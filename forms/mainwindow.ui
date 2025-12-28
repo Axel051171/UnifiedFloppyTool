@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+ <property name="geometry"><rect><x>0</x><y>0</y><width>950</width><height>750</height></rect></property>
+ <property name="windowTitle"><string>UnifiedFloppyTool v3.1 - PERFECT Edition</string></property>
+ <widget class="QWidget" name="centralwidget">
+ <layout class="QVBoxLayout">
+ <item>
+ <widget class="QTabWidget" name="tabWidget">
+ <property name="currentIndex"><number>0</number></property>
+ <widget class="QWidget" name="tab_workflow"><attribute name="title"><string>1. Workflow </string></attribute></widget>
+ <widget class="QWidget" name="tab_hardware"><attribute name="title"><string>2. Hardware </string></attribute></widget>
+ <widget class="QWidget" name="tab_format"><attribute name="title"><string>3. Format </string></attribute></widget>
+ <widget class="QWidget" name="tab_protection"><attribute name="title"><string>4. Protection </string></attribute></widget>
+ <widget class="QWidget" name="tab_catalog"><attribute name="title"><string>5. Catalog </string></attribute></widget>
+ <widget class="QWidget" name="tab_tools"><attribute name="title"><string>6. Tools </string></attribute></widget>
+ </widget>
+ </item>
+ </layout>
+ </widget>
+ <widget class="QMenuBar" name="menubar">
+ <widget class="QMenu" name="menuFile"><property name="title"><string>&amp;File</string></property></widget>
+ <widget class="QMenu" name="menuTools"><property name="title"><string>&amp;Tools</string></property></widget>
+ <widget class="QMenu" name="menuHelp"><property name="title"><string>&amp;Help</string></property></widget>
+ </widget>
+ <widget class="QStatusBar" name="statusbar"/>
+ <widget class="QToolBar" name="toolBar"/>
+ </widget>
+</ui>

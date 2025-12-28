@@ -1,0 +1,77 @@
+name: Build
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Install Qt
+      uses: jurplel/install-qt-action@v3
+      with:
+        version: '6.5.0'
+        
+    - name: Install Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y cmake ninja-build
+        
+    - name: Configure CMake
+      run: |
+        cmake -B build -G Ninja \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DUFT_ENABLE_SIMD=ON \
+          -DUFT_ENABLE_OPENMP=ON
+          
+    - name: Build
+      run: cmake --build build
+      
+    - name: Test
+      run: cd build && ctest --output-on-failure
+      
+  build-windows:
+    runs-on: windows-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Install Qt
+      uses: jurplel/install-qt-action@v3
+      with:
+        version: '6.5.0'
+        
+    - name: Configure CMake
+      run: |
+        cmake -B build -G "Visual Studio 17 2022" `
+          -DCMAKE_BUILD_TYPE=Release `
+          -DUFT_ENABLE_SIMD=ON
+          
+    - name: Build
+      run: cmake --build build --config Release
+      
+  build-macos:
+    runs-on: macos-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Install Qt
+      uses: jurplel/install-qt-action@v3
+      with:
+        version: '6.5.0'
+        
+    - name: Configure CMake
+      run: |
+        cmake -B build \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DUFT_ENABLE_SIMD=ON
+          
+    - name: Build
+      run: cmake --build build

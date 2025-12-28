@@ -1,0 +1,914 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>TabTools</class>
+ <widget class="QWidget" name="TabTools">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>900</width>
+    <height>700</height>
+   </rect>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout_main">
+   
+   <!-- SUB-TABS -->
+   <item>
+    <widget class="QTabWidget" name="tabWidgetTools">
+     <property name="currentIndex">
+      <number>0</number>
+     </property>
+     
+     <!-- ========================================== -->
+     <!-- SUB-TAB 1: BATCH                           -->
+     <!-- ========================================== -->
+     <widget class="QWidget" name="tabBatch">
+      <attribute name="title">
+       <string>Batch</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="verticalLayout_batch">
+       
+       <item>
+        <widget class="QGroupBox" name="groupBatchOperation">
+         <property name="title">
+          <string>📦 BATCH OPERATION</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_batchop">
+          
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_batchtype">
+            <item>
+             <widget class="QLabel" name="labelBatchType">
+              <property name="text">
+               <string>Operation:</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QComboBox" name="comboBatchType">
+              <item><property name="text"><string>Read Multiple Disks (Flux → Files)</string></property></item>
+              <item><property name="text"><string>Write Multiple Images (Files → Flux)</string></property></item>
+              <item><property name="text"><string>Verify Multiple Images</string></property></item>
+              <item><property name="text"><string>Convert Multiple Files</string></property></item>
+             </widget>
+            </item>
+            <item>
+             <spacer>
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+             </spacer>
+            </item>
+           </layout>
+          </item>
+          
+          <item>
+           <widget class="QGroupBox" name="groupBatchSettings">
+            <property name="title">
+             <string>Batch Settings</string>
+            </property>
+            <layout class="QFormLayout" name="formLayout_batch">
+             <item row="0" column="0">
+              <widget class="QLabel" name="labelBatchOutput">
+               <property name="text">
+                <string>Output Directory:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="1">
+              <layout class="QHBoxLayout">
+               <item>
+                <widget class="QLineEdit" name="lineBatchOutput">
+                 <property name="placeholderText">
+                  <string>C:\Output\</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QPushButton" name="btnBrowseBatchOutput">
+                 <property name="text">
+                  <string>Browse...</string>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </item>
+             
+             <item row="1" column="0">
+              <widget class="QLabel" name="labelBatchNaming">
+               <property name="text">
+                <string>Naming:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="1">
+              <layout class="QHBoxLayout">
+               <item>
+                <widget class="QLineEdit" name="lineBatchPrefix">
+                 <property name="placeholderText">
+                  <string>disk</string>
+                 </property>
+                 <property name="maximumWidth">
+                  <number>150</number>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QCheckBox" name="checkAutoIncrement">
+                 <property name="text">
+                  <string>Auto-increment (001, 002, ...)</string>
+                 </property>
+                 <property name="checked">
+                  <bool>true</bool>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <spacer>
+                 <property name="orientation">
+                  <enum>Qt::Horizontal</enum>
+                 </property>
+                </spacer>
+               </item>
+              </layout>
+             </item>
+             
+             <item row="2" column="0">
+              <widget class="QLabel" name="labelPauseBetween">
+               <property name="text">
+                <string>Pause Between Disks:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="1">
+              <layout class="QHBoxLayout">
+               <item>
+                <widget class="QSpinBox" name="spinPauseSeconds">
+                 <property name="suffix">
+                  <string> seconds</string>
+                 </property>
+                 <property name="value">
+                  <number>10</number>
+                 </property>
+                 <property name="maximumWidth">
+                  <number>100</number>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QLabel" name="labelPauseHint">
+                 <property name="text">
+                  <string>(Time to swap disk)</string>
+                 </property>
+                 <property name="styleSheet">
+                  <string>color: gray; font-style: italic;</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <spacer>
+                 <property name="orientation">
+                  <enum>Qt::Horizontal</enum>
+                 </property>
+                </spacer>
+               </item>
+              </layout>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          
+         </layout>
+        </widget>
+       </item>
+       
+       <item>
+        <widget class="QGroupBox" name="groupBatchQueue">
+         <property name="title">
+          <string>📋 QUEUE</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_queue">
+          <item>
+           <widget class="QListWidget" name="listBatchQueue">
+            <property name="alternatingRowColors">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_queueButtons">
+            <item>
+             <widget class="QPushButton" name="btnAddToQueue">
+              <property name="text">
+               <string>➕ Add</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="btnRemoveFromQueue">
+              <property name="text">
+               <string>➖ Remove</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="btnClearQueue">
+              <property name="text">
+               <string>🗑️ Clear All</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <spacer>
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+             </spacer>
+            </item>
+            <item>
+             <widget class="QLabel" name="labelQueueCount">
+              <property name="text">
+               <string>Items in queue: 0</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       
+       <item>
+        <widget class="QGroupBox" name="groupBatchProgress">
+         <property name="title">
+          <string>📈 PROGRESS</string>
+         </property>
+         <property name="maximumHeight">
+          <number>100</number>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_batchprogress">
+          <item>
+           <widget class="QProgressBar" name="progressBatch">
+            <property name="value">
+             <number>0</number>
+            </property>
+            <property name="format">
+             <string>%p% - Item 0/0</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <layout class="QHBoxLayout">
+            <item>
+             <widget class="QPushButton" name="btnStartBatch">
+              <property name="text">
+               <string>▶ START BATCH</string>
+              </property>
+              <property name="minimumHeight">
+               <number>35</number>
+              </property>
+              <property name="styleSheet">
+               <string>QPushButton { background-color: #4CAF50; color: white; font-weight: bold; }</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="btnPauseBatch">
+              <property name="text">
+               <string>⏸ PAUSE</string>
+              </property>
+              <property name="minimumHeight">
+               <number>35</number>
+              </property>
+              <property name="enabled">
+               <bool>false</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="btnStopBatch">
+              <property name="text">
+               <string>⏹ STOP</string>
+              </property>
+              <property name="minimumHeight">
+               <number>35</number>
+              </property>
+              <property name="enabled">
+               <bool>false</bool>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       
+      </layout>
+     </widget>
+     
+     <!-- ========================================== -->
+     <!-- SUB-TAB 2: CONVERTER                       -->
+     <!-- ========================================== -->
+     <widget class="QWidget" name="tabConverter">
+      <attribute name="title">
+       <string>Converter</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="verticalLayout_converter">
+       
+       <item>
+        <widget class="QGroupBox" name="groupConverter">
+         <property name="title">
+          <string>🔄 FORMAT CONVERTER</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_conv">
+          
+          <item>
+           <layout class="QFormLayout" name="formLayout_converter">
+            <item row="0" column="0">
+             <widget class="QLabel" name="labelSourceFormat">
+              <property name="text">
+               <string>Source Format:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="1">
+             <widget class="QComboBox" name="comboSourceFormat">
+              <item><property name="text"><string>Auto-Detect</string></property></item>
+              <item><property name="text"><string>SCP - SuperCard Pro</string></property></item>
+              <item><property name="text"><string>HFE - HxC Floppy</string></property></item>
+              <item><property name="text"><string>IMG - Raw Image</string></property></item>
+              <item><property name="text"><string>D64 - C64 1541</string></property></item>
+              <item><property name="text"><string>D71 - C64 1571</string></property></item>
+              <item><property name="text"><string>ADF - Amiga</string></property></item>
+              <item><property name="text"><string>ST - Atari ST</string></property></item>
+              <item><property name="text"><string>ATR - Atari 8-bit</string></property></item>
+             </widget>
+            </item>
+            
+            <item row="1" column="0">
+             <widget class="QLabel" name="labelTargetFormat">
+              <property name="text">
+               <string>Target Format:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="1">
+             <widget class="QComboBox" name="comboTargetFormat">
+              <item><property name="text"><string>SCP - SuperCard Pro</string></property></item>
+              <item><property name="text"><string>HFE - HxC Floppy</string></property></item>
+              <item><property name="text"><string>IMG - Raw Image</string></property></item>
+              <item><property name="text"><string>D64 - C64 1541</string></property></item>
+              <item><property name="text"><string>ADF - Amiga</string></property></item>
+              <item><property name="text"><string>ST - Atari ST</string></property></item>
+              <item><property name="text"><string>ATR - Atari 8-bit</string></property></item>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          
+          <item>
+           <widget class="QGroupBox" name="groupConvFiles">
+            <property name="title">
+             <string>Files</string>
+            </property>
+            <layout class="QFormLayout" name="formLayout_convfiles">
+             <item row="0" column="0">
+              <widget class="QLabel" name="labelConvInput">
+               <property name="text">
+                <string>Input File(s):</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="1">
+              <layout class="QHBoxLayout">
+               <item>
+                <widget class="QLineEdit" name="lineConvInput">
+                 <property name="placeholderText">
+                  <string>Select file(s) or drag &amp; drop</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QPushButton" name="btnBrowseConvInput">
+                 <property name="text">
+                  <string>Browse...</string>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </item>
+             
+             <item row="1" column="0">
+              <widget class="QLabel" name="labelConvOutput">
+               <property name="text">
+                <string>Output Directory:</string>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="1">
+              <layout class="QHBoxLayout">
+               <item>
+                <widget class="QLineEdit" name="lineConvOutput">
+                 <property name="placeholderText">
+                  <string>C:\Output\</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QPushButton" name="btnBrowseConvOutput">
+                 <property name="text">
+                  <string>Browse...</string>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          
+          <item>
+           <widget class="QGroupBox" name="groupConvOptions">
+            <property name="title">
+             <string>Options</string>
+            </property>
+            <layout class="QVBoxLayout" name="verticalLayout_convoptions">
+             <item>
+              <widget class="QCheckBox" name="checkConvMetadata">
+               <property name="text">
+                <string>✓ Preserve metadata</string>
+               </property>
+               <property name="checked">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QCheckBox" name="checkConvVerify">
+               <property name="text">
+                <string>✓ Verify after conversion</string>
+               </property>
+               <property name="checked">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QCheckBox" name="checkConvDelete">
+               <property name="text">
+                <string>Delete source files after successful conversion</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          
+          <item>
+           <layout class="QHBoxLayout">
+            <item>
+             <spacer>
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+             </spacer>
+            </item>
+            <item>
+             <widget class="QPushButton" name="btnConvert">
+              <property name="text">
+               <string>▶ CONVERT</string>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>200</width>
+                <height>40</height>
+               </size>
+              </property>
+              <property name="styleSheet">
+               <string>QPushButton { background-color: #2196F3; color: white; font-weight: bold; }</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <spacer>
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+             </spacer>
+            </item>
+           </layout>
+          </item>
+          
+          <item>
+           <spacer>
+            <property name="orientation">
+             <enum>Qt::Vertical</enum>
+            </property>
+           </spacer>
+          </item>
+          
+         </layout>
+        </widget>
+       </item>
+       
+      </layout>
+     </widget>
+     
+     <!-- ========================================== -->
+     <!-- SUB-TAB 3: ANALYZER                        -->
+     <!-- ========================================== -->
+     <widget class="QWidget" name="tabAnalyzer">
+      <attribute name="title">
+       <string>Analyzer</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="verticalLayout_analyzer">
+       
+       <item>
+        <widget class="QGroupBox" name="groupAnalyzer">
+         <property name="title">
+          <string>🔬 DISK ANALYZER</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_analyze">
+          
+          <item>
+           <layout class="QHBoxLayout">
+            <item>
+             <widget class="QLabel" name="labelAnalyzeFile">
+              <property name="text">
+               <string>File to Analyze:</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLineEdit" name="lineAnalyzeFile">
+              <property name="placeholderText">
+               <string>Select disk image file...</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="btnBrowseAnalyze">
+              <property name="text">
+               <string>Browse...</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="btnAnalyze">
+              <property name="text">
+               <string>🔍 ANALYZE</string>
+              </property>
+              <property name="styleSheet">
+               <string>QPushButton { background-color: #FF9800; color: white; font-weight: bold; }</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          
+          <item>
+           <widget class="QGroupBox" name="groupAnalysisResults">
+            <property name="title">
+             <string>Analysis Results</string>
+            </property>
+            <layout class="QVBoxLayout" name="verticalLayout_results">
+             <item>
+              <widget class="QTextEdit" name="textAnalysisResults">
+               <property name="readOnly">
+                <bool>true</bool>
+               </property>
+               <property name="placeholderText">
+                <string>Analysis results will appear here...
+
+Format: [Detected]
+Tracks: [T×S]
+Encoding: [MFM/FM/GCR]
+Sectors: [per track]
+Timing: [average]
+Weak Bits: [detected/not detected]
+Protection: [type if detected]
+File System: [detected]
+Bootblock: [type]
+MD5: [hash]
+SHA-1: [hash]</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          
+          <item>
+           <layout class="QHBoxLayout">
+            <item>
+             <spacer>
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+             </spacer>
+            </item>
+            <item>
+             <widget class="QPushButton" name="btnExportReport">
+              <property name="text">
+               <string>📄 Export Report</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="btnCopyToClipboard">
+              <property name="text">
+               <string>📋 Copy to Clipboard</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          
+         </layout>
+        </widget>
+       </item>
+       
+      </layout>
+     </widget>
+     
+     <!-- ========================================== -->
+     <!-- SUB-TAB 4: UTILITIES                       -->
+     <!-- ========================================== -->
+     <widget class="QWidget" name="tabUtilities">
+      <attribute name="title">
+       <string>Utilities</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="verticalLayout_utilities">
+       
+       <!-- IMAGE COMPARE -->
+       <item>
+        <widget class="QGroupBox" name="groupCompare">
+         <property name="title">
+          <string>🔍 IMAGE COMPARE</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_compare">
+          <item>
+           <layout class="QFormLayout" name="formLayout_compare">
+            <item row="0" column="0">
+             <widget class="QLabel" name="labelCompare1">
+              <property name="text">
+               <string>File 1:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="1">
+             <layout class="QHBoxLayout">
+              <item>
+               <widget class="QLineEdit" name="lineCompare1"/>
+              </item>
+              <item>
+               <widget class="QPushButton" name="btnBrowseCompare1">
+                <property name="text">
+                 <string>Browse...</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            
+            <item row="1" column="0">
+             <widget class="QLabel" name="labelCompare2">
+              <property name="text">
+               <string>File 2:</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="1">
+             <layout class="QHBoxLayout">
+              <item>
+               <widget class="QLineEdit" name="lineCompare2"/>
+              </item>
+              <item>
+               <widget class="QPushButton" name="btnBrowseCompare2">
+                <property name="text">
+                 <string>Browse...</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+           </layout>
+          </item>
+          
+          <item>
+           <layout class="QHBoxLayout">
+            <item>
+             <spacer>
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+             </spacer>
+            </item>
+            <item>
+             <widget class="QPushButton" name="btnCompare">
+              <property name="text">
+               <string>⚖️ COMPARE</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          
+          <item>
+           <widget class="QTextEdit" name="textCompareResults">
+            <property name="maximumHeight">
+             <number>60</number>
+            </property>
+            <property name="readOnly">
+             <bool>true</bool>
+            </property>
+            <property name="placeholderText">
+             <string>Comparison results...</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       
+       <!-- CHECKSUM/HASH -->
+       <item>
+        <widget class="QGroupBox" name="groupHash">
+         <property name="title">
+          <string>🔐 CHECKSUM / HASH</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_hash">
+          <item>
+           <layout class="QHBoxLayout">
+            <item>
+             <widget class="QLabel" name="labelHashFile">
+              <property name="text">
+               <string>File:</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLineEdit" name="lineHashFile"/>
+            </item>
+            <item>
+             <widget class="QPushButton" name="btnBrowseHash">
+              <property name="text">
+               <string>Browse...</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          
+          <item>
+           <layout class="QHBoxLayout">
+            <item>
+             <widget class="QCheckBox" name="checkMD5">
+              <property name="text">
+               <string>MD5</string>
+              </property>
+              <property name="checked">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QCheckBox" name="checkSHA1">
+              <property name="text">
+               <string>SHA-1</string>
+              </property>
+              <property name="checked">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QCheckBox" name="checkSHA256">
+              <property name="text">
+               <string>SHA-256</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <spacer>
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+             </spacer>
+            </item>
+            <item>
+             <widget class="QPushButton" name="btnGenerateHash">
+              <property name="text">
+               <string>🔒 GENERATE</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          
+          <item>
+           <widget class="QTextEdit" name="textHashResults">
+            <property name="maximumHeight">
+             <number>80</number>
+            </property>
+            <property name="readOnly">
+             <bool>true</bool>
+            </property>
+            <property name="placeholderText">
+             <string>Hash values will appear here...</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       
+       <!-- DISK REPAIR -->
+       <item>
+        <widget class="QGroupBox" name="groupRepair">
+         <property name="title">
+          <string>🔧 DISK REPAIR (Experimental)</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_repair">
+          <item>
+           <layout class="QHBoxLayout">
+            <item>
+             <widget class="QLabel" name="labelRepairFile">
+              <property name="text">
+               <string>File:</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLineEdit" name="lineRepairFile"/>
+            </item>
+            <item>
+             <widget class="QPushButton" name="btnBrowseRepair">
+              <property name="text">
+               <string>Browse...</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          
+          <item>
+           <layout class="QHBoxLayout">
+            <item>
+             <widget class="QCheckBox" name="checkFixChecksums">
+              <property name="text">
+               <string>Fix checksums</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QCheckBox" name="checkReconstructSectors">
+              <property name="text">
+               <string>Reconstruct bad sectors</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <spacer>
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+             </spacer>
+            </item>
+            <item>
+             <widget class="QPushButton" name="btnRepair">
+              <property name="text">
+               <string>🔧 ANALYZE &amp; REPAIR</string>
+              </property>
+              <property name="styleSheet">
+               <string>QPushButton { background-color: #f44336; color: white; font-weight: bold; }</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       
+       <item>
+        <spacer>
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+        </spacer>
+       </item>
+       
+      </layout>
+     </widget>
+     
+    </widget>
+   </item>
+   
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

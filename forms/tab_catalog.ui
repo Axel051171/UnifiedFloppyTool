@@ -1,0 +1,354 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>TabCatalog</class>
+ <widget class="QWidget" name="TabCatalog">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>900</width>
+    <height>700</height>
+   </rect>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout_main">
+   
+   <!-- SEARCH & FILTER -->
+   <item>
+    <widget class="QGroupBox" name="groupSearch">
+     <property name="title">
+      <string>🔍 SEARCH &amp; FILTER</string>
+     </property>
+     <property name="maximumHeight">
+      <number>100</number>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout_search">
+      <item>
+       <layout class="QHBoxLayout" name="horizontalLayout_search">
+        <item>
+         <widget class="QLabel" name="labelSearch">
+          <property name="text">
+           <string>Search:</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLineEdit" name="lineSearch">
+          <property name="placeholderText">
+           <string>Search by name, format, date...</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="btnSearch">
+          <property name="text">
+           <string>🔍 Search</string>
+          </property>
+          <property name="maximumWidth">
+           <number>100</number>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      
+      <item>
+       <layout class="QHBoxLayout" name="horizontalLayout_filter">
+        <item>
+         <widget class="QLabel" name="labelFilterFormat">
+          <property name="text">
+           <string>Format:</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QComboBox" name="comboFilterFormat">
+          <item><property name="text"><string>All Formats</string></property></item>
+          <item><property name="text"><string>Amiga (ADF, IPF, DMS)</string></property></item>
+          <item><property name="text"><string>C64 (D64, D71, D81, G64)</string></property></item>
+          <item><property name="text"><string>IBM PC (IMG, IMD, TD0)</string></property></item>
+          <item><property name="text"><string>Atari (ST, ATR, STX, ATX)</string></property></item>
+          <item><property name="text"><string>Apple (DSK, PO, NIB, WOZ)</string></property></item>
+          <item><property name="text"><string>Raw Flux (SCP, HFE, KF)</string></property></item>
+         </widget>
+        </item>
+        
+        <item>
+         <widget class="QLabel" name="labelFilterStatus">
+          <property name="text">
+           <string>Status:</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QComboBox" name="comboFilterStatus">
+          <item><property name="text"><string>All Disks</string></property></item>
+          <item><property name="text"><string>Good (no errors)</string></property></item>
+          <item><property name="text"><string>Warnings</string></property></item>
+          <item><property name="text"><string>Errors</string></property></item>
+          <item><property name="text"><string>Protected</string></property></item>
+         </widget>
+        </item>
+        
+        <item>
+         <spacer>
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+         </spacer>
+        </item>
+        
+        <item>
+         <widget class="QPushButton" name="btnClearFilter">
+          <property name="text">
+           <string>Clear Filter</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   
+   <!-- DISK LIST TABLE -->
+   <item>
+    <widget class="QGroupBox" name="groupDiskList">
+     <property name="title">
+      <string>📋 DISK CATALOG</string>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout_table">
+      <item>
+       <widget class="QTableWidget" name="tableDiskList">
+        <property name="alternatingRowColors">
+         <bool>true</bool>
+        </property>
+        <property name="selectionBehavior">
+         <enum>QAbstractItemView::SelectRows</enum>
+        </property>
+        <property name="sortingEnabled">
+         <bool>true</bool>
+        </property>
+        <column>
+         <property name="text">
+          <string>ID</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>Name</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>Format</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>Size</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>Date</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>Status</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>Protection</string>
+         </property>
+        </column>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   
+   <!-- DETAILS PANEL -->
+   <item>
+    <widget class="QGroupBox" name="groupDetails">
+     <property name="title">
+      <string>📊 DETAILS (selected disk)</string>
+     </property>
+     <property name="maximumHeight">
+      <number>200</number>
+     </property>
+     <layout class="QHBoxLayout" name="horizontalLayout_details">
+      
+      <!-- Left: Info -->
+      <item>
+       <layout class="QFormLayout" name="formLayout_info">
+        <item row="0" column="0">
+         <widget class="QLabel" name="labelDetailName">
+          <property name="text">
+           <string>Name:</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="QLineEdit" name="lineDetailName">
+          <property name="readOnly">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        
+        <item row="1" column="0">
+         <widget class="QLabel" name="labelDetailFormat">
+          <property name="text">
+           <string>Format:</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="1">
+         <widget class="QLineEdit" name="lineDetailFormat">
+          <property name="readOnly">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        
+        <item row="2" column="0">
+         <widget class="QLabel" name="labelDetailDate">
+          <property name="text">
+           <string>Date:</string>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="1">
+         <widget class="QLineEdit" name="lineDetailDate">
+          <property name="readOnly">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        
+        <item row="3" column="0">
+         <widget class="QLabel" name="labelDetailFile">
+          <property name="text">
+           <string>File Path:</string>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="1">
+         <widget class="QLineEdit" name="lineDetailFile">
+          <property name="readOnly">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      
+      <!-- Right: Stats & Notes -->
+      <item>
+       <layout class="QVBoxLayout" name="verticalLayout_stats">
+        <item>
+         <widget class="QLabel" name="labelDetailStats">
+          <property name="text">
+           <string>Tracks: 80×2 (158 good, 2 errors)
+Protection: X-Copy v2.1
+MD5: a3f2b1c4d5e6f7g8...</string>
+          </property>
+          <property name="wordWrap">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        
+        <item>
+         <widget class="QLabel" name="labelNotes">
+          <property name="text">
+           <string>Notes:</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QTextEdit" name="textNotes">
+          <property name="placeholderText">
+           <string>Add notes about this disk...</string>
+          </property>
+          <property name="maximumHeight">
+           <number>60</number>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   
+   <!-- ACTIONS -->
+   <item>
+    <widget class="QGroupBox" name="groupActions">
+     <property name="title">
+      <string>🎬 ACTIONS</string>
+     </property>
+     <property name="maximumHeight">
+      <number>70</number>
+     </property>
+     <layout class="QHBoxLayout" name="horizontalLayout_actions">
+      <item>
+       <widget class="QPushButton" name="btnAddToCatalog">
+        <property name="text">
+         <string>➕ Add to Catalog</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="btnEditEntry">
+        <property name="text">
+         <string>✏️ Edit Entry</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="btnDeleteEntry">
+        <property name="text">
+         <string>🗑️ Delete</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="btnOpenImage">
+        <property name="text">
+         <string>📂 Open Image</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer>
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QPushButton" name="btnExportList">
+        <property name="text">
+         <string>📤 Export List (CSV)</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="btnStatistics">
+        <property name="text">
+         <string>📊 Statistics</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
