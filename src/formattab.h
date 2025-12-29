@@ -1,4 +1,5 @@
-#pragma once
+#ifndef FORMATTAB_H
+#define FORMATTAB_H
 #include <QWidget>
 namespace Ui { class TabFormat; }
 class FormatTab : public QWidget {
@@ -9,3 +10,4 @@ public:
 private:
     Ui::TabFormat *ui;
 };
+#endif

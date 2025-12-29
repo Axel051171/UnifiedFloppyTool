@@ -1,4 +1,5 @@
-#pragma once
+#ifndef HARDWARETAB_H
+#define HARDWARETAB_H
 #include <QWidget>
 namespace Ui { class TabHardware; }
 class HardwareTab : public QWidget {
@@ -9,3 +10,4 @@ public:
 private:
     Ui::TabHardware *ui;
 };
+#endif

@@ -63,3 +63,47 @@ Thumbs.db
 # Build artifacts
 *.log
 compile_commands.json
+
+# Test results
+test-results/
+Testing/
+*.log
+*.xml
+
+# Sanitizer outputs
+*.asan
+*.ubsan
+*.tsan
+*.msan
+
+# Coverage
+*.gcda
+*.gcno
+*.gcov
+coverage/
+*.profdata
+*.profraw
+
+# Backup files
+*.backup
+*.bak
+*.tmp
+*_OLD.*
+
+# Package files
+*.zip
+*.tar.gz
+*.tar.bz2
+
+# Generated documentation
+docs/html/
+docs/latex/
+
+# Benchmark results
+bench_*.txt
+
+# Fuzzing
+fuzz-corpus/
+crash-*
+leak-*
+timeout-*

@@ -1,4 +1,5 @@
-#pragma once
+#ifndef CATALOGTAB_H
+#define CATALOGTAB_H
 #include <QWidget>
 namespace Ui { class TabCatalog; }
 class CatalogTab : public QWidget {
@@ -9,3 +10,4 @@ public:
 private:
     Ui::TabCatalog *ui;
 };
+#endif

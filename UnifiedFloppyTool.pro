@@ -243,3 +243,7 @@ message("✅ Disk Catalog")
 message("================================================")
 message("To edit GUI: Open .ui files in Qt Designer!")
 message("================================================")
+
+# Worker Thread (Fix: UI Freeze)
+SOURCES += src/decodejob.cpp
+HEADERS += src/decodejob.h

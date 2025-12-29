@@ -1,4 +1,5 @@
-#pragma once
+#ifndef PROTECTIONTAB_H
+#define PROTECTIONTAB_H
 #include <QWidget>
 namespace Ui { class TabProtection; }
 class ProtectionTab : public QWidget {
@@ -9,3 +10,4 @@ public:
 private:
     Ui::TabProtection *ui;
 };
+#endif

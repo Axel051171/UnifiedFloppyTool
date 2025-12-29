@@ -1,12 +1,37 @@
 cmake_minimum_required(VERSION 3.20)
 
 project(UnifiedFloppyTool
-    VERSION 3.1.0
+    VERSION 3.1.2
     DESCRIPTION "The Ultimate Floppy Disk Preservation & Analysis Suite"
     LANGUAGES C CXX
 )
 
+# =============================================================================
+# BUILD OPTIONS
+# =============================================================================
+
+option(UFT_ENABLE_SIMD "Enable SIMD optimizations (SSE2/AVX2)" ON)
+option(UFT_ENABLE_OPENMP "Enable OpenMP parallelization" ON)
+option(UFT_ENABLE_LTO "Enable Link-Time Optimization" OFF)
+
+# SANITIZERS
+option(UFT_ENABLE_ASAN "Enable Address Sanitizer" OFF)
+option(UFT_ENABLE_UBSAN "Enable Undefined Behavior Sanitizer" OFF)
+option(UFT_ENABLE_TSAN "Enable Thread Sanitizer" OFF)
+option(UFT_ENABLE_MSAN "Enable Memory Sanitizer" OFF)
+
+# TESTING
+option(UFT_BUILD_TESTS "Build test suite" ON)
+option(UFT_ENABLE_FUZZING "Enable fuzzing targets (libFuzzer)" OFF)
+
+# ANALYSIS
+option(UFT_ENABLE_CLANG_TIDY "Enable clang-tidy static analysis" OFF)
+option(UFT_ENABLE_CPPCHECK "Enable cppcheck static analysis" OFF)
+
+# =============================================================================
 # Qt Configuration
+# =============================================================================
+
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
@@ -17,88 +42,218 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
-# Options
-option(UFT_ENABLE_SIMD "Enable SIMD optimizations (AVX2/SSE2)" ON)
-option(UFT_ENABLE_OPENMP "Enable OpenMP parallelization" ON)
-option(UFT_ENABLE_LTO "Enable Link Time Optimization" OFF)
-option(UFT_ENABLE_ASAN "Enable Address Sanitizer" OFF)
-
-# Find Qt (try Qt6 first, fallback to Qt5)
-find_package(Qt6 COMPONENTS Core Gui Widgets QUIET)
-if(NOT Qt6_FOUND)
-    find_package(Qt5 5.12 REQUIRED COMPONENTS Core Gui Widgets)
+# Find Qt (try Qt6, fall back to Qt5)
+find_package(Qt6 COMPONENTS Core Widgets QUIET)
+if (NOT Qt6_FOUND)
+    find_package(Qt5 REQUIRED COMPONENTS Core Widgets)
     set(QT_VERSION_MAJOR 5)
 else()
     set(QT_VERSION_MAJOR 6)
 endif()
 
-# Compiler Flags
+message(STATUS "Using Qt${QT_VERSION_MAJOR}")
+
+# =============================================================================
+# COMPILER FLAGS
+# =============================================================================
+
 if(MSVC)
-    add_compile_options(/W4)
-    if(UFT_ENABLE_SIMD)
-        add_compile_options(/arch:AVX2)
+    # MSVC Warnings
+    add_compile_options(/W4 /WX-)
+    
+    # UTF-8 source files
+    add_compile_options(/utf-8)
+    
+    # Sanitizers on MSVC
+    if(UFT_ENABLE_ASAN)
+        add_compile_options(/fsanitize=address)
+        add_link_options(/fsanitize=address)
     endif()
 else()
-    add_compile_options(-Wall -Wextra -pedantic)
-    if(UFT_ENABLE_SIMD)
-        add_compile_options(-mavx2 -msse2)
+    # GCC/Clang Warnings
+    add_compile_options(
+        -Wall
+        -Wextra
+        -Wpedantic
+        -Wno-unused-parameter
+    )
+    
+    # Sanitizers on GCC/Clang
+    set(SANITIZER_FLAGS "")
+    
+    if(UFT_ENABLE_ASAN)
+        list(APPEND SANITIZER_FLAGS "-fsanitize=address")
+        message(STATUS "Address Sanitizer enabled")
+    endif()
+    
+    if(UFT_ENABLE_UBSAN)
+        list(APPEND SANITIZER_FLAGS "-fsanitize=undefined")
+        message(STATUS "Undefined Behavior Sanitizer enabled")
+    endif()
+    
+    if(UFT_ENABLE_TSAN)
+        if(UFT_ENABLE_ASAN)
+            message(FATAL_ERROR "Cannot enable both ASan and TSan")
+        endif()
+        list(APPEND SANITIZER_FLAGS "-fsanitize=thread")
+        message(STATUS "Thread Sanitizer enabled")
+    endif()
+    
+    if(UFT_ENABLE_MSAN)
+        if(UFT_ENABLE_ASAN OR UFT_ENABLE_TSAN)
+            message(FATAL_ERROR "MSan cannot be combined with other sanitizers")
+        endif()
+        list(APPEND SANITIZER_FLAGS "-fsanitize=memory")
+        message(STATUS "Memory Sanitizer enabled")
+    endif()
+    
+    if(SANITIZER_FLAGS)
+        add_compile_options(${SANITIZER_FLAGS})
+        add_link_options(${SANITIZER_FLAGS})
     endif()
 endif()
 
+# =============================================================================
+# STATIC ANALYSIS
+# =============================================================================
+
+if(UFT_ENABLE_CLANG_TIDY)
+    find_program(CLANG_TIDY_EXE NAMES clang-tidy)
+    if(CLANG_TIDY_EXE)
+        set(CMAKE_CXX_CLANG_TIDY
+            ${CLANG_TIDY_EXE};
+            -checks=-*,bugprone-*,performance-*,modernize-*,readability-*;
+            -warnings-as-errors=*;
+        )
+        message(STATUS "clang-tidy enabled")
+    else()
+        message(WARNING "clang-tidy not found")
+    endif()
+endif()
+
+if(UFT_ENABLE_CPPCHECK)
+    find_program(CPPCHECK_EXE NAMES cppcheck)
+    if(CPPCHECK_EXE)
+        set(CMAKE_C_CPPCHECK
+            ${CPPCHECK_EXE};
+            --enable=warning,style,performance,portability;
+            --suppress=missingIncludeSystem;
+        )
+        message(STATUS "cppcheck enabled")
+    else()
+        message(WARNING "cppcheck not found")
+    endif()
+endif()
+
+# =============================================================================
+# SIMD
+# =============================================================================
+
+if(UFT_ENABLE_SIMD)
+    if(CMAKE_SYSTEM_PROCESSOR MATCHES "(x86)|(X86)|(amd64)|(AMD64)")
+        if(MSVC)
+            add_compile_options(/arch:AVX2)
+        else()
+            add_compile_options(-mavx2 -msse2)
+        endif()
+        message(STATUS "SIMD optimizations enabled (AVX2/SSE2)")
+    endif()
+endif()
+
+# =============================================================================
 # OpenMP
+# =============================================================================
+
 if(UFT_ENABLE_OPENMP)
     find_package(OpenMP)
     if(OpenMP_FOUND)
-        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+        message(STATUS "OpenMP enabled")
+    else()
+        message(WARNING "OpenMP not found")
     endif()
 endif()
 
-# Address Sanitizer
-if(UFT_ENABLE_ASAN)
-    add_compile_options(-fsanitize=address -fno-omit-frame-pointer)
-    add_link_options(-fsanitize=address)
+# =============================================================================
+# LTO
+# =============================================================================
+
+if(UFT_ENABLE_LTO)
+    include(CheckIPOSupported)
+    check_ipo_supported(RESULT IPO_SUPPORTED)
+    if(IPO_SUPPORTED)
+        set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+        message(STATUS "Link-Time Optimization enabled")
+    else()
+        message(WARNING "LTO not supported on this platform")
+    endif()
 endif()
 
-# Include Directories
-include_directories(
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/src
-)
+# =============================================================================
+# SOURCE FILES
+# =============================================================================
 
-# Sources
-set(SOURCES
+set(UFT_SOURCES
+    # Main
     src/main.cpp
     src/mainwindow.cpp
+    src/decodejob.cpp
+    
+    # Tabs
     src/workflowtab.cpp
     src/hardwaretab.cpp
     src/formattab.cpp
     src/protectiontab.cpp
     src/catalogtab.cpp
     src/toolstab.cpp
-    src/visualdisk.cpp
+    
+    # Widgets
     src/widgets/trackgridwidget.cpp
     src/widgets/presetmanager.cpp
     src/widgets/diskvisualizationwindow.cpp
+    src/visualdisk.cpp
+    
+    # Core (C)
+    src/core/flux_core.c
+    src/core/uft_mfm_scalar.c
+    src/core/uft_gcr_scalar.c
+    src/core/uft_simd.c
+    src/core/uft_memory.c
+    src/core/uft_sector_status.c
 )
 
-# Headers
-set(HEADERS
+set(UFT_HEADERS
+    # Main
     src/mainwindow.h
+    src/decodejob.h
+    
+    # Tabs
     src/workflowtab.h
     src/hardwaretab.h
     src/formattab.h
     src/protectiontab.h
     src/catalogtab.h
     src/toolstab.h
-    src/visualdisk.h
+    
+    # Widgets
     src/widgets/trackgridwidget.h
     src/widgets/presetmanager.h
     src/widgets/diskvisualizationwindow.h
+    src/visualdisk.h
+    
+    # Utilities (header-only)
+    src/pathutils.h
+    src/inputvalidation.h
+    src/settingsmanager.h
+    
+    # Core
+    include/uft/flux_core.h
+    include/uft/uft_memory.h
+    include/uft/uft_simd.h
+    include/uft/uft_sector_status.h
+    include/uft/uft_endian.h
 )
 
-# UI Files
-set(UI_FILES
+set(UFT_UI_FILES
     forms/mainwindow.ui
     forms/tab_workflow.ui
     forms/tab_hardware.ui
@@ -110,79 +265,76 @@ set(UI_FILES
     forms/dialog_validation.ui
 )
 
-# Resources
-set(RESOURCES
-    resources/resources.qrc
+# =============================================================================
+# EXECUTABLE
+# =============================================================================
+
+add_executable(UnifiedFloppyTool
+    ${UFT_SOURCES}
+    ${UFT_HEADERS}
+    ${UFT_UI_FILES}
 )
 
-# Core Library (C)
-add_library(uft_core STATIC
-    src/core/flux_core.c
-    src/core/uft_memory.c
-    src/core/uft_mfm_scalar.c
-    src/core/uft_gcr_scalar.c
-    src/core/uft_simd.c
-    include/uft/flux_core.h
-    include/uft/uft_memory.h
-    include/uft/uft_simd.h
+target_include_directories(UnifiedFloppyTool PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 
-target_include_directories(uft_core PUBLIC include)
-
-# SIMD Support
-if(UFT_ENABLE_SIMD)
-    target_compile_definitions(uft_core PRIVATE UFT_ENABLE_AVX2 UFT_ENABLE_SSE2)
+if(QT_VERSION_MAJOR EQUAL 6)
+    target_link_libraries(UnifiedFloppyTool PRIVATE Qt6::Core Qt6::Widgets)
+else()
+    target_link_libraries(UnifiedFloppyTool PRIVATE Qt5::Core Qt5::Widgets)
 endif()
 
-# Main Executable
-add_executable(${PROJECT_NAME}
-    ${SOURCES}
-    ${HEADERS}
-    ${UI_FILES}
-    ${RESOURCES}
-)
-
-# Link Libraries
-target_link_libraries(${PROJECT_NAME}
-    uft_core
-    Qt${QT_VERSION_MAJOR}::Core
-    Qt${QT_VERSION_MAJOR}::Gui
-    Qt${QT_VERSION_MAJOR}::Widgets
-)
-
-if(OpenMP_FOUND)
-    target_link_libraries(${PROJECT_NAME} OpenMP::OpenMP_CXX)
+if(OpenMP_FOUND AND UFT_ENABLE_OPENMP)
+    target_link_libraries(UnifiedFloppyTool PRIVATE OpenMP::OpenMP_CXX)
 endif()
 
-# LTO
-if(UFT_ENABLE_LTO)
-    set_property(TARGET ${PROJECT_NAME} PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
-    set_property(TARGET uft_core PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+# =============================================================================
+# TESTING
+# =============================================================================
+
+if(UFT_BUILD_TESTS)
+    enable_testing()
+    add_subdirectory(tests)
 endif()
 
-# Install
-install(TARGETS ${PROJECT_NAME}
+# =============================================================================
+# INSTALL
+# =============================================================================
+
+install(TARGETS UnifiedFloppyTool
     RUNTIME DESTINATION bin
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
 )
 
-# CPack Configuration
-set(CPACK_PACKAGE_NAME "UnifiedFloppyTool")
-set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
-set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "${PROJECT_DESCRIPTION}")
-set(CPACK_PACKAGE_VENDOR "UnifiedFloppyTool Contributors")
-set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
-set(CPACK_RESOURCE_FILE_README "${CMAKE_CURRENT_SOURCE_DIR}/README.md")
+# =============================================================================
+# SUMMARY
+# =============================================================================
 
-include(CPack)
-
-# Print Configuration
 message(STATUS "")
-message(STATUS "UnifiedFloppyTool v${PROJECT_VERSION} Configuration:")
-message(STATUS "  Qt Version:        Qt${QT_VERSION_MAJOR}")
-message(STATUS "  C++ Standard:      C++${CMAKE_CXX_STANDARD}")
-message(STATUS "  C Standard:        C${CMAKE_C_STANDARD}")
+message(STATUS "==================================================================")
+message(STATUS "UnifiedFloppyTool v${PROJECT_VERSION} - Build Configuration")
+message(STATUS "==================================================================")
+message(STATUS "Qt Version:          Qt${QT_VERSION_MAJOR}")
+message(STATUS "Compiler:            ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}")
+message(STATUS "Build Type:          ${CMAKE_BUILD_TYPE}")
+message(STATUS "")
+message(STATUS "Options:")
 message(STATUS "  SIMD:              ${UFT_ENABLE_SIMD}")
 message(STATUS "  OpenMP:            ${UFT_ENABLE_OPENMP}")
 message(STATUS "  LTO:               ${UFT_ENABLE_LTO}")
-message(STATUS "  Address Sanitizer: ${UFT_ENABLE_ASAN}")
+message(STATUS "  Tests:             ${UFT_BUILD_TESTS}")
+message(STATUS "")
+message(STATUS "Sanitizers:")
+message(STATUS "  ASan:              ${UFT_ENABLE_ASAN}")
+message(STATUS "  UBSan:             ${UFT_ENABLE_UBSAN}")
+message(STATUS "  TSan:              ${UFT_ENABLE_TSAN}")
+message(STATUS "  MSan:              ${UFT_ENABLE_MSAN}")
+message(STATUS "")
+message(STATUS "Static Analysis:")
+message(STATUS "  clang-tidy:        ${UFT_ENABLE_CLANG_TIDY}")
+message(STATUS "  cppcheck:          ${UFT_ENABLE_CPPCHECK}")
+message(STATUS "==================================================================")
 message(STATUS "")

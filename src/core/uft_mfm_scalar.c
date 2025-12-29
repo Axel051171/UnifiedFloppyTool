@@ -168,7 +168,7 @@ size_t uft_mfm_extract_data(
     
     for (size_t i = 0; i < bit_count; i++) {
         /* Extract bit from byte array */
-        uint8_t byte_idx = i / 8;
+        size_t byte_idx  /* FIX: size_t to prevent overflow */ = i / 8;
         uint8_t bit_idx = 7 - (i % 8);
         uint8_t bit = (mfm_bits[byte_idx] >> bit_idx) & 1;
         
@@ -217,7 +217,7 @@ int uft_mfm_find_sync(
     
     for (size_t i = 0; i < bit_count - 15; i++) {
         /* Build 16-bit window */
-        uint8_t byte_idx = i / 8;
+        size_t byte_idx  /* FIX: size_t to prevent overflow */ = i / 8;
         uint8_t bit_idx = 7 - (i % 8);
         uint8_t bit = (mfm_bits[byte_idx] >> bit_idx) & 1;
         
@@ -243,6 +243,10 @@ int uft_mfm_find_sync(
 void uft_mfm_benchmark_scalar(const uint64_t *flux_data, size_t count, int iterations)
 {
     uint8_t *output = malloc(count * 2);  /* Worst case: 2 bytes per transition */
+    if (!output) {
+        fprintf(stderr, "ERROR: malloc() failed in benchmark\n");
+        return;  /* FIX: Check malloc() return value */
+    }
     
     clock_t start = clock();
     

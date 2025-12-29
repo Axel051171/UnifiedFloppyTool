@@ -1,4 +1,5 @@
-#pragma once
+#ifndef TOOLSTAB_H
+#define TOOLSTAB_H
 #include <QWidget>
 namespace Ui { class TabTools; }
 class ToolsTab : public QWidget {
@@ -9,3 +10,4 @@ public:
 private:
     Ui::TabTools *ui;
 };
+#endif
