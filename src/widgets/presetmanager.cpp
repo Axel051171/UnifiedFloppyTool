@@ -162,6 +162,72 @@ void PresetManager::initializeBuiltInPresets()
         preset.autoDetectVariants = true;
         m_presets.push_back(preset);
     }
+
+    // PC 360K
+    {
+        FormatPreset preset;
+        preset.id = "pc_360k";
+        preset.name = "PC 360K (5.25\" DD)";
+        preset.description = "IBM PC 5.25\" Double-Density 360K floppy";
+        preset.category = "PC";
+        preset.isBuiltIn = true;
+        preset.tracks = 40;
+        preset.sides = 2;
+        preset.sectorsPerTrack = 9;
+        preset.sectorSize = 512;
+        preset.encoding = FormatPreset::Encoding::MFM;
+        preset.bitrate = 250000;
+        preset.rpm = 300;
+        preset.interleave = 1;
+        preset.gap3Length = 84;
+        preset.firstSectorID = 1;
+        preset.autoDetectVariants = true;
+        m_presets.push_back(preset);
+    }
+
+    // PC 1.2M
+    {
+        FormatPreset preset;
+        preset.id = "pc_12m";
+        preset.name = "PC 1.2M (5.25\" HD)";
+        preset.description = "IBM PC 5.25\" High-Density 1.2M floppy";
+        preset.category = "PC";
+        preset.isBuiltIn = true;
+        preset.tracks = 80;
+        preset.sides = 2;
+        preset.sectorsPerTrack = 15;
+        preset.sectorSize = 512;
+        preset.encoding = FormatPreset::Encoding::MFM;
+        preset.bitrate = 500000;
+        preset.rpm = 360;
+        preset.interleave = 1;
+        preset.gap3Length = 84;
+        preset.firstSectorID = 1;
+        preset.autoDetectVariants = true;
+        m_presets.push_back(preset);
+    }
+
+    // PC 2.88M
+    {
+        FormatPreset preset;
+        preset.id = "pc_288m";
+        preset.name = "PC 2.88M (3.5\" ED)";
+        preset.description = "IBM PC 3.5\" Extended-Density 2.88M floppy";
+        preset.category = "PC";
+        preset.isBuiltIn = true;
+        preset.tracks = 80;
+        preset.sides = 2;
+        preset.sectorsPerTrack = 36;
+        preset.sectorSize = 512;
+        preset.encoding = FormatPreset::Encoding::MFM;
+        preset.bitrate = 1000000;
+        preset.rpm = 300;
+        preset.interleave = 1;
+        preset.gap3Length = 80;
+        preset.firstSectorID = 1;
+        preset.autoDetectVariants = true;
+        m_presets.push_back(preset);
+    }
     
     // Amiga Standard
     {
@@ -201,6 +267,28 @@ void PresetManager::initializeBuiltInPresets()
         preset.bitrate = 250000;
         preset.rpm = 300;
         preset.interleave = 10;
+        preset.gap3Length = 0;
+        preset.firstSectorID = 0;
+        preset.autoDetectVariants = true;
+        m_presets.push_back(preset);
+    }
+
+    // Apple II DOS 3.3
+    {
+        FormatPreset preset;
+        preset.id = "apple2_dos33";
+        preset.name = "Apple II DOS 3.3 (140K)";
+        preset.description = "Apple II DOS 3.3 (35T/16S/256B)";
+        preset.category = "Apple II";
+        preset.isBuiltIn = true;
+        preset.tracks = 35;
+        preset.sides = 1;
+        preset.sectorsPerTrack = 16;
+        preset.sectorSize = 256;
+        preset.encoding = FormatPreset::Encoding::GCR;
+        preset.bitrate = 250000;
+        preset.rpm = 300;
+        preset.interleave = 0;
         preset.gap3Length = 0;
         preset.firstSectorID = 0;
         preset.autoDetectVariants = true;

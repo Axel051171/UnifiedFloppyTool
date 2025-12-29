@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <limits.h>
 
 /* =============================================================================
  * FLUX BITSTREAM IMPLEMENTATION
@@ -60,7 +61,13 @@ bool flux_bitstream_append_bit(flux_bitstream_t *bitstream, uint8_t bit)
     /* Check if we need to expand */
     size_t needed_bytes = (bitstream->bit_count + 1 + 7) / 8;
     if (needed_bytes > bitstream->byte_capacity) {
-        size_t new_capacity = bitstream->byte_capacity * 2;
+        size_t new_capacity = bitstream->byte_capacity ? bitstream->byte_capacity : 1;
+        while (new_capacity < needed_bytes) {
+            if (new_capacity > SIZE_MAX / 2) {
+                return false;
+            }
+            new_capacity *= 2;
+        }
         uint8_t *new_bits = realloc(bitstream->bits, new_capacity);
         if (!new_bits) {
             return false;
@@ -162,8 +169,15 @@ bool flux_track_add_sample(flux_track_t *track, uint64_t timestamp_ns, uint8_t i
     
     /* Expand if needed */
     if (track->sample_count >= track->sample_capacity) {
-        size_t new_capacity = track->sample_capacity * 2;
-        flux_sample_t *new_samples = realloc(track->samples, 
+        size_t new_capacity = track->sample_capacity ? track->sample_capacity : 1;
+        if (new_capacity > SIZE_MAX / 2) {
+            return false;
+        }
+        new_capacity *= 2;
+        if (new_capacity > SIZE_MAX / sizeof(flux_sample_t)) {
+            return false;
+        }
+        flux_sample_t *new_samples = realloc(track->samples,
                                              new_capacity * sizeof(flux_sample_t));
         if (!new_samples) {
             return false;
@@ -214,7 +228,7 @@ float flux_track_get_rpm(const flux_track_t *track)
         }
     }
     
-    if (second_index == 0 || first_index == 0) {
+    if (index_found < 2) {
         return 0.0f;
     }
     
@@ -231,6 +245,10 @@ float flux_track_get_rpm(const flux_track_t *track)
 
 flux_disk_t* flux_disk_create(int cylinders, int heads)
 {
+    if (cylinders <= 0 || heads <= 0) {
+        return NULL;
+    }
+
     flux_disk_t *disk = calloc(1, sizeof(flux_disk_t));
     if (!disk) {
         return NULL;
@@ -238,7 +256,11 @@ flux_disk_t* flux_disk_create(int cylinders, int heads)
     
     disk->max_cylinders = cylinders;
     disk->max_heads = heads;
-    disk->track_count = cylinders * heads;
+    if ((size_t)cylinders > SIZE_MAX / (size_t)heads) {
+        free(disk);
+        return NULL;
+    }
+    disk->track_count = (size_t)cylinders * (size_t)heads;
     
     disk->tracks = calloc(disk->track_count, sizeof(flux_track_t*));
     if (!disk->tracks) {
@@ -291,7 +313,8 @@ void flux_disk_destroy(flux_disk_t **disk_ptr)
 
 flux_track_t* flux_disk_get_track(flux_disk_t *disk, int cylinder, int head)
 {
-    if (!disk || cylinder >= disk->max_cylinders || head >= disk->max_heads) {
+    if (!disk || cylinder < 0 || head < 0 ||
+        cylinder >= disk->max_cylinders || head >= disk->max_heads) {
         return NULL;
     }
     
@@ -301,7 +324,8 @@ flux_track_t* flux_disk_get_track(flux_disk_t *disk, int cylinder, int head)
 
 bool flux_disk_set_track(flux_disk_t *disk, int cylinder, int head, flux_track_t *track)
 {
-    if (!disk || !track || cylinder >= disk->max_cylinders || head >= disk->max_heads) {
+    if (!disk || !track || cylinder < 0 || head < 0 ||
+        cylinder >= disk->max_cylinders || head >= disk->max_heads) {
         return false;
     }
     

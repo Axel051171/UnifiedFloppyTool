@@ -219,6 +219,7 @@ set(UFT_SOURCES
     src/core/uft_simd.c
     src/core/uft_memory.c
     src/core/uft_sector_status.c
+    src/core/uft_formats.c
 )
 
 set(UFT_HEADERS
@@ -251,6 +252,7 @@ set(UFT_HEADERS
     include/uft/uft_simd.h
     include/uft/uft_sector_status.h
     include/uft/uft_endian.h
+    include/uft/uft_formats.h
 )
 
 set(UFT_UI_FILES
