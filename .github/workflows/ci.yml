@@ -1,0 +1,119 @@
+name: Quick CI
+
+# Runs on every push and PR - fast feedback
+on:
+  push:
+    branches: [ main, master, develop, 'feature/*' ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Quick Compile Check (< 5 minutes)
+  # ═══════════════════════════════════════════════════════════════════════════
+  quick-check:
+    runs-on: ubuntu-22.04
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Install Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential cppcheck
+        sudo apt-get install -y qt6-base-dev libgl1-mesa-dev
+        sudo apt-get install -y libxcb-cursor0 libxcb-icccm4 libxcb-keysyms1
+        sudo apt-get install -y libxcb-shape0 libxcb-xfixes0 libxcb-randr0
+        sudo apt-get install -y libxkbcommon-x11-0
+
+    - name: Static Analysis (Quick)
+      run: |
+        echo "🔍 Running quick static analysis..."
+        cppcheck --enable=warning,performance \
+                 --suppress=missingIncludeSystem \
+                 --suppress=unknownMacro \
+                 --error-exitcode=1 \
+                 --quiet \
+                 --std=c++17 \
+                 -I src -I include \
+                 src/*.cpp src/*.h 2>&1 || exit 1
+        echo "✅ No critical issues found"
+
+    - name: Compile Check
+      run: |
+        echo "🔨 Checking if code compiles..."
+        mkdir -p build && cd build
+        qmake6 ../UnifiedFloppyTool.pro CONFIG+=release 2>&1
+        make -j$(nproc) 2>&1 | tail -50
+        
+        if [ -f "UnifiedFloppyTool" ]; then
+          echo "✅ Build successful"
+          ls -lh UnifiedFloppyTool
+        else
+          echo "❌ Build failed"
+          exit 1
+        fi
+
+    - name: Check UI Files
+      run: |
+        echo "🖼️ Validating UI files..."
+        for ui in forms/*.ui; do
+          if ! xmllint --noout "$ui" 2>/dev/null; then
+            echo "❌ Invalid XML in $ui"
+            exit 1
+          fi
+        done
+        echo "✅ All UI files valid"
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Code Style Check
+  # ═══════════════════════════════════════════════════════════════════════════
+  style-check:
+    runs-on: ubuntu-22.04
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Check for common issues
+      run: |
+        echo "📋 Checking code style..."
+        
+        # Check for tabs (should use spaces)
+        if grep -rn $'\t' --include="*.cpp" --include="*.h" src/; then
+          echo "⚠️ Warning: Found tabs in source files (prefer spaces)"
+        fi
+        
+        # Check for trailing whitespace
+        if grep -rn ' $' --include="*.cpp" --include="*.h" src/; then
+          echo "⚠️ Warning: Found trailing whitespace"
+        fi
+        
+        # Check for TODO/FIXME comments
+        TODO_COUNT=$(grep -rn "TODO\|FIXME\|XXX\|HACK" --include="*.cpp" --include="*.h" src/ | wc -l)
+        echo "ℹ️ Found $TODO_COUNT TODO/FIXME comments"
+        
+        echo "✅ Style check complete"
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Summary
+  # ═══════════════════════════════════════════════════════════════════════════
+  ci-summary:
+    needs: [quick-check, style-check]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+    - name: CI Summary
+      run: |
+        echo "════════════════════════════════════════════════════════════════"
+        echo "  CI Summary"
+        echo "════════════════════════════════════════════════════════════════"
+        echo "  Quick Check: ${{ needs.quick-check.result }}"
+        echo "  Style Check: ${{ needs.style-check.result }}"
+        echo "════════════════════════════════════════════════════════════════"
+        
+        if [ "${{ needs.quick-check.result }}" != "success" ]; then
+          echo "❌ CI failed"
+          exit 1
+        fi
+        
+        echo "✅ All CI checks passed!"

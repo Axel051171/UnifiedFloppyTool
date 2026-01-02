@@ -1,0 +1,388 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>TabHardware</class>
+ <widget class="QWidget" name="TabHardware">
+  <property name="geometry">
+   <rect><x>0</x><y>0</y><width>900</width><height>600</height></rect>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout_main">
+   <property name="leftMargin"><number>4</number></property>
+   <property name="topMargin"><number>4</number></property>
+   <property name="rightMargin"><number>4</number></property>
+   <property name="bottomMargin"><number>4</number></property>
+   
+   <item>
+    <widget class="QScrollArea" name="scrollArea">
+     <property name="widgetResizable"><bool>true</bool></property>
+     <property name="frameShape"><enum>QFrame::NoFrame</enum></property>
+     <widget class="QWidget" name="scrollContent">
+      <layout class="QHBoxLayout" name="mainHLayout">
+       <property name="spacing"><number>8</number></property>
+       
+       <!-- ═══════════════════════════════════════════════════════════ -->
+       <!-- COLUMN 1: Controller + Connection                           -->
+       <!-- ═══════════════════════════════════════════════════════════ -->
+       <item>
+        <layout class="QVBoxLayout" name="col1">
+         <property name="spacing"><number>6</number></property>
+         
+         <!-- CONTROLLER -->
+         <item>
+          <widget class="QGroupBox" name="groupController">
+           <property name="title"><string>Controller</string></property>
+           <property name="styleSheet"><string>QGroupBox { font-weight: bold; }</string></property>
+           <layout class="QFormLayout">
+            <property name="verticalSpacing"><number>4</number></property>
+            <item row="0" column="0"><widget class="QLabel"><property name="text"><string>Type:</string></property></widget></item>
+            <item row="0" column="1">
+             <widget class="QComboBox" name="comboController">
+              <property name="minimumWidth"><number>180</number></property>
+              <item><property name="text"><string>Greaseweazle (F1/F7)</string></property></item>
+              <item><property name="text"><string>SuperCard Pro</string></property></item>
+              <item><property name="text"><string>KryoFlux</string></property></item>
+              <item><property name="text"><string>FluxEngine</string></property></item>
+              <item><property name="text"><string>FC5025</string></property></item>
+              <item><property name="text"><string>USB Floppy Drive</string></property></item>
+              <item><property name="text"><string>XUM1541 (C64 IEC)</string></property></item>
+              <item><property name="text"><string>Catweasel</string></property></item>
+              <item><property name="text"><string>Arduino Due</string></property></item>
+              <item><property name="text"><string>Mock (Testing)</string></property></item>
+             </widget>
+            </item>
+            <item row="1" column="0"><widget class="QLabel"><property name="text"><string>Status:</string></property></widget></item>
+            <item row="1" column="1">
+             <widget class="QLabel" name="labelControllerStatus">
+              <property name="text"><string>Not connected</string></property>
+              <property name="styleSheet"><string>color: #888;</string></property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </item>
+         
+         <!-- CONNECTION -->
+         <item>
+          <widget class="QGroupBox" name="groupConnection">
+           <property name="title"><string>Connection</string></property>
+           <property name="styleSheet"><string>QGroupBox { font-weight: bold; }</string></property>
+           <layout class="QGridLayout">
+            <property name="verticalSpacing"><number>4</number></property>
+            <item row="0" column="0"><widget class="QLabel"><property name="text"><string>Port:</string></property></widget></item>
+            <item row="0" column="1">
+             <widget class="QComboBox" name="comboPort">
+              <item><property name="text"><string>Auto</string></property></item>
+              <item><property name="text"><string>COM1</string></property></item>
+              <item><property name="text"><string>COM2</string></property></item>
+              <item><property name="text"><string>COM3</string></property></item>
+              <item><property name="text"><string>/dev/ttyUSB0</string></property></item>
+              <item><property name="text"><string>/dev/ttyACM0</string></property></item>
+             </widget>
+            </item>
+            <item row="0" column="2">
+             <widget class="QPushButton" name="btnRefreshPorts">
+              <property name="text"><string>↻</string></property>
+              <property name="maximumWidth"><number>30</number></property>
+             </widget>
+            </item>
+            <item row="1" column="0"><widget class="QLabel"><property name="text"><string>Drive:</string></property></widget></item>
+            <item row="1" column="1">
+             <widget class="QComboBox" name="comboDriveSelect">
+              <item><property name="text"><string>A: (Drive 0)</string></property></item>
+              <item><property name="text"><string>B: (Drive 1)</string></property></item>
+             </widget>
+            </item>
+            <item row="2" column="0" colspan="3">
+             <layout class="QHBoxLayout">
+              <item>
+               <widget class="QPushButton" name="btnDetect">
+                <property name="text"><string>Detect</string></property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="btnConnect">
+                <property name="text"><string>Connect</string></property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+           </layout>
+          </widget>
+         </item>
+         
+         <!-- TEST -->
+         <item>
+          <widget class="QGroupBox" name="groupTest">
+           <property name="title"><string>Test</string></property>
+           <property name="styleSheet"><string>QGroupBox { font-weight: bold; }</string></property>
+           <layout class="QGridLayout">
+            <property name="verticalSpacing"><number>4</number></property>
+            <item row="0" column="0">
+             <widget class="QPushButton" name="btnCalibrate">
+              <property name="text"><string>Calibrate</string></property>
+             </widget>
+            </item>
+            <item row="0" column="1">
+             <widget class="QPushButton" name="btnSeekTest">
+              <property name="text"><string>Seek Test</string></property>
+             </widget>
+            </item>
+            <item row="1" column="0">
+             <widget class="QPushButton" name="btnReadTest">
+              <property name="text"><string>Read Test</string></property>
+             </widget>
+            </item>
+            <item row="1" column="1">
+             <widget class="QPushButton" name="btnRPMTest">
+              <property name="text"><string>RPM Test</string></property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </item>
+         
+         <item><spacer><property name="orientation"><enum>Qt::Vertical</enum></property></spacer></item>
+        </layout>
+       </item>
+       
+       <!-- ═══════════════════════════════════════════════════════════ -->
+       <!-- COLUMN 2: Drive Settings (Auto/Manual)                      -->
+       <!-- ═══════════════════════════════════════════════════════════ -->
+       <item>
+        <layout class="QVBoxLayout" name="col2">
+         <property name="spacing"><number>6</number></property>
+         
+         <!-- DETECTION MODE -->
+         <item>
+          <widget class="QGroupBox" name="groupDetection">
+           <property name="title"><string>Detection Mode</string></property>
+           <property name="styleSheet"><string>QGroupBox { font-weight: bold; }</string></property>
+           <layout class="QHBoxLayout">
+            <item>
+             <widget class="QRadioButton" name="radioAutoDetect">
+              <property name="text"><string>Auto-Detect</string></property>
+              <property name="checked"><bool>true</bool></property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QRadioButton" name="radioManual">
+              <property name="text"><string>Manual Override</string></property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </item>
+         
+         <!-- DRIVE SETTINGS -->
+         <item>
+          <widget class="QGroupBox" name="groupDrive">
+           <property name="title"><string>Drive Settings</string></property>
+           <property name="styleSheet"><string>QGroupBox { font-weight: bold; }</string></property>
+           <layout class="QGridLayout">
+            <property name="verticalSpacing"><number>4</number></property>
+            <item row="0" column="0"><widget class="QLabel"><property name="text"><string>Drive Type:</string></property></widget></item>
+            <item row="0" column="1">
+             <widget class="QComboBox" name="comboDriveType">
+              <item><property name="text"><string>3.5" DD (720K)</string></property></item>
+              <item><property name="text"><string>3.5" HD (1.44M)</string></property></item>
+              <item><property name="text"><string>3.5" ED (2.88M)</string></property></item>
+              <item><property name="text"><string>5.25" DD (360K)</string></property></item>
+              <item><property name="text"><string>5.25" HD (1.2M)</string></property></item>
+              <item><property name="text"><string>8" SD (250K)</string></property></item>
+              <item><property name="text"><string>8" DD (500K)</string></property></item>
+             </widget>
+            </item>
+            <item row="1" column="0"><widget class="QLabel"><property name="text"><string>Tracks:</string></property></widget></item>
+            <item row="1" column="1">
+             <widget class="QComboBox" name="comboTracks">
+              <item><property name="text"><string>35</string></property></item>
+              <item><property name="text"><string>40</string></property></item>
+              <item><property name="text"><string>77</string></property></item>
+              <item><property name="text"><string>80</string></property></item>
+              <item><property name="text"><string>82</string></property></item>
+              <item><property name="text"><string>83</string></property></item>
+             </widget>
+            </item>
+            <item row="2" column="0"><widget class="QLabel"><property name="text"><string>Heads:</string></property></widget></item>
+            <item row="2" column="1">
+             <widget class="QComboBox" name="comboHeads">
+              <item><property name="text"><string>1</string></property></item>
+              <item><property name="text"><string>2</string></property></item>
+             </widget>
+            </item>
+            <item row="3" column="0"><widget class="QLabel"><property name="text"><string>Density:</string></property></widget></item>
+            <item row="3" column="1">
+             <widget class="QComboBox" name="comboDensity">
+              <item><property name="text"><string>SD (Single)</string></property></item>
+              <item><property name="text"><string>DD (Double)</string></property></item>
+              <item><property name="text"><string>HD (High)</string></property></item>
+              <item><property name="text"><string>ED (Extended)</string></property></item>
+             </widget>
+            </item>
+            <item row="4" column="0"><widget class="QLabel"><property name="text"><string>RPM:</string></property></widget></item>
+            <item row="4" column="1">
+             <widget class="QComboBox" name="comboRPM">
+              <item><property name="text"><string>300</string></property></item>
+              <item><property name="text"><string>360</string></property></item>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </item>
+         
+         <!-- MOTOR -->
+         <item>
+          <widget class="QGroupBox" name="groupMotor">
+           <property name="title"><string>Motor</string></property>
+           <property name="styleSheet"><string>QGroupBox { font-weight: bold; }</string></property>
+           <layout class="QGridLayout">
+            <property name="verticalSpacing"><number>4</number></property>
+            <item row="0" column="0" colspan="2">
+             <widget class="QCheckBox" name="checkAutoSpinDown">
+              <property name="text"><string>Auto spin-down</string></property>
+              <property name="checked"><bool>true</bool></property>
+             </widget>
+            </item>
+            <item row="1" column="0"><widget class="QLabel"><property name="text"><string>Timeout:</string></property></widget></item>
+            <item row="1" column="1">
+             <widget class="QSpinBox" name="spinMotorTimeout">
+              <property name="suffix"><string> sec</string></property>
+              <property name="minimum"><number>1</number></property>
+              <property name="maximum"><number>60</number></property>
+              <property name="value"><number>5</number></property>
+             </widget>
+            </item>
+            <item row="2" column="0" colspan="2">
+             <layout class="QHBoxLayout">
+              <item>
+               <widget class="QPushButton" name="btnMotorOn">
+                <property name="text"><string>Motor ON</string></property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="btnMotorOff">
+                <property name="text"><string>Motor OFF</string></property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+           </layout>
+          </widget>
+         </item>
+         
+         <item><spacer><property name="orientation"><enum>Qt::Vertical</enum></property></spacer></item>
+        </layout>
+       </item>
+       
+       <!-- ═══════════════════════════════════════════════════════════ -->
+       <!-- COLUMN 3: Info + Advanced                                   -->
+       <!-- ═══════════════════════════════════════════════════════════ -->
+       <item>
+        <layout class="QVBoxLayout" name="col3">
+         <property name="spacing"><number>6</number></property>
+         
+         <!-- INFO (detected values) -->
+         <item>
+          <widget class="QGroupBox" name="groupInfo">
+           <property name="title"><string>Detected Info</string></property>
+           <property name="styleSheet"><string>QGroupBox { font-weight: bold; }</string></property>
+           <layout class="QFormLayout">
+            <property name="verticalSpacing"><number>4</number></property>
+            <item row="0" column="0"><widget class="QLabel"><property name="text"><string>Model:</string></property></widget></item>
+            <item row="0" column="1">
+             <widget class="QLabel" name="labelModel">
+              <property name="text"><string>-</string></property>
+             </widget>
+            </item>
+            <item row="1" column="0"><widget class="QLabel"><property name="text"><string>Firmware:</string></property></widget></item>
+            <item row="1" column="1">
+             <widget class="QLabel" name="labelFirmware">
+              <property name="text"><string>-</string></property>
+             </widget>
+            </item>
+            <item row="2" column="0"><widget class="QLabel"><property name="text"><string>RPM:</string></property></widget></item>
+            <item row="2" column="1">
+             <widget class="QLabel" name="labelRPMMeasured">
+              <property name="text"><string>-</string></property>
+             </widget>
+            </item>
+            <item row="3" column="0"><widget class="QLabel"><property name="text"><string>Index:</string></property></widget></item>
+            <item row="3" column="1">
+             <widget class="QLabel" name="labelIndex">
+              <property name="text"><string>-</string></property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </item>
+         
+         <!-- ADVANCED -->
+         <item>
+          <widget class="QGroupBox" name="groupAdvanced">
+           <property name="title"><string>Advanced</string></property>
+           <property name="styleSheet"><string>QGroupBox { font-weight: bold; }</string></property>
+           <layout class="QGridLayout">
+            <property name="verticalSpacing"><number>4</number></property>
+            <item row="0" column="0" colspan="2">
+             <widget class="QCheckBox" name="checkDoubleStep">
+              <property name="text"><string>Double step (40→80)</string></property>
+             </widget>
+            </item>
+            <item row="1" column="0" colspan="2">
+             <widget class="QCheckBox" name="checkIgnoreIndex">
+              <property name="text"><string>Ignore index signal</string></property>
+             </widget>
+            </item>
+            <item row="2" column="0"><widget class="QLabel"><property name="text"><string>Step delay:</string></property></widget></item>
+            <item row="2" column="1">
+             <widget class="QSpinBox" name="spinStepDelay">
+              <property name="suffix"><string> µs</string></property>
+              <property name="minimum"><number>1000</number></property>
+              <property name="maximum"><number>50000</number></property>
+              <property name="singleStep"><number>1000</number></property>
+              <property name="value"><number>3000</number></property>
+             </widget>
+            </item>
+            <item row="3" column="0"><widget class="QLabel"><property name="text"><string>Settle:</string></property></widget></item>
+            <item row="3" column="1">
+             <widget class="QSpinBox" name="spinSettleTime">
+              <property name="suffix"><string> ms</string></property>
+              <property name="minimum"><number>1</number></property>
+              <property name="maximum"><number>100</number></property>
+              <property name="value"><number>15</number></property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </item>
+         
+         <!-- STATUS LOG -->
+         <item>
+          <widget class="QGroupBox" name="groupStatus">
+           <property name="title"><string>Status</string></property>
+           <property name="styleSheet"><string>QGroupBox { font-weight: bold; }</string></property>
+           <layout class="QVBoxLayout">
+            <item>
+             <widget class="QPlainTextEdit" name="textStatus">
+              <property name="readOnly"><bool>true</bool></property>
+              <property name="maximumHeight"><number>100</number></property>
+              <property name="plainText"><string>Ready.</string></property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </item>
+         
+         <item><spacer><property name="orientation"><enum>Qt::Vertical</enum></property></spacer></item>
+        </layout>
+       </item>
+       
+      </layout>
+     </widget>
+    </widget>
+   </item>
+   
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
