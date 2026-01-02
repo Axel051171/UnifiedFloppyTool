@@ -183,7 +183,7 @@ This project is licensed under the **GPL-3.0 License** - see [LICENSE](LICENSE) 
 
 **Axel Kramer**
 
-- GitHub: [@axelmuhr](https://github.com/Axel051171)
+- GitHub: [@axe](https://github.com/Axel051171)
 
 ---
 
