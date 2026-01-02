@@ -26,6 +26,7 @@ QT       += core gui widgets
 greaterThan(QT_MAJOR_VERSION, 5): QT += widgets
 
 CONFIG += c++17
+CONFIG += sdk_no_version_check
 
 TARGET = UnifiedFloppyTool
 TEMPLATE = app
@@ -170,7 +171,8 @@ macx {
         QMAKE_CFLAGS += -O3
     }
     
-    ICON = resources/icon.icns
+    # macOS icon (optional - only if file exists)
+       exists(resources/icon.icns): ICON = resources/icon.icns
 }
 
 ###############################################################################
