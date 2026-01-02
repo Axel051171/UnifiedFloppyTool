@@ -1,0 +1,259 @@
+/**
+ * @file uft_gwraw_reader.c
+ * @brief Greaseweazle RAW Flux Image Reader Implementation
+ */
+
+#include "uft_gwraw_reader.h"
+#include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
+
+/* Default Greaseweazle sampling frequency: 72 MHz */
+#define DEFAULT_SAMPLE_FREQ 72000000
+
+/* Initial flux buffer size */
+#define INITIAL_FLUX_CAPACITY 100000
+
+/* ========================================================================
+ * OPEN/CLOSE
+ * ======================================================================== */
+
+uft_rc_t uft_gwraw_open(const char* path, uft_gwraw_ctx_t** ctx) {
+    UFT_CHECK_NULL(path);
+    UFT_CHECK_NULL(ctx);
+    
+    *ctx = NULL;
+    
+    /* Allocate context */
+    uft_gwraw_ctx_t* gw = calloc(1, sizeof(uft_gwraw_ctx_t));
+    if (!gw) {
+        return UFT_ERR_MEMORY;
+    }
+    
+    /* Open file */
+    gw->fp = fopen(path, "rb");
+    if (!gw->fp) {
+        free(gw);
+        return UFT_ERR_NOT_FOUND;
+    }
+    
+    /* Set default sampling frequency */
+    gw->sample_freq = DEFAULT_SAMPLE_FREQ;
+    gw->track_start_pos = 0;
+    
+    *ctx = gw;
+    return UFT_SUCCESS;
+}
+
+void uft_gwraw_close(uft_gwraw_ctx_t** ctx) {
+    if (ctx && *ctx) {
+        if ((*ctx)->fp) {
+            fclose((*ctx)->fp);
+        }
+        free(*ctx);
+        *ctx = NULL;
+    }
+}
+
+/* ========================================================================
+ * HELPER FUNCTIONS
+ * ======================================================================== */
+
+uft_rc_t uft_gwraw_rewind(uft_gwraw_ctx_t* ctx) {
+    UFT_CHECK_NULL(ctx);
+    
+    if (fseek(ctx->fp, 0, SEEK_SET) != 0) {
+        return UFT_ERR_IO;
+    }
+    
+    ctx->track_start_pos = 0;
+    ctx->current_track = 0;
+    ctx->current_head = 0;
+    
+    return UFT_SUCCESS;
+}
+
+uft_rc_t uft_gwraw_set_freq(uft_gwraw_ctx_t* ctx, uint32_t freq_hz) {
+    UFT_CHECK_NULL(ctx);
+    
+    if (freq_hz == 0) {
+        return UFT_ERR_INVALID_ARG;
+    }
+    
+    ctx->sample_freq = freq_hz;
+    return UFT_SUCCESS;
+}
+
+/* ========================================================================
+ * TRACK READING
+ * ======================================================================== */
+
+uft_rc_t uft_gwraw_read_track(
+    uft_gwraw_ctx_t* ctx,
+    uint32_t** flux_ns,
+    uint32_t* count,
+    bool* has_index
+) {
+    UFT_CHECK_NULLS(ctx, flux_ns, count);
+    
+    *flux_ns = NULL;
+    *count = 0;
+    if (has_index) *has_index = false;
+    
+    /* Allocate initial flux buffer */
+    uint32_t capacity = INITIAL_FLUX_CAPACITY;
+    uint32_t* flux = malloc(capacity * sizeof(uint32_t));
+    if (!flux) {
+        return UFT_ERR_MEMORY;
+    }
+    
+    uint32_t flux_count = 0;
+    uint32_t ticks = 0;
+    bool found_index = false;
+    
+    /* Read opcodes until end of track */
+    while (1) {
+        int op = fgetc(ctx->fp);
+        
+        if (op == EOF) {
+            /* End of file */
+            break;
+        }
+        
+        switch (op) {
+        case GWRAW_OP_INDEX:
+            /* Index pulse marker */
+            found_index = true;
+            ctx->index_pulses_found++;
+            
+            /* If we already have flux data, this marks end of track */
+            if (flux_count > 0) {
+                goto track_complete;
+            }
+            break;
+            
+        case GWRAW_OP_FLUX1: {
+            /* 1-byte flux value */
+            uint8_t val = fgetc(ctx->fp);
+            ticks += val;
+            
+            /* Convert ticks to nanoseconds */
+            uint64_t ns = ((uint64_t)ticks * 1000000000ULL) / ctx->sample_freq;
+            
+            /* Grow buffer if needed */
+            if (flux_count >= capacity) {
+                capacity *= 2;
+                uint32_t* new_flux = realloc(flux, capacity * sizeof(uint32_t));
+                if (!new_flux) {
+                    free(flux);
+                    return UFT_ERR_MEMORY;
+                }
+                flux = new_flux;
+            }
+            
+            flux[flux_count++] = (uint32_t)ns;
+            ticks = 0;
+            break;
+        }
+        
+        case GWRAW_OP_FLUX2: {
+            /* 2-byte flux value (big-endian) */
+            uint8_t hi = fgetc(ctx->fp);
+            uint8_t lo = fgetc(ctx->fp);
+            uint16_t val = ((uint16_t)hi << 8) | lo;
+            ticks += val;
+            
+            uint64_t ns = ((uint64_t)ticks * 1000000000ULL) / ctx->sample_freq;
+            
+            if (flux_count >= capacity) {
+                capacity *= 2;
+                uint32_t* new_flux = realloc(flux, capacity * sizeof(uint32_t));
+                if (!new_flux) {
+                    free(flux);
+                    return UFT_ERR_MEMORY;
+                }
+                flux = new_flux;
+            }
+            
+            flux[flux_count++] = (uint32_t)ns;
+            ticks = 0;
+            break;
+        }
+        
+        case GWRAW_OP_FLUX3: {
+            /* 3-byte flux value (big-endian) */
+            uint8_t b0 = fgetc(ctx->fp);
+            uint8_t b1 = fgetc(ctx->fp);
+            uint8_t b2 = fgetc(ctx->fp);
+            uint32_t val = ((uint32_t)b0 << 16) | ((uint32_t)b1 << 8) | b2;
+            ticks += val;
+            
+            uint64_t ns = ((uint64_t)ticks * 1000000000ULL) / ctx->sample_freq;
+            
+            if (flux_count >= capacity) {
+                capacity *= 2;
+                uint32_t* new_flux = realloc(flux, capacity * sizeof(uint32_t));
+                if (!new_flux) {
+                    free(flux);
+                    return UFT_ERR_MEMORY;
+                }
+                flux = new_flux;
+            }
+            
+            flux[flux_count++] = (uint32_t)ns;
+            ticks = 0;
+            break;
+        }
+        
+        case GWRAW_OP_SPACE: {
+            /* Extended space - accumulate ticks but don't output */
+            uint8_t val = fgetc(ctx->fp);
+            ticks += val;
+            break;
+        }
+        
+        case GWRAW_OP_ASTABLE: {
+            /* Astable timing info - skip for now */
+            fgetc(ctx->fp);  /* Skip 1 byte */
+            break;
+        }
+        
+        case GWRAW_OP_EOF:
+            /* Explicit end of stream */
+            goto track_complete;
+            
+        default:
+            /* Unknown opcode - could be data corruption */
+            /* For robustness, treat as potential end */
+            if (flux_count > 1000) {
+                /* We have significant data, assume track is done */
+                goto track_complete;
+            }
+            /* Otherwise skip and continue */
+            break;
+        }
+    }
+    
+track_complete:
+    /* Shrink buffer to actual size */
+    if (flux_count > 0) {
+        uint32_t* final_flux = realloc(flux, flux_count * sizeof(uint32_t));
+        if (final_flux) {
+            flux = final_flux;
+        }
+        
+        *flux_ns = flux;
+        *count = flux_count;
+        if (has_index) *has_index = found_index;
+        
+        ctx->tracks_read++;
+        ctx->total_flux_transitions += flux_count;
+        ctx->current_track++;
+        
+        return UFT_SUCCESS;
+    } else {
+        /* No flux data found */
+        free(flux);
+        return UFT_ERR_NOT_FOUND;
+    }
+}

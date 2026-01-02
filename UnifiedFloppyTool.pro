@@ -1,39 +1,42 @@
-###############################################################################
+# ═══════════════════════════════════════════════════════════════════════════════
 # UnifiedFloppyTool v3.2.0 - VISUAL Edition
-# 
-# NEW IN v3.2.0:
-# - Dark Mode Toggle (Ctrl+D)
-# - Status Tab with Hex Dump & Sector Info
-# - Status LED Bar (Hardware connection indicator)
-# - Disk Analyzer Window (HxC-style visualization)
-# - Recent Files Menu
-# - Drag & Drop support
-# - Full Keyboard Shortcuts
-# - Complete Menu Structure (File/Drive/Tools/Settings/Help)
-# - Multi-Language support (Load external language files)
-# - Tool Buttons: Label Editor, BAM/FAT Viewer, Bootblock, Protection
-#
-# EXISTING FEATURES:
-# - 7 Tabs (Workflow, Status, Hardware, Settings, Protection, Catalog, Tools)
-# - 11 Protection Profiles
-# - DiskDupe (dd*) Detection + Expert Mode
-# - Batch Operations, Disk Catalog, Comparison Tool, Health Analyzer
-# - 175+ Parameters
-###############################################################################
+# ═══════════════════════════════════════════════════════════════════════════════
 
-QT       += core gui widgets
-
-greaterThan(QT_MAJOR_VERSION, 5): QT += widgets
+QT += core gui widgets
+greaterThan(QT_MAJOR_VERSION, 5): QT += core5compat
 
 CONFIG += c++17
+CONFIG += sdk_no_version_check
 
 TARGET = UnifiedFloppyTool
 TEMPLATE = app
+VERSION = 3.2.0
 
-###############################################################################
-# Source Files
-###############################################################################
+DEFINES += APP_VERSION=\\\"$$VERSION\\\"
+DEFINES += APP_NAME=\\\"UnifiedFloppyTool\\\"
+DEFINES += APP_EDITION=\\\"VISUAL\\\"
+DEFINES += UFT_VERSION=\\\"$$VERSION\\\"
 
+# Build info
+win32: message("Compiler: MSVC")
+macx: message("Compiler: Clang (macOS)")
+unix:!macx: message("Compiler: GCC/Clang (Linux)")
+message("════════════════════════════════════════════════════")
+message("  UnifiedFloppyTool v$$VERSION - VISUAL Edition")
+message("════════════════════════════════════════════════════")
+
+# Platform specific
+win32 {
+    exists(resources/icon.ico): RC_ICONS = resources/icon.ico
+    DEFINES += WIN32_LEAN_AND_MEAN NOMINMAX
+}
+
+macx {
+    exists(resources/icon.icns): ICON = resources/icon.icns
+    QMAKE_MACOSX_DEPLOYMENT_TARGET = 11.0
+}
+
+# Sources
 SOURCES += \
     src/main.cpp \
     src/mainwindow.cpp \
@@ -46,8 +49,10 @@ SOURCES += \
     src/catalogtab.cpp \
     src/toolstab.cpp \
     src/diskanalyzerwindow.cpp \
-    src/decodejob.cpp
+    src/decodejob.cpp \
+    src/settingsmanager.cpp
 
+# Headers
 HEADERS += \
     src/mainwindow.h \
     src/visualdisk.h \
@@ -60,14 +65,9 @@ HEADERS += \
     src/toolstab.h \
     src/diskanalyzerwindow.h \
     src/decodejob.h \
-    src/inputvalidation.h \
-    src/pathutils.h \
     src/settingsmanager.h
 
-###############################################################################
-# UI Forms (Qt Designer files)
-###############################################################################
-
+# UI Forms
 FORMS += \
     forms/mainwindow.ui \
     forms/tab_workflow.ui \
@@ -81,141 +81,33 @@ FORMS += \
     forms/diskanalyzer_window.ui \
     forms/dialog_validation.ui
 
-###############################################################################
-# Include Paths
-###############################################################################
-
-INCLUDEPATH += src
-INCLUDEPATH += include
-
-###############################################################################
-# Compiler-Specific Settings
-###############################################################################
-
-# ─── MSVC (Windows with Visual Studio) ──────────────────────────────────────
-win32-msvc* {
-    message("Compiler: MSVC (Visual Studio)")
-    
-    QMAKE_CXXFLAGS += /W3
-    QMAKE_CFLAGS += /W3
-    
-    CONFIG(debug, debug|release) {
-        DEFINES += UFT_DEBUG_MEMORY DEBUG_BUILD
-        QMAKE_CXXFLAGS += /Od /Zi
-        QMAKE_CFLAGS += /Od /Zi
-    } else {
-        DEFINES += NDEBUG RELEASE_BUILD
-        QMAKE_CXXFLAGS += /O2
-        QMAKE_CFLAGS += /O2
-    }
-}
-
-# ─── MinGW (Windows with GCC) ───────────────────────────────────────────────
-win32-g++ {
-    message("Compiler: MinGW (GCC on Windows)")
-    
-    QMAKE_CFLAGS += -std=c11
-    QMAKE_CXXFLAGS += -Wall -Wextra -Wno-unused-parameter
-    QMAKE_CFLAGS += -Wall -Wextra -Wno-unused-parameter
-    
-    CONFIG(debug, debug|release) {
-        DEFINES += UFT_DEBUG_MEMORY DEBUG_BUILD
-        QMAKE_CXXFLAGS += -g -O0
-        QMAKE_CFLAGS += -g -O0
-    } else {
-        DEFINES += NDEBUG RELEASE_BUILD
-        QMAKE_CXXFLAGS += -O3
-        QMAKE_CFLAGS += -O3
-    }
-    
-    LIBS += -lpthread
-}
-
-# ─── GCC/Clang (Linux) ──────────────────────────────────────────────────────
-unix:!macx {
-    message("Compiler: GCC/Clang (Linux)")
-    
-    QMAKE_CFLAGS += -std=c11
-    QMAKE_CXXFLAGS += -Wall -Wextra -Wno-unused-parameter
-    QMAKE_CFLAGS += -Wall -Wextra -Wno-unused-parameter
-    
-    CONFIG(debug, debug|release) {
-        DEFINES += UFT_DEBUG_MEMORY DEBUG_BUILD
-        QMAKE_CXXFLAGS += -g -O0
-        QMAKE_CFLAGS += -g -O0
-    } else {
-        DEFINES += NDEBUG RELEASE_BUILD
-        QMAKE_CXXFLAGS += -O3
-        QMAKE_CFLAGS += -O3
-    }
-    
-    LIBS += -lpthread
-}
-
-# ─── macOS ───────────────────────────────────────────────────────────────────
-macx {
-    message("Compiler: Clang (macOS)")
-    
-    QMAKE_CFLAGS += -std=c11
-    QMAKE_CXXFLAGS += -Wall -Wextra -Wno-unused-parameter
-    QMAKE_CFLAGS += -Wall -Wextra -Wno-unused-parameter
-    
-    CONFIG(debug, debug|release) {
-        DEFINES += UFT_DEBUG_MEMORY DEBUG_BUILD
-        QMAKE_CXXFLAGS += -g -O0
-        QMAKE_CFLAGS += -g -O0
-    } else {
-        DEFINES += NDEBUG RELEASE_BUILD
-        QMAKE_CXXFLAGS += -O3
-        QMAKE_CFLAGS += -O3
-    }
-    
-    ICON = resources/icon.icns
-}
-
-###############################################################################
-# Version Info
-###############################################################################
-
-VERSION = 3.2.0
-DEFINES += UFT_VERSION=\\\"$$VERSION\\\"
-DEFINES += APP_VERSION=\\\"$$VERSION\\\"
-DEFINES += APP_NAME=\\\"UnifiedFloppyTool\\\"
-DEFINES += APP_EDITION=\\\"VISUAL\\\"
-
-###############################################################################
 # Resources
-###############################################################################
+exists(resources/resources.qrc): RESOURCES += resources/resources.qrc
 
-RESOURCES += \
-    resources/resources.qrc
+# Include paths
+INCLUDEPATH += src include include/uft
 
-###############################################################################
-# Installation
-###############################################################################
-
-unix {
-    target.path = /usr/local/bin
-    INSTALLS += target
+# Compiler flags
+gcc|clang {
+    QMAKE_CXXFLAGS += -Wall -Wextra -Wno-unused-parameter
+    QMAKE_CXXFLAGS_RELEASE += -O2
 }
 
-###############################################################################
-# Build Messages
-###############################################################################
+msvc {
+    QMAKE_CXXFLAGS += /W3 /utf-8
+    QMAKE_CXXFLAGS_RELEASE += /O2
+}
 
-message("════════════════════════════════════════════════════")
-message("  UnifiedFloppyTool v3.2.0 - VISUAL Edition")
-message("════════════════════════════════════════════════════")
-message("Qt version: $$QT_VERSION")
-message("Compiler: $$QMAKESPEC")
-message("Target: $$TARGET")
-message("════════════════════════════════════════════════════")
-message("NEW IN v3.2.0:")
-message("  ✅ Dark Mode Toggle (Ctrl+D)")
-message("  ✅ Status Tab with Hex Dump")
-message("  ✅ Status LED Bar")
-message("  ✅ Disk Analyzer Window")
-message("  ✅ Recent Files Menu")
-message("  ✅ Drag & Drop Support")
-message("  ✅ Full Keyboard Shortcuts")
-message("════════════════════════════════════════════════════")
+# Output directories
+CONFIG(debug, debug|release) {
+    DEFINES += DEBUG_BUILD UFT_DEBUG_MEMORY
+    DESTDIR = debug
+} else {
+    DEFINES += RELEASE_BUILD NDEBUG
+    DESTDIR = release
+}
+
+OBJECTS_DIR = $$DESTDIR/.obj
+MOC_DIR = $$DESTDIR/.moc
+RCC_DIR = $$DESTDIR/.rcc
+UI_DIR = $$DESTDIR/.ui

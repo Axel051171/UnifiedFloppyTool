@@ -26,6 +26,13 @@
  </item>
  <item row="0" column="1">
  <widget class="QComboBox" name="comboProfile">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="maximumWidth"><number>250</number></property>
  <item>
  <property name="text">
  <string>Custom (User-Defined)</string>
@@ -513,6 +520,13 @@
  </item>
  <item row="1" column="1">
  <widget class="QComboBox" name="comboSync">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="maximumWidth"><number>250</number></property>
  <item>
  <property name="text">
  <string>Standard ($FF × 10)</string>
@@ -616,6 +630,13 @@
  </item>
  <item row="2" column="1">
  <widget class="QComboBox" name="comboHalfTrackStep">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="maximumWidth"><number>250</number></property>
  <item>
  <property name="text">
  <string>0.5 (Standard)</string>

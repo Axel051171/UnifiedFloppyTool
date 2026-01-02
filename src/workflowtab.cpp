@@ -48,7 +48,7 @@ void WorkflowTab::connectSignals()
     connect(ui->btnDestFile, &QPushButton::clicked, this, &WorkflowTab::onDestFileClicked);
     
     // Start/Abort button
-    connect(ui->btnStart, &QPushButton::clicked, this, &WorkflowTab::onStartAbortClicked);
+    connect(ui->btnStartAbort, &QPushButton::clicked, this, &WorkflowTab::onStartAbortClicked);
 }
 
 void WorkflowTab::onSourceFluxClicked()
@@ -98,8 +98,8 @@ void WorkflowTab::onStartAbortClicked()
     if (!m_isRunning) {
         // Start operation with worker thread
         m_isRunning = true;
-        ui->btnStart->setText("⏹ ABBRECHEN");
-        ui->btnStart->setStyleSheet("background-color: #f44336; color: white;");
+        ui->btnStartAbort->setText("⏹ ABBRECHEN");
+        ui->btnStartAbort->setStyleSheet("background-color: #f44336; color: white;");
         
         // Create worker thread
         m_workerThread = new QThread(this);
@@ -138,8 +138,8 @@ void WorkflowTab::onStartAbortClicked()
         }
         
         m_isRunning = false;
-        ui->btnStart->setText("▶ START");
-        ui->btnStart->setStyleSheet("background-color: #4CAF50; color: white;");
+        ui->btnStartAbort->setText("▶ START");
+        ui->btnStartAbort->setStyleSheet("background-color: #4CAF50; color: white;");
     }
 }
 

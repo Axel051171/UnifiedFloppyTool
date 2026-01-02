@@ -1,0 +1,27 @@
+UnifiedFloppyTool (UFT)
+=======================
+
+Version: 5.28.0 GOD MODE EXTENDED
+Date: 2026-01-02
+
+BUILD SYSTEM:
+-------------
+✓ CMake 3.16+ (primary)
+✓ Makefile (alternative)
+✓ Cross-platform (Linux/macOS/Windows)
+
+STATISTICS:
+-----------
+Total Files: 2,504+
+Total LOC: 537,985+
+
+Build with:
+  mkdir build && cd build
+  cmake .. -DCMAKE_BUILD_TYPE=Release
+  cmake --build . -j$(nproc)
+
+Or with Make:
+  make
+  make DEBUG=1  # Debug build
+
+See docs/BUILD.md for full documentation.

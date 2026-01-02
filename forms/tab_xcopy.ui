@@ -1,0 +1,355 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>TabXCopy</class>
+ <widget class="QWidget" name="TabXCopy">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>900</width>
+    <height>700</height>
+   </rect>
+  </property>
+  <layout class="QHBoxLayout" name="horizontalLayout_main">
+   
+   <!-- LEFT COLUMN -->
+   <item>
+    <layout class="QVBoxLayout" name="verticalLayout_left">
+     
+     <!-- SOURCE -->
+     <item>
+      <widget class="QGroupBox" name="groupSource">
+       <property name="title">
+        <string>Source</string>
+       </property>
+       <layout class="QFormLayout" name="formLayout_source">
+        <item row="0" column="0">
+         <widget class="QLabel" name="labelSourceType">
+          <property name="text"><string>Type:</string></property>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="QComboBox" name="comboSourceType">
+          <property name="maximumWidth"><number>200</number></property>
+          <item><property name="text"><string>Drive</string></property></item>
+          <item><property name="text"><string>Image File</string></property></item>
+         </widget>
+        </item>
+        <item row="1" column="0">
+         <widget class="QLabel" name="labelSourceDrive">
+          <property name="text"><string>Drive:</string></property>
+         </widget>
+        </item>
+        <item row="1" column="1">
+         <widget class="QComboBox" name="comboSourceDrive">
+          <property name="maximumWidth"><number>200</number></property>
+          <item><property name="text"><string>A: (Drive 0)</string></property></item>
+          <item><property name="text"><string>B: (Drive 1)</string></property></item>
+         </widget>
+        </item>
+        <item row="2" column="0">
+         <widget class="QLabel" name="labelSourceFile">
+          <property name="text"><string>File:</string></property>
+         </widget>
+        </item>
+        <item row="2" column="1">
+         <layout class="QHBoxLayout">
+          <item>
+           <widget class="QLineEdit" name="editSourceFile">
+            <property name="placeholderText"><string>Select source image...</string></property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="btnBrowseSource">
+            <property name="text"><string>...</string></property>
+            <property name="maximumWidth"><number>30</number></property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     
+     <!-- DESTINATION -->
+     <item>
+      <widget class="QGroupBox" name="groupDest">
+       <property name="title">
+        <string>Destination</string>
+       </property>
+       <layout class="QFormLayout" name="formLayout_dest">
+        <item row="0" column="0">
+         <widget class="QLabel" name="labelDestType">
+          <property name="text"><string>Type:</string></property>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="QComboBox" name="comboDestType">
+          <property name="maximumWidth"><number>200</number></property>
+          <item><property name="text"><string>Image File</string></property></item>
+          <item><property name="text"><string>Drive</string></property></item>
+         </widget>
+        </item>
+        <item row="1" column="0">
+         <widget class="QLabel" name="labelDestDrive">
+          <property name="text"><string>Drive:</string></property>
+         </widget>
+        </item>
+        <item row="1" column="1">
+         <widget class="QComboBox" name="comboDestDrive">
+          <property name="maximumWidth"><number>200</number></property>
+          <item><property name="text"><string>A: (Drive 0)</string></property></item>
+          <item><property name="text"><string>B: (Drive 1)</string></property></item>
+         </widget>
+        </item>
+        <item row="2" column="0">
+         <widget class="QLabel" name="labelDestFile">
+          <property name="text"><string>File:</string></property>
+         </widget>
+        </item>
+        <item row="2" column="1">
+         <layout class="QHBoxLayout">
+          <item>
+           <widget class="QLineEdit" name="editDestFile">
+            <property name="placeholderText"><string>Select destination...</string></property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="btnBrowseDest">
+            <property name="text"><string>...</string></property>
+            <property name="maximumWidth"><number>30</number></property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     
+     <!-- TRACK RANGE -->
+     <item>
+      <widget class="QGroupBox" name="groupRange">
+       <property name="title">
+        <string>Track Range</string>
+       </property>
+       <layout class="QFormLayout" name="formLayout_range">
+        <item row="0" column="0">
+         <widget class="QLabel" name="labelStartTrack">
+          <property name="text"><string>Start Track:</string></property>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="QSpinBox" name="spinStartTrack">
+          <property name="maximum"><number>255</number></property>
+          <property name="value"><number>0</number></property>
+          <property name="maximumWidth"><number>80</number></property>
+         </widget>
+        </item>
+        <item row="1" column="0">
+         <widget class="QLabel" name="labelEndTrack">
+          <property name="text"><string>End Track:</string></property>
+         </widget>
+        </item>
+        <item row="1" column="1">
+         <widget class="QSpinBox" name="spinEndTrack">
+          <property name="maximum"><number>255</number></property>
+          <property name="value"><number>79</number></property>
+          <property name="maximumWidth"><number>80</number></property>
+         </widget>
+        </item>
+        <item row="2" column="0">
+         <widget class="QLabel" name="labelSides">
+          <property name="text"><string>Sides:</string></property>
+         </widget>
+        </item>
+        <item row="2" column="1">
+         <widget class="QComboBox" name="comboSides">
+          <property name="maximumWidth"><number>150</number></property>
+          <item><property name="text"><string>Both (0+1)</string></property></item>
+          <item><property name="text"><string>Side 0 only</string></property></item>
+          <item><property name="text"><string>Side 1 only</string></property></item>
+         </widget>
+        </item>
+        <item row="3" column="0" colspan="2">
+         <widget class="QCheckBox" name="checkAllTracks">
+          <property name="text"><string>Copy all tracks</string></property>
+          <property name="checked"><bool>true</bool></property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     
+     <item><spacer><property name="orientation"><enum>Qt::Vertical</enum></property></spacer></item>
+     
+    </layout>
+   </item>
+   
+   <!-- RIGHT COLUMN -->
+   <item>
+    <layout class="QVBoxLayout" name="verticalLayout_right">
+     
+     <!-- COPY MODE -->
+     <item>
+      <widget class="QGroupBox" name="groupMode">
+       <property name="title">
+        <string>Copy Mode</string>
+       </property>
+       <layout class="QFormLayout" name="formLayout_mode">
+        <item row="0" column="0">
+         <widget class="QLabel" name="labelCopyMode">
+          <property name="text"><string>Mode:</string></property>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="QComboBox" name="comboCopyMode">
+          <property name="maximumWidth"><number>200</number></property>
+          <item><property name="text"><string>Sector Copy</string></property></item>
+          <item><property name="text"><string>Track Copy</string></property></item>
+          <item><property name="text"><string>Flux Copy</string></property></item>
+          <item><property name="text"><string>Nibble Copy</string></property></item>
+         </widget>
+        </item>
+        <item row="1" column="0" colspan="2">
+         <widget class="QCheckBox" name="checkVerify">
+          <property name="text"><string>Verify after write</string></property>
+          <property name="checked"><bool>true</bool></property>
+         </widget>
+        </item>
+        <item row="2" column="0">
+         <widget class="QLabel" name="labelVerifyRetries">
+          <property name="text"><string>Verify retries:</string></property>
+         </widget>
+        </item>
+        <item row="2" column="1">
+         <widget class="QSpinBox" name="spinVerifyRetries">
+          <property name="maximum"><number>10</number></property>
+          <property name="value"><number>3</number></property>
+          <property name="maximumWidth"><number>80</number></property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     
+     <!-- ERROR HANDLING -->
+     <item>
+      <widget class="QGroupBox" name="groupErrors">
+       <property name="title">
+        <string>Error Handling</string>
+       </property>
+       <layout class="QVBoxLayout" name="verticalLayout_errors">
+        <item>
+         <widget class="QCheckBox" name="checkIgnoreErrors">
+          <property name="text"><string>Ignore errors</string></property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="checkRetryErrors">
+          <property name="text"><string>Retry on error</string></property>
+          <property name="checked"><bool>true</bool></property>
+         </widget>
+        </item>
+        <item>
+         <layout class="QHBoxLayout">
+          <item>
+           <widget class="QLabel" name="labelMaxRetries">
+            <property name="text"><string>Max retries:</string></property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QSpinBox" name="spinMaxRetries">
+            <property name="maximum"><number>50</number></property>
+            <property name="value"><number>5</number></property>
+            <property name="maximumWidth"><number>80</number></property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="checkSkipBad">
+          <property name="text"><string>Skip bad sectors</string></property>
+          <property name="checked"><bool>true</bool></property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="checkFillBad">
+          <property name="text"><string>Fill bad sectors with:</string></property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QSpinBox" name="spinFillByte">
+          <property name="prefix"><string>0x</string></property>
+          <property name="displayIntegerBase"><number>16</number></property>
+          <property name="maximum"><number>255</number></property>
+          <property name="value"><number>0</number></property>
+          <property name="maximumWidth"><number>80</number></property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     
+     <!-- MULTIPLE COPIES -->
+     <item>
+      <widget class="QGroupBox" name="groupMultiple">
+       <property name="title">
+        <string>Multiple Copies</string>
+       </property>
+       <layout class="QFormLayout" name="formLayout_multiple">
+        <item row="0" column="0">
+         <widget class="QLabel" name="labelNumCopies">
+          <property name="text"><string>Number of copies:</string></property>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="QSpinBox" name="spinNumCopies">
+          <property name="minimum"><number>1</number></property>
+          <property name="maximum"><number>100</number></property>
+          <property name="value"><number>1</number></property>
+          <property name="maximumWidth"><number>80</number></property>
+         </widget>
+        </item>
+        <item row="1" column="0" colspan="2">
+         <widget class="QCheckBox" name="checkAutoEject">
+          <property name="text"><string>Auto-eject after copy</string></property>
+         </widget>
+        </item>
+        <item row="2" column="0" colspan="2">
+         <widget class="QCheckBox" name="checkWaitForDisk">
+          <property name="text"><string>Wait for next disk</string></property>
+          <property name="checked"><bool>true</bool></property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     
+     <item><spacer><property name="orientation"><enum>Qt::Vertical</enum></property></spacer></item>
+     
+     <!-- ACTION BUTTONS -->
+     <item>
+      <layout class="QHBoxLayout">
+       <item>
+        <widget class="QPushButton" name="btnStartCopy">
+         <property name="text"><string>▶ Start Copy</string></property>
+         <property name="styleSheet"><string>background-color: #4CAF50; color: white; font-weight: bold; padding: 10px;</string></property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="btnStopCopy">
+         <property name="text"><string>⏹ Stop</string></property>
+         <property name="enabled"><bool>false</bool></property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+     
+    </layout>
+   </item>
+   
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

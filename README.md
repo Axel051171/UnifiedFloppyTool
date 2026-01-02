@@ -1,201 +1,63 @@
-# UnifiedFloppyTool v3.2.0
+# UnifiedFloppyTool v3.2.0 - VISUAL Edition
 
-<p align="center">
-  <b>A comprehensive floppy disk preservation and analysis tool</b>
-</p>
+Cross-platform floppy disk preservation and analysis tool.
 
-<p align="center">
-  <img src="https://img.shields.io/badge/version-3.2.0-blue.svg" alt="Version">
-  <img src="https://img.shields.io/badge/Qt-6.6+-green.svg" alt="Qt">
-  <img src="https://img.shields.io/badge/license-GPL--3.0-orange.svg" alt="License">
-  <img src="https://img.shields.io/badge/platform-Win%20%7C%20Linux%20%7C%20macOS-lightgrey.svg" alt="Platform">
-</p>
+![Build Status](https://github.com/Axel051171/UnifiedFloppyTool/actions/workflows/ci.yml/badge.svg)
 
----
+## ✨ Features
 
-## ✨ What's New in v3.2.0
+- **Dark Mode Toggle** (Ctrl+D)
+- **Status Tab** with Hex Dump viewer
+- **Status LED Bar** for visual feedback
+- **Disk Analyzer Window** for detailed analysis
+- **Recent Files Menu** for quick access
+- **Drag & Drop Support** for files
+- **Full Keyboard Shortcuts**
+- **Format Auto-Detection** (30+ formats)
 
-### 🌙 Dark Mode
-Toggle with `Ctrl+D` or `Settings → Dark Mode`
+## 🔧 Supported Formats
 
-### 📊 Status Tab
-- Real-time sector info with hex dump
-- Tool buttons: Label Editor, BAM/FAT Viewer, Bootblock, Protection Analyzer
-
-### 💡 Status LED
-- Visual indicator for hardware connection status
-- Colors: Gray → Green → Orange → Red
-
-### 🔬 Disk Analyzer
-- HxC-style visualization
-- Side 0 / Side 1 views
-- Track analysis format filters
-
-### ⌨️ Keyboard Shortcuts
-| Key | Action |
-|-----|--------|
-| `Ctrl+O` | Open |
-| `Ctrl+S` | Save |
-| `Ctrl+D` | Dark Mode |
-| `F5` | Read Disk |
-| `F6` | Write Disk |
-| `F8` | Analyze |
-
-### 📁 Drag & Drop
-Drop disk images directly onto the window
-
-### 🕐 Recent Files
-Quick access to last 10 opened files
-
----
-
-## 📥 Downloads
-
-Pre-built binaries for all platforms:
-
-| Platform | Download |
-|----------|----------|
-| **Windows x64** | [UnifiedFloppyTool-Windows-x64.zip](../../releases/latest) |
-| **Linux x64** | [UnifiedFloppyTool-Linux-x64.tar.gz](../../releases/latest) |
-| **macOS x64** | [UnifiedFloppyTool-macOS-x64.dmg](../../releases/latest) |
-
-Or build from source (see below).
-
----
-
-## 🖥️ Screenshots
-
-### Light Mode
-```
-┌─ UnifiedFloppyTool v3.2.0 ──────────────────────────────────────┐
-│ ● No hardware connected              No image loaded            │
-├─────────────────────────────────────────────────────────────────┤
-│ [Workflow] [Status] [Hardware] [Settings] [Catalog] [Tools]     │
-│                                                                 │
-│ ┌─ SOURCE ─────────────────────────────────────────────────────┐│
-│ │ ◉ Physical Drive  ○ Image File                               ││
-│ │ Drive: [Greaseweazle F7 ▼]  [Detect]                         ││
-│ └──────────────────────────────────────────────────────────────┘│
-└─────────────────────────────────────────────────────────────────┘
-```
-
----
-
-## 💾 Supported Formats
-
-### Sector Images
 | Platform | Formats |
 |----------|---------|
-| Commodore | D64, G64, D71, D81, D80, D82 |
-| Amiga | ADF, ADZ, DMS, HDF |
-| Apple | NIB, WOZ, DSK, DO, PO |
-| Atari | ATR, XFD, DCM, ATX |
-| PC/IBM | IMG, IMA, IMD, TD0 |
+| Commodore | D64, G64, D71, D81, NIB |
+| Amiga | ADF, IPF, ADZ, DMS |
+| Apple | NIB, WOZ, DSK |
+| Atari | ATR, XFD, ATX |
+| PC/DOS | IMG, IMD, TD0 |
+| BBC Micro | SSD, DSD |
+| Flux | SCP, HFE, RAW, KF |
 
-### Flux Images
-| Format | Description |
-|--------|-------------|
-| SCP | SuperCard Pro |
-| HFE | HxC Floppy Emulator |
-| RAW | Greaseweazle Raw |
-| KF | KryoFlux Stream |
-
----
-
-## 🔌 Supported Hardware
-
-| Controller | Status |
-|------------|--------|
-| Greaseweazle (F1/F7) | ✅ Full support |
-| SuperCard Pro | ✅ Full support |
-| KryoFlux | ✅ Full support |
-| FluxEngine | ✅ Full support |
-| FC5025 | ✅ Full support |
-| USB Floppy Drive | ✅ Basic support |
-| XUM1541 (C64 IEC) | ✅ Full support |
-
----
-
-## 🛠️ Building from Source
+## 🏗️ Building
 
 ### Prerequisites
 
-- **Qt 6.6+** (or Qt 5.15+)
-- **C++17** compiler
-- **CMake 3.20+** or **qmake**
+- CMake 3.16+
+- Qt 6.6+
+- C++17 compiler (GCC 9+, Clang 10+, MSVC 2019+)
 
-### Windows (MSVC)
-
-```batch
-mkdir build && cd build
-qmake ../UnifiedFloppyTool.pro CONFIG+=release
-nmake
-```
-
-### Linux
+### Build with CMake (Recommended)
 
 ```bash
-sudo apt install qt6-base-dev build-essential
+cmake -B build -G Ninja
+cmake --build build --config Release
+```
+
+### Build with qmake
+
+```bash
 mkdir build && cd build
 qmake ../UnifiedFloppyTool.pro CONFIG+=release
 make -j$(nproc)
 ```
 
-### macOS
+## 📦 Downloads
 
-```bash
-brew install qt@6
-mkdir build && cd build
-qmake ../UnifiedFloppyTool.pro CONFIG+=release
-make -j$(sysctl -n hw.ncpu)
-macdeployqt UnifiedFloppyTool.app -dmg
-```
+Pre-built binaries are available on the [Releases](https://github.com/Axel051171/UnifiedFloppyTool/releases) page:
 
----
-
-## 📖 Documentation
-
-- [Features Overview](docs/FEATURES_v3.1.md)
-- [Validation System](docs/VALIDATION.md)
-- [Drive Detection](docs/DRIVE_DETECTION.md)
-- [C64 Integration](docs/C64_INTEGRATION.md)
-
----
-
-## 🤝 Contributing
-
-Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md).
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Submit a pull request
-
----
+- **Windows** (x64) - `.zip`
+- **macOS** (x64) - `.tar.gz`
+- **Linux** (x64) - `.tar.gz`
 
 ## 📄 License
 
-This project is licensed under the **GPL-3.0 License** - see [LICENSE](LICENSE) for details.
-
----
-
-## 👤 Author
-
-**Axel Muhr**
-
-- GitHub: [@axelmuhr](https://github.com/axelmuhr)
-
----
-
-## 🙏 Acknowledgments
-
-- HxC Floppy Emulator project
-- Greaseweazle project
-- KryoFlux team
-- All the retro computing community
-
----
-
-<p align="center">
-  Made with ❤️ for the retro computing community
-</p>
+This project is for floppy disk preservation and research purposes.

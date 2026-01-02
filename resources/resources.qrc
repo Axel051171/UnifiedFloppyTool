@@ -1,5 +1,5 @@
 <RCC>
     <qresource prefix="/">
-        <!-- Add icons and images here later -->
+        <file>README.md</file>
     </qresource>
 </RCC>

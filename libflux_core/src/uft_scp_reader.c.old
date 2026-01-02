@@ -1,0 +1,319 @@
+/**
+ * @file uft_scp_reader.c
+ * @brief SuperCard Pro (SCP) Flux Image Reader Implementation
+ */
+
+#include "uft_scp_reader.h"
+#include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
+
+/* SCP file header structure (16 bytes) */
+typedef struct __attribute__((packed)) {
+    uint8_t magic[3];           /* "SCP" */
+    uint8_t version;            /* 0x00-0x21 */
+    uint8_t disk_type;
+    uint8_t revolutions;
+    uint8_t start_track;
+    uint8_t end_track;
+    uint8_t flags;
+    uint8_t bit_cell_width;
+    uint16_t heads;
+    uint8_t reserved;
+    uint32_t checksum;
+} scp_header_t;
+
+/* SCP track header (per revolution) */
+typedef struct __attribute__((packed)) {
+    uint8_t signature[3];       /* "TRK" */
+    uint8_t track_number;
+} scp_track_hdr_t;
+
+/* ========================================================================
+ * HELPER FUNCTIONS
+ * ======================================================================== */
+
+static const char* disk_type_names[] = {
+    [0x00] = "Commodore 64",
+    [0x04] = "Amiga",
+    [0x08] = "Apple II",
+    [0x0C] = "Atari ST",
+    [0x10] = "Atari 810",
+    [0x14] = "PC 360K/720K",
+    [0x18] = "PC 1.2M/1.44M",
+    [0xFF] = "Custom"
+};
+
+const char* uft_scp_disk_type_name(uint8_t disk_type) {
+    if (disk_type < sizeof(disk_type_names) / sizeof(disk_type_names[0])) {
+        const char* name = disk_type_names[disk_type];
+        if (name) return name;
+    }
+    if (disk_type == 0xFF) return "Custom";
+    return "Unknown";
+}
+
+const char* uft_scp_version_string(uint8_t version) {
+    static char buf[8];
+    switch (version) {
+    case 0x10: return "1.0";
+    case 0x15: return "1.5";
+    case 0x20: return "2.0";
+    case 0x21: return "2.1";
+    default:
+        snprintf(buf, sizeof(buf), "0x%02X", version);
+        return buf;
+    }
+}
+
+/* Read 16-bit little-endian */
+static uint16_t read_le16(FILE* fp) {
+    uint8_t buf[2];
+    fread(buf, 1, 2, fp);
+    return (uint16_t)buf[0] | ((uint16_t)buf[1] << 8);
+}
+
+/* Read 32-bit little-endian */
+static uint32_t read_le32(FILE* fp) {
+    uint8_t buf[4];
+    fread(buf, 1, 4, fp);
+    return (uint32_t)buf[0] | ((uint32_t)buf[1] << 8) |
+           ((uint32_t)buf[2] << 16) | ((uint32_t)buf[3] << 24);
+}
+
+/* ========================================================================
+ * OPEN/CLOSE
+ * ======================================================================== */
+
+uft_rc_t uft_scp_open(const char* path, uft_scp_ctx_t** ctx) {
+    UFT_CHECK_NULL(path);
+    UFT_CHECK_NULL(ctx);
+    
+    *ctx = NULL;
+    
+    /* Allocate context */
+    uft_scp_ctx_t* scp = calloc(1, sizeof(uft_scp_ctx_t));
+    if (!scp) {
+        return UFT_ERR_MEMORY;
+    }
+    
+    /* Open file */
+    scp->fp = fopen(path, "rb");
+    if (!scp->fp) {
+        free(scp);
+        return UFT_ERR_NOT_FOUND;
+    }
+    
+    /* Read header */
+    uint8_t magic[3];
+    if (fread(magic, 1, 3, scp->fp) != 3) {
+        fclose(scp->fp);
+        free(scp);
+        return UFT_ERR_CORRUPTED;
+    }
+    
+    /* Verify magic */
+    if (memcmp(magic, "SCP", 3) != 0) {
+        fclose(scp->fp);
+        free(scp);
+        return UFT_ERR_INVALID_FORMAT;
+    }
+    
+    /* Read rest of header */
+    scp->version = fgetc(scp->fp);
+    scp->disk_type = fgetc(scp->fp);
+    scp->revolutions = fgetc(scp->fp);
+    scp->start_track = fgetc(scp->fp);
+    scp->end_track = fgetc(scp->fp);
+    scp->flags = fgetc(scp->fp);
+    scp->bit_cell_width = fgetc(scp->fp);
+    scp->heads = read_le16(scp->fp);
+    fgetc(scp->fp);  /* reserved */
+    scp->checksum = read_le32(scp->fp);
+    
+    /* Validate version */
+    if (scp->version != 0x10 && scp->version != 0x15 &&
+        scp->version != 0x20 && scp->version != 0x21) {
+        fclose(scp->fp);
+        free(scp);
+        return UFT_ERR_UNSUPPORTED;
+    }
+    
+    /* Read track offset table (168 entries = 84 tracks * 2 heads) */
+    for (int i = 0; i < 168; i++) {
+        scp->track_offsets[i] = read_le32(scp->fp);
+    }
+    
+    *ctx = scp;
+    return UFT_SUCCESS;
+}
+
+void uft_scp_close(uft_scp_ctx_t** ctx) {
+    if (ctx && *ctx) {
+        if ((*ctx)->fp) {
+            fclose((*ctx)->fp);
+        }
+        free(*ctx);
+        *ctx = NULL;
+    }
+}
+
+/* ========================================================================
+ * TRACK ACCESS
+ * ======================================================================== */
+
+bool uft_scp_has_track(
+    const uft_scp_ctx_t* ctx,
+    uint8_t track,
+    uint8_t head
+) {
+    if (!ctx || track > 83 || head > 1) {
+        return false;
+    }
+    
+    uint8_t idx = track * 2 + head;
+    return (ctx->track_offsets[idx] != 0);
+}
+
+uft_rc_t uft_scp_get_track_header(
+    uft_scp_ctx_t* ctx,
+    uint8_t track,
+    uint8_t head,
+    uft_scp_track_header_t* header
+) {
+    UFT_CHECK_NULLS(ctx, header);
+    
+    if (track > 83 || head > 1) {
+        return UFT_ERR_INVALID_ARG;
+    }
+    
+    uint8_t idx = track * 2 + head;
+    uint32_t offset = ctx->track_offsets[idx];
+    
+    if (offset == 0) {
+        return UFT_ERR_NOT_FOUND;
+    }
+    
+    /* Seek to track */
+    if (fseek(ctx->fp, offset, SEEK_SET) != 0) {
+        return UFT_ERR_IO;
+    }
+    
+    /* Verify track signature */
+    uint8_t sig[3];
+    if (fread(sig, 1, 3, ctx->fp) != 3 || memcmp(sig, "TRK", 3) != 0) {
+        return UFT_ERR_CORRUPTED;
+    }
+    
+    uint8_t trk_num = fgetc(ctx->fp);
+    if (trk_num != track) {
+        return UFT_ERR_CORRUPTED;
+    }
+    
+    /* Read revolution headers */
+    header->track_offset = offset;
+    header->duration = read_le32(ctx->fp);  /* First revolution duration */
+    header->entry_count = read_le32(ctx->fp);  /* First revolution entries */
+    header->index_offset = read_le32(ctx->fp);  /* Index position */
+    
+    return UFT_SUCCESS;
+}
+
+uft_rc_t uft_scp_read_track(
+    uft_scp_ctx_t* ctx,
+    uint8_t track,
+    uint8_t head,
+    uint8_t revolution,
+    uint32_t** flux_ns,
+    uint32_t* count
+) {
+    UFT_CHECK_NULLS(ctx, flux_ns, count);
+    
+    if (track > 83 || head > 1) {
+        return UFT_ERR_INVALID_ARG;
+    }
+    
+    if (revolution >= ctx->revolutions) {
+        return UFT_ERR_INVALID_ARG;
+    }
+    
+    uint8_t idx = track * 2 + head;
+    uint32_t offset = ctx->track_offsets[idx];
+    
+    if (offset == 0) {
+        return UFT_ERR_NOT_FOUND;
+    }
+    
+    /* Seek to track */
+    if (fseek(ctx->fp, offset, SEEK_SET) != 0) {
+        return UFT_ERR_IO;
+    }
+    
+    /* Verify signature */
+    uint8_t sig[4];
+    if (fread(sig, 1, 4, ctx->fp) != 4 || memcmp(sig, "TRK", 3) != 0) {
+        return UFT_ERR_CORRUPTED;
+    }
+    
+    /* Skip to desired revolution */
+    for (uint8_t rev = 0; rev <= revolution; rev++) {
+        uint32_t duration = read_le32(ctx->fp);
+        uint32_t entries = read_le32(ctx->fp);
+        uint32_t index_offset = read_le32(ctx->fp);
+        
+        if (rev == revolution) {
+            /* This is the revolution we want */
+            *count = entries;
+            
+            /* Allocate flux buffer */
+            uint32_t* flux = malloc(entries * sizeof(uint32_t));
+            if (!flux) {
+                return UFT_ERR_MEMORY;
+            }
+            
+            /* Read flux data */
+            uint32_t total_time = 0;
+            uint32_t flux_idx = 0;
+            
+            for (uint32_t i = 0; i < entries; i++) {
+                uint16_t interval;
+                
+                if (ctx->bit_cell_width == 0) {
+                    /* 16-bit flux values */
+                    interval = read_le16(ctx->fp);
+                } else {
+                    /* 8-bit flux values (rare) */
+                    interval = fgetc(ctx->fp);
+                }
+                
+                /* Handle overflow markers */
+                if (interval == 0) {
+                    /* Overflow - next value is actual time */
+                    interval = read_le16(ctx->fp);
+                }
+                
+                /* Convert to nanoseconds */
+                /* SCP uses 25ns units (40MHz sampling) */
+                uint32_t time_ns = interval * 25;
+                
+                flux[flux_idx++] = time_ns;
+                total_time += time_ns;
+            }
+            
+            *flux_ns = flux;
+            ctx->tracks_read++;
+            ctx->total_flux_transitions += entries;
+            
+            return UFT_SUCCESS;
+            
+        } else {
+            /* Skip this revolution's data */
+            uint32_t bytes_to_skip = entries * 2;  /* 16-bit values */
+            if (fseek(ctx->fp, bytes_to_skip, SEEK_CUR) != 0) {
+                return UFT_ERR_IO;
+            }
+        }
+    }
+    
+    return UFT_ERR_NOT_FOUND;
+}

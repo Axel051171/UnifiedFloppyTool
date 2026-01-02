@@ -1,6 +1,6 @@
 /**
  * @file mainwindow.h
- * @brief Main Window with file state tracking and format auto-detection
+ * @brief Main Window - Uses Qt Designer .ui file
  */
 
 #pragma once
@@ -15,32 +15,6 @@ class QDropEvent;
 QT_END_NAMESPACE
 
 class VisualDiskWindow;
-class FormatTab;
-class WorkflowTab;
-class StatusTab;
-
-/**
- * @brief Information about the currently loaded file
- */
-struct LoadedFileInfo {
-    QString filePath;
-    QString fileName;
-    QString detectedSystem;      // e.g. "Commodore", "Amiga"
-    QString detectedFormat;      // e.g. "D64", "ADF"
-    qint64 fileSize;
-    bool isLoaded;
-    bool isModified;
-    
-    void clear() {
-        filePath.clear();
-        fileName.clear();
-        detectedSystem.clear();
-        detectedFormat.clear();
-        fileSize = 0;
-        isLoaded = false;
-        isModified = false;
-    }
-};
 
 class MainWindow : public QMainWindow
 {
@@ -52,20 +26,10 @@ public:
     
     enum class LEDStatus { Disconnected, Connected, Busy, Error };
     void setLEDStatus(LEDStatus status);
-    
-    // File state access
-    bool hasLoadedFile() const { return m_loadedFile.isLoaded; }
-    const LoadedFileInfo& loadedFileInfo() const { return m_loadedFile; }
-
-signals:
-    void fileLoaded(const LoadedFileInfo &info);
-    void fileUnloaded();
-    void formatAutoDetected(const QString &system, const QString &format);
 
 protected:
     void dragEnterEvent(QDragEnterEvent *event) override;
     void dropEvent(QDropEvent *event) override;
-    void closeEvent(QCloseEvent *event) override;
 
 private slots:
     // File menu
@@ -81,9 +45,6 @@ private slots:
     void onHelp();
     void onAbout();
     void onKeyboardShortcuts();
-    
-    // Format change handling
-    void onOutputFormatChanged(const QString &system, const QString &format);
 
 private:
     void loadTabWidgets();
@@ -94,26 +55,9 @@ private:
     void updateRecentFilesMenu();
     void applyDarkMode(bool enabled);
     
-    // Format auto-detection
-    bool autoDetectFormat(const QString &filename);
-    QString detectSystemFromExtension(const QString &ext);
-    QString detectFormatFromFile(const QString &filename, qint64 fileSize);
-    
-    // File state management
-    void setFileLoaded(const QString &filename, const QString &system, const QString &format);
-    void clearLoadedFile();
-    bool confirmFormatChange(const QString &newSystem, const QString &newFormat);
-    
     Ui::MainWindow *ui;
     VisualDiskWindow *m_visualDiskWindow;
     
-    // Tab references for cross-communication
-    FormatTab *m_formatTab;
-    WorkflowTab *m_workflowTab;
-    StatusTab *m_statusTab;
-    
-    // File state
-    LoadedFileInfo m_loadedFile;
     QString m_currentFile;
     QStringList m_recentFiles;
     bool m_darkMode;

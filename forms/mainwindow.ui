@@ -56,7 +56,6 @@
       <widget class="QWidget" name="tab_status"><attribute name="title"><string>Status</string></attribute></widget>
       <widget class="QWidget" name="tab_hardware"><attribute name="title"><string>Hardware</string></attribute></widget>
       <widget class="QWidget" name="tab_format"><attribute name="title"><string>Settings</string></attribute></widget>
-      <widget class="QWidget" name="tab_protection"><attribute name="title"><string>Protection</string></attribute></widget>
       <widget class="QWidget" name="tab_catalog"><attribute name="title"><string>Catalog</string></attribute></widget>
       <widget class="QWidget" name="tab_tools"><attribute name="title"><string>Tools</string></attribute></widget>
      </widget>
