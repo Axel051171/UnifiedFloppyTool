@@ -30,6 +30,7 @@ static bool csv_parse(const uint8_t* data, size_t size, csv_file_t* csv) {
     
     /* Detect delimiter */
     uint32_t comma_count = 0, semi_count = 0, tab_count = 0;
+    // cppcheck-suppress arrayIndexOutOfBounds
     for (size_t i = 0; i < size && i < 1000; i++) {
         if (data[i] == ',') comma_count++;
         else if (data[i] == ';') semi_count++;

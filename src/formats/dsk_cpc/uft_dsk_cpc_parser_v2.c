@@ -86,7 +86,7 @@ typedef enum {
  */
 typedef struct {
     char           signature[34];      /* "MV - CPC..." or "EXTENDED CPC..." */
-    char           creator[14];        /* Creator name */
+    char           creator[15];        // +1 for null        /* Creator name */
     uint8_t        tracks;             /* Number of tracks */
     uint8_t        sides;              /* Number of sides */
     uint16_t       track_size;         /* Standard: track size, EDSK: unused */

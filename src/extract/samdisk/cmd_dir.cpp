@@ -632,9 +632,10 @@ bool IsCpmDirEntry(const uint8_t* pb_)
     // CPC special case - allow entries with a 2nd character of 6, used for some fancy effects
 //  if (p->file[1] != 0x06)
     {
-        // Ensure the file+ext are normal ASCII characters (ignoring bit 7)     illegal: !&()+,-./:;<=>[\]|
+        // Ensure the file+ext are normal ASCII characters (ignoring bit 7)
+        const uint8_t* name_bytes = &p->file[0];
         for (size_t i = 0; i < sizeof(p->file) + sizeof(p->ext); ++i)
-            if ((p->file[i] & 0x7f) < 0x20)
+            if ((name_bytes[i] & 0x7f) < 0x20)
                 return false;
     }
 

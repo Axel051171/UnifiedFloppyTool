@@ -361,7 +361,7 @@ void TrackBuilder::addAmigaSector(const CylHead& cylhead, int sector, const void
     auto remain = sectors - sector;
 
     uint32_t checksum = 0;
-    uint32_t info = (0xff << 24) | (((cylhead.cyl << 1) | cylhead.head) << 16) |
+    uint32_t info = (0xffU << 24) | (((cylhead.cyl << 1) | cylhead.head) << 16) |
         (sector << 8) | remain;
     addAmigaDword(info, checksum);
 

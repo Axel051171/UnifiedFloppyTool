@@ -295,7 +295,7 @@ static uft_error_t g64_open(uft_disk_t* disk, const char* path, bool read_only) 
     }
     
     // Header lesen
-    g64_header_t header;
+    g64_header_t header = {0};
     if (fread(&header, sizeof(header), 1, f) != 1) {
         fclose(f);
         return UFT_ERROR_FILE_READ;
@@ -419,7 +419,7 @@ static uft_error_t g64_create(uft_disk_t* disk, const char* path,
     }
     
     // Header schreiben
-    g64_header_t header;
+    g64_header_t header = {0};
     memcpy(header.signature, G64_SIGNATURE, 8);
     header.version = G64_VERSION;
     header.num_tracks = (uint8_t)g64_tracks;

@@ -81,14 +81,14 @@ static int adf_find_free_block(uint8_t *image, int start)
     uint8_t *bitmap = image + ADF_BITMAP_BLOCK * ADF_BLOCK_SIZE;
     int max_blocks = ADF_BLOCKS_DD;
     
-    for (int blk = start; blk < max_blocks; blk++) {
+    for (int blk = (start < 2) ? 2 : start; blk < max_blocks; blk++) {
         if (blk == ADF_ROOT_BLOCK || blk == ADF_BITMAP_BLOCK) continue;
         
         int word = (blk - 2) / 32;
         int bit = (blk - 2) % 32;
         
         uint32_t bitmap_word = read_be32(bitmap + 4 + word * 4);
-        if (bitmap_word & (1 << bit)) {
+        if (bitmap_word & (1U << (unsigned)bit)) {
             return blk;
         }
     }
@@ -107,7 +107,7 @@ static void adf_mark_block_used(uint8_t *image, int block)
     int bit = (block - 2) % 32;
     
     uint32_t bitmap_word = read_be32(bitmap + 4 + word * 4);
-    bitmap_word &= ~(1 << bit);
+    bitmap_word &= ~(1U << (unsigned)bit);
     write_be32(bitmap + 4 + word * 4, bitmap_word);
     
     /* Update checksum */

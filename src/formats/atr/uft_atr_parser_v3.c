@@ -231,8 +231,8 @@ typedef struct {
     uint8_t flags;          /* Bit 7=in use, Bit 6=deleted, Bit 5=locked */
     uint16_t sector_count;
     uint16_t first_sector;
-    char name[8];
-    char ext[3];
+    char name[9];  // +1 for null terminator
+    char ext[4];   // +1 for null terminator
 } atr_dir_entry_t;
 
 typedef struct {

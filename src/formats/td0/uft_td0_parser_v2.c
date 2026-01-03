@@ -443,7 +443,7 @@ td0_context_t* td0_open(const char *filename) {
     
     /* Read comment if present */
     if (ctx->has_comment) {
-        td0_comment_header_t comment_hdr;
+        td0_comment_header_t comment_hdr = {0};
         
         if (ctx->advanced_compression) {
             /* Decompress comment header */

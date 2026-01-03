@@ -190,7 +190,7 @@ void UftForensicPanel::exportResults() { m_detailsView->appendPlainText("Exporti
 
 UftForensicPanel::ForensicParams UftForensicPanel::getParams() const
 {
-    ForensicParams p;
+    ForensicParams p = {};  // Zero-initialize all members
     p.calculate_md5 = m_md5->isChecked();
     p.calculate_sha1 = m_sha1->isChecked();
     p.calculate_sha256 = m_sha256->isChecked();

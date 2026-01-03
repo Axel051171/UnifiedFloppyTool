@@ -356,7 +356,8 @@ unsigned char * unpack(unsigned char *packeddata,unsigned int size, unsigned int
 			i++;
 		}while(i<512 && (Eof!=255));
 
-		buffer = (unsigned char*)realloc( buffer,j+512);
+		unsigned char* tmp = (unsigned char*)realloc(buffer, j+512);
+		if (tmp) buffer = tmp; else { free(buffer); buffer = NULL; break; }
 	}
 
 	if(buffer)
