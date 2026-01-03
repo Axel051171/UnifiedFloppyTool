@@ -79,12 +79,12 @@ jobs:
 
       - name: Package (Windows)
         if: runner.os == 'Windows'
-        shell: pwsh
+        shell: bash
         run: |
           mkdir -p dist
-          cp build/Release/*.exe dist/ 2>$null || cp build/*.exe dist/
-          & "$env:Qt6_DIR/bin/windeployqt.exe" dist/*.exe
-          Compress-Archive -Path dist/* -DestinationPath ${{ matrix.artifact }}.zip
+          cp build/Release/*.exe dist/ 2>/dev/null || cp build/*.exe dist/ || true
+          "${Qt6_DIR}/bin/windeployqt.exe" dist/*.exe
+          cd dist && 7z a -tzip ../${{ matrix.artifact }}.zip *
 
       - name: Package (Linux/macOS)
         if: runner.os != 'Windows'
@@ -139,7 +139,6 @@ jobs:
             -DCMAKE_EXE_LINKER_FLAGS="$FLAGS"
 
       - name: Build
-        shell: bash
         run: cmake --build build --parallel
 
   # ═══════════════════════════════════════════════════════════
@@ -148,11 +147,9 @@ jobs:
   release:
     if: startsWith(github.ref, 'refs/tags/v')
     needs: [build, sanitize]
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
+    runs-on: ubuntu-22.04
     steps:
-      - name: Download all artifacts
+      - name: Download Artifacts
         uses: actions/download-artifact@v4
 
       - name: Create Release
