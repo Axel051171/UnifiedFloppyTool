@@ -27,7 +27,7 @@
 // Format Database
 // ============================================================================
 
-#define MAX_FORMATS 64
+#define MAX_FORMATS 16
 #define MAX_MAGIC_LEN 16
 #define MAX_SIZES 8
 

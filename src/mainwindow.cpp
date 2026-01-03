@@ -283,7 +283,7 @@ void MainWindow::onHelp()
            "  F7        Verify disk\n"
            "  F8        Analyze\n\n"
            "For more help, visit:\n"
-           "https://github.com/axelmuhr/UnifiedFloppyTool"));
+           "https://github.com/Axel051171/UnifiedFloppyTool"));
 }
 
 void MainWindow::onAbout()

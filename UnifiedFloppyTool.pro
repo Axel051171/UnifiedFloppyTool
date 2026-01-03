@@ -1,42 +1,50 @@
-# ═══════════════════════════════════════════════════════════════════════════════
-# UnifiedFloppyTool v3.2.0 - VISUAL Edition
-# ═══════════════════════════════════════════════════════════════════════════════
+#═══════════════════════════════════════════════════════════════════════════════
+# UnifiedFloppyTool.pro - Qt 5/6 Compatible Build
+#═══════════════════════════════════════════════════════════════════════════════
 
 QT += core gui widgets
-greaterThan(QT_MAJOR_VERSION, 5): QT += core5compat
 
 CONFIG += c++17
 CONFIG += sdk_no_version_check
 
-TARGET = UnifiedFloppyTool
-TEMPLATE = app
-VERSION = 3.2.0
-
+VERSION = 3.2.1
 DEFINES += APP_VERSION=\\\"$$VERSION\\\"
-DEFINES += APP_NAME=\\\"UnifiedFloppyTool\\\"
-DEFINES += APP_EDITION=\\\"VISUAL\\\"
-DEFINES += UFT_VERSION=\\\"$$VERSION\\\"
 
-# Build info
-win32: message("Compiler: MSVC")
-macx: message("Compiler: Clang (macOS)")
-unix:!macx: message("Compiler: GCC/Clang (Linux)")
 message("════════════════════════════════════════════════════")
-message("  UnifiedFloppyTool v$$VERSION - VISUAL Edition")
+message("UnifiedFloppyTool v$$VERSION - VISUAL Edition")
 message("════════════════════════════════════════════════════")
 
-# Platform specific
 win32 {
-    exists(resources/icon.ico): RC_ICONS = resources/icon.ico
-    DEFINES += WIN32_LEAN_AND_MEAN NOMINMAX
+    message("Compiler: MSVC (Windows)")
+    QMAKE_CXXFLAGS += /W3 /utf-8
+    RC_ICONS = resources/icons/app.ico
+}
+
+unix:!macx {
+    message("Compiler: GCC/Clang (Linux)")
+    QMAKE_CXXFLAGS += -Wall -Wextra
 }
 
 macx {
-    exists(resources/icon.icns): ICON = resources/icon.icns
+    message("Compiler: Clang (macOS)")
+    QMAKE_CXXFLAGS += -Wall -Wextra
+    ICON = resources/icons/app.icns
     QMAKE_MACOSX_DEPLOYMENT_TARGET = 11.0
 }
 
-# Sources
+CONFIG(debug, debug|release) {
+    DESTDIR = debug
+} else {
+    DESTDIR = release
+}
+
+OBJECTS_DIR = $$DESTDIR/.obj
+MOC_DIR = $$DESTDIR/.moc
+RCC_DIR = $$DESTDIR/.rcc
+UI_DIR = $$DESTDIR/.ui
+
+INCLUDEPATH += src include include/uft
+
 SOURCES += \
     src/main.cpp \
     src/mainwindow.cpp \
@@ -52,7 +60,10 @@ SOURCES += \
     src/decodejob.cpp \
     src/settingsmanager.cpp
 
-# Headers
+exists(src/forensictab.cpp): SOURCES += src/forensictab.cpp
+exists(src/nibbletab.cpp): SOURCES += src/nibbletab.cpp
+exists(src/xcopytab.cpp): SOURCES += src/xcopytab.cpp
+
 HEADERS += \
     src/mainwindow.h \
     src/visualdisk.h \
@@ -67,7 +78,10 @@ HEADERS += \
     src/decodejob.h \
     src/settingsmanager.h
 
-# UI Forms
+exists(src/forensictab.h): HEADERS += src/forensictab.h
+exists(src/nibbletab.h): HEADERS += src/nibbletab.h
+exists(src/xcopytab.h): HEADERS += src/xcopytab.h
+
 FORMS += \
     forms/mainwindow.ui \
     forms/tab_workflow.ui \
@@ -78,36 +92,15 @@ FORMS += \
     forms/tab_catalog.ui \
     forms/tab_tools.ui \
     forms/visualdisk.ui \
-    forms/diskanalyzer_window.ui \
-    forms/dialog_validation.ui
+    forms/diskanalyzer_window.ui
 
-# Resources
+exists(forms/dialog_validation.ui): FORMS += forms/dialog_validation.ui
+exists(forms/tab_forensic.ui): FORMS += forms/tab_forensic.ui
+exists(forms/tab_nibble.ui): FORMS += forms/tab_nibble.ui
+exists(forms/tab_xcopy.ui): FORMS += forms/tab_xcopy.ui
+
 exists(resources/resources.qrc): RESOURCES += resources/resources.qrc
 
-# Include paths
-INCLUDEPATH += src include include/uft
-
-# Compiler flags
-gcc|clang {
-    QMAKE_CXXFLAGS += -Wall -Wextra -Wno-unused-parameter
-    QMAKE_CXXFLAGS_RELEASE += -O2
-}
-
-msvc {
-    QMAKE_CXXFLAGS += /W3 /utf-8
-    QMAKE_CXXFLAGS_RELEASE += /O2
-}
-
-# Output directories
-CONFIG(debug, debug|release) {
-    DEFINES += DEBUG_BUILD UFT_DEBUG_MEMORY
-    DESTDIR = debug
-} else {
-    DEFINES += RELEASE_BUILD NDEBUG
-    DESTDIR = release
-}
-
-OBJECTS_DIR = $$DESTDIR/.obj
-MOC_DIR = $$DESTDIR/.moc
-RCC_DIR = $$DESTDIR/.rcc
-UI_DIR = $$DESTDIR/.ui
+qnx: target.path = /tmp/$${TARGET}/bin
+else: unix:!android: target.path = /opt/$${TARGET}/bin
+!isEmpty(target.path): INSTALLS += target
