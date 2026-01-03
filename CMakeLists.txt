@@ -36,7 +36,7 @@ set(CMAKE_AUTOUIC_SEARCH_PATHS ${CMAKE_SOURCE_DIR}/forms)
 # Find Qt6
 # ═══════════════════════════════════════════════════════════════════════════════
 
-find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets)
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets SerialPort)
 find_package(Qt6 COMPONENTS Core5Compat QUIET)
 
 message(STATUS "════════════════════════════════════════════════════")
@@ -209,6 +209,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     Qt6::Core
     Qt6::Gui
     Qt6::Widgets
+    Qt6::SerialPort
 )
 
 if(TARGET Qt6::Core5Compat)

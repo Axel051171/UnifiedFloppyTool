@@ -78,7 +78,7 @@ private:
         {
             auto write_bit = [&](bool val)
             {
-                if (cursor <= bits.size())
+                if (cursor < bits.size())
                 {
                     bits[cursor] = val;
                 }

@@ -2376,7 +2376,7 @@ void hxcfe_td_draw_track( HXCFE_TD *td, HXCFE_FLOPPY * floppydisk, int32_t track
 	// Sector drawing
 	for(i=0;i<32;i++)
 	{
-		if(td->enabledtrackmode & (0x00000001<<i) )
+		if(td->enabledtrackmode & (1U<<i) )
 		{
 			display_sectors(td,floppydisk,track,side,timingoffset_offset,i);
 		}
@@ -2867,7 +2867,7 @@ static void draw_trkstream( HXCFE_TD *td, HXCFE_TRKSTREAM* track_stream )
 			// Sector drawing
 			for(i=0;i<32;i++)
 			{
-				if(td->enabledtrackmode & (0x00000001<<i) )
+				if(td->enabledtrackmode & (1U<<i) )
 				{
 					display_sectors(td,fp,0,0,timingoffset_offset,i);
 				}
@@ -3766,7 +3766,7 @@ void hxcfe_draw_side(HXCFE_TD *td,HXCFE_FLOPPY * floppydisk, int x_center, int y
 		// Sector drawing
 		for(i=0;i<32;i++)
 		{
-			if(td->enabledtrackmode & (0x00000001<<i) )
+			if(td->enabledtrackmode & (1U<<i) )
 			{
 				display_sectors_disk(td,floppydisk,track,side,0,i,x_pos_1,y_pos,start_tracks_space_radius - (int)(track * track_ep),(int)g_track_ep, (side & 1)^1);
 			}

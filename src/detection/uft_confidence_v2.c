@@ -402,7 +402,7 @@ int main(void) {
     // Test 2: Buffer overflow prevention
     {
         char small_buf[32];
-        uft_format_candidate_t candidates[10];
+        uft_format_candidate_t candidates[10] = {0};
         for (int i = 0; i < 10; i++) {
             snprintf(candidates[i].name, sizeof(candidates[i].name), "Format%d", i);
             candidates[i].confidence = 0.5f + i * 0.05f;

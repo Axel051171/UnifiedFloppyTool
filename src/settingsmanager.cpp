@@ -1,10 +1,4 @@
 #include "settingsmanager.h"
 
-SettingsManager::SettingsManager(QObject *parent)
-    : QObject(parent)
-{
-}
-
-SettingsManager::~SettingsManager()
-{
-}
+// All implementation is in the header (singleton pattern)
+// This file exists for MOC generation
