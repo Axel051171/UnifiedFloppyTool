@@ -183,7 +183,7 @@ void UftNibblePanel::createAnalysisView()
 
 UftNibblePanel::NibbleParams UftNibblePanel::getParams() const
 {
-    NibbleParams p;
+    NibbleParams p = {};
     p.read_mode = m_readMode->currentData().toInt();
     p.revolutions = m_revolutions->value();
     p.read_between_index = m_readBetweenIndex->isChecked();
@@ -436,7 +436,7 @@ void UftRecoveryPanel::repairImage() { m_recoveryLog->appendPlainText("Repairing
 
 UftRecoveryPanel::RecoveryParams UftRecoveryPanel::getParams() const
 {
-    RecoveryParams p;
+    RecoveryParams p = {};
     p.max_retries = m_maxRetries->value();
     p.retry_delay_ms = m_retryDelay->value();
     p.vary_head_position = m_varyHeadPosition->isChecked();
