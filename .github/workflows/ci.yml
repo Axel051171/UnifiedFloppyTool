@@ -64,7 +64,7 @@ jobs:
         run: |
           cmake -B build -S . \
             -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
-            -DCMAKE_PREFIX_PATH="${Qt6_DIR}" \
+            -DCMAKE_PREFIX_PATH="${QT_ROOT_DIR}" \
             -DUFT_ENABLE_LTO=OFF
 
       - name: Build
@@ -73,12 +73,14 @@ jobs:
 
       - name: Package (Windows)
         if: runner.os == 'Windows'
-        shell: cmd
+        shell: pwsh
         run: |
-          mkdir dist
-          copy build\Release\*.exe dist\
-          "%Qt6_DIR%\bin\windeployqt.exe" dist\UnifiedFloppyTool.exe
-          7z a -tzip ${{ matrix.artifact }}.zip dist\*
+          New-Item -ItemType Directory -Force -Path dist
+          Copy-Item build\Release\*.exe dist\
+          $windeployqt = Join-Path $env:QT_ROOT_DIR "bin\windeployqt.exe"
+          Write-Host "Using windeployqt: $windeployqt"
+          & $windeployqt --release --no-translations dist\UnifiedFloppyTool.exe
+          7z a -tzip "${{ matrix.artifact }}.zip" dist\*
 
       - name: Package (Linux/macOS)
         if: runner.os != 'Windows'
