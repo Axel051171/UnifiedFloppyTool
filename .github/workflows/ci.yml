@@ -38,7 +38,7 @@ jobs:
           - os: windows-2022
             name: Windows
             artifact: UFT-Windows
-          - os: macos-13
+          - os: macos-15
             name: macOS
             artifact: UFT-macOS
 
@@ -58,6 +58,12 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libgl1-mesa-dev libxkbcommon-dev libxcb-cursor0
+
+      - name: Install macOS Dependencies
+        if: runner.os == 'macOS'
+        run: |
+          echo "macOS: Using system frameworks"
+          # Qt SerialPort uses IOKit which is part of macOS SDK
 
       - name: Configure (CMake)
         shell: bash
@@ -82,11 +88,22 @@ jobs:
           & $windeployqt --release --no-translations dist\UnifiedFloppyTool.exe
           7z a -tzip "${{ matrix.artifact }}.zip" dist\*
 
-      - name: Package (Linux/macOS)
-        if: runner.os != 'Windows'
+      - name: Package (Linux)
+        if: runner.os == 'Linux'
         run: |
           mkdir -p dist
-          cp build/UnifiedFloppyTool dist/ 2>/dev/null || cp build/*/UnifiedFloppyTool dist/ || true
+          cp build/UnifiedFloppyTool dist/ 2>/dev/null || true
+          tar -czvf ${{ matrix.artifact }}.tar.gz -C dist .
+
+      - name: Package (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          mkdir -p dist
+          cp build/UnifiedFloppyTool dist/ 2>/dev/null || true
+          # Create basic app bundle structure
+          mkdir -p dist/UnifiedFloppyTool.app/Contents/MacOS
+          cp build/UnifiedFloppyTool dist/UnifiedFloppyTool.app/Contents/MacOS/ 2>/dev/null || true
+          ${QT_ROOT_DIR}/bin/macdeployqt dist/UnifiedFloppyTool.app 2>/dev/null || true
           tar -czvf ${{ matrix.artifact }}.tar.gz -C dist .
 
       - name: Upload Artifact
