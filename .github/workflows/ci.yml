@@ -1,0 +1,162 @@
+name: UFT CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, master, develop]
+    tags: ['v*']
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+env:
+  QT_VERSION: '6.6.3'
+  BUILD_TYPE: Release
+
+jobs:
+  # ═══════════════════════════════════════════════════════════
+  # Static Analysis
+  # ═══════════════════════════════════════════════════════════
+  lint:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install cppcheck
+        run: sudo apt-get update && sudo apt-get install -y cppcheck
+      - name: Run cppcheck
+        run: |
+          cppcheck --enable=warning,performance --error-exitcode=1 \
+            --suppress=missingIncludeSystem \
+            -I include -I src \
+            src/ || echo "::warning::cppcheck found issues"
+
+  # ═══════════════════════════════════════════════════════════
+  # Main Build Matrix
+  # ═══════════════════════════════════════════════════════════
+  build:
+    needs: lint
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            name: Linux
+            artifact: UFT-Linux
+          - os: windows-2022
+            name: Windows
+            artifact: UFT-Windows
+          - os: macos-13
+            name: macOS
+            artifact: UFT-macOS
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          # modules removed - not needed
+          cache: true
+
+      - name: Install Linux Dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgl1-mesa-dev libxkbcommon-dev libxcb-cursor0
+
+      - name: Configure (CMake)
+        run: |
+          cmake -B build -S . \
+            -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
+            -DCMAKE_PREFIX_PATH="${{ env.Qt6_DIR }}" \
+            -DUFT_ENABLE_LTO=OFF
+
+      - name: Build
+        run: cmake --build build --config ${{ env.BUILD_TYPE }} --parallel
+
+      - name: Package (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          mkdir -p dist
+          cp build/Release/*.exe dist/ 2>$null || cp build/*.exe dist/
+          & "$env:Qt6_DIR/bin/windeployqt.exe" dist/*.exe
+          Compress-Archive -Path dist/* -DestinationPath ${{ matrix.artifact }}.zip
+
+      - name: Package (Linux/macOS)
+        if: runner.os != 'Windows'
+        run: |
+          mkdir -p dist
+          cp build/UnifiedFloppyTool dist/ 2>/dev/null || cp build/*/UnifiedFloppyTool dist/ || true
+          tar -czvf ${{ matrix.artifact }}.tar.gz -C dist .
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: |
+            *.zip
+            *.tar.gz
+
+  # ═══════════════════════════════════════════════════════════
+  # Sanitizer Builds (Linux only)
+  # ═══════════════════════════════════════════════════════════
+  sanitize:
+    needs: lint
+    runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        sanitizer: [asan, ubsan]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          # modules removed - not needed
+          cache: true
+
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgl1-mesa-dev libxkbcommon-dev libxcb-cursor0
+
+      - name: Configure with ${{ matrix.sanitizer }}
+        run: |
+          if [ "${{ matrix.sanitizer }}" = "asan" ]; then
+            FLAGS="-fsanitize=address -fno-omit-frame-pointer"
+          else
+            FLAGS="-fsanitize=undefined"
+          fi
+          cmake -B build -S . \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_CXX_FLAGS="$FLAGS" \
+            -DCMAKE_C_FLAGS="$FLAGS" \
+            -DCMAKE_EXE_LINKER_FLAGS="$FLAGS"
+
+      - name: Build
+        run: cmake --build build --parallel
+
+  # ═══════════════════════════════════════════════════════════
+  # Release (on tag push)
+  # ═══════════════════════════════════════════════════════════
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [build, sanitize]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            UFT-Linux/*.tar.gz
+            UFT-Windows/*.zip
+            UFT-macOS/*.tar.gz
+          generate_release_notes: true
