@@ -365,7 +365,7 @@ void UftProtectionPanel::analyzeSelected()
 
 UftProtectionPanel::ProtectionParams UftProtectionPanel::getParams() const
 {
-    ProtectionParams p;
+    ProtectionParams p = {};
     p.detect_all = m_detectAll->isChecked();
     p.detect_weak_bits = m_detectWeakBits->isChecked();
     p.detect_long_tracks = m_detectLongTracks->isChecked();

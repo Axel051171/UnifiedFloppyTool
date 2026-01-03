@@ -369,7 +369,7 @@ void UftFormatPanel::setProfile(const QString &profile)
 
 UftFormatPanel::FormatParams UftFormatPanel::getParams() const
 {
-    FormatParams params;
+    FormatParams params = {};
     
     params.tracks = m_tracks->value();
     params.sides = m_sides->currentData().toInt();
