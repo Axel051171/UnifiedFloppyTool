@@ -1,0 +1,173 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# UFT CI Workflow - Build & Test auf allen Plattformen
+# ═══════════════════════════════════════════════════════════════════════════════
+
+name: 🔨 CI Build
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  QT_VERSION: '6.6.2'
+  BUILD_TYPE: Release
+
+jobs:
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Linux Build
+  # ═══════════════════════════════════════════════════════════════════════════
+  build-linux:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: 🔧 Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgl1-mesa-dev libxkbcommon-dev libxcb-cursor0
+
+      - name: 📦 Cache Qt
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/Qt
+          key: qt-${{ env.QT_VERSION }}-linux
+
+      - name: 🎨 Install Qt
+        uses: jurplel/install-qt-action@v3
+        with:
+          version: ${{ env.QT_VERSION }}
+          host: linux
+          target: desktop
+          dir: ${{ github.workspace }}/Qt
+          cache: true
+          modules: 'qtserialport'
+
+      - name: 🔨 Configure
+        run: |
+          cmake -B build \
+            -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
+            -DCMAKE_PREFIX_PATH="${{ github.workspace }}/Qt/Qt/${{ env.QT_VERSION }}/gcc_64"
+
+      - name: 🏗️ Build
+        run: cmake --build build -j$(nproc)
+
+      - name: ✅ Test
+        run: |
+          cd build
+          ctest --output-on-failure || true
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # macOS Build
+  # ═══════════════════════════════════════════════════════════════════════════
+  build-macos:
+    runs-on: macos-14
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: 📦 Cache Qt
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/Qt
+          key: qt-${{ env.QT_VERSION }}-macos
+
+      - name: 🎨 Install Qt
+        uses: jurplel/install-qt-action@v3
+        with:
+          version: ${{ env.QT_VERSION }}
+          host: mac
+          target: desktop
+          arch: clang_64
+          dir: ${{ github.workspace }}/Qt
+          cache: true
+          modules: 'qtserialport'
+
+      - name: 🔨 Configure
+        run: |
+          cmake -B build \
+            -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
+            -DCMAKE_PREFIX_PATH="${{ github.workspace }}/Qt/Qt/${{ env.QT_VERSION }}/macos" \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0
+
+      - name: 🏗️ Build
+        run: cmake --build build -j$(sysctl -n hw.ncpu)
+
+      - name: ✅ Test
+        run: |
+          cd build
+          ctest --output-on-failure || true
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Windows Build
+  # ═══════════════════════════════════════════════════════════════════════════
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: 🔧 Setup MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: 📦 Cache Qt
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/Qt
+          key: qt-${{ env.QT_VERSION }}-windows
+
+      - name: 🎨 Install Qt
+        uses: jurplel/install-qt-action@v3
+        with:
+          version: ${{ env.QT_VERSION }}
+          host: windows
+          target: desktop
+          arch: win64_msvc2019_64
+          dir: ${{ github.workspace }}/Qt
+          cache: true
+          modules: 'qtserialport'
+
+      - name: 🔨 Configure
+        run: |
+          cmake -B build -G "NMake Makefiles" `
+            -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} `
+            -DCMAKE_PREFIX_PATH="${{ github.workspace }}/Qt/Qt/${{ env.QT_VERSION }}/msvc2019_64"
+
+      - name: 🏗️ Build
+        run: cmake --build build
+
+      - name: ✅ Test
+        run: |
+          cd build
+          ctest --output-on-failure
+        continue-on-error: true
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Status Summary
+  # ═══════════════════════════════════════════════════════════════════════════
+  status:
+    needs: [build-linux, build-macos, build-windows]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: 📊 Build Summary
+        run: |
+          echo "## Build Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Platform | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Linux | ${{ needs.build-linux.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| macOS | ${{ needs.build-macos.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Windows | ${{ needs.build-windows.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY

@@ -1,0 +1,322 @@
+{
+  "version": "4.2.0",
+  "generated": "2026-01-03",
+  "capabilities": {
+    "formats": {
+      "adf": {
+        "name": "Amiga Disk File",
+        "extensions": [".adf"],
+        "read": true,
+        "write": true,
+        "convert_from": true,
+        "convert_to": true,
+        "recovery": true,
+        "protection_detect": true,
+        "filesystems": ["ofs", "ffs"],
+        "platforms": ["amiga"]
+      },
+      "d64": {
+        "name": "Commodore 64 Disk Image",
+        "extensions": [".d64"],
+        "read": true,
+        "write": true,
+        "convert_from": true,
+        "convert_to": true,
+        "recovery": true,
+        "protection_detect": true,
+        "filesystems": ["cbm_dos"],
+        "platforms": ["c64", "c128", "vic20"]
+      },
+      "g64": {
+        "name": "Commodore GCR Image",
+        "extensions": [".g64"],
+        "read": true,
+        "write": true,
+        "convert_from": true,
+        "convert_to": true,
+        "recovery": true,
+        "protection_detect": true,
+        "encoding": "gcr",
+        "platforms": ["c64"]
+      },
+      "scp": {
+        "name": "SuperCard Pro Flux",
+        "extensions": [".scp"],
+        "read": true,
+        "write": true,
+        "convert_from": true,
+        "convert_to": true,
+        "recovery": true,
+        "protection_detect": true,
+        "flux_level": true,
+        "multi_revolution": true
+      },
+      "hfe": {
+        "name": "HxC Floppy Emulator",
+        "extensions": [".hfe"],
+        "read": true,
+        "write": true,
+        "write_v3": "partial",
+        "convert_from": true,
+        "convert_to": true,
+        "recovery": true,
+        "protection_detect": "partial",
+        "versions": ["v1", "v2", "v3"]
+      },
+      "woz": {
+        "name": "Applesauce WOZ",
+        "extensions": [".woz"],
+        "read": true,
+        "write": true,
+        "write_v21_flux": "partial",
+        "convert_from": true,
+        "convert_to": true,
+        "recovery": true,
+        "protection_detect": true,
+        "platforms": ["apple2"],
+        "versions": ["1.0", "2.0", "2.1"]
+      },
+      "a2r": {
+        "name": "Applesauce A2R Flux",
+        "extensions": [".a2r"],
+        "read": true,
+        "write": "partial",
+        "convert_from": true,
+        "convert_to": true,
+        "recovery": true,
+        "protection_detect": true,
+        "flux_level": true,
+        "platforms": ["apple2"]
+      },
+      "ipf": {
+        "name": "Interchangeable Preservation Format",
+        "extensions": [".ipf"],
+        "read": true,
+        "write": false,
+        "convert_from": true,
+        "convert_to": false,
+        "recovery": true,
+        "protection_detect": true,
+        "ctraw": "partial"
+      },
+      "dmk": {
+        "name": "TRS-80 DMK",
+        "extensions": [".dmk"],
+        "read": true,
+        "write": true,
+        "convert_from": true,
+        "convert_to": true,
+        "recovery": true,
+        "protection_detect": "partial",
+        "platforms": ["trs80", "coco"]
+      },
+      "td0": {
+        "name": "Teledisk",
+        "extensions": [".td0"],
+        "read": true,
+        "write": true,
+        "convert_from": true,
+        "convert_to": true,
+        "recovery": "partial",
+        "protection_detect": false,
+        "compression": ["normal", "advanced"]
+      },
+      "imd": {
+        "name": "ImageDisk",
+        "extensions": [".imd"],
+        "read": true,
+        "write": true,
+        "convert_from": true,
+        "convert_to": true,
+        "recovery": true,
+        "protection_detect": false
+      },
+      "img": {
+        "name": "Raw Sector Image",
+        "extensions": [".img", ".ima", ".dsk", ".bin"],
+        "read": true,
+        "write": true,
+        "convert_from": true,
+        "convert_to": true,
+        "recovery": true,
+        "protection_detect": false,
+        "platforms": ["pc", "atari_st"]
+      },
+      "stx": {
+        "name": "Atari ST Extended",
+        "extensions": [".stx"],
+        "read": true,
+        "write": "partial",
+        "convert_from": true,
+        "convert_to": true,
+        "recovery": true,
+        "protection_detect": true,
+        "platforms": ["atari_st"]
+      },
+      "atr": {
+        "name": "Atari 8-bit Standard",
+        "extensions": [".atr"],
+        "read": true,
+        "write": true,
+        "convert_from": true,
+        "convert_to": true,
+        "recovery": true,
+        "protection_detect": true,
+        "platforms": ["atari_8bit"]
+      },
+      "atx": {
+        "name": "Atari VAPI Extended",
+        "extensions": [".atx"],
+        "read": true,
+        "write": true,
+        "convert_from": true,
+        "convert_to": true,
+        "recovery": true,
+        "protection_detect": true,
+        "weak_sectors": true,
+        "platforms": ["atari_8bit"]
+      },
+      "nib": {
+        "name": "Apple II Nibble",
+        "extensions": [".nib"],
+        "read": true,
+        "write": true,
+        "convert_from": true,
+        "convert_to": true,
+        "recovery": true,
+        "protection_detect": "partial",
+        "platforms": ["apple2"]
+      },
+      "kryoflux_raw": {
+        "name": "KryoFlux Raw Stream",
+        "extensions": [".raw"],
+        "pattern": "track*.*.raw",
+        "read": true,
+        "write": false,
+        "convert_from": true,
+        "convert_to": false,
+        "recovery": true,
+        "protection_detect": true,
+        "flux_level": true
+      }
+    },
+    "hardware": {
+      "greaseweazle": {
+        "name": "Greaseweazle",
+        "type": "flux",
+        "read": true,
+        "write": true,
+        "flux_level": true,
+        "multi_revolution": true,
+        "index_pulse": true,
+        "density_select": true,
+        "usb": true,
+        "models": ["F1", "F7"]
+      },
+      "fluxengine": {
+        "name": "FluxEngine",
+        "type": "flux",
+        "read": true,
+        "write": true,
+        "flux_level": true,
+        "multi_revolution": true,
+        "index_pulse": true,
+        "density_select": true,
+        "usb": true
+      },
+      "kryoflux": {
+        "name": "KryoFlux",
+        "type": "flux",
+        "read": true,
+        "write": "partial",
+        "flux_level": true,
+        "multi_revolution": true,
+        "index_pulse": true,
+        "density_select": true,
+        "usb": true,
+        "dtc_mode": "partial"
+      },
+      "supercardpro": {
+        "name": "SuperCard Pro",
+        "type": "flux",
+        "read": true,
+        "write": "partial",
+        "flux_level": true,
+        "multi_revolution": true,
+        "index_pulse": true,
+        "density_select": true,
+        "usb": true
+      },
+      "fc5025": {
+        "name": "FC5025",
+        "type": "sector",
+        "read": true,
+        "write": true,
+        "flux_level": false,
+        "multi_revolution": false,
+        "index_pulse": true,
+        "density_select": true,
+        "usb": true,
+        "drives": ["5.25_dd", "5.25_hd", "8_inch"]
+      },
+      "xum1541": {
+        "name": "XUM1541 / ZoomFloppy",
+        "type": "native",
+        "read": true,
+        "write": true,
+        "flux_level": false,
+        "multi_revolution": false,
+        "index_pulse": false,
+        "density_select": false,
+        "usb": true,
+        "drives": ["1541", "1571", "1581"]
+      }
+    },
+    "encodings": {
+      "mfm": {
+        "decode": true,
+        "encode": true,
+        "simd": ["sse2", "avx2", "avx512"]
+      },
+      "fm": {
+        "decode": true,
+        "encode": true,
+        "simd": ["sse2", "avx2"]
+      },
+      "gcr_commodore": {
+        "decode": true,
+        "encode": true,
+        "variants": ["1541", "1571"]
+      },
+      "gcr_apple": {
+        "decode": true,
+        "encode": true,
+        "variants": ["5.25_disk2", "3.5_gc"]
+      }
+    },
+    "recovery": {
+      "multi_read": true,
+      "majority_voting": true,
+      "byte_confidence": true,
+      "weak_bit_detection": true,
+      "crc_correction": {
+        "enabled": true,
+        "max_bits": 2
+      },
+      "flux_fusion": true
+    },
+    "protection_detection": {
+      "c64": ["vmax", "pirateslayer", "rapidlok", "vorpal"],
+      "amiga": ["copylock", "speedlock", "rnc", "long_tracks"],
+      "generic": ["weak_bits", "fuzzy_bits", "extra_sectors", "missing_sectors"],
+      "pc": ["planned"]
+    },
+    "platforms": {
+      "linux_x86_64": {"build": true, "test": true, "gui": true},
+      "linux_arm64": {"build": true, "test": "partial", "gui": true},
+      "macos_x86_64": {"build": true, "test": true, "gui": true},
+      "macos_arm64": {"build": true, "test": "partial", "gui": true},
+      "windows_x64": {"build": true, "test": true, "gui": true}
+    }
+  }
+}

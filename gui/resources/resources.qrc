@@ -1,0 +1,30 @@
+<!DOCTYPE RCC>
+<RCC version="1.0">
+    <qresource prefix="/">
+        <!-- Styles -->
+        <file>styles/darkmode.qss</file>
+        <file>styles/lightmode.qss</file>
+        
+        <!-- Icons (SVG for scalability) -->
+        <file>icons/folder-open.svg</file>
+        <file>icons/save.svg</file>
+        <file>icons/play.svg</file>
+        <file>icons/stop.svg</file>
+        <file>icons/settings.svg</file>
+        <file>icons/chevron-down.svg</file>
+        <file>icons/chevron-up.svg</file>
+        <file>icons/check.svg</file>
+        <file>icons/info.svg</file>
+        <file>icons/warning.svg</file>
+        <file>icons/error.svg</file>
+        <file>icons/disk.svg</file>
+        <file>icons/flux.svg</file>
+        <file>icons/forensic.svg</file>
+        <file>icons/theme-light.svg</file>
+        <file>icons/theme-dark.svg</file>
+        <file>icons/theme-auto.svg</file>
+        
+        <!-- App Icon -->
+        <file>icons/app-icon.svg</file>
+    </qresource>
+</RCC>

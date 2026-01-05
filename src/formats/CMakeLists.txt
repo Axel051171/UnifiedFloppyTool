@@ -1,0 +1,40 @@
+# UnifiedFloppyTool Format Plugins CMake
+
+set(UFT_FORMAT_SOURCES
+    # Core formats (existierend)
+    d64/uft_d64.c
+    g64/uft_g64.c
+    adf/uft_adf.c
+    img/uft_img.c
+    scp/uft_scp.c
+    hfe/uft_hfe.c
+    
+    # New API-compliant formats
+    d71/uft_d71.c
+    d80/uft_d80.c
+    d81/uft_d81.c
+    d82/uft_d82.c
+    g71/uft_g71.c
+    atr/uft_atr.c
+    msa/uft_msa.c
+    ipf/uft_ipf.c
+    td0/uft_td0.c
+    imd/uft_imd.c
+    dsk_cpc/uft_dsk_cpc.c
+    nib/uft_nib.c
+    woz/uft_woz.c
+    trd/uft_trd.c
+    ssd/uft_ssd.c
+    d88/uft_d88.c
+    sad/uft_sad.c
+    dmk/uft_dmk.c
+    fdi/uft_fdi.c
+    cqm/uft_cqm.c
+    
+    # Registry
+    format_registry/uft_format_registry.c
+)
+
+add_library(uft_formats STATIC ${UFT_FORMAT_SOURCES})
+target_include_directories(uft_formats PUBLIC ${PROJECT_SOURCE_DIR}/include)
+target_link_libraries(uft_formats uft_core)

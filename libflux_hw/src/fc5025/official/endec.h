@@ -1,0 +1,10 @@
+int enc_4and4(unsigned char *out, unsigned char *in, int count);
+int dec_4and4(unsigned char *out, unsigned char *in, int count);
+int enc_54gcr(unsigned char *out, unsigned char *in, int count);
+int dec_54gcr(unsigned char *out, unsigned char *in, int count);
+int dec_5and3(unsigned char *out, unsigned char *in, int count);
+int dec_6and2(unsigned char *out, unsigned char *in, int count);
+int enc_fm(unsigned char *out, unsigned char *in, int count);
+int dec_fm(unsigned char *raw, unsigned char *fm, int count);
+int dec_mfm(unsigned char *out, unsigned char *in, int count);
+int enc_mfm(unsigned char *out, unsigned char *outmask, unsigned char *in, int count);

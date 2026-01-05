@@ -1,0 +1,171 @@
+# UFT Copy Protection Analysis - Complete Summary
+
+**Date:** 2026-01-04  
+**Version:** v3.6.0.017  
+**Sources Analyzed:**
+- MAME lib/formats (~60K LOC)
+- disk-utilities (~52K LOC)
+- dec0de (~7K LOC)
+- Original Rob Northen Disassembly
+
+---
+
+## Executive Summary
+
+Four major sources have been analyzed for copy protection implementation:
+
+| Source | Focus | LOC | Protection Types |
+|--------|-------|-----|------------------|
+| **MAME** | Cross-platform formats | ~60K | ~220 formats |
+| **disk-utilities** | Amiga specialist | ~52K | 456 track types |
+| **dec0de** | Atari ST decoder | ~7K | 11 protections |
+| **Rob Northen Disasm** | Original source | N/A | Key algorithm |
+
+**Key Integration Completed:**
+- ✅ CopyLock LFSR algorithm (Amiga)
+- ✅ Serial number derivation (original disassembly!)
+- ✅ Rob Northen TVD Series 1 & 2 (Atari ST)
+- ✅ Magnetic state types (MG_N, MG_D)
+- ✅ Weak bit API pattern (tbuf_weak)
+- ✅ Long track framework reference
+- ✅ Anti-bitos/Zippy decryption (Atari ST)
+
+---
+
+## 1. Platform Coverage
+
+### 1.1 Amiga (disk-utilities)
+- **456 track types** total
+- **194 format handlers** in libdisk/format/amiga/
+- **36+ longtrack variants**
+- CopyLock with LFSR + timing variations
+- Speedlock variable density
+- Weak bits (Dungeon Master)
+
+### 1.2 Atari ST (dec0de)
+- **Rob Northen Series 1 (1988)** - 5 variants
+- **Rob Northen Series 2 (1989)** - 6 variants
+- **Anti-bitos** v1.0/1.4/1.6/1.61
+- **Zippy Little Protection** v2.05/v2.06
+- **Toxic Packer**, **Cooper**, **CID**, etc.
+
+### 1.3 Cross-Platform (MAME)
+- **IPF format** with weak bits (opcode 5)
+- **86f format** with dual mask
+- **C64 speed zones** validation
+- **PLL tolerances** (0.75x-1.25x)
+
+---
+
+## 2. Rob Northen CopyLock - Complete!
+
+### 2.1 Amiga Version (from disk-utilities)
+```c
+// 23-bit LFSR with taps at 1 and 23
+static uint32_t lfsr_next(uint32_t x) {
+    return ((x << 1) & ((1u << 23) - 1)) | (((x >> 22) ^ x) & 1);
+}
+
+// Timing: Sector 4 = 5% faster, Sector 6 = 5% slower
+// Signature: "Rob Northen Comp" in sector 6
+```
+
+### 2.2 Serial Number Derivation (from original disassembly)
+```c
+// Magic constant 0xB34C4FDC = 0 - "Rob Northen Comp" (as BE longwords)
+#define UFT_COPYLOCK_SIG_CHECKSUM 0xB34C4FDCu
+
+// Algorithm from $298-$2B8:
+// checksum = 0
+// checksum -= "Rob " + "Nort" + "hen " + "Comp" → 0xB34C4FDC
+// checksum -= lfsr_data[16:23]
+// serial = checksum
+```
+
+### 2.3 Atari ST Version (from dec0de)
+```c
+// Series 1: XOR with ~SWAP(prev_instruction)
+static inline uint32_t uft_robn88_decrypt_instr(const uint8_t *buf) {
+    uint32_t key32 = uft_read32_be(buf - 4);
+    key32 = ~key32;
+    key32 = uft_swap32(key32);
+    return uft_read32_be(buf) ^ key32;
+}
+
+// Series 2: XOR with (prev_instruction + magic32)
+static inline uint32_t uft_robn89_decrypt_instr(const uint8_t *buf, uint32_t magic32) {
+    uint32_t key32 = uft_read32_be(buf - 4) + magic32;
+    return uft_read32_be(buf) ^ key32;
+}
+```
+
+---
+
+## 3. Files Created/Updated
+
+### 3.1 Headers (include/uft/protection/)
+| File | LOC | Content |
+|------|-----|---------|
+| uft_copylock.h | 649 | Amiga CopyLock + serial extraction |
+| uft_atarist_dec0de.h | 500 | Atari ST decoders |
+| uft_longtrack.h | 400 | Long track framework |
+| uft_speedlock.h | 280 | Variable density |
+| **Total** | **5,834** | **16 header files** |
+
+### 3.2 Documentation (docs/)
+| File | Size | Content |
+|------|------|---------|
+| MAME_COPY_PROTECTION_ANALYSIS.md | 9.6 KB | IPF, 86f, weak bits |
+| DISK_UTILITIES_COPY_PROTECTION_ANALYSIS.md | 13.7 KB | 456 track types |
+| DEC0DE_COPY_PROTECTION_ANALYSIS.md | 12.2 KB | Atari ST decoders |
+| COPY_PROTECTION_INTEGRATION_SUMMARY.md | 6.3 KB | This document |
+
+---
+
+## 4. Algorithms Implemented
+
+### 4.1 Decryption Methods
+| Protection | Platform | Method | Key Source |
+|------------|----------|--------|------------|
+| CopyLock LFSR | Amiga | LFSR | 23-bit seed |
+| CopyLock S1 TVD | Atari ST | XOR | ~SWAP(prev) |
+| CopyLock S2 TVD | Atari ST | XOR | prev + magic |
+| Anti-bitos | Atari ST | XOR + ROL | Evolving key |
+| Zippy | Atari ST | XOR | LCG (3141597*x+1) |
+
+### 4.2 Detection Signatures
+| Protection | Pattern |
+|------------|---------|
+| CopyLock Amiga | "Rob Northen Comp" + LFSR |
+| CopyLock ST | `st $43e.l` (0x50f9 0000 043e) |
+| Anti-bitos | `lea pc+$a8,a0` (0x41fa 00a6) |
+| Longtrack | Track length ≥ 102,400 bits |
+
+---
+
+## 5. Next Steps (P1)
+
+### 5.1 Implementation
+1. `uft_magnetic_state_t` enum for MG_N/MG_D
+2. `tbuf_weak()` API pattern integration
+3. Long track detection framework
+4. IPF chkFlaky export
+
+### 5.2 Testing
+1. Sample files from dec0de/samples/
+2. Golden tests for each protection type
+3. Cross-platform validation
+
+---
+
+## 6. Source Credits
+
+- **MAME Team** - Cross-platform format infrastructure
+- **Keir Fraser** - disk-utilities (Amiga expert)
+- **Orion ^ The Replicants** - dec0de (Atari ST decoders)
+- **Rob Northen Computing** - Original CopyLock algorithms
+
+---
+
+*Generated by UFT Copy Protection Analysis Pipeline*
+*Combined from: MAME, disk-utilities, dec0de, original disassembly*

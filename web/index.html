@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UFT Web Viewer - Disk Image Analyzer</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #1a1a2e;
+            color: #eaeaea;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #16213e 0%, #0f3460 100%);
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        header h1 {
+            font-size: 1.8rem;
+            font-weight: 600;
+            color: #e94560;
+        }
+        
+        header .version {
+            color: #888;
+            font-size: 0.9rem;
+        }
+        
+        .main-content {
+            display: grid;
+            grid-template-columns: 280px 1fr 300px;
+            gap: 20px;
+        }
+        
+        .panel {
+            background: #16213e;
+            border-radius: 8px;
+            padding: 15px;
+        }
+        
+        .panel h2 {
+            font-size: 1rem;
+            color: #e94560;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #2a2a4a;
+        }
+        
+        /* File Drop Zone */
+        .drop-zone {
+            border: 2px dashed #4a4a6a;
+            border-radius: 8px;
+            padding: 30px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 15px;
+        }
+        
+        .drop-zone:hover, .drop-zone.active {
+            border-color: #e94560;
+            background: rgba(233, 69, 96, 0.1);
+        }
+        
+        .drop-zone-icon {
+            font-size: 3rem;
+            margin-bottom: 10px;
+        }
+        
+        .drop-zone p {
+            color: #888;
+            font-size: 0.9rem;
+        }
+        
+        /* File Info */
+        .file-info {
+            display: none;
+            margin-top: 15px;
+        }
+        
+        .file-info.visible {
+            display: block;
+        }
+        
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #2a2a4a;
+            font-size: 0.85rem;
+        }
+        
+        .info-row .label {
+            color: #888;
+        }
+        
+        .info-row .value {
+            color: #eaeaea;
+            font-family: 'Fira Code', 'Consolas', monospace;
+        }
+        
+        /* Canvas Area */
+        .viewer-area {
+            min-height: 500px;
+        }
+        
+        .view-tabs {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 15px;
+        }
+        
+        .view-tab {
+            padding: 8px 16px;
+            background: #2a2a4a;
+            border: none;
+            border-radius: 4px;
+            color: #888;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .view-tab:hover {
+            background: #3a3a5a;
+        }
+        
+        .view-tab.active {
+            background: #e94560;
+            color: white;
+        }
+        
+        #viewer-canvas {
+            width: 100%;
+            height: 450px;
+            background: #0a0a1a;
+            border-radius: 8px;
+            cursor: crosshair;
+        }
+        
+        /* Status Bar */
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 15px;
+            background: #2a2a4a;
+            border-radius: 4px;
+            margin-top: 15px;
+            font-size: 0.8rem;
+        }
+        
+        .status-bar .status {
+            color: #4ade80;
+        }
+        
+        .status-bar .coords {
+            color: #888;
+            font-family: monospace;
+        }
+        
+        /* Hex View */
+        .hex-view {
+            font-family: 'Fira Code', 'Consolas', monospace;
+            font-size: 0.75rem;
+            line-height: 1.6;
+            background: #0a0a1a;
+            padding: 10px;
+            border-radius: 4px;
+            max-height: 400px;
+            overflow: auto;
+        }
+        
+        .hex-row {
+            display: flex;
+        }
+        
+        .hex-offset {
+            color: #888;
+            margin-right: 15px;
+            min-width: 60px;
+        }
+        
+        .hex-bytes {
+            color: #4ade80;
+            margin-right: 15px;
+        }
+        
+        .hex-ascii {
+            color: #60a5fa;
+        }
+        
+        /* Sector Grid */
+        .sector-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, 30px);
+            gap: 3px;
+            margin-top: 10px;
+        }
+        
+        .sector-cell {
+            width: 28px;
+            height: 28px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+        
+        .sector-cell:hover {
+            transform: scale(1.1);
+        }
+        
+        .sector-cell.good { background: #22c55e; color: white; }
+        .sector-cell.bad { background: #ef4444; color: white; }
+        .sector-cell.weak { background: #eab308; color: black; }
+        .sector-cell.empty { background: #404040; color: #888; }
+        .sector-cell.protected { background: #a855f7; color: white; }
+        .sector-cell.selected { box-shadow: 0 0 0 2px #e94560; }
+        
+        /* Loading */
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px;
+        }
+        
+        .loading.visible {
+            display: block;
+        }
+        
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #2a2a4a;
+            border-top-color: #e94560;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Mobile */
+        @media (max-width: 1200px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div>
+                <h1>🖴 UFT Web Viewer</h1>
+                <span class="version">v1.0.0 - Disk Image Analyzer</span>
+            </div>
+            <div>
+                <span id="wasm-status">Loading WASM...</span>
+            </div>
+        </header>
+        
+        <div class="main-content">
+            <!-- Left Panel: File & Track Selection -->
+            <div class="panel">
+                <h2>📁 File</h2>
+                
+                <div class="drop-zone" id="drop-zone">
+                    <div class="drop-zone-icon">📀</div>
+                    <p>Drop disk image here<br>or click to browse</p>
+                    <input type="file" id="file-input" hidden accept=".adf,.d64,.g64,.dsk,.img,.hfe,.woz,.scp,.ipf,.raw">
+                </div>
+                
+                <div class="loading" id="loading">
+                    <div class="spinner"></div>
+                    <p>Analyzing disk image...</p>
+                </div>
+                
+                <div class="file-info" id="file-info">
+                    <div class="info-row">
+                        <span class="label">Format</span>
+                        <span class="value" id="info-format">-</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">Platform</span>
+                        <span class="value" id="info-platform">-</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">Tracks</span>
+                        <span class="value" id="info-tracks">-</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">Sectors</span>
+                        <span class="value" id="info-sectors">-</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">Size</span>
+                        <span class="value" id="info-size">-</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">Good</span>
+                        <span class="value" style="color: #22c55e" id="info-good">-</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">Bad</span>
+                        <span class="value" style="color: #ef4444" id="info-bad">-</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">Protection</span>
+                        <span class="value" id="info-protection">-</span>
+                    </div>
+                </div>
+                
+                <h2 style="margin-top: 20px">🎯 Track Selection</h2>
+                <div style="margin-top: 10px">
+                    <label>Track: <input type="range" id="track-slider" min="0" max="79" value="0" style="width: 150px"></label>
+                    <span id="track-num">0</span>
+                </div>
+                <div style="margin-top: 10px">
+                    <label>
+                        <input type="checkbox" id="side-toggle"> Side 1
+                    </label>
+                </div>
+                
+                <h2 style="margin-top: 20px">📊 Sectors</h2>
+                <div class="sector-grid" id="sector-grid">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+            
+            <!-- Center: Main Viewer -->
+            <div class="panel viewer-area">
+                <div class="view-tabs">
+                    <button class="view-tab active" data-view="0">Track Map</button>
+                    <button class="view-tab" data-view="1">Track Detail</button>
+                    <button class="view-tab" data-view="2">Hex View</button>
+                    <button class="view-tab" data-view="3">Flux Graph</button>
+                    <button class="view-tab" data-view="4">Protection</button>
+                </div>
+                
+                <canvas id="viewer-canvas"></canvas>
+                
+                <div class="status-bar">
+                    <span class="status" id="status-text">Ready</span>
+                    <span class="coords" id="coords-text">-</span>
+                </div>
+            </div>
+            
+            <!-- Right Panel: Details -->
+            <div class="panel">
+                <h2>📋 Sector Data</h2>
+                <div class="hex-view" id="hex-view">
+                    <p style="color: #888">Select a sector to view data</p>
+                </div>
+                
+                <h2 style="margin-top: 20px">🔒 Protection Report</h2>
+                <div id="protection-report" style="font-size: 0.85rem; color: #888">
+                    No protection detected
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // UFT Web Viewer JavaScript Interface
+        
+        let Module = null;
+        let viewerHandle = 0;
+        let canvas, ctx;
+        let currentView = 0;
+        
+        // Initialize WASM module
+        async function initWasm() {
+            try {
+                // In production, this would load the actual WASM module
+                // Module = await UFTWeb();
+                document.getElementById('wasm-status').textContent = '✅ Ready';
+                document.getElementById('wasm-status').style.color = '#4ade80';
+                
+                // For demo, simulate WASM initialization
+                console.log('UFT Web Viewer initialized (demo mode)');
+            } catch (e) {
+                console.error('WASM init failed:', e);
+                document.getElementById('wasm-status').textContent = '❌ WASM Error';
+                document.getElementById('wasm-status').style.color = '#ef4444';
+            }
+        }
+        
+        // File handling
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        
+        dropZone.addEventListener('click', () => fileInput.click());
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('active');
+        });
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('active');
+        });
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('active');
+            if (e.dataTransfer.files.length) {
+                loadFile(e.dataTransfer.files[0]);
+            }
+        });
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files.length) {
+                loadFile(fileInput.files[0]);
+            }
+        });
+        
+        async function loadFile(file) {
+            console.log('Loading:', file.name, file.size, 'bytes');
+            
+            document.getElementById('loading').classList.add('visible');
+            document.getElementById('file-info').classList.remove('visible');
+            
+            try {
+                const buffer = await file.arrayBuffer();
+                const data = new Uint8Array(buffer);
+                
+                // Demo: Parse file info
+                const info = analyzeFile(file.name, data);
+                updateFileInfo(info);
+                renderTrackMap(info);
+                
+                document.getElementById('loading').classList.remove('visible');
+                document.getElementById('file-info').classList.add('visible');
+                document.getElementById('status-text').textContent = `Loaded: ${file.name}`;
+                
+            } catch (e) {
+                console.error('Load error:', e);
+                document.getElementById('loading').classList.remove('visible');
+                document.getElementById('status-text').textContent = 'Error loading file';
+            }
+        }
+        
+        // Demo: File analysis (would be done by WASM in production)
+        function analyzeFile(name, data) {
+            const ext = name.split('.').pop().toLowerCase();
+            
+            const formats = {
+                'adf': { format: 'ADF', platform: 'Amiga', tracks: 80, sides: 2, sectors: 11 },
+                'd64': { format: 'D64', platform: 'C64', tracks: 35, sides: 1, sectors: 21 },
+                'dsk': { format: 'DSK', platform: 'Amstrad/Spectrum', tracks: 40, sides: 1, sectors: 9 },
+                'img': { format: 'IMG', platform: 'PC', tracks: 80, sides: 2, sectors: 18 },
+                'hfe': { format: 'HFE', platform: 'Multi', tracks: 80, sides: 2, sectors: 0 },
+                'woz': { format: 'WOZ', platform: 'Apple II', tracks: 35, sides: 1, sectors: 16 }
+            };
+            
+            const info = formats[ext] || { format: 'Unknown', platform: 'Unknown', tracks: 80, sides: 2, sectors: 9 };
+            info.size = data.length;
+            info.filename = name;
+            
+            // Simulate sector analysis
+            const totalSectors = info.tracks * info.sides * info.sectors;
+            info.goodSectors = Math.floor(totalSectors * 0.95);
+            info.badSectors = Math.floor(totalSectors * 0.02);
+            info.weakSectors = totalSectors - info.goodSectors - info.badSectors;
+            info.protection = data.length > 200000 ? 'Possible' : 'None';
+            
+            return info;
+        }
+        
+        function updateFileInfo(info) {
+            document.getElementById('info-format').textContent = info.format;
+            document.getElementById('info-platform').textContent = info.platform;
+            document.getElementById('info-tracks').textContent = `${info.tracks} × ${info.sides}`;
+            document.getElementById('info-sectors').textContent = info.sectors || 'Variable';
+            document.getElementById('info-size').textContent = formatBytes(info.size);
+            document.getElementById('info-good').textContent = info.goodSectors;
+            document.getElementById('info-bad').textContent = info.badSectors;
+            document.getElementById('info-protection').textContent = info.protection;
+            
+            // Update track slider
+            document.getElementById('track-slider').max = info.tracks - 1;
+            
+            // Update sector grid
+            updateSectorGrid(info.sectors);
+        }
+        
+        function updateSectorGrid(sectorCount) {
+            const grid = document.getElementById('sector-grid');
+            grid.innerHTML = '';
+            
+            for (let i = 0; i < sectorCount; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'sector-cell good';
+                cell.textContent = i;
+                cell.onclick = () => selectSector(i);
+                
+                // Random status for demo
+                const rand = Math.random();
+                if (rand > 0.95) cell.className = 'sector-cell bad';
+                else if (rand > 0.90) cell.className = 'sector-cell weak';
+                
+                grid.appendChild(cell);
+            }
+        }
+        
+        function selectSector(num) {
+            // Remove previous selection
+            document.querySelectorAll('.sector-cell.selected').forEach(el => el.classList.remove('selected'));
+            
+            // Select new
+            const cells = document.querySelectorAll('.sector-cell');
+            if (cells[num]) {
+                cells[num].classList.add('selected');
+            }
+            
+            // Update hex view
+            updateHexView(num);
+        }
+        
+        function updateHexView(sector) {
+            const view = document.getElementById('hex-view');
+            let html = '';
+            
+            // Generate demo hex data
+            for (let row = 0; row < 32; row++) {
+                const offset = row * 16;
+                html += `<div class="hex-row">`;
+                html += `<span class="hex-offset">${offset.toString(16).padStart(4, '0')}</span>`;
+                
+                let bytes = '';
+                let ascii = '';
+                for (let col = 0; col < 16; col++) {
+                    const val = Math.floor(Math.random() * 256);
+                    bytes += val.toString(16).padStart(2, '0') + ' ';
+                    ascii += (val >= 32 && val < 127) ? String.fromCharCode(val) : '.';
+                }
+                
+                html += `<span class="hex-bytes">${bytes}</span>`;
+                html += `<span class="hex-ascii">${ascii}</span>`;
+                html += `</div>`;
+            }
+            
+            view.innerHTML = html;
+        }
+        
+        function renderTrackMap(info) {
+            canvas = document.getElementById('viewer-canvas');
+            ctx = canvas.getContext('2d');
+            
+            // Set canvas size
+            canvas.width = canvas.clientWidth;
+            canvas.height = canvas.clientHeight;
+            
+            // Clear
+            ctx.fillStyle = '#0a0a1a';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw track map
+            const cellWidth = Math.floor(canvas.width / (info.tracks + 2));
+            const cellHeight = Math.floor(canvas.height / (info.sides * info.sectors + 4));
+            
+            ctx.font = '10px monospace';
+            ctx.fillStyle = '#888';
+            
+            // Track headers
+            for (let t = 0; t < info.tracks; t++) {
+                ctx.fillText(t.toString(), (t + 1) * cellWidth, 12);
+            }
+            
+            // Draw sectors
+            for (let s = 0; s < info.sides; s++) {
+                for (let sec = 0; sec < info.sectors; sec++) {
+                    const y = (s * info.sectors + sec + 2) * cellHeight;
+                    
+                    // Sector label
+                    ctx.fillStyle = '#888';
+                    ctx.fillText(`${s}:${sec}`, 2, y + cellHeight - 2);
+                    
+                    // Sector cells
+                    for (let t = 0; t < info.tracks; t++) {
+                        const x = (t + 1) * cellWidth;
+                        
+                        // Random color for demo
+                        const rand = Math.random();
+                        if (rand > 0.98) ctx.fillStyle = '#ef4444'; // Bad
+                        else if (rand > 0.95) ctx.fillStyle = '#eab308'; // Weak
+                        else ctx.fillStyle = '#22c55e'; // Good
+                        
+                        ctx.fillRect(x + 1, y + 1, cellWidth - 2, cellHeight - 2);
+                    }
+                }
+            }
+        }
+        
+        // View tabs
+        document.querySelectorAll('.view-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.view-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                currentView = parseInt(tab.dataset.view);
+                // Would call uft_web_set_view(handle, currentView) in production
+            });
+        });
+        
+        // Track slider
+        document.getElementById('track-slider').addEventListener('input', (e) => {
+            document.getElementById('track-num').textContent = e.target.value;
+            // Would call uft_web_select_track(handle, track, side) in production
+        });
+        
+        // Canvas mouse tracking
+        document.getElementById('viewer-canvas').addEventListener('mousemove', (e) => {
+            const rect = e.target.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            document.getElementById('coords-text').textContent = `X: ${Math.floor(x)} Y: ${Math.floor(y)}`;
+        });
+        
+        // Utility
+        function formatBytes(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+        }
+        
+        // Initialize
+        initWasm();
+    </script>
+</body>
+</html>

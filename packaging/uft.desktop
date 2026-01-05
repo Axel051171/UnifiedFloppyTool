@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=UnifiedFloppyTool
+Comment=Forensic Floppy Preservation Tool
+Exec=uft
+Icon=uft
+Terminal=false
+Type=Application
+Categories=Utility;System;
+Keywords=floppy;disk;preservation;commodore;amiga;atari;

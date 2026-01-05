@@ -1,0 +1,20 @@
+Package: uft
+Version: 3.3.0
+Section: utils
+Priority: optional
+Architecture: amd64
+Maintainer: Axel Kramer <axel@unifiedfloppytool.org>
+Depends: libc6 (>= 2.17), libusb-1.0-0, libqt6core6, libqt6gui6, libqt6widgets6
+Suggests: greaseweazle, kryoflux
+Homepage: https://github.com/Axel051171/UnifiedFloppyTool
+Description: UnifiedFloppyTool - Forensic Floppy Preservation
+ Professional-grade floppy disk preservation and analysis tool.
+ .
+ Features:
+  - 115+ disk formats supported
+  - 20+ historical computing platforms
+  - Forensic-quality preservation with copy protection
+  - Qt6 GUI with Dark Mode
+  - Cross-platform (Win/Linux/macOS)
+ .
+ "Bei uns geht kein Bit verloren" - No bit gets lost
