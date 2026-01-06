@@ -331,8 +331,15 @@ static const uint8_t SIG_PCAP[]        = { 0xD4, 0xC3, 0xB2, 0xA1 };
  * Signature Database
  * ============================================================================ */
 
+/* MSVC doesn't accept ternary operator as constant initializer */
+#define SIG_WITH_FOOTER(nm, ext, desc, cat, hdr, off, ftr, flg) \
+    { nm, ext, desc, cat, hdr, sizeof(hdr), off, ftr, sizeof(ftr), flg }
+
+#define SIG_NO_FOOTER(nm, ext, desc, cat, hdr, off, flg) \
+    { nm, ext, desc, cat, hdr, sizeof(hdr), off, NULL, 0, flg }
+
 #define SIG(nm, ext, desc, cat, hdr, off, ftr, flg) \
-    { nm, ext, desc, cat, hdr, sizeof(hdr), off, ftr, (ftr) ? sizeof(ftr) : 0, flg }
+    SIG_WITH_FOOTER(nm, ext, desc, cat, hdr, off, ftr, flg)
 
 #define SIG_SIMPLE(nm, ext, desc, cat, hdr) \
     { nm, ext, desc, cat, hdr, sizeof(hdr), 0, NULL, 0, UFT_SIG_FLAG_NONE }
