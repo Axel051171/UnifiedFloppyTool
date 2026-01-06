@@ -40,7 +40,7 @@ jobs:
           key: qt-${{ env.QT_VERSION }}-linux
 
       - name: 🎨 Install Qt
-        uses: jurplel/install-qt-action@v3
+        uses: jurplel/install-qt-action@v4
         with:
           version: ${{ env.QT_VERSION }}
           host: linux
@@ -81,7 +81,7 @@ jobs:
           key: qt-${{ env.QT_VERSION }}-macos
 
       - name: 🎨 Install Qt
-        uses: jurplel/install-qt-action@v3
+        uses: jurplel/install-qt-action@v4
         with:
           version: ${{ env.QT_VERSION }}
           host: mac
@@ -129,7 +129,7 @@ jobs:
           key: qt-${{ env.QT_VERSION }}-windows
 
       - name: 🎨 Install Qt
-        uses: jurplel/install-qt-action@v3
+        uses: jurplel/install-qt-action@v4
         with:
           version: ${{ env.QT_VERSION }}
           host: windows
