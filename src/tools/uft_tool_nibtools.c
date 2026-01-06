@@ -15,7 +15,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+
+#ifdef _WIN32
+#include <windows.h>
+#define popen _popen
+#define pclose _pclose
+#else
 #include <unistd.h>
+#endif
 
 // ============================================================================
 // Helper

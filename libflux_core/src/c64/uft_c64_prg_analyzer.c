@@ -137,5 +137,9 @@ void uft_prg_score_floppy_keywords(const uft_prg_string_t *strings, size_t count
         out->read     += (uint32_t)ci_contains(s, "READ");
         out->write    += (uint32_t)ci_contains(s, "WRITE");
         out->gap      += (uint32_t)ci_contains(s, "GAP");
+        out->backup   += (uint32_t)ci_contains(s, "BACKUP");
+        out->format   += (uint32_t)ci_contains(s, "FORMAT");
+        out->bam      += (uint32_t)ci_contains(s, "BAM");
+        out->directory += (uint32_t)ci_contains(s, "DIRECTORY");
     }
 }

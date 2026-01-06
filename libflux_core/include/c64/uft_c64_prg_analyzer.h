@@ -70,6 +70,10 @@ typedef struct uft_prg_score {
     uint32_t read;
     uint32_t write;
     uint32_t gap;
+    uint32_t backup;
+    uint32_t format;
+    uint32_t bam;
+    uint32_t directory;
 } uft_prg_score_t;
 
 uft_prg_status_t uft_prg_parse(const uint8_t *blob, size_t blob_len, uft_prg_view_t *out);

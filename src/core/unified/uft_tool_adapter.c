@@ -12,8 +12,17 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+
+#ifdef _WIN32
+#include <windows.h>
+#include <process.h>
+#define unlink _unlink
+#define getpid _getpid
+typedef int pid_t;
+#else
 #include <unistd.h>     /* unlink, getpid */
 #include <sys/types.h>  /* pid_t */
+#endif
 
 // ============================================================================
 // Registry Storage

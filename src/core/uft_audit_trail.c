@@ -19,11 +19,15 @@
 #include "uft/uft_audit_trail.h"
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 #include <stdarg.h>
 
 #ifdef _WIN32
 #include <windows.h>
+static inline int uft_gethostname(char* name, size_t len) {
+    DWORD size = (DWORD)len;
+    return GetComputerNameA(name, &size) ? 0 : -1;
+}
+#define gethostname uft_gethostname
 #else
 #include <sys/time.h>
 #include <unistd.h>

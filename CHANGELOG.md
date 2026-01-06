@@ -1,9 +1,39 @@
 # Changelog
 
 All notable changes to UnifiedFloppyTool will be documented in this file.
+## [3.4.3] - 2026-01-06
+
+### Fixed
+- Windows Build: Removed unguarded `#include <unistd.h>` in multiple files
+- Windows Build: Added platform guards for POSIX-specific code
+- Linux AppImage: Fixed icon detection for linuxdeploy
+
+### Changed
+- uft_audit_trail.c: Windows-compatible gethostname replacement
+- uft_tool_adapter.c: Windows-compatible unlink/getpid
+- uft_fat_table.c: Windows-compatible endian macros
+- uft_simd.c, uft_memory.c: Platform-specific includes
+
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [3.4.2] - 2026-01-06
+
+### Added
+- CBM DOS High-Level Error Codes (0-77) für vollständige DOS-Kompatibilität
+- uft_cbm_dos_error_string() für Channel 15 Status
+- uft_cbm_dos_format_status() für CBM-Style Status-Strings
+- Source: disk2easyflash (Per Olofsson, BSD License)
+
+## [3.4.1] - 2026-01-06
+
+### Added
+- PRG Analyzer: 4 neue Keywords (BACKUP, FORMAT, BAM, DIRECTORY)
+- Test-Samples: 6 historische C64-Kopierprogramme (TurboNibbler, Di-Sector, etc.)
+
+### Changed
+- uft_prg_score_t erweitert für bessere Copy-Tool-Erkennung
 
 ## [3.7.0] - 2026-01-06 - "Windows Fix Edition" (R49)
 

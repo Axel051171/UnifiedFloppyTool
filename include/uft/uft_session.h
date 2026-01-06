@@ -96,12 +96,12 @@ typedef enum {
  * ═══════════════════════════════════════════════════════════════════════════════ */
 
 typedef enum {
-    UFT_TRACK_STATUS_PENDING        = 0,
-    UFT_TRACK_STATUS_PROCESSING     = 1,
-    UFT_TRACK_STATUS_COMPLETE       = 2,
-    UFT_TRACK_STATUS_FAILED         = 3,
-    UFT_TRACK_STATUS_SKIPPED        = 4,
-} uft_track_status_t;
+    UFT_SESSION_TRACK_PENDING        = 0,
+    UFT_SESSION_TRACK_PROCESSING     = 1,
+    UFT_SESSION_TRACK_COMPLETE       = 2,
+    UFT_SESSION_TRACK_FAILED         = 3,
+    UFT_SESSION_TRACK_SKIPPED        = 4,
+} uft_session_track_status_t;
 
 /* ═══════════════════════════════════════════════════════════════════════════════
  * Session Track Info
@@ -110,7 +110,7 @@ typedef enum {
 typedef struct {
     uint8_t             cylinder;
     uint8_t             head;
-    uft_track_status_t  status;
+    uft_session_track_status_t  status;
     
     int                 retry_count;
     double              process_time_ms;
@@ -344,7 +344,7 @@ void uft_session_set_track_status(
     uft_session_t *session,
     int cylinder,
     int head,
-    uft_track_status_t status
+    uft_session_track_status_t status
 );
 
 /**
@@ -492,7 +492,7 @@ const char *uft_session_op_string(uft_session_op_t op);
 /**
  * @brief Track-Status als String
  */
-const char *uft_track_status_string(uft_track_status_t status);
+const char *uft_session_track_status_string(uft_session_track_status_t status);
 
 /**
  * @brief Default Session-Pfad abrufen
