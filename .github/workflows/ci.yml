@@ -32,21 +32,34 @@ jobs:
             pkg-config \
             libusb-1.0-0-dev \
             libudev-dev \
-            qt6-base-dev \
-            qt6-tools-dev \
-            libqt6serialport6-dev \
             libgl1-mesa-dev \
             libxcb-cursor0 \
+            libxcb-xinerama0 \
+            libxkbcommon-x11-0 \
+            libxcb-icccm4 \
+            libxcb-image0 \
+            libxcb-keysyms1 \
+            libxcb-randr0 \
+            libxcb-render-util0 \
+            libxcb-shape0 \
             xvfb
+
+      - name: 🎨 Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          host: 'linux'
+          target: 'desktop'
+          arch: 'gcc_64'
+          modules: 'qtserialport'
 
       - name: 🔨 Configure CMake
         run: |
           cmake -B build -G Ninja \
             -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
             -DUFT_ENABLE_SECURITY=ON \
-            -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
-            -DCMAKE_C_FLAGS="-Wall -Wextra -fPIC" \
-            -DCMAKE_CXX_FLAGS="-Wall -Wextra -fPIC"
+            -DCMAKE_C_FLAGS="-Wall -Wextra" \
+            -DCMAKE_CXX_FLAGS="-Wall -Wextra"
 
       - name: 🏗️ Build
         run: cmake --build build --config ${{ env.BUILD_TYPE }} --parallel
@@ -96,9 +109,10 @@ jobs:
 
   # ═══════════════════════════════════════════════════════════════════════════
   # macOS Build + Tests
+  # Note: macOS 15 (Sequoia) required for latest Qt6 compatibility
   # ═══════════════════════════════════════════════════════════════════════════
   build-macos:
-    runs-on: macos-13
+    runs-on: macos-15
     name: 🍎 macOS
 
     steps:
@@ -138,7 +152,7 @@ jobs:
       - name: 📤 Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: uft-macos-x86_64
+          name: uft-macos-arm64
           path: |
             build/*.tar.gz
             build/UnifiedFloppyTool.app

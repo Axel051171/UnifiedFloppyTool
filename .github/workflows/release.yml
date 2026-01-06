@@ -7,9 +7,9 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version (e.g. 3.5.0)'
+        description: 'Version (e.g. 3.6.0)'
         required: true
-        default: '3.5.0'
+        default: '3.6.0'
 
 env:
   BUILD_TYPE: Release
@@ -48,12 +48,26 @@ jobs:
             libudev-dev \
             dpkg-dev \
             file \
-            qt6-base-dev \
-            qt6-tools-dev \
-            libqt6serialport6-dev \
             libgl1-mesa-dev \
             libxcb-cursor0 \
+            libxcb-xinerama0 \
+            libxkbcommon-x11-0 \
+            libxcb-icccm4 \
+            libxcb-image0 \
+            libxcb-keysyms1 \
+            libxcb-randr0 \
+            libxcb-render-util0 \
+            libxcb-shape0 \
             xvfb
+
+      - name: 🎨 Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          host: 'linux'
+          target: 'desktop'
+          arch: 'gcc_64'
+          modules: 'qtserialport'
 
       - name: 🔨 Configure
         run: |
@@ -61,7 +75,6 @@ jobs:
             -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
             -DCMAKE_INSTALL_PREFIX=/usr \
             -DUFT_ENABLE_SECURITY=ON \
-            -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
             -DUFT_VERSION="${{ steps.version.outputs.version }}" \
             -DCPACK_PACKAGE_VERSION="${{ steps.version.outputs.version }}"
 
@@ -96,10 +109,10 @@ jobs:
 
   # ═══════════════════════════════════════════════════════════════════════════
   # macOS Release: tar.gz
-  # Note: macOS 15 (Sequoia) requires code signing for distribution
+  # Note: macOS 15 (Sequoia) - ARM64 runner
   # ═══════════════════════════════════════════════════════════════════════════
   macos:
-    runs-on: macos-13
+    runs-on: macos-15
     name: 🍎 macOS Release
 
     steps:
@@ -140,7 +153,7 @@ jobs:
         run: |
           cd build
           cpack -G TGZ
-          mv *.tar.gz ../uft-${{ steps.version.outputs.version }}-macos-x86_64.tar.gz
+          mv *.tar.gz ../uft-${{ steps.version.outputs.version }}-macos-arm64.tar.gz
 
       - name: 📤 Upload Artifacts
         uses: actions/upload-artifact@v4
