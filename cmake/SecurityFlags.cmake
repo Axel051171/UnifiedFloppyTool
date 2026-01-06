@@ -14,8 +14,6 @@ if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
     # Platform-specific linker flags
     if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
         # PIE and RELRO only on Linux
-        add_compile_options(-fPIE)
-        add_link_options(-pie)
         add_link_options(-Wl,-z,relro,-z,now)
     endif()
     
