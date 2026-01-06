@@ -14,6 +14,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
+#include "uft/uft_compiler.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -28,7 +29,8 @@ extern "C" {
  * 
  * Offsets are from start of boot sector (sector 0)
  */
-typedef struct __attribute__((packed)) {
+UFT_PACK_BEGIN
+typedef struct {
     uint8_t  jmp_boot[3];           /**< 0x00: Jump instruction */
     char     oem_name[8];           /**< 0x03: OEM name */
     uint16_t bytes_per_sector;      /**< 0x0B: Bytes per sector (512) */
@@ -54,6 +56,7 @@ typedef struct __attribute__((packed)) {
     uint8_t  boot_code[448];        /**< 0x3E: Boot code */
     uint16_t signature;             /**< 0x1FE: Boot signature (0xAA55) */
 } uft_fat_bootsect_t;
+UFT_PACK_END
 
 /*===========================================================================
  * Media Descriptor Types
@@ -152,7 +155,8 @@ static const uft_fat_geometry_t uft_fat_geometries[] = {
 /**
  * @brief FAT directory entry (32 bytes)
  */
-typedef struct __attribute__((packed)) {
+UFT_PACK_BEGIN
+typedef struct {
     char     name[8];               /**< 0x00: Filename (space-padded) */
     char     ext[3];                /**< 0x08: Extension (space-padded) */
     uint8_t  attributes;            /**< 0x0B: File attributes */
@@ -167,6 +171,7 @@ typedef struct __attribute__((packed)) {
     uint16_t cluster_low;           /**< 0x1A: Low word of first cluster */
     uint32_t file_size;             /**< 0x1C: File size in bytes */
 } uft_fat_dirent_t;
+UFT_PACK_END
 
 /*===========================================================================
  * Time/Date Conversion

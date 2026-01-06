@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include "uft/uft_compiler.h"
 
 /* ============================================================================
  * D64 Track Layout Table
@@ -281,7 +282,8 @@ typedef struct {
     uint8_t version;            /* 0 */
     uint8_t track_count;        /* Number of tracks */
     uint16_t max_track_size;    /* Maximum track size */
-} __attribute__((packed)) g64_header_t;
+} g64_header_t;
+UFT_PACK_END
 
 /**
  * @brief G64 image handle

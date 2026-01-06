@@ -24,7 +24,9 @@
 #define UFT_FLASHFLOPPY_FORMATS_H
 
 #include <stdint.h>
+#include <stddef.h>
 #include <stdbool.h>
+#include <stddef.h>
 
 #ifdef __cplusplus
 extern "C" {

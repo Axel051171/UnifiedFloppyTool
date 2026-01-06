@@ -6,7 +6,12 @@
 #include "uft/uft_simd.h"
 #include <stdio.h>
 #include <string.h>
+
+#ifdef _WIN32
+#include <windows.h>
+#else
 #include <unistd.h>  /* For sysconf() */
+#endif
 
 #if defined(__x86_64__) || defined(_M_X64) || defined(__i386__) || defined(_M_IX86)
     #define UFT_ARCH_X86

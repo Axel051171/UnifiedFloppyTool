@@ -1,3 +1,10 @@
+/* Feature test macros for strdup */
+#ifndef _POSIX_C_SOURCE
+#define _POSIX_C_SOURCE 200809L
+#endif
+#ifndef _DEFAULT_SOURCE
+#define _DEFAULT_SOURCE 1
+#endif
 /**
  * @file uft_recovery_meta.c
  * @brief GOD MODE Meta/Decision Recovery Implementation

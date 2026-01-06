@@ -1,9 +1,11 @@
 /**
  * @file uft_apple2_protection.c
  * @brief Apple II Copy Protection Detection Implementation
+ * FIXED R18: Added stdio.h for snprintf
  */
 
 #include "uft/protection/uft_apple2_protection.h"
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>

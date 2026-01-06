@@ -280,7 +280,7 @@ bool uft_format_validate(const uft_format_params_t* fmt) {
     return true;
 }
 
-const char* uft_encoding_name(uft_encoding_t encoding) {
+static const char* uft_format_params_encoding_name(uft_encoding_t encoding) {
     switch (encoding) {
         case UFT_ENCODING_FM:         return "FM";
         case UFT_ENCODING_MFM:        return "MFM";

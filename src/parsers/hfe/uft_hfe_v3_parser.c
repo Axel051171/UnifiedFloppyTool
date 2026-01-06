@@ -130,7 +130,8 @@ static const char* hfe_error_names[] = {
  *============================================================================*/
 
 /* HFE File Header (512 bytes) */
-typedef struct __attribute__((packed)) {
+UFT_PACK_BEGIN
+typedef struct {
     uint8_t  signature[8];         /* "HXCPICFE" or "HXCHFEV3" */
     uint8_t  format_revision;      /* Format revision */
     uint8_t  number_of_tracks;     /* Number of tracks */
@@ -149,12 +150,15 @@ typedef struct __attribute__((packed)) {
     uint8_t  track0s1_encoding;    /* Track 0 side 1 encoding */
     uint8_t  reserved2[478];       /* Padding to 512 bytes */
 } hfe_header_t;
+UFT_PACK_END
 
 /* Track offset entry */
-typedef struct __attribute__((packed)) {
+UFT_PACK_BEGIN
+typedef struct {
     uint16_t offset;               /* Offset in 512-byte blocks */
     uint16_t track_len;            /* Track length in bytes */
 } hfe_track_entry_t;
+UFT_PACK_END
 
 /* Decoded track side data */
 typedef struct {
@@ -838,6 +842,7 @@ int hfe_decode_hddd_a2_track(
 #ifdef HFE_V3_PARSER_TEST
 
 #include <assert.h>
+#include "uft/uft_compiler.h"
 
 int main(void) {
     printf("=== HFE v3 Parser Unit Tests ===\n");

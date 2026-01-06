@@ -3,6 +3,7 @@
  * @brief Amstrad CPC/Spectrum DSK Format Plugin - API-konform
  */
 
+#include <stdio.h>  // FIXED R18
 #include "uft/uft_format_common.h"
 
 #define DSK_HEADER_SIZE     256

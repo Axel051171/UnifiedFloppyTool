@@ -6,6 +6,9 @@
 #include "fdc_defs.h"
 #include "bit_array.h"
 
+#include <stdbool.h>
+#include <stddef.h>
+
 class disk_image_exception {
 private:
     int m_error_code;

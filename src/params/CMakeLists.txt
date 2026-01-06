@@ -17,7 +17,8 @@ set_target_properties(uft_params PROPERTIES
     C_STANDARD_REQUIRED ON
 )
 
-target_link_libraries(uft_params PRIVATE m)
+# Math library via zentrale Funktion
+uft_link_math(uft_params)
 
 if(MSVC)
     target_compile_options(uft_params PRIVATE /W3)

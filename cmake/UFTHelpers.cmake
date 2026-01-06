@@ -22,14 +22,27 @@ function(uft_add_simd_source TARGET SOURCE)
     
     if("AVX2" IN_LIST SIMD_VARIANT AND UFT_HAVE_AVX2)
         target_sources(${TARGET} PRIVATE ${SOURCE})
-        set_source_files_properties(${SOURCE} PROPERTIES
-            COMPILE_FLAGS "-mavx2 -DUFT_SIMD_AVX2"
-        )
+        if(MSVC)
+            set_source_files_properties(${SOURCE} PROPERTIES
+                COMPILE_FLAGS "/arch:AVX2 /DUFT_SIMD_AVX2"
+            )
+        else()
+            set_source_files_properties(${SOURCE} PROPERTIES
+                COMPILE_FLAGS "-mavx2 -DUFT_SIMD_AVX2"
+            )
+        endif()
     elseif("SSE2" IN_LIST SIMD_VARIANT AND UFT_HAVE_SSE2)
         target_sources(${TARGET} PRIVATE ${SOURCE})
-        set_source_files_properties(${SOURCE} PROPERTIES
-            COMPILE_FLAGS "-msse2 -DUFT_SIMD_SSE2"
-        )
+        if(MSVC)
+            # SSE2 is default on x64 MSVC, no special flag needed
+            set_source_files_properties(${SOURCE} PROPERTIES
+                COMPILE_FLAGS "/DUFT_SIMD_SSE2"
+            )
+        else()
+            set_source_files_properties(${SOURCE} PROPERTIES
+                COMPILE_FLAGS "-msse2 -DUFT_SIMD_SSE2"
+            )
+        endif()
     else()
         target_sources(${TARGET} PRIVATE ${SOURCE})
     endif()

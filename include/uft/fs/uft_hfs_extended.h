@@ -18,6 +18,9 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include "uft/uft_compiler.h"
+
+#include <time.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -81,33 +84,40 @@ typedef enum {
 /**
  * @brief HFS extent descriptor
  */
-typedef struct __attribute__((packed)) {
+UFT_PACK_BEGIN
+typedef struct {
     uint16_t start_block;           /**< First allocation block */
     uint16_t block_count;           /**< Number of blocks */
 } uft_hfs_extent_t;
+UFT_PACK_END
 
 /**
  * @brief HFS+ extent descriptor
  */
-typedef struct __attribute__((packed)) {
+UFT_PACK_BEGIN
+typedef struct {
     uint32_t start_block;           /**< First allocation block */
     uint32_t block_count;           /**< Number of blocks */
 } uft_hfsplus_extent_t;
+UFT_PACK_END
 
 /**
  * @brief HFS+ fork data
  */
-typedef struct __attribute__((packed)) {
+UFT_PACK_BEGIN
+typedef struct {
     uint64_t logical_size;          /**< Logical size in bytes */
     uint32_t clump_size;            /**< Clump size for allocation */
     uint32_t total_blocks;          /**< Total blocks in fork */
     uft_hfsplus_extent_t extents[8];/**< First 8 extents */
 } uft_hfsplus_fork_t;
+UFT_PACK_END
 
 /**
  * @brief HFS volume header (Master Directory Block)
  */
-typedef struct __attribute__((packed)) {
+UFT_PACK_BEGIN
+typedef struct {
     uint16_t signature;             /**< 0x4244 'BD' */
     uint32_t create_date;           /**< Creation date */
     uint32_t modify_date;           /**< Modification date */
@@ -133,11 +143,13 @@ typedef struct __attribute__((packed)) {
     uint32_t finder_info[8];        /**< Finder info */
     /* Extents and catalog info follow */
 } uft_hfs_mdb_t;
+UFT_PACK_END
 
 /**
  * @brief HFS+ volume header
  */
-typedef struct __attribute__((packed)) {
+UFT_PACK_BEGIN
+typedef struct {
     uint16_t signature;             /**< 0x482B 'H+' or 0x4858 'HX' */
     uint16_t version;               /**< Volume format version */
     uint32_t attributes;            /**< Volume attributes */
@@ -172,6 +184,7 @@ typedef struct __attribute__((packed)) {
     uft_hfsplus_fork_t attributes_file;  /**< Attributes B-tree */
     uft_hfsplus_fork_t startup_file;     /**< Boot loader */
 } uft_hfsplus_header_t;
+UFT_PACK_END
 
 /**
  * @brief File info

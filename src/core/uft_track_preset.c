@@ -12,6 +12,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include "uft/uft_compat.h"  /* strncasecmp */
 #include <stdio.h>
 #include <ctype.h>
 

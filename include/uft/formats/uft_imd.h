@@ -16,6 +16,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
+#include "uft/uft_compiler.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -213,13 +214,15 @@ typedef struct {
 /**
  * @brief IMD track header (binary format in file)
  */
-typedef struct __attribute__((packed)) {
+UFT_PACK_BEGIN
+typedef struct {
     uint8_t mode;               /**< Mode (data rate/density) */
     uint8_t cylinder;           /**< Cylinder number (0-255) */
     uint8_t head;               /**< Head (0-1) + optional map flags */
     uint8_t nsectors;           /**< Number of sectors */
     uint8_t sector_size;        /**< Sector size code */
 } uft_imd_track_header_t;
+UFT_PACK_END
 
 /**
  * @brief IMD track data (expanded for processing)

@@ -16,6 +16,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
+#include "uft/uft_compiler.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -73,7 +74,8 @@ extern "C" {
 /**
  * @brief ADFS directory entry (26 bytes in old format)
  */
-typedef struct __attribute__((packed)) {
+UFT_PACK_BEGIN
+typedef struct {
     char     name[10];              /**< Filename (space-padded, top bit = dir flag) */
     uint32_t load_addr;             /**< Load address */
     uint32_t exec_addr;             /**< Execution address */
@@ -82,11 +84,13 @@ typedef struct __attribute__((packed)) {
     uint8_t  sector_mid;            /**< Start sector (middle byte) */
     uint8_t  sector_high_attr;      /**< Start sector high (bits 0-1) + attributes (bits 2-7) */
 } uft_adfs_old_dirent_t;
+UFT_PACK_END
 
 /**
  * @brief ADFS New Directory entry (Big Directory format)
  */
-typedef struct __attribute__((packed)) {
+UFT_PACK_BEGIN
+typedef struct {
     uint32_t load_addr;             /**< Load address */
     uint32_t exec_addr;             /**< Execution address */
     uint32_t length;                /**< File length */
@@ -95,20 +99,24 @@ typedef struct __attribute__((packed)) {
     uint32_t name_len;              /**< Name length */
     /* Variable length name follows */
 } uft_adfs_new_dirent_t;
+UFT_PACK_END
 
 /**
  * @brief ADFS Old Directory header
  */
-typedef struct __attribute__((packed)) {
+UFT_PACK_BEGIN
+typedef struct {
     uint8_t  master_seq;            /**< Master sequence number */
     char     dir_name[10];          /**< Directory name */
     uint32_t parent_sector;         /**< Parent directory sector (3 bytes) + seq */
 } uft_adfs_old_dir_header_t;
+UFT_PACK_END
 
 /**
  * @brief ADFS Old Directory tail
  */
-typedef struct __attribute__((packed)) {
+UFT_PACK_BEGIN
+typedef struct {
     uint8_t  last_entry;            /**< Last entry marker (0) */
     char     dir_name[10];          /**< Directory name (copy) */
     uint8_t  parent_high;           /**< Parent sector high byte */
@@ -117,6 +125,7 @@ typedef struct __attribute__((packed)) {
     uint8_t  end_marker;            /**< End marker */
     uint8_t  checksum;              /**< Directory checksum */
 } uft_adfs_old_dir_tail_t;
+UFT_PACK_END
 
 /*===========================================================================
  * ADFS Boot Block / Free Space Map
@@ -125,7 +134,8 @@ typedef struct __attribute__((packed)) {
 /**
  * @brief ADFS Free Space Map (old format, sectors 0-1)
  */
-typedef struct __attribute__((packed)) {
+UFT_PACK_BEGIN
+typedef struct {
     uint8_t  free_start[82 * 3];    /**< Free space start pointers (3 bytes each) */
     uint8_t  reserved1[4];
     char     disc_name[10];         /**< Disc name */
@@ -138,6 +148,7 @@ typedef struct __attribute__((packed)) {
     uint8_t  free_end_ptr;          /**< Free space end pointer */
     uint8_t  check1;                /**< Checksum byte 1 */
 } uft_adfs_free_space_map_t;
+UFT_PACK_END
 
 /*===========================================================================
  * Disc Record (E+ format)
@@ -146,7 +157,8 @@ typedef struct __attribute__((packed)) {
 /**
  * @brief ADFS Disc Record (for E+ and F formats)
  */
-typedef struct __attribute__((packed)) {
+UFT_PACK_BEGIN
+typedef struct {
     uint8_t  log2_sector_size;      /**< Log2 of sector size */
     uint8_t  sectors_per_track;     /**< Sectors per track */
     uint8_t  heads;                 /**< Number of heads (surfaces) */
@@ -168,6 +180,7 @@ typedef struct __attribute__((packed)) {
     uint8_t  big_flag;              /**< Big flag */
     uint8_t  reserved[18];          /**< Reserved */
 } uft_adfs_disc_record_t;
+UFT_PACK_END
 
 /*===========================================================================
  * Density Values

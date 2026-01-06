@@ -15,6 +15,7 @@
 #include <stddef.h>
 #include <stdbool.h>
 #include <string.h>
+#include "uft/uft_compiler.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -133,7 +134,8 @@ static inline bool uft_fat_valid_media(uint8_t media)
 /**
  * @brief FAT Boot Sector (BPB) structure
  */
-typedef struct __attribute__((packed)) {
+UFT_PACK_BEGIN
+typedef struct {
     uint8_t  jmp[3];            /**< Jump instruction */
     uint8_t  oem_name[8];       /**< OEM name */
     uint8_t  bytes_per_sec[2];  /**< Bytes per sector (usually 512) */
@@ -149,11 +151,13 @@ typedef struct __attribute__((packed)) {
     uint32_t hidden_secs;       /**< Hidden sectors */
     uint32_t total_secs_32;     /**< Total sectors (32-bit) */
 } uft_fat_bpb_t;
+UFT_PACK_END
 
 /**
  * @brief FAT32 Extended BPB
  */
-typedef struct __attribute__((packed)) {
+UFT_PACK_BEGIN
+typedef struct {
     uft_fat_bpb_t bpb;
     uint32_t fat_size_32;       /**< Sectors per FAT (FAT32) */
     uint16_t ext_flags;
@@ -169,6 +173,7 @@ typedef struct __attribute__((packed)) {
     uint8_t  vol_label[11];     /**< Volume label */
     uint8_t  fs_type[8];        /**< "FAT32   " */
 } uft_fat32_bpb_t;
+UFT_PACK_END
 
 /*===========================================================================
  * Minix Filesystem Detection
@@ -189,7 +194,8 @@ typedef struct __attribute__((packed)) {
 /**
  * @brief Minix v1/v2 superblock
  */
-typedef struct __attribute__((packed)) {
+UFT_PACK_BEGIN
+typedef struct {
     uint16_t s_ninodes;         /**< Number of inodes */
     uint16_t s_nzones;          /**< Number of zones (v1) */
     uint16_t s_imap_blocks;     /**< Inode bitmap blocks */
@@ -201,11 +207,13 @@ typedef struct __attribute__((packed)) {
     uint16_t s_state;           /**< Mount state */
     uint32_t s_zones;           /**< Number of zones (v2) */
 } uft_minix_sb_t;
+UFT_PACK_END
 
 /**
  * @brief Minix v3 superblock
  */
-typedef struct __attribute__((packed)) {
+UFT_PACK_BEGIN
+typedef struct {
     uint32_t s_ninodes;
     uint16_t s_pad0;
     uint16_t s_imap_blocks;
@@ -220,6 +228,7 @@ typedef struct __attribute__((packed)) {
     uint16_t s_blocksize;
     uint8_t  s_disk_version;
 } uft_minix3_sb_t;
+UFT_PACK_END
 
 /*===========================================================================
  * Other Filesystem Signatures

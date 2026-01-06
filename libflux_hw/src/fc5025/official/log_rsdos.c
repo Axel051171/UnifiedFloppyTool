@@ -1,7 +1,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include <strings.h>
+#include "uft/uft_compat.h"
 #include <sys/types.h>
 #include <sys/stat.h>
 #ifdef WIN32

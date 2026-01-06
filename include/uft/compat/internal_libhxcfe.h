@@ -105,6 +105,8 @@ typedef struct {
 
 #if HXCFE_DEBUG
 #include <stdio.h>
+
+#include <stdint.h>
 #define hxcfe_log(ctx, level, fmt, ...) \
     fprintf(stderr, "[HXCFE] " fmt "\n", ##__VA_ARGS__)
 #else

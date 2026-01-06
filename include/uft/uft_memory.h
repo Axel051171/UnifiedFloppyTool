@@ -293,6 +293,8 @@ void uft_pool_destroy(uft_pool_t **pool);
 
 /* =============================================================================
  * DEBUG MODE - ALLOCATION TRACKING
+ * FIXED R18: Only enable malloc/free wrapping on GCC/Clang, not MSVC
+ *            MSVC does not support GNU Statement Expressions
  * ============================================================================= */
 
 #ifdef UFT_DEBUG_MEMORY
@@ -318,15 +320,36 @@ void uft_memory_debug_register(void *ptr, size_t size,
  */
 void uft_memory_debug_unregister(void *ptr);
 
-// Wrap standard allocation functions in debug mode
-#define malloc(size) \
-    ({ void *p = malloc(size); \
-       uft_memory_debug_register(p, size, __FILE__, __LINE__); \
-       p; })
+/* 
+ * Wrap standard allocation functions in debug mode
+ * Only works with GCC/Clang due to GNU Statement Expressions
+ * For MSVC, use the explicit uft_debug_* functions instead
+ */
+#if defined(__GNUC__) || defined(__clang__)
+    #define malloc(size) \
+        ({ void *p = malloc(size); \
+           uft_memory_debug_register(p, size, __FILE__, __LINE__); \
+           p; })
 
-#define free(ptr) \
-    ({ uft_memory_debug_unregister(ptr); \
-       free(ptr); })
+    #define free(ptr) \
+        ({ uft_memory_debug_unregister(ptr); \
+           free(ptr); })
+#else
+    /* MSVC: Use explicit debug functions - no automatic wrapping */
+    /* Call uft_debug_malloc() and uft_debug_free() explicitly for tracking */
+    static inline void* uft_debug_malloc(size_t size, const char* file, int line) {
+        void* p = malloc(size);
+        if (p) uft_memory_debug_register(p, size, file, line);
+        return p;
+    }
+    static inline void uft_debug_free(void* ptr) {
+        uft_memory_debug_unregister(ptr);
+        free(ptr);
+    }
+    /* Optional macros for MSVC - these don't auto-track but avoid errors */
+    #define UFT_DEBUG_MALLOC(size) uft_debug_malloc(size, __FILE__, __LINE__)
+    #define UFT_DEBUG_FREE(ptr)    uft_debug_free(ptr)
+#endif
 
 #endif /* UFT_DEBUG_MEMORY */
 

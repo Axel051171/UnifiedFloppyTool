@@ -6,6 +6,8 @@
 #include "image_base.h"
 #include "fdc_vfo_def.h"
 
+#include <stddef.h>
+
 class disk_image_d77 : public disk_image {
 private:
     size_t m_vfo_type;

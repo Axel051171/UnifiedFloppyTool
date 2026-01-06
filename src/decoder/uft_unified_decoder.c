@@ -400,7 +400,7 @@ void uft_track_free(uft_track_t *track)
  * Utility Functions
  *===========================================================================*/
 
-const char *uft_encoding_name(uft_encoding_t encoding)
+static const char *uft_decoder_encoding_name(uft_encoding_t encoding)
 {
     if (encoding >= UFT_ENC_COUNT) {
         return "Unknown";

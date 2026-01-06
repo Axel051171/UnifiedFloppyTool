@@ -8,6 +8,10 @@
 #include "fdc_crc.h"
 #include "mfm_codec.h"
 
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+
 //#define DEBUG
 
 class fdc_bitstream {

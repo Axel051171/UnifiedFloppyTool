@@ -91,7 +91,7 @@ const char* uft_platform_name(uft_platform_t platform) {
     return "Invalid";
 }
 
-const char* uft_encoding_name(uft_encoding_t encoding) {
+static const char* uft_params_universal_encoding_name(uft_encoding_t encoding) {
     if (encoding < UFT_ENCODING_COUNT) {
         return encoding_names[encoding];
     }

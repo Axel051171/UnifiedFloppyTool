@@ -20,6 +20,9 @@
 #include <stddef.h>
 #include <stdbool.h>
 #include <time.h>
+#include "uft/uft_compiler.h"
+
+#include <stdio.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -159,7 +162,8 @@ typedef enum {
  * @brief DOS 3.3 VTOC (Volume Table of Contents)
  * Located at Track 17, Sector 0
  */
-typedef struct __attribute__((packed)) {
+UFT_PACK_BEGIN
+typedef struct {
     uint8_t  unused1;             /**< 0x00: Unused (usually 0) */
     uint8_t  catalog_track;       /**< 0x01: First catalog track */
     uint8_t  catalog_sector;      /**< 0x02: First catalog sector */
@@ -177,33 +181,39 @@ typedef struct __attribute__((packed)) {
     uint16_t bytes_per_sector;    /**< 0x36-37: Bytes per sector (LE) */
     uint8_t  bitmap[200];         /**< 0x38-FF: Free sector bitmap */
 } uft_dos33_vtoc_t;
+UFT_PACK_END
 
 /**
  * @brief DOS 3.3 Catalog Entry
  */
-typedef struct __attribute__((packed)) {
+UFT_PACK_BEGIN
+typedef struct {
     uint8_t  ts_list_track;       /**< 0x00: T/S list track (0 = deleted) */
     uint8_t  ts_list_sector;      /**< 0x01: T/S list sector */
     uint8_t  file_type;           /**< 0x02: File type + flags */
     char     filename[30];        /**< 0x03-20: Filename (high bit set) */
     uint16_t sector_count;        /**< 0x21-22: Sector count (LE) */
 } uft_dos33_entry_t;
+UFT_PACK_END
 
 /**
  * @brief DOS 3.3 Catalog Sector
  */
-typedef struct __attribute__((packed)) {
+UFT_PACK_BEGIN
+typedef struct {
     uint8_t  unused;              /**< 0x00: Unused */
     uint8_t  next_track;          /**< 0x01: Next catalog track */
     uint8_t  next_sector;         /**< 0x02: Next catalog sector */
     uint8_t  reserved[8];         /**< 0x03-0A: Reserved */
     uft_dos33_entry_t entries[7]; /**< 0x0B-FF: File entries */
 } uft_dos33_catalog_t;
+UFT_PACK_END
 
 /**
  * @brief DOS 3.3 Track/Sector List
  */
-typedef struct __attribute__((packed)) {
+UFT_PACK_BEGIN
+typedef struct {
     uint8_t  unused;              /**< 0x00: Unused */
     uint8_t  next_track;          /**< 0x01: Next T/S list track */
     uint8_t  next_sector;         /**< 0x02: Next T/S list sector */
@@ -215,6 +225,7 @@ typedef struct __attribute__((packed)) {
         uint8_t sector;
     } pairs[122];                 /**< 0x0C-FF: T/S pairs */
 } uft_dos33_tslist_t;
+UFT_PACK_END
 
 /*===========================================================================
  * ProDOS Structures
@@ -223,15 +234,18 @@ typedef struct __attribute__((packed)) {
 /**
  * @brief ProDOS Date/Time
  */
-typedef struct __attribute__((packed)) {
+UFT_PACK_BEGIN
+typedef struct {
     uint16_t date;                /**< YYYYYYYMMMMDDDDD */
     uint16_t time;                /**< 000HHHHH00MMMMMM */
 } uft_prodos_datetime_t;
+UFT_PACK_END
 
 /**
  * @brief ProDOS Directory Entry (39 bytes)
  */
-typedef struct __attribute__((packed)) {
+UFT_PACK_BEGIN
+typedef struct {
     uint8_t  storage_type_len;    /**< 0x00: Storage type (hi) + name length (lo) */
     char     filename[15];        /**< 0x01-0F: Filename */
     uint8_t  file_type;           /**< 0x10: File type */
@@ -246,11 +260,13 @@ typedef struct __attribute__((packed)) {
     uft_prodos_datetime_t modified; /**< 0x21-24: Modification date/time */
     uint16_t header_pointer;      /**< 0x25-26: Header block pointer */
 } uft_prodos_entry_t;
+UFT_PACK_END
 
 /**
  * @brief ProDOS Directory Block Header
  */
-typedef struct __attribute__((packed)) {
+UFT_PACK_BEGIN
+typedef struct {
     uint16_t prev_block;          /**< 0x00-01: Previous block */
     uint16_t next_block;          /**< 0x02-03: Next block */
     uint8_t  storage_type_len;    /**< 0x04: Storage type + name length */
@@ -266,6 +282,7 @@ typedef struct __attribute__((packed)) {
     uint16_t bitmap_pointer;      /**< 0x27-28: Bitmap block pointer */
     uint16_t total_blocks;        /**< 0x29-2A: Total blocks */
 } uft_prodos_vol_header_t;
+UFT_PACK_END
 
 /*===========================================================================
  * Runtime Structures

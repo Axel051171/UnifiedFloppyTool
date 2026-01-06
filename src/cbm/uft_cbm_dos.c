@@ -163,3 +163,78 @@ const char* uft_cbm_error_string(uint8_t status)
             return "Unknown error";
     }
 }
+
+/*============================================================================
+ * CBM DOS High-Level Error Messages
+ * Source: disk2easyflash (Per Olofsson, BSD License)
+ *============================================================================*/
+
+static const struct {
+    int code;
+    const char* message;
+} cbm_dos_errors[] = {
+    /* Non-errors */
+    {0,  "ok"},
+    {1,  "files scratched"},
+    {2,  "partition selected"},
+    /* Read/Write errors */
+    {20, "read error (block header not found)"},
+    {21, "read error (drive not ready)"},
+    {22, "read error (data block not found)"},
+    {23, "read error (crc error in data block)"},
+    {24, "read error (byte sector header)"},
+    {25, "write error (write-verify error)"},
+    {26, "write protect on"},
+    {27, "read error (crc error in header)"},
+    /* Syntax errors */
+    {30, "syntax error (general syntax)"},
+    {31, "syntax error (invalid command)"},
+    {32, "syntax error (long line)"},
+    {33, "syntax error (invalid file name)"},
+    {34, "syntax error (no file given)"},
+    {39, "syntax error (invalid command)"},
+    /* Record errors */
+    {50, "record not present"},
+    {51, "overflow in record"},
+    {52, "file too large"},
+    /* File errors */
+    {60, "write file open"},
+    {61, "file not open"},
+    {62, "file not found"},
+    {63, "file exists"},
+    {64, "file type mismatch"},
+    {65, "no block"},
+    {66, "illegal track and sector"},
+    {67, "illegal system t or s"},
+    /* System errors */
+    {70, "no channel"},
+    {71, "directory error"},
+    {72, "disk full"},
+    {73, "dos mismatch"},
+    {74, "drive not ready"},
+    {75, "format error"},
+    {76, "controller error"},
+    {77, "selected partition illegal"},
+    {-1, NULL}
+};
+
+const char* uft_cbm_dos_error_string(uint8_t error_code)
+{
+    for (size_t i = 0; cbm_dos_errors[i].code >= 0; i++) {
+        if (cbm_dos_errors[i].code == error_code) {
+            return cbm_dos_errors[i].message;
+        }
+    }
+    return "unknown error";
+}
+
+int uft_cbm_dos_format_status(uint8_t error_code, uint8_t track, 
+                               uint8_t sector, char* out, size_t out_cap)
+{
+    if (!out || out_cap < 32) return -1;
+    
+    const char* msg = uft_cbm_dos_error_string(error_code);
+    snprintf(out, out_cap, "%02d,%s,%02d,%02d", 
+             error_code, msg, track, sector);
+    return 0;
+}

@@ -39,6 +39,7 @@
 #include <stddef.h>
 #include <stdbool.h>
 #include <time.h>
+#include "uft/uft_compiler.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -232,7 +233,8 @@ typedef struct {
  * 
  * Raw structure as stored on disk
  */
-typedef struct __attribute__((packed)) {
+UFT_PACK_BEGIN
+typedef struct {
     uint8_t  user;              /**< User number (0-15/31) or 0xE5 deleted */
     char     name[8];           /**< Filename (padded with spaces) */
     char     ext[3];            /**< Extension (padded with spaces) */
@@ -242,6 +244,7 @@ typedef struct __attribute__((packed)) {
     uint8_t  rc;                /**< Record count (sectors in this extent) */
     uint8_t  al[16];            /**< Allocation map (block numbers) */
 } uft_cpm_dir_entry_t;
+UFT_PACK_END
 
 /**
  * @brief File attribute flags

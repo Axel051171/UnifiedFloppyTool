@@ -1,3 +1,4 @@
+#include <stdio.h>  // FIXED R18
 #include "uft/uft_format_common.h"
 
 typedef struct { FILE* file; uint8_t tracks, sides, spt; } ssd_data_t;

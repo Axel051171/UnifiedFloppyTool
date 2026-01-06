@@ -24,6 +24,9 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
+#include "uft/uft_compiler.h"
+
+#include <stdio.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -120,10 +123,12 @@ typedef enum {
  *   - Bytes 0-6: Filename (space-padded, 7F masked)
  *   - Byte 7: Directory letter (bit 7 = locked flag)
  */
-typedef struct __attribute__((packed)) {
+UFT_PACK_BEGIN
+typedef struct {
     uint8_t title1[8];          /**< Disk title (first 8 chars) */
     uint8_t entries[248];       /**< File entries (31 × 8 bytes) */
 } uft_dfs_cat0_t;
+UFT_PACK_END
 
 /**
  * @brief DFS Catalog Sector 1 (256 bytes)
@@ -141,7 +146,8 @@ typedef struct __attribute__((packed)) {
  *   - Byte 6: Mixed bits (address/length high bits)
  *   - Byte 7: Start sector (low byte)
  */
-typedef struct __attribute__((packed)) {
+UFT_PACK_BEGIN
+typedef struct {
     uint8_t title2[4];          /**< Disk title (last 4 chars) */
     uint8_t sequence;           /**< Sequence number (BCD) */
     uint8_t num_entries;        /**< Number of entries × 8 */
@@ -149,6 +155,7 @@ typedef struct __attribute__((packed)) {
     uint8_t sectors_lo;         /**< Total sectors low */
     uint8_t info[248];          /**< File info entries */
 } uft_dfs_cat1_t;
+UFT_PACK_END
 
 /**
  * @brief Mixed bits byte layout (catalog sector 1, entry byte 6)
@@ -210,26 +217,31 @@ typedef enum {
 /**
  * @brief ADFS Free Space Entry (old map)
  */
-typedef struct __attribute__((packed)) {
+UFT_PACK_BEGIN
+typedef struct {
     uint8_t start[3];           /**< Start sector (24-bit LE) */
     uint8_t length[3];          /**< Length in sectors (24-bit LE) */
 } uft_adfs_free_entry_t;
+UFT_PACK_END
 
 /**
  * @brief ADFS Directory Entry (old map, 26 bytes)
  */
-typedef struct __attribute__((packed)) {
+UFT_PACK_BEGIN
+typedef struct {
     uint8_t  name[10];          /**< Filename (bit 7 of byte 0 = permissions) */
     uint32_t load_addr;         /**< Load address */
     uint32_t exec_addr;         /**< Exec address */
     uint32_t length;            /**< File length */
     uint8_t  start[3];          /**< Start sector (24-bit) */
 } uft_adfs_dir_entry_t;
+UFT_PACK_END
 
 /**
  * @brief ADFS Directory Header (old map)
  */
-typedef struct __attribute__((packed)) {
+UFT_PACK_BEGIN
+typedef struct {
     uint8_t  seq;               /**< Sequence number */
     char     name[10];          /**< Directory name */
     uint8_t  parent[3];         /**< Parent directory sector */
@@ -237,6 +249,7 @@ typedef struct __attribute__((packed)) {
     uint8_t  reserved[14];      /**< Reserved */
     uint8_t  entries_count;     /**< Number of entries */
 } uft_adfs_dir_header_t;
+UFT_PACK_END
 
 /*===========================================================================
  * High-Level Structures

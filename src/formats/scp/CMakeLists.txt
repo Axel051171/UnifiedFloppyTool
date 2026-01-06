@@ -17,10 +17,8 @@ target_include_directories(uft_format_scp PUBLIC
     ${PROJECT_SOURCE_DIR}/include/uft/formats
 )
 
-# Link dependencies
-target_link_libraries(uft_format_scp PRIVATE
-    m  # math library for sqrt
-)
+# Link dependencies via zentrale Funktion
+uft_link_math(uft_format_scp)
 
 # Compiler options - use C_COMPILER_ID for C code
 target_compile_options(uft_format_scp PRIVATE
@@ -47,5 +45,5 @@ if(UFT_BUILD_SCP_TESTS)
     target_include_directories(test_scp_multirev PRIVATE
         ${PROJECT_SOURCE_DIR}/include
     )
-    target_link_libraries(test_scp_multirev PRIVATE m)
+    uft_link_math(test_scp_multirev)
 endif()

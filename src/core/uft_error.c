@@ -285,9 +285,12 @@ void uft_error_print(uft_error_t err) {
 
 // ============================================================================
 // Error Stack (optional, für Debugging)
+// FIXED R18: Added guard to prevent redefinition warning
 // ============================================================================
 
-#define UFT_ERROR_STACK_SIZE 16
+#ifndef UFT_ERROR_STACK_SIZE
+    #define UFT_ERROR_STACK_SIZE 16
+#endif
 
 typedef struct {
     uft_error_t code;

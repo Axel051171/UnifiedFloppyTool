@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
-#include <strings.h>
+#include "uft/uft_compat.h"
 #include <time.h>
 #include <sys/time.h>
 #include <math.h>

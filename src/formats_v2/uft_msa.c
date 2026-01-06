@@ -3,6 +3,7 @@
  * @brief Atari ST MSA (Magic Shadow Archiver) Format Plugin - API-konform
  */
 
+#include <stdio.h>  // FIXED R18
 #include "uft/uft_format_common.h"
 
 #define MSA_MAGIC_0         0x0E

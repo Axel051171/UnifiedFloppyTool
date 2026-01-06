@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Floppy Disk Body -->
+  <rect x="4" y="4" width="56" height="56" rx="4" fill="#2D3748" stroke="#4A5568" stroke-width="2"/>
+  <!-- Metal Slider -->
+  <rect x="16" y="4" width="32" height="20" fill="#718096" stroke="#4A5568" stroke-width="1"/>
+  <rect x="24" y="8" width="16" height="12" fill="#2D3748"/>
+  <!-- Label Area -->
+  <rect x="8" y="28" width="48" height="24" fill="#E2E8F0" rx="2"/>
+  <!-- Label Text Lines -->
+  <rect x="12" y="34" width="40" height="4" fill="#A0AEC0" rx="1"/>
+  <rect x="12" y="42" width="30" height="4" fill="#A0AEC0" rx="1"/>
+  <!-- UFT Logo -->
+  <text x="32" y="59" font-family="monospace" font-size="8" fill="#48BB78" text-anchor="middle">UFT</text>
+</svg>

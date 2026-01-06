@@ -158,7 +158,7 @@ const uft_encoding_info_t* uft_encoding_get_info(uft_disk_encoding_t enc)
     return find_encoding(enc);
 }
 
-const char* uft_encoding_name(uft_disk_encoding_t enc)
+const char* uft_disk_encoding_name(uft_disk_encoding_t enc)
 {
     const uft_encoding_info_t *info = find_encoding(enc);
     return info ? info->name : "Unknown";

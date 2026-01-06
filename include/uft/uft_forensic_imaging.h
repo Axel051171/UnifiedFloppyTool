@@ -31,6 +31,8 @@
 #include <stddef.h>
 #include <time.h>
 
+#include <stdio.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif

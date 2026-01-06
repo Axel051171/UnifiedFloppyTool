@@ -3,6 +3,7 @@
  * @brief Windows/POSIX Compatibility Layer
  * 
  * Include this header INSTEAD of <strings.h> for portable code.
+ * Provides strcasecmp, strncasecmp, bzero on Windows.
  */
 
 #ifndef UFT_COMPAT_H

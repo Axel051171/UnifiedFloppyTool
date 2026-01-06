@@ -19,6 +19,9 @@
 #include <stddef.h>
 #include <stdbool.h>
 
+/* Forward declaration */
+struct uft_imd_image_t;
+
 #ifdef __cplusplus
 extern "C" {
 #endif

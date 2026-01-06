@@ -15,6 +15,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
+#include "uft/uft_compiler.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -134,7 +135,8 @@ extern "C" {
 /**
  * @brief BIOS Parameter Block (BPB)
  */
-typedef struct __attribute__((packed)) {
+UFT_PACK_BEGIN
+typedef struct {
     uint16_t bytes_per_sector;      /**< Bytes per sector (usually 512) */
     uint8_t  sectors_per_cluster;   /**< Sectors per cluster */
     uint16_t reserved_sectors;      /**< Reserved sectors (including boot) */
@@ -148,11 +150,13 @@ typedef struct __attribute__((packed)) {
     uint32_t hidden_sectors;        /**< Hidden sectors */
     uint32_t total_sectors_32;      /**< Total sectors (32-bit) */
 } uft_fat12_bpb_t;
+UFT_PACK_END
 
 /**
  * @brief Boot sector structure
  */
-typedef struct __attribute__((packed)) {
+UFT_PACK_BEGIN
+typedef struct {
     uint8_t  jump[3];               /**< Jump instruction (EB xx 90) */
     char     oem_name[8];           /**< OEM name */
     uft_fat12_bpb_t bpb;            /**< BIOS Parameter Block */
@@ -165,11 +169,13 @@ typedef struct __attribute__((packed)) {
     uint8_t  boot_code[448];        /**< Boot code */
     uint16_t signature;             /**< Boot signature (0xAA55) */
 } uft_fat12_boot_t;
+UFT_PACK_END
 
 /**
  * @brief Directory entry structure
  */
-typedef struct __attribute__((packed)) {
+UFT_PACK_BEGIN
+typedef struct {
     char     name[8];               /**< Filename (space padded) */
     char     ext[3];                /**< Extension (space padded) */
     uint8_t  attributes;            /**< File attributes */
@@ -179,6 +185,7 @@ typedef struct __attribute__((packed)) {
     uint16_t cluster;               /**< First cluster number */
     uint32_t size;                  /**< File size in bytes */
 } uft_fat12_dirent_t;
+UFT_PACK_END
 
 /**
  * @brief FAT12 filesystem handle

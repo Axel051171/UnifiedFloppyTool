@@ -76,7 +76,8 @@ typedef struct {
     uint8_t track_count;      /* Number of tracks */
     uint8_t revision;         /* Revision */
     uint32_t reserved2;
-} __attribute__((packed)) stx_file_header_t;
+} stx_file_header_t;
+UFT_PACK_END
 
 /**
  * @brief STX track descriptor
@@ -453,6 +454,7 @@ static char* stx_info_to_text(const stx_disk_t* disk) {
 #ifdef STX_PARSER_TEST
 
 #include <assert.h>
+#include "uft/uft_compiler.h"
 
 static int tests_passed = 0;
 static int tests_failed = 0;

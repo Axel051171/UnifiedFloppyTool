@@ -12,6 +12,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
+#include "uft/uft_compiler.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -127,24 +128,29 @@ extern "C" {
 /**
  * @brief Btrfs disk key (17 bytes)
  */
-typedef struct __attribute__((packed)) {
+UFT_PACK_BEGIN
+typedef struct {
     uint64_t objectid;              /**< Object ID */
     uint8_t type;                   /**< Key type */
     uint64_t offset;                /**< Type-specific offset */
 } uft_btrfs_disk_key_t;
+UFT_PACK_END
 
 /**
  * @brief Btrfs time structure
  */
-typedef struct __attribute__((packed)) {
+UFT_PACK_BEGIN
+typedef struct {
     uint64_t sec;                   /**< Seconds */
     uint32_t nsec;                  /**< Nanoseconds */
 } uft_btrfs_timespec_t;
+UFT_PACK_END
 
 /**
  * @brief Device item (stored in chunk tree)
  */
-typedef struct __attribute__((packed)) {
+UFT_PACK_BEGIN
+typedef struct {
     uint64_t devid;                 /**< Device ID */
     uint64_t total_bytes;           /**< Total size */
     uint64_t bytes_used;            /**< Bytes used */
@@ -160,11 +166,13 @@ typedef struct __attribute__((packed)) {
     uint8_t uuid[UFT_BTRFS_UUID_SIZE];  /**< Device UUID */
     uint8_t fsid[UFT_BTRFS_UUID_SIZE];  /**< FS UUID */
 } uft_btrfs_dev_item_t;
+UFT_PACK_END
 
 /**
  * @brief Superblock structure
  */
-typedef struct __attribute__((packed)) {
+UFT_PACK_BEGIN
+typedef struct {
     uint8_t csum[UFT_BTRFS_CSUM_SIZE];  /**< Checksum of everything past this */
     uint8_t fsid[UFT_BTRFS_UUID_SIZE];  /**< FS UUID */
     uint64_t bytenr;                    /**< Physical address of this block */
@@ -201,11 +209,13 @@ typedef struct __attribute__((packed)) {
     uint8_t sys_chunk_array[UFT_BTRFS_SYSTEM_CHUNK_ARRAY_SIZE]; /**< System chunks */
     /* Super roots follow (backup copies) */
 } uft_btrfs_super_block_t;
+UFT_PACK_END
 
 /**
  * @brief Tree header (at start of every node)
  */
-typedef struct __attribute__((packed)) {
+UFT_PACK_BEGIN
+typedef struct {
     uint8_t csum[UFT_BTRFS_CSUM_SIZE];  /**< Checksum */
     uint8_t fsid[UFT_BTRFS_UUID_SIZE];  /**< FS UUID */
     uint64_t bytenr;                    /**< Logical address */
@@ -216,29 +226,35 @@ typedef struct __attribute__((packed)) {
     uint32_t nritems;                   /**< Number of items */
     uint8_t level;                      /**< Level (0 = leaf) */
 } uft_btrfs_header_t;
+UFT_PACK_END
 
 /**
  * @brief Leaf item (index into leaf data)
  */
-typedef struct __attribute__((packed)) {
+UFT_PACK_BEGIN
+typedef struct {
     uft_btrfs_disk_key_t key;           /**< Item key */
     uint32_t offset;                    /**< Offset from end of header */
     uint32_t size;                      /**< Item size */
 } uft_btrfs_item_t;
+UFT_PACK_END
 
 /**
  * @brief Key pointer (in internal nodes)
  */
-typedef struct __attribute__((packed)) {
+UFT_PACK_BEGIN
+typedef struct {
     uft_btrfs_disk_key_t key;           /**< First key in child */
     uint64_t blockptr;                  /**< Child block address */
     uint64_t generation;                /**< Generation */
 } uft_btrfs_key_ptr_t;
+UFT_PACK_END
 
 /**
  * @brief Inode item
  */
-typedef struct __attribute__((packed)) {
+UFT_PACK_BEGIN
+typedef struct {
     uint64_t generation;                /**< Generation */
     uint64_t transid;                   /**< Transaction ID */
     uint64_t size;                      /**< File size */
@@ -257,6 +273,7 @@ typedef struct __attribute__((packed)) {
     uft_btrfs_timespec_t mtime;         /**< Modification time */
     uft_btrfs_timespec_t otime;         /**< Creation time */
 } uft_btrfs_inode_item_t;
+UFT_PACK_END
 
 /*===========================================================================
  * Checksum Functions

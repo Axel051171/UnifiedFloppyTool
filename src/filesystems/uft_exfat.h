@@ -14,6 +14,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
+#include "uft/uft_compiler.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -80,16 +81,19 @@ typedef enum {
 /**
  * @brief exFAT BIOS Parameter Block (64 bytes)
  */
-typedef struct __attribute__((packed)) {
+UFT_PACK_BEGIN
+typedef struct {
     uint8_t  jmp_boot[3];       /**< Jump instruction */
     uint8_t  oem_name[8];       /**< "EXFAT   " */
     uint8_t  reserved[53];      /**< Must be zero */
 } uft_exfat_bpb_t;
+UFT_PACK_END
 
 /**
  * @brief exFAT Extended Boot Sector (56 bytes)
  */
-typedef struct __attribute__((packed)) {
+UFT_PACK_BEGIN
+typedef struct {
     uint64_t vol_offset;        /**< Partition offset (sectors) */
     uint64_t vol_length;        /**< Volume length (sectors) */
     uint32_t fat_offset;        /**< FAT offset (sectors) */
@@ -107,16 +111,19 @@ typedef struct __attribute__((packed)) {
     uint8_t  percent_used;      /**< Percent of heap in use */
     uint8_t  reserved[7];
 } uft_exfat_bsx_t;
+UFT_PACK_END
 
 /**
  * @brief exFAT Partition Boot Record (512 bytes)
  */
-typedef struct __attribute__((packed)) {
+UFT_PACK_BEGIN
+typedef struct {
     uft_exfat_bpb_t bpb;        /**< BIOS Parameter Block */
     uft_exfat_bsx_t bsx;        /**< Extended Boot Sector */
     uint8_t  boot_code[390];    /**< Boot code */
     uint16_t signature;         /**< 0xAA55 */
 } uft_exfat_pbr_t;
+UFT_PACK_END
 
 /*===========================================================================
  * Directory Entry Structures
@@ -125,17 +132,20 @@ typedef struct __attribute__((packed)) {
 /**
  * @brief exFAT Volume Label Entry
  */
-typedef struct __attribute__((packed)) {
+UFT_PACK_BEGIN
+typedef struct {
     uint8_t  type;              /**< 0x83 */
     uint8_t  char_count;        /**< Label length (0-11) */
     uint16_t label[11];         /**< Volume label (UTF-16LE) */
     uint8_t  reserved[8];
 } uft_exfat_vol_entry_t;
+UFT_PACK_END
 
 /**
  * @brief exFAT File Directory Entry
  */
-typedef struct __attribute__((packed)) {
+UFT_PACK_BEGIN
+typedef struct {
     uint8_t  type;              /**< 0x85 */
     uint8_t  secondary_count;   /**< Number of secondary entries */
     uint16_t checksum;          /**< Entry set checksum */
@@ -154,11 +164,13 @@ typedef struct __attribute__((packed)) {
     uint8_t  access_tz;         /**< Access timezone */
     uint8_t  reserved2[7];
 } uft_exfat_file_entry_t;
+UFT_PACK_END
 
 /**
  * @brief exFAT Stream Extension Entry
  */
-typedef struct __attribute__((packed)) {
+UFT_PACK_BEGIN
+typedef struct {
     uint8_t  type;              /**< 0xC0 */
     uint8_t  flags;             /**< General flags */
     uint8_t  reserved1;
@@ -170,6 +182,7 @@ typedef struct __attribute__((packed)) {
     uint32_t start_cluster;     /**< First cluster */
     uint64_t data_length;       /**< Allocated size */
 } uft_exfat_stream_entry_t;
+UFT_PACK_END
 
 /** Stream entry flags */
 #define UFT_EXFAT_SF_CONTIGUOUS     0x02    /**< Data is contiguous */
@@ -177,22 +190,26 @@ typedef struct __attribute__((packed)) {
 /**
  * @brief exFAT File Name Entry
  */
-typedef struct __attribute__((packed)) {
+UFT_PACK_BEGIN
+typedef struct {
     uint8_t  type;              /**< 0xC1 */
     uint8_t  flags;             /**< General flags */
     uint16_t name[15];          /**< Filename fragment (UTF-16LE) */
 } uft_exfat_name_entry_t;
+UFT_PACK_END
 
 /**
  * @brief exFAT Allocation Bitmap Entry
  */
-typedef struct __attribute__((packed)) {
+UFT_PACK_BEGIN
+typedef struct {
     uint8_t  type;              /**< 0x81 */
     uint8_t  flags;             /**< Bitmap flags */
     uint8_t  reserved[18];
     uint32_t start_cluster;     /**< First cluster of bitmap */
     uint64_t size;              /**< Bitmap size in bytes */
 } uft_exfat_bitmap_entry_t;
+UFT_PACK_END
 
 /*===========================================================================
  * Helper Functions

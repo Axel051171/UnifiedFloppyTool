@@ -1,3 +1,4 @@
+#include <stdio.h>  // FIXED R18
 #include "uft/uft_format_common.h"
 
 #define TRD_SEC_SIZE 256

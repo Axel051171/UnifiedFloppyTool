@@ -13,10 +13,8 @@ target_include_directories(flux_recovery PUBLIC
 # Link to core for shared types
 target_link_libraries(flux_recovery PUBLIC flux_core)
 
-# Math library for PLL calculations
-if(UNIX)
-    target_link_libraries(flux_recovery PRIVATE m)
-endif()
+# Math library for PLL calculations via zentrale Funktion
+uft_link_math(flux_recovery)
 
 # Compiler warnings
 target_compile_options(flux_recovery PRIVATE

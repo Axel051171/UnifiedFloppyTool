@@ -20,6 +20,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
+#include "uft/uft_compiler.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -62,7 +63,8 @@ extern "C" {
  * The ATR format stores disk paragraphs (16-byte units) and sector size.
  * First 3 sectors in DD images may be 128 bytes (boot sectors).
  */
-typedef struct __attribute__((packed)) {
+UFT_PACK_BEGIN
+typedef struct {
     uint8_t  magic[2];          /**< 0x96, 0x02 */
     uint8_t  para_lo;           /**< Paragraphs low byte */
     uint8_t  para_hi;           /**< Paragraphs high byte */
@@ -73,6 +75,7 @@ typedef struct __attribute__((packed)) {
     uint8_t  unused[4];         /**< Reserved */
     uint8_t  flags;             /**< Flags (write protect, etc.) */
 } uft_atr_header_t;
+UFT_PACK_END
 
 /** ATR flags */
 #define UFT_ATR_FLAG_WRITE_PROT  0x01
@@ -112,7 +115,8 @@ typedef enum {
 /**
  * @brief ATX file header (48 bytes)
  */
-typedef struct __attribute__((packed)) {
+UFT_PACK_BEGIN
+typedef struct {
     uint8_t  signature[4];      /**< "AT8X" */
     uint16_t version;           /**< Format version */
     uint16_t min_version;       /**< Minimum reader version */
@@ -128,20 +132,24 @@ typedef struct __attribute__((packed)) {
     uint32_t end_data;          /**< Offset past last record */
     uint8_t  reserved2[12];
 } uft_atx_header_t;
+UFT_PACK_END
 
 /**
  * @brief ATX record header
  */
-typedef struct __attribute__((packed)) {
+UFT_PACK_BEGIN
+typedef struct {
     uint32_t next;              /**< Offset to next record */
     uint16_t type;              /**< Record type */
     uint16_t pad0;
 } uft_atx_rec_header_t;
+UFT_PACK_END
 
 /**
  * @brief ATX track header
  */
-typedef struct __attribute__((packed)) {
+UFT_PACK_BEGIN
+typedef struct {
     uint32_t next;              /**< Offset to next record */
     uint16_t type;              /**< Record type (0 = track) */
     uint16_t pad0;
@@ -154,18 +162,21 @@ typedef struct __attribute__((packed)) {
     uint32_t start_data;        /**< Offset to chunk data */
     uint8_t  reserved[8];
 } uft_atx_track_header_t;
+UFT_PACK_END
 
 /**
  * @brief ATX sector header
  * 
  * Time is start of header in 8-microsecond units (at nominal speed).
  */
-typedef struct __attribute__((packed)) {
+UFT_PACK_BEGIN
+typedef struct {
     uint8_t  sector;            /**< Sector number */
     uint8_t  status;            /**< FDC status */
     uint16_t time;              /**< Angular position */
     uint32_t data;              /**< Offset to sector data */
 } uft_atx_sector_header_t;
+UFT_PACK_END
 
 /** FDC status bits in ATX sector header */
 #define UFT_ATX_STATUS_CRC_ERROR     0x08   /**< CRC error in data */

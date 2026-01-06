@@ -10,11 +10,25 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <stdarg.h>
+
+#ifdef _WIN32
+#include <windows.h>
+#include <io.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#define open _open
+#define close _close
+#define read _read
+#define write _write
+#define lseek _lseeki64
+#define fsync _commit
+#else
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/stat.h>
 #include <sys/ioctl.h>
-#include <stdarg.h>
+#endif
 
 #ifdef __linux__
 #include <linux/fs.h>

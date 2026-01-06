@@ -71,7 +71,8 @@ typedef struct {
     uint8_t version;          /* Version (0) */
     uint8_t num_tracks;       /* Number of tracks */
     uint16_t max_track_size;  /* Maximum track size in bytes */
-} __attribute__((packed)) g64_header_t;
+} g64_header_t;
+UFT_PACK_END
 
 /**
  * @brief Speed zone info
@@ -538,6 +539,7 @@ static char* g64_info_to_text(const g64_disk_t* disk) {
 #ifdef G64_PARSER_TEST
 
 #include <assert.h>
+#include "uft/uft_compiler.h"
 
 static int tests_passed = 0;
 static int tests_failed = 0;

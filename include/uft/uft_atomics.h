@@ -31,6 +31,8 @@ extern "C" {
     /* C11 with atomics support */
     #define UFT_ATOMICS_C11 1
     #include <stdatomic.h>
+
+#include <stddef.h>
 #elif defined(__GNUC__) || defined(__clang__)
     /* GCC/Clang builtin atomics */
     #define UFT_ATOMICS_GCC 1

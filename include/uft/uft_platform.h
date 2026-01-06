@@ -39,6 +39,9 @@ extern "C" {
     #include <sys/types.h>
 #endif
 
+/* Include compiler macros after platform detection */
+#include "uft/uft_compiler.h"
+
 /*============================================================================
  * Boolean compatibility (for older compilers)
  *============================================================================*/
@@ -103,31 +106,17 @@ extern "C" {
 #endif
 
 /*============================================================================
- * Inline hints
+ * Inline hints - Defined in uft_compiler.h (included above)
+ * DO NOT DEFINE HERE - use the central definition!
  *============================================================================*/
 
-#if !defined(UFT_INLINE) || !defined(UFT_FORCE_INLINE)
-#if defined(_MSC_VER)
-    #define UFT_INLINE __inline
-    #define UFT_FORCE_INLINE __forceinline
-#elif defined(__GNUC__) || defined(__clang__)
-    #define UFT_INLINE static inline
-    #define UFT_FORCE_INLINE static inline __attribute__((always_inline))
-#else
-    #define UFT_INLINE static inline
-    #define UFT_FORCE_INLINE static inline
-#endif
-#endif
+/* UFT_INLINE, UFT_FORCE_INLINE are defined in uft_compiler.h */
 
 /*============================================================================
- * Unused parameter marker
+ * Unused parameter marker - Defined in uft_compiler.h
  *============================================================================*/
 
-#ifdef __GNUC__
-    #define UFT_UNUSED __attribute__((unused))
-#else
-    #define UFT_UNUSED
-#endif
+/* UFT_UNUSED is defined in uft_compiler.h */
 
 /*============================================================================
  * Endianness detection
@@ -148,22 +137,24 @@ extern "C" {
 #endif
 
 /*============================================================================
- * Struct packing
+ * Struct packing (with guards to prevent redefinition warnings)
  *============================================================================*/
 
-#if defined(_MSC_VER)
-    #define UFT_PACKED_BEGIN __pragma(pack(push, 1))
-    #define UFT_PACKED_END   __pragma(pack(pop))
-    #define UFT_PACKED_STRUCT
-#elif defined(__GNUC__) || defined(__clang__)
-    #define UFT_PACKED_BEGIN
-    #define UFT_PACKED_END
-    #define UFT_PACKED_STRUCT __attribute__((packed))
-#else
-    #define UFT_PACKED_BEGIN
-    #define UFT_PACKED_END
-    #define UFT_PACKED_STRUCT
-#endif
+#ifndef UFT_PACKED_BEGIN
+    #if defined(_MSC_VER)
+        #define UFT_PACKED_BEGIN __pragma(pack(push, 1))
+        #define UFT_PACKED_END   __pragma(pack(pop))
+        #define UFT_PACKED_STRUCT
+    #elif defined(__GNUC__) || defined(__clang__)
+        #define UFT_PACKED_BEGIN
+        #define UFT_PACKED_END
+        #define UFT_PACKED_STRUCT __attribute__((packed))
+    #else
+        #define UFT_PACKED_BEGIN
+        #define UFT_PACKED_END
+        #define UFT_PACKED_STRUCT
+    #endif
+#endif /* UFT_PACKED_BEGIN */
 
 #ifdef __cplusplus
 }

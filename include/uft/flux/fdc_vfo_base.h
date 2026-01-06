@@ -36,6 +36,7 @@ public:
                  m_gain_l(VFO_GAIN_L_DEFAULT), m_gain_h(VFO_GAIN_H_DEFAULT), 
                  m_current_gain(vfo_base::gain_state::low),
                  m_sampling_rate(), m_fdc_bit_rate(), m_data_window_ratio() {};
+    virtual ~vfo_base() = default;  // Virtual destructor for proper cleanup
     virtual void disp_vfo_status(void);
     virtual void reset(void);
     virtual void soft_reset(void);
@@ -59,3 +60,5 @@ public:
 #include "vfo_simple2.h"
 #include "vfo_pid3.h"
 #include "vfo_experimental.h"
+
+#include <stddef.h>

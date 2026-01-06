@@ -1,3 +1,10 @@
+/* Feature test macros for gethostname */
+#ifndef _POSIX_C_SOURCE
+#define _POSIX_C_SOURCE 200809L
+#endif
+#ifndef _DEFAULT_SOURCE
+#define _DEFAULT_SOURCE 1
+#endif
 /**
  * @file uft_audit_trail.c
  * @brief UFT Audit Trail System Implementation
@@ -16,6 +23,11 @@
 
 #ifdef _WIN32
 #include <windows.h>
+static inline int uft_gethostname(char* name, size_t len) {
+    DWORD size = (DWORD)len;
+    return GetComputerNameA(name, &size) ? 0 : -1;
+}
+#define gethostname uft_gethostname
 #else
 #include <sys/time.h>
 #include <unistd.h>

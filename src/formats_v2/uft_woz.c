@@ -1,3 +1,4 @@
+#include <stdio.h>  // FIXED R18
 #include "uft/uft_format_common.h"
 
 #define WOZ1_MAGIC 0x315A4F57

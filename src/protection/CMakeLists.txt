@@ -42,7 +42,8 @@ target_include_directories(uft_protection PUBLIC
     ${CMAKE_SOURCE_DIR}/include/uft/protection
 )
 
-target_link_libraries(uft_protection PRIVATE m)
+# Math library via zentrale Funktion
+uft_link_math(uft_protection)
 
 set_target_properties(uft_protection PROPERTIES
     C_STANDARD 99

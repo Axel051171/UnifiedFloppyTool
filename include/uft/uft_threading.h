@@ -15,6 +15,16 @@
 #ifndef UFT_THREADING_H
 #define UFT_THREADING_H
 
+/* POSIX Feature Test Macros - MUST be before any includes */
+#if !defined(_WIN32) && !defined(_WIN64)
+    #ifndef _POSIX_C_SOURCE
+        #define _POSIX_C_SOURCE 200809L
+    #endif
+    #ifndef _DEFAULT_SOURCE
+        #define _DEFAULT_SOURCE 1
+    #endif
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -32,11 +42,31 @@ extern "C" {
         #define WIN32_LEAN_AND_MEAN
     #endif
     #include <windows.h>
+    #include <time.h>    /* FIXED R19: Include BEFORE our timespec check - SDK may define it */
+    #include <stdlib.h>  /* FIXED R19: Required for malloc/free used in this header */
 #else
     #define UFT_PLATFORM_POSIX 1
     #include <pthread.h>
     #include <time.h>
     #include <unistd.h>
+    #include <stdlib.h>  /* FIXED R19: Required for malloc/free used in this header */
+    
+    /* FIXED R20: Ensure CLOCK_* constants are available on all POSIX systems */
+    #ifndef CLOCK_MONOTONIC
+        #ifdef __APPLE__
+            /* macOS uses CLOCK_MONOTONIC_RAW or we fall back to CLOCK_REALTIME */
+            #ifdef CLOCK_MONOTONIC_RAW
+                #define CLOCK_MONOTONIC CLOCK_MONOTONIC_RAW
+            #else
+                #define CLOCK_MONOTONIC 1
+            #endif
+        #else
+            #define CLOCK_MONOTONIC 1
+        #endif
+    #endif
+    #ifndef CLOCK_REALTIME
+        #define CLOCK_REALTIME 0
+    #endif
 #endif
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -435,16 +465,14 @@ static inline void uft_sleep_ms(uint32_t ms)
         #define CLOCK_REALTIME 0
     #endif
     
-    /* Provide clock_gettime for Windows */
-    struct timespec_win {
-        long tv_sec;
-        long tv_nsec;
-    };
-    #ifndef timespec
-        #define timespec timespec_win
-    #endif
+    /* 
+     * FIXED R20: Windows SDK 10.0.26100+ defines struct timespec in <time.h>
+     * We DO NOT define our own - just use the SDK's definition.
+     * The <time.h> include above ensures it's available.
+     */
     
-    static inline int clock_gettime(int clk_id, struct timespec_win *ts)
+    /* clock_gettime implementation for Windows */
+    static inline int clock_gettime(int clk_id, struct timespec *ts)
     {
         if (!ts) return -1;
         if (clk_id == CLOCK_MONOTONIC) {

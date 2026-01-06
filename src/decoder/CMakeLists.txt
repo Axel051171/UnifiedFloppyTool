@@ -21,7 +21,5 @@ target_include_directories(uft_decoder PUBLIC
     ${CMAKE_SOURCE_DIR}/include/uft
 )
 
-# Math library
-if(NOT MSVC)
-    target_link_libraries(uft_decoder PRIVATE m)
-endif()
+# Math library via zentrale Funktion
+uft_link_math(uft_decoder)

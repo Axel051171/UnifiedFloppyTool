@@ -22,6 +22,8 @@
 #include <stdint.h>
 #include "uft/core/uft_endian.h"  // For endian functions
 
+#include <stddef.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif

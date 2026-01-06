@@ -19,6 +19,8 @@
 #include <limits.h>
 #include "uft_error.h"
 
+#include <stddef.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif

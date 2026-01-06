@@ -17,6 +17,8 @@
 #include <stdarg.h>
 #include "uft_types.h"
 
+#include <stddef.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif

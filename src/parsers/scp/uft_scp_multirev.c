@@ -26,6 +26,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <math.h>
+#include "uft/uft_compiler.h"
 
 /* ============================================================================
  * SCP FORMAT STRUCTURES
@@ -34,7 +35,8 @@
 /**
  * SCP File Header (16 bytes before track offsets)
  */
-typedef struct __attribute__((packed)) {
+UFT_PACK_BEGIN
+typedef struct {
     uint8_t  signature[3];      /* "SCP" */
     uint8_t  version;           /* Major/minor in nibbles (0x24 = v2.4) */
     uint8_t  disk_type;         /* Subclass/class in nibbles */
@@ -47,23 +49,28 @@ typedef struct __attribute__((packed)) {
     uint8_t  resolution;        /* 25ns * (resolution+1) */
     uint8_t  checksum[4];       /* CRC32 of data after header */
 } uft_scp_file_header_t;
+UFT_PACK_END
 
 /**
  * SCP Track Header (4 bytes)
  */
-typedef struct __attribute__((packed)) {
+UFT_PACK_BEGIN
+typedef struct {
     uint8_t  signature[3];      /* "TRK" */
     uint8_t  track_number;      /* SCP track number */
 } uft_scp_track_header_t;
+UFT_PACK_END
 
 /**
  * SCP Revolution Entry (12 bytes)
  */
-typedef struct __attribute__((packed)) {
+UFT_PACK_BEGIN
+typedef struct {
     uint8_t  index_time[4];     /* Duration for this revolution (ns) */
     uint8_t  flux_count[4];     /* Number of flux entries */
     uint8_t  data_offset[4];    /* Offset from track header to flux data */
 } uft_scp_revolution_t;
+UFT_PACK_END
 
 /* SCP Flags */
 #define SCP_FLAG_INDEXED     (1 << 0)

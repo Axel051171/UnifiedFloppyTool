@@ -451,6 +451,8 @@ typedef struct {
 #define UFT_D88_DENSITY_S   0x40   /* Single density (FM) */
 #define UFT_D88_DENSITY_H   0x01   /* High density */
 
+#include <stddef.h>
+
 #pragma pack(push, 1)
 
 typedef struct {

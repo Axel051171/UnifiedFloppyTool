@@ -17,6 +17,7 @@
 #include "uft/core/uft_platform.h"
 #include <string.h>
 #include <stdlib.h>
+#include "uft/uft_compiler.h"
 
 // ============================================================================
 // CONSTANTS
@@ -77,7 +78,8 @@ typedef struct {
     uint16_t    sectors_per_fat;
     uint16_t    sectors_per_track;
     uint16_t    heads;
-} __attribute__((packed)) bpb_t;
+} bpb_t;
+UFT_PACK_END
 
 static bool img_validate_bpb(const uint8_t* data, size_t size, img_data_t* priv) {
     if (size < 62) return false;

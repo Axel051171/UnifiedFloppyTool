@@ -22,6 +22,8 @@
 #include "uft_device_manager.h"
 #include "uft_job_manager.h"
 
+#include <stddef.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif

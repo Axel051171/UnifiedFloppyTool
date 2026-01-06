@@ -13,9 +13,11 @@ extern "C" {
 /* Platform-specific mutex type */
 #ifdef _WIN32
 #include <windows.h>
+#include <stddef.h>
 typedef CRITICAL_SECTION uft_mutex_t;
 #else
 #include <pthread.h>
+#include <stddef.h>
 typedef pthread_mutex_t uft_mutex_t;
 #endif
 

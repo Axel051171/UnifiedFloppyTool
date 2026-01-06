@@ -28,6 +28,9 @@
 #include <QGridLayout>
 #include <QButtonGroup>
 
+#include <stdbool.h>
+#include <stdint.h>
+
 namespace UFT {
 namespace Amiga {
 

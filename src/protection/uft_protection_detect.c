@@ -18,6 +18,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>  /* FIXED R20: Required for sqrt() */
 
 /*============================================================================
  * Signature Tables
@@ -696,7 +697,8 @@ int uft_protection_scan_disk(uft_protection_ctx_t *ctx,
  * String Functions
  *============================================================================*/
 
-const char *uft_protection_type_name(uft_protection_type_t type) {
+/* R21 FIX: Renamed to avoid duplicate symbol - main version in uft_protection_params.c */
+static const char *uft_protection_type_name_local(uft_protection_type_t type) {
     switch (type) {
         case UFT_PROT_NONE: return "None";
         case UFT_PROT_VMAX: return "V-MAX";
@@ -879,7 +881,7 @@ static void test_context_management(void) {
 }
 
 static void test_string_functions(void) {
-    assert(strcmp(uft_protection_type_name(UFT_PROT_VMAX), "V-MAX") == 0);
+    assert(strcmp(uft_protection_type_name_local(UFT_PROT_VMAX), "V-MAX") == 0);
     assert(strcmp(uft_protection_family_name(UFT_PROT_COPYLOCK), "Rob Northen") == 0);
     
     printf("  ✓ string_functions passed\n");

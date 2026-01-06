@@ -3,6 +3,7 @@
  * @brief ImageDisk (IMD) Format Plugin - API-konform
  */
 
+#include <stdio.h>  // FIXED R18
 #include "uft/uft_format_common.h"
 
 #define IMD_HEADER_END      0x1A
