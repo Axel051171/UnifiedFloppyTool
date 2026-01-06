@@ -1,73 +1,181 @@
-# UFT - TODO Liste
+# UFT TODO - Priorisiert & Dedupliziert
 
-**Stand:** 2026-01-06 v3.4.0
+**Version:** 3.5.0  
+**Stand:** 2026-01-06  
+**Status:** 🟢 Release-Ready (CI-Builds funktionieren)
 
-## P0 - KRITISCH (Build-Blocker)
+---
 
-Keine offenen P0-Probleme.
+## Übersicht
 
-## P1 - HOCH (Funktionalität)
+| Priorität | Offen | Erledigt |
+|-----------|-------|----------|
+| P0 (Kritisch) | 0 | 3 |
+| P1 (Hoch) | 4 | 3 |
+| P2 (Mittel) | 6 | 2 |
+| P3 (Niedrig) | 5 | 0 |
 
-### TODO-P1-001: fread Buffer Overflow Warning
-- **Status:** OFFEN
-- **Aufwand:** M
-- **Beschreibung:** Linux CI zeigt `fread_chk_warn` Warnung
-- **Betroffene Module:** unbekannt (generische glibc-Warnung)
-- **Akzeptanzkriterien:** Keine fread_chk_warn in CI-Logs
-- **Abhängigkeiten:** Vollständige Build-Reproduktion auf Ubuntu 24.04
+---
 
-## P2 - MITTEL (Qualität)
+## ✅ ERLEDIGT
 
-Keine offenen P2-Probleme - alle unused variable Warnungen behoben.
+### Build-Fixes (v3.5.0)
+- [x] **Windows C4146**: `-(crc & 1)` → Ternary in `uft_writer_verify.c:58`
+- [x] **macOS Linker**: `-z,-pie` nur auf Linux (`cmake/SecurityFlags.cmake`)
+- [x] **Linux AppImage**: `app_icon.png` erstellt
 
-## P3 - NIEDRIG (Wartbarkeit)
+### Security-Patches (v3.4.5)
+- [x] Command Injection in Tool Adapter gefixt
+- [x] Command Injection in OCR gefixt  
+- [x] Syntax-Fehler in A2R/IPF Parser gefixt
+- [x] `uft_security.h` erstellt
+- [x] Security Compiler Flags (CMake)
 
-### TODO-P3-001: Forward Declaration Optimierung
-- **Status:** OFFEN
-- **Aufwand:** S
-- **Beschreibung:** `struct uft_dpll_config declared inside parameter list` Warnung
-- **Betroffene Dateien:** include/uft/uft_gui_params.h
-- **Akzeptanzkriterien:** Keine "declared inside parameter list" Warnungen
-- **Abhängigkeiten:** Keine
+### CI/CD
+- [x] `ci.yml` für Linux/macOS/Windows
+- [x] `release.yml` mit automatischen Releases
+- [x] CPack Konfiguration (tar.gz, deb, zip)
+- [x] Qt6 Dependencies
 
-## ABGESCHLOSSEN (v3.4.0)
+---
 
-### ✅ P0-001: flashfloppy Header fehlend
-- Datei existierte lokal, war nicht im Repo
-- Fix: Datei zum Repo hinzugefügt
+## 🔴 P0 - KRITISCH
 
-### ✅ P0-002: forensic Header fehlend
-- Datei existierte lokal, war nicht im Repo
-- Fix: Datei zum Repo hinzugefügt
+*Keine offenen P0-Items*
 
-### ✅ P1-001: UFT_PACKED_BEGIN Redefinition
-- Macro in 8 Dateien definiert
-- Fix: #ifndef Guards zu allen Definitionen hinzugefügt
+---
 
-### ✅ P1-002 bis P1-005: POSIX Implicit Declarations
-- gethostname, strdup, strcasecmp, clock_gettime, usleep
-- Fix: _POSIX_C_SOURCE=200809L in CMakeLists.txt
+## 🟠 P1 - HOCH
 
-### ✅ P1-007: UB Shifting Negative Value
-- src/crc/poly.c ~(~0U << CHAR_BIT)
-- Fix: Zu 0xFFU geändert
+### P1-001: Test-Abdeckung erhöhen
+**Status:** Offen  
+**Aufwand:** L (1-2 Wochen)  
+**Akzeptanzkriterien:**
+- [ ] Test-Abdeckung von ~5% auf >30%
+- [ ] D64, G64, ADF, HFE, SCP Parser-Tests
+- [ ] Golden-File Tests für Roundtrip
 
-### ✅ P1-008: MSVC strncpy Deprecation
-- Fix: _CRT_SECURE_NO_WARNINGS in CMakeLists.txt
+### P1-002: Memory Leak Audit
+**Status:** Offen  
+**Aufwand:** M (3-5 Tage)  
+**Betroffene Dateien:**
+- `src/core/batch.c`
+- `src/core/forensic_report.c`
+- `src/flux/uft_kryoflux.c`
+**Akzeptanzkriterien:**
+- [ ] Valgrind-Clean auf Linux
+- [ ] ASan-Clean in Debug-Build
 
-### ✅ P2-001 bis P2-008: Unused Variables
-- last_error, freq_error_diff, read_le16, lastbit, total_gap, dups, dup_count, expected
-- Fix: (void) casts und __attribute__((unused))
+### P1-003: CQM Dekompression
+**Status:** Offen  
+**Aufwand:** M (3-5 Tage)  
+**Beschreibung:** CopyQM-Format ist read-only wegen fehlender Dekompression
+**Akzeptanzkriterien:**
+- [ ] LZSS-Dekompression implementiert
+- [ ] Parser-Test für CQM-Samples
+- [ ] Dokumentation aktualisiert
 
-### ✅ P3-001: UFT_PACKED Chaos
-- Fix: Zentrale uft_packed.h erstellt
+### P1-004: Copy-Protection Stubs
+**Status:** Offen  
+**Aufwand:** L (1-2 Wochen)  
+**Betroffene Dateien:** `src/protection/dec0de.c` (8 TODOs)
+**Akzeptanzkriterien:**
+- [ ] Alle Protection-Stubs implementiert oder als unsupported markiert
+- [ ] Tests für erkannte Protections
 
-## STATISTIK
+---
 
-| Priorität | Offen | Behoben |
-|-----------|-------|---------|
-| P0 | 0 | 2 |
-| P1 | 1 | 7 |
-| P2 | 0 | 8 |
-| P3 | 1 | 1 |
-| **TOTAL** | **2** | **18** |
+## 🟡 P2 - MITTEL
+
+### P2-001: TODO/FIXME Cleanup
+**Status:** Offen  
+**Aufwand:** L (fortlaufend)  
+**Beschreibung:** 2090 TODO/FIXME/HACK Einträge im Code
+**Akzeptanzkriterien:**
+- [ ] Top 100 kritische TODOs bearbeitet
+- [ ] Rest kategorisiert und in Issues überführt
+
+### P2-002: GCR-Decoder vereinheitlichen
+**Status:** Offen  
+**Aufwand:** M (3-5 Tage)  
+**Beschreibung:** 3+ Duplikate des GCR-Decoders
+**Betroffene Dateien:**
+- `src/formats/c64/gcr_decode.c`
+- `src/formats/c64/gcr_codec.c`
+- `libflux_format/src/gcr.c`
+
+### P2-003: CRC-Module konsolidieren
+**Status:** Offen  
+**Aufwand:** M (3-5 Tage)  
+**Beschreibung:** Mehrere CRC-Implementierungen
+
+### P2-004: KryoFlux Memory-Optimierung
+**Status:** Offen  
+**Aufwand:** M (3-5 Tage)  
+**Beschreibung:** 8MB Allokationen in `uft_kryoflux.c:297,358`
+**Akzeptanzkriterien:**
+- [ ] Streaming statt Bulk-Allokation
+- [ ] Memory-Peak < 2MB
+
+### P2-005: ATX Write-Support
+**Status:** Offen  
+**Aufwand:** M (3-5 Tage)  
+**Beschreibung:** ATX-Format ist read-only
+
+### P2-006: Forward-Declaration Warnings
+**Status:** Offen  
+**Aufwand:** S (1-2 Tage)  
+**Beschreibung:** Fehlende Forward-Declarations in einigen Headers
+
+---
+
+## 🟢 P3 - NIEDRIG
+
+### P3-001: API-Dokumentation
+**Status:** Offen  
+**Aufwand:** M (3-5 Tage)  
+**Akzeptanzkriterien:**
+- [ ] Doxygen-Kommentare für Public API
+- [ ] Generierte HTML-Doku
+
+### P3-002: Beispiel-Programme
+**Status:** Offen  
+**Aufwand:** S (1-2 Tage)  
+**Beschreibung:** Beispiele für CLI-Nutzung
+
+### P3-003: Format-Katalog
+**Status:** Offen  
+**Aufwand:** S (1-2 Tage)  
+**Beschreibung:** Übersicht aller unterstützten Formate mit Capabilities
+
+### P3-004: Hardware-Setup Guides
+**Status:** Offen  
+**Aufwand:** M (3-5 Tage)  
+**Beschreibung:** Anleitungen für Greaseweazle, KryoFlux, etc.
+
+### P3-005: GUI Tooltips
+**Status:** Offen  
+**Aufwand:** S (1-2 Tage)  
+**Beschreibung:** Hilfreiche Tooltips in der GUI
+
+---
+
+## Nicht geplant (Won't Fix)
+
+- **IPF Write-Support**: Lizenzrechtliche Einschränkungen
+- **Cloud-Sync**: Außerhalb des Projekt-Scopes
+- **OCR für Labels**: Tesseract-Integration zu komplex
+
+---
+
+## Legende
+
+| Symbol | Bedeutung |
+|--------|-----------|
+| 🔴 P0 | Release-Blocker |
+| 🟠 P1 | Wichtig für Stabilität |
+| 🟡 P2 | Verbesserungen |
+| 🟢 P3 | Nice-to-have |
+| S | Small (1-2 Tage) |
+| M | Medium (3-5 Tage) |
+| L | Large (1-2 Wochen) |

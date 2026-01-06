@@ -518,8 +518,8 @@ endif()
 
 enable_testing()
 
-# Simple test that always passes (placeholder)
-add_test(NAME BuildTest COMMAND ${PROJECT_NAME} --version || true)
+# GUI app tests are handled in tests/ subdirectory
+# Do not run the main GUI executable as a test - it hangs in headless CI
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Install
