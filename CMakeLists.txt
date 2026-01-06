@@ -112,6 +112,9 @@ add_subdirectory(src/hal)
 # Decoder Module (PLL, GCR, sync, fusion)
 add_subdirectory(src/decoder)
 
+# Sector Parser (IBM FM/MFM)
+add_subdirectory(src/sector)
+
 # Decoders Module (FM, MFM, GCR plugins + unified v2)
 add_subdirectory(src/decoders)
 
@@ -144,6 +147,9 @@ add_subdirectory(src/protection)
 # add_subdirectory(src/formats/misc_hxc)  # DISABLED: needs HxC types.h
 add_subdirectory(src/formats/scp)
 add_subdirectory(src/formats/amstrad)
+add_subdirectory(src/formats/msa)
+# Floppy I/O Library (GCR, MFM, FAT12)
+add_subdirectory(lib/floppy)
 
 # Disk Image Format Parsers (v3.2.0)
 add_subdirectory(src/loaders/disk_formats)
