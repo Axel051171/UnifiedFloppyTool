@@ -166,6 +166,7 @@ int uft_pll_process_transition(uft_pll_t *pll,
     /* Calculate error from expected period */
     double expected = pll->current_period;
     double error = 0;
+    (void)expected; /* Reserved for future validation */
     int num_cells;
     
     /* Determine how many bit cells this transition spans */

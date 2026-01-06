@@ -1,0 +1,41 @@
+# Build artifacts
+build/
+build_*/
+cmake-build-*/
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.dylib
+*.dll
+*.exe
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Qt
+*.pro.user
+moc_*.cpp
+ui_*.h
+qrc_*.cpp
+
+# Temporary
+*.tmp
+*.bak
+*.log
+
+# Test artifacts
+Testing/
+CTestTestfile.cmake
+
+# Packages
+*.zip
+*.tar.gz
+*.deb
+*.dmg

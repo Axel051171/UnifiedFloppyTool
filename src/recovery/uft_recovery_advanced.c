@@ -414,6 +414,7 @@ uft_sector_status_t uft_recovery_read_sector(
     size_t total_read = 0;
     int attempts = 0;
     uft_recovery_error_t last_error = UFT_REC_ERR_NONE;
+    (void)last_error; /* Suppress unused warning */
     
     while (attempts < rec->config.max_retries) {
         attempts++;

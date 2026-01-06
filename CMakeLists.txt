@@ -8,7 +8,7 @@
 cmake_minimum_required(VERSION 3.16)
 
 project(UnifiedFloppyTool
-    VERSION 3.7.0
+    VERSION 3.4.0
     DESCRIPTION "Cross-platform floppy disk preservation and analysis tool"
     LANGUAGES CXX C
 )
@@ -70,6 +70,27 @@ set(CMAKE_CXX_EXTENSIONS OFF)  # Use -std=c++17, not -std=gnu++17
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS OFF)
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# POSIX Feature-Test-Macros (Fix für strdup, strcasecmp, gethostname, etc.)
+# Diese Funktionen sind POSIX, aber nicht ISO C. Ohne diese Macros gibt es
+# "implicit declaration" Warnings auf Linux/macOS mit -std=c11.
+# Windows hat diese Funktionen nativ in der CRT.
+# ═══════════════════════════════════════════════════════════════════════════════
+if(NOT WIN32)
+    add_compile_definitions(
+        _POSIX_C_SOURCE=200809L
+        _XOPEN_SOURCE=700
+    )
+endif()
+
+# Suppress MSVC deprecation warnings for standard C functions
+if(MSVC)
+    add_compile_definitions(
+        _CRT_SECURE_NO_WARNINGS
+        _CRT_NONSTDC_NO_WARNINGS
+    )
+endif()
 
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)

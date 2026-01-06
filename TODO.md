@@ -1,108 +1,73 @@
-# UFT TODO List
+# UFT - TODO Liste
 
-Consolidated task list for UnifiedFloppyTool development.
-Priority: P0 (Critical) > P1 (High) > P2 (Medium) > P3 (Polish)
+**Stand:** 2026-01-06 v3.4.0
 
----
+## P0 - KRITISCH (Build-Blocker)
 
-## P0 - Critical (Crashes / Data Corruption)
+Keine offenen P0-Probleme.
 
-All P0 tasks completed in v3.3.0 ✅
+## P1 - HOCH (Funktionalität)
 
----
+### TODO-P1-001: fread Buffer Overflow Warning
+- **Status:** OFFEN
+- **Aufwand:** M
+- **Beschreibung:** Linux CI zeigt `fread_chk_warn` Warnung
+- **Betroffene Module:** unbekannt (generische glibc-Warnung)
+- **Akzeptanzkriterien:** Keine fread_chk_warn in CI-Logs
+- **Abhängigkeiten:** Vollständige Build-Reproduktion auf Ubuntu 24.04
 
-## P1 - High Priority (Incorrect Results / Format Errors)
+## P2 - MITTEL (Qualität)
 
-### P1-FMT-001: Extended D88 Support
-- **Scope**: PC-98 D88 format edge cases
-- **Modules**: `src/formats/d88/`
-- **Acceptance**: All NEC PC-98 D88 variants parse correctly
-- **Status**: 80% complete
+Keine offenen P2-Probleme - alle unused variable Warnungen behoben.
 
-### P1-FMT-002: Apple II RWTS Variations
-- **Scope**: Custom RWTS disk formatting
-- **Modules**: `src/formats/apple/`
-- **Acceptance**: Detect and handle non-standard sector skewing
-- **Status**: Not started
+## P3 - NIEDRIG (Wartbarkeit)
 
-### P1-HW-001: KryoFlux Stream Index Sync
-- **Scope**: Multi-revolution index alignment
-- **Modules**: `src/flux/kryoflux/`
-- **Acceptance**: Accurate revolution boundaries
-- **Status**: 60% complete
+### TODO-P3-001: Forward Declaration Optimierung
+- **Status:** OFFEN
+- **Aufwand:** S
+- **Beschreibung:** `struct uft_dpll_config declared inside parameter list` Warnung
+- **Betroffene Dateien:** include/uft/uft_gui_params.h
+- **Akzeptanzkriterien:** Keine "declared inside parameter list" Warnungen
+- **Abhängigkeiten:** Keine
 
----
+## ABGESCHLOSSEN (v3.4.0)
 
-## P2 - Medium Priority (Performance / Refactoring)
+### ✅ P0-001: flashfloppy Header fehlend
+- Datei existierte lokal, war nicht im Repo
+- Fix: Datei zum Repo hinzugefügt
 
-### P2-PERF-001: SIMD Flux Analysis
-- **Scope**: AVX2/NEON acceleration for PLL
-- **Modules**: `src/flux/pll/`
-- **Acceptance**: 2x speedup on large flux files
-- **Status**: Prototype ready
+### ✅ P0-002: forensic Header fehlend
+- Datei existierte lokal, war nicht im Repo
+- Fix: Datei zum Repo hinzugefügt
 
-### P2-REF-001: Parser Factory Consolidation
-- **Scope**: Unify parser instantiation
-- **Modules**: `src/formats/*/`
-- **Acceptance**: Single registration point
-- **Status**: 40% complete
+### ✅ P1-001: UFT_PACKED_BEGIN Redefinition
+- Macro in 8 Dateien definiert
+- Fix: #ifndef Guards zu allen Definitionen hinzugefügt
 
-### P2-GUI-001: Batch Processing Dialog
-- **Scope**: Multi-file conversion wizard
-- **Modules**: `src/gui/`
-- **Acceptance**: Queue management, progress tracking
-- **Status**: Planned
+### ✅ P1-002 bis P1-005: POSIX Implicit Declarations
+- gethostname, strdup, strcasecmp, clock_gettime, usleep
+- Fix: _POSIX_C_SOURCE=200809L in CMakeLists.txt
 
----
+### ✅ P1-007: UB Shifting Negative Value
+- src/crc/poly.c ~(~0U << CHAR_BIT)
+- Fix: Zu 0xFFU geändert
 
-## P3 - Polish / Documentation
+### ✅ P1-008: MSVC strncpy Deprecation
+- Fix: _CRT_SECURE_NO_WARNINGS in CMakeLists.txt
 
-### P3-DOC-001: API Documentation
-- **Scope**: Doxygen for public API
-- **Modules**: `include/`
-- **Acceptance**: 100% public API documented
-- **Status**: 70% complete
+### ✅ P2-001 bis P2-008: Unused Variables
+- last_error, freq_error_diff, read_le16, lastbit, total_gap, dups, dup_count, expected
+- Fix: (void) casts und __attribute__((unused))
 
-### P3-GUI-001: Keyboard Shortcuts
-- **Scope**: Comprehensive keyboard navigation
-- **Modules**: `src/gui/`
-- **Acceptance**: All actions have shortcuts
-- **Status**: 50% complete
+### ✅ P3-001: UFT_PACKED Chaos
+- Fix: Zentrale uft_packed.h erstellt
 
-### P3-TEST-001: Integration Test Suite
-- **Scope**: End-to-end conversion tests
-- **Modules**: `tests/integration/`
-- **Acceptance**: All format pairs tested
-- **Status**: 30% complete
+## STATISTIK
 
----
-
-## Completed Tasks (v3.3.0)
-
-- [x] P0-SEC-001: Buffer overflow protection
-- [x] P0-SEC-002: Integer overflow checks
-- [x] P0-SEC-003: Format string safety
-- [x] P0-SEC-004: Memory safety audit
-- [x] P1-IO-001: I/O return value checks (1,370 fixes)
-- [x] P1-IO-002: File handle leak prevention
-- [x] P1-THR-001: Thread safety fixes
-- [x] P1-MEM-001: Memory leak fixes
-- [x] P2-ARCH-001-007: Core unification
-- [x] P2-GUI-001-010: GUI components
-
----
-
-## Issue Tracking
-
-For bug reports and feature requests, please use [GitHub Issues](https://github.com/Axel051171/UnifiedFloppyTool/issues).
-
-Template:
-```
-**Type**: Bug / Feature / Enhancement
-**Priority**: P0 / P1 / P2 / P3
-**Module**: [affected module]
-**Description**: [clear description]
-**Steps to Reproduce**: [if bug]
-**Expected Behavior**: [what should happen]
-**Actual Behavior**: [what happens]
-```
+| Priorität | Offen | Behoben |
+|-----------|-------|---------|
+| P0 | 0 | 2 |
+| P1 | 1 | 7 |
+| P2 | 0 | 8 |
+| P3 | 1 | 1 |
+| **TOTAL** | **2** | **18** |
