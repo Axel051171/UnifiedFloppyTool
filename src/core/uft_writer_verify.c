@@ -54,7 +54,8 @@ static void init_crc32_table(void) {
     for (uint32_t i = 0; i < 256; i++) {
         uint32_t crc = i;
         for (int j = 0; j < 8; j++) {
-            crc = (crc >> 1) ^ (0xEDB88320 & -(crc & 1));
+            /* Fix C4146: avoid unary minus on unsigned - use ternary instead */
+            crc = (crc >> 1) ^ ((crc & 1) ? 0xEDB88320U : 0U);
         }
         crc32_table[i] = crc;
     }

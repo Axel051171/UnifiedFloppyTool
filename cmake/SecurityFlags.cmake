@@ -8,14 +8,18 @@ if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
     # Fortify source (buffer overflow detection)
     add_compile_definitions(_FORTIFY_SOURCE=2)
     
-    # Position Independent Executable
-    add_compile_options(-fPIE)
-    add_link_options(-pie)
+    # Position Independent Code (works on all platforms)
+    add_compile_options(-fPIC)
     
-    # Relocation Read-Only
-    add_link_options(-Wl,-z,relro,-z,now)
+    # Platform-specific linker flags
+    if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+        # PIE and RELRO only on Linux
+        add_compile_options(-fPIE)
+        add_link_options(-pie)
+        add_link_options(-Wl,-z,relro,-z,now)
+    endif()
     
-    # Warnings als Fehler für sicherheitsrelevante Probleme
+    # Common warnings
     add_compile_options(
         -Wall
         -Wextra
@@ -23,8 +27,12 @@ if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
         -Wformat-security
         -Wstrict-overflow=2
         -Warray-bounds
-        -Wstringop-overflow
     )
+    
+    # GCC-specific warnings (not available on Clang/macOS)
+    if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
+        add_compile_options(-Wstringop-overflow)
+    endif()
     
     # Optional: AddressSanitizer für Debug-Builds
     if(CMAKE_BUILD_TYPE STREQUAL "Debug")

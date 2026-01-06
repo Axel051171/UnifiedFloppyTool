@@ -1,9 +1,9 @@
-# UnifiedFloppyTool (UFT) v3.4.5
+# UnifiedFloppyTool (UFT) v3.5.0
 
 [![CI Build](https://github.com/Axel051171/UnifiedFloppyTool/actions/workflows/ci.yml/badge.svg)](https://github.com/Axel051171/UnifiedFloppyTool/actions/workflows/ci.yml)
 [![Release](https://github.com/Axel051171/UnifiedFloppyTool/actions/workflows/release.yml/badge.svg)](https://github.com/Axel051171/UnifiedFloppyTool/actions/workflows/release.yml)
 [![License: GPL-2.0](https://img.shields.io/badge/License-GPL%202.0-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-3.4.5-green.svg)](https://github.com/Axel051171/UnifiedFloppyTool/releases/latest)
+[![Version](https://img.shields.io/badge/version-3.5.0-green.svg)](https://github.com/Axel051171/UnifiedFloppyTool/releases/latest)
 
 > **"Bei uns geht kein Bit verloren"** - No bit gets lost
 
