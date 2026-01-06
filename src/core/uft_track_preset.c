@@ -268,9 +268,9 @@ int uft_copy_profile_parse(const char *text,
     
     /* Look for track count */
     skip_whitespace(&ps);
-    int t = parse_number(&ps);
-    if (t > 0 && t <= UFT_MAX_TRACKS_PER_SIDE) {
-        tracks = (uint8_t)t;
+    int track_count_val = parse_number(&ps);
+    if (track_count_val > 0 && track_count_val <= UFT_MAX_TRACKS_PER_SIDE) {
+        tracks = (uint8_t)track_count_val;
     }
     
     /* Skip rest of header line(s) until we hit a command */
@@ -405,9 +405,9 @@ int uft_copy_profile_parse(const char *text,
             
             /* Apply last_config from last_track+1 to end_track */
             if (last_track >= 0 && current_side >= 0) {
-                for (int t = last_track + 1; t <= end_track && t < profile->track_count; t++) {
+                for (int tr = last_track + 1; tr <= end_track && tr < profile->track_count; tr++) {
                     uft_copy_profile_set_track(profile,
-                                               (uint8_t)t,
+                                               (uint8_t)tr,
                                                (uint8_t)current_side,
                                                &last_config);
                 }

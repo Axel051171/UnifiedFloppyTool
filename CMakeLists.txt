@@ -13,6 +13,25 @@ project(UnifiedFloppyTool
     LANGUAGES CXX C
 )
 
+# ---- Toolchain / Language Standards (cross-platform, deterministic) ----
+set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_STANDARD_REQUIRED ON)
+set(CMAKE_C_EXTENSIONS OFF)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+# ---- Qt (Debian/Ubuntu) + -reduce-relocations requires PIC, and default PIE breaks builds ----
+# Force PIC and disable PIE for Linux builds to avoid Qt's qglobal.h hard error.
+if(UNIX AND NOT APPLE)
+  set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+  if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    add_compile_options(-fPIC -fno-PIE)
+    add_link_options(-no-pie)
+  endif()
+endif()
+
+
 # ──────────────────────────────────────────────────────────────────────────────
 # Zentrale Plattform-Funktionen (Math, Threads, OpenMP)
 # DIREKT HIER DEFINIERT - kein externes include nötig!
