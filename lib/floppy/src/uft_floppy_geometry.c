@@ -7,7 +7,13 @@
  */
 
 #include <stdio.h>
-#include <sys/types.h>
+/* Platform compatibility for ssize_t */
+#ifdef _MSC_VER
+    #include <BaseTsd.h>
+    typedef SSIZE_T ssize_t;
+#else
+    #include <sys/types.h>
+#endif
 #include <string.h>
 
 #include "uft_floppy_geometry.h"

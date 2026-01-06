@@ -7,7 +7,13 @@
  */
 
 #include <stdio.h>
-#include <sys/types.h>
+/* Platform compatibility for ssize_t */
+#ifdef _MSC_VER
+    #include <BaseTsd.h>
+    typedef SSIZE_T ssize_t;
+#else
+    #include <sys/types.h>
+#endif
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>

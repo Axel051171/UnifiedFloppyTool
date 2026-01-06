@@ -7,11 +7,19 @@
  */
 
 #include "formats/uft_diskimage.h"
-#include <sys/types.h>
+#include "uft_floppy_types.h"
 #include "encoding/uft_gcr.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+
+/* Platform compatibility for ssize_t */
+#ifdef _MSC_VER
+    #include <BaseTsd.h>
+    typedef SSIZE_T ssize_t;
+#else
+    #include <sys/types.h>
+#endif
 
 /* ============================================================================
  * D64 Track Layout Table
@@ -279,12 +287,22 @@ uint8_t uft_d64_get_error(d64_handle_t *h, uint8_t track, uint8_t sector) {
  * ============================================================================ */
 
 /** G64 header structure */
+#ifdef _MSC_VER
+#pragma pack(push, 1)
+#endif
 typedef struct {
     char signature[8];          /* "GCR-1541" */
     uint8_t version;            /* 0 */
     uint8_t track_count;        /* Number of tracks */
     uint16_t max_track_size;    /* Maximum track size */
-} __attribute__((packed)) g64_header_t;
+}
+#ifdef __GNUC__
+__attribute__((packed))
+#endif
+g64_header_t;
+#ifdef _MSC_VER
+#pragma pack(pop)
+#endif
 
 /**
  * @brief G64 image handle
