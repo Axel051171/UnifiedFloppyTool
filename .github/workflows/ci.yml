@@ -44,8 +44,9 @@ jobs:
           cmake -B build -G Ninja \
             -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
             -DUFT_ENABLE_SECURITY=ON \
-            -DCMAKE_C_FLAGS="-Wall -Wextra" \
-            -DCMAKE_CXX_FLAGS="-Wall -Wextra"
+            -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
+            -DCMAKE_C_FLAGS="-Wall -Wextra -fPIC" \
+            -DCMAKE_CXX_FLAGS="-Wall -Wextra -fPIC"
 
       - name: 🏗️ Build
         run: cmake --build build --config ${{ env.BUILD_TYPE }} --parallel
@@ -204,9 +205,12 @@ jobs:
 
       - name: 📦 Deploy Qt DLLs
         run: |
-          $exe = Get-ChildItem -Path build -Filter "*.exe" -Recurse | Select-Object -First 1
-          if ($exe) {
-            windeployqt --release --no-translations $exe.FullName
+          $exe = "build/Release/UnifiedFloppyTool.exe"
+          if (Test-Path $exe) {
+            windeployqt --release --no-translations $exe
+          } else {
+            Write-Host "Warning: UnifiedFloppyTool.exe not found at $exe"
+            Get-ChildItem -Path build -Filter "*.exe" -Recurse | ForEach-Object { Write-Host $_.FullName }
           }
 
       - name: 📤 Upload Artifacts

@@ -61,6 +61,7 @@ jobs:
             -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
             -DCMAKE_INSTALL_PREFIX=/usr \
             -DUFT_ENABLE_SECURITY=ON \
+            -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
             -DUFT_VERSION="${{ steps.version.outputs.version }}" \
             -DCPACK_PACKAGE_VERSION="${{ steps.version.outputs.version }}"
 
@@ -199,9 +200,12 @@ jobs:
       - name: 📦 Deploy Qt DLLs
         shell: pwsh
         run: |
-          $exe = Get-ChildItem -Path build/Release -Filter "*.exe" | Select-Object -First 1
-          if ($exe) {
-            windeployqt --release --no-translations --no-opengl-sw $exe.FullName
+          $exe = "build/Release/UnifiedFloppyTool.exe"
+          if (Test-Path $exe) {
+            windeployqt --release --no-translations --no-opengl-sw $exe
+          } else {
+            Write-Host "Warning: exe not found, searching..."
+            Get-ChildItem -Path build -Filter "*.exe" -Recurse | ForEach-Object { Write-Host $_.FullName }
           }
 
       - name: 📦 Create ZIP Package
