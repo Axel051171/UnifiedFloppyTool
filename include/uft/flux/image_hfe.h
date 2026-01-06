@@ -10,8 +10,6 @@
 
 #include "image_base.h"
 
-#include <stdint.h>
-
 typedef struct {
 	uint8_t HEADERSIGNATURE[8];		// "HXCPICFE"
 	uint8_t formatrevision;			// Revision 0

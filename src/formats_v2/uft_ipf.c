@@ -3,7 +3,6 @@
  * @brief CAPS/SPS IPF Format Plugin - API-konform
  */
 
-#include <stdio.h>  // FIXED R18
 #include "uft/uft_format_common.h"
 
 #define IPF_CAPS    0x43415053

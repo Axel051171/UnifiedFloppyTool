@@ -61,7 +61,6 @@
 
 int mfmtobin(unsigned char * input_data,int * data_index_buf,int input_data_size,unsigned char * decod_data,int decod_data_size,int bit_offset,int lastbit)
 {
-    (void)lastbit; /* Suppress unused parameter warning */
 	int i,j;
 	unsigned char b,c1,c2;
 	int first_loop_data_size;

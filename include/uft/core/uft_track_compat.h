@@ -16,8 +16,6 @@
 #include "uft/decoder/uft_unified_decoder.h"
 #include "uft/uft_ir_format.h"
 
-#include <stdint.h>
-
 #ifdef __cplusplus
 extern "C" {
 #endif

@@ -33,7 +33,6 @@
 #include <stdint.h>
 
 #include "params.h"
-#include "uft/uft_compiler.h"
 
 #if HOST_IS_BIG_ENDIAN
 	// Big Endian host - as the 68k... nothing to do.
@@ -56,8 +55,7 @@ typedef struct _bblock
 	uint32_t checksum;
 	uint32_t rootblock;
 	unsigned char code[1024-(3+1+4+4)];
-} bblock;
-UFT_PACK_END
+}__attribute__ ((packed)) bblock;
 
 int memsearch(unsigned char * tofind, int sizetofind, unsigned char * buffer, int bufsize, int startpoint )
 {

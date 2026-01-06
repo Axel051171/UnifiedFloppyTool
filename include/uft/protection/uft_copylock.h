@@ -25,7 +25,6 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
-#include <string.h>   /* FIXED R19: For memcmp */
 
 #ifdef __cplusplus
 extern "C" {

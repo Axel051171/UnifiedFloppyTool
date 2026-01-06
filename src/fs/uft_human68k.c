@@ -16,7 +16,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
-#include "uft/uft_compiler.h"
 
 /*===========================================================================
  * Constants
@@ -66,8 +65,7 @@ typedef struct {
     uint8_t     hidden_sec[2];  /* 23: Hidden sectors */
     uint8_t     total_sec32[4]; /* 25: Total sectors (32-bit) */
     /* Extended fields follow */
-} h68k_boot_t;
-UFT_PACK_END
+} __attribute__((packed)) h68k_boot_t;
 
 /* Human68k Directory Entry */
 typedef struct {
@@ -79,8 +77,7 @@ typedef struct {
     uint8_t     date[2];        /* 18: Date */
     uint8_t     start_clust[2]; /* 1A: Starting cluster */
     uint8_t     file_size[4];   /* 1C: File size */
-} h68k_dirent_t;
-UFT_PACK_END
+} __attribute__((packed)) h68k_dirent_t;
 
 /*===========================================================================
  * Helpers

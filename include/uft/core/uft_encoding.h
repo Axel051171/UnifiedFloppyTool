@@ -15,8 +15,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#include <stddef.h>
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -164,7 +162,7 @@ const uft_encoding_info_t* uft_encoding_get_info(uft_disk_encoding_t enc);
 /**
  * @brief Get encoding name
  */
-const char* uft_disk_encoding_name(uft_disk_encoding_t enc);
+const char* uft_encoding_name(uft_disk_encoding_t enc);
 
 /**
  * @brief Get encoding category

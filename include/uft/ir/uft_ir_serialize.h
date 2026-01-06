@@ -26,7 +26,6 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
-#include "uft/uft_compiler.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -74,8 +73,7 @@ extern "C" {
 /**
  * @brief UFIR file header (32 bytes)
  */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     uint32_t magic;             /**< UFT_IR_MAGIC */
     uint8_t  version_major;     /**< Major version */
     uint8_t  version_minor;     /**< Minor version */
@@ -90,7 +88,6 @@ typedef struct {
     uint32_t checksum;          /**< Header checksum (CRC32) */
     uint32_t reserved;          /**< Reserved for future use */
 } uft_ir_header_t;
-UFT_PACK_END
 
 /** Header flags */
 #define UFT_IR_FLAG_HAS_TIMING      0x01    /**< Contains timing data */
@@ -103,20 +100,17 @@ UFT_PACK_END
 /**
  * @brief Block header (8 bytes)
  */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     uint8_t  type;              /**< Block type */
     uint8_t  flags;             /**< Block flags */
     uint16_t track_id;          /**< Track identifier (type-specific) */
     uint32_t size;              /**< Block data size (after header) */
 } uft_ir_block_header_t;
-UFT_PACK_END
 
 /**
  * @brief Track block header (16 bytes after block header)
  */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     uint16_t track;             /**< Track number */
     uint8_t  side;              /**< Side (0 or 1) */
     uint8_t  encoding;          /**< Encoding type */
@@ -127,13 +121,11 @@ typedef struct {
     uint32_t bitstream_size;    /**< Bitstream size in bits */
     uint32_t flags;             /**< Track flags */
 } uft_ir_track_header_t;
-UFT_PACK_END
 
 /**
  * @brief Sector block header (12 bytes after block header)
  */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     uint16_t track;             /**< Track number */
     uint8_t  side;              /**< Side */
     uint8_t  sector;            /**< Sector number */
@@ -143,7 +135,6 @@ typedef struct {
     uint16_t crc_calculated;    /**< Calculated CRC */
     uint16_t data_size;         /**< Data size in bytes */
 } uft_ir_sector_header_t;
-UFT_PACK_END
 
 /** Sector flags */
 #define UFT_IR_SECT_CRC_OK      0x01    /**< CRC valid */
@@ -155,14 +146,12 @@ UFT_PACK_END
 /**
  * @brief Track index entry (8 bytes)
  */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     uint16_t track;             /**< Track number */
     uint8_t  side;              /**< Side */
     uint8_t  sector_count;      /**< Sector count */
     uint32_t file_offset;       /**< Offset in file */
 } uft_ir_index_entry_t;
-UFT_PACK_END
 
 /*===========================================================================
  * Serialization Context

@@ -17,7 +17,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
-#include "uft/uft_compiler.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -59,8 +58,7 @@ extern "C" {
 /**
  * @brief ATX file header
  */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     uint32_t magic;                 /**< 'AT8X' */
     uint16_t version;               /**< Format version */
     uint16_t min_version;           /**< Minimum reader version */
@@ -76,13 +74,11 @@ typedef struct {
     uint32_t start_offset;          /**< Offset to first track */
     uint32_t end_offset;            /**< Offset past last track */
 } uft_atx_header_t;
-UFT_PACK_END
 
 /**
  * @brief Track header
  */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     uint32_t size;                  /**< Track record size */
     uint16_t type;                  /**< Record type (0 = track) */
     uint16_t reserved;
@@ -95,31 +91,26 @@ typedef struct {
     uint32_t header_size;           /**< Size of sector headers */
     uint8_t  reserved3[8];
 } uft_atx_track_header_t;
-UFT_PACK_END
 
 /**
  * @brief Sector header
  */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     uint8_t  number;                /**< Sector number */
     uint8_t  status;                /**< FDC status + flags */
     uint16_t position;              /**< Angular position (0-26041) */
     uint32_t start_data;            /**< Offset to sector data */
 } uft_atx_sector_header_t;
-UFT_PACK_END
 
 /**
  * @brief Extended sector data header
  */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     uint32_t size;                  /**< Total size including header */
     uint8_t  type;                  /**< Extended data type */
     uint8_t  sector_index;          /**< Which sector this applies to */
     uint16_t reserved;
 } uft_atx_extended_header_t;
-UFT_PACK_END
 
 /**
  * @brief Weak bit region

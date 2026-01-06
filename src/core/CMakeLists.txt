@@ -42,42 +42,23 @@ set(SIMD_SOURCES
     uft_mfm_scalar.c
 )
 
-# Check for SIMD support - compiler-specific
+# Check for SSE2 support
 include(CheckCCompilerFlag)
+check_c_compiler_flag("-msse2" HAVE_SSE2)
+if(HAVE_SSE2)
+    list(APPEND SIMD_SOURCES uft_mfm_sse2.c)
+    set_source_files_properties(uft_mfm_sse2.c PROPERTIES
+        COMPILE_FLAGS "-msse2"
+    )
+endif()
 
-if(MSVC)
-    # MSVC: SSE2 is default on x64, AVX2 needs /arch:AVX2
-    check_c_compiler_flag("/arch:AVX2" HAVE_AVX2)
-    set(HAVE_SSE2 TRUE)  # Always available on x64 MSVC
-    
-    if(HAVE_SSE2)
-        list(APPEND SIMD_SOURCES uft_mfm_sse2.c)
-        # No special flag needed for SSE2 on x64 MSVC
-    endif()
-    
-    if(HAVE_AVX2)
-        list(APPEND SIMD_SOURCES uft_mfm_avx2.c)
-        set_source_files_properties(uft_mfm_avx2.c PROPERTIES
-            COMPILE_FLAGS "/arch:AVX2"
-        )
-    endif()
-else()
-    # GCC/Clang
-    check_c_compiler_flag("-msse2" HAVE_SSE2)
-    if(HAVE_SSE2)
-        list(APPEND SIMD_SOURCES uft_mfm_sse2.c)
-        set_source_files_properties(uft_mfm_sse2.c PROPERTIES
-            COMPILE_FLAGS "-msse2"
-        )
-    endif()
-    
-    check_c_compiler_flag("-mavx2" HAVE_AVX2)
-    if(HAVE_AVX2)
-        list(APPEND SIMD_SOURCES uft_mfm_avx2.c)
-        set_source_files_properties(uft_mfm_avx2.c PROPERTIES
-            COMPILE_FLAGS "-mavx2"
-        )
-    endif()
+# Check for AVX2 support
+check_c_compiler_flag("-mavx2" HAVE_AVX2)
+if(HAVE_AVX2)
+    list(APPEND SIMD_SOURCES uft_mfm_avx2.c)
+    set_source_files_properties(uft_mfm_avx2.c PROPERTIES
+        COMPILE_FLAGS "-mavx2"
+    )
 endif()
 
 add_library(uft_core STATIC ${CORE_SOURCES} ${SIMD_SOURCES})
@@ -86,8 +67,12 @@ target_include_directories(uft_core PUBLIC
     ${CMAKE_SOURCE_DIR}/include
 )
 
-# Link math library via zentrale Funktion (plattformunabhängig)
-uft_link_math(uft_core)
+target_link_libraries(uft_core
+    m
+)
 
-# Thread support via zentrale Funktion
-uft_link_threads(uft_core)
+# Thread support
+find_package(Threads)
+if(Threads_FOUND)
+    target_link_libraries(uft_core Threads::Threads)
+endif()

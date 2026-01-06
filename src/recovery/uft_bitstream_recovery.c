@@ -213,7 +213,6 @@ static int detect_bit_slip(const uint8_t *bitstream, size_t bit_count,
     size_t sync_count = 0;
     size_t total_gap = 0;
     
-    (void)total_gap; /* Reserved for future gap analysis */
     for (size_t i = 0; i < byte_count - MFM_SYNC_LEN; i++) {
         bool match = true;
         for (size_t j = 0; j < MFM_SYNC_LEN && match; j++) {

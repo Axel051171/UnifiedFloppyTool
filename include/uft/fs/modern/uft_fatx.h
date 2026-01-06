@@ -12,7 +12,6 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
-#include "uft/uft_compiler.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -74,15 +73,13 @@ typedef enum {
 /**
  * @brief FATX volume header (on-disk)
  */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     uint32_t signature;             /**< "FATX" (0x58544146) */
     uint32_t volume_id;             /**< Volume serial number */
     uint32_t sectors_per_cluster;   /**< Cluster size in sectors */
     uint32_t root_dir_cluster;      /**< First cluster of root directory */
     /* Padding to sector boundary */
 } uft_fatx_header_t;
-UFT_PACK_END
 
 /**
  * @brief Xbox timestamp format
@@ -111,8 +108,7 @@ typedef uint32_t uft_fatx360_time_t;
 /**
  * @brief FATX directory entry (64 bytes)
  */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     uint8_t  filename_length;       /**< 0x00 = never used, 0xE5 = deleted, 0xFF = end */
     uint8_t  attributes;            /**< File attributes */
     uint8_t  filename[42];          /**< Filename (ASCII, not null-terminated) */
@@ -122,7 +118,6 @@ typedef struct {
     uint32_t last_write_time;       /**< Last write timestamp */
     uint32_t last_access_time;      /**< Last access timestamp */
 } uft_fatx_dirent_t;
-UFT_PACK_END
 
 /**
  * @brief FATX volume context

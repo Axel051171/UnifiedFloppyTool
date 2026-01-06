@@ -21,7 +21,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <strings.h>  /* strcasecmp */
 #include <stdint.h>
 #include <stdbool.h>
 #include "uft/uft_atomics.h"
@@ -105,7 +104,6 @@ static uint64_t xxh64_update(uint64_t hash, const uint8_t* data, size_t len) {
 
 /*============================================================================
  * STREAMING HASH TYPES
- * FIXED R18: Use uft_atomic_* types for MSVC compatibility
  *============================================================================*/
 
 /* Work item for hash queue */
@@ -113,8 +111,8 @@ typedef struct {
     uint8_t* data;
     size_t len;
     uint64_t offset;
-    uft_atomic_bool done;
-    uft_atomic_bool free_data;
+    atomic_bool done;
+    atomic_bool free_data;
 } hash_work_t;
 
 /* Hash result */
@@ -139,9 +137,9 @@ typedef struct {
     uint32_t crc32;
     uint64_t xxh64;
     
-    /* Progress - use uft_atomic_size for 64-bit atomic */
-    uft_atomic_size bytes_hashed;
-    uft_atomic_size total_bytes;
+    /* Progress */
+    _Atomic uint64_t bytes_hashed;
+    _Atomic uint64_t total_bytes;
     
     /* Thread pool */
     pthread_t workers[HASH_THREAD_COUNT];
@@ -155,8 +153,8 @@ typedef struct {
     pthread_cond_t queue_cond;
     
     /* State */
-    uft_atomic_bool running;
-    uft_atomic_bool shutdown;
+    atomic_bool running;
+    atomic_bool shutdown;
     pthread_mutex_t state_lock;
     
     /* Results */
@@ -221,8 +219,8 @@ streaming_hash_t* streaming_hash_create(int algorithms) {
     pthread_cond_init(&sh->queue_cond, NULL);
     pthread_mutex_init(&sh->state_lock, NULL);
     
-    uft_atomic_store(&sh->running, true);
-    uft_atomic_store(&sh->shutdown, false);
+    atomic_store(&sh->running, true);
+    atomic_store(&sh->shutdown, false);
     
     return sh;
 }
@@ -233,7 +231,7 @@ streaming_hash_t* streaming_hash_create(int algorithms) {
 void streaming_hash_destroy(streaming_hash_t* sh) {
     if (!sh) return;
     
-    uft_atomic_store(&sh->shutdown, true);
+    atomic_store(&sh->shutdown, true);
     pthread_cond_broadcast(&sh->queue_cond);
     
     /* Wait for workers */
@@ -272,14 +270,14 @@ int streaming_hash_update(streaming_hash_t* sh, const uint8_t* data, size_t len)
     /* MD5 and SHA256 would need full implementation */
     /* For now, just update byte count */
     
-    uft_atomic_fetch_add(&sh->bytes_hashed, len);
+    atomic_fetch_add(&sh->bytes_hashed, len);
     
     pthread_mutex_unlock(&sh->state_lock);
     
     /* Progress callback */
     if (sh->progress_cb) {
-        uint64_t hashed = uft_atomic_load(&sh->bytes_hashed);
-        uint64_t total = uft_atomic_load(&sh->total_bytes);
+        uint64_t hashed = atomic_load(&sh->bytes_hashed);
+        uint64_t total = atomic_load(&sh->total_bytes);
         sh->progress_cb(hashed, total, sh->user_data);
     }
     
@@ -343,7 +341,7 @@ void streaming_hash_set_callback(streaming_hash_t* sh,
  */
 void streaming_hash_set_total(streaming_hash_t* sh, uint64_t total) {
     if (sh) {
-        uft_atomic_store(&sh->total_bytes, total);
+        atomic_store(&sh->total_bytes, total);
     }
 }
 
@@ -353,8 +351,8 @@ void streaming_hash_set_total(streaming_hash_t* sh, uint64_t total) {
 double streaming_hash_get_progress(streaming_hash_t* sh) {
     if (!sh) return 0.0;
     
-    uint64_t hashed = uft_atomic_load(&sh->bytes_hashed);
-    uint64_t total = uft_atomic_load(&sh->total_bytes);
+    uint64_t hashed = atomic_load(&sh->bytes_hashed);
+    uint64_t total = atomic_load(&sh->total_bytes);
     
     if (total == 0) return 0.0;
     return (double)hashed / total * 100.0;

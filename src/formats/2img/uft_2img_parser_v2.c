@@ -77,8 +77,7 @@ typedef struct {
     uint32_t creator_offset;  /* Offset to creator data */
     uint32_t creator_size;    /* Size of creator data */
     uint8_t reserved[16];     /* Reserved */
-} img2_header_t;
-UFT_PACK_END
+} __attribute__((packed)) img2_header_t;
 
 /**
  * @brief Image format types
@@ -475,7 +474,6 @@ static char* img2_info_to_text(const img2_disk_t* disk) {
 #ifdef IMG2_PARSER_TEST
 
 #include <assert.h>
-#include "uft/uft_compiler.h"
 
 int main(void) {
     printf("=== 2IMG Parser v2 Tests ===\n");

@@ -6,16 +6,6 @@
  * Implements safecopy and recoverdm algorithms for disk recovery.
  */
 
-/* POSIX Feature Test Macros - MUST be before any includes */
-#if !defined(_WIN32) && !defined(_WIN64)
-    #ifndef _POSIX_C_SOURCE
-        #define _POSIX_C_SOURCE 200809L
-    #endif
-    #ifndef _DEFAULT_SOURCE
-        #define _DEFAULT_SOURCE 1
-    #endif
-#endif
-
 #include "uft/uft_recovery_advanced.h"
 #include <stdlib.h>
 #include <string.h>
@@ -27,16 +17,12 @@
     #include <windows.h>
     #include <io.h>
     #define INVALID_FD INVALID_HANDLE_VALUE
-    /* Use uint64_t for timing on Windows instead of struct timespec */
-    typedef uint64_t uft_time_point_t;
-    #define UFT_USE_WINDOWS_TIME 1
 #else
     #include <unistd.h>
     #include <fcntl.h>
     #include <sys/stat.h>
     #include <sys/time.h>
     #define INVALID_FD -1
-    typedef struct timespec uft_time_point_t;
 #endif
 
 /* ═══════════════════════════════════════════════════════════════════════════════
@@ -59,9 +45,9 @@ struct uft_recovery {
     uint64_t current_position;
     size_t current_block_size;
     
-    /* Timing - platform-specific */
-    uft_time_point_t start_time;
-    uft_time_point_t last_progress;
+    /* Timing */
+    struct timespec start_time;
+    struct timespec last_progress;
 };
 
 /* ═══════════════════════════════════════════════════════════════════════════════
@@ -414,7 +400,6 @@ uft_sector_status_t uft_recovery_read_sector(
     size_t total_read = 0;
     int attempts = 0;
     uft_recovery_error_t last_error = UFT_REC_ERR_NONE;
-    (void)last_error; /* Suppress unused warning */
     
     while (attempts < rec->config.max_retries) {
         attempts++;

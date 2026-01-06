@@ -53,8 +53,7 @@
  *============================================================================*/
 
 /* File header (16 bytes) */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     char     signature[4];       /* "RSY\0" */
     uint16_t version;            /* Format version (3) */
     uint16_t tool_version;       /* Tool version that created file */
@@ -63,11 +62,9 @@ typedef struct {
     uint8_t  revision;           /* File revision */
     uint32_t reserved2;
 } stx_file_header_t;
-UFT_PACK_END
 
 /* Track descriptor (16 bytes) */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     uint32_t record_size;        /* Size of track record */
     uint32_t fuzzy_size;         /* Size of fuzzy bit data */
     uint16_t sector_count;       /* Number of sectors */
@@ -76,11 +73,9 @@ typedef struct {
     uint8_t  track_number;       /* Physical track number */
     uint8_t  track_type;         /* Track type/encoding */
 } stx_track_descriptor_t;
-UFT_PACK_END
 
 /* Sector descriptor (16 bytes) */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     uint32_t data_offset;        /* Offset to sector data */
     uint16_t bit_position;       /* Sector position in track (bits/16) */
     uint16_t read_time;          /* Read timing */
@@ -92,7 +87,6 @@ typedef struct {
     uint8_t  fdcstat;            /* FDC status */
     uint8_t  reserved[2];
 } stx_sector_descriptor_t;
-UFT_PACK_END
 
 /* Parsed sector */
 typedef struct {
@@ -659,7 +653,6 @@ int stx_parser_analyze_protection(
 #ifdef STX_PARSER_TEST
 
 #include <assert.h>
-#include "uft/uft_compiler.h"
 
 int main(void) {
     printf("=== STX Parser Unit Tests ===\n");

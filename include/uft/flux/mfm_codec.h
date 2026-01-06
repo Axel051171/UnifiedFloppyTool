@@ -6,10 +6,6 @@
 #include "bit_array.h"
 #include "fdc_vfo_base.h"
 
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
-
 //#define DEBUG
 
 class mfm_codec {

@@ -99,7 +99,7 @@ const char* uft_protection_preset_name(uft_protection_preset_id_t preset) {
     return g_preset_names[preset];
 }
 
-static const char* uft_protection_type_name_local(uft_protection_type_t type) {
+const char* uft_protection_type_name(uft_protection_type_t type) {
     int idx = 0;
     uint32_t t = (uint32_t)type;
     while (t > 1 && idx < 14) { t >>= 1; idx++; }

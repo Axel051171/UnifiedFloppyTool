@@ -575,7 +575,7 @@ uft_error_t uft_cache_flush(uft_cache_t* cache, uft_disk_t* disk) {
     while (entry) {
         if (entry->dirty && disk) {
             uft_error_t err = uft_track_write(disk, entry->track, NULL);
-            if (err == UFT_SUCCESS) {
+            if ((err == UFT_SUCCESS)) {
                 entry->dirty = false;
                 cache->stats.writebacks++;
             }

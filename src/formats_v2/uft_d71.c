@@ -3,7 +3,6 @@
  * @brief Commodore 1571 (D71) Format Plugin - API-konform
  */
 
-#include <stdio.h>  // FIXED R18
 #include "uft/uft_format_common.h"
 
 #define D71_TRACKS_PER_SIDE     35

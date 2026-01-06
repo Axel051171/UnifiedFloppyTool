@@ -6,7 +6,13 @@
 #include "protocol.h"
 #include <numeric>
 #include <math.h>
+#ifdef _WIN32
+#include <string.h>
+#define strcasecmp _stricmp
+#define strncasecmp _strnicmp
+#else
 #include <strings.h>
+#endif
 
 FluxPattern::FluxPattern(unsigned bits, uint64_t pattern): _bits(bits)
 {

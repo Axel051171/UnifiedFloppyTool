@@ -13,11 +13,8 @@
 #define UFT_MAGIC_SIGNATURES_H
 
 #include <stdint.h>
-#include <stddef.h>
 #include <stdbool.h>
-#include <stddef.h>
 #include <string.h>
-#include <stddef.h>
 
 #ifdef __cplusplus
 extern "C" {

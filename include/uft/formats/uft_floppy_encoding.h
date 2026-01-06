@@ -18,7 +18,6 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
-#include "uft/uft_compiler.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -417,26 +416,22 @@ static inline uint16_t uft_crc16_ibm(const uint8_t *data, size_t length)
 /**
  * @brief IBM-format sector ID field
  */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     uint8_t  track;         /**< Track number (cylinder) */
     uint8_t  head;          /**< Head/side number */
     uint8_t  sector;        /**< Sector number */
     uint8_t  size_code;     /**< Sector size code (0=128, 1=256, 2=512...) */
 } uft_sector_id_t;
-UFT_PACK_END
 
 /**
  * @brief Complete sector header with CRC
  */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     uint8_t  sync[3];       /**< 0xA1 sync bytes */
     uint8_t  mark;          /**< Address mark (0xFE) */
     uft_sector_id_t id;     /**< Sector ID */
     uint16_t crc;           /**< CRC-16 */
 } uft_mfm_sector_header_t;
-UFT_PACK_END
 
 #ifdef __cplusplus
 }

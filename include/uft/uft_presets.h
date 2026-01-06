@@ -1,96 +1,67 @@
-/*
- * uft_presets.h - Master Presets Header
- *
- * Part of UnifiedFloppyTool (UFT) v3.3.0
- *
- * Includes all platform-specific preset headers.
- * Use this single header to access all format presets.
+/**
+ * @file uft_presets.h
+ * @brief Preset System API
  */
 
 #ifndef UFT_PRESETS_H
 #define UFT_PRESETS_H
 
-/* ═══════════════════════════════════════════════════════════════════════════
- * Platform Presets - Major Systems
- * ═══════════════════════════════════════════════════════════════════════════ */
+#include "uft_params.h"
 
-#include "presets/uft_preset_zx_spectrum.h"   /* ZX Spectrum (+3, Beta, MGT, etc.) */
-#include "presets/uft_preset_pc98.h"          /* NEC PC-98 */
-#include "presets/uft_preset_msx.h"           /* MSX */
-#include "presets/uft_preset_trs80.h"         /* TRS-80 (JV1, JV3, DMK) */
-#include "presets/uft_preset_acorn.h"         /* BBC Micro / Acorn (DFS, ADFS) */
-#include "presets/uft_preset_apple.h"         /* Apple II / Macintosh */
-#include "presets/uft_preset_atari_st.h"      /* Atari ST */
-#include "presets/uft_preset_commodore.h"     /* Commodore (D64, D71, D81, G64) */
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-/* ═══════════════════════════════════════════════════════════════════════════
- * Container Formats (CQM, IMD, TD0, etc.)
- * ═══════════════════════════════════════════════════════════════════════════ */
+// ============================================================================
+// Preset Categories
+// ============================================================================
 
-#include "presets/uft_preset_containers.h"    /* CQM, IMD, TD0, QCOW, VDI, etc. */
+typedef enum uft_preset_category {
+    UFT_PRESET_CAT_GENERAL,
+    UFT_PRESET_CAT_COMMODORE,
+    UFT_PRESET_CAT_AMIGA,
+    UFT_PRESET_CAT_APPLE,
+    UFT_PRESET_CAT_IBM_PC,
+    UFT_PRESET_CAT_ATARI,
+    UFT_PRESET_CAT_PRESERVATION,
+    UFT_PRESET_CAT_COPY_PROTECTION,
+    UFT_PRESET_CAT_USER,
+} uft_preset_category_t;
 
-/* ═══════════════════════════════════════════════════════════════════════════
- * Regional/Specialized Formats
- * ═══════════════════════════════════════════════════════════════════════════ */
+// ============================================================================
+// Preset Structure
+// ============================================================================
 
-#include "presets/uft_preset_historical.h"    /* Victor 9000, Oric, DEC, HP, etc. */
-#include "presets/uft_preset_japanese.h"      /* DIM, NFD, FDD, D88, XDF */
+typedef struct uft_preset {
+    char                    name[64];
+    char                    description[256];
+    uft_preset_category_t   category;
+    bool                    is_builtin;
+    bool                    is_modified;
+    uft_params_t            params;
+} uft_preset_t;
 
-/* ═══════════════════════════════════════════════════════════════════════════
- * Platform Statistics
- * ═══════════════════════════════════════════════════════════════════════════ */
+// ============================================================================
+// API
+// ============================================================================
 
-#define UFT_PRESET_PLATFORM_COUNT   11
+uft_error_t uft_preset_init(void);
+size_t uft_preset_count(void);
+const uft_preset_t* uft_preset_get(size_t index);
+const uft_preset_t* uft_preset_find(const char* name);
 
-#define UFT_PRESET_TOTAL_FORMATS    (UFT_ZX_FORMAT_COUNT + \
-                                     UFT_PC98_FORMAT_COUNT + \
-                                     UFT_MSX_FORMAT_COUNT + \
-                                     UFT_TRS80_FORMAT_COUNT + \
-                                     UFT_ACORN_FORMAT_COUNT + \
-                                     UFT_APPLE_FORMAT_COUNT + \
-                                     UFT_ATARI_ST_FORMAT_COUNT + \
-                                     UFT_CBM_FORMAT_COUNT + \
-                                     UFT_CONTAINER_FORMAT_COUNT + \
-                                     UFT_HISTORICAL_FORMAT_COUNT + \
-                                     UFT_JAPANESE_FORMAT_COUNT)
+uft_error_t uft_preset_save(const char* name, const uft_params_t* params);
+uft_error_t uft_preset_load(const char* name, uft_params_t* params);
+uft_error_t uft_preset_delete(const char* name);
 
-/* ═══════════════════════════════════════════════════════════════════════════
- * Platform Enumeration
- * ═══════════════════════════════════════════════════════════════════════════ */
+int uft_preset_list(const char** names, int max_count);
+int uft_preset_list_by_category(uft_preset_category_t cat,
+                                 const uft_preset_t** presets,
+                                 int max_count);
+const char* uft_preset_category_name(uft_preset_category_t cat);
 
-typedef enum uft_platform_id {
-    UFT_PLATFORM_ZX_SPECTRUM = 0,
-    UFT_PLATFORM_PC98,
-    UFT_PLATFORM_MSX,
-    UFT_PLATFORM_TRS80,
-    UFT_PLATFORM_ACORN,
-    UFT_PLATFORM_APPLE,
-    UFT_PLATFORM_ATARI_ST,
-    UFT_PLATFORM_COMMODORE,
-    UFT_PLATFORM_CONTAINERS,
-    UFT_PLATFORM_HISTORICAL,
-    UFT_PLATFORM_JAPANESE,
-} uft_platform_id_t;
+#ifdef __cplusplus
+}
+#endif
 
-typedef struct uft_platform_info {
-    uft_platform_id_t id;
-    const char *name;
-    const char *description;
-    uint8_t format_count;
-} uft_platform_info_t;
-
-static const uft_platform_info_t UFT_PLATFORMS[] = {
-    { UFT_PLATFORM_ZX_SPECTRUM, "ZX Spectrum", "Sinclair ZX Spectrum & clones", UFT_ZX_FORMAT_COUNT },
-    { UFT_PLATFORM_PC98, "NEC PC-98", "Japanese NEC PC-9801/9821", UFT_PC98_FORMAT_COUNT },
-    { UFT_PLATFORM_MSX, "MSX", "MSX home computers", UFT_MSX_FORMAT_COUNT },
-    { UFT_PLATFORM_TRS80, "TRS-80", "Radio Shack TRS-80", UFT_TRS80_FORMAT_COUNT },
-    { UFT_PLATFORM_ACORN, "Acorn/BBC", "BBC Micro & Acorn Archimedes", UFT_ACORN_FORMAT_COUNT },
-    { UFT_PLATFORM_APPLE, "Apple", "Apple II & Macintosh", UFT_APPLE_FORMAT_COUNT },
-    { UFT_PLATFORM_ATARI_ST, "Atari ST", "Atari ST/STE/TT/Falcon", UFT_ATARI_ST_FORMAT_COUNT },
-    { UFT_PLATFORM_COMMODORE, "Commodore", "Commodore C64/C128/PET", UFT_CBM_FORMAT_COUNT },
-    { UFT_PLATFORM_CONTAINERS, "Containers", "CQM, IMD, TD0, QCOW, etc.", UFT_CONTAINER_FORMAT_COUNT },
-    { UFT_PLATFORM_HISTORICAL, "Historical", "Victor 9000, Oric, DEC, HP, etc.", UFT_HISTORICAL_FORMAT_COUNT },
-    { UFT_PLATFORM_JAPANESE, "Japanese", "DIM, NFD, FDD, D88, XDF", UFT_JAPANESE_FORMAT_COUNT },
-};
-
-#endif /* UFT_PRESETS_H */
+#endif // UFT_PRESETS_H

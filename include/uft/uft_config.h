@@ -263,8 +263,6 @@
 
 #ifdef UFT_DEBUG_BUILD
     #include <assert.h>
-
-#include "uft/uft_compiler.h"
     #define UFT_ASSERT(cond)        assert(cond)
     #define UFT_ASSERT_MSG(cond, m) assert((cond) && (m))
 #else
@@ -315,7 +313,7 @@ typedef enum uft_error {
 /**
  * @brief Get error message for error code
  */
-UFT_INLINE const char* uft_error_string(uft_error_t err) {
+static UFT_INLINE const char* uft_error_string(uft_error_t err) {
     switch (err) {
         case UFT_OK:                return "Success";
         case UFT_ERR_INVALID_ARG:   return "Invalid argument";

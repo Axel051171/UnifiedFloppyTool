@@ -3,7 +3,6 @@
  * @brief Teledisk (TD0) Format Plugin - API-konform
  */
 
-#include <stdio.h>  // FIXED R18
 #include "uft/uft_format_common.h"
 
 #define TD0_MAGIC_NORMAL    0x5444

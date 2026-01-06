@@ -28,9 +28,6 @@ extern "C" {
 /** Last I/O error message (thread-local where supported) */
 #if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L && !defined(__STDC_NO_THREADS__)
     #include <threads.h>
-
-#include <stddef.h>
-#include <stdlib.h>
     extern _Thread_local char uft_io_last_error[256];
 #else
     extern char uft_io_last_error[256];

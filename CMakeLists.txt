@@ -8,31 +8,10 @@
 cmake_minimum_required(VERSION 3.16)
 
 project(UnifiedFloppyTool
-    VERSION 3.4.2
+    VERSION 3.3.0
     DESCRIPTION "Cross-platform floppy disk preservation and analysis tool"
     LANGUAGES CXX C
 )
-
-# ──────────────────────────────────────────────────────────────────────────────
-# Zentrale Plattform-Funktionen (Math, Threads, OpenMP)
-# DIREKT HIER DEFINIERT - kein externes include nötig!
-# ──────────────────────────────────────────────────────────────────────────────
-
-# uft_link_math() - Linkt Math-Library nur auf Unix (nicht auf Windows)
-# Hintergrund: Windows hat Math in MSVCRT, es gibt kein m.lib → LNK1181
-function(uft_link_math target)
-    if(UNIX)
-        target_link_libraries(${target} PRIVATE m)
-    endif()
-endfunction()
-
-# uft_link_threads() - Plattformunabhängiges Thread-Linking
-function(uft_link_threads target)
-    find_package(Threads QUIET)
-    if(Threads_FOUND)
-        target_link_libraries(${target} PRIVATE Threads::Threads)
-    endif()
-endfunction()
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -59,39 +38,10 @@ option(UFT_ENABLE_OPENMP   "Enable OpenMP parallelization"     ON)
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # C++ Standard & Qt Settings
-# FIXED R20: Expliziter C++17 Standard, keine GNU-Extensions, Required
 # ═══════════════════════════════════════════════════════════════════════════════
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)  # Use -std=c++17, not -std=gnu++17
-
-# Also set C standard explicitly
-set(CMAKE_C_STANDARD 11)
-set(CMAKE_C_STANDARD_REQUIRED ON)
-set(CMAKE_C_EXTENSIONS OFF)
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# POSIX Feature-Test-Macros (Fix für strdup, strcasecmp, gethostname, etc.)
-# Diese Funktionen sind POSIX, aber nicht ISO C. Ohne diese Macros gibt es
-# "implicit declaration" Warnings auf Linux/macOS mit -std=c11.
-# Windows hat diese Funktionen nativ in der CRT.
-# ═══════════════════════════════════════════════════════════════════════════════
-if(NOT WIN32)
-    add_compile_definitions(
-        _POSIX_C_SOURCE=200809L
-        _XOPEN_SOURCE=700
-    )
-endif()
-
-# Suppress MSVC deprecation warnings for standard C functions
-if(MSVC)
-    add_compile_definitions(
-        _CRT_SECURE_NO_WARNINGS
-        _CRT_NONSTDC_NO_WARNINGS
-    )
-endif()
-
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
@@ -133,9 +83,6 @@ add_subdirectory(src/hal)
 # Decoder Module (PLL, GCR, sync, fusion)
 add_subdirectory(src/decoder)
 
-# Sector Parser (IBM FM/MFM)
-add_subdirectory(src/sector)
-
 # Decoders Module (FM, MFM, GCR plugins + unified v2)
 add_subdirectory(src/decoders)
 
@@ -168,11 +115,6 @@ add_subdirectory(src/protection)
 # add_subdirectory(src/formats/misc_hxc)  # DISABLED: needs HxC types.h
 add_subdirectory(src/formats/scp)
 add_subdirectory(src/formats/amstrad)
-add_subdirectory(src/formats/msa)
-# Floppy I/O Library (GCR, MFM, FAT12)
-add_subdirectory(lib/floppy)
-add_subdirectory(src/formats/flashfloppy)
-add_subdirectory(src/forensic)
 
 # Disk Image Format Parsers (v3.2.0)
 add_subdirectory(src/loaders/disk_formats)
@@ -403,9 +345,6 @@ if(WIN32)
         NOMINMAX
         UNICODE
         _UNICODE
-        # Suppress MSVC CRT security warnings (we use safe functions where appropriate)
-        _CRT_SECURE_NO_WARNINGS
-        _CRT_NONSTDC_NO_WARNINGS
     )
 endif()
 
@@ -434,22 +373,14 @@ else()
 endif()
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# OpenMP Support (FIXED R22: Platform-specific handling)
+# OpenMP Support
 # ═══════════════════════════════════════════════════════════════════════════════
 
 if(UFT_ENABLE_OPENMP)
     find_package(OpenMP QUIET)
-    if(OpenMP_CXX_FOUND OR OpenMP_C_FOUND)
-        if(MSVC)
-            # MSVC: Only use /openmp flag, do NOT link OpenMP library
-            # This avoids LNK1181 errors when OpenMP runtime is not installed
-            target_compile_options(${PROJECT_NAME} PRIVATE /openmp)
-            message(STATUS "  OpenMP: Enabled (MSVC /openmp)")
-        else()
-            # GCC/Clang: Link OpenMP library normally
-            target_link_libraries(${PROJECT_NAME} PRIVATE OpenMP::OpenMP_CXX)
-            message(STATUS "  OpenMP: Enabled")
-        endif()
+    if(OpenMP_CXX_FOUND)
+        target_link_libraries(${PROJECT_NAME} PRIVATE OpenMP::OpenMP_CXX)
+        message(STATUS "  OpenMP: Enabled")
     else()
         message(STATUS "  OpenMP: Not found")
     endif()
@@ -468,8 +399,7 @@ if(UFT_ENABLE_SIMD)
             target_compile_options(${PROJECT_NAME} PRIVATE /arch:AVX2)
             message(STATUS "  SIMD: AVX2")
         endif()
-    elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64|i[3-6]86")
-        # Only enable AVX2/SSE on x86 architectures (not ARM/Apple Silicon)
+    else()
         check_cxx_compiler_flag("-mavx2" HAVE_AVX2)
         check_cxx_compiler_flag("-msse4.2" HAVE_SSE42)
         
@@ -480,9 +410,6 @@ if(UFT_ENABLE_SIMD)
             target_compile_options(${PROJECT_NAME} PRIVATE -msse4.2)
             message(STATUS "  SIMD: SSE4.2")
         endif()
-    elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "arm64|aarch64|ARM64")
-        # ARM64/Apple Silicon - use NEON (auto-enabled on ARM64)
-        message(STATUS "  SIMD: ARM NEON (auto)")
     endif()
     
     target_compile_definitions(${PROJECT_NAME} PRIVATE UFT_ENABLE_SIMD)
@@ -520,25 +447,5 @@ install(TARGETS ${PROJECT_NAME}
     BUNDLE DESTINATION .
     RUNTIME DESTINATION bin
 )
-
-# Install desktop file and icons (Linux)
-if(UNIX AND NOT APPLE)
-    # Desktop file
-    install(FILES ${CMAKE_SOURCE_DIR}/packaging/linux/UnifiedFloppyTool.desktop
-            DESTINATION share/applications)
-    
-    # Icons (multiple sizes)
-    install(FILES ${CMAKE_SOURCE_DIR}/resources/icons/UnifiedFloppyTool.svg
-            DESTINATION share/icons/hicolor/scalable/apps)
-    
-    # PNG icons for various sizes (if they exist)
-    foreach(SIZE 16 32 48 64 128 256)
-        if(EXISTS "${CMAKE_SOURCE_DIR}/resources/icons/UnifiedFloppyTool_${SIZE}.png")
-            install(FILES ${CMAKE_SOURCE_DIR}/resources/icons/UnifiedFloppyTool_${SIZE}.png
-                    DESTINATION share/icons/hicolor/${SIZE}x${SIZE}/apps
-                    RENAME UnifiedFloppyTool.png)
-        endif()
-    endforeach()
-endif()
 
 message(STATUS "════════════════════════════════════════════════════")

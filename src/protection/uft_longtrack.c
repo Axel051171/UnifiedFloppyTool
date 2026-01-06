@@ -12,12 +12,6 @@
 #include <stdio.h>
 
 /*===========================================================================
- * Forward Declarations (internal functions)
- *===========================================================================*/
-static const char* uft_longtrack_type_name_internal(uft_longtrack_type_t type);
-static const uft_longtrack_def_t* uft_longtrack_get_def_internal(uft_longtrack_type_t type);
-
-/*===========================================================================
  * Helper Functions
  *===========================================================================*/
 
@@ -658,7 +652,7 @@ int uft_longtrack_detect(const uint8_t *track_data,
     if (result->detected) {
         snprintf(result->info, sizeof(result->info),
                  "%s longtrack: %u bits (%.1f%%), sync=0x%X, pattern=0x%02X (%.1f%%)",
-                 uft_longtrack_type_name_internal(result->primary.type),
+                 uft_longtrack_type_name(result->primary.type),
                  track_bits,
                  result->primary.length_ratio * 100.0f,
                  result->primary.sync_word,
@@ -676,7 +670,7 @@ int uft_longtrack_detect(const uint8_t *track_data,
  * Reporting
  *===========================================================================*/
 
-static const char* uft_longtrack_type_name_internal(uft_longtrack_type_t type) {
+const char* uft_longtrack_type_name(uft_longtrack_type_t type) {
     if (type < UFT_LONGTRACK_TYPE_COUNT) {
         return uft_longtrack_defs[type].name;
     }
@@ -693,7 +687,7 @@ const char* uft_longtrack_confidence_name(uft_longtrack_confidence_t conf) {
     }
 }
 
-static const uft_longtrack_def_t* uft_longtrack_get_def_internal(uft_longtrack_type_t type) {
+const uft_longtrack_def_t* uft_longtrack_get_def(uft_longtrack_type_t type) {
     if (type < UFT_LONGTRACK_TYPE_COUNT) {
         return &uft_longtrack_defs[type];
     }
@@ -729,7 +723,7 @@ size_t uft_longtrack_report(const uft_longtrack_result_t *result,
             "  Sync Word: 0x%X @ bit %d\n"
             "  Pattern Byte: 0x%02X (%.1f%% match)\n"
             "  Pattern Length: %u bits\n",
-            uft_longtrack_type_name_internal(p->type),
+            uft_longtrack_type_name(p->type),
             p->sync_word,
             p->sync_offset,
             p->pattern_byte,
@@ -762,7 +756,7 @@ size_t uft_longtrack_report(const uft_longtrack_result_t *result,
                 w += snprintf(buffer + w, buffer_size - w,
                     "  [%d] %s (sync 0x%X)\n",
                     i + 1,
-                    uft_longtrack_type_name_internal(result->candidates[i].type),
+                    uft_longtrack_type_name(result->candidates[i].type),
                     result->candidates[i].sync_word);
             }
         }
@@ -814,7 +808,7 @@ size_t uft_longtrack_export_json(const uft_longtrack_result_t *result,
             "    \"pattern_length\": %u,\n"
             "    \"signature_found\": %s\n"
             "  },\n",
-            uft_longtrack_type_name_internal(p->type),
+            uft_longtrack_type_name(p->type),
             p->sync_word,
             p->sync_offset,
             p->pattern_byte,

@@ -25,7 +25,6 @@ extern "C" {
  * Portable Packed Structure Macros
  *============================================================================*/
 
-#ifndef UFT_PACKED_BEGIN
 #ifdef _MSC_VER
     #define UFT_PACKED_BEGIN __pragma(pack(push, 1))
     #define UFT_PACKED_END   __pragma(pack(pop))
@@ -35,7 +34,6 @@ extern "C" {
     #define UFT_PACKED_END
     #define UFT_PACKED_ATTR __attribute__((packed))
 #endif
-#endif /* UFT_PACKED_BEGIN */
 
 /*============================================================================
  * FAT Constants
@@ -410,6 +408,21 @@ void uft_fdi_name_to_string(const uft_fdi_dir_entry_t* entry, char* buffer);
 int uft_fdi_string_to_name(const char* name, uft_fdi_dir_entry_t* entry);
 
 #ifdef __cplusplus
+#endif
+
+/*============================================================================
+ * Portable Packed Structure Macros
+ *============================================================================*/
+
+#ifdef _MSC_VER
+    #define UFT_PACKED_BEGIN __pragma(pack(push, 1))
+    #define UFT_PACKED_END   __pragma(pack(pop))
+    #define UFT_PACKED_ATTR
+#else
+    #define UFT_PACKED_BEGIN
+    #define UFT_PACKED_END
+    #define UFT_PACKED_ATTR __attribute__((packed))
+#endif
 }
 #endif
 

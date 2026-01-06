@@ -12,7 +12,6 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
-#include "uft/uft_compiler.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -129,31 +128,26 @@ typedef int64_t  uft_apfs_paddr_t;  /**< Physical block address */
 /**
  * @brief Physical address range
  */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     uft_apfs_paddr_t pr_start_paddr;
     uint64_t pr_block_count;
 } uft_apfs_prange_t;
-UFT_PACK_END
 
 /**
  * @brief Object header (first 32 bytes of every object)
  */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     uint8_t o_cksum[UFT_APFS_MAX_CKSUM_SIZE];  /**< Fletcher-64 checksum */
     uft_apfs_oid_t o_oid;                       /**< Object identifier */
     uft_apfs_xid_t o_xid;                       /**< Transaction ID */
     uint32_t o_type;                            /**< Object type + flags */
     uint32_t o_subtype;                         /**< Object subtype */
 } uft_apfs_obj_phys_t;
-UFT_PACK_END
 
 /**
  * @brief Container superblock (nx_superblock_t)
  */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     uft_apfs_obj_phys_t nx_o;                   /**< Object header */
     
     uint32_t nx_magic;                          /**< "NXSB" = 0x4253584E */
@@ -190,13 +184,11 @@ typedef struct {
     uft_apfs_oid_t nx_fs_oid[100];              /**< Volume OIDs (first 100) */
     /* ... additional fields omitted for brevity ... */
 } uft_apfs_nx_superblock_t;
-UFT_PACK_END
 
 /**
  * @brief Volume superblock (apfs_superblock_t)
  */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     uft_apfs_obj_phys_t apfs_o;                 /**< Object header */
     
     uint32_t apfs_magic;                        /**< "APSB" = 0x42535041 */
@@ -246,31 +238,25 @@ typedef struct {
     char apfs_formatted_by[32];                 /**< Software that created volume */
     /* ... additional fields ... */
 } uft_apfs_superblock_t;
-UFT_PACK_END
 
 /**
  * @brief B-tree key (j_key_t)
  */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     uint64_t obj_id_and_type;                   /**< OID (60 bits) + type (4 bits) */
 } uft_apfs_j_key_t;
-UFT_PACK_END
 
 /**
  * @brief Inode key (j_inode_key_t)
  */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     uft_apfs_j_key_t hdr;
 } uft_apfs_j_inode_key_t;
-UFT_PACK_END
 
 /**
  * @brief Inode value (j_inode_val_t) - partial
  */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     uint64_t parent_id;
     uint64_t private_id;
     uint64_t create_time;
@@ -292,7 +278,6 @@ typedef struct {
     uint64_t uncompressed_size;
     /* Extended fields follow */
 } uft_apfs_j_inode_val_t;
-UFT_PACK_END
 
 /*===========================================================================
  * Fletcher-64 Checksum (APFS Variant)

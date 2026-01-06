@@ -24,7 +24,6 @@
 #include <stdint.h>
 #include <stddef.h>
 
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -43,10 +42,20 @@ typedef enum uft_cbm_status {
  * Drive Job Status
  *============================================================================*/
 
+/**
+ * @brief Check if drive job is busy
+ * @param status Status byte from M-R
+ * @return true if bit 7 is set (busy)
+ */
 static inline int uft_cbm_is_busy(uint8_t status) {
     return (status & 0x80) != 0;
 }
 
+/**
+ * @brief Check if drive job completed successfully
+ * @param status Status byte from M-R
+ * @return true if status == 0x01 (OK)
+ */
 static inline int uft_cbm_is_ok(uint8_t status) {
     return status == 0x01;
 }
@@ -55,49 +64,159 @@ static inline int uft_cbm_is_ok(uint8_t status) {
  * Command Builders
  *============================================================================*/
 
+/**
+ * @brief Build M-W (Memory Write) command
+ * 
+ * Format: "M-W" + addr_lo + addr_hi + len + data[len]
+ * 
+ * @param addr Target address in drive memory
+ * @param data Data to write
+ * @param data_len Length of data (1-34 bytes)
+ * @param out Output buffer
+ * @param out_cap Output buffer capacity
+ * @param out_len Output: bytes written
+ * @return Status code
+ */
 uft_cbm_status_t uft_cbm_build_mw(uint16_t addr, const uint8_t *data, 
                                    uint8_t data_len, uint8_t *out, 
                                    size_t out_cap, size_t *out_len);
 
+/**
+ * @brief Build M-R (Memory Read) command
+ * 
+ * Format: "M-R" + addr_lo + addr_hi + len
+ * 
+ * @param addr Source address in drive memory
+ * @param len Number of bytes to read (1-255)
+ * @param out Output buffer
+ * @param out_cap Output buffer capacity
+ * @param out_len Output: bytes written
+ * @return Status code
+ */
 uft_cbm_status_t uft_cbm_build_mr(uint16_t addr, uint8_t len,
                                    uint8_t *out, size_t out_cap, 
                                    size_t *out_len);
 
+/**
+ * @brief Build B-P (Buffer Pointer) command
+ * 
+ * Format: "B-P <buffer> <offset>" (ASCII, space-separated)
+ * 
+ * @param buffer Buffer number (0-4)
+ * @param offset Offset within buffer (0-255)
+ * @param out Output buffer (ASCII string)
+ * @param out_cap Output buffer capacity
+ * @return Status code
+ */
 uft_cbm_status_t uft_cbm_build_bp(uint8_t buffer, uint8_t offset,
                                    char *out, size_t out_cap);
 
+/**
+ * @brief Build U1 (Block Read) command
+ * 
+ * Format: "U1:<channel> <drive> <track> <sector>"
+ * 
+ * @param channel Channel number (2-14)
+ * @param drive Drive number (0-1)
+ * @param track Track number (1-40)
+ * @param sector Sector number (0-20)
+ * @param out Output buffer (ASCII string)
+ * @param out_cap Output buffer capacity
+ * @return Status code
+ */
 uft_cbm_status_t uft_cbm_build_u1(uint8_t channel, uint8_t drive,
                                    uint8_t track, uint8_t sector,
                                    char *out, size_t out_cap);
 
+/**
+ * @brief Build U2 (Block Write) command
+ * 
+ * Format: "U2:<channel> <drive> <track> <sector>"
+ */
 uft_cbm_status_t uft_cbm_build_u2(uint8_t channel, uint8_t drive,
                                    uint8_t track, uint8_t sector,
                                    char *out, size_t out_cap);
 
 /*============================================================================
+ * Common Command Sequences
+ *============================================================================*/
+
+/**
+ * @brief Command sequence for raw sector read
+ * 
+ * Standard BASIC sequence:
+ *   OPEN 1,8,15
+ *   OPEN 2,8,2,"#2"
+ *   PRINT#1,"M-W"+chr$(10)+chr$(0)+chr$(2)+chr$(track)+chr$(sector)
+ *   PRINT#1,"M-W"+chr$(2)+chr$(0)+chr$(1)+chr$(128)
+ *   PRINT#1,"M-R"+chr$(2)+chr$(0)+chr$(1)
+ *   GET#1,a$ : ... poll until not busy ...
+ *   PRINT#1,"B-P 2 0"
+ *   FOR i=0 TO 255: GET#2,a$: ... : NEXT
+ */
+typedef struct uft_cbm_read_cmds {
+    uint8_t mw_ts[8];       /**< M-W command: set track/sector at $000A */
+    size_t  mw_ts_len;
+    
+    uint8_t mw_job[7];      /**< M-W command: set job code at $0002 */
+    size_t  mw_job_len;
+    
+    uint8_t mr_status[6];   /**< M-R command: read status from $0002 */
+    size_t  mr_status_len;
+    
+    char    bp_cmd[16];     /**< B-P command: "B-P 2 0" */
+} uft_cbm_read_cmds_t;
+
+/**
+ * @brief Build command sequence for raw sector read
+ * 
+ * @param track Track number (1-40)
+ * @param sector Sector number (0-20)
+ * @param out Output structure
+ * @return Status code
+ */
+uft_cbm_status_t uft_cbm_build_read_cmds(uint8_t track, uint8_t sector,
+                                          uft_cbm_read_cmds_t *out);
+
+/*============================================================================
  * Drive Memory Map Constants
  *============================================================================*/
 
+/** Job queue start address */
 #define UFT_CBM_JOB_QUEUE       0x0000
+
+/** Job track/sector for buffer 0 */
 #define UFT_CBM_JOB_TS_BUF0     0x0006
+
+/** Job track/sector for buffer 2 */
 #define UFT_CBM_JOB_TS_BUF2     0x000A
+
+/** Job code/status for buffer 0 */
 #define UFT_CBM_JOB_CODE_BUF0   0x0000
+
+/** Job code/status for buffer 2 */
 #define UFT_CBM_JOB_CODE_BUF2   0x0002
+
+/** Buffer 0 data area */
 #define UFT_CBM_BUFFER_0        0x0300
+
+/** Buffer 2 data area */
 #define UFT_CBM_BUFFER_2        0x0500
 
-#define UFT_CBM_JOB_READ        0x80
-#define UFT_CBM_JOB_WRITE       0x90
-#define UFT_CBM_JOB_VERIFY      0xA0
-#define UFT_CBM_JOB_SEEK        0xB0
-#define UFT_CBM_JOB_BUMP        0xC0
-#define UFT_CBM_JOB_EXEC        0xE0
+/** Job codes */
+#define UFT_CBM_JOB_READ        0x80    /**< Read sector */
+#define UFT_CBM_JOB_WRITE       0x90    /**< Write sector */
+#define UFT_CBM_JOB_VERIFY      0xA0    /**< Verify sector */
+#define UFT_CBM_JOB_SEEK        0xB0    /**< Seek track */
+#define UFT_CBM_JOB_BUMP        0xC0    /**< Bump head */
+#define UFT_CBM_JOB_EXEC        0xE0    /**< Execute code */
 
-#define UFT_CBM_STATUS_OK       0x01
-#define UFT_CBM_STATUS_BUSY     0x80
+/** Job status codes */
+#define UFT_CBM_STATUS_OK       0x01    /**< Success */
+#define UFT_CBM_STATUS_BUSY     0x80    /**< Busy (bit 7 set) */
 
 /*============================================================================
- * Low-Level Error Codes (Drive Job Errors)
+ * Error Codes (from 1541 DOS)
  *============================================================================*/
 
 #define UFT_CBM_ERR_00  0x01    /**< OK */
@@ -112,80 +231,12 @@ uft_cbm_status_t uft_cbm_build_u2(uint8_t channel, uint8_t drive,
 #define UFT_CBM_ERR_28  0x0A    /**< Write error (long) */
 #define UFT_CBM_ERR_29  0x0B    /**< Disk ID mismatch */
 
-/*============================================================================
- * Common Command Sequences
- *============================================================================*/
-
-typedef struct uft_cbm_read_cmds {
-    uint8_t mw_ts[8];
-    size_t  mw_ts_len;
-    uint8_t mw_job[7];
-    size_t  mw_job_len;
-    uint8_t mr_status[6];
-    size_t  mr_status_len;
-    char    bp_cmd[16];
-} uft_cbm_read_cmds_t;
-
-uft_cbm_status_t uft_cbm_build_read_cmds(uint8_t track, uint8_t sector,
-                                          uft_cbm_read_cmds_t *out);
-
+/**
+ * @brief Get error description
+ * @param status Drive status code
+ * @return Static error string
+ */
 const char* uft_cbm_error_string(uint8_t status);
-
-/*============================================================================
- * CBM DOS High-Level Error Codes (Channel 15 Status)
- * Source: disk2easyflash (Per Olofsson, BSD License)
- *============================================================================*/
-
-/* Non-errors */
-#define UFT_CBM_DOS_OK              0
-#define UFT_CBM_DOS_SCRATCHED       1
-#define UFT_CBM_DOS_PARTITION       2
-
-/* Read/Write errors (20-29) */
-#define UFT_CBM_DOS_READ_HDR        20
-#define UFT_CBM_DOS_READ_NOREADY    21
-#define UFT_CBM_DOS_READ_DATA       22
-#define UFT_CBM_DOS_READ_CRC_DATA   23
-#define UFT_CBM_DOS_READ_BYTE_HDR   24
-#define UFT_CBM_DOS_WRITE_VERIFY    25
-#define UFT_CBM_DOS_WRITE_PROTECT   26
-#define UFT_CBM_DOS_READ_CRC_HDR    27
-
-/* Syntax errors (30-39) */
-#define UFT_CBM_DOS_SYNTAX          30
-#define UFT_CBM_DOS_SYNTAX_CMD      31
-#define UFT_CBM_DOS_SYNTAX_LONG     32
-#define UFT_CBM_DOS_SYNTAX_NAME     33
-#define UFT_CBM_DOS_SYNTAX_NOFILE   34
-#define UFT_CBM_DOS_SYNTAX_CMD2     39
-
-/* Record/File errors (50-67) */
-#define UFT_CBM_DOS_RECORD_ABSENT   50
-#define UFT_CBM_DOS_RECORD_OVERFLOW 51
-#define UFT_CBM_DOS_FILE_TOO_LARGE  52
-#define UFT_CBM_DOS_FILE_OPEN       60
-#define UFT_CBM_DOS_FILE_NOT_OPEN   61
-#define UFT_CBM_DOS_FILE_NOT_FOUND  62
-#define UFT_CBM_DOS_FILE_EXISTS     63
-#define UFT_CBM_DOS_FILE_TYPE       64
-#define UFT_CBM_DOS_NO_BLOCK        65
-#define UFT_CBM_DOS_ILLEGAL_TS      66
-#define UFT_CBM_DOS_ILLEGAL_SYS_TS  67
-
-/* System errors (70-77) */
-#define UFT_CBM_DOS_NO_CHANNEL      70
-#define UFT_CBM_DOS_DIR_ERROR       71
-#define UFT_CBM_DOS_DISK_FULL       72
-#define UFT_CBM_DOS_DOS_MISMATCH    73
-#define UFT_CBM_DOS_DRIVE_NOT_READY 74
-#define UFT_CBM_DOS_FORMAT_ERROR    75
-#define UFT_CBM_DOS_CONTROLLER      76
-#define UFT_CBM_DOS_PARTITION_ILLEGAL 77
-
-const char* uft_cbm_dos_error_string(uint8_t error_code);
-
-int uft_cbm_dos_format_status(uint8_t error_code, uint8_t track, 
-                               uint8_t sector, char* out, size_t out_cap);
 
 #ifdef __cplusplus
 }

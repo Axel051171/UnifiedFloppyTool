@@ -3,7 +3,6 @@
  * @brief Commodore 1581 (D81) 3.5" Format Plugin - API-konform
  */
 
-#include <stdio.h>  // FIXED R18
 #include "uft/uft_format_common.h"
 
 #define D81_CYLINDERS           80

@@ -14,12 +14,10 @@ target_include_directories(uft_unified PUBLIC
     ${CMAKE_SOURCE_DIR}/include
 )
 
-target_link_libraries(uft_unified PRIVATE
+target_link_libraries(uft_unified
     uft_core
+    m  # math library for sqrt()
 )
-
-# Math library via zentrale Funktion
-uft_link_math(uft_unified)
 
 # Install headers
 install(FILES

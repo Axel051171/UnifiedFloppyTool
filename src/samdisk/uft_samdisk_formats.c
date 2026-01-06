@@ -16,7 +16,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
-#include "uft/uft_compiler.h"
 
 /*===========================================================================
  * SAM Coupé Format
@@ -44,8 +43,7 @@ typedef struct {
     uint8_t     mgts_flags;     /* 1A: MGTS flags */
     uint8_t     reserved[5];    /* 1B-1F: reserved */
     uint8_t     extra[224];     /* 20-FF: extra space in 256-byte entry */
-} sam_dir_entry_t;
-UFT_PACK_END
+} __attribute__((packed)) sam_dir_entry_t;
 
 int uft_sam_read_directory(const uint8_t *image, size_t size,
                            uft_sam_file_t *files, size_t max_files,
@@ -158,8 +156,7 @@ typedef struct {
     uint8_t     basic_offset[2]; /* BASIC prog offset */
     uint8_t     unused[104];    /* Unused */
     uint8_t     checksum;       /* Header checksum */
-} p3dos_header_t;
-UFT_PACK_END
+} __attribute__((packed)) p3dos_header_t;
 
 int uft_p3_validate_header(const uint8_t *data, size_t size)
 {
@@ -253,8 +250,7 @@ typedef struct {
     uint8_t     extent_hi;      /* Extent high */
     uint8_t     records;        /* Record count */
     uint8_t     blocks[16];     /* Block pointers */
-} amsdos_dir_t;
-UFT_PACK_END
+} __attribute__((packed)) amsdos_dir_t;
 
 /* AMSDOS file header (in file) */
 typedef struct {
@@ -271,8 +267,7 @@ typedef struct {
     uint8_t     real_length[3]; /* Real file length (24-bit) */
     uint8_t     checksum[2];    /* Header checksum */
     uint8_t     unused5[59];
-} amsdos_file_header_t;
-UFT_PACK_END
+} __attribute__((packed)) amsdos_file_header_t;
 
 int uft_cpc_read_directory(const uint8_t *image, size_t size,
                            uft_cpc_file_t *files, size_t max_files,
@@ -343,8 +338,7 @@ typedef struct {
     uint8_t     sec_track[2];   /* Sectors per track */
     uint8_t     heads[2];       /* Number of heads */
     uint8_t     hidden[4];      /* Hidden sectors */
-} msx_boot_t;
-UFT_PACK_END
+} __attribute__((packed)) msx_boot_t;
 
 int uft_msx_parse_boot(const uint8_t *image, size_t size, uft_msx_info_t *info)
 {
@@ -399,8 +393,7 @@ typedef struct {
     uint8_t     extent;         /* Extent number */
     uint8_t     records;        /* Records in extent */
     uint8_t     blocks[16];     /* Block allocation */
-} exdos_dir_t;
-UFT_PACK_END
+} __attribute__((packed)) exdos_dir_t;
 
 int uft_ep_read_directory(const uint8_t *image, size_t size,
                           uft_ep_file_t *files, size_t max_files,

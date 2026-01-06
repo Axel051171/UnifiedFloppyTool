@@ -12,7 +12,6 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <time.h>
-#include "uft/uft_compiler.h"
 
 /*===========================================================================
  * DOS 3.3 Image Creation
@@ -399,8 +398,7 @@ int uft_apple_convert_order(const uint8_t *src, uint8_t *dst, size_t size,
  *===========================================================================*/
 
 /** 2IMG header structure */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     char magic[4];          /* "2IMG" */
     char creator[4];        /* Creator ID */
     uint16_t header_size;   /* Header size (64) */
@@ -416,7 +414,6 @@ typedef struct {
     uint32_t creator_size;  /* Creator data size */
     uint8_t reserved[16];   /* Reserved */
 } uft_2img_header_t;
-UFT_PACK_END
 
 /**
  * @brief Check if file is 2IMG format

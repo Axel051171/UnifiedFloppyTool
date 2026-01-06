@@ -17,7 +17,6 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
-#include "uft/uft_compiler.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -42,8 +41,7 @@ extern "C" {
 /**
  * @brief MBR partition entry (16 bytes)
  */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     uint8_t  boot_ind;      /**< 0x80 = bootable, 0x00 = not bootable */
     uint8_t  start_head;    /**< Starting head */
     uint8_t  start_sector;  /**< Starting sector (bits 0-5), cyl high (bits 6-7) */
@@ -55,7 +53,6 @@ typedef struct {
     uint8_t  start_lba[4];  /**< Starting LBA (little-endian) */
     uint8_t  size_lba[4];   /**< Size in sectors (little-endian) */
 } uft_mbr_entry_t;
-UFT_PACK_END
 
 /*===========================================================================
  * Partition Types (System Indicator)

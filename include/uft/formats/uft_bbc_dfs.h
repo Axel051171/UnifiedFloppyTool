@@ -19,7 +19,6 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
-#include "uft/uft_compiler.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -79,8 +78,7 @@ typedef enum {
  * Contains filenames and directory letters for up to 31 files.
  * Entry 0 is at offset 8, each entry is 8 bytes.
  */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     uint8_t  title1[8];         /**< Disk title (first 8 chars) */
     /**< Followed by file entries, 8 bytes each:
      *   - Bytes 0-6: Filename (space-padded)
@@ -88,15 +86,13 @@ typedef struct {
      */
     uint8_t  entries[248];      /**< File entries (31 max) */
 } uft_dfs_cat0_t;
-UFT_PACK_END
 
 /**
  * @brief DFS Catalog Sector 1 (256 bytes)
  * 
  * Contains disk title continuation and file metadata.
  */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     uint8_t  title2[4];         /**< Disk title (last 4 chars) */
     uint8_t  sequence;          /**< Disk sequence number (BCD) */
     uint8_t  num_entries;       /**< Number of catalog entries * 8 */
@@ -111,7 +107,6 @@ typedef struct {
      */
     uint8_t  info[248];         /**< File info entries */
 } uft_dfs_cat1_t;
-UFT_PACK_END
 
 /**
  * @brief DFS File Catalog Entry (combined from sectors 0 and 1)
@@ -179,25 +174,21 @@ typedef enum {
 /**
  * @brief ADFS Old Map Free Space Entry
  */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     uint8_t  start[3];          /**< Start sector (24-bit, little-endian) */
     uint8_t  length[3];         /**< Length in sectors (24-bit, little-endian) */
 } uft_adfs_free_entry_t;
-UFT_PACK_END
 
 /**
  * @brief ADFS Old Directory Entry (26 bytes)
  */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     uint8_t  name[10];          /**< Filename (bit 7 of byte 0 = read perm) */
     uint32_t load_addr;         /**< Load address */
     uint32_t exec_addr;         /**< Exec address */
     uint32_t length;            /**< File length */
     uint8_t  start[3];          /**< Start sector (24-bit) */
 } uft_adfs_dir_entry_t;
-UFT_PACK_END
 
 #define UFT_ADFS_ENTRY_SIZE         26
 #define UFT_ADFS_DIR_ENTRIES        47      /**< Max entries per directory */
@@ -229,8 +220,7 @@ UFT_PACK_END
  * 
  * Stored after sync byte (0x2A) and filename.
  */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     uint32_t load_addr;         /**< Load address (32-bit) */
     uint32_t exec_addr;         /**< Exec address (32-bit) */
     uint16_t block_num;         /**< Block number */
@@ -239,7 +229,6 @@ typedef struct {
     uint8_t  spare[4];          /**< Reserved */
     uint16_t header_crc;        /**< Header CRC-16 (big-endian) */
 } uft_bbc_tape_header_t;
-UFT_PACK_END
 
 /**
  * @brief Complete tape block structure

@@ -4,8 +4,6 @@
 
 #include "fdc_vfo_base.h"
 
-#include <stddef.h>
-
 /**
  * @brief VFO class using PID control
  * 

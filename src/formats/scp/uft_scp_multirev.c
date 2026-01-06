@@ -24,9 +24,6 @@
 #include <stdbool.h>
 #include <math.h>
 
-/* Cross-platform packed struct support */
-#include "uft/uft_compiler.h"
-
 /*============================================================================
  * SCP CONSTANTS
  *============================================================================*/
@@ -57,12 +54,10 @@
 
 /*============================================================================
  * STRUCTURES
- * FIXED R18: Use UFT_PACK_BEGIN/END for MSVC compatibility
  *============================================================================*/
 
 /* SCP File Header (16 bytes) */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     uint8_t  signature[3];       /* "SCP" */
     uint8_t  version;            /* Version (format version * 10) */
     uint8_t  disk_type;          /* Disk type (C64, Amiga, etc.) */
@@ -75,24 +70,19 @@ typedef struct {
     uint8_t  resolution;         /* 25ns * (resolution + 1) */
     uint32_t checksum;           /* Data checksum (optional) */
 } scp_header_t;
-UFT_PACK_END
 
 /* Track header (4 bytes) */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     uint8_t  signature[3];       /* "TRK" */
     uint8_t  track_number;       /* Track number */
 } scp_track_header_t;
-UFT_PACK_END
 
 /* Revolution entry (12 bytes per revolution) */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     uint32_t index_time;         /* Time from index to index (ticks) */
     uint32_t track_length;       /* Number of flux transitions */
     uint32_t data_offset;        /* Offset to flux data from track header */
 } scp_revolution_entry_t;
-UFT_PACK_END
 
 /* Single revolution data */
 typedef struct {

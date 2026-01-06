@@ -8,8 +8,6 @@
 
 #include "image_base.h"
 
-#include <stddef.h>
-
 class disk_image_raw : public disk_image {
 private:
     size_t  m_overlap;

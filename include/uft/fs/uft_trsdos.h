@@ -34,7 +34,6 @@
 #include <stddef.h>
 #include <stdbool.h>
 #include <time.h>
-#include "uft/uft_compiler.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -263,8 +262,7 @@ typedef struct {
 /**
  * @brief TRSDOS 2.3 Directory Entry (48 bytes)
  */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     /* Extent 0: bytes 0-7 */
     uint8_t attr;                   /**< Attribute byte */
     uint8_t month;                  /**< Month (ASCII) */
@@ -288,13 +286,11 @@ typedef struct {
     } extents[4];                   /**< Up to 4 extents */
     uint8_t reserved[16];           /**< Reserved */
 } uft_trsdos23_dir_entry_t;
-UFT_PACK_END
 
 /**
  * @brief TRSDOS 6/LDOS Directory Entry (32 bytes)
  */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     uint8_t attr;                   /**< Attribute byte */
     char name[8];                   /**< Filename (space-padded) */
     char ext[3];                    /**< Extension (space-padded) */
@@ -314,13 +310,11 @@ typedef struct {
     uint8_t fde_cnt;                /**< Extent count */
     uint8_t fxde[7];                /**< File extent data elements */
 } uft_trsdos6_dir_entry_t;
-UFT_PACK_END
 
 /**
  * @brief RS-DOS / CoCo Directory Entry (32 bytes)
  */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     char name[8];                   /**< Filename (space-padded) */
     char ext[3];                    /**< Extension (space-padded) */
     uint8_t file_type;              /**< File type: 0=BASIC, 1=Data, 2=ML, 3=Text */
@@ -329,7 +323,6 @@ typedef struct {
     uint16_t last_sector_bytes;     /**< Bytes in last sector (LE) */
     uint8_t reserved[16];           /**< Reserved */
 } uft_rsdos_dir_entry_t;
-UFT_PACK_END
 
 /*===========================================================================
  * File Entry (unified structure)

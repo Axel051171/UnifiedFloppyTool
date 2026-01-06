@@ -5,8 +5,6 @@
 #include "bit_array.h"
 #include "image_base.h"
 
-#include <stdint.h>
-
 // Header (ofst(byte) = 0)
 typedef struct {
     uint8_t     id_str[8];                  //  "MFM_IMG "

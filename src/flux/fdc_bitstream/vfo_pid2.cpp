@@ -48,7 +48,6 @@ double vfo_pid2::calc(double pulse_pos) {
     // Cell size adjustment == frequency correction
     double freq_error = m_cell_center - pulse_pos;
     double freq_error_diff = freq_error - m_prev_freq_error;
-    (void)freq_error_diff; // Suppress unused warning - reserved for future PID tuning
     m_freq_integral += freq_error;                                                              // 'I' element
     double new_cell_size = m_cell_size_ref - (m_freq_integral * 0.01f) * m_current_gain;        // 'I' only control
     m_prev_freq_error = freq_error;
@@ -60,7 +59,6 @@ double vfo_pid2::calc(double pulse_pos) {
                                       m_cell_size_ref * phase_error_limitter);
     m_phase_integral += phase_error;
     double phase_err_diff =  phase_error - m_prev_phase_error;
-    (void)phase_err_diff; // Suppress unused warning - reserved for future PID tuning
     double phase_correction = (phase_error * 0.02f /*- phase_err_diff * 0.02f*/ + m_phase_integral * 0.002f) * m_current_gain;  // PI control (no D element)
     constexpr double phase_correction_limitter = 0.125f;
     phase_correction = limit(phase_correction, -m_cell_size_ref * phase_correction_limitter, 

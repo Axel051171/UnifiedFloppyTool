@@ -17,7 +17,6 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
-#include "uft/uft_compiler.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -132,8 +131,7 @@ typedef enum {
 /**
  * @brief TD0 main image header (12 bytes)
  */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     uint16_t signature;     /**< "TD" (0x4454) or "td" (0x6474) */
     uint8_t  sequence;      /**< Volume sequence number */
     uint8_t  check_seq;     /**< Check sequence for multi-volume */
@@ -145,13 +143,11 @@ typedef struct {
     uint8_t  sides;         /**< Number of sides */
     uint16_t crc;           /**< Header CRC-16 */
 } uft_td0_header_t;
-UFT_PACK_END
 
 /**
  * @brief TD0 comment block header (10 bytes)
  */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     uint16_t crc;           /**< Comment CRC-16 */
     uint16_t length;        /**< Comment data length */
     uint8_t  year;          /**< Year - 1900 */
@@ -161,25 +157,21 @@ typedef struct {
     uint8_t  minute;        /**< Minute (0-59) */
     uint8_t  second;        /**< Second (0-59) */
 } uft_td0_comment_header_t;
-UFT_PACK_END
 
 /**
  * @brief TD0 track header (4 bytes)
  */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     uint8_t  nsectors;      /**< Number of sectors (0xFF = end) */
     uint8_t  cylinder;      /**< Physical cylinder */
     uint8_t  side;          /**< Physical side/head */
     uint8_t  crc;           /**< Header CRC-8 */
 } uft_td0_track_header_t;
-UFT_PACK_END
 
 /**
  * @brief TD0 sector header (6 bytes)
  */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     uint8_t  cylinder;      /**< Cylinder in ID field */
     uint8_t  side;          /**< Side in ID field */
     uint8_t  sector;        /**< Sector number in ID field */
@@ -187,17 +179,14 @@ typedef struct {
     uint8_t  flags;         /**< Sector flags */
     uint8_t  crc;           /**< Sector header CRC-8 */
 } uft_td0_sector_header_t;
-UFT_PACK_END
 
 /**
  * @brief TD0 data block header (3 bytes)
  */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     uint16_t offset;        /**< Offset to next data block */
     uint8_t  method;        /**< Encoding method */
 } uft_td0_data_header_t;
-UFT_PACK_END
 
 /*============================================================================
  * LZSS Decompression State

@@ -8,10 +8,6 @@
 #include "fdc_bitstream.h"
 #include "bit_array.h"
 
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
-
 namespace fdc_misc {
 
 void color(size_t col);

@@ -958,10 +958,9 @@ size_t uft_generate_longtrack(uft_longtrack_type_t type,
 
 /*============================================================================
  * Utility Functions
- * R21 FIX: Renamed to avoid duplicate symbols - main versions in uft_longtrack.c
  *============================================================================*/
 
-static const char* uft_longtrack_type_name_ext(uft_longtrack_type_t type)
+const char* uft_longtrack_type_name(uft_longtrack_type_t type)
 {
     for (int i = 0; i < UFT_LONGTRACK_DEF_COUNT; i++) {
         if (uft_longtrack_defs[i].type == type) {
@@ -971,7 +970,7 @@ static const char* uft_longtrack_type_name_ext(uft_longtrack_type_t type)
     return "Unknown";
 }
 
-static const uft_longtrack_def_t* uft_longtrack_get_def_ext(uft_longtrack_type_t type)
+const uft_longtrack_def_t* uft_longtrack_get_def(uft_longtrack_type_t type)
 {
     for (int i = 0; i < UFT_LONGTRACK_DEF_COUNT; i++) {
         if (uft_longtrack_defs[i].type == type) {
@@ -990,7 +989,7 @@ void uft_longtrack_ext_print(const uft_longtrack_ext_t *result, bool verbose)
     
     if (!result->detected) return;
     
-    printf("  Type: %s\n", uft_longtrack_type_name_ext(result->type));
+    printf("  Type: %s\n", uft_longtrack_type_name(result->type));
     printf("  Confidence: %.0f%%\n", result->confidence * 100);
     printf("  Track Length: %u bits (%u%%)\n", 
            result->track_bits, result->percent);

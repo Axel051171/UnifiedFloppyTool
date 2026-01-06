@@ -59,8 +59,6 @@
 #include <QBarSeries>
 #include <QLineSeries>
 
-#include <stdbool.h>
-
 namespace UFT {
 namespace GUI {
 

@@ -3,9 +3,6 @@
 #include <vector>
 #include <cstdint>
 
-#include <stddef.h>
-#include <stdint.h>
-
 class fdc_crc {
 private:
 	const uint32_t m_polynomial = 0b0001000100000010000100000000;   // 0001 0001 0000 0010 0001 [0000 0000]

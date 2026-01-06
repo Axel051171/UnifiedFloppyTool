@@ -11,7 +11,7 @@
 #include "uft/uft_detect.h"
 #include "uft/core/uft_platform.h"
 #include <string.h>
-#include <strings.h>
+#include "uft/uft_compat.h"
 
 // ============================================================================
 // PLATFORM DEFINITIONS

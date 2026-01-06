@@ -17,8 +17,6 @@
 #include "uft_types.h"
 #include "uft_error.h"
 
-#include <stddef.h>
-
 #ifdef __cplusplus
 extern "C" {
 #endif

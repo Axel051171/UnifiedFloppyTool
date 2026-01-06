@@ -14,7 +14,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
-#include "uft/uft_compiler.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -62,8 +61,7 @@ typedef enum {
 /**
  * @brief Boot sector (first 3 sectors)
  */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     uint8_t  flags;                 /**< Boot flags */
     uint8_t  boot_sectors;          /**< Number of boot sectors */
     uint16_t boot_addr;             /**< Boot address */
@@ -85,13 +83,11 @@ typedef struct {
     uint8_t  sector_size;           /**< Sector size code */
     uint8_t  version;               /**< DOS version */
 } uft_sparta_boot_t;
-UFT_PACK_END
 
 /**
  * @brief Directory entry
  */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     uint8_t  status;                /**< Status flags */
     uint16_t sector_map_start;      /**< First sector map sector */
     uint16_t file_length_lo;        /**< File length (low word) */
@@ -105,19 +101,16 @@ typedef struct {
     uint8_t  time_minute;           /**< Time: minute */
     uint8_t  time_second;           /**< Time: second */
 } uft_sparta_dirent_t;
-UFT_PACK_END
 
 /**
  * @brief Sector map entry
  */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     uint16_t next_map;              /**< Next sector map (0 if last) */
     uint8_t  sequence;              /**< Sequence number */
     uint8_t  sector_count;          /**< Sectors in this map */
     uint16_t sectors[62];           /**< Sector numbers (253 bytes / 2 - 2 header) */
 } uft_sparta_sector_map_t;
-UFT_PACK_END
 
 /**
  * @brief Filesystem context

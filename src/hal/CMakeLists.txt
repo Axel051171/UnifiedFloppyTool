@@ -2,7 +2,7 @@
 
 set(HAL_SOURCES
     uft_drive.c
-    # uft_hal.c  # DISABLED: Stub, superseded by uft_hal_unified.c
+    uft_hal.c
     # uft_hal_profiles.c     # DISABLED: many API mismatches
     uft_hal_unified.c
     # uft_hal_v2.c           # DISABLED: API mismatches
@@ -15,7 +15,7 @@ target_include_directories(uft_hal PUBLIC
     ${CMAKE_SOURCE_DIR}/include
 )
 
-target_link_libraries(uft_hal PRIVATE
+target_link_libraries(uft_hal
     uft_core
 )
 
@@ -28,6 +28,6 @@ else()
     # Linux: pthread may be needed
     find_package(Threads)
     if(Threads_FOUND)
-        target_link_libraries(uft_hal PRIVATE Threads::Threads)
+        target_link_libraries(uft_hal Threads::Threads)
     endif()
 endif()

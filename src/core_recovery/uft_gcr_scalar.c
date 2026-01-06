@@ -16,13 +16,9 @@
  */
 
 #include "uft/uft_simd.h"
-#include <math.h>
 #include <stdint.h>
-#include <math.h>
 #include <stdbool.h>
-#include <math.h>
 #include <string.h>
-#include <math.h>
 
 /* =============================================================================
  * GCR 5-TO-4 DECODE TABLE
@@ -309,9 +305,7 @@ bool uft_gcr_decode_c64_sector(
 #ifdef UFT_BENCHMARK
 
 #include <time.h>
-#include <math.h>
 #include <stdio.h>
-#include <math.h>
 
 void uft_gcr_benchmark_scalar(const uint64_t *flux_data, size_t count, int iterations)
 {

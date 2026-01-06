@@ -18,7 +18,6 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
-#include "uft/uft_compiler.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -42,8 +41,7 @@ extern "C" {
  *===========================================================================*/
 
 /** WAV file header (44 bytes for standard PCM) */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     /* RIFF chunk */
     uint8_t  riff_id[4];        /**< "RIFF" */
     uint32_t riff_size;         /**< File size - 8 */
@@ -63,7 +61,6 @@ typedef struct {
     uint8_t  data_id[4];        /**< "data" */
     uint32_t data_size;         /**< Number of bytes of audio data */
 } uft_wav_header_t;
-UFT_PACK_END
 
 /** WAV format codes */
 #define UFT_WAV_FORMAT_PCM          1
@@ -170,21 +167,17 @@ typedef enum {
 } uft_uef_chunk_type_t;
 
 /** UEF file header */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     char     signature[10];     /**< "UEF File!" */
     uint8_t  minor_version;     /**< Minor version */
     uint8_t  major_version;     /**< Major version */
 } uft_uef_header_t;
-UFT_PACK_END
 
 /** UEF chunk header */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     uint16_t type;              /**< Chunk type */
     uint32_t length;            /**< Chunk data length */
 } uft_uef_chunk_header_t;
-UFT_PACK_END
 
 /*===========================================================================
  * CSW Tape Image Format
@@ -205,8 +198,7 @@ typedef enum {
 } uft_csw_compression_t;
 
 /** CSW v2 header */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     char     signature[22];     /**< "Compressed Square Wave" */
     uint8_t  terminator;        /**< 0x1A */
     uint8_t  major_version;     /**< Version major */
@@ -218,7 +210,6 @@ typedef struct {
     uint8_t  header_extension;  /**< Header extension length */
     char     encoding[16];      /**< Encoding description */
 } uft_csw_header_t;
-UFT_PACK_END
 
 /*===========================================================================
  * Helper Functions

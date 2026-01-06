@@ -1,1 +1,26 @@
-3.4.3
+UnifiedFloppyTool v3.3.0
+========================
+Release: 2026-01-05
+Codename: "GitHub Edition"
+Build: Release
+
+"Bei uns geht kein Bit verloren"
+
+Major Features:
+- 115+ disk formats supported
+- 20+ historical computing platforms
+- Forensic-quality preservation
+- Qt6 GUI with Dark Mode
+- Cross-platform (Win/Linux/macOS)
+
+Security Fixes (v3.3.0):
+- P0-SEC-001: Buffer overflow protection
+- P0-SEC-002: Integer overflow checks
+- P0-SEC-003: Format string safety
+- P0-SEC-004: Memory safety audit
+
+I/O Hardening:
+- 1,370 I/O return value checks added
+- 95% I/O operation coverage
+
+For full changelog see CHANGELOG.md

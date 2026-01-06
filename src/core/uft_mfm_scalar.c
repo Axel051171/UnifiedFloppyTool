@@ -130,7 +130,7 @@ static UFT_HOT uint32_t detect_cell_time(
  * 
  * This compiles to CMOVcc instructions on x86.
  */
-UFT_INLINE UFT_HOT mfm_pulse_type_t classify_pulse(
+static UFT_INLINE UFT_HOT mfm_pulse_type_t classify_pulse(
     uint64_t delta,
     uint32_t cell_ns)
 {

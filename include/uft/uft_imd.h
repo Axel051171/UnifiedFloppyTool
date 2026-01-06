@@ -221,7 +221,6 @@ typedef struct {
     uint8_t nsectors;           /**< Number of sectors */
     uint8_t sector_size;        /**< Sector size code */
 } uft_imd_track_header_t;
-#pragma pack(pop)
 
 /**
  * @brief IMD track data (expanded for processing)

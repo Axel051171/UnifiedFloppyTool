@@ -21,21 +21,6 @@
 #include <stddef.h>
 #include <stdbool.h>
 
-/* Windows compatibility for ssize_t */
-#ifdef _WIN32
-    #ifndef _SSIZE_T_DEFINED
-        #define _SSIZE_T_DEFINED
-        #include <basetsd.h>
-        #ifdef _WIN64
-            typedef __int64 ssize_t;
-        #else
-            typedef int ssize_t;
-        #endif
-    #endif
-#else
-    #include <sys/types.h>
-#endif
-
 #ifdef __cplusplus
 extern "C" {
 #endif

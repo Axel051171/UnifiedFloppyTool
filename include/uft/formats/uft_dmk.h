@@ -18,7 +18,6 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
-#include "uft/uft_compiler.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -100,8 +99,7 @@ extern "C" {
 /**
  * @brief DMK file header (16 bytes)
  */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     uint8_t  write_protect;     /**< 0x00=R/W, 0xFF=Read-only */
     uint8_t  tracks;            /**< Number of tracks */
     uint16_t track_length;      /**< Track length in bytes (little-endian) */
@@ -109,7 +107,6 @@ typedef struct {
     uint8_t  reserved[7];       /**< Reserved (should be 0) */
     uint32_t native_flag;       /**< 0x12345678 if native mode */
 } uft_dmk_header_t;
-UFT_PACK_END
 
 /**
  * @brief DMK IDAM entry (parsed)

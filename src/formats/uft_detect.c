@@ -8,7 +8,7 @@
 #include "uft/formats/uft_detect.h"
 #include <stdlib.h>
 #include <string.h>
-#include <strings.h>
+#include "uft/uft_compat.h"
 #include <math.h>
 
 // ============================================================================

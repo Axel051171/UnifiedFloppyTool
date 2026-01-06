@@ -23,7 +23,6 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
-#include "uft/uft_compiler.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -101,8 +100,7 @@ typedef enum {
 /**
  * @brief DOS 2.x VTOC structure (sector 360)
  */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     uint8_t  dos_code;          /**< DOS version signature */
     uint8_t  alloc_lo;          /**< Total allocatable sectors (lo) */
     uint8_t  alloc_hi;          /**< Total allocatable sectors (hi) */
@@ -115,22 +113,19 @@ typedef struct {
     /**< Covers sectors 0-719 */
     uint8_t  reserved[28];      /**< Reserved (to 128 bytes) */
 } uft_dos_vtoc_t;
-UFT_PACK_END
 
 /**
  * @brief DOS 2.5 VTOC2 structure (sector 1024)
  * 
  * Extended bitmap for enhanced density disks.
  */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     uint8_t  bitmap_720[84];    /**< Bitmap mirror for sectors 48-719 */
     uint8_t  bitmap_ext[38];    /**< Bitmap for sectors 720-1023 */
     uint8_t  free_lo;           /**< Free sectors above 719 (lo) */
     uint8_t  free_hi;           /**< Free sectors above 719 (hi) */
     uint8_t  reserved[4];
 } uft_dos_vtoc2_t;
-UFT_PACK_END
 
 /*===========================================================================
  * Directory Entry Structure
@@ -139,8 +134,7 @@ UFT_PACK_END
 /**
  * @brief DOS 2.x directory entry (16 bytes)
  */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     uint8_t  flags;             /**< File flags */
     uint8_t  count_lo;          /**< Sector count (lo) */
     uint8_t  count_hi;          /**< Sector count (hi) */
@@ -149,7 +143,6 @@ typedef struct {
     uint8_t  filename[8];       /**< Filename (space-padded) */
     uint8_t  extension[3];      /**< Extension (space-padded) */
 } uft_dos_dirent_t;
-UFT_PACK_END
 
 /*===========================================================================
  * Data Sector Structure
@@ -160,26 +153,22 @@ UFT_PACK_END
  * 
  * File data is stored with a 3-byte link structure at the end.
  */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     uint8_t  data[125];         /**< File data bytes */
     uint8_t  link_hi;           /**< File# (bits 7-2), next sector (bits 1-0) */
     uint8_t  link_lo;           /**< Next sector (bits 7-0) */
     uint8_t  bytes_used;        /**< Bytes used in this sector (usually 125) */
 } uft_dos_sector_sd_t;
-UFT_PACK_END
 
 /**
  * @brief DOS 2.x data sector (256-byte DD)
  */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     uint8_t  data[253];         /**< File data bytes */
     uint8_t  link_hi;           /**< File# (bits 7-2), next sector (bits 1-0) */
     uint8_t  link_lo;           /**< Next sector (bits 7-0) */
     uint8_t  bytes_used;        /**< Bytes used in this sector (usually 253) */
 } uft_dos_sector_dd_t;
-UFT_PACK_END
 
 /*===========================================================================
  * Sparta DOS Structures
@@ -191,8 +180,7 @@ UFT_PACK_END
 /**
  * @brief Sparta DOS boot sector / superblock
  */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     uint8_t  boot_jmp;          /**< 0x00 = short jmp */
     uint8_t  boot_sectors;      /**< Boot sector count */
     uint8_t  load_addr_lo;      /**< Load address (lo) */
@@ -217,7 +205,6 @@ typedef struct {
     uint8_t  revision;          /**< Sparta revision */
     /* Boot code follows */
 } uft_sparta_boot_t;
-UFT_PACK_END
 
 /** Sparta directory entry flags */
 #define UFT_SPARTA_FLAG_LOCKED   0x01    /**< Locked */
@@ -231,8 +218,7 @@ UFT_PACK_END
 /**
  * @brief Sparta DOS directory entry (23 bytes)
  */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     uint8_t  flags;             /**< Entry flags */
     uint8_t  sector_lo;         /**< Start sector map (lo) */
     uint8_t  sector_hi;         /**< Start sector map (hi) */
@@ -242,7 +228,6 @@ typedef struct {
     uint8_t  date[3];           /**< Date (day, month, year) */
     uint8_t  time[3];           /**< Time (hour, min, sec) */
 } uft_sparta_dirent_t;
-UFT_PACK_END
 
 #define UFT_SPARTA_ENTRY_SIZE    23
 

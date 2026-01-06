@@ -329,13 +329,13 @@ int uft_detect_dm_protection(void *ctx, uft_copy_protection_t *result)
     
     /* Determine protection type */
     if (result->has_fuzzy_sector && result->has_sector_247 && result->has_fb_markers) {
-        strncpy(result->protection_type, "FTL/First Byte", 31); result->protection_type[31] = '\0';
+        strncpy(result->protection_type, "FTL/First Byte", 63); result->protection_type[63] = '\0';
     } else if (result->has_fuzzy_sector) {
-        strncpy(result->protection_type, "Fuzzy Bits", 31); result->protection_type[31] = '\0';
+        strncpy(result->protection_type, "Fuzzy Bits", 63); result->protection_type[63] = '\0';
     } else if (result->has_sector_247) {
-        strncpy(result->protection_type, "Invalid Sector", 31); result->protection_type[31] = '\0';
+        strncpy(result->protection_type, "Invalid Sector", 63); result->protection_type[63] = '\0';
     } else {
-        strncpy(result->protection_type, "None", 31); result->protection_type[31] = '\0';
+        strncpy(result->protection_type, "None", 63); result->protection_type[63] = '\0';
     }
     
     return 0;  /* UFT_ERR_OK */

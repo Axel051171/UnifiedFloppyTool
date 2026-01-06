@@ -32,7 +32,6 @@ extern "C" {
  * PRAGMA PACK - Plattformunabhängig
  *============================================================================*/
 
-#ifndef UFT_PACKED_BEGIN
 #if defined(_MSC_VER)
     #define UFT_PACKED_BEGIN __pragma(pack(push, 1))
     #define UFT_PACKED_END   __pragma(pack(pop))

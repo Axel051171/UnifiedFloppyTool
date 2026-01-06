@@ -53,8 +53,7 @@
  *============================================================================*/
 
 /* 2MG File Header (64 bytes) */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     char     signature[4];       /* "2IMG" */
     char     creator[4];         /* Creator ID (e.g. "XGS!", "WOOF") */
     uint16_t header_size;        /* Header size (usually 64) */
@@ -70,7 +69,6 @@ typedef struct {
     uint32_t creator_size;       /* Size of creator data */
     uint32_t reserved[4];        /* Reserved, should be 0 */
 } img2_header_t;
-UFT_PACK_END
 
 /* Disk geometry */
 typedef struct {
@@ -546,7 +544,6 @@ int img2_parser_analyze(
 #ifdef IMG2_PARSER_TEST
 
 #include <assert.h>
-#include "uft/uft_compiler.h"
 
 int main(void) {
     printf("=== 2MG Parser Unit Tests ===\n");

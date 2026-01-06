@@ -12,7 +12,6 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
-#include "uft/uft_compiler.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -92,15 +91,13 @@ extern "C" {
  *   [6-11]  File UID (6 bytes)
  *   [12-15] Block sequence number (big-endian)
  */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     uint8_t signature[3];           /**< "SBx" */
     uint8_t version;                /**< Version (1, 2, 3, 17, 18, 19) */
     uint16_t crc16;                 /**< CRC-16-CCITT (big-endian) */
     uint8_t uid[UFT_SBX_UID_SIZE];  /**< File UID */
     uint32_t seq_num;               /**< Sequence number (big-endian) */
 } uft_sbx_header_t;
-UFT_PACK_END
 
 /**
  * @brief Metadata entry (variable length)

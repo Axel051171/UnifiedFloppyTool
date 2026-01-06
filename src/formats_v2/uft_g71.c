@@ -1,4 +1,3 @@
-#include <stdio.h>  // FIXED R18
 #include "uft/uft_format_common.h"
 
 typedef struct { FILE* file; uint8_t num_tracks; uint32_t* offsets; } g71_data_t;

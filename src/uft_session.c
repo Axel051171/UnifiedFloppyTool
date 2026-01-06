@@ -13,20 +13,16 @@
 #include <string.h>
 #include <stdio.h>
 #include <time.h>
+#include <sys/stat.h>
+#include <dirent.h>
+#include <unistd.h>
 #include <errno.h>
 
 #ifdef _WIN32
 #include <windows.h>
 #include <shlobj.h>
-#include <sys/stat.h>
-#include <direct.h>
 #define PATH_SEP "\\"
-#define mkdir(path, mode) _mkdir(path)
-/* Windows doesn't have dirent - use FindFirstFile */
 #else
-#include <sys/stat.h>
-#include <dirent.h>
-#include <unistd.h>
 #include <pthread.h>
 #include <signal.h>
 #define PATH_SEP "/"
@@ -844,7 +840,7 @@ void uft_session_set_position(uft_session_t *session, int cylinder, int head) {
 }
 
 void uft_session_set_track_status(uft_session_t *session, int cylinder, int head,
-                                   uft_session_track_status_t status) {
+                                   uft_track_status_t status) {
     if (!session) return;
     
     /* Find or add track */
@@ -868,9 +864,9 @@ void uft_session_set_track_status(uft_session_t *session, int cylinder, int head
     }
     
     /* Update counters */
-    if (status == UFT_SESSION_TRACK_COMPLETE) {
+    if (status == UFT_TRACK_STATUS_COMPLETE) {
         session->info.tracks_completed++;
-    } else if (status == UFT_SESSION_TRACK_FAILED) {
+    } else if (status == UFT_TRACK_STATUS_FAILED) {
         session->info.tracks_failed++;
     }
     
@@ -1197,13 +1193,13 @@ const char *uft_session_op_string(uft_session_op_t op) {
     }
 }
 
-const char *uft_session_track_status_string(uft_session_track_status_t status) {
+const char *uft_track_status_string(uft_track_status_t status) {
     switch (status) {
-        case UFT_SESSION_TRACK_PENDING:    return "PENDING";
-        case UFT_SESSION_TRACK_PROCESSING: return "PROCESSING";
-        case UFT_SESSION_TRACK_COMPLETE:   return "COMPLETE";
-        case UFT_SESSION_TRACK_FAILED:     return "FAILED";
-        case UFT_SESSION_TRACK_SKIPPED:    return "SKIPPED";
+        case UFT_TRACK_STATUS_PENDING:    return "PENDING";
+        case UFT_TRACK_STATUS_PROCESSING: return "PROCESSING";
+        case UFT_TRACK_STATUS_COMPLETE:   return "COMPLETE";
+        case UFT_TRACK_STATUS_FAILED:     return "FAILED";
+        case UFT_TRACK_STATUS_SKIPPED:    return "SKIPPED";
         default:                          return "UNKNOWN";
     }
 }

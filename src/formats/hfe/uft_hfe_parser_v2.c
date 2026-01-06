@@ -65,8 +65,7 @@
 /**
  * @brief HFE file header (512 bytes)
  */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     char signature[8];          /* "HXCPICFE" */
     uint8_t format_revision;    /* Format revision (0 or 1) */
     uint8_t num_tracks;         /* Number of tracks */
@@ -84,17 +83,14 @@ typedef struct {
     uint8_t track0s1_altenc;    /* Track 0 side 1 alternate encoding */
     uint8_t track0s1_enc;       /* Track 0 side 1 encoding */
 } hfe_header_t;
-UFT_PACK_END
 
 /**
  * @brief Track list entry (4 bytes each)
  */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     uint16_t offset;            /* Track data offset (in blocks) */
     uint16_t length;            /* Track length (in bytes) */
 } hfe_track_entry_t;
-UFT_PACK_END
 
 /**
  * @brief Track data
@@ -323,7 +319,6 @@ static char* hfe_info_to_text(const hfe_disk_t* disk) {
 #ifdef HFE_PARSER_TEST
 
 #include <assert.h>
-#include "uft/uft_compiler.h"
 
 int main(void) {
     printf("=== HFE Parser v2 Tests ===\n");

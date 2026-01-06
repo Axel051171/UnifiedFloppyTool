@@ -18,7 +18,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
-#include "uft/uft_compiler.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -72,8 +71,7 @@ typedef enum {
 /**
  * @brief AMSDOS file header (128 bytes)
  */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     uint8_t  user;              /**< User number (0-15) */
     char     filename[8];       /**< Filename (space-padded) */
     char     extension[3];      /**< Extension (space-padded) */
@@ -93,7 +91,6 @@ typedef struct {
     uint16_t checksum;          /**< Header checksum */
     uint8_t  reserved7[59];     /**< Padding to 128 bytes */
 } uft_amsdos_header_t;
-UFT_PACK_END
 
 /*===========================================================================
  * DSK/EDSK Format Structures
@@ -102,8 +99,7 @@ UFT_PACK_END
 /**
  * @brief DSK disk information block (256 bytes)
  */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     char     magic[34];         /**< "MV - CPC..." or "EXTENDED CPC DSK..." */
     char     creator[14];       /**< Creator name */
     uint8_t  num_tracks;        /**< Number of tracks */
@@ -111,13 +107,11 @@ typedef struct {
     uint16_t track_size;        /**< Track size (DSK only, unused in EDSK) */
     uint8_t  track_sizes[204];  /**< EDSK: size of each track / 256 */
 } uft_dsk_header_t;
-UFT_PACK_END
 
 /**
  * @brief DSK track information block (256 bytes)
  */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     char     magic[12];         /**< "Track-Info\r\n" */
     uint8_t  padding[4];        /**< Unused */
     uint8_t  track;             /**< Track number */
@@ -129,13 +123,11 @@ typedef struct {
     uint8_t  filler_byte;       /**< Filler byte */
     /* Followed by sector info blocks */
 } uft_dsk_track_header_t;
-UFT_PACK_END
 
 /**
  * @brief DSK sector information (8 bytes per sector)
  */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     uint8_t  track;             /**< Track (C) */
     uint8_t  side;              /**< Side (H) */
     uint8_t  sector_id;         /**< Sector ID (R) */
@@ -144,7 +136,6 @@ typedef struct {
     uint8_t  fdcstat2;          /**< FDC status 2 */
     uint16_t data_length;       /**< EDSK: actual data length */
 } uft_dsk_sector_info_t;
-UFT_PACK_END
 
 /*===========================================================================
  * CP/M on CPC
@@ -165,8 +156,7 @@ UFT_PACK_END
 /**
  * @brief CPC CP/M directory entry
  */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     uint8_t  user;              /**< User number (0-15, 0xE5=deleted) */
     char     filename[8];       /**< Filename */
     char     extension[3];      /**< Extension (with flags in high bits) */
@@ -176,7 +166,6 @@ typedef struct {
     uint8_t  record_count;      /**< Records in this extent (0-128) */
     uint8_t  allocation[16];    /**< Block allocation map */
 } uft_cpc_cpm_dirent_t;
-UFT_PACK_END
 
 /*===========================================================================
  * API Functions

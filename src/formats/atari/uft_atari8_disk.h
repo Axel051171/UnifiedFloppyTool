@@ -15,7 +15,6 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
-#include "uft/uft_compiler.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -135,8 +134,7 @@ typedef enum {
  * This structure mirrors the DCB in Atari memory at $0300-$030B.
  * Used for all SIO device communication.
  */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     uint8_t  ddevic;    /**< Device ID ($31='1' for disk) */
     uint8_t  dunit;     /**< Unit number (1-4) */
     uint8_t  dcomd;     /**< Command byte */
@@ -150,7 +148,6 @@ typedef struct {
     uint8_t  dauxlo;    /**< Aux1 (sector low byte) */
     uint8_t  dauxhi;    /**< Aux2 (sector high byte) */
 } uft_atari_dcb_t;
-UFT_PACK_END
 
 /** DCB direction flags for dstats */
 #define UFT_ATARI_DCB_READ      0x40    /**< Data transfer: device to computer */
@@ -176,15 +173,13 @@ UFT_PACK_END
 /**
  * @brief Atari DOS 2.x directory entry (16 bytes)
  */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     uint8_t  flags;             /**< File flags */
     uint16_t sector_count;      /**< Number of sectors (LE) */
     uint16_t start_sector;      /**< Starting sector (LE) */
     uint8_t  filename[8];       /**< Filename (space-padded) */
     uint8_t  extension[3];      /**< Extension (space-padded) */
 } uft_atari_dir_entry_t;
-UFT_PACK_END
 
 /*===========================================================================
  * Volume Table of Contents (VTOC) - Sector 360
@@ -193,8 +188,7 @@ UFT_PACK_END
 /**
  * @brief Atari DOS 2.x VTOC structure
  */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     uint8_t  dos_code;          /**< DOS code (usually 2) */
     uint16_t total_sectors;     /**< Total sectors (LE) */
     uint16_t free_sectors;      /**< Free sectors (LE) */
@@ -203,7 +197,6 @@ typedef struct {
     /**< Bit=1 means sector is free */
     /**< Covers sectors 0-719 */
 } uft_atari_vtoc_t;
-UFT_PACK_END
 
 /*===========================================================================
  * Sector Data Link (for file chains)
@@ -214,14 +207,12 @@ UFT_PACK_END
  * 
  * Each data sector has 125 bytes of data + 3 bytes of link info
  */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     uint8_t  file_num_hi;       /**< File number bits 7-2 + next sector hi bits */
     uint8_t  data[125];         /**< Actual file data */
     uint8_t  next_sector_lo;    /**< Next sector low byte (0 = last) */
     uint8_t  data_bytes;        /**< Bytes used in this sector (usually 125) */
 } uft_atari_data_sector_t;
-UFT_PACK_END
 
 /** Extract file number from sector */
 #define UFT_ATARI_SECTOR_FILENUM(s) (((s)->file_num_hi >> 2) & 0x3F)
@@ -236,8 +227,7 @@ UFT_PACK_END
  *===========================================================================*/
 
 /** ATR file header (16 bytes) */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     uint16_t magic;             /**< 0x0296 = NICKATARI */
     uint16_t paragraphs;        /**< Size in 16-byte paragraphs (low) */
     uint16_t sector_size;       /**< Sector size (128 or 256) */
@@ -246,7 +236,6 @@ typedef struct {
     uint32_t unused;
     uint8_t  flags;             /**< Flags (write protect, etc.) */
 } uft_atari_atr_header_t;
-UFT_PACK_END
 
 #define UFT_ATARI_ATR_MAGIC     0x0296  /**< "NICKATARI" signature */
 

@@ -26,7 +26,6 @@
 #include <stddef.h>
 #include <stdbool.h>
 #include <stdio.h>
-#include "uft/uft_compiler.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -123,21 +122,18 @@ typedef struct {
 /**
  * @brief DOS 2.0 VTOC header (first bytes of sector 360)
  */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     uint8_t  dos_code;         /**< DOS code (0 = DOS 2) */
     uint16_t total_sectors;    /**< Total sectors (little-endian) */
     uint16_t free_sectors;     /**< Free sectors (little-endian) */
     uint8_t  reserved[5];      /**< Reserved */
     uint8_t  bitmap[90];       /**< Sector allocation bitmap */
 } uft_atari_vtoc_t;
-UFT_PACK_END
 
 /**
  * @brief MyDOS extended VTOC
  */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     uint8_t  dos_code;         /**< DOS code (2 = MyDOS) */
     uint16_t total_sectors;    /**< Total sectors */
     uint16_t free_sectors;     /**< Free sectors */
@@ -145,7 +141,6 @@ typedef struct {
     uint8_t  bitmap[118];      /**< Extended bitmap for MyDOS */
     uint16_t vtoc2_sector;     /**< Second VTOC sector (for large disks) */
 } uft_atari_mydos_vtoc_t;
-UFT_PACK_END
 
 /*===========================================================================
  * Directory Entry Structure
@@ -166,15 +161,13 @@ typedef enum {
 /**
  * @brief Directory entry (16 bytes, on-disk format)
  */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     uint8_t  flags;            /**< File flags */
     uint16_t sector_count;     /**< Number of sectors (little-endian) */
     uint16_t start_sector;     /**< First sector (little-endian) */
     char     filename[8];      /**< Filename (space-padded) */
     char     extension[3];     /**< Extension (space-padded) */
 } uft_atari_dir_entry_raw_t;
-UFT_PACK_END
 
 /**
  * @brief Unified file entry (internal representation)
@@ -218,13 +211,11 @@ typedef struct {
  * - Byte 1: Low byte of next sector (0 = last sector)
  * - Byte 2: Bytes used in sector (125 max for SD, 253 max for DD)
  */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     uint8_t  file_id_hi;       /**< File ID (0-62) + next sector high bits */
     uint8_t  next_lo;          /**< Next sector low byte */
     uint8_t  bytes_used;       /**< Data bytes in this sector */
 } uft_atari_sector_link_t;
-UFT_PACK_END
 
 /** Extract file ID from link */
 #define UFT_ATARI_LINK_FILE_ID(link) ((link)->file_id_hi & 0x3F)
@@ -782,8 +773,7 @@ int uft_atari_directory_to_json(uft_atari_ctx_t *ctx,
 /**
  * @brief ATR file header (16 bytes)
  */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     uint16_t magic;            /**< 0x0296 = NICKATARI */
     uint16_t paragraphs;       /**< Image size in 16-byte paragraphs (lo) */
     uint16_t sector_size;      /**< Sector size (128 or 256) */
@@ -792,7 +782,6 @@ typedef struct {
     uint32_t reserved;         /**< Reserved */
     uint8_t  flags;            /**< Flags (bit 0 = write protect) */
 } uft_atari_atr_header_t;
-UFT_PACK_END
 
 #define UFT_ATARI_ATR_MAGIC     0x0296
 

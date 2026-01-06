@@ -1,11 +1,18 @@
-/*
- * uft_msa.h - Atari ST MSA (Magic Shadow Archiver) Format Parser
+/**
+ * @file uft_msa.h
+ * @brief MSA (Magic Shadow Archiver) Format Support
+ * @version 3.1.4.002
  *
- * Part of UnifiedFloppyTool (UFT) v3.3.0
- * Based on msa-to-zip (Olivier Bruchez) - Algorithm extraction
+ * MSA is the Atari ST disk image format created by Magic Shadow Archiver.
+ * Features:
+ * - Run-Length Encoding (RLE) compression
+ * - Track-based storage
+ * - Support for single/double sided disks
+ * - 9-11 sectors per track
  *
- * MSA is a compressed disk image format for Atari ST.
- * Uses simple RLE compression with $E5 marker byte.
+ * Based on msa-coder by Keith Clark (MIT License)
+ *
+ * SPDX-License-Identifier: MIT
  */
 
 #ifndef UFT_MSA_H
@@ -13,160 +20,215 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include <stdbool.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/* ═══════════════════════════════════════════════════════════════════════════
- * Constants
- * ═══════════════════════════════════════════════════════════════════════════ */
+/*============================================================================
+ * MSA Constants
+ *============================================================================*/
 
-#define UFT_MSA_SIGNATURE       0x0E0F
-#define UFT_MSA_HEADER_SIZE     10
-#define UFT_MSA_SECTOR_SIZE     512
+/** MSA file magic number */
+#define UFT_MSA_MAGIC           0x0E0F
+
+/** RLE marker byte */
 #define UFT_MSA_RLE_MARKER      0xE5
 
-/* Maximum supported geometry */
+/** Standard sector size (Atari ST) */
+#define UFT_MSA_SECTOR_SIZE     512
+
+/** Maximum sectors per track */
+#define UFT_MSA_MAX_SPT         11
+
+/** Maximum tracks */
 #define UFT_MSA_MAX_TRACKS      86
-#define UFT_MSA_MAX_SIDES       2
-#define UFT_MSA_MAX_SECTORS     11
 
-/* ═══════════════════════════════════════════════════════════════════════════
- * Error Codes
- * ═══════════════════════════════════════════════════════════════════════════ */
+/*============================================================================
+ * Data Structures
+ *============================================================================*/
 
-typedef enum uft_msa_error {
-    UFT_MSA_OK = 0,
-    UFT_MSA_ERR_NULL_PTR,
-    UFT_MSA_ERR_INVALID_SIGNATURE,
-    UFT_MSA_ERR_INVALID_GEOMETRY,
-    UFT_MSA_ERR_BUFFER_TOO_SMALL,
-    UFT_MSA_ERR_TRUNCATED_DATA,
-    UFT_MSA_ERR_RLE_OVERFLOW,
-    UFT_MSA_ERR_COMPRESSION_FAILED,
-} uft_msa_error_t;
-
-/* ═══════════════════════════════════════════════════════════════════════════
- * MSA Header Structure
- * ═══════════════════════════════════════════════════════════════════════════ */
-
-typedef struct uft_msa_header {
-    uint16_t signature;         /* Must be 0x0E0F */
-    uint16_t sectors_per_track; /* 9, 10, or 11 */
-    uint16_t sides;             /* 0 = single, 1 = double (add 1 for count) */
-    uint16_t start_track;       /* Usually 0 */
-    uint16_t end_track;         /* Usually 79 or 81 */
+/** MSA file header */
+#pragma pack(push, 1)
+typedef struct {
+    uint16_t    magic;          /**< Magic number (0x0E0F) */
+    uint16_t    sectors_per_track;  /**< Sectors per track (9-11) */
+    uint16_t    sides;          /**< Number of sides (0=SS, 1=DS) */
+    uint16_t    first_track;    /**< First encoded track */
+    uint16_t    last_track;     /**< Last encoded track */
 } uft_msa_header_t;
 
-/* ═══════════════════════════════════════════════════════════════════════════
- * MSA Track Header
- * ═══════════════════════════════════════════════════════════════════════════ */
+/** MSA disk image handle */
+typedef struct {
+    uft_msa_header_t header;    /**< File header */
+    uint8_t    *data;           /**< Decompressed track data */
+    size_t      data_size;      /**< Size of decompressed data */
+    bool        modified;       /**< Data has been modified */
+} uft_msa_disk_t;
 
-typedef struct uft_msa_track_header {
-    uint16_t data_length;       /* Compressed length (or uncompressed if equal) */
-} uft_msa_track_header_t;
-
-/* ═══════════════════════════════════════════════════════════════════════════
- * MSA Image Info (parsed from header)
- * ═══════════════════════════════════════════════════════════════════════════ */
-
-typedef struct uft_msa_info {
-    uint16_t sectors_per_track;
-    uint8_t  side_count;        /* 1 or 2 */
-    uint16_t start_track;
-    uint16_t end_track;
-    uint16_t track_count;       /* end_track - start_track + 1 */
-    uint32_t raw_size;          /* Uncompressed size in bytes */
+/** MSA format information */
+typedef struct {
+    uint16_t    sectors_per_track;
+    uint16_t    sides;
+    uint16_t    first_track;
+    uint16_t    last_track;
+    uint32_t    total_sectors;
+    uint32_t    total_bytes;
 } uft_msa_info_t;
 
-/* ═══════════════════════════════════════════════════════════════════════════
- * RLE Compression Statistics
- * ═══════════════════════════════════════════════════════════════════════════ */
-
-typedef struct uft_msa_stats {
-    uint32_t compressed_size;
-    uint32_t uncompressed_size;
-    uint32_t tracks_compressed;
-    uint32_t tracks_uncompressed;
-    float    compression_ratio;
-} uft_msa_stats_t;
-
-/* ═══════════════════════════════════════════════════════════════════════════
- * API Functions - Header Parsing
- * ═══════════════════════════════════════════════════════════════════════════ */
+/*============================================================================
+ * API Functions
+ *============================================================================*/
 
 /**
- * Parse MSA header from buffer
+ * @brief Open and decode MSA file
+ * @param path Path to MSA file
+ * @return Disk handle or NULL on error
  */
-uft_msa_error_t uft_msa_parse_header(const uint8_t *data, size_t len,
-                                      uft_msa_header_t *header);
+uft_msa_disk_t *uft_msa_open(const char *path);
 
 /**
- * Validate MSA header and extract info
+ * @brief Decode MSA from memory buffer
+ * @param data MSA file data
+ * @param size Data size
+ * @return Disk handle or NULL on error
  */
-uft_msa_error_t uft_msa_validate_header(const uft_msa_header_t *header,
-                                         uft_msa_info_t *info);
+uft_msa_disk_t *uft_msa_decode(const uint8_t *data, size_t size);
 
 /**
- * Quick probe - check if data is valid MSA
+ * @brief Close MSA disk
+ * @param disk Disk handle
  */
-int uft_msa_probe(const uint8_t *data, size_t len);
-
-/* ═══════════════════════════════════════════════════════════════════════════
- * API Functions - RLE Decompression
- * ═══════════════════════════════════════════════════════════════════════════ */
+void uft_msa_close(uft_msa_disk_t *disk);
 
 /**
- * Decompress MSA RLE data
- * 
- * RLE format:
- *   - $E5 <data_byte> <run_length_hi> <run_length_lo>
- *   - All other bytes are literal
+ * @brief Get MSA format information
+ * @param disk Disk handle
+ * @param info Output information structure
+ * @return 0 on success
  */
-uft_msa_error_t uft_msa_rle_decode(const uint8_t *src, size_t src_len,
-                                    uint8_t *dst, size_t dst_len,
-                                    size_t *out_written);
+int uft_msa_get_info(uft_msa_disk_t *disk, uft_msa_info_t *info);
 
 /**
- * Compress data using MSA RLE
+ * @brief Read sector from MSA image
+ * @param disk Disk handle
+ * @param track Track number
+ * @param side Side (0 or 1)
+ * @param sector Sector number (1-based)
+ * @param buffer Output buffer (512 bytes)
+ * @return 0 on success, -1 on error
  */
-uft_msa_error_t uft_msa_rle_encode(const uint8_t *src, size_t src_len,
-                                    uint8_t *dst, size_t dst_len,
-                                    size_t *out_written);
-
-/* ═══════════════════════════════════════════════════════════════════════════
- * API Functions - Full Image Conversion
- * ═══════════════════════════════════════════════════════════════════════════ */
-
-/**
- * Convert MSA image to raw ST format
- */
-uft_msa_error_t uft_msa_to_st(const uint8_t *msa_data, size_t msa_len,
-                               uint8_t *st_data, size_t st_len,
-                               size_t *out_written,
-                               uft_msa_stats_t *stats);
+int uft_msa_read_sector(uft_msa_disk_t *disk,
+                        uint16_t track, uint16_t side, uint16_t sector,
+                        uint8_t *buffer);
 
 /**
- * Convert raw ST image to MSA format
+ * @brief Write sector to MSA image
+ * @param disk Disk handle
+ * @param track Track number
+ * @param side Side
+ * @param sector Sector number (1-based)
+ * @param buffer Data to write (512 bytes)
+ * @return 0 on success, -1 on error
  */
-uft_msa_error_t uft_st_to_msa(const uint8_t *st_data, size_t st_len,
-                               const uft_msa_info_t *info,
-                               uint8_t *msa_data, size_t msa_len,
-                               size_t *out_written,
-                               uft_msa_stats_t *stats);
+int uft_msa_write_sector(uft_msa_disk_t *disk,
+                         uint16_t track, uint16_t side, uint16_t sector,
+                         const uint8_t *buffer);
 
 /**
- * Calculate required buffer size for MSA to ST conversion
+ * @brief Save MSA to file
+ * @param disk Disk handle
+ * @param path Output path
+ * @param compress Enable RLE compression
+ * @return 0 on success, -1 on error
  */
-size_t uft_msa_get_st_size(const uint8_t *msa_data, size_t msa_len);
+int uft_msa_save(uft_msa_disk_t *disk, const char *path, bool compress);
 
 /**
- * Get error string
+ * @brief Encode data to MSA format
+ * @param disk Disk handle
+ * @param output Output buffer (caller allocated)
+ * @param output_size Output buffer size
+ * @param compress Enable compression
+ * @param written Actual bytes written
+ * @return 0 on success, -1 on error
  */
-const char *uft_msa_strerror(uft_msa_error_t err);
+int uft_msa_encode(uft_msa_disk_t *disk,
+                   uint8_t *output, size_t output_size,
+                   bool compress, size_t *written);
+
+/**
+ * @brief Convert MSA to raw ST image
+ * @param disk MSA disk handle
+ * @param path Output path
+ * @return 0 on success, -1 on error
+ */
+int uft_msa_to_st(uft_msa_disk_t *disk, const char *path);
+
+/**
+ * @brief Convert raw ST to MSA
+ * @param st_path Input ST file path
+ * @param msa_path Output MSA path
+ * @param compress Enable compression
+ * @return 0 on success, -1 on error
+ */
+int uft_st_to_msa(const char *st_path, const char *msa_path, bool compress);
+
+/**
+ * @brief Create new MSA disk image
+ * @param sectors_per_track Sectors per track (9-11)
+ * @param sides Number of sides (1 or 2)
+ * @param tracks Number of tracks (typically 80)
+ * @return Disk handle or NULL on error
+ */
+uft_msa_disk_t *uft_msa_create(uint16_t sectors_per_track,
+                                uint16_t sides, uint16_t tracks);
+
+/*============================================================================
+ * RLE Compression Functions
+ *============================================================================*/
+
+/**
+ * @brief Decompress RLE-encoded track data
+ * @param input Compressed data
+ * @param input_size Compressed size
+ * @param output Output buffer
+ * @param output_size Expected output size
+ * @return Actual output bytes, or -1 on error
+ */
+int uft_msa_rle_decompress(const uint8_t *input, size_t input_size,
+                            uint8_t *output, size_t output_size);
+
+/**
+ * @brief Compress track data with RLE
+ * @param input Raw data
+ * @param input_size Input size
+ * @param output Output buffer
+ * @param output_size Output buffer size
+ * @return Compressed size, or -1 if larger than input
+ */
+int uft_msa_rle_compress(const uint8_t *input, size_t input_size,
+                          uint8_t *output, size_t output_size);
+
+/*============================================================================
+ * Standard Atari ST Formats
+ *============================================================================*/
+
+/** Single-sided 9 sector (360KB) */
+#define UFT_MSA_SS_9SPT     { 9, 0, 0, 79 }
+
+/** Double-sided 9 sector (720KB) */
+#define UFT_MSA_DS_9SPT     { 9, 1, 0, 79 }
+
+/** Double-sided 10 sector (800KB) */
+#define UFT_MSA_DS_10SPT    { 10, 1, 0, 79 }
+
+/** Double-sided 11 sector (880KB) - special format */
+#define UFT_MSA_DS_11SPT    { 11, 1, 0, 79 }
 
 #ifdef __cplusplus
 }
 #endif
+
 #endif /* UFT_MSA_H */

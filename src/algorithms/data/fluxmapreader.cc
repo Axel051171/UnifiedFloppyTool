@@ -7,7 +7,13 @@
 #include "protocol.h"
 #include <numeric>
 #include <math.h>
+#ifdef _WIN32
+#include <string.h>
+#define strcasecmp _stricmp
+#define strncasecmp _strnicmp
+#else
 #include <strings.h>
+#endif
 
 FluxmapReader::FluxmapReader(const Fluxmap& fluxmap):
     _fluxmap(fluxmap),

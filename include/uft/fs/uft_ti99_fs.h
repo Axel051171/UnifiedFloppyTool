@@ -27,7 +27,6 @@
 #include <stddef.h>
 #include <stdbool.h>
 #include <stdio.h>
-#include "uft/uft_compiler.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -117,8 +116,7 @@ typedef struct {
  * 
  * Note: All multi-byte values are big-endian (Motorola format)
  */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     char     disk_name[10];         /**< 0x00: Volume name (space padded) */
     uint16_t total_sectors;         /**< 0x0A: Total sectors (big-endian) */
     uint8_t  sectors_per_track;     /**< 0x0C: Sectors per track */
@@ -132,7 +130,6 @@ typedef struct {
     uint8_t  reserved2[16];         /**< 0x40: Reserved */
     uint8_t  bitmap[176];           /**< 0x50: Allocation bitmap (0x50-0xFF = 176 bytes) */
 } uft_ti99_vib_t;
-UFT_PACK_END
 
 #define UFT_TI99_VIB_DSK_ID         "DSK"
 #define UFT_TI99_PROTECTED          0x20
@@ -148,12 +145,10 @@ UFT_PACK_END
  * Big-endian format: high byte first
  * Value 0x0000 = empty slot
  */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     uint8_t  fdr_sector_hi;         /**< FDR sector high byte */
     uint8_t  fdr_sector_lo;         /**< FDR sector low byte */
 } uft_ti99_fdir_entry_t;
-UFT_PACK_END
 
 /** Extract FDR sector from FDIR entry */
 #define UFT_TI99_FDIR_SECTOR(e) \
@@ -169,8 +164,7 @@ UFT_PACK_END
 /**
  * @brief FDR on-disk structure
  */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     char     filename[10];          /**< 0x00: Filename (space padded) */
     uint16_t reserved1;             /**< 0x0A: Reserved */
     uint8_t  status_flags;          /**< 0x0C: File type and flags */
@@ -183,7 +177,6 @@ typedef struct {
     uint8_t  update_time[4];        /**< 0x18: Update date/time */
     uint8_t  data_chain[256-28];    /**< 0x1C: Cluster allocation map */
 } uft_ti99_fdr_t;
-UFT_PACK_END
 
 /**
  * @brief Data chain entry (3 bytes each)
@@ -193,13 +186,11 @@ UFT_PACK_END
  * - Byte 1: Start sector bits 0-3 (high nibble), offset (low nibble)
  * - Byte 2: End sector offset from start
  */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     uint8_t  start_hi;              /**< Start sector high 8 bits */
     uint8_t  start_lo_offset;       /**< Start low nibble + offset */
     uint8_t  end_offset;            /**< End offset from start */
 } uft_ti99_chain_entry_t;
-UFT_PACK_END
 
 /** Maximum chain entries in FDR: (256-28)/3 = 76 */
 #define UFT_TI99_MAX_CHAIN_ENTRIES  76

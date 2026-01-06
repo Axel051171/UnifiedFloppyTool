@@ -4,17 +4,12 @@
  */
 
 #include "uft/uft_memory.h"
+#include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdatomic.h>
-
-#ifdef _WIN32
-#include <windows.h>
-#else
-#include <unistd.h>
 #include <pthread.h>
-#endif
 
 /* =============================================================================
  * PLATFORM-SPECIFIC ALIGNED ALLOCATION

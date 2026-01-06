@@ -12,14 +12,8 @@
 #include "uft/uft_safe.h"
 #include <stdlib.h>
 #include <string.h>
-
-#ifdef _WIN32
-#include <windows.h>
-#define sleep(s) Sleep((s) * 1000)
-#else
 #include <pthread.h>
 #include <unistd.h>
-#endif
 
 // ============================================================================
 // Constants

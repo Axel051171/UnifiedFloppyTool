@@ -40,14 +40,13 @@
 
 /*============================================================================
  * GLOBAL STATISTICS
- * FIXED R18: Use uft_atomic_size instead of atomic_size_t for MSVC compatibility
  *============================================================================*/
 
-static uft_atomic_size g_total_allocated = UFT_ATOMIC_INIT(0);
-static uft_atomic_size g_current_allocated = UFT_ATOMIC_INIT(0);
-static uft_atomic_size g_peak_allocated = UFT_ATOMIC_INIT(0);
-static uft_atomic_size g_allocation_count = UFT_ATOMIC_INIT(0);
-static uft_atomic_size g_free_count = UFT_ATOMIC_INIT(0);
+static atomic_size_t g_total_allocated = 0;
+static atomic_size_t g_current_allocated = 0;
+static atomic_size_t g_peak_allocated = 0;
+static atomic_size_t g_allocation_count = 0;
+static atomic_size_t g_free_count = 0;
 
 /*============================================================================
  * PUBLIC API - ALIGNED ALLOCATION
@@ -61,15 +60,13 @@ void* uft_malloc_aligned(size_t size, size_t alignment)
     
     void* ptr = platform_aligned_alloc(size, alignment);
     if (ptr) {
-        uft_atomic_fetch_add(&g_total_allocated, (long)size);
-        size_t current = (size_t)uft_atomic_fetch_add(&g_current_allocated, (long)size) + size;
-        uft_atomic_fetch_add(&g_allocation_count, 1);
+        atomic_fetch_add(&g_total_allocated, size);
+        size_t current = atomic_fetch_add(&g_current_allocated, size) + size;
+        atomic_fetch_add(&g_allocation_count, 1);
         
-        size_t peak = (size_t)uft_atomic_load(&g_peak_allocated);
+        size_t peak = atomic_load(&g_peak_allocated);
         while (current > peak) {
-            long expected = (long)peak;
-            if (uft_atomic_compare_exchange(&g_peak_allocated, &expected, (long)current)) break;
-            peak = (size_t)expected;
+            if (atomic_compare_exchange_weak(&g_peak_allocated, &peak, current)) break;
         }
     }
     return ptr;
@@ -79,7 +76,7 @@ void uft_free_aligned(void* ptr)
 {
     if (ptr) {
         platform_aligned_free(ptr);
-        uft_atomic_fetch_add(&g_free_count, 1);
+        atomic_fetch_add(&g_free_count, 1);
     }
 }
 
@@ -218,18 +215,18 @@ void uft_pool_destroy(uft_pool_t** pool_ptr)
 void uft_memory_get_stats(uft_memory_stats_t* stats)
 {
     if (!stats) return;
-    stats->total_allocated = (size_t)uft_atomic_load(&g_total_allocated);
-    stats->current_allocated = (size_t)uft_atomic_load(&g_current_allocated);
-    stats->peak_allocated = (size_t)uft_atomic_load(&g_peak_allocated);
-    stats->allocation_count = (size_t)uft_atomic_load(&g_allocation_count);
-    stats->free_count = (size_t)uft_atomic_load(&g_free_count);
+    stats->total_allocated = atomic_load(&g_total_allocated);
+    stats->current_allocated = atomic_load(&g_current_allocated);
+    stats->peak_allocated = atomic_load(&g_peak_allocated);
+    stats->allocation_count = atomic_load(&g_allocation_count);
+    stats->free_count = atomic_load(&g_free_count);
 }
 
 void uft_memory_reset_stats(void)
 {
-    uft_atomic_store(&g_total_allocated, 0);
-    uft_atomic_store(&g_current_allocated, 0);
-    uft_atomic_store(&g_peak_allocated, 0);
-    uft_atomic_store(&g_allocation_count, 0);
-    uft_atomic_store(&g_free_count, 0);
+    atomic_store(&g_total_allocated, 0);
+    atomic_store(&g_current_allocated, 0);
+    atomic_store(&g_peak_allocated, 0);
+    atomic_store(&g_allocation_count, 0);
+    atomic_store(&g_free_count, 0);
 }

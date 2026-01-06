@@ -17,16 +17,13 @@
 #include <stdarg.h>
 #include <errno.h>
 #include <stdint.h>
-#include <stdbool.h>
-#include <stddef.h>
 
-/* Platform-specific ssize_t definition */
-#if defined(_MSC_VER) || defined(_WIN32)
-    /* Windows: Use SSIZE_T from BaseTsd.h */
+/* Windows doesn't have ssize_t */
+#if defined(_MSC_VER)
     #include <BaseTsd.h>
     typedef SSIZE_T ssize_t;
-#else
-    /* POSIX systems (Linux, macOS, BSD) */
+#elif !defined(__APPLE__) && !defined(__linux__)
+    /* Fallback for other platforms */
     #include <sys/types.h>
 #endif
 

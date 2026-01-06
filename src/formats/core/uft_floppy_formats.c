@@ -388,7 +388,7 @@ int uft_format_candidates(size_t size, uft_format_id_t *formats, int max_formats
  * Helper Functions
  *===========================================================================*/
 
-static const char *uft_floppy_encoding_name(uft_encoding_t encoding)
+const char *uft_encoding_name(uft_encoding_t encoding)
 {
     switch (encoding) {
         case UFT_ENCODING_FM:        return "FM";

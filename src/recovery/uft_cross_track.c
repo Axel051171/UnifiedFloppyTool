@@ -355,7 +355,6 @@ int uft_cross_track_recover(uft_disk_map_t *map, size_t *recovered)
             /* Try to find duplicate */
             uft_sector_ref_t *dups;
             size_t dup_count;
-    (void)dups; (void)dup_count; /* Reserved for deduplication reporting */
             
             /* Check other tracks for same data pattern */
             for (size_t j = 0; j < map->ref_count; j++) {

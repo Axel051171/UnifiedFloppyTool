@@ -12,7 +12,6 @@
 #include <ctype.h>
 
 #include "uft_file_ops.h"
-#include "uft/uft_compiler.h"
 
 /* ============================================================================
  * SSD/DSD BBC Micro File Operations (Acorn DFS)
@@ -288,8 +287,7 @@ typedef struct {
     uint16_t heads;
     uint32_t hidden_sectors;
     uint32_t total_sectors_32;
-} fat12_bpb_t;
-UFT_PACK_END
+} __attribute__((packed)) fat12_bpb_t;
 
 /**
  * @brief Get FAT12 cluster value

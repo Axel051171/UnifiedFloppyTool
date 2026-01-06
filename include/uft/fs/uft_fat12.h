@@ -22,9 +22,6 @@
 #include <stddef.h>
 #include <stdbool.h>
 #include <time.h>
-#include "uft/uft_compiler.h"
-
-#include <stdio.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -145,8 +142,7 @@ typedef enum {
  * 
  * Standard PC boot sector layout
  */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     uint8_t  jmp_boot[3];           /**< 0x00: Jump instruction */
     char     oem_name[8];           /**< 0x03: OEM name */
     uint16_t bytes_per_sector;      /**< 0x0B: Bytes per sector (512) */
@@ -172,7 +168,6 @@ typedef struct {
     uint8_t  boot_code[448];        /**< 0x3E: Boot code */
     uint16_t signature;             /**< 0x1FE: Boot signature (0xAA55) */
 } uft_fat_bootsect_t;
-UFT_PACK_END
 
 /*===========================================================================
  * Structures - Directory Entry
@@ -181,8 +176,7 @@ UFT_PACK_END
 /**
  * @brief FAT Short Directory Entry (8.3 format, 32 bytes)
  */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     char     name[8];               /**< 0x00: Filename (space-padded) */
     char     ext[3];                /**< 0x08: Extension (space-padded) */
     uint8_t  attributes;            /**< 0x0B: File attributes */
@@ -197,13 +191,11 @@ typedef struct {
     uint16_t cluster_low;           /**< 0x1A: Low word of first cluster */
     uint32_t file_size;             /**< 0x1C: File size in bytes */
 } uft_fat_sfn_t;
-UFT_PACK_END
 
 /**
  * @brief FAT Long Filename Entry (32 bytes)
  */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     uint8_t  sequence;              /**< 0x00: Sequence number (1-20) | 0x40 for last */
     uint16_t name1[5];              /**< 0x01: Characters 1-5 (UCS-2) */
     uint8_t  attributes;            /**< 0x0B: Always 0x0F */
@@ -213,7 +205,6 @@ typedef struct {
     uint16_t cluster;               /**< 0x1A: Always 0x0000 */
     uint16_t name3[2];              /**< 0x1C: Characters 12-13 (UCS-2) */
 } uft_fat_lfn_t;
-UFT_PACK_END
 
 /*===========================================================================
  * Structures - Geometry

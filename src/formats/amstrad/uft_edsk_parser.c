@@ -20,7 +20,6 @@
 #include <string.h>
 #include <stdint.h>
 #include <stdbool.h>
-#include "uft/uft_compiler.h"
 
 /*============================================================================
  * EDSK CONSTANTS
@@ -47,8 +46,7 @@
  *============================================================================*/
 
 /* Disk Information Block (256 bytes) */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     char     signature[34];          /* Format signature */
     char     creator[14];            /* Creator name */
     uint8_t  num_tracks;             /* Number of tracks */
@@ -56,11 +54,9 @@ typedef struct {
     uint16_t track_size;             /* Track size (standard DSK only) */
     uint8_t  track_sizes[MAX_TRACKS]; /* Per-track sizes (EDSK) */
 } edsk_disk_info_t;
-UFT_PACK_END
 
 /* Track Information Block (256 bytes) */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     char     signature[12];          /* "Track-Info\r\n" */
     uint8_t  unused1[4];
     uint8_t  track_number;           /* Track number */
@@ -72,11 +68,9 @@ typedef struct {
     uint8_t  filler_byte;            /* Filler byte */
     /* Followed by sector info blocks */
 } edsk_track_info_t;
-UFT_PACK_END
 
 /* Sector Information Block (8 bytes) */
-UFT_PACK_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
     uint8_t  track;                  /* ID: track (C) */
     uint8_t  side;                   /* ID: side (H) */
     uint8_t  sector;                 /* ID: sector (R) */
@@ -85,7 +79,6 @@ typedef struct {
     uint8_t  fdc_status2;            /* FDC status register 2 */
     uint16_t data_length;            /* Actual data length (EDSK) */
 } edsk_sector_info_t;
-UFT_PACK_END
 
 /* Parsed sector */
 typedef struct {
@@ -156,7 +149,7 @@ typedef struct {
  * INTERNAL HELPERS
  *============================================================================*/
 
-static __attribute__((unused)) uint16_t read_le16(const uint8_t* p) {
+static uint16_t read_le16(const uint8_t* p) {
     return (uint16_t)p[0] | ((uint16_t)p[1] << 8);
 }
 
@@ -605,7 +598,6 @@ int edsk_parser_analyze_format(
 #ifdef EDSK_PARSER_TEST
 
 #include <assert.h>
-#include "uft/uft_compiler.h"
 
 int main(void) {
     printf("=== EDSK Parser Unit Tests ===\n");

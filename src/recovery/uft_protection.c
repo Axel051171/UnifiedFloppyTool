@@ -445,7 +445,7 @@ void uft_protection_result_free(uft_protection_result_t *result)
 /**
  * @brief Get protection type name
  */
-static const char* recovery_protection_type_name(uft_protection_type_t type)
+const char* uft_protection_type_name(uft_protection_type_t type)
 {
     switch (type) {
         case UFT_PROT_NONE:             return "None";

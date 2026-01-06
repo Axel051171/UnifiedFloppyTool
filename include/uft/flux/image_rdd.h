@@ -7,10 +7,6 @@
 #include "fdc_vfo_def.h"
 #include "fdc_bitstream.h"
 
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
-
 class disk_image_rdd : public disk_image {
 private:
     size_t m_vfo_type;

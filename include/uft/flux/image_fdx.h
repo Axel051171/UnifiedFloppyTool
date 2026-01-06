@@ -5,9 +5,6 @@
 #include "bit_array.h"
 #include "image_base.h"
 
-#include <stdbool.h>
-#include <stdint.h>
-
 // FDX header
 // IMPORTANT: Some of the data in this header has data type boundary misalignment.
 //            You need to specify #pragma pack(1). Otherwise, the compiler will insert 

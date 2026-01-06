@@ -19,9 +19,7 @@ target_include_directories(uft_decoders_v2 PUBLIC
     ${CMAKE_SOURCE_DIR}/include
 )
 
-target_link_libraries(uft_decoders_v2 PRIVATE
-    uft_core
+target_link_libraries(uft_decoders_v2
+    # uft_unified  # DISABLED: not built
+    m
 )
-
-# Math library via zentrale Funktion
-uft_link_math(uft_decoders_v2)

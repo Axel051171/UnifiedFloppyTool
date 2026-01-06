@@ -17,7 +17,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
-#include "uft/uft_compiler.h"
 
 /*===========================================================================
  * Constants
@@ -56,8 +55,7 @@ typedef struct {
     uint8_t     tracks;
     uint8_t     sectors;
     uint8_t     sector_size;    /* In 64-byte units */
-} sad_header_t;
-UFT_PACK_END
+} __attribute__((packed)) sad_header_t;
 
 /*===========================================================================
  * Extended DSK Structures
@@ -70,8 +68,7 @@ typedef struct {
     uint8_t     sides;
     uint8_t     unused[2];
     uint8_t     track_sizes[MAX_TRACKS * MAX_SIDES];  /* MSB of track size */
-} edsk_header_t;
-UFT_PACK_END
+} __attribute__((packed)) edsk_header_t;
 
 typedef struct {
     uint8_t     signature[TRACK_INFO_LEN];
@@ -83,8 +80,7 @@ typedef struct {
     uint8_t     sector_count;
     uint8_t     gap3_length;
     uint8_t     filler_byte;
-} edsk_track_info_t;
-UFT_PACK_END
+} __attribute__((packed)) edsk_track_info_t;
 
 typedef struct {
     uint8_t     track;
@@ -95,8 +91,7 @@ typedef struct {
     uint8_t     fdc_status2;
     uint8_t     data_length_lo;
     uint8_t     data_length_hi;
-} edsk_sector_info_t;
-UFT_PACK_END
+} __attribute__((packed)) edsk_sector_info_t;
 
 /*===========================================================================
  * Helpers

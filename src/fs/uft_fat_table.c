@@ -27,29 +27,12 @@
 #include <stdio.h>
 #include <inttypes.h>
 #include <fcntl.h>
+#include <unistd.h>
 #include <string.h>
 #include <stdint.h>
-#include <ctype.h>
-
-#ifdef _WIN32
-#include <io.h>
-#include <windows.h>
-#define lseek _lseek
-#define read _read
-#define write _write
-#define close _close
-#define open _open
-/* Windows doesn't have endian.h - define le16toh/le32toh */
-#define le16toh(x) (x)
-#define le32toh(x) (x)
-#define htole16(x) (x)
-#define htole32(x) (x)
-#else
-#include <unistd.h>
 #include <search.h>
 #include <endian.h>
-#endif
-
+#include <ctype.h>
 #include "table.h"
 
 int fattabledebug = 0;

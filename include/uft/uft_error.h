@@ -15,8 +15,6 @@
 #include <stddef.h>
 #include <stdbool.h>
 
-#include <stdio.h>
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -120,8 +118,6 @@ typedef uft_rc_t uft_error_t;
 #define UFT_ERROR_CANCELLED      UFT_ERR_TIMEOUT
 #define UFT_ERROR_FILE_WRITE     UFT_ERR_IO
 #define UFT_ERROR_FILE_READ      UFT_ERR_IO
-#define UFT_ERROR_IO             UFT_ERR_IO
-#define UFT_ERROR_TOOL_FAILED    UFT_ERR_INTERNAL
 #define UFT_ERROR               UFT_ERR_INTERNAL
 #define UFT_ERROR_UNKNOWN_ENCODING UFT_ERR_FORMAT
 #define UFT_ERROR_PLUGIN_LOAD    UFT_ERR_INTERNAL

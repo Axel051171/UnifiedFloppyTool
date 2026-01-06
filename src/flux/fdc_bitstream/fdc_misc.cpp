@@ -7,25 +7,16 @@
  * 
  * @copyright Copyright (c) 2022
  * 
- * @note FIXED R18: All #includes MUST be outside namespace blocks to avoid
- *       polluting the namespace with std:: symbols (causes "fdc_misc::std" errors)
  */
 
 #include <algorithm>
-
-// Platform-specific includes - MUST be before namespace block
-#ifdef _WIN32
-    #include <windows.h>
-#else
-    #include <iostream>
-    #include <sstream>
-#endif
 
 #include "fdc_misc.h"
 
 namespace fdc_misc {
 
 #ifdef _WIN32
+#include <windows.h>
 void color(size_t col) {
     //if(col>7) col=7;
     size_t flags = FOREGROUND_INTENSITY;
@@ -43,6 +34,8 @@ void color(size_t col) {
     SetConsoleTextAttribute(console_handle, flags);
 }
 #else
+#include <iostream>
+#include <sstream>
 void color(size_t col) {
     const size_t col_tbl[8] { 30, 34, 31, 35, 32, 36, 33, 37 };
     if(col>7) col=7;

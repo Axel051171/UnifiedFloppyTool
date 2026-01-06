@@ -13,8 +13,6 @@
 #include "uft_types.h"
 #include "uft_error.h"
 
-#include <stdbool.h>
-
 #ifdef __cplusplus
 extern "C" {
 #endif
