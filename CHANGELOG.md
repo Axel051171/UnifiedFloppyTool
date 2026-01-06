@@ -1,6 +1,27 @@
 # Changelog
 
 All notable changes to UnifiedFloppyTool will be documented in this file.
+
+## [3.6.0] - 2026-01-06 - "GitHub Release Edition"
+
+### 🔧 Build Fixes
+- **Fixed**: Uninitialized variables in `uft_bitstream_preserve.c:619,654` (14 variables)
+- **Fixed**: Linux Qt6 -fPIC compile error - switched to aqtinstall (Qt 6.6.2)
+- **Fixed**: macOS compatibility - upgraded to macos-15 runner (ARM64)
+
+### 🚀 CI/CD
+- Linux: Qt6 via aqtinstall (6.6.2) instead of system packages
+- macOS: Upgraded from macos-13 to macos-15 (ARM64/Apple Silicon)
+- Matrix builds for Windows, macOS, Linux
+- Automated release artifacts (tar.gz, deb, zip)
+- Test labels for selective test execution (smoke, io, parser)
+
+### 📄 Documentation
+- Updated TODO.md with current status
+- Release-ready documentation structure
+
+---
+
 ## [3.4.3] - 2026-01-06
 
 ### Fixed

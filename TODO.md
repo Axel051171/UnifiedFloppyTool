@@ -1,6 +1,6 @@
 # UFT TODO - Priorisiert & Dedupliziert
 
-**Version:** 3.5.0  
+**Version:** 3.6.0  
 **Stand:** 2026-01-06  
 **Status:** 🟢 Release-Ready (CI-Builds funktionieren)
 
@@ -10,16 +10,18 @@
 
 | Priorität | Offen | Erledigt |
 |-----------|-------|----------|
-| P0 (Kritisch) | 0 | 3 |
-| P1 (Hoch) | 4 | 3 |
-| P2 (Mittel) | 6 | 2 |
+| P0 (Kritisch) | 0 | 4 |
+| P1 (Hoch) | 4 | 4 |
+| P2 (Mittel) | 6 | 3 |
 | P3 (Niedrig) | 5 | 0 |
 
 ---
 
 ## ✅ ERLEDIGT
 
-### Build-Fixes (v3.5.0)
+### Build-Fixes (v3.6.0)
+- [x] **Uninitialisierte Variablen**: `uft_bitstream_preserve.c:619,654` - 14 Variablen initialisiert
+- [x] **Linux Qt6 -fPIC**: CMakeLists.txt + CI Workflow angepasst
 - [x] **Windows C4146**: `-(crc & 1)` → Ternary in `uft_writer_verify.c:58`
 - [x] **macOS Linker**: `-z,-pie` nur auf Linux (`cmake/SecurityFlags.cmake`)
 - [x] **Linux AppImage**: `app_icon.png` erstellt

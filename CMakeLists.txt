@@ -8,7 +8,7 @@
 cmake_minimum_required(VERSION 3.16)
 
 project(UnifiedFloppyTool
-    VERSION 3.5.0
+    VERSION 3.6.0
     DESCRIPTION "Cross-platform floppy disk preservation and analysis tool"
     LANGUAGES CXX C
 )
@@ -577,8 +577,8 @@ set(CPACK_PACKAGE_NAME "uft")
 set(CPACK_PACKAGE_VENDOR "UFT Project")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Universal Floppy Tool - Cross-platform disk imaging")
 set(CPACK_PACKAGE_DESCRIPTION "UFT is a comprehensive floppy disk preservation and analysis tool supporting 200+ disk formats, flux-level imaging, and copy protection analysis.")
-set(CPACK_PACKAGE_HOMEPAGE_URL "https://github.com/your-username/uft")
-set(CPACK_PACKAGE_CONTACT "your-email@example.com")
+set(CPACK_PACKAGE_HOMEPAGE_URL "https://github.com/Axel051171/UnifiedFloppyTool")
+set(CPACK_PACKAGE_CONTACT "axel.kramer@unifiedfloppytool.org")
 set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
 set(CPACK_PACKAGE_VERSION_MAJOR ${PROJECT_VERSION_MAJOR})
 set(CPACK_PACKAGE_VERSION_MINOR ${PROJECT_VERSION_MINOR})
@@ -603,7 +603,7 @@ set(CPACK_GENERATOR "TGZ")
 if(UNIX AND NOT APPLE)
     list(APPEND CPACK_GENERATOR "DEB")
     
-    set(CPACK_DEBIAN_PACKAGE_MAINTAINER "UFT Project <your-email@example.com>")
+    set(CPACK_DEBIAN_PACKAGE_MAINTAINER "UFT Project <axel.kramer@unifiedfloppytool.org>")
     set(CPACK_DEBIAN_PACKAGE_SECTION "utils")
     set(CPACK_DEBIAN_PACKAGE_PRIORITY "optional")
     set(CPACK_DEBIAN_PACKAGE_DEPENDS "libc6 (>= 2.17), libusb-1.0-0 (>= 1.0.0), libqt6core6 (>= 6.2.0), libqt6gui6 (>= 6.2.0), libqt6widgets6 (>= 6.2.0)")

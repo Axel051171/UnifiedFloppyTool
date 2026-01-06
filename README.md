@@ -1,9 +1,9 @@
-# UnifiedFloppyTool (UFT) v3.5.0
+# UnifiedFloppyTool (UFT) v3.6.0
 
 [![CI Build](https://github.com/Axel051171/UnifiedFloppyTool/actions/workflows/ci.yml/badge.svg)](https://github.com/Axel051171/UnifiedFloppyTool/actions/workflows/ci.yml)
 [![Release](https://github.com/Axel051171/UnifiedFloppyTool/actions/workflows/release.yml/badge.svg)](https://github.com/Axel051171/UnifiedFloppyTool/actions/workflows/release.yml)
 [![License: GPL-2.0](https://img.shields.io/badge/License-GPL%202.0-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-3.5.0-green.svg)](https://github.com/Axel051171/UnifiedFloppyTool/releases/latest)
+[![Version](https://img.shields.io/badge/version-3.6.0-green.svg)](https://github.com/Axel051171/UnifiedFloppyTool/releases/latest)
 
 > **"Bei uns geht kein Bit verloren"** - No bit gets lost
 
@@ -35,9 +35,9 @@ Professional-grade floppy disk preservation and analysis tool supporting 115+ di
 
 Get the latest release from [GitHub Releases](https://github.com/Axel051171/UnifiedFloppyTool/releases):
 
-- **Linux**: `uft-v3.3.0-linux-x64.tar.gz` or `uft-v3.3.0-linux-amd64.deb`
-- **Windows**: `uft-v3.3.0-windows-x64.zip`
-- **macOS**: `uft-v3.3.0-macos-arm64.zip`
+- **Linux**: `uft-3.6.0-linux-x86_64.tar.gz` or `uft-3.6.0-linux-x86_64.deb`
+- **Windows**: `uft-3.6.0-windows-x64.zip`
+- **macOS**: `uft-3.6.0-macos-arm64.tar.gz` (Apple Silicon)
 
 ### Build from Source
 
