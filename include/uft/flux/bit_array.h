@@ -24,7 +24,7 @@ private:
     inline size_t to_alloc_unit(size_t size) { return ((((size)/256)+1)*256); }
 public:
 
-    bit_array() : m_stream_pos(), m_wraparound(false), m_bit_length() {
+    bit_array() : m_bit_length(0), m_stream_pos(0), m_wraparound(false) {
         m_array_data.clear();
     }
 

@@ -20,7 +20,22 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
-#include <sys/types.h>
+/* Windows compatibility for ssize_t */
+#ifdef _WIN32
+    #ifndef _SSIZE_T_DEFINED
+        #define _SSIZE_T_DEFINED
+        #include <basetsd.h>
+        #ifdef _WIN64
+            typedef __int64 ssize_t;
+        #else
+            typedef int ssize_t;
+        #endif
+    #endif
+#endif
+/* POSIX systems: ssize_t from sys/types.h */
+#ifndef _WIN32
+    #include <sys/types.h>
+#endif
 
 #ifdef __cplusplus
 extern "C" {

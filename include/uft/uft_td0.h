@@ -18,6 +18,9 @@
 #include <stddef.h>
 #include <stdbool.h>
 
+/* Forward declaration */
+struct uft_imd_image_t;
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -144,6 +147,7 @@ typedef struct {
     uint8_t  sides;         /**< Number of sides */
     uint16_t crc;           /**< Header CRC-16 */
 } uft_td0_header_t;
+#pragma pack(pop)
 
 /**
  * @brief TD0 comment block header (10 bytes)
@@ -159,6 +163,7 @@ typedef struct {
     uint8_t  minute;        /**< Minute (0-59) */
     uint8_t  second;        /**< Second (0-59) */
 } uft_td0_comment_header_t;
+#pragma pack(pop)
 
 /**
  * @brief TD0 track header (4 bytes)
@@ -170,6 +175,7 @@ typedef struct {
     uint8_t  side;          /**< Physical side/head */
     uint8_t  crc;           /**< Header CRC-8 */
 } uft_td0_track_header_t;
+#pragma pack(pop)
 
 /**
  * @brief TD0 sector header (6 bytes)
@@ -183,6 +189,7 @@ typedef struct {
     uint8_t  flags;         /**< Sector flags */
     uint8_t  crc;           /**< Sector header CRC-8 */
 } uft_td0_sector_header_t;
+#pragma pack(pop)
 
 /**
  * @brief TD0 data block header (3 bytes)
@@ -192,6 +199,7 @@ typedef struct {
     uint16_t offset;        /**< Offset to next data block */
     uint8_t  method;        /**< Encoding method */
 } uft_td0_data_header_t;
+#pragma pack(pop)
 
 /*============================================================================
  * LZSS Decompression State

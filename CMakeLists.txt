@@ -8,7 +8,7 @@
 cmake_minimum_required(VERSION 3.16)
 
 project(UnifiedFloppyTool
-    VERSION 3.3.0
+    VERSION 3.7.0
     DESCRIPTION "Cross-platform floppy disk preservation and analysis tool"
     LANGUAGES CXX C
 )
@@ -150,6 +150,8 @@ add_subdirectory(src/formats/amstrad)
 add_subdirectory(src/formats/msa)
 # Floppy I/O Library (GCR, MFM, FAT12)
 add_subdirectory(lib/floppy)
+add_subdirectory(src/formats/flashfloppy)
+add_subdirectory(src/forensic)
 
 # Disk Image Format Parsers (v3.2.0)
 add_subdirectory(src/loaders/disk_formats)
@@ -380,6 +382,9 @@ if(WIN32)
         NOMINMAX
         UNICODE
         _UNICODE
+        # Suppress MSVC CRT security warnings (we use safe functions where appropriate)
+        _CRT_SECURE_NO_WARNINGS
+        _CRT_NONSTDC_NO_WARNINGS
     )
 endif()
 
@@ -442,7 +447,8 @@ if(UFT_ENABLE_SIMD)
             target_compile_options(${PROJECT_NAME} PRIVATE /arch:AVX2)
             message(STATUS "  SIMD: AVX2")
         endif()
-    else()
+    elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64|i[3-6]86")
+        # Only enable AVX2/SSE on x86 architectures (not ARM/Apple Silicon)
         check_cxx_compiler_flag("-mavx2" HAVE_AVX2)
         check_cxx_compiler_flag("-msse4.2" HAVE_SSE42)
         
@@ -453,6 +459,9 @@ if(UFT_ENABLE_SIMD)
             target_compile_options(${PROJECT_NAME} PRIVATE -msse4.2)
             message(STATUS "  SIMD: SSE4.2")
         endif()
+    elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "arm64|aarch64|ARM64")
+        # ARM64/Apple Silicon - use NEON (auto-enabled on ARM64)
+        message(STATUS "  SIMD: ARM NEON (auto)")
     endif()
     
     target_compile_definitions(${PROJECT_NAME} PRIVATE UFT_ENABLE_SIMD)
@@ -490,5 +499,25 @@ install(TARGETS ${PROJECT_NAME}
     BUNDLE DESTINATION .
     RUNTIME DESTINATION bin
 )
+
+# Install desktop file and icons (Linux)
+if(UNIX AND NOT APPLE)
+    # Desktop file
+    install(FILES ${CMAKE_SOURCE_DIR}/packaging/linux/UnifiedFloppyTool.desktop
+            DESTINATION share/applications)
+    
+    # Icons (multiple sizes)
+    install(FILES ${CMAKE_SOURCE_DIR}/resources/icons/UnifiedFloppyTool.svg
+            DESTINATION share/icons/hicolor/scalable/apps)
+    
+    # PNG icons for various sizes (if they exist)
+    foreach(SIZE 16 32 48 64 128 256)
+        if(EXISTS "${CMAKE_SOURCE_DIR}/resources/icons/UnifiedFloppyTool_${SIZE}.png")
+            install(FILES ${CMAKE_SOURCE_DIR}/resources/icons/UnifiedFloppyTool_${SIZE}.png
+                    DESTINATION share/icons/hicolor/${SIZE}x${SIZE}/apps
+                    RENAME UnifiedFloppyTool.png)
+        endif()
+    endforeach()
+endif()
 
 message(STATUS "════════════════════════════════════════════════════")

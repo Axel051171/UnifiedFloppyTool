@@ -16,13 +16,17 @@
  * @brief Construct a new mfm codec::mfm codec object
  * 
  */
-mfm_codec::mfm_codec() : m_bit_stream(),
-        m_sync_mode(false), m_wraparound(false),
-        m_prev_write_bit(),
-        m_sampling_rate(4e6), m_data_bit_rate(500e3),
-        m_vfo_suspension_rate(),
+mfm_codec::mfm_codec() : 
         m_track_ready(false),
-        m_current_bit_pos(), m_distance_to_next_pulse(),
+        m_sync_mode(false),
+        m_bit_stream(),
+        m_wraparound(false),
+        m_prev_write_bit(),
+        m_sampling_rate(4e6), 
+        m_data_bit_rate(500e3),
+        m_current_bit_pos(), 
+        m_distance_to_next_pulse(),
+        m_vfo_suspension_rate(),
         m_vfo(nullptr)
 {
     set_vfo_type(VFO_TYPE_DEFAULT);

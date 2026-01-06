@@ -63,18 +63,29 @@ elseif(APPLE)
 endif()
 
 # Relaxed warnings for this library (external code)
-if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
+    # GCC-specific flags
     target_compile_options(uft_floppy PRIVATE
         -Wall
         -Wno-unused-variable
         -Wno-unused-function
         -Wno-sign-conversion
         -Wno-implicit-fallthrough
-        -Wno-stringop-truncation
+        -Wno-stringop-truncation  # GCC only
+        -Wno-unused-result
+    )
+elseif(CMAKE_C_COMPILER_ID STREQUAL "Clang" OR CMAKE_C_COMPILER_ID STREQUAL "AppleClang")
+    # Clang/AppleClang flags (no -Wno-stringop-truncation)
+    target_compile_options(uft_floppy PRIVATE
+        -Wall
+        -Wno-unused-variable
+        -Wno-unused-function
+        -Wno-sign-conversion
+        -Wno-implicit-fallthrough
         -Wno-unused-result
     )
 elseif(MSVC)
-    target_compile_options(uft_floppy PRIVATE /W3)
+    target_compile_options(uft_floppy PRIVATE /W3 /wd4996)
 endif()
 
 message(STATUS "  UFT Floppy Library: GCR, MFM, FAT12, Flux, Protection")

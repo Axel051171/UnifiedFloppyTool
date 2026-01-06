@@ -137,22 +137,24 @@ extern "C" {
 #endif
 
 /*============================================================================
- * Struct packing
+ * Struct packing (with guards to prevent redefinition warnings)
  *============================================================================*/
 
-#if defined(_MSC_VER)
-    #define UFT_PACKED_BEGIN __pragma(pack(push, 1))
-    #define UFT_PACKED_END   __pragma(pack(pop))
-    #define UFT_PACKED_STRUCT
-#elif defined(__GNUC__) || defined(__clang__)
-    #define UFT_PACKED_BEGIN
-    #define UFT_PACKED_END
-    #define UFT_PACKED_STRUCT __attribute__((packed))
-#else
-    #define UFT_PACKED_BEGIN
-    #define UFT_PACKED_END
-    #define UFT_PACKED_STRUCT
-#endif
+#ifndef UFT_PACKED_BEGIN
+    #if defined(_MSC_VER)
+        #define UFT_PACKED_BEGIN __pragma(pack(push, 1))
+        #define UFT_PACKED_END   __pragma(pack(pop))
+        #define UFT_PACKED_STRUCT
+    #elif defined(__GNUC__) || defined(__clang__)
+        #define UFT_PACKED_BEGIN
+        #define UFT_PACKED_END
+        #define UFT_PACKED_STRUCT __attribute__((packed))
+    #else
+        #define UFT_PACKED_BEGIN
+        #define UFT_PACKED_END
+        #define UFT_PACKED_STRUCT
+    #endif
+#endif /* UFT_PACKED_BEGIN */
 
 #ifdef __cplusplus
 }

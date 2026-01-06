@@ -21,6 +21,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>  /* strcasecmp */
 #include <stdint.h>
 #include <stdbool.h>
 #include "uft/uft_atomics.h"

@@ -1,3 +1,10 @@
+/* Feature test macros for gethostname */
+#ifndef _POSIX_C_SOURCE
+#define _POSIX_C_SOURCE 200809L
+#endif
+#ifndef _DEFAULT_SOURCE
+#define _DEFAULT_SOURCE 1
+#endif
 /**
  * @file uft_audit_trail.c
  * @brief UFT Audit Trail System Implementation
@@ -12,6 +19,7 @@
 #include "uft/uft_audit_trail.h"
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #include <stdarg.h>
 
 #ifdef _WIN32
