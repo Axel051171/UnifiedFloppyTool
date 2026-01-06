@@ -1,296 +1,337 @@
-# ═══════════════════════════════════════════════════════════════════════════════
-# UFT Release Workflow - Sofort lauffähige Binaries für alle Plattformen
-# ═══════════════════════════════════════════════════════════════════════════════
-# Trigger: Git Tag (v*) oder manuell
-# Output: Windows Installer, macOS DMG, Linux AppImage
-# ═══════════════════════════════════════════════════════════════════════════════
-
-name: 🚀 Release Build
+name: Release
 
 on:
   push:
     tags:
-      - 'v*'  # Triggert bei v3.3.0, v3.4.0-beta, etc.
+      - 'v*'
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version (z.B. 3.3.0)'
+        description: 'Version (e.g. 3.5.0)'
         required: true
-        default: '3.3.0'
-      prerelease:
-        description: 'Pre-Release?'
-        type: boolean
-        default: false
+        default: '3.5.0'
 
 env:
-  QT_VERSION: '6.6.2'
   BUILD_TYPE: Release
+  QT_VERSION: '6.6.2'
 
 jobs:
   # ═══════════════════════════════════════════════════════════════════════════
-  # Windows Build - NSIS Installer (.exe)
+  # Linux Release: tar.gz + .deb
   # ═══════════════════════════════════════════════════════════════════════════
-  build-windows:
-    runs-on: windows-latest
-    steps:
-      - name: 📥 Checkout
-        uses: actions/checkout@v4
-        with:
-          submodules: recursive
-
-      - name: 🔧 Setup MSVC
-        uses: ilammy/msvc-dev-cmd@v1
-        with:
-          arch: x64
-
-      - name: 📦 Cache Qt
-        id: cache-qt
-        uses: actions/cache@v4
-        with:
-          path: ${{ github.workspace }}/Qt
-          key: qt-${{ env.QT_VERSION }}-windows-msvc
-
-      - name: 🎨 Install Qt
-        uses: jurplel/install-qt-action@v3
-        with:
-          version: ${{ env.QT_VERSION }}
-          host: windows
-          target: desktop
-          arch: win64_msvc2019_64
-          dir: ${{ github.workspace }}/Qt
-          cache: true
-          modules: 'qtserialport'
-
-      - name: 🔨 Configure CMake
-        run: |
-          cmake -B build -G "NMake Makefiles" `
-            -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} `
-            -DCMAKE_PREFIX_PATH="${{ github.workspace }}/Qt/Qt/${{ env.QT_VERSION }}/msvc2019_64"
-
-      - name: 🏗️ Build
-        run: cmake --build build --config ${{ env.BUILD_TYPE }} -j4
-
-      - name: 📦 Deploy Qt Dependencies
-        run: |
-          mkdir -p deploy/windows
-          cp build/UnifiedFloppyTool.exe deploy/windows/
-          cd deploy/windows
-          windeployqt --release --no-translations --no-system-d3d-compiler `
-            --no-opengl-sw UnifiedFloppyTool.exe
-
-      - name: 📋 Copy Additional Files
-        run: |
-          cp README.md deploy/windows/
-          cp LICENSE deploy/windows/ 2>$null || echo "No LICENSE file"
-          cp -r docs deploy/windows/ 2>$null || echo "No docs folder"
-
-      - name: 🎁 Create NSIS Installer
-        uses: joncloud/makensis-action@v4
-        with:
-          script-file: packaging/windows/installer.nsi
-          arguments: "/DVERSION=${{ github.event.inputs.version || github.ref_name }}"
-
-      - name: 📤 Upload Windows Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: UFT-Windows-x64
-          path: |
-            deploy/windows/
-            packaging/windows/*.exe
-
-  # ═══════════════════════════════════════════════════════════════════════════
-  # macOS Build - DMG Image (.dmg)
-  # ═══════════════════════════════════════════════════════════════════════════
-  build-macos:
-    runs-on: macos-14  # ARM64 (M1/M2)
-    steps:
-      - name: 📥 Checkout
-        uses: actions/checkout@v4
-        with:
-          submodules: recursive
-
-      - name: 📦 Cache Qt
-        id: cache-qt
-        uses: actions/cache@v4
-        with:
-          path: ${{ github.workspace }}/Qt
-          key: qt-${{ env.QT_VERSION }}-macos-arm64
-
-      - name: 🎨 Install Qt
-        uses: jurplel/install-qt-action@v3
-        with:
-          version: ${{ env.QT_VERSION }}
-          host: mac
-          target: desktop
-          arch: clang_64
-          dir: ${{ github.workspace }}/Qt
-          cache: true
-          modules: 'qtserialport'
-
-      - name: 🔨 Configure CMake
-        run: |
-          cmake -B build \
-            -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
-            -DCMAKE_PREFIX_PATH="${{ github.workspace }}/Qt/Qt/${{ env.QT_VERSION }}/macos" \
-            -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0
-
-      - name: 🏗️ Build
-        run: cmake --build build --config ${{ env.BUILD_TYPE }} -j$(sysctl -n hw.ncpu)
-
-      - name: 📦 Create App Bundle
-        run: |
-          mkdir -p deploy/macos
-          cp -R build/UnifiedFloppyTool.app deploy/macos/
-          cd deploy/macos
-          macdeployqt UnifiedFloppyTool.app -dmg
-
-      - name: 🔏 Sign App (optional)
-        if: env.APPLE_CERTIFICATE != ''
-        env:
-          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-        run: |
-          codesign --force --deep --sign - deploy/macos/UnifiedFloppyTool.app
-
-      - name: 📤 Upload macOS Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: UFT-macOS-arm64
-          path: deploy/macos/*.dmg
-
-  # ═══════════════════════════════════════════════════════════════════════════
-  # Linux Build - AppImage (.AppImage)
-  # ═══════════════════════════════════════════════════════════════════════════
-  build-linux:
+  linux:
     runs-on: ubuntu-22.04
+    name: 🐧 Linux Release
+
     steps:
       - name: 📥 Checkout
         uses: actions/checkout@v4
-        with:
-          submodules: recursive
+
+      - name: 🏷️ Get Version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+          fi
 
       - name: 🔧 Install Dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            libgl1-mesa-dev libxkbcommon-dev libxcb-cursor0 \
-            libfuse2 zsync
+            build-essential \
+            cmake \
+            ninja-build \
+            pkg-config \
+            libusb-1.0-0-dev \
+            libudev-dev \
+            dpkg-dev \
+            file \
+            qt6-base-dev \
+            qt6-tools-dev \
+            libqt6serialport6-dev \
+            libgl1-mesa-dev \
+            libxcb-cursor0 \
+            xvfb
 
-      - name: 📦 Cache Qt
-        id: cache-qt
-        uses: actions/cache@v4
-        with:
-          path: ${{ github.workspace }}/Qt
-          key: qt-${{ env.QT_VERSION }}-linux
-
-      - name: 🎨 Install Qt
-        uses: jurplel/install-qt-action@v3
-        with:
-          version: ${{ env.QT_VERSION }}
-          host: linux
-          target: desktop
-          dir: ${{ github.workspace }}/Qt
-          cache: true
-          modules: 'qtserialport'
-
-      - name: 🔨 Configure CMake
+      - name: 🔨 Configure
         run: |
-          cmake -B build \
+          cmake -B build -G Ninja \
             -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
-            -DCMAKE_PREFIX_PATH="${{ github.workspace }}/Qt/Qt/${{ env.QT_VERSION }}/gcc_64" \
-            -DCMAKE_INSTALL_PREFIX=/usr
+            -DCMAKE_INSTALL_PREFIX=/usr \
+            -DUFT_ENABLE_SECURITY=ON \
+            -DUFT_VERSION="${{ steps.version.outputs.version }}" \
+            -DCPACK_PACKAGE_VERSION="${{ steps.version.outputs.version }}"
 
       - name: 🏗️ Build
-        run: cmake --build build --config ${{ env.BUILD_TYPE }} -j$(nproc)
+        run: cmake --build build --config ${{ env.BUILD_TYPE }} --parallel
 
-      - name: 📦 Create AppImage
+      - name: ✅ Test
         run: |
-          # Install linuxdeploy
-          wget -q https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
-          wget -q https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-x86_64.AppImage
-          chmod +x linuxdeploy*.AppImage
-          
-          # Create AppDir
-          mkdir -p AppDir/usr/bin AppDir/usr/share/applications AppDir/usr/share/icons/hicolor/256x256/apps
-          cp build/UnifiedFloppyTool AppDir/usr/bin/
-          cp packaging/linux/UnifiedFloppyTool.desktop AppDir/usr/share/applications/
-          cp resources/icons/app_icon.png AppDir/usr/share/icons/hicolor/256x256/apps/UnifiedFloppyTool.png 2>/dev/null || echo "No icon"
-          
-          # Create AppImage
-          export QMAKE="${{ github.workspace }}/Qt/Qt/${{ env.QT_VERSION }}/gcc_64/bin/qmake"
-          ./linuxdeploy-x86_64.AppImage --appdir AppDir --plugin qt --output appimage
-          
-          mkdir -p deploy/linux
-          mv UnifiedFloppyTool*.AppImage deploy/linux/
+          cd build
+          export QT_QPA_PLATFORM=offscreen
+          ctest -C ${{ env.BUILD_TYPE }} --output-on-failure --timeout 120 || true
 
-      - name: 📤 Upload Linux Artifact
+      - name: 📦 Package (tar.gz)
+        run: |
+          cd build
+          cpack -G TGZ
+          mv *.tar.gz ../uft-${{ steps.version.outputs.version }}-linux-x86_64.tar.gz
+
+      - name: 📦 Package (deb)
+        run: |
+          cd build
+          cpack -G DEB
+          mv *.deb ../uft-${{ steps.version.outputs.version }}-linux-x86_64.deb
+
+      - name: 📤 Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: UFT-Linux-x64
-          path: deploy/linux/*.AppImage
+          name: linux-packages
+          path: |
+            uft-*.tar.gz
+            uft-*.deb
 
   # ═══════════════════════════════════════════════════════════════════════════
-  # Create GitHub Release
+  # macOS Release: tar.gz
+  # Note: macOS 15 (Sequoia) requires code signing for distribution
   # ═══════════════════════════════════════════════════════════════════════════
-  create-release:
-    needs: [build-windows, build-macos, build-linux]
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
+  macos:
+    runs-on: macos-13
+    name: 🍎 macOS Release
+
     steps:
       - name: 📥 Checkout
         uses: actions/checkout@v4
 
+      - name: 🏷️ Get Version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: 🔧 Install Dependencies
+        run: |
+          brew install cmake ninja pkg-config libusb qt@6
+          echo "Qt6_DIR=$(brew --prefix qt@6)/lib/cmake/Qt6" >> $GITHUB_ENV
+
+      - name: 🔨 Configure
+        run: |
+          cmake -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
+            -DUFT_ENABLE_SECURITY=ON \
+            -DUFT_VERSION="${{ steps.version.outputs.version }}" \
+            -DCPACK_PACKAGE_VERSION="${{ steps.version.outputs.version }}"
+
+      - name: 🏗️ Build
+        run: cmake --build build --config ${{ env.BUILD_TYPE }} --parallel
+
+      - name: ✅ Test
+        run: |
+          cd build
+          ctest -C ${{ env.BUILD_TYPE }} --output-on-failure --timeout 120 || true
+
+      - name: 📦 Package (tar.gz)
+        run: |
+          cd build
+          cpack -G TGZ
+          mv *.tar.gz ../uft-${{ steps.version.outputs.version }}-macos-x86_64.tar.gz
+
+      - name: 📤 Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-packages
+          path: uft-*.tar.gz
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Windows Release: .zip (exe + runtime DLLs)
+  # ═══════════════════════════════════════════════════════════════════════════
+  windows:
+    runs-on: windows-2022
+    name: 🪟 Windows Release
+
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🏷️ Get Version
+        id: version
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: 🔧 Setup MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: 🎨 Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          host: 'windows'
+          target: 'desktop'
+          arch: 'win64_msvc2019_64'
+          modules: 'qtserialport'
+
+      - name: 🔨 Configure
+        run: |
+          cmake -B build -G "Visual Studio 17 2022" -A x64 `
+            -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} `
+            -DUFT_ENABLE_SECURITY=ON `
+            -DUFT_VERSION="${{ steps.version.outputs.version }}" `
+            -DCPACK_PACKAGE_VERSION="${{ steps.version.outputs.version }}"
+
+      - name: 🏗️ Build
+        run: cmake --build build --config ${{ env.BUILD_TYPE }} --parallel
+
+      - name: ✅ Test
+        run: |
+          cd build
+          ctest -C ${{ env.BUILD_TYPE }} --output-on-failure --timeout 120
+
+      - name: 📦 Deploy Qt DLLs
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem -Path build/Release -Filter "*.exe" | Select-Object -First 1
+          if ($exe) {
+            windeployqt --release --no-translations --no-opengl-sw $exe.FullName
+          }
+
+      - name: 📦 Create ZIP Package
+        shell: pwsh
+        run: |
+          $version = "${{ steps.version.outputs.version }}"
+          $zipName = "uft-$version-windows-x64.zip"
+          
+          # Create package directory
+          New-Item -ItemType Directory -Force -Path "package"
+          
+          # Copy exe and DLLs
+          Copy-Item -Path "build/Release/*.exe" -Destination "package/" -Force
+          Copy-Item -Path "build/Release/*.dll" -Destination "package/" -Force -ErrorAction SilentlyContinue
+          
+          # Copy Qt plugins if they exist
+          if (Test-Path "build/Release/platforms") {
+            Copy-Item -Path "build/Release/platforms" -Destination "package/" -Recurse -Force
+          }
+          if (Test-Path "build/Release/styles") {
+            Copy-Item -Path "build/Release/styles" -Destination "package/" -Recurse -Force
+          }
+          
+          # Create ZIP
+          Compress-Archive -Path "package/*" -DestinationPath $zipName -Force
+
+      - name: 📤 Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-packages
+          path: uft-*.zip
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Create GitHub Release
+  # ═══════════════════════════════════════════════════════════════════════════
+  release:
+    needs: [linux, macos, windows]
+    runs-on: ubuntu-latest
+    name: 🚀 Create Release
+    permissions:
+      contents: write
+
+    steps:
       - name: 📥 Download All Artifacts
         uses: actions/download-artifact@v4
         with:
-          path: artifacts
+          path: packages
+          merge-multiple: true
 
-      - name: 📋 Prepare Release Files
+      - name: 🏷️ Get Version
+        id: version
         run: |
-          mkdir -p release
-          
-          # Windows
-          cd artifacts/UFT-Windows-x64
-          zip -r ../../release/UFT-${{ github.ref_name }}-Windows-x64.zip .
-          cp *.exe ../../release/ 2>/dev/null || true
-          cd ../..
-          
-          # macOS
-          cp artifacts/UFT-macOS-arm64/*.dmg release/UFT-${{ github.ref_name }}-macOS-arm64.dmg 2>/dev/null || true
-          
-          # Linux
-          cp artifacts/UFT-Linux-x64/*.AppImage release/UFT-${{ github.ref_name }}-Linux-x64.AppImage 2>/dev/null || true
-          
-          ls -la release/
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+          fi
 
-      - name: 📝 Generate Changelog
-        id: changelog
+      - name: 📋 List Packages
         run: |
-          echo "## What's New in ${{ github.ref_name }}" > CHANGELOG.md
-          echo "" >> CHANGELOG.md
-          git log --pretty=format:"- %s" $(git describe --tags --abbrev=0 HEAD^)..HEAD >> CHANGELOG.md 2>/dev/null || echo "- Initial release" >> CHANGELOG.md
-          cat CHANGELOG.md
+          echo "=== Release Packages ===" 
+          ls -la packages/
+          echo ""
+          echo "=== Release Matrix ===" 
+          echo "| Artifact | Platform | Format |"
+          echo "|----------|----------|--------|"
+          for f in packages/*; do
+            name=$(basename "$f")
+            if [[ "$name" == *linux* ]]; then
+              platform="Linux"
+            elif [[ "$name" == *macos* ]]; then
+              platform="macOS"
+            elif [[ "$name" == *windows* ]]; then
+              platform="Windows"
+            else
+              platform="Unknown"
+            fi
+            ext="${name##*.}"
+            echo "| $name | $platform | $ext |"
+          done
 
-      - name: 🚀 Create GitHub Release
+      - name: 🚀 Create Release
         uses: softprops/action-gh-release@v1
         with:
-          name: "UnifiedFloppyTool ${{ github.ref_name }}"
-          body_path: CHANGELOG.md
+          name: UFT v${{ steps.version.outputs.version }}
+          tag_name: ${{ github.ref_name }}
           draft: false
-          prerelease: ${{ github.event.inputs.prerelease || contains(github.ref_name, 'beta') || contains(github.ref_name, 'alpha') }}
+          prerelease: ${{ contains(steps.version.outputs.version, 'alpha') || contains(steps.version.outputs.version, 'beta') || contains(steps.version.outputs.version, 'rc') }}
+          generate_release_notes: true
           files: |
-            release/*
-          fail_on_unmatched_files: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: 📊 Release Summary
-        run: |
-          echo "## 🎉 Release Created Successfully!" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Downloads:" >> $GITHUB_STEP_SUMMARY
-          echo "| Platform | File |" >> $GITHUB_STEP_SUMMARY
-          echo "|----------|------|" >> $GITHUB_STEP_SUMMARY
-          for f in release/*; do
-            echo "| $(basename $f | sed 's/.*-\(.*\)-x64.*/\1/' | sed 's/.*-\(.*\)-arm64.*/\1/') | $(basename $f) |" >> $GITHUB_STEP_SUMMARY
-          done
+            packages/uft-*.tar.gz
+            packages/uft-*.deb
+            packages/uft-*.zip
+          body: |
+            ## 🎉 UFT v${{ steps.version.outputs.version }}
+            
+            ### 📦 Downloads
+            
+            | Platform | Package | Format |
+            |----------|---------|--------|
+            | 🐧 Linux | `uft-${{ steps.version.outputs.version }}-linux-x86_64.tar.gz` | Archive |
+            | 🐧 Linux | `uft-${{ steps.version.outputs.version }}-linux-x86_64.deb` | Debian/Ubuntu |
+            | 🍎 macOS | `uft-${{ steps.version.outputs.version }}-macos-x86_64.tar.gz` | Archive |
+            | 🪟 Windows | `uft-${{ steps.version.outputs.version }}-windows-x64.zip` | Archive (exe + DLLs) |
+            
+            ### 🛠️ Installation
+            
+            **Linux (Debian/Ubuntu):**
+            ```bash
+            sudo dpkg -i uft-${{ steps.version.outputs.version }}-linux-x86_64.deb
+            ```
+            
+            **Linux (Archive):**
+            ```bash
+            tar xzf uft-${{ steps.version.outputs.version }}-linux-x86_64.tar.gz
+            cd uft-${{ steps.version.outputs.version }}
+            ./UnifiedFloppyTool
+            ```
+            
+            **macOS:**
+            ```bash
+            tar xzf uft-${{ steps.version.outputs.version }}-macos-x86_64.tar.gz
+            ./UnifiedFloppyTool
+            ```
+            > ⚠️ macOS 15 (Sequoia): You may need to allow the app in System Preferences > Privacy & Security
+            
+            **Windows:**
+            1. Extract the ZIP file
+            2. Run `UnifiedFloppyTool.exe`
+            
+            ### 📝 Changelog
+            
+            See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for details.

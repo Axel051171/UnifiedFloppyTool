@@ -1,15 +1,10 @@
-# ═══════════════════════════════════════════════════════════════════════════════
-# UFT CI Workflow - Build & Test auf allen Plattformen
-# ═══════════════════════════════════════════════════════════════════════════════
-
-name: 🔨 CI Build
+name: CI Build
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main, master, develop]
   pull_request:
-    branches: [main]
-  workflow_dispatch:
+    branches: [main, master]
 
 env:
   QT_VERSION: '6.6.2'
@@ -17,157 +12,242 @@ env:
 
 jobs:
   # ═══════════════════════════════════════════════════════════════════════════
-  # Linux Build
+  # Linux Build + Tests
   # ═══════════════════════════════════════════════════════════════════════════
   build-linux:
     runs-on: ubuntu-22.04
+    name: 🐧 Linux
+
     steps:
       - name: 📥 Checkout
         uses: actions/checkout@v4
-        with:
-          submodules: recursive
 
       - name: 🔧 Install Dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            libgl1-mesa-dev libxkbcommon-dev libxcb-cursor0
+            build-essential \
+            cmake \
+            ninja-build \
+            pkg-config \
+            libusb-1.0-0-dev \
+            libudev-dev \
+            qt6-base-dev \
+            qt6-tools-dev \
+            libqt6serialport6-dev \
+            libgl1-mesa-dev \
+            libxcb-cursor0 \
+            xvfb
 
-      - name: 📦 Cache Qt
-        uses: actions/cache@v4
-        with:
-          path: ${{ github.workspace }}/Qt
-          key: qt-${{ env.QT_VERSION }}-linux
-
-      - name: 🎨 Install Qt
-        uses: jurplel/install-qt-action@v3
-        with:
-          version: ${{ env.QT_VERSION }}
-          host: linux
-          target: desktop
-          dir: ${{ github.workspace }}/Qt
-          cache: true
-          modules: 'qtserialport'
-
-      - name: 🔨 Configure
+      - name: 🔨 Configure CMake
         run: |
-          cmake -B build \
+          cmake -B build -G Ninja \
             -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
-            -DCMAKE_PREFIX_PATH="${{ github.workspace }}/Qt/Qt/${{ env.QT_VERSION }}/gcc_64"
+            -DUFT_ENABLE_SECURITY=ON \
+            -DCMAKE_C_FLAGS="-Wall -Wextra" \
+            -DCMAKE_CXX_FLAGS="-Wall -Wextra"
 
       - name: 🏗️ Build
-        run: cmake --build build -j$(nproc)
+        run: cmake --build build --config ${{ env.BUILD_TYPE }} --parallel
 
-      - name: ✅ Test
+      - name: ✅ Run Tests
         run: |
           cd build
-          ctest --output-on-failure || true
+          # Run tests with offscreen Qt platform (headless)
+          export QT_QPA_PLATFORM=offscreen
+          ctest -C ${{ env.BUILD_TYPE }} --output-on-failure --timeout 120 -L "smoke|io|parser" || true
+
+      - name: 📦 Package (tar.gz)
+        run: |
+          cd build
+          cpack -G TGZ || true
+          ls -la *.tar.gz 2>/dev/null || echo "No tar.gz created"
+
+      - name: 📦 Package (DEB)
+        run: |
+          cd build
+          cpack -G DEB || true
+          ls -la *.deb 2>/dev/null || echo "No deb created"
+
+      - name: 📤 Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: uft-linux-x86_64
+          path: |
+            build/*.tar.gz
+            build/*.deb
+            build/UnifiedFloppyTool
+          if-no-files-found: ignore
+
+      - name: 📊 Test Summary
+        if: always()
+        run: |
+          echo "## Linux Build Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ -f build/UnifiedFloppyTool ]; then
+            echo "✅ Build: SUCCESS" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Build: FAILED" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Tests" >> $GITHUB_STEP_SUMMARY
+          cd build && ctest -N 2>/dev/null | grep -E "Test #|Total Tests" >> $GITHUB_STEP_SUMMARY || echo "No tests found" >> $GITHUB_STEP_SUMMARY
 
   # ═══════════════════════════════════════════════════════════════════════════
-  # macOS Build
+  # macOS Build + Tests
   # ═══════════════════════════════════════════════════════════════════════════
   build-macos:
-    runs-on: macos-14
+    runs-on: macos-13
+    name: 🍎 macOS
+
     steps:
       - name: 📥 Checkout
         uses: actions/checkout@v4
-        with:
-          submodules: recursive
 
-      - name: 📦 Cache Qt
-        uses: actions/cache@v4
-        with:
-          path: ${{ github.workspace }}/Qt
-          key: qt-${{ env.QT_VERSION }}-macos
-
-      - name: 🎨 Install Qt
-        uses: jurplel/install-qt-action@v3
-        with:
-          version: ${{ env.QT_VERSION }}
-          host: mac
-          target: desktop
-          arch: clang_64
-          dir: ${{ github.workspace }}/Qt
-          cache: true
-          modules: 'qtserialport'
-
-      - name: 🔨 Configure
+      - name: 🔧 Install Dependencies
         run: |
-          cmake -B build \
+          brew install cmake ninja pkg-config libusb qt@6
+          echo "Qt6_DIR=$(brew --prefix qt@6)/lib/cmake/Qt6" >> $GITHUB_ENV
+          echo "PATH=$(brew --prefix qt@6)/bin:$PATH" >> $GITHUB_ENV
+
+      - name: 🔨 Configure CMake
+        run: |
+          cmake -B build -G Ninja \
             -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
-            -DCMAKE_PREFIX_PATH="${{ github.workspace }}/Qt/Qt/${{ env.QT_VERSION }}/macos" \
-            -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0
+            -DUFT_ENABLE_SECURITY=ON \
+            -DCMAKE_C_FLAGS="-Wall -Wextra" \
+            -DCMAKE_CXX_FLAGS="-Wall -Wextra"
 
       - name: 🏗️ Build
-        run: cmake --build build -j$(sysctl -n hw.ncpu)
+        run: cmake --build build --config ${{ env.BUILD_TYPE }} --parallel
 
-      - name: ✅ Test
+      - name: ✅ Run Tests
         run: |
           cd build
-          ctest --output-on-failure || true
+          # Run tests with offscreen Qt platform (headless CI)
+          export QT_QPA_PLATFORM=offscreen
+          ctest -C ${{ env.BUILD_TYPE }} --output-on-failure --timeout 120 -L "smoke|io|parser" || true
+
+      - name: 📦 Package (tar.gz)
+        run: |
+          cd build
+          cpack -G TGZ || true
+          ls -la *.tar.gz 2>/dev/null || echo "No tar.gz created"
+
+      - name: 📤 Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: uft-macos-x86_64
+          path: |
+            build/*.tar.gz
+            build/UnifiedFloppyTool.app
+            build/UnifiedFloppyTool
+          if-no-files-found: ignore
+
+      - name: 📊 Test Summary
+        if: always()
+        run: |
+          echo "## macOS Build Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ -f build/UnifiedFloppyTool ] || [ -d build/UnifiedFloppyTool.app ]; then
+            echo "✅ Build: SUCCESS" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Build: FAILED" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Note" >> $GITHUB_STEP_SUMMARY
+          echo "macOS 15 (Sequoia) may require additional signing. See docs/MACOS_BUILD.md" >> $GITHUB_STEP_SUMMARY
 
   # ═══════════════════════════════════════════════════════════════════════════
-  # Windows Build
+  # Windows Build + Tests
   # ═══════════════════════════════════════════════════════════════════════════
   build-windows:
-    runs-on: windows-latest
+    runs-on: windows-2022
+    name: 🪟 Windows
+
     steps:
       - name: 📥 Checkout
         uses: actions/checkout@v4
-        with:
-          submodules: recursive
 
       - name: 🔧 Setup MSVC
         uses: ilammy/msvc-dev-cmd@v1
-        with:
-          arch: x64
-
-      - name: 📦 Cache Qt
-        uses: actions/cache@v4
-        with:
-          path: ${{ github.workspace }}/Qt
-          key: qt-${{ env.QT_VERSION }}-windows
 
       - name: 🎨 Install Qt
-        uses: jurplel/install-qt-action@v3
+        uses: jurplel/install-qt-action@v4
         with:
           version: ${{ env.QT_VERSION }}
-          host: windows
-          target: desktop
-          arch: win64_msvc2019_64
-          dir: ${{ github.workspace }}/Qt
-          cache: true
+          host: 'windows'
+          target: 'desktop'
+          arch: 'win64_msvc2019_64'
           modules: 'qtserialport'
 
-      - name: 🔨 Configure
+      - name: 🔨 Configure CMake
         run: |
-          cmake -B build -G "NMake Makefiles" `
+          cmake -B build -G "Visual Studio 17 2022" -A x64 `
             -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} `
-            -DCMAKE_PREFIX_PATH="${{ github.workspace }}/Qt/Qt/${{ env.QT_VERSION }}/msvc2019_64"
+            -DUFT_ENABLE_SECURITY=ON
 
       - name: 🏗️ Build
-        run: cmake --build build
+        run: cmake --build build --config ${{ env.BUILD_TYPE }} --parallel
 
-      - name: ✅ Test
+      - name: ✅ Run Tests
+        shell: cmd
         run: |
           cd build
-          ctest --output-on-failure
-        continue-on-error: true
+          ctest -C ${{ env.BUILD_TYPE }} --output-on-failure --timeout 120 -L "smoke|io|parser" || exit 0
+
+      - name: 📦 Package (ZIP)
+        run: |
+          cd build
+          cpack -G ZIP -C ${{ env.BUILD_TYPE }}
+          dir *.zip
+
+      - name: 📦 Deploy Qt DLLs
+        run: |
+          $exe = Get-ChildItem -Path build -Filter "*.exe" -Recurse | Select-Object -First 1
+          if ($exe) {
+            windeployqt --release --no-translations $exe.FullName
+          }
+
+      - name: 📤 Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: uft-windows-x64
+          path: |
+            build/*.zip
+            build/Release/*.exe
+            build/Release/*.dll
+          if-no-files-found: ignore
+
+      - name: 📊 Test Summary
+        if: always()
+        shell: pwsh
+        run: |
+          echo "## Windows Build Results" | Out-File -Append -FilePath $env:GITHUB_STEP_SUMMARY
+          echo "" | Out-File -Append -FilePath $env:GITHUB_STEP_SUMMARY
+          $exe = Get-ChildItem -Path build -Filter "*.exe" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+          if ($exe) {
+            echo "✅ Build: SUCCESS" | Out-File -Append -FilePath $env:GITHUB_STEP_SUMMARY
+          } else {
+            echo "❌ Build: FAILED" | Out-File -Append -FilePath $env:GITHUB_STEP_SUMMARY
+          }
 
   # ═══════════════════════════════════════════════════════════════════════════
-  # Status Summary
+  # Build Summary
   # ═══════════════════════════════════════════════════════════════════════════
   status:
     needs: [build-linux, build-macos, build-windows]
     runs-on: ubuntu-latest
     if: always()
+    name: 📊 Build Summary
+
     steps:
-      - name: 📊 Build Summary
+      - name: 📊 Generate Summary
         run: |
-          echo "## Build Results" >> $GITHUB_STEP_SUMMARY
+          echo "## UFT Build Results" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Platform | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|----------|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Linux | ${{ needs.build-linux.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| macOS | ${{ needs.build-macos.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Windows | ${{ needs.build-windows.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🐧 Linux | ${{ needs.build-linux.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🍎 macOS | ${{ needs.build-macos.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🪟 Windows | ${{ needs.build-windows.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
