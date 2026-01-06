@@ -8,7 +8,7 @@
 cmake_minimum_required(VERSION 3.16)
 
 project(UnifiedFloppyTool
-    VERSION 3.4.2
+    VERSION 3.4.5
     DESCRIPTION "Cross-platform floppy disk preservation and analysis tool"
     LANGUAGES CXX C
 )
@@ -56,6 +56,15 @@ add_compile_options(
 option(UFT_ENABLE_LTO      "Enable Link-Time Optimization"     OFF)
 option(UFT_ENABLE_SIMD     "Enable SIMD optimizations"         ON)
 option(UFT_ENABLE_OPENMP   "Enable OpenMP parallelization"     ON)
+option(UFT_ENABLE_SECURITY "Enable security hardening flags"   ON)
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Security Hardening (2026-01-06 Security Audit)
+# ═══════════════════════════════════════════════════════════════════════════════
+if(UFT_ENABLE_SECURITY AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/cmake/SecurityFlags.cmake")
+    include(cmake/SecurityFlags.cmake)
+    message(STATUS "Security hardening flags enabled")
+endif()
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # C++ Standard & Qt Settings
@@ -540,5 +549,98 @@ if(UNIX AND NOT APPLE)
         endif()
     endforeach()
 endif()
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# CPack Configuration - Cross-Platform Packaging
+# ═══════════════════════════════════════════════════════════════════════════════
+
+set(CPACK_PACKAGE_NAME "uft")
+set(CPACK_PACKAGE_VENDOR "UFT Project")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Universal Floppy Tool - Cross-platform disk imaging")
+set(CPACK_PACKAGE_DESCRIPTION "UFT is a comprehensive floppy disk preservation and analysis tool supporting 200+ disk formats, flux-level imaging, and copy protection analysis.")
+set(CPACK_PACKAGE_HOMEPAGE_URL "https://github.com/your-username/uft")
+set(CPACK_PACKAGE_CONTACT "your-email@example.com")
+set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
+set(CPACK_PACKAGE_VERSION_MAJOR ${PROJECT_VERSION_MAJOR})
+set(CPACK_PACKAGE_VERSION_MINOR ${PROJECT_VERSION_MINOR})
+set(CPACK_PACKAGE_VERSION_PATCH ${PROJECT_VERSION_PATCH})
+
+# Resource/License files
+set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_SOURCE_DIR}/LICENSE")
+set(CPACK_RESOURCE_FILE_README "${CMAKE_SOURCE_DIR}/README.md")
+
+# Package file naming
+set(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR}")
+string(TOLOWER "${CPACK_PACKAGE_FILE_NAME}" CPACK_PACKAGE_FILE_NAME)
+
+# ───────────────────────────────────────────────────────────────────────────────
+# TGZ (tar.gz) - All platforms
+# ───────────────────────────────────────────────────────────────────────────────
+set(CPACK_GENERATOR "TGZ")
+
+# ───────────────────────────────────────────────────────────────────────────────
+# DEB Package (Linux)
+# ───────────────────────────────────────────────────────────────────────────────
+if(UNIX AND NOT APPLE)
+    list(APPEND CPACK_GENERATOR "DEB")
+    
+    set(CPACK_DEBIAN_PACKAGE_MAINTAINER "UFT Project <your-email@example.com>")
+    set(CPACK_DEBIAN_PACKAGE_SECTION "utils")
+    set(CPACK_DEBIAN_PACKAGE_PRIORITY "optional")
+    set(CPACK_DEBIAN_PACKAGE_DEPENDS "libc6 (>= 2.17), libusb-1.0-0 (>= 1.0.0), libqt6core6 (>= 6.2.0), libqt6gui6 (>= 6.2.0), libqt6widgets6 (>= 6.2.0)")
+    set(CPACK_DEBIAN_PACKAGE_RECOMMENDS "greaseweazle")
+    set(CPACK_DEBIAN_PACKAGE_HOMEPAGE "${CPACK_PACKAGE_HOMEPAGE_URL}")
+    set(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)
+    
+    # Architecture
+    if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|amd64")
+        set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "amd64")
+    elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|arm64")
+        set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "arm64")
+    elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "arm")
+        set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "armhf")
+    else()
+        set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "${CMAKE_SYSTEM_PROCESSOR}")
+    endif()
+endif()
+
+# ───────────────────────────────────────────────────────────────────────────────
+# ZIP Package (Windows)
+# ───────────────────────────────────────────────────────────────────────────────
+if(WIN32)
+    set(CPACK_GENERATOR "ZIP")
+    
+    # Include Visual C++ Runtime
+    include(InstallRequiredSystemLibraries)
+endif()
+
+# ───────────────────────────────────────────────────────────────────────────────
+# macOS Bundle (optional, falls gewünscht)
+# ───────────────────────────────────────────────────────────────────────────────
+if(APPLE)
+    set(CPACK_GENERATOR "TGZ")
+    
+    # Optional: DMG generator
+    # list(APPEND CPACK_GENERATOR "DragNDrop")
+    # set(CPACK_DMG_VOLUME_NAME "UFT")
+    # set(CPACK_DMG_FORMAT "UDBZ")
+endif()
+
+# ───────────────────────────────────────────────────────────────────────────────
+# Source Package
+# ───────────────────────────────────────────────────────────────────────────────
+set(CPACK_SOURCE_GENERATOR "TGZ")
+set(CPACK_SOURCE_IGNORE_FILES
+    "/\\\\.git/"
+    "/\\\\.github/"
+    "/build/"
+    "/\\\\.vscode/"
+    "/\\\\.idea/"
+    "\\\\.orig$"
+    "\\\\.swp$"
+    "~$"
+)
+
+include(CPack)
 
 message(STATUS "════════════════════════════════════════════════════")

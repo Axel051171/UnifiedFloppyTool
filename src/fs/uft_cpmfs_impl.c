@@ -687,9 +687,9 @@ static int parseLine(struct cpmSuperBlock *d, const char *format, char *line, in
 
     /* Allow inline comments preceded by ; or # */
     s = strchr(line, '#');
-    if (s) strcpy(s, "\n");
+    if (s) strcpy(s, "\n");  /* REVIEW: Consider bounds check */
     s = strchr(line, ';');
-    if (s) strcpy(s, "\n");
+    if (s) strcpy(s, "\n");  /* REVIEW: Consider bounds check */
     if (line[0] == '\n') return 0;
 
     for (argc=0; argc<1 && (argv[argc]=strtok(argc ? (char*)0 : line," \t\n")); ++argc);

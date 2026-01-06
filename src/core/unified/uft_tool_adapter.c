@@ -9,6 +9,7 @@
 #include "uft/uft_safe.h"
 #include "uft/uft_format_hfe.h"
 #include "uft/uft_format_scp.h"
+#include "uft_security.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -301,7 +302,12 @@ static uft_error_t gw_read_disk(void* context,
             " --drive=%c", 'A' + (char)(params->drive - 1));
     }
     
-    /* Add output file */
+    /* SECURITY FIX: Validate filename before shell use */
+    if (!uft_is_safe_filename(tmpfile)) {
+        return UFT_ERROR_INVALID_ARG;
+    }
+    
+    /* Add output file - tmpfile validated above */
     snprintf(cmd + ret, sizeof(cmd) - (size_t)ret, " \"%s\" 2>&1", tmpfile);
     
     /* Execute gw read */

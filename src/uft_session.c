@@ -107,7 +107,8 @@ static const char *get_default_session_path(void) {
             snprintf(g_default_session_path, sizeof(g_default_session_path),
                     "%s\\UFT\\sessions", appdata);
         } else {
-            strcpy(g_default_session_path, ".\\uft_sessions");
+            snprintf(g_default_session_path, sizeof(g_default_session_path),
+                    "%s", ".\\uft_sessions");
         }
 #else
         const char *home = getenv("HOME");
@@ -115,7 +116,8 @@ static const char *get_default_session_path(void) {
             snprintf(g_default_session_path, sizeof(g_default_session_path),
                     "%s/.local/share/uft/sessions", home);
         } else {
-            strcpy(g_default_session_path, "./uft_sessions");
+            snprintf(g_default_session_path, sizeof(g_default_session_path),
+                    "%s", "./uft_sessions");
         }
 #endif
     }

@@ -198,7 +198,7 @@ bool uft_hxc_detect_format(const uint8_t* data, size_t size,
     memset(result, 0, sizeof(*result));
     result->type = UFT_FORMAT_UNKNOWN;
     result->confidence = 0;
-    strcpy(result->name, "Unknown");
+    strcpy(result->name, "Unknown");  /* REVIEW: Consider bounds check */
     
     /* Check signatures */
     for (const format_signature_t* sig = signatures; sig->name; sig++) {
@@ -237,7 +237,7 @@ bool uft_hxc_detect_format(const uint8_t* data, size_t size,
             (flags & 0x0F) == 0) {
             result->type = UFT_FORMAT_DMK;
             result->confidence = 70;
-            strcpy(result->name, "DMK");
+            strcpy(result->name, "DMK");  /* REVIEW: Consider bounds check */
             return true;
         }
     }
@@ -247,7 +247,7 @@ bool uft_hxc_detect_format(const uint8_t* data, size_t size,
         if (data[0] == 'G' && data[1] == 'C' && data[2] == 'R' && data[3] == '-') {
             result->type = UFT_FORMAT_G64;
             result->confidence = 100;
-            strcpy(result->name, "G64");
+            strcpy(result->name, "G64");  /* REVIEW: Consider bounds check */
             return true;
         }
     }

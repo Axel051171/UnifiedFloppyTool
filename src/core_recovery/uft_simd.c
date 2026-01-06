@@ -163,8 +163,8 @@ uft_cpu_info_t uft_cpu_detect(void)
 uft_cpu_info_t uft_cpu_detect(void)
 {
     uft_cpu_info_t info = {0};
-    strcpy(info.vendor, "Unknown");
-    strcpy(info.brand, "Non-x86 CPU");
+    strcpy(info.vendor, "Unknown");  /* REVIEW: Consider bounds check */
+    strcpy(info.brand, "Non-x86 CPU");  /* REVIEW: Consider bounds check */
     info.logical_cpus = 1;
     
     g_cpu_info = info;

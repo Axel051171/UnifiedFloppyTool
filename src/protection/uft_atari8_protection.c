@@ -778,7 +778,7 @@ int main(void)
             .sector = 3,
             .confidence = 85,
         };
-        strcpy(hit.details, "Test bad sector");
+        strcpy(hit.details, "Test bad sector");  /* REVIEW: Consider bounds check */
         result_add_hit(result, &hit);
         
         char json[2048];

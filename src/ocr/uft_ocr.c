@@ -9,6 +9,7 @@
  */
 
 #include "uft/ocr/uft_ocr.h"
+#include "uft_security.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -307,6 +308,12 @@ static int ocr_tesseract_binary(const uft_image_t *image, char *text, size_t max
     /* Run tesseract */
     char temp_out[] = "/tmp/uft_ocr_out_XXXXXX";
     mkstemp(temp_out);
+    
+    /* SECURITY FIX: Validate filenames before shell use */
+    if (!uft_is_safe_filename(temp_img) || !uft_is_safe_filename(temp_out)) {
+        unlink(temp_img);
+        return -1;
+    }
     
     char cmd[1024];
     snprintf(cmd, sizeof(cmd), "tesseract \"%s\" \"%s\" -l eng 2>/dev/null",

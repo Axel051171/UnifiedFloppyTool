@@ -1,0 +1,78 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# UFT .gitignore
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Build directories
+build/
+cmake-build-*/
+out/
+bin/
+lib/
+*.a
+*.lib
+*.so
+*.dylib
+*.dll
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.cproject
+.settings/
+*.code-workspace
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+compile_commands.json
+CTestTestfile.cmake
+_deps/
+CMakeUserPresets.json
+
+# CPack
+_CPack_Packages/
+*.tar.gz
+*.zip
+*.deb
+*.rpm
+*.dmg
+
+# Qt
+*.pro.user
+*.qm
+moc_*.cpp
+ui_*.h
+qrc_*.cpp
+
+# OS
+.DS_Store
+Thumbs.db
+*.bak
+*.orig
+
+# Testing
+Testing/
+CTestCostData.txt
+
+# Coverage
+*.gcno
+*.gcda
+*.gcov
+coverage/
+
+# Logs
+*.log
+
+# Temporary
+tmp/
+temp/
+*.tmp
+
+# Packages (keep tarballs in releases/)
+!releases/*.tar.gz

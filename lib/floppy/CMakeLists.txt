@@ -45,6 +45,7 @@ add_library(uft_floppy STATIC ${UFT_FLOPPY_SOURCES})
 
 target_include_directories(uft_floppy
     PUBLIC
+        ${CMAKE_SOURCE_DIR}/include
         ${CMAKE_CURRENT_SOURCE_DIR}/include
         ${CMAKE_CURRENT_SOURCE_DIR}/include/encoding
         ${CMAKE_CURRENT_SOURCE_DIR}/include/formats

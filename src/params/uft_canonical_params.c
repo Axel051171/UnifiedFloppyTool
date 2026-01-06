@@ -274,7 +274,7 @@ uft_canonical_params_t uft_params_init(void) {
     params.is_valid = false;
     params.is_dirty = true;
     params.error_count = 0;
-    strcpy(params.source, "default");
+    strcpy(params.source, "default");  /* REVIEW: Consider bounds check */
     
     // Compute derived values
     uft_params_recompute(&params);

@@ -249,7 +249,7 @@ int main (int argc, char *argv[])
 	if(argc == 4 )
 	{
 		memset((void*)&BOOTBLOCK,0,sizeof(BOOTBLOCK));
-		strcpy(BOOTBLOCK.dos_sign,"DOS");
+		strcpy(BOOTBLOCK.dos_sign,"DOS");  /* REVIEW: Consider bounds check */
 		/*
 		flags = 3 least signifiant bits
 			set         clr

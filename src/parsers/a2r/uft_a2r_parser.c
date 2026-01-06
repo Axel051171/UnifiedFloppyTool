@@ -556,7 +556,8 @@ a2r_context_t *a2r_open(const char *path) {
         return NULL;
     }
     
-    safe_strncpy(ctx->path, path, sizeof(ctx->path, sizeof(ctx->path)-1); ctx->path[sizeof(ctx->path)-1] = '\0');
+    safe_strncpy(ctx->path, path, sizeof(ctx->path) - 1);
+    ctx->path[sizeof(ctx->path) - 1] = '\0';
     ctx->version = version;
     ctx->file_data = file_data;
     ctx->file_size = file_size;

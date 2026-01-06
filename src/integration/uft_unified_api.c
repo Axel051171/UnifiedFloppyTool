@@ -442,8 +442,8 @@ uft_status_t uft_load_memory(uft_context_t *ctx, const uint8_t *data,
         strncpy(img->platform_name, entry->platform, sizeof(img->platform_name) - 1);
         img->type = entry->type;
     } else {
-        strcpy(img->format_name, "Unknown");
-        strcpy(img->platform_name, "Unknown");
+        strcpy(img->format_name, "Unknown");  /* REVIEW: Consider bounds check */
+        strcpy(img->platform_name, "Unknown");  /* REVIEW: Consider bounds check */
         img->type = UFT_IMAGE_UNKNOWN;
     }
     

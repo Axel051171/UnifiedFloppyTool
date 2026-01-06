@@ -438,7 +438,8 @@ ipf_context_t *ipf_open(const char *path) {
         return NULL;
     }
     
-    safe_strncpy(ctx->path, path, sizeof(ctx->path, sizeof(ctx->path)-1); ctx->path[sizeof(ctx->path)-1] = '\0');
+    safe_strncpy(ctx->path, path, sizeof(ctx->path) - 1);
+    ctx->path[sizeof(ctx->path) - 1] = '\0';
     ctx->file_data = file_data;
     ctx->file_size = file_size;
     

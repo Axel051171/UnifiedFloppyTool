@@ -192,7 +192,7 @@ int uft_ia_generate_identifier(const char *filename, char *identifier, size_t ma
     
     /* Ensure valid: 3-80 chars, starts with alphanumeric */
     if (j < 3) {
-        strcpy(identifier, "uft-item-");
+        strcpy(identifier, "uft-item-");  /* REVIEW: Consider bounds check */
         j = 9;
         j += snprintf(identifier + j, max_len - j, "%ld", (long)time(NULL));
     }
@@ -715,7 +715,7 @@ int uft_cloud_hash_file(const char *path, char *md5, char *sha256)
     /* TODO: Calculate actual hashes */
     /* Would require OpenSSL or similar */
     
-    if (md5) strcpy(md5, "00000000000000000000000000000000");
+    if (md5) strcpy(md5, "00000000000000000000000000000000");  /* REVIEW: Consider bounds check */
     if (sha256) strcpy(sha256, 
         "0000000000000000000000000000000000000000000000000000000000000000");
     

@@ -619,7 +619,7 @@ int uft_params_from_json(const char *json, uft_canonical_params_t *params) {
     // Recompute derived values
     uft_params_recompute(params);
     
-    strcpy(params->source, "json");
+    strcpy(params->source, "json");  /* REVIEW: Consider bounds check */  /* Safe: "json" is 4 chars + NUL, source is 64 bytes */
     
     return 0;
 }
