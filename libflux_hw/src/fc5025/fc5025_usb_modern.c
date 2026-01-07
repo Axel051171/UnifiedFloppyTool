@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 /*
- * fc5025_usb_modern.c - FC5025 USB Wrapper for libusb-1.0 and WinUSB
+ * uft_fc5025_usb_modern.c - FC5025 USB Wrapper for libusb-1.0 and WinUSB
  * 
  * Wraps the official FC5025 code to work with modern USB libraries.
  * Original code used libusb-0.1, this adapter provides libusb-1.0 and
@@ -22,7 +22,7 @@
  *============================================================================*/
 
 #if defined(_WIN32) || defined(_WIN64)
-    #define FC5025_PLATFORM_WINDOWS
+    #define UFT_FC5025_PLATFORM_WINDOWS
     #include <windows.h>
     #include <setupapi.h>
     #include <winusb.h>
@@ -30,7 +30,7 @@
     #pragma comment(lib, "winusb.lib")
     #define usleep(x) Sleep((x)/1000)
 #else
-    #define FC5025_PLATFORM_UNIX
+    #define UFT_FC5025_PLATFORM_UNIX
     #include <libusb-1.0/libusb.h>
     #include <unistd.h>
     #include <arpa/inet.h>
@@ -40,8 +40,8 @@
  * FC5025 CONSTANTS (from official fc5025.h)
  *============================================================================*/
 
-#define FC5025_VID  0x16c0
-#define FC5025_PID  0x06d6
+#define UFT_FC5025_VID  0x16c0
+#define UFT_FC5025_PID  0x06d6
 
 /* Opcodes */
 #define OPCODE_SEEK          0xc0
@@ -75,7 +75,7 @@
                   ((((uint32_t)x) & 0x0000ff00) <<  8) | \
                   ((((uint32_t)x) & 0x000000ff) << 24))
 
-#ifdef FC5025_PLATFORM_WINDOWS
+#ifdef UFT_FC5025_PLATFORM_WINDOWS
 static inline uint32_t htonl_compat(uint32_t x) {
     return ((x & 0xff) << 24) | ((x & 0xff00) << 8) | 
            ((x & 0xff0000) >> 8) | ((x & 0xff000000) >> 24);
@@ -89,8 +89,8 @@ static inline uint32_t htonl_compat(uint32_t x) {
  * USB HANDLE
  *============================================================================*/
 
-typedef struct fc5025_device {
-#ifdef FC5025_PLATFORM_WINDOWS
+typedef struct uft_fc5025_device {
+#ifdef UFT_FC5025_PLATFORM_WINDOWS
     HANDLE device_handle;
     WINUSB_INTERFACE_HANDLE winusb_handle;
 #else
@@ -99,9 +99,9 @@ typedef struct fc5025_device {
 #endif
     uint32_t tag;
     int is_open;
-} fc5025_device_t;
+} uft_fc5025_device_t;
 
-static fc5025_device_t g_fc5025 = {0};
+static uft_fc5025_device_t g_fc5025 = {0};
 
 /*============================================================================*
  * COMMAND BLOCK WRAPPER (CBW)
@@ -116,7 +116,7 @@ typedef struct {
     uint8_t padding1;
     uint8_t padding2;
     uint8_t cdb[48];
-} fc5025_cbw_t;
+} uft_fc5025_cbw_t;
 
 typedef struct {
     uint32_t signature;  /* 0x46435342 = "FCSB" */
@@ -126,14 +126,14 @@ typedef struct {
     uint8_t asc;
     uint8_t ascq;
     uint8_t padding[20];
-} fc5025_csw_t;
+} uft_fc5025_csw_t;
 #pragma pack(pop)
 
 /*============================================================================*
  * USB I/O FUNCTIONS
  *============================================================================*/
 
-#ifdef FC5025_PLATFORM_UNIX
+#ifdef UFT_FC5025_PLATFORM_UNIX
 
 static int usb_bulk_write_wrapper(uint8_t endpoint, void *data, int length, int timeout) {
     int transferred;
@@ -178,8 +178,8 @@ static int usb_bulk_read_wrapper(uint8_t endpoint, void *data, int length, int t
  *============================================================================*/
 
 int fc_bulk_cdb(void *cdb, int length, int timeout, void *csw_out, void *xferbuf, int xferlen, int *xferlen_out) {
-    fc5025_cbw_t cbw = {{'C','F','B','C'}, 0, 0, 0x80, 0, 0, {0}};
-    fc5025_csw_t csw;
+    uft_fc5025_cbw_t cbw = {{'C','F','B','C'}, 0, 0, 0x80, 0, 0, {0}};
+    uft_fc5025_csw_t csw;
     int ret;
     
     cbw.tag = ++g_fc5025.tag;
@@ -298,9 +298,9 @@ int fc_drive_status(int *status_out) {
  * DEVICE OPEN/CLOSE
  *============================================================================*/
 
-#ifdef FC5025_PLATFORM_UNIX
+#ifdef UFT_FC5025_PLATFORM_UNIX
 
-int fc5025_open(void) {
+int uft_fc5025_open(void) {
     if (g_fc5025.is_open)
         return 0;
     
@@ -308,7 +308,7 @@ int fc5025_open(void) {
     if (rc < 0)
         return 1;
     
-    g_fc5025.handle = libusb_open_device_with_vid_pid(g_fc5025.ctx, FC5025_VID, FC5025_PID);
+    g_fc5025.handle = libusb_open_device_with_vid_pid(g_fc5025.ctx, UFT_FC5025_VID, UFT_FC5025_PID);
     if (!g_fc5025.handle) {
         libusb_exit(g_fc5025.ctx);
         return 1;
@@ -331,7 +331,7 @@ int fc5025_open(void) {
     return 0;
 }
 
-int fc5025_close(void) {
+int uft_fc5025_close(void) {
     if (!g_fc5025.is_open)
         return 0;
     
@@ -343,7 +343,7 @@ int fc5025_close(void) {
     return 0;
 }
 
-int fc5025_find(int *count_out) {
+int uft_fc5025_find(int *count_out) {
     libusb_context *ctx;
     int count = 0;
     
@@ -356,7 +356,7 @@ int fc5025_find(int *count_out) {
     for (ssize_t i = 0; i < cnt; i++) {
         struct libusb_device_descriptor desc;
         if (libusb_get_device_descriptor(list[i], &desc) == 0) {
-            if (desc.idVendor == FC5025_VID && desc.idProduct == FC5025_PID) {
+            if (desc.idVendor == UFT_FC5025_VID && desc.idProduct == UFT_FC5025_PID) {
                 count++;
             }
         }
@@ -375,7 +375,7 @@ int fc5025_find(int *count_out) {
 DEFINE_GUID(GUID_FC5025, 
     0x16c006d6, 0x0000, 0x0000, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00);
 
-int fc5025_open(void) {
+int uft_fc5025_open(void) {
     if (g_fc5025.is_open)
         return 0;
     
@@ -438,7 +438,7 @@ int fc5025_open(void) {
     return 0;
 }
 
-int fc5025_close(void) {
+int uft_fc5025_close(void) {
     if (!g_fc5025.is_open)
         return 0;
     
@@ -449,13 +449,13 @@ int fc5025_close(void) {
     return 0;
 }
 
-int fc5025_find(int *count_out) {
+int uft_fc5025_find(int *count_out) {
     /* Simplified for Windows */
     int count = 0;
     
-    if (fc5025_open() == 0) {
+    if (uft_fc5025_open() == 0) {
         count = 1;
-        fc5025_close();
+        uft_fc5025_close();
     }
     
     if (count_out) *count_out = count;
@@ -468,12 +468,12 @@ int fc5025_find(int *count_out) {
  * HIGH-LEVEL API
  *============================================================================*/
 
-int fc5025_is_open(void) {
+int uft_fc5025_is_open(void) {
     return g_fc5025.is_open;
 }
 
 /* Export functions for use by official format handlers */
-int fc5025_read_flexible(unsigned char *out, int length, int timeout,
+int uft_fc5025_read_flexible(unsigned char *out, int length, int timeout,
                          unsigned char flags, unsigned char format,
                          unsigned short bitcell, unsigned char sectorhole,
                          unsigned short rdelay, unsigned char idam,
@@ -508,6 +508,6 @@ int fc5025_read_flexible(unsigned char *out, int length, int timeout,
     return fc_bulk_cdb(&cdb, sizeof(cdb), timeout, NULL, out, length, xferlen_out);
 }
 
-const char *fc5025_get_version(void) {
+const char *uft_fc5025_get_version(void) {
     return "FC5025 Driver v1309 (libusb-1.0/WinUSB wrapper)";
 }

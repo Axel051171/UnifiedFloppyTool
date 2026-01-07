@@ -3,7 +3,6 @@
  * @brief FAT12/FAT16/FAT32 Filesystem Structures and Recovery
  * @version 3.3.0
  *
- * Extracted from:
  * - FAT12Extractor-master (msdosdir.c, msdosextr.c)
  * - DataRecovery-1-master (fatmbr.h, ntfs.h)
  *
@@ -46,6 +45,7 @@ extern "C" {
     #define UFT_PACKED_END
     #define UFT_PACKED
 #endif
+#endif /* UFT_PACKED_BEGIN */
 
 /*============================================================================
  * FAT12/16 BOOT SECTOR (BPB - BIOS Parameter Block)

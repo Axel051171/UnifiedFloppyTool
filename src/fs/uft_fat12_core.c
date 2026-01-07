@@ -590,7 +590,7 @@ int uft_fat_get_label(const uft_fat_ctx_t *ctx, char *label) {
     }
     
     /* Fall back to boot sector label */
-    strcpy(label, ctx->vol.label);
+    strncpy(label, ctx->vol.label, 12); label[11] = '\0';
     return 0;
 }
 
@@ -637,7 +637,7 @@ int uft_fat_set_label(uft_fat_ctx_t *ctx, const char *label) {
     }
     
     /* Update cached label */
-    strcpy(ctx->vol.label, new_label);
+    strncpy(ctx->vol.label, new_label, 12); ctx->vol.label[11] = '\0';
     for (int i = 10; i >= 0 && ctx->vol.label[i] == ' '; i--) {
         ctx->vol.label[i] = '\0';
     }

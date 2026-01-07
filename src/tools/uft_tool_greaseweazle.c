@@ -1,6 +1,5 @@
 /**
  * @file uft_tool_greaseweazle.c
- * @brief Greaseweazle Tool Adapter - Vollständige Integration
  * 
  * Unterstützt:
  * - Flux lesen (SCP, HFE, raw)
@@ -30,9 +29,9 @@
 // Constants
 // ============================================================================
 
-#define GW_CMD              "gw"
-#define GW_TIMEOUT_SEC      300
-#define GW_MAX_OUTPUT       65536
+#define UFT_GW_CMD              "gw"
+#define UFT_GW_TIMEOUT_SEC      300
+#define UFT_GW_MAX_OUTPUT       65536
 
 // ============================================================================
 // Helper: Command Execution
@@ -90,18 +89,18 @@ static uft_error_t run_command(const char* cmd, cmd_result_t* result) {
     close(stderr_pipe[1]);
     
     // Read output
-    result->stdout_buf = malloc(GW_MAX_OUTPUT);
-    result->stderr_buf = malloc(GW_MAX_OUTPUT);
+    result->stdout_buf = malloc(UFT_GW_MAX_OUTPUT);
+    result->stderr_buf = malloc(UFT_GW_MAX_OUTPUT);
     
     if (result->stdout_buf) {
-        result->stdout_len = read(stdout_pipe[0], result->stdout_buf, GW_MAX_OUTPUT - 1);
+        result->stdout_len = read(stdout_pipe[0], result->stdout_buf, UFT_GW_MAX_OUTPUT - 1);
         if (result->stdout_len > 0) {
             result->stdout_buf[result->stdout_len] = '\0';
         }
     }
     
     if (result->stderr_buf) {
-        result->stderr_len = read(stderr_pipe[0], result->stderr_buf, GW_MAX_OUTPUT - 1);
+        result->stderr_len = read(stderr_pipe[0], result->stderr_buf, UFT_GW_MAX_OUTPUT - 1);
         if (result->stderr_len > 0) {
             result->stderr_buf[result->stderr_len] = '\0';
         }
@@ -121,7 +120,7 @@ static uft_error_t run_command(const char* cmd, cmd_result_t* result) {
 // Availability Check
 // ============================================================================
 
-static bool gw_is_available(void) {
+static bool uft_gw_is_available(void) {
     cmd_result_t r;
     uft_error_t err = run_command("which gw 2>/dev/null", &r);
     bool found = (err == UFT_OK && r.stdout_len > 0);
@@ -133,7 +132,7 @@ static bool gw_is_available(void) {
 // Hardware Detection
 // ============================================================================
 
-static bool gw_detect_hardware(char* info, size_t size) {
+static bool uft_gw_detect_hardware(char* info, size_t size) {
     if (!info || size == 0) return false;
     
     cmd_result_t r;
@@ -141,7 +140,6 @@ static bool gw_detect_hardware(char* info, size_t size) {
     
     if (err == UFT_OK && r.stdout_buf) {
         // Parse output for device info
-        // Example: "Host Controller: Greaseweazle F7 Plus"
         //          "Firmware: 1.4"
         
         const char* host = strstr(r.stdout_buf, "Host Controller:");
@@ -166,9 +164,9 @@ static bool gw_detect_hardware(char* info, size_t size) {
                 const char* ver_end = strchr(ver_start, '\n');
                 size_t ver_len = ver_end ? (size_t)(ver_end - ver_start) : strlen(ver_start);
                 
-                strcat(info, " (FW ");
+                strncat(info, " (FW ", sizeof(info) - strlen(info) - 1);
                 strncat(info, ver_start, ver_len);
-                strcat(info, ")");
+                strncat(info, ")", sizeof(info) - strlen(info) - 1);
             }
             
             free_cmd_result(&r);
@@ -189,14 +187,14 @@ typedef struct {
     uft_progress_callback_t callback;
     void*                   user_data;
     volatile bool*          cancel_flag;
-} gw_context_t;
+} uft_gw_context_t;
 
-static uft_error_t gw_read_disk(void* context,
+static uft_error_t uft_gw_read_disk(void* context,
                                  const uft_tool_read_params_t* params,
                                  uft_unified_image_t* output) {
     if (!params || !output) return UFT_ERROR_NULL_POINTER;
     
-    gw_context_t* ctx = (gw_context_t*)context;
+    uft_gw_context_t* ctx = (uft_gw_context_t*)context;
     
     // Build command
     char cmd[1024];
@@ -265,12 +263,12 @@ static uft_error_t gw_read_disk(void* context,
 // Write Disk
 // ============================================================================
 
-static uft_error_t gw_write_disk(void* context,
+static uft_error_t uft_gw_write_disk(void* context,
                                   const uft_tool_write_params_t* params,
                                   const uft_unified_image_t* input) {
     if (!params || !input) return UFT_ERROR_NULL_POINTER;
     
-    gw_context_t* ctx = (gw_context_t*)context;
+    uft_gw_context_t* ctx = (uft_gw_context_t*)context;
     
     // Need a file path
     if (!input->path) {
@@ -322,7 +320,7 @@ static uft_error_t gw_write_disk(void* context,
 // Convert (via gw convert)
 // ============================================================================
 
-static uft_error_t gw_convert(void* context,
+static uft_error_t uft_gw_convert(void* context,
                                const char* input,
                                const char* output,
                                uft_format_t format) {
@@ -342,7 +340,7 @@ static uft_error_t gw_convert(void* context,
 // Disk Info
 // ============================================================================
 
-static uft_error_t gw_get_disk_info(void* context, uft_tool_disk_info_t* info) {
+static uft_error_t uft_gw_get_disk_info(void* context, uft_tool_disk_info_t* info) {
     if (!info) return UFT_ERROR_NULL_POINTER;
     
     memset(info, 0, sizeof(*info));
@@ -368,7 +366,7 @@ static uft_error_t gw_get_disk_info(void* context, uft_tool_disk_info_t* info) {
 // Seek
 // ============================================================================
 
-static uft_error_t gw_seek(void* context, int track, int head) {
+static uft_error_t uft_gw_seek(void* context, int track, int head) {
     char cmd[128];
     snprintf(cmd, sizeof(cmd), "gw seek %d.%d 2>&1", track, head);
     
@@ -383,7 +381,7 @@ static uft_error_t gw_seek(void* context, int track, int head) {
 // Reset
 // ============================================================================
 
-static uft_error_t gw_reset(void* context) {
+static uft_error_t uft_gw_reset(void* context) {
     cmd_result_t r;
     uft_error_t err = run_command("gw reset 2>&1", &r);
     free_cmd_result(&r);
@@ -394,15 +392,15 @@ static uft_error_t gw_reset(void* context) {
 // Init / Cleanup
 // ============================================================================
 
-static uft_error_t gw_init(void** context) {
-    gw_context_t* ctx = calloc(1, sizeof(gw_context_t));
+static uft_error_t uft_gw_init(void** context) {
+    uft_gw_context_t* ctx = calloc(1, sizeof(uft_gw_context_t));
     if (!ctx) return UFT_ERROR_NO_MEMORY;
     
     *context = ctx;
     return UFT_OK;
 }
 
-static void gw_cleanup(void* context) {
+static void uft_gw_cleanup(void* context) {
     free(context);
 }
 
@@ -420,15 +418,15 @@ const uft_tool_adapter_t uft_tool_greaseweazle = {
     .supported_formats = (1u << UFT_FORMAT_SCP) | (1u << UFT_FORMAT_HFE) |
                          (1u << UFT_FORMAT_IMG) | (1u << UFT_FORMAT_ADF),
     
-    .init = gw_init,
-    .cleanup = gw_cleanup,
-    .is_available = gw_is_available,
-    .detect_hardware = gw_detect_hardware,
+    .init = uft_gw_init,
+    .cleanup = uft_gw_cleanup,
+    .is_available = uft_gw_is_available,
+    .detect_hardware = uft_gw_detect_hardware,
     
-    .read_disk = gw_read_disk,
-    .write_disk = gw_write_disk,
-    .convert = gw_convert,
-    .get_disk_info = gw_get_disk_info,
-    .seek = gw_seek,
-    .reset = gw_reset,
+    .read_disk = uft_gw_read_disk,
+    .write_disk = uft_gw_write_disk,
+    .convert = uft_gw_convert,
+    .get_disk_info = uft_gw_get_disk_info,
+    .seek = uft_gw_seek,
+    .reset = uft_gw_reset,
 };

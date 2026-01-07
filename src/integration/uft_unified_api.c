@@ -6,11 +6,17 @@
  */
 
 #include "uft/uft_unified_api.h"
+#include "uft/core/uft_safe_parse.h"
 #include "uft/uft_integration.h"
+#include "uft/core/uft_safe_parse.h"
 #include <stdlib.h>
+#include "uft/core/uft_safe_parse.h"
 #include <string.h>
+#include "uft/core/uft_safe_parse.h"
 #include <stdio.h>
+#include "uft/core/uft_safe_parse.h"
 #include <ctype.h>
+#include "uft/core/uft_safe_parse.h"
 
 /* ============================================================================
  * Internal Structures
@@ -210,7 +216,7 @@ uft_status_t uft_set_option(uft_context_t *ctx, const char *key, const char *val
     } else if (strcmp(key, "verbose") == 0) {
         ctx->verbose = (value && strcmp(value, "true") == 0);
     } else if (strcmp(key, "retries") == 0) {
-        ctx->max_retries = value ? atoi(value) : 3;
+        { int32_t t=3; if(value && uft_parse_int32(value,&t,10)) ctx->max_retries=t; else ctx->max_retries=3; }
     }
     
     return UFT_SUCCESS;
@@ -442,8 +448,8 @@ uft_status_t uft_load_memory(uft_context_t *ctx, const uint8_t *data,
         strncpy(img->platform_name, entry->platform, sizeof(img->platform_name) - 1);
         img->type = entry->type;
     } else {
-        strcpy(img->format_name, "Unknown");  /* REVIEW: Consider bounds check */
-        strcpy(img->platform_name, "Unknown");  /* REVIEW: Consider bounds check */
+        strncpy(img->format_name, "Unknown", sizeof(img->format_name) - 1); img->format_name[sizeof(img->format_name) - 1] = '\0';
+        strncpy(img->platform_name, "Unknown", sizeof(img->platform_name) - 1); img->platform_name[sizeof(img->platform_name) - 1] = '\0';
         img->type = UFT_IMAGE_UNKNOWN;
     }
     

@@ -21,7 +21,7 @@ static void log_msg(FloppyDevice *d, const char *m){
 static uint16_t rd16(const uint8_t *p){ return (uint16_t)p[0] | ((uint16_t)p[1]<<8); }
 static uint32_t rd32(const uint8_t *p){ return (uint32_t)p[0] | ((uint32_t)p[1]<<8) | ((uint32_t)p[2]<<16) | ((uint32_t)p[3]<<24); }
 
-int floppy_open(FloppyDevice *dev, const char *path){
+int uft_floppy_open(FloppyDevice *dev, const char *path){
     if(!dev||!path) return UFT_EINVAL;
 
     ScpCtx *ctx = calloc(1,sizeof(ScpCtx));
@@ -55,7 +55,7 @@ int floppy_open(FloppyDevice *dev, const char *path){
     return UFT_OK;
 }
 
-int floppy_close(FloppyDevice *dev){
+int uft_floppy_close(FloppyDevice *dev){
     if(!dev||!dev->internal_ctx) return UFT_EINVAL;
     ScpCtx *ctx = dev->internal_ctx;
     if(ctx->fp) fclose(ctx->fp);
@@ -72,16 +72,16 @@ int floppy_close(FloppyDevice *dev){
 }
 
 /* SCP is flux-only */
-int floppy_read_sector(FloppyDevice *dev,uint32_t t,uint32_t h,uint32_t s,uint8_t *buf){
+int uft_floppy_read_sector(FloppyDevice *dev,uint32_t t,uint32_t h,uint32_t s,uint8_t *buf){
     (void)dev;(void)t;(void)h;(void)s;(void)buf;
     return UFT_ENOTSUP;
 }
-int floppy_write_sector(FloppyDevice *dev,uint32_t t,uint32_t h,uint32_t s,const uint8_t *buf){
+int uft_floppy_write_sector(FloppyDevice *dev,uint32_t t,uint32_t h,uint32_t s,const uint8_t *buf){
     (void)dev;(void)t;(void)h;(void)s;(void)buf;
     return UFT_ENOTSUP;
 }
 
-int floppy_analyze_protection(FloppyDevice *dev){
+int uft_floppy_analyze_protection(FloppyDevice *dev){
     if(!dev||!dev->internal_ctx) return UFT_EINVAL;
     log_msg(dev,"Analyzer(SCP): Flux stream detected. Exact timing, weak bits, and copy protection preserved.");
     log_msg(dev,"Analyzer(SCP): This is the archival master format. All other formats should derive from this.");

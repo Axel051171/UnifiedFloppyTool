@@ -611,7 +611,7 @@ const uft_format_def_t UFT_FMT_KF = {
 
 const uft_format_def_t UFT_FMT_HFE = {
     .name = "HFE",
-    .description = "HxC Floppy Emulator image",
+    .description = "UFT HFE Format image",
     .extensions = "hfe",
     .form_factor = UFT_FF_UNKNOWN,
     .variant = UFT_VAR_UNKNOWN,

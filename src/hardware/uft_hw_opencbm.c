@@ -1,6 +1,5 @@
 /**
  * @file uft_hw_opencbm.c
- * @brief UnifiedFloppyTool - OpenCBM/Nibtools Hardware Backend
  * 
  * Backend für Commodore 1541/1571/1581 Laufwerke via:
  * - XUM1541 (USB)
@@ -13,27 +12,31 @@
  * - Umgeht DOS für Kopierschutz-Preservation
  * - Benötigt speziellen Code im Laufwerk (via M-E)
  * 
- * @see https://github.com/OpenCBM/OpenCBM
- * @see http://c64preservation.com/nibtools
  * 
  * @author UFT Team
  * @date 2025
  */
 
 #include "uft/uft_hardware.h"
+#include "uft/core/uft_safe_parse.h"
 #include "uft/uft_hardware_internal.h"
+#include "uft/core/uft_safe_parse.h"
 #include <stdlib.h>
+#include "uft/core/uft_safe_parse.h"
 #include <string.h>
+#include "uft/core/uft_safe_parse.h"
 #include <stdio.h>
+#include "uft/core/uft_safe_parse.h"
 
 // ============================================================================
-// OpenCBM Interface (libopencbm)
+// CBM library Interface (libopencbm)
 // ============================================================================
 
 #ifdef UFT_HAS_OPENCBM
 #include <opencbm.h>
+#include "uft/core/uft_safe_parse.h"
 #else
-// Stub-Deklarationen wenn OpenCBM nicht verfügbar
+// Stub-Deklarationen wenn CBM library nicht verfügbar
 typedef void* CBM_FILE;
 static int cbm_driver_open(CBM_FILE* f, int port) { (void)f; (void)port; return -1; }
 static void cbm_driver_close(CBM_FILE f) { (void)f; }
@@ -64,7 +67,7 @@ static int cbm_exec_command(CBM_FILE f, unsigned char dev, const void* cmd, size
 #define NIBTOOLS_CODE       0x0500  // Code-Bereich
 
 // Nibtools Read-Code (6502 Assembler)
-static const uint8_t nibtools_read_code[] = {
+static const uint8_t GCR tools_read_code[] = {
     0x78,               // SEI
     0xA9, 0x00,         // LDA #$00
     0x8D, 0x00, 0x1C,   // STA $1C00
@@ -89,7 +92,7 @@ typedef struct {
     uint8_t     drive_type;
     uint8_t     current_track;
     bool        motor_on;
-    bool        nibtools_loaded;
+    bool        GCR tools_loaded;
 } opencbm_state_t;
 
 // ============================================================================
@@ -237,7 +240,7 @@ static uft_error_t opencbm_open(const uft_hw_info_t* info, uft_hw_device_t** dev
         return UFT_ERROR_FILE_OPEN;
     }
     
-    cbm->device_num = (uint8_t)atoi(info->serial);
+    { int32_t t; if(uft_parse_int32(info->serial,&t,10)) cbm->device_num=(uint8_t)t; }
     if (cbm->device_num < 8 || cbm->device_num > 11) {
         cbm->device_num = 8;
     }
@@ -324,12 +327,12 @@ static uft_error_t opencbm_read_track(uft_hw_device_t* device,
     opencbm_state_t* cbm = device->handle;
     
 #ifdef UFT_HAS_OPENCBM
-    if (!cbm->nibtools_loaded) {
+    if (!cbm->GCR tools_loaded) {
         uft_error_t err = send_memory_execute(cbm, NIBTOOLS_CODE,
-                                              nibtools_read_code,
-                                              sizeof(nibtools_read_code));
+                                              GCR tools_read_code,
+                                              sizeof(GCR tools_read_code));
         if (UFT_FAILED(err)) return err;
-        cbm->nibtools_loaded = true;
+        cbm->GCR tools_loaded = true;
     }
     
     uint8_t exec_cmd[] = {'M', '-', 'E', 
@@ -398,7 +401,7 @@ static uft_error_t opencbm_iec_command(uft_hw_device_t* device,
 // ============================================================================
 
 static const uft_hw_backend_t opencbm_backend = {
-    .name = "OpenCBM/Nibtools",
+    .name = "CBM library/Nibtools",
     .type = UFT_HW_XUM1541,
     
     .init = opencbm_init,
@@ -430,7 +433,7 @@ uft_error_t uft_hw_register_opencbm(void) {
 }
 
 const uft_hw_backend_t uft_hw_backend_opencbm = {
-    .name = "OpenCBM/Nibtools",
+    .name = "CBM library/Nibtools",
     .type = UFT_HW_XUM1541,
     .init = opencbm_init,
     .shutdown = opencbm_shutdown,

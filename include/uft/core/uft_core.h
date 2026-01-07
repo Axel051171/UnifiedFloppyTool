@@ -25,7 +25,7 @@
 #include "uft_crc_unified.h"    /* P2-ARCH-002: Unified CRC */
 #include "uft_sector.h"         /* P2-ARCH-004: Unified sector */
 #include "uft_track_base.h"     /* P2-ARCH-001: Unified track */
-#include "uft_track_compat.h"   /* P2-ARCH-001: Track conversion */
+/* Note: uft_track_compat.h is optional - include separately if needed */
 #include "uft_disk.h"           /* P2-ARCH-005: Unified disk */
 #include "uft_format_registry.h"/* P2-ARCH-007: Format registry */
 

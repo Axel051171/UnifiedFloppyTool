@@ -7,11 +7,17 @@
  */
 
 #include "uft/uft_param_bridge.h"
+#include "uft/core/uft_safe_parse.h"
 #include "uft/uft_memory.h"
+#include "uft/core/uft_safe_parse.h"
 #include <stdlib.h>
+#include "uft/core/uft_safe_parse.h"
 #include <string.h>
+#include "uft/core/uft_safe_parse.h"
 #include <stdio.h>
+#include "uft/core/uft_safe_parse.h"
 #include <ctype.h>
+#include "uft/core/uft_safe_parse.h"
 
 /* ═══════════════════════════════════════════════════════════════════════════════
  * Parameter Definitions
@@ -253,7 +259,7 @@ uft_params_t *uft_params_create_defaults(void) {
                     break;
                 case UFT_PARAM_TYPE_INT:
                 case UFT_PARAM_TYPE_RANGE:
-                    params->values[i].value.int_val = atoi(def->default_value);
+                    { int32_t t; if(uft_parse_int32(def->default_value,&t,10)) params->values[i].value.int_val=t; }
                     break;
                 case UFT_PARAM_TYPE_FLOAT:
                     params->values[i].value.float_val = atof(def->default_value);
@@ -266,6 +272,11 @@ uft_params_t *uft_params_create_defaults(void) {
                     params->values[i].value.enum_index = 
                         find_enum_index(def->enum_values, def->default_value);
                     break;
+                default:
+                    /* Unknown type - skip */
+                    break;
+            default:
+                break;
             }
         }
     }
@@ -360,7 +371,7 @@ uft_params_t *uft_params_from_cli(int argc, char **argv) {
             switch (def->type) {
                 case UFT_PARAM_TYPE_INT:
                 case UFT_PARAM_TYPE_RANGE:
-                    params->values[idx].value.int_val = atoi(val);
+                    { int32_t t; if(uft_parse_int32(val,&t,10)) params->values[idx].value.int_val=t; }
                     break;
                 case UFT_PARAM_TYPE_FLOAT:
                     params->values[idx].value.float_val = atof(val);
@@ -376,6 +387,8 @@ uft_params_t *uft_params_from_cli(int argc, char **argv) {
                     break;
                 default:
                     break;
+            default:
+                break;
             }
             params->values[idx].is_set = true;
         }
@@ -451,6 +464,8 @@ char *uft_params_to_cli(const uft_params_t *params) {
                 if (def->enum_values && params->values[i].value.enum_index >= 0) {
                     pos += snprintf(cli + pos, size - pos, " %s %s",
                                    opt, def->enum_values[params->values[i].value.enum_index]);
+            default:
+                break;
                 }
                 break;
         }
@@ -577,7 +592,7 @@ uft_params_t *uft_params_from_json(const char *json) {
             if (def->type == UFT_PARAM_TYPE_FLOAT) {
                 params->values[idx].value.float_val = atof(val_start);
             } else {
-                params->values[idx].value.int_val = atoi(val_start);
+                { int32_t t; if(uft_parse_int32(val_start,&t,10)) params->values[idx].value.int_val=t; }
             }
             params->values[idx].is_set = true;
             while (*p && (isdigit(*p) || *p == '.' || *p == '-')) p++;
@@ -660,6 +675,8 @@ char *uft_params_to_json(const uft_params_t *params, bool pretty) {
                 if (def->enum_values && params->values[i].value.enum_index >= 0) {
                     pos += snprintf(json + pos, size - pos, "\"%s\"",
                                    def->enum_values[params->values[i].value.enum_index]);
+            default:
+                break;
                 } else {
                     pos += snprintf(json + pos, size - pos, "null");
                 }
@@ -1039,6 +1056,8 @@ const char *uft_param_type_string(uft_param_type_t type) {
         case UFT_PARAM_TYPE_PATH:   return "path";
         case UFT_PARAM_TYPE_RANGE:  return "range";
         default:                    return "unknown";
+            default:
+                break;
     }
 }
 
@@ -1070,6 +1089,8 @@ void uft_params_print(const uft_params_t *params) {
                 break;
             case UFT_PARAM_TYPE_ENUM:
                 printf("%s", uft_params_get_enum_string(params, def->name));
+                break;
+            default:
                 break;
         }
         printf("\n");
@@ -1107,6 +1128,8 @@ void uft_params_print_table(const uft_params_t *params) {
             case UFT_PARAM_TYPE_ENUM:
                 snprintf(value, sizeof(value), "%s",
                         uft_params_get_enum_string(params, def->name));
+                break;
+            default:
                 break;
         }
         

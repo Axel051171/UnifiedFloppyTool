@@ -2,7 +2,6 @@
  * uft_amiga_mfm.c
  *
  * Amiga MFM (Modified Frequency Modulation) decoder implementation.
- * Based on concepts from Keir Fraser's disk-utilities (Public Domain).
  *
  * Build:
  *   cc -std=c11 -O2 -Wall -Wextra -pedantic -c uft_amiga_mfm.c

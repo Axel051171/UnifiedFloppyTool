@@ -114,7 +114,6 @@ void uft_gui_settings_init_default(uft_gui_master_settings_t* settings) {
     settings->processing.proc_type = UFT_PROC_ADAPTIVE;
     settings->processing.platform = UFT_PLATFORM_AMIGA;
     
-    /* MFM Timing (FloppyControl defaults für 10MHz sampling) */
     settings->processing.timing.offset = 0;
     settings->processing.timing.min = 10;
     settings->processing.timing.four = 20;
@@ -125,7 +124,6 @@ void uft_gui_settings_init_default(uft_gui_master_settings_t* settings) {
     settings->processing.timing.thresh_8us = 4.0f;
     settings->processing.timing.hd_shift = 0;
     
-    /* Adaptive (FloppyControl defaults) */
     settings->processing.adaptive.rate_of_change = 4.0f;
     settings->processing.adaptive.rate_of_change2 = 100.0f;
     settings->processing.adaptive.adapt_rate_pct = 25.0f;

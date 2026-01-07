@@ -1,3 +1,6 @@
+#ifndef UFT_LOADERS_DMK_LOADER_DMK_FORMAT_H
+#define UFT_LOADERS_DMK_LOADER_DMK_FORMAT_H
+
 
 #define SINGLE_SIDE    0x10
 #define SINGLE_DENSITY 0x40
@@ -19,3 +22,5 @@ typedef struct dmk_header_
 }dmk_header;
 
 #pragma pack()
+
+#endif /* UFT_LOADERS_DMK_LOADER_DMK_FORMAT_H */

@@ -21,6 +21,28 @@ extern "C" {
 #endif
 
 /* ═══════════════════════════════════════════════════════════════════════════════
+ * Hardware Identifier (for capability queries)
+ * 
+ * Note: This is different from uft_hardware_id_t in uft_canonical_params.h
+ * which is a configuration structure. This enum identifies hardware types.
+ * ═══════════════════════════════════════════════════════════════════════════════ */
+
+typedef enum {
+    UFT_HW_NONE = 0,
+    UFT_HW_GREASEWEAZLE,
+    UFT_HW_FLUXENGINE,
+    UFT_HW_KRYOFLUX,
+    UFT_HW_SUPERCARD_PRO,
+    UFT_HW_CATWEASEL,
+    UFT_HW_FC5025,
+    UFT_HW_XUM1541,
+    UFT_HW_PAULINE,
+    UFT_HW_APPLESAUCE,
+    UFT_HW_GENERIC_FDC,
+    UFT_HW_COUNT
+} uft_hardware_id_t;
+
+/* ═══════════════════════════════════════════════════════════════════════════════
  * Capability Flags
  * ═══════════════════════════════════════════════════════════════════════════════ */
 
@@ -73,7 +95,10 @@ typedef enum {
  * ═══════════════════════════════════════════════════════════════════════════════ */
 
 /**
- * @brief Format capability information
+ * @brief Format capability information (extended)
+ * 
+ * Note: This is an extended version with more fields than uft_format_info_t
+ * from uft_types.h. Use this for detailed capability queries.
  */
 typedef struct {
     uft_format_t        format;         /**< Format identifier */
@@ -101,13 +126,13 @@ typedef struct {
     const char          *version;       /**< Parser version */
     const char          *author;        /**< Author/source */
     const char          *url;           /**< Documentation URL */
-} uft_format_info_t;
+} uft_format_capability_t;
 
 /**
  * @brief Hardware capability information
  */
 typedef struct {
-    uft_hardware_t      hardware;       /**< Hardware identifier */
+    uft_hardware_id_t      hardware;       /**< Hardware identifier */
     const char          *name;          /**< Hardware name */
     const char          *description;   /**< Description */
     const char          *vendor;        /**< Vendor name */
@@ -141,7 +166,7 @@ typedef struct {
  */
 typedef struct {
     uft_format_t        format;
-    uft_hardware_t      hardware;
+    uft_hardware_id_t      hardware;
     uint32_t            capabilities;   /**< What's possible with this combo */
     int                 quality;        /**< Quality rating 0-100 */
     const char          *notes;         /**< Compatibility notes */
@@ -183,7 +208,7 @@ uint32_t uft_capability_get(uft_format_t format);
  * @param hardware Hardware to query
  * @return Hardware capability flags
  */
-uint32_t uft_hw_capability_get(uft_hardware_t hardware);
+uint32_t uft_hw_capability_get(uft_hardware_id_t hardware);
 
 /**
  * @brief Check format+hardware compatibility
@@ -192,7 +217,7 @@ uint32_t uft_hw_capability_get(uft_hardware_t hardware);
  * @param result Output result (can be NULL)
  * @return true if compatible
  */
-bool uft_capability_compatible(uft_format_t format, uft_hardware_t hardware,
+bool uft_capability_compatible(uft_format_t format, uft_hardware_id_t hardware,
                                 uft_capability_result_t *result);
 
 /**
@@ -203,7 +228,7 @@ bool uft_capability_compatible(uft_format_t format, uft_hardware_t hardware,
  * @return Result structure (caller should not free)
  */
 uft_capability_result_t uft_capability_query(uft_format_t format,
-                                              uft_hardware_t hardware,
+                                              uft_hardware_id_t hardware,
                                               uft_capability_t operation);
 
 /* ═══════════════════════════════════════════════════════════════════════════════
@@ -215,7 +240,7 @@ uft_capability_result_t uft_capability_query(uft_format_t format,
  * @param format Format identifier
  * @return Format info (NULL if unknown)
  */
-const uft_format_info_t *uft_format_get_info(uft_format_t format);
+const uft_format_capability_t *uft_format_get_capability(uft_format_t format);
 
 /**
  * @brief Get format by name
@@ -252,7 +277,7 @@ uft_format_t *uft_format_list_by_capability(uft_capability_t capability, int *co
  * @param count Output: number of compatible formats
  * @return Array of format identifiers (caller must free)
  */
-uft_format_t *uft_format_list_by_hardware(uft_hardware_t hardware, int *count);
+uft_format_t *uft_format_list_by_hardware(uft_hardware_id_t hardware, int *count);
 
 /* ═══════════════════════════════════════════════════════════════════════════════
  * Hardware Information API
@@ -263,21 +288,21 @@ uft_format_t *uft_format_list_by_hardware(uft_hardware_t hardware, int *count);
  * @param hardware Hardware identifier
  * @return Hardware info (NULL if unknown)
  */
-const uft_hardware_info_t *uft_hardware_get_info(uft_hardware_t hardware);
+const uft_hardware_info_t *uft_hardware_get_info(uft_hardware_id_t hardware);
 
 /**
  * @brief Get hardware by name
  * @param name Hardware name (case-insensitive)
  * @return Hardware identifier (UFT_HW_NONE if not found)
  */
-uft_hardware_t uft_hardware_by_name(const char *name);
+uft_hardware_id_t uft_hardware_by_name(const char *name);
 
 /**
  * @brief List all supported hardware
  * @param count Output: number of hardware types
  * @return Array of hardware identifiers (do not free)
  */
-const uft_hardware_t *uft_hardware_list_all(int *count);
+const uft_hardware_id_t *uft_hardware_list_all(int *count);
 
 /**
  * @brief List hardware with specific capability
@@ -285,14 +310,14 @@ const uft_hardware_t *uft_hardware_list_all(int *count);
  * @param count Output: number of matching hardware
  * @return Array of hardware identifiers (caller must free)
  */
-uft_hardware_t *uft_hardware_list_by_capability(uft_hw_capability_t capability, int *count);
+uft_hardware_id_t *uft_hardware_list_by_capability(uft_hw_capability_t capability, int *count);
 
 /**
  * @brief Check platform support for hardware
  * @param hardware Hardware to check
  * @return Platform support level for current platform
  */
-uft_platform_support_t uft_hardware_platform_support(uft_hardware_t hardware);
+uft_platform_support_t uft_hardware_platform_support(uft_hardware_id_t hardware);
 
 /* ═══════════════════════════════════════════════════════════════════════════════
  * Compatibility Matrix API
@@ -304,7 +329,7 @@ uft_platform_support_t uft_hardware_platform_support(uft_hardware_t hardware);
  * @param hardware Hardware to check
  * @return Compatibility entry (NULL if no specific entry)
  */
-const uft_compat_entry_t *uft_compat_get(uft_format_t format, uft_hardware_t hardware);
+const uft_compat_entry_t *uft_compat_get(uft_format_t format, uft_hardware_id_t hardware);
 
 /**
  * @brief Find best hardware for a format
@@ -312,7 +337,7 @@ const uft_compat_entry_t *uft_compat_get(uft_format_t format, uft_hardware_t har
  * @param operation Desired operation
  * @return Best hardware (UFT_HW_NONE if none suitable)
  */
-uft_hardware_t uft_compat_best_hardware(uft_format_t format, uft_capability_t operation);
+uft_hardware_id_t uft_compat_best_hardware(uft_format_t format, uft_capability_t operation);
 
 /**
  * @brief Find best format for conversion
@@ -343,7 +368,7 @@ int uft_compat_conversion_path(uft_format_t source, uft_format_t target,
  * @param source_format Source file format (can be UFT_FORMAT_UNKNOWN)
  * @return JSON string describing available operations (caller must free)
  */
-char *uft_capability_discover(uft_hardware_t detected_hw, uft_format_t source_format);
+char *uft_capability_discover(uft_hardware_id_t detected_hw, uft_format_t source_format);
 
 /**
  * @brief Get feature suggestions for user
@@ -402,7 +427,7 @@ void uft_capability_print_summary(void);
 void uft_format_print_info(uft_format_t format);
 
 /** Print hardware info */
-void uft_hardware_print_info(uft_hardware_t hardware);
+void uft_hardware_print_info(uft_hardware_id_t hardware);
 
 #ifdef __cplusplus
 }

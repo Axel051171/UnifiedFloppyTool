@@ -117,7 +117,6 @@ static inline uft_flux_thresholds_t uft_get_flux_thresholds_hd(void) {
 #define UFT_FILTER_HD               0
 
 /*============================================================================
- * Drive Operation Delays (from XCopy/nibtools)
  *============================================================================*/
 
 /**

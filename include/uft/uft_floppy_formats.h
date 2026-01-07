@@ -1,8 +1,6 @@
 /**
  * @file uft_floppy_formats.h
- * @brief Floppy disk format definitions derived from Linux kernel
  * 
- * Source: linux/drivers/block/floppy.c
  * Authors: Linus Torvalds, Alain Knaff, Alan Cox
  * License: GPL-2.0
  * 
@@ -57,7 +55,7 @@ typedef enum {
 /**
  * @brief Floppy disk format parameters
  * 
- * Based on Linux kernel struct floppy_struct
+ * Based on Linux kernel struct uft_floppy_struct
  */
 typedef struct {
     const char *name;       /**< Format name (e.g., "H1440") */

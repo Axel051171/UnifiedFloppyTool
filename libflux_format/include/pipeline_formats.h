@@ -99,7 +99,6 @@ static const platform_encoding_t PLATFORM_ENCODINGS[] = {
  * The pipeline converts raw flux to logical formats in stages:
  * 
  * STAGE 0: Hardware Capture
- *   Greaseweazle/KryoFlux/SCP → Raw flux transitions
  *   Output: Delta timings (hardware-specific format)
  * 
  * STAGE 1: Flux Normalization
@@ -150,13 +149,11 @@ static const platform_encoding_t PLATFORM_ENCODINGS[] = {
  * EXAMPLE WORKFLOW:
  * 
  *   C64 Preservation:
- *     1. Greaseweazle captures disk → disk.gwf (FLUX)
  *     2. GWFLUX reader → normalized flux
  *     3. GCRRAW decoder → GCR bitcells
  *     4. D64 decoder → logical disk image
  * 
  *   PC Preservation:
- *     1. KryoFlux captures disk → track00.0.raw (FLUX)
  *     2. KFS reader → normalized flux
  *     3. MFMRAW decoder → MFM bitcells
  *     4. IMG decoder → logical disk image

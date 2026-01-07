@@ -34,8 +34,8 @@ typedef struct {
     uint8_t  number_of_sides;
     uint8_t  track_encoding;    // 0=ISOIBM_MFM, 1=Amiga_MFM, 2=ISOIBM_FM, etc.
     uint16_t bit_rate;          // kbps (LE)
-    uint16_t floppy_rpm;        // (LE)
-    uint8_t  floppy_interface_mode;
+    uint16_t uft_floppy_rpm;        // (LE)
+    uint8_t  uft_floppy_interface_mode;
     uint8_t  reserved;
     uint16_t track_list_offset; // Offset to track table in blocks (LE)
     uint8_t  write_allowed;

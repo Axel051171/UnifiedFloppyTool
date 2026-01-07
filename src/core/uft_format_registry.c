@@ -152,7 +152,7 @@ static const uft_format_info_t g_format_db[] = {
       MAGIC_IPF, 4, 0, 50000, 0, 10000000, "Universal" },
     
     /* Bitstream Images */
-    { UFT_FMT_HFE, "HFE", "HxC Floppy Emulator", "hfe",
+    { UFT_FMT_HFE, "HFE", "UFT HFE Format", "hfe",
       UFT_FCAT_BITSTREAM, UFT_FCAP_FULL | UFT_FCAP_BITSTREAM,
       MAGIC_HFE, 8, 0, 50000, 0, 5000000, "Universal" },
     { UFT_FMT_DMK, "DMK", "DMK Format", "dmk",

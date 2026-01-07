@@ -1,8 +1,6 @@
 /**
- * @file uft_kryoflux_enhanced.c
- * @brief KryoFlux Enhanced Parser Implementation
+ * @file uft_uft_kf_enhanced.c
  * 
- * EXT2-014: Enhanced KryoFlux stream parsing
  * 
  * Features:
  * - CTool compatibility
@@ -12,7 +10,7 @@
  * - Quality metrics
  */
 
-#include "uft/flux/uft_kryoflux_enhanced.h"
+#include "uft/flux/uft_uft_kf_enhanced.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -22,9 +20,8 @@
  * Constants
  *===========================================================================*/
 
-/* KryoFlux sample clock */
-#define KF_SCK              24027428.57142857
-#define KF_ICK              (KF_SCK / 8.0)
+#define UFT_KF_SCK              24027428.57142857
+#define UFT_KF_ICK              (UFT_KF_SCK / 8.0)
 
 /* CTool command codes */
 #define CT_RESET            0x00
@@ -70,7 +67,7 @@ typedef struct {
     uint32_t index_count;
     uint32_t oob_count;
     uint32_t error_count;
-} kf_enhanced_ctx_t;
+} uft_kf_enhanced_ctx_t;
 
 /*===========================================================================
  * Helpers
@@ -111,8 +108,8 @@ int uft_kf_enhanced_open(uft_kf_enhanced_t *stream,
     }
     
     /* Default clocks */
-    stream->sample_clock = KF_SCK;
-    stream->index_clock = KF_ICK;
+    stream->sample_clock = UFT_KF_SCK;
+    stream->index_clock = UFT_KF_ICK;
     
     /* Parse stream */
     size_t pos = 0;
@@ -476,7 +473,7 @@ int uft_kf_enhanced_report(const uft_kf_enhanced_t *stream,
     
     int written = snprintf(buffer, size,
         "{\n"
-        "  \"kryoflux_enhanced\": {\n"
+        "  \"uft_kf_enhanced\": {\n"
         "    \"flux_count\": %u,\n"
         "    \"index_count\": %zu,\n"
         "    \"sample_clock\": %.0f,\n"

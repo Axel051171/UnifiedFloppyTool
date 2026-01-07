@@ -5,7 +5,6 @@
 
 #include <QString>
 
-// FluxEngine provider (Provider Framework A1 – static providers).
 // Conservative CLI-wrapper skeleton:
 //  - validates that a 'fluxengine' executable is present
 //  - surfaces basic toolchain info

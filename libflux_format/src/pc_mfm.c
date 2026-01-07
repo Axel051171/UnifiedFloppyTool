@@ -2,8 +2,6 @@
 /*
  * pc_mfm.c - PC DOS MFM Sector Decoder
  * 
- * Ported from FloppyControl (C# -> C)
- * Original: https://github.com/Skaizo/FloppyControl
  * 
  * Supports:
  *   - PC DOS DD (720K, 360K)

@@ -5,8 +5,6 @@
  * THE ULTIMATE API - One API to rule them all!
  * 
  * Integrates:
- *   - 6 Hardware types (KryoFlux, FluxEngine, Applesauce, XUM1541, HxC, Zoom)
- *   - 57+ Disk formats (via SAMdisk)
  *   - Universal parameter compensation (Mac800K, C64, Amiga, Apple II, etc.)
  * 
  * Usage:
@@ -23,14 +21,14 @@
 #include <stdbool.h>
 
 /* Hardware headers */
-#include "kryoflux_hw.h"
-#include "fluxengine_usb.h"
-#include "applesauce_hw.h"
-#include "xum1541_usb.h"
+#include "uft_kf_hw.h"
+#include "uft_fe_usb.h"
+#include "uft_as_hw.h"
+#include "uft_xum_usb.h"
 #include "hw_writer.h"
 
 /* Format headers */
-#include "samdisk_api.h"
+#include "uft_sam_api.h"
 
 /* Core headers */
 #include "parameter_compensation.h"
@@ -59,8 +57,8 @@ typedef struct {
     void *hw_handle;  /* Points to specific hardware handle */
     
     /* Format engine */
-    samdisk_engine_t *format_engine;
-    samdisk_disk_t *current_disk;
+    uft_sam_engine_t *format_engine;
+    uft_sam_disk_t *current_disk;
     
     /* Compensation */
     compensation_params_t comp_params;
@@ -100,7 +98,7 @@ int unified_init(unified_handle_t **handle_out, hardware_type_t hw_type)
     handle->comp_mode = COMP_MODE_AUTO;
     
     /* Initialize format engine */
-    if (samdisk_init(&handle->format_engine) < 0) {
+    if (uft_sam_init(&handle->format_engine) < 0) {
         free(handle);
         return -1;
     }
@@ -111,7 +109,7 @@ int unified_init(unified_handle_t **handle_out, hardware_type_t hw_type)
     /* Initialize hardware (if specified) */
     if (hw_type != HW_TYPE_NONE) {
         if (unified_connect_hardware(handle) < 0) {
-            samdisk_close(handle->format_engine);
+            uft_sam_close(handle->format_engine);
             free(handle);
             return -1;
         }
@@ -132,28 +130,28 @@ void unified_close(unified_handle_t *handle)
     
     /* Close current disk */
     if (handle->current_disk) {
-        samdisk_free_disk(handle->current_disk);
+        uft_sam_free_disk(handle->current_disk);
     }
     
     /* Close format engine */
     if (handle->format_engine) {
-        samdisk_close(handle->format_engine);
+        uft_sam_close(handle->format_engine);
     }
     
     /* Close hardware */
     if (handle->hw_handle) {
         switch (handle->hw_type) {
             case HW_TYPE_KRYOFLUX:
-                kryoflux_close((kryoflux_handle_t*)handle->hw_handle);
+                uft_kf_close((uft_kf_handle_t*)handle->hw_handle);
                 break;
             case HW_TYPE_FLUXENGINE:
-                fluxengine_close((fluxengine_handle_t*)handle->hw_handle);
+                uft_fe_close((uft_fe_handle_t*)handle->hw_handle);
                 break;
             case HW_TYPE_APPLESAUCE:
-                applesauce_close((applesauce_handle_t*)handle->hw_handle);
+                uft_as_close((uft_as_handle_t*)handle->hw_handle);
                 break;
             case HW_TYPE_XUM1541:
-                xum1541_close((xum1541_handle_t*)handle->hw_handle);
+                uft_xum_close((uft_xum_handle_t*)handle->hw_handle);
                 break;
             default:
                 break;
@@ -185,8 +183,8 @@ int unified_connect_hardware(unified_handle_t *handle)
     switch (handle->hw_type) {
         case HW_TYPE_KRYOFLUX:
             {
-                kryoflux_handle_t *kf;
-                if (kryoflux_init(&kf) == 0) {
+                uft_kf_handle_t *kf;
+                if (uft_kf_init(&kf) == 0) {
                     handle->hw_handle = kf;
                     result = 0;
                 }
@@ -195,8 +193,8 @@ int unified_connect_hardware(unified_handle_t *handle)
             
         case HW_TYPE_FLUXENGINE:
             {
-                fluxengine_handle_t *fe;
-                if (fluxengine_init(&fe) == 0) {
+                uft_fe_handle_t *fe;
+                if (uft_fe_init(&fe) == 0) {
                     handle->hw_handle = fe;
                     result = 0;
                 }
@@ -205,8 +203,8 @@ int unified_connect_hardware(unified_handle_t *handle)
             
         case HW_TYPE_APPLESAUCE:
             {
-                applesauce_handle_t *as;
-                if (applesauce_init("/dev/ttyUSB0", &as) == 0) {
+                uft_as_handle_t *as;
+                if (uft_as_init("/dev/ttyUSB0", &as) == 0) {
                     handle->hw_handle = as;
                     result = 0;
                 }
@@ -215,8 +213,8 @@ int unified_connect_hardware(unified_handle_t *handle)
             
         case HW_TYPE_XUM1541:
             {
-                xum1541_handle_t *xum;
-                if (xum1541_init(&xum) == 0) {
+                uft_xum_handle_t *xum;
+                if (uft_xum_init(&xum) == 0) {
                     handle->hw_handle = xum;
                     result = 0;
                 }
@@ -252,16 +250,16 @@ int unified_seek(unified_handle_t *handle, int track)
     
     switch (handle->hw_type) {
         case HW_TYPE_KRYOFLUX:
-            result = kryoflux_seek((kryoflux_handle_t*)handle->hw_handle, track);
+            result = uft_kf_seek((uft_kf_handle_t*)handle->hw_handle, track);
             break;
         case HW_TYPE_FLUXENGINE:
-            result = fluxengine_seek((fluxengine_handle_t*)handle->hw_handle, track);
+            result = uft_fe_seek((uft_fe_handle_t*)handle->hw_handle, track);
             break;
         case HW_TYPE_APPLESAUCE:
-            result = applesauce_seek((applesauce_handle_t*)handle->hw_handle, track);
+            result = uft_as_seek((uft_as_handle_t*)handle->hw_handle, track);
             break;
         case HW_TYPE_XUM1541:
-            result = xum1541_seek((xum1541_handle_t*)handle->hw_handle, track);
+            result = uft_xum_seek((uft_xum_handle_t*)handle->hw_handle, track);
             break;
         default:
             result = -1;
@@ -301,22 +299,22 @@ int unified_read_flux(
     /* Read flux based on hardware type */
     switch (handle->hw_type) {
         case HW_TYPE_KRYOFLUX:
-            result = kryoflux_read_flux(
-                (kryoflux_handle_t*)handle->hw_handle,
+            result = uft_kf_read_flux(
+                (uft_kf_handle_t*)handle->hw_handle,
                 side, &flux_data, &flux_len
             );
             break;
             
         case HW_TYPE_FLUXENGINE:
-            result = fluxengine_read_flux(
-                (fluxengine_handle_t*)handle->hw_handle,
+            result = uft_fe_read_flux(
+                (uft_fe_handle_t*)handle->hw_handle,
                 side, 200, &flux_data, &flux_len  /* 200ms read */
             );
             break;
             
         case HW_TYPE_APPLESAUCE:
-            result = applesauce_read_flux(
-                (applesauce_handle_t*)handle->hw_handle,
+            result = uft_as_read_flux(
+                (uft_as_handle_t*)handle->hw_handle,
                 side, &flux_data, &flux_len
             );
             break;
@@ -371,12 +369,11 @@ int unified_read_image(
     
     /* Close previous disk */
     if (handle->current_disk) {
-        samdisk_free_disk(handle->current_disk);
+        uft_sam_free_disk(handle->current_disk);
         handle->current_disk = NULL;
     }
     
-    /* Read via SAMdisk */
-    return samdisk_read_image(
+    return uft_sam_read_image(
         handle->format_engine,
         filename,
         format,
@@ -400,7 +397,7 @@ int unified_write_image(
         return -1;
     }
     
-    return samdisk_write_image(
+    return uft_sam_write_image(
         handle->format_engine,
         handle->current_disk,
         filename,
@@ -429,8 +426,7 @@ int unified_convert(
         return -1;
     }
     
-    /* Do the conversion via SAMdisk */
-    int result = samdisk_convert(
+    int result = uft_sam_convert(
         handle->format_engine,
         input_file,
         NULL,  /* Auto-detect input */
@@ -512,14 +508,14 @@ compensation_mode_t unified_get_compensation_mode(unified_handle_t *handle)
  */
 int unified_list_formats(
     unified_handle_t *handle,
-    samdisk_format_info_t **formats_out,
+    uft_sam_format_info_t **formats_out,
     int *count_out
 ) {
     if (!handle) {
         return -1;
     }
     
-    return samdisk_list_formats(handle->format_engine, formats_out, count_out);
+    return uft_sam_list_formats(handle->format_engine, formats_out, count_out);
 }
 
 /**
@@ -533,35 +529,33 @@ int unified_detect_hardware(hardware_type_t *hw_type_out)
     
     /* Try each hardware type in order of preference */
     
-    /* Try KryoFlux */
-    kryoflux_handle_t *kf;
-    if (kryoflux_init(&kf) == 0) {
+    uft_kf_handle_t *kf;
+    if (uft_kf_init(&kf) == 0) {
         *hw_type_out = HW_TYPE_KRYOFLUX;
-        kryoflux_close(kf);
+        uft_kf_close(kf);
         return 0;
     }
     
-    /* Try FluxEngine */
-    fluxengine_handle_t *fe;
-    if (fluxengine_init(&fe) == 0) {
+    uft_fe_handle_t *fe;
+    if (uft_fe_init(&fe) == 0) {
         *hw_type_out = HW_TYPE_FLUXENGINE;
-        fluxengine_close(fe);
+        uft_fe_close(fe);
         return 0;
     }
     
     /* Try Applesauce */
-    applesauce_handle_t *as;
-    if (applesauce_init("/dev/ttyUSB0", &as) == 0) {
+    uft_as_handle_t *as;
+    if (uft_as_init("/dev/ttyUSB0", &as) == 0) {
         *hw_type_out = HW_TYPE_APPLESAUCE;
-        applesauce_close(as);
+        uft_as_close(as);
         return 0;
     }
     
     /* Try XUM1541 */
-    xum1541_handle_t *xum;
-    if (xum1541_init(&xum) == 0) {
+    uft_xum_handle_t *xum;
+    if (uft_xum_init(&xum) == 0) {
         *hw_type_out = HW_TYPE_XUM1541;
-        xum1541_close(xum);
+        uft_xum_close(xum);
         return 0;
     }
     

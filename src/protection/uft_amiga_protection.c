@@ -4,7 +4,6 @@
  * @version 1.0.0
  * @date 2026-01-06
  *
- * Based on disk-utilities by Keir Fraser (Public Domain)
  * Implements detection for 170+ Amiga copy protections.
  */
 

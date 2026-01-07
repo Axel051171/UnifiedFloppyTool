@@ -2,7 +2,6 @@
  * @file amigados_filesystem.h
  * @brief AmigaDOS Filesystem - Public API
  * 
- * Based on Keir Fraser's amiga-stuff implementation.
  * 
  * @version 0.8.0
  * @date 2024-12-22

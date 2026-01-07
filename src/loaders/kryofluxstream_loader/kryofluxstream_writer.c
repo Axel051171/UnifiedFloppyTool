@@ -2,25 +2,20 @@
 //
 // Copyright (C) 2006-2025 Jean-Franois DEL NERO
 //
-// This file is part of the HxCFloppyEmulator library
 //
-// HxCFloppyEmulator may be used and distributed without restriction provided
 // that this copyright statement is not removed from the file and that any
 // derivative work contains the original copyright notice and the associated
 // disclaimer.
 //
-// HxCFloppyEmulator is free software; you can redistribute it
 // and/or modify  it under the terms of the GNU General Public License
 // as published by the Free Software Foundation; either version 2
 // of the License, or (at your option) any later version.
 //
-// HxCFloppyEmulator is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 //   See the GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with HxCFloppyEmulator; if not, write to the Free Software
 // Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 //
 */
@@ -50,8 +45,8 @@
 
 #include "types.h"
 
-#include "internal_libhxcfe.h"
-#include "libhxcfe.h"
+#include "libflux.h""
+#include "libflux.h""
 
 #include "kryofluxstream_format.h"
 #include "kryofluxstream_loader.h"
@@ -123,7 +118,7 @@ int alignOOB(FILE * f)
 	return j;
 }
 
-uint32_t write_kf_stream_track(HXCFE_IMGLDR * imgldr_ctx,char * filepath,HXCFE_SIDE * track,int tracknum,int sidenum,unsigned int revolution,double sck)
+uint32_t write_kf_stream_track(LIBFLUX_IMGLDR * imgldr_ctx,char * filepath,LIBFLUX_SIDE * track,int tracknum,int sidenum,unsigned int revolution,double sck)
 {
 	char fullp[512];
 	char fullp2[512];
@@ -154,22 +149,22 @@ uint32_t write_kf_stream_track(HXCFE_IMGLDR * imgldr_ctx,char * filepath,HXCFE_S
 	time_t curtimecnt;
 	struct tm * curtime;
 
-	strconv = initStreamConvert(imgldr_ctx->hxcfe,track, (float)(1E9/sck) * 1000.0, 0x00FFFFFF,-1,-1,revolution+1,5000000);
+	strconv = initStreamConvert(imgldr_ctx->ctx,track, (float)(1E9/sck) * 1000.0, 0x00FFFFFF,-1,-1,revolution+1,5000000);
 	if(!strconv)
 		return 0;
 
-	hxc_getpathfolder(filepath,fullp,SYS_PATH_TYPE);
-	hxc_getfilenamewext(filepath,fullp2,SYS_PATH_TYPE);
-	strcat(fullp,fullp2);
+	libflux_getpathfolder(filepath,fullp,SYS_PATH_TYPE);
+	libflux_getfilenamewext(filepath,fullp2,SYS_PATH_TYPE);
+	strncat(fullp, fullp2, sizeof(fullp) - strlen(fullp) - 1);
 	snprintf(fileext, sizeof(fileext),"%.2d.%d.raw",tracknum,sidenum);
-	strcat(fullp,fileext);
+	strncat(fullp, fileext, sizeof(fullp) - strlen(fullp) - 1);
 
-	imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"write_kf_stream_track : Creating %s (trk %d, side %d, rev %d)",fullp,tracknum,sidenum,revolution);
+	imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"write_kf_stream_track : Creating %s (trk %d, side %d, rev %d)",fullp,tracknum,sidenum,revolution);
 
 	time(&curtimecnt);
 	curtime = localtime(&curtimecnt);
 
-	f = hxc_fopen(fullp,"wb");
+	f = libflux_fopen(fullp,"wb");
 	if(f)
 	{
 		streamsize = 0;
@@ -188,10 +183,10 @@ uint32_t write_kf_stream_track(HXCFE_IMGLDR * imgldr_ctx,char * filepath,HXCFE_S
 		if (fwrite(&oobh,sizeof(s_oob_header),1,f) != 1) { /* I/O error */ }
 		if (fwrite(kfinfobuffer,1,oobh.Size,f) != oobh.Size) { /* I/O error */ }
 		// KFInfo : software information and clocks
-		envstr = hxcfe_getEnvVar(imgldr_ctx->hxcfe,"LIBVERSION",0);
+		envstr = libflux_getEnvVar(imgldr_ctx->ctx,"LIBVERSION",0);
 		if(envstr)
 		{
-			snprintf(kfinfobuffer,sizeof(kfinfobuffer)-1,"name=%s, version=%s, sck=%.7f, ick=%.7f","libhxcfe",envstr,sck,(double)(sck/8));
+			snprintf(kfinfobuffer,sizeof(kfinfobuffer)-1,"name=%s, version=%s, sck=%.7f, ick=%.7f","liblibflux_ctx",envstr,sck,(double)(sck/8));
 			kfinfobuffer[sizeof(kfinfobuffer)-1] = 0;
 			memset(&oobh,0,sizeof(s_oob_header));
 			oobh.Sign = 0xD;
@@ -303,7 +298,7 @@ uint32_t write_kf_stream_track(HXCFE_IMGLDR * imgldr_ctx,char * filepath,HXCFE_S
 					oobdi.SysClk = iclk;
 					totalcelllen = 0;
 					if (fwrite(&oobdi,sizeof(s_oob_DiskIndex),1,f) != 1) { /* I/O error */ }
-					imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"write_kf_stream_track : Index added (Stream pos : %d, Sysclk : %d)",oobdi.StreamPosition,oobdi.SysClk);
+					imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"write_kf_stream_track : Index added (Stream pos : %d, Sysclk : %d)",oobdi.StreamPosition,oobdi.SysClk);
 				}
 
 				SRcntdown--;
@@ -346,7 +341,7 @@ uint32_t write_kf_stream_track(HXCFE_IMGLDR * imgldr_ctx,char * filepath,HXCFE_S
 		}
 		else
 		{
-			imgldr_ctx->hxcfe->hxc_printf(MSG_WARNING,"write_kf_stream_track : No pulse in this track !");
+			imgldr_ctx->ctx->libflux_printf(MSG_WARNING,"write_kf_stream_track : No pulse in this track !");
 		}
 
 		// Finish the stream
@@ -361,19 +356,19 @@ uint32_t write_kf_stream_track(HXCFE_IMGLDR * imgldr_ctx,char * filepath,HXCFE_S
 		if (fwrite(&oobse,sizeof(s_oob_StreamEnd),1,f) != 1) { /* I/O error */ }
 		memset(trackbuffer,0x0D,7);
 		if (fwrite(&trackbuffer,7,1,f) != 1) { /* I/O error */ }
-		imgldr_ctx->hxcfe->hxc_printf(MSG_WARNING,"write_kf_stream_track : End of the track ! (StreamPosition : %d)",oobse.StreamPosition);
+		imgldr_ctx->ctx->libflux_printf(MSG_WARNING,"write_kf_stream_track : End of the track ! (StreamPosition : %d)",oobse.StreamPosition);
 
-		hxc_fclose(f);
+		libflux_fclose(f);
 	}
 	else
 	{
-		imgldr_ctx->hxcfe->hxc_printf(MSG_ERROR,"write_kf_stream_track : Can't create %s !",fullp);
+		imgldr_ctx->ctx->libflux_printf(MSG_ERROR,"write_kf_stream_track : Can't create %s !",fullp);
 	}
 
 	return 0;
 }
 
-int KryoFluxStream_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char * filename)
+int KryoFluxStream_libWrite_DiskFile(LIBFLUX_IMGLDR* imgldr_ctx,LIBFLUX_FLOPPY * floppy,char * filename)
 {
 	int i,j, nbrevolutions;
 	int track_step;
@@ -381,21 +376,21 @@ int KryoFluxStream_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * flo
 	char * tmp_str;
 	double sck;
 
-	nbrevolutions = hxcfe_getEnvVarValue( imgldr_ctx->hxcfe, "KFRAWEXPORT_NUMBER_OF_REVOLUTIONS" );
+	nbrevolutions = libflux_getEnvVarValue( imgldr_ctx->ctx, "KFRAWEXPORT_NUMBER_OF_REVOLUTIONS" );
 
 	track_step = 1;
 
-	if( hxcfe_getEnvVarValue( imgldr_ctx->hxcfe, "KFRAWEXPORT_DOUBLE_STEP" ) == 1 )
+	if( libflux_getEnvVarValue( imgldr_ctx->ctx, "KFRAWEXPORT_DOUBLE_STEP" ) == 1 )
 		track_step = 2;
 
-	sck = DEFAULT_KF_SCLOCK;
-	tmp_str = hxcfe_getEnvVar( imgldr_ctx->hxcfe, "KFRAWEXPORT_SAMPLE_FREQUENCY", NULL);
+	sck = DEFAULT_UFT_KF_SCLOCK;
+	tmp_str = libflux_getEnvVar( imgldr_ctx->ctx, "KFRAWEXPORT_SAMPLE_FREQUENCY", NULL);
 	if( tmp_str )
 	{
 		sck = atof(tmp_str);
 		if( !( sck >= (4 * 1000000) && sck <= (250 * 1000000) ) )
 		{
-			sck = (double)DEFAULT_KF_SCLOCK;
+			sck = (double)DEFAULT_UFT_KF_SCLOCK;
 		}
 	}
 
@@ -403,11 +398,11 @@ int KryoFluxStream_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * flo
 	{
 		for(i=0;i<floppy->floppyNumberOfTrack;i++)
 		{
-			hxcfe_imgCallProgressCallback(imgldr_ctx,i + (j*floppy->floppyNumberOfTrack),floppy->floppyNumberOfTrack*floppy->floppyNumberOfSide );
+			libflux_imgCallProgressCallback(imgldr_ctx,i + (j*floppy->floppyNumberOfTrack),floppy->floppyNumberOfTrack*floppy->floppyNumberOfSide );
 
 			write_kf_stream_track(imgldr_ctx, filename,floppy->tracks[i]->sides[j],i*track_step,j,nbrevolutions,sck);
 		}
 	}
 
-	return HXCFE_NOERROR;
+	return LIBFLUX_NOERROR;
 }

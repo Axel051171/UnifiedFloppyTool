@@ -2,7 +2,6 @@
  * uft_c64_gcr_codec.h
  *
  * Complete GCR (Group Code Recording) codec for Commodore 64/1541.
- * Based on nibtools by Pete Rittwage and Markus Brenner.
  *
  * GCR Encoding (4-to-5):
  * - Each 4-bit nibble is encoded as 5 bits
@@ -10,10 +9,7 @@
  * - 4 bytes become 5 bytes (20 data bits → 25 GCR bits, 8 sync bits)
  *
  * Original Source:
- * - nibtools gcr.c (C) Markus Brenner <markus(at)brenner.de>
- * - nibtools gcr.h (C) Pete Rittwage <peter(at)rittwage.com>
  *
- * License: GPL (from nibtools)
  *
  * Build:
  *   cc -std=c11 -O2 -Wall -Wextra -pedantic -c uft_c64_gcr_codec.c

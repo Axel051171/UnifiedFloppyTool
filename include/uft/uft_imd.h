@@ -2,10 +2,9 @@
  * @file uft_imd.h
  * @brief ImageDisk (IMD) Format Support for UFT
  * 
- * ImageDisk is a disk image format created by Dave Dunfield for archiving
+ * ImageDisk is a disk image format created for archiving
  * floppy disks. It supports multiple data rates, sector sizes, and densities.
  * 
- * Format specification based on IMD documentation and source code analysis.
  * 
  * @copyright UFT Project - Based on public domain IMD format specification
  */

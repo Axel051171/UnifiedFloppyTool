@@ -1,8 +1,8 @@
 /**
  * @file uft_hfe_parser_v2.c
- * @brief GOD MODE HFE Parser v2 - HxC Floppy Emulator Format
+ * @brief GOD MODE HFE Parser v2 - UFT HFE Format Format
  * 
- * HFE (HxC Floppy Emulator) is a universal floppy image format.
+ * HFE (UFT HFE Format) is a universal floppy image format.
  * Supports any floppy format through raw MFM/FM track storage.
  * 
  * Features:

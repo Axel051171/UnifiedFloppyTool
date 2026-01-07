@@ -316,7 +316,7 @@ uft_error_t uft_register_builtin_format_plugins(void) {
         return err;
     }
     
-    // HFE Plugin (HxC Floppy Emulator)
+    // HFE Plugin (UFT HFE Format)
     err = uft_register_format_plugin(&uft_format_plugin_hfe);
     if (UFT_FAILED(err) && err != UFT_ERROR_PLUGIN_LOAD) {
         return err;

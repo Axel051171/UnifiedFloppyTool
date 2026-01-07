@@ -1,11 +1,7 @@
 /**
- * @file uft_fluxengine_algorithms.h
- * @brief FluxEngine + FlashFloppy Algorithms Collection
+ * @file uft_uft_fe_algorithms.h
  * @version 3.4.0
  *
- * Extracted from:
- * - FluxEngine by David Given (public domain)
- * - FlashFloppy by Keir Fraser (public domain)
  *
  * Contains:
  * - PLL Algorithm (SamDisk-derived)
@@ -19,8 +15,8 @@
  * SPDX-License-Identifier: Unlicense
  */
 
-#ifndef UFT_FLUXENGINE_ALGORITHMS_H
-#define UFT_FLUXENGINE_ALGORITHMS_H
+#ifndef UFT_UFT_FE_ALGORITHMS_H
+#define UFT_UFT_FE_ALGORITHMS_H
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -33,10 +29,8 @@ extern "C" {
 #endif
 
 /*============================================================================
- * TIMING CONSTANTS (from FluxEngine protocol.h)
  *============================================================================*/
 
-/* FluxEngine Hardware Timing */
 #define UFT_FE_TICK_FREQUENCY       12000000    /* 12 MHz */
 #define UFT_FE_TICKS_PER_US         (UFT_FE_TICK_FREQUENCY / 1000000)
 #define UFT_FE_TICKS_PER_MS         (UFT_FE_TICK_FREQUENCY / 1000)
@@ -53,14 +47,12 @@ extern "C" {
 #define UFT_FE_EOF                  0x100   /* Synthetic, library-only */
 
 /*============================================================================
- * PLL ALGORITHM (from FluxEngine fluxdecoder.cc - SamDisk derived)
  *============================================================================*/
 
 /**
  * @brief PLL Decoder State
  * 
  * Port of SamDisk FluxDecoder algorithm:
- * https://github.com/simonowen/samdisk/blob/master/src/FluxDecoder.cpp
  */
 typedef struct uft_fe_pll {
     /* Configuration */
@@ -82,9 +74,7 @@ typedef struct uft_fe_pll {
 } uft_fe_pll_t;
 
 /**
- * @brief Initialize PLL with default FluxEngine settings
  * 
- * Default values from FluxEngine decoders.proto:
  * - pll_phase: 0.75 (75%)
  * - pll_adjust: 0.05 (5%)
  * - flux_scale: 1.0
@@ -130,7 +120,6 @@ static inline void uft_fe_pll_init_custom(uft_fe_pll_t *pll,
 /**
  * @brief Process one flux interval and return decoded bit
  * 
- * This is the core PLL algorithm from FluxEngine/SamDisk.
  * 
  * @param pll PLL state
  * @param flux_ns Flux interval in nanoseconds
@@ -183,7 +172,6 @@ static inline int uft_fe_pll_process(uft_fe_pll_t *pll, double flux_ns) {
 }
 
 /*============================================================================
- * MFM ENCODING TABLE (from FlashFloppy mfm.c)
  *============================================================================*/
 
 /**
@@ -259,7 +247,6 @@ static inline uint8_t uft_mfm_decode_word(uint16_t mfm) {
 }
 
 /*============================================================================
- * FM ENCODING (from FlashFloppy)
  *============================================================================*/
 
 /**
@@ -279,7 +266,6 @@ static inline uint16_t uft_fm_sync(uint8_t data, uint8_t clock) {
 }
 
 /*============================================================================
- * IBM MFM SYNC PATTERNS (from FluxEngine ibm/decoder.cc)
  *============================================================================*/
 
 /* MFM record separator: 0xA1 with missing clock
@@ -298,7 +284,6 @@ static inline uint16_t uft_fm_sync(uint8_t data, uint8_t clock) {
  */
 #define UFT_MFM_SYNC_C2             0x5224
 
-/* FM patterns (from FluxEngine) */
 #define UFT_FM_IDAM_PATTERN         0xF57E  /* 0xFE with clock 0xC7 */
 #define UFT_FM_DAM1_PATTERN         0xF56A  /* 0xF8 with clock 0xC7 */
 #define UFT_FM_DAM2_PATTERN         0xF56F  /* 0xFB with clock 0xC7 */
@@ -309,7 +294,6 @@ static inline uint16_t uft_fm_sync(uint8_t data, uint8_t clock) {
 #define UFT_FM_TRS80_DAM2           0xF56E  /* 0xFA with clock 0xC7 */
 
 /*============================================================================
- * GCR ENCODING - COMMODORE 64 (from FluxEngine c64/)
  *============================================================================*/
 
 /* C64 GCR uses 5 bits to encode 4 bits of data */
@@ -336,7 +320,6 @@ static inline int uft_c64_gcr_decode(uint8_t gcr) {
 }
 
 /*============================================================================
- * GCR ENCODING - APPLE II (from FluxEngine apple2/)
  *============================================================================*/
 
 #define UFT_APPLE2_SECTOR_RECORD    0xD5AA96
@@ -380,7 +363,6 @@ static const int8_t UFT_APPLE2_GCR_DECODE[256] = {
 };
 
 /*============================================================================
- * GCR ENCODING - MACINTOSH (from FluxEngine macintosh/)
  *============================================================================*/
 
 #define UFT_MAC_SECTOR_RECORD       0xD5AA96
@@ -391,7 +373,6 @@ static const int8_t UFT_APPLE2_GCR_DECODE[256] = {
 /* Macintosh uses same GCR encoding as Apple II */
 
 /*============================================================================
- * AMIGA MFM (from FluxEngine amiga/)
  *============================================================================*/
 
 #define UFT_AMIGA_SECTOR_RECORD     0xAAAA44894489ULL
@@ -491,7 +472,6 @@ static inline void uft_amiga_deinterleave(const uint8_t *odds,
 }
 
 /*============================================================================
- * CRC16-CCITT (from FlashFloppy crc.c)
  *============================================================================*/
 
 static const uint16_t UFT_CRC16_CCITT_TABLE[256] = {
@@ -554,7 +534,6 @@ static inline uint16_t uft_crc16_ccitt_std(const uint8_t *data, size_t len) {
 }
 
 /*============================================================================
- * HFE FORMAT CONSTANTS (from FlashFloppy hfe.c)
  *============================================================================*/
 
 /* HFE track encoding types */
@@ -598,4 +577,4 @@ typedef enum {
 }
 #endif
 
-#endif /* UFT_FLUXENGINE_ALGORITHMS_H */
+#endif /* UFT_UFT_FE_ALGORITHMS_H */

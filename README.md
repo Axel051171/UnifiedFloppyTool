@@ -1,155 +1,122 @@
-# UnifiedFloppyTool (UFT) v3.6.0
+# UnifiedFloppyTool (UFT)
 
-[![CI Build](https://github.com/Axel051171/UnifiedFloppyTool/actions/workflows/ci.yml/badge.svg)](https://github.com/Axel051171/UnifiedFloppyTool/actions/workflows/ci.yml)
-[![Release](https://github.com/Axel051171/UnifiedFloppyTool/actions/workflows/release.yml/badge.svg)](https://github.com/Axel051171/UnifiedFloppyTool/actions/workflows/release.yml)
-[![License: GPL-2.0](https://img.shields.io/badge/License-GPL%202.0-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-3.6.0-green.svg)](https://github.com/Axel051171/UnifiedFloppyTool/releases/latest)
+**Industrial-Grade Floppy Disk Preservation & Analysis System**
 
-> **"Bei uns geht kein Bit verloren"** - No bit gets lost
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![C Standard](https://img.shields.io/badge/C-C11-blue.svg)](https://en.wikipedia.org/wiki/C11_(C_standard_revision))
+[![Platform](https://img.shields.io/badge/Platform-Linux%20%7C%20macOS%20%7C%20Windows-lightgrey.svg)]()
 
-Professional-grade floppy disk preservation and analysis tool supporting 115+ disk formats across 20+ historical computing platforms.
-
-## Features
-
-- **115+ Format Support**: Commodore (D64, G64, NIB), Amiga (ADF, ADZ, DMS), Atari (ATR, ATX, XFD), Apple (DSK, WOZ, 2IMG), PC (IMD, TD0, DMK), and many more
-- **Forensic Quality**: Preserve copy protection, weak bits, timing variations
-- **Multi-Revolution**: Capture multiple disk revolutions for enhanced recovery
-- **Cross-Platform**: Windows, Linux, macOS (ARM64 & x86_64)
-- **Qt6 GUI**: Modern interface with Dark Mode support
-- **Hardware Support**: Greaseweazle, KryoFlux, FluxEngine, SuperCard Pro, FC5025
-
-## Platform Support
-
-| Platform | Status | Notes |
-|----------|--------|-------|
-| Linux (x64) | ✅ Fully supported | Ubuntu 22.04+, Debian 12+ |
-| Windows (x64) | ✅ Fully supported | Windows 10/11 |
-| macOS (ARM64) | ✅ Fully supported | macOS 14 Sonoma+ |
-| macOS (x64) | ⚠️ Limited | macOS 12 Monterey+ |
-
-> **Note**: macOS builds require macOS 14+ for full Qt6 compatibility.
-
-## Quick Start
-
-### Download
-
-Get the latest release from [GitHub Releases](https://github.com/Axel051171/UnifiedFloppyTool/releases):
-
-- **Linux**: `uft-3.6.0-linux-x86_64.tar.gz` or `uft-3.6.0-linux-x86_64.deb`
-- **Windows**: `uft-3.6.0-windows-x64.zip`
-- **macOS**: `uft-3.6.0-macos-arm64.tar.gz` (Apple Silicon)
-
-### Build from Source
-
-#### Prerequisites
-
-- CMake 3.16+
-- Qt 6.5+
-- C++17 compiler (GCC 10+, Clang 12+, MSVC 2019+)
-- libusb 1.0 (for hardware support)
-
-#### Linux
-
-```bash
-# Install dependencies (Ubuntu/Debian)
-sudo apt install build-essential cmake qt6-base-dev qt6-tools-dev libusb-1.0-0-dev
-
-# Build
-git clone https://github.com/Axel051171/UnifiedFloppyTool.git
-cd UnifiedFloppyTool
-cmake -B build -DCMAKE_BUILD_TYPE=Release
-cmake --build build -j$(nproc)
-
-# Run
-./build/uft
-```
-
-#### Windows
-
-```powershell
-# Install Qt6 via Qt Installer or vcpkg
-# Install CMake
-
-git clone https://github.com/Axel051171/UnifiedFloppyTool.git
-cd UnifiedFloppyTool
-cmake -B build -DCMAKE_BUILD_TYPE=Release
-cmake --build build --config Release
-
-# Run
-.\build\Release\uft.exe
-```
-
-#### macOS
-
-```bash
-# Install dependencies
-brew install qt@6 cmake libusb
-
-# Build
-git clone https://github.com/Axel051171/UnifiedFloppyTool.git
-cd UnifiedFloppyTool
-export Qt6_DIR=$(brew --prefix qt@6)/lib/cmake/Qt6
-cmake -B build -DCMAKE_BUILD_TYPE=Release
-cmake --build build -j$(sysctl -n hw.ncpu)
-
-# Run
-./build/uft
-```
-
-## Usage
-
-### GUI Mode
-
-```bash
-./uft
-```
-
-### Command Line
-
-```bash
-# Show version
-./uft --version
-
-# Convert D64 to ADF
-./uft convert input.d64 output.adf
-
-# Analyze disk image
-./uft analyze disk.g64
-
-# Detect format
-./uft detect unknown.img
-```
-
-## Documentation
-
-- [Architecture](docs/ARCHITECTURE.md) - System design and data flow
-- [Format Catalog](docs/FORMAT_CATALOG.md) - Supported formats reference
-- [API Reference](docs/API_REFERENCE.md) - Developer API documentation
-- [Parser Guide](docs/PARSER_WRITING_GUIDE.md) - Writing new format parsers
-
-## Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
-
-## Security
-
-See [SECURITY.md](SECURITY.md) for security policy and reporting vulnerabilities.
-
-## License
-
-This project is licensed under the GPL-2.0 License - see [LICENSE](LICENSE) for details.
-
-## Credits
-
-Maintainer: **Axel Kramer**
-
-Special thanks to:
-- HxCFloppyEmulator project
-- FluxEngine project
-- Greaseweazle project
-- MAME floppy preservation team
-- All contributors and testers
+> *"Bei uns geht kein Bit verloren"* — No bit gets lost
 
 ---
 
-**UnifiedFloppyTool** - Preserving digital history, one floppy at a time.
+## Overview
+
+UFT is a comprehensive toolkit for reading, analyzing, writing, and preserving floppy disk images across **115+ formats** from **20+ platforms** including:
+
+- **Commodore** (C64, C128, VIC-20, Amiga)
+- **Atari** (8-bit, ST)
+- **Apple** (II, Macintosh)
+- **IBM PC** (FAT12, various formats)
+- **Japanese** (PC-98, X68000, FM-Towns)
+- **British** (BBC Micro, Amstrad CPC, Spectrum)
+- **Others** (TRS-80, TI-99, MSX, and more)
+
+## Features
+
+### Core Capabilities
+- 🔬 **Forensic Imaging** — Bit-perfect preservation with hash verification
+- 🔄 **Format Conversion** — Convert between 100+ disk formats
+- 🛡️ **Copy Protection Analysis** — Detect and analyze protection schemes
+- 📊 **Flux Analysis** — Direct flux stream processing with PLL decoding
+- 🔧 **Recovery Tools** — Recover data from damaged media
+
+### Technical Highlights
+- Pure **C11** with no mandatory external dependencies
+- Cross-platform (Linux, macOS, Windows)
+- Optional **Qt6 GUI** for visual analysis
+- Hardware support: Greaseweazle, FluxEngine, KryoFlux, SuperCard Pro
+
+## Quick Start
+
+### Build
+```bash
+mkdir build && cd build
+cmake ..
+cmake --build . -j$(nproc)
+```
+
+### Basic Usage
+```bash
+# Analyze a disk image
+uft info disk.d64
+
+# Convert formats
+uft convert input.adf output.ipf
+
+# Read from hardware
+uft read --device gw --format amiga -o disk.adf
+```
+
+## Project Structure
+
+```
+UnifiedFloppyTool/
+├── include/uft/          # Public headers
+│   ├── core/             # Core types and utilities
+│   ├── formats/          # Format-specific headers
+│   └── flux/             # Flux processing
+├── src/                  # Implementation
+│   ├── core/             # Core modules
+│   ├── formats/          # Format handlers
+│   ├── algorithms/       # PLL, encoding, CRC
+│   └── hardware/         # Hardware drivers
+├── tools/                # CLI tools
+├── tests/                # Test suite
+├── docs/                 # Documentation
+└── gui/                  # Qt6 GUI (optional)
+```
+
+## Supported Formats
+
+| Platform | Formats |
+|----------|---------|
+| Commodore | D64, D71, D81, G64, NIB, ADF, IPF |
+| Atari | ATR, XFD, DCM, ATX, ST, MSA |
+| Apple | DSK, DO, PO, NIB, WOZ |
+| IBM PC | IMG, IMA, IMD, TD0, FDI |
+| Amstrad | DSK, EDSK |
+| Spectrum | TRD, SCL, TAP, TZX |
+| Flux | SCP, KF, RAW, A2R |
+
+## Documentation
+
+- [Architecture Guide](docs/ARCHITECTURE.md)
+- [API Reference](docs/API_REFERENCE.md)
+- [Format Specifications](docs/formats/)
+- [Hardware Setup](docs/HARDWARE.md)
+
+## Building with Qt GUI
+
+```bash
+cmake -DUFT_BUILD_GUI=ON ..
+cmake --build .
+```
+
+## License
+
+MIT License — See [LICENSE](LICENSE) for details.
+
+## Contributing
+
+Contributions welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) first.
+
+## Acknowledgments
+
+- Software Preservation Society (SPS)
+- MAME/MESS team
+- Various open-source floppy tools (HxCFloppyEmulator, FluxEngine, SAMdisk)
+
+---
+
+**Version 3.7.0** | [Changelog](CHANGELOG.md) | [Issues](https://github.com/your-repo/issues)

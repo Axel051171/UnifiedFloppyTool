@@ -6,17 +6,14 @@
  * ════════════════════════════════════════════════════════════════════════════
  * 
  * FLUX TOOLS (Hardware-basiert):
- *   Greaseweazle (gw), FluxEngine, Kryoflux DTC
  *   Input:  Hardware (Floppy Drive)
  *   Output: Flux (SCP, HFE, Kryoflux raw)
  *   
  * SECTOR TOOLS (Format-spezifisch):
- *   nibtools, adftools, mtools
  *   Input:  Hardware ODER Sector-Images
  *   Output: Sector-Images (D64, ADF, IMG)
  *   
  * CONVERTER TOOLS (Software):
- *   HxCFE, disk-analyse, SAMdisk
  *   Input:  Flux/Bitstream/Sector Images
  *   Output: Verschiedene Formate
  *   
@@ -192,7 +189,7 @@ extern const uft_tool_profile_t UFT_TOOL_FLUXENGINE;
 extern const uft_tool_profile_t UFT_TOOL_KRYOFLUX;
 extern const uft_tool_profile_t UFT_TOOL_NIBTOOLS;
 extern const uft_tool_profile_t UFT_TOOL_ADFTOOLS;
-extern const uft_tool_profile_t UFT_TOOL_HXCFE;
+extern const uft_tool_profile_t UFT_TOOL_LIBFLUX;
 extern const uft_tool_profile_t UFT_TOOL_DISK_ANALYSE;
 extern const uft_tool_profile_t UFT_TOOL_SAMDISK;
 extern const uft_tool_profile_t UFT_TOOL_MTOOLS;

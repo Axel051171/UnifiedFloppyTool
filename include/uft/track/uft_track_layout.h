@@ -11,7 +11,6 @@
  * - Pattern C: Zoned data-only format
  * - Pattern D: Raw sync stream (for diagnostics)
  * 
- * Source: track_layout_gen_c (UFT Project)
  * 
  * @copyright UFT Project 2026
  */

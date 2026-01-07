@@ -346,6 +346,9 @@ uft_error_t uft_mock_generate_pattern(uft_mock_device_t *dev, int pattern) {
                         data[i] = (i + c + h) & 0xFF;
                     }
                     break;
+                default:  /* Unknown pattern - use zeros */
+                    memset(data, 0x00, track_size);
+                    break;
             }
             
             dev->tracks[c][h].size = track_size;

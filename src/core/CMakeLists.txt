@@ -2,6 +2,9 @@
 # Contains: Core API, Cache, Error handling, Format detection, PLL, SIMD
 
 set(CORE_SOURCES
+    uft_safe_string.c
+    uft_file_io.c
+    uft_media_probe.c
     flux_core.c
     format_detection.c
     uft_adaptive_decoder.c

@@ -145,13 +145,11 @@ static inline uint32_t uft_mg_state(uint32_t cell) {
 }
 
 /*===========================================================================
- * Track Buffer (disk-utilities compatible)
  *===========================================================================*/
 
 /**
  * @brief Track buffer with magnetic state support
  * 
- * Compatible with both MAME's cell-based and disk-utilities' 
  * tbuf-based weak bit marking.
  */
 typedef struct {
@@ -187,9 +185,7 @@ static inline void uft_tbuf_init(uft_track_buffer_t *tbuf) {
 }
 
 /**
- * @brief Mark a region as weak bits (disk-utilities compatible)
  * 
- * This is the UFT equivalent of disk-utilities' tbuf_weak() function.
  * 
  * @param tbuf Track buffer
  * @param start_time Start position

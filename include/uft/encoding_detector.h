@@ -3,7 +3,6 @@
  * @brief Automatische Encoding-Erkennung
  * 
  * Score-basierter Detector mit Lock-Mechanismus.
- * Basierend auf FluxRipper's encoding_detector.v
  * 
  * Unterstützte Encodings:
  * - MFM (Standard PC Floppy)

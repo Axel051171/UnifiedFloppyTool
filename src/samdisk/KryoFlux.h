@@ -3,15 +3,15 @@
 class KryoFlux
 {
 public:
-    static const uint16_t KF_VID = 0x03eb;
-    static const uint16_t KF_PID = 0x6124;
-    static const uint8_t KF_EP_BULK_OUT = 0x01;
-    static const uint8_t KF_EP_BULK_IN = 0x82;
-    static const int KF_INTERFACE = 1;
-    static const int KF_TIMEOUT_MS = 1500;
-    static const int KF_FW_LOAD_ADDR = 0x202000;
-    static const int KF_FW_EXEC_ADDR = KF_FW_LOAD_ADDR;
-    static const char* KF_FW_FILE;
+    static const uint16_t UFT_KF_VID = 0x03eb;
+    static const uint16_t UFT_KF_PID = 0x6124;
+    static const uint8_t UFT_KF_EP_BULK_OUT = 0x01;
+    static const uint8_t UFT_KF_EP_BULK_IN = 0x82;
+    static const int UFT_KF_INTERFACE = 1;
+    static const int UFT_KF_TIMEOUT_MS = 1500;
+    static const int UFT_KF_FW_LOAD_ADDR = 0x202000;
+    static const int UFT_KF_FW_EXEC_ADDR = UFT_KF_FW_LOAD_ADDR;
+    static const char* UFT_KF_FW_FILE;
     static const uint8_t OOB = 0x0d;
 
 public:

@@ -14,7 +14,7 @@
  * code is provided for informational purposes only, and I provide no
  * support for it, technical or otherwise.
  *
- * Copyright 2007-2008 Dave Dunfield
+ * Copyright 2007-2008 various authors
  * All rights reserved.
  *
  * For the record: I am retaining copyright on this code, however this is

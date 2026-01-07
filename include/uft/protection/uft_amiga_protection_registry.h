@@ -4,13 +4,10 @@
  * @version 1.0.0
  * @date 2026-01-06
  *
- * Source: disk-utilities (Keir Fraser)
  * License: Public Domain
  *
  * This module provides detection signatures for 170+ Amiga copy protections.
- * Based on Keir Fraser's disk-utilities libdisk format handlers.
  *
- * Integration: R50 - disk-utilities extraction
  */
 
 #ifndef UFT_AMIGA_PROTECTION_REGISTRY_H

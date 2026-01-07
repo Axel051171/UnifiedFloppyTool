@@ -2,8 +2,6 @@
  * @file uft_protection.c
  * @brief Copy Protection Detection Implementation for UFT
  * 
- * Based on analysis of:
- * - Disk-Utilities by Keir Fraser (copylock.c, speedlock.c, longtrack.c)
  * - SPS/CAPS preservation documentation
  * 
  * @copyright UFT Project

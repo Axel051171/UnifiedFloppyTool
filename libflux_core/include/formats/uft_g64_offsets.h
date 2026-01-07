@@ -4,7 +4,6 @@
  * Standard G64 track offset tables.
  *
  * These offsets are for a standard 40-track G64 image
- * as created by nibtools/nibconvert.
  *
  * Data provided by user analysis of G64 files.
  *
@@ -42,7 +41,6 @@ extern "C" {
  * Example: AC02000000000000 → LE32: 0x000002AC = 684 decimal
  *
  * Track size pattern: ~7930 bytes between tracks in Zone 3
- * Zone 2 tracks (18-24): $1BDE (7134) bytes per track (nibtools)
  */
 static const uint32_t g64_standard_track_offsets[41] = {
     0,          /* Track 0 (unused) */
@@ -67,7 +65,6 @@ static const uint32_t g64_standard_track_offsets[41] = {
     0x0001F24C, /* Track 17 - 4CF2010000000000 */
     
     /* Zone 2: 19 sectors per track ($1BDE = 7134 bytes) */
-    0x00021146, /* Track 18 - 4611020000000000 - nibtools: $1BDE bytes */
     0x00023040, /* Track 19 - 4030020000000000 */
     0x00024F3A, /* Track 20 - 3A4F020000000000 */
     0x00026E34, /* Track 21 - 346E020000000000 */

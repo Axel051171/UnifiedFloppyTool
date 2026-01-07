@@ -142,7 +142,6 @@ void demo_cross_hardware_copy(void) {
     printf("\n=== DEMO 2: Cross-Hardware Copy ===\n");
     printf("Reading from Greaseweazle, writing to SCP\n\n");
     
-    /* Source: Greaseweazle */
     uft_universal_drive_t* source;
     uft_rc_t rc = uft_drive_create("greaseweazle", "/dev/ttyACM0", &source);
     

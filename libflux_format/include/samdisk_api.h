@@ -1,15 +1,13 @@
 // SPDX-License-Identifier: MIT
 /*
- * samdisk_api.h - SAMdisk C API Header
  * 
- * C API for SAMdisk format engine providing support for 57+ disk formats.
  * 
  * @version 2.8.0
  * @date 2024-12-26
  */
 
-#ifndef SAMDISK_API_H
-#define SAMDISK_API_H
+#ifndef UFT_SAM_API_H
+#define UFT_SAM_API_H
 
 #include <stdint.h>
 #include <stddef.h>
@@ -23,45 +21,43 @@ extern "C" {
  *============================================================================*/
 
 /* Opaque engine handle */
-typedef struct samdisk_engine_t samdisk_engine_t;
+typedef struct uft_sam_engine_t uft_sam_engine_t;
 
 /* Opaque disk handle */
-typedef struct samdisk_disk_t samdisk_disk_t;
+typedef struct uft_sam_disk_t uft_sam_disk_t;
 
 /* Format types */
-#define SAMDISK_FORMAT_UNKNOWN      0
-#define SAMDISK_FORMAT_FLUX         1
-#define SAMDISK_FORMAT_SECTOR       2
-#define SAMDISK_FORMAT_TRACK        3
+#define UFT_SAM_FORMAT_UNKNOWN      0
+#define UFT_SAM_FORMAT_FLUX         1
+#define UFT_SAM_FORMAT_SECTOR       2
+#define UFT_SAM_FORMAT_TRACK        3
 
 /* Format information */
-typedef struct samdisk_format_info_t {
+typedef struct uft_sam_format_info_t {
     const char* name;
     const char* extension;
     const char* description;
     int type;
     int can_read;
     int can_write;
-} samdisk_format_info_t;
+} uft_sam_format_info_t;
 
 /*============================================================================*
  * ENGINE MANAGEMENT
  *============================================================================*/
 
 /**
- * @brief Initialize SAMdisk engine
  * 
  * @param engine_out Engine handle (output)
  * @return 0 on success
  */
-int samdisk_init(samdisk_engine_t** engine_out);
+int uft_sam_init(uft_sam_engine_t** engine_out);
 
 /**
- * @brief Close SAMdisk engine
  * 
  * @param engine Engine handle
  */
-void samdisk_close(samdisk_engine_t* engine);
+void uft_sam_close(uft_sam_engine_t* engine);
 
 /*============================================================================*
  * FORMAT DETECTION
@@ -76,8 +72,8 @@ void samdisk_close(samdisk_engine_t* engine);
  * @param format_name_out Format name (allocated by function, must be freed)
  * @return 0 on success
  */
-int samdisk_detect_format(
-    samdisk_engine_t* engine,
+int uft_sam_detect_format(
+    uft_sam_engine_t* engine,
     const uint8_t* data,
     size_t len,
     char** format_name_out
@@ -91,8 +87,8 @@ int samdisk_detect_format(
  * @param format_name_out Format name (allocated by function, must be freed)
  * @return 0 on success
  */
-int samdisk_detect_format_file(
-    samdisk_engine_t* engine,
+int uft_sam_detect_format_file(
+    uft_sam_engine_t* engine,
     const char* filename,
     char** format_name_out
 );
@@ -110,11 +106,11 @@ int samdisk_detect_format_file(
  * @param disk_out Disk handle (output)
  * @return 0 on success
  */
-int samdisk_read_image(
-    samdisk_engine_t* engine,
+int uft_sam_read_image(
+    uft_sam_engine_t* engine,
     const char* filename,
     const char* format,
-    samdisk_disk_t** disk_out
+    uft_sam_disk_t** disk_out
 );
 
 /**
@@ -126,9 +122,9 @@ int samdisk_read_image(
  * @param format Format name
  * @return 0 on success
  */
-int samdisk_write_image(
-    samdisk_engine_t* engine,
-    samdisk_disk_t* disk,
+int uft_sam_write_image(
+    uft_sam_engine_t* engine,
+    uft_sam_disk_t* disk,
     const char* filename,
     const char* format
 );
@@ -138,7 +134,7 @@ int samdisk_write_image(
  * 
  * @param disk Disk handle
  */
-void samdisk_free_disk(samdisk_disk_t* disk);
+void uft_sam_free_disk(uft_sam_disk_t* disk);
 
 /*============================================================================*
  * CONVERSION
@@ -154,8 +150,8 @@ void samdisk_free_disk(samdisk_disk_t* disk);
  * @param output_format Output format
  * @return 0 on success
  */
-int samdisk_convert(
-    samdisk_engine_t* engine,
+int uft_sam_convert(
+    uft_sam_engine_t* engine,
     const char* input_file,
     const char* input_format,
     const char* output_file,
@@ -174,9 +170,9 @@ int samdisk_convert(
  * @param count_out Number of formats
  * @return 0 on success
  */
-int samdisk_list_formats(
-    samdisk_engine_t* engine,
-    samdisk_format_info_t** formats_out,
+int uft_sam_list_formats(
+    uft_sam_engine_t* engine,
+    uft_sam_format_info_t** formats_out,
     int* count_out
 );
 
@@ -185,7 +181,7 @@ int samdisk_list_formats(
  * 
  * @param formats Format array
  */
-void samdisk_free_formats(samdisk_format_info_t* formats);
+void uft_sam_free_formats(uft_sam_format_info_t* formats);
 
 /**
  * @brief Get format info by name
@@ -195,10 +191,10 @@ void samdisk_free_formats(samdisk_format_info_t* formats);
  * @param info_out Format info (output)
  * @return 0 on success
  */
-int samdisk_get_format_info(
-    samdisk_engine_t* engine,
+int uft_sam_get_format_info(
+    uft_sam_engine_t* engine,
     const char* format_name,
-    samdisk_format_info_t* info_out
+    uft_sam_format_info_t* info_out
 );
 
 /*============================================================================*
@@ -213,8 +209,8 @@ int samdisk_get_format_info(
  * @param sides_out Number of sides (output)
  * @return 0 on success
  */
-int samdisk_get_geometry(
-    samdisk_disk_t* disk,
+int uft_sam_get_geometry(
+    uft_sam_disk_t* disk,
     int* tracks_out,
     int* sides_out
 );
@@ -225,7 +221,7 @@ int samdisk_get_geometry(
  * @param disk Disk handle
  * @return Format name string (do not free)
  */
-const char* samdisk_get_format_name(samdisk_disk_t* disk);
+const char* uft_sam_get_format_name(uft_sam_disk_t* disk);
 
 /**
  * @brief Read sector data
@@ -239,8 +235,8 @@ const char* samdisk_get_format_name(samdisk_disk_t* disk);
  * @param bytes_read_out Bytes read (output)
  * @return 0 on success
  */
-int samdisk_read_sector(
-    samdisk_disk_t* disk,
+int uft_sam_read_sector(
+    uft_sam_disk_t* disk,
     int track,
     int side,
     int sector_id,
@@ -260,8 +256,8 @@ int samdisk_read_sector(
  * @param data_size Data size
  * @return 0 on success
  */
-int samdisk_write_sector(
-    samdisk_disk_t* disk,
+int uft_sam_write_sector(
+    uft_sam_disk_t* disk,
     int track,
     int side,
     int sector_id,
@@ -273,4 +269,4 @@ int samdisk_write_sector(
 }
 #endif
 
-#endif /* SAMDISK_API_H */
+#endif /* UFT_SAM_API_H */

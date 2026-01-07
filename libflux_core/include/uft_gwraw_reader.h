@@ -1,15 +1,12 @@
 /**
  * @file uft_gwraw_reader.h
- * @brief Greaseweazle RAW Flux Image Reader
  * 
- * Reads Greaseweazle raw flux files (.raw format).
  * 
  * Format Specification:
  * - Stream of opcodes with flux timing data
  * - Opcodes: FLUX1, FLUX2, FLUX3, INDEX, etc.
  * - Variable-length encoding
  * 
- * Reference: Greaseweazle project
  * 
  * @version 2.11.0
  * @date 2024-12-27
@@ -41,7 +38,6 @@ typedef enum {
 } gwraw_opcode_t;
 
 /**
- * @brief Greaseweazle RAW context
  */
 typedef struct {
     FILE* fp;
@@ -65,7 +61,6 @@ typedef struct {
 } uft_gwraw_ctx_t;
 
 /**
- * @brief Open Greaseweazle RAW file
  * 
  * @param[in] path Path to .raw file
  * @param[out] ctx Pointer to receive context
@@ -113,7 +108,6 @@ uft_rc_t uft_gwraw_rewind(uft_gwraw_ctx_t* ctx);
 /**
  * @brief Set sampling frequency
  * 
- * Default is 72MHz (Greaseweazle hardware).
  * Adjust if using different capture hardware.
  * 
  * @param[in] ctx GWRAW context

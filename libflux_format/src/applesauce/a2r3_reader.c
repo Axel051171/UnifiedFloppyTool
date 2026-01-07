@@ -1,4 +1,4 @@
-// ufm_applesauce_a2r3.c
+// ufm_uft_as_a2r3.c
 // Applesauce A2R 3.x reader (chunk-based) -> minimal UFM-style captures
 //
 // Sources / spec references:
@@ -9,7 +9,7 @@
 // - This parser does NOT "fix" flux; it preserves the packed stream and exposes decoded delta-times
 //   plus original packed bytes for lossless roundtrips.
 //
-// Build: cc -std=c11 -O2 -Wall -Wextra -pedantic ufm_applesauce_a2r3.c -o a2r_dump
+// Build: cc -std=c11 -O2 -Wall -Wextra -pedantic ufm_uft_as_a2r3.c -o a2r_dump
 //
 // Public domain-ish single-file module: drop into libflux_format/ as a plugin base.
 

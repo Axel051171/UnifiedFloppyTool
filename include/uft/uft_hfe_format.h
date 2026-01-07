@@ -1,9 +1,7 @@
 /**
  * @file uft_hfe_format.h
- * @brief HFE (HxC Floppy Emulator) Image Format Support
+ * @brief HFE (UFT HFE Format) Image Format Support
  * 
- * Extracted from RIDE (Reversible Image Disk Editor)
- * Source: /home/claude/ride/RIDE-master/Main/src/HFE.cpp
  * 
  * HFE is used by HxC floppy emulators and Gotek devices.
  * Supports both V1 (HXCPICFE) and V3 (HXCHFEV3) formats.
@@ -95,7 +93,7 @@ typedef struct {
     uint8_t  track_encoding;        /* hfe_track_encoding_t */
     uint16_t data_bit_rate;         /* Bit rate in kbit/s (250, 300, 500) */
     uint16_t drive_rpm;             /* RPM (300 or 360) */
-    uint8_t  floppy_interface;      /* hfe_floppy_interface_t */
+    uint8_t  uft_floppy_interface;      /* hfe_floppy_interface_t */
     uint8_t  reserved1;
     uint16_t track_list_offset;     /* Offset to track LUT (in 512-byte blocks) */
     uint8_t  write_allowed;         /* 0xFF = write allowed */
@@ -191,7 +189,7 @@ static inline void hfe_init_header(hfe_header_t *hdr, bool v3) {
     hdr->track_encoding = HFE_ENC_ISOIBM_MFM;
     hdr->data_bit_rate = 250;       /* DD */
     hdr->drive_rpm = 300;
-    hdr->floppy_interface = HFE_IF_GENERIC_SHUGART;
+    hdr->uft_floppy_interface = HFE_IF_GENERIC_SHUGART;
     hdr->track_list_offset = 1;     /* Immediately after header */
     hdr->write_allowed = 0xFF;      /* Writeable */
     hdr->single_step = 0xFF;        /* Single step */

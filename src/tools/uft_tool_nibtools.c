@@ -1,6 +1,4 @@
 /**
- * @file uft_tool_nibtools.c
- * @brief nibtools Adapter - Commodore 1541/1571 Support
  * 
  * Unterstützt:
  * - D64/G64/NBZ lesen
@@ -56,8 +54,8 @@ static bool nib_is_available(void) {
     if (run_cmd("which nibread 2>/dev/null", buf, sizeof(buf)) == UFT_OK && buf[0]) {
         return true;
     }
-    // Also check for nibtools
-    return run_cmd("which nibtools 2>/dev/null", buf, sizeof(buf)) == UFT_OK && buf[0];
+    // Also check for GCR tools
+    return run_cmd("which GCR tools 2>/dev/null", buf, sizeof(buf)) == UFT_OK && buf[0];
 }
 
 // ============================================================================
@@ -67,16 +65,16 @@ static bool nib_is_available(void) {
 static bool nib_detect_hardware(char* info, size_t size) {
     if (!info || size == 0) return false;
     
-    // nibtools requires XUM1541 or similar
+    // GCR tools requires XUM1541 or similar
     char buf[1024];
     if (run_cmd("nibread --help 2>&1 | head -5", buf, sizeof(buf)) == UFT_OK) {
-        if (strstr(buf, "nibread") || strstr(buf, "nibtools")) {
-            snprintf(info, size, "nibtools (XUM1541/ZoomFloppy)");
+        if (strstr(buf, "nibread") || strstr(buf, "GCR tools")) {
+            snprintf(info, size, "GCR tools (XUM1541/ZoomFloppy)");
             return true;
         }
     }
     
-    snprintf(info, size, "nibtools");
+    snprintf(info, size, "GCR tools");
     return true;
 }
 
@@ -219,8 +217,8 @@ static void nib_cleanup(void* context) {
 // Plugin Registration
 // ============================================================================
 
-const uft_tool_adapter_t uft_tool_nibtools = {
-    .name = "nibtools",
+const uft_tool_adapter_t uft_tool_GCR tools = {
+    .name = "GCR tools",
     .version = "1.0.0",
     .description = "Commodore 1541/1571 Disk Tools",
     .capabilities = UFT_TOOL_CAP_READ | UFT_TOOL_CAP_WRITE |

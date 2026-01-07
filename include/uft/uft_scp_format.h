@@ -3,7 +3,6 @@
  * @brief SuperCard Pro (SCP) Image Format Support
  * @version 3.3.0
  *
- * Source: Greaseweazle-master/src/greaseweazle/image/scp.py
  * Spec: https://www.cbmstuff.com/downloads/scp/scp_image_specs.txt
  *
  * Provides:

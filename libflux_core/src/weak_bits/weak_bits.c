@@ -477,13 +477,18 @@ int weak_bits_export_json(
         const weak_bit_t *wb = &result->weak_bits[i];
         
         char samples_str[128] = "[";
+        size_t samples_pos = 1;
         for (uint8_t j = 0; j < wb->sample_count && j < 10; j++) {
-            char buf[8];
-            snprintf(buf, sizeof(buf), "%u%s", wb->samples[j],
+            char buf[16];
+            int n = snprintf(buf, sizeof(buf), "%u%s", wb->samples[j],
                     j < wb->sample_count - 1 ? "," : "");
-            strcat(samples_str, buf);
+            if (samples_pos + n < sizeof(samples_str) - 1) {
+                memcpy(samples_str + samples_pos, buf, n);
+                samples_pos += n;
+            }
         }
-        strcat(samples_str, "]");
+        samples_str[samples_pos++] = ']';
+        samples_str[samples_pos] = '\0';
         
         char entry[256];
         snprintf(entry, sizeof(entry),
@@ -493,11 +498,17 @@ int weak_bits_export_json(
             i < show_count - 1 ? "," : ""
         );
         
-        if (strlen(json_out) + strlen(entry) >= json_size) break;
-        strcat(json_out, entry);
+        size_t cur_len = strlen(json_out);
+        size_t entry_len = strlen(entry);
+        if (cur_len + entry_len >= json_size) break;
+        memcpy(json_out + cur_len, entry, entry_len + 1);
     }
     
-    strcat(json_out, "  ]\n}\n");
+    /* Safe append of closing */
+    size_t cur_len = strlen(json_out);
+    if (cur_len + 8 < json_size) {
+        memcpy(json_out + cur_len, "  ]\n}\n", 7);
+    }
     
     return 0;
 }

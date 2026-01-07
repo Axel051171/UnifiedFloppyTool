@@ -1,19 +1,16 @@
 // SPDX-License-Identifier: MIT
 /*
- * kryoflux_device.c - KryoFlux USB Device Handler
  * 
- * USB device communication for KryoFlux hardware.
  * Implementation based on libusb examples analysis.
  * 
  * Device Info:
  *   VID: 0x16d0 (MCS Electronics)
- *   PID: 0x0498 (KryoFlux)
  * 
  * @version 2.7.2
  * @date 2024-12-25
  */
 
-#include "../include/kryoflux_hw.h"
+#include "../include/uft_kf_hw.h"
 #include <libusb-1.0/libusb.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -24,13 +21,13 @@
  * INTERNAL DEVICE STRUCTURE
  *============================================================================*/
 
-struct kryoflux_device {
+struct uft_kf_device {
     libusb_device_handle *handle;
     libusb_context *context;
     uint8_t interface_num;
     uint8_t endpoint_in;
     uint8_t endpoint_out;
-    kf_error_info_t last_error;
+    uft_kf_error_info_t last_error;
 };
 
 /*============================================================================*
@@ -38,10 +35,10 @@ struct kryoflux_device {
  *============================================================================*/
 
 static void set_error(
-    kryoflux_device_t *dev,
-    kf_error_code_t code,
-    kf_error_severity_t severity,
-    kf_error_domain_t domain,
+    uft_kf_device_t *dev,
+    uft_kf_error_code_t code,
+    uft_kf_error_severity_t severity,
+    uft_kf_error_domain_t domain,
     const char *message
 ) {
     if (!dev) return;
@@ -58,22 +55,20 @@ static void set_error(
  *============================================================================*/
 
 /**
- * @brief Initialize KryoFlux subsystem
  * 
  * Initializes libusb context.
  */
-int kryoflux_init(void)
+int uft_kf_init(void)
 {
-    /* libusb_init will be called per-device in kryoflux_open */
+    /* libusb_init will be called per-device in uft_kf_open */
     return 0;
 }
 
 /**
- * @brief Shutdown KryoFlux subsystem
  */
-void kryoflux_shutdown(void)
+void uft_kf_shutdown(void)
 {
-    /* Cleanup handled in kryoflux_close */
+    /* Cleanup handled in uft_kf_close */
 }
 
 /*============================================================================*
@@ -81,12 +76,11 @@ void kryoflux_shutdown(void)
  *============================================================================*/
 
 /**
- * @brief Detect available KryoFlux devices
  * 
  * Based on listdevs.c pattern from libusb examples.
  * Scans USB bus for matching VID/PID.
  */
-int kryoflux_detect_devices(int *count_out)
+int uft_kf_detect_devices(int *count_out)
 {
     libusb_context *ctx = NULL;
     libusb_device **devs = NULL;
@@ -106,15 +100,14 @@ int kryoflux_detect_devices(int *count_out)
         return (int)cnt;
     }
     
-    /* Scan for KryoFlux devices */
     for (ssize_t i = 0; i < cnt; i++) {
         struct libusb_device_descriptor desc;
         
         r = libusb_get_device_descriptor(devs[i], &desc);
         if (r < 0) continue;
         
-        if (desc.idVendor == KRYOFLUX_USB_VID &&
-            desc.idProduct == KRYOFLUX_USB_PID) {
+        if (desc.idVendor == UFT_UFT_KF_USB_VID &&
+            desc.idProduct == UFT_UFT_KF_USB_PID) {
             count++;
         }
     }
@@ -134,7 +127,6 @@ int kryoflux_detect_devices(int *count_out)
  *============================================================================*/
 
 /**
- * @brief Open KryoFlux device
  * 
  * Implementation based on libusb device opening patterns.
  * 
@@ -145,13 +137,13 @@ int kryoflux_detect_devices(int *count_out)
  *   4. Claim interface
  *   5. Find endpoints
  */
-int kryoflux_open(int device_index, kryoflux_device_t **device_out)
+int uft_kf_open(int device_index, uft_kf_device_t **device_out)
 {
     if (!device_out) {
         return -1;
     }
     
-    kryoflux_device_t *dev = calloc(1, sizeof(*dev));
+    uft_kf_device_t *dev = calloc(1, sizeof(*dev));
     if (!dev) {
         return -1;
     }
@@ -172,7 +164,6 @@ int kryoflux_open(int device_index, kryoflux_device_t **device_out)
         return (int)cnt;
     }
     
-    /* Find KryoFlux device */
     libusb_device *target_dev = NULL;
     int found_count = 0;
     
@@ -182,8 +173,8 @@ int kryoflux_open(int device_index, kryoflux_device_t **device_out)
         r = libusb_get_device_descriptor(devs[i], &desc);
         if (r < 0) continue;
         
-        if (desc.idVendor == KRYOFLUX_USB_VID &&
-            desc.idProduct == KRYOFLUX_USB_PID) {
+        if (desc.idVendor == UFT_UFT_KF_USB_VID &&
+            desc.idProduct == UFT_UFT_KF_USB_PID) {
             if (found_count == device_index) {
                 target_dev = devs[i];
                 break;
@@ -196,8 +187,8 @@ int kryoflux_open(int device_index, kryoflux_device_t **device_out)
         libusb_free_device_list(devs, 1);
         libusb_exit(dev->context);
         free(dev);
-        set_error(dev, KF_ERROR_INDEX_MISSING, KF_SEVERITY_ERROR,
-                  KF_ERROR_HARDWARE, "KryoFlux device not found");
+        set_error(dev, UFT_KF_ERROR_INDEX_MISSING, UFT_KF_SEVERITY_ERROR,
+                  UFT_KF_ERROR_HARDWARE, "KryoFlux device not found");
         return -1;
     }
     
@@ -211,7 +202,6 @@ int kryoflux_open(int device_index, kryoflux_device_t **device_out)
         return r;
     }
     
-    /* Claim interface 0 (standard for KryoFlux) */
     dev->interface_num = 0;
     r = libusb_claim_interface(dev->handle, dev->interface_num);
     if (r < 0) {
@@ -221,18 +211,16 @@ int kryoflux_open(int device_index, kryoflux_device_t **device_out)
         return r;
     }
     
-    /* Set endpoints (from KryoFlux specs) */
-    dev->endpoint_in = KRYOFLUX_EP_IN;
-    dev->endpoint_out = KRYOFLUX_EP_OUT;
+    dev->endpoint_in = UFT_UFT_KF_EP_IN;
+    dev->endpoint_out = UFT_UFT_KF_EP_OUT;
     
     *device_out = dev;
     return 0;
 }
 
 /**
- * @brief Close KryoFlux device
  */
-void kryoflux_close(kryoflux_device_t *device)
+void uft_kf_close(uft_kf_device_t *device)
 {
     if (!device) return;
     
@@ -255,8 +243,8 @@ void kryoflux_close(kryoflux_device_t *device)
 /**
  * @brief Get device information
  */
-int kryoflux_get_device_info(
-    kryoflux_device_t *device,
+int uft_kf_get_device_info(
+    uft_kf_device_t *device,
     char *info_out
 ) {
     if (!device || !device->handle || !info_out) {
@@ -315,22 +303,22 @@ int kryoflux_get_device_info(
  * This is a placeholder - full implementation requires:
  *   1. Send read command to device
  *   2. Receive flux stream via bulk transfer
- *   3. Decode stream (using kryoflux_stream.c)
+ *   3. Decode stream (using uft_kf_stream.c)
  * 
  * For now, we demonstrate the bulk transfer pattern.
  */
-int kryoflux_read_track(
-    kryoflux_device_t *device,
-    const kf_read_opts_t *opts,
-    kf_stream_result_t *result_out
+int uft_kf_read_track(
+    uft_kf_device_t *device,
+    const uft_kf_read_opts_t *opts,
+    uft_kf_stream_result_t *result_out
 ) {
     if (!device || !device->handle || !opts || !result_out) {
         return -1;
     }
     
     /* Placeholder: Full implementation requires protocol analysis */
-    set_error(device, KF_ERROR_NONE, KF_SEVERITY_INFO,
-              KF_ERROR_HARDWARE, 
+    set_error(device, UFT_KF_ERROR_NONE, UFT_KF_SEVERITY_INFO,
+              UFT_KF_ERROR_HARDWARE, 
               "Direct hardware reading not yet implemented - use stream files");
     
     return -1;
@@ -343,9 +331,9 @@ int kryoflux_read_track(
 /**
  * @brief Get last error
  */
-int kryoflux_get_last_error(
-    kryoflux_device_t *device,
-    kf_error_info_t *error_out
+int uft_kf_get_last_error(
+    uft_kf_device_t *device,
+    uft_kf_error_info_t *error_out
 ) {
     if (!device || !error_out) {
         return -1;
@@ -358,16 +346,16 @@ int kryoflux_get_last_error(
 /**
  * @brief Print error
  */
-void kryoflux_print_error(const kf_error_info_t *error)
+void uft_kf_print_error(const uft_kf_error_info_t *error)
 {
     if (!error) return;
     
     const char *severity_str = "UNKNOWN";
     switch (error->severity) {
-        case KF_SEVERITY_INFO: severity_str = "INFO"; break;
-        case KF_SEVERITY_WARNING: severity_str = "WARNING"; break;
-        case KF_SEVERITY_ERROR: severity_str = "ERROR"; break;
-        case KF_SEVERITY_CRITICAL: severity_str = "CRITICAL"; break;
+        case UFT_KF_SEVERITY_INFO: severity_str = "INFO"; break;
+        case UFT_KF_SEVERITY_WARNING: severity_str = "WARNING"; break;
+        case UFT_KF_SEVERITY_ERROR: severity_str = "ERROR"; break;
+        case UFT_KF_SEVERITY_CRITICAL: severity_str = "CRITICAL"; break;
     }
     
     fprintf(stderr, "[%s] Code %d: %s\n",
@@ -381,7 +369,7 @@ void kryoflux_print_error(const kf_error_info_t *error)
 /**
  * @brief Get default read options
  */
-void kryoflux_get_default_opts(kf_read_opts_t *opts)
+void uft_kf_get_default_opts(uft_kf_read_opts_t *opts)
 {
     if (!opts) return;
     
@@ -397,7 +385,7 @@ void kryoflux_get_default_opts(kf_read_opts_t *opts)
 /**
  * @brief Calculate RPM from flux stream
  */
-uint32_t kryoflux_calculate_rpm(const kf_stream_result_t *stream)
+uint32_t uft_uft_kf_calculate_rpm(const uft_kf_stream_result_t *stream)
 {
     if (!stream || stream->rpm > 0) {
         return stream->rpm;

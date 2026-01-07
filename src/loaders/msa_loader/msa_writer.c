@@ -2,25 +2,20 @@
 //
 // Copyright (C) 2006-2025 Jean-Franois DEL NERO
 //
-// This file is part of the HxCFloppyEmulator library
 //
-// HxCFloppyEmulator may be used and distributed without restriction provided
 // that this copyright statement is not removed from the file and that any
 // derivative work contains the original copyright notice and the associated
 // disclaimer.
 //
-// HxCFloppyEmulator is free software; you can redistribute it
 // and/or modify  it under the terms of the GNU General Public License
 // as published by the Free Software Foundation; either version 2
 // of the License, or (at your option) any later version.
 //
-// HxCFloppyEmulator is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 //   See the GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with HxCFloppyEmulator; if not, write to the Free Software
 // Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 //
 */
@@ -31,9 +26,9 @@
 
 #include "types.h"
 
-#include "internal_libhxcfe.h"
+#include "libflux.h""
 #include "tracks/track_generator.h"
-#include "libhxcfe.h"
+#include "libflux.h""
 #include "msa_loader.h"
 #include "msa_writer.h"
 #include "msa_format.h"
@@ -141,14 +136,14 @@ unsigned short msapacktrack(unsigned char * inputtrack,int insize,unsigned char 
 }
 
 // Main writer function
-int MSA_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char * filename)
+int MSA_libWrite_DiskFile(LIBFLUX_IMGLDR* imgldr_ctx,LIBFLUX_FLOPPY * floppy,char * filename)
 {
 	int i,j,k,id;
 	int nbsector,maxtrack;
 
 	FILE * msadskfile;
-	HXCFE_SECTORACCESS* ss;
-	HXCFE_SECTCFG* sc;
+	LIBFLUX_SECTORACCESS* ss;
+	LIBFLUX_SECTCFG* sc;
 
 	unsigned char * flat_track;
 	unsigned char * packed_track;
@@ -158,7 +153,7 @@ int MSA_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char * 
 
 	msa_header msah;
 
-	imgldr_ctx->hxcfe->hxc_printf(MSG_INFO_1,"Write MSA file %s...",filename);
+	imgldr_ctx->ctx->libflux_printf(MSG_INFO_1,"Write MSA file %s...",filename);
 
 	memset(&msah,0,sizeof(msa_header));
 	msah.sign[0] = 0xE;
@@ -170,36 +165,36 @@ int MSA_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char * 
 	nbsector = 0;
 
 	// Get the number of sector per track.
-	ss = hxcfe_initSectorAccess(imgldr_ctx->hxcfe,floppy);
+	ss = libflux_initSectorAccess(imgldr_ctx->ctx,floppy);
 	if(ss)
 	{
 		id = 1;
 		do
 		{
-			sc = hxcfe_searchSector(ss,0,0,id,ISOIBM_MFM_ENCODING);
+			sc = libflux_searchSector(ss,0,0,id,ISOIBM_MFM_ENCODING);
 			if(sc)
 			{
 				if(sc->sectorsize == 512)
 				{
 					nbsector = id;
 
-					hxcfe_freeSectorConfig( ss, sc );
+					libflux_freeSectorConfig( ss, sc );
 				}
 				else
 				{
-					hxcfe_freeSectorConfig( ss, sc );
+					libflux_freeSectorConfig( ss, sc );
 					sc = 0;
 				}
 			}
 			id++;
 		}while(sc);
 
-		hxcfe_deinitSectorAccess(ss);
+		libflux_deinitSectorAccess(ss);
 	}
 
 	memset(trk_sectorcnt,0,sizeof(trk_sectorcnt));
 
-	ss = hxcfe_initSectorAccess(imgldr_ctx->hxcfe,floppy);
+	ss = libflux_initSectorAccess(imgldr_ctx->ctx,floppy);
 	if(ss)
 	{
 		for(j = 0; (j < (int)floppy->floppyNumberOfTrack); j++)
@@ -208,20 +203,20 @@ int MSA_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char * 
 			{
 				for(k=0;k<nbsector;k++)
 				{
-					sc = hxcfe_searchSector(ss,j,i,k+1,ISOIBM_MFM_ENCODING);
+					sc = libflux_searchSector(ss,j,i,k+1,ISOIBM_MFM_ENCODING);
 					if(sc)
 					{
 						if(sc->sectorsize == 512)
 						{
 							trk_sectorcnt[(j<<1) + (i&1)]++;
 						}
-						hxcfe_freeSectorConfig( ss, sc );
+						libflux_freeSectorConfig( ss, sc );
 					}
 				}
 			}
 		}
 
-		hxcfe_deinitSectorAccess(ss);
+		libflux_deinitSectorAccess(ss);
 	}
 
 	sidesflags = 0;
@@ -270,28 +265,28 @@ int MSA_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char * 
 		{
 			free(packed_track);
 			free(flat_track);
-			return HXCFE_INTERNALERROR;
+			return LIBFLUX_INTERNALERROR;
 		}
 
-		msadskfile = hxc_fopen(filename,"wb");
+		msadskfile = libflux_fopen(filename,"wb");
 		if(msadskfile)
 		{
 			if (fwrite(&msah,sizeof(msa_header),1,msadskfile) != 1) { /* I/O error */ }
-			ss = hxcfe_initSectorAccess(imgldr_ctx->hxcfe,floppy);
+			ss = libflux_initSectorAccess(imgldr_ctx->ctx,floppy);
 			if(ss)
 			{
 				for(j = 0; (j < (int)BIGENDIAN_WORD(msah.number_of_track)+1); j++)
 				{
 					for(i = 0; i < (int)BIGENDIAN_WORD(msah.number_of_side)+1; i++)
 					{
-						hxcfe_imgCallProgressCallback(imgldr_ctx,(j<<1) | (i&1),BIGENDIAN_WORD(msah.number_of_track)*2 );
+						libflux_imgCallProgressCallback(imgldr_ctx,(j<<1) | (i&1),BIGENDIAN_WORD(msah.number_of_track)*2 );
 
 						memset(packed_track,0,nbsector * 512 * 4);
 						memset(flat_track,0,nbsector * 512);
 
 						for(k=0;k<nbsector;k++)
 						{
-							sc = hxcfe_searchSector(ss,j,i,k+1,ISOIBM_MFM_ENCODING);
+							sc = libflux_searchSector(ss,j,i,k+1,ISOIBM_MFM_ENCODING);
 							if(sc)
 							{
 								if(sc->sectorsize == 512)
@@ -300,7 +295,7 @@ int MSA_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char * 
 										memcpy((void*)&flat_track[k*512],sc->input_data,sc->sectorsize);
 								}
 
-								hxcfe_freeSectorConfig( ss, sc );
+								libflux_freeSectorConfig( ss, sc );
 							}
 						}
 
@@ -309,22 +304,22 @@ int MSA_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char * 
 					}
 				}
 
-				hxcfe_deinitSectorAccess(ss);
+				libflux_deinitSectorAccess(ss);
 			}
 
-			hxc_fclose(msadskfile);
+			libflux_fclose(msadskfile);
 
 			free(flat_track);
 			free(packed_track);
 
-			return HXCFE_NOERROR;
+			return LIBFLUX_NOERROR;
 		}
 
 		free(flat_track);
 		free(packed_track);
 
-		return HXCFE_ACCESSERROR;
+		return LIBFLUX_ACCESSERROR;
 	}
 
-	return HXCFE_BADFILE;
+	return LIBFLUX_BADFILE;
 }

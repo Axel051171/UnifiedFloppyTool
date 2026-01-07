@@ -2,7 +2,6 @@
  * @file flux_stat.c
  * @brief Statistical Flux Recovery (FluxStat) Implementation
  * 
- * Basierend auf FluxRipper's FluxStat-Algorithmen.
  * 
  * @version 1.0.0
  */
@@ -77,7 +76,6 @@ int fluxstat_get_config(fluxstat_config_t *config)
 }
 
 /*============================================================================
- * Confidence-Berechnung (Kern-Algorithmus aus FluxRipper)
  *============================================================================*/
 
 uint8_t fluxstat_correlation_confidence(const flux_correlation_t *corr)

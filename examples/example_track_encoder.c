@@ -318,7 +318,7 @@ int main(int argc, char *argv[])
     printf("\n");
     printf("╔═══════════════════════════════════════════════════════════╗\n");
     printf("║  TRACK ENCODER DEMO - v2.7.0 Writer Edition              ║\n");
-    printf("║  HxC Integration + Copy Protection Support! ⭐            ║\n");
+    printf("║  HFE Integration + Copy Protection Support! ⭐            ║\n");
     printf("╚═══════════════════════════════════════════════════════════╝\n");
     printf("\n");
     

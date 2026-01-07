@@ -10,7 +10,7 @@
 #define UFT_FORMAT_PLUGIN_V2_H
 
 #include "uft/core/uft_ownership.h"
-#include "uft/core/uft_error.h"
+#include "uft/uft_error.h"
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>

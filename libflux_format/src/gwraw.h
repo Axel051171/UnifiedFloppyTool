@@ -1,8 +1,5 @@
-// gwraw.h - Greaseweazle RAW/GWF flux format (C11, no deps)
 // UFT - Unified Floppy Tooling
 //
-// Greaseweazle RAW/GWF stores per-track flux intervals similar to SCP,
-// but optimized for Greaseweazle hardware workflows.
 //
 // This module is flux-only and analysis-oriented.
 
@@ -45,11 +42,11 @@ typedef struct {
 } FluxMeta;
 
 /* Unified API */
-int floppy_open(FloppyDevice *dev, const char *path);
-int floppy_close(FloppyDevice *dev);
-int floppy_read_sector(FloppyDevice *dev, uint32_t t, uint32_t h, uint32_t s, uint8_t *buf);
-int floppy_write_sector(FloppyDevice *dev, uint32_t t, uint32_t h, uint32_t s, const uint8_t *buf);
-int floppy_analyze_protection(FloppyDevice *dev);
+int uft_floppy_open(FloppyDevice *dev, const char *path);
+int uft_floppy_close(FloppyDevice *dev);
+int uft_floppy_read_sector(FloppyDevice *dev, uint32_t t, uint32_t h, uint32_t s, uint8_t *buf);
+int uft_floppy_write_sector(FloppyDevice *dev, uint32_t t, uint32_t h, uint32_t s, const uint8_t *buf);
+int uft_floppy_analyze_protection(FloppyDevice *dev);
 
 /* Flux access */
 const FluxMeta* gwraw_get_flux(const FloppyDevice *dev);

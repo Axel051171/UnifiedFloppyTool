@@ -320,7 +320,7 @@ typedef struct {
  * @param crc_init Initial CRC value (typically 0)
  * @return CRC32 value
  */
-uint32_t uft_applesauce_crc32(const uint8_t *data, size_t len, uint32_t crc_init);
+uint32_t uft_uft_as_crc32(const uint8_t *data, size_t len, uint32_t crc_init);
 
 /*============================================================================
  * 255-Run Encoding (A2R/MOOF Flux)

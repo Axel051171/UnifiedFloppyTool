@@ -3,7 +3,6 @@
  * @brief Tool Adapter Interface - Vollständige Definition
  * 
  * Abstraktion für externe Tools:
- * - Greaseweazle, FluxEngine, nibtools
  * - HxCFE, adftools, disk-analyse
  */
 

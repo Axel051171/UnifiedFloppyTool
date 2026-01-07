@@ -1,10 +1,10 @@
-#ifndef GREASEWEAZLE_H
-#define GREASEWEAZLE_H
+#ifndef UFT_GW_H
+#define UFT_GW_H
 
-#define GREASEWEAZLE_VID 0x1209
-#define GREASEWEAZLE_PID 0x4d69
+#define UFT_GW_VID 0x1209
+#define UFT_GW_PID 0x4d69
 
-#define GREASEWEAZLE_ID ((GREASEWEAZLE_VID << 16) | GREASEWEAZLE_PID)
+#define UFT_GW_ID ((UFT_GW_VID << 16) | UFT_GW_PID)
 
 #define EP_OUT 0x02
 #define EP_IN 0x83
@@ -14,7 +14,6 @@ extern Bytes greaseweazleToFluxEngine(const Bytes& gwdata, nanoseconds_t clock);
 extern Bytes stripPartialRotation(const Bytes& fldata);
 
 /* Copied from
- * https://github.com/keirf/Greaseweazle/blob/master/inc/cdc_acm_protocol.h.
  *
  * WANING: these headers were originally defined with 'packed', which is a
  * gccism so it's been dummied out. Don't use them expecting wire protocol
@@ -45,10 +44,10 @@ extern Bytes stripPartialRotation(const Bytes& fldata);
 #define CMD_GET_PARAMS 5
 /* CMD_MOTOR, length=4, drive#, on/off. Turn on/off a drive motor. */
 #define CMD_MOTOR 6
-/* CMD_READ_FLUX, length=2-8. Argument is gw_read_flux.
+/* CMD_READ_FLUX, length=2-8. Argument is uft_gw_read_flux.
  * Returns flux readings until EOStream. */
 #define CMD_READ_FLUX 7
-/* CMD_WRITE_FLUX, length=2-4. Argument is gw_write_flux.
+/* CMD_WRITE_FLUX, length=2-4. Argument is uft_gw_write_flux.
  * Host follows with flux readings until EOStream. */
 #define CMD_WRITE_FLUX 8
 /* CMD_GET_FLUX_STATUS, length=2. Last read/write status returned in ACK. */
@@ -65,11 +64,11 @@ extern Bytes stripPartialRotation(const Bytes& fldata);
 #define CMD_SET_PIN 15
 /* CMD_RESET, length=2. Reset all state to initial (power on) values. */
 #define CMD_RESET 16
-/* CMD_ERASE_FLUX, length=6. Argument is gw_erase_flux. */
+/* CMD_ERASE_FLUX, length=6. Argument is uft_gw_erase_flux. */
 #define CMD_ERASE_FLUX 17
-/* CMD_SOURCE_BYTES, length=6. Argument is gw_sink_source_bytes. */
+/* CMD_SOURCE_BYTES, length=6. Argument is uft_gw_sink_source_bytes. */
 #define CMD_SOURCE_BYTES 18
-/* CMD_SINK_BYTES, length=6. Argument is gw_sink_source_bytes. */
+/* CMD_SINK_BYTES, length=6. Argument is uft_gw_sink_source_bytes. */
 #define CMD_SINK_BYTES 19
 #define CMD_MAX 19
 
@@ -138,7 +137,7 @@ extern Bytes stripPartialRotation(const Bytes& fldata);
 
 /* CMD_GET_INFO, index 0 */
 #define GETINFO_FIRMWARE 0
-struct packed gw_info
+struct packed uft_gw_info
 {
     uint8_t fw_major;
     uint8_t fw_minor;
@@ -148,11 +147,11 @@ struct packed gw_info
     uint8_t hw_model, hw_submodel;
     uint8_t usb_speed;
 };
-extern struct gw_info gw_info;
+extern struct uft_gw_info uft_gw_info;
 
 /* CMD_GET_INFO, index 1 */
 #define GETINFO_BW_STATS 1
-struct packed gw_bw_stats
+struct packed uft_gw_bw_stats
 {
     struct packed
     {
@@ -162,7 +161,7 @@ struct packed gw_bw_stats
 };
 
 /* CMD_READ_FLUX */
-struct packed gw_read_flux
+struct packed uft_gw_read_flux
 {
     /* Maximum ticks to read for (or 0, for no limit). */
     uint32_t ticks;
@@ -171,7 +170,7 @@ struct packed gw_read_flux
 };
 
 /* CMD_WRITE_FLUX */
-struct packed gw_write_flux
+struct packed uft_gw_write_flux
 {
     /* If non-zero, start the write at the index pulse. */
     uint8_t cue_at_index;
@@ -180,20 +179,20 @@ struct packed gw_write_flux
 };
 
 /* CMD_ERASE_FLUX */
-struct packed gw_erase_flux
+struct packed uft_gw_erase_flux
 {
     uint32_t ticks;
 };
 
 /* CMD_SINK_SOURCE_BYTES */
-struct packed gw_sink_source_bytes
+struct packed uft_gw_sink_source_bytes
 {
     uint32_t nr_bytes;
 };
 
 /* CMD_{GET,SET}_PARAMS, index 0 */
 #define PARAMS_DELAYS 0
-struct packed gw_delay
+struct packed uft_gw_delay
 {
     uint16_t select_delay; /* usec */
     uint16_t step_delay;   /* usec */

@@ -43,12 +43,12 @@ static uint64_t file_size(const char *path){
 }
 
 /* ---- Expected wrapper symbols (you provide these in your build) ----
- * Rationale: all modules share floppy_open() etc; to link multiple formats
+ * Rationale: all modules share uft_floppy_open() etc; to link multiple formats
  * into one library, each must be compiled/aliased to unique names.
  *
  * Example wrapper file (pcimg_wrap.c):
  *   #include "pc_img.h"
- *   int pcimg_open(FloppyDevice*d,const char*p){return floppy_open(d,p);}
+ *   int pcimg_open(FloppyDevice*d,const char*p){return uft_floppy_open(d,p);}
  *   ...
  */
 extern int pcimg_open(FloppyDevice*, const char*);

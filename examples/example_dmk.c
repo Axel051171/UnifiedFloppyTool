@@ -9,10 +9,14 @@
  */
 
 #include <stdio.h>
+#include "uft/core/uft_safe_parse.h"
 #include <stdlib.h>
+#include "uft/core/uft_safe_parse.h"
 #include <string.h>
+#include "uft/core/uft_safe_parse.h"
 
 #include "dmk.h"
+#include "uft/core/uft_safe_parse.h"
 
 /*============================================================================*
  * EXAMPLE 1: Create DMK Image
@@ -49,7 +53,7 @@ static void example_create_dmk(void)
     /* Write some data to sector 1 */
     uint8_t sector_data[256];
     memset(sector_data, 0, sizeof(sector_data));
-    sprintf((char*)sector_data, "TRS-80 DMK Test - Track 0, Sector 1");
+    snprintf((char*)sector_data, 512, "TRS-80 DMK Test - Track 0, Sector 1");
     
     if (dmk_write_sector(&image, 0, 0, 1, sector_data, 256)) {
         printf("✅ Wrote data to track 0, sector 1\n");
@@ -239,7 +243,11 @@ int main(int argc, char *argv[])
     printf("╚═══════════════════════════════════════════════════════════╝\n");
     
     if (argc > 1) {
-        int example = atoi(argv[1]);
+        int32_t example = 0;
+        if (!uft_parse_int32(argv[1], &example, 10)) {
+            fprintf(stderr, "Invalid argument: %s\n", argv[1]);
+            return 1;
+        }
         
         switch (example) {
             case 1:

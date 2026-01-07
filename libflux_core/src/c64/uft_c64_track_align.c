@@ -2,13 +2,10 @@
  * uft_c64_track_align.c
  *
  * Track alignment functions for C64/1541 disk preservation.
- * Based on nibtools by Pete Rittwage and Markus Brenner.
  *
  * Original Source:
- * - nibtools prot.c (C) Pete Rittwage <peter(at)rittwage.com>
  * - GCR routines (C) Markus Brenner <markus(at)brenner.de>
  *
- * License: GPL (from nibtools)
  */
 
 #include "c64/uft_c64_track_align.h"

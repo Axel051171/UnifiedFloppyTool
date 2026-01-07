@@ -25,11 +25,11 @@ typedef struct {
 } FloppyDevice;
 
 /* Unified API */
-int floppy_open(FloppyDevice *dev, const char *path);
-int floppy_close(FloppyDevice *dev);
-int floppy_read_sector(FloppyDevice *dev, uint32_t t, uint32_t h, uint32_t s, uint8_t *buf);
-int floppy_write_sector(FloppyDevice *dev, uint32_t t, uint32_t h, uint32_t s, const uint8_t *buf);
-int floppy_analyze_protection(FloppyDevice *dev);
+int uft_floppy_open(FloppyDevice *dev, const char *path);
+int uft_floppy_close(FloppyDevice *dev);
+int uft_floppy_read_sector(FloppyDevice *dev, uint32_t t, uint32_t h, uint32_t s, uint8_t *buf);
+int uft_floppy_write_sector(FloppyDevice *dev, uint32_t t, uint32_t h, uint32_t s, const uint8_t *buf);
+int uft_floppy_analyze_protection(FloppyDevice *dev);
 
 #ifdef __cplusplus
 }

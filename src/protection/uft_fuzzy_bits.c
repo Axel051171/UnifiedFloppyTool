@@ -3,7 +3,6 @@
  * @brief Fuzzy bit copy protection detection and analysis implementation
  * 
  * Based on Dungeon Master / Chaos Strikes Back copy protection
- * Source: http://dmweb.free.fr/community/documentation/copy-protection/copy-protection-atari-st/
  */
 
 #include "uft_fuzzy_bits.h"
@@ -351,7 +350,6 @@ int uft_capture_fuzzy_flux(void *ctx, uint8_t track, uint8_t sector,
 {
     /* 
      * TODO: Implement flux-level capture
-     * Requires KryoFlux, SuperCard Pro, or similar hardware
      */
     (void)ctx;
     (void)track;

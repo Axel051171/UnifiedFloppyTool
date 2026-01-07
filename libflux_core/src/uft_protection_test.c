@@ -3,7 +3,7 @@
  *
  * Simple CLI that:
  *  1) opens .IMG/.ATR/.D64 via protection_analyzer (as a device)
- *  2) runs floppy_analyze_protection()
+ *  2) runs uft_floppy_analyze_protection()
  *  3) exports either:
  *      - .imd (default)
  *      - .atx (uft stub) if --atx is specified
@@ -64,11 +64,11 @@ int main(int argc, char** argv) {
     out = argv[argi++];
 
     FloppyInterface dev;
-    int rc = floppy_open(&dev, in);
-    if (rc != 0) { fprintf(stderr, "floppy_open failed: %d\n", rc); return 1; }
+    int rc = uft_floppy_open(&dev, in);
+    if (rc != 0) { fprintf(stderr, "uft_floppy_open failed: %d\n", rc); return 1; }
 
-    rc = floppy_analyze_protection(&dev);
-    if (rc != 0) { fprintf(stderr, "floppy_analyze_protection failed: %d\n", rc); floppy_close(&dev); return 1; }
+    rc = uft_floppy_analyze_protection(&dev);
+    if (rc != 0) { fprintf(stderr, "uft_floppy_analyze_protection failed: %d\n", rc); uft_floppy_close(&dev); return 1; }
 
     const UFT_ProtectionReport* rep = uft_get_last_report(&dev);
     print_report(rep);
@@ -76,9 +76,9 @@ int main(int argc, char** argv) {
     if (want_atx) rc = uft_export_atx_stub(&dev, out);
     else          rc = uft_export_imd(&dev, out);
 
-    if (rc != 0) { fprintf(stderr, "export failed: %d\n", rc); floppy_close(&dev); return 1; }
+    if (rc != 0) { fprintf(stderr, "export failed: %d\n", rc); uft_floppy_close(&dev); return 1; }
 
     printf("Wrote: %s\n", out);
-    floppy_close(&dev);
+    uft_floppy_close(&dev);
     return 0;
 }

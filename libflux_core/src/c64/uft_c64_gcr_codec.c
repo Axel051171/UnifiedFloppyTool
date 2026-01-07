@@ -2,13 +2,9 @@
  * uft_c64_gcr_codec.c
  *
  * Complete GCR (Group Code Recording) codec for Commodore 64/1541.
- * Based on nibtools by Pete Rittwage and Markus Brenner.
  *
  * Original Source:
- * - nibtools gcr.c (C) Markus Brenner <markus(at)brenner.de>
- * - nibtools gcr.h (C) Pete Rittwage <peter(at)rittwage.com>
  *
- * License: GPL (from nibtools)
  */
 
 #include "c64/uft_c64_gcr_codec.h"
@@ -985,9 +981,11 @@ size_t uft_c64_gcr_check_errors(const uint8_t *gcr_data, size_t length,
             error_count++;
             if (error_str && error_size > 0) {
                 char buf[64];
+                size_t cur_len = strlen(error_str);
                 snprintf(buf, sizeof(buf), "T%d/S%d:E%02X ", track, s, err);
-                if (strlen(error_str) + strlen(buf) < error_size) {
-                    strcat(error_str, buf);
+                if (cur_len + strlen(buf) < error_size) {
+                    /* Safe concatenation with explicit bounds check */
+                    snprintf(error_str + cur_len, error_size - cur_len, "%s", buf);
                 }
             }
         }

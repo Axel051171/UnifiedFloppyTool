@@ -614,10 +614,10 @@ uft_preserved_disk_t* uft_bp_disk_load(const char* filename) {
     }
     
     /* Read header */
-    uint32_t magic = 0;
-    uint16_t version = 0;
-    uint8_t cylinders = 0, heads = 0;
-    uint32_t track_count = 0;
+    uint32_t magic;
+    uint16_t version;
+    uint8_t cylinders, heads;
+    uint32_t track_count;
     
     if (uft_buf_reader_u32(&reader, &magic) != UFT_IO_OK || magic != UFT_PRESERVE_MAGIC) {
         fclose(f);
@@ -651,8 +651,8 @@ uft_preserved_disk_t* uft_bp_disk_load(const char* filename) {
         uint8_t has_track;
         if (uft_buf_reader_u8(&reader, &has_track) != UFT_IO_OK || !has_track) continue;
         
-        uint8_t cyl = 0, head = 0, format_type = 0, flags = 0, rev_count = 0, best_rev = 0;
-        uint16_t weak_count = 0;
+        uint8_t cyl, head, format_type, flags, rev_count, best_rev;
+        uint16_t weak_count;
         
         uft_buf_reader_u8(&reader, &cyl);
         uft_buf_reader_u8(&reader, &head);

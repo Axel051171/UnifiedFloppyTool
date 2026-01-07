@@ -2,7 +2,6 @@
  * @file uft_pll_params.h
  * @brief PLL (Phase-Locked Loop) Parameters for flux decoding
  * 
- * Extracted from SAMdisk FluxDecoder and FluxEngine
  */
 
 #ifndef UFT_PLL_PARAMS_H

@@ -2,7 +2,7 @@
  * @file uft_track_grid_widget.h
  * @brief Track Grid Widget - Visual Track/Sector Status Display
  * 
- * Similar to HxC Floppy Emulator track visualization
+ * Similar to UFT HFE Format track visualization
  */
 
 #ifndef UFT_TRACK_GRID_WIDGET_H

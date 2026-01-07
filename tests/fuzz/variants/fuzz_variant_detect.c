@@ -29,7 +29,7 @@ int fuzz_detect(const uint8_t* data, size_t size, fuzz_variant_t* info) {
     // SCP
     if (size >= 16 && data[0] == 'S' && data[1] == 'C' && data[2] == 'P') {
         info->format_id = 0x1000;
-        strcpy(info->format_name, "SCP");
+        strncpy(info->format_name, "SCP", sizeof(info->format_name) - 1);
         info->confidence = 100;
         if (size > 7) {
             uint8_t start = data[6];
@@ -44,7 +44,7 @@ int fuzz_detect(const uint8_t* data, size_t size, fuzz_variant_t* info) {
     // HFE
     if (size >= 16 && memcmp(data, "HXCPICFE", 8) == 0) {
         info->format_id = 0x1001;
-        strcpy(info->format_name, "HFE");
+        strncpy(info->format_name, "HFE", sizeof(info->format_name) - 1);
         info->confidence = 100;
         if (size > 10) {
             info->tracks = data[9];
@@ -58,7 +58,7 @@ int fuzz_detect(const uint8_t* data, size_t size, fuzz_variant_t* info) {
     // HFE v3
     if (size >= 8 && memcmp(data, "HXCHFE3", 7) == 0) {
         info->format_id = 0x1001;
-        strcpy(info->format_name, "HFE");
+        strncpy(info->format_name, "HFE", sizeof(info->format_name) - 1);
         info->variant_flags = 0x04;  // V3
         info->confidence = 100;
         return 0;
@@ -69,7 +69,7 @@ int fuzz_detect(const uint8_t* data, size_t size, fuzz_variant_t* info) {
         uint32_t magic = data[0] | (data[1] << 8) | (data[2] << 16) | (data[3] << 24);
         if (magic == 0x315A4F57 || magic == 0x325A4F57) {
             info->format_id = 0x0320;
-            strcpy(info->format_name, "WOZ");
+            strncpy(info->format_name, "WOZ", sizeof(info->format_name) - 1);
             info->confidence = 100;
             return 0;
         }
@@ -78,7 +78,7 @@ int fuzz_detect(const uint8_t* data, size_t size, fuzz_variant_t* info) {
     // G64
     if (size >= 12 && memcmp(data, "GCR-1541", 8) == 0) {
         info->format_id = 0x0110;
-        strcpy(info->format_name, "G64");
+        strncpy(info->format_name, "G64", sizeof(info->format_name) - 1);
         info->confidence = 100;
         if (size > 9) {
             info->tracks = data[9];
@@ -90,7 +90,7 @@ int fuzz_detect(const uint8_t* data, size_t size, fuzz_variant_t* info) {
     // IPF
     if (size >= 12 && memcmp(data, "CAPS", 4) == 0) {
         info->format_id = 0x1002;
-        strcpy(info->format_name, "IPF");
+        strncpy(info->format_name, "IPF", sizeof(info->format_name) - 1);
         info->confidence = 100;
         return 0;
     }
@@ -98,7 +98,7 @@ int fuzz_detect(const uint8_t* data, size_t size, fuzz_variant_t* info) {
     // ATR
     if (size >= 16 && data[0] == 0x96 && data[1] == 0x02) {
         info->format_id = 0x0500;
-        strcpy(info->format_name, "ATR");
+        strncpy(info->format_name, "ATR", sizeof(info->format_name) - 1);
         info->confidence = 100;
         return 0;
     }
@@ -106,7 +106,7 @@ int fuzz_detect(const uint8_t* data, size_t size, fuzz_variant_t* info) {
     // ADF by size
     if (size == 901120 || size == 1802240) {
         info->format_id = 0x0200;
-        strcpy(info->format_name, "ADF");
+        strncpy(info->format_name, "ADF", sizeof(info->format_name) - 1);
         info->confidence = 80;
         info->tracks = 80;
         info->heads = 2;
@@ -116,7 +116,7 @@ int fuzz_detect(const uint8_t* data, size_t size, fuzz_variant_t* info) {
     // D64 by size
     if (size >= 174848 && size <= 206114) {
         info->format_id = 0x0100;
-        strcpy(info->format_name, "D64");
+        strncpy(info->format_name, "D64", sizeof(info->format_name) - 1);
         info->confidence = 90;
         return 0;
     }

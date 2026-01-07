@@ -9,7 +9,6 @@
  * - Cross-Track Sync
  * - Custom Address/Data Marks
  * 
- * Based on analysis of historical protection methods.
  */
 
 #ifndef UFT_APPLE2_PROTECTION_H

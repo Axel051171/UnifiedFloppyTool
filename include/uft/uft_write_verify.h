@@ -22,7 +22,7 @@
  * USAGE:
  * ```c
  * // Option 1: Automatisch mit Write
- * uft_write_options_t opts = UFT_WRITE_OPTIONS_DEFAULT;
+ * uft_write_verify_options_t opts = UFT_WRITE_VERIFY_OPTIONS_DEFAULT;
  * opts.verify = true;
  * opts.verify_retries = 3;
  * uft_disk_write_track_ex(disk, cyl, head, data, &opts);
@@ -217,6 +217,11 @@ typedef struct {
 
 /* ═══════════════════════════════════════════════════════════════════════════════
  * Write Options (mit Verify)
+/* ═══════════════════════════════════════════════════════════════════════════════
+ * Write with Verify Options
+ * 
+ * Note: This is uft_write_verify_options_t, not uft_write_options_t
+ * (which is defined in uft_types.h for general write operations)
  * ═══════════════════════════════════════════════════════════════════════════════ */
 
 typedef struct {
@@ -232,9 +237,9 @@ typedef struct {
     bool                (*abort_check)(void *user);
     void                *abort_user;
     
-} uft_write_options_t;
+} uft_write_verify_options_t;
 
-#define UFT_WRITE_OPTIONS_DEFAULT { \
+#define UFT_WRITE_VERIFY_OPTIONS_DEFAULT { \
     .verify = true, \
     .verify_options = UFT_VERIFY_OPTIONS_DEFAULT, \
     .precomp = false, \
@@ -365,7 +370,7 @@ uft_error_t uft_disk_write_track_verified(
     uint8_t head,
     const uint8_t *data,
     size_t size,
-    const uft_write_options_t *options,
+    const uft_write_verify_options_t *options,
     uft_track_verify_t **verify_result
 );
 
@@ -379,7 +384,7 @@ uft_error_t uft_disk_write_sector_verified(
     uint8_t sector,
     const uint8_t *data,
     size_t size,
-    const uft_write_options_t *options,
+    const uft_write_verify_options_t *options,
     uft_sector_verify_t **verify_result
 );
 

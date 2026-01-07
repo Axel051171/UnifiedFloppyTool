@@ -3,7 +3,6 @@
  * @brief Flux Stream PLL (Phase-Locked Loop) for UFT
  * 
  * Implements a digital PLL for decoding flux transitions from raw stream data.
- * Based on analysis of HxCFloppyEmulator's fluxStreamAnalyzer.
  * 
  * The PLL consists of:
  * - Histogram-based bitcell detection (peak finding)

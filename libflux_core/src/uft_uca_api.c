@@ -13,52 +13,51 @@
  * LAYER 1: TRANSPORT IMPLEMENTATIONS
  * ======================================================================== */
 
-/* Greaseweazle Transport */
 typedef struct {
     uft_gwraw_ctx_t* gwraw_ctx;
-} gw_transport_ctx_t;
+} uft_gw_transport_ctx_t;
 
-static uft_rc_t gw_open(void* ctx, const char* path) {
-    gw_transport_ctx_t* gw = ctx;
+static uft_rc_t uft_gw_open(void* ctx, const char* path) {
+    uft_gw_transport_ctx_t* gw = ctx;
     return uft_gwraw_open(path, &gw->gwraw_ctx);
 }
 
-static uft_rc_t gw_close(void* ctx) {
-    gw_transport_ctx_t* gw = ctx;
+static uft_rc_t uft_gw_close(void* ctx) {
+    uft_gw_transport_ctx_t* gw = ctx;
     uft_gwraw_close(&gw->gwraw_ctx);
     return UFT_SUCCESS;
 }
 
-static uft_rc_t gw_calibrate(void* ctx) {
-    gw_transport_ctx_t* gw = ctx;
+static uft_rc_t uft_gw_calibrate(void* ctx) {
+    uft_gw_transport_ctx_t* gw = ctx;
     return uft_gwraw_rewind(gw->gwraw_ctx);
 }
 
-static uft_rc_t gw_seek(void* ctx, uint8_t track, uint8_t head) {
+static uft_rc_t uft_gw_seek(void* ctx, uint8_t track, uint8_t head) {
     /* GWRAW is sequential - cannot seek */
     (void)ctx; (void)track; (void)head;
     return UFT_SUCCESS;
 }
 
-static uft_rc_t gw_read_flux(void* ctx, uint32_t** flux_ns, uint32_t* count) {
-    gw_transport_ctx_t* gw = ctx;
+static uft_rc_t uft_gw_read_flux(void* ctx, uint32_t** flux_ns, uint32_t* count) {
+    uft_gw_transport_ctx_t* gw = ctx;
     bool has_index;
     return uft_gwraw_read_track(gw->gwraw_ctx, flux_ns, count, &has_index);
 }
 
-static uft_rc_t gw_write_flux(void* ctx, const uint32_t* flux_ns, uint32_t count) {
+static uft_rc_t uft_gw_write_flux(void* ctx, const uint32_t* flux_ns, uint32_t count) {
     /* Not implemented */
     (void)ctx; (void)flux_ns; (void)count;
     return UFT_ERR_UNSUPPORTED;
 }
 
-static const uft_transport_ops_t greaseweazle_ops = {
-    .open = gw_open,
-    .close = gw_close,
-    .calibrate = gw_calibrate,
-    .seek = gw_seek,
-    .read_flux = gw_read_flux,
-    .write_flux = gw_write_flux
+static const uft_transport_ops_t uft_gw_ops = {
+    .open = uft_gw_open,
+    .close = uft_gw_close,
+    .calibrate = uft_gw_calibrate,
+    .seek = uft_gw_seek,
+    .read_flux = uft_gw_read_flux,
+    .write_flux = uft_gw_write_flux
 };
 
 /* SuperCard Pro Transport */
@@ -107,7 +106,7 @@ static uft_rc_t scp_write_flux(void* ctx, const uint32_t* flux_ns, uint32_t coun
     return UFT_ERR_UNSUPPORTED;
 }
 
-static const uft_transport_ops_t supercard_pro_ops = {
+static const uft_transport_ops_t uft_sc_pro_ops = {
     .open = scp_open,
     .close = scp_close,
     .calibrate = scp_calibrate,
@@ -137,8 +136,8 @@ uft_rc_t uft_transport_create(
     /* Select operations & allocate device context */
     switch (type) {
     case UFT_TRANSPORT_GREASEWEAZLE: {
-        t->ops = &greaseweazle_ops;
-        gw_transport_ctx_t* gw = calloc(1, sizeof(gw_transport_ctx_t));
+        t->ops = &uft_gw_ops;
+        uft_gw_transport_ctx_t* gw = calloc(1, sizeof(uft_gw_transport_ctx_t));
         if (!gw) { free(t); return UFT_ERR_MEMORY; }
         t->device_ctx = gw;
         t->caps.supports_flux_read = true;
@@ -149,7 +148,7 @@ uft_rc_t uft_transport_create(
     }
     
     case UFT_TRANSPORT_SUPERCARD_PRO: {
-        t->ops = &supercard_pro_ops;
+        t->ops = &uft_sc_pro_ops;
         scp_transport_ctx_t* scp = calloc(1, sizeof(scp_transport_ctx_t));
         if (!scp) { free(t); return UFT_ERR_MEMORY; }
         t->device_ctx = scp;

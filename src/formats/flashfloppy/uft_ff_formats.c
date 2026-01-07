@@ -1,8 +1,6 @@
 /**
  * @file uft_ff_formats.c
- * @brief FlashFloppy-derived format detection algorithms
  *
- * Original code by Keir Fraser (Public Domain/Unlicense)
  * Adapted for UFT
  *
  * SPDX-License-Identifier: Unlicense

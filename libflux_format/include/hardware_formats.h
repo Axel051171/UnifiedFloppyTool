@@ -3,8 +3,6 @@
  * hardware_formats.h - Hardware Flux Capture Formats (TIER 0)
  * 
  * PURE FLUX formats from actual floppy disk hardware:
- * - GWFLUX: Greaseweazle flux captures
- * - KFS: KryoFlux stream files
  * - SCP: SuperCard Pro flux dumps (existing)
  * 
  * These are NOT normal disk images - they are RAW FLUX TRANSITIONS
@@ -29,10 +27,8 @@ extern "C" {
  * HARDWARE FLUX FORMATS (TIER 0)
  *============================================================================*/
 
-/* GWFLUX - Greaseweazle Flux Captures */
 #include "uft_gwflux.h"
 
-/* KFS - KryoFlux Stream Files */
 #include "uft_kfstream.h"
 
 /* SCP - SuperCard Pro (already in project) */
@@ -47,8 +43,6 @@ extern "C" {
  */
 typedef enum {
     HARDWARE_FORMAT_UNKNOWN = 0,
-    HARDWARE_FORMAT_GWFLUX,  /* Greaseweazle flux */
-    HARDWARE_FORMAT_KFS,     /* KryoFlux stream */
     HARDWARE_FORMAT_SCP      /* SuperCard Pro */
 } hardware_format_type_t;
 
@@ -68,7 +62,6 @@ static inline hardware_format_type_t hardware_detect_format(const uint8_t* buffe
         return HARDWARE_FORMAT_GWFLUX;
     }
     
-    /* KFS: KryoFlux stream (no fixed signature, heuristic detection) */
     if (uft_kfs_detect(buffer, size)) {
         return HARDWARE_FORMAT_KFS;
     }
@@ -126,14 +119,12 @@ static const hardware_device_t HARDWARE_DEVICES[] = {
  * 
  * These are TIER 0 formats - the foundation of preservation!
  * 
- * GWFLUX (Greaseweazle):
  *   - $30 USB device, community favorite
  *   - Open source firmware
  *   - Simple .gwf container format
  *   - Pure flux delta timings
  *   - Track/side separated
  * 
- * KFS (KryoFlux Stream):
  *   - Professional preservation standard
  *   - Used by museums and archives
  *   - Stream-based format (trackNN.raw)
@@ -158,8 +149,6 @@ static const hardware_device_t HARDWARE_DEVICES[] = {
  *   Hardware → FLUX → Pipeline → Logical Format
  *   
  *   Example:
- *     Greaseweazle → .gwf → GCR decoder → D64
- *     KryoFlux → .raw → MFM decoder → IMG
  *     SCP → .scp → Custom decoder → Unknown format!
  * 
  * WITHOUT FLUX SUPPORT:

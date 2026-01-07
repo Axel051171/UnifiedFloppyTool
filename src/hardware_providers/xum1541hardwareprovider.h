@@ -18,7 +18,7 @@
 
 // Forward declaration of C handle
 extern "C" {
-    struct xum1541_handle_t;
+    struct uft_xum_handle_t;
 }
 
 /**
@@ -102,7 +102,7 @@ signals:
     void errorOccurred(const QString &error);
 
 private:
-    xum1541_handle_t *m_handle;
+    uft_xum_handle_t *m_handle;
     bool m_connected;
     uint8_t m_deviceNumber;  // IEC device number (8-11)
     uint8_t m_currentTrack;

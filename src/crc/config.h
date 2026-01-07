@@ -1,4 +1,3 @@
-/* config.h - CRC RevEng configuration
  * Generated for UnifiedFloppyTool
  */
 

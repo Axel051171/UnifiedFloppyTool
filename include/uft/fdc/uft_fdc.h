@@ -5,7 +5,6 @@
  * This header provides structures and definitions for working with
  * NEC µPD765 compatible floppy disk controllers and related hardware.
  * 
- * Based on analysis of fdformat, fdread, ImageDisk, and Linux kernel sources.
  * 
  * @copyright UFT Project
  */
@@ -167,7 +166,7 @@ typedef enum {
 
 /**
  * @brief Floppy drive parameters
- * Based on Linux floppy_drive_params structure
+ * Based on Linux uft_floppy_drive_params structure
  */
 typedef struct {
     uint8_t  cmos_type;         /**< CMOS drive type code */
@@ -188,7 +187,7 @@ typedef struct {
 
 /**
  * @brief Floppy format parameters
- * Based on Linux floppy_struct
+ * Based on Linux uft_floppy_struct
  */
 typedef struct {
     uint32_t size;              /**< Total size in sectors */

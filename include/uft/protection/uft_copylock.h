@@ -3,7 +3,6 @@
  * @brief Rob Northen CopyLock Protection Handler
  * 
  * Implements detection and analysis of Amiga CopyLock protection.
- * Based on algorithm analysis from Keir Fraser's disk-utilities (GPL).
  * Clean-room reimplementation for UFT.
  * 
  * CopyLock uses:

@@ -11,7 +11,7 @@
  * - Format detection per track
  * - Real-time update during read
  * 
- * BASED ON: HxC Software's Visual Floppy Disk
+ * Disk visualization's Visual Floppy Disk
  */
 
 #pragma once

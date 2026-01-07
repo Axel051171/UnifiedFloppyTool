@@ -1,6 +1,5 @@
 /**
  * @file flux_stat.h
- * @brief Statistical Flux Recovery (FluxStat) - Inspiriert von FluxRipper
  * 
  * Multi-Pass Flux Capture und statistische Analyse für die Wiederherstellung
  * marginaler/schwacher Sektoren. Übertrifft SpinRite's DynaStat durch Zugang

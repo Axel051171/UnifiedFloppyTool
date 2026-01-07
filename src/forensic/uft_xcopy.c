@@ -5,9 +5,13 @@
  */
 
 #include "uft/forensic/uft_xcopy.h"
+#include "uft/core/uft_safe_parse.h"
 #include <stdlib.h>
+#include "uft/core/uft_safe_parse.h"
 #include <string.h>
+#include "uft/core/uft_safe_parse.h"
 #include <stdio.h>
+#include "uft/core/uft_safe_parse.h"
 
 // ============================================================================
 // SESSION STRUCTURE
@@ -166,7 +170,7 @@ int uft_xcopy_profile_parse(const char* str, uft_copy_profile_t* profile) {
                     profile->end_side = end;
                 }
             } else if (strcmp(key, "retries") == 0) {
-                profile->default_retries = atoi(val);
+                { int32_t t; if(uft_parse_int32(val,&t,10)) profile->default_retries=t; }
             } else if (strcmp(key, "mode") == 0) {
                 if (strcmp(val, "raw") == 0) profile->mode = UFT_COPY_MODE_RAW;
                 else if (strcmp(val, "flux") == 0) profile->mode = UFT_COPY_MODE_FLUX;
@@ -179,7 +183,7 @@ int uft_xcopy_profile_parse(const char* str, uft_copy_profile_t* profile) {
             } else if (strcmp(key, "halftracks") == 0) {
                 profile->copy_halftracks = (strcmp(val, "true") == 0 || strcmp(val, "1") == 0);
             } else if (strcmp(key, "revolutions") == 0) {
-                profile->revolutions = atoi(val);
+                { int32_t t; if(uft_parse_int32(val,&t,10)) profile->revolutions=t; }
             }
         }
         token = strtok(NULL, ",");

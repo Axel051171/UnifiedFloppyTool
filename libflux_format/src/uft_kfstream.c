@@ -8,7 +8,6 @@
 bool uft_kfs_detect(const uint8_t* buffer, size_t size)
 {
     if (!buffer || size < 4) return false;
-    /* KryoFlux streams usually start with chunk headers */
     return (buffer[0] == KFS_CHUNK_FLUX || buffer[0] == KFS_CHUNK_OOB);
 }
 

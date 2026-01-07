@@ -1,10 +1,8 @@
 /**
  * @file uft_opencbm_gcr.c
- * @brief GCR 4-bit to 5-bit encoding/decoding from OpenCBM
  * @version 1.0.0
  * @date 2026-01-06
  *
- * Source: OpenCBM (Wolfgang Moser, http://d81.de)
  * License: GPL v2
  *
  * This module provides Commodore GCR (Group Code Recording) conversion:
@@ -12,7 +10,6 @@
  * - 5-to-4 bit decoding for reading from disk
  * - Support for partial conversions and in-place operations
  *
- * Integration: R50 - OpenCBM extraction
  */
 
 #include <stdint.h>

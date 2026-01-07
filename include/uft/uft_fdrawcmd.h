@@ -2,9 +2,6 @@
  * @file uft_fdrawcmd.h
  * @brief fdrawcmd.sys Driver Interface Definitions
  * 
- * Extracted from RIDE (Reversible Image Disk Editor)
- * Source: /home/claude/ride/RIDE-master/Externals/fdrawcmd/fdrawcmd.h
- * Original: Simon Owen's fdrawcmd.sys v1.0.1.11
  * 
  * Low-level Windows floppy filter driver for direct FDC access.
  * Allows raw sector operations, custom formats, and timing control.

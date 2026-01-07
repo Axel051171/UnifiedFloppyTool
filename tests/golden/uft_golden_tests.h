@@ -119,7 +119,7 @@ static const format_test_t FORMAT_TESTS[] = {
     {"F-C64-008", "d64_dolphindos", "D64", "DolphinDOS", 174848, 0x0100, 0x0081, 90, 35, 1, 0, 256, false, false, false, false, PRIO_P2, NULL, NULL},
     {"F-C64-009", "g64_v0", "G64", "v0", 0, 0x0110, 0x0001, 100, 0, 1, 0, 0, false, false, false, false, PRIO_P0, NULL, NULL},
     {"F-C64-010", "g64_v1", "G64", "v1", 0, 0x0110, 0x0002, 100, 0, 1, 0, 0, false, false, false, false, PRIO_P1, NULL, NULL},
-    {"F-C64-011", "g64_nibtools", "G64", "Nibtools", 0, 0x0110, 0x0010, 95, 0, 1, 0, 0, false, false, false, false, PRIO_P2, NULL, NULL},
+    {"F-C64-011", "g64_GCR tools", "G64", "Nibtools", 0, 0x0110, 0x0010, 95, 0, 1, 0, 0, false, false, false, false, PRIO_P2, NULL, NULL},
     {"F-C64-012", "g64_protected", "G64", "Protected", 0, 0x0110, 0x0020, 90, 0, 1, 0, 0, false, false, true, false, PRIO_P1, NULL, NULL},
     {"F-C64-013", "d71_standard", "D71", "Standard", 349696, 0x0101, 0x0001, 95, 70, 2, 0, 256, false, false, false, false, PRIO_P1, NULL, NULL},
     {"F-C64-014", "d71_errors", "D71", "+Errors", 351062, 0x0101, 0x0011, 98, 70, 2, 0, 256, true, false, false, false, PRIO_P2, NULL, NULL},

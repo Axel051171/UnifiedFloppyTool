@@ -8,7 +8,6 @@
 #define C64_DATA_RECORD 0xffd57
 #define C64_SECTOR_LENGTH 256
 
-/* Source: http://www.unusedino.de/ec64/technical/formats/g64.html
    1. Header sync       FF FF FF FF FF (40 'on' bits, not GCR)
    2. Header info       52 54 B5 29 4B 7A 5E 95 55 55 (10 GCR bytes)
    3. Header gap        55 55 55 55 55 55 55 55 55 (9 bytes, never read)

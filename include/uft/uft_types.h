@@ -115,10 +115,10 @@ typedef enum uft_format {
     
     // Flux-Images (raw)
     UFT_FORMAT_SCP,          ///< SuperCard Pro
-    UFT_FORMAT_KF_STREAM,    ///< KryoFlux Stream
-    UFT_FORMAT_KF_RAW,       ///< KryoFlux Raw
+    UFT_FORMAT_UFT_KF_STREAM,    ///< KryoFlux Stream
+    UFT_FORMAT_UFT_KF_RAW,       ///< KryoFlux Raw
     UFT_FORMAT_KRYOFLUX,     ///< KryoFlux (alias)
-    UFT_FORMAT_HFE,          ///< HxC Floppy Emulator
+    UFT_FORMAT_HFE,          ///< UFT HFE Format
     UFT_FORMAT_IPF,          ///< Interchangeable Preservation Format
     UFT_FORMAT_CT_RAW,       ///< CatWeasel Raw
     UFT_FORMAT_A2R,          ///< Applesauce A2R
@@ -258,6 +258,8 @@ typedef enum uft_sector_status {
 /**
  * @brief Einzelner Sektor
  */
+#ifndef UFT_SECTOR_T_DEFINED
+#define UFT_SECTOR_T_DEFINED
 typedef struct uft_sector {
     uft_sector_id_t  id;           ///< Sektor-ID
     uint8_t*         data;         ///< Sektor-Daten
@@ -269,6 +271,7 @@ typedef struct uft_sector {
     uint32_t         bit_position; ///< Position im Track (Bits)
     uint32_t         gap_before;   ///< Gap-Größe vor diesem Sektor
 } uft_sector_t;
+#endif /* UFT_SECTOR_T_DEFINED */
 
 // ============================================================================
 // Track-Strukturen

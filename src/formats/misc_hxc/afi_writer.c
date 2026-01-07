@@ -2,25 +2,20 @@
 //
 // Copyright (C) 2006-2025 Jean-Franois DEL NERO
 //
-// This file is part of the HxCFloppyEmulator library
 //
-// HxCFloppyEmulator may be used and distributed without restriction provided
 // that this copyright statement is not removed from the file and that any
 // derivative work contains the original copyright notice and the associated
 // disclaimer.
 //
-// HxCFloppyEmulator is free software; you can redistribute it
 // and/or modify  it under the terms of the GNU General Public License
 // as published by the Free Software Foundation; either version 2
 // of the License, or (at your option) any later version.
 //
-// HxCFloppyEmulator is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 //   See the GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with HxCFloppyEmulator; if not, write to the Free Software
 // Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 //
 */
@@ -32,8 +27,8 @@
 
 #include "types.h"
 
-#include "internal_libhxcfe.h"
-#include "libhxcfe.h"
+#include "libflux.h""
+#include "libflux.h""
 
 #include "afi_format.h"
 #include "afi_loader.h"
@@ -98,9 +93,9 @@ int adddatablock(FILE* f,int typecode,int compressdata,unsigned char* data,int d
 	}
 
 	memset(&afidata,0,sizeof(AFIDATA));
-	strcpy((char*)&afidata.afi_data_tag,AFI_DATA_TAG);
+	strncpy((char*)afidata.afi_data_tag, AFI_DATA_TAG, sizeof(afidata.afi_data_tag));
 	afidata.TYPEIDCODE=datacode[i].idcode;
-	strcpy((char*)&afidata.type_tag,datacode[i].idcodetag);
+	strncpy((char*)afidata.type_tag, datacode[i].idcodetag, sizeof(afidata.type_tag));
 	afidata.nb_bits_per_element = bitsperelement;
 
 	if(compressdata)
@@ -136,7 +131,7 @@ int adddatablock(FILE* f,int typecode,int compressdata,unsigned char* data,int d
 	if (fwrite(&afidata,sizeof(afidata),1,f) != 1) { /* I/O error */ }
 	if (fwrite(tempcompressbuffer,afidata.packed_size,1,f) != 1) { /* I/O error */ }
 	tempcrc=getcrc(&afidata,sizeof(afidata),tempcompressbuffer,afidata.packed_size);
-	fwrite(&tempcrc,sizeof(tempcrc),1,f);            //temporary crc
+	if (fwrite(&tempcrc, sizeof(tempcrc), 1, f) != 1) { /* I/O error */ }            //temporary crc
 
 	free(tempcompressbuffer);
 	return afidata.packed_size;
@@ -206,7 +201,7 @@ uint32_t * bitrate_rle_pack(uint32_t * bitrate,uint32_t len,uint32_t * outlen)
 }
 
 
-int AFI_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char * filename)
+int AFI_libWrite_DiskFile(LIBFLUX_IMGLDR* imgldr_ctx,LIBFLUX_FLOPPY * floppy,char * filename)
 {
 
 	FILE * hxcafifile;
@@ -242,22 +237,22 @@ int AFI_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char * 
 
 	floppy->floppyiftype=GENERIC_SHUGART_DD_FLOPPYMODE;
 
-	imgldr_ctx->hxcfe->hxc_printf(MSG_INFO_1,"Write AFI file %s...",filename);
+	imgldr_ctx->ctx->libflux_printf(MSG_INFO_1,"Write AFI file %s...",filename);
 
-	hxcafifile=hxc_fopen(filename,"wb");
+	hxcafifile=libflux_fopen(filename,"wb");
 	if(hxcafifile)
 	{
 		tempcrc=0x0000;
 
 		//------------- header -------------
 		memset(&afiheader,0,sizeof(AFIIMG));
-		sprintf((char*)&afiheader.afi_img_tag,AFI_IMG_TAG);
+		strncpy((char*)afiheader.afi_img_tag, AFI_IMG_TAG, sizeof(afiheader.afi_img_tag));
 		afiheader.header_size=sizeof(AFIIMG);
 		afiheader.version_code_minor = 2;
 		afiheader.header_crc=getcrc(&afiheader,sizeof(afiheader)-2,0,0);
 		//------------- info -------------
 		memset(&afiinfo,0,sizeof(AFIIMGINFO));
-		sprintf((char*)&afiinfo.afi_img_infos_tag,AFI_INFO_TAG);
+		strncpy((char*)afiinfo.afi_img_infos_tag, AFI_INFO_TAG, sizeof(afiinfo.afi_img_infos_tag));
 
 		afiinfo.start_side=0;
 		afiinfo.end_side=floppy->floppyNumberOfSide-1;
@@ -316,11 +311,11 @@ int AFI_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char * 
 
 		afiinfo.number_of_string=0;
 
-		imgldr_ctx->hxcfe->hxc_printf(MSG_INFO_1,"%d Tracks, %d side(s)",afiinfo.end_track,afiinfo.end_side);
+		imgldr_ctx->ctx->libflux_printf(MSG_INFO_1,"%d Tracks, %d side(s)",afiinfo.end_track,afiinfo.end_side);
 
 		//------------- track list -------------
 		memset(&afitracklist,0,sizeof(AFITRACKLIST));
-		sprintf((char*)&afitracklist.afi_img_track_list_tag,AFI_TRACKLIST_TAG);
+		strncpy((char*)afitracklist.afi_img_track_list_tag, AFI_TRACKLIST_TAG, sizeof(afitracklist.afi_img_track_list_tag));
 		afitracklist.number_of_track=floppy->floppyNumberOfTrack*floppy->floppyNumberOfSide;
 
 		track_list=(uint32_t *)malloc(afitracklist.number_of_track*sizeof(uint32_t));
@@ -330,12 +325,12 @@ int AFI_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char * 
 
 			afiheader.track_list_offset=sizeof(AFIIMG);
 
-			fwrite(&afiheader,sizeof(afiheader),1,hxcafifile);        //write temporary file header
-			fwrite(&afitracklist,sizeof(afitracklist),1,hxcafifile);  //write temporary track list header
+			if (fwrite(&afiheader, sizeof(afiheader), 1, hxcafifile) != 1) { /* I/O error */ }        //write temporary file header
+			if (fwrite(&afitracklist, sizeof(afitracklist), 1, hxcafifile) != 1) { /* I/O error */ }  //write temporary track list header
 			track_listptr=ftell(hxcafifile);
 			if (fwrite(track_list,afitracklist.number_of_track*sizeof(uint32_t),1,hxcafifile) != 1) { /* I/O error */ }
 			tempcrc=getcrc(&afitracklist,sizeof(afitracklist),track_list,afitracklist.number_of_track*sizeof(uint32_t));
-			fwrite(&tempcrc,sizeof(tempcrc),1,hxcafifile);            //temporary crc
+			if (fwrite(&tempcrc, sizeof(tempcrc), 1, hxcafifile) != 1) { /* I/O error */ }            //temporary crc
 
 			trackposition=sizeof(afitracklist)+afitracklist.number_of_track*sizeof(uint32_t)+sizeof(tempcrc);
 			t=0;
@@ -343,11 +338,11 @@ int AFI_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char * 
 			{
 				for(j=0;j<floppy->tracks[i]->number_of_side;j++)
 				{
-					hxcfe_imgCallProgressCallback(imgldr_ctx,(i<<1) + (j&1),(2*floppy->floppyNumberOfTrack) );
+					libflux_imgCallProgressCallback(imgldr_ctx,(i<<1) + (j&1),(2*floppy->floppyNumberOfTrack) );
 
 					memset(data_list,0,sizeof(uint32_t)*16);
 					memset(&afitrack,0,sizeof(afitrack));
-					sprintf((char*)&afitrack.afi_track_tag,AFI_TRACK_TAG);
+					strncpy((char*)afitrack.afi_track_tag, AFI_TRACK_TAG, sizeof(afitrack.afi_track_tag));
 
 					track_list[t]=trackposition;
 
@@ -369,13 +364,13 @@ int AFI_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char * 
 					afitrack.nb_of_element = floppy->tracks[i]->sides[j]->tracklen;
 					afitrack.number_of_data_chunk = 4;//-------
 
-					imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"Track %d [%d:%d], file offset %X",t,afitrack.track_number,afitrack.side_number,track_list[t]+afiheader.track_list_offset);
+					imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"Track %d [%d:%d], file offset %X",t,afitrack.track_number,afitrack.side_number,track_list[t]+afiheader.track_list_offset);
 
 					track_fileptr = ftell(hxcafifile);
 					if (fwrite(&afitrack,sizeof(afitrack),1,hxcafifile) != 1) { /* I/O error */ }
 					if (fwrite(&data_list,afitrack.number_of_data_chunk*sizeof(uint32_t),1,hxcafifile) != 1) { /* I/O error */ }
 					tempcrc=getcrc(&afitrack,sizeof(afitrack),data_list,afitrack.number_of_data_chunk*sizeof(uint32_t));
-					fwrite(&tempcrc,sizeof(tempcrc),1,hxcafifile);            //temporary crc
+					if (fwrite(&tempcrc, sizeof(tempcrc), 1, hxcafifile) != 1) { /* I/O error */ }            //temporary crc
 
 					dataposition=sizeof(afitrack)+(afitrack.number_of_data_chunk*sizeof(uint32_t))+sizeof(tempcrc);
 
@@ -390,7 +385,7 @@ int AFI_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char * 
 					if (fwrite(&afitrack,sizeof(afitrack),1,hxcafifile) != 1) { /* I/O error */ }
 					if (fwrite(&data_list,afitrack.number_of_data_chunk*sizeof(uint32_t),1,hxcafifile) != 1) { /* I/O error */ }
 					tempcrc=getcrc(&afitrack,sizeof(afitrack),data_list,afitrack.number_of_data_chunk*sizeof(uint32_t));
-					fwrite(&tempcrc,sizeof(tempcrc),1,hxcafifile);            //temporary crc
+					if (fwrite(&tempcrc, sizeof(tempcrc), 1, hxcafifile) != 1) { /* I/O error */ }            //temporary crc
 					if (fseek(hxcafifile,temp_fileptr,SEEK_SET) != 0) { /* seek error */ }
 					//////////////////////////////////////////////
 
@@ -407,7 +402,7 @@ int AFI_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char * 
 					if (fwrite(&afitrack,sizeof(afitrack),1,hxcafifile) != 1) { /* I/O error */ }
 					if (fwrite(&data_list,afitrack.number_of_data_chunk*sizeof(uint32_t),1,hxcafifile) != 1) { /* I/O error */ }
 					tempcrc=getcrc(&afitrack,sizeof(afitrack),data_list,afitrack.number_of_data_chunk*sizeof(uint32_t));
-					fwrite(&tempcrc,sizeof(tempcrc),1,hxcafifile);            //temporary crc
+					if (fwrite(&tempcrc, sizeof(tempcrc), 1, hxcafifile) != 1) { /* I/O error */ }            //temporary crc
 					if (fseek(hxcafifile,temp_fileptr,SEEK_SET) != 0) { /* seek error */ }
 					//////////////////////////////////////////////
 
@@ -455,7 +450,7 @@ int AFI_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char * 
 					if (fwrite(&afitrack,sizeof(afitrack),1,hxcafifile) != 1) { /* I/O error */ }
 					if (fwrite(&data_list,afitrack.number_of_data_chunk*sizeof(uint32_t),1,hxcafifile) != 1) { /* I/O error */ }
 					tempcrc=getcrc(&afitrack,sizeof(afitrack),data_list,afitrack.number_of_data_chunk*sizeof(uint32_t));
-					fwrite(&tempcrc,sizeof(tempcrc),1,hxcafifile);            //temporary crc
+					if (fwrite(&tempcrc, sizeof(tempcrc), 1, hxcafifile) != 1) { /* I/O error */ }            //temporary crc
 					if (fseek(hxcafifile,temp_fileptr,SEEK_SET) != 0) { /* seek error */ }
 					//////////////////////////////////////////////
 
@@ -486,7 +481,7 @@ int AFI_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char * 
 					if (fwrite(&afitrack,sizeof(afitrack),1,hxcafifile) != 1) { /* I/O error */ }
 					if (fwrite(&data_list,afitrack.number_of_data_chunk*sizeof(uint32_t),1,hxcafifile) != 1) { /* I/O error */ }
 					tempcrc=getcrc(&afitrack,sizeof(afitrack),data_list,afitrack.number_of_data_chunk*sizeof(uint32_t));
-					fwrite(&tempcrc,sizeof(tempcrc),1,hxcafifile);            //temporary crc
+					if (fwrite(&tempcrc, sizeof(tempcrc), 1, hxcafifile) != 1) { /* I/O error */ }            //temporary crc
 					if (fseek(hxcafifile,temp_fileptr,SEEK_SET) != 0) { /* seek error */ }
 					//////////////////////////////////////////////
 
@@ -502,30 +497,30 @@ int AFI_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char * 
 			tempcrc=getcrc(&afitracklist,sizeof(afitracklist),track_list,afitracklist.number_of_track*sizeof(uint32_t));
 			if (fseek(hxcafifile,track_listptr,SEEK_SET) != 0) { /* seek error */ }
 			if (fwrite(track_list,afitracklist.number_of_track*sizeof(uint32_t),1,hxcafifile) != 1) { /* I/O error */ }
-			fwrite(&tempcrc,sizeof(tempcrc),1,hxcafifile);            //temporary crc
+			if (fwrite(&tempcrc, sizeof(tempcrc), 1, hxcafifile) != 1) { /* I/O error */ }            //temporary crc
 			if (fseek(hxcafifile,temp_fileptr,SEEK_SET) != 0) { /* seek error */ }
 			afiheader.floppyinfo_offset=ftell(hxcafifile);
 			if (fwrite(&afiinfo,sizeof(AFIIMGINFO),1,hxcafifile) != 1) { /* I/O error */ }
 			tempcrc=getcrc(&afiinfo,sizeof(AFIIMGINFO),0,0);
-			fwrite(&tempcrc,sizeof(tempcrc),1,hxcafifile);            //temporary crc
+			if (fwrite(&tempcrc, sizeof(tempcrc), 1, hxcafifile) != 1) { /* I/O error */ }            //temporary crc
 
 
 			temp_fileptr=ftell(hxcafifile);
 			if (fseek(hxcafifile,0,SEEK_SET) != 0) { /* seek error */ }
 			afiheader.header_crc=getcrc(&afiheader,sizeof(afiheader)-2,0,0);
-			fwrite(&afiheader,sizeof(afiheader),1,hxcafifile);        //write temporary file header
+			if (fwrite(&afiheader, sizeof(afiheader), 1, hxcafifile) != 1) { /* I/O error */ }        //write temporary file header
 			if (fseek(hxcafifile,temp_fileptr,SEEK_SET) != 0) { /* seek error */ }
 			free(track_list);
 		}
 
-		hxc_fclose(hxcafifile);
+		libflux_fclose(hxcafifile);
 
-		return HXCFE_NOERROR;
+		return LIBFLUX_NOERROR;
 	}
 	else
 	{
-		imgldr_ctx->hxcfe->hxc_printf(MSG_ERROR,"Cannot create %s!",filename);
+		imgldr_ctx->ctx->libflux_printf(MSG_ERROR,"Cannot create %s!",filename);
 
-		return HXCFE_ACCESSERROR;
+		return LIBFLUX_ACCESSERROR;
 	}
 }

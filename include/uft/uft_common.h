@@ -18,8 +18,8 @@
 // ============================================================================
 
 #include <stdint.h>
-#include "uft/core/uft_endian.h"  // For endian functions
-#include "uft_safe.h"  // For safe math functions
+#include "uft_endian.h"  // For endian functions
+// uft_safe.h entfernt - nicht benötigt  // For safe math functions
 #include <stddef.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -107,23 +107,7 @@
 
 // Moved to uft/core/uft_endian.h
 
-// Moved to uft/core/uft_endian.h
-
-// Moved to uft/core/uft_endian.h
-
-// Moved to uft/core/uft_endian.h
-
-static inline void uft_write_be16(uint8_t* p, uint16_t v) {
-    p[0] = (uint8_t)(v >> 8);
-    p[1] = (uint8_t)(v & 0xFF);
-}
-
-static inline void uft_write_be32(uint8_t* p, uint32_t v) {
-    p[0] = (uint8_t)(v >> 24);
-    p[1] = (uint8_t)((v >> 16) & 0xFF);
-    p[2] = (uint8_t)((v >> 8) & 0xFF);
-    p[3] = (uint8_t)(v & 0xFF);
-}
+// Endian functions are now in uft_endian.h (included above)
 
 #endif // UFT_BYTE_ORDER_DEFINED
 

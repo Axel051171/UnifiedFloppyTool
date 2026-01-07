@@ -12,7 +12,6 @@
  * - Seven Cities Of Gold
  * - Super Methane Bros (GCR)
  * 
- * Based on analysis of Disk-Utilities by Keir Fraser.
  * 
  * @copyright UFT Project
  */

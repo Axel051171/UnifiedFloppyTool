@@ -6,8 +6,8 @@
  * - ATR: Standard Atari disk images (90KB - 360KB+)
  * - ATX: Protected Atari disk images (flux-level, weak bits, timing)
  * 
- * a8rawconv Compatibility:
- * This module provides API compatibility with a8rawconv command-line
+ * Atari 8-bit Compatibility:
+ * This module provides API compatibility with Atari tool command-line
  * parameters for seamless integration with existing Atari workflows.
  * 
  * @version 2.8.7
@@ -35,7 +35,7 @@ extern "C" {
 /* ATX - Protected Atari 8-bit Disk Images (Flux-Level) */
 #include "uft_atx.h"
 
-/* XFD - Atari 8-bit Raw Disk Images (a8rawconv RAW format!) */
+/* XFD - Atari 8-bit Raw Disk Images (Atari RAW format!) */
 #include "uft_xfd.h"
 
 /*============================================================================*
@@ -49,7 +49,7 @@ typedef enum {
     ATARI_FORMAT_UNKNOWN = 0,
     ATARI_FORMAT_ATR,    /* Standard Atari disk image */
     ATARI_FORMAT_ATX,    /* Protected Atari disk image (flux-level) */
-    ATARI_FORMAT_XFD     /* Atari raw disk image (a8rawconv RAW!) */
+    ATARI_FORMAT_XFD     /* Atari raw disk image (Atari RAW!) */
 } atari_format_type_t;
 
 /**
@@ -94,19 +94,19 @@ static inline const char* atari_format_name(atari_format_type_t fmt)
     switch (fmt) {
         case ATARI_FORMAT_ATR: return "ATR (Standard Atari 8-bit)";
         case ATARI_FORMAT_ATX: return "ATX (Protected Atari 8-bit)";
-        case ATARI_FORMAT_XFD: return "XFD (Atari 8-bit Raw / a8rawconv)";
+        case ATARI_FORMAT_XFD: return "XFD (Atari 8-bit Raw / Atari raw)";
         default: return "Unknown";
     }
 }
 
 /*============================================================================*
- * a8rawconv COMPATIBILITY
+ * Atari 8-bit support
  *============================================================================*/
 
 /**
- * @brief a8rawconv conversion modes
+ * @brief Atari conversion modes
  * 
- * Compatible with a8rawconv command-line parameters:
+ * Compatible with Atari tool command-line parameters:
  * - Standard mode: ATR <-> RAW conversion
  * - Protected mode: ATX <-> RAW conversion (LOSSY!)
  */
@@ -122,9 +122,9 @@ typedef enum {
 } a8rawconv_mode_t;
 
 /**
- * @brief a8rawconv compatible geometry
+ * @brief Atari compatible geometry
  * 
- * Matches a8rawconv density parameters:
+ * Matches Atari tool density parameters:
  * - SD: Single density (90KB, 720 sectors, 128 bytes/sector)
  * - ED: Enhanced density (130KB, 1040 sectors, 128 bytes/sector)
  * - DD: Double density (180KB, 720 sectors, 256 bytes/sector)
@@ -146,7 +146,7 @@ static const a8rawconv_geometry_t A8RAWCONV_GEOMETRIES[] = {
 };
 
 /**
- * @brief Get a8rawconv geometry by name
+ * @brief Get Atari geometry by name
  * @param name Geometry name (SD, ED, DD, DD+)
  * @return Geometry pointer or NULL
  */
@@ -155,7 +155,7 @@ static inline const a8rawconv_geometry_t* a8rawconv_get_geometry(const char* nam
     if (!name) return NULL;
     
     for (int i = 0; A8RAWCONV_GEOMETRIES[i].name; i++) {
-        if (strcmp(A8RAWCONV_GEOMETRIES[i].name, name) == 0) {
+        if (strcmp(Atari_GEOMETRIES[i].name, name) == 0) {
             return &A8RAWCONV_GEOMETRIES[i];
         }
     }
@@ -163,14 +163,14 @@ static inline const a8rawconv_geometry_t* a8rawconv_get_geometry(const char* nam
 }
 
 /**
- * @brief a8rawconv compatible conversion
+ * @brief Atari compatible conversion
  * @param mode Conversion mode
  * @param input_path Input file path
  * @param output_path Output file path
  * @param geom_name Geometry name (SD/ED/DD/DD+) for RAW→ATR
  * @return 0 on success, negative on error
  */
-static inline int a8rawconv_convert(a8rawconv_mode_t mode,
+static inline int a8rawconv_convert(Atari_mode_t mode,
                                     const char* input_path,
                                     const char* output_path,
                                     const char* geom_name)
@@ -205,12 +205,12 @@ static inline int a8rawconv_convert(a8rawconv_mode_t mode,
         
         case A8RAWCONV_MODE_ATR_TO_XFD:
             /* Same as ATR_TO_RAW - XFD is the raw format */
-            return a8rawconv_convert(A8RAWCONV_MODE_ATR_TO_RAW, 
+            return a8rawconv_convert(Atari_MODE_ATR_TO_RAW, 
                                     input_path, output_path, geom_name);
         
         case A8RAWCONV_MODE_XFD_TO_ATR:
             /* Same as RAW_TO_ATR */
-            return a8rawconv_convert(A8RAWCONV_MODE_RAW_TO_ATR,
+            return a8rawconv_convert(Atari_MODE_RAW_TO_ATR,
                                     input_path, output_path, geom_name);
         
         default:

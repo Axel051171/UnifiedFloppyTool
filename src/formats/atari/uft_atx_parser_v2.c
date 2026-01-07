@@ -535,7 +535,7 @@ int atx_read_track_v2(atx_reader_t* reader, uint8_t track_num, uint8_t side,
         if (fread(&chunk_size, 4, 1, reader->fp) != 1) break;
         if (fread(&chunk_type, 2, 1, reader->fp) != 1) break;
         
-        fseek(reader->fp, -6, SEEK_CUR);  /* Zurück zum Chunk-Start */
+        (void)fseek(reader->fp, -6, SEEK_CUR);  /* Zurück zum Chunk-Start */
         
         if (chunk_type == ATX_CHUNK_SECTOR_LIST) {
             atx_sector_list_chunk_t list_chunk;

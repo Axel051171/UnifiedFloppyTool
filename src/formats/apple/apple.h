@@ -1,3 +1,6 @@
+#ifndef UFT_FORMATS_APPLE_APPLE_H
+#define UFT_FORMATS_APPLE_APPLE_H
+
 /*
  * libhfs - library for reading and writing Macintosh HFS volumes
  * Copyright (C) 1996-1998 Robert Leslie
@@ -289,3 +292,5 @@ typedef struct
     ULongInt bthFree;       /* number of free nodes */
     SignedByte bthResv[76]; /* reserved */
 } BTHdrRec;
+
+#endif /* UFT_FORMATS_APPLE_APPLE_H */

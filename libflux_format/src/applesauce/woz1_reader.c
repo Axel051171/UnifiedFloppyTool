@@ -1,4 +1,4 @@
-// ufm_applesauce_woz1.c
+// ufm_uft_as_woz1.c
 // Applesauce WOZ 1.0 reader (chunk-based) -> minimal track bitstream extraction
 //
 // Sources / spec references:
@@ -10,7 +10,7 @@
 // - For future integration, map the TRKS bitstream to your UFM as "quantized bitcells"
 //   with metadata: bytes_used, bit_count, splice hints.
 //
-// Build: cc -std=c11 -O2 -Wall -Wextra -pedantic ufm_applesauce_woz1.c -o woz_dump
+// Build: cc -std=c11 -O2 -Wall -Wextra -pedantic ufm_uft_as_woz1.c -o woz_dump
 
 #include "uft/uft_error.h"
 #include <stdint.h>

@@ -9,10 +9,15 @@
  */
 
 #include <stdio.h>
+#include "uft/core/uft_safe_parse.h"
 #include <stdlib.h>
+#include "uft/core/uft_safe_parse.h"
 #include <string.h>
+#include "uft/core/uft_safe_parse.h"
 #include <stdint.h>
+#include "uft/core/uft_safe_parse.h"
 #include <stdbool.h>
+#include "uft/core/uft_safe_parse.h"
 
 typedef struct {
     uint32_t version;
@@ -34,13 +39,14 @@ static bool fm2_parse(const uint8_t* data, size_t size, fm2_file_t* fm2) {
         fm2->valid = true;
         /* Parse version */
         const char* ver = strstr((const char*)data, "version ");
-        if (ver) fm2->version = atoi(ver + 8);
+        if (ver) { int32_t t; if(uft_parse_int32(ver+8,&t,10)) fm2->version=t; }
     }
     return true;
 }
 
 #ifdef FM2_V3_TEST
 #include <assert.h>
+#include "uft/core/uft_safe_parse.h"
 int main(void) {
     printf("=== FM2 Parser v3 Tests ===\n");
     printf("Testing... ");

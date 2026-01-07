@@ -1,6 +1,5 @@
 /**
  * @file uft_gwraw_reader.c
- * @brief Greaseweazle RAW Flux Reader - PROFESSIONAL EDITION
  * 
  * UPGRADES IN v3.0:
  * ✅ Thread-safe (mutex protection)
@@ -21,7 +20,6 @@
 #include <stdio.h>
 #include <pthread.h>
 
-/* Default Greaseweazle sampling frequency: 72 MHz */
 #define DEFAULT_SAMPLE_FREQ 72000000
 
 /* Initial flux buffer capacity */
@@ -54,7 +52,6 @@ struct uft_gwraw_ctx {
  * ======================================================================== */
 
 /**
- * Convert Greaseweazle ticks to nanoseconds
  * Default: 72MHz = 13.888ns per tick
  */
 static inline uint32_t ticks_to_ns(uint32_t ticks, uint32_t freq_hz) {

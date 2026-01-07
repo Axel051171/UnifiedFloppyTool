@@ -1,3 +1,6 @@
+#ifndef UFT_LOADERS_APPLE2_2MG_LOADER_APPLE2_2MG_FORMAT_H
+#define UFT_LOADERS_APPLE2_2MG_LOADER_APPLE2_2MG_FORMAT_H
+
 /*
 GS WorldView
 Summer 2003
@@ -166,3 +169,5 @@ typedef struct _A2_2MG_header
 
 #pragma pack()
 
+
+#endif /* UFT_LOADERS_APPLE2_2MG_LOADER_APPLE2_2MG_FORMAT_H */

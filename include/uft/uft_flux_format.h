@@ -495,9 +495,8 @@ int uff_import_scp(uff_file_t* uff, const char* scp_path);
 int uff_import_hfe(uff_file_t* uff, const char* hfe_path);
 
 /**
- * @brief KryoFlux Stream zu UFF
  */
-int uff_import_kryoflux(uff_file_t* uff, const char* kf_path);
+int uff_import_kryoflux(uff_file_t* uff, const char* uft_kf_path);
 
 /**
  * @brief IPF zu UFF konvertieren

@@ -15,7 +15,7 @@ typedef struct {
 
 static void log_msg(FloppyDevice *d, const char *m){ if(d && d->log_callback) d->log_callback(m); }
 
-int floppy_open(FloppyDevice *dev, const char *path){
+int uft_floppy_open(FloppyDevice *dev, const char *path){
     if(!dev || !path) return UFT_EINVAL;
     NibCtx *ctx = calloc(1,sizeof(NibCtx));
     if(!ctx) return UFT_EIO;
@@ -24,7 +24,6 @@ int floppy_open(FloppyDevice *dev, const char *path){
     if(!fp){ free(ctx); return UFT_ENOENT; }
     ctx->fp = fp;
 
-    /* Very lightweight parse: nibtools stores fixed-size tracks (usually 8192 bytes) */
     fseek(fp,0,SEEK_END);
     long sz = ftell(fp);
     fseek(fp,0,SEEK_SET);
@@ -59,11 +58,11 @@ int floppy_open(FloppyDevice *dev, const char *path){
     dev->flux_supported = true;
     dev->internal_ctx = ctx;
 
-    log_msg(dev, "NIB opened (raw GCR tracks, nibtools format).");
+    log_msg(dev, "NIB opened (raw GCR tracks, GCR tools format).");
     return UFT_OK;
 }
 
-int floppy_close(FloppyDevice *dev){
+int uft_floppy_close(FloppyDevice *dev){
     if(!dev || !dev->internal_ctx) return UFT_EINVAL;
     NibCtx *ctx = dev->internal_ctx;
     if(ctx->fp) fclose(ctx->fp);
@@ -76,16 +75,16 @@ int floppy_close(FloppyDevice *dev){
     return UFT_OK;
 }
 
-int floppy_read_sector(FloppyDevice *dev,uint32_t t,uint32_t h,uint32_t s,uint8_t *buf){
+int uft_floppy_read_sector(FloppyDevice *dev,uint32_t t,uint32_t h,uint32_t s,uint8_t *buf){
     (void)dev;(void)t;(void)h;(void)s;(void)buf;
     return UFT_ENOTSUP;
 }
-int floppy_write_sector(FloppyDevice *dev,uint32_t t,uint32_t h,uint32_t s,const uint8_t *buf){
+int uft_floppy_write_sector(FloppyDevice *dev,uint32_t t,uint32_t h,uint32_t s,const uint8_t *buf){
     (void)dev;(void)t;(void)h;(void)s;(void)buf;
     return UFT_ENOTSUP;
 }
 
-int floppy_analyze_protection(FloppyDevice *dev){
+int uft_floppy_analyze_protection(FloppyDevice *dev){
     if(!dev || !dev->internal_ctx) return UFT_EINVAL;
     log_msg(dev, "Analyzer(NIB): raw GCR tracks with possible sync tricks and long tracks preserved.");
     log_msg(dev, "Analyzer(NIB): Weak-bit behavior may be present; flux formats are still the gold standard.");

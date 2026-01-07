@@ -3,7 +3,6 @@
  * @brief Extended Copy Protection Detection - Longtrack Variants Implementation
  * 
  * Implements specific longtrack detection algorithms based on analysis of
- * Disk-Utilities by Keir Fraser (longtrack.c, GPL).
  * 
  * This is a clean-room reimplementation based on documented algorithms.
  * 

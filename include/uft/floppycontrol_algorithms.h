@@ -1,9 +1,6 @@
 // SPDX-License-Identifier: MIT
 /*
- * floppycontrol_algorithms.h - FloppyControl Algorithms for UFT
  * 
- * Ported from FloppyControl (C# -> C)
- * Original: https://github.com/Skaizo/FloppyControl
  * 
  * This header provides access to advanced floppy disk recovery algorithms
  * including adaptive MFM processing, error correction, and format-specific

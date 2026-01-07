@@ -19,10 +19,7 @@
  * - Provider Pattern (device-specific implementations)
  * 
  * Supported Devices:
- * - Greaseweazle
  * - SuperCard Pro
- * - KryoFlux
- * - FluxEngine
  * - Any future device (just add provider!)
  * 
  * @version 2.14.0

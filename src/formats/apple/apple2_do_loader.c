@@ -2,25 +2,20 @@
 //
 // Copyright (C) 2006-2025 Jean-François DEL NERO
 //
-// This file is part of the HxCFloppyEmulator library
 //
-// HxCFloppyEmulator may be used and distributed without restriction provided
 // that this copyright statement is not removed from the file and that any
 // derivative work contains the original copyright notice and the associated
 // disclaimer.
 //
-// HxCFloppyEmulator is free software; you can redistribute it
 // and/or modify  it under the terms of the GNU General Public License
 // as published by the Free Software Foundation; either version 2
 // of the License, or (at your option) any later version.
 //
-// HxCFloppyEmulator is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 //   See the GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with HxCFloppyEmulator; if not, write to the Free Software
 // Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 //
 */
@@ -49,35 +44,35 @@
 
 #include "types.h"
 
-#include "internal_libhxcfe.h"
+#include "libflux.h""
 #include "tracks/track_generator.h"
-#include "libhxcfe.h"
+#include "libflux.h""
 
-#include "floppy_loader.h"
-#include "floppy_utils.h"
+#include "uft_floppy_loader.h"
+#include "uft_floppy_utils.h"
 
 #include "apple2_do_loader.h"
 
 #include "libhxcadaptor.h"
 
-int Apple2_do_libIsValidDiskFile( HXCFE_IMGLDR * imgldr_ctx, HXCFE_IMGLDR_FILEINFOS * imgfile )
+int Apple2_do_libIsValidDiskFile( LIBFLUX_IMGLDR * imgldr_ctx, LIBFLUX_IMGLDR_FILEINFOS * imgfile )
 {
-	imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"Apple2_do_libIsValidDiskFile");
+	imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"Apple2_do_libIsValidDiskFile");
 
-	if( hxc_checkfileext(imgfile->path,"do",SYS_PATH_TYPE) || hxc_checkfileext(imgfile->path,"po",SYS_PATH_TYPE))
+	if( libflux_checkfileext(imgfile->path,"do",SYS_PATH_TYPE) || libflux_checkfileext(imgfile->path,"po",SYS_PATH_TYPE))
 	{
 		if( imgfile->file_size % (16*1*256) || ( (imgfile->file_size/(16*1*256)) > 50 ) )
 		{
-			imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"Apple2_do_libIsValidDiskFile : non DO file !");
-			return HXCFE_BADFILE;
+			imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"Apple2_do_libIsValidDiskFile : non DO file !");
+			return LIBFLUX_BADFILE;
 		}
 
-		imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"Apple2_do_libIsValidDiskFile : DO file !");
-		return HXCFE_VALIDFILE;
+		imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"Apple2_do_libIsValidDiskFile : DO file !");
+		return LIBFLUX_VALIDFILE;
 	}
 
-	imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"Apple2_do_libIsValidDiskFile : non DO file !");
-	return HXCFE_BADFILE;
+	imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"Apple2_do_libIsValidDiskFile : non DO file !");
+	return LIBFLUX_BADFILE;
 }
 
 const unsigned char LogicalToPhysicalSectorMap_Dos33[16] =
@@ -104,7 +99,7 @@ const unsigned char PhysicalToLogicalSectorMap_ProDos[16] =
 	0x04, 0x0C, 0x05, 0x0D, 0x06, 0x0E, 0x07, 0x0F
 };
 
-int Apple2_do_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,char * imgfile,void * parameters)
+int Apple2_do_libLoad_DiskFile(LIBFLUX_IMGLDR * imgldr_ctx,LIBFLUX_FLOPPY * floppydisk,char * imgfile,void * parameters)
 {
 
 	FILE * f;
@@ -118,29 +113,29 @@ int Apple2_do_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydi
 	int bitrate;
 	unsigned char * sector_order;
 
-	HXCFE_SECTCFG* sectorconfig;
-	HXCFE_CYLINDER* currentcylinder;
+	LIBFLUX_SECTCFG* sectorconfig;
+	LIBFLUX_CYLINDER* currentcylinder;
 
 	sectorconfig = NULL;
 	currentcylinder = NULL;
 	trackdata = NULL;
 
-	imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"Apple2_do_libLoad_DiskFile %s",imgfile);
+	imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"Apple2_do_libLoad_DiskFile %s",imgfile);
 
 	sector_order = (unsigned char *)&PhysicalToLogicalSectorMap_Dos33;
-	if(hxc_checkfileext(imgfile,"po",SYS_PATH_TYPE))
+	if(libflux_checkfileext(imgfile,"po",SYS_PATH_TYPE))
 	{
 		sector_order = (unsigned char *)&PhysicalToLogicalSectorMap_ProDos;
 	}
 
-	f = hxc_fopen(imgfile,"rb");
+	f = libflux_fopen(imgfile,"rb");
 	if( f == NULL )
 	{
-		imgldr_ctx->hxcfe->hxc_printf(MSG_ERROR,"Cannot open %s !",imgfile);
-		return HXCFE_ACCESSERROR;
+		imgldr_ctx->ctx->libflux_printf(MSG_ERROR,"Cannot open %s !",imgfile);
+		return LIBFLUX_ACCESSERROR;
 	}
 
-	filesize = hxc_fgetsize(f);
+	filesize = libflux_fgetsize(f);
 
 	if( filesize )
 	{
@@ -157,15 +152,15 @@ int Apple2_do_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydi
 
 		floppydisk->floppyBitRate=bitrate;
 		floppydisk->floppyiftype=GENERIC_SHUGART_DD_FLOPPYMODE;
-		floppydisk->tracks=(HXCFE_CYLINDER**)malloc(sizeof(HXCFE_CYLINDER*)*floppydisk->floppyNumberOfTrack);
+		floppydisk->tracks=(LIBFLUX_CYLINDER**)malloc(sizeof(LIBFLUX_CYLINDER*)*floppydisk->floppyNumberOfTrack);
 
-		imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"rpm %d bitrate:%d track:%d side:%d sector:%d",rpm,bitrate,floppydisk->floppyNumberOfTrack,floppydisk->floppyNumberOfSide,floppydisk->floppySectorPerTrack);
+		imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"rpm %d bitrate:%d track:%d side:%d sector:%d",rpm,bitrate,floppydisk->floppyNumberOfTrack,floppydisk->floppyNumberOfSide,floppydisk->floppySectorPerTrack);
 
-		sectorconfig=(HXCFE_SECTCFG*)malloc(sizeof(HXCFE_SECTCFG)*floppydisk->floppySectorPerTrack);
+		sectorconfig=(LIBFLUX_SECTCFG*)malloc(sizeof(LIBFLUX_SECTCFG)*floppydisk->floppySectorPerTrack);
 		if(!sectorconfig)
 			goto alloc_error;
 
-		memset(sectorconfig,0,sizeof(HXCFE_SECTCFG)*floppydisk->floppySectorPerTrack);
+		memset(sectorconfig,0,sizeof(LIBFLUX_SECTCFG)*floppydisk->floppySectorPerTrack);
 
 		trackdata = (unsigned char*)uft_safe_malloc_array(floppydisk->floppySectorPerTrack, sectorsize);
 		if(!trackdata)
@@ -179,15 +174,15 @@ int Apple2_do_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydi
 
 			for(i=0;i<floppydisk->floppyNumberOfSide;i++)
 			{
-				hxcfe_imgCallProgressCallback(imgldr_ctx, (j<<1) + (i&1),floppydisk->floppyNumberOfTrack*2);
+				libflux_imgCallProgressCallback(imgldr_ctx, (j<<1) + (i&1),floppydisk->floppyNumberOfTrack*2);
 
 				file_offset=(sectorsize*(j*floppydisk->floppySectorPerTrack*floppydisk->floppyNumberOfSide))+
 							(sectorsize*(floppydisk->floppySectorPerTrack)*i);
 
-				fseek (f , file_offset , SEEK_SET);
-				hxc_fread(trackdata,sectorsize*floppydisk->floppySectorPerTrack,f);
+				(void)fseek(f , file_offset , SEEK_SET);
+				libflux_fread(trackdata,sectorsize*floppydisk->floppySectorPerTrack,f);
 
-				memset(sectorconfig,0,sizeof(HXCFE_SECTCFG)*floppydisk->floppySectorPerTrack);
+				memset(sectorconfig,0,sizeof(LIBFLUX_SECTCFG)*floppydisk->floppySectorPerTrack);
 				for(k=0;k<floppydisk->floppySectorPerTrack;k++)
 				{
 					sectorconfig[k].cylinder=j;
@@ -207,35 +202,35 @@ int Apple2_do_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydi
 		free(trackdata);
 		free(sectorconfig);
 
-		imgldr_ctx->hxcfe->hxc_printf(MSG_INFO_1,"track file successfully loaded and encoded!");
-		hxc_fclose(f);
+		imgldr_ctx->ctx->libflux_printf(MSG_INFO_1,"track file successfully loaded and encoded!");
+		libflux_fclose(f);
 
-		return HXCFE_NOERROR;
+		return LIBFLUX_NOERROR;
 	}
 
-	imgldr_ctx->hxcfe->hxc_printf(MSG_ERROR,"file size=%d !?",filesize);
-	hxc_fclose(f);
+	imgldr_ctx->ctx->libflux_printf(MSG_ERROR,"file size=%d !?",filesize);
+	libflux_fclose(f);
 
-	return HXCFE_BADFILE;
+	return LIBFLUX_BADFILE;
 
 alloc_error:
-	imgldr_ctx->hxcfe->hxc_printf(MSG_ERROR,"Alloc / Internal error !",imgfile);
+	imgldr_ctx->ctx->libflux_printf(MSG_ERROR,"Alloc / Internal error !",imgfile);
 
 	free(trackdata);
 	free(sectorconfig);
 
 	if(f)
-		hxc_fclose(f);
+		libflux_fclose(f);
 
-	hxcfe_freeFloppy(imgldr_ctx->hxcfe, floppydisk );
+	libflux_freeFloppy(imgldr_ctx->ctx, floppydisk );
 
-	return HXCFE_INTERNALERROR;
+	return LIBFLUX_INTERNALERROR;
 }
 
 
-int Apple2_do_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char * filename);
+int Apple2_do_libWrite_DiskFile(LIBFLUX_IMGLDR* imgldr_ctx,LIBFLUX_FLOPPY * floppy,char * filename);
 
-int Apple2_do_libGetPluginInfo(HXCFE_IMGLDR * imgldr_ctx,uint32_t infotype,void * returnvalue)
+int Apple2_do_libGetPluginInfo(LIBFLUX_IMGLDR * imgldr_ctx,uint32_t infotype,void * returnvalue)
 {
 	static const char plug_id[] = "APPLE2_DO";
 	static const char plug_desc[] = "Apple II DO Loader";
@@ -260,7 +255,7 @@ int Apple2_do_libGetPluginInfo(HXCFE_IMGLDR * imgldr_ctx,uint32_t infotype,void 
 			);
 }
 
-int Apple2_po_libGetPluginInfo(HXCFE_IMGLDR * imgldr_ctx,uint32_t infotype,void * returnvalue)
+int Apple2_po_libGetPluginInfo(LIBFLUX_IMGLDR * imgldr_ctx,uint32_t infotype,void * returnvalue)
 {
 	static const char plug_id[] = "APPLE2_PO";
 	static const char plug_desc[] = "Apple II PO Loader";

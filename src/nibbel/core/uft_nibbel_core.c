@@ -409,7 +409,7 @@ const char* uft_nibbel_format_name(uft_nibbel_format_t format) {
         [UFT_NIB_FORMAT_AUTO] = "Auto",
         [UFT_NIB_FORMAT_D64] = "D64 (C64 Sector Image)",
         [UFT_NIB_FORMAT_G64] = "G64 (C64 GCR Image)",
-        [UFT_NIB_FORMAT_NBZ] = "NBZ (nibtools Compressed)",
+        [UFT_NIB_FORMAT_NBZ] = "NBZ (GCR tools Compressed)",
         [UFT_NIB_FORMAT_NIB] = "NIB (Apple II Nibble)",
         [UFT_NIB_FORMAT_DSK] = "DSK (Apple II Sector)",
         [UFT_NIB_FORMAT_PO] = "PO (Apple ProDOS Order)",

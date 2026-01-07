@@ -2,25 +2,20 @@
 //
 // Copyright (C) 2006-2025 Jean-Franois DEL NERO
 //
-// This file is part of the HxCFloppyEmulator library
 //
-// HxCFloppyEmulator may be used and distributed without restriction provided
 // that this copyright statement is not removed from the file and that any
 // derivative work contains the original copyright notice and the associated
 // disclaimer.
 //
-// HxCFloppyEmulator is free software; you can redistribute it
 // and/or modify  it under the terms of the GNU General Public License
 // as published by the Free Software Foundation; either version 2
 // of the License, or (at your option) any later version.
 //
-// HxCFloppyEmulator is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 //   See the GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with HxCFloppyEmulator; if not, write to the Free Software
 // Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 //
 */
@@ -52,11 +47,11 @@
 
 #include "types.h"
 
-#include "internal_libhxcfe.h"
-#include "libhxcfe.h"
+#include "libflux.h""
+#include "libflux.h""
 
-#include "floppy_loader.h"
-#include "floppy_utils.h"
+#include "uft_floppy_loader.h"
+#include "uft_floppy_utils.h"
 
 #include "scp_loader.h"
 #include "scp_writer.h"
@@ -69,39 +64,39 @@
 
 //#define SCPDEBUG 1
 
-int SCP_libIsValidDiskFile( HXCFE_IMGLDR * imgldr_ctx, HXCFE_IMGLDR_FILEINFOS * imgfile )
+int SCP_libIsValidDiskFile( LIBFLUX_IMGLDR * imgldr_ctx, LIBFLUX_IMGLDR_FILEINFOS * imgfile )
 {
 	scp_header * scph;
 
-	imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"SCP_libIsValidDiskFile");
+	imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"SCP_libIsValidDiskFile");
 
-	if( hxc_checkfileext(imgfile->path,"scp",SYS_PATH_TYPE) )
+	if( libflux_checkfileext(imgfile->path,"scp",SYS_PATH_TYPE) )
 	{
 		scph = (scp_header *)&imgfile->file_header;
 
 		if( strncmp((char*)&scph->sign,"SCP",3) )
 		{
-			imgldr_ctx->hxcfe->hxc_printf(MSG_ERROR,"SCP_libIsValidDiskFile : Bad file header !");
-			return HXCFE_BADFILE;
+			imgldr_ctx->ctx->libflux_printf(MSG_ERROR,"SCP_libIsValidDiskFile : Bad file header !");
+			return LIBFLUX_BADFILE;
 		}
 
-		imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"SCP_libIsValidDiskFile : SCP file !");
-		return HXCFE_VALIDFILE;
+		imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"SCP_libIsValidDiskFile : SCP file !");
+		return LIBFLUX_VALIDFILE;
 	}
 	else
 	{
-		imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"SCP_libIsValidDiskFile : non SCP file !");
-		return HXCFE_BADFILE;
+		imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"SCP_libIsValidDiskFile : non SCP file !");
+		return LIBFLUX_BADFILE;
 	}
 }
 
-static HXCFE_SIDE* decodestream(HXCFE* floppycontext,FILE * f,int track,uint32_t foffset,short * rpm,float timecoef,int phasecorrection,int nb_of_revs, int resolution,int bitrate,int filter,int filterpasses, int bmpexport)
+static LIBFLUX_SIDE* decodestream(LIBFLUX_CTX* flux_ctx,FILE * f,int track,uint32_t foffset,short * rpm,float timecoef,int phasecorrection,int nb_of_revs, int resolution,int bitrate,int filter,int filterpasses, int bmpexport)
 {
-	HXCFE_SIDE* currentside;
+	LIBFLUX_SIDE* currentside;
 	int totallength,i,k,offset;
 
-	HXCFE_TRKSTREAM *track_dump;
-	HXCFE_FXSA * fxs;
+	LIBFLUX_TRKSTREAM *track_dump;
+	LIBFLUX_FXSA * fxs;
 	scp_track_header * trkh;
 	char tmp_filename[512];
 
@@ -114,36 +109,36 @@ static HXCFE_SIDE* decodestream(HXCFE* floppycontext,FILE * f,int track,uint32_t
 
 	currentside = NULL;
 
-	floppycontext->hxc_printf(MSG_DEBUG,"------------------------------------------------");
+	flux_ctx->libflux_printf(MSG_DEBUG,"------------------------------------------------");
 
-	floppycontext->hxc_printf(MSG_DEBUG,"Loading SCP track...");
+	flux_ctx->libflux_printf(MSG_DEBUG,"Loading SCP track...");
 
 	if(nb_of_revs <= 0)
 	{
-		floppycontext->hxc_printf(MSG_ERROR,"Track with bad revolution(s) count ! (%d)",nb_of_revs);
+		flux_ctx->libflux_printf(MSG_ERROR,"Track with bad revolution(s) count ! (%d)",nb_of_revs);
 		return NULL;
 	}
 
-	fxs = hxcfe_initFxStream(floppycontext);
+	fxs = libflux_initFxStream(flux_ctx);
 	if(fxs)
 	{
-		hxcfe_FxStream_setBitrate(fxs,bitrate);
+		libflux_FxStream_setBitrate(fxs,bitrate);
 
-		hxcfe_FxStream_setPhaseCorrectionFactor(fxs,phasecorrection);
+		libflux_FxStream_setPhaseCorrectionFactor(fxs,phasecorrection);
 
-		hxcfe_FxStream_setFilterParameters(fxs,filterpasses,filter);
+		libflux_FxStream_setFilterParameters(fxs,filterpasses,filter);
 
 		if (fseek(f,foffset,SEEK_SET) != 0) { /* seek error */ }
 		trkh = malloc( sizeof(scp_track_header) + ( nb_of_revs * sizeof(scp_index_pos) ) + sizeof(uint32_t) );
 		if(!trkh)
 		{
-			floppycontext->hxc_printf(MSG_ERROR,"Track header allocation failed !");
-			hxcfe_deinitFxStream(fxs);
+			flux_ctx->libflux_printf(MSG_ERROR,"Track header allocation failed !");
+			libflux_deinitFxStream(fxs);
 			return NULL;
 		}
 
 		memset(trkh,0,sizeof(scp_track_header) + ( nb_of_revs * sizeof(scp_index_pos) ) + sizeof(uint32_t));
-		hxc_fread(trkh,sizeof(scp_track_header) + ( nb_of_revs * sizeof(scp_index_pos) ) + sizeof(uint32_t),f);
+		libflux_fread(trkh,sizeof(scp_track_header) + ( nb_of_revs * sizeof(scp_index_pos) ) + sizeof(uint32_t),f);
 
 		if(!strncmp((char*)trkh->trk_sign,"TRK",3))
 		{
@@ -152,11 +147,11 @@ static HXCFE_SIDE* decodestream(HXCFE* floppycontext,FILE * f,int track,uint32_t
 			{
 				if(!trkh->index_position[i].track_length || (trkh->index_position[i].track_length > 512*1024))
 				{
-					floppycontext->hxc_printf(MSG_ERROR,"Track %d Revolution %d : Null sized or invalid revolution !",track,nb_of_revs);
+					flux_ctx->libflux_printf(MSG_ERROR,"Track %d Revolution %d : Null sized or invalid revolution !",track,nb_of_revs);
 					nb_of_revs = i;
 					if(!i)
 					{
-						hxcfe_deinitFxStream(fxs);
+						libflux_deinitFxStream(fxs);
 						free(trkh);
 						return NULL;
 					}
@@ -166,12 +161,12 @@ static HXCFE_SIDE* decodestream(HXCFE* floppycontext,FILE * f,int track,uint32_t
 				totallength += trkh->index_position[i].track_length;
 
 #ifdef SCPDEBUG
-				floppycontext->hxc_printf(MSG_DEBUG,"Revolution %d : %d words - offset 0x%x - index time : %d",i,trkh->index_position[i].track_length,trkh->index_position[i].track_offset,(trkh->index_position[i].index_time));
+				flux_ctx->libflux_printf(MSG_DEBUG,"Revolution %d : %d words - offset 0x%x - index time : %d",i,trkh->index_position[i].track_length,trkh->index_position[i].track_offset,(trkh->index_position[i].index_time));
 #endif
 			}
 
 #ifdef SCPDEBUG
-			floppycontext->hxc_printf(MSG_DEBUG,"Total track length : [0x%X - 0x%X] - %d bytes",foffset + trkh->index_position[0].track_offset,foffset + trkh->index_position[0].track_offset + ((totallength*sizeof(unsigned short))-1),totallength*sizeof(unsigned short));
+			flux_ctx->libflux_printf(MSG_DEBUG,"Total track length : [0x%X - 0x%X] - %d bytes",foffset + trkh->index_position[0].track_offset,foffset + trkh->index_position[0].track_offset + ((totallength*sizeof(unsigned short))-1),totallength*sizeof(unsigned short));
 #endif
 
 			totallength++;
@@ -188,10 +183,10 @@ static HXCFE_SIDE* decodestream(HXCFE* floppycontext,FILE * f,int track,uint32_t
 					for(i=0;i<nb_of_revs;i++)
 					{
 						if (fseek(f,foffset + trkh->index_position[i].track_offset,SEEK_SET) != 0) { /* seek error */ }
-						hxc_fread(&trackbuf[offset], (trkh->index_position[i].track_length*sizeof(unsigned short)), f);
+						libflux_fread(&trackbuf[offset], (trkh->index_position[i].track_length*sizeof(unsigned short)), f);
 
 #ifdef SCPDEBUG
-						floppycontext->hxc_printf(MSG_DEBUG,"SCP read stream - offset [0x%X - 0x%X] : %d bytes",
+						flux_ctx->libflux_printf(MSG_DEBUG,"SCP read stream - offset [0x%X - 0x%X] : %d bytes",
 							 foffset + trkh->index_position[i].track_offset,
 							 (foffset + trkh->index_position[i].track_offset) + ((trkh->index_position[i].track_length*sizeof(unsigned short)) - 1 ),
 							(trkh->index_position[i].track_length*sizeof(unsigned short)));
@@ -247,39 +242,39 @@ static HXCFE_SIDE* decodestream(HXCFE* floppycontext,FILE * f,int track,uint32_t
 
 					free(trackbuf);
 
-					hxcfe_FxStream_setResolution(fxs,DEFAULT_SCP_PERIOD*resolution); // 25 ns per tick
+					libflux_FxStream_setResolution(fxs,DEFAULT_SCP_PERIOD*resolution); // 25 ns per tick
 
-					track_dump = hxcfe_FxStream_ImportStream(fxs,trackbuf_dword,32,(realnumberofpulses), HXCFE_STREAMCHANNEL_TYPE_RLEEVT, "data", NULL);
+					track_dump = libflux_FxStream_ImportStream(fxs,trackbuf_dword,32,(realnumberofpulses), LIBFLUX_STREAMCHANNEL_TYPE_RLEEVT, "data", NULL);
 					if(track_dump)
 					{
 						if(nb_of_revs)
 						{
 							offset = 0;
-							hxcfe_FxStream_AddIndex(fxs,track_dump,offset,0,FXSTRM_INDEX_MAININDEX);
+							libflux_FxStream_AddIndex(fxs,track_dump,offset,0,FXSTRM_INDEX_MAININDEX);
 
 							for(i=0;i<nb_of_revs;i++)
 							{
 								offset += (trkh->index_position[i].track_length);
-								hxcfe_FxStream_AddIndex(fxs,track_dump,offset,0,FXSTRM_INDEX_MAININDEX);
+								libflux_FxStream_AddIndex(fxs,track_dump,offset,0,FXSTRM_INDEX_MAININDEX);
 							}
 						}
 
-						hxcfe_FxStream_ChangeSpeed(fxs,track_dump,timecoef);
+						libflux_FxStream_ChangeSpeed(fxs,track_dump,timecoef);
 
 						fxs->pll.track = track>>1;
 						fxs->pll.side = track&1;
-						currentside = hxcfe_FxStream_AnalyzeAndGetTrack(fxs,track_dump);
+						currentside = libflux_FxStream_AnalyzeAndGetTrack(fxs,track_dump);
 
 						if(currentside)
 						{
 							if(rpm)
-								*rpm = (short)( 60 / GetTrackPeriod(floppycontext,currentside) );
+								*rpm = (short)( 60 / GetTrackPeriod(flux_ctx,currentside) );
 						}
 
 						if( bmpexport )
 						{
 							snprintf(tmp_filename, sizeof(tmp_filename),"track%.2d.%d.bmp",track>>1,track&1);
-							hxcfe_FxStream_ExportToBmp(fxs,track_dump, tmp_filename);
+							libflux_FxStream_ExportToBmp(fxs,track_dump, tmp_filename);
 						}
 
 						if(currentside)
@@ -288,7 +283,7 @@ static HXCFE_SIDE* decodestream(HXCFE* floppycontext,FILE * f,int track,uint32_t
 						}
 						else
 						{
-							hxcfe_FxStream_FreeStream(fxs,track_dump);
+							libflux_FxStream_FreeStream(fxs,track_dump);
 						}
 					}
 					free(trackbuf_dword);
@@ -298,10 +293,10 @@ static HXCFE_SIDE* decodestream(HXCFE* floppycontext,FILE * f,int track,uint32_t
 
 		free(trkh);
 
-		hxcfe_deinitFxStream(fxs);
+		libflux_deinitFxStream(fxs);
 	}
 
-	floppycontext->hxc_printf(MSG_DEBUG,"------------------------------------------------");
+	flux_ctx->libflux_printf(MSG_DEBUG,"------------------------------------------------");
 
 	return currentside;
 }
@@ -369,7 +364,7 @@ float clv_track2rpm(int track, int type)
 	return def->rpm;
 }
 
-int SCP_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,char * imgfile,void * parameters)
+int SCP_libLoad_DiskFile(LIBFLUX_IMGLDR * imgldr_ctx,LIBFLUX_FLOPPY * floppydisk,char * imgfile,void * parameters)
 {
 	FILE * f;
 	int mintrack,maxtrack;
@@ -378,8 +373,8 @@ int SCP_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 	unsigned short i,j;
 	int k,l,len;
 	int trackstep,singleside;
-	HXCFE_CYLINDER* currentcylinder;
-	HXCFE_SIDE * curside;
+	LIBFLUX_CYLINDER* currentcylinder;
+	LIBFLUX_SIDE * curside;
 	int nbtrack,nbside;
 	float timecoef;
 	int tracklen;
@@ -397,7 +392,7 @@ int SCP_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 	envvar_entry * backup_env;
 	envvar_entry * tmp_env;
 
-	imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"SCP_libLoad_DiskFile");
+	imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"SCP_libLoad_DiskFile");
 
 	backup_env = NULL;
 
@@ -414,60 +409,60 @@ int SCP_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 		track_offset_cyl_step = 2;
 		track_offset_head_step = 1;
 
-		f = hxc_fopen(imgfile,"rb");
+		f = libflux_fopen(imgfile,"rb");
 		if(f)
 		{
-			hxc_fread(&scph, sizeof(scp_header), f);
+			libflux_fread(&scph, sizeof(scp_header), f);
 			if(strncmp((char*)&scph.sign,"SCP",3))
 			{
-				hxc_fclose(f);
-				imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"SCP_libLoad_DiskFile : bad Header !");
-				return HXCFE_BADFILE;
+				libflux_fclose(f);
+				imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"SCP_libLoad_DiskFile : bad Header !");
+				return LIBFLUX_BADFILE;
 			}
 
-			tmp_env = initEnv( (envvar_entry *)imgldr_ctx->hxcfe->envvar, NULL );
+			tmp_env = initEnv( (envvar_entry *)imgldr_ctx->ctx->envvar, NULL );
 			if(!tmp_env)
 			{
-				hxc_fclose(f);
-				return HXCFE_INTERNALERROR;
+				libflux_fclose(f);
+				return LIBFLUX_INTERNALERROR;
 			}
 
-			backup_env = imgldr_ctx->hxcfe->envvar;
-			imgldr_ctx->hxcfe->envvar = tmp_env;
-			setget_env_script(imgldr_ctx->hxcfe->scriptctx, tmp_env);
+			backup_env = imgldr_ctx->ctx->envvar;
+			imgldr_ctx->ctx->envvar = tmp_env;
+			setget_env_script(imgldr_ctx->ctx->scriptctx, tmp_env);
 
-			len=hxc_getpathfolder(imgfile,0,SYS_PATH_TYPE);
+			len=libflux_getpathfolder(imgfile,0,SYS_PATH_TYPE);
 			folder=(char*)malloc(len+1);
 			if(!folder)
 			{
-				hxc_fclose(f);
+				libflux_fclose(f);
 
-				tmp_env = (envvar_entry *)imgldr_ctx->hxcfe->envvar;
-				imgldr_ctx->hxcfe->envvar = backup_env;
-				setget_env_script(imgldr_ctx->hxcfe->scriptctx, backup_env);
+				tmp_env = (envvar_entry *)imgldr_ctx->ctx->envvar;
+				imgldr_ctx->ctx->envvar = backup_env;
+				setget_env_script(imgldr_ctx->ctx->scriptctx, backup_env);
 				deinitEnv( tmp_env );
 
-				return HXCFE_INTERNALERROR;
+				return LIBFLUX_INTERNALERROR;
 			}
 
-			hxc_getpathfolder(imgfile,folder,SYS_PATH_TYPE);
+			libflux_getpathfolder(imgfile,folder,SYS_PATH_TYPE);
 
 			filepath = malloc( strlen(imgfile) + 32 );
 			if(!filepath)
 			{
 				free(folder);
-				hxc_fclose(f);
+				libflux_fclose(f);
 
-				tmp_env = (envvar_entry *)imgldr_ctx->hxcfe->envvar;
-				imgldr_ctx->hxcfe->envvar = backup_env;
-				setget_env_script(imgldr_ctx->hxcfe->scriptctx, backup_env);
+				tmp_env = (envvar_entry *)imgldr_ctx->ctx->envvar;
+				imgldr_ctx->ctx->envvar = backup_env;
+				setget_env_script(imgldr_ctx->ctx->scriptctx, backup_env);
 				deinitEnv( tmp_env );
 
-				return HXCFE_INTERNALERROR;
+				return LIBFLUX_INTERNALERROR;
 			}
 
 			snprintf(filepath, sizeof(filepath),"%s%s",folder,"config.script");
-			hxcfe_execScriptFile(imgldr_ctx->hxcfe, filepath);
+			libflux_execScriptFile(imgldr_ctx->ctx, filepath);
 
 			free(filepath);
 			filepath = NULL;
@@ -475,43 +470,43 @@ int SCP_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 			free(folder);
 			folder = NULL;
 
-			imgldr_ctx->hxcfe->hxc_printf(MSG_INFO_1,"Loading SCP file...");
-			imgldr_ctx->hxcfe->hxc_printf(MSG_INFO_1,"Version : 0x%.2X",scph.version);
-			imgldr_ctx->hxcfe->hxc_printf(MSG_INFO_1,"Disk Type : 0x%.2X",scph.disk_type);
-			imgldr_ctx->hxcfe->hxc_printf(MSG_INFO_1,"Start track : %d",scph.start_track);
-			imgldr_ctx->hxcfe->hxc_printf(MSG_INFO_1,"End track : %d",scph.end_track);
-			imgldr_ctx->hxcfe->hxc_printf(MSG_INFO_1,"Number of revolution(s) : %d",scph.number_of_revolution);
-			imgldr_ctx->hxcfe->hxc_printf(MSG_INFO_1,"Flags : 0x%.2X",scph.flags);
-			imgldr_ctx->hxcfe->hxc_printf(MSG_INFO_1,"File Checksum : 0x%.4X",scph.file_data_checksum);
-			imgldr_ctx->hxcfe->hxc_printf(MSG_INFO_1,"Bit Cell width : %d",scph.bit_cell_width);
-			imgldr_ctx->hxcfe->hxc_printf(MSG_INFO_1,"Number of heads : %d",scph.number_of_heads);
-			imgldr_ctx->hxcfe->hxc_printf(MSG_INFO_1,"Resolution factor : %d",scph.resolution);
+			imgldr_ctx->ctx->libflux_printf(MSG_INFO_1,"Loading SCP file...");
+			imgldr_ctx->ctx->libflux_printf(MSG_INFO_1,"Version : 0x%.2X",scph.version);
+			imgldr_ctx->ctx->libflux_printf(MSG_INFO_1,"Disk Type : 0x%.2X",scph.disk_type);
+			imgldr_ctx->ctx->libflux_printf(MSG_INFO_1,"Start track : %d",scph.start_track);
+			imgldr_ctx->ctx->libflux_printf(MSG_INFO_1,"End track : %d",scph.end_track);
+			imgldr_ctx->ctx->libflux_printf(MSG_INFO_1,"Number of revolution(s) : %d",scph.number_of_revolution);
+			imgldr_ctx->ctx->libflux_printf(MSG_INFO_1,"Flags : 0x%.2X",scph.flags);
+			imgldr_ctx->ctx->libflux_printf(MSG_INFO_1,"File Checksum : 0x%.4X",scph.file_data_checksum);
+			imgldr_ctx->ctx->libflux_printf(MSG_INFO_1,"Bit Cell width : %d",scph.bit_cell_width);
+			imgldr_ctx->ctx->libflux_printf(MSG_INFO_1,"Number of heads : %d",scph.number_of_heads);
+			imgldr_ctx->ctx->libflux_printf(MSG_INFO_1,"Resolution factor : %d",scph.resolution);
 
 			nbside = 1;
 
-			if( hxcfe_getEnvVarValue( imgldr_ctx->hxcfe, "SCPLOADER_DOUBLE_STEP" ) > 0 )
+			if( libflux_getEnvVarValue( imgldr_ctx->ctx, "SCPLOADER_DOUBLE_STEP" ) > 0 )
 				trackstep = 2;
 			else
 				trackstep = 1;
 
-			mac_clv = hxcfe_getEnvVarValue( imgldr_ctx->hxcfe, "FLUXSTREAM_IMPORT_PCCAV_TO_MACCLV" );
-			c64_clv = hxcfe_getEnvVarValue( imgldr_ctx->hxcfe, "FLUXSTREAM_IMPORT_PCCAV_TO_C64CLV" );
-			victor9k_clv = hxcfe_getEnvVarValue( imgldr_ctx->hxcfe, "FLUXSTREAM_IMPORT_PCCAV_TO_VICTOR9KCLV" );
+			mac_clv = libflux_getEnvVarValue( imgldr_ctx->ctx, "FLUXSTREAM_IMPORT_PCCAV_TO_MACCLV" );
+			c64_clv = libflux_getEnvVarValue( imgldr_ctx->ctx, "FLUXSTREAM_IMPORT_PCCAV_TO_C64CLV" );
+			victor9k_clv = libflux_getEnvVarValue( imgldr_ctx->ctx, "FLUXSTREAM_IMPORT_PCCAV_TO_VICTOR9KCLV" );
 
-			singleside = hxcfe_getEnvVarValue( imgldr_ctx->hxcfe, "SCPLOADER_SINGLE_SIDE" )&1;
-			phasecorrection = hxcfe_getEnvVarValue( imgldr_ctx->hxcfe, "FLUXSTREAM_PLL_PHASE_CORRECTION_DIVISOR" );
-			filterpasses = hxcfe_getEnvVarValue( imgldr_ctx->hxcfe, "FLUXSTREAM_BITRATE_FILTER_PASSES" );
-			filter = hxcfe_getEnvVarValue( imgldr_ctx->hxcfe, "FLUXSTREAM_BITRATE_FILTER_WINDOW" );
-			bitrate = hxcfe_getEnvVarValue( imgldr_ctx->hxcfe, "SCPLOADER_BITRATE" );
-			bmp_export = hxcfe_getEnvVarValue( imgldr_ctx->hxcfe, "SCPLOADER_BMPEXPORT" );
+			singleside = libflux_getEnvVarValue( imgldr_ctx->ctx, "SCPLOADER_SINGLE_SIDE" )&1;
+			phasecorrection = libflux_getEnvVarValue( imgldr_ctx->ctx, "FLUXSTREAM_PLL_PHASE_CORRECTION_DIVISOR" );
+			filterpasses = libflux_getEnvVarValue( imgldr_ctx->ctx, "FLUXSTREAM_BITRATE_FILTER_PASSES" );
+			filter = libflux_getEnvVarValue( imgldr_ctx->ctx, "FLUXSTREAM_BITRATE_FILTER_WINDOW" );
+			bitrate = libflux_getEnvVarValue( imgldr_ctx->ctx, "SCPLOADER_BITRATE" );
+			bmp_export = libflux_getEnvVarValue( imgldr_ctx->ctx, "SCPLOADER_BMPEXPORT" );
 
 			timecoef = 1;
-			if( !strcmp(hxcfe_getEnvVar( imgldr_ctx->hxcfe, "FLUXSTREAM_RPMFIX", NULL),"360TO300RPM") )
+			if( !strcmp(libflux_getEnvVar( imgldr_ctx->ctx, "FLUXSTREAM_RPMFIX", NULL),"360TO300RPM") )
 			{
 				timecoef=(float)1.2;
 			}
 
-			if( !strcmp(hxcfe_getEnvVar( imgldr_ctx->hxcfe, "FLUXSTREAM_RPMFIX", NULL),"300TO360RPM") )
+			if( !strcmp(libflux_getEnvVar( imgldr_ctx->ctx, "FLUXSTREAM_RPMFIX", NULL),"300TO360RPM") )
 			{
 				timecoef=(float)0.833;
 			}
@@ -549,7 +544,7 @@ int SCP_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 				break;
 			}
 
-			imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"%d track (%d - %d), %d sides (%d - %d)",nbtrack,mintrack,maxtrack,nbside,minside,maxside);
+			imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"%d track (%d - %d), %d sides (%d - %d)",nbtrack,mintrack,maxtrack,nbside,minside,maxside);
 
 			floppydisk->floppyiftype = GENERIC_SHUGART_DD_FLOPPYMODE;
 			floppydisk->floppyBitRate = VARIABLEBITRATE;
@@ -558,7 +553,7 @@ int SCP_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 
 			floppydisk->floppySectorPerTrack = -1;
 
-			hxc_fread(tracksoffset,sizeof(tracksoffset),f);
+			libflux_fread(tracksoffset,sizeof(tracksoffset),f);
 
 			if( floppydisk->floppyNumberOfTrack*trackstep > MAX_NUMBER_OF_TRACKS )
 			{
@@ -592,22 +587,22 @@ int SCP_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 
 			floppydisk->floppyNumberOfTrack = ((k >> 1) + 1) / trackstep;
 
-			floppydisk->tracks = (HXCFE_CYLINDER**)malloc(sizeof(HXCFE_CYLINDER*)*floppydisk->floppyNumberOfTrack);
+			floppydisk->tracks = (LIBFLUX_CYLINDER**)malloc(sizeof(LIBFLUX_CYLINDER*)*floppydisk->floppyNumberOfTrack);
 			if(!floppydisk->tracks)
 			{
-				hxc_fclose(f);
-				return HXCFE_INTERNALERROR;
+				libflux_fclose(f);
+				return LIBFLUX_INTERNALERROR;
 			}
 
-			memset(floppydisk->tracks,0,sizeof(HXCFE_CYLINDER*)*floppydisk->floppyNumberOfTrack);
+			memset(floppydisk->tracks,0,sizeof(LIBFLUX_CYLINDER*)*floppydisk->floppyNumberOfTrack);
 
 			for(j=0;j<floppydisk->floppyNumberOfTrack*trackstep;j=j+trackstep)
 			{
 				for(i=0;i<floppydisk->floppyNumberOfSide;i++)
 				{
-					hxcfe_imgCallProgressCallback(imgldr_ctx,(j<<1) | (i&1),(floppydisk->floppyNumberOfTrack*trackstep)*2 );
+					libflux_imgCallProgressCallback(imgldr_ctx,(j<<1) | (i&1),(floppydisk->floppyNumberOfTrack*trackstep)*2 );
 
-					imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"Load Track %.3d Side %d",j,i);
+					imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"Load Track %.3d Side %d",j,i);
 
 					if(mac_clv)
 						timecoef = (float)mac_clv / clv_track2rpm(j,1);
@@ -620,7 +615,7 @@ int SCP_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 
 					rpm = 300;
 
-					curside = decodestream(imgldr_ctx->hxcfe,f,(j<<1)|(i&1),tracksoffset[(track_offset_cyl_step*j) + (track_offset_head_step*i)],&rpm,timecoef,phasecorrection,scph.number_of_revolution,1 + scph.resolution,bitrate,filter,filterpasses,bmp_export);
+					curside = decodestream(imgldr_ctx->ctx,f,(j<<1)|(i&1),tracksoffset[(track_offset_cyl_step*j) + (track_offset_head_step*i)],&rpm,timecoef,phasecorrection,scph.number_of_revolution,1 + scph.resolution,bitrate,filter,filterpasses,bmp_export);
 
 					if(!floppydisk->tracks[j/trackstep])
 					{
@@ -666,7 +661,7 @@ int SCP_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 				}
 			}
 
-			hxc_fclose(f);
+			libflux_fclose(f);
 
 			// Adjust track timings.
 			for(j=0;j<floppydisk->floppyNumberOfTrack;j++)
@@ -676,30 +671,30 @@ int SCP_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 					curside = floppydisk->tracks[j]->sides[i];
 					if(curside && floppydisk->tracks[0]->sides[0])
 					{
-						AdjustTrackPeriod(imgldr_ctx->hxcfe,floppydisk->tracks[0]->sides[0],curside);
+						AdjustTrackPeriod(imgldr_ctx->ctx,floppydisk->tracks[0]->sides[0],curside);
 					}
 				}
 			}
 
-			imgldr_ctx->hxcfe->hxc_printf(MSG_INFO_1,"track file successfully loaded and encoded!");
+			imgldr_ctx->ctx->libflux_printf(MSG_INFO_1,"track file successfully loaded and encoded!");
 
-			hxcfe_sanityCheck(imgldr_ctx->hxcfe,floppydisk);
+			libflux_sanityCheck(imgldr_ctx->ctx,floppydisk);
 
-			tmp_env = (envvar_entry *)imgldr_ctx->hxcfe->envvar;
-			imgldr_ctx->hxcfe->envvar = backup_env;
-			setget_env_script(imgldr_ctx->hxcfe->scriptctx, backup_env);
+			tmp_env = (envvar_entry *)imgldr_ctx->ctx->envvar;
+			imgldr_ctx->ctx->envvar = backup_env;
+			setget_env_script(imgldr_ctx->ctx->scriptctx, backup_env);
 			deinitEnv( tmp_env );
 
-			return HXCFE_NOERROR;
+			return LIBFLUX_NOERROR;
 		}
 
-		return HXCFE_ACCESSERROR;
+		return LIBFLUX_ACCESSERROR;
 	}
 
-	return HXCFE_BADFILE;
+	return LIBFLUX_BADFILE;
 }
 
-int SCP_libGetPluginInfo(HXCFE_IMGLDR * imgldr_ctx,uint32_t infotype,void * returnvalue)
+int SCP_libGetPluginInfo(LIBFLUX_IMGLDR * imgldr_ctx,uint32_t infotype,void * returnvalue)
 {
 	static const char plug_id[]="SCP_FLUX_STREAM";
 	static const char plug_desc[]="SCP Stream Loader";

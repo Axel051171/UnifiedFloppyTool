@@ -1,9 +1,7 @@
 /**
  * @file uft_format_params.h
- * @brief Unified Format Parameters (from FluxEngine/SAMdisk)
  * 
  * Comprehensive parameter system for disk format encoding/decoding.
- * Extracted from FluxEngine .proto files and SAMdisk Format.h
  */
 
 #ifndef UFT_FORMAT_PARAMS_H
@@ -17,7 +15,6 @@ extern "C" {
 #endif
 
 // ============================================================================
-// Data Rate (from SAMdisk)
 // ============================================================================
 typedef enum {
     UFT_DATARATE_UNKNOWN = 0,
@@ -29,7 +26,6 @@ typedef enum {
 } uft_datarate_t;
 
 // ============================================================================
-// Encoding Type (from SAMdisk/FluxEngine)
 // ============================================================================
 typedef enum {
     UFT_ENCODING_UNKNOWN = 0,
@@ -46,7 +42,6 @@ typedef enum {
 } uft_encoding_t;
 
 // ============================================================================
-// FDC Type (from SAMdisk)
 // ============================================================================
 typedef enum {
     UFT_FDC_NONE = 0,
@@ -57,7 +52,6 @@ typedef enum {
 } uft_fdc_type_t;
 
 // ============================================================================
-// IBM/PC Format Parameters (from FluxEngine ibm.proto)
 // ============================================================================
 typedef struct {
     // Track-specific overrides
@@ -89,7 +83,6 @@ typedef struct {
 } uft_ibm_params_t;
 
 // ============================================================================
-// Amiga Format Parameters (from FluxEngine amiga.proto)
 // ============================================================================
 typedef struct {
     double clock_rate_us;           // default 2.0
@@ -97,7 +90,6 @@ typedef struct {
 } uft_amiga_params_t;
 
 // ============================================================================
-// Brother Format Parameters (from FluxEngine brother.proto)
 // ============================================================================
 typedef enum {
     UFT_BROTHER_240 = 0,    // 78 tracks, 240KB
@@ -113,7 +105,6 @@ typedef struct {
 } uft_brother_params_t;
 
 // ============================================================================
-// Victor 9000 Parameters (from FluxEngine victor9k.proto)
 // ============================================================================
 typedef struct {
     int32_t min_track;
@@ -135,7 +126,6 @@ typedef struct {
 } uft_victor9k_params_t;
 
 // ============================================================================
-// Micropolis Parameters (from FluxEngine micropolis.proto)
 // ============================================================================
 typedef enum {
     UFT_MICROPOLIS_CHECKSUM_AUTO = 0,
@@ -157,7 +147,6 @@ typedef struct {
 } uft_micropolis_params_t;
 
 // ============================================================================
-// Generic Format Parameters (SAMdisk Format structure)
 // ============================================================================
 typedef struct {
     // Geometry
@@ -190,7 +179,6 @@ typedef struct {
 } uft_format_params_t;
 
 // ============================================================================
-// Preset Formats (from SAMdisk RegularFormat)
 // ============================================================================
 typedef enum {
     UFT_PRESET_CUSTOM = 0,

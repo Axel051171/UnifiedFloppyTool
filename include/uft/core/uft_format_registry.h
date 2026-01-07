@@ -104,7 +104,7 @@ typedef enum uft_format_id {
     /* ═══ Flux Images (100-149) ═══ */
     UFT_FMT_SCP             = 100,  /**< SuperCard Pro */
     UFT_FMT_KF              = 101,  /**< KryoFlux stream */
-    UFT_FMT_KF_RAW          = 102,  /**< KryoFlux raw */
+    UFT_FMT_UFT_KF_RAW          = 102,  /**< KryoFlux raw */
     UFT_FMT_IPF             = 103,  /**< Interchangeable (CAPS) */
     UFT_FMT_CTR             = 104,  /**< CTRaw (CAPS) */
     UFT_FMT_FDX             = 105,  /**< FDX (floppy1) */
@@ -113,7 +113,7 @@ typedef enum uft_format_id {
     UFT_FMT_FLUX_RAW        = 108,  /**< Raw flux capture */
     
     /* ═══ Bitstream Images (150-199) ═══ */
-    UFT_FMT_HFE             = 150,  /**< HxC Floppy Emulator */
+    UFT_FMT_HFE             = 150,  /**< UFT HFE Format */
     UFT_FMT_HFE_V3          = 151,  /**< HFE version 3 */
     UFT_FMT_MFM             = 152,  /**< MFM bitstream */
     UFT_FMT_FM              = 153,  /**< FM bitstream */

@@ -2,7 +2,6 @@
  * uft_amiga_mfm.h
  *
  * Amiga MFM (Modified Frequency Modulation) decoder.
- * Based on concepts from Keir Fraser's disk-utilities (Public Domain).
  *
  * Amiga MFM Format:
  * - MFM encoding with 2µs bit cells (500 kbps)

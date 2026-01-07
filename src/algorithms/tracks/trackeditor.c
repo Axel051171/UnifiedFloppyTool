@@ -2,25 +2,20 @@
 //
 // Copyright (C) 2006-2025 Jean-François DEL NERO
 //
-// This file is part of the HxCFloppyEmulator library
 //
-// HxCFloppyEmulator may be used and distributed without restriction provided
 // that this copyright statement is not removed from the file and that any
 // derivative work contains the original copyright notice and the associated
 // disclaimer.
 //
-// HxCFloppyEmulator is free software; you can redistribute it
 // and/or modify  it under the terms of the GNU General Public License
 // as published by the Free Software Foundation; either version 2
 // of the License, or (at your option) any later version.
 //
-// HxCFloppyEmulator is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 //   See the GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with HxCFloppyEmulator; if not, write to the Free Software
 // Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 //
 */
@@ -48,16 +43,16 @@
 
 #include "types.h"
 
-#include "internal_libhxcfe.h"
+#include "libflux.h""
 #include "tracks/track_generator.h"
-#include "libhxcfe.h"
+#include "libflux.h""
 
-#include "floppy_loader.h"
-#include "floppy_utils.h"
+#include "uft_floppy_loader.h"
+#include "uft_floppy_utils.h"
 
 #include "trackutils.h"
 
-HXCFE_SIDE * hxcfe_getSide( HXCFE* floppycontext, HXCFE_FLOPPY * fp, int32_t track, int32_t side )
+LIBFLUX_SIDE * libflux_getSide( LIBFLUX_CTX* flux_ctx, LIBFLUX_FLOPPY * fp, int32_t track, int32_t side )
 {
 	if(fp)
 	{
@@ -76,19 +71,19 @@ HXCFE_SIDE * hxcfe_getSide( HXCFE* floppycontext, HXCFE_FLOPPY * fp, int32_t tra
 	return 0;
 }
 
-HXCFE_SIDE * hxcfe_duplicateSide( HXCFE* floppycontext, HXCFE_SIDE * side )
+LIBFLUX_SIDE * libflux_duplicateSide( LIBFLUX_CTX* flux_ctx, LIBFLUX_SIDE * side )
 {
-	HXCFE_SIDE * new_side;
+	LIBFLUX_SIDE * new_side;
 	int track_wordsize, i;
 
 	new_side = NULL;
 
 	if(side)
 	{
-		new_side = malloc(sizeof(HXCFE_SIDE));
+		new_side = malloc(sizeof(LIBFLUX_SIDE));
 		if( new_side )
 		{
-			memset( new_side, 0, sizeof(HXCFE_SIDE) );
+			memset( new_side, 0, sizeof(LIBFLUX_SIDE) );
 
 			track_wordsize = side->tracklen / 8;
 			if(side->tracklen&7)
@@ -140,10 +135,10 @@ HXCFE_SIDE * hxcfe_duplicateSide( HXCFE* floppycontext, HXCFE_SIDE * side )
 
 			if( side->stream_dump )
 			{
-				new_side->stream_dump = malloc( sizeof(HXCFE_TRKSTREAM) );
+				new_side->stream_dump = malloc( sizeof(LIBFLUX_TRKSTREAM) );
 				if( new_side->stream_dump )
 				{
-					memcpy(new_side->stream_dump,side->stream_dump,sizeof(HXCFE_TRKSTREAM));
+					memcpy(new_side->stream_dump,side->stream_dump,sizeof(LIBFLUX_TRKSTREAM));
 
 					for(i=0;i<MAX_NB_OF_STREAMCHANNEL;i++)
 					{
@@ -179,7 +174,7 @@ HXCFE_SIDE * hxcfe_duplicateSide( HXCFE* floppycontext, HXCFE_SIDE * side )
 	return new_side;
 }
 
-void hxcfe_freeSide( HXCFE* floppycontext, HXCFE_SIDE * side )
+void libflux_freeSide( LIBFLUX_CTX* flux_ctx, LIBFLUX_SIDE * side )
 {
 	int i;
 
@@ -221,9 +216,9 @@ void hxcfe_freeSide( HXCFE* floppycontext, HXCFE_SIDE * side )
 	return;
 }
 
-HXCFE_SIDE * hxcfe_replaceSide( HXCFE* floppycontext, HXCFE_FLOPPY * fp, int32_t track_number, int32_t side_number, HXCFE_SIDE * side )
+LIBFLUX_SIDE * libflux_replaceSide( LIBFLUX_CTX* flux_ctx, LIBFLUX_FLOPPY * fp, int32_t track_number, int32_t side_number, LIBFLUX_SIDE * side )
 {
-	HXCFE_SIDE * new_side;
+	LIBFLUX_SIDE * new_side;
 
 	new_side = 0;
 
@@ -235,9 +230,9 @@ HXCFE_SIDE * hxcfe_replaceSide( HXCFE* floppycontext, HXCFE_FLOPPY * fp, int32_t
 			{
 				if(fp->tracks[track_number]->sides && ( side_number < fp->tracks[track_number]->number_of_side) )
 				{
-					hxcfe_freeSide( floppycontext, fp->tracks[track_number]->sides[side_number] );
+					libflux_freeSide( flux_ctx, fp->tracks[track_number]->sides[side_number] );
 
-					fp->tracks[track_number]->sides[side_number] = hxcfe_duplicateSide( floppycontext, side );
+					fp->tracks[track_number]->sides[side_number] = libflux_duplicateSide( flux_ctx, side );
 
 					new_side = fp->tracks[track_number]->sides[side_number];
 				}
@@ -248,7 +243,7 @@ HXCFE_SIDE * hxcfe_replaceSide( HXCFE* floppycontext, HXCFE_FLOPPY * fp, int32_t
 	return new_side;
 }
 
-int32_t hxcfe_shiftTrackData( HXCFE* floppycontext, HXCFE_SIDE * side, int32_t bitoffset )
+int32_t libflux_shiftTrackData( LIBFLUX_CTX* flux_ctx, LIBFLUX_SIDE * side, int32_t bitoffset )
 {
 	unsigned char * tmpbuffer;
 	uint32_t * longtmpbuffer;
@@ -259,7 +254,7 @@ int32_t hxcfe_shiftTrackData( HXCFE* floppycontext, HXCFE_SIDE * side, int32_t b
 
 		if(!bitoffset)
 		{
-			return HXCFE_NOERROR;
+			return LIBFLUX_NOERROR;
 		}
 
 		tmpbuffer = malloc( (side->tracklen>>3) + 1 );
@@ -329,14 +324,14 @@ int32_t hxcfe_shiftTrackData( HXCFE* floppycontext, HXCFE_SIDE * side, int32_t b
 
 			free(tmpbuffer);
 
-			return HXCFE_NOERROR;
+			return LIBFLUX_NOERROR;
 		}
 	}
 
-	return HXCFE_BADPARAMETER;
+	return LIBFLUX_BADPARAMETER;
 }
 
-int32_t hxcfe_rotateFloppy( HXCFE* floppycontext, HXCFE_FLOPPY * fp, int32_t bitoffset, int32_t total )
+int32_t libflux_rotateFloppy( LIBFLUX_CTX* flux_ctx, LIBFLUX_FLOPPY * fp, int32_t bitoffset, int32_t total )
 {
 	int32_t i,j;
 	double period,periodtoshift;
@@ -348,19 +343,19 @@ int32_t hxcfe_rotateFloppy( HXCFE* floppycontext, HXCFE_FLOPPY * fp, int32_t bit
 		{
 			for(j=0;j<fp->floppyNumberOfSide;j++)
 			{
-				period = GetTrackPeriod(floppycontext,fp->tracks[i]->sides[j]);
+				period = GetTrackPeriod(flux_ctx,fp->tracks[i]->sides[j]);
 				periodtoshift = (period * (double)((double)bitoffset/(double)total)); //
 				offset = fp->tracks[i]->sides[j]->tracklen - us2index(0,fp->tracks[i]->sides[j],(uint32_t)((double)(periodtoshift * 1000000)),0,0);
 
-				hxcfe_shiftTrackData(floppycontext,fp->tracks[i]->sides[j],(offset&(~0x7)));
+				libflux_shiftTrackData(flux_ctx,fp->tracks[i]->sides[j],(offset&(~0x7)));
 			}
 		}
 	}
 
-	return HXCFE_BADPARAMETER;
+	return LIBFLUX_BADPARAMETER;
 }
 
-int32_t hxcfe_reverseTrackData( HXCFE* floppycontext, HXCFE_SIDE * side )
+int32_t libflux_reverseTrackData( LIBFLUX_CTX* flux_ctx, LIBFLUX_SIDE * side )
 {
 	unsigned char * tmpbuffer;
 	uint32_t * longtmpbuffer;
@@ -432,14 +427,14 @@ int32_t hxcfe_reverseTrackData( HXCFE* floppycontext, HXCFE_SIDE * side )
 
 			free(tmpbuffer);
 
-			return HXCFE_NOERROR;
+			return LIBFLUX_NOERROR;
 		}
 	}
 
-	return HXCFE_BADPARAMETER;
+	return LIBFLUX_BADPARAMETER;
 }
 
-int32_t hxcfe_reverseFloppy( HXCFE* floppycontext, HXCFE_FLOPPY * fp )
+int32_t libflux_reverseFloppy( LIBFLUX_CTX* flux_ctx, LIBFLUX_FLOPPY * fp )
 {
 	int32_t i,j;
 
@@ -449,46 +444,46 @@ int32_t hxcfe_reverseFloppy( HXCFE* floppycontext, HXCFE_FLOPPY * fp )
 		{
 			for(j=0;j<fp->floppyNumberOfSide;j++)
 			{
-				hxcfe_reverseTrackData( floppycontext,fp->tracks[i]->sides[j] );
+				libflux_reverseTrackData( flux_ctx,fp->tracks[i]->sides[j] );
 			}
 		}
 	}
 
-	return HXCFE_BADPARAMETER;
+	return LIBFLUX_BADPARAMETER;
 }
 
-int32_t hxcfe_getCellState( HXCFE* floppycontext, HXCFE_SIDE * currentside, int32_t cellnumber )
+int32_t libflux_getCellState( LIBFLUX_CTX* flux_ctx, LIBFLUX_SIDE * currentside, int32_t cellnumber )
 {
-	if(currentside && floppycontext)
+	if(currentside && flux_ctx)
 	{
 		if(cellnumber < currentside->tracklen && currentside->databuffer)
 		{
 			return getbit(currentside->databuffer,cellnumber);
 		}
 	}
-	return HXCFE_BADPARAMETER;
+	return LIBFLUX_BADPARAMETER;
 }
 
-int32_t hxcfe_setCellState( HXCFE* floppycontext, HXCFE_SIDE * currentside, int32_t cellnumber, int32_t state )
+int32_t libflux_setCellState( LIBFLUX_CTX* flux_ctx, LIBFLUX_SIDE * currentside, int32_t cellnumber, int32_t state )
 {
-	if(currentside && floppycontext)
+	if(currentside && flux_ctx)
 	{
 		if(cellnumber < currentside->tracklen && currentside->databuffer)
 		{
 			setbit(currentside->databuffer,cellnumber,state);
-			return HXCFE_NOERROR;
+			return LIBFLUX_NOERROR;
 		}
 	}
-	return HXCFE_BADPARAMETER;
+	return LIBFLUX_BADPARAMETER;
 }
 
-int32_t hxcfe_removeCell( HXCFE* floppycontext, HXCFE_SIDE * currentside, int32_t cellnumber, int32_t numberofcells )
+int32_t libflux_removeCell( LIBFLUX_CTX* flux_ctx, LIBFLUX_SIDE * currentside, int32_t cellnumber, int32_t numberofcells )
 {
 	int32_t i;
 
 	int32_t loopcnt;
 
-	if(currentside && floppycontext)
+	if(currentside && flux_ctx)
 	{
 		if(cellnumber < currentside->tracklen)
 		{
@@ -541,14 +536,14 @@ int32_t hxcfe_removeCell( HXCFE* floppycontext, HXCFE_SIDE * currentside, int32_
 				currentside->tracklen = 1;
 			}
 
-			return HXCFE_NOERROR;
+			return LIBFLUX_NOERROR;
 		}
 	}
 
-	return HXCFE_BADPARAMETER;
+	return LIBFLUX_BADPARAMETER;
 }
 
-int32_t hxcfe_insertCell( HXCFE* floppycontext, HXCFE_SIDE * currentside, int32_t cellnumber, int32_t state, int32_t numberofcells )
+int32_t libflux_insertCell( LIBFLUX_CTX* flux_ctx, LIBFLUX_SIDE * currentside, int32_t cellnumber, int32_t state, int32_t numberofcells )
 {
 	int32_t i,tmpbufsize,oldbufsize;
 
@@ -556,9 +551,9 @@ int32_t hxcfe_insertCell( HXCFE* floppycontext, HXCFE_SIDE * currentside, int32_
 	uint32_t * tmpulongbuffer;
 
 	if( numberofcells <= 0)
-		return HXCFE_NOERROR;
+		return LIBFLUX_NOERROR;
 
-	if(currentside && floppycontext)
+	if(currentside && flux_ctx)
 	{
 		if(cellnumber < currentside->tracklen)
 		{
@@ -696,30 +691,30 @@ int32_t hxcfe_insertCell( HXCFE* floppycontext, HXCFE_SIDE * currentside, int32_
 
 			currentside->tracklen += numberofcells;
 
-			return HXCFE_NOERROR;
+			return LIBFLUX_NOERROR;
 		}
 	}
 
-	return HXCFE_BADPARAMETER;
+	return LIBFLUX_BADPARAMETER;
 }
 
-int32_t hxcfe_getCellFlakeyState( HXCFE* floppycontext, HXCFE_SIDE * currentside, int32_t cellnumber )
+int32_t libflux_getCellFlakeyState( LIBFLUX_CTX* flux_ctx, LIBFLUX_SIDE * currentside, int32_t cellnumber )
 {
-	if(currentside && floppycontext)
+	if(currentside && flux_ctx)
 	{
 		if(cellnumber < currentside->tracklen && currentside->flakybitsbuffer)
 		{
 			return getbit(currentside->flakybitsbuffer,cellnumber);
 		}
 	}
-	return HXCFE_BADPARAMETER;
+	return LIBFLUX_BADPARAMETER;
 }
 
-int32_t hxcfe_setCellFlakeyState( HXCFE* floppycontext, HXCFE_SIDE * currentside, int32_t cellnumber, int32_t state )
+int32_t libflux_setCellFlakeyState( LIBFLUX_CTX* flux_ctx, LIBFLUX_SIDE * currentside, int32_t cellnumber, int32_t state )
 {
 	int tmpbufsize;
 
-	if(currentside && floppycontext)
+	if(currentside && flux_ctx)
 	{
 		if(cellnumber < currentside->tracklen)
 		{
@@ -743,40 +738,40 @@ int32_t hxcfe_setCellFlakeyState( HXCFE* floppycontext, HXCFE_SIDE * currentside
 				}
 
 			}
-			return HXCFE_NOERROR;
+			return LIBFLUX_NOERROR;
 		}
 	}
-	return HXCFE_BADPARAMETER;
+	return LIBFLUX_BADPARAMETER;
 }
 
-int32_t hxcfe_getCellIndexState( HXCFE* floppycontext, HXCFE_SIDE * currentside, int32_t cellnumber )
+int32_t libflux_getCellIndexState( LIBFLUX_CTX* flux_ctx, LIBFLUX_SIDE * currentside, int32_t cellnumber )
 {
-	if(currentside && floppycontext)
+	if(currentside && flux_ctx)
 	{
 		if(cellnumber < currentside->tracklen && currentside->indexbuffer)
 		{
 			return getbit(currentside->indexbuffer,cellnumber);
 		}
 	}
-	return HXCFE_BADPARAMETER;
+	return LIBFLUX_BADPARAMETER;
 }
 
-int32_t hxcfe_setCellIndexState( HXCFE* floppycontext, HXCFE_SIDE * currentside, int32_t cellnumber, int32_t state )
+int32_t libflux_setCellIndexState( LIBFLUX_CTX* flux_ctx, LIBFLUX_SIDE * currentside, int32_t cellnumber, int32_t state )
 {
-	if(currentside && floppycontext)
+	if(currentside && flux_ctx)
 	{
 		if(cellnumber < currentside->tracklen && currentside->indexbuffer)
 		{
 			setbit(currentside->indexbuffer,cellnumber,state);
-			return HXCFE_NOERROR;
+			return LIBFLUX_NOERROR;
 		}
 	}
-	return HXCFE_BADPARAMETER;
+	return LIBFLUX_BADPARAMETER;
 }
 
-int32_t hxcfe_getCellBitrate( HXCFE* floppycontext, HXCFE_SIDE * currentside, int32_t cellnumber )
+int32_t libflux_getCellBitrate( LIBFLUX_CTX* flux_ctx, LIBFLUX_SIDE * currentside, int32_t cellnumber )
 {
-	if(currentside && floppycontext)
+	if(currentside && flux_ctx)
 	{
 		if(cellnumber < currentside->tracklen)
 		{
@@ -790,15 +785,15 @@ int32_t hxcfe_getCellBitrate( HXCFE* floppycontext, HXCFE_SIDE * currentside, in
 			}
 		}
 	}
-	return HXCFE_BADPARAMETER;
+	return LIBFLUX_BADPARAMETER;
 }
 
-int32_t hxcfe_setCellBitrate( HXCFE* floppycontext, HXCFE_SIDE * currentside, int32_t cellnumber, uint32_t bitrate, int32_t numberofcells )
+int32_t libflux_setCellBitrate( LIBFLUX_CTX* flux_ctx, LIBFLUX_SIDE * currentside, int32_t cellnumber, uint32_t bitrate, int32_t numberofcells )
 {
 	int tmpbufsize;
 	int32_t i,j;
 
-	if(currentside && floppycontext)
+	if(currentside && flux_ctx)
 	{
 		if(cellnumber < currentside->tracklen)
 		{
@@ -835,14 +830,14 @@ int32_t hxcfe_setCellBitrate( HXCFE* floppycontext, HXCFE_SIDE * currentside, in
 
 			}
 
-			return HXCFE_NOERROR;
+			return LIBFLUX_NOERROR;
 		}
 	}
-	return HXCFE_BADPARAMETER;
+	return LIBFLUX_BADPARAMETER;
 }
 
 
-int32_t hxcfe_setTrackRPM( HXCFE* floppycontext, HXCFE_SIDE * side, int32_t rpm )
+int32_t libflux_setTrackRPM( LIBFLUX_CTX* flux_ctx, LIBFLUX_SIDE * side, int32_t rpm )
 {
 	double period_s0,period_s1;
 	int32_t i;
@@ -850,7 +845,7 @@ int32_t hxcfe_setTrackRPM( HXCFE* floppycontext, HXCFE_SIDE * side, int32_t rpm 
 
 	if(side)
 	{
-		period_s0 = GetTrackPeriod(floppycontext,side);
+		period_s0 = GetTrackPeriod(flux_ctx,side);
 		period_s1 = (double)1/(double)((double)rpm/(double)60);
 
 		bitrate = 250000;
@@ -859,21 +854,21 @@ int32_t hxcfe_setTrackRPM( HXCFE* floppycontext, HXCFE_SIDE * side, int32_t rpm 
 		{
 			if(!(i&7))
 			{
-				bitrate = hxcfe_getCellBitrate( floppycontext, side, i );
+				bitrate = libflux_getCellBitrate( flux_ctx, side, i );
 
 				bitrate = (int32_t)((double)bitrate * (double)(period_s0/period_s1));
 			}
 
-			hxcfe_setCellBitrate( floppycontext, side, i, bitrate, 1 );
+			libflux_setCellBitrate( flux_ctx, side, i, bitrate, 1 );
 		}
 
-		return HXCFE_NOERROR;
+		return LIBFLUX_NOERROR;
 	}
 
-	return HXCFE_BADPARAMETER;
+	return LIBFLUX_BADPARAMETER;
 }
 
-int32_t hxcfe_removeOddTracks( HXCFE* floppycontext, HXCFE_FLOPPY * fp)
+int32_t libflux_removeOddTracks( LIBFLUX_CTX* flux_ctx, LIBFLUX_FLOPPY * fp)
 {
 	int32_t i,tracknum;
 
@@ -885,12 +880,12 @@ int32_t hxcfe_removeOddTracks( HXCFE* floppycontext, HXCFE_FLOPPY * fp)
 			{
 				if(fp->tracks[i]->number_of_side>0)
 				{
-					hxcfe_freeSide( floppycontext, fp->tracks[i]->sides[0] );
+					libflux_freeSide( flux_ctx, fp->tracks[i]->sides[0] );
 				}
 
 				if(fp->tracks[i]->number_of_side>1)
 				{
-					hxcfe_freeSide( floppycontext, fp->tracks[i]->sides[1] );
+					libflux_freeSide( flux_ctx, fp->tracks[i]->sides[1] );
 				}
 
 				free(fp->tracks[i]);
@@ -907,13 +902,13 @@ int32_t hxcfe_removeOddTracks( HXCFE* floppycontext, HXCFE_FLOPPY * fp)
 		}
 		fp->floppyNumberOfTrack = tracknum;
 
-		return HXCFE_NOERROR;
+		return LIBFLUX_NOERROR;
 	}
 
-	return HXCFE_BADPARAMETER;
+	return LIBFLUX_BADPARAMETER;
 }
 
-int32_t hxcfe_removeTrack( HXCFE* floppycontext, HXCFE_FLOPPY * fp, int track, int flags)
+int32_t libflux_removeTrack( LIBFLUX_CTX* flux_ctx, LIBFLUX_FLOPPY * fp, int track, int flags)
 {
 	int i;
 
@@ -923,12 +918,12 @@ int32_t hxcfe_removeTrack( HXCFE* floppycontext, HXCFE_FLOPPY * fp, int track, i
 		{
 			if(fp->tracks[track]->number_of_side>0)
 			{
-				hxcfe_freeSide( floppycontext, fp->tracks[track]->sides[0] );
+				libflux_freeSide( flux_ctx, fp->tracks[track]->sides[0] );
 			}
 
 			if(fp->tracks[track]->number_of_side>1)
 			{
-				hxcfe_freeSide( floppycontext, fp->tracks[track]->sides[1] );
+				libflux_freeSide( flux_ctx, fp->tracks[track]->sides[1] );
 			}
 
 			free(fp->tracks[track]);
@@ -942,27 +937,27 @@ int32_t hxcfe_removeTrack( HXCFE* floppycontext, HXCFE_FLOPPY * fp, int track, i
 
 			fp->floppyNumberOfTrack--;
 
-			return HXCFE_NOERROR;
+			return LIBFLUX_NOERROR;
 		}
 	}
 
-	return HXCFE_BADPARAMETER;
+	return LIBFLUX_BADPARAMETER;
 }
 
-int32_t hxcfe_removeLastTrack( HXCFE* floppycontext, HXCFE_FLOPPY * fp)
+int32_t libflux_removeLastTrack( LIBFLUX_CTX* flux_ctx, LIBFLUX_FLOPPY * fp)
 {
 	if(fp)
 	{
 		if(fp->floppyNumberOfTrack)
-			return hxcfe_removeTrack( floppycontext, fp, fp->floppyNumberOfTrack - 1, 0 );
+			return libflux_removeTrack( flux_ctx, fp, fp->floppyNumberOfTrack - 1, 0 );
 		else
-			return HXCFE_NOERROR;
+			return LIBFLUX_NOERROR;
 	}
 
-	return HXCFE_BADPARAMETER;
+	return LIBFLUX_BADPARAMETER;
 }
 
-int32_t hxcfe_deleteSide1( HXCFE* floppycontext, HXCFE_FLOPPY * fp )
+int32_t libflux_deleteSide1( LIBFLUX_CTX* flux_ctx, LIBFLUX_FLOPPY * fp )
 {
 	int track;
 
@@ -974,21 +969,21 @@ int32_t hxcfe_deleteSide1( HXCFE* floppycontext, HXCFE_FLOPPY * fp )
 			{
 				if( fp->tracks[track]->number_of_side == 2 )
 				{
-					hxcfe_freeSide( floppycontext, fp->tracks[track]->sides[1] );
+					libflux_freeSide( flux_ctx, fp->tracks[track]->sides[1] );
 					fp->tracks[track]->number_of_side = 1;
 				}
 			}
 
 			fp->floppyNumberOfSide = 1;
 
-			return HXCFE_NOERROR;
+			return LIBFLUX_NOERROR;
 		}
 	}
 
-	return HXCFE_BADPARAMETER;
+	return LIBFLUX_BADPARAMETER;
 }
 
-int32_t hxcfe_allocSide1( HXCFE* floppycontext, HXCFE_FLOPPY * fp )
+int32_t libflux_allocSide1( LIBFLUX_CTX* flux_ctx, LIBFLUX_FLOPPY * fp )
 {
 	int track,i,tracklen;
 
@@ -1000,37 +995,37 @@ int32_t hxcfe_allocSide1( HXCFE* floppycontext, HXCFE_FLOPPY * fp )
 			{
 				if( fp->tracks[track]->number_of_side == 1 )
 				{
-					fp->tracks[track]->sides[1] = hxcfe_duplicateSide( floppycontext, fp->tracks[track]->sides[0] );
+					fp->tracks[track]->sides[1] = libflux_duplicateSide( flux_ctx, fp->tracks[track]->sides[0] );
 					fp->tracks[track]->number_of_side = 2;
 
-					tracklen = hxcfe_getTrackLength(floppycontext,fp,track,1);
+					tracklen = libflux_getTrackLength(flux_ctx,fp,track,1);
 
 					for(i=0;i<tracklen;i++)
 					{
 						if(!(i&0x3))
-							hxcfe_setCellState( floppycontext, fp->tracks[track]->sides[1], i, 1 );
+							libflux_setCellState( flux_ctx, fp->tracks[track]->sides[1], i, 1 );
 						else
-							hxcfe_setCellState( floppycontext, fp->tracks[track]->sides[1], i, 0 );
+							libflux_setCellState( flux_ctx, fp->tracks[track]->sides[1], i, 0 );
 
-						hxcfe_setCellFlakeyState( floppycontext, fp->tracks[track]->sides[1], i, 0 );
+						libflux_setCellFlakeyState( flux_ctx, fp->tracks[track]->sides[1], i, 0 );
 					}
 				}
 			}
 
 			fp->floppyNumberOfSide = 2;
 
-			return HXCFE_NOERROR;
+			return LIBFLUX_NOERROR;
 		}
 	}
 
 
-	return HXCFE_BADPARAMETER;
+	return LIBFLUX_BADPARAMETER;
 }
 
-int32_t hxcfe_insertTrack( HXCFE* floppycontext, HXCFE_FLOPPY * fp, uint32_t bitrate, int32_t rpm, int track )
+int32_t libflux_insertTrack( LIBFLUX_CTX* flux_ctx, LIBFLUX_FLOPPY * fp, uint32_t bitrate, int32_t rpm, int track )
 {
-	HXCFE_CYLINDER ** oldcylinderarray;
-	HXCFE_CYLINDER ** newcylinderarray;
+	LIBFLUX_CYLINDER ** oldcylinderarray;
+	LIBFLUX_CYLINDER ** newcylinderarray;
 	int i,j;
 
 	if(fp)
@@ -1052,7 +1047,7 @@ int32_t hxcfe_insertTrack( HXCFE* floppycontext, HXCFE_FLOPPY * fp, uint32_t bit
 
 			oldcylinderarray = fp->tracks;
 
-			newcylinderarray = (HXCFE_CYLINDER**)malloc(sizeof(HXCFE_CYLINDER*)*(fp->floppyNumberOfTrack));
+			newcylinderarray = (LIBFLUX_CYLINDER**)malloc(sizeof(LIBFLUX_CYLINDER*)*(fp->floppyNumberOfTrack));
 			if(newcylinderarray)
 			{
 				j = 0;
@@ -1087,26 +1082,26 @@ int32_t hxcfe_insertTrack( HXCFE* floppycontext, HXCFE_FLOPPY * fp, uint32_t bit
 
 					fp->floppyNumberOfTrack--;
 
-					return HXCFE_BADPARAMETER;
+					return LIBFLUX_BADPARAMETER;
 				}
 
 			}
 
-			return HXCFE_NOERROR;
+			return LIBFLUX_NOERROR;
 		}
 	}
 
-	return HXCFE_BADPARAMETER;
+	return LIBFLUX_BADPARAMETER;
 }
 
-int32_t hxcfe_addTrack( HXCFE* floppycontext, HXCFE_FLOPPY * fp, uint32_t bitrate, int32_t rpm )
+int32_t libflux_addTrack( LIBFLUX_CTX* flux_ctx, LIBFLUX_FLOPPY * fp, uint32_t bitrate, int32_t rpm )
 {
 	if(fp)
 	{
-		return hxcfe_insertTrack( floppycontext, fp, bitrate, rpm, fp->floppyNumberOfTrack );
+		return libflux_insertTrack( flux_ctx, fp, bitrate, rpm, fp->floppyNumberOfTrack );
 	}
 
-	return HXCFE_BADPARAMETER;
+	return LIBFLUX_BADPARAMETER;
 }
 
 const unsigned short test_pattern_array[]=
@@ -1170,14 +1165,14 @@ int repair_sector_type_list[]=
 	-1
 };
 
-int32_t hxcfe_localRepair( HXCFE* floppycontext, HXCFE_FLOPPY *fp, int32_t track, int32_t side, int32_t start_cellnumber, int32_t numberofcells )
+int32_t libflux_localRepair( LIBFLUX_CTX* flux_ctx, LIBFLUX_FLOPPY *fp, int32_t track, int32_t side, int32_t start_cellnumber, int32_t numberofcells )
 {
 	int32_t i,test_pattern_size;
 	uint32_t pattern,old_pattern;
-	HXCFE_SIDE * currentside;
-	HXCFE_SECTORACCESS * sa;
-	HXCFE_SECTCFG** sc_list;
-	HXCFE_SECTCFG* sc;
+	LIBFLUX_SIDE * currentside;
+	LIBFLUX_SECTORACCESS * sa;
+	LIBFLUX_SECTCFG** sc_list;
+	LIBFLUX_SECTCFG* sc;
 	int32_t nb_sectorfound,sectorpos,good_pattern;
 	int type,retrep,cellnumber;
 	uint32_t test_pattern;
@@ -1187,9 +1182,9 @@ int32_t hxcfe_localRepair( HXCFE* floppycontext, HXCFE_FLOPPY *fp, int32_t track
 		cellnumber = start_cellnumber;
 		do
 		{
-			printf("hxcfe_localRepair : bitoffset %d...\n",cellnumber);
+			printf("libflux_localRepair : bitoffset %d...\n",cellnumber);
 
-			retrep = hxcfe_localRepair( floppycontext, fp, track, side, cellnumber, 8 );
+			retrep = libflux_localRepair( flux_ctx, fp, track, side, cellnumber, 8 );
 
 			cellnumber += 6;
 		}while(retrep != 1 && cellnumber < (start_cellnumber+numberofcells) );
@@ -1199,7 +1194,7 @@ int32_t hxcfe_localRepair( HXCFE* floppycontext, HXCFE_FLOPPY *fp, int32_t track
 
 	good_pattern = 0;
 
-	if(fp && floppycontext)
+	if(fp && flux_ctx)
 	{
 		if( ( track < fp->floppyNumberOfTrack ) && ( side < fp->floppyNumberOfSide ) )
 		{
@@ -1207,10 +1202,10 @@ int32_t hxcfe_localRepair( HXCFE* floppycontext, HXCFE_FLOPPY *fp, int32_t track
 
 			currentside = fp->tracks[track]->sides[side];
 
-			sa = hxcfe_initSectorAccess( floppycontext, fp );
+			sa = libflux_initSectorAccess( flux_ctx, fp );
 
 			if ( !sa )
-				return HXCFE_INTERNALERROR;
+				return LIBFLUX_INTERNALERROR;
 
 			i = 0;
 			sc_list = NULL;
@@ -1218,12 +1213,12 @@ int32_t hxcfe_localRepair( HXCFE* floppycontext, HXCFE_FLOPPY *fp, int32_t track
 			while(!sc_list && repair_sector_type_list[i] >=0 && !nb_sectorfound)
 			{
 				type = repair_sector_type_list[i];
-				sc_list = hxcfe_getAllTrackSectors(  sa, track, side, type,&nb_sectorfound );
+				sc_list = libflux_getAllTrackSectors(  sa, track, side, type,&nb_sectorfound );
 				i++;
 			}
 
 			if ( !sc_list )
-				return HXCFE_INTERNALERROR;
+				return LIBFLUX_INTERNALERROR;
 
 			sectorpos = -1;
 			if(nb_sectorfound)
@@ -1243,7 +1238,7 @@ int32_t hxcfe_localRepair( HXCFE* floppycontext, HXCFE_FLOPPY *fp, int32_t track
 			{
 				test_pattern_size = numberofcells;
 
-				printf("hxcfe_localRepair : Pattern size = %d + 2 bits...\n",test_pattern_size);
+				printf("libflux_localRepair : Pattern size = %d + 2 bits...\n",test_pattern_size);
 
 				if( numberofcells && ( test_pattern_size < 28 ) )
 				{
@@ -1251,24 +1246,24 @@ int32_t hxcfe_localRepair( HXCFE* floppycontext, HXCFE_FLOPPY *fp, int32_t track
 					old_pattern = 0x00000000;
 					for(i = 0; i < test_pattern_size;i++)
 					{
-						if(hxcfe_getCellState( floppycontext, currentside, (start_cellnumber + i) % currentside->tracklen))
+						if(libflux_getCellState( flux_ctx, currentside, (start_cellnumber + i) % currentside->tracklen))
 						{
 							old_pattern = old_pattern | (0x00000001 << i);
 						}
 					}
 
-					hxcfe_removeCell( floppycontext, currentside, start_cellnumber, test_pattern_size );
+					libflux_removeCell( flux_ctx, currentside, start_cellnumber, test_pattern_size );
 
 					test_pattern_size = 0;
 					do
 					{
 						if(test_pattern_size < numberofcells + 2)
 						{
-							hxcfe_insertCell( floppycontext, currentside, start_cellnumber, 0,  1 );
+							libflux_insertCell( flux_ctx, currentside, start_cellnumber, 0,  1 );
 							test_pattern_size++;
 						}
 
-						printf("hxcfe_localRepair : testing %d bits patterns...\n",test_pattern_size);
+						printf("libflux_localRepair : testing %d bits patterns...\n",test_pattern_size);
 
 						if( test_pattern_size > 0 )
 						{
@@ -1281,19 +1276,19 @@ int32_t hxcfe_localRepair( HXCFE* floppycontext, HXCFE_FLOPPY *fp, int32_t track
 								{
 									if( test_pattern & (0x80000000 >> i) )
 									{
-										hxcfe_setCellState( floppycontext, currentside, (start_cellnumber + i) % currentside->tracklen, 1 );
+										libflux_setCellState( flux_ctx, currentside, (start_cellnumber + i) % currentside->tracklen, 1 );
 									}
 									else
 									{
-										hxcfe_setCellState( floppycontext, currentside, (start_cellnumber + i) % currentside->tracklen, 0 );
+										libflux_setCellState( flux_ctx, currentside, (start_cellnumber + i) % currentside->tracklen, 0 );
 									}
 								}
 
 								// Test Sector State...
-								hxcfe_clearTrackCache(sa);
-								hxcfe_resetSearchTrackPosition( sa );
+								libflux_clearTrackCache(sa);
+								libflux_resetSearchTrackPosition( sa );
 
-								sc = hxcfe_searchSector ( sa, track, side, sc_list[sectorpos]->sector, type );
+								sc = libflux_searchSector ( sa, track, side, sc_list[sectorpos]->sector, type );
 
 								if( sc )
 								{
@@ -1301,7 +1296,7 @@ int32_t hxcfe_localRepair( HXCFE* floppycontext, HXCFE_FLOPPY *fp, int32_t track
 									{
 										good_pattern = 1;
 									}
-									hxcfe_freeSectorConfig( sa, sc );
+									libflux_freeSectorConfig( sa, sc );
 								}
 
 								pattern++;
@@ -1316,24 +1311,24 @@ int32_t hxcfe_localRepair( HXCFE* floppycontext, HXCFE_FLOPPY *fp, int32_t track
 						printf("Not found... restoring...\n");
 						if(test_pattern_size < numberofcells)
 						{
-							hxcfe_insertCell( floppycontext, currentside, numberofcells - start_cellnumber, 0,  1 );
+							libflux_insertCell( flux_ctx, currentside, numberofcells - start_cellnumber, 0,  1 );
 							test_pattern_size++;
 						}
 						else
 						{
 							if(test_pattern_size > numberofcells)
-								hxcfe_removeCell( floppycontext, currentside, start_cellnumber, test_pattern_size - numberofcells );
+								libflux_removeCell( flux_ctx, currentside, start_cellnumber, test_pattern_size - numberofcells );
 						}
 
 						for(i = 0; i < numberofcells;i++)
 						{
 							if( old_pattern & (0x00000001 << i) )
 							{
-								hxcfe_setCellState( floppycontext, currentside, (start_cellnumber + i) % currentside->tracklen, 1 );
+								libflux_setCellState( flux_ctx, currentside, (start_cellnumber + i) % currentside->tracklen, 1 );
 							}
 							else
 							{
-								hxcfe_setCellState( floppycontext, currentside, (start_cellnumber + i) % currentside->tracklen, 0 );
+								libflux_setCellState( flux_ctx, currentside, (start_cellnumber + i) % currentside->tracklen, 0 );
 							}
 						}
 					}
@@ -1353,7 +1348,7 @@ int32_t hxcfe_localRepair( HXCFE* floppycontext, HXCFE_FLOPPY *fp, int32_t track
 						printf("\nNew pattern (%.2d bits)     : ",test_pattern_size);
 						for(i = 0; i < test_pattern_size;i++)
 						{
-							if(hxcfe_getCellState( floppycontext, currentside, (start_cellnumber + i) % currentside->tracklen))
+							if(libflux_getCellState( flux_ctx, currentside, (start_cellnumber + i) % currentside->tracklen))
 							{
 								printf("1");
 							}
@@ -1373,36 +1368,36 @@ int32_t hxcfe_localRepair( HXCFE* floppycontext, HXCFE_FLOPPY *fp, int32_t track
 				while( i < nb_sectorfound )
 				{
 
-					hxcfe_freeSectorConfig( sa, sc_list[i] );
+					libflux_freeSectorConfig( sa, sc_list[i] );
 					i++;
 				}
 				free(sc_list);
 			}
-			hxcfe_deinitSectorAccess( sa );
+			libflux_deinitSectorAccess( sa );
 
 			if(!good_pattern)
-				return HXCFE_NOERROR;
+				return LIBFLUX_NOERROR;
 			else
 				return 1; // Repaired...
 		}
 	}
-	return HXCFE_BADPARAMETER;
+	return LIBFLUX_BADPARAMETER;
 }
 
-int32_t hxcfe_sectorRepair( HXCFE* floppycontext, HXCFE_FLOPPY *fp, int32_t track, int32_t side, int32_t start_cellnumber )
+int32_t libflux_sectorRepair( LIBFLUX_CTX* flux_ctx, LIBFLUX_FLOPPY *fp, int32_t track, int32_t side, int32_t start_cellnumber )
 {
 	int32_t i,retrep;
-	HXCFE_SIDE * currentside;
-	HXCFE_SECTORACCESS * sa;
-	HXCFE_SECTCFG** sc_list;
+	LIBFLUX_SIDE * currentside;
+	LIBFLUX_SECTORACCESS * sa;
+	LIBFLUX_SECTCFG** sc_list;
 	int32_t nb_sectorfound,sectorpos,cellnumber;
 
-	if(fp && floppycontext)
+	if(fp && flux_ctx)
 	{
 		if( ( track < fp->floppyNumberOfTrack ) && ( side < fp->floppyNumberOfSide ) )
 		{
-			sa = hxcfe_initSectorAccess( floppycontext, fp );
-			sc_list = hxcfe_getAllTrackISOSectors( sa, track, side, &nb_sectorfound );
+			sa = libflux_initSectorAccess( flux_ctx, fp );
+			sc_list = libflux_getAllTrackISOSectors( sa, track, side, &nb_sectorfound );
 
 			currentside = fp->tracks[track]->sides[side];
 
@@ -1427,7 +1422,7 @@ int32_t hxcfe_sectorRepair( HXCFE* floppycontext, HXCFE_FLOPPY *fp, int32_t trac
 				cellnumber = ( sc_list[sectorpos]->startdataindex + (4*8*2) );
 				do
 				{
-					retrep = hxcfe_localRepair( floppycontext, fp, track, side, cellnumber, 10 );
+					retrep = libflux_localRepair( flux_ctx, fp, track, side, cellnumber, 10 );
 					cellnumber = cellnumber + 8;
 				}while(cellnumber < ( sc_list[sectorpos]->endsectorindex - 16 ) && !retrep);
 			}
@@ -1438,19 +1433,19 @@ int32_t hxcfe_sectorRepair( HXCFE* floppycontext, HXCFE_FLOPPY *fp, int32_t trac
 				while( i < nb_sectorfound )
 				{
 
-					hxcfe_freeSectorConfig( sa, sc_list[i] );
+					libflux_freeSectorConfig( sa, sc_list[i] );
 					i++;
 				}
 				free(sc_list);
 			}
-			hxcfe_deinitSectorAccess( sa );
+			libflux_deinitSectorAccess( sa );
 
 			if(!retrep)
-				return HXCFE_NOERROR;
+				return LIBFLUX_NOERROR;
 			else
 				return 1; // Repaired...
 		}
 	}
 
-	return HXCFE_BADPARAMETER;
+	return LIBFLUX_BADPARAMETER;
 }

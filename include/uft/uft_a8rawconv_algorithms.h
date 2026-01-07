@@ -1,8 +1,7 @@
 /**
  * @file uft_a8rawconv_algorithms.h
- * @brief Atari 8-bit algorithms from a8rawconv
+ * @brief Atari 8-bit algorithms standard
  * 
- * Source: a8rawconv by Avery Lee (Phaeron)
  * https://github.com/atari800/atari800/tree/master/tools/a8rawconv
  * 
  * Key algorithms:
@@ -13,16 +12,16 @@
  * - SuperCardPro device communication
  * - Flux stream processing
  * 
- * License: GPL v2 (a8rawconv)
+ * License: GPL v2 (Atari)
  */
 
 #ifndef UFT_A8RAWCONV_ALGORITHMS_H
 #define UFT_A8RAWCONV_ALGORITHMS_H
 
-#include &lt;stdint.h&gt;
-#include &lt;stdbool.h&gt;
-#include &lt;stddef.h&gt;
-#include &lt;math.h&gt;
+#include <stdint.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <math.h>
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -39,7 +38,6 @@ extern "C" {
 /**
  * Nominal bitcell times at 5ns/tick @ 360 RPM
  * a8rawconv uses 5ns resolution for compatibility with both
- * KryoFlux (40ns) and SuperCardPro (25ns)
  */
 #define UFT_A8_FM_BITCELL_TIME      640     /* 4µs @ 288 RPM = 3.2µs @ 360 RPM */
 #define UFT_A8_A2GCR_BITCELL_TIME   667     /* 4µs @ 300 RPM = 3.33µs @ 360 RPM */

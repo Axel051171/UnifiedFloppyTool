@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 /*
- * applesauce_hw.c - Applesauce FDC Hardware Support
+ * uft_as_hw.c - Applesauce FDC Hardware Support
  * 
  * Professional implementation of Applesauce serial protocol.
  * Enables flux-level reading/writing on Apple II and other platforms.
@@ -32,16 +32,16 @@
  * APPLESAUCE CONSTANTS
  *============================================================================*/
 
-#define APPLESAUCE_ID_STRING    "Applesauce"
-#define APPLESAUCE_PROTOCOL_V2  "client:v2"
-#define APPLESAUCE_SUCCESS      "."
+#define UFT_AS_ID_STRING    "Applesauce"
+#define UFT_AS_PROTOCOL_V2  "client:v2"
+#define UFT_AS_SUCCESS      "."
 
-#define APPLESAUCE_BUFFER_SIZE  8192
-#define APPLESAUCE_TIMEOUT      5000  /* 5 seconds */
-#define APPLESAUCE_BAUD_RATE    B115200
+#define UFT_AS_BUFFER_SIZE  8192
+#define UFT_AS_TIMEOUT      5000  /* 5 seconds */
+#define UFT_AS_BAUD_RATE    B115200
 
 /* Flux timing */
-#define APPLESAUCE_TICK_NS      125   /* 8 MHz = 125ns per tick */
+#define UFT_AS_TICK_NS      125   /* 8 MHz = 125ns per tick */
 
 /*============================================================================*
  * DEVICE HANDLE
@@ -56,12 +56,12 @@ typedef struct {
     
     /* Protocol */
     char cmd_buffer[1024];      /* Command buffer */
-    uint8_t data_buffer[APPLESAUCE_BUFFER_SIZE];  /* Data buffer */
+    uint8_t data_buffer[UFT_AS_BUFFER_SIZE];  /* Data buffer */
     
     /* Statistics */
     unsigned long bytes_read;
     unsigned long bytes_written;
-} applesauce_handle_t;
+} uft_as_handle_t;
 
 /*============================================================================*
  * SERIAL PORT COMMUNICATION
@@ -92,8 +92,8 @@ static int serial_open(const char *port_path, int *fd_out)
     }
     
     /* Set baud rate */
-    cfsetospeed(&tty, APPLESAUCE_BAUD_RATE);
-    cfsetispeed(&tty, APPLESAUCE_BAUD_RATE);
+    cfsetospeed(&tty, UFT_AS_BAUD_RATE);
+    cfsetispeed(&tty, UFT_AS_BAUD_RATE);
     
     /* 8N1 */
     tty.c_cflag = (tty.c_cflag & ~CSIZE) | CS8;
@@ -218,8 +218,8 @@ static int serial_read_bytes(int fd, uint8_t *buffer, size_t len)
 /**
  * @brief Send command and receive response
  */
-static int applesauce_sendrecv(
-    applesauce_handle_t *handle,
+static int uft_as_sendrecv(
+    uft_as_handle_t *handle,
     const char *command,
     char *response,
     size_t max_len
@@ -244,15 +244,15 @@ static int applesauce_sendrecv(
 /**
  * @brief Execute command (expect "." response)
  */
-static int applesauce_do_command(applesauce_handle_t *handle, const char *command)
+static int uft_as_do_command(uft_as_handle_t *handle, const char *command)
 {
     char response[256];
     
-    if (applesauce_sendrecv(handle, command, response, sizeof(response)) < 0) {
+    if (uft_as_sendrecv(handle, command, response, sizeof(response)) < 0) {
         return -1;
     }
     
-    if (strcmp(response, APPLESAUCE_SUCCESS) != 0) {
+    if (strcmp(response, UFT_AS_SUCCESS) != 0) {
         fprintf(stderr, "Applesauce error: '%s' (command: '%s')\n", 
                 response, command);
         return -1;
@@ -264,14 +264,14 @@ static int applesauce_do_command(applesauce_handle_t *handle, const char *comman
 /**
  * @brief Execute command and read additional response
  */
-static int applesauce_do_command_x(
-    applesauce_handle_t *handle,
+static int uft_as_do_command_x(
+    uft_as_handle_t *handle,
     const char *command,
     char *data,
     size_t max_len
 ) {
     /* First execute command */
-    if (applesauce_do_command(handle, command) < 0) {
+    if (uft_as_do_command(handle, command) < 0) {
         return -1;
     }
     
@@ -290,13 +290,13 @@ static int applesauce_do_command_x(
 /**
  * @brief Initialize Applesauce device
  */
-int applesauce_init(const char *port_path, applesauce_handle_t **handle_out)
+int uft_as_init(const char *port_path, uft_as_handle_t **handle_out)
 {
     if (!port_path || !handle_out) {
         return -1;
     }
     
-    applesauce_handle_t *handle = calloc(1, sizeof(*handle));
+    uft_as_handle_t *handle = calloc(1, sizeof(*handle));
     if (!handle) {
         return -1;
     }
@@ -311,13 +311,13 @@ int applesauce_init(const char *port_path, applesauce_handle_t **handle_out)
     
     /* Check device ID */
     char response[256];
-    if (applesauce_sendrecv(handle, "?", response, sizeof(response)) < 0) {
+    if (uft_as_sendrecv(handle, "?", response, sizeof(response)) < 0) {
         close(handle->serial_fd);
         free(handle);
         return -1;
     }
     
-    if (strcmp(response, APPLESAUCE_ID_STRING) != 0) {
+    if (strcmp(response, UFT_AS_ID_STRING) != 0) {
         fprintf(stderr, "Not an Applesauce device (got '%s')\n", response);
         close(handle->serial_fd);
         free(handle);
@@ -325,7 +325,7 @@ int applesauce_init(const char *port_path, applesauce_handle_t **handle_out)
     }
     
     /* Set protocol version */
-    if (applesauce_do_command(handle, APPLESAUCE_PROTOCOL_V2) < 0) {
+    if (uft_as_do_command(handle, UFT_AS_PROTOCOL_V2) < 0) {
         close(handle->serial_fd);
         free(handle);
         return -1;
@@ -342,7 +342,7 @@ int applesauce_init(const char *port_path, applesauce_handle_t **handle_out)
 /**
  * @brief Close Applesauce device
  */
-void applesauce_close(applesauce_handle_t *handle)
+void uft_as_close(uft_as_handle_t *handle)
 {
     if (!handle) {
         return;
@@ -350,8 +350,8 @@ void applesauce_close(applesauce_handle_t *handle)
     
     /* Disconnect gracefully */
     if (handle->connected) {
-        applesauce_do_command(handle, "motor:off");
-        applesauce_do_command(handle, "disconnect");
+        uft_as_do_command(handle, "motor:off");
+        uft_as_do_command(handle, "disconnect");
     }
     
     close(handle->serial_fd);
@@ -361,7 +361,7 @@ void applesauce_close(applesauce_handle_t *handle)
 /**
  * @brief Connect to drive
  */
-int applesauce_connect(applesauce_handle_t *handle)
+int uft_as_connect(uft_as_handle_t *handle)
 {
     if (!handle) {
         return -1;
@@ -372,19 +372,19 @@ int applesauce_connect(applesauce_handle_t *handle)
     }
     
     /* Connect sequence */
-    if (applesauce_do_command(handle, "connect") < 0) {
+    if (uft_as_do_command(handle, "connect") < 0) {
         return -1;
     }
     
-    if (applesauce_do_command(handle, "drive:enable") < 0) {
+    if (uft_as_do_command(handle, "drive:enable") < 0) {
         return -1;
     }
     
-    if (applesauce_do_command(handle, "motor:on") < 0) {
+    if (uft_as_do_command(handle, "motor:on") < 0) {
         return -1;
     }
     
-    if (applesauce_do_command(handle, "head:zero") < 0) {
+    if (uft_as_do_command(handle, "head:zero") < 0) {
         return -1;
     }
     
@@ -398,14 +398,14 @@ int applesauce_connect(applesauce_handle_t *handle)
 /**
  * @brief Seek to track
  */
-int applesauce_seek(applesauce_handle_t *handle, int track)
+int uft_as_seek(uft_as_handle_t *handle, int track)
 {
     if (!handle) {
         return -1;
     }
     
     if (!handle->connected) {
-        if (applesauce_connect(handle) < 0) {
+        if (uft_as_connect(handle) < 0) {
             return -1;
         }
     }
@@ -413,12 +413,12 @@ int applesauce_seek(applesauce_handle_t *handle, int track)
     char cmd[256];
     
     if (track == 0) {
-        if (applesauce_do_command(handle, "head:zero") < 0) {
+        if (uft_as_do_command(handle, "head:zero") < 0) {
             return -1;
         }
     } else {
         snprintf(cmd, sizeof(cmd), "head:track%d", track);
-        if (applesauce_do_command(handle, cmd) < 0) {
+        if (uft_as_do_command(handle, cmd) < 0) {
             return -1;
         }
     }
@@ -430,8 +430,8 @@ int applesauce_seek(applesauce_handle_t *handle, int track)
 /**
  * @brief Get rotational period (RPM measurement)
  */
-int applesauce_get_rpm(
-    applesauce_handle_t *handle,
+int uft_as_get_rpm(
+    uft_as_handle_t *handle,
     double *period_us_out
 ) {
     if (!handle || !period_us_out) {
@@ -439,7 +439,7 @@ int applesauce_get_rpm(
     }
     
     if (!handle->connected) {
-        if (applesauce_connect(handle) < 0) {
+        if (uft_as_connect(handle) < 0) {
             return -1;
         }
     }
@@ -447,7 +447,7 @@ int applesauce_get_rpm(
     char response[256];
     
     /* Query speed */
-    if (applesauce_do_command_x(handle, "sync:?speed", response, sizeof(response)) < 0) {
+    if (uft_as_do_command_x(handle, "sync:?speed", response, sizeof(response)) < 0) {
         return -1;
     }
     
@@ -465,8 +465,8 @@ int applesauce_get_rpm(
 /**
  * @brief Read flux data from track
  */
-int applesauce_read_flux(
-    applesauce_handle_t *handle,
+int uft_as_read_flux(
+    uft_as_handle_t *handle,
     int side,
     uint8_t **flux_data_out,
     size_t *flux_len_out
@@ -476,7 +476,7 @@ int applesauce_read_flux(
     }
     
     if (!handle->connected) {
-        if (applesauce_connect(handle) < 0) {
+        if (uft_as_connect(handle) < 0) {
             return -1;
         }
     }
@@ -484,14 +484,14 @@ int applesauce_read_flux(
     /* Set side */
     char cmd[256];
     snprintf(cmd, sizeof(cmd), "head:side%d", side);
-    if (applesauce_do_command(handle, cmd) < 0) {
+    if (uft_as_do_command(handle, cmd) < 0) {
         return -1;
     }
     
     /* Read flux data */
     /* Query max data size */
     char response[256];
-    if (applesauce_sendrecv(handle, "data:?max", response, sizeof(response)) < 0) {
+    if (uft_as_sendrecv(handle, "data:?max", response, sizeof(response)) < 0) {
         return -1;
     }
     
@@ -502,7 +502,7 @@ int applesauce_read_flux(
     
     /* Request flux data read */
     snprintf(cmd, sizeof(cmd), "data:<%d", max_bytes);
-    if (applesauce_do_command(handle, cmd) < 0) {
+    if (uft_as_do_command(handle, cmd) < 0) {
         return -1;
     }
     
@@ -533,8 +533,8 @@ int applesauce_read_flux(
 /**
  * @brief Write flux data to track
  */
-int applesauce_write_flux(
-    applesauce_handle_t *handle,
+int uft_as_write_flux(
+    uft_as_handle_t *handle,
     int side,
     const uint8_t *flux_data,
     size_t flux_len
@@ -544,7 +544,7 @@ int applesauce_write_flux(
     }
     
     if (!handle->connected) {
-        if (applesauce_connect(handle) < 0) {
+        if (uft_as_connect(handle) < 0) {
             return -1;
         }
     }
@@ -552,13 +552,13 @@ int applesauce_write_flux(
     /* Set side */
     char cmd[256];
     snprintf(cmd, sizeof(cmd), "head:side%d", side);
-    if (applesauce_do_command(handle, cmd) < 0) {
+    if (uft_as_do_command(handle, cmd) < 0) {
         return -1;
     }
     
     /* Write flux data */
     snprintf(cmd, sizeof(cmd), "data:>%zu", flux_len);
-    if (applesauce_do_command(handle, cmd) < 0) {
+    if (uft_as_do_command(handle, cmd) < 0) {
         return -1;
     }
     
@@ -580,7 +580,7 @@ int applesauce_write_flux(
 /**
  * @brief Detect Applesauce devices
  */
-int applesauce_detect_devices(char ***device_list_out, int *count_out)
+int uft_as_detect_devices(char ***device_list_out, int *count_out)
 {
     if (!device_list_out || !count_out) {
         return -1;
@@ -605,11 +605,11 @@ int applesauce_detect_devices(char ***device_list_out, int *count_out)
     
     /* Try each path */
     for (int i = 0; serial_paths[i] != NULL; i++) {
-        applesauce_handle_t *handle;
-        if (applesauce_init(serial_paths[i], &handle) == 0) {
+        uft_as_handle_t *handle;
+        if (uft_as_init(serial_paths[i], &handle) == 0) {
             list[count] = strdup(serial_paths[i]);
             count++;
-            applesauce_close(handle);
+            uft_as_close(handle);
         }
     }
     
@@ -622,8 +622,8 @@ int applesauce_detect_devices(char ***device_list_out, int *count_out)
 /**
  * @brief Get statistics
  */
-void applesauce_get_stats(
-    applesauce_handle_t *handle,
+void uft_as_get_stats(
+    uft_as_handle_t *handle,
     unsigned long *bytes_read,
     unsigned long *bytes_written
 ) {

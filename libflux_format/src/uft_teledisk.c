@@ -2,7 +2,6 @@
  * @file uft_teledisk.c
  * @brief TeleDisk TD0 Format Implementation
  * 
- * Algorithms ported from DiskImageTool by Digitoxin1:
  * - TD0Lzhuf: LZHUF decompression (TD0 2.x)
  * - TD0Lzw: LZW decompression (TD0 1.x)
  * - TD0Rle: RLE expansion

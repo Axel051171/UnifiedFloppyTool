@@ -1,11 +1,11 @@
 /**
  * @file uft_access.h
- * @brief Extended Access API - Enhanced a8rawconv compatibility
+ * @brief Extended Access API - Enhanced Atari 8-bit compatibility
  * 
  * Provides backwards-compatible extensions to the standard CHS access pattern
  * with explicit geometry, format hints, progress callbacks, and verification.
  * 
- * Key improvements over basic a8rawconv:
+ * Key improvements over basic converters:
  * - Explicit geometry (eliminates heuristics)
  * - Format detection override
  * - Sector numbering clarity (0-based vs 1-based)
@@ -152,7 +152,7 @@ typedef struct {
 void uft_access_options_init(uft_access_options_t* opts);
 
 /**
- * @brief Read sector with extended options (a8rawconv compatible)
+ * @brief Read sector with extended options (Atari compatible)
  * 
  * Enhanced version of standard read_sector with explicit control.
  * Fully backwards compatible when opts == NULL.

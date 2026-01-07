@@ -2,7 +2,6 @@
  * @file uft_amiga_mfm.h
  * @brief Amiga MFM Encoding/Decoding (OFS/FFS)
  * 
- * Basierend auf amiga-stuff-master von Keir Fraser
  * - mfm.S (68k Assembly → C Port)
  * - floppy.c (Hardware-Konstanten)
  * 

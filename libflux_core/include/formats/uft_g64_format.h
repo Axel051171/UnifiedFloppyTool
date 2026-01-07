@@ -24,7 +24,6 @@
  *
  * Sources:
  * - VICE emulator documentation
- * - nibtools by Pete Rittwage
  * - User-provided G64 offset table
  *
  * Build:
@@ -67,7 +66,6 @@ extern "C" {
 #define UFT_G64_TRACK_SIZE_Z1   6667    /* Zone 1 (tracks 25-30): 18 sectors */
 #define UFT_G64_TRACK_SIZE_Z0   6250    /* Zone 0 (tracks 31-42): 17 sectors */
 
-/* Standard track sizes (nibtools: $1BDE per track for zones 18-24) */
 #define UFT_G64_NIBTOOLS_TRACK_SIZE  0x1BDE  /* 7134 bytes */
 
 /* Speed zones */

@@ -469,12 +469,12 @@ static const format_entry_t FLUX_FORMATS[] = {
         .extension = ".hfe",
         .magic_bytes = "HXCPICFE",
         .magic_len = 8,
-        .technical_name = "HxC Floppy Emulator v1",
+        .technical_name = "UFT HFE Format v1",
         .marketing_name = "HFE Standard",
         .common_name = "HFE Image",
         .family = FORMAT_FAMILY_FLUX,
         .era = "2006-",
-        .description = "Jean-François Del Nero's emulator format"
+        .description = "UFT Project's emulator format"
     },
     {
         .id = "HFE_V2",
@@ -517,7 +517,7 @@ static const format_entry_t FLUX_FORMATS[] = {
         .description = "Software Preservation Society master format"
     },
     {
-        .id = "KF_RAW",
+        .id = "UFT_KF_RAW",
         .extension = ".raw",
         .technical_name = "KryoFlux Raw",
         .marketing_name = "KryoFlux Stream",
@@ -540,7 +540,6 @@ static const format_entry_t FLUX_FORMATS[] = {
         .preserves_timing = true,
         .preserves_weak_bits = true,
         .lossless = true,
-        .description = "Keir Fraser's open-source flux format"
     },
     {
         .id = "UFF_V1",

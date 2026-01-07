@@ -34,7 +34,6 @@ class QCustomPlot;  // Optional: for live graph
 enum class PLLPresetCategory {
     General = 0,    // Default, Aggressive, Conservative, Forensic
     Platform,       // IBM, Amiga, Atari, C64, Apple, Mac
-    Hardware        // Greaseweazle, KryoFlux, FluxEngine, SCP
 };
 
 /**

@@ -2,8 +2,7 @@
  * @file uft_td0.c
  * @brief Teledisk (TD0) Format Implementation for UFT
  * 
- * Based on reverse-engineering work by Dave Dunfield, Will Krantz,
- * Sergey Erokhin, Simon Owen, and Haruhiko Okumura (LZSS).
+ * Based on reverse-engineering work by various authors, Will Krantz,
  * 
  * @copyright UFT Project
  */

@@ -11,7 +11,7 @@
  * - Compression detection (unavailable/normal/compressed/deleted)
  * - Raw sector image conversion
  * 
- * ImageDisk was created by Dave Dunfield for CP/M disk preservation.
+ * ImageDisk was created for CP/M disk preservation.
  * It stores full track geometry including interleave and skew.
  * 
  * @author GOD MODE v5.3.8
@@ -448,8 +448,8 @@ int imd_read_sector(imd_context_t *ctx, uint8_t cyl, uint8_t head,
     /* Skip sector map */
     if (fseek(ctx->fp, track->header.sectors, SEEK_CUR) != 0) { /* seek error */ }
     /* Skip optional maps */
-    if (track->has_cyl_map) fseek(ctx->fp, track->header.sectors, SEEK_CUR);
-    if (track->has_head_map) fseek(ctx->fp, track->header.sectors, SEEK_CUR);
+    if (track->has_cyl_map) (void)fseek(ctx->fp, track->header.sectors, SEEK_CUR);
+    if (track->has_head_map) (void)fseek(ctx->fp, track->header.sectors, SEEK_CUR);
     
     /* Find sector */
     for (int s = 0; s < track->header.sectors; s++) {
@@ -488,7 +488,7 @@ int imd_read_sector(imd_context_t *ctx, uint8_t cyl, uint8_t head,
             /* No data */
         } else if (type == IMD_SEC_COMPRESS || type == IMD_SEC_DEL_COMP ||
                    type == IMD_SEC_ERR_COMP || type == IMD_SEC_DEL_ERR_C) {
-            fseek(ctx->fp, 1, SEEK_CUR);  /* Fill byte only */
+            (void)fseek(ctx->fp, 1, SEEK_CUR);  /* Fill byte only */
         } else {
             if (fseek(ctx->fp, track->sector_size, SEEK_CUR) != 0) { /* seek error */ }
         }

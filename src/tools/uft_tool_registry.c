@@ -20,8 +20,8 @@
 
 extern const uft_tool_adapter_t uft_tool_greaseweazle;
 extern const uft_tool_adapter_t uft_tool_fluxengine;
-extern const uft_tool_adapter_t uft_tool_nibtools;
-extern const uft_tool_adapter_t uft_tool_hxcfe;
+extern const uft_tool_adapter_t uft_tool_GCR tools;
+extern const uft_tool_adapter_t uft_tool_libflux;
 extern const uft_tool_adapter_t uft_tool_adftools;
 extern const uft_tool_adapter_t uft_tool_disk_analyse;
 
@@ -52,8 +52,8 @@ uft_error_t uft_tool_registry_init(void) {
     const uft_tool_adapter_t* builtin_tools[] = {
         &uft_tool_greaseweazle,
         &uft_tool_fluxengine,
-        &uft_tool_nibtools,
-        &uft_tool_hxcfe,
+        &uft_tool_GCR tools,
+        &uft_tool_libflux,
         &uft_tool_adftools,
         &uft_tool_disk_analyse,
     };

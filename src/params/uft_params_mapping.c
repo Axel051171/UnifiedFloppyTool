@@ -9,10 +9,15 @@
  */
 
 #include "uft/uft_params.h"
+#include "uft/core/uft_safe_parse.h"
 #include "uft/uft_tool_adapter.h"
+#include "uft/core/uft_safe_parse.h"
 #include <stdlib.h>
+#include "uft/core/uft_safe_parse.h"
 #include <string.h>
+#include "uft/core/uft_safe_parse.h"
 #include <stdio.h>
+#include "uft/core/uft_safe_parse.h"
 
 // ============================================================================
 // GUI Field Aliases (für verschiedene Terminologien)
@@ -90,7 +95,7 @@ uft_error_t uft_params_from_gui(uft_params_t* params,
     // Convert based on type
     switch (schema->type) {
         case UFT_PARAM_TYPE_INT:
-            *(int*)field_ptr = atoi(value);
+            { int32_t t; if(uft_parse_int32(value,&t,10)) *(int*)field_ptr=t; }
             break;
             
         case UFT_PARAM_TYPE_DOUBLE:
@@ -108,7 +113,7 @@ uft_error_t uft_params_from_gui(uft_params_t* params,
             break;
             
         case UFT_PARAM_TYPE_ENUM:
-            *(int*)field_ptr = atoi(value);  // Simplified
+            { int32_t t; if(uft_parse_int32(value,&t,10)) *(int*)field_ptr=t; }  // Simplified
             break;
             
         default:
@@ -137,14 +142,14 @@ static const tool_arg_mapping_t g_gw_mappings[] = {
     { NULL, NULL, NULL }
 };
 
-static const tool_arg_mapping_t g_fluxengine_mappings[] = {
+static const tool_arg_mapping_t g_uft_fe_mappings[] = {
     { "geometry.cylinder_start",    "--cylinders",  "%d" },
     { "geometry.cylinder_end",      NULL,           "-%d" },
     { "geometry.head_start",        "--heads",      "%d" },
     { NULL, NULL, NULL }
 };
 
-static const tool_arg_mapping_t g_nibtools_mappings[] = {
+static const tool_arg_mapping_t g_GCR tools_mappings[] = {
     { "geometry.cylinder_start",    "--start-track", "%d" },
     { "geometry.cylinder_end",      "--end-track",   "%d" },
     { "global.global_retries",      "--retries",     "%d" },
@@ -153,8 +158,8 @@ static const tool_arg_mapping_t g_nibtools_mappings[] = {
 
 static const tool_arg_mapping_t* get_tool_mappings(const char* tool_name) {
     if (strcmp(tool_name, "gw") == 0) return g_gw_mappings;
-    if (strcmp(tool_name, "fluxengine") == 0) return g_fluxengine_mappings;
-    if (strcmp(tool_name, "nibtools") == 0) return g_nibtools_mappings;
+    if (strcmp(tool_name, "fluxengine") == 0) return g_uft_fe_mappings;
+    if (strcmp(tool_name, "GCR tools") == 0) return g_GCR tools_mappings;
     return NULL;
 }
 
@@ -225,7 +230,7 @@ uft_error_t uft_params_to_tool_args(const uft_params_t* params,
                 if (pos > 0) {
                     args[pos++] = ' ';
                 }
-                strcpy(args + pos, arg_buf);
+                memcpy(args + pos, arg_buf, strlen(arg_buf) + 1);  /* Safe: size checked */
                 pos += strlen(arg_buf);
             }
         }
@@ -252,7 +257,7 @@ uft_error_t uft_params_to_tool_args(const uft_params_t* params,
                 // Already handled above
             } else if (pos + strlen(track_arg) + 2 < args_size) {
                 if (pos > 0) args[pos++] = ' ';
-                strcpy(args + pos, track_arg);
+                memcpy(args + pos, track_arg, strlen(track_arg) + 1);  /* Safe: size checked */
             }
         }
     }

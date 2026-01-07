@@ -1,3 +1,6 @@
+#ifndef UFT_FORMATS_AMIGA_EXT_MFM_TABLE_H
+#define UFT_FORMATS_AMIGA_EXT_MFM_TABLE_H
+
 
 static const unsigned short MFM_tab[]=
 {
@@ -34,3 +37,5 @@ static const unsigned short MFM_tab[]=
 	0x552A,0x5529,0x5524,0x5525,0x5512,0x5511,0x5514,0x5515,
 	0x554A,0x5549,0x5544,0x5545,0x5552,0x5551,0x5554,0x5555
 };
+
+#endif /* UFT_FORMATS_AMIGA_EXT_MFM_TABLE_H */

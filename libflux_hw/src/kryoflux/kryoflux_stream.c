@@ -1,9 +1,6 @@
 // SPDX-License-Identifier: MIT
 /*
- * kryoflux_stream.c - KryoFlux Stream Decoder
  * 
- * Professional stream decoder for KryoFlux STREAM format.
- * Based on analysis of disk-utilities by Keir Fraser.
  * 
  * Stream Format Analysis:
  *   - Opcodes 0x00-0x0D for flux timing and control
@@ -14,7 +11,7 @@
  * @date 2024-12-25
  */
 
-#include "../include/kryoflux_hw.h"
+#include "../include/uft_kf_hw.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -26,7 +23,6 @@
 #include <unistd.h>
 
 /*============================================================================*
- * TIMING CONSTANTS (From KryoFlux Hardware Specs)
  *============================================================================*/
 
 /* Master clock frequency: (18.432 MHz * 73) / 14 / 2 */
@@ -44,39 +40,39 @@
 
 typedef enum {
     /* Flux samples (0x00-0x07): 2-byte values */
-    KF_OPCODE_FLUX2_0   = 0x00,
-    KF_OPCODE_FLUX2_1   = 0x01,
-    KF_OPCODE_FLUX2_2   = 0x02,
-    KF_OPCODE_FLUX2_3   = 0x03,
-    KF_OPCODE_FLUX2_4   = 0x04,
-    KF_OPCODE_FLUX2_5   = 0x05,
-    KF_OPCODE_FLUX2_6   = 0x06,
-    KF_OPCODE_FLUX2_7   = 0x07,
+    UFT_KF_OPCODE_FLUX2_0   = 0x00,
+    UFT_KF_OPCODE_FLUX2_1   = 0x01,
+    UFT_KF_OPCODE_FLUX2_2   = 0x02,
+    UFT_KF_OPCODE_FLUX2_3   = 0x03,
+    UFT_KF_OPCODE_FLUX2_4   = 0x04,
+    UFT_KF_OPCODE_FLUX2_5   = 0x05,
+    UFT_KF_OPCODE_FLUX2_6   = 0x06,
+    UFT_KF_OPCODE_FLUX2_7   = 0x07,
     
     /* NOPs (padding) */
-    KF_OPCODE_NOP1      = 0x08,  /**< 1-byte NOP */
-    KF_OPCODE_NOP2      = 0x09,  /**< 2-byte NOP */
-    KF_OPCODE_NOP3      = 0x0A,  /**< 3-byte NOP */
+    UFT_KF_OPCODE_NOP1      = 0x08,  /**< 1-byte NOP */
+    UFT_KF_OPCODE_NOP2      = 0x09,  /**< 2-byte NOP */
+    UFT_KF_OPCODE_NOP3      = 0x0A,  /**< 3-byte NOP */
     
     /* Special values */
-    KF_OPCODE_OVERFLOW  = 0x0B,  /**< Add 0x10000 to value */
-    KF_OPCODE_VALUE16   = 0x0C,  /**< Force 2-byte sample */
+    UFT_KF_OPCODE_OVERFLOW  = 0x0B,  /**< Add 0x10000 to value */
+    UFT_KF_OPCODE_VALUE16   = 0x0C,  /**< Force 2-byte sample */
     
     /* Out-of-Band data */
-    KF_OPCODE_OOB       = 0x0D   /**< OOB block follows */
-} kf_stream_opcode_t;
+    UFT_KF_OPCODE_OOB       = 0x0D   /**< OOB block follows */
+} uft_kf_stream_opcode_t;
 
 /*============================================================================*
  * OOB DATA TYPES
  *============================================================================*/
 
 typedef enum {
-    KF_OOB_STREAM_READ  = 0x01,  /**< Stream position marker */
-    KF_OOB_INDEX        = 0x02,  /**< Index pulse position */
-    KF_OOB_STREAM_END   = 0x03,  /**< End of stream block */
-    KF_OOB_KF_INFO      = 0x04,  /**< KryoFlux device info */
-    KF_OOB_EOF          = 0x0D   /**< End of file */
-} kf_oob_type_t;
+    UFT_KF_OOB_STREAM_READ  = 0x01,  /**< Stream position marker */
+    UFT_KF_OOB_INDEX        = 0x02,  /**< Index pulse position */
+    UFT_KF_OOB_STREAM_END   = 0x03,  /**< End of stream block */
+    UFT_KF_OOB_UFT_KF_INFO      = 0x04,  /**< KryoFlux device info */
+    UFT_KF_OOB_EOF          = 0x0D   /**< End of file */
+} uft_kf_oob_type_t;
 
 /*============================================================================*
  * INTERNAL STRUCTURES
@@ -124,7 +120,6 @@ static inline uint32_t le32toh_inline(const uint8_t *p) {
 /**
  * @brief Parse stream to extract index pulse positions
  * 
- * Algorithm extracted from disk-utilities analysis.
  * Scans stream for OOB blocks containing index markers.
  * 
  * @param data Stream data
@@ -150,7 +145,7 @@ static uint32_t* decode_index_positions(
     while (i < size) {
         uint8_t opcode = data[i];
         
-        if (opcode == KF_OPCODE_OOB) {
+        if (opcode == UFT_KF_OPCODE_OOB) {
             /* OOB block: 4 bytes header + variable data */
             if (i + 4 > size) break;
             
@@ -159,7 +154,7 @@ static uint32_t* decode_index_positions(
             
             i += 4;
             
-            if (oob_type == KF_OOB_INDEX) {
+            if (oob_type == UFT_KF_OOB_INDEX) {
                 /* Index pulse OOB */
                 if (oob_size >= 4 && i + 4 <= size) {
                     uint32_t pos = le32toh_inline(&data[i]);
@@ -168,22 +163,22 @@ static uint32_t* decode_index_positions(
                         positions[idx_count++] = pos;
                     }
                 }
-            } else if (oob_type == KF_OOB_EOF) {
+            } else if (oob_type == UFT_KF_OOB_EOF) {
                 /* EOF marker */
                 break;
             }
             
             i += oob_size;
-        } else if (opcode >= KF_OPCODE_FLUX2_0 && opcode <= KF_OPCODE_FLUX2_7) {
+        } else if (opcode >= UFT_KF_OPCODE_FLUX2_0 && opcode <= UFT_KF_OPCODE_FLUX2_7) {
             /* 2-byte flux sample */
             i += 2;
-        } else if (opcode == KF_OPCODE_NOP1 || opcode == KF_OPCODE_OVERFLOW) {
+        } else if (opcode == UFT_KF_OPCODE_NOP1 || opcode == UFT_KF_OPCODE_OVERFLOW) {
             i += 1;
-        } else if (opcode == KF_OPCODE_NOP2) {
+        } else if (opcode == UFT_KF_OPCODE_NOP2) {
             i += 2;
-        } else if (opcode == KF_OPCODE_NOP3 || opcode == KF_OPCODE_VALUE16) {
-            i += (opcode == KF_OPCODE_NOP3) ? 3 : 1;
-            if (opcode == KF_OPCODE_VALUE16 && i + 2 <= size) {
+        } else if (opcode == UFT_KF_OPCODE_NOP3 || opcode == UFT_KF_OPCODE_VALUE16) {
+            i += (opcode == UFT_KF_OPCODE_NOP3) ? 3 : 1;
+            if (opcode == UFT_KF_OPCODE_VALUE16 && i + 2 <= size) {
                 i += 2;  /* VALUE16 forces 2-byte sample */
             }
         } else {
@@ -207,7 +202,6 @@ static uint32_t* decode_index_positions(
 /**
  * @brief Decode next flux transition from stream
  * 
- * Core decoder algorithm based on KryoFlux stream format analysis.
  * Implements opcode parsing and timing conversion.
  * 
  * @param decoder Decoder state
@@ -236,7 +230,7 @@ static int decode_next_flux(
     while (!done && decoder->data_idx < decoder->data_size) {
         uint8_t opcode = decoder->data[decoder->data_idx];
         
-        if (opcode >= KF_OPCODE_FLUX2_0 && opcode <= KF_OPCODE_FLUX2_7) {
+        if (opcode >= UFT_KF_OPCODE_FLUX2_0 && opcode <= UFT_KF_OPCODE_FLUX2_7) {
             /* 2-byte flux sample */
             if (decoder->data_idx + 2 > decoder->data_size) break;
             
@@ -245,24 +239,24 @@ static int decode_next_flux(
             decoder->stream_idx += 2;
             done = true;
             
-        } else if (opcode == KF_OPCODE_NOP1) {
+        } else if (opcode == UFT_KF_OPCODE_NOP1) {
             decoder->data_idx += 1;
             decoder->stream_idx += 1;
             
-        } else if (opcode == KF_OPCODE_NOP2) {
+        } else if (opcode == UFT_KF_OPCODE_NOP2) {
             decoder->data_idx += 2;
             decoder->stream_idx += 2;
             
-        } else if (opcode == KF_OPCODE_NOP3) {
+        } else if (opcode == UFT_KF_OPCODE_NOP3) {
             decoder->data_idx += 3;
             decoder->stream_idx += 3;
             
-        } else if (opcode == KF_OPCODE_OVERFLOW) {
+        } else if (opcode == UFT_KF_OPCODE_OVERFLOW) {
             flux_value += 0x10000;
             decoder->data_idx += 1;
             decoder->stream_idx += 1;
             
-        } else if (opcode == KF_OPCODE_VALUE16) {
+        } else if (opcode == UFT_KF_OPCODE_VALUE16) {
             /* VALUE16: force 2-byte sample */
             decoder->data_idx += 1;
             decoder->stream_idx += 1;
@@ -275,7 +269,7 @@ static int decode_next_flux(
             decoder->stream_idx += 2;
             done = true;
             
-        } else if (opcode == KF_OPCODE_OOB) {
+        } else if (opcode == UFT_KF_OPCODE_OOB) {
             /* OOB block */
             if (decoder->data_idx + 4 > decoder->data_size) break;
             
@@ -285,7 +279,7 @@ static int decode_next_flux(
             decoder->data_idx += 4;
             
             /* Handle different OOB types */
-            if (oob_type == KF_OOB_STREAM_READ || oob_type == KF_OOB_STREAM_END) {
+            if (oob_type == UFT_KF_OOB_STREAM_READ || oob_type == UFT_KF_OOB_STREAM_END) {
                 /* Verify stream position */
                 if (oob_size >= 4 && decoder->data_idx + 4 <= decoder->data_size) {
                     uint32_t pos = le32toh_inline(&decoder->data[decoder->data_idx]);
@@ -294,7 +288,7 @@ static int decode_next_flux(
                                 decoder->stream_idx, pos);
                     }
                 }
-            } else if (oob_type == KF_OOB_EOF) {
+            } else if (oob_type == UFT_KF_OOB_EOF) {
                 decoder->data_idx = decoder->data_size;
                 break;
             }
@@ -327,7 +321,6 @@ static int decode_next_flux(
  *============================================================================*/
 
 /**
- * @brief Decode KryoFlux stream file
  * 
  * Professional stream decoder with full error handling.
  * 
@@ -335,9 +328,9 @@ static int decode_next_flux(
  * @param result_out Decoded stream (output, allocated by this function)
  * @return 0 on success, negative on error
  */
-int kryoflux_decode_stream_file(
+int uft_kf_decode_stream_file(
     const char *filename,
-    kf_stream_result_t *result_out
+    uft_kf_stream_result_t *result_out
 ) {
     if (!filename || !result_out) {
         return -1;
@@ -396,7 +389,7 @@ int kryoflux_decode_stream_file(
     
     /* Decode all flux transitions */
     #define MAX_TRANSITIONS 500000
-    kf_flux_transition_t *transitions = malloc(MAX_TRANSITIONS * sizeof(*transitions));
+    uft_kf_flux_transition_t *transitions = malloc(MAX_TRANSITIONS * sizeof(*transitions));
     if (!transitions) {
         free(indices);
         free(data);
@@ -453,7 +446,7 @@ int kryoflux_decode_stream_file(
 /**
  * @brief Free stream result
  */
-void kryoflux_free_stream_result(kf_stream_result_t *result)
+void uft_kf_free_stream_result(uft_kf_stream_result_t *result)
 {
     if (!result) return;
     

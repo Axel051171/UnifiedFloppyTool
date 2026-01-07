@@ -1,12 +1,10 @@
 /**
  * @file uft_hfe.h
- * @brief HxC Floppy Emulator (HFE) Format Support
+ * @brief UFT HFE Format (HFE) Format Support
  * 
- * Based on SAMdisk by Simon Owen
  * License: MIT
  * 
  * Format specification:
- * http://hxc2001.com/download/floppy_drive_emulator/SDCard_HxC_Floppy_Emulator_HFE_file_format.pdf
  */
 
 #ifndef UFT_HFE_H
@@ -83,8 +81,8 @@ typedef struct {
     uint8_t  number_of_sides;       /**< Number of sides (1-2) */
     uint8_t  track_encoding;        /**< Track encoding (uft_hfe_encoding_t) */
     uint16_t bitrate_kbps;          /**< Data rate in kbps (LE) */
-    uint16_t floppy_rpm;            /**< RPM (0 = use default) */
-    uint8_t  floppy_interface_mode; /**< Interface mode */
+    uint16_t uft_floppy_rpm;            /**< RPM (0 = use default) */
+    uint8_t  uft_floppy_interface_mode; /**< Interface mode */
     uint8_t  reserved1;             /**< Reserved (0x01) */
     uint16_t track_list_offset;     /**< Track LUT offset in 512-byte blocks */
     uint8_t  write_allowed;         /**< 0xFF = writable */

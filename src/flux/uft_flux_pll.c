@@ -2,7 +2,6 @@
  * @file uft_flux_pll.c
  * @brief Flux Stream PLL Implementation for UFT
  * 
- * Based on analysis of HxCFloppyEmulator's fluxStreamAnalyzer.c
  * 
  * @copyright UFT Project
  */

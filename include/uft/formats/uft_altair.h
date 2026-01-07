@@ -3,7 +3,6 @@
  * @brief Altair 8800 HD Floppy Disk Support for UFT
  * 
  * Support for Altair 8800 high-density floppy disk format as used
- * by the FDC+ controller. Based on analysis of FLOP2PC.ASM and
  * PC2FLOP.ASM transfer utilities.
  * 
  * The Altair HD format uses a unique track layout with 149 tracks

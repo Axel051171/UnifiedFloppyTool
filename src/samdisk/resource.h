@@ -1,6 +1,5 @@
 //{{NO_DEPENDENCIES}}
 // Microsoft Visual C++ generated include file.
-// Used by SAMdisk.rc
 //
 #define IDD_MAIN                        100
 

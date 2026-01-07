@@ -15,9 +15,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdarg.h>
-#include "uft_types.h"
-
 #include <stddef.h>
+#include "uft/core/uft_error_codes.h"  /* uft_error_t */
 
 #ifdef __cplusplus
 extern "C" {
@@ -393,7 +392,7 @@ void uft_error_print_full(uft_error_context_t *ctx);
  * @param entry Error entry
  * @return Formatted string (caller must free)
  */
-char *uft_error_format(const uft_error_entry_t *entry);
+char *uft_error_entry_format(const uft_error_entry_t *entry);
 
 /**
  * @brief Format full error chain as string

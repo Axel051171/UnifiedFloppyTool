@@ -2,25 +2,20 @@
 //
 // Copyright (C) 2006-2025 Jean-François DEL NERO
 //
-// This file is part of the HxCFloppyEmulator library
 //
-// HxCFloppyEmulator may be used and distributed without restriction provided
 // that this copyright statement is not removed from the file and that any
 // derivative work contains the original copyright notice and the associated
 // disclaimer.
 //
-// HxCFloppyEmulator is free software; you can redistribute it
 // and/or modify  it under the terms of the GNU General Public License
 // as published by the Free Software Foundation; either version 2
 // of the License, or (at your option) any later version.
 //
-// HxCFloppyEmulator is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 //   See the GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with HxCFloppyEmulator; if not, write to the Free Software
 // Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 //
 */
@@ -50,8 +45,8 @@
 
 #include <stdint.h>
 
-#include "internal_libhxcfe.h"
-#include "libhxcfe.h"
+#include "libflux.h""
+#include "libflux.h""
 
 #include "hfev3_trackgen.h"
 
@@ -77,7 +72,7 @@ void adjustrand(unsigned char * d, unsigned char * r)
 	return;
 }
 
-int32_t GenOpcodesTrack(HXCFE* floppycontext,uint8_t * index_h0,uint8_t * datah0,uint32_t lendatah0,uint8_t * datah1,uint32_t lendatah1,uint8_t * randomh0,uint8_t * randomh1,int32_t fixedbitrateh0,uint32_t * timeh0,int32_t fixedbitrateh1,uint32_t * timeh1,uint8_t ** finalbuffer_H0_param,uint8_t ** finalbuffer_H1_param,uint8_t ** randomfinalbuffer_param)
+int32_t GenOpcodesTrack(LIBFLUX_CTX* flux_ctx,uint8_t * index_h0,uint8_t * datah0,uint32_t lendatah0,uint8_t * datah1,uint32_t lendatah1,uint8_t * randomh0,uint8_t * randomh1,int32_t fixedbitrateh0,uint32_t * timeh0,int32_t fixedbitrateh1,uint32_t * timeh1,uint8_t ** finalbuffer_H0_param,uint8_t ** finalbuffer_H1_param,uint8_t ** randomfinalbuffer_param)
 {
 	uint32_t i,k,j;
 
@@ -118,7 +113,7 @@ int32_t GenOpcodesTrack(HXCFE* floppycontext,uint8_t * index_h0,uint8_t * datah0
 
 
 #ifdef DEBUGVB
-	floppycontext->hxc_printf(MSG_DEBUG,"********************************************************************");
+	flux_ctx->libflux_printf(MSG_DEBUG,"********************************************************************");
 #endif
 
 	lenbitdatah0 = lendatah0;
@@ -204,7 +199,7 @@ int32_t GenOpcodesTrack(HXCFE* floppycontext,uint8_t * index_h0,uint8_t * datah0
 	}
 
 #ifdef DEBUGVB
-	floppycontext->hxc_printf(MSG_DEBUG,"GenOpcodesTrack : head 0 number of time zone = %d!",trackzoneindex0 );
+	flux_ctx->libflux_printf(MSG_DEBUG,"GenOpcodesTrack : head 0 number of time zone = %d!",trackzoneindex0 );
 #endif
 
 	// head 1
@@ -248,7 +243,7 @@ int32_t GenOpcodesTrack(HXCFE* floppycontext,uint8_t * index_h0,uint8_t * datah0
 		trackzoneindex1=0;
 	}
 #ifdef DEBUGVB
-	floppycontext->hxc_printf(MSG_DEBUG,"GenOpcodesTrack : head 1 number of time zone = %d!",trackzoneindex1 );
+	flux_ctx->libflux_printf(MSG_DEBUG,"GenOpcodesTrack : head 1 number of time zone = %d!",trackzoneindex1 );
 #endif
 
 
@@ -256,11 +251,11 @@ int32_t GenOpcodesTrack(HXCFE* floppycontext,uint8_t * index_h0,uint8_t * datah0
 	// debug
 	////////////////////////////////////////////////////////////////////////////////////////////////////////
 #ifdef DEBUGVB
-	floppycontext->hxc_printf(MSG_DEBUG,"------------------------------------------------");
-	floppycontext->hxc_printf(MSG_DEBUG,"GenOpcodesTrack: Head0:");
+	flux_ctx->libflux_printf(MSG_DEBUG,"------------------------------------------------");
+	flux_ctx->libflux_printf(MSG_DEBUG,"GenOpcodesTrack: Head0:");
 	for(i=0;i<trackzoneindex0+1;i++)
 	{
-		floppycontext->hxc_printf(MSG_DEBUG,"bitrate %d -  %.4x:%.4x (%d)",
+		flux_ctx->libflux_printf(MSG_DEBUG,"bitrate %d -  %.4x:%.4x (%d)",
 											 trackzonebuffer_0[i].bitrate,
 											 trackzonebuffer_0[i].start,
 											 trackzonebuffer_0[i].end,
@@ -268,10 +263,10 @@ int32_t GenOpcodesTrack(HXCFE* floppycontext,uint8_t * index_h0,uint8_t * datah0
 											 );
 	}
 
-	floppycontext->hxc_printf(MSG_DEBUG,"GenOpcodesTrack: Head1:");
+	flux_ctx->libflux_printf(MSG_DEBUG,"GenOpcodesTrack: Head1:");
 	for(i=0;i<trackzoneindex1+1;i++)
 	{
-		floppycontext->hxc_printf(MSG_DEBUG,"bitrate %d -  %.4x:%.4x (%d)",
+		flux_ctx->libflux_printf(MSG_DEBUG,"bitrate %d -  %.4x:%.4x (%d)",
 											 trackzonebuffer_1[i].bitrate,
 											 trackzonebuffer_1[i].start,
 											 trackzonebuffer_1[i].end,
@@ -359,11 +354,11 @@ int32_t GenOpcodesTrack(HXCFE* floppycontext,uint8_t * index_h0,uint8_t * datah0
 	// debug
 	////////////////////////////////////////////////////////////////////////////////////////////////////////
 #ifdef DEBUGVB
-	floppycontext->hxc_printf(MSG_DEBUG,"------------------------------------------------");
-	floppycontext->hxc_printf(MSG_DEBUG,"GenOpcodesTrack: Head0:");
+	flux_ctx->libflux_printf(MSG_DEBUG,"------------------------------------------------");
+	flux_ctx->libflux_printf(MSG_DEBUG,"GenOpcodesTrack: Head0:");
 	for(i=0;i<trackzoneindex0+1;i++)
 	{
-		floppycontext->hxc_printf(MSG_DEBUG,"bitrate %d -  %.4x:%.4x (%d)",
+		flux_ctx->libflux_printf(MSG_DEBUG,"bitrate %d -  %.4x:%.4x (%d)",
 											 trackzonebuffer_0[i].bitrate,
 											 trackzonebuffer_0[i].start,
 											 trackzonebuffer_0[i].end,
@@ -371,10 +366,10 @@ int32_t GenOpcodesTrack(HXCFE* floppycontext,uint8_t * index_h0,uint8_t * datah0
 											 );
 	}
 
-	floppycontext->hxc_printf(MSG_DEBUG,"GenOpcodesTrack: Head1:");
+	flux_ctx->libflux_printf(MSG_DEBUG,"GenOpcodesTrack: Head1:");
 	for(i=0;i<trackzoneindex1+1;i++)
 	{
-		floppycontext->hxc_printf(MSG_DEBUG,"bitrate %d -  %.4x:%.4x (%d)",
+		flux_ctx->libflux_printf(MSG_DEBUG,"bitrate %d -  %.4x:%.4x (%d)",
 											 trackzonebuffer_1[i].bitrate,
 											 trackzonebuffer_1[i].start,
 											 trackzonebuffer_1[i].end,
@@ -480,7 +475,7 @@ int32_t GenOpcodesTrack(HXCFE* floppycontext,uint8_t * index_h0,uint8_t * datah0
 			if(j<(2047*2))
 				j++;
 			else
-				floppycontext->hxc_printf(MSG_ERROR,"GenOpcodesTrack : trackpartbuffer_0 overrun !");
+				flux_ctx->libflux_printf(MSG_ERROR,"GenOpcodesTrack : trackpartbuffer_0 overrun !");
 		}
 
 		if(trackzonebuffer_0[i].code1lenint)
@@ -490,7 +485,7 @@ int32_t GenOpcodesTrack(HXCFE* floppycontext,uint8_t * index_h0,uint8_t * datah0
 			if(j<2047*2)
 				j++;
 			else
-				floppycontext->hxc_printf(MSG_ERROR,"GenOpcodesTrack : trackpartbuffer_0 overrun !");
+				flux_ctx->libflux_printf(MSG_ERROR,"GenOpcodesTrack : trackpartbuffer_0 overrun !");
 		}
 
 		i++;
@@ -509,7 +504,7 @@ int32_t GenOpcodesTrack(HXCFE* floppycontext,uint8_t * index_h0,uint8_t * datah0
 			if(j<2047*2)
 				j++;
 			else
-				floppycontext->hxc_printf(MSG_ERROR,"GenOpcodesTrack : trackpartbuffer_1 overrun !");
+				flux_ctx->libflux_printf(MSG_ERROR,"GenOpcodesTrack : trackpartbuffer_1 overrun !");
 		}
 
 		if(trackzonebuffer_1[i].code1lenint)
@@ -519,7 +514,7 @@ int32_t GenOpcodesTrack(HXCFE* floppycontext,uint8_t * index_h0,uint8_t * datah0
 			if(j<2047*2)
 				j++;
 			else
-				floppycontext->hxc_printf(MSG_ERROR,"GenOpcodesTrack : trackpartbuffer_1 overrun !");
+				flux_ctx->libflux_printf(MSG_ERROR,"GenOpcodesTrack : trackpartbuffer_1 overrun !");
 		}
 
 		i++;
@@ -530,31 +525,31 @@ int32_t GenOpcodesTrack(HXCFE* floppycontext,uint8_t * index_h0,uint8_t * datah0
 	// debug
 	////////////////////////////////////////////////////////////////////////////////////////////////////////
 #ifdef DEBUGVB
-	floppycontext->hxc_printf(MSG_DEBUG,"------------------------------------------------");
-	floppycontext->hxc_printf(MSG_DEBUG,"GenOpcodesTrack: Head0: %d zones",numberofzoneh0);
+	flux_ctx->libflux_printf(MSG_DEBUG,"------------------------------------------------");
+	flux_ctx->libflux_printf(MSG_DEBUG,"GenOpcodesTrack: Head0: %d zones",numberofzoneh0);
 	j=0;
 	k=0;
 	for(i=0;i<numberofzoneh0;i++)
 	{
-		floppycontext->hxc_printf(MSG_DEBUG,"code %d len %d (Ofs:%d) [P:%d]",trackpartbuffer_0[i].code,trackpartbuffer_0[i].len,j,i);
+		flux_ctx->libflux_printf(MSG_DEBUG,"code %d len %d (Ofs:%d) [P:%d]",trackpartbuffer_0[i].code,trackpartbuffer_0[i].len,j,i);
 		j=j+trackpartbuffer_0[i].len;
 		k=k+(trackpartbuffer_0[i].code*625)*trackpartbuffer_0[i].len*4;
 		k=k%finalsizebuffer;
 	}
-	floppycontext->hxc_printf(MSG_DEBUG,"Total track Head0: %d timing : %dns",j,k/10);
+	flux_ctx->libflux_printf(MSG_DEBUG,"Total track Head0: %d timing : %dns",j,k/10);
 
-	floppycontext->hxc_printf(MSG_DEBUG,"GenOpcodesTrack: Head1: %d zones",numberofzoneh1);
+	flux_ctx->libflux_printf(MSG_DEBUG,"GenOpcodesTrack: Head1: %d zones",numberofzoneh1);
 
 	j=0;
 	k=0;
 	for(i=0;i<numberofzoneh1;i++)
 	{
-		floppycontext->hxc_printf(MSG_DEBUG,"code %d len %d (Ofs:%d) [P:%d]",trackpartbuffer_1[i].code,trackpartbuffer_1[i].len,j,i);
+		flux_ctx->libflux_printf(MSG_DEBUG,"code %d len %d (Ofs:%d) [P:%d]",trackpartbuffer_1[i].code,trackpartbuffer_1[i].len,j,i);
 		j=j+trackpartbuffer_1[i].len;
 		k=k+(trackpartbuffer_1[i].code*625)*trackpartbuffer_1[i].len*4;
 		k=k%finalsizebuffer;
 	}
-	floppycontext->hxc_printf(MSG_DEBUG,"Total track Head1: %d timing : %dns",j,k/10);
+	flux_ctx->libflux_printf(MSG_DEBUG,"Total track Head1: %d timing : %dns",j,k/10);
 #endif
 	////////////////////////////////////////////////////////////////////////////////////////////////////////
 	////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -587,7 +582,7 @@ int32_t GenOpcodesTrack(HXCFE* floppycontext,uint8_t * index_h0,uint8_t * datah0
 		if( (lenbitdatah0 & 7) && !(lenbitdatah1 & 7) )
 		{
 #ifdef DEBUGVB
-			floppycontext->hxc_printf(MSG_DEBUG,"SKIPBITS_OPCODE (0X) (Ofs: %d)", k);
+			flux_ctx->libflux_printf(MSG_DEBUG,"SKIPBITS_OPCODE (0X) (Ofs: %d)", k);
 #endif
 			finalbuffer_H0[k] = SKIPBITS_OPCODE;
 			finalbuffer_H1[k] = NOP_OPCODE;
@@ -610,7 +605,7 @@ int32_t GenOpcodesTrack(HXCFE* floppycontext,uint8_t * index_h0,uint8_t * datah0
 		if( !(lenbitdatah0 & 7) && (lenbitdatah1 & 7) )
 		{
 #ifdef DEBUGVB
-			floppycontext->hxc_printf(MSG_DEBUG,"SKIPBITS_OPCODE (X1) (Ofs: %d)", k);
+			flux_ctx->libflux_printf(MSG_DEBUG,"SKIPBITS_OPCODE (X1) (Ofs: %d)", k);
 #endif
 
 			finalbuffer_H0[k] = NOP_OPCODE;
@@ -633,7 +628,7 @@ int32_t GenOpcodesTrack(HXCFE* floppycontext,uint8_t * index_h0,uint8_t * datah0
 		if( (lenbitdatah0 & 7) && (lenbitdatah1 & 7) )
 		{
 #ifdef DEBUGVB
-			floppycontext->hxc_printf(MSG_DEBUG,"SKIPBITS_OPCODE (01) (Ofs: %d)", k);
+			flux_ctx->libflux_printf(MSG_DEBUG,"SKIPBITS_OPCODE (01) (Ofs: %d)", k);
 #endif
 			finalbuffer_H0[k] = SKIPBITS_OPCODE;
 			finalbuffer_H1[k] = SKIPBITS_OPCODE;
@@ -661,7 +656,7 @@ int32_t GenOpcodesTrack(HXCFE* floppycontext,uint8_t * index_h0,uint8_t * datah0
 			if( index_h0[i] && !currentindex )
 			{
 #ifdef DEBUGVB
-				floppycontext->hxc_printf(MSG_DEBUG,"SETINDEX_OPCODE (01) (Ofs: %d)", k);
+				flux_ctx->libflux_printf(MSG_DEBUG,"SETINDEX_OPCODE (01) (Ofs: %d)", k);
 #endif
 				finalbuffer_H0[k] = SETINDEX_OPCODE;
 				finalbuffer_H1[k] = SETINDEX_OPCODE;
@@ -705,12 +700,12 @@ int32_t GenOpcodesTrack(HXCFE* floppycontext,uint8_t * index_h0,uint8_t * datah0
 			#ifdef DEBUGVB
 			if( !speedcfg_track0 || !speedcfg_track1 )
 			{
-				floppycontext->hxc_printf(MSG_DEBUG,"Invalid speed state ! : H0- P:%d L:%d S:%d --- H1- P:%d L:%d S:%d",trackparthead0index-1,lencode_track0,speedcfg_track0,trackparthead1index-1,lencode_track1,speedcfg_track1);
+				flux_ctx->libflux_printf(MSG_DEBUG,"Invalid speed state ! : H0- P:%d L:%d S:%d --- H1- P:%d L:%d S:%d",trackparthead0index-1,lencode_track0,speedcfg_track0,trackparthead1index-1,lencode_track1,speedcfg_track1);
 			}
 			#endif
 
 #ifdef DEBUGVB
-			floppycontext->hxc_printf(MSG_DEBUG,"SETBITRATE_OPCODE (01) (Ofs: %d) (%d - %d)", k, speedcfg_track0, speedcfg_track1);
+			flux_ctx->libflux_printf(MSG_DEBUG,"SETBITRATE_OPCODE (01) (Ofs: %d) (%d - %d)", k, speedcfg_track0, speedcfg_track1);
 #endif
 
 			finalbuffer_H0[k] = SETBITRATE_OPCODE;
@@ -736,12 +731,12 @@ int32_t GenOpcodesTrack(HXCFE* floppycontext,uint8_t * index_h0,uint8_t * datah0
 					#ifdef DEBUGVB
 					if( !speedcfg_track0 )
 					{
-						floppycontext->hxc_printf(MSG_DEBUG,"Invalid speed state ! : H0-P:%d L:%d S:%d",trackparthead0index-1,lencode_track0,speedcfg_track0);
+						flux_ctx->libflux_printf(MSG_DEBUG,"Invalid speed state ! : H0-P:%d L:%d S:%d",trackparthead0index-1,lencode_track0,speedcfg_track0);
 					}
 					#endif
 
 #ifdef DEBUGVB
-					floppycontext->hxc_printf(MSG_DEBUG,"SETBITRATE_OPCODE (01) (Ofs: %d) (%d - %d)", k, speedcfg_track0, speedcfg_track1);
+					flux_ctx->libflux_printf(MSG_DEBUG,"SETBITRATE_OPCODE (01) (Ofs: %d) (%d - %d)", k, speedcfg_track0, speedcfg_track1);
 #endif
 
 					finalbuffer_H0[k] = SETBITRATE_OPCODE;
@@ -766,12 +761,12 @@ int32_t GenOpcodesTrack(HXCFE* floppycontext,uint8_t * index_h0,uint8_t * datah0
 					#ifdef DEBUGVB
 					if( !speedcfg_track1 )
 					{
-						floppycontext->hxc_printf(MSG_DEBUG,"Invalid speed state ! : H1-P:%d L:%d S:%d",trackparthead1index-1,lencode_track1,speedcfg_track1);
+						flux_ctx->libflux_printf(MSG_DEBUG,"Invalid speed state ! : H1-P:%d L:%d S:%d",trackparthead1index-1,lencode_track1,speedcfg_track1);
 					}
 					#endif
 
 #ifdef DEBUGVB
-					floppycontext->hxc_printf(MSG_DEBUG,"SETBITRATE_OPCODE (01) (Ofs: %d) (%d - %d)", k, speedcfg_track0, speedcfg_track1);
+					flux_ctx->libflux_printf(MSG_DEBUG,"SETBITRATE_OPCODE (01) (Ofs: %d) (%d - %d)", k, speedcfg_track0, speedcfg_track1);
 #endif
 
 					finalbuffer_H0[k] = SETBITRATE_OPCODE;

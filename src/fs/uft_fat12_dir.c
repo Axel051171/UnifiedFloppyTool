@@ -614,8 +614,8 @@ int uft_fat_find_path(const uft_fat_ctx_t *ctx, const char *path, uft_fat_entry_
     if (*p == '\0') {
         /* Root directory - create fake entry */
         memset(entry, 0, sizeof(*entry));
-        strcpy(entry->sfn, "/");  /* REVIEW: Consider bounds check */
-        strcpy(entry->lfn, "/");  /* REVIEW: Consider bounds check */
+        strncpy(entry->sfn, "/", 13); entry->sfn[12] = '\0';
+        strncpy(entry->lfn, "/", 255); entry->lfn[254] = '\0';
         entry->is_directory = true;
         entry->cluster = 0;
         return 0;
@@ -786,7 +786,7 @@ void uft_fat_print_dir(const uft_fat_ctx_t *ctx, uint32_t cluster, FILE *fp) {
         if (tm) {
             strftime(time_str, sizeof(time_str), "%Y-%m-%d %H:%M:%S", tm);
         } else {
-            strcpy(time_str, "                   ");  /* REVIEW: Consider bounds check */
+            memset(time_str, ' ', 19); time_str[19] = '\0';
         }
         
         const char *name = e->has_lfn ? e->lfn : e->sfn;

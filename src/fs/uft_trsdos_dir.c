@@ -710,10 +710,10 @@ void uft_trsdos_print_dir(const uft_trsdos_ctx_t *ctx) {
         uft_trsdos_format_filename(e->name, e->ext, name);
         
         char attr[16] = "";
-        if (e->attrib.visibility == UFT_TRSDOS_ATTR_INVISIBLE) strcat(attr, "I");
-        if (e->attrib.visibility == UFT_TRSDOS_ATTR_SYSTEM) strcat(attr, "S");
-        if (e->attrib.has_password) strcat(attr, "P");
-        if (e->attrib.protection > UFT_TRSDOS_PROT_FULL) strcat(attr, "L");
+        if (e->attrib.visibility == UFT_TRSDOS_ATTR_INVISIBLE) strncat(attr, "I", sizeof(attr) - strlen(attr) - 1);
+        if (e->attrib.visibility == UFT_TRSDOS_ATTR_SYSTEM) strncat(attr, "S", sizeof(attr) - strlen(attr) - 1);
+        if (e->attrib.has_password) strncat(attr, "P", sizeof(attr) - strlen(attr) - 1);
+        if (e->attrib.protection > UFT_TRSDOS_PROT_FULL) strncat(attr, "L", sizeof(attr) - strlen(attr) - 1);
         
         printf("%-8.8s %-3.3s %7u %3u  %s\n",
                e->name, e->ext, e->size, e->granules, attr);

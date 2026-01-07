@@ -755,8 +755,8 @@ uft_usb_result_t uft_usb_find_floppy_hardware(
         const char *name;
     } known_devices[] = {
         { UFT_USB_VID_XUM1541,       UFT_USB_PID_XUM1541,         "XUM1541/ZoomFloppy" },
-        { UFT_USB_VID_GREASEWEAZLE,  UFT_USB_PID_GREASEWEAZLE_F1, "Greaseweazle F1" },
-        { UFT_USB_VID_GREASEWEAZLE,  UFT_USB_PID_GREASEWEAZLE_F7, "Greaseweazle F7" },
+        { UFT_USB_VID_GREASEWEAZLE,  UFT_USB_PID_UFT_GW_F1, "Greaseweazle F1" },
+        { UFT_USB_VID_GREASEWEAZLE,  UFT_USB_PID_UFT_GW_F7, "Greaseweazle F7" },
         { UFT_USB_VID_KRYOFLUX,      UFT_USB_PID_KRYOFLUX,        "KryoFlux" },
         { UFT_USB_VID_SCP,           UFT_USB_PID_SCP,             "SuperCard Pro" },
         { UFT_USB_VID_FC5025,        UFT_USB_PID_FC5025,          "FC5025" },

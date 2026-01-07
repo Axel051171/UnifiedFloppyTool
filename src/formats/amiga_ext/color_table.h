@@ -1,3 +1,6 @@
+#ifndef UFT_FORMATS_AMIGA_EXT_COLOR_TABLE_H
+#define UFT_FORMATS_AMIGA_EXT_COLOR_TABLE_H
+
 static UWORD colortable[] = {
 	0x002, 0xFFF, 0x0f0, 0x00f,
 	0x000, 0xFFF, 0x0f0, 0x00f,
@@ -33,3 +36,5 @@ static UWORD colortable[] = {
 	0x555, 0x000, 0x0f0, 0x00f,
 	0x666, 0x000, 0x0f0, 0x00f
 };
+
+#endif /* UFT_FORMATS_AMIGA_EXT_COLOR_TABLE_H */

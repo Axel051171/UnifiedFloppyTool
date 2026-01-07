@@ -2,7 +2,6 @@
  * @file uft_raw_parser_v3.c
  * @brief GOD MODE RAW Parser v3 - Raw Flux Stream
  * 
- * Generic raw flux timing data (KryoFlux compatible)
  * 
  * @author UFT Team / GOD MODE
  * @version 3.0.0
@@ -39,7 +38,6 @@ static bool raw_parse(const uint8_t* data, size_t size, raw_flux_t* raw) {
     if (!data || !raw || size < 10) return false;
     memset(raw, 0, sizeof(raw_flux_t));
     raw->source_size = size;
-    raw->sample_clock_mhz = 24.027428;  /* Default KryoFlux clock */
     raw->index_clock_mhz = 73.728;
     
     /* Parse flux stream */

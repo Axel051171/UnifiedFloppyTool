@@ -2,25 +2,20 @@
 //
 // Copyright (C) 2006-2025 Jean-Franois DEL NERO
 //
-// This file is part of the HxCFloppyEmulator library
 //
-// HxCFloppyEmulator may be used and distributed without restriction provided
 // that this copyright statement is not removed from the file and that any
 // derivative work contains the original copyright notice and the associated
 // disclaimer.
 //
-// HxCFloppyEmulator is free software; you can redistribute it
 // and/or modify  it under the terms of the GNU General Public License
 // as published by the Free Software Foundation; either version 2
 // of the License, or (at your option) any later version.
 //
-// HxCFloppyEmulator is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 //   See the GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with HxCFloppyEmulator; if not, write to the Free Software
 // Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 //
 */
@@ -49,12 +44,12 @@
 
 #include "types.h"
 
-#include "internal_libhxcfe.h"
+#include "libflux.h""
 #include "tracks/track_generator.h"
-#include "libhxcfe.h"
+#include "libflux.h""
 
-#include "floppy_loader.h"
-#include "floppy_utils.h"
+#include "uft_floppy_loader.h"
+#include "uft_floppy_utils.h"
 
 #include "h17_loader.h"
 #include "h17_writer.h"
@@ -63,28 +58,28 @@
 
 #include "libhxcadaptor.h"
 
-int H17_libIsValidDiskFile( HXCFE_IMGLDR * imgldr_ctx, HXCFE_IMGLDR_FILEINFOS * imgfile )
+int H17_libIsValidDiskFile( LIBFLUX_IMGLDR * imgldr_ctx, LIBFLUX_IMGLDR_FILEINFOS * imgfile )
 {
 	h17_header * hdr;
 
-	imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"H17_libIsValidDiskFile");
+	imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"H17_libIsValidDiskFile");
 
-	if(hxc_checkfileext(imgfile->path,"h17",SYS_PATH_TYPE))
+	if(libflux_checkfileext(imgfile->path,"h17",SYS_PATH_TYPE))
 	{
 		hdr = (h17_header *)&imgfile->file_header;
 
 		if( !strncmp((char *)hdr->file_tag, "H17D",4) && hdr->check == 0xFF )
 		{
-			imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"H17_libIsValidDiskFile : H17 file !");
-			return HXCFE_VALIDFILE;
+			imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"H17_libIsValidDiskFile : H17 file !");
+			return LIBFLUX_VALIDFILE;
 		}
 	}
 
-	imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"H17_libIsValidDiskFile : non H17 file !");
-	return HXCFE_BADFILE;
+	imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"H17_libIsValidDiskFile : non H17 file !");
+	return LIBFLUX_BADFILE;
 }
 
-int H17_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,char * imgfile,void * parameters)
+int H17_libLoad_DiskFile(LIBFLUX_IMGLDR * imgldr_ctx,LIBFLUX_FLOPPY * floppydisk,char * imgfile,void * parameters)
 {
 	FILE * f;
 	unsigned int filesize;
@@ -94,8 +89,8 @@ int H17_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 	int gap3len,interleave;
 	int rpm,sectorsize;
 	int trackformat,skew;
-	HXCFE_CYLINDER* currentcylinder;
-	HXCFE_SECTCFG  sectorconfig[16];
+	LIBFLUX_CYLINDER* currentcylinder;
+	LIBFLUX_SECTCFG  sectorconfig[16];
 	unsigned char VolumeID;
 	h17_header hdr;
 	h17_block  blk;
@@ -110,25 +105,25 @@ int H17_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 	char str_tmp[512];
 	h17_sect_metadata * sect_meta;
 
-	imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"H17_libLoad_DiskFile %s",imgfile);
+	imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"H17_libLoad_DiskFile %s",imgfile);
 
-	f = hxc_fopen(imgfile,"rb");
+	f = libflux_fopen(imgfile,"rb");
 	if( f == NULL )
 	{
-		imgldr_ctx->hxcfe->hxc_printf(MSG_ERROR,"Cannot open %s !",imgfile);
-		return HXCFE_ACCESSERROR;
+		imgldr_ctx->ctx->libflux_printf(MSG_ERROR,"Cannot open %s !",imgfile);
+		return LIBFLUX_ACCESSERROR;
 	}
 
-	filesize = hxc_fgetsize(f);
+	filesize = libflux_fgetsize(f);
 
-	hxc_fread(&hdr,sizeof(h17_header),f);
+	libflux_fread(&hdr,sizeof(h17_header),f);
 
 	if( strncmp((char *)&hdr.file_tag, "H17D",4) || hdr.check != 0xFF )
 	{
-		imgldr_ctx->hxcfe->hxc_printf(MSG_ERROR,"H17_libLoad_DiskFile : Bad H17 file ?");
-		hxc_fclose(f);
+		imgldr_ctx->ctx->libflux_printf(MSG_ERROR,"H17_libLoad_DiskFile : Bad H17 file ?");
+		libflux_fclose(f);
 
-		return HXCFE_BADFILE;
+		return LIBFLUX_BADFILE;
 	}
 
 	sector_metadata = NULL;
@@ -143,7 +138,7 @@ int H17_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 		block_pos = ftell(f);
 
 		memset((h17_block*)&blk,0,sizeof(h17_block));
-		hxc_fread((void*)&blk,sizeof(h17_block),f);
+		libflux_fread((void*)&blk,sizeof(h17_block),f);
 
 		memcpy((void*)&blkid,(void*)&blk.id,4);
 
@@ -156,9 +151,9 @@ int H17_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 				if(size > sizeof(DskF) )
 					size = sizeof(DskF);
 
-				hxc_fread((void*)&DskF,size,f);
+				libflux_fread((void*)&DskF,size,f);
 
-				imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"H17_libLoad_DiskFile : BLKID_DskF - Sides:%d Tracks:%d RO:%d",DskF.Sides,DskF.Tracks,DskF.ReadOnly);
+				imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"H17_libLoad_DiskFile : BLKID_DskF - Sides:%d Tracks:%d RO:%d",DskF.Sides,DskF.Tracks,DskF.ReadOnly);
 			break;
 			case BLKID_Parm:
 				memset((void*)&Parm,0,sizeof(Parm));
@@ -167,9 +162,9 @@ int H17_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 				if(size > sizeof(Parm) )
 					size = sizeof(Parm);
 
-				hxc_fread((void*)&Parm,size,f);
+				libflux_fread((void*)&Parm,size,f);
 
-				imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"H17_libLoad_DiskFile : BLKID_Parm - Distribution_Disk:%d Source_of_Header_Data:%d",Parm.Distribution_Disk,Parm.Source_of_Header_Data);
+				imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"H17_libLoad_DiskFile : BLKID_Parm - Distribution_Disk:%d Source_of_Header_Data:%d",Parm.Distribution_Disk,Parm.Source_of_Header_Data);
 			break;
 			case BLKID_Date:
 				memset((void*)&str_tmp,0,sizeof(str_tmp));
@@ -178,9 +173,9 @@ int H17_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 				if(size >= sizeof(str_tmp) )
 					size = sizeof(str_tmp) - 1;
 
-				hxc_fread((void*)&str_tmp,size,f);
+				libflux_fread((void*)&str_tmp,size,f);
 
-				imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"H17_libLoad_DiskFile : BLKID_Date - %s",str_tmp);
+				imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"H17_libLoad_DiskFile : BLKID_Date - %s",str_tmp);
 			break;
 			case BLKID_Imgr:
 				memset((void*)&str_tmp,0,sizeof(str_tmp));
@@ -189,9 +184,9 @@ int H17_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 				if(size >= sizeof(str_tmp) )
 					size = sizeof(str_tmp) - 1;
 
-				hxc_fread((void*)&str_tmp,size,f);
+				libflux_fread((void*)&str_tmp,size,f);
 
-				imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"H17_libLoad_DiskFile : BLKID_Imgr - %s",str_tmp);
+				imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"H17_libLoad_DiskFile : BLKID_Imgr - %s",str_tmp);
 			break;
 			case BLKID_Prog:
 				memset((void*)&str_tmp,0,sizeof(str_tmp));
@@ -200,15 +195,15 @@ int H17_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 				if(size >= sizeof(str_tmp) )
 					size = sizeof(str_tmp) - 1;
 
-				hxc_fread((void*)&str_tmp,size,f);
+				libflux_fread((void*)&str_tmp,size,f);
 
-				imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"H17_libLoad_DiskFile : BLKID_Prog - %s",str_tmp);
+				imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"H17_libLoad_DiskFile : BLKID_Prog - %s",str_tmp);
 			break;
 			case BLKID_Padd:
-				imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"H17_libLoad_DiskFile : BLKID_Padd");
+				imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"H17_libLoad_DiskFile : BLKID_Padd");
 			break;
 			case BLKID_H8DB:
-				imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"H17_libLoad_DiskFile : BLKID_H8DB");
+				imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"H17_libLoad_DiskFile : BLKID_H8DB");
 			break;
 			case BLKID_Labl:
 				memset((void*)&str_tmp,0,sizeof(str_tmp));
@@ -217,9 +212,9 @@ int H17_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 				if(size >= sizeof(str_tmp) )
 					size = sizeof(str_tmp) - 1;
 
-				hxc_fread((void*)&str_tmp,size,f);
+				libflux_fread((void*)&str_tmp,size,f);
 
-				imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"H17_libLoad_DiskFile : BLKID_Labl - %s",str_tmp);
+				imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"H17_libLoad_DiskFile : BLKID_Labl - %s",str_tmp);
 			break;
 			case BLKID_Comm:
 				memset((void*)&str_tmp,0,sizeof(str_tmp));
@@ -228,12 +223,12 @@ int H17_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 				if(size >= sizeof(str_tmp) )
 					size = sizeof(str_tmp) - 1;
 
-				hxc_fread((void*)&str_tmp,size,f);
+				libflux_fread((void*)&str_tmp,size,f);
 
-				imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"H17_libLoad_DiskFile : BLKID_Comm - %s",str_tmp);
+				imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"H17_libLoad_DiskFile : BLKID_Comm - %s",str_tmp);
 			break;
 			case BLKID_SecM:
-				imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"H17_libLoad_DiskFile : BLKID_SecM");
+				imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"H17_libLoad_DiskFile : BLKID_SecM");
 
 				size = BIGENDIAN_DWORD(blk.lenght);
 				if(size)
@@ -244,13 +239,13 @@ int H17_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 						memset(sector_metadata,0,size);
 						size_metadata = size;
 
-						hxc_fread((void*)sector_metadata,size_metadata,f);
+						libflux_fread((void*)sector_metadata,size_metadata,f);
 					}
 				}
 
 			break;
 			default:
-				imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"H17_libLoad_DiskFile : BLKID_???? (0x%.8X)",blk.id);
+				imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"H17_libLoad_DiskFile : BLKID_???? (0x%.8X)",blk.id);
 			break;
 		}
 
@@ -267,14 +262,14 @@ int H17_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 		block_pos = ftell(f);
 
 		memset((h17_block*)&blk,0,sizeof(h17_block));
-		hxc_fread((void*)&blk,sizeof(h17_block),f);
+		libflux_fread((void*)&blk,sizeof(h17_block),f);
 
 		memcpy((void*)&blkid,(void*)&blk.id,4);
 
 		switch(blkid)
 		{
 			case BLKID_H8DB:
-				imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"H17_libLoad_DiskFile : BLKID_H8DB");
+				imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"H17_libLoad_DiskFile : BLKID_H8DB");
 
 				sectorsize = 256;
 				trackformat = HEATHKIT_HS_SD;
@@ -290,29 +285,29 @@ int H17_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 				floppydisk->floppyBitRate = 250000;
 				floppydisk->floppyiftype = GENERIC_SHUGART_DD_FLOPPYMODE;
 
-				floppydisk->tracks = (HXCFE_CYLINDER**)malloc(sizeof(HXCFE_CYLINDER*)*floppydisk->floppyNumberOfTrack);
+				floppydisk->tracks = (LIBFLUX_CYLINDER**)malloc(sizeof(LIBFLUX_CYLINDER*)*floppydisk->floppyNumberOfTrack);
 				if( !floppydisk->tracks )
 				{
-					hxc_fclose(f);
-					return HXCFE_INTERNALERROR;
+					libflux_fclose(f);
+					return LIBFLUX_INTERNALERROR;
 				}
 
-				memset(floppydisk->tracks,0,sizeof(HXCFE_CYLINDER*)*floppydisk->floppyNumberOfTrack);
+				memset(floppydisk->tracks,0,sizeof(LIBFLUX_CYLINDER*)*floppydisk->floppyNumberOfTrack);
 
 				rpm=300; // normal rpm
 
-				imgldr_ctx->hxcfe->hxc_printf(MSG_INFO_1,"filesize:%dkB, %d tracks, %d side(s), %d sectors/track, gap3:%d, interleave:%d,rpm:%d",filesize/1024,floppydisk->floppyNumberOfTrack,floppydisk->floppyNumberOfSide,floppydisk->floppySectorPerTrack,gap3len,interleave,rpm);
+				imgldr_ctx->ctx->libflux_printf(MSG_INFO_1,"filesize:%dkB, %d tracks, %d side(s), %d sectors/track, gap3:%d, interleave:%d,rpm:%d",filesize/1024,floppydisk->floppyNumberOfTrack,floppydisk->floppyNumberOfSide,floppydisk->floppySectorPerTrack,gap3len,interleave,rpm);
 
 				trackdata = (unsigned char*)uft_safe_malloc_array(floppydisk->floppySectorPerTrack, sectorsize);
 				if( !trackdata )
 				{
-					hxcfe_freeFloppy(imgldr_ctx->hxcfe, floppydisk );
-					hxc_fclose(f);
-					return HXCFE_INTERNALERROR;
+					libflux_freeFloppy(imgldr_ctx->ctx, floppydisk );
+					libflux_fclose(f);
+					return LIBFLUX_INTERNALERROR;
 				}
 
 				// HDOS or CPM image ?
-				hxc_fread(trackdata,(floppydisk->floppySectorPerTrack*sectorsize),f);
+				libflux_fread(trackdata,(floppydisk->floppySectorPerTrack*sectorsize),f);
 
 				for( i = 0x900; i < 0xA00 - 4 ; i++ )
 				{
@@ -336,18 +331,18 @@ int H17_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 
 						currentcylinder=floppydisk->tracks[j];
 
-						hxcfe_imgCallProgressCallback(imgldr_ctx,trk,floppydisk->floppyNumberOfTrack*2 );
+						libflux_imgCallProgressCallback(imgldr_ctx,trk,floppydisk->floppyNumberOfTrack*2 );
 						trk++;
 
 
 						file_offset = ( ( floppydisk->floppySectorPerTrack * sectorsize ) * j * floppydisk->floppyNumberOfSide) + \
 										( ( floppydisk->floppySectorPerTrack * sectorsize ) * j * i);
 
-						fseek (f , (block_pos + sizeof(h17_block)) + file_offset , SEEK_SET);
+						(void)fseek(f , (block_pos + sizeof(h17_block)) + file_offset , SEEK_SET);
 
-						hxc_fread(trackdata,(floppydisk->floppySectorPerTrack*sectorsize),f);
+						libflux_fread(trackdata,(floppydisk->floppySectorPerTrack*sectorsize),f);
 
-						memset(sectorconfig,0,sizeof(HXCFE_SECTCFG)*floppydisk->floppySectorPerTrack);
+						memset(sectorconfig,0,sizeof(LIBFLUX_SECTCFG)*floppydisk->floppySectorPerTrack);
 						for(k=0;k<floppydisk->floppySectorPerTrack;k++)
 						{
 							sectorconfig[k].head = i;
@@ -404,9 +399,9 @@ int H17_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 									sectorconfig[k].alternate_datamark = 0x00;
 								}
 
-								fseek (f , BIGENDIAN_DWORD(sect_meta->Offset) , SEEK_SET);
+								(void)fseek(f , BIGENDIAN_DWORD(sect_meta->Offset) , SEEK_SET);
 
-								hxc_fread(&trackdata[k*sectorsize],sectorsize,f);
+								libflux_fread(&trackdata[k*sectorsize],sectorsize,f);
 							}
 						}
 
@@ -416,13 +411,13 @@ int H17_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 
 				free(trackdata);
 
-				imgldr_ctx->hxcfe->hxc_printf(MSG_INFO_1,"track file successfully loaded and encoded!");
+				imgldr_ctx->ctx->libflux_printf(MSG_INFO_1,"track file successfully loaded and encoded!");
 
-				hxc_fclose(f);
+				libflux_fclose(f);
 
 				free(sector_metadata);
 
-				return HXCFE_NOERROR;
+				return LIBFLUX_NOERROR;
 			break;
 
 			default:
@@ -436,14 +431,14 @@ int H17_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 
 	free(sector_metadata);
 
-	imgldr_ctx->hxcfe->hxc_printf(MSG_ERROR,"file size=%d !?",filesize);
+	imgldr_ctx->ctx->libflux_printf(MSG_ERROR,"file size=%d !?",filesize);
 
-	hxc_fclose(f);
+	libflux_fclose(f);
 
-	return HXCFE_BADFILE;
+	return LIBFLUX_BADFILE;
 }
 
-int H17_libGetPluginInfo(HXCFE_IMGLDR * imgldr_ctx,uint32_t infotype,void * returnvalue)
+int H17_libGetPluginInfo(LIBFLUX_IMGLDR * imgldr_ctx,uint32_t infotype,void * returnvalue)
 {
 	static const char plug_id[]="H17_HEATHKIT";
 	static const char plug_desc[]="H17 Heathkit Loader";

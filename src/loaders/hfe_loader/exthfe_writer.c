@@ -2,25 +2,20 @@
 //
 // Copyright (C) 2006-2025 Jean-Franois DEL NERO
 //
-// This file is part of the HxCFloppyEmulator library
 //
-// HxCFloppyEmulator may be used and distributed without restriction provided
 // that this copyright statement is not removed from the file and that any
 // derivative work contains the original copyright notice and the associated
 // disclaimer.
 //
-// HxCFloppyEmulator is free software; you can redistribute it
 // and/or modify  it under the terms of the GNU General Public License
 // as published by the Free Software Foundation; either version 2
 // of the License, or (at your option) any later version.
 //
-// HxCFloppyEmulator is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 //   See the GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with HxCFloppyEmulator; if not, write to the Free Software
 // Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 //
 */
@@ -31,8 +26,8 @@
 
 #include "types.h"
 
-#include "internal_libhxcfe.h"
-#include "libhxcfe.h"
+#include "libflux.h""
+#include "libflux.h""
 
 #include "hfe_loader.h"
 #include "hfe_format.h"
@@ -72,7 +67,7 @@ void extaddpad(unsigned char * track,int mfmsize,int tracksize)
 	}
 }
 
-int EXTHFE_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char * filename)
+int EXTHFE_libWrite_DiskFile(LIBFLUX_IMGLDR* imgldr_ctx,LIBFLUX_FLOPPY * floppy,char * filename)
 {
 	HXCRAMFILE rf;
 	picexttrack * track;
@@ -98,9 +93,9 @@ int EXTHFE_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char
 	mfmtemp = NULL;
 
 	factor=1;// factor=1-> 50% duty cycle  // factor=2-> 25% duty cycle
-	imgldr_ctx->hxcfe->hxc_printf(MSG_INFO_1,"Write HFE file %s for the standalone emulator.",filename);
+	imgldr_ctx->ctx->libflux_printf(MSG_INFO_1,"Write HFE file %s for the standalone emulator.",filename);
 
-	hxcpicfile = hxc_ram_fopen(filename,"wb",&rf);
+	hxcpicfile = libflux_ram_fopen(filename,"wb",&rf);
 
 	if(hxcpicfile)
 	{
@@ -127,7 +122,7 @@ int EXTHFE_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char
 		FILEHEADER->track_list_offset=1;
 		FILEHEADER->write_protected=1;
 
-		switch( hxcfe_getEnvVarValue( imgldr_ctx->hxcfe, "HFE_WRITER_WRITENOTALLOWED" ) )
+		switch( libflux_getEnvVarValue( imgldr_ctx->ctx, "HFE_WRITER_WRITENOTALLOWED" ) )
 		{
 			default:
 			case 0: // Write protect off
@@ -137,7 +132,7 @@ int EXTHFE_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char
 				FILEHEADER->write_allowed = 0x00;
 			break;
 			case 2: // From source
-				if( hxcfe_floppyGetFlags( imgldr_ctx->hxcfe, floppy ) & HXCFE_FLOPPY_WRPROTECTED_FLAG )
+				if( libflux_floppyGetFlags( imgldr_ctx->ctx, floppy ) & LIBFLUX_FLOPPY_WRPROTECTED_FLAG )
 				{
 					FILEHEADER->write_allowed = 0;
 				}
@@ -175,7 +170,7 @@ int EXTHFE_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char
 		else
 			FILEHEADER->single_step=0xFF;
 
-		hxc_ram_fwrite(FILEHEADER,512,1,hxcpicfile,&rf);
+		libflux_ram_fwrite(FILEHEADER,512,1,hxcpicfile,&rf);
 
 		tracklistlen=((((((FILEHEADER->number_of_track)+1)*sizeof(picexttrack))/512)+1));
 
@@ -213,7 +208,7 @@ int EXTHFE_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char
 
 			if(mfmsize*2>0xFFFF)
 			{
-				imgldr_ctx->hxcfe->hxc_printf(MSG_ERROR,"Argg!! track %d too long (%x) and shorten to 0xFFFF !",i,mfmsize*2);
+				imgldr_ctx->ctx->libflux_printf(MSG_ERROR,"Argg!! track %d too long (%x) and shorten to 0xFFFF !",i,mfmsize*2);
 				mfmsize=0x7FFF;
 			}
 
@@ -232,12 +227,12 @@ int EXTHFE_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char
 			i++;
 		};
 
-		hxc_ram_fwrite(offsettrack,512*tracklistlen,1,hxcpicfile,&rf);
+		libflux_ram_fwrite(offsettrack,512*tracklistlen,1,hxcpicfile,&rf);
 
 		i=0;
 		while(i<(FILEHEADER->number_of_track))
 		{
-			hxcfe_imgCallProgressCallback(imgldr_ctx,i,(FILEHEADER->number_of_track) );
+			libflux_imgCallProgressCallback(imgldr_ctx,i,(FILEHEADER->number_of_track) );
 
 			mfmsize=floppy->tracks[i]->sides[0]->tracklen * factor;
 			if(mfmsize&7)
@@ -344,7 +339,7 @@ int EXTHFE_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char
 				}
 			}
 
-			hxc_ram_fwrite(mfmtrackfinal,tracksize*2,1,hxcpicfile,&rf);
+			libflux_ram_fwrite(mfmtrackfinal,tracksize*2,1,hxcpicfile,&rf);
 
 			free(mfmtracks0);
 			mfmtracks0 = NULL;
@@ -358,40 +353,40 @@ int EXTHFE_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char
 
 		free(offsettrack);
 
-		hxcpicfile=hxc_fopen(filename,"wb");
+		hxcpicfile=libflux_fopen(filename,"wb");
 		if(hxcpicfile)
 		{
 			if (fwrite(rf.ramfile,rf.ramfile_size,1,hxcpicfile) != 1) { /* I/O error */ }
-			hxc_fclose(hxcpicfile);
+			libflux_fclose(hxcpicfile);
 		}
 		else
 		{
-			hxc_ram_fclose(hxcpicfile,&rf);
-			imgldr_ctx->hxcfe->hxc_printf(MSG_ERROR,"Cannot create %s!",filename);
-			return HXCFE_ACCESSERROR;
+			libflux_ram_fclose(hxcpicfile,&rf);
+			imgldr_ctx->ctx->libflux_printf(MSG_ERROR,"Cannot create %s!",filename);
+			return LIBFLUX_ACCESSERROR;
 		}
 
-		hxc_ram_fclose(hxcpicfile,&rf);
+		libflux_ram_fclose(hxcpicfile,&rf);
 
-		imgldr_ctx->hxcfe->hxc_printf(MSG_INFO_1,"%d tracks written to the file",FILEHEADER->number_of_track);
+		imgldr_ctx->ctx->libflux_printf(MSG_INFO_1,"%d tracks written to the file",FILEHEADER->number_of_track);
 
-		return HXCFE_NOERROR;
+		return LIBFLUX_NOERROR;
 	}
 	else
 	{
-		imgldr_ctx->hxcfe->hxc_printf(MSG_ERROR,"Cannot create %s!",filename);
+		imgldr_ctx->ctx->libflux_printf(MSG_ERROR,"Cannot create %s!",filename);
 
-		return HXCFE_ACCESSERROR;
+		return LIBFLUX_ACCESSERROR;
 	}
 
 alloc_error:
 	if(hxcpicfile)
-		hxc_ram_fclose(hxcpicfile,&rf);
+		libflux_ram_fclose(hxcpicfile,&rf);
 
 	free( offsettrack );
 	free(mfmtracks0);
 	free(mfmtracks1);
 	free(mfmtrackfinal);
 
-	return HXCFE_INTERNALERROR;
+	return LIBFLUX_INTERNALERROR;
 }

@@ -2,7 +2,6 @@
 /*
  * parameter_compensation.c - Universal Parameter Compensation System
  * 
- * Based on a8rawconv compensation algorithms by Avery Lee.
  * Implements platform-specific parameter compensation for optimal
  * flux data quality across different disk formats.
  * 
@@ -87,7 +86,6 @@ typedef struct {
 /*============================================================================*
  * MAC 800K PEAK SHIFT CORRECTION
  * 
- * Based on a8rawconv compensation.cpp by Avery Lee.
  * 
  * Mac 800K disks are prone to peak shift effects due to high density.
  * This applies adaptive correction to flux transitions that are too
@@ -97,7 +95,7 @@ typedef struct {
 /**
  * @brief Apply Mac 800K peak shift correction
  * 
- * Algorithm from a8rawconv:
+ * Algorithm:
  * - Computes threshold as ~1/45000th of rotation (vs 1/50000th for MFM)
  * - Applies correction to transitions below threshold
  * - Includes track density compensation for inner tracks
@@ -141,7 +139,7 @@ static int compensate_mac800k(
         
         /* Apply correction shift
          * Limited to no more than half the distance rounded down
-         * Strength factor from a8rawconv: 5/12 (~0.417)
+         * Strength factor standard: 5/12 (~0.417)
          */
         int32_t shift = ((delta2 - delta1) * 5) / 12;
         int32_t min_shift = -t01 / 2;
@@ -339,7 +337,7 @@ int compensation_init_params(
     /* Set defaults based on mode */
     switch (mode) {
         case COMP_MODE_MAC800K:
-            params->peak_shift_threshold = 0.417f;  /* 5/12 from a8rawconv */
+            params->peak_shift_threshold = 0.417f;  /* 5/12 */
             params->samples_per_rev = 100000;
             params->rotation_speed_rpm = 394.0f;
             break;

@@ -136,7 +136,7 @@ int fc_set_density(int density) {
 	return fc_FLAGS(density<<2,4,NULL);
 }
 
-int fc5025_open(struct usb_device *dev) {
+int uft_fc5025_open(struct usb_device *dev) {
 	cbw.tag=time(NULL)&0xffffffff;
 	udev=usb_open(dev);
 	if(!udev)
@@ -154,14 +154,14 @@ int fc5025_open(struct usb_device *dev) {
 	return 0;
 }
 
-int fc5025_close(void) {
+int uft_fc5025_close(void) {
 	if(usb_release_interface(udev,0)!=0 || usb_close(udev)!=0)
 		return 1;
 
 	return 0;
 }
 
-int fc5025_find(struct usb_device **devs, int max) {
+int uft_fc5025_find(struct usb_device **devs, int max) {
 	struct usb_bus *bus;
 	struct usb_device *dev;
 	static int usb_inited=0;
@@ -177,7 +177,7 @@ int fc5025_find(struct usb_device **devs, int max) {
 
 	for(bus=usb_get_busses();bus!=NULL;bus=bus->next) {
 		for(dev=bus->devices;dev!=NULL;dev=dev->next) {
-			if ((dev->descriptor.idVendor==FC5025_VID)&&(dev->descriptor.idProduct==FC5025_PID)) {
+			if ((dev->descriptor.idVendor==UFT_FC5025_VID)&&(dev->descriptor.idProduct==UFT_FC5025_PID)) {
 				num_found++;
 				if(num_found<=max)
 					*(devs++)=dev;

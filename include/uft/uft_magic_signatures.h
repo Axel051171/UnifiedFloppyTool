@@ -2,8 +2,6 @@
  * @file uft_magic_signatures.h
  * @brief File Type Detection via Magic Byte Signatures
  * 
- * Extracted from fileextractor project
- * Source: /home/claude/fileextractor/fileextractor-master/signatures.py
  * 
  * Signature-based file type detection for carving files
  * from disk images and raw data.
@@ -76,8 +74,7 @@ typedef enum {
     /* Floppy Formats */
     UFT_FILE_IPF,           /* Interchangeable Preservation Format */
     UFT_FILE_SCP,           /* SuperCard Pro */
-    UFT_FILE_HFE,           /* HxC Floppy Emulator */
-    UFT_FILE_KRYOFLUX,      /* KryoFlux stream */
+    UFT_FILE_HFE,           /* UFT HFE Format */
     /* Count */
     UFT_FILE_TYPE_COUNT
 } uft_file_type_t;
@@ -324,7 +321,7 @@ static const uft_signature_t UFT_SIGNATURES[] = {
         .type = UFT_FILE_HFE,
         .name = "HFE",
         .extension = "hfe",
-        .description = "HxC Floppy Emulator Image",
+        .description = "UFT HFE Format Image",
         .sig_type = UFT_SIG_MANUAL,
         .start_sig = { 0x48, 0x58, 0x43 },  /* "HXC" */
         .start_mask = { 0xFF, 0xFF, 0xFF },

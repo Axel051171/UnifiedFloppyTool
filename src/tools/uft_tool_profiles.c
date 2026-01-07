@@ -28,10 +28,9 @@
 #define FMT_TD0         (1 << UFT_FORMAT_TD0)
 
 // ============================================================================
-// Greaseweazle Options
 // ============================================================================
 
-static const uft_tool_option_t gw_options[] = {
+static const uft_tool_option_t uft_gw_options[] = {
     {
         .name = "--revs", .long_name = "revolutions",
         .description = "Number of revolutions to capture",
@@ -78,7 +77,6 @@ const uft_tool_profile_t UFT_TOOL_GREASEWEAZLE = {
     .name = "Greaseweazle",
     .version = "1.x",
     .description = "Open-source USB floppy adapter with flux capture",
-    .homepage = "https://github.com/keirf/greaseweazle",
     .executable = "gw",
     
     .io_caps = {
@@ -123,8 +121,8 @@ const uft_tool_profile_t UFT_TOOL_GREASEWEAZLE = {
     },
     .platform_count = 3,
     
-    .options = gw_options,
-    .option_count = sizeof(gw_options) / sizeof(gw_options[0]),
+    .options = uft_gw_options,
+    .option_count = sizeof(uft_gw_options) / sizeof(uft_gw_options[0]),
     
     .read_pattern = "gw read --revs={revolutions} --tracks={tracks} -d {device} {output}",
     .write_pattern = "gw write --tracks={tracks} -d {device} {input}",
@@ -133,7 +131,6 @@ const uft_tool_profile_t UFT_TOOL_GREASEWEAZLE = {
 };
 
 // ============================================================================
-// FluxEngine Options
 // ============================================================================
 
 static const uft_tool_option_t fe_options[] = {
@@ -219,7 +216,7 @@ const uft_tool_profile_t UFT_TOOL_FLUXENGINE = {
 // Kryoflux Options
 // ============================================================================
 
-static const uft_tool_option_t kf_options[] = {
+static const uft_tool_option_t uft_kf_options[] = {
     {
         .name = "-i", .long_name = "image_type",
         .description = "Output image type (0=stream, 4=SCP)",
@@ -290,14 +287,14 @@ const uft_tool_profile_t UFT_TOOL_KRYOFLUX = {
     },
     .platform_count = 3,
     
-    .options = kf_options,
-    .option_count = sizeof(kf_options) / sizeof(kf_options[0]),
+    .options = uft_kf_options,
+    .option_count = sizeof(uft_kf_options) / sizeof(uft_kf_options[0]),
     
     .read_pattern = "dtc -f{output} -i{image_type} -s{start} -e{end} -g{sides}",
 };
 
 // ============================================================================
-// nibtools Options
+// GCR tools Options
 // ============================================================================
 
 static const uft_tool_option_t nib_options[] = {
@@ -343,10 +340,10 @@ static const uft_tool_option_t nib_options[] = {
 };
 
 const uft_tool_profile_t UFT_TOOL_NIBTOOLS = {
-    .name = "nibtools",
+    .name = "GCR tools",
     .version = "0.8.x",
     .description = "Commodore disk imaging via XUM1541/ZoomFloppy",
-    .homepage = "https://c64preservation.com/dp.php?pg=nibtools",
+    .homepage = "https://c64preservation.com/dp.php?pg=GCR tools",
     .executable = "nibread",
     
     .io_caps = {
@@ -398,7 +395,7 @@ const uft_tool_profile_t UFT_TOOL_NIBTOOLS = {
 // HxCFE Options
 // ============================================================================
 
-static const uft_tool_option_t hxc_options[] = {
+static const uft_tool_option_t libflux_options[] = {
     {
         .name = "-finput:", .long_name = "input_file",
         .description = "Input file path",
@@ -426,12 +423,11 @@ static const uft_tool_option_t hxc_options[] = {
     },
 };
 
-const uft_tool_profile_t UFT_TOOL_HXCFE = {
-    .name = "HxCFloppyEmulator",
+const uft_tool_profile_t UFT_TOOL_LIBFLUX = {
+    .name = "UFT HxC Mode",
     .version = "2.x",
     .description = "Universal floppy format converter",
-    .homepage = "https://hxc2001.com/",
-    .executable = "hxcfe",
+    .executable = "libflux_ctx",
     
     .io_caps = {
         .input = {
@@ -467,11 +463,11 @@ const uft_tool_profile_t UFT_TOOL_HXCFE = {
     },
     .platform_count = 3,
     
-    .options = hxc_options,
-    .option_count = sizeof(hxc_options) / sizeof(hxc_options[0]),
+    .options = libflux_options,
+    .option_count = sizeof(libflux_options) / sizeof(libflux_options[0]),
     
-    .convert_pattern = "hxcfe -finput:{input} -foutput:{output} -conv:{format}",
-    .analyze_pattern = "hxcfe -finput:{input} -infos",
+    .convert_pattern = "libflux_ctx -finput:{input} -foutput:{output} -conv:{format}",
+    .analyze_pattern = "libflux_ctx -finput:{input} -infos",
 };
 
 // ============================================================================
@@ -501,9 +497,7 @@ static const uft_tool_option_t da_options[] = {
 
 const uft_tool_profile_t UFT_TOOL_DISK_ANALYSE = {
     .name = "disk-analyse",
-    .version = "Keir Fraser",
     .description = "Flux analysis and format detection tool",
-    .homepage = "https://github.com/keirf/disk-utilities",
     .executable = "disk-analyse",
     
     .io_caps = {
@@ -675,7 +669,7 @@ static const uft_tool_profile_t* g_tool_profiles[] = {
     &UFT_TOOL_FLUXENGINE,
     &UFT_TOOL_KRYOFLUX,
     &UFT_TOOL_NIBTOOLS,
-    &UFT_TOOL_HXCFE,
+    &UFT_TOOL_LIBFLUX,
     &UFT_TOOL_DISK_ANALYSE,
     &UFT_TOOL_ADFTOOLS,
     &UFT_TOOL_MTOOLS,

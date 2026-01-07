@@ -1,8 +1,8 @@
 /**
  * @file uft_hfe_parser_v3.c
- * @brief GOD MODE HFE Parser v3 - HxC Floppy Emulator Format
+ * @brief GOD MODE HFE Parser v3 - UFT HFE Format Format
  * 
- * HFE ist das Format für HxC Floppy Emulatoren:
+ * HFE ist das Format für UFT HFE Formaten:
  * - HFE v1, v2, v3 Support
  * - MFM/FM/GCR Encoding
  * - Variable Track-Längen

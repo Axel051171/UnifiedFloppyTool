@@ -3,7 +3,6 @@
  * @brief Flux Instability Analysis Implementation
  * 
  * EXT4-001: Flux Instability Analysis
- * Based on FloppyAI flux_analyzer.py
  * 
  * Analyzes multi-revolution flux data to detect:
  * - Weak bits (inconsistent across revolutions)

@@ -1,3 +1,6 @@
+#ifndef UFT_LOADERS_FDI_LOADER_FDI_FORMAT_H
+#define UFT_LOADERS_FDI_LOADER_FDI_FORMAT_H
+
 /*
 FDI Format
 Supported by various emulators, including SPIN. Note that this entry was translated from UKV Spectrum Debugger's documentation by Mac Buster.
@@ -86,3 +89,5 @@ typedef struct fdi_sector_header_
 }fdi_sector_header;
 
 #pragma pack()
+
+#endif /* UFT_LOADERS_FDI_LOADER_FDI_FORMAT_H */

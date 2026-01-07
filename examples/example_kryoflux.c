@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 /*
- * example_kryoflux.c - KryoFlux Demo Program
  * 
- * Demonstrates KryoFlux stream decoding and device detection.
  * 
  * Usage:
  *   ./example_kryoflux detect              # Detect devices
@@ -12,7 +10,7 @@
  * @date 2024-12-25
  */
 
-#include "kryoflux_hw.h"
+#include "uft_kf_hw.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -25,17 +23,17 @@ static void demo_detect_devices(void)
 {
     printf("=== KryoFlux Device Detection ===\n\n");
     
-    int r = kryoflux_init();
+    int r = uft_kf_init();
     if (r < 0) {
         fprintf(stderr, "Failed to initialize KryoFlux subsystem\n");
         return;
     }
     
     int count = 0;
-    r = kryoflux_detect_devices(&count);
+    r = uft_kf_detect_devices(&count);
     if (r < 0) {
         fprintf(stderr, "Failed to detect devices: %d\n", r);
-        kryoflux_shutdown();
+        uft_kf_shutdown();
         return;
     }
     
@@ -43,22 +41,22 @@ static void demo_detect_devices(void)
     
     if (count > 0) {
         /* Try to open first device */
-        kryoflux_device_t *dev = NULL;
-        r = kryoflux_open(0, &dev);
+        uft_kf_device_t *dev = NULL;
+        r = uft_kf_open(0, &dev);
         
         if (r == 0 && dev) {
             char info[512];
-            if (kryoflux_get_device_info(dev, info) == 0) {
+            if (uft_kf_get_device_info(dev, info) == 0) {
                 printf("%s\n", info);
             }
             
-            kryoflux_close(dev);
+            uft_kf_close(dev);
         } else {
             fprintf(stderr, "Failed to open device: %d\n", r);
         }
     }
     
-    kryoflux_shutdown();
+    uft_kf_shutdown();
 }
 
 /*============================================================================*
@@ -70,8 +68,8 @@ static void demo_decode_stream(const char *filename)
     printf("=== KryoFlux Stream Decoder ===\n\n");
     printf("File: %s\n\n", filename);
     
-    kf_stream_result_t result;
-    int r = kryoflux_decode_stream_file(filename, &result);
+    uft_kf_stream_result_t result;
+    int r = uft_kf_decode_stream_file(filename, &result);
     
     if (r < 0) {
         fprintf(stderr, "Failed to decode stream file\n");
@@ -140,7 +138,7 @@ static void demo_decode_stream(const char *filename)
     printf("  ✓ UFM export for complete preservation\n");
     printf("\n");
     
-    kryoflux_free_stream_result(&result);
+    uft_kf_free_stream_result(&result);
 }
 
 /*============================================================================*

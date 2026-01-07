@@ -4,11 +4,11 @@
  * 
  * Teledisk was a popular disk imaging program by Sydex. The format is
  * undocumented but has been reverse-engineered. This implementation is
- * based on the notes by Dave Dunfield and others.
+ * based on the notes by various authors and others.
  * 
  * The format supports optional LZSS-Huffman compression ("Advanced Compression").
  * 
- * @copyright UFT Project - Based on reverse-engineering by Dave Dunfield et al.
+ * @copyright UFT Project - Based on reverse-engineering by various authors et al.
  */
 
 #ifndef UFT_TD0_H

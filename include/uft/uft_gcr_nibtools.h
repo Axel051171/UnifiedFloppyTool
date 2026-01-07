@@ -1,8 +1,5 @@
 /**
- * @file uft_gcr_nibtools.h
- * @brief Professional C64/1541 GCR Codec (from nibtools)
  * 
- * Complete GCR encoding/decoding implementation extracted from nibtools
  * by Markus Brenner and Pete Rittwage.
  * 
  * Features:
@@ -13,7 +10,6 @@
  * - Bad GCR detection
  * 
  * @version 1.0.0
- * @copyright Based on nibtools (C) 2001-2005 Markus Brenner, Pete Rittwage
  */
 
 #ifndef UFT_GCR_NIBTOOLS_H

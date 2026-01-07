@@ -2,7 +2,6 @@
  * @file uft_track_layout.c
  * @brief Track Layout Generation Implementation
  * 
- * Source: track_layout_gen_c (UFT Project)
  * 
  * @copyright UFT Project 2026
  */

@@ -2,25 +2,20 @@
 //
 // Copyright (C) 2006-2025 Jean-Franois DEL NERO
 //
-// This file is part of the HxCFloppyEmulator library
 //
-// HxCFloppyEmulator may be used and distributed without restriction provided
 // that this copyright statement is not removed from the file and that any
 // derivative work contains the original copyright notice and the associated
 // disclaimer.
 //
-// HxCFloppyEmulator is free software; you can redistribute it
 // and/or modify  it under the terms of the GNU General Public License
 // as published by the Free Software Foundation; either version 2
 // of the License, or (at your option) any later version.
 //
-// HxCFloppyEmulator is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 //   See the GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with HxCFloppyEmulator; if not, write to the Free Software
 // Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 //
 */
@@ -38,18 +33,18 @@
 
 #include "types.h"
 
-#include "internal_libhxcfe.h"
+#include "libflux.h""
 #include "tracks/track_generator.h"
-#include "libhxcfe.h"
+#include "libflux.h""
 #include "h17_loader.h"
 #include "h17_writer.h"
 #include "tracks/sector_extractor.h"
 #include "libhxcadaptor.h"
 
-int write_meta_data_track(FILE * f,HXCFE_SECTORACCESS* ss,int32_t startidsector,int32_t sectorpertrack,int32_t trk,int32_t side,int32_t sectorsize,int32_t tracktype, int * badsect, int * missingsect )
+int write_meta_data_track(FILE * f,LIBFLUX_SECTORACCESS* ss,int32_t startidsector,int32_t sectorpertrack,int32_t trk,int32_t side,int32_t sectorsize,int32_t tracktype, int * badsect, int * missingsect )
 {
 	int sect;
-	HXCFE_SECTCFG * scfg;
+	LIBFLUX_SECTCFG * scfg;
 
 	h17_sect_metadata sect_meta;
 
@@ -57,7 +52,7 @@ int write_meta_data_track(FILE * f,HXCFE_SECTORACCESS* ss,int32_t startidsector,
 	{
 		memset(&sect_meta,0,sizeof(sect_meta));
 
-		scfg = hxcfe_searchSector ( ss, trk, side, startidsector + sect, tracktype );
+		scfg = libflux_searchSector ( ss, trk, side, startidsector + sect, tracktype );
 		if( scfg )
 		{
 			if( scfg->use_alternate_data_crc || !scfg->input_data )
@@ -86,7 +81,7 @@ int write_meta_data_track(FILE * f,HXCFE_SECTORACCESS* ss,int32_t startidsector,
 			sect_meta.Valid_Bytes = BIGENDIAN_WORD(256);
 			sect_meta.Offset = BIGENDIAN_DWORD( 256 + (((trk * sectorpertrack) + sect) * sectorsize) ) ;
 
-			hxcfe_freeSectorConfig( ss , scfg );
+			libflux_freeSectorConfig( ss , scfg );
 		}
 		else
 		{
@@ -110,10 +105,10 @@ int write_meta_data_track(FILE * f,HXCFE_SECTORACCESS* ss,int32_t startidsector,
 	return 0;
 }
 
-int write_meta_data(HXCFE_IMGLDR * imgldr_ctx,FILE * f,HXCFE_FLOPPY * fp,int32_t startidsector,int32_t sectorpertrack,int32_t nboftrack,int32_t nbofside,int32_t sectorsize,int32_t tracktype,int32_t sidefilelayout)
+int write_meta_data(LIBFLUX_IMGLDR * imgldr_ctx,FILE * f,LIBFLUX_FLOPPY * fp,int32_t startidsector,int32_t sectorpertrack,int32_t nboftrack,int32_t nbofside,int32_t sectorsize,int32_t tracktype,int32_t sidefilelayout)
 {
 	int trk,side;
-	HXCFE_SECTORACCESS* ss;
+	LIBFLUX_SECTORACCESS* ss;
 	int badsect,missingsect;
 
 	badsect = 0;
@@ -121,7 +116,7 @@ int write_meta_data(HXCFE_IMGLDR * imgldr_ctx,FILE * f,HXCFE_FLOPPY * fp,int32_t
 
 	if(f && fp)
 	{
-		ss = hxcfe_initSectorAccess( imgldr_ctx->hxcfe, fp );
+		ss = libflux_initSectorAccess( imgldr_ctx->ctx, fp );
 		if(ss)
 		{
 			for( trk = 0 ; trk < nboftrack ; trk++ )
@@ -132,18 +127,18 @@ int write_meta_data(HXCFE_IMGLDR * imgldr_ctx,FILE * f,HXCFE_FLOPPY * fp,int32_t
 				}
 			}
 
-			hxcfe_deinitSectorAccess(ss);
+			libflux_deinitSectorAccess(ss);
 		}
 	}
 
 	if(badsect || missingsect)
-		return HXCFE_FILECORRUPTED;
+		return LIBFLUX_FILECORRUPTED;
 	else
-		return HXCFE_NOERROR;
+		return LIBFLUX_NOERROR;
 }
 
 // Main writer function
-int H17_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char * filename)
+int H17_libWrite_DiskFile(LIBFLUX_IMGLDR* imgldr_ctx,LIBFLUX_FLOPPY * floppy,char * filename)
 {
 	int nbsector;
 	int nbtrack;
@@ -171,16 +166,16 @@ int H17_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char * 
 
 	sectorsize = 256;
 
-	hxcfe_imgCallProgressCallback(imgldr_ctx,0,floppy->floppyNumberOfTrack*2 );
+	libflux_imgCallProgressCallback(imgldr_ctx,0,floppy->floppyNumberOfTrack*2 );
 
-	imgldr_ctx->hxcfe->hxc_printf(MSG_INFO_1,"Write H17 Heathkit file %s...",filename);
+	imgldr_ctx->ctx->libflux_printf(MSG_INFO_1,"Write H17 Heathkit file %s...",filename);
 
-	sectorcnt_s0 = count_sector(imgldr_ctx->hxcfe,floppy,0,0,0,sectorsize,HEATHKIT_HS_FM_ENCODING,0x0000);
-	sectorcnt_s1 = count_sector(imgldr_ctx->hxcfe,floppy,0,0,1,sectorsize,HEATHKIT_HS_FM_ENCODING,0x0000);
+	sectorcnt_s0 = count_sector(imgldr_ctx->ctx,floppy,0,0,0,sectorsize,HEATHKIT_HS_FM_ENCODING,0x0000);
+	sectorcnt_s1 = count_sector(imgldr_ctx->ctx,floppy,0,0,1,sectorsize,HEATHKIT_HS_FM_ENCODING,0x0000);
 
-	writeret = HXCFE_ACCESSERROR;
+	writeret = LIBFLUX_ACCESSERROR;
 
-	h8dfile = hxc_fopen(filename,"wb");
+	h8dfile = libflux_fopen(filename,"wb");
 	if(h8dfile)
 	{
 		memcpy((void*)&hdr.file_tag,"H17D",4);
@@ -189,12 +184,12 @@ int H17_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char * 
 		if (fwrite(&hdr,sizeof(hdr),1,h8dfile) != 1) { /* I/O error */ }
 		if(sectorcnt_s0 != 10)
 		{
-			imgldr_ctx->hxcfe->hxc_printf(MSG_INFO_1,"Error : Disk format doesn't match...",filename);
-			return HXCFE_FILECORRUPTED;
+			imgldr_ctx->ctx->libflux_printf(MSG_INFO_1,"Error : Disk format doesn't match...",filename);
+			return LIBFLUX_FILECORRUPTED;
 		}
 
 		nbtrack = 40;
-		while(nbtrack && !count_sector(imgldr_ctx->hxcfe,floppy,0,nbtrack-1,0,sectorsize,HEATHKIT_HS_FM_ENCODING,0x0000))
+		while(nbtrack && !count_sector(imgldr_ctx->ctx,floppy,0,nbtrack-1,0,sectorsize,HEATHKIT_HS_FM_ENCODING,0x0000))
 		{
 			nbtrack--;
 		}
@@ -216,7 +211,6 @@ int H17_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char * 
 		Parm.Distribution_Disk = 0;
 		Parm.Source_of_Header_Data = 0;
 		if (fwrite(&Parm,sizeof(Parm),1,h8dfile) != 1) { /* I/O error */ }
-		snprintf(str_tmp, sizeof(str_tmp),"HxC Floppy Emulator software v%s\nhttps://hxc2001.com",STR_FILE_VERSION2);
 		blk.id = BLKID_Prog;
 		blk.lenght = BIGENDIAN_DWORD(strlen(str_tmp));
 		if (fwrite(&blk,sizeof(blk),1,h8dfile) != 1) { /* I/O error */ }
@@ -253,7 +247,7 @@ int H17_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char * 
 
 		nbsector = sectorcnt_s0;
 
-		imgldr_ctx->hxcfe->hxc_printf(MSG_INFO_1,"%d sectors (%d bytes), %d tracks, %d sides...",nbsector,sectorsize,nbtrack,nbside);
+		imgldr_ctx->ctx->libflux_printf(MSG_INFO_1,"%d sectors (%d bytes), %d tracks, %d sides...",nbsector,sectorsize,nbtrack,nbside);
 
 		writeret = write_raw_file(imgldr_ctx,h8dfile,floppy,0,nbsector,nbtrack,nbside,sectorsize,HEATHKIT_HS_FM_ENCODING,1);
 
@@ -277,7 +271,7 @@ int H17_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char * 
 		blk.lenght = BIGENDIAN_DWORD( offset2 - offset );
 		if (fwrite(&blk,sizeof(blk),1,h8dfile) != 1) { /* I/O error */ }
 		if (fseek(h8dfile,0,SEEK_END) != 0) { /* seek error */ }
-		hxc_fclose(h8dfile);
+		libflux_fclose(h8dfile);
 	}
 
 	return writeret;

@@ -16,10 +16,15 @@
  */
 
 #include "uft/ml/uft_ml_decoder.h"
+#include "uft/core/uft_safe_parse.h"
 #include <stdio.h>
+#include "uft/core/uft_safe_parse.h"
 #include <stdlib.h>
+#include "uft/core/uft_safe_parse.h"
 #include <string.h>
+#include "uft/core/uft_safe_parse.h"
 #include <signal.h>
+#include "uft/core/uft_safe_parse.h"
 
 /*===========================================================================
  * Globals
@@ -128,9 +133,9 @@ static int cmd_train(int argc, char **argv)
         if ((strcmp(argv[i], "-o") == 0 || strcmp(argv[i], "--output") == 0) && i + 1 < argc) {
             output_path = argv[++i];
         } else if ((strcmp(argv[i], "-e") == 0 || strcmp(argv[i], "--epochs") == 0) && i + 1 < argc) {
-            epochs = atoi(argv[++i]);
+            { int32_t t; if(uft_parse_int32(argv[++i],&t,10)) epochs=t; }
         } else if ((strcmp(argv[i], "-b") == 0 || strcmp(argv[i], "--batch") == 0) && i + 1 < argc) {
-            batch_size = atoi(argv[++i]);
+            { int32_t t; if(uft_parse_int32(argv[++i],&t,10)) batch_size=t; }
         } else if ((strcmp(argv[i], "-l") == 0 || strcmp(argv[i], "--lr") == 0) && i + 1 < argc) {
             learning_rate = (float)atof(argv[++i]);
         } else if ((strcmp(argv[i], "-t") == 0 || strcmp(argv[i], "--target") == 0) && i + 1 < argc) {
@@ -141,11 +146,11 @@ static int cmd_train(int argc, char **argv)
             else if (strcmp(t, "apple") == 0) target = UFT_ML_TARGET_APPLE_GCR;
             else if (strcmp(t, "c64") == 0) target = UFT_ML_TARGET_C64_GCR;
         } else if (strcmp(argv[i], "--hidden") == 0 && i + 1 < argc) {
-            hidden_size = atoi(argv[++i]);
+            { int32_t t; if(uft_parse_int32(argv[++i],&t,10)) hidden_size=t; }
         } else if (strcmp(argv[i], "--filters") == 0 && i + 1 < argc) {
-            num_filters = atoi(argv[++i]);
+            { int32_t t; if(uft_parse_int32(argv[++i],&t,10)) num_filters=t; }
         } else if (strcmp(argv[i], "--kernel") == 0 && i + 1 < argc) {
-            kernel_size = atoi(argv[++i]);
+            { int32_t t; if(uft_parse_int32(argv[++i],&t,10)) kernel_size=t; }
         } else if (strcmp(argv[i], "--split") == 0 && i + 1 < argc) {
             split_ratio = (float)atof(argv[++i]);
         } else if (strcmp(argv[i], "-v") == 0 || strcmp(argv[i], "--verbose") == 0) {

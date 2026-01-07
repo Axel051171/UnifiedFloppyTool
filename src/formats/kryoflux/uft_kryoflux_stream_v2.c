@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 /**
- * @file uft_kryoflux_stream_v2.c
- * @brief KryoFlux Stream Reader v2 - GOD MODE Edition
+ * @file uft_uft_kf_stream_v2.c
  * @version 2.0.0
  * @date 2025-01-02
  *
@@ -14,7 +13,6 @@
  * - Streaming-Modus für große Dateien
  * - Weak Bit Detection durch Revolution-Vergleich
  *
- * KryoFlux Stream Format:
  * - Flux-Daten als variable-length encoded Samples
  * - OOB Blocks für Metadaten (Index, Stream Info, EOF)
  * - Sample Clock: 24.027428 MHz (SCK) / (ICK+1)
@@ -38,31 +36,30 @@
  *============================================================================*/
 
 /* Sample Clock */
-#define KF_SCK_HZ               24027428.0  /* Master clock */
-#define KF_ICK_DEFAULT          2           /* Index clock divider */
-#define KF_SAMPLE_FREQ          (KF_SCK_HZ / (KF_ICK_DEFAULT + 1))
-#define KF_SAMPLE_NS            (1e9 / KF_SAMPLE_FREQ)  /* ~41.619ns */
+#define UFT_KF_SCK_HZ               24027428.0  /* Master clock */
+#define UFT_KF_ICK_DEFAULT          2           /* Index clock divider */
+#define UFT_KF_SAMPLE_FREQ          (UFT_KF_SCK_HZ / (UFT_KF_ICK_DEFAULT + 1))
+#define UFT_KF_SAMPLE_NS            (1e9 / UFT_KF_SAMPLE_FREQ)  /* ~41.619ns */
 
 /* Stream Opcodes */
-#define KF_OP_NOP1              0x08        /* 1-byte NOP */
-#define KF_OP_NOP2              0x09        /* 2-byte NOP */
-#define KF_OP_NOP3              0x0A        /* 3-byte NOP */
-#define KF_OP_OVERFLOW16        0x0B        /* 16-bit overflow */
-#define KF_OP_FLUX3             0x0C        /* 3-byte flux value */
-#define KF_OP_OOB               0x0D        /* Out-of-Band block */
+#define UFT_KF_OP_NOP1              0x08        /* 1-byte NOP */
+#define UFT_KF_OP_NOP2              0x09        /* 2-byte NOP */
+#define UFT_KF_OP_NOP3              0x0A        /* 3-byte NOP */
+#define UFT_KF_OP_OVERFLOW16        0x0B        /* 16-bit overflow */
+#define UFT_KF_OP_FLUX3             0x0C        /* 3-byte flux value */
+#define UFT_KF_OP_OOB               0x0D        /* Out-of-Band block */
 
 /* OOB Types */
-#define KF_OOB_INVALID          0x00
-#define KF_OOB_STREAM_INFO      0x01        /* Stream info block */
-#define KF_OOB_INDEX            0x02        /* Index pulse */
-#define KF_OOB_STREAM_END       0x03        /* End of stream */
-#define KF_OOB_KFINFO           0x04        /* KryoFlux info string */
-#define KF_OOB_EOF              0x0D        /* End of file */
+#define UFT_KF_OOB_INVALID          0x00
+#define UFT_KF_OOB_STREAM_INFO      0x01        /* Stream info block */
+#define UFT_KF_OOB_INDEX            0x02        /* Index pulse */
+#define UFT_KF_OOB_STREAM_END       0x03        /* End of stream */
+#define UFT_KF_OOB_EOF              0x0D        /* End of file */
 
 /* Limits */
-#define KF_MAX_REVOLUTIONS      10
-#define KF_MAX_INDICES          20
-#define KF_MAX_FLUX_PER_REV     500000
+#define UFT_KF_MAX_REVOLUTIONS      10
+#define UFT_KF_MAX_INDICES          20
+#define UFT_KF_MAX_FLUX_PER_REV     500000
 
 /*============================================================================
  * STRUCTURES
@@ -73,26 +70,26 @@ typedef struct {
     uint32_t sample_counter;    /* Sample counter bei Index */
     uint32_t index_counter;     /* Index counter */
     double   time_ns;           /* Zeit in Nanosekunden */
-} kf_index_t;
+} uft_kf_index_t;
 
 typedef struct {
     uint32_t stream_pos;        /* Stream position */
     uint32_t result_code;       /* Hardware result */
-} kf_stream_end_t;
+} uft_kf_stream_end_t;
 
 typedef struct {
     char     name[64];          /* Info name */
     char     value[256];        /* Info value */
-} kf_info_t;
+} uft_kf_info_t;
 
 typedef struct {
     /* Flux data per revolution */
-    uint32_t* flux[KF_MAX_REVOLUTIONS];
-    uint32_t  flux_count[KF_MAX_REVOLUTIONS];
-    uint32_t  flux_capacity[KF_MAX_REVOLUTIONS];
+    uint32_t* flux[UFT_KF_MAX_REVOLUTIONS];
+    uint32_t  flux_count[UFT_KF_MAX_REVOLUTIONS];
+    uint32_t  flux_capacity[UFT_KF_MAX_REVOLUTIONS];
     
     /* Index pulses */
-    kf_index_t indices[KF_MAX_INDICES];
+    uft_kf_index_t indices[UFT_KF_MAX_INDICES];
     uint8_t    index_count;
     
     /* Computed revolutions */
@@ -105,7 +102,7 @@ typedef struct {
     /* Timing */
     double     sample_clock_hz;
     double     sample_period_ns;
-    float      rpm[KF_MAX_REVOLUTIONS];
+    float      rpm[UFT_KF_MAX_REVOLUTIONS];
     float      avg_rpm;
     
     /* Statistics */
@@ -126,7 +123,7 @@ typedef struct {
     float      track_confidence;
     float      alignment_quality;
     
-} kf_track_t;
+} uft_kf_track_t;
 
 typedef struct {
     /* Input */
@@ -142,7 +139,7 @@ typedef struct {
     void (*progress_cb)(int percent, void* ctx);
     void* callback_ctx;
     
-} kf_decode_params_t;
+} uft_kf_decode_params_t;
 
 /*============================================================================
  * SIMD OOB DETECTION
@@ -168,7 +165,7 @@ static int simd_find_oob(const uint8_t* data, size_t len) {
     
     /* Scalar fallback */
     for (; i < len; i++) {
-        if (data[i] == KF_OP_OOB) return (int)i;
+        if (data[i] == UFT_KF_OP_OOB) return (int)i;
     }
     
     return -1;
@@ -204,7 +201,7 @@ static void simd_kf_flux_stats(const uint32_t* flux, size_t count,
 /* Scalar Fallbacks */
 static int simd_find_oob(const uint8_t* data, size_t len) {
     for (size_t i = 0; i < len; i++) {
-        if (data[i] == KF_OP_OOB) return (int)i;
+        if (data[i] == UFT_KF_OP_OOB) return (int)i;
     }
     return -1;
 }
@@ -241,7 +238,7 @@ static void simd_kf_flux_stats(const uint32_t* flux, size_t count,
  * @brief OOB Block parsen
  * @return Bytes consumed, or -1 on error
  */
-static int parse_oob_block(const uint8_t* data, size_t len, kf_track_t* track) {
+static int parse_oob_block(const uint8_t* data, size_t len, uft_kf_track_t* track) {
     if (len < 4) return -1;
     
     /* Format: 0D type size_lo size_hi [data...] */
@@ -253,7 +250,7 @@ static int parse_oob_block(const uint8_t* data, size_t len, kf_track_t* track) {
     const uint8_t* payload = data + 4;
     
     switch (type) {
-        case KF_OOB_STREAM_INFO:
+        case UFT_KF_OOB_STREAM_INFO:
             /* Stream info: position(4) + time(4) */
             if (size >= 8) {
                 /* uint32_t stream_pos = payload[0] | ... */
@@ -261,10 +258,10 @@ static int parse_oob_block(const uint8_t* data, size_t len, kf_track_t* track) {
             }
             break;
             
-        case KF_OOB_INDEX:
+        case UFT_KF_OOB_INDEX:
             /* Index pulse: stream_pos(4) + sample_counter(4) + index_counter(4) */
-            if (size >= 12 && track->index_count < KF_MAX_INDICES) {
-                kf_index_t* idx = &track->indices[track->index_count++];
+            if (size >= 12 && track->index_count < UFT_KF_MAX_INDICES) {
+                uft_kf_index_t* idx = &track->indices[track->index_count++];
                 
                 idx->stream_pos = payload[0] | (payload[1] << 8) |
                                   (payload[2] << 16) | (payload[3] << 24);
@@ -278,15 +275,14 @@ static int parse_oob_block(const uint8_t* data, size_t len, kf_track_t* track) {
             }
             break;
             
-        case KF_OOB_STREAM_END:
+        case UFT_KF_OOB_STREAM_END:
             /* Stream end: stream_pos(4) + result(4) */
             if (size >= 8) {
                 /* Stream beendet */
             }
             break;
             
-        case KF_OOB_KFINFO:
-            /* KryoFlux info string */
+        case UFT_KF_OOB_KFINFO:
             if (size > 0 && track->extract_hardware_info) {
                 char info[512];
                 size_t copy_len = (size < sizeof(info) - 1) ? size : sizeof(info) - 1;
@@ -313,7 +309,7 @@ static int parse_oob_block(const uint8_t* data, size_t len, kf_track_t* track) {
             }
             break;
             
-        case KF_OOB_EOF:
+        case UFT_KF_OOB_EOF:
             /* End of file */
             return -2;  /* Special: EOF reached */
             
@@ -333,14 +329,14 @@ static int parse_oob_block(const uint8_t* data, size_t len, kf_track_t* track) {
 /**
  * @brief Flux-Wert zu aktueller Revolution hinzufügen
  */
-static bool add_flux(kf_track_t* track, int rev, uint32_t flux_samples) {
-    if (rev < 0 || rev >= KF_MAX_REVOLUTIONS) return false;
+static bool add_flux(uft_kf_track_t* track, int rev, uint32_t flux_samples) {
+    if (rev < 0 || rev >= UFT_KF_MAX_REVOLUTIONS) return false;
     
     /* Kapazität prüfen/erweitern */
     if (track->flux_count[rev] >= track->flux_capacity[rev]) {
         uint32_t new_cap = track->flux_capacity[rev] ? 
                            track->flux_capacity[rev] * 2 : 8192;
-        if (new_cap > KF_MAX_FLUX_PER_REV) new_cap = KF_MAX_FLUX_PER_REV;
+        if (new_cap > UFT_KF_MAX_FLUX_PER_REV) new_cap = UFT_KF_MAX_FLUX_PER_REV;
         
         uint32_t* new_flux = realloc(track->flux[rev], new_cap * sizeof(uint32_t));
         if (!new_flux) return false;
@@ -358,9 +354,8 @@ static bool add_flux(kf_track_t* track, int rev, uint32_t flux_samples) {
 }
 
 /**
- * @brief KryoFlux Stream decodieren
  */
-int kf_decode_stream_v2(const kf_decode_params_t* params, kf_track_t* track) {
+int uft_kf_decode_stream_v2(const uft_kf_decode_params_t* params, uft_kf_track_t* track) {
     if (!params || !track || !params->data) {
         return -1;
     }
@@ -371,7 +366,7 @@ int kf_decode_stream_v2(const kf_decode_params_t* params, kf_track_t* track) {
     if (params->sample_clock_override > 0) {
         track->sample_clock_hz = params->sample_clock_override;
     } else {
-        track->sample_clock_hz = KF_SAMPLE_FREQ;
+        track->sample_clock_hz = UFT_KF_SAMPLE_FREQ;
     }
     track->sample_period_ns = 1e9 / track->sample_clock_hz;
     track->extract_hardware_info = params->extract_hardware_info;
@@ -409,26 +404,26 @@ int kf_decode_stream_v2(const kf_decode_params_t* params, kf_track_t* track) {
         
         /* Special opcodes 0x08-0x0D */
         switch (byte) {
-            case KF_OP_NOP1:
+            case UFT_KF_OP_NOP1:
                 pos++;
                 break;
                 
-            case KF_OP_NOP2:
+            case UFT_KF_OP_NOP2:
                 pos += 2;
                 break;
                 
-            case KF_OP_NOP3:
+            case UFT_KF_OP_NOP3:
                 pos += 3;
                 break;
                 
-            case KF_OP_OVERFLOW16:
+            case UFT_KF_OP_OVERFLOW16:
                 /* 16-bit overflow: nächstes Byte * 256 zu Accumulator */
                 if (pos + 1 >= len) return -3;
                 flux_acc += (uint32_t)data[pos + 1] << 8;
                 pos += 2;
                 break;
                 
-            case KF_OP_FLUX3:
+            case UFT_KF_OP_FLUX3:
                 /* 3-byte flux: next two bytes as little-endian value */
                 if (pos + 2 >= len) return -3;
                 {
@@ -444,7 +439,7 @@ int kf_decode_stream_v2(const kf_decode_params_t* params, kf_track_t* track) {
                 pos += 3;
                 break;
                 
-            case KF_OP_OOB:
+            case UFT_KF_OP_OOB:
                 /* Out-of-Band Block */
                 {
                     int oob_result = parse_oob_block(data + pos, len - pos, track);
@@ -459,10 +454,10 @@ int kf_decode_stream_v2(const kf_decode_params_t* params, kf_track_t* track) {
                     }
                     
                     /* Revolution wechseln bei Index */
-                    if (data[pos + 1] == KF_OOB_INDEX) {
+                    if (data[pos + 1] == UFT_KF_OOB_INDEX) {
                         current_rev++;
-                        if (current_rev >= KF_MAX_REVOLUTIONS) {
-                            current_rev = KF_MAX_REVOLUTIONS - 1;
+                        if (current_rev >= UFT_KF_MAX_REVOLUTIONS) {
+                            current_rev = UFT_KF_MAX_REVOLUTIONS - 1;
                         }
                     }
                     
@@ -486,7 +481,7 @@ int kf_decode_stream_v2(const kf_decode_params_t* params, kf_track_t* track) {
 decode_done:
     /* Revolution count */
     track->revolution_count = 0;
-    for (int r = 0; r < KF_MAX_REVOLUTIONS; r++) {
+    for (int r = 0; r < UFT_KF_MAX_REVOLUTIONS; r++) {
         if (track->flux_count[r] > 0) {
             track->revolution_count = r + 1;
         }
@@ -550,10 +545,10 @@ decode_done:
 /**
  * @brief Track-Daten freigeben
  */
-void kf_free_track(kf_track_t* track) {
+void uft_kf_free_track(uft_kf_track_t* track) {
     if (!track) return;
     
-    for (int r = 0; r < KF_MAX_REVOLUTIONS; r++) {
+    for (int r = 0; r < UFT_KF_MAX_REVOLUTIONS; r++) {
         free(track->flux[r]);
         track->flux[r] = NULL;
     }
@@ -562,7 +557,7 @@ void kf_free_track(kf_track_t* track) {
 /**
  * @brief Flux zu Nanosekunden konvertieren (bereits in decode gemacht)
  */
-const uint32_t* kf_get_flux_ns(const kf_track_t* track, int revolution,
+const uint32_t* uft_kf_get_flux_ns(const uft_kf_track_t* track, int revolution,
                                uint32_t* count_out) {
     if (!track || revolution < 0 || revolution >= track->revolution_count) {
         if (count_out) *count_out = 0;
@@ -577,7 +572,7 @@ const uint32_t* kf_get_flux_ns(const kf_track_t* track, int revolution,
  * UNIT TESTS
  *============================================================================*/
 
-#ifdef KRYOFLUX_TEST
+#ifdef UFT_UFT_KF_TEST
 
 #include <assert.h>
 
@@ -605,7 +600,7 @@ static void test_flux_stats(void) {
 }
 
 static void test_sample_clock(void) {
-    double freq = KF_SAMPLE_FREQ;
+    double freq = UFT_KF_SAMPLE_FREQ;
     double period = 1e9 / freq;
     
     /* Sollte ca. 41.6ns sein */
@@ -625,7 +620,7 @@ static void test_rpm_calculation(void) {
 }
 
 static void test_add_flux(void) {
-    kf_track_t track;
+    uft_kf_track_t track;
     memset(&track, 0, sizeof(track));
     track.sample_period_ns = 41.619;
     
@@ -638,7 +633,7 @@ static void test_add_flux(void) {
     assert(track.total_flux == 3);
     
     /* Cleanup */
-    kf_free_track(&track);
+    uft_kf_free_track(&track);
     
     printf("✓ Add Flux\n");
 }
@@ -656,4 +651,4 @@ int main(void) {
     return 0;
 }
 
-#endif /* KRYOFLUX_TEST */
+#endif /* UFT_UFT_KF_TEST */

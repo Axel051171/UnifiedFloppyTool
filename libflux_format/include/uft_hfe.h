@@ -2,9 +2,9 @@
 #define UFT_HFE_H
 
 /*
- * UFT (Universal Floppy Tool) - HFE (HxC Floppy Emulator) - v2.8.7
+ * UFT (Universal Floppy Tool) - HFE (UFT HFE Format) - v2.8.7
  *
- * HFE is a track-oriented container used by the HxC emulator.
+ * HFE is a track-oriented container used by the UFT HFE.
  * It stores:
  *  - disk geometry
  *  - per-track bitstreams (MFM/FM encoded)

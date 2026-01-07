@@ -2,25 +2,20 @@
 //
 // Copyright (C) 2006-2025 Jean-Franois DEL NERO
 //
-// This file is part of the HxCFloppyEmulator library
 //
-// HxCFloppyEmulator may be used and distributed without restriction provided
 // that this copyright statement is not removed from the file and that any
 // derivative work contains the original copyright notice and the associated
 // disclaimer.
 //
-// HxCFloppyEmulator is free software; you can redistribute it
 // and/or modify  it under the terms of the GNU General Public License
 // as published by the Free Software Foundation; either version 2
 // of the License, or (at your option) any later version.
 //
-// HxCFloppyEmulator is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 //   See the GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with HxCFloppyEmulator; if not, write to the Free Software
 // Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 //
 */
@@ -49,23 +44,23 @@
 
 #include "types.h"
 
-#include "internal_libhxcfe.h"
+#include "libflux.h""
 #include "tracks/track_generator.h"
-#include "libhxcfe.h"
+#include "libflux.h""
 #include "stx_loader.h"
 #include "stx_writer.h"
 #include "pasti_format.h"
-#include "floppy_utils.h"
+#include "uft_floppy_utils.h"
 #include "tracks/sector_extractor.h"
 #include "libhxcadaptor.h"
 
 // Main writer function
-int STX_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char * filename)
+int STX_libWrite_DiskFile(LIBFLUX_IMGLDR* imgldr_ctx,LIBFLUX_FLOPPY * floppy,char * filename)
 {
 	int i,j;
 	FILE * stxdskfile;
-	HXCFE_SECTORACCESS* ss;
-	HXCFE_SECTCFG* sc;
+	LIBFLUX_SECTORACCESS* ss;
+	LIBFLUX_SECTCFG* sc;
 
 	int cur_track_file_offset;
 	int sect_cnt;
@@ -91,7 +86,7 @@ int STX_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char * 
 
 	rawtrackdata = 0;
 
-	imgldr_ctx->hxcfe->hxc_printf(MSG_INFO_1,"Write STX file %s...",filename);
+	imgldr_ctx->ctx->libflux_printf(MSG_INFO_1,"Write STX file %s...",filename);
 
 	memset(&header,0,sizeof(pasti_fileheader));
 	header.headertag[0] = 'R';
@@ -123,7 +118,7 @@ int STX_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char * 
 			number_of_track = 0xA4;
 	}
 
-	stxdskfile = hxc_fopen(filename,"w+b");
+	stxdskfile = libflux_fopen(filename,"w+b");
 	if(stxdskfile)
 	{
 		if (fwrite(&header,sizeof(pasti_fileheader),1,stxdskfile) != 1) { /* I/O error */ }
@@ -131,7 +126,7 @@ int STX_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char * 
 		{
 			for(j=0;j<number_of_side;j++)
 			{
-				hxcfe_imgCallProgressCallback(imgldr_ctx,(i<<1) | (j&1),number_of_track*2 );
+				libflux_imgCallProgressCallback(imgldr_ctx,(i<<1) | (j&1),number_of_track*2 );
 
 				flakey_mask_buffer = 0;
 
@@ -147,12 +142,12 @@ int STX_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char * 
 				if (fwrite(&track_header,sizeof(pasti_trackheader),1,stxdskfile) != 1) { /* I/O error */ }
 				flakey_mask_size = 0;
 				sect_cnt = 0;
-				ss = hxcfe_initSectorAccess(imgldr_ctx->hxcfe,floppy);
+				ss = libflux_initSectorAccess(imgldr_ctx->ctx,floppy);
 				if(ss)
 				{
 					do
 					{
-						sc = hxcfe_getNextSector(ss,i,j,ISOIBM_MFM_ENCODING);
+						sc = libflux_getNextSector(ss,i,j,ISOIBM_MFM_ENCODING);
 						if(sc)
 						{
 							memset(&sector_header,0,sizeof(pasti_sector));
@@ -161,13 +156,13 @@ int STX_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char * 
 							sector_header.track_num = sc->cylinder;
 							sector_header.side_num = sc->head;
 
-							sector_header.sector_pos_timing = (unsigned short)((MeasureTrackTiming(imgldr_ctx->hxcfe,floppy->tracks[i]->sides[j],0,sc->startsectorindex)*1000000)/4);
+							sector_header.sector_pos_timing = (unsigned short)((MeasureTrackTiming(imgldr_ctx->ctx,floppy->tracks[i]->sides[j],0,sc->startsectorindex)*1000000)/4);
 
 							if(sc->endsectorindex >= sc->startdataindex)
-								sector_header.sector_speed_timing = (unsigned short)(((MeasureTrackTiming(imgldr_ctx->hxcfe,floppy->tracks[i]->sides[j],sc->startdataindex,sc->endsectorindex)*1000000)));
+								sector_header.sector_speed_timing = (unsigned short)(((MeasureTrackTiming(imgldr_ctx->ctx,floppy->tracks[i]->sides[j],sc->startdataindex,sc->endsectorindex)*1000000)));
 							else
-								sector_header.sector_speed_timing = (unsigned short)((( MeasureTrackTiming(imgldr_ctx->hxcfe,floppy->tracks[i]->sides[j],0,sc->endsectorindex) +
-																	MeasureTrackTiming(imgldr_ctx->hxcfe,floppy->tracks[i]->sides[j],floppy->tracks[i]->sides[j]->tracklen - sc->startdataindex,floppy->tracks[i]->sides[j]->tracklen) ) * 1000000));
+								sector_header.sector_speed_timing = (unsigned short)((( MeasureTrackTiming(imgldr_ctx->ctx,floppy->tracks[i]->sides[j],0,sc->endsectorindex) +
+																	MeasureTrackTiming(imgldr_ctx->ctx,floppy->tracks[i]->sides[j],floppy->tracks[i]->sides[j]->tracklen - sc->startdataindex,floppy->tracks[i]->sides[j]->tracklen) ) * 1000000));
 
 							sector_header.header_crc = (sc->header_crc>>8) | (sc->header_crc<<8);
 
@@ -183,7 +178,7 @@ int STX_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char * 
 									cellnumber = sc->startdataindex;
 									do
 									{
-										flakeystate = hxcfe_getCellFlakeyState( imgldr_ctx->hxcfe, floppy->tracks[i]->sides[j], cellnumber);
+										flakeystate = libflux_getCellFlakeyState( imgldr_ctx->ctx, floppy->tracks[i]->sides[j], cellnumber);
 										if(flakeystate>0)
 										{
 											flakeymaskneeded = 1;
@@ -226,19 +221,19 @@ int STX_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char * 
 							if (fwrite(flakey_mask_buffer,flakey_mask_size,1,stxdskfile) != 1) { /* I/O error */ }
 						}
 					}
-					hxcfe_resetSearchTrackPosition(ss);
+					libflux_resetSearchTrackPosition(ss);
 
 					sect_cnt = 0;
 					tracksectsize = 0;
 
 					do
 					{
-						sc = hxcfe_getNextSector(ss,i,j,ISOIBM_MFM_ENCODING);
+						sc = libflux_getNextSector(ss,i,j,ISOIBM_MFM_ENCODING);
 						if(sc)
 						{
 							if (fseek(stxdskfile,cur_track_file_offset + sizeof(pasti_trackheader) + (sizeof(pasti_sector)*sect_cnt),SEEK_SET) != 0) { /* seek error */ }
 							memset(&sector_header,0,sizeof(pasti_sector));
-							hxc_fread(&sector_header,sizeof(pasti_sector),stxdskfile);
+							libflux_fread(&sector_header,sizeof(pasti_sector),stxdskfile);
 
 							if (fseek(stxdskfile,0,SEEK_END) != 0) { /* seek error */ }
 							if( sc->input_data )
@@ -258,7 +253,7 @@ int STX_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char * 
 										cellcnt = 0;
 										do
 										{
-											flakeystate = hxcfe_getCellFlakeyState( imgldr_ctx->hxcfe, floppy->tracks[i]->sides[j], cellnumber);
+											flakeystate = libflux_getCellFlakeyState( imgldr_ctx->ctx, floppy->tracks[i]->sides[j], cellnumber);
 
 											if(flakeystate > 0)
 											{
@@ -286,7 +281,7 @@ int STX_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char * 
 						}
 					}while(sc);
 
-					hxcfe_deinitSectorAccess(ss);
+					libflux_deinitSectorAccess(ss);
 				}
 
 
@@ -318,8 +313,8 @@ int STX_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char * 
 
 		fclose(stxdskfile);
 
-		return HXCFE_NOERROR;
+		return LIBFLUX_NOERROR;
 	}
 
-	return HXCFE_ACCESSERROR;
+	return LIBFLUX_ACCESSERROR;
 }

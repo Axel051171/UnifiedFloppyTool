@@ -25,7 +25,6 @@
  *          byte value
  *          output value repeated count times
  *
- * Source: msa_decoder_c11_port_lenient_only.zip
  */
 
 #ifndef UFT_MSA_H

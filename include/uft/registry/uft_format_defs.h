@@ -237,10 +237,9 @@ extern const uft_format_def_t UFT_FMT_JV3;
 /** SCP: SuperCard Pro flux image */
 extern const uft_format_def_t UFT_FMT_SCP;
 
-/** KF: KryoFlux stream */
 extern const uft_format_def_t UFT_FMT_KF;
 
-/** HFE: HxC Floppy Emulator */
+/** HFE: UFT HFE Format */
 extern const uft_format_def_t UFT_FMT_HFE;
 
 /** IPF: Interchangeable Preservation Format */

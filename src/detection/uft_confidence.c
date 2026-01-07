@@ -89,7 +89,7 @@ void uft_build_reason(uint32_t evidence_flags, char* buf, size_t size) {
                     buf[pos++] = ',';
                     buf[pos++] = ' ';
                 }
-                strcpy(buf + pos, name);
+                memcpy(buf + pos, name, len + 1);  /* Safe: size checked above */
                 pos += len;
                 first = false;
             }

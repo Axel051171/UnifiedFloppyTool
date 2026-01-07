@@ -37,7 +37,7 @@ typedef enum {
     UFT_FORMAT_SCP,
     UFT_FORMAT_HFE,
     UFT_FORMAT_IPF,
-    UFT_FORMAT_KF_STREAM,
+    UFT_FORMAT_UFT_KF_STREAM,
     UFT_FORMAT_WOZ,
     UFT_FORMAT_NIB,
     UFT_FORMAT_IMD,
@@ -109,7 +109,7 @@ typedef enum {
     UFT_TOOL_SCP,
     UFT_TOOL_ANADISK,
     UFT_TOOL_DISK2FDI,
-    UFT_TOOL_HXCFE,
+    UFT_TOOL_LIBFLUX,
     UFT_TOOL_MAX
 } uft_tool_e;
 

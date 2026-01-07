@@ -1,6 +1,5 @@
 /**
- * @file uft_samdisk_formats.c
- * @brief SAMdisk System-Specific Format Support
+ * @file uft_uft_sam_formats.c
  * 
  * EXT4-015 Part 2: System-specific disk formats
  * 
@@ -12,7 +11,7 @@
  * - Enterprise format
  */
 
-#include "uft/samdisk/uft_samdisk_formats.h"
+#include "uft/samdisk/uft_uft_sam_formats.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -44,7 +43,7 @@ typedef struct {
     uint8_t     mgts_flags;     /* 1A: MGTS flags */
     uint8_t     reserved[5];    /* 1B-1F: reserved */
     uint8_t     extra[224];     /* 20-FF: extra space in 256-byte entry */
-} sam_dir_entry_t;
+} uft_sam_dir_entry_t;
 UFT_PACK_END
 
 int uft_sam_read_directory(const uint8_t *image, size_t size,
@@ -442,7 +441,7 @@ int uft_ep_read_directory(const uint8_t *image, size_t size,
  * Generic Format Detection
  *===========================================================================*/
 
-uft_samdisk_system_t uft_samdisk_detect_system(const uint8_t *image, size_t size)
+uft_uft_sam_system_t uft_uft_sam_detect_system(const uint8_t *image, size_t size)
 {
     if (!image || size < 512) return UFT_SYSTEM_UNKNOWN;
     
@@ -462,8 +461,8 @@ uft_samdisk_system_t uft_samdisk_detect_system(const uint8_t *image, size_t size
     }
     
     /* Check for SAM Coupé (by disk size) */
-    size_t sam_size = SAM_TRACKS * SAM_SIDES * SAM_SECTORS * SAM_SECTOR_SIZE;
-    if (size == sam_size) {
+    size_t uft_sam_size = SAM_TRACKS * SAM_SIDES * SAM_SECTORS * SAM_SECTOR_SIZE;
+    if (size == uft_sam_size) {
         return UFT_SYSTEM_SAM_COUPE;
     }
     
@@ -479,7 +478,7 @@ uft_samdisk_system_t uft_samdisk_detect_system(const uint8_t *image, size_t size
     return UFT_SYSTEM_UNKNOWN;
 }
 
-const char *uft_samdisk_system_name(uft_samdisk_system_t system)
+const char *uft_uft_sam_system_name(uft_uft_sam_system_t system)
 {
     switch (system) {
         case UFT_SYSTEM_SAM_COUPE:    return "SAM Coupé";
@@ -496,18 +495,18 @@ const char *uft_samdisk_system_name(uft_samdisk_system_t system)
  * Report
  *===========================================================================*/
 
-int uft_samdisk_system_report(const uint8_t *image, size_t size,
+int uft_uft_sam_system_report(const uint8_t *image, size_t size,
                               char *buffer, size_t buf_size)
 {
     if (!image || !buffer) return -1;
     
-    uft_samdisk_system_t system = uft_samdisk_detect_system(image, size);
+    uft_uft_sam_system_t system = uft_uft_sam_detect_system(image, size);
     
     int written = snprintf(buffer, buf_size,
         "{\n"
         "  \"system\": \"%s\",\n"
         "  \"image_size\": %zu,\n",
-        uft_samdisk_system_name(system),
+        uft_uft_sam_system_name(system),
         size
     );
     

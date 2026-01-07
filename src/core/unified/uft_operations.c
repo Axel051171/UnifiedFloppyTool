@@ -186,7 +186,7 @@ uft_error_t uft_convert_image(const uft_unified_image_t* input,
                                uft_unified_image_t* output) {
     if (!input || !output) return UFT_ERROR_NULL_POINTER;
     
-    // First try using hxcfe or similar converter tool
+    // First try using libflux_ctx or similar converter tool
     const uft_tool_adapter_t* tool = uft_tool_find_for_operation(UFT_TOOL_CAP_CONVERT);
     
     if (tool && tool->convert && input->path) {

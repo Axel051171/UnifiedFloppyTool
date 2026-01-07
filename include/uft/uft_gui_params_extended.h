@@ -3,7 +3,6 @@
  * @brief UnifiedFloppyTool - Erweiterte GUI Parameter Mapping v3.1.4.010
  * 
  * Konsolidiert Parameter aus:
- * - FloppyControl (C# Windows App) - Processing Settings, EC Settings
  * - UFT_ForensicImaging - Forensic Imager Settings
  * - UFT_HxC_Extract - Flux Profiles, Track/Sector/Flux API
  * - Bestehende UFT GUI Params (v3.1.4.004)
@@ -32,11 +31,9 @@ typedef float uft_usec_t;
 typedef int32_t uft_nsec_t;
 
 /*============================================================================
- * ENUMS - Processing Types (aus FloppyControl)
  *============================================================================*/
 
 /**
- * @brief Processing-Algorithmus Auswahl (aus FloppyControl ProcSettings)
  */
 typedef enum {
     UFT_PROC_NORMAL = 0,           /**< Standard-Decodierung */
@@ -52,7 +49,6 @@ typedef enum {
 } uft_processing_type_t;
 
 /**
- * @brief Platform-Auswahl (aus FloppyControl)
  */
 typedef enum {
     UFT_PLATFORM_AUTO = 0,
@@ -86,7 +82,6 @@ typedef enum {
 } uft_encoding_t;
 
 /**
- * @brief Disk Format (aus FloppyControl)
  */
 typedef enum {
     UFT_DISKFMT_UNKNOWN = 0,
@@ -101,12 +96,10 @@ typedef enum {
 } uft_disk_format_t;
 
 /*============================================================================
- * DISK GEOMETRY (aus FloppyControl + UFT_HxC)
  *============================================================================*/
 
 /**
  * @brief Disk Geometry Parameter
- * Kombiniert FloppyControl DiskGeometry + UFT_HxC UFT_Geometry
  */
 typedef struct uft_gui_geometry {
     /* Basic Geometry */
@@ -129,18 +122,14 @@ typedef struct uft_gui_geometry {
 } uft_gui_geometry_t;
 
 /*============================================================================
- * PROCESSING SETTINGS (aus FloppyControl ProcSettings)
  *============================================================================*/
 
 /**
- * @brief MFM Timing Thresholds (aus FloppyControl)
  * 
  * Diese Werte definieren die Grenzen für 4µs/6µs/8µs Pulse.
- * In FloppyControl: min, four, six, max als Sample-Counts
  * Hier: Als µs-Werte für GUI-Kompatibilität
  */
 typedef struct uft_gui_mfm_timing {
-    /* Sample-basiert (wie FloppyControl intern) */
     int32_t offset;               /**< Basis-Offset (Default: 0) */
     int32_t min;                  /**< Minimum Sample Count */
     int32_t four;                 /**< 4µs Threshold (2T) */
@@ -157,10 +146,8 @@ typedef struct uft_gui_mfm_timing {
 } uft_gui_mfm_timing_t;
 
 /**
- * @brief Adaptive Processing Parameter (aus FloppyControl ProcTypeAdaptive)
  */
 typedef struct uft_gui_adaptive_processing {
-    /* Rate of Change (aus FloppyControl) */
     float rate_of_change;         /**< Adaptionsrate (1.0-16.0, Default: 4.0) */
     float rate_of_change2;        /**< Lowpass Radius als Float */
     
@@ -185,7 +172,6 @@ typedef struct uft_gui_adaptive_processing {
 } uft_gui_adaptive_processing_t;
 
 /**
- * @brief Komplette Processing Settings (aus FloppyControl ProcSettings)
  */
 typedef struct uft_gui_proc_settings {
     /* Basis */
@@ -224,7 +210,6 @@ typedef struct uft_gui_proc_settings {
 } uft_gui_proc_settings_t;
 
 /*============================================================================
- * ERROR CORRECTION SETTINGS (aus FloppyControl ECSettings)
  *============================================================================*/
 
 /**
@@ -254,11 +239,9 @@ typedef struct uft_gui_ec_settings {
 } uft_gui_ec_settings_t;
 
 /*============================================================================
- * PLL SETTINGS (WD1772 DPLL aus FloppyControl + uft_gui_params.h)
  *============================================================================*/
 
 /**
- * @brief WD1772 DPLL Parameter (aus FloppyControl DPLL.CS + uft_dpll_wd1772.h)
  */
 typedef struct uft_gui_dpll_settings {
     /* Clock Base */
@@ -364,7 +347,6 @@ typedef struct uft_gui_forensic_settings {
 } uft_gui_forensic_settings_t;
 
 /*============================================================================
- * SECTOR MAP STATUS (aus FloppyControl SectorMap)
  *============================================================================*/
 
 typedef enum {

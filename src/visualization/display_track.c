@@ -2,25 +2,20 @@
 //
 // Copyright (C) 2006-2025 Jean-François DEL NERO
 //
-// This file is part of the HxCFloppyEmulator library
 //
-// HxCFloppyEmulator may be used and distributed without restriction provided
 // that this copyright statement is not removed from the file and that any
 // derivative work contains the original copyright notice and the associated
 // disclaimer.
 //
-// HxCFloppyEmulator is free software; you can redistribute it
 // and/or modify  it under the terms of the GNU General Public License
 // as published by the Free Software Foundation; either version 2
 // of the License, or (at your option) any later version.
 //
-// HxCFloppyEmulator is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 //   See the GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with HxCFloppyEmulator; if not, write to the Free Software
 // Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 //
 */
@@ -49,9 +44,9 @@
 
 #include "types.h"
 
-#include "internal_libhxcfe.h"
+#include "libflux.h""
 #include "tracks/track_generator.h"
-#include "libhxcfe.h"
+#include "libflux.h""
 
 #include "tracks/luts.h"
 
@@ -60,7 +55,7 @@
 #include "crc.h"
 #include "std_crc32.h"
 
-#include "floppy_utils.h"
+#include "uft_floppy_utils.h"
 
 #include "display_track.h"
 
@@ -122,7 +117,7 @@ static uint32_t alpha2(uint32_t dst, uint32_t src)
 			( ( ( (uint32_t)(alpha_value) * ((src&0xFF0000)>>16) + (uint32_t)(255-alpha_value) * ((dst&0xFF0000)>>16) ) << 8 ) & 0xFF0000);
 }
 
-void putchar8x8(HXCFE_TD *td,int layer,int x_pos,int y_pos,unsigned char c,uint32_t color,uint32_t bgcolor,int vertical,int transparent)
+void putchar8x8(LIBFLUX_TD *td,int layer,int x_pos,int y_pos,unsigned char c,uint32_t color,uint32_t bgcolor,int vertical,int transparent)
 {
 	int charoffset;
 	int xpos,ypos;
@@ -189,7 +184,7 @@ void putchar8x8(HXCFE_TD *td,int layer,int x_pos,int y_pos,unsigned char c,uint3
 	}
 }
 
-void putstring8x8(HXCFE_TD *td,int layer, int x_pos,int y_pos,char * str,uint32_t color,uint32_t bgcolor,int vertical,int transparent)
+void putstring8x8(LIBFLUX_TD *td,int layer, int x_pos,int y_pos,char * str,uint32_t color,uint32_t bgcolor,int vertical,int transparent)
 {
 	int i;
 
@@ -248,7 +243,7 @@ void splash_sprite(bmaptype * bmp,uint32_t * dest_buffer, int xsize, int ysize, 
 	}
 }
 
-void clear_layers( HXCFE_TD *td )
+void clear_layers( LIBFLUX_TD *td )
 {
 	int i;
 
@@ -263,7 +258,7 @@ void clear_layers( HXCFE_TD *td )
 	}
 }
 
-static void plot(HXCFE_TD *td, int layer, int x, int y, uint32_t color, uint8_t alpha_value, int op)
+static void plot(LIBFLUX_TD *td, int layer, int x, int y, uint32_t color, uint8_t alpha_value, int op)
 {
 	unsigned char color_r,color_v,color_b;
 	uint32_t rdcolor;
@@ -303,7 +298,7 @@ static void plot(HXCFE_TD *td, int layer, int x, int y, uint32_t color, uint8_t 
 	}
 }
 
-void line_fast(HXCFE_TD *td, int layer, int x1 ,int y1, int x2, int y2, unsigned int color, uint8_t alpha )
+void line_fast(LIBFLUX_TD *td, int layer, int x1 ,int y1, int x2, int y2, unsigned int color, uint8_t alpha )
 {
 	int first_x,last_x;
 	int first_y,last_y;
@@ -412,7 +407,7 @@ void line_fast(HXCFE_TD *td, int layer, int x1 ,int y1, int x2, int y2, unsigned
 	}
 }
 
-void line(HXCFE_TD *td, int layer, int first_x ,int first_y, int last_x, int last_y, unsigned int color, uint8_t alpha )
+void line(LIBFLUX_TD *td, int layer, int first_x ,int first_y, int last_x, int last_y, unsigned int color, uint8_t alpha )
 {
 	int dx;
 	int dy;
@@ -521,7 +516,7 @@ static int dist(int x1, int y1, int x2, int y2 )
 	return ( ( x1 - x2 ) * ( x1 - x2 ) ) + ( ( y1 - y2 ) * ( y1 - y2 ) );
 }
 
-void line_len(HXCFE_TD *td, int layer, int first_x ,int first_y, int last_x, int last_y, int len, unsigned int color, uint8_t alpha, int op)
+void line_len(LIBFLUX_TD *td, int layer, int first_x ,int first_y, int last_x, int last_y, int len, unsigned int color, uint8_t alpha, int op)
 {
 	int dx;
 	int dy;
@@ -628,7 +623,7 @@ void line_len(HXCFE_TD *td, int layer, int first_x ,int first_y, int last_x, int
 	}
 }
 
-void circle(HXCFE_TD *td,int layer,int x_centre,int y_centre,int r,unsigned int color, uint8_t alpha)
+void circle(LIBFLUX_TD *td,int layer,int x_centre,int y_centre,int r,unsigned int color, uint8_t alpha)
 {
 	int x;
 	int y;
@@ -676,7 +671,7 @@ void circle(HXCFE_TD *td,int layer,int x_centre,int y_centre,int r,unsigned int 
 	}
 }
 
-void circle_B(HXCFE_TD *td,int layer,int x_centre,int y_centre,int r,unsigned int color, uint8_t alpha)
+void circle_B(LIBFLUX_TD *td,int layer,int x_centre,int y_centre,int r,unsigned int color, uint8_t alpha)
 {
 	int x;
 	int y;
@@ -724,7 +719,7 @@ void circle_B(HXCFE_TD *td,int layer,int x_centre,int y_centre,int r,unsigned in
 	}
 }
 
-void disc(HXCFE_TD *td,int layer, int x_centre,int y_centre,int r,unsigned int color,unsigned int bcolor,uint8_t alpha)
+void disc(LIBFLUX_TD *td,int layer, int x_centre,int y_centre,int r,unsigned int color,unsigned int bcolor,uint8_t alpha)
 {
 	int i;
 
@@ -736,7 +731,7 @@ void disc(HXCFE_TD *td,int layer, int x_centre,int y_centre,int r,unsigned int c
 	circle(td,layer,x_centre,y_centre,r,bcolor,alpha);
 }
 
-void box(HXCFE_TD *td,int layer, int x1,int y1,int x2,int y2, uint32_t color, int alpha_val, int op )
+void box(LIBFLUX_TD *td,int layer, int x1,int y1,int x2,int y2, uint32_t color, int alpha_val, int op )
 {
 	int t,i;
 
@@ -767,7 +762,7 @@ void box(HXCFE_TD *td,int layer, int x1,int y1,int x2,int y2, uint32_t color, in
 	}
 }
 
-void render(HXCFE_TD *td)
+void render(LIBFLUX_TD *td)
 {
 	int i,size;
 	uint32_t *src;
@@ -838,16 +833,16 @@ void render(HXCFE_TD *td)
 ///////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////
 
-HXCFE_TD * hxcfe_td_init(HXCFE* floppycontext,uint32_t xsize,uint32_t ysize)
+LIBFLUX_TD * libflux_td_init(LIBFLUX_CTX* flux_ctx,uint32_t xsize,uint32_t ysize)
 {
-	HXCFE_TD * td;
+	LIBFLUX_TD * td;
 	int i;
 
-	td = malloc(sizeof(HXCFE_TD));
+	td = malloc(sizeof(LIBFLUX_TD));
 	if(td)
 	{
-		memset(td,0,sizeof(HXCFE_TD));
-		td->hxcfe = floppycontext;
+		memset(td,0,sizeof(LIBFLUX_TD));
+		td->ctx = flux_ctx;
 
 		td->xsize = xsize;
 		td->ysize = ysize;
@@ -887,7 +882,7 @@ HXCFE_TD * hxcfe_td_init(HXCFE* floppycontext,uint32_t xsize,uint32_t ysize)
 			i++;
 		}
 
-		td->hxc_setprogress = dummy_graph_progress;
+		td->libflux_setprogress = dummy_graph_progress;
 		td->progress_userdata = 0;
 	}
 
@@ -909,7 +904,7 @@ alloc_error:
 	return NULL;
 }
 
-int32_t hxcfe_td_zoom_area( HXCFE_TD *td, uint32_t x1, uint32_t y1 ,uint32_t x2, uint32_t y2)
+int32_t libflux_td_zoom_area( LIBFLUX_TD *td, uint32_t x1, uint32_t y1 ,uint32_t x2, uint32_t y2)
 {
 	uint32_t t;
 	float x_ratio, y_ratio, ratio;
@@ -1021,40 +1016,40 @@ int32_t hxcfe_td_zoom_area( HXCFE_TD *td, uint32_t x1, uint32_t y1 ,uint32_t x2,
 	}
 }
 
-int32_t hxcfe_td_virt_xres( HXCFE_TD *td )
+int32_t libflux_td_virt_xres( LIBFLUX_TD *td )
 {
 	return td->virtual_xsize;
 }
 
-int32_t hxcfe_td_virt_yres( HXCFE_TD *td )
+int32_t libflux_td_virt_yres( LIBFLUX_TD *td )
 {
 	return td->virtual_ysize;
 }
 
-int32_t hxcfe_td_window_xpos( HXCFE_TD *td )
+int32_t libflux_td_window_xpos( LIBFLUX_TD *td )
 {
 	return td->window_xpos;
 }
 
-int32_t hxcfe_td_window_ypos( HXCFE_TD *td )
+int32_t libflux_td_window_ypos( LIBFLUX_TD *td )
 {
 	return td->window_ypos;
 }
 
-int32_t hxcfe_td_setProgressCallback( HXCFE_TD *td, HXCFE_TDPROGRESSOUT_FUNC progress_func, void * userdata )
+int32_t libflux_td_setProgressCallback( LIBFLUX_TD *td, LIBFLUX_TDPROGRESSOUT_FUNC progress_func, void * userdata )
 {
 	if(td)
 	{
 		if(progress_func)
 		{
 			td->progress_userdata = userdata;
-			td->hxc_setprogress = progress_func;
+			td->libflux_setprogress = progress_func;
 		}
 	}
 	return 0;
 }
 
-void hxcfe_td_setparams( HXCFE_TD *td, uint32_t x_us, uint32_t y_us, uint32_t x_start_us, uint32_t flags )
+void libflux_td_setparams( LIBFLUX_TD *td, uint32_t x_us, uint32_t y_us, uint32_t x_start_us, uint32_t flags )
 {
 	if(td)
 	{
@@ -1114,7 +1109,7 @@ void freelist(struct s_sectorlist_ * element)
 // start -> track bit start point
 // offset -> track bit offset
 //
-float getOffsetTiming(HXCFE_SIDE *currentside,int offset,float timingoffset,int start)
+float getOffsetTiming(LIBFLUX_SIDE *currentside,int offset,float timingoffset,int start)
 {
 	int i,j,totaloffset,partial_offset;
 	uint32_t bitrate;
@@ -1207,7 +1202,7 @@ float getOffsetTiming(HXCFE_SIDE *currentside,int offset,float timingoffset,int 
 	return timingoffset;
 }
 
-void hxcfe_td_draw_markers( HXCFE_TD *td, HXCFE_FLOPPY * floppydisk, int32_t track, int32_t side, int buffer_offset )
+void libflux_td_draw_markers( LIBFLUX_TD *td, LIBFLUX_FLOPPY * floppydisk, int32_t track, int32_t side, int buffer_offset )
 {
 	int tracksize;
 	int i,j,m;
@@ -1217,7 +1212,7 @@ void hxcfe_td_draw_markers( HXCFE_TD *td, HXCFE_FLOPPY * floppydisk, int32_t tra
 	int xpos;
 	int endfill;
 	float xresstep;
-	HXCFE_SIDE * currentside;
+	LIBFLUX_SIDE * currentside;
 
 	xresstep = (float)td->x_us/(float)td->xsize;
 	currentside=floppydisk->tracks[track]->sides[side];
@@ -1327,7 +1322,7 @@ void hxcfe_td_draw_markers( HXCFE_TD *td, HXCFE_FLOPPY * floppydisk, int32_t tra
 	render(td);
 }
 
-void hxcfe_td_draw_rules( HXCFE_TD *td )
+void libflux_td_draw_rules( LIBFLUX_TD *td )
 {
 	int i,y;
 	int xpos,ypos;
@@ -1438,7 +1433,7 @@ int isAsciiChar(char c)
 	return 0;
 }
 
-s_sectorlist * display_sectors(HXCFE_TD *td,HXCFE_FLOPPY * floppydisk,int track,int side,float timingoffset_offset, int TRACKTYPE)
+s_sectorlist * display_sectors(LIBFLUX_TD *td,LIBFLUX_FLOPPY * floppydisk,int track,int side,float timingoffset_offset, int TRACKTYPE)
 {
 	int tracksize;
 	int i,j,old_i;
@@ -1452,9 +1447,9 @@ s_sectorlist * display_sectors(HXCFE_TD *td,HXCFE_FLOPPY * floppydisk,int track,
 	int xpos_tmp;
 	int endfill,loop;
 	s_col * col;
-	HXCFE_SECTORACCESS* ss;
-	HXCFE_SECTCFG* sc;
-	HXCFE_SIDE * currentside;
+	LIBFLUX_SECTORACCESS* ss;
+	LIBFLUX_SECTCFG* sc;
+	LIBFLUX_SIDE * currentside;
 	s_sectorlist * sl,*oldsl;
 
 	xresstep = (float)td->x_us/(float)td->xsize;
@@ -1479,13 +1474,13 @@ s_sectorlist * display_sectors(HXCFE_TD *td,HXCFE_FLOPPY * floppydisk,int track,
 
 			old_i=0;
 
-			ss=hxcfe_initSectorAccess(td->hxcfe,floppydisk);
+			ss=libflux_initSectorAccess(td->ctx,floppydisk);
 			if(ss)
 			{
 				endfill=0;
 				do
 				{
-					sc=hxcfe_getNextSector(ss,track,side,TRACKTYPE);
+					sc=libflux_getNextSector(ss,track,side,TRACKTYPE);
 					if(sc)
 					{
 
@@ -1748,7 +1743,7 @@ s_sectorlist * display_sectors(HXCFE_TD *td,HXCFE_FLOPPY * floppydisk,int track,
 							else
 								strncpy(tempstr2, "", sizeof(tempstr2)-1); tempstr2[sizeof(tempstr2)-1] = '\0';
 
-							strcat(tempstr,tempstr2);
+							strncat(tempstr, tempstr2, sizeof(tempstr) - strlen(tempstr) - 1);
 
 							putstring8x8(td,LAYER_TEXT, xpos_startheader,225,tempstr,0x000,0x000,1,1);
 
@@ -1870,7 +1865,7 @@ s_sectorlist * display_sectors(HXCFE_TD *td,HXCFE_FLOPPY * floppydisk,int track,
 					}
 				}while(sc);
 
-				hxcfe_deinitSectorAccess(ss);
+				libflux_deinitSectorAccess(ss);
 
 				loop++;
 			}
@@ -1887,7 +1882,7 @@ s_sectorlist * display_sectors(HXCFE_TD *td,HXCFE_FLOPPY * floppydisk,int track,
 	return sl;
 }
 
-void hxcfe_td_activate_analyzer( HXCFE_TD *td, int32_t TRACKTYPE, int32_t enable )
+void libflux_td_activate_analyzer( LIBFLUX_TD *td, int32_t TRACKTYPE, int32_t enable )
 {
 	if(td && TRACKTYPE<32)
 	{
@@ -1898,7 +1893,7 @@ void hxcfe_td_activate_analyzer( HXCFE_TD *td, int32_t TRACKTYPE, int32_t enable
 	}
 }
 
-void hxcfe_td_draw_track( HXCFE_TD *td, HXCFE_FLOPPY * floppydisk, int32_t track, int32_t side )
+void libflux_td_draw_track( LIBFLUX_TD *td, LIBFLUX_FLOPPY * floppydisk, int32_t track, int32_t side )
 {
 	int tracksize;
 	int i,j,old_i;
@@ -1917,7 +1912,7 @@ void hxcfe_td_draw_track( HXCFE_TD *td, HXCFE_FLOPPY * floppydisk, int32_t track
 	float xresstep,index_period;
 	s_sectorlist * sl,*oldsl;
 	s_pulseslist * pl,*oldpl;
-	HXCFE_SIDE * currentside;
+	LIBFLUX_SIDE * currentside;
 	s_col * col;
 
 	char tmp_str[256];
@@ -1928,7 +1923,7 @@ void hxcfe_td_draw_track( HXCFE_TD *td, HXCFE_FLOPPY * floppydisk, int32_t track
 		oldsl = sl->next_element;
 		//sl = sl->next_element;
 
-		hxcfe_freeSectorConfig( 0, sl->sectorconfig );
+		libflux_freeSectorConfig( 0, sl->sectorconfig );
 
 		free(sl);
 
@@ -2031,7 +2026,7 @@ void hxcfe_td_draw_track( HXCFE_TD *td, HXCFE_FLOPPY * floppydisk, int32_t track
 
 					putstring8x8(td,LAYER_IDENTIFICATION,td->xsize/2 - (strlen(tmp_str)*8)/2 ,td->ysize/2,tmp_str,0x0000FF,0x000000,0,1);
 
-					td->hxcfe->hxc_printf(MSG_ERROR,tmp_str);
+					td->ctx->libflux_printf(MSG_ERROR,tmp_str);
 					return;
 				}
 
@@ -2383,11 +2378,11 @@ void hxcfe_td_draw_track( HXCFE_TD *td, HXCFE_FLOPPY * floppydisk, int32_t track
 		}
 	}
 
-	hxcfe_td_draw_rules( td );
+	libflux_td_draw_rules( td );
 
-	hxcfe_td_draw_markers( td, floppydisk, track, side, buffer_offset );
+	libflux_td_draw_markers( td, floppydisk, track, side, buffer_offset );
 
-	snprintf(tmp_str, sizeof(tmp_str),"libhxcfe v%s",STR_FILE_VERSION2);
+	snprintf(tmp_str, sizeof(tmp_str),"liblibflux_ctx v%s",STR_FILE_VERSION2);
 	putstring8x8(td,LAYER_TEXT,td->xsize - (8 + 1),td->ysize - (8*3 + 1),tmp_str,0x000000,0xFFFFFF,1,1);
 
 	splash_sprite(bitmap_hxc2001_logo_bmp,td->layers[LAYER_TEXT], td->xsize, td->ysize, td->xsize - (bitmap_hxc2001_logo_bmp->Xsize + 16), td->ysize - (bitmap_hxc2001_logo_bmp->Ysize + 16), LOGOALPHA);
@@ -2412,7 +2407,7 @@ int32_t * bands_type[]={
 	NULL
 };
 
-int is_valid_timing(HXCFE_TD *td, int ps )
+int is_valid_timing(LIBFLUX_TD *td, int ps )
 {
 	int32_t * bands;
 	int i;
@@ -2431,7 +2426,7 @@ int is_valid_timing(HXCFE_TD *td, int ps )
 	return 0;
 }
 
-int hxcfe_td_stream_to_sound( HXCFE_TD *td, HXCFE_STREAMCHANNEL* stream_channel, int stream_index,uint16_t * sound_buffer, int nbsamples, int samplerate)
+int libflux_td_stream_to_sound( LIBFLUX_TD *td, LIBFLUX_STREAMCHANNEL* stream_channel, int stream_index,uint16_t * sound_buffer, int nbsamples, int samplerate)
 {
 	int i;
 	int cur_ticks_count;
@@ -2441,7 +2436,7 @@ int hxcfe_td_stream_to_sound( HXCFE_TD *td, HXCFE_STREAMCHANNEL* stream_channel,
 	int next_start_remain;
 	int next_start_updated;
 
-	td->hxcfe->hxc_printf(MSG_INFO_1,"hxcfe_td_stream_to_sound: stream_index:%d  stream_channel->nb_of_pulses : %d",stream_index,stream_channel->nb_of_pulses);
+	td->ctx->libflux_printf(MSG_INFO_1,"libflux_td_stream_to_sound: stream_index:%d  stream_channel->nb_of_pulses : %d",stream_index,stream_channel->nb_of_pulses);
 
 	// | Stream window scan : Count pulses |    - cnt 1
 	//      | Stream window scan : Count pulses |    - cnt 2 (+22uS - 44100)
@@ -2475,7 +2470,7 @@ int hxcfe_td_stream_to_sound( HXCFE_TD *td, HXCFE_STREAMCHANNEL* stream_channel,
 				next_start_index = stream_index;
 				next_start_remain = cur_ticks_count - ticks_sampleshift;
 				next_start_updated = 1;
-				td->hxcfe->hxc_printf(MSG_INFO_1,"hxcfe_td_stream_to_sound: >>next_start_index:%d - next_start_remain:%d",next_start_index,pulses_count,cur_ticks_count,ticks_window,ticks_sampleshift);
+				td->ctx->libflux_printf(MSG_INFO_1,"libflux_td_stream_to_sound: >>next_start_index:%d - next_start_remain:%d",next_start_index,pulses_count,cur_ticks_count,ticks_window,ticks_sampleshift);
 
 			}
 
@@ -2489,7 +2484,7 @@ int hxcfe_td_stream_to_sound( HXCFE_TD *td, HXCFE_STREAMCHANNEL* stream_channel,
 			stream_index++;
 		}
 
-		td->hxcfe->hxc_printf(MSG_INFO_1,"hxcfe_td_stream_to_sound: >>stream_index:%d - pulses_count:%d cur_ticks_count:%d ticks_window:%d ticks_sampleshift:%d",stream_index,pulses_count,cur_ticks_count,ticks_window,ticks_sampleshift);
+		td->ctx->libflux_printf(MSG_INFO_1,"libflux_td_stream_to_sound: >>stream_index:%d - pulses_count:%d cur_ticks_count:%d ticks_window:%d ticks_sampleshift:%d",stream_index,pulses_count,cur_ticks_count,ticks_window,ticks_sampleshift);
 
 		sound_buffer[i] = pulses_count;
 	}
@@ -2497,7 +2492,7 @@ int hxcfe_td_stream_to_sound( HXCFE_TD *td, HXCFE_STREAMCHANNEL* stream_channel,
 	return stream_index;
 }
 
-static void draw_trkstream( HXCFE_TD *td, HXCFE_TRKSTREAM* track_stream )
+static void draw_trkstream( LIBFLUX_TD *td, LIBFLUX_TRKSTREAM* track_stream )
 {
 	int buffer_offset;
 	int total_tick,max_total_tick;
@@ -2508,8 +2503,8 @@ static void draw_trkstream( HXCFE_TD *td, HXCFE_TRKSTREAM* track_stream )
 	int last_index_total_offset;
 	char tmp_str[256];
 	uint32_t total_offset,cur_ticks,contrast;
-	HXCFE_SIDE* side;
-	HXCFE_FLOPPY *fp;
+	LIBFLUX_SIDE* side;
+	LIBFLUX_FLOPPY *fp;
 	int tracksize;
 	int tick_to_remove;
 
@@ -2524,14 +2519,14 @@ static void draw_trkstream( HXCFE_TD *td, HXCFE_TRKSTREAM* track_stream )
 	float index_period;
 	float timingoffset,timingoffset2;
 	float timingoffset_offset;
-	HXCFE_SIDE * currentside;
+	LIBFLUX_SIDE * currentside;
 
 	int channel_maxtick[MAX_NB_OF_STREAMCHANNEL];
 	int channel_buffer_offset[MAX_NB_OF_STREAMCHANNEL];
 
-	HXCFE_FXSA * fxs;
+	LIBFLUX_FXSA * fxs;
 
-	fxs = hxcfe_initFxStream( td->hxcfe );
+	fxs = libflux_initFxStream( td->ctx );
 
 	td->noloop_trackmode = 1;
 
@@ -2544,12 +2539,12 @@ static void draw_trkstream( HXCFE_TD *td, HXCFE_TRKSTREAM* track_stream )
 	x_tick_to_pix = ( (float)1.0 / x_us_per_pixel ) * ( (float)1000000 / (float)track_stream->tick_freq );
 	y_tick_to_pix = ( (float)1.0 / y_us_per_pixel ) * ( (float)1000000 / (float)track_stream->tick_freq );
 
-	if( hxcfe_getEnvVarValue( td->hxcfe, "BMPEXPORT_STREAM_HIGHCONTRAST" ) || (x_us_per_pixel < 200) )
+	if( libflux_getEnvVarValue( td->ctx, "BMPEXPORT_STREAM_HIGHCONTRAST" ) || (x_us_per_pixel < 200) )
 	{
 		td->flags |= TD_FLAG_HICONTRAST;
 	}
 
-	if( hxcfe_getEnvVarValue( td->hxcfe, "BMPEXPORT_STREAM_BIG_DOTS" ) || (x_us_per_pixel < 16) || td->disk_type == 2 )
+	if( libflux_getEnvVarValue( td->ctx, "BMPEXPORT_STREAM_BIG_DOTS" ) || (x_us_per_pixel < 16) || td->disk_type == 2 )
 	{
 		td->flags |= TD_FLAG_BIGDOT;
 	}
@@ -2576,9 +2571,9 @@ static void draw_trkstream( HXCFE_TD *td, HXCFE_TRKSTREAM* track_stream )
 
 				channel_maxtick[channel] = total_tick;
 
-				td->hxcfe->hxc_printf(MSG_DEBUG,"hxcfe_td_draw_trkstream: chn %d , tick %d , pulses %d\n",channel,total_tick,track_stream->channels[channel].nb_of_pulses);
+				td->ctx->libflux_printf(MSG_DEBUG,"libflux_td_draw_trkstream: chn %d , tick %d , pulses %d\n",channel,total_tick,track_stream->channels[channel].nb_of_pulses);
 #if 0
-				printf("hxcfe_td_draw_trkstream: chn %d , tick %d , pulses %d\n",channel,total_tick,track_stream->channels[channel].nb_of_pulses);
+				printf("libflux_td_draw_trkstream: chn %d , tick %d , pulses %d\n",channel,total_tick,track_stream->channels[channel].nb_of_pulses);
 
 				if(track_stream->channels[channel].nb_of_pulses<16)
 				{
@@ -2636,7 +2631,7 @@ static void draw_trkstream( HXCFE_TD *td, HXCFE_TRKSTREAM* track_stream )
 
 			switch(track_stream->channels[channel].type)
 			{
-				case HXCFE_STREAMCHANNEL_TYPE_RLEEVT:
+				case LIBFLUX_STREAMCHANNEL_TYPE_RLEEVT:
 					//////////////////////////////////////////
 					// Scatter drawing
 					total_offset = 0;
@@ -2706,14 +2701,14 @@ static void draw_trkstream( HXCFE_TD *td, HXCFE_TRKSTREAM* track_stream )
 					}
 				break;
 
-				case HXCFE_STREAMCHANNEL_TYPE_RLETOGGLESTATE_0:
-				case HXCFE_STREAMCHANNEL_TYPE_RLETOGGLESTATE_1:
+				case LIBFLUX_STREAMCHANNEL_TYPE_RLETOGGLESTATE_0:
+				case LIBFLUX_STREAMCHANNEL_TYPE_RLETOGGLESTATE_1:
 
 					total_offset = 0;
 					xpos_start = 0;
 					bitstate = 0;
 
-					if( track_stream->channels[channel].type == HXCFE_STREAMCHANNEL_TYPE_RLETOGGLESTATE_1)
+					if( track_stream->channels[channel].type == LIBFLUX_STREAMCHANNEL_TYPE_RLETOGGLESTATE_1)
 						bitstate = 1;
 
 					for (i = buffer_offset; i < (int)track_stream->channels[channel].nb_of_pulses; i++)
@@ -2812,12 +2807,12 @@ static void draw_trkstream( HXCFE_TD *td, HXCFE_TRKSTREAM* track_stream )
 	{
 		computehistogram(track_stream->channels[0].stream, track_stream->channels[0].nb_of_pulses, histo);
 
-		bitrate = detectpeaks(td->hxcfe,&fxs->pll,histo);
+		bitrate = detectpeaks(td->ctx,&fxs->pll,histo);
 
 		free(histo);
 	}
 
-	side = ScanAndDecodeStream(td->hxcfe, fxs, bitrate,track_stream,NULL,0, 0, 8, 0x0001);
+	side = ScanAndDecodeStream(td->ctx, fxs, bitrate,track_stream,NULL,0, 0, 8, 0x0001);
 	if(side)
 	{
 		cleanupTrack(side);
@@ -2877,14 +2872,14 @@ static void draw_trkstream( HXCFE_TD *td, HXCFE_TRKSTREAM* track_stream )
 			freefloppy(fp);
 		}
 
-		hxcfe_freeSide(td->hxcfe,side);
+		libflux_freeSide(td->ctx,side);
 	}
 
-	hxcfe_deinitFxStream( fxs );
+	libflux_deinitFxStream( fxs );
 
-	hxcfe_td_draw_rules( td );
+	libflux_td_draw_rules( td );
 
-	snprintf(tmp_str, sizeof(tmp_str),"libhxcfe v%s",STR_FILE_VERSION2);
+	snprintf(tmp_str, sizeof(tmp_str),"liblibflux_ctx v%s",STR_FILE_VERSION2);
 	putstring8x8(td,LAYER_TEXT,td->xsize - (8 + 1),td->ysize - (8*3 + 1),tmp_str,0x000000,0xFFFFFF,1,1);
 
 	splash_sprite(bitmap_hxc2001_logo_bmp,td->layers[LAYER_TEXT], td->xsize, td->ysize, td->xsize - (bitmap_hxc2001_logo_bmp->Xsize + 16), td->ysize - (bitmap_hxc2001_logo_bmp->Ysize + 16),LOGOALPHA);
@@ -2892,18 +2887,18 @@ static void draw_trkstream( HXCFE_TD *td, HXCFE_TRKSTREAM* track_stream )
 	td->noloop_trackmode = 0;
 }
 
-void hxcfe_td_draw_trkstream( HXCFE_TD *td, HXCFE_TRKSTREAM* track_stream )
+void libflux_td_draw_trkstream( LIBFLUX_TD *td, LIBFLUX_TRKSTREAM* track_stream )
 {
 	draw_trkstream( td, track_stream );
 
 	render(td);
 }
 
-void hxcfe_td_draw_stream_track( HXCFE_TD *td, HXCFE_FLOPPY * floppydisk, int32_t track, int32_t side )
+void libflux_td_draw_stream_track( LIBFLUX_TD *td, LIBFLUX_FLOPPY * floppydisk, int32_t track, int32_t side )
 {
 	s_sectorlist * sl,*oldsl;
 	s_pulseslist * pl,*oldpl;
-	HXCFE_SIDE * currentside;
+	LIBFLUX_SIDE * currentside;
 	char tmp_str[512];
 
 	sl=td->sl;
@@ -2912,7 +2907,7 @@ void hxcfe_td_draw_stream_track( HXCFE_TD *td, HXCFE_FLOPPY * floppydisk, int32_
 		oldsl = sl->next_element;
 		//sl = sl->next_element;
 
-		hxcfe_freeSectorConfig( 0, sl->sectorconfig );
+		libflux_freeSectorConfig( 0, sl->sectorconfig );
 
 		free(sl);
 
@@ -2979,7 +2974,7 @@ void hxcfe_td_draw_stream_track( HXCFE_TD *td, HXCFE_FLOPPY * floppydisk, int32_
 			snprintf(tmp_str, sizeof(tmp_str),"This track doesn't have any stream information !");
 			putstring8x8(td,LAYER_TEXT,(td->xsize/2) - ((strlen(tmp_str)*8)/2),td->ysize / 2,tmp_str,0x000000,0xCCCCCC,0,1);
 
-			snprintf(tmp_str, sizeof(tmp_str),"libhxcfe v%s",STR_FILE_VERSION2);
+			snprintf(tmp_str, sizeof(tmp_str),"liblibflux_ctx v%s",STR_FILE_VERSION2);
 			putstring8x8(td,LAYER_TEXT,td->xsize - (8 + 1),td->ysize - (8*3 + 1),tmp_str,0x000000,0xFFFFFF,1,1);
 
 			splash_sprite(bitmap_hxc2001_logo_bmp,td->layers[LAYER_TEXT], td->xsize, td->ysize, td->xsize - (bitmap_hxc2001_logo_bmp->Xsize + 16), td->ysize - (bitmap_hxc2001_logo_bmp->Ysize + 16),LOGOALPHA);
@@ -2989,7 +2984,7 @@ void hxcfe_td_draw_stream_track( HXCFE_TD *td, HXCFE_FLOPPY * floppydisk, int32_
 	render(td);
 }
 
-int32_t hxcfe_td_setName( HXCFE_TD *td, char * name )
+int32_t libflux_td_setName( LIBFLUX_TD *td, char * name )
 {
 	if( td )
 	{
@@ -3001,27 +2996,27 @@ int32_t hxcfe_td_setName( HXCFE_TD *td, char * name )
 			td->name = malloc( strlen(name) + 1);
 			if(td->name)
 			{
-				strcpy(td->name,name);
-				return HXCFE_NOERROR;
+				strncpy(td->name, name, sizeof(td->name) - 1); td->name[sizeof(td->name) - 1] = '\0';
+				return LIBFLUX_NOERROR;
 			}
 
-			return HXCFE_INTERNALERROR;
+			return LIBFLUX_INTERNALERROR;
 		}
 	}
 
-	return HXCFE_NOERROR;
+	return LIBFLUX_NOERROR;
 }
-s_sectorlist * hxcfe_td_getlastsectorlist(HXCFE_TD *td)
+s_sectorlist * libflux_td_getlastsectorlist(LIBFLUX_TD *td)
 {
 	return td->sl;
 }
 
-s_pulseslist * hxcfe_td_getlastpulselist(HXCFE_TD *td)
+s_pulseslist * libflux_td_getlastpulselist(LIBFLUX_TD *td)
 {
 	return td->pl;
 }
 
-void draw_circle (HXCFE_TD *td,int layer, uint32_t col,uint8_t alpha_val,float start_angle,float stop_angle,int xpos,int ypos,int diametre,int op,int thickness,int counterclock)
+void draw_circle (LIBFLUX_TD *td,int layer, uint32_t col,uint8_t alpha_val,float start_angle,float stop_angle,int xpos,int ypos,int diametre,int op,int thickness,int counterclock)
 {
 	int x, y;
 	int x_tmp, y_tmp;
@@ -3100,7 +3095,7 @@ void draw_circle (HXCFE_TD *td,int layer, uint32_t col,uint8_t alpha_val,float s
 	}
 }
 
-void draw_density_circle (HXCFE_TD *td, int layer, uint32_t col, uint8_t alpha_val, float start_angle,float stop_angle,int xpos,int ypos,int diametre,int op,int thickness,HXCFE_SIDE * side,int counterclock)
+void draw_density_circle (LIBFLUX_TD *td, int layer, uint32_t col, uint8_t alpha_val, float start_angle,float stop_angle,int xpos,int ypos,int diametre,int op,int thickness,LIBFLUX_SIDE * side,int counterclock)
 {
 	int x, y, x_old, y_old, x_tmp, y_tmp;
 	int length;
@@ -3242,7 +3237,7 @@ void draw_density_circle (HXCFE_TD *td, int layer, uint32_t col, uint8_t alpha_v
 	}while (angle < stop_angle );
 }
 
-s_sectorlist * display_sectors_disk(HXCFE_TD *td,HXCFE_FLOPPY * floppydisk,int track,int side,float timingoffset_offset, int TRACKTYPE,int xpos,int ypos,int diam,int thickness,int mirror)
+s_sectorlist * display_sectors_disk(LIBFLUX_TD *td,LIBFLUX_FLOPPY * floppydisk,int track,int side,float timingoffset_offset, int TRACKTYPE,int xpos,int ypos,int diam,int thickness,int mirror)
 {
 	int tracksize;
 	int old_i;
@@ -3252,9 +3247,9 @@ s_sectorlist * display_sectors_disk(HXCFE_TD *td,HXCFE_FLOPPY * floppydisk,int t
 	float endsector_timingoffset;
 	float timingoffset;
 	int color;
-	HXCFE_SECTORACCESS* ss;
-	HXCFE_SECTCFG* sc;
-	HXCFE_SIDE * currentside;
+	LIBFLUX_SECTORACCESS* ss;
+	LIBFLUX_SECTCFG* sc;
+	LIBFLUX_SIDE * currentside;
 	s_sectorlist * sl,*oldsl;
 	uint32_t color_valid_sector_data,color_bad_sector_data,color_valid_empty_sector_data;
 	uint32_t color_headerless_sector_data;
@@ -3276,28 +3271,28 @@ s_sectorlist * display_sectors_disk(HXCFE_TD *td,HXCFE_FLOPPY * floppydisk,int t
 	old_i=0;
 	timingoffset = 0;
 
-	color_valid_sector_data = hxcfe_getEnvVarValue( td->hxcfe, "BMPDISKEXPORT_COLOR_VALID_SECTOR_DATA" );
-	color_valid_empty_sector_data = hxcfe_getEnvVarValue( td->hxcfe, "BMPDISKEXPORT_COLOR_VALID_EMPTY_SECTOR_DATA" );
-	color_bad_sector_data = hxcfe_getEnvVarValue( td->hxcfe, "BMPDISKEXPORT_COLOR_BAD_SECTOR_DATA" );
-	color_headerless_sector_data = hxcfe_getEnvVarValue( td->hxcfe, "BMPDISKEXPORT_COLOR_HEADERLESS_SECTOR_DATA" );
-	color_sector_alpha = hxcfe_getEnvVarValue( td->hxcfe, "BMPDISKEXPORT_COLOR_ALPHA" );
+	color_valid_sector_data = libflux_getEnvVarValue( td->ctx, "BMPDISKEXPORT_COLOR_VALID_SECTOR_DATA" );
+	color_valid_empty_sector_data = libflux_getEnvVarValue( td->ctx, "BMPDISKEXPORT_COLOR_VALID_EMPTY_SECTOR_DATA" );
+	color_bad_sector_data = libflux_getEnvVarValue( td->ctx, "BMPDISKEXPORT_COLOR_BAD_SECTOR_DATA" );
+	color_headerless_sector_data = libflux_getEnvVarValue( td->ctx, "BMPDISKEXPORT_COLOR_HEADERLESS_SECTOR_DATA" );
+	color_sector_alpha = libflux_getEnvVarValue( td->ctx, "BMPDISKEXPORT_COLOR_ALPHA" );
 
-	color_valid_sector_header = hxcfe_getEnvVarValue( td->hxcfe, "BMPDISKEXPORT_COLOR_VALID_SECTOR_HEADER" );
-	color_bad_sector_header = hxcfe_getEnvVarValue( td->hxcfe, "BMPDISKEXPORT_COLOR_BAD_SECTOR_HEADER" );
+	color_valid_sector_header = libflux_getEnvVarValue( td->ctx, "BMPDISKEXPORT_COLOR_VALID_SECTOR_HEADER" );
+	color_bad_sector_header = libflux_getEnvVarValue( td->ctx, "BMPDISKEXPORT_COLOR_BAD_SECTOR_HEADER" );
 
-	color_sector_boundary = hxcfe_getEnvVarValue( td->hxcfe, "BMPDISKEXPORT_COLOR_SECTOR_BOUNDARY" );
-	color_sector_data_boundary = hxcfe_getEnvVarValue( td->hxcfe, "BMPDISKEXPORT_COLOR_SECTOR_DATA_BOUNDARY" );
+	color_sector_boundary = libflux_getEnvVarValue( td->ctx, "BMPDISKEXPORT_COLOR_SECTOR_BOUNDARY" );
+	color_sector_data_boundary = libflux_getEnvVarValue( td->ctx, "BMPDISKEXPORT_COLOR_SECTOR_DATA_BOUNDARY" );
 
-	display_boundary = hxcfe_getEnvVarValue( td->hxcfe, "BMPDISKEXPORT_DISPLAY_SECTOR_BOUNDARY" );
+	display_boundary = libflux_getEnvVarValue( td->ctx, "BMPDISKEXPORT_DISPLAY_SECTOR_BOUNDARY" );
 
 	track_timing = (float)getOffsetTiming(currentside,tracksize,timingoffset,old_i);
 
-	ss=hxcfe_initSectorAccess(td->hxcfe,floppydisk);
+	ss=libflux_initSectorAccess(td->ctx,floppydisk);
 	if(ss)
 	{
 		do
 		{
-			sc = hxcfe_getNextSector(ss,track,side,TRACKTYPE);
+			sc = libflux_getNextSector(ss,track,side,TRACKTYPE);
 			if(sc)
 			{
 				oldsl = sl;
@@ -3410,7 +3405,7 @@ s_sectorlist * display_sectors_disk(HXCFE_TD *td,HXCFE_FLOPPY * floppydisk,int t
 			}
 		}while(sc);
 
-		hxcfe_deinitSectorAccess(ss);
+		libflux_deinitSectorAccess(ss);
 	}
 
 	td->sl=sl;
@@ -3564,7 +3559,7 @@ typedef struct physical_floppy_dim_
 // 48 tpi -> 48 per 2.54cm -> 18,897637795 track per cm -> 77 tracks = 77/18,897637795 = 4,074583333 cm
 // 77 tracks : 40746
 
-physical_floppy_dim floppy_dimension[]=
+physical_floppy_dim uft_floppy_dimension[]=
 {   //                                 total_radius_um  hole_radius_um  center_to_tracks_radius_um  tracks_space_radius_um   track_witdh_um      track_spacing_um            window                  Index type
 	{   "Track view",                      50000,          13000,         { 15000, 15000 },           { 35000, 35000 },       { 300, 300 },          { 0, 0 },      { -1,     0,    0,     0 }        , 0},
 	{   "Stream view",                     50000,          13000,         { 15000, 15000 },           { 35000, 35000 },       { 300, 300 },          { 0, 0 },      { -1,     0,    0,     0 }        , 0},
@@ -3577,7 +3572,7 @@ physical_floppy_dim floppy_dimension[]=
 	{   NULL,                              43000,          12000,         { 21000, 21000 },           { 15805, 15805 },       { 300, 300 },          { 420, 420 },  { 50000, -6500, 98000, 6500 }     , 1}
 };
 
-void hxcfe_td_select_view_type( HXCFE_TD *td, int32_t disk_type)
+void libflux_td_select_view_type( LIBFLUX_TD *td, int32_t disk_type)
 {
 	if(td)
 	{
@@ -3585,17 +3580,17 @@ void hxcfe_td_select_view_type( HXCFE_TD *td, int32_t disk_type)
 	}
 }
 
-char * hxcfe_td_get_view_mode_name( HXCFE_TD *td, int32_t disk_type)
+char * libflux_td_get_view_mode_name( LIBFLUX_TD *td, int32_t disk_type)
 {
 	int i;
 	if(td)
 	{
 		i = 0;
-		while(i<disk_type && floppy_dimension[i].type_name)
+		while(i<disk_type && uft_floppy_dimension[i].type_name)
 		{
 			i++;
 		}
-		return floppy_dimension[i].type_name;
+		return uft_floppy_dimension[i].type_name;
 	}
 
 	return NULL;
@@ -3606,12 +3601,12 @@ int um2pix(int totalpix, int size_um, int um )
 	return (int)( (float)totalpix * ((float)um / (float)size_um) );
 }
 
-void hxcfe_draw_side(HXCFE_TD *td,HXCFE_FLOPPY * floppydisk, int x_center, int y_center, int side)
+void libflux_draw_side(LIBFLUX_TD *td,LIBFLUX_FLOPPY * floppydisk, int x_center, int y_center, int side)
 {
 	int tracksize;
 	int i;
 	int track;
-	HXCFE_SIDE * currentside;
+	LIBFLUX_SIDE * currentside;
 	unsigned int color,color_bitsdensity;
 	int y_pos,x_pos_1;
 	int total_radius,center_hole_radius;
@@ -3627,7 +3622,7 @@ void hxcfe_draw_side(HXCFE_TD *td,HXCFE_FLOPPY * floppydisk, int x_center, int y
 	int old_i;
 	float timingoffset;
 
-	alpha = hxcfe_getEnvVarValue( td->hxcfe, "BMPDISKEXPORT_COLOR_ALPHA" );
+	alpha = libflux_getEnvVarValue( td->ctx, "BMPDISKEXPORT_COLOR_ALPHA" );
 	physical_dim = td->disk_type;
 	doesntfit = 0;
 
@@ -3643,22 +3638,22 @@ void hxcfe_draw_side(HXCFE_TD *td,HXCFE_FLOPPY * floppydisk, int x_center, int y
 		total_radius = (td->virtual_xsize/2) - (td->virtual_xsize / 4);
 	}
 
-	center_hole_radius = (int)((float)total_radius * ((float)floppy_dimension[physical_dim].hole_radius_um / \
-													  (float)floppy_dimension[physical_dim].total_radius_um));
+	center_hole_radius = (int)((float)total_radius * ((float)uft_floppy_dimension[physical_dim].hole_radius_um / \
+													  (float)uft_floppy_dimension[physical_dim].total_radius_um));
 
-	//end_tracks_space_radius = (int)((float)total_radius * ((float)floppy_dimension[physical_dim].center_to_tracks_radius_um[i] /
-	//                             (float)floppy_dimension[physical_dim].total_radius_um));
+	//end_tracks_space_radius = (int)((float)total_radius * ((float)uft_floppy_dimension[physical_dim].center_to_tracks_radius_um[i] /
+	//                             (float)uft_floppy_dimension[physical_dim].total_radius_um));
 
-	start_tracks_space_radius = (int)((float)total_radius * ((float)(floppy_dimension[physical_dim].center_to_tracks_radius_um[side] + floppy_dimension[physical_dim].tracks_space_radius_um[side]) / \
-										 (float)floppy_dimension[physical_dim].total_radius_um));
+	start_tracks_space_radius = (int)((float)total_radius * ((float)(uft_floppy_dimension[physical_dim].center_to_tracks_radius_um[side] + uft_floppy_dimension[physical_dim].tracks_space_radius_um[side]) / \
+										 (float)uft_floppy_dimension[physical_dim].total_radius_um));
 
-	tracks_space_radius = (int)((float)total_radius * ((float)floppy_dimension[physical_dim].tracks_space_radius_um[side] / \
-														  (float)floppy_dimension[physical_dim].total_radius_um));
+	tracks_space_radius = (int)((float)total_radius * ((float)uft_floppy_dimension[physical_dim].tracks_space_radius_um[side] / \
+														  (float)uft_floppy_dimension[physical_dim].total_radius_um));
 
-	if( floppy_dimension[physical_dim].track_spacing_um[side] > 0 )
+	if( uft_floppy_dimension[physical_dim].track_spacing_um[side] > 0 )
 	{
-		track_ep = ((float)total_radius * ((float)floppy_dimension[physical_dim].track_spacing_um[side] / \
-											  (float)floppy_dimension[physical_dim].total_radius_um));
+		track_ep = ((float)total_radius * ((float)uft_floppy_dimension[physical_dim].track_spacing_um[side] / \
+											  (float)uft_floppy_dimension[physical_dim].total_radius_um));
 	}
 	else
 	{
@@ -3678,7 +3673,7 @@ void hxcfe_draw_side(HXCFE_TD *td,HXCFE_FLOPPY * floppydisk, int x_center, int y
 		doesntfit = 1;
 	}
 
-	color = hxcfe_getEnvVarValue( td->hxcfe, "BMPDISKEXPORT_COLOR_MEDIA_SUBSTRATE" );
+	color = libflux_getEnvVarValue( td->ctx, "BMPDISKEXPORT_COLOR_MEDIA_SUBSTRATE" );
 	for(i=center_hole_radius;i<total_radius;i++)
 	{
 		circle(td,LAYER_SUPPORT,x_pos_1,y_pos,i,color,255);
@@ -3701,33 +3696,33 @@ void hxcfe_draw_side(HXCFE_TD *td,HXCFE_FLOPPY * floppydisk, int x_center, int y
 		putstring8x8(td,LAYER_SUPPORT,(x_pos_1 - td->window_xpos) - 4,(y_pos - td->window_ypos) - 44, "->",0x666666,0x000000,0,1);
 	}
 
-	switch(floppy_dimension[physical_dim].index_type)
+	switch(uft_floppy_dimension[physical_dim].index_type)
 	{
 		case 0:
 		break;
 		case 1:
-			disc(td,LAYER_SUPPORT,x_pos_1 + um2pix(total_radius, floppy_dimension[physical_dim].total_radius_um, 10000 ), \
+			disc(td,LAYER_SUPPORT,x_pos_1 + um2pix(total_radius, uft_floppy_dimension[physical_dim].total_radius_um, 10000 ), \
 					y_pos, \
-					um2pix(total_radius, floppy_dimension[physical_dim].total_radius_um, 1250 ), \
+					um2pix(total_radius, uft_floppy_dimension[physical_dim].total_radius_um, 1250 ), \
 					0x00000000,0x808080, 255);
 		break;
 		case 2:
-			disc(td,LAYER_SUPPORT,x_pos_1 + um2pix(total_radius, floppy_dimension[physical_dim].total_radius_um, 7000 ), \
-					y_pos + um2pix(total_radius, floppy_dimension[physical_dim].total_radius_um, 24000 ),
-					um2pix(total_radius, floppy_dimension[physical_dim].total_radius_um, 1000 ),
+			disc(td,LAYER_SUPPORT,x_pos_1 + um2pix(total_radius, uft_floppy_dimension[physical_dim].total_radius_um, 7000 ), \
+					y_pos + um2pix(total_radius, uft_floppy_dimension[physical_dim].total_radius_um, 24000 ),
+					um2pix(total_radius, uft_floppy_dimension[physical_dim].total_radius_um, 1000 ),
 					0x00000000,0x808080, 255);
 		break;
 		case 3:
-			disc(td,LAYER_SUPPORT,x_pos_1 - um2pix(total_radius, floppy_dimension[physical_dim].total_radius_um, 39000 ), \
-					y_pos + um2pix(total_radius, floppy_dimension[physical_dim].total_radius_um,  4000 ),
-					um2pix(total_radius, floppy_dimension[physical_dim].total_radius_um, 2000 ),
+			disc(td,LAYER_SUPPORT,x_pos_1 - um2pix(total_radius, uft_floppy_dimension[physical_dim].total_radius_um, 39000 ), \
+					y_pos + um2pix(total_radius, uft_floppy_dimension[physical_dim].total_radius_um,  4000 ),
+					um2pix(total_radius, uft_floppy_dimension[physical_dim].total_radius_um, 2000 ),
 					0x00000000,0x808080, 255);
 		break;
 	}
 
 	if(doesntfit)
 	{
-		snprintf(tempstr, sizeof(tempstr),"This image doesn't fit on a %s disk !",floppy_dimension[physical_dim].type_name);
+		snprintf(tempstr, sizeof(tempstr),"This image doesn't fit on a %s disk !",uft_floppy_dimension[physical_dim].type_name);
 		putstring8x8(td,LAYER_TEXT,(td->xsize/2) - ((strlen(tempstr)*8)/2),td->ysize / 2,tempstr,0x0000FF,0x000000,0,0);
 
 		render(td);
@@ -3737,11 +3732,11 @@ void hxcfe_draw_side(HXCFE_TD *td,HXCFE_FLOPPY * floppydisk, int x_center, int y
 
 	render(td);
 
-	color_bitsdensity = hxcfe_getEnvVarValue( td->hxcfe, "BMPDISKEXPORT_COLOR_BITSDENSITY" );
+	color_bitsdensity = libflux_getEnvVarValue( td->ctx, "BMPDISKEXPORT_COLOR_BITSDENSITY" );
 
 	for(track=0;track<max_physical_tracks;track++)
 	{
-		td->hxc_setprogress(track*floppydisk->floppyNumberOfSide,floppydisk->floppyNumberOfTrack*floppydisk->floppyNumberOfSide*2,td,td->progress_userdata);
+		td->libflux_setprogress(track*floppydisk->floppyNumberOfSide,floppydisk->floppyNumberOfTrack*floppydisk->floppyNumberOfSide*2,td,td->progress_userdata);
 
 		currentside = floppydisk->tracks[track]->sides[side];
 		draw_density_circle (td,LAYER_SUPPORT,color_bitsdensity,0xFF,0,(float)((float)((float)2 * PI)),x_pos_1,y_pos,start_tracks_space_radius - (int)((float)track * track_ep),0,(int)g_track_ep,currentside,(side & 1)^1);
@@ -3758,7 +3753,7 @@ void hxcfe_draw_side(HXCFE_TD *td,HXCFE_FLOPPY * floppydisk, int x_center, int y
 
 	for(track=0;track<max_physical_tracks;track++)
 	{
-		td->hxc_setprogress((floppydisk->floppyNumberOfTrack*floppydisk->floppyNumberOfSide) + track * floppydisk->floppyNumberOfSide ,floppydisk->floppyNumberOfTrack*floppydisk->floppyNumberOfSide*2,td,td->progress_userdata);
+		td->libflux_setprogress((floppydisk->floppyNumberOfTrack*floppydisk->floppyNumberOfSide) + track * floppydisk->floppyNumberOfSide ,floppydisk->floppyNumberOfTrack*floppydisk->floppyNumberOfSide*2,td,td->progress_userdata);
 
 		currentside = floppydisk->tracks[track]->sides[side];
 
@@ -3823,21 +3818,21 @@ void hxcfe_draw_side(HXCFE_TD *td,HXCFE_FLOPPY * floppydisk, int x_center, int y
 	circle(td,LAYER_TEXT,x_pos_1,y_pos,start_tracks_space_radius - (int)(((max_physical_tracks+1) * track_ep)) + 1,0x000000, 50);
 
 	// mechanical details
-	if(floppy_dimension[physical_dim].window[0] >= 0)
+	if(uft_floppy_dimension[physical_dim].window[0] >= 0)
 	{
-		box(td,LAYER_IDENTIFICATION,um2pix(total_radius, floppy_dimension[physical_dim].total_radius_um, floppy_dimension[physical_dim].window[0] ) + x_pos_1, \
-			   um2pix(total_radius, floppy_dimension[physical_dim].total_radius_um, floppy_dimension[physical_dim].window[1] ) + y_pos, \
-			   um2pix(total_radius, floppy_dimension[physical_dim].total_radius_um, floppy_dimension[physical_dim].window[2] ) + x_pos_1, \
-			   um2pix(total_radius, floppy_dimension[physical_dim].total_radius_um, floppy_dimension[physical_dim].window[3] ) + y_pos, \
+		box(td,LAYER_IDENTIFICATION,um2pix(total_radius, uft_floppy_dimension[physical_dim].total_radius_um, uft_floppy_dimension[physical_dim].window[0] ) + x_pos_1, \
+			   um2pix(total_radius, uft_floppy_dimension[physical_dim].total_radius_um, uft_floppy_dimension[physical_dim].window[1] ) + y_pos, \
+			   um2pix(total_radius, uft_floppy_dimension[physical_dim].total_radius_um, uft_floppy_dimension[physical_dim].window[2] ) + x_pos_1, \
+			   um2pix(total_radius, uft_floppy_dimension[physical_dim].total_radius_um, uft_floppy_dimension[physical_dim].window[3] ) + y_pos, \
 			   0x909090, 255, 1 );
 	}
 
-	td->hxc_setprogress(floppydisk->floppyNumberOfTrack*floppydisk->floppyNumberOfSide,floppydisk->floppyNumberOfTrack*floppydisk->floppyNumberOfSide,td,td->progress_userdata);
+	td->libflux_setprogress(floppydisk->floppyNumberOfTrack*floppydisk->floppyNumberOfSide,floppydisk->floppyNumberOfTrack*floppydisk->floppyNumberOfSide,td,td->progress_userdata);
 
 	render(td);
 }
 
-void hxcfe_td_draw_disk(HXCFE_TD *td,HXCFE_FLOPPY * floppydisk)
+void libflux_td_draw_disk(LIBFLUX_TD *td,LIBFLUX_FLOPPY * floppydisk)
 {
 	int i;
 	uint32_t crc32;
@@ -3859,7 +3854,7 @@ void hxcfe_td_draw_disk(HXCFE_TD *td,HXCFE_FLOPPY * floppydisk)
 	{
 		oldsl = sl->next_element;
 
-		hxcfe_freeSectorConfig( 0, sl->sectorconfig );
+		libflux_freeSectorConfig( 0, sl->sectorconfig );
 
 		free(sl);
 
@@ -3871,10 +3866,10 @@ void hxcfe_td_draw_disk(HXCFE_TD *td,HXCFE_FLOPPY * floppydisk)
 
 	splash_sprite(bitmap_hxc2001_logo_bmp,td->layers[LAYER_TEXT], td->xsize, td->ysize, td->xsize - (bitmap_hxc2001_logo_bmp->Xsize + 16), td->ysize - (bitmap_hxc2001_logo_bmp->Ysize + 16),LOGOALPHA);
 
-	snprintf(tempstr, sizeof(tempstr),"libhxcfe v%s",STR_FILE_VERSION2);
+	snprintf(tempstr, sizeof(tempstr),"liblibflux_ctx v%s",STR_FILE_VERSION2);
 	putstring8x8(td,LAYER_TEXT,td->xsize - (8 + 1),td->ysize - (8*3 + 1),tempstr,0xAAAAAA,0x000000,1,1);
 
-	snprintf(tempstr, sizeof(tempstr),"%s",floppy_dimension[physical_dim].type_name);
+	snprintf(tempstr, sizeof(tempstr),"%s",uft_floppy_dimension[physical_dim].type_name);
 	putstring8x8(td,LAYER_TEXT,td->xsize - (16*8),td->ysize - (8 + 1),tempstr,0xAAAAAA,0x000000,0,1);
 
 	if(td->name)
@@ -3907,16 +3902,16 @@ void hxcfe_td_draw_disk(HXCFE_TD *td,HXCFE_FLOPPY * floppydisk)
 
 	for(i=0;i<2;i++)
 	{
-		//end_tracks_space_radius[i] = (int)((float)total_radius * ((float)floppy_dimension[physical_dim].center_to_tracks_radius_um[i] /
-		//                             (float)floppy_dimension[physical_dim].total_radius_um));
+		//end_tracks_space_radius[i] = (int)((float)total_radius * ((float)uft_floppy_dimension[physical_dim].center_to_tracks_radius_um[i] /
+		//                             (float)uft_floppy_dimension[physical_dim].total_radius_um));
 
-		tracks_space_radius[i] = (int)((float)total_radius * ((float)floppy_dimension[physical_dim].tracks_space_radius_um[i] / \
-															(float)floppy_dimension[physical_dim].total_radius_um));
+		tracks_space_radius[i] = (int)((float)total_radius * ((float)uft_floppy_dimension[physical_dim].tracks_space_radius_um[i] / \
+															(float)uft_floppy_dimension[physical_dim].total_radius_um));
 
-		if( floppy_dimension[physical_dim].track_spacing_um[i] > 0 )
+		if( uft_floppy_dimension[physical_dim].track_spacing_um[i] > 0 )
 		{
-			track_ep[i] = ((float)total_radius * ((float)floppy_dimension[physical_dim].track_spacing_um[i] / \
-												(float)floppy_dimension[physical_dim].total_radius_um));
+			track_ep[i] = ((float)total_radius * ((float)uft_floppy_dimension[physical_dim].track_spacing_um[i] / \
+												(float)uft_floppy_dimension[physical_dim].total_radius_um));
 		}
 		else
 		{
@@ -3937,7 +3932,7 @@ void hxcfe_td_draw_disk(HXCFE_TD *td,HXCFE_FLOPPY * floppydisk)
 
 	if(doesntfit)
 	{
-		snprintf(tempstr, sizeof(tempstr),"This image doesn't fit on a %s disk !",floppy_dimension[physical_dim].type_name);
+		snprintf(tempstr, sizeof(tempstr),"This image doesn't fit on a %s disk !",uft_floppy_dimension[physical_dim].type_name);
 		putstring8x8(td,LAYER_TEXT,(td->xsize/2) - ((strlen(tempstr)*8)/2),td->ysize / 2,tempstr,0x0000FF,0x000000,0,0);
 
 		render(td);
@@ -3947,12 +3942,12 @@ void hxcfe_td_draw_disk(HXCFE_TD *td,HXCFE_FLOPPY * floppydisk)
 
 	render(td);
 
-	td->hxc_setprogress(floppydisk->floppyNumberOfTrack*floppydisk->floppyNumberOfSide,floppydisk->floppyNumberOfTrack*floppydisk->floppyNumberOfSide,td,td->progress_userdata);
+	td->libflux_setprogress(floppydisk->floppyNumberOfTrack*floppydisk->floppyNumberOfSide,floppydisk->floppyNumberOfTrack*floppydisk->floppyNumberOfSide,td,td->progress_userdata);
 
 	if(floppydisk->floppyNumberOfSide > 0)
 	{
 		if( td->window_xpos < td->virtual_xsize / 2 )
-			hxcfe_draw_side(td, floppydisk, x_pos_1, y_pos, 0);
+			libflux_draw_side(td, floppydisk, x_pos_1, y_pos, 0);
 	}
 
 	snprintf(tempstr, sizeof(tempstr),"%d Sectors,%d bad", countSector(td->sl,0),countBadSectors(td->sl,0));
@@ -3977,7 +3972,7 @@ void hxcfe_td_draw_disk(HXCFE_TD *td,HXCFE_FLOPPY * floppydisk)
 		i++;
 	}
 
-	if( hxcfe_floppyGetFlags( td->hxcfe, floppydisk ) & HXCFE_FLOPPY_WRPROTECTED_FLAG )
+	if( libflux_floppyGetFlags( td->ctx, floppydisk ) & LIBFLUX_FLOPPY_WRPROTECTED_FLAG )
 		putstring8x8(td,LAYER_TEXT,1,ytypepos,"WrProt ON ",0xAAAAAA,0x000000,0,1);
 	else
 		putstring8x8(td,LAYER_TEXT,1,ytypepos,"WrProt OFF",0xAAAAAA,0x000000,0,1);
@@ -3987,7 +3982,7 @@ void hxcfe_td_draw_disk(HXCFE_TD *td,HXCFE_FLOPPY * floppydisk)
 	if(floppydisk->floppyNumberOfSide > 1)
 	{
 		if( td->window_xpos + td->xsize >= td->virtual_xsize / 2 )
-			hxcfe_draw_side(td, floppydisk, x_pos_2, y_pos, 1);
+			libflux_draw_side(td, floppydisk, x_pos_2, y_pos, 1);
 	}
 	snprintf(tempstr, sizeof(tempstr),"%d Sectors,%d bad", countSector(td->sl,1),countBadSectors(td->sl,1));
 	putstring8x8(td,LAYER_TEXT,(td->xsize/2)+1,11,tempstr,0xAAAAAA,0x000000,0,1);
@@ -4015,7 +4010,7 @@ void hxcfe_td_draw_disk(HXCFE_TD *td,HXCFE_FLOPPY * floppydisk)
 
 	render(td);
 
-	hxcfe_getHash( td->hxcfe, floppydisk, -1, -1, -1, td->enabledtrackmode, HASH_TYPE_CRC32, HASH_FLAG_DATA | HASH_FLAG_PHYSICALORDER, (void*)&crc32, sizeof(crc32) );
+	libflux_getHash( td->ctx, floppydisk, -1, -1, -1, td->enabledtrackmode, HASH_TYPE_CRC32, HASH_FLAG_DATA | HASH_FLAG_PHYSICALORDER, (void*)&crc32, sizeof(crc32) );
 
 	snprintf(tempstr, sizeof(tempstr),"CRC32: 0x%.8X",crc32);
 	putstring8x8(td,LAYER_TEXT,td->xsize/2 - (8*18),td->ysize - 9,tempstr,0xAAAAAA,0x000000,0,1);
@@ -4024,7 +4019,7 @@ void hxcfe_td_draw_disk(HXCFE_TD *td,HXCFE_FLOPPY * floppydisk)
 
 }
 
-void * hxcfe_td_getframebuffer(HXCFE_TD *td)
+void * libflux_td_getframebuffer(LIBFLUX_TD *td)
 {
 	if(td)
 	{
@@ -4034,7 +4029,7 @@ void * hxcfe_td_getframebuffer(HXCFE_TD *td)
 	return 0;
 }
 
-int32_t hxcfe_td_getframebuffer_xres( HXCFE_TD *td )
+int32_t libflux_td_getframebuffer_xres( LIBFLUX_TD *td )
 {
 	if(td)
 	{
@@ -4045,7 +4040,7 @@ int32_t hxcfe_td_getframebuffer_xres( HXCFE_TD *td )
 
 }
 
-int32_t hxcfe_td_getframebuffer_yres( HXCFE_TD *td )
+int32_t libflux_td_getframebuffer_yres( LIBFLUX_TD *td )
 {
 	if(td)
 	{
@@ -4055,7 +4050,7 @@ int32_t hxcfe_td_getframebuffer_yres( HXCFE_TD *td )
 	return 0;
 }
 
-int32_t hxcfe_td_exportToBMP( HXCFE_TD *td, char * filename )
+int32_t libflux_td_exportToBMP( LIBFLUX_TD *td, char * filename )
 {
 	int i,j,k;
 	uint32_t * ptr;
@@ -4077,7 +4072,7 @@ int32_t hxcfe_td_exportToBMP( HXCFE_TD *td, char * filename )
 	if(!ptrchar)
 		goto alloc_error;
 
-	td->hxcfe->hxc_printf(MSG_INFO_1,"Converting image...");
+	td->ctx->libflux_printf(MSG_INFO_1,"Converting image...");
 	nbcol = 0;
 
 	k=0;
@@ -4119,7 +4114,7 @@ int32_t hxcfe_td_exportToBMP( HXCFE_TD *td, char * filename )
 		}
 	}
 
-	td->hxcfe->hxc_printf(MSG_INFO_1,"Writing %s...",filename);
+	td->ctx->libflux_printf(MSG_INFO_1,"Writing %s...",filename);
 
 	if(nbcol>=256)
 	{
@@ -4157,7 +4152,7 @@ alloc_error:
 	return -1;
 }
 
-void hxcfe_td_deinit(HXCFE_TD *td)
+void libflux_td_deinit(LIBFLUX_TD *td)
 {
 	int i;
 
@@ -4175,7 +4170,7 @@ void hxcfe_td_deinit(HXCFE_TD *td)
 	free(td);
 }
 
-void hxcfe_td_set_marker( HXCFE_TD *td, int32_t cell_pos, int32_t marker_id, uint32_t type, uint32_t color, uint32_t flags )
+void libflux_td_set_marker( LIBFLUX_TD *td, int32_t cell_pos, int32_t marker_id, uint32_t type, uint32_t color, uint32_t flags )
 {
 	if(!td)
 		return;

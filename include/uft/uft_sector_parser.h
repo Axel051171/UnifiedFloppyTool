@@ -2,7 +2,7 @@
  * uft_sector_parser.h - IBM FM/MFM Sector Parser
  *
  * Part of UnifiedFloppyTool (UFT) v3.3.0
- * Based on floppy_sector_parser by UFT Team
+ * Based on uft_floppy_sector_parser by UFT Team
  *
  * Goals:
  *  - Parse IBM-style FM/MFM sector structures from demodulated byte stream
@@ -87,12 +87,15 @@ typedef struct uft_data_record {
 } uft_data_record_t;
 
 /* Complete Sector */
-typedef struct uft_sector {
+#ifndef UFT_PARSED_SECTOR_T_DEFINED
+#define UFT_PARSED_SECTOR_T_DEFINED
+typedef struct uft_parsed_sector {
     uft_id_record_t   id_rec;
     uft_data_record_t data_rec;
     uint8_t *data;          /* caller-provided storage */
     uint16_t data_capacity; /* bytes available at data */
-} uft_sector_t;
+} uft_parsed_sector_t;
+#endif /* UFT_PARSED_SECTOR_T_DEFINED */
 
 /* ═══════════════════════════════════════════════════════════════════════════
  * Configuration
@@ -155,7 +158,7 @@ uint16_t uft_sector_crc16(const uint8_t *buf, size_t len, uint16_t init);
  */
 int uft_sector_parse_track(const uft_sector_config_t *cfg,
                            const uint8_t *stream, size_t stream_len,
-                           uft_sector_t *sectors, size_t sectors_cap,
+                           uft_parsed_sector_t *sectors, size_t sectors_cap,
                            uft_sector_result_t *out);
 
 /**

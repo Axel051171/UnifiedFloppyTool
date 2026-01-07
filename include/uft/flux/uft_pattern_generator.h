@@ -2,8 +2,6 @@
  * @file uft_pattern_generator.h
  * @brief Test Pattern Generation for Flux Analysis
  * 
- * Based on FloppyAI patterns.py
- * Ported from Python to C for UFT
  * 
  * Generates various flux test patterns for:
  * - Media tolerance testing

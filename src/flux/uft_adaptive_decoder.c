@@ -3,7 +3,6 @@
  * @brief Adaptive Flux Decoder with K-Means Clustering
  * 
  * EXT4-004: Adaptive Decoder Implementation
- * Based on FloppyAI custom_decoder.py
  */
 
 #include "uft/flux/uft_adaptive_decoder.h"

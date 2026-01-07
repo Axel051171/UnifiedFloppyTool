@@ -13,16 +13,24 @@
  */
 
 #include "uft/tools/uft_dtc_wrapper.h"
+#include "uft/core/uft_safe_parse.h"
 #include <stdlib.h>
+#include "uft/core/uft_safe_parse.h"
 #include <string.h>
+#include "uft/core/uft_safe_parse.h"
 #include <stdio.h>
+#include "uft/core/uft_safe_parse.h"
 
 #ifdef _WIN32
 #include <windows.h>
+#include "uft/core/uft_safe_parse.h"
 #else
 #include <unistd.h>
+#include "uft/core/uft_safe_parse.h"
 #include <sys/wait.h>
+#include "uft/core/uft_safe_parse.h"
 #include <spawn.h>
+#include "uft/core/uft_safe_parse.h"
 extern char **environ;
 #endif
 
@@ -252,7 +260,7 @@ int uft_dtc_read_track(uft_dtc_ctx_t *ctx, int drive, int track, int side,
     /* Parse output for flux count */
     char *p = strstr(output, "flux:");
     if (p) {
-        result->flux_count = atoi(p + 5);
+        { int32_t t; if(uft_parse_int32(p+5,&t,10) && t>=0) result->flux_count=(uint32_t)t; }
     }
     
     return result->error ? -1 : 0;
@@ -319,12 +327,11 @@ int uft_dtc_info(uft_dtc_ctx_t *ctx, uft_dtc_result_t *result)
 }
 
 /*===========================================================================
- * Greaseweazle Wrapper
  *===========================================================================*/
 
 int uft_gw_find_tool(char *path, size_t size)
 {
-    static const char *gw_paths[] = {
+    static const char *uft_gw_paths[] = {
         "gw",
         "/usr/local/bin/gw",
         "/usr/bin/gw",
@@ -334,17 +341,17 @@ int uft_gw_find_tool(char *path, size_t size)
     
     if (!path || size == 0) return -1;
     
-    for (int i = 0; gw_paths[i] != NULL; i++) {
+    for (int i = 0; uft_gw_paths[i] != NULL; i++) {
 #ifdef _WIN32
-        DWORD attrs = GetFileAttributesA(gw_paths[i]);
+        DWORD attrs = GetFileAttributesA(uft_gw_paths[i]);
         if (attrs != INVALID_FILE_ATTRIBUTES) {
-            strncpy(path, gw_paths[i], size - 1);
+            strncpy(path, uft_gw_paths[i], size - 1);
             path[size - 1] = '\0';
             return 0;
         }
 #else
-        if (access(gw_paths[i], X_OK) == 0) {
-            strncpy(path, gw_paths[i], size - 1);
+        if (access(uft_gw_paths[i], X_OK) == 0) {
+            strncpy(path, uft_gw_paths[i], size - 1);
             path[size - 1] = '\0';
             return 0;
         }
@@ -382,7 +389,6 @@ int uft_gw_read(const char *tool_path, const char *output_file,
 }
 
 /*===========================================================================
- * FluxEngine Wrapper
  *===========================================================================*/
 
 int uft_fe_find_tool(char *path, size_t size)

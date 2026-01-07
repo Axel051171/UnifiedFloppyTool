@@ -2,7 +2,6 @@
  * @file uft_cbm_dos.c
  * @brief Commodore DOS Command Builders Implementation
  * 
- * Source: cbm_dos_mw_mr.h (UFT Project)
  * 
  * @copyright UFT Project 2026
  */
@@ -166,7 +165,6 @@ const char* uft_cbm_error_string(uint8_t status)
 
 /*============================================================================
  * CBM DOS High-Level Error Messages
- * Source: disk2easyflash (Per Olofsson, BSD License)
  *============================================================================*/
 
 static const struct {

@@ -1,3 +1,6 @@
+#ifndef UFT_LOADERS_IMD_LOADER_IMD_FORMAT_H
+#define UFT_LOADERS_IMD_LOADER_IMD_FORMAT_H
+
 // IMD File format :
 /*
                                    ImageDisk
@@ -10,7 +13,7 @@
 
                                   Version 1.17
                               Revised 27-Jun-2008
-                       Copyright 2005-2008 Dave Dunfield
+                       Copyright 2005-2008 various authors
                               All rights reserved.
 
     6. IMAGE FILE FORMAT
@@ -151,3 +154,5 @@ typedef struct imd_trackheader_
 }imd_trackheader;
 
 #pragma pack()
+
+#endif /* UFT_LOADERS_IMD_LOADER_IMD_FORMAT_H */

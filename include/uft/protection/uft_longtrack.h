@@ -3,7 +3,6 @@
  * @brief Longtrack Protection Collection Handler
  * 
  * Implements detection of various Amiga longtrack protection schemes.
- * Based on algorithm analysis from Keir Fraser's disk-utilities.
  * Clean-room reimplementation for UFT.
  * 
  * Longtrack protections work by creating tracks that exceed the

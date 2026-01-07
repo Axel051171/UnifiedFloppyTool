@@ -13,7 +13,7 @@ static bool ssd_probe(const uint8_t* data, size_t size, size_t file_size, int* c
 static uft_error_t ssd_open(uft_disk_t* disk, const char* path, bool read_only) {
     FILE* f = fopen(path, "rb");
     if (!f) return UFT_ERROR_FILE_OPEN;
-    fseek(f, 0, SEEK_END); size_t sz = ftell(f); fseek(f, 0, SEEK_SET);
+    (void)fseek(f, 0, SEEK_END); size_t sz = ftell(f); (void)fseek(f, 0, SEEK_SET);
     
     ssd_data_t* p = calloc(1, sizeof(ssd_data_t));
     p->file = f; p->spt = 10;

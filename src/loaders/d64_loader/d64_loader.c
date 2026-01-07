@@ -3,25 +3,20 @@
 //
 // Copyright (C) 2006-2025 Jean-Franois DEL NERO
 //
-// This file is part of the HxCFloppyEmulator library
 //
-// HxCFloppyEmulator may be used and distributed without restriction provided
 // that this copyright statement is not removed from the file and that any
 // derivative work contains the original copyright notice and the associated
 // disclaimer.
 //
-// HxCFloppyEmulator is free software; you can redistribute it
 // and/or modify  it under the terms of the GNU General Public License
 // as published by the Free Software Foundation; either version 2
 // of the License, or (at your option) any later version.
 //
-// HxCFloppyEmulator is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 //   See the GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with HxCFloppyEmulator; if not, write to the Free Software
 // Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 //
 */
@@ -50,11 +45,11 @@
 
 #include "types.h"
 
-#include "internal_libhxcfe.h"
-#include "libhxcfe.h"
+#include "libflux.h""
+#include "libflux.h""
 
-#include "floppy_loader.h"
-#include "floppy_utils.h"
+#include "uft_floppy_loader.h"
+#include "uft_floppy_utils.h"
 
 #include "tracks/track_formats/c64_gcr_track.h"
 
@@ -69,23 +64,23 @@ typedef struct d64trackpos_
 	int fileoffset;
 }d64trackpos;
 
-int D64_libIsValidDiskFile( HXCFE_IMGLDR * imgldr_ctx, HXCFE_IMGLDR_FILEINFOS * imgfile )
+int D64_libIsValidDiskFile( LIBFLUX_IMGLDR * imgldr_ctx, LIBFLUX_IMGLDR_FILEINFOS * imgfile )
 {
-	imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"D64_libIsValidDiskFile");
+	imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"D64_libIsValidDiskFile");
 
-	if(hxc_checkfileext(imgfile->path,"d64",SYS_PATH_TYPE))
+	if(libflux_checkfileext(imgfile->path,"d64",SYS_PATH_TYPE))
 	{
-		imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"D64_libIsValidDiskFile : D64 file !");
-		return HXCFE_VALIDFILE;
+		imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"D64_libIsValidDiskFile : D64 file !");
+		return LIBFLUX_VALIDFILE;
 	}
 	else
 	{
-		imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"D64_libIsValidDiskFile : non D64 file !");
-		return HXCFE_BADFILE;
+		imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"D64_libIsValidDiskFile : non D64 file !");
+		return LIBFLUX_BADFILE;
 	}
 }
 
-int D64_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,char * imgfile,void * parameters)
+int D64_libLoad_DiskFile(LIBFLUX_IMGLDR * imgldr_ctx,LIBFLUX_FLOPPY * floppydisk,char * imgfile,void * parameters)
 {
 	FILE * f;
 	unsigned int filesize;
@@ -94,8 +89,8 @@ int D64_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 	int tracklen;
 	int rpm;
 	int sectorsize;
-	HXCFE_CYLINDER* currentcylinder;
-	HXCFE_SIDE* currentside;
+	LIBFLUX_CYLINDER* currentcylinder;
+	LIBFLUX_SIDE* currentside;
 	unsigned char errormap[1024];
 	d64trackpos * tracklistpos;
 	int number_of_track;
@@ -104,16 +99,16 @@ int D64_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 	tracklistpos = NULL;
 	trackdata = NULL;
 
-	imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"D64_libLoad_DiskFile %s",imgfile);
+	imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"D64_libLoad_DiskFile %s",imgfile);
 
-	f = hxc_fopen(imgfile,"rb");
+	f = libflux_fopen(imgfile,"rb");
 	if( f == NULL )
 	{
-		imgldr_ctx->hxcfe->hxc_printf(MSG_ERROR,"Cannot open %s !",imgfile);
-		return HXCFE_ACCESSERROR;
+		imgldr_ctx->ctx->libflux_printf(MSG_ERROR,"Cannot open %s !",imgfile);
+		return LIBFLUX_ACCESSERROR;
 	}
 
-	filesize = hxc_fgetsize(f);
+	filesize = libflux_fgetsize(f);
 
 	errormap_size=0;
 	switch(filesize)
@@ -130,7 +125,7 @@ int D64_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 			errormap_size=683;
 			memset(errormap,0,errormap_size);
 			if (fseek(f,errormap_size,SEEK_END) != 0) { /* seek error */ }
-			hxc_fread(errormap,errormap_size,f);
+			libflux_fread(errormap,errormap_size,f);
 
 			break;
 
@@ -146,15 +141,15 @@ int D64_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 			errormap_size=768;
 			memset(errormap,0,errormap_size);
 			if (fseek(f,errormap_size,SEEK_END) != 0) { /* seek error */ }
-			hxc_fread(errormap,errormap_size,f);
+			libflux_fread(errormap,errormap_size,f);
 
 			break;
 
 		default:
 			// not supported !
-			imgldr_ctx->hxcfe->hxc_printf(MSG_ERROR,"Unsupported D64 file size ! (%d Bytes)",filesize);
-			hxc_fclose(f);
-			return HXCFE_UNSUPPORTEDFILE;
+			imgldr_ctx->ctx->libflux_printf(MSG_ERROR,"Unsupported D64 file size ! (%d Bytes)",filesize);
+			libflux_fclose(f);
+			return LIBFLUX_UNSUPPORTEDFILE;
 
 			break;
 	}
@@ -219,11 +214,11 @@ int D64_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 
 	floppydisk->floppyBitRate=VARIABLEBITRATE;
 	floppydisk->floppyiftype=C64_DD_FLOPPYMODE;
-	floppydisk->tracks=(HXCFE_CYLINDER**)malloc(sizeof(HXCFE_CYLINDER*)*floppydisk->floppyNumberOfTrack);
+	floppydisk->tracks=(LIBFLUX_CYLINDER**)malloc(sizeof(LIBFLUX_CYLINDER*)*floppydisk->floppyNumberOfTrack);
 
 	rpm=300;
 
-	imgldr_ctx->hxcfe->hxc_printf(MSG_INFO_1,"filesize:%dkB, %d tracks, %d side(s), rpm:%d",filesize/1024,floppydisk->floppyNumberOfTrack,floppydisk->floppyNumberOfSide,rpm);
+	imgldr_ctx->ctx->libflux_printf(MSG_INFO_1,"filesize:%dkB, %d tracks, %d side(s), rpm:%d",filesize/1024,floppydisk->floppyNumberOfTrack,floppydisk->floppyNumberOfSide,rpm);
 
 	for(j=0;j<floppydisk->floppyNumberOfTrack;j++)
 	{
@@ -236,15 +231,15 @@ int D64_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 
 		for(i=0;i<floppydisk->floppyNumberOfSide;i++)
 		{
-			hxcfe_imgCallProgressCallback(imgldr_ctx,(j<<1) + (i&1),floppydisk->floppyNumberOfTrack*2 );
+			libflux_imgCallProgressCallback(imgldr_ctx,(j<<1) + (i&1),floppydisk->floppyNumberOfTrack*2 );
 
 			tracklen=(tracklistpos[j].bitrate/(rpm/60))/4;
 
-			currentcylinder->sides[i] = malloc(sizeof(HXCFE_SIDE));
+			currentcylinder->sides[i] = malloc(sizeof(LIBFLUX_SIDE));
 			if( !currentcylinder->sides[i] )
 				goto alloc_error;
 
-			memset(currentcylinder->sides[i],0,sizeof(HXCFE_SIDE));
+			memset(currentcylinder->sides[i],0,sizeof(LIBFLUX_SIDE));
 			currentside=currentcylinder->sides[i];
 
 			currentside->number_of_sector=tracklistpos[j].number_of_sector;
@@ -268,11 +263,11 @@ int D64_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 			currentside->bitrate=tracklistpos[j].bitrate;
 			currentside->track_encoding=UNKNOWN_ENCODING;
 
-			fseek (f , tracklistpos[j].fileoffset , SEEK_SET);
+			(void)fseek(f , tracklistpos[j].fileoffset , SEEK_SET);
 
-			hxc_fread(trackdata,sectorsize*currentside->number_of_sector,f);
+			libflux_fread(trackdata,sectorsize*currentside->number_of_sector,f);
 
-			imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"Track:%d Size:%d File offset:%d Number of sector:%d Bitrate:%d",j,currentside->tracklen,tracklistpos[j].fileoffset,tracklistpos[j].number_of_sector,currentside->bitrate);
+			imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"Track:%d Size:%d File offset:%d Number of sector:%d Bitrate:%d",j,currentside->tracklen,tracklistpos[j].fileoffset,tracklistpos[j].number_of_sector,currentside->bitrate);
 
 			BuildC64GCRTrack(currentside->number_of_sector,sectorsize,j,i,trackdata,currentside->databuffer,&currentside->tracklen);
 
@@ -284,25 +279,25 @@ int D64_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 		trackdata = NULL;
 	}
 
-	imgldr_ctx->hxcfe->hxc_printf(MSG_INFO_1,"track file successfully loaded and encoded!");
+	imgldr_ctx->ctx->libflux_printf(MSG_INFO_1,"track file successfully loaded and encoded!");
 
-	hxc_fclose(f);
-	return HXCFE_NOERROR;
+	libflux_fclose(f);
+	return LIBFLUX_NOERROR;
 
 alloc_error:
 
 	if ( f )
-		hxc_fclose( f );
+		libflux_fclose( f );
 
-	hxcfe_freeFloppy(imgldr_ctx->hxcfe, floppydisk );
+	libflux_freeFloppy(imgldr_ctx->ctx, floppydisk );
 
 	free( trackdata );
 	free( tracklistpos );
 
-	return HXCFE_INTERNALERROR;
+	return LIBFLUX_INTERNALERROR;
 }
 
-int D64_libGetPluginInfo(HXCFE_IMGLDR * imgldr_ctx,uint32_t infotype,void * returnvalue)
+int D64_libGetPluginInfo(LIBFLUX_IMGLDR * imgldr_ctx,uint32_t infotype,void * returnvalue)
 {
 	static const char plug_id[]="C64_D64";
 	static const char plug_desc[]="C64 D64 file image loader";

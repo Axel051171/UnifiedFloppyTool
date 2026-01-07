@@ -589,6 +589,7 @@ void uft_fi_log_footer(uft_fi_job_t *job) {
         case UFT_FI_EXIT_ABORTED: status = "ABORTED"; break;
         case UFT_FI_EXIT_FAILED: status = "FAILED"; break;
         case UFT_FI_EXIT_VERIFY_FAIL: status = "VERIFICATION FAILED"; break;
+        default: /* status already "Unknown" */ break;
     }
     
     uft_fi_log(job, UFT_FI_LOG_INFO, "Status: %s", status);

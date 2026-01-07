@@ -2,10 +2,7 @@
 #define UFT_GWFLUX_H
 
 /*
- * UFT (Universal Floppy Tool) - Greaseweazle Flux (.gwf) - v2.8.7
  *
- * Greaseweazle flux files store raw flux transition timings,
- * similar in spirit to SCP/KryoFlux but with a simpler container.
  *
  * Characteristics:
  *  - PURE FLUX (delta timings)
@@ -55,7 +52,6 @@ typedef struct uft_gwf_ctx {
     char* path;
 } uft_gwf_ctx_t;
 
-/* Detect Greaseweazle flux */
 bool uft_gwf_detect(const uint8_t* buffer, size_t size);
 
 /* Open and parse */

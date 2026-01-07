@@ -10,7 +10,6 @@
  * - Timing Anomaly Detection
  * - Recovery Confidence Assessment
  * 
- * SOURCE: Extracted from forensic.zip analysis
  * VERSION: 1.6.0 (2025-12-30)
  * 
  * Copyright (c) 2025 UFT Project

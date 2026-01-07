@@ -10,6 +10,7 @@
 
 #include "uft_unified_image.h"
 #include "uft_error.h"
+#include "uft_tool_adapter.h"   /* uft_tool_read_params_t, uft_tool_write_params_t */
 
 #include <stdbool.h>
 #include <stddef.h>

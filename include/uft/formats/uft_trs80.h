@@ -72,7 +72,7 @@ typedef enum uft_trs80_format {
     UFT_TRS80_FMT_DMK       = 4,   /* David Keil format */
     UFT_TRS80_FMT_VDK       = 5,   /* VDK format (CoCo) */
     UFT_TRS80_FMT_DSK       = 6,   /* Raw sector dump */
-    UFT_TRS80_FMT_HFE       = 7,   /* HxC Floppy Emulator */
+    UFT_TRS80_FMT_HFE       = 7,   /* UFT HFE Format */
     UFT_TRS80_FMT_IMD       = 8    /* ImageDisk */
 } uft_trs80_format_t;
 

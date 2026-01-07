@@ -3,7 +3,6 @@
  * @brief Test Pattern Generation Implementation
  * 
  * EXT4-002: Pattern Generator Implementation
- * Based on FloppyAI patterns.py
  */
 
 #include "uft/flux/uft_pattern_generator.h"

@@ -2,7 +2,6 @@
  * @file uft_crc_bfs.h
  * @brief CRC Brute-Force Search API
  * 
- * Based on crcbfs.pl v1.03 by Gregory Cook
  * 
  * Usage Example:
  * @code

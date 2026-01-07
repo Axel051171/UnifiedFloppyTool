@@ -9,7 +9,6 @@
  * - Brainfile.xml parser for signatures
  * - Safe bootblock library
  * 
- * SOURCE: Extracted from UnifiedFloppyTool_v2_6_3_Bootblock_Edition.zip
  * VERSION: 1.6.0 (2025-12-30)
  * 
  * Copyright (c) 2025 UFT Project

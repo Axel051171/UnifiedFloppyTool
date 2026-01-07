@@ -168,7 +168,7 @@ int uft_ia_generate_identifier(const char *filename, char *identifier, size_t ma
     const char *prefix = "uft-preservation-";
     size_t prefix_len = strlen(prefix);
     if (prefix_len < max_len - 1) {
-        strcpy(identifier, prefix);
+        strncpy(identifier, prefix, 64); identifier[63] = '\0';
         j = prefix_len;
     }
     
@@ -192,7 +192,7 @@ int uft_ia_generate_identifier(const char *filename, char *identifier, size_t ma
     
     /* Ensure valid: 3-80 chars, starts with alphanumeric */
     if (j < 3) {
-        strcpy(identifier, "uft-item-");  /* REVIEW: Consider bounds check */
+        strncpy(identifier, "uft-item-", 64); identifier[63] = '\0';
         j = 9;
         j += snprintf(identifier + j, max_len - j, "%ld", (long)time(NULL));
     }
@@ -715,9 +715,9 @@ int uft_cloud_hash_file(const char *path, char *md5, char *sha256)
     /* TODO: Calculate actual hashes */
     /* Would require OpenSSL or similar */
     
-    if (md5) strcpy(md5, "00000000000000000000000000000000");  /* REVIEW: Consider bounds check */
-    if (sha256) strcpy(sha256, 
-        "0000000000000000000000000000000000000000000000000000000000000000");
+    if (md5) { strncpy(md5, "00000000000000000000000000000000", 33); md5[32] = '\0'; }
+    if (sha256) { strncpy(sha256, 
+        "0000000000000000000000000000000000000000000000000000000000000000", 65); sha256[64] = '\0'; }
     
     return 0;
 }

@@ -10,7 +10,6 @@
  * - Weak bits / Fuzzy bits
  * - Custom sync marks
  * 
- * Based on analysis of Disk-Utilities by Keir Fraser.
  * 
  * @copyright UFT Project
  */

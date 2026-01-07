@@ -1,3 +1,6 @@
+#ifndef UFT_FORMATS_AMIGA_EXT_SNPRINTF_H
+#define UFT_FORMATS_AMIGA_EXT_SNPRINTF_H
+
 /* varargs declarations: */
 /* you might have to hand force this  by doing #define HAVE_STDARG_H */
 
@@ -13,3 +16,5 @@ int vsnprintf (char *str, size_t count, const char *fmt, va_list arg);
 
 //#define vsnprintf vplp_snprintf
 
+
+#endif /* UFT_FORMATS_AMIGA_EXT_SNPRINTF_H */

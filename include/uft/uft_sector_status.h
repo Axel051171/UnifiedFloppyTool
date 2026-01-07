@@ -32,7 +32,6 @@ typedef enum {
     UFT_SECTOR_FLAG_VOTED       = 1u << 3, /**< Sector content is a vote/merge result */
 
     /* --------------------------------------------------------------------- */
-    /* Extended forensic / tool-interoperability flags (KryoFlux-style)       */
     /* --------------------------------------------------------------------- */
     UFT_SECTOR_FLAG_PROTECTION       = 1u << 4, /**< Copy-protection suspected/present */
     UFT_SECTOR_FLAG_NOT_IN_IMAGE     = 1u << 5, /**< Sector seen, but not included in image */

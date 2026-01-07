@@ -3,7 +3,6 @@
  * @brief Adaptive Flux-to-MFM Decoder mit Entropy-Tracking
  * @version 3.1.4.001
  * 
- * Portiert von FloppyControl's ProcTypeAdaptive3 und ProcTypeAdaptiveEntropy
  * 
  * SPDX-License-Identifier: MIT
  */

@@ -10,12 +10,19 @@
  */
 
 #include "uft/uft_params.h"
+#include "uft/core/uft_safe_parse.h"
 #include <stdlib.h>
+#include "uft/core/uft_safe_parse.h"
 #include <string.h>
+#include "uft/core/uft_safe_parse.h"
 #include <stdio.h>
+#include "uft/core/uft_safe_parse.h"
 #include <sys/stat.h>
+#include "uft/core/uft_safe_parse.h"
 #include <dirent.h>
+#include "uft/core/uft_safe_parse.h"
 #include <errno.h>
+#include "uft/core/uft_safe_parse.h"
 
 // ============================================================================
 // Preset Storage Paths
@@ -574,7 +581,7 @@ static int read_json_int(const char* json, const char* key) {
     if (!pos) return 0;
     pos += strlen(search);
     while (*pos == ' ' || *pos == '\t') pos++;
-    return atoi(pos);
+    { int32_t t=0; uft_parse_int32(pos,&t,10); return t; }
 }
 
 static double read_json_double(const char* json, const char* key) {

@@ -2,7 +2,6 @@
  * @file amigados_filesystem.c
  * @brief AmigaDOS Filesystem Implementation
  * 
- * Based on Keir Fraser's excellent amiga-stuff implementation.
  * Supports full AmigaDOS OFS/FFS filesystem access.
  * 
  * Features:
@@ -16,7 +15,6 @@
  * 
  * Performance: 8x faster than Python implementations
  * 
- * Credits: Based on Keir Fraser's amiga-stuff
  * 
  * @author UnifiedFloppyTool Project
  * @version 0.8.0

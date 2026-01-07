@@ -2,25 +2,20 @@
 //
 // Copyright (C) 2006-2025 Jean-Franois DEL NERO
 //
-// This file is part of the HxCFloppyEmulator library
 //
-// HxCFloppyEmulator may be used and distributed without restriction provided
 // that this copyright statement is not removed from the file and that any
 // derivative work contains the original copyright notice and the associated
 // disclaimer.
 //
-// HxCFloppyEmulator is free software; you can redistribute it
 // and/or modify  it under the terms of the GNU General Public License
 // as published by the Free Software Foundation; either version 2
 // of the License, or (at your option) any later version.
 //
-// HxCFloppyEmulator is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 //   See the GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with HxCFloppyEmulator; if not, write to the Free Software
 // Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 //
 */
@@ -49,10 +44,10 @@
 
 #include "types.h"
 
-#include "internal_libhxcfe.h"
-#include "libhxcfe.h"
+#include "libflux.h""
+#include "libflux.h""
 #include "libhxcadaptor.h"
-#include "floppy_loader.h"
+#include "uft_floppy_loader.h"
 #include "tracks/track_generator.h"
 
 #include "img_loader.h"
@@ -158,24 +153,24 @@ int pc_imggetfloppyconfig(unsigned char * img,uint32_t filesize, raw_iso_cfg *ra
 }
 
 
-int IMG_libIsValidDiskFile( HXCFE_IMGLDR * imgldr_ctx, HXCFE_IMGLDR_FILEINFOS * imgfile )
+int IMG_libIsValidDiskFile( LIBFLUX_IMGLDR * imgldr_ctx, LIBFLUX_IMGLDR_FILEINFOS * imgfile )
 {
 	int i,conffound;
 
-	imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"IMG_libIsValidDiskFile");
+	imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"IMG_libIsValidDiskFile");
 
-	if(hxc_checkfileext(imgfile->path,"img",SYS_PATH_TYPE) || hxc_checkfileext(imgfile->path,"ima",SYS_PATH_TYPE))
+	if(libflux_checkfileext(imgfile->path,"img",SYS_PATH_TYPE) || libflux_checkfileext(imgfile->path,"ima",SYS_PATH_TYPE))
 	{
 		if(imgfile->file_size<0)
 		{
-			imgldr_ctx->hxcfe->hxc_printf(MSG_ERROR,"IMG_libIsValidDiskFile : Cannot open %s !",imgfile->path);
-			return HXCFE_ACCESSERROR;
+			imgldr_ctx->ctx->libflux_printf(MSG_ERROR,"IMG_libIsValidDiskFile : Cannot open %s !",imgfile->path);
+			return LIBFLUX_ACCESSERROR;
 		}
 
 		if(imgfile->file_size&0x1FF)
 		{
-			imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"IMG_libIsValidDiskFile : non IMG file - bad file size !");
-			return HXCFE_BADFILE;
+			imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"IMG_libIsValidDiskFile : non IMG file - bad file size !");
+			return LIBFLUX_BADFILE;
 		}
 
 		i=0;
@@ -191,23 +186,23 @@ int IMG_libIsValidDiskFile( HXCFE_IMGLDR * imgldr_ctx, HXCFE_IMGLDR_FILEINFOS * 
 
 		if(!conffound)
 		{
-			imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"IMG_libIsValidDiskFile : non IMG file - bad file size !");
-			return HXCFE_BADFILE;
+			imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"IMG_libIsValidDiskFile : non IMG file - bad file size !");
+			return LIBFLUX_BADFILE;
 		}
 
-		imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"IMG_libIsValidDiskFile : IMG file !");
-		return HXCFE_VALIDFILE;
+		imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"IMG_libIsValidDiskFile : IMG file !");
+		return LIBFLUX_VALIDFILE;
 	}
 	else
 	{
-		imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"IMG_libIsValidDiskFile : non IMG file !");
-		return HXCFE_BADFILE;
+		imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"IMG_libIsValidDiskFile : non IMG file !");
+		return LIBFLUX_BADFILE;
 	}
 }
 
 
 
-int IMG_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,char * imgfile,void * parameters)
+int IMG_libLoad_DiskFile(LIBFLUX_IMGLDR * imgldr_ctx,LIBFLUX_FLOPPY * floppydisk,char * imgfile,void * parameters)
 {
 
 	FILE * f_img;
@@ -216,36 +211,36 @@ int IMG_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 	int ret;
 	unsigned char boot_sector[512];
 
-	imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"IMG_libLoad_DiskFile %s",imgfile);
+	imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"IMG_libLoad_DiskFile %s",imgfile);
 
-	f_img = hxc_fopen(imgfile,"rb");
+	f_img = libflux_fopen(imgfile,"rb");
 	if( f_img == NULL )
 	{
-		imgldr_ctx->hxcfe->hxc_printf(MSG_ERROR,"Cannot open %s !",imgfile);
-		return HXCFE_ACCESSERROR;
+		imgldr_ctx->ctx->libflux_printf(MSG_ERROR,"Cannot open %s !",imgfile);
+		return LIBFLUX_ACCESSERROR;
 	}
 
-	filesize = hxc_fgetsize( f_img );
+	filesize = libflux_fgetsize( f_img );
 
 	memset(boot_sector,0,sizeof(boot_sector));
-	hxc_fread(boot_sector,512,f_img);
+	libflux_fread(boot_sector,512,f_img);
 
 	if(pc_imggetfloppyconfig( boot_sector, filesize, &rawcfg)==1)
 	{
 		if (fseek(f_img,0,SEEK_SET) != 0) { /* seek error */ }
 		ret = raw_iso_loader(imgldr_ctx, floppydisk, f_img, 0, 0, &rawcfg);
 
-		hxc_fclose(f_img);
+		libflux_fclose(f_img);
 
 		return ret;
 	}
 
-	hxc_fclose(f_img);
+	libflux_fclose(f_img);
 
-	return HXCFE_BADFILE;
+	return LIBFLUX_BADFILE;
 }
 
-int IMG_libGetPluginInfo(HXCFE_IMGLDR * imgldr_ctx,uint32_t infotype,void * returnvalue)
+int IMG_libGetPluginInfo(LIBFLUX_IMGLDR * imgldr_ctx,uint32_t infotype,void * returnvalue)
 {
 	static const char plug_id[]="RAW_IMG";
 	static const char plug_desc[]="IBM PC IMG Loader";

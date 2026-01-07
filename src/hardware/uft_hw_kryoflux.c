@@ -1,8 +1,6 @@
 /**
  * @file uft_hw_kryoflux.c
- * @brief UnifiedFloppyTool - KryoFlux Hardware Backend
  * 
- * KryoFlux ist professionelle Flux-Level Hardware für Disk-Preservation.
  * - USB High-Speed Interface
  * - Extrem präzises Timing (~42ns Auflösung)
  * - Stream-Modus für kontinuierliches Capture
@@ -36,51 +34,49 @@
 #endif
 
 // ============================================================================
-// KryoFlux Constants
 // ============================================================================
 
-#define KRYOFLUX_VID            0x03EB  // Atmel
-#define KRYOFLUX_PID            0x6124  // KryoFlux
+#define UFT_UFT_KF_VID            0x03EB  // Atmel
 
 // Sample Clock: 24.027428 MHz (PAL subcarrier × 6)
-#define KRYOFLUX_SAMPLE_FREQ    24027428
-#define KRYOFLUX_TICK_NS        (1000000000.0 / KRYOFLUX_SAMPLE_FREQ)  // ~41.6ns
+#define UFT_UFT_KF_SAMPLE_FREQ    24027428
+#define UFT_UFT_KF_TICK_NS        (1000000000.0 / UFT_UFT_KF_SAMPLE_FREQ)  // ~41.6ns
 
 // USB Endpoints
-#define KRYOFLUX_EP_CTRL        0x00
-#define KRYOFLUX_EP_BULK_OUT    0x01
-#define KRYOFLUX_EP_BULK_IN     0x82
+#define UFT_UFT_KF_EP_CTRL        0x00
+#define UFT_UFT_KF_EP_BULK_OUT    0x01
+#define UFT_UFT_KF_EP_BULK_IN     0x82
 
 // Kommandos
-#define KF_CMD_GET_INFO         0x00
-#define KF_CMD_SET_DENSITY      0x01
-#define KF_CMD_SET_SIDE         0x02
-#define KF_CMD_MOTOR            0x03
-#define KF_CMD_SEEK             0x04
-#define KF_CMD_READ_STREAM      0x05
-#define KF_CMD_WRITE_STREAM     0x06
-#define KF_CMD_GET_STATUS       0x07
-#define KF_CMD_RESET            0x08
-#define KF_CMD_SET_DRIVE        0x09
+#define UFT_KF_CMD_GET_INFO         0x00
+#define UFT_KF_CMD_SET_DENSITY      0x01
+#define UFT_KF_CMD_SET_SIDE         0x02
+#define UFT_KF_CMD_MOTOR            0x03
+#define UFT_KF_CMD_SEEK             0x04
+#define UFT_KF_CMD_READ_STREAM      0x05
+#define UFT_KF_CMD_WRITE_STREAM     0x06
+#define UFT_KF_CMD_GET_STATUS       0x07
+#define UFT_KF_CMD_RESET            0x08
+#define UFT_KF_CMD_SET_DRIVE        0x09
 
 // Stream Opcodes (OOB = Out-of-Band)
-#define KF_OOB_INVALID          0x00
-#define KF_OOB_STREAM_INFO      0x01
-#define KF_OOB_INDEX            0x02
-#define KF_OOB_STREAM_END       0x03
-#define KF_OOB_KFINFO           0x04
-#define KF_OOB_EOF              0x0D
+#define UFT_KF_OOB_INVALID          0x00
+#define UFT_KF_OOB_STREAM_INFO      0x01
+#define UFT_KF_OOB_INDEX            0x02
+#define UFT_KF_OOB_STREAM_END       0x03
+#define UFT_KF_OOB_KFINFO           0x04
+#define UFT_KF_OOB_EOF              0x0D
 
 // Flux Encoding
-#define KF_FLUX_MAX_8BIT        0xE7    // 231 - Werte darüber sind Opcodes
-#define KF_FLUX_OVERFLOW        0xFF    // Überlauf-Marker
+#define UFT_KF_FLUX_MAX_8BIT        0xE7    // 231 - Werte darüber sind Opcodes
+#define UFT_KF_FLUX_OVERFLOW        0xFF    // Überlauf-Marker
 
 // Status-Flags
-#define KF_STATUS_DRIVE_READY   0x01
-#define KF_STATUS_INDEX         0x02
-#define KF_STATUS_TRACK0        0x04
-#define KF_STATUS_WRITE_PROTECT 0x08
-#define KF_STATUS_MOTOR_ON      0x10
+#define UFT_KF_STATUS_DRIVE_READY   0x01
+#define UFT_KF_STATUS_INDEX         0x02
+#define UFT_KF_STATUS_TRACK0        0x04
+#define UFT_KF_STATUS_WRITE_PROTECT 0x08
+#define UFT_KF_STATUS_MOTOR_ON      0x10
 
 // ============================================================================
 // Device State
@@ -102,16 +98,14 @@ typedef struct {
     bool        motor_on;
     bool        streaming;
     
-} kryoflux_state_t;
+} uft_kf_state_t;
 
 // ============================================================================
 // Stream Parser
 // ============================================================================
 
 /**
- * @brief Parst KryoFlux Stream-Daten zu Flux-Zeiten
  * 
- * KryoFlux Stream Format:
  * - Bytes 0x00-0xE7: 8-bit Flux-Wert
  * - Byte 0xE8-0xED: OOB-Marker (2-byte: opcode + length)
  * - Bytes 0xEE-0xF7: Reserviert
@@ -125,7 +119,7 @@ typedef struct {
  * @param index_positions [out] Positionen der Index-Pulse (optional)
  * @param index_count [out] Anzahl Index-Pulse
  */
-static uft_error_t kf_parse_stream(const uint8_t* stream, size_t stream_len,
+static uft_error_t uft_kf_parse_stream(const uint8_t* stream, size_t stream_len,
                                     uint32_t* flux, size_t max_flux,
                                     size_t* flux_count,
                                     uint32_t* index_positions, 
@@ -139,12 +133,12 @@ static uft_error_t kf_parse_stream(const uint8_t* stream, size_t stream_len,
     uint32_t accumulator = 0;
     size_t i = 0;
     
-    double ns_per_tick = KRYOFLUX_TICK_NS;
+    double ns_per_tick = UFT_UFT_KF_TICK_NS;
     
     while (i < stream_len && out_pos < max_flux) {
         uint8_t b = stream[i++];
         
-        if (b <= KF_FLUX_MAX_8BIT) {
+        if (b <= UFT_KF_FLUX_MAX_8BIT) {
             // Normaler 8-bit Flux-Wert
             accumulator += b;
             flux[out_pos++] = (uint32_t)(accumulator * ns_per_tick);
@@ -162,18 +156,18 @@ static uft_error_t kf_parse_stream(const uint8_t* stream, size_t stream_len,
             i += 2;
             
             switch (oob_type) {
-                case KF_OOB_INDEX:
+                case UFT_KF_OOB_INDEX:
                     // Index-Puls Position
                     if (index_positions && index_count && idx_pos < 16) {
                         index_positions[idx_pos++] = (uint32_t)out_pos;
                     }
                     break;
                     
-                case KF_OOB_STREAM_END:
+                case UFT_KF_OOB_STREAM_END:
                     // Stream beendet
                     goto done;
                     
-                case KF_OOB_EOF:
+                case UFT_KF_OOB_EOF:
                     // Dateiende
                     goto done;
                     
@@ -209,7 +203,7 @@ done:
 
 #ifdef UFT_OS_LINUX
 
-static uft_error_t kf_usb_control(kryoflux_state_t* kf,
+static uft_error_t uft_kf_usb_control(uft_kf_state_t* kf,
                                    uint8_t request, uint16_t value,
                                    uint8_t* data, size_t len, bool in) {
     int ret = libusb_control_transfer(
@@ -227,11 +221,11 @@ static uft_error_t kf_usb_control(kryoflux_state_t* kf,
     return (ret >= 0) ? UFT_OK : UFT_ERROR_IO;
 }
 
-static uft_error_t kf_usb_bulk_read(kryoflux_state_t* kf,
+static uft_error_t uft_kf_usb_bulk_read(uft_kf_state_t* kf,
                                      uint8_t* data, size_t len,
                                      size_t* actual) {
     int transferred = 0;
-    int ret = libusb_bulk_transfer(kf->usb_handle, KRYOFLUX_EP_BULK_IN,
+    int ret = libusb_bulk_transfer(kf->usb_handle, UFT_UFT_KF_EP_BULK_IN,
                                    data, (int)len, &transferred, 5000);
     
     if (actual) *actual = (size_t)transferred;
@@ -245,7 +239,7 @@ static uft_error_t kf_usb_bulk_read(kryoflux_state_t* kf,
 // Backend Implementation
 // ============================================================================
 
-static uft_error_t kryoflux_init(void) {
+static uft_error_t uft_kf_init(void) {
 #ifdef UFT_OS_LINUX
     return (libusb_init(NULL) == 0) ? UFT_OK : UFT_ERROR_IO;
 #else
@@ -253,13 +247,13 @@ static uft_error_t kryoflux_init(void) {
 #endif
 }
 
-static void kryoflux_shutdown(void) {
+static void uft_kf_shutdown(void) {
 #ifdef UFT_OS_LINUX
     libusb_exit(NULL);
 #endif
 }
 
-static uft_error_t kryoflux_enumerate(uft_hw_info_t* devices, size_t max_devices,
+static uft_error_t uft_kf_enumerate(uft_hw_info_t* devices, size_t max_devices,
                                        size_t* found) {
     *found = 0;
     
@@ -274,7 +268,7 @@ static uft_error_t kryoflux_enumerate(uft_hw_info_t* devices, size_t max_devices
         
         if (libusb_get_device_descriptor(dev_list[i], &desc) < 0) continue;
         
-        if (desc.idVendor == KRYOFLUX_VID && desc.idProduct == KRYOFLUX_PID) {
+        if (desc.idVendor == UFT_UFT_KF_VID && desc.idProduct == UFT_UFT_KF_PID) {
             uft_hw_info_t* info = &devices[*found];
             memset(info, 0, sizeof(*info));
             
@@ -292,8 +286,8 @@ static uft_error_t kryoflux_enumerate(uft_hw_info_t* devices, size_t max_devices
                                  UFT_HW_CAP_MULTI_REV | UFT_HW_CAP_MOTOR |
                                  UFT_HW_CAP_TIMING | UFT_HW_CAP_WEAK_BITS;
             
-            info->sample_rate_hz = KRYOFLUX_SAMPLE_FREQ;
-            info->resolution_ns = (uint32_t)(KRYOFLUX_TICK_NS + 0.5);
+            info->sample_rate_hz = UFT_UFT_KF_SAMPLE_FREQ;
+            info->resolution_ns = (uint32_t)(UFT_UFT_KF_TICK_NS + 0.5);
             
             (*found)++;
         }
@@ -307,14 +301,14 @@ static uft_error_t kryoflux_enumerate(uft_hw_info_t* devices, size_t max_devices
     return UFT_OK;
 }
 
-static uft_error_t kryoflux_open(const uft_hw_info_t* info, uft_hw_device_t** device) {
+static uft_error_t uft_kf_open(const uft_hw_info_t* info, uft_hw_device_t** device) {
 #ifdef UFT_OS_LINUX
-    kryoflux_state_t* kf = calloc(1, sizeof(kryoflux_state_t));
+    uft_kf_state_t* kf = calloc(1, sizeof(uft_kf_state_t));
     if (!kf) return UFT_ERROR_NO_MEMORY;
     
     kf->usb_handle = libusb_open_device_with_vid_pid(NULL, 
-                                                      KRYOFLUX_VID, 
-                                                      KRYOFLUX_PID);
+                                                      UFT_UFT_KF_VID, 
+                                                      UFT_UFT_KF_PID);
     if (!kf->usb_handle) {
         free(kf);
         return UFT_ERROR_FILE_OPEN;
@@ -327,11 +321,11 @@ static uft_error_t kryoflux_open(const uft_hw_info_t* info, uft_hw_device_t** de
         return UFT_ERROR_IO;
     }
     
-    kf->sample_freq = KRYOFLUX_SAMPLE_FREQ;
+    kf->sample_freq = UFT_UFT_KF_SAMPLE_FREQ;
     
     // Firmware-Version abfragen
     uint8_t version[64];
-    if (UFT_OK == kf_usb_control(kf, KF_CMD_GET_INFO, 0, version, sizeof(version), true)) {
+    if (UFT_OK == uft_kf_usb_control(kf, UFT_KF_CMD_GET_INFO, 0, version, sizeof(version), true)) {
         snprintf(kf->firmware_version, sizeof(kf->firmware_version), 
                  "%d.%d", version[0], version[1]);
     }
@@ -344,16 +338,16 @@ static uft_error_t kryoflux_open(const uft_hw_info_t* info, uft_hw_device_t** de
 #endif
 }
 
-static void kryoflux_close(uft_hw_device_t* device) {
+static void uft_kf_close(uft_hw_device_t* device) {
     if (!device || !device->handle) return;
     
-    kryoflux_state_t* kf = device->handle;
+    uft_kf_state_t* kf = device->handle;
     
 #ifdef UFT_OS_LINUX
     // Motor ausschalten
     if (kf->motor_on) {
         uint8_t cmd = 0;
-        kf_usb_control(kf, KF_CMD_MOTOR, 0, &cmd, 1, false);
+        uft_kf_usb_control(kf, UFT_KF_CMD_MOTOR, 0, &cmd, 1, false);
     }
     
     if (kf->usb_handle) {
@@ -366,21 +360,21 @@ static void kryoflux_close(uft_hw_device_t* device) {
     device->handle = NULL;
 }
 
-static uft_error_t kryoflux_get_status(uft_hw_device_t* device, 
+static uft_error_t uft_kf_get_status(uft_hw_device_t* device, 
                                         uft_drive_status_t* status) {
     if (!device || !device->handle || !status) {
         return UFT_ERROR_NULL_POINTER;
     }
     
-    kryoflux_state_t* kf = device->handle;
+    uft_kf_state_t* kf = device->handle;
     memset(status, 0, sizeof(*status));
     
 #ifdef UFT_OS_LINUX
     uint8_t flags = 0;
-    if (UFT_OK == kf_usb_control(kf, KF_CMD_GET_STATUS, 0, &flags, 1, true)) {
+    if (UFT_OK == uft_kf_usb_control(kf, UFT_KF_CMD_GET_STATUS, 0, &flags, 1, true)) {
         status->connected = true;
-        status->ready = (flags & KF_STATUS_DRIVE_READY) != 0;
-        status->write_protected = (flags & KF_STATUS_WRITE_PROTECT) != 0;
+        status->ready = (flags & UFT_KF_STATUS_DRIVE_READY) != 0;
+        status->write_protected = (flags & UFT_KF_STATUS_WRITE_PROTECT) != 0;
     }
 #endif
     
@@ -391,14 +385,14 @@ static uft_error_t kryoflux_get_status(uft_hw_device_t* device,
     return UFT_OK;
 }
 
-static uft_error_t kryoflux_motor(uft_hw_device_t* device, bool on) {
+static uft_error_t uft_kf_motor(uft_hw_device_t* device, bool on) {
     if (!device || !device->handle) return UFT_ERROR_NULL_POINTER;
     
-    kryoflux_state_t* kf = device->handle;
+    uft_kf_state_t* kf = device->handle;
     
 #ifdef UFT_OS_LINUX
     uint8_t cmd = on ? 1 : 0;
-    uft_error_t err = kf_usb_control(kf, KF_CMD_MOTOR, cmd, NULL, 0, false);
+    uft_error_t err = uft_kf_usb_control(kf, UFT_KF_CMD_MOTOR, cmd, NULL, 0, false);
     if (UFT_FAILED(err)) return err;
 #endif
     
@@ -406,13 +400,13 @@ static uft_error_t kryoflux_motor(uft_hw_device_t* device, bool on) {
     return UFT_OK;
 }
 
-static uft_error_t kryoflux_seek(uft_hw_device_t* device, uint8_t track) {
+static uft_error_t uft_kf_seek(uft_hw_device_t* device, uint8_t track) {
     if (!device || !device->handle) return UFT_ERROR_NULL_POINTER;
     
-    kryoflux_state_t* kf = device->handle;
+    uft_kf_state_t* kf = device->handle;
     
 #ifdef UFT_OS_LINUX
-    uft_error_t err = kf_usb_control(kf, KF_CMD_SEEK, track, NULL, 0, false);
+    uft_error_t err = uft_kf_usb_control(kf, UFT_KF_CMD_SEEK, track, NULL, 0, false);
     if (UFT_FAILED(err)) return err;
 #endif
     
@@ -420,13 +414,13 @@ static uft_error_t kryoflux_seek(uft_hw_device_t* device, uint8_t track) {
     return UFT_OK;
 }
 
-static uft_error_t kryoflux_select_head(uft_hw_device_t* device, uint8_t head) {
+static uft_error_t uft_kf_select_head(uft_hw_device_t* device, uint8_t head) {
     if (!device || !device->handle) return UFT_ERROR_NULL_POINTER;
     
-    kryoflux_state_t* kf = device->handle;
+    uft_kf_state_t* kf = device->handle;
     
 #ifdef UFT_OS_LINUX
-    uft_error_t err = kf_usb_control(kf, KF_CMD_SET_SIDE, head, NULL, 0, false);
+    uft_error_t err = uft_kf_usb_control(kf, UFT_KF_CMD_SET_SIDE, head, NULL, 0, false);
     if (UFT_FAILED(err)) return err;
 #endif
     
@@ -434,20 +428,20 @@ static uft_error_t kryoflux_select_head(uft_hw_device_t* device, uint8_t head) {
     return UFT_OK;
 }
 
-static uft_error_t kryoflux_read_flux(uft_hw_device_t* device, uint32_t* flux,
+static uft_error_t uft_kf_read_flux(uft_hw_device_t* device, uint32_t* flux,
                                        size_t max_flux, size_t* flux_count,
                                        uint8_t revolutions) {
     if (!device || !device->handle || !flux || !flux_count) {
         return UFT_ERROR_NULL_POINTER;
     }
     
-    kryoflux_state_t* kf = device->handle;
+    uft_kf_state_t* kf = device->handle;
     *flux_count = 0;
     
 #ifdef UFT_OS_LINUX
     // Stream-Read starten
     uint8_t params[2] = {revolutions > 0 ? revolutions : 1, 0};
-    uft_error_t err = kf_usb_control(kf, KF_CMD_READ_STREAM, 0, params, 2, false);
+    uft_error_t err = uft_kf_usb_control(kf, UFT_KF_CMD_READ_STREAM, 0, params, 2, false);
     if (UFT_FAILED(err)) return err;
     
     kf->streaming = true;
@@ -465,7 +459,7 @@ static uft_error_t kryoflux_read_flux(uft_hw_device_t* device, uint32_t* flux,
     
     // Lese bis Stream-Ende
     while (total_read < stream_size) {
-        err = kf_usb_bulk_read(kf, &stream[total_read], 
+        err = uft_kf_usb_bulk_read(kf, &stream[total_read], 
                                stream_size - total_read, &chunk_read);
         if (UFT_FAILED(err) || chunk_read == 0) break;
         
@@ -486,7 +480,7 @@ stream_done:
     uint32_t index_pos[16];
     size_t index_count;
     
-    err = kf_parse_stream(stream, total_read, flux, max_flux, 
+    err = uft_kf_parse_stream(stream, total_read, flux, max_flux, 
                           flux_count, index_pos, &index_count);
     
     free(stream);
@@ -501,25 +495,25 @@ stream_done:
 // Backend Definition
 // ============================================================================
 
-static const uft_hw_backend_t kryoflux_backend = {
+static const uft_hw_backend_t uft_kf_backend = {
     .name = "KryoFlux",
     .type = UFT_HW_KRYOFLUX,
     
-    .init = kryoflux_init,
-    .shutdown = kryoflux_shutdown,
-    .enumerate = kryoflux_enumerate,
-    .open = kryoflux_open,
-    .close = kryoflux_close,
+    .init = uft_kf_init,
+    .shutdown = uft_kf_shutdown,
+    .enumerate = uft_kf_enumerate,
+    .open = uft_kf_open,
+    .close = uft_kf_close,
     
-    .get_status = kryoflux_get_status,
-    .motor = kryoflux_motor,
-    .seek = kryoflux_seek,
-    .select_head = kryoflux_select_head,
+    .get_status = uft_kf_get_status,
+    .motor = uft_kf_motor,
+    .seek = uft_kf_seek,
+    .select_head = uft_kf_select_head,
     .select_density = NULL,
     
     .read_track = NULL,
     .write_track = NULL,
-    .read_flux = kryoflux_read_flux,
+    .read_flux = uft_kf_read_flux,
     .write_flux = NULL,  // TODO
     
     .parallel_write = NULL,
@@ -530,21 +524,21 @@ static const uft_hw_backend_t kryoflux_backend = {
 };
 
 uft_error_t uft_hw_register_kryoflux(void) {
-    return uft_hw_register_backend(&kryoflux_backend);
+    return uft_hw_register_backend(&uft_kf_backend);
 }
 
 const uft_hw_backend_t uft_hw_backend_kryoflux = {
     .name = "KryoFlux",
     .type = UFT_HW_KRYOFLUX,
-    .init = kryoflux_init,
-    .shutdown = kryoflux_shutdown,
-    .enumerate = kryoflux_enumerate,
-    .open = kryoflux_open,
-    .close = kryoflux_close,
-    .get_status = kryoflux_get_status,
-    .motor = kryoflux_motor,
-    .seek = kryoflux_seek,
-    .select_head = kryoflux_select_head,
-    .read_flux = kryoflux_read_flux,
+    .init = uft_kf_init,
+    .shutdown = uft_kf_shutdown,
+    .enumerate = uft_kf_enumerate,
+    .open = uft_kf_open,
+    .close = uft_kf_close,
+    .get_status = uft_kf_get_status,
+    .motor = uft_kf_motor,
+    .seek = uft_kf_seek,
+    .select_head = uft_kf_select_head,
+    .read_flux = uft_kf_read_flux,
     .private_data = NULL
 };

@@ -187,7 +187,7 @@ static const format_spec_t FORMAT_SPECS[] = {
     // HFE
     {
         .name = "HFE",
-        .description = "HxC Floppy Emulator",
+        .description = "UFT HFE Format",
         .valid_sizes = {0},
         .num_valid_sizes = 0,
         .min_size = 512,

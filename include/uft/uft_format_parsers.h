@@ -15,7 +15,7 @@
  * - Kryoflux raw stream
  * - TD0 (Teledisk)
  * - IPF (Interchangeable Preservation Format / CAPS)
- * - HFE (HxC Floppy Emulator)
+ * - HFE (UFT HFE Format)
  * - IMD (ImageDisk)
  * - MFI (MAME Floppy Image)
  */
@@ -51,7 +51,7 @@ typedef enum {
     /* Bitstream formats */
     UFT_FORMAT_IMD         = 10,   /**< ImageDisk */
     UFT_FORMAT_TD0         = 11,   /**< Teledisk */
-    UFT_FORMAT_HFE         = 12,   /**< HxC Floppy Emulator */
+    UFT_FORMAT_HFE         = 12,   /**< UFT HFE Format */
     UFT_FORMAT_MFM         = 13,   /**< Raw MFM bitstream */
     UFT_FORMAT_86F         = 14,   /**< PCem 86F */
     
@@ -184,7 +184,7 @@ typedef enum {
     UFT_KFX_OOB_STREAM_INFO = 0x01,
     UFT_KFX_OOB_INDEX       = 0x02,
     UFT_KFX_OOB_STREAM_END  = 0x03,
-    UFT_KFX_OOB_KF_INFO     = 0x04,
+    UFT_KFX_OOB_UFT_KF_INFO     = 0x04,
     UFT_KFX_OOB_EOF         = 0x0D
 } uft_kfx_oob_type_t;
 
@@ -362,7 +362,7 @@ typedef struct {
 } uft_ipf_info_t;
 
 /*============================================================================
- * HFE (HxC Floppy Emulator) Format
+ * HFE (UFT HFE Format) Format
  *============================================================================*/
 
 /** HFE signature "HXCPICFE" */

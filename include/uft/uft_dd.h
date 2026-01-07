@@ -173,14 +173,11 @@ typedef enum {
     FLOPPY_NONE = 0,
     FLOPPY_RAW_DEVICE,          /* /dev/fd0 or \\.\A: */
     FLOPPY_USB_DEVICE,          /* USB floppy */
-    FLOPPY_GREASEWEAZLE,        /* Via Greaseweazle */
-    FLOPPY_FLUXENGINE,          /* Via FluxEngine */
-    FLOPPY_KRYOFLUX             /* Via KryoFlux */
-} floppy_type_t;
+} uft_floppy_type_t;
 
 typedef struct {
     bool enabled;               /* Enable floppy output */
-    floppy_type_t type;         /* Floppy device type */
+    uft_floppy_type_t type;         /* Floppy device type */
     const char *device;         /* Device path */
     int drive_number;           /* Drive unit (0-3) */
     

@@ -1,6 +1,6 @@
 /**
  * @file uft_hfe_v3_parser.h
- * @brief UFT HFE v3 Parser API - HxC Floppy Emulator Format with HDDD A2 Support
+ * @brief UFT HFE v3 Parser API - UFT HFE Format Format with HDDD A2 Support
  * @version 3.3.7
  * @date 2026-01-03
  *

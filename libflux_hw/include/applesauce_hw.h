@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 /*
- * applesauce_hw.h - Applesauce FDC Hardware Support Header
+ * uft_as_hw.h - Applesauce FDC Hardware Support Header
  * 
  * @version 2.8.0
  * @date 2024-12-26
  */
 
-#ifndef APPLESAUCE_HW_H
-#define APPLESAUCE_HW_H
+#ifndef UFT_AS_HW_H
+#define UFT_AS_HW_H
 
 #include <stdint.h>
 #include <stddef.h>
@@ -18,7 +18,7 @@ extern "C" {
 #endif
 
 /* Forward declaration */
-typedef struct applesauce_handle_t applesauce_handle_t;
+typedef struct uft_as_handle_t uft_as_handle_t;
 
 /*============================================================================*
  * PUBLIC API
@@ -31,14 +31,14 @@ typedef struct applesauce_handle_t applesauce_handle_t;
  * @param handle_out Device handle (output)
  * @return 0 on success
  */
-int applesauce_init(const char *port_path, applesauce_handle_t **handle_out);
+int uft_as_init(const char *port_path, uft_as_handle_t **handle_out);
 
 /**
  * @brief Close Applesauce device
  * 
  * @param handle Device handle
  */
-void applesauce_close(applesauce_handle_t *handle);
+void uft_as_close(uft_as_handle_t *handle);
 
 /**
  * @brief Connect to floppy drive
@@ -46,7 +46,7 @@ void applesauce_close(applesauce_handle_t *handle);
  * @param handle Device handle
  * @return 0 on success
  */
-int applesauce_connect(applesauce_handle_t *handle);
+int uft_as_connect(uft_as_handle_t *handle);
 
 /**
  * @brief Seek to track
@@ -55,7 +55,7 @@ int applesauce_connect(applesauce_handle_t *handle);
  * @param track Track number (0-79)
  * @return 0 on success
  */
-int applesauce_seek(applesauce_handle_t *handle, int track);
+int uft_as_seek(uft_as_handle_t *handle, int track);
 
 /**
  * @brief Get rotational period (RPM measurement)
@@ -64,8 +64,8 @@ int applesauce_seek(applesauce_handle_t *handle, int track);
  * @param period_us_out Period in microseconds (output)
  * @return 0 on success
  */
-int applesauce_get_rpm(
-    applesauce_handle_t *handle,
+int uft_as_get_rpm(
+    uft_as_handle_t *handle,
     double *period_us_out
 );
 
@@ -78,8 +78,8 @@ int applesauce_get_rpm(
  * @param flux_len_out Flux data length
  * @return 0 on success
  */
-int applesauce_read_flux(
-    applesauce_handle_t *handle,
+int uft_as_read_flux(
+    uft_as_handle_t *handle,
     int side,
     uint8_t **flux_data_out,
     size_t *flux_len_out
@@ -94,8 +94,8 @@ int applesauce_read_flux(
  * @param flux_len Flux data length
  * @return 0 on success
  */
-int applesauce_write_flux(
-    applesauce_handle_t *handle,
+int uft_as_write_flux(
+    uft_as_handle_t *handle,
     int side,
     const uint8_t *flux_data,
     size_t flux_len
@@ -108,7 +108,7 @@ int applesauce_write_flux(
  * @param count_out Number of devices
  * @return 0 on success
  */
-int applesauce_detect_devices(char ***device_list_out, int *count_out);
+int uft_as_detect_devices(char ***device_list_out, int *count_out);
 
 /**
  * @brief Get statistics
@@ -117,8 +117,8 @@ int applesauce_detect_devices(char ***device_list_out, int *count_out);
  * @param bytes_read Bytes read (output, optional)
  * @param bytes_written Bytes written (output, optional)
  */
-void applesauce_get_stats(
-    applesauce_handle_t *handle,
+void uft_as_get_stats(
+    uft_as_handle_t *handle,
     unsigned long *bytes_read,
     unsigned long *bytes_written
 );
@@ -127,4 +127,4 @@ void applesauce_get_stats(
 }
 #endif
 
-#endif /* APPLESAUCE_HW_H */
+#endif /* UFT_AS_HW_H */

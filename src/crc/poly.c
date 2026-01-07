@@ -2,24 +2,18 @@
  * Greg Cook, 7/Aug/2024
  */
 
-/* CRC RevEng: arbitrary-precision CRC calculator and algorithm finder
  * Copyright (C) 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018,
- * 2019, 2020, 2021, 2022, 2024  Gregory Cook
  *
- * This file is part of CRC RevEng.
  *
- * CRC RevEng is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
  *
- * CRC RevEng is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with CRC RevEng.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 /* 2021-12-24: added pcoeff()
@@ -48,7 +42,6 @@
  * 2011-01-04: fixed bogus final length calculation in wide pcrc()
  * 2011-01-02: faster, more robust prcp()
  * 2011-01-01: commented functions, full const declarations, all-LUT rev()
- * 2010-12-26: renamed CRC RevEng
  * 2010-12-18: removed pmods(), finished pcrc(), added piter()
  * 2010-12-17: roughed out pcrc(). difficult, etiam aberat musa heri :(
  * 2010-12-15: added psnorm(), psncmp(); optimised pnorm(); fix to praloc()

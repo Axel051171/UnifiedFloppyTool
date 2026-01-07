@@ -163,7 +163,8 @@ bool c64_analyze_protection(
     }
     
     /* Build recommendations */
-    strcpy(result->recommendations, "Preservation Recommendations:\n");
+    snprintf(result->recommendations, sizeof(result->recommendations),
+             "Preservation Recommendations:\n");
     
     if (result->overall_confidence >= 50) {
         add_recommendation(result, "Use multi-revolution capture (3+ revs)");

@@ -3,7 +3,6 @@
  * @file uft_gcr.c
  * @brief GCR encoding/decoding implementation
  * 
- * Source: Extracted and converted from disk2disk and mac2dos projects
  * Original: Copyright (c) 1987-1989 Central Coast Software
  */
 

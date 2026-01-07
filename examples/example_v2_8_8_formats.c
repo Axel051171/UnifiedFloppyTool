@@ -3,35 +3,42 @@
  * example_v2_8_8_formats.c - v2.8.8 New Format Examples
  * 
  * Demonstrates the 4 new disk formats in v2.8.8:
- * - XFD: Atari 8-bit raw (a8rawconv COMPLETE!)
+ * - XFD: Atari 8-bit raw (Atari support COMPLETE!)
  * - DSK: Amstrad CPC/Spectrum
  * - FDI: Flexible Disk Image
  * - ADF: Amiga Disk File
  * 
- * Special focus on a8rawconv XFD compatibility!
+ * Special focus on Atari XFD compatibility!
  * 
  * @version 2.8.8
  * @date 2024-12-26
  */
 
 #include <stdio.h>
+#include "uft/core/uft_safe_parse.h"
 #include <stdlib.h>
+#include "uft/core/uft_safe_parse.h"
 #include <string.h>
+#include "uft/core/uft_safe_parse.h"
 #include <stdbool.h>
+#include "uft/core/uft_safe_parse.h"
 
 #include "atari_formats.h"
+#include "uft/core/uft_safe_parse.h"
 #include "cpc_formats.h"
+#include "uft/core/uft_safe_parse.h"
 #include "multi_formats.h"
+#include "uft/core/uft_safe_parse.h"
 
 /*============================================================================*
- * EXAMPLE 1: XFD (Atari Raw - a8rawconv CRITICAL!)
+ * EXAMPLE 1: XFD (Atari Raw - Atari CRITICAL!)
  *============================================================================*/
 
 static void example_xfd(void)
 {
     printf("\n");
     printf("╔═══════════════════════════════════════════════════════════╗\n");
-    printf("║  EXAMPLE 1: XFD (Atari 8-bit Raw - a8rawconv!)           ║\n");
+    printf("║  EXAMPLE 1: XFD (Atari 8-bit Raw - Atari!)           ║\n");
     printf("╚═══════════════════════════════════════════════════════════╝\n");
     printf("\n");
     
@@ -39,7 +46,7 @@ static void example_xfd(void)
     printf("  • Atari 8-bit RAW disk image\n");
     printf("  • NO HEADER! Pure sector dump\n");
     printf("  • ATR data WITHOUT 16-byte header\n");
-    printf("  • a8rawconv \"RAW\" format! ✨\n");
+    printf("  • Atari raw format! ✨\n");
     printf("\n");
     
     printf("Common Geometries:\n");
@@ -49,15 +56,15 @@ static void example_xfd(void)
     printf("  • 360KB: 2880× 128 = 368,640 bytes (DS/DD)\n");
     printf("\n");
     
-    printf("a8rawconv Workflow - NOW COMPLETE! ✨\n");
+    printf("Atari workflow - NOW COMPLETE! ✨\n");
     printf("  ATR → XFD → RAW conversion chain:\n");
     printf("  \n");
     printf("  1. ATR → XFD (exact conversion):\n");
-    printf("     a8rawconv_convert(A8RAWCONV_MODE_ATR_TO_XFD,\n");
+    printf("     a8rawconv_convert(Atari_MODE_ATR_TO_XFD,\n");
     printf("                       \"disk.atr\", \"disk.xfd\", NULL);\n");
     printf("  \n");
     printf("  2. XFD → ATR (reverse conversion):\n");
-    printf("     a8rawconv_convert(A8RAWCONV_MODE_XFD_TO_ATR,\n");
+    printf("     a8rawconv_convert(Atari_MODE_XFD_TO_ATR,\n");
     printf("                       \"disk.xfd\", \"disk.atr\", \"DD\");\n");
     printf("  \n");
     printf("  3. Direct XFD usage:\n");
@@ -70,8 +77,8 @@ static void example_xfd(void)
     printf("\n");
     
     printf("WHY XFD IS CRITICAL:\n");
-    printf("  ✅ Completes a8rawconv compatibility!\n");
-    printf("  ✅ XFD is the \"RAW\" format in a8rawconv\n");
+    printf("  ✅ Completes Atari 8-bit compatibility!\n");
+    printf("  ✅ XFD is the Atari raw format\n");
     printf("  ✅ ATR ↔ XFD ↔ RAW workflow complete!\n");
     printf("  ✅ Essential for Atari 8-bit community!\n");
     printf("\n");
@@ -228,18 +235,18 @@ static void example_adf(void)
 }
 
 /*============================================================================*
- * EXAMPLE 5: a8rawconv Complete Workflow
+ * EXAMPLE 5: Atari support COMPLETE Workflow
  *============================================================================*/
 
 static void example_a8rawconv_complete(void)
 {
     printf("\n");
     printf("╔═══════════════════════════════════════════════════════════╗\n");
-    printf("║  EXAMPLE 5: a8rawconv COMPLETE Workflow! ✨              ║\n");
+    printf("║  EXAMPLE 5: Atari support COMPLETE Workflow! ✨              ║\n");
     printf("╚═══════════════════════════════════════════════════════════╝\n");
     printf("\n");
     
-    printf("v2.8.8 COMPLETES a8rawconv compatibility!\n");
+    printf("v2.8.8 COMPLETES Atari 8-bit compatibility!\n");
     printf("\n");
     
     printf("BEFORE v2.8.8:\n");
@@ -256,7 +263,7 @@ static void example_a8rawconv_complete(void)
     printf("  ✅ XFD format support ✨ NEW!\n");
     printf("  ✅ ATR → XFD conversion ✨ EXACT!\n");
     printf("  ✅ XFD → ATR conversion ✨ EXACT!\n");
-    printf("  ✅ COMPLETE a8rawconv workflow! 🎯\n");
+    printf("  ✅ COMPLETE Atari workflow! 🎯\n");
     printf("\n");
     
     printf("Complete Workflow Example:\n");
@@ -268,8 +275,8 @@ static void example_a8rawconv_complete(void)
     printf("  uft_atr_convert_to_raw(&atr_ctx, \"game.xfd\");\n");
     printf("  uft_atr_close(&atr_ctx);\n");
     printf("  \n");
-    printf("  // Or using a8rawconv API:\n");
-    printf("  a8rawconv_convert(A8RAWCONV_MODE_ATR_TO_XFD,\n");
+    printf("  // Or using Atari API:\n");
+    printf("  a8rawconv_convert(Atari_MODE_ATR_TO_XFD,\n");
     printf("                    \"game.atr\", \"game.xfd\", NULL);\n");
     printf("\n");
     
@@ -290,8 +297,8 @@ static void example_a8rawconv_complete(void)
     
     printf("  Step 3: XFD → ATR conversion\n");
     printf("  ────────────────────────────────\n");
-    printf("  // Using a8rawconv API with geometry:\n");
-    printf("  a8rawconv_convert(A8RAWCONV_MODE_XFD_TO_ATR,\n");
+    printf("  // Using Atari API with geometry:\n");
+    printf("  a8rawconv_convert(Atari_MODE_XFD_TO_ATR,\n");
     printf("                    \"game.xfd\", \"modified.atr\", \"DD\");\n");
     printf("\n");
     
@@ -303,7 +310,7 @@ static void example_a8rawconv_complete(void)
     printf("\n");
     
     printf("IMPACT:\n");
-    printf("  🎯 a8rawconv workflow COMPLETE!\n");
+    printf("  🎯 Atari workflow COMPLETE!\n");
     printf("  🎯 ATR ↔ XFD ↔ RAW fully supported!\n");
     printf("  🎯 Atari 8-bit community: COMPLETE SOLUTION!\n");
     printf("\n");
@@ -364,12 +371,16 @@ int main(int argc, char *argv[])
 {
     printf("\n");
     printf("╔═══════════════════════════════════════════════════════════╗\n");
-    printf("║  UFT v2.8.8 - a8rawconv COMPLETE! ✨                     ║\n");
+    printf("║  UFT v2.8.8 - Atari support COMPLETE! ✨                     ║\n");
     printf("║  4 NEW FORMATS + XFD COMPLETION!                         ║\n");
     printf("╚═══════════════════════════════════════════════════════════╝\n");
     
     if (argc > 1) {
-        int example = atoi(argv[1]);
+        int32_t example = 0;
+        if (!uft_parse_int32(argv[1], &example, 10)) {
+            fprintf(stderr, "Invalid argument: %s\n", argv[1]);
+            return 1;
+        }
         
         switch (example) {
             case 1: example_xfd(); break;
@@ -380,11 +391,11 @@ int main(int argc, char *argv[])
             case 6: example_format_detection(); break;
             default:
                 printf("\nUsage: %s [1-6]\n", argv[0]);
-                printf("  1 - XFD (Atari Raw - a8rawconv!)\n");
+                printf("  1 - XFD (Atari Raw - Atari!)\n");
                 printf("  2 - DSK (Amstrad CPC - TIER 2!)\n");
                 printf("  3 - FDI (Flexible Disk Image)\n");
                 printf("  4 - ADF (Amiga Disk File)\n");
-                printf("  5 - a8rawconv Complete Workflow ✨\n");
+                printf("  5 - Atari support COMPLETE Workflow ✨\n");
                 printf("  6 - Format Detection\n");
                 return 1;
         }
@@ -404,12 +415,12 @@ int main(int argc, char *argv[])
     printf("╚═══════════════════════════════════════════════════════════╝\n");
     printf("\n");
     
-    printf("v2.8.8 \"a8rawconv COMPLETE\" SUMMARY:\n");
+    printf("v2.8.8 \"Atari support COMPLETE\" SUMMARY:\n");
     printf("\n");
     
     printf("NEW FORMATS (4):\n");
     printf("  1. XFD - Atari 8-bit raw (368 LOC) 💥💥💥\n");
-    printf("     ✅ Completes a8rawconv!\n");
+    printf("     ✅ Completes Atari support!\n");
     printf("     ✅ ATR ↔ XFD ↔ RAW workflow!\n");
     printf("  \n");
     printf("  2. DSK - Amstrad CPC (307 LOC) 💥💥\n");
@@ -427,7 +438,7 @@ int main(int argc, char *argv[])
     printf("\n");
     
     printf("ACHIEVEMENTS:\n");
-    printf("  🎯 a8rawconv COMPLETE!\n");
+    printf("  🎯 Atari support COMPLETE!\n");
     printf("  🎯 TIER 2: 60%% (+20%%)!\n");
     printf("  🎯 Amstrad CPC platform!\n");
     printf("  🎯 Amiga enhanced!\n");

@@ -13,11 +13,11 @@
 
 #include "KryoFlux.h"
 
-class KF_libusb final : public KryoFlux
+class UFT_KF_libusb final : public KryoFlux
 {
 public:
-    KF_libusb(libusb_context* ctx, libusb_device_handle* hdev);
-    ~KF_libusb();
+    UFT_KF_libusb(libusb_context* ctx, libusb_device_handle* hdev);
+    ~UFT_KF_libusb();
     static std::unique_ptr<KryoFlux> Open();
 
     void ReadCallback(libusb_transfer* transfer);
@@ -26,8 +26,8 @@ private:
     static constexpr int BUFFER_SIZE = 4096;
     static constexpr int BUFFER_COUNT = 128;
 
-    KF_libusb(const KF_libusb&) = delete;
-    void operator= (const KF_libusb&) = delete;
+    UFT_KF_libusb(const UFT_KF_libusb&) = delete;
+    void operator= (const UFT_KF_libusb&) = delete;
 
     std::string GetProductName() override;
 

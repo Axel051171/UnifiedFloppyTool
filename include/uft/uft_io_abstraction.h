@@ -4,7 +4,6 @@
  * 
  * PROBLEM:
  * ════════════════════════════════════════════════════════════════════════════
- * Tools wie nibtools erwarten spezifische Input-Formate (G64, NIB).
  * Aber wir haben vielleicht nur SCP-Flux oder D64-Sektoren.
  * 
  * LÖSUNG:
@@ -40,7 +39,6 @@
  *   │   ─────────────           ───────────                               │
  *   │                                                                     │
  *   │   ┌─────────────┐         ┌─────────────┐                           │
- *   │   │  nibtools   │◄────────│ Synthesize  │                           │
  *   │   │  (needs G64)│         │ G64 from    │                           │
  *   │   └─────────────┘         │ flux/sector │                           │
  *   │                           └─────────────┘                           │
@@ -97,8 +95,11 @@ typedef enum uft_data_layer {
 
 /**
  * @brief Sector data within a track
+ * Note: May already be defined in uft_types.h or uft_sector_parser.h
  */
-typedef struct uft_sector {
+#ifndef UFT_IO_SECTOR_T_DEFINED
+#define UFT_IO_SECTOR_T_DEFINED
+typedef struct uft_io_sector {
     int             logical_sector;     // Logical sector number
     int             physical_sector;    // Physical position
     
@@ -118,7 +119,8 @@ typedef struct uft_sector {
     // Timing (if from flux)
     double          bit_cell_time_us;   // Average bit cell
     double          data_rate_kbps;     // Data rate
-} uft_sector_t;
+} uft_io_sector_t;
+#endif /* UFT_IO_SECTOR_T_DEFINED */
 
 /**
  * @brief Complete track with all data layers
@@ -158,7 +160,7 @@ typedef struct uft_track {
     
     // Layer 2: Sectors
     struct {
-        uft_sector_t* sectors;
+        uft_io_sector_t* sectors;
         int           sector_count;
         int           sector_size;      // Common size
         int           interleave;       // Sector interleave

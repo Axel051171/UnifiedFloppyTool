@@ -1,5 +1,5 @@
 /*
- * floppy_sector_parser.h  —  "Superman"-grade floppy sector parser (C99)
+ * uft_floppy_sector_parser.h  —  "Superman"-grade floppy sector parser (C99)
  *
  * Goals:
  *  - Parse IBM-style FM/MFM sector structures from an already-demodulated byte stream.

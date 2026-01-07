@@ -3,25 +3,20 @@
 //
 // Copyright (C) 2006-2025 Jean-François DEL NERO
 //
-// This file is part of the HxCFloppyEmulator library
 //
-// HxCFloppyEmulator may be used and distributed without restriction provided
 // that this copyright statement is not removed from the file and that any
 // derivative work contains the original copyright notice and the associated
 // disclaimer.
 //
-// HxCFloppyEmulator is free software; you can redistribute it
 // and/or modify  it under the terms of the GNU General Public License
 // as published by the Free Software Foundation; either version 2
 // of the License, or (at your option) any later version.
 //
-// HxCFloppyEmulator is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 //   See the GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with HxCFloppyEmulator; if not, write to the Free Software
 // Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 //
 */
@@ -50,26 +45,26 @@
 
 #include "types.h"
 
-#include "internal_libhxcfe.h"
+#include "libflux.h""
 #include "tracks/track_generator.h"
-#include "libhxcfe.h"
+#include "libflux.h""
 
-#include "floppy_loader.h"
-#include "floppy_utils.h"
+#include "uft_floppy_loader.h"
+#include "uft_floppy_utils.h"
 
 #include "raw_loader.h"
 
 #include "libhxcadaptor.h"
 
-int RAW_libIsValidFormat(HXCFE* floppycontext,cfgrawfile * imgformatcfg)
+int RAW_libIsValidFormat(LIBFLUX_CTX* flux_ctx,cfgrawfile * imgformatcfg)
 {
 	if(imgformatcfg->rpm == 0)
-		return HXCFE_BADPARAMETER;
+		return LIBFLUX_BADPARAMETER;
 
-	return HXCFE_VALIDFILE;
+	return LIBFLUX_VALIDFILE;
 }
 
-int RAW_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,char * imgfile,cfgrawfile * imgformatcfg)
+int RAW_libLoad_DiskFile(LIBFLUX_IMGLDR * imgldr_ctx,LIBFLUX_FLOPPY * floppydisk,char * imgfile,cfgrawfile * imgformatcfg)
 {
 	FILE * f;
 	int i,j,fileside,bitrate;
@@ -83,18 +78,18 @@ int RAW_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 
 	if(imgfile)
 	{
-		imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"RAW_libLoad_DiskFile %s",imgfile);
+		imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"RAW_libLoad_DiskFile %s",imgfile);
 
-		f = hxc_fopen(imgfile,"rb");
+		f = libflux_fopen(imgfile,"rb");
 		if( f == NULL )
 		{
-			imgldr_ctx->hxcfe->hxc_printf(MSG_ERROR,"Cannot open %s !",imgfile);
-			return HXCFE_ACCESSERROR;
+			imgldr_ctx->ctx->libflux_printf(MSG_ERROR,"Cannot open %s !",imgfile);
+			return LIBFLUX_ACCESSERROR;
 		}
 	}
 	else
 	{
-		imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"RAW_libLoad_DiskFile empty floppy");
+		imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"RAW_libLoad_DiskFile empty floppy");
 	}
 
 	sectorsize=128<<(imgformatcfg->sectorsize&7);
@@ -124,11 +119,11 @@ int RAW_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 
 	floppydisk->floppyBitRate=bitrate;
 	floppydisk->floppyiftype=GENERIC_SHUGART_DD_FLOPPYMODE;
-	floppydisk->tracks=(HXCFE_CYLINDER**)malloc(sizeof(HXCFE_CYLINDER*)*floppydisk->floppyNumberOfTrack);
+	floppydisk->tracks=(LIBFLUX_CYLINDER**)malloc(sizeof(LIBFLUX_CYLINDER*)*floppydisk->floppyNumberOfTrack);
 	if(!floppydisk->tracks)
 		goto error;
 
-	imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"%d bytes sectors, %d sectors/tracks,interleaving %d, skew %d, %d tracks, %d side(s), gap3 %d, %d rpm, %d bits/s",
+	imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"%d bytes sectors, %d sectors/tracks,interleaving %d, skew %d, %d tracks, %d side(s), gap3 %d, %d rpm, %d bits/s",
 		sectorsize,
 		floppydisk->floppySectorPerTrack,
 		interleave,
@@ -144,27 +139,27 @@ int RAW_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 	{
 		case FM_TRACK_TYPE:
 			tracktype=ISOFORMAT_SD;
-			imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"FM ISO tracks format");
+			imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"FM ISO tracks format");
 		break;
 
 		case FMIBM_TRACK_TYPE:
 			tracktype=IBMFORMAT_SD;
-			imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"FM IBM tracks format");
+			imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"FM IBM tracks format");
 		break;
 
 		case MFM_TRACK_TYPE:
 			tracktype=ISOFORMAT_DD;
-			imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"MFM ISO tracks format");
+			imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"MFM ISO tracks format");
 		break;
 
 		case MFMIBM_TRACK_TYPE:
 			tracktype=IBMFORMAT_DD;
-			imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"MFM IBM tracks format");
+			imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"MFM IBM tracks format");
 		break;
 
 		case GCR_TRACK_TYPE:
 			tracktype=0;
-			imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"GCR tracks format");
+			imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"GCR tracks format");
 		break;
 		default:
 			tracktype=ISOFORMAT_DD;
@@ -182,7 +177,7 @@ int RAW_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 
 		for(i=0;i<floppydisk->floppyNumberOfSide;i++)
 		{
-			hxcfe_imgCallProgressCallback(imgldr_ctx,(j<<1) + (i&1),floppydisk->floppyNumberOfTrack*2 );
+			libflux_imgCallProgressCallback(imgldr_ctx,(j<<1) + (i&1),floppydisk->floppyNumberOfTrack*2 );
 
 			if(imgformatcfg->sidecfg&TWOSIDESFLOPPY)
 			{
@@ -213,10 +208,10 @@ int RAW_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 
 			if(f)
 			{
-				fseek (f , file_offset , SEEK_SET);
+				(void)fseek(f , file_offset , SEEK_SET);
 
-				imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"Track %d Head %d : Reading %d bytes at %.8X",j,i,sectorsize*floppydisk->floppySectorPerTrack,file_offset);
-				hxc_fread(trackdata,sectorsize*floppydisk->floppySectorPerTrack,f);
+				imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"Track %d Head %d : Reading %d bytes at %.8X",j,i,sectorsize*floppydisk->floppySectorPerTrack,file_offset);
+				libflux_fread(trackdata,sectorsize*floppydisk->floppySectorPerTrack,f);
 
 			}
 			else
@@ -248,28 +243,28 @@ int RAW_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 	free(trackdata);
 
 	if(f)
-		hxc_fclose(f);
+		libflux_fclose(f);
 
-	imgldr_ctx->hxcfe->hxc_printf(MSG_INFO_1,"track file successfully loaded and encoded!");
+	imgldr_ctx->ctx->libflux_printf(MSG_INFO_1,"track file successfully loaded and encoded!");
 
-	return HXCFE_NOERROR;
+	return LIBFLUX_NOERROR;
 
 error:
-	imgldr_ctx->hxcfe->hxc_printf(MSG_ERROR,"Alloc / Internal error !",imgfile);
+	imgldr_ctx->ctx->libflux_printf(MSG_ERROR,"Alloc / Internal error !",imgfile);
 
 	free(trackdata);
 
 	if(f)
-		hxc_fclose(f);
+		libflux_fclose(f);
 
-	hxcfe_freeFloppy(imgldr_ctx->hxcfe, floppydisk );
+	libflux_freeFloppy(imgldr_ctx->ctx, floppydisk );
 
-	return HXCFE_INTERNALERROR;
+	return LIBFLUX_INTERNALERROR;
 }
 
-int RAW_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char * filename);
+int RAW_libWrite_DiskFile(LIBFLUX_IMGLDR* imgldr_ctx,LIBFLUX_FLOPPY * floppy,char * filename);
 
-int32_t RAW_libGetPluginInfo(HXCFE_IMGLDR * imgldr_ctx,uint32_t infotype,void * returnvalue)
+int32_t RAW_libGetPluginInfo(LIBFLUX_IMGLDR * imgldr_ctx,uint32_t infotype,void * returnvalue)
 {
 	static const char plug_id[]="RAW_LOADER";
 	static const char plug_desc[]="RAW Sector loader";

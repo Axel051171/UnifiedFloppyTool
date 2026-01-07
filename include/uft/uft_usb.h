@@ -7,7 +7,6 @@
  *   - macOS (libusb-1.0 or IOKit)
  *   - Windows (WinUSB, libusb-win32, or built-in)
  * 
- * GOAL: Eliminate external dependencies like OpenCBM
  *       Users should NOT need to install anything extra!
  * 
  * @version 1.0.0
@@ -72,12 +71,10 @@ typedef enum {
 #define UFT_USB_VID_XUM1541         0x16d0
 #define UFT_USB_PID_XUM1541         0x0504
 
-/* Greaseweazle */
 #define UFT_USB_VID_GREASEWEAZLE    0x1209
-#define UFT_USB_PID_GREASEWEAZLE_F1 0x4d69
-#define UFT_USB_PID_GREASEWEAZLE_F7 0x0001
+#define UFT_USB_PID_UFT_GW_F1 0x4d69
+#define UFT_USB_PID_UFT_GW_F7 0x0001
 
-/* KryoFlux */
 #define UFT_USB_VID_KRYOFLUX        0x03EB
 #define UFT_USB_PID_KRYOFLUX        0x6124
 
@@ -141,7 +138,6 @@ uft_usb_result_t uft_usb_find_devices(
 /**
  * @brief Find all known floppy hardware
  * 
- * Searches for: XUM1541, Greaseweazle, KryoFlux, SCP, FC5025
  * 
  * @param devices_out Array of device info
  * @param max_devices Maximum devices

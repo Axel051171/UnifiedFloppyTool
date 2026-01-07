@@ -2,8 +2,6 @@
  * @file uft_sector_overlay.h
  * @brief Sector Boundary Detection via FFT/ACF Analysis
  * 
- * Based on FloppyAI overlay_detection.py
- * Ported from Python to C for UFT
  * 
  * Detects sector boundaries in flux data without format knowledge:
  * - MFM media: Uses FFT + Autocorrelation

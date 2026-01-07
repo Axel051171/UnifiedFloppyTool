@@ -25,11 +25,11 @@ typedef struct {
     bool is_masterdos;
     size_t source_size;
     bool valid;
-} sam_disk_t;
+} uft_sam_disk_t;
 
-static bool sam_parse(const uint8_t* data, size_t size, sam_disk_t* disk) {
+static bool uft_sam_parse(const uint8_t* data, size_t size, uft_sam_disk_t* disk) {
     if (!data || !disk || size < SAM_SIZE_800K) return false;
-    memset(disk, 0, sizeof(sam_disk_t));
+    memset(disk, 0, sizeof(uft_sam_disk_t));
     disk->source_size = size;
     disk->tracks = 80;
     disk->sides = 2;
@@ -48,8 +48,8 @@ int main(void) {
     printf("=== SAM Coupé Parser v3 Tests ===\n");
     printf("Testing... ");
     uint8_t* sam = calloc(1, SAM_SIZE_800K);
-    sam_disk_t disk;
-    assert(sam_parse(sam, SAM_SIZE_800K, &disk) && disk.valid);
+    uft_sam_disk_t disk;
+    assert(uft_sam_parse(sam, SAM_SIZE_800K, &disk) && disk.valid);
     free(sam);
     printf("✓\n=== All tests passed! ===\n");
     return 0;

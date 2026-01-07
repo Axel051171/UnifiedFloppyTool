@@ -169,7 +169,7 @@ static int sector_offset(const FdiCtx *ctx, const FloppyDevice *dev,
     return UFT_OK;
 }
 
-int floppy_open(FloppyDevice *dev, const char *path) {
+int uft_floppy_open(FloppyDevice *dev, const char *path) {
     if (!dev || !path || !path[0]) return UFT_EINVAL;
     if (dev->internal_ctx) return UFT_EINVAL;
 
@@ -216,7 +216,7 @@ int floppy_open(FloppyDevice *dev, const char *path) {
     return UFT_OK;
 }
 
-int floppy_close(FloppyDevice *dev) {
+int uft_floppy_close(FloppyDevice *dev) {
     if (!dev || !dev->internal_ctx) return UFT_EINVAL;
     FdiCtx *ctx = (FdiCtx*)dev->internal_ctx;
     if (ctx->fp) fclose(ctx->fp);
@@ -226,7 +226,7 @@ int floppy_close(FloppyDevice *dev) {
     return UFT_OK;
 }
 
-int floppy_read_sector(FloppyDevice *dev, uint32_t t, uint32_t h, uint32_t s, uint8_t *buf) {
+int uft_floppy_read_sector(FloppyDevice *dev, uint32_t t, uint32_t h, uint32_t s, uint8_t *buf) {
     if (!dev || !dev->internal_ctx || !buf) return UFT_EINVAL;
     FdiCtx *ctx = (FdiCtx*)dev->internal_ctx;
 
@@ -240,7 +240,7 @@ int floppy_read_sector(FloppyDevice *dev, uint32_t t, uint32_t h, uint32_t s, ui
     return UFT_OK;
 }
 
-int floppy_write_sector(FloppyDevice *dev, uint32_t t, uint32_t h, uint32_t s, const uint8_t *buf) {
+int uft_floppy_write_sector(FloppyDevice *dev, uint32_t t, uint32_t h, uint32_t s, const uint8_t *buf) {
     if (!dev || !dev->internal_ctx || !buf) return UFT_EINVAL;
     FdiCtx *ctx = (FdiCtx*)dev->internal_ctx;
     if (ctx->read_only) return UFT_ENOTSUP;
@@ -256,7 +256,7 @@ int floppy_write_sector(FloppyDevice *dev, uint32_t t, uint32_t h, uint32_t s, c
     return UFT_OK;
 }
 
-int floppy_analyze_protection(FloppyDevice *dev) {
+int uft_floppy_analyze_protection(FloppyDevice *dev) {
     if (!dev || !dev->internal_ctx) return UFT_EINVAL;
     FdiCtx *ctx = (FdiCtx*)dev->internal_ctx;
 
@@ -277,7 +277,7 @@ int floppy_analyze_protection(FloppyDevice *dev) {
     if (dev->sectorSize >= 16) {
         uint8_t *b = (uint8_t*)malloc(dev->sectorSize);
         if (b) {
-            if (floppy_read_sector(dev, 0, 0, 1, b) == UFT_OK) {
+            if (uft_floppy_read_sector(dev, 0, 0, 1, b) == UFT_OK) {
                 char oem[9]; memset(oem, 0, sizeof(oem));
                 if (dev->sectorSize >= 11) memcpy(oem, &b[3], 8);
                 char m2[128];

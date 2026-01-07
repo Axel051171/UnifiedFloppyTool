@@ -1,7 +1,7 @@
-// nib.h - Commodore 64 NIB (nibtools raw GCR tracks) (C11, no deps)
+// nib.h - Commodore 64 NIB (GCR tools raw GCR tracks) (C11, no deps)
 // UFT - Unified Floppy Tooling
 //
-// NIB stores raw per-track GCR bitstreams as used by nibtools.
+// NIB stores raw per-track GCR bitstreams as used by GCR tools.
 // It is a preservation/analysis format (between G64 and flux).
 // Sector-based access is NOT supported.
 
@@ -35,11 +35,11 @@ typedef struct {
 } NibMeta;
 
 /* Unified API */
-int floppy_open(FloppyDevice *dev, const char *path);
-int floppy_close(FloppyDevice *dev);
-int floppy_read_sector(FloppyDevice *dev, uint32_t t, uint32_t h, uint32_t s, uint8_t *buf);
-int floppy_write_sector(FloppyDevice *dev, uint32_t t, uint32_t h, uint32_t s, const uint8_t *buf);
-int floppy_analyze_protection(FloppyDevice *dev);
+int uft_floppy_open(FloppyDevice *dev, const char *path);
+int uft_floppy_close(FloppyDevice *dev);
+int uft_floppy_read_sector(FloppyDevice *dev, uint32_t t, uint32_t h, uint32_t s, uint8_t *buf);
+int uft_floppy_write_sector(FloppyDevice *dev, uint32_t t, uint32_t h, uint32_t s, const uint8_t *buf);
+int uft_floppy_analyze_protection(FloppyDevice *dev);
 
 /* Metadata */
 const NibMeta* nib_get_meta(const FloppyDevice *dev);

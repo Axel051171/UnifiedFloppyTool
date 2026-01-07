@@ -9,10 +9,14 @@
  */
 
 #include <stdio.h>
+#include "uft/core/uft_safe_parse.h"
 #include <stdlib.h>
+#include "uft/core/uft_safe_parse.h"
 #include <string.h>
+#include "uft/core/uft_safe_parse.h"
 
 #include "msa.h"
+#include "uft/core/uft_safe_parse.h"
 
 /*============================================================================*
  * EXAMPLE 1: Create MSA Image
@@ -46,7 +50,7 @@ static void example_create_msa(void)
     uint8_t *track;
     size_t size;
     if (msa_get_track(&image, 0, 0, &track, &size)) {
-        sprintf((char*)track, "Atari ST MSA Test - Track 0, Side 0");
+        snprintf((char*)track, 256, "Atari ST MSA Test - Track 0, Side 0");
         printf("✅ Wrote data to track 0, side 0\n");
     }
     
@@ -209,7 +213,11 @@ int main(int argc, char *argv[])
     printf("╚═══════════════════════════════════════════════════════════╝\n");
     
     if (argc > 1) {
-        int example = atoi(argv[1]);
+        int32_t example = 0;
+        if (!uft_parse_int32(argv[1], &example, 10)) {
+            fprintf(stderr, "Invalid argument: %s\n", argv[1]);
+            return 1;
+        }
         
         switch (example) {
             case 1:

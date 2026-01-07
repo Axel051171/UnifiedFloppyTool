@@ -2,25 +2,20 @@
 //
 // Copyright (C) 2006-2025 Jean-Franois DEL NERO
 //
-// This file is part of the HxCFloppyEmulator library
 //
-// HxCFloppyEmulator may be used and distributed without restriction provided
 // that this copyright statement is not removed from the file and that any
 // derivative work contains the original copyright notice and the associated
 // disclaimer.
 //
-// HxCFloppyEmulator is free software; you can redistribute it
 // and/or modify  it under the terms of the GNU General Public License
 // as published by the Free Software Foundation; either version 2
 // of the License, or (at your option) any later version.
 //
-// HxCFloppyEmulator is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 //   See the GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with HxCFloppyEmulator; if not, write to the Free Software
 // Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 //
 */
@@ -51,10 +46,10 @@
 
 #include "types.h"
 
-#include "internal_libhxcfe.h"
-#include "libhxcfe.h"
+#include "libflux.h""
+#include "libflux.h""
 #include "libhxcadaptor.h"
-#include "floppy_loader.h"
+#include "uft_floppy_loader.h"
 
 #include "loaders/common/raw_amiga.h"
 
@@ -63,18 +58,18 @@
 #include "thirdpartylibs/adflib/Lib/adflib.h"
 #include "stdboot3.h"
 
-HXCFE* global_floppycontext;
+LIBFLUX_CTX* global_flux_ctx;
 
 #define DEFAULT_DISK_NAME "AmigaDOS (HxC)"
 
 
-int AMIGADOSFSDK_libIsValidDiskFile( HXCFE_IMGLDR * imgldr_ctx, HXCFE_IMGLDR_FILEINFOS * imgfile )
+int AMIGADOSFSDK_libIsValidDiskFile( LIBFLUX_IMGLDR * imgldr_ctx, LIBFLUX_IMGLDR_FILEINFOS * imgfile )
 {
 
 	int pathlen;
 	char * filepath;
 
-	imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"AMIGADOSFSDK_libIsValidDiskFile %s",imgfile->path);
+	imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"AMIGADOSFSDK_libIsValidDiskFile %s",imgfile->path);
 
 	pathlen=strlen(imgfile->path);
 	if(pathlen!=0)
@@ -85,47 +80,47 @@ int AMIGADOSFSDK_libIsValidDiskFile( HXCFE_IMGLDR * imgldr_ctx, HXCFE_IMGLDR_FIL
 			if(filepath!=0)
 			{
 				snprintf(filepath, sizeof(filepath),"%s",imgfile->path);
-				hxc_strlower(filepath);
+				libflux_strlower(filepath);
 
 				if(strstr( filepath,".amigados" )!=NULL)
 				{
-					imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"AMIGADOSFSDK_libIsValidDiskFile : AMIGADOSFSDK file !");
+					imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"AMIGADOSFSDK_libIsValidDiskFile : AMIGADOSFSDK file !");
 					free(filepath);
-					return HXCFE_VALIDFILE;
+					return LIBFLUX_VALIDFILE;
 				}
 				else
 				{
-					imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"AMIGADOSFSDK_libIsValidDiskFile : non AMIGADOSFSDK file ! (.amigados missing)");
+					imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"AMIGADOSFSDK_libIsValidDiskFile : non AMIGADOSFSDK file ! (.amigados missing)");
 					free(filepath);
-					return HXCFE_BADFILE;
+					return LIBFLUX_BADFILE;
 				}
 			}
 		}
 		else
 		{
-			imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"AMIGADOSFSDK_libIsValidDiskFile : non AMIGADOSFSDK file ! (it's not a directory)");
-			return HXCFE_BADFILE;
+			imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"AMIGADOSFSDK_libIsValidDiskFile : non AMIGADOSFSDK file ! (it's not a directory)");
+			return LIBFLUX_BADFILE;
 		}
 	}
-	return HXCFE_BADPARAMETER;
+	return LIBFLUX_BADPARAMETER;
 }
 
 static void adlib_printerror(char * msg)
 {
-	global_floppycontext->hxc_printf(MSG_ERROR,"AdfLib Error: %s",msg);
+	global_flux_ctx->libflux_printf(MSG_ERROR,"AdfLib Error: %s",msg);
 }
 
 static void adlib_printwarning(char * msg)
 {
-	global_floppycontext->hxc_printf(MSG_WARNING,"AdfLib Warning: %s",msg);
+	global_flux_ctx->libflux_printf(MSG_WARNING,"AdfLib Warning: %s",msg);
 }
 
 static void adlib_printdebug(char * msg)
 {
-	global_floppycontext->hxc_printf(MSG_DEBUG,"AdfLib Debug: %s",msg);
+	global_flux_ctx->libflux_printf(MSG_DEBUG,"AdfLib Debug: %s",msg);
 }
 
-int ScanFile(HXCFE* floppycontext,struct Volume * adfvolume,char * folder,char * file)
+int ScanFile(LIBFLUX_CTX* flux_ctx,struct Volume * adfvolume,char * folder,char * file)
 {
 	void* hfindfile;
 	filefoundinfo FindFileData;
@@ -138,7 +133,7 @@ int ScanFile(HXCFE* floppycontext,struct Volume * adfvolume,char * folder,char *
 	int size,filesize;
 	RETCODE  rc;
 
-	hfindfile = hxc_find_first_file(folder,file, &FindFileData);
+	hfindfile = libflux_find_first_file(folder,file, &FindFileData);
 	if(hfindfile)
 	{
 		bbool=TRUE;
@@ -150,11 +145,11 @@ int ScanFile(HXCFE* floppycontext,struct Volume * adfvolume,char * folder,char *
 				{
 					if(adfCountFreeBlocks(adfvolume)>4)
 					{
-						floppycontext->hxc_printf(MSG_INFO_1,"Adding directory %s",FindFileData.filename);
+						flux_ctx->libflux_printf(MSG_INFO_1,"Adding directory %s",FindFileData.filename);
 						rc=adfCreateDir(adfvolume,adfvolume->curDirPtr,FindFileData.filename);
 						if(rc==RC_OK)
 						{
-							floppycontext->hxc_printf(MSG_INFO_1,"entering directory %s",FindFileData.filename);
+							flux_ctx->libflux_printf(MSG_INFO_1,"entering directory %s",FindFileData.filename);
 							rc=adfChangeDir(adfvolume, FindFileData.filename);
 							if(rc==RC_OK)
 							{
@@ -165,31 +160,31 @@ int ScanFile(HXCFE* floppycontext,struct Volume * adfvolume,char * folder,char *
 
 								snprintf(fullpath, sizeof(fullpath),"%s"DIR_SEPARATOR"%s",folder,FindFileData.filename);
 
-								if(ScanFile(floppycontext,adfvolume,fullpath,file))
+								if(ScanFile(flux_ctx,adfvolume,fullpath,file))
 								{
 									adfParentDir(adfvolume);
 									free(fullpath);
 									return 1;
 								}
-								floppycontext->hxc_printf(MSG_INFO_1,"Leaving directory %s",FindFileData.filename);
+								flux_ctx->libflux_printf(MSG_INFO_1,"Leaving directory %s",FindFileData.filename);
 								free(fullpath);
 								adfParentDir( adfvolume);
 							}
 							else
 							{
-								floppycontext->hxc_printf(MSG_ERROR,"Cannot enter to the directory %s !",FindFileData.filename);
+								flux_ctx->libflux_printf(MSG_ERROR,"Cannot enter to the directory %s !",FindFileData.filename);
 								return 1;
 							}
 						}
 						else
 						{
-							floppycontext->hxc_printf(MSG_ERROR,"Cannot Add the directory %s !",FindFileData.filename);
+							flux_ctx->libflux_printf(MSG_ERROR,"Cannot Add the directory %s !",FindFileData.filename);
 							return 1;
 						}
 					}
 					else
 					{
-						floppycontext->hxc_printf(MSG_ERROR,"Cannot Add a directory ! : no more free block!!!");
+						flux_ctx->libflux_printf(MSG_ERROR,"Cannot Add a directory ! : no more free block!!!");
 						return 1;
 					}
 
@@ -199,7 +194,7 @@ int ScanFile(HXCFE* floppycontext,struct Volume * adfvolume,char * folder,char *
 			{
 				if(adfCountFreeBlocks(adfvolume)>4)
 				{
-					floppycontext->hxc_printf(MSG_INFO_1,"Adding file %s, %dB",FindFileData.filename,FindFileData.size);
+					flux_ctx->libflux_printf(MSG_INFO_1,"Adding file %s, %dB",FindFileData.filename,FindFileData.size);
 					adffile = adfOpenFile(adfvolume, FindFileData.filename, "w");
 					if(adffile)
 					{
@@ -211,10 +206,10 @@ int ScanFile(HXCFE* floppycontext,struct Volume * adfvolume,char * folder,char *
 
 							snprintf(fullpath, sizeof(fullpath),"%s"DIR_SEPARATOR"%s",folder,FindFileData.filename);
 
-							ftemp=hxc_fopen(fullpath,"rb");
+							ftemp=libflux_fopen(fullpath,"rb");
 							if(ftemp)
 							{
-								filesize = hxc_fgetsize(ftemp);
+								filesize = libflux_fgetsize(ftemp);
 
 								do
 								{
@@ -226,14 +221,14 @@ int ScanFile(HXCFE* floppycontext,struct Volume * adfvolume,char * folder,char *
 									{
 										size=filesize;
 									}
-									hxc_fread(&tempbuffer,size,ftemp);
+									libflux_fread(&tempbuffer,size,ftemp);
 
 									byte_written=adfWriteFile(adffile, size, tempbuffer);
 									if((byte_written!=size) || (adfCountFreeBlocks(adfvolume)<2) )
 									{
-										floppycontext->hxc_printf(MSG_ERROR,"Error while writting the file %s. No more free block ?",FindFileData.filename);
+										flux_ctx->libflux_printf(MSG_ERROR,"Error while writting the file %s. No more free block ?",FindFileData.filename);
 										adfCloseFile(adffile);
-										hxc_fclose(ftemp);
+										libflux_fclose(ftemp);
 										free(fullpath);
 										return 1;
 									}
@@ -244,17 +239,17 @@ int ScanFile(HXCFE* floppycontext,struct Volume * adfvolume,char * folder,char *
 
 								/*fileimg=(unsigned char*)malloc(filesize);
 								memset(fileimg,0,filesize);
-								hxc_fread(fileimg,filesize,ftemp);
+								libflux_fread(fileimg,filesize,ftemp);
 								adfWriteFile(adffile, filesize, fileimg);
 								free(fileimg);*/
 
 								adfCloseFile(adffile);
-								hxc_fclose(ftemp);
+								libflux_fclose(ftemp);
 								free(fullpath);
 							}
 							else
 							{
-									floppycontext->hxc_printf(MSG_ERROR,"Error : Cannot open %s !!!",fullpath);
+									flux_ctx->libflux_printf(MSG_ERROR,"Error : Cannot open %s !!!",fullpath);
 									free(fullpath);
 									return 1;
 							}
@@ -262,27 +257,27 @@ int ScanFile(HXCFE* floppycontext,struct Volume * adfvolume,char * folder,char *
 					}
 					else
 					{
-						floppycontext->hxc_printf(MSG_ERROR,"Error : Cannot create %s, %dB!!!",FindFileData.filename,FindFileData.size);
+						flux_ctx->libflux_printf(MSG_ERROR,"Error : Cannot create %s, %dB!!!",FindFileData.filename,FindFileData.size);
 						 return 1;
 					}
 				}
 				else
 				{
-					floppycontext->hxc_printf(MSG_ERROR,"Error : Cannot add a file : no more free block");
+					flux_ctx->libflux_printf(MSG_ERROR,"Error : Cannot add a file : no more free block");
 					return 1;
 				}
 			}
-			bbool=hxc_find_next_file(hfindfile,folder,file,&FindFileData);
+			bbool=libflux_find_next_file(hfindfile,folder,file,&FindFileData);
 		}
 
 	}
 	else printf("Error FindFirstFile\n");
 
-	hxc_find_close(hfindfile);
+	libflux_find_close(hfindfile);
 	return 0;
 }
 
-int AMIGADOSFSDK_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,char * imgfile,void * parameters)
+int AMIGADOSFSDK_libLoad_DiskFile(LIBFLUX_IMGLDR * imgldr_ctx,LIBFLUX_FLOPPY * floppydisk,char * imgfile,void * parameters)
 {
 	struct Device * adfdevice;
 	struct Volume * adfvolume;
@@ -312,21 +307,21 @@ int AMIGADOSFSDK_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * flopp
 		}
 	}
 
-	imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"AMIGADOSFSDK_libLoad_DiskFile %s",imgfile);
+	imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"AMIGADOSFSDK_libLoad_DiskFile %s",imgfile);
 
-	hxc_stat(imgfile,&repstate);
+	libflux_stat(imgfile,&repstate);
 
 	ts = localtime(&repstate.st_ctime);
 
 	if(repstate.st_mode&S_IFDIR || !strlen(imgfile) )
 	{
-		global_floppycontext=imgldr_ctx->hxcfe;
+		global_flux_ctx=imgldr_ctx->ctx;
 		adfEnvInitDefault();
 		adfChgEnvProp(PR_EFCT,adlib_printerror);
 		adfChgEnvProp(PR_WFCT,adlib_printwarning);
 		adfChgEnvProp(PR_VFCT,adlib_printdebug);
 
-		imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"ADFLib %s %s",adfGetVersionNumber(), adfGetVersionDate());
+		imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"ADFLib %s %s",adfGetVersionNumber(), adfGetVersionDate());
 
 		adfdevice = adfCreateMemoryDumpDevice(numberoftrack, 2, numberofsectorpertrack,&flatimg,&flatimgsize);
 		if(adfdevice)
@@ -343,16 +338,16 @@ int AMIGADOSFSDK_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * flopp
 
 			if( !repname )
 			{
-				imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"Alloc error!");
+				imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"Alloc error!");
 				adfUnMountDev(adfdevice);
-				return HXCFE_INTERNALERROR;
+				return LIBFLUX_INTERNALERROR;
 			}
 
 			memset(repname,0,strlen(imgfile)+1);
-			hxc_getfilenamebase( imgfile, repname, SYS_PATH_TYPE );
+			libflux_getfilenamebase( imgfile, repname, SYS_PATH_TYPE );
 
 			if(!strlen(repname))
-				strcpy(repname, DEFAULT_DISK_NAME);
+				strncpy(repname, DEFAULT_DISK_NAME, sizeof(repname) - 1); repname[sizeof(repname) - 1] = '\0';
 
 			memset(&reptime,0,sizeof(struct DateTime));
 			if(ts)
@@ -374,19 +369,19 @@ int AMIGADOSFSDK_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * flopp
 				adfvolume = adfMount(adfdevice, 0, 0);
 				if(adfvolume)
 				{
-					imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"adfCreateFlop ok");
+					imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"adfCreateFlop ok");
 
 					if(adfInstallBootBlock(adfvolume, stdboot3)!=RC_OK)
 					{
-						imgldr_ctx->hxcfe->hxc_printf(MSG_ERROR,"adflib: adfInstallBootBlock error!");
+						imgldr_ctx->ctx->libflux_printf(MSG_ERROR,"adflib: adfInstallBootBlock error!");
 					}
 
 					if(strlen(imgfile))
 					{
-						if(ScanFile(imgldr_ctx->hxcfe,adfvolume,imgfile,"*.*"))
+						if(ScanFile(imgldr_ctx->ctx,adfvolume,imgfile,"*.*"))
 						{
-							imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"ScanFile error!");
-							return HXCFE_INTERNALERROR;
+							imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"ScanFile error!");
+							return LIBFLUX_INTERNALERROR;
 						}
 					}
 
@@ -395,11 +390,11 @@ int AMIGADOSFSDK_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * flopp
 					{
 						memcpy(flatimg2,flatimg,flatimgsize);
 						/*////////
-						debugadf = hxc_fopen("d:\\debug.adf","wb");
+						debugadf = libflux_fopen("d:\\debug.adf","wb");
 						if(debugadf)
 						{
 							if (fwrite(flatimg2,flatimgsize,1,debugadf) != 1) { /* I/O error */ }
-							hxc_fclose(debugadf);
+							libflux_fclose(debugadf);
 						}
 						//////////*/
 					}
@@ -408,20 +403,20 @@ int AMIGADOSFSDK_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * flopp
 				}
 				else
 				{
-					imgldr_ctx->hxcfe->hxc_printf(MSG_ERROR,"adflib: adfMount error!");
-					return HXCFE_INTERNALERROR;
+					imgldr_ctx->ctx->libflux_printf(MSG_ERROR,"adflib: adfMount error!");
+					return LIBFLUX_INTERNALERROR;
 				}
 			}
 			else
 			{
-				imgldr_ctx->hxcfe->hxc_printf(MSG_ERROR,"adflib: Error while creating the virtual floppy!");
-				return HXCFE_INTERNALERROR;
+				imgldr_ctx->ctx->libflux_printf(MSG_ERROR,"adflib: Error while creating the virtual floppy!");
+				return LIBFLUX_INTERNALERROR;
 			}
 		}
 		else
 		{
-			imgldr_ctx->hxcfe->hxc_printf(MSG_ERROR,"adflib: adfCreateMemoryDumpDevice error!");
-			return HXCFE_INTERNALERROR;
+			imgldr_ctx->ctx->libflux_printf(MSG_ERROR,"adflib: adfCreateMemoryDumpDevice error!");
+			return LIBFLUX_INTERNALERROR;
 		}
 
 		ret = raw_amiga_loader(imgldr_ctx, floppydisk, 0, flatimg2, flatimgsize );
@@ -430,12 +425,12 @@ int AMIGADOSFSDK_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * flopp
 	}
 	else
 	{
-		imgldr_ctx->hxcfe->hxc_printf(MSG_ERROR,"not a directory !");
-		return HXCFE_BADFILE;
+		imgldr_ctx->ctx->libflux_printf(MSG_ERROR,"not a directory !");
+		return LIBFLUX_BADFILE;
 	}
 }
 
-int AMIGADOSFSDK_libGetPluginInfo(HXCFE_IMGLDR * imgldr_ctx,uint32_t infotype,void * returnvalue)
+int AMIGADOSFSDK_libGetPluginInfo(LIBFLUX_IMGLDR * imgldr_ctx,uint32_t infotype,void * returnvalue)
 {
 	static const char plug_id[]="AMIGA_FS";
 	static const char plug_desc[]="AMIGA FS Loader";

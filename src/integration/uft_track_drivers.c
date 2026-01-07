@@ -722,7 +722,7 @@ const char** uft_track_driver_names(size_t *count)
         "pc98",
         "x68000",
         "fm_towns",
-        "sam_coupe",
+        "uft_sam_coupe",
         "spectrum",
         "kaypro",
         "osborne",

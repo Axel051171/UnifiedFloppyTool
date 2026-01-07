@@ -1,3 +1,6 @@
+#ifndef UFT_FORMATS_AMIGA_EXT_HUNK_H
+#define UFT_FORMATS_AMIGA_EXT_HUNK_H
+
 
 typedef struct hunk_header_
 {
@@ -8,3 +11,5 @@ typedef struct hunk_header_
 	uint32_t LAST_HUNK;
 	uint32_t HUNKSIZE[];
 }hunk_header;
+
+#endif /* UFT_FORMATS_AMIGA_EXT_HUNK_H */

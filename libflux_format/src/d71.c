@@ -58,7 +58,7 @@ static int uft_to_d71_lba(uint32_t t0, uint32_t h, uint32_t s1, uint32_t *out_lb
     return UFT_OK;
 }
 
-int floppy_open(FloppyDevice *dev, const char *path){
+int uft_floppy_open(FloppyDevice *dev, const char *path){
     if(!dev || !path) return UFT_EINVAL;
 
     D71Ctx *ctx = (D71Ctx*)calloc(1,sizeof(D71Ctx));
@@ -92,7 +92,7 @@ int floppy_open(FloppyDevice *dev, const char *path){
     return UFT_OK;
 }
 
-int floppy_close(FloppyDevice *dev){
+int uft_floppy_close(FloppyDevice *dev){
     if(!dev || !dev->internal_ctx) return UFT_EINVAL;
     D71Ctx *ctx = (D71Ctx*)dev->internal_ctx;
     if(ctx->fp) fclose(ctx->fp);
@@ -101,7 +101,7 @@ int floppy_close(FloppyDevice *dev){
     return UFT_OK;
 }
 
-int floppy_read_sector(FloppyDevice *dev, uint32_t t, uint32_t h, uint32_t s, uint8_t *buf){
+int uft_floppy_read_sector(FloppyDevice *dev, uint32_t t, uint32_t h, uint32_t s, uint8_t *buf){
     if(!dev || !dev->internal_ctx || !buf) return UFT_EINVAL;
     D71Ctx *ctx = (D71Ctx*)dev->internal_ctx;
 
@@ -115,7 +115,7 @@ int floppy_read_sector(FloppyDevice *dev, uint32_t t, uint32_t h, uint32_t s, ui
     return UFT_OK;
 }
 
-int floppy_write_sector(FloppyDevice *dev, uint32_t t, uint32_t h, uint32_t s, const uint8_t *buf){
+int uft_floppy_write_sector(FloppyDevice *dev, uint32_t t, uint32_t h, uint32_t s, const uint8_t *buf){
     if(!dev || !dev->internal_ctx || !buf) return UFT_EINVAL;
     D71Ctx *ctx = (D71Ctx*)dev->internal_ctx;
     if(ctx->read_only) return UFT_ENOTSUP;
@@ -131,7 +131,7 @@ int floppy_write_sector(FloppyDevice *dev, uint32_t t, uint32_t h, uint32_t s, c
     return UFT_OK;
 }
 
-int floppy_analyze_protection(FloppyDevice *dev){
+int uft_floppy_analyze_protection(FloppyDevice *dev){
     if(!dev || !dev->internal_ctx) return UFT_EINVAL;
     log_msg(dev, "Analyzer(D71): sector dump only; does NOT preserve C64 copy protection (GCR timing/weak bits/long tracks).");
     log_msg(dev, "Analyzer(D71): If protection matters, convert from flux (SCP/GWF) or use G64/NIB where possible.");

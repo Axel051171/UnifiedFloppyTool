@@ -711,7 +711,7 @@ uft_hash_entry_t *uft_hash_chain_add(uft_hash_chain_t *chain, const char *data_i
     
     /* Copy previous hash */
     if (chain->count > 0) {
-        strcpy(entry->prev_hash, chain->entries[chain->count - 1].hash);
+        strncpy(entry->prev_hash, chain->entries[chain->count - 1].hash, sizeof(entry->prev_hash) - 1); entry->prev_hash[sizeof(entry->prev_hash) - 1] = '\0';
     }
     
     /* Compute hash */
@@ -731,7 +731,7 @@ const char *uft_hash_chain_finalize(uft_hash_chain_t *chain) {
     
     combined[0] = '\0';
     for (int i = 0; i < chain->count; i++) {
-        strcat(combined, chain->entries[i].hash);
+        strncat(combined, chain->entries[i].hash, total_len - strlen(combined));
     }
     
     uft_compute_hash(chain->algorithm, (uint8_t *)combined, strlen(combined),

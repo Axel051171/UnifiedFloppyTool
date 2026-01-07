@@ -2,8 +2,6 @@
 /*
  * amiga_mfm.c - Amiga MFM Sector Decoder
  * 
- * Ported from FloppyControl (C# -> C)
- * Original: https://github.com/Skaizo/FloppyControl
  * 
  * Supports:
  *   - AmigaDOS (OFS/FFS) - 11 sectors/track

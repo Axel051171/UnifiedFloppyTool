@@ -111,7 +111,7 @@ static int safe_fseek(FILE *f, size_t file_size, uint32_t offset) {
 #if defined(_WIN32)
     return _fseeki64(f, (long long)offset, SEEK_SET);
 #else
-    return fseek(f, (long)offset, SEEK_SET);
+    return (void)fseek(f, (long)offset, SEEK_SET);
 #endif
 }
 

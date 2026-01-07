@@ -9,19 +9,25 @@
  * - ATR: Atari 8-bit standard
  * - ATX: Atari 8-bit protected (flux-level)
  * 
- * Includes a8rawconv compatibility examples!
+ * Includes Atari 8-bit compatibility examples!
  * 
  * @version 2.8.7
  * @date 2024-12-26
  */
 
 #include <stdio.h>
+#include "uft/core/uft_safe_parse.h"
 #include <stdlib.h>
+#include "uft/core/uft_safe_parse.h"
 #include <string.h>
+#include "uft/core/uft_safe_parse.h"
 #include <stdbool.h>
+#include "uft/core/uft_safe_parse.h"
 
 #include "pc_formats.h"
+#include "uft/core/uft_safe_parse.h"
 #include "atari_formats.h"
+#include "uft/core/uft_safe_parse.h"
 
 /*============================================================================*
  * EXAMPLE 1: IMG (Raw PC Disk)
@@ -116,7 +122,7 @@ static void example_imd(void)
     printf("\n");
     
     printf("IMD Format:\n");
-    printf("  • Dave Dunfield's ImageDisk format\n");
+    printf("  • ImageDisk format\n");
     printf("  • CP/M preservation standard\n");
     printf("  • Full READ/WRITE/SAVE! ✨ (upgraded!)\n");
     printf("  • Variable sector sizes\n");
@@ -269,18 +275,18 @@ static void example_atx(void)
 }
 
 /*============================================================================*
- * EXAMPLE 6: a8rawconv Compatibility
+ * EXAMPLE 6: Atari 8-bit Compatibility
  *============================================================================*/
 
 static void example_a8rawconv(void)
 {
     printf("\n");
     printf("╔═══════════════════════════════════════════════════════════╗\n");
-    printf("║  EXAMPLE 6: a8rawconv Compatibility                      ║\n");
+    printf("║  EXAMPLE 6: Atari 8-bit Compatibility                      ║\n");
     printf("╚═══════════════════════════════════════════════════════════╝\n");
     printf("\n");
     
-    printf("a8rawconv is a popular Atari 8-bit conversion tool.\n");
+    printf("UFT supports Atari 8-bit conversion tool.\n");
     printf("UFT v2.8.7 provides API-level compatibility!\n");
     printf("\n");
     
@@ -291,7 +297,7 @@ static void example_a8rawconv(void)
                A8RAWCONV_GEOMETRIES[i].sectors,
                A8RAWCONV_GEOMETRIES[i].sector_size,
                A8RAWCONV_GEOMETRIES[i].total_bytes);
-        if (A8RAWCONV_GEOMETRIES[i].boot_sectors > 0) {
+        if (Atari_GEOMETRIES[i].boot_sectors > 0) {
             printf("    (First %d sectors are 128 bytes)\n",
                    A8RAWCONV_GEOMETRIES[i].boot_sectors);
         }
@@ -299,12 +305,12 @@ static void example_a8rawconv(void)
     printf("\n");
     
     printf("Example 1: ATR → RAW (XFD) conversion\n");
-    printf("  a8rawconv_convert(A8RAWCONV_MODE_ATR_TO_RAW,\n");
+    printf("  a8rawconv_convert(Atari_MODE_ATR_TO_RAW,\n");
     printf("                    \"disk.atr\", \"disk.xfd\", NULL);\n");
     printf("\n");
     
     printf("Example 2: ATX → RAW (LOSSY!)\n");
-    printf("  a8rawconv_convert(A8RAWCONV_MODE_ATX_TO_RAW,\n");
+    printf("  a8rawconv_convert(Atari_MODE_ATX_TO_RAW,\n");
     printf("                    \"protected.atx\", \"disk.xfd\", NULL);\n");
     printf("  /* WARNING: Loses protection data! */\n");
     printf("\n");
@@ -403,11 +409,15 @@ int main(int argc, char *argv[])
     printf("\n");
     printf("╔═══════════════════════════════════════════════════════════╗\n");
     printf("║  UFT v2.8.7 - PC & ATARI DISK FORMATS                    ║\n");
-    printf("║  5 NEW FORMATS + a8rawconv COMPATIBILITY!                ║\n");
+    printf("║  5 NEW FORMATS + Atari 8-bit support!                ║\n");
     printf("╚═══════════════════════════════════════════════════════════╝\n");
     
     if (argc > 1) {
-        int example = atoi(argv[1]);
+        int32_t example = 0;
+        if (!uft_parse_int32(argv[1], &example, 10)) {
+            fprintf(stderr, "Invalid argument: %s\n", argv[1]);
+            return 1;
+        }
         
         switch (example) {
             case 1: example_img(); break;
@@ -425,7 +435,7 @@ int main(int argc, char *argv[])
                 printf("  3 - IMD (ImageDisk)\n");
                 printf("  4 - ATR (Atari 8-bit)\n");
                 printf("  5 - ATX (Atari Protected)\n");
-                printf("  6 - a8rawconv Compatibility\n");
+                printf("  6 - Atari 8-bit Compatibility\n");
                 printf("  7 - Format Detection\n");
                 printf("  8 - Complete Workflow\n");
                 return 1;
@@ -463,7 +473,7 @@ int main(int argc, char *argv[])
     printf("\n");
     
     printf("COMPATIBILITY:\n");
-    printf("  ✅ a8rawconv parameter compatibility\n");
+    printf("  ✅ Atari parameter compatibility\n");
     printf("  ✅ Standard geometries (SD/ED/DD/DD+)\n");
     printf("  ✅ Automatic format detection\n");
     printf("\n");

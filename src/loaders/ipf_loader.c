@@ -2,25 +2,20 @@
 //
 // Copyright (C) 2006-2025 Jean-François DEL NERO
 //
-// This file is part of the HxCFloppyEmulator library
 //
-// HxCFloppyEmulator may be used and distributed without restriction provided
 // that this copyright statement is not removed from the file and that any
 // derivative work contains the original copyright notice and the associated
 // disclaimer.
 //
-// HxCFloppyEmulator is free software; you can redistribute it
 // and/or modify  it under the terms of the GNU General Public License
 // as published by the Free Software Foundation; either version 2
 // of the License, or (at your option) any later version.
 //
-// HxCFloppyEmulator is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 //   See the GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with HxCFloppyEmulator; if not, write to the Free Software
 // Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 //
 */
@@ -49,11 +44,11 @@
 
 #include "types.h"
 
-#include "internal_libhxcfe.h"
-#include "libhxcfe.h"
+#include "libflux.h""
+#include "libflux.h""
 
-#include "floppy_loader.h"
-#include "floppy_utils.h"
+#include "uft_floppy_loader.h"
+#include "uft_floppy_utils.h"
 
 #include "ipf_loader.h"
 #include "ipf_writer.h"
@@ -101,27 +96,27 @@ extern  CAPSREMIMAGE pCAPSRemImage;
 #define INDEX_POSITION  0
 #define INDEX_DURATION  2000
 
-int IPF_libIsValidDiskFile( HXCFE_IMGLDR * imgldr_ctx, HXCFE_IMGLDR_FILEINFOS * imgfile )
+int IPF_libIsValidDiskFile( LIBFLUX_IMGLDR * imgldr_ctx, LIBFLUX_IMGLDR_FILEINFOS * imgfile )
 {
-	imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"IPF_libIsValidDiskFile");
+	imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"IPF_libIsValidDiskFile");
 
-	if(hxc_checkfileext(imgfile->path,"ipf",SYS_PATH_TYPE) || hxc_checkfileext(imgfile->path,"ct",SYS_PATH_TYPE) || hxc_checkfileext(imgfile->path,"ctr",SYS_PATH_TYPE))
+	if(libflux_checkfileext(imgfile->path,"ipf",SYS_PATH_TYPE) || libflux_checkfileext(imgfile->path,"ct",SYS_PATH_TYPE) || libflux_checkfileext(imgfile->path,"ctr",SYS_PATH_TYPE))
 	{
-		imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"IPF_libIsValidDiskFile : IPF file !");
-		if(init_caps_lib(imgldr_ctx->hxcfe))
+		imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"IPF_libIsValidDiskFile : IPF file !");
+		if(init_caps_lib(imgldr_ctx->ctx))
 		{
-			return HXCFE_VALIDFILE;
+			return LIBFLUX_VALIDFILE;
 		}
 		else
 		{
-			imgldr_ctx->hxcfe->hxc_printf(MSG_ERROR,"IPF_libIsValidDiskFile : No Caps lib available!");
-			return HXCFE_INTERNALERROR;
+			imgldr_ctx->ctx->libflux_printf(MSG_ERROR,"IPF_libIsValidDiskFile : No Caps lib available!");
+			return LIBFLUX_INTERNALERROR;
 		}
 	}
 	else
 	{
-		imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"IPF_libIsValidDiskFile : non IPF file !");
-		return HXCFE_BADFILE;
+		imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"IPF_libIsValidDiskFile : non IPF file !");
+		return LIBFLUX_BADFILE;
 	}
 }
 
@@ -197,7 +192,7 @@ uint32_t trackcopy(unsigned char * dest,unsigned char * src,uint32_t overlap,uin
 	return dest_tracklen;
 }
 
-int IPF_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,char * imgfile,void * parameters)
+int IPF_libLoad_DiskFile(LIBFLUX_IMGLDR * imgldr_ctx,LIBFLUX_FLOPPY * floppydisk,char * imgfile,void * parameters)
 {
 	unsigned int filesize;
 	unsigned int i,j,k,l,m,len;
@@ -218,26 +213,26 @@ int IPF_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 	int intrackflakeybit;
 	uint32_t bitrate;
 	int rpm,sizefactor;
-	HXCFE_CYLINDER* currentcylinder;
+	LIBFLUX_CYLINDER* currentcylinder;
 	unsigned char flakeybyte;
-	HXCFE_SIDE* currentside;
+	LIBFLUX_SIDE* currentside;
 
 	UDWORD flag;
 
-	imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"IPF_libLoad_DiskFile %s",imgfile);
+	imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"IPF_libLoad_DiskFile %s",imgfile);
 
 	fileimg = NULL;
 	temptrack = NULL;
 	progresscnt = 0;
 
-	f = hxc_fopen(imgfile,"rb");
+	f = libflux_fopen(imgfile,"rb");
 	if( f == NULL )
 	{
-		imgldr_ctx->hxcfe->hxc_printf(MSG_ERROR,"Cannot open %s !",imgfile);
-		return HXCFE_ACCESSERROR;
+		imgldr_ctx->ctx->libflux_printf(MSG_ERROR,"Cannot open %s !",imgfile);
+		return LIBFLUX_ACCESSERROR;
 	}
 
-	filesize = hxc_fgetsize(f);
+	filesize = libflux_fgetsize(f);
 
 	if( filesize )
 	{
@@ -248,31 +243,31 @@ int IPF_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 			i=0;
 			do
 			{
-				hxc_fread(fileimg+(i*1024),1024,f);
+				libflux_fread(fileimg+(i*1024),1024,f);
 				i++;
 			}while(i<((filesize/1024)+1));
 
 		}
 		else
 		{
-			imgldr_ctx->hxcfe->hxc_printf(MSG_ERROR,"Memory error!");
-			hxc_fclose(f);
-			return HXCFE_INTERNALERROR;
+			imgldr_ctx->ctx->libflux_printf(MSG_ERROR,"Memory error!");
+			libflux_fclose(f);
+			return LIBFLUX_INTERNALERROR;
 		}
 	}
 	else
 	{
-		imgldr_ctx->hxcfe->hxc_printf(MSG_ERROR,"0 byte file!");
-		hxc_fclose(f);
-		return HXCFE_BADFILE;
+		imgldr_ctx->ctx->libflux_printf(MSG_ERROR,"0 byte file!");
+		libflux_fclose(f);
+		return LIBFLUX_BADFILE;
 	}
 
-	hxc_fclose(f);
+	libflux_fclose(f);
 
 	cvi.type = LIB_TYPE;
 	pCAPSGetVersionInfo (&cvi, 0);
 
-	imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"CAPS: library version %d.%d (flags=%08X)", cvi.release, cvi.revision, cvi.flag);
+	imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"CAPS: library version %d.%d (flags=%08X)", cvi.release, cvi.revision, cvi.flag);
 
 	oldlib = (cvi.flag & (DI_LOCK_TRKBIT | DI_LOCK_OVLBIT)) != (DI_LOCK_TRKBIT | DI_LOCK_OVLBIT);
 
@@ -280,10 +275,10 @@ int IPF_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 
 	flag = DI_LOCK_DENVAR | DI_LOCK_UPDATEFD | DI_LOCK_TYPE;
 
-	if( hxcfe_getEnvVarValue( imgldr_ctx->hxcfe, "LOADER_IPF_CAPS_DI_LOCK_INDEX" ) )
+	if( libflux_getEnvVarValue( imgldr_ctx->ctx, "LOADER_IPF_CAPS_DI_LOCK_INDEX" ) )
 	{
 		flag |= DI_LOCK_INDEX;
-		imgldr_ctx->hxcfe->hxc_printf(MSG_INFO_1,"CAPS DI_LOCK_INDEX flag enabled");
+		imgldr_ctx->ctx->libflux_printf(MSG_INFO_1,"CAPS DI_LOCK_INDEX flag enabled");
 	}
 
 	if (!oldlib)
@@ -302,16 +297,16 @@ int IPF_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 			pCAPSGetImageInfo(&ci2, img);
 
 			////// debug //////
-			imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"Image Info: %s",imgfile);
-			imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"Type     : %.8x",ci2.type);
-			imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"Release  : %.8x",ci2.release);
-			imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"Revision : %.8x",ci2.revision);
-			imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"Platform : %.8x",ci2.platform);
-			imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"minhead  : %d",ci2.minhead);
-			imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"maxhead  : %d",ci2.maxhead);
-			imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"mincylinder : %d",ci2.mincylinder);
-			imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"maxcylinder : %d",ci2.maxcylinder);
-			imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"Date : %d/%d/%d",ci2.crdt.day,ci2.crdt.month,ci2.crdt.year);
+			imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"Image Info: %s",imgfile);
+			imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"Type     : %.8x",ci2.type);
+			imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"Release  : %.8x",ci2.release);
+			imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"Revision : %.8x",ci2.revision);
+			imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"Platform : %.8x",ci2.platform);
+			imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"minhead  : %d",ci2.minhead);
+			imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"maxhead  : %d",ci2.maxhead);
+			imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"mincylinder : %d",ci2.mincylinder);
+			imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"maxcylinder : %d",ci2.maxcylinder);
+			imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"Date : %d/%d/%d",ci2.crdt.day,ci2.crdt.month,ci2.crdt.year);
 			///////////////////
 
 			if(ci2.type == ciitFDD)
@@ -323,47 +318,47 @@ int IPF_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 				rpm=300;
 				floppydisk->floppyiftype=AMIGA_DD_FLOPPYMODE;
 
-				floppydisk->tracks = (HXCFE_CYLINDER**)malloc(sizeof(HXCFE_CYLINDER*)*floppydisk->floppyNumberOfTrack);
+				floppydisk->tracks = (LIBFLUX_CYLINDER**)malloc(sizeof(LIBFLUX_CYLINDER*)*floppydisk->floppyNumberOfTrack);
 				if(!floppydisk->tracks)
 					goto alloc_error;
 
-				memset(floppydisk->tracks,0,sizeof(HXCFE_CYLINDER*)*floppydisk->floppyNumberOfTrack);
+				memset(floppydisk->tracks,0,sizeof(LIBFLUX_CYLINDER*)*floppydisk->floppyNumberOfTrack);
 
 				for(i=ci2.mincylinder;i<=ci2.maxcylinder;i++)
 				{
 					for(j=ci2.minhead;j<=ci2.maxhead;j++)
 					{
-						hxcfe_imgCallProgressCallback(imgldr_ctx,progresscnt,((ci2.maxcylinder-ci2.mincylinder)+1) * ((ci2.maxhead - ci2.minhead)+1));
+						libflux_imgCallProgressCallback(imgldr_ctx,progresscnt,((ci2.maxcylinder-ci2.mincylinder)+1) * ((ci2.maxhead - ci2.minhead)+1));
 
 						progresscnt++;
 						ti.type = LIB_TYPE;
-						imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"-----------------------------%d %d",i,j);
+						imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"-----------------------------%d %d",i,j);
 						ret=pCAPSLockTrack((struct CapsTrackInfo *)&ti, img, i, j, flag);
 						if(ret==imgeOk)
 						{
-							imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"Track Info  : %d %d",i,j);
-							imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"Cylinder    : %d",ti.cylinder);
-							imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"Head        : %d",ti.head);
-							imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"Sectorcnt   : %d",ti.sectorcnt);
-							imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"sectorsize  : %d",ti.sectorsize);
-							imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"Type        : %.8X",ti.type);
-							//  imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"trackcnt    : %d\n",ti.trackcnt);
-							imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"tracklen     : %d %s",ti.tracklen*sizefactor,(ti.tracklen*sizefactor)&0x7?"non aligned !":"aligned");
-							imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"overlap     : %d %s",ti.overlap*sizefactor,(ti.overlap*sizefactor)&0x7?"non aligned !":"aligned");
+							imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"Track Info  : %d %d",i,j);
+							imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"Cylinder    : %d",ti.cylinder);
+							imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"Head        : %d",ti.head);
+							imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"Sectorcnt   : %d",ti.sectorcnt);
+							imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"sectorsize  : %d",ti.sectorsize);
+							imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"Type        : %.8X",ti.type);
+							//  imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"trackcnt    : %d\n",ti.trackcnt);
+							imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"tracklen     : %d %s",ti.tracklen*sizefactor,(ti.tracklen*sizefactor)&0x7?"non aligned !":"aligned");
+							imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"overlap     : %d %s",ti.overlap*sizefactor,(ti.overlap*sizefactor)&0x7?"non aligned !":"aligned");
 
 							if(!floppydisk->tracks[i])
 							{
-								floppydisk->tracks[i] = (HXCFE_CYLINDER*)malloc(sizeof(HXCFE_CYLINDER));
+								floppydisk->tracks[i] = (LIBFLUX_CYLINDER*)malloc(sizeof(LIBFLUX_CYLINDER));
 								currentcylinder = floppydisk->tracks[i];
 								if( !currentcylinder )
 									goto alloc_error;
 
 								currentcylinder->number_of_side = floppydisk->floppyNumberOfSide;
-								currentcylinder->sides = (HXCFE_SIDE**)malloc(sizeof(HXCFE_SIDE*)*currentcylinder->number_of_side);
+								currentcylinder->sides = (LIBFLUX_SIDE**)malloc(sizeof(LIBFLUX_SIDE*)*currentcylinder->number_of_side);
 								if( !currentcylinder->sides )
 									goto alloc_error;
 
-								memset(currentcylinder->sides,0,sizeof(HXCFE_SIDE*)*currentcylinder->number_of_side);
+								memset(currentcylinder->sides,0,sizeof(LIBFLUX_SIDE*)*currentcylinder->number_of_side);
 
 								currentcylinder->floppyRPM=rpm;
 							}
@@ -372,12 +367,12 @@ int IPF_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 								currentcylinder = floppydisk->tracks[i];
 							}
 
-							currentcylinder->sides[j] = malloc(sizeof(HXCFE_SIDE));
+							currentcylinder->sides[j] = malloc(sizeof(LIBFLUX_SIDE));
 							currentside = currentcylinder->sides[j];
 							if( !currentside )
 								goto alloc_error;
 
-							memset(currentside,0,sizeof(HXCFE_SIDE));
+							memset(currentside,0,sizeof(LIBFLUX_SIDE));
 
 							currentside->flakybitsbuffer=0;
 							currentside->track_encoding=AMIGA_MFM_ENCODING;
@@ -399,7 +394,7 @@ int IPF_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 								memset(currentside->databuffer,0,len);
 
 								//flakey bits in track ?
-								if((ti.type & CTIT_FLAG_FLAKEY) && hxc_checkfileext(imgfile,"ipf",SYS_PATH_TYPE) )
+								if((ti.type & CTIT_FLAG_FLAKEY) && libflux_checkfileext(imgfile,"ipf",SYS_PATH_TYPE) )
 								{
 									// This method is only valid with ipf files (fixed track size at each revolution...)
 									temptrack = (unsigned char *)malloc(len);
@@ -491,7 +486,7 @@ int IPF_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 
 							bitrate=((rpm/60)*currentside->tracklen)>>1;
 
-							imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"Fixed bitrate    : %d",bitrate);
+							imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"Fixed bitrate    : %d",bitrate);
 							currentside->timingbuffer=0;
 							currentside->bitrate=bitrate;
 							currentside->track_encoding=AMIGA_MFM_ENCODING;
@@ -499,8 +494,8 @@ int IPF_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 							// get track timing
 							if(ti.timebuf!=0)// && (ti.type & CTIT_FLAG_FLAKEY))
 							{
-								imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"Variable bit rate!!!");
-								imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"timelen     : %d",ti.timelen);
+								imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"Variable bit rate!!!");
+								imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"timelen     : %d",ti.timelen);
 
 								len = ti.timelen*sizeof(uint32_t);
 
@@ -527,23 +522,23 @@ int IPF_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 								currentside->bitrate=VARIABLEBITRATE;
 							}
 
-							imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"timebuf     : %.8X",ti.timebuf);
+							imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"timebuf     : %.8X",ti.timebuf);
 
 							if(ti.type & CTIT_FLAG_FLAKEY)
 							{
-								imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"Track %d Side %d: CTIT_FLAG_FLAKEY",i,j);
+								imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"Track %d Side %d: CTIT_FLAG_FLAKEY",i,j);
 							}
 
 
 							if((ti.type & CTIT_MASK_TYPE) ==  ctitNoise)
 							{
-								imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"Track %d Side %d: cells are unformatted (random size)",i,j);
+								imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"Track %d Side %d: cells are unformatted (random size)",i,j);
 							}
 
 
 							if(intrackflakeybit !=  -1)
 							{
-								imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"In track flakey bit found (last: %d)",intrackflakeybit);
+								imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"In track flakey bit found (last: %d)",intrackflakeybit);
 							}
 
 							pCAPSUnlockTrack(img,i, j);
@@ -567,17 +562,17 @@ int IPF_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 
 							if(!floppydisk->tracks[i])
 							{
-								floppydisk->tracks[i]=(HXCFE_CYLINDER*)malloc(sizeof(HXCFE_CYLINDER));
+								floppydisk->tracks[i]=(LIBFLUX_CYLINDER*)malloc(sizeof(LIBFLUX_CYLINDER));
 								currentcylinder = floppydisk->tracks[i];
 								if( !currentcylinder )
 									goto alloc_error;
 
 
 								currentcylinder->number_of_side=floppydisk->floppyNumberOfSide;
-								currentcylinder->sides = (HXCFE_SIDE**)malloc(sizeof(HXCFE_SIDE*)*currentcylinder->number_of_side);
+								currentcylinder->sides = (LIBFLUX_SIDE**)malloc(sizeof(LIBFLUX_SIDE*)*currentcylinder->number_of_side);
 								if(!currentcylinder->sides)
 									goto alloc_error;
-								memset(currentcylinder->sides,0,sizeof(HXCFE_SIDE*)*currentcylinder->number_of_side);
+								memset(currentcylinder->sides,0,sizeof(LIBFLUX_SIDE*)*currentcylinder->number_of_side);
 
 								currentcylinder->floppyRPM = rpm;
 							}
@@ -586,11 +581,11 @@ int IPF_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 								currentcylinder=floppydisk->tracks[i];
 							}
 
-							currentcylinder->sides[j] = malloc(sizeof(HXCFE_SIDE));
+							currentcylinder->sides[j] = malloc(sizeof(LIBFLUX_SIDE));
 							if(!currentcylinder->sides[j])
 								goto alloc_error;
 
-							memset(currentcylinder->sides[j],0,sizeof(HXCFE_SIDE));
+							memset(currentcylinder->sides[j],0,sizeof(LIBFLUX_SIDE));
 							currentside=currentcylinder->sides[j];
 
 							// error -> random track
@@ -637,26 +632,26 @@ int IPF_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 		free(fileimg);
 		fileimg = NULL;
 
-		imgldr_ctx->hxcfe->hxc_printf(MSG_INFO_1,"IPF Loader : tracks file successfully loaded and encoded!");
-		return HXCFE_NOERROR;
+		imgldr_ctx->ctx->libflux_printf(MSG_INFO_1,"IPF Loader : tracks file successfully loaded and encoded!");
+		return LIBFLUX_NOERROR;
 	}
 
-	return HXCFE_INTERNALERROR;
+	return LIBFLUX_INTERNALERROR;
 
 alloc_error:
-	imgldr_ctx->hxcfe->hxc_printf(MSG_ERROR,"IPF Loader : Memory allocation error !");
+	imgldr_ctx->ctx->libflux_printf(MSG_ERROR,"IPF Loader : Memory allocation error !");
 
 	free( fileimg );
 	free( temptrack );
 
-	hxcfe_freeFloppy(imgldr_ctx->hxcfe, floppydisk );
+	libflux_freeFloppy(imgldr_ctx->ctx, floppydisk );
 
-	return HXCFE_INTERNALERROR;
+	return LIBFLUX_INTERNALERROR;
 }
 
-int IPF_libGetPluginInfo(HXCFE_IMGLDR * imgldr_ctx,uint32_t infotype,void * returnvalue)
+int IPF_libGetPluginInfo(LIBFLUX_IMGLDR * imgldr_ctx,uint32_t infotype,void * returnvalue)
 {
-	static const char plug_id[]="SPS_IPF";
+	static const char plug_id[]="UFT_SPS_IPF";
 	static const char plug_desc[]="SPS IPF Loader";
 	static const char plug_ext[]="ipf";
 

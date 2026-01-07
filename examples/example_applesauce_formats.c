@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 /*
- * example_applesauce_formats.c - Applesauce Format Examples
+ * example_uft_as_formats.c - Applesauce Format Examples
  * 
  * Demonstrates reading A2R3, WOZ1, and MOOF files.
  * 

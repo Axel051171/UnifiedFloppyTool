@@ -1,4 +1,4 @@
-// ufm_applesauce_moof.c
+// ufm_uft_as_moof.c
 // Applesauce MOOF 1.0 reader (chunk-based) -> bitstream OR embedded flux stream extraction
 //
 // Sources / spec references:
@@ -10,7 +10,7 @@
 // - Optional FLUX tracks are exposed as packed bytes AND expanded delta-ticks without smoothing.
 // - 255-run delta encoding is expanded exactly as spec (255,255,10 => 520 ticks). citeturn2view0
 //
-// Build: cc -std=c11 -O2 -Wall -Wextra -pedantic ufm_applesauce_moof.c -o moof_dump
+// Build: cc -std=c11 -O2 -Wall -Wextra -pedantic ufm_uft_as_moof.c -o moof_dump
 
 #include "uft/uft_error.h"
 #include <stdint.h>

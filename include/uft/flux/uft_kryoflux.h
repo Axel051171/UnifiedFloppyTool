@@ -1,16 +1,13 @@
 /**
  * @file uft_kryoflux.h
- * @brief KryoFlux Stream File Parser
  * 
- * Source: Aufit (Atari Universal FD Image Tools)
  * Author: Jean Louis-Guerin / Software Preservation Society
  * License: GPL-2.0+
  * 
- * Parses KryoFlux .raw stream files to extract flux timing data.
  */
 
-#ifndef UFT_KRYOFLUX_H
-#define UFT_KRYOFLUX_H
+#ifndef UFT_UFT_UFT_KF_H
+#define UFT_UFT_UFT_KF_H
 
 #include <stdint.h>
 #include <stddef.h>
@@ -25,16 +22,16 @@ extern "C" {
  *===========================================================================*/
 
 /** Default sample clock frequency (Hz) */
-#define UFT_KF_SAMPLE_CLOCK  24027428.5714285
+#define UFT_UFT_KF_SAMPLE_CLOCK  24027428.5714285
 
 /** Index clock frequency (sample clock / 8) */
-#define UFT_KF_INDEX_CLOCK   (UFT_KF_SAMPLE_CLOCK / 8.0)
+#define UFT_UFT_KF_INDEX_CLOCK   (UFT_UFT_KF_SAMPLE_CLOCK / 8.0)
 
 /** Maximum flux values per track (typical ~50000) */
-#define UFT_KF_MAX_FLUX      200000
+#define UFT_UFT_KF_MAX_FLUX      200000
 
 /** Maximum indexes per track */
-#define UFT_KF_MAX_INDEX     16
+#define UFT_UFT_KF_MAX_INDEX     16
 
 /*===========================================================================
  * Stream Block Types
@@ -42,32 +39,32 @@ extern "C" {
 
 /** Block type codes */
 typedef enum {
-    UFT_KF_FLUX1_MIN    = 0x00,  /**< Flux1 range start */
-    UFT_KF_FLUX1_MAX    = 0x07,  /**< Flux1 range end */
-    UFT_KF_FLUX2        = 0x08,  /**< 2-byte flux value */
-    UFT_KF_FLUX3        = 0x09,  /**< 3-byte flux value */
-    UFT_KF_OVERFLOW     = 0x0A,  /**< Add 65536 to next flux */
-    UFT_KF_FLUX3_ALT    = 0x0B,  /**< Alternative flux3 */
-    UFT_KF_NOP1         = 0x0C,  /**< Skip 1 byte */
-    UFT_KF_OOB          = 0x0D,  /**< Out-of-band block */
-    UFT_KF_NOP3         = 0x0E,  /**< Skip 3 bytes */
-} uft_kf_block_type_t;
+    UFT_UFT_KF_FLUX1_MIN    = 0x00,  /**< Flux1 range start */
+    UFT_UFT_KF_FLUX1_MAX    = 0x07,  /**< Flux1 range end */
+    UFT_UFT_KF_FLUX2        = 0x08,  /**< 2-byte flux value */
+    UFT_UFT_KF_FLUX3        = 0x09,  /**< 3-byte flux value */
+    UFT_UFT_KF_OVERFLOW     = 0x0A,  /**< Add 65536 to next flux */
+    UFT_UFT_KF_FLUX3_ALT    = 0x0B,  /**< Alternative flux3 */
+    UFT_UFT_KF_NOP1         = 0x0C,  /**< Skip 1 byte */
+    UFT_UFT_KF_OOB          = 0x0D,  /**< Out-of-band block */
+    UFT_UFT_KF_NOP3         = 0x0E,  /**< Skip 3 bytes */
+} uft_uft_kf_block_type_t;
 
 /** OOB sub-types */
 typedef enum {
-    UFT_KF_OOB_INVALID      = 0x00,
-    UFT_KF_OOB_STREAM_INFO  = 0x01,
-    UFT_KF_OOB_INDEX        = 0x02,
-    UFT_KF_OOB_STREAM_END   = 0x03,
-    UFT_KF_OOB_KF_INFO      = 0x04,
-    UFT_KF_OOB_EOF          = 0x0D,
+    UFT_UFT_KF_OOB_INVALID      = 0x00,
+    UFT_UFT_KF_OOB_STREAM_INFO  = 0x01,
+    UFT_UFT_KF_OOB_INDEX        = 0x02,
+    UFT_UFT_KF_OOB_STREAM_END   = 0x03,
+    UFT_UFT_KF_OOB_UFT_KF_INFO      = 0x04,
+    UFT_UFT_KF_OOB_EOF          = 0x0D,
 } uft_kf_oob_type_t;
 
 /** Stream end result codes */
 typedef enum {
-    UFT_KF_RESULT_OK        = 0x00,
-    UFT_KF_RESULT_BUFFERING = 0x01,
-    UFT_KF_RESULT_NO_INDEX  = 0x02,
+    UFT_UFT_KF_RESULT_OK        = 0x00,
+    UFT_UFT_KF_RESULT_BUFFERING = 0x01,
+    UFT_UFT_KF_RESULT_NO_INDEX  = 0x02,
 } uft_kf_result_t;
 
 /*===========================================================================
@@ -76,18 +73,18 @@ typedef enum {
 
 /** Stream decode status */
 typedef enum {
-    UFT_KF_STATUS_OK            = 0,
-    UFT_KF_STATUS_MISSING_DATA  = -1,
-    UFT_KF_STATUS_INVALID_CODE  = -2,
-    UFT_KF_STATUS_WRONG_POS     = -3,
-    UFT_KF_STATUS_DEV_BUFFER    = -4,
-    UFT_KF_STATUS_DEV_INDEX     = -5,
-    UFT_KF_STATUS_TRANSFER      = -6,
-    UFT_KF_STATUS_INVALID_OOB   = -7,
-    UFT_KF_STATUS_MISSING_END   = -8,
-    UFT_KF_STATUS_INDEX_REF     = -9,
-    UFT_KF_STATUS_MISSING_INDEX = -10,
-    UFT_KF_STATUS_READ_ERROR    = -11,
+    UFT_UFT_KF_STATUS_OK            = 0,
+    UFT_UFT_KF_STATUS_MISSING_DATA  = -1,
+    UFT_UFT_KF_STATUS_INVALID_CODE  = -2,
+    UFT_UFT_KF_STATUS_WRONG_POS     = -3,
+    UFT_UFT_KF_STATUS_DEV_BUFFER    = -4,
+    UFT_UFT_KF_STATUS_DEV_INDEX     = -5,
+    UFT_UFT_KF_STATUS_TRANSFER      = -6,
+    UFT_UFT_KF_STATUS_INVALID_OOB   = -7,
+    UFT_UFT_KF_STATUS_MISSING_END   = -8,
+    UFT_UFT_KF_STATUS_INDEX_REF     = -9,
+    UFT_UFT_KF_STATUS_MISSING_INDEX = -10,
+    UFT_UFT_KF_STATUS_READ_ERROR    = -11,
 } uft_kf_status_t;
 
 /*===========================================================================
@@ -126,7 +123,6 @@ typedef struct {
 } uft_kf_stats_t;
 
 /**
- * @brief KryoFlux stream reader context
  */
 typedef struct {
     /* Flux data */
@@ -156,14 +152,12 @@ typedef struct {
  *===========================================================================*/
 
 /**
- * @brief Initialize KryoFlux stream context
  * @param stream Context to initialize
- * @return UFT_KF_STATUS_OK on success
+ * @return UFT_UFT_KF_STATUS_OK on success
  */
 uft_kf_status_t uft_kf_init(uft_kf_stream_t *stream);
 
 /**
- * @brief Free KryoFlux stream context resources
  * @param stream Context to free
  */
 void uft_kf_free(uft_kf_stream_t *stream);
@@ -175,7 +169,6 @@ void uft_kf_free(uft_kf_stream_t *stream);
 void uft_kf_reset(uft_kf_stream_t *stream);
 
 /**
- * @brief Decode KryoFlux stream from buffer
  * @param stream Context to store results
  * @param data Raw stream data
  * @param len Data length in bytes
@@ -185,7 +178,6 @@ uft_kf_status_t uft_kf_decode(uft_kf_stream_t *stream,
                               const uint8_t *data, size_t len);
 
 /**
- * @brief Decode KryoFlux stream from file
  * @param stream Context to store results
  * @param filename Path to .raw file
  * @return Status code
@@ -197,7 +189,7 @@ uft_kf_status_t uft_kf_decode_file(uft_kf_stream_t *stream,
  * @brief Calculate stream statistics
  * @param stream Decoded stream context
  */
-void uft_kf_calc_stats(uft_kf_stream_t *stream);
+void uft_uft_kf_calc_stats(uft_kf_stream_t *stream);
 
 /**
  * @brief Convert flux value to microseconds
@@ -272,7 +264,7 @@ static inline uint32_t uft_kf_read_u32(const uint8_t *p) {
  * @param histogram Output array (must be >= max_flux+1)
  * @param max_value Maximum value to track
  */
-void uft_kf_build_histogram(const uft_kf_stream_t *stream,
+void uft_uft_kf_build_histogram(const uft_kf_stream_t *stream,
                             uint32_t *histogram, uint32_t max_value);
 
 /**
@@ -290,4 +282,4 @@ int uft_kf_find_histogram_peaks(const uint32_t *histogram, size_t len,
 }
 #endif
 
-#endif /* UFT_KRYOFLUX_H */
+#endif /* UFT_UFT_UFT_KF_H */

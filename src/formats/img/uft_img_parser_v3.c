@@ -18,6 +18,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#include "uft_safe_string.h"
+
 /* Standard PC disk sizes */
 #define IMG_SIZE_160K           163840
 #define IMG_SIZE_180K           184320
@@ -107,15 +109,15 @@ static uint32_t img_read_le32(const uint8_t* p) { return p[0] | (p[1] << 8) | (p
 
 static bool img_detect_geometry(size_t size, uint8_t* tracks, uint8_t* heads, uint8_t* sectors, char* name) {
     switch (size) {
-        case IMG_SIZE_160K:  *tracks = 40; *heads = 1; *sectors = 8;  strcpy(name, "160K SS/DD");  /* REVIEW: Consider bounds check */ return true;
-        case IMG_SIZE_180K:  *tracks = 40; *heads = 1; *sectors = 9;  strcpy(name, "180K SS/DD");  /* REVIEW: Consider bounds check */ return true;
-        case IMG_SIZE_320K:  *tracks = 40; *heads = 2; *sectors = 8;  strcpy(name, "320K DS/DD");  /* REVIEW: Consider bounds check */ return true;
-        case IMG_SIZE_360K:  *tracks = 40; *heads = 2; *sectors = 9;  strcpy(name, "360K DS/DD");  /* REVIEW: Consider bounds check */ return true;
-        case IMG_SIZE_720K:  *tracks = 80; *heads = 2; *sectors = 9;  strcpy(name, "720K DS/DD");  /* REVIEW: Consider bounds check */ return true;
-        case IMG_SIZE_1200K: *tracks = 80; *heads = 2; *sectors = 15; strcpy(name, "1.2M DS/HD");  /* REVIEW: Consider bounds check */ return true;
-        case IMG_SIZE_1440K: *tracks = 80; *heads = 2; *sectors = 18; strcpy(name, "1.44M DS/HD");  /* REVIEW: Consider bounds check */ return true;
-        case IMG_SIZE_2880K: *tracks = 80; *heads = 2; *sectors = 36; strcpy(name, "2.88M DS/ED");  /* REVIEW: Consider bounds check */ return true;
-        default: strcpy(name, "Unknown");  /* REVIEW: Consider bounds check */ return false;
+        case IMG_SIZE_160K:  *tracks = 40; *heads = 1; *sectors = 8;  uft_strlcpy(name, "160K SS/DD", 32); return true;
+        case IMG_SIZE_180K:  *tracks = 40; *heads = 1; *sectors = 9;  uft_strlcpy(name, "180K SS/DD", 32); return true;
+        case IMG_SIZE_320K:  *tracks = 40; *heads = 2; *sectors = 8;  uft_strlcpy(name, "320K DS/DD", 32); return true;
+        case IMG_SIZE_360K:  *tracks = 40; *heads = 2; *sectors = 9;  uft_strlcpy(name, "360K DS/DD", 32); return true;
+        case IMG_SIZE_720K:  *tracks = 80; *heads = 2; *sectors = 9;  uft_strlcpy(name, "720K DS/DD", 32); return true;
+        case IMG_SIZE_1200K: *tracks = 80; *heads = 2; *sectors = 15; uft_strlcpy(name, "1.2M DS/HD", 32); return true;
+        case IMG_SIZE_1440K: *tracks = 80; *heads = 2; *sectors = 18; uft_strlcpy(name, "1.44M DS/HD", 32); return true;
+        case IMG_SIZE_2880K: *tracks = 80; *heads = 2; *sectors = 36; uft_strlcpy(name, "2.88M DS/ED", 32); return true;
+        default: uft_strlcpy(name, "Unknown", 32); return false;
     }
 }
 

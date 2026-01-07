@@ -14,10 +14,15 @@
  */
 
 #include "uft/ml/uft_ml_training_gen.h"
+#include "uft/core/uft_safe_parse.h"
 #include <stdio.h>
+#include "uft/core/uft_safe_parse.h"
 #include <stdlib.h>
+#include "uft/core/uft_safe_parse.h"
 #include <string.h>
+#include "uft/core/uft_safe_parse.h"
 #include <getopt.h>
+#include "uft/core/uft_safe_parse.h"
 
 /*============================================================================
  * CLI OPTIONS
@@ -219,15 +224,15 @@ static int parse_options(int argc, char* argv[], cli_options_t* opts) {
             case 'i': opts->input_file = optarg; break;
             case 'o': opts->output_file = optarg; break;
             case 'F': opts->export_format = optarg; break;
-            case 'w': opts->window_size = atoi(optarg); break;
-            case 's': opts->window_stride = atoi(optarg); break;
-            case 'b': opts->bits_per_sample = atoi(optarg); break;
+            case 'w': { int32_t t; if(uft_parse_int32(optarg,&t,10)) opts->window_size=t; } break;
+            case 's': { int32_t t; if(uft_parse_int32(optarg,&t,10)) opts->window_stride=t; } break;
+            case 'b': { int32_t t; if(uft_parse_int32(optarg,&t,10)) opts->bits_per_sample=t; } break;
             case 'e': opts->encoding = parse_encoding(optarg); break;
             case 'S': opts->min_snr = atof(optarg); break;
             case 'J': opts->max_jitter = atof(optarg); break;
-            case 'V': opts->augment_variants = atoi(optarg); break;
+            case 'V': { int32_t t; if(uft_parse_int32(optarg,&t,10)) opts->augment_variants=t; } break;
             case 'P': opts->augment_probability = atof(optarg); break;
-            case 'M': opts->max_samples = atoi(optarg); break;
+            case 'M': { int32_t t; if(uft_parse_int32(optarg,&t,10)) opts->max_samples=t; } break;
             case 'T': opts->train_ratio = atof(optarg); break;
             case 'L': opts->val_ratio = atof(optarg); break;
             case 'N': opts->augment_probability = 0.0f; break;

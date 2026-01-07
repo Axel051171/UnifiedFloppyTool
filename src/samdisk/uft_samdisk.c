@@ -1,8 +1,6 @@
 /**
  * @file uft_samdisk.c
- * @brief SAMdisk Integration Implementation
  * 
- * EXT4-015: SAMdisk format and tool integration
  * 
  * Features:
  * - SAD/SDF format support
@@ -437,30 +435,30 @@ void uft_edsk_writer_free(uft_edsk_writer_t *writer)
  * Format Detection
  *===========================================================================*/
 
-uft_samdisk_format_t uft_samdisk_detect(const uint8_t *data, size_t size)
+uft_uft_sam_format_t uft_uft_sam_detect(const uint8_t *data, size_t size)
 {
-    if (!data || size < 64) return UFT_SAMDISK_UNKNOWN;
+    if (!data || size < 64) return UFT_UFT_SAM_UNKNOWN;
     
     /* Check SAD signature */
     if (size >= sizeof(sad_header_t)) {
         if (memcmp(data, SAD_SIGNATURE, SAD_SIG_LEN) == 0) {
-            return UFT_SAMDISK_SAD;
+            return UFT_UFT_SAM_SAD;
         }
     }
     
     /* Check Extended DSK signature */
     if (size >= sizeof(edsk_header_t)) {
         if (memcmp(data, EDSK_SIGNATURE, EDSK_SIG_LEN) == 0) {
-            return UFT_SAMDISK_EDSK;
+            return UFT_UFT_SAM_EDSK;
         }
     }
     
     /* Check standard DSK signature */
     if (memcmp(data, DSK_SIGNATURE, DSK_SIG_LEN) == 0) {
-        return UFT_SAMDISK_DSK;
+        return UFT_UFT_SAM_DSK;
     }
     
-    return UFT_SAMDISK_UNKNOWN;
+    return UFT_UFT_SAM_UNKNOWN;
 }
 
 /*===========================================================================

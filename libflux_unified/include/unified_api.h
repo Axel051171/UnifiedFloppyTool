@@ -16,7 +16,7 @@
 
 /* Include sub-APIs */
 #include "parameter_compensation.h"
-#include "samdisk_api.h"
+#include "uft_sam_api.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -212,7 +212,7 @@ compensation_mode_t unified_get_compensation_mode(unified_handle_t *handle);
  */
 int unified_list_formats(
     unified_handle_t *handle,
-    samdisk_format_info_t **formats_out,
+    uft_sam_format_info_t **formats_out,
     int *count_out
 );
 

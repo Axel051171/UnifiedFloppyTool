@@ -1,5 +1,5 @@
-static const int FC5025_VID=0x16c0;
-static const int FC5025_PID=0x6d6;
+static const int UFT_FC5025_VID=0x16c0;
+static const int UFT_FC5025_PID=0x6d6;
 
 static const unsigned char OPCODE_SEEK=0xc0;
 static const unsigned char OPCODE_SELF_TEST=0xc1;
@@ -27,7 +27,7 @@ int fc_SEEK_abs(int track);
 int fc_READ_ID(unsigned char *out, int length, char side, char format, int bitcell, unsigned char idam0, unsigned char idam1, unsigned char idam2);
 int fc_FLAGS(int in, int mask, int *out);
 int fc_set_density(int density);
-int fc5025_open(struct usb_device *dev);
-int fc5025_close(void);
-int fc5025_find(struct usb_device **devs, int max);
+int uft_fc5025_open(struct usb_device *dev);
+int uft_fc5025_close(void);
+int uft_fc5025_find(struct usb_device **devs, int max);
 

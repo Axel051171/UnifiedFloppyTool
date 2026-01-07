@@ -27,7 +27,7 @@ static uint32_t lba(uint32_t t, uint32_t h, uint32_t s){
     return (t * 2u + h) * 10u + (s - 1u);
 }
 
-int floppy_open(FloppyDevice *dev, const char *path){
+int uft_floppy_open(FloppyDevice *dev, const char *path){
     if(!dev || !path) return UFT_EINVAL;
 
     D81Ctx *ctx = calloc(1,sizeof(D81Ctx));
@@ -59,7 +59,7 @@ int floppy_open(FloppyDevice *dev, const char *path){
     return UFT_OK;
 }
 
-int floppy_close(FloppyDevice *dev){
+int uft_floppy_close(FloppyDevice *dev){
     if(!dev || !dev->internal_ctx) return UFT_EINVAL;
     D81Ctx *ctx = dev->internal_ctx;
     if(ctx->fp) fclose(ctx->fp);
@@ -68,7 +68,7 @@ int floppy_close(FloppyDevice *dev){
     return UFT_OK;
 }
 
-int floppy_read_sector(FloppyDevice *dev, uint32_t t, uint32_t h, uint32_t s, uint8_t *buf){
+int uft_floppy_read_sector(FloppyDevice *dev, uint32_t t, uint32_t h, uint32_t s, uint8_t *buf){
     if(!dev || !dev->internal_ctx || !buf) return UFT_EINVAL;
     int rc = validate(t,h,s);
     if(rc != UFT_OK) return rc;
@@ -80,7 +80,7 @@ int floppy_read_sector(FloppyDevice *dev, uint32_t t, uint32_t h, uint32_t s, ui
     return UFT_OK;
 }
 
-int floppy_write_sector(FloppyDevice *dev, uint32_t t, uint32_t h, uint32_t s, const uint8_t *buf){
+int uft_floppy_write_sector(FloppyDevice *dev, uint32_t t, uint32_t h, uint32_t s, const uint8_t *buf){
     if(!dev || !dev->internal_ctx || !buf) return UFT_EINVAL;
     D81Ctx *ctx = dev->internal_ctx;
     if(ctx->read_only) return UFT_ENOTSUP;
@@ -95,7 +95,7 @@ int floppy_write_sector(FloppyDevice *dev, uint32_t t, uint32_t h, uint32_t s, c
     return UFT_OK;
 }
 
-int floppy_analyze_protection(FloppyDevice *dev){
+int uft_floppy_analyze_protection(FloppyDevice *dev){
     if(!dev || !dev->internal_ctx) return UFT_EINVAL;
     log_msg(dev, "Analyzer(D81): sector dump only; no preservation of copy protection.");
     log_msg(dev, "Analyzer(D81): For protected titles, use flux formats (SCP/GWF) if available.");

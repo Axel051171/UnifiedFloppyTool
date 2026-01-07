@@ -1,8 +1,6 @@
 /**
  * @file uft_preset_flashfloppy.h
- * @brief FlashFloppy-derived format presets
  *
- * Formats extracted from FlashFloppy (Public Domain)
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
@@ -16,7 +14,6 @@ extern "C" {
 #endif
 
 /**
- * @brief FlashFloppy-derived format presets
  */
 static const uft_format_preset_t UFT_PRESETS_FLASHFLOPPY[] = {
     /* ===== TI-99/4A Formats ===== */

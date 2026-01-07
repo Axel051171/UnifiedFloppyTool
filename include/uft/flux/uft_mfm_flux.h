@@ -2,7 +2,6 @@
  * @file uft_mfm_flux.h
  * @brief MFM Flux Analysis for IBM PC Floppy Disks
  * 
- * Based on flux-analyze project
  * Implements MFM decoding, address mark detection, and sector parsing
  */
 

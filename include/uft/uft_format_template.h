@@ -4,7 +4,7 @@
  * 
  * Use this as a starting point for migrating any format to the
  * unified UFT API with standard lifecycle, error handling, and
- * a8rawconv compatibility.
+ * Atari 8-bit compatibility.
  * 
  * @version 2.10.0
  * @date 2024-12-26
@@ -113,7 +113,7 @@ uft_rc_t uft_format_detect(const uint8_t* buffer, size_t size);
 uft_rc_t uft_format_open(uft_format_ctx_t* ctx, const char* path, bool read_only);
 
 /**
- * @brief Read sector by CHS (a8rawconv compatible)
+ * @brief Read sector by CHS (Atari compatible)
  * 
  * Standard CHS pattern for all logical formats.
  * 

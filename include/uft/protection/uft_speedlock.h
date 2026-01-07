@@ -3,7 +3,6 @@
  * @brief Speedlock Variable-Density Protection Handler
  * 
  * Implements detection and analysis of Speedlock protection.
- * Based on algorithm analysis from Keir Fraser's disk-utilities.
  * Clean-room reimplementation for UFT.
  * 
  * Speedlock uses variable-density regions on the track:

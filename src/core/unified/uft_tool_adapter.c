@@ -2,7 +2,6 @@
  * @file uft_tool_adapter.c
  * @brief Tool Adapter Registry Implementation
  * 
- * Verwaltet externe Tools wie Greaseweazle CLI, nibtools, etc.
  */
 
 #include "uft/uft_tool_adapter.h"
@@ -180,9 +179,8 @@ const char* uft_tool_get_preferred(void) {
 // Built-in Tool Adapters (Stubs)
 // ============================================================================
 
-// --- Greaseweazle CLI Adapter ---
 
-static bool gw_is_available(void) {
+static bool uft_gw_is_available(void) {
     // Check if 'gw' command exists
     FILE* p = popen("which gw 2>/dev/null", "r");
     if (!p) return false;
@@ -194,7 +192,7 @@ static bool gw_is_available(void) {
     return found;
 }
 
-static bool gw_detect_hardware(char* info, size_t size) {
+static bool uft_gw_detect_hardware(char* info, size_t size) {
     /* BUGFIX: Better error handling and device detection
      * - Check for actual device presence, not just command output
      * - Handle cases where gw is installed but no device connected
@@ -248,7 +246,7 @@ static bool gw_detect_hardware(char* info, size_t size) {
     return false;
 }
 
-static uft_error_t gw_read_disk(void* context,
+static uft_error_t uft_gw_read_disk(void* context,
                                  const uft_tool_read_params_t* params,
                                  uft_unified_image_t* output) {
     (void)context;
@@ -270,7 +268,7 @@ static uft_error_t gw_read_disk(void* context,
         fmt_arg = "raw";
     }
     
-    snprintf(tmpfile, sizeof(tmpfile), "/tmp/gw_read_%u.%s", 
+    snprintf(tmpfile, sizeof(tmpfile), "/tmp/uft_gw_read_%u.%s", 
              (unsigned)getpid(), ext);
     
     /* Build gw read command */
@@ -399,16 +397,16 @@ static const uft_tool_adapter_t g_tool_gw = {
     .supported_formats = (1 << UFT_FORMAT_SCP) | (1 << UFT_FORMAT_HFE),
     .init = NULL,
     .cleanup = NULL,
-    .is_available = gw_is_available,
-    .detect_hardware = gw_detect_hardware,
-    .read_disk = gw_read_disk,
+    .is_available = uft_gw_is_available,
+    .detect_hardware = uft_gw_detect_hardware,
+    .read_disk = uft_gw_read_disk,
     .write_disk = NULL,
     .convert = NULL,
 };
 
-// --- nibtools Adapter ---
+// --- GCR tools Adapter ---
 
-static bool nibtools_is_available(void) {
+static bool GCR tools_is_available(void) {
     FILE* p = popen("which nibread 2>/dev/null", "r");
     if (!p) return false;
     
@@ -419,25 +417,25 @@ static bool nibtools_is_available(void) {
     return found;
 }
 
-static const uft_tool_adapter_t g_tool_nibtools = {
-    .name = "nibtools",
+static const uft_tool_adapter_t g_tool_GCR tools = {
+    .name = "GCR tools",
     .version = "1.0",
     .description = "Commodore Disk Tools",
     .capabilities = UFT_TOOL_CAP_READ | UFT_TOOL_CAP_WRITE | UFT_TOOL_CAP_SECTOR | UFT_TOOL_CAP_HARDWARE,
     .supported_formats = (1 << UFT_FORMAT_D64) | (1 << UFT_FORMAT_G64) | (1 << UFT_FORMAT_NBZ),
     .init = NULL,
     .cleanup = NULL,
-    .is_available = nibtools_is_available,
+    .is_available = GCR tools_is_available,
     .detect_hardware = NULL,
     .read_disk = NULL,
     .write_disk = NULL,
     .convert = NULL,
 };
 
-// --- hxcfe Adapter ---
+// --- libflux_ctx Adapter ---
 
-static bool hxcfe_is_available(void) {
-    FILE* p = popen("which hxcfe 2>/dev/null", "r");
+static bool libflux_is_available(void) {
+    FILE* p = popen("which libflux_ctx 2>/dev/null", "r");
     if (!p) return false;
     
     char buf[256];
@@ -447,7 +445,7 @@ static bool hxcfe_is_available(void) {
     return found;
 }
 
-static uft_error_t hxcfe_convert(void* context,
+static uft_error_t libflux_convert(void* context,
                                   const char* input,
                                   const char* output,
                                   uft_format_t format) {
@@ -466,26 +464,26 @@ static uft_error_t hxcfe_convert(void* context,
         default: break;
     }
     
-    snprintf(cmd, sizeof(cmd), "hxcfe -finput:\"%s\" -foutput:\"%s\" -conv:%s 2>/dev/null",
+    snprintf(cmd, sizeof(cmd), "libflux_ctx -finput:\"%s\" -foutput:\"%s\" -conv:%s 2>/dev/null",
              input, output, fmt_str);
     
     int ret = system(cmd);
     return (ret == 0) ? UFT_OK : UFT_ERROR_TOOL_FAILED;
 }
 
-static const uft_tool_adapter_t g_tool_hxcfe = {
-    .name = "hxcfe",
+static const uft_tool_adapter_t g_tool_libflux_ctx = {
+    .name = "libflux_ctx",
     .version = "1.0",
-    .description = "HxC Floppy Emulator Tool",
+    .description = "UFT HFE Format Tool",
     .capabilities = UFT_TOOL_CAP_CONVERT | UFT_TOOL_CAP_FLUX | UFT_TOOL_CAP_SECTOR,
     .supported_formats = 0xFFFFFFFF,  // Supports many formats
     .init = NULL,
     .cleanup = NULL,
-    .is_available = hxcfe_is_available,
+    .is_available = libflux_is_available,
     .detect_hardware = NULL,
     .read_disk = NULL,
     .write_disk = NULL,
-    .convert = hxcfe_convert,
+    .convert = libflux_convert,
 };
 
 // ============================================================================
@@ -494,6 +492,6 @@ static const uft_tool_adapter_t g_tool_hxcfe = {
 
 void uft_register_builtin_tools(void) {
     uft_tool_register(&g_tool_gw);
-    uft_tool_register(&g_tool_nibtools);
-    uft_tool_register(&g_tool_hxcfe);
+    uft_tool_register(&g_tool_GCR tools);
+    uft_tool_register(&g_tool_libflux_ctx);
 }

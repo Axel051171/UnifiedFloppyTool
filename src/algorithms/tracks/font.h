@@ -1,3 +1,6 @@
+#ifndef UFT_ALGORITHMS_TRACKS_FONT_H
+#define UFT_ALGORITHMS_TRACKS_FONT_H
+
 // Basic Font (basic latin)
 unsigned char font8x8[]=
 {
@@ -130,3 +133,5 @@ unsigned char font8x8[]=
 	0x6E, 0x3B, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, //U+007E (~)
 	0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF  //U+007F
 };
+
+#endif /* UFT_ALGORITHMS_TRACKS_FONT_H */

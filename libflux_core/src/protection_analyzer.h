@@ -45,11 +45,11 @@ typedef struct {
 } FloppyInterface;
 
 /* --- Uniform interface (MUST stay identical across modules) --- */
-int floppy_open(FloppyInterface* dev, const char* path);
-int floppy_close(FloppyInterface* dev);
-int floppy_read(FloppyInterface* dev, uint32_t c, uint32_t h, uint32_t s, uint8_t* buffer);
-int floppy_write(FloppyInterface* dev, uint32_t c, uint32_t h, uint32_t s, const uint8_t* buffer);
-int floppy_analyze_protection(FloppyInterface* dev);
+int uft_floppy_open(FloppyInterface* dev, const char* path);
+int uft_floppy_close(FloppyInterface* dev);
+int uft_floppy_read(FloppyInterface* dev, uint32_t c, uint32_t h, uint32_t s, uint8_t* buffer);
+int uft_floppy_write(FloppyInterface* dev, uint32_t c, uint32_t h, uint32_t s, const uint8_t* buffer);
+int uft_floppy_analyze_protection(FloppyInterface* dev);
 
 /* --- Extra API (allowed) --- */
 
@@ -109,7 +109,7 @@ typedef struct {
     size_t weakRegionCount;
 } UFT_ProtectionReport;
 
-/* Retrieve the last report after floppy_analyze_protection(). */
+/* Retrieve the last report after uft_floppy_analyze_protection(). */
 const UFT_ProtectionReport* uft_get_last_report(const FloppyInterface* dev);
 
 /*

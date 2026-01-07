@@ -84,11 +84,9 @@ typedef enum {
     
     /* Flux Formats */
     UFT_FMT_SCP,            /* SuperCard Pro */
-    UFT_FMT_HFE,            /* HxC Floppy Emulator */
+    UFT_FMT_HFE,            /* UFT HFE Format */
     UFT_FMT_HFE_V3,         /* HxC v3 */
-    UFT_FMT_KRYOFLUX,       /* KryoFlux Stream */
     UFT_FMT_DMK,            /* TRS-80 DMK */
-    UFT_FMT_FLX,            /* FluxEngine Native */
     UFT_FMT_CT,             /* CatWeasel */
     UFT_FMT_RAW_FLUX,       /* Raw Flux Data */
     

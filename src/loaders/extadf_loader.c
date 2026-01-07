@@ -2,25 +2,20 @@
 //
 // Copyright (C) 2006-2025 Jean-François DEL NERO
 //
-// This file is part of the HxCFloppyEmulator library
 //
-// HxCFloppyEmulator may be used and distributed without restriction provided
 // that this copyright statement is not removed from the file and that any
 // derivative work contains the original copyright notice and the associated
 // disclaimer.
 //
-// HxCFloppyEmulator is free software; you can redistribute it
 // and/or modify  it under the terms of the GNU General Public License
 // as published by the Free Software Foundation; either version 2
 // of the License, or (at your option) any later version.
 //
-// HxCFloppyEmulator is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 //   See the GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with HxCFloppyEmulator; if not, write to the Free Software
 // Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 //
 */
@@ -49,46 +44,46 @@
 
 #include "types.h"
 
-#include "internal_libhxcfe.h"
-#include "libhxcfe.h"
+#include "libflux.h""
+#include "libflux.h""
 #include "./tracks/track_generator.h"
 
-#include "floppy_loader.h"
-#include "floppy_utils.h"
+#include "uft_floppy_loader.h"
+#include "uft_floppy_utils.h"
 
 #include "extadf_loader.h"
 
 #include "libhxcadaptor.h"
 
-int EXTADF_libIsValidDiskFile( HXCFE_IMGLDR * imgldr_ctx, HXCFE_IMGLDR_FILEINFOS * imgfile )
+int EXTADF_libIsValidDiskFile( LIBFLUX_IMGLDR * imgldr_ctx, LIBFLUX_IMGLDR_FILEINFOS * imgfile )
 {
-	imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"EXTADF_libIsValidDiskFile");
+	imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"EXTADF_libIsValidDiskFile");
 
-	if( hxc_checkfileext(imgfile->path,"adf",SYS_PATH_TYPE) )
+	if( libflux_checkfileext(imgfile->path,"adf",SYS_PATH_TYPE) )
 	{
 		if(!strncmp((char*)imgfile->file_header,"UAE-1ADF",8))
 		{
-			imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"EXTADF_libIsValidDiskFile : Extended ADF file (new version)!");
-			return HXCFE_VALIDFILE;
+			imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"EXTADF_libIsValidDiskFile : Extended ADF file (new version)!");
+			return LIBFLUX_VALIDFILE;
 		}
 
-		return HXCFE_BADFILE;
+		return LIBFLUX_BADFILE;
 	}
 	else
 	{
-		imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"EXTADF_libIsValidDiskFile : non Extended ADF file !");
-		return HXCFE_BADFILE;
+		imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"EXTADF_libIsValidDiskFile : non Extended ADF file !");
+		return LIBFLUX_BADFILE;
 	}
 }
 
-int EXTADF_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,char * imgfile,void * parameters)
+int EXTADF_libLoad_DiskFile(LIBFLUX_IMGLDR * imgldr_ctx,LIBFLUX_FLOPPY * floppydisk,char * imgfile,void * parameters)
 {
 	FILE * f;
 	unsigned int filesize;
 	int i,j;
 	unsigned char* trackdata;
 	int tracklen;
-	HXCFE_CYLINDER* currentcylinder;
+	LIBFLUX_CYLINDER* currentcylinder;
 	unsigned int numberoftrack;
 
 	unsigned char header[12];
@@ -100,26 +95,26 @@ int EXTADF_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,
 
 	tracktable = NULL;
 
-	imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"EXTADF_libLoad_DiskFile %s",imgfile);
+	imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"EXTADF_libLoad_DiskFile %s",imgfile);
 
-	f = hxc_fopen(imgfile,"rb");
+	f = libflux_fopen(imgfile,"rb");
 	if( f == NULL )
 	{
-		imgldr_ctx->hxcfe->hxc_printf(MSG_ERROR,"Cannot open %s !",imgfile);
-		return HXCFE_ACCESSERROR;
+		imgldr_ctx->ctx->libflux_printf(MSG_ERROR,"Cannot open %s !",imgfile);
+		return LIBFLUX_ACCESSERROR;
 	}
 
-	filesize = hxc_fgetsize(f);
+	filesize = libflux_fgetsize(f);
 
 	if( !filesize )
 	{
-		imgldr_ctx->hxcfe->hxc_printf(MSG_ERROR,"Bad file size : %d !",filesize);
-		hxc_fclose(f);
-		return HXCFE_BADFILE;
+		imgldr_ctx->ctx->libflux_printf(MSG_ERROR,"Bad file size : %d !",filesize);
+		libflux_fclose(f);
+		return LIBFLUX_BADFILE;
 	}
 
 	memset(header,0,sizeof(header));
-	hxc_fread(header,12,f);
+	libflux_fread(header,12,f);
 
 	numberoftrack=0;
 	if(!strncmp((char*)header,"UAE-1ADF",8))
@@ -131,7 +126,7 @@ int EXTADF_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,
 
 		memset(tracktable,0,12*numberoftrack);
 
-		hxc_fread(tracktable,12*numberoftrack,f);
+		libflux_fread(tracktable,12*numberoftrack,f);
 	}
 	trackindex=0;
 
@@ -148,14 +143,14 @@ int EXTADF_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,
 	floppydisk->floppyNumberOfSide=2;
 	floppydisk->floppyBitRate=DEFAULT_AMIGA_BITRATE;
 	floppydisk->floppyiftype=AMIGA_DD_FLOPPYMODE;
-	floppydisk->tracks = (HXCFE_CYLINDER**)malloc(sizeof(HXCFE_CYLINDER*)*floppydisk->floppyNumberOfTrack);
+	floppydisk->tracks = (LIBFLUX_CYLINDER**)malloc(sizeof(LIBFLUX_CYLINDER*)*floppydisk->floppyNumberOfTrack);
 
 	if(!floppydisk->tracks)
 		goto alloc_error;
 
 	tracklen=(DEFAULT_AMIGA_BITRATE/(DEFAULT_AMIGA_RPM/60))/4;
 
-	imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"Extended ADF : %x tracks",numberoftrack);
+	imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"Extended ADF : %x tracks",numberoftrack);
 
 	for(j=0;j<floppydisk->floppyNumberOfTrack;j++)
 	{
@@ -165,7 +160,7 @@ int EXTADF_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,
 
 		for(i=0;i<floppydisk->floppyNumberOfSide;i++)
 		{
-			hxcfe_imgCallProgressCallback(imgldr_ctx, (j<<1) + (i&1),floppydisk->floppyNumberOfTrack*2);
+			libflux_imgCallProgressCallback(imgldr_ctx, (j<<1) + (i&1),floppydisk->floppyNumberOfTrack*2);
 
 			if(trackindex<numberoftrack)
 			{
@@ -179,10 +174,10 @@ int EXTADF_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,
 
 					if(tracktable[(12*trackindex)+3]==1)
 					{
-						imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"[%.3d:%.1X] Reading Non-DOS track at 0x%.8x, Size : 0x%.8x",j,i,ftell(f),tracksize);
+						imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"[%.3d:%.1X] Reading Non-DOS track at 0x%.8x, Size : 0x%.8x",j,i,ftell(f),tracksize);
 
 						currentcylinder->sides[i]=tg_alloctrack(DEFAULT_AMIGA_BITRATE,AMIGA_MFM_ENCODING,DEFAULT_AMIGA_RPM,(tracksize)*8,2500,-100,0x00);
-						hxc_fread(currentcylinder->sides[i]->databuffer,tracksize,f);
+						libflux_fread(currentcylinder->sides[i]->databuffer,tracksize,f);
 						currentcylinder->sides[i]->number_of_sector=floppydisk->floppySectorPerTrack;
 
 					}
@@ -199,9 +194,9 @@ int EXTADF_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,
 							trackdata = (unsigned char*)malloc(tracksize);
 							if(trackdata)
 							{
-								imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"[%.3d:%.1X] Reading DOS track at 0x%.8x, Size : 0x%.8x",j,i,ftell(f),tracksize);
+								imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"[%.3d:%.1X] Reading DOS track at 0x%.8x, Size : 0x%.8x",j,i,ftell(f),tracksize);
 
-								hxc_fread(trackdata,tracksize,f);
+								libflux_fread(trackdata,tracksize,f);
 
 								currentcylinder->sides[i]=tg_generateTrack(trackdata,sectorsize,(unsigned short)(tracksize_bit/sectorsize),(unsigned char)j,(unsigned char)i,0,interleave,((j<<1)|(i&1))*skew,floppydisk->floppyBitRate,currentcylinder->floppyRPM,trackformat,gap3len,0,2500,-11150);
 
@@ -213,13 +208,13 @@ int EXTADF_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,
 				}
 				else
 				{
-					imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"[%.3d:%.1X] Null Size track!",j,i);
+					imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"[%.3d:%.1X] Null Size track!",j,i);
 					currentcylinder->sides[i]=tg_alloctrack(DEFAULT_AMIGA_BITRATE,AMIGA_MFM_ENCODING,DEFAULT_AMIGA_RPM,(tracklen)*8,2500,-11360,0x00);
 				}
 			}
 			else
 			{
-				imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"[%.3d:%.1X] No track!",j,i);
+				imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"[%.3d:%.1X] No track!",j,i);
 				currentcylinder->sides[i]=tg_alloctrack(DEFAULT_AMIGA_BITRATE,AMIGA_MFM_ENCODING,DEFAULT_AMIGA_RPM,(tracklen)*8,2500,-11360,0x00);
 			}
 
@@ -229,25 +224,25 @@ int EXTADF_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,
 
 	free(tracktable);
 
-	imgldr_ctx->hxcfe->hxc_printf(MSG_INFO_1,"track file successfully loaded and encoded!");
-	hxc_fclose(f);
+	imgldr_ctx->ctx->libflux_printf(MSG_INFO_1,"track file successfully loaded and encoded!");
+	libflux_fclose(f);
 
-	hxcfe_sanityCheck(imgldr_ctx->hxcfe,floppydisk);
+	libflux_sanityCheck(imgldr_ctx->ctx,floppydisk);
 
-	return HXCFE_NOERROR;
+	return LIBFLUX_NOERROR;
 
 alloc_error:
 
 	free(tracktable);
 
-	hxc_fclose(f);
+	libflux_fclose(f);
 
-	hxcfe_freeFloppy(imgldr_ctx->hxcfe, floppydisk );
+	libflux_freeFloppy(imgldr_ctx->ctx, floppydisk );
 
-	return HXCFE_INTERNALERROR;
+	return LIBFLUX_INTERNALERROR;
 }
 
-int EXTADF_libGetPluginInfo(HXCFE_IMGLDR * imgldr_ctx,uint32_t infotype,void * returnvalue)
+int EXTADF_libGetPluginInfo(LIBFLUX_IMGLDR * imgldr_ctx,uint32_t infotype,void * returnvalue)
 {
 	static const char plug_id[]="AMIGA_EXTADF";
 	static const char plug_desc[]="AMIGA EXTENDED ADF Loader";

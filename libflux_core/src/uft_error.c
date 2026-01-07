@@ -45,7 +45,6 @@ const char* uft_strerror(uft_rc_t rc) {
         /* Resource errors */
         case UFT_ERR_MEMORY:
             return "Memory allocation failed";
-        case UFT_ERR_RESOURCE:
             return "Resource limit exceeded";
         case UFT_ERR_BUSY:
             return "Resource busy";

@@ -143,7 +143,7 @@ typedef enum {
     /* Flux */
     UFT_FMT_SCP,            /**< SuperCard Pro */
     UFT_FMT_KF,             /**< KryoFlux stream */
-    UFT_FMT_HFE,            /**< HxC Floppy Emulator */
+    UFT_FMT_HFE,            /**< UFT HFE Format */
     UFT_FMT_HFE_V3,         /**< HFE version 3 */
     UFT_FMT_MFM,            /**< Raw MFM stream */
     UFT_FMT_IPF,            /**< Interchangeable */

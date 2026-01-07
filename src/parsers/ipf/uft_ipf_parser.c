@@ -41,7 +41,7 @@ typedef struct {
     uint32_t    encoder;        /**< Encoder type */
     uint32_t    version;        /**< Format version */
     uint32_t    reserved;       /**< Reserved */
-} caps_record_t;
+} uft_caps_record_t;
 
 /** INFO record layout */
 typedef struct {
@@ -444,8 +444,8 @@ ipf_context_t *ipf_open(const char *path) {
     ctx->file_size = file_size;
     
     /* Parse CAPS header record */
-    uint32_t caps_len = read_be32(file_data + 4);
-    if (caps_len >= 12) {
+    uint32_t uft_caps_len = read_be32(file_data + 4);
+    if (uft_caps_len >= 12) {
         ctx->version = read_be32(file_data + 16);
     }
     
@@ -458,7 +458,7 @@ ipf_context_t *ipf_open(const char *path) {
     }
     
     /* Parse all records */
-    const uint8_t *ptr = file_data + 12 + caps_len;
+    const uint8_t *ptr = file_data + 12 + uft_caps_len;
     const uint8_t *end = file_data + file_size;
     bool has_info = false;
     

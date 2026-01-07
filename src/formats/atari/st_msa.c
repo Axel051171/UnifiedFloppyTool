@@ -62,7 +62,7 @@ static int msa_decompress(FILE *fp, uint8_t **out, uint32_t *out_size){
     return 0;
 }
 
-int floppy_open(FloppyDevice *dev, const char *path){
+int uft_floppy_open(FloppyDevice *dev, const char *path){
     if(!dev||!path) return UFT_EINVAL;
     StCtx *ctx = calloc(1,sizeof(StCtx));
     if(!ctx) return UFT_EIO;
@@ -77,7 +77,7 @@ int floppy_open(FloppyDevice *dev, const char *path){
     ctx->is_msa = (ext && (ext[1]=='m' || ext[1]=='M'));
 
     uint64_t size;
-    fseek(fp,0,SEEK_END); size=(uint64_t)ftell(fp); fseek(fp,0,SEEK_SET);
+    (void)fseek(fp,0,SEEK_END); size=(uint64_t)ftell(fp); (void)fseek(fp,0,SEEK_SET);
 
     if(ctx->is_msa){
         if(msa_decompress(fp,&ctx->msa_cache,&ctx->msa_size)!=0){
@@ -103,7 +103,7 @@ int floppy_open(FloppyDevice *dev, const char *path){
     return UFT_OK;
 }
 
-int floppy_close(FloppyDevice *dev){
+int uft_floppy_close(FloppyDevice *dev){
     if(!dev||!dev->internal_ctx) return UFT_EINVAL;
     StCtx *ctx=dev->internal_ctx;
     if(ctx->fp) fclose(ctx->fp);
@@ -113,7 +113,7 @@ int floppy_close(FloppyDevice *dev){
     return UFT_OK;
 }
 
-int floppy_read_sector(FloppyDevice *dev,uint32_t t,uint32_t h,uint32_t s,uint8_t *buf){
+int uft_floppy_read_sector(FloppyDevice *dev,uint32_t t,uint32_t h,uint32_t s,uint8_t *buf){
     if(!dev||!dev->internal_ctx||!buf) return UFT_EINVAL;
     StCtx *ctx=dev->internal_ctx;
     if(t>=ctx->tracks||h>=ctx->heads||s==0||s>ctx->sectors) return UFT_EBOUNDS;
@@ -128,7 +128,7 @@ int floppy_read_sector(FloppyDevice *dev,uint32_t t,uint32_t h,uint32_t s,uint8_
     return UFT_OK;
 }
 
-int floppy_write_sector(FloppyDevice *dev,uint32_t t,uint32_t h,uint32_t s,const uint8_t *buf){
+int uft_floppy_write_sector(FloppyDevice *dev,uint32_t t,uint32_t h,uint32_t s,const uint8_t *buf){
     if(!dev||!dev->internal_ctx||!buf) return UFT_EINVAL;
     StCtx *ctx=dev->internal_ctx;
     if(ctx->read_only||ctx->is_msa) return UFT_ENOTSUP;
@@ -141,7 +141,7 @@ int floppy_write_sector(FloppyDevice *dev,uint32_t t,uint32_t h,uint32_t s,const
     return UFT_OK;
 }
 
-int floppy_analyze_protection(FloppyDevice *dev){
+int uft_floppy_analyze_protection(FloppyDevice *dev){
     if(!dev||!dev->internal_ctx) return UFT_EINVAL;
     log_msg(dev,"Analyzer(ST/MSA): working formats; no weak bits or timing preserved. Use IPF/flux for protections.");
     return UFT_OK;

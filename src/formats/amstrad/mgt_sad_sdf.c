@@ -19,7 +19,7 @@ static int infer_geom(long sz, uint32_t* tracks, uint32_t* heads){
     return -1;
 }
 
-int floppy_open(FloppyDevice *dev,const char*path){
+int uft_floppy_open(FloppyDevice *dev,const char*path){
     if(!dev||!path) return EINVAL;
     Ctx *ctx=calloc(1,sizeof(Ctx));
     if(!ctx) return EIO;
@@ -50,7 +50,7 @@ int floppy_open(FloppyDevice *dev,const char*path){
     return OK;
 }
 
-int floppy_close(FloppyDevice *dev){
+int uft_floppy_close(FloppyDevice *dev){
     if(!dev||!dev->internal_ctx) return EINVAL;
     Ctx *ctx=dev->internal_ctx;
     fclose(ctx->fp);
@@ -59,7 +59,7 @@ int floppy_close(FloppyDevice *dev){
     return OK;
 }
 
-int floppy_read_sector(FloppyDevice *dev,uint32_t t,uint32_t h,uint32_t s,uint8_t *buf){
+int uft_floppy_read_sector(FloppyDevice *dev,uint32_t t,uint32_t h,uint32_t s,uint8_t *buf){
     if(!dev||!dev->internal_ctx||!buf) return EINVAL;
     Ctx *ctx=dev->internal_ctx;
     if(t>=ctx->tracks||h>=ctx->heads||s==0||s>9) return EBOUNDS;
@@ -71,7 +71,7 @@ int floppy_read_sector(FloppyDevice *dev,uint32_t t,uint32_t h,uint32_t s,uint8_
     return OK;
 }
 
-int floppy_write_sector(FloppyDevice *dev,uint32_t t,uint32_t h,uint32_t s,const uint8_t *buf){
+int uft_floppy_write_sector(FloppyDevice *dev,uint32_t t,uint32_t h,uint32_t s,const uint8_t *buf){
     if(!dev||!dev->internal_ctx||!buf) return EINVAL;
     Ctx *ctx=dev->internal_ctx;
     if(ctx->ro) return ENOTSUP;
@@ -85,7 +85,7 @@ int floppy_write_sector(FloppyDevice *dev,uint32_t t,uint32_t h,uint32_t s,const
     return OK;
 }
 
-int floppy_analyze_protection(FloppyDevice *dev){
+int uft_floppy_analyze_protection(FloppyDevice *dev){
     logm(dev,"Analyzer(MGT/SAD/SDF): raw sector dump, no flux-level protection.");
     return OK;
 }

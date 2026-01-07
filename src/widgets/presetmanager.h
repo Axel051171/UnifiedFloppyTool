@@ -3,7 +3,6 @@
  * @brief Profile/Preset Management System
  * @version 3.0.0
  * 
- * BASED ON: FluxMyFluffyFloppy Templates + KryoFlux Image Profiles
  * 
  * FEATURES:
  * - Built-in presets (PC, Amiga, C64, Atari, Apple)

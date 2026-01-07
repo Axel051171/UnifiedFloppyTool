@@ -3,11 +3,9 @@
  * example_hardware_flux.c - Hardware & Flux Format Examples
  * 
  * Demonstrates the 6 new formats in v2.8.9:
- * - GWFLUX: Greaseweazle flux captures (TIER 0)
- * - KFS: KryoFlux stream files (TIER 0)
  * - GCRRAW: GCR pipeline layer (TIER 0.5)
  * - MFMRAW: MFM pipeline layer (TIER 0.5)
- * - HFE: HxC Floppy Emulator (TIER 1)
+ * - HFE: UFT HFE Format (TIER 1)
  * - D71: C64 1571 double-sided (TIER 1)
  * 
  * Special focus on hardware preservation workflow!
@@ -17,17 +15,24 @@
  */
 
 #include <stdio.h>
+#include "uft/core/uft_safe_parse.h"
 #include <stdlib.h>
+#include "uft/core/uft_safe_parse.h"
 #include <string.h>
+#include "uft/core/uft_safe_parse.h"
 #include <stdbool.h>
+#include "uft/core/uft_safe_parse.h"
 
 #include "hardware_formats.h"
+#include "uft/core/uft_safe_parse.h"
 #include "pipeline_formats.h"
+#include "uft/core/uft_safe_parse.h"
 #include "emulator_formats.h"
+#include "uft/core/uft_safe_parse.h"
 #include "c64_formats.h"
+#include "uft/core/uft_safe_parse.h"
 
 /*============================================================================*
- * EXAMPLE 1: GWFLUX (Greaseweazle - TIER 0!)
  *============================================================================*/
 
 static void example_gwflux(void)
@@ -87,7 +92,6 @@ static void example_gwflux(void)
 }
 
 /*============================================================================*
- * EXAMPLE 2: KFS (KryoFlux Stream - TIER 0!)
  *============================================================================*/
 
 static void example_kfs(void)
@@ -284,12 +288,12 @@ static void example_hfe(void)
 {
     printf("\n");
     printf("╔═══════════════════════════════════════════════════════════╗\n");
-    printf("║  EXAMPLE 5: HFE (HxC Floppy Emulator - TIER 1!)          ║\n");
+    printf("║  EXAMPLE 5: HFE (UFT HFE Format - TIER 1!)          ║\n");
     printf("╚═══════════════════════════════════════════════════════════╝\n");
     printf("\n");
     
     printf("HFE Format:\n");
-    printf("  • HxC Floppy Emulator format\n");
+    printf("  • UFT HFE Format format\n");
     printf("  • Track-oriented bitstreams\n");
     printf("  • MFM/FM encoding support\n");
     printf("  • Works on REAL hardware! 💾\n");
@@ -329,8 +333,8 @@ static void example_hfe(void)
     printf("Real-World Workflow:\n");
     printf("  1. Preserve disk → Create IMG file\n");
     printf("  2. Convert IMG → HFE format\n");
-    printf("  3. Load HFE onto HxC device\n");
-    printf("  4. Insert HxC into vintage computer\n");
+    printf("  3. Load HFE onto floppy emulator\n");
+    printf("  4. Insert emulator into vintage computer\n");
     printf("  5. Computer thinks it has real floppy!\n");
     printf("\n");
     
@@ -486,7 +490,7 @@ static void example_complete_workflow(void)
     printf("    → Widely compatible\n");
     printf("  \n");
     printf("  TIER 2 (Hardware Emulator):\n");
-    printf("    game.hfe          - HxC emulator format\n");
+    printf("    game.hfe          - UFT HFE format\n");
     printf("    → For real C64 with HxC\n");
     printf("    → Museum exhibits\n");
     printf("\n");
@@ -513,7 +517,11 @@ int main(int argc, char *argv[])
     printf("╚═══════════════════════════════════════════════════════════╝\n");
     
     if (argc > 1) {
-        int example = atoi(argv[1]);
+        int32_t example = 0;
+        if (!uft_parse_int32(argv[1], &example, 10)) {
+            fprintf(stderr, "Invalid argument: %s\n", argv[1]);
+            return 1;
+        }
         
         switch (example) {
             case 1: example_gwflux(); break;
@@ -568,7 +576,7 @@ int main(int argc, char *argv[])
     printf("       ✅ PC/Atari/Amiga essential!\n");
     printf("  \n");
     printf("  TIER 1 - FORMATS:\n");
-    printf("    5. HFE - HxC Emulator (208 LOC) 💥\n");
+    printf("    5. HFE format (208 LOC) 💥\n");
     printf("       ✅ Works on real hardware!\n");
     printf("    6. D71 - C64 1571 (203 LOC) 💥\n");
     printf("       ✅ Completes C64!\n");
@@ -581,7 +589,7 @@ int main(int argc, char *argv[])
     printf("  🔥 Hardware FLUX complete!\n");
     printf("  🔥 Greaseweazle + KryoFlux!\n");
     printf("  🔥 GCR + MFM pipeline layers!\n");
-    printf("  🔥 HxC emulator support!\n");
+    printf("  🔥 UFT HFE support!\n");
     printf("  🔥 C64 1571 complete!\n");
     printf("  🔥 Museum-grade preservation!\n");
     printf("\n");

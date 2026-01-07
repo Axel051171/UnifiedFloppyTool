@@ -2,8 +2,6 @@
  * @file uft_adaptive_decoder.h
  * @brief Adaptive Flux Decoder with Clustering
  * 
- * Based on FloppyAI custom_decoder.py
- * Ported from Python to C for UFT
  * 
  * Provides adaptive decoding using statistical analysis:
  * - K-means clustering for threshold detection

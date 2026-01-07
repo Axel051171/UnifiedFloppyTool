@@ -1,18 +1,14 @@
 //-----------------------------------------------------------------------------
-// gw_protocol.h
-// Greaseweazle Protocol Constants and Structures
+// uft_gw_protocol.h
 //
 // Created: 2025-12-05 20:00
 //
-// Extracted from: github.com/keirf/greaseweazle-firmware
 // Reference: inc/cdc_acm_protocol.h
 //
-// This file provides protocol definitions for Greaseweazle compatibility mode.
-// FluxRipper emulates a Greaseweazle F7 Lightning for maximum compatibility.
 //-----------------------------------------------------------------------------
 
-#ifndef GW_PROTOCOL_H
-#define GW_PROTOCOL_H
+#ifndef UFT_GW_PROTOCOL_H
+#define UFT_GW_PROTOCOL_H
 
 #include <stdint.h>
 
@@ -20,8 +16,7 @@
 // USB Identification
 //=============================================================================
 
-#define GW_USB_VID              0x1209  // pid.codes open-source VID
-#define GW_USB_PID              0x4D69  // Greaseweazle PID
+#define UFT_GW_USB_VID              0x1209  // pid.codes open-source VID
 
 //=============================================================================
 // Command Opcodes
@@ -132,23 +127,20 @@
 #define FLUX_STREAM_END         0x00    // Terminates flux stream
 
 //=============================================================================
-// Hardware Identity (FluxRipper reports as F7 Lightning)
 //=============================================================================
 
-#define GW_FW_MAJOR             1
-#define GW_FW_MINOR             6
-#define GW_IS_MAIN_FIRMWARE     1
-#define GW_HW_MODEL             7       // F7
-#define GW_HW_SUBMODEL          1       // Lightning
-#define GW_USB_SPEED            1       // High-Speed (480 Mbit/s)
-#define GW_MCU_ID               7       // STM32F730 (emulated)
-#define GW_MCU_MHZ              216
-#define GW_MCU_SRAM_KB          64
-#define GW_USB_BUF_KB           32
+#define UFT_GW_FW_MAJOR             1
+#define UFT_GW_FW_MINOR             6
+#define UFT_GW_IS_MAIN_FIRMWARE     1
+#define UFT_GW_HW_MODEL             7       // F7
+#define UFT_GW_HW_SUBMODEL          1       // Lightning
+#define UFT_GW_USB_SPEED            1       // High-Speed (480 Mbit/s)
+#define UFT_GW_MCU_ID               7       // STM32F730 (emulated)
+#define UFT_GW_MCU_MHZ              216
+#define UFT_GW_MCU_SRAM_KB          64
+#define UFT_GW_USB_BUF_KB           32
 
-// Sample frequency: 72 MHz standard Greaseweazle rate
-// FluxRipper converts from 300 MHz internally
-#define GW_SAMPLE_FREQ          72000000
+#define UFT_GW_SAMPLE_FREQ          72000000
 
 //=============================================================================
 // Structures (packed, little-endian)
@@ -171,27 +163,27 @@ typedef struct {
     uint16_t mcu_sram_kb;       // MCU SRAM size (KB)
     uint16_t usb_buf_kb;        // USB buffer size (KB)
     uint8_t  reserved[14];      // Reserved for future use
-} gw_info_t;
+} uft_gw_info_t;
 
 // GET_INFO (GETINFO_CURRENT_DRIVE) response - 2 bytes
 typedef struct {
     uint8_t  flags;             // [0]=cyl_valid, [1]=selected, [2]=motor, [3]=flippy
     uint8_t  cylinder;          // Current cylinder position
-} gw_drive_info_t;
+} uft_gw_drive_info_t;
 
 // READ_FLUX command parameters
 typedef struct {
     uint32_t ticks;             // Maximum ticks to capture (0 = unlimited)
     uint16_t max_index;         // Maximum index pulses (0 = unlimited)
     uint32_t max_index_linger;  // Optional linger time after last index (µs)
-} gw_read_flux_t;
+} uft_gw_read_flux_t;
 
 // WRITE_FLUX command parameters
 typedef struct {
     uint8_t  cue_at_index;      // Start write at index pulse
     uint8_t  terminate_at_index;// Stop write at next index pulse
     uint32_t hard_sector_ticks; // Hard sector timing (0 = disabled)
-} gw_write_flux_t;
+} uft_gw_write_flux_t;
 
 // Timing delays (PARAMS_DELAYS) - 8 x 16-bit values
 typedef struct {
@@ -203,22 +195,22 @@ typedef struct {
     uint16_t pre_write;         // Pre-write delay (µs)
     uint16_t post_write;        // Post-write delay (µs)
     uint16_t index_mask;        // Index mask time (µs)
-} gw_delays_t;
+} uft_gw_delays_t;
 
 // MOTOR command parameters
 typedef struct {
     uint8_t  unit;              // Drive unit number
     uint8_t  state;             // 0 = off, 1 = on
-} gw_motor_t;
+} uft_gw_motor_t;
 
 // SEEK command parameters (variable length)
 typedef struct {
     int8_t   cylinder;          // Target cylinder (8-bit signed)
-} gw_seek_8_t;
+} uft_gw_seek_8_t;
 
 typedef struct {
     int16_t  cylinder;          // Target cylinder (16-bit signed)
-} gw_seek_16_t;
+} uft_gw_seek_16_t;
 
 #pragma pack(pop)
 
@@ -242,14 +234,13 @@ typedef struct {
 #define N28_BYTE3(v)            (((((v) >> 20) & 0x7F) << 1) | 1)
 
 //=============================================================================
-// Rate Conversion (FluxRipper 300 MHz -> GW 72 MHz)
 //=============================================================================
 
-// Conversion: GW_ticks = FR_ticks * 72 / 300 = FR_ticks * 6 / 25
+// Conversion: UFT_GW_ticks = FR_ticks * 72 / 300 = FR_ticks * 6 / 25
 #define FR_TO_GW_TICKS(fr_ticks)    (((uint32_t)(fr_ticks) * 6) / 25)
 
-// Reverse conversion: FR_ticks = GW_ticks * 300 / 72 = GW_ticks * 25 / 6
-#define GW_TO_FR_TICKS(gw_ticks)    (((uint32_t)(gw_ticks) * 25) / 6)
+// Reverse conversion: FR_ticks = UFT_GW_ticks * 300 / 72 = UFT_GW_ticks * 25 / 6
+#define UFT_GW_TO_FR_TICKS(uft_gw_ticks)    (((uint32_t)(uft_gw_ticks) * 25) / 6)
 
 //=============================================================================
 // Default Timing Parameters
@@ -264,4 +255,4 @@ typedef struct {
 #define DEFAULT_POST_WRITE      140     // 140µs
 #define DEFAULT_INDEX_MASK      2000    // 2ms
 
-#endif // GW_PROTOCOL_H
+#endif // UFT_GW_PROTOCOL_H

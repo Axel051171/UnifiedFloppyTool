@@ -1,6 +1,5 @@
 /**
  * @file uft_kryoflux.c
- * @brief KryoFlux Stream File Parser Implementation
  * 
  * Based on Aufit by Jean Louis-Guerin / Software Preservation Society
  */
@@ -16,13 +15,13 @@
  *===========================================================================*/
 
 uft_kf_status_t uft_kf_init(uft_kf_stream_t *stream) {
-    if (!stream) return UFT_KF_STATUS_READ_ERROR;
+    if (!stream) return UFT_UFT_KF_STATUS_READ_ERROR;
     
     memset(stream, 0, sizeof(*stream));
     
     /* Default clock values */
-    stream->sample_clock = UFT_KF_SAMPLE_CLOCK;
-    stream->index_clock = UFT_KF_INDEX_CLOCK;
+    stream->sample_clock = UFT_UFT_KF_SAMPLE_CLOCK;
+    stream->index_clock = UFT_UFT_KF_INDEX_CLOCK;
     
     /* Initial allocation */
     stream->flux_capacity = 65536;
@@ -31,18 +30,18 @@ uft_kf_status_t uft_kf_init(uft_kf_stream_t *stream) {
     
     if (!stream->flux_values || !stream->flux_positions) {
         uft_kf_free(stream);
-        return UFT_KF_STATUS_READ_ERROR;
+        return UFT_UFT_KF_STATUS_READ_ERROR;
     }
     
-    stream->indexes = malloc(UFT_KF_MAX_INDEX * sizeof(uft_kf_index_t));
-    stream->index_internal = malloc(UFT_KF_MAX_INDEX * sizeof(uft_kf_index_internal_t));
+    stream->indexes = malloc(UFT_UFT_KF_MAX_INDEX * sizeof(uft_kf_index_t));
+    stream->index_internal = malloc(UFT_UFT_KF_MAX_INDEX * sizeof(uft_kf_index_internal_t));
     
     if (!stream->indexes || !stream->index_internal) {
         uft_kf_free(stream);
-        return UFT_KF_STATUS_READ_ERROR;
+        return UFT_UFT_KF_STATUS_READ_ERROR;
     }
     
-    return UFT_KF_STATUS_OK;
+    return UFT_UFT_KF_STATUS_OK;
 }
 
 void uft_kf_free(uft_kf_stream_t *stream) {
@@ -73,7 +72,7 @@ void uft_kf_reset(uft_kf_stream_t *stream) {
 
 static uft_kf_status_t ensure_flux_capacity(uft_kf_stream_t *stream, uint32_t needed) {
     if (needed <= stream->flux_capacity) {
-        return UFT_KF_STATUS_OK;
+        return UFT_UFT_KF_STATUS_OK;
     }
     
     uint32_t new_cap = stream->flux_capacity * 2;
@@ -85,18 +84,18 @@ static uft_kf_status_t ensure_flux_capacity(uft_kf_stream_t *stream, uint32_t ne
     uint32_t *new_positions = realloc(stream->flux_positions, new_cap * sizeof(uint32_t));
     
     if (!new_values || !new_positions) {
-        return UFT_KF_STATUS_READ_ERROR;
+        return UFT_UFT_KF_STATUS_READ_ERROR;
     }
     
     stream->flux_values = new_values;
     stream->flux_positions = new_positions;
     stream->flux_capacity = new_cap;
     
-    return UFT_KF_STATUS_OK;
+    return UFT_UFT_KF_STATUS_OK;
 }
 
 static void emit_flux(uft_kf_stream_t *stream, uint32_t value, uint32_t stream_pos) {
-    if (ensure_flux_capacity(stream, stream->flux_count + 1) != UFT_KF_STATUS_OK) {
+    if (ensure_flux_capacity(stream, stream->flux_count + 1) != UFT_UFT_KF_STATUS_OK) {
         return;
     }
     
@@ -114,7 +113,7 @@ static uft_kf_status_t handle_oob(uft_kf_stream_t *stream,
                                   uint8_t type, uint16_t size,
                                   uint32_t stream_pos) {
     switch (type) {
-        case UFT_KF_OOB_STREAM_INFO:
+        case UFT_UFT_KF_OOB_STREAM_INFO:
             /* Parse stream info string */
             if (size > 0 && size < sizeof(stream->info_string)) {
                 memcpy(stream->info_string, data + pos, size);
@@ -122,8 +121,8 @@ static uft_kf_status_t handle_oob(uft_kf_stream_t *stream,
             }
             break;
             
-        case UFT_KF_OOB_INDEX:
-            if (size >= 12 && stream->index_count < UFT_KF_MAX_INDEX) {
+        case UFT_UFT_KF_OOB_INDEX:
+            if (size >= 12 && stream->index_count < UFT_UFT_KF_MAX_INDEX) {
                 uft_kf_index_internal_t *idx = &stream->index_internal[stream->index_count];
                 idx->stream_pos = uft_kf_read_u32(data + pos);
                 idx->sample_counter = uft_kf_read_u32(data + pos + 4);
@@ -132,31 +131,31 @@ static uft_kf_status_t handle_oob(uft_kf_stream_t *stream,
             }
             break;
             
-        case UFT_KF_OOB_STREAM_END:
+        case UFT_UFT_KF_OOB_STREAM_END:
             if (size >= 8) {
                 uint32_t result = uft_kf_read_u32(data + pos + 4);
-                if (result == UFT_KF_RESULT_BUFFERING) {
-                    return UFT_KF_STATUS_DEV_BUFFER;
+                if (result == UFT_UFT_KF_RESULT_BUFFERING) {
+                    return UFT_UFT_KF_STATUS_DEV_BUFFER;
                 }
-                if (result == UFT_KF_RESULT_NO_INDEX) {
-                    return UFT_KF_STATUS_DEV_INDEX;
+                if (result == UFT_UFT_KF_RESULT_NO_INDEX) {
+                    return UFT_UFT_KF_STATUS_DEV_INDEX;
                 }
             }
             break;
             
-        case UFT_KF_OOB_KF_INFO:
+        case UFT_UFT_KF_OOB_UFT_KF_INFO:
             /* Additional hardware info - append to info string */
             break;
             
-        case UFT_KF_OOB_EOF:
+        case UFT_UFT_KF_OOB_EOF:
             /* End of file marker */
             break;
             
         default:
-            return UFT_KF_STATUS_INVALID_OOB;
+            return UFT_UFT_KF_STATUS_INVALID_OOB;
     }
     
-    return UFT_KF_STATUS_OK;
+    return UFT_UFT_KF_STATUS_OK;
 }
 
 /*===========================================================================
@@ -166,7 +165,7 @@ static uft_kf_status_t handle_oob(uft_kf_stream_t *stream,
 uft_kf_status_t uft_kf_decode(uft_kf_stream_t *stream,
                               const uint8_t *data, size_t len) {
     if (!stream || !data || len == 0) {
-        return UFT_KF_STATUS_READ_ERROR;
+        return UFT_UFT_KF_STATUS_READ_ERROR;
     }
     
     uft_kf_reset(stream);
@@ -180,88 +179,88 @@ uft_kf_status_t uft_kf_decode(uft_kf_stream_t *stream,
         uint8_t code = data[pos++];
         stream_pos++;
         
-        if (code <= UFT_KF_FLUX1_MAX) {
+        if (code <= UFT_UFT_KF_FLUX1_MAX) {
             /* Flux1: short value (0-7) */
             flux += code;
             emit_flux(stream, flux, stream_pos);
             flux = 0;
         }
-        else if (code == UFT_KF_FLUX2) {
+        else if (code == UFT_UFT_KF_FLUX2) {
             /* Flux2: medium value */
-            if (pos >= len) return UFT_KF_STATUS_MISSING_DATA;
+            if (pos >= len) return UFT_UFT_KF_STATUS_MISSING_DATA;
             flux += data[pos++];
             stream_pos++;
             emit_flux(stream, flux, stream_pos);
             flux = 0;
         }
-        else if (code == UFT_KF_FLUX3 || code == UFT_KF_FLUX3_ALT) {
+        else if (code == UFT_UFT_KF_FLUX3 || code == UFT_UFT_KF_FLUX3_ALT) {
             /* Flux3: long value */
-            if (pos + 1 >= len) return UFT_KF_STATUS_MISSING_DATA;
+            if (pos + 1 >= len) return UFT_UFT_KF_STATUS_MISSING_DATA;
             flux += uft_kf_read_u16(data + pos);
             pos += 2;
             stream_pos += 2;
             emit_flux(stream, flux, stream_pos);
             flux = 0;
         }
-        else if (code == UFT_KF_OVERFLOW) {
+        else if (code == UFT_UFT_KF_OVERFLOW) {
             /* Overflow: add 65536 */
             flux += 65536;
         }
-        else if (code == UFT_KF_NOP1) {
+        else if (code == UFT_UFT_KF_NOP1) {
             /* NOP1: skip 1 byte */
-            if (pos >= len) return UFT_KF_STATUS_MISSING_DATA;
+            if (pos >= len) return UFT_UFT_KF_STATUS_MISSING_DATA;
             pos++;
             stream_pos++;
         }
-        else if (code == UFT_KF_OOB) {
+        else if (code == UFT_UFT_KF_OOB) {
             /* OOB block */
-            if (pos + 2 >= len) return UFT_KF_STATUS_MISSING_DATA;
+            if (pos + 2 >= len) return UFT_UFT_KF_STATUS_MISSING_DATA;
             
             uint8_t oob_type = data[pos++];
             uint16_t oob_size = uft_kf_read_u16(data + pos);
             pos += 2;
             stream_pos += 3;
             
-            if (pos + oob_size > len) return UFT_KF_STATUS_MISSING_DATA;
+            if (pos + oob_size > len) return UFT_UFT_KF_STATUS_MISSING_DATA;
             
             uft_kf_status_t status = handle_oob(stream, data, pos, 
                                                 oob_type, oob_size, stream_pos);
-            if (status != UFT_KF_STATUS_OK) {
+            if (status != UFT_UFT_KF_STATUS_OK) {
                 return status;
             }
             
-            if (oob_type == UFT_KF_OOB_EOF) {
+            if (oob_type == UFT_UFT_KF_OOB_EOF) {
                 eof_found = true;
             }
             
             pos += oob_size;
             stream_pos += oob_size;
         }
-        else if (code == UFT_KF_NOP3) {
+        else if (code == UFT_UFT_KF_NOP3) {
             /* NOP3: skip 3 bytes */
-            if (pos + 2 >= len) return UFT_KF_STATUS_MISSING_DATA;
+            if (pos + 2 >= len) return UFT_UFT_KF_STATUS_MISSING_DATA;
             pos += 3;
             stream_pos += 3;
         }
         else {
-            return UFT_KF_STATUS_INVALID_CODE;
+            return UFT_UFT_KF_STATUS_INVALID_CODE;
         }
     }
     
     if (!eof_found) {
-        return UFT_KF_STATUS_MISSING_END;
+        return UFT_UFT_KF_STATUS_MISSING_END;
     }
     
     /* Process index data */
     uft_kf_status_t status = uft_kf_process_indexes(stream);
-    if (status != UFT_KF_STATUS_OK) {
+    if (status != UFT_UFT_KF_STATUS_OK) {
         return status;
     }
     
     /* Calculate statistics */
-    uft_kf_calc_stats(stream);
+    uft_uft_kf_calc_stats(stream);
     
-    return UFT_KF_STATUS_OK;
+    return UFT_UFT_KF_STATUS_OK;
 }
 
 /*===========================================================================
@@ -270,7 +269,7 @@ uft_kf_status_t uft_kf_decode(uft_kf_stream_t *stream,
 
 static uft_kf_status_t uft_kf_process_indexes(uft_kf_stream_t *stream) {
     if (stream->index_count == 0 || stream->flux_count == 0) {
-        return UFT_KF_STATUS_OK;
+        return UFT_UFT_KF_STATUS_OK;
     }
     
     uint32_t iidx = 0;  /* Index counter */
@@ -310,7 +309,7 @@ static uft_kf_status_t uft_kf_process_indexes(uft_kf_stream_t *stream) {
             uint32_t pre_overflow = stream->flux_positions[next_fidx] - next_stream_pos;
             
             if (overflow_count < pre_overflow) {
-                return UFT_KF_STATUS_MISSING_INDEX;
+                return UFT_UFT_KF_STATUS_MISSING_INDEX;
             }
             
             uint32_t pre_index = ((overflow_count - pre_overflow) << 16) + sample_ctr;
@@ -335,17 +334,17 @@ static uft_kf_status_t uft_kf_process_indexes(uft_kf_stream_t *stream) {
     }
     
     if (iidx < stream->index_count) {
-        return UFT_KF_STATUS_MISSING_INDEX;
+        return UFT_UFT_KF_STATUS_MISSING_INDEX;
     }
     
-    return UFT_KF_STATUS_OK;
+    return UFT_UFT_KF_STATUS_OK;
 }
 
 /*===========================================================================
  * Statistics
  *===========================================================================*/
 
-void uft_kf_calc_stats(uft_kf_stream_t *stream) {
+void uft_uft_kf_calc_stats(uft_kf_stream_t *stream) {
     if (!stream || stream->flux_count == 0) return;
     
     /* Find min/max flux values */
@@ -401,7 +400,7 @@ void uft_kf_calc_stats(uft_kf_stream_t *stream) {
 uft_kf_status_t uft_kf_decode_file(uft_kf_stream_t *stream, const char *filename) {
     FILE *f = fopen(filename, "rb");
     if (!f) {
-        return UFT_KF_STATUS_READ_ERROR;
+        return UFT_UFT_KF_STATUS_READ_ERROR;
     }
     
     /* Get file size */
@@ -410,20 +409,20 @@ uft_kf_status_t uft_kf_decode_file(uft_kf_stream_t *stream, const char *filename
     if (fseek(f, 0, SEEK_SET) != 0) { /* seek error */ }
     if (size <= 0 || size > 100 * 1024 * 1024) {  /* 100MB limit */
         fclose(f);
-        return UFT_KF_STATUS_READ_ERROR;
+        return UFT_UFT_KF_STATUS_READ_ERROR;
     }
     
     /* Read entire file */
     uint8_t *data = malloc(size);
     if (!data) {
         fclose(f);
-        return UFT_KF_STATUS_READ_ERROR;
+        return UFT_UFT_KF_STATUS_READ_ERROR;
     }
     
     if (fread(data, 1, size, f) != (size_t)size) {
         free(data);
         fclose(f);
-        return UFT_KF_STATUS_READ_ERROR;
+        return UFT_UFT_KF_STATUS_READ_ERROR;
     }
     fclose(f);
     
@@ -438,7 +437,7 @@ uft_kf_status_t uft_kf_decode_file(uft_kf_stream_t *stream, const char *filename
  * Histogram Analysis
  *===========================================================================*/
 
-void uft_kf_build_histogram(const uft_kf_stream_t *stream,
+void uft_uft_kf_build_histogram(const uft_kf_stream_t *stream,
                             uint32_t *histogram, uint32_t max_value) {
     if (!stream || !histogram) return;
     

@@ -3,7 +3,6 @@
  * @brief Format-Agnostic Sector Detection Implementation
  * 
  * EXT4-003: Sector Overlay Detection
- * Based on FloppyAI overlay_detection.py
  * 
  * Detects sector boundaries without format knowledge using:
  * - Autocorrelation for periodic patterns

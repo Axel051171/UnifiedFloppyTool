@@ -6,13 +6,11 @@
  *
  * Tests all new modules from R50-R55:
  * - FluxStat multi-pass analysis
- * - HxC PLL Enhanced
+ * - libflux PLL Enhanced
  * - SCP Parser
- * - KryoFlux Parser
  * - WOZ Parser
  * - Amiga Protection Registry (194 entries)
  * - HxC Format Detection (90+ formats)
- * - OpenCBM GCR Codec
  */
 
 #include <stdio.h>
@@ -48,8 +46,8 @@ extern void run_flux_parser_tests(void);
 /* From test_amiga_protection.c */
 extern void run_amiga_protection_tests(void);
 
-/* From test_hxc_formats.c */
-extern void run_hxc_format_tests(void);
+/* From test_libflux_formats.c */
+extern void run_libflux_format_tests(void);
 
 /*============================================================================
  * Quick Sanity Tests (if modules not available)
@@ -90,8 +88,8 @@ static void test_basic_sanity(void)
 #define HAS_SCP 0
 #endif
 
-#ifdef UFT_HAS_KRYOFLUX_PARSER
-#include "uft/flux/uft_kryoflux_parser.h"
+#ifdef UFT_HAS_UFT_UFT_KF_PARSER
+#include "uft/flux/uft_uft_kf_parser.h"
 #define HAS_KRYOFLUX 1
 #else
 #define HAS_KRYOFLUX 0
@@ -112,7 +110,7 @@ static void test_basic_sanity(void)
 #endif
 
 #ifdef UFT_HAS_HXC_FORMATS
-#include "uft/formats/uft_hxc_formats.h"
+#include "uft/formats/uft_libflux_formats.h"
 #define HAS_HXC_FMT 1
 #else
 #define HAS_HXC_FMT 0
@@ -184,7 +182,7 @@ int main(int argc, char* argv[])
     printf("║           UnifiedFloppyTool (UFT) R50-R55 Test Suite             ║\n");
     printf("║                                                                  ║\n");
     printf("║   Testing: FluxStat, SCP, KryoFlux, WOZ, Amiga Protection,       ║\n");
-    printf("║            HxC Formats, OpenCBM GCR                              ║\n");
+    printf("║            HxC Formats, CBM library GCR                              ║\n");
     printf("║                                                                  ║\n");
     printf("╚══════════════════════════════════════════════════════════════════╝\n");
     
@@ -201,7 +199,7 @@ int main(int argc, char* argv[])
 #endif
 
 #ifdef RUN_HXC_FORMAT_TESTS
-    run_hxc_format_tests();
+    run_libflux_format_tests();
 #endif
     
     clock_t end = clock();

@@ -1,8 +1,7 @@
 /**
  * @file uft_a8rawconv_atari.h
- * @brief Atari 8-bit Disk Algorithms from a8rawconv
+ * @brief Atari 8-bit Disk Algorithms standard
  * 
- * Extracted from a8rawconv by Avery Lee - comprehensive Atari 8-bit
  * raw disk conversion utility with:
  * - FM/MFM decoding for Atari
  * - Apple II GCR support
@@ -11,7 +10,6 @@
  * - Write precompensation
  * - ATX/ATR/XFD format support
  * 
- * @copyright Original: a8rawconv Copyright (C) 2014-2020 Avery Lee (GPL v2)
  * @copyright Adaptation for UFT: 2025
  */
 

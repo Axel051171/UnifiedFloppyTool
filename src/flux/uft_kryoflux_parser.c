@@ -1,6 +1,5 @@
 /**
- * @file uft_kryoflux_parser.c
- * @brief KryoFlux Stream Format Parser Implementation
+ * @file uft_uft_kf_parser.c
  * @version 1.0.0
  * @date 2026-01-06
  */
@@ -11,17 +10,17 @@
 #include <ctype.h>
 #include <math.h>
 
-#include "uft/flux/uft_kryoflux_parser.h"
+#include "uft/flux/uft_uft_kf_parser.h"
 
 /*============================================================================
  * Constants
  *============================================================================*/
 
 /* Sample clock: ~48.054 MHz */
-static const double SAMPLE_CLOCK = UFT_KF_SAMPLE_CLOCK;
+static const double SAMPLE_CLOCK = UFT_UFT_KF_SAMPLE_CLOCK;
 
 /* Index clock: 1.152 MHz */
-static const double INDEX_CLOCK = UFT_KF_INDEX_CLOCK;
+static const double INDEX_CLOCK = UFT_UFT_KF_INDEX_CLOCK;
 
 /*============================================================================
  * Lifecycle
@@ -50,7 +49,7 @@ void uft_kf_destroy(uft_kf_ctx_t* ctx)
 
 int uft_kf_load_file(uft_kf_ctx_t* ctx, const char* filename)
 {
-    if (!ctx || !filename) return UFT_KF_ERR_NULLPTR;
+    if (!ctx || !filename) return UFT_UFT_KF_ERR_NULLPTR;
     
     /* Free existing data */
     if (ctx->stream_data) {
@@ -64,38 +63,38 @@ int uft_kf_load_file(uft_kf_ctx_t* ctx, const char* filename)
     /* Open file */
     FILE* f = fopen(filename, "rb");
     if (!f) {
-        ctx->last_error = UFT_KF_ERR_OPEN;
-        return UFT_KF_ERR_OPEN;
+        ctx->last_error = UFT_UFT_KF_ERR_OPEN;
+        return UFT_UFT_KF_ERR_OPEN;
     }
     
     /* Get size */
-    fseek(f, 0, SEEK_END);
+    (void)fseek(f, 0, SEEK_END);
     ctx->stream_size = ftell(f);
-    fseek(f, 0, SEEK_SET);
+    (void)fseek(f, 0, SEEK_SET);
     
     /* Allocate and read */
     ctx->stream_data = malloc(ctx->stream_size);
     if (!ctx->stream_data) {
         fclose(f);
-        ctx->last_error = UFT_KF_ERR_MEMORY;
-        return UFT_KF_ERR_MEMORY;
+        ctx->last_error = UFT_UFT_KF_ERR_MEMORY;
+        return UFT_UFT_KF_ERR_MEMORY;
     }
     
     if (fread(ctx->stream_data, 1, ctx->stream_size, f) != ctx->stream_size) {
         free(ctx->stream_data);
         ctx->stream_data = NULL;
         fclose(f);
-        ctx->last_error = UFT_KF_ERR_READ;
-        return UFT_KF_ERR_READ;
+        ctx->last_error = UFT_UFT_KF_ERR_READ;
+        return UFT_UFT_KF_ERR_READ;
     }
     
     fclose(f);
-    return UFT_KF_OK;
+    return UFT_UFT_KF_OK;
 }
 
 int uft_kf_load_memory(uft_kf_ctx_t* ctx, const uint8_t* data, size_t size)
 {
-    if (!ctx || !data || size == 0) return UFT_KF_ERR_NULLPTR;
+    if (!ctx || !data || size == 0) return UFT_UFT_KF_ERR_NULLPTR;
     
     /* Free existing data */
     if (ctx->stream_data) {
@@ -104,8 +103,8 @@ int uft_kf_load_memory(uft_kf_ctx_t* ctx, const uint8_t* data, size_t size)
     
     ctx->stream_data = malloc(size);
     if (!ctx->stream_data) {
-        ctx->last_error = UFT_KF_ERR_MEMORY;
-        return UFT_KF_ERR_MEMORY;
+        ctx->last_error = UFT_UFT_KF_ERR_MEMORY;
+        return UFT_UFT_KF_ERR_MEMORY;
     }
     
     memcpy(ctx->stream_data, data, size);
@@ -113,7 +112,7 @@ int uft_kf_load_memory(uft_kf_ctx_t* ctx, const uint8_t* data, size_t size)
     ctx->stream_pos = 0;
     ctx->index_count = 0;
     
-    return UFT_KF_OK;
+    return UFT_UFT_KF_OK;
 }
 
 /*============================================================================
@@ -134,17 +133,17 @@ static int find_indices(uft_kf_ctx_t* ctx)
         if (op <= 0x07) {
             /* Flux2: 2 bytes total */
             ctx->stream_pos += 2;
-        } else if (op == UFT_KF_OP_NOP1) {
+        } else if (op == UFT_UFT_KF_OP_NOP1) {
             ctx->stream_pos += 1;
-        } else if (op == UFT_KF_OP_NOP2) {
+        } else if (op == UFT_UFT_KF_OP_NOP2) {
             ctx->stream_pos += 2;
-        } else if (op == UFT_KF_OP_NOP3) {
+        } else if (op == UFT_UFT_KF_OP_NOP3) {
             ctx->stream_pos += 3;
-        } else if (op == UFT_KF_OP_OVL16) {
+        } else if (op == UFT_UFT_KF_OP_OVL16) {
             ctx->stream_pos += 1;
-        } else if (op == UFT_KF_OP_FLUX3) {
+        } else if (op == UFT_UFT_KF_OP_FLUX3) {
             ctx->stream_pos += 3;
-        } else if (op == UFT_KF_OP_OOB) {
+        } else if (op == UFT_UFT_KF_OP_OOB) {
             /* Out-of-band block */
             if (ctx->stream_pos + 3 > ctx->stream_size) break;
             
@@ -152,9 +151,9 @@ static int find_indices(uft_kf_ctx_t* ctx)
             uint16_t oob_size = ctx->stream_data[ctx->stream_pos + 2] |
                                (ctx->stream_data[ctx->stream_pos + 3] << 8);
             
-            if (oob_type == UFT_KF_OOB_INDEX && oob_size >= 12) {
+            if (oob_type == UFT_UFT_KF_OOB_INDEX && oob_size >= 12) {
                 /* Index block */
-                if (ctx->index_count < UFT_KF_MAX_REVOLUTIONS + 1) {
+                if (ctx->index_count < UFT_UFT_KF_MAX_REVOLUTIONS + 1) {
                     size_t data_offset = ctx->stream_pos + 4;
                     if (data_offset + 12 <= ctx->stream_size) {
                         uint8_t* p = &ctx->stream_data[data_offset];
@@ -167,7 +166,7 @@ static int find_indices(uft_kf_ctx_t* ctx)
                         ctx->index_count++;
                     }
                 }
-            } else if (oob_type == UFT_KF_OOB_STREAMINFO && oob_size >= 8) {
+            } else if (oob_type == UFT_UFT_KF_OOB_STREAMINFO && oob_size >= 8) {
                 ctx->has_stream_info = true;
                 size_t data_offset = ctx->stream_pos + 4;
                 if (data_offset + 8 <= ctx->stream_size) {
@@ -175,7 +174,7 @@ static int find_indices(uft_kf_ctx_t* ctx)
                     ctx->stream_info_pos = p[0] | (p[1] << 8) | (p[2] << 16) | (p[3] << 24);
                     ctx->xfer_time = p[4] | (p[5] << 8) | (p[6] << 16) | (p[7] << 24);
                 }
-            } else if (oob_type == UFT_KF_OOB_EOF) {
+            } else if (oob_type == UFT_UFT_KF_OOB_EOF) {
                 break;
             }
             
@@ -186,7 +185,7 @@ static int find_indices(uft_kf_ctx_t* ctx)
         }
     }
     
-    return (ctx->index_count > 0) ? UFT_KF_OK : UFT_KF_ERR_NO_INDEX;
+    return (ctx->index_count > 0) ? UFT_UFT_KF_OK : UFT_UFT_KF_ERR_NO_INDEX;
 }
 
 /**
@@ -199,7 +198,7 @@ static int extract_flux(uft_kf_ctx_t* ctx,
     /* Estimate max flux count */
     size_t max_flux = end_pos - start_pos;
     uint32_t* flux = malloc(max_flux * sizeof(uint32_t));
-    if (!flux) return UFT_KF_ERR_MEMORY;
+    if (!flux) return UFT_UFT_KF_ERR_MEMORY;
     
     uint32_t flux_count = 0;
     uint32_t overflow = 0;
@@ -215,16 +214,16 @@ static int extract_flux(uft_kf_ctx_t* ctx,
             flux[flux_count++] = val + overflow;
             overflow = 0;
             ctx->stream_pos += 2;
-        } else if (op == UFT_KF_OP_NOP1) {
+        } else if (op == UFT_UFT_KF_OP_NOP1) {
             ctx->stream_pos += 1;
-        } else if (op == UFT_KF_OP_NOP2) {
+        } else if (op == UFT_UFT_KF_OP_NOP2) {
             ctx->stream_pos += 2;
-        } else if (op == UFT_KF_OP_NOP3) {
+        } else if (op == UFT_UFT_KF_OP_NOP3) {
             ctx->stream_pos += 3;
-        } else if (op == UFT_KF_OP_OVL16) {
+        } else if (op == UFT_UFT_KF_OP_OVL16) {
             overflow += 0x10000;
             ctx->stream_pos += 1;
-        } else if (op == UFT_KF_OP_FLUX3) {
+        } else if (op == UFT_UFT_KF_OP_FLUX3) {
             /* 3-byte flux value */
             if (ctx->stream_pos + 3 <= ctx->stream_size) {
                 uint32_t val = ctx->stream_data[ctx->stream_pos + 1] |
@@ -233,7 +232,7 @@ static int extract_flux(uft_kf_ctx_t* ctx,
                 overflow = 0;
             }
             ctx->stream_pos += 3;
-        } else if (op == UFT_KF_OP_OOB) {
+        } else if (op == UFT_UFT_KF_OP_OOB) {
             /* Skip OOB block */
             if (ctx->stream_pos + 4 > ctx->stream_size) break;
             uint16_t oob_size = ctx->stream_data[ctx->stream_pos + 2] |
@@ -249,24 +248,24 @@ static int extract_flux(uft_kf_ctx_t* ctx,
     
     *flux_out = flux;
     *count_out = flux_count;
-    return UFT_KF_OK;
+    return UFT_UFT_KF_OK;
 }
 
 int uft_kf_parse_stream(uft_kf_ctx_t* ctx, uft_kf_track_data_t* track)
 {
-    if (!ctx || !track) return UFT_KF_ERR_NULLPTR;
-    if (!ctx->stream_data) return UFT_KF_ERR_FORMAT;
+    if (!ctx || !track) return UFT_UFT_KF_ERR_NULLPTR;
+    if (!ctx->stream_data) return UFT_UFT_KF_ERR_FORMAT;
     
     memset(track, 0, sizeof(*track));
     
     /* Find indices first */
     int err = find_indices(ctx);
-    if (err != UFT_KF_OK) return err;
+    if (err != UFT_UFT_KF_OK) return err;
     
     /* Extract revolutions between indices */
     track->revolution_count = 0;
     
-    for (int i = 0; i < ctx->index_count - 1 && i < UFT_KF_MAX_REVOLUTIONS; i++) {
+    for (int i = 0; i < ctx->index_count - 1 && i < UFT_UFT_KF_MAX_REVOLUTIONS; i++) {
         uft_kf_revolution_t* rev = &track->revolutions[track->revolution_count];
         
         rev->start_pos = ctx->indices[i].stream_pos;
@@ -285,7 +284,7 @@ int uft_kf_parse_stream(uft_kf_ctx_t* ctx, uft_kf_track_data_t* track)
         /* Extract flux data */
         err = extract_flux(ctx, rev->start_pos, rev->end_pos,
                           &rev->flux_data, &rev->flux_count);
-        if (err != UFT_KF_OK) {
+        if (err != UFT_UFT_KF_OK) {
             uft_kf_free_track(track);
             return err;
         }
@@ -294,14 +293,14 @@ int uft_kf_parse_stream(uft_kf_ctx_t* ctx, uft_kf_track_data_t* track)
     }
     
     track->valid = (track->revolution_count > 0);
-    return UFT_KF_OK;
+    return UFT_UFT_KF_OK;
 }
 
 void uft_kf_free_track(uft_kf_track_data_t* track)
 {
     if (!track) return;
     
-    for (int i = 0; i < UFT_KF_MAX_REVOLUTIONS; i++) {
+    for (int i = 0; i < UFT_UFT_KF_MAX_REVOLUTIONS; i++) {
         if (track->revolutions[i].flux_data) {
             free(track->revolutions[i].flux_data);
             track->revolutions[i].flux_data = NULL;
@@ -363,7 +362,7 @@ double uft_kf_index_to_us(uint32_t ticks)
     return (double)ticks * 1e6 / INDEX_CLOCK;
 }
 
-uint32_t uft_kf_calculate_rpm(double index_time_us)
+uint32_t uft_uft_kf_calculate_rpm(double index_time_us)
 {
     if (index_time_us <= 0) return 0;
     /* RPM = 60,000,000 us / index_time_us */

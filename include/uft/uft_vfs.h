@@ -2,7 +2,6 @@
  * @file uft_vfs.h
  * @brief Virtual File System Interface for UFT
  * 
- * Based on FluxEngine VFS by David Given
  * Provides filesystem access for various disk formats
  * 
  * Supported filesystems:

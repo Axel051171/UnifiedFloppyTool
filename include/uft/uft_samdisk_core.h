@@ -1,5 +1,5 @@
 /**
- * @file uft_samdisk_core.h
+ * @file uft_uft_sam_core.h
  * @brief SamDisk Core Algorithms for UnifiedFloppyTool
  * 
  * Extracted from SamDisk - the ORIGINAL reference implementation for:
@@ -9,14 +9,12 @@
  * - CRC-16-CCITT calculation
  * - Track building
  * 
- * SamDisk PLL code derived from Keir Fraser's Disk-Utilities/libdisk
  * 
- * @copyright Original: SamDisk by Simon Owen
  * @copyright Adaptation for UFT: 2025
  */
 
-#ifndef UFT_SAMDISK_CORE_H
-#define UFT_SAMDISK_CORE_H
+#ifndef UFT_UFT_SAM_CORE_H
+#define UFT_UFT_SAM_CORE_H
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -120,8 +118,6 @@ typedef enum {
  * @brief SamDisk PLL State Structure
  * 
  * This is the ORIGINAL PLL implementation from SamDisk, which was derived
- * from Keir Fraser's Disk-Utilities/libdisk. It is the reference implementation
- * that FluxEngine also uses.
  */
 typedef struct {
     /* Clock parameters */
@@ -633,4 +629,4 @@ static inline int uft_sd_track_capacity(int rpm, uft_sd_datarate_t datarate,
 }
 #endif
 
-#endif /* UFT_SAMDISK_CORE_H */
+#endif /* UFT_UFT_SAM_CORE_H */

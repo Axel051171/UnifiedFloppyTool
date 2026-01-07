@@ -98,4 +98,12 @@ typedef enum {
  * Data Structures for Serialization
  *===========================================================================*/
 
-/**
+/** * TODO: Data structures for serialization are defined in implementation.
+ * This header will be completed in future revisions.
+ */
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* UFT_JSON_SERIALIZE_H */

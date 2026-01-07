@@ -1,10 +1,8 @@
 /**
  * @file uft_opencbm_gcr.h
- * @brief GCR 4-bit to 5-bit encoding/decoding from OpenCBM
  * @version 1.0.0
  * @date 2026-01-06
  *
- * Source: OpenCBM (Wolfgang Moser, http://d81.de)
  *
  * Commodore GCR (Group Code Recording) converts 4 data bits into 5 GCR bits,
  * ensuring no more than 2 consecutive zeros (important for magnetic recording).

@@ -2,7 +2,7 @@
  * @file uft_params_universal.h
  * @brief GOD MODE Universal Floppy Parameter System v2
  * 
- * Applies the a8rawconv parameter model to ALL floppy disk formats.
+ * Applies the Atari parameter model to ALL floppy disk formats.
  * This creates a unified interface for:
  * - Reading/Writing any format
  * - Flux-level analysis

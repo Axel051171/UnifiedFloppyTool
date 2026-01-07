@@ -1,8 +1,8 @@
 /**
  * @file uft_hfe.c
- * @brief UnifiedFloppyTool - HFE (HxC Floppy Emulator) Format Plugin
+ * @brief UnifiedFloppyTool - HFE (UFT HFE Format) Format Plugin
  * 
- * HFE ist das native Format des HxC Floppy Emulators.
+ * HFE ist das native Format des UFT HFE Formats.
  * Es speichert MFM/FM-kodierte Bitstream-Daten mit Timing.
  * 
  * VERSIONEN:
@@ -81,8 +81,8 @@ typedef struct {
     uint8_t     number_of_sides;        // 1 oder 2
     uint8_t     track_encoding;         // hfe_encoding_t
     uint16_t    bitrate;                // Bitrate in kbit/s (LE)
-    uint16_t    floppy_rpm;             // RPM (LE), 0 = 300
-    uint8_t     floppy_interface_mode;  // hfe_interface_t
+    uint16_t    uft_floppy_rpm;             // RPM (LE), 0 = 300
+    uint8_t     uft_floppy_interface_mode;  // hfe_interface_t
     uint8_t     reserved;               // 0x01
     uint16_t    track_list_offset;      // Offset zur Track-LUT (in Blocks)
     uint8_t     write_allowed;          // 0xFF = schreibgeschützt
@@ -440,8 +440,8 @@ static uft_error_t hfe_create(uft_disk_t* disk, const char* path,
     header.number_of_sides = (uint8_t)sides;
     header.track_encoding = HFE_ENC_ISOIBM_MFM;
     write_le16((uint8_t*)&header.bitrate, bitrate);
-    write_le16((uint8_t*)&header.floppy_rpm, 300);
-    header.floppy_interface_mode = HFE_IF_IBMPC_DD;
+    write_le16((uint8_t*)&header.uft_floppy_rpm, 300);
+    header.uft_floppy_interface_mode = HFE_IF_IBMPC_DD;
     header.reserved = 0x01;
     header.track_list_offset = 1;  // LUT beginnt bei Block 1
     header.write_allowed = 0x00;   // Schreiben erlaubt
@@ -591,7 +591,7 @@ static uft_error_t hfe_read_track(uft_disk_t* disk, int cylinder, int head,
     track->encoding = hfe_to_uft_encoding(pdata->header.track_encoding);
     
     // Track-Metriken
-    uint16_t rpm = read_le16((const uint8_t*)&pdata->header.floppy_rpm);
+    uint16_t rpm = read_le16((const uint8_t*)&pdata->header.uft_floppy_rpm);
     track->metrics.rpm = (rpm > 0) ? rpm : 300.0;
     
     uint16_t bitrate = read_le16((const uint8_t*)&pdata->header.bitrate);
@@ -730,7 +730,7 @@ static uft_error_t hfe_read_metadata(uft_disk_t* disk, const char* key,
     }
     
     if (strcmp(key, "rpm") == 0) {
-        uint16_t rpm = read_le16((const uint8_t*)&pdata->header.floppy_rpm);
+        uint16_t rpm = read_le16((const uint8_t*)&pdata->header.uft_floppy_rpm);
         snprintf(value, max_len, "%d", rpm > 0 ? rpm : 300);
         return UFT_OK;
     }
@@ -750,7 +750,7 @@ static uft_error_t hfe_read_metadata(uft_disk_t* disk, const char* key,
     
     if (strcmp(key, "interface") == 0) {
         const char* if_name;
-        switch (pdata->header.floppy_interface_mode) {
+        switch (pdata->header.uft_floppy_interface_mode) {
             case HFE_IF_IBMPC_DD:    if_name = "IBM PC DD"; break;
             case HFE_IF_IBMPC_HD:    if_name = "IBM PC HD"; break;
             case HFE_IF_ATARIST_DD:  if_name = "Atari ST DD"; break;
@@ -780,7 +780,7 @@ static uft_error_t hfe_read_metadata(uft_disk_t* disk, const char* key,
 
 const uft_format_plugin_t uft_format_plugin_hfe = {
     .name = "HFE",
-    .description = "HxC Floppy Emulator Image",
+    .description = "UFT HFE Format Image",
     .extensions = "hfe",
     .version = 0x00010000,
     .format = UFT_FORMAT_HFE,

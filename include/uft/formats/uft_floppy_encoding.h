@@ -2,7 +2,6 @@
  * @file uft_floppy_encoding.h
  * @brief Floppy Disk Data Encoding (FM, MFM, GCR)
  * 
- * Based on MAME floppy documentation, HxC specifications, and
  * various platform documentation.
  * 
  * Implements:

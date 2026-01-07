@@ -1,26 +1,20 @@
 /*
 //
-// Copyright (C) 2006-2025 Jean-François DEL NERO
 //
-// This file is part of the HxCFloppyEmulator library
 //
-// HxCFloppyEmulator may be used and distributed without restriction provided
 // that this copyright statement is not removed from the file and that any
 // derivative work contains the original copyright notice and the associated
 // disclaimer.
 //
-// HxCFloppyEmulator is free software; you can redistribute it
 // and/or modify  it under the terms of the GNU General Public License
 // as published by the Free Software Foundation; either version 2
 // of the License, or (at your option) any later version.
 //
-// HxCFloppyEmulator is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 //   See the GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with HxCFloppyEmulator; if not, write to the Free Software
 // Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 //
 */
@@ -38,7 +32,6 @@
 // File : streamConvert.c
 // Contains: Flux (pulses) Stream conversion utility
 //
-// Written by: Jean-François DEL NERO
 //
 // Change History (most recent first):
 ///////////////////////////////////////////////////////////////////////////////////
@@ -52,12 +45,12 @@
 
 #include "types.h"
 
-#include "internal_libhxcfe.h"
+#include "libflux.h""
 #include "tracks/track_generator.h"
-#include "libhxcfe.h"
+#include "libflux.h""
 
-#include "floppy_loader.h"
-#include "floppy_utils.h"
+#include "uft_floppy_loader.h"
+#include "uft_floppy_utils.h"
 #include "tracks/trackutils.h"
 
 #include "fluxStreamAnalyzer.h"
@@ -123,7 +116,7 @@ void StreamConvert_update_index_event(streamconv * sc)
 	}
 }
 
-streamconv * initStreamConvert(HXCFE* hxcfe, HXCFE_SIDE * track, float stream_period_ps, float overflowvalue,int start_revolution,float start_offset,int end_revolution,float end_offset)
+streamconv * initStreamConvert(LIBFLUX_CTX* libflux_ctx, LIBFLUX_SIDE * track, float stream_period_ps, float overflowvalue,int start_revolution,float start_offset,int end_revolution,float end_offset)
 {
 	streamconv * sc;
 	int start_bitstream_pos,i;
@@ -133,7 +126,7 @@ streamconv * initStreamConvert(HXCFE* hxcfe, HXCFE_SIDE * track, float stream_pe
 	{
 		memset(sc,0,sizeof(streamconv));
 
-		sc->hxcfe = hxcfe;
+		sc->ctx = libflux_ctx;
 
 		sc->stream_period_ps = stream_period_ps;
 		sc->track = track;
@@ -144,7 +137,7 @@ streamconv * initStreamConvert(HXCFE* hxcfe, HXCFE_SIDE * track, float stream_pe
 
 		sc->end_revolution = end_revolution;
 
-		if( !sc->track->stream_dump || !hxcfe_getEnvVarValue( hxcfe, "FLUXSTREAM_STREAM_TO_STREAM_CONVERT" ) )
+		if( !sc->track->stream_dump || !libflux_getEnvVarValue( libflux_ctx, "FLUXSTREAM_STREAM_TO_STREAM_CONVERT" ) )
 		{
 			if(start_revolution < 0)
 				start_revolution = 0;
@@ -159,7 +152,7 @@ streamconv * initStreamConvert(HXCFE* hxcfe, HXCFE_SIDE * track, float stream_pe
 		StreamConvert_setPosition(sc, start_revolution, start_offset);
 		start_bitstream_pos = sc->bitstream_pos;
 
-		hxcfe->hxc_printf(MSG_DEBUG,"initStreamConvert : tracklen : %d\n",sc->track->tracklen);
+		libflux_ctx->libflux_printf(MSG_DEBUG,"initStreamConvert : tracklen : %d\n",sc->track->tracklen);
 
 		sc->bitstream_pos = 0;
 		sc->old_index_state = track->indexbuffer[sc->bitstream_pos>>3];
@@ -168,7 +161,7 @@ streamconv * initStreamConvert(HXCFE* hxcfe, HXCFE_SIDE * track, float stream_pe
 		sc->end_bitstream_pos = sc->bitstream_pos;
 		sc->end_revolution = end_revolution;
 
-		hxcfe->hxc_printf(MSG_DEBUG,"initStreamConvert : end_revolution : %d end_bitstream_pos: %d\n",sc->end_revolution,sc->end_bitstream_pos);
+		libflux_ctx->libflux_printf(MSG_DEBUG,"initStreamConvert : end_revolution : %d end_bitstream_pos: %d\n",sc->end_revolution,sc->end_bitstream_pos);
 
 		sc->start_revolution = start_revolution;
 		sc->start_bitstream_pos = start_bitstream_pos;
@@ -176,7 +169,7 @@ streamconv * initStreamConvert(HXCFE* hxcfe, HXCFE_SIDE * track, float stream_pe
 		sc->old_index_state = track->indexbuffer[sc->bitstream_pos>>3];
 		sc->index_state = sc->old_index_state;
 
-		hxcfe->hxc_printf(MSG_DEBUG,"initStreamConvert : start_revolution : %d start_bitstream_pos: %d\n",sc->start_revolution,sc->start_bitstream_pos);
+		libflux_ctx->libflux_printf(MSG_DEBUG,"initStreamConvert : start_revolution : %d start_bitstream_pos: %d\n",sc->start_revolution,sc->start_bitstream_pos);
 
 		sc->index_event = 0;
 		sc->stream_end_event = 0;
@@ -188,13 +181,13 @@ streamconv * initStreamConvert(HXCFE* hxcfe, HXCFE_SIDE * track, float stream_pe
 
 		if( sc->track->stream_dump )
 		{
-			if( hxcfe_getEnvVarValue( hxcfe, "FLUXSTREAM_STREAM_TO_STREAM_CONVERT" ) )
+			if( libflux_getEnvVarValue( libflux_ctx, "FLUXSTREAM_STREAM_TO_STREAM_CONVERT" ) )
 			{
 				sc->stream_source = 1;
-				sc->fxs = hxcfe_initFxStream(sc->hxcfe);
+				sc->fxs = libflux_initFxStream(sc->ctx);
 				if( start_revolution >= 0 )
 				{
-					sc->bitstream_pos = sc->track->stream_dump->index_evt_tab[hxcfe_FxStream_GetRevolutionIndex( sc->fxs, sc->track->stream_dump, start_revolution )].dump_offset;
+					sc->bitstream_pos = sc->track->stream_dump->index_evt_tab[libflux_FxStream_GetRevolutionIndex( sc->fxs, sc->track->stream_dump, start_revolution )].dump_offset;
 				}
 				else
 				{
@@ -498,7 +491,7 @@ void deinitStreamConvert(streamconv * sc)
 	{
 		if(sc->fxs)
 		{
-			hxcfe_deinitFxStream(sc->fxs);
+			libflux_deinitFxStream(sc->fxs);
 		}
 
 		free(sc);

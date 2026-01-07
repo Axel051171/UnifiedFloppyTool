@@ -38,7 +38,7 @@ static void log_msg(FloppyDevice*d,const char*m){
     if(d && d->log_callback) d->log_callback(m);
 }
 
-int floppy_open(FloppyDevice *dev,const char*path){
+int uft_floppy_open(FloppyDevice *dev,const char*path){
     if(!dev||!path) return UFT_EINVAL;
     D4MCtx *ctx=calloc(1,sizeof(D4MCtx));
     if(!ctx) return UFT_EIO;
@@ -72,7 +72,7 @@ int floppy_open(FloppyDevice *dev,const char*path){
     return UFT_OK;
 }
 
-int floppy_close(FloppyDevice *dev){
+int uft_floppy_close(FloppyDevice *dev){
     if(!dev||!dev->internal_ctx) return UFT_EINVAL;
     D4MCtx *ctx=dev->internal_ctx;
     fclose(ctx->fp);
@@ -81,7 +81,7 @@ int floppy_close(FloppyDevice *dev){
     return UFT_OK;
 }
 
-int floppy_read_sector(FloppyDevice *dev,uint32_t t,uint32_t h,uint32_t s,uint8_t *buf){
+int uft_floppy_read_sector(FloppyDevice *dev,uint32_t t,uint32_t h,uint32_t s,uint8_t *buf){
     if(!dev||!dev->internal_ctx||!buf) return UFT_EINVAL;
     if(t<1||t>77||h>1||s>=spt[t-1]) return UFT_EBOUNDS;
     D4MCtx *ctx=dev->internal_ctx;
@@ -98,7 +98,7 @@ int floppy_read_sector(FloppyDevice *dev,uint32_t t,uint32_t h,uint32_t s,uint8_
     return UFT_OK;
 }
 
-int floppy_write_sector(FloppyDevice *dev,uint32_t t,uint32_t h,uint32_t s,const uint8_t *buf){
+int uft_floppy_write_sector(FloppyDevice *dev,uint32_t t,uint32_t h,uint32_t s,const uint8_t *buf){
     if(!dev||!dev->internal_ctx||!buf) return UFT_EINVAL;
     D4MCtx *ctx=dev->internal_ctx;
     if(ctx->read_only) return UFT_ENOTSUP;
@@ -117,7 +117,7 @@ int floppy_write_sector(FloppyDevice *dev,uint32_t t,uint32_t h,uint32_t s,const
     return UFT_OK;
 }
 
-int floppy_analyze_protection(FloppyDevice *dev){
+int uft_floppy_analyze_protection(FloppyDevice *dev){
     log_msg(dev,"Analyzer(D4M): Commodore 8250 Mega Image (extended, multiple images).");
     log_msg(dev,"Analyzer(D4M): sector image only; no GCR timing preserved.");
     return UFT_OK;

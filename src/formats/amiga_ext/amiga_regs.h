@@ -1,3 +1,6 @@
+#ifndef UFT_FORMATS_AMIGA_EXT_AMIGA_REGS_H
+#define UFT_FORMATS_AMIGA_EXT_AMIGA_REGS_H
+
 #define WRITEREG_B(addr,value) *((volatile unsigned char  *) (addr)) = ((unsigned char)(value))
 #define WRITEREG_W(addr,value) *((volatile unsigned short *) (addr)) = ((unsigned short)(value))
 #define WRITEREG_L(addr,value) *((volatile unsigned long  *) (addr)) = ((unsigned long)(value))
@@ -161,3 +164,5 @@ create a level 6 interrupt. See Appendix F for details.
 #define SPR0POS (0xDFF140)
 #define SPR0CTL (0xDFF142)
 #define JOYTEST (0xDFF036)
+
+#endif /* UFT_FORMATS_AMIGA_EXT_AMIGA_REGS_H */

@@ -39,7 +39,7 @@ typedef enum {
     ATR_SD_90K = 0, ATR_ED_130K, ATR_DD_180K, ATR_QD_360K, ATR_VERSION_COUNT 
 } atr_version_t;
 
-/* HFE (HxC Floppy Emulator) */
+/* HFE (UFT HFE Format) */
 typedef enum { HFE_V1 = 0, HFE_V3, HFE_VERSION_COUNT } hfe_version_t;
 
 /* NFD (PC-98) */

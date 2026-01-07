@@ -2,25 +2,20 @@
 //
 // Copyright (C) 2006-2025 Jean-Franois DEL NERO
 //
-// This file is part of the HxCFloppyEmulator library
 //
-// HxCFloppyEmulator may be used and distributed without restriction provided
 // that this copyright statement is not removed from the file and that any
 // derivative work contains the original copyright notice and the associated
 // disclaimer.
 //
-// HxCFloppyEmulator is free software; you can redistribute it
 // and/or modify  it under the terms of the GNU General Public License
 // as published by the Free Software Foundation; either version 2
 // of the License, or (at your option) any later version.
 //
-// HxCFloppyEmulator is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 //   See the GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with HxCFloppyEmulator; if not, write to the Free Software
 // Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 //
 */
@@ -31,9 +26,9 @@
 
 #include "types.h"
 
-#include "internal_libhxcfe.h"
+#include "libflux.h""
 #include "tracks/track_generator.h"
-#include "libhxcfe.h"
+#include "libflux.h""
 
 #include "d88_format.h"
 #include "d88_writer.h"
@@ -41,9 +36,9 @@
 #include "tracks/sector_extractor.h"
 
 #include "libhxcadaptor.h"
-#include "floppy_utils.h"
+#include "uft_floppy_utils.h"
 
-int D88_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char * filename)
+int D88_libWrite_DiskFile(LIBFLUX_IMGLDR* imgldr_ctx,LIBFLUX_FLOPPY * floppy,char * filename)
 {
 	int i,j,k;
 	int32_t nbsector;
@@ -63,10 +58,10 @@ int D88_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char * 
 
 	int nb_valid_sector;
 
-	HXCFE_SECTORACCESS* ss;
-	HXCFE_SECTCFG** sca;
+	LIBFLUX_SECTORACCESS* ss;
+	LIBFLUX_SECTCFG** sca;
 
-	imgldr_ctx->hxcfe->hxc_printf(MSG_INFO_1,"Write D88 file %s...",filename);
+	imgldr_ctx->ctx->libflux_printf(MSG_INFO_1,"Write D88 file %s...",filename);
 
 	mfmdd_found = 0;
 	mfmhd_found = 0;
@@ -74,19 +69,19 @@ int D88_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char * 
 	//fmhd_found = 0;
 	maxtrack = 0;
 
-	outfile = hxc_fopen(filename,"wb");
+	outfile = libflux_fopen(filename,"wb");
 	if( !outfile )
 	{
-		imgldr_ctx->hxcfe->hxc_printf(MSG_ERROR,"Cannot create %s !",filename);
-		return HXCFE_ACCESSERROR;
+		imgldr_ctx->ctx->libflux_printf(MSG_ERROR,"Cannot create %s !",filename);
+		return LIBFLUX_ACCESSERROR;
 	}
 
 	memset(&d88_fh,0,sizeof(d88_fileheader));
-	sprintf((char*)&d88_fh.name,"HxCFE");
+	memcpy(d88_fh.name, "HxCFE", 6);  /* Fixed tag */
 	if (fwrite(&d88_fh,sizeof(d88_fileheader),1,outfile) != 1) { /* I/O error */ }
 	memset(tracktable,0,sizeof(tracktable));
 	if (fwrite(&tracktable, sizeof(tracktable),1,outfile) != 1) { /* I/O error */ }
-	ss = hxcfe_initSectorAccess(imgldr_ctx->hxcfe,floppy);
+	ss = libflux_initSectorAccess(imgldr_ctx->ctx,floppy);
 	if( !ss )
 		goto error;
 
@@ -94,13 +89,13 @@ int D88_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char * 
 	{
 		for(i=0;i<(int)floppy->floppyNumberOfSide;i++)
 		{
-			hxcfe_imgCallProgressCallback(imgldr_ctx,(j<<1) + (i&1),2*floppy->floppyNumberOfTrack);
+			libflux_imgCallProgressCallback(imgldr_ctx,(j<<1) + (i&1),2*floppy->floppyNumberOfTrack);
 
-			log_str = hxc_dyn_sprintfcat(NULL,"track:%.2d:%d file offset:0x%.6x, sectors: ",j,i,(unsigned int)ftell(outfile));
+			log_str = libflux_dyn_sprintfcat(NULL,"track:%.2d:%d file offset:0x%.6x, sectors: ",j,i,(unsigned int)ftell(outfile));
 
 			if((j<<1 | i) <164)
 			{
-				sca = hxcfe_getAllTrackISOSectors(ss,j,i,&nbsector);
+				sca = libflux_getAllTrackISOSectors(ss,j,i,&nbsector);
 				if(sca)
 				{
 					tracktable[(j<<1 | i)] = ftell(outfile);
@@ -194,7 +189,7 @@ int D88_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char * 
 								if (fwrite(sca[k]->input_data,sca[k]->sectorsize,1,outfile) != 1) { /* I/O error */ }
 						}
 
-						hxcfe_freeSectorConfig( 0, sca[k]);
+						libflux_freeSectorConfig( 0, sca[k]);
 					}
 
 					if(i==0)
@@ -205,13 +200,13 @@ int D88_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char * 
 			}
 
 			if(log_str)
-				imgldr_ctx->hxcfe->hxc_printf(MSG_INFO_1,log_str);
+				imgldr_ctx->ctx->libflux_printf(MSG_INFO_1,log_str);
 
 			free(log_str);
 		}
 	}
 
-	hxcfe_deinitSectorAccess(ss);
+	libflux_deinitSectorAccess(ss);
 
 	// Media flag. 00h = 2D, 10h = 2DD, 20h = 2HD.
 	if( (maxtrack >= 46) )
@@ -235,17 +230,17 @@ int D88_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char * 
 		d88_fh.media_flag = 0x00;
 	}
 
-	d88_fh.file_size = hxc_fgetsize(outfile);
+	d88_fh.file_size = libflux_fgetsize(outfile);
 	if (fseek(outfile,0,SEEK_SET) != 0) { /* seek error */ }
 	if (fwrite(&d88_fh,sizeof(d88_fileheader),1,outfile) != 1) { /* I/O error */ }
 	if (fwrite(&tracktable, sizeof(tracktable),1,outfile) != 1) { /* I/O error */ }
-	hxc_fclose(outfile);
+	libflux_fclose(outfile);
 
-	return HXCFE_NOERROR;
+	return LIBFLUX_NOERROR;
 
 error:
 	if(outfile)
-		hxc_fclose(outfile);
+		libflux_fclose(outfile);
 
-	return HXCFE_INTERNALERROR;
+	return LIBFLUX_INTERNALERROR;
 }

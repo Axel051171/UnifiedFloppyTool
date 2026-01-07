@@ -34,8 +34,7 @@
  * 
  * Flux:
  * - SCP: SuperCard Pro
- * - KF: KryoFlux stream
- * - HFE: HxC Floppy Emulator
+ * - HFE: UFT HFE Format
  * - MFM: Raw MFM stream
  */
 
@@ -103,7 +102,7 @@ typedef enum {
     /* Flux formats */
     UFT_IMG_SCP,            /**< SuperCard Pro */
     UFT_IMG_KF,             /**< KryoFlux stream */
-    UFT_IMG_HFE,            /**< HxC Floppy Emulator */
+    UFT_IMG_HFE,            /**< UFT HFE Format */
     UFT_IMG_MFM,            /**< Raw MFM stream */
     UFT_IMG_RAW,            /**< Raw flux data */
     UFT_IMG_IPF,            /**< Interchangeable Preservation Format */

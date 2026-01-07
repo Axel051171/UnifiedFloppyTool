@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 /*
- * xum1541_usb.h - XUM1541 USB Hardware Support Header
+ * uft_xum_usb.h - XUM1541 USB Hardware Support Header
  * 
  * @version 2.7.3
  * @date 2024-12-26
  */
 
-#ifndef XUM1541_USB_H
-#define XUM1541_USB_H
+#ifndef UFT_XUM_USB_H
+#define UFT_XUM_USB_H
 
 #include <stdint.h>
 #include <stddef.h>
@@ -18,8 +18,8 @@ extern "C" {
 #endif
 
 /* Forward declaration */
-typedef struct xum1541_handle_t xum1541_handle_t;
-typedef struct xum1541_device_info_t xum1541_device_info_t;
+typedef struct uft_xum_handle_t uft_xum_handle_t;
+typedef struct uft_xum_device_info_t uft_xum_device_info_t;
 
 /*============================================================================*
  * PUBLIC API
@@ -31,14 +31,14 @@ typedef struct xum1541_device_info_t xum1541_device_info_t;
  * @param handle_out Device handle (output)
  * @return 0 on success
  */
-int xum1541_init(xum1541_handle_t **handle_out);
+int uft_xum_init(uft_xum_handle_t **handle_out);
 
 /**
  * @brief Close XUM1541 USB device
  * 
  * @param handle Device handle
  */
-void xum1541_close(xum1541_handle_t *handle);
+void uft_xum_close(uft_xum_handle_t *handle);
 
 /**
  * @brief Read track nibbles from drive
@@ -49,8 +49,8 @@ void xum1541_close(xum1541_handle_t *handle);
  * @param track_len_out Track length
  * @return 0 on success
  */
-int xum1541_read_track(
-    xum1541_handle_t *handle,
+int uft_xum_read_track(
+    uft_xum_handle_t *handle,
     uint8_t track,
     uint8_t **track_data_out,
     size_t *track_len_out
@@ -65,8 +65,8 @@ int xum1541_read_track(
  * @param track_len Track length
  * @return 0 on success
  */
-int xum1541_write_track(
-    xum1541_handle_t *handle,
+int uft_xum_write_track(
+    uft_xum_handle_t *handle,
     uint8_t track,
     const uint8_t *track_data,
     size_t track_len
@@ -79,7 +79,7 @@ int xum1541_write_track(
  * @param on true = motor on, false = motor off
  * @return 0 on success
  */
-int xum1541_motor(xum1541_handle_t *handle, bool on);
+int uft_xum_motor(uft_xum_handle_t *handle, bool on);
 
 /**
  * @brief Detect XUM1541 devices
@@ -88,10 +88,10 @@ int xum1541_motor(xum1541_handle_t *handle, bool on);
  * @param count_out Number of devices
  * @return 0 on success
  */
-int xum1541_detect_devices(char ***device_list_out, int *count_out);
+int uft_xum_detect_devices(char ***device_list_out, int *count_out);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* XUM1541_USB_H */
+#endif /* UFT_XUM_USB_H */

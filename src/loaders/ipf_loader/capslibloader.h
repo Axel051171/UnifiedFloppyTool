@@ -1,1 +1,6 @@
-int init_caps_lib(HXCFE* hxcfe);
+#ifndef UFT_LOADERS_IPF_LOADER_CAPSLIBLOADER_H
+#define UFT_LOADERS_IPF_LOADER_CAPSLIBLOADER_H
+
+int init_caps_lib(LIBFLUX_CTX* libflux_ctx);
+
+#endif /* UFT_LOADERS_IPF_LOADER_CAPSLIBLOADER_H */

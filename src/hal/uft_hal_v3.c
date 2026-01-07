@@ -26,7 +26,7 @@ struct uft_hal_device {
     
     /* Controller-specific handle */
     union {
-        gw_device_t* greaseweazle;
+        uft_gw_device_t* greaseweazle;
         void* generic;
     } handle;
 };
@@ -41,27 +41,25 @@ static void* safe_calloc(size_t count, size_t size) {
     return calloc(count, size);
 }
 
-/** Map Greaseweazle error to HAL error */
-static int gw_to_hal_error(int gw_err) {
-    switch (gw_err) {
-        case GW_OK:              return UFT_HAL_OK;
-        case GW_ERR_NOT_FOUND:   return UFT_HAL_ERR_NOT_FOUND;
-        case GW_ERR_OPEN_FAILED: return UFT_HAL_ERR_OPEN_FAILED;
-        case GW_ERR_IO:          return UFT_HAL_ERR_IO;
-        case GW_ERR_TIMEOUT:     return UFT_HAL_ERR_TIMEOUT;
-        case GW_ERR_NO_INDEX:    return UFT_HAL_ERR_NO_INDEX;
-        case GW_ERR_NO_TRK0:     return UFT_HAL_ERR_NO_TRK0;
-        case GW_ERR_OVERFLOW:    return UFT_HAL_ERR_OVERFLOW;
-        case GW_ERR_WRPROT:      return UFT_HAL_ERR_WRPROT;
-        case GW_ERR_INVALID:     return UFT_HAL_ERR_INVALID;
-        case GW_ERR_NOMEM:       return UFT_HAL_ERR_NOMEM;
-        case GW_ERR_NOT_CONNECTED: return UFT_HAL_ERR_NOT_CONNECTED;
+static int uft_gw_to_hal_error(int uft_gw_err) {
+    switch (uft_gw_err) {
+        case UFT_GW_OK:              return UFT_HAL_OK;
+        case UFT_GW_ERR_NOT_FOUND:   return UFT_HAL_ERR_NOT_FOUND;
+        case UFT_GW_ERR_OPEN_FAILED: return UFT_HAL_ERR_OPEN_FAILED;
+        case UFT_GW_ERR_IO:          return UFT_HAL_ERR_IO;
+        case UFT_GW_ERR_TIMEOUT:     return UFT_HAL_ERR_TIMEOUT;
+        case UFT_GW_ERR_NO_INDEX:    return UFT_HAL_ERR_NO_INDEX;
+        case UFT_GW_ERR_NO_TRK0:     return UFT_HAL_ERR_NO_TRK0;
+        case UFT_GW_ERR_OVERFLOW:    return UFT_HAL_ERR_OVERFLOW;
+        case UFT_GW_ERR_WRPROT:      return UFT_HAL_ERR_WRPROT;
+        case UFT_GW_ERR_INVALID:     return UFT_HAL_ERR_INVALID;
+        case UFT_GW_ERR_NOMEM:       return UFT_HAL_ERR_NOMEM;
+        case UFT_GW_ERR_NOT_CONNECTED: return UFT_HAL_ERR_NOT_CONNECTED;
         default:                 return UFT_HAL_ERR_IO;
     }
 }
 
-/** Convert Greaseweazle flux data to UFT-IR track */
-static int gw_flux_to_ir_track(const gw_flux_data_t* flux, uint8_t cylinder,
+static int uft_gw_flux_to_ir_track(const uft_gw_flux_data_t* flux, uint8_t cylinder,
                                 uint8_t head, uft_ir_track_t** track_out) {
     if (!flux || !track_out) return UFT_HAL_ERR_INVALID;
     
@@ -108,7 +106,7 @@ static int gw_flux_to_ir_track(const gw_flux_data_t* flux, uint8_t cylinder,
             uint64_t total_ns = 0;
             for (uint32_t i = 0; i < rev_samples && (rev_start_idx + i) < flux->sample_count; i++) {
                 uint32_t ticks = flux->samples[rev_start_idx + i];
-                uint32_t ns = gw_ticks_to_ns(ticks, flux->sample_freq);
+                uint32_t ns = uft_gw_ticks_to_ns(ticks, flux->sample_freq);
                 ir_rev->flux_deltas[i] = ns;
                 total_ns += ns;
             }
@@ -134,7 +132,7 @@ static int gw_flux_to_ir_track(const gw_flux_data_t* flux, uint8_t cylinder,
         uint64_t total_ns = 0;
         for (uint32_t i = 0; i < flux->sample_count; i++) {
             uint32_t ticks = flux->samples[i];
-            uint32_t ns = gw_ticks_to_ns(ticks, flux->sample_freq);
+            uint32_t ns = uft_gw_ticks_to_ns(ticks, flux->sample_freq);
             ir_rev->flux_deltas[i] = ns;
             total_ns += ns;
         }
@@ -162,7 +160,6 @@ static int gw_flux_to_ir_track(const gw_flux_data_t* flux, uint8_t cylinder,
     return UFT_HAL_OK;
 }
 
-/** Convert UFT-IR track to Greaseweazle flux format */
 static int ir_track_to_gw_flux(const uft_ir_track_t* track, uint32_t sample_freq,
                                 uint32_t** samples, uint32_t* sample_count) {
     if (!track || !samples || !sample_count) return UFT_HAL_ERR_INVALID;
@@ -184,7 +181,7 @@ static int ir_track_to_gw_flux(const uft_ir_track_t* track, uint32_t sample_freq
     
     /* Convert nanoseconds back to ticks */
     for (uint32_t i = 0; i < rev->flux_count; i++) {
-        out[i] = gw_ns_to_ticks(rev->flux_deltas[i], sample_freq);
+        out[i] = uft_gw_ns_to_ticks(rev->flux_deltas[i], sample_freq);
     }
     
     *samples = out;
@@ -205,22 +202,22 @@ typedef struct {
     int count;
 } discover_ctx_t;
 
-static void gw_discover_callback(void* user_data, const char* port, const gw_info_t* gw_info) {
+static void uft_gw_discover_callback(void* user_data, const char* port, const uft_gw_info_t* uft_gw_info) {
     discover_ctx_t* ctx = (discover_ctx_t*)user_data;
     
     uft_hal_info_t info;
     memset(&info, 0, sizeof(info));
     
     info.type = UFT_HAL_GREASEWEAZLE;
-    snprintf(info.name, sizeof(info.name), "Greaseweazle F%d", gw_info->hw_model);
-    snprintf(info.version, sizeof(info.version), "%d.%d", gw_info->fw_major, gw_info->fw_minor);
-    strncpy(info.serial, gw_info->serial, sizeof(info.serial) - 1);
+    snprintf(info.name, sizeof(info.name), "Greaseweazle F%d", uft_gw_info->hw_model);
+    snprintf(info.version, sizeof(info.version), "%d.%d", uft_gw_info->fw_major, uft_gw_info->fw_minor);
+    strncpy(info.serial, uft_gw_info->serial, sizeof(info.serial) - 1);
     strncpy(info.port, port, sizeof(info.port) - 1);
-    info.sample_freq = gw_info->sample_freq;
+    info.sample_freq = uft_gw_info->sample_freq;
     info.max_drives = 2;
     info.can_write = true;
     info.supports_hd = true;
-    info.supports_ed = (gw_info->hw_model >= 7);
+    info.supports_ed = (uft_gw_info->hw_model >= 7);
     
     if (ctx->user_callback) {
         ctx->user_callback(ctx->user_data, &info);
@@ -242,8 +239,7 @@ int uft_hal_discover(uft_hal_discover_cb callback, void* user_data) {
         .count = 0
     };
     
-    /* Discover Greaseweazle devices */
-    gw_discover(gw_discover_callback, &ctx);
+    uft_gw_discover(uft_gw_discover_callback, &ctx);
     
     /* TODO: Add other controller discovery */
     
@@ -259,7 +255,7 @@ int uft_hal_list(uft_hal_info_t* infos, int max_count) {
         .count = 0
     };
     
-    gw_discover(gw_discover_callback, &ctx);
+    uft_gw_discover(uft_gw_discover_callback, &ctx);
     
     return ctx.count;
 }
@@ -283,34 +279,34 @@ int uft_hal_open(uft_hal_controller_t type, const char* port,
     
     switch (type) {
         case UFT_HAL_GREASEWEAZLE: {
-            gw_device_t* gw;
+            uft_gw_device_t* gw;
             if (port) {
-                ret = gw_open(port, &gw);
+                ret = uft_gw_open(port, &gw);
             } else {
-                ret = gw_open_first(&gw);
+                ret = uft_gw_open_first(&gw);
             }
             
-            if (ret != GW_OK) {
+            if (ret != UFT_GW_OK) {
                 free(dev);
-                return gw_to_hal_error(ret);
+                return uft_gw_to_hal_error(ret);
             }
             
             dev->handle.greaseweazle = gw;
             
             /* Get device info */
-            gw_info_t gw_info;
-            gw_get_info(gw, &gw_info);
+            uft_gw_info_t uft_gw_info;
+            uft_gw_get_info(gw, &uft_gw_info);
             
             dev->info.type = UFT_HAL_GREASEWEAZLE;
-            snprintf(dev->info.name, sizeof(dev->info.name), "Greaseweazle F%d", gw_info.hw_model);
+            snprintf(dev->info.name, sizeof(dev->info.name), "Greaseweazle F%d", uft_gw_info.hw_model);
             snprintf(dev->info.version, sizeof(dev->info.version), "%d.%d", 
-                     gw_info.fw_major, gw_info.fw_minor);
-            strncpy(dev->info.serial, gw_info.serial, sizeof(dev->info.serial) - 1);
-            dev->info.sample_freq = gw_info.sample_freq;
+                     uft_gw_info.fw_major, uft_gw_info.fw_minor);
+            strncpy(dev->info.serial, uft_gw_info.serial, sizeof(dev->info.serial) - 1);
+            dev->info.sample_freq = uft_gw_info.sample_freq;
             dev->info.max_drives = 2;
             dev->info.can_write = true;
             dev->info.supports_hd = true;
-            dev->info.supports_ed = (gw_info.hw_model >= 7);
+            dev->info.supports_ed = (uft_gw_info.hw_model >= 7);
             break;
         }
         
@@ -331,7 +327,6 @@ int uft_hal_open(uft_hal_controller_t type, const char* port,
 }
 
 int uft_hal_open_first(uft_hal_device_t** device) {
-    /* Try Greaseweazle first */
     int ret = uft_hal_open(UFT_HAL_GREASEWEAZLE, NULL, device);
     if (ret == UFT_HAL_OK) return ret;
     
@@ -345,7 +340,7 @@ void uft_hal_close(uft_hal_device_t* device) {
     
     switch (device->type) {
         case UFT_HAL_GREASEWEAZLE:
-            gw_close(device->handle.greaseweazle);
+            uft_gw_close(device->handle.greaseweazle);
             break;
         default:
             break;
@@ -369,7 +364,7 @@ int uft_hal_select_drive(uft_hal_device_t* device, uint8_t unit) {
     
     switch (device->type) {
         case UFT_HAL_GREASEWEAZLE:
-            return gw_to_hal_error(gw_select_drive(device->handle.greaseweazle, unit));
+            return uft_gw_to_hal_error(uft_gw_select_drive(device->handle.greaseweazle, unit));
         default:
             return UFT_HAL_ERR_UNSUPPORTED;
     }
@@ -382,8 +377,8 @@ int uft_hal_set_profile(uft_hal_device_t* device, uft_hal_drive_profile_t profil
     /* Apply profile-specific settings */
     switch (device->type) {
         case UFT_HAL_GREASEWEAZLE: {
-            gw_delays_t delays;
-            gw_get_delays(device->handle.greaseweazle, &delays);
+            uft_gw_delays_t delays;
+            uft_gw_get_delays(device->handle.greaseweazle, &delays);
             
             /* Adjust delays based on profile */
             switch (profile) {
@@ -406,7 +401,7 @@ int uft_hal_set_profile(uft_hal_device_t* device, uft_hal_drive_profile_t profil
                     break;
             }
             
-            gw_set_delays(device->handle.greaseweazle, &delays);
+            uft_gw_set_delays(device->handle.greaseweazle, &delays);
             break;
         }
         default:
@@ -421,7 +416,7 @@ int uft_hal_recalibrate(uft_hal_device_t* device) {
     
     switch (device->type) {
         case UFT_HAL_GREASEWEAZLE:
-            return gw_to_hal_error(gw_recalibrate(device->handle.greaseweazle));
+            return uft_gw_to_hal_error(uft_gw_recalibrate(device->handle.greaseweazle));
         default:
             return UFT_HAL_ERR_UNSUPPORTED;
     }
@@ -432,7 +427,7 @@ bool uft_hal_is_write_protected(uft_hal_device_t* device) {
     
     switch (device->type) {
         case UFT_HAL_GREASEWEAZLE:
-            return gw_is_write_protected(device->handle.greaseweazle);
+            return uft_gw_is_write_protected(device->handle.greaseweazle);
         default:
             return true;
     }
@@ -450,15 +445,15 @@ int uft_hal_read_track(uft_hal_device_t* device, uint8_t cylinder, uint8_t head,
     
     switch (device->type) {
         case UFT_HAL_GREASEWEAZLE: {
-            gw_flux_data_t* flux;
-            int ret = gw_read_track(device->handle.greaseweazle, cylinder, head,
+            uft_gw_flux_data_t* flux;
+            int ret = uft_gw_read_track(device->handle.greaseweazle, cylinder, head,
                                     revolutions, &flux);
-            if (ret != GW_OK) {
-                return gw_to_hal_error(ret);
+            if (ret != UFT_GW_OK) {
+                return uft_gw_to_hal_error(ret);
             }
             
-            ret = gw_flux_to_ir_track(flux, cylinder, head, track);
-            gw_flux_free(flux);
+            ret = uft_gw_flux_to_ir_track(flux, cylinder, head, track);
+            uft_gw_flux_free(flux);
             return ret;
         }
         default:
@@ -594,11 +589,11 @@ int uft_hal_write_track(uft_hal_device_t* device, const uft_ir_track_t* track) {
                                           &samples, &sample_count);
             if (ret != UFT_HAL_OK) return ret;
             
-            ret = gw_write_track(device->handle.greaseweazle, track->cylinder,
+            ret = uft_gw_write_track(device->handle.greaseweazle, track->cylinder,
                                  track->head, samples, sample_count);
             
             free(samples);
-            return gw_to_hal_error(ret);
+            return uft_gw_to_hal_error(ret);
         }
         default:
             return UFT_HAL_ERR_UNSUPPORTED;
@@ -686,7 +681,7 @@ int uft_hal_seek(uft_hal_device_t* device, uint8_t cylinder) {
     
     switch (device->type) {
         case UFT_HAL_GREASEWEAZLE:
-            return gw_to_hal_error(gw_seek(device->handle.greaseweazle, cylinder));
+            return uft_gw_to_hal_error(uft_gw_seek(device->handle.greaseweazle, cylinder));
         default:
             return UFT_HAL_ERR_UNSUPPORTED;
     }
@@ -697,7 +692,7 @@ int uft_hal_select_head(uft_hal_device_t* device, uint8_t head) {
     
     switch (device->type) {
         case UFT_HAL_GREASEWEAZLE:
-            return gw_to_hal_error(gw_select_head(device->handle.greaseweazle, head));
+            return uft_gw_to_hal_error(uft_gw_select_head(device->handle.greaseweazle, head));
         default:
             return UFT_HAL_ERR_UNSUPPORTED;
     }
@@ -708,7 +703,7 @@ int uft_hal_set_motor(uft_hal_device_t* device, bool on) {
     
     switch (device->type) {
         case UFT_HAL_GREASEWEAZLE:
-            return gw_to_hal_error(gw_set_motor(device->handle.greaseweazle, on));
+            return uft_gw_to_hal_error(uft_gw_set_motor(device->handle.greaseweazle, on));
         default:
             return UFT_HAL_ERR_UNSUPPORTED;
     }
@@ -719,13 +714,13 @@ int uft_hal_erase_track(uft_hal_device_t* device, uint8_t cylinder, uint8_t head
     
     switch (device->type) {
         case UFT_HAL_GREASEWEAZLE: {
-            int ret = gw_seek(device->handle.greaseweazle, cylinder);
-            if (ret != GW_OK) return gw_to_hal_error(ret);
+            int ret = uft_gw_seek(device->handle.greaseweazle, cylinder);
+            if (ret != UFT_GW_OK) return uft_gw_to_hal_error(ret);
             
-            ret = gw_select_head(device->handle.greaseweazle, head);
-            if (ret != GW_OK) return gw_to_hal_error(ret);
+            ret = uft_gw_select_head(device->handle.greaseweazle, head);
+            if (ret != UFT_GW_OK) return uft_gw_to_hal_error(ret);
             
-            return gw_to_hal_error(gw_erase_track(device->handle.greaseweazle, 2));
+            return uft_gw_to_hal_error(uft_gw_erase_track(device->handle.greaseweazle, 2));
         }
         default:
             return UFT_HAL_ERR_UNSUPPORTED;

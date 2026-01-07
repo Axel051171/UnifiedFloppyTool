@@ -2,8 +2,6 @@
  * @file uft_flux_instability.h
  * @brief Flux Instability Analysis and Scoring
  * 
- * Based on FloppyAI flux_analyzer.py instability algorithms
- * Ported from Python to C for UFT
  * 
  * Provides metrics for analyzing flux stability across revolutions:
  * - Phase variance (angular jitter across revolutions)
@@ -42,7 +40,6 @@ extern "C" {
 #define UFT_INSTAB_DEFAULT_BINS     360
 #define UFT_INSTAB_HIGH_RES_BINS    1440
 
-/** Instability weight factors (from FloppyAI) */
 #define UFT_INSTAB_W_VARIANCE       0.4     /**< Phase variance weight */
 #define UFT_INSTAB_W_INCOHERENCE    0.3     /**< Cross-rev incoherence weight */
 #define UFT_INSTAB_W_GAP_RATE       0.2     /**< Gap rate weight */

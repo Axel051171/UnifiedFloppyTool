@@ -2,25 +2,20 @@
 //
 // Copyright (C) 2006-2025 Jean-François DEL NERO
 //
-// This file is part of the HxCFloppyEmulator library
 //
-// HxCFloppyEmulator may be used and distributed without restriction provided
 // that this copyright statement is not removed from the file and that any
 // derivative work contains the original copyright notice and the associated
 // disclaimer.
 //
-// HxCFloppyEmulator is free software; you can redistribute it
 // and/or modify  it under the terms of the GNU General Public License
 // as published by the Free Software Foundation; either version 2
 // of the License, or (at your option) any later version.
 //
-// HxCFloppyEmulator is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 //   See the GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with HxCFloppyEmulator; if not, write to the Free Software
 // Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 //
 */
@@ -49,99 +44,99 @@
 
 #include "types.h"
 
-#include "internal_libhxcfe.h"
-#include "libhxcfe.h"
+#include "libflux.h""
+#include "libflux.h""
 
-#include "floppy_loader.h"
-#include "floppy_utils.h"
+#include "uft_floppy_loader.h"
+#include "uft_floppy_utils.h"
 
 #include "xml_db_loader.h"
 #include "xml_db_writer.h"
 
 #include "libhxcadaptor.h"
 
-HXCFE_XMLLDR * rfb = 0;
+LIBFLUX_XMLLDR * rfb = 0;
 
-int XMLDB_libIsValidDiskFile( HXCFE_IMGLDR * imgldr_ctx, HXCFE_IMGLDR_FILEINFOS * imgfile )
+int XMLDB_libIsValidDiskFile( LIBFLUX_IMGLDR * imgldr_ctx, LIBFLUX_IMGLDR_FILEINFOS * imgfile )
 {
-	HXCFE_XMLLDR * xmlldr;
+	LIBFLUX_XMLLDR * xmlldr;
 
-	imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"XMLDB_libIsValidDiskFile");
+	imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"XMLDB_libIsValidDiskFile");
 
-	xmlldr = hxcfe_initXmlFloppy( imgldr_ctx->hxcfe );
+	xmlldr = libflux_initXmlFloppy( imgldr_ctx->ctx );
 
 	if(xmlldr)
 	{
 
-		hxcfe_deinitXmlFloppy( xmlldr );
+		libflux_deinitXmlFloppy( xmlldr );
 
-		return HXCFE_VALIDFILE;
+		return LIBFLUX_VALIDFILE;
 
 	}
 	else
 	{
-		imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"XMLDB_libIsValidDiskFile : Internal error !");
-		return HXCFE_INTERNALERROR;
+		imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"XMLDB_libIsValidDiskFile : Internal error !");
+		return LIBFLUX_INTERNALERROR;
 	}
 }
 
-int XMLDB_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,char * imgfile,void * parameters)
+int XMLDB_libLoad_DiskFile(LIBFLUX_IMGLDR * imgldr_ctx,LIBFLUX_FLOPPY * floppydisk,char * imgfile,void * parameters)
 {
 	FILE * f;
 	unsigned int filesize;
-	HXCFE_XMLLDR* rfb;
-	HXCFE_FLOPPY * fp;
+	LIBFLUX_XMLLDR* rfb;
+	LIBFLUX_FLOPPY * fp;
 
-	imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"XMLDB_libLoad_DiskFile %s",imgfile);
+	imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"XMLDB_libLoad_DiskFile %s",imgfile);
 
-	f = hxc_fopen(imgfile,"rb");
+	f = libflux_fopen(imgfile,"rb");
 	if( f == NULL )
 	{
-		imgldr_ctx->hxcfe->hxc_printf(MSG_ERROR,"Cannot open %s !",imgfile);
-		return HXCFE_ACCESSERROR;
+		imgldr_ctx->ctx->libflux_printf(MSG_ERROR,"Cannot open %s !",imgfile);
+		return LIBFLUX_ACCESSERROR;
 	}
 
-	filesize = hxc_fgetsize(f);
+	filesize = libflux_fgetsize(f);
 
-	hxc_fclose(f);
+	libflux_fclose(f);
 
-	if(hxc_checkfileext(imgfile,"xml",SYS_PATH_TYPE) && filesize!=0)
+	if(libflux_checkfileext(imgfile,"xml",SYS_PATH_TYPE) && filesize!=0)
 	{
-		rfb = hxcfe_initXmlFloppy(imgldr_ctx->hxcfe);
+		rfb = libflux_initXmlFloppy(imgldr_ctx->ctx);
 		if(rfb)
 		{
-			if(hxcfe_setXmlFloppyLayoutFile(rfb,imgfile) == HXCFE_NOERROR)
+			if(libflux_setXmlFloppyLayoutFile(rfb,imgfile) == LIBFLUX_NOERROR)
 			{
 				if(parameters)
 				{
-					fp = hxcfe_generateXmlFileFloppy(rfb,(char*)parameters);
+					fp = libflux_generateXmlFileFloppy(rfb,(char*)parameters);
 				}
 				else
 				{
-					fp = hxcfe_generateXmlFloppy(rfb,0,0);
+					fp = libflux_generateXmlFloppy(rfb,0,0);
 				}
 
 				if(fp)
 				{
-					memcpy(floppydisk,fp,sizeof(HXCFE_FLOPPY));
+					memcpy(floppydisk,fp,sizeof(LIBFLUX_FLOPPY));
 					free(fp);
 
-					hxcfe_deinitXmlFloppy(rfb);
+					libflux_deinitXmlFloppy(rfb);
 
-					imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"XMLDB_libLoad_DiskFile - disk generated !");
+					imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"XMLDB_libLoad_DiskFile - disk generated !");
 
-					return HXCFE_NOERROR;
+					return LIBFLUX_NOERROR;
 				}
 			}
 
-			hxcfe_deinitXmlFloppy(rfb);
+			libflux_deinitXmlFloppy(rfb);
 		}
 	}
 
-	return HXCFE_BADFILE;
+	return LIBFLUX_BADFILE;
 }
 
-int XMLDB_libGetPluginInfo(HXCFE_IMGLDR * imgldr_ctx,uint32_t infotype,void * returnvalue)
+int XMLDB_libGetPluginInfo(LIBFLUX_IMGLDR * imgldr_ctx,uint32_t infotype,void * returnvalue)
 {
 	static char plug_id[512]="XML_DATABASE_LOADER";
 	static char plug_desc[512]="XML Format database Loader";
@@ -168,16 +163,16 @@ int XMLDB_libGetPluginInfo(HXCFE_IMGLDR * imgldr_ctx,uint32_t infotype,void * re
 
 				case GETEXTENSION:
 					if(!rfb)
-						rfb = hxcfe_initXmlFloppy(imgldr_ctx->hxcfe);
+						rfb = libflux_initXmlFloppy(imgldr_ctx->ctx);
 
 					*(char**)(returnvalue)=(char*)plug_ext;
 					break;
 
 				case GETNBSUBLOADER:
 					if(!rfb)
-						rfb = hxcfe_initXmlFloppy(imgldr_ctx->hxcfe);
+						rfb = libflux_initXmlFloppy(imgldr_ctx->ctx);
 
-					*(int*)(returnvalue) = hxcfe_numberOfXmlLayout(rfb);
+					*(int*)(returnvalue) = libflux_numberOfXmlLayout(rfb);
 
 					break;
 
@@ -185,30 +180,30 @@ int XMLDB_libGetPluginInfo(HXCFE_IMGLDR * imgldr_ctx,uint32_t infotype,void * re
 					imgldr_ctx->selected_subid = *((int*)returnvalue);
 
 					if(!rfb)
-						rfb = hxcfe_initXmlFloppy(imgldr_ctx->hxcfe);
+						rfb = libflux_initXmlFloppy(imgldr_ctx->ctx);
 
 
 					if( imgldr_ctx->selected_subid && rfb )
 					{
-						tmp_ptr = (char*)hxcfe_getXmlLayoutDesc( rfb, imgldr_ctx->selected_subid - 1 );
+						tmp_ptr = (char*)libflux_getXmlLayoutDesc( rfb, imgldr_ctx->selected_subid - 1 );
 						if(tmp_ptr)
 							strncpy(plug_desc, tmp_ptr, sizeof(plug_desc)-1); plug_desc[sizeof(plug_desc)-1] = '\0';
 
-						tmp_ptr = (char*)hxcfe_getXmlLayoutName( rfb, imgldr_ctx->selected_subid - 1 );
+						tmp_ptr = (char*)libflux_getXmlLayoutName( rfb, imgldr_ctx->selected_subid - 1 );
 						if(tmp_ptr)
 							strncpy(plug_id, tmp_ptr, sizeof(plug_id)-1); plug_id[sizeof(plug_id)-1] = '\0';
 
-						hxcfe_selectXmlFloppyLayout( rfb, imgldr_ctx->selected_subid - 1 );
+						libflux_selectXmlFloppyLayout( rfb, imgldr_ctx->selected_subid - 1 );
 					}
 					break;
 
 				default:
-					return HXCFE_BADPARAMETER;
+					return LIBFLUX_BADPARAMETER;
 					break;
 			}
 
-			return HXCFE_NOERROR;
+			return LIBFLUX_NOERROR;
 		}
 	}
-	return HXCFE_BADPARAMETER;
+	return LIBFLUX_BADPARAMETER;
 }

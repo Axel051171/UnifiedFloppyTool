@@ -311,7 +311,7 @@ uint32_t* generate_flux_pattern(uint32_t bit_cells,
 
 /* ---- Interface functions ---- */
 
-int floppy_open(FloppyInterface* dev, const char* path) {
+int uft_floppy_open(FloppyInterface* dev, const char* path) {
     if (!dev || !path) return -EINVAL;
     memset(dev, 0, sizeof(*dev));
     dev->filePath = path;
@@ -350,7 +350,7 @@ int floppy_open(FloppyInterface* dev, const char* path) {
     return 0;
 }
 
-int floppy_close(FloppyInterface* dev) {
+int uft_floppy_close(FloppyInterface* dev) {
     if (!dev) return -EINVAL;
     if (dev->internalData) {
         ctx_free((AnalyzerCtx*)dev->internalData);
@@ -359,7 +359,7 @@ int floppy_close(FloppyInterface* dev) {
     return 0;
 }
 
-int floppy_read(FloppyInterface* dev, uint32_t c, uint32_t h, uint32_t s, uint8_t* buffer) {
+int uft_floppy_read(FloppyInterface* dev, uint32_t c, uint32_t h, uint32_t s, uint8_t* buffer) {
     if (!dev || !dev->internalData || !buffer) return -EINVAL;
     AnalyzerCtx* ctx = (AnalyzerCtx*)dev->internalData;
 
@@ -371,7 +371,7 @@ int floppy_read(FloppyInterface* dev, uint32_t c, uint32_t h, uint32_t s, uint8_
     return 0;
 }
 
-int floppy_write(FloppyInterface* dev, uint32_t c, uint32_t h, uint32_t s, const uint8_t* buffer) {
+int uft_floppy_write(FloppyInterface* dev, uint32_t c, uint32_t h, uint32_t s, const uint8_t* buffer) {
     if (!dev || !dev->internalData || !buffer) return -EINVAL;
     if (dev->isReadOnly) return -EPERM;
 
@@ -467,7 +467,7 @@ static void scan_sector_for_heuristics(AnalyzerCtx* ctx, uint32_t c, uint32_t h,
     }
 }
 
-int floppy_analyze_protection(FloppyInterface* dev) {
+int uft_floppy_analyze_protection(FloppyInterface* dev) {
     if (!dev || !dev->internalData) return -EINVAL;
     AnalyzerCtx* ctx = (AnalyzerCtx*)dev->internalData;
 
@@ -491,7 +491,7 @@ int floppy_analyze_protection(FloppyInterface* dev) {
     for (uint32_t c = 0; c < scanTracks; c++) {
         for (uint32_t h = 0; h < maxH; h++) {
             for (uint32_t s = 1; s <= maxS; s++) {
-                if (floppy_read(dev, c, h, s, tmp) == 0) {
+                if (uft_floppy_read(dev, c, h, s, tmp) == 0) {
                     scan_sector_for_heuristics(ctx, c, h, s, tmp, secSize);
                 }
             }
@@ -502,7 +502,7 @@ int floppy_analyze_protection(FloppyInterface* dev) {
     for (uint32_t c = 3; c < maxC; c += 8) {
         for (uint32_t h = 0; h < maxH; h++) {
             uint32_t s = (c % maxS) + 1;
-            if (floppy_read(dev, c, h, s, tmp) == 0) {
+            if (uft_floppy_read(dev, c, h, s, tmp) == 0) {
                 scan_sector_for_heuristics(ctx, c, h, s, tmp, secSize);
             }
         }
@@ -590,7 +590,7 @@ int uft_export_imd(const FloppyInterface* dev, const char* out_path) {
             /* no cylinder/head maps, no sector flags map (keep it simple) */
 
             for (uint32_t s = 1; s <= ctx->spt; s++) {
-                int rc = floppy_read((FloppyInterface*)dev, c, h, s, sec);
+                int rc = uft_floppy_read((FloppyInterface*)dev, c, h, s, sec);
                 if (rc != 0) {
                     uint8_t t = 0; /* unavailable */
                     fwrite(&t, 1, 1, f);
@@ -618,7 +618,6 @@ int uft_export_imd(const FloppyInterface* dev, const char* out_path) {
  *  - raw payload: the original image bytes (verbatim)
  *
  * This is intended as an interchange format for your pipeline: the next stage
- * (e.g., a Greaseweazle writer) can read this container, interpret metadata,
  * and use generate_flux_pattern() to synthesize weak-bit timings during write.
  */
 static void json_escape(FILE* f, const char* s) {

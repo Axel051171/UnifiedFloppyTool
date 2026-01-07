@@ -1,8 +1,6 @@
 /**
  * @file uft_kryoflux.c
- * @brief KryoFlux Stream Parser Implementation
  * 
- * EXT4-005: KryoFlux raw stream format parser
  * 
  * Features:
  * - Stream file parsing (.raw)
@@ -22,16 +20,16 @@
  *===========================================================================*/
 
 /* Sample clock: 24.027428 MHz (official spec) */
-#define KF_SAMPLE_CLOCK     24027428.0
-#define KF_SAMPLE_PERIOD    (1.0 / KF_SAMPLE_CLOCK)
+#define UFT_KF_SAMPLE_CLOCK     24027428.0
+#define UFT_KF_SAMPLE_PERIOD    (1.0 / UFT_KF_SAMPLE_CLOCK)
 
 /* Stream opcodes */
-#define KF_FLUX1            0x00    /* Flux1: value 0x00-0x07 */
-#define KF_FLUX2            0x08    /* Flux2: + next byte */
-#define KF_FLUX3            0x09    /* Flux3: + 2 bytes (big endian) */
-#define KF_OVERFLOW         0x0A    /* Overflow: add 0x10000 */
-#define KF_VALUE3           0x0B    /* Value3: + 2 bytes (little endian) */
-#define KF_OOB              0x0D    /* OOB: out-of-band data follows */
+#define UFT_KF_FLUX1            0x00    /* Flux1: value 0x00-0x07 */
+#define UFT_KF_FLUX2            0x08    /* Flux2: + next byte */
+#define UFT_KF_FLUX3            0x09    /* Flux3: + 2 bytes (big endian) */
+#define UFT_KF_OVERFLOW         0x0A    /* Overflow: add 0x10000 */
+#define UFT_KF_VALUE3           0x0B    /* Value3: + 2 bytes (little endian) */
+#define UFT_KF_OOB              0x0D    /* OOB: out-of-band data follows */
 
 /* OOB types */
 #define OOB_INVALID         0x00
@@ -138,7 +136,7 @@ int uft_kf_open(uft_kf_ctx_t *ctx, const uint8_t *data, size_t size)
     while (pos < size) {
         uint8_t opcode = data[pos];
         
-        if (opcode == KF_OOB) {
+        if (opcode == UFT_KF_OOB) {
             pos++;
             uft_kf_oob_t oob;
             if (parse_oob(data, size, &pos, &oob) != 0) break;
@@ -165,13 +163,13 @@ int uft_kf_open(uft_kf_ctx_t *ctx, const uint8_t *data, size_t size)
             }
         } else if (opcode <= 0x07) {
             pos++;  /* Flux1 */
-        } else if (opcode == KF_FLUX2) {
+        } else if (opcode == UFT_KF_FLUX2) {
             pos += 2;
-        } else if (opcode == KF_FLUX3) {
+        } else if (opcode == UFT_KF_FLUX3) {
             pos += 3;
-        } else if (opcode == KF_OVERFLOW) {
+        } else if (opcode == UFT_KF_OVERFLOW) {
             pos++;
-        } else if (opcode == KF_VALUE3) {
+        } else if (opcode == UFT_KF_VALUE3) {
             pos += 3;
         } else {
             pos++;
@@ -180,7 +178,7 @@ int uft_kf_open(uft_kf_ctx_t *ctx, const uint8_t *data, size_t size)
     
     /* Default clock if not specified */
     if (ctx->sample_clock == 0) {
-        ctx->sample_clock = KF_SAMPLE_CLOCK;
+        ctx->sample_clock = UFT_KF_SAMPLE_CLOCK;
     }
     
     ctx->is_valid = true;
@@ -219,7 +217,7 @@ int uft_kf_extract_flux(const uft_kf_ctx_t *ctx,
     while (pos < ctx->size && *flux_count < max_flux) {
         uint8_t opcode = ctx->data[pos];
         
-        if (opcode == KF_OOB) {
+        if (opcode == UFT_KF_OOB) {
             pos++;
             uft_kf_oob_t oob;
             if (parse_oob(ctx->data, ctx->size, &pos, &oob) != 0) break;
@@ -242,24 +240,24 @@ int uft_kf_extract_flux(const uft_kf_ctx_t *ctx,
             flux_value = overflow + opcode + 1;
             overflow = 0;
             pos++;
-        } else if (opcode == KF_FLUX2) {
+        } else if (opcode == UFT_KF_FLUX2) {
             /* Flux2: next byte */
             if (pos + 1 >= ctx->size) break;
             flux_value = overflow + 0x08 + ctx->data[pos + 1];
             overflow = 0;
             pos += 2;
-        } else if (opcode == KF_FLUX3) {
+        } else if (opcode == UFT_KF_FLUX3) {
             /* Flux3: 2 bytes big-endian */
             if (pos + 2 >= ctx->size) break;
             flux_value = overflow + (ctx->data[pos + 1] << 8) + ctx->data[pos + 2];
             overflow = 0;
             pos += 3;
-        } else if (opcode == KF_OVERFLOW) {
+        } else if (opcode == UFT_KF_OVERFLOW) {
             /* Add 0x10000 to next flux value */
             overflow += 0x10000;
             pos++;
             continue;
-        } else if (opcode == KF_VALUE3) {
+        } else if (opcode == UFT_KF_VALUE3) {
             /* Value3: 2 bytes little-endian (used for special purposes) */
             pos += 3;
             continue;

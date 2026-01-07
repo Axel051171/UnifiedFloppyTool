@@ -28,17 +28,17 @@ int main(int argc, char** argv){
     }
 
     FloppyDevice dev; memset(&dev, 0, sizeof(dev)); dev.log_callback = log_cb;
-    if(floppy_open(&dev, argv[1]) != 0) die("open failed");
+    if(uft_floppy_open(&dev, argv[1]) != 0) die("open failed");
 
     uint8_t *buf = (uint8_t*)malloc(dev.sectorSize);
     if(!buf) die("oom");
-    if(floppy_read_sector(&dev, 0, 0, 1, buf) != 0) die("read failed");
+    if(uft_floppy_read_sector(&dev, 0, 0, 1, buf) != 0) die("read failed");
     fprintf(stdout, "First 16 bytes of sector 0/0/1:\n");
     for(int i=0;i<16;i++) fprintf(stdout, "%02X ", buf[i]);
     fprintf(stdout, "\n");
     free(buf);
 
-    floppy_analyze_protection(&dev);
-    floppy_close(&dev);
+    uft_floppy_analyze_protection(&dev);
+    uft_floppy_close(&dev);
     return 0;
 }

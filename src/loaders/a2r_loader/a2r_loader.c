@@ -2,25 +2,20 @@
 //
 // Copyright (C) 2006-2025 Jean-Franois DEL NERO
 //
-// This file is part of the HxCFloppyEmulator library
 //
-// HxCFloppyEmulator may be used and distributed without restriction provided
 // that this copyright statement is not removed from the file and that any
 // derivative work contains the original copyright notice and the associated
 // disclaimer.
 //
-// HxCFloppyEmulator is free software; you can redistribute it
 // and/or modify  it under the terms of the GNU General Public License
 // as published by the Free Software Foundation; either version 2
 // of the License, or (at your option) any later version.
 //
-// HxCFloppyEmulator is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 //   See the GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with HxCFloppyEmulator; if not, write to the Free Software
 // Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 //
 */
@@ -52,11 +47,11 @@
 
 #include "types.h"
 
-#include "internal_libhxcfe.h"
-#include "libhxcfe.h"
+#include "libflux.h""
+#include "libflux.h""
 
-#include "floppy_loader.h"
-#include "floppy_utils.h"
+#include "uft_floppy_loader.h"
+#include "uft_floppy_utils.h"
 
 #include "a2r_loader.h"
 
@@ -69,40 +64,40 @@
 
 //#define A2RDEBUG 1
 
-int A2R_libIsValidDiskFile( HXCFE_IMGLDR * imgldr_ctx, HXCFE_IMGLDR_FILEINFOS * imgfile )
+int A2R_libIsValidDiskFile( LIBFLUX_IMGLDR * imgldr_ctx, LIBFLUX_IMGLDR_FILEINFOS * imgfile )
 {
 	a2r_header * a2rh;
 
-	imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"A2R_libIsValidDiskFile");
+	imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"A2R_libIsValidDiskFile");
 
-	if( hxc_checkfileext(imgfile->path,"a2r",SYS_PATH_TYPE) )
+	if( libflux_checkfileext(imgfile->path,"a2r",SYS_PATH_TYPE) )
 	{
 		a2rh = (a2r_header *)&imgfile->file_header;
 
 		if( strncmp((char*)&a2rh->sign,"A2R2",4) || (a2rh->ff_byte != 0xFF) )
 		{
-			imgldr_ctx->hxcfe->hxc_printf(MSG_ERROR,"A2R_libIsValidDiskFile : Bad file header !");
-			return HXCFE_BADFILE;
+			imgldr_ctx->ctx->libflux_printf(MSG_ERROR,"A2R_libIsValidDiskFile : Bad file header !");
+			return LIBFLUX_BADFILE;
 		}
 
-		imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"A2R_libIsValidDiskFile : A2R file !");
-		return HXCFE_VALIDFILE;
+		imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"A2R_libIsValidDiskFile : A2R file !");
+		return LIBFLUX_VALIDFILE;
 	}
 	else
 	{
-		imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"A2R_libIsValidDiskFile : non A2R file !");
-		return HXCFE_BADFILE;
+		imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"A2R_libIsValidDiskFile : non A2R file !");
+		return LIBFLUX_BADFILE;
 	}
 }
 
 
-static HXCFE_SIDE* import_a2r_stream(HXCFE* floppycontext, a2r_capture * captureinfo, unsigned char * stream, int size, short * rpm, float timecoef, int bitrate, int phasecorrection, int filter, int filterpasses,int bmpexport )
+static LIBFLUX_SIDE* import_a2r_stream(LIBFLUX_CTX* flux_ctx, a2r_capture * captureinfo, unsigned char * stream, int size, short * rpm, float timecoef, int bitrate, int phasecorrection, int filter, int filterpasses,int bmpexport )
 {
 	uint32_t * tmp_stream;
 	uint32_t cumul,offset_in,offset_out;
-	HXCFE_FXSA * fxs;
-	HXCFE_SIDE* currentside;
-	HXCFE_TRKSTREAM *track_dump;
+	LIBFLUX_FXSA * fxs;
+	LIBFLUX_SIDE* currentside;
+	LIBFLUX_TRKSTREAM *track_dump;
 	int index_stream_pos;
 	int total;
 	uint8_t cur_value;
@@ -140,41 +135,41 @@ static HXCFE_SIDE* import_a2r_stream(HXCFE* floppycontext, a2r_capture * capture
 			}
 		}
 
-		fxs = hxcfe_initFxStream(floppycontext);
+		fxs = libflux_initFxStream(flux_ctx);
 		if(fxs)
 		{
-		//  hxcfe_FxStream_setBitrate(fxs,bitrate);
+		//  libflux_FxStream_setBitrate(fxs,bitrate);
 
-		//  hxcfe_FxStream_setPhaseCorrectionFactor(fxs,phasecorrection);
+		//  libflux_FxStream_setPhaseCorrectionFactor(fxs,phasecorrection);
 
-		//  hxcfe_FxStream_setFilterParameters(fxs,filterpasses,filter);
+		//  libflux_FxStream_setFilterParameters(fxs,filterpasses,filter);
 
-			hxcfe_FxStream_setResolution(fxs,125000); // 125 ns per tick
+			libflux_FxStream_setResolution(fxs,125000); // 125 ns per tick
 
-			track_dump = hxcfe_FxStream_ImportStream(fxs,tmp_stream,32,(offset_out),HXCFE_STREAMCHANNEL_TYPE_RLEEVT, "data", NULL);
+			track_dump = libflux_FxStream_ImportStream(fxs,tmp_stream,32,(offset_out),LIBFLUX_STREAMCHANNEL_TYPE_RLEEVT, "data", NULL);
 			if(track_dump)
 			{
-				hxcfe_FxStream_ChangeSpeed(fxs,track_dump,timecoef);
+				libflux_FxStream_ChangeSpeed(fxs,track_dump,timecoef);
 
-				hxcfe_FxStream_AddIndex(fxs,track_dump,0,0,FXSTRM_INDEX_MAININDEX);
-				hxcfe_FxStream_AddIndex(fxs,track_dump,index_stream_pos,0,FXSTRM_INDEX_MAININDEX);
+				libflux_FxStream_AddIndex(fxs,track_dump,0,0,FXSTRM_INDEX_MAININDEX);
+				libflux_FxStream_AddIndex(fxs,track_dump,index_stream_pos,0,FXSTRM_INDEX_MAININDEX);
 
-				currentside = hxcfe_FxStream_AnalyzeAndGetTrack(fxs,track_dump);
+				currentside = libflux_FxStream_AnalyzeAndGetTrack(fxs,track_dump);
 
 				if(currentside)
 				{
 					if(rpm)
-						*rpm = (short)( 60 / GetTrackPeriod(floppycontext,currentside) );
+						*rpm = (short)( 60 / GetTrackPeriod(flux_ctx,currentside) );
 				}
 				else
 				{
-					floppycontext->hxc_printf(MSG_ERROR,"import_a2r_stream : null track !");
+					flux_ctx->libflux_printf(MSG_ERROR,"import_a2r_stream : null track !");
 				}
 
 				if( bmpexport )
 				{
 					snprintf(tmp_filename, sizeof(tmp_filename),"track%.2d.%d.bmp",captureinfo->location>>1,captureinfo->location&1);
-					hxcfe_FxStream_ExportToBmp(fxs,track_dump, tmp_filename);
+					libflux_FxStream_ExportToBmp(fxs,track_dump, tmp_filename);
 				}
 
 				if(currentside)
@@ -183,11 +178,11 @@ static HXCFE_SIDE* import_a2r_stream(HXCFE* floppycontext, a2r_capture * capture
 				}
 				else
 				{
-					hxcfe_FxStream_FreeStream(fxs,track_dump);
+					libflux_FxStream_FreeStream(fxs,track_dump);
 				}
 			}
 
-			hxcfe_deinitFxStream(fxs);
+			libflux_deinitFxStream(fxs);
 		}
 
 		free(tmp_stream);
@@ -197,7 +192,7 @@ static HXCFE_SIDE* import_a2r_stream(HXCFE* floppycontext, a2r_capture * capture
 	return currentside;
 }
 
-int A2R_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,char * imgfile,void * parameters)
+int A2R_libLoad_DiskFile(LIBFLUX_IMGLDR * imgldr_ctx,LIBFLUX_FLOPPY * floppydisk,char * imgfile,void * parameters)
 {
 	FILE * f;
 	int mintrack,maxtrack;
@@ -206,8 +201,8 @@ int A2R_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 	unsigned short i,j;
 	int k,l,len;
 	int singleside;
-	HXCFE_CYLINDER* currentcylinder;
-	HXCFE_SIDE * curside;
+	LIBFLUX_CYLINDER* currentcylinder;
+	LIBFLUX_SIDE * curside;
 	int nbside;
 	float timecoef;
 	int tracklen;
@@ -234,7 +229,7 @@ int A2R_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 
 	a2r_chunk_header a2r_chunkh;
 	unsigned char *tmp_buffer;
-	imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"A2R_libLoad_DiskFile");
+	imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"A2R_libLoad_DiskFile");
 
 	backup_env = NULL;
 
@@ -247,98 +242,98 @@ int A2R_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 		minside=0;
 		maxside=0;
 
-		filesize = hxc_getfilesize(imgfile);
+		filesize = libflux_getfilesize(imgfile);
 
 		if(filesize < 8)
-			return HXCFE_BADFILE;
+			return LIBFLUX_BADFILE;
 
-		f = hxc_fopen(imgfile,"rb");
+		f = libflux_fopen(imgfile,"rb");
 		if(f)
 		{
 			nbside = 2;
 /*
-			if( hxcfe_getEnvVarValue( imgldr_ctx->hxcfe, "FLUXSTREAM_IMPORT_PCCAV_TO_MACCLV" ) & 1 )
+			if( libflux_getEnvVarValue( imgldr_ctx->ctx, "FLUXSTREAM_IMPORT_PCCAV_TO_MACCLV" ) & 1 )
 				mac_clv = 1;
 			else
 				mac_clv = 0;
 */
-			skip_inter_tracks = hxcfe_getEnvVarValue( imgldr_ctx->hxcfe, "A2RLOADER_SKIP_INTER_TRACKS" );
+			skip_inter_tracks = libflux_getEnvVarValue( imgldr_ctx->ctx, "A2RLOADER_SKIP_INTER_TRACKS" );
 
-			singleside = hxcfe_getEnvVarValue( imgldr_ctx->hxcfe, "A2RLOADER_SINGLE_SIDE" )&1;
-			phasecorrection = hxcfe_getEnvVarValue( imgldr_ctx->hxcfe, "FLUXSTREAM_PLL_PHASE_CORRECTION_DIVISOR" );
-			filterpasses = hxcfe_getEnvVarValue( imgldr_ctx->hxcfe, "FLUXSTREAM_BITRATE_FILTER_PASSES" );
-			filter = hxcfe_getEnvVarValue( imgldr_ctx->hxcfe, "FLUXSTREAM_BITRATE_FILTER_WINDOW" );
-			bitrate = hxcfe_getEnvVarValue( imgldr_ctx->hxcfe, "A2RLOADER_BITRATE" );
-			bmp_export = hxcfe_getEnvVarValue( imgldr_ctx->hxcfe, "A2RLOADER_BMPEXPORT" );
+			singleside = libflux_getEnvVarValue( imgldr_ctx->ctx, "A2RLOADER_SINGLE_SIDE" )&1;
+			phasecorrection = libflux_getEnvVarValue( imgldr_ctx->ctx, "FLUXSTREAM_PLL_PHASE_CORRECTION_DIVISOR" );
+			filterpasses = libflux_getEnvVarValue( imgldr_ctx->ctx, "FLUXSTREAM_BITRATE_FILTER_PASSES" );
+			filter = libflux_getEnvVarValue( imgldr_ctx->ctx, "FLUXSTREAM_BITRATE_FILTER_WINDOW" );
+			bitrate = libflux_getEnvVarValue( imgldr_ctx->ctx, "A2RLOADER_BITRATE" );
+			bmp_export = libflux_getEnvVarValue( imgldr_ctx->ctx, "A2RLOADER_BMPEXPORT" );
 
 			timecoef = 1;
-			if( !strcmp(hxcfe_getEnvVar( imgldr_ctx->hxcfe, "FLUXSTREAM_RPMFIX", NULL),"360TO300RPM") )
+			if( !strcmp(libflux_getEnvVar( imgldr_ctx->ctx, "FLUXSTREAM_RPMFIX", NULL),"360TO300RPM") )
 			{
 				timecoef=(float)1.2;
 			}
 
-			if( !strcmp(hxcfe_getEnvVar( imgldr_ctx->hxcfe, "FLUXSTREAM_RPMFIX", NULL),"300TO360RPM") )
+			if( !strcmp(libflux_getEnvVar( imgldr_ctx->ctx, "FLUXSTREAM_RPMFIX", NULL),"300TO360RPM") )
 			{
 				timecoef=(float)0.833;
 			}
 
-			hxc_fread(&a2rh, sizeof(a2r_header), f);
+			libflux_fread(&a2rh, sizeof(a2r_header), f);
 
 			if( strncmp((char*)&a2rh.sign,"A2R2",4) || (a2rh.ff_byte != 0xFF) )
 			{
-				hxc_fclose(f);
-				imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"A2R_libLoad_DiskFile : bad Header !");
-				return HXCFE_BADFILE;
+				libflux_fclose(f);
+				imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"A2R_libLoad_DiskFile : bad Header !");
+				return LIBFLUX_BADFILE;
 			}
 
-			tmp_env = initEnv( (envvar_entry *)imgldr_ctx->hxcfe->envvar, NULL );
+			tmp_env = initEnv( (envvar_entry *)imgldr_ctx->ctx->envvar, NULL );
 			if(!tmp_env)
 			{
-				hxc_fclose(f);
-				return HXCFE_INTERNALERROR;
+				libflux_fclose(f);
+				return LIBFLUX_INTERNALERROR;
 			}
 
-			backup_env = imgldr_ctx->hxcfe->envvar;
-			imgldr_ctx->hxcfe->envvar = tmp_env;
-			setget_env_script(imgldr_ctx->hxcfe->scriptctx, tmp_env);
+			backup_env = imgldr_ctx->ctx->envvar;
+			imgldr_ctx->ctx->envvar = tmp_env;
+			setget_env_script(imgldr_ctx->ctx->scriptctx, tmp_env);
 
-			len=hxc_getpathfolder(imgfile,0,SYS_PATH_TYPE);
+			len=libflux_getpathfolder(imgfile,0,SYS_PATH_TYPE);
 			folder = (char*)malloc(len+1);
 			if( !folder )
 			{
-				hxc_fclose(f);
+				libflux_fclose(f);
 
-				tmp_env = (envvar_entry *)imgldr_ctx->hxcfe->envvar;
-				imgldr_ctx->hxcfe->envvar = backup_env;
-				setget_env_script(imgldr_ctx->hxcfe->scriptctx, backup_env);
+				tmp_env = (envvar_entry *)imgldr_ctx->ctx->envvar;
+				imgldr_ctx->ctx->envvar = backup_env;
+				setget_env_script(imgldr_ctx->ctx->scriptctx, backup_env);
 				deinitEnv( tmp_env );
 
-				return HXCFE_INTERNALERROR;
+				return LIBFLUX_INTERNALERROR;
 			}
 
-			hxc_getpathfolder(imgfile,folder,SYS_PATH_TYPE);
+			libflux_getpathfolder(imgfile,folder,SYS_PATH_TYPE);
 
 			filepath = malloc( strlen(imgfile) + 32 );
 			if(filepath)
 			{
 				snprintf(filepath, sizeof(filepath),"%s%s",folder,"config.script");
-				hxcfe_execScriptFile(imgldr_ctx->hxcfe, filepath);
+				libflux_execScriptFile(imgldr_ctx->ctx, filepath);
 				free(filepath);
 				filepath = NULL;
 			}
 
-			imgldr_ctx->hxcfe->hxc_printf(MSG_INFO_1,"Loading A2R file...");
+			imgldr_ctx->ctx->libflux_printf(MSG_INFO_1,"Loading A2R file...");
 
 			foffset = ftell(f);
 
 			while( foffset < filesize )
 			{
 				memset(&a2r_chunkh,0,sizeof(a2r_chunk_header));
-				hxc_fread(&a2r_chunkh, sizeof(a2r_chunk_header), f);
+				libflux_fread(&a2r_chunkh, sizeof(a2r_chunk_header), f);
 
 				if(!strncmp((char*)&a2r_chunkh.sign,"STRM",4))
 				{
-					imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"A2R STRM CHUNK - %d bytes",a2r_chunkh.chunk_size);
+					imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"A2R STRM CHUNK - %d bytes",a2r_chunkh.chunk_size);
 					last_location = -1;
 
 					stream_start_pos = ftell(f);
@@ -352,7 +347,7 @@ int A2R_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 					str_offset = 0;
 					while( str_offset < a2r_chunkh.chunk_size - 1)
 					{
-						hxc_fread(&capture, sizeof(a2r_capture), f);
+						libflux_fread(&capture, sizeof(a2r_capture), f);
 						if (fseek(f,capture.data_length,SEEK_CUR) != 0) { /* seek error */ }
 						if(max_location < capture.location)
 							max_location = capture.location;
@@ -365,7 +360,7 @@ int A2R_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 					maxside = nbside;
 					maxtrack = max_location / nbside;
 
-					imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"%d track (%d - %d), %d sides (%d - %d)",( maxtrack - mintrack ) + 1,mintrack,maxtrack,maxside - minside,minside,maxside);
+					imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"%d track (%d - %d), %d sides (%d - %d)",( maxtrack - mintrack ) + 1,mintrack,maxtrack,maxside - minside,minside,maxside);
 
 					floppydisk->floppyiftype = GENERIC_SHUGART_DD_FLOPPYMODE;
 					floppydisk->floppyBitRate = VARIABLEBITRATE;
@@ -380,31 +375,31 @@ int A2R_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 
 					floppydisk->floppySectorPerTrack = -1;
 
-					floppydisk->tracks=(HXCFE_CYLINDER**)calloc( 1, sizeof(HXCFE_CYLINDER*)*(floppydisk->floppyNumberOfTrack+1) );
+					floppydisk->tracks=(LIBFLUX_CYLINDER**)calloc( 1, sizeof(LIBFLUX_CYLINDER*)*(floppydisk->floppyNumberOfTrack+1) );
 					if(!floppydisk->tracks)
 					{
-						hxc_fclose(f);
+						libflux_fclose(f);
 
-						tmp_env = (envvar_entry *)imgldr_ctx->hxcfe->envvar;
-						imgldr_ctx->hxcfe->envvar = backup_env;
-						setget_env_script(imgldr_ctx->hxcfe->scriptctx, backup_env);
+						tmp_env = (envvar_entry *)imgldr_ctx->ctx->envvar;
+						imgldr_ctx->ctx->envvar = backup_env;
+						setget_env_script(imgldr_ctx->ctx->scriptctx, backup_env);
 						deinitEnv( tmp_env );
 
-						return HXCFE_INTERNALERROR;
+						return LIBFLUX_INTERNALERROR;
 					}
 
 					str_offset = 0;
 					while( str_offset < a2r_chunkh.chunk_size - 1)
 					{
-						hxc_fread(&capture, sizeof(a2r_capture), f);
+						libflux_fread(&capture, sizeof(a2r_capture), f);
 
 						rpm = 300;
 
-						imgldr_ctx->hxcfe->hxc_printf(MSG_INFO_1,"A2R STRM CAPTURE : New Capture block");
-						imgldr_ctx->hxcfe->hxc_printf(MSG_INFO_1,"A2R STRM CAPTURE : location             : %d", capture.location);
-						imgldr_ctx->hxcfe->hxc_printf(MSG_INFO_1,"A2R STRM CAPTURE : capture_type         : %d", capture.capture_type);
-						imgldr_ctx->hxcfe->hxc_printf(MSG_INFO_1,"A2R STRM CAPTURE : data_length          : %d", capture.data_length);
-						imgldr_ctx->hxcfe->hxc_printf(MSG_INFO_1,"A2R STRM CAPTURE : estimated_loop_point : %d", capture.estimated_loop_point);
+						imgldr_ctx->ctx->libflux_printf(MSG_INFO_1,"A2R STRM CAPTURE : New Capture block");
+						imgldr_ctx->ctx->libflux_printf(MSG_INFO_1,"A2R STRM CAPTURE : location             : %d", capture.location);
+						imgldr_ctx->ctx->libflux_printf(MSG_INFO_1,"A2R STRM CAPTURE : capture_type         : %d", capture.capture_type);
+						imgldr_ctx->ctx->libflux_printf(MSG_INFO_1,"A2R STRM CAPTURE : data_length          : %d", capture.data_length);
+						imgldr_ctx->ctx->libflux_printf(MSG_INFO_1,"A2R STRM CAPTURE : estimated_loop_point : %d", capture.estimated_loop_point);
 
 						tmp_buffer = malloc(capture.data_length + 1);
 						if(tmp_buffer)
@@ -412,11 +407,11 @@ int A2R_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 							curside = NULL;
 
 							memset(tmp_buffer,0,capture.data_length + 1);
-							hxc_fread(tmp_buffer, capture.data_length, f);
+							libflux_fread(tmp_buffer, capture.data_length, f);
 
 							if( (last_location != capture.location) && (!skip_inter_tracks || !(capture.location&3) ) )
 							{
-								curside = import_a2r_stream(imgldr_ctx->hxcfe, &capture, tmp_buffer, capture.data_length, &rpm, timecoef, bitrate, phasecorrection, filter, filterpasses, bmp_export );
+								curside = import_a2r_stream(imgldr_ctx->ctx, &capture, tmp_buffer, capture.data_length, &rpm, timecoef, bitrate, phasecorrection, filter, filterpasses, bmp_export );
 								last_location = capture.location;
 
 								if(curside)
@@ -472,7 +467,7 @@ int A2R_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 
 								}
 
-								hxcfe_imgCallProgressCallback(imgldr_ctx,capture.location,max_location );
+								libflux_imgCallProgressCallback(imgldr_ctx,capture.location,max_location );
 							}
 
 							free(tmp_buffer);
@@ -487,13 +482,13 @@ int A2R_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 				{
 					if(!strncmp((char*)&a2r_chunkh.sign,"META",4))
 					{
-						imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"A2R META CHUNK - %d bytes",a2r_chunkh.chunk_size);
+						imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"A2R META CHUNK - %d bytes",a2r_chunkh.chunk_size);
 						tmp_buffer = malloc(a2r_chunkh.chunk_size + 1);
 						if(tmp_buffer)
 						{
 							memset(tmp_buffer,0,a2r_chunkh.chunk_size + 1);
-							hxc_fread(tmp_buffer, a2r_chunkh.chunk_size, f);
-							imgldr_ctx->hxcfe->hxc_printf(MSG_INFO_1,"A2R META :\n%s", tmp_buffer);
+							libflux_fread(tmp_buffer, a2r_chunkh.chunk_size, f);
+							imgldr_ctx->ctx->libflux_printf(MSG_INFO_1,"A2R META :\n%s", tmp_buffer);
 							free(tmp_buffer);
 							tmp_buffer = NULL;
 						}
@@ -502,8 +497,8 @@ int A2R_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 					{
 						if(!strncmp((char*)&a2r_chunkh.sign,"INFO",4))
 						{
-							imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"A2R INFO CHUNK - %d bytes",a2r_chunkh.chunk_size);
-							hxc_fread(&info, sizeof(a2r_info), f);
+							imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"A2R INFO CHUNK - %d bytes",a2r_chunkh.chunk_size);
+							libflux_fread(&info, sizeof(a2r_info), f);
 
 							if( info.disk_type == 2 )
 							{
@@ -516,21 +511,21 @@ int A2R_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 							switch(info.version)
 							{
 								case 1:
-									imgldr_ctx->hxcfe->hxc_printf(MSG_INFO_1,"A2R INFO : Version         : %d", info.version);
-									imgldr_ctx->hxcfe->hxc_printf(MSG_INFO_1,"A2R INFO : Creator         : %s", info.creator);
-									imgldr_ctx->hxcfe->hxc_printf(MSG_INFO_1,"A2R INFO : disk_type       : %d", info.disk_type);
-									imgldr_ctx->hxcfe->hxc_printf(MSG_INFO_1,"A2R INFO : write_protected : %d", info.write_protected);
-									imgldr_ctx->hxcfe->hxc_printf(MSG_INFO_1,"A2R INFO : synchronized    : %d", info.synchronized);
+									imgldr_ctx->ctx->libflux_printf(MSG_INFO_1,"A2R INFO : Version         : %d", info.version);
+									imgldr_ctx->ctx->libflux_printf(MSG_INFO_1,"A2R INFO : Creator         : %s", info.creator);
+									imgldr_ctx->ctx->libflux_printf(MSG_INFO_1,"A2R INFO : disk_type       : %d", info.disk_type);
+									imgldr_ctx->ctx->libflux_printf(MSG_INFO_1,"A2R INFO : write_protected : %d", info.write_protected);
+									imgldr_ctx->ctx->libflux_printf(MSG_INFO_1,"A2R INFO : synchronized    : %d", info.synchronized);
 								break;
 
 								default:
-									imgldr_ctx->hxcfe->hxc_printf(MSG_WARNING,"UNKNOWN INFO Version : %d !", info.version);
+									imgldr_ctx->ctx->libflux_printf(MSG_WARNING,"UNKNOWN INFO Version : %d !", info.version);
 								break;
 							}
 						}
 						else
 						{
-							imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"A2R UNKNOWN CHUNK !");
+							imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"A2R UNKNOWN CHUNK !");
 							break;
 						}
 					}
@@ -539,10 +534,10 @@ int A2R_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 				if (fseek(f,foffset + sizeof(a2r_chunk_header) + a2r_chunkh.chunk_size, SEEK_SET) != 0) { /* seek error */ }
 				foffset = ftell(f);
 
-				imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"Scan offset : %d",foffset);
+				imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"Scan offset : %d",foffset);
 			}
 
-			hxc_fclose(f);
+			libflux_fclose(f);
 
 			// Adjust track timings.
 			for(j=0;j<floppydisk->floppyNumberOfTrack;j++)
@@ -552,31 +547,31 @@ int A2R_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 					curside = floppydisk->tracks[j]->sides[i];
 					if(curside && floppydisk->tracks[0]->sides[0])
 					{
-						AdjustTrackPeriod(imgldr_ctx->hxcfe,floppydisk->tracks[0]->sides[0],curside);
+						AdjustTrackPeriod(imgldr_ctx->ctx,floppydisk->tracks[0]->sides[0],curside);
 					}
 				}
 			}
 
-			imgldr_ctx->hxcfe->hxc_printf(MSG_INFO_1,"track file successfully loaded and encoded!");
+			imgldr_ctx->ctx->libflux_printf(MSG_INFO_1,"track file successfully loaded and encoded!");
 
-			hxcfe_sanityCheck(imgldr_ctx->hxcfe,floppydisk);
+			libflux_sanityCheck(imgldr_ctx->ctx,floppydisk);
 
-			tmp_env = (envvar_entry *)imgldr_ctx->hxcfe->envvar;
-			imgldr_ctx->hxcfe->envvar = backup_env;
-			setget_env_script(imgldr_ctx->hxcfe->scriptctx, backup_env);
+			tmp_env = (envvar_entry *)imgldr_ctx->ctx->envvar;
+			imgldr_ctx->ctx->envvar = backup_env;
+			setget_env_script(imgldr_ctx->ctx->scriptctx, backup_env);
 			deinitEnv( tmp_env );
 
 			free(folder);
 			folder = NULL;
 
-			return HXCFE_NOERROR;
+			return LIBFLUX_NOERROR;
 		}
 	}
 
-	return HXCFE_BADFILE;
+	return LIBFLUX_BADFILE;
 }
 
-int A2R_libGetPluginInfo(HXCFE_IMGLDR * imgldr_ctx,uint32_t infotype,void * returnvalue)
+int A2R_libGetPluginInfo(LIBFLUX_IMGLDR * imgldr_ctx,uint32_t infotype,void * returnvalue)
 {
 	static const char plug_id[]="A2R_FLUX_STREAM";
 	static const char plug_desc[]="A2R Stream Loader";

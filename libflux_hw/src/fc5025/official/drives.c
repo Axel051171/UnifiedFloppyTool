@@ -8,7 +8,7 @@
 static struct drive_info *drives=NULL;
 
 int open_drive(struct drive_info *drive) {
-	return fc5025_open(drive->usbdev);
+	return uft_fc5025_open(drive->usbdev);
 }
 
 int open_drive_by_id(char *id) {
@@ -29,7 +29,7 @@ char *open_default_drive(void) {
 }
 
 int close_drive(void) {
-	return fc5025_close();
+	return uft_fc5025_close();
 }
 
 static int get_desc(struct drive_info *drive) {
@@ -58,7 +58,7 @@ struct drive_info *get_drive_list(void) {
 	struct usb_device **dev;
 	struct drive_info *drive;
 
-	total_devs=fc5025_find(NULL,0);
+	total_devs=uft_fc5025_find(NULL,0);
 	if(total_devs==0)
 		return NULL;
 	if(devs!=NULL)
@@ -66,7 +66,7 @@ struct drive_info *get_drive_list(void) {
 	devs=malloc(total_devs*sizeof(struct usb_device));
 	if(!devs)
 		return NULL;
-	listed_devs=fc5025_find(devs,total_devs);
+	listed_devs=uft_fc5025_find(devs,total_devs);
 	if(listed_devs==0)
 		return NULL;
 	if(drives!=NULL)

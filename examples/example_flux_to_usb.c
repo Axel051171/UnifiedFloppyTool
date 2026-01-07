@@ -3,7 +3,6 @@
  * example_flux_to_usb.c - Complete Flux → USB Workflow
  * 
  * Demonstrates the complete workflow:
- *   1. Read flux from hardware (Applesauce, KryoFlux, etc.)
  *   2. Convert to disk image (.img, .adf, etc.)
  *   3. Write directly to USB floppy drive or USB stick
  * 
@@ -12,18 +11,24 @@
  */
 
 #include <stdio.h>
+#include "uft/core/uft_safe_parse.h"
 #include <stdlib.h>
+#include "uft/core/uft_safe_parse.h"
 #include <string.h>
+#include "uft/core/uft_safe_parse.h"
 
 #include "unified_api.h"
+#include "uft/core/uft_safe_parse.h"
 #include "usb_writer.h"
+#include "uft/core/uft_safe_parse.h"
 #include "apple_protection.h"
+#include "uft/core/uft_safe_parse.h"
 
 /*============================================================================*
  * EXAMPLE 1: APPLESAUCE → IMAGE → USB
  *============================================================================*/
 
-static void example_applesauce_to_usb(void)
+static void example_uft_as_to_usb(void)
 {
     printf("╔═══════════════════════════════════════════════════════════╗\n");
     printf("║  EXAMPLE 1: Applesauce → Image → USB Floppy              ║\n");
@@ -107,13 +112,12 @@ static void example_applesauce_to_usb(void)
  * EXAMPLE 2: KRYOFLUX → ADF → USB
  *============================================================================*/
 
-static void example_kryoflux_to_usb(void)
+static void example_uft_kf_to_usb(void)
 {
     printf("╔═══════════════════════════════════════════════════════════╗\n");
     printf("║  EXAMPLE 2: KryoFlux → ADF → USB (Amiga)                 ║\n");
     printf("╚═══════════════════════════════════════════════════════════╝\n\n");
     
-    /* Step 1: Read from KryoFlux */
     printf("Step 1: Reading from KryoFlux...\n");
     
     unified_handle_t *h = unified_open_hardware("kryoflux", NULL);
@@ -273,14 +277,18 @@ int main(int argc, char *argv[])
     
     if (argc > 1) {
         /* Run specific example */
-        int example = atoi(argv[1]);
+        int32_t example = 0;
+        if (!uft_parse_int32(argv[1], &example, 10)) {
+            fprintf(stderr, "Invalid argument: %s\n", argv[1]);
+            return 1;
+        }
         
         switch (example) {
             case 1:
-                example_applesauce_to_usb();
+                example_uft_as_to_usb();
                 break;
             case 2:
-                example_kryoflux_to_usb();
+                example_uft_kf_to_usb();
                 break;
             case 3:
                 example_scp_to_usb();
@@ -299,8 +307,8 @@ int main(int argc, char *argv[])
     } else {
         /* Run all examples */
         example_usb_info();
-        example_applesauce_to_usb();
-        example_kryoflux_to_usb();
+        example_uft_as_to_usb();
+        example_uft_kf_to_usb();
         example_scp_to_usb();
     }
     

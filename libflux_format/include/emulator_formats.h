@@ -3,7 +3,7 @@
  * emulator_formats.h - Floppy Emulator Formats
  * 
  * Formats designed for hardware floppy emulators:
- * - HFE: HxC Floppy Emulator format
+ * - HFE: UFT HFE Format format
  * 
  * These formats bridge the gap between logical images and hardware,
  * allowing vintage computers to use modern storage via emulator devices.
@@ -27,7 +27,7 @@ extern "C" {
  * EMULATOR FORMATS
  *============================================================================*/
 
-/* HFE - HxC Floppy Emulator */
+/* HFE - UFT HFE Format */
 #include "uft_hfe.h"
 
 /*============================================================================*
@@ -39,7 +39,7 @@ extern "C" {
  */
 typedef enum {
     EMULATOR_FORMAT_UNKNOWN = 0,
-    EMULATOR_FORMAT_HFE      /* HxC Floppy Emulator */
+    EMULATOR_FORMAT_HFE      /* UFT HFE Format */
 } emulator_format_type_t;
 
 /**
@@ -71,7 +71,7 @@ static inline emulator_format_type_t emulator_detect_format(const uint8_t* buffe
 static inline const char* emulator_format_name(emulator_format_type_t fmt)
 {
     switch (fmt) {
-        case EMULATOR_FORMAT_HFE: return "HFE (HxC Floppy Emulator)";
+        case EMULATOR_FORMAT_HFE: return "HFE (UFT HFE Format)";
         default: return "Unknown";
     }
 }
@@ -91,7 +91,7 @@ typedef struct {
 } emulator_device_t;
 
 static const emulator_device_t EMULATOR_DEVICES[] = {
-    { "HxC Floppy Emulator", "HFE, IMG, DSK, many", "Shugart, PC, Amiga", "$60-150" },
+    { "UFT HFE Format", "HFE, IMG, DSK, many", "Shugart, PC, Amiga", "$60-150" },
     { "Gotek (FlashFloppy)", "IMG, DSK, HFE, ADF", "PC, Amiga, Atari",   "$20-40" },
     { "FDADAP",              "Various",             "Apple II",           "$40" },
     { "Ultimate-II+",        "D64, D71, D81",       "C64/C128 cartridge", "$100+" },
@@ -103,7 +103,7 @@ static const emulator_device_t EMULATOR_DEVICES[] = {
  *============================================================================*/
 
 /**
- * HFE (HxC Floppy Emulator) Format:
+ * HFE (UFT HFE Format) Format:
  * 
  * OVERVIEW:
  *   - Track-oriented container format

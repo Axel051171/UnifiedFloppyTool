@@ -14,6 +14,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include "uft/core/uft_error_codes.h"
 #include "uft_types.h"
 
 #include <stddef.h>

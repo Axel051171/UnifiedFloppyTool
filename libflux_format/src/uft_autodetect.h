@@ -11,11 +11,11 @@
 // NOTE: This file does not pull any external dependencies. It relies on
 // format modules exporting the unified symbols:
 //
-//   int floppy_open(FloppyDevice*, const char*);
-//   int floppy_close(FloppyDevice*);
-//   int floppy_read_sector(FloppyDevice*, uint32_t, uint32_t, uint32_t, uint8_t*);
-//   int floppy_write_sector(FloppyDevice*, uint32_t, uint32_t, uint32_t, const uint8_t*);
-//   int floppy_analyze_protection(FloppyDevice*);
+//   int uft_floppy_open(FloppyDevice*, const char*);
+//   int uft_floppy_close(FloppyDevice*);
+//   int uft_floppy_read_sector(FloppyDevice*, uint32_t, uint32_t, uint32_t, uint8_t*);
+//   int uft_floppy_write_sector(FloppyDevice*, uint32_t, uint32_t, uint32_t, const uint8_t*);
+//   int uft_floppy_analyze_protection(FloppyDevice*);
 //
 // Because each module uses the SAME function names, you cannot link them all into
 // one binary without namespacing. Therefore, in the UFT library you should compile

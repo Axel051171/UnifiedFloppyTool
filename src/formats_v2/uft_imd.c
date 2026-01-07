@@ -65,9 +65,9 @@ static uft_error_t imd_open(uft_disk_t* disk, const char* path, bool read_only) 
         if (num_sec > max_sec) max_sec = num_sec;
         if (sz > size_code && sz < 7) size_code = sz;
         
-        fseek(f, num_sec, SEEK_CUR);  // sector map
-        if (hdr[2] & 0x80) fseek(f, num_sec, SEEK_CUR);  // cyl map
-        if (hdr[2] & 0x40) fseek(f, num_sec, SEEK_CUR);  // head map
+        (void)fseek(f, num_sec, SEEK_CUR);  // sector map
+        if (hdr[2] & 0x80) (void)fseek(f, num_sec, SEEK_CUR);  // cyl map
+        if (hdr[2] & 0x40) (void)fseek(f, num_sec, SEEK_CUR);  // head map
         
         uint16_t sec_size = imd_sector_sizes[sz < 7 ? sz : 2];
         for (int s = 0; s < num_sec; s++) {
@@ -120,8 +120,8 @@ static uft_error_t imd_read_track(uft_disk_t* disk, int cyl, int head, uft_track
         uint16_t sec_size = imd_sector_sizes[sz < 7 ? sz : 2];
         uint8_t sec_map[256];
         if (fread(sec_map, 1, num_sec, pdata->file) != num_sec) { /* I/O error */ }
-        if (hdr[2] & 0x80) fseek(pdata->file, num_sec, SEEK_CUR);
-        if (hdr[2] & 0x40) fseek(pdata->file, num_sec, SEEK_CUR);
+        if (hdr[2] & 0x80) (void)fseek(pdata->file, num_sec, SEEK_CUR);
+        if (hdr[2] & 0x40) (void)fseek(pdata->file, num_sec, SEEK_CUR);
         
         if (t_cyl == cyl && t_head == head) {
             uint8_t* sec_buf = malloc(sec_size);
@@ -158,7 +158,7 @@ static uft_error_t imd_read_track(uft_disk_t* disk, int cyl, int head, uft_track
 
 const uft_format_plugin_t uft_format_plugin_imd = {
     .name = "IMD",
-    .description = "ImageDisk (Dave Dunfield)",
+    .description = "ImageDisk (various authors)",
     .extensions = "imd",
     .version = 0x00010000,
     .format = UFT_FORMAT_DSK,

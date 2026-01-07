@@ -926,11 +926,11 @@ static const format_entry_ext_t FLUX_FORMATS_EXT[] = {
         .extension = ".hfe",
         .magic = "48584350494346",  /* "HXCPICF" */
         .gui_name = "HFE (v1)",
-        .full_name = "HxC Floppy Emulator v1",
+        .full_name = "UFT HFE Format v1",
         .marketing_name = "HFE Standard",
         .platform = "Universal",
         .era = "2006-present",
-        .created_by = "Jean-François Del Nero",
+        .created_by = "UFT Project",
         .category = "Flux Formats",
         .priority = 10
     },
@@ -975,7 +975,7 @@ static const format_entry_ext_t FLUX_FORMATS_EXT[] = {
         .priority = 20
     },
     {
-        .id = "KF_RAW",
+        .id = "UFT_KF_RAW",
         .extension = ".raw",
         .gui_name = "KryoFlux (Raw)",
         .full_name = "KryoFlux Stream Files",
@@ -990,14 +990,13 @@ static const format_entry_ext_t FLUX_FORMATS_EXT[] = {
         .priority = 30
     },
     {
-        .id = "GW_RAW",
+        .id = "UFT_GW_RAW",
         .extension = ".raw,.gw",
         .gui_name = "Greaseweazle",
         .full_name = "Greaseweazle Raw Flux",
         .marketing_name = "GW Raw",
         .platform = "Universal",
         .era = "2019-present",
-        .created_by = "Keir Fraser",
         .preserves_timing = true,
         .preserves_weak_bits = true,
         .lossless = true,
@@ -1193,10 +1192,10 @@ static const format_entry_ext_t OTHER_FORMATS_EXT[] = {
         .magic = "494D44",  /* "IMD" */
         .gui_name = "IMD (ImageDisk)",
         .full_name = "ImageDisk Format",
-        .marketing_name = "Dave Dunfield IMD",
+        .marketing_name = "various authors IMD",
         .platform = "Universal",
         .era = "2005-present",
-        .created_by = "Dave Dunfield",
+        .created_by = "various authors",
         .preserves_timing = true,
         .has_error_info = true,
         .category = "Archive Formats",

@@ -4,7 +4,6 @@
  * 
  * The UFT-IR format is the canonical hub format for raw track data in the
  * UnifiedFloppyTool. It serves as the central interchange format between:
- * - Hardware controllers (Greaseweazle, FluxEngine, KryoFlux, FC5025, XUM1541)
  * - Disk image formats (HFE, WOZ, SCP, IPF, etc.)
  * - Analysis/decode pipelines
  * - Archive/cache storage
@@ -651,7 +650,6 @@ int uft_ir_track_deserialize(const uint8_t* buffer, size_t size,
 /**
  * @brief Convert ticks to nanoseconds
  * @param ticks Tick count
- * @param tick_rate Tick rate in Hz (e.g., 72MHz for Greaseweazle)
  * @return Time in nanoseconds
  */
 static inline uint32_t uft_ir_ticks_to_ns(uint32_t ticks, uint32_t tick_rate) {

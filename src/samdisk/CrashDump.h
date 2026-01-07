@@ -1,6 +1,6 @@
 #pragma once
 
-#include "SAMdisk.h"
+#include "uft_sam.h"
 
 #ifdef _WIN32
 

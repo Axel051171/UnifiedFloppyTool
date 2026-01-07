@@ -1,6 +1,5 @@
 /**
  * @file uft_tool_fluxengine.c
- * @brief FluxEngine Tool Adapter
  * 
  * Unterstützt:
  * - Flux lesen (verschiedene Formate)
@@ -83,7 +82,6 @@ static bool fe_detect_hardware(char* info, size_t size) {
 // ============================================================================
 
 static const char* get_fe_profile(uft_format_t format, uft_geometry_preset_t geo) {
-    // FluxEngine uses profile names
     switch (format) {
         case UFT_FORMAT_ADF:
             return "amiga";

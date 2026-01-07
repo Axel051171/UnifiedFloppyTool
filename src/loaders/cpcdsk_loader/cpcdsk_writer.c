@@ -2,25 +2,20 @@
 //
 // Copyright (C) 2006-2025 Jean-Franois DEL NERO
 //
-// This file is part of the HxCFloppyEmulator library
 //
-// HxCFloppyEmulator may be used and distributed without restriction provided
 // that this copyright statement is not removed from the file and that any
 // derivative work contains the original copyright notice and the associated
 // disclaimer.
 //
-// HxCFloppyEmulator is free software; you can redistribute it
 // and/or modify  it under the terms of the GNU General Public License
 // as published by the Free Software Foundation; either version 2
 // of the License, or (at your option) any later version.
 //
-// HxCFloppyEmulator is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 //   See the GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with HxCFloppyEmulator; if not, write to the Free Software
 // Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 //
 */
@@ -31,20 +26,20 @@
 
 #include "types.h"
 
-#include "internal_libhxcfe.h"
+#include "libflux.h""
 #include "tracks/track_generator.h"
-#include "libhxcfe.h"
+#include "libflux.h""
 
 #include "cpcdsk_format.h"
 #include "cpcdsk_loader.h"
 
 #include "libhxcadaptor.h"
 
-#include "floppy_utils.h"
+#include "uft_floppy_utils.h"
 
 #include "version.h"
 
-int CPCDSK_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char * filename)
+int CPCDSK_libWrite_DiskFile(LIBFLUX_IMGLDR* imgldr_ctx,LIBFLUX_FLOPPY * floppy,char * filename)
 {
 	int32_t i,j,k,l,m,nbsector;
 	FILE * outfile;
@@ -62,26 +57,26 @@ int CPCDSK_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char
 	int flag_limit_sector_size;
 	int flag_discard_unformatted_2side;
 
-	HXCFE_SECTORACCESS* ss;
-	HXCFE_SECTCFG** sca;
+	LIBFLUX_SECTORACCESS* ss;
+	LIBFLUX_SECTCFG** sca;
 	int gap3_value;
 
 	if( !imgldr_ctx || !floppy || !filename )
 	{
-		return HXCFE_BADPARAMETER;
+		return LIBFLUX_BADPARAMETER;
 	}
 
-	imgldr_ctx->hxcfe->hxc_printf(MSG_INFO_1,"Write CPCDSK file %s...",filename);
+	imgldr_ctx->ctx->libflux_printf(MSG_INFO_1,"Write CPCDSK file %s...",filename);
 
-	gap3_value = hxcfe_getEnvVarValue( imgldr_ctx->hxcfe, "CPCDSK_WRITER_GAP3_VALUE" );
-	flag_limit_sector_size = hxcfe_getEnvVarValue( imgldr_ctx->hxcfe, "CPCDSK_WRITER_LIMIT_SECTOR_SIZE" );
-	flag_discard_unformatted_2side = hxcfe_getEnvVarValue( imgldr_ctx->hxcfe, "CPCDSK_WRITER_DISCARD_UNFORMATTED_SIDE" );
+	gap3_value = libflux_getEnvVarValue( imgldr_ctx->ctx, "CPCDSK_WRITER_GAP3_VALUE" );
+	flag_limit_sector_size = libflux_getEnvVarValue( imgldr_ctx->ctx, "CPCDSK_WRITER_LIMIT_SECTOR_SIZE" );
+	flag_discard_unformatted_2side = libflux_getEnvVarValue( imgldr_ctx->ctx, "CPCDSK_WRITER_DISCARD_UNFORMATTED_SIDE" );
 
-	outfile = hxc_fopen(filename,"wb");
+	outfile = libflux_fopen(filename,"wb");
 	if( !outfile )
 	{
-		imgldr_ctx->hxcfe->hxc_printf(MSG_ERROR,"Cannot create %s !",filename);
-		return HXCFE_ACCESSERROR;
+		imgldr_ctx->ctx->libflux_printf(MSG_ERROR,"Cannot create %s !",filename);
+		return LIBFLUX_ACCESSERROR;
 	}
 
 	memset(disk_info_block,0,0x100);
@@ -95,7 +90,7 @@ int CPCDSK_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char
 	if (fwrite(&disk_info_block,0x100,1,outfile) != 1) { /* I/O error */ }
 	track_cnt=0;
 
-	ss = hxcfe_initSectorAccess(imgldr_ctx->hxcfe, floppy);
+	ss = libflux_initSectorAccess(imgldr_ctx->ctx, floppy);
 	if(!ss)
 		goto error;
 
@@ -103,15 +98,15 @@ int CPCDSK_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char
 	{
 		for(i=0;i<(int)floppy->floppyNumberOfSide;i++)
 		{
-			log_str = hxc_dyn_sprintfcat(NULL,"track:%.2d:%d file offset:0x%.6x, sectors: ",j,i,(unsigned int)ftell(outfile));
+			log_str = libflux_dyn_sprintfcat(NULL,"track:%.2d:%d file offset:0x%.6x, sectors: ",j,i,(unsigned int)ftell(outfile));
 
-			hxcfe_imgCallProgressCallback(imgldr_ctx,(j<<1) | (i&1),floppy->floppyNumberOfTrack*2 );
+			libflux_imgCallProgressCallback(imgldr_ctx,(j<<1) | (i&1),floppy->floppyNumberOfTrack*2 );
 
 			rec_mode = 2;  // MFM
-			sca = hxcfe_getAllTrackSectors(ss,j,i,ISOIBM_MFM_ENCODING,&nbsector);
+			sca = libflux_getAllTrackSectors(ss,j,i,ISOIBM_MFM_ENCODING,&nbsector);
 			if(!sca)
 			{
-				sca = hxcfe_getAllTrackSectors(ss,j,i,ISOIBM_FM_ENCODING,&nbsector);
+				sca = libflux_getAllTrackSectors(ss,j,i,ISOIBM_FM_ENCODING,&nbsector);
 				rec_mode = 1; // FM
 				if(!nbsector)
 				{
@@ -120,7 +115,7 @@ int CPCDSK_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char
 			}
 
 			memset(&cpcdsk_th,0,sizeof(cpcdsk_trackheader));
-			sprintf((char*)&cpcdsk_th.headertag,"Track-Info\r\n");
+			memcpy(cpcdsk_th.headertag, "Track-Info\r\n", 13);  /* Fixed tag */
 			cpcdsk_th.side_number = i;
 			cpcdsk_th.track_number = j;
 
@@ -329,7 +324,7 @@ int CPCDSK_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char
 						}
 					}
 
-					log_str = hxc_dyn_sprintfcat(log_str,"%d ",sca[k]->sector);
+					log_str = libflux_dyn_sprintfcat(log_str,"%d ",sca[k]->sector);
 
 					k++;
 
@@ -338,7 +333,7 @@ int CPCDSK_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char
 				k=0;
 				while(k<nbsector)
 				{
-					hxcfe_freeSectorConfig( ss, sca[k] );
+					libflux_freeSectorConfig( ss, sca[k] );
 					k++;
 				};
 
@@ -346,7 +341,7 @@ int CPCDSK_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char
 
 				if(sectorsize!=-1)
 				{
-					log_str = hxc_dyn_sprintfcat(log_str,",%dB/s",sectorsize);
+					log_str = libflux_dyn_sprintfcat(log_str,",%dB/s",sectorsize);
 				}
 
 				tracksize = (ftell(outfile)-trackinfooffset);
@@ -370,13 +365,13 @@ int CPCDSK_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char
 			track_cnt++;
 
 			if(log_str)
-				imgldr_ctx->hxcfe->hxc_printf(MSG_INFO_1,log_str);
+				imgldr_ctx->ctx->libflux_printf(MSG_INFO_1,log_str);
 
 			free(log_str);
 		}
 	}
 
-	hxcfe_deinitSectorAccess(ss);
+	libflux_deinitSectorAccess(ss);
 
 	// It appears that some emulators don't like 2 sides disk
 	// with the second side unformatted
@@ -405,13 +400,13 @@ int CPCDSK_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char
 
 	if (fseek(outfile,0,SEEK_SET) != 0) { /* seek error */ }
 	if (fwrite(&disk_info_block,0x100,1,outfile) != 1) { /* I/O error */ }
-	hxc_fclose(outfile);
+	libflux_fclose(outfile);
 
-	return HXCFE_NOERROR;
+	return LIBFLUX_NOERROR;
 
 error:
 	if(outfile)
-		hxc_fclose(outfile);
+		libflux_fclose(outfile);
 
-	return HXCFE_INTERNALERROR;
+	return LIBFLUX_INTERNALERROR;
 }

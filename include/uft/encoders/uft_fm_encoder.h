@@ -14,7 +14,8 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
-#include "uft/uft_sector.h"
+#include "uft/core/uft_sector.h"
+#include "uft/uft_types.h"  /* uft_sector_t */
 
 #ifdef __cplusplus
 extern "C" {

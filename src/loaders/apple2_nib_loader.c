@@ -2,25 +2,20 @@
 //
 // Copyright (C) 2006-2025 Jean-François DEL NERO
 //
-// This file is part of the HxCFloppyEmulator library
 //
-// HxCFloppyEmulator may be used and distributed without restriction provided
 // that this copyright statement is not removed from the file and that any
 // derivative work contains the original copyright notice and the associated
 // disclaimer.
 //
-// HxCFloppyEmulator is free software; you can redistribute it
 // and/or modify  it under the terms of the GNU General Public License
 // as published by the Free Software Foundation; either version 2
 // of the License, or (at your option) any later version.
 //
-// HxCFloppyEmulator is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 //   See the GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with HxCFloppyEmulator; if not, write to the Free Software
 // Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 //
 */
@@ -49,12 +44,12 @@
 
 #include "types.h"
 
-#include "internal_libhxcfe.h"
+#include "libflux.h""
 #include "tracks/track_generator.h"
-#include "libhxcfe.h"
+#include "libflux.h""
 
-#include "floppy_loader.h"
-#include "floppy_utils.h"
+#include "uft_floppy_loader.h"
+#include "uft_floppy_utils.h"
 
 #include "apple2_nib_loader.h"
 
@@ -65,12 +60,12 @@
 //#define HDDD_A2_SUPPORT 1
 #include "tracks/luts.h"
 
-int Apple2_nib_libIsValidDiskFile( HXCFE_IMGLDR * imgldr_ctx, HXCFE_IMGLDR_FILEINFOS * imgfile )
+int Apple2_nib_libIsValidDiskFile( LIBFLUX_IMGLDR * imgldr_ctx, LIBFLUX_IMGLDR_FILEINFOS * imgfile )
 {
-	return hxcfe_imgCheckFileCompatibility( imgldr_ctx, imgfile, "Apple2_nib_libIsValidDiskFile", "nib", NIB_TRACK_SIZE*35 );
+	return libflux_imgCheckFileCompatibility( imgldr_ctx, imgfile, "Apple2_nib_libIsValidDiskFile", "nib", NIB_TRACK_SIZE*35 );
 }
 
-int Apple2_nib_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,char * imgfile,void * parameters)
+int Apple2_nib_libLoad_DiskFile(LIBFLUX_IMGLDR * imgldr_ctx,LIBFLUX_FLOPPY * floppydisk,char * imgfile,void * parameters)
 {
 	FILE * f;
 	unsigned int filesize;
@@ -79,7 +74,7 @@ int Apple2_nib_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppyd
 	unsigned char trackdata[NIB_TRACK_SIZE];
 	int trackformat;
 	int rpm;
-	HXCFE_CYLINDER* currentcylinder;
+	LIBFLUX_CYLINDER* currentcylinder;
 
 	unsigned short pulses;
 
@@ -88,16 +83,16 @@ int Apple2_nib_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppyd
 #endif
 	unsigned char  data_nibble;
 
-	imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"Apple2_nib_libLoad_DiskFile %s",imgfile);
+	imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"Apple2_nib_libLoad_DiskFile %s",imgfile);
 
-	f = hxc_fopen(imgfile,"rb");
+	f = libflux_fopen(imgfile,"rb");
 	if( f == NULL )
 	{
-		imgldr_ctx->hxcfe->hxc_printf(MSG_ERROR,"Cannot open %s !",imgfile);
-		return HXCFE_ACCESSERROR;
+		imgldr_ctx->ctx->libflux_printf(MSG_ERROR,"Cannot open %s !",imgfile);
+		return LIBFLUX_ACCESSERROR;
 	}
 
-	filesize = hxc_fgetsize(f);
+	filesize = libflux_fgetsize(f);
 
 	if( filesize )
 	{
@@ -112,28 +107,28 @@ int Apple2_nib_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppyd
 		floppydisk->floppyBitRate = floppydisk->floppyBitRate * 2;
 #endif
 		floppydisk->floppyiftype=GENERIC_SHUGART_DD_FLOPPYMODE;
-		floppydisk->tracks=(HXCFE_CYLINDER**)malloc(sizeof(HXCFE_CYLINDER*)*floppydisk->floppyNumberOfTrack);
+		floppydisk->tracks=(LIBFLUX_CYLINDER**)malloc(sizeof(LIBFLUX_CYLINDER*)*floppydisk->floppyNumberOfTrack);
 		if(!floppydisk->tracks)
 		{
-			hxc_fclose(f);
-			return HXCFE_INTERNALERROR;
+			libflux_fclose(f);
+			return LIBFLUX_INTERNALERROR;
 		}
 
 		rpm=300;
 
-		imgldr_ctx->hxcfe->hxc_printf(MSG_INFO_1,"filesize:%dkB, %d tracks, %d side(s)",filesize/1024,floppydisk->floppyNumberOfTrack,floppydisk->floppyNumberOfSide);
+		imgldr_ctx->ctx->libflux_printf(MSG_INFO_1,"filesize:%dkB, %d tracks, %d side(s)",filesize/1024,floppydisk->floppyNumberOfTrack,floppydisk->floppyNumberOfSide);
 
 		for(j=0;j<floppydisk->floppyNumberOfTrack;j++)
 		{
-			hxcfe_imgCallProgressCallback(imgldr_ctx, j,floppydisk->floppyNumberOfTrack);
+			libflux_imgCallProgressCallback(imgldr_ctx, j,floppydisk->floppyNumberOfTrack);
 
 			floppydisk->tracks[j]=allocCylinderEntry(rpm,floppydisk->floppyNumberOfSide);
 			currentcylinder=floppydisk->tracks[j];
 
 			file_offset= NIB_TRACK_SIZE * j;
 
-			fseek (f , file_offset , SEEK_SET);
-			hxc_fread(&trackdata,NIB_TRACK_SIZE,f);
+			(void)fseek(f , file_offset , SEEK_SET);
+			libflux_fread(&trackdata,NIB_TRACK_SIZE,f);
 
 #ifdef HDDD_A2_SUPPORT
 			currentcylinder->sides[0] = tg_alloctrack(floppydisk->floppyBitRate,trackformat,rpm,NIB_TRACK_SIZE * 2 * 8 * 2,1000,0,0);
@@ -170,21 +165,21 @@ int Apple2_nib_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppyd
 #endif
 		}
 
-		imgldr_ctx->hxcfe->hxc_printf(MSG_INFO_1,"track file successfully loaded and encoded!");
+		imgldr_ctx->ctx->libflux_printf(MSG_INFO_1,"track file successfully loaded and encoded!");
 
-		hxc_fclose(f);
-		return HXCFE_NOERROR;
+		libflux_fclose(f);
+		return LIBFLUX_NOERROR;
 
 	}
 
-	imgldr_ctx->hxcfe->hxc_printf(MSG_ERROR,"file size=%d !?",filesize);
+	imgldr_ctx->ctx->libflux_printf(MSG_ERROR,"file size=%d !?",filesize);
 
-	hxc_fclose(f);
+	libflux_fclose(f);
 
-	return HXCFE_BADFILE;
+	return LIBFLUX_BADFILE;
 }
 
-int Apple2_nib_libGetPluginInfo(HXCFE_IMGLDR * imgldr_ctx,uint32_t infotype,void * returnvalue)
+int Apple2_nib_libGetPluginInfo(LIBFLUX_IMGLDR * imgldr_ctx,uint32_t infotype,void * returnvalue)
 {
 	static const char plug_id[]="APPLE2_NIB";
 	static const char plug_desc[]="Apple II NIB Loader";

@@ -36,7 +36,6 @@ TEST(hal_type_caps) {
     
     caps = uft_hal_type_caps(UFT_HAL_KRYOFLUX);
     if (!(caps & UFT_HAL_CAP_READ_FLUX)) return -1;
-    // KryoFlux can't write
     if (caps & UFT_HAL_CAP_WRITE_FLUX) return -1;
     
     return 0;

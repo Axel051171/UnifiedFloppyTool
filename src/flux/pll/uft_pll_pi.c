@@ -4,7 +4,6 @@
  * 
  * Based on raszpl/sigrok-disk modern PLL implementation.
  * 
- * @copyright GPL-3.0 (derived from sigrok-disk)
  */
 
 #include "uft_pll_pi.h"

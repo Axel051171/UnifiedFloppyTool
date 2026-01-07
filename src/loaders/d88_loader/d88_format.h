@@ -1,3 +1,6 @@
+#ifndef UFT_LOADERS_D88_LOADER_D88_FORMAT_H
+#define UFT_LOADERS_D88_LOADER_D88_FORMAT_H
+
 /*
 D88 (D68/D77/D98) File Structure
 ================================
@@ -108,3 +111,5 @@ typedef struct d88_sector_
 }d88_sector;
 
 #pragma pack()
+
+#endif /* UFT_LOADERS_D88_LOADER_D88_FORMAT_H */

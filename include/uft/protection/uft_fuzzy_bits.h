@@ -3,7 +3,6 @@
  * @brief Fuzzy bit copy protection detection and analysis
  * 
  * Based on Dungeon Master / Chaos Strikes Back copy protection
- * Source: http://dmweb.free.fr/community/documentation/copy-protection/copy-protection-atari-st/
  * 
  * Fuzzy bits are created by placing flux reversals at PLL inspection
  * window boundaries, causing random bit values on each read.
@@ -230,7 +229,6 @@ uint8_t uft_calc_dm_serial_crc(const uint8_t serial[4]);
  * @brief Create flux-level image of fuzzy sector
  * 
  * Captures raw flux timings for accurate preservation.
- * Required for creating working copies with KryoFlux/SCP.
  * 
  * @param ctx UFT context
  * @param track Track number

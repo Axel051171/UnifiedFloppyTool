@@ -7,7 +7,6 @@
  * WOZ is the preservation format for Apple II disk images.
  * Supports v1, v2, and v3 (flux) formats.
  *
- * Source: Applesauce WOZ specification, HxCFloppyEmulator (GPL v2)
  */
 
 #ifndef UFT_WOZ_PARSER_H

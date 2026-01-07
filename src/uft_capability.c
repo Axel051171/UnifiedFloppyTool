@@ -39,7 +39,7 @@ static const uft_format_info_t format_db[] = {
      UFT_CAP_MULTI_REV | UFT_CAP_WEAK_BITS | UFT_CAP_PROTECTION | UFT_CAP_INDEX_SYNC,
      0, 255, 1, 2, 0, 0, "linux,macos,windows", NULL, NULL, "3.0", "SCP", NULL},
     
-    {UFT_FORMAT_HFE, "HFE", "HxC Floppy Emulator", "hfe",
+    {UFT_FORMAT_HFE, "HFE", "UFT HFE Format", "hfe",
      UFT_CAP_READ | UFT_CAP_WRITE | UFT_CAP_CONVERT_FROM | UFT_CAP_CONVERT_TO |
      UFT_CAP_FLUX,
      0, 255, 1, 2, 0, 0, "linux,macos,windows", NULL, NULL, "3.0", "HxC", NULL},
@@ -116,15 +116,12 @@ static const uft_format_info_t format_db[] = {
  * ═══════════════════════════════════════════════════════════════════════════════ */
 
 static const uft_hardware_info_t hardware_db[] = {
-    {UFT_HW_GREASEWEAZLE, "Greaseweazle", "Open source floppy controller", "Keir Fraser",
      UFT_HW_CAP_READ | UFT_HW_CAP_WRITE | UFT_HW_CAP_FLUX_READ | UFT_HW_CAP_FLUX_WRITE |
      UFT_HW_CAP_MULTI_REV | UFT_HW_CAP_INDEX | UFT_HW_CAP_DENSITY | UFT_HW_CAP_SIDE_SEL |
      UFT_HW_CAP_HD | UFT_HW_CAP_PRECOMP,
      4000000, 84000000, 28, 2, "3.5\",5.25\",8\"",
      UFT_PLATFORM_FULL, UFT_PLATFORM_FULL, UFT_PLATFORM_FULL,
-     "USB", NULL, "https://github.com/keirf/greaseweazle", NULL},
     
-    {UFT_HW_FLUXENGINE, "FluxEngine", "Open source USB floppy controller", "David Given",
      UFT_HW_CAP_READ | UFT_HW_CAP_WRITE | UFT_HW_CAP_FLUX_READ | UFT_HW_CAP_FLUX_WRITE |
      UFT_HW_CAP_MULTI_REV | UFT_HW_CAP_INDEX | UFT_HW_CAP_DENSITY,
      1000000, 12000000, 83, 2, "3.5\",5.25\"",
@@ -155,7 +152,7 @@ static const uft_hardware_info_t hardware_db[] = {
      UFT_HW_CAP_READ | UFT_HW_CAP_WRITE,
      0, 0, 0, 4, "1541,1571,1581",
      UFT_PLATFORM_FULL, UFT_PLATFORM_PARTIAL, UFT_PLATFORM_PARTIAL,
-     "USB", "opencbm", "https://github.com/OpenCBM/OpenCBM", NULL},
+     "USB", "opencbm", "https://github.com/CBM library/CBM library", NULL},
     
     /* Terminator */
     {UFT_HW_NONE, NULL, NULL, NULL, 0, 0, 0, 0, 0, NULL,
@@ -170,7 +167,6 @@ static const uft_hardware_info_t hardware_db[] = {
  * ═══════════════════════════════════════════════════════════════════════════════ */
 
 static const uft_compat_entry_t compat_db[] = {
-    /* Greaseweazle - excellent for everything */
     {UFT_FORMAT_ADF, UFT_HW_GREASEWEAZLE, 
      UFT_CAP_READ | UFT_CAP_WRITE | UFT_CAP_FLUX | UFT_CAP_VERIFY, 100,
      "Full support", NULL},
@@ -181,7 +177,6 @@ static const uft_compat_entry_t compat_db[] = {
      UFT_CAP_READ | UFT_CAP_WRITE | UFT_CAP_FLUX | UFT_CAP_MULTI_REV, 100,
      "Native format", NULL},
      
-    /* FluxEngine */
     {UFT_FORMAT_ADF, UFT_HW_FLUXENGINE,
      UFT_CAP_READ | UFT_CAP_WRITE | UFT_CAP_FLUX, 95,
      "Good support", NULL},
@@ -189,7 +184,6 @@ static const uft_compat_entry_t compat_db[] = {
      UFT_CAP_READ | UFT_CAP_WRITE | UFT_CAP_FLUX, 90,
      "Good support", "May need timing adjustments"},
      
-    /* KryoFlux - read-focused */
     {UFT_FORMAT_IPF, UFT_HW_KRYOFLUX,
      UFT_CAP_READ | UFT_CAP_FLUX | UFT_CAP_PROTECTION, 100,
      "Best for preservation", "Write limited"},
@@ -203,7 +197,7 @@ static const uft_compat_entry_t compat_db[] = {
      "Native Commodore support", "Requires 1541/1571 drive"},
     {UFT_FORMAT_G64, UFT_HW_XUM1541,
      UFT_CAP_READ | UFT_CAP_WRITE | UFT_CAP_PROTECTION, 95,
-     "GCR support via nibtools", NULL},
+     "GCR support via GCR tools", NULL},
     
     /* Terminator */
     {UFT_FORMAT_UNKNOWN, UFT_HW_NONE, 0, 0, NULL, NULL}
@@ -827,8 +821,8 @@ char *uft_capability_flags_string(uint32_t caps) {
     str[0] = '\0';
     for (int i = 0; i < 14; i++) {
         if (caps & (1 << i)) {
-            if (str[0]) strcat(str, "|");
-            strcat(str, uft_capability_name(1 << i));
+            if (str[0]) strncat(str, "|", 255 - strlen(str));
+            strncat(str, uft_capability_name(1 << i), 255 - strlen(str));
         }
     }
     

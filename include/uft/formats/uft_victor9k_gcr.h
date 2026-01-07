@@ -2,8 +2,6 @@
  * @file uft_victor9k_gcr.h
  * @brief Victor 9000 Variable-Density GCR Encoding
  * 
- * Based on HxCFloppyEmulator victor9k_gcr_track.c
- * Copyright (C) 2006-2025 Jean-François DEL NERO
  * License: GPL-2.0+
  * 
  * The Victor 9000 (Sirius 1) uses a unique variable-density GCR encoding

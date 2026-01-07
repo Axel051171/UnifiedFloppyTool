@@ -6,9 +6,6 @@
  * converting their native formats to/from UFT-IR.
  * 
  * Supported Controllers:
- * - Greaseweazle (F7 and compatible)
- * - FluxEngine (planned)
- * - KryoFlux (planned)
  * - FC5025 (planned)
  * - XUM1541 (planned)
  * 

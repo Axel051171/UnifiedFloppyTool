@@ -2,25 +2,20 @@
 //
 // Copyright (C) 2006-2025 Jean-Franois DEL NERO
 //
-// This file is part of the HxCFloppyEmulator library
 //
-// HxCFloppyEmulator may be used and distributed without restriction provided
 // that this copyright statement is not removed from the file and that any
 // derivative work contains the original copyright notice and the associated
 // disclaimer.
 //
-// HxCFloppyEmulator is free software; you can redistribute it
 // and/or modify  it under the terms of the GNU General Public License
 // as published by the Free Software Foundation; either version 2
 // of the License, or (at your option) any later version.
 //
-// HxCFloppyEmulator is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 //   See the GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with HxCFloppyEmulator; if not, write to the Free Software
 // Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 //
 */
@@ -49,14 +44,14 @@
 
 #include "types.h"
 
-#include "internal_libhxcfe.h"
+#include "libflux.h""
 #include "tracks/track_generator.h"
-#include "libhxcfe.h"
+#include "libflux.h""
 
 #include "tracks/encoding/mfm_encoding.h"
 
-#include "floppy_loader.h"
-#include "floppy_utils.h"
+#include "uft_floppy_loader.h"
+#include "uft_floppy_utils.h"
 
 #include "stx_loader.h"
 #include "stx_writer.h"
@@ -69,31 +64,31 @@
 // Enable the debug outputs by default
 #define PASTI_DBG 1
 
-int STX_libIsValidDiskFile( HXCFE_IMGLDR * imgldr_ctx, HXCFE_IMGLDR_FILEINFOS * imgfile )
+int STX_libIsValidDiskFile( LIBFLUX_IMGLDR * imgldr_ctx, LIBFLUX_IMGLDR_FILEINFOS * imgfile )
 {
 	pasti_fileheader * fileheader;
 
-	imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"STX_libIsValidDiskFile");
+	imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"STX_libIsValidDiskFile");
 
-	if(hxc_checkfileext(imgfile->path,"stx",SYS_PATH_TYPE))
+	if(libflux_checkfileext(imgfile->path,"stx",SYS_PATH_TYPE))
 	{
 		fileheader = (pasti_fileheader*)imgfile->file_header;
 
 		if(strcmp((char*)&fileheader->headertag,"RSY"))
 		{
-			imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"STX_libIsValidDiskFile : non STX file (bad header)!");
-			return HXCFE_BADFILE;
+			imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"STX_libIsValidDiskFile : non STX file (bad header)!");
+			return LIBFLUX_BADFILE;
 		}
 		else
 		{
-			imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"STX_libIsValidDiskFile : STX file !");
-			return HXCFE_VALIDFILE;
+			imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"STX_libIsValidDiskFile : STX file !");
+			return LIBFLUX_VALIDFILE;
 		}
 	}
 	else
 	{
-		imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"STX_libIsValidDiskFile : non STX file !");
-		return HXCFE_BADFILE;
+		imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"STX_libIsValidDiskFile : non STX file !");
+		return LIBFLUX_BADFILE;
 	}
 }
 
@@ -118,7 +113,7 @@ unsigned char getchunk(unsigned char c)
 ////////////////////////////////////////////////////
 // Scan a track and make an sectors position list
 ////////////////////////////////////////////////////
-int * getSectorHeaderOffset(HXCFE* floppycontext,unsigned char * trackbuffer,int buffersize,int numsector)
+int * getSectorHeaderOffset(LIBFLUX_CTX* flux_ctx,unsigned char * trackbuffer,int buffersize,int numsector)
 {
 	int * offsetlist;
 	int i,t;
@@ -143,7 +138,7 @@ int * getSectorHeaderOffset(HXCFE* floppycontext,unsigned char * trackbuffer,int
 				if(1)//trackbuffer[i-1]!=0xA1)
 				{
 					offsetlist[t]=i-1;
-					floppycontext->hxc_printf(MSG_DEBUG,"[0x%X] header",offsetlist[t]);
+					flux_ctx->libflux_printf(MSG_DEBUG,"[0x%X] header",offsetlist[t]);
 					t++;
 				}
 			}
@@ -160,7 +155,7 @@ int * getSectorHeaderOffset(HXCFE* floppycontext,unsigned char * trackbuffer,int
 // This function try to found index/data mark and patch them.
 // Used on tracks without sector.
 /////////////////////////////////////////////////////////////////
-void patchtrack(HXCFE* floppycontext,unsigned char * trackbuffer,unsigned char * trackclock,int buffersize,int tracknum)
+void patchtrack(LIBFLUX_CTX* flux_ctx,unsigned char * trackbuffer,unsigned char * trackclock,int buffersize,int tracknum)
 {
 	int lastindex;
 	int i,doff;
@@ -182,7 +177,7 @@ void patchtrack(HXCFE* floppycontext,unsigned char * trackbuffer,unsigned char *
 			trackbuffer[lastindex]=0xA1;
 			trackclock [lastindex]=0x0A;
 
-		floppycontext->hxc_printf(MSG_DEBUG,"Patch track 0x%.2X - Offset :0x%.8X Data:%.2X %.2X %.2X %.2X",
+		flux_ctx->libflux_printf(MSG_DEBUG,"Patch track 0x%.2X - Offset :0x%.8X Data:%.2X %.2X %.2X %.2X",
 			tracknum,
 			doff,
 			trackbuffer[doff%buffersize],
@@ -220,7 +215,7 @@ unsigned char patchbyte(unsigned char * buffer,unsigned char * maskbuffer,int bu
 /////////////////////////////////////////////////////////////////
 // This function patch the track with a sector header and data
 /////////////////////////////////////////////////////////////////
-void addsector(HXCFE* floppycontext,unsigned char * trackbuffer,unsigned char * trackclock,unsigned char * trackmask,int buffersize,int * offsetlist,int numsector,HXCFE_SECTCFG * sector)
+void addsector(LIBFLUX_CTX* flux_ctx,unsigned char * trackbuffer,unsigned char * trackclock,unsigned char * trackmask,int buffersize,int * offsetlist,int numsector,LIBFLUX_SECTCFG * sector)
 {
 	int lastindex,shoff,doff;
 	int i;
@@ -376,7 +371,7 @@ void addsector(HXCFE* floppycontext,unsigned char * trackbuffer,unsigned char * 
 		}
 	}
 
-	floppycontext->hxc_printf(MSG_DEBUG,"Patch track - Track ID: 0x%.2X, Side ID: 0x%.2X, Sector ID: 0x%.2X Size:0x%.4X (Id:0x%.2X), Header Offset :0x%.8X, Data Offset :0x%.8X - 0x%.8X (0x%.3X)",
+	flux_ctx->libflux_printf(MSG_DEBUG,"Patch track - Track ID: 0x%.2X, Side ID: 0x%.2X, Sector ID: 0x%.2X Size:0x%.4X (Id:0x%.2X), Header Offset :0x%.8X, Data Offset :0x%.8X - 0x%.8X (0x%.3X)",
 		sector[numsector].cylinder,
 		sector[numsector].head,
 		sector[numsector].sector,
@@ -389,7 +384,7 @@ void addsector(HXCFE* floppycontext,unsigned char * trackbuffer,unsigned char * 
 		);
 }
 
-int STX_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,char * imgfile,void * parameters)
+int STX_libLoad_DiskFile(LIBFLUX_IMGLDR * imgldr_ctx,LIBFLUX_FLOPPY * floppydisk,char * imgfile,void * parameters)
 {
 	FILE * f;
 	int t;
@@ -406,7 +401,7 @@ int STX_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 	pasti_fileheader  fileheader;
 	pasti_trackheader trackheader;
 	pasti_sector * sector;
-	HXCFE_SECTCFG* sectorconfig;
+	LIBFLUX_SECTCFG* sectorconfig;
 	int * sectordata_index;
 	unsigned char * temptrack;
 	unsigned char * tempclock;
@@ -425,8 +420,8 @@ int STX_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 	int weaksectoroffset;
 	unsigned char * weaksectorbuffer;
 
-	HXCFE_CYLINDER* currentcylinder;
-	HXCFE_SIDE* currentside;
+	LIBFLUX_CYLINDER* currentcylinder;
+	LIBFLUX_SIDE* currentside;
 
 #ifdef PASTI_DBG
 	char tempstring[512];
@@ -445,18 +440,18 @@ int STX_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 
 	interleave = 1;
 
-	imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"STX_libLoad_DiskFile %s",imgfile);
+	imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"STX_libLoad_DiskFile %s",imgfile);
 
-	f = hxc_fopen(imgfile,"rb");
+	f = libflux_fopen(imgfile,"rb");
 	if( f == NULL )
 	{
-		imgldr_ctx->hxcfe->hxc_printf(MSG_ERROR,"Cannot open %s !",imgfile);
-		return HXCFE_ACCESSERROR;
+		imgldr_ctx->ctx->libflux_printf(MSG_ERROR,"Cannot open %s !",imgfile);
+		return LIBFLUX_ACCESSERROR;
 	}
 
-	imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"Image Info: %s\n",imgfile);
+	imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"Image Info: %s\n",imgfile);
 
-	hxc_fread( &fileheader, sizeof(pasti_fileheader), f );
+	libflux_fread( &fileheader, sizeof(pasti_fileheader), f );
 
 	if(!strcmp((char*)&fileheader.headertag,"RSY"))
 	{
@@ -472,7 +467,7 @@ int STX_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 		for(i=0;i<numberoftrack;i++)
 		{
 			trackheaderpos=ftell(f);
-			hxc_fread( &trackheader, sizeof(trackheader), f );
+			libflux_fread( &trackheader, sizeof(trackheader), f );
 
 			presenceside[trackheader.track_code>>7]=1;
 			if((trackheader.track_code&(unsigned char)0x7F)>numberoftrackperside)
@@ -514,50 +509,50 @@ int STX_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 		}
 		snprintf(tempstring + strlen(tempstring), sizeof(tempstring) - strlen(tempstring),"\n");
 
-		imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"%s",tempstring);
+		imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"%s",tempstring);
 
-		imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"Number of track : %d (%d), Number of side: %d\n",numberoftrack,numberoftrackperside,numberofside);
-		imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"Tracks :");
+		imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"Number of track : %d (%d), Number of side: %d\n",numberoftrack,numberoftrackperside,numberofside);
+		imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"Tracks :");
 #endif
 		if(floppydisk->floppyNumberOfTrack)
 		{
-			floppydisk->tracks = (HXCFE_CYLINDER**)malloc(sizeof(HXCFE_CYLINDER*)*floppydisk->floppyNumberOfTrack);
+			floppydisk->tracks = (LIBFLUX_CYLINDER**)malloc(sizeof(LIBFLUX_CYLINDER*)*floppydisk->floppyNumberOfTrack);
 			if( !floppydisk->tracks )
 			{
-				hxc_fclose(f);
-				return HXCFE_INTERNALERROR;
+				libflux_fclose(f);
+				return LIBFLUX_INTERNALERROR;
 			}
 
-			memset(floppydisk->tracks,0,sizeof(HXCFE_CYLINDER*)*floppydisk->floppyNumberOfTrack);
+			memset(floppydisk->tracks,0,sizeof(LIBFLUX_CYLINDER*)*floppydisk->floppyNumberOfTrack);
 
 			for(i=0;i<numberoftrack;i++)
 			{
-				hxcfe_imgCallProgressCallback(imgldr_ctx,i,numberoftrack);
+				libflux_imgCallProgressCallback(imgldr_ctx,i,numberoftrack);
 
 				//lecture descripteur track
 				trackheaderpos=ftell(f);
-				hxc_fread( &trackheader, sizeof(trackheader), f );
+				libflux_fread( &trackheader, sizeof(trackheader), f );
 
 				///////////////////////////// debug ///////////////////////////////
 #ifdef PASTI_DBG
-				imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"");
-				imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T");
-				imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"T-T-T-T-T-T-T-T- Track Header %.3d Offset 0x%.8X -T-T-T-T-T-T-T-T-T-T",i,trackheaderpos);
-				imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T");
-				imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"Track %.3d",trackheader.track_code&0x7F);
-				imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"Side %.3d" ,trackheader.track_code>>7);
-				imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"Number of Sector %.3d" ,trackheader.numberofsector);
-				imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"Track Block Size : 0x%.8X" ,trackheader.track_block_size);
-				imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"Track Flags: 0x%.4X" ,trackheader.flags);
+				imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"");
+				imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T");
+				imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"T-T-T-T-T-T-T-T- Track Header %.3d Offset 0x%.8X -T-T-T-T-T-T-T-T-T-T",i,trackheaderpos);
+				imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T-T");
+				imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"Track %.3d",trackheader.track_code&0x7F);
+				imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"Side %.3d" ,trackheader.track_code>>7);
+				imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"Number of Sector %.3d" ,trackheader.numberofsector);
+				imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"Track Block Size : 0x%.8X" ,trackheader.track_block_size);
+				imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"Track Flags: 0x%.4X" ,trackheader.flags);
 
-				imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"Track header:");
+				imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"Track header:");
 				tempstring[0]=0;
 				for(debug_i=0;debug_i<sizeof(trackheader);debug_i++)
 				{
 					snprintf(tempstring + strlen(tempstring), sizeof(tempstring) - strlen(tempstring),"%.2X ",*(((unsigned char*)&trackheader)+debug_i));
 				}
-				imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"%s",tempstring);
-				imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"---------------------------------------------");
+				imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"%s",tempstring);
+				imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"---------------------------------------------");
 #endif
 				///////////////////////////// debug ///////////////////////////////
 
@@ -581,16 +576,16 @@ int STX_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 					// -> encodage "standard"
 					case 0:
 #ifdef PASTI_DBG
-						imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"READ SECTOR track");
+						imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"READ SECTOR track");
 #endif
 						if(trackheader.numberofsector > 0)
 						{
 							sector = malloc(sizeof(pasti_sector)*trackheader.numberofsector);
-							sectorconfig = (HXCFE_SECTCFG *) malloc(sizeof(HXCFE_SECTCFG)* trackheader.numberofsector);
+							sectorconfig = (LIBFLUX_SECTCFG *) malloc(sizeof(LIBFLUX_SECTCFG)* trackheader.numberofsector);
 							if( !sector || !sectorconfig )
 								goto alloc_error;
 
-							memset(sectorconfig,0,sizeof(HXCFE_SECTCFG)* trackheader.numberofsector);
+							memset(sectorconfig,0,sizeof(LIBFLUX_SECTCFG)* trackheader.numberofsector);
 							memset(sector,0,sizeof(pasti_sector)*trackheader.numberofsector);
 
 							// lecture de l'ensemble des descripteurs de secteur
@@ -600,7 +595,7 @@ int STX_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 								if(trackheader.flags&0x01)
 								{
 									if (fseek(f,sectorlistoffset + (sizeof(pasti_sector)*j) ,SEEK_SET) != 0) { /* seek error */ }
-									hxc_fread( &sector[j], sizeof(pasti_sector), f );
+									libflux_fread( &sector[j], sizeof(pasti_sector), f );
 
 									sectorconfig[j].use_alternate_data_crc=0;
 
@@ -641,18 +636,18 @@ int STX_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 
 									///////////////////////////// debug ///////////////////////////////
 #ifdef PASTI_DBG
-									imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"------ Sector Header %.3d - Offset 0x%.8X ------",j,sectorlistoffset + (sizeof(pasti_sector)*j));
-									imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"Track: %.3d",sector[j].track_num);
-									imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"Side: %.3d" ,sector[j].side_num);
-									imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"Sector ID: %.3d" ,sector[j].sector_num);
-									imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"Sector size: 0x%.2X (%d bytes)" ,sector[j].sector_size,128<<sector[j].sector_size);
-									imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"Sector Flags: 0x%.2X" ,sector[j].sector_flags);
-									imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"Sector FDC Status: 0x%.2X" ,sector[j].FDC_status);
-									imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"Sector Header CRC : 0x%.4X" ,sector[j].header_crc);
-									imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"Sector data Offset: 0x%.8X" ,sector[j].sector_pos);
-									imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"Index-Sector Timing: %d" ,sector[j].sector_pos_timing);
-									imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"Read Sector Timing: %d" ,sector[j].sector_speed_timing);
-									imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"Sector header:");
+									imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"------ Sector Header %.3d - Offset 0x%.8X ------",j,sectorlistoffset + (sizeof(pasti_sector)*j));
+									imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"Track: %.3d",sector[j].track_num);
+									imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"Side: %.3d" ,sector[j].side_num);
+									imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"Sector ID: %.3d" ,sector[j].sector_num);
+									imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"Sector size: 0x%.2X (%d bytes)" ,sector[j].sector_size,128<<sector[j].sector_size);
+									imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"Sector Flags: 0x%.2X" ,sector[j].sector_flags);
+									imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"Sector FDC Status: 0x%.2X" ,sector[j].FDC_status);
+									imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"Sector Header CRC : 0x%.4X" ,sector[j].header_crc);
+									imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"Sector data Offset: 0x%.8X" ,sector[j].sector_pos);
+									imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"Index-Sector Timing: %d" ,sector[j].sector_pos_timing);
+									imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"Read Sector Timing: %d" ,sector[j].sector_speed_timing);
+									imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"Sector header:");
 									tempstring[0]=0;
 									for(debug_i=0;debug_i<sizeof(pasti_sector);debug_i++)
 									{
@@ -662,8 +657,8 @@ int STX_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 											snprintf(tempstring + strlen(tempstring), sizeof(tempstring) - strlen(tempstring)," ");
 										}
 									}
-									imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"%s",tempstring);
-									imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"------------------------------------------------");
+									imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"%s",tempstring);
+									imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"------------------------------------------------");
 #endif
 									///////////////////////////// debug ///////////////////////////////
 
@@ -691,12 +686,12 @@ int STX_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 
 									///////////////////////////// debug ///////////////////////////////
 #ifdef PASTI_DBG
-									imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"------ Sector %.3d : No Header / unprotected -------",j);
-									imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"Track: %.3d",sectorconfig[j].cylinder);
-									imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"Side: %.3d" ,sectorconfig[j].head);
-									imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"Sector ID: %.3d" ,sectorconfig[j].sector);
-									imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"Sector size: %d bytes" ,sectorconfig[j].sectorsize);
-									imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"---------------------------------------------------");
+									imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"------ Sector %.3d : No Header / unprotected -------",j);
+									imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"Track: %.3d",sectorconfig[j].cylinder);
+									imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"Side: %.3d" ,sectorconfig[j].head);
+									imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"Sector ID: %.3d" ,sectorconfig[j].sector);
+									imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"Sector size: %d bytes" ,sectorconfig[j].sectorsize);
+									imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"---------------------------------------------------");
 #endif
 									///////////////////////////// debug ///////////////////////////////
 
@@ -710,9 +705,9 @@ int STX_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 						if (fseek(f,trackpos,SEEK_SET) != 0) { /* seek error */ }
 						if(trackheader.flags&0x80)
 						{
-							hxc_fread( &temp_val, sizeof(unsigned short), f );
+							libflux_fread( &temp_val, sizeof(unsigned short), f );
 #ifdef PASTI_DBG
-							imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"Unknow value 0x%X",temp_val);
+							imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"Unknow value 0x%X",temp_val);
 #endif
 						}
 
@@ -720,31 +715,31 @@ int STX_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 						for(j=0;j<trackheader.numberofsector && sector;j++)
 						{
 #ifdef PASTI_DBG
-							imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"Reading Sector data %d at: 0x%.8X",j,trackpos + sector[j].sector_pos);
+							imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"Reading Sector data %d at: 0x%.8X",j,trackpos + sector[j].sector_pos);
 #endif
 							if (fseek(f,trackpos + sector[j].sector_pos,SEEK_SET) != 0) { /* seek error */ }
 							sectorconfig[j].input_data = malloc(sectorconfig[j].sectorsize);
 							if(sectorconfig[j].input_data)
-								hxc_fread(sectorconfig[j].input_data,sectorconfig[j].sectorsize,f);
+								libflux_fread(sectorconfig[j].input_data,sectorconfig[j].sectorsize,f);
 						}
 
 						// Allocation track
 						if(!floppydisk->tracks[tracknumber])
 						{
-							floppydisk->tracks[tracknumber]=(HXCFE_CYLINDER*)malloc(sizeof(HXCFE_CYLINDER));
-							if(!floppydisk->tracks[tracknumber]) return HXCFE_INTERNALERROR; /* P0-SEC-001 */
-							memset(floppydisk->tracks[tracknumber],0,sizeof(HXCFE_CYLINDER));
+							floppydisk->tracks[tracknumber]=(LIBFLUX_CYLINDER*)malloc(sizeof(LIBFLUX_CYLINDER));
+							if(!floppydisk->tracks[tracknumber]) return LIBFLUX_INTERNALERROR; /* P0-SEC-001 */
+							memset(floppydisk->tracks[tracknumber],0,sizeof(LIBFLUX_CYLINDER));
 							floppydisk->tracks[tracknumber]->floppyRPM=300;
 							currentcylinder=floppydisk->tracks[tracknumber];
 							currentcylinder->number_of_side=0;
 
-							currentcylinder->sides=(HXCFE_SIDE**)malloc(sizeof(HXCFE_SIDE*)*2);
-							if(!currentcylinder->sides) return HXCFE_INTERNALERROR; /* P0-SEC-001 */
-							memset(currentcylinder->sides,0,sizeof(HXCFE_SIDE*)*2);
+							currentcylinder->sides=(LIBFLUX_SIDE**)malloc(sizeof(LIBFLUX_SIDE*)*2);
+							if(!currentcylinder->sides) return LIBFLUX_INTERNALERROR; /* P0-SEC-001 */
+							memset(currentcylinder->sides,0,sizeof(LIBFLUX_SIDE*)*2);
 						}
 
 						currentcylinder->number_of_side++;
-						currentcylinder->sides[sidenumber]=tg_generateTrackEx(trackheader.numberofsector,(HXCFE_SECTCFG *)sectorconfig,interleave,0,floppydisk->floppyBitRate,300,trackformat,0,2500,0);
+						currentcylinder->sides[sidenumber]=tg_generateTrackEx(trackheader.numberofsector,(LIBFLUX_SECTCFG *)sectorconfig,interleave,0,floppydisk->floppyBitRate,300,trackformat,0,2500,0);
 						currentside=currentcylinder->sides[sidenumber];
 
 						currentside->flakybitsbuffer=tg_allocsubtrack_char(currentside->tracklen,0x00);
@@ -764,9 +759,9 @@ int STX_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 							{
 								///////////////////////////// debug ///////////////////////////////
 #ifdef PASTI_DBG
-								imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"----------- Flakey Buffer - Sector %.3d -----------",j);
-								imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"File Offset: 0x%.8X Size : %d Bytes",weaksectoroffset,128<<sector[j].sector_size);
-								imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"---------------------------------------------------");
+								imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"----------- Flakey Buffer - Sector %.3d -----------",j);
+								imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"File Offset: 0x%.8X Size : %d Bytes",weaksectoroffset,128<<sector[j].sector_size);
+								imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"---------------------------------------------------");
 #endif
 								///////////////////////////// debug ///////////////////////////////
 
@@ -774,7 +769,7 @@ int STX_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 								if(weaksectorbuffer)
 								{
 									if (fseek(f,weaksectoroffset,SEEK_SET) != 0) { /* seek error */ }
-									hxc_fread(weaksectorbuffer,128<<sector[j].sector_size, f);
+									libflux_fread(weaksectorbuffer,128<<sector[j].sector_size, f);
 
 									for(k=0;(k<(128<<sector[j].sector_size)*2);k=k+2)
 									{
@@ -806,7 +801,7 @@ int STX_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 						{
 							for(j=0;j<trackheader.numberofsector;j++)
 							{
-								hxcfe_freeSectorConfigData( 0, &sectorconfig[j] );
+								libflux_freeSectorConfigData( 0, &sectorconfig[j] );
 							}
 
 							free(sectorconfig);
@@ -825,18 +820,18 @@ int STX_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 					///////////////////////////////////////////////////////////////////////////////////////////////
 					case 1:
 
-						imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"READTRACK track");
+						imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"READTRACK track");
 
 						// allocation buffers secteurs
 						if(trackheader.numberofsector > 0)
 						{
 							sector = malloc(sizeof(pasti_sector)*trackheader.numberofsector);
-							sectorconfig = (HXCFE_SECTCFG *) malloc(sizeof(HXCFE_SECTCFG)* trackheader.numberofsector);
+							sectorconfig = (LIBFLUX_SECTCFG *) malloc(sizeof(LIBFLUX_SECTCFG)* trackheader.numberofsector);
 							if( !sector || !sectorconfig )
 								goto alloc_error;
 
 							memset(sector,0,sizeof(pasti_sector)*trackheader.numberofsector);
-							memset(sectorconfig,0,sizeof(HXCFE_SECTCFG)* trackheader.numberofsector);
+							memset(sectorconfig,0,sizeof(LIBFLUX_SECTCFG)* trackheader.numberofsector);
 						}
 						else
 						{
@@ -848,7 +843,7 @@ int STX_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 						for(j=0;j<(trackheader.numberofsector);j++)
 						{
 							if (fseek(f,sectorlistoffset + (sizeof(pasti_sector)*j) ,SEEK_SET) != 0) { /* seek error */ }
-							hxc_fread( &sector[j], sizeof(pasti_sector), f );
+							libflux_fread( &sector[j], sizeof(pasti_sector), f );
 						}
 
 						// analyse configuration secteurs
@@ -911,24 +906,24 @@ int STX_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 									snprintf(tempstring + strlen(tempstring), sizeof(tempstring) - strlen(tempstring)," ");
 								}
 							}
-							imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"%s",tempstring);
+							imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"%s",tempstring);
 #endif
 							///////////////////////////// debug ///////////////////////////////
 
 							///////////////////////////// debug ///////////////////////////////
 #ifdef PASTI_DBG
-							imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"------ Sector Header %.3d - Offset 0x%.8X ------",j,sectorlistoffset + (sizeof(pasti_sector)*j));
-							imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"Track: %.3d",sector[j].track_num);
-							imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"Side: %.3d" ,sector[j].side_num);
-							imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"Sector ID: %.3d" ,sector[j].sector_num);
-							imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"Sector size: 0x%.2X (%d bytes)" ,sector[j].sector_size,128<<sector[j].sector_size);
-							imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"Sector Flags: 0x%.2X" ,sector[j].sector_flags);
-							imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"Sector FDC Status: 0x%.2X" ,sector[j].FDC_status);
-							imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"Sector Header CRC : 0x%.4X" ,sector[j].header_crc);
-							imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"Sector data Offset: 0x%.8X" ,sector[j].sector_pos);
-							imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"Index-Sector Timing: %d" ,sector[j].sector_pos_timing);
-							imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"Read Sector Timing: %d" ,sector[j].sector_speed_timing);
-							imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"Sector header:");
+							imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"------ Sector Header %.3d - Offset 0x%.8X ------",j,sectorlistoffset + (sizeof(pasti_sector)*j));
+							imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"Track: %.3d",sector[j].track_num);
+							imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"Side: %.3d" ,sector[j].side_num);
+							imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"Sector ID: %.3d" ,sector[j].sector_num);
+							imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"Sector size: 0x%.2X (%d bytes)" ,sector[j].sector_size,128<<sector[j].sector_size);
+							imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"Sector Flags: 0x%.2X" ,sector[j].sector_flags);
+							imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"Sector FDC Status: 0x%.2X" ,sector[j].FDC_status);
+							imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"Sector Header CRC : 0x%.4X" ,sector[j].header_crc);
+							imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"Sector data Offset: 0x%.8X" ,sector[j].sector_pos);
+							imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"Index-Sector Timing: %d" ,sector[j].sector_pos_timing);
+							imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"Read Sector Timing: %d" ,sector[j].sector_speed_timing);
+							imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"Sector header:");
 							tempstring[0]=0;
 							for(debug_i=0;debug_i<sizeof(pasti_sector);debug_i++)
 							{
@@ -938,8 +933,8 @@ int STX_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 									snprintf(tempstring + strlen(tempstring), sizeof(tempstring) - strlen(tempstring)," ");
 								}
 							}
-							imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"%s",tempstring);
-							imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"------------------------------------------------");
+							imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"%s",tempstring);
+							imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"------------------------------------------------");
 #endif
 									///////////////////////////// debug ///////////////////////////////
 
@@ -951,17 +946,17 @@ int STX_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 						if (fseek(f,trackpos,SEEK_SET) != 0) { /* seek error */ }
 						if(trackheader.flags&0x80)
 						{
-							hxc_fread( &index_sync, sizeof(unsigned short), f );
+							libflux_fread( &index_sync, sizeof(unsigned short), f );
 #ifdef PASTI_DBG
-							imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"Index sync pos 0x%X",index_sync);
+							imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"Index sync pos 0x%X",index_sync);
 #endif
 						}
-						hxc_fread( &temp_val, sizeof(unsigned short), f );
+						libflux_fread( &temp_val, sizeof(unsigned short), f );
 
 						tracklen=temp_val;
 
 #ifdef PASTI_DBG
-						imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"READTRACK data size 0x%X (File offset 0x%.8X)",tracklen,ftell(f));
+						imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"READTRACK data size 0x%X (File offset 0x%.8X)",tracklen,ftell(f));
 #endif
 
 						temptrack=(unsigned char*)malloc(tracklen);
@@ -970,11 +965,11 @@ int STX_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 
 						if(temptrack && tempclock && tempmask)
 						{
-							hxc_fread( temptrack, tracklen, f );
+							libflux_fread( temptrack, tracklen, f );
 							memset(tempclock,0xFF,tracklen);
 							memset(tempmask,0xFF,tracklen);
 
-							sectordata_index=getSectorHeaderOffset(imgldr_ctx->hxcfe,temptrack,tracklen,trackheader.numberofsector);
+							sectordata_index=getSectorHeaderOffset(imgldr_ctx->ctx,temptrack,tracklen,trackheader.numberofsector);
 
 							lastindex=0;
 
@@ -989,16 +984,16 @@ int STX_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 
 								if (fseek(f,trackpos,SEEK_SET) != 0) { /* seek error */ }
 								if (fseek(f,sector[j].sector_pos,SEEK_CUR) != 0) { /* seek error */ }
-								hxc_fread(sectorconfig[j].input_data,sectorconfig[j].sectorsize,f);
+								libflux_fread(sectorconfig[j].input_data,sectorconfig[j].sectorsize,f);
 							}
 
 							for(j=0;j<trackheader.numberofsector;j++)
 							{
-								addsector(imgldr_ctx->hxcfe,temptrack,tempclock,tempmask,tracklen,sectordata_index,j,sectorconfig);
+								addsector(imgldr_ctx->ctx,temptrack,tempclock,tempmask,tracklen,sectordata_index,j,sectorconfig);
 							}
 
 							if(!trackheader.numberofsector)
-								patchtrack(imgldr_ctx->hxcfe,temptrack,tempclock,tracklen,i);
+								patchtrack(imgldr_ctx->ctx,temptrack,tempclock,tracklen,i);
 
 							// Second pass : CRC recalculation
 							for(j=0;j<(trackheader.numberofsector);j++)
@@ -1037,7 +1032,7 @@ int STX_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 
 										}
 
-										imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG," - sectordata_index[0x%.4X]=0x%.8X , data crc result: %.2X%.2X  %d bytes",j,sectorconfig[j].startsectorindex,CRC16_High,CRC16_Low,sectorconfig[j].sectorsize+4);
+										imgldr_ctx->ctx->libflux_printf(MSG_DEBUG," - sectordata_index[0x%.4X]=0x%.8X , data crc result: %.2X%.2X  %d bytes",j,sectorconfig[j].startsectorindex,CRC16_High,CRC16_Low,sectorconfig[j].sectorsize+4);
 									}
 								}
 							}
@@ -1073,9 +1068,9 @@ int STX_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 								{
 									///////////////////////////// debug ///////////////////////////////
 	#ifdef PASTI_DBG
-									imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"----------- Flakey Buffer - Sector %.3d -----------",j);
-									imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"File Offset: 0x%.8X Size : %d Bytes",weaksectoroffset,128<<sector[j].sector_size);
-									imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"---------------------------------------------------");
+									imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"----------- Flakey Buffer - Sector %.3d -----------",j);
+									imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"File Offset: 0x%.8X Size : %d Bytes",weaksectoroffset,128<<sector[j].sector_size);
+									imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"---------------------------------------------------");
 	#endif
 									///////////////////////////// debug ///////////////////////////////
 
@@ -1083,7 +1078,7 @@ int STX_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 									if(weaksectorbuffer)
 									{
 										if (fseek(f,weaksectoroffset,SEEK_SET) != 0) { /* seek error */ }
-										hxc_fread(weaksectorbuffer,128<<sector[j].sector_size,f);
+										libflux_fread(weaksectorbuffer,128<<sector[j].sector_size,f);
 
 										for(k=0;(k<(128<<sector[j].sector_size)*2);k=k+2)
 										{
@@ -1123,7 +1118,7 @@ int STX_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 							{
 								for(j=0;j<trackheader.numberofsector;j++)
 								{
-									hxcfe_freeSectorConfigData( 0, &sectorconfig[j] );
+									libflux_freeSectorConfigData( 0, &sectorconfig[j] );
 								}
 							}
 
@@ -1188,17 +1183,17 @@ int STX_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 			}
 			else
 			{
-				floppydisk->tracks[i]=(HXCFE_CYLINDER*)malloc(sizeof(HXCFE_CYLINDER));
-				if(!floppydisk->tracks[i]) return HXCFE_INTERNALERROR; /* P0-SEC-001 */
-				memset(floppydisk->tracks[i],0,sizeof(HXCFE_CYLINDER));
+				floppydisk->tracks[i]=(LIBFLUX_CYLINDER*)malloc(sizeof(LIBFLUX_CYLINDER));
+				if(!floppydisk->tracks[i]) return LIBFLUX_INTERNALERROR; /* P0-SEC-001 */
+				memset(floppydisk->tracks[i],0,sizeof(LIBFLUX_CYLINDER));
 				floppydisk->tracks[i]->floppyRPM=300;
 
 				currentcylinder=floppydisk->tracks[i];
 				currentcylinder->number_of_side=floppydisk->floppyNumberOfSide;
 
-				currentcylinder->sides=(HXCFE_SIDE**)malloc(sizeof(HXCFE_SIDE*)*2);
-							if(!currentcylinder->sides) return HXCFE_INTERNALERROR; /* P0-SEC-001 */
-				memset(currentcylinder->sides,0,sizeof(HXCFE_SIDE*)*2);
+				currentcylinder->sides=(LIBFLUX_SIDE**)malloc(sizeof(LIBFLUX_SIDE*)*2);
+							if(!currentcylinder->sides) return LIBFLUX_INTERNALERROR; /* P0-SEC-001 */
+				memset(currentcylinder->sides,0,sizeof(LIBFLUX_SIDE*)*2);
 				floppydisk->tracks[i]->sides[0]=tg_generateTrack(0,512,0 ,(unsigned char)i,(unsigned char)0,1,interleave,(unsigned char)(0),250000,currentcylinder->floppyRPM,ISOFORMAT_DD,255,0,2500| NO_SECTOR_UNDER_INDEX,0);
 
 				if(floppydisk->tracks[i]->number_of_side==2)
@@ -1209,24 +1204,24 @@ int STX_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 
 		}
 
-		hxcfe_sanityCheck(imgldr_ctx->hxcfe,floppydisk);
+		libflux_sanityCheck(imgldr_ctx->ctx,floppydisk);
 
-		hxc_fclose(f);
+		libflux_fclose(f);
 
-		imgldr_ctx->hxcfe->hxc_printf(MSG_INFO_0,"Pasti image loading done!");
+		imgldr_ctx->ctx->libflux_printf(MSG_INFO_0,"Pasti image loading done!");
 
-		return HXCFE_NOERROR;
+		return LIBFLUX_NOERROR;
 	}
 	else
 	{
-		hxc_fclose(f);
+		libflux_fclose(f);
 
-		imgldr_ctx->hxcfe->hxc_printf(MSG_ERROR,"non STX/pasti image (bad header)",imgfile);
-		return HXCFE_BADFILE;
+		imgldr_ctx->ctx->libflux_printf(MSG_ERROR,"non STX/pasti image (bad header)",imgfile);
+		return LIBFLUX_BADFILE;
 	}
 
 alloc_error:
-	hxc_fclose(f);
+	libflux_fclose(f);
 
 	free(sector);
 	free(sectorconfig);
@@ -1236,12 +1231,12 @@ alloc_error:
 	free(tempmask);
 	free(weaksectorbuffer);
 
-	hxcfe_freeFloppy(imgldr_ctx->hxcfe, floppydisk );
+	libflux_freeFloppy(imgldr_ctx->ctx, floppydisk );
 
-	return HXCFE_INTERNALERROR;
+	return LIBFLUX_INTERNALERROR;
 }
 
-int STX_libGetPluginInfo(HXCFE_IMGLDR * imgldr_ctx,uint32_t infotype,void * returnvalue)
+int STX_libGetPluginInfo(LIBFLUX_IMGLDR * imgldr_ctx,uint32_t infotype,void * returnvalue)
 {
 	static const char plug_id[]="ATARIST_STX";
 	static const char plug_desc[]="Atari ST STX/Pasti Loader";

@@ -2,7 +2,6 @@
  * @file uft_crc.c
  * @brief CRC computation implementation
  * 
- * Based on CRC RevEng by Gregory Cook
  * Optimized for UFT floppy disk verification
  */
 

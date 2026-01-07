@@ -1,2 +1,7 @@
+#ifndef UFT_LOADERS_KRYOFLUXSTREAM_LOADER_KRYOFLUXSTREAM_WRITER_H
+#define UFT_LOADERS_KRYOFLUXSTREAM_LOADER_KRYOFLUXSTREAM_WRITER_H
 
-int KryoFluxStream_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char * filename);
+
+int KryoFluxStream_libWrite_DiskFile(LIBFLUX_IMGLDR* imgldr_ctx,LIBFLUX_FLOPPY * floppy,char * filename);
+
+#endif /* UFT_LOADERS_KRYOFLUXSTREAM_LOADER_KRYOFLUXSTREAM_WRITER_H */

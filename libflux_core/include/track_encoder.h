@@ -5,7 +5,6 @@
  * Universal track encoder system for writing disk images to various formats
  * and hardware devices.
  * 
- * Integrates encoders from HxC Floppy Emulator (Jean-François DEL NERO)
  * with UnifiedFloppyTool's UFM architecture.
  * 
  * @version 2.7.0

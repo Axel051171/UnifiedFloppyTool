@@ -2,11 +2,10 @@
  * @file uft_forensic_imaging.h
  * @brief UnifiedFloppyTool - Forensic Imaging Module v3.1.4.009
  * 
- * Comprehensive forensic disk imaging functionality extracted from:
  * - dd_rescue 1.99.22 (Kurt Garloff) - Recovery algorithms, SIMD optimization
  * - dc3dd (DoD Cyber Crime Center) - Forensic hashing, verification
  * - dcfldd (Nicholas Harbour) - Split imaging, window hashing
- * - floppy_bios (Sergey Kiselev) - Low-level FDC register operations
+ * - uft_floppy_bios (Sergey Kiselev) - Low-level FDC register operations
  * 
  * Features:
  * - Multi-algorithm concurrent hashing (MD5/SHA1/SHA256/SHA384/SHA512)
@@ -585,7 +584,7 @@ void uft_fi_log_header(uft_fi_job_t *job);
 void uft_fi_log_footer(uft_fi_job_t *job);
 
 /*===========================================================================
- * FDC LOW-LEVEL OPERATIONS (from floppy_bios)
+ * FDC LOW-LEVEL OPERATIONS (from uft_floppy_bios)
  *===========================================================================*/
 
 /**
@@ -606,7 +605,7 @@ void uft_fi_log_footer(uft_fi_job_t *job);
 #define UFT_FDC_STAT_BUSY   0x10  /**< FDC busy */
 
 /**
- * @brief Media state codes (from floppy_bios)
+ * @brief Media state codes (from uft_floppy_bios)
  */
 typedef enum {
     UFT_FDC_MEDIA_360_IN_360   = 0x93,  /**< 250Kbps, 360K in 360K */

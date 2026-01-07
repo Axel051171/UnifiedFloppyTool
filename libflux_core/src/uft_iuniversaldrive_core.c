@@ -5,7 +5,6 @@
  * HARDWARE ABSTRACTION LAYER
  * 
  * Features:
- * ✅ Provider pattern (Greaseweazle, SCP, KryoFlux, Mock)
  * ✅ Sample rate normalization (ALL → nanoseconds)
  * ✅ Capability negotiation
  * ✅ Thread-safe
@@ -147,9 +146,7 @@ static const uft_drive_ops_t* find_provider(const char* name) {
  * Normalize flux stream to nanoseconds
  * 
  * This is THE CORE of hardware abstraction:
- * - Greaseweazle: 72MHz ticks → nanoseconds
  * - SuperCard Pro: 40MHz ticks → nanoseconds
- * - KryoFlux: variable → nanoseconds
  * - Mock: already nanoseconds
  */
 uft_rc_t uft_drive_normalize_flux(

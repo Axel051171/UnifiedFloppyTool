@@ -54,7 +54,7 @@ int detect_variant(const uint8_t* data, size_t size, test_variant_t* info) {
     // SCP
     if (size >= 16 && memcmp(data, "SCP", 3) == 0) {
         info->format_id = FMT_SCP;
-        strcpy(info->format_name, "SCP");
+        strncpy(info->format_name, "SCP", sizeof(info->format_name) - 1);
         info->variant_flags = (data[3] >= 0x25) ? 0x04 : 0x02;
         info->confidence = 100;
         info->is_flux = true;
@@ -65,9 +65,9 @@ int detect_variant(const uint8_t* data, size_t size, test_variant_t* info) {
     // HFE
     if (size >= 16 && memcmp(data, "HXCPICFE", 8) == 0) {
         info->format_id = FMT_HFE;
-        strcpy(info->format_name, "HFE");
+        strncpy(info->format_name, "HFE", sizeof(info->format_name) - 1);
         info->variant_flags = (data[8] == 0) ? 0x01 : 0x02;
-        strcpy(info->variant_name, (data[8] == 0) ? "v1" : "v2");
+        strncpy(info->variant_name, (data[8] == 0) ? "v1" : "v2", sizeof(info->variant_name) - 1);
         info->confidence = 100;
         info->is_flux = true;
         info->tracks = data[9];
@@ -78,8 +78,8 @@ int detect_variant(const uint8_t* data, size_t size, test_variant_t* info) {
     // HFE v3
     if (size >= 8 && memcmp(data, "HXCHFE3", 7) == 0) {
         info->format_id = FMT_HFE;
-        strcpy(info->format_name, "HFE");
-        strcpy(info->variant_name, "v3");
+        strncpy(info->format_name, "HFE", sizeof(info->format_name) - 1);
+        strncpy(info->variant_name, "v3", sizeof(info->variant_name) - 1);
         info->variant_flags = 0x04;
         info->confidence = 100;
         info->is_flux = true;
@@ -93,8 +93,8 @@ int detect_variant(const uint8_t* data, size_t size, test_variant_t* info) {
         if (tail == 0x0A0D0AFF) {
             if (magic == 0x315A4F57) {
                 info->format_id = FMT_WOZ;
-                strcpy(info->format_name, "WOZ");
-                strcpy(info->variant_name, "v1");
+                strncpy(info->format_name, "WOZ", sizeof(info->format_name) - 1);
+                strncpy(info->variant_name, "v1", sizeof(info->variant_name) - 1);
                 info->variant_flags = 0x01;
                 info->confidence = 100;
                 info->is_flux = true;
@@ -102,8 +102,8 @@ int detect_variant(const uint8_t* data, size_t size, test_variant_t* info) {
             }
             if (magic == 0x325A4F57) {
                 info->format_id = FMT_WOZ;
-                strcpy(info->format_name, "WOZ");
-                strcpy(info->variant_name, "v2");
+                strncpy(info->format_name, "WOZ", sizeof(info->format_name) - 1);
+                strncpy(info->variant_name, "v2", sizeof(info->variant_name) - 1);
                 info->variant_flags = 0x02;
                 info->confidence = 100;
                 info->is_flux = true;
@@ -115,7 +115,7 @@ int detect_variant(const uint8_t* data, size_t size, test_variant_t* info) {
     // G64
     if (size >= 12 && memcmp(data, "GCR-1541", 8) == 0) {
         info->format_id = FMT_G64;
-        strcpy(info->format_name, "G64");
+        strncpy(info->format_name, "G64", sizeof(info->format_name) - 1);
         info->variant_flags = (data[8] == 0) ? 0x01 : 0x02;
         info->confidence = 100;
         info->tracks = data[9] / 2;
@@ -125,7 +125,7 @@ int detect_variant(const uint8_t* data, size_t size, test_variant_t* info) {
     // IPF
     if (size >= 12 && memcmp(data, "CAPS", 4) == 0) {
         info->format_id = FMT_IPF;
-        strcpy(info->format_name, "IPF");
+        strncpy(info->format_name, "IPF", sizeof(info->format_name) - 1);
         info->confidence = 100;
         info->is_flux = true;
         return 0;
@@ -134,7 +134,7 @@ int detect_variant(const uint8_t* data, size_t size, test_variant_t* info) {
     // ATR
     if (size >= 16 && data[0] == 0x96 && data[1] == 0x02) {
         info->format_id = FMT_ATR;
-        strcpy(info->format_name, "ATR");
+        strncpy(info->format_name, "ATR", sizeof(info->format_name) - 1);
         info->sector_size = read_le16(data + 4);
         info->confidence = 100;
         return 0;
@@ -143,7 +143,7 @@ int detect_variant(const uint8_t* data, size_t size, test_variant_t* info) {
     // ADF
     if (size == 901120 || size == 1802240) {
         info->format_id = FMT_ADF;
-        strcpy(info->format_name, "ADF");
+        strncpy(info->format_name, "ADF", sizeof(info->format_name) - 1);
         info->tracks = 80;
         info->heads = 2;
         info->sector_size = 512;
@@ -161,14 +161,14 @@ int detect_variant(const uint8_t* data, size_t size, test_variant_t* info) {
     switch (size) {
         case 174848:
             info->format_id = FMT_D64;
-            strcpy(info->format_name, "D64");
+            strncpy(info->format_name, "D64", sizeof(info->format_name) - 1);
             info->variant_flags = 0x01;
             info->tracks = 35;
             info->confidence = 95;
             return 0;
         case 175531:
             info->format_id = FMT_D64;
-            strcpy(info->format_name, "D64");
+            strncpy(info->format_name, "D64", sizeof(info->format_name) - 1);
             info->variant_flags = 0x11;
             info->tracks = 35;
             info->has_error_info = true;
@@ -176,14 +176,14 @@ int detect_variant(const uint8_t* data, size_t size, test_variant_t* info) {
             return 0;
         case 196608:
             info->format_id = FMT_D64;
-            strcpy(info->format_name, "D64");
+            strncpy(info->format_name, "D64", sizeof(info->format_name) - 1);
             info->variant_flags = 0x02;
             info->tracks = 40;
             info->confidence = 95;
             return 0;
         case 197376:
             info->format_id = FMT_D64;
-            strcpy(info->format_name, "D64");
+            strncpy(info->format_name, "D64", sizeof(info->format_name) - 1);
             info->variant_flags = 0x12;
             info->tracks = 40;
             info->has_error_info = true;
@@ -194,7 +194,7 @@ int detect_variant(const uint8_t* data, size_t size, test_variant_t* info) {
     // NIB
     if (size % 6656 == 0 && size >= 232960) {
         info->format_id = FMT_NIB;
-        strcpy(info->format_name, "NIB");
+        strncpy(info->format_name, "NIB", sizeof(info->format_name) - 1);
         info->tracks = size / 6656;
         info->confidence = 90;
         return 0;
@@ -203,7 +203,7 @@ int detect_variant(const uint8_t* data, size_t size, test_variant_t* info) {
     // IMG
     if (size == 368640 || size == 737280 || size == 1474560 || size == 1720320) {
         info->format_id = FMT_IMG;
-        strcpy(info->format_name, "IMG");
+        strncpy(info->format_name, "IMG", sizeof(info->format_name) - 1);
         info->sector_size = 512;
         info->confidence = 85;
         return 0;

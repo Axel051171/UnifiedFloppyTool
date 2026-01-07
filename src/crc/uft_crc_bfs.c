@@ -2,7 +2,6 @@
  * @file uft_crc_bfs.c
  * @brief CRC Brute-Force Search Algorithm
  * 
- * Based on crcbfs.pl v1.03 by Gregory Cook (19/May/2009)
  * Ported to C for UFT integration.
  * 
  * Algorithm Overview:

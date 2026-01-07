@@ -608,8 +608,8 @@ const char *uft_format_name(uft_format_e format) {
         [UFT_FORMAT_SCP] = "SCP",
         [UFT_FORMAT_HFE] = "HFE",
         [UFT_FORMAT_IPF] = "IPF",
-        [UFT_FORMAT_KF_RAW] = "KF-RAW",
-        [UFT_FORMAT_KF_STREAM] = "KF-STREAM",
+        [UFT_FORMAT_UFT_KF_RAW] = "KF-RAW",
+        [UFT_FORMAT_UFT_KF_STREAM] = "KF-STREAM",
         [UFT_FORMAT_A2R] = "A2R",
         [UFT_FORMAT_FLUX] = "FLUX"
     };

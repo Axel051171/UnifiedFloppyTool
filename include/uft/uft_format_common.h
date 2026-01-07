@@ -20,7 +20,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdint.h>
-#include "uft/core/uft_endian.h"  // For endian functions
+#include "uft/uft_endian.h"  // For endian functions
 
 #include <stddef.h>
 
@@ -38,23 +38,7 @@ extern "C" {
 
 // Moved to uft/core/uft_endian.h
 
-// Moved to uft/core/uft_endian.h
-
-// Moved to uft/core/uft_endian.h
-
-// Moved to uft/core/uft_endian.h
-
-static inline void uft_write_be16(uint8_t* p, uint16_t v) {
-    p[0] = (v >> 8) & 0xFF;
-    p[1] = v & 0xFF;
-}
-
-static inline void uft_write_be32(uint8_t* p, uint32_t v) {
-    p[0] = (v >> 24) & 0xFF;
-    p[1] = (v >> 16) & 0xFF;
-    p[2] = (v >> 8) & 0xFF;
-    p[3] = v & 0xFF;
-}
+/* Note: uft_write_be16/be32/le16/le32 are now in uft/uft_endian.h */
 
 // ============================================================================
 // Sektor-Hilsfunktionen

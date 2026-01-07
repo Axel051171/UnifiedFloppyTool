@@ -26,7 +26,7 @@ static int is_scl(FILE *fp){
     return memcmp(sig,"SINCLAIR",8)==0;
 }
 
-int floppy_open(FloppyDevice *dev,const char*path){
+int uft_floppy_open(FloppyDevice *dev,const char*path){
     if(!dev||!path) return UFT_EINVAL;
 
     TrdCtx *ctx = calloc(1,sizeof(TrdCtx));
@@ -77,7 +77,7 @@ int floppy_open(FloppyDevice *dev,const char*path){
     return UFT_OK;
 }
 
-int floppy_close(FloppyDevice *dev){
+int uft_floppy_close(FloppyDevice *dev){
     if(!dev||!dev->internal_ctx) return UFT_EINVAL;
     TrdCtx *ctx=dev->internal_ctx;
     fclose(ctx->fp);
@@ -91,7 +91,7 @@ static int bounds(FloppyDevice*d,uint32_t t,uint32_t h,uint32_t s){
     return UFT_OK;
 }
 
-int floppy_read_sector(FloppyDevice *dev,uint32_t t,uint32_t h,uint32_t s,uint8_t *buf){
+int uft_floppy_read_sector(FloppyDevice *dev,uint32_t t,uint32_t h,uint32_t s,uint8_t *buf){
     if(!dev||!dev->internal_ctx||!buf) return UFT_EINVAL;
     TrdCtx *ctx=dev->internal_ctx;
     if(ctx->type!=IMG_TRD) return UFT_ENOTSUP;
@@ -104,7 +104,7 @@ int floppy_read_sector(FloppyDevice *dev,uint32_t t,uint32_t h,uint32_t s,uint8_
     return UFT_OK;
 }
 
-int floppy_write_sector(FloppyDevice *dev,uint32_t t,uint32_t h,uint32_t s,const uint8_t *buf){
+int uft_floppy_write_sector(FloppyDevice *dev,uint32_t t,uint32_t h,uint32_t s,const uint8_t *buf){
     if(!dev||!dev->internal_ctx||!buf) return UFT_EINVAL;
     TrdCtx *ctx=dev->internal_ctx;
     if(ctx->type!=IMG_TRD || ctx->read_only) return UFT_ENOTSUP;
@@ -118,7 +118,7 @@ int floppy_write_sector(FloppyDevice *dev,uint32_t t,uint32_t h,uint32_t s,const
     return UFT_OK;
 }
 
-int floppy_analyze_protection(FloppyDevice *dev){
+int uft_floppy_analyze_protection(FloppyDevice *dev){
     TrdCtx *ctx=dev->internal_ctx;
     if(ctx->type==IMG_SCL){
         log_msg(dev,"Analyzer(SCL): file container, not a disk image.");

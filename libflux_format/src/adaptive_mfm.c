@@ -2,8 +2,6 @@
 /*
  * adaptive_mfm.c - Adaptive MFM Processing Algorithm
  * 
- * Ported from FloppyControl (C# -> C)
- * Original: https://github.com/Skaizo/FloppyControl
  * 
  * This algorithm uses dynamic thresholds that adapt to the disk's
  * actual timing characteristics. Essential for recovering data from
@@ -108,7 +106,6 @@ void adaptive_default_settings(adaptive_settings_t *settings) {
 /**
  * @brief Process period data to MFM using adaptive thresholds
  * 
- * This is the core algorithm from FloppyControl. It converts raw
  * flux timing data to MFM bitstream while dynamically adjusting
  * the timing thresholds based on observed data.
  * 

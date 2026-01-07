@@ -68,7 +68,7 @@ static uft_error_t ipf_open(uft_disk_t* disk, const char* path, bool read_only) 
             pdata->max_track = uft_read_be32(info + 28);
             pdata->min_side = uft_read_be32(info + 32);
             pdata->max_side = uft_read_be32(info + 36);
-            if (len > 64) fseek(f, len - 64, SEEK_CUR);
+            if (len > 64) (void)fseek(f, len - 64, SEEK_CUR);
         } else {
             if (fseek(f, len, SEEK_CUR) != 0) { /* seek error */ }
         }

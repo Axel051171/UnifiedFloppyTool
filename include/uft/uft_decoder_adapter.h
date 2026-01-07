@@ -65,7 +65,6 @@
  *   - Aus SCP/Kryoflux/HFE geladen werden
  *   - Nach G64/NIB/HFE geschrieben werden
  *   - Von allen Decodern verarbeitet werden
- *   - An nibtools (via G64) oder andere Tools übergeben werden
  */
 
 #ifndef UFT_DECODER_ADAPTER_H
@@ -85,15 +84,7 @@ extern "C" {
 // Encoding Types
 // ============================================================================
 
-typedef enum uft_encoding {
-    UFT_ENC_UNKNOWN     = 0,
-    UFT_ENC_FM          = 1,    // Single density
-    UFT_ENC_MFM         = 2,    // Modified FM (IBM PC, Amiga, Atari ST)
-    UFT_ENC_GCR_CBM     = 3,    // Commodore GCR
-    UFT_ENC_GCR_APPLE   = 4,    // Apple II GCR
-    UFT_ENC_AMIGA_MFM   = 5,    // Amiga-specific MFM variant
-    UFT_ENC_APPLE_CLV   = 6,    // Apple 3.5" (variable speed)
-} uft_encoding_t;
+/* uft_encoding_t is defined in uft_types.h (already included) */
 
 // ============================================================================
 // Raw Track (Universal Bitstream Format)
@@ -103,7 +94,6 @@ typedef enum uft_encoding {
  * @brief Universal bitstream track format
  * 
  * This is the common interchange format between:
- * - nibtools (expects G64/NIB bitstream)
  * - flux hardware (produces raw flux)
  * - HFE files
  * - Any decoder/encoder

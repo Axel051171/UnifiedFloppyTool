@@ -15,7 +15,7 @@ static void logm(FloppyDevice*d,const char*m){
     if(d && d->log_callback) d->log_callback(m);
 }
 
-int floppy_open(FloppyDevice *dev,const char*path){
+int uft_floppy_open(FloppyDevice *dev,const char*path){
     if(!dev||!path) return EINVAL;
 
     Ctx *ctx = calloc(1,sizeof(Ctx));
@@ -44,7 +44,7 @@ int floppy_open(FloppyDevice *dev,const char*path){
     return OK;
 }
 
-int floppy_close(FloppyDevice *dev){
+int uft_floppy_close(FloppyDevice *dev){
     if(!dev||!dev->internal_ctx) return EINVAL;
     Ctx *ctx = dev->internal_ctx;
     fclose(ctx->fp);
@@ -53,17 +53,17 @@ int floppy_close(FloppyDevice *dev){
     return OK;
 }
 
-int floppy_read_sector(FloppyDevice *dev,uint32_t t,uint32_t h,uint32_t s,uint8_t *buf){
+int uft_floppy_read_sector(FloppyDevice *dev,uint32_t t,uint32_t h,uint32_t s,uint8_t *buf){
     (void)t;(void)h;(void)s;(void)buf;
     return ENOTSUP;
 }
 
-int floppy_write_sector(FloppyDevice *dev,uint32_t t,uint32_t h,uint32_t s,const uint8_t *buf){
+int uft_floppy_write_sector(FloppyDevice *dev,uint32_t t,uint32_t h,uint32_t s,const uint8_t *buf){
     (void)dev;(void)t;(void)h;(void)s;(void)buf;
     return ENOTSUP;
 }
 
-int floppy_analyze_protection(FloppyDevice *dev){
+int uft_floppy_analyze_protection(FloppyDevice *dev){
     logm(dev,"Analyzer(TD0): supports bad CRC flags, missing sectors, non-standard tracks.");
     return OK;
 }

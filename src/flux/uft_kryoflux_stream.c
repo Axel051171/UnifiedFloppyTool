@@ -1,8 +1,6 @@
 /**
- * @file uft_kryoflux_stream.c
- * @brief KryoFlux Stream Parser Implementation
+ * @file uft_uft_kf_stream.c
  * 
- * EXT4-005: Complete KryoFlux RAW stream parsing
  * 
  * Features:
  * - C2 block parsing (OOB data)
@@ -12,7 +10,7 @@
  * - Hardware info extraction
  */
 
-#include "uft/flux/uft_kryoflux_stream.h"
+#include "uft/flux/uft_uft_kf_stream.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -22,14 +20,14 @@
  *===========================================================================*/
 
 /* Stream block types */
-#define KF_FLUX_2       0x00  /* 2-byte flux value */
-#define KF_FLUX_3       0x08  /* 3-byte flux value */
-#define KF_NOP1         0x09  /* NOP (1 byte) */
-#define KF_NOP2         0x0A  /* NOP (2 bytes) */
-#define KF_NOP3         0x0B  /* NOP (3 bytes) */
-#define KF_OVL16        0x0C  /* Overflow 16-bit */
-#define KF_FLUX_1       0x0D  /* 1-byte flux value */
-#define KF_OOB          0x0D  /* Out-of-band marker (context dependent) */
+#define UFT_KF_FLUX_2       0x00  /* 2-byte flux value */
+#define UFT_KF_FLUX_3       0x08  /* 3-byte flux value */
+#define UFT_KF_NOP1         0x09  /* NOP (1 byte) */
+#define UFT_KF_NOP2         0x0A  /* NOP (2 bytes) */
+#define UFT_KF_NOP3         0x0B  /* NOP (3 bytes) */
+#define UFT_KF_OVL16        0x0C  /* Overflow 16-bit */
+#define UFT_KF_FLUX_1       0x0D  /* 1-byte flux value */
+#define UFT_KF_OOB          0x0D  /* Out-of-band marker (context dependent) */
 
 /* OOB block types */
 #define OOB_INVALID     0x00
@@ -40,8 +38,8 @@
 #define OOB_EOF         0x0D
 
 /* Sample clock (nominally 24.027428 MHz for SCK) */
-#define KF_SAMPLE_CLOCK 24027428.0
-#define KF_INDEX_CLOCK  (KF_SAMPLE_CLOCK / 8.0)  /* ICK = SCK/8 */
+#define UFT_KF_SAMPLE_CLOCK 24027428.0
+#define UFT_KF_INDEX_CLOCK  (UFT_KF_SAMPLE_CLOCK / 8.0)  /* ICK = SCK/8 */
 
 /*===========================================================================
  * Stream Parsing Context
@@ -67,7 +65,7 @@ typedef struct {
     
     /* Stream info */
     uft_kf_stream_info_t info;
-} kf_parse_ctx_t;
+} uft_kf_parse_ctx_t;
 
 /*===========================================================================
  * Helpers
@@ -83,7 +81,7 @@ static uint32_t read_le32(const uint8_t *p)
     return p[0] | (p[1] << 8) | (p[2] << 16) | (p[3] << 24);
 }
 
-static int add_flux(kf_parse_ctx_t *ctx, uint32_t value)
+static int add_flux(uft_kf_parse_ctx_t *ctx, uint32_t value)
 {
     if (ctx->flux_count >= ctx->flux_capacity) {
         size_t new_cap = ctx->flux_capacity * 2;
@@ -106,7 +104,7 @@ static int add_flux(kf_parse_ctx_t *ctx, uint32_t value)
     return 0;
 }
 
-static int add_index(kf_parse_ctx_t *ctx, const uft_kf_index_t *index)
+static int add_index(uft_kf_parse_ctx_t *ctx, const uft_kf_index_t *index)
 {
     if (ctx->index_count >= ctx->index_capacity) {
         size_t new_cap = ctx->index_capacity * 2;
@@ -128,7 +126,7 @@ static int add_index(kf_parse_ctx_t *ctx, const uft_kf_index_t *index)
  * OOB Block Parsing
  *===========================================================================*/
 
-static int parse_oob(kf_parse_ctx_t *ctx)
+static int parse_oob(uft_kf_parse_ctx_t *ctx)
 {
     if (ctx->pos + 4 > ctx->size) return -1;
     
@@ -203,7 +201,7 @@ static int parse_oob(kf_parse_ctx_t *ctx)
  * Stream Block Parsing
  *===========================================================================*/
 
-static int parse_block(kf_parse_ctx_t *ctx)
+static int parse_block(uft_kf_parse_ctx_t *ctx)
 {
     if (ctx->pos >= ctx->size) return -1;
     
@@ -225,7 +223,7 @@ static int parse_block(kf_parse_ctx_t *ctx)
         add_flux(ctx, value);
         ctx->pos += 2;
     }
-    else if (byte == KF_FLUX_3) {
+    else if (byte == UFT_KF_FLUX_3) {
         /* Flux3: 3-byte value */
         if (ctx->pos + 3 > ctx->size) return -1;
         
@@ -233,16 +231,16 @@ static int parse_block(kf_parse_ctx_t *ctx)
         add_flux(ctx, value);
         ctx->pos += 3;
     }
-    else if (byte == KF_NOP1) {
+    else if (byte == UFT_KF_NOP1) {
         ctx->pos += 1;
     }
-    else if (byte == KF_NOP2) {
+    else if (byte == UFT_KF_NOP2) {
         ctx->pos += 2;
     }
-    else if (byte == KF_NOP3) {
+    else if (byte == UFT_KF_NOP3) {
         ctx->pos += 3;
     }
-    else if (byte == KF_OVL16) {
+    else if (byte == UFT_KF_OVL16) {
         /* 16-bit overflow */
         ctx->overflow += 0x10000;
         ctx->pos += 1;
@@ -271,15 +269,15 @@ int uft_kf_stream_open(uft_kf_stream_t *stream, const uint8_t *data, size_t size
     
     memset(stream, 0, sizeof(*stream));
     
-    kf_parse_ctx_t ctx;
+    uft_kf_parse_ctx_t ctx;
     memset(&ctx, 0, sizeof(ctx));
     ctx.data = data;
     ctx.size = size;
     ctx.pos = 0;
     
     /* Set default clocks */
-    ctx.info.sample_clock = KF_SAMPLE_CLOCK;
-    ctx.info.index_clock = KF_INDEX_CLOCK;
+    ctx.info.sample_clock = UFT_KF_SAMPLE_CLOCK;
+    ctx.info.index_clock = UFT_KF_INDEX_CLOCK;
     
     /* Parse entire stream */
     while (ctx.pos < ctx.size && !ctx.info.eof_reached) {

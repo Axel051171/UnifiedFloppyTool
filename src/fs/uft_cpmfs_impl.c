@@ -667,7 +667,7 @@ void cpmglob(int optin, int argc, char * const argv[], struct cpmInode *root, in
       if (match(dirent[j].name,argv[i]))
       {
         if (*gargc==gargcap) *gargv=realloc(*gargv,sizeof(char*)*(gargcap ? (gargcap*=2) : (gargcap=16)));
-        (*gargv)[*gargc]=strcpy(malloc(strlen(dirent[j].name)+1),dirent[j].name);
+        (*gargv)[*gargc] = strdup(dirent[j].name);  /* strdup is safer */
         ++*gargc;
         ++found;
       }
@@ -687,9 +687,9 @@ static int parseLine(struct cpmSuperBlock *d, const char *format, char *line, in
 
     /* Allow inline comments preceded by ; or # */
     s = strchr(line, '#');
-    if (s) strcpy(s, "\n");  /* REVIEW: Consider bounds check */
+    if (s) { s[0] = '\n'; s[1] = '\0'; }
     s = strchr(line, ';');
-    if (s) strcpy(s, "\n");  /* REVIEW: Consider bounds check */
+    if (s) { s[0] = '\n'; s[1] = '\0'; }
     if (line[0] == '\n') return 0;
 
     for (argc=0; argc<1 && (argv[argc]=strtok(argc ? (char*)0 : line," \t\n")); ++argc);

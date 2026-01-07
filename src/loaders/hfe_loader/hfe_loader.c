@@ -2,25 +2,20 @@
 //
 // Copyright (C) 2006-2025 Jean-Franois DEL NERO
 //
-// This file is part of the HxCFloppyEmulator library
 //
-// HxCFloppyEmulator may be used and distributed without restriction provided
 // that this copyright statement is not removed from the file and that any
 // derivative work contains the original copyright notice and the associated
 // disclaimer.
 //
-// HxCFloppyEmulator is free software; you can redistribute it
 // and/or modify  it under the terms of the GNU General Public License
 // as published by the Free Software Foundation; either version 2
 // of the License, or (at your option) any later version.
 //
-// HxCFloppyEmulator is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 //   See the GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with HxCFloppyEmulator; if not, write to the Free Software
 // Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 //
 */
@@ -49,11 +44,11 @@
 
 #include "types.h"
 
-#include "internal_libhxcfe.h"
-#include "libhxcfe.h"
+#include "libflux.h""
+#include "libflux.h""
 
-#include "floppy_loader.h"
-#include "floppy_utils.h"
+#include "uft_floppy_loader.h"
+#include "uft_floppy_utils.h"
 
 #include "hfe_loader.h"
 #include "hfe_format.h"
@@ -87,11 +82,11 @@ const char * interfacemodecode[]=
 	"EMU_SHUGART_FLOPPYMODE"
 };
 
-int HFE_libIsValidDiskFile( HXCFE_IMGLDR * imgldr_ctx, HXCFE_IMGLDR_FILEINFOS * imgfile )
+int HFE_libIsValidDiskFile( LIBFLUX_IMGLDR * imgldr_ctx, LIBFLUX_IMGLDR_FILEINFOS * imgfile )
 {
 	picfileformatheader * header;
 
-	imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"HFE_libIsValidDiskFile");
+	imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"HFE_libIsValidDiskFile");
 
 	if(imgfile)
 	{
@@ -99,29 +94,29 @@ int HFE_libIsValidDiskFile( HXCFE_IMGLDR * imgldr_ctx, HXCFE_IMGLDR_FILEINFOS * 
 
 		if( !strncmp((char*)header->HEADERSIGNATURE,"HXCPICFE",8))
 		{
-			imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"HFE_libIsValidDiskFile : HFE file !");
-			return HXCFE_VALIDFILE;
+			imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"HFE_libIsValidDiskFile : HFE file !");
+			return LIBFLUX_VALIDFILE;
 		}
 		else
 		{
-			imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"HFE_libIsValidDiskFile : non HFE file !");
-			return HXCFE_BADFILE;
+			imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"HFE_libIsValidDiskFile : non HFE file !");
+			return LIBFLUX_BADFILE;
 		}
 	}
 	else
 	{
-		imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"HFE_libIsValidDiskFile : non HFE file !");
-		return HXCFE_BADFILE;
+		imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"HFE_libIsValidDiskFile : non HFE file !");
+		return LIBFLUX_BADFILE;
 	}
 }
 
-int HFE_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,char * imgfile,void * parameters)
+int HFE_libLoad_DiskFile(LIBFLUX_IMGLDR * imgldr_ctx,LIBFLUX_FLOPPY * floppydisk,char * imgfile,void * parameters)
 {
 	FILE * f;
 	picfileformatheader header;
 	int i,j,k,l,offset,offset2;
-	HXCFE_CYLINDER* currentcylinder;
-	HXCFE_SIDE* currentside;
+	LIBFLUX_CYLINDER* currentcylinder;
+	LIBFLUX_SIDE* currentside;
 	pictrack* trackoffsetlist;
 	unsigned int tracks_base;
 	unsigned char * hfetrack;
@@ -136,21 +131,21 @@ int HFE_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 
 	memset(&header,0,sizeof(picfileformatheader));
 
-	imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"HFE_libLoad_DiskFile %s",imgfile);
+	imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"HFE_libLoad_DiskFile %s",imgfile);
 
-	f = hxc_fopen(imgfile,"rb");
+	f = libflux_fopen(imgfile,"rb");
 	if( f == NULL )
 	{
-		imgldr_ctx->hxcfe->hxc_printf(MSG_ERROR,"Cannot open %s !",imgfile);
-		return HXCFE_ACCESSERROR;
+		imgldr_ctx->ctx->libflux_printf(MSG_ERROR,"Cannot open %s !",imgfile);
+		return LIBFLUX_ACCESSERROR;
 	}
 
 	// Reading the header
-	hxc_fread(&header,sizeof(header),f);
+	libflux_fread(&header,sizeof(header),f);
 
 	if(!strncmp((char*)header.HEADERSIGNATURE,"HXCPICFE",8))
 	{
-		imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"HFE File : Format v%d, %d track, %d side, %d bit/s, interface mode %s, track encoding:%s",
+		imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"HFE File : Format v%d, %d track, %d side, %d bit/s, interface mode %s, track encoding:%s",
 			header.formatrevision+1,
 			header.number_of_track,
 			header.number_of_side,
@@ -160,27 +155,27 @@ int HFE_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 
 		if( header.formatrevision != 0 )
 		{
-			imgldr_ctx->hxcfe->hxc_printf(MSG_ERROR,"HFE File : Format version %d currently not supported !",header.formatrevision+1);
+			imgldr_ctx->ctx->libflux_printf(MSG_ERROR,"HFE File : Format version %d currently not supported !",header.formatrevision+1);
 
-			hxc_fclose(f);
-			return HXCFE_BADFILE;
+			libflux_fclose(f);
+			return LIBFLUX_BADFILE;
 		}
 
 		if( !header.number_of_track || !header.number_of_side )
 		{
 			// Nothing to Load ?!
-			imgldr_ctx->hxcfe->hxc_printf(MSG_ERROR,"HFE File : 0 track or side ! Nothing to load !");
+			imgldr_ctx->ctx->libflux_printf(MSG_ERROR,"HFE File : 0 track or side ! Nothing to load !");
 
-			hxc_fclose(f);
-			return HXCFE_BADFILE;
+			libflux_fclose(f);
+			return LIBFLUX_BADFILE;
 		}
 
 		if( !header.bitRate )
 		{
-			imgldr_ctx->hxcfe->hxc_printf(MSG_ERROR,"HFE File : Null bitrate !");
+			imgldr_ctx->ctx->libflux_printf(MSG_ERROR,"HFE File : Null bitrate !");
 
-			hxc_fclose(f);
-			return HXCFE_BADFILE;
+			libflux_fclose(f);
+			return LIBFLUX_BADFILE;
 		}
 
 		floppydisk->floppyNumberOfTrack = header.number_of_track;
@@ -191,7 +186,7 @@ int HFE_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 
 		if( !header.write_allowed )
 		{
-			hxcfe_floppySetFlags( imgldr_ctx->hxcfe, floppydisk, HXCFE_FLOPPY_WRPROTECTED_FLAG );
+			libflux_floppySetFlags( imgldr_ctx->ctx, floppydisk, LIBFLUX_FLOPPY_WRPROTECTED_FLAG );
 		}
 
 		trackoffsetlist = (pictrack*)malloc(sizeof(pictrack)* header.number_of_track);
@@ -200,15 +195,15 @@ int HFE_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 
 		memset(trackoffsetlist,0,sizeof(pictrack)* header.number_of_track);
 		if (fseek( f,512,SEEK_SET) != 0) { /* seek error */ }
-		hxc_fread( trackoffsetlist,sizeof(pictrack)* header.number_of_track,f);
+		libflux_fread( trackoffsetlist,sizeof(pictrack)* header.number_of_track,f);
 
 		tracks_base= 512 + ( (((sizeof(pictrack)* header.number_of_track)/512)+1)*512);
 		if (fseek( f,tracks_base,SEEK_SET) != 0) { /* seek error */ }
-		floppydisk->tracks = (HXCFE_CYLINDER**)malloc(sizeof(HXCFE_CYLINDER*)*floppydisk->floppyNumberOfTrack);
+		floppydisk->tracks = (LIBFLUX_CYLINDER**)malloc(sizeof(LIBFLUX_CYLINDER*)*floppydisk->floppyNumberOfTrack);
 		if(!floppydisk->tracks)
 			goto alloc_error;
 
-		memset(floppydisk->tracks,0,sizeof(HXCFE_CYLINDER*)*floppydisk->floppyNumberOfTrack);
+		memset(floppydisk->tracks,0,sizeof(LIBFLUX_CYLINDER*)*floppydisk->floppyNumberOfTrack);
 
 		for(i=0;i<floppydisk->floppyNumberOfTrack;i++)
 		{
@@ -224,7 +219,7 @@ int HFE_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 
 			if(!tracklen)
 			{
-				imgldr_ctx->hxcfe->hxc_printf(MSG_ERROR,"HFE File : Invalid track %d lentght ! Stopping here !",i);
+				imgldr_ctx->ctx->libflux_printf(MSG_ERROR,"HFE File : Invalid track %d lentght ! Stopping here !",i);
 				break;
 			}
 
@@ -234,28 +229,28 @@ int HFE_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 
 			memset(hfetrack,0,tracklen);
 
-			imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"HFE File : reading track %d, track size:%d - file offset:%.8X", i, tracklen, (trackoffsetlist[i].offset*512));
+			imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"HFE File : reading track %d, track size:%d - file offset:%.8X", i, tracklen, (trackoffsetlist[i].offset*512));
 
-			hxc_fread( hfetrack,tracklen,f);
+			libflux_fread( hfetrack,tracklen,f);
 
-			floppydisk->tracks[i] = (HXCFE_CYLINDER*)malloc(sizeof(HXCFE_CYLINDER));
+			floppydisk->tracks[i] = (LIBFLUX_CYLINDER*)malloc(sizeof(LIBFLUX_CYLINDER));
 			if( !floppydisk->tracks[i] )
 				goto alloc_error;
 
 			currentcylinder = floppydisk->tracks[i];
 			currentcylinder->number_of_side = floppydisk->floppyNumberOfSide;
-			currentcylinder->sides = (HXCFE_SIDE**)malloc(sizeof(HXCFE_SIDE*)*currentcylinder->number_of_side);
+			currentcylinder->sides = (LIBFLUX_SIDE**)malloc(sizeof(LIBFLUX_SIDE*)*currentcylinder->number_of_side);
 			if( !currentcylinder->sides )
 				goto alloc_error;
 
-			memset(currentcylinder->sides,0,sizeof(HXCFE_SIDE*)*currentcylinder->number_of_side);
+			memset(currentcylinder->sides,0,sizeof(LIBFLUX_SIDE*)*currentcylinder->number_of_side);
 			currentcylinder->floppyRPM = header.floppyRPM;
 
 			for(j=0;j<currentcylinder->number_of_side;j++)
 			{
-				hxcfe_imgCallProgressCallback(imgldr_ctx,(i<<1) + (j&1),floppydisk->floppyNumberOfTrack*2 );
+				libflux_imgCallProgressCallback(imgldr_ctx,(i<<1) + (j&1),floppydisk->floppyNumberOfTrack*2 );
 
-				currentcylinder->sides[j] = calloc( 1, sizeof(HXCFE_SIDE));
+				currentcylinder->sides[j] = calloc( 1, sizeof(LIBFLUX_SIDE));
 				if(!currentcylinder->sides[j])
 					goto alloc_error;
 
@@ -316,7 +311,7 @@ int HFE_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 				currentside->tracklen = currentside->tracklen*8;
 
 				if(!currentcylinder->floppyRPM)
-					currentcylinder->floppyRPM = (short)( 60 / GetTrackPeriod(imgldr_ctx->hxcfe,currentside) );
+					currentcylinder->floppyRPM = (short)( 60 / GetTrackPeriod(imgldr_ctx->ctx,currentside) );
 
 			}
 
@@ -326,37 +321,37 @@ int HFE_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 
 		free(trackoffsetlist);
 
-		hxc_fclose(f);
+		libflux_fclose(f);
 
-		hxcfe_sanityCheck(imgldr_ctx->hxcfe,floppydisk);
+		libflux_sanityCheck(imgldr_ctx->ctx,floppydisk);
 
-		return HXCFE_NOERROR;
+		return LIBFLUX_NOERROR;
 	}
 
-	hxc_fclose(f);
+	libflux_fclose(f);
 
-	imgldr_ctx->hxcfe->hxc_printf(MSG_ERROR,"HFE File : Bad file header !");
+	imgldr_ctx->ctx->libflux_printf(MSG_ERROR,"HFE File : Bad file header !");
 
-	return HXCFE_BADFILE;
+	return LIBFLUX_BADFILE;
 
 alloc_error:
-	imgldr_ctx->hxcfe->hxc_printf(MSG_ERROR,"HFE File : Internal memory allocation error ! Please report !");
+	imgldr_ctx->ctx->libflux_printf(MSG_ERROR,"HFE File : Internal memory allocation error ! Please report !");
 
-	hxcfe_freeFloppy(imgldr_ctx->hxcfe, floppydisk );
+	libflux_freeFloppy(imgldr_ctx->ctx, floppydisk );
 
 	if(f)
-		hxc_fclose(f);
+		libflux_fclose(f);
 
 	free(hfetrack);
 
 	free(trackoffsetlist);
 
-	return HXCFE_INTERNALERROR;
+	return LIBFLUX_INTERNALERROR;
 }
 
-int HFE_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char * filename);
+int HFE_libWrite_DiskFile(LIBFLUX_IMGLDR* imgldr_ctx,LIBFLUX_FLOPPY * floppy,char * filename);
 
-int HFE_libGetPluginInfo(HXCFE_IMGLDR * imgldr_ctx,uint32_t infotype,void * returnvalue)
+int HFE_libGetPluginInfo(LIBFLUX_IMGLDR * imgldr_ctx,uint32_t infotype,void * returnvalue)
 {
 	static const char plug_id[]="HXC_HFE";
 	static const char plug_desc[]="SD Card HxCFE HFE file Loader";
@@ -381,9 +376,9 @@ int HFE_libGetPluginInfo(HXCFE_IMGLDR * imgldr_ctx,uint32_t infotype,void * retu
 			);
 }
 
-int EXTHFE_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char * filename);
+int EXTHFE_libWrite_DiskFile(LIBFLUX_IMGLDR* imgldr_ctx,LIBFLUX_FLOPPY * floppy,char * filename);
 
-int EXTHFE_libGetPluginInfo(HXCFE_IMGLDR * imgldr_ctx,uint32_t infotype,void * returnvalue)
+int EXTHFE_libGetPluginInfo(LIBFLUX_IMGLDR * imgldr_ctx,uint32_t infotype,void * returnvalue)
 {
 	static const char plug_id[]="HXC_EXTHFE";
 	static const char plug_desc[]="SD Card HxCFE EXTENDED HFE file Loader";
@@ -408,9 +403,9 @@ int EXTHFE_libGetPluginInfo(HXCFE_IMGLDR * imgldr_ctx,uint32_t infotype,void * r
 			);
 }
 
-int HFE_HDDD_A2_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char * filename);
+int HFE_HDDD_A2_libWrite_DiskFile(LIBFLUX_IMGLDR* imgldr_ctx,LIBFLUX_FLOPPY * floppy,char * filename);
 
-int HFE_HDDD_A2_libGetPluginInfo(HXCFE_IMGLDR * imgldr_ctx,uint32_t infotype,void * returnvalue)
+int HFE_HDDD_A2_libGetPluginInfo(LIBFLUX_IMGLDR * imgldr_ctx,uint32_t infotype,void * returnvalue)
 {
 	static const char plug_id[]="HXC_HDDD_A2_HFE";
 	static const char plug_desc[]="SD Card HxCFE HFE file Loader (HDDD A2 Support)";

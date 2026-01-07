@@ -317,7 +317,7 @@ int uft_dos33_find_entry(const uft_apple_ctx_t *ctx, const char *name,
                 /* Found it */
                 if (entry) {
                     memset(entry, 0, sizeof(*entry));
-                    strcpy(entry->name, entry_name);
+                    strncpy(entry->name, entry_name, 31); entry->name[31] = '\0';
                     entry->file_type = e->file_type & 0x7F;
                     entry->is_locked = (e->file_type & 0x80) != 0;
                     entry->ts_track = e->ts_list_track;

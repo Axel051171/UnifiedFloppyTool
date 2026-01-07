@@ -4,7 +4,6 @@
  * @version 2.0.0
  * @date 2026-01-06
  *
- * Source: disk-utilities by Keir Fraser (Public Domain)
  * Complete extraction of all Amiga copy protection formats.
  */
 

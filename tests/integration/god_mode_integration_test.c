@@ -268,9 +268,9 @@ static void test_dd_v2_simd(void) {
 }
 
 /**
- * @brief Test HxC Decoder v2
+ * @brief Test libflux Decoder v2
  */
-static void test_hxc_decoder_v2(void) {
+static void test_libflux_decoder_v2(void) {
     TEST_BEGIN("HxC Decoder v2 - MFM sync search");
     
     /* Create buffer with sync pattern */
@@ -570,7 +570,7 @@ int main(void) {
     test_gcr_viterbi_v2();
     test_multi_rev_fusion_v2();
     test_dd_v2_simd();
-    test_hxc_decoder_v2();
+    test_libflux_decoder_v2();
     test_hfe_v3_decoder();
     test_streaming_hash();
     test_forensic_report();

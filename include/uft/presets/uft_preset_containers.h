@@ -12,6 +12,7 @@
 #define UFT_PRESET_CONTAINERS_H
 
 #include <stdint.h>
+#include <stddef.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -192,7 +193,7 @@ static const uft_container_preset_t UFT_CONTAINER_PRESETS[] = {
     {
         .id = UFT_CONTAINER_IMD,
         .name = "ImageDisk",
-        .description = "Dave Dunfield ImageDisk format",
+        .description = "ImageDisk format",
         .signature = "IMD", .signature_len = 3,
         .header_size = 0, .compressed = 1, .stores_geometry = 1,
         .extensions = ".imd"

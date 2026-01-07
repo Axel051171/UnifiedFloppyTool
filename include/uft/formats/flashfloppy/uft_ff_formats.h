@@ -1,8 +1,6 @@
 /**
  * @file uft_ff_formats.h
- * @brief FlashFloppy-derived format detection algorithms
  *
- * Extracted from FlashFloppy by Keir Fraser (Public Domain/Unlicense)
  * Adapted for UFT by the UFT Team
  *
  * Supported formats:
@@ -190,7 +188,6 @@ int uft_ff_detect_uknc(size_t file_size, uft_ff_detect_result_t *result);
  * ============================================================================ */
 
 /**
- * @brief Try all FlashFloppy-derived format detectors
  * 
  * @param data File data (at least first 4096 bytes)
  * @param data_size Size of data buffer

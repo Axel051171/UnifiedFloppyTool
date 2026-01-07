@@ -2,25 +2,20 @@
 //
 // Copyright (C) 2006-2025 Jean-Franois DEL NERO
 //
-// This file is part of the HxCFloppyEmulator library
 //
-// HxCFloppyEmulator may be used and distributed without restriction provided
 // that this copyright statement is not removed from the file and that any
 // derivative work contains the original copyright notice and the associated
 // disclaimer.
 //
-// HxCFloppyEmulator is free software; you can redistribute it
 // and/or modify  it under the terms of the GNU General Public License
 // as published by the Free Software Foundation; either version 2
 // of the License, or (at your option) any later version.
 //
-// HxCFloppyEmulator is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 //   See the GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with HxCFloppyEmulator; if not, write to the Free Software
 // Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 //
 */
@@ -31,9 +26,9 @@
 
 #include "types.h"
 
-#include "internal_libhxcfe.h"
+#include "libflux.h""
 #include "tracks/track_generator.h"
-#include "libhxcfe.h"
+#include "libflux.h""
 
 #include "dmk_format.h"
 #include "dmk_loader.h"
@@ -154,16 +149,16 @@ int dmkbitlookingfor(unsigned char * input_data,uint32_t intput_data_size,int se
 	return bitoffset;
 }
 
-int align_sectors_id(HXCFE_IMGLDR* imgldr_ctx, HXCFE_SECTORACCESS* ss, HXCFE_FLOPPY * floppy, int track, int side)
+int align_sectors_id(LIBFLUX_IMGLDR* imgldr_ctx, LIBFLUX_SECTORACCESS* ss, LIBFLUX_FLOPPY * floppy, int track, int side)
 {
 	int32_t k,nbsector,ret;
-	HXCFE_SECTCFG** sca = NULL;
-	HXCFE_SIDE * currentside;
+	LIBFLUX_SECTCFG** sca = NULL;
+	LIBFLUX_SIDE * currentside;
 
 	ret = 0;
 	currentside = floppy->tracks[track]->sides[side];
 
-	sca = hxcfe_getAllTrackISOSectors(ss,track,side,&nbsector);
+	sca = libflux_getAllTrackISOSectors(ss,track,side,&nbsector);
 	if(sca)
 	{
 		k=0;
@@ -171,14 +166,14 @@ int align_sectors_id(HXCFE_IMGLDR* imgldr_ctx, HXCFE_SECTORACCESS* ss, HXCFE_FLO
 		{
 			if(sca[k]->startsectorindex&0xF)
 			{
-				hxcfe_insertCell( imgldr_ctx->hxcfe, currentside, sca[k]->startsectorindex, 0,  0x10 - (sca[k]->startsectorindex&0xF) );
+				libflux_insertCell( imgldr_ctx->ctx, currentside, sca[k]->startsectorindex, 0,  0x10 - (sca[k]->startsectorindex&0xF) );
 				ret = 1;
 				break;
 			}
 
 			if(sca[k]->startdataindex&0xF)
 			{
-				hxcfe_insertCell( imgldr_ctx->hxcfe, currentside, sca[k]->startdataindex, 0,  0x10 - (sca[k]->startdataindex&0xF) );
+				libflux_insertCell( imgldr_ctx->ctx, currentside, sca[k]->startdataindex, 0,  0x10 - (sca[k]->startdataindex&0xF) );
 				ret = 1;
 				break;
 			}
@@ -189,7 +184,7 @@ int align_sectors_id(HXCFE_IMGLDR* imgldr_ctx, HXCFE_SECTORACCESS* ss, HXCFE_FLO
 		k=0;
 		do
 		{
-			hxcfe_freeSectorConfig(ss,sca[k]);
+			libflux_freeSectorConfig(ss,sca[k]);
 
 			k++;
 		}while(k<nbsector);
@@ -200,7 +195,7 @@ int align_sectors_id(HXCFE_IMGLDR* imgldr_ctx, HXCFE_SECTORACCESS* ss, HXCFE_FLO
 	return ret;
 }
 
-int DMK_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char * filename)
+int DMK_libWrite_DiskFile(LIBFLUX_IMGLDR* imgldr_ctx,LIBFLUX_FLOPPY * floppy,char * filename)
 {
 	int32_t i,j,k,nbsector_mfm,nbsector_fm;
 	unsigned char IDAMbuf[0x80];
@@ -215,15 +210,15 @@ int DMK_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char * 
 	unsigned char mfm_buffer[16];
 	int32_t track_size;
 
-	HXCFE_SECTORACCESS* ss = NULL;
-	HXCFE_SECTCFG** sca_mfm = NULL;
-	HXCFE_SECTCFG** sca_fm = NULL;
+	LIBFLUX_SECTORACCESS* ss = NULL;
+	LIBFLUX_SECTCFG** sca_mfm = NULL;
+	LIBFLUX_SECTCFG** sca_fm = NULL;
 
 	dmk_header dmkheader;
 
-	imgldr_ctx->hxcfe->hxc_printf(MSG_INFO_1,"Write DMK file %s...",filename);
+	imgldr_ctx->ctx->libflux_printf(MSG_INFO_1,"Write DMK file %s...",filename);
 
-	dmkdskfile=hxc_fopen(filename,"wb");
+	dmkdskfile=libflux_fopen(filename,"wb");
 	if(dmkdskfile)
 	{
 		memset(&dmkheader,0,sizeof(dmkheader));
@@ -242,7 +237,7 @@ int DMK_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char * 
 			memset(track_buf,0xAA,track_size);
 
 			if (fwrite(&dmkheader,sizeof(dmk_header),1,dmkdskfile) != 1) { /* I/O error */ }
-			ss=hxcfe_initSectorAccess(imgldr_ctx->hxcfe,floppy);
+			ss=libflux_initSectorAccess(imgldr_ctx->ctx,floppy);
 			if(ss)
 			{
 				for(j=0;j<(int)floppy->floppyNumberOfTrack;j++)
@@ -250,7 +245,7 @@ int DMK_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char * 
 					for(i=0;i<(int)floppy->floppyNumberOfSide;i++)
 					{
 
-						hxcfe_imgCallProgressCallback(imgldr_ctx, (j<<1) + (i&1),floppy->floppyNumberOfTrack*2);
+						libflux_imgCallProgressCallback(imgldr_ctx, (j<<1) + (i&1),floppy->floppyNumberOfTrack*2);
 
 						memset(track_buf,0xAA,track_size);
 						memset(&IDAMbuf,0,128);
@@ -270,11 +265,11 @@ int DMK_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char * 
 
 						if( k >= 4096 )
 						{
-							imgldr_ctx->hxcfe->hxc_printf(MSG_ERROR,"DMK track %d.%d : Failed to align the sectors !",j,i);
+							imgldr_ctx->ctx->libflux_printf(MSG_ERROR,"DMK track %d.%d : Failed to align the sectors !",j,i);
 						}
 
-						sca_mfm = hxcfe_getAllTrackSectors(ss,j,i,ISOIBM_MFM_ENCODING,&nbsector_mfm);
-						sca_fm = hxcfe_getAllTrackSectors(ss,j,i,ISOIBM_FM_ENCODING,&nbsector_fm);
+						sca_mfm = libflux_getAllTrackSectors(ss,j,i,ISOIBM_MFM_ENCODING,&nbsector_mfm);
+						sca_fm = libflux_getAllTrackSectors(ss,j,i,ISOIBM_FM_ENCODING,&nbsector_fm);
 
 						if(nbsector_mfm)
 						{
@@ -330,7 +325,7 @@ int DMK_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char * 
 							k=0;
 							do
 							{
-								hxcfe_freeSectorConfig(ss,sca_mfm[k]);
+								libflux_freeSectorConfig(ss,sca_mfm[k]);
 								k++;
 							}while(k<nbsector_mfm);
 
@@ -393,7 +388,7 @@ int DMK_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char * 
 							k=0;
 							do
 							{
-								hxcfe_freeSectorConfig(ss,sca_fm[k]);
+								libflux_freeSectorConfig(ss,sca_fm[k]);
 								k++;
 							}while(k<nbsector_fm);
 
@@ -405,14 +400,14 @@ int DMK_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char * 
 					}
 				}
 
-				hxcfe_deinitSectorAccess(ss);
+				libflux_deinitSectorAccess(ss);
 
 			}
 
 			free(track_buf);
 		}
 
-		hxc_fclose(dmkdskfile);
+		libflux_fclose(dmkdskfile);
 	}
 
 	return 0;

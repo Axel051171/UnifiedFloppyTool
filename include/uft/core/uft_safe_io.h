@@ -16,6 +16,15 @@
 #include <stdbool.h>
 #include <string.h>
 #include <errno.h>
+#include <stddef.h>
+
+/* ssize_t portability */
+#ifdef _WIN32
+    #include <BaseTsd.h>
+    typedef SSIZE_T ssize_t;
+#else
+    #include <sys/types.h>
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -28,11 +37,10 @@ extern "C" {
 /** Last I/O error message (thread-local where supported) */
 #if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L && !defined(__STDC_NO_THREADS__)
     #include <threads.h>
-
-#include <stddef.h>
-#include <stdlib.h>
+    #include <stdlib.h>
     extern _Thread_local char uft_io_last_error[256];
 #else
+    #include <stdlib.h>
     extern char uft_io_last_error[256];
 #endif
 

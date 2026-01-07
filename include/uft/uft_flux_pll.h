@@ -4,7 +4,6 @@
  * @version 3.1.4.006
  *
  * Comprehensive flux transition processing, PLL (Phase-Locked Loop) decoding,
- * and bitstream extraction. Based on analysis of FluxFox (Rust), BBC-FDC,
  * and other modern flux processing implementations.
  *
  * Sources analyzed:
@@ -170,7 +169,6 @@ typedef enum {
  * @brief PLL state structure
  *
  * Software Phase-Locked Loop for flux-to-bitstream conversion.
- * Based on FluxFox's Pll struct with enhancements.
  */
 typedef struct {
     /* Clock parameters */

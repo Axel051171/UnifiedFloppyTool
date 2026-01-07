@@ -95,7 +95,7 @@ typedef struct {
  * @param path  Pfad zur Datei
  * @return 0 bei Erfolg, Fehlercode sonst
  */
-int floppy_open(FloppyDevice *dev, const char *path);
+int uft_floppy_open(FloppyDevice *dev, const char *path);
 
 /**
  * @brief Schließt ein FORMAT Image
@@ -103,7 +103,7 @@ int floppy_open(FloppyDevice *dev, const char *path);
  * @param dev  FloppyDevice Handle
  * @return 0 bei Erfolg, Fehlercode sonst
  */
-int floppy_close(FloppyDevice *dev);
+int uft_floppy_close(FloppyDevice *dev);
 
 /**
  * @brief Liest einen Sektor
@@ -115,7 +115,7 @@ int floppy_close(FloppyDevice *dev);
  * @param buf  Ausgabepuffer (mind. sector_size Bytes)
  * @return 0 bei Erfolg, Fehlercode sonst
  */
-int floppy_read_sector(FloppyDevice *dev, uint32_t t, uint32_t h, uint32_t s, uint8_t *buf);
+int uft_floppy_read_sector(FloppyDevice *dev, uint32_t t, uint32_t h, uint32_t s, uint8_t *buf);
 
 /**
  * @brief Schreibt einen Sektor
@@ -127,7 +127,7 @@ int floppy_read_sector(FloppyDevice *dev, uint32_t t, uint32_t h, uint32_t s, ui
  * @param buf  Eingabepuffer
  * @return 0 bei Erfolg, Fehlercode sonst
  */
-int floppy_write_sector(FloppyDevice *dev, uint32_t t, uint32_t h, uint32_t s, const uint8_t *buf);
+int uft_floppy_write_sector(FloppyDevice *dev, uint32_t t, uint32_t h, uint32_t s, const uint8_t *buf);
 
 /**
  * @brief Analysiert Kopierschutz
@@ -135,7 +135,7 @@ int floppy_write_sector(FloppyDevice *dev, uint32_t t, uint32_t h, uint32_t s, c
  * @param dev  FloppyDevice Handle
  * @return 0 bei Erfolg, Fehlercode sonst
  */
-int floppy_analyze_protection(FloppyDevice *dev);
+int uft_floppy_analyze_protection(FloppyDevice *dev);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // FORMAT-SPEZIFISCHE FUNKTIONEN

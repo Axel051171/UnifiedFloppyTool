@@ -7,6 +7,7 @@
 
 #include "uft/uft_bit_confidence.h"
 #include "uft/uft_flux_statistics.h"
+#include "uft_endian.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -717,12 +718,12 @@ int32_t uft_trackconf_serialize(const uft_track_confidence_t *tconf,
     uint8_t *p = buffer;
     
     /* Header */
-    *(uint32_t*)p = UFT_TRACKCONF_MAGIC; p += 4;
-    *(uint32_t*)p = UFT_TRACKCONF_VER; p += 4;
+    uft_write_le32(p, UFT_TRACKCONF_MAGIC); p += 4;
+    uft_write_le32(p, UFT_TRACKCONF_VER); p += 4;
     *p++ = tconf->track;
     *p++ = tconf->head;
     p += 2; /* padding */
-    *(uint32_t*)p = tconf->bit_count; p += 4;
+    uft_write_le32(p, tconf->bit_count); p += 4;
     
     /* Bit data */
     size_t bits_size = tconf->bit_count * sizeof(uft_bit_confidence_packed_t);
@@ -734,14 +735,14 @@ int32_t uft_trackconf_serialize(const uft_track_confidence_t *tconf,
     *p++ = tconf->max_confidence;
     *p++ = tconf->avg_confidence;
     *p++ = tconf->median_confidence;
-    *(uint32_t*)p = tconf->weak_bit_count; p += 4;
-    *(uint16_t*)p = tconf->low_conf_region_count; p += 2;
+    uft_write_le32(p, tconf->weak_bit_count); p += 4;
+    uft_write_le16(p, tconf->low_conf_region_count); p += 2;
     p += 2; /* padding */
     
     /* Regions */
     for (uint16_t i = 0; i < tconf->low_conf_region_count; i++) {
-        *(uint32_t*)p = tconf->low_conf_regions[i].start_bit; p += 4;
-        *(uint32_t*)p = tconf->low_conf_regions[i].end_bit; p += 4;
+        uft_write_le32(p, tconf->low_conf_regions[i].start_bit); p += 4;
+        uft_write_le32(p, tconf->low_conf_regions[i].end_bit); p += 4;
         *p++ = tconf->low_conf_regions[i].min_confidence;
         p += 3; /* padding */
     }
@@ -756,15 +757,15 @@ int32_t uft_trackconf_deserialize(const uint8_t *buffer, size_t buffer_size,
     const uint8_t *p = buffer;
     
     /* Check header */
-    if (*(uint32_t*)p != UFT_TRACKCONF_MAGIC) return -3;
+    if (uft_read_le32(p) != UFT_TRACKCONF_MAGIC) return -3;
     p += 4;
-    if (*(uint32_t*)p != UFT_TRACKCONF_VER) return -4;
+    if (uft_read_le32(p) != UFT_TRACKCONF_VER) return -4;
     p += 4;
     
     uint8_t track = *p++;
     uint8_t head = *p++;
     p += 2; /* padding */
-    uint32_t bit_count = *(uint32_t*)p; p += 4;
+    uint32_t bit_count = uft_read_le32(p); p += 4;
     
     /* Allocate */
     *tconf = uft_trackconf_alloc(track, head, bit_count);
@@ -785,14 +786,14 @@ int32_t uft_trackconf_deserialize(const uint8_t *buffer, size_t buffer_size,
     (*tconf)->max_confidence = *p++;
     (*tconf)->avg_confidence = *p++;
     (*tconf)->median_confidence = *p++;
-    (*tconf)->weak_bit_count = *(uint32_t*)p; p += 4;
-    (*tconf)->low_conf_region_count = *(uint16_t*)p; p += 2;
+    (*tconf)->weak_bit_count = uft_read_le32(p); p += 4;
+    (*tconf)->low_conf_region_count = uft_read_le16(p); p += 2;
     p += 2; /* padding */
     
     /* Regions */
     for (uint16_t i = 0; i < (*tconf)->low_conf_region_count && i < 64; i++) {
-        (*tconf)->low_conf_regions[i].start_bit = *(uint32_t*)p; p += 4;
-        (*tconf)->low_conf_regions[i].end_bit = *(uint32_t*)p; p += 4;
+        (*tconf)->low_conf_regions[i].start_bit = uft_read_le32(p); p += 4;
+        (*tconf)->low_conf_regions[i].end_bit = uft_read_le32(p); p += 4;
         (*tconf)->low_conf_regions[i].min_confidence = *p++;
         p += 3; /* padding */
     }

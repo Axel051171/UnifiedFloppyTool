@@ -1,12 +1,8 @@
 /**
  * @file uft_gw_official_params.h
- * @brief Official Greaseweazle Parameters from Keir Fraser's Implementation
  * 
- * Source: greaseweazle-master/src/greaseweazle/
- * Author: Keir Fraser <keir.xen@gmail.com>
  * 
  * This header contains the OFFICIAL parameter values from the reference
- * Greaseweazle implementation for direct GUI integration.
  */
 
 #ifndef UFT_GW_OFFICIAL_PARAMS_H
@@ -40,7 +36,6 @@ typedef struct {
     float lowpass_thresh_us;    /* Lowpass threshold in µs (0 = disabled) */
 } uft_pll_preset_t;
 
-/* Official PLL presets from Greaseweazle */
 static const uft_pll_preset_t UFT_PLL_PRESETS[] = {
     {
         .name = "Aggressive (Default)",
@@ -115,7 +110,6 @@ typedef struct {
     uint8_t gap4a;      /* Post Index gap */
 } uft_gap_params_t;
 
-/* Official FM gaps from Greaseweazle */
 static const uft_gap_params_t UFT_FM_GAPS = {
     .gap1 = 26,
     .gap2 = 11,
@@ -123,7 +117,6 @@ static const uft_gap_params_t UFT_FM_GAPS = {
     .gap4a = 40
 };
 
-/* Official MFM gaps from Greaseweazle */
 static const uft_gap_params_t UFT_MFM_GAPS = {
     .gap1 = 50,
     .gap2 = 22,
@@ -284,7 +277,6 @@ typedef struct {
     uint8_t auto_off_secs;      /* Auto motor-off in seconds (default: 10) */
 } uft_drive_delays_t;
 
-/* Official defaults from Greaseweazle */
 static const uft_drive_delays_t UFT_DRIVE_DELAYS_DEFAULT = {
     .step_delay_us = 3000,      /* 3ms per step */
     .settle_delay_ms = 15,      /* 15ms head settle */

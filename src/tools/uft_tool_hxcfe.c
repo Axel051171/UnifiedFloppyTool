@@ -1,6 +1,6 @@
 /**
- * @file uft_tool_hxcfe.c
- * @brief HxC Floppy Emulator Tool Adapter
+ * @file uft_tool_libflux.c
+ * @brief UFT HFE Format Tool Adapter
  * 
  * Unterstützt:
  * - Universelle Format-Konvertierung
@@ -27,7 +27,7 @@
 // Format Mapping
 // ============================================================================
 
-static const char* hxc_format_name(uft_format_t format) {
+static const char* libflux_format_name(uft_format_t format) {
     switch (format) {
         case UFT_FORMAT_HFE:      return "HFE";
         case UFT_FORMAT_IMG:      return "RAW_LOADER";
@@ -39,7 +39,7 @@ static const char* hxc_format_name(uft_format_t format) {
         case UFT_FORMAT_IPF:      return "IPF";
         case UFT_FORMAT_IMD:      return "IMD";
         case UFT_FORMAT_TD0:      return "TD0";
-        case UFT_FORMAT_KRYOFLUX: return "KF_RAW";
+        case UFT_FORMAT_KRYOFLUX: return "UFT_KF_RAW";
         default:                  return "RAW_LOADER";
     }
 }
@@ -70,28 +70,28 @@ static uft_error_t run_cmd(const char* cmd, char* output, size_t out_size) {
 // Availability
 // ============================================================================
 
-static bool hxc_is_available(void) {
+static bool libflux_is_available(void) {
     char buf[64];
-    return run_cmd("which hxcfe 2>/dev/null", buf, sizeof(buf)) == UFT_OK && buf[0];
+    return run_cmd("which libflux_ctx 2>/dev/null", buf, sizeof(buf)) == UFT_OK && buf[0];
 }
 
 // ============================================================================
 // Hardware Detection (N/A - converter only)
 // ============================================================================
 
-static bool hxc_detect_hardware(char* info, size_t size) {
+static bool libflux_detect_hardware(char* info, size_t size) {
     if (!info || size == 0) return false;
     
     char buf[1024];
-    if (run_cmd("hxcfe -help 2>&1 | head -3", buf, sizeof(buf)) == UFT_OK) {
+    if (run_cmd("libflux_ctx -help 2>&1 | head -3", buf, sizeof(buf)) == UFT_OK) {
         const char* ver = strstr(buf, "version");
         if (ver) {
-            snprintf(info, size, "HxC Floppy Emulator Tool %.30s", ver);
+            snprintf(info, size, "UFT HFE Format Tool %.30s", ver);
             return true;
         }
     }
     
-    snprintf(info, size, "HxC Floppy Emulator Tool");
+    snprintf(info, size, "UFT HFE Format Tool");
     return true;
 }
 
@@ -99,17 +99,17 @@ static bool hxc_detect_hardware(char* info, size_t size) {
 // Convert
 // ============================================================================
 
-static uft_error_t hxc_convert(void* context,
+static uft_error_t libflux_convert(void* context,
                                 const char* input,
                                 const char* output,
                                 uft_format_t format) {
     if (!input || !output) return UFT_ERROR_NULL_POINTER;
     
-    const char* fmt_name = hxc_format_name(format);
+    const char* fmt_name = libflux_format_name(format);
     
     char cmd[2048];
     snprintf(cmd, sizeof(cmd),
-             "hxcfe -finput:\"%s\" -foutput:\"%s\" -conv:%s 2>&1",
+             "libflux_ctx -finput:\"%s\" -foutput:\"%s\" -conv:%s 2>&1",
              input, output, fmt_name);
     
     char buf[4096];
@@ -117,17 +117,17 @@ static uft_error_t hxc_convert(void* context,
 }
 
 // ============================================================================
-// Analyze (hxcfe can show disk structure)
+// Analyze (libflux_ctx can show disk structure)
 // ============================================================================
 
-static uft_error_t hxc_analyze(void* context,
+static uft_error_t libflux_analyze(void* context,
                                 const char* input,
                                 char* report,
                                 size_t report_size) {
     if (!input || !report) return UFT_ERROR_NULL_POINTER;
     
     char cmd[1024];
-    snprintf(cmd, sizeof(cmd), "hxcfe -finput:\"%s\" -infos 2>&1", input);
+    snprintf(cmd, sizeof(cmd), "libflux_ctx -finput:\"%s\" -infos 2>&1", input);
     
     return run_cmd(cmd, report, report_size);
 }
@@ -136,10 +136,10 @@ static uft_error_t hxc_analyze(void* context,
 // Export to HFE (common operation)
 // ============================================================================
 
-static uft_error_t hxc_export_hfe(const char* input, const char* output) {
+static uft_error_t libflux_export_hfe(const char* input, const char* output) {
     char cmd[2048];
     snprintf(cmd, sizeof(cmd),
-             "hxcfe -finput:\"%s\" -foutput:\"%s\" -conv:HFE 2>&1",
+             "libflux_ctx -finput:\"%s\" -foutput:\"%s\" -conv:HFE 2>&1",
              input, output);
     
     char buf[4096];
@@ -150,11 +150,11 @@ static uft_error_t hxc_export_hfe(const char* input, const char* output) {
 // List Supported Formats
 // ============================================================================
 
-static uft_error_t hxc_list_formats(char* formats, size_t size) {
+static uft_error_t libflux_list_formats(char* formats, size_t size) {
     if (!formats || size == 0) return UFT_ERROR_NULL_POINTER;
     
     char cmd[256];
-    snprintf(cmd, sizeof(cmd), "hxcfe -modulelist 2>&1");
+    snprintf(cmd, sizeof(cmd), "libflux_ctx -modulelist 2>&1");
     
     return run_cmd(cmd, formats, size);
 }
@@ -163,12 +163,12 @@ static uft_error_t hxc_list_formats(char* formats, size_t size) {
 // Init / Cleanup
 // ============================================================================
 
-static uft_error_t hxc_init(void** context) {
+static uft_error_t libflux_init(void** context) {
     *context = NULL;
     return UFT_OK;
 }
 
-static void hxc_cleanup(void* context) {
+static void libflux_cleanup(void* context) {
     (void)context;
 }
 
@@ -176,21 +176,21 @@ static void hxc_cleanup(void* context) {
 // Plugin Registration
 // ============================================================================
 
-const uft_tool_adapter_t uft_tool_hxcfe = {
-    .name = "hxcfe",
+const uft_tool_adapter_t uft_tool_libflux = {
+    .name = "libflux_ctx",
     .version = "1.0.0",
-    .description = "HxC Floppy Emulator Tool (Converter)",
+    .description = "UFT HFE Format Tool (Converter)",
     .capabilities = UFT_TOOL_CAP_CONVERT | UFT_TOOL_CAP_INFO,
     .supported_formats = 0xFFFFFFFF,  // Supports almost everything
     
-    .init = hxc_init,
-    .cleanup = hxc_cleanup,
-    .is_available = hxc_is_available,
-    .detect_hardware = hxc_detect_hardware,
+    .init = libflux_init,
+    .cleanup = libflux_cleanup,
+    .is_available = libflux_is_available,
+    .detect_hardware = libflux_detect_hardware,
     
     .read_disk = NULL,  // No hardware support
     .write_disk = NULL,
-    .convert = hxc_convert,
+    .convert = libflux_convert,
     .get_disk_info = NULL,
     .seek = NULL,
     .reset = NULL,

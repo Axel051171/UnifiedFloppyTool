@@ -329,9 +329,9 @@ static const uft_format_info_t format_info_table[UFT_FORMAT_MAX] = {
         .preserves_timing = true
     },
     
-    // UFT_FORMAT_KF_STREAM
+    // UFT_FORMAT_UFT_KF_STREAM
     {
-        .format = UFT_FORMAT_KF_STREAM,
+        .format = UFT_FORMAT_UFT_KF_STREAM,
         .name = "KryoFlux",
         .description = "KryoFlux stream files",
         .extensions = "raw",  // trackXX.Y.raw
@@ -344,7 +344,7 @@ static const uft_format_info_t format_info_table[UFT_FORMAT_MAX] = {
     {
         .format = UFT_FORMAT_HFE,
         .name = "HFE",
-        .description = "HxC Floppy Emulator",
+        .description = "UFT HFE Format",
         .extensions = "hfe",
         .has_flux = true,
         .can_write = true,

@@ -7,10 +7,15 @@
  */
 
 #include <stdio.h>
+#include "uft/core/uft_safe_parse.h"
 #include <stdlib.h>
+#include "uft/core/uft_safe_parse.h"
 #include <string.h>
+#include "uft/core/uft_safe_parse.h"
 #include <stdint.h>
+#include "uft/core/uft_safe_parse.h"
 #include <stdbool.h>
+#include "uft/core/uft_safe_parse.h"
 
 #define PLS_MAGIC               "[playlist]"
 
@@ -36,13 +41,13 @@ static bool pls_parse(const uint8_t* data, size_t size, pls_file_t* pls) {
         /* Find NumberOfEntries */
         const char* num = strstr(text, "NumberOfEntries=");
         if (num) {
-            pls->num_entries = atoi(num + 16);
+            { int32_t t; if(uft_parse_int32(num+16,&t,10)) pls->num_entries=t; }
         }
         
         /* Find Version */
         const char* ver = strstr(text, "Version=");
         if (ver) {
-            pls->version = atoi(ver + 8);
+            { int32_t t; if(uft_parse_int32(ver+8,&t,10)) pls->version=t; }
         }
         
         pls->valid = true;
@@ -52,6 +57,7 @@ static bool pls_parse(const uint8_t* data, size_t size, pls_file_t* pls) {
 
 #ifdef PLS_V3_TEST
 #include <assert.h>
+#include "uft/core/uft_safe_parse.h"
 int main(void) {
     printf("=== PLS Parser v3 Tests ===\n");
     printf("Testing... ");

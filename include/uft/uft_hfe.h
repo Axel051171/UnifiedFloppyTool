@@ -1,9 +1,9 @@
 /**
  * @file uft_hfe.h
- * @brief HxC Floppy Emulator (HFE) Image Format Support
+ * @brief UFT HFE Format (HFE) Image Format Support
  * @version 3.1.4.004
  *
- * HFE is the native format for HxC Floppy Emulator hardware.
+ * HFE is the native format for UFT HFE Format hardware.
  * Features:
  * - MFM/FM bitstream representation
  * - Variable bitrate support per track
@@ -14,7 +14,6 @@
  * - Opcodes for index marks, bitrate changes, random data
  * - Better weak/random bit support
  *
- * Reference: https://hxc2001.com/
  *
  * SPDX-License-Identifier: MIT
  */
@@ -111,8 +110,8 @@ typedef struct {
     uint8_t     number_of_sides;    /**< 1 or 2 */
     uint8_t     track_encoding;     /**< Encoding mode */
     uint16_t    bitrate;            /**< Bitrate in kbit/s (100-500) */
-    uint16_t    floppy_rpm;         /**< RPM (typically 300) */
-    uint8_t     floppy_interface;   /**< Interface mode */
+    uint16_t    uft_floppy_rpm;         /**< RPM (typically 300) */
+    uint8_t     uft_floppy_interface;   /**< Interface mode */
     uint8_t     reserved;           /**< Must be 0x01 */
     uint16_t    track_list_offset;  /**< Track LUT offset in blocks */
     uint8_t     write_allowed;      /**< 0xFF if write allowed */

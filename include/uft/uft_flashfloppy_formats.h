@@ -1,10 +1,7 @@
 /**
  * @file uft_flashfloppy_formats.h
- * @brief FlashFloppy Format Definitions and Disk Types
  * @version 3.4.0
  *
- * Extracted from FlashFloppy by Keir Fraser (public domain)
- * Source: flashfloppy-master/src/image/img.c
  *
  * Contains:
  * - Standard IBM PC disk formats
@@ -48,7 +45,6 @@ extern "C" {
 /**
  * @brief Disk format definition
  * 
- * Compact structure matching FlashFloppy's raw_type
  */
 typedef struct uft_ff_format {
     uint8_t  nr_sectors;        /**< Sectors per track */

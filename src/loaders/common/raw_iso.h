@@ -1,3 +1,6 @@
+#ifndef UFT_LOADERS_COMMON_RAW_ISO_H
+#define UFT_LOADERS_COMMON_RAW_ISO_H
+
 
 typedef struct raw_iso_cfg_
 {
@@ -22,6 +25,8 @@ typedef struct raw_iso_cfg_
 
 }raw_iso_cfg;
 
-int raw_iso_loader(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk, FILE * f_img , unsigned char * imagebuffer, int size, raw_iso_cfg * cfg);
+int raw_iso_loader(LIBFLUX_IMGLDR * imgldr_ctx,LIBFLUX_FLOPPY * floppydisk, FILE * f_img , unsigned char * imagebuffer, int size, raw_iso_cfg * cfg);
 
 void raw_iso_setdefcfg(raw_iso_cfg *rawcfg);
+
+#endif /* UFT_LOADERS_COMMON_RAW_ISO_H */

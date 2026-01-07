@@ -10,7 +10,6 @@
  * in the encoded data stream, which is required for reliable magnetic
  * flux transitions on floppy disk media.
  * 
- * Source: Extracted from disk2disk and mac2dos projects
  * Original: Copyright (c) 1987-1989 Central Coast Software
  */
 

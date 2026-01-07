@@ -4,7 +4,6 @@
  *
  * Goal: collect "tool-like" options (think Alcohol 120% style) into one
  * structured configuration that can be applied consistently across
- * backends (GW, FluxEngine, blockdev writer, etc.).
  *
  * "Wir bewahren Information – wir entscheiden nicht vorschnell, was wichtig ist."
  */

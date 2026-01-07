@@ -2,25 +2,20 @@
 //
 // Copyright (C) 2006-2025 Jean-Franois DEL NERO
 //
-// This file is part of the HxCFloppyEmulator library
 //
-// HxCFloppyEmulator may be used and distributed without restriction provided
 // that this copyright statement is not removed from the file and that any
 // derivative work contains the original copyright notice and the associated
 // disclaimer.
 //
-// HxCFloppyEmulator is free software; you can redistribute it
 // and/or modify  it under the terms of the GNU General Public License
 // as published by the Free Software Foundation; either version 2
 // of the License, or (at your option) any later version.
 //
-// HxCFloppyEmulator is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 //   See the GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with HxCFloppyEmulator; if not, write to the Free Software
 // Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 //
 */
@@ -49,11 +44,11 @@
 
 #include "types.h"
 
-#include "internal_libhxcfe.h"
-#include "libhxcfe.h"
+#include "libflux.h""
+#include "libflux.h""
 
-#include "floppy_loader.h"
-#include "floppy_utils.h"
+#include "uft_floppy_loader.h"
+#include "uft_floppy_utils.h"
 
 #include "afi_format.h"
 #include "afi_loader.h"
@@ -81,7 +76,7 @@ uint16_t filecheckcrc(FILE * f,uint32_t fileoffset,uint32_t size)
 
 		if(s>512)
 		{
-			hxc_fread(&buffer,512,f);
+			libflux_fread(&buffer,512,f);
 			for(i=0;i<512;i++)
 			{
 				CRC16_Update(&crc16h,&crc16l,buffer[i],(unsigned char*)crctable);
@@ -90,7 +85,7 @@ uint16_t filecheckcrc(FILE * f,uint32_t fileoffset,uint32_t size)
 		}
 		else
 		{
-			hxc_fread(&buffer,s,f);
+			libflux_fread(&buffer,s,f);
 			for(i=0;i<s;i++)
 			{
 				CRC16_Update(&crc16h,&crc16l,buffer[i],(unsigned char*)crctable);
@@ -156,36 +151,36 @@ uint32_t * bitrate_rle_unpack(uint32_t * packedbuffer,uint32_t len,unsigned long
 }
 
 
-int AFI_libIsValidDiskFile( HXCFE_IMGLDR * imgldr_ctx, HXCFE_IMGLDR_FILEINFOS * imgfile )
+int AFI_libIsValidDiskFile( LIBFLUX_IMGLDR * imgldr_ctx, LIBFLUX_IMGLDR_FILEINFOS * imgfile )
 {
 	AFIIMG *header;
 
-	imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"AFI_libIsValidDiskFile");
+	imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"AFI_libIsValidDiskFile");
 
-	if(hxc_checkfileext(imgfile->path,"afi",SYS_PATH_TYPE))
+	if(libflux_checkfileext(imgfile->path,"afi",SYS_PATH_TYPE))
 	{
 
 		header = (AFIIMG *)imgfile->file_header;
 
 		if( !strncmp((char*)header->afi_img_tag,AFI_IMG_TAG,strlen(AFI_IMG_TAG)) )
 		{
-			imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"AFI_libIsValidDiskFile : AFI file !");
-			return HXCFE_VALIDFILE;
+			imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"AFI_libIsValidDiskFile : AFI file !");
+			return LIBFLUX_VALIDFILE;
 		}
 		else
 		{
-			imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"AFI_libIsValidDiskFile : non AFI file !");
-			return HXCFE_BADFILE;
+			imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"AFI_libIsValidDiskFile : non AFI file !");
+			return LIBFLUX_BADFILE;
 		}
 	}
 	else
 	{
-		imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"AFI_libIsValidDiskFile : non AFI file !");
-		return HXCFE_BADFILE;
+		imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"AFI_libIsValidDiskFile : non AFI file !");
+		return LIBFLUX_BADFILE;
 	}
 }
 
-int AFI_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,char * imgfile,void * parameters)
+int AFI_libLoad_DiskFile(LIBFLUX_IMGLDR * imgldr_ctx,LIBFLUX_FLOPPY * floppydisk,char * imgfile,void * parameters)
 {
 	FILE * f;
 	AFIIMG header;
@@ -196,8 +191,8 @@ int AFI_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 	int i,j;
 	uint32_t k,bytelen;
 	unsigned long destLen;
-	HXCFE_CYLINDER* currentcylinder;
-	HXCFE_SIDE* currentside;
+	LIBFLUX_CYLINDER* currentcylinder;
+	LIBFLUX_SIDE* currentside;
 	uint32_t * tracklistoffset;
 	uint32_t * datalistoffset;
 
@@ -206,29 +201,29 @@ int AFI_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 
 	uint32_t * temp_timing;
 
-	imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"AFI_libLoad_DiskFile %s",imgfile);
+	imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"AFI_libLoad_DiskFile %s",imgfile);
 
-	f = hxc_fopen(imgfile,"rb");
+	f = libflux_fopen(imgfile,"rb");
 	if( f == NULL )
 	{
-		imgldr_ctx->hxcfe->hxc_printf(MSG_ERROR,"AFI_libLoad_DiskFile : Cannot open %s !",imgfile);
-		return HXCFE_ACCESSERROR;
+		imgldr_ctx->ctx->libflux_printf(MSG_ERROR,"AFI_libLoad_DiskFile : Cannot open %s !",imgfile);
+		return LIBFLUX_ACCESSERROR;
 	}
 
-	hxc_fread(&header,sizeof(header),f);
+	libflux_fread(&header,sizeof(header),f);
 
 	if(!strncmp((char*)header.afi_img_tag,AFI_IMG_TAG,strlen(AFI_IMG_TAG)))
 	{
 
 		if(filecheckcrc(f,0,sizeof(AFIIMG)))
 		{
-				imgldr_ctx->hxcfe->hxc_printf(MSG_ERROR,"AFI_libLoad_DiskFile : bad header CRC !");
-				hxc_fclose(f);
-				return HXCFE_BADFILE;
+				imgldr_ctx->ctx->libflux_printf(MSG_ERROR,"AFI_libLoad_DiskFile : bad header CRC !");
+				libflux_fclose(f);
+				return LIBFLUX_BADFILE;
 		}
 
 		if (fseek(f,header.floppyinfo_offset,SEEK_SET) != 0) { /* seek error */ }
-		hxc_fread(&afiinfo,sizeof(afiinfo),f);
+		libflux_fread(&afiinfo,sizeof(afiinfo),f);
 
 		floppydisk->floppyNumberOfTrack=afiinfo.end_track+1;
 		floppydisk->floppyNumberOfSide=afiinfo.end_side+1;
@@ -286,93 +281,93 @@ int AFI_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 		}
 
 		//floppydisk->floppyBitRate=header.floppyBitRate*1000;
-		imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"AFI File : %d track, %d side, %d bit/s, %d sectors, mode %d",
+		imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"AFI File : %d track, %d side, %d bit/s, %d sectors, mode %d",
 			floppydisk->floppyNumberOfTrack,
 			floppydisk->floppyNumberOfSide,
 			floppydisk->floppyBitRate,
 			floppydisk->floppySectorPerTrack,
 			floppydisk->floppyiftype);
 
-		floppydisk->tracks=(HXCFE_CYLINDER**)malloc(sizeof(HXCFE_CYLINDER*)*floppydisk->floppyNumberOfTrack);
+		floppydisk->tracks=(LIBFLUX_CYLINDER**)malloc(sizeof(LIBFLUX_CYLINDER*)*floppydisk->floppyNumberOfTrack);
 		if(!floppydisk->tracks)
 		{
-			imgldr_ctx->hxcfe->hxc_printf(MSG_ERROR,"floppydisk->tracks alloc error !");
+			imgldr_ctx->ctx->libflux_printf(MSG_ERROR,"floppydisk->tracks alloc error !");
 
-			hxc_fclose(f);
-			return HXCFE_INTERNALERROR;
+			libflux_fclose(f);
+			return LIBFLUX_INTERNALERROR;
 		}
 
-		memset(floppydisk->tracks,0,sizeof(HXCFE_CYLINDER*)*floppydisk->floppyNumberOfTrack);
+		memset(floppydisk->tracks,0,sizeof(LIBFLUX_CYLINDER*)*floppydisk->floppyNumberOfTrack);
 
 		if (fseek(f,header.track_list_offset,SEEK_SET) != 0) { /* seek error */ }
-		hxc_fread(&trackliststruct,sizeof(trackliststruct),f);
+		libflux_fread(&trackliststruct,sizeof(trackliststruct),f);
 		if(strncmp((char*)trackliststruct.afi_img_track_list_tag,AFI_TRACKLIST_TAG,strlen(AFI_TRACKLIST_TAG)))
 		{
-			imgldr_ctx->hxcfe->hxc_printf(MSG_ERROR,"bad AFI_TRACKLIST_TAG");
-			return HXCFE_BADFILE;
+			imgldr_ctx->ctx->libflux_printf(MSG_ERROR,"bad AFI_TRACKLIST_TAG");
+			return LIBFLUX_BADFILE;
 		}
 
 		tracklistoffset=(uint32_t*)malloc(trackliststruct.number_of_track*sizeof(uint32_t));
 		if(!tracklistoffset)
 		{
-			imgldr_ctx->hxcfe->hxc_printf(MSG_ERROR,"tracklistoffset alloc error !");
+			imgldr_ctx->ctx->libflux_printf(MSG_ERROR,"tracklistoffset alloc error !");
 
-			hxc_fclose(f);
-			return HXCFE_INTERNALERROR;
+			libflux_fclose(f);
+			return LIBFLUX_INTERNALERROR;
 		}
 
-		hxc_fread(tracklistoffset,trackliststruct.number_of_track*sizeof(uint32_t),f);
+		libflux_fread(tracklistoffset,trackliststruct.number_of_track*sizeof(uint32_t),f);
 
 		for(i=0;i<(int)trackliststruct.number_of_track;i++)
 		{
-			hxcfe_imgCallProgressCallback(imgldr_ctx,i,trackliststruct.number_of_track );
+			libflux_imgCallProgressCallback(imgldr_ctx,i,trackliststruct.number_of_track );
 
 			if (fseek(f,header.track_list_offset+tracklistoffset[i],SEEK_SET) != 0) { /* seek error */ }
-			hxc_fread(&track,sizeof(track),f);
+			libflux_fread(&track,sizeof(track),f);
 			if(strncmp((char*)track.afi_track_tag,AFI_TRACK_TAG,strlen(AFI_TRACK_TAG)))
 			{
-				imgldr_ctx->hxcfe->hxc_printf(MSG_ERROR,"bad AFI_TRACK_TAG");
-				return HXCFE_BADFILE;
+				imgldr_ctx->ctx->libflux_printf(MSG_ERROR,"bad AFI_TRACK_TAG");
+				return LIBFLUX_BADFILE;
 			}
 
 			if(filecheckcrc(f,header.track_list_offset+tracklistoffset[i],(track.number_of_data_chunk*sizeof(uint32_t))+sizeof(AFITRACK)+sizeof(unsigned short)))
 			{
-				imgldr_ctx->hxcfe->hxc_printf(MSG_ERROR,"bad track CRC !");
-				hxc_fclose(f);
-				return HXCFE_BADFILE;
+				imgldr_ctx->ctx->libflux_printf(MSG_ERROR,"bad track CRC !");
+				libflux_fclose(f);
+				return LIBFLUX_BADFILE;
 			}
 
 			datalistoffset=(uint32_t *)malloc(track.number_of_data_chunk*sizeof(uint32_t));
 			if(!datalistoffset)
 			{
-				imgldr_ctx->hxcfe->hxc_printf(MSG_ERROR,"Data list alloc error !");
-				hxc_fclose(f);
-				return HXCFE_INTERNALERROR;
+				imgldr_ctx->ctx->libflux_printf(MSG_ERROR,"Data list alloc error !");
+				libflux_fclose(f);
+				return LIBFLUX_INTERNALERROR;
 			}
 
-			hxc_fread(datalistoffset,track.number_of_data_chunk*sizeof(uint32_t),f);
+			libflux_fread(datalistoffset,track.number_of_data_chunk*sizeof(uint32_t),f);
 
 			if(!floppydisk->tracks[track.track_number])
 			{
-				floppydisk->tracks[track.track_number]=(HXCFE_CYLINDER*)malloc(sizeof(HXCFE_CYLINDER));
+				floppydisk->tracks[track.track_number]=(LIBFLUX_CYLINDER*)malloc(sizeof(LIBFLUX_CYLINDER));
 				if(!floppydisk->tracks[track.track_number])
 				{
-					imgldr_ctx->hxcfe->hxc_printf(MSG_ERROR,"tracks array alloc error !");
-					hxc_fclose(f);
-					return HXCFE_INTERNALERROR;
+					imgldr_ctx->ctx->libflux_printf(MSG_ERROR,"tracks array alloc error !");
+					libflux_fclose(f);
+					return LIBFLUX_INTERNALERROR;
 				}
 
 				currentcylinder = floppydisk->tracks[track.track_number];
 				currentcylinder->number_of_side=floppydisk->floppyNumberOfSide;
-				currentcylinder->sides=(HXCFE_SIDE**)malloc(sizeof(HXCFE_SIDE*)*currentcylinder->number_of_side);
+				currentcylinder->sides=(LIBFLUX_SIDE**)malloc(sizeof(LIBFLUX_SIDE*)*currentcylinder->number_of_side);
 				if(!currentcylinder->sides)
 				{
-					imgldr_ctx->hxcfe->hxc_printf(MSG_ERROR,"sides array alloc error !");
-					hxc_fclose(f);
-					return HXCFE_INTERNALERROR;
+					imgldr_ctx->ctx->libflux_printf(MSG_ERROR,"sides array alloc error !");
+					libflux_fclose(f);
+					return LIBFLUX_INTERNALERROR;
 				}
 
-				memset(currentcylinder->sides,0,sizeof(HXCFE_SIDE*)*currentcylinder->number_of_side);
+				memset(currentcylinder->sides,0,sizeof(LIBFLUX_SIDE*)*currentcylinder->number_of_side);
 				currentcylinder->floppyRPM=0;//header.floppyRPM;
 			}
 			else
@@ -380,15 +375,15 @@ int AFI_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 				currentcylinder = floppydisk->tracks[track.track_number];
 			}
 
-			imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"read track %d side %d at offset 0x%x (0x%x bytes)",
+			imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"read track %d side %d at offset 0x%x (0x%x bytes)",
 			track.track_number,
 			track.side_number,
 			track.number_of_data_chunk,
 			track.nb_of_element);
 
-			currentcylinder->sides[track.side_number]=malloc(sizeof(HXCFE_SIDE));
-			if(!currentcylinder->sides[track.side_number]) return HXCFE_INTERNALERROR; /* P0-SEC-001 */
-			memset(currentcylinder->sides[track.side_number],0,sizeof(HXCFE_SIDE));
+			currentcylinder->sides[track.side_number]=malloc(sizeof(LIBFLUX_SIDE));
+			if(!currentcylinder->sides[track.side_number]) return LIBFLUX_INTERNALERROR; /* P0-SEC-001 */
+			memset(currentcylinder->sides[track.side_number],0,sizeof(LIBFLUX_SIDE));
 			currentside=currentcylinder->sides[track.side_number];
 
 			currentside->number_of_sector=floppydisk->floppySectorPerTrack;
@@ -410,19 +405,19 @@ int AFI_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 			for(j=0;j<(int)track.number_of_data_chunk;j++)
 			{
 				if (fseek(f,header.track_list_offset+tracklistoffset[i]+datalistoffset[j],SEEK_SET) != 0) { /* seek error */ }
-				hxc_fread(&datablock,sizeof(datablock),f);
+				libflux_fread(&datablock,sizeof(datablock),f);
 
 				if(strncmp((char*)datablock.afi_data_tag,AFI_DATA_TAG,strlen(AFI_DATA_TAG)))
 				{
-					imgldr_ctx->hxcfe->hxc_printf(MSG_ERROR,"bad AFI_DATA_TAG");
-					return HXCFE_BADFILE;
+					imgldr_ctx->ctx->libflux_printf(MSG_ERROR,"bad AFI_DATA_TAG");
+					return LIBFLUX_BADFILE;
 				}
 
 				if(filecheckcrc(f,header.track_list_offset+tracklistoffset[i]+datalistoffset[j],sizeof(AFIDATA)+datablock.packed_size+sizeof(unsigned short)))
 				{
-					imgldr_ctx->hxcfe->hxc_printf(MSG_ERROR,"bad data CRC !");
-					hxc_fclose(f);
-					return HXCFE_BADFILE;
+					imgldr_ctx->ctx->libflux_printf(MSG_ERROR,"bad data CRC !");
+					libflux_fclose(f);
+					return LIBFLUX_BADFILE;
 				}
 
 				switch(datablock.TYPEIDCODE)
@@ -433,14 +428,14 @@ int AFI_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 							case AFI_COMPRESS_NONE:
 								currentside->databuffer = malloc(datablock.unpacked_size);
 								if(currentside->databuffer)
-									hxc_fread(currentside->databuffer,datablock.unpacked_size,f);
+									libflux_fread(currentside->databuffer,datablock.unpacked_size,f);
 							break;
 							case AFI_COMPRESS_GZIP:
 								currentside->databuffer = malloc(datablock.unpacked_size);
 								temp_uncompressbuffer = malloc(datablock.packed_size);
 								if(currentside->databuffer && temp_uncompressbuffer)
 								{
-									hxc_fread(temp_uncompressbuffer,datablock.packed_size,f);
+									libflux_fread(temp_uncompressbuffer,datablock.packed_size,f);
 									destLen = datablock.unpacked_size;
 									uncompress(currentside->databuffer, &destLen,temp_uncompressbuffer, datablock.packed_size);
 									free(temp_uncompressbuffer);
@@ -467,14 +462,14 @@ int AFI_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 							case AFI_COMPRESS_NONE:
 								currentside->databuffer=malloc(datablock.unpacked_size);
 								if(currentside->databuffer)
-									hxc_fread(currentside->databuffer,datablock.unpacked_size,f);
+									libflux_fread(currentside->databuffer,datablock.unpacked_size,f);
 								break;
 							case AFI_COMPRESS_GZIP:
 								currentside->databuffer=malloc(datablock.unpacked_size);
 								temp_uncompressbuffer=malloc(datablock.packed_size);
 								if(currentside->databuffer && temp_uncompressbuffer)
 								{
-									hxc_fread(temp_uncompressbuffer,datablock.packed_size,f);
+									libflux_fread(temp_uncompressbuffer,datablock.packed_size,f);
 									destLen=datablock.unpacked_size;
 									uncompress(currentside->databuffer, &destLen,temp_uncompressbuffer, datablock.packed_size);
 									free(temp_uncompressbuffer);
@@ -500,14 +495,14 @@ int AFI_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 							case AFI_COMPRESS_NONE:
 								currentside->indexbuffer=malloc(datablock.packed_size);
 								if(currentside->indexbuffer)
-									hxc_fread(currentside->indexbuffer,datablock.packed_size,f);
+									libflux_fread(currentside->indexbuffer,datablock.packed_size,f);
 							break;
 							case AFI_COMPRESS_GZIP:
 								currentside->indexbuffer=malloc(datablock.unpacked_size);
 								temp_uncompressbuffer=malloc(datablock.packed_size);
 								if(currentside->indexbuffer && temp_uncompressbuffer)
 								{
-									hxc_fread(temp_uncompressbuffer,datablock.packed_size,f);
+									libflux_fread(temp_uncompressbuffer,datablock.packed_size,f);
 									destLen=datablock.unpacked_size;
 									uncompress(currentside->indexbuffer, &destLen,temp_uncompressbuffer, datablock.packed_size);
 									free(temp_uncompressbuffer);
@@ -542,7 +537,7 @@ int AFI_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 
 									if(temp_timing && currentside->timingbuffer)
 									{
-										hxc_fread(temp_timing,datablock.packed_size,f);
+										libflux_fread(temp_timing,datablock.packed_size,f);
 
 										for(k=0;k<bytelen;k++)
 										{
@@ -582,7 +577,7 @@ int AFI_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 									temp_uncompressbuffer=malloc(datablock.packed_size);
 									if(temp_uncompressbuffer && currentside->timingbuffer)
 									{
-										hxc_fread(temp_uncompressbuffer,datablock.packed_size,f);
+										libflux_fread(temp_uncompressbuffer,datablock.packed_size,f);
 
 										destLen = datablock.unpacked_size;
 										if( destLen & ( sizeof(uint32_t) - 1 ) )
@@ -647,7 +642,7 @@ int AFI_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 									currentside->timingbuffer=malloc(datablock.packed_size);
 									if(currentside->timingbuffer)
 									{
-										hxc_fread(currentside->timingbuffer,datablock.packed_size,f);
+										libflux_fread(currentside->timingbuffer,datablock.packed_size,f);
 
 										k=0;
 										do
@@ -669,7 +664,7 @@ int AFI_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 									temp_uncompressbuffer=malloc(datablock.packed_size);
 									if(currentside->timingbuffer && temp_uncompressbuffer)
 									{
-										hxc_fread(temp_uncompressbuffer,datablock.packed_size,f);
+										libflux_fread(temp_uncompressbuffer,datablock.packed_size,f);
 										destLen=datablock.unpacked_size;
 										uncompress((unsigned char*)currentside->timingbuffer, &destLen,temp_uncompressbuffer, datablock.packed_size);
 
@@ -716,7 +711,7 @@ int AFI_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 								currentside->flakybitsbuffer = malloc(datablock.packed_size);
 								if(currentside->flakybitsbuffer)
 								{
-									hxc_fread(currentside->flakybitsbuffer,datablock.packed_size,f);
+									libflux_fread(currentside->flakybitsbuffer,datablock.packed_size,f);
 									k=0;
 									do
 									{
@@ -736,7 +731,7 @@ int AFI_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 								temp_uncompressbuffer=malloc(datablock.packed_size);
 								if( currentside->flakybitsbuffer && temp_uncompressbuffer )
 								{
-									hxc_fread(temp_uncompressbuffer,datablock.packed_size,f);
+									libflux_fread(temp_uncompressbuffer,datablock.packed_size,f);
 									destLen=datablock.unpacked_size;
 									uncompress(currentside->flakybitsbuffer, &destLen,temp_uncompressbuffer, datablock.packed_size);
 
@@ -814,7 +809,7 @@ int AFI_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 
 						if(currentside->timingbuffer)
 						{
-							floppydisk->tracks[j]->floppyRPM = (short)( 60 / GetTrackPeriod(imgldr_ctx->hxcfe,currentside) );
+							floppydisk->tracks[j]->floppyRPM = (short)( 60 / GetTrackPeriod(imgldr_ctx->ctx,currentside) );
 						}
 						else
 						{
@@ -825,20 +820,20 @@ int AFI_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 			}
 		}
 
-		floppyTrackTypeIdentification(imgldr_ctx->hxcfe,floppydisk);
+		floppyTrackTypeIdentification(imgldr_ctx->ctx,floppydisk);
 
-		hxc_fclose(f);
-		return HXCFE_NOERROR;
+		libflux_fclose(f);
+		return LIBFLUX_NOERROR;
 	}
 
-	hxc_fclose(f);
-	imgldr_ctx->hxcfe->hxc_printf(MSG_ERROR,"bad header");
-	return HXCFE_BADFILE;
+	libflux_fclose(f);
+	imgldr_ctx->ctx->libflux_printf(MSG_ERROR,"bad header");
+	return LIBFLUX_BADFILE;
 }
 
-int AFI_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char * filename);
+int AFI_libWrite_DiskFile(LIBFLUX_IMGLDR* imgldr_ctx,LIBFLUX_FLOPPY * floppy,char * filename);
 
-int AFI_libGetPluginInfo(HXCFE_IMGLDR * imgldr_ctx,uint32_t infotype,void * returnvalue)
+int AFI_libGetPluginInfo(LIBFLUX_IMGLDR * imgldr_ctx,uint32_t infotype,void * returnvalue)
 {
 	static const char plug_id[]="HXC_AFI";
 	static const char plug_desc[]="HxC AFI file loader";

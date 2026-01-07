@@ -13,7 +13,7 @@ static int fseek_abs(FILE *f, uint32_t off) {
 #if defined(_WIN32)
     return _fseeki64(f, (long long)off, SEEK_SET);
 #else
-    return fseek(f, (long)off, SEEK_SET);
+    return (void)fseek(f, (long)off, SEEK_SET);
 #endif
 }
 
@@ -45,7 +45,7 @@ int uft_scp_open(uft_scp_image_t *img, const char *path) {
         img->track_offsets[i] = img->hdr.track_offsets[i];
     }
 
-    /* Extended mode: offsets table at absolute 0x80 (per a8rawconv behavior/spec). */
+    /* Extended mode: offsets table at absolute 0x80 (per Atari spec/spec). */
     if (img->extended_mode) {
         if (fseek_abs(img->f, 0x80u) != 0) {
             uft_scp_close(img);

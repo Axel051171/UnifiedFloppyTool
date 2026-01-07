@@ -2,8 +2,6 @@
 /*
  * error_correction.c - MFM Error Correction via Bit-Flipping
  * 
- * Ported from FloppyControl (C# -> C)
- * Original: https://github.com/Skaizo/FloppyControl
  * 
  * This module implements brute-force error correction for MFM data.
  * It systematically tries flipping bits in suspected error regions

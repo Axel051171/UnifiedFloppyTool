@@ -24,7 +24,6 @@
  * FILE FORMATS:
  * - SCP: Little-endian
  * - HFE: Little-endian
- * - KryoFlux RAW: Little-endian
  * - Some old formats: Big-endian
  */
 
@@ -35,7 +34,6 @@
 
 /* =============================================================================
  * LITTLE-ENDIAN READERS
- * Used by: SCP, HFE, KryoFlux, most modern formats
  * ============================================================================= */
 
 /**

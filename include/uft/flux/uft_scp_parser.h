@@ -4,8 +4,6 @@
  * @version 1.0.0
  * @date 2026-01-06
  *
- * Source: SCP format specification v2.0 by Jim Drew
- * HxCFloppyEmulator (Jean-François DEL NERO) - GPL v2
  */
 
 #ifndef UFT_SCP_PARSER_H

@@ -543,13 +543,13 @@ static const uft_format_variant_t scp_variants[] = {
 };
 
 // ============================================================================
-// HFE - HxC Floppy Emulator
+// HFE - UFT HFE Format
 // ============================================================================
 
 static const uft_format_variant_t hfe_variants[] = {
     {
         .name = "HFE v1",
-        .description = "HxC Floppy Emulator format v1",
+        .description = "UFT HFE Format format v1",
         .file_size = 0,
         .file_size_min = 512,
         .file_size_max = 5000000,

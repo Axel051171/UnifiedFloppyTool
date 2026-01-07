@@ -3,7 +3,6 @@
  * @brief FAT12 Filesystem Support for UFT
  * 
  * Support for reading and writing FAT12 filesystems commonly used
- * on floppy disks. Based on analysis of FDI.C and standard MS-DOS
  * specifications.
  * 
  * @copyright UFT Project

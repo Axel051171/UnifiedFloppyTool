@@ -23,7 +23,7 @@ bool detect_flux(const uint8_t* data, size_t size, flux_info_t* info) {
     
     // SCP
     if (data[0] == 'S' && data[1] == 'C' && data[2] == 'P') {
-        strcpy(info->format, "SCP");
+        strncpy(info->format, "SCP", sizeof(info->format) - 1);
         info->version = data[3];
         info->confidence = 100;
         
@@ -44,7 +44,7 @@ bool detect_flux(const uint8_t* data, size_t size, flux_info_t* info) {
     
     // HFE v1/v2
     if (memcmp(data, "HXCPICFE", 8) == 0) {
-        strcpy(info->format, "HFE");
+        strncpy(info->format, "HFE", sizeof(info->format) - 1);
         info->version = data[8];
         info->confidence = 100;
         
@@ -57,7 +57,7 @@ bool detect_flux(const uint8_t* data, size_t size, flux_info_t* info) {
     
     // HFE v3
     if (memcmp(data, "HXCHFE3", 7) == 0) {
-        strcpy(info->format, "HFE");
+        strncpy(info->format, "HFE", sizeof(info->format) - 1);
         info->version = 3;
         info->confidence = 100;
         info->has_metadata = true;
@@ -71,13 +71,13 @@ bool detect_flux(const uint8_t* data, size_t size, flux_info_t* info) {
         
         if (tail == 0x0A0D0AFF) {
             if (magic == 0x315A4F57) {
-                strcpy(info->format, "WOZ");
+                strncpy(info->format, "WOZ", sizeof(info->format) - 1);
                 info->version = 1;
                 info->confidence = 100;
                 return true;
             }
             if (magic == 0x325A4F57) {
-                strcpy(info->format, "WOZ");
+                strncpy(info->format, "WOZ", sizeof(info->format) - 1);
                 info->version = 2;
                 info->confidence = 100;
                 return true;
@@ -87,7 +87,7 @@ bool detect_flux(const uint8_t* data, size_t size, flux_info_t* info) {
     
     // IPF
     if (memcmp(data, "CAPS", 4) == 0) {
-        strcpy(info->format, "IPF");
+        strncpy(info->format, "IPF", sizeof(info->format) - 1);
         info->version = 2;
         info->confidence = 100;
         return true;

@@ -4,7 +4,6 @@
  * @version 3.1.4.007
  *
  * Detection of various copy protection schemes used on PC floppy disks.
- * Based on analysis of bad sector patterns, file signatures, and layout.
  *
  * Sources analyzed:
  * - DiskImageTool CopyProtection.vb

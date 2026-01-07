@@ -17,11 +17,17 @@
  */
 
 #include "uft/batch/uft_batch.h"
+#include "uft/core/uft_safe_parse.h"
 #include "uft/uft_format_detect.h"
+#include "uft/core/uft_safe_parse.h"
 #include <stdio.h>
+#include "uft/core/uft_safe_parse.h"
 #include <stdlib.h>
+#include "uft/core/uft_safe_parse.h"
 #include <string.h>
+#include "uft/core/uft_safe_parse.h"
 #include <signal.h>
+#include "uft/core/uft_safe_parse.h"
 
 /*===========================================================================
  * Globals
@@ -384,7 +390,7 @@ int main(int argc, char **argv)
     int cmd_start = 2;
     for (int i = 2; i < argc; i++) {
         if ((strcmp(argv[i], "-j") == 0 || strcmp(argv[i], "--jobs") == 0) && i + 1 < argc) {
-            config.num_workers = atoi(argv[++i]);
+            { int32_t tmp; if (uft_parse_int32(argv[++i], &tmp, 10)) config.num_workers = tmp; else { fprintf(stderr, "Invalid workers count\n"); return 1; } }
             cmd_start = i + 1;
         } else if ((strcmp(argv[i], "-s") == 0 || strcmp(argv[i], "--state") == 0) && i + 1 < argc) {
             strncpy(config.state_file, argv[++i], UFT_BATCH_MAX_PATH - 1);

@@ -2,7 +2,6 @@
  * @file uft_flux_cluster.h
  * @brief Flux Pulse Clustering and Pattern Search
  * 
- * Based on flux-analyze by various contributors
  * 
  * Implements:
  * - K-median clustering for flux band detection

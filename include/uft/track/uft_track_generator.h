@@ -2,8 +2,6 @@
  * @file uft_track_generator.h
  * @brief Track Generation and Encoding
  * 
- * Based on HxCFloppyEmulator track_generator.c
- * Copyright (C) 2006-2025 Jean-François DEL NERO
  * License: GPL-2.0+
  * 
  * Provides low-level track generation for various encoding schemes:

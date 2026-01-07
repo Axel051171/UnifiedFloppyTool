@@ -1,1 +1,6 @@
-int IPF_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char * filename);
+#ifndef UFT_LOADERS_IPF_LOADER_IPF_WRITER_H
+#define UFT_LOADERS_IPF_LOADER_IPF_WRITER_H
+
+int IPF_libWrite_DiskFile(LIBFLUX_IMGLDR* imgldr_ctx,LIBFLUX_FLOPPY * floppy,char * filename);
+
+#endif /* UFT_LOADERS_IPF_LOADER_IPF_WRITER_H */

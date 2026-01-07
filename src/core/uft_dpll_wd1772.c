@@ -4,7 +4,6 @@
  * @version 3.1.4.001
  * 
  * Basiert auf dem WD1772 FDC DPLL-Algorithmus (US Patent 4,780,844)
- * Portiert von FloppyControl C# zu C11 für UFT
  * 
  * Original: Jean Louis-Guerin (AUFIT Project, GPLv3)
  * Port: UFT Project 2025

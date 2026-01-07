@@ -1,6 +1,5 @@
 /**
  * @file uft_tool_disk_analyse.c
- * @brief disk-analyse Adapter (Keir Fraser)
  * 
  * Leistungsstarkes Analyse-Tool für:
  * - SCP/Kryoflux Stream Analyse
@@ -59,7 +58,6 @@ static bool da_is_available(void) {
 // ============================================================================
 
 static bool da_detect_hardware(char* info, size_t size) {
-    snprintf(info, size, "disk-analyse (Keir Fraser)");
     return true;
 }
 
@@ -188,7 +186,6 @@ static void da_cleanup(void* context) {
 const uft_tool_adapter_t uft_tool_disk_analyse = {
     .name = "disk-analyse",
     .version = "1.0.0",
-    .description = "Keir Fraser's Disk Analyzer",
     .capabilities = UFT_TOOL_CAP_CONVERT | UFT_TOOL_CAP_INFO,
     .supported_formats = (1u << UFT_FORMAT_SCP) | (1u << UFT_FORMAT_ADF) |
                          (1u << UFT_FORMAT_IMG) | (1u << UFT_FORMAT_HFE) |

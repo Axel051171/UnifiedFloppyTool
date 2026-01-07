@@ -9,10 +9,14 @@
  */
 
 #include <stdio.h>
+#include "uft/core/uft_safe_parse.h"
 #include <stdlib.h>
+#include "uft/core/uft_safe_parse.h"
 #include <string.h>
+#include "uft/core/uft_safe_parse.h"
 
 #include "woz2.h"
+#include "uft/core/uft_safe_parse.h"
 
 /*============================================================================*
  * EXAMPLE 1: Convert DSK to WOZ2
@@ -231,7 +235,11 @@ int main(int argc, char *argv[])
     printf("╚═══════════════════════════════════════════════════════════╝\n");
     
     if (argc > 1) {
-        int example = atoi(argv[1]);
+        int32_t example = 0;
+        if (!uft_parse_int32(argv[1], &example, 10)) {
+            fprintf(stderr, "Invalid argument: %s\n", argv[1]);
+            return 1;
+        }
         
         switch (example) {
             case 1:

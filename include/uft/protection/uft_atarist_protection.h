@@ -9,7 +9,6 @@
  * - Long Tracks
  * - Flaschel (FDC Bug Exploit)
  * 
- * Based on analysis of historical protection methods.
  */
 
 #ifndef UFT_ATARIST_PROTECTION_H

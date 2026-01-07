@@ -11,7 +11,6 @@
  *
  * Sources:
  * - EasySplit by Thomas Giesel (zlib license)
- * - nibtools by Pete Rittwage (GPL)
  *
  * Build:
  *   cc -std=c11 -O2 -Wall -Wextra -pedantic -c uft_crc.c

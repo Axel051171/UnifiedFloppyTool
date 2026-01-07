@@ -221,7 +221,7 @@ static const format_info_t g_format_info[] = {
     
     // Flux
     {"SCP", "scp", "SuperCard Pro", "Flux", 0},
-    {"HFE", "hfe", "HxC Floppy Emulator", "Flux", 1},
+    {"HFE", "hfe", "UFT HFE Format", "Flux", 1},
     {"IPF", "ipf", "SPS Preservation", "Flux", 0},
     {"GWRAW", "raw", "Greaseweazle Raw", "Flux", 0},
     {"KFRAW", "raw", "Kryoflux Stream", "Flux", 0},
@@ -326,10 +326,8 @@ void uft_format_registry_print(void) {
 }
 
 // ============================================================================
-// EXTENDED FORMATS (from FluxEngine, SAMdisk, A8rawconv)
 // ============================================================================
 
-// FluxEngine Formats
 #include "uft/formats/brother.h"
 #include "uft/formats/victor9k.h"
 #include "uft/formats/micropolis.h"
@@ -339,7 +337,6 @@ void uft_format_registry_print(void) {
 #include "uft/formats/zilogmcz.h"
 #include "uft/formats/tids990.h"
 
-// SAMdisk Formats
 #include "uft/formats/udi.h"
 #include "uft/formats/lif.h"
 #include "uft/formats/qdos.h"
@@ -352,7 +349,6 @@ void uft_format_registry_print(void) {
 #include "uft/formats/xfd.h"
 
 static const format_info_t g_extended_format_info[] = {
-    // FluxEngine Unique Formats
     {"Brother", "br", "Brother Word Processor", "Brother", 1},
     {"Victor9K", "v9k", "Victor 9000 / Sirius 1", "Victor", 1},
     {"Micropolis", "mpo", "Micropolis Vector Graphic", "Micropolis", 2},
@@ -366,7 +362,6 @@ static const format_info_t g_extended_format_info[] = {
     {"Smaky6", "smk", "Smaky 6", "Smaky", 2},
     {"Tartu", "tar", "Tartu", "Tartu", 2},
     
-    // SAMdisk Unique Formats
     {"UDI", "udi", "Universal Disk Image", "Spectrum", 1},
     {"LIF", "lif", "HP LIF Format", "HP", 2},
     {"QDOS", "ql,mdv", "Sinclair QL / QDOS", "QL", 2},

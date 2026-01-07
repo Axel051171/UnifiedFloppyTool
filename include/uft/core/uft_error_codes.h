@@ -61,6 +61,7 @@ extern "C" {
 #define UFT_E_PERMISSION          -17       /**< Permission denied */
 #define UFT_E_VERSION             -18       /**< Version mismatch */
 #define UFT_E_INTERNAL            -19       /**< Internal error */
+#define UFT_E_SECURITY            -20       /**< Security violation (path traversal, etc.) */
 
 /*===========================================================================
  * I/O Errors (-100 to -199)

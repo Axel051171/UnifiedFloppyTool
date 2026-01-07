@@ -293,7 +293,7 @@ done:
     if (options->compute_hashes) {
         sha256_simple(reference, ref_size, result->hash_expected);
         /* hash_actual would need the actual disk data */
-        strcpy(result->hash_actual, "not-computed");  /* REVIEW: Consider bounds check */
+        strncpy(result->hash_actual, "not-computed", sizeof(result->hash_actual) - 1); result->hash_actual[sizeof(result->hash_actual) - 1] = '\0';
     }
     
     return result;

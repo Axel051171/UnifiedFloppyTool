@@ -3,8 +3,6 @@
  * @brief Raw flux data analysis and processing
  * 
  * This module provides tools for analyzing raw magnetic flux data
- * from floppy disks, as captured by devices like Greaseweazle,
- * FluxEngine, KryoFlux, or SuperCard Pro.
  * 
  * Flux data represents the actual magnetic transitions on the disk,
  * allowing for:

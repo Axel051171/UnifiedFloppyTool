@@ -205,7 +205,7 @@ static const format_spec_t FORMAT_DB[] = {
     },
     {
         .name = "HFE",
-        .description = "HxC Floppy Emulator",
+        .description = "UFT HFE Format",
         .magic = {'H', 'X', 'C', 'P', 'I', 'C', 'F', 'E'},
         .magic_offset = 0,
         .magic_len = 8,

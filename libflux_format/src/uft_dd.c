@@ -299,7 +299,7 @@ static ssize_t recovery_read(int fd, void *buf, size_t soft_bs, size_t hard_bs,
 
 #ifdef __linux__
 
-static int floppy_open_device(const char *device) {
+static int uft_floppy_open_device(const char *device) {
     int fd = open(device, O_RDWR | O_NDELAY);
     if (fd < 0) {
         return -1;
@@ -317,7 +317,7 @@ int dd_floppy_write_sector(const dd_floppy_t *floppy,
                            const uint8_t *data, size_t len) {
     if (!floppy || !data || !floppy->device) return -1;
     
-    int fd = floppy_open_device(floppy->device);
+    int fd = uft_floppy_open_device(floppy->device);
     if (fd < 0) return -1;
     
     /* Calculate offset */
@@ -355,7 +355,7 @@ int dd_floppy_read_sector(const dd_floppy_t *floppy,
                           uint8_t *data, size_t len) {
     if (!floppy || !data || !floppy->device) return -1;
     
-    int fd = floppy_open_device(floppy->device);
+    int fd = uft_floppy_open_device(floppy->device);
     if (fd < 0) return -1;
     
     /* Calculate offset */
@@ -382,7 +382,7 @@ int dd_floppy_write_image(const dd_floppy_t *floppy,
                           void *user_data) {
     if (!floppy || !image || !floppy->device) return -1;
     
-    int fd = floppy_open_device(floppy->device);
+    int fd = uft_floppy_open_device(floppy->device);
     if (fd < 0) return -1;
     
     size_t sector_size = floppy->sector_size;
@@ -437,7 +437,7 @@ int dd_floppy_read_image(const dd_floppy_t *floppy,
                          void *user_data) {
     if (!floppy || !image || !floppy->device) return -1;
     
-    int fd = floppy_open_device(floppy->device);
+    int fd = uft_floppy_open_device(floppy->device);
     if (fd < 0) return -1;
     
     size_t sector_size = floppy->sector_size;
@@ -478,13 +478,13 @@ int dd_floppy_detect(char **devices, int max_devices) {
     if (!devices || max_devices < 1) return 0;
     
     int found = 0;
-    const char *floppy_devs[] = {
+    const char *uft_floppy_devs[] = {
         "/dev/fd0", "/dev/fd1", "/dev/floppy", NULL
     };
     
-    for (int i = 0; floppy_devs[i] && found < max_devices; i++) {
-        if (access(floppy_devs[i], F_OK) == 0) {
-            devices[found] = strdup(floppy_devs[i]);
+    for (int i = 0; uft_floppy_devs[i] && found < max_devices; i++) {
+        if (access(uft_floppy_devs[i], F_OK) == 0) {
+            devices[found] = strdup(uft_floppy_devs[i]);
             found++;
         }
     }

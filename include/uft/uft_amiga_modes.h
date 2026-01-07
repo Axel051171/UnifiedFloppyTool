@@ -3,7 +3,6 @@
  * @brief Amiga Disk Copy/Recovery/Virus Scan Modes for UFT GUI
  * 
  * This header defines copy modes, recovery options, and virus scanning
- * parameters derived from classic Amiga tools:
  * - XCopy Pro (Copy modes: DosCopy, DosCopy+, BamCopy+, Nibble)
  * - DiskSalv 4 (Recovery and stream archive format)
  * - XVS Library (Virus scanning for bootblocks, sectors, files)
@@ -505,7 +504,6 @@ typedef enum uft_amiga_track_status {
 } uft_amiga_track_status_t;
 
 /**
- * @brief Track status colors for GUI (KryoFlux style)
  */
 static inline uint32_t uft_amiga_track_color(uft_amiga_track_status_t status) {
     switch (status) {

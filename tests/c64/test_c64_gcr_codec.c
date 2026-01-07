@@ -239,7 +239,7 @@ void test_petscii_conversion(void)
     /* Roundtrip */
     char test[] = "HELLO";
     char original[6];
-    strcpy(original, test);
+    strncpy(original, test, sizeof(original) - 1); original[sizeof(original) - 1] = '\0';
     
     uft_c64_str_to_petscii(test, strlen(test));
     uft_c64_str_from_petscii(test, strlen(test));

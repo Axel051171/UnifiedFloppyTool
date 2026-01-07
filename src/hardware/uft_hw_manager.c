@@ -77,7 +77,7 @@ static const backend_default_t g_default_backends[] = {
     
     // Spezial-Hardware (mittlere Priorität)
     { UFT_HW_FC5025,        true,   50,     "FC5025" },
-    { UFT_HW_XUM1541,       true,   40,     "OpenCBM/Nibtools" },
+    { UFT_HW_XUM1541,       true,   40,     "CBM library/Nibtools" },
     { UFT_HW_ZOOMFLOPPY,    true,   45,     "ZoomFloppy" },
     
     // Legacy (niedrige Priorität)
@@ -347,9 +347,8 @@ uft_error_t uft_hw_manager_enumerate(uft_hw_info_t* devices, size_t max_devices,
 // ============================================================================
 
 /**
- * @brief Nur Nibtools/OpenCBM aktivieren
  */
-void uft_hw_use_nibtools_only(void) {
+void uft_hw_use_GCR tools_only(void) {
     uft_hw_backend_disable_all();
     uft_hw_backend_set_enabled(UFT_HW_XUM1541, true);
     uft_hw_backend_set_enabled(UFT_HW_ZOOMFLOPPY, true);
@@ -376,7 +375,7 @@ void uft_hw_use_all(void) {
 /**
  * @brief Nibtools ein/ausschalten (Convenience)
  */
-void uft_hw_nibtools_enable(bool enable) {
+void uft_hw_GCR tools_enable(bool enable) {
     uft_hw_backend_set_enabled(UFT_HW_XUM1541, enable);
     uft_hw_backend_set_enabled(UFT_HW_ZOOMFLOPPY, enable);
     uft_hw_backend_set_enabled(UFT_HW_XU1541, enable);

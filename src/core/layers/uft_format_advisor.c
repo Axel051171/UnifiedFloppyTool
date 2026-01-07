@@ -258,7 +258,7 @@ const char* uft_format_get_name(uft_format_t format) {
         case UFT_FORMAT_G64: return "Commodore G64";
         case UFT_FORMAT_ADF: return "Amiga ADF";
         case UFT_FORMAT_SCP: return "SuperCard Pro";
-        case UFT_FORMAT_HFE: return "HxC Floppy Emulator";
+        case UFT_FORMAT_HFE: return "UFT HFE Format";
         case UFT_FORMAT_KRYOFLUX: return "KryoFlux Stream";
         case UFT_FORMAT_WOZ: return "WOZ (Applesauce)";
         case UFT_FORMAT_NIB: return "Apple Nibble";

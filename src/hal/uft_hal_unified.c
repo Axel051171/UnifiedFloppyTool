@@ -36,11 +36,8 @@ const char* uft_hal_type_name(uft_hal_type_t type) {
 static const uint32_t type_caps[] = {
     0,  // NONE
     UFT_HAL_CAP_READ_FLUX | UFT_HAL_CAP_WRITE_FLUX | UFT_HAL_CAP_MULTI_REV | 
-    UFT_HAL_CAP_HD | UFT_HAL_CAP_INDEX,  // Greaseweazle
     UFT_HAL_CAP_READ_FLUX | UFT_HAL_CAP_WRITE_FLUX | UFT_HAL_CAP_MULTI_REV | 
-    UFT_HAL_CAP_HD | UFT_HAL_CAP_INDEX,  // FluxEngine
     UFT_HAL_CAP_READ_FLUX | UFT_HAL_CAP_MULTI_REV | UFT_HAL_CAP_HD | 
-    UFT_HAL_CAP_INDEX,  // KryoFlux (no write)
     UFT_HAL_CAP_READ_MFM | UFT_HAL_CAP_WRITE_MFM | UFT_HAL_CAP_HD,  // FC5025
     UFT_HAL_CAP_GCR_NATIVE,  // XUM1541
     UFT_HAL_CAP_GCR_NATIVE,  // ZoomFloppy

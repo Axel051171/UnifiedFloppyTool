@@ -103,7 +103,7 @@ typedef struct {
     uint8_t     revolutions;        // Anzahl Umdrehungen (1-5)
     uint32_t    bitcell_time;       // Erwartete Bitcell-Zeit in ns
     
-} supercard_state_t;
+} uft_sc_state_t;
 
 // ============================================================================
 // USB Communication
@@ -111,7 +111,7 @@ typedef struct {
 
 #ifdef UFT_OS_LINUX
 
-static uft_error_t scp_send_command(supercard_state_t* scp,
+static uft_error_t scp_send_command(uft_sc_state_t* scp,
                                      uint8_t cmd, 
                                      const uint8_t* params, size_t param_len,
                                      uint8_t* response, size_t* resp_len) {
@@ -154,7 +154,7 @@ static uft_error_t scp_send_command(supercard_state_t* scp,
     return UFT_OK;
 }
 
-static uft_error_t scp_read_bulk(supercard_state_t* scp,
+static uft_error_t scp_read_bulk(uft_sc_state_t* scp,
                                   uint8_t* data, size_t len,
                                   size_t* actual) {
     int transferred = 0;
@@ -172,7 +172,7 @@ static uft_error_t scp_read_bulk(supercard_state_t* scp,
 // Backend Implementation
 // ============================================================================
 
-static uft_error_t supercard_init(void) {
+static uft_error_t uft_sc_init(void) {
 #ifdef UFT_OS_LINUX
     return (libusb_init(NULL) == 0) ? UFT_OK : UFT_ERROR_IO;
 #else
@@ -180,13 +180,13 @@ static uft_error_t supercard_init(void) {
 #endif
 }
 
-static void supercard_shutdown(void) {
+static void uft_sc_shutdown(void) {
 #ifdef UFT_OS_LINUX
     libusb_exit(NULL);
 #endif
 }
 
-static uft_error_t supercard_enumerate(uft_hw_info_t* devices, size_t max_devices,
+static uft_error_t uft_sc_enumerate(uft_hw_info_t* devices, size_t max_devices,
                                         size_t* found) {
     *found = 0;
     
@@ -235,9 +235,9 @@ static uft_error_t supercard_enumerate(uft_hw_info_t* devices, size_t max_device
     return UFT_OK;
 }
 
-static uft_error_t supercard_open(const uft_hw_info_t* info, uft_hw_device_t** device) {
+static uft_error_t uft_sc_open(const uft_hw_info_t* info, uft_hw_device_t** device) {
 #ifdef UFT_OS_LINUX
-    supercard_state_t* scp = calloc(1, sizeof(supercard_state_t));
+    uft_sc_state_t* scp = calloc(1, sizeof(uft_sc_state_t));
     if (!scp) return UFT_ERROR_NO_MEMORY;
     
     scp->usb_handle = libusb_open_device_with_vid_pid(NULL, SCP_VID, SCP_PID);
@@ -276,10 +276,10 @@ static uft_error_t supercard_open(const uft_hw_info_t* info, uft_hw_device_t** d
 #endif
 }
 
-static void supercard_close(uft_hw_device_t* device) {
+static void uft_sc_close(uft_hw_device_t* device) {
     if (!device || !device->handle) return;
     
-    supercard_state_t* scp = device->handle;
+    uft_sc_state_t* scp = device->handle;
     
 #ifdef UFT_OS_LINUX
     if (scp->motor_on) {
@@ -296,13 +296,13 @@ static void supercard_close(uft_hw_device_t* device) {
     device->handle = NULL;
 }
 
-static uft_error_t supercard_get_status(uft_hw_device_t* device,
+static uft_error_t uft_sc_get_status(uft_hw_device_t* device,
                                          uft_drive_status_t* status) {
     if (!device || !device->handle || !status) {
         return UFT_ERROR_NULL_POINTER;
     }
     
-    supercard_state_t* scp = device->handle;
+    uft_sc_state_t* scp = device->handle;
     memset(status, 0, sizeof(*status));
     
 #ifdef UFT_OS_LINUX
@@ -328,10 +328,10 @@ static uft_error_t supercard_get_status(uft_hw_device_t* device,
     return UFT_OK;
 }
 
-static uft_error_t supercard_motor(uft_hw_device_t* device, bool on) {
+static uft_error_t uft_sc_motor(uft_hw_device_t* device, bool on) {
     if (!device || !device->handle) return UFT_ERROR_NULL_POINTER;
     
-    supercard_state_t* scp = device->handle;
+    uft_sc_state_t* scp = device->handle;
     
 #ifdef UFT_OS_LINUX
     uint8_t params[1] = {on ? 1 : 0};
@@ -346,10 +346,10 @@ static uft_error_t supercard_motor(uft_hw_device_t* device, bool on) {
     return UFT_OK;
 }
 
-static uft_error_t supercard_seek(uft_hw_device_t* device, uint8_t track) {
+static uft_error_t uft_sc_seek(uft_hw_device_t* device, uint8_t track) {
     if (!device || !device->handle) return UFT_ERROR_NULL_POINTER;
     
-    supercard_state_t* scp = device->handle;
+    uft_sc_state_t* scp = device->handle;
     
 #ifdef UFT_OS_LINUX
     uint8_t params[1] = {track};
@@ -368,10 +368,10 @@ static uft_error_t supercard_seek(uft_hw_device_t* device, uint8_t track) {
     return UFT_OK;
 }
 
-static uft_error_t supercard_select_head(uft_hw_device_t* device, uint8_t head) {
+static uft_error_t uft_sc_select_head(uft_hw_device_t* device, uint8_t head) {
     if (!device || !device->handle) return UFT_ERROR_NULL_POINTER;
     
-    supercard_state_t* scp = device->handle;
+    uft_sc_state_t* scp = device->handle;
     
 #ifdef UFT_OS_LINUX
     uint8_t params[1] = {head};
@@ -386,10 +386,10 @@ static uft_error_t supercard_select_head(uft_hw_device_t* device, uint8_t head) 
     return UFT_OK;
 }
 
-static uft_error_t supercard_select_density(uft_hw_device_t* device, bool high_density) {
+static uft_error_t uft_sc_select_density(uft_hw_device_t* device, bool high_density) {
     if (!device || !device->handle) return UFT_ERROR_NULL_POINTER;
     
-    supercard_state_t* scp = device->handle;
+    uft_sc_state_t* scp = device->handle;
     
 #ifdef UFT_OS_LINUX
     uint8_t params[1] = {high_density ? 1 : 0};
@@ -405,14 +405,14 @@ static uft_error_t supercard_select_density(uft_hw_device_t* device, bool high_d
     return UFT_OK;
 }
 
-static uft_error_t supercard_read_flux(uft_hw_device_t* device, uint32_t* flux,
+static uft_error_t uft_sc_read_flux(uft_hw_device_t* device, uint32_t* flux,
                                         size_t max_flux, size_t* flux_count,
                                         uint8_t revolutions) {
     if (!device || !device->handle || !flux || !flux_count) {
         return UFT_ERROR_NULL_POINTER;
     }
     
-    supercard_state_t* scp = device->handle;
+    uft_sc_state_t* scp = device->handle;
     *flux_count = 0;
     
     if (revolutions > SCP_MAX_REVOLUTIONS) {
@@ -491,25 +491,25 @@ static uft_error_t supercard_read_flux(uft_hw_device_t* device, uint32_t* flux,
 // Backend Definition
 // ============================================================================
 
-static const uft_hw_backend_t supercard_backend = {
+static const uft_hw_backend_t uft_sc_backend = {
     .name = "SuperCard Pro",
     .type = UFT_HW_SUPERCARD_PRO,
     
-    .init = supercard_init,
-    .shutdown = supercard_shutdown,
-    .enumerate = supercard_enumerate,
-    .open = supercard_open,
-    .close = supercard_close,
+    .init = uft_sc_init,
+    .shutdown = uft_sc_shutdown,
+    .enumerate = uft_sc_enumerate,
+    .open = uft_sc_open,
+    .close = uft_sc_close,
     
-    .get_status = supercard_get_status,
-    .motor = supercard_motor,
-    .seek = supercard_seek,
-    .select_head = supercard_select_head,
-    .select_density = supercard_select_density,
+    .get_status = uft_sc_get_status,
+    .motor = uft_sc_motor,
+    .seek = uft_sc_seek,
+    .select_head = uft_sc_select_head,
+    .select_density = uft_sc_select_density,
     
     .read_track = NULL,
     .write_track = NULL,
-    .read_flux = supercard_read_flux,
+    .read_flux = uft_sc_read_flux,
     .write_flux = NULL,  // TODO
     
     .parallel_write = NULL,
@@ -520,22 +520,22 @@ static const uft_hw_backend_t supercard_backend = {
 };
 
 uft_error_t uft_hw_register_supercard(void) {
-    return uft_hw_register_backend(&supercard_backend);
+    return uft_hw_register_backend(&uft_sc_backend);
 }
 
 const uft_hw_backend_t uft_hw_backend_supercard = {
     .name = "SuperCard Pro",
     .type = UFT_HW_SUPERCARD_PRO,
-    .init = supercard_init,
-    .shutdown = supercard_shutdown,
-    .enumerate = supercard_enumerate,
-    .open = supercard_open,
-    .close = supercard_close,
-    .get_status = supercard_get_status,
-    .motor = supercard_motor,
-    .seek = supercard_seek,
-    .select_head = supercard_select_head,
-    .select_density = supercard_select_density,
-    .read_flux = supercard_read_flux,
+    .init = uft_sc_init,
+    .shutdown = uft_sc_shutdown,
+    .enumerate = uft_sc_enumerate,
+    .open = uft_sc_open,
+    .close = uft_sc_close,
+    .get_status = uft_sc_get_status,
+    .motor = uft_sc_motor,
+    .seek = uft_sc_seek,
+    .select_head = uft_sc_select_head,
+    .select_density = uft_sc_select_density,
+    .read_flux = uft_sc_read_flux,
     .private_data = NULL
 };

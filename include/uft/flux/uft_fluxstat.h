@@ -1,10 +1,8 @@
 /**
  * @file uft_fluxstat.h
- * @brief Statistical Flux Recovery Module (inspired by FluxRipper)
  * @version 1.0.0
  * @date 2026-01-06
  *
- * Source: FluxRipper Project
  *
  * This module provides statistical flux analysis for recovering marginal sectors:
  * - Multi-pass capture support
@@ -13,7 +11,6 @@
  * - CRC-guided error correction
  * - Weak bit preservation
  *
- * Integration: R50 - FluxRipper extraction
  */
 
 #ifndef UFT_FLUXSTAT_H

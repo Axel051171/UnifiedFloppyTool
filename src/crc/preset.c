@@ -2,24 +2,18 @@
  * Greg Cook, 7/Aug/2024
  */
 
-/* CRC RevEng: arbitrary-precision CRC calculator and algorithm finder
  * Copyright (C) 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018,
- * 2019, 2020, 2021, 2022, 2024  Gregory Cook
  *
- * This file is part of CRC RevEng.
  *
- * CRC RevEng is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
  *
- * CRC RevEng is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with CRC RevEng.  If not, see <https://www.gnu.org/licenses/>.
  */
 
 /* 2024-08-07: added CRC-64/NVME; CRC-5/USB, CRC-16/USB confirmed
@@ -64,7 +58,6 @@
  * 2011-02-10: made preset models ANSI C compliant
  * 2011-01-17: fixed ANSI C warnings (except preset models)
  * 2011-01-01: added mbynum(), mcount()
- * 2010-12-26: renamed CRC RevEng
  * 2010-12-18: minor change to mtostr() output format
  * 2010-12-15: added mcmp(), mmatch()
  * 2010-12-14: finished mbynam(), mnames()
@@ -970,7 +963,7 @@ mnames(void) {
 		sptr = string;
 		while(aptr->name) {
 			if(aptr == aptr->model->alias) {
-				strcpy(sptr, aptr->name);
+				{ size_t _len = strlen(aptr->name); memcpy(sptr, aptr->name, _len + 1); }
 				sptr += strlen(aptr->name);
 				*sptr++ = '\n';
 			}

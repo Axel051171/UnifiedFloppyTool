@@ -89,7 +89,7 @@ const uft_fdc_drive_params_t uft_fdc_drive_types[] = {
 };
 
 /*============================================================================
- * Standard Format Parameters (from Linux kernel floppy_type[])
+ * Standard Format Parameters (from Linux kernel uft_floppy_type[])
  *============================================================================*/
 
 const uft_fdc_format_t uft_fdc_formats[] = {

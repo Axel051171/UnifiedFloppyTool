@@ -390,12 +390,19 @@ uft_rc_t uft_protection_auto_detect(
     /* Test each pattern */
     if (dpm && detect_copylock(dpm)) {
         res->protection_types |= UFT_PROTECTION_COPYLOCK;
-        strcat(res->protection_names, "Amiga Copylock; ");
+        /* Safe string append - assume protection_names is sized 256 */
+        size_t len = strlen(res->protection_names);
+        snprintf(res->protection_names + len, 
+                 sizeof(res->protection_names) - len,
+                 "Amiga Copylock; ");
     }
     
     if (weak && detect_rnc(weak)) {
         res->protection_types |= UFT_PROTECTION_RNC;
-        strcat(res->protection_names, "Rob Northen Copylock; ");
+        size_t len = strlen(res->protection_names);
+        snprintf(res->protection_names + len,
+                 sizeof(res->protection_names) - len,
+                 "Rob Northen Copylock; ");
     }
     
     /* More patterns could be added here */

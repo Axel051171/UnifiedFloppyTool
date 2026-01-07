@@ -410,9 +410,10 @@ int uft_imd_open(uft_imd_ctx_t* ctx, const char* path)
 
     fclose(fp);
 
-    ctx->path = (char*)malloc(strlen(path) + 1);
+    size_t path_len = strlen(path);
+    ctx->path = (char*)malloc(path_len + 1);
     if (!ctx->path) { uft_imd_close(ctx); return UFT_IMD_ERR_NOMEM; }
-    strcpy(ctx->path, path);
+    memcpy(ctx->path, path, path_len + 1);
 
     ctx->dirty = false;
 

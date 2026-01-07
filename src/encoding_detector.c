@@ -2,7 +2,6 @@
  * @file encoding_detector.c
  * @brief Automatische Encoding-Erkennung Implementation
  * 
- * Basierend auf FluxRipper's Verilog-Modulen:
  * - encoding_detector.v
  * - mfm_decoder.v
  * - gcr_apple.v
@@ -18,7 +17,6 @@
  * Lookup Tables - GCR Apple 6-bit
  *============================================================================*/
 
-/* 6-bit → 8-bit Encoding Table (aus FluxRipper gcr_apple.v) */
 static const uint8_t gcr_apple6_enc_table[64] = {
     0x96, 0x97, 0x9A, 0x9B, 0x9D, 0x9E, 0x9F, 0xA6,
     0xA7, 0xAB, 0xAC, 0xAD, 0xAE, 0xAF, 0xB2, 0xB3,
@@ -34,7 +32,6 @@ static const uint8_t gcr_apple6_enc_table[64] = {
  * Lookup Tables - GCR CBM
  *============================================================================*/
 
-/* 4-bit → 5-bit Encoding (aus FluxRipper gcr_cbm.v) */
 static const uint8_t gcr_cbm_enc_table[16] = {
     0x0A, 0x0B, 0x12, 0x13, 0x0E, 0x0F, 0x16, 0x17,
     0x09, 0x19, 0x1A, 0x1B, 0x0D, 0x1D, 0x1E, 0x15

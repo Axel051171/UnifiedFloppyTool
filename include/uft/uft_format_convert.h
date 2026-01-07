@@ -105,7 +105,7 @@ typedef struct uft_conversion_path {
 // Conversion Options
 // ============================================================================
 
-typedef struct uft_convert_options {
+typedef struct uft_convert_options_ext {
     // General
     bool                verify_after;
     bool                preserve_errors;
@@ -125,7 +125,7 @@ typedef struct uft_convert_options {
     void (*progress_cb)(int percent, const char* stage, void* user);
     void* progress_user;
     volatile bool* cancel;
-} uft_convert_options_t;
+} uft_convert_options_ext_t;
 
 // ============================================================================
 // Conversion Result
@@ -177,7 +177,7 @@ int uft_convert_list_targets(uft_format_t src,
 uft_error_t uft_convert_file(const char* src_path,
                               const char* dst_path,
                               uft_format_t dst_format,
-                              const uft_convert_options_t* options,
+                              const uft_convert_options_ext_t* options,
                               uft_convert_result_t* result);
 
 /**
@@ -187,7 +187,7 @@ uft_error_t uft_convert_memory(const uint8_t* src_data, size_t src_size,
                                 uft_format_t src_format,
                                 uint8_t** dst_data, size_t* dst_size,
                                 uft_format_t dst_format,
-                                const uft_convert_options_t* options,
+                                const uft_convert_options_ext_t* options,
                                 uft_convert_result_t* result);
 
 /**

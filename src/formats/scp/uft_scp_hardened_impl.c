@@ -71,7 +71,7 @@ static bool fread_exact(FILE *f, void *buf, size_t n) {
 
 static int safe_fseek(FILE *f, size_t file_size, uint32_t offset) {
     if ((size_t)offset >= file_size) return -1;
-    return fseek(f, (long)offset, SEEK_SET);
+    return (void)fseek(f, (long)offset, SEEK_SET);
 }
 
 // ============================================================================

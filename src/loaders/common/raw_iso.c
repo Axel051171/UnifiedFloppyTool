@@ -2,25 +2,20 @@
 //
 // Copyright (C) 2006-2025 Jean-Franois DEL NERO
 //
-// This file is part of the HxCFloppyEmulator library
 //
-// HxCFloppyEmulator may be used and distributed without restriction provided
 // that this copyright statement is not removed from the file and that any
 // derivative work contains the original copyright notice and the associated
 // disclaimer.
 //
-// HxCFloppyEmulator is free software; you can redistribute it
 // and/or modify  it under the terms of the GNU General Public License
 // as published by the Free Software Foundation; either version 2
 // of the License, or (at your option) any later version.
 //
-// HxCFloppyEmulator is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 //   See the GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with HxCFloppyEmulator; if not, write to the Free Software
 // Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 //
 */
@@ -49,28 +44,28 @@
 
 #include "types.h"
 
-#include "internal_libhxcfe.h"
-#include "libhxcfe.h"
+#include "libflux.h""
+#include "libflux.h""
 #include "./tracks/track_generator.h"
 
-#include "floppy_loader.h"
-#include "floppy_utils.h"
+#include "uft_floppy_loader.h"
+#include "uft_floppy_utils.h"
 
 #include "raw_iso.h"
 
 #include "libhxcadaptor.h"
 
-int raw_iso_loader(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk, FILE * f_img , unsigned char * imagebuffer, int size, raw_iso_cfg * cfg)
+int raw_iso_loader(LIBFLUX_IMGLDR * imgldr_ctx,LIBFLUX_FLOPPY * floppydisk, FILE * f_img , unsigned char * imagebuffer, int size, raw_iso_cfg * cfg)
 {
-	HXCFE_FLPGEN * fb_ctx;
+	LIBFLUX_FLPGEN * fb_ctx;
 	int cur_offset;
 	int ret;
 	int32_t flags;
 
 	if( !f_img && !imagebuffer )
 	{
-		imgldr_ctx->hxcfe->hxc_printf(MSG_ERROR,"File access error or allocation error");
-		return HXCFE_INTERNALERROR;
+		imgldr_ctx->ctx->libflux_printf(MSG_ERROR,"File access error or allocation error");
+		return LIBFLUX_INTERNALERROR;
 	}
 
 	cur_offset = 0;
@@ -84,35 +79,35 @@ int raw_iso_loader(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk, FILE * f
 
 	if( !size )
 	{
-		imgldr_ctx->hxcfe->hxc_printf(MSG_ERROR,"Null sized image !");
-		return HXCFE_BADFILE;
+		imgldr_ctx->ctx->libflux_printf(MSG_ERROR,"Null sized image !");
+		return LIBFLUX_BADFILE;
 	}
 
-	fb_ctx = hxcfe_initFloppy( imgldr_ctx->hxcfe, 86, cfg->number_of_sides );
+	fb_ctx = libflux_initFloppy( imgldr_ctx->ctx, 86, cfg->number_of_sides );
 	if( !fb_ctx )
 	{
-		imgldr_ctx->hxcfe->hxc_printf(MSG_ERROR,"Alloc Error !");
-		return HXCFE_INTERNALERROR;
+		imgldr_ctx->ctx->libflux_printf(MSG_ERROR,"Alloc Error !");
+		return LIBFLUX_INTERNALERROR;
 	}
 
-	hxcfe_setNumberOfTrack( fb_ctx, cfg->number_of_tracks );
-	hxcfe_setNumberOfSide( fb_ctx, cfg->number_of_sides );
-	hxcfe_setNumberOfSector( fb_ctx, cfg->number_of_sectors_per_track );
-	hxcfe_setSectorSize( fb_ctx, cfg->sector_size );
-	hxcfe_setStartSectorID( fb_ctx, cfg->start_sector_id );
-	hxcfe_setSectorGap3( fb_ctx, cfg->gap3 );
-	hxcfe_setTrackPreGap( fb_ctx, cfg->pregap );
-	hxcfe_setTrackType( fb_ctx, cfg->track_format );
-	hxcfe_setTrackBitrate( fb_ctx, cfg->bitrate );
-	hxcfe_setRPM( fb_ctx, cfg->rpm );
-	hxcfe_setInterfaceMode( fb_ctx, cfg->interface_mode );
-	hxcfe_setTrackSkew ( fb_ctx, cfg->skew_per_track );
-	hxcfe_setSideSkew ( fb_ctx, cfg->skew_per_side );
-	hxcfe_setTrackInterleave ( fb_ctx, cfg->interleave );
-	hxcfe_setSectorFill ( fb_ctx, cfg->fill_value );
+	libflux_setNumberOfTrack( fb_ctx, cfg->number_of_tracks );
+	libflux_setNumberOfSide( fb_ctx, cfg->number_of_sides );
+	libflux_setNumberOfSector( fb_ctx, cfg->number_of_sectors_per_track );
+	libflux_setSectorSize( fb_ctx, cfg->sector_size );
+	libflux_setStartSectorID( fb_ctx, cfg->start_sector_id );
+	libflux_setSectorGap3( fb_ctx, cfg->gap3 );
+	libflux_setTrackPreGap( fb_ctx, cfg->pregap );
+	libflux_setTrackType( fb_ctx, cfg->track_format );
+	libflux_setTrackBitrate( fb_ctx, cfg->bitrate );
+	libflux_setRPM( fb_ctx, cfg->rpm );
+	libflux_setInterfaceMode( fb_ctx, cfg->interface_mode );
+	libflux_setTrackSkew ( fb_ctx, cfg->skew_per_track );
+	libflux_setSideSkew ( fb_ctx, cfg->skew_per_side );
+	libflux_setTrackInterleave ( fb_ctx, cfg->interleave );
+	libflux_setSectorFill ( fb_ctx, cfg->fill_value );
 
 	if(cfg->force_side_id >= 0)
-		hxcfe_setDiskSectorsHeadID( fb_ctx, cfg->force_side_id );
+		libflux_setDiskSectorsHeadID( fb_ctx, cfg->force_side_id );
 
 	flags = 0;
 
@@ -122,9 +117,9 @@ int raw_iso_loader(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk, FILE * f
 	if(cfg->flip_sides)
 		flags |= FLPGEN_FLIP_SIDES;
 
-	hxcfe_setDiskFlags( fb_ctx, flags );
+	libflux_setDiskFlags( fb_ctx, flags );
 
-	ret = hxcfe_generateDisk( fb_ctx, floppydisk, f_img, imagebuffer, size );
+	ret = libflux_generateDisk( fb_ctx, floppydisk, f_img, imagebuffer, size );
 
 	return ret;
 }

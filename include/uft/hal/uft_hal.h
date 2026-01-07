@@ -4,9 +4,6 @@
  * @version 1.0.0
  * 
  * Unified interface for floppy disk controllers:
- * - Greaseweazle
- * - FluxEngine
- * - KryoFlux
  * - SuperCard Pro
  * - Applesauce
  * - XUM1541/ZoomFloppy

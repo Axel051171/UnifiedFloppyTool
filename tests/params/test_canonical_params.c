@@ -281,7 +281,6 @@ static int test_preset_pc_1440(void) {
 }
 
 /**
- * Test: CLI generation for Greaseweazle
  */
 static int test_cli_gw(void) {
     // Simulate building CLI args
@@ -293,16 +292,16 @@ static int test_cli_gw(void) {
     char buffer[256];
     int pos = 0;
     
-    pos += sprintf(buffer + pos, "--cyls %d:%d ", cyl_start, cyl_end);
+    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "--cyls %d:%d ", cyl_start, cyl_end);
     
     if (head_mask == 0x01) {
-        pos += sprintf(buffer + pos, "--heads 0 ");
+        pos += snprintf(buffer + pos, sizeof(buffer) - pos, "--heads 0 ");
     } else if (head_mask == 0x02) {
-        pos += sprintf(buffer + pos, "--heads 1 ");
+        pos += snprintf(buffer + pos, sizeof(buffer) - pos, "--heads 1 ");
     }
     
     if (revolutions != 3) {
-        pos += sprintf(buffer + pos, "--revs %d ", revolutions);
+        pos += snprintf(buffer + pos, sizeof(buffer) - pos, "--revs %d ", revolutions);
     }
     
     ASSERT_TRUE(strstr(buffer, "--cyls 0:79") != NULL);
@@ -312,7 +311,6 @@ static int test_cli_gw(void) {
 }
 
 /**
- * Test: CLI generation for FluxEngine
  */
 static int test_cli_fe(void) {
     int cyl_start = 0;
@@ -322,12 +320,12 @@ static int test_cli_fe(void) {
     char buffer[256];
     int pos = 0;
     
-    pos += sprintf(buffer + pos, "-c %d-%d ", cyl_start, cyl_end);
+    pos += snprintf(buffer + pos, sizeof(buffer) - pos, "-c %d-%d ", cyl_start, cyl_end);
     
     if (head_mask == 0x01) {
-        pos += sprintf(buffer + pos, "-h 0 ");
+        pos += snprintf(buffer + pos, sizeof(buffer) - pos, "-h 0 ");
     } else if (head_mask == 0x02) {
-        pos += sprintf(buffer + pos, "-h 1 ");
+        pos += snprintf(buffer + pos, sizeof(buffer) - pos, "-h 1 ");
     }
     
     ASSERT_TRUE(strstr(buffer, "-c 0-39") != NULL);

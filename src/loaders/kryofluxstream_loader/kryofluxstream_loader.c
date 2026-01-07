@@ -2,25 +2,20 @@
 //
 // Copyright (C) 2006-2025 Jean-François DEL NERO
 //
-// This file is part of the HxCFloppyEmulator library
 //
-// HxCFloppyEmulator may be used and distributed without restriction provided
 // that this copyright statement is not removed from the file and that any
 // derivative work contains the original copyright notice and the associated
 // disclaimer.
 //
-// HxCFloppyEmulator is free software; you can redistribute it
 // and/or modify  it under the terms of the GNU General Public License
 // as published by the Free Software Foundation; either version 2
 // of the License, or (at your option) any later version.
 //
-// HxCFloppyEmulator is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 //   See the GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with HxCFloppyEmulator; if not, write to the Free Software
 // Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 //
 */
@@ -35,8 +30,6 @@
 //-------------------------------------------------------------------------------//
 //----------------------------------------------------- http://hxc2001.free.fr --//
 ///////////////////////////////////////////////////////////////////////////////////
-// File : KryoFluxStream_loader.c
-// Contains: KryoFlux Stream floppy image loader
 //
 // Written by: Jean-François DEL NERO
 //
@@ -52,11 +45,11 @@
 
 #include "types.h"
 
-#include "internal_libhxcfe.h"
-#include "libhxcfe.h"
+#include "libflux.h""
+#include "libflux.h""
 
-#include "floppy_loader.h"
-#include "floppy_utils.h"
+#include "uft_floppy_loader.h"
+#include "uft_floppy_utils.h"
 
 #include "kryofluxstream_loader.h"
 #include "kryofluxstream_format.h"
@@ -69,7 +62,7 @@
 #include "misc/env.h"
 #include "misc/script_exec.h"
 
-int KryoFluxStream_libIsValidDiskFile( HXCFE_IMGLDR * imgldr_ctx, HXCFE_IMGLDR_FILEINFOS * imgfile )
+int KryoFluxStream_libIsValidDiskFile( LIBFLUX_IMGLDR * imgldr_ctx, LIBFLUX_IMGLDR_FILEINFOS * imgfile )
 {
 	int found,track,side;
 	char * filepath;
@@ -77,7 +70,7 @@ int KryoFluxStream_libIsValidDiskFile( HXCFE_IMGLDR * imgldr_ctx, HXCFE_IMGLDR_F
 	s_oob_header oob;
 	char filename[512];
 
-	imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"KryoFluxStream_libIsValidDiskFile");
+	imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"KryoFluxStream_libIsValidDiskFile");
 
 	if(imgfile)
 	{
@@ -85,7 +78,7 @@ int KryoFluxStream_libIsValidDiskFile( HXCFE_IMGLDR * imgldr_ctx, HXCFE_IMGLDR_F
 		{
 			filepath = malloc( strlen(imgfile->path) + 32 );
 			if(!filepath)
-				return HXCFE_BADFILE;
+				return LIBFLUX_BADFILE;
 
 			track=0;
 			side=0;
@@ -93,15 +86,15 @@ int KryoFluxStream_libIsValidDiskFile( HXCFE_IMGLDR * imgldr_ctx, HXCFE_IMGLDR_F
 			do
 			{
 				snprintf(filepath, sizeof(filepath),"%s"DIR_SEPARATOR"track%.2d.%d.raw",imgfile->path,track,side);
-				f = hxc_fopen(filepath,"rb");
+				f = libflux_fopen(filepath,"rb");
 				if(f)
 				{
-					hxc_fread(&oob,sizeof(s_oob_header),f);
+					libflux_fread(&oob,sizeof(s_oob_header),f);
 					if(oob.Sign==OOB_SIGN)
 					{
 						found=1;
 					}
-					hxc_fclose(f);
+					libflux_fclose(f);
 				}
 				side++;
 				if(side>1)
@@ -116,23 +109,23 @@ int KryoFluxStream_libIsValidDiskFile( HXCFE_IMGLDR * imgldr_ctx, HXCFE_IMGLDR_F
 
 			if(found)
 			{
-				return HXCFE_VALIDFILE;
+				return LIBFLUX_VALIDFILE;
 			}
 			else
 			{
-				return HXCFE_BADFILE;
+				return LIBFLUX_BADFILE;
 			}
 
 		}
 		else
 		{
-			hxc_getfilenamebase(imgfile->path,(char*)&filename,SYS_PATH_TYPE);
-			hxc_strlower((char*)&filename);
+			libflux_getfilenamebase(imgfile->path,(char*)&filename,SYS_PATH_TYPE);
+			libflux_strlower((char*)&filename);
 			found=0;
 
 			if(!strstr(filename,".0.raw") && !strstr(filename,".1.raw") )
 			{
-				return HXCFE_BADFILE;
+				return LIBFLUX_BADFILE;
 			}
 
 			memcpy(&oob,imgfile->file_header,sizeof(s_oob_header));
@@ -144,58 +137,58 @@ int KryoFluxStream_libIsValidDiskFile( HXCFE_IMGLDR * imgldr_ctx, HXCFE_IMGLDR_F
 
 			if(found)
 			{
-				return HXCFE_VALIDFILE;
+				return LIBFLUX_VALIDFILE;
 			}
 			else
 			{
-				return HXCFE_BADFILE;
+				return LIBFLUX_BADFILE;
 			}
 		}
 	}
 
-	return HXCFE_BADPARAMETER;
+	return LIBFLUX_BADPARAMETER;
 }
 
-static HXCFE_SIDE* decodestream(HXCFE* floppycontext,char * file,short * rpm,float timecoef,int phasecorrection,int bitrate,int filter,int filterpasses, int bmpexport, int track, int side)
+static LIBFLUX_SIDE* decodestream(LIBFLUX_CTX* flux_ctx,char * file,short * rpm,float timecoef,int phasecorrection,int bitrate,int filter,int filterpasses, int bmpexport, int track, int side)
 {
-	HXCFE_SIDE* currentside;
+	LIBFLUX_SIDE* currentside;
 
-	HXCFE_TRKSTREAM *track_dump;
-	HXCFE_FXSA * fxs;
+	LIBFLUX_TRKSTREAM *track_dump;
+	LIBFLUX_FXSA * fxs;
 	char tmp_filename[512];
 	currentside=0;
 
-	floppycontext->hxc_printf(MSG_DEBUG,"------------------------------------------------");
+	flux_ctx->libflux_printf(MSG_DEBUG,"------------------------------------------------");
 
-	floppycontext->hxc_printf(MSG_DEBUG,"Loading %s...",hxc_getfilenamebase(file,0,SYS_PATH_TYPE));
+	flux_ctx->libflux_printf(MSG_DEBUG,"Loading %s...",libflux_getfilenamebase(file,0,SYS_PATH_TYPE));
 
-	fxs = hxcfe_initFxStream(floppycontext);
+	fxs = libflux_initFxStream(flux_ctx);
 	if(fxs)
 	{
-		track_dump=DecodeKFStreamFile(floppycontext,fxs,file);
+		track_dump=DecodeKFStreamFile(flux_ctx,fxs,file);
 		if(track_dump)
 		{
-			hxcfe_FxStream_ChangeSpeed(fxs,track_dump,timecoef);
+			libflux_FxStream_ChangeSpeed(fxs,track_dump,timecoef);
 
-			hxcfe_FxStream_setBitrate(fxs,bitrate);
+			libflux_FxStream_setBitrate(fxs,bitrate);
 
-			hxcfe_FxStream_setPhaseCorrectionFactor(fxs,phasecorrection);
+			libflux_FxStream_setPhaseCorrectionFactor(fxs,phasecorrection);
 
-			hxcfe_FxStream_setFilterParameters(fxs,filterpasses,filter);
+			libflux_FxStream_setFilterParameters(fxs,filterpasses,filter);
 
 			fxs->pll.track = track;
 			fxs->pll.side = side;
-			currentside = hxcfe_FxStream_AnalyzeAndGetTrack(fxs,track_dump);
+			currentside = libflux_FxStream_AnalyzeAndGetTrack(fxs,track_dump);
 
 			if( bmpexport )
 			{
 				strncpy(tmp_filename, file, sizeof(tmp_filename)-1); tmp_filename[sizeof(tmp_filename)-1] = '\0';
-				strcat(tmp_filename,".bmp");
-				hxcfe_FxStream_ExportToBmp(fxs,track_dump, tmp_filename);
+				strncat(tmp_filename, ".bmp", sizeof(tmp_filename) - strlen(tmp_filename) - 1);
+				libflux_FxStream_ExportToBmp(fxs,track_dump, tmp_filename);
 			}
 
 			if(rpm && currentside)
-				*rpm = (short)( 60 / GetTrackPeriod(floppycontext,currentside) );
+				*rpm = (short)( 60 / GetTrackPeriod(flux_ctx,currentside) );
 
 			if(currentside)
 			{
@@ -203,21 +196,21 @@ static HXCFE_SIDE* decodestream(HXCFE* floppycontext,char * file,short * rpm,flo
 			}
 			else
 			{
-				hxcfe_FxStream_FreeStream(fxs,track_dump);
+				libflux_FxStream_FreeStream(fxs,track_dump);
 			}
 		}
 
-		hxcfe_deinitFxStream(fxs);
+		libflux_deinitFxStream(fxs);
 	}
 
-	floppycontext->hxc_printf(MSG_DEBUG,"------------------------------------------------");
+	flux_ctx->libflux_printf(MSG_DEBUG,"------------------------------------------------");
 
 	return currentside;
 }
 
 extern float clv_track2rpm(int track, int type);
 
-int KryoFluxStream_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,char * imgfile,void * parameters)
+int KryoFluxStream_libLoad_DiskFile(LIBFLUX_IMGLDR * imgldr_ctx,LIBFLUX_FLOPPY * floppydisk,char * imgfile,void * parameters)
 {
 	FILE * f;
 	char * filepath;
@@ -228,12 +221,12 @@ int KryoFluxStream_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * flo
 	short rpm;
 	unsigned short i,j;
 	int trackstep;
-	HXCFE_CYLINDER* currentcylinder;
+	LIBFLUX_CYLINDER* currentcylinder;
 	int len;
 	int found,track,side;
 	struct stat staterep;
 	s_oob_header oob;
-	HXCFE_SIDE * curside;
+	LIBFLUX_SIDE * curside;
 	int nbtrack,nbside;
 	float timecoef;
 
@@ -245,7 +238,7 @@ int KryoFluxStream_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * flo
 	envvar_entry * backup_env;
 	envvar_entry * tmp_env;
 
-	imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"KryoFluxStream_libLoad_DiskFile");
+	imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"KryoFluxStream_libLoad_DiskFile");
 
 	backup_env = NULL;
 	folder = NULL;
@@ -253,23 +246,23 @@ int KryoFluxStream_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * flo
 
 	if(imgfile)
 	{
-		if(!hxc_stat(imgfile,&staterep))
+		if(!libflux_stat(imgfile,&staterep))
 		{
-			tmp_env = initEnv( (envvar_entry *)imgldr_ctx->hxcfe->envvar, NULL );
+			tmp_env = initEnv( (envvar_entry *)imgldr_ctx->ctx->envvar, NULL );
 			if(!tmp_env)
 				goto error;
 
-			backup_env = imgldr_ctx->hxcfe->envvar;
-			imgldr_ctx->hxcfe->envvar = tmp_env;
-			setget_env_script(imgldr_ctx->hxcfe->scriptctx, tmp_env);
+			backup_env = imgldr_ctx->ctx->envvar;
+			imgldr_ctx->ctx->envvar = tmp_env;
+			setget_env_script(imgldr_ctx->ctx->scriptctx, tmp_env);
 
-			len = hxc_getpathfolder(imgfile,0,SYS_PATH_TYPE);
+			len = libflux_getpathfolder(imgfile,0,SYS_PATH_TYPE);
 
 			folder = (char*)malloc(len+1);
 			if(!folder)
 				goto error;
 
-			hxc_getpathfolder(imgfile,folder,SYS_PATH_TYPE);
+			libflux_getpathfolder(imgfile,folder,SYS_PATH_TYPE);
 
 			if(staterep.st_mode&S_IFDIR)
 			{
@@ -277,16 +270,16 @@ int KryoFluxStream_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * flo
 			}
 			else
 			{
-				hxc_getfilenamebase(imgfile,(char*)&fname,SYS_PATH_TYPE);
+				libflux_getfilenamebase(imgfile,(char*)&fname,SYS_PATH_TYPE);
 				if(!strstr(fname,".0.raw") && !strstr(fname,".1.raw") )
 				{
-					tmp_env = (envvar_entry *)imgldr_ctx->hxcfe->envvar;
-					imgldr_ctx->hxcfe->envvar = backup_env;
-					setget_env_script(imgldr_ctx->hxcfe->scriptctx, backup_env);
+					tmp_env = (envvar_entry *)imgldr_ctx->ctx->envvar;
+					imgldr_ctx->ctx->envvar = backup_env;
+					setget_env_script(imgldr_ctx->ctx->scriptctx, backup_env);
 					deinitEnv( tmp_env );
 
 					free(folder);
-					return HXCFE_BADFILE;
+					return LIBFLUX_BADFILE;
 				}
 
 				fname[strlen(fname)-8]=0;
@@ -297,35 +290,35 @@ int KryoFluxStream_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * flo
 				goto error;
 
 			snprintf(filepath, sizeof(filepath),"%s%s",folder,"config.script");
-			hxcfe_execScriptFile(imgldr_ctx->hxcfe, filepath);
+			libflux_execScriptFile(imgldr_ctx->ctx, filepath);
 
-			if( hxcfe_getEnvVarValue( imgldr_ctx->hxcfe, "KFRAWLOADER_DOUBLE_STEP" ) & 1 )
+			if( libflux_getEnvVarValue( imgldr_ctx->ctx, "KFRAWLOADER_DOUBLE_STEP" ) & 1 )
 				trackstep = 2;
 			else
 				trackstep = 1;
 
-			mac_clv = hxcfe_getEnvVarValue( imgldr_ctx->hxcfe, "FLUXSTREAM_IMPORT_PCCAV_TO_MACCLV" );
-			c64_clv = hxcfe_getEnvVarValue( imgldr_ctx->hxcfe, "FLUXSTREAM_IMPORT_PCCAV_TO_C64CLV" );
-			victor9k_clv = hxcfe_getEnvVarValue( imgldr_ctx->hxcfe, "FLUXSTREAM_IMPORT_PCCAV_TO_VICTOR9KCLV" );
+			mac_clv = libflux_getEnvVarValue( imgldr_ctx->ctx, "FLUXSTREAM_IMPORT_PCCAV_TO_MACCLV" );
+			c64_clv = libflux_getEnvVarValue( imgldr_ctx->ctx, "FLUXSTREAM_IMPORT_PCCAV_TO_C64CLV" );
+			victor9k_clv = libflux_getEnvVarValue( imgldr_ctx->ctx, "FLUXSTREAM_IMPORT_PCCAV_TO_VICTOR9KCLV" );
 
-			singleside = hxcfe_getEnvVarValue( imgldr_ctx->hxcfe, "KFRAWLOADER_SINGLE_SIDE" )&1;
+			singleside = libflux_getEnvVarValue( imgldr_ctx->ctx, "KFRAWLOADER_SINGLE_SIDE" )&1;
 
 			timecoef=1;
-			if( !strcmp(hxcfe_getEnvVar( imgldr_ctx->hxcfe, "FLUXSTREAM_RPMFIX", NULL),"360TO300RPM") )
+			if( !strcmp(libflux_getEnvVar( imgldr_ctx->ctx, "FLUXSTREAM_RPMFIX", NULL),"360TO300RPM") )
 			{
 				timecoef=(float)1.2;
 			}
 
-			if( !strcmp(hxcfe_getEnvVar( imgldr_ctx->hxcfe, "FLUXSTREAM_RPMFIX", NULL),"300TO360RPM") )
+			if( !strcmp(libflux_getEnvVar( imgldr_ctx->ctx, "FLUXSTREAM_RPMFIX", NULL),"300TO360RPM") )
 			{
 				timecoef=(float)0.833;
 			}
 
-			phasecorrection = hxcfe_getEnvVarValue( imgldr_ctx->hxcfe, "FLUXSTREAM_PLL_PHASE_CORRECTION_DIVISOR" );
-			filterpasses = hxcfe_getEnvVarValue( imgldr_ctx->hxcfe, "FLUXSTREAM_BITRATE_FILTER_PASSES" );
-			filter = hxcfe_getEnvVarValue( imgldr_ctx->hxcfe, "FLUXSTREAM_BITRATE_FILTER_WINDOW" );
-			bitrate = hxcfe_getEnvVarValue( imgldr_ctx->hxcfe, "KFRAWLOADER_BITRATE" );
-			bmp_export = hxcfe_getEnvVarValue( imgldr_ctx->hxcfe, "KFRAWLOADER_BMPEXPORT" );
+			phasecorrection = libflux_getEnvVarValue( imgldr_ctx->ctx, "FLUXSTREAM_PLL_PHASE_CORRECTION_DIVISOR" );
+			filterpasses = libflux_getEnvVarValue( imgldr_ctx->ctx, "FLUXSTREAM_BITRATE_FILTER_PASSES" );
+			filter = libflux_getEnvVarValue( imgldr_ctx->ctx, "FLUXSTREAM_BITRATE_FILTER_WINDOW" );
+			bitrate = libflux_getEnvVarValue( imgldr_ctx->ctx, "KFRAWLOADER_BITRATE" );
+			bmp_export = libflux_getEnvVarValue( imgldr_ctx->ctx, "KFRAWLOADER_BMPEXPORT" );
 
 			track=0;
 			side=0;
@@ -339,10 +332,10 @@ int KryoFluxStream_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * flo
 			do
 			{
 				snprintf(filepath, sizeof(filepath),"%s%s%.2d.%d.raw",folder,fname,track,side);
-				f = hxc_fopen(filepath,"rb");
+				f = libflux_fopen(filepath,"rb");
 				if(f)
 				{
-					hxc_fread(&oob,sizeof(s_oob_header),f);
+					libflux_fread(&oob,sizeof(s_oob_header),f);
 					if(oob.Sign==OOB_SIGN)
 					{
 						if(mintrack>track) mintrack = track;
@@ -351,7 +344,7 @@ int KryoFluxStream_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * flo
 						if(maxside<side) maxside = side;
 						found=1;
 					}
-					hxc_fclose(f);
+					libflux_fclose(f);
 				}
 				side++;
 				if(side>1)
@@ -363,14 +356,14 @@ int KryoFluxStream_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * flo
 
 			if(!found)
 			{
-				tmp_env = (envvar_entry *)imgldr_ctx->hxcfe->envvar;
-				imgldr_ctx->hxcfe->envvar = backup_env;
-				setget_env_script(imgldr_ctx->hxcfe->scriptctx, backup_env);
+				tmp_env = (envvar_entry *)imgldr_ctx->ctx->envvar;
+				imgldr_ctx->ctx->envvar = backup_env;
+				setget_env_script(imgldr_ctx->ctx->scriptctx, backup_env);
 				deinitEnv( tmp_env );
 
 				free( folder );
 				free( filepath );
-				return HXCFE_BADFILE;
+				return LIBFLUX_BADFILE;
 			}
 
 			nbside=(maxside-minside)+1;
@@ -380,7 +373,7 @@ int KryoFluxStream_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * flo
 			if(trackstep==2)
 				nbtrack=(nbtrack/trackstep) + 1;
 
-			imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"%d track (%d - %d), %d sides (%d - %d)",nbtrack,mintrack,maxtrack,nbside,minside,maxside);
+			imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"%d track (%d - %d), %d sides (%d - %d)",nbtrack,mintrack,maxtrack,nbside,minside,maxside);
 
 			floppydisk->floppyiftype=GENERIC_SHUGART_DD_FLOPPYMODE;
 			floppydisk->floppyBitRate=VARIABLEBITRATE;
@@ -388,11 +381,11 @@ int KryoFluxStream_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * flo
 			floppydisk->floppyNumberOfSide=nbside;
 			floppydisk->floppySectorPerTrack=-1;
 
-			floppydisk->tracks = (HXCFE_CYLINDER**)malloc(sizeof(HXCFE_CYLINDER*)*floppydisk->floppyNumberOfTrack);
+			floppydisk->tracks = (LIBFLUX_CYLINDER**)malloc(sizeof(LIBFLUX_CYLINDER*)*floppydisk->floppyNumberOfTrack);
 			if(!floppydisk->tracks)
 				goto error;
 
-			memset(floppydisk->tracks,0,sizeof(HXCFE_CYLINDER*)*floppydisk->floppyNumberOfTrack);
+			memset(floppydisk->tracks,0,sizeof(LIBFLUX_CYLINDER*)*floppydisk->floppyNumberOfTrack);
 
 			rpm = 300;
 
@@ -400,7 +393,7 @@ int KryoFluxStream_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * flo
 			{
 				for(i=0;i<floppydisk->floppyNumberOfSide;i++)
 				{
-					hxcfe_imgCallProgressCallback(imgldr_ctx,(j<<1) | (i&1),(floppydisk->floppyNumberOfTrack*trackstep)*2 );
+					libflux_imgCallProgressCallback(imgldr_ctx,(j<<1) | (i&1),(floppydisk->floppyNumberOfTrack*trackstep)*2 );
 
 					snprintf(filepath, sizeof(filepath),"%s%s%.2d.%d.raw",folder,fname,j,i);
 
@@ -414,7 +407,7 @@ int KryoFluxStream_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * flo
 						timecoef = (float)victor9k_clv / clv_track2rpm(j,3);
 
 					rpm = 300;
-					curside = decodestream(imgldr_ctx->hxcfe,filepath,&rpm,timecoef,phasecorrection,bitrate,filter,filterpasses,bmp_export,j,i);
+					curside = decodestream(imgldr_ctx->ctx,filepath,&rpm,timecoef,phasecorrection,bitrate,filter,filterpasses,bmp_export,j,i);
 
 					if(!floppydisk->tracks[j/trackstep])
 					{
@@ -434,28 +427,28 @@ int KryoFluxStream_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * flo
 					curside = floppydisk->tracks[j]->sides[i];
 					if(curside && floppydisk->tracks[0]->sides[0])
 					{
-						AdjustTrackPeriod(imgldr_ctx->hxcfe,floppydisk->tracks[0]->sides[0],curside);
+						AdjustTrackPeriod(imgldr_ctx->ctx,floppydisk->tracks[0]->sides[0],curside);
 					}
 				}
 			}
 
-			imgldr_ctx->hxcfe->hxc_printf(MSG_INFO_1,"track file successfully loaded and encoded!");
+			imgldr_ctx->ctx->libflux_printf(MSG_INFO_1,"track file successfully loaded and encoded!");
 
 			free( folder );
 			free( filepath );
 
-			hxcfe_sanityCheck(imgldr_ctx->hxcfe,floppydisk);
+			libflux_sanityCheck(imgldr_ctx->ctx,floppydisk);
 
-			tmp_env = (envvar_entry *)imgldr_ctx->hxcfe->envvar;
-			imgldr_ctx->hxcfe->envvar = backup_env;
-			setget_env_script(imgldr_ctx->hxcfe->scriptctx, backup_env);
+			tmp_env = (envvar_entry *)imgldr_ctx->ctx->envvar;
+			imgldr_ctx->ctx->envvar = backup_env;
+			setget_env_script(imgldr_ctx->ctx->scriptctx, backup_env);
 			deinitEnv( tmp_env );
 
-			return HXCFE_NOERROR;
+			return LIBFLUX_NOERROR;
 		}
 	}
 
-	return HXCFE_BADFILE;
+	return LIBFLUX_BADFILE;
 
 error:
 	free(folder);
@@ -463,16 +456,16 @@ error:
 
 	if( backup_env )
 	{
-		tmp_env = (envvar_entry *)imgldr_ctx->hxcfe->envvar;
-		imgldr_ctx->hxcfe->envvar = backup_env;
-		setget_env_script(imgldr_ctx->hxcfe->scriptctx, backup_env);
+		tmp_env = (envvar_entry *)imgldr_ctx->ctx->envvar;
+		imgldr_ctx->ctx->envvar = backup_env;
+		setget_env_script(imgldr_ctx->ctx->scriptctx, backup_env);
 		deinitEnv( tmp_env );
 	}
 
-	return HXCFE_INTERNALERROR;
+	return LIBFLUX_INTERNALERROR;
 }
 
-int KryoFluxStream_libGetPluginInfo(HXCFE_IMGLDR * imgldr_ctx,uint32_t infotype,void * returnvalue)
+int KryoFluxStream_libGetPluginInfo(LIBFLUX_IMGLDR * imgldr_ctx,uint32_t infotype,void * returnvalue)
 {
 	static const char plug_id[]="KRYOFLUXSTREAM";
 	static const char plug_desc[]="KryoFlux Stream Loader";

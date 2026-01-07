@@ -7,28 +7,45 @@
  */
 
 #include "uft/uft_session.h"
+#include "uft/core/uft_safe_parse.h"
 #include "uft/uft_param_bridge.h"
+#include "uft/core/uft_safe_parse.h"
 #include "uft/uft_memory.h"
+#include "uft/core/uft_safe_parse.h"
 #include <stdlib.h>
+#include "uft/core/uft_safe_parse.h"
 #include <string.h>
+#include "uft/core/uft_safe_parse.h"
 #include <stdio.h>
+#include "uft/core/uft_safe_parse.h"
 #include <time.h>
+#include "uft/core/uft_safe_parse.h"
 #include <errno.h>
+#include "uft/core/uft_safe_parse.h"
 
 #ifdef _WIN32
 #include <windows.h>
+#include "uft/core/uft_safe_parse.h"
 #include <shlobj.h>
+#include "uft/core/uft_safe_parse.h"
 #include <sys/stat.h>
+#include "uft/core/uft_safe_parse.h"
 #include <direct.h>
+#include "uft/core/uft_safe_parse.h"
 #define PATH_SEP "\\"
 #define mkdir(path, mode) _mkdir(path)
 /* Windows doesn't have dirent - use FindFirstFile */
 #else
 #include <sys/stat.h>
+#include "uft/core/uft_safe_parse.h"
 #include <dirent.h>
+#include "uft/core/uft_safe_parse.h"
 #include <unistd.h>
+#include "uft/core/uft_safe_parse.h"
 #include <pthread.h>
+#include "uft/core/uft_safe_parse.h"
 #include <signal.h>
+#include "uft/core/uft_safe_parse.h"
 #define PATH_SEP "/"
 #endif
 
@@ -337,13 +354,13 @@ static uft_session_t *session_from_json(const char *json) {
     /* Parse state */
     p = strstr(json, "\"state\":");
     if (p) {
-        session->info.state = atoi(strchr(p, ':') + 1);
+        { char *v=strchr(p,':')+1; int32_t t; if(v && uft_parse_int32(v,&t,10)) session->info.state=t; }
     }
     
     /* Parse operation */
     p = strstr(json, "\"operation\":");
     if (p) {
-        session->info.operation = atoi(strchr(p, ':') + 1);
+        { char *v=strchr(p,':')+1; int32_t t; if(v && uft_parse_int32(v,&t,10)) session->info.operation=t; }
     }
     
     /* Parse timestamps */
@@ -382,33 +399,33 @@ static uft_session_t *session_from_json(const char *json) {
     /* Parse formats */
     p = strstr(json, "\"source_format\":");
     if (p) {
-        session->info.source_format = atoi(strchr(p, ':') + 1);
+        { char *v=strchr(p,':')+1; int32_t t; if(v && uft_parse_int32(v,&t,10)) session->info.source_format=t; }
     }
     
     p = strstr(json, "\"target_format\":");
     if (p) {
-        session->info.target_format = atoi(strchr(p, ':') + 1);
+        { char *v=strchr(p,':')+1; int32_t t; if(v && uft_parse_int32(v,&t,10)) session->info.target_format=t; }
     }
     
     /* Parse track counts */
     p = strstr(json, "\"tracks_total\":");
     if (p) {
-        session->info.tracks_total = atoi(strchr(p, ':') + 1);
+        { char *v=strchr(p,':')+1; int32_t t; if(v && uft_parse_int32(v,&t,10)) session->info.tracks_total=t; }
     }
     
     p = strstr(json, "\"tracks_completed\":");
     if (p) {
-        session->info.tracks_completed = atoi(strchr(p, ':') + 1);
+        { char *v=strchr(p,':')+1; int32_t t; if(v && uft_parse_int32(v,&t,10)) session->info.tracks_completed=t; }
     }
     
     p = strstr(json, "\"current_cylinder\":");
     if (p) {
-        session->info.current_cylinder = atoi(strchr(p, ':') + 1);
+        { char *v=strchr(p,':')+1; int32_t t; if(v && uft_parse_int32(v,&t,10)) session->info.current_cylinder=t; }
     }
     
     p = strstr(json, "\"current_head\":");
     if (p) {
-        session->info.current_head = atoi(strchr(p, ':') + 1);
+        { char *v=strchr(p,':')+1; int32_t t; if(v && uft_parse_int32(v,&t,10)) session->info.current_head=t; }
     }
     
     /* Parse preset */

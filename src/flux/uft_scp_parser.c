@@ -4,7 +4,6 @@
  * @version 1.0.0
  * @date 2026-01-06
  *
- * Source: SCP format specification v2.0 by Jim Drew
  */
 
 #include <stdlib.h>
@@ -78,9 +77,9 @@ int uft_scp_open(uft_scp_ctx_t* ctx, const char* filename)
     }
     
     /* Get file size */
-    fseek(ctx->file, 0, SEEK_END);
+    (void)fseek(ctx->file, 0, SEEK_END);
     ctx->file_size = ftell(ctx->file);
-    fseek(ctx->file, 0, SEEK_SET);
+    (void)fseek(ctx->file, 0, SEEK_SET);
     
     /* Read header */
     if (fread(&ctx->header, sizeof(uft_scp_header_t), 1, ctx->file) != 1) {
@@ -299,7 +298,7 @@ int uft_scp_read_track(uft_scp_ctx_t* ctx, int track, uft_scp_track_data_t* data
             free(raw_flux);
             
             /* Restore position */
-            fseek(ctx->file, saved_pos, SEEK_SET);
+            (void)fseek(ctx->file, saved_pos, SEEK_SET);
         }
     }
     
@@ -417,7 +416,7 @@ bool uft_scp_verify_checksum(uft_scp_ctx_t* ctx)
     long saved_pos = ftell(ctx->file);
     
     /* Calculate checksum from offset 0x10 to end */
-    fseek(ctx->file, 0x10, SEEK_SET);
+    (void)fseek(ctx->file, 0x10, SEEK_SET);
     
     uint32_t checksum = 0;
     uint8_t buffer[4096];
@@ -430,7 +429,7 @@ bool uft_scp_verify_checksum(uft_scp_ctx_t* ctx)
     }
     
     /* Restore position */
-    fseek(ctx->file, saved_pos, SEEK_SET);
+    (void)fseek(ctx->file, saved_pos, SEEK_SET);
     
     return checksum == ctx->header.checksum;
 }

@@ -5,7 +5,6 @@
  * Based on raszpl/sigrok-disk modern PLL implementation.
  * Uses Proportional-Integral control for robust clock recovery.
  * 
- * @copyright GPL-3.0 (derived from sigrok-disk)
  */
 
 #ifndef UFT_PLL_PI_H

@@ -12,6 +12,7 @@
 #define UFT_PRESET_TRS80_H
 
 #include <stdint.h>
+#include <stddef.h>
 
 #ifdef __cplusplus
 extern "C" {

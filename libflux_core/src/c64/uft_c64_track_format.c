@@ -2,19 +2,14 @@
  * uft_c64_track_format.c
  *
  * C64/1541 track format tables and functions.
- * Based on nibtools by Pete Rittwage and Markus Brenner.
  *
  * Original Source:
- * - nibtools gcr.c (C) Markus Brenner <markus(at)brenner.de>
- * - nibtools gcr.h (C) Pete Rittwage <peter(at)rittwage.com>
  *
- * License: GPL (from nibtools)
  */
 
 #include "c64/uft_c64_track_format.h"
 
 /* ═══════════════════════════════════════════════════════════════════════════
- * STATIC TABLES (from nibtools)
  * ═══════════════════════════════════════════════════════════════════════════ */
 
 /*

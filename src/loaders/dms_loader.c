@@ -2,25 +2,20 @@
 //
 // Copyright (C) 2006-2025 Jean-François DEL NERO
 //
-// This file is part of the HxCFloppyEmulator library
 //
-// HxCFloppyEmulator may be used and distributed without restriction provided
 // that this copyright statement is not removed from the file and that any
 // derivative work contains the original copyright notice and the associated
 // disclaimer.
 //
-// HxCFloppyEmulator is free software; you can redistribute it
 // and/or modify  it under the terms of the GNU General Public License
 // as published by the Free Software Foundation; either version 2
 // of the License, or (at your option) any later version.
 //
-// HxCFloppyEmulator is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 //   See the GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with HxCFloppyEmulator; if not, write to the Free Software
 // Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 //
 */
@@ -49,10 +44,10 @@
 
 #include "types.h"
 
-#include "internal_libhxcfe.h"
-#include "libhxcfe.h"
+#include "libflux.h""
+#include "libflux.h""
 #include "libhxcadaptor.h"
-#include "floppy_loader.h"
+#include "uft_floppy_loader.h"
 
 #include "loaders/common/raw_amiga.h"
 
@@ -63,34 +58,34 @@
 #include "thirdpartylibs/xdms/xdms-1.3.2/src/cdata.h"
 #include "thirdpartylibs/xdms/xdms-1.3.2/src/pfile.h"
 
-int DMS_libIsValidDiskFile( HXCFE_IMGLDR * imgldr_ctx, HXCFE_IMGLDR_FILEINFOS * imgfile )
+int DMS_libIsValidDiskFile( LIBFLUX_IMGLDR * imgldr_ctx, LIBFLUX_IMGLDR_FILEINFOS * imgfile )
 {
-	return hxcfe_imgCheckFileCompatibility( imgldr_ctx, imgfile, "DMS_libIsValidDiskFile", "dms", 0);
+	return libflux_imgCheckFileCompatibility( imgldr_ctx, imgfile, "DMS_libIsValidDiskFile", "dms", 0);
 }
 
-int DMS_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,char * imgfile,void * parameters)
+int DMS_libLoad_DiskFile(LIBFLUX_IMGLDR * imgldr_ctx,LIBFLUX_FLOPPY * floppydisk,char * imgfile,void * parameters)
 {
 	int ret;
 	unsigned int filesize;
 	HXCFILE * f_img;
 	int retxdms;
 
-	imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"DMS_libLoad_DiskFile %s",imgfile);
+	imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"DMS_libLoad_DiskFile %s",imgfile);
 
 	// Unpack the dms file.
 	f_img = HXC_fopen("","");
 	if( !f_img )
 	{
-		imgldr_ctx->hxcfe->hxc_printf(MSG_ERROR,"Alloc Error !");
-		return HXCFE_INTERNALERROR;
+		imgldr_ctx->ctx->libflux_printf(MSG_ERROR,"Alloc Error !");
+		return LIBFLUX_INTERNALERROR;
 	}
 
 	retxdms = Process_File(imgfile,f_img, CMD_UNPACK, 0, 0, 0);
 	if(retxdms)
 	{
-		imgldr_ctx->hxcfe->hxc_printf(MSG_ERROR,"XDMS: Error %d while reading the file!",retxdms);
+		imgldr_ctx->ctx->libflux_printf(MSG_ERROR,"XDMS: Error %d while reading the file!",retxdms);
 		HXC_fclose(f_img);
-		return HXCFE_ACCESSERROR;
+		return LIBFLUX_ACCESSERROR;
 	}
 
 	filesize = f_img->buffersize;
@@ -102,7 +97,7 @@ int DMS_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 	return ret;
 }
 
-int DMS_libGetPluginInfo(HXCFE_IMGLDR * imgldr_ctx,uint32_t infotype,void * returnvalue)
+int DMS_libGetPluginInfo(LIBFLUX_IMGLDR * imgldr_ctx,uint32_t infotype,void * returnvalue)
 {
 	static const char plug_id[]="AMIGA_DMS";
 	static const char plug_desc[]="AMIGA DMS Loader";

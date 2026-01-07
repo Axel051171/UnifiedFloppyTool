@@ -165,7 +165,7 @@ static const format_spec_t FORMAT_SPECS[] = {
         .base_prior = 0.03f
     },
     {
-        .id = "hfe", .name = "HxC Floppy Emulator (HFE)",
+        .id = "hfe", .name = "UFT HFE Format (HFE)",
         .family = UFT_FAMILY_FLUX_HFE,
         .expected_sizes = NULL, .expected_size_count = 0,
         .magic = MAGIC_HFE, .magic_len = 8, .magic_offset = 0,

@@ -1,3 +1,6 @@
+#ifndef UFT_LOADERS_TELEDISK_LOADER_TELEDISK_FORMAT_H
+#define UFT_LOADERS_TELEDISK_LOADER_TELEDISK_FORMAT_H
+
 #define TD0_SIG_NORMAL          "TD"    // Normal compression (RLE)
 #define TD0_SIG_ADVANCED        "td"    // Huffman compression also used for everything after TD0_HEADER
 
@@ -45,3 +48,5 @@ typedef struct _TELEDISK_SECTOR_HEADER
 }TELEDISK_SECTOR_HEADER;
 
 #pragma pack()
+
+#endif /* UFT_LOADERS_TELEDISK_LOADER_TELEDISK_FORMAT_H */

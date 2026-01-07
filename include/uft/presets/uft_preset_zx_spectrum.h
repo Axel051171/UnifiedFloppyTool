@@ -19,6 +19,8 @@
 #define UFT_PRESET_ZX_SPECTRUM_H
 
 #include <stdint.h>
+#include <stddef.h>
+#include <string.h>  /* NULL */
 
 #ifdef __cplusplus
 extern "C" {
@@ -55,7 +57,7 @@ typedef struct uft_zx_preset {
     uft_zx_format_id_t id;
     const char *name;
     const char *description;
-    const char *gw_format;      /* Greaseweazle format string */
+    const char *uft_gw_format;   /* Greaseweazle format string */
     
     /* Geometry */
     uint8_t  cyls;
@@ -90,7 +92,7 @@ static const uft_zx_preset_t UFT_ZX_PRESETS[] = {
         .id = UFT_ZX_PLUS3DOS_SSSD,
         .name = "ZX Spectrum +3 DOS SS/SD",
         .description = "Amstrad +3 DOS single-sided single-density",
-        .gw_format = "zx.3dos.sssd",
+        .uft_gw_format = "zx.3dos.sssd",
         .cyls = 40, .heads = 1, .secs = 9, .bps = 512,
         .rate = 250, .encoding = 1,
         .interleave = 1, .cskew = 0, .hskew = 0,
@@ -101,7 +103,7 @@ static const uft_zx_preset_t UFT_ZX_PRESETS[] = {
         .id = UFT_ZX_PLUS3DOS_DSDD,
         .name = "ZX Spectrum +3 DOS DS/DD",
         .description = "Amstrad +3 DOS double-sided double-density",
-        .gw_format = "zx.3dos.dsdd",
+        .uft_gw_format = "zx.3dos.dsdd",
         .cyls = 80, .heads = 2, .secs = 9, .bps = 512,
         .rate = 250, .encoding = 1,
         .interleave = 1, .cskew = 0, .hskew = 0,
@@ -114,7 +116,7 @@ static const uft_zx_preset_t UFT_ZX_PRESETS[] = {
         .id = UFT_ZX_MGT_PLUSD_DSDD,
         .name = "MGT +D",
         .description = "Miles Gordon +D interface",
-        .gw_format = "zx.plusd.ds80",
+        .uft_gw_format = "zx.plusd.ds80",
         .cyls = 80, .heads = 2, .secs = 10, .bps = 512,
         .rate = 250, .encoding = 1,
         .interleave = 1, .cskew = 0, .hskew = 0,
@@ -127,7 +129,7 @@ static const uft_zx_preset_t UFT_ZX_PRESETS[] = {
         .id = UFT_ZX_OPUS_SSSD,
         .name = "Opus Discovery SS/SD",
         .description = "Opus Discovery single-sided",
-        .gw_format = "zx.opus.ss40",
+        .uft_gw_format = "zx.opus.ss40",
         .cyls = 40, .heads = 1, .secs = 18, .bps = 256,
         .rate = 250, .encoding = 1,
         .interleave = 13, .cskew = 13, .hskew = 0,
@@ -138,7 +140,7 @@ static const uft_zx_preset_t UFT_ZX_PRESETS[] = {
         .id = UFT_ZX_OPUS_DSDD,
         .name = "Opus Discovery DS/DD",
         .description = "Opus Discovery double-sided",
-        .gw_format = "zx.opus.ds80",
+        .uft_gw_format = "zx.opus.ds80",
         .cyls = 80, .heads = 2, .secs = 18, .bps = 256,
         .rate = 250, .encoding = 1,
         .interleave = 13, .cskew = 13, .hskew = 0,
@@ -151,7 +153,7 @@ static const uft_zx_preset_t UFT_ZX_PRESETS[] = {
         .id = UFT_ZX_KEMPSTON_SSSD,
         .name = "Kempston SS/SD",
         .description = "Kempston Disc Interface single-sided",
-        .gw_format = "zx.kempston.sssd",
+        .uft_gw_format = "zx.kempston.sssd",
         .cyls = 40, .heads = 1, .secs = 10, .bps = 512,
         .rate = 250, .encoding = 1,
         .interleave = 1, .cskew = 0, .hskew = 0,
@@ -162,7 +164,7 @@ static const uft_zx_preset_t UFT_ZX_PRESETS[] = {
         .id = UFT_ZX_KEMPSTON_DSDD,
         .name = "Kempston DS/DD",
         .description = "Kempston Disc Interface double-sided",
-        .gw_format = "zx.kempston.dsdd",
+        .uft_gw_format = "zx.kempston.dsdd",
         .cyls = 80, .heads = 2, .secs = 10, .bps = 512,
         .rate = 250, .encoding = 1,
         .interleave = 1, .cskew = 0, .hskew = 0,
@@ -175,7 +177,7 @@ static const uft_zx_preset_t UFT_ZX_PRESETS[] = {
         .id = UFT_ZX_WATFORD_SSSD,
         .name = "Watford SPDOS SS/SD",
         .description = "Watford Electronics SPDOS single-sided",
-        .gw_format = "zx.watford.sssd",
+        .uft_gw_format = "zx.watford.sssd",
         .cyls = 40, .heads = 1, .secs = 10, .bps = 512,
         .rate = 250, .encoding = 1,
         .interleave = 1, .cskew = 0, .hskew = 0,
@@ -186,7 +188,7 @@ static const uft_zx_preset_t UFT_ZX_PRESETS[] = {
         .id = UFT_ZX_WATFORD_DSDD,
         .name = "Watford SPDOS DS/DD",
         .description = "Watford Electronics SPDOS double-sided",
-        .gw_format = "zx.watford.dsdd",
+        .uft_gw_format = "zx.watford.dsdd",
         .cyls = 80, .heads = 2, .secs = 10, .bps = 512,
         .rate = 250, .encoding = 1,
         .interleave = 1, .cskew = 0, .hskew = 0,
@@ -199,7 +201,7 @@ static const uft_zx_preset_t UFT_ZX_PRESETS[] = {
         .id = UFT_ZX_TURBODRIVE_DSSD,
         .name = "Turbodrive DS/SD",
         .description = "Turbodrive 40-track double-sided",
-        .gw_format = "zx.turbodrive.dssd",
+        .uft_gw_format = "zx.turbodrive.dssd",
         .cyls = 40, .heads = 2, .secs = 10, .bps = 512,
         .rate = 250, .encoding = 1,
         .interleave = 5, .cskew = 5, .hskew = 0,
@@ -210,7 +212,7 @@ static const uft_zx_preset_t UFT_ZX_PRESETS[] = {
         .id = UFT_ZX_TURBODRIVE_DSDD,
         .name = "Turbodrive DS/DD",
         .description = "Turbodrive 80-track double-sided",
-        .gw_format = "zx.turbodrive.dsdd",
+        .uft_gw_format = "zx.turbodrive.dsdd",
         .cyls = 80, .heads = 2, .secs = 10, .bps = 512,
         .rate = 250, .encoding = 1,
         .interleave = 5, .cskew = 5, .hskew = 0,
@@ -223,7 +225,7 @@ static const uft_zx_preset_t UFT_ZX_PRESETS[] = {
         .id = UFT_ZX_DIDAKTIK_D80_DSDD,
         .name = "Didaktik D80",
         .description = "Didaktik D80 MDOS",
-        .gw_format = "zx.d80.dsdd",
+        .uft_gw_format = "zx.d80.dsdd",
         .cyls = 80, .heads = 2, .secs = 9, .bps = 512,
         .rate = 250, .encoding = 1,
         .interleave = 1, .cskew = 0, .hskew = 0,
@@ -236,7 +238,7 @@ static const uft_zx_preset_t UFT_ZX_PRESETS[] = {
         .id = UFT_ZX_TIMEX_FDD3000_SSSD,
         .name = "Timex FDD 3000 SS/SD",
         .description = "Timex FDD 3/3000 single-sided",
-        .gw_format = "tmx.fdd3000.sssd",
+        .uft_gw_format = "tmx.fdd3000.sssd",
         .cyls = 40, .heads = 1, .secs = 16, .bps = 256,
         .rate = 250, .encoding = 1,
         .interleave = 1, .cskew = 0, .hskew = 0,
@@ -247,7 +249,7 @@ static const uft_zx_preset_t UFT_ZX_PRESETS[] = {
         .id = UFT_ZX_TIMEX_FDD3000_DSDD,
         .name = "Timex FDD 3000 DS/DD",
         .description = "Timex FDD 3/3000 double-sided",
-        .gw_format = "tmx.fdd3000.dsdd",
+        .uft_gw_format = "tmx.fdd3000.dsdd",
         .cyls = 80, .heads = 2, .secs = 16, .bps = 256,
         .rate = 250, .encoding = 1,
         .interleave = 1, .cskew = 0, .hskew = 0,
@@ -260,7 +262,7 @@ static const uft_zx_preset_t UFT_ZX_PRESETS[] = {
         .id = UFT_ZX_BETADISK_TRDOS,
         .name = "Beta Disk TR-DOS",
         .description = "Technology Research TR-DOS",
-        .gw_format = "zx.trdos.ds80",
+        .uft_gw_format = "zx.trdos.ds80",
         .cyls = 80, .heads = 2, .secs = 16, .bps = 256,
         .rate = 250, .encoding = 1,
         .interleave = 1, .cskew = 0, .hskew = 0,
@@ -282,12 +284,11 @@ static inline const uft_zx_preset_t *uft_zx_get_preset(uft_zx_format_id_t id) {
 }
 
 /**
- * Find preset by Greaseweazle format string
  */
-static inline const uft_zx_preset_t *uft_zx_find_by_gw_format(const char *gw_format) {
-    if (!gw_format) return NULL;
+static inline const uft_zx_preset_t *uft_zx_find_by_gw_format(const char *uft_gw_format) {
+    if (!uft_gw_format) return NULL;
     for (int i = 0; i < UFT_ZX_FORMAT_COUNT; i++) {
-        if (strcmp(UFT_ZX_PRESETS[i].gw_format, gw_format) == 0) {
+        if (strcmp(UFT_ZX_PRESETS[i].uft_gw_format, uft_gw_format) == 0) {
             return &UFT_ZX_PRESETS[i];
         }
     }

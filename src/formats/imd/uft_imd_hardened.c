@@ -156,8 +156,8 @@ static uft_error_t imd_read_track(uft_disk_t* disk, int cyl, int head, uft_track
         uint8_t sec_map[IMD_MAX_SECTORS];
         if (fread(sec_map, 1, num_sec, p->file) != num_sec) break;
         
-        if (hdr[2] & 0x80) fseek(p->file, num_sec, SEEK_CUR);
-        if (hdr[2] & 0x40) fseek(p->file, num_sec, SEEK_CUR);
+        if (hdr[2] & 0x80) (void)fseek(p->file, num_sec, SEEK_CUR);
+        if (hdr[2] & 0x40) (void)fseek(p->file, num_sec, SEEK_CUR);
         
         if (t_cyl == cyl && t_head == head) {
             uint8_t* sec_buf = malloc(sec_size);

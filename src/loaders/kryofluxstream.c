@@ -2,25 +2,20 @@
 //
 // Copyright (C) 2006-2025 Jean-François DEL NERO
 //
-// This file is part of the HxCFloppyEmulator library
 //
-// HxCFloppyEmulator may be used and distributed without restriction provided
 // that this copyright statement is not removed from the file and that any
 // derivative work contains the original copyright notice and the associated
 // disclaimer.
 //
-// HxCFloppyEmulator is free software; you can redistribute it
 // and/or modify  it under the terms of the GNU General Public License
 // as published by the Free Software Foundation; either version 2
 // of the License, or (at your option) any later version.
 //
-// HxCFloppyEmulator is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 //   See the GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with HxCFloppyEmulator; if not, write to the Free Software
 // Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 //
 */
@@ -36,7 +31,6 @@
 //----------------------------------------------------- http://hxc2001.free.fr --//
 ///////////////////////////////////////////////////////////////////////////////////
 // File : kryofluxstream.c
-// Contains: KryoFlux Stream file loader
 //
 // Written by: Jean-François DEL NERO
 //
@@ -49,11 +43,11 @@
 
 #include "types.h"
 
-#include "internal_libhxcfe.h"
-#include "libhxcfe.h"
+#include "libflux.h""
+#include "libflux.h""
 
-#include "floppy_loader.h"
-#include "floppy_utils.h"
+#include "uft_floppy_loader.h"
+#include "uft_floppy_utils.h"
 
 #include "kryofluxstream_loader.h"
 #include "kryofluxstream_format.h"
@@ -95,12 +89,12 @@ static uint32_t get_tick_from_reversal(uint32_t* buffer,uint32_t reversal)
 	return tick;
 }
 
-HXCFE_TRKSTREAM* DecodeKFStreamFile(HXCFE* floppycontext,HXCFE_FXSA * fxs,char * file)
+LIBFLUX_TRKSTREAM* DecodeKFStreamFile(LIBFLUX_CTX* flux_ctx,LIBFLUX_FXSA * fxs,char * file)
 {
 	uint32_t i;
 	s_oob_header        * oob;
 	s_oob_DiskIndex     * diskIndex;
-	HXCFE_TRKSTREAM     * track_dump;
+	LIBFLUX_TRKSTREAM     * track_dump;
 
 	Index index_events[MAX_INDEX];
 
@@ -145,26 +139,26 @@ HXCFE_TRKSTREAM* DecodeKFStreamFile(HXCFE* floppycontext,HXCFE_FXSA * fxs,char *
 	double sampleperiod;
 	char *sck_strpos;
 
-	sck = DEFAULT_KF_SCLOCK;
+	sck = DEFAULT_UFT_KF_SCLOCK;
 	sampleperiod = (1E9/sck) * 1000.0; // default 41.619 ns
 
 	if(fxs)
 	{
-		f = hxc_fopen(file,"rb");
+		f = libflux_fopen(file,"rb");
 		if(f)
 		{
-			filesize = hxc_fgetsize(f);
+			filesize = libflux_fgetsize(f);
 
 			kfstreambuffer = malloc(filesize);
 			if( kfstreambuffer )
 			{
-				hxc_fread(kfstreambuffer,filesize,f);
+				libflux_fread(kfstreambuffer,filesize,f);
 
-				hxc_fclose(f);
+				libflux_fclose(f);
 			}
 			else
 			{
-				hxc_fclose(f);
+				libflux_fclose(f);
 
 				return 0;
 			}
@@ -198,22 +192,22 @@ HXCFE_TRKSTREAM* DecodeKFStreamFile(HXCFE* floppycontext,HXCFE_FXSA * fxs,char *
 				// Set Operation / Data code lenght
 				switch (cur_op)
 				{
-					case KF_STREAM_OP_NOP1:
+					case UFT_KF_STREAM_OP_NOP1:
 						cur_op_len = 1;
 					break;
-					case KF_STREAM_OP_NOP2:
+					case UFT_KF_STREAM_OP_NOP2:
 						cur_op_len = 2;
 					break;
-					case KF_STREAM_OP_NOP3:
+					case UFT_KF_STREAM_OP_NOP3:
 						cur_op_len = 3;
 					break;
-					case KF_STREAM_OP_OVERFLOW:
+					case UFT_KF_STREAM_OP_OVERFLOW:
 						cur_op_len = 1;
 					break;
-					case KF_STREAM_OP_VALUE16:
+					case UFT_KF_STREAM_OP_VALUE16:
 						cur_op_len = 3;
 					break;
-					case KF_STREAM_OP_OOB:
+					case UFT_KF_STREAM_OP_OOB:
 						oob = (s_oob_header*)&kfstreambuffer[stream_ofs];
 
 						cur_op_len = sizeof(s_oob_header);
@@ -228,13 +222,13 @@ HXCFE_TRKSTREAM* DecodeKFStreamFile(HXCFE* floppycontext,HXCFE_FXSA * fxs,char *
 					break;
 
 					default:
-						if (cur_op >= KF_STREAM_DAT_BYTE)
+						if (cur_op >= UFT_KF_STREAM_DAT_BYTE)
 						{
 							cur_op_len = 1;
 						}
 						else
 						{
-							if (!(cur_op & ~KF_STREAM_DAT_MASK_SHORT))
+							if (!(cur_op & ~UFT_KF_STREAM_DAT_MASK_SHORT))
 								cur_op_len = 2;
 							else
 							{
@@ -264,26 +258,26 @@ HXCFE_TRKSTREAM* DecodeKFStreamFile(HXCFE* floppycontext,HXCFE_FXSA * fxs,char *
 				{
 					//0x0B Overflow16 1 Next cell value is increased by 0×10000 (16-bits).
 					//                  Decoding of *this* cell should continue at next stream position
-					case KF_STREAM_OP_OVERFLOW:
+					case UFT_KF_STREAM_OP_OVERFLOW:
 						cell_accumulator +=  0x10000;
 					break;
 
 					//0x0C Value16 3 New cell value: Upper 8 bits are offset+1 in the stream, lower 8-bits are offset+2
-					case KF_STREAM_OP_VALUE16:
+					case UFT_KF_STREAM_OP_VALUE16:
 						// 2 Bytes Flux (full)
 						cell_accumulator += ( kfstreambuffer[stream_ofs + 1] << 8 ) | kfstreambuffer[stream_ofs + 2];
 						new_cell_available = 1;
 					break;
 
 					default:
-						if (cur_op >= KF_STREAM_DAT_BYTE)
+						if (cur_op >= UFT_KF_STREAM_DAT_BYTE)
 						{
 							cell_accumulator += cur_op;
 							new_cell_available = 1;
 						}
 						else
 						{
-							if (!(cur_op & ~KF_STREAM_DAT_MASK_SHORT))
+							if (!(cur_op & ~UFT_KF_STREAM_DAT_MASK_SHORT))
 							{
 								cell_accumulator += (((uint32_t)cur_op)<<8) | kfstreambuffer[stream_ofs + 1];
 								new_cell_available = 1;
@@ -292,7 +286,7 @@ HXCFE_TRKSTREAM* DecodeKFStreamFile(HXCFE* floppycontext,HXCFE_FXSA * fxs,char *
 					break;
 				}
 
-				if( cur_op != KF_STREAM_OP_OOB )
+				if( cur_op != UFT_KF_STREAM_OP_OOB )
 				{
 					if(new_cell_available)
 					{
@@ -312,21 +306,21 @@ HXCFE_TRKSTREAM* DecodeKFStreamFile(HXCFE* floppycontext,HXCFE_FXSA * fxs,char *
 					{
 						case OOBTYPE_Stream_Read:
 	#ifdef KFSTREAMDBG
-							floppycontext->hxc_printf(MSG_DEBUG,"---Stream Read---");
+							flux_ctx->libflux_printf(MSG_DEBUG,"---Stream Read---");
 	#endif
 
 	#ifdef KFSTREAMDBG
 							streamRead = (s_oob_StreamRead*) &kfstreambuffer[stream_ofs + sizeof(s_oob_header) ];
-							floppycontext->hxc_printf(MSG_DEBUG,"StreamPosition: 0x%.8X TrTime: 0x%.8X",streamRead->StreamPosition,streamRead->TrTime);
+							flux_ctx->libflux_printf(MSG_DEBUG,"StreamPosition: 0x%.8X TrTime: 0x%.8X",streamRead->StreamPosition,streamRead->TrTime);
 	#endif
 							break;
 
 						case OOBTYPE_Index:
-							floppycontext->hxc_printf(MSG_DEBUG,"---Index--- : %d sp:%d",nbindex,cellpos);
+							flux_ctx->libflux_printf(MSG_DEBUG,"---Index--- : %d sp:%d",nbindex,cellpos);
 
 							diskIndex=  (s_oob_DiskIndex*) &kfstreambuffer[stream_ofs + sizeof(s_oob_header) ];
 
-							floppycontext->hxc_printf(MSG_DEBUG,"StreamPosition: 0x%.8X SysClk: 0x%.8X Timer: 0x%.8X",diskIndex->StreamPosition,diskIndex->SysClk,diskIndex->Timer);
+							flux_ctx->libflux_printf(MSG_DEBUG,"StreamPosition: 0x%.8X SysClk: 0x%.8X Timer: 0x%.8X",diskIndex->StreamPosition,diskIndex->SysClk,diskIndex->Timer);
 
 							if(nbindex < MAX_INDEX)
 							{
@@ -343,24 +337,24 @@ HXCFE_TRKSTREAM* DecodeKFStreamFile(HXCFE* floppycontext,HXCFE_FXSA * fxs,char *
 							}
 							else
 							{
-								floppycontext->hxc_printf(MSG_ERROR,"DecodeKFStreamFile : nbindex >= MAX_INDEX (%d)!",MAX_INDEX);
+								flux_ctx->libflux_printf(MSG_ERROR,"DecodeKFStreamFile : nbindex >= MAX_INDEX (%d)!",MAX_INDEX);
 							}
 							break;
 
 						case OOBTYPE_Stream_End:
 	#ifdef KFSTREAMDBG
-							floppycontext->hxc_printf(MSG_DEBUG,"---Stream End---");
+							flux_ctx->libflux_printf(MSG_DEBUG,"---Stream End---");
 	#endif
 
 	#ifdef KFSTREAMDBG
 							streamEnd = (s_oob_StreamEnd*) &kfstreambuffer[stream_ofs + sizeof(s_oob_header) ];
-							floppycontext->hxc_printf(MSG_DEBUG,"StreamPosition: 0x%.8X Result: 0x%.8X",streamEnd->StreamPosition,streamEnd->Result);
+							flux_ctx->libflux_printf(MSG_DEBUG,"StreamPosition: 0x%.8X Result: 0x%.8X",streamEnd->StreamPosition,streamEnd->Result);
 	#endif
 						break;
 
 						case OOBTYPE_String:
 	#ifdef KFSTREAMDBG
-							floppycontext->hxc_printf(MSG_DEBUG,"---String---");
+							flux_ctx->libflux_printf(MSG_DEBUG,"---String---");
 	#endif
 							tempstr = malloc(oob->Size+1);
 							if( tempstr )
@@ -369,7 +363,7 @@ HXCFE_TRKSTREAM* DecodeKFStreamFile(HXCFE* floppycontext,HXCFE_FXSA * fxs,char *
 								memcpy(tempstr,&kfstreambuffer[stream_ofs + sizeof(s_oob_header)],oob->Size);
 
 	#ifdef KFSTREAMDBG
-								floppycontext->hxc_printf(MSG_DEBUG,"String : %s",tempstr);
+								flux_ctx->libflux_printf(MSG_DEBUG,"String : %s",tempstr);
 	#endif
 
 								sck_strpos = strstr(tempstr, "sck=");
@@ -390,18 +384,18 @@ HXCFE_TRKSTREAM* DecodeKFStreamFile(HXCFE* floppycontext,HXCFE_FXSA * fxs,char *
 									tmpstrfreq[str_i++] = 0;
 									sck = atof(tmpstrfreq);
 
-									floppycontext->hxc_printf(MSG_DEBUG,"sck: %.16f",sck);
+									flux_ctx->libflux_printf(MSG_DEBUG,"sck: %.16f",sck);
 
 									if( sck >= (4 * 1000000) && sck <= (250 * 1000000) )
 									{
 										// ns per tick
 										sampleperiod = (1E9/sck) * 1000.0;
-										floppycontext->hxc_printf(MSG_DEBUG,"sampleperiod: %.16f",sampleperiod);
+										flux_ctx->libflux_printf(MSG_DEBUG,"sampleperiod: %.16f",sampleperiod);
 									}
 									else
 									{
-										floppycontext->hxc_printf(MSG_ERROR,"sck is out of range! (%.16f)",sck);
-										sck = DEFAULT_KF_SCLOCK;
+										flux_ctx->libflux_printf(MSG_ERROR,"sck is out of range! (%.16f)",sck);
+										sck = DEFAULT_UFT_KF_SCLOCK;
 										sampleperiod = (1E9/sck) * 1000.0;
 									}
 								}
@@ -417,7 +411,7 @@ HXCFE_TRKSTREAM* DecodeKFStreamFile(HXCFE* floppycontext,HXCFE_FXSA * fxs,char *
 
 						default:
 							oob = (s_oob_header*)&kfstreambuffer[stream_ofs];
-							floppycontext->hxc_printf(MSG_DEBUG,"Unknown OOB : 0x%.2x 0x%.2x Size:0x%.4x",oob->Sign,oob->Type,oob->Size);
+							flux_ctx->libflux_printf(MSG_DEBUG,"Unknown OOB : 0x%.2x 0x%.2x Size:0x%.4x",oob->Sign,oob->Type,oob->Size);
 						break;
 
 					}
@@ -488,19 +482,19 @@ HXCFE_TRKSTREAM* DecodeKFStreamFile(HXCFE* floppycontext,HXCFE_FXSA * fxs,char *
 				}
 			}
 
-			hxcfe_FxStream_setResolution(fxs,(int)sampleperiod);
+			libflux_FxStream_setResolution(fxs,(int)sampleperiod);
 
-			track_dump = hxcfe_FxStream_ImportStream(fxs,cellstream,32,cellpos, HXCFE_STREAMCHANNEL_TYPE_RLEEVT, "data",NULL);
+			track_dump = libflux_FxStream_ImportStream(fxs,cellstream,32,cellpos, LIBFLUX_STREAMCHANNEL_TYPE_RLEEVT, "data",NULL);
 
 			for(i=0;i<nbindex;i++)
 			{
 				index_events[i].type = FXSTRM_INDEX_MAININDEX;
 			}
 
-			if( hxcfe_getEnvVarValue( fxs->hxcfe, "FLUXSTREAM_ALL_REVOLUTIONS_IN_ONE" ) )
+			if( libflux_getEnvVarValue( fxs->ctx, "FLUXSTREAM_ALL_REVOLUTIONS_IN_ONE" ) )
 			{
-				hxcfe_FxStream_AddIndex(fxs,track_dump,index_events[0].CellPos,index_events[0].Timer,index_events[0].type);
-				hxcfe_FxStream_AddIndex(fxs,track_dump,index_events[nbindex-1].CellPos,index_events[nbindex-1].Timer,index_events[nbindex-1].type);
+				libflux_FxStream_AddIndex(fxs,track_dump,index_events[0].CellPos,index_events[0].Timer,index_events[0].type);
+				libflux_FxStream_AddIndex(fxs,track_dump,index_events[nbindex-1].CellPos,index_events[nbindex-1].Timer,index_events[nbindex-1].type);
 			}
 			else
 			{
@@ -604,12 +598,12 @@ HXCFE_TRKSTREAM* DecodeKFStreamFile(HXCFE* floppycontext,HXCFE_FXSA * fxs,char *
 
 				for( i = 0; i < nbindex ; i++ )
 				{
-					floppycontext->hxc_printf(MSG_DEBUG,"Index %d : Prev delta %f ms, Next delta %f ms, Type : 0x%x",i, \
+					flux_ctx->libflux_printf(MSG_DEBUG,"Index %d : Prev delta %f ms, Next delta %f ms, Type : 0x%x",i, \
 								(float)index_events[i].Prev_Index_Tick * (sampleperiod * 10E-10), \
 								(float)index_events[i].Next_Index_Tick * (sampleperiod * 10E-10), \
 								index_events[i].type);
 
-					hxcfe_FxStream_AddIndex(fxs,track_dump,index_events[i].CellPos,index_events[i].Timer,index_events[i].type);
+					libflux_FxStream_AddIndex(fxs,track_dump,index_events[i].CellPos,index_events[i].Timer,index_events[i].type);
 				}
 			}
 

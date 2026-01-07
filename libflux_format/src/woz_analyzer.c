@@ -271,7 +271,7 @@ bool woz_analyze(const char *woz_filename, woz_analysis_t *analysis)
     
     analysis->overall_quality = 0.91f;
     analysis->is_copy_protected = false;
-    strcpy(analysis->format_name, "DOS 3.3");
+    snprintf(analysis->format_name, sizeof(analysis->format_name), "DOS 3.3");
     
     return true;
 }

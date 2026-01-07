@@ -3,25 +3,20 @@
 //
 // Copyright (C) 2006-2025 Jean-Franois DEL NERO
 //
-// This file is part of the HxCFloppyEmulator library
 //
-// HxCFloppyEmulator may be used and distributed without restriction provided
 // that this copyright statement is not removed from the file and that any
 // derivative work contains the original copyright notice and the associated
 // disclaimer.
 //
-// HxCFloppyEmulator is free software; you can redistribute it
 // and/or modify  it under the terms of the GNU General Public License
 // as published by the Free Software Foundation; either version 2
 // of the License, or (at your option) any later version.
 //
-// HxCFloppyEmulator is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 //   See the GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with HxCFloppyEmulator; if not, write to the Free Software
 // Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 //
 */
@@ -50,52 +45,52 @@
 
 #include "types.h"
 
-#include "internal_libhxcfe.h"
+#include "libflux.h""
 #include "tracks/track_generator.h"
-#include "libhxcfe.h"
+#include "libflux.h""
 
-#include "floppy_loader.h"
-#include "floppy_utils.h"
+#include "uft_floppy_loader.h"
+#include "uft_floppy_utils.h"
 
 #include "imd_loader.h"
 #include "imd_format.h"
 
 #include "libhxcadaptor.h"
 
-int IMD_libIsValidDiskFile( HXCFE_IMGLDR * imgldr_ctx, HXCFE_IMGLDR_FILEINFOS * imgfile )
+int IMD_libIsValidDiskFile( LIBFLUX_IMGLDR * imgldr_ctx, LIBFLUX_IMGLDR_FILEINFOS * imgfile )
 {
-	imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"IMD_libIsValidDiskFile");
+	imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"IMD_libIsValidDiskFile");
 
-	if(hxc_checkfileext(imgfile->path,"imd",SYS_PATH_TYPE))
+	if(libflux_checkfileext(imgfile->path,"imd",SYS_PATH_TYPE))
 	{
 		if( !strncmp((char*)imgfile->file_header,"IMD ",4))
 		{
-			imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"IMD_libIsValidDiskFile : IMD file !");
-			return HXCFE_VALIDFILE;
+			imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"IMD_libIsValidDiskFile : IMD file !");
+			return LIBFLUX_VALIDFILE;
 		}
 		else
 		{
-			imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"IMD_libIsValidDiskFile : non IMD file !");
-			return HXCFE_BADFILE;
+			imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"IMD_libIsValidDiskFile : non IMD file !");
+			return LIBFLUX_BADFILE;
 		}
 	}
 	else
 	{
-		imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"IMD_libIsValidDiskFile : non IMD file !");
-		return HXCFE_BADFILE;
+		imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"IMD_libIsValidDiskFile : non IMD file !");
+		return LIBFLUX_BADFILE;
 	}
 
 }
 
-int IMD_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,char * imgfile,void * parameters)
+int IMD_libLoad_DiskFile(LIBFLUX_IMGLDR * imgldr_ctx,LIBFLUX_FLOPPY * floppydisk,char * imgfile,void * parameters)
 {
 	FILE * f;
 	char fileheader[5];
 //  MFMTRACKIMG trackdesc;
 	unsigned int i,j,trackcount,headcount;
-	HXCFE_SECTCFG* sectorconfig = NULL;
-	HXCFE_CYLINDER* currentcylinder = NULL;
-	HXCFE_SIDE* currentside = NULL;
+	LIBFLUX_SECTCFG* sectorconfig = NULL;
+	LIBFLUX_CYLINDER* currentcylinder = NULL;
+	LIBFLUX_SIDE* currentside = NULL;
 	int32_t bitrate;
 	int32_t pregap;
 	unsigned char * sectormap = NULL;
@@ -109,22 +104,22 @@ int IMD_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 	unsigned char sectordatarecordcode,cdata;
 	unsigned int filesize;
 
-	imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"IMD_libLoad_DiskFile %s",imgfile);
+	imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"IMD_libLoad_DiskFile %s",imgfile);
 
 	pregap = 0;
 
-	f = hxc_fopen(imgfile,"rb");
+	f = libflux_fopen(imgfile,"rb");
 	if( f == NULL )
 	{
-		imgldr_ctx->hxcfe->hxc_printf(MSG_ERROR,"Cannot open %s !",imgfile);
-		return HXCFE_ACCESSERROR;
+		imgldr_ctx->ctx->libflux_printf(MSG_ERROR,"Cannot open %s !",imgfile);
+		return LIBFLUX_ACCESSERROR;
 	}
 
-	filesize = hxc_fgetsize(f);
+	filesize = libflux_fgetsize(f);
 
 	memset(fileheader,0,sizeof(fileheader));
 
-	hxc_fread(&fileheader,sizeof(fileheader),f);
+	libflux_fread(&fileheader,sizeof(fileheader),f);
 
 	if(!strncmp(fileheader,"IMD ",4))
 	{
@@ -137,8 +132,8 @@ int IMD_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 
 		if( i >= filesize )
 		{
-			hxc_fclose(f);
-			return HXCFE_BADFILE;
+			libflux_fclose(f);
+			return LIBFLUX_BADFILE;
 		}
 
 		// recuperation de la geometries du disque
@@ -147,7 +142,7 @@ int IMD_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 		do
 		{
 
-			if(hxc_fread(&trackcfg,sizeof(trackcfg),f)>0)
+			if(libflux_fread(&trackcfg,sizeof(trackcfg),f)>0)
 			{
 				if (fseek(f,trackcfg.number_of_sector,SEEK_CUR) != 0) { /* seek error */ }
 				if(trackcfg.physical_head & SEC_CYL_MAP)
@@ -172,7 +167,7 @@ int IMD_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 
 				for(i=0;i<trackcfg.number_of_sector;i++)
 				{
-					hxc_fread(&sectordatarecordcode,1,f);
+					libflux_fread(&sectordatarecordcode,1,f);
 
 					switch(sectordatarecordcode)
 					{
@@ -218,7 +213,7 @@ int IMD_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 		floppydisk->floppySectorPerTrack=-1;
 		floppydisk->floppyiftype=GENERIC_SHUGART_DD_FLOPPYMODE;
 
-		imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"IMD File : %d track, %d side, %d bit/s, %d sectors, mode %d",
+		imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"IMD File : %d track, %d side, %d bit/s, %d sectors, mode %d",
 			floppydisk->floppyNumberOfTrack,
 			floppydisk->floppyNumberOfSide,
 			floppydisk->floppyBitRate,
@@ -227,11 +222,11 @@ int IMD_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 
 		interleave=1;
 		rpm=300;
-		floppydisk->tracks = (HXCFE_CYLINDER**)malloc(sizeof(HXCFE_CYLINDER*)*floppydisk->floppyNumberOfTrack);
+		floppydisk->tracks = (LIBFLUX_CYLINDER**)malloc(sizeof(LIBFLUX_CYLINDER*)*floppydisk->floppyNumberOfTrack);
 		if(!floppydisk->tracks)
 			goto alloc_error;
 
-		memset(floppydisk->tracks,0,sizeof(HXCFE_CYLINDER*)*floppydisk->floppyNumberOfTrack);
+		memset(floppydisk->tracks,0,sizeof(LIBFLUX_CYLINDER*)*floppydisk->floppyNumberOfTrack);
 
 		if (fseek(f,0,SEEK_SET) != 0) { /* seek error */ }
 		// recherche fin entete / comentaire(s).
@@ -243,28 +238,28 @@ int IMD_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 
 		if( i >= filesize )
 		{
-			hxc_fclose(f);
-			return HXCFE_BADFILE;
+			libflux_fclose(f);
+			return LIBFLUX_BADFILE;
 		}
 
 		for(i=0;i<(unsigned int)(floppydisk->floppyNumberOfTrack*floppydisk->floppyNumberOfSide);i++)
 		{
-			hxcfe_imgCallProgressCallback(imgldr_ctx,i,(floppydisk->floppyNumberOfTrack*floppydisk->floppyNumberOfSide) );
+			libflux_imgCallProgressCallback(imgldr_ctx,i,(floppydisk->floppyNumberOfTrack*floppydisk->floppyNumberOfSide) );
 
-			if(hxc_fread(&trackcfg,sizeof(trackcfg),f)>0)
+			if(libflux_fread(&trackcfg,sizeof(trackcfg),f)>0)
 			{
-				sectorconfig = (HXCFE_SECTCFG*)malloc(sizeof(HXCFE_SECTCFG)*trackcfg.number_of_sector);
+				sectorconfig = (LIBFLUX_SECTCFG*)malloc(sizeof(LIBFLUX_SECTCFG)*trackcfg.number_of_sector);
 				if(!sectorconfig)
 					goto alloc_error;
 
-				memset(sectorconfig,0,sizeof(HXCFE_SECTCFG)*trackcfg.number_of_sector);
+				memset(sectorconfig,0,sizeof(LIBFLUX_SECTCFG)*trackcfg.number_of_sector);
 
 				// lecture map sector.
 				sectormap = (unsigned char*) malloc(trackcfg.number_of_sector);
 				if(!sectormap)
 					goto alloc_error;
 
-				hxc_fread(sectormap,trackcfg.number_of_sector,f);
+				libflux_fread(sectormap,trackcfg.number_of_sector,f);
 
 				// init map cylinder
 				sectorcylmap = (unsigned char*) malloc(trackcfg.number_of_sector);
@@ -274,7 +269,7 @@ int IMD_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 				memset(sectorcylmap,trackcfg.physical_cylinder,trackcfg.number_of_sector);
 				if(trackcfg.physical_head & SEC_CYL_MAP)
 				{
-					hxc_fread(sectorcylmap,trackcfg.number_of_sector,f);
+					libflux_fread(sectorcylmap,trackcfg.number_of_sector,f);
 				}
 
 				// init map head
@@ -285,7 +280,7 @@ int IMD_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 				memset(sectorheadmap,trackcfg.physical_head&0xF,trackcfg.number_of_sector);
 				if(trackcfg.physical_head & SEC_HEAD_MAP)
 				{
-					hxc_fread(sectorheadmap,trackcfg.number_of_sector,f);
+					libflux_fread(sectorheadmap,trackcfg.number_of_sector,f);
 				}
 
 				sectorsize = (int32_t)(128<<trackcfg.sector_size_code);
@@ -359,7 +354,7 @@ int IMD_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 				}
 
 
-				imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"Track %d Head %d: %d kbits/s, %d %dbytes sectors, encoding :%d",
+				imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"Track %d Head %d: %d kbits/s, %d %dbytes sectors, encoding :%d",
 					trackcfg.physical_cylinder,
 					trackcfg.physical_head&0xF,
 					bitrate/1000,
@@ -371,7 +366,7 @@ int IMD_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 				for(j=0;j<trackcfg.number_of_sector;j++)
 				{
 
-					hxc_fread(&sectordatarecordcode,1,f);
+					libflux_fread(&sectordatarecordcode,1,f);
 					switch(sectordatarecordcode)
 					{
 						case 0x00:
@@ -381,27 +376,27 @@ int IMD_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 							sectorconfig[j].missingdataaddressmark = 1;
 						break;
 						case 0x01:
-							hxc_fread(&track_data[j*sectorsize],sectorsize,f);
+							libflux_fread(&track_data[j*sectorsize],sectorsize,f);
 							sectorconfig[j].input_data=&track_data[j*sectorsize];
 							sectorconfig[j].use_alternate_datamark=0x00;
 							sectorconfig[j].alternate_datamark=0xFB;
 						break;
 						case 0x02:
-							hxc_fread(&cdata,1,f);
+							libflux_fread(&cdata,1,f);
 							memset(&track_data[j*sectorsize],cdata,sectorsize);
 							sectorconfig[j].input_data=&track_data[j*sectorsize];
 							sectorconfig[j].use_alternate_datamark=0x00;
 							sectorconfig[j].alternate_datamark=0xFB;
 						break;
 						case 0x03:
-							hxc_fread(&track_data[j*sectorsize],sectorsize,f);
+							libflux_fread(&track_data[j*sectorsize],sectorsize,f);
 							sectorconfig[j].input_data=&track_data[j*sectorsize];
 							sectorconfig[j].use_alternate_datamark=1;
 							sectorconfig[j].alternate_datamark=0xF8;
 
 						break;
 						case 0x04:
-							hxc_fread(&cdata,1,f);
+							libflux_fread(&cdata,1,f);
 							memset(&track_data[j*sectorsize],cdata,sectorsize);
 							sectorconfig[j].input_data=&track_data[j*sectorsize];
 							sectorconfig[j].use_alternate_datamark=1;
@@ -409,13 +404,13 @@ int IMD_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 
 						break;
 						case 0x05:
-							hxc_fread(&track_data[j*sectorsize],sectorsize,f);
+							libflux_fread(&track_data[j*sectorsize],sectorsize,f);
 							sectorconfig[j].input_data=&track_data[j*sectorsize];
 							sectorconfig[j].use_alternate_data_crc=0x1;
 							sectorconfig[j].alternate_datamark=0xFB;
 						break;
 						case 0x06:
-							hxc_fread(&cdata,1,f);
+							libflux_fread(&cdata,1,f);
 							memset(&track_data[j*sectorsize],cdata,sectorsize);
 							sectorconfig[j].input_data=&track_data[j*sectorsize];
 							sectorconfig[j].use_alternate_data_crc=0x1;
@@ -423,14 +418,14 @@ int IMD_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 							sectorconfig[j].use_alternate_datamark=0x00;
 						break;
 						case 0x07:
-							hxc_fread(&track_data[j*sectorsize],sectorsize,f);
+							libflux_fread(&track_data[j*sectorsize],sectorsize,f);
 							sectorconfig[j].input_data=&track_data[j*sectorsize];
 							sectorconfig[j].use_alternate_datamark=1;
 							sectorconfig[j].alternate_datamark=0xF8;
 							sectorconfig[j].use_alternate_data_crc=0x1;
 						break;
 						case 0x08:
-							hxc_fread(&cdata,1,f);
+							libflux_fread(&cdata,1,f);
 							memset(&track_data[j*sectorsize],cdata,sectorsize);
 							sectorconfig[j].input_data=&track_data[j*sectorsize];
 							sectorconfig[j].use_alternate_datamark=1;
@@ -468,7 +463,7 @@ int IMD_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 
 				for(j=0;j<trackcfg.number_of_sector;j++)
 				{
-					imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"Sector:%d %x %x %x",sectorconfig[j].sector,sectorconfig[j].alternate_datamark,sectorconfig[j].alternate_sector_size_id,tracktype);
+					imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"Sector:%d %x %x %x",sectorconfig[j].sector,sectorconfig[j].alternate_datamark,sectorconfig[j].alternate_sector_size_id,tracktype);
 				}
 
 				free(track_data);
@@ -502,18 +497,18 @@ int IMD_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 
 		}
 
-		hxc_fclose(f);
+		libflux_fclose(f);
 
-		hxcfe_sanityCheck(imgldr_ctx->hxcfe,floppydisk);
+		libflux_sanityCheck(imgldr_ctx->ctx,floppydisk);
 
-		return HXCFE_NOERROR;
+		return LIBFLUX_NOERROR;
 	}
 
-	hxc_fclose(f);
+	libflux_fclose(f);
 
-	imgldr_ctx->hxcfe->hxc_printf(MSG_ERROR,"bad header");
+	imgldr_ctx->ctx->libflux_printf(MSG_ERROR,"bad header");
 
-	return HXCFE_BADFILE;
+	return LIBFLUX_BADFILE;
 
 alloc_error:
 	free(track_data);
@@ -522,14 +517,14 @@ alloc_error:
 	free(sectormap);
 	free(sectorconfig);
 
-	hxcfe_freeFloppy(imgldr_ctx->hxcfe, floppydisk );
+	libflux_freeFloppy(imgldr_ctx->ctx, floppydisk );
 
-	return HXCFE_INTERNALERROR;
+	return LIBFLUX_INTERNALERROR;
 }
 
-int IMD_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char * filename);
+int IMD_libWrite_DiskFile(LIBFLUX_IMGLDR* imgldr_ctx,LIBFLUX_FLOPPY * floppy,char * filename);
 
-int IMD_libGetPluginInfo(HXCFE_IMGLDR * imgldr_ctx,uint32_t infotype,void * returnvalue)
+int IMD_libGetPluginInfo(LIBFLUX_IMGLDR * imgldr_ctx,uint32_t infotype,void * returnvalue)
 {
 	static const char plug_id[]="IMD_IMG";
 	static const char plug_desc[]="ImageDisk IMD file Loader";

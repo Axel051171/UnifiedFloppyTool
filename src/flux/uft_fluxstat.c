@@ -5,7 +5,6 @@
  * @date 2026-01-06
  *
  * Multi-pass flux analysis for recovering marginal sectors.
- * Based on FluxRipper concepts.
  */
 
 #include <stdlib.h>

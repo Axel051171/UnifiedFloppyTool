@@ -13,7 +13,6 @@
  * - Copy protection analysis
  * - Drive diagnostics
  * 
- * Source: cbm_dos_mw_mr.h (UFT Project)
  * 
  * @copyright UFT Project 2026
  */
@@ -133,7 +132,6 @@ const char* uft_cbm_error_string(uint8_t status);
 
 /*============================================================================
  * CBM DOS High-Level Error Codes (Channel 15 Status)
- * Source: disk2easyflash (Per Olofsson, BSD License)
  *============================================================================*/
 
 /* Non-errors */

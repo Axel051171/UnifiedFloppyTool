@@ -8,14 +8,19 @@
  */
 
 #include <stdio.h>
+#include "uft/core/uft_safe_parse.h"
 #include <stdlib.h>
+#include "uft/core/uft_safe_parse.h"
 #include <string.h>
+#include "uft/core/uft_safe_parse.h"
 #include <ctype.h>
+#include "uft/core/uft_safe_parse.h"
 
 /* Include the header - in real build this would be from include path */
 /* For now, inline the necessary types */
 
 #include "uft_params_universal.h"
+#include "uft/core/uft_safe_parse.h"
 
 /* ═══════════════════════════════════════════════════════════════════════════
  * NAME TABLES
@@ -335,19 +340,19 @@ bool uft_params_parse_cli(uft_params_t* params, int argc, char** argv) {
         /* Track selection */
         else if (strcmp(arg, "--track") == 0 || strcmp(arg, "-t") == 0) {
             if (++i < argc) {
-                params->flux_dump.track = atoi(argv[i]);
+                { int32_t t; if(uft_parse_int32(argv[i],&t,10)) params->flux_dump.track=t; }
             }
         }
         /* Side selection */
         else if (strcmp(arg, "--side") == 0) {
             if (++i < argc) {
-                params->flux_dump.side = atoi(argv[i]);
+                { int32_t t; if(uft_parse_int32(argv[i],&t,10)) params->flux_dump.side=t; }
             }
         }
         /* Revolution selection */
         else if (strcmp(arg, "--rev") == 0 || strcmp(arg, "-r") == 0) {
             if (++i < argc) {
-                params->flux_dump.revolution = atoi(argv[i]);
+                { int32_t t; if(uft_parse_int32(argv[i],&t,10)) params->flux_dump.revolution=t; }
             }
         }
         /* Flux dump */
@@ -359,7 +364,7 @@ bool uft_params_parse_cli(uft_params_t* params, int argc, char** argv) {
         /* Max transitions */
         else if (strcmp(arg, "--max-transitions") == 0) {
             if (++i < argc) {
-                params->flux_dump.max_transitions = atoi(argv[i]);
+                { int32_t t; if(uft_parse_int32(argv[i],&t,10)) params->flux_dump.max_transitions=t; }
             }
         }
         /* Recovery level */
@@ -403,7 +408,7 @@ bool uft_params_parse_cli(uft_params_t* params, int argc, char** argv) {
         /* Max revolutions */
         else if (strcmp(arg, "--max-revs") == 0) {
             if (++i < argc) {
-                params->recovery.max_revs_to_use = atoi(argv[i]);
+                { int32_t t; if(uft_parse_int32(argv[i],&t,10)) params->recovery.max_revs_to_use=t; }
             }
         }
         /* Allow CRC errors */
@@ -610,6 +615,7 @@ void uft_params_print_help(const char* program_name) {
 #ifdef PARAMS_TEST
 
 #include <assert.h>
+#include "uft/core/uft_safe_parse.h"
 
 int main(void) {
     printf("=== Universal Params Tests ===\n");

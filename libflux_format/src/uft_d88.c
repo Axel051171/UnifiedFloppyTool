@@ -231,7 +231,7 @@ static D88SectorInfo* find_sector(D88Ctx *ctx, uint32_t t, uint32_t h, uint32_t 
     return NULL;
 }
 
-int floppy_open(FloppyDevice *dev, const char *path) {
+int uft_floppy_open(FloppyDevice *dev, const char *path) {
     if (!dev || !path || !path[0]) return UFT_EINVAL;
     if (dev->internal_ctx) return UFT_EINVAL;
 
@@ -274,7 +274,7 @@ int floppy_open(FloppyDevice *dev, const char *path) {
     return UFT_OK;
 }
 
-int floppy_close(FloppyDevice *dev) {
+int uft_floppy_close(FloppyDevice *dev) {
     if (!dev || !dev->internal_ctx) return UFT_EINVAL;
     D88Ctx *ctx = (D88Ctx*)dev->internal_ctx;
     if (ctx->fp) fclose(ctx->fp);
@@ -285,7 +285,7 @@ int floppy_close(FloppyDevice *dev) {
     return UFT_OK;
 }
 
-int floppy_read_sector(FloppyDevice *dev, uint32_t t, uint32_t h, uint32_t s, uint8_t *buf) {
+int uft_floppy_read_sector(FloppyDevice *dev, uint32_t t, uint32_t h, uint32_t s, uint8_t *buf) {
     if (!dev || !dev->internal_ctx || !buf) return UFT_EINVAL;
     D88Ctx *ctx = (D88Ctx*)dev->internal_ctx;
 
@@ -304,7 +304,7 @@ int floppy_read_sector(FloppyDevice *dev, uint32_t t, uint32_t h, uint32_t s, ui
     return UFT_OK;
 }
 
-int floppy_write_sector(FloppyDevice *dev, uint32_t t, uint32_t h, uint32_t s, const uint8_t *buf) {
+int uft_floppy_write_sector(FloppyDevice *dev, uint32_t t, uint32_t h, uint32_t s, const uint8_t *buf) {
     if (!dev || !dev->internal_ctx || !buf) return UFT_EINVAL;
     D88Ctx *ctx = (D88Ctx*)dev->internal_ctx;
     if (ctx->read_only) return UFT_ENOTSUP;
@@ -319,7 +319,7 @@ int floppy_write_sector(FloppyDevice *dev, uint32_t t, uint32_t h, uint32_t s, c
     return UFT_OK;
 }
 
-int floppy_analyze_protection(FloppyDevice *dev) {
+int uft_floppy_analyze_protection(FloppyDevice *dev) {
     if (!dev || !dev->internal_ctx) return UFT_EINVAL;
     D88Ctx *ctx = (D88Ctx*)dev->internal_ctx;
 
@@ -361,7 +361,7 @@ int d88_export_raw_img(FloppyDevice *dev, const char *out_img_path) {
             for (uint32_t s = 1; s <= dev->sectors; s++) {
                 memset(buf, 0, dev->sectorSize);
                 D88SectorInfo *si = find_sector(ctx, t, h, s);
-                if (si) (void)floppy_read_sector(dev, t, h, s, buf);
+                if (si) (void)uft_floppy_read_sector(dev, t, h, s, buf);
                 if (fwrite(buf, 1, dev->sectorSize, out) != dev->sectorSize) {
                     free(buf); fclose(out); return UFT_EIO;
                 }

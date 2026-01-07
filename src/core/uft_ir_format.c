@@ -1523,7 +1523,6 @@ char* uft_ir_disk_summary(const uft_ir_disk_t* disk) {
         strbuf_append(&sb, "PLATFORM:   %s\n", disk->metadata.platform);
     }
     if (disk->metadata.source_name[0]) {
-        strbuf_append(&sb, "SOURCE:     %s\n", disk->metadata.source_name);
     }
     
     strbuf_append(&sb, "\n── GEOMETRY ──────────────────────────────────────────────────\n");

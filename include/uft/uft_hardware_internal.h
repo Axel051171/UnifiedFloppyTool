@@ -46,12 +46,10 @@ struct uft_hw_device {
 // ============================================================================
 
 /**
- * @brief Registriert das Greaseweazle Backend
  */
 uft_error_t uft_hw_register_greaseweazle(void);
 
 /**
- * @brief Registriert das OpenCBM/Nibtools Backend
  */
 uft_error_t uft_hw_register_opencbm(void);
 
@@ -61,7 +59,6 @@ uft_error_t uft_hw_register_opencbm(void);
 uft_error_t uft_hw_register_fc5025(void);
 
 /**
- * @brief Registriert das KryoFlux Backend
  */
 uft_error_t uft_hw_register_kryoflux(void);
 

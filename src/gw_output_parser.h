@@ -1,13 +1,12 @@
 /**
- * @file gw_output_parser.h
- * @brief Greaseweazle Output Parser - basierend auf Sovox Disk Master Analyse
+ * @file uft_gw_output_parser.h
  * @version 1.0.0
  * 
  * Extrahierte Regex-Patterns und Error-Keywords aus Sovox Decompilation.
  */
 
-#ifndef GW_OUTPUT_PARSER_H
-#define GW_OUTPUT_PARSER_H
+#ifndef UFT_GW_OUTPUT_PARSER_H
+#define UFT_GW_OUTPUT_PARSER_H
 
 #include <QObject>
 #include <QString>
@@ -27,7 +26,6 @@ struct GWTrackStatus {
 };
 
 /**
- * @brief Parser für Greaseweazle stdout/stderr Output
  * 
  * Basierend auf den extrahierten Patterns aus Sovox Disk Master:
  * - Track Status: ^T(\d{1,2})\.(\d)
@@ -84,4 +82,4 @@ private:
     QStringList m_gwPrefixes;
 };
 
-#endif // GW_OUTPUT_PARSER_H
+#endif // UFT_GW_OUTPUT_PARSER_H

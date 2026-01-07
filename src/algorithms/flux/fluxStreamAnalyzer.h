@@ -1,3 +1,6 @@
+#ifndef UFT_ALGORITHMS_FLUX_FLUXSTREAMANALYZER_H
+#define UFT_ALGORITHMS_FLUX_FLUXSTREAMANALYZER_H
+
 typedef struct stathisto_
 {
 	uint32_t val;
@@ -47,17 +50,17 @@ typedef struct s_match_
 	int32_t offset;
 }s_match;
 
-HXCFE_SIDE* ScanAndDecodeStream(HXCFE* floppycontext,HXCFE_FXSA * fxs, int initialvalue,HXCFE_TRKSTREAM * track,pulses_link * pl,uint32_t start_index, short rpm,int phasecorrection, int flags);
-int cleanupTrack(HXCFE_SIDE *curside);
-HXCFE_FLOPPY * makefloppyfromtrack(HXCFE_SIDE * side);
-void freefloppy(HXCFE_FLOPPY * fp);
+LIBFLUX_SIDE* ScanAndDecodeStream(LIBFLUX_CTX* flux_ctx,LIBFLUX_FXSA * fxs, int initialvalue,LIBFLUX_TRKSTREAM * track,pulses_link * pl,uint32_t start_index, short rpm,int phasecorrection, int flags);
+int cleanupTrack(LIBFLUX_SIDE *curside);
+LIBFLUX_FLOPPY * makefloppyfromtrack(LIBFLUX_SIDE * side);
+void freefloppy(LIBFLUX_FLOPPY * fp);
 void computehistogram(uint32_t *indata,int size,uint32_t *outdata);
-int detectpeaks(HXCFE* floppycontext, pll_stat *pll, uint32_t *histogram);
-void hxcfe_FxStream_JitterFilter(HXCFE_FXSA * fxs,HXCFE_TRKSTREAM * stream);
+int detectpeaks(LIBFLUX_CTX* flux_ctx, pll_stat *pll, uint32_t *histogram);
+void libflux_FxStream_JitterFilter(LIBFLUX_FXSA * fxs,LIBFLUX_TRKSTREAM * stream);
 
 typedef struct streamconv_
 {
-	HXCFE* hxcfe;
+	LIBFLUX_CTX* libflux_ctx;
 
 	uint32_t stream_in_mode;
 	uint32_t bitstream_pos;
@@ -67,8 +70,8 @@ typedef struct streamconv_
 	int      start_revolution;
 	int      end_revolution;
 
-	HXCFE_SIDE * track;
-	HXCFE_FXSA * fxs;
+	LIBFLUX_SIDE * track;
+	LIBFLUX_FXSA * fxs;
 
 	float    stream_period_ps;
 	uint64_t stream_time_offset_ps;
@@ -89,8 +92,10 @@ typedef struct streamconv_
 	int      stream_source;
 }streamconv;
 
-streamconv * initStreamConvert(HXCFE* hxcfe, HXCFE_SIDE * track, float stream_period_ps, float overflowvalue,int start_revolution,float start_offset,int end_revolution,float end_offset);
+streamconv * initStreamConvert(LIBFLUX_CTX* libflux_ctx, LIBFLUX_SIDE * track, float stream_period_ps, float overflowvalue,int start_revolution,float start_offset,int end_revolution,float end_offset);
 uint32_t StreamConvert_getNextPulse(streamconv * sc);
 uint32_t StreamConvert_search_index(streamconv * sc, int index);
 uint32_t StreamConvert_setPosition(streamconv * sc, int revolution, float offset);
 void deinitStreamConvert(streamconv * sc);
+
+#endif /* UFT_ALGORITHMS_FLUX_FLUXSTREAMANALYZER_H */

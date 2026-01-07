@@ -16,6 +16,8 @@
 #define UFT_PRESET_JAPANESE_H
 
 #include <stdint.h>
+#include <stddef.h>
+#include <string.h>
 
 #ifdef __cplusplus
 extern "C" {

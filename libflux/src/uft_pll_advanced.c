@@ -3,7 +3,6 @@
  * 
  * UnifiedFloppyTool - Advanced PLL Implementation
  * 
- * Based on FluxFox PLL concepts (MIT licensed) by Daniel Balsom
  * 
  * Copyright (c) 2025 UFT Project
  * SPDX-License-Identifier: MIT

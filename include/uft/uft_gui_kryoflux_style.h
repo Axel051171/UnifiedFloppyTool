@@ -1,8 +1,6 @@
 /**
- * @file uft_gui_kryoflux_style.h
- * @brief UFT Qt GUI Components - KryoFlux-Inspired Layout
+ * @file uft_gui_uft_kf_style.h
  * 
- * This header defines Qt widget interfaces inspired by the KryoFlux UI
  * layout structure while using Qt/C++ conventions.
  * 
  * Layout concept:
@@ -29,8 +27,8 @@
  * @license MIT
  */
 
-#ifndef UFT_GUI_KRYOFLUX_STYLE_H
-#define UFT_GUI_KRYOFLUX_STYLE_H
+#ifndef UFT_GUI_UFT_UFT_KF_STYLE_H
+#define UFT_GUI_UFT_UFT_KF_STYLE_H
 
 #include <QMainWindow>
 #include <QWidget>
@@ -69,7 +67,6 @@ namespace GUI {
 // ============================================================================
 
 /**
- * @brief Track cell state enumeration (matches KryoFlux concept)
  */
 enum class CellState {
     Unknown,    ///< Not yet read (gray)
@@ -99,7 +96,6 @@ struct TrackInfo {
     double baseUs;
     QString bandsUs;        // "4.0, 6.0, 8.0"
     
-    // Flags (from KryoFlux)
     QString statusFlags;    // "P", "N", "X", etc.
 };
 
@@ -607,7 +603,6 @@ private:
 // ============================================================================
 
 /**
- * @brief UFT Main Window (KryoFlux-style layout)
  */
 class MainWindow : public QMainWindow {
     Q_OBJECT
@@ -656,7 +651,6 @@ private:
 // ============================================================================
 
 /**
- * @brief UI strings for localization (matching KryoFlux keys)
  */
 struct UIStrings {
     // Sections
@@ -720,7 +714,6 @@ struct UIStrings {
     static constexpr const char* PROFILE_TARGET_RPM = "Target RPM";
     static constexpr const char* PROFILE_FLIPPY_MODE = "Flippy Mode";
     
-    // Error flags (KryoFlux style)
     static constexpr const char* FLAG_P = "Generic protection present";
     static constexpr const char* FLAG_N = "Sector not in image";
     static constexpr const char* FLAG_X = "Decoding stopped (protection)";
@@ -737,4 +730,4 @@ struct UIStrings {
 } // namespace GUI
 } // namespace UFT
 
-#endif // UFT_GUI_KRYOFLUX_STYLE_H
+#endif // UFT_GUI_UFT_UFT_KF_STYLE_H

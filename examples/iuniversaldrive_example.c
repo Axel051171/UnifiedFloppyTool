@@ -4,7 +4,6 @@
  * 
  * Shows the POWER of hardware abstraction:
  * - Same code works with ANY device
- * - Greaseweazle → SuperCard Pro copy
  * - Hardware-agnostic X-Copy module
  * - Easy testing with mock devices
  * 
@@ -24,10 +23,7 @@
  * Copy disk from ANY source to ANY dest
  * 
  * This function works with:
- * - Greaseweazle → Greaseweazle
  * - SuperCard Pro → SuperCard Pro
- * - Greaseweazle → SuperCard Pro
- * - KryoFlux → FluxEngine
  * - ANY combination!
  */
 uft_rc_t copy_disk_hardware_agnostic(
@@ -147,7 +143,6 @@ uft_rc_t copy_disk_hardware_agnostic(
 /**
  * X-Copy module - NOW hardware-agnostic!
  * 
- * This replaces the old hardcoded Greaseweazle version.
  */
 typedef struct {
     uft_universal_drive_t* drive;  // ← ONLY interface we need!
@@ -289,7 +284,6 @@ int main(int argc, char** argv) {
     printf("║  IUniversalDrive API - Practical Examples            ║\n");
     printf("╚═══════════════════════════════════════════════════════╝\n\n");
     
-    /* Example 1: Greaseweazle → SuperCard Pro copy */
     if (argc > 1 && strcmp(argv[1], "copy") == 0) {
         copy_disk_hardware_agnostic(
             "greaseweazle", "/dev/ttyACM0",
@@ -334,10 +328,8 @@ int main(int argc, char** argv) {
  * 
  * ✅ Hardware Independence
  *    - copy_disk_hardware_agnostic() works with ANY combination
- *    - Greaseweazle, SCP, KryoFlux, FluxEngine - doesn't matter!
  * 
  * ✅ X-Copy Simplification
- *    - Old: Hardcoded Greaseweazle calls
  *    - New: Single IUniversalDrive interface
  * 
  * ✅ Testability

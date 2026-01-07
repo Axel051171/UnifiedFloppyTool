@@ -1,3 +1,6 @@
+#ifndef UFT_LOADERS_IPF_LOADER_IPF_FORMAT_H
+#define UFT_LOADERS_IPF_LOADER_IPF_FORMAT_H
+
 #pragma pack(1)
 
 #define IPF_ID 0x843265bb
@@ -101,3 +104,4 @@ enum dentype
 };
 
 #pragma pack()
+#endif /* UFT_LOADERS_IPF_LOADER_IPF_FORMAT_H */

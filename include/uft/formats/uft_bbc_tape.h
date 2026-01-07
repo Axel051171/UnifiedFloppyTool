@@ -18,7 +18,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
-#include "uft/uft_compiler.h"
+#include "uft/uft_compiler.h"  /* UFT_PACK_BEGIN, UFT_PACK_END */
 
 #ifdef __cplusplus
 extern "C" {
@@ -138,6 +138,34 @@ typedef struct {
     int      buffer_size;
     int      buffer_pos;
 } uft_bbc_tape_decoder_t;
+
+/*===========================================================================
+ * Tape Block Data
+ *===========================================================================*/
+
+/** Maximum tape block data size */
+#define UFT_BBC_TAPE_MAX_BLOCK_SIZE     65536
+
+/** Tape block types */
+typedef enum {
+    UFT_BBC_BLOCK_FILE_HEADER = 0x00,   /**< File header block */
+    UFT_BBC_BLOCK_DATA        = 0xFF,   /**< Data block */
+    UFT_BBC_BLOCK_EOF         = 0x80    /**< End of file marker */
+} uft_bbc_block_type_t;
+
+/** Decoded tape block */
+typedef struct {
+    uint8_t  type;                      /**< Block type */
+    uint8_t  block_number;              /**< Block number (0-255) */
+    uint16_t data_length;               /**< Actual data length */
+    uint8_t  data[UFT_BBC_TAPE_MAX_BLOCK_SIZE]; /**< Block data */
+    uint16_t crc;                       /**< CRC-16 checksum */
+    bool     crc_valid;                 /**< CRC validation result */
+    char     filename[11];              /**< Filename (for header blocks) */
+    uint32_t load_address;              /**< Load address */
+    uint32_t exec_address;              /**< Execution address */
+    uint32_t file_length;               /**< Total file length */
+} uft_bbc_tape_block_t;
 
 /*===========================================================================
  * UEF Tape Image Format

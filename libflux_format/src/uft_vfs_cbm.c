@@ -2,7 +2,6 @@
  * @file uft_vfs_cbm.c
  * @brief CBM Filesystem Implementation (D64/D71/D81)
  * 
- * Based on FluxEngine cbmfs.cc by David Given
  * Implements Commodore DOS filesystem access
  * 
  * Supports:

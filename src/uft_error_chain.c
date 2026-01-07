@@ -229,8 +229,8 @@ char *uft_error_context_path(uft_error_context_t *ctx, const char *separator) {
     
     path[0] = '\0';
     for (int i = 0; i < ctx->context_depth; i++) {
-        if (i > 0) strcat(path, separator);
-        strcat(path, ctx->context_stack[i]);
+        if (i > 0) strncat(path, separator, path_size - strlen(path) - 1);
+        strncat(path, ctx->context_stack[i], path_size - strlen(path) - 1);
     }
     
     return path;

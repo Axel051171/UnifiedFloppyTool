@@ -174,7 +174,7 @@ static const uft_blkid_magic_t magic_db[] = {
     {
         .type = UFT_BLKID_IMG_HFE,
         .name = "hfe",
-        .description = "HxC Floppy Emulator image",
+        .description = "UFT HFE Format image",
         .offset = 0,
         .magic = (const uint8_t[]){'H','X','C','P','I','C','F','E'},
         .magic_len = 8,

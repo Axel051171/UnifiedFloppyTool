@@ -12,6 +12,7 @@
 #define UFT_PRESET_ATARI_ST_H
 
 #include <stdint.h>
+#include <stddef.h>
 
 #ifdef __cplusplus
 extern "C" {

@@ -2,7 +2,6 @@
  * @file uft_fdi.h
  * @brief FAT Disk Image (FDI) Support for UFT
  * 
- * Based on analysis of FDI.C by Dave Dunfield.
  * 
  * Provides FAT12/FAT16 filesystem support for floppy disk images,
  * including directory operations and file extraction.

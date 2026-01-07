@@ -2,9 +2,7 @@
 #define UFT_KFSTREAM_H
 
 /*
- * UFT (Universal Floppy Tool) - KryoFlux Stream (RAW STREAM) - v2.8.7
  *
- * KryoFlux stream files contain raw flux transition timings.
  * Files are usually named like:
  *   trackNN.raw
  *   trackNN.0.raw / trackNN.1.raw
@@ -14,7 +12,6 @@
  *  - Variable timing resolution
  *
  * This module:
- *  - READ: parses KryoFlux stream records
  *  - FLUX-READY: native
  *  - CONVERT: exports normalized delta stream
  */
@@ -35,7 +32,6 @@ typedef enum uft_kfs_rc {
     UFT_KFS_ERR_NOMEM    = -4
 } uft_kfs_rc_t;
 
-/* KryoFlux stream chunk types */
 typedef enum uft_kfs_chunk_type {
     KFS_CHUNK_FLUX   = 0x01,
     KFS_CHUNK_OOB    = 0x02,
@@ -59,7 +55,6 @@ typedef struct uft_kfs_ctx {
     char* path;
 } uft_kfs_ctx_t;
 
-/* Detect if file looks like KryoFlux stream */
 bool uft_kfs_detect(const uint8_t* buffer, size_t size);
 
 /* Open and parse stream */

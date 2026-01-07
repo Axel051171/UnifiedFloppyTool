@@ -18,6 +18,9 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+/* Forward declaration - actual definition in uft_format_registry.h */
+typedef uint32_t uft_format_id_t;
+
 #ifdef __cplusplus
 extern "C" {
 #endif

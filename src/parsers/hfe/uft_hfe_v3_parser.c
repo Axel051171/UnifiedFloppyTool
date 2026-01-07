@@ -1,6 +1,6 @@
 /**
  * @file uft_hfe_v3_parser.c
- * @brief UFT HFE v3 Parser - HxC Floppy Emulator Format with HDDD A2 Support
+ * @brief UFT HFE v3 Parser - UFT HFE Format Format with HDDD A2 Support
  * @version 3.3.7
  * @date 2026-01-03
  *
@@ -138,8 +138,8 @@ typedef struct {
     uint8_t  number_of_sides;      /* Number of sides (1 or 2) */
     uint8_t  track_encoding;       /* Track encoding type */
     uint16_t bitrate;              /* Bitrate in kbps (for fixed rate) */
-    uint16_t floppy_rpm;           /* Floppy RPM (usually 0 = auto) */
-    uint8_t  floppy_interface_mode;/* Interface mode */
+    uint16_t uft_floppy_rpm;           /* Floppy RPM (usually 0 = auto) */
+    uint8_t  uft_floppy_interface_mode;/* Interface mode */
     uint8_t  reserved1;            /* Reserved (must be 1) */
     uint16_t track_list_offset;    /* Offset to track list (in 512-byte blocks) */
     uint8_t  write_allowed;        /* Write allowed flag */
@@ -594,7 +594,7 @@ int hfe_read_track(hfe_ctx_t* ctx, int track_num, hfe_track_t** track_out) {
     
     track->track_number = track_num;
     track->number_of_sides = ctx->header.number_of_sides;
-    track->rpm = ctx->header.floppy_rpm;
+    track->rpm = ctx->header.uft_floppy_rpm;
     
     /* De-interleave track data (HFE stores sides interleaved in 256-byte blocks) */
     uint32_t side_len = track_size / 2;
@@ -719,7 +719,7 @@ void hfe_get_info(
     if (tracks) *tracks = ctx->header.number_of_tracks;
     if (sides) *sides = ctx->header.number_of_sides;
     if (encoding) *encoding = ctx->header.track_encoding;
-    if (interface_mode) *interface_mode = ctx->header.floppy_interface_mode;
+    if (interface_mode) *interface_mode = ctx->header.uft_floppy_interface_mode;
     if (version) *version = ctx->version;
     if (is_hddd_a2) *is_hddd_a2 = ctx->is_hddd_a2;
 }

@@ -1,6 +1,5 @@
 /**
  * @file uft_drive_provider_greaseweazle.c
- * @brief Greaseweazle Provider for IUniversalDrive
  * 
  * HARDWARE PROVIDER
  * 
@@ -20,10 +19,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* Greaseweazle sample rate: 72MHz */
-#define GW_SAMPLE_RATE_HZ 72000000
+#define UFT_GW_SAMPLE_RATE_HZ 72000000
 
-/* Greaseweazle context */
 typedef struct {
     char device_path[256];
     void* usb_handle;  /* Placeholder for USB communication */
@@ -36,16 +33,15 @@ typedef struct {
     uint64_t flux_transitions_read;
     uint32_t read_operations;
     
-} gw_context_t;
+} uft_gw_context_t;
 
 /* ========================================================================
  * PROVIDER OPERATIONS
  * ======================================================================== */
 
 /**
- * Open Greaseweazle device
  */
-static uft_rc_t gw_open(const char* device_path, void** context) {
+static uft_rc_t uft_gw_open(const char* device_path, void** context) {
     if (!device_path || !context) {
         UFT_RETURN_ERROR(UFT_ERR_INVALID_ARG, "Invalid arguments");
     }
@@ -53,7 +49,7 @@ static uft_rc_t gw_open(const char* device_path, void** context) {
     UFT_LOG_INFO("Opening Greaseweazle device: %s", device_path);
     
     /* Allocate context */
-    gw_context_t* ctx = calloc(1, sizeof(gw_context_t));
+    uft_gw_context_t* ctx = calloc(1, sizeof(uft_gw_context_t));
     if (!ctx) {
         UFT_RETURN_ERROR(UFT_ERR_MEMORY, "Failed to allocate GW context");
     }
@@ -72,14 +68,13 @@ static uft_rc_t gw_open(const char* device_path, void** context) {
 }
 
 /**
- * Close Greaseweazle device
  */
-static void gw_close(void** context) {
+static void uft_gw_close(void** context) {
     if (!context || !*context) {
         return;
     }
     
-    gw_context_t* ctx = (gw_context_t*)*context;
+    uft_gw_context_t* ctx = (uft_gw_context_t*)*context;
     
     UFT_LOG_INFO("Greaseweazle stats: %llu flux read, %u operations",
                  (unsigned long long)ctx->flux_transitions_read,
@@ -94,14 +89,13 @@ static void gw_close(void** context) {
 }
 
 /**
- * Read flux from Greaseweazle
  */
-static uft_rc_t gw_read_flux(void* context, uft_flux_stream_t** flux) {
+static uft_rc_t uft_gw_read_flux(void* context, uft_flux_stream_t** flux) {
     if (!context || !flux) {
         UFT_RETURN_ERROR(UFT_ERR_INVALID_ARG, "Invalid arguments");
     }
     
-    gw_context_t* ctx = (gw_context_t*)context;
+    uft_gw_context_t* ctx = (uft_gw_context_t*)context;
     
     UFT_LOG_DEBUG("Reading flux from Greaseweazle (track %d, head %d)",
                   ctx->current_track, ctx->current_head);
@@ -134,7 +128,7 @@ static uft_rc_t gw_read_flux(void* context, uft_flux_stream_t** flux) {
     uft_rc_t rc = uft_drive_normalize_flux(
         raw_ticks,
         count,
-        GW_SAMPLE_RATE_HZ,
+        UFT_GW_SAMPLE_RATE_HZ,
         &flux_ns,
         &flux_count
     );
@@ -167,12 +161,12 @@ static uft_rc_t gw_read_flux(void* context, uft_flux_stream_t** flux) {
 /**
  * Seek to track
  */
-static uft_rc_t gw_seek(void* context, uint8_t track, uint8_t head) {
+static uft_rc_t uft_gw_seek(void* context, uint8_t track, uint8_t head) {
     if (!context) {
         UFT_RETURN_ERROR(UFT_ERR_INVALID_ARG, "context is NULL");
     }
     
-    gw_context_t* ctx = (gw_context_t*)context;
+    uft_gw_context_t* ctx = (uft_gw_context_t*)context;
     
     UFT_LOG_DEBUG("Greaseweazle seeking to track %d, head %d", track, head);
     
@@ -187,12 +181,12 @@ static uft_rc_t gw_seek(void* context, uint8_t track, uint8_t head) {
 /**
  * Motor control
  */
-static uft_rc_t gw_motor(void* context, bool on) {
+static uft_rc_t uft_gw_motor(void* context, bool on) {
     if (!context) {
         UFT_RETURN_ERROR(UFT_ERR_INVALID_ARG, "context is NULL");
     }
     
-    gw_context_t* ctx = (gw_context_t*)context;
+    uft_gw_context_t* ctx = (uft_gw_context_t*)context;
     
     UFT_LOG_DEBUG("Greaseweazle motor: %s", on ? "ON" : "OFF");
     
@@ -206,7 +200,7 @@ static uft_rc_t gw_motor(void* context, bool on) {
 /**
  * Get capabilities
  */
-static void gw_get_capabilities(
+static void uft_gw_get_capabilities(
     void* context,
     uft_drive_capabilities_t* caps
 ) {
@@ -216,7 +210,6 @@ static void gw_get_capabilities(
     
     memset(caps, 0, sizeof(*caps));
     
-    /* Greaseweazle capabilities */
     caps->can_read_flux = true;
     caps->can_write_flux = true;
     caps->has_index_pulse = true;
@@ -228,7 +221,7 @@ static void gw_get_capabilities(
     caps->max_track = 83;
     caps->heads = 2;
     
-    caps->sample_rate_hz = GW_SAMPLE_RATE_HZ;
+    caps->sample_rate_hz = UFT_GW_SAMPLE_RATE_HZ;
     
     strncpy(caps->hardware_name, "Greaseweazle F7",
             sizeof(caps->hardware_name) - 1);
@@ -240,22 +233,21 @@ static void gw_get_capabilities(
  * PROVIDER REGISTRATION
  * ======================================================================== */
 
-static const uft_drive_ops_t greaseweazle_ops = {
+static const uft_drive_ops_t uft_gw_ops = {
     .name = "greaseweazle",
-    .open = gw_open,
-    .close = gw_close,
-    .read_flux = gw_read_flux,
+    .open = uft_gw_open,
+    .close = uft_gw_close,
+    .read_flux = uft_gw_read_flux,
     .write_flux = NULL,  /* TODO */
-    .seek = gw_seek,
+    .seek = uft_gw_seek,
     .step = NULL,
-    .motor = gw_motor,
+    .motor = uft_gw_motor,
     .erase_track = NULL,
-    .get_capabilities = gw_get_capabilities,
+    .get_capabilities = uft_gw_get_capabilities,
 };
 
 /**
- * Register Greaseweazle provider
  */
 uft_rc_t uft_drive_register_greaseweazle(void) {
-    return uft_drive_register_provider(&greaseweazle_ops);
+    return uft_drive_register_provider(&uft_gw_ops);
 }

@@ -3,12 +3,8 @@
  * @brief UnifiedFloppyTool - Hardware Abstraction Layer
  * 
  * Einheitliche API für verschiedene Floppy-Hardware:
- * - Nibtools/OpenCBM (XUM1541, ZoomFloppy) - C64/1541
  * - FC5025 (Device Side Industries) - 5.25"/8" FM/MFM
- * - Greaseweazle - Flux-Level, alle Formate
- * - FluxEngine - Flux-Level, alle Formate
  * - SuperCard Pro - Flux-Level, High-Resolution
- * - KryoFlux - Flux-Level, Professional
  * - Applesauce - Apple II GCR
  * 
  * ARCHITEKTUR:
@@ -24,7 +20,6 @@
  *   ┌───────┴───────┬───────────────┬────────────────┐
  *   ▼               ▼               ▼                ▼
  * ┌─────────┐  ┌─────────┐   ┌──────────┐   ┌──────────┐
- * │OpenCBM  │  │ FC5025  │   │Greaseweazle  │ KryoFlux │
  * │Backend  │  │ Backend │   │ Backend  │   │ Backend  │
  * └─────────┘  └─────────┘   └──────────┘   └──────────┘
  * 
@@ -555,9 +550,8 @@ uft_error_t uft_hw_manager_enumerate(uft_hw_info_t* devices, size_t max_devices,
 // ============================================================================
 
 /**
- * @brief Nur Nibtools/OpenCBM aktivieren
  */
-void uft_hw_use_nibtools_only(void);
+void uft_hw_use_GCR_tools_only(void);
 
 /**
  * @brief Nur Flux-Hardware aktivieren
@@ -573,10 +567,8 @@ void uft_hw_use_all(void);
  * @brief Nibtools ein/ausschalten
  * 
  * BEISPIEL:
- *   uft_hw_nibtools_enable(false);  // Nibtools AUS
- *   uft_hw_nibtools_enable(true);   // Nibtools AN
  */
-void uft_hw_nibtools_enable(bool enable);
+void uft_hw_GCR_tools_enable(bool enable);
 
 /**
  * @brief Konfiguration speichern

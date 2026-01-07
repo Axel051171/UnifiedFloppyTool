@@ -232,22 +232,20 @@ typedef struct {
 } tool_flag_t;
 
 static const tool_flag_t TOOL_FLAGS[] = {
-    // Greaseweazle
     {UFT_TOOL_GW, "geometry.cylinder_start", "--cyls", "%d:"},
     {UFT_TOOL_GW, "geometry.cylinder_end", "--cyls", ":%d"},
     {UFT_TOOL_GW, "geometry.head_mask", "--heads", "%s"},  // "0", "1", "0:1"
     {UFT_TOOL_GW, "operation.revolutions", "--revs", "%d"},
     {UFT_TOOL_GW, "operation.retries", "--retries", "%d"},
     
-    // FluxEngine
     {UFT_TOOL_FE, "geometry.cylinder_start", "-c", "%d-"},
     {UFT_TOOL_FE, "geometry.cylinder_end", "-c", "-%d"},
     {UFT_TOOL_FE, "geometry.head_mask", "-h", "%s"},
     {UFT_TOOL_FE, "operation.revolutions", "--revolutions", "%d"},
     
     // HxC
-    {UFT_TOOL_HXCFE, "geometry.cylinder_start", "-c", "%d"},
-    {UFT_TOOL_HXCFE, "geometry.heads", "-h", "%d"},
+    {UFT_TOOL_LIBFLUX, "geometry.cylinder_start", "-c", "%d"},
+    {UFT_TOOL_LIBFLUX, "geometry.heads", "-h", "%d"},
     
     // Sentinel
     {0, NULL, NULL, NULL}
@@ -274,7 +272,7 @@ uft_canonical_params_t uft_params_init(void) {
     params.is_valid = false;
     params.is_dirty = true;
     params.error_count = 0;
-    strcpy(params.source, "default");  /* REVIEW: Consider bounds check */
+    strncpy(params.source, "default", sizeof(params.source) - 1); params.source[sizeof(params.source) - 1] = '\0';
     
     // Compute derived values
     uft_params_recompute(&params);
@@ -649,7 +647,6 @@ int uft_params_to_cli(const uft_canonical_params_t *params,
     
     switch (tool) {
         case UFT_TOOL_GW: {
-            // Greaseweazle
             int cyl_start = params->geometry.cylinder_start;
             int cyl_end = params->geometry.cylinder_end;
             if (cyl_end < 0) cyl_end = params->geometry.cylinders - 1;
@@ -680,7 +677,6 @@ int uft_params_to_cli(const uft_canonical_params_t *params,
         }
         
         case UFT_TOOL_FE: {
-            // FluxEngine
             int cyl_start = params->geometry.cylinder_start;
             int cyl_end = params->geometry.cylinder_end;
             if (cyl_end < 0) cyl_end = params->geometry.cylinders - 1;

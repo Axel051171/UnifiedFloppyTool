@@ -4,7 +4,6 @@
  * 
  * Verbindet alle externen Algorithmen mit dem UFT-Core:
  * - HxC FluxStreamAnalyzer
- * - SAMdisk BitstreamDecoder
  * - Track Extractors (27 Plattformen)
  * - VFS Filesystems (11)
  * - Format Loaders (118)

@@ -7,7 +7,7 @@
  * - .ipf (Interchangeable Preservation Format)
  * - .scp (SuperCard Pro)
  * - .img (Raw Sector Image)
- * - .hfe (HxC Floppy Emulator)
+ * - .hfe (UFT HFE Format)
  * 
  * Zusätzliche UFT-Formate:
  * - .raw (Raw Flux)
@@ -116,7 +116,7 @@ static const DiskFormatDef DISK_FORMATS[] = {
     // Flux Formate
     {".scp", "SuperCard Pro", "Universal", true, 0, -1, -1, -1, -1},
     {".ipf", "SPS Interchangeable", "Universal", true, 0, -1, -1, -1, -1},
-    {".hfe", "HxC Floppy Emulator", "Universal", true, 0, -1, -1, -1, -1},
+    {".hfe", "UFT HFE Format", "Universal", true, 0, -1, -1, -1, -1},
     {".raw", "Raw Flux Dump", "Universal", true, 0, -1, -1, -1, -1},
     
     // PC

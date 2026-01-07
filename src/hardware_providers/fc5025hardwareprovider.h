@@ -17,8 +17,8 @@
 
 // Forward declaration of C handle
 extern "C" {
-    struct fc5025_handle;
-    typedef struct fc5025_handle fc5025_handle_t;
+    struct uft_fc5025_handle;
+    typedef struct uft_fc5025_handle uft_fc5025_handle_t;
 }
 
 /**
@@ -123,7 +123,7 @@ signals:
     void statusMessage(const QString &message);
 
 private:
-    fc5025_handle_t *m_handle;
+    uft_fc5025_handle_t *m_handle;
     bool m_connected;
     uint8_t m_currentCylinder;
     uint8_t m_currentHead;

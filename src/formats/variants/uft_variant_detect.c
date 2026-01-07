@@ -178,7 +178,7 @@ static int detect_g64(const uint8_t* data, size_t size, uft_variant_info_t* info
         info->confidence = 70;
     }
     
-    // Check for nibtools signature
+    // Check for GCR tools signature
     if (size > 0x300 && memcmp(data + 0x2F8, "NIBTOOLS", 8) == 0) {
         info->variant_flags |= VAR_G64_NIBTOOLS;
         strncat(info->variant_name, "+Nibtools", 63 - strlen(info->variant_name));
@@ -545,7 +545,7 @@ static int detect_hfe(const uint8_t* data, size_t size, uft_variant_info_t* info
         info->confidence = 100;
         
         snprintf(info->full_description, sizeof(info->full_description),
-                 "HxC Floppy Emulator v3 Stream Format (%zu bytes)", size);
+                 "UFT HFE Format v3 Stream Format (%zu bytes)", size);
         
         snprintf(info->detection.evidence_summary, sizeof(info->detection.evidence_summary),
                  "HXCHFE3 signature detected - STREAM FORMAT requires special parsing");
@@ -591,7 +591,7 @@ static int detect_hfe(const uint8_t* data, size_t size, uft_variant_info_t* info
     info->confidence = 100;
     
     snprintf(info->full_description, sizeof(info->full_description),
-             "HxC Floppy Emulator %s (%d tracks, %d sides, %d kbps)",
+             "UFT HFE Format %s (%d tracks, %d sides, %d kbps)",
              info->variant_name, num_tracks, num_sides, bitrate);
     
     return 0;

@@ -42,7 +42,6 @@ protected:
 extern USB& getUsb();
 
 extern USB* createFluxengineUsb(libusbp::device& device);
-extern USB* createGreaseweazleUsb(
     const std::string& serialPort, const GreaseweazleProto& config);
 extern USB* createApplesauceUsb(
     const std::string& serialPort, const ApplesauceProto& config);

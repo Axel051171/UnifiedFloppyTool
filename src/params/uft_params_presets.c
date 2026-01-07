@@ -567,7 +567,7 @@ static const uft_preset_def_t PRESET_DATABASE[] = {
     {
         .name = "flux_hfe",
         .display_name = "HxC HFE",
-        .description = "HxC Floppy Emulator format",
+        .description = "UFT HFE Format format",
         .category = "Flux",
         .format = UFT_FORMAT_HFE, .encoding = UFT_ENC_AUTO, .density = UFT_DENSITY_AUTO,
         .cylinders = 84, .heads = 2, .sectors_per_track = 0, .sector_size = 0, .sector_base = 0,
@@ -589,7 +589,7 @@ static const uft_preset_def_t PRESET_DATABASE[] = {
         .display_name = "Kryoflux Stream",
         .description = "Kryoflux raw stream files",
         .category = "Flux",
-        .format = UFT_FORMAT_KF_STREAM, .encoding = UFT_ENC_AUTO, .density = UFT_DENSITY_AUTO,
+        .format = UFT_FORMAT_UFT_KF_STREAM, .encoding = UFT_ENC_AUTO, .density = UFT_DENSITY_AUTO,
         .cylinders = 84, .heads = 2, .sectors_per_track = 0, .sector_size = 0, .sector_base = 0,
         .datarate_bps = 0, .rpm = 300.0, .total_size = 0,
         .flags = PRESET_FLAG_FLUX

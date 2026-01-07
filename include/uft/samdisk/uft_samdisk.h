@@ -1,12 +1,10 @@
 /**
  * @file uft_samdisk.h
- * @brief SAMdisk Integration Header
  * 
- * EXT4-015: SAMdisk format support
  */
 
-#ifndef UFT_SAMDISK_H
-#define UFT_SAMDISK_H
+#ifndef UFT_UFT_SAM_H
+#define UFT_UFT_SAM_H
 
 #include <stdint.h>
 #include <stddef.h>
@@ -21,11 +19,11 @@ extern "C" {
  *===========================================================================*/
 
 typedef enum {
-    UFT_SAMDISK_UNKNOWN,
-    UFT_SAMDISK_SAD,        /* SAM Coupé SAD format */
-    UFT_SAMDISK_DSK,        /* Standard DSK */
-    UFT_SAMDISK_EDSK        /* Extended DSK */
-} uft_samdisk_format_t;
+    UFT_UFT_SAM_UNKNOWN,
+    UFT_UFT_SAM_SAD,        /* SAM Coupé SAD format */
+    UFT_UFT_SAM_DSK,        /* Standard DSK */
+    UFT_UFT_SAM_EDSK        /* Extended DSK */
+} uft_uft_sam_format_t;
 
 typedef enum {
     UFT_SYSTEM_UNKNOWN,
@@ -35,7 +33,7 @@ typedef enum {
     UFT_SYSTEM_PCW,
     UFT_SYSTEM_MSX,
     UFT_SYSTEM_ENTERPRISE
-} uft_samdisk_system_t;
+} uft_uft_sam_system_t;
 
 /*===========================================================================
  * SAD Context
@@ -202,9 +200,9 @@ int uft_sad_to_edsk(const uft_sad_ctx_t *sad, uft_edsk_writer_t *writer);
  * Detection Functions
  *===========================================================================*/
 
-uft_samdisk_format_t uft_samdisk_detect(const uint8_t *data, size_t size);
-uft_samdisk_system_t uft_samdisk_detect_system(const uint8_t *image, size_t size);
-const char *uft_samdisk_system_name(uft_samdisk_system_t system);
+uft_uft_sam_format_t uft_uft_sam_detect(const uint8_t *data, size_t size);
+uft_uft_sam_system_t uft_uft_sam_detect_system(const uint8_t *image, size_t size);
+const char *uft_uft_sam_system_name(uft_uft_sam_system_t system);
 
 /*===========================================================================
  * System-Specific Functions
@@ -233,11 +231,11 @@ int uft_ep_read_directory(const uint8_t *image, size_t size,
                           uft_ep_file_t *files, size_t max_files, size_t *count);
 
 /* Report */
-int uft_samdisk_system_report(const uint8_t *image, size_t size,
+int uft_uft_sam_system_report(const uint8_t *image, size_t size,
                               char *buffer, size_t buf_size);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* UFT_SAMDISK_H */
+#endif /* UFT_UFT_SAM_H */

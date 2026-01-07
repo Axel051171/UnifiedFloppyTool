@@ -106,7 +106,7 @@ static int encode_ibm_mfm(
     memset(output, 0, sizeof(*output));
     
     // Build HxC parameters
-    mfm_ibm_track_params_t hxc_params = {
+    mfm_ibm_track_params_t libflux_params = {
         .cyl = 0,  // Will be set per track
         .head = 0,
         .spt = params->params.ibm.sectors_per_track,
@@ -119,7 +119,7 @@ static int encode_ibm_mfm(
     uint8_t *bits = NULL;
     size_t bit_count = 0;
     
-    int rc = mfm_ibm_build_track_bits(li, &hxc_params, &bits, &bit_count);
+    int rc = mfm_ibm_build_track_bits(li, &libflux_params, &bits, &bit_count);
     if (rc < 0) {
         g_stats.errors++;
         return rc;
@@ -154,7 +154,7 @@ static int encode_amiga_mfm(
     memset(output, 0, sizeof(*output));
     
     // Build parameters - similar to IBM but with Amiga specifics
-    mfm_ibm_track_params_t hxc_params = {
+    mfm_ibm_track_params_t libflux_params = {
         .cyl = 0,
         .head = 0,
         .spt = params->params.amiga.sectors_per_track,
@@ -167,7 +167,7 @@ static int encode_amiga_mfm(
     uint8_t *bits = NULL;
     size_t bit_count = 0;
     
-    int rc = mfm_ibm_build_track_bits(li, &hxc_params, &bits, &bit_count);
+    int rc = mfm_ibm_build_track_bits(li, &libflux_params, &bits, &bit_count);
     if (rc < 0) {
         g_stats.errors++;
         return rc;

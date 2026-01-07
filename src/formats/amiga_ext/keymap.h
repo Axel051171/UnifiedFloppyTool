@@ -1,3 +1,6 @@
+#ifndef UFT_FORMATS_AMIGA_EXT_KEYMAP_H
+#define UFT_FORMATS_AMIGA_EXT_KEYMAP_H
+
 
 keyboard_funct_mapper keysmap[]=
 {
@@ -81,3 +84,5 @@ keyboard_funct_mapper char_keysmap[]=
 
 	{0xFF,0x00},
 };
+
+#endif /* UFT_FORMATS_AMIGA_EXT_KEYMAP_H */

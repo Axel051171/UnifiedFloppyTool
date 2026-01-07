@@ -8,9 +8,7 @@
  * - PC: Various custom schemes
  * 
  * Sources:
- * - nibtools prot.c (C64 protections)
  * - UFT GUI parameter_registry.json (Amiga protections)
- * - disk-utilities (Amiga decoders)
  * 
  * @version 1.0.0
  */

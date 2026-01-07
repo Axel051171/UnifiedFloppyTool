@@ -18,7 +18,7 @@
  * - Unified uft_rc_t error codes
  * - Standard _create()/_destroy() lifecycle
  * - Flux metadata integration
- * - a8rawconv compatible sector access
+ * - Atari compatible sector access
  * 
  * @version 2.10.0
  * @date 2024-12-26
@@ -183,7 +183,7 @@ uft_rc_t uft_d88_detect(const uint8_t* buffer, size_t size, uint32_t* header_siz
 uft_rc_t uft_d88_open(uft_d88_ctx_t* ctx, const char* path, bool read_only);
 
 /**
- * @brief Read sector by CHS (a8rawconv compatible)
+ * @brief Read sector by CHS (Atari compatible)
  * 
  * @param[in] ctx D88 context
  * @param track Track number (0-based)

@@ -26,7 +26,7 @@ static int infer_geom(uint64_t size, uint32_t *tracks, uint32_t *heads, uint32_t
     return -1;
 }
 
-int floppy_open(FloppyDevice *dev, const char *path){
+int uft_floppy_open(FloppyDevice *dev, const char *path){
     if(!dev||!path) return UFT_EINVAL;
     AdfCtx *ctx = calloc(1,sizeof(AdfCtx));
     if(!ctx) return UFT_EIO;
@@ -56,7 +56,7 @@ int floppy_open(FloppyDevice *dev, const char *path){
     return UFT_OK;
 }
 
-int floppy_close(FloppyDevice *dev){
+int uft_floppy_close(FloppyDevice *dev){
     if(!dev||!dev->internal_ctx) return UFT_EINVAL;
     AdfCtx *ctx=dev->internal_ctx;
     if(ctx->fp) fclose(ctx->fp);
@@ -65,7 +65,7 @@ int floppy_close(FloppyDevice *dev){
     return UFT_OK;
 }
 
-int floppy_read_sector(FloppyDevice *dev,uint32_t t,uint32_t h,uint32_t s,uint8_t *buf){
+int uft_floppy_read_sector(FloppyDevice *dev,uint32_t t,uint32_t h,uint32_t s,uint8_t *buf){
     if(!dev||!dev->internal_ctx||!buf) return UFT_EINVAL;
     AdfCtx *ctx=dev->internal_ctx;
     if(t>=ctx->tracks||h>=ctx->heads||s==0||s>ctx->sectors) return UFT_EBOUNDS;
@@ -76,7 +76,7 @@ int floppy_read_sector(FloppyDevice *dev,uint32_t t,uint32_t h,uint32_t s,uint8_
     return UFT_OK;
 }
 
-int floppy_write_sector(FloppyDevice *dev,uint32_t t,uint32_t h,uint32_t s,const uint8_t *buf){
+int uft_floppy_write_sector(FloppyDevice *dev,uint32_t t,uint32_t h,uint32_t s,const uint8_t *buf){
     if(!dev||!dev->internal_ctx||!buf) return UFT_EINVAL;
     AdfCtx *ctx=dev->internal_ctx;
     if(ctx->read_only) return UFT_ENOTSUP;
@@ -89,7 +89,7 @@ int floppy_write_sector(FloppyDevice *dev,uint32_t t,uint32_t h,uint32_t s,const
     return UFT_OK;
 }
 
-int floppy_analyze_protection(FloppyDevice *dev){
+int uft_floppy_analyze_protection(FloppyDevice *dev){
     if(!dev||!dev->internal_ctx) return UFT_EINVAL;
     log_msg(dev,"Analyzer(ADF): working format only. Amiga copy protections are not preserved.");
     log_msg(dev,"Analyzer(ADF): Use IPF or flux (SCP/GWF) for protected disks.");

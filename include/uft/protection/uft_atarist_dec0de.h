@@ -27,6 +27,12 @@
 #define UFT_ATARIST_DEC0DE_H
 
 #include <stdint.h>
+#ifdef _WIN32
+#include <BaseTsd.h>
+typedef SSIZE_T ssize_t;
+#else
+#include <sys/types.h>
+#endif
 #include <stdbool.h>
 #include <stddef.h>
 #include <string.h>

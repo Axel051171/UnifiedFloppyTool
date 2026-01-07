@@ -5,7 +5,6 @@
  *
  * Sources:
  * - CRC-16-CCITT: EasySplit by Thomas Giesel (zlib license)
- * - CRC-32: nibtools by Pete Rittwage (PUBLIC DOMAIN portion)
  *
  * Build:
  *   cc -std=c11 -O2 -Wall -Wextra -pedantic -c uft_crc.c

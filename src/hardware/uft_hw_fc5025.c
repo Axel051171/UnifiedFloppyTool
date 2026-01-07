@@ -33,38 +33,38 @@
 // FC5025 USB Constants
 // ============================================================================
 
-#define FC5025_VID          0x16C0  // Vendor ID
-#define FC5025_PID          0x06D6  // Product ID
+#define UFT_FC5025_VID          0x16C0  // Vendor ID
+#define UFT_FC5025_PID          0x06D6  // Product ID
 
 // USB Endpoints
-#define FC5025_EP_OUT       0x01
-#define FC5025_EP_IN        0x81
+#define UFT_FC5025_EP_OUT       0x01
+#define UFT_FC5025_EP_IN        0x81
 
 // Kommandos
-#define FC5025_CMD_FLAGS            0x01
-#define FC5025_CMD_SEEK             0x02
-#define FC5025_CMD_MOTOR            0x03
-#define FC5025_CMD_DENSITY          0x04
-#define FC5025_CMD_SIDE             0x05
-#define FC5025_CMD_READ_ID          0x10
-#define FC5025_CMD_READ_SECTOR      0x11
-#define FC5025_CMD_READ_TRACK       0x12
-#define FC5025_CMD_WRITE_SECTOR     0x20
-#define FC5025_CMD_WRITE_TRACK      0x21
-#define FC5025_CMD_FORMAT_TRACK     0x30
+#define UFT_FC5025_CMD_FLAGS            0x01
+#define UFT_FC5025_CMD_SEEK             0x02
+#define UFT_FC5025_CMD_MOTOR            0x03
+#define UFT_FC5025_CMD_DENSITY          0x04
+#define UFT_FC5025_CMD_SIDE             0x05
+#define UFT_FC5025_CMD_READ_ID          0x10
+#define UFT_FC5025_CMD_READ_SECTOR      0x11
+#define UFT_FC5025_CMD_READ_TRACK       0x12
+#define UFT_FC5025_CMD_WRITE_SECTOR     0x20
+#define UFT_FC5025_CMD_WRITE_TRACK      0x21
+#define UFT_FC5025_CMD_FORMAT_TRACK     0x30
 
 // Status-Flags
-#define FC5025_STATUS_INDEX         0x01
-#define FC5025_STATUS_TRACK0        0x02
-#define FC5025_STATUS_WPROT         0x04
-#define FC5025_STATUS_READY         0x08
-#define FC5025_STATUS_DSKIN         0x10
+#define UFT_FC5025_STATUS_INDEX         0x01
+#define UFT_FC5025_STATUS_TRACK0        0x02
+#define UFT_FC5025_STATUS_WPROT         0x04
+#define UFT_FC5025_STATUS_READY         0x08
+#define UFT_FC5025_STATUS_DSKIN         0x10
 
 // Density
-#define FC5025_DENSITY_FM_SD        0x00    // FM Single Density
-#define FC5025_DENSITY_FM_DD        0x01    // FM Double Density (selten)
-#define FC5025_DENSITY_MFM_DD       0x02    // MFM Double Density
-#define FC5025_DENSITY_MFM_HD       0x03    // MFM High Density
+#define UFT_FC5025_DENSITY_FM_SD        0x00    // FM Single Density
+#define UFT_FC5025_DENSITY_FM_DD        0x01    // FM Double Density (selten)
+#define UFT_FC5025_DENSITY_MFM_DD       0x02    // MFM Double Density
+#define UFT_FC5025_DENSITY_MFM_HD       0x03    // MFM High Density
 
 // ============================================================================
 // Device State
@@ -81,7 +81,7 @@ typedef struct {
     bool        motor_on;
     bool        drive_ready;
     
-} fc5025_state_t;
+} uft_fc5025_state_t;
 
 // ============================================================================
 // USB Communication
@@ -89,13 +89,13 @@ typedef struct {
 
 #ifdef UFT_OS_LINUX
 
-static uft_error_t fc5025_usb_transfer(fc5025_state_t* fc,
+static uft_error_t uft_fc5025_usb_transfer(uft_fc5025_state_t* fc,
                                         const uint8_t* cmd, size_t cmd_len,
                                         uint8_t* response, size_t* resp_len) {
     int actual;
     
     // Kommando senden
-    int ret = libusb_bulk_transfer(fc->usb_handle, FC5025_EP_OUT,
+    int ret = libusb_bulk_transfer(fc->usb_handle, UFT_FC5025_EP_OUT,
                                    (uint8_t*)cmd, (int)cmd_len,
                                    &actual, 1000);
     if (ret < 0) {
@@ -104,7 +104,7 @@ static uft_error_t fc5025_usb_transfer(fc5025_state_t* fc,
     
     // Antwort empfangen
     if (response && resp_len && *resp_len > 0) {
-        ret = libusb_bulk_transfer(fc->usb_handle, FC5025_EP_IN,
+        ret = libusb_bulk_transfer(fc->usb_handle, UFT_FC5025_EP_IN,
                                    response, (int)*resp_len,
                                    &actual, 2000);
         if (ret < 0) {
@@ -122,7 +122,7 @@ static uft_error_t fc5025_usb_transfer(fc5025_state_t* fc,
 // Backend Implementation
 // ============================================================================
 
-static uft_error_t fc5025_init(void) {
+static uft_error_t uft_fc5025_init(void) {
 #ifdef UFT_OS_LINUX
     int ret = libusb_init(NULL);
     return (ret == 0) ? UFT_OK : UFT_ERROR_IO;
@@ -131,13 +131,13 @@ static uft_error_t fc5025_init(void) {
 #endif
 }
 
-static void fc5025_shutdown(void) {
+static void uft_fc5025_shutdown(void) {
 #ifdef UFT_OS_LINUX
     libusb_exit(NULL);
 #endif
 }
 
-static uft_error_t fc5025_enumerate(uft_hw_info_t* devices, size_t max_devices,
+static uft_error_t uft_fc5025_enumerate(uft_hw_info_t* devices, size_t max_devices,
                                     size_t* found) {
     *found = 0;
     
@@ -156,7 +156,7 @@ static uft_error_t fc5025_enumerate(uft_hw_info_t* devices, size_t max_devices,
             continue;
         }
         
-        if (desc.idVendor == FC5025_VID && desc.idProduct == FC5025_PID) {
+        if (desc.idVendor == UFT_FC5025_VID && desc.idProduct == UFT_FC5025_PID) {
             uft_hw_info_t* info = &devices[*found];
             memset(info, 0, sizeof(*info));
             
@@ -187,14 +187,14 @@ static uft_error_t fc5025_enumerate(uft_hw_info_t* devices, size_t max_devices,
     return UFT_OK;
 }
 
-static uft_error_t fc5025_open(const uft_hw_info_t* info, uft_hw_device_t** device) {
+static uft_error_t uft_fc5025_open(const uft_hw_info_t* info, uft_hw_device_t** device) {
 #ifdef UFT_OS_LINUX
-    fc5025_state_t* fc = calloc(1, sizeof(fc5025_state_t));
+    uft_fc5025_state_t* fc = calloc(1, sizeof(uft_fc5025_state_t));
     if (!fc) return UFT_ERROR_NO_MEMORY;
     
     fc->usb_handle = libusb_open_device_with_vid_pid(NULL, 
-                                                      FC5025_VID, 
-                                                      FC5025_PID);
+                                                      UFT_FC5025_VID, 
+                                                      UFT_FC5025_PID);
     if (!fc->usb_handle) {
         free(fc);
         return UFT_ERROR_FILE_OPEN;
@@ -207,7 +207,7 @@ static uft_error_t fc5025_open(const uft_hw_info_t* info, uft_hw_device_t** devi
         return UFT_ERROR_IO;
     }
     
-    fc->current_density = FC5025_DENSITY_MFM_DD;
+    fc->current_density = UFT_FC5025_DENSITY_MFM_DD;
     
     (*device)->handle = fc;
     return UFT_OK;
@@ -217,10 +217,10 @@ static uft_error_t fc5025_open(const uft_hw_info_t* info, uft_hw_device_t** devi
 #endif
 }
 
-static void fc5025_close(uft_hw_device_t* device) {
+static void uft_fc5025_close(uft_hw_device_t* device) {
     if (!device || !device->handle) return;
     
-    fc5025_state_t* fc = device->handle;
+    uft_fc5025_state_t* fc = device->handle;
     
 #ifdef UFT_OS_LINUX
     if (fc->usb_handle) {
@@ -233,22 +233,22 @@ static void fc5025_close(uft_hw_device_t* device) {
     device->handle = NULL;
 }
 
-static uft_error_t fc5025_get_status(uft_hw_device_t* device, 
+static uft_error_t uft_fc5025_get_status(uft_hw_device_t* device, 
                                      uft_drive_status_t* status) {
     if (!device || !device->handle || !status) {
         return UFT_ERROR_NULL_POINTER;
     }
     
-    fc5025_state_t* fc = device->handle;
+    uft_fc5025_state_t* fc = device->handle;
     
     memset(status, 0, sizeof(*status));
     
 #ifdef UFT_OS_LINUX
-    uint8_t cmd[1] = {FC5025_CMD_FLAGS};
+    uint8_t cmd[1] = {UFT_FC5025_CMD_FLAGS};
     uint8_t response[2];
     size_t resp_len = sizeof(response);
     
-    uft_error_t err = fc5025_usb_transfer(fc, cmd, sizeof(cmd), 
+    uft_error_t err = uft_fc5025_usb_transfer(fc, cmd, sizeof(cmd), 
                                           response, &resp_len);
     if (UFT_FAILED(err)) {
         return err;
@@ -257,9 +257,9 @@ static uft_error_t fc5025_get_status(uft_hw_device_t* device,
     if (resp_len >= 1) {
         uint8_t flags = response[0];
         status->connected = true;
-        status->disk_present = (flags & FC5025_STATUS_DSKIN) != 0;
-        status->write_protected = (flags & FC5025_STATUS_WPROT) != 0;
-        status->ready = (flags & FC5025_STATUS_READY) != 0;
+        status->disk_present = (flags & UFT_FC5025_STATUS_DSKIN) != 0;
+        status->write_protected = (flags & UFT_FC5025_STATUS_WPROT) != 0;
+        status->ready = (flags & UFT_FC5025_STATUS_READY) != 0;
     }
 #endif
     
@@ -270,14 +270,14 @@ static uft_error_t fc5025_get_status(uft_hw_device_t* device,
     return UFT_OK;
 }
 
-static uft_error_t fc5025_motor(uft_hw_device_t* device, bool on) {
+static uft_error_t uft_fc5025_motor(uft_hw_device_t* device, bool on) {
     if (!device || !device->handle) return UFT_ERROR_NULL_POINTER;
     
-    fc5025_state_t* fc = device->handle;
+    uft_fc5025_state_t* fc = device->handle;
     
 #ifdef UFT_OS_LINUX
-    uint8_t cmd[2] = {FC5025_CMD_MOTOR, on ? 1 : 0};
-    uft_error_t err = fc5025_usb_transfer(fc, cmd, sizeof(cmd), NULL, NULL);
+    uint8_t cmd[2] = {UFT_FC5025_CMD_MOTOR, on ? 1 : 0};
+    uft_error_t err = uft_fc5025_usb_transfer(fc, cmd, sizeof(cmd), NULL, NULL);
     if (UFT_FAILED(err)) return err;
 #endif
     
@@ -285,14 +285,14 @@ static uft_error_t fc5025_motor(uft_hw_device_t* device, bool on) {
     return UFT_OK;
 }
 
-static uft_error_t fc5025_seek(uft_hw_device_t* device, uint8_t track) {
+static uft_error_t uft_fc5025_seek(uft_hw_device_t* device, uint8_t track) {
     if (!device || !device->handle) return UFT_ERROR_NULL_POINTER;
     
-    fc5025_state_t* fc = device->handle;
+    uft_fc5025_state_t* fc = device->handle;
     
 #ifdef UFT_OS_LINUX
-    uint8_t cmd[2] = {FC5025_CMD_SEEK, track};
-    uft_error_t err = fc5025_usb_transfer(fc, cmd, sizeof(cmd), NULL, NULL);
+    uint8_t cmd[2] = {UFT_FC5025_CMD_SEEK, track};
+    uft_error_t err = uft_fc5025_usb_transfer(fc, cmd, sizeof(cmd), NULL, NULL);
     if (UFT_FAILED(err)) return err;
 #endif
     
@@ -300,14 +300,14 @@ static uft_error_t fc5025_seek(uft_hw_device_t* device, uint8_t track) {
     return UFT_OK;
 }
 
-static uft_error_t fc5025_select_head(uft_hw_device_t* device, uint8_t head) {
+static uft_error_t uft_fc5025_select_head(uft_hw_device_t* device, uint8_t head) {
     if (!device || !device->handle) return UFT_ERROR_NULL_POINTER;
     
-    fc5025_state_t* fc = device->handle;
+    uft_fc5025_state_t* fc = device->handle;
     
 #ifdef UFT_OS_LINUX
-    uint8_t cmd[2] = {FC5025_CMD_SIDE, head};
-    uft_error_t err = fc5025_usb_transfer(fc, cmd, sizeof(cmd), NULL, NULL);
+    uint8_t cmd[2] = {UFT_FC5025_CMD_SIDE, head};
+    uft_error_t err = uft_fc5025_usb_transfer(fc, cmd, sizeof(cmd), NULL, NULL);
     if (UFT_FAILED(err)) return err;
 #endif
     
@@ -315,15 +315,15 @@ static uft_error_t fc5025_select_head(uft_hw_device_t* device, uint8_t head) {
     return UFT_OK;
 }
 
-static uft_error_t fc5025_select_density(uft_hw_device_t* device, bool high_density) {
+static uft_error_t uft_fc5025_select_density(uft_hw_device_t* device, bool high_density) {
     if (!device || !device->handle) return UFT_ERROR_NULL_POINTER;
     
-    fc5025_state_t* fc = device->handle;
+    uft_fc5025_state_t* fc = device->handle;
     
 #ifdef UFT_OS_LINUX
-    uint8_t density = high_density ? FC5025_DENSITY_MFM_HD : FC5025_DENSITY_MFM_DD;
-    uint8_t cmd[2] = {FC5025_CMD_DENSITY, density};
-    uft_error_t err = fc5025_usb_transfer(fc, cmd, sizeof(cmd), NULL, NULL);
+    uint8_t density = high_density ? UFT_FC5025_DENSITY_MFM_HD : UFT_FC5025_DENSITY_MFM_DD;
+    uint8_t cmd[2] = {UFT_FC5025_CMD_DENSITY, density};
+    uft_error_t err = uft_fc5025_usb_transfer(fc, cmd, sizeof(cmd), NULL, NULL);
     if (UFT_FAILED(err)) return err;
     fc->current_density = density;
 #else
@@ -333,7 +333,7 @@ static uft_error_t fc5025_select_density(uft_hw_device_t* device, bool high_dens
     return UFT_OK;
 }
 
-static uft_error_t fc5025_read_track(uft_hw_device_t* device, 
+static uft_error_t uft_fc5025_read_track(uft_hw_device_t* device, 
                                      uft_track_t* track,
                                      uint8_t revolutions) {
     if (!device || !device->handle || !track) {
@@ -342,11 +342,11 @@ static uft_error_t fc5025_read_track(uft_hw_device_t* device,
     
     (void)revolutions;
     
-    fc5025_state_t* fc = device->handle;
+    uft_fc5025_state_t* fc = device->handle;
     
 #ifdef UFT_OS_LINUX
     // Track-Read Kommando
-    uint8_t cmd[3] = {FC5025_CMD_READ_TRACK, fc->current_track, fc->current_head};
+    uint8_t cmd[3] = {UFT_FC5025_CMD_READ_TRACK, fc->current_track, fc->current_head};
     
     // Buffer für Track-Daten (max ~16KB für HD)
     size_t buffer_size = 16384;
@@ -354,7 +354,7 @@ static uft_error_t fc5025_read_track(uft_hw_device_t* device,
     if (!buffer) return UFT_ERROR_NO_MEMORY;
     
     size_t read_len = buffer_size;
-    uft_error_t err = fc5025_usb_transfer(fc, cmd, sizeof(cmd), buffer, &read_len);
+    uft_error_t err = uft_fc5025_usb_transfer(fc, cmd, sizeof(cmd), buffer, &read_len);
     
     if (UFT_FAILED(err)) {
         free(buffer);
@@ -364,8 +364,8 @@ static uft_error_t fc5025_read_track(uft_hw_device_t* device,
     // Track-Struktur füllen
     track->raw_data = buffer;
     track->raw_size = read_len;
-    track->encoding = (fc->current_density == FC5025_DENSITY_FM_SD ||
-                       fc->current_density == FC5025_DENSITY_FM_DD) 
+    track->encoding = (fc->current_density == UFT_FC5025_DENSITY_FM_SD ||
+                       fc->current_density == UFT_FC5025_DENSITY_FM_DD) 
                       ? UFT_ENC_FM : UFT_ENC_MFM;
     track->status = UFT_TRACK_OK;
     
@@ -380,23 +380,23 @@ static uft_error_t fc5025_read_track(uft_hw_device_t* device,
 // Backend Definition
 // ============================================================================
 
-static const uft_hw_backend_t fc5025_backend = {
+static const uft_hw_backend_t uft_fc5025_backend = {
     .name = "FC5025",
     .type = UFT_HW_FC5025,
     
-    .init = fc5025_init,
-    .shutdown = fc5025_shutdown,
-    .enumerate = fc5025_enumerate,
-    .open = fc5025_open,
-    .close = fc5025_close,
+    .init = uft_fc5025_init,
+    .shutdown = uft_fc5025_shutdown,
+    .enumerate = uft_fc5025_enumerate,
+    .open = uft_fc5025_open,
+    .close = uft_fc5025_close,
     
-    .get_status = fc5025_get_status,
-    .motor = fc5025_motor,
-    .seek = fc5025_seek,
-    .select_head = fc5025_select_head,
-    .select_density = fc5025_select_density,
+    .get_status = uft_fc5025_get_status,
+    .motor = uft_fc5025_motor,
+    .seek = uft_fc5025_seek,
+    .select_head = uft_fc5025_select_head,
+    .select_density = uft_fc5025_select_density,
     
-    .read_track = fc5025_read_track,
+    .read_track = uft_fc5025_read_track,
     .write_track = NULL,  // TODO
     .read_flux = NULL,    // Kein Flux-Level beim FC5025
     .write_flux = NULL,
@@ -409,22 +409,22 @@ static const uft_hw_backend_t fc5025_backend = {
 };
 
 uft_error_t uft_hw_register_fc5025(void) {
-    return uft_hw_register_backend(&fc5025_backend);
+    return uft_hw_register_backend(&uft_fc5025_backend);
 }
 
 const uft_hw_backend_t uft_hw_backend_fc5025 = {
     .name = "FC5025",
     .type = UFT_HW_FC5025,
-    .init = fc5025_init,
-    .shutdown = fc5025_shutdown,
-    .enumerate = fc5025_enumerate,
-    .open = fc5025_open,
-    .close = fc5025_close,
-    .get_status = fc5025_get_status,
-    .motor = fc5025_motor,
-    .seek = fc5025_seek,
-    .select_head = fc5025_select_head,
-    .select_density = fc5025_select_density,
-    .read_track = fc5025_read_track,
+    .init = uft_fc5025_init,
+    .shutdown = uft_fc5025_shutdown,
+    .enumerate = uft_fc5025_enumerate,
+    .open = uft_fc5025_open,
+    .close = uft_fc5025_close,
+    .get_status = uft_fc5025_get_status,
+    .motor = uft_fc5025_motor,
+    .seek = uft_fc5025_seek,
+    .select_head = uft_fc5025_select_head,
+    .select_density = uft_fc5025_select_density,
+    .read_track = uft_fc5025_read_track,
     .private_data = NULL
 };

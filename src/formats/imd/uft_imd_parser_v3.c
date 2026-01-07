@@ -2,7 +2,7 @@
  * @file uft_imd_parser_v3.c
  * @brief GOD MODE IMD Parser v3 - ImageDisk Format
  * 
- * IMD ist das Format von Dave Dunfield's ImageDisk:
+ * IMD ist das Format von ImageDisk:
  * - ASCII Header mit Kommentaren
  * - Sektor-Daten mit Mode-Bytes
  * - Unterstützt FM und MFM

@@ -2,25 +2,20 @@
 //
 // Copyright (C) 2006-2025 Jean-François DEL NERO
 //
-// This file is part of the HxCFloppyEmulator library
 //
-// HxCFloppyEmulator may be used and distributed without restriction provided
 // that this copyright statement is not removed from the file and that any
 // derivative work contains the original copyright notice and the associated
 // disclaimer.
 //
-// HxCFloppyEmulator is free software; you can redistribute it
 // and/or modify  it under the terms of the GNU General Public License
 // as published by the Free Software Foundation; either version 2
 // of the License, or (at your option) any later version.
 //
-// HxCFloppyEmulator is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 //   See the GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with HxCFloppyEmulator; if not, write to the Free Software
 // Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 //
 */
@@ -49,10 +44,10 @@
 
 #include "types.h"
 
-#include "internal_libhxcfe.h"
-#include "libhxcfe.h"
+#include "libflux.h""
+#include "libflux.h""
 #include "libhxcadaptor.h"
-#include "floppy_loader.h"
+#include "uft_floppy_loader.h"
 #include "tracks/track_generator.h"
 
 #include "msa_loader.h"
@@ -60,24 +55,24 @@
 
 #include "loaders/common/raw_iso.h"
 
-int MSA_libIsValidDiskFile( HXCFE_IMGLDR * imgldr_ctx, HXCFE_IMGLDR_FILEINFOS * imgfile )
+int MSA_libIsValidDiskFile( LIBFLUX_IMGLDR * imgldr_ctx, LIBFLUX_IMGLDR_FILEINFOS * imgfile )
 {
-	imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"MSA_libIsValidDiskFile");
+	imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"MSA_libIsValidDiskFile");
 
-	if(hxc_checkfileext(imgfile->path,"msa",SYS_PATH_TYPE))
+	if(libflux_checkfileext(imgfile->path,"msa",SYS_PATH_TYPE))
 	{
 		if(imgfile->file_header[0]==0x0E && imgfile->file_header[1]==0x0F && imgfile->file_header[2]==0x00)
 		{
-			imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"MSA_libIsValidDiskFile : MSA file !");
-			return HXCFE_VALIDFILE;
+			imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"MSA_libIsValidDiskFile : MSA file !");
+			return LIBFLUX_VALIDFILE;
 		}
 	}
 
-	imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"MSA_libIsValidDiskFile : non MSA file !");
-	return HXCFE_BADFILE;
+	imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"MSA_libIsValidDiskFile : non MSA file !");
+	return LIBFLUX_BADFILE;
 }
 
-int MSA_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,char * imgfile,void * parameters)
+int MSA_libLoad_DiskFile(LIBFLUX_IMGLDR * imgldr_ctx,LIBFLUX_FLOPPY * floppydisk,char * imgfile,void * parameters)
 {
 	FILE * f;
 	raw_iso_cfg rawcfg;
@@ -95,21 +90,21 @@ int MSA_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 
 	int ret;
 
-	imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"MSA_libLoad_DiskFile %s",imgfile);
+	imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"MSA_libLoad_DiskFile %s",imgfile);
 
-	f = hxc_fopen(imgfile,"rb");
+	f = libflux_fopen(imgfile,"rb");
 	if( f == NULL )
 	{
-		imgldr_ctx->hxcfe->hxc_printf(MSG_ERROR,"Cannot open %s !",imgfile);
-		return HXCFE_ACCESSERROR;
+		imgldr_ctx->ctx->libflux_printf(MSG_ERROR,"Cannot open %s !",imgfile);
+		return LIBFLUX_ACCESSERROR;
 	}
 
 	raw_iso_setdefcfg(&rawcfg);
 
-	filesize = hxc_fgetsize(f);
+	filesize = libflux_fgetsize(f);
 	if( filesize )
 	{
-		hxc_fread(fileheader,5*sizeof(unsigned short),f);
+		libflux_fread(fileheader,5*sizeof(unsigned short),f);
 		if(fileheader[0]==0x0E && fileheader[1]==0x0F)
 		{
 			rawcfg.number_of_tracks = ((256*fileheader[8])+fileheader[9])+1;
@@ -129,7 +124,7 @@ int MSA_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 			i = 0;
 			do
 			{
-				hxc_fread(trackheader,2,f);
+				libflux_fread(trackheader,2,f);
 				filetracksize = ((trackheader[0]*256)+trackheader[1]);
 				if(filetracksize == (rawcfg.number_of_sectors_per_track*512))
 				{
@@ -138,7 +133,7 @@ int MSA_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 						goto alloc_error;
 
 					memset(tmpbuffer,0,filetracksize);
-					hxc_fread(tmpbuffer,filetracksize,f);
+					libflux_fread(tmpbuffer,filetracksize,f);
 					memcpy(flatimg+j,tmpbuffer,filetracksize);
 					free(tmpbuffer);
 					tmpbuffer = NULL;
@@ -155,7 +150,7 @@ int MSA_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 
 					memset(tmpbuffer,0,filetracksize);
 
-					hxc_fread(tmpbuffer,filetracksize,f);
+					libflux_fread(tmpbuffer,filetracksize,f);
 					do
 					{
 						if(tmpbuffer[k]!=0xE5)
@@ -199,7 +194,7 @@ int MSA_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 				i++;
 			}while(i< (rawcfg.number_of_tracks*rawcfg.number_of_sides) );
 
-			hxc_fclose(f);
+			libflux_fclose(f);
 
 			if( rawcfg.number_of_sectors_per_track < 15 )
 			{
@@ -248,37 +243,37 @@ int MSA_libLoad_DiskFile(HXCFE_IMGLDR * imgldr_ctx,HXCFE_FLOPPY * floppydisk,cha
 
 			return ret;
 		}
-		return HXCFE_NOERROR;
+		return LIBFLUX_NOERROR;
 	}
 
-	imgldr_ctx->hxcfe->hxc_printf(MSG_ERROR,"file size=%d !?",filesize);
+	imgldr_ctx->ctx->libflux_printf(MSG_ERROR,"file size=%d !?",filesize);
 
-	return HXCFE_BADFILE;
+	return LIBFLUX_BADFILE;
 
 alloc_error:
 
 	free( flatimg );
 	free( tmpbuffer );
 
-	hxc_fclose(f);
+	libflux_fclose(f);
 
-	hxcfe_freeFloppy(imgldr_ctx->hxcfe, floppydisk );
+	libflux_freeFloppy(imgldr_ctx->ctx, floppydisk );
 
-	return HXCFE_INTERNALERROR;
+	return LIBFLUX_INTERNALERROR;
 
 corrupted_file:
 
 	free( flatimg );
 	free( tmpbuffer );
 
-	hxc_fclose(f);
+	libflux_fclose(f);
 
-	hxcfe_freeFloppy(imgldr_ctx->hxcfe, floppydisk );
+	libflux_freeFloppy(imgldr_ctx->ctx, floppydisk );
 
-	return HXCFE_FILECORRUPTED;
+	return LIBFLUX_FILECORRUPTED;
 }
 
-int MSA_libGetPluginInfo(HXCFE_IMGLDR * imgldr_ctx,uint32_t infotype,void * returnvalue)
+int MSA_libGetPluginInfo(LIBFLUX_IMGLDR * imgldr_ctx,uint32_t infotype,void * returnvalue)
 {
 	static const char plug_id[]="ATARIST_MSA";
 	static const char plug_desc[]="ATARI ST MSA Loader";

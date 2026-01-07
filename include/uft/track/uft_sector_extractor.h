@@ -2,8 +2,6 @@
  * @file uft_sector_extractor.h
  * @brief Sector Extraction from Raw Tracks
  * 
- * Based on HxCFloppyEmulator sector_extractor.c
- * Copyright (C) 2006-2025 Jean-François DEL NERO
  * License: GPL-2.0+
  * 
  * Extracts sectors from raw MFM/FM/GCR encoded track data:

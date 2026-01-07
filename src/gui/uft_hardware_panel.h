@@ -163,15 +163,12 @@ struct ControllerInfo {
 };
 
 static const ControllerInfo CONTROLLERS[] = {
-    { "Greaseweazle F7",    "Keir Fraser",     "1209:4d69", true,  true,  true,  72 },
-    { "Greaseweazle F7+",   "Keir Fraser",     "1209:4d69", true,  true,  true,  84 },
     { "KryoFlux",           "KryoFlux",        "03eb:6124", true,  true,  true,  48 },
-    { "FluxEngine",         "David Given",     "Various",   true,  true,  true,  48 },
     { "SuperCard Pro",      "Jim Drew",        "04D8:F8EB", true,  true,  true,  50 },
     { "Catweasel MK4",      "Individual Comp", "PCI",       true,  true,  true,  28 },
     { "Applesauce",         "John Googolplex", "Various",   true,  true,  true,  32 },
     { "FC5025",             "Device Side",     "16C0:06D6", false, false, true,   0 },
-    { "Pauline",            "Jean-François",   "Various",   true,  true,  true,  50 },
+    { "Pauline",            "UFT",   "Various",   true,  true,  true,  50 },
     { nullptr, nullptr, nullptr, false, false, false, 0 }
 };
 

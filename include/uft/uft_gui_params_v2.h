@@ -1,11 +1,9 @@
 /**
  * @file uft_gui_params_v2.h
- * @brief Unified GUI Parameters V2 - Abgleich mit offiziellem Greaseweazle
  * @version 3.3.0
  *
  * Dieser Header vereint:
  * - Unsere bestehenden UFT GUI Parameter
- * - Offizielle Greaseweazle Parameter (Keir Fraser)
  * - FAT12/FAT32/NTFS Recovery Parameter
  * - Erweiterte Forensik-Parameter
  *
@@ -31,10 +29,8 @@ extern "C" {
 #endif
 
 /*============================================================================
- * PARAMETER ABGLEICH: UFT V1 vs Greaseweazle Official
  *============================================================================
  *
- * | Parameter           | UFT V1              | Greaseweazle Official  | Status    |
  * |---------------------|---------------------|------------------------|-----------|
  * | PLL Phase Adjust    | phase_adjust 65%    | phase_adj_pct 60%      | UPDATED   |
  * | PLL Period Adjust   | freq_adjust 5%      | period_adj_pct 5%      | RENAMED   |
@@ -69,7 +65,6 @@ typedef int32_t uft_nsec_t;     /**< Nanosekunden */
 typedef uint16_t uft_msec_t;    /**< Millisekunden */
 
 /*============================================================================
- * PLL PARAMETER V2 (Greaseweazle-kompatibel)
  *============================================================================*/
 
 /**
@@ -93,7 +88,6 @@ typedef enum {
  * - Presets mit offiziellen GW-Werten
  */
 typedef struct {
-    /* Greaseweazle-kompatible Parameter */
     uft_percent_t period_adj;       /**< Period adjustment %, Default: 5 (GW) */
     uft_percent_t phase_adj;        /**< Phase adjustment %, Default: 60 (GW) */
     uft_usec_t    lowpass_thresh;   /**< Lowpass threshold µs, 0=disabled */
@@ -111,14 +105,12 @@ typedef struct {
     uft_pll_preset_type_t preset;   /**< Aktives Preset */
 } uft_pll_params_v2_t;
 
-/* Offizielle Greaseweazle PLL Defaults */
 #define UFT_PLL_PERIOD_ADJ_AGGRESSIVE   5
 #define UFT_PLL_PHASE_ADJ_AGGRESSIVE    60
 #define UFT_PLL_PERIOD_ADJ_CONSERVATIVE 1
 #define UFT_PLL_PHASE_ADJ_CONSERVATIVE  10
 
 /*============================================================================
- * PRECOMPENSATION (NEU aus Greaseweazle)
  *============================================================================*/
 
 typedef enum {
@@ -146,7 +138,6 @@ typedef struct {
 #define UFT_PRECOMP_GCR_DEFAULT     0
 
 /*============================================================================
- * GAP PARAMETER (NEU aus Greaseweazle ibm.py)
  *============================================================================*/
 
 /**
@@ -178,7 +169,6 @@ typedef struct {
 #define UFT_GAP4A_MFM   80
 
 /*============================================================================
- * INTERLEAVE PARAMETER (NEU aus Greaseweazle)
  *============================================================================*/
 
 typedef struct {
@@ -193,7 +183,6 @@ typedef struct {
 #define UFT_HSKEW_DEFAULT       0
 
 /*============================================================================
- * DRIVE TIMING PARAMETER (NEU aus Greaseweazle)
  *============================================================================*/
 
 typedef struct {
@@ -203,7 +192,6 @@ typedef struct {
     uint8_t     auto_off;       /**< Auto motor-off seconds (default 10) */
 } uft_drive_timing_t;
 
-/* Offizielle Greaseweazle Defaults */
 #define UFT_STEP_DELAY_DEFAULT      3000    /* 3ms */
 #define UFT_SETTLE_DELAY_DEFAULT    15      /* 15ms */
 #define UFT_MOTOR_DELAY_DEFAULT     500     /* 500ms */
@@ -331,12 +319,10 @@ typedef struct {
  *============================================================================*/
 
 /**
- * @brief Initialisiert Parameter mit Greaseweazle-Defaults
  */
 static inline void uft_gui_params_v2_init(uft_gui_params_v2_t *p) {
     memset(p, 0, sizeof(*p));
     
-    /* PLL - Greaseweazle Aggressive Defaults */
     p->pll.period_adj = UFT_PLL_PERIOD_ADJ_AGGRESSIVE;
     p->pll.phase_adj = UFT_PLL_PHASE_ADJ_AGGRESSIVE;
     p->pll.lowpass_thresh = 0;
@@ -361,7 +347,6 @@ static inline void uft_gui_params_v2_init(uft_gui_params_v2_t *p) {
     p->interleave.cskew = UFT_CSKEW_DEFAULT;
     p->interleave.hskew = UFT_HSKEW_DEFAULT;
     
-    /* Drive Timing - Greaseweazle Defaults */
     p->timing.step_delay = UFT_STEP_DELAY_DEFAULT;
     p->timing.settle_delay = UFT_SETTLE_DELAY_DEFAULT;
     p->timing.motor_delay = UFT_MOTOR_DELAY_DEFAULT;

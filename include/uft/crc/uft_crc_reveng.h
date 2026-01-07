@@ -1,8 +1,6 @@
 /**
  * @file uft_crc_reveng.h
- * @brief CRC Preset Database derived from CRC RevEng v3.0.6
  * 
- * Source: CRC RevEng by Gregory Cook
  * License: GPL-3.0
  * 
  * Contains 113 CRC presets covering all common CRC algorithms.

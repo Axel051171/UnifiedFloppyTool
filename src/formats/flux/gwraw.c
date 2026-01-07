@@ -1,4 +1,3 @@
-// gwraw.c - Greaseweazle RAW/GWF reader (C11)
 
 #include "uft/formats/gwraw.h"
 #include <stdio.h>
@@ -17,7 +16,7 @@ static void log_msg(FloppyDevice *d, const char *m){
     if(d && d->log_callback) d->log_callback(m);
 }
 
-int floppy_open(FloppyDevice *dev, const char *path){
+int uft_floppy_open(FloppyDevice *dev, const char *path){
     if(!dev||!path) return UFT_EINVAL;
 
     GwCtx *ctx = calloc(1,sizeof(GwCtx));
@@ -47,7 +46,7 @@ int floppy_open(FloppyDevice *dev, const char *path){
     return UFT_OK;
 }
 
-int floppy_close(FloppyDevice *dev){
+int uft_floppy_close(FloppyDevice *dev){
     if(!dev||!dev->internal_ctx) return UFT_EINVAL;
     GwCtx *ctx = dev->internal_ctx;
     if(ctx->fp) fclose(ctx->fp);
@@ -64,16 +63,16 @@ int floppy_close(FloppyDevice *dev){
 }
 
 /* Flux-only */
-int floppy_read_sector(FloppyDevice *dev,uint32_t t,uint32_t h,uint32_t s,uint8_t *buf){
+int uft_floppy_read_sector(FloppyDevice *dev,uint32_t t,uint32_t h,uint32_t s,uint8_t *buf){
     (void)dev;(void)t;(void)h;(void)s;(void)buf;
     return UFT_ENOTSUP;
 }
-int floppy_write_sector(FloppyDevice *dev,uint32_t t,uint32_t h,uint32_t s,const uint8_t *buf){
+int uft_floppy_write_sector(FloppyDevice *dev,uint32_t t,uint32_t h,uint32_t s,const uint8_t *buf){
     (void)dev;(void)t;(void)h;(void)s;(void)buf;
     return UFT_ENOTSUP;
 }
 
-int floppy_analyze_protection(FloppyDevice *dev){
+int uft_floppy_analyze_protection(FloppyDevice *dev){
     if(!dev||!dev->internal_ctx) return UFT_EINVAL;
     log_msg(dev,"Analyzer(GWRAW): Greaseweazle flux capture detected.");
     log_msg(dev,"Analyzer(GWRAW): Equivalent preservation level to SCP; suitable as archival master.");

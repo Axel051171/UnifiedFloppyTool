@@ -1,19 +1,16 @@
 /**
- * @file uft_kryoflux_algorithms.h
- * @brief KryoFlux Algorithm Details extracted from kryoflux-ui.jar
+ * @file uft_uft_kf_algorithms.h
  * 
  * This header contains data structures and constants reverse-engineered
- * from the KryoFlux GUI application for use in UFT.
  * 
- * Source: kryoflux-ui.jar (v3.50)
  * 
  * @author UFT Development Team
  * @date 2025
  * @license MIT
  */
 
-#ifndef UFT_KRYOFLUX_ALGORITHMS_H
-#define UFT_KRYOFLUX_ALGORITHMS_H
+#ifndef UFT_UFT_UFT_KF_ALGORITHMS_H
+#define UFT_UFT_UFT_KF_ALGORITHMS_H
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -25,13 +22,10 @@ extern "C" {
 #endif
 
 // ============================================================================
-// KryoFlux Error Codes (from kfe$)
 // ============================================================================
 
 /**
- * @brief KryoFlux Engine Error Codes
  * 
- * These codes are used internally by KryoFlux for error reporting.
  */
 typedef enum uft_kfe_error {
     KFE_OK = 0,                     ///< Success
@@ -54,13 +48,11 @@ typedef enum uft_kfe_error {
 } uft_kfe_error_t;
 
 // ============================================================================
-// KryoFlux OOB (Out-of-Band) Message Types (from c2commH)
 // ============================================================================
 
 /**
  * @brief OOB Message Type Codes
  * 
- * These match the KryoFlux stream format OOB block types.
  */
 typedef enum uft_c2_oob_type {
     C2_OOB_INVALID      = 0x00,     ///< Invalid
@@ -105,7 +97,6 @@ typedef struct uft_c2_oob_stream_end {
 } uft_c2_oob_stream_end_t;
 
 // ============================================================================
-// KryoFlux Cell Statistics (from KFDecode_h$CellStat)
 // ============================================================================
 
 /**
@@ -113,23 +104,23 @@ typedef struct uft_c2_oob_stream_end {
  * 
  * Statistics computed for a track/revolution.
  */
-typedef struct uft_kf_cell_stat {
+typedef struct uft_uft_kf_cell_stat {
     double avgbps;      ///< Average bits per second
     double avgdrift;    ///< Average drift (µs)
     double avgfr;       ///< Average flux reversals
     double avgrpm;      ///< Average RPM
     double avgrps;      ///< Average revolutions per second
-} uft_kf_cell_stat_t;
+} uft_uft_kf_cell_stat_t;
 
 /**
  * @brief Cell Index
  * 
  * Index data for a cell position.
  */
-typedef struct uft_kf_cell_index {
+typedef struct uft_uft_kf_cell_index {
     double   cellpos;   ///< Cell position
     double   rpm;       ///< Measured RPM at this position
-} uft_kf_cell_index_t;
+} uft_uft_kf_cell_index_t;
 
 /**
  * @brief Stream Index
@@ -141,7 +132,6 @@ typedef struct uft_kf_stream_index {
 } uft_kf_stream_index_t;
 
 // ============================================================================
-// KryoFlux Histogram (from Hist)
 // ============================================================================
 
 /**
@@ -158,7 +148,6 @@ typedef struct uft_kf_histogram {
 } uft_kf_histogram_t;
 
 // ============================================================================
-// KryoFlux Timing (from Timing)
 // ============================================================================
 
 /**
@@ -172,17 +161,15 @@ typedef struct uft_kf_timing {
 /**
  * @brief Default Timing Values
  * 
- * KryoFlux default timing:
  * - Sample clock: 24027428.57 Hz (ICK/2)
  * - Index clock: 48054857.14 Hz (ICK)
  * - ICK = ((18432000 * 73) / 14) / 2
  */
-#define UFT_KF_DEFAULT_SAMPLE_CLOCK  24027428.57
-#define UFT_KF_DEFAULT_INDEX_CLOCK   48054857.14
-#define UFT_KF_TICK_NS               41.619  // nanoseconds per tick
+#define UFT_UFT_KF_DEFAULT_SAMPLE_CLOCK  24027428.57
+#define UFT_UFT_KF_DEFAULT_INDEX_CLOCK   48054857.14
+#define UFT_UFT_KF_TICK_NS               41.619  // nanoseconds per tick
 
 // ============================================================================
-// KryoFlux Cell Buffer (from CellBuffer)
 // ============================================================================
 
 /**
@@ -190,82 +177,80 @@ typedef struct uft_kf_timing {
  * 
  * Each cell entry is a (position, timing) tuple.
  */
-typedef struct uft_kf_cell_entry {
+typedef struct uft_uft_kf_cell_entry {
     double position;    ///< Cell position in track
     double timing;      ///< Timing value (µs or ticks)
-} uft_kf_cell_entry_t;
+} uft_uft_kf_cell_entry_t;
 
 /**
  * @brief Cell Buffer
  * 
  * Stores decoded cell data for a track.
  */
-typedef struct uft_kf_cell_buffer {
-    uft_kf_cell_entry_t* cells;     ///< Cell entries
+typedef struct uft_uft_kf_cell_buffer {
+    uft_uft_kf_cell_entry_t* cells;     ///< Cell entries
     size_t               count;     ///< Number of cells
     size_t               capacity;  ///< Allocated capacity
-} uft_kf_cell_buffer_t;
+} uft_uft_kf_cell_buffer_t;
 
 // ============================================================================
-// KryoFlux Domain Types (from domain package)
 // ============================================================================
 
 /**
  * @brief Density Type
  */
 typedef enum uft_kf_density {
-    KF_DENSITY_DD,      ///< Double Density
-    KF_DENSITY_HD       ///< High Density
+    UFT_KF_DENSITY_DD,      ///< Double Density
+    UFT_KF_DENSITY_HD       ///< High Density
 } uft_kf_density_t;
 
 /**
  * @brief Track Result
  */
 typedef enum uft_kf_track_result {
-    KF_RESULT_NOT_DUMPED,   ///< Not yet read
-    KF_RESULT_GOOD,         ///< All sectors OK
-    KF_RESULT_BAD,          ///< Has errors
-    KF_RESULT_UNKNOWN,      ///< Unknown status
-    KF_RESULT_MISMATCH      ///< Format mismatch
+    UFT_KF_RESULT_NOT_DUMPED,   ///< Not yet read
+    UFT_KF_RESULT_GOOD,         ///< All sectors OK
+    UFT_KF_RESULT_BAD,          ///< Has errors
+    UFT_KF_RESULT_UNKNOWN,      ///< Unknown status
+    UFT_KF_RESULT_MISMATCH      ///< Format mismatch
 } uft_kf_track_result_t;
 
 /**
  * @brief Format Status
  */
 typedef enum uft_kf_format_status {
-    KF_FORMAT_UNKNOWN,      ///< Unknown format
-    KF_FORMAT_GOOD,         ///< Format detected OK
-    KF_FORMAT_BAD,          ///< Format detection failed
-    KF_FORMAT_MISMATCH      ///< Format doesn't match expected
+    UFT_KF_FORMAT_UNKNOWN,      ///< Unknown format
+    UFT_KF_FORMAT_GOOD,         ///< Format detected OK
+    UFT_KF_FORMAT_BAD,          ///< Format detection failed
+    UFT_KF_FORMAT_MISMATCH      ///< Format doesn't match expected
 } uft_kf_format_status_t;
 
 /**
  * @brief Sector Flags
  * 
- * These match the flag letters shown in KryoFlux UI.
  */
 typedef enum uft_kf_flag {
-    KF_FLAG_NONE           = 0,
-    KF_FLAG_PROTECTION     = (1 << 0),  ///< P - Protection detected
-    KF_FLAG_SECTOR_IGNORED = (1 << 1),  ///< N - Sector not in image
-    KF_FLAG_TRUNCATED      = (1 << 2),  ///< X - Decoding stopped
-    KF_FLAG_EXTRA_HEADER   = (1 << 3),  ///< H - Hidden header data
-    KF_FLAG_NON_STANDARD   = (1 << 4),  ///< I - Non-standard format
-    KF_FLAG_BAD_TRACK_ID   = (1 << 5),  ///< T - Wrong track number
-    KF_FLAG_BAD_SIDE_ID    = (1 << 6),  ///< S - Wrong side number
-    KF_FLAG_OUT_OF_RANGE   = (1 << 7),  ///< B - Sector out of range
-    KF_FLAG_BAD_LENGTH     = (1 << 8),  ///< L - Non-standard length
-    KF_FLAG_BAD_OFFSET     = (1 << 9),  ///< Z - Illegal offset
-    KF_FLAG_UNCHECKED_CRC  = (1 << 10)  ///< C - Unchecked checksum
+    UFT_KF_FLAG_NONE           = 0,
+    UFT_KF_FLAG_PROTECTION     = (1 << 0),  ///< P - Protection detected
+    UFT_KF_FLAG_SECTOR_IGNORED = (1 << 1),  ///< N - Sector not in image
+    UFT_KF_FLAG_TRUNCATED      = (1 << 2),  ///< X - Decoding stopped
+    UFT_KF_FLAG_EXTRA_HEADER   = (1 << 3),  ///< H - Hidden header data
+    UFT_KF_FLAG_NON_STANDARD   = (1 << 4),  ///< I - Non-standard format
+    UFT_KF_FLAG_BAD_TRACK_ID   = (1 << 5),  ///< T - Wrong track number
+    UFT_KF_FLAG_BAD_SIDE_ID    = (1 << 6),  ///< S - Wrong side number
+    UFT_KF_FLAG_OUT_OF_RANGE   = (1 << 7),  ///< B - Sector out of range
+    UFT_KF_FLAG_BAD_LENGTH     = (1 << 8),  ///< L - Non-standard length
+    UFT_KF_FLAG_BAD_OFFSET     = (1 << 9),  ///< Z - Illegal offset
+    UFT_KF_FLAG_UNCHECKED_CRC  = (1 << 10)  ///< C - Unchecked checksum
 } uft_kf_flag_t;
 
 /**
  * @brief Flag Severity
  */
 typedef enum uft_kf_severity {
-    KF_SEVERITY_INFO,       ///< Informational
-    KF_SEVERITY_WARNING,    ///< Warning
-    KF_SEVERITY_SERIOUS     ///< Serious error
+    UFT_KF_SEVERITY_INFO,       ///< Informational
+    UFT_KF_SEVERITY_WARNING,    ///< Warning
+    UFT_KF_SEVERITY_SERIOUS     ///< Serious error
 } uft_kf_severity_t;
 
 /**
@@ -273,23 +258,22 @@ typedef enum uft_kf_severity {
  */
 static inline char uft_kf_flag_char(uft_kf_flag_t flag) {
     switch (flag) {
-        case KF_FLAG_PROTECTION:     return 'P';
-        case KF_FLAG_SECTOR_IGNORED: return 'N';
-        case KF_FLAG_TRUNCATED:      return 'X';
-        case KF_FLAG_EXTRA_HEADER:   return 'H';
-        case KF_FLAG_NON_STANDARD:   return 'I';
-        case KF_FLAG_BAD_TRACK_ID:   return 'T';
-        case KF_FLAG_BAD_SIDE_ID:    return 'S';
-        case KF_FLAG_OUT_OF_RANGE:   return 'B';
-        case KF_FLAG_BAD_LENGTH:     return 'L';
-        case KF_FLAG_BAD_OFFSET:     return 'Z';
-        case KF_FLAG_UNCHECKED_CRC:  return 'C';
+        case UFT_KF_FLAG_PROTECTION:     return 'P';
+        case UFT_KF_FLAG_SECTOR_IGNORED: return 'N';
+        case UFT_KF_FLAG_TRUNCATED:      return 'X';
+        case UFT_KF_FLAG_EXTRA_HEADER:   return 'H';
+        case UFT_KF_FLAG_NON_STANDARD:   return 'I';
+        case UFT_KF_FLAG_BAD_TRACK_ID:   return 'T';
+        case UFT_KF_FLAG_BAD_SIDE_ID:    return 'S';
+        case UFT_KF_FLAG_OUT_OF_RANGE:   return 'B';
+        case UFT_KF_FLAG_BAD_LENGTH:     return 'L';
+        case UFT_KF_FLAG_BAD_OFFSET:     return 'Z';
+        case UFT_KF_FLAG_UNCHECKED_CRC:  return 'C';
         default:                     return '?';
     }
 }
 
 // ============================================================================
-// KryoFlux Image Descriptor (from ImageDescriptor)
 // ============================================================================
 
 /**
@@ -305,7 +289,6 @@ typedef struct uft_kf_image_descriptor {
 } uft_kf_image_descriptor_t;
 
 // ============================================================================
-// KryoFlux Track Info (from TrackInfo/TrackInfoFull)
 // ============================================================================
 
 /**
@@ -345,36 +328,35 @@ typedef struct uft_kf_track_info_full {
 } uft_kf_track_info_full_t;
 
 // ============================================================================
-// KryoFlux Read Error Types (from ReadErrors)
 // ============================================================================
 
 /**
  * @brief Read Error Types
  */
 typedef enum uft_kf_read_error {
-    KF_ERR_NONE = 0,
-    KF_ERR_BAD_SECTOR,              ///< Bad sector found
-    KF_ERR_READ_FAILED,             ///< Read operation failed
-    KF_ERR_STREAM_FILE_OPEN,        ///< Can't open stream file
-    KF_ERR_BUFFERING,               ///< Buffering error
-    KF_ERR_STREAM_READ,             ///< Error reading stream
-    KF_ERR_STREAM_POSITION,         ///< Bad stream position
-    KF_ERR_NO_DISK,                 ///< No disk in drive
-    KF_ERR_COMMAND_REJECTED         ///< Command rejected
+    UFT_KF_ERR_NONE = 0,
+    UFT_KF_ERR_BAD_SECTOR,              ///< Bad sector found
+    UFT_KF_ERR_READ_FAILED,             ///< Read operation failed
+    UFT_KF_ERR_STREAM_FILE_OPEN,        ///< Can't open stream file
+    UFT_KF_ERR_BUFFERING,               ///< Buffering error
+    UFT_KF_ERR_STREAM_READ,             ///< Error reading stream
+    UFT_KF_ERR_STREAM_POSITION,         ///< Bad stream position
+    UFT_KF_ERR_NO_DISK,                 ///< No disk in drive
+    UFT_KF_ERR_COMMAND_REJECTED         ///< Command rejected
 } uft_kf_read_error_t;
 
 /**
  * @brief Hardware Error Types
  */
 typedef enum uft_kf_hw_error {
-    KF_HW_OK = 0,
-    KF_HW_DEVICE_NOT_FOUND,         ///< Device not found
-    KF_HW_DRIVE_NOT_FOUND,          ///< Drive not found
-    KF_HW_DISCONNECT_TIMEOUT,       ///< Disconnect timeout
-    KF_HW_MODE_FAILED,              ///< Mode command failed
-    KF_HW_STATUS_FAILED,            ///< Status command failed
-    KF_HW_IN_USE,                   ///< Device in use
-    KF_HW_USB_ENDPOINT              ///< USB endpoint not found
+    UFT_KF_HW_OK = 0,
+    UFT_KF_HW_DEVICE_NOT_FOUND,         ///< Device not found
+    UFT_KF_HW_DRIVE_NOT_FOUND,          ///< Drive not found
+    UFT_KF_HW_DISCONNECT_TIMEOUT,       ///< Disconnect timeout
+    UFT_KF_HW_MODE_FAILED,              ///< Mode command failed
+    UFT_KF_HW_STATUS_FAILED,            ///< Status command failed
+    UFT_KF_HW_IN_USE,                   ///< Device in use
+    UFT_KF_HW_USB_ENDPOINT              ///< USB endpoint not found
 } uft_kf_hw_error_t;
 
 // ============================================================================
@@ -386,8 +368,8 @@ typedef enum uft_kf_hw_error {
  */
 static inline uft_kf_timing_t uft_kf_default_timing(void) {
     return (uft_kf_timing_t){
-        .sample_clock = UFT_KF_DEFAULT_SAMPLE_CLOCK,
-        .index_clock = UFT_KF_DEFAULT_INDEX_CLOCK
+        .sample_clock = UFT_UFT_KF_DEFAULT_SAMPLE_CLOCK,
+        .index_clock = UFT_UFT_KF_DEFAULT_INDEX_CLOCK
     };
 }
 
@@ -412,7 +394,7 @@ static inline uint32_t uft_kf_us_to_ticks(double us, const uft_kf_timing_t* timi
  * @param timing Timing configuration
  * @return RPM value
  */
-static inline double uft_kf_calc_rpm(uint32_t index_ticks, const uft_kf_timing_t* timing) {
+static inline double uft_uft_kf_calc_rpm(uint32_t index_ticks, const uft_kf_timing_t* timing) {
     double seconds = (double)index_ticks / timing->sample_clock;
     return 60.0 / seconds;
 }
@@ -456,41 +438,39 @@ static inline void uft_kf_hist_add(uft_kf_histogram_t* hist, double value) {
 }
 
 // ============================================================================
-// KryoFlux DTC Encoding Methods (from CDiskEncoding)
 // ============================================================================
 
 /**
- * @brief Encoding Types supported by KryoFlux DTC
  * 
  * These are derived from the CDiskEncoding class in dtc binary.
  */
 typedef enum uft_kf_encoding_type {
     // FM (Single Density)
-    KF_ENC_FM,
+    UFT_KF_ENC_FM,
     
     // MFM (Double Density)
-    KF_ENC_MFM,
+    UFT_KF_ENC_MFM,
     
     // GCR C64/CBM
-    KF_ENC_GCR_CBM,         ///< Standard C64 GCR
-    KF_ENC_GCR_CBM_S,       ///< C64 GCR Short
+    UFT_KF_ENC_GCR_CBM,         ///< Standard C64 GCR
+    UFT_KF_ENC_GCR_CBM_S,       ///< C64 GCR Short
     
     // GCR Apple
-    KF_ENC_GCR_APPLE_H,     ///< Apple Header
-    KF_ENC_GCR_APPLE_5,     ///< Apple 5.25"
-    KF_ENC_GCR_APPLE_6,     ///< Apple 6-and-2
+    UFT_KF_ENC_GCR_APPLE_H,     ///< Apple Header
+    UFT_KF_ENC_GCR_APPLE_5,     ///< Apple 5.25"
+    UFT_KF_ENC_GCR_APPLE_6,     ///< Apple 6-and-2
     
     // GCR Copy Protection (C64)
-    KF_ENC_GCR_VORPAL,      ///< Vorpal protection
-    KF_ENC_GCR_VORPAL2,     ///< Vorpal 2 protection
-    KF_ENC_GCR_VMAX,        ///< V-Max protection
-    KF_ENC_GCR_VMAX_OLD,    ///< V-Max old version
-    KF_ENC_GCR_BIGFIVE,     ///< Big Five protection
-    KF_ENC_GCR_OZISOFT,     ///< Ozisoft protection
-    KF_ENC_GCR_TEQUE,       ///< Teque protection
+    UFT_KF_ENC_GCR_VORPAL,      ///< Vorpal protection
+    UFT_KF_ENC_GCR_VORPAL2,     ///< Vorpal 2 protection
+    UFT_KF_ENC_GCR_VMAX,        ///< V-Max protection
+    UFT_KF_ENC_GCR_VMAX_OLD,    ///< V-Max old version
+    UFT_KF_ENC_GCR_BIGFIVE,     ///< Big Five protection
+    UFT_KF_ENC_GCR_OZISOFT,     ///< Ozisoft protection
+    UFT_KF_ENC_GCR_TEQUE,       ///< Teque protection
     
     // GCR 4-bit
-    KF_ENC_GCR_4BIT         ///< 4-bit GCR
+    UFT_KF_ENC_GCR_4BIT         ///< 4-bit GCR
 } uft_kf_encoding_type_t;
 
 /**
@@ -512,45 +492,44 @@ typedef struct uft_kf_encoding_method {
 } uft_kf_encoding_method_t;
 
 /**
- * @brief KryoFlux DTC Image Format Types
  * 
  * These correspond to the -i parameter values.
  * Format: iN where N is the format code.
  */
 typedef enum uft_kf_image_type {
     // Stream formats
-    KF_IMG_CT_RAW           = 0,    ///< CT Raw (preservation)
-    KF_IMG_KF_STREAM        = 1,    ///< KryoFlux Stream
+    UFT_KF_IMG_CT_RAW           = 0,    ///< CT Raw (preservation)
+    UFT_KF_IMG_UFT_KF_STREAM        = 1,    ///< KryoFlux Stream
     
     // Sector image formats
-    KF_IMG_GENERIC_MFM      = 2,    ///< Generic MFM
-    KF_IMG_GENERIC_FM       = 3,    ///< Generic FM
+    UFT_KF_IMG_GENERIC_MFM      = 2,    ///< Generic MFM
+    UFT_KF_IMG_GENERIC_FM       = 3,    ///< Generic FM
     
     // Specific platform formats
-    KF_IMG_AMIGA_DD         = 4,    ///< Amiga DD (880KB)
-    KF_IMG_AMIGA_HD         = 5,    ///< Amiga HD (1.76MB)
-    KF_IMG_ATARI_ST_SS      = 6,    ///< Atari ST SS
-    KF_IMG_ATARI_ST_DS      = 7,    ///< Atari ST DS
-    KF_IMG_ATARI_ST_HD      = 8,    ///< Atari ST HD
-    KF_IMG_APPLE_DOS        = 9,    ///< Apple DOS 3.x
-    KF_IMG_APPLE_PRODOS     = 10,   ///< Apple ProDOS
-    KF_IMG_APPLE_400K       = 11,   ///< Apple 400K
-    KF_IMG_APPLE_800K       = 12,   ///< Apple 800K
-    KF_IMG_CBM_1541         = 13,   ///< Commodore 1541
-    KF_IMG_CBM_1571         = 14,   ///< Commodore 1571
-    KF_IMG_CBM_1581         = 15,   ///< Commodore 1581
-    KF_IMG_IBM_PC_DD        = 16,   ///< IBM PC DD
-    KF_IMG_IBM_PC_HD        = 17,   ///< IBM PC HD
-    KF_IMG_TRS80            = 18,   ///< TRS-80
-    KF_IMG_SPECTRUM         = 19,   ///< ZX Spectrum
+    UFT_KF_IMG_AMIGA_DD         = 4,    ///< Amiga DD (880KB)
+    UFT_KF_IMG_AMIGA_HD         = 5,    ///< Amiga HD (1.76MB)
+    UFT_KF_IMG_ATARI_ST_SS      = 6,    ///< Atari ST SS
+    UFT_KF_IMG_ATARI_ST_DS      = 7,    ///< Atari ST DS
+    UFT_KF_IMG_ATARI_ST_HD      = 8,    ///< Atari ST HD
+    UFT_KF_IMG_APPLE_DOS        = 9,    ///< Apple DOS 3.x
+    UFT_KF_IMG_APPLE_PRODOS     = 10,   ///< Apple ProDOS
+    UFT_KF_IMG_APPLE_400K       = 11,   ///< Apple 400K
+    UFT_KF_IMG_APPLE_800K       = 12,   ///< Apple 800K
+    UFT_KF_IMG_CBM_1541         = 13,   ///< Commodore 1541
+    UFT_KF_IMG_CBM_1571         = 14,   ///< Commodore 1571
+    UFT_KF_IMG_CBM_1581         = 15,   ///< Commodore 1581
+    UFT_KF_IMG_IBM_PC_DD        = 16,   ///< IBM PC DD
+    UFT_KF_IMG_IBM_PC_HD        = 17,   ///< IBM PC HD
+    UFT_KF_IMG_TRS80            = 18,   ///< TRS-80
+    UFT_KF_IMG_SPECTRUM         = 19,   ///< ZX Spectrum
     
     // Extended formats (may vary by DTC version)
-    KF_IMG_AMSTRAD          = 20,   ///< Amstrad CPC
-    KF_IMG_MSX              = 21,   ///< MSX
-    KF_IMG_BBC              = 22,   ///< BBC Micro
-    KF_IMG_SAM_COUPE        = 23,   ///< Sam Coupe
+    UFT_KF_IMG_AMSTRAD          = 20,   ///< Amstrad CPC
+    UFT_KF_IMG_MSX              = 21,   ///< MSX
+    UFT_KF_IMG_BBC              = 22,   ///< BBC Micro
+    UFT_KF_IMG_SAM_COUPE        = 23,   ///< Sam Coupe
     
-    KF_IMG_MAX              = 64    ///< Maximum format number
+    UFT_KF_IMG_MAX              = 64    ///< Maximum format number
 } uft_kf_image_type_t;
 
 /**
@@ -629,23 +608,22 @@ static inline uft_kf_dtc_options_t uft_kf_default_dtc_options(void) {
 // ============================================================================
 
 /**
- * @brief KryoFlux Firmware Commands
  */
 typedef enum uft_kf_fw_command {
-    KF_FW_CMD_STATUS,       ///< Get status
-    KF_FW_CMD_INFO,         ///< Get info
-    KF_FW_CMD_RESULT,       ///< Get result
-    KF_FW_CMD_DATA,         ///< Data transfer
-    KF_FW_CMD_INDEX,        ///< Index signal
-    KF_FW_CMD_RESET,        ///< Reset device
-    KF_FW_CMD_DEVICE,       ///< Device control
-    KF_FW_CMD_MOTOR,        ///< Motor control
-    KF_FW_CMD_DENSITY,      ///< Density select
-    KF_FW_CMD_SIDE          ///< Side select
+    UFT_KF_FW_CMD_STATUS,       ///< Get status
+    UFT_KF_FW_CMD_INFO,         ///< Get info
+    UFT_KF_FW_CMD_RESULT,       ///< Get result
+    UFT_KF_FW_CMD_DATA,         ///< Data transfer
+    UFT_KF_FW_CMD_INDEX,        ///< Index signal
+    UFT_KF_FW_CMD_RESET,        ///< Reset device
+    UFT_KF_FW_CMD_DEVICE,       ///< Device control
+    UFT_KF_FW_CMD_MOTOR,        ///< Motor control
+    UFT_KF_FW_CMD_DENSITY,      ///< Density select
+    UFT_KF_FW_CMD_SIDE          ///< Side select
 } uft_kf_fw_command_t;
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif // UFT_KRYOFLUX_ALGORITHMS_H
+#endif // UFT_UFT_UFT_KF_ALGORITHMS_H

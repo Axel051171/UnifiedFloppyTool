@@ -1,6 +1,5 @@
 /**
  * @file uft_greaseweazle.c
- * @brief Greaseweazle Hardware Driver Implementation
  * 
  * @version 1.0.0
  * @date 2025
@@ -16,7 +15,7 @@
 
 #ifdef _WIN32
     #include <windows.h>
-    #define GW_PLATFORM_WINDOWS 1
+    #define UFT_GW_PLATFORM_WINDOWS 1
 #else
     #include <fcntl.h>
     #include <unistd.h>
@@ -24,7 +23,7 @@
     #include <sys/ioctl.h>
     #include <dirent.h>
     #include <errno.h>
-    #define GW_PLATFORM_POSIX 1
+    #define UFT_GW_PLATFORM_POSIX 1
 #endif
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -34,24 +33,24 @@
 /**
  * @brief Internal device handle structure
  */
-struct gw_device {
-#ifdef GW_PLATFORM_WINDOWS
+struct uft_gw_device {
+#ifdef UFT_GW_PLATFORM_WINDOWS
     HANDLE          handle;         /**< Windows serial handle */
 #else
     int             fd;             /**< POSIX file descriptor */
 #endif
     char            port[256];      /**< Port name */
-    gw_info_t       info;           /**< Device info */
+    uft_gw_info_t       info;           /**< Device info */
     char            version_str[16];/**< Version string */
     uint8_t         current_cyl;    /**< Current cylinder */
     uint8_t         current_head;   /**< Current head */
     uint8_t         current_unit;   /**< Current drive unit */
     bool            motor_on;       /**< Motor state */
     bool            selected;       /**< Drive selected */
-    gw_bus_type_t   bus_type;       /**< Current bus type */
-    gw_delays_t     delays;         /**< Current delays */
-    uint8_t         cmd_buf[GW_MAX_CMD_SIZE];   /**< Command buffer */
-    uint8_t         resp_buf[GW_MAX_CMD_SIZE];  /**< Response buffer */
+    uft_gw_bus_type_t   bus_type;       /**< Current bus type */
+    uft_gw_delays_t     delays;         /**< Current delays */
+    uint8_t         cmd_buf[UFT_GW_MAX_CMD_SIZE];   /**< Command buffer */
+    uint8_t         resp_buf[UFT_GW_MAX_CMD_SIZE];  /**< Response buffer */
 };
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -67,7 +66,7 @@ static void* safe_calloc(size_t count, size_t size) {
 
 /** Millisecond sleep */
 static void msleep(uint32_t ms) {
-#ifdef GW_PLATFORM_WINDOWS
+#ifdef UFT_GW_PLATFORM_WINDOWS
     Sleep(ms);
 #else
     struct timespec ts;
@@ -81,16 +80,16 @@ static void msleep(uint32_t ms) {
  * SERIAL PORT OPERATIONS
  * ═══════════════════════════════════════════════════════════════════════════ */
 
-#ifdef GW_PLATFORM_WINDOWS
+#ifdef UFT_GW_PLATFORM_WINDOWS
 
-static int serial_open(gw_device_t* dev, const char* port) {
+static int serial_open(uft_gw_device_t* dev, const char* port) {
     char full_port[280];
     snprintf(full_port, sizeof(full_port), "\\\\.\\%s", port);
     
     dev->handle = CreateFileA(full_port, GENERIC_READ | GENERIC_WRITE,
                               0, NULL, OPEN_EXISTING, 0, NULL);
     if (dev->handle == INVALID_HANDLE_VALUE) {
-        return GW_ERR_OPEN_FAILED;
+        return UFT_GW_ERR_OPEN_FAILED;
     }
     
     /* Configure serial port */
@@ -100,7 +99,7 @@ static int serial_open(gw_device_t* dev, const char* port) {
     
     if (!GetCommState(dev->handle, &dcb)) {
         CloseHandle(dev->handle);
-        return GW_ERR_OPEN_FAILED;
+        return UFT_GW_ERR_OPEN_FAILED;
     }
     
     dcb.BaudRate = CBR_115200;
@@ -112,58 +111,58 @@ static int serial_open(gw_device_t* dev, const char* port) {
     
     if (!SetCommState(dev->handle, &dcb)) {
         CloseHandle(dev->handle);
-        return GW_ERR_OPEN_FAILED;
+        return UFT_GW_ERR_OPEN_FAILED;
     }
     
     /* Set timeouts */
     COMMTIMEOUTS timeouts;
     timeouts.ReadIntervalTimeout = 50;
-    timeouts.ReadTotalTimeoutConstant = GW_USB_TIMEOUT_MS;
+    timeouts.ReadTotalTimeoutConstant = UFT_GW_USB_TIMEOUT_MS;
     timeouts.ReadTotalTimeoutMultiplier = 10;
-    timeouts.WriteTotalTimeoutConstant = GW_USB_TIMEOUT_MS;
+    timeouts.WriteTotalTimeoutConstant = UFT_GW_USB_TIMEOUT_MS;
     timeouts.WriteTotalTimeoutMultiplier = 10;
     SetCommTimeouts(dev->handle, &timeouts);
     
     strncpy(dev->port, port, sizeof(dev->port) - 1);
-    return GW_OK;
+    return UFT_GW_OK;
 }
 
-static void serial_close(gw_device_t* dev) {
+static void serial_close(uft_gw_device_t* dev) {
     if (dev->handle != INVALID_HANDLE_VALUE) {
         CloseHandle(dev->handle);
         dev->handle = INVALID_HANDLE_VALUE;
     }
 }
 
-static int serial_write(gw_device_t* dev, const uint8_t* data, size_t len) {
+static int serial_write(uft_gw_device_t* dev, const uint8_t* data, size_t len) {
     DWORD written;
     if (!WriteFile(dev->handle, data, (DWORD)len, &written, NULL)) {
-        return GW_ERR_IO;
+        return UFT_GW_ERR_IO;
     }
-    return (written == len) ? GW_OK : GW_ERR_IO;
+    return (written == len) ? UFT_GW_OK : UFT_GW_ERR_IO;
 }
 
-static int serial_read(gw_device_t* dev, uint8_t* data, size_t len, size_t* actual) {
+static int serial_read(uft_gw_device_t* dev, uint8_t* data, size_t len, size_t* actual) {
     DWORD read_bytes;
     if (!ReadFile(dev->handle, data, (DWORD)len, &read_bytes, NULL)) {
-        return GW_ERR_IO;
+        return UFT_GW_ERR_IO;
     }
     if (actual) *actual = read_bytes;
-    return GW_OK;
+    return UFT_GW_OK;
 }
 
-static int serial_flush(gw_device_t* dev) {
+static int serial_flush(uft_gw_device_t* dev) {
     FlushFileBuffers(dev->handle);
     PurgeComm(dev->handle, PURGE_RXCLEAR | PURGE_TXCLEAR);
-    return GW_OK;
+    return UFT_GW_OK;
 }
 
 #else /* POSIX */
 
-static int serial_open(gw_device_t* dev, const char* port) {
+static int serial_open(uft_gw_device_t* dev, const char* port) {
     dev->fd = open(port, O_RDWR | O_NOCTTY | O_NONBLOCK);
     if (dev->fd < 0) {
-        return GW_ERR_OPEN_FAILED;
+        return UFT_GW_ERR_OPEN_FAILED;
     }
     
     /* Clear non-blocking */
@@ -176,7 +175,7 @@ static int serial_open(gw_device_t* dev, const char* port) {
     
     if (tcgetattr(dev->fd, &tty) != 0) {
         close(dev->fd);
-        return GW_ERR_OPEN_FAILED;
+        return UFT_GW_ERR_OPEN_FAILED;
     }
     
     cfsetispeed(&tty, B115200);
@@ -206,7 +205,7 @@ static int serial_open(gw_device_t* dev, const char* port) {
     
     if (tcsetattr(dev->fd, TCSANOW, &tty) != 0) {
         close(dev->fd);
-        return GW_ERR_OPEN_FAILED;
+        return UFT_GW_ERR_OPEN_FAILED;
     }
     
     /* Set DTR */
@@ -214,22 +213,22 @@ static int serial_open(gw_device_t* dev, const char* port) {
     ioctl(dev->fd, TIOCMBIS, &dtr);
     
     strncpy(dev->port, port, sizeof(dev->port) - 1);
-    return GW_OK;
+    return UFT_GW_OK;
 }
 
-static void serial_close(gw_device_t* dev) {
+static void serial_close(uft_gw_device_t* dev) {
     if (dev->fd >= 0) {
         close(dev->fd);
         dev->fd = -1;
     }
 }
 
-static int serial_write(gw_device_t* dev, const uint8_t* data, size_t len) {
+static int serial_write(uft_gw_device_t* dev, const uint8_t* data, size_t len) {
     ssize_t written = write(dev->fd, data, len);
-    return (written == (ssize_t)len) ? GW_OK : GW_ERR_IO;
+    return (written == (ssize_t)len) ? UFT_GW_OK : UFT_GW_ERR_IO;
 }
 
-static int serial_read(gw_device_t* dev, uint8_t* data, size_t len, size_t* actual) {
+static int serial_read(uft_gw_device_t* dev, uint8_t* data, size_t len, size_t* actual) {
     size_t total = 0;
     time_t start = time(NULL);
     
@@ -241,19 +240,19 @@ static int serial_read(gw_device_t* dev, uint8_t* data, size_t len, size_t* actu
             break;
         }
         
-        if (time(NULL) - start > (GW_USB_TIMEOUT_MS / 1000)) {
+        if (time(NULL) - start > (UFT_GW_USB_TIMEOUT_MS / 1000)) {
             if (actual) *actual = total;
-            return (total > 0) ? GW_OK : GW_ERR_TIMEOUT;
+            return (total > 0) ? UFT_GW_OK : UFT_GW_ERR_TIMEOUT;
         }
     }
     
     if (actual) *actual = total;
-    return GW_OK;
+    return UFT_GW_OK;
 }
 
-static int serial_flush(gw_device_t* dev) {
+static int serial_flush(uft_gw_device_t* dev) {
     tcflush(dev->fd, TCIOFLUSH);
-    return GW_OK;
+    return UFT_GW_OK;
 }
 
 #endif /* Platform-specific */
@@ -265,48 +264,48 @@ static int serial_flush(gw_device_t* dev) {
 /**
  * @brief Send command and receive response
  */
-static int gw_command(gw_device_t* dev, uint8_t cmd, const uint8_t* params,
+static int uft_gw_command(uft_gw_device_t* dev, uint8_t cmd, const uint8_t* params,
                       size_t param_len, uint8_t* response, size_t* resp_len) {
-    if (!dev) return GW_ERR_NOT_CONNECTED;
+    if (!dev) return UFT_GW_ERR_NOT_CONNECTED;
     
     /* Build command packet */
     dev->cmd_buf[0] = cmd;
     if (params && param_len > 0) {
-        if (param_len > GW_MAX_CMD_SIZE - 1) {
-            return GW_ERR_OVERFLOW;
+        if (param_len > UFT_GW_MAX_CMD_SIZE - 1) {
+            return UFT_GW_ERR_OVERFLOW;
         }
         memcpy(dev->cmd_buf + 1, params, param_len);
     }
     
     /* Send command */
     int ret = serial_write(dev, dev->cmd_buf, 1 + param_len);
-    if (ret != GW_OK) return ret;
+    if (ret != UFT_GW_OK) return ret;
     
     /* Read response (at least 2 bytes: cmd echo + ack) */
     size_t read_len = 0;
     ret = serial_read(dev, dev->resp_buf, 2, &read_len);
-    if (ret != GW_OK) return ret;
+    if (ret != UFT_GW_OK) return ret;
     
     if (read_len < 2) {
-        return GW_ERR_TIMEOUT;
+        return UFT_GW_ERR_TIMEOUT;
     }
     
     /* Verify command echo */
     if (dev->resp_buf[0] != cmd) {
-        return GW_ERR_PROTOCOL;
+        return UFT_GW_ERR_PROTOCOL;
     }
     
     /* Check ACK */
     uint8_t ack = dev->resp_buf[1];
-    if (ack != GW_ACK_OK) {
+    if (ack != UFT_GW_ACK_OK) {
         /* Map device error to our error code */
         switch (ack) {
-            case GW_ACK_NO_INDEX:     return GW_ERR_NO_INDEX;
-            case GW_ACK_NO_TRK0:      return GW_ERR_NO_TRK0;
-            case GW_ACK_FLUX_OVERFLOW: return GW_ERR_OVERFLOW;
-            case GW_ACK_FLUX_UNDERFLOW: return GW_ERR_UNDERFLOW;
-            case GW_ACK_WRPROT:       return GW_ERR_WRPROT;
-            default:                  return GW_ERR_PROTOCOL;
+            case UFT_GW_ACK_NO_INDEX:     return UFT_GW_ERR_NO_INDEX;
+            case UFT_GW_ACK_NO_TRK0:      return UFT_GW_ERR_NO_TRK0;
+            case UFT_GW_ACK_FLUX_OVERFLOW: return UFT_GW_ERR_OVERFLOW;
+            case UFT_GW_ACK_FLUX_UNDERFLOW: return UFT_GW_ERR_UNDERFLOW;
+            case UFT_GW_ACK_WRPROT:       return UFT_GW_ERR_WRPROT;
+            default:                  return UFT_GW_ERR_PROTOCOL;
         }
     }
     
@@ -314,28 +313,28 @@ static int gw_command(gw_device_t* dev, uint8_t cmd, const uint8_t* params,
     if (response && resp_len && *resp_len > 0) {
         size_t to_read = *resp_len;
         ret = serial_read(dev, response, to_read, resp_len);
-        if (ret != GW_OK) return ret;
+        if (ret != UFT_GW_OK) return ret;
     }
     
-    return GW_OK;
+    return UFT_GW_OK;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
  * DEVICE DISCOVERY & CONNECTION
  * ═══════════════════════════════════════════════════════════════════════════ */
 
-int gw_discover(gw_discover_cb callback, void* user_data) {
+int uft_gw_discover(uft_gw_discover_cb callback, void* user_data) {
     char* ports[32];
-    int count = gw_list_ports(ports, 32);
+    int count = uft_gw_list_ports(ports, 32);
     int found = 0;
     
     for (int i = 0; i < count; i++) {
-        gw_device_t* dev;
-        if (gw_open(ports[i], &dev) == GW_OK) {
+        uft_gw_device_t* dev;
+        if (uft_gw_open(ports[i], &dev) == UFT_GW_OK) {
             if (callback) {
                 callback(user_data, ports[i], &dev->info);
             }
-            gw_close(dev);
+            uft_gw_close(dev);
             found++;
         }
         free(ports[i]);
@@ -344,10 +343,10 @@ int gw_discover(gw_discover_cb callback, void* user_data) {
     return found;
 }
 
-int gw_list_ports(char** ports, int max_ports) {
+int uft_gw_list_ports(char** ports, int max_ports) {
     int count = 0;
     
-#ifdef GW_PLATFORM_WINDOWS
+#ifdef UFT_GW_PLATFORM_WINDOWS
     /* Enumerate COM ports */
     for (int i = 1; i <= 256 && count < max_ports; i++) {
         char port_name[16];
@@ -384,13 +383,13 @@ int gw_list_ports(char** ports, int max_ports) {
     return count;
 }
 
-int gw_open(const char* port, gw_device_t** device) {
-    if (!port || !device) return GW_ERR_INVALID;
+int uft_gw_open(const char* port, uft_gw_device_t** device) {
+    if (!port || !device) return UFT_GW_ERR_INVALID;
     
-    gw_device_t* dev = (gw_device_t*)safe_calloc(1, sizeof(gw_device_t));
-    if (!dev) return GW_ERR_NOMEM;
+    uft_gw_device_t* dev = (uft_gw_device_t*)safe_calloc(1, sizeof(uft_gw_device_t));
+    if (!dev) return UFT_GW_ERR_NOMEM;
     
-#ifdef GW_PLATFORM_WINDOWS
+#ifdef UFT_GW_PLATFORM_WINDOWS
     dev->handle = INVALID_HANDLE_VALUE;
 #else
     dev->fd = -1;
@@ -398,7 +397,7 @@ int gw_open(const char* port, gw_device_t** device) {
     
     /* Open serial port */
     int ret = serial_open(dev, port);
-    if (ret != GW_OK) {
+    if (ret != UFT_GW_OK) {
         free(dev);
         return ret;
     }
@@ -407,12 +406,11 @@ int gw_open(const char* port, gw_device_t** device) {
     msleep(100);
     serial_flush(dev);
     
-    /* Get device info to verify it's a Greaseweazle */
-    ret = gw_get_info(dev, &dev->info);
-    if (ret != GW_OK) {
+    ret = uft_gw_get_info(dev, &dev->info);
+    if (ret != UFT_GW_OK) {
         serial_close(dev);
         free(dev);
-        return GW_ERR_NOT_FOUND;
+        return UFT_GW_ERR_NOT_FOUND;
     }
     
     /* Format version string */
@@ -422,74 +420,74 @@ int gw_open(const char* port, gw_device_t** device) {
     /* Initialize defaults */
     dev->delays.select_delay_us = 10;
     dev->delays.step_delay_us = 3000;
-    dev->delays.settle_delay_ms = GW_SEEK_SETTLE_MS;
-    dev->delays.motor_delay_ms = GW_MOTOR_SPINUP_MS;
+    dev->delays.settle_delay_ms = UFT_GW_SEEK_SETTLE_MS;
+    dev->delays.motor_delay_ms = UFT_GW_MOTOR_SPINUP_MS;
     dev->delays.auto_off_ms = 10000;
     
     *device = dev;
-    return GW_OK;
+    return UFT_GW_OK;
 }
 
-int gw_open_first(gw_device_t** device) {
+int uft_gw_open_first(uft_gw_device_t** device) {
     char* ports[32];
-    int count = gw_list_ports(ports, 32);
+    int count = uft_gw_list_ports(ports, 32);
     
     for (int i = 0; i < count; i++) {
-        int ret = gw_open(ports[i], device);
+        int ret = uft_gw_open(ports[i], device);
         free(ports[i]);
         
-        if (ret == GW_OK) {
+        if (ret == UFT_GW_OK) {
             /* Free remaining ports */
             for (int j = i + 1; j < count; j++) {
                 free(ports[j]);
             }
-            return GW_OK;
+            return UFT_GW_OK;
         }
     }
     
-    return GW_ERR_NOT_FOUND;
+    return UFT_GW_ERR_NOT_FOUND;
 }
 
-void gw_close(gw_device_t* device) {
+void uft_gw_close(uft_gw_device_t* device) {
     if (!device) return;
     
     /* Turn off motor and deselect drive */
     if (device->selected) {
-        gw_set_motor(device, false);
-        gw_deselect_drive(device);
+        uft_gw_set_motor(device, false);
+        uft_gw_deselect_drive(device);
     }
     
     serial_close(device);
     free(device);
 }
 
-bool gw_is_connected(gw_device_t* device) {
+bool uft_gw_is_connected(uft_gw_device_t* device) {
     if (!device) return false;
     
     /* Try to get info as a connection test */
-    gw_info_t info;
-    return (gw_get_info(device, &info) == GW_OK);
+    uft_gw_info_t info;
+    return (uft_gw_get_info(device, &info) == UFT_GW_OK);
 }
 
-int gw_reset(gw_device_t* device) {
-    if (!device) return GW_ERR_NOT_CONNECTED;
-    return gw_command(device, GW_CMD_RESET, NULL, 0, NULL, NULL);
+int uft_gw_reset(uft_gw_device_t* device) {
+    if (!device) return UFT_GW_ERR_NOT_CONNECTED;
+    return uft_gw_command(device, UFT_GW_CMD_RESET, NULL, 0, NULL, NULL);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
  * DEVICE INFORMATION
  * ═══════════════════════════════════════════════════════════════════════════ */
 
-int gw_get_info(gw_device_t* device, gw_info_t* info) {
-    if (!device || !info) return GW_ERR_INVALID;
+int uft_gw_get_info(uft_gw_device_t* device, uft_gw_info_t* info) {
+    if (!device || !info) return UFT_GW_ERR_INVALID;
     
     uint8_t resp[32];
     size_t resp_len = sizeof(resp);
     
-    int ret = gw_command(device, GW_CMD_GET_INFO, NULL, 0, resp, &resp_len);
-    if (ret != GW_OK) return ret;
+    int ret = uft_gw_command(device, UFT_GW_CMD_GET_INFO, NULL, 0, resp, &resp_len);
+    if (ret != UFT_GW_OK) return ret;
     
-    if (resp_len < 8) return GW_ERR_PROTOCOL;
+    if (resp_len < 8) return UFT_GW_ERR_PROTOCOL;
     
     /* Parse response */
     memset(info, 0, sizeof(*info));
@@ -504,7 +502,7 @@ int gw_get_info(gw_device_t* device, gw_info_t* info) {
     
     /* Set default sample frequency if not reported */
     if (info->sample_freq == 0) {
-        info->sample_freq = GW_SAMPLE_FREQ_HZ;
+        info->sample_freq = UFT_GW_SAMPLE_FREQ_HZ;
     }
     
     /* Extended info if available */
@@ -516,18 +514,18 @@ int gw_get_info(gw_device_t* device, gw_info_t* info) {
         info->usb_speed = resp[10];
     }
     
-    return GW_OK;
+    return UFT_GW_OK;
 }
 
-const char* gw_get_version_string(gw_device_t* device) {
+const char* uft_gw_get_version_string(uft_gw_device_t* device) {
     return device ? device->version_str : NULL;
 }
 
-const char* gw_get_serial(gw_device_t* device) {
+const char* uft_gw_get_serial(uft_gw_device_t* device) {
     return device ? device->info.serial : NULL;
 }
 
-uint32_t gw_get_sample_freq(gw_device_t* device) {
+uint32_t uft_gw_get_sample_freq(uft_gw_device_t* device) {
     return device ? device->info.sample_freq : 0;
 }
 
@@ -535,52 +533,52 @@ uint32_t gw_get_sample_freq(gw_device_t* device) {
  * DRIVE CONTROL
  * ═══════════════════════════════════════════════════════════════════════════ */
 
-int gw_set_bus_type(gw_device_t* device, gw_bus_type_t bus_type) {
-    if (!device) return GW_ERR_NOT_CONNECTED;
+int uft_gw_set_bus_type(uft_gw_device_t* device, uft_gw_bus_type_t bus_type) {
+    if (!device) return UFT_GW_ERR_NOT_CONNECTED;
     
     uint8_t param = (uint8_t)bus_type;
-    int ret = gw_command(device, GW_CMD_SET_BUS_TYPE, &param, 1, NULL, NULL);
-    if (ret == GW_OK) {
+    int ret = uft_gw_command(device, UFT_GW_CMD_SET_BUS_TYPE, &param, 1, NULL, NULL);
+    if (ret == UFT_GW_OK) {
         device->bus_type = bus_type;
     }
     return ret;
 }
 
-int gw_select_drive(gw_device_t* device, uint8_t unit) {
-    if (!device) return GW_ERR_NOT_CONNECTED;
-    if (unit > 1) return GW_ERR_INVALID;
+int uft_gw_select_drive(uft_gw_device_t* device, uint8_t unit) {
+    if (!device) return UFT_GW_ERR_NOT_CONNECTED;
+    if (unit > 1) return UFT_GW_ERR_INVALID;
     
     /* Set bus type if not set */
-    if (device->bus_type == GW_BUS_NONE) {
-        int ret = gw_set_bus_type(device, GW_BUS_IBM_PC);
-        if (ret != GW_OK) return ret;
+    if (device->bus_type == UFT_GW_BUS_NONE) {
+        int ret = uft_gw_set_bus_type(device, UFT_GW_BUS_IBM_PC);
+        if (ret != UFT_GW_OK) return ret;
     }
     
     uint8_t param = unit;
-    int ret = gw_command(device, GW_CMD_SELECT, &param, 1, NULL, NULL);
-    if (ret == GW_OK) {
+    int ret = uft_gw_command(device, UFT_GW_CMD_SELECT, &param, 1, NULL, NULL);
+    if (ret == UFT_GW_OK) {
         device->current_unit = unit;
         device->selected = true;
     }
     return ret;
 }
 
-int gw_deselect_drive(gw_device_t* device) {
-    if (!device) return GW_ERR_NOT_CONNECTED;
+int uft_gw_deselect_drive(uft_gw_device_t* device) {
+    if (!device) return UFT_GW_ERR_NOT_CONNECTED;
     
-    int ret = gw_command(device, GW_CMD_DESELECT, NULL, 0, NULL, NULL);
-    if (ret == GW_OK) {
+    int ret = uft_gw_command(device, UFT_GW_CMD_DESELECT, NULL, 0, NULL, NULL);
+    if (ret == UFT_GW_OK) {
         device->selected = false;
     }
     return ret;
 }
 
-int gw_set_motor(gw_device_t* device, bool on) {
-    if (!device) return GW_ERR_NOT_CONNECTED;
+int uft_gw_set_motor(uft_gw_device_t* device, bool on) {
+    if (!device) return UFT_GW_ERR_NOT_CONNECTED;
     
     uint8_t param = on ? 1 : 0;
-    int ret = gw_command(device, GW_CMD_MOTOR, &param, 1, NULL, NULL);
-    if (ret == GW_OK) {
+    int ret = uft_gw_command(device, UFT_GW_CMD_MOTOR, &param, 1, NULL, NULL);
+    if (ret == UFT_GW_OK) {
         device->motor_on = on;
         if (on) {
             msleep(device->delays.motor_delay_ms);
@@ -589,40 +587,40 @@ int gw_set_motor(gw_device_t* device, bool on) {
     return ret;
 }
 
-int gw_seek(gw_device_t* device, uint8_t cylinder) {
-    if (!device) return GW_ERR_NOT_CONNECTED;
-    if (cylinder > GW_MAX_CYLINDERS) return GW_ERR_INVALID;
+int uft_gw_seek(uft_gw_device_t* device, uint8_t cylinder) {
+    if (!device) return UFT_GW_ERR_NOT_CONNECTED;
+    if (cylinder > UFT_GW_MAX_CYLINDERS) return UFT_GW_ERR_INVALID;
     
     uint8_t param = cylinder;
-    int ret = gw_command(device, GW_CMD_SEEK, &param, 1, NULL, NULL);
-    if (ret == GW_OK) {
+    int ret = uft_gw_command(device, UFT_GW_CMD_SEEK, &param, 1, NULL, NULL);
+    if (ret == UFT_GW_OK) {
         device->current_cyl = cylinder;
         msleep(device->delays.settle_delay_ms);
     }
     return ret;
 }
 
-int gw_select_head(gw_device_t* device, uint8_t head) {
-    if (!device) return GW_ERR_NOT_CONNECTED;
-    if (head > 1) return GW_ERR_INVALID;
+int uft_gw_select_head(uft_gw_device_t* device, uint8_t head) {
+    if (!device) return UFT_GW_ERR_NOT_CONNECTED;
+    if (head > 1) return UFT_GW_ERR_INVALID;
     
     uint8_t param = head;
-    int ret = gw_command(device, GW_CMD_HEAD, &param, 1, NULL, NULL);
-    if (ret == GW_OK) {
+    int ret = uft_gw_command(device, UFT_GW_CMD_HEAD, &param, 1, NULL, NULL);
+    if (ret == UFT_GW_OK) {
         device->current_head = head;
     }
     return ret;
 }
 
-int gw_get_cylinder(gw_device_t* device) {
+int uft_gw_get_cylinder(uft_gw_device_t* device) {
     return device ? device->current_cyl : -1;
 }
 
-int gw_get_head(gw_device_t* device) {
+int uft_gw_get_head(uft_gw_device_t* device) {
     return device ? device->current_head : -1;
 }
 
-bool gw_is_write_protected(gw_device_t* device) {
+bool uft_gw_is_write_protected(uft_gw_device_t* device) {
     if (!device) return true;
     
     /* Read write-protect pin (pin 28 on PC floppy) */
@@ -630,14 +628,14 @@ bool gw_is_write_protected(gw_device_t* device) {
     uint8_t resp;
     size_t resp_len = 1;
     
-    if (gw_command(device, GW_CMD_GET_PIN, &param, 1, &resp, &resp_len) == GW_OK) {
+    if (uft_gw_command(device, UFT_GW_CMD_GET_PIN, &param, 1, &resp, &resp_len) == UFT_GW_OK) {
         return (resp == 0);  /* Low = write protected */
     }
     return true;  /* Assume protected on error */
 }
 
-int gw_set_delays(gw_device_t* device, const gw_delays_t* delays) {
-    if (!device || !delays) return GW_ERR_INVALID;
+int uft_gw_set_delays(uft_gw_device_t* device, const uft_gw_delays_t* delays) {
+    if (!device || !delays) return UFT_GW_ERR_INVALID;
     
     uint8_t params[10];
     params[0] = delays->select_delay_us & 0xFF;
@@ -651,21 +649,21 @@ int gw_set_delays(gw_device_t* device, const gw_delays_t* delays) {
     params[8] = delays->auto_off_ms & 0xFF;
     params[9] = (delays->auto_off_ms >> 8) & 0xFF;
     
-    int ret = gw_command(device, GW_CMD_SET_DRIVE_DELAYS, params, 10, NULL, NULL);
-    if (ret == GW_OK) {
+    int ret = uft_gw_command(device, UFT_GW_CMD_SET_DRIVE_DELAYS, params, 10, NULL, NULL);
+    if (ret == UFT_GW_OK) {
         device->delays = *delays;
     }
     return ret;
 }
 
-int gw_get_delays(gw_device_t* device, gw_delays_t* delays) {
-    if (!device || !delays) return GW_ERR_INVALID;
+int uft_gw_get_delays(uft_gw_device_t* device, uft_gw_delays_t* delays) {
+    if (!device || !delays) return UFT_GW_ERR_INVALID;
     
     uint8_t resp[10];
     size_t resp_len = 10;
     
-    int ret = gw_command(device, GW_CMD_GET_DRIVE_DELAYS, NULL, 0, resp, &resp_len);
-    if (ret != GW_OK) return ret;
+    int ret = uft_gw_command(device, UFT_GW_CMD_GET_DRIVE_DELAYS, NULL, 0, resp, &resp_len);
+    if (ret != UFT_GW_OK) return ret;
     
     if (resp_len >= 10) {
         delays->select_delay_us = resp[0] | (resp[1] << 8);
@@ -675,16 +673,16 @@ int gw_get_delays(gw_device_t* device, gw_delays_t* delays) {
         delays->auto_off_ms = resp[8] | (resp[9] << 8);
     }
     
-    return GW_OK;
+    return UFT_GW_OK;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
  * FLUX READING
  * ═══════════════════════════════════════════════════════════════════════════ */
 
-int gw_read_flux(gw_device_t* device, const gw_read_params_t* params,
-                 gw_flux_data_t** flux) {
-    if (!device || !params || !flux) return GW_ERR_INVALID;
+int uft_gw_read_flux(uft_gw_device_t* device, const uft_gw_read_params_t* params,
+                 uft_gw_flux_data_t** flux) {
+    if (!device || !params || !flux) return UFT_GW_ERR_INVALID;
     
     *flux = NULL;
     
@@ -708,13 +706,13 @@ int gw_read_flux(gw_device_t* device, const gw_read_params_t* params,
     cmd_params[4] = params->revolutions;
     
     /* Send read command */
-    int ret = gw_command(device, GW_CMD_READ_FLUX, cmd_params, 5, NULL, NULL);
-    if (ret != GW_OK) return ret;
+    int ret = uft_gw_command(device, UFT_GW_CMD_READ_FLUX, cmd_params, 5, NULL, NULL);
+    if (ret != UFT_GW_OK) return ret;
     
     /* Read flux data stream */
     size_t buffer_size = 4 * 1024 * 1024;  /* 4MB initial buffer */
     uint8_t* raw_buffer = (uint8_t*)malloc(buffer_size);
-    if (!raw_buffer) return GW_ERR_NOMEM;
+    if (!raw_buffer) return UFT_GW_ERR_NOMEM;
     
     size_t total_read = 0;
     bool done = false;
@@ -746,13 +744,13 @@ int gw_read_flux(gw_device_t* device, const gw_read_params_t* params,
     /* Get flux status */
     uint8_t status_resp[4];
     size_t status_len = 4;
-    gw_command(device, GW_CMD_GET_FLUX_STATUS, NULL, 0, status_resp, &status_len);
+    uft_gw_command(device, UFT_GW_CMD_GET_FLUX_STATUS, NULL, 0, status_resp, &status_len);
     
     /* Allocate flux data structure */
-    gw_flux_data_t* fx = (gw_flux_data_t*)safe_calloc(1, sizeof(gw_flux_data_t));
+    uft_gw_flux_data_t* fx = (uft_gw_flux_data_t*)safe_calloc(1, sizeof(uft_gw_flux_data_t));
     if (!fx) {
         free(raw_buffer);
-        return GW_ERR_NOMEM;
+        return UFT_GW_ERR_NOMEM;
     }
     
     /* Allocate sample array (upper bound) */
@@ -760,12 +758,12 @@ int gw_read_flux(gw_device_t* device, const gw_read_params_t* params,
     if (!fx->samples) {
         free(fx);
         free(raw_buffer);
-        return GW_ERR_NOMEM;
+        return UFT_GW_ERR_NOMEM;
     }
     
     /* Decode flux stream */
     fx->sample_freq = device->info.sample_freq;
-    fx->sample_count = gw_decode_flux_stream(raw_buffer, total_read,
+    fx->sample_count = uft_gw_decode_flux_stream(raw_buffer, total_read,
                                               fx->samples, (uint32_t)total_read,
                                               NULL);
     
@@ -777,36 +775,36 @@ int gw_read_flux(gw_device_t* device, const gw_read_params_t* params,
     fx->total_ticks = (uint32_t)(total_ticks & 0xFFFFFFFF);
     
     /* Get index times */
-    fx->index_times = (uint32_t*)safe_calloc(GW_MAX_REVOLUTIONS, sizeof(uint32_t));
+    fx->index_times = (uint32_t*)safe_calloc(UFT_GW_MAX_REVOLUTIONS, sizeof(uint32_t));
     if (fx->index_times) {
-        fx->index_count = (uint8_t)gw_get_index_times(device, fx->index_times, 
-                                                       GW_MAX_REVOLUTIONS);
+        fx->index_count = (uint8_t)uft_gw_get_index_times(device, fx->index_times, 
+                                                       UFT_GW_MAX_REVOLUTIONS);
     }
     
     fx->status = status_resp[0];
     
     free(raw_buffer);
     *flux = fx;
-    return GW_OK;
+    return UFT_GW_OK;
 }
 
-int gw_read_flux_simple(gw_device_t* device, uint8_t revolutions,
-                        gw_flux_data_t** flux) {
-    gw_read_params_t params = {
+int uft_gw_read_flux_simple(uft_gw_device_t* device, uint8_t revolutions,
+                        uft_gw_flux_data_t** flux) {
+    uft_gw_read_params_t params = {
         .revolutions = revolutions,
         .index_sync = true,
         .ticks = 0,
         .read_flux_ticks = false
     };
-    return gw_read_flux(device, &params, flux);
+    return uft_gw_read_flux(device, &params, flux);
 }
 
-int gw_read_flux_raw(gw_device_t* device, uint8_t* buffer, size_t buffer_size,
+int uft_gw_read_flux_raw(uft_gw_device_t* device, uint8_t* buffer, size_t buffer_size,
                      size_t* bytes_read) {
-    if (!device || !buffer || !bytes_read) return GW_ERR_INVALID;
+    if (!device || !buffer || !bytes_read) return UFT_GW_ERR_INVALID;
     
     /* Simple read without decoding */
-    gw_read_params_t params = {
+    uft_gw_read_params_t params = {
         .revolutions = 1,
         .index_sync = true,
         .ticks = 0,
@@ -816,13 +814,13 @@ int gw_read_flux_raw(gw_device_t* device, uint8_t* buffer, size_t buffer_size,
     uint8_t cmd_params[5] = {0};
     cmd_params[4] = 1;
     
-    int ret = gw_command(device, GW_CMD_READ_FLUX, cmd_params, 5, NULL, NULL);
-    if (ret != GW_OK) return ret;
+    int ret = uft_gw_command(device, UFT_GW_CMD_READ_FLUX, cmd_params, 5, NULL, NULL);
+    if (ret != UFT_GW_OK) return ret;
     
     return serial_read(device, buffer, buffer_size, bytes_read);
 }
 
-void gw_flux_free(gw_flux_data_t* flux) {
+void uft_gw_flux_free(uft_gw_flux_data_t* flux) {
     if (!flux) return;
     
     if (flux->samples) free(flux->samples);
@@ -830,15 +828,15 @@ void gw_flux_free(gw_flux_data_t* flux) {
     free(flux);
 }
 
-int gw_get_index_times(gw_device_t* device, uint32_t* times, int max_times) {
+int uft_gw_get_index_times(uft_gw_device_t* device, uint32_t* times, int max_times) {
     if (!device || !times || max_times <= 0) return 0;
     
     uint8_t resp[64];
     size_t resp_len = (size_t)max_times * 4;
     if (resp_len > sizeof(resp)) resp_len = sizeof(resp);
     
-    int ret = gw_command(device, GW_CMD_GET_INDEX_TIMES, NULL, 0, resp, &resp_len);
-    if (ret != GW_OK) return 0;
+    int ret = uft_gw_command(device, UFT_GW_CMD_GET_INDEX_TIMES, NULL, 0, resp, &resp_len);
+    if (ret != UFT_GW_OK) return 0;
     
     int count = (int)(resp_len / 4);
     for (int i = 0; i < count && i < max_times; i++) {
@@ -855,21 +853,21 @@ int gw_get_index_times(gw_device_t* device, uint32_t* times, int max_times) {
  * FLUX WRITING
  * ═══════════════════════════════════════════════════════════════════════════ */
 
-int gw_write_flux(gw_device_t* device, const gw_write_params_t* params,
+int uft_gw_write_flux(uft_gw_device_t* device, const uft_gw_write_params_t* params,
                   const uint32_t* samples, uint32_t sample_count) {
-    if (!device || !samples || sample_count == 0) return GW_ERR_INVALID;
+    if (!device || !samples || sample_count == 0) return UFT_GW_ERR_INVALID;
     
     /* Check write protection */
-    if (gw_is_write_protected(device)) {
-        return GW_ERR_WRPROT;
+    if (uft_gw_is_write_protected(device)) {
+        return UFT_GW_ERR_WRPROT;
     }
     
     /* Encode flux stream */
     size_t max_encoded = sample_count * 4;  /* Upper bound */
     uint8_t* encoded = (uint8_t*)malloc(max_encoded);
-    if (!encoded) return GW_ERR_NOMEM;
+    if (!encoded) return UFT_GW_ERR_NOMEM;
     
-    size_t encoded_len = gw_encode_flux_stream(samples, sample_count,
+    size_t encoded_len = uft_gw_encode_flux_stream(samples, sample_count,
                                                 encoded, max_encoded);
     
     /* Prepare write parameters */
@@ -879,8 +877,8 @@ int gw_write_flux(gw_device_t* device, const gw_write_params_t* params,
     cmd_params[1] = (params->terminate_at_index >> 8) & 0xFF;
     
     /* Send write command */
-    int ret = gw_command(device, GW_CMD_WRITE_FLUX, cmd_params, 2, NULL, NULL);
-    if (ret != GW_OK) {
+    int ret = uft_gw_command(device, UFT_GW_CMD_WRITE_FLUX, cmd_params, 2, NULL, NULL);
+    if (ret != UFT_GW_OK) {
         free(encoded);
         return ret;
     }
@@ -889,111 +887,111 @@ int gw_write_flux(gw_device_t* device, const gw_write_params_t* params,
     ret = serial_write(device, encoded, encoded_len);
     free(encoded);
     
-    if (ret != GW_OK) return ret;
+    if (ret != UFT_GW_OK) return ret;
     
     /* Write end marker */
     uint8_t end_marker[3] = {0, 0, 0};
     ret = serial_write(device, end_marker, 3);
-    if (ret != GW_OK) return ret;
+    if (ret != UFT_GW_OK) return ret;
     
     /* Get write status */
     uint8_t status;
     size_t status_len = 1;
-    gw_command(device, GW_CMD_GET_FLUX_STATUS, NULL, 0, &status, &status_len);
+    uft_gw_command(device, UFT_GW_CMD_GET_FLUX_STATUS, NULL, 0, &status, &status_len);
     
-    if (status != GW_ACK_OK) {
-        return GW_ERR_IO;
+    if (status != UFT_GW_ACK_OK) {
+        return UFT_GW_ERR_IO;
     }
     
-    return GW_OK;
+    return UFT_GW_OK;
 }
 
-int gw_write_flux_simple(gw_device_t* device, const uint32_t* samples,
+int uft_gw_write_flux_simple(uft_gw_device_t* device, const uint32_t* samples,
                          uint32_t sample_count) {
-    gw_write_params_t params = {
+    uft_gw_write_params_t params = {
         .index_sync = true,
         .erase_empty = false,
         .verify = false,
         .pre_erase_ticks = 0,
         .terminate_at_index = 1
     };
-    return gw_write_flux(device, &params, samples, sample_count);
+    return uft_gw_write_flux(device, &params, samples, sample_count);
 }
 
-int gw_erase_track(gw_device_t* device, uint8_t revolutions) {
-    if (!device) return GW_ERR_NOT_CONNECTED;
+int uft_gw_erase_track(uft_gw_device_t* device, uint8_t revolutions) {
+    if (!device) return UFT_GW_ERR_NOT_CONNECTED;
     
-    if (gw_is_write_protected(device)) {
-        return GW_ERR_WRPROT;
+    if (uft_gw_is_write_protected(device)) {
+        return UFT_GW_ERR_WRPROT;
     }
     
     uint8_t param = revolutions;
-    return gw_command(device, GW_CMD_ERASE_FLUX, &param, 1, NULL, NULL);
+    return uft_gw_command(device, UFT_GW_CMD_ERASE_FLUX, &param, 1, NULL, NULL);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
  * HIGH-LEVEL OPERATIONS
  * ═══════════════════════════════════════════════════════════════════════════ */
 
-int gw_read_track(gw_device_t* device, uint8_t cylinder, uint8_t head,
-                  uint8_t revolutions, gw_flux_data_t** flux) {
-    if (!device) return GW_ERR_NOT_CONNECTED;
+int uft_gw_read_track(uft_gw_device_t* device, uint8_t cylinder, uint8_t head,
+                  uint8_t revolutions, uft_gw_flux_data_t** flux) {
+    if (!device) return UFT_GW_ERR_NOT_CONNECTED;
     
     /* Ensure drive is selected and motor is on */
     if (!device->selected) {
-        int ret = gw_select_drive(device, 0);
-        if (ret != GW_OK) return ret;
+        int ret = uft_gw_select_drive(device, 0);
+        if (ret != UFT_GW_OK) return ret;
     }
     
     if (!device->motor_on) {
-        int ret = gw_set_motor(device, true);
-        if (ret != GW_OK) return ret;
+        int ret = uft_gw_set_motor(device, true);
+        if (ret != UFT_GW_OK) return ret;
     }
     
     /* Seek to cylinder */
-    int ret = gw_seek(device, cylinder);
-    if (ret != GW_OK) return ret;
+    int ret = uft_gw_seek(device, cylinder);
+    if (ret != UFT_GW_OK) return ret;
     
     /* Select head */
-    ret = gw_select_head(device, head);
-    if (ret != GW_OK) return ret;
+    ret = uft_gw_select_head(device, head);
+    if (ret != UFT_GW_OK) return ret;
     
     /* Read flux */
-    return gw_read_flux_simple(device, revolutions, flux);
+    return uft_gw_read_flux_simple(device, revolutions, flux);
 }
 
-int gw_write_track(gw_device_t* device, uint8_t cylinder, uint8_t head,
+int uft_gw_write_track(uft_gw_device_t* device, uint8_t cylinder, uint8_t head,
                    const uint32_t* samples, uint32_t sample_count) {
-    if (!device) return GW_ERR_NOT_CONNECTED;
+    if (!device) return UFT_GW_ERR_NOT_CONNECTED;
     
     /* Ensure drive is selected and motor is on */
     if (!device->selected) {
-        int ret = gw_select_drive(device, 0);
-        if (ret != GW_OK) return ret;
+        int ret = uft_gw_select_drive(device, 0);
+        if (ret != UFT_GW_OK) return ret;
     }
     
     if (!device->motor_on) {
-        int ret = gw_set_motor(device, true);
-        if (ret != GW_OK) return ret;
+        int ret = uft_gw_set_motor(device, true);
+        if (ret != UFT_GW_OK) return ret;
     }
     
     /* Seek to cylinder */
-    int ret = gw_seek(device, cylinder);
-    if (ret != GW_OK) return ret;
+    int ret = uft_gw_seek(device, cylinder);
+    if (ret != UFT_GW_OK) return ret;
     
     /* Select head */
-    ret = gw_select_head(device, head);
-    if (ret != GW_OK) return ret;
+    ret = uft_gw_select_head(device, head);
+    if (ret != UFT_GW_OK) return ret;
     
     /* Write flux */
-    return gw_write_flux_simple(device, samples, sample_count);
+    return uft_gw_write_flux_simple(device, samples, sample_count);
 }
 
-int gw_recalibrate(gw_device_t* device) {
-    if (!device) return GW_ERR_NOT_CONNECTED;
+int uft_gw_recalibrate(uft_gw_device_t* device) {
+    if (!device) return UFT_GW_ERR_NOT_CONNECTED;
     
     /* Seek to track 0 */
-    return gw_seek(device, 0);
+    return uft_gw_seek(device, 0);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -1001,14 +999,13 @@ int gw_recalibrate(gw_device_t* device) {
  * ═══════════════════════════════════════════════════════════════════════════ */
 
 /**
- * Greaseweazle flux stream format:
  * - Values 1-249: Direct tick count
  * - Value 250-254: Extended encoding (250 + (byte[1]-1)*250 + byte[2])
  * - Value 255: 16-bit extension (255 + byte[1] + byte[2]*256)
  * - Value 0: Special marker (index, overflow, etc.)
  */
 
-uint32_t gw_decode_flux_stream(const uint8_t* raw, size_t raw_len,
+uint32_t uft_gw_decode_flux_stream(const uint8_t* raw, size_t raw_len,
                                 uint32_t* samples, uint32_t max_samples,
                                 uint32_t* sample_freq) {
     (void)sample_freq;  /* Currently unused */
@@ -1044,7 +1041,7 @@ uint32_t gw_decode_flux_stream(const uint8_t* raw, size_t raw_len,
     return count;
 }
 
-size_t gw_encode_flux_stream(const uint32_t* samples, uint32_t sample_count,
+size_t uft_gw_encode_flux_stream(const uint32_t* samples, uint32_t sample_count,
                               uint8_t* raw, size_t max_raw) {
     if (!samples || !raw || sample_count == 0) return 0;
     
@@ -1078,23 +1075,23 @@ size_t gw_encode_flux_stream(const uint32_t* samples, uint32_t sample_count,
  * ERROR MESSAGES
  * ═══════════════════════════════════════════════════════════════════════════ */
 
-const char* gw_strerror(int err) {
+const char* uft_gw_strerror(int err) {
     switch (err) {
-        case GW_OK:              return "Success";
-        case GW_ERR_NOT_FOUND:   return "Device not found";
-        case GW_ERR_OPEN_FAILED: return "Failed to open device";
-        case GW_ERR_IO:          return "I/O error";
-        case GW_ERR_TIMEOUT:     return "Operation timed out";
-        case GW_ERR_PROTOCOL:    return "Protocol error";
-        case GW_ERR_NO_INDEX:    return "No index pulse detected";
-        case GW_ERR_NO_TRK0:     return "Track 0 not found";
-        case GW_ERR_OVERFLOW:    return "Buffer overflow";
-        case GW_ERR_UNDERFLOW:   return "Buffer underflow";
-        case GW_ERR_WRPROT:      return "Disk is write protected";
-        case GW_ERR_INVALID:     return "Invalid parameter";
-        case GW_ERR_NOMEM:       return "Out of memory";
-        case GW_ERR_NOT_CONNECTED: return "Device not connected";
-        case GW_ERR_UNSUPPORTED: return "Operation not supported";
+        case UFT_GW_OK:              return "Success";
+        case UFT_GW_ERR_NOT_FOUND:   return "Device not found";
+        case UFT_GW_ERR_OPEN_FAILED: return "Failed to open device";
+        case UFT_GW_ERR_IO:          return "I/O error";
+        case UFT_GW_ERR_TIMEOUT:     return "Operation timed out";
+        case UFT_GW_ERR_PROTOCOL:    return "Protocol error";
+        case UFT_GW_ERR_NO_INDEX:    return "No index pulse detected";
+        case UFT_GW_ERR_NO_TRK0:     return "Track 0 not found";
+        case UFT_GW_ERR_OVERFLOW:    return "Buffer overflow";
+        case UFT_GW_ERR_UNDERFLOW:   return "Buffer underflow";
+        case UFT_GW_ERR_WRPROT:      return "Disk is write protected";
+        case UFT_GW_ERR_INVALID:     return "Invalid parameter";
+        case UFT_GW_ERR_NOMEM:       return "Out of memory";
+        case UFT_GW_ERR_NOT_CONNECTED: return "Device not connected";
+        case UFT_GW_ERR_UNSUPPORTED: return "Operation not supported";
         default:                 return "Unknown error";
     }
 }

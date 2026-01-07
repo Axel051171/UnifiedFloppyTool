@@ -2,8 +2,6 @@
  * @file uft_fm_mfm_decode.h
  * @brief FM and MFM Encoding/Decoding with Auto-Detection
  * 
- * Extracted from floppy8 project
- * Source: /home/claude/floppy8/floppy8-main/extract.c
  * 
  * Clean implementation of FM (single density) and MFM (double density)
  * encoding with histogram-based format auto-detection.

@@ -435,7 +435,7 @@ UFT_TEST(edsk_probe_invalid)
 {
     uint8_t buffer[512];
     memset(buffer, 0, sizeof(buffer));
-    strcpy((char*)buffer, "INVALID HEADER");
+    memcpy(buffer, "INVALID HEADER", 14);
     
     int confidence = uft_edsk_probe(buffer, sizeof(buffer));
     UFT_ASSERT_EQ(confidence, 0);
@@ -570,7 +570,7 @@ UFT_TEST(img2_probe_invalid)
 {
     uint8_t buffer[512];
     memset(buffer, 0, sizeof(buffer));
-    strcpy((char*)buffer, "NOT2IMG");
+    memcpy(buffer, "NOT2IMG", 7);
     
     int confidence = uft_2mg_probe(buffer, sizeof(buffer));
     UFT_ASSERT_EQ(confidence, 0);

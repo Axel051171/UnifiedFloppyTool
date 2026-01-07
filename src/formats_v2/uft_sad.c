@@ -18,7 +18,7 @@ static uft_error_t sad_open(uft_disk_t* disk, const char* path, bool read_only) 
     uint8_t hdr[22];
     if (fread(hdr, 1, 22, f) != 22) { /* I/O error */ }
     bool has_hdr = (memcmp(hdr, "SAD!", 4) == 0);
-    if (!has_hdr) fseek(f, 0, SEEK_SET);
+    if (!has_hdr) (void)fseek(f, 0, SEEK_SET);
     
     sad_data_t* p = calloc(1, sizeof(sad_data_t));
     p->file = f; p->header = has_hdr;

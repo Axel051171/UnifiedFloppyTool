@@ -1,6 +1,5 @@
 /**
  * @file test_flux_parsers.c
- * @brief Unit Tests for SCP, KryoFlux, WOZ Parsers
  * @version 1.0.0
  * @date 2026-01-06
  */
@@ -17,7 +16,7 @@
 
 /* Modules under test */
 #include "uft/flux/uft_scp_parser.h"
-#include "uft/flux/uft_kryoflux_parser.h"
+#include "uft/flux/uft_uft_kf_parser.h"
 #include "uft/flux/uft_woz_parser.h"
 #include "uft/flux/uft_fluxstat.h"
 
@@ -49,7 +48,6 @@ static const uint8_t test_woz_header[] = {
     0x00, 0x00, 0x00, 0x00  /* CRC32 (placeholder) */
 };
 
-/* Minimal KryoFlux stream with one index */
 static const uint8_t test_kf_stream[] = {
     /* Some flux values */
     0x02, 0x50,             /* Flux2: 0x0250 */
@@ -185,7 +183,6 @@ static void test_scp_null_handling(void)
 }
 
 /*============================================================================
- * KryoFlux Parser Tests
  *============================================================================*/
 
 static void test_kf_create_destroy(void)
@@ -246,10 +243,10 @@ static void test_kf_timing_conversions(void)
     TEST_ASSERT(us >= 999.0 && us <= 1001.0);
     
     /* RPM calculation */
-    uint32_t rpm = uft_kf_calculate_rpm(200000.0);  /* 200ms = 300 RPM */
+    uint32_t rpm = uft_uft_kf_calculate_rpm(200000.0);  /* 200ms = 300 RPM */
     TEST_ASSERT(rpm == 300);
     
-    rpm = uft_kf_calculate_rpm(166666.67);  /* ~360 RPM */
+    rpm = uft_uft_kf_calculate_rpm(166666.67);  /* ~360 RPM */
     TEST_ASSERT(rpm >= 359 && rpm <= 361);
     
     printf(" PASSED\n");
@@ -264,12 +261,12 @@ static void test_kf_stream_parsing(void)
     
     /* Load test stream */
     int err = uft_kf_load_memory(ctx, test_kf_stream, sizeof(test_kf_stream));
-    TEST_ASSERT(err == UFT_KF_OK);
+    TEST_ASSERT(err == UFT_UFT_KF_OK);
     
     /* Parse stream */
     uft_kf_track_data_t track;
     err = uft_kf_parse_stream(ctx, &track);
-    TEST_ASSERT(err == UFT_KF_OK);
+    TEST_ASSERT(err == UFT_UFT_KF_OK);
     TEST_ASSERT(track.valid == true);
     TEST_ASSERT(track.revolution_count >= 1);
     
@@ -287,11 +284,11 @@ static void test_kf_null_handling(void)
     printf("  test_kf_null_handling...");
     
     TEST_ASSERT(uft_kf_get_index_count(NULL) == 0);
-    TEST_ASSERT(uft_kf_load_file(NULL, "test.raw") == UFT_KF_ERR_NULLPTR);
-    TEST_ASSERT(uft_kf_load_memory(NULL, NULL, 0) == UFT_KF_ERR_NULLPTR);
+    TEST_ASSERT(uft_kf_load_file(NULL, "test.raw") == UFT_UFT_KF_ERR_NULLPTR);
+    TEST_ASSERT(uft_kf_load_memory(NULL, NULL, 0) == UFT_UFT_KF_ERR_NULLPTR);
     
     uft_kf_ctx_t* ctx = uft_kf_create();
-    TEST_ASSERT(uft_kf_parse_stream(ctx, NULL) == UFT_KF_ERR_NULLPTR);
+    TEST_ASSERT(uft_kf_parse_stream(ctx, NULL) == UFT_UFT_KF_ERR_NULLPTR);
     uft_kf_destroy(ctx);
     
     printf(" PASSED\n");

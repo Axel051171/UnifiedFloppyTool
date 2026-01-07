@@ -2,7 +2,6 @@
  * uft_c64_track_format.h
  *
  * C64/1541 track format tables and constants.
- * Based on nibtools by Pete Rittwage and Markus Brenner.
  *
  * This module provides:
  * - Sector counts per track (sector_map)
@@ -12,10 +11,7 @@
  * - Density zone data rates
  *
  * Original Source:
- * - nibtools gcr.c (C) Markus Brenner <markus(at)brenner.de>
- * - nibtools gcr.h (C) Pete Rittwage <peter(at)rittwage.com>
  *
- * License: GPL (from nibtools)
  *
  * Build:
  *   cc -std=c11 -O2 -Wall -Wextra -pedantic -c uft_c64_track_format.c

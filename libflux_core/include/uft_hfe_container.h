@@ -1,6 +1,6 @@
 /**
  * @file uft_hfe_container.h
- * @brief HFE (HxC Floppy Emulator) Container Parser
+ * @brief HFE (UFT HFE Format) Container Parser
  * 
  * Version-agnostic parser supporting HFE v1, v3, and future versions.
  * Implements strict 3-layer separation:

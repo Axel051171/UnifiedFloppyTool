@@ -1,10 +1,8 @@
 /**
- * @file uft_samdisk_algorithms.h
+ * @file uft_uft_sam_algorithms.h
  * @brief SamDisk algorithms extracted for UFT integration
  * 
- * Source: SamDisk by Simon Owen (https://github.com/simonowen/samdisk)
  * This is the ORIGINAL REFERENCE implementation for the PLL algorithm
- * used by FluxEngine and other tools.
  * 
  * Key algorithms:
  * - Original PLL (Phase-Locked Loop) flux decoder
@@ -17,13 +15,13 @@
  * License: MIT (SamDisk)
  */
 
-#ifndef UFT_SAMDISK_ALGORITHMS_H
-#define UFT_SAMDISK_ALGORITHMS_H
+#ifndef UFT_UFT_SAM_ALGORITHMS_H
+#define UFT_UFT_SAM_ALGORITHMS_H
 
-#include &lt;stdint.h&gt;
-#include &lt;stdbool.h&gt;
-#include &lt;stddef.h&gt;
-#include &lt;string.h&gt;
+#include <stdint.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <string.h>
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -98,7 +96,6 @@ static inline int uft_sd_bitcell_ns(uft_sd_datarate_t datarate) {
 
 /**
  * PLL state structure based on SamDisk FluxDecoder
- * This is the REFERENCE implementation from Keir Fraser's Disk-Utilities
  */
 typedef struct {
     /* Clock parameters (in nanoseconds) */
@@ -158,7 +155,6 @@ static inline void uft_sd_pll_init_ex(uft_sd_pll_t *pll, int bitcell_ns,
 /**
  * Process a flux transition and return decoded bit
  * 
- * This is the ORIGINAL SamDisk/Keir Fraser PLL algorithm.
  * 
  * @param pll       PLL state
  * @param flux_ns   Time since last flux transition in nanoseconds
@@ -203,7 +199,6 @@ static inline int uft_sd_pll_next_bit(uft_sd_pll_t *pll) {
     
     /* 
      * PLL Clock Adjustment - THE CORE ALGORITHM
-     * Based on Keir Fraser's Disk-Utilities/libdisk
      */
     if (pll->clocked_zeros <= 3) {
         /* In sync: adjust base clock by percentage of phase mismatch */
@@ -579,4 +574,4 @@ static inline int uft_sd_track_capacity(uft_sd_datarate_t datarate,
 }
 #endif
 
-#endif /* UFT_SAMDISK_ALGORITHMS_H */
+#endif /* UFT_UFT_SAM_ALGORITHMS_H */

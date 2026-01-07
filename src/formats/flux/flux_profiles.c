@@ -1,4 +1,3 @@
-// flux_profiles.c - helper to ship FluxEngine textpb profiles with UFT (C11)
 #include "uft/formats/flux_profiles.h"
 #include <stdio.h>
 #include <stdlib.h>

@@ -2,25 +2,20 @@
 //
 // Copyright (C) 2006-2025 Jean-Franois DEL NERO
 //
-// This file is part of the HxCFloppyEmulator library
 //
-// HxCFloppyEmulator may be used and distributed without restriction provided
 // that this copyright statement is not removed from the file and that any
 // derivative work contains the original copyright notice and the associated
 // disclaimer.
 //
-// HxCFloppyEmulator is free software; you can redistribute it
 // and/or modify  it under the terms of the GNU General Public License
 // as published by the Free Software Foundation; either version 2
 // of the License, or (at your option) any later version.
 //
-// HxCFloppyEmulator is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 //   See the GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with HxCFloppyEmulator; if not, write to the Free Software
 // Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 //
 */
@@ -50,8 +45,8 @@
 
 #include "types.h"
 
-#include "internal_libhxcfe.h"
-#include "libhxcfe.h"
+#include "libflux.h""
+#include "libflux.h""
 
 #include "scp_format.h"
 #include "scp_loader.h"
@@ -76,7 +71,7 @@ static uint32_t update_checksum(uint32_t checksum,unsigned char * buffer,unsigne
 	return checksum;
 }
 
-uint32_t write_scp_track(HXCFE_IMGLDR* imgldr_ctx,FILE *f,HXCFE_SIDE * track,uint32_t * csum,int tracknum,unsigned int nb_of_revs)
+uint32_t write_scp_track(LIBFLUX_IMGLDR* imgldr_ctx,FILE *f,LIBFLUX_SIDE * track,uint32_t * csum,int tracknum,unsigned int nb_of_revs)
 {
 	uint32_t checksum,file_checksum,size,offset,totalsize;
 	unsigned short trackbuffer[256];
@@ -98,7 +93,7 @@ uint32_t write_scp_track(HXCFE_IMGLDR* imgldr_ctx,FILE *f,HXCFE_SIDE * track,uin
 	if(!trkh)
 		return 0;
 
-	strconv = initStreamConvert(imgldr_ctx->hxcfe,track, DEFAULT_SCP_PERIOD, (DEFAULT_SCP_PERIOD/1000)*65536,-1,-1,nb_of_revs+1,5000000);
+	strconv = initStreamConvert(imgldr_ctx->ctx,track, DEFAULT_SCP_PERIOD, (DEFAULT_SCP_PERIOD/1000)*65536,-1,-1,nb_of_revs+1,5000000);
 	if(!strconv)
 	{
 		free(trkh);
@@ -209,7 +204,7 @@ uint32_t write_scp_track(HXCFE_IMGLDR* imgldr_ctx,FILE *f,HXCFE_SIDE * track,uin
 	return totalsize;
 }
 
-int SCP_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char * filename)
+int SCP_libWrite_DiskFile(LIBFLUX_IMGLDR* imgldr_ctx,LIBFLUX_FLOPPY * floppy,char * filename)
 {
 	FILE * f;
 	scp_header scph;
@@ -220,7 +215,7 @@ int SCP_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char * 
 	uint32_t track_checksum;
 	int i,tracknumber;
 
-	f = hxc_fopen(filename,"wb");
+	f = libflux_fopen(filename,"wb");
 	if( f )
 	{
 		memset(&scph,0,sizeof(scp_header));
@@ -231,11 +226,11 @@ int SCP_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char * 
 
 		if(tracknumber>83*2)
 		{
-			imgldr_ctx->hxcfe->hxc_printf(MSG_WARNING,"SCP_libWrite_DiskFile : Track number limited to 164 !");
+			imgldr_ctx->ctx->libflux_printf(MSG_WARNING,"SCP_libWrite_DiskFile : Track number limited to 164 !");
 			tracknumber = 83*2;
 		}
 
-		scph.number_of_revolution = hxcfe_getEnvVarValue( imgldr_ctx->hxcfe, "SCPEXPORT_NUMBER_OF_REVOLUTIONS" );
+		scph.number_of_revolution = libflux_getEnvVarValue( imgldr_ctx->ctx, "SCPEXPORT_NUMBER_OF_REVOLUTIONS" );
 
 		scph.disk_type = 0x15;
 
@@ -278,21 +273,21 @@ int SCP_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char * 
 				break;
 		}
 
-		if( hxcfe_getEnvVar( imgldr_ctx->hxcfe, "SCPEXPORT_DISK_TYPE", NULL ) )
+		if( libflux_getEnvVar( imgldr_ctx->ctx, "SCPEXPORT_DISK_TYPE", NULL ) )
 		{
-			scph.disk_type = hxcfe_getEnvVarValue( imgldr_ctx->hxcfe, "SCPEXPORT_DISK_TYPE" );
+			scph.disk_type = libflux_getEnvVarValue( imgldr_ctx->ctx, "SCPEXPORT_DISK_TYPE" );
 		}
 
 		scph.flags = INDEXMARK;
 		if(floppy->floppyNumberOfTrack>42)
 			scph.flags |= DISK_96TPI;
 
-		if( hxcfe_getEnvVar( imgldr_ctx->hxcfe, "SCPEXPORT_DISK_96TPI", NULL ) )
+		if( libflux_getEnvVar( imgldr_ctx->ctx, "SCPEXPORT_DISK_96TPI", NULL ) )
 		{
 			scph.flags |= DISK_96TPI;
 		}
 
-		if( hxcfe_getEnvVar( imgldr_ctx->hxcfe, "SCPEXPORT_DISK_48TPI", NULL ) )
+		if( libflux_getEnvVar( imgldr_ctx->ctx, "SCPEXPORT_DISK_48TPI", NULL ) )
 		{
 			scph.flags &= ~DISK_96TPI;
 		}
@@ -335,7 +330,7 @@ int SCP_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char * 
 
 		scph.version = 0x09;
 
-		imgldr_ctx->hxcfe->hxc_printf(MSG_DEBUG,"SCP_libWrite_DiskFile : Flags=0x%.2X Disktype=0x%.2X NumberOfRevolution=%d Version=%d NbTrack=%d NbSide:%d",scph.flags,scph.disk_type,scph.number_of_revolution,scph.version,floppy->floppyNumberOfTrack,floppy->floppyNumberOfSide);
+		imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"SCP_libWrite_DiskFile : Flags=0x%.2X Disktype=0x%.2X NumberOfRevolution=%d Version=%d NbTrack=%d NbSide:%d",scph.flags,scph.disk_type,scph.number_of_revolution,scph.version,floppy->floppyNumberOfTrack,floppy->floppyNumberOfSide);
 
 		// Header
 		if (fwrite(&scph,sizeof(scp_header),1,f) != 1) { /* I/O error */ }
@@ -349,7 +344,7 @@ int SCP_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char * 
 
 		for(i=0;i<tracknumber;i++)
 		{
-			hxcfe_imgCallProgressCallback(imgldr_ctx,i,tracknumber);
+			libflux_imgCallProgressCallback(imgldr_ctx,i,tracknumber);
 
 			if (fseek(f,0,SEEK_END) != 0) { /* seek error */ }
 			if(floppy->floppyNumberOfSide == 2)
@@ -373,10 +368,10 @@ int SCP_libWrite_DiskFile(HXCFE_IMGLDR* imgldr_ctx,HXCFE_FLOPPY * floppy,char * 
 		if (fseek(f,0,SEEK_SET) != 0) { /* seek error */ }
 		scph.file_data_checksum = LITTLEENDIAN_DWORD(file_checksum);
 		if (fwrite(&scph,sizeof(scp_header),1,f) != 1) { /* I/O error */ }
-		hxc_fclose(f);
+		libflux_fclose(f);
 
-		return HXCFE_NOERROR;
+		return LIBFLUX_NOERROR;
 	}
 
-	return HXCFE_ACCESSERROR;
+	return LIBFLUX_ACCESSERROR;
 }

@@ -45,7 +45,6 @@ typedef enum uft_device_cap {
 
 typedef struct uft_device_info {
     int         index;
-    char        name[64];           // "Greaseweazle F7" (human-readable)
     char        port[32];           // "/dev/ttyACM0" oder "COM3"
     char        firmware[16];       // "1.2"
     uint32_t    capabilities;       // Bitmask von uft_device_cap_t

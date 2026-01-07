@@ -4,7 +4,6 @@
  * @version 1.0.0
  * @date 2026-01-06
  *
- * Source: Applesauce WOZ specification, HxCFloppyEmulator (GPL v2)
  */
 
 #include <stdlib.h>
@@ -229,9 +228,9 @@ int uft_woz_open(uft_woz_ctx_t* ctx, const char* filename)
     }
     
     /* Get file size */
-    fseek(f, 0, SEEK_END);
+    (void)fseek(f, 0, SEEK_END);
     ctx->file_size = ftell(f);
-    fseek(f, 0, SEEK_SET);
+    (void)fseek(f, 0, SEEK_SET);
     
     /* Allocate and read */
     ctx->file_data = malloc(ctx->file_size);

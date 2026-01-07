@@ -262,7 +262,6 @@ typedef struct {
     
     /* Capture info */
     uint64_t    capture_timestamp;  /* Unix timestamp of capture */
-    char        capture_device[32]; /* Device used (e.g., "Greaseweazle F7") */
     char        capture_software[32]; /* Software version */
     
     /* Source media */
@@ -542,12 +541,10 @@ int uff_import_hfe(uff_file_t* uff, const char* hfe_path);
 int uff_import_g64(uff_file_t* uff, const char* g64_path);
 
 /**
- * @brief Import from KryoFlux stream
  * @param uff Target UFF file
- * @param kf_dir Source KryoFlux directory
  * @return 0 on success
  */
-int uff_import_kryoflux(uff_file_t* uff, const char* kf_dir);
+int uff_import_kryoflux(uff_file_t* uff, const char* uft_kf_dir);
 
 /**
  * @brief Export to SCP file

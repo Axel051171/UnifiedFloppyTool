@@ -359,7 +359,7 @@ int uft_hw_detect_floppy_params(
         return -1;
     }
     
-    struct floppy_drive_params params;
+    struct uft_floppy_drive_params params;
     if (ioctl(fd, FDGETDRVPRM, &params) == 0) {
         *cylinders_out = 80;  // Standard
         *heads_out = 2;       // Standard

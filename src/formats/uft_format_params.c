@@ -7,7 +7,6 @@
 #include <stddef.h>
 
 // ============================================================================
-// Preset Format Definitions (from SAMdisk Format.cpp)
 // ============================================================================
 
 static const uft_regular_format_t g_preset_formats[] = {

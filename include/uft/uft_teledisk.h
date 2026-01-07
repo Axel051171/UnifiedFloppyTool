@@ -2,7 +2,6 @@
  * @file uft_teledisk.h
  * @brief TeleDisk TD0 Format Support
  * 
- * Algorithms ported from DiskImageTool by Digitoxin1
  * 
  * TeleDisk formats:
  * - TD0 1.x: LZW compression

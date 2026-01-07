@@ -1,5 +1,5 @@
-#ifndef CATWEASEL_H
-#define CATWEASEL_H
+#ifndef UFT_CW_H
+#define UFT_CW_H
 
 class Fluxmap;
 class Bytes;

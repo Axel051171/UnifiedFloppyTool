@@ -4,10 +4,10 @@
 #include <stdbool.h>
 typedef struct { uint32_t tracks, heads, sectors, sectorSize; bool flux_supported;
   void (*log_callback)(const char* msg); void *internal_ctx; } FloppyDevice;
-int floppy_open(FloppyDevice*, const char*);
-int floppy_close(FloppyDevice*);
-int floppy_read_sector(FloppyDevice*, uint32_t,uint32_t,uint32_t,uint8_t*);
-int floppy_write_sector(FloppyDevice*, uint32_t,uint32_t,uint32_t,const uint8_t*);
-int floppy_analyze_protection(FloppyDevice*);
+int uft_floppy_open(FloppyDevice*, const char*);
+int uft_floppy_close(FloppyDevice*);
+int uft_floppy_read_sector(FloppyDevice*, uint32_t,uint32_t,uint32_t,uint8_t*);
+int uft_floppy_write_sector(FloppyDevice*, uint32_t,uint32_t,uint32_t,const uint8_t*);
+int uft_floppy_analyze_protection(FloppyDevice*);
 
 #endif
