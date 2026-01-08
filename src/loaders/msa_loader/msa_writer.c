@@ -33,7 +33,7 @@
 #include "msa_writer.h"
 #include "msa_format.h"
 #include "tracks/sector_extractor.h"
-#include "libhxcadaptor.h"
+#include "uft_compat.h"
 
 unsigned short msapacktrack(unsigned char * inputtrack,int insize,unsigned char * outputtrack)
 {

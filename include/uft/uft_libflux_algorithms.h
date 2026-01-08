@@ -4,7 +4,7 @@
  * 
  * This file contains algorithms and data structures extracted from the
  * 
- * Original UFT HFE Format: http://hxc2001.free.fr
+ * Original UFT HFE Format: docs.uft.org
  * 
  * Integrated for UnifiedFloppyTool (UFT) - December 2025
  * 

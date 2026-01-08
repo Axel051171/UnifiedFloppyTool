@@ -28,7 +28,7 @@
 //--------H----H----X--X----C----------2-------0----0---0----0-----1-------------//
 //-------H----H---X-----X---CCCCC-----222222----0000-----0000----1111------------//
 //-------------------------------------------------------------------------------//
-//----------------------------------------------------- http://hxc2001.free.fr --//
+
 ///////////////////////////////////////////////////////////////////////////////////
 // File : fs_amigados.c
 // Contains: AmigaDos File system manager functions
@@ -51,7 +51,7 @@
 #include "fs_manager/fs_manager.h"
 #include "libflux.h""
 
-#include "libhxcadaptor.h"
+#include "uft_compat.h"
 #include "uft_floppy_loader.h"
 #include "uft_floppy_utils.h"
 

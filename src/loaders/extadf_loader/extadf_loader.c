@@ -28,7 +28,7 @@
 //--------H----H----X--X----C----------2-------0----0---0----0-----1-------------//
 //-------H----H---X-----X---CCCCC-----222222----0000-----0000----1111------------//
 //-------------------------------------------------------------------------------//
-//----------------------------------------------------- http://hxc2001.free.fr --//
+
 ///////////////////////////////////////////////////////////////////////////////////
 // File : extadf_loader.c
 // Contains: Extended ADF floppy image loader
@@ -53,7 +53,7 @@
 
 #include "extadf_loader.h"
 
-#include "libhxcadaptor.h"
+#include "uft_compat.h"
 
 int EXTADF_libIsValidDiskFile( LIBFLUX_IMGLDR * imgldr_ctx, LIBFLUX_IMGLDR_FILEINFOS * imgfile )
 {

@@ -28,7 +28,7 @@
 //--------H----H----X--X----C----------2-------0----0---0----0-----1-------------//
 //-------H----H---X-----X---CCCCC-----222222----0000-----0000----1111------------//
 //-------------------------------------------------------------------------------//
-//----------------------------------------------------- http://hxc2001.free.fr --//
+
 ///////////////////////////////////////////////////////////////////////////////////
 // File : stx_writer.c
 // Contains: STX floppy image writer
@@ -52,7 +52,7 @@
 #include "pasti_format.h"
 #include "uft_floppy_utils.h"
 #include "tracks/sector_extractor.h"
-#include "libhxcadaptor.h"
+#include "uft_compat.h"
 
 // Main writer function
 int STX_libWrite_DiskFile(LIBFLUX_IMGLDR* imgldr_ctx,LIBFLUX_FLOPPY * floppy,char * filename)

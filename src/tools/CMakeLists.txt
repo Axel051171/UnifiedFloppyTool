@@ -4,7 +4,7 @@ set(TOOL_SOURCES
     uft_tool_greaseweazle.c
     uft_tool_fluxengine.c
     uft_tool_nibtools.c
-    uft_tool_hxcfe.c
+    uft_tool_convert.c
     uft_tool_adftools.c
     uft_tool_disk_analyse.c
     uft_tool_registry.c

@@ -27,7 +27,7 @@
 //--------H----H----X--X----C----------2-------0----0---0----0-----1-------------//
 //-------H----H---X-----X---CCCCC-----22222----0000-----0000----11111------------//
 //-------------------------------------------------------------------------------//
-//----------------------------------------------------- http://hxc2001.free.fr --//
+
 ///////////////////////////////////////////////////////////////////////////////////
 // File : display_track.c
 // Contains:
@@ -67,7 +67,7 @@
 #include "loaders/bmp_loader/bmp_file.h"
 
 #include "xml_disk/packer/pack.h"
-#include "misc/data/data_bmp_hxc2001_logo_bmp.h"
+#include "misc/data/data_bmp_uft_logo_bmp.h"
 
 #define PI    ((float)  3.141592654f)
 
@@ -860,9 +860,9 @@ LIBFLUX_TD * libflux_td_init(LIBFLUX_CTX* flux_ctx,uint32_t xsize,uint32_t ysize
 
 		td->angle_step = 0.001;
 
-		if(!bitmap_hxc2001_logo_bmp->unpacked_data)
+		if(!bitmap_uft_logo_bmp->unpacked_data)
 		{
-			bitmap_hxc2001_logo_bmp->unpacked_data = data_unpack(bitmap_hxc2001_logo_bmp->data,bitmap_hxc2001_logo_bmp->csize ,bitmap_hxc2001_logo_bmp->data, bitmap_hxc2001_logo_bmp->size);
+			bitmap_uft_logo_bmp->unpacked_data = data_unpack(bitmap_uft_logo_bmp->data,bitmap_uft_logo_bmp->csize ,bitmap_uft_logo_bmp->data, bitmap_uft_logo_bmp->size);
 		}
 
 		td->framebuffer = malloc(td->xsize*td->ysize*sizeof(uint32_t));
@@ -2385,7 +2385,7 @@ void libflux_td_draw_track( LIBFLUX_TD *td, LIBFLUX_FLOPPY * floppydisk, int32_t
 	snprintf(tmp_str, sizeof(tmp_str),"liblibflux_ctx v%s",STR_FILE_VERSION2);
 	putstring8x8(td,LAYER_TEXT,td->xsize - (8 + 1),td->ysize - (8*3 + 1),tmp_str,0x000000,0xFFFFFF,1,1);
 
-	splash_sprite(bitmap_hxc2001_logo_bmp,td->layers[LAYER_TEXT], td->xsize, td->ysize, td->xsize - (bitmap_hxc2001_logo_bmp->Xsize + 16), td->ysize - (bitmap_hxc2001_logo_bmp->Ysize + 16), LOGOALPHA);
+	splash_sprite(bitmap_uft_logo_bmp,td->layers[LAYER_TEXT], td->xsize, td->ysize, td->xsize - (bitmap_uft_logo_bmp->Xsize + 16), td->ysize - (bitmap_uft_logo_bmp->Ysize + 16), LOGOALPHA);
 
 	render( td );
 }
@@ -2882,7 +2882,7 @@ static void draw_trkstream( LIBFLUX_TD *td, LIBFLUX_TRKSTREAM* track_stream )
 	snprintf(tmp_str, sizeof(tmp_str),"liblibflux_ctx v%s",STR_FILE_VERSION2);
 	putstring8x8(td,LAYER_TEXT,td->xsize - (8 + 1),td->ysize - (8*3 + 1),tmp_str,0x000000,0xFFFFFF,1,1);
 
-	splash_sprite(bitmap_hxc2001_logo_bmp,td->layers[LAYER_TEXT], td->xsize, td->ysize, td->xsize - (bitmap_hxc2001_logo_bmp->Xsize + 16), td->ysize - (bitmap_hxc2001_logo_bmp->Ysize + 16),LOGOALPHA);
+	splash_sprite(bitmap_uft_logo_bmp,td->layers[LAYER_TEXT], td->xsize, td->ysize, td->xsize - (bitmap_uft_logo_bmp->Xsize + 16), td->ysize - (bitmap_uft_logo_bmp->Ysize + 16),LOGOALPHA);
 
 	td->noloop_trackmode = 0;
 }
@@ -2977,7 +2977,7 @@ void libflux_td_draw_stream_track( LIBFLUX_TD *td, LIBFLUX_FLOPPY * floppydisk, 
 			snprintf(tmp_str, sizeof(tmp_str),"liblibflux_ctx v%s",STR_FILE_VERSION2);
 			putstring8x8(td,LAYER_TEXT,td->xsize - (8 + 1),td->ysize - (8*3 + 1),tmp_str,0x000000,0xFFFFFF,1,1);
 
-			splash_sprite(bitmap_hxc2001_logo_bmp,td->layers[LAYER_TEXT], td->xsize, td->ysize, td->xsize - (bitmap_hxc2001_logo_bmp->Xsize + 16), td->ysize - (bitmap_hxc2001_logo_bmp->Ysize + 16),LOGOALPHA);
+			splash_sprite(bitmap_uft_logo_bmp,td->layers[LAYER_TEXT], td->xsize, td->ysize, td->xsize - (bitmap_uft_logo_bmp->Xsize + 16), td->ysize - (bitmap_uft_logo_bmp->Ysize + 16),LOGOALPHA);
 		}
 	}
 
@@ -3864,7 +3864,7 @@ void libflux_td_draw_disk(LIBFLUX_TD *td,LIBFLUX_FLOPPY * floppydisk)
 
 	clear_layers( td );
 
-	splash_sprite(bitmap_hxc2001_logo_bmp,td->layers[LAYER_TEXT], td->xsize, td->ysize, td->xsize - (bitmap_hxc2001_logo_bmp->Xsize + 16), td->ysize - (bitmap_hxc2001_logo_bmp->Ysize + 16),LOGOALPHA);
+	splash_sprite(bitmap_uft_logo_bmp,td->layers[LAYER_TEXT], td->xsize, td->ysize, td->xsize - (bitmap_uft_logo_bmp->Xsize + 16), td->ysize - (bitmap_uft_logo_bmp->Ysize + 16),LOGOALPHA);
 
 	snprintf(tempstr, sizeof(tempstr),"liblibflux_ctx v%s",STR_FILE_VERSION2);
 	putstring8x8(td,LAYER_TEXT,td->xsize - (8 + 1),td->ysize - (8*3 + 1),tempstr,0xAAAAAA,0x000000,1,1);

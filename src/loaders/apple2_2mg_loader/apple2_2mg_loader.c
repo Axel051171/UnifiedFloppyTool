@@ -29,7 +29,7 @@
 //--------H----H----X--X----C----------2-------0----0---0----0-----1-------------//
 //-------H----H---X-----X---CCCCC-----222222----0000-----0000----1111------------//
 //-------------------------------------------------------------------------------//
-//----------------------------------------------------- http://hxc2001.free.fr --//
+
 ///////////////////////////////////////////////////////////////////////////////////
 // File : Apple2_2mg_loader.c
 // Contains: 2MG Apple II floppy image loader
@@ -55,7 +55,7 @@
 #include "apple2_2mg_loader.h"
 #include "apple2_2mg_format.h"
 
-#include "libhxcadaptor.h"
+#include "uft_compat.h"
 
 int Apple2_2mg_libIsValidDiskFile( LIBFLUX_IMGLDR * imgldr_ctx, LIBFLUX_IMGLDR_FILEINFOS * imgfile )
 {

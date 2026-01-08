@@ -3,7 +3,7 @@
  * @brief Tool Adapter Interface - Vollständige Definition
  * 
  * Abstraktion für externe Tools:
- * - HxCFE, adftools, disk-analyse
+ * - adftools, disk-analyse
  */
 
 #ifndef UFT_TOOL_ADAPTER_H

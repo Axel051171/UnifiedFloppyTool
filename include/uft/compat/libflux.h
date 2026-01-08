@@ -1,10 +1,10 @@
 /**
  * @file liblibflux.h
  * 
- * Provides type definitions and macros compatible with HxCFE library
+ * Provides type definitions and macros compatible with UFT library
  * to allow integration of HxC-derived code into UFT.
  * 
- * @note This is a compatibility shim, not the full HxCFE library
+ * @note This is a compatibility shim, not the full UFT library
  */
 
 #ifndef LIBLIBFLUX_H

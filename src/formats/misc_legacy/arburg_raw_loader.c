@@ -28,7 +28,7 @@
 //--------H----H----X--X----C----------2-------0----0---0----0-----1-------------//
 //-------H----H---X-----X---CCCCC-----222222----0000-----0000----1111------------//
 //-------------------------------------------------------------------------------//
-//----------------------------------------------------- http://hxc2001.free.fr --//
+
 ///////////////////////////////////////////////////////////////////////////////////
 // File : arburg_raw_loader.c
 // Contains: Arburg floppy image loader
@@ -55,7 +55,7 @@
 #include "arburg_raw_loader.h"
 #include "arburg_raw_writer.h"
 
-#include "libhxcadaptor.h"
+#include "uft_compat.h"
 
 int ARBURG_RAW_libIsValidDiskFile( LIBFLUX_IMGLDR * imgldr_ctx, LIBFLUX_IMGLDR_FILEINFOS * imgfile )
 {

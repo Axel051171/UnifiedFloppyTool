@@ -32,7 +32,7 @@
 #include "hfe_loader.h"
 #include "hfe_format.h"
 
-#include "libhxcadaptor.h"
+#include "uft_compat.h"
 
 #include "tracks/luts.h"
 

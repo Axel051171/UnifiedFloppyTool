@@ -32,7 +32,7 @@
 #include "mfm_loader.h"
 #include "mfm_format.h"
 
-#include "libhxcadaptor.h"
+#include "uft_compat.h"
 
 int MFM_libWrite_DiskFile(LIBFLUX_IMGLDR* imgldr_ctx,LIBFLUX_FLOPPY * floppy,char * filename)
 {

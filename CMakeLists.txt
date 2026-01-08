@@ -196,7 +196,7 @@ add_subdirectory(src/protection)
 # add_subdirectory(src/formats/atari)  # DISABLED: missing Atari-specific headers
 # add_subdirectory(src/formats/amiga_ext)  # DISABLED: missing Amiga-specific headers
 # add_subdirectory(src/formats/ibm)  # DISABLED: needs HxC types.h
-# add_subdirectory(src/formats/misc_hxc)  # DISABLED: needs HxC types.h
+# add_subdirectory(src/formats/misc_legacy)  # DISABLED: needs HxC types.h
 add_subdirectory(src/formats/scp)
 add_subdirectory(src/formats/amstrad)
 add_subdirectory(src/formats/msa)

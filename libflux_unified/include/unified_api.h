@@ -32,7 +32,7 @@ typedef enum {
     HW_TYPE_FLUXENGINE,
     HW_TYPE_APPLESAUCE,
     HW_TYPE_XUM1541,
-    HW_TYPE_HXC,
+    HW_TYPE_USB_FDC,
     HW_TYPE_ZOOMFLOPPY
 } hardware_type_t;
 

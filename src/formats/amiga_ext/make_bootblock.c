@@ -286,7 +286,7 @@ int main (int argc, char *argv[])
 			exit(-1);
 		}
 
-		tableoffset = memsearch("<HXCFEM>",2*4, (unsigned char*)&BOOTBLOCK, sizeof(BOOTBLOCK), 0 );
+		tableoffset = memsearch("<UFTFEM>",2*4, (unsigned char*)&BOOTBLOCK, sizeof(BOOTBLOCK), 0 );
 		if(tableoffset<0)
 		{
 			printf("Entry table not found !!\n");

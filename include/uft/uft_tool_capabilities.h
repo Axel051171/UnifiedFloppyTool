@@ -18,7 +18,7 @@
  *   Output: Verschiedene Formate
  *   
  * ANALYZER TOOLS:
- *   disk-analyse, HxCFE -infos
+ *   disk-analyse -infos
  *   Input:  Alle Formate
  *   Output: Analyse-Reports
  */

@@ -35,7 +35,7 @@
 
 #include "tracks/sector_extractor.h"
 
-#include "libhxcadaptor.h"
+#include "uft_compat.h"
 #include "uft_floppy_utils.h"
 
 int D88_libWrite_DiskFile(LIBFLUX_IMGLDR* imgldr_ctx,LIBFLUX_FLOPPY * floppy,char * filename)
@@ -77,7 +77,7 @@ int D88_libWrite_DiskFile(LIBFLUX_IMGLDR* imgldr_ctx,LIBFLUX_FLOPPY * floppy,cha
 	}
 
 	memset(&d88_fh,0,sizeof(d88_fileheader));
-	memcpy(d88_fh.name, "HxCFE", 6);  /* Fixed tag */
+	memcpy(d88_fh.name, "UFTOOL", 6);  /* Fixed tag */
 	if (fwrite(&d88_fh,sizeof(d88_fileheader),1,outfile) != 1) { /* I/O error */ }
 	memset(tracktable,0,sizeof(tracktable));
 	if (fwrite(&tracktable, sizeof(tracktable),1,outfile) != 1) { /* I/O error */ }

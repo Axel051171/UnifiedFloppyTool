@@ -1,8 +1,6 @@
 /**
  * @file test_ipf_roundtrip.c
- * @brief IPF Container Roundtrip Test
- * 
- * Tests: write -> read -> validate -> compare
+ * @brief IPF Container Tests v2.0
  */
 
 #include "uft/formats/ipf/uft_ipf.h"
@@ -10,170 +8,216 @@
 #include <string.h>
 #include <stdlib.h>
 
-#define TEST_FILE "/tmp/ipf_test_roundtrip.bin"
+#define TEST_FILE "/tmp/ipf_test_v2.bin"
 
-static int fail(const char *msg) {
-    fprintf(stderr, "FAIL: %s\n", msg);
-    return 1;
+static int g_tests = 0;
+static int g_passed = 0;
+
+#define TEST(name) do { g_tests++; printf("Test %d: %s... ", g_tests, name); } while(0)
+#define PASS() do { g_passed++; printf("PASS\n"); return 0; } while(0)
+#define FAIL(msg) do { printf("FAIL: %s\n", msg); return 1; } while(0)
+
+static int test_probe(void) {
+    TEST("Probe function");
+    
+    /* Create valid IPF */
+    uft_ipf_writer_t w;
+    if (uft_ipf_writer_open(&w, TEST_FILE) != UFT_IPF_OK) FAIL("writer_open");
+    if (uft_ipf_writer_write_header(&w) != UFT_IPF_OK) FAIL("write_header");
+    uft_ipf_writer_close(&w);
+    
+    if (!uft_ipf_probe(TEST_FILE)) FAIL("probe should return true");
+    
+    /* Create invalid file */
+    FILE *f = fopen(TEST_FILE, "wb");
+    fprintf(f, "NOT AN IPF FILE");
+    fclose(f);
+    
+    if (uft_ipf_probe(TEST_FILE)) FAIL("probe should return false");
+    
+    PASS();
 }
 
-static int test_basic_roundtrip(void) {
-    printf("Test 1: Basic roundtrip (8-byte header)...\n");
+static int test_basic_write_read(void) {
+    TEST("Basic write/read");
     
     /* Write */
     uft_ipf_writer_t w;
-    if (uft_ipf_writer_open(&w, TEST_FILE, UFT_IPF_MAGIC_CAPS, true, 8) != UFT_IPF_OK) {
-        return fail("writer_open");
-    }
+    if (uft_ipf_writer_open(&w, TEST_FILE) != UFT_IPF_OK) FAIL("writer_open");
     
-    const char msg[] = "Hello IPF!";
-    if (uft_ipf_writer_add_chunk(&w, UFT_IPF_CHUNK_INFO, msg, (uint32_t)strlen(msg), false) != UFT_IPF_OK) {
-        return fail("writer_add INFO");
-    }
+    /* Add INFO */
+    uft_ipf_info_t info = {0};
+    info.min_track = 0;
+    info.max_track = 79;
+    info.min_side = 0;
+    info.max_side = 1;
+    info.platforms = UFT_IPF_PLATFORM_AMIGA_OCS;
+    info.media_type = UFT_IPF_MEDIA_FLOPPY_DD;
     
-    const uint8_t data[] = {0xDE, 0xAD, 0xBE, 0xEF};
-    if (uft_ipf_writer_add_chunk(&w, UFT_IPF_CHUNK_DATA, data, sizeof(data), false) != UFT_IPF_OK) {
-        return fail("writer_add DATA");
-    }
+    if (uft_ipf_writer_add_info(&w, &info) != UFT_IPF_OK) FAIL("add_info");
+    
+    /* Add custom record */
+    const char data[] = "Test data";
+    if (uft_ipf_writer_add_record(&w, UFT_IPF_REC_DATA, data, sizeof(data)) != UFT_IPF_OK) 
+        FAIL("add_record");
     
     uft_ipf_writer_close(&w);
     
     /* Read */
     uft_ipf_t ipf;
-    if (uft_ipf_open(&ipf, TEST_FILE) != UFT_IPF_OK) return fail("open");
-    if (uft_ipf_parse(&ipf) != UFT_IPF_OK) return fail("parse");
-    if (uft_ipf_validate(&ipf, false) != UFT_IPF_OK) return fail("validate");
+    if (uft_ipf_open(&ipf, TEST_FILE) != UFT_IPF_OK) FAIL("open");
     
-    if (uft_ipf_chunk_count(&ipf) != 2) return fail("chunk_count != 2");
+    if (!ipf.is_valid_ipf) FAIL("not valid IPF");
+    if (ipf.record_count != 3) FAIL("expected 3 records"); /* CAPS + INFO + DATA */
     
-    /* Verify INFO chunk */
-    const uft_ipf_chunk_t *c0 = uft_ipf_chunk_at(&ipf, 0);
-    if (!c0 || !uft_fourcc_eq(c0->id, UFT_IPF_CHUNK_INFO)) return fail("chunk 0 not INFO");
-    
-    char buf[64] = {0};
-    size_t got;
-    if (uft_ipf_read_chunk_data(&ipf, 0, buf, sizeof(buf), &got) != UFT_IPF_OK) return fail("read INFO");
-    if (got != strlen(msg) || memcmp(buf, msg, got) != 0) return fail("INFO content mismatch");
-    
-    /* Verify DATA chunk */
-    const uft_ipf_chunk_t *c1 = uft_ipf_chunk_at(&ipf, 1);
-    if (!c1 || !uft_fourcc_eq(c1->id, UFT_IPF_CHUNK_DATA)) return fail("chunk 1 not DATA");
-    
-    uint8_t buf2[16] = {0};
-    if (uft_ipf_read_chunk_data(&ipf, 1, buf2, sizeof(buf2), &got) != UFT_IPF_OK) return fail("read DATA");
-    if (got != sizeof(data) || memcmp(buf2, data, got) != 0) return fail("DATA content mismatch");
+    const uft_ipf_info_t *ri = uft_ipf_get_info(&ipf);
+    if (!ri) FAIL("no INFO record");
+    if (ri->max_track != 79) FAIL("max_track mismatch");
+    if (!(ri->platforms & UFT_IPF_PLATFORM_AMIGA_OCS)) FAIL("platform mismatch");
     
     uft_ipf_close(&ipf);
-    printf("  PASS\n");
-    return 0;
+    PASS();
 }
 
-static int test_crc32_function(void) {
-    printf("Test 2: CRC32 calculation...\n");
+static int test_crc_validation(void) {
+    TEST("CRC validation");
     
-    /* Known CRC32 values */
-    const char test1[] = "123456789";
-    uint32_t crc1 = uft_ipf_crc32(test1, 9);
-    /* CRC32 of "123456789" should be 0xCBF43926 */
-    if (crc1 != 0xCBF43926) {
-        printf("  CRC32('123456789') = %08X, expected CBF43926\n", crc1);
-        return fail("CRC32 mismatch");
-    }
-    
-    printf("  PASS\n");
-    return 0;
-}
-
-static int test_find_chunk(void) {
-    printf("Test 3: Find chunk by FourCC...\n");
-    
-    /* Write multiple chunks */
+    /* Create file */
     uft_ipf_writer_t w;
-    if (uft_ipf_writer_open(&w, TEST_FILE, UFT_IPF_MAGIC_CAPS, false, 8) != UFT_IPF_OK) {
-        return fail("writer_open");
-    }
-    
-    uft_ipf_writer_add_chunk(&w, UFT_IPF_CHUNK_INFO, "info", 4, false);
-    uft_ipf_writer_add_chunk(&w, UFT_IPF_CHUNK_TRCK, "track", 5, false);
-    uft_ipf_writer_add_chunk(&w, UFT_IPF_CHUNK_DATA, "data", 4, false);
+    uft_ipf_writer_open(&w, TEST_FILE);
+    uft_ipf_writer_write_header(&w);
+    uft_ipf_writer_add_record(&w, UFT_IPF_REC_DATA, "hello", 5);
     uft_ipf_writer_close(&w);
     
-    /* Find chunks */
+    /* Validate */
     uft_ipf_t ipf;
     uft_ipf_open(&ipf, TEST_FILE);
-    uft_ipf_parse(&ipf);
     
-    size_t idx = uft_ipf_find_chunk(&ipf, UFT_IPF_CHUNK_TRCK);
-    if (idx != 1) return fail("TRCK not at index 1");
+    uft_ipf_err_t e = uft_ipf_validate(&ipf, true);
+    if (e != UFT_IPF_OK) FAIL("validation failed");
     
-    idx = uft_ipf_find_chunk(&ipf, UFT_IPF_CHUNK_DATA);
-    if (idx != 2) return fail("DATA not at index 2");
-    
-    idx = uft_ipf_find_chunk(&ipf, uft_fourcc_make('N','O','N','E'));
-    if (idx != SIZE_MAX) return fail("Found non-existent chunk");
+    /* Check CRC on DATA record */
+    if (!uft_ipf_verify_record_crc(&ipf, 1)) FAIL("CRC verify failed");
     
     uft_ipf_close(&ipf);
-    printf("  PASS\n");
-    return 0;
+    PASS();
+}
+
+static int test_record_types(void) {
+    TEST("Record type functions");
+    
+    if (!uft_ipf_record_type_known(UFT_IPF_REC_CAPS)) FAIL("CAPS unknown");
+    if (!uft_ipf_record_type_known(UFT_IPF_REC_INFO)) FAIL("INFO unknown");
+    if (!uft_ipf_record_type_known(UFT_IPF_REC_DATA)) FAIL("DATA unknown");
+    if (uft_ipf_record_type_known(0x12345678)) FAIL("random should be unknown");
+    
+    if (strcmp(uft_ipf_record_type_name(UFT_IPF_REC_CAPS), "CAPS") != 0) FAIL("CAPS name");
+    if (strcmp(uft_ipf_record_type_name(UFT_IPF_REC_INFO), "INFO") != 0) FAIL("INFO name");
+    
+    uint32_t t = uft_ipf_string_to_type("DATA");
+    if (t != UFT_IPF_REC_DATA) FAIL("string_to_type");
+    
+    const char *s = uft_ipf_type_to_string(UFT_IPF_REC_TRCK);
+    if (strcmp(s, "TRCK") != 0) FAIL("type_to_string");
+    
+    PASS();
+}
+
+static int test_find_record(void) {
+    TEST("Find record");
+    
+    uft_ipf_writer_t w;
+    uft_ipf_writer_open(&w, TEST_FILE);
+    uft_ipf_writer_write_header(&w);
+    uft_ipf_writer_add_record(&w, UFT_IPF_REC_DATA, "1", 1);
+    uft_ipf_writer_add_record(&w, UFT_IPF_REC_DATA, "2", 1);
+    uft_ipf_writer_add_record(&w, UFT_IPF_REC_DATA, "3", 1);
+    uft_ipf_writer_close(&w);
+    
+    uft_ipf_t ipf;
+    uft_ipf_open(&ipf, TEST_FILE);
+    
+    size_t idx = uft_ipf_find_record(&ipf, UFT_IPF_REC_DATA);
+    if (idx != 1) FAIL("first DATA not at 1");
+    
+    idx = uft_ipf_find_next_record(&ipf, UFT_IPF_REC_DATA, 1);
+    if (idx != 2) FAIL("second DATA not at 2");
+    
+    idx = uft_ipf_find_next_record(&ipf, UFT_IPF_REC_DATA, 3);
+    if (idx != SIZE_MAX) FAIL("should not find after 3");
+    
+    idx = uft_ipf_find_record(&ipf, UFT_IPF_REC_TRCK);
+    if (idx != SIZE_MAX) FAIL("should not find TRCK");
+    
+    uft_ipf_close(&ipf);
+    PASS();
+}
+
+static int test_dump(void) {
+    TEST("Dump function");
+    
+    uft_ipf_writer_t w;
+    uft_ipf_writer_open(&w, TEST_FILE);
+    
+    uft_ipf_info_t info = {0};
+    info.min_track = 0;
+    info.max_track = 79;
+    info.platforms = UFT_IPF_PLATFORM_AMIGA_OCS | UFT_IPF_PLATFORM_ATARI_ST;
+    uft_ipf_writer_add_info(&w, &info);
+    uft_ipf_writer_add_record(&w, UFT_IPF_REC_DATA, "test", 4);
+    uft_ipf_writer_close(&w);
+    
+    uft_ipf_t ipf;
+    uft_ipf_open(&ipf, TEST_FILE);
+    
+    printf("\n");
+    uft_ipf_dump(&ipf, stdout, true);
+    
+    uft_ipf_close(&ipf);
+    PASS();
 }
 
 static int test_error_handling(void) {
-    printf("Test 4: Error handling...\n");
+    TEST("Error handling");
     
     uft_ipf_t ipf;
     
-    /* Non-existent file */
-    if (uft_ipf_open(&ipf, "/nonexistent/path.ipf") == UFT_IPF_OK) {
-        uft_ipf_close(&ipf);
-        return fail("Should fail on non-existent file");
+    if (uft_ipf_open(&ipf, "/nonexistent") == UFT_IPF_OK) FAIL("should fail");
+    if (uft_ipf_open(NULL, TEST_FILE) == UFT_IPF_OK) FAIL("NULL ctx");
+    if (uft_ipf_open(&ipf, NULL) == UFT_IPF_OK) FAIL("NULL path");
+    
+    /* Create non-IPF file (must be at least 12 bytes for EMAGIC) */
+    FILE *f = fopen(TEST_FILE, "wb");
+    fprintf(f, "NOT AN IPF FILE!");  /* 16 bytes */
+    fclose(f);
+    
+    uft_ipf_err_t e = uft_ipf_open(&ipf, TEST_FILE);
+    if (e != UFT_IPF_EMAGIC) {
+        printf("got error %d (%s) ", e, uft_ipf_strerror(e));
+        FAIL("should be EMAGIC");
     }
     
-    /* NULL arguments */
-    if (uft_ipf_open(NULL, TEST_FILE) == UFT_IPF_OK) return fail("Should fail on NULL ctx");
-    if (uft_ipf_open(&ipf, NULL) == UFT_IPF_OK) return fail("Should fail on NULL path");
-    
-    printf("  PASS\n");
-    return 0;
-}
-
-static int test_dump_info(void) {
-    printf("Test 5: Dump info...\n");
-    
-    /* Write test file */
-    uft_ipf_writer_t w;
-    uft_ipf_writer_open(&w, TEST_FILE, UFT_IPF_MAGIC_CAPS, true, 8);
-    uft_ipf_writer_add_chunk(&w, UFT_IPF_CHUNK_INFO, "metadata", 8, false);
-    uft_ipf_writer_add_chunk(&w, UFT_IPF_CHUNK_DATA, "content", 7, false);
-    uft_ipf_writer_close(&w);
-    
-    /* Parse and dump */
-    uft_ipf_t ipf;
-    uft_ipf_open(&ipf, TEST_FILE);
-    uft_ipf_parse(&ipf);
-    
-    printf("  --- dump ---\n");
-    uft_ipf_dump_info(&ipf, stdout);
-    printf("  --- end ---\n");
-    
-    uft_ipf_close(&ipf);
-    printf("  PASS\n");
-    return 0;
+    PASS();
 }
 
 int main(void) {
-    printf("=== IPF Container Tests ===\n\n");
+    printf("═══════════════════════════════════════════════════════════════\n");
+    printf("IPF Container Tests v2.0\n");
+    printf("═══════════════════════════════════════════════════════════════\n\n");
     
-    int failures = 0;
-    failures += test_basic_roundtrip();
-    failures += test_crc32_function();
-    failures += test_find_chunk();
-    failures += test_error_handling();
-    failures += test_dump_info();
+    test_probe();
+    test_basic_write_read();
+    test_crc_validation();
+    test_record_types();
+    test_find_record();
+    test_error_handling();
+    test_dump();
     
-    printf("\n=== Results: %d failures ===\n", failures);
+    printf("\n═══════════════════════════════════════════════════════════════\n");
+    printf("Results: %d/%d passed\n", g_passed, g_tests);
+    printf("═══════════════════════════════════════════════════════════════\n");
     
-    /* Cleanup */
     remove(TEST_FILE);
     
-    return failures > 0 ? 1 : 0;
+    return (g_passed == g_tests) ? 0 : 1;
 }

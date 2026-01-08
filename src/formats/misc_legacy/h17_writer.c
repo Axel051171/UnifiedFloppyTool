@@ -39,7 +39,7 @@
 #include "h17_loader.h"
 #include "h17_writer.h"
 #include "tracks/sector_extractor.h"
-#include "libhxcadaptor.h"
+#include "uft_compat.h"
 
 int write_meta_data_track(FILE * f,LIBFLUX_SECTORACCESS* ss,int32_t startidsector,int32_t sectorpertrack,int32_t trk,int32_t side,int32_t sectorsize,int32_t tracktype, int * badsect, int * missingsect )
 {

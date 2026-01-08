@@ -28,7 +28,7 @@
 //--------H----H----X--X----C----------2-------0----0---0----0-----1-------------//
 //-------H----H---X-----X---CCCCC-----222222----0000-----0000----1111------------//
 //-------------------------------------------------------------------------------//
-//----------------------------------------------------- http://hxc2001.free.fr --//
+
 ///////////////////////////////////////////////////////////////////////////////////
 // File : hdm_loader.c
 // Contains: HDM X68000 floppy image loader
@@ -46,7 +46,7 @@
 
 #include "libflux.h""
 #include "libflux.h""
-#include "libhxcadaptor.h"
+#include "uft_compat.h"
 #include "uft_floppy_loader.h"
 #include "tracks/track_generator.h"
 #include "loaders/common/raw_iso.h"

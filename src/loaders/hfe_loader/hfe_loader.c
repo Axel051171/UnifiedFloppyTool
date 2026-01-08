@@ -28,7 +28,7 @@
 //--------H----H----X--X----C----------2-------0----0---0----0-----1-------------//
 //-------H----H---X-----X---CCCCC-----222222----0000-----0000----1111------------//
 //-------------------------------------------------------------------------------//
-//----------------------------------------------------- http://hxc2001.free.fr --//
+
 ///////////////////////////////////////////////////////////////////////////////////
 // File : hfe_loader.c
 // Contains: HFE floppy image loader
@@ -53,7 +53,7 @@
 #include "hfe_loader.h"
 #include "hfe_format.h"
 
-#include "libhxcadaptor.h"
+#include "uft_compat.h"
 
 #include "tracks/luts.h"
 
@@ -354,7 +354,7 @@ int HFE_libWrite_DiskFile(LIBFLUX_IMGLDR* imgldr_ctx,LIBFLUX_FLOPPY * floppy,cha
 int HFE_libGetPluginInfo(LIBFLUX_IMGLDR * imgldr_ctx,uint32_t infotype,void * returnvalue)
 {
 	static const char plug_id[]="HXC_HFE";
-	static const char plug_desc[]="SD Card HxCFE HFE file Loader";
+	static const char plug_desc[]="SD Card HFE file Loader";
 	static const char plug_ext[]="hfe";
 
 	plugins_ptr plug_funcs=
@@ -381,7 +381,7 @@ int EXTHFE_libWrite_DiskFile(LIBFLUX_IMGLDR* imgldr_ctx,LIBFLUX_FLOPPY * floppy,
 int EXTHFE_libGetPluginInfo(LIBFLUX_IMGLDR * imgldr_ctx,uint32_t infotype,void * returnvalue)
 {
 	static const char plug_id[]="HXC_EXTHFE";
-	static const char plug_desc[]="SD Card HxCFE EXTENDED HFE file Loader";
+	static const char plug_desc[]="SD Card Extended HFE file Loader";
 	static const char plug_ext[]="hfe";
 
 	plugins_ptr plug_funcs=
@@ -408,7 +408,7 @@ int HFE_HDDD_A2_libWrite_DiskFile(LIBFLUX_IMGLDR* imgldr_ctx,LIBFLUX_FLOPPY * fl
 int HFE_HDDD_A2_libGetPluginInfo(LIBFLUX_IMGLDR * imgldr_ctx,uint32_t infotype,void * returnvalue)
 {
 	static const char plug_id[]="HXC_HDDD_A2_HFE";
-	static const char plug_desc[]="SD Card HxCFE HFE file Loader (HDDD A2 Support)";
+	static const char plug_desc[]="SD Card HFE file Loader (HDDD A2 Support)";
 	static const char plug_ext[]="hfe";
 
 	plugins_ptr plug_funcs=

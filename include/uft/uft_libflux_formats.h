@@ -5,7 +5,7 @@
  * This file contains format structures extracted from UFT HFE Format
  * for supporting 100+ disk image formats.
  * 
- * Original UFT HFE Format: http://hxc2001.free.fr
+ * Original UFT HFE Format: docs.uft.org
  * 
  * Integrated for UnifiedFloppyTool (UFT) - December 2025
  */

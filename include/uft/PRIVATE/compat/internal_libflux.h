@@ -1,6 +1,6 @@
 /**
  * @file internal_liblibflux.h
- * @brief Internal HxCFE types for UFT compatibility
+ * @brief Internal UFT types for UFT compatibility
  */
 
 #ifndef INTERNAL_LIBLIBFLUX_H

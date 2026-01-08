@@ -1,18 +1,18 @@
 # UFT Encoding Module - FM/MFM/GCR
 # Part of UnifiedFloppyTool
 
-# HxCFloppyEmulator encoding files - now using hxcfe_compat.h compatibility layer
+# legacy format encoding files - now using uft_encoding_types.h compatibility layer
 # Integration completed 2025-01-05
 
-set(HXCFE_ENCODING_SOURCES
+set(UFT_ENCODING_SOURCES
     fm_encoding.c
     mfm_encoding.c
     dec_m2fm_encoding.c
     luts.c
 )
 
-set(HXCFE_ENCODING_HEADERS
-    hxcfe_compat.h
+set(UFT_ENCODING_HEADERS
+    uft_encoding_types.h
     fm_encoding.h
     mfm_encoding.h
     dec_m2fm_encoding.h
@@ -20,7 +20,7 @@ set(HXCFE_ENCODING_HEADERS
 )
 
 # GCR submodule - DISABLED: need HxC types.h
-# These files are from HxCFloppyEmulator and need additional headers
+# These files are from legacy format and need additional headers
 set(GCR_SOURCES
     # gcr/apple2_gcr_track.c    # DISABLED: needs types.h
     # gcr/apple_mac_gcr_track.c # DISABLED: needs types.h
@@ -39,8 +39,8 @@ set(GCR_HEADERS
 
 # Create static library with all encoding sources
 add_library(uft_encoding STATIC
-    ${HXCFE_ENCODING_SOURCES}
-    ${HXCFE_ENCODING_HEADERS}
+    ${UFT_ENCODING_SOURCES}
+    ${UFT_ENCODING_HEADERS}
     ${GCR_SOURCES}
     ${GCR_HEADERS}
 )

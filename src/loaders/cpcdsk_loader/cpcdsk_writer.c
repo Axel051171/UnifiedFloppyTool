@@ -33,7 +33,7 @@
 #include "cpcdsk_format.h"
 #include "cpcdsk_loader.h"
 
-#include "libhxcadaptor.h"
+#include "uft_compat.h"
 
 #include "uft_floppy_utils.h"
 

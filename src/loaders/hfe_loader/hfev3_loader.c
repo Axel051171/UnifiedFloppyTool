@@ -28,7 +28,7 @@
 //--------H----H----X--X----C----------2-------0----0---0----0-----1-------------//
 //-------H----H---X-----X---CCCCC-----222222----0000-----0000----1111------------//
 //-------------------------------------------------------------------------------//
-//----------------------------------------------------- http://hxc2001.free.fr --//
+
 ///////////////////////////////////////////////////////////////////////////////////
 // File : hfev3_loader.c
 // Contains: HFE V3 floppy image loader
@@ -55,7 +55,7 @@
 
 #include "hfev3_trackgen.h"
 
-#include "libhxcadaptor.h"
+#include "uft_compat.h"
 
 #include "tracks/luts.h"
 
@@ -486,7 +486,7 @@ int HFEV3_libWrite_DiskFile(LIBFLUX_IMGLDR* imgldr_ctx,LIBFLUX_FLOPPY * floppy,c
 int HFEV3_libGetPluginInfo(LIBFLUX_IMGLDR * imgldr_ctx,uint32_t infotype,void * returnvalue)
 {
 	static const char plug_id[]="HXC_HFEV3";
-	static const char plug_desc[]="SD Card HxCFE HFE V3 file Loader";
+	static const char plug_desc[]="SD Card HFE V3 file Loader";
 	static const char plug_ext[]="hfe";
 
 	plugins_ptr plug_funcs=

@@ -11,7 +11,7 @@
 #   - MFM: Amiga, IBM PC, Northstar, Membrain, Centurion
 #   - FM:  IBM PC, Heathkit, DEC RX02, Emu, Thomson MO5, AED, Arburg, Tycom
 #
-# Origin: HxCFloppyEmulator (Jean-François DEL NERO)
+# Origin: legacy format (Jean-François DEL NERO)
 # License: GPL-2.0
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -120,7 +120,7 @@ target_include_directories(uft_tracks PUBLIC
     ${CMAKE_SOURCE_DIR}/include/uft
     ${CMAKE_SOURCE_DIR}/include/uft/compat
     
-    # HxCFloppyEmulator compatibility (types.h, libhxcfe.h, etc.)
+    # legacy format compatibility (types.h, libuft_enc.h, etc.)
     ${CMAKE_SOURCE_DIR}/src/algorithms/tracks
 )
 

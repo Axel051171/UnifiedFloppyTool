@@ -1477,7 +1477,7 @@ void init_timer()
 {
 	rbfint = AllocMem(sizeof(struct Interrupt), MEMF_PUBLIC|MEMF_CLEAR);
 	rbfint->is_Node.ln_Type = NT_INTERRUPT;      /* Init interrupt node. */
-	rbfint->is_Node.ln_Name = "HxCFESelectorTimerInt";
+	rbfint->is_Node.ln_Name = "UFTSelectorTimerInt";
 	rbfint->is_Data = 0;//(APTR)rbfdata;
 	rbfint->is_Code = ithandler;
 

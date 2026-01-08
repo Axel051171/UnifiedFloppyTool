@@ -43,7 +43,7 @@ typedef enum {
     HW_TYPE_FLUXENGINE,
     HW_TYPE_APPLESAUCE,
     HW_TYPE_XUM1541,
-    HW_TYPE_HXC,
+    HW_TYPE_USB_FDC,
     HW_TYPE_ZOOMFLOPPY
 } hardware_type_t;
 
@@ -573,7 +573,7 @@ const char* unified_get_hardware_name(hardware_type_t hw_type)
         case HW_TYPE_FLUXENGINE:  return "FluxEngine";
         case HW_TYPE_APPLESAUCE:  return "Applesauce";
         case HW_TYPE_XUM1541:     return "XUM1541";
-        case HW_TYPE_HXC:         return "HxC USB";
+        case HW_TYPE_USB_FDC:         return "USB FDC";
         case HW_TYPE_ZOOMFLOPPY:  return "ZoomFloppy";
         case HW_TYPE_NONE:        return "None";
         default:                  return "Unknown";

@@ -28,7 +28,7 @@
 //--------H----H----X--X----C----------2-------0----0---0----0-----1-------------//
 //-------H----H---X-----X---CCCCC-----222222----0000-----0000----1111------------//
 //-------------------------------------------------------------------------------//
-//----------------------------------------------------- http://hxc2001.free.fr --//
+
 ///////////////////////////////////////////////////////////////////////////////////
 // File : mfm_loader.c
 // Contains: MFM floppy image loader
@@ -54,7 +54,7 @@
 #include "mfm_loader.h"
 #include "mfm_format.h"
 
-#include "libhxcadaptor.h"
+#include "uft_compat.h"
 
 int MFM_libIsValidDiskFile( LIBFLUX_IMGLDR * imgldr_ctx, LIBFLUX_IMGLDR_FILEINFOS * imgfile )
 {

@@ -34,7 +34,7 @@
 
 #include "hfev3_trackgen.h"
 
-#include "libhxcadaptor.h"
+#include "uft_compat.h"
 
 #include "tracks/luts.h"
 

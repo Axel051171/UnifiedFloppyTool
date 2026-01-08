@@ -392,7 +392,7 @@ const uft_tool_profile_t UFT_TOOL_NIBTOOLS = {
 };
 
 // ============================================================================
-// HxCFE Options
+// UFT Options
 // ============================================================================
 
 static const uft_tool_option_t libflux_options[] = {

@@ -32,7 +32,7 @@
 #include "st_loader.h"
 #include "st_writer.h"
 #include "tracks/sector_extractor.h"
-#include "libhxcadaptor.h"
+#include "uft_compat.h"
 
 // Main writer function
 int ST_libWrite_DiskFile(LIBFLUX_IMGLDR* imgldr_ctx,LIBFLUX_FLOPPY * floppy,char * filename)

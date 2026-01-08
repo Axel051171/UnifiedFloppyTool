@@ -38,7 +38,7 @@
 #include "tracks/sector_extractor.h"
 #include "tracks/trackutils.h"
 
-#include "libhxcadaptor.h"
+#include "uft_compat.h"
 
 void setdmktrackbit(unsigned char * input_data,int bit_offset,int state)
 {

@@ -35,7 +35,7 @@
 
 #include "imd_format.h"
 
-#include "libhxcadaptor.h"
+#include "uft_compat.h"
 
 extern unsigned char size_to_code(uint32_t size);
 

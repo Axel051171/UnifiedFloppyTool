@@ -78,14 +78,14 @@ typedef enum {
     UFT_FMT_FDI,            /* Formatted Disk Image */
     UFT_FMT_DSK_CPC,        /* CPC DSK */
     UFT_FMT_EDSK,           /* Extended DSK */
-    UFT_FMT_MFM,            /* HxC MFM Stream */
+    UFT_FMT_MFM,            /* MFM Stream */
     UFT_FMT_ISO,            /* ISO Image */
     UFT_FMT_VFD,            /* Virtual Floppy */
     
     /* Flux Formats */
     UFT_FMT_SCP,            /* SuperCard Pro */
     UFT_FMT_HFE,            /* UFT HFE Format */
-    UFT_FMT_HFE_V3,         /* HxC v3 */
+    UFT_FMT_HFE_V3,         /* HFE v3 */
     UFT_FMT_DMK,            /* TRS-80 DMK */
     UFT_FMT_CT,             /* CatWeasel */
     UFT_FMT_RAW_FLUX,       /* Raw Flux Data */
@@ -208,7 +208,7 @@ static const magic_entry_t MAGIC_TABLE[] = {
     { UFT_FMT_FDI,      0, 3, {'F','D','I'}, "FDI", "" },
     { UFT_FMT_DSK_CPC,  0, 8, {'M','V',' ','-',' ','C','P','C'}, "DSK", "MV-CPC" },
     { UFT_FMT_EDSK,     0, 8, {'E','X','T','E','N','D','E','D'}, "EDSK", "Extended" },
-    { UFT_FMT_MFM,      0, 7, {'H','X','C','M','F','M','\0'}, "MFM", "HxC" },
+    { UFT_FMT_MFM,      0, 7, {'H','X','C','M','F','M','\0'}, "MFM", "Stream" },
     
     /* Flux */
     { UFT_FMT_SCP,      0, 3, {'S','C','P'}, "SCP", "" },

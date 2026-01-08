@@ -50,7 +50,7 @@ extern "C" {
 #endif
 
 /*============================================================================
- * HxCFE Error Codes (from liblibflux_ctx.h)
+ * UFT Error Codes (from liblibflux_ctx.h)
  *============================================================================*/
 
 #define LIBFLUX_VALIDFILE                  1
@@ -63,7 +63,7 @@ extern "C" {
 #define LIBFLUX_UNSUPPORTEDFILE           -6
 
 /*============================================================================
- * HxCFE Opaque Types (from liblibflux_ctx.h)
+ * UFT Opaque Types (from liblibflux_ctx.h)
  *============================================================================*/
 
 #ifndef _LIBFLUX_
