@@ -17,10 +17,14 @@ set(UFT_ENCODING_HEADERS
     luts.h
 )
 
-# GCR headers that exist
+# GCR headers - platform-specific encoding
 set(GCR_HEADERS
     gcr/c64.h
     gcr/data_gcr.h
+    gcr/apple2_gcr_track.h
+    gcr/apple_mac_gcr_track.h
+    gcr/c64_gcr_track.h
+    gcr/victor9k_gcr_track.h
 )
 
 # Create static library
