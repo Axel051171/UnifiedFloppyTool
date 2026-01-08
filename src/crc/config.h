@@ -1,3 +1,4 @@
+/* config.h
  * Generated for UnifiedFloppyTool
  */
 
