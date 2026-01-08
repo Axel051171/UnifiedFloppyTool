@@ -352,3 +352,5 @@ static inline bool uft_failed(uft_rc_t rc) {
 #endif
 
 #endif /* UFT_ERROR_H */
+/* Include compat aliases at end */
+#include "core/uft_error_compat.h"

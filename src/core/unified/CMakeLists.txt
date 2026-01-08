@@ -1,31 +1,13 @@
-# Unified Image Model - CMakeLists.txt
-
-set(UNIFIED_SOURCES
-    uft_unified_image.c
-    uft_flux_buffer.c
-    uft_decoder_registry.c
-    uft_tool_adapter.c
-    uft_operations.c
-)
-
-add_library(uft_unified STATIC ${UNIFIED_SOURCES})
-
-target_include_directories(uft_unified PUBLIC
-    ${CMAKE_SOURCE_DIR}/include
-)
-
-target_link_libraries(uft_unified PRIVATE
-    uft_core
-)
-
-# Math library via zentrale Funktion
-uft_link_math(uft_unified)
-
-# Install headers
-install(FILES
-    ${CMAKE_SOURCE_DIR}/include/uft/uft_unified_image.h
-    ${CMAKE_SOURCE_DIR}/include/uft/uft_decoder_registry.h
-    ${CMAKE_SOURCE_DIR}/include/uft/uft_tool_adapter.h
-    ${CMAKE_SOURCE_DIR}/include/uft/uft_operations.h
-    DESTINATION include/uft
-)
+# UFT Core Unified Module
+file(GLOB UNIFIED_SOURCES "*.c")
+if(UNIFIED_SOURCES)
+    add_library(uft_core_unified STATIC ${UNIFIED_SOURCES})
+    target_include_directories(uft_core_unified PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}
+        ${CMAKE_SOURCE_DIR}/include
+        ${CMAKE_SOURCE_DIR}/include/uft
+    )
+    set_target_properties(uft_core_unified PROPERTIES C_STANDARD 11)
+else()
+    message(STATUS "uft_core_unified: No source files found, skipping")
+endif()

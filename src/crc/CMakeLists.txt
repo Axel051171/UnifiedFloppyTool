@@ -1,15 +1,19 @@
-# UFT CRC Module - CRC RevEng Tools
+# UFT CRC Module
 # Part of UnifiedFloppyTool
-# Polynomial database and CRC calculation
 
+# UFT CRC implementation files (clean, self-contained)
 set(CRC_SOURCES
-    model.c
-    poly.c
-    preset.c
+    uft_crc32_tables.c
+    uft_crc_extended.c
+)
+
+set(CRC_HEADERS
+    uft_crc_polys.h
 )
 
 add_library(uft_crc STATIC
     ${CRC_SOURCES}
+    ${CRC_HEADERS}
 )
 
 target_include_directories(uft_crc PUBLIC
@@ -27,5 +31,5 @@ set_target_properties(uft_crc PROPERTIES
 if(MSVC)
     target_compile_options(uft_crc PRIVATE /W3)
 else()
-    target_compile_options(uft_crc PRIVATE $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall> $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wextra>)
+    target_compile_options(uft_crc PRIVATE -Wall -Wextra)
 endif()
