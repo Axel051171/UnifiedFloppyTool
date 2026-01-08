@@ -1,9 +1,7 @@
 # UFT Encoding Module - FM/MFM/GCR
 # Part of UnifiedFloppyTool
 
-# legacy format encoding files - now using uft_encoding_types.h compatibility layer
-# Integration completed 2025-01-05
-
+# Core encoding files
 set(UFT_ENCODING_SOURCES
     fm_encoding.c
     mfm_encoding.c
@@ -19,29 +17,16 @@ set(UFT_ENCODING_HEADERS
     luts.h
 )
 
-# GCR submodule - DISABLED: need HxC types.h
-# These files are from legacy format and need additional headers
-set(GCR_SOURCES
-    # gcr/apple2_gcr_track.c    # DISABLED: needs types.h
-    # gcr/apple_mac_gcr_track.c # DISABLED: needs types.h
-    # gcr/c64_gcr_track.c       # DISABLED: needs types.h
-    # gcr/victor9k_gcr_track.c  # DISABLED: needs types.h
-)
-
+# GCR headers that exist
 set(GCR_HEADERS
-    gcr/apple2_gcr_track.h
-    gcr/apple_mac_gcr_track.h
-    gcr/c64_gcr_track.h
-    gcr/victor9k_gcr_track.h
     gcr/c64.h
     gcr/data_gcr.h
 )
 
-# Create static library with all encoding sources
+# Create static library
 add_library(uft_encoding STATIC
     ${UFT_ENCODING_SOURCES}
     ${UFT_ENCODING_HEADERS}
-    ${GCR_SOURCES}
     ${GCR_HEADERS}
 )
 
@@ -63,5 +48,5 @@ set_target_properties(uft_encoding PROPERTIES
 if(MSVC)
     target_compile_options(uft_encoding PRIVATE /W3)
 else()
-    target_compile_options(uft_encoding PRIVATE $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall> $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wextra>)
+    target_compile_options(uft_encoding PRIVATE -Wall -Wextra)
 endif()
