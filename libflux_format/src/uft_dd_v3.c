@@ -1,3 +1,4 @@
+#include "uft_atomics.h"
 // SPDX-License-Identifier: GPL-2.0-or-later
 /**
  * @file uft_dd_v3.c

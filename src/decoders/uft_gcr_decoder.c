@@ -1,3 +1,4 @@
+#include "uft/compat/uft_platform.h"
 /**
  * @file uft_gcr_decoder.c
  * @brief UnifiedFloppyTool - GCR (Group Coded Recording) Decoder Plugin

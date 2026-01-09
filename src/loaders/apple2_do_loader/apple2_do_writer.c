@@ -25,9 +25,9 @@
 
 #include "types.h"
 
-#include "libflux.h""
-#include "tracks/track_generator.h"
-#include "libflux.h""
+#include "libflux.h"
+#include "track_generator.h"
+#include "libflux.h"
 
 #include "apple2_do_loader.h"
 

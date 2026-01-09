@@ -11,7 +11,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
-#include <dirent.h>
+#include "uft/compat/uft_dirent.h"
 #include <sys/stat.h>
 #include <fnmatch.h>
 
@@ -399,7 +399,13 @@ static int process_job(uft_batch_ctx_t *ctx, uft_batch_job_t *job)
                 
                 /* Simple checksum for now (real MD5/SHA256 would need crypto lib) */
                 uint32_t crc = 0xFFFFFFFF;
-                uint8_t *buffer = (uint8_t*)malloc(8192); if (!buffer) continue;
+                uint8_t *buffer = (uint8_t*)malloc(8192);
+                if (!buffer) {
+                    fclose(fp);
+                    result = -1;
+                    strncpy(job->result_msg, "Memory allocation failed", sizeof(job->result_msg));
+                    break;
+                }
                 size_t total = 0;
                 size_t n;
                 

@@ -1,3 +1,6 @@
+#include "uft_error.h"
+#include "uft_error_compat.h"
+#include "uft_track.h"
 /**
  * @file uft_amiga_checksum.c
  * @brief Amiga MFM Checksum Verification

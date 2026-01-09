@@ -1,3 +1,4 @@
+#include "uft/compat/uft_platform.h"
 /**
  * @file uft_recovery_advanced.c
  * @brief Advanced Disk Recovery Implementation

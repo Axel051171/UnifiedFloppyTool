@@ -1,3 +1,4 @@
+#include "uft/compat/uft_platform.h"
 /**
  * @file uft_hw_supercard.c
  * @brief UnifiedFloppyTool - SuperCard Pro Hardware Backend

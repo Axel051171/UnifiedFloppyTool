@@ -26,9 +26,9 @@
 
 #include "types.h"
 
-#include "libflux.h""
-#include "tracks/track_generator.h"
-#include "libflux.h""
+#include "libflux.h"
+#include "track_generator.h"
+#include "libflux.h"
 
 #include "d88_format.h"
 #include "d88_writer.h"

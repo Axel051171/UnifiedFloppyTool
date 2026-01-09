@@ -1,17 +1,20 @@
 /**
  * @file uft_protection.h
- * @brief Copy Protection Detection for UFT
+ * @brief Copy protection detection and analysis
  * 
- * Implements detection algorithms for various floppy disk copy protection
- * schemes, including:
- * - Rob Northen CopyLock (Amiga)
- * - Speedlock variable density (Amiga)
+ * This module provides detection of various floppy disk copy protection
+ * schemes used by software publishers. Supports:
+ * 
+ * - Weak/fuzzy bits (bits that read differently each time)
+ * - Extra/missing sectors
+ * - Non-standard sector sizes
+ * - Timing-based protection
  * - Long tracks
- * - Weak bits / Fuzzy bits
- * - Custom sync marks
+ * - Duplicate sector IDs
+ * - Bad sector markers
+ * - Unusual sync patterns
  * 
- * 
- * @copyright UFT Project
+ * For forensic disk imaging and preservation.
  */
 
 #ifndef UFT_PROTECTION_H
@@ -20,360 +23,525 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
+/* Platform compatibility for ssize_t */
+#ifdef _MSC_VER
+    #include <BaseTsd.h>
+    typedef SSIZE_T ssize_t;
+#else
+    #include <sys/types.h>
+#endif
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/*============================================================================
- * Protection Type Enumeration
- *============================================================================*/
+/* ============================================================================
+ * Protection Types
+ * ============================================================================ */
 
+/**
+ * @brief Known copy protection schemes
+ */
 typedef enum {
-    UFT_PROT_NONE           = 0,
+    UFT_PROT_NONE = 0,              /**< No protection detected */
     
-    /* Amiga protections */
-    UFT_PROT_COPYLOCK       = 0x0100,   /**< Rob Northen CopyLock */
-    UFT_PROT_COPYLOCK_OLD   = 0x0101,   /**< Older CopyLock variant */
-    UFT_PROT_SPEEDLOCK      = 0x0102,   /**< Speedlock variable density */
-    UFT_PROT_LONGTRACK      = 0x0103,   /**< Long track protection */
-    UFT_PROT_RNC_PROTECT    = 0x0104,   /**< RNC protection */
-    UFT_PROT_SOFTLOCK       = 0x0105,   /**< Softlock */
+    /* Weak bit protections */
+    UFT_PROT_WEAK_BITS,             /**< Weak/fuzzy bit areas */
+    UFT_PROT_FLUX_REVERSAL,         /**< Missing flux reversals */
     
-    /* C64 protections */
-    UFT_PROT_V_MAX          = 0x0200,   /**< V-MAX! protection */
-    UFT_PROT_PIRATESLAYER   = 0x0201,   /**< PirateSlayer */
-    UFT_PROT_RAPIDLOK       = 0x0202,   /**< RapidLok */
-    UFT_PROT_VORPAL         = 0x0203,   /**< Vorpal protection */
+    /* Sector-based protections */
+    UFT_PROT_EXTRA_SECTORS,         /**< More sectors than standard */
+    UFT_PROT_MISSING_SECTORS,       /**< Intentionally missing sectors */
+    UFT_PROT_DUPLICATE_SECTORS,     /**< Multiple sectors with same ID */
+    UFT_PROT_BAD_SECTORS,           /**< Intentional CRC errors */
+    UFT_PROT_DELETED_DATA,          /**< Deleted data address marks */
+    UFT_PROT_NONSTANDARD_SIZE,      /**< Non-standard sector sizes */
     
-    /* Generic protections */
-    UFT_PROT_WEAK_BITS      = 0x0300,   /**< Weak/fuzzy bits */
-    UFT_PROT_CUSTOM_SYNC    = 0x0301,   /**< Non-standard sync marks */
-    UFT_PROT_TIMING_BASED   = 0x0302,   /**< Timing-based protection */
-    UFT_PROT_DUPLICATE_SECTOR = 0x0303, /**< Duplicate sector IDs */
+    /* Track-based protections */
+    UFT_PROT_LONG_TRACK,            /**< Track longer than standard */
+    UFT_PROT_SHORT_TRACK,           /**< Track shorter than standard */
+    UFT_PROT_HALF_TRACK,            /**< Data between normal tracks */
+    UFT_PROT_EXTRA_TRACK,           /**< Tracks beyond normal range */
     
-    UFT_PROT_UNKNOWN        = 0xFFFF    /**< Unknown protection */
+    /* Timing-based protections */
+    UFT_PROT_VARIABLE_DENSITY,      /**< Variable bit density */
+    UFT_PROT_SPEED_VARIATION,       /**< Unusual rotation speed */
+    UFT_PROT_TIMING_BASED,          /**< Timing measurements required */
+    
+    /* Format-based protections */
+    UFT_PROT_NONSTANDARD_GAP,       /**< Non-standard gap sizes */
+    UFT_PROT_UNUSUAL_SYNC,          /**< Non-standard sync patterns */
+    UFT_PROT_MIXED_FORMAT,          /**< Mixed MFM/FM on same disk */
+    
+    /* Specific commercial schemes */
+    UFT_PROT_PROLOK,                /**< Vault ProLok */
+    UFT_PROT_SOFTGUARD,             /**< SoftGuard SuperLok */
+    UFT_PROT_SPIRADISC,             /**< Spiradisk */
+    UFT_PROT_COPYLOCK,              /**< CopyLock (Amiga) */
+    UFT_PROT_EVERLOCK,              /**< Everlock */
+    UFT_PROT_FBCOPY,                /**< Fat Bits (C64) */
+    UFT_PROT_V_MAX,                 /**< V-Max (C64) */
+    UFT_PROT_RAPIDLOK,              /**< RapidLok (C64) */
+    
+    UFT_PROT_COUNT                  /**< Number of protection types */
 } uft_protection_type_t;
 
-/*============================================================================
- * CopyLock Structures
- *============================================================================*/
-
-/** CopyLock signature "Rob Northen Comp" */
-#define UFT_COPYLOCK_SIGNATURE "Rob Northen Comp"
-#define UFT_COPYLOCK_SIG_LEN   16
-
-/** CopyLock sector containing signature */
-#define UFT_COPYLOCK_SIG_SECTOR 6
-
-/** Number of CopyLock sectors */
-#define UFT_COPYLOCK_SECTORS   11
-
 /**
- * @brief CopyLock sync markers
- * 
- * Each sector uses a unique sync word:
- * Sector 0: 0x8a91   Sector 6: 0x8914 (slow)
- * Sector 1: 0x8a44   Sector 7: 0x8915
- * Sector 2: 0x8a45   Sector 8: 0x8944
- * Sector 3: 0x8a51   Sector 9: 0x8945
- * Sector 4: 0x8912 (fast)  Sector 10: 0x8951
- * Sector 5: 0x8911
+ * @brief Confidence level for protection detection
  */
-extern const uint16_t uft_copylock_sync_marks[UFT_COPYLOCK_SECTORS];
+typedef enum {
+    UFT_CONF_NONE = 0,              /**< No match */
+    UFT_CONF_LOW = 25,              /**< Possible match */
+    UFT_CONF_MEDIUM = 50,           /**< Likely match */
+    UFT_CONF_HIGH = 75,             /**< Very likely match */
+    UFT_CONF_CERTAIN = 100,         /**< Definite match */
+} uft_confidence_t;
+
+/* ============================================================================
+ * Detection Results
+ * ============================================================================ */
 
 /**
- * @brief CopyLock detection result
+ * @brief Single protection detection result
  */
 typedef struct {
-    uft_protection_type_t type;     /**< COPYLOCK or COPYLOCK_OLD */
-    uint32_t lfsr_seed;             /**< 23-bit LFSR seed */
-    uint8_t  valid_sectors;         /**< Bitmask of valid sectors */
-    uint8_t  sectors_found;         /**< Number of sectors found */
-    bool     signature_found;       /**< "Rob Northen Comp" found */
+    uft_protection_type_t type;     /**< Type of protection */
+    uft_confidence_t confidence;    /**< Detection confidence */
+    uint8_t track;                  /**< Track where found */
+    uint8_t head;                   /**< Head/side where found */
+    uint8_t sector;                 /**< Sector (if applicable) */
+    uint32_t offset;                /**< Byte offset in track data */
+    uint32_t length;                /**< Length of protection area */
+    char description[128];          /**< Human-readable description */
+} uft_protection_hit_t;
+
+/**
+ * @brief Complete protection analysis report
+ */
+typedef struct {
+    size_t hit_count;               /**< Number of hits */
+    size_t hit_capacity;            /**< Allocated capacity */
+    uft_protection_hit_t *hits;     /**< Array of hits */
     
-    /* Timing analysis */
-    int16_t  fast_sector_delta;     /**< Sector 4 timing delta (%) */
-    int16_t  slow_sector_delta;     /**< Sector 6 timing delta (%) */
-} uft_copylock_info_t;
+    /* Summary statistics */
+    bool has_weak_bits;             /**< Any weak bit areas found */
+    bool has_timing_protection;     /**< Any timing-based protection */
+    bool has_sector_anomalies;      /**< Any sector-based anomalies */
+    bool has_track_anomalies;       /**< Any track-based anomalies */
+    
+    uft_protection_type_t primary_scheme;  /**< Most likely protection scheme */
+    uft_confidence_t overall_confidence;   /**< Overall detection confidence */
+} uft_protection_report_t;
 
-/*============================================================================
- * Speedlock Structures
- *============================================================================*/
-
-/** Speedlock speed variations */
-#define UFT_SPEEDLOCK_NORMAL    100     /**< 100% = normal speed */
-#define UFT_SPEEDLOCK_FAST      90      /**< 90% = fast (short bitcells) */
-#define UFT_SPEEDLOCK_SLOW      110     /**< 110% = slow (long bitcells) */
-
-/** Speedlock detection threshold */
-#define UFT_SPEEDLOCK_THRESHOLD 8       /**< 8% deviation to detect */
-
-/**
- * @brief Speedlock detection result
- */
-typedef struct {
-    bool     detected;              /**< Speedlock found */
-    uint32_t long_region_start;     /**< Bit offset of long bitcells */
-    uint32_t short_region_start;    /**< Bit offset of short bitcells */
-    uint32_t normal_region_start;   /**< Bit offset of normal bitcells */
-    uint16_t sector_length;         /**< Length of each region in bits */
-    int16_t  long_delta;            /**< Long region timing delta (%) */
-    int16_t  short_delta;           /**< Short region timing delta (%) */
-} uft_speedlock_info_t;
-
-/*============================================================================
- * Long Track Structures
- *============================================================================*/
-
-/** Standard track length (MFM DD @ 300 RPM) */
-#define UFT_STANDARD_TRACK_BITS     100000
-
-/** Long track threshold (percentage) */
-#define UFT_LONGTRACK_THRESHOLD     105     /**< 105% = long track */
-
-/**
- * @brief Long track detection result
- */
-typedef struct {
-    bool     detected;              /**< Long track found */
-    uint32_t track_bits;            /**< Actual track length in bits */
-    uint16_t percent;               /**< Percentage of standard length */
-    uint32_t extra_bits;            /**< Extra bits beyond standard */
-} uft_longtrack_info_t;
-
-/*============================================================================
- * Weak Bits Structures
- *============================================================================*/
+/* ============================================================================
+ * Weak Bit Detection
+ * ============================================================================ */
 
 /**
  * @brief Weak bit region
  */
 typedef struct {
-    uint32_t bit_offset;            /**< Start offset in track */
-    uint32_t bit_length;            /**< Length in bits */
-    uint8_t  variation_percent;     /**< Variation between reads */
+    uint32_t offset;                /**< Byte offset in track */
+    uint32_t length;                /**< Length in bits */
+    uint8_t variation_count;        /**< Number of different reads */
+    uint8_t min_value;              /**< Minimum read value */
+    uint8_t max_value;              /**< Maximum read value */
 } uft_weak_region_t;
 
 /**
- * @brief Weak bits detection result
+ * @brief Compare multiple reads to find weak bits
+ * 
+ * Compares multiple readings of the same track to identify bits
+ * that read differently each time (weak bits).
+ * 
+ * @param reads         Array of track readings
+ * @param read_count    Number of readings
+ * @param track_len     Length of each reading
+ * @param regions       Output array for weak regions
+ * @param max_regions   Maximum number of regions to return
+ * @return Number of weak regions found
  */
-typedef struct {
-    bool     detected;              /**< Weak bits found */
-    uint16_t num_regions;           /**< Number of weak regions */
-    uft_weak_region_t* regions;     /**< Array of weak regions */
-} uft_weakbits_info_t;
-
-/*============================================================================
- * Protection Detection Context
- *============================================================================*/
+size_t uft_find_weak_bits(
+    const uint8_t **reads,
+    size_t read_count,
+    size_t track_len,
+    uft_weak_region_t *regions,
+    size_t max_regions
+);
 
 /**
- * @brief Protection detection context
+ * @brief Analyze flux reversals for missing transitions
+ * 
+ * Looks for areas where flux transitions are missing or
+ * have unusual timing, which can indicate copy protection.
+ * 
+ * @param flux_data     Raw flux timing data
+ * @param flux_len      Length of flux data
+ * @param threshold     Timing threshold for anomalies
+ * @param regions       Output array for anomalous regions
+ * @param max_regions   Maximum regions to return
+ * @return Number of anomalous regions found
+ */
+size_t uft_find_flux_anomalies(
+    const uint32_t *flux_data,
+    size_t flux_len,
+    uint32_t threshold,
+    uft_weak_region_t *regions,
+    size_t max_regions
+);
+
+/* ============================================================================
+ * Sector Analysis
+ * ============================================================================ */
+
+/**
+ * @brief Sector anomaly types
+ */
+typedef enum {
+    UFT_SECTOR_OK = 0,              /**< Normal sector */
+    UFT_SECTOR_BAD_CRC,             /**< CRC error */
+    UFT_SECTOR_DELETED,             /**< Deleted data mark */
+    UFT_SECTOR_MISSING,             /**< Expected but not found */
+    UFT_SECTOR_EXTRA,               /**< Unexpected sector */
+    UFT_SECTOR_DUPLICATE,           /**< Duplicate sector ID */
+    UFT_SECTOR_WRONG_SIZE,          /**< Non-standard size */
+    UFT_SECTOR_WEAK,                /**< Contains weak bits */
+} uft_sector_status_t;
+
+/**
+ * @brief Sector analysis result
+ */
+typedef struct {
+    uint8_t cylinder;               /**< Logical cylinder */
+    uint8_t head;                   /**< Head/side */
+    uint8_t sector;                 /**< Sector number */
+    uint8_t size_code;              /**< Size code (0-3) */
+    uint16_t actual_size;           /**< Actual data size */
+    uft_sector_status_t status;     /**< Sector status */
+    uint16_t header_crc;            /**< Header CRC (read) */
+    uint16_t data_crc;              /**< Data CRC (read) */
+    uint16_t calc_header_crc;       /**< Header CRC (calculated) */
+    uint16_t calc_data_crc;         /**< Data CRC (calculated) */
+    uint32_t track_offset;          /**< Position in track data */
+    bool has_weak_bits;             /**< Contains weak bits */
+} uft_sector_info_t;
+
+/**
+ * @brief Analyze all sectors on a track
+ * 
+ * @param track_data    Raw track data (MFM encoded)
+ * @param track_len     Length of track data
+ * @param sectors       Output array for sector info
+ * @param max_sectors   Maximum sectors to return
+ * @return Number of sectors found
+ */
+size_t uft_analyze_track_sectors(
+    const uint8_t *track_data,
+    size_t track_len,
+    uft_sector_info_t *sectors,
+    size_t max_sectors
+);
+
+/* ============================================================================
+ * Protection Scheme Detection
+ * ============================================================================ */
+
+/**
+ * @brief Create a new protection report
+ * 
+ * @return Allocated report, or NULL on failure
+ */
+uft_protection_report_t* uft_protection_report_create(void);
+
+/**
+ * @brief Free a protection report
+ * 
+ * @param report Report to free
+ */
+void uft_protection_report_free(uft_protection_report_t *report);
+
+/**
+ * @brief Add a hit to the report
+ * 
+ * @param report    Report to modify
+ * @param hit       Hit to add
+ * @return true on success
+ */
+bool uft_protection_report_add(uft_protection_report_t *report,
+                                const uft_protection_hit_t *hit);
+
+/**
+ * @brief Analyze a track for copy protection
+ * 
+ * @param track_data    Raw track data
+ * @param track_len     Length of track data
+ * @param track         Track number
+ * @param head          Head/side number
+ * @param report        Report to add hits to
+ * @return Number of hits found on this track
+ */
+size_t uft_analyze_track_protection(
+    const uint8_t *track_data,
+    size_t track_len,
+    uint8_t track,
+    uint8_t head,
+    uft_protection_report_t *report
+);
+
+/**
+ * @brief Detect specific protection scheme signatures
+ * 
+ * Looks for signatures of known commercial protection schemes.
+ * 
+ * @param disk_data     Complete disk image data
+ * @param disk_size     Size of disk image
+ * @param report        Report to add results to
+ * @return Primary protection scheme detected
+ */
+uft_protection_type_t uft_detect_protection_scheme(
+    const uint8_t *disk_data,
+    size_t disk_size,
+    uft_protection_report_t *report
+);
+
+/* ============================================================================
+ * Protection Scheme Signatures
+ * ============================================================================ */
+
+/**
+ * @brief Known protection scheme signature
+ */
+typedef struct {
+    uft_protection_type_t type;     /**< Protection type */
+    const char *name;               /**< Human-readable name */
+    const uint8_t *signature;       /**< Signature bytes */
+    size_t sig_len;                 /**< Signature length */
+    uint8_t track;                  /**< Expected track (0xFF = any) */
+    uint8_t sector;                 /**< Expected sector (0xFF = any) */
+    uint32_t offset;                /**< Expected offset (0 = any) */
+} uft_protection_signature_t;
+
+/**
+ * @brief Array of known protection signatures
+ */
+extern const uft_protection_signature_t uft_protection_signatures[];
+extern const size_t uft_protection_signature_count;
+
+/**
+ * @brief Get protection type name
+ * 
+ * @param type Protection type
+ * @return Human-readable name
+ */
+const char* uft_protection_type_name(uft_protection_type_t type);
+
+/* ============================================================================
+ * Utility Functions
+ * ============================================================================ */
+
+/**
+ * @brief Calculate track length for a given format
+ * 
+ * @param data_rate     Data rate in kbps (250, 300, 500, 1000)
+ * @param rpm           Rotation speed (300 or 360)
+ * @return Track length in bytes
+ */
+size_t uft_calc_track_length(uint32_t data_rate, uint32_t rpm);
+
+/**
+ * @brief Check if track length is unusual
+ * 
+ * @param track_len     Measured track length
+ * @param expected_len  Expected track length
+ * @param tolerance     Tolerance percentage (0-100)
+ * @return true if track length is unusual
+ */
+bool uft_is_unusual_track_length(size_t track_len, size_t expected_len,
+                                  uint8_t tolerance);
+
+/**
+ * @brief Generate forensic report
+ * 
+ * Creates a detailed text report of all protection features found.
+ * 
+ * @param report        Protection report
+ * @param output        Output buffer
+ * @param output_len    Output buffer size
+ * @return Bytes written, or required size if output_len is 0
+ */
+size_t uft_generate_protection_report(
+    const uft_protection_report_t *report,
+    char *output,
+    size_t output_len
+);
+
+#ifdef __cplusplus
+}
+#endif
+
+/* ============================================================================
+ * Protection Context
+ * ============================================================================ */
+
+/**
+ * @brief Maximum weak bit regions to track
+ */
+#define UFT_MAX_WEAK_REGIONS 256
+
+/**
+ * @brief Protection analysis context
  */
 typedef struct {
     /* Input data */
-    const uint8_t* track_data;      /**< Raw track data (MFM/GCR) */
-    size_t track_bits;              /**< Track length in bits */
-    uint8_t track_number;           /**< Track number */
-    uint8_t head;                   /**< Head/side */
+    const uint8_t* track_data;      /**< Track data to analyze */
+    size_t track_size;              /**< Size of track data */
+    int track_number;               /**< Track number */
+    int head;                       /**< Head/side */
     
-    /* Multi-revolution data for weak bit detection */
-    const uint8_t** revolutions;    /**< Array of revolution data */
-    size_t num_revolutions;         /**< Number of revolutions */
-    
-    /* Timing data (optional) */
-    const uint32_t* flux_times;     /**< Flux timing data */
-    size_t num_flux;                /**< Number of flux transitions */
+    /* Flux data (optional) */
+    const uint32_t* flux_data;      /**< Flux timing data */
+    size_t flux_count;              /**< Number of flux transitions */
+    double sample_clock;            /**< Sample clock frequency */
     
     /* Detection results */
-    uft_protection_type_t primary;  /**< Primary protection detected */
-    uint16_t all_protections;       /**< Bitmask of all detected */
+    uft_protection_type_t detected; /**< Detected protection types (bitmask) */
+    uft_confidence_t confidence;    /**< Overall confidence */
     
-    uft_copylock_info_t copylock;
-    uft_speedlock_info_t speedlock;
-    uft_longtrack_info_t longtrack;
-    uft_weakbits_info_t weakbits;
+    /* CopyLock-specific */
+    struct {
+        bool detected;
+        uint32_t seed;
+        uint16_t sync_marks[16];
+        int num_sectors;
+    } copylock;
+    
+    /* SpeedLock-specific */
+    struct {
+        bool detected;
+        int variant;
+        uint8_t key[8];
+    } speedlock;
+    
+    /* Long track detection */
+    struct {
+        bool detected;
+        double track_length_ms;
+        double expected_length_ms;
+        double ratio;
+    } longtrack;
+    
+    /* Weak bits */
+    struct {
+        bool detected;
+        uft_weak_region_t* regions;
+        size_t num_regions;
+    } weakbits;
+    
+    /* Custom sync */
+    struct {
+        bool detected;
+        uint16_t patterns[16];
+        int num_patterns;
+    } custom_sync;
+    
+    /* Report */
+    uft_protection_report_t report;
 } uft_protection_ctx_t;
 
-/*============================================================================
- * LFSR Functions (for CopyLock)
- *============================================================================*/
+/* ============================================================================
+ * Protection API Functions
+ * ============================================================================ */
 
 /**
- * @brief Advance LFSR to next state
- * 
- * 23-bit LFSR with taps at positions 1 and 23.
- * x_new = ((x << 1) & 0x7FFFFF) | ((x >> 22) ^ x) & 1
- * 
- * @param state Current 23-bit state
- * @return Next state
- */
-static inline uint32_t uft_lfsr_next(uint32_t state)
-{
-    return ((state << 1) & 0x7FFFFF) | (((state >> 22) ^ state) & 1);
-}
-
-/**
- * @brief Reverse LFSR to previous state
- * @param state Current 23-bit state
- * @return Previous state
- */
-static inline uint32_t uft_lfsr_prev(uint32_t state)
-{
-    return (state >> 1) | ((((state >> 1) ^ state) & 1) << 22);
-}
-
-/**
- * @brief Get data byte from LFSR state
- * 
- * The data byte is bits [22:15] of the LFSR state.
- * 
- * @param state 23-bit LFSR state
- * @return Data byte
- */
-static inline uint8_t uft_lfsr_byte(uint32_t state)
-{
-    return (uint8_t)(state >> 15);
-}
-
-/**
- * @brief Advance LFSR by N steps
- * @param state Current state
- * @param steps Number of steps (positive = forward)
- * @return New state
- */
-uint32_t uft_lfsr_advance(uint32_t state, int steps);
-
-/*============================================================================
- * Protection Detection Functions
- *============================================================================*/
-
-/**
- * @brief Initialize protection detection context
+ * @brief Initialize protection context
  */
 void uft_protection_init(uft_protection_ctx_t* ctx);
 
 /**
- * @brief Free protection detection resources
+ * @brief Free protection context resources
  */
 void uft_protection_free(uft_protection_ctx_t* ctx);
 
 /**
  * @brief Detect CopyLock protection
- * 
- * Scans track for CopyLock characteristics:
- * - Unique sync marks for each sector
- * - LFSR-generated data pattern
- * - "Rob Northen Comp" signature in sector 6
- * - ±5% timing variations
- * 
- * @param ctx Detection context
- * @return true if CopyLock detected
  */
 bool uft_detect_copylock(uft_protection_ctx_t* ctx);
 
 /**
- * @brief Detect Speedlock protection
- * 
- * Scans track for variable-density regions:
- * - Long bitcells (+10%)
- * - Short bitcells (-10%)
- * - Normal bitcells (reference)
- * 
- * @param ctx Detection context
- * @return true if Speedlock detected
+ * @brief Detect SpeedLock protection
  */
 bool uft_detect_speedlock(uft_protection_ctx_t* ctx);
 
 /**
  * @brief Detect long track protection
- * 
- * Checks if track length exceeds standard by threshold.
- * 
- * @param ctx Detection context
- * @return true if long track detected
  */
 bool uft_detect_longtrack(uft_protection_ctx_t* ctx);
 
 /**
- * @brief Detect weak bits
- * 
- * Compares multiple revolutions to find varying bits.
- * Requires ctx->revolutions and ctx->num_revolutions >= 2.
- * 
- * @param ctx Detection context
- * @return true if weak bits detected
+ * @brief Detect weak bits protection
  */
 bool uft_detect_weakbits(uft_protection_ctx_t* ctx);
 
 /**
- * @brief Detect custom sync marks
- * 
- * Searches for non-standard MFM sync patterns.
- * Standard: 0x4489 (A1 with missing clock)
- * 
- * @param ctx Detection context
- * @return true if custom sync found
+ * @brief Detect custom sync patterns
  */
 bool uft_detect_custom_sync(uft_protection_ctx_t* ctx);
 
 /**
- * @brief Run all protection detection algorithms
- * 
- * @param ctx Detection context
- * @return Primary protection type detected
+ * @brief Run all protection detectors
  */
 uft_protection_type_t uft_detect_all_protections(uft_protection_ctx_t* ctx);
 
-/*============================================================================
- * Protection Reconstruction
- *============================================================================*/
-
 /**
- * @brief Reconstruct CopyLock track from LFSR seed
- * 
- * CopyLock tracks can be fully reconstructed from the LFSR seed,
- * allowing recovery of damaged tracks.
- * 
- * @param seed 23-bit LFSR seed
- * @param output Output buffer (must be large enough for full track)
- * @param old_style true for COPYLOCK_OLD variant
- * @return Bytes written
- */
-size_t uft_copylock_reconstruct(uint32_t seed, uint8_t* output, bool old_style);
-
-/**
- * @brief Generate Speedlock track
- * 
- * @param normal_data Normal-speed data
- * @param normal_len Length of normal data
- * @param output Output buffer with timing info
- * @return Bytes written
- */
-size_t uft_speedlock_generate(const uint8_t* normal_data, size_t normal_len,
-                               uint8_t* output);
-
-/*============================================================================
- * Utility Functions
- *============================================================================*/
-
-/**
- * @brief Get protection type name
- * @param type Protection type
- * @return Static string with name
+ * @brief Get protection name as string
  */
 const char* uft_protection_name(uft_protection_type_t type);
 
 /**
- * @brief Print protection detection results
- * @param ctx Detection context
- * @param verbose Include detailed info
+ * @brief Print protection report
  */
 void uft_protection_print(const uft_protection_ctx_t* ctx, bool verbose);
 
-#ifdef __cplusplus
+/**
+ * @brief Reconstruct CopyLock data from seed
+ */
+size_t uft_copylock_reconstruct(uint32_t seed, uint8_t* output, bool old_style);
+
+/* ============================================================================
+ * LFSR Functions (for CopyLock)
+ * ============================================================================ */
+
+/**
+ * @brief CopyLock LFSR parameters
+ */
+#define UFT_COPYLOCK_SECTORS 11
+
+/**
+ * @brief CopyLock sync mark table
+ */
+extern const uint16_t uft_copylock_sync_marks[UFT_COPYLOCK_SECTORS];
+
+/**
+ * @brief Advance LFSR state
+ */
+uint32_t uft_lfsr_advance(uint32_t state, int steps);
+
+/**
+ * @brief LFSR next state
+ */
+static inline uint32_t uft_lfsr_next(uint32_t state) {
+    uint32_t bit = ((state >> 31) ^ (state >> 21) ^ (state >> 1) ^ state) & 1;
+    return (state << 1) | bit;
 }
-#endif
+
+/**
+ * @brief LFSR previous state
+ */
+static inline uint32_t uft_lfsr_prev(uint32_t state) {
+    uint32_t bit = state & 1;
+    state >>= 1;
+    state |= (bit ^ ((state >> 30) ^ (state >> 20) ^ state)) << 31;
+    return state;
+}
 
 #endif /* UFT_PROTECTION_H */

@@ -26,8 +26,8 @@
 
 #include "types.h"
 
-#include "libflux.h""
-#include "libflux.h""
+#include "libflux.h"
+#include "libflux.h"
 
 #include "mfm_loader.h"
 #include "mfm_format.h"

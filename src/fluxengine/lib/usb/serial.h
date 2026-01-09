@@ -1,3 +1,4 @@
+#include "uft/compat/uft_platform.h"
 #ifndef SERIAL_H
 #define SERIAL_H
 

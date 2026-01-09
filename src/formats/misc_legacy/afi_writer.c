@@ -27,8 +27,8 @@
 
 #include "types.h"
 
-#include "libflux.h""
-#include "libflux.h""
+#include "libflux.h"
+#include "libflux.h"
 
 #include "afi_format.h"
 #include "afi_loader.h"

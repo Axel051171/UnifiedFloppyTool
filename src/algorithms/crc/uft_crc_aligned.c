@@ -1,3 +1,4 @@
+#include "uft_mfm_flux.h"
 /**
  * @file uft_crc_aligned.c
  * @brief CRC-16 calculation with bit-alignment support

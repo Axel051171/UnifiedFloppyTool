@@ -1,3 +1,7 @@
+#include "uft/compat/uft_platform.h"
+#include "uft_error.h"
+#include "uft_error_compat.h"
+#include "uft_track.h"
 /**
  * @file uft_gcr_cbm_decoder_v2.c
  * @brief GCR CBM Decoder - Unified Registry Version

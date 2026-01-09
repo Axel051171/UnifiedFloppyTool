@@ -6,7 +6,7 @@
 #ifndef FLOPPY_UTILS_H
 #define FLOPPY_UTILS_H
 
-#include "liblibflux.h"
+#include "libflux.h"
 
 #include <stddef.h>
 #include <stdint.h>
@@ -19,10 +19,15 @@ extern "C" {
  * Bit/Byte Manipulation
  * ============================================================================ */
 
+#ifndef HAVE_GETBIT
+#define HAVE_GETBIT
 static inline uint8_t getbit(const uint8_t* buffer, uint32_t bit_offset) {
     return (buffer[bit_offset >> 3] >> (7 - (bit_offset & 7))) & 1;
 }
+#endif
 
+#ifndef HAVE_SETBIT
+#define HAVE_SETBIT
 static inline void setbit(uint8_t* buffer, uint32_t bit_offset, uint8_t value) {
     uint32_t byte_idx = bit_offset >> 3;
     uint8_t bit_mask = 0x80 >> (bit_offset & 7);
@@ -31,6 +36,7 @@ static inline void setbit(uint8_t* buffer, uint32_t bit_offset, uint8_t value) {
     else
         buffer[byte_idx] &= ~bit_mask;
 }
+#endif
 
 static inline uint8_t getbyte(const uint8_t* buffer, uint32_t bit_offset) {
     uint32_t byte_idx = bit_offset >> 3;
@@ -44,22 +50,27 @@ static inline uint8_t getbyte(const uint8_t* buffer, uint32_t bit_offset) {
  * Track Utilities
  * ============================================================================ */
 
-static inline uint32_t us2index(uint32_t us, uint32_t bitrate) {
+static inline uint32_t uft_us2index(uint32_t us, uint32_t bitrate) {
     return (uint32_t)((uint64_t)us * bitrate / 1000000ULL);
 }
 
-static inline uint32_t index2us(uint32_t index, uint32_t bitrate) {
+static inline uint32_t uft_index2us(uint32_t index, uint32_t bitrate) {
     return (uint32_t)((uint64_t)index * 1000000ULL / bitrate);
 }
 
-static inline uint32_t tracklen_us(int32_t rpm) {
+static inline uint32_t uft_tracklen_us(int32_t rpm) {
     if (rpm <= 0) rpm = 300;
     return (60 * 1000000) / rpm;
 }
 
-static inline uint32_t tracklen_bits(int32_t bitrate, int32_t rpm) {
-    return us2index(tracklen_us(rpm), bitrate);
+static inline uint32_t uft_tracklen_bits(int32_t bitrate, int32_t rpm) {
+    return uft_us2index(uft_tracklen_us(rpm), bitrate);
 }
+
+/* Aliases for legacy code */
+#define tracklen_us uft_tracklen_us
+#define tracklen_bits uft_tracklen_bits
+#define index2us uft_index2us
 
 /* ============================================================================
  * CRC Helpers

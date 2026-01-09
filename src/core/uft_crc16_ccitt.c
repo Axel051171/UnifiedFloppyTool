@@ -1,17 +1,27 @@
+#include "uft_mfm_flux.h"
 /**
  * @file uft_crc16_ccitt.c
  * @brief CRC-16-CCITT Implementation for IBM MFM Floppies
  * 
  * Polynomial: x^16 + x^12 + x^5 + 1 (0x1021)
  * Initial value: 0xFFFF
- * This is the CRC used in IBM PC floppy disk sector headers and data
  */
 
-#include "uft_mfm_flux.h"
+#include <stdint.h>
+#include <stddef.h>
+#include <stdbool.h>
+
+/* CRC Constants */
+#define UFT_CRC16_POLY      0x1021
+#define UFT_CRC16_INIT      0xFFFF
+
+/* MFM Address Marks */
+#define UFT_MFM_MARK_IDAM   0xFE
+#define UFT_MFM_MARK_DAM    0xFB
+#define UFT_MFM_MARK_DDAM   0xF8
 
 /*
  * CRC-16-CCITT Lookup Table
- * Generated using polynomial 0x1021
  */
 const uint16_t uft_mfm_crc16_table[256] = {
     0x0000, 0x1021, 0x2042, 0x3063, 0x4084, 0x50A5, 0x60C6, 0x70E7,
@@ -49,6 +59,26 @@ const uint16_t uft_mfm_crc16_table[256] = {
 };
 
 /**
+ * @brief Update CRC with one byte
+ */
+static inline uint16_t crc16_update(uint16_t crc, uint8_t byte)
+{
+    return (crc << 8) ^ uft_mfm_crc16_table[(crc >> 8) ^ byte];
+}
+
+/**
+ * @brief Compute CRC-16-CCITT using lookup table
+ */
+uint16_t uft_crc16_ccitt_table(const uint8_t *data, size_t len)
+{
+    uint16_t crc = UFT_CRC16_INIT;
+    for (size_t i = 0; i < len; i++) {
+        crc = crc16_update(crc, data[i]);
+    }
+    return crc;
+}
+
+/**
  * @brief Compute CRC-16-CCITT bit-by-bit (slow, for verification)
  */
 uint16_t uft_crc16_ccitt_bitwise(const uint8_t *data, size_t len)
@@ -56,12 +86,12 @@ uint16_t uft_crc16_ccitt_bitwise(const uint8_t *data, size_t len)
     uint16_t crc = UFT_CRC16_INIT;
     
     for (size_t i = 0; i < len; i++) {
-        uint8_t byte = data[i];
-        for (int bit = 7; bit >= 0; bit--) {
-            int xor_flag = (crc ^ (byte << (8 + bit))) & 0x8000;
-            crc <<= 1;
-            if (xor_flag) {
-                crc ^= UFT_CRC16_POLY;
+        crc ^= ((uint16_t)data[i] << 8);
+        for (int bit = 0; bit < 8; bit++) {
+            if (crc & 0x8000) {
+                crc = (crc << 1) ^ UFT_CRC16_POLY;
+            } else {
+                crc <<= 1;
             }
         }
     }
@@ -70,28 +100,23 @@ uint16_t uft_crc16_ccitt_bitwise(const uint8_t *data, size_t len)
 }
 
 /**
- * @brief Compute CRC including sync bytes (for IDAM/DAM verification)
- * 
- * For IBM floppy format, CRC calculation includes:
- * - Three A1 sync bytes (0xA1, 0xA1, 0xA1)
- * - Address mark byte (0xFE for IDAM, 0xFB/0xF8 for DAM)
- * - Actual data
+ * @brief Compute CRC including sync bytes
  */
 uint16_t uft_crc16_with_sync(uint8_t mark_byte, const uint8_t *data, size_t len)
 {
     uint16_t crc = UFT_CRC16_INIT;
     
     /* Include three A1 sync bytes */
-    crc = uft_mfm_crc16_update(crc, 0xA1);
-    crc = uft_mfm_crc16_update(crc, 0xA1);
-    crc = uft_mfm_crc16_update(crc, 0xA1);
+    crc = crc16_update(crc, 0xA1);
+    crc = crc16_update(crc, 0xA1);
+    crc = crc16_update(crc, 0xA1);
     
     /* Include address mark */
-    crc = uft_mfm_crc16_update(crc, mark_byte);
+    crc = crc16_update(crc, mark_byte);
     
     /* Include data */
     for (size_t i = 0; i < len; i++) {
-        crc = uft_mfm_crc16_update(crc, data[i]);
+        crc = crc16_update(crc, data[i]);
     }
     
     return crc;
@@ -99,53 +124,34 @@ uint16_t uft_crc16_with_sync(uint8_t mark_byte, const uint8_t *data, size_t len)
 
 /**
  * @brief Verify IDAM CRC
- * @param track Track number
- * @param head Head number
- * @param sector Sector number
- * @param size_code Size code (N value)
- * @param crc_high CRC high byte
- * @param crc_low CRC low byte
- * @return true if CRC is valid
  */
-bool uft_verify_idam_crc(uint8_t track, uint8_t head, uint8_t sector,
-                         uint8_t size_code, uint8_t crc_high, uint8_t crc_low)
+bool uft_verify_idam_crc(const uint8_t *idam_data, size_t len)
 {
-    uint8_t idam_data[4] = { track, head, sector, size_code };
-    uint16_t computed = uft_crc16_with_sync(UFT_MFM_MARK_IDAM, idam_data, 4);
-    uint16_t stored = ((uint16_t)crc_high << 8) | crc_low;
-    
-    return computed == stored;
+    uint16_t crc = uft_crc16_with_sync(UFT_MFM_MARK_IDAM, idam_data, len);
+    return (crc == 0);
 }
 
 /**
  * @brief Verify DAM CRC
- * @param data Sector data
- * @param len Data length
- * @param deleted true if DDAM (deleted data)
- * @param crc_high CRC high byte
- * @param crc_low CRC low byte
- * @return true if CRC is valid
  */
-bool uft_verify_dam_crc(const uint8_t *data, size_t len, bool deleted,
-                        uint8_t crc_high, uint8_t crc_low)
+bool uft_verify_dam_crc(const uint8_t *dam_data, size_t len, bool is_deleted)
 {
-    uint8_t mark = deleted ? UFT_MFM_MARK_DDAM : UFT_MFM_MARK_DAM;
-    uint16_t computed = uft_crc16_with_sync(mark, data, len);
-    uint16_t stored = ((uint16_t)crc_high << 8) | crc_low;
-    
-    return computed == stored;
+    uint8_t mark = is_deleted ? UFT_MFM_MARK_DDAM : UFT_MFM_MARK_DAM;
+    uint16_t crc = uft_crc16_with_sync(mark, dam_data, len);
+    return (crc == 0);
 }
 
 /**
- * @brief Get address mark type name
+ * @brief Get expected CRC for sector
  */
-const char *uft_mfm_am_name(uft_mfm_am_type_t type)
+uint16_t uft_get_sector_crc(uint8_t type, const uint8_t *data, size_t len)
 {
+    uint8_t mark;
     switch (type) {
-        case UFT_AM_IAM:  return "IAM";
-        case UFT_AM_IDAM: return "IDAM";
-        case UFT_AM_DAM:  return "DAM";
-        case UFT_AM_DDAM: return "DDAM";
-        default:          return "UNKNOWN";
+        case 0: mark = UFT_MFM_MARK_IDAM; break;
+        case 1: mark = UFT_MFM_MARK_DAM;  break;
+        case 2: mark = UFT_MFM_MARK_DDAM; break;
+        default: mark = UFT_MFM_MARK_DAM; break;
     }
+    return uft_crc16_with_sync(mark, data, len);
 }

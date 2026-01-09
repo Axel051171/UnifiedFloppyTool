@@ -43,9 +43,9 @@
 
 #include "types.h"
 
-#include "libflux.h""
+#include "libflux.h"
 #include "track_generator.h"
-#include "libflux.h""
+#include "libflux.h"
 
 #include "crc.h"
 #include "uft_floppy_utils.h"
@@ -67,9 +67,9 @@
 #include "tracks/track_formats/tycom_fm_track.h"
 #include "tracks/track_formats/micraln_fm_track.h"
 
-#include "tracks/encoding/mfm_encoding.h"
-#include "tracks/encoding/fm_encoding.h"
-#include "tracks/encoding/dec_m2fm_encoding.h"
+#include "mfm_encoding.h"
+#include "fm_encoding.h"
+#include "dec_m2fm_encoding.h"
 
 #include "trackutils.h"
 

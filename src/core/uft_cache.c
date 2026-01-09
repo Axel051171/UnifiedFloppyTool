@@ -18,7 +18,7 @@
 #include <string.h>
 
 #ifdef UFT_CACHE_THREAD_SAFE
-#include <pthread.h>
+#include "uft/compat/uft_thread.h"
 #endif
 
 // ============================================================================

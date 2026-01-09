@@ -1,3 +1,4 @@
+#include "uft/compat/uft_platform.h"
 /**
  * @file uft_hw_kryoflux.c
  * 
@@ -30,7 +31,7 @@
 
 #ifdef UFT_OS_LINUX
     #include <libusb-1.0/libusb.h>
-    #include <dirent.h>
+    #include "uft/compat/uft_dirent.h"
 #endif
 
 // ============================================================================

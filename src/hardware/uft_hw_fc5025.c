@@ -1,3 +1,4 @@
+#include "uft/compat/uft_platform.h"
 /**
  * @file uft_hw_fc5025.c
  * @brief UnifiedFloppyTool - FC5025 Hardware Backend

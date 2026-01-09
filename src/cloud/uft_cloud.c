@@ -9,13 +9,14 @@
  */
 
 #include "uft/cloud/uft_cloud.h"
+#include "uft/core/uft_unified_types.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 #include <ctype.h>
 #include <time.h>
 #include <sys/stat.h>
-#include <dirent.h>
+#include "uft/compat/uft_dirent.h"
 
 #ifdef UFT_HAVE_CURL
 #include <curl/curl.h>

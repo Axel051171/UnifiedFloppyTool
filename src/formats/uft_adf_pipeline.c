@@ -146,9 +146,20 @@ uft_error_t adf_read(const char *path, uft_disk_image_t **out_disk) {
         return UFT_ERR_IO;
     }
     
-    fseek(fp, 0, SEEK_END);
-    size_t file_size = ftell(fp);
-    fseek(fp, 0, SEEK_SET);
+    if (fseek(fp, 0, SEEK_END) != 0) {
+        fclose(fp);
+        return UFT_ERR_IO;
+    }
+    long file_size_l = ftell(fp);
+    if (file_size_l < 0) {
+        fclose(fp);
+        return UFT_ERR_IO;
+    }
+    size_t file_size = (size_t)file_size_l;
+    if (fseek(fp, 0, SEEK_SET) != 0) {
+        fclose(fp);
+        return UFT_ERR_IO;
+    }
     
     uint8_t *data = malloc(file_size);
     if (!data) {

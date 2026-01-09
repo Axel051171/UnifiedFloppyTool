@@ -19,7 +19,7 @@
 #include "uft/core/uft_safe_parse.h"
 #include <sys/stat.h>
 #include "uft/core/uft_safe_parse.h"
-#include <dirent.h>
+#include "uft/compat/uft_dirent.h"
 #include "uft/core/uft_safe_parse.h"
 #include <errno.h>
 #include "uft/core/uft_safe_parse.h"

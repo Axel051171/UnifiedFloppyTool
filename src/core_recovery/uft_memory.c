@@ -7,7 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdatomic.h>
+#include "uft_atomics.h"
 
 #ifdef _WIN32
 #include <windows.h>

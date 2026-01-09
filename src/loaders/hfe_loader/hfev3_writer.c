@@ -26,8 +26,8 @@
 
 #include "types.h"
 
-#include "libflux.h""
-#include "libflux.h""
+#include "libflux.h"
+#include "libflux.h"
 
 #include "hfev3_loader.h"
 #include "hfev3_format.h"

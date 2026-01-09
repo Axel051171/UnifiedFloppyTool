@@ -27,6 +27,7 @@
 #ifndef UFT_SIMD_H
 #define UFT_SIMD_H
 
+#include "uft/uft_config.h"
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>

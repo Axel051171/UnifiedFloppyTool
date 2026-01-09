@@ -2,11 +2,13 @@
 
 set(HAL_SOURCES
     uft_drive.c
-    # uft_hal.c  # DISABLED: Stub, superseded by uft_hal_unified.c
-    # uft_hal_profiles.c     # DISABLED: many API mismatches
     uft_hal_unified.c
-    # uft_hal_v2.c           # DISABLED: API mismatches
-    # uft_greaseweazle_full.c # DISABLED: needs greaseweazle headers
+    uft_kryoflux_dtc.c
+    uft_supercard.c
+    uft_xum1541.c
+    uft_fc5025.c
+    uft_applesauce.c
+    uft_nibtools.c
 )
 
 add_library(uft_hal STATIC ${HAL_SOURCES})

@@ -1,0 +1,141 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# UFT Pre-Flight Checks
+# Läuft VOR dem eigentlichen Build um häufige Fehler früh zu erkennen
+# ═══════════════════════════════════════════════════════════════════════════════
+
+name: Pre-Flight Checks
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Quick Checks (läuft in <30 Sekunden)
+  # ─────────────────────────────────────────────────────────────────────────────
+  preflight:
+    name: "🔍 Pre-Flight Validation"
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: "Check: Required Constants Have Includes"
+        run: |
+          echo "Checking for undeclared constants..."
+          ERRORS=0
+          
+          # UFT_CRC16_INIT muss uft_mfm_flux.h inkludieren
+          for f in $(grep -rl "UFT_CRC16_INIT" --include="*.c" . 2>/dev/null || true); do
+            if ! grep -q "uft_mfm_flux.h" "$f"; then
+              echo "❌ $f uses UFT_CRC16_INIT but missing uft_mfm_flux.h"
+              ERRORS=$((ERRORS + 1))
+            fi
+          done
+          
+          # atomic_int/atomic_bool muss uft_atomics.h inkludieren
+          for f in $(grep -rl "atomic_int\|atomic_bool" --include="*.c" . 2>/dev/null || true); do
+            if ! grep -q "uft_atomics.h\|stdatomic.h" "$f"; then
+              echo "❌ $f uses atomics but missing uft_atomics.h"
+              ERRORS=$((ERRORS + 1))
+            fi
+          done
+          
+          if [ $ERRORS -gt 0 ]; then
+            echo "::error::$ERRORS files missing required includes"
+            exit 1
+          fi
+          echo "✅ All constants have required includes"
+
+      - name: "Check: Struct Member Definitions"
+        run: |
+          echo "Checking struct member definitions..."
+          
+          # uft_prot_scheme_t muss diese Members haben
+          if ! grep -q "id;" include/uft/uft_protection.h; then
+            echo "::error::uft_prot_scheme_t missing 'id' member"
+            exit 1
+          fi
+          
+          # uft_md_session muss stats haben
+          if ! grep -q "stats" include/uft/uft_multi_decode.h; then
+            echo "::error::uft_md_session missing 'stats' member"
+            exit 1
+          fi
+          
+          echo "✅ All struct members defined"
+
+      - name: "Check: Include Guards"
+        run: |
+          echo "Checking include guards..."
+          MISSING=0
+          
+          for f in $(find include -name "*.h" -type f); do
+            if ! grep -q "#ifndef" "$f"; then
+              echo "⚠️ $f missing include guard"
+              MISSING=$((MISSING + 1))
+            fi
+          done
+          
+          if [ $MISSING -gt 10 ]; then
+            echo "::error::Too many headers ($MISSING) without include guards"
+            exit 1
+          fi
+          echo "✅ Include guards OK"
+
+      - name: "Check: CMakeLists.txt Syntax"
+        run: |
+          echo "Checking CMakeLists.txt files..."
+          for f in $(find . -name "CMakeLists.txt"); do
+            # Prüfe auf offensichtliche Syntaxfehler
+            if grep -q "add_library.*$" "$f"; then
+              if ! grep -A1 "add_library.*$" "$f" | grep -q ")"; then
+                echo "⚠️ $f may have incomplete add_library"
+              fi
+            fi
+          done
+          echo "✅ CMakeLists.txt syntax OK"
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Header Consistency Check
+  # ─────────────────────────────────────────────────────────────────────────────
+  header-check:
+    name: "📋 Header Consistency"
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: "Check: Central Type Definitions"
+        run: |
+          echo "Checking type definition consistency..."
+          
+          # uft_track_t sollte nur an EINER Stelle definiert sein
+          TRACK_DEFS=$(grep -rn "typedef.*uft_track_t\|typedef struct uft_track " --include="*.h" . | wc -l)
+          if [ $TRACK_DEFS -gt 3 ]; then
+            echo "::warning::uft_track_t defined in $TRACK_DEFS places (should be centralized)"
+          fi
+          
+          # uft_sector_t sollte Include-Guard haben
+          if ! grep -q "UFT_SECTOR_T_DEFINED" include/uft/uft_types.h; then
+            echo "::warning::uft_sector_t missing UFT_SECTOR_T_DEFINED guard"
+          fi
+          
+          echo "✅ Type definitions checked"
+
+      - name: "Check: Error Code Completeness"
+        run: |
+          echo "Checking error codes..."
+          
+          REQUIRED_ERRORS="UFT_OK UFT_ERROR UFT_ERR_INVALID_ARG UFT_ERR_IO UFT_ERR_NOMEM"
+          
+          for err in $REQUIRED_ERRORS; do
+            if ! grep -rq "#define $err\|$err.*=" include/uft/uft_error*.h; then
+              echo "::error::Missing error code: $err"
+              exit 1
+            fi
+          done
+          
+          echo "✅ All required error codes defined"

@@ -104,20 +104,30 @@ bool uft_ipf_record_type_known(uint32_t type) {
 
 const char *uft_ipf_platform_name(uint32_t platform) {
     static char buf[256];
+    size_t pos = 0;
     buf[0] = '\0';
     
-    if (platform & UFT_IPF_PLATFORM_AMIGA_OCS) strcat(buf, "Amiga-OCS ");
-    if (platform & UFT_IPF_PLATFORM_AMIGA_ECS) strcat(buf, "Amiga-ECS ");
-    if (platform & UFT_IPF_PLATFORM_AMIGA_AGA) strcat(buf, "Amiga-AGA ");
-    if (platform & UFT_IPF_PLATFORM_ATARI_ST)  strcat(buf, "Atari-ST ");
-    if (platform & UFT_IPF_PLATFORM_ATARI_STE) strcat(buf, "Atari-STE ");
-    if (platform & UFT_IPF_PLATFORM_PC_DOS)    strcat(buf, "PC-DOS ");
-    if (platform & UFT_IPF_PLATFORM_AMSTRAD_CPC) strcat(buf, "CPC ");
-    if (platform & UFT_IPF_PLATFORM_SPECTRUM)  strcat(buf, "Spectrum ");
-    if (platform & UFT_IPF_PLATFORM_C64)       strcat(buf, "C64 ");
-    if (platform & UFT_IPF_PLATFORM_C128)      strcat(buf, "C128 ");
+    #define APPEND_PLATFORM(flag, name) \
+        if ((platform & (flag)) && pos < sizeof(buf) - 16) { \
+            pos += (size_t)snprintf(buf + pos, sizeof(buf) - pos, "%s", name); \
+        }
     
-    if (buf[0] == '\0') strcpy(buf, "(unknown)");
+    APPEND_PLATFORM(UFT_IPF_PLATFORM_AMIGA_OCS, "Amiga-OCS ");
+    APPEND_PLATFORM(UFT_IPF_PLATFORM_AMIGA_ECS, "Amiga-ECS ");
+    APPEND_PLATFORM(UFT_IPF_PLATFORM_AMIGA_AGA, "Amiga-AGA ");
+    APPEND_PLATFORM(UFT_IPF_PLATFORM_ATARI_ST,  "Atari-ST ");
+    APPEND_PLATFORM(UFT_IPF_PLATFORM_ATARI_STE, "Atari-STE ");
+    APPEND_PLATFORM(UFT_IPF_PLATFORM_PC_DOS,    "PC-DOS ");
+    APPEND_PLATFORM(UFT_IPF_PLATFORM_AMSTRAD_CPC, "CPC ");
+    APPEND_PLATFORM(UFT_IPF_PLATFORM_SPECTRUM,  "Spectrum ");
+    APPEND_PLATFORM(UFT_IPF_PLATFORM_C64,       "C64 ");
+    APPEND_PLATFORM(UFT_IPF_PLATFORM_C128,      "C128 ");
+    
+    #undef APPEND_PLATFORM
+    
+    if (buf[0] == '\0') {
+        (void)snprintf(buf, sizeof(buf), "(unknown)");
+    }
     return buf;
 }
 
@@ -213,7 +223,7 @@ bool uft_ipf_probe_fp(FILE *fp) {
     
     uint8_t hdr[12];
     bool ok = read_exact(fp, hdr, 12);
-    fseek(fp, pos, SEEK_SET);
+    (void)fseek(fp, pos, SEEK_SET);  /* Best-effort position restore */
     
     if (!ok) return false;
     

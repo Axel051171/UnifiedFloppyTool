@@ -1,0 +1,176 @@
+# UFT Extended CI - Verhindert häufige Fehler
+name: Extended CI Checks
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  # ═══════════════════════════════════════════════════════════════
+  # Job 1: Statische Code-Analyse (vor dem Build)
+  # ═══════════════════════════════════════════════════════════════
+  static-analysis:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: "🔍 Check: Keine relativen Include-Pfade"
+        run: |
+          echo "Prüfe auf problematische Include-Pfade..."
+          ERRORS=0
+          
+          # Suche nach relativen Pfaden die Probleme machen
+          if grep -rn '#include.*"tracks/track_generator.h"' --include="*.c" --include="*.h" src/; then
+            echo "❌ FEHLER: Relative Include-Pfade gefunden!"
+            echo "   Benutze: #include \"track_generator.h\""
+            ERRORS=1
+          fi
+          
+          if [ $ERRORS -eq 1 ]; then
+            exit 1
+          fi
+          echo "✓ Keine problematischen Include-Pfade"
+      
+      - name: "🔍 Check: Keine direkten stdatomic.h Includes"
+        run: |
+          echo "Prüfe auf direkte stdatomic.h Includes..."
+          if grep -rn '#include.*<stdatomic.h>' --include="*.c" --include="*.h" src/; then
+            echo "❌ FEHLER: Direkter stdatomic.h Include gefunden!"
+            echo "   Benutze stattdessen: #include \"uft_atomics.h\""
+            exit 1
+          fi
+          echo "✓ Keine direkten stdatomic.h Includes"
+      
+      - name: "🔍 Check: Veraltete Error-Codes"
+        run: |
+          echo "Prüfe auf veraltete Error-Codes ohne compat header..."
+          WARNINGS=0
+          
+          # Prüfe ob Dateien veraltete Codes benutzen OHNE den compat header
+          for f in $(find src -name "*.c"); do
+            if grep -q "UFT_ERROR_FORMAT_NOT_SUPPORTED\|UFT_ERR_INVALID_PARAM" "$f"; then
+              if ! grep -q "uft_error_compat.h" "$f"; then
+                echo "⚠️ WARNUNG: $f benutzt Legacy-Error-Codes ohne uft_error_compat.h"
+                WARNINGS=1
+              fi
+            fi
+          done
+          
+          if [ $WARNINGS -eq 1 ]; then
+            echo "Füge #include \"uft_error_compat.h\" hinzu!"
+          fi
+          echo "✓ Error-Code Check abgeschlossen"
+
+      - name: "🔍 Check: bool ohne stdbool.h"
+        run: |
+          echo "Prüfe auf bool Verwendung ohne stdbool.h..."
+          for f in $(find src -name "*.c" -o -name "*.h"); do
+            if grep -q '\bbool\b' "$f"; then
+              if ! grep -q '#include.*<stdbool.h>\|#include.*"stdbool.h"' "$f"; then
+                # Prüfe ob es durch einen anderen Header kommt
+                if ! grep -q 'uft_types.h\|uft_track.h\|uft_atomics.h' "$f"; then
+                  echo "⚠️ $f: verwendet 'bool' ohne stdbool.h Include"
+                fi
+              fi
+            fi
+          done
+          echo "✓ bool Check abgeschlossen"
+
+  # ═══════════════════════════════════════════════════════════════
+  # Job 2: Header-Konsistenz prüfen
+  # ═══════════════════════════════════════════════════════════════
+  header-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: "📋 Check: Erforderliche Header existieren"
+        run: |
+          echo "Prüfe ob alle erforderlichen Header existieren..."
+          MISSING=0
+          
+          REQUIRED_HEADERS=(
+            "include/uft/uft_error.h"
+            "include/uft/uft_error_compat.h"
+            "include/uft/uft_types.h"
+            "include/uft/uft_track.h"
+            "include/uft/uft_atomics.h"
+            "include/uft/uft_mfm_flux.h"
+            "include/tracks/track_generator.h"
+          )
+          
+          for header in "${REQUIRED_HEADERS[@]}"; do
+            if [ ! -f "$header" ]; then
+              echo "❌ FEHLT: $header"
+              MISSING=1
+            else
+              echo "✓ $header"
+            fi
+          done
+          
+          if [ $MISSING -eq 1 ]; then
+            exit 1
+          fi
+
+      - name: "📋 Check: Include-Guards"
+        run: |
+          echo "Prüfe Include-Guards..."
+          for f in $(find include -name "*.h"); do
+            if ! grep -q "#ifndef\|#pragma once" "$f"; then
+              echo "⚠️ $f: Kein Include-Guard gefunden!"
+            fi
+          done
+          echo "✓ Include-Guard Check abgeschlossen"
+
+  # ═══════════════════════════════════════════════════════════════
+  # Job 3: Cross-Platform Syntax Check
+  # ═══════════════════════════════════════════════════════════════
+  syntax-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y gcc
+      
+      - name: "🔧 Syntax Check: Core Module"
+        run: |
+          echo "Prüfe Syntax der Core-Module..."
+          ERRORS=0
+          
+          for f in src/core/*.c src/crc/*.c src/encoding/*.c; do
+            if [ -f "$f" ]; then
+              if ! gcc -fsyntax-only -c "$f" \
+                  -I include -I include/uft -I include/uft/core \
+                  -I include/uft/crc -I include/uft/compat \
+                  -I include/tracks -I src 2>/dev/null; then
+                echo "❌ Syntax-Fehler: $f"
+                ERRORS=$((ERRORS + 1))
+              fi
+            fi
+          done
+          
+          echo "Dateien mit Fehlern: $ERRORS"
+          # Nicht abbrechen, nur warnen
+          
+  # ═══════════════════════════════════════════════════════════════
+  # Job 4: Standard Build (Matrix)
+  # ═══════════════════════════════════════════════════════════════
+  build:
+    needs: [static-analysis, header-check]
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Configure CMake
+        run: cmake -B build -DUFT_BUILD_GUI=OFF -DUFT_BUILD_TESTS=OFF
+        
+      - name: Build
+        run: cmake --build build --config Release

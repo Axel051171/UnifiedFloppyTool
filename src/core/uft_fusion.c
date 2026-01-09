@@ -321,20 +321,27 @@ uft_error_t uft_fusion_tracks(const uft_track_t *const *tracks,
     if (!out_track->raw_data || out_track->raw_capacity < byte_count) {
         free(out_track->raw_data);
         out_track->raw_data = malloc(byte_count);
+        if (!out_track->raw_data) {
+            free(revisions);
+            return UFT_ERR_MEMORY;
+        }
         out_track->raw_capacity = byte_count;
     }
     
     if (!out_track->confidence) {
         out_track->confidence = malloc(byte_count);
+        if (!out_track->confidence) {
+            free(revisions);
+            return UFT_ERR_MEMORY;
+        }
     }
     
     if (!out_track->weak_mask) {
         out_track->weak_mask = malloc(max_bits * sizeof(bool));
-    }
-    
-    if (!out_track->raw_data) {
-        free(revisions);
-        return UFT_ERR_MEMORY;
+        if (!out_track->weak_mask) {
+            free(revisions);
+            return UFT_ERR_MEMORY;
+        }
     }
     
     /* Perform fusion */
@@ -401,15 +408,17 @@ uft_error_t uft_fusion_sectors(const uft_sector_t *const *sectors,
     if (!out_sector->data || out_sector->data_len < max_size) {
         free(out_sector->data);
         out_sector->data = malloc(max_size);
+        if (!out_sector->data) {
+            return UFT_ERR_MEMORY;
+        }
         out_sector->data_len = max_size;
     }
     
     if (!out_sector->confidence) {
         out_sector->confidence = malloc(max_size);
-    }
-    
-    if (!out_sector->data) {
-        return UFT_ERR_MEMORY;
+        if (!out_sector->confidence) {
+            return UFT_ERR_MEMORY;
+        }
     }
     
     /* Initialize result */

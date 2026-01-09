@@ -299,9 +299,9 @@ int edsk_parser_read_track(
         return -1;
     }
     
-    /* Read track info */
+    /* Read track info header (24 bytes, not full 256-byte block) */
     edsk_track_info_t track_info;
-    if (fread(&track_info, TRACK_INFO_SIZE, 1, ctx->file) != 1) {
+    if (fread(&track_info, sizeof(edsk_track_info_t), 1, ctx->file) != 1) {
         return -1;
     }
     

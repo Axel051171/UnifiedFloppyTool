@@ -44,8 +44,8 @@
 
 #include "types.h"
 
-#include "libflux.h""
-#include "libflux.h""
+#include "libflux.h"
+#include "libflux.h"
 #include "./tracks/track_generator.h"
 
 #include "uft_floppy_loader.h"

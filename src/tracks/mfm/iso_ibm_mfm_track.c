@@ -41,12 +41,12 @@
 
 #include "types.h"
 
-#include "libflux.h""
-#include "tracks/track_generator.h"
+#include "libflux.h"
+#include "track_generator.h"
 #include "sector_search.h"
 #include "fdc_ctrl.h"
 
-#include "libflux.h""
+#include "libflux.h"
 
 #include "tracks/sector_extractor.h"
 #include "tracks/crc.h"
@@ -54,7 +54,7 @@
 #include "tracks/track_formats/iso_ibm_mfm_track.h"
 
 #include "tracks/trackutils.h"
-#include "tracks/encoding/mfm_encoding.h"
+#include "mfm_encoding.h"
 
 #include "tracks/luts.h"
 

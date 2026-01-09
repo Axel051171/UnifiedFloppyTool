@@ -46,8 +46,8 @@
 
 #include "types.h"
 
-#include "libflux.h""
-#include "libflux.h""
+#include "libflux.h"
+#include "libflux.h"
 #include "uft_compat.h"
 #include "uft_floppy_loader.h"
 

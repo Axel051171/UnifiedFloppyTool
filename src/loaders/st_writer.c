@@ -26,9 +26,9 @@
 
 #include "types.h"
 
-#include "libflux.h""
-#include "tracks/track_generator.h"
-#include "libflux.h""
+#include "libflux.h"
+#include "track_generator.h"
+#include "libflux.h"
 #include "st_loader.h"
 #include "st_writer.h"
 #include "tracks/sector_extractor.h"

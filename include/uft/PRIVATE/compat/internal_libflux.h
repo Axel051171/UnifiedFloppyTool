@@ -1,12 +1,12 @@
 /**
- * @file internal_liblibflux.h
+ * @file internal_libflux.h
  * @brief Internal UFT types for UFT compatibility
  */
 
 #ifndef INTERNAL_LIBLIBFLUX_H
 #define INTERNAL_LIBLIBFLUX_H
 
-#include "liblibflux.h"
+#include "libflux.h"
 
 #ifdef __cplusplus
 extern "C" {

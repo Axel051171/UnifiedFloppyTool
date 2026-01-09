@@ -1,122 +1,180 @@
 #!/bin/bash
 # ═══════════════════════════════════════════════════════════════════════════════
-# UFT Pre-Push Validation Script
+# UFT Pre-Commit Validation Script
 # ═══════════════════════════════════════════════════════════════════════════════
-# Führe dieses Script VOR jedem Push aus:
-#   ./scripts/validate.sh
+# 
+# Dieses Script prüft auf häufige Fehler BEVOR Code committed wird.
+# Basierend auf den tatsächlichen Build-Fehlern die wir gefunden haben.
+#
+# Verwendung:
+#   ./scripts/validate.sh           # Alles prüfen
+#   ./scripts/validate.sh --quick   # Nur kritische Prüfungen
+#
 # ═══════════════════════════════════════════════════════════════════════════════
 
 set -e
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
 ERRORS=0
 WARNINGS=0
 
-echo "═══════════════════════════════════════════════════════════════════════════"
-echo "  UFT Pre-Push Validation"
-echo "═══════════════════════════════════════════════════════════════════════════"
-echo ""
-
-# ─────────────────────────────────────────────────────────────────────────────
-# 1. Math-Library Check (KRITISCH!)
-# ─────────────────────────────────────────────────────────────────────────────
-echo "🔍 [1/5] Checking for unguarded 'm' linking..."
-
-# Suche nach direktem 'm' - aber erlaube die zentrale Funktion in CMakeLists.txt
-bad_m=$(grep -rn "target_link_libraries" . --include="CMakeLists.txt" 2>/dev/null | grep -E "\bm\b|\bm\)" | grep -v "uft_link_math" | grep -v "^\./CMakeLists.txt:.*if(UNIX)" || true)
-
-# Prüfe ob die gefundenen Stellen NICHT in der uft_link_math Funktion sind
-# Die Funktion in CMakeLists.txt Zeile 23-27 ist OK
-bad_m_filtered=""
-while IFS= read -r line; do
-    # Erlaube CMakeLists.txt Zeilen 23-30 (die Funktion)
-    if echo "$line" | grep -q "^\./CMakeLists.txt:2[3-9]:\|^\./CMakeLists.txt:30:"; then
-        continue
-    fi
-    bad_m_filtered="${bad_m_filtered}${line}\n"
-done <<< "$bad_m"
-
-if [ -n "$bad_m_filtered" ] && [ "$bad_m_filtered" != "\n" ]; then
-    echo "❌ FEHLER: Unguarded 'm' found!"
-    echo -e "$bad_m_filtered"
-    echo ""
-    echo "   FIX: Verwende uft_link_math(target) statt direktem 'm'"
-    echo ""
+error() {
+    echo -e "${RED}❌ ERROR: $1${NC}"
     ERRORS=$((ERRORS + 1))
-else
-    echo "✅ Keine unguarded 'm' Verlinkungen"
-fi
+}
 
-# ─────────────────────────────────────────────────────────────────────────────
-# 2. PRIVATE/PUBLIC Check
-# ─────────────────────────────────────────────────────────────────────────────
-echo ""
-echo "🔍 [2/5] Checking for missing PRIVATE/PUBLIC..."
-
-bad_private=$(grep -rn "target_link_libraries" . --include="CMakeLists.txt" 2>/dev/null | grep -v "PRIVATE\|PUBLIC\|INTERFACE\|#\|function" | grep -v "^\./CMakeLists.txt:" || true)
-
-if [ -n "$bad_private" ]; then
-    echo "⚠️  WARNING: Missing PRIVATE/PUBLIC in target_link_libraries:"
-    echo "$bad_private"
-    echo ""
+warning() {
+    echo -e "${YELLOW}⚠️  WARNING: $1${NC}"
     WARNINGS=$((WARNINGS + 1))
-else
-    echo "✅ Alle target_link_libraries haben PRIVATE/PUBLIC"
-fi
+}
 
-# ─────────────────────────────────────────────────────────────────────────────
-# 3. uft_link_math Funktion existiert
-# ─────────────────────────────────────────────────────────────────────────────
+success() {
+    echo -e "${GREEN}✓ $1${NC}"
+}
+
+echo "═══════════════════════════════════════════════════════════════"
+echo "       UFT Pre-Commit Validation"
+echo "═══════════════════════════════════════════════════════════════"
 echo ""
-echo "🔍 [3/5] Checking uft_link_math function exists..."
 
-if grep -q "function(uft_link_math" CMakeLists.txt 2>/dev/null; then
-    echo "✅ uft_link_math() Funktion gefunden"
-else
-    echo "❌ FEHLER: uft_link_math() Funktion fehlt in CMakeLists.txt!"
-    ERRORS=$((ERRORS + 1))
-fi
+# ═══════════════════════════════════════════════════════════════════════════════
+# CHECK 1: Neue Header haben Include-Guards
+# ═══════════════════════════════════════════════════════════════════════════════
+echo "=== Check 1: Include-Guards ==="
 
-# ─────────────────────────────────────────────────────────────────────────────
-# 4. Zähle uft_link_math Aufrufe
-# ─────────────────────────────────────────────────────────────────────────────
-echo ""
-echo "🔍 [4/5] Counting uft_link_math() calls..."
-
-count=$(grep -rn "uft_link_math(" . --include="CMakeLists.txt" 2>/dev/null | grep -v "function\|#" | wc -l)
-echo "   $count Targets verwenden uft_link_math()"
-
-# ─────────────────────────────────────────────────────────────────────────────
-# 5. OpenMP Check (MSVC braucht nur /openmp, keine Library)
-# ─────────────────────────────────────────────────────────────────────────────
-echo ""
-echo "🔍 [5/5] Checking OpenMP configuration..."
-
-if grep -q "OpenMP::OpenMP" CMakeLists.txt 2>/dev/null; then
-    if grep -q "if(MSVC)" CMakeLists.txt 2>/dev/null && grep -q "/openmp" CMakeLists.txt 2>/dev/null; then
-        echo "✅ OpenMP korrekt konfiguriert (MSVC: /openmp flag)"
-    else
-        echo "⚠️  WARNING: OpenMP sollte auf MSVC nur /openmp verwenden"
-        WARNINGS=$((WARNINGS + 1))
+for header in $(find include src -name "*.h" -type f 2>/dev/null); do
+    if ! grep -q "#ifndef\|#pragma once" "$header" 2>/dev/null; then
+        error "$header: Fehlender Include-Guard"
     fi
-else
-    echo "✅ Kein OpenMP oder korrekt konfiguriert"
+done
+success "Include-Guards geprüft"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# CHECK 2: Keine undeklarierten Typen in neuen Headern
+# ═══════════════════════════════════════════════════════════════════════════════
+echo ""
+echo "=== Check 2: Typ-Definitionen ==="
+
+# Diese Typen MÜSSEN existieren (basierend auf unseren Fehlern)
+REQUIRED_TYPES=(
+    "uft_sector_t"
+    "uft_track_t"
+    "uft_prot_scheme_t"
+    "uft_md_session_t"
+)
+
+for type in "${REQUIRED_TYPES[@]}"; do
+    if ! grep -rq "typedef.*$type\|} $type;" include/ 2>/dev/null; then
+        error "Typ '$type' nicht in include/ definiert"
+    fi
+done
+success "Kritische Typen vorhanden"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# CHECK 3: Keine fehlenden Konstanten
+# ═══════════════════════════════════════════════════════════════════════════════
+echo ""
+echo "=== Check 3: Kritische Konstanten ==="
+
+REQUIRED_CONSTANTS=(
+    "UFT_CRC16_INIT"
+    "UFT_CRC16_POLY"
+    "UFT_MFM_MARK_IDAM"
+    "UFT_MFM_MARK_DAM"
+    "UFT_OK"
+    "UFT_ERROR"
+)
+
+for const in "${REQUIRED_CONSTANTS[@]}"; do
+    if ! grep -rq "#define $const" include/ 2>/dev/null; then
+        error "Konstante '$const' nicht definiert"
+    fi
+done
+success "Kritische Konstanten vorhanden"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# CHECK 4: MSVC-Kompatibilität (atomic)
+# ═══════════════════════════════════════════════════════════════════════════════
+echo ""
+echo "=== Check 4: MSVC-Kompatibilität ==="
+
+# Dateien die atomic verwenden müssen uft_atomics.h inkludieren
+for file in $(grep -rl "atomic_int\|atomic_bool" --include="*.c" src/ 2>/dev/null); do
+    if ! grep -q "uft_atomics.h\|<stdatomic.h>" "$file" 2>/dev/null; then
+        warning "$file: Verwendet atomic ohne uft_atomics.h Include"
+    fi
+done
+success "Atomic-Verwendung geprüft"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# CHECK 5: Struct-Member-Vollständigkeit
+# ═══════════════════════════════════════════════════════════════════════════════
+echo ""
+echo "=== Check 5: Struct-Member ==="
+
+# uft_prot_scheme_t muss diese Members haben
+if grep -q "typedef.*uft_prot_scheme_t\|} uft_prot_scheme_t;" include/uft/uft_protection.h 2>/dev/null; then
+    for member in "id" "platform" "indicators" "notes"; do
+        if ! grep -A 100 "typedef struct {" include/uft/uft_protection.h 2>/dev/null | \
+             grep -B 100 "} uft_prot_scheme_t;" | grep -q "$member"; then
+            error "uft_prot_scheme_t: Member '$member' fehlt"
+        fi
+    done
 fi
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Zusammenfassung
-# ─────────────────────────────────────────────────────────────────────────────
-echo ""
-echo "═══════════════════════════════════════════════════════════════════════════"
-echo "  Ergebnis"
-echo "═══════════════════════════════════════════════════════════════════════════"
-echo ""
-echo "   Fehler:    $ERRORS"
-echo "   Warnungen: $WARNINGS"
-echo ""
+# uft_md_session muss stats haben
+if grep -q "typedef.*uft_md_session" include/uft/uft_multi_decode.h 2>/dev/null; then
+    if ! grep -A 50 "typedef struct uft_md_session" include/uft/uft_multi_decode.h | \
+         grep -q "stats"; then
+        error "uft_md_session: 'stats' Member fehlt"
+    fi
+fi
+success "Struct-Member geprüft"
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# CHECK 6: CMakeLists.txt Syntax
+# ═══════════════════════════════════════════════════════════════════════════════
+echo ""
+echo "=== Check 6: CMake Syntax ==="
+
+for cmake in $(find . -name "CMakeLists.txt" -type f 2>/dev/null); do
+    if ! cmake -P "$cmake" 2>/dev/null; then
+        # Nur warnen, nicht blockieren
+        warning "$cmake: Möglicherweise Syntax-Fehler"
+    fi
+done 2>/dev/null || true
+success "CMake-Dateien geprüft"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# CHECK 7: Keine harten Include-Pfade
+# ═══════════════════════════════════════════════════════════════════════════════
+echo ""
+echo "=== Check 7: Include-Pfade ==="
+
+# Prüfe auf absolute Pfade
+if grep -r '#include "/\|#include "C:\|#include "D:' --include="*.c" --include="*.h" . 2>/dev/null; then
+    error "Absolute Include-Pfade gefunden"
+fi
+success "Keine absoluten Pfade"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# ERGEBNIS
+# ═══════════════════════════════════════════════════════════════════════════════
+echo ""
+echo "═══════════════════════════════════════════════════════════════"
 if [ $ERRORS -gt 0 ]; then
-    echo "❌ VALIDATION FAILED - Bitte Fehler beheben vor Push!"
+    echo -e "${RED}FEHLGESCHLAGEN: $ERRORS Fehler, $WARNINGS Warnungen${NC}"
+    echo "Bitte Fehler beheben vor dem Commit!"
     exit 1
 else
-    echo "✅ VALIDATION PASSED - Ready to push!"
+    if [ $WARNINGS -gt 0 ]; then
+        echo -e "${YELLOW}BESTANDEN mit $WARNINGS Warnungen${NC}"
+    else
+        echo -e "${GREEN}ALLE PRÜFUNGEN BESTANDEN${NC}"
+    fi
     exit 0
 fi

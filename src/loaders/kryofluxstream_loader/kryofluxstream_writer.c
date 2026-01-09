@@ -45,8 +45,8 @@
 
 #include "types.h"
 
-#include "libflux.h""
-#include "libflux.h""
+#include "libflux.h"
+#include "libflux.h"
 
 #include "kryofluxstream_format.h"
 #include "kryofluxstream_loader.h"

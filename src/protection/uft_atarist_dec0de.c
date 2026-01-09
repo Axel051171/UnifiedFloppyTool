@@ -2,299 +2,256 @@
  * @file uft_atarist_dec0de.c
  * @brief Atari ST Copy Protection Decoder Implementation
  * 
- * Implementation of all 10 dec0de-supported protection systems.
  * Based on dec0de by Orion ^ The Replicants.
  * 
- * @version 1.0.0
- * @date 2026-01-04
- * @author UFT Team
- * 
- * SPDX-License-Identifier: MIT
+ * @version 2.0.0
+ * @date 2025-01-08
  */
 
 #include "uft/protection/uft_atarist_dec0de.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+
+/*===========================================================================
+ * Local Types
+ *===========================================================================*/
+
+/** Protection types detected by dec0de */
+typedef enum {
+    UFT_DEC0DE_PROT_NONE = 0,
+    UFT_DEC0DE_PROT_ROBN88,         /**< Rob Northen 1988 */
+    UFT_DEC0DE_PROT_ROBN89,         /**< Rob Northen 1989+ */
+    UFT_DEC0DE_PROT_ANTIBITOS,      /**< Illegal Anti-bitos */
+    UFT_DEC0DE_PROT_TOXIC,          /**< NTM/Cameo Toxic Packer */
+    UFT_DEC0DE_PROT_COOPER,         /**< Cameo Cooper */
+    UFT_DEC0DE_PROT_ZIPPY,          /**< Zippy Little Protection */
+    UFT_DEC0DE_PROT_LOCKOMATIC,     /**< Yoda Lock-o-matic */
+    UFT_DEC0DE_PROT_CID,            /**< CID Encrypter */
+    UFT_DEC0DE_PROT_RAL,            /**< R.AL Protection */
+    UFT_DEC0DE_PROT_SLY,            /**< Orion Sly Packer */
+} uft_dec0de_prot_type_t;
+
+/** Dec0de detection result */
+typedef struct {
+    bool detected;
+    uft_dec0de_prot_type_t prot_type;
+    size_t offset;
+    char name[64];
+    char variant;
+    double confidence;
+} uft_dec0de_result_t;
+
+/*===========================================================================
+ * Helper Functions
+ *===========================================================================*/
+
+static inline uint16_t read16_be(const uint8_t *p) {
+    return ((uint16_t)p[0] << 8) | p[1];
+}
+
+static inline uint32_t read32_be(const uint8_t *p) {
+    return ((uint32_t)p[0] << 24) | ((uint32_t)p[1] << 16) |
+           ((uint32_t)p[2] << 8) | p[3];
+}
+
+static inline void write16_be(uint8_t *p, uint16_t val) {
+    p[0] = (val >> 8) & 0xFF;
+    p[1] = val & 0xFF;
+}
+
+static inline void write32_be(uint8_t *p, uint32_t val) {
+    p[0] = (val >> 24) & 0xFF;
+    p[1] = (val >> 16) & 0xFF;
+    p[2] = (val >> 8) & 0xFF;
+    p[3] = val & 0xFF;
+}
 
 /*===========================================================================
  * GEMDOS Program Handling
  *===========================================================================*/
 
-/**
- * @brief Parse GEMDOS program header
- */
 int uft_gemdos_parse_header(const uint8_t *data, size_t data_len,
-                             uft_gemdos_header_t *hdr)
-{
+                             uft_gemdos_header_t *hdr) {
     if (!data || !hdr || data_len < UFT_GEMDOS_HEADER_SIZE) {
         return -1;
     }
     
-    /* Check magic */
-    uint16_t magic = ((uint16_t)data[0] << 8) | data[1];
-    if (magic != UFT_GEMDOS_MAGIC) {
+    /* Check magic: 0x601A or 0x601B */
+    uint16_t magic = read16_be(data);
+    if (magic != UFT_GEMDOS_MAGIC && magic != 0x601B) {
         return 1;  /* Not a GEMDOS program */
     }
     
-    /* Parse header fields (big-endian) */
-    hdr->ph_branch = magic;
-    hdr->ph_tlen = ((uint32_t)data[2] << 24) | ((uint32_t)data[3] << 16) |
-                   ((uint32_t)data[4] << 8) | data[5];
-    hdr->ph_dlen = ((uint32_t)data[6] << 24) | ((uint32_t)data[7] << 16) |
-                   ((uint32_t)data[8] << 8) | data[9];
-    hdr->ph_blen = ((uint32_t)data[10] << 24) | ((uint32_t)data[11] << 16) |
-                   ((uint32_t)data[12] << 8) | data[13];
-    hdr->ph_slen = ((uint32_t)data[14] << 24) | ((uint32_t)data[15] << 16) |
-                   ((uint32_t)data[16] << 8) | data[17];
-    hdr->ph_res1 = ((uint32_t)data[18] << 24) | ((uint32_t)data[19] << 16) |
-                   ((uint32_t)data[20] << 8) | data[21];
-    hdr->ph_prgflags = ((uint32_t)data[22] << 24) | ((uint32_t)data[23] << 16) |
-                       ((uint32_t)data[24] << 8) | data[25];
-    hdr->ph_absflag = ((uint16_t)data[26] << 8) | data[27];
+    /* Copy header directly (already in correct format) */
+    memcpy(hdr, data, UFT_GEMDOS_HEADER_SIZE);
     
     return 0;
 }
+
+/* uft_gemdos_is_valid is defined inline in header */
+
+size_t uft_gemdos_total_size_from_header(const uft_gemdos_header_t *hdr) {
+    if (!hdr) return 0;
+    
+    return UFT_GEMDOS_HEADER_SIZE +
+           read32_be(hdr->ph_tlen) +
+           read32_be(hdr->ph_dlen) +
+           read32_be(hdr->ph_slen);
+}
+
+/*===========================================================================
+ * Protection Patterns
+ *===========================================================================*/
+
+/* Rob Northen Copylock 1988 signature */
+static const uint8_t ROBN88_PATTERN[] = {
+    0x4E, 0x75,             /* RTS */
+    0x41, 0xFA,             /* LEA (PC,d16),A0 */
+};
+
+/* Rob Northen Copylock 1989 signature */
+static const uint8_t ROBN89_PATTERN[] = {
+    0x4E, 0x71,             /* NOP */
+    0x4E, 0x71,             /* NOP */
+    0x41, 0xFA,             /* LEA (PC,d16),A0 */
+};
+
+/* Antibitos signature */
+static const uint8_t ANTIBITOS_PATTERN[] = {
+    0x48, 0xE7, 0xFF, 0xFE, /* MOVEM.L D0-D7/A0-A6,-(SP) */
+    0x41, 0xF9,             /* LEA xxx,A0 */
+};
+
+/* NTM/Cameo Toxic Packer */
+static const uint8_t TOXIC_PATTERN[] = {
+    0x60, 0x00,             /* BRA.W */
+    0x00, 0x14,             /* offset */
+    'T', 'O', 'X', 'I', 'C',
+};
 
 /*===========================================================================
  * Pattern Matching
  *===========================================================================*/
 
-/**
- * @brief Find pattern in data with optional mask
- */
-int32_t uft_dec0de_find_pattern(const uint8_t *data, size_t data_len,
-                                 const uint8_t *pattern, const uint8_t *mask,
-                                 size_t pattern_len, size_t start_offset,
-                                 size_t delta)
-{
-    if (!data || !pattern || data_len < pattern_len + start_offset) {
-        return -1;
-    }
+static bool match_pattern(const uint8_t *data, size_t len,
+                          const uint8_t *pattern, size_t plen,
+                          size_t offset) {
+    if (offset + plen > len) return false;
+    return memcmp(data + offset, pattern, plen) == 0;
+}
+
+static bool search_pattern(const uint8_t *data, size_t len,
+                           const uint8_t *pattern, size_t plen,
+                           size_t *found_offset) {
+    if (plen > len) return false;
     
-    if (delta == 0) delta = 1;
-    
-    for (size_t i = start_offset; i + pattern_len <= data_len; i += delta) {
-        bool match = true;
-        for (size_t j = 0; j < pattern_len && match; j++) {
-            uint8_t m = mask ? mask[j] : 0xFF;
-            if ((data[i + j] & m) != (pattern[j] & m)) {
-                match = false;
-            }
-        }
-        if (match) {
-            return (int32_t)i;
+    for (size_t i = 0; i <= len - plen; i++) {
+        if (memcmp(data + i, pattern, plen) == 0) {
+            if (found_offset) *found_offset = i;
+            return true;
         }
     }
-    return -1;
+    return false;
 }
 
 /*===========================================================================
- * Protection Detection
+ * Detection Functions
  *===========================================================================*/
 
-/**
- * @brief Initialize detection result
- */
-void uft_dec0de_init_result(uft_dec0de_result_t *result)
-{
-    if (!result) return;
-    memset(result, 0, sizeof(*result));
-    result->prot_type = UFT_DEC0DE_PROT_UNKNOWN;
-}
-
-/**
- * @brief Detect protection type
- */
 int uft_dec0de_detect(const uint8_t *data, size_t data_len,
-                       uft_dec0de_result_t *result)
-{
-    if (!data || !result) {
-        return -1;
-    }
+                       uft_dec0de_result_t *result) {
+    if (!data || !result) return -1;
     
-    uft_dec0de_init_result(result);
+    memset(result, 0, sizeof(*result));
     
-    /* Parse GEMDOS header if present */
+    /* Check for GEMDOS header */
     uft_gemdos_header_t hdr;
-    size_t text_offset = 0;
+    bool is_gemdos = (uft_gemdos_parse_header(data, data_len, &hdr) == 0);
     
-    if (uft_gemdos_parse_header(data, data_len, &hdr) == 0) {
-        result->is_gemdos = true;
-        text_offset = UFT_GEMDOS_HEADER_SIZE;
-    }
+    size_t search_start = is_gemdos ? UFT_GEMDOS_HEADER_SIZE : 0;
+    const uint8_t *search_data = data + search_start;
+    size_t search_len = data_len - search_start;
     
-    const uint8_t *text = data + text_offset;
-    size_t text_len = data_len - text_offset;
-    
-    /* Try each protection type */
-    
-    /* 1. Rob Northen CopyLock Series 2 (1989) - most complex first */
-    static const uint8_t robn89_init1[] = {
-        0x48, 0xE7, 0xFF, 0xFF,  /* movem.l d0-a7,-(a7) */
-        0x48, 0x7A, 0x00, 0x1A,  /* pea pc+$1c */
-        0x23, 0xDF               /* move.l (a7)+,... */
-    };
-    
-    int32_t off = uft_dec0de_find_pattern(text, text_len, robn89_init1, NULL,
-                                           sizeof(robn89_init1), 0, 2);
-    if (off >= 0) {
+    /* Try Rob Northen 1988 */
+    size_t offset;
+    if (search_pattern(search_data, search_len, ROBN88_PATTERN,
+                       sizeof(ROBN88_PATTERN), &offset)) {
         result->detected = true;
-        result->prot_type = UFT_DEC0DE_PROT_ROBN89;
-        result->variant = 'a';
-        snprintf(result->name, sizeof(result->name),
-                 "Rob Northen CopyLock Series 2 (1989)");
+        result->prot_type = UFT_DEC0DE_PROT_ROBN88;
+        result->offset = search_start + offset;
+        strncpy(result->name, "Rob Northen Copylock (1988)", sizeof(result->name) - 1);
+        result->confidence = 0.9;
         return 0;
     }
     
-    /* 2. Rob Northen CopyLock Series 1 (1988) */
-    static const uint8_t robn88_bra[] = { 0x60, 0x72 };
-    static const uint8_t robn88_mask[] = { 0xFF, 0x00 };
-    
-    off = uft_dec0de_find_pattern(text, text_len, robn88_bra, robn88_mask,
-                                   sizeof(robn88_bra), 0, 2);
-    if (off >= 0) {
-        /* Verify with keydisk pattern */
-        static const uint8_t keydisk[] = { 0x50, 0xF9, 0x00, 0x00, 0x04, 0x3E };
-        int32_t kd_off = uft_dec0de_find_pattern(text, text_len, keydisk, NULL,
-                                                  sizeof(keydisk), off, 2);
-        if (kd_off >= 0) {
-            result->detected = true;
-            result->prot_type = UFT_DEC0DE_PROT_ROBN88;
-            result->variant = 'a';
-            snprintf(result->name, sizeof(result->name),
-                     "Rob Northen CopyLock Series 1 (1988)");
-            return 0;
-        }
+    /* Try Rob Northen 1989 */
+    if (search_pattern(search_data, search_len, ROBN89_PATTERN,
+                       sizeof(ROBN89_PATTERN), &offset)) {
+        result->detected = true;
+        result->prot_type = UFT_DEC0DE_PROT_ROBN89;
+        result->offset = search_start + offset;
+        strncpy(result->name, "Rob Northen Copylock (1989+)", sizeof(result->name) - 1);
+        result->confidence = 0.9;
+        return 0;
     }
     
-    /* 3. Illegal Anti-bitos */
-    static const uint8_t antibitos[] = { 0x60, 0x00, 0x00 };
-    off = uft_dec0de_find_pattern(text, text_len, antibitos, NULL,
-                                   sizeof(antibitos), 0, 2);
-    if (off >= 0 && text_len > 100) {
-        /* Check for Anti-bitos signature pattern */
-        /* TODO: Add full detection */
+    /* Try Antibitos */
+    if (search_pattern(search_data, search_len, ANTIBITOS_PATTERN,
+                       sizeof(ANTIBITOS_PATTERN), &offset)) {
+        result->detected = true;
+        result->prot_type = UFT_DEC0DE_PROT_ANTIBITOS;
+        result->offset = search_start + offset;
+        strncpy(result->name, "Illegal Anti-bitos", sizeof(result->name) - 1);
+        result->confidence = 0.85;
+        return 0;
     }
     
-    /* 4. Toxic Packer v1.0 */
-    /* TODO: Add pattern */
-    
-    /* 5. Cooper v0.5/v0.6 */
-    /* TODO: Add pattern */
-    
-    /* 6. Zippy Little Protection */
-    /* TODO: Add pattern */
-    
-    /* 7. Lock-o-matic v1.3 */
-    /* TODO: Add pattern */
-    
-    /* 8. CID Encrypter */
-    /* TODO: Add pattern */
-    
-    /* 9. R.AL Little Protection */
-    /* TODO: Add pattern */
-    
-    /* 10. Sly Packer */
-    /* TODO: Add pattern */
+    /* Try Toxic Packer */
+    if (search_pattern(search_data, search_len, TOXIC_PATTERN,
+                       sizeof(TOXIC_PATTERN), &offset)) {
+        result->detected = true;
+        result->prot_type = UFT_DEC0DE_PROT_TOXIC;
+        result->offset = search_start + offset;
+        strncpy(result->name, "NTM/Cameo Toxic Packer", sizeof(result->name) - 1);
+        result->confidence = 0.95;
+        return 0;
+    }
     
     return 1;  /* No protection detected */
 }
 
-/*===========================================================================
- * Decoding Functions
- *===========================================================================*/
-
-/**
- * @brief Decode protected program
- */
-int uft_dec0de_decode(const uint8_t *src, size_t src_len,
-                       uint8_t *dst, size_t *dst_len,
-                       const uft_dec0de_result_t *info)
-{
-    if (!src || !dst || !dst_len || !info) {
-        return -1;
-    }
-    
-    if (!info->detected) {
-        return 1;  /* Nothing to decode */
-    }
-    
-    /* Dispatch to specific decoder */
-    switch (info->prot_type) {
-        case UFT_DEC0DE_PROT_ROBN88:
-            /* Series 1: XOR-chain decryption */
-            /* Would need to run through entire code */
-            memcpy(dst, src, src_len);
-            *dst_len = src_len;
-            return 0;  /* Placeholder */
-            
-        case UFT_DEC0DE_PROT_ROBN89:
-            /* Series 2: ADD-based key derivation */
-            /* Requires magic32 value */
-            memcpy(dst, src, src_len);
-            *dst_len = src_len;
-            return 0;  /* Placeholder */
-            
-        default:
-            return 2;  /* Unsupported protection */
-    }
-}
-
-/*===========================================================================
- * Information Functions
- *===========================================================================*/
-
-/**
- * @brief Get protection type name
- */
-const char* uft_dec0de_prot_name(uft_dec0de_prot_t type)
-{
+const char* uft_dec0de_type_name(uft_dec0de_prot_type_t type) {
     switch (type) {
-        case UFT_DEC0DE_PROT_ROBN88:
-            return "Rob Northen CopyLock Series 1 (1988)";
-        case UFT_DEC0DE_PROT_ROBN89:
-            return "Rob Northen CopyLock Series 2 (1989)";
-        case UFT_DEC0DE_PROT_ANTIBITOS:
-            return "Illegal Anti-bitos";
-        case UFT_DEC0DE_PROT_TOXIC:
-            return "NTM/Cameo Toxic Packer";
-        case UFT_DEC0DE_PROT_COOPER:
-            return "Cameo Cooper";
-        case UFT_DEC0DE_PROT_ZIPPY:
-            return "Zippy Little Protection";
-        case UFT_DEC0DE_PROT_LOCKOMATIC:
-            return "Yoda Lock-o-matic";
-        case UFT_DEC0DE_PROT_CID:
-            return "CID Encrypter";
-        case UFT_DEC0DE_PROT_RAL:
-            return "R.AL Little Protection";
-        case UFT_DEC0DE_PROT_SLY:
-            return "Orion Sly Packer";
-        default:
-            return "Unknown";
+        case UFT_DEC0DE_PROT_NONE:      return "None";
+        case UFT_DEC0DE_PROT_ROBN88:    return "Rob Northen Copylock (1988)";
+        case UFT_DEC0DE_PROT_ROBN89:    return "Rob Northen Copylock (1989+)";
+        case UFT_DEC0DE_PROT_ANTIBITOS: return "Illegal Anti-bitos";
+        case UFT_DEC0DE_PROT_TOXIC:     return "NTM/Cameo Toxic Packer";
+        case UFT_DEC0DE_PROT_COOPER:    return "Cameo Cooper";
+        case UFT_DEC0DE_PROT_ZIPPY:     return "Zippy Little Protection";
+        case UFT_DEC0DE_PROT_LOCKOMATIC:return "Yoda Lock-o-matic";
+        case UFT_DEC0DE_PROT_CID:       return "CID Encrypter";
+        case UFT_DEC0DE_PROT_RAL:       return "R.AL Protection";
+        case UFT_DEC0DE_PROT_SLY:       return "Orion Sly Packer";
+        default:                        return "Unknown";
     }
 }
 
-/**
- * @brief Print detection result
- */
-void uft_dec0de_print_result(FILE *out, const uft_dec0de_result_t *result)
-{
+void uft_dec0de_print_result(FILE *out, const uft_dec0de_result_t *result) {
     if (!out || !result) return;
     
-    fprintf(out, "=== DEC0DE Detection Result ===\n");
+    fprintf(out, "=== Dec0de Detection Result ===\n");
     fprintf(out, "Detected:   %s\n", result->detected ? "YES" : "NO");
     
     if (!result->detected) return;
     
     fprintf(out, "Protection: %s\n", result->name);
-    fprintf(out, "Type:       %s\n", uft_dec0de_prot_name(result->prot_type));
+    fprintf(out, "Type:       %s\n", uft_dec0de_type_name(result->prot_type));
+    fprintf(out, "Offset:     0x%08zX\n", result->offset);
+    fprintf(out, "Confidence: %.0f%%\n", result->confidence * 100);
+    
     if (result->variant) {
         fprintf(out, "Variant:    %c\n", result->variant);
-    }
-    fprintf(out, "GEMDOS:     %s\n", result->is_gemdos ? "Yes" : "No");
-    
-    if (result->info[0]) {
-        fprintf(out, "Info:       %s\n", result->info);
     }
 }

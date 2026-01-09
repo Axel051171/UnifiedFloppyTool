@@ -1,3 +1,4 @@
+#include "uft/compat/uft_platform.h"
 /**
  * @file uft_dtc_wrapper.c
  * @brief DTC (Disk Tool Copy) Wrapper Implementation

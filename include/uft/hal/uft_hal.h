@@ -155,11 +155,36 @@ void uft_hal_close(uft_hal_t* hal);
 const char* uft_hal_error(uft_hal_t* hal);
 
 /**
+ * @brief Get last error message (alias)
+ */
+const char* uft_hal_get_error(uft_hal_t* hal);
+
+/**
  * @brief Get controller name
  * @param type Controller type
  * @return Human-readable name
  */
 const char* uft_hal_controller_name(uft_hal_controller_t type);
+
+/**
+ * @brief Get number of supported controllers
+ * @return Controller count
+ */
+int uft_hal_get_controller_count(void);
+
+/**
+ * @brief Get controller name by index
+ * @param index Controller index (0 to count-1)
+ * @return Controller name or NULL
+ */
+const char* uft_hal_get_controller_name_by_index(int index);
+
+/**
+ * @brief Check if controller is implemented
+ * @param type Controller type
+ * @return true if implemented, false if stub
+ */
+bool uft_hal_is_controller_implemented(uft_hal_controller_t type);
 
 #ifdef __cplusplus
 }

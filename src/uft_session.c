@@ -38,7 +38,7 @@
 #else
 #include <sys/stat.h>
 #include "uft/core/uft_safe_parse.h"
-#include <dirent.h>
+#include "uft/compat/uft_dirent.h"
 #include "uft/core/uft_safe_parse.h"
 #include <unistd.h>
 #include "uft/core/uft_safe_parse.h"

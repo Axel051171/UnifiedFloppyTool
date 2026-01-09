@@ -1,152 +1,112 @@
 /**
  * @file uft_common.h
- * @brief Common definitions and standard includes
+ * @brief UFT Common Includes - Bündelt alle häufig benötigten Header
  * 
- * This header provides:
- * - Standard C library includes (stdint, stddef, stdbool)
- * - Platform-independent type definitions
- * - Common macros and utility functions
+ * VERWENDUNG:
+ * Statt vieler einzelner Includes einfach:
+ *   #include "uft_common.h"
  * 
- * All UFT source files should include this header first.
+ * Dies verhindert:
+ * - Fehlende stdbool.h für 'bool'
+ * - Fehlende stdint.h für uint8_t etc.
+ * - MSVC atomic Probleme
+ * - Legacy Error-Code Probleme
  */
 
 #ifndef UFT_COMMON_H
 #define UFT_COMMON_H
 
-// ============================================================================
-// Standard Library Includes
-// ============================================================================
+/*===========================================================================
+ * Standard C Headers
+ *===========================================================================*/
 
 #include <stdint.h>
-#include "uft_endian.h"  // For endian functions
-// uft_safe.h entfernt - nicht benötigt  // For safe math functions
 #include <stddef.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdio.h>
 
-// ============================================================================
-// POSIX Types (for ssize_t)
-// ============================================================================
+/*===========================================================================
+ * UFT Core Headers
+ *===========================================================================*/
 
-#ifdef _WIN32
-    typedef intptr_t ssize_t;
-#else
-    #include <sys/types.h>
-#endif
-
-// ============================================================================
-// Common UFT Headers
-// ============================================================================
-
+/* Error handling */
 #include "uft_error.h"
+#include "uft_error_compat.h"
+
+/* Type definitions */
 #include "uft_types.h"
 
-#include "uft/uft_compiler.h"
+/* Track/Sector types */
+#include "uft_track.h"
 
-// ============================================================================
-// Platform Detection
-// ============================================================================
+/* Portable atomics (MSVC-kompatibel) */
+#include "uft_atomics.h"
 
-#if defined(_WIN32) || defined(_WIN64)
-    #define UFT_PLATFORM_WINDOWS 1
-#elif defined(__APPLE__)
-    #define UFT_PLATFORM_MACOS 1
-#elif defined(__linux__)
-    #define UFT_PLATFORM_LINUX 1
-#else
-    #define UFT_PLATFORM_UNKNOWN 1
+/*===========================================================================
+ * Common Macros
+ *===========================================================================*/
+
+#ifndef MIN
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
 #endif
 
-// ============================================================================
-// Compiler Attributes
-// ============================================================================
+#ifndef MAX
+#define MAX(a, b) ((a) > (b) ? (a) : (b))
+#endif
 
-#ifdef __GNUC__
-    #define UFT_UNUSED      __attribute__((unused))
-    #define UFT_PACKED      
-    #define UFT_ALIGNED(n)  __attribute__((aligned(n)))
-    #define UFT_LIKELY(x)   __builtin_expect(!!(x), 1)
-    #define UFT_UNLIKELY(x) __builtin_expect(!!(x), 0)
+#ifndef ARRAY_SIZE
+#define ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
+#endif
+
+/* Unused parameter marker */
+#ifndef UNUSED
+#define UNUSED(x) (void)(x)
+#endif
+
+/* Static assertions */
+#ifndef STATIC_ASSERT
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+    #define STATIC_ASSERT(cond, msg) _Static_assert(cond, msg)
 #else
-    #define UFT_UNUSED
+    #define STATIC_ASSERT(cond, msg) typedef char static_assert_##msg[(cond)?1:-1]
+#endif
+#endif
+
+/*===========================================================================
+ * Compiler Compatibility
+ *===========================================================================*/
+
+/* Packed structs */
+#ifdef _MSC_VER
+    #define UFT_PACKED_BEGIN __pragma(pack(push, 1))
+    #define UFT_PACKED_END   __pragma(pack(pop))
     #define UFT_PACKED
-    #define UFT_ALIGNED(n)
-    #define UFT_LIKELY(x)   (x)
-    #define UFT_UNLIKELY(x) (x)
+#else
+    #define UFT_PACKED_BEGIN
+    #define UFT_PACKED_END
+    #define UFT_PACKED __attribute__((packed))
 #endif
 
-// ============================================================================
-// Safe Math (with guards to prevent redefinition)
-// ============================================================================
-
-#ifndef UFT_SAFE_MATH_DEFINED
-#define UFT_SAFE_MATH_DEFINED
-
-// Moved to uft_safe.h
-
-// Moved to uft_safe.h
-
-// Moved to uft_safe.h
-
-// Moved to uft_safe.h
-
-#endif // UFT_SAFE_MATH_DEFINED
-
-// ============================================================================
-// Byte Order Helpers (with guards)
-// ============================================================================
-
-#ifndef UFT_BYTE_ORDER_DEFINED
-#define UFT_BYTE_ORDER_DEFINED
-
-// Moved to uft/core/uft_endian.h
-
-// Moved to uft/core/uft_endian.h
-
-// Moved to uft/core/uft_endian.h
-
-// Endian functions are now in uft_endian.h (included above)
-
-#endif // UFT_BYTE_ORDER_DEFINED
-
-// ============================================================================
-// Utility Macros
-// ============================================================================
-
-#ifndef UFT_MIN
-#define UFT_MIN(a, b) (((a) < (b)) ? (a) : (b))
+/* Alignment */
+#ifdef _MSC_VER
+    #define UFT_ALIGNED(n) __declspec(align(n))
+#else
+    #define UFT_ALIGNED(n) __attribute__((aligned(n)))
 #endif
 
-#ifndef UFT_MAX
-#define UFT_MAX(a, b) (((a) > (b)) ? (a) : (b))
+/* Inline */
+#ifdef _MSC_VER
+    #define UFT_INLINE __forceinline
+#else
+    #define UFT_INLINE static inline __attribute__((always_inline))
 #endif
 
-#ifndef UFT_CLAMP
-#define UFT_CLAMP(x, lo, hi) UFT_MIN(UFT_MAX(x, lo), hi)
+/* Restrict */
+#ifdef _MSC_VER
+    #define UFT_RESTRICT __restrict
+#else
+    #define UFT_RESTRICT __restrict__
 #endif
 
-#ifndef UFT_ARRAY_SIZE
-#define UFT_ARRAY_SIZE(arr) (sizeof(arr) / sizeof((arr)[0]))
-#endif
-
-#ifndef UFT_ALIGN_UP
-#define UFT_ALIGN_UP(x, align) (((x) + (align) - 1) & ~((align) - 1))
-#endif
-
-// ============================================================================
-// Memory Helpers
-// ============================================================================
-
-#define UFT_ZERO(ptr) memset((ptr), 0, sizeof(*(ptr)))
-#define UFT_ZERO_ARRAY(arr, count) memset((arr), 0, (count) * sizeof((arr)[0]))
-
-// ============================================================================
-// Null Check
-// ============================================================================
-
-#define UFT_RETURN_IF_NULL(ptr, ret) do { if (!(ptr)) return (ret); } while(0)
-#define UFT_RETURN_ERROR_IF_NULL(ptr) UFT_RETURN_IF_NULL(ptr, UFT_ERROR_NULL_POINTER)
-
-#endif // UFT_COMMON_H
+#endif /* UFT_COMMON_H */

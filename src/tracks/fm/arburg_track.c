@@ -41,9 +41,9 @@
 
 #include "types.h"
 
-#include "libflux.h""
-#include "tracks/track_generator.h"
-#include "libflux.h""
+#include "libflux.h"
+#include "track_generator.h"
+#include "libflux.h"
 
 #include "tracks/sector_extractor.h"
 
@@ -51,7 +51,7 @@
 #include "arburg_track.h"
 
 #include "tracks/trackutils.h"
-#include "tracks/encoding/fm_encoding.h"
+#include "fm_encoding.h"
 
 #include "tracks/luts.h"
 

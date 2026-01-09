@@ -426,13 +426,14 @@ int uft_bs_recover_full(uint8_t *bitstream, size_t *bit_count,
     /* Allocate result buffer */
     result->bit_count = *bit_count;
     result->corrected_bits = malloc((*bit_count + 7) / 8);
-    if (result->corrected_bits) {
-        memcpy(result->corrected_bits, bitstream, (*bit_count + 7) / 8);
+    if (!result->corrected_bits) {
+        return -1;  /* Memory allocation failed */
     }
+    memcpy(result->corrected_bits, bitstream, (*bit_count + 7) / 8);
     
-    /* Calculate confidence */
-    result->confidence = 100 - (result->corrections * 5);
-    if (result->confidence < 0) result->confidence = 0;
+    /* Calculate confidence (prevent underflow for uint8_t) */
+    int temp_conf = 100 - (result->corrections * 5);
+    result->confidence = (temp_conf > 0) ? (uint8_t)temp_conf : 0;
     
     return 0;
 }

@@ -1,3 +1,4 @@
+#include "uft_mfm_flux.h"
 /**
  * @file uft_mfm_decoder_v2.c
  * @brief Thread-safe MFM decoder implementation

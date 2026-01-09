@@ -45,12 +45,12 @@
 
 #include "luts.h"
 
-int getbit(unsigned char * input_data,int bit_offset)
+static int hxc_getbit_impl(unsigned char * input_data,int bit_offset)
 {
 	return ( ( input_data[bit_offset>>3] >> ( 0x7 - (bit_offset&0x7) ) ) ) & 0x01;
 }
 
-void setbit(unsigned char * input_data,int bit_offset,int state)
+static void hxc_setbit_impl(unsigned char * input_data,int bit_offset,int state)
 {
 	if(state)
 	{

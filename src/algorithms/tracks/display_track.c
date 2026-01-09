@@ -44,9 +44,9 @@
 
 #include "types.h"
 
-#include "libflux.h""
-#include "tracks/track_generator.h"
-#include "libflux.h""
+#include "libflux.h"
+#include "track_generator.h"
+#include "libflux.h"
 
 #include "tracks/luts.h"
 
@@ -1092,10 +1092,11 @@ void freelist(struct s_sectorlist_ * element)
 {
 	struct s_sectorlist_ * nextelement;
 
-	nextelement = element->next_element;
+	if(!element)
+		return;
 
-	if(element)
-		free(element);
+	nextelement = element->next_element;
+	free(element);
 
 	if(nextelement)
 		freelist(nextelement);

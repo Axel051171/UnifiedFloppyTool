@@ -1,3 +1,4 @@
+#include "uft/compat/uft_platform.h"
 // SPDX-License-Identifier: MIT
 /*
  * uft_usb.c - Platform-Independent USB Access Implementation

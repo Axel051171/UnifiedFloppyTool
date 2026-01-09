@@ -1,3 +1,4 @@
+#include "uft/compat/uft_platform.h"
 /**
  * @file uft_imd.c
  * @brief ImageDisk (IMD) Format Implementation for UFT

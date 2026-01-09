@@ -45,11 +45,11 @@
 
 #include "types.h"
 
-#include "libflux.h""
-#include "tracks/track_generator.h"
-#include "libflux.h""
+#include "libflux.h"
+#include "track_generator.h"
+#include "libflux.h"
 
-#include "tracks/encoding/mfm_encoding.h"
+#include "mfm_encoding.h"
 
 #include "uft_floppy_loader.h"
 #include "uft_floppy_utils.h"

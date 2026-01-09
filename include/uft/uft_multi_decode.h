@@ -272,6 +272,8 @@ typedef struct uft_sector_candidates {
     /* Best Candidate (lazy evaluated) */
     uft_decode_candidate_t *resolved;            /**< Resolved best candidate */
     bool                is_resolved;             /**< Has been resolved? */
+    int                 selected_index;          /**< Index of selected candidate */
+    uint8_t             sector_num;              /**< Sector number alias */
     uft_resolution_strategy_t resolution_used;   /**< Strategy that was used */
     
     /* Statistics */
@@ -346,6 +348,14 @@ typedef struct uft_md_session {
     uft_track_candidates_t *tracks[UFT_MD_MAX_TRACKS];
     uint16_t            track_count;             /**< Number of tracks */
     
+    /* Statistics Struct */
+    struct {
+        uint32_t total_sectors;
+        uint32_t resolved_count;
+        uint32_t conflict_count;
+        float avg_confidence;
+    } stats;
+
     /* Session Statistics */
     uint32_t            total_candidates;        /**< Total candidates generated */
     uint32_t            resolved_sectors;        /**< Sectors resolved */

@@ -2,7 +2,8 @@
  *
  * Copyright (C) 2025 UFT Project (compatibility layer)
  *
- * This compatibility layer provides the minimal types and functions
+ * This compatibility layer wraps the central libflux.h and track_generator.h
+ * and adds encoding-specific utilities.
  *
  * SPDX-License-Identifier: GPL-2.0-or-later
  */
@@ -10,14 +11,20 @@
 #ifndef UFT_LIBFLUX_COMPAT_H
 #define UFT_LIBFLUX_COMPAT_H
 
+/* Include central UFT headers */
+#include "track_generator.h"
+#include "libflux.h"
+
 #include <stdint.h>
 #include <stddef.h>
+#include <string.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /*============================================================================
+ * Boolean Constants
  *============================================================================*/
 
 #ifndef FALSE
@@ -28,7 +35,10 @@ extern "C" {
 #define TRUE  0xFF
 #endif
 
-/* Endianness Macros */
+/*============================================================================
+ * Endianness Macros
+ *============================================================================*/
+
 #ifdef UFT_BIG_ENDIAN
     /* Big endian host */
     #define BIGENDIAN_WORD(wValue) (wValue)
@@ -50,9 +60,10 @@ extern "C" {
 #endif
 
 /*============================================================================
- * UFT Error Codes (from liblibflux_ctx.h)
+ * UFT Error Codes
  *============================================================================*/
 
+#ifndef LIBFLUX_NOERROR
 #define LIBFLUX_VALIDFILE                  1
 #define LIBFLUX_NOERROR                    0
 #define LIBFLUX_ACCESSERROR               -1
@@ -61,210 +72,136 @@ extern "C" {
 #define LIBFLUX_BADPARAMETER              -4
 #define LIBFLUX_INTERNALERROR             -5
 #define LIBFLUX_UNSUPPORTEDFILE           -6
-
-/*============================================================================
- * UFT Opaque Types (from liblibflux_ctx.h)
- *============================================================================*/
-
-#ifndef _LIBFLUX_
-typedef void LIBFLUX_CTX;
-#define _LIBFLUX_
-#endif
-
-#ifndef _LIBFLUX_FLOPPY_
-typedef void LIBFLUX_FLOPPY;
-#define _LIBFLUX_FLOPPY_
 #endif
 
 /*============================================================================
- * LIBFLUX_SIDE Structure (from internal_floppy.h)
+ * Encoding Constants
  *============================================================================*/
 
-#define VARIABLEBITRATE                  -1
-#define VARIABLEENCODING                 1
-
-/* Forward declaration for stream dump */
-typedef struct _LIBFLUX_TRKSTREAM LIBFLUX_TRKSTREAM;
-
-#ifndef _LIBFLUX_SIDE_
-typedef struct _LIBFLUX_SIDE
-{
-    int32_t         number_of_sector;        /* Number of sectors per track (-1 if unknown) */
-    uint8_t       * databuffer;              /* Data buffer */
-    int32_t         bitrate;                 /* Bitrate (VARIABLEBITRATE if timing buffer used) */
-    uint32_t      * timingbuffer;            /* Bitrate buffer */
-    uint8_t       * flakybitsbuffer;         /* Flakey/weak bits (NULL if none) */
-    uint8_t       * indexbuffer;             /* Index signal (1=asserted, 0=not) */
-    uint8_t       * track_encoding_buffer;   /* Track encoding indication buffer */
-
-    int32_t         track_encoding;
-
-    int32_t         tracklen;                /* Buffer length in bits */
-
-    LIBFLUX_TRKSTREAM * stream_dump;
-
-    uint32_t      * cell_to_tick;
-    int             tick_freq;
-
-} LIBFLUX_SIDE;
-#define _LIBFLUX_SIDE_
-#endif
-
-/*============================================================================
- * Track Generator Structure (from track_generator.h)
- *============================================================================*/
-
-#define DEFAULT_HD_BITRATE    500000
-#define DEFAULT_DD_BITRATE    250000
-#define DEFAULT_AMIGA_BITRATE 253360
-
-#define DEFAULT_DD_RPM        300
-#define DEFAULT_AMIGA_RPM     300
-
-typedef struct track_generator_
-{
-    int32_t  last_bit_offset;
-    uint16_t mfm_last_bit;
-
-    void * disk_formats_LUT[256];
-} track_generator;
-
-/*============================================================================
- * Sector Configuration (from track_generator.h)
- *============================================================================*/
-
-#define TRACKGEN_NO_DATA 0x00000001
-
-#ifndef _LIBFLUX_SECTCFG_
-typedef struct _LIBFLUX_SECTCFG
-{
-    int32_t        head;
-    int32_t        sector;
-    int32_t        sectorsleft;
-    int32_t        cylinder;
-
-    int32_t        sectorsize;
-
-    int32_t        use_alternate_sector_size_id;
-    int32_t        alternate_sector_size_id;
-
-    int32_t        missingdataaddressmark;
-
-    int32_t        use_alternate_header_crc;    /* 0x1 = Bad crc, 0x2 = alternate crc */
-    uint32_t       data_crc;
-
-    int32_t        use_alternate_data_crc;      /* 0x1 = Bad crc, 0x2 = alternate crc */
-    uint32_t       header_crc;
-
-    int32_t        use_alternate_datamark;
-    int32_t        alternate_datamark;
-
-    int32_t        use_alternate_addressmark;
-    int32_t        alternate_addressmark;
-
-    int32_t        startsectorindex;
-    int32_t        startdataindex;
-    int32_t        endsectorindex;
-
-    int32_t        trackencoding;
-
-    int32_t        gap3;
-
-    int32_t        bitrate;
-
-    uint8_t      * input_data;
-    int32_t      * input_data_index;
-
-    uint8_t      * weak_bits_mask;
-
-    uint8_t        fill_byte;
-    uint8_t        fill_byte_used;              /* Set if sector filled with fill_byte */
-
-    uint32_t       flags;
-} LIBFLUX_SECTCFG;
-#define _LIBFLUX_SECTCFG_
-#endif
-
-/*============================================================================
- * Track Utilities (from trackutils.h)
- *============================================================================*/
-
-/**
- * @brief Get a single bit from a bit buffer
- * @param input_data Pointer to bit buffer
- * @param bit_offset Bit offset (0 = MSB of first byte)
- * @return 0 or 1
- */
-static inline int getbit(unsigned char * input_data, int bit_offset)
-{
-    return (input_data[bit_offset >> 3] >> (7 - (bit_offset & 7))) & 1;
-}
-
-/**
- * @brief Set a single bit in a bit buffer
- * @param input_data Pointer to bit buffer
- * @param bit_offset Bit offset (0 = MSB of first byte)
- * @param state 0 or 1
- */
-static inline void setbit(unsigned char * input_data, int bit_offset, int state)
-{
-    if (state)
-        input_data[bit_offset >> 3] |= (0x80 >> (bit_offset & 7));
-    else
-        input_data[bit_offset >> 3] &= ~(0x80 >> (bit_offset & 7));
-}
-
-/**
- * @brief Set a field of bits in a bit buffer
- * @param dstbuffer Destination bit buffer
- * @param byte Byte value to write
- * @param bitoffset Starting bit offset
- * @param size Number of bits to write (max 8)
- */
-static inline void setfieldbit(unsigned char * dstbuffer, unsigned char byte, 
-                                int bitoffset, int size)
-{
-    int i;
-    for (i = 0; i < size && i < 8; i++)
-    {
-        setbit(dstbuffer, bitoffset + i, (byte >> (7 - i)) & 1);
-    }
-}
-
-/*============================================================================
- * Track Encoding Constants
- *============================================================================*/
-
-#define ISOIBM_MFM_ENCODING          0x00
-#define AMIGA_MFM_ENCODING           0x01
-#define ISOIBM_FM_ENCODING           0x02
-#define EMU_FM_ENCODING              0x03
-#define TYCOM_FM_ENCODING            0x04
-#define MEMBRAIN_MFM_ENCODING        0x05
-#define APPLEII_GCR1_ENCODING        0x06
-#define APPLEII_GCR2_ENCODING        0x07
+#ifndef ISOIBM_MFM_ENCODING
+#define ISOIBM_MFM_ENCODING    0x00
+#define AMIGA_MFM_ENCODING     0x01
+#define ISOIBM_FM_ENCODING     0x02
+#define EMU_FM_ENCODING        0x03
+#define TYCOM_FM_ENCODING      0x04
+#define MEMBRAIN_MFM_ENCODING  0x05
+#define APPLEII_GCR1_ENCODING  0x06
+#define APPLEII_GCR2_ENCODING  0x07
 #define APPLEII_HDDD_A2_GCR1_ENCODING 0x08
 #define APPLEII_HDDD_A2_GCR2_ENCODING 0x09
-#define ARBURGDAT_ENCODING           0x0A
-#define ARBURGSYS_ENCODING           0x0B
-#define AED6200P_MFM_ENCODING        0x0C
-#define NORTHSTAR_HS_MFM_ENCODING    0x0D
-#define HEATHKIT_HS_FM_ENCODING      0x0E
-#define DEC_RX02_M2FM_ENCODING       0x0F
-#define APPLEMAC_GCR_ENCODING        0x10
-#define QD_MO5_ENCODING              0x11
-#define C64_GCR_ENCODING             0x12
-#define VICTOR9K_GCR_ENCODING        0x13
-#define MICRALN_HS_FM_ENCODING       0x14
-#define CENTURION_MFM_ENCODING       0x15
-#define UNKNOWN_ENCODING             0xFF
+#define APPLEMAC_GCR_ENCODING  0x0A
+#define QD_MO5_ENCODING        0x0B
+#define C64_GCR_ENCODING       0x0C
+#define VICTOR9K_GCR_ENCODING  0x0D
+#define MICRALN_HS_FM_ENCODING 0x0E
+#define NORTHSTAR_HS_MFM_ENCODING 0x0F
+#define HEATHKIT_HS_FM_ENCODING 0x10
+#define DEC_RX02_M2FM_ENCODING  0x11
+#define AED6200P_MFM_ENCODING   0x12
+#define CENTURION_MFM_ENCODING  0x13
+#define ARBURGDAT_ENCODING      0x14
+#define ARBURGSYS_ENCODING      0x15
+#endif
 
 /*============================================================================
- * Stream/Flux Constants
+ * Bit Manipulation Functions
+ * Compatible with include/uft/PRIVATE/compat/floppy_utils.h
  *============================================================================*/
 
-/* Internal stream tick frequency */
-#define TICKFREQ 250000000  /* 250MHz tick */
+/* Only define if not already provided by floppy_utils.h */
+#ifndef HAVE_GETBIT
+#define HAVE_GETBIT
+#ifndef getbit
+static inline uint8_t getbit(const uint8_t* buffer, uint32_t bit_offset) {
+    if (!buffer) return 0;
+    return (buffer[bit_offset >> 3] >> (7 - (bit_offset & 7))) & 1;
+}
+#endif
+#endif
+
+#ifndef HAVE_SETBIT
+#define HAVE_SETBIT
+#ifndef setbit
+static inline void setbit(uint8_t* buffer, uint32_t bit_offset, uint8_t value) {
+    if (!buffer) return;
+    uint32_t byte_idx = bit_offset >> 3;
+    uint8_t bit_mask = (uint8_t)(0x80 >> (bit_offset & 7));
+    if (value)
+        buffer[byte_idx] |= bit_mask;
+    else
+        buffer[byte_idx] &= (uint8_t)(~bit_mask);
+}
+#endif
+#endif
+
+/* Legacy aliases for HxC compatibility */
+#define uft_getbit getbit
+#define uft_setbit setbit
+
+/*============================================================================
+ * Track Utility Functions (HxC compatibility)
+ *============================================================================*/
+
+/* HxC-style us2index with fill and marge parameters */
+static inline uint32_t hxc_us2index(uint32_t start_index, LIBFLUX_SIDE* track, 
+                                uint32_t us, uint8_t fill, int marge)
+{
+    if (!track || !track->databuffer) return start_index;
+    
+    uint32_t byte_index = start_index >> 3;
+    uint32_t tracklen_bytes = track->tracklen >> 3;
+    
+    /* Calculate number of bytes for the given time */
+    uint32_t bitrate = (uint32_t)track->bitrate;
+    if (bitrate == 0) bitrate = 250000;
+    
+    uint32_t nbbit = (us * bitrate) / 1000000UL;
+    uint32_t nbbyte = nbbit >> 3;
+    
+    if (marge && nbbyte > 0) nbbyte--;
+    
+    /* Fill bytes if requested */
+    if (fill != 0 && tracklen_bytes > 0) {
+        for (uint32_t i = 0; i < nbbyte && byte_index < tracklen_bytes; i++) {
+            track->databuffer[byte_index] = fill;
+            byte_index++;
+            if (byte_index >= tracklen_bytes) byte_index = 0;
+        }
+    }
+    
+    return (byte_index << 3);
+}
+
+/* Map us2index to HxC version for compatibility */
+#ifndef us2index
+#define us2index hxc_us2index
+#endif
+
+/*============================================================================
+ * MFM/FM Encoding Declarations
+ *============================================================================*/
+
+/* BuildMFMCylinder and BuildFMCylinder are declared in their respective
+ * headers (mfm_encoding.h and fm_encoding.h). Do not duplicate here. */
+
+/*============================================================================
+ * Debug/Logging
+ *============================================================================*/
+
+#ifndef MSG_DEBUG
+#define MSG_DEBUG   0
+#define MSG_INFO    1
+#define MSG_WARNING 2
+#define MSG_ERROR   3
+#endif
+
+/* Stub for libflux_printf - can be overridden */
+#ifndef HAVE_LIBFLUX_PRINTF
+static inline void libflux_printf(void* ctx, int level, const char* fmt, ...) {
+    (void)ctx; (void)level; (void)fmt;
+}
+#define HAVE_LIBFLUX_PRINTF
+#endif
 
 #ifdef __cplusplus
 }

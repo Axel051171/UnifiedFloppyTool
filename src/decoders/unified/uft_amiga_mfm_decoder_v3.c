@@ -1,3 +1,7 @@
+#include "uft/compat/uft_platform.h"
+#include "uft_error.h"
+#include "uft_error_compat.h"
+#include "uft_track.h"
 /**
  * @file uft_amiga_mfm_decoder_v3.c
  * @brief Amiga MFM Decoder v3 - With Proper Checksum Verification

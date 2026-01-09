@@ -1,3 +1,4 @@
+#include "uft/compat/uft_platform.h"
 /**
  * @file uft_forensic_imaging.c
  * @brief UnifiedFloppyTool - Forensic Imaging Implementation v3.1.4.009

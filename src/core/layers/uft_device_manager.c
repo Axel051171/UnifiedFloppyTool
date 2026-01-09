@@ -13,7 +13,7 @@
 #include "uft/uft_safe.h"
 #include <stdlib.h>
 #include <string.h>
-#include <pthread.h>
+#include "uft/compat/uft_thread.h"
 
 // ============================================================================
 // Constants

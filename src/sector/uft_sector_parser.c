@@ -141,7 +141,7 @@ static int id_equals(const uft_sector_id_t *a, const uft_sector_id_t *b) {
            a->size_n == b->size_n;
 }
 
-static int find_sector_by_id(uft_sector_t *sectors, size_t count, 
+static int find_sector_by_id(uft_parsed_sector_t *sectors, size_t count, 
                              const uft_sector_id_t *id) {
     if (!sectors || !id) return -1;
     for (size_t i = 0; i < count; i++) {
@@ -156,7 +156,7 @@ static int find_sector_by_id(uft_sector_t *sectors, size_t count,
 
 int uft_sector_parse_track(const uft_sector_config_t *cfg,
                            const uint8_t *stream, size_t stream_len,
-                           uft_sector_t *sectors, size_t sectors_cap,
+                           uft_parsed_sector_t *sectors, size_t sectors_cap,
                            uft_sector_result_t *out)
 {
     if (!cfg || !stream || !sectors) return -1;
@@ -206,7 +206,7 @@ int uft_sector_parse_track(const uft_sector_config_t *cfg,
 
         /* Check if enough data for ID record */
         if (mark_pos + 1 + 4 + 2 > stream_len) {
-            uft_sector_t *s = &sectors[sector_count++];
+            uft_parsed_sector_t *s = &sectors[sector_count++];
             s->id_rec.sync_offset = sync_pos;
             s->id_rec.offset = mark_pos;
             s->id_rec.status = st | UFT_SECTOR_TRUNCATED;
@@ -247,7 +247,7 @@ int uft_sector_parse_track(const uft_sector_config_t *cfg,
         }
 
         /* Store ID record */
-        uft_sector_t *s = &sectors[sector_count++];
+        uft_parsed_sector_t *s = &sectors[sector_count++];
         s->id_rec.sync_offset = sync_pos;
         s->id_rec.offset = mark_pos;
         s->id_rec.id = id;
@@ -267,7 +267,7 @@ int uft_sector_parse_track(const uft_sector_config_t *cfg,
      * Phase 2: Find data records for each sector
      * ───────────────────────────────────────────────────────────────────── */
     for (size_t si = 0; si < sector_count; si++) {
-        uft_sector_t *s = &sectors[si];
+        uft_parsed_sector_t *s = &sectors[si];
         uint16_t expected_len = uft_sector_length_from_n(s->id_rec.id.size_n);
         s->data_rec.expected_len = expected_len;
 

@@ -330,6 +330,10 @@ int jv3_from_dmk(const char *dmk_file, const char *jv3_file)
     jv3_create(&jv3);
     
     uint8_t *track_buf = malloc(track_len);
+    if (!track_buf) {
+        fclose(fp);
+        return -1;
+    }
     
     for (int t = 0; t < tracks; t++) {
         for (int s = 0; s < sides; s++) {

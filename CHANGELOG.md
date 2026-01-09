@@ -1,49 +1,77 @@
-# Changelog
+# UnifiedFloppyTool Changelog
 
-## [3.7.0] - 2025-01-08
+## v3.7.0 - Release
 
-### Added
+**Datum:** 2025-01-09
 
-#### IPF Container v2.0
-- Known record types: CAPS, INFO, IMGE, DATA, TRCK, CTEI, CTEX, DUMP
-- Structured INFO/IMGE parsing with all fields
-- Platform detection (Amiga, Atari ST, PC, CPC, Spectrum, C64, etc.)
-- Density types (Amiga DD/HD, Atari, PC, GCR)
-- Probe function for format detection
-- CRC validation per record
-- Warning system and diagnostic callbacks
+### Überblick
 
-#### CAPS Library Integration
-- Dynamic loader for libcapsimage.so / CAPSImg.dll
-- Official SPS type definitions and enums
-- Complete error code mapping
-- Track decoding when library available
+UnifiedFloppyTool (UFT) ist ein forensisches Disk-Preservation-Tool für historische Floppy-Formate.
 
-#### Third-Party
-- **CAPS Library** (ipflib 4.2)
-  - Linux x86_64: libcapsimage.so.4.2
-  - Windows x64: CAPSImg.dll
-  - Official headers
-- **CAPS Access API** (Open License)
-  - Plugin interface for commercial use
-  - Minimal header for optional IPF support
+**Motto:** "Bei uns geht kein Bit verloren"
 
-#### Tools
-- `ipfinfo` — Container analysis (no CAPS required)
-- `ipfinfo_caps` — Full analysis with CAPS library
-- `ipfpack` — Container creation
+### Features
 
-#### Documentation
-- CAPS_INTEGRATION.md — Complete integration guide
-- API reference with code examples
-- Platform IDs, Lock Flags, Error Codes
+#### Core Engine
+- 21 Track-Module für verschiedene Plattformen
+- Multi-Format Support (115+ Formate)
+- Cross-Platform (Linux, macOS, Windows)
 
-### Fixed
-- Added LICENSE file (fixes CI build)
+#### Unterstützte Plattformen
+- **Commodore**: C64, C128, VIC-20, Plus/4, PET
+- **Amiga**: OFS, FFS, alle Varianten
+- **Atari**: ST, 8-Bit
+- **Apple**: Apple II, Macintosh
+- **PC**: IBM PC, DOS, FAT12/16
+- **Weitere**: ZX Spectrum, BBC Micro, MSX, CPC, TI-99
 
-### Statistics
-- Headers: 727 lines
-- Implementation: 2554 lines
-- Tools: 780 lines
-- Documentation: 200 lines
-- Tests: 7/7 passing
+#### Hardware-Unterstützung (HAL)
+- Greaseweazle
+- FluxEngine
+- KryoFlux
+- SuperCard Pro
+- XUM1541/Nibtools
+- FC5025
+- Applesauce
+
+#### XDF Container Familie
+- AXDF (Amiga Extended Disk Format)
+- DXDF (C64 Extended Disk Format)
+- PXDF (PC Extended Disk Format)
+- TXDF (Atari ST Extended Disk Format)
+- ZXDF (ZX Spectrum Extended Disk Format)
+- MXDF (Multi-Format Bundle)
+
+#### XDF API
+- Universelle API für alle Formate
+- Auto-Detection
+- 7-Phasen Forensik-Pipeline
+- Batch Processing
+- JSON/REST Interface
+- Event System
+
+#### Forensik-Features
+- Multi-Revolution Capture
+- Weak-Bit Detection
+- Copy Protection Analysis
+- CRC Correction (1-Bit, 2-Bit)
+- Confidence Scoring
+- Audit Trail
+
+### Build
+
+```bash
+mkdir build && cd build
+cmake ..
+make -j$(nproc)
+```
+
+### Anforderungen
+
+- CMake 3.16+
+- C99 Compiler
+- Qt6 6.2+ (optional, für GUI)
+
+### Lizenz
+
+Open Source - Siehe LICENSE Datei

@@ -1,3 +1,6 @@
+#include "uft_error.h"
+#include "uft_error_compat.h"
+#include "uft_track.h"
 /**
  * @file uft_fm_encoder.c
  * @brief FM (Frequency Modulation) Encoding Implementation

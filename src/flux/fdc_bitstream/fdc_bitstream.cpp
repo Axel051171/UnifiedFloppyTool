@@ -567,11 +567,10 @@ void fdc_bitstream::read_data(uint8_t& data, bool& missing_clock, bool ignore_mi
  */
 fdc_bitstream::sector_data fdc_bitstream::read_sector(int trk, int sct) {
     size_t index_hole_count = 0;
-    sector_data sect_data;
+    sector_data sect_data = {};  // Value-initialization instead of memset
     std::vector<uint8_t> sect_id;
     std::vector<uint8_t> sect_body_data;
     std::vector<size_t> sect_byte_pos;
-    memset(&sect_data, 0, sizeof(sector_data));
     bool crc_error = false;
     bool dam_type = false;
     bool record_not_found = false;
@@ -646,7 +645,8 @@ bool fdc_bitstream::write_sector(int trk, int sct, bool dam_type, std::vector<ui
                     int64_t pos = static_cast<int64_t>(get_pos());
                     pos += normal_distribution_random();   // +-3
                     if (pos < 0) pos = 0;
-                    if (pos >= get_track_length()) pos = static_cast<int64_t>(get_track_length()) - 1;
+                    int64_t track_len = static_cast<int64_t>(get_track_length());
+                    if (pos >= track_len) pos = track_len - 1;
                     set_pos(static_cast<size_t>(pos));
                 }
                 write_sector_body(write_data, dam_type);

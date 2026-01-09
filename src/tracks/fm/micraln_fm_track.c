@@ -41,12 +41,12 @@
 
 #include "types.h"
 
-#include "libflux.h""
-#include "tracks/track_generator.h"
+#include "libflux.h"
+#include "track_generator.h"
 #include "sector_search.h"
 #include "fdc_ctrl.h"
 
-#include "libflux.h""
+#include "libflux.h"
 
 #include "uft_floppy_utils.h"
 
@@ -56,7 +56,7 @@
 #include "tracks/track_formats/micraln_fm_track.h"
 
 #include "tracks/trackutils.h"
-#include "tracks/encoding/fm_encoding.h"
+#include "fm_encoding.h"
 
 #include "tracks/luts.h"
 

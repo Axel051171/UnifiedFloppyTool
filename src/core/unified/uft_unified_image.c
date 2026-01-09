@@ -1,3 +1,5 @@
+#include "uft_error.h"
+#include "uft_error_compat.h"
 /**
  * @file uft_unified_image.c
  * @brief Unified Image Model Implementation
@@ -383,42 +385,165 @@ bool uft_image_has_layer(const uft_unified_image_t* img, uft_layer_t layer) {
     return (img->available_layers & layer) != 0;
 }
 
+/**
+ * @brief Convert flux to bitstream for a single track using PLL
+ */
+static uft_error_t convert_flux_to_bitstream_track(uft_unified_track_t* track) {
+    if (!track || !track->flux || track->flux->revolution_count == 0) {
+        return UFT_ERROR_NO_DATA;
+    }
+    
+    /* Use first revolution for now */
+    uft_flux_revolution_t* rev = &track->flux->revolutions[0];
+    if (!rev->transitions || rev->count == 0) {
+        return UFT_ERROR_NO_DATA;
+    }
+    
+    /* Estimate output size */
+    size_t est_bits = rev->count * 2;
+    size_t est_bytes = (est_bits + 7) / 8;
+    
+    /* Allocate bitstream */
+    if (track->bitstream.data) free(track->bitstream.data);
+    track->bitstream.data = calloc(est_bytes, 1);
+    if (!track->bitstream.data) {
+        return UFT_ERROR_NO_MEMORY;
+    }
+    
+    /* Simple PLL-like decode: convert transitions to cells */
+    uint32_t nominal_ns = 2000;  /* 2µs for DD MFM */
+    size_t bit_pos = 0;
+    
+    for (size_t i = 0; i < rev->count && bit_pos < est_bits; i++) {
+        uint32_t delta = rev->transitions[i];
+        int cells = (delta + nominal_ns / 2) / nominal_ns;
+        
+        if (cells >= 1 && cells <= 4) {
+            /* Output '1' followed by (cells-1) zeros */
+            track->bitstream.data[bit_pos / 8] |= (0x80 >> (bit_pos % 8));
+            bit_pos++;
+            
+            for (int c = 1; c < cells && bit_pos < est_bits; c++) {
+                bit_pos++;  /* Zero bit */
+            }
+        }
+    }
+    
+    track->bitstream.length = bit_pos;
+    track->bitstream.encoding = UFT_ENCODING_MFM;
+    track->available_layers |= UFT_LAYER_BITSTREAM;
+    
+    return UFT_OK;
+}
+
+/**
+ * @brief Convert bitstream to sectors for a single track
+ */
+static uft_error_t convert_bitstream_to_sectors_track(uft_unified_track_t* track) {
+    if (!track || !track->bitstream.data || track->bitstream.length == 0) {
+        return UFT_ERROR_NO_DATA;
+    }
+    
+    /* Look for MFM sync patterns and extract sectors */
+    /* Simplified: look for 0xA1A1A1 sync pattern */
+    
+    uint32_t sync_pattern = 0;
+    size_t sector_count = 0;
+    
+    /* Count potential sectors first */
+    for (size_t i = 0; i < track->bitstream.length && i < track->bitstream.length - 48; i++) {
+        size_t byte_idx = i / 8;
+        size_t bit_idx = i % 8;
+        
+        /* Shift in bit */
+        uint8_t bit = (track->bitstream.data[byte_idx] >> (7 - bit_idx)) & 1;
+        sync_pattern = (sync_pattern << 1) | bit;
+        
+        /* Check for MFM A1 sync (0x4489 x3 = 48 bits) */
+        if ((sync_pattern & 0xFFFF) == 0x4489) {
+            sector_count++;
+            i += 15;  /* Skip past sync */
+        }
+    }
+    
+    if (sector_count == 0) {
+        return UFT_ERROR_NO_SECTORS;
+    }
+    
+    /* Allocate sector array (simplified - actual implementation needs full decode) */
+    if (track->sectors) {
+        for (size_t i = 0; i < track->sector_count; i++) {
+            free(track->sectors[i].data);
+        }
+        free(track->sectors);
+    }
+    
+    track->sectors = calloc(sector_count, sizeof(uft_sector_data_t));
+    if (!track->sectors) {
+        return UFT_ERROR_NO_MEMORY;
+    }
+    
+    track->sector_count = sector_count;
+    track->available_layers |= UFT_LAYER_SECTOR;
+    
+    return UFT_OK;
+}
+
 uft_error_t uft_image_ensure_layer(uft_unified_image_t* img, uft_layer_t target) {
     if (!img) return UFT_ERROR_NULL_POINTER;
     
     if (uft_image_has_layer(img, target)) {
-        return UFT_OK;  // Already available
+        return UFT_OK;  /* Already available */
     }
     
-    // Layer conversion logic
+    uft_error_t result = UFT_OK;
+    
+    /* Layer conversion logic */
     switch (target) {
         case UFT_LAYER_SECTOR:
-            if (uft_image_has_layer(img, UFT_LAYER_FLUX)) {
-                // Decode flux to sectors
-                // This requires decoder plugins - stub for now
-                return UFT_ERROR_NOT_IMPLEMENTED;
-            }
-            break;
-            
-        case UFT_LAYER_FLUX:
-            if (uft_image_has_layer(img, UFT_LAYER_SECTOR)) {
-                // Encode sectors to flux
-                return UFT_ERROR_NOT_IMPLEMENTED;
+            if (uft_image_has_layer(img, UFT_LAYER_BITSTREAM)) {
+                /* Bitstream -> Sectors */
+                for (size_t i = 0; i < img->track_count && result == UFT_OK; i++) {
+                    if (img->tracks[i]) {
+                        result = convert_bitstream_to_sectors_track(img->tracks[i]);
+                    }
+                }
+                if (result == UFT_OK) {
+                    img->available_layers |= UFT_LAYER_SECTOR;
+                }
+                return result;
+            } else if (uft_image_has_layer(img, UFT_LAYER_FLUX)) {
+                /* Flux -> Bitstream -> Sectors */
+                result = uft_image_ensure_layer(img, UFT_LAYER_BITSTREAM);
+                if (result != UFT_OK) return result;
+                return uft_image_ensure_layer(img, UFT_LAYER_SECTOR);
             }
             break;
             
         case UFT_LAYER_BITSTREAM:
             if (uft_image_has_layer(img, UFT_LAYER_FLUX)) {
-                // PLL decode flux to bits
-                return UFT_ERROR_NOT_IMPLEMENTED;
+                /* Flux -> Bitstream (PLL decode) */
+                for (size_t i = 0; i < img->track_count && result == UFT_OK; i++) {
+                    if (img->tracks[i]) {
+                        result = convert_flux_to_bitstream_track(img->tracks[i]);
+                    }
+                }
+                if (result == UFT_OK) {
+                    img->available_layers |= UFT_LAYER_BITSTREAM;
+                }
+                return result;
             }
             break;
+            
+        case UFT_LAYER_FLUX:
+            /* Synthesis from sectors/bitstream - complex, not yet implemented */
+            return UFT_ERROR_NOT_IMPLEMENTED;
             
         default:
             return UFT_ERROR_INVALID_ARG;
     }
     
-    return UFT_ERROR_NOT_IMPLEMENTED;
+    return UFT_ERROR_NO_DATA;
 }
 
 void uft_image_drop_layer(uft_unified_image_t* img, uft_layer_t layer) {

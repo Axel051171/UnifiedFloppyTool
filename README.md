@@ -120,3 +120,47 @@ Contributions welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) first.
 ---
 
 **Version 3.7.0** | [Changelog](CHANGELOG.md) | [Issues](https://github.com/your-repo/issues)
+
+---
+
+## 🔧 Für Entwickler
+
+### Vor dem ersten Commit
+
+```bash
+# Git Hooks installieren
+./scripts/install-hooks.sh
+
+# Manuell validieren
+./scripts/validate.sh
+```
+
+### Wichtige Dokumente
+
+- [CONTRIBUTING.md](CONTRIBUTING.md) - Coding Guidelines
+- [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md) - Bekannte Fehler & Lösungen
+
+### CI/CD
+
+Pre-Flight Checks laufen automatisch bei jedem Push:
+- Konstanten-Includes
+- Struct-Member-Definitionen
+- Include-Guards
+- CMake-Syntax
+
+---
+
+## 🛠️ Entwicklung
+
+### Vor dem Commit ausführen:
+```bash
+./scripts/validate.sh
+```
+
+### Pre-Commit Hook installieren:
+```bash
+./scripts/setup-hooks.sh
+```
+
+### Guidelines lesen:
+Siehe [CONTRIBUTING.md](CONTRIBUTING.md) für Coding-Regeln.

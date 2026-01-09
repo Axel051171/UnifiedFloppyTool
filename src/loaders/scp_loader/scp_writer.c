@@ -45,8 +45,8 @@
 
 #include "types.h"
 
-#include "libflux.h""
-#include "libflux.h""
+#include "libflux.h"
+#include "libflux.h"
 
 #include "scp_format.h"
 #include "scp_loader.h"

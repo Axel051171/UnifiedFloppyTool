@@ -90,6 +90,14 @@ uft_prob_bit_t uft_fusion_fuse(const uft_bit_fusion_t *fusion) {
     }
     
     /* Determine value */
+    if (total_weight == 0) {
+        /* No confidence from any sample - treat as maximally weak */
+        result.value = first_value;
+        result.confidence = 0;
+        result.is_weak = true;
+        return result;
+    }
+    
     if (weighted_1 > weighted_0) {
         result.value = 1;
         result.confidence = (uint8_t)(weighted_1 * 255 / total_weight);

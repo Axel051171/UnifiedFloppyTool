@@ -61,13 +61,13 @@ void color(size_t col) {
  */
 std::vector<int> generate_interleaved_sector_list(size_t num_sector, int interleave = 1) {
     std::vector<int> sector_list(num_sector, 0);
-    int pos = 0;
-    for (int i = 1; i <= num_sector; i++) {
+    size_t pos = 0;
+    for (size_t i = 1; i <= num_sector; i++) {
         while (sector_list[pos] != 0) {
             if (++pos >= num_sector) pos = 0;
         }
-        sector_list[pos] = i;
-        pos += interleave;
+        sector_list[pos] = static_cast<int>(i);
+        pos += static_cast<size_t>(interleave);
         if (pos >= num_sector) pos = 0;
     }
     return sector_list;
@@ -195,16 +195,17 @@ std::vector<size_t> find_peaks(const std::vector<size_t> &dist_freq) {
     std::vector<size_t> avg(dist_freq.size());
     const int filt[5] { 1,2,3,2,1 };
     const int flt_sum = 1+2+3+2+1;
-    for(int i = 0; i<dist_freq.size(); i++) {
+    for(size_t i = 0; i < dist_freq.size(); i++) {
         size_t avg_tmp = 0;
         for(int j=-2; j<=2; j++) {
             size_t dt=0;
-            if (i+j < 0) {
+            int idx = static_cast<int>(i) + j;
+            if (idx < 0) {
                 dt = 0;
-            } else if(i+j >= dist_freq.size()) {
+            } else if(static_cast<size_t>(idx) >= dist_freq.size()) {
                 dt = 0;
             } else {
-                dt = dist_freq[i+j];
+                dt = dist_freq[static_cast<size_t>(idx)];
             }
             avg_tmp += dt * filt[j+2];
         }
@@ -439,7 +440,7 @@ void display_id(const fdc_bitstream::id_field &id, bool color_flag) {
 void display_id_list(const std::vector<fdc_bitstream::id_field> &id_fields, bool color_flag) {
     std::ios::fmtflags flags_saved = std::cout.flags();
     std::cout << std::hex << std::setw(2) << std::setfill('0');
-    for (int i = 0; i < id_fields.size(); i++) {
+    for (size_t i = 0; i < id_fields.size(); i++) {
         std::cout << std::dec << std::setw(2) << std::setfill(' ') << i+1 << " ";
         display_id(id_fields[i], color_flag);
         std::cout << std::endl;

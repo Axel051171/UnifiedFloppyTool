@@ -232,6 +232,22 @@ const char* uft_error_category(uft_error_t err);
  */
 int uft_error_format(uft_error_t err, char *buffer, size_t size);
 
+/**
+ * @brief Get actionable suggestion for an error
+ * @param err Error code
+ * @return Suggestion string or NULL if no suggestion available
+ */
+const char* uft_error_suggestion(uft_error_t err);
+
+/**
+ * @brief Format error with description and suggestion
+ * @param err Error code
+ * @param buffer Output buffer
+ * @param size Buffer size
+ * @return Number of characters written (excluding null terminator)
+ */
+int uft_error_format_full(uft_error_t err, char *buffer, size_t size);
+
 /*===========================================================================
  * Error Context (Thread-Local)
  *===========================================================================*/

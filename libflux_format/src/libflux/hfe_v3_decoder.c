@@ -1,3 +1,4 @@
+#include "uft_atomics.h"
 // SPDX-License-Identifier: MIT
 /**
  * @file hfe_v3_decoder.c

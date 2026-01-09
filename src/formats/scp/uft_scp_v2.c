@@ -602,6 +602,15 @@ scp_v2_t* scp_v2_open(const char* path) {
     /* Allocate initial flux buffer */
     scp->flux_capacity = 500000;  /* 500K flux transitions */
     scp->flux_buffer = malloc(scp->flux_capacity * sizeof(uint32_t));
+    if (!scp->flux_buffer) {
+        snprintf(scp->error_msg, sizeof(scp->error_msg), 
+                "Out of memory allocating flux buffer");
+        scp->error_code = -3;
+        fclose(f);
+        free(scp->path);
+        free(scp);
+        return NULL;
+    }
     
     return scp;
 }

@@ -44,11 +44,11 @@
 
 #include "types.h"
 
-#include "libflux.h""
-#include "libflux.h""
+#include "libflux.h"
+#include "libflux.h"
 #include "uft_compat.h"
 #include "uft_floppy_loader.h"
-#include "tracks/track_generator.h"
+#include "track_generator.h"
 
 #include "msa_loader.h"
 #include "msa_writer.h"

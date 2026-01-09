@@ -6,10 +6,10 @@
 #include "gw_device_detector.h"
 #include <QDebug>
 
-// USB IDs für Greaseweazle
-const quint16 GWDeviceDetector::GW_VID;
-const quint16 GWDeviceDetector::GW_PID_F1;
-const quint16 GWDeviceDetector::GW_PID_F7;
+// USB IDs für Greaseweazle (pid.codes registered)
+static const quint16 GW_VID    = 0x1209;
+static const quint16 GW_PID_F1 = 0x4D69;  // F1 firmware (AT32F403)
+static const quint16 GW_PID_F7 = 0x4D69;  // F7 same PID (STM32F730)
 
 GWDeviceDetector::GWDeviceDetector(QObject* parent)
     : QObject(parent)

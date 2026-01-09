@@ -405,6 +405,11 @@ typedef struct {
         uint8_t             raw[64];
     } details;
     
+    uint32_t                id;             /**< Unique scheme ID */
+    uft_platform_t          platform;       /**< Target platform */
+    uft_prot_indicator_t    indicators[16]; /**< Protection indicators */
+    char                    notes[256];     /**< Detection notes */
+    
     const char*             name;           /**< Human-readable name */
     const char*             description;    /**< Detailed description */
 } uft_prot_scheme_t;
@@ -511,8 +516,12 @@ typedef struct {
  */
 typedef struct {
     uft_protection_scheme_t scheme;
+    uint32_t                id;             /**< Unique scheme ID */
+    uft_platform_t          platform;       /**< Target platform */
+    uft_prot_indicator_t    indicators[16]; /**< Protection indicators */
+    char                    notes[256];     /**< Detection notes */
+    
     const char*             name;
-    uft_platform_t          platform;
     
     /* Signature data */
     const uint8_t*          signature;

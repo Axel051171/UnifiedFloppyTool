@@ -243,3 +243,89 @@ void uft_clear_error(void)
     g_last_error = UFT_OK;
     g_error_msg[0] = '\0';
 }
+
+/*===========================================================================
+ * Actionable Error Suggestions (P3-9)
+ *===========================================================================*/
+
+const char* uft_error_suggestion(uft_error_t err)
+{
+    switch (err) {
+        /* I/O Errors */
+        case UFT_E_FILE_NOT_FOUND:
+            return "Check if the file path is correct and the file exists.";
+        case UFT_E_FILE_OPEN:
+            return "Ensure the file is not locked by another application.";
+        case UFT_E_FILE_READ:
+            return "Check if the file is readable and not corrupted.";
+        case UFT_E_FILE_WRITE:
+            return "Check disk space and write permissions.";
+        case UFT_E_DISK_FULL:
+            return "Free up disk space or choose a different location.";
+        case UFT_E_READ_ONLY:
+            return "Remove write protection or save to a different location.";
+        
+        /* Format Errors */
+        case UFT_E_FORMAT_UNKNOWN:
+            return "Try specifying the format manually with --format option.";
+        case UFT_E_FORMAT_INVALID:
+            return "The file may be corrupted. Try a different source.";
+        case UFT_E_FORMAT_UNSUPPORTED:
+            return "This format variant is not yet supported. Check documentation.";
+        case UFT_E_MAGIC:
+            return "File header is invalid. May be wrong format or corrupted.";
+        case UFT_E_CHECKSUM:
+            return "Data integrity check failed. Enable error correction.";
+        case UFT_E_CORRUPT:
+            return "Use --recover option to attempt data recovery.";
+        
+        /* Decode Errors */
+        case UFT_E_DECODE_SYNC:
+            return "Try adjusting PLL settings or use multi-revolution capture.";
+        case UFT_E_DECODE_CRC:
+            return "Enable --retry with higher revolution count.";
+        case UFT_E_DECODE_PLL:
+            return "Adjust --pll-window or try different encoding preset.";
+        case UFT_E_DECODE_WEAK:
+            return "Use --preserve-weak to keep weak bit information.";
+        
+        /* Hardware Errors */
+        case UFT_E_HW_NOT_FOUND:
+            return "Connect the device and check USB connection.";
+        case UFT_E_HW_OPEN:
+            return "Install device drivers or check permissions.";
+        case UFT_E_HW_TIMEOUT:
+            return "Check drive motor and disk insertion.";
+        case UFT_E_HW_INDEX:
+            return "The disk may not be spinning. Check drive mechanism.";
+        case UFT_E_HW_TRK0:
+            return "Head cannot find track 0. Check drive alignment.";
+        
+        /* Memory Errors */
+        case UFT_E_MEMORY:
+        case UFT_E_ALLOC:
+            return "Close other applications to free memory.";
+        
+        default:
+            return NULL;  /* No specific suggestion */
+    }
+}
+
+int uft_error_format_full(uft_error_t err, char *buffer, size_t size)
+{
+    if (!buffer || size == 0) return -1;
+    
+    const char *name = uft_error_name(err);
+    const char *desc = uft_error_desc(err);
+    const char *suggest = uft_error_suggestion(err);
+    
+    int written;
+    if (suggest) {
+        written = snprintf(buffer, size, "%s (%d): %s\n  → %s", 
+                          name, err, desc, suggest);
+    } else {
+        written = snprintf(buffer, size, "%s (%d): %s", name, err, desc);
+    }
+    
+    return written;
+}

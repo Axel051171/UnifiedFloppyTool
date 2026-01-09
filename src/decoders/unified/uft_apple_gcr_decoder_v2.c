@@ -1,3 +1,6 @@
+#include "uft_error.h"
+#include "uft_error_compat.h"
+#include "uft_track.h"
 // SPDX-License-Identifier: GPL-2.0-or-later
 /**
  * @file uft_apple_gcr_decoder_v2.c

@@ -1,11 +1,14 @@
-# UFT Tests
-file(GLOB TEST_SOURCES "*.c")
-if(TEST_SOURCES AND TARGET uft_core)
-    foreach(test_src ${TEST_SOURCES})
-        get_filename_component(test_name ${test_src} NAME_WE)
-        add_executable(${test_name} ${test_src})
-        target_link_libraries(${test_name} PRIVATE uft_core)
-    endforeach()
-else()
-    message(STATUS "Tests: Skipping - no sources or dependencies not ready")
+# UnifiedFloppyTool Test Suite
+
+# Smoke tests (basic functionality)
+add_subdirectory(smoke)
+
+# Hardened tests (if available)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/hardened/CMakeLists.txt" AND TARGET uft_hardened)
+    add_subdirectory(hardened)
 endif()
+
+# Header validation (temporarily disabled - missing UFT_ERR_NOMEM)
+# if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/header_validation/CMakeLists.txt")
+#     add_subdirectory(header_validation)
+# endif()

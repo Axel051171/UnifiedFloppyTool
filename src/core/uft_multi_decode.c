@@ -443,7 +443,7 @@ uft_decode_candidate_t* uft_md_resolve(
     if (!sector || sector->candidate_count == 0) return NULL;
     
     /* Sort by confidence (descending) */
-    uft_decode_candidate_t *sorted[UFT_MD_MAX_CANDIDATES];
+    uft_decode_candidate_t *sorted[UFT_MD_MAX_CANDIDATES] = {NULL};
     for (size_t i = 0; i < sector->candidate_count; i++) {
         sorted[i] = &sector->candidates[i];
     }

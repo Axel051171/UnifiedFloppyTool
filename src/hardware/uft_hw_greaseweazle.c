@@ -1,3 +1,4 @@
+#include "uft/compat/uft_platform.h"
 /**
  * @file uft_hw_greaseweazle.c
  * 
@@ -27,7 +28,7 @@
     #include <unistd.h>
     #include <termios.h>
     #include <sys/ioctl.h>
-    #include <dirent.h>
+    #include "uft/compat/uft_dirent.h"
 #endif
 
 #ifdef UFT_OS_WINDOWS

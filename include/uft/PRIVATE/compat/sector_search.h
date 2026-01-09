@@ -6,7 +6,7 @@
 #ifndef SECTOR_SEARCH_H
 #define SECTOR_SEARCH_H
 
-#include "liblibflux.h"
+#include "libflux.h"
 
 #include <stdint.h>
 

@@ -124,7 +124,8 @@ double vfo_pid3::calc(double pulse_pos) {
 	}
 
     //LPF
-    m_hist_ptr = (++m_hist_ptr) & (c_history_len-1);
+    m_hist_ptr++;
+    m_hist_ptr &= (c_history_len-1);
     m_pulse_pos_history[m_hist_ptr] = pulse_pos;
     double sum = 0.f;
     for(size_t i=1; i <= c_history_len; i++) {

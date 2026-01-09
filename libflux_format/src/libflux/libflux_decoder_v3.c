@@ -1,3 +1,4 @@
+#include "uft_atomics.h"
 // SPDX-License-Identifier: MIT
 /**
  * @file libflux_decoder_v3.c

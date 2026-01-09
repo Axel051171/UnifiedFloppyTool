@@ -1,8 +1,5 @@
 # ═══════════════════════════════════════════════════════════════════════════════
-# UnifiedFloppyTool v3.7.0
-# ═══════════════════════════════════════════════════════════════════════════════
-# Cross-platform floppy disk preservation and analysis tool
-# Build: cmake -B build && cmake --build build
+# UnifiedFloppyTool v3.7.1
 # ═══════════════════════════════════════════════════════════════════════════════
 
 cmake_minimum_required(VERSION 3.16)
@@ -23,16 +20,106 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# Position Independent Code (required for Qt on Linux)
+# Position Independent Code
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Global Include Directories
+# ═══════════════════════════════════════════════════════════════════════════════
+include_directories(
+    ${CMAKE_SOURCE_DIR}/include
+    ${CMAKE_SOURCE_DIR}/include/uft
+    ${CMAKE_SOURCE_DIR}/include/uft/core
+    ${CMAKE_SOURCE_DIR}/include/uft/crc
+    ${CMAKE_SOURCE_DIR}/include/uft/compat
+    ${CMAKE_SOURCE_DIR}/include/uft/flux
+    ${CMAKE_SOURCE_DIR}/include/uft/decoders
+    ${CMAKE_SOURCE_DIR}/include/uft/recovery
+    ${CMAKE_SOURCE_DIR}/include/uft/PRIVATE
+    ${CMAKE_SOURCE_DIR}/include/uft/PRIVATE/compat
+    ${CMAKE_SOURCE_DIR}/include/tracks
+    ${CMAKE_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/src/encoding
+    ${CMAKE_SOURCE_DIR}/src/tracks
+    ${CMAKE_SOURCE_DIR}/src/tracks/fm
+    ${CMAKE_SOURCE_DIR}/src/tracks/mfm
+    ${CMAKE_SOURCE_DIR}/src/tracks/gcr
+    ${CMAKE_SOURCE_DIR}/src/algorithms
+    ${CMAKE_SOURCE_DIR}/src/algorithms/tracks
+    ${CMAKE_SOURCE_DIR}/src/algorithms/encoding
+)
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Build Options
 # ═══════════════════════════════════════════════════════════════════════════════
 option(UFT_BUILD_GUI      "Build Qt6 GUI application"      ON)
 option(UFT_BUILD_TOOLS    "Build command-line tools"       ON)
-option(UFT_BUILD_TESTS    "Build test suite"               OFF)
+option(UFT_BUILD_TESTS    "Build test suite"               ON)
 option(UFT_ENABLE_SIMD    "Enable SIMD optimizations"      ON)
+option(UFT_ENABLE_OPENMP  "Enable OpenMP parallelization"  ON)
+option(UFT_ENABLE_LTO     "Enable Link-Time Optimization"  OFF)
+option(UFT_ENABLE_ASAN    "Enable Address Sanitizer"       OFF)
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Platform Detection
+# ═══════════════════════════════════════════════════════════════════════════════
+if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+    set(UFT_PLATFORM_MACOS TRUE)
+    message(STATUS "Platform: macOS")
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+    set(UFT_PLATFORM_WINDOWS TRUE)
+    message(STATUS "Platform: Windows")
+else()
+    set(UFT_PLATFORM_LINUX TRUE)
+    message(STATUS "Platform: Linux")
+endif()
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# OpenMP Configuration (optional, fallback on failure)
+# ═══════════════════════════════════════════════════════════════════════════════
+if(UFT_ENABLE_OPENMP)
+    find_package(OpenMP QUIET)
+    if(OpenMP_FOUND OR OpenMP_C_FOUND)
+        message(STATUS "OpenMP: ENABLED (${OpenMP_C_VERSION})")
+        set(UFT_HAS_OPENMP TRUE)
+    else()
+        message(STATUS "OpenMP: NOT FOUND - building without parallelization")
+        set(UFT_HAS_OPENMP FALSE)
+        add_compile_definitions(UFT_NO_OPENMP)
+    endif()
+else()
+    message(STATUS "OpenMP: DISABLED by option")
+    set(UFT_HAS_OPENMP FALSE)
+    add_compile_definitions(UFT_NO_OPENMP)
+endif()
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# SIMD Configuration (platform-aware)
+# ═══════════════════════════════════════════════════════════════════════════════
+if(UFT_ENABLE_SIMD)
+    include(CheckCCompilerFlag)
+    if(MSVC)
+        # MSVC auto-detects SIMD
+        set(UFT_HAS_SSE2 TRUE)
+        check_c_compiler_flag("/arch:AVX2" HAS_AVX2)
+        if(HAS_AVX2)
+            set(UFT_HAS_AVX2 TRUE)
+        endif()
+    else()
+        check_c_compiler_flag("-msse2" HAS_SSE2)
+        check_c_compiler_flag("-mavx2" HAS_AVX2)
+        if(HAS_SSE2)
+            set(UFT_HAS_SSE2 TRUE)
+        endif()
+        if(HAS_AVX2)
+            set(UFT_HAS_AVX2 TRUE)
+        endif()
+    endif()
+    message(STATUS "SIMD: SSE2=${UFT_HAS_SSE2} AVX2=${UFT_HAS_AVX2}")
+else()
+    message(STATUS "SIMD: DISABLED by option")
+    add_compile_definitions(UFT_NO_SIMD)
+endif()
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Platform Helper Functions
@@ -42,6 +129,27 @@ function(uft_link_math target)
         target_link_libraries(${target} PRIVATE m)
     endif()
 endfunction()
+
+function(uft_add_openmp target)
+    if(UFT_HAS_OPENMP)
+        target_link_libraries(${target} PRIVATE OpenMP::OpenMP_C)
+    endif()
+endfunction()
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Compiler Flags
+# ═══════════════════════════════════════════════════════════════════════════════
+if(MSVC)
+    add_compile_options(/W3 /wd4100 /wd4996)
+    add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
+else()
+    add_compile_options(-Wall -Wextra -Wno-unused-parameter)
+    # Enable POSIX features
+    add_compile_definitions(_POSIX_C_SOURCE=200809L)
+    if(NOT APPLE)
+        add_compile_definitions(_GNU_SOURCE)
+    endif()
+endif()
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Find Qt6 (Optional for GUI)
@@ -53,23 +161,13 @@ if(UFT_BUILD_GUI)
         set(CMAKE_AUTOMOC ON)
         set(CMAKE_AUTORCC ON)
         set(CMAKE_AUTOUIC ON)
+        set(CMAKE_AUTOUIC_SEARCH_PATHS
+            ${CMAKE_SOURCE_DIR}/forms
+            ${CMAKE_SOURCE_DIR}/gui/forms
+        )
     else()
         message(STATUS "Qt6 not found - GUI will not be built")
         set(UFT_BUILD_GUI OFF)
-    endif()
-endif()
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# SIMD Detection
-# ═══════════════════════════════════════════════════════════════════════════════
-if(UFT_ENABLE_SIMD)
-    include(CheckCCompilerFlag)
-    check_c_compiler_flag("-msse4.2" HAVE_SSE42)
-    check_c_compiler_flag("-mavx2" HAVE_AVX2)
-    if(HAVE_AVX2)
-        message(STATUS "  SIMD: AVX2")
-    elseif(HAVE_SSE42)
-        message(STATUS "  SIMD: SSE4.2")
     endif()
 endif()
 
@@ -80,37 +178,22 @@ message(STATUS "  Build Tools: ${UFT_BUILD_TOOLS}")
 message(STATUS "════════════════════════════════════════════════════")
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# Core Libraries (always built)
+# Core Libraries
 # ═══════════════════════════════════════════════════════════════════════════════
 
-# CRC Module
 add_subdirectory(src/crc)
-
-# Core Module
 add_subdirectory(src/core)
-
-# Encoding Module (FM/MFM/GCR)
 add_subdirectory(src/encoding)
-
-# FDC Bitstream (C++ VFO/PLL)
 add_subdirectory(src/flux/fdc_bitstream)
-
-# PLL Module
 add_subdirectory(src/flux/pll)
-
-# Tracks Module
 add_subdirectory(src/tracks)
-
-# Format Modules
 add_subdirectory(src/formats/scp)
 add_subdirectory(src/formats/amstrad)
 add_subdirectory(src/formats/msa)
 add_subdirectory(src/formats/flashfloppy)
-
-# Loaders
 add_subdirectory(src/loaders/disk_formats)
 
-# Optional modules (if they have content)
+# Optional modules
 if(EXISTS "${CMAKE_SOURCE_DIR}/src/decoder/CMakeLists.txt")
     add_subdirectory(src/decoder)
 endif()
@@ -130,14 +213,33 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/src/sector/CMakeLists.txt")
     add_subdirectory(src/sector)
 endif()
 
+# Additional modules (P2-7)
+if(EXISTS "${CMAKE_SOURCE_DIR}/src/batch/CMakeLists.txt")
+    add_subdirectory(src/batch)
+endif()
+if(EXISTS "${CMAKE_SOURCE_DIR}/src/cbm/CMakeLists.txt")
+    add_subdirectory(src/cbm)
+endif()
+if(EXISTS "${CMAKE_SOURCE_DIR}/src/cli/CMakeLists.txt")
+    add_subdirectory(src/cli)
+endif()
+if(EXISTS "${CMAKE_SOURCE_DIR}/src/cloud/CMakeLists.txt")
+    add_subdirectory(src/cloud)
+endif()
+if(EXISTS "${CMAKE_SOURCE_DIR}/src/whdload/CMakeLists.txt")
+    add_subdirectory(src/whdload)
+
+# XDF Container Format Family
+if(EXISTS "${CMAKE_SOURCE_DIR}/src/xdf/CMakeLists.txt")
+    add_subdirectory(src/xdf)
+endif()
+endif()
+
 # ═══════════════════════════════════════════════════════════════════════════════
-# GUI Application (Qt6 required)
+# GUI Application
 # ═══════════════════════════════════════════════════════════════════════════════
 if(UFT_BUILD_GUI AND Qt6_FOUND)
-    # Check if GUI sources exist
-    if(EXISTS "${CMAKE_SOURCE_DIR}/src/main.cpp" AND 
-       EXISTS "${CMAKE_SOURCE_DIR}/src/mainwindow.cpp")
-        
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src/main.cpp")
         file(GLOB GUI_SOURCES "src/*.cpp")
         file(GLOB GUI_HEADERS "src/*.h")
         file(GLOB GUI_FORMS "forms/*.ui")
@@ -155,22 +257,28 @@ if(UFT_BUILD_GUI AND Qt6_FOUND)
             uft_core
             uft_crc
             uft_encoding
+            uft_tracks
+            uft_protection
+            uft_recovery
+            uft_decoders
+            uft_hal
+            uft_sector
         )
         
-        # Install
+        # Windows-specific libraries
+        if(WIN32)
+            target_link_libraries(${PROJECT_NAME} PRIVATE ws2_32)
+        endif()
+        
+        # macOS-specific frameworks
+        if(APPLE)
+            target_link_libraries(${PROJECT_NAME} PRIVATE
+                "-framework CoreFoundation"
+                "-framework IOKit"
+            )
+        endif()
+        
         install(TARGETS ${PROJECT_NAME} RUNTIME DESTINATION bin)
-    else()
-        message(STATUS "GUI sources not found - skipping GUI build")
-    endif()
-endif()
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# Command-Line Tools
-# ═══════════════════════════════════════════════════════════════════════════════
-if(UFT_BUILD_TOOLS)
-    # Add tools subdirectory if it exists
-    if(EXISTS "${CMAKE_SOURCE_DIR}/tools/CMakeLists.txt")
-        add_subdirectory(tools)
     endif()
 endif()
 
@@ -184,9 +292,6 @@ if(UFT_BUILD_TESTS)
     endif()
 endif()
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# Summary
-# ═══════════════════════════════════════════════════════════════════════════════
 message(STATUS "════════════════════════════════════════════════════")
 message(STATUS "Configuration complete")
 message(STATUS "════════════════════════════════════════════════════")

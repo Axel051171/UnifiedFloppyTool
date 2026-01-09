@@ -1,3 +1,5 @@
+#include "uft_error.h"
+#include "uft_error_compat.h"
 /**
  * @file uft_decoder_registry.c
  * @brief Decoder Registry Implementation

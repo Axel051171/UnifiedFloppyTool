@@ -1,3 +1,5 @@
+#include "uft_error.h"
+#include "uft_error_compat.h"
 /**
  * @file uft_gui_bridge.c
  * @brief GUI Bridge - Saubere Schnittstelle für GUI-Layer

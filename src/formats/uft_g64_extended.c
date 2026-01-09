@@ -139,7 +139,10 @@ bool uft_g64_has_extension(const char *path) {
     if (!fp) return false;
     
     /* Seek to end and check for extension marker */
-    fseek(fp, -8, SEEK_END);
+    if (fseek(fp, -8, SEEK_END) != 0) {
+        fclose(fp);
+        return false;
+    }
     
     char marker[4];
     if (fread(marker, 1, 4, fp) != 4) {
@@ -216,7 +219,12 @@ uft_error_t uft_g64_read_extended(const char *path,
     }
     
     /* Seek past track offsets to speed zones */
-    fseek(fp, 12 + (num_tracks * 4), SEEK_SET);
+    if (fseek(fp, 12 + (num_tracks * 4), SEEK_SET) != 0) {
+        free(speed_zones);
+        free(track_offsets);
+        fclose(fp);
+        return UFT_ERR_IO;
+    }
     if (fread(speed_zones, sizeof(uint32_t), num_tracks, fp) != num_tracks) {
         /* Speed zones are optional */
         memset(speed_zones, 0, num_tracks * sizeof(uint32_t));
@@ -240,7 +248,9 @@ uft_error_t uft_g64_read_extended(const char *path,
     for (uint8_t t = 0; t < num_tracks; t += 2) {
         if (track_offsets[t] == 0) continue;
         
-        fseek(fp, track_offsets[t], SEEK_SET);
+        if (fseek(fp, track_offsets[t], SEEK_SET) != 0) {
+            continue;  /* Skip unreadable track */
+        }
         
         /* Read track size */
         uint16_t track_size;
@@ -308,8 +318,15 @@ uft_error_t uft_g64_read_error_map(const char *path,
     if (!fp) return UFT_ERR_IO;
     
     /* Find extension at end of file */
-    fseek(fp, -8, SEEK_END);
+    if (fseek(fp, -8, SEEK_END) != 0) {
+        fclose(fp);
+        return UFT_ERR_IO;
+    }
     long ext_end = ftell(fp);
+    if (ext_end < 0) {
+        fclose(fp);
+        return UFT_ERR_IO;
+    }
     
     /* Read extension header offset */
     uint32_t ext_offset;
@@ -327,7 +344,10 @@ uft_error_t uft_g64_read_error_map(const char *path,
     }
     
     /* Seek to extension start */
-    fseek(fp, ext_offset, SEEK_SET);
+    if (fseek(fp, ext_offset, SEEK_SET) != 0) {
+        fclose(fp);
+        return UFT_ERR_IO;
+    }
     
     /* Read extension header */
     uint8_t ext_version;
@@ -461,9 +481,13 @@ uft_error_t uft_g64_write_extended(const uft_disk_image_t *disk,
         size_t track_bytes = (track->raw_bits + 7) / 8;
         uint16_t track_size = (uint16_t)track_bytes;
         
-        fseek(fp, offsets[t], SEEK_SET);
-        fwrite(&track_size, sizeof(track_size), 1, fp);
-        fwrite(track->raw_data, 1, track_bytes, fp);
+        if (fseek(fp, offsets[t], SEEK_SET) != 0) {
+            continue;  /* Skip unwritable position */
+        }
+        if (fwrite(&track_size, sizeof(track_size), 1, fp) != 1) {
+            continue;
+        }
+        (void)fwrite(track->raw_data, 1, track_bytes, fp);
     }
     
     free(offsets);
@@ -472,6 +496,10 @@ uft_error_t uft_g64_write_extended(const uft_disk_image_t *disk,
     /* Write extension if requested */
     if (opts->include_error_map && errors && errors->error_count > 0) {
         long ext_offset = ftell(fp);
+        if (ext_offset < 0) {
+            fclose(fp);
+            return UFT_ERR_IO;
+        }
         
         /* Extension header */
         uint8_t ext_version = G64_EXT_VERSION;

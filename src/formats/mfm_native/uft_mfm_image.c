@@ -156,10 +156,11 @@ void uft_mfm_close(uft_mfm_ctx_t *ctx) {
     if (ctx->fp) {
         if (ctx->is_write && ctx->tracks) {
             /* Update track table */
-            fseek(ctx->fp, (long)ctx->header.track_table_offset, SEEK_SET);
-            for (size_t i = 0; i < ctx->track_count; i++) {
-                write_le64(ctx->fp, ctx->tracks[i].offset);
-                write_le64(ctx->fp, ctx->tracks[i].length_bit);
+            if (fseek(ctx->fp, (long)ctx->header.track_table_offset, SEEK_SET) == 0) {
+                for (size_t i = 0; i < ctx->track_count; i++) {
+                    write_le64(ctx->fp, ctx->tracks[i].offset);
+                    write_le64(ctx->fp, ctx->tracks[i].length_bit);
+                }
             }
         }
         fclose(ctx->fp);
