@@ -1,7 +1,7 @@
 /**
  * @file uft_apple_dos_core.c
  * @brief Apple II DOS/ProDOS Core Implementation
- * @version 3.6.0
+ * @version 3.7.0
  * 
  * Lifecycle, detection, sector/block access for Apple II filesystems.
  */

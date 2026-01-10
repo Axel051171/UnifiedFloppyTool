@@ -1097,10 +1097,13 @@ int uft_kf_flux_to_raw(const uint32_t* flux, size_t count,
                         output[pos++] = 0x08;  /* Length: 8 */
                         output[pos++] = 0x00;
                         /* Stream position (4 bytes) + timer (4 bytes) */
-                        output[pos++] = (pos) & 0xFF;
-                        output[pos++] = (pos >> 8) & 0xFF;
-                        output[pos++] = (pos >> 16) & 0xFF;
-                        output[pos++] = (pos >> 24) & 0xFF;
+                        {
+                            uint32_t stream_pos = (uint32_t)pos;
+                            output[pos++] = stream_pos & 0xFF;
+                            output[pos++] = (stream_pos >> 8) & 0xFF;
+                            output[pos++] = (stream_pos >> 16) & 0xFF;
+                            output[pos++] = (stream_pos >> 24) & 0xFF;
+                        }
                         output[pos++] = 0x00;
                         output[pos++] = 0x00;
                         output[pos++] = 0x00;
@@ -1146,14 +1149,15 @@ int uft_kf_flux_to_raw(const uint32_t* flux, size_t count,
     
     /* Write end-of-stream OOB block */
     if (pos + 8 < max_size) {
+        uint32_t stream_pos = (uint32_t)pos;
         output[pos++] = 0x0D;
         output[pos++] = 0x0D;  /* Type: EOF */
         output[pos++] = 0x04;
         output[pos++] = 0x00;
-        output[pos++] = (pos) & 0xFF;
-        output[pos++] = (pos >> 8) & 0xFF;
-        output[pos++] = (pos >> 16) & 0xFF;
-        output[pos++] = (pos >> 24) & 0xFF;
+        output[pos++] = stream_pos & 0xFF;
+        output[pos++] = (stream_pos >> 8) & 0xFF;
+        output[pos++] = (stream_pos >> 16) & 0xFF;
+        output[pos++] = (stream_pos >> 24) & 0xFF;
     }
     
     return (int)pos;

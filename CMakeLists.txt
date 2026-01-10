@@ -1,5 +1,5 @@
 # ═══════════════════════════════════════════════════════════════════════════════
-# UnifiedFloppyTool v3.7.1
+# UnifiedFloppyTool v3.7.0
 # ═══════════════════════════════════════════════════════════════════════════════
 
 cmake_minimum_required(VERSION 3.16)
@@ -186,11 +186,35 @@ add_subdirectory(src/core)
 add_subdirectory(src/encoding)
 add_subdirectory(src/flux/fdc_bitstream)
 add_subdirectory(src/flux/pll)
+
+# SAMdisk Core (C++ bitstream processing)
+if(EXISTS "${CMAKE_SOURCE_DIR}/src/samdisk/CMakeLists.txt")
+    add_subdirectory(src/samdisk)
+endif()
+
 add_subdirectory(src/tracks)
 add_subdirectory(src/formats/scp)
 add_subdirectory(src/formats/amstrad)
 add_subdirectory(src/formats/msa)
 add_subdirectory(src/formats/flashfloppy)
+
+# Additional format parsers (P3)
+if(EXISTS "${CMAKE_SOURCE_DIR}/src/formats/tzx/CMakeLists.txt")
+    add_subdirectory(src/formats/tzx)
+endif()
+if(EXISTS "${CMAKE_SOURCE_DIR}/src/formats/trd/CMakeLists.txt")
+    add_subdirectory(src/formats/trd)
+endif()
+if(EXISTS "${CMAKE_SOURCE_DIR}/src/formats/d88/CMakeLists.txt")
+    add_subdirectory(src/formats/d88)
+endif()
+if(EXISTS "${CMAKE_SOURCE_DIR}/src/formats/cpm/CMakeLists.txt")
+    add_subdirectory(src/formats/cpm)
+endif()
+if(EXISTS "${CMAKE_SOURCE_DIR}/src/formats/zx/CMakeLists.txt")
+    add_subdirectory(src/formats/zx)
+endif()
+
 add_subdirectory(src/loaders/disk_formats)
 
 # Optional modules
@@ -220,6 +244,42 @@ endif()
 if(EXISTS "${CMAKE_SOURCE_DIR}/src/cbm/CMakeLists.txt")
     add_subdirectory(src/cbm)
 endif()
+
+# C64 Forensics Module (6502 Disasm, PRG Parser, Fastloader DB)
+if(EXISTS "${CMAKE_SOURCE_DIR}/src/c64/CMakeLists.txt")
+    add_subdirectory(src/c64)
+endif()
+
+# Z80 Module (Disassembler for ZX Spectrum)
+if(EXISTS "${CMAKE_SOURCE_DIR}/src/z80/CMakeLists.txt")
+    add_subdirectory(src/z80)
+endif()
+
+# Track Analysis Module (XCopy Pro algorithms)
+if(EXISTS "${CMAKE_SOURCE_DIR}/src/analysis/CMakeLists.txt")
+    add_subdirectory(src/analysis)
+endif()
+
+# Policy Module (Write Safety Gate)
+if(EXISTS "${CMAKE_SOURCE_DIR}/src/policy/CMakeLists.txt")
+    add_subdirectory(src/policy)
+endif()
+
+# Serial Link Module (TransWarp integration)
+if(EXISTS "${CMAKE_SOURCE_DIR}/src/link/CMakeLists.txt")
+    add_subdirectory(src/link)
+endif()
+
+# FormatID Module (FAT detection, geometry guessing)
+if(EXISTS "${CMAKE_SOURCE_DIR}/src/formatid/CMakeLists.txt")
+    add_subdirectory(src/formatid)
+endif()
+
+# Amiga Protection Detection
+if(EXISTS "${CMAKE_SOURCE_DIR}/src/formats/amiga/CMakeLists.txt")
+    add_subdirectory(src/formats/amiga)
+endif()
+
 if(EXISTS "${CMAKE_SOURCE_DIR}/src/cli/CMakeLists.txt")
     add_subdirectory(src/cli)
 endif()
@@ -232,6 +292,11 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/src/whdload/CMakeLists.txt")
 # XDF Container Format Family
 if(EXISTS "${CMAKE_SOURCE_DIR}/src/xdf/CMakeLists.txt")
     add_subdirectory(src/xdf)
+endif()
+
+# Format Adapters (XDF Plugin System)
+if(EXISTS "${CMAKE_SOURCE_DIR}/src/adapters/CMakeLists.txt")
+    add_subdirectory(src/adapters)
 endif()
 endif()
 

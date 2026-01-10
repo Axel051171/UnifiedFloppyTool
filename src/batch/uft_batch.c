@@ -13,12 +13,21 @@
 #include <stdio.h>
 #include "uft/compat/uft_dirent.h"
 #include <sys/stat.h>
-#include <fnmatch.h>
 
 #ifdef _WIN32
 #include <windows.h>
+#include <shlwapi.h>  /* PathMatchSpec */
 #define PATH_SEP '\\'
+/* Windows fnmatch replacement using PathMatchSpec */
+static int uft_fnmatch(const char *pattern, const char *string, int flags) {
+    (void)flags;
+    /* Convert POSIX pattern to Windows: *.adf stays *.adf */
+    return PathMatchSpecA(string, pattern) ? 0 : 1;
+}
+#define fnmatch(p, s, f) uft_fnmatch(p, s, f)
+#define FNM_NOMATCH 1
 #else
+#include <fnmatch.h>
 #include <pthread.h>
 #include <unistd.h>
 #define PATH_SEP '/'

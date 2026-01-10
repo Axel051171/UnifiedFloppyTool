@@ -22,7 +22,9 @@
 typedef void* HANDLE;
 #define INVALID_HANDLE_VALUE reinterpret_cast<void *>(-1)
 
+#ifndef MAX_PATH
 #define MAX_PATH    512
+#endif
 
 #define O_SEQUENTIAL    0
 #define O_BINARY        0

@@ -109,4 +109,36 @@
     #define UFT_RESTRICT __restrict__
 #endif
 
+/*===========================================================================
+ * Diagnostic Structure (for TransWarp/FormatID modules)
+ *===========================================================================*/
+
+/**
+ * @brief Simple diagnostic structure for detailed error messages
+ * Used by newer modules (TransWarp, FormatID) for error reporting.
+ */
+typedef struct uft_diag {
+    char msg[256];
+} uft_diag_t;
+
+/**
+ * @brief Set diagnostic message
+ */
+static inline void uft_diag_set(uft_diag_t *d, const char *s)
+{
+    if (!d) return;
+    if (!s) { d->msg[0] = '\0'; return; }
+    size_t i = 0;
+    for (; i + 1 < sizeof(d->msg) && s[i]; i++) d->msg[i] = s[i];
+    d->msg[i] = '\0';
+}
+
+/**
+ * @brief Clear diagnostic message
+ */
+static inline void uft_diag_clear(uft_diag_t *d)
+{
+    if (d) d->msg[0] = '\0';
+}
+
 #endif /* UFT_COMMON_H */

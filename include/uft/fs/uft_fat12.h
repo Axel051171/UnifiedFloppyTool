@@ -1,7 +1,7 @@
 /**
  * @file uft_fat12.h
  * @brief FAT12/FAT16 Filesystem Layer for Floppy Disk Preservation
- * @version 3.6.0
+ * @version 3.7.0
  * 
  * Complete FAT12/FAT16 filesystem implementation for floppy disk images:
  * - All standard PC floppy formats (160KB - 2.88MB)

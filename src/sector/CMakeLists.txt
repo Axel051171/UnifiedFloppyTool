@@ -27,6 +27,9 @@ set_target_properties(uft_sector PROPERTIES
 # ═══════════════════════════════════════════════════════════════════════════════
 if(BUILD_TESTING)
     add_executable(test_sector_parser test_sector_parser.c)
-    target_link_libraries(test_sector_parser PRIVATE uft_sector)
+    target_include_directories(test_sector_parser PRIVATE
+        ${CMAKE_SOURCE_DIR}/include
+    )
+    target_link_libraries(test_sector_parser PRIVATE uft_sector uft_core)
     add_test(NAME test_sector_parser COMMAND test_sector_parser)
 endif()

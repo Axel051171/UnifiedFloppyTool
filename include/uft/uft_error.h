@@ -110,6 +110,7 @@ typedef uft_rc_t uft_error_t;
 
 /* Legacy error code aliases */
 #define UFT_ERROR_NO_MEMORY      UFT_ERR_MEMORY
+#define UFT_ERR_NOMEM            UFT_ERR_MEMORY  /* CI check compatibility */
 #define UFT_ERROR_NOT_SUPPORTED  UFT_ERR_NOT_SUPPORTED
 #define UFT_ERROR_FILE_OPEN      UFT_ERR_IO
 #define UFT_ERROR_DISK_PROTECTED UFT_ERR_NOT_PERMITTED

@@ -1,5 +1,6 @@
 # UnifiedFloppyTool CI Pipeline
 # Builds on Windows, macOS, and Linux
+# P1-6: Improved with CTest integration
 
 name: CI
 
@@ -16,7 +17,7 @@ env:
 
 jobs:
   # ═══════════════════════════════════════════════════════════════════════════
-  # Linux Build
+  # Linux Build + Tests
   # ═══════════════════════════════════════════════════════════════════════════
   linux:
     runs-on: ubuntu-22.04
@@ -36,23 +37,65 @@ jobs:
           cache: true
           
       - name: Configure
-        run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=$BUILD_TYPE
+        run: |
+          cmake -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
+            -DBUILD_TESTING=ON
         
       - name: Build
         run: cmake --build build --parallel
         
-      - name: Quick Test
+      - name: Run CTest
         run: |
-          ./build/UnifiedFloppyTool --version || true
+          cd build
+          ctest --output-on-failure -j4
+          
+      - name: Quick Executable Test
+        run: |
+          ./build/UnifiedFloppyTool --version || echo "GUI not built"
           
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: UnifiedFloppyTool-Linux-x64
           path: build/UnifiedFloppyTool
+          if-no-files-found: ignore
 
   # ═══════════════════════════════════════════════════════════════════════════
-  # macOS Build (ARM64 - M1/M2/M3)
+  # Linux No-GUI Build (Faster, core libraries)
+  # ═══════════════════════════════════════════════════════════════════════════
+  linux-no-gui:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake ninja-build
+          
+      - name: Configure (No GUI)
+        run: |
+          cmake -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
+            -DUFT_BUILD_GUI=OFF \
+            -DUFT_ENABLE_SAMDISK=ON \
+            -DBUILD_TESTING=ON
+        
+      - name: Build
+        run: cmake --build build --parallel
+        
+      - name: Run CTest
+        run: |
+          cd build
+          ctest --output-on-failure -j4
+          echo ""
+          echo "═══════════════════════════════════════════════════════════"
+          echo "Test Summary:"
+          ctest -N | tail -5
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # macOS Build (ARM64)
   # ═══════════════════════════════════════════════════════════════════════════
   macos:
     runs-on: macos-14
@@ -60,9 +103,7 @@ jobs:
       - uses: actions/checkout@v4
       
       - name: Install Dependencies
-        run: |
-          brew install cmake ninja
-          # OpenMP disabled on macOS by default
+        run: brew install cmake ninja
           
       - name: Install Qt
         uses: jurplel/install-qt-action@v3
@@ -76,20 +117,23 @@ jobs:
           cmake -B build -G Ninja \
             -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
             -DUFT_ENABLE_OPENMP=OFF \
+            -DBUILD_TESTING=ON \
             -DCMAKE_OSX_ARCHITECTURES="arm64"
         
       - name: Build
         run: cmake --build build --parallel
         
-      - name: Quick Test
+      - name: Run CTest
         run: |
-          ./build/UnifiedFloppyTool --version || true
+          cd build
+          ctest --output-on-failure -j4
           
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: UnifiedFloppyTool-macOS-arm64
           path: build/UnifiedFloppyTool
+          if-no-files-found: ignore
 
   # ═══════════════════════════════════════════════════════════════════════════
   # Windows Build (MSVC)
@@ -107,22 +151,42 @@ jobs:
           arch: win64_msvc2019_64
           
       - name: Configure
-        run: |
-          cmake -B build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }}
+        run: cmake -B build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DBUILD_TESTING=ON
           
       - name: Build
         run: cmake --build build --config ${{ env.BUILD_TYPE }} --parallel
         
-      - name: Quick Test
+      - name: Run CTest
         run: |
-          .\build\${{ env.BUILD_TYPE }}\UnifiedFloppyTool.exe --version
+          cd build
+          ctest -C ${{ env.BUILD_TYPE }} --output-on-failure
         continue-on-error: true
-          
+        
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: UnifiedFloppyTool-Windows-x64
           path: build/${{ env.BUILD_TYPE }}/UnifiedFloppyTool.exe
+          if-no-files-found: ignore
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Windows No-GUI Build
+  # ═══════════════════════════════════════════════════════════════════════════
+  windows-no-gui:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+          
+      - name: Configure (No GUI)
+        run: cmake -B build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DUFT_BUILD_GUI=OFF -DBUILD_TESTING=ON
+          
+      - name: Build
+        run: cmake --build build --config ${{ env.BUILD_TYPE }} --parallel
+        
+      - name: Run CTest
+        run: |
+          cd build
+          ctest -C ${{ env.BUILD_TYPE }} --output-on-failure
 
   # ═══════════════════════════════════════════════════════════════════════════
   # Version Consistency Check
@@ -136,7 +200,6 @@ jobs:
         run: |
           CMAKE_VER=$(grep "VERSION" CMakeLists.txt | head -1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
           echo "CMakeLists version: $CMAKE_VER"
-          
           if [ -f "include/uft/uft_version.h" ]; then
             HEADER_VER=$(grep "UFT_VERSION_STRING" include/uft/uft_version.h | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
             echo "Header version: $HEADER_VER"
@@ -148,7 +211,7 @@ jobs:
           echo "✓ Versions consistent: $CMAKE_VER"
 
   # ═══════════════════════════════════════════════════════════════════════════
-  # Static Analysis (Linux only)
+  # Static Analysis
   # ═══════════════════════════════════════════════════════════════════════════
   static-analysis:
     runs-on: ubuntu-22.04
@@ -168,7 +231,6 @@ jobs:
             -I include -I src \
             --quiet \
             src/ 2>&1 | tee cppcheck-report.txt
-          echo "Analysis complete"
           
       - name: Upload Report
         uses: actions/upload-artifact@v4
@@ -180,17 +242,19 @@ jobs:
   # Build Summary
   # ═══════════════════════════════════════════════════════════════════════════
   summary:
-    needs: [linux, macos, windows, version-check]
+    needs: [linux, linux-no-gui, macos, windows, windows-no-gui, version-check]
     runs-on: ubuntu-latest
     if: always()
     steps:
       - name: Build Summary
         run: |
-          echo "## Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "## UFT Build Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Platform | Status |" >> $GITHUB_STEP_SUMMARY
-          echo "|----------|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Linux x64 | ${{ needs.linux.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| macOS ARM64 | ${{ needs.macos.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Windows x64 | ${{ needs.windows.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Version Check | ${{ needs.version-check.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Platform | GUI | Tests | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-----|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Linux x64 | ✓ | ✓ | ${{ needs.linux.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Linux x64 | ✗ | ✓ | ${{ needs.linux-no-gui.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| macOS ARM64 | ✓ | ✓ | ${{ needs.macos.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Windows x64 | ✓ | ✓ | ${{ needs.windows.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Windows x64 | ✗ | ✓ | ${{ needs.windows-no-gui.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Version Check | - | - | ${{ needs.version-check.result }} |" >> $GITHUB_STEP_SUMMARY

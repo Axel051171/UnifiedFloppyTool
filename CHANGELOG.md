@@ -1,14 +1,45 @@
 # UnifiedFloppyTool Changelog
 
-## v3.7.0 - Release
+## v3.7.0 - Consolidated Release
 
-**Datum:** 2025-01-09
+**Datum:** 2025-01-10
 
 ### Überblick
 
 UnifiedFloppyTool (UFT) ist ein forensisches Disk-Preservation-Tool für historische Floppy-Formate.
 
 **Motto:** "Bei uns geht kein Bit verloren"
+
+### Highlights dieser Version
+
+#### Tests & Stabilität
+- **18 Test-Suites** mit **322 Sub-Tests** - alle bestanden
+- Smoke Tests, Parser Tests, Adapter Tests, Algorithm Tests
+- Version Consistency Tests
+- Cross-Platform Build verifiziert
+
+#### SAMdisk Integration (NEU)
+- SAMdisk C++ Core aktiviert (171 Dateien)
+- libuft_samdisk_core.a (510KB)
+- C-API Wrapper: uft_samdisk_adapter.h
+- Features: BitBuffer, BitstreamDecoder, FluxDecoder, CRC16
+
+#### Format-Adapter (4 Complete)
+- **ADF** (Amiga DD/HD) - OFS/FFS Auto-Detection
+- **D64** (Commodore 64) - Variable Sectors, Error Bytes
+- **IMG** (PC FAT12) - 360K/720K/1.2M/1.44M/2.88M
+- **TRD** (ZX Spectrum TR-DOS) - 640K/320K/180K
+
+#### Neue Module
+- **XCopy Pro Algorithms** - Track Length, Multi-Revolution, Calibration
+- **Write Safety Gate** - SHA-256, Snapshots, Fail-Closed Policy
+- **Z80 Disassembler** - 53 Tests, tzxtools Port
+- **C64 Forensik** - 6502 Disasm, PRG Parser, Drive Scanner, CBM Disk
+
+#### Parser Cleanup
+- 90 aktive Floppy-Format-Verzeichnisse
+- 403 archivierte Non-Floppy Formate
+- SAMdisk C++ vorbereitet für Integration
 
 ### Features
 

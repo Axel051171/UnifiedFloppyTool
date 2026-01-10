@@ -1,14 +1,26 @@
 # UFT Hardware Abstraction Layer - CMakeLists.txt
 
 set(HAL_SOURCES
-    uft_drive.c
+    # Core HAL
+    uft_hal_profiles.c  # Drive profiles + Controller caps (replaces uft_drive.c)
     uft_hal_unified.c
+    
+    # Controller Implementations (working)
     uft_kryoflux_dtc.c
     uft_supercard.c
     uft_xum1541.c
     uft_fc5025.c
     uft_applesauce.c
     uft_nibtools.c
+    
+    # Support
+    uft_latency_tracking.c
+    ufi.c
+    
+    # Disabled:
+    # uft_drive.c (superseded by uft_hal_profiles.c)
+    # uft_greaseweazle_full.c (needs extended GW types)
+    # uft_hal_v3.c (duplicate of v2)
 )
 
 add_library(uft_hal STATIC ${HAL_SOURCES})

@@ -284,12 +284,16 @@ void uft_clear_error(void);
 /* Map legacy error codes to unified codes */
 #define UFT_ERR_OK              UFT_OK
 #define UFT_ERR_INVALID_ARG     UFT_E_INVALID_ARG
+#define UFT_ERR_INVALID_PARAM   UFT_E_INVALID_ARG
 #define UFT_ERR_BUFFER_TOO_SMALL UFT_E_BUFFER_TOO_SMALL
 #define UFT_ERR_INVALID_PATH    UFT_E_PATH_INVALID
 #define UFT_ERR_IO              UFT_E_IO
 #define UFT_ERR_FILE_NOT_FOUND  UFT_E_FILE_NOT_FOUND
 #define UFT_ERR_UNSUPPORTED     UFT_E_NOT_SUPPORTED
 #define UFT_ERR_NOT_FOUND       UFT_E_NOT_FOUND
+#define UFT_ERR_ALREADY_EXISTS  UFT_E_ALREADY_EXISTS
+#define UFT_ERR_OVERFLOW        UFT_E_OVERFLOW
+#define UFT_ERR_NOMEM           UFT_E_NOMEM
 
 /* IR format compatibility */
 #define UFT_IR_OK               UFT_OK

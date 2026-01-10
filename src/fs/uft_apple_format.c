@@ -1,7 +1,7 @@
 /**
  * @file uft_apple_format.c
  * @brief Apple II Disk Image Creation and Formatting
- * @version 3.6.0
+ * @version 3.7.0
  * 
  * Create new DOS 3.3 and ProDOS disk images.
  */

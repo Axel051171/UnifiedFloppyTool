@@ -1,7 +1,7 @@
 /**
  * @file uft_fat12_lfn.c
  * @brief FAT12/FAT16 Long Filename Support
- * @version 3.6.0
+ * @version 3.7.0
  * 
  * LFN generation, checksum, SFN conversion
  */

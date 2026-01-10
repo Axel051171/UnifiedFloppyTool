@@ -13,6 +13,8 @@
 #include "uft_xdf_api.h"
 #include "uft_xdf_core.h"
 #include <stdarg.h>
+#include <stdio.h>    /* vsnprintf */
+#include <string.h>   /* strrchr, strcmp, etc. */
 
 #ifdef __cplusplus
 extern "C" {

@@ -69,3 +69,44 @@
 #endif
 
 #endif /* UFT_ERROR_COMPAT_H */
+
+/* ============================================================================
+ * New module compatibility (TransWarp/FormatID integration)
+ * These modules use short error codes (UFT_EINVAL instead of UFT_ERR_INVALID_ARG)
+ * ============================================================================ */
+
+#ifndef UFT_EINVAL
+#define UFT_EINVAL UFT_ERR_INVALID_ARG
+#endif
+
+#ifndef UFT_EIO
+#define UFT_EIO UFT_ERR_IO
+#endif
+
+#ifndef UFT_EFORMAT
+#define UFT_EFORMAT UFT_ERR_FORMAT
+#endif
+
+#ifndef UFT_EUNSUPPORTED
+#define UFT_EUNSUPPORTED UFT_ERR_NOT_SUPPORTED
+#endif
+
+#ifndef UFT_ENOMEM
+#define UFT_ENOMEM UFT_ERR_MEMORY
+#endif
+
+#ifndef UFT_ECRC
+#define UFT_ECRC UFT_ERR_CRC
+#endif
+
+#ifndef UFT_ENOT_IMPLEMENTED
+#define UFT_ENOT_IMPLEMENTED UFT_ERR_NOT_IMPLEMENTED
+#endif
+
+#ifndef UFT_ETIMEOUT
+#define UFT_ETIMEOUT UFT_ERR_TIMEOUT
+#endif
+
+/* Re-close the guard */
+#undef UFT_ERROR_COMPAT_H
+#define UFT_ERROR_COMPAT_H

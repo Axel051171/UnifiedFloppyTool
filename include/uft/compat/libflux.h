@@ -458,6 +458,24 @@ LIBFLUX_SIDE* tg_generateTrackEx(
 /* CRC functions */
 uint16_t libflux_crc16_ccitt(const uint8_t* data, size_t len, uint16_t init);
 
+/**
+ * @brief Get environment variable value from context
+ * 
+ * Returns configuration value from context. If not set, returns 0.
+ * Used by HxC-derived track format code.
+ * 
+ * @param ctx   libflux context (can be NULL)
+ * @param name  Variable name to query
+ * @return      Integer value, or 0 if not set
+ */
+static inline int32_t libflux_getEnvVarValue(void* ctx, const char* name) {
+    (void)ctx;
+    (void)name;
+    /* Stub: returns 0 (use default values) */
+    /* TODO: Implement proper environment variable lookup if needed */
+    return 0;
+}
+
 #ifdef __cplusplus
 }
 #endif

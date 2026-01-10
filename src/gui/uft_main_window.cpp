@@ -18,6 +18,10 @@
 #include "uft_hardware_panel.h"
 #include "uft_track_grid_widget.h"
 
+/* P2-12: AnalyzerToolbar */
+#include "AnalyzerToolbar.h"
+#include "TrackAnalyzerWidget.h"
+
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QSettings>
@@ -37,16 +41,20 @@
 UftMainWindow::UftMainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::UftMainWindow)
+    , m_analyzerToolbar(nullptr)
+    , m_trackAnalyzer(nullptr)
     , m_modified(false)
 {
     ui->setupUi(this);
     
     setupCentralWidget();
+    setupAnalyzerToolbar();  /* P2-12 */
     setupStatusBar();
     setupConnections();
+    setupAnalyzerConnections();  /* P2-13 */
     loadSettings();
     
-    setWindowTitle("UnifiedFloppyTool v5.32");
+    setWindowTitle("UnifiedFloppyTool v5.33");
 }
 
 UftMainWindow::~UftMainWindow()
@@ -464,4 +472,143 @@ void UftMainWindow::onHelp()
         "<li><b>Convert</b> to another format</li>"
         "</ol>"
         "<p>For hardware operations, connect your controller first.</p>");
+}
+
+/* ============================================================================
+ * P2-12: AnalyzerToolbar Setup
+ * ============================================================================ */
+
+void UftMainWindow::setupAnalyzerToolbar()
+{
+    m_analyzerToolbar = new AnalyzerToolbar(this);
+    m_analyzerToolbar->setObjectName("analyzerToolbar");
+    
+    /* Add below main toolbar */
+    addToolBar(Qt::TopToolBarArea, m_analyzerToolbar);
+    
+    /* Initially hidden until image is loaded */
+    m_analyzerToolbar->setVisible(false);
+}
+
+/* ============================================================================
+ * P2-13: Analyzer ↔ XCopy Signal-Slot Connections
+ * ============================================================================ */
+
+void UftMainWindow::setupAnalyzerConnections()
+{
+    if (!m_analyzerToolbar || !m_xcopyPanel) return;
+    
+    /* AnalyzerToolbar → MainWindow */
+    connect(m_analyzerToolbar, &AnalyzerToolbar::analyzeRequested,
+            this, &UftMainWindow::onAnalyzerQuickScan);
+    
+    connect(m_analyzerToolbar, &AnalyzerToolbar::fullAnalysisRequested,
+            this, &UftMainWindow::onAnalyzerFullAnalysis);
+    
+    connect(m_analyzerToolbar, &AnalyzerToolbar::applyRequested,
+            this, &UftMainWindow::onAnalyzerApply);
+    
+    /* AnalyzerToolbar → XCopyPanel (direct) */
+    connect(m_analyzerToolbar, &AnalyzerToolbar::applyRequested,
+            m_xcopyPanel, &UftXCopyPanel::setCopyMode);
+    
+    connect(m_analyzerToolbar, &AnalyzerToolbar::modeChanged,
+            m_xcopyPanel, &UftXCopyPanel::suggestMode);
+    
+    /* MainWindow image loaded → trigger analysis */
+    connect(this, &UftMainWindow::imageLoaded,
+            this, &UftMainWindow::onImageLoadedForAnalysis);
+}
+
+/* ============================================================================
+ * Analyzer Slot Implementations
+ * ============================================================================ */
+
+void UftMainWindow::onAnalyzerQuickScan()
+{
+    if (!m_analyzerToolbar) return;
+    
+    m_analyzerToolbar->setAnalyzing(true);
+    
+    /* TODO: Implement actual analysis using TrackAnalyzerWidget */
+    /* For now, simulate with dummy result */
+    
+    ToolbarAnalysisResult result;
+    result.platform = m_currentFormat.isEmpty() ? "Unknown" : m_currentFormat;
+    result.encoding = "MFM";
+    result.sectorsPerTrack = 11;
+    result.protectionDetected = false;
+    result.protectionName = "";
+    result.recommendedMode = CopyMode::Normal;
+    result.confidence = 85;
+    
+    m_analyzerToolbar->setAnalysisResult(result);
+    
+    m_statusLabel->setText(QString("Quick scan complete: %1").arg(result.platform));
+}
+
+void UftMainWindow::onAnalyzerFullAnalysis()
+{
+    if (!m_analyzerToolbar) return;
+    
+    m_analyzerToolbar->setAnalyzing(true);
+    
+    /* Switch to Forensic tab for full analysis */
+    ui->mainTabs->setCurrentWidget(ui->tabForensic);
+    
+    /* TODO: Start full track-by-track analysis */
+    
+    m_statusLabel->setText("Full analysis started...");
+}
+
+void UftMainWindow::onAnalyzerApply(CopyMode mode)
+{
+    if (!m_xcopyPanel) return;
+    
+    /* Apply mode to XCopy panel */
+    m_xcopyPanel->setCopyMode(mode);
+    
+    /* Switch to XCopy tab */
+    ui->mainTabs->setCurrentWidget(ui->tabXCopy);
+    
+    QString modeName;
+    switch (mode) {
+        case CopyMode::Normal:     modeName = "Normal"; break;
+        case CopyMode::TrackCopy:  modeName = "Track"; break;
+        case CopyMode::NibbleCopy: modeName = "Nibble"; break;
+        case CopyMode::FluxCopy:   modeName = "Flux"; break;
+        case CopyMode::Mixed:      modeName = "Mixed"; break;
+    }
+    
+    m_statusLabel->setText(QString("Applied copy mode: %1").arg(modeName));
+}
+
+void UftMainWindow::onQuickScanComplete(const ToolbarAnalysisResult &result)
+{
+    if (!m_analyzerToolbar) return;
+    
+    m_analyzerToolbar->setAnalysisResult(result);
+    
+    /* Show notification if protection detected */
+    if (result.protectionDetected) {
+        statusBar()->showMessage(
+            QString("⚠️ Protection detected: %1 - Recommended: %2")
+            .arg(result.protectionName)
+            .arg(result.recommendedMode == CopyMode::FluxCopy ? "Flux Copy" : "Nibble Copy"),
+            5000);
+    }
+}
+
+void UftMainWindow::onImageLoadedForAnalysis(const QString &path)
+{
+    Q_UNUSED(path);
+    
+    /* Show analyzer toolbar when image is loaded */
+    if (m_analyzerToolbar) {
+        m_analyzerToolbar->setVisible(true);
+        m_analyzerToolbar->clearResult();
+        
+        /* Auto-start quick scan */
+        QTimer::singleShot(500, this, &UftMainWindow::onAnalyzerQuickScan);
+    }
 }

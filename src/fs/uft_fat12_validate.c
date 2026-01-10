@@ -1,7 +1,7 @@
 /**
  * @file uft_fat12_validate.c
  * @brief FAT12/FAT16 Validation and Repair
- * @version 3.6.0
+ * @version 3.7.0
  * 
  * Filesystem validation, cross-link detection, repair, deleted file recovery
  */

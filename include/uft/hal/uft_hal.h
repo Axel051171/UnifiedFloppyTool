@@ -191,3 +191,103 @@ bool uft_hal_is_controller_implemented(uft_hal_controller_t type);
 #endif
 
 #endif /* UFT_HAL_H */
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+ * Extended Controller Types (for profiles)
+ * ═══════════════════════════════════════════════════════════════════════════════ */
+
+typedef enum {
+    UFT_CTRL_GREASEWEAZLE = 0,
+    UFT_CTRL_FLUXENGINE,
+    UFT_CTRL_KRYOFLUX,
+    UFT_CTRL_SCP,
+    UFT_CTRL_FC5025,
+    UFT_CTRL_XUM1541,
+    UFT_CTRL_APPLESAUCE,
+    UFT_CTRL_COUNT
+} uft_controller_type_t;
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+ * Extended Controller Capabilities (for detailed profiles)
+ * ═══════════════════════════════════════════════════════════════════════════════ */
+
+typedef struct {
+    uft_controller_type_t type;     /**< Controller type */
+    const char* name;               /**< Display name */
+    const char* version;            /**< Version/model info */
+    
+    /* Timing characteristics */
+    double sample_rate_mhz;         /**< Sample clock (MHz) */
+    double sample_resolution_ns;    /**< Resolution (ns) */
+    double jitter_ns;               /**< Typical jitter (ns) */
+    
+    /* Read/Write capabilities */
+    bool can_read_flux;             /**< Raw flux capture */
+    bool can_read_bitstream;        /**< Decoded bitstream */
+    bool can_read_sector;           /**< Sector-level reads */
+    bool can_write_flux;            /**< Raw flux writing */
+    bool can_write_bitstream;       /**< Bitstream writing */
+    
+    /* Index sensing */
+    bool hardware_index;            /**< Hardware index detection */
+    double index_accuracy_ns;       /**< Index accuracy (ns) */
+    int max_revolutions;            /**< Max revolutions per read */
+    
+    /* Physical limits */
+    int max_cylinders;              /**< Max cylinder number */
+    int max_heads;                  /**< Max heads (sides) */
+    bool supports_half_tracks;      /**< Half-track stepping */
+    
+    /* Data rate */
+    double max_data_rate_kbps;      /**< Max data rate (kbit/s) */
+    bool variable_data_rate;        /**< Variable rate support */
+    
+    /* Special features */
+    bool copy_protection_support;   /**< Copy protection handling */
+    bool weak_bit_detection;        /**< Weak bit detection */
+    bool density_select;            /**< HD/DD selection */
+    
+    /* Limitations */
+    const char* limitations[8];     /**< Known limitations */
+} uft_controller_caps_t;
+
+/* Predefined controller capabilities */
+extern const uft_controller_caps_t UFT_CAPS_GREASEWEAZLE;
+extern const uft_controller_caps_t UFT_CAPS_FLUXENGINE;
+extern const uft_controller_caps_t UFT_CAPS_KRYOFLUX;
+extern const uft_controller_caps_t UFT_CAPS_SCP;
+extern const uft_controller_caps_t UFT_CAPS_FC5025;
+extern const uft_controller_caps_t UFT_CAPS_XUM1541;
+
+/**
+ * @brief Get controller capabilities by type
+ */
+const uft_controller_caps_t* uft_hal_get_controller_caps(uft_controller_type_t type);
+
+/**
+ * @brief Print controller capabilities (debug)
+ */
+void uft_hal_print_controller_caps(const uft_controller_caps_t* caps);
+
+/**
+ * @brief Get controller type name
+ */
+const char* uft_hal_controller_type_name(uft_controller_type_t type);
+
+/**
+ * @brief Check if controller supports a feature
+ * @param caps Capabilities structure
+ * @param feature Feature string ("flux", "halftrack", "weakbit", etc.)
+ * @return true if supported
+ */
+bool uft_hal_controller_has_feature(const uft_controller_caps_t* caps, const char* feature);
+
+/**
+ * @brief Get recommended controller for a task
+ * @param need_flux Requires raw flux capture
+ * @param need_write Requires write capability
+ * @param need_halftrack Requires half-track support
+ * @return Best controller type or UFT_CTRL_GREASEWEAZLE (default)
+ */
+uft_controller_type_t uft_hal_recommend_controller(bool need_flux, bool need_write, bool need_halftrack);
+

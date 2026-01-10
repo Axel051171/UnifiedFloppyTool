@@ -336,3 +336,92 @@ void UftXCopyPanel::setParams(const XCopyParams &params)
     m_autoEject->setChecked(params.auto_eject);
     m_waitForDisk->setChecked(params.wait_for_disk);
 }
+
+/* ============================================================================
+ * P2-13: Analyzer Integration Slots
+ * ============================================================================ */
+
+void UftXCopyPanel::setCopyMode(CopyMode mode)
+{
+    int index = m_copyMode->findData(static_cast<int>(mode));
+    if (index >= 0) {
+        m_copyMode->setCurrentIndex(index);
+    }
+    emit paramsChanged();
+}
+
+void UftXCopyPanel::setTrackModes(const QVector<CopyMode> &modes)
+{
+    /* Store per-track modes for mixed mode operation */
+    m_trackModes.clear();
+    for (const auto &mode : modes) {
+        m_trackModes.append(static_cast<int>(mode));
+    }
+    
+    /* If we have mixed modes, suggest Mixed mode */
+    if (!modes.isEmpty()) {
+        bool allSame = true;
+        CopyMode first = modes.first();
+        for (const auto &mode : modes) {
+            if (mode != first) {
+                allSame = false;
+                break;
+            }
+        }
+        
+        if (!allSame) {
+            setCopyMode(CopyMode::Mixed);
+        } else {
+            setCopyMode(first);
+        }
+    }
+    
+    emit paramsChanged();
+}
+
+void UftXCopyPanel::applyAnalyzerResult(CopyMode overall, const QVector<CopyMode> &perTrack)
+{
+    /* Apply overall mode */
+    setCopyMode(overall);
+    
+    /* Store per-track modes if different from overall */
+    if (!perTrack.isEmpty()) {
+        setTrackModes(perTrack);
+    }
+    
+    /* Update status */
+    QString modeName;
+    switch (overall) {
+        case CopyMode::Normal:     modeName = "Normal (sector copy)"; break;
+        case CopyMode::TrackCopy:  modeName = "Track (raw track copy)"; break;
+        case CopyMode::NibbleCopy: modeName = "Nibble (bit-level copy)"; break;
+        case CopyMode::FluxCopy:   modeName = "Flux (magnetic level)"; break;
+        case CopyMode::Mixed:      modeName = "Mixed (per-track modes)"; break;
+    }
+    
+    m_statusLabel->setText(QString("Mode from Analyzer: %1").arg(modeName));
+}
+
+void UftXCopyPanel::suggestMode(CopyMode mode)
+{
+    /* Highlight the suggested mode without changing selection */
+    int index = m_copyMode->findData(static_cast<int>(mode));
+    if (index >= 0) {
+        /* Flash the combobox or show tooltip */
+        QString modeName;
+        switch (mode) {
+            case CopyMode::Normal:     modeName = "Normal"; break;
+            case CopyMode::TrackCopy:  modeName = "Track"; break;
+            case CopyMode::NibbleCopy: modeName = "Nibble"; break;
+            case CopyMode::FluxCopy:   modeName = "Flux"; break;
+            case CopyMode::Mixed:      modeName = "Mixed"; break;
+        }
+        
+        m_copyMode->setToolTip(QString("Analyzer suggests: %1").arg(modeName));
+        
+        /* Optional: auto-select if current is Normal */
+        if (m_copyMode->currentData().toInt() == static_cast<int>(CopyMode::Normal)) {
+            setCopyMode(mode);
+        }
+    }
+}

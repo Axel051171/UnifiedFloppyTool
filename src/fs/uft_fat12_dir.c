@@ -1,7 +1,7 @@
 /**
  * @file uft_fat12_dir.c
  * @brief FAT12/FAT16 Directory Operations
- * @version 3.6.0
+ * @version 3.7.0
  * 
  * Directory parsing, entry finding, LFN assembly, iteration
  */

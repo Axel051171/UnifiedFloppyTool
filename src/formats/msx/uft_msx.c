@@ -1,7 +1,7 @@
 /**
  * @file uft_msx.c
  * @brief MSX Disk Format Implementation
- * @version 3.6.0
+ * @version 3.7.0
  * 
  * SPDX-License-Identifier: MIT
  */

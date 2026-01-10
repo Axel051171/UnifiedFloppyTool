@@ -1,7 +1,7 @@
 /**
  * @file uft_fat12_format.c
  * @brief FAT12/FAT16 Disk Formatting
- * @version 3.6.0
+ * @version 3.7.0
  * 
  * Format new FAT images, create standard floppy images
  */

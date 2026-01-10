@@ -1,7 +1,7 @@
 /**
  * @file uft_trs80.h
  * @brief TRS-80 Disk Format Support
- * @version 3.6.0
+ * @version 3.7.0
  * 
  * Comprehensive TRS-80 format support including:
  * - JV1: Simple sector image (35×10×256)

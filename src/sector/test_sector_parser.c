@@ -105,7 +105,7 @@ static void test_parse_mfm_track(void) {
     };
     
     uint8_t sector_data[512];
-    uft_sector_t sectors[1];
+    uft_parsed_sector_t sectors[1];
     sectors[0].data = sector_data;
     sectors[0].data_capacity = 512;
     

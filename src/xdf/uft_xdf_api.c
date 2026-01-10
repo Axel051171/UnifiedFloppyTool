@@ -14,6 +14,14 @@
 #include <string.h>
 #include <ctype.h>
 
+/* strcasecmp compatibility */
+#ifdef _WIN32
+#define strcasecmp _stricmp
+#define strncasecmp _strnicmp
+#else
+#include <strings.h>  /* strcasecmp on POSIX */
+#endif
+
 /*===========================================================================
  * Built-in Format Handlers
  *===========================================================================*/

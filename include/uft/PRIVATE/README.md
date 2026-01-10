@@ -50,4 +50,4 @@ Für Disk-Images:
 
 ---
 
-*UFT v3.8.5 - Private Header Documentation*
+*UFT v3.7.0 - Private Header Documentation*

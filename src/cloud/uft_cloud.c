@@ -18,6 +18,19 @@
 #include <sys/stat.h>
 #include "uft/compat/uft_dirent.h"
 
+#ifdef _WIN32
+#include <direct.h>
+#include <io.h>
+/* Windows compatibility for POSIX stat macros */
+#ifndef S_ISDIR
+#define S_ISDIR(m) (((m) & _S_IFMT) == _S_IFDIR)
+#endif
+#ifndef S_ISREG
+#define S_ISREG(m) (((m) & _S_IFMT) == _S_IFREG)
+#endif
+#define mkdir(path, mode) _mkdir(path)
+#endif
+
 #ifdef UFT_HAVE_CURL
 #include <curl/curl.h>
 #endif

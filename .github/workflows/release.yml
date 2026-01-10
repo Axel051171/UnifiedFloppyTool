@@ -1,0 +1,367 @@
+# UnifiedFloppyTool Release Pipeline
+# Creates versioned release artifacts for all platforms
+# Triggered on version tags (v*) or manual dispatch
+
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., 3.7.0)'
+        required: true
+        default: '3.7.0'
+
+env:
+  BUILD_TYPE: Release
+  QT_VERSION: '6.6.2'
+
+jobs:
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Extract Version
+  # ═══════════════════════════════════════════════════════════════════════════
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.get_version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Get Version
+        id: get_version
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION="${GITHUB_REF#refs/tags/v}"
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Release version: $VERSION"
+          
+      - name: Verify Version
+        run: |
+          VERSION="${{ steps.get_version.outputs.version }}"
+          # Check header
+          HEADER_VER=$(grep "UFT_VERSION_STRING" include/uft/uft_version.h | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
+          if [ "$VERSION" != "$HEADER_VER" ]; then
+            echo "⚠️ WARNING: Tag version ($VERSION) != Header version ($HEADER_VER)"
+          fi
+          # Check CMake
+          CMAKE_VER=$(grep 'VERSION [0-9]' CMakeLists.txt | head -1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
+          if [ "$VERSION" != "$CMAKE_VER" ]; then
+            echo "⚠️ WARNING: Tag version ($VERSION) != CMake version ($CMAKE_VER)"
+          fi
+          echo "✓ Version check complete"
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Linux Release Build
+  # ═══════════════════════════════════════════════════════════════════════════
+  linux:
+    needs: version
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake ninja-build
+          sudo apt-get install -y libomp-dev libusb-1.0-0-dev
+          sudo apt-get install -y dpkg-dev fakeroot
+          
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v3
+        with:
+          version: ${{ env.QT_VERSION }}
+          cache: true
+          
+      - name: Configure
+        run: |
+          cmake -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
+            -DUFT_ENABLE_SAMDISK=ON \
+            -DBUILD_TESTING=ON \
+            -DCMAKE_INSTALL_PREFIX=/usr
+        
+      - name: Build
+        run: cmake --build build --parallel
+        
+      - name: Run Tests
+        run: |
+          cd build
+          echo "═══════════════════════════════════════════════════════════"
+          echo "UFT v${{ needs.version.outputs.version }} - Linux Test Suite"
+          echo "═══════════════════════════════════════════════════════════"
+          ctest --output-on-failure -j4 2>&1 | tee test-log.txt
+          echo ""
+          echo "Test Summary:"
+          tail -10 test-log.txt
+          
+      - name: Create Archive
+        run: |
+          VERSION="${{ needs.version.outputs.version }}"
+          mkdir -p release
+          # Copy main files
+          cp build/UnifiedFloppyTool release/ 2>/dev/null || true
+          cp -r build/lib*.a release/ 2>/dev/null || true
+          # Copy docs
+          cp README.md CHANGELOG.md release/
+          # Create tarball
+          cd release
+          tar -czvf ../uft-${VERSION}-linux-x64.tar.gz *
+          
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: uft-${{ needs.version.outputs.version }}-linux-x64
+          path: uft-${{ needs.version.outputs.version }}-linux-x64.tar.gz
+          
+      - name: Upload Test Log
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-log-linux
+          path: build/test-log.txt
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # macOS Release Build (ARM64)
+  # ═══════════════════════════════════════════════════════════════════════════
+  macos-arm64:
+    needs: version
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Dependencies
+        run: brew install cmake ninja
+          
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v3
+        with:
+          version: ${{ env.QT_VERSION }}
+          cache: true
+          arch: clang_64
+          
+      - name: Configure
+        run: |
+          cmake -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
+            -DUFT_ENABLE_OPENMP=OFF \
+            -DUFT_ENABLE_SAMDISK=ON \
+            -DBUILD_TESTING=ON \
+            -DCMAKE_OSX_ARCHITECTURES="arm64"
+        
+      - name: Build
+        run: cmake --build build --parallel
+        
+      - name: Run Tests
+        run: |
+          cd build
+          echo "═══════════════════════════════════════════════════════════"
+          echo "UFT v${{ needs.version.outputs.version }} - macOS ARM64 Test Suite"
+          echo "═══════════════════════════════════════════════════════════"
+          ctest --output-on-failure -j4 2>&1 | tee test-log.txt
+          
+      - name: Create Archive
+        run: |
+          VERSION="${{ needs.version.outputs.version }}"
+          mkdir -p release
+          cp build/UnifiedFloppyTool release/ 2>/dev/null || true
+          cp README.md CHANGELOG.md release/
+          cd release
+          zip -r ../uft-${VERSION}-macos-arm64.zip *
+          
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: uft-${{ needs.version.outputs.version }}-macos-arm64
+          path: uft-${{ needs.version.outputs.version }}-macos-arm64.zip
+          
+      - name: Upload Test Log
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-log-macos
+          path: build/test-log.txt
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # macOS x64 (Intel) Build
+  # ═══════════════════════════════════════════════════════════════════════════
+  macos-x64:
+    needs: version
+    runs-on: macos-13
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Dependencies
+        run: brew install cmake ninja
+          
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v3
+        with:
+          version: ${{ env.QT_VERSION }}
+          cache: true
+          arch: clang_64
+          
+      - name: Configure
+        run: |
+          cmake -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
+            -DUFT_ENABLE_OPENMP=OFF \
+            -DUFT_ENABLE_SAMDISK=ON \
+            -DBUILD_TESTING=ON
+        
+      - name: Build
+        run: cmake --build build --parallel
+        
+      - name: Run Tests
+        run: |
+          cd build
+          ctest --output-on-failure -j4 2>&1 | tee test-log.txt
+          
+      - name: Create Archive
+        run: |
+          VERSION="${{ needs.version.outputs.version }}"
+          mkdir -p release
+          cp build/UnifiedFloppyTool release/ 2>/dev/null || true
+          cp README.md CHANGELOG.md release/
+          cd release
+          zip -r ../uft-${VERSION}-macos-x64.zip *
+          
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: uft-${{ needs.version.outputs.version }}-macos-x64
+          path: uft-${{ needs.version.outputs.version }}-macos-x64.zip
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Windows Release Build
+  # ═══════════════════════════════════════════════════════════════════════════
+  windows:
+    needs: version
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v3
+        with:
+          version: ${{ env.QT_VERSION }}
+          cache: true
+          arch: win64_msvc2019_64
+          
+      - name: Configure
+        run: |
+          cmake -B build `
+            -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} `
+            -DUFT_ENABLE_SAMDISK=ON `
+            -DBUILD_TESTING=ON
+          
+      - name: Build
+        run: cmake --build build --config ${{ env.BUILD_TYPE }} --parallel
+        
+      - name: Run Tests
+        run: |
+          cd build
+          echo "═══════════════════════════════════════════════════════════"
+          echo "UFT v${{ needs.version.outputs.version }} - Windows x64 Test Suite"
+          echo "═══════════════════════════════════════════════════════════"
+          ctest -C ${{ env.BUILD_TYPE }} --output-on-failure 2>&1 | Tee-Object test-log.txt
+        continue-on-error: true
+        
+      - name: Create Archive
+        run: |
+          $VERSION = "${{ needs.version.outputs.version }}"
+          New-Item -ItemType Directory -Force -Path release
+          Copy-Item "build/${{ env.BUILD_TYPE }}/UnifiedFloppyTool.exe" release/ -ErrorAction SilentlyContinue
+          Copy-Item "README.md" release/
+          Copy-Item "CHANGELOG.md" release/
+          # Deploy Qt dependencies
+          if (Test-Path "release/UnifiedFloppyTool.exe") {
+            windeployqt release/UnifiedFloppyTool.exe --release --no-translations
+          }
+          Compress-Archive -Path release/* -DestinationPath "uft-${VERSION}-windows-x64.zip"
+          
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: uft-${{ needs.version.outputs.version }}-windows-x64
+          path: uft-${{ needs.version.outputs.version }}-windows-x64.zip
+          
+      - name: Upload Test Log
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-log-windows
+          path: build/test-log.txt
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Create GitHub Release
+  # ═══════════════════════════════════════════════════════════════════════════
+  release:
+    needs: [version, linux, macos-arm64, macos-x64, windows]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Download All Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          pattern: uft-*
+          merge-multiple: true
+          
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: UFT v${{ needs.version.outputs.version }}
+          body: |
+            ## UnifiedFloppyTool v${{ needs.version.outputs.version }}
+            
+            Cross-platform floppy disk preservation and analysis tool.
+            
+            ### Downloads
+            
+            | Platform | Architecture | File |
+            |----------|--------------|------|
+            | Linux | x64 | `uft-${{ needs.version.outputs.version }}-linux-x64.tar.gz` |
+            | macOS | ARM64 (M1/M2) | `uft-${{ needs.version.outputs.version }}-macos-arm64.zip` |
+            | macOS | x64 (Intel) | `uft-${{ needs.version.outputs.version }}-macos-x64.zip` |
+            | Windows | x64 | `uft-${{ needs.version.outputs.version }}-windows-x64.zip` |
+            
+            ### Changes
+            See [CHANGELOG.md](CHANGELOG.md) for details.
+            
+          files: |
+            artifacts/*.tar.gz
+            artifacts/*.zip
+          draft: false
+          prerelease: false
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Release Summary
+  # ═══════════════════════════════════════════════════════════════════════════
+  summary:
+    needs: [version, linux, macos-arm64, macos-x64, windows]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Release Summary
+        run: |
+          echo "## UFT v${{ needs.version.outputs.version }} Release Build" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Platform | Architecture | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|--------------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Linux | x64 | ${{ needs.linux.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| macOS | ARM64 | ${{ needs.macos-arm64.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| macOS | x64 | ${{ needs.macos-x64.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Windows | x64 | ${{ needs.windows.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "- \`uft-${{ needs.version.outputs.version }}-linux-x64.tar.gz\`" >> $GITHUB_STEP_SUMMARY
+          echo "- \`uft-${{ needs.version.outputs.version }}-macos-arm64.zip\`" >> $GITHUB_STEP_SUMMARY
+          echo "- \`uft-${{ needs.version.outputs.version }}-macos-x64.zip\`" >> $GITHUB_STEP_SUMMARY
+          echo "- \`uft-${{ needs.version.outputs.version }}-windows-x64.zip\`" >> $GITHUB_STEP_SUMMARY

@@ -496,6 +496,7 @@ int uft_caps_to_adf_track(const uint8_t *ipf_track, size_t size,
     
     /* Sync pattern in MFM: 0x4489 0x4489 */
     const uint8_t sync_pattern[] = { 0x44, 0x89, 0x44, 0x89 };
+    (void)sync_pattern;  /* Used for documentation, comparison uses literals */
     
     size_t pos = 0;
     int sectors_found = 0;

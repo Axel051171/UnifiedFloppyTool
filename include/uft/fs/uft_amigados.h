@@ -25,7 +25,7 @@
  * - Hardlink/Softlink support
  * - Comment and protection bits
  * 
- * @version 3.6.0
+ * @version 3.7.0
  * @date 2025
  */
 

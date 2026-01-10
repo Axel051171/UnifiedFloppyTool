@@ -1,5 +1,7 @@
 # UFT fs Module
 set(FS_SOURCES
+    fat_bpb.c
+    uft_fat_detect.c
     uft_amigados.c
     uft_amigados_bitmap.c
     uft_amigados_core.c

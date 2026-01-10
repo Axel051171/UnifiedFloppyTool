@@ -1,7 +1,7 @@
 /**
  * @file uft_main_window.h
  * @brief UFT Main Window - Qt 6 GUI
- * @version 5.32.0
+ * @version 5.33.0
  */
 
 #ifndef UFT_MAIN_WINDOW_H
@@ -40,6 +40,10 @@ class UftHexViewerPanel;
 class UftFileBrowserPanel;
 class UftHardwarePanel;
 class UftTrackGridWidget;
+class AnalyzerToolbar;
+class TrackAnalyzerWidget;
+struct ToolbarAnalysisResult;
+enum class CopyMode;
 
 /* ============================================================================
  * Main Window
@@ -98,15 +102,21 @@ private:
     void setupUi();
     void setupMenuBar();
     void setupToolBar();
+    void setupAnalyzerToolbar();  /* P2-12: AnalyzerToolbar */
     void setupStatusBar();
     void setupCentralWidget();
     void setupConnections();
+    void setupAnalyzerConnections();  /* P2-13: Analyzer ↔ XCopy */
     void loadSettings();
     void saveSettings();
 
     /* UI Components */
     Ui::UftMainWindow *ui;
     QTabWidget *m_mainTabs;
+    
+    /* Analyzer Toolbar - P2-12 */
+    AnalyzerToolbar *m_analyzerToolbar;
+    TrackAnalyzerWidget *m_trackAnalyzer;
     
     /* Panels */
     UftFluxPanel       *m_fluxPanel;
@@ -133,6 +143,14 @@ private:
     QString m_currentFile;
     QString m_currentFormat;
     bool m_modified;
+
+private slots:
+    /* Analyzer Integration - P2-12/P2-13 */
+    void onAnalyzerQuickScan();
+    void onAnalyzerFullAnalysis();
+    void onAnalyzerApply(CopyMode mode);
+    void onQuickScanComplete(const ToolbarAnalysisResult &result);
+    void onImageLoadedForAnalysis(const QString &path);
 };
 
 #endif /* UFT_MAIN_WINDOW_H */

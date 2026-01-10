@@ -31,6 +31,12 @@ set(UFT_FORMAT_SOURCES
     fdi/uft_fdi.c
     cqm/uft_cqm.c
     
+    # ZX Spectrum / Sinclair (integrated from uft_drive_trx_scl_pack_v2)
+    scl/uft_scl.c
+    
+    # XDF (IBM Extended Density Format)
+    uft_xdf.c
+    
     # Registry
     format_registry/uft_format_registry.c
 )

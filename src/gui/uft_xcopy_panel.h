@@ -15,6 +15,16 @@
 #include <QPushButton>
 #include <QProgressBar>
 #include <QLabel>
+#include <QVector>
+
+/* Copy mode enum for Analyzer integration */
+enum class CopyMode {
+    Normal = 0,
+    TrackCopy = 1,
+    NibbleCopy = 2,
+    FluxCopy = 3,
+    Mixed = 4
+};
 
 class UftXCopyPanel : public QWidget
 {
@@ -59,6 +69,9 @@ public:
         int num_copies;
         bool auto_eject;
         bool wait_for_disk;
+        
+        /* Per-Track Modes (from Analyzer) */
+        QVector<int> track_modes;  /* Per-track copy mode override */
     };
 
     XCopyParams getParams() const;
@@ -69,12 +82,21 @@ signals:
     void copyProgress(int track, int side, int percent);
     void copyFinished(bool success);
     void paramsChanged();
+    
+    /* Request analysis from Analyzer */
+    void requestAnalysis();
 
 public slots:
     void startCopy();
     void stopCopy();
     void selectSource();
     void selectDest();
+    
+    /* Analyzer Integration - P2-13 */
+    void setCopyMode(CopyMode mode);
+    void setTrackModes(const QVector<CopyMode> &modes);
+    void applyAnalyzerResult(CopyMode overall, const QVector<CopyMode> &perTrack);
+    void suggestMode(CopyMode mode);
 
 private:
     void setupUi();
@@ -144,6 +166,9 @@ private:
     QLabel *m_statusLabel;
     QPushButton *m_startButton;
     QPushButton *m_stopButton;
+    
+    /* Per-Track Modes (from Analyzer) - P2-13 */
+    QVector<int> m_trackModes;
 };
 
 #endif /* UFT_XCOPY_PANEL_H */

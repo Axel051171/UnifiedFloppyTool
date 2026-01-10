@@ -199,7 +199,7 @@ size_t uft_detect_weak_from_revolutions(
         }
         
         /* Analyze jitter */
-        uft_timing_stats_t stats;
+        uft_timing_stats_t stats = {0};  /* Initialize to avoid maybe-uninitialized */
         uft_analyze_timing_jitter(samples, valid_samples, &stats);
         
         /* Mark as weak if jitter exceeds threshold */

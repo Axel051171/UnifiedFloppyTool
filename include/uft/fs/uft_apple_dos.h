@@ -1,7 +1,7 @@
 /**
  * @file uft_apple_dos.h
  * @brief Apple II DOS 3.3 and ProDOS Filesystem Layer
- * @version 3.6.0
+ * @version 3.7.0
  * 
  * Complete Apple II filesystem implementation:
  * - DOS 3.3: VTOC, Catalog, T/S Lists

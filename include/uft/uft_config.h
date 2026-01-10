@@ -1,8 +1,12 @@
 /**
  * @file uft_config.h
  * @brief UnifiedFloppyTool - Master Configuration Header
- * @version 1.6.1
- * @date 2025-12-30
+ * @version 1.6.2
+ * @date 2025-01-10
+ * 
+ * CHANGELOG v1.6.2:
+ * - Include uft_macros.h for centralized macro definitions
+ * - Eliminates macro duplicates across the codebase
  * 
  * CHANGELOG v1.6.1:
  * - Consolidated all feature flags
@@ -18,14 +22,17 @@
 #ifndef UFT_CONFIG_H
 #define UFT_CONFIG_H
 
+/* Central macro definitions - include first to set defaults */
+#include "uft_macros.h"
+
 /*============================================================================
  * VERSION INFO
  *============================================================================*/
 
 #define UFT_VERSION_MAJOR   1
 #define UFT_VERSION_MINOR   6
-#define UFT_VERSION_PATCH   1
-#define UFT_VERSION_STRING  "1.6.1"
+#define UFT_VERSION_PATCH   2
+#define UFT_VERSION_STRING  "1.6.2"
 
 /*============================================================================
  * PLATFORM DETECTION

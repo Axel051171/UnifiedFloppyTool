@@ -1,7 +1,7 @@
 /**
  * @file uft_apple_core.c
  * @brief Apple DOS 3.3 / ProDOS Core Implementation
- * @version 3.6.0
+ * @version 3.7.0
  * 
  * Lifecycle, detection, sector/block access, interleave handling.
  */
