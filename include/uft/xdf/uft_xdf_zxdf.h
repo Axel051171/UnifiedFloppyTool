@@ -72,7 +72,8 @@ typedef enum {
 /**
  * @brief TR-DOS catalog entry
  */
-typedef struct __attribute__((packed)) {
+#pragma pack(push, 1)
+typedef struct {
     char name[8];               /**< Filename */
     uint8_t type;               /**< File type: B/C/D/# */
     uint16_t start;             /**< Start address */
@@ -81,11 +82,13 @@ typedef struct __attribute__((packed)) {
     uint8_t first_sector;       /**< First sector */
     uint8_t first_track;        /**< First track */
 } zxdf_trdos_entry_t;
+#pragma pack(pop)
 
 /**
  * @brief TR-DOS disk info (sector 9, track 0)
  */
-typedef struct __attribute__((packed)) {
+#pragma pack(push, 1)
+typedef struct {
     uint8_t zero;               /**< Always 0 */
     uint8_t reserved[224];      /**< Unused */
     uint8_t first_free_sector;  /**< First free sector */
@@ -101,6 +104,7 @@ typedef struct __attribute__((packed)) {
     char label[8];              /**< Disk label */
     uint8_t reserved4[3];
 } zxdf_trdos_info_t;
+#pragma pack(pop)
 
 /** TR-DOS disk types */
 #define ZXDF_TRDOS_DS_80        0x16    /**< Double-sided 80 track */
@@ -118,10 +122,12 @@ typedef struct __attribute__((packed)) {
  * SCL Container
  *===========================================================================*/
 
-typedef struct __attribute__((packed)) {
+#pragma pack(push, 1)
+typedef struct {
     char magic[8];              /**< "SINCLAIR" */
     uint8_t file_count;         /**< Number of files */
 } zxdf_scl_header_t;
+#pragma pack(pop)
 
 #define ZXDF_SCL_MAGIC          "SINCLAIR"
 
@@ -129,7 +135,8 @@ typedef struct __attribute__((packed)) {
  * Extended DSK (CPC/+3 compatible)
  *===========================================================================*/
 
-typedef struct __attribute__((packed)) {
+#pragma pack(push, 1)
+typedef struct {
     char magic[34];             /**< "EXTENDED CPC DSK File\r\nDisk-Info\r\n" or
                                      "MV - CPCEMU Disk-File\r\nDisk-Info\r\n" */
     char creator[14];           /**< Creator name */
@@ -138,8 +145,10 @@ typedef struct __attribute__((packed)) {
     uint16_t unused;            /**< Unused (standard DSK: track size) */
     uint8_t track_sizes[204];   /**< Track size table (high bytes) */
 } zxdf_dsk_header_t;
+#pragma pack(pop)
 
-typedef struct __attribute__((packed)) {
+#pragma pack(push, 1)
+typedef struct {
     char magic[13];             /**< "Track-Info\r\n\0" */
     uint8_t unused[3];
     uint8_t track;              /**< Track number */
@@ -151,8 +160,10 @@ typedef struct __attribute__((packed)) {
     uint8_t filler;             /**< Filler byte */
     /* Followed by sector info blocks */
 } zxdf_dsk_track_t;
+#pragma pack(pop)
 
-typedef struct __attribute__((packed)) {
+#pragma pack(push, 1)
+typedef struct {
     uint8_t track;              /**< C - Cylinder */
     uint8_t side;               /**< H - Head */
     uint8_t sector_id;          /**< R - Sector ID */
@@ -161,12 +172,14 @@ typedef struct __attribute__((packed)) {
     uint8_t fdc_status2;        /**< FDC status 2 */
     uint16_t data_length;       /**< Actual data length */
 } zxdf_dsk_sector_t;
+#pragma pack(pop)
 
 /*===========================================================================
  * ZXDF Header Extension
  *===========================================================================*/
 
-typedef struct __attribute__((packed)) {
+#pragma pack(push, 1)
+typedef struct {
     /* Format info */
     zxdf_format_t format;
     uint8_t tracks;
@@ -188,6 +201,7 @@ typedef struct __attribute__((packed)) {
     
     uint8_t reserved[64];
 } zxdf_extension_t;
+#pragma pack(pop)
 
 /*===========================================================================
  * ZXDF API

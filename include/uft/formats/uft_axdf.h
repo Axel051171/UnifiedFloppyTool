@@ -84,7 +84,8 @@ typedef enum {
  * File Header (512 bytes)
  *===========================================================================*/
 
-typedef struct __attribute__((packed)) {
+#pragma pack(push, 1)
+typedef struct {
     /* Identification (16 bytes) */
     char     magic[4];              /**< "AXDF" */
     uint8_t  version_major;         /**< Major version */
@@ -144,12 +145,14 @@ typedef struct __attribute__((packed)) {
     /* Padding to 512 bytes */
     uint8_t  padding[256];
 } axdf_header_t;
+#pragma pack(pop)
 
 /*===========================================================================
  * Track Table Entry (32 bytes each)
  *===========================================================================*/
 
-typedef struct __attribute__((packed)) {
+#pragma pack(push, 1)
+typedef struct {
     uint8_t  track;                 /**< Track number */
     uint8_t  side;                  /**< Side (0/1) */
     uint16_t flags;                 /**< Track flags */
@@ -165,12 +168,14 @@ typedef struct __attribute__((packed)) {
     
     uint32_t checksum;              /**< Track data CRC32 */
 } axdf_track_entry_t;
+#pragma pack(pop)
 
 /*===========================================================================
  * Sector Header (16 bytes each, before sector data)
  *===========================================================================*/
 
-typedef struct __attribute__((packed)) {
+#pragma pack(push, 1)
+typedef struct {
     uint8_t  sector;                /**< Sector number */
     uint8_t  status;                /**< Sector status flags */
     uint16_t size;                  /**< Sector data size */
@@ -181,12 +186,14 @@ typedef struct __attribute__((packed)) {
     uint8_t  weak_bits;             /**< Number of weak bits */
     uint8_t  reserved;
 } axdf_sector_header_t;
+#pragma pack(pop)
 
 /*===========================================================================
  * Repair Log Entry (64 bytes each)
  *===========================================================================*/
 
-typedef struct __attribute__((packed)) {
+#pragma pack(push, 1)
+typedef struct {
     uint32_t timestamp;             /**< Repair timestamp */
     uint8_t  track;                 /**< Track number */
     uint8_t  side;                  /**< Side */
@@ -198,6 +205,7 @@ typedef struct __attribute__((packed)) {
     char     method[32];            /**< Repair method description */
     uint8_t  reserved[16];
 } axdf_repair_entry_t;
+#pragma pack(pop)
 
 /** Repair types */
 typedef enum {

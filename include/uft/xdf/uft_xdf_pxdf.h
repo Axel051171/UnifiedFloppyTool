@@ -87,12 +87,14 @@ typedef enum {
  * PC Sector ID (CHRN)
  *===========================================================================*/
 
-typedef struct __attribute__((packed)) {
+#pragma pack(push, 1)
+typedef struct {
     uint8_t cylinder;           /**< C - Physical cylinder */
     uint8_t head;               /**< H - Head (0/1) */
     uint8_t sector;             /**< R - Sector number */
     uint8_t size;               /**< N - Size code (0=128, 1=256, 2=512, 3=1024) */
 } pxdf_sector_id_t;
+#pragma pack(pop)
 
 /*===========================================================================
  * PC Format Descriptor
@@ -121,7 +123,8 @@ typedef struct {
  * PC Boot Sector
  *===========================================================================*/
 
-typedef struct __attribute__((packed)) {
+#pragma pack(push, 1)
+typedef struct {
     uint8_t jump[3];            /**< Jump instruction */
     char oem_name[8];           /**< OEM name */
     
@@ -147,12 +150,14 @@ typedef struct __attribute__((packed)) {
     char volume_label[11];
     char filesystem[8];
 } pxdf_boot_sector_t;
+#pragma pack(pop)
 
 /*===========================================================================
  * PXDF Header Extension
  *===========================================================================*/
 
-typedef struct __attribute__((packed)) {
+#pragma pack(push, 1)
+typedef struct {
     /* Format info */
     pxdf_format_t format;       /**< Detected format */
     uint8_t cylinders;
@@ -179,6 +184,7 @@ typedef struct __attribute__((packed)) {
     
     uint8_t reserved[64];
 } pxdf_extension_t;
+#pragma pack(pop)
 
 /*===========================================================================
  * PXDF API

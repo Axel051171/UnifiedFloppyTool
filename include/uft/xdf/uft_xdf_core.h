@@ -162,7 +162,8 @@ typedef enum {
 /**
  * @brief Zone descriptor (within a track)
  */
-typedef struct __attribute__((packed)) {
+#pragma pack(push, 1)
+typedef struct {
     uint32_t offset;            /**< Bit offset in track */
     uint32_t length;            /**< Length in bits */
     uint8_t type;               /**< xdf_zone_type_t */
@@ -174,6 +175,7 @@ typedef struct __attribute__((packed)) {
     uint8_t variance;           /**< Bit variance (0-100) */
     uint8_t reserved[2];
 } xdf_zone_t;
+#pragma pack(pop)
 
 /*===========================================================================
  * Read Capture (Phase 1: Multi-Read)
@@ -182,7 +184,8 @@ typedef struct __attribute__((packed)) {
 /**
  * @brief Single read capture
  */
-typedef struct __attribute__((packed)) {
+#pragma pack(push, 1)
+typedef struct {
     uint32_t timestamp;         /**< Capture timestamp */
     uint16_t revolution;        /**< Revolution number */
     uint16_t flags;             /**< Capture flags */
@@ -199,12 +202,14 @@ typedef struct __attribute__((packed)) {
     uint16_t bitcell_jitter;    /**< Bitcell jitter (ns) */
     uint16_t reserved;
 } xdf_read_capture_t;
+#pragma pack(pop)
 
 /*===========================================================================
  * Sector Header
  *===========================================================================*/
 
-typedef struct __attribute__((packed)) {
+#pragma pack(push, 1)
+typedef struct {
     /* Identity */
     uint8_t sector;             /**< Sector number */
     uint8_t head;               /**< Head (0/1) */
@@ -230,6 +235,7 @@ typedef struct __attribute__((packed)) {
     uint8_t zone_count;         /**< Number of zones */
     uint8_t reserved[3];
 } xdf_sector_t;
+#pragma pack(pop)
 
 /*===========================================================================
  * Track Header
@@ -248,7 +254,8 @@ typedef struct __attribute__((packed)) {
 #define XDF_TRK_LONG_TRACK      0x0200  /**< Extended track length */
 #define XDF_TRK_DENSITY_ERROR   0x0400  /**< Density mismatch */
 
-typedef struct __attribute__((packed)) {
+#pragma pack(push, 1)
+typedef struct {
     /* Identity */
     uint8_t cylinder;           /**< Cylinder number */
     uint8_t head;               /**< Head (0/1) */
@@ -287,6 +294,7 @@ typedef struct __attribute__((packed)) {
     uint32_t data_crc32;        /**< CRC32 of decoded data */
     uint32_t flux_crc32;        /**< CRC32 of flux data */
 } xdf_track_t;
+#pragma pack(pop)
 
 /*===========================================================================
  * Protection Detection
@@ -309,7 +317,8 @@ typedef struct __attribute__((packed)) {
 #define XDF_PROT_NO_FLUX        0x00002000
 #define XDF_PROT_CUSTOM         0x80000000
 
-typedef struct __attribute__((packed)) {
+#pragma pack(push, 1)
+typedef struct {
     uint32_t type_flags;        /**< Protection types detected */
     xdf_confidence_t confidence;/**< Detection confidence */
     
@@ -327,6 +336,7 @@ typedef struct __attribute__((packed)) {
     uint8_t is_intentional;     /**< true = protection, false = defect */
     uint8_t reserved[7];
 } xdf_protection_t;
+#pragma pack(pop)
 
 /*===========================================================================
  * Repair Log Entry
@@ -345,7 +355,8 @@ typedef enum {
     XDF_REPAIR_UNDO,            /**< Repair was undone */
 } xdf_repair_action_t;
 
-typedef struct __attribute__((packed)) {
+#pragma pack(push, 1)
+typedef struct {
     uint32_t timestamp;         /**< When repaired */
     
     /* Location */
@@ -374,6 +385,7 @@ typedef struct __attribute__((packed)) {
     uint8_t reversible;         /**< Can be undone? */
     uint8_t reserved;
 } xdf_repair_entry_t;
+#pragma pack(pop)
 
 /*===========================================================================
  * Decision Matrix Entry
@@ -382,7 +394,8 @@ typedef struct __attribute__((packed)) {
 /**
  * @brief Explains WHY something is classified as it is
  */
-typedef struct __attribute__((packed)) {
+#pragma pack(push, 1)
+typedef struct {
     /* Location */
     uint8_t track;
     uint8_t head;
@@ -407,6 +420,7 @@ typedef struct __attribute__((packed)) {
     uint16_t measurement_size;
     uint16_t reserved;
 } xdf_decision_t;
+#pragma pack(pop)
 
 /*===========================================================================
  * Stability Map (Phase 2: Compare)
@@ -415,7 +429,8 @@ typedef struct __attribute__((packed)) {
 /**
  * @brief Per-bit stability across multiple reads
  */
-typedef struct __attribute__((packed)) {
+#pragma pack(push, 1)
+typedef struct {
     uint8_t track;
     uint8_t head;
     uint16_t bit_count;         /**< Number of bits */
@@ -430,6 +445,7 @@ typedef struct __attribute__((packed)) {
     uint32_t unstable_bits;     /**< Count of unstable bits */
     float reproducibility;      /**< 0.0 - 1.0 */
 } xdf_stability_map_t;
+#pragma pack(pop)
 
 /*===========================================================================
  * Knowledge Base Match (Phase 4)
@@ -445,7 +461,8 @@ typedef enum {
     XDF_KB_SOURCE_USER,         /**< User-provided */
 } xdf_kb_source_t;
 
-typedef struct __attribute__((packed)) {
+#pragma pack(push, 1)
+typedef struct {
     uint8_t source;             /**< xdf_kb_source_t */
     uint8_t match_type;         /**< 0=exact, 1=similar, 2=partial */
     xdf_confidence_t confidence;/**< Match confidence */
@@ -461,12 +478,14 @@ typedef struct __attribute__((packed)) {
     uint8_t sector;
     uint8_t reserved[2];
 } xdf_kb_match_t;
+#pragma pack(pop)
 
 /*===========================================================================
  * File Header (Universal)
  *===========================================================================*/
 
-typedef struct __attribute__((packed)) {
+#pragma pack(push, 1)
+typedef struct {
     /* Magic & Version (16 bytes) */
     char magic[4];              /**< XDF_MAGIC_* */
     uint8_t version_major;
@@ -541,6 +560,7 @@ typedef struct __attribute__((packed)) {
     /* Padding to 512 bytes */
     uint8_t padding[192];
 } xdf_header_t;
+#pragma pack(pop)
 
 /*===========================================================================
  * API Types

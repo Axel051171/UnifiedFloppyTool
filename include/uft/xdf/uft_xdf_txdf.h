@@ -89,13 +89,15 @@ typedef enum {
  * MSA Header
  *===========================================================================*/
 
-typedef struct __attribute__((packed)) {
+#pragma pack(push, 1)
+typedef struct {
     uint16_t magic;             /**< 0x0E0F */
     uint16_t sectors_per_track;
     uint16_t sides;             /**< 0 = single, 1 = double */
     uint16_t start_track;
     uint16_t end_track;
 } txdf_msa_header_t;
+#pragma pack(pop)
 
 #define TXDF_MSA_MAGIC          0x0F0E  /**< MSA magic (little-endian) */
 
@@ -103,7 +105,8 @@ typedef struct __attribute__((packed)) {
  * STX/Pasti Structures
  *===========================================================================*/
 
-typedef struct __attribute__((packed)) {
+#pragma pack(push, 1)
+typedef struct {
     char magic[4];              /**< "RSY\0" */
     uint16_t version;           /**< Format version */
     uint16_t tool_version;      /**< Tool that created it */
@@ -112,8 +115,10 @@ typedef struct __attribute__((packed)) {
     uint8_t revision;           /**< Revision number */
     uint32_t reserved2;
 } txdf_stx_header_t;
+#pragma pack(pop)
 
-typedef struct __attribute__((packed)) {
+#pragma pack(push, 1)
+typedef struct {
     uint32_t block_size;        /**< Size of this record */
     uint32_t fuzzy_size;        /**< Fuzzy mask size */
     uint16_t sector_count;      /**< Sectors in track */
@@ -122,12 +127,14 @@ typedef struct __attribute__((packed)) {
     uint8_t track_number;       /**< Track number */
     uint8_t track_type;         /**< Track type */
 } txdf_stx_track_t;
+#pragma pack(pop)
 
 /*===========================================================================
  * TXDF Header Extension
  *===========================================================================*/
 
-typedef struct __attribute__((packed)) {
+#pragma pack(push, 1)
+typedef struct {
     /* Format info */
     txdf_format_t format;
     uint8_t tracks;
@@ -158,6 +165,7 @@ typedef struct __attribute__((packed)) {
     
     uint8_t reserved[64];
 } txdf_extension_t;
+#pragma pack(pop)
 
 /*===========================================================================
  * TXDF API

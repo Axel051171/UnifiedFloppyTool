@@ -16,6 +16,13 @@
 #include <string.h>
 #include <ctype.h>
 
+/* strcasecmp portability */
+#ifdef _WIN32
+#define strcasecmp _stricmp
+#else
+#include <strings.h>
+#endif
+
 /* ============================================================================
  * Track Layout Tables
  * ============================================================================ */

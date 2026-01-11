@@ -24,9 +24,34 @@
 #include <string.h>
 #include <stdarg.h>
 #include <time.h>
-#include <dirent.h>
 #include <sys/stat.h>
+
+/* Platform-specific includes */
+#ifdef _WIN32
+#include <windows.h>
+#include <shlwapi.h>
+#define strcasecmp _stricmp
+#define PATH_SEP '\\'
+/* S_IS* macros for Windows */
+#ifndef S_ISDIR
+#define S_ISDIR(m) (((m) & S_IFMT) == S_IFDIR)
+#endif
+#ifndef S_ISREG
+#define S_ISREG(m) (((m) & S_IFMT) == S_IFREG)
+#endif
+/* fnmatch replacement */
+static int uft_xdf_fnmatch(const char *pattern, const char *string, int flags) {
+    (void)flags;
+    return PathMatchSpecA(string, pattern) ? 0 : 1;
+}
+#define fnmatch(p, s, f) uft_xdf_fnmatch(p, s, f)
+#define FNM_NOMATCH 1
+#else
+#include <dirent.h>
 #include <fnmatch.h>
+#include <strings.h>
+#define PATH_SEP '/'
+#endif
 
 /*===========================================================================
  * Batch Processing Implementation

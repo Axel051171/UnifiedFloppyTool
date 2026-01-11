@@ -55,10 +55,13 @@ extern "C" {
 #define UFT_D88_PC88_2D_SECSIZE     256
 #define UFT_D88_PC88_2D_SIZE        327680
 
-#ifdef _MSC_VER
+/*---------------------------------------------------------------------------
+ * Packed Structures (Cross-Platform)
+ *---------------------------------------------------------------------------*/
+
 #pragma pack(push, 1)
-#endif
-typedef struct __attribute__((packed)) {
+
+typedef struct {
     char     disk_name[17];
     uint8_t  reserved1[9];
     uint8_t  write_protect;
@@ -66,14 +69,8 @@ typedef struct __attribute__((packed)) {
     uint32_t disk_size;
     uint32_t track_offsets[164];
 } uft_d88_header_t;
-#ifdef _MSC_VER
-#pragma pack(pop)
-#endif
 
-#ifdef _MSC_VER
-#pragma pack(push, 1)
-#endif
-typedef struct __attribute__((packed)) {
+typedef struct {
     uint8_t  cylinder;
     uint8_t  head;
     uint8_t  sector;
@@ -85,9 +82,12 @@ typedef struct __attribute__((packed)) {
     uint8_t  reserved[5];
     uint16_t data_size;
 } uft_d88_sector_header_t;
-#ifdef _MSC_VER
+
 #pragma pack(pop)
-#endif
+
+/*---------------------------------------------------------------------------
+ * Info Structure (not packed)
+ *---------------------------------------------------------------------------*/
 
 typedef struct {
     char     name[18];

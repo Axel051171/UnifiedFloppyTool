@@ -77,7 +77,8 @@
  * Compiler Compatibility
  *===========================================================================*/
 
-/* Packed structs */
+/* Packed structs - only define if not already defined by uft_packed.h */
+#ifndef UFT_PACKED_BEGIN
 #ifdef _MSC_VER
     #define UFT_PACKED_BEGIN __pragma(pack(push, 1))
     #define UFT_PACKED_END   __pragma(pack(pop))
@@ -87,26 +88,33 @@
     #define UFT_PACKED_END
     #define UFT_PACKED __attribute__((packed))
 #endif
+#endif
 
 /* Alignment */
+#ifndef UFT_ALIGNED
 #ifdef _MSC_VER
     #define UFT_ALIGNED(n) __declspec(align(n))
 #else
     #define UFT_ALIGNED(n) __attribute__((aligned(n)))
 #endif
+#endif
 
 /* Inline */
+#ifndef UFT_INLINE
 #ifdef _MSC_VER
     #define UFT_INLINE __forceinline
 #else
     #define UFT_INLINE static inline __attribute__((always_inline))
 #endif
+#endif
 
 /* Restrict */
+#ifndef UFT_RESTRICT
 #ifdef _MSC_VER
     #define UFT_RESTRICT __restrict
 #else
     #define UFT_RESTRICT __restrict__
+#endif
 #endif
 
 /*===========================================================================

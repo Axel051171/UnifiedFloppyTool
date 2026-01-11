@@ -66,11 +66,13 @@ extern "C" {
 #ifdef _MSC_VER
 #pragma pack(push, 1)
 #endif
-typedef struct __attribute__((packed)) {
+#pragma pack(push, 1)
+typedef struct {
     uint32_t signature;
     uint32_t magic;
     uint32_t crc32;
 } uft_woz_header_t;
+#pragma pack(pop)
 #ifdef _MSC_VER
 #pragma pack(pop)
 #endif
@@ -78,10 +80,12 @@ typedef struct __attribute__((packed)) {
 #ifdef _MSC_VER
 #pragma pack(push, 1)
 #endif
-typedef struct __attribute__((packed)) {
+#pragma pack(push, 1)
+typedef struct {
     uint32_t chunk_id;
     uint32_t chunk_size;
 } uft_woz_chunk_header_t;
+#pragma pack(pop)
 #ifdef _MSC_VER
 #pragma pack(pop)
 #endif
@@ -90,7 +94,8 @@ typedef struct __attribute__((packed)) {
 #ifdef _MSC_VER
 #pragma pack(push, 1)
 #endif
-typedef struct __attribute__((packed)) {
+#pragma pack(push, 1)
+typedef struct {
     uint8_t  info_version;          /* 1 byte */
     uint8_t  disk_type;             /* 1 byte */
     uint8_t  write_protected;       /* 1 byte */
@@ -107,6 +112,7 @@ typedef struct __attribute__((packed)) {
     uint16_t largest_flux_track;    /* 2 bytes - WOZ2.1+ */
     uint8_t  reserved[10];          /* 10 bytes padding to 60 */
 } uft_woz_info_t;
+#pragma pack(pop)
 #ifdef _MSC_VER
 #pragma pack(pop)
 #endif
@@ -114,7 +120,8 @@ typedef struct __attribute__((packed)) {
 #ifdef _MSC_VER
 #pragma pack(push, 1)
 #endif
-typedef struct __attribute__((packed)) {
+#pragma pack(push, 1)
+typedef struct {
     uint8_t  bitstream[6646];
     uint16_t bytes_used;
     uint16_t bit_count;
@@ -123,6 +130,7 @@ typedef struct __attribute__((packed)) {
     uint8_t  splice_bit_count;
     uint16_t reserved;
 } uft_woz_v1_track_t;
+#pragma pack(pop)
 #ifdef _MSC_VER
 #pragma pack(pop)
 #endif
@@ -130,11 +138,13 @@ typedef struct __attribute__((packed)) {
 #ifdef _MSC_VER
 #pragma pack(push, 1)
 #endif
-typedef struct __attribute__((packed)) {
+#pragma pack(push, 1)
+typedef struct {
     uint16_t starting_block;
     uint16_t block_count;
     uint32_t bit_count;
 } uft_woz_v2_trk_entry_t;
+#pragma pack(pop)
 #ifdef _MSC_VER
 #pragma pack(pop)
 #endif

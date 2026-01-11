@@ -97,7 +97,7 @@ typedef struct s_col_
 #pragma pack()
 
 #define COLOR_RGBA(R,G,B,A) ( (R & 0xFF) | ( ( G & 0xFF ) << 8 ) | ( ( B & 0xFF ) << 16 ) | ( ( A & 0xFF ) << 24 ) )
-#define COLOR_RGB2RGBA(RGB,A) ( RGB | ( ( A & 0xFF ) << 24 ) )
+#define COLOR_RGB2RGBA(RGB,A) ( (uint32_t)(RGB) | ( (uint32_t)( (A) & 0xFF ) << 24 ) )
 
 static uint32_t alpha(uint32_t dst, uint32_t src, uint8_t alpha_value)
 {

@@ -39,7 +39,8 @@ extern "C" {
  * Disk Entry
  *===========================================================================*/
 
-typedef struct __attribute__((packed)) {
+#pragma pack(push, 1)
+typedef struct {
     /* Identity */
     uint32_t disk_id;           /**< Unique ID within bundle */
     char name[64];              /**< Disk name */
@@ -70,6 +71,7 @@ typedef struct __attribute__((packed)) {
     uint32_t crc32;             /**< CRC32 of disk data */
     uint8_t sha256[32];         /**< SHA-256 (optional) */
 } mxdf_disk_entry_t;
+#pragma pack(pop)
 
 /*===========================================================================
  * Relationship Types
@@ -91,7 +93,8 @@ typedef enum {
  * Bundle Metadata
  *===========================================================================*/
 
-typedef struct __attribute__((packed)) {
+#pragma pack(push, 1)
+typedef struct {
     /* Title info */
     char title[128];            /**< Game/software title */
     char publisher[64];         /**< Publisher name */
@@ -120,12 +123,14 @@ typedef struct __attribute__((packed)) {
     /* Notes */
     char notes[512];            /**< Free-form notes */
 } mxdf_metadata_t;
+#pragma pack(pop)
 
 /*===========================================================================
  * MXDF Header
  *===========================================================================*/
 
-typedef struct __attribute__((packed)) {
+#pragma pack(push, 1)
+typedef struct {
     /* Magic & Version (16 bytes) */
     char magic[4];              /**< "MXDF" */
     uint8_t version_major;
@@ -166,12 +171,14 @@ typedef struct __attribute__((packed)) {
     /* Padding to 1024 bytes */
     uint8_t padding[432];
 } mxdf_header_t;
+#pragma pack(pop)
 
 /*===========================================================================
  * Relationship Entry
  *===========================================================================*/
 
-typedef struct __attribute__((packed)) {
+#pragma pack(push, 1)
+typedef struct {
     uint32_t source_id;         /**< Source disk ID */
     uint32_t target_id;         /**< Target disk ID */
     uint8_t relation;           /**< mxdf_relation_t */
@@ -179,6 +186,7 @@ typedef struct __attribute__((packed)) {
     uint8_t reserved[6];
     char description[48];       /**< Relationship description */
 } mxdf_relation_entry_t;
+#pragma pack(pop)
 
 /*===========================================================================
  * MXDF Context

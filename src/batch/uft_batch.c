@@ -26,6 +26,13 @@ static int uft_fnmatch(const char *pattern, const char *string, int flags) {
 }
 #define fnmatch(p, s, f) uft_fnmatch(p, s, f)
 #define FNM_NOMATCH 1
+/* POSIX S_IS* macros for Windows */
+#ifndef S_ISDIR
+#define S_ISDIR(m)  (((m) & S_IFMT) == S_IFDIR)
+#endif
+#ifndef S_ISREG
+#define S_ISREG(m)  (((m) & S_IFMT) == S_IFREG)
+#endif
 #else
 #include <fnmatch.h>
 #include <pthread.h>

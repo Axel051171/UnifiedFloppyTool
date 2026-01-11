@@ -100,7 +100,8 @@ typedef enum {
 /**
  * @brief C64 sector header (from disk)
  */
-typedef struct __attribute__((packed)) {
+#pragma pack(push, 1)
+typedef struct {
     uint8_t block_id;           /**< 0x08 for header */
     uint8_t checksum;           /**< Header XOR checksum */
     uint8_t sector;             /**< Sector number */
@@ -108,6 +109,7 @@ typedef struct __attribute__((packed)) {
     uint8_t disk_id[2];         /**< Disk ID */
     uint8_t padding[2];         /**< Usually 0x0F */
 } dxdf_sector_header_t;
+#pragma pack(pop)
 
 /**
  * @brief C64 track analysis
@@ -144,7 +146,8 @@ typedef struct {
 /**
  * @brief DXDF header extension
  */
-typedef struct __attribute__((packed)) {
+#pragma pack(push, 1)
+typedef struct {
     /* C64-specific info */
     uint8_t disk_id[2];         /**< Disk ID from BAM */
     uint8_t dos_type[2];        /**< DOS type (2A, etc.) */
@@ -172,6 +175,7 @@ typedef struct __attribute__((packed)) {
     
     uint8_t reserved2[32];
 } dxdf_extension_t;
+#pragma pack(pop)
 
 /*===========================================================================
  * DXDF API
