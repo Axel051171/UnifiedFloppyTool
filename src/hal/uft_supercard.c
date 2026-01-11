@@ -29,6 +29,11 @@ typedef HANDLE serial_handle_t;
 #include <dirent.h>
 typedef int serial_handle_t;
 #define INVALID_SERIAL (-1)
+
+/* CRTSCTS is not defined on macOS */
+#ifndef CRTSCTS
+#define CRTSCTS 0
+#endif
 #endif
 
 /*============================================================================

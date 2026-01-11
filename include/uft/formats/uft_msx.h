@@ -202,7 +202,7 @@ typedef struct uft_msx_protection_result {
     uint8_t  extra_tracks;         /* Number of extra tracks */
     uint8_t  extra_sectors;        /* Extra sectors per track */
     uint8_t  bad_sector_count;     /* Number of bad sectors */
-    char     description[128];     /* Human-readable description */
+    char     description[256];     /* Human-readable description (increased from 128) */
 } uft_msx_protection_result_t;
 
 /*============================================================================

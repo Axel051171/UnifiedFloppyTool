@@ -276,11 +276,12 @@ UFT_PACK_END
 uft_fs_type_t uft_fs_detect(const uint8_t *data, size_t len);
 
 /**
- * @brief Detect FAT filesystem variant
+ * @brief Detect FAT filesystem variant (simple version)
  * @param data Boot sector (512 bytes minimum)
  * @return FAT type or UFT_FS_UNKNOWN
+ * @note For detailed detection with confidence, use uft_fat_detect() from uft_fat_detect.h
  */
-uft_fs_type_t uft_fat_detect(const uint8_t *data);
+uft_fs_type_t uft_fat_detect_type(const uint8_t *data);
 
 /**
  * @brief Detect Minix filesystem version

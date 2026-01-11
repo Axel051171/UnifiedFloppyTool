@@ -225,7 +225,7 @@ typedef struct uft_trs80_protection_result {
     uint8_t  confidence;
     uint8_t  crc_error_count;
     uint8_t  mixed_density_tracks;
-    char     description[128];
+    char     description[256];  /* Increased from 128 to match strncpy usage */
 } uft_trs80_protection_result_t;
 
 /*============================================================================

@@ -120,6 +120,34 @@ static int create_directory(const char *path) {
 #endif
 }
 
+/**
+ * @brief Parse raw KryoFlux stream data (stub implementation)
+ * 
+ * This function parses raw KryoFlux stream data into flux timing values.
+ * Currently not fully implemented - returns error.
+ * 
+ * @param raw Raw stream data
+ * @param raw_size Size of raw data
+ * @param flux_out Output flux array (allocated by function)
+ * @param flux_count_out Number of flux values
+ * @param index_out Optional index positions (can be NULL)
+ * @param index_count_out Optional index count (can be NULL)
+ * @return 0 on success, non-zero on error
+ */
+static int uft_kf_parse_raw_stream(const uint8_t *raw, size_t raw_size,
+                                    uint32_t **flux_out, size_t *flux_count_out,
+                                    size_t *index_out, size_t *index_count_out) {
+    (void)raw;
+    (void)raw_size;
+    (void)index_out;
+    (void)index_count_out;
+    
+    /* Stub: Not yet implemented */
+    *flux_out = NULL;
+    *flux_count_out = 0;
+    return -1;  /* Return error - feature not implemented */
+}
+
 static bool find_dtc_executable(uft_kf_config_t *cfg) {
     /* Check if already set */
     if (cfg->dtc_path[0] && is_executable(cfg->dtc_path)) {

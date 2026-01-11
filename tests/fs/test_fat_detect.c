@@ -223,27 +223,30 @@ static void test_false_positive_rejection(void)
  * ============================================================================ */
 static void test_edge_cases(void)
 {
-    printf("\n=== Test 3: Edge Cases ===\n");
-    
     uft_fat_detect_result_t result;
     int rc;
+    uint8_t small[256];
+    uint8_t no_sig[512];
+    uint8_t bad_bpb[512];
+    
+    printf("\n=== Test 3: Edge Cases ===\n");
     
     /* NULL pointer */
     rc = uft_fat_detect(NULL, 512, &result);
     TEST(rc != 0, "NULL data rejected");
     
     /* Too small */
-    uint8_t small[256] = {0};
+    memset(small, 0, sizeof(small));
     rc = uft_fat_detect(small, 256, &result);
     TEST(rc != 0, "Too small rejected");
     
     /* No boot signature */
-    uint8_t no_sig[512] = {0};
+    memset(no_sig, 0, sizeof(no_sig));
     rc = uft_fat_detect(no_sig, 512, &result);
     TEST(rc != 0, "No signature rejected");
     
     /* Invalid BPB (all zeros except signature) */
-    uint8_t bad_bpb[512] = {0};
+    memset(bad_bpb, 0, sizeof(bad_bpb));
     bad_bpb[510] = 0x55;
     bad_bpb[511] = 0xAA;
     rc = uft_fat_detect(bad_bpb, 512, &result);

@@ -389,7 +389,7 @@ typedef struct {
     int      sectors_per_track;
     int      sector_size;
     int      version;
-    char     format[16];
+    char     format[32];  /* Increased from 16 to match strncpy usage */
     bool     write_protected;
     bool     has_errors;
     uint8_t *error_info;

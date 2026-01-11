@@ -25,6 +25,11 @@
     #include "uft/compat/uft_dirent.h"
     #include <errno.h>
     #define UFT_GW_PLATFORM_POSIX 1
+    
+    /* CRTSCTS is not defined on macOS */
+    #ifndef CRTSCTS
+    #define CRTSCTS 0
+    #endif
 #endif
 
 /* ═══════════════════════════════════════════════════════════════════════════
