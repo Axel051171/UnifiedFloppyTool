@@ -31,14 +31,9 @@
 #define UFT_SERIAL_HANDLE int
 #define INVALID_HANDLE_VALUE (-1)
 
-/* CRTSCTS is not defined on macOS - use alternative flags */
+/* CRTSCTS is not defined on macOS */
 #ifndef CRTSCTS
-#ifdef __APPLE__
-/* macOS uses CCTS_OFLOW | CRTS_IFLOW instead */
-#define CRTSCTS (CCTS_OFLOW | CRTS_IFLOW)
-#else
 #define CRTSCTS 0
-#endif
 #endif
 #endif
 

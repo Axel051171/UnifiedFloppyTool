@@ -51,10 +51,8 @@ extern "C" {
 #define UFT_HFE_V3_OP_SKIPBITS      0xF3
 #define UFT_HFE_V3_OP_RAND          0xF4
 
-#ifdef _MSC_VER
 #pragma pack(push, 1)
-#endif
-typedef struct __attribute__((packed)) {
+typedef struct {
     char     signature[8];
     uint8_t  format_revision;
     uint8_t  track_count;
@@ -73,20 +71,14 @@ typedef struct __attribute__((packed)) {
     uint8_t  track0s1_encoding;
     uint8_t  reserved2[486];
 } uft_hfe_header_t;
-#ifdef _MSC_VER
 #pragma pack(pop)
-#endif
 
-#ifdef _MSC_VER
 #pragma pack(push, 1)
-#endif
-typedef struct __attribute__((packed)) {
+typedef struct {
     uint16_t offset;
     uint16_t length;
 } uft_hfe_track_entry_t;
-#ifdef _MSC_VER
 #pragma pack(pop)
-#endif
 
 typedef struct {
     uint8_t     mode;

@@ -30,6 +30,7 @@
 #ifdef _WIN32
 #include <windows.h>
 #include <shlwapi.h>
+#include "uft/compat/uft_dirent.h"
 #define strcasecmp _stricmp
 #define PATH_SEP '\\'
 /* S_IS* macros for Windows */

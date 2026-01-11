@@ -45,10 +45,8 @@ extern "C" {
 static const uint8_t uft_dc42_zone_tracks[5] = {16, 32, 48, 64, 80};
 static const uint8_t uft_dc42_zone_spt[5] = {12, 11, 10, 9, 8};
 
-#ifdef _MSC_VER
 #pragma pack(push, 1)
-#endif
-typedef struct __attribute__((packed)) {
+typedef struct {
     uint8_t  name_len;
     char     disk_name[63];
     uint32_t data_size;
@@ -59,9 +57,7 @@ typedef struct __attribute__((packed)) {
     uint8_t  format_byte;
     uint16_t magic;
 } uft_dc42_header_t;
-#ifdef _MSC_VER
 #pragma pack(pop)
-#endif
 
 typedef struct {
     char     disk_name[64];

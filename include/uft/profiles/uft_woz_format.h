@@ -63,9 +63,6 @@ extern "C" {
 #define UFT_WOZ_TIMING_525          32
 #define UFT_WOZ_TIMING_35           16
 
-#ifdef _MSC_VER
-#pragma pack(push, 1)
-#endif
 #pragma pack(push, 1)
 typedef struct {
     uint32_t signature;
@@ -73,27 +70,15 @@ typedef struct {
     uint32_t crc32;
 } uft_woz_header_t;
 #pragma pack(pop)
-#ifdef _MSC_VER
-#pragma pack(pop)
-#endif
 
-#ifdef _MSC_VER
-#pragma pack(push, 1)
-#endif
 #pragma pack(push, 1)
 typedef struct {
     uint32_t chunk_id;
     uint32_t chunk_size;
 } uft_woz_chunk_header_t;
 #pragma pack(pop)
-#ifdef _MSC_VER
-#pragma pack(pop)
-#endif
 
 /* WOZ INFO chunk - 60 bytes for WOZ2 format */
-#ifdef _MSC_VER
-#pragma pack(push, 1)
-#endif
 #pragma pack(push, 1)
 typedef struct {
     uint8_t  info_version;          /* 1 byte */
@@ -113,13 +98,7 @@ typedef struct {
     uint8_t  reserved[10];          /* 10 bytes padding to 60 */
 } uft_woz_info_t;
 #pragma pack(pop)
-#ifdef _MSC_VER
-#pragma pack(pop)
-#endif
 
-#ifdef _MSC_VER
-#pragma pack(push, 1)
-#endif
 #pragma pack(push, 1)
 typedef struct {
     uint8_t  bitstream[6646];
@@ -131,13 +110,7 @@ typedef struct {
     uint16_t reserved;
 } uft_woz_v1_track_t;
 #pragma pack(pop)
-#ifdef _MSC_VER
-#pragma pack(pop)
-#endif
 
-#ifdef _MSC_VER
-#pragma pack(push, 1)
-#endif
 #pragma pack(push, 1)
 typedef struct {
     uint16_t starting_block;
@@ -145,9 +118,6 @@ typedef struct {
     uint32_t bit_count;
 } uft_woz_v2_trk_entry_t;
 #pragma pack(pop)
-#ifdef _MSC_VER
-#pragma pack(pop)
-#endif
 
 static const uint8_t uft_woz_gcr_valid_nibbles[64] = {
     0x96, 0x97, 0x9A, 0x9B, 0x9D, 0x9E, 0x9F, 0xA6,

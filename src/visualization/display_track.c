@@ -96,7 +96,7 @@ typedef struct s_col_
 }s_col;
 #pragma pack()
 
-#define COLOR_RGBA(R,G,B,A) ( (R & 0xFF) | ( ( G & 0xFF ) << 8 ) | ( ( B & 0xFF ) << 16 ) | ( ( A & 0xFF ) << 24 ) )
+#define COLOR_RGBA(R,G,B,A) ( (uint32_t)(R & 0xFF) | ( (uint32_t)( G & 0xFF ) << 8 ) | ( (uint32_t)( B & 0xFF ) << 16 ) | ( (uint32_t)( A & 0xFF ) << 24 ) )
 #define COLOR_RGB2RGBA(RGB,A) ( (uint32_t)(RGB) | ( (uint32_t)( (A) & 0xFF ) << 24 ) )
 
 static uint32_t alpha(uint32_t dst, uint32_t src, uint8_t alpha_value)
@@ -274,7 +274,7 @@ static void plot(LIBFLUX_TD *td, int layer, int x, int y, uint32_t color, uint8_
 			{
 				case 0:
 				default:
-					td->layers[layer][(td->xsize*y)+x] = (color & 0xFFFFFF) | (alpha_value << 24);
+					td->layers[layer][(td->xsize*y)+x] = (color & 0xFFFFFF) | ((uint32_t)(alpha_value) << 24);
 				break;
 				case 1:
 					rdcolor = td->layers[layer][(td->xsize*y)+x];

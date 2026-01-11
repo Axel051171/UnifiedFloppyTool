@@ -1,88 +1,64 @@
 # UFT TODO - v3.7.0
 
-**Status:** CI Fixes Applied  
+**Status:** CI Fixes Complete (Linux ✅, Windows/macOS pending CI)  
 **Date:** 2025-01-11
 
 ---
 
-## ✅ COMPLETED
+## ✅ P0 - COMPLETED (Build Blockers)
 
-### CI/Build Fixes (P0) - DONE
-- [x] MSVC packed struct compatibility (pragma pack)
-- [x] Windows S_ISDIR/S_ISREG macros
-- [x] macOS strcasecmp (strings.h)
-- [x] macOS CRTSCTS serial port flag
-- [x] Integer overflow in display_track.c
-- [x] Macro redefinition guards (uft_common.h, uft_atomics.h)
-
-### RetroGhidra Formats - DONE
-- [x] BBC Micro UEF Tape Format
-- [x] ZX Spectrum SNA Snapshot (48K/128K)
-- [x] Amstrad CPC SNA Snapshot
-- [x] C64 CRT Cartridge (61 types)
-- [x] Commodore D80/D82 Disk
-- [x] Apple II DOS 3.3 / ProDOS
-- [x] Atari 8-bit XEX / Atari ST PRG
-- [x] TRS-80 /CMD / CoCo CCC
-- [x] Spectrum Next NEX
-
-### DDR/ZX Tape Formats - DONE
-- [x] KC85 CAOS FSK
-- [x] Z1013 Headersave
-- [x] TZX/TAP/PZX
-- [x] CSW v1/v2
-- [x] C64 TAP/T64
-
-### Test Suite - DONE
-- [x] 19 ctest suites all passing
-- [x] 435+ individual tests
+- [x] MSVC packed struct (`__attribute__((packed))` → `#pragma pack`)
+  - uft_hfe_format.h, uft_dc42_format.h, uft_woz_format.h
+  - uft_d77_format.h, uft_d88_format.h
+  - uft_xdf_*.h (8 files)
+  - uft_axdf.h, uft_fdi.h
+- [x] Windows dirent.h (included uft_dirent.h)
+- [x] macOS CRTSCTS serial flag (defined as 0)
+- [x] strcasecmp portability (strings.h + _stricmp)
+- [x] S_ISDIR/S_ISREG macros for Windows
+- [x] Integer overflow in COLOR_RGBA/COLOR_RGB2RGBA
+- [x] Macro redefinition guards (#ifndef)
 
 ---
 
-## 🔄 PENDING (Awaiting CI Verification)
+## 🔄 P1 - PENDING (Awaiting CI Verification)
 
-### P0 - CI Verification
-- [ ] Windows build on GitHub Actions
-- [ ] macOS build on GitHub Actions
-- [ ] All platform tests green
+- [ ] Windows GitHub Actions build verification
+- [ ] macOS GitHub Actions build verification
+- [ ] Cross-platform test suite green
 
 ---
 
-## 📋 BACKLOG
+## 📋 P2 - BACKLOG (Quality)
 
-### P1 - Format Extensions
-- [ ] Classic Mac Resource Fork parser
-- [ ] D80 BAM analysis
-- [ ] Apple DOS 3.3 file extraction
-- [ ] ProDOS file extraction
-
-### P1 - Quality
-- [ ] Fix remaining warnings (strncpy truncation)
 - [ ] Remove unused variables in xdf module
+  - uft_xdf_api_impl.c: sector_size, sectors_per_track, has_errors
 - [ ] Add fread return value checks
+  - uft_xdf_api_impl.c:268-269
+- [ ] ODR violation cleanup in C++ external code
+  - INFO_CHUNK, Track, FluxDecoder, etc.
 
-### P2 - HAL
-- [ ] Real device testing (Greaseweazle, FluxEngine)
-- [ ] USB hotplug support
-- [ ] Drive calibration profiles
+---
 
-### P3 - Documentation
-- [ ] API documentation
-- [ ] Format specification docs
+## 📋 P3 - BACKLOG (Enhancement)
+
+- [ ] strncpy truncation warnings cleanup
+- [ ] Format truncation warnings cleanup  
+- [ ] Documentation updates
+- [ ] HAL device testing (Greaseweazle, FluxEngine)
 
 ---
 
 ## 📊 Metrics
 
-| Category | Count |
-|----------|-------|
-| Files Fixed | 12 |
-| Build Platforms | 3 (Linux ✅, Windows ⏳, macOS ⏳) |
-| Test Suites | 19 |
-| Total Tests | 435+ |
+| Category | Status |
+|----------|--------|
+| P0 Build Blockers | 12/12 ✅ |
+| Test Suites | 19/19 ✅ |
+| Platforms | Linux ✅, Win/Mac ⏳ |
 
 ---
 
 ## Version History
 
-- **v3.7.0** - CI fixes, cross-platform compatibility
+- **v3.7.0** - Cross-platform CI fixes, pragma pack, POSIX compatibility
