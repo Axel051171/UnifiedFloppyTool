@@ -2,6 +2,12 @@
 
 add_executable(test_fat_detect test_fat_detect.c)
 
+# Ensure C11 standard for MSVC compatibility
+set_target_properties(test_fat_detect PROPERTIES
+    C_STANDARD 11
+    C_STANDARD_REQUIRED ON
+)
+
 target_include_directories(test_fat_detect PRIVATE
     ${PROJECT_SOURCE_DIR}/include
 )

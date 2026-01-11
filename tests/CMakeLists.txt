@@ -47,3 +47,6 @@ endif()
 # if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/header_validation/CMakeLists.txt")
 #     add_subdirectory(header_validation)
 # endif()
+
+# Format Detection Tests
+add_subdirectory(detect)

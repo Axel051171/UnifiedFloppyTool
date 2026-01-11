@@ -26,6 +26,11 @@ target_include_directories(uft_xdf PUBLIC
 
 uft_link_math(uft_xdf)
 
+# Windows: Link shlwapi for PathMatchSpec
+if(WIN32)
+    target_link_libraries(uft_xdf PUBLIC shlwapi)
+endif()
+
 set_target_properties(uft_xdf PROPERTIES
     C_STANDARD 99
     C_STANDARD_REQUIRED ON

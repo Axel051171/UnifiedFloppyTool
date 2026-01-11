@@ -1,0 +1,262 @@
+name: Code Quality
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  #============================================================================
+  # clang-format - Style Check
+  #============================================================================
+  clang-format:
+    name: 🎨 Code Style (clang-format)
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Install clang-format
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-format-15
+      
+      - name: Check formatting
+        run: |
+          echo "═══════════════════════════════════════════════════════════"
+          echo "Checking code style with clang-format..."
+          echo "═══════════════════════════════════════════════════════════"
+          
+          # Find all C/C++ files (excluding third-party)
+          FILES=$(find src include tests -name '*.c' -o -name '*.h' -o -name '*.cpp' -o -name '*.hpp' | \
+                  grep -v '/external/' | grep -v '/third_party/' | head -100)
+          
+          FAILED=0
+          for file in $FILES; do
+            if ! clang-format-15 --dry-run --Werror "$file" 2>/dev/null; then
+              echo "::warning file=$file::Style issue detected"
+              FAILED=$((FAILED + 1))
+            fi
+          done
+          
+          if [ $FAILED -gt 0 ]; then
+            echo ""
+            echo "::warning::$FAILED files have style issues"
+            echo "Run 'clang-format -i <file>' to fix"
+            # Don't fail the build, just warn
+            exit 0
+          fi
+          
+          echo "✅ All checked files pass style check"
+      
+      - name: Generate diff (if issues found)
+        if: failure()
+        run: |
+          echo "Suggested fixes:"
+          find src include -name '*.c' -o -name '*.h' | head -20 | while read f; do
+            clang-format-15 "$f" | diff -u "$f" - || true
+          done | head -100
+
+  #============================================================================
+  # clang-tidy - Static Analysis
+  #============================================================================
+  clang-tidy:
+    name: 🔍 Static Analysis (clang-tidy)
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-tidy-15 cmake ninja-build
+      
+      - name: Configure CMake
+        run: |
+          cmake -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_C_COMPILER=clang \
+            -DCMAKE_CXX_COMPILER=clang++ \
+            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+      
+      - name: Run clang-tidy
+        run: |
+          echo "═══════════════════════════════════════════════════════════"
+          echo "Running clang-tidy static analysis..."
+          echo "═══════════════════════════════════════════════════════════"
+          
+          # Run on core source files
+          CORE_FILES=$(find src -name '*.c' | grep -v '/external/' | head -50)
+          
+          ERRORS=0
+          WARNINGS=0
+          
+          for file in $CORE_FILES; do
+            echo "Analyzing: $file"
+            OUTPUT=$(clang-tidy-15 -p build "$file" 2>&1 || true)
+            
+            # Count issues
+            FILE_ERRORS=$(echo "$OUTPUT" | grep -c "error:" || true)
+            FILE_WARNINGS=$(echo "$OUTPUT" | grep -c "warning:" || true)
+            
+            ERRORS=$((ERRORS + FILE_ERRORS))
+            WARNINGS=$((WARNINGS + FILE_WARNINGS))
+            
+            # Show issues
+            if [ $FILE_ERRORS -gt 0 ] || [ $FILE_WARNINGS -gt 0 ]; then
+              echo "$OUTPUT" | grep -E "(error:|warning:)" | head -5
+            fi
+          done
+          
+          echo ""
+          echo "═══════════════════════════════════════════════════════════"
+          echo "Summary: $ERRORS errors, $WARNINGS warnings"
+          echo "═══════════════════════════════════════════════════════════"
+          
+          # Fail on errors, warn on warnings
+          if [ $ERRORS -gt 10 ]; then
+            echo "::error::Too many clang-tidy errors ($ERRORS)"
+            exit 1
+          fi
+          
+          if [ $WARNINGS -gt 50 ]; then
+            echo "::warning::High number of clang-tidy warnings ($WARNINGS)"
+          fi
+          
+          echo "✅ Static analysis complete"
+
+  #============================================================================
+  # cppcheck - Additional Static Analysis
+  #============================================================================
+  cppcheck:
+    name: 🔬 cppcheck Analysis
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Install cppcheck
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cppcheck
+      
+      - name: Run cppcheck
+        run: |
+          echo "═══════════════════════════════════════════════════════════"
+          echo "Running cppcheck..."
+          echo "═══════════════════════════════════════════════════════════"
+          
+          cppcheck \
+            --enable=warning,performance,portability \
+            --error-exitcode=0 \
+            --inline-suppr \
+            --suppress=missingIncludeSystem \
+            --suppress=unusedFunction \
+            --suppress=unmatchedSuppression \
+            -I include \
+            -j4 \
+            --xml --xml-version=2 \
+            src 2> cppcheck-report.xml
+          
+          # Convert to readable format
+          cppcheck \
+            --enable=warning,performance,portability \
+            --inline-suppr \
+            --suppress=missingIncludeSystem \
+            --suppress=unusedFunction \
+            -I include \
+            src 2>&1 | tee cppcheck-output.txt
+          
+          # Count issues
+          ERRORS=$(grep -c "error:" cppcheck-output.txt || true)
+          WARNINGS=$(grep -c "warning:" cppcheck-output.txt || true)
+          
+          echo ""
+          echo "═══════════════════════════════════════════════════════════"
+          echo "cppcheck: $ERRORS errors, $WARNINGS warnings"
+          echo "═══════════════════════════════════════════════════════════"
+          
+          # Fail on critical errors only
+          if [ $ERRORS -gt 5 ]; then
+            echo "::error::Critical cppcheck errors found"
+            exit 1
+          fi
+      
+      - name: Upload cppcheck report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cppcheck-report
+          path: cppcheck-report.xml
+          retention-days: 7
+
+  #============================================================================
+  # Include Guard Check
+  #============================================================================
+  include-guards:
+    name: 📋 Include Guard Check
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Check include guards
+        run: |
+          echo "═══════════════════════════════════════════════════════════"
+          echo "Checking include guards..."
+          echo "═══════════════════════════════════════════════════════════"
+          
+          FAILED=0
+          
+          for header in $(find include -name '*.h'); do
+            # Check for #ifndef or #pragma once
+            if ! grep -q '#ifndef\|#pragma once' "$header"; then
+              echo "::error file=$header::Missing include guard"
+              FAILED=$((FAILED + 1))
+            fi
+          done
+          
+          if [ $FAILED -gt 0 ]; then
+            echo "::error::$FAILED headers missing include guards"
+            exit 1
+          fi
+          
+          echo "✅ All headers have include guards"
+
+  #============================================================================
+  # TODO/FIXME Scanner
+  #============================================================================
+  todo-scanner:
+    name: 📝 TODO/FIXME Scanner
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Scan for TODOs
+        run: |
+          echo "═══════════════════════════════════════════════════════════"
+          echo "Scanning for TODO/FIXME comments..."
+          echo "═══════════════════════════════════════════════════════════"
+          
+          # Find all TODOs
+          TODOS=$(grep -rn "TODO\|FIXME\|HACK\|XXX" src include --include="*.c" --include="*.h" || true)
+          
+          if [ -n "$TODOS" ]; then
+            echo "$TODOS"
+            COUNT=$(echo "$TODOS" | wc -l)
+            echo ""
+            echo "Found $COUNT TODO/FIXME items"
+          else
+            echo "No TODO/FIXME items found"
+          fi
+          
+          # Don't fail, just report
+          exit 0

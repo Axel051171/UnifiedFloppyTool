@@ -140,7 +140,8 @@ endfunction()
 # Compiler Flags
 # ═══════════════════════════════════════════════════════════════════════════════
 if(MSVC)
-    add_compile_options(/W3 /wd4100 /wd4996)
+    # MSVC requires /std:c11 for proper C11 support (stdint.h, mixed declarations)
+    add_compile_options(/W3 /wd4100 /wd4996 /std:c11)
     add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
 else()
     add_compile_options(-Wall -Wextra -Wno-unused-parameter)
