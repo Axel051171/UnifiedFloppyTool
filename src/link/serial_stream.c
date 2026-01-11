@@ -1,3 +1,8 @@
+/* Enable BSD extensions on macOS for cfmakeraw and higher baud rates */
+#if defined(__APPLE__)
+#define _DARWIN_C_SOURCE 1
+#endif
+
 #include "uft/link/serial_stream.h"
 
 #include <string.h>
@@ -88,6 +93,27 @@ uft_rc_t uft_serial_write_all(uft_serial_t *s, const void *buf, size_t n, uft_di
 #include <errno.h>
 #include <termios.h>
 #include <sys/select.h>
+
+/* Fallback baud rate definitions for platforms that don't have them */
+#ifndef B57600
+#define B57600 57600
+#endif
+#ifndef B115200
+#define B115200 115200
+#endif
+
+/* cfmakeraw fallback for platforms without it */
+#ifndef HAVE_CFMAKERAW
+#if !defined(__APPLE__) && !defined(__linux__) && !defined(__FreeBSD__)
+static void cfmakeraw(struct termios *t) {
+    t->c_iflag &= ~(IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR | IGNCR | ICRNL | IXON);
+    t->c_oflag &= ~OPOST;
+    t->c_lflag &= ~(ECHO | ECHONL | ICANON | ISIG | IEXTEN);
+    t->c_cflag &= ~(CSIZE | PARENB);
+    t->c_cflag |= CS8;
+}
+#endif
+#endif
 
 static speed_t baud_to_speed(uint32_t baud)
 {

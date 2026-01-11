@@ -195,7 +195,7 @@ uft_fat_platform_t uft_fat_detect_platform(const uft_fat_bootsect_t *boot) {
     return UFT_FAT_PLATFORM_PC;
 }
 
-int uft_fat_detect(const uint8_t *data, size_t size, uft_fat_detect_t *result) {
+int uft_fat12_detect(const uint8_t *data, size_t size, uft_fat_detect_t *result) {
     if (!data || !result || size < 512) {
         return UFT_FAT_ERR_INVALID;
     }
@@ -433,7 +433,7 @@ int uft_fat_open(uft_fat_ctx_t *ctx, const uint8_t *data, size_t size, bool copy
     
     /* Detect filesystem first */
     uft_fat_detect_t detect;
-    int rc = uft_fat_detect(data, size, &detect);
+    int rc = uft_fat12_detect(data, size, &detect);
     if (rc != 0) return rc;
     
     if (!detect.valid) {

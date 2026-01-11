@@ -536,7 +536,7 @@ const uint8_t *uft_fat_get_data(const uft_fat_ctx_t *ctx, size_t *size);
  * @param result Detection result
  * @return 0 on success
  */
-int uft_fat_detect(const uint8_t *data, size_t size, uft_fat_detect_t *result);
+int uft_fat12_detect(const uint8_t *data, size_t size, uft_fat_detect_t *result);
 
 /**
  * @brief Get geometry from image size

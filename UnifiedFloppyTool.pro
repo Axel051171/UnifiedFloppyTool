@@ -7,7 +7,7 @@ QT += core gui widgets
 CONFIG += c++17
 CONFIG += sdk_no_version_check
 
-VERSION = 3.3.0
+VERSION = 3.7.0
 DEFINES += APP_VERSION=\\\"$$VERSION\\\"
 
 message("════════════════════════════════════════════════════")
