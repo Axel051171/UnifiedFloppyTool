@@ -1,7 +1,7 @@
 /**
  * @file uft_pc98.c
  * @brief NEC PC-98 Format Support Implementation
- * @version 3.7.0
+ * @version 3.6.0
  * 
  * Implements PC-98 disk format support including:
  * - Multiple geometries (2DD 640KB, 2HD 1.2MB, 2HC, 2HQ 1.44MB)

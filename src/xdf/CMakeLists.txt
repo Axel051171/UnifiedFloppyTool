@@ -5,13 +5,10 @@ set(XDF_SOURCES
     uft_xdf_core.c
     uft_xdf_api.c
     uft_xdf_api_impl.c
-    uft_xdf_adapter.c
 )
 
 set(XDF_HEADERS
     ${CMAKE_SOURCE_DIR}/include/uft/xdf/uft_xdf_core.h
-    ${CMAKE_SOURCE_DIR}/include/uft/xdf/uft_xdf_api.h
-    ${CMAKE_SOURCE_DIR}/include/uft/xdf/uft_xdf_adapter.h
     ${CMAKE_SOURCE_DIR}/include/uft/xdf/uft_xdf_dxdf.h
     ${CMAKE_SOURCE_DIR}/include/uft/xdf/uft_xdf_pxdf.h
     ${CMAKE_SOURCE_DIR}/include/uft/xdf/uft_xdf_txdf.h

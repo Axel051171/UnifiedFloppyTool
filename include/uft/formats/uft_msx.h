@@ -1,7 +1,7 @@
 /**
  * @file uft_msx.h
  * @brief MSX Disk Format Support
- * @version 3.7.0
+ * @version 3.6.0
  * 
  * Comprehensive MSX disk format support including:
  * - MSX-DOS 1.x/2.x filesystem parsing

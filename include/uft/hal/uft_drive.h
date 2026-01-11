@@ -45,15 +45,6 @@ typedef enum {
 #define DRIVE_TYPE_1541    UFT_DRIVE_1541
 #define DRIVE_TYPE_APPLE   UFT_DRIVE_APPLE
 
-/* Extended drive type aliases */
-#define UFT_DRIVE_CBM_1541    UFT_DRIVE_1541
-#define UFT_DRIVE_CBM_1571    UFT_DRIVE_1541  /* Use 1541 profile as base */
-#define UFT_DRIVE_APPLE_525   UFT_DRIVE_APPLE
-
-/* Extended encoding aliases */
-#define DRIVE_ENC_GCR_CBM     DRIVE_ENC_GCR
-#define DRIVE_ENC_GCR_APPLE   DRIVE_ENC_GCR
-
 /* ═══════════════════════════════════════════════════════════════════════════════
  * Encoding Types
  * ═══════════════════════════════════════════════════════════════════════════════ */
@@ -77,8 +68,6 @@ typedef struct {
     int cylinders;                /**< Number of cylinders */
     int heads;                    /**< Number of heads (sides) */
     bool double_step;             /**< Uses double stepping */
-    bool half_tracks;             /**< Supports half-track stepping */
-    int speed_zones;              /**< Number of speed zones (CBM) */
     
     /* Timing */
     double rpm;                   /**< Rotation speed (RPM) */
@@ -90,7 +79,6 @@ typedef struct {
     /* Data rates */
     double data_rate_dd;          /**< DD data rate (kbit/s) */
     double data_rate_hd;          /**< HD data rate (kbit/s) */
-    double data_rate_ed;          /**< ED data rate (kbit/s) */
     double bit_cell_dd;           /**< DD bit cell (µs) */
     double bit_cell_hd;           /**< HD bit cell (µs) */
     

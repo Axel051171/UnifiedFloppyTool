@@ -2,7 +2,7 @@
 
 set(HAL_SOURCES
     # Core HAL
-    uft_hal_profiles.c  # Drive profiles + Controller caps (replaces uft_drive.c)
+    uft_drive.c
     uft_hal_unified.c
     
     # Controller Implementations (working)
@@ -17,9 +17,9 @@ set(HAL_SOURCES
     uft_latency_tracking.c
     ufi.c
     
-    # Disabled:
-    # uft_drive.c (superseded by uft_hal_profiles.c)
-    # uft_greaseweazle_full.c (needs extended GW types)
+    # Disabled - API mismatch, needs update (P3):
+    # uft_hal_profiles.c
+    # uft_greaseweazle_full.c
     # uft_hal_v3.c (duplicate of v2)
 )
 

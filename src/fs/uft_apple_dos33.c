@@ -1,7 +1,7 @@
 /**
  * @file uft_apple_dos33.c
  * @brief Apple DOS 3.3 Filesystem Implementation
- * @version 3.7.0
+ * @version 3.6.0
  * 
  * VTOC management, catalog operations, T/S list handling.
  */

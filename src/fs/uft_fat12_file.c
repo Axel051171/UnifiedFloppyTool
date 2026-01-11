@@ -1,7 +1,7 @@
 /**
  * @file uft_fat12_file.c
  * @brief FAT12/FAT16 File Operations
- * @version 3.7.0
+ * @version 3.6.0
  * 
  * File extraction, injection, deletion, rename, mkdir/rmdir
  */

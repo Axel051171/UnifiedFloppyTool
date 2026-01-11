@@ -1,7 +1,7 @@
 /**
  * @file uft_fat12_core.c
  * @brief FAT12/FAT16 Core Implementation
- * @version 3.7.0
+ * @version 3.6.0
  * 
  * Lifecycle, detection, volume info, FAT table operations
  */

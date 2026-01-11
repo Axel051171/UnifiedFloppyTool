@@ -8,7 +8,7 @@
  * - Generic: Weak bits, Fuzzy bits, Extra/Missing sectors
  * 
  * @author UFT Team
- * @version 3.7.0
+ * @version 3.6.0
  * @date 2026-01-03
  * 
  * SPDX-License-Identifier: MIT

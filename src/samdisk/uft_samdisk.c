@@ -348,7 +348,7 @@ int uft_edsk_create(uft_edsk_writer_t *writer, int tracks, int sides,
     if (creator) {
         strncpy((char *)hdr->creator, creator, 14);
     } else {
-        strncpy((char *)hdr->creator, "UFT v3.7.0", 14);
+        strncpy((char *)hdr->creator, "UFT v3.6.0", 14);
     }
     
     hdr->tracks = tracks;

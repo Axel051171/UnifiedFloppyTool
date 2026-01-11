@@ -79,7 +79,6 @@ jobs:
           cmake -B build -G Ninja \
             -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
             -DUFT_BUILD_GUI=OFF \
-            -DUFT_ENABLE_SAMDISK=ON \
             -DBUILD_TESTING=ON
         
       - name: Build

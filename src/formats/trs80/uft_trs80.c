@@ -1,7 +1,7 @@
 /**
  * @file uft_trs80.c
  * @brief TRS-80 Disk Format Implementation
- * @version 3.7.0
+ * @version 3.6.0
  * 
  * SPDX-License-Identifier: MIT
  */

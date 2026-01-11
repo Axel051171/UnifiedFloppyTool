@@ -1,7 +1,7 @@
 /**
  * @file uft_apple_file.c
  * @brief Apple II File Operations
- * @version 3.7.0
+ * @version 3.6.0
  * 
  * Unified file operations for DOS 3.3 and ProDOS.
  */

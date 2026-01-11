@@ -1,0 +1,35 @@
+# Build
+build/
+cmake-build-*/
+*.o
+*.a
+*.so
+*.dylib
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*~
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+compile_commands.json
+
+# Qt
+moc_*.cpp
+ui_*.h
+*.qm
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test
+*.log
+coverage/
+
+# Archives
+*.zip
+*.tar.gz

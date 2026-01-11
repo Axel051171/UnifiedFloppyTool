@@ -12,8 +12,6 @@ set(CORE_SOURCES
     uft_operation_result.c
     uft_platform.c
     uft_safe_string.c
-    uft_sha256.c
-    uft_snapshot.c
     uft_string_utils.c
     uft_timer.c
     uft_track.c

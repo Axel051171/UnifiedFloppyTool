@@ -33,32 +33,17 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/c64/CMakeLists.txt" AND TARGET uft_c64)
     add_subdirectory(c64)
 endif()
 
-# Policy tests (Write Safety Gate)
-if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/policy/CMakeLists.txt" AND TARGET uft_policy)
-    add_subdirectory(policy)
-endif()
-
-# Analysis tests (XCopy Algorithms)
-if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/analysis/CMakeLists.txt" AND TARGET uft_track_analysis)
-    add_subdirectory(analysis)
-endif()
-
 # Hardened tests (if available)
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/hardened/CMakeLists.txt" AND TARGET uft_hardened)
     add_subdirectory(hardened)
+endif()
+
+# Profile format tests (HFE, WOZ, DC42, D88, D77)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/profiles/CMakeLists.txt")
+    add_subdirectory(profiles)
 endif()
 
 # Header validation (temporarily disabled - missing UFT_ERR_NOMEM)
 # if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/header_validation/CMakeLists.txt")
 #     add_subdirectory(header_validation)
 # endif()
-
-# Adapter tests (Format Adapters)
-if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/adapters/CMakeLists.txt" AND TARGET uft_adapters)
-    add_subdirectory(adapters)
-endif()
-
-# ZX Spectrum tests (Screen converter)
-if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/zx/CMakeLists.txt" AND TARGET uft_zx)
-    add_subdirectory(zx)
-endif()

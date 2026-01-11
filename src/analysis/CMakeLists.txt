@@ -3,7 +3,6 @@
 
 set(TRACK_ANALYSIS_SOURCES
     uft_track_analysis.c
-    uft_xcopy_algo.c
 )
 
 set(TRACK_ANALYSIS_HEADERS
@@ -17,11 +16,6 @@ target_include_directories(uft_track_analysis PUBLIC
     ${CMAKE_SOURCE_DIR}/src
     ${CMAKE_SOURCE_DIR}/include
 )
-
-# Math library for sqrtf etc.
-if(NOT MSVC)
-    target_link_libraries(uft_track_analysis PRIVATE m)
-endif()
 
 # Link with Amiga-specific module if available
 if(TARGET uft_amiga_protection)

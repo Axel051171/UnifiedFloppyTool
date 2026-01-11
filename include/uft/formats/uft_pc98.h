@@ -1,7 +1,7 @@
 /**
  * @file uft_pc98.h
  * @brief NEC PC-98 Format Support with Shift-JIS Encoding
- * @version 3.7.0
+ * @version 3.6.0
  */
 
 #ifndef UFT_PC98_H
