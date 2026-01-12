@@ -411,8 +411,8 @@ static void test_nib_validation(void) {
     TEST_START("nib_validation");
     
     /* Invalid size */
-    uint8_t small[100];
-    ASSERT_TRUE(!uft_nib_validate(small, 100), "Too small invalid");
+    uint8_t small_buf[100];
+    ASSERT_TRUE(!uft_nib_validate(small_buf, 100), "Too small invalid");
     
     /* Valid size but bad content */
     uint8_t *nib = calloc(1, NIB_FILE_SIZE_35);
@@ -557,8 +557,8 @@ static void test_adf_validation(void) {
     TEST_START("adf_validation");
     
     /* Invalid size */
-    uint8_t small[100];
-    ASSERT_TRUE(!adf_validate(small, 100), "Too small invalid");
+    uint8_t small_buf[100];
+    ASSERT_TRUE(!adf_validate(small_buf, 100), "Too small invalid");
     
     /* Valid DD size */
     uint8_t *adf = malloc(ADF_FILE_SIZE_DD);

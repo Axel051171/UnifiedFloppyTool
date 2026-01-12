@@ -225,7 +225,7 @@ static void test_edge_cases(void)
 {
     uft_fat_detect_result_t result;
     int rc;
-    uint8_t small[256];
+    uint8_t small_buf[256];    /* Renamed: 'small' conflicts with Windows.h */
     uint8_t no_sig[512];
     uint8_t bad_bpb[512];
     
@@ -236,8 +236,8 @@ static void test_edge_cases(void)
     TEST(rc != 0, "NULL data rejected");
     
     /* Too small */
-    memset(small, 0, sizeof(small));
-    rc = uft_fat_detect(small, 256, &result);
+    memset(small_buf, 0, sizeof(small_buf));
+    rc = uft_fat_detect(small_buf, 256, &result);
     TEST(rc != 0, "Too small rejected");
     
     /* No boot signature */

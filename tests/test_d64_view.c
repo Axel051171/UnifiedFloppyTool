@@ -60,9 +60,9 @@ UFT_TEST(test_d64_open_with_errors) {
 }
 
 UFT_TEST(test_d64_open_invalid_size) {
-    uint8_t small[1000];
+    uint8_t small_buf[1000];
     uft_d64_view_t view;
-    uft_d64_status_t st = uft_d64_open(small, sizeof(small), &view);
+    uft_d64_status_t st = uft_d64_open(small_buf, sizeof(small_buf), &view);
     UFT_ASSERT_EQ(st, UFT_D64_E_GEOM);
 }
 

@@ -48,4 +48,8 @@ if(UFT_BUILD_EXAMPLES)
     target_link_libraries(xdf_example PRIVATE uft_xdf)
     target_include_directories(xdf_example PRIVATE ${CMAKE_SOURCE_DIR}/include)
     uft_link_math(xdf_example)
+    # Windows: Explicitly link shlwapi for PathMatchSpec
+    if(WIN32)
+        target_link_libraries(xdf_example PRIVATE shlwapi)
+    endif()
 endif()

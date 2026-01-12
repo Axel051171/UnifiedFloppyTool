@@ -12,8 +12,8 @@
 #define UFT_VERSION_MINOR 7
 #define UFT_VERSION_PATCH 0
 
-#define UFT_VERSION_STRING "3.7.0"
-#define UFT_VERSION_FULL "UnifiedFloppyTool v3.7.0"
+#define UFT_VERSION_STRING "3.7.1"
+#define UFT_VERSION_FULL "UnifiedFloppyTool v3.7.1"
 
 /* Build info - set by CI or build system */
 #ifndef UFT_BUILD_DATE
@@ -59,7 +59,7 @@
 
 /**
  * @brief Get full version string with platform info
- * @return Static string like "UnifiedFloppyTool v3.7.0 (Linux x64)"
+ * @return Static string like "UnifiedFloppyTool v3.7.1 (Linux x64)"
  */
 static inline const char* uft_version_full(void) {
     return UFT_VERSION_FULL " (" UFT_PLATFORM_NAME " " UFT_ARCH_NAME ")";
