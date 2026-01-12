@@ -63,23 +63,6 @@ uft_ipf_writer_add_chunk(&w, UFT_IPF_CHUNK_DATA, track_data, track_len, false);
 uft_ipf_writer_close(&w);
 ```
 
-## CLI Tools
-
-### ipfinfo
-
-Display container information:
-```bash
-ipfinfo disk.ipf
-ipfinfo -v disk.ipf  # With validation
-```
-
-### ipfpack
-
-Create container from raw files:
-```bash
-ipfpack -o output.ipf -b -c track1.bin track2.bin
-```
-
 ## Note on Track Decoding
 
 This module handles container structure only. Full track decoding requires

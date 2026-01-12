@@ -26,8 +26,6 @@
 | `link/serial_stream.{h,c}` | Cross-Platform Serial I/O (POSIX/Win32) | ~200 |
 | `format/adf.{h,c}` | ADF Container Helpers (DD Geometry) | ~150 |
 | `hal/blockdev.h` | Blockdevice Interface (read/write/flush) | ~50 |
-| `tools/uft_adf_serial_recv.c` | CLI: ADF über Serial empfangen | ~100 |
-| `tools/uft_adf_serial_send.c` | CLI: ADF über Serial senden | ~100 |
 
 ### 1.2 API-Qualität
 
@@ -66,7 +64,6 @@ typedef struct uft_serial_opts {
 **Use-Cases:**
 - Amiga Serial Disk Capture (TransWarp-kompatibel)
 - Generische Serial I/O für weitere Controller
-- CLI-Tools für Scripting/Batch
 
 ---
 
@@ -79,7 +76,6 @@ typedef struct uft_serial_opts {
 | `fs/fat_bpb.{h,c}` | FAT BPB Parser + Layout Calculator | ~250 |
 | `formatid/guess.{h,c}` | Format/Geometry Guesser | ~100 |
 | `hal/ufi.{h,c}` | USB Floppy Interface HAL | ~150 |
-| `tools/uft_guess.c` | CLI: Image-Format raten | ~50 |
 
 ### 2.2 API-Qualität
 
@@ -187,13 +183,6 @@ target_include_directories(uft_formatid PUBLIC include)
 # UFI HAL
 add_library(uft_ufi STATIC src/hal/ufi.c)
 target_include_directories(uft_ufi PUBLIC include)
-
-# CLI Tools (optional)
-add_executable(uft_adf_serial_recv tools/uft_adf_serial_recv.c)
-target_link_libraries(uft_adf_serial_recv PRIVATE uft_link)
-
-add_executable(uft_guess tools/uft_guess.c)
-target_link_libraries(uft_guess PRIVATE uft_formatid)
 ```
 
 ---
@@ -205,7 +194,6 @@ target_link_libraries(uft_guess PRIVATE uft_formatid)
 | ID | Task | Aufwand | Akzeptanz |
 |----|------|---------|-----------|
 | P1-5 | FAT BPB Probe in Format-Detection | S | FAT12/16/32 erkannt, keine false-success |
-| P1-6 | Amiga Serial Capture CLI | M | DD ADF zuverlässig empfangen/senden |
 
 ### Neue P2 Tasks
 

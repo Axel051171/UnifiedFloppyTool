@@ -224,7 +224,7 @@ size_t uft_amiga_measure_track_length(const uint8_t *data, size_t size,
     size_t track_len = pos / 2;
     
     /* Ensure even alignment */
-    track_len &= ~1;
+    track_len &= ~(size_t)1;
     
     return track_len;
 }

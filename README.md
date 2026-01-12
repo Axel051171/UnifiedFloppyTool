@@ -71,10 +71,9 @@ UnifiedFloppyTool/
 │   ├── formats/          # Format handlers
 │   ├── algorithms/       # PLL, encoding, CRC
 │   └── hardware/         # Hardware drivers
-├── tools/                # CLI tools
 ├── tests/                # Test suite
 ├── docs/                 # Documentation
-└── gui/                  # Qt6 GUI (optional)
+└── gui/                  # Qt6 GUI
 ```
 
 ## Supported Formats

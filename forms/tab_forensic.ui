@@ -1,0 +1,296 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>TabForensic</class>
+ <widget class="QWidget" name="TabForensic">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>900</width>
+    <height>700</height>
+   </rect>
+  </property>
+  <layout class="QHBoxLayout" name="horizontalLayout_main">
+   
+   <!-- LEFT COLUMN -->
+   <item>
+    <layout class="QVBoxLayout" name="verticalLayout_left">
+     
+     <!-- CHECKSUMS -->
+     <item>
+      <widget class="QGroupBox" name="groupChecksums">
+       <property name="title">
+        <string>Checksums</string>
+       </property>
+       <layout class="QVBoxLayout" name="verticalLayout_checksums">
+        <item>
+         <layout class="QHBoxLayout">
+          <item>
+           <widget class="QCheckBox" name="checkMD5">
+            <property name="text"><string>MD5</string></property>
+            <property name="checked"><bool>true</bool></property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QCheckBox" name="checkSHA1">
+            <property name="text"><string>SHA-1</string></property>
+            <property name="checked"><bool>true</bool></property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QCheckBox" name="checkSHA256">
+            <property name="text"><string>SHA-256</string></property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QCheckBox" name="checkCRC32">
+            <property name="text"><string>CRC32</string></property>
+            <property name="checked"><bool>true</bool></property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <layout class="QFormLayout">
+          <item row="0" column="0">
+           <widget class="QLabel" name="labelMD5Result">
+            <property name="text"><string>MD5:</string></property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QLineEdit" name="editMD5">
+            <property name="readOnly"><bool>true</bool></property>
+            <property name="placeholderText"><string>Not calculated</string></property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="labelSHA1Result">
+            <property name="text"><string>SHA-1:</string></property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QLineEdit" name="editSHA1">
+            <property name="readOnly"><bool>true</bool></property>
+            <property name="placeholderText"><string>Not calculated</string></property>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QLabel" name="labelCRC32Result">
+            <property name="text"><string>CRC32:</string></property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="QLineEdit" name="editCRC32">
+            <property name="readOnly"><bool>true</bool></property>
+            <property name="placeholderText"><string>Not calculated</string></property>
+            <property name="maximumWidth"><number>150</number></property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="checkSectorChecksums">
+          <property name="text"><string>Calculate per-sector checksums</string></property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="checkTrackChecksums">
+          <property name="text"><string>Calculate per-track checksums</string></property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     
+     <!-- VALIDATION -->
+     <item>
+      <widget class="QGroupBox" name="groupValidation">
+       <property name="title">
+        <string>Validation</string>
+       </property>
+       <layout class="QVBoxLayout" name="verticalLayout_validation">
+        <item>
+         <widget class="QCheckBox" name="checkValidateStructure">
+          <property name="text"><string>Validate disk structure</string></property>
+          <property name="checked"><bool>true</bool></property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="checkValidateFilesystem">
+          <property name="text"><string>Validate filesystem</string></property>
+          <property name="checked"><bool>true</bool></property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="checkValidateBootblock">
+          <property name="text"><string>Validate boot block</string></property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="checkValidateDirectory">
+          <property name="text"><string>Validate directory</string></property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="checkValidateFAT">
+          <property name="text"><string>Validate FAT/BAM</string></property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     
+     <!-- ANALYSIS -->
+     <item>
+      <widget class="QGroupBox" name="groupAnalysis">
+       <property name="title">
+        <string>Analysis</string>
+       </property>
+       <layout class="QVBoxLayout" name="verticalLayout_analysis">
+        <item>
+         <widget class="QCheckBox" name="checkAnalyzeFormat">
+          <property name="text"><string>Analyze format</string></property>
+          <property name="checked"><bool>true</bool></property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="checkAnalyzeProtection">
+          <property name="text"><string>Analyze copy protection</string></property>
+          <property name="checked"><bool>true</bool></property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="checkAnalyzeDuplicates">
+          <property name="text"><string>Find duplicate sectors</string></property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="checkCompareRevolutions">
+          <property name="text"><string>Compare revolutions</string></property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="checkFindHiddenData">
+          <property name="text"><string>Find hidden data</string></property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     
+     <item><spacer><property name="orientation"><enum>Qt::Vertical</enum></property></spacer></item>
+     
+    </layout>
+   </item>
+   
+   <!-- RIGHT COLUMN -->
+   <item>
+    <layout class="QVBoxLayout" name="verticalLayout_right">
+     
+     <!-- REPORT -->
+     <item>
+      <widget class="QGroupBox" name="groupReport">
+       <property name="title">
+        <string>Report</string>
+       </property>
+       <layout class="QFormLayout" name="formLayout_report">
+        <item row="0" column="0" colspan="2">
+         <widget class="QCheckBox" name="checkGenerateReport">
+          <property name="text"><string>Generate report</string></property>
+          <property name="checked"><bool>true</bool></property>
+         </widget>
+        </item>
+        <item row="1" column="0">
+         <widget class="QLabel" name="labelReportFormat">
+          <property name="text"><string>Format:</string></property>
+         </widget>
+        </item>
+        <item row="1" column="1">
+         <widget class="QComboBox" name="comboReportFormat">
+          <property name="maximumWidth"><number>150</number></property>
+          <item><property name="text"><string>HTML</string></property></item>
+          <item><property name="text"><string>JSON</string></property></item>
+          <item><property name="text"><string>XML</string></property></item>
+          <item><property name="text"><string>TXT</string></property></item>
+         </widget>
+        </item>
+        <item row="2" column="0" colspan="2">
+         <widget class="QCheckBox" name="checkIncludeHexDump">
+          <property name="text"><string>Include hex dump</string></property>
+         </widget>
+        </item>
+        <item row="3" column="0" colspan="2">
+         <widget class="QCheckBox" name="checkIncludeScreenshots">
+          <property name="text"><string>Include track screenshots</string></property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     
+     <!-- RESULTS TABLE -->
+     <item>
+      <widget class="QGroupBox" name="groupResults">
+       <property name="title">
+        <string>Results</string>
+       </property>
+       <layout class="QVBoxLayout">
+        <item>
+         <widget class="QTableWidget" name="tableResults">
+          <property name="columnCount"><number>3</number></property>
+          <column><property name="text"><string>Check</string></property></column>
+          <column><property name="text"><string>Result</string></property></column>
+          <column><property name="text"><string>Details</string></property></column>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     
+     <!-- DETAILS -->
+     <item>
+      <widget class="QGroupBox" name="groupDetails">
+       <property name="title">
+        <string>Details</string>
+       </property>
+       <layout class="QVBoxLayout">
+        <item>
+         <widget class="QPlainTextEdit" name="textDetails">
+          <property name="readOnly"><bool>true</bool></property>
+          <property name="maximumHeight"><number>120</number></property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     
+     <!-- ACTION BUTTONS -->
+     <item>
+      <layout class="QHBoxLayout">
+       <item>
+        <widget class="QPushButton" name="btnRunAnalysis">
+         <property name="text"><string>▶ Run Analysis</string></property>
+         <property name="styleSheet"><string>background-color: #2196F3; color: white; font-weight: bold; padding: 10px;</string></property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="btnCompare">
+         <property name="text"><string>Compare...</string></property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="btnExportReport">
+         <property name="text"><string>Export Report</string></property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+     
+    </layout>
+   </item>
+   
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

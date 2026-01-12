@@ -84,14 +84,7 @@
 | **TrackAnalyzerWidget** | (Widget) | Heatmap-Visualisierung |
 | **TrackAnalyzerBackend** | (C++ Wrapper) | C ↔ Qt Bridge |
 
-#### 9. CLI
-
-| Modul | Executable | Zweck |
-|-------|------------|-------|
-| **uft_cli** | `uft_cli` | Command-Line Interface |
-| **uft_batch_cli** | `uft_batch_cli` | Batch-Verarbeitung |
-
-#### 10. TESTS
+#### 9. TESTS
 
 | Modul | Executable | Coverage |
 |-------|------------|----------|

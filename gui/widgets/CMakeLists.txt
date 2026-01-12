@@ -1,0 +1,10 @@
+# UFT GUI Widgets - Qt6 required
+if(Qt6_FOUND)
+    file(GLOB WIDGET_SOURCES "*.cpp")
+    if(WIDGET_SOURCES)
+        add_library(uft_widgets STATIC ${WIDGET_SOURCES})
+        target_link_libraries(uft_widgets PUBLIC Qt6::Widgets)
+    endif()
+else()
+    message(STATUS "GUI Widgets: Qt6 not found, skipping")
+endif()

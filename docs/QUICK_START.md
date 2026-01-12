@@ -29,7 +29,6 @@ make -j$(nproc)
 
 ```bash
 ./UnifiedFloppyTool              # GUI
-./uft_cli --help                 # CLI
 ```
 
 ---
@@ -151,7 +150,7 @@ cmake .. -DCMAKE_BUILD_TYPE=Debug \
 ### Check for memory leaks
 
 ```bash
-valgrind --leak-check=full ./uft_cli read disk.adf
+valgrind --leak-check=full ./UnifiedFloppyTool
 ```
 
 ---

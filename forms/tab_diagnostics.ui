@@ -1,0 +1,745 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>TabDiagnostics</class>
+ <widget class="QWidget" name="TabDiagnostics">
+ <property name="geometry">
+ <rect>
+ <x>0</x>
+ <y>0</y>
+ <width>850</width>
+ <height>700</height>
+ </rect>
+ </property>
+ <layout class="QVBoxLayout" name="verticalLayout">
+ <item>
+ <widget class="QGroupBox" name="groupRPMMeasurement">
+ <property name="title">
+ <string>RPM-Messung (fdutils/floppymeter)</string>
+ </property>
+ <layout class="QGridLayout" name="gridLayoutRPM">
+ <item row="0" column="0">
+ <widget class="QLabel" name="labelMeasurementCycles">
+ <property name="text">
+ <string>Messzyklen:</string>
+ </property>
+ </widget>
+ </item>
+ <item row="0" column="1">
+ <widget class="QSpinBox" name="spinMeasurementCycles">
+ <property name="minimum">
+ <number>100</number>
+ </property>
+ <property name="maximum">
+ <number>10000</number>
+ </property>
+ <property name="value">
+ <number>1000</number>
+ </property>
+ <property name="toolTip">
+ <string>Anzahl Messzyklen für RPM-Messung</string>
+ </property>
+ </widget>
+ </item>
+ <item row="0" column="2">
+ <widget class="QLabel" name="labelWarmupRotations">
+ <property name="text">
+ <string>Warmup-Rotationen:</string>
+ </property>
+ </widget>
+ </item>
+ <item row="0" column="3">
+ <widget class="QSpinBox" name="spinWarmupRotations">
+ <property name="minimum">
+ <number>10</number>
+ </property>
+ <property name="maximum">
+ <number>500</number>
+ </property>
+ <property name="value">
+ <number>100</number>
+ </property>
+ </widget>
+ </item>
+ <item row="1" column="0">
+ <widget class="QLabel" name="labelSlidingWindow">
+ <property name="text">
+ <string>Sliding-Window:</string>
+ </property>
+ </widget>
+ </item>
+ <item row="1" column="1">
+ <widget class="QSpinBox" name="spinSlidingWindow">
+ <property name="minimum">
+ <number>5</number>
+ </property>
+ <property name="maximum">
+ <number>50</number>
+ </property>
+ <property name="value">
+ <number>10</number>
+ </property>
+ </widget>
+ </item>
+ <item row="1" column="2">
+ <widget class="QLabel" name="labelTestCylinder">
+ <property name="text">
+ <string>Test-Zylinder:</string>
+ </property>
+ </widget>
+ </item>
+ <item row="1" column="3">
+ <widget class="QSpinBox" name="spinTestCylinder">
+ <property name="minimum">
+ <number>0</number>
+ </property>
+ <property name="maximum">
+ <number>84</number>
+ </property>
+ <property name="value">
+ <number>0</number>
+ </property>
+ </widget>
+ </item>
+ <item row="2" column="0" colspan="4">
+ <widget class="QPushButton" name="btnMeasureRPM">
+ <property name="text">
+ <string>🔬 RPM messen</string>
+ </property>
+ </widget>
+ </item>
+ <item row="3" column="0" colspan="4">
+ <widget class="QGroupBox" name="groupRPMResult">
+ <property name="title">
+ <string>Messergebnis</string>
+ </property>
+ <layout class="QFormLayout" name="formLayoutRPMResult">
+ <item row="0" column="0">
+ <widget class="QLabel" name="labelResultRotTime">
+ <property name="text">
+ <string>Rotationszeit:</string>
+ </property>
+ </widget>
+ </item>
+ <item row="0" column="1">
+ <widget class="QLineEdit" name="lineResultRotTime">
+ <property name="readOnly">
+ <bool>true</bool>
+ </property>
+ <property name="placeholderText">
+ <string>____ µs (Soll: ____ µs)</string>
+ </property>
+ </widget>
+ </item>
+ <item row="1" column="0">
+ <widget class="QLabel" name="labelResultRPM">
+ <property name="text">
+ <string>RPM:</string>
+ </property>
+ </widget>
+ </item>
+ <item row="1" column="1">
+ <widget class="QLineEdit" name="lineResultRPM">
+ <property name="readOnly">
+ <bool>true</bool>
+ </property>
+ <property name="placeholderText">
+ <string>____ (Soll: ____)</string>
+ </property>
+ </widget>
+ </item>
+ <item row="2" column="0">
+ <widget class="QLabel" name="labelResultDeviation">
+ <property name="text">
+ <string>Abweichung:</string>
+ </property>
+ </widget>
+ </item>
+ <item row="2" column="1">
+ <widget class="QLineEdit" name="lineResultDeviation">
+ <property name="readOnly">
+ <bool>true</bool>
+ </property>
+ <property name="placeholderText">
+ <string>____ PPM</string>
+ </property>
+ </widget>
+ </item>
+ <item row="3" column="0">
+ <widget class="QLabel" name="labelResultCapacity">
+ <property name="text">
+ <string>Track-Kapazität:</string>
+ </property>
+ </widget>
+ </item>
+ <item row="3" column="1">
+ <widget class="QLineEdit" name="lineResultCapacity">
+ <property name="readOnly">
+ <bool>true</bool>
+ </property>
+ <property name="placeholderText">
+ <string>____ Half-Bits (Soll: ____)</string>
+ </property>
+ </widget>
+ </item>
+ <item row="4" column="0">
+ <widget class="QLabel" name="labelResultDataRate">
+ <property name="text">
+ <string>Datenrate:</string>
+ </property>
+ </widget>
+ </item>
+ <item row="4" column="1">
+ <widget class="QLineEdit" name="lineResultDataRate">
+ <property name="readOnly">
+ <bool>true</bool>
+ </property>
+ <property name="placeholderText">
+ <string>____ bit/s (Soll: ____)</string>
+ </property>
+ </widget>
+ </item>
+ </layout>
+ </widget>
+ </item>
+ </layout>
+ </widget>
+ </item>
+ <item>
+ <widget class="QGroupBox" name="groupDriftJitter">
+ <property name="title">
+ <string>Drift/Jitter-Test (gw_drift_jitter_test.py)</string>
+ </property>
+ <layout class="QGridLayout" name="gridLayoutDrift">
+ <item row="0" column="0">
+ <widget class="QLabel" name="labelRevsPerPass">
+ <property name="text">
+ <string>Umdrehungen/Pass:</string>
+ </property>
+ </widget>
+ </item>
+ <item row="0" column="1">
+ <widget class="QSpinBox" name="spinRevsPerPass">
+ <property name="minimum">
+ <number>10</number>
+ </property>
+ <property name="maximum">
+ <number>200</number>
+ </property>
+ <property name="value">
+ <number>50</number>
+ </property>
+ </widget>
+ </item>
+ <item row="0" column="2">
+ <widget class="QLabel" name="labelPasses">
+ <property name="text">
+ <string>Durchläufe:</string>
+ </property>
+ </widget>
+ </item>
+ <item row="0" column="3">
+ <widget class="QSpinBox" name="spinPasses">
+ <property name="minimum">
+ <number>1</number>
+ </property>
+ <property name="maximum">
+ <number>20</number>
+ </property>
+ <property name="value">
+ <number>5</number>
+ </property>
+ </widget>
+ </item>
+ <item row="1" column="0" colspan="4">
+ <widget class="QPushButton" name="btnDriftTest">
+ <property name="text">
+ <string>📊 Drift-Test starten</string>
+ </property>
+ </widget>
+ </item>
+ <item row="2" column="0" colspan="4">
+ <widget class="QGroupBox" name="groupDriftResult">
+ <property name="title">
+ <string>Testergebnis</string>
+ </property>
+ <layout class="QFormLayout" name="formLayoutDriftResult">
+ <item row="0" column="0">
+ <widget class="QLabel" name="labelJitterPkPk">
+ <property name="text">
+ <string>Jitter (pk-pk):</string>
+ </property>
+ </widget>
+ </item>
+ <item row="0" column="1">
+ <widget class="QLineEdit" name="lineJitterPkPk">
+ <property name="readOnly">
+ <bool>true</bool>
+ </property>
+ <property name="placeholderText">
+ <string>____ Ticks</string>
+ </property>
+ </widget>
+ </item>
+ <item row="1" column="0">
+ <widget class="QLabel" name="labelJitterStdev">
+ <property name="text">
+ <string>Jitter (stdev):</string>
+ </property>
+ </widget>
+ </item>
+ <item row="1" column="1">
+ <widget class="QLineEdit" name="lineJitterStdev">
+ <property name="readOnly">
+ <bool>true</bool>
+ </property>
+ <property name="placeholderText">
+ <string>____ Ticks</string>
+ </property>
+ </widget>
+ </item>
+ <item row="2" column="0">
+ <widget class="QLabel" name="labelDriftTotal">
+ <property name="text">
+ <string>Drift (gesamt):</string>
+ </property>
+ </widget>
+ </item>
+ <item row="2" column="1">
+ <widget class="QLineEdit" name="lineDriftTotal">
+ <property name="readOnly">
+ <bool>true</bool>
+ </property>
+ <property name="placeholderText">
+ <string>____ Ticks über ____ Passes</string>
+ </property>
+ </widget>
+ </item>
+ <item row="3" column="0">
+ <widget class="QLabel" name="labelDriftAssessment">
+ <property name="text">
+ <string>Bewertung:</string>
+ </property>
+ </widget>
+ </item>
+ <item row="3" column="1">
+ <widget class="QLineEdit" name="lineDriftAssessment">
+ <property name="readOnly">
+ <bool>true</bool>
+ </property>
+ <property name="placeholderText">
+ <string>[OK / WARNUNG / FEHLER]</string>
+ </property>
+ </widget>
+ </item>
+ </layout>
+ </widget>
+ </item>
+ </layout>
+ </widget>
+ </item>
+ <item>
+ <widget class="QGroupBox" name="groupGWStats">
+ <property name="title">
+ <string>Greaseweazle Live-Stats (gw_stats.py)</string>
+ </property>
+ <layout class="QVBoxLayout" name="verticalLayoutGWStats">
+ <item>
+ <layout class="QHBoxLayout" name="horizontalLayoutGWControls">
+ <item>
+ <widget class="QPushButton" name="btnRefreshStats">
+ <property name="text">
+ <string>🔄 Refresh</string>
+ </property>
+ </widget>
+ </item>
+ <item>
+ <widget class="QCheckBox" name="checkAutoRefresh">
+ <property name="text">
+ <string>Auto-Refresh</string>
+ </property>
+ </widget>
+ </item>
+ <item>
+ <widget class="QDoubleSpinBox" name="spinRefreshInterval">
+ <property name="minimum">
+ <double>0.100000000000000</double>
+ </property>
+ <property name="maximum">
+ <double>5.000000000000000</double>
+ </property>
+ <property name="singleStep">
+ <double>0.100000000000000</double>
+ </property>
+ <property name="value">
+ <double>0.500000000000000</double>
+ </property>
+ <property name="suffix">
+ <string> s</string>
+ </property>
+ </widget>
+ </item>
+ <item>
+ <widget class="QPushButton" name="btnResetStats">
+ <property name="text">
+ <string>🗑️ Reset Stats</string>
+ </property>
+ </widget>
+ </item>
+ <item>
+ <spacer name="horizontalSpacer">
+ <property name="orientation">
+ <enum>Qt::Horizontal</enum>
+ </property>
+ </spacer>
+ </item>
+ </layout>
+ </item>
+ <item>
+ <widget class="QGroupBox" name="groupErrorStats">
+ <property name="title">
+ <string>Fehler-Statistik</string>
+ </property>
+ <layout class="QGridLayout" name="gridLayoutErrorStats">
+ <item row="0" column="0">
+ <widget class="QLabel" name="labelBadCmd">
+ <property name="text">
+ <string>bad_cmd:</string>
+ </property>
+ </widget>
+ </item>
+ <item row="0" column="1">
+ <widget class="QLineEdit" name="lineBadCmd">
+ <property name="readOnly">
+ <bool>true</bool>
+ </property>
+ <property name="text">
+ <string>0</string>
+ </property>
+ <property name="alignment">
+ <set>Qt::AlignRight</set>
+ </property>
+ </widget>
+ </item>
+ <item row="0" column="2">
+ <widget class="QLabel" name="labelNoIndex">
+ <property name="text">
+ <string>no_idx:</string>
+ </property>
+ </widget>
+ </item>
+ <item row="0" column="3">
+ <widget class="QLineEdit" name="lineNoIndex">
+ <property name="readOnly">
+ <bool>true</bool>
+ </property>
+ <property name="text">
+ <string>0</string>
+ </property>
+ <property name="alignment">
+ <set>Qt::AlignRight</set>
+ </property>
+ </widget>
+ </item>
+ <item row="0" column="4">
+ <widget class="QLabel" name="labelNoTrk0">
+ <property name="text">
+ <string>no_trk0:</string>
+ </property>
+ </widget>
+ </item>
+ <item row="0" column="5">
+ <widget class="QLineEdit" name="lineNoTrk0">
+ <property name="readOnly">
+ <bool>true</bool>
+ </property>
+ <property name="text">
+ <string>0</string>
+ </property>
+ <property name="alignment">
+ <set>Qt::AlignRight</set>
+ </property>
+ </widget>
+ </item>
+ <item row="1" column="0">
+ <widget class="QLabel" name="labelWrProt">
+ <property name="text">
+ <string>wrprot:</string>
+ </property>
+ </widget>
+ </item>
+ <item row="1" column="1">
+ <widget class="QLineEdit" name="lineWrProt">
+ <property name="readOnly">
+ <bool>true</bool>
+ </property>
+ <property name="text">
+ <string>0</string>
+ </property>
+ <property name="alignment">
+ <set>Qt::AlignRight</set>
+ </property>
+ </widget>
+ </item>
+ <item row="1" column="2">
+ <widget class="QLabel" name="labelOverflow">
+ <property name="text">
+ <string>overflow:</string>
+ </property>
+ </widget>
+ </item>
+ <item row="1" column="3">
+ <widget class="QLineEdit" name="lineOverflow">
+ <property name="readOnly">
+ <bool>true</bool>
+ </property>
+ <property name="text">
+ <string>0</string>
+ </property>
+ <property name="alignment">
+ <set>Qt::AlignRight</set>
+ </property>
+ </widget>
+ </item>
+ <item row="1" column="4">
+ <widget class="QLabel" name="labelUnderflow">
+ <property name="text">
+ <string>underflow:</string>
+ </property>
+ </widget>
+ </item>
+ <item row="1" column="5">
+ <widget class="QLineEdit" name="lineUnderflow">
+ <property name="readOnly">
+ <bool>true</bool>
+ </property>
+ <property name="text">
+ <string>0</string>
+ </property>
+ <property name="alignment">
+ <set>Qt::AlignRight</set>
+ </property>
+ </widget>
+ </item>
+ </layout>
+ </widget>
+ </item>
+ <item>
+ <widget class="QGroupBox" name="groupIndexFilter">
+ <property name="title">
+ <string>Index-Filter</string>
+ </property>
+ <layout class="QGridLayout" name="gridLayoutIndexFilter">
+ <item row="0" column="0">
+ <widget class="QLabel" name="labelAccepted">
+ <property name="text">
+ <string>accepted:</string>
+ </property>
+ </widget>
+ </item>
+ <item row="0" column="1">
+ <widget class="QLineEdit" name="lineAccepted">
+ <property name="readOnly">
+ <bool>true</bool>
+ </property>
+ <property name="text">
+ <string>0</string>
+ </property>
+ <property name="alignment">
+ <set>Qt::AlignRight</set>
+ </property>
+ </widget>
+ </item>
+ <item row="0" column="2">
+ <widget class="QLabel" name="labelMasked">
+ <property name="text">
+ <string>masked:</string>
+ </property>
+ </widget>
+ </item>
+ <item row="0" column="3">
+ <widget class="QLineEdit" name="lineMasked">
+ <property name="readOnly">
+ <bool>true</bool>
+ </property>
+ <property name="text">
+ <string>0</string>
+ </property>
+ <property name="alignment">
+ <set>Qt::AlignRight</set>
+ </property>
+ </widget>
+ </item>
+ <item row="0" column="4">
+ <widget class="QLabel" name="labelGlitch">
+ <property name="text">
+ <string>glitch:</string>
+ </property>
+ </widget>
+ </item>
+ <item row="0" column="5">
+ <widget class="QLineEdit" name="lineGlitch">
+ <property name="readOnly">
+ <bool>true</bool>
+ </property>
+ <property name="text">
+ <string>0</string>
+ </property>
+ <property name="alignment">
+ <set>Qt::AlignRight</set>
+ </property>
+ </widget>
+ </item>
+ </layout>
+ </widget>
+ </item>
+ <item>
+ <widget class="QGroupBox" name="groupIndexWrite">
+ <property name="title">
+ <string>Index-Write Timing</string>
+ </property>
+ <layout class="QGridLayout" name="gridLayoutIndexWrite">
+ <item row="0" column="0">
+ <widget class="QLabel" name="labelIdxStarts">
+ <property name="text">
+ <string>starts:</string>
+ </property>
+ </widget>
+ </item>
+ <item row="0" column="1">
+ <widget class="QLineEdit" name="lineIdxStarts">
+ <property name="readOnly">
+ <bool>true</bool>
+ </property>
+ <property name="text">
+ <string>0</string>
+ </property>
+ <property name="alignment">
+ <set>Qt::AlignRight</set>
+ </property>
+ </widget>
+ </item>
+ <item row="0" column="2">
+ <widget class="QLabel" name="labelIdxMin">
+ <property name="text">
+ <string>min:</string>
+ </property>
+ </widget>
+ </item>
+ <item row="0" column="3">
+ <widget class="QLineEdit" name="lineIdxMin">
+ <property name="readOnly">
+ <bool>true</bool>
+ </property>
+ <property name="text">
+ <string>0 µs</string>
+ </property>
+ <property name="alignment">
+ <set>Qt::AlignRight</set>
+ </property>
+ </widget>
+ </item>
+ <item row="0" column="4">
+ <widget class="QLabel" name="labelIdxMax">
+ <property name="text">
+ <string>max:</string>
+ </property>
+ </widget>
+ </item>
+ <item row="0" column="5">
+ <widget class="QLineEdit" name="lineIdxMax">
+ <property name="readOnly">
+ <bool>true</bool>
+ </property>
+ <property name="text">
+ <string>0 µs</string>
+ </property>
+ <property name="alignment">
+ <set>Qt::AlignRight</set>
+ </property>
+ </widget>
+ </item>
+ <item row="0" column="6">
+ <widget class="QLabel" name="labelIdxAvg">
+ <property name="text">
+ <string>avg:</string>
+ </property>
+ </widget>
+ </item>
+ <item row="0" column="7">
+ <widget class="QLineEdit" name="lineIdxAvg">
+ <property name="readOnly">
+ <bool>true</bool>
+ </property>
+ <property name="text">
+ <string>0 µs</string>
+ </property>
+ <property name="alignment">
+ <set>Qt::AlignRight</set>
+ </property>
+ </widget>
+ </item>
+ </layout>
+ </widget>
+ </item>
+ </layout>
+ </widget>
+ </item>
+ <item>
+ <widget class="QGroupBox" name="groupCMOSTable">
+ <property name="title">
+ <string>CMOS Drive-Type Referenz (fdutils)</string>
+ </property>
+ <layout class="QVBoxLayout" name="verticalLayoutCMOS">
+ <item>
+ <widget class="QTableWidget" name="tableCMOS">
+ <property name="maximumHeight">
+ <number>150</number>
+ </property>
+ <property name="rowCount">
+ <number>6</number>
+ </property>
+ <property name="columnCount">
+ <number>5</number>
+ </property>
+ <column>
+ <property name="text">
+ <string>CMOS</string>
+ </property>
+ </column>
+ <column>
+ <property name="text">
+ <string>Typ</string>
+ </property>
+ </column>
+ <column>
+ <property name="text">
+ <string>Rotation (µs)</string>
+ </property>
+ </column>
+ <column>
+ <property name="text">
+ <string>RPM</string>
+ </property>
+ </column>
+ <column>
+ <property name="text">
+ <string>Datenrate</string>
+ </property>
+ </column>
+ </widget>
+ </item>
+ </layout>
+ </widget>
+ </item>
+ <item>
+ <spacer name="verticalSpacer">
+ <property name="orientation">
+ <enum>Qt::Vertical</enum>
+ </property>
+ </spacer>
+ </item>
+ </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

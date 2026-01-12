@@ -297,9 +297,7 @@ make
 
 # Build everything
 cmake -DBUILD_GUI=ON \
-      -DBUILD_CLI=ON \
       -DBUILD_TESTS=ON \
-      -DBUILD_EXAMPLES=ON \
       ..
 make
 ```
@@ -337,7 +335,6 @@ make
 ### **Tools for Testing:**
 - **WinUAE** - Amiga emulator (Windows)
 - **FS-UAE** - Cross-platform Amiga emulator
-- **adf-tools** - Command-line ADF utilities
 
 ### **Sample ADF Files:**
 - **Workbench 1.3** - Classic Amiga OS

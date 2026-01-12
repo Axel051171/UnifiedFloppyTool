@@ -15,7 +15,7 @@
  * - **Hardware Support**: Greaseweazle, FluxEngine, KryoFlux, FC5025, SuperCard Pro
  * - **Advanced Recovery**: Multi-pass reading, majority voting, weak bit detection
  * - **Copy Protection Analysis**: V-MAX, CopyLock, RapidLok, and 50+ protection schemes
- * - **GUI and CLI**: Professional Qt6 interface with command-line equivalence
+ * - **Professional GUI**: Full-featured Qt6 interface for all operations
  * 
  * @section modules Core Modules
  * 

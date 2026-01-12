@@ -1,0 +1,335 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>TabNibble</class>
+ <widget class="QWidget" name="TabNibble">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>900</width>
+    <height>700</height>
+   </rect>
+  </property>
+  <layout class="QHBoxLayout" name="horizontalLayout_main">
+   
+   <!-- LEFT COLUMN -->
+   <item>
+    <layout class="QVBoxLayout" name="verticalLayout_left">
+     
+     <!-- READ MODE -->
+     <item>
+      <widget class="QGroupBox" name="groupReadMode">
+       <property name="title">
+        <string>Read Mode</string>
+       </property>
+       <layout class="QFormLayout" name="formLayout_read">
+        <item row="0" column="0">
+         <widget class="QLabel" name="labelMode">
+          <property name="text"><string>Mode:</string></property>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="QComboBox" name="comboReadMode">
+          <property name="maximumWidth"><number>180</number></property>
+          <item><property name="text"><string>Normal</string></property></item>
+          <item><property name="text"><string>Raw</string></property></item>
+          <item><property name="text"><string>Flux</string></property></item>
+         </widget>
+        </item>
+        <item row="1" column="0">
+         <widget class="QLabel" name="labelRevolutions">
+          <property name="text"><string>Revolutions:</string></property>
+         </widget>
+        </item>
+        <item row="1" column="1">
+         <widget class="QSpinBox" name="spinRevolutions">
+          <property name="minimum"><number>1</number></property>
+          <property name="maximum"><number>10</number></property>
+          <property name="value"><number>3</number></property>
+          <property name="maximumWidth"><number>80</number></property>
+         </widget>
+        </item>
+        <item row="2" column="0" colspan="2">
+         <widget class="QCheckBox" name="checkReadBetweenIndex">
+          <property name="text"><string>Read between index</string></property>
+          <property name="checked"><bool>true</bool></property>
+         </widget>
+        </item>
+        <item row="3" column="0">
+         <widget class="QLabel" name="labelIndexToIndex">
+          <property name="text"><string>Index to index:</string></property>
+         </widget>
+        </item>
+        <item row="3" column="1">
+         <widget class="QDoubleSpinBox" name="spinIndexToIndex">
+          <property name="suffix"><string> ms</string></property>
+          <property name="minimum"><number>100</number></property>
+          <property name="maximum"><number>250</number></property>
+          <property name="value"><number>200</number></property>
+          <property name="maximumWidth"><number>100</number></property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     
+     <!-- GCR SETTINGS -->
+     <item>
+      <widget class="QGroupBox" name="groupGCR">
+       <property name="title">
+        <string>GCR Settings (Commodore/Apple)</string>
+       </property>
+       <layout class="QVBoxLayout" name="verticalLayout_gcr">
+        <item>
+         <widget class="QCheckBox" name="checkGCRMode">
+          <property name="text"><string>GCR Mode</string></property>
+         </widget>
+        </item>
+        <item>
+         <layout class="QFormLayout">
+          <item row="0" column="0">
+           <widget class="QLabel" name="labelGCRType">
+            <property name="text"><string>GCR Type:</string></property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QComboBox" name="comboGCRType">
+            <property name="maximumWidth"><number>180</number></property>
+            <item><property name="text"><string>C64/1541</string></property></item>
+            <item><property name="text"><string>Apple II 5.25"</string></property></item>
+            <item><property name="text"><string>Apple 3.5"</string></property></item>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="checkDecodeGCR">
+          <property name="text"><string>Decode GCR</string></property>
+          <property name="checked"><bool>true</bool></property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="checkPreserveSync">
+          <property name="text"><string>Preserve sync marks</string></property>
+          <property name="checked"><bool>true</bool></property>
+         </widget>
+        </item>
+        <item>
+         <layout class="QHBoxLayout">
+          <item>
+           <widget class="QLabel" name="labelSyncLength">
+            <property name="text"><string>Min sync length:</string></property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QSpinBox" name="spinSyncLength">
+            <property name="minimum"><number>1</number></property>
+            <property name="maximum"><number>100</number></property>
+            <property name="value"><number>10</number></property>
+            <property name="maximumWidth"><number>80</number></property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     
+     <!-- TIMING -->
+     <item>
+      <widget class="QGroupBox" name="groupTiming">
+       <property name="title">
+        <string>Timing</string>
+       </property>
+       <layout class="QVBoxLayout" name="verticalLayout_timing">
+        <item>
+         <widget class="QCheckBox" name="checkPreserveTiming">
+          <property name="text"><string>Preserve original timing</string></property>
+          <property name="checked"><bool>true</bool></property>
+         </widget>
+        </item>
+        <item>
+         <layout class="QFormLayout">
+          <item row="0" column="0">
+           <widget class="QLabel" name="labelBitTolerance">
+            <property name="text"><string>Bit time tolerance:</string></property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QDoubleSpinBox" name="spinBitTolerance">
+            <property name="suffix"><string> %</string></property>
+            <property name="minimum"><number>1</number></property>
+            <property name="maximum"><number>50</number></property>
+            <property name="value"><number>10</number></property>
+            <property name="maximumWidth"><number>100</number></property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="checkDetectWeakBits">
+          <property name="text"><string>Detect weak bits</string></property>
+          <property name="checked"><bool>true</bool></property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="checkMarkWeakBits">
+          <property name="text"><string>Mark weak bits in output</string></property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     
+     <item><spacer><property name="orientation"><enum>Qt::Vertical</enum></property></spacer></item>
+     
+    </layout>
+   </item>
+   
+   <!-- RIGHT COLUMN -->
+   <item>
+    <layout class="QVBoxLayout" name="verticalLayout_right">
+     
+     <!-- HALF TRACKS -->
+     <item>
+      <widget class="QGroupBox" name="groupHalfTracks">
+       <property name="title">
+        <string>Half Tracks</string>
+       </property>
+       <layout class="QVBoxLayout" name="verticalLayout_half">
+        <item>
+         <widget class="QCheckBox" name="checkReadHalfTracks">
+          <property name="text"><string>Read half tracks</string></property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="checkAnalyzeHalfTracks">
+          <property name="text"><string>Analyze half tracks</string></property>
+         </widget>
+        </item>
+        <item>
+         <layout class="QFormLayout">
+          <item row="0" column="0">
+           <widget class="QLabel" name="labelHalfTrackOffset">
+            <property name="text"><string>Half track offset:</string></property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QDoubleSpinBox" name="spinHalfTrackOffset">
+            <property name="minimum"><number>-1</number></property>
+            <property name="maximum"><number>1</number></property>
+            <property name="singleStep"><number>0.1</number></property>
+            <property name="value"><number>0.5</number></property>
+            <property name="maximumWidth"><number>100</number></property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     
+     <!-- DENSITY -->
+     <item>
+      <widget class="QGroupBox" name="groupDensity">
+       <property name="title">
+        <string>Density</string>
+       </property>
+       <layout class="QVBoxLayout" name="verticalLayout_density">
+        <item>
+         <widget class="QCheckBox" name="checkVariableDensity">
+          <property name="text"><string>Variable density</string></property>
+         </widget>
+        </item>
+        <item>
+         <layout class="QFormLayout">
+          <item row="0" column="0">
+           <widget class="QLabel" name="labelDensityZones">
+            <property name="text"><string>Density zones:</string></property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QSpinBox" name="spinDensityZones">
+            <property name="minimum"><number>1</number></property>
+            <property name="maximum"><number>10</number></property>
+            <property name="value"><number>4</number></property>
+            <property name="maximumWidth"><number>80</number></property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="checkAutoDetectDensity">
+          <property name="text"><string>Auto-detect density</string></property>
+          <property name="checked"><bool>true</bool></property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     
+     <!-- OUTPUT -->
+     <item>
+      <widget class="QGroupBox" name="groupOutput">
+       <property name="title">
+        <string>Output Format</string>
+       </property>
+       <layout class="QVBoxLayout" name="verticalLayout_output">
+        <item>
+         <widget class="QCheckBox" name="checkCreateNIB">
+          <property name="text"><string>Create .NIB file</string></property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="checkCreateG64">
+          <property name="text"><string>Create .G64 file</string></property>
+          <property name="checked"><bool>true</bool></property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="checkIncludeTiming">
+          <property name="text"><string>Include timing data</string></property>
+          <property name="checked"><bool>true</bool></property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="checkIncludeRawFlux">
+          <property name="text"><string>Include raw flux data</string></property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     
+     <item><spacer><property name="orientation"><enum>Qt::Vertical</enum></property></spacer></item>
+     
+     <!-- ANALYSIS TABLE -->
+     <item>
+      <widget class="QGroupBox" name="groupAnalysis">
+       <property name="title">
+        <string>Track Analysis</string>
+       </property>
+       <layout class="QVBoxLayout">
+        <item>
+         <widget class="QTableWidget" name="tableTrackAnalysis">
+          <property name="maximumHeight"><number>150</number></property>
+          <property name="columnCount"><number>5</number></property>
+          <column><property name="text"><string>Track</string></property></column>
+          <column><property name="text"><string>Side</string></property></column>
+          <column><property name="text"><string>Bits</string></property></column>
+          <column><property name="text"><string>Sync</string></property></column>
+          <column><property name="text"><string>Status</string></property></column>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     
+    </layout>
+   </item>
+   
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

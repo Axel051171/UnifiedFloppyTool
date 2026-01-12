@@ -5,7 +5,7 @@
  * Optimized for UFT floppy disk verification
  */
 
-#include "uft_crc_reveng.h"
+#include <uft/crc/uft_crc_reveng.h>
 #include <string.h>
 #include <ctype.h>
 

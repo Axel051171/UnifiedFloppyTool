@@ -147,9 +147,6 @@ cmake -B build -DFUZZ=ON
 
 # Static-Build (für Distribution)
 cmake -B build -DBUILD_SHARED_LIBS=OFF -DSTATIC_RUNTIME=ON
-
-# GUI-less Build (CLI only)
-cmake -B build -DBUILD_GUI=OFF
 ```
 
 ---

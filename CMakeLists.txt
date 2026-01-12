@@ -53,8 +53,9 @@ include_directories(
 # Build Options
 # ═══════════════════════════════════════════════════════════════════════════════
 option(UFT_BUILD_GUI      "Build Qt6 GUI application"      ON)
-option(UFT_BUILD_TOOLS    "Build command-line tools"       ON)
+option(UFT_BUILD_TOOLS    "Build command-line tools"       OFF)
 option(UFT_BUILD_TESTS    "Build test suite"               ON)
+option(UFT_BUILD_EXAMPLES "Build example programs"         OFF)
 option(UFT_ENABLE_SIMD    "Enable SIMD optimizations"      ON)
 option(UFT_ENABLE_OPENMP  "Enable OpenMP parallelization"  ON)
 option(UFT_ENABLE_LTO     "Enable Link-Time Optimization"  OFF)
@@ -280,6 +281,11 @@ if(UFT_BUILD_GUI AND Qt6_FOUND)
             ${GUI_SOURCES}
             ${GUI_HEADERS}
             ${GUI_FORMS}
+        )
+        
+        # Set AUTOUIC search paths as target property
+        set_target_properties(${PROJECT_NAME} PROPERTIES
+            AUTOUIC_SEARCH_PATHS "${CMAKE_SOURCE_DIR}/forms;${CMAKE_SOURCE_DIR}/gui/forms"
         )
         
         target_link_libraries(${PROJECT_NAME} PRIVATE

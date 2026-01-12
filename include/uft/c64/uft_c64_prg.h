@@ -50,6 +50,9 @@ const char *uft_c64_basic_token_name(uint8_t token);
 /* Utility: compute SHA-1 (small implementation) for forensics/reproducibility. */
 void uft_sha1(const uint8_t *data, size_t len, uint8_t out20[20]);
 
+/* Utility: format SHA-1 hash as hex string */
+size_t uft_sha1_format(const uint8_t hash[20], char *out, size_t out_cap);
+
 /**
  * @brief Extended PRG analysis info
  */

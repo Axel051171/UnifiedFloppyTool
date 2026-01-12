@@ -754,8 +754,12 @@ static uft_error_t gcr_encode_flux(const uft_sector_t* sectors, size_t sector_co
     free(bits);
     
     /* Shrink to actual size */
-    *flux = realloc(flux_data, flux_idx * sizeof(uint32_t));
-    if (!*flux) *flux = flux_data;  /* Keep original if realloc fails */
+    uint32_t *new_flux = realloc(flux_data, flux_idx * sizeof(uint32_t));
+    if (new_flux) {
+        *flux = new_flux;
+    } else {
+        *flux = flux_data;  /* Keep original if realloc fails */
+    }
     *flux_count = flux_idx;
     
     return UFT_OK;
