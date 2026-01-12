@@ -1,4 +1,4 @@
-# UnifiedFloppyTool CI - Minimal & Robust
+# UnifiedFloppyTool CI - Full GUI on All Platforms
 name: CI
 
 on:
@@ -13,7 +13,7 @@ env:
 
 jobs:
   # ═══════════════════════════════════════════════════════════════════════════
-  # Linux Build (No GUI) - Core Libraries Only
+  # Linux Core (No GUI) - Fast validation + Tests
   # ═══════════════════════════════════════════════════════════════════════════
   linux-core:
     name: 🐧 Linux Core
@@ -36,7 +36,7 @@ jobs:
         run: ctest --test-dir build --output-on-failure
 
   # ═══════════════════════════════════════════════════════════════════════════
-  # Linux Build (With GUI)
+  # Linux GUI
   # ═══════════════════════════════════════════════════════════════════════════
   linux-gui:
     name: 🐧 Linux GUI
@@ -47,7 +47,7 @@ jobs:
       - name: Install Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential cmake ninja-build libgl1-mesa-dev
+          sudo apt-get install -y build-essential cmake ninja-build libgl1-mesa-dev libxkbcommon-dev
           
       - name: Install Qt
         uses: jurplel/install-qt-action@v3
@@ -63,10 +63,10 @@ jobs:
         run: cmake --build build --parallel
 
   # ═══════════════════════════════════════════════════════════════════════════
-  # Windows Build
+  # Windows Core (No GUI) - Fast validation + Tests
   # ═══════════════════════════════════════════════════════════════════════════
-  windows:
-    name: 🪟 Windows
+  windows-core:
+    name: 🪟 Windows Core
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -81,10 +81,32 @@ jobs:
         run: ctest --test-dir build -C ${{ env.BUILD_TYPE }} --output-on-failure
 
   # ═══════════════════════════════════════════════════════════════════════════
-  # macOS Build
+  # Windows GUI
   # ═══════════════════════════════════════════════════════════════════════════
-  macos:
-    name: 🍎 macOS
+  windows-gui:
+    name: 🪟 Windows GUI
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v3
+        with:
+          version: ${{ env.QT_VERSION }}
+          cache: true
+          modules: 'qtserialport'
+          
+      - name: Configure
+        run: cmake -B build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DUFT_BUILD_GUI=ON -DBUILD_TESTING=ON
+          
+      - name: Build
+        run: cmake --build build --config ${{ env.BUILD_TYPE }} --parallel
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # macOS Core (No GUI) - Fast validation + Tests
+  # ═══════════════════════════════════════════════════════════════════════════
+  macos-core:
+    name: 🍎 macOS Core
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -100,3 +122,28 @@ jobs:
         
       - name: Test
         run: ctest --test-dir build --output-on-failure
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # macOS GUI
+  # ═══════════════════════════════════════════════════════════════════════════
+  macos-gui:
+    name: 🍎 macOS GUI
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Dependencies
+        run: brew install cmake ninja
+      
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v3
+        with:
+          version: ${{ env.QT_VERSION }}
+          cache: true
+          modules: 'qtserialport'
+          
+      - name: Configure
+        run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DUFT_BUILD_GUI=ON -DUFT_ENABLE_OPENMP=OFF -DBUILD_TESTING=ON
+        
+      - name: Build
+        run: cmake --build build --parallel
