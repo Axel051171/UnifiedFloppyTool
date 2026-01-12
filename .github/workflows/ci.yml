@@ -144,6 +144,7 @@ jobs:
         with:
           version: ${{ env.QT_VERSION }}
           cache: true
+          modules: 'qtserialport'
           
       - name: Configure
         run: |
@@ -216,6 +217,7 @@ jobs:
           version: ${{ env.QT_VERSION }}
           cache: true
           arch: clang_64
+          modules: 'qtserialport'
           
       - name: Configure
         run: |
@@ -255,6 +257,7 @@ jobs:
           version: ${{ env.QT_VERSION }}
           cache: true
           arch: win64_msvc2019_64
+          modules: 'qtserialport'
           
       - name: Configure
         run: cmake -B build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DBUILD_TESTING=ON

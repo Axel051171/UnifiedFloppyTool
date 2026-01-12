@@ -5,7 +5,7 @@
 cmake_minimum_required(VERSION 3.16)
 
 project(UnifiedFloppyTool
-    VERSION 3.7.1
+    VERSION 3.7.3
     DESCRIPTION "Cross-platform floppy disk preservation and analysis tool"
     LANGUAGES CXX C
 )
@@ -157,7 +157,7 @@ endif()
 # Find Qt6 (Optional for GUI)
 # ═══════════════════════════════════════════════════════════════════════════════
 if(UFT_BUILD_GUI)
-    find_package(Qt6 COMPONENTS Core Widgets Gui QUIET)
+    find_package(Qt6 COMPONENTS Core Widgets Gui SerialPort QUIET)
     if(Qt6_FOUND)
         message(STATUS "Qt6 found: ${Qt6_VERSION}")
         set(CMAKE_AUTOMOC ON)
@@ -293,6 +293,7 @@ if(UFT_BUILD_GUI AND Qt6_FOUND)
             Qt6::Core
             Qt6::Widgets
             Qt6::Gui
+            Qt6::SerialPort
             uft_core
             uft_crc
             uft_encoding

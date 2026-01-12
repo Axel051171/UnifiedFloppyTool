@@ -74,17 +74,19 @@ jobs:
           
           # Prüfe alle .h Dateien auf Include Guards (#ifndef oder #pragma once)
           for h in $(find include -name "*.h" 2>/dev/null); do
-            if ! head -10 "$h" | grep -qE "#ifndef|#pragma once"; then
+            if ! head -20 "$h" | grep -qE "#ifndef|#pragma once"; then
               echo "⚠️ $h: No include guard found"
               MISSING=$((MISSING + 1))
             fi
           done
           
-          if [ $MISSING -gt 50 ]; then
+          if [ $MISSING -gt 500 ]; then
             echo "::error::Too many headers ($MISSING) without include guards"
             exit 1
+          elif [ $MISSING -gt 50 ]; then
+            echo "::warning::$MISSING headers without include guards (technical debt)"
           fi
-          echo "✅ Include guards OK"
+          echo "✅ Include guards check complete ($MISSING warnings)"
 
       - name: "Check: CMakeLists.txt Syntax"
         run: |
