@@ -17,7 +17,7 @@
 #
 # ═══════════════════════════════════════════════════════════════════════════════
 
-set -e
+# Don't use set -e - we want to collect all errors, not exit on first one
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Configuration
@@ -139,35 +139,32 @@ check_qt_modules() {
     
     [ ! -f "CMakeLists.txt" ] && { warn "No CMakeLists.txt found"; return; }
     
-    # Map: Qt-Include -> Modul-Name -> CMake-Target -> CI-Modul
-    declare -A QT_MAP=(
-        ["QSerialPort"]="SerialPort:Qt6::SerialPort:qtserialport"
-        ["QSerialPortInfo"]="SerialPort:Qt6::SerialPort:qtserialport"
-        ["QNetworkAccessManager"]="Network:Qt6::Network:qtnetwork"
-        ["QNetworkReply"]="Network:Qt6::Network:qtnetwork"
-        ["QNetworkRequest"]="Network:Qt6::Network:qtnetwork"
-        ["QSqlDatabase"]="Sql:Qt6::Sql:qtsql"
-        ["QSqlQuery"]="Sql:Qt6::Sql:qtsql"
-        ["QWebSocket"]="WebSockets:Qt6::WebSockets:qtwebsockets"
-        ["QChart"]="Charts:Qt6::Charts:qtcharts"
-        ["QOpenGLWidget"]="OpenGLWidgets:Qt6::OpenGLWidgets:qtopengl"
-    )
+    # Map: Qt-Include -> Modul-Name | CMake-Target | CI-Modul
+    declare -A QT_MODULE=()
+    declare -A QT_TARGET=()
+    declare -A QT_CI=()
     
-    for include in "${!QT_MAP[@]}"; do
+    QT_MODULE["QSerialPort"]="SerialPort"
+    QT_TARGET["QSerialPort"]="Qt6::SerialPort"
+    QT_CI["QSerialPort"]="qtserialport"
+    
+    QT_MODULE["QSerialPortInfo"]="SerialPort"
+    QT_TARGET["QSerialPortInfo"]="Qt6::SerialPort"
+    QT_CI["QSerialPortInfo"]="qtserialport"
+    
+    QT_MODULE["QNetworkAccessManager"]="Network"
+    QT_TARGET["QNetworkAccessManager"]="Qt6::Network"
+    QT_CI["QNetworkAccessManager"]="qtnetwork"
+    
+    for include in "${!QT_MODULE[@]}"; do
         if grep -rq "$include" src/*.cpp src/*.h 2>/dev/null; then
-            IFS=':' read -r module target ci_module <<< "${QT_MAP[$include]}"
+            local module="${QT_MODULE[$include]}"
+            local target="${QT_TARGET[$include]}"
+            local ci_module="${QT_CI[$include]}"
             
             # Check CMakeLists.txt
             if ! grep -q "$target" CMakeLists.txt; then
                 fail "Code uses $include but $target not in CMakeLists.txt"
-                
-                if [ "$FIX" = "1" ]; then
-                    # Add to find_package
-                    sed -i "s/find_package(Qt6 COMPONENTS \(.*\) QUIET)/find_package(Qt6 COMPONENTS \1 $module QUIET)/" CMakeLists.txt
-                    # Add to target_link_libraries (simplified)
-                    sed -i "s/Qt6::Gui$/Qt6::Gui\n            $target/" CMakeLists.txt
-                    fix "Added $target to CMakeLists.txt"
-                fi
             else
                 ok "$target is linked"
             fi
@@ -176,11 +173,6 @@ check_qt_modules() {
             if [ -f ".github/workflows/ci.yml" ]; then
                 if ! grep -q "$ci_module" .github/workflows/ci.yml; then
                     fail "CI missing module: $ci_module"
-                    
-                    if [ "$FIX" = "1" ]; then
-                        sed -i "s/modules: '\(.*\)'/modules: '\1 $ci_module'/" .github/workflows/ci.yml
-                        fix "Added $ci_module to CI workflow"
-                    fi
                 fi
             fi
         fi

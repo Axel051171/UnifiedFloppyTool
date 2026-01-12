@@ -15,6 +15,7 @@
 #include <QFileInfo>
 #include <QCryptographicHash>
 #include <QDateTime>
+#include <QInputDialog>
 
 ToolsTab::ToolsTab(QWidget *parent)
     : QWidget(parent)
@@ -71,12 +72,12 @@ void ToolsTab::appendOutput(const QString& text)
 
 void ToolsTab::onDiskInfo()
 {
-    QString path = ui->editAnalyzePath->text();
+    QString path = ui->editAnalyzeFile->text();
     if (path.isEmpty()) {
         path = QFileDialog::getOpenFileName(this, tr("Select Disk Image"),
             QString(), DiskImageValidator::fileDialogFilter());
         if (path.isEmpty()) return;
-        ui->editAnalyzePath->setText(path);
+        ui->editAnalyzeFile->setText(path);
     }
     
     DiskImageInfo info = DiskImageValidator::validate(path);
@@ -109,7 +110,7 @@ void ToolsTab::onDiskInfo()
 
 void ToolsTab::onHexView()
 {
-    QString path = ui->editAnalyzePath->text();
+    QString path = ui->editAnalyzeFile->text();
     if (path.isEmpty()) {
         QMessageBox::information(this, tr("Hex View"),
             tr("Please select a disk image first."));
@@ -169,7 +170,7 @@ void ToolsTab::onAnalyze()
 {
     onDiskInfo();
     
-    QString path = ui->editAnalyzePath->text();
+    QString path = ui->editAnalyzeFile->text();
     if (path.isEmpty()) return;
     
     // Calculate hash if checkbox is checked
@@ -214,7 +215,7 @@ void ToolsTab::onConvert()
 
 void ToolsTab::onRepair()
 {
-    QString path = ui->editRepairPath->text();
+    QString path = ui->editRepairFile->text();
     if (path.isEmpty()) {
         QMessageBox::information(this, tr("Repair"),
             tr("Please specify a disk image to repair."));
@@ -278,7 +279,12 @@ void ToolsTab::onCompare()
 
 void ToolsTab::onCreateBlank()
 {
-    QString format = ui->comboBlankFormat->currentText();
+    // Ask user for format (comboBlankFormat not in UI)
+    QStringList formats = {"ADF", "D64", "IMG", "ST", "DSK"};
+    bool ok;
+    QString format = QInputDialog::getItem(this, tr("Create Blank Disk"),
+        tr("Select format:"), formats, 0, false, &ok);
+    if (!ok || format.isEmpty()) return;
     
     QString path = QFileDialog::getSaveFileName(this, tr("Create Blank Disk"),
         QString(), QString("%1 (*.%2)").arg(format).arg(format.toLower()));
@@ -359,7 +365,7 @@ void ToolsTab::onBrowseRepair()
 {
     QString path = QFileDialog::getOpenFileName(this, tr("Select Image"),
         QString(), DiskImageValidator::fileDialogFilter());
-    if (!path.isEmpty()) ui->editRepairPath->setText(path);
+    if (!path.isEmpty()) ui->editRepairFile->setText(path);
 }
 
 void ToolsTab::onBrowseCompareA()
@@ -380,7 +386,7 @@ void ToolsTab::onBrowseAnalyze()
 {
     QString path = QFileDialog::getOpenFileName(this, tr("Select Image"),
         QString(), DiskImageValidator::fileDialogFilter());
-    if (!path.isEmpty()) ui->editAnalyzePath->setText(path);
+    if (!path.isEmpty()) ui->editAnalyzeFile->setText(path);
 }
 
 void ToolsTab::onBrowseBatch()
