@@ -57,14 +57,12 @@ jobs:
         mkdir -p ${PKG_DIR}/DEBIAN
         mkdir -p ${PKG_DIR}/usr/bin
         mkdir -p ${PKG_DIR}/usr/share/applications
-        mkdir -p ${PKG_DIR}/usr/share/icons/hicolor/256x256/apps
         mkdir -p ${PKG_DIR}/usr/share/doc/${{ env.APP_NAME }}
         
         cp UnifiedFloppyTool ${PKG_DIR}/usr/bin/
         cp README.md ${PKG_DIR}/usr/share/doc/${{ env.APP_NAME }}/
         cp LICENSE ${PKG_DIR}/usr/share/doc/${{ env.APP_NAME }}/copyright
         
-        # Create control file
         cat > ${PKG_DIR}/DEBIAN/control << EOF
         Package: unifiedfloppytool
         Version: ${VERSION}
@@ -79,19 +77,16 @@ jobs:
          including Commodore, Amiga, Atari, Apple, and PC.
         EOF
         
-        # Create .desktop file
         cat > ${PKG_DIR}/usr/share/applications/unifiedfloppytool.desktop << EOF
         [Desktop Entry]
         Name=UnifiedFloppyTool
         Comment=Floppy disk forensics and preservation
         Exec=/usr/bin/UnifiedFloppyTool
-        Icon=unifiedfloppytool
         Terminal=false
         Type=Application
         Categories=Utility;System;
         EOF
         
-        # Build .deb
         cd dist/deb
         fakeroot dpkg-deb --build ${{ env.APP_NAME }}_${VERSION}_amd64
         mv ${{ env.APP_NAME }}_${VERSION}_amd64.deb ../
@@ -105,7 +100,7 @@ jobs:
           dist/*.deb
 
   # ═══════════════════════════════════════════════════════════════════════════
-  # WINDOWS BUILD
+  # WINDOWS BUILD (MSVC)
   # ═══════════════════════════════════════════════════════════════════════════
   build-windows:
     runs-on: windows-latest
@@ -123,14 +118,17 @@ jobs:
         version: ${{ env.QT_VERSION }}
         host: 'windows'
         target: 'desktop'
-        arch: 'win64_mingw'
+        arch: 'win64_msvc2019_64'
         modules: 'qtserialport'
+    
+    - name: Setup MSVC
+      uses: ilammy/msvc-dev-cmd@v1
     
     - name: Build
       shell: cmd
       run: |
         qmake UnifiedFloppyTool.pro CONFIG+=release
-        mingw32-make -j%NUMBER_OF_PROCESSORS%
+        nmake
     
     - name: Deploy Qt
       shell: cmd
@@ -156,7 +154,7 @@ jobs:
   # MACOS BUILD
   # ═══════════════════════════════════════════════════════════════════════════
   build-macos:
-    runs-on: macos-13
+    runs-on: macos-14
     steps:
     - uses: actions/checkout@v4
     

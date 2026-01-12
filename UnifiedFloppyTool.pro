@@ -205,3 +205,12 @@ HEADERS += \
 qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# MSVC-specific settings
+# ═══════════════════════════════════════════════════════════════════════════════
+win32-msvc* {
+    QMAKE_CXXFLAGS += /W3 /WX-
+    QMAKE_CXXFLAGS_RELEASE += /O2
+    LIBS += shlwapi.lib
+}

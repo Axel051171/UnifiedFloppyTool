@@ -48,14 +48,17 @@ jobs:
         version: '6.6.2'
         host: 'windows'
         target: 'desktop'
-        arch: 'win64_mingw'
+        arch: 'win64_msvc2019_64'
         modules: 'qtserialport'
+    
+    - name: Setup MSVC
+      uses: ilammy/msvc-dev-cmd@v1
     
     - name: Build with qmake
       shell: cmd
       run: |
         qmake UnifiedFloppyTool.pro CONFIG+=release
-        mingw32-make -j%NUMBER_OF_PROCESSORS%
+        nmake
     
     - name: Upload artifact
       uses: actions/upload-artifact@v4
@@ -64,7 +67,7 @@ jobs:
         path: release/UnifiedFloppyTool.exe
 
   build-macos:
-    runs-on: macos-13
+    runs-on: macos-14
     steps:
     - uses: actions/checkout@v4
     
