@@ -450,3 +450,15 @@ QString ForensicTab::generateReport()
     
     return report;
 }
+
+void ForensicTab::onBrowseImage()
+{
+    QString path = QFileDialog::getOpenFileName(this, tr("Select Image"),
+        QString(), DiskImageValidator::fileDialogFilter());
+    
+    if (!path.isEmpty()) {
+        m_currentImage = path;
+        analyzeImage(path);
+        emit statusMessage(tr("Loaded: %1").arg(QFileInfo(path).fileName()));
+    }
+}
