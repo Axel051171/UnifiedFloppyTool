@@ -32,7 +32,7 @@ jobs:
         make -j$(nproc)
     
     - name: Upload artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: UnifiedFloppyTool-linux
         path: UnifiedFloppyTool
@@ -61,7 +61,7 @@ jobs:
         nmake
     
     - name: Upload artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: UnifiedFloppyTool-windows
         path: release/UnifiedFloppyTool.exe
@@ -86,7 +86,7 @@ jobs:
         make -j$(sysctl -n hw.ncpu)
     
     - name: Upload artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: UnifiedFloppyTool-macos
         path: UnifiedFloppyTool.app
