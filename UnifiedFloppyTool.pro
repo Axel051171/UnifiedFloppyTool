@@ -31,7 +31,7 @@ greaterThan(QT_MAJOR_VERSION, 5) {
 CONFIG += sdk_no_version_check
 
 # Compiler flags - suppress warnings for legacy code
-QMAKE_CXXFLAGS += -Wall -Wextra -Wno-unknown-pragmas -Wno-sign-compare -Wno-unused-parameter
+# Compiler flags moved to platform-specific sections below
 QMAKE_CFLAGS += -Wall -Wextra -Wno-unused-parameter
 
 # Windows specific
@@ -213,4 +213,11 @@ win32-msvc* {
     QMAKE_CXXFLAGS += /W3 /WX-
     QMAKE_CXXFLAGS_RELEASE += /O2
     LIBS += shlwapi.lib
+}
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# GCC/Clang-specific settings (Linux, macOS)
+# ═══════════════════════════════════════════════════════════════════════════════
+unix|macx {
+    QMAKE_CXXFLAGS += -Wall -Wextra -Wno-unknown-pragmas -Wno-sign-compare -Wno-unused-parameter
 }
