@@ -12,6 +12,7 @@
 #include <QFormLayout>
 #include <QMessageBox>
 #include <QFileDialog>
+#include <QHeaderView>
 #include <QJsonDocument>
 #include <QFile>
 #include <QPainter>

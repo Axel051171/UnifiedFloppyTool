@@ -3,7 +3,7 @@
  <class>MainWindow</class>
  <widget class="QMainWindow" name="MainWindow">
   <property name="geometry"><rect><x>0</x><y>0</y><width>1000</width><height>780</height></rect></property>
-  <property name="windowTitle"><string>UnifiedFloppyTool v5.36 - VISUAL Edition</string></property>
+  <property name="windowTitle"><string>UnifiedFloppyTool v3.7.0</string></property>
   <property name="acceptDrops"><bool>true</bool></property>
   
   <widget class="QWidget" name="centralwidget">
@@ -56,7 +56,7 @@
       <widget class="QWidget" name="tab_status"><attribute name="title"><string>Status</string></attribute></widget>
       <widget class="QWidget" name="tab_hardware"><attribute name="title"><string>Hardware</string></attribute></widget>
       <widget class="QWidget" name="tab_format"><attribute name="title"><string>Settings</string></attribute></widget>
-      <widget class="QWidget" name="tab_catalog"><attribute name="title"><string>Catalog</string></attribute></widget>
+      <widget class="QWidget" name="tab_explorer"><attribute name="title"><string>Explorer</string></attribute></widget>
       <widget class="QWidget" name="tab_tools"><attribute name="title"><string>Tools</string></attribute></widget>
      </widget>
     </item>

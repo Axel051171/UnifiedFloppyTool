@@ -1,0 +1,267 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>VisualDiskDialog</class>
+ <widget class="QDialog" name="VisualDiskDialog">
+  <property name="geometry">
+   <rect><x>0</x><y>0</y><width>1100</width><height>700</height></rect>
+  </property>
+  <property name="windowTitle">
+   <string>Visual Floppy Disk</string>
+  </property>
+  <layout class="QVBoxLayout" name="mainLayout">
+   <property name="spacing"><number>4</number></property>
+   <property name="margin"><number>4</number></property>
+   
+   <!-- Top info bars -->
+   <item>
+    <layout class="QHBoxLayout">
+     <item>
+      <widget class="QLabel" name="labelSide0Info">
+       <property name="text"><string>Side 0, 80 Tracks | 1440 Sectors, 0 bad | 1474560 Bytes | ISO MFM</string></property>
+       <property name="styleSheet"><string>background: #333; color: #0f0; padding: 4px;</string></property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="labelSide1Info">
+       <property name="text"><string>Side 1, 80 Tracks | 1440 Sectors, 0 bad | 1474560 Bytes | ISO MFM</string></property>
+       <property name="styleSheet"><string>background: #333; color: #0f0; padding: 4px;</string></property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   
+   <!-- Main content: Disk views + Status panel -->
+   <item>
+    <layout class="QHBoxLayout">
+     <!-- Disk visualizations -->
+     <item>
+      <widget class="QFrame" name="frameDiskView0">
+       <property name="minimumSize"><size><width>350</width><height>350</height></size></property>
+       <property name="frameShape"><enum>QFrame::Box</enum></property>
+       <property name="styleSheet"><string>background: black;</string></property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QFrame" name="frameDiskView1">
+       <property name="minimumSize"><size><width>350</width><height>350</height></size></property>
+       <property name="frameShape"><enum>QFrame::Box</enum></property>
+       <property name="styleSheet"><string>background: black;</string></property>
+      </widget>
+     </item>
+     
+     <!-- Right panel: Status + Format analysis -->
+     <item>
+      <layout class="QVBoxLayout">
+       <!-- Status -->
+       <item>
+        <widget class="QGroupBox" name="groupStatus">
+         <property name="title"><string>Status</string></property>
+         <layout class="QVBoxLayout">
+          <item>
+           <widget class="QLabel" name="labelTrackSide">
+            <property name="text"><string>Track: 0 Side: 0</string></property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QTextEdit" name="textSectorInfo">
+            <property name="readOnly"><bool>true</bool></property>
+            <property name="maximumHeight"><number>180</number></property>
+            <property name="styleSheet"><string>font-family: monospace; font-size: 9pt;</string></property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QTextEdit" name="textHexDump">
+            <property name="readOnly"><bool>true</bool></property>
+            <property name="maximumHeight"><number>120</number></property>
+            <property name="styleSheet"><string>font-family: monospace; font-size: 8pt;</string></property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       
+       <!-- Track analysis format checkboxes -->
+       <item>
+        <widget class="QGroupBox" name="groupFormats">
+         <property name="title"><string>Track analysis format</string></property>
+         <layout class="QGridLayout">
+          <item row="0" column="0">
+           <widget class="QCheckBox" name="checkIsoMfm">
+            <property name="text"><string>ISO MFM</string></property>
+            <property name="checked"><bool>true</bool></property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QCheckBox" name="checkEEmu">
+            <property name="text"><string>E-Emu</string></property>
+           </widget>
+          </item>
+          <item row="0" column="2">
+           <widget class="QCheckBox" name="checkAed6200p">
+            <property name="text"><string>AED 6200P</string></property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QCheckBox" name="checkIsoFm">
+            <property name="text"><string>ISO FM</string></property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QCheckBox" name="checkTycom">
+            <property name="text"><string>TYCOM</string></property>
+           </widget>
+          </item>
+          <item row="1" column="2">
+           <widget class="QCheckBox" name="checkMembrain">
+            <property name="text"><string>MEMBRAIN</string></property>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QCheckBox" name="checkAmigaMfm">
+            <property name="text"><string>AMIGA MFM</string></property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="QCheckBox" name="checkAppleII">
+            <property name="text"><string>Apple II</string></property>
+           </widget>
+          </item>
+          <item row="2" column="2">
+           <widget class="QCheckBox" name="checkArburg">
+            <property name="text"><string>Arburg</string></property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       
+       <!-- Track/Side selection -->
+       <item>
+        <widget class="QGroupBox" name="groupSelection">
+         <property name="title"><string>Track / Side selection</string></property>
+         <layout class="QFormLayout">
+          <item row="0" column="0">
+           <widget class="QLabel"><property name="text"><string>Track number</string></property></widget>
+          </item>
+          <item row="0" column="1">
+           <layout class="QHBoxLayout">
+            <item>
+             <widget class="QSpinBox" name="spinTrack">
+              <property name="minimum"><number>0</number></property>
+              <property name="maximum"><number>255</number></property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QSlider" name="sliderTrack">
+              <property name="orientation"><enum>Qt::Horizontal</enum></property>
+              <property name="minimum"><number>0</number></property>
+              <property name="maximum"><number>79</number></property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel"><property name="text"><string>Side number</string></property></widget>
+          </item>
+          <item row="1" column="1">
+           <layout class="QHBoxLayout">
+            <item>
+             <widget class="QSpinBox" name="spinSide">
+              <property name="minimum"><number>0</number></property>
+              <property name="maximum"><number>1</number></property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QSlider" name="sliderSide">
+              <property name="orientation"><enum>Qt::Horizontal</enum></property>
+              <property name="minimum"><number>0</number></property>
+              <property name="maximum"><number>1</number></property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       
+       <!-- Edit tools button -->
+       <item>
+        <widget class="QPushButton" name="btnEditTools">
+         <property name="text"><string>Edit tools</string></property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+    </layout>
+   </item>
+   
+   <!-- Bottom: View slider + controls -->
+   <item>
+    <layout class="QHBoxLayout">
+     <item>
+      <widget class="QLabel"><property name="text"><string>View</string></property></widget>
+     </item>
+     <item>
+      <widget class="QDoubleSpinBox" name="spinXOffset">
+       <property name="minimum"><number>0</number></property>
+       <property name="maximum"><number>100</number></property>
+       <property name="value"><number>85</number></property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel"><property name="text"><string>x offset (% of the track len)</string></property></widget>
+     </item>
+     <item>
+      <widget class="QSlider" name="sliderXScale">
+       <property name="orientation"><enum>Qt::Horizontal</enum></property>
+       <property name="minimum"><number>1</number></property>
+       <property name="maximum"><number>100</number></property>
+       <property name="value"><number>50</number></property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel"><property name="text"><string>full x time scale</string></property></widget>
+     </item>
+     <item><spacer><property name="orientation"><enum>Qt::Horizontal</enum></property></spacer></item>
+     <item>
+      <widget class="QSlider" name="sliderYScale">
+       <property name="orientation"><enum>Qt::Horizontal</enum></property>
+       <property name="minimum"><number>1</number></property>
+       <property name="maximum"><number>100</number></property>
+       <property name="value"><number>16</number></property>
+       <property name="maximumWidth"><number>100</number></property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel"><property name="text"><string>full y time scale (us)</string></property></widget>
+     </item>
+    </layout>
+   </item>
+   
+   <!-- View mode + OK -->
+   <item>
+    <layout class="QHBoxLayout">
+     <item><spacer><property name="orientation"><enum>Qt::Horizontal</enum></property></spacer></item>
+     <item>
+      <widget class="QRadioButton" name="radioTrackView">
+       <property name="text"><string>Track view mode</string></property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QRadioButton" name="radioDiskView">
+       <property name="text"><string>Disk view mode</string></property>
+       <property name="checked"><bool>true</bool></property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btnOK">
+       <property name="text"><string>OK</string></property>
+       <property name="default"><bool>true</bool></property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   
+  </layout>
+ </widget>
+</ui>

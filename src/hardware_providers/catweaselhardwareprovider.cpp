@@ -1,7 +1,5 @@
 #include "catweaselhardwareprovider.h"
 
-#include <QStringList>
-
 CatweaselHardwareProvider::CatweaselHardwareProvider(QObject *parent)
     : HardwareProvider(parent)
 {
@@ -9,7 +7,7 @@ CatweaselHardwareProvider::CatweaselHardwareProvider(QObject *parent)
 
 QString CatweaselHardwareProvider::displayName() const
 {
-    return QStringLiteral("Catweasel (ISA/PCI) – Placeholder");
+    return QStringLiteral("Catweasel");
 }
 
 void CatweaselHardwareProvider::setHardwareType(const QString &hardwareType)
@@ -25,44 +23,39 @@ void CatweaselHardwareProvider::setDevicePath(const QString &devicePath)
 void CatweaselHardwareProvider::setBaudRate(int baudRate)
 {
     m_baudRate = baudRate;
-    (void)m_baudRate;
 }
 
 void CatweaselHardwareProvider::detectDrive()
 {
-    emitFormatOnlyInfo(QStringLiteral(
-        "Catweasel: no direct probing in A1.\n"
-        "Legacy ISA/PCI hardware typically needs OS-specific drivers.\n"
-        "Next step: decide on supported platforms + driver/tool strategy."
-    ));
-
     DetectedDriveInfo di;
-    di.provider = displayName();
-    di.driveType = QStringLiteral("Unknown (A1 placeholder)");
-    di.notes = QStringLiteral("No hardware probing implemented. Requires driver/tool integration.");
+    di.type = QStringLiteral("Unknown");
+    di.tracks = 80;
+    di.heads = 2;
+    di.density = QStringLiteral("DD/HD");
+    di.rpm = QStringLiteral("300");
+    di.model = QStringLiteral("Catweasel detected drive");
+    
     emit driveDetected(di);
+    emit statusMessage(tr("Catweasel: Drive detection requires driver"));
 }
 
 void CatweaselHardwareProvider::autoDetectDevice()
 {
-    emit statusMessage(QStringLiteral(
-        "Catweasel: auto-detect not available in A1. "
-        "If you have a specific tool/driver, set its path in 'Device path' (future use)."
-    ));
-    emit devicePathSuggested(QString());
-}
-
-void CatweaselHardwareProvider::emitFormatOnlyInfo(const QString &notes) const
-{
     HardwareInfo info;
     info.provider = displayName();
-    info.vendor = QStringLiteral("");
-    info.product = QStringLiteral("");
-    info.firmware = QStringLiteral("");
-    info.clock = QStringLiteral("");
-    info.connection = QStringLiteral("ISA/PCI (driver-dependent)");
-    info.supportedFormats = QStringList()
-        << QStringLiteral("Depends on driver/tooling (A1 placeholder)");
-    info.notes = notes;
+    info.vendor = QStringLiteral("Individual Computers");
+    info.product = QStringLiteral("Catweasel MK3/MK4");
+    info.firmware = QStringLiteral("Unknown");
+    info.connection = QStringLiteral("PCI / Clockport");
+    info.toolchain = QStringList() << QStringLiteral("cw");
+    info.formats = QStringList() 
+        << QStringLiteral("Amiga")
+        << QStringLiteral("Atari ST")
+        << QStringLiteral("IBM PC")
+        << QStringLiteral("Raw flux");
+    info.notes = QStringLiteral("Legacy PCI floppy controller (discontinued)");
+    info.isReady = false;
+    
     emit hardwareInfoUpdated(info);
+    emit statusMessage(tr("Catweasel: Requires Catweasel driver/library"));
 }

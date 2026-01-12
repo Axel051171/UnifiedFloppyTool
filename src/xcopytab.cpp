@@ -135,6 +135,7 @@ XCopyTab::XCopyTab(QWidget *parent)
     ui->setupUi(this);
     createExtraWidgets();
     setupConnections();
+    setupDependencies();
     updateUIState(false);
 }
 
@@ -183,6 +184,24 @@ void XCopyTab::setupConnections()
     connect(ui->btnBrowseDest, &QPushButton::clicked, this, &XCopyTab::onBrowseDest);
     connect(ui->btnStartCopy, &QPushButton::clicked, this, &XCopyTab::onStartCopy);
     connect(ui->btnStopCopy, &QPushButton::clicked, this, &XCopyTab::onStopCopy);
+    
+    // UI Dependencies
+    connect(ui->comboCopyMode, QOverload<int>::of(&QComboBox::currentIndexChanged),
+            this, &XCopyTab::onCopyModeChanged);
+    connect(ui->comboSourceType, QOverload<int>::of(&QComboBox::currentIndexChanged),
+            this, &XCopyTab::onSourceTypeChanged);
+    connect(ui->comboDestType, QOverload<int>::of(&QComboBox::currentIndexChanged),
+            this, &XCopyTab::onDestTypeChanged);
+    connect(ui->checkRetryErrors, &QCheckBox::toggled,
+            this, &XCopyTab::onRetryErrorsToggled);
+    connect(ui->checkVerify, &QCheckBox::toggled,
+            this, &XCopyTab::onVerifyToggled);
+    connect(ui->checkFillBad, &QCheckBox::toggled,
+            this, &XCopyTab::onFillBadToggled);
+    connect(ui->comboSides, QOverload<int>::of(&QComboBox::currentIndexChanged),
+            this, &XCopyTab::onSidesChanged);
+    connect(ui->checkAllTracks, &QCheckBox::toggled,
+            this, [this](bool) { updateTrackRange(); });
 }
 
 void XCopyTab::onBrowseSource()
@@ -351,4 +370,184 @@ bool XCopyTab::validatePaths()
     }
     
     return true;
+}
+
+// ============================================================================
+// UI Dependency Slots
+// ============================================================================
+
+void XCopyTab::setupDependencies()
+{
+    // Initial state
+    updateCopyModeOptions(ui->comboCopyMode->currentText());
+    updateSourceOptions(ui->comboSourceType->currentText());
+    updateDestOptions(ui->comboDestType->currentText());
+    
+    // Retry/Verify/Fill dependencies
+    ui->spinMaxRetries->setEnabled(ui->checkRetryErrors->isChecked());
+    ui->spinVerifyRetries->setEnabled(ui->checkVerify->isChecked());
+    ui->spinFillByte->setEnabled(ui->checkFillBad->isChecked());
+}
+
+void XCopyTab::onCopyModeChanged(int index)
+{
+    QString mode = ui->comboCopyMode->itemText(index);
+    updateCopyModeOptions(mode);
+}
+
+void XCopyTab::updateCopyModeOptions(const QString& mode)
+{
+    bool isSector = mode.contains("Sector", Qt::CaseInsensitive);
+    bool isFlux = mode.contains("Flux", Qt::CaseInsensitive);
+    bool isFile = mode.contains("File", Qt::CaseInsensitive);
+    
+    // Track range - only for sector copy
+    ui->spinStartTrack->setEnabled(isSector);
+    ui->spinEndTrack->setEnabled(isSector);
+    ui->checkAllTracks->setEnabled(isSector);
+    
+    // Sides selection
+    ui->comboSides->setEnabled(isSector || isFlux);
+    
+    // Flux-specific options (if they exist)
+    // These might not be in the current UI, so we check with hasOwnProperty pattern
+    
+    // Visual feedback
+    QString trackStyle = isSector ? "" : "color: gray;";
+    ui->spinStartTrack->setStyleSheet(trackStyle);
+    ui->spinEndTrack->setStyleSheet(trackStyle);
+    
+    // Update track range based on mode
+    if (isSector) {
+        ui->spinStartTrack->setRange(0, 83);
+        ui->spinEndTrack->setRange(0, 83);
+    }
+    
+    // File mode enables format conversion
+    if (isFile) {
+        // Could enable format selection combos here
+    }
+}
+
+void XCopyTab::onSourceTypeChanged(int index)
+{
+    QString type = ui->comboSourceType->itemText(index);
+    updateSourceOptions(type);
+}
+
+void XCopyTab::updateSourceOptions(const QString& type)
+{
+    bool isFile = type.contains("File", Qt::CaseInsensitive);
+    bool isHardware = type.contains("Hardware", Qt::CaseInsensitive) || 
+                      type.contains("Drive", Qt::CaseInsensitive);
+    
+    // File path - only for file source
+    ui->editSourceFile->setEnabled(isFile);
+    ui->btnBrowseSource->setEnabled(isFile);
+    
+    // Drive selection - only for hardware
+    ui->comboSourceDrive->setEnabled(isHardware);
+    
+    // Visual feedback
+    if (isFile) {
+        ui->editSourceFile->setPlaceholderText(tr("Select source image file..."));
+        ui->editSourceFile->setStyleSheet("");
+    } else {
+        ui->editSourceFile->setPlaceholderText(tr("(Hardware source selected)"));
+        ui->editSourceFile->setStyleSheet("background-color: #f0f0f0;");
+        ui->editSourceFile->clear();
+    }
+}
+
+void XCopyTab::onDestTypeChanged(int index)
+{
+    QString type = ui->comboDestType->itemText(index);
+    updateDestOptions(type);
+}
+
+void XCopyTab::updateDestOptions(const QString& type)
+{
+    bool isFile = type.contains("File", Qt::CaseInsensitive);
+    bool isHardware = type.contains("Hardware", Qt::CaseInsensitive) || 
+                      type.contains("Drive", Qt::CaseInsensitive);
+    
+    // File path - only for file dest
+    ui->editDestFile->setEnabled(isFile);
+    ui->btnBrowseDest->setEnabled(isFile);
+    
+    // Drive selection - only for hardware
+    ui->comboDestDrive->setEnabled(isHardware);
+    
+    // Number of copies - only meaningful for hardware dest
+    ui->spinNumCopies->setEnabled(isHardware);
+    ui->checkAutoEject->setEnabled(isHardware);
+    ui->checkWaitForDisk->setEnabled(isHardware);
+    
+    // Visual feedback
+    if (isFile) {
+        ui->editDestFile->setPlaceholderText(tr("Select destination file..."));
+        ui->editDestFile->setStyleSheet("");
+    } else {
+        ui->editDestFile->setPlaceholderText(tr("(Hardware destination selected)"));
+        ui->editDestFile->setStyleSheet("background-color: #f0f0f0;");
+        ui->editDestFile->clear();
+    }
+}
+
+void XCopyTab::onRetryErrorsToggled(bool checked)
+{
+    ui->spinMaxRetries->setEnabled(checked);
+    ui->spinMaxRetries->setStyleSheet(checked ? "" : "color: gray;");
+    
+    if (!checked) {
+        // Also disable skip bad option (no retries = can't skip)
+        ui->checkSkipBad->setEnabled(false);
+    } else {
+        ui->checkSkipBad->setEnabled(true);
+    }
+}
+
+void XCopyTab::onVerifyToggled(bool checked)
+{
+    ui->spinVerifyRetries->setEnabled(checked);
+    ui->spinVerifyRetries->setStyleSheet(checked ? "" : "color: gray;");
+}
+
+void XCopyTab::onFillBadToggled(bool checked)
+{
+    ui->spinFillByte->setEnabled(checked);
+    ui->spinFillByte->setStyleSheet(checked ? "" : "color: gray;");
+    
+    // Fill bad is mutually exclusive with skip bad
+    if (checked) {
+        ui->checkSkipBad->setChecked(false);
+    }
+}
+
+void XCopyTab::onSidesChanged(int index)
+{
+    QString sides = ui->comboSides->itemText(index);
+    
+    // Update track range hints based on sides
+    if (sides == "Both" || sides == "2") {
+        // Double-sided: typical 80 tracks per side
+        ui->spinEndTrack->setValue(79);
+    } else if (sides == "Top" || sides == "Bottom" || sides == "1") {
+        // Single-sided
+        ui->spinEndTrack->setValue(79);
+    }
+}
+
+void XCopyTab::updateTrackRange()
+{
+    // Called when "All Tracks" is toggled
+    if (ui->checkAllTracks->isChecked()) {
+        ui->spinStartTrack->setValue(0);
+        ui->spinEndTrack->setValue(ui->spinEndTrack->maximum());
+        ui->spinStartTrack->setEnabled(false);
+        ui->spinEndTrack->setEnabled(false);
+    } else {
+        ui->spinStartTrack->setEnabled(true);
+        ui->spinEndTrack->setEnabled(true);
+    }
 }

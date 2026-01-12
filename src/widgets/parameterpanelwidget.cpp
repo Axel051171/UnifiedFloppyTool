@@ -461,7 +461,7 @@ void ParameterPanelWidget::createParameterWidget(const ParameterDef& def, QLayou
         connect(combo, &QComboBox::currentTextChanged, this, &ParameterPanelWidget::onParameterChanged);
         widget = combo;
     }
-    else if (def.defaultValue.type() == QVariant::Bool) {
+    else if (def.defaultValue.typeId() == QMetaType::Bool) {
         // Bool -> CheckBox
         QCheckBox* check = new QCheckBox(this);
         check->setChecked(def.defaultValue.toBool());
@@ -469,7 +469,7 @@ void ParameterPanelWidget::createParameterWidget(const ParameterDef& def, QLayou
         connect(check, &QCheckBox::toggled, this, &ParameterPanelWidget::onParameterChanged);
         widget = check;
     }
-    else if (def.defaultValue.type() == QVariant::Int) {
+    else if (def.defaultValue.typeId() == QMetaType::Int) {
         // Int -> SpinBox
         QSpinBox* spin = new QSpinBox(this);
         spin->setRange(def.minValue.toInt(), def.maxValue.toInt());
@@ -479,7 +479,7 @@ void ParameterPanelWidget::createParameterWidget(const ParameterDef& def, QLayou
                 this, &ParameterPanelWidget::onParameterChanged);
         widget = spin;
     }
-    else if (def.defaultValue.type() == QVariant::Double) {
+    else if (def.defaultValue.typeId() == QMetaType::Double) {
         // Double -> DoubleSpinBox
         QDoubleSpinBox* spin = new QDoubleSpinBox(this);
         spin->setRange(def.minValue.toDouble(), def.maxValue.toDouble());
@@ -672,7 +672,7 @@ QStringList ParameterPanelWidget::getValidationErrors() const
         
         // Range check
         if (!def.minValue.isNull() && !def.maxValue.isNull()) {
-            if (value.type() == QVariant::Int) {
+            if (value.typeId() == QMetaType::Int) {
                 int v = value.toInt();
                 if (v < def.minValue.toInt() || v > def.maxValue.toInt()) {
                     errors << QString("%1: Value %2 out of range [%3, %4]")
@@ -819,10 +819,10 @@ QString ParameterPanelWidget::toCLI() const
     
     // Add changed parameters
     for (auto it = m_parameters.begin(); it != m_parameters.end(); ++it) {
-        QString key = it.key().replace('_', '-');
+        QString key = QString(it.key()).replace('_', '-');
         QVariant val = it.value();
         
-        if (val.type() == QVariant::Bool) {
+        if (val.typeId() == QMetaType::Bool) {
             if (val.toBool()) {
                 args << QString("--%1").arg(key);
             }

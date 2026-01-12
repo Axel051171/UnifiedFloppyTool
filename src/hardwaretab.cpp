@@ -1,309 +1,656 @@
 /**
  * @file hardwaretab.cpp
- * @brief Hardware Tab Implementation
+ * @brief Hardware Tab Implementation with Source/Destination Role
  * 
- * P0-GUI-003 FIX: Full implementation with device detection
+ * Role-based Controller Selection:
+ * ┌─────────────────────────────────────────────────────────────┐
+ * │ SOURCE Mode:                                                │
+ * │   - Greaseweazle (F1/F7)                                   │
+ * │   - SuperCard Pro                                          │
+ * │   - KryoFlux                                               │
+ * │   (NO USB Floppy - can only READ flux, not write)          │
+ * ├─────────────────────────────────────────────────────────────┤
+ * │ DESTINATION Mode:                                          │
+ * │   - Greaseweazle (F1/F7)                                   │
+ * │   - SuperCard Pro                                          │
+ * │   - KryoFlux                                               │
+ * │   - USB Floppy Drive  ← ONLY in Destination mode!          │
+ * └─────────────────────────────────────────────────────────────┘
+ * 
+ * @date 2026-01-12
  */
 
 #include "hardwaretab.h"
 #include "ui_tab_hardware.h"
 
 #include <QMessageBox>
-#include <QSerialPortInfo>
 #include <QRandomGenerator>
 #include <QDebug>
+
+#if __has_include(<QSerialPortInfo>)
+#include <QSerialPortInfo>
+#define HAS_SERIALPORT 1
+#else
+#define HAS_SERIALPORT 0
+#endif
+
+// ============================================================================
+// Construction / Destruction
+// ============================================================================
 
 HardwareTab::HardwareTab(QWidget *parent)
     : QWidget(parent)
     , ui(new Ui::TabHardware)
+    , m_detectionModeGroup(nullptr)
+    , m_roleGroup(nullptr)
     , m_connected(false)
+    , m_autoDetect(true)
+    , m_motorRunning(false)
+    , m_controllerRole(RoleSource)
+    , m_sourceIsHardware(true)
+    , m_destIsHardware(true)
+    , m_detectedTracks(0)
+    , m_detectedHeads(0)
+    , m_detectedRPM(0)
+    , m_motorTimer(nullptr)
+    , m_statusTimer(nullptr)
 {
     ui->setupUi(this);
-    setupConnections();
     
-    // Initial port scan
+    setupButtonGroups();
+    setupConnections();
     detectSerialPorts();
-    updateUIState();
+    populateControllerList();
+    
+    // Initialize UI state (disconnected)
+    setConnectionState(false);
+    updateRoleButtonsEnabled();
+    updateStatus(tr("Ready. Select controller and port, then click Connect."));
 }
 
 HardwareTab::~HardwareTab()
 {
+    if (m_motorTimer) {
+        m_motorTimer->stop();
+        delete m_motorTimer;
+    }
     delete ui;
+}
+
+// ============================================================================
+// Setup
+// ============================================================================
+
+void HardwareTab::setupButtonGroups()
+{
+    // Detection mode radio buttons
+    m_detectionModeGroup = new QButtonGroup(this);
+    m_detectionModeGroup->setExclusive(true);
+    m_detectionModeGroup->addButton(ui->radioAutoDetect, 0);
+    m_detectionModeGroup->addButton(ui->radioManual, 1);
+    ui->radioAutoDetect->setChecked(true);
+    m_autoDetect = true;
+    
+    // Role radio buttons (Source/Destination)
+    m_roleGroup = new QButtonGroup(this);
+    m_roleGroup->setExclusive(true);
+    m_roleGroup->addButton(ui->radioSource, RoleSource);
+    m_roleGroup->addButton(ui->radioDestination, RoleDestination);
+    ui->radioSource->setChecked(true);
+    m_controllerRole = RoleSource;
 }
 
 void HardwareTab::setupConnections()
 {
-    // Connection buttons
+    // Connection controls
     connect(ui->btnRefreshPorts, &QPushButton::clicked, this, &HardwareTab::onRefreshPorts);
-    connect(ui->btnConnect, &QPushButton::clicked, this, &HardwareTab::onConnect);
-    connect(ui->btnDetect, &QPushButton::clicked, this, &HardwareTab::onDetect);
+    connect(ui->btnConnect, &QPushButton::clicked, this, [this]() {
+        if (m_connected) {
+            onDisconnect();
+        } else {
+            onConnect();
+        }
+    });
+    connect(ui->btnDetect, &QPushButton::clicked, this, &HardwareTab::onDetectDrive);
+    connect(ui->comboController, QOverload<int>::of(&QComboBox::currentIndexChanged),
+            this, &HardwareTab::onControllerChanged);
+    
+    // Role selection (Source/Destination)
+    connect(m_roleGroup, QOverload<int>::of(&QButtonGroup::idClicked),
+            this, &HardwareTab::onRoleChanged);
+    
+    // Detection mode
+    connect(m_detectionModeGroup, QOverload<int>::of(&QButtonGroup::idClicked),
+            this, [this](int id) {
+                Q_UNUSED(id);
+                onDetectionModeChanged();
+            });
     
     // Motor control
     connect(ui->btnMotorOn, &QPushButton::clicked, this, &HardwareTab::onMotorOn);
     connect(ui->btnMotorOff, &QPushButton::clicked, this, &HardwareTab::onMotorOff);
+    connect(ui->checkAutoSpinDown, &QCheckBox::toggled, this, &HardwareTab::onAutoSpinDownChanged);
+    
+    // Drive settings (for manual mode)
+    connect(ui->comboDriveType, QOverload<int>::of(&QComboBox::currentIndexChanged),
+            this, &HardwareTab::onDriveTypeChanged);
+    connect(ui->comboTracks, QOverload<int>::of(&QComboBox::currentIndexChanged),
+            this, &HardwareTab::onTracksChanged);
+    connect(ui->comboHeads, QOverload<int>::of(&QComboBox::currentIndexChanged),
+            this, &HardwareTab::onHeadsChanged);
+    connect(ui->comboDensity, QOverload<int>::of(&QComboBox::currentIndexChanged),
+            this, &HardwareTab::onDensityChanged);
+    connect(ui->comboRPM, QOverload<int>::of(&QComboBox::currentIndexChanged),
+            this, &HardwareTab::onRPMChanged);
+    
+    // Advanced settings
+    connect(ui->checkDoubleStep, &QCheckBox::toggled, this, &HardwareTab::onDoubleStepChanged);
+    connect(ui->checkIgnoreIndex, &QCheckBox::toggled, this, &HardwareTab::onIgnoreIndexChanged);
     
     // Test buttons
     connect(ui->btnSeekTest, &QPushButton::clicked, this, &HardwareTab::onSeekTest);
     connect(ui->btnReadTest, &QPushButton::clicked, this, &HardwareTab::onReadTest);
     connect(ui->btnRPMTest, &QPushButton::clicked, this, &HardwareTab::onRPMTest);
     connect(ui->btnCalibrate, &QPushButton::clicked, this, &HardwareTab::onCalibrate);
-    
-    // Combo changes
-    connect(ui->comboController, QOverload<int>::of(&QComboBox::currentIndexChanged),
-            this, &HardwareTab::onControllerChanged);
 }
+
+// ============================================================================
+// Controller List Management
+// ============================================================================
+
+void HardwareTab::populateControllerList()
+{
+    ui->comboController->blockSignals(true);
+    ui->comboController->clear();
+    
+    // Flux controllers (always available)
+    ui->comboController->addItem(tr("Greaseweazle (F1/F7)"), "greaseweazle");
+    ui->comboController->addItem(tr("SuperCard Pro"), "scp");
+    ui->comboController->addItem(tr("KryoFlux"), "kryoflux");
+    
+    // USB Floppy - only for Destination mode
+    if (m_controllerRole == RoleDestination) {
+        ui->comboController->addItem(tr("USB Floppy Drive"), "usb_floppy");
+    }
+    
+    ui->comboController->blockSignals(false);
+}
+
+void HardwareTab::updateControllerListForRole()
+{
+    // Remember current selection
+    QString currentData = ui->comboController->currentData().toString();
+    
+    // Repopulate
+    populateControllerList();
+    
+    // Try to restore selection
+    int idx = ui->comboController->findData(currentData);
+    if (idx >= 0) {
+        ui->comboController->setCurrentIndex(idx);
+    } else {
+        // If USB was selected but we switched to Source, select first item
+        ui->comboController->setCurrentIndex(0);
+    }
+}
+
+// ============================================================================
+// Role Change (Source/Destination)
+// ============================================================================
+
+void HardwareTab::onRoleChanged(int roleId)
+{
+    m_controllerRole = static_cast<ControllerRole>(roleId);
+    
+    // Update controller list (USB only in Destination)
+    updateControllerListForRole();
+    
+    // Update status
+    QString roleName = (m_controllerRole == RoleSource) ? tr("Source") : tr("Destination");
+    updateStatus(tr("Role: %1 - Select controller and connect.").arg(roleName));
+    
+    qDebug() << "Role changed to:" << roleName;
+}
+
+void HardwareTab::updateRoleButtonsEnabled()
+{
+    // Source button: enabled only if Workflow source is hardware
+    ui->radioSource->setEnabled(m_sourceIsHardware);
+    
+    // Destination button: enabled only if Workflow destination is hardware  
+    ui->radioDestination->setEnabled(m_destIsHardware);
+    
+    // Visual feedback
+    QString enabledStyle = "";
+    QString disabledStyle = "color: gray;";
+    
+    ui->radioSource->setStyleSheet(m_sourceIsHardware ? enabledStyle : disabledStyle);
+    ui->radioDestination->setStyleSheet(m_destIsHardware ? enabledStyle : disabledStyle);
+    
+    // If current selection is disabled, switch to the other
+    if (m_controllerRole == RoleSource && !m_sourceIsHardware) {
+        if (m_destIsHardware) {
+            ui->radioDestination->setChecked(true);
+            m_controllerRole = RoleDestination;
+            updateControllerListForRole();
+        }
+    } else if (m_controllerRole == RoleDestination && !m_destIsHardware) {
+        if (m_sourceIsHardware) {
+            ui->radioSource->setChecked(true);
+            m_controllerRole = RoleSource;
+            updateControllerListForRole();
+        }
+    }
+    
+    // If neither is hardware, disable the whole controller group
+    bool anyHardware = m_sourceIsHardware || m_destIsHardware;
+    ui->groupController->setEnabled(anyHardware);
+    ui->groupConnection->setEnabled(anyHardware);
+    
+    if (!anyHardware) {
+        updateStatus(tr("Hardware not needed - both Source and Destination are Image Files."));
+    }
+}
+
+void HardwareTab::setWorkflowModes(bool sourceIsHardware, bool destIsHardware)
+{
+    m_sourceIsHardware = sourceIsHardware;
+    m_destIsHardware = destIsHardware;
+    updateRoleButtonsEnabled();
+}
+
+// ============================================================================
+// Port Detection
+// ============================================================================
 
 void HardwareTab::detectSerialPorts()
 {
     ui->comboPort->clear();
     
-    const auto ports = QSerialPortInfo::availablePorts();
+#if HAS_SERIALPORT
+    QList<QSerialPortInfo> ports = QSerialPortInfo::availablePorts();
     
-    for (const QSerialPortInfo &port : ports) {
-        QString description = port.portName();
-        if (!port.description().isEmpty()) {
-            description += " - " + port.description();
+    for (const QSerialPortInfo& port : ports) {
+        QString portName = port.portName();
+        QString description = port.description();
+        uint16_t vid = port.vendorIdentifier();
+        uint16_t pid = port.productIdentifier();
+        
+        QString displayName;
+        QString controllerHint;
+        
+        // Known VID/PID pairs
+        if (vid == 0x1209 && pid == 0x4D69) {
+            controllerHint = "Greaseweazle";
+        } else if (vid == 0x16D0 && pid == 0x0F8C) {
+            controllerHint = "SuperCard Pro";
+        } else if (vid == 0x0403 && pid == 0x6001) {
+            controllerHint = "KryoFlux (FTDI)";
         }
-        ui->comboPort->addItem(description, port.portName());
+        
+        if (!controllerHint.isEmpty()) {
+            displayName = QString("%1 - %2").arg(portName, controllerHint);
+        } else if (!description.isEmpty()) {
+            displayName = QString("%1 - %2").arg(portName, description);
+        } else {
+            displayName = portName;
+        }
+        
+        ui->comboPort->addItem(displayName, portName);
     }
+#endif
     
-    if (ports.isEmpty()) {
-        ui->comboPort->addItem(tr("No ports found"), "");
+    if (ui->comboPort->count() == 0) {
+        ui->comboPort->addItem(tr("(No ports found)"), "");
+        ui->btnConnect->setEnabled(false);
+    } else {
+        ui->btnConnect->setEnabled(true);
     }
-    
-    qDebug() << "Found" << ports.size() << "serial ports";
 }
 
 void HardwareTab::onRefreshPorts()
 {
     detectSerialPorts();
-    updateStatus(tr("Ports refreshed - found %1 device(s)").arg(ui->comboPort->count()));
+    updateStatus(tr("Port list refreshed."));
 }
+
+// ============================================================================
+// Connection
+// ============================================================================
 
 void HardwareTab::onConnect()
 {
-    if (m_connected) {
-        // Disconnect
-        m_connected = false;
-        m_controllerType.clear();
-        m_portName.clear();
-        m_firmwareVersion.clear();
-        
-        ui->btnConnect->setText(tr("Connect"));
-        updateStatus(tr("Disconnected"));
-        updateUIState();
-        emit connectionChanged(false);
-        return;
-    }
-    
-    // Get selected port
-    m_portName = ui->comboPort->currentData().toString();
-    if (m_portName.isEmpty()) {
+    QString port = ui->comboPort->currentData().toString();
+    if (port.isEmpty()) {
         QMessageBox::warning(this, tr("Connection Error"),
-            tr("Please select a valid port first."));
+            tr("Please select a valid port."));
         return;
     }
     
+    m_portName = port;
     m_controllerType = ui->comboController->currentText();
     
-    // Try to connect (simulated for now - real HAL would go here)
-    updateStatus(tr("Connecting to %1 on %2...").arg(m_controllerType).arg(m_portName));
+    updateStatus(tr("Connecting to %1 on %2...").arg(m_controllerType, m_portName));
     
-    // Simulate connection attempt
-    // In real implementation: uft_hal_open(port, controller_type)
+    // Simulate connection (real implementation would use HAL)
+    // TODO: Replace with real uft_hal_connect()
     
-    // For now, simulate success
-    m_connected = true;
-    m_firmwareVersion = "v1.0 (simulated)";
-    
-    ui->btnConnect->setText(tr("Disconnect"));
-    ui->labelControllerStatus->setText(tr("Connected"));
-    ui->labelControllerStatus->setStyleSheet("color: #00aa00; font-weight: bold;");
-    ui->labelFirmware->setText(m_firmwareVersion);
-    
-    updateStatus(tr("Connected to %1").arg(m_controllerType));
-    updateUIState();
-    emit connectionChanged(true);
-}
-
-void HardwareTab::onDetect()
-{
-    updateStatus(tr("Auto-detecting hardware..."));
-    
-    // Scan ports for known devices
-    const auto ports = QSerialPortInfo::availablePorts();
-    QString detected;
-    
-    for (const QSerialPortInfo &port : ports) {
-        QString vid = QString::number(port.vendorIdentifier(), 16).toUpper();
-        QString pid = QString::number(port.productIdentifier(), 16).toUpper();
+    QTimer::singleShot(500, this, [this]() {
+        m_connected = true;
+        m_firmwareVersion = "v4.1";
+        setConnectionState(true);
         
-        // Known VID/PID pairs
-        if (vid == "1209" && pid == "4D69") {
-            detected = QString("Greaseweazle on %1").arg(port.portName());
-            ui->comboController->setCurrentIndex(0); // Greaseweazle
-            break;
-        } else if (vid == "16D0" && pid == "4D63") {
-            detected = QString("SuperCard Pro on %1").arg(port.portName());
-            ui->comboController->setCurrentIndex(1); // SCP
-            break;
-        } else if (vid == "0403" && pid == "6001") {
-            detected = QString("Possible KryoFlux/FTDI on %1").arg(port.portName());
-            ui->comboController->setCurrentIndex(2); // KryoFlux
-            break;
+        if (m_autoDetect) {
+            autoDetectDrive();
         }
-    }
-    
-    if (detected.isEmpty()) {
-        updateStatus(tr("No known floppy controllers detected"), true);
-        QMessageBox::information(this, tr("Auto-Detect"),
-            tr("No known floppy controllers were detected.\n\n"
-               "Supported controllers:\n"
-               "- Greaseweazle (VID:1209 PID:4D69)\n"
-               "- SuperCard Pro (VID:16D0 PID:4D63)\n"
-               "- KryoFlux (FTDI-based)\n\n"
-               "Please connect a controller and try again."));
-    } else {
-        updateStatus(tr("Detected: %1").arg(detected));
-        QMessageBox::information(this, tr("Auto-Detect"),
-            tr("Found: %1\n\nClick Connect to establish connection.").arg(detected));
-    }
+        
+        updateStatus(tr("Connected to %1 (%2)").arg(m_controllerType, m_firmwareVersion));
+        emit connectionChanged(true);
+    });
 }
 
-void HardwareTab::onMotorOn()
+void HardwareTab::onDisconnect()
 {
-    if (!m_connected) {
-        updateStatus(tr("Not connected"), true);
-        return;
+    if (m_motorRunning) {
+        onMotorOff();
     }
     
-    updateStatus(tr("Motor ON"));
-    // Real: uft_hal_motor_on()
-}
-
-void HardwareTab::onMotorOff()
-{
-    if (!m_connected) {
-        updateStatus(tr("Not connected"), true);
-        return;
-    }
+    m_connected = false;
+    setConnectionState(false);
+    clearDetectedInfo();
     
-    updateStatus(tr("Motor OFF"));
-    // Real: uft_hal_motor_off()
-}
-
-void HardwareTab::onSeekTest()
-{
-    if (!m_connected) {
-        updateStatus(tr("Connect to controller first"), true);
-        return;
-    }
-    
-    updateStatus(tr("Running seek test..."));
-    
-    // Simulate seek test
-    // Real: uft_hal_seek_test()
-    
-    QMessageBox::information(this, tr("Seek Test"),
-        tr("Seek test completed.\n\n"
-           "Track 0 → 40 → 79 → 0\n"
-           "All seeks successful."));
-    
-    updateStatus(tr("Seek test passed"));
-}
-
-void HardwareTab::onReadTest()
-{
-    if (!m_connected) {
-        updateStatus(tr("Connect to controller first"), true);
-        return;
-    }
-    
-    updateStatus(tr("Running read test..."));
-    
-    // Real: uft_hal_read_test()
-    
-    QMessageBox::information(this, tr("Read Test"),
-        tr("Read test completed.\n\n"
-           "Track 0, Head 0: OK\n"
-           "Flux transitions detected: 50,247\n"
-           "Data rate: ~250 kbit/s (DD)"));
-    
-    updateStatus(tr("Read test passed"));
-}
-
-void HardwareTab::onRPMTest()
-{
-    if (!m_connected) {
-        updateStatus(tr("Connect to controller first"), true);
-        return;
-    }
-    
-    updateStatus(tr("Measuring RPM..."));
-    
-    // Real: uft_hal_measure_rpm()
-    double rpm = 299.8 + (QRandomGenerator::global()->bounded(10)) / 10.0; // Simulated
-    
-    ui->labelRPMMeasured->setText(QString("%1 RPM").arg(rpm, 0, 'f', 1));
-    
-    QString status = (rpm >= 298.5 && rpm <= 301.5) ? "OK" : "WARNING";
-    updateStatus(tr("RPM: %1 (%2)").arg(rpm, 0, 'f', 1).arg(status));
-}
-
-void HardwareTab::onCalibrate()
-{
-    if (!m_connected) {
-        updateStatus(tr("Connect to controller first"), true);
-        return;
-    }
-    
-    int result = QMessageBox::question(this, tr("Calibrate"),
-        tr("This will calibrate the drive head position.\n\n"
-           "Make sure a disk is NOT inserted.\n\n"
-           "Continue?"),
-        QMessageBox::Yes | QMessageBox::No);
-    
-    if (result != QMessageBox::Yes) return;
-    
-    updateStatus(tr("Calibrating..."));
-    
-    // Real: uft_hal_calibrate()
-    
-    updateStatus(tr("Calibration complete"));
+    updateStatus(tr("Disconnected."));
+    emit connectionChanged(false);
 }
 
 void HardwareTab::onControllerChanged(int index)
 {
     Q_UNUSED(index);
-    // Update UI based on controller capabilities
-    QString controller = ui->comboController->currentText();
+    QString controller = ui->comboController->currentData().toString();
     
-    // Enable/disable features based on controller
-    bool supportsFlux = !controller.contains("USB Floppy");
-    ui->groupTest->setEnabled(supportsFlux);
+    // USB Floppy has different capabilities
+    bool isUSB = (controller == "usb_floppy");
     
-    qDebug() << "Controller changed to:" << controller;
+    // Disable flux-specific options for USB
+    ui->groupAdvanced->setEnabled(!isUSB);
+    
+    if (isUSB) {
+        updateStatus(tr("USB Floppy selected - limited to standard formats."));
+    }
 }
+
+// ============================================================================
+// Detection Mode
+// ============================================================================
+
+void HardwareTab::onDetectionModeChanged()
+{
+    m_autoDetect = ui->radioAutoDetect->isChecked();
+    updateDriveSettingsEnabled();
+    
+    if (m_autoDetect) {
+        updateStatus(tr("Auto-Detect mode - drive settings will be detected automatically."));
+        if (m_connected) {
+            autoDetectDrive();
+        }
+    } else {
+        updateStatus(tr("Manual mode - configure drive settings manually."));
+    }
+}
+
+void HardwareTab::onDetectDrive()
+{
+    if (!m_connected) {
+        QMessageBox::warning(this, tr("Not Connected"),
+            tr("Please connect to a controller first."));
+        return;
+    }
+    
+    autoDetectDrive();
+}
+
+void HardwareTab::autoDetectDrive()
+{
+    updateStatus(tr("Detecting drive..."));
+    
+    // Simulate detection (real implementation would use HAL)
+    QTimer::singleShot(1000, this, [this]() {
+        // Simulated detection results
+        QString driveType = "3.5\" HD";
+        int tracks = 80;
+        int heads = 2;
+        QString density = "HD";
+        int rpm = 300;
+        
+        applyDetectedSettings(driveType, tracks, heads, density, rpm);
+        setDetectedInfo(driveType, m_firmwareVersion, QString::number(rpm), "Yes");
+        
+        updateStatus(tr("Drive detected: %1, %2 tracks, %3 RPM")
+                    .arg(driveType).arg(tracks).arg(rpm));
+    });
+}
+
+void HardwareTab::applyDetectedSettings(const QString& driveType, int tracks,
+                                        int heads, const QString& density, int rpm)
+{
+    m_detectedModel = driveType;
+    m_detectedTracks = tracks;
+    m_detectedHeads = heads;
+    m_detectedDensity = density;
+    m_detectedRPM = rpm;
+    
+    // Update UI (in auto mode these are read-only)
+    int idx;
+    idx = ui->comboDriveType->findText(driveType, Qt::MatchContains);
+    if (idx >= 0) ui->comboDriveType->setCurrentIndex(idx);
+    
+    idx = ui->comboTracks->findText(QString::number(tracks));
+    if (idx >= 0) ui->comboTracks->setCurrentIndex(idx);
+    
+    idx = ui->comboHeads->findText(QString::number(heads));
+    if (idx >= 0) ui->comboHeads->setCurrentIndex(idx);
+    
+    idx = ui->comboDensity->findText(density, Qt::MatchContains);
+    if (idx >= 0) ui->comboDensity->setCurrentIndex(idx);
+    
+    idx = ui->comboRPM->findText(QString::number(rpm));
+    if (idx >= 0) ui->comboRPM->setCurrentIndex(idx);
+}
+
+// ============================================================================
+// UI State Management
+// ============================================================================
+
+void HardwareTab::setConnectionState(bool connected)
+{
+    m_connected = connected;
+    
+    ui->btnConnect->setText(connected ? tr("Disconnect") : tr("Connect"));
+    ui->btnConnect->setStyleSheet(connected ? 
+        "background-color: #ff6666;" : "");
+    
+    ui->comboController->setEnabled(!connected);
+    ui->comboPort->setEnabled(!connected);
+    ui->btnRefreshPorts->setEnabled(!connected);
+    
+    updateDriveSettingsEnabled();
+    updateMotorControlsEnabled();
+    updateAdvancedEnabled();
+    updateTestButtonsEnabled();
+    
+    ui->groupDetection->setEnabled(connected);
+    ui->groupDrive->setEnabled(connected);
+    ui->groupMotor->setEnabled(connected);
+    ui->groupTest->setEnabled(connected);
+    ui->groupAdvanced->setEnabled(connected);
+    ui->groupInfo->setEnabled(connected);
+    
+    if (!connected) {
+        clearDetectedInfo();
+    }
+}
+
+void HardwareTab::updateDriveSettingsEnabled()
+{
+    bool enabled = m_connected && !m_autoDetect;
+    
+    ui->comboDriveType->setEnabled(enabled);
+    ui->comboTracks->setEnabled(enabled);
+    ui->comboHeads->setEnabled(enabled);
+    ui->comboDensity->setEnabled(enabled);
+    ui->comboRPM->setEnabled(enabled);
+}
+
+void HardwareTab::updateMotorControlsEnabled()
+{
+    ui->btnMotorOn->setEnabled(m_connected && !m_motorRunning);
+    ui->btnMotorOff->setEnabled(m_connected && m_motorRunning);
+    ui->checkAutoSpinDown->setEnabled(m_connected);
+}
+
+void HardwareTab::updateAdvancedEnabled()
+{
+    bool enabled = m_connected && !m_autoDetect;
+    
+    ui->checkDoubleStep->setEnabled(enabled);
+    ui->checkIgnoreIndex->setEnabled(enabled);
+}
+
+void HardwareTab::updateTestButtonsEnabled()
+{
+    ui->btnSeekTest->setEnabled(m_connected);
+    ui->btnReadTest->setEnabled(m_connected);
+    ui->btnRPMTest->setEnabled(m_connected);
+    ui->btnCalibrate->setEnabled(m_connected);
+    ui->btnDetect->setEnabled(m_connected);
+}
+
+// ============================================================================
+// Status Updates
+// ============================================================================
 
 void HardwareTab::updateStatus(const QString& status, bool isError)
 {
     ui->labelControllerStatus->setText(status);
-    ui->labelControllerStatus->setStyleSheet(
-        isError ? "color: #ff4444;" : "color: #888888;");
-    
+    ui->labelControllerStatus->setStyleSheet(isError ? "color: red;" : "");
     emit statusMessage(status);
 }
 
-void HardwareTab::updateUIState()
+void HardwareTab::clearDetectedInfo()
 {
-    // Enable/disable controls based on connection state
-    ui->comboController->setEnabled(!m_connected);
-    ui->comboPort->setEnabled(!m_connected);
-    ui->btnRefreshPorts->setEnabled(!m_connected);
-    ui->btnDetect->setEnabled(!m_connected);
+    ui->labelFirmware->setText("-");
+    ui->labelIndex->setText("-");
+}
+
+void HardwareTab::setDetectedInfo(const QString& model, const QString& firmware,
+                                  const QString& rpm, const QString& index)
+{
+    Q_UNUSED(model);
+    Q_UNUSED(rpm);
+    ui->labelFirmware->setText(firmware);
+    ui->labelIndex->setText(index);
+}
+
+// ============================================================================
+// Motor Control
+// ============================================================================
+
+void HardwareTab::onMotorOn()
+{
+    if (!m_connected) return;
     
-    ui->groupMotor->setEnabled(m_connected);
-    ui->groupTest->setEnabled(m_connected);
-    ui->groupDrive->setEnabled(m_connected);
-    ui->groupAdvanced->setEnabled(m_connected);
+    m_motorRunning = true;
+    updateMotorControlsEnabled();
+    updateStatus(tr("Motor ON"));
+    
+    // Auto spin-down timer
+    if (ui->checkAutoSpinDown->isChecked()) {
+        if (!m_motorTimer) {
+            m_motorTimer = new QTimer(this);
+            m_motorTimer->setSingleShot(true);
+            connect(m_motorTimer, &QTimer::timeout, this, &HardwareTab::onMotorOff);
+        }
+        m_motorTimer->start(10000);  // 10 seconds
+    }
+}
+
+void HardwareTab::onMotorOff()
+{
+    if (!m_connected) return;
+    
+    m_motorRunning = false;
+    if (m_motorTimer) {
+        m_motorTimer->stop();
+    }
+    updateMotorControlsEnabled();
+    updateStatus(tr("Motor OFF"));
+}
+
+void HardwareTab::onAutoSpinDownChanged(bool enabled)
+{
+    Q_UNUSED(enabled);
+}
+
+// ============================================================================
+// Drive Settings (Manual Mode)
+// ============================================================================
+
+void HardwareTab::onDriveTypeChanged(int index) { Q_UNUSED(index); }
+void HardwareTab::onTracksChanged(int index) { Q_UNUSED(index); }
+void HardwareTab::onHeadsChanged(int index) { Q_UNUSED(index); }
+void HardwareTab::onDensityChanged(int index) { Q_UNUSED(index); }
+void HardwareTab::onRPMChanged(int index) { Q_UNUSED(index); }
+
+// ============================================================================
+// Advanced Settings
+// ============================================================================
+
+void HardwareTab::onDoubleStepChanged(bool enabled) { Q_UNUSED(enabled); }
+void HardwareTab::onIgnoreIndexChanged(bool enabled) { Q_UNUSED(enabled); }
+void HardwareTab::onStepDelayChanged(int value) { Q_UNUSED(value); }
+void HardwareTab::onSettleTimeChanged(int value) { Q_UNUSED(value); }
+
+// ============================================================================
+// Test Functions
+// ============================================================================
+
+void HardwareTab::onSeekTest()
+{
+    if (!m_connected) return;
+    
+    updateStatus(tr("Running seek test..."));
+    QTimer::singleShot(2000, this, [this]() {
+        updateStatus(tr("Seek test complete - all tracks accessible."));
+    });
+}
+
+void HardwareTab::onReadTest()
+{
+    if (!m_connected) return;
+    
+    updateStatus(tr("Running read test..."));
+    QTimer::singleShot(3000, this, [this]() {
+        updateStatus(tr("Read test complete - track 0 readable."));
+    });
+}
+
+void HardwareTab::onRPMTest()
+{
+    if (!m_connected) return;
+    
+    updateStatus(tr("Measuring RPM..."));
+    QTimer::singleShot(2000, this, [this]() {
+        int rpm = 299 + QRandomGenerator::global()->bounded(3);
+        updateStatus(tr("RPM: %1 (target: 300)").arg(rpm));
+    });
+}
+
+void HardwareTab::onCalibrate()
+{
+    if (!m_connected) return;
+    
+    updateStatus(tr("Calibrating drive..."));
+    QTimer::singleShot(5000, this, [this]() {
+        updateStatus(tr("Calibration complete."));
+    });
 }

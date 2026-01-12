@@ -18,6 +18,7 @@
 #include <QLineEdit>
 #include <QComboBox>
 #include <QGroupBox>
+#include <QDialog>
 #include <QTabWidget>
 #include <QTableWidget>
 

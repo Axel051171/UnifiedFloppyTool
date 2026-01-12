@@ -32,6 +32,7 @@ NibbleTab::NibbleTab(QWidget *parent)
     ui->setupUi(this);
     createWidgets();
     setupConnections();
+    setupDependencies();
 }
 
 NibbleTab::~NibbleTab()
@@ -256,7 +257,8 @@ void NibbleTab::onDetectWeakBits()
         for (int j = 1; j < 8; j++) {
             if (m_trackData[i] != m_trackData[i+j]) { suspicious = false; break; }
         }
-        if (suspicious && m_trackData[i] != 0x00 && m_trackData[i] != 0xFF) { suspectAreas++; i += 7; }
+        unsigned char byte = static_cast<unsigned char>(m_trackData[i]);
+        if (suspicious && byte != 0x00 && byte != 0xFF) { suspectAreas++; i += 7; }
     }
     
     m_textAnalysis->appendPlainText(tr("Suspect areas: %1").arg(suspectAreas));
@@ -312,4 +314,193 @@ void NibbleTab::analyzeSync(const QByteArray& data)
         else { if (curLen > 0) { syncRuns++; if (curLen > maxLen) maxLen = curLen; curLen = 0; } }
     }
     m_textAnalysis->appendPlainText(tr("\nSync: %1 runs, longest %2 bytes").arg(syncRuns).arg(maxLen));
+}
+
+// ============================================================================
+// UI Dependency Setup
+// ============================================================================
+
+void NibbleTab::setupDependencies()
+{
+    // Connect UI checkboxes and combos to dependency handlers
+    connect(ui->checkGCRMode, &QCheckBox::toggled,
+            this, &NibbleTab::onGCRModeToggled);
+    connect(ui->comboGCRType, QOverload<int>::of(&QComboBox::currentIndexChanged),
+            this, &NibbleTab::onGCRTypeChanged);
+    connect(ui->comboReadMode, QOverload<int>::of(&QComboBox::currentIndexChanged),
+            this, &NibbleTab::onReadModeChanged);
+    connect(ui->checkReadHalfTracks, &QCheckBox::toggled,
+            this, &NibbleTab::onReadHalfTracksToggled);
+    connect(ui->checkVariableDensity, &QCheckBox::toggled,
+            this, &NibbleTab::onVariableDensityToggled);
+    connect(ui->checkPreserveTiming, &QCheckBox::toggled,
+            this, &NibbleTab::onPreserveTimingToggled);
+    connect(ui->checkAutoDetectDensity, &QCheckBox::toggled,
+            this, &NibbleTab::onAutoDetectDensityToggled);
+    
+    // Initialize state
+    updateGCROptions(ui->checkGCRMode->isChecked());
+    updateHalfTrackOptions(ui->checkReadHalfTracks->isChecked());
+    updateTimingOptions(ui->checkPreserveTiming->isChecked());
+    updateDensityOptions(ui->checkVariableDensity->isChecked());
+}
+
+// ============================================================================
+// UI Dependency Slots
+// ============================================================================
+
+void NibbleTab::onGCRModeToggled(bool checked)
+{
+    updateGCROptions(checked);
+}
+
+void NibbleTab::updateGCROptions(bool enabled)
+{
+    // GCR-specific options
+    ui->comboGCRType->setEnabled(enabled);
+    ui->checkDecodeGCR->setEnabled(enabled);
+    ui->checkPreserveSync->setEnabled(enabled);
+    ui->spinSyncLength->setEnabled(enabled && ui->checkPreserveSync->isChecked());
+    
+    // Update toolbar buttons
+    m_btnAnalyzeGCR->setEnabled(enabled);
+    m_btnDecodeGCR->setEnabled(enabled);
+    
+    // Export options
+    ui->checkCreateNIB->setEnabled(enabled);
+    ui->checkCreateG64->setEnabled(enabled);
+    m_btnExportNIB->setEnabled(enabled);
+    m_btnExportG64->setEnabled(enabled);
+    
+    // Visual feedback
+    QString style = enabled ? "" : "color: gray;";
+    ui->comboGCRType->setStyleSheet(style);
+    
+    // If GCR enabled, suggest C64 default
+    if (enabled && ui->comboGCRType->currentIndex() == 0) {
+        // First item is usually "Auto" or "C64"
+    }
+}
+
+void NibbleTab::onGCRTypeChanged(int index)
+{
+    QString type = ui->comboGCRType->itemText(index);
+    
+    // Adjust parameters based on GCR type
+    if (type.contains("C64") || type.contains("1541")) {
+        // C64: 35 tracks, GCR with zones
+        m_spinTrack->setRange(0, 42);  // Support extended tracks
+        ui->spinSyncLength->setValue(5);  // Standard C64 sync
+        ui->spinDensityZones->setValue(4);  // C64 has 4 density zones
+    } 
+    else if (type.contains("Apple") || type.contains("Disk II")) {
+        // Apple II: 35 tracks, 6-and-2 GCR
+        m_spinTrack->setRange(0, 35);
+        ui->spinSyncLength->setValue(10);  // Apple sync bytes
+        ui->spinDensityZones->setValue(1);  // Uniform density
+    }
+    else if (type.contains("Victor")) {
+        // Victor 9000: variable speed, GCR
+        m_spinTrack->setRange(0, 80);
+        ui->spinDensityZones->setValue(9);  // Victor has many zones
+    }
+}
+
+void NibbleTab::onReadModeChanged(int index)
+{
+    QString mode = ui->comboReadMode->itemText(index);
+    updateReadModeOptions(mode);
+}
+
+void NibbleTab::updateReadModeOptions(const QString& mode)
+{
+    bool isFlux = mode.contains("Flux", Qt::CaseInsensitive);
+    bool isTiming = mode.contains("Timing", Qt::CaseInsensitive);
+    
+    // Flux-specific options
+    ui->spinRevolutions->setEnabled(isFlux);
+    ui->checkIncludeRawFlux->setEnabled(isFlux);
+    
+    // Timing-specific options
+    ui->checkIncludeTiming->setEnabled(isTiming || isFlux);
+    ui->checkPreserveTiming->setEnabled(isTiming || isFlux);
+}
+
+void NibbleTab::onReadHalfTracksToggled(bool checked)
+{
+    updateHalfTrackOptions(checked);
+}
+
+void NibbleTab::updateHalfTrackOptions(bool enabled)
+{
+    // Half-track specific options
+    ui->spinHalfTrackOffset->setEnabled(enabled);
+    ui->checkAnalyzeHalfTracks->setEnabled(enabled);
+    
+    // Update track spinbox range
+    if (enabled) {
+        // Allow 0.5 track increments (double the range)
+        m_spinTrack->setRange(0, 84);
+        m_spinTrack->setSingleStep(1);  // .5 track steps
+    } else {
+        m_spinTrack->setRange(0, 42);
+        m_spinTrack->setSingleStep(1);
+    }
+    
+    // Visual feedback
+    QString style = enabled ? "" : "color: gray;";
+    ui->spinHalfTrackOffset->setStyleSheet(style);
+}
+
+void NibbleTab::onVariableDensityToggled(bool checked)
+{
+    updateDensityOptions(checked);
+}
+
+void NibbleTab::updateDensityOptions(bool enabled)
+{
+    // Variable density options
+    ui->spinDensityZones->setEnabled(enabled);
+    ui->spinBitTolerance->setEnabled(enabled);
+    
+    // Auto-detect is mutually exclusive with manual density
+    if (enabled) {
+        ui->checkAutoDetectDensity->setChecked(false);
+    }
+    
+    // Visual feedback
+    QString style = enabled ? "" : "color: gray;";
+    ui->spinDensityZones->setStyleSheet(style);
+    ui->spinBitTolerance->setStyleSheet(style);
+}
+
+void NibbleTab::onPreserveTimingToggled(bool checked)
+{
+    updateTimingOptions(checked);
+}
+
+void NibbleTab::updateTimingOptions(bool enabled)
+{
+    // Timing preservation options
+    ui->checkIncludeTiming->setEnabled(enabled);
+    ui->checkMarkWeakBits->setEnabled(enabled);
+    
+    // When preserving timing, suggest G64 output
+    if (enabled) {
+        ui->checkCreateG64->setChecked(true);
+    }
+    
+    // Visual feedback
+    QString style = enabled ? "" : "color: gray;";
+    ui->checkIncludeTiming->setStyleSheet(style);
+}
+
+void NibbleTab::onAutoDetectDensityToggled(bool checked)
+{
+    // Auto-detect is mutually exclusive with variable density
+    if (checked) {
+        ui->checkVariableDensity->setChecked(false);
+        ui->spinDensityZones->setEnabled(false);
+        ui->spinBitTolerance->setEnabled(false);
+    }
 }

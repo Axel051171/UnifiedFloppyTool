@@ -259,15 +259,8 @@ bool DecodeJob::verifySectors()
                     if (file.seek(offset)) {
                         qint64 bytesRead = file.read(sectorData.data(), sectorSize);
                         if (bytesRead == sectorSize) {
-                            // Check if sector is valid (not all zeros or all 0xFF)
-                            bool allZero = true;
-                            bool allFF = true;
-                            for (int i = 0; i < sectorSize; i++) {
-                                if (static_cast<unsigned char>(sectorData[i]) != 0x00) allZero = false;
-                                if (static_cast<unsigned char>(sectorData[i]) != 0xFF) allFF = false;
-                            }
-                            
-                            // Empty sectors (all zero or all FF) are valid but marked differently
+                            // Sector read successfully - count as good
+                            // Note: Empty sectors (all zero or all FF) are still valid
                             sectorOk = true;
                             goodCount++;
                         }

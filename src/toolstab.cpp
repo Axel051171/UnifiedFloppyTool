@@ -16,6 +16,8 @@
 #include <QCryptographicHash>
 #include <QDateTime>
 #include <QInputDialog>
+#include "rawformatdialog.h"
+#include "visualdiskdialog.h"
 
 ToolsTab::ToolsTab(QWidget *parent)
     : QWidget(parent)
@@ -23,6 +25,7 @@ ToolsTab::ToolsTab(QWidget *parent)
     , m_batchRunning(false)
 {
     ui->setupUi(this);
+    setupFormatConversionMap();
     setupConnections();
 }
 
@@ -63,6 +66,12 @@ void ToolsTab::setupConnections()
     // Output
     connect(ui->btnClearOutput, &QPushButton::clicked, this, &ToolsTab::onClearOutput);
     connect(ui->btnSaveOutput, &QPushButton::clicked, this, &ToolsTab::onSaveOutput);
+    
+    // Format conversion dependencies
+    connect(ui->comboConvertFrom, QOverload<int>::of(&QComboBox::currentIndexChanged),
+            this, &ToolsTab::onConvertFromChanged);
+    connect(ui->comboBatchAction, QOverload<int>::of(&QComboBox::currentIndexChanged),
+            this, &ToolsTab::onBatchActionChanged);
 }
 
 void ToolsTab::appendOutput(const QString& text)
@@ -413,4 +422,151 @@ void ToolsTab::onSaveOutput()
             appendOutput(tr("Output saved to: %1").arg(path));
         }
     }
+}
+
+void ToolsTab::setupFormatConversionMap()
+{
+    // Commodore formats
+    m_conversionMap["D64"] = {"G64", "NIB", "SCP", "HFE", "TAP"};
+    m_conversionMap["G64"] = {"D64", "NIB", "SCP", "HFE"};
+    m_conversionMap["NIB"] = {"D64", "G64", "SCP", "HFE"};
+    m_conversionMap["D71"] = {"SCP", "HFE"};
+    m_conversionMap["D81"] = {"IMG", "SCP", "HFE"};
+    
+    // Amiga formats
+    m_conversionMap["ADF"] = {"HFE", "SCP", "ADZ"};
+    m_conversionMap["ADZ"] = {"ADF", "HFE", "SCP"};
+    
+    // Apple formats
+    m_conversionMap["WOZ"] = {"NIB", "PO", "DO", "SCP", "HFE", "A2R"};
+    m_conversionMap["A2R"] = {"WOZ", "NIB", "PO", "SCP", "HFE"};
+    m_conversionMap["NIB_Apple"] = {"WOZ", "PO", "DO", "2IMG"};
+    m_conversionMap["PO"] = {"DO", "2IMG", "WOZ", "NIB"};
+    m_conversionMap["DO"] = {"PO", "2IMG", "WOZ", "NIB"};
+    
+    // Atari formats
+    m_conversionMap["ST"] = {"MSA", "STX", "SCP", "HFE", "IMG"};
+    m_conversionMap["MSA"] = {"ST", "SCP", "HFE"};
+    m_conversionMap["STX"] = {"ST", "SCP", "HFE"};
+    m_conversionMap["ATR"] = {"XFD", "ATX", "SCP"};
+    
+    // PC formats - most flexible
+    m_conversionMap["IMG"] = {"IMA", "XDF", "DMF", "TD0", "IMD", "SCP", "HFE"};
+    m_conversionMap["IMA"] = {"IMG", "XDF", "TD0", "SCP", "HFE"};
+    m_conversionMap["XDF"] = {"IMG", "SCP", "HFE"};
+    m_conversionMap["DMF"] = {"IMG", "SCP", "HFE"};
+    m_conversionMap["TD0"] = {"IMG", "SCP", "HFE"};
+    m_conversionMap["IMD"] = {"IMG", "TD0", "SCP", "HFE"};
+    
+    // BBC formats
+    m_conversionMap["SSD"] = {"DSD", "SCP", "HFE"};
+    m_conversionMap["DSD"] = {"SSD", "SCP", "HFE"};
+    m_conversionMap["ADL"] = {"SCP", "HFE"};
+    
+    // Spectrum formats
+    m_conversionMap["TRD"] = {"SCL", "SCP", "HFE"};
+    m_conversionMap["SCL"] = {"TRD", "SCP"};
+    
+    // Japanese formats
+    m_conversionMap["D88"] = {"IMG", "SCP", "HFE"};
+    m_conversionMap["NFD"] = {"D88", "SCP"};
+    
+    // Flux formats - can convert to almost anything
+    m_conversionMap["SCP"] = {"HFE", "RAW", "D64", "G64", "ADF", "ST", "IMG", "ATR", "WOZ"};
+    m_conversionMap["HFE"] = {"SCP", "RAW", "D64", "G64", "ADF", "ST", "IMG"};
+    m_conversionMap["RAW"] = {"SCP", "HFE", "D64", "G64", "ADF", "ST", "IMG"};
+    m_conversionMap["KF"] = {"SCP", "HFE", "RAW"};
+}
+
+void ToolsTab::onConvertFromChanged(int index)
+{
+    QString format = ui->comboConvertFrom->itemText(index);
+    populateConvertToFormats(format);
+}
+
+void ToolsTab::populateConvertToFormats(const QString& fromFormat)
+{
+    ui->comboConvertTo->blockSignals(true);
+    ui->comboConvertTo->clear();
+    
+    if (m_conversionMap.contains(fromFormat)) {
+        ui->comboConvertTo->addItems(m_conversionMap[fromFormat]);
+    } else {
+        // Default: allow flux formats
+        ui->comboConvertTo->addItems({"SCP", "HFE", "RAW"});
+    }
+    
+    ui->comboConvertTo->blockSignals(false);
+    
+    // Show hint
+    int targetCount = ui->comboConvertTo->count();
+    appendOutput(tr("Format %1 can convert to %2 target format(s)")
+                .arg(fromFormat).arg(targetCount));
+}
+
+void ToolsTab::onBatchActionChanged(int index)
+{
+    QString action = ui->comboBatchAction->itemText(index);
+    updateBatchOptions(action);
+}
+
+void ToolsTab::updateBatchOptions(const QString& action)
+{
+    // Enable/disable options based on batch action
+    bool isConvert = action.contains("Convert", Qt::CaseInsensitive);
+    bool isAnalyze = action.contains("Analyze", Qt::CaseInsensitive) || 
+                     action.contains("Verify", Qt::CaseInsensitive);
+    bool isHash = action.contains("Hash", Qt::CaseInsensitive) ||
+                  action.contains("Checksum", Qt::CaseInsensitive);
+    
+    // Target format only for conversion
+    ui->comboConvertTo->setEnabled(isConvert);
+    
+    // Hash options
+    ui->checkCalcHashes->setEnabled(isAnalyze || isHash);
+    
+    // Log options
+    ui->checkBatchLog->setEnabled(true);  // Always available
+    
+    // Subfolder processing
+    ui->checkBatchSubfolders->setEnabled(true);  // Always available
+}
+
+// ============================================================================
+// RAW Format Configuration
+// ============================================================================
+
+void ToolsTab::onRawFormatConfig()
+{
+    RawFormatDialog dlg(this);
+    
+    connect(&dlg, &RawFormatDialog::configurationApplied, this, [this](const RawFormatDialog::RawConfig& cfg) {
+        appendOutput(tr("═══════════════════════════════════════"));
+        appendOutput(tr("RAW Format Configuration Applied"));
+        appendOutput(tr("═══════════════════════════════════════"));
+        appendOutput(tr("Track Type: %1").arg(cfg.trackType));
+        appendOutput(tr("Geometry: %1 tracks × %2 sides × %3 sectors").arg(cfg.tracks).arg(cfg.sides).arg(cfg.sectorsPerTrack));
+        appendOutput(tr("Sector Size: %1 bytes").arg(cfg.sectorSize));
+        appendOutput(tr("Bitrate: %1 bps").arg(cfg.bitrate));
+        appendOutput(tr("Total Size: %1 bytes (%2 KB)").arg(cfg.totalSize).arg(cfg.totalSize / 1024));
+    });
+    
+    dlg.exec();
+}
+
+// ============================================================================
+// Visual Disk Viewer
+// ============================================================================
+
+void ToolsTab::onVisualDisk()
+{
+    QString path = ui->editAnalyzeFile->text();
+    
+    VisualDiskDialog dlg(this);
+    
+    if (!path.isEmpty()) {
+        dlg.loadDiskImage(path);
+    }
+    
+    dlg.exec();
 }

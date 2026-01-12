@@ -1,6 +1,8 @@
 /**
  * @file mainwindow.h
  * @brief Main Window - Uses Qt Designer .ui file
+ * 
+ * P1-2: StatusTab connection to DecodeJob
  */
 
 #pragma once
@@ -13,9 +15,12 @@ QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
 class QDragEnterEvent;
 class QDropEvent;
+class QThread;
 QT_END_NAMESPACE
 
 class VisualDiskWindow;
+class StatusTab;
+class DecodeJob;
 
 class MainWindow : public QMainWindow
 {
@@ -48,6 +53,12 @@ private slots:
     void onSave();
     void onSaveAs();
     
+    // Decode operations
+    void startDecode(const QString& path);
+    void onDecodeProgress(int percentage);
+    void onDecodeFinished(const QString& message);
+    void onDecodeError(const QString& error);
+    
     // Settings menu
     void onDarkModeToggled(bool enabled);
     void onPreferences();
@@ -68,6 +79,13 @@ private:
     
     Ui::MainWindow *ui;
     VisualDiskWindow *m_visualDiskWindow;
+    
+    // Tab references for signal connections
+    StatusTab* m_statusTab = nullptr;
+    
+    // Decode thread
+    QThread* m_decodeThread = nullptr;
+    DecodeJob* m_decodeJob = nullptr;
     
     QString m_currentFile;
     QStringList m_recentFiles;

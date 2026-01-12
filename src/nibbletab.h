@@ -2,7 +2,14 @@
  * @file nibbletab.h
  * @brief Nibble Tab - Low-Level Track Editor (GCR/MFM)
  * 
- * P0-GUI-007 FIX: Full implementation with programmatic UI
+ * UI Dependencies:
+ * - checkGCRMode → GCR-specific options enabled
+ * - comboGCRType → C64/Apple/Victor GCR variants
+ * - checkReadHalfTracks → spinHalfTrackOffset enabled
+ * - checkVariableDensity → spinDensityZones enabled
+ * - comboReadMode → timing/flux options
+ * 
+ * @date 2026-01-12
  */
 
 #ifndef NIBBLETAB_H
@@ -32,6 +39,7 @@ signals:
     void statusMessage(const QString& message);
 
 private slots:
+    // Track operations
     void onReadTrack();
     void onWriteTrack();
     void onAnalyzeGCR();
@@ -41,14 +49,31 @@ private slots:
     void onExportG64();
     void onTrackChanged(int track);
     void onHeadChanged(int head);
+    
+    // UI Dependencies
+    void onGCRModeToggled(bool checked);
+    void onGCRTypeChanged(int index);
+    void onReadModeChanged(int index);
+    void onReadHalfTracksToggled(bool checked);
+    void onVariableDensityToggled(bool checked);
+    void onPreserveTimingToggled(bool checked);
+    void onAutoDetectDensityToggled(bool checked);
 
 private:
     void createWidgets();
     void setupConnections();
+    void setupDependencies();
     void updateDisplay();
     void displayHexDump(const QByteArray& data);
     void displayTimingHistogram(const QByteArray& data);
     void analyzeSync(const QByteArray& data);
+    
+    // Dependency updates
+    void updateGCROptions(bool enabled);
+    void updateHalfTrackOptions(bool enabled);
+    void updateTimingOptions(bool enabled);
+    void updateDensityOptions(bool enabled);
+    void updateReadModeOptions(const QString& mode);
     
     Ui::TabNibble *ui;
     

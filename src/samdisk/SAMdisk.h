@@ -118,7 +118,9 @@ typedef void* HANDLE;
 #endif
 #endif
 #define WIN32_LEAN_AND_MEAN
+#ifndef NOMINMAX
 #define NOMINMAX
+#endif
 #define STRICT
 #include <windows.h>
 #include <devguid.h>

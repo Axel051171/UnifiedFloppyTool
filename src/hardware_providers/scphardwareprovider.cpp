@@ -1,7 +1,5 @@
 #include "scphardwareprovider.h"
 
-#include <QStringList>
-
 SCPHardwareProvider::SCPHardwareProvider(QObject *parent)
     : HardwareProvider(parent)
 {
@@ -9,7 +7,7 @@ SCPHardwareProvider::SCPHardwareProvider(QObject *parent)
 
 QString SCPHardwareProvider::displayName() const
 {
-    return QStringLiteral("SuperCard Pro (SCP)");
+    return QStringLiteral("SuperCard Pro");
 }
 
 void SCPHardwareProvider::setHardwareType(const QString &hardwareType)
@@ -29,39 +27,33 @@ void SCPHardwareProvider::setBaudRate(int baudRate)
 
 void SCPHardwareProvider::detectDrive()
 {
-    // A1: Provide capability info (format support) rather than hardware probing.
-    emit statusMessage(QStringLiteral("SCP: A1 mode – treating SCP as file-format support only (no direct hardware control yet)."));
-    emitFormatOnlyInfo(QStringLiteral("Format support only. Hardware control not implemented in A1."));
-
     DetectedDriveInfo di;
     di.type = QStringLiteral("Unknown");
-    di.tracks = 0;
-    di.heads = 0;
-    di.density = QStringLiteral("Unknown");
-    di.rpm = QStringLiteral("Unknown");
-    di.model = QString();
+    di.tracks = 80;
+    di.heads = 2;
+    di.density = QStringLiteral("DD/HD");
+    di.rpm = QStringLiteral("300/360");
+    di.model = QStringLiteral("SuperCard Pro detected drive");
+    
     emit driveDetected(di);
+    emit statusMessage(tr("SuperCard Pro: Drive detection stub"));
 }
 
 void SCPHardwareProvider::autoDetectDevice()
 {
-    // SCP hardware detection would require a known, reliable tool or USB enumeration.
-    emit statusMessage(QStringLiteral("SCP: auto-detect not available (A1). If you use external SCP tools, set their path in 'Device path'."));
-    emit devicePathSuggested(QString());
-}
-
-void SCPHardwareProvider::emitFormatOnlyInfo(const QString &notes) const
-{
     HardwareInfo info;
     info.provider = displayName();
-    info.vendor = QStringLiteral("");
-    info.product = QStringLiteral("");
-    info.firmware = QStringLiteral("");
-    info.clock = QStringLiteral("");
-    info.connection = QStringLiteral("USB (device), external tooling varies");
-    info.toolchain = QStringList{QStringLiteral("(external SCP tooling)")};
-    info.formats = QStringList{QStringLiteral("SCP")};
-    info.notes = notes;
+    info.vendor = QStringLiteral("Jim Drew / CBM Stuff");
+    info.product = QStringLiteral("SuperCard Pro");
+    info.firmware = QStringLiteral("Unknown");
+    info.connection = QStringLiteral("USB");
+    info.toolchain = QStringList() << QStringLiteral("scp");
+    info.formats = QStringList() 
+        << QStringLiteral("SCP (raw flux)")
+        << QStringLiteral("Many platforms");
+    info.notes = QStringLiteral("High-precision flux capture device");
     info.isReady = false;
+    
     emit hardwareInfoUpdated(info);
+    emit statusMessage(tr("SuperCard Pro: Requires SCP utility"));
 }

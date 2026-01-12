@@ -9,6 +9,7 @@
 #include <QGridLayout>
 #include <QFormLayout>
 #include <QFileDialog>
+#include <QLineEdit>
 
 UftXCopyPanel::UftXCopyPanel(QWidget *parent)
     : QWidget(parent)

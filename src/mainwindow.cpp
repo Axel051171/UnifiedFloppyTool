@@ -5,10 +5,12 @@
 
 // Tab widget classes
 #include "workflowtab.h"
-#include "statustab.h"
 #include "hardwaretab.h"
+#include "statustab.h"
+#include "decodejob.h"
+#include <QThread>
 #include "formattab.h"
-#include "catalogtab.h"
+#include "explorertab.h"
 #include "toolstab.h"
 
 #include <QVBoxLayout>
@@ -86,16 +88,20 @@ void MainWindow::loadTabWidgets()
     layout1->addWidget(workflowTab);
     
     // Tab 2: Status - Real-time track/sector info and hex dump
-    StatusTab* statusTab = new StatusTab();
+    m_statusTab = new StatusTab();
     QVBoxLayout* layoutStatus = new QVBoxLayout(ui->tab_status);
     layoutStatus->setContentsMargins(0, 0, 0, 0);
-    layoutStatus->addWidget(statusTab);
+    layoutStatus->addWidget(m_statusTab);
     
     // Tab 3: Hardware - Controller and Drive settings
     HardwareTab* hardwareTab = new HardwareTab();
     QVBoxLayout* layout2 = new QVBoxLayout(ui->tab_hardware);
     layout2->setContentsMargins(0, 0, 0, 0);
     layout2->addWidget(hardwareTab);
+    
+    // Connect WorkflowTab to HardwareTab for Source/Destination sync
+    connect(workflowTab, &WorkflowTab::hardwareModeChanged,
+            hardwareTab, &HardwareTab::setWorkflowModes);
     
     // Tab 4: Settings - All settings as Sub-Tabs (Flux, Format, XCopy, Nibble, Forensic, Protection)
     FormatTab* formatTab = new FormatTab();
@@ -104,8 +110,8 @@ void MainWindow::loadTabWidgets()
     layout3->addWidget(formatTab);
     
     // Tab 5: Catalog
-    CatalogTab* catalogTab = new CatalogTab();
-    QVBoxLayout* layout4 = new QVBoxLayout(ui->tab_catalog);
+    ExplorerTab* catalogTab = new ExplorerTab();
+    QVBoxLayout* layout4 = new QVBoxLayout(ui->tab_explorer);
     layout4->setContentsMargins(0, 0, 0, 0);
     layout4->addWidget(catalogTab);
     
@@ -259,6 +265,8 @@ void MainWindow::openFile(const QString &filename)
     m_currentImageInfo = info;
     
     // Notify tabs that a file was loaded (they can query m_currentImageInfo)
+    // Start decode job for status display
+    startDecode(filename);
     emit imageLoaded(filename, info);
 }
 
@@ -327,8 +335,8 @@ void MainWindow::onHelp()
 void MainWindow::onAbout()
 {
     QMessageBox::about(this, tr("About UnifiedFloppyTool"),
-        tr("<h2>UnifiedFloppyTool v5.36</h2>"
-           "<p>VISUAL Edition</p>"
+        tr("<h2>UnifiedFloppyTool v3.7.0</h2>"
+           "<p>Bei uns geht kein Bit verloren</p>"
            "<p>A comprehensive floppy disk preservation and analysis tool.</p>"
            "<p>Supports: Commodore, Amiga, Apple, Atari, PC, BBC Micro, and more.</p>"
            "<p><b>Author:</b> Axel Muhr</p>"
@@ -396,4 +404,81 @@ void MainWindow::dropEvent(QDropEvent *event)
             }
         }
     }
+}
+
+// ============================================================================
+// Decode Job Management (P1-2)
+// ============================================================================
+
+void MainWindow::startDecode(const QString& path)
+{
+    // Clean up any existing decode job
+    if (m_decodeThread && m_decodeThread->isRunning()) {
+        if (m_decodeJob) {
+            m_decodeJob->requestCancel();
+        }
+        m_decodeThread->quit();
+        m_decodeThread->wait(1000);
+    }
+    
+    // Create new thread and job
+    m_decodeThread = new QThread(this);
+    m_decodeJob = new DecodeJob();
+    m_decodeJob->setSourcePath(path);
+    m_decodeJob->moveToThread(m_decodeThread);
+    
+    // Connect StatusTab to DecodeJob
+    if (m_statusTab) {
+        m_statusTab->connectToDecodeJob(m_decodeJob);
+    }
+    
+    // Connect thread signals
+    connect(m_decodeThread, &QThread::started, m_decodeJob, &DecodeJob::run);
+    connect(m_decodeJob, &DecodeJob::finished, m_decodeThread, &QThread::quit);
+    connect(m_decodeJob, &DecodeJob::finished, m_decodeJob, &QObject::deleteLater);
+    connect(m_decodeThread, &QThread::finished, m_decodeThread, &QObject::deleteLater);
+    
+    // Connect to MainWindow slots
+    connect(m_decodeJob, &DecodeJob::progress, this, &MainWindow::onDecodeProgress);
+    connect(m_decodeJob, &DecodeJob::finished, this, &MainWindow::onDecodeFinished);
+    connect(m_decodeJob, &DecodeJob::error, this, &MainWindow::onDecodeError);
+    
+    // Update UI state
+    setLEDStatus(LEDStatus::Busy);
+    
+    // Switch to Status tab to show progress
+    if (ui->tabWidget) {
+        ui->tabWidget->setCurrentIndex(1);  // Status tab
+    }
+    
+    // Start decode
+    m_decodeThread->start();
+}
+
+void MainWindow::onDecodeProgress(int percentage)
+{
+    // Could update status bar or other UI elements
+    statusBar()->showMessage(tr("Decoding... %1%").arg(percentage));
+}
+
+void MainWindow::onDecodeFinished(const QString& message)
+{
+    setLEDStatus(LEDStatus::Connected);
+    statusBar()->showMessage(message, 5000);
+    
+    // Clear thread references (they will delete themselves)
+    m_decodeThread = nullptr;
+    m_decodeJob = nullptr;
+}
+
+void MainWindow::onDecodeError(const QString& error)
+{
+    setLEDStatus(LEDStatus::Error);
+    statusBar()->showMessage(tr("Error: %1").arg(error), 10000);
+    
+    QMessageBox::warning(this, tr("Decode Error"), error);
+    
+    // Clear thread references
+    m_decodeThread = nullptr;
+    m_decodeJob = nullptr;
 }

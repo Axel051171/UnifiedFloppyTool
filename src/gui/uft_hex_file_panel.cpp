@@ -271,6 +271,7 @@ void UftHexViewerPanel::createHexView()
     m_hexView = new UftHexView(this);
     
     QHBoxLayout *optLayout = new QHBoxLayout();
+    Q_UNUSED(optLayout);  // Layout used for future options
     m_bytesPerLine = new QComboBox();
     m_bytesPerLine->addItem("8", 8);
     m_bytesPerLine->addItem("16", 16);

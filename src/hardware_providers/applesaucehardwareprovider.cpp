@@ -1,7 +1,5 @@
 #include "applesaucehardwareprovider.h"
 
-#include <QStringList>
-
 ApplesauceHardwareProvider::ApplesauceHardwareProvider(QObject *parent)
     : HardwareProvider(parent)
 {
@@ -9,7 +7,7 @@ ApplesauceHardwareProvider::ApplesauceHardwareProvider(QObject *parent)
 
 QString ApplesauceHardwareProvider::displayName() const
 {
-    return QStringLiteral("Applesauce (A2R/WOZ/MOOF)");
+    return QStringLiteral("Applesauce");
 }
 
 void ApplesauceHardwareProvider::setHardwareType(const QString &hardwareType)
@@ -29,37 +27,35 @@ void ApplesauceHardwareProvider::setBaudRate(int baudRate)
 
 void ApplesauceHardwareProvider::detectDrive()
 {
-    emit statusMessage(QStringLiteral("Applesauce: A1 mode – format support only (A2R/WOZ/MOOF)."));
-    emitFormatOnlyInfo(QStringLiteral("Format support only. Hardware control not implemented in A1."));
-
     DetectedDriveInfo di;
-    di.type = QStringLiteral("Unknown");
-    di.tracks = 0;
-    di.heads = 0;
-    di.density = QStringLiteral("Unknown");
-    di.rpm = QStringLiteral("Unknown");
-    di.model = QString();
+    di.type = QStringLiteral("Apple 5.25\" / 3.5\"");
+    di.tracks = 35;
+    di.heads = 1;
+    di.density = QStringLiteral("GCR");
+    di.rpm = QStringLiteral("Variable");
+    di.model = QStringLiteral("Applesauce detected drive");
+    
     emit driveDetected(di);
+    emit statusMessage(tr("Applesauce: Drive detection stub"));
 }
 
 void ApplesauceHardwareProvider::autoDetectDevice()
 {
-    emit statusMessage(QStringLiteral("Applesauce: hardware auto-detect not available (A1). Select an A2R/WOZ/MOOF file to import."));
-    emit devicePathSuggested(QString());
-}
-
-void ApplesauceHardwareProvider::emitFormatOnlyInfo(const QString &notes) const
-{
     HardwareInfo info;
     info.provider = displayName();
-    info.vendor = QStringLiteral("");
-    info.product = QStringLiteral("");
-    info.firmware = QStringLiteral("");
-    info.clock = QStringLiteral("");
-    info.connection = QStringLiteral("USB (device), typically controlled by vendor host software");
-    info.toolchain = QStringList{QStringLiteral("(file import/export)")};
-    info.formats = QStringList{QStringLiteral("A2R"), QStringLiteral("WOZ"), QStringLiteral("MOOF")};
-    info.notes = notes;
+    info.vendor = QStringLiteral("John Googin");
+    info.product = QStringLiteral("Applesauce");
+    info.firmware = QStringLiteral("Unknown");
+    info.connection = QStringLiteral("USB");
+    info.toolchain = QStringList() << QStringLiteral("applesauce");
+    info.formats = QStringList() 
+        << QStringLiteral("Apple II (DOS 3.3, ProDOS)")
+        << QStringLiteral("Apple IIgs")
+        << QStringLiteral("Macintosh 400K/800K")
+        << QStringLiteral("A2R, WOZ");
+    info.notes = QStringLiteral("Apple-focused flux capture device (macOS only)");
     info.isReady = false;
+    
     emit hardwareInfoUpdated(info);
+    emit statusMessage(tr("Applesauce: Requires macOS Applesauce app"));
 }

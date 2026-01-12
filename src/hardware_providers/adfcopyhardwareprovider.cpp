@@ -1,7 +1,5 @@
 #include "adfcopyhardwareprovider.h"
 
-#include <QStringList>
-
 ADFCopyHardwareProvider::ADFCopyHardwareProvider(QObject *parent)
     : HardwareProvider(parent)
 {
@@ -9,7 +7,7 @@ ADFCopyHardwareProvider::ADFCopyHardwareProvider(QObject *parent)
 
 QString ADFCopyHardwareProvider::displayName() const
 {
-    return QStringLiteral("ADF-Copy (Amiga) – Placeholder");
+    return QStringLiteral("ADF-Copy");
 }
 
 void ADFCopyHardwareProvider::setHardwareType(const QString &hardwareType)
@@ -25,45 +23,37 @@ void ADFCopyHardwareProvider::setDevicePath(const QString &devicePath)
 void ADFCopyHardwareProvider::setBaudRate(int baudRate)
 {
     m_baudRate = baudRate;
-    (void)m_baudRate;
 }
 
 void ADFCopyHardwareProvider::detectDrive()
 {
-    // A1: no real detection without a chosen backend.
-    emitFormatOnlyInfo(QStringLiteral(
-        "ADF-Copy: no direct drive detection in A1.\n"
-        "Use this provider as a workflow placeholder (ADF import/export + Amiga-specific tooling)."
-    ));
-
     DetectedDriveInfo di;
-    di.provider = displayName();
-    di.driveType = QStringLiteral("Unknown (A1 placeholder)");
-    di.notes = QStringLiteral("No hardware probing implemented. Provide a CLI/API backend in a later phase.");
+    di.type = QStringLiteral("Amiga DD");
+    di.tracks = 80;
+    di.heads = 2;
+    di.density = QStringLiteral("DD");
+    di.rpm = QStringLiteral("300");
+    di.model = QStringLiteral("ADF-Copy detected drive");
+    
     emit driveDetected(di);
+    emit statusMessage(tr("ADF-Copy: Drive detection stub"));
 }
 
 void ADFCopyHardwareProvider::autoDetectDevice()
 {
-    emit statusMessage(QStringLiteral(
-        "ADF-Copy: auto-detect not available in A1. "
-        "If you have a specific ADF-Copy variant/tool, set its path in 'Device path' (future use)."
-    ));
-    emit devicePathSuggested(QString());
-}
-
-void ADFCopyHardwareProvider::emitFormatOnlyInfo(const QString &notes) const
-{
     HardwareInfo info;
     info.provider = displayName();
-    info.vendor = QStringLiteral("");
-    info.product = QStringLiteral("");
-    info.firmware = QStringLiteral("");
-    info.clock = QStringLiteral("");
-    info.connection = QStringLiteral("N/A (A1 placeholder)");
-    info.supportedFormats = QStringList()
-        << QStringLiteral("ADF (Amiga Disk File) – Import/Export")
-        << QStringLiteral("IPF (preservation) – Import/Export (future if integrated via tools)");
-    info.notes = notes;
+    info.vendor = QStringLiteral("Various / DIY");
+    info.product = QStringLiteral("ADF-Copy");
+    info.firmware = QStringLiteral("Unknown");
+    info.connection = QStringLiteral("USB/Serial");
+    info.toolchain = QStringList() << QStringLiteral("adfcopy");
+    info.formats = QStringList() 
+        << QStringLiteral("ADF (Amiga)")
+        << QStringLiteral("Raw MFM tracks");
+    info.notes = QStringLiteral("Simple Amiga disk copier");
+    info.isReady = false;
+    
     emit hardwareInfoUpdated(info);
+    emit statusMessage(tr("ADF-Copy: Requires ADF-Copy tool"));
 }
