@@ -238,7 +238,6 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/src/analysis/CMakeLists.txt")
     add_subdirectory(src/analysis)
 endif()
 
-# Serial Link Module (TransWarp integration)
 if(EXISTS "${CMAKE_SOURCE_DIR}/src/link/CMakeLists.txt")
     add_subdirectory(src/link)
 endif()
@@ -256,16 +255,18 @@ endif()
 if(EXISTS "${CMAKE_SOURCE_DIR}/src/cli/CMakeLists.txt")
     add_subdirectory(src/cli)
 endif()
+
 if(EXISTS "${CMAKE_SOURCE_DIR}/src/cloud/CMakeLists.txt")
     add_subdirectory(src/cloud)
 endif()
+
 if(EXISTS "${CMAKE_SOURCE_DIR}/src/whdload/CMakeLists.txt")
     add_subdirectory(src/whdload)
+endif()
 
 # XDF Container Format Family
 if(EXISTS "${CMAKE_SOURCE_DIR}/src/xdf/CMakeLists.txt")
     add_subdirectory(src/xdf)
-endif()
 endif()
 
 # ═══════════════════════════════════════════════════════════════════════════════

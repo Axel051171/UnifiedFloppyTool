@@ -1,6 +1,7 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 #include "visualdisk.h"
+#include "disk_image_validator.h"
 
 // Tab widget classes
 #include "workflowtab.h"
@@ -206,6 +207,17 @@ void MainWindow::openFile(const QString &filename)
 {
     m_currentFile = filename;
     
+    // Validate and analyze the image using DiskImageValidator
+    DiskImageInfo info = DiskImageValidator::validate(filename);
+    
+    if (!info.isValid) {
+        QMessageBox::warning(this, tr("Load Error"),
+            tr("Failed to load image:\n%1").arg(info.errorMessage));
+        ui->labelImageInfo->setText(tr("Load failed"));
+        ui->labelImageInfo->setStyleSheet("color: #ff0000;");
+        return;
+    }
+    
     // Add to recent files
     m_recentFiles.removeAll(filename);
     m_recentFiles.prepend(filename);
@@ -214,14 +226,40 @@ void MainWindow::openFile(const QString &filename)
     }
     updateRecentFilesMenu();
     
-    // Update status
-    QFileInfo fi(filename);
-    ui->labelImageInfo->setText(fi.fileName());
-    ui->labelImageInfo->setStyleSheet("color: #00aa00;");
+    // Build info string
+    QString infoStr = QString("%1 - %2 (%3)")
+        .arg(QFileInfo(filename).fileName())
+        .arg(info.formatName)
+        .arg(info.platform);
     
-    statusBar()->showMessage(tr("Loaded: %1").arg(filename), 3000);
+    if (info.tracks > 0 && info.heads > 0) {
+        infoStr += QString(" [%1T/%2H/%3S]")
+            .arg(info.tracks)
+            .arg(info.heads)
+            .arg(info.sectorsPerTrack > 0 ? info.sectorsPerTrack : 0);
+    }
     
-    // TODO: Actually load and analyze the image
+    // Update UI
+    ui->labelImageInfo->setText(infoStr);
+    ui->labelImageInfo->setStyleSheet(info.isFluxFormat ? "color: #00aaff;" : "color: #00aa00;");
+    
+    // Update status bar with file size
+    QString sizeStr;
+    if (info.fileSize > 1024*1024) {
+        sizeStr = QString::number(info.fileSize / (1024.0*1024.0), 'f', 2) + " MB";
+    } else if (info.fileSize > 1024) {
+        sizeStr = QString::number(info.fileSize / 1024.0, 'f', 1) + " KB";
+    } else {
+        sizeStr = QString::number(info.fileSize) + " B";
+    }
+    
+    statusBar()->showMessage(tr("Loaded: %1 (%2)").arg(filename).arg(sizeStr), 5000);
+    
+    // Store current image info for use by tabs
+    m_currentImageInfo = info;
+    
+    // Notify tabs that a file was loaded (they can query m_currentImageInfo)
+    emit imageLoaded(filename, info);
 }
 
 void MainWindow::updateRecentFilesMenu()

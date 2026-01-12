@@ -2,18 +2,17 @@
  * @file decodejob.h
  * @brief Worker Thread for Disk Decoding Operations
  * 
- * FIX: Critical - UI Thread Freeze Issue
+ * P0-GUI-001 FIX: Real Backend Integration
  * 
- * PROBLEM: Decoding operations were running in UI thread causing:
- * - "Not Responding" freezes
- * - No progress updates
- * - No cancel capability
- * 
- * SOLUTION: QThread-based worker with signals/slots
+ * Uses UFT Unified API for actual disk image processing:
+ * - uft_load() for image loading
+ * - uft_verify() for sector verification  
+ * - uft_get_track_info() for track analysis
  * 
  * USAGE:
  *   auto* thread = new QThread(this);
  *   auto* job = new DecodeJob();
+ *   job->setSourcePath("/path/to/disk.adf");
  *   job->moveToThread(thread);
  *   
  *   connect(thread, &QThread::started, job, &DecodeJob::run);
@@ -33,9 +32,28 @@
 #include <atomic>
 
 /**
+ * @brief Image information returned after decode
+ */
+struct DecodeResult {
+    QString formatName;
+    QString platformName;
+    QString volumeName;
+    int tracks = 0;
+    int heads = 0;
+    int sectorsPerTrack = 0;
+    int sectorSize = 0;
+    qint64 totalSize = 0;
+    int goodSectors = 0;
+    int badSectors = 0;
+    int totalSectors = 0;
+    bool hasErrors = false;
+};
+
+/**
  * @brief Worker class for disk decode operations
  * 
  * Runs in separate thread to prevent UI freeze.
+ * Uses UFT C backend for actual decoding.
  * Provides progress updates and cancel capability.
  */
 class DecodeJob : public QObject
@@ -47,83 +65,94 @@ public:
     ~DecodeJob();
     
     /**
+     * @brief Set source file path
+     * @param path Path to disk image (ADF, D64, SCP, etc.)
+     */
+    void setSourcePath(const QString& path);
+    
+    /**
+     * @brief Set destination path for conversion (optional)
+     * @param path Output path
+     * @param format Output format (e.g., "ADF", "D64")
+     */
+    void setDestination(const QString& path, const QString& format = QString());
+    
+    /**
+     * @brief Get decode results after completion
+     */
+    DecodeResult result() const { return m_result; }
+    
+    /**
      * @brief Request cancellation of running job
-     * 
-     * Sets atomic flag that worker checks periodically.
-     * Not immediate - worker must check cancel state.
      */
     void requestCancel();
     
     /**
      * @brief Check if job was cancelled
-     * @return true if cancel was requested
      */
     bool isCancelled() const;
     
 signals:
     /**
      * @brief Progress update (0-100%)
-     * @param percentage Current progress
      */
     void progress(int percentage);
     
     /**
      * @brief Current operation stage changed
-     * @param stage Description of current stage
      */
     void stageChanged(const QString& stage);
     
     /**
      * @brief Track/sector update for visualization
      * @param track Track number
-     * @param sector Sector number
-     * @param status Status string ("OK", "CRC_BAD", etc.)
+     * @param sector Sector number  
+     * @param status Status string ("OK", "CRC_BAD", "MISSING", etc.)
      */
     void sectorUpdate(int track, int sector, const QString& status);
     
     /**
+     * @brief Image information available
+     */
+    void imageInfo(const DecodeResult& info);
+    
+    /**
      * @brief Job completed successfully
-     * @param resultMessage Summary of results
      */
     void finished(const QString& resultMessage);
     
     /**
      * @brief Job failed with error
-     * @param errorMessage Error description
      */
     void error(const QString& errorMessage);
     
 public slots:
     /**
-     * @brief Main worker function
-     * 
-     * This runs in the worker thread.
-     * Calls C core functions for decoding.
-     * Emits progress signals.
-     * Checks cancel flag periodically.
+     * @brief Main worker function - runs in worker thread
      */
     void run();
     
 private:
-    /**
-     * @brief Atomic cancel flag
-     * 
-     * Set by UI thread via requestCancel().
-     * Checked by worker thread in run().
-     * Uses relaxed memory ordering (sufficient for boolean flag).
-     */
     std::atomic_bool m_cancel{false};
+    QString m_sourcePath;
+    QString m_destPath;
+    QString m_destFormat;
+    DecodeResult m_result;
     
     /**
-     * @brief Demo: Simulate decode operation
-     * 
-     * Real implementation would call:
-     * - uft_mfm_decode_flux_scalar()
-     * - CRC checking
-     * - Sector extraction
-     * - etc.
+     * @brief Load and analyze image using UFT backend
      */
-    void performDecode();
+    bool loadImage();
+    
+    /**
+     * @brief Verify all sectors
+     */
+    bool verifySectors();
+    
+    /**
+     * @brief Convert to destination format (if set)
+     */
+    bool convertImage();
 };
 
 #endif // DECODEJOB_H

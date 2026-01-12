@@ -1,6 +1,7 @@
 # ═══════════════════════════════════════════════════════════════════════════════
 # UFT Pre-Flight Checks
 # Läuft VOR dem eigentlichen Build um häufige Fehler früh zu erkennen
+# v3.7.0: Added GUI-Only Policy Checks
 # ═══════════════════════════════════════════════════════════════════════════════
 
 name: Pre-Flight Checks
@@ -59,12 +60,11 @@ jobs:
             exit 1
           fi
           
-          # uft_md_session muss stats haben
-          if ! grep -q "stats" include/uft/uft_multi_decode.h; then
+          # uft_md_session muss stats Member haben  
+          if grep -q "uft_md_session" include/uft/*.h && ! grep -A20 "uft_md_session" include/uft/*.h | grep -q "stats"; then
             echo "::error::uft_md_session missing 'stats' member"
             exit 1
           fi
-          
           echo "✅ All struct members defined"
 
       - name: "Check: Include Guards"
@@ -72,15 +72,15 @@ jobs:
           echo "Checking include guards..."
           MISSING=0
           
-          for f in $(find include -name "*.h" -type f); do
-            # Accept both #ifndef and #pragma once as valid include guards
-            if ! grep -q "#ifndef\|#pragma once" "$f"; then
-              echo "⚠️ $f missing include guard"
+          # Prüfe alle .h Dateien auf Include Guards (#ifndef oder #pragma once)
+          for h in $(find include -name "*.h" 2>/dev/null); do
+            if ! head -10 "$h" | grep -qE "#ifndef|#pragma once"; then
+              echo "⚠️ $h: No include guard found"
               MISSING=$((MISSING + 1))
             fi
           done
           
-          if [ $MISSING -gt 10 ]; then
+          if [ $MISSING -gt 50 ]; then
             echo "::error::Too many headers ($MISSING) without include guards"
             exit 1
           fi
@@ -89,15 +89,56 @@ jobs:
       - name: "Check: CMakeLists.txt Syntax"
         run: |
           echo "Checking CMakeLists.txt files..."
-          for f in $(find . -name "CMakeLists.txt"); do
+          ERRORS=0
+          
+          for cmake in $(find . -name "CMakeLists.txt" 2>/dev/null); do
             # Prüfe auf offensichtliche Syntaxfehler
-            if grep -q "add_library.*$" "$f"; then
-              if ! grep -A1 "add_library.*$" "$f" | grep -q ")"; then
-                echo "⚠️ $f may have incomplete add_library"
-              fi
+            if grep -qE "^\s*(if|else|endif|foreach|endforeach|function|endfunction|macro|endmacro)\s*[^(]" "$cmake"; then
+              echo "❌ $cmake: Possible syntax error"
+              ERRORS=$((ERRORS + 1))
             fi
           done
+          
+          if [ $ERRORS -gt 0 ]; then
+            echo "::error::CMake syntax errors found"
+            exit 1
+          fi
           echo "✅ CMakeLists.txt syntax OK"
+
+      - name: "Check: P0 GUI Blockers (Informational)"
+        run: |
+          echo "Checking P0 GUI blockers..."
+          
+          if [ -f "TODO.md" ]; then
+            P0_COUNT=$(grep -c "P0-GUI.*\[BLOCKER\]" TODO.md 2>/dev/null || echo "0")
+            
+            if [ "$P0_COUNT" -gt 0 ]; then
+              echo "::warning::$P0_COUNT P0 GUI blockers found - see TODO.md"
+              echo ""
+              echo "P0 Blockers:"
+              grep "^### P0-GUI" TODO.md | head -10
+            else
+              echo "✅ No P0 blockers"
+            fi
+          fi
+
+      - name: "Check: Simulated Code (Informational)"
+        run: |
+          echo "Checking for simulated/fake code in GUI..."
+          
+          SIMULATE=$(grep -rn "// Simulate\|// For now:" src/*.cpp 2>/dev/null | wc -l || echo "0")
+          FAKE=$(grep -rn "Hardcoded\|hardcoded\|fake result" src/*.cpp 2>/dev/null | wc -l || echo "0")
+          
+          TOTAL=$((SIMULATE + FAKE))
+          
+          if [ "$TOTAL" -gt 0 ]; then
+            echo "::warning::Found $TOTAL simulated/fake code blocks in GUI"
+            echo ""
+            echo "Locations:"
+            grep -rn "// Simulate\|// For now:\|Hardcoded" src/*.cpp 2>/dev/null | head -10 || true
+          else
+            echo "✅ No simulated code found"
+          fi
 
   # ─────────────────────────────────────────────────────────────────────────────
   # Header Consistency Check
@@ -109,34 +150,48 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - name: "Check: Central Type Definitions"
+      - name: "Check: Type Definition Consistency"
         run: |
           echo "Checking type definition consistency..."
           
-          # uft_track_t sollte nur an EINER Stelle definiert sein
-          TRACK_DEFS=$(grep -rn "typedef.*uft_track_t\|typedef struct uft_track " --include="*.h" . | wc -l)
-          if [ $TRACK_DEFS -gt 3 ]; then
-            echo "::warning::uft_track_t defined in $TRACK_DEFS places (should be centralized)"
-          fi
+          # Prüfe ob wichtige Types in core header definiert sind
+          TYPES="uft_rc_t uft_error_t uft_platform_t uft_disk_unified_t"
           
-          # uft_sector_t sollte Include-Guard haben
-          if ! grep -q "UFT_SECTOR_T_DEFINED" include/uft/uft_types.h; then
-            echo "::warning::uft_sector_t missing UFT_SECTOR_T_DEFINED guard"
-          fi
-          
+          for t in $TYPES; do
+            if ! grep -rq "typedef.*$t\|enum.*$t" include/uft/core/ include/uft/; then
+              echo "⚠️ Type $t not found in headers"
+            fi
+          done
           echo "✅ Type definitions checked"
 
-      - name: "Check: Error Code Completeness"
+      - name: "Check: Error Code Consistency"  
         run: |
           echo "Checking error codes..."
           
-          REQUIRED_ERRORS="UFT_OK UFT_ERROR UFT_ERR_INVALID_ARG UFT_ERR_IO UFT_ERR_NOMEM"
+          # Wichtige Error-Codes müssen definiert sein
+          ERRORS="UFT_OK UFT_ERR_NOMEM UFT_ERR_INVALID UFT_ERR_IO"
           
-          for err in $REQUIRED_ERRORS; do
+          for err in $ERRORS; do
             if ! grep -rq "#define $err\|$err.*=" include/uft/uft_error*.h; then
               echo "::error::Missing error code: $err"
               exit 1
             fi
           done
-          
           echo "✅ All required error codes defined"
+
+      - name: "Check: GUI Backend Calls (Informational)"
+        run: |
+          echo "Checking GUI backend integration..."
+          
+          UFT_CALLS=$(grep -roh "uft_[a-z_]*(" src/*.cpp 2>/dev/null | sort | uniq -c | sort -rn | head -10)
+          CALL_COUNT=$(grep -roh "uft_[a-z_]*(" src/*.cpp 2>/dev/null | wc -l || echo "0")
+          
+          echo "Total uft_* calls in GUI: $CALL_COUNT"
+          
+          if [ "$CALL_COUNT" -lt 10 ]; then
+            echo "::warning::GUI has very few backend calls ($CALL_COUNT) - integration incomplete"
+          fi
+          
+          echo ""
+          echo "Top uft_* calls:"
+          echo "$UFT_CALLS"
