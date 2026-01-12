@@ -92,7 +92,7 @@ jobs:
         mv ${{ env.APP_NAME }}_${VERSION}_amd64.deb ../
     
     - name: Upload Linux artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: linux-release
         path: |
@@ -145,7 +145,7 @@ jobs:
         tar czf ${{ env.APP_NAME }}-${{ steps.version.outputs.VERSION }}-windows-x64.tar.gz *
     
     - name: Upload Windows artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: windows-release
         path: dist/*.tar.gz
@@ -189,7 +189,7 @@ jobs:
         tar czf ${{ env.APP_NAME }}-${{ steps.version.outputs.VERSION }}-macos-x64.tar.gz UnifiedFloppyTool.app README.md LICENSE
     
     - name: Upload macOS artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v6
       with:
         name: macos-release
         path: dist/*.tar.gz
