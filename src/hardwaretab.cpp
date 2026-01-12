@@ -10,6 +10,7 @@
 
 #include <QMessageBox>
 #include <QSerialPortInfo>
+#include <QRandomGenerator>
 #include <QDebug>
 
 HardwareTab::HardwareTab(QWidget *parent)
@@ -241,7 +242,7 @@ void HardwareTab::onRPMTest()
     updateStatus(tr("Measuring RPM..."));
     
     // Real: uft_hal_measure_rpm()
-    double rpm = 299.8 + (qrand() % 10) / 10.0; // Simulated
+    double rpm = 299.8 + (QRandomGenerator::global()->bounded(10)) / 10.0; // Simulated
     
     ui->labelRPMMeasured->setText(QString("%1 RPM").arg(rpm, 0, 'f', 1));
     

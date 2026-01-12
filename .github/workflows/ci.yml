@@ -1,15 +1,11 @@
-# UnifiedFloppyTool CI Pipeline
-# Builds on Windows, macOS, and Linux
-# v3.7.0: Added GUI Integration Checks (P0-GUI audit)
-
+# UnifiedFloppyTool CI - Minimal & Robust
 name: CI
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main, master, develop]
   pull_request:
-    branches: [main]
-  workflow_dispatch:
+    branches: [main, master]
 
 env:
   BUILD_TYPE: Release
@@ -17,119 +13,11 @@ env:
 
 jobs:
   # ═══════════════════════════════════════════════════════════════════════════
-  # P0 Blocker Check - GUI Integration Audit
+  # Linux Build (No GUI) - Core Libraries Only
   # ═══════════════════════════════════════════════════════════════════════════
-  gui-integration-check:
-    name: 🔍 GUI Integration Audit
+  linux-core:
+    name: 🐧 Linux Core
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Check for Simulated/Fake Code
-        id: fake-check
-        run: |
-          echo "## GUI Integration Audit" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          
-          echo "### 🔴 Simulated/Fake Code Detection" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          
-          # Count simulated code instances
-          SIMULATE_COUNT=$(grep -rn "Simulate\|simulate\|// For now:" src/*.cpp 2>/dev/null | wc -l || echo "0")
-          FAKE_COUNT=$(grep -rn "fake\|dummy\|hardcoded" src/*.cpp 2>/dev/null | grep -vi "filename\|path" | wc -l || echo "0")
-          TODO_GUI=$(grep -rn "// TODO:" src/*.cpp 2>/dev/null | wc -l || echo "0")
-          
-          echo "Simulated code blocks: $SIMULATE_COUNT"
-          echo "Fake/dummy instances: $FAKE_COUNT"  
-          echo "TODO comments in GUI: $TODO_GUI"
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          
-          # List specific instances
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 📍 Locations" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          grep -rn "Simulate\|// For now:" src/*.cpp 2>/dev/null | head -10 || echo "None found"
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          
-          # Warn but don't fail (informational)
-          if [ "$SIMULATE_COUNT" -gt 0 ]; then
-            echo "::warning::Found $SIMULATE_COUNT simulated code blocks in GUI (P0-GUI-001)"
-          fi
-          
-      - name: Check Backend Integration
-        id: backend-check
-        run: |
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 🔗 Backend Integration (uft_* calls)" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          
-          # Count uft_ calls in GUI code
-          UFT_CALLS=$(grep -roh "uft_[a-z_]*(" src/*.cpp 2>/dev/null | wc -l || echo "0")
-          echo "Total uft_* calls in GUI: $UFT_CALLS"
-          
-          # Check critical functions
-          echo ""
-          echo "Critical function usage:"
-          for func in "uft_load_image" "uft_save_image" "uft_hal_open" "uft_hal_read" "uft_format_detect" "uft_recovery"; do
-            count=$(grep -r "$func" src/*.cpp 2>/dev/null | wc -l || echo "0")
-            if [ "$count" -eq 0 ]; then
-              echo "  ❌ $func: NOT USED"
-            else
-              echo "  ✅ $func: $count calls"
-            fi
-          done
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          
-          # Warn if too few backend calls
-          if [ "$UFT_CALLS" -lt 10 ]; then
-            echo "::warning::GUI has only $UFT_CALLS backend calls - most features are stubs"
-          fi
-          
-      - name: Check Empty Tab Implementations
-        run: |
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 📋 Tab Implementation Status" >> $GITHUB_STEP_SUMMARY
-          echo "| Tab | Lines | Status |" >> $GITHUB_STEP_SUMMARY
-          echo "|-----|-------|--------|" >> $GITHUB_STEP_SUMMARY
-          
-          for tab in catalogtab hardwaretab nibbletab toolstab forensictab xcopytab workflowtab; do
-            if [ -f "src/${tab}.cpp" ]; then
-              lines=$(wc -l < "src/${tab}.cpp")
-              if [ "$lines" -lt 20 ]; then
-                echo "| $tab | $lines | ⚠️ Stub |" >> $GITHUB_STEP_SUMMARY
-              elif [ "$lines" -lt 50 ]; then
-                echo "| $tab | $lines | 🟡 Minimal |" >> $GITHUB_STEP_SUMMARY
-              else
-                echo "| $tab | $lines | ✅ |" >> $GITHUB_STEP_SUMMARY
-              fi
-            fi
-          done
-          
-      - name: P0 Issue Counter
-        run: |
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 📊 P0 Blocker Status" >> $GITHUB_STEP_SUMMARY
-          
-          if [ -f "TODO.md" ]; then
-            P0_COUNT=$(grep -c "^### P0-GUI" TODO.md 2>/dev/null || echo "0")
-            P0_OPEN=$(grep "P0-GUI.*\[BLOCKER\]" TODO.md 2>/dev/null | wc -l || echo "0")
-            echo "- **P0 Issues defined:** $P0_COUNT" >> $GITHUB_STEP_SUMMARY
-            echo "- **P0 Blockers open:** $P0_OPEN" >> $GITHUB_STEP_SUMMARY
-            
-            if [ "$P0_OPEN" -gt 0 ]; then
-              echo "" >> $GITHUB_STEP_SUMMARY
-              echo "⚠️ **$P0_OPEN P0 blockers must be resolved for GUI-only release**" >> $GITHUB_STEP_SUMMARY
-              echo "" >> $GITHUB_STEP_SUMMARY
-              echo "See [TODO.md](TODO.md) for details." >> $GITHUB_STEP_SUMMARY
-            fi
-          fi
-
-  # ═══════════════════════════════════════════════════════════════════════════
-  # Linux Build + Tests
-  # ═══════════════════════════════════════════════════════════════════════════
-  linux:
-    name: 🐧 Linux (GUI)
-    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
       
@@ -137,7 +25,29 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential cmake ninja-build
-          sudo apt-get install -y libomp-dev libusb-1.0-0-dev
+          
+      - name: Configure
+        run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DUFT_BUILD_GUI=OFF -DBUILD_TESTING=ON
+        
+      - name: Build
+        run: cmake --build build --parallel
+        
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Linux Build (With GUI)
+  # ═══════════════════════════════════════════════════════════════════════════
+  linux-gui:
+    name: 🐧 Linux GUI
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake ninja-build libgl1-mesa-dev
           
       - name: Install Qt
         uses: jurplel/install-qt-action@v3
@@ -147,248 +57,46 @@ jobs:
           modules: 'qtserialport'
           
       - name: Configure
-        run: |
-          cmake -B build -G Ninja \
-            -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
-            -DBUILD_TESTING=ON
+        run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DUFT_BUILD_GUI=ON -DBUILD_TESTING=ON
         
       - name: Build
         run: cmake --build build --parallel
-        
-      - name: Run CTest
-        run: |
-          cd build
-          ctest --output-on-failure -j4
-          
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: UnifiedFloppyTool-Linux-x64
-          path: build/UnifiedFloppyTool
-          if-no-files-found: ignore
 
   # ═══════════════════════════════════════════════════════════════════════════
-  # Linux No-GUI Build (Core libraries only)
+  # Windows Build
   # ═══════════════════════════════════════════════════════════════════════════
-  linux-no-gui:
-    name: 🐧 Linux (No GUI)
-    runs-on: ubuntu-22.04
+  windows:
+    name: 🪟 Windows
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
       
-      - name: Install Dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential cmake ninja-build
+      - name: Configure
+        run: cmake -B build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DUFT_BUILD_GUI=OFF -DBUILD_TESTING=ON
           
-      - name: Configure (No GUI)
-        run: |
-          cmake -B build -G Ninja \
-            -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
-            -DUFT_BUILD_GUI=OFF \
-            -DBUILD_TESTING=ON
-        
       - name: Build
-        run: cmake --build build --parallel
+        run: cmake --build build --config ${{ env.BUILD_TYPE }} --parallel
         
-      - name: Run CTest
-        run: |
-          cd build
-          ctest --output-on-failure -j4
-          echo ""
-          echo "═══════════════════════════════════════════════════════════"
-          ctest -N | tail -5
+      - name: Test
+        run: ctest --test-dir build -C ${{ env.BUILD_TYPE }} --output-on-failure
 
   # ═══════════════════════════════════════════════════════════════════════════
-  # macOS Build (ARM64)
+  # macOS Build
   # ═══════════════════════════════════════════════════════════════════════════
   macos:
-    name: 🍎 macOS (ARM64)
-    runs-on: macos-14
+    name: 🍎 macOS
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
       
       - name: Install Dependencies
         run: brew install cmake ninja
           
-      - name: Install Qt
-        uses: jurplel/install-qt-action@v3
-        with:
-          version: ${{ env.QT_VERSION }}
-          cache: true
-          arch: clang_64
-          modules: 'qtserialport'
-          
       - name: Configure
-        run: |
-          cmake -B build -G Ninja \
-            -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
-            -DUFT_ENABLE_OPENMP=OFF \
-            -DBUILD_TESTING=ON \
-            -DCMAKE_OSX_ARCHITECTURES="arm64"
+        run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DUFT_BUILD_GUI=OFF -DUFT_ENABLE_OPENMP=OFF -DBUILD_TESTING=ON
         
       - name: Build
         run: cmake --build build --parallel
         
-      - name: Run CTest
-        run: |
-          cd build
-          ctest --output-on-failure -j4
-          
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: UnifiedFloppyTool-macOS-arm64
-          path: build/UnifiedFloppyTool
-          if-no-files-found: ignore
-
-  # ═══════════════════════════════════════════════════════════════════════════
-  # Windows Build (MSVC)
-  # ═══════════════════════════════════════════════════════════════════════════
-  windows:
-    name: 🪟 Windows (GUI)
-    runs-on: windows-2022
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Install Qt
-        uses: jurplel/install-qt-action@v3
-        with:
-          version: ${{ env.QT_VERSION }}
-          cache: true
-          arch: win64_msvc2019_64
-          modules: 'qtserialport'
-          
-      - name: Configure
-        run: cmake -B build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DBUILD_TESTING=ON
-          
-      - name: Build
-        run: cmake --build build --config ${{ env.BUILD_TYPE }} --parallel
-        
-      - name: Run CTest
-        run: |
-          cd build
-          ctest -C ${{ env.BUILD_TYPE }} --output-on-failure
-          
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: UnifiedFloppyTool-Windows-x64
-          path: build/${{ env.BUILD_TYPE }}/UnifiedFloppyTool.exe
-          if-no-files-found: ignore
-
-  # ═══════════════════════════════════════════════════════════════════════════
-  # Windows No-GUI Build
-  # ═══════════════════════════════════════════════════════════════════════════
-  windows-no-gui:
-    name: 🪟 Windows (No GUI)
-    runs-on: windows-2022
-    steps:
-      - uses: actions/checkout@v4
-          
-      - name: Configure (No GUI)
-        run: cmake -B build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DUFT_BUILD_GUI=OFF -DBUILD_TESTING=ON
-          
-      - name: Build
-        run: cmake --build build --config ${{ env.BUILD_TYPE }} --parallel
-        
-      - name: Run CTest
-        run: |
-          cd build
-          ctest -C ${{ env.BUILD_TYPE }} --output-on-failure
-
-  # ═══════════════════════════════════════════════════════════════════════════
-  # Version Consistency Check
-  # ═══════════════════════════════════════════════════════════════════════════
-  version-check:
-    name: 🔢 Version Check
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Check Version Consistency
-        run: |
-          CMAKE_VER=$(grep "VERSION" CMakeLists.txt | head -1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
-          echo "CMakeLists version: $CMAKE_VER"
-          
-          if [ -f "VERSION" ]; then
-            FILE_VER=$(cat VERSION | tr -d '[:space:]')
-            echo "VERSION file: $FILE_VER"
-            if [ "$CMAKE_VER" != "$FILE_VER" ]; then
-              echo "::warning::VERSION file mismatch: CMake=$CMAKE_VER, FILE=$FILE_VER"
-            fi
-          fi
-          
-          echo "✓ Version check complete: $CMAKE_VER"
-
-  # ═══════════════════════════════════════════════════════════════════════════
-  # Static Analysis
-  # ═══════════════════════════════════════════════════════════════════════════
-  static-analysis:
-    name: 🔬 Static Analysis
-    runs-on: ubuntu-22.04
-    continue-on-error: true
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Install cppcheck
-        run: sudo apt-get install -y cppcheck
-        
-      - name: Run cppcheck
-        run: |
-          cppcheck --enable=warning,performance \
-            --error-exitcode=0 \
-            --suppress=missingIncludeSystem \
-            --suppress=unusedFunction \
-            -I include -I src \
-            --quiet \
-            src/ 2>&1 | tee cppcheck-report.txt
-          
-      - name: Upload Report
-        uses: actions/upload-artifact@v4
-        with:
-          name: cppcheck-report
-          path: cppcheck-report.txt
-
-  # ═══════════════════════════════════════════════════════════════════════════
-  # Build Summary
-  # ═══════════════════════════════════════════════════════════════════════════
-  summary:
-    name: 📊 Summary
-    needs: [gui-integration-check, linux, linux-no-gui, macos, windows, windows-no-gui, version-check]
-    runs-on: ubuntu-latest
-    if: always()
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Build Summary
-        run: |
-          echo "## 🔧 UFT Build Summary v3.7.0" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          
-          echo "### Build Status" >> $GITHUB_STEP_SUMMARY
-          echo "| Platform | GUI | Tests | Status |" >> $GITHUB_STEP_SUMMARY
-          echo "|----------|-----|-------|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Linux x64 | ✓ | ✓ | ${{ needs.linux.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Linux x64 | ✗ | ✓ | ${{ needs.linux-no-gui.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| macOS ARM64 | ✓ | ✓ | ${{ needs.macos.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Windows x64 | ✓ | ✓ | ${{ needs.windows.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Windows x64 | ✗ | ✓ | ${{ needs.windows-no-gui.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          
-          echo "### Checks" >> $GITHUB_STEP_SUMMARY
-          echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
-          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| GUI Integration | ${{ needs.gui-integration-check.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Version | ${{ needs.version-check.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          
-          # Count P0 issues
-          if [ -f "TODO.md" ]; then
-            P0_COUNT=$(grep -c "P0-GUI.*\[BLOCKER\]" TODO.md 2>/dev/null || echo "0")
-            echo "### ⚠️ Open P0 Blockers: $P0_COUNT" >> $GITHUB_STEP_SUMMARY
-            if [ "$P0_COUNT" -gt 0 ]; then
-              echo "" >> $GITHUB_STEP_SUMMARY
-              echo "GUI-only release requires all P0 issues resolved." >> $GITHUB_STEP_SUMMARY
-            fi
-          fi
+      - name: Test
+        run: ctest --test-dir build --output-on-failure

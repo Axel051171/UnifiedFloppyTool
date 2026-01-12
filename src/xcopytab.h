@@ -44,9 +44,16 @@ private:
     
     Ui::TabXCopy *ui;
     
+    // Programmatic widgets (not in .ui file)
+    class QProgressBar *m_progressBar;
+    class QLabel *m_labelStatus;
+    class QGroupBox *m_groupOptions;
+    
     bool m_copying;
     QThread *m_copyThread;
     CopyWorker *m_copyWorker;
+    
+    void createExtraWidgets();
 };
 
 #endif // XCOPYTAB_H

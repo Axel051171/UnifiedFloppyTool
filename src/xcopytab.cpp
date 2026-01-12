@@ -16,6 +16,10 @@
 #include <QDebug>
 #include <QThread>
 #include <QCryptographicHash>
+#include <QProgressBar>
+#include <QLabel>
+#include <QGroupBox>
+#include <QVBoxLayout>
 
 // Worker class for background copy
 class CopyWorker : public QObject
@@ -121,11 +125,15 @@ private:
 XCopyTab::XCopyTab(QWidget *parent)
     : QWidget(parent)
     , ui(new Ui::TabXCopy)
+    , m_progressBar(nullptr)
+    , m_labelStatus(nullptr)
+    , m_groupOptions(nullptr)
     , m_copying(false)
     , m_copyThread(nullptr)
     , m_copyWorker(nullptr)
 {
     ui->setupUi(this);
+    createExtraWidgets();
     setupConnections();
     updateUIState(false);
 }
@@ -136,6 +144,37 @@ XCopyTab::~XCopyTab()
         onStopCopy();
     }
     delete ui;
+}
+
+void XCopyTab::createExtraWidgets()
+{
+    // Create progress bar (not in .ui file)
+    m_progressBar = new QProgressBar(this);
+    m_progressBar->setRange(0, 100);
+    m_progressBar->setValue(0);
+    m_progressBar->setTextVisible(true);
+    
+    // Create status label
+    m_labelStatus = new QLabel(tr("Ready"), this);
+    m_labelStatus->setAlignment(Qt::AlignCenter);
+    
+    // Create options group for enable/disable during copy
+    m_groupOptions = new QGroupBox(tr("Options"), this);
+    
+    // Find the main layout and add our widgets
+    if (QVBoxLayout* mainLayout = qobject_cast<QVBoxLayout*>(layout())) {
+        // Add progress section at bottom
+        mainLayout->addWidget(m_progressBar);
+        mainLayout->addWidget(m_labelStatus);
+    } else {
+        // Fallback: create layout if needed
+        QVBoxLayout* newLayout = new QVBoxLayout();
+        newLayout->addWidget(m_progressBar);
+        newLayout->addWidget(m_labelStatus);
+        if (layout()) {
+            layout()->addItem(newLayout);
+        }
+    }
 }
 
 void XCopyTab::setupConnections()
@@ -202,8 +241,8 @@ void XCopyTab::onStartCopy()
     m_copying = true;
     updateUIState(true);
     
-    ui->progressBar->setValue(0);
-    ui->labelStatus->setText(tr("Copying..."));
+    m_progressBar->setValue(0);
+    m_labelStatus->setText(tr("Copying..."));
     
     // Create worker thread
     m_copyThread = new QThread(this);
@@ -230,16 +269,16 @@ void XCopyTab::onStopCopy()
         m_copyWorker->cancel();
     }
     
-    ui->labelStatus->setText(tr("Cancelling..."));
+    m_labelStatus->setText(tr("Cancelling..."));
 }
 
 void XCopyTab::onCopyProgress(int current, int total)
 {
-    ui->progressBar->setMaximum(total);
-    ui->progressBar->setValue(current);
+    m_progressBar->setMaximum(total);
+    m_progressBar->setValue(current);
     
     if (ui->checkVerify->isChecked() && current == 0) {
-        ui->labelStatus->setText(tr("Verifying..."));
+        m_labelStatus->setText(tr("Verifying..."));
     }
 }
 
@@ -252,15 +291,15 @@ void XCopyTab::onCopyFinished(bool success, const QString& message)
     updateUIState(false);
     
     if (success) {
-        ui->progressBar->setValue(100);
-        ui->labelStatus->setText(tr("Complete"));
-        ui->labelStatus->setStyleSheet("color: green; font-weight: bold;");
+        m_progressBar->setValue(100);
+        m_labelStatus->setText(tr("Complete"));
+        m_labelStatus->setStyleSheet("color: green; font-weight: bold;");
         
         emit statusMessage(message);
         emit copyComplete(true, message);
     } else {
-        ui->labelStatus->setText(tr("Failed"));
-        ui->labelStatus->setStyleSheet("color: red; font-weight: bold;");
+        m_labelStatus->setText(tr("Failed"));
+        m_labelStatus->setStyleSheet("color: red; font-weight: bold;");
         
         QMessageBox::warning(this, tr("Copy Failed"), message);
         emit copyComplete(false, message);
@@ -277,10 +316,10 @@ void XCopyTab::updateUIState(bool copying)
     ui->editDestFile->setEnabled(!copying);
     ui->comboSourceType->setEnabled(!copying);
     ui->comboDestType->setEnabled(!copying);
-    ui->groupOptions->setEnabled(!copying);
+    m_groupOptions->setEnabled(!copying);
     
     if (!copying) {
-        ui->labelStatus->setStyleSheet("");
+        m_labelStatus->setStyleSheet("");
     }
 }
 

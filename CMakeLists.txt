@@ -4,8 +4,7 @@
 
 cmake_minimum_required(VERSION 3.16)
 
-project(UnifiedFloppyTool
-    VERSION 3.7.3
+project(UnifiedFloppyTool VERSION 3.7.0
     DESCRIPTION "Cross-platform floppy disk preservation and analysis tool"
     LANGUAGES CXX C
 )
