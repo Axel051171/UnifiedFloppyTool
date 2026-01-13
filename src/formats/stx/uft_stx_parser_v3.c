@@ -33,11 +33,11 @@ typedef enum {
     STX_DIAG_COUNT
 } stx_diag_code_t;
 
-typedef struct { float overall; bool valid; bool has_timing; bool has_fuzzy; } stx_score_t;
-typedef struct { stx_diag_code_t code; uint8_t track; char msg[128]; } stx_diagnosis_t;
-typedef struct { stx_diagnosis_t* items; size_t count; size_t cap; float quality; } stx_diagnosis_list_t;
+typedef struct stx_score { float overall; bool valid; bool has_timing; bool has_fuzzy; } stx_score_t;
+typedef struct stx_diagnosis { stx_diag_code_t code; uint8_t track; char msg[128]; } stx_diagnosis_t;
+typedef struct stx_diagnosis_list { stx_diagnosis_t* items; size_t count; size_t cap; float quality; } stx_diagnosis_list_t;
 
-typedef struct {
+typedef struct stx_track {
     uint8_t track_num;
     uint8_t side;
     uint8_t sector_count;
@@ -46,7 +46,7 @@ typedef struct {
     stx_score_t score;
 } stx_track_t;
 
-typedef struct {
+typedef struct stx_disk {
     uint32_t signature;
     uint16_t version;
     uint16_t tool_version;
@@ -79,7 +79,7 @@ static uint16_t stx_read_le16(const uint8_t* p) {
     return p[0] | (p[1] << 8);
 }
 
-static bool stx_parse(const uint8_t* data, size_t size, stx_disk_t* disk) {
+bool stx_parse(const uint8_t* data, size_t size, stx_disk_t* disk) {
     if (!data || !disk || size < 16) return false;
     memset(disk, 0, sizeof(stx_disk_t));
     disk->diagnosis = stx_diagnosis_create();
@@ -107,9 +107,9 @@ static bool stx_parse(const uint8_t* data, size_t size, stx_disk_t* disk) {
         uint32_t fuzzy_count = stx_read_le32(data + pos + 4);
         uint16_t sector_count = stx_read_le16(data + pos + 8);
         uint16_t flags = stx_read_le16(data + pos + 10);
-        uint16_t track_len = stx_read_le16(data + pos + 14);
+        (void)stx_read_le16(data + pos + 14); // track_len - reserved for future use
         uint8_t track_num = data[pos + 16];
-        uint8_t track_type = data[pos + 17];
+        (void)data[pos + 17]; // track_type - reserved for future use
         
         stx_track_t* track = &disk->tracks[disk->actual_tracks];
         track->track_num = track_num & 0x7F;
@@ -138,7 +138,7 @@ static bool stx_parse(const uint8_t* data, size_t size, stx_disk_t* disk) {
     return true;
 }
 
-static void stx_disk_free(stx_disk_t* disk) {
+void stx_disk_free(stx_disk_t* disk) {
     if (disk && disk->diagnosis) stx_diagnosis_free(disk->diagnosis);
 }
 

@@ -20,7 +20,7 @@ typedef struct {
 
 static const uint16_t td0_sector_sizes[8] = { 128, 256, 512, 1024, 2048, 4096, 8192, 16384 };
 
-static bool td0_probe(const uint8_t* data, size_t size, size_t file_size, int* confidence) {
+bool td0_probe(const uint8_t* data, size_t size, size_t file_size, int* confidence) {
     if (size < 2) return false;
     uint16_t magic = uft_read_le16(data);
     if (magic == TD0_MAGIC_NORMAL || magic == TD0_MAGIC_ADVANCED) {

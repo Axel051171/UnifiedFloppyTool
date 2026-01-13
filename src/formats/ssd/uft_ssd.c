@@ -2,7 +2,7 @@
 
 typedef struct { FILE* file; uint8_t tracks, sides, spt; } ssd_data_t;
 
-static bool ssd_probe(const uint8_t* data, size_t size, size_t file_size, int* confidence) {
+bool ssd_probe(const uint8_t* data, size_t size, size_t file_size, int* confidence) {
     if (file_size == 102400 || file_size == 204800 || file_size == 409600) {
         *confidence = 70; return true;
     }

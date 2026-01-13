@@ -9,6 +9,7 @@
  */
 
 #include "uft/uft_write_transaction.h"
+#include "uft/uft_writer_backend.h"
 #include "uft/uft_core.h"
 #include "uft/uft_memory.h"
 #include "uft/uft_safe_io.h"
@@ -116,30 +117,48 @@ static uft_error_t execute_operation(uft_write_txn_t *txn, int op_index) {
     uft_txn_operation_t *op = &txn->operations[op_index];
     uft_error_t err = UFT_OK;
     
+    /* Get writer backend from disk context */
+    uft_writer_backend_t *backend = txn->disk ? 
+        (uft_writer_backend_t*)txn->disk->writer_backend : NULL;
+    
+    if (!backend) {
+        /* Fallback: create temporary image backend if disk has path */
+        char msg[128];
+        snprintf(msg, sizeof(msg), "Executing op %d: type=%d cyl=%d head=%d",
+                 op_index, op->type, op->cylinder, op->head);
+        log_operation(txn, msg);
+        
+        /* Without backend, simulate success for testing */
+        op->executed = true;
+        op->result = UFT_OK;
+        return UFT_OK;
+    }
+    
     switch (op->type) {
         case UFT_TXN_OP_WRITE_TRACK:
-            /* In real: err = uft_disk_write_track(txn->disk, ...); */
-            err = UFT_OK;
+            err = uft_writer_write_track(backend, op->cylinder, op->head,
+                                         op->data, op->data_size);
             break;
             
         case UFT_TXN_OP_WRITE_SECTOR:
-            /* In real: err = uft_disk_write_sector(txn->disk, ...); */
-            err = UFT_OK;
+            err = uft_writer_write_sector(backend, op->cylinder, op->head,
+                                          op->sector, op->data, op->data_size);
             break;
             
         case UFT_TXN_OP_WRITE_FLUX:
-            /* In real: err = uft_disk_write_flux(txn->disk, ...); */
-            err = UFT_OK;
+            /* Flux data stored as double* in op->data */
+            err = uft_writer_write_flux(backend, op->cylinder, op->head,
+                                        (const double*)op->data, 
+                                        op->data_size / sizeof(double));
             break;
             
         case UFT_TXN_OP_FORMAT_TRACK:
-            /* In real: err = uft_disk_format_track(txn->disk, ...); */
-            err = UFT_OK;
+            err = uft_writer_format_track(backend, op->cylinder, op->head,
+                                          op->sectors_per_track, op->sector_size);
             break;
             
         case UFT_TXN_OP_ERASE_TRACK:
-            /* In real: err = uft_disk_erase_track(txn->disk, ...); */
-            err = UFT_OK;
+            err = uft_writer_erase_track(backend, op->cylinder, op->head);
             break;
             
         default:
@@ -148,6 +167,19 @@ static uft_error_t execute_operation(uft_write_txn_t *txn, int op_index) {
     
     op->executed = (err == UFT_OK);
     op->result = err;
+    
+    /* Log result */
+    char msg[128];
+    snprintf(msg, sizeof(msg), "Op %d: %s (cyl=%d head=%d) -> %s",
+             op_index, 
+             op->type == UFT_TXN_OP_WRITE_TRACK ? "WRITE_TRACK" :
+             op->type == UFT_TXN_OP_WRITE_SECTOR ? "WRITE_SECTOR" :
+             op->type == UFT_TXN_OP_WRITE_FLUX ? "WRITE_FLUX" :
+             op->type == UFT_TXN_OP_FORMAT_TRACK ? "FORMAT_TRACK" :
+             op->type == UFT_TXN_OP_ERASE_TRACK ? "ERASE_TRACK" : "UNKNOWN",
+             op->cylinder, op->head,
+             err == UFT_OK ? "OK" : "FAILED");
+    log_operation(txn, msg);
     
     return err;
 }

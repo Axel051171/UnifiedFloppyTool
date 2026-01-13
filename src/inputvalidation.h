@@ -1,3 +1,4 @@
+#pragma once
 /**
  * @file inputvalidation.h
  * @brief Input Validation Framework

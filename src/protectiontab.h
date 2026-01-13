@@ -1,3 +1,4 @@
+#pragma once
 /**
  * @file protectiontab.h
  * @brief Protection Tab Widget - GUI↔Backend Integration

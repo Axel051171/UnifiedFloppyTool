@@ -261,7 +261,7 @@ static const char* g64_diag_suggestions[] = {
 /**
  * @brief Score structure
  */
-typedef struct {
+typedef struct g64_score {
     float overall;
     float sync_score;
     float gcr_score;
@@ -288,7 +288,7 @@ typedef struct {
 /**
  * @brief Diagnosis entry
  */
-typedef struct {
+typedef struct g64_diagnosis {
     g64_diag_code_t code;
     uint8_t track;              /* Half-track number (1-84) */
     uint8_t sector;             /* 0xFF if track-level */
@@ -300,7 +300,7 @@ typedef struct {
 /**
  * @brief Diagnosis list
  */
-typedef struct {
+typedef struct g64_diagnosis_list {
     g64_diagnosis_t* items;
     size_t count;
     size_t capacity;
@@ -313,7 +313,7 @@ typedef struct {
 /**
  * @brief Decoded sector from GCR
  */
-typedef struct {
+typedef struct g64_sector {
     /* Identity */
     uint8_t track_id;           /* From header */
     uint8_t sector_id;          /* From header */
@@ -356,7 +356,7 @@ typedef struct {
 /**
  * @brief Track structure
  */
-typedef struct {
+typedef struct g64_track {
     /* Identity */
     uint8_t half_track;         /* 1-84 (half-track number) */
     uint8_t full_track;         /* 1-42 (full track) */
@@ -414,7 +414,7 @@ typedef struct {
 /**
  * @brief G64 disk structure
  */
-typedef struct {
+typedef struct g64_disk {
     /* File info */
     char signature[9];
     uint8_t version;
@@ -464,7 +464,7 @@ typedef struct {
 /**
  * @brief G64 parameters
  */
-typedef struct {
+typedef struct g64_params {
     /* Read options */
     uint8_t revolutions;
     bool multi_rev_merge;
@@ -556,7 +556,7 @@ static uint16_t g64_get_track_size(uint8_t speed_zone) {
 /**
  * @brief Get bitcell time for speed zone
  */
-static uint32_t g64_get_bitcell_ns(uint8_t speed_zone) {
+uint32_t g64_get_bitcell_ns(uint8_t speed_zone) {
     switch (speed_zone) {
         case 3: return G64_BITCELL_ZONE_3;
         case 2: return G64_BITCELL_ZONE_2;
@@ -610,7 +610,7 @@ static bool g64_gcr_decode_block(const uint8_t* gcr, uint8_t* data, uint8_t* err
 /**
  * @brief Encode 4 data bytes to 5 GCR bytes
  */
-static void g64_gcr_encode_block(const uint8_t* data, uint8_t* gcr) {
+void g64_gcr_encode_block(const uint8_t* data, uint8_t* gcr) {
     uint8_t n[8];
     uint8_t g[8];
     
@@ -664,7 +664,7 @@ static int g64_find_sync(const uint8_t* data, size_t size, size_t start, uint8_t
 /**
  * @brief Calculate CBM checksum
  */
-static uint8_t g64_checksum(const uint8_t* data, size_t len) {
+uint8_t g64_checksum(const uint8_t* data, size_t len) {
     uint8_t sum = 0;
     for (size_t i = 0; i < len; i++) {
         sum ^= data[i];
@@ -762,7 +762,7 @@ static void g64_diagnosis_add(
 /**
  * @brief Generate diagnosis report
  */
-static char* g64_diagnosis_to_text(const g64_diagnosis_list_t* list, const g64_disk_t* disk) {
+char* g64_diagnosis_to_text(const g64_diagnosis_list_t* list, const g64_disk_t* disk) {
     if (!list) return NULL;
     
     size_t buf_size = 24576;
@@ -1391,7 +1391,7 @@ static bool g64_parse_track(
 /**
  * @brief Main G64 parse function
  */
-static bool g64_parse(
+bool g64_parse(
     const uint8_t* data,
     size_t size,
     g64_disk_t* disk,
@@ -1468,7 +1468,7 @@ static size_t g64_calculate_size(const g64_disk_t* disk) {
 /**
  * @brief Write G64 to buffer
  */
-static uint8_t* g64_write(
+uint8_t* g64_write(
     const g64_disk_t* disk,
     g64_params_t* params,
     size_t* out_size
@@ -1539,7 +1539,7 @@ static uint8_t* g64_write(
 /**
  * @brief Detect copy protection
  */
-static bool g64_detect_protection(
+bool g64_detect_protection(
     const g64_disk_t* disk,
     char* protection_name,
     size_t name_size,
@@ -1626,7 +1626,7 @@ static bool g64_detect_protection(
 /**
  * @brief Export to D64 format
  */
-static uint8_t* g64_export_d64(
+uint8_t* g64_export_d64(
     const g64_disk_t* disk,
     size_t* out_size,
     bool include_errors
@@ -1689,7 +1689,7 @@ static uint8_t* g64_export_d64(
 /**
  * @brief Get default parameters
  */
-static void g64_get_default_params(g64_params_t* params) {
+void g64_get_default_params(g64_params_t* params) {
     if (!params) return;
     memset(params, 0, sizeof(g64_params_t));
     
@@ -1730,7 +1730,7 @@ static void g64_get_default_params(g64_params_t* params) {
 /**
  * @brief Free disk structure
  */
-static void g64_disk_free(g64_disk_t* disk) {
+void g64_disk_free(g64_disk_t* disk) {
     if (!disk) return;
     
     if (disk->diagnosis) {

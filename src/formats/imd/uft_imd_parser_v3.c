@@ -53,11 +53,11 @@ typedef enum {
     IMD_DIAG_COUNT
 } imd_diag_code_t;
 
-typedef struct { float overall; bool valid; uint8_t tracks; uint8_t errors; } imd_score_t;
-typedef struct { imd_diag_code_t code; uint8_t track; uint8_t sector; char msg[128]; } imd_diagnosis_t;
-typedef struct { imd_diagnosis_t* items; size_t count; size_t cap; float quality; } imd_diagnosis_list_t;
+typedef struct imd_score { float overall; bool valid; uint8_t tracks; uint8_t errors; } imd_score_t;
+typedef struct imd_diagnosis { imd_diag_code_t code; uint8_t track; uint8_t sector; char msg[128]; } imd_diagnosis_t;
+typedef struct imd_diagnosis_list { imd_diagnosis_t* items; size_t count; size_t cap; float quality; } imd_diagnosis_list_t;
 
-typedef struct {
+typedef struct imd_sector {
     uint8_t cylinder;
     uint8_t head;
     uint8_t id;
@@ -68,7 +68,7 @@ typedef struct {
     bool deleted;
 } imd_sector_t;
 
-typedef struct {
+typedef struct imd_track {
     uint8_t mode;
     uint8_t cylinder;
     uint8_t head;
@@ -80,7 +80,7 @@ typedef struct {
     imd_score_t score;
 } imd_track_t;
 
-typedef struct {
+typedef struct imd_disk {
     char comment[4096];
     size_t comment_len;
     
@@ -120,7 +120,7 @@ static uint16_t imd_sector_size(uint8_t code) {
     }
 }
 
-static const char* imd_mode_str(uint8_t mode) {
+const char* imd_mode_str(uint8_t mode) {
     switch (mode) {
         case IMD_MODE_500_FM: return "500 kbps FM";
         case IMD_MODE_300_FM: return "300 kbps FM";
@@ -132,7 +132,7 @@ static const char* imd_mode_str(uint8_t mode) {
     }
 }
 
-static bool imd_parse(const uint8_t* data, size_t size, imd_disk_t* disk) {
+bool imd_parse(const uint8_t* data, size_t size, imd_disk_t* disk) {
     if (!data || !disk || size < 32) return false;
     memset(disk, 0, sizeof(imd_disk_t));
     disk->diagnosis = imd_diagnosis_create();
@@ -250,7 +250,7 @@ static bool imd_parse(const uint8_t* data, size_t size, imd_disk_t* disk) {
     return true;
 }
 
-static void imd_disk_free(imd_disk_t* disk) {
+void imd_disk_free(imd_disk_t* disk) {
     if (disk && disk->diagnosis) imd_diagnosis_free(disk->diagnosis);
 }
 
@@ -259,7 +259,7 @@ static void imd_disk_free(imd_disk_t* disk) {
  * ============================================================================ */
 
 /* Get sector data from IMD */
-static bool imd_get_sector(const uint8_t* data, size_t size,
+bool imd_get_sector(const uint8_t* data, size_t size,
                            uint8_t cylinder, uint8_t head, uint8_t sector,
                            uint8_t* out_data, size_t* out_size) {
     if (!data || !out_data || !out_size || size < 32) return false;
@@ -373,7 +373,7 @@ static bool imd_get_sector(const uint8_t* data, size_t size,
 }
 
 /* Calculate IMD disk statistics */
-typedef struct {
+typedef struct imd_stats {
     int total_sectors;
     int valid_sectors;
     int compressed_sectors;
@@ -384,7 +384,7 @@ typedef struct {
     float compression_ratio;
 } imd_stats_t;
 
-static void imd_calculate_stats(const imd_disk_t* disk, imd_stats_t* stats) {
+void imd_calculate_stats(const imd_disk_t* disk, imd_stats_t* stats) {
     if (!disk || !stats) return;
     memset(stats, 0, sizeof(imd_stats_t));
     

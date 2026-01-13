@@ -245,7 +245,7 @@ static int find_sync(const uint8_t* data, size_t len, size_t start) {
 // Probe
 // ============================================================================
 
-static bool g64_probe(const uint8_t* data, size_t size, size_t file_size,
+bool g64_probe(const uint8_t* data, size_t size, size_t file_size,
                       int* confidence) {
     *confidence = 0;
     

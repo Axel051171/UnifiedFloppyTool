@@ -38,11 +38,11 @@ typedef enum {
     DSK_DIAG_COUNT
 } dsk_diag_code_t;
 
-typedef struct { float overall; bool valid; bool has_fdc_errors; bool has_weak; } dsk_score_t;
-typedef struct { dsk_diag_code_t code; uint8_t track; uint8_t sector; char msg[128]; } dsk_diagnosis_t;
-typedef struct { dsk_diagnosis_t* items; size_t count; size_t cap; float quality; } dsk_diagnosis_list_t;
+typedef struct dsk_score { float overall; bool valid; bool has_fdc_errors; bool has_weak; } dsk_score_t;
+typedef struct dsk_diagnosis { dsk_diag_code_t code; uint8_t track; uint8_t sector; char msg[128]; } dsk_diagnosis_t;
+typedef struct dsk_diagnosis_list { dsk_diagnosis_t* items; size_t count; size_t cap; float quality; } dsk_diagnosis_list_t;
 
-typedef struct {
+typedef struct dsk_sector {
     uint8_t track;
     uint8_t side;
     uint8_t sector_id;
@@ -57,7 +57,7 @@ typedef struct {
     bool is_weak;
 } dsk_sector_t;
 
-typedef struct {
+typedef struct dsk_track {
     uint8_t track_num;
     uint8_t side;
     uint8_t sector_count;
@@ -68,7 +68,7 @@ typedef struct {
     dsk_score_t score;
 } dsk_track_t;
 
-typedef struct {
+typedef struct dsk_disk {
     char signature[16];
     char creator[16];
     uint8_t track_count;
@@ -101,7 +101,7 @@ static void dsk_diagnosis_free(dsk_diagnosis_list_t* l) { if (l) { free(l->items
 
 static uint16_t dsk_read_le16(const uint8_t* p) { return p[0] | (p[1] << 8); }
 
-static bool dsk_parse(const uint8_t* data, size_t size, dsk_disk_t* disk) {
+bool dsk_parse(const uint8_t* data, size_t size, dsk_disk_t* disk) {
     if (!data || !disk || size < DSK_HEADER_SIZE) return false;
     memset(disk, 0, sizeof(dsk_disk_t));
     disk->diagnosis = dsk_diagnosis_create();
@@ -196,7 +196,7 @@ static bool dsk_parse(const uint8_t* data, size_t size, dsk_disk_t* disk) {
     return true;
 }
 
-static void dsk_disk_free(dsk_disk_t* disk) {
+void dsk_disk_free(dsk_disk_t* disk) {
     if (!disk) return;
     for (int t = 0; t < DSK_MAX_TRACKS * 2; t++) {
         for (int s = 0; s < DSK_MAX_SECTORS; s++) {

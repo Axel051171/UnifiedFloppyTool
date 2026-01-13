@@ -14,6 +14,7 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QDebug>
+#include <QInputDialog>
 #include <QHeaderView>
 
 ExplorerTab::ExplorerTab(QWidget *parent)
@@ -51,6 +52,16 @@ void ExplorerTab::setupConnections()
     connect(ui->btnExtractSelected, &QPushButton::clicked, this, &ExplorerTab::onExtractSelected);
     connect(ui->btnExtractAll, &QPushButton::clicked, this, &ExplorerTab::onExtractAll);
     connect(ui->btnBrowseExtract, &QPushButton::clicked, this, &ExplorerTab::onBrowseExtractPath);
+    
+    /* P0-GUI-FIX: Fehlende Button-Connections */
+    connect(ui->btnBrowseImage, &QPushButton::clicked, this, &ExplorerTab::onBrowseImage);
+    connect(ui->btnImportFiles, &QPushButton::clicked, this, &ExplorerTab::onImportFiles);
+    connect(ui->btnImportFolder, &QPushButton::clicked, this, &ExplorerTab::onImportFolder);
+    connect(ui->btnRename, &QPushButton::clicked, this, &ExplorerTab::onRename);
+    connect(ui->btnDelete, &QPushButton::clicked, this, &ExplorerTab::onDelete);
+    connect(ui->btnNewFolder, &QPushButton::clicked, this, &ExplorerTab::onNewFolder);
+    connect(ui->btnNewDisk, &QPushButton::clicked, this, &ExplorerTab::onNewDisk);
+    connect(ui->btnValidate, &QPushButton::clicked, this, &ExplorerTab::onValidate);
     
     connect(ui->tableFiles, &QTableWidget::cellDoubleClicked,
             this, &ExplorerTab::onItemDoubleClicked);
@@ -323,4 +334,129 @@ QList<FileEntry> ExplorerTab::readDirectory(const QString& path)
     }
     
     return entries;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+ * P0-GUI-FIX: Neue Slot-Implementierungen
+ * ═══════════════════════════════════════════════════════════════════════════════ */
+
+void ExplorerTab::onBrowseImage()
+{
+    QString path = QFileDialog::getOpenFileName(this, tr("Select Disk Image"),
+        QString(), tr("Disk Images (*.adf *.d64 *.g64 *.nib *.woz *.img *.st *.msa);;All Files (*)"));
+    if (!path.isEmpty()) {
+        loadImage(path);
+    }
+}
+
+void ExplorerTab::onImportFiles()
+{
+    if (!m_imageLoaded) {
+        QMessageBox::warning(this, tr("No Image"), tr("Please open a disk image first."));
+        return;
+    }
+    
+    QStringList files = QFileDialog::getOpenFileNames(this, tr("Select Files to Import"),
+        QString(), tr("All Files (*)"));
+    
+    if (files.isEmpty()) return;
+    
+    // TODO: Implement actual file import to disk image
+    QMessageBox::information(this, tr("Import"),
+        tr("Import of %1 files to disk image is not yet implemented.").arg(files.size()));
+}
+
+void ExplorerTab::onImportFolder()
+{
+    if (!m_imageLoaded) {
+        QMessageBox::warning(this, tr("No Image"), tr("Please open a disk image first."));
+        return;
+    }
+    
+    QString dir = QFileDialog::getExistingDirectory(this, tr("Select Folder to Import"));
+    
+    if (dir.isEmpty()) return;
+    
+    // TODO: Implement actual folder import to disk image
+    QMessageBox::information(this, tr("Import"),
+        tr("Import of folder to disk image is not yet implemented."));
+}
+
+void ExplorerTab::onRename()
+{
+    if (!m_imageLoaded) {
+        QMessageBox::warning(this, tr("No Image"), tr("Please open a disk image first."));
+        return;
+    }
+    
+    QList<QTableWidgetItem*> selected = ui->tableFiles->selectedItems();
+    if (selected.isEmpty()) {
+        QMessageBox::warning(this, tr("No Selection"), tr("Please select a file to rename."));
+        return;
+    }
+    
+    // TODO: Implement actual rename
+    QMessageBox::information(this, tr("Rename"),
+        tr("Rename is not yet implemented."));
+}
+
+void ExplorerTab::onDelete()
+{
+    if (!m_imageLoaded) {
+        QMessageBox::warning(this, tr("No Image"), tr("Please open a disk image first."));
+        return;
+    }
+    
+    QList<QTableWidgetItem*> selected = ui->tableFiles->selectedItems();
+    if (selected.isEmpty()) {
+        QMessageBox::warning(this, tr("No Selection"), tr("Please select files to delete."));
+        return;
+    }
+    
+    int reply = QMessageBox::question(this, tr("Confirm Delete"),
+        tr("Are you sure you want to delete the selected files?"),
+        QMessageBox::Yes | QMessageBox::No);
+    
+    if (reply == QMessageBox::Yes) {
+        // TODO: Implement actual delete
+        QMessageBox::information(this, tr("Delete"),
+            tr("Delete is not yet implemented."));
+    }
+}
+
+void ExplorerTab::onNewFolder()
+{
+    if (!m_imageLoaded) {
+        QMessageBox::warning(this, tr("No Image"), tr("Please open a disk image first."));
+        return;
+    }
+    
+    bool ok;
+    QString name = QInputDialog::getText(this, tr("New Folder"),
+        tr("Folder name:"), QLineEdit::Normal, tr("New Folder"), &ok);
+    
+    if (ok && !name.isEmpty()) {
+        // TODO: Implement actual folder creation
+        QMessageBox::information(this, tr("New Folder"),
+            tr("Folder creation is not yet implemented."));
+    }
+}
+
+void ExplorerTab::onNewDisk()
+{
+    // TODO: Open new disk dialog
+    QMessageBox::information(this, tr("New Disk"),
+        tr("New disk creation is not yet implemented."));
+}
+
+void ExplorerTab::onValidate()
+{
+    if (!m_imageLoaded) {
+        QMessageBox::warning(this, tr("No Image"), tr("Please open a disk image first."));
+        return;
+    }
+    
+    // TODO: Implement disk validation
+    QMessageBox::information(this, tr("Validate"),
+        tr("Disk validation is not yet implemented."));
 }

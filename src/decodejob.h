@@ -1,3 +1,4 @@
+#pragma once
 /**
  * @file decodejob.h
  * @brief Worker Thread for Disk Decoding Operations

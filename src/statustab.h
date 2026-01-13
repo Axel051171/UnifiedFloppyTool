@@ -1,3 +1,4 @@
+#pragma once
 /**
  * @file statustab.h
  * @brief Status Tab - Real-time Decode Progress Display

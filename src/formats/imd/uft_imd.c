@@ -20,7 +20,7 @@ typedef struct {
     uint16_t sector_size;
 } imd_data_t;
 
-static bool imd_probe(const uint8_t* data, size_t size, size_t file_size, int* confidence) {
+bool imd_probe(const uint8_t* data, size_t size, size_t file_size, int* confidence) {
     if (size >= 4 && data[0] == 'I' && data[1] == 'M' && data[2] == 'D' && data[3] == ' ') {
         *confidence = 95;
         return true;

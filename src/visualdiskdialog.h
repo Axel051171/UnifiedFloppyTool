@@ -1,3 +1,4 @@
+#pragma once
 /**
  * @file visualdiskdialog.h
  * @brief Visual Floppy Disk Viewer Dialog

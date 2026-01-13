@@ -5,7 +5,7 @@
 
 typedef struct { FILE* file; uint8_t tracks, sides; } trd_data_t;
 
-static bool trd_probe(const uint8_t* data, size_t size, size_t file_size, int* confidence) {
+bool trd_probe(const uint8_t* data, size_t size, size_t file_size, int* confidence) {
     if (file_size == 655360 || file_size == 327680 || file_size == 163840) {
         *confidence = 70;
         return true;

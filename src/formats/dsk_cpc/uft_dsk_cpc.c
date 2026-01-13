@@ -17,7 +17,7 @@ typedef struct {
     uint8_t     track_sizes[200];
 } dsk_data_t;
 
-static bool dsk_probe(const uint8_t* data, size_t size, size_t file_size, int* confidence) {
+bool dsk_probe(const uint8_t* data, size_t size, size_t file_size, int* confidence) {
     if (size < 8) return false;
     if (memcmp(data, "EXTENDED", 8) == 0) { *confidence = 95; return true; }
     if (memcmp(data, "MV - CPC", 8) == 0) { *confidence = 95; return true; }

@@ -19,7 +19,7 @@
  */
 void bit_array::set_array(std::vector<uint8_t>& buf, int bit_length) {
     m_array_data = buf;
-    if(bit_length >= 0 && bit_length <= buf.size() * 8) {
+    if(bit_length >= 0 && (size_t)bit_length <= buf.size() * 8) {
         m_bit_length = bit_length;
     } else {
         m_bit_length = buf.size() * 8;
@@ -43,7 +43,7 @@ void bit_array::clear_with_0(void) {
 }
 
 void bit_array::extend_buffer(int new_buf_size_in_bit) {
-    if(new_buf_size_in_bit <= m_bit_length) return;
+    if((size_t)new_buf_size_in_bit <= m_bit_length) return;
 
     size_t byte_count = to_byte_pos(new_buf_size_in_bit);
     if(byte_count >= m_array_data.size()) {
@@ -131,7 +131,7 @@ void bit_array::set(int index, uint8_t value, bool elastic) {
     while(index < 0) {
         index += static_cast<int>(m_bit_length);
     }
-    if(elastic==false && index >= m_bit_length) {
+    if(elastic==false && (size_t)index >= m_bit_length) {
         index = index % m_bit_length;
     }
 
@@ -141,7 +141,7 @@ void bit_array::set(int index, uint8_t value, bool elastic) {
     if (byte_pos >= m_array_data.size()) {
         extend_buffer(index+1);
     }
-    if(index >= m_bit_length) {
+    if((size_t)index >= m_bit_length) {
         m_bit_length = index;
     }
 
@@ -166,7 +166,7 @@ uint8_t bit_array::get(int index) {
     while(index < 0) {
         index += static_cast<int>(m_bit_length);
     }
-    if(index >= m_bit_length) {
+    if((size_t)index >= m_bit_length) {
         index = index % m_bit_length;
     }
 
@@ -188,7 +188,7 @@ bool bit_array::set_stream_pos(int position) {
     while(position < 0) {
         position += static_cast<int>(m_bit_length);
     }
-    if(position >= m_bit_length) {
+    if((size_t)position >= m_bit_length) {
         position = position % m_bit_length;
     }
 #if 0
@@ -299,8 +299,8 @@ size_t bit_array::distance_to_next_pulse(void) {
  * @param length Number of bits to fill.
  */
 void bit_array::fill_stream(int start_pos, int end_pos, uint8_t data) {
-    if(start_pos >= m_bit_length) start_pos = m_bit_length - 1;
-    if(end_pos   >= m_bit_length) end_pos   = m_bit_length - 1;
+    if((size_t)start_pos >= m_bit_length) start_pos = m_bit_length - 1;
+    if((size_t)end_pos >= m_bit_length) end_pos   = m_bit_length - 1;
     if(start_pos >= end_pos) return;
     for (int i = start_pos; i < end_pos; i++) {
         set(i, data);

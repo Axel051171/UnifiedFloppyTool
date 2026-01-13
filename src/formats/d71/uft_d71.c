@@ -50,7 +50,7 @@ static bool d71_detect_variant(size_t file_size, bool* has_errors) {
     return false;
 }
 
-static bool d71_probe(const uint8_t* data, size_t size, size_t file_size, int* confidence) {
+bool d71_probe(const uint8_t* data, size_t size, size_t file_size, int* confidence) {
     bool has_errors;
     if (!d71_detect_variant(file_size, &has_errors)) return false;
     

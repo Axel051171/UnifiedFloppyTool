@@ -1,3 +1,4 @@
+#pragma once
 /**
  * @file pathutils.h
  * @brief Cross-Platform Path Handling Utilities

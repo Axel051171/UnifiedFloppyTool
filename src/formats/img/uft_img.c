@@ -109,7 +109,7 @@ static bool img_detect_geometry(size_t file_size, uft_geometry_t* geo) {
 // Probe
 // ============================================================================
 
-static bool img_probe(const uint8_t* data, size_t size, size_t file_size, 
+bool img_probe(const uint8_t* data, size_t size, size_t file_size, 
                       int* confidence) {
     *confidence = 0;
     

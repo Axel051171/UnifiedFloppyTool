@@ -1,3 +1,4 @@
+#pragma once
 /**
  * @file forensictab.h
  * @brief Forensic Tab - Disk Image Analysis

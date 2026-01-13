@@ -28,7 +28,7 @@ static size_t cqm_decomp(FILE* f, uint8_t* dst, size_t dst_sz) {
     return w;
 }
 
-static bool cqm_probe(const uint8_t* data, size_t size, size_t file_size, int* confidence) {
+bool cqm_probe(const uint8_t* data, size_t size, size_t file_size, int* confidence) {
     if (size >= 3 && data[0] == 'C' && data[1] == 'Q' && data[2] == 0x14) {
         *confidence = 95; return true;
     }

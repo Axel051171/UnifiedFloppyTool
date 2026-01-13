@@ -684,7 +684,7 @@ void FormatTab::updatePLLOptions(bool enabled) {
     // Advanced PLL settings removed in simplified layout
 }
 
-void FormatTab::updateFluxOptions(bool isFluxFormat) {
+void FormatTab::updateFluxOptions(bool /* isFluxFormat */) {
     // Use embedded panels
     // Flux/PLL options handled by UI widgets and Advanced dialogs
 }
@@ -1326,7 +1326,7 @@ void FormatTab::onReadTimingDataChanged(bool checked)
     emit readOptionsChanged();
 }
 
-void FormatTab::onDPMAnalysisChanged(bool checked)
+void FormatTab::onDPMAnalysisChanged(bool /* checked */)
 {
     // Enable/disable the DPM accuracy combo
     emit readOptionsChanged();

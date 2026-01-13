@@ -246,7 +246,7 @@ static size_t interleave_track(const uint8_t* side0, size_t side0_len,
 // Probe
 // ============================================================================
 
-static bool hfe_probe(const uint8_t* data, size_t size, size_t file_size,
+bool hfe_probe(const uint8_t* data, size_t size, size_t file_size,
                       int* confidence) {
     *confidence = 0;
     

@@ -265,7 +265,7 @@ static const char* scp_diag_suggestions[] = {
 /**
  * @brief Flux statistics for analysis
  */
-typedef struct {
+typedef struct scp_flux_stats {
     uint32_t min_flux;
     uint32_t max_flux;
     double mean_flux;
@@ -285,7 +285,7 @@ typedef struct {
 /**
  * @brief Score structure
  */
-typedef struct {
+typedef struct scp_score {
     float overall;
     float flux_score;
     float timing_score;
@@ -310,7 +310,7 @@ typedef struct {
 /**
  * @brief Diagnosis entry
  */
-typedef struct {
+typedef struct scp_diagnosis {
     scp_diag_code_t code;
     uint8_t track;
     uint8_t side;
@@ -323,7 +323,7 @@ typedef struct {
 /**
  * @brief Diagnosis list
  */
-typedef struct {
+typedef struct scp_diagnosis_list {
     scp_diagnosis_t* items;
     size_t count;
     size_t capacity;
@@ -336,7 +336,7 @@ typedef struct {
 /**
  * @brief Revolution data
  */
-typedef struct {
+typedef struct scp_revolution {
     /* Raw flux data */
     uint16_t* flux;             /* Flux transition times (16-bit) */
     uint32_t flux_count;        /* Number of transitions */
@@ -361,7 +361,7 @@ typedef struct {
 /**
  * @brief Track structure
  */
-typedef struct {
+typedef struct scp_track {
     /* Identity */
     uint8_t track_num;          /* Track number (0-167) */
     uint8_t physical_track;     /* Physical track (0-83) */
@@ -413,7 +413,7 @@ typedef struct {
 /**
  * @brief SCP disk structure
  */
-typedef struct {
+typedef struct scp_disk {
     /* Header info */
     char signature[4];
     uint8_t version;
@@ -471,7 +471,7 @@ typedef struct {
 /**
  * @brief SCP parameters
  */
-typedef struct {
+typedef struct scp_params {
     /* Read options */
     uint8_t min_revolutions;
     uint8_t max_revolutions;
@@ -586,7 +586,7 @@ static const char* scp_disk_type_name(uint8_t type) {
 /**
  * @brief Get expected sectors for disk type
  */
-static uint8_t scp_get_expected_sectors(uint8_t disk_type, uint8_t track) {
+uint8_t scp_get_expected_sectors(uint8_t disk_type, uint8_t track) {
     switch (disk_type) {
         case SCP_DISK_C64:
             if (track < 17) return 21;
@@ -618,7 +618,7 @@ static uint8_t scp_get_expected_sectors(uint8_t disk_type, uint8_t track) {
 /**
  * @brief Get expected bitcell time for disk type
  */
-static uint16_t scp_get_expected_bitcell(uint8_t disk_type) {
+uint16_t scp_get_expected_bitcell(uint8_t disk_type) {
     switch (disk_type) {
         case SCP_DISK_C64:
             return SCP_GCR_BITCELL_C64;
@@ -719,7 +719,7 @@ static void scp_diagnosis_add(
     }
 }
 
-static char* scp_diagnosis_to_text(const scp_diagnosis_list_t* list, const scp_disk_t* disk) {
+char* scp_diagnosis_to_text(const scp_diagnosis_list_t* list, const scp_disk_t* disk) {
     if (!list) return NULL;
     
     size_t buf_size = 32768;
@@ -1278,7 +1278,7 @@ static bool scp_parse_track(
 /**
  * @brief Main SCP parse function
  */
-static bool scp_parse(
+bool scp_parse(
     const uint8_t* data,
     size_t size,
     scp_disk_t* disk,
@@ -1373,7 +1373,7 @@ static size_t scp_calculate_size(const scp_disk_t* disk) {
     return size;
 }
 
-static uint8_t* scp_write(
+uint8_t* scp_write(
     const scp_disk_t* disk,
     scp_params_t* params,
     size_t* out_size
@@ -1474,7 +1474,7 @@ static uint8_t* scp_write(
  * PROTECTION DETECTION
  * ═══════════════════════════════════════════════════════════════════════════ */
 
-static bool scp_detect_protection(
+bool scp_detect_protection(
     const scp_disk_t* disk,
     char* protection_name,
     size_t name_size,
@@ -1535,7 +1535,7 @@ static bool scp_detect_protection(
  * DEFAULT PARAMETERS
  * ═══════════════════════════════════════════════════════════════════════════ */
 
-static void scp_get_default_params(scp_params_t* params) {
+void scp_get_default_params(scp_params_t* params) {
     if (!params) return;
     memset(params, 0, sizeof(scp_params_t));
     
@@ -1580,7 +1580,7 @@ static void scp_get_default_params(scp_params_t* params) {
  * CLEANUP
  * ═══════════════════════════════════════════════════════════════════════════ */
 
-static void scp_disk_free(scp_disk_t* disk) {
+void scp_disk_free(scp_disk_t* disk) {
     if (!disk) return;
     
     if (disk->diagnosis) {

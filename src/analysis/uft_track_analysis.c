@@ -446,7 +446,7 @@ int uft_find_syncs_rotated(const uint8_t *data, size_t size,
                     pos += 0x100;
                     if (pos < size - bytes_per_step) {
                         d0 = (sync_bits <= 16) ? 
-                             (read_be16(data + pos - 2) << 16) | read_be16(data + pos) :
+                             (uint32_t)((read_be16(data + pos - 2) << 16) | read_be16(data + pos)) :
                              read_be32(data + pos);
                     }
                     goto next_pos;

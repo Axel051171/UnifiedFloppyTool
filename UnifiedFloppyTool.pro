@@ -47,6 +47,7 @@ macx {
 
 # Include paths
 INCLUDEPATH += \
+    $$PWD/src/core/unified \
     include \
     include/uft \
     include/uft/flux \
@@ -221,3 +222,142 @@ win32-msvc* {
 unix|macx {
     QMAKE_CXXFLAGS += -Wall -Wextra -Wno-unknown-pragmas -Wno-sign-compare -Wno-unused-parameter
 }
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# FORMAT PARSERS (P0-003)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+INCLUDEPATH += $$PWD/src/formats
+    $$PWD/src/core/unified \
+
+# D64 - Commodore 64 (most important for preservation)
+SOURCES += \
+    src/formats/d64/uft_d64_parser_v3.c \
+
+# G64 - Commodore 64 with timing data
+SOURCES += \
+    src/formats/g64/uft_g64_parser_v3.c \
+
+# ADF - Amiga
+SOURCES += \
+    src/formats/adf/uft_adf_parser_v3.c \
+
+# SCP - SuperCard Pro raw flux
+SOURCES += \
+    src/formats/scp/uft_scp_parser_v3.c \
+
+# IMD - ImageDisk
+SOURCES += \
+    src/formats/imd/uft_imd_parser_v3.c \
+
+# DSK - Standard disk image
+SOURCES += \
+    src/formats/dsk/uft_dsk_parser_v3.c
+
+# STX - Atari ST with protection
+SOURCES += \
+    src/formats/stx/uft_stx_parser_v3.c
+
+# Industrial Upgrade Components (v3.8.0)
+SOURCES += \
+    src/core/uft_decode_score.c \
+    src/core/uft_merge_engine.c
+
+HEADERS += \
+    include/uft/uft_decode_score.h \
+    include/uft/uft_merge_engine.h
+
+# SerialPort conditional compilation
+qtHaveModule(serialport) {
+    DEFINES += UFT_HAS_SERIALPORT
+    message("SerialPort module available - hardware support enabled")
+} else {
+    message("SerialPort module NOT available - hardware support disabled")
+}
+
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# v3 Parser Bridge - Connects advanced parsers to format handler API
+# ═══════════════════════════════════════════════════════════════════════════════
+
+SOURCES += \
+    src/formats/uft_v3_bridge.c
+
+HEADERS += \
+    include/uft/uft_v3_bridge.h \
+    include/uft/formats/uft_d64_v3.h \
+    include/uft/formats/uft_g64_v3.h \
+    include/uft/formats/uft_scp_v3.h \
+    include/uft/formats/uft_adf_v3.h \
+    include/uft/formats/uft_imd_v3.h \
+    include/uft/formats/uft_dsk_v3.h \
+    include/uft/formats/uft_stx_v3.h
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# UFT v3.8.0 Extended Features
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# God-Mode Algorithms
+SOURCES += \
+    src/algorithms/god_mode/uft_god_mode_api.c \
+    src/algorithms/god_mode/uft_bayesian_detect.c \
+    src/algorithms/god_mode/uft_bayesian_detect_v2.c \
+    src/algorithms/god_mode/uft_gcr_viterbi.c \
+    src/algorithms/god_mode/uft_gcr_viterbi_v2.c \
+    src/algorithms/god_mode/uft_kalman_pll_v2.c \
+    src/algorithms/god_mode/uft_multi_rev_fusion.c \
+    src/algorithms/god_mode/uft_crc_correction_v2.c \
+    src/algorithms/god_mode/uft_fuzzy_sync_v2.c \
+    src/algorithms/god_mode/uft_decoder_metrics.c
+
+HEADERS += \
+    include/uft/uft_god_mode.h \
+    include/uft/uft_format_probes.h
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# UFT Smart Pipeline - Automatic Feature Integration
+# ═══════════════════════════════════════════════════════════════════════════════
+
+SOURCES += \
+    src/core/uft_smart_open.c
+
+HEADERS += \
+    include/uft/uft_smart_open.h
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# UFT Advanced Mode
+# ═══════════════════════════════════════════════════════════════════════════════
+
+SOURCES += src/core/uft_advanced_mode.c
+
+HEADERS += include/uft/uft_advanced_mode.h
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Additional Format Parsers (with public probe functions)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+SOURCES += \
+    src/formats/d71/uft_d71.c \
+    src/formats/d80/uft_d80.c \
+    src/formats/d81/uft_d81.c \
+    src/formats/d82/uft_d82.c \
+    src/formats/g71/uft_g71.c \
+    src/formats/atr/uft_atr.c \
+    src/formats/dmk/uft_dmk.c \
+    src/formats/trd/uft_trd.c
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Core Format Registry and Track Functions
+# ═══════════════════════════════════════════════════════════════════════════════
+
+SOURCES += \
+    src/formats/uft_format_registry.c \
+    src/core/uft_format_plugin.c
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Track Analysis (Required for GUI Protection Display)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+SOURCES += \
+    src/analysis/uft_track_analysis.c

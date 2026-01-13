@@ -2,7 +2,7 @@
 
 typedef struct { FILE* file; uint8_t num_tracks; uint32_t* offsets; } g71_data_t;
 
-static bool g71_probe(const uint8_t* data, size_t size, size_t file_size, int* confidence) {
+bool g71_probe(const uint8_t* data, size_t size, size_t file_size, int* confidence) {
     if (size >= 8 && memcmp(data, "GCR-1571", 8) == 0) { *confidence = 95; return true; }
     if (size >= 8 && memcmp(data, "GCR-1541", 8) == 0 && data[9] > 84) { *confidence = 70; return true; }
     return false;

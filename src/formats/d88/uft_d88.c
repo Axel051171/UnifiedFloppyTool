@@ -4,7 +4,7 @@
 
 typedef struct { FILE* file; uint8_t media; uint32_t track_off[164]; } d88_data_t;
 
-static bool d88_probe(const uint8_t* data, size_t size, size_t file_size, int* confidence) {
+bool d88_probe(const uint8_t* data, size_t size, size_t file_size, int* confidence) {
     if (size < D88_HEADER) return false;
     uint32_t dsz = uft_read_le32(data + 0x1C);
     uint8_t media = data[0x1B];

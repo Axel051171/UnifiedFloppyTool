@@ -139,6 +139,7 @@ size_t find_mfm_sync_fuzzy(const uint8_t* data, size_t num_bits,
     
     size_t found = 0;
     size_t num_bytes = (num_bits + 7) / 8;
+    (void)num_bytes; // Suppress unused warning
     
     // Need at least 48 bits (3 × 16) for sync
     for (size_t bit = 0; bit + 48 <= num_bits && found < max_results; bit++) {

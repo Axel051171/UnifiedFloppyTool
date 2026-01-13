@@ -8,7 +8,7 @@
  */
 
 #include "uft/algorithms/uft_gcr_viterbi.h"
-#include "uft/core/uft_platform.h"
+#include "uft/uft_platform.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>

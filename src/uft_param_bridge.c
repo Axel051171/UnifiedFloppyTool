@@ -606,6 +606,9 @@ uft_params_t *uft_params_from_json(const char *json) {
 
 uft_params_t *uft_params_load_json(const char *path) {
     FILE *f = fopen(path, "r");
+    if (!f) {
+        return NULL;
+    }
     if (!f) return NULL;
     
     if (fseek(f, 0, SEEK_END) != 0) { /* seek error */ }

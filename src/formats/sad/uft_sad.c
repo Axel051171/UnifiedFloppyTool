@@ -4,7 +4,7 @@
 
 typedef struct { FILE* file; bool header; } sad_data_t;
 
-static bool sad_probe(const uint8_t* data, size_t size, size_t file_size, int* confidence) {
+bool sad_probe(const uint8_t* data, size_t size, size_t file_size, int* confidence) {
     if (size >= 4 && memcmp(data, "SAD!", 4) == 0) { *confidence = 95; return true; }
     if (file_size == SAD_SIZE) { *confidence = 70; return true; }
     return false;

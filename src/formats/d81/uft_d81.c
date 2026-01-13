@@ -18,7 +18,7 @@ typedef struct {
     uint8_t*    error_table;
 } d81_data_t;
 
-static bool d81_probe(const uint8_t* data, size_t size, size_t file_size, int* confidence) {
+bool d81_probe(const uint8_t* data, size_t size, size_t file_size, int* confidence) {
     if (file_size == D81_SIZE_STANDARD || file_size == D81_SIZE_WITH_ERRORS) {
         *confidence = 85;
         return true;

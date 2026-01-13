@@ -1,3 +1,4 @@
+#pragma once
 /**
  * @file xcopytab.h
  * @brief XCopy Tab - Disk Copy Operations

@@ -5,7 +5,7 @@
 
 typedef struct { FILE* file; uint8_t tracks; uint16_t track_len; bool ss; } dmk_data_t;
 
-static bool dmk_probe(const uint8_t* data, size_t size, size_t file_size, int* confidence) {
+bool dmk_probe(const uint8_t* data, size_t size, size_t file_size, int* confidence) {
     if (size < DMK_HDR) return false;
     uint8_t tracks = data[1];
     uint16_t tlen = uft_read_le16(&data[2]);

@@ -27,7 +27,7 @@
 #include <QRandomGenerator>
 #include <QDebug>
 
-#if __has_include(<QSerialPortInfo>)
+#ifdef UFT_HAS_SERIALPORT
 #include <QSerialPortInfo>
 #define HAS_SERIALPORT 1
 #else

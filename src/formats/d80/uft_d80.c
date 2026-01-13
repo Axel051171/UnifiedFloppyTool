@@ -21,7 +21,7 @@ static void d80_init_off(void) {
     init = true;
 }
 
-static bool d80_probe(const uint8_t* data, size_t size, size_t file_size, int* confidence) {
+bool d80_probe(const uint8_t* data, size_t size, size_t file_size, int* confidence) {
     if (file_size == D80_SIZE) { *confidence = 75; return true; }
     return false;
 }

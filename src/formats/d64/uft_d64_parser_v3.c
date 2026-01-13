@@ -207,7 +207,7 @@ static const char* d64_diag_suggestions[] = {
 /**
  * @brief Score structure
  */
-typedef struct {
+typedef struct d64_score {
     float overall;
     float crc_score;
     float id_score;
@@ -230,7 +230,7 @@ typedef struct {
 /**
  * @brief Diagnosis entry
  */
-typedef struct {
+typedef struct d64_diagnosis {
     d64_diag_code_t code;
     uint8_t track;
     uint8_t sector;
@@ -242,7 +242,7 @@ typedef struct {
 /**
  * @brief Diagnosis list
  */
-typedef struct {
+typedef struct d64_diagnosis_list {
     d64_diagnosis_t* items;
     size_t count;
     size_t capacity;
@@ -255,7 +255,7 @@ typedef struct {
 /**
  * @brief Sector structure (v3)
  */
-typedef struct {
+typedef struct d64_sector_v3 {
     /* Identity */
     uint8_t physical_track;
     uint8_t physical_sector;
@@ -300,7 +300,7 @@ typedef struct {
 /**
  * @brief Track structure (v3)
  */
-typedef struct {
+typedef struct d64_track_v3 {
     uint8_t track_num;
     uint8_t expected_sectors;
     uint8_t found_sectors;
@@ -346,7 +346,7 @@ typedef struct {
 /**
  * @brief BAM entry
  */
-typedef struct {
+typedef struct d64_bam_entry {
     uint8_t free_sectors;
     uint8_t bitmap[3];          /* 21 bits for sectors */
 } d64_bam_entry_t;
@@ -354,7 +354,7 @@ typedef struct {
 /**
  * @brief Directory entry
  */
-typedef struct {
+typedef struct d64_dir_entry {
     uint8_t file_type;
     uint8_t first_track;
     uint8_t first_sector;
@@ -377,7 +377,7 @@ typedef struct {
 /**
  * @brief D64 disk structure (v3)
  */
-typedef struct {
+typedef struct d64_disk_v3 {
     /* Format info */
     char format_name[64];
     bool is_extended;           /* 40 tracks */
@@ -433,7 +433,7 @@ typedef struct {
  * PARAMETER STRUCTURE (D64 specific)
  * ═══════════════════════════════════════════════════════════════════════════ */
 
-typedef struct {
+typedef struct d64_params {
     /* Read options */
     uint8_t revolutions;
     bool multi_rev_merge;
@@ -549,7 +549,7 @@ static bool d64_is_valid_size(size_t size, uint8_t* tracks, bool* has_errors) {
 /**
  * @brief File type to string
  */
-static const char* d64_file_type_str(uint8_t type) {
+const char* d64_file_type_str(uint8_t type) {
     static const char* types[] = { "DEL", "SEQ", "PRG", "USR", "REL" };
     uint8_t t = type & 0x07;
     if (t <= 4) return types[t];
@@ -585,7 +585,7 @@ static void d64_copy_filename(char* dest, const uint8_t* src, size_t max) {
 /**
  * @brief Encode 4 bytes to 5 GCR bytes
  */
-static void d64_gcr_encode_block(const uint8_t* data, uint8_t* gcr) {
+void d64_gcr_encode_block(const uint8_t* data, uint8_t* gcr) {
     uint8_t nib[8];
     
     /* Extract nibbles */
@@ -615,7 +615,7 @@ static void d64_gcr_encode_block(const uint8_t* data, uint8_t* gcr) {
 /**
  * @brief Decode 5 GCR bytes to 4 data bytes
  */
-static bool d64_gcr_decode_block(const uint8_t* gcr, uint8_t* data, uint8_t* errors) {
+bool d64_gcr_decode_block(const uint8_t* gcr, uint8_t* data, uint8_t* errors) {
     uint8_t g[8];
     uint8_t nib[8];
     bool valid = true;
@@ -740,7 +740,7 @@ static void d64_diagnosis_add(
 /**
  * @brief Generate diagnosis report
  */
-static char* d64_diagnosis_to_text(const d64_diagnosis_list_t* list, const d64_disk_v3_t* disk) {
+char* d64_diagnosis_to_text(const d64_diagnosis_list_t* list, const d64_disk_v3_t* disk) {
     if (!list) return NULL;
     
     size_t buf_size = 16384;
@@ -953,7 +953,7 @@ static void d64_score_track(d64_track_v3_t* track) {
 /**
  * @brief Merge sector data from multiple revolutions
  */
-static bool d64_merge_sector_revs(
+bool d64_merge_sector_revs(
     d64_sector_v3_t* sector,
     d64_params_t* params
 ) {
@@ -1201,7 +1201,7 @@ static bool d64_parse_track(
 /**
  * @brief Parse D64 disk (main entry)
  */
-static bool d64_parse(
+bool d64_parse(
     const uint8_t* data,
     size_t size,
     d64_disk_v3_t* disk,
@@ -1295,7 +1295,7 @@ static bool d64_parse(
 /**
  * @brief Write D64 to buffer
  */
-static uint8_t* d64_write(
+uint8_t* d64_write(
     const d64_disk_v3_t* disk,
     d64_params_t* params,
     size_t* out_size
@@ -1351,7 +1351,7 @@ static uint8_t* d64_write(
 /**
  * @brief Verify written data
  */
-static bool d64_verify(
+bool d64_verify(
     const uint8_t* original,
     size_t original_size,
     const uint8_t* written,
@@ -1408,7 +1408,7 @@ static bool d64_verify(
 /**
  * @brief Detect copy protection
  */
-static bool d64_detect_protection(
+bool d64_detect_protection(
     const d64_disk_v3_t* disk,
     char* protection_name,
     size_t name_size,
@@ -1474,7 +1474,7 @@ static bool d64_detect_protection(
 /**
  * @brief Get default parameters
  */
-static void d64_get_default_params(d64_params_t* params) {
+void d64_get_default_params(d64_params_t* params) {
     if (!params) return;
     memset(params, 0, sizeof(d64_params_t));
     
@@ -1516,7 +1516,7 @@ static void d64_get_default_params(d64_params_t* params) {
 /**
  * @brief Free disk structure
  */
-static void d64_disk_free(d64_disk_v3_t* disk) {
+void d64_disk_free(d64_disk_v3_t* disk) {
     if (!disk) return;
     
     if (disk->diagnosis) {

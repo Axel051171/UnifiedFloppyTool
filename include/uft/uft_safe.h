@@ -162,6 +162,8 @@ static inline bool uft_safe_add_size(size_t a, size_t b, size_t* result) {
 /**
  * @brief Sichere Multiplikation (uint32)
  */
+#ifndef UFT_SAFE_MUL_DEFINED
+#define UFT_SAFE_MUL_DEFINED
 static inline bool uft_safe_mul_u32(uint32_t a, uint32_t b, uint32_t* result) {
     if (a > 0 && b > UINT32_MAX / a) {
         return false;
@@ -169,6 +171,7 @@ static inline bool uft_safe_mul_u32(uint32_t a, uint32_t b, uint32_t* result) {
     *result = a * b;
     return true;
 }
+#endif /* UFT_SAFE_MUL_DEFINED */
 
 /**
  * @brief Makro für sichere Allokation mit Multiplikation

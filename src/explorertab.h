@@ -47,6 +47,15 @@ private slots:
     void onBrowseExtractPath();
     void onItemDoubleClicked(int row, int column);
     void onSelectionChanged();
+    /* P0-GUI-FIX: Neue Slots */
+    void onBrowseImage();
+    void onImportFiles();
+    void onImportFolder();
+    void onRename();
+    void onDelete();
+    void onNewFolder();
+    void onNewDisk();
+    void onValidate();
 
 private:
     void setupConnections();

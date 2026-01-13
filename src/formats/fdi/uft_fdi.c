@@ -2,7 +2,7 @@
 
 typedef struct { FILE* file; uint16_t cyls, heads; } fdi_data_t;
 
-static bool fdi_probe(const uint8_t* data, size_t size, size_t file_size, int* confidence) {
+bool fdi_probe(const uint8_t* data, size_t size, size_t file_size, int* confidence) {
     if (size >= 3 && memcmp(data, "FDI", 3) == 0) { *confidence = 95; return true; }
     return false;
 }

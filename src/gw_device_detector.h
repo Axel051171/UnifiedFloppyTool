@@ -1,72 +1,51 @@
-/**
- * @file uft_gw_device_detector.h
- * 
- * Basierend auf Sovox _get_available_com_ports() Logik.
- * Verwendet QSerialPortInfo wenn verfügbar.
- */
-
-#ifndef UFT_GW_DEVICE_DETECTOR_H
-#define UFT_GW_DEVICE_DETECTOR_H
-
-/* Check if SerialPort support is available */
-#ifndef UFT_HAS_SERIALPORT
-#define UFT_HAS_SERIALPORT 0
-#endif
+#ifndef GW_DEVICE_DETECTOR_H
+#define GW_DEVICE_DETECTOR_H
 
 #include <QObject>
+#include <QString>
 #include <QStringList>
 
-#if UFT_HAS_SERIALPORT
-#include <QSerialPortInfo>
+/* SerialPort availability check */
+#ifdef UFT_HAS_SERIALPORT
+#define GW_DETECTOR_AVAILABLE 1
+#else
+#define GW_DETECTOR_AVAILABLE 0
 #endif
 
 /**
- */
-struct GWDeviceInfo {
-    QString portName;           // COM10, /dev/ttyACM0, etc.
-    quint16 vendorId;
-    quint16 productId;
-    QString serialNumber;
-    bool isVerified;            // True wenn als GW erkannt
-};
-
-/**
+ * @brief Greaseweazle device detector
  * 
+ * Scans serial ports for Greaseweazle devices.
+ * 
+ * @note Requires Qt SerialPort module. If not available,
+ *       detection will return empty results.
  */
-class GWDeviceDetector : public QObject
+class GwDeviceDetector : public QObject
 {
     Q_OBJECT
-
+    
 public:
-    explicit GWDeviceDetector(QObject *parent = nullptr);
+    explicit GwDeviceDetector(QObject *parent = nullptr);
     
     /**
-     * @return Liste der gefundenen Geräte
+     * @brief Scan for Greaseweazle devices
+     * @return List of detected device paths
      */
-    QList<GWDeviceInfo> findDevices();
+    QStringList scan();
     
     /**
-     * @param portName Name des Ports (z.B. "COM10")
+     * @brief Check if a specific port is a Greaseweazle
      */
-    bool isGreaseweazlePort(const QString& portName);
+    bool isGreaseweazle(const QString &portName);
     
     /**
-     * @brief Gibt Liste aller COM-Ports zurück
+     * @brief Check if SerialPort support is available
      */
-    QStringList getAvailablePorts();
-    
-#if UFT_HAS_SERIALPORT
-    /**
-     */
-    static bool isGreaseweazle(const QSerialPortInfo& port);
-#endif
+    static bool isAvailable() { return GW_DETECTOR_AVAILABLE != 0; }
 
 signals:
-    void deviceFound(const GWDeviceInfo& device);
-    void scanComplete(int count);
-
-private:
-    static const quint16 UFT_GW_VID = 0x1209;  // pid.codes VID
+    void deviceFound(const QString &portName, const QString &description);
+    void scanComplete(int devicesFound);
 };
 
-#endif // UFT_GW_DEVICE_DETECTOR_H
+#endif // GW_DEVICE_DETECTOR_H

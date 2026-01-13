@@ -147,7 +147,7 @@ static const char* adf_diag_names[] = {
  * DATA STRUCTURES
  * ═══════════════════════════════════════════════════════════════════════════ */
 
-typedef struct {
+typedef struct adf_score {
     float overall;
     float structure_score;
     float checksum_score;
@@ -157,13 +157,13 @@ typedef struct {
     bool bitmap_valid;
 } adf_score_t;
 
-typedef struct {
+typedef struct adf_diagnosis {
     adf_diag_code_t code;
     uint16_t block;
     char message[256];
 } adf_diagnosis_t;
 
-typedef struct {
+typedef struct adf_diagnosis_list {
     adf_diagnosis_t* items;
     size_t count;
     size_t capacity;
@@ -172,7 +172,7 @@ typedef struct {
     float overall_quality;
 } adf_diagnosis_list_t;
 
-typedef struct {
+typedef struct adf_file_entry {
     char name[32];
     uint8_t type;
     uint32_t size;
@@ -184,7 +184,7 @@ typedef struct {
     bool is_dir;
 } adf_file_entry_t;
 
-typedef struct {
+typedef struct adf_disk {
     /* Format info */
     bool is_hd;
     uint32_t total_blocks;
@@ -221,7 +221,7 @@ typedef struct {
     
 } adf_disk_t;
 
-typedef struct {
+typedef struct adf_params {
     bool validate_checksums;
     bool validate_bitmap;
     bool scan_directory;
@@ -403,7 +403,7 @@ static bool adf_parse_root_block(const uint8_t* data, size_t size, adf_disk_t* d
     return true;
 }
 
-static bool adf_parse(const uint8_t* data, size_t size, adf_disk_t* disk,
+bool adf_parse(const uint8_t* data, size_t size, adf_disk_t* disk,
                        adf_params_t* params) {
     if (!data || !disk) return false;
     
@@ -447,7 +447,7 @@ static bool adf_parse(const uint8_t* data, size_t size, adf_disk_t* disk,
  * WRITE / CLEANUP / DEFAULTS
  * ═══════════════════════════════════════════════════════════════════════════ */
 
-static void adf_get_default_params(adf_params_t* params) {
+void adf_get_default_params(adf_params_t* params) {
     if (!params) return;
     memset(params, 0, sizeof(adf_params_t));
     params->validate_checksums = true;
@@ -456,7 +456,7 @@ static void adf_get_default_params(adf_params_t* params) {
     params->detect_viruses = true;
 }
 
-static void adf_disk_free(adf_disk_t* disk) {
+void adf_disk_free(adf_disk_t* disk) {
     if (disk && disk->diagnosis) {
         adf_diagnosis_free(disk->diagnosis);
         disk->diagnosis = NULL;

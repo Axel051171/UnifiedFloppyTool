@@ -9,7 +9,7 @@
  */
 
 #include "uft/uft_detect.h"
-#include "uft/core/uft_platform.h"
+#include "uft/uft_platform.h"
 #include <string.h>
 #include "uft/uft_compat.h"
 

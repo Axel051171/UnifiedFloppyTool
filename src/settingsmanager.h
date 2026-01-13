@@ -1,3 +1,4 @@
+#pragma once
 /**
  * @file settingsmanager.h
  * @brief Application Settings Manager with Proper Lifecycle

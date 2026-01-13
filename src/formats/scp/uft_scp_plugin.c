@@ -195,7 +195,7 @@ static void scp_get_geometry(uint8_t disk_type, uint8_t start, uint8_t end,
 // Probe
 // ============================================================================
 
-static bool scp_probe(const uint8_t* data, size_t size, size_t file_size,
+bool scp_probe(const uint8_t* data, size_t size, size_t file_size,
                       int* confidence) {
     *confidence = 0;
     

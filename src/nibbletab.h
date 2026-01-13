@@ -1,3 +1,4 @@
+#pragma once
 /**
  * @file nibbletab.h
  * @brief Nibble Tab - Low-Level Track Editor (GCR/MFM)

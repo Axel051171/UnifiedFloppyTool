@@ -21,7 +21,7 @@ static void d82_init_off(void) {
     init = true;
 }
 
-static bool d82_probe(const uint8_t* data, size_t size, size_t file_size, int* confidence) {
+bool d82_probe(const uint8_t* data, size_t size, size_t file_size, int* confidence) {
     if (file_size == D82_SIZE) { *confidence = 75; return true; }
     return false;
 }

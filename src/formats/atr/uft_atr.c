@@ -24,7 +24,7 @@ static size_t atr_sector_offset(int sector, uint16_t sector_size) {
            (sector - ATR_BOOT_SECTORS - 1) * sector_size;
 }
 
-static bool atr_probe(const uint8_t* data, size_t size, size_t file_size, int* confidence) {
+bool atr_probe(const uint8_t* data, size_t size, size_t file_size, int* confidence) {
     if (size < ATR_HEADER_SIZE) return false;
     if (uft_read_le16(data) == ATR_MAGIC) {
         *confidence = 95;

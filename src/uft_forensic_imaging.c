@@ -626,6 +626,9 @@ int uft_fi_export_bad_map(const uft_fi_job_t *job, const char *path) {
     if (!job || !path) return -1;
     
     FILE *f = fopen(path, "w");
+    if (!f) {
+        return UFT_ERROR_IO;
+    }
     if (!f) return -1;
     
     fprintf(f, "# UnifiedFloppyTool Bad Sector Map\n");

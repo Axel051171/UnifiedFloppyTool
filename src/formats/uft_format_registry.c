@@ -16,7 +16,7 @@ static const uint8_t magic_scp[]  = { 'S', 'C', 'P' };
 static const uint8_t magic_hfe[]  = { 'H', 'X', 'C', 'P', 'I', 'C', 'F', 'E' };
 static const uint8_t magic_ipf[]  = { 'C', 'A', 'P', 'S' };
 static const uint8_t magic_stx[]  = { 'R', 'S', 'Y', 0 };
-static const uint8_t magic_td0[]  = { 'T', 'D' };
+// static const uint8_t magic_td0[]  = { 'T', 'D' };
 static const uint8_t magic_imd[]  = { 'I', 'M', 'D', ' ' };
 static const uint8_t magic_woz1[] = { 'W', 'O', 'Z', '1' };
 static const uint8_t magic_woz2[] = { 'W', 'O', 'Z', '2' };
@@ -33,7 +33,7 @@ static uft_error_t probe_by_magic(const void* data, size_t size,
                                    size_t offset, int* confidence) {
     if (!data || size < offset + magic_len) {
         *confidence = 0;
-        return UFT_ERROR_INVALID_FORMAT;
+        return UFT_ERR_FORMAT;
     }
     
     if (memcmp((const uint8_t*)data + offset, magic, magic_len) == 0) {
@@ -42,7 +42,7 @@ static uft_error_t probe_by_magic(const void* data, size_t size,
     }
     
     *confidence = 0;
-    return UFT_ERROR_INVALID_FORMAT;
+    return UFT_ERR_FORMAT;
 }
 
 uft_error_t uft_scp_probe(const void* data, size_t size, int* confidence) {
@@ -64,7 +64,7 @@ uft_error_t uft_stx_probe(const void* data, size_t size, int* confidence) {
 uft_error_t uft_td0_probe(const void* data, size_t size, int* confidence) {
     if (!data || size < 2) {
         *confidence = 0;
-        return UFT_ERROR_INVALID_FORMAT;
+        return UFT_ERR_FORMAT;
     }
     
     const uint8_t* d = data;
@@ -75,7 +75,7 @@ uft_error_t uft_td0_probe(const void* data, size_t size, int* confidence) {
     }
     
     *confidence = 0;
-    return UFT_ERROR_INVALID_FORMAT;
+    return UFT_ERR_FORMAT;
 }
 
 uft_error_t uft_imd_probe(const void* data, size_t size, int* confidence) {
@@ -108,7 +108,7 @@ uft_error_t uft_nib_probe(const void* data, size_t size, int* confidence) {
         return UFT_OK;
     }
     *confidence = 0;
-    return UFT_ERROR_INVALID_FORMAT;
+    return UFT_ERR_FORMAT;
 }
 
 uft_error_t uft_d64_probe(const void* data, size_t size, int* confidence) {
@@ -120,7 +120,7 @@ uft_error_t uft_d64_probe(const void* data, size_t size, int* confidence) {
         return UFT_OK;
     }
     *confidence = 0;
-    return UFT_ERROR_INVALID_FORMAT;
+    return UFT_ERR_FORMAT;
 }
 
 uft_error_t uft_adf_probe(const void* data, size_t size, int* confidence) {
@@ -131,7 +131,7 @@ uft_error_t uft_adf_probe(const void* data, size_t size, int* confidence) {
         return UFT_OK;
     }
     *confidence = 0;
-    return UFT_ERROR_INVALID_FORMAT;
+    return UFT_ERR_FORMAT;
 }
 
 uft_error_t uft_img_probe(const void* data, size_t size, int* confidence) {
@@ -145,7 +145,7 @@ uft_error_t uft_img_probe(const void* data, size_t size, int* confidence) {
         }
     }
     *confidence = 0;
-    return UFT_ERROR_INVALID_FORMAT;
+    return UFT_ERR_FORMAT;
 }
 
 // ============================================================================

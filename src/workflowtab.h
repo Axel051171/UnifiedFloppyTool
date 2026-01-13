@@ -1,3 +1,4 @@
+#pragma once
 /**
  * @file workflowtab.h
  * @brief Workflow Tab - Source/Destination Selection with Combination Validation

@@ -1,3 +1,4 @@
+#pragma once
 /**
  * @file hardwaretab.h
  * @brief Hardware Tab - Floppy Controller Management

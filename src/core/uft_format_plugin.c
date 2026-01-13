@@ -281,52 +281,11 @@ void uft_sector_cleanup(uft_sector_t* sector) {
 // Built-in Plugin Registration
 // ============================================================================
 
-// Forward declarations für Built-in Plugins
-extern const uft_format_plugin_t uft_format_plugin_adf;
-extern const uft_format_plugin_t uft_format_plugin_img;
-extern const uft_format_plugin_t uft_format_plugin_d64;
-extern const uft_format_plugin_t uft_format_plugin_g64;
-extern const uft_format_plugin_t uft_format_plugin_hfe;
-extern const uft_format_plugin_t uft_format_plugin_scp;
+// NOTE: Built-in plugins are now handled via uft_format_registry.c
+// This function is a stub for API compatibility
 
 uft_error_t uft_register_builtin_format_plugins(void) {
-    uft_error_t err;
-    
-    // ADF Plugin
-    err = uft_register_format_plugin(&uft_format_plugin_adf);
-    if (UFT_FAILED(err) && err != UFT_ERROR_PLUGIN_LOAD) {
-        return err;
-    }
-    
-    // IMG Plugin
-    err = uft_register_format_plugin(&uft_format_plugin_img);
-    if (UFT_FAILED(err) && err != UFT_ERROR_PLUGIN_LOAD) {
-        return err;
-    }
-    
-    // D64 Plugin (Commodore 64)
-    err = uft_register_format_plugin(&uft_format_plugin_d64);
-    if (UFT_FAILED(err) && err != UFT_ERROR_PLUGIN_LOAD) {
-        return err;
-    }
-    
-    // G64 Plugin (Commodore 64 GCR Raw)
-    err = uft_register_format_plugin(&uft_format_plugin_g64);
-    if (UFT_FAILED(err) && err != UFT_ERROR_PLUGIN_LOAD) {
-        return err;
-    }
-    
-    // HFE Plugin (UFT HFE Format)
-    err = uft_register_format_plugin(&uft_format_plugin_hfe);
-    if (UFT_FAILED(err) && err != UFT_ERROR_PLUGIN_LOAD) {
-        return err;
-    }
-    
-    // SCP Plugin (SuperCard Pro Flux)
-    err = uft_register_format_plugin(&uft_format_plugin_scp);
-    if (UFT_FAILED(err) && err != UFT_ERROR_PLUGIN_LOAD) {
-        return err;
-    }
-    
+    // Plugins are now registered via the format handler system
+    // See: src/formats/uft_format_registry.c
     return UFT_OK;
 }

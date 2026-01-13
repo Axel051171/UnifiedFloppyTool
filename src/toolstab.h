@@ -1,3 +1,4 @@
+#pragma once
 /**
  * @file toolstab.h
  * @brief Tools Tab - Disk Utilities

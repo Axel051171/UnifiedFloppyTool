@@ -17,7 +17,7 @@ static const uint8_t gcr62_decode[256] = {
 
 typedef struct { uint8_t* data; } nib_data_t;
 
-static bool nib_probe(const uint8_t* data, size_t size, size_t file_size, int* confidence) {
+bool nib_probe(const uint8_t* data, size_t size, size_t file_size, int* confidence) {
     if (file_size == NIB_FILE_SIZE) { *confidence = 85; return true; }
     return false;
 }

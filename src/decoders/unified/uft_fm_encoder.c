@@ -21,7 +21,7 @@
 
 #include "uft/decoders/uft_fm_decoder.h"
 #include "uft/uft_sector.h"
-#include "uft/core/uft_platform.h"
+#include "uft/uft_platform.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>

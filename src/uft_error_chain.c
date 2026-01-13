@@ -599,6 +599,9 @@ uft_error_t uft_error_save_log(uft_error_context_t *ctx, const char *path) {
     
     FILE *f = fopen(path, "w");
     if (!f) {
+        return UFT_ERROR_IO;
+    }
+    if (!f) {
         free(json);
         return UFT_ERR_IO;
     }

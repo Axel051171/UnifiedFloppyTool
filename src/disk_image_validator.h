@@ -1,3 +1,4 @@
+#pragma once
 /**
  * @file disk_image_validator.h
  * @brief Disk Image Validation und Format-Erkennung
