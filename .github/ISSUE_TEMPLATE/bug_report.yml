@@ -1,0 +1,75 @@
+name: Bug Report
+description: Report a bug in UnifiedFloppyTool
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug! Please fill out the information below.
+  
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating System
+      options:
+        - Windows 10
+        - Windows 11
+        - macOS 13 (Ventura)
+        - macOS 14 (Sonoma)
+        - Ubuntu 22.04
+        - Ubuntu 24.04
+        - Other Linux
+    validations:
+      required: true
+  
+  - type: input
+    id: version
+    attributes:
+      label: UFT Version
+      placeholder: "e.g., 3.7.0"
+    validations:
+      required: true
+  
+  - type: dropdown
+    id: hardware
+    attributes:
+      label: Hardware Controller
+      options:
+        - Greaseweazle F7
+        - Greaseweazle F7 Plus
+        - FluxEngine
+        - SuperCard Pro
+        - KryoFlux
+        - None / Not applicable
+  
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      placeholder: Describe what happened...
+    validations:
+      required: true
+  
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      placeholder: |
+        1. Open UFT
+        2. Click on...
+        3. Select...
+    validations:
+      required: true
+  
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      placeholder: What should have happened?
+  
+  - type: textarea
+    id: logs
+    attributes:
+      label: Log Output
+      description: Paste any relevant log output here
+      render: shell
