@@ -10,7 +10,7 @@ jobs:
   build-linux:
     runs-on: ubuntu-22.04
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     
     - name: Install Qt
       uses: jurplel/install-qt-action@v3
@@ -40,7 +40,7 @@ jobs:
   build-windows:
     runs-on: windows-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     
     - name: Install Qt
       uses: jurplel/install-qt-action@v3
@@ -69,7 +69,7 @@ jobs:
   build-macos:
     runs-on: macos-14
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     
     - name: Install Qt
       uses: jurplel/install-qt-action@v3
