@@ -58,7 +58,6 @@ option(UFT_BUILD_EXAMPLES "Build example programs"         OFF)
 option(UFT_ENABLE_SIMD    "Enable SIMD optimizations"      ON)
 option(UFT_ENABLE_OPENMP  "Enable OpenMP parallelization"  ON)
 option(UFT_ENABLE_LTO     "Enable Link-Time Optimization"  OFF)
-option(UFT_ENABLE_ASAN    "Enable Address Sanitizer"       OFF)
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Platform Detection
@@ -334,3 +333,29 @@ endif()
 message(STATUS "════════════════════════════════════════════════════")
 message(STATUS "Configuration complete")
 message(STATUS "════════════════════════════════════════════════════")
+
+# ═══════════════════════════════════════════════════════════════════════════════
+
+    message(STATUS "UndefinedBehaviorSanitizer: ENABLED")
+    add_compile_options(-fsanitize=undefined -fno-omit-frame-pointer)
+    add_link_options(-fsanitize=undefined)
+endif()
+
+    message(STATUS "ThreadSanitizer: ENABLED")
+    add_compile_options(-fsanitize=thread -fno-omit-frame-pointer)
+    add_link_options(-fsanitize=thread)
+endif()
+
+# Industrial-grade warning flags
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    add_compile_options(
+        -Wall
+        -Wextra
+        -Wpedantic
+        -Wformat=2
+        -Wconversion
+        -Wshadow
+        -Wcast-qual
+        -Wstrict-prototypes
+    )
+endif()

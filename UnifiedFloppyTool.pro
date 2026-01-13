@@ -258,54 +258,17 @@ SOURCES += \
 SOURCES += \
     src/formats/stx/uft_stx_parser_v3.c
 
-# Industrial Upgrade Components (v3.8.0)
-SOURCES += \
-    src/core/uft_decode_score.c \
-    src/core/uft_merge_engine.c
-
-HEADERS += \
-    include/uft/uft_decode_score.h \
-    include/uft/uft_merge_engine.h
-
-# SerialPort conditional compilation
-qtHaveModule(serialport) {
-    DEFINES += UFT_HAS_SERIALPORT
-    message("SerialPort module available - hardware support enabled")
-} else {
-    message("SerialPort module NOT available - hardware support disabled")
-}
-
 # ═══════════════════════════════════════════════════════════════════════════════
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# v3 Parser Bridge - Connects advanced parsers to format handler API
-# ═══════════════════════════════════════════════════════════════════════════════
-
-SOURCES += \
-    src/formats/uft_v3_bridge.c
-
-HEADERS += \
-    include/uft/uft_v3_bridge.h \
-    include/uft/formats/uft_d64_v3.h \
-    include/uft/formats/uft_g64_v3.h \
-    include/uft/formats/uft_scp_v3.h \
-    include/uft/formats/uft_adf_v3.h \
-    include/uft/formats/uft_imd_v3.h \
-    include/uft/formats/uft_dsk_v3.h \
-    include/uft/formats/uft_stx_v3.h
-
-# ═══════════════════════════════════════════════════════════════════════════════
-# UFT v3.8.0 Extended Features
-# ═══════════════════════════════════════════════════════════════════════════════
-
 # God-Mode Algorithms
+# ═══════════════════════════════════════════════════════════════════════════════
+
 SOURCES += \
     src/algorithms/god_mode/uft_god_mode_api.c \
-    src/algorithms/god_mode/uft_bayesian_detect.c \
-    src/algorithms/god_mode/uft_bayesian_detect_v2.c \
+    src/algorithms/god_mode/uft_kalman_pll_v2.c \
     src/algorithms/god_mode/uft_gcr_viterbi.c \
     src/algorithms/god_mode/uft_gcr_viterbi_v2.c \
-    src/algorithms/god_mode/uft_kalman_pll_v2.c \
+    src/algorithms/god_mode/uft_bayesian_detect.c \
+    src/algorithms/god_mode/uft_bayesian_detect_v2.c \
     src/algorithms/god_mode/uft_multi_rev_fusion.c \
     src/algorithms/god_mode/uft_crc_correction_v2.c \
     src/algorithms/god_mode/uft_fuzzy_sync_v2.c \
@@ -316,7 +279,7 @@ HEADERS += \
     include/uft/uft_format_probes.h
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# UFT Smart Pipeline - Automatic Feature Integration
+# UFT Smart Pipeline
 # ═══════════════════════════════════════════════════════════════════════════════
 
 SOURCES += \
@@ -334,7 +297,7 @@ SOURCES += src/core/uft_advanced_mode.c
 HEADERS += include/uft/uft_advanced_mode.h
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# Additional Format Parsers (with public probe functions)
+# Additional Format Parsers
 # ═══════════════════════════════════════════════════════════════════════════════
 
 SOURCES += \
@@ -348,7 +311,7 @@ SOURCES += \
     src/formats/trd/uft_trd.c
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# Core Format Registry and Track Functions
+# Core Format Registry
 # ═══════════════════════════════════════════════════════════════════════════════
 
 SOURCES += \
@@ -356,7 +319,7 @@ SOURCES += \
     src/core/uft_format_plugin.c
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# Track Analysis (Required for GUI Protection Display)
+# Track Analysis
 # ═══════════════════════════════════════════════════════════════════════════════
 
 SOURCES += \
