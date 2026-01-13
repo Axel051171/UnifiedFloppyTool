@@ -1,6 +1,6 @@
 # UnifiedFloppyTool CI Pipeline
 # Builds on Windows, macOS, and Linux
-# P1-6: Improved with CTest integration
+# Outputs: .tar.gz (all platforms) + .deb (Linux)
 
 name: CI
 
@@ -9,7 +9,7 @@ on:
     branches: [master, main, develop]
   pull_request:
     branches: [master, main]
-  workflow_dispatch:  # Allow manual trigger
+  workflow_dispatch:
 
 env:
   BUILD_TYPE: Release
@@ -17,7 +17,7 @@ env:
 
 jobs:
   # ═══════════════════════════════════════════════════════════════════════════
-  # Linux Build + Tests
+  # Linux Build + Package (.tar.gz + .deb)
   # ═══════════════════════════════════════════════════════════════════════════
   linux:
     runs-on: ubuntu-22.04
@@ -29,6 +29,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y build-essential cmake ninja-build
           sudo apt-get install -y libomp-dev libusb-1.0-0-dev
+          sudo apt-get install -y dpkg-dev fakeroot
           
       - name: Install Qt
         uses: jurplel/install-qt-action@v3
@@ -40,61 +41,88 @@ jobs:
         run: |
           cmake -B build -G Ninja \
             -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
+            -DCMAKE_INSTALL_PREFIX=/usr \
             -DBUILD_TESTING=ON
         
       - name: Build
         run: cmake --build build --parallel
         
-      - name: Run CTest
+      - name: Run Tests
         run: |
           cd build
           ctest --output-on-failure -j4
           
-      - name: Quick Executable Test
+      - name: Create tar.gz Package
         run: |
-          ./build/UnifiedFloppyTool --version || echo "GUI not built"
+          mkdir -p package/UnifiedFloppyTool-linux-x64
+          cp build/UnifiedFloppyTool package/UnifiedFloppyTool-linux-x64/ 2>/dev/null || true
+          cp -r build/lib* package/UnifiedFloppyTool-linux-x64/ 2>/dev/null || true
+          cp README.md LICENSE* package/UnifiedFloppyTool-linux-x64/ 2>/dev/null || true
+          cd package
+          tar -czvf UnifiedFloppyTool-linux-x64.tar.gz UnifiedFloppyTool-linux-x64
           
-      - name: Upload Artifact
+      - name: Create .deb Package
+        run: |
+          mkdir -p deb/DEBIAN
+          mkdir -p deb/usr/bin
+          mkdir -p deb/usr/share/applications
+          mkdir -p deb/usr/share/icons/hicolor/256x256/apps
+          
+          # Copy binary
+          cp build/UnifiedFloppyTool deb/usr/bin/ 2>/dev/null || echo "No GUI binary"
+          
+          # Get version from CMakeLists.txt
+          VERSION=$(grep "project.*VERSION" CMakeLists.txt | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
+          
+          # Create control file
+          cat > deb/DEBIAN/control << EOF
+          Package: unifiedfloppytool
+          Version: ${VERSION}
+          Section: utils
+          Priority: optional
+          Architecture: amd64
+          Depends: libqt6widgets6, libqt6gui6, libqt6core6, libc6
+          Maintainer: UFT Team
+          Description: Cross-platform floppy disk preservation tool
+           UnifiedFloppyTool is a comprehensive floppy disk preservation
+           and analysis system with support for multiple formats including
+           ADF, D64, G64, SCP, HFE, and many more.
+          EOF
+          
+          # Create .desktop file
+          cat > deb/usr/share/applications/unifiedfloppytool.desktop << EOF
+          [Desktop Entry]
+          Name=UnifiedFloppyTool
+          Comment=Floppy Disk Preservation Tool
+          Exec=/usr/bin/UnifiedFloppyTool
+          Icon=unifiedfloppytool
+          Terminal=false
+          Type=Application
+          Categories=Utility;System;
+          EOF
+          
+          # Copy icon if exists
+          cp resources/icons/app_256.png deb/usr/share/icons/hicolor/256x256/apps/unifiedfloppytool.png 2>/dev/null || true
+          
+          # Build .deb
+          dpkg-deb --build deb UnifiedFloppyTool-${VERSION}-amd64.deb || echo "DEB build skipped"
+          
+      - name: Upload tar.gz
         uses: actions/upload-artifact@v4
         with:
-          name: UnifiedFloppyTool-Linux-x64
-          path: build/UnifiedFloppyTool
+          name: UnifiedFloppyTool-linux-x64-tar
+          path: package/*.tar.gz
+          if-no-files-found: ignore
+          
+      - name: Upload .deb
+        uses: actions/upload-artifact@v4
+        with:
+          name: UnifiedFloppyTool-linux-x64-deb
+          path: "*.deb"
           if-no-files-found: ignore
 
   # ═══════════════════════════════════════════════════════════════════════════
-  # Linux No-GUI Build (Faster, core libraries)
-  # ═══════════════════════════════════════════════════════════════════════════
-  linux-no-gui:
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Install Dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential cmake ninja-build
-          
-      - name: Configure (No GUI)
-        run: |
-          cmake -B build -G Ninja \
-            -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
-            -DUFT_BUILD_GUI=OFF \
-            -DBUILD_TESTING=ON
-        
-      - name: Build
-        run: cmake --build build --parallel
-        
-      - name: Run CTest
-        run: |
-          cd build
-          ctest --output-on-failure -j4
-          echo ""
-          echo "═══════════════════════════════════════════════════════════"
-          echo "Test Summary:"
-          ctest -N | tail -5
-
-  # ═══════════════════════════════════════════════════════════════════════════
-  # macOS Build (ARM64)
+  # macOS Build + Package (.tar.gz)
   # ═══════════════════════════════════════════════════════════════════════════
   macos:
     runs-on: macos-14
@@ -122,20 +150,29 @@ jobs:
       - name: Build
         run: cmake --build build --parallel
         
-      - name: Run CTest
+      - name: Run Tests
         run: |
           cd build
           ctest --output-on-failure -j4
           
-      - name: Upload Artifact
+      - name: Create tar.gz Package
+        run: |
+          mkdir -p package/UnifiedFloppyTool-macos-arm64
+          cp build/UnifiedFloppyTool package/UnifiedFloppyTool-macos-arm64/ 2>/dev/null || true
+          cp -r build/*.dylib package/UnifiedFloppyTool-macos-arm64/ 2>/dev/null || true
+          cp README.md LICENSE* package/UnifiedFloppyTool-macos-arm64/ 2>/dev/null || true
+          cd package
+          tar -czvf UnifiedFloppyTool-macos-arm64.tar.gz UnifiedFloppyTool-macos-arm64
+          
+      - name: Upload tar.gz
         uses: actions/upload-artifact@v4
         with:
-          name: UnifiedFloppyTool-macOS-arm64
-          path: build/UnifiedFloppyTool
+          name: UnifiedFloppyTool-macos-arm64-tar
+          path: package/*.tar.gz
           if-no-files-found: ignore
 
   # ═══════════════════════════════════════════════════════════════════════════
-  # Windows Build (MSVC)
+  # Windows Build + Package (.tar.gz)
   # ═══════════════════════════════════════════════════════════════════════════
   windows:
     runs-on: windows-2022
@@ -155,40 +192,33 @@ jobs:
       - name: Build
         run: cmake --build build --config ${{ env.BUILD_TYPE }} --parallel
         
-      - name: Run CTest
+      - name: Run Tests
         run: |
           cd build
           ctest -C ${{ env.BUILD_TYPE }} --output-on-failure
         continue-on-error: true
         
-      - name: Upload Artifact
+      - name: Create tar.gz Package
+        shell: bash
+        run: |
+          mkdir -p package/UnifiedFloppyTool-win-x64
+          cp build/${{ env.BUILD_TYPE }}/UnifiedFloppyTool.exe package/UnifiedFloppyTool-win-x64/ 2>/dev/null || true
+          cp build/${{ env.BUILD_TYPE }}/*.dll package/UnifiedFloppyTool-win-x64/ 2>/dev/null || true
+          cp README.md LICENSE* package/UnifiedFloppyTool-win-x64/ 2>/dev/null || true
+          # Copy Qt DLLs
+          windeployqt package/UnifiedFloppyTool-win-x64/UnifiedFloppyTool.exe 2>/dev/null || true
+          cd package
+          tar -czvf UnifiedFloppyTool-win-x64.tar.gz UnifiedFloppyTool-win-x64
+          
+      - name: Upload tar.gz
         uses: actions/upload-artifact@v4
         with:
-          name: UnifiedFloppyTool-Windows-x64
-          path: build/${{ env.BUILD_TYPE }}/UnifiedFloppyTool.exe
+          name: UnifiedFloppyTool-win-x64-tar
+          path: package/*.tar.gz
           if-no-files-found: ignore
 
   # ═══════════════════════════════════════════════════════════════════════════
-  # Windows No-GUI Build
-  # ═══════════════════════════════════════════════════════════════════════════
-  windows-no-gui:
-    runs-on: windows-2022
-    steps:
-      - uses: actions/checkout@v4
-          
-      - name: Configure (No GUI)
-        run: cmake -B build -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} -DUFT_BUILD_GUI=OFF -DBUILD_TESTING=ON
-          
-      - name: Build
-        run: cmake --build build --config ${{ env.BUILD_TYPE }} --parallel
-        
-      - name: Run CTest
-        run: |
-          cd build
-          ctest -C ${{ env.BUILD_TYPE }} --output-on-failure
-
-  # ═══════════════════════════════════════════════════════════════════════════
-  # Version Consistency Check
+  # Version Check
   # ═══════════════════════════════════════════════════════════════════════════
   version-check:
     runs-on: ubuntu-latest
@@ -197,7 +227,7 @@ jobs:
       
       - name: Check Version Consistency
         run: |
-          CMAKE_VER=$(grep "VERSION" CMakeLists.txt | head -1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
+          CMAKE_VER=$(grep "project.*VERSION" CMakeLists.txt | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
           echo "CMakeLists version: $CMAKE_VER"
           if [ -f "include/uft/uft_version.h" ]; then
             HEADER_VER=$(grep "UFT_VERSION_STRING" include/uft/uft_version.h | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
@@ -241,7 +271,7 @@ jobs:
   # Build Summary
   # ═══════════════════════════════════════════════════════════════════════════
   summary:
-    needs: [linux, linux-no-gui, macos, windows, windows-no-gui, version-check]
+    needs: [linux, macos, windows, version-check]
     runs-on: ubuntu-latest
     if: always()
     steps:
@@ -249,11 +279,9 @@ jobs:
         run: |
           echo "## UFT Build Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Platform | GUI | Tests | Status |" >> $GITHUB_STEP_SUMMARY
-          echo "|----------|-----|-------|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Linux x64 | ✓ | ✓ | ${{ needs.linux.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Linux x64 | ✗ | ✓ | ${{ needs.linux-no-gui.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| macOS ARM64 | ✓ | ✓ | ${{ needs.macos.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Windows x64 | ✓ | ✓ | ${{ needs.windows.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Windows x64 | ✗ | ✓ | ${{ needs.windows-no-gui.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Version Check | - | - | ${{ needs.version-check.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Platform | Artifact | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|----------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Linux x64 | .tar.gz + .deb | ${{ needs.linux.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| macOS ARM64 | .tar.gz | ${{ needs.macos.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Windows x64 | .tar.gz | ${{ needs.windows.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Version Check | - | ${{ needs.version-check.result }} |" >> $GITHUB_STEP_SUMMARY

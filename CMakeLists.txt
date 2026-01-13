@@ -330,23 +330,27 @@ if(UFT_BUILD_TESTS)
     endif()
 endif()
 
-message(STATUS "════════════════════════════════════════════════════")
-message(STATUS "Configuration complete")
-message(STATUS "════════════════════════════════════════════════════")
-
 # ═══════════════════════════════════════════════════════════════════════════════
+# Sanitizers (optional, for debugging)
+# ═══════════════════════════════════════════════════════════════════════════════
+option(UFT_ENABLE_UBSAN "Enable UndefinedBehaviorSanitizer" OFF)
+option(UFT_ENABLE_TSAN "Enable ThreadSanitizer" OFF)
 
+if(UFT_ENABLE_UBSAN)
     message(STATUS "UndefinedBehaviorSanitizer: ENABLED")
     add_compile_options(-fsanitize=undefined -fno-omit-frame-pointer)
     add_link_options(-fsanitize=undefined)
 endif()
 
+if(UFT_ENABLE_TSAN)
     message(STATUS "ThreadSanitizer: ENABLED")
     add_compile_options(-fsanitize=thread -fno-omit-frame-pointer)
     add_link_options(-fsanitize=thread)
 endif()
 
+# ═══════════════════════════════════════════════════════════════════════════════
 # Industrial-grade warning flags
+# ═══════════════════════════════════════════════════════════════════════════════
 if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
     add_compile_options(
         -Wall
@@ -359,3 +363,14 @@ if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
         -Wstrict-prototypes
     )
 endif()
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Configuration Summary
+# ═══════════════════════════════════════════════════════════════════════════════
+message(STATUS "════════════════════════════════════════════════════")
+message(STATUS "UnifiedFloppyTool v${PROJECT_VERSION}")
+message(STATUS "  Build type:    ${CMAKE_BUILD_TYPE}")
+message(STATUS "  GUI:           ${UFT_BUILD_GUI}")
+message(STATUS "  Tests:         ${UFT_BUILD_TESTS}")
+message(STATUS "  OpenMP:        ${UFT_ENABLE_OPENMP}")
+message(STATUS "════════════════════════════════════════════════════")
