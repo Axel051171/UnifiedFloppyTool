@@ -1,3 +1,8 @@
+/**
+ * @file stt.c
+ * @brief Atari ST STT track image format
+ * @version 3.8.0
+ */
 // stt.c - Atari STT disk image format (C11)
 // Minimal, robust reader for the "sectors+ID section" (DataFlags bit0).
 // Raw track data section (DataFlags bit1) is parsed only for presence.

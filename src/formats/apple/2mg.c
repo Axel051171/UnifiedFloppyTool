@@ -1,3 +1,8 @@
+/**
+ * @file 2mg.c
+ * @brief Apple II 2MG universal disk image
+ * @version 3.8.0
+ */
 // 2mg.c - Apple IIgs 2MG implementation (C11)
 
 #include "uft/formats/2mg.h"

@@ -1,3 +1,8 @@
+/**
+ * @file mac_dsk.c
+ * @brief Macintosh DSK disk image format
+ * @version 3.8.0
+ */
 // mac_dsk.c - Macintosh DSK (GCR) analysis-only implementation (C11)
 
 #include "uft/formats/mac_dsk.h"

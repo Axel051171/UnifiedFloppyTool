@@ -1,3 +1,8 @@
+/**
+ * @file dim.c
+ * @brief NEC PC-98 dim format
+ * @version 3.8.0
+ */
 // dim.c - X68000 DIM (C11)
 
 #include "uft/formats/dim.h"

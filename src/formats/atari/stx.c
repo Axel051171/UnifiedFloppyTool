@@ -1,3 +1,8 @@
+/**
+ * @file stx.c
+ * @brief Atari ST STX Pasti image format
+ * @version 3.8.0
+ */
 // stx.c - minimal STX parser (analysis-only) (C11)
 
 #include "uft/formats/stx.h"

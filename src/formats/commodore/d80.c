@@ -1,3 +1,8 @@
+/**
+ * @file d80.c
+ * @brief Commodore 8050 D80 disk image format
+ * @version 3.8.0
+ */
 // d80.c - Commodore D80 (C11)
 
 #include "uft/formats/d80.h"

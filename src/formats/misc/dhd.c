@@ -1,3 +1,8 @@
+/**
+ * @file dhd.c
+ * @brief DHD disk format
+ * @version 3.8.0
+ */
 // dhd.c - CMD Hard Disk Image (C11)
 
 #include "uft/formats/dhd.h"

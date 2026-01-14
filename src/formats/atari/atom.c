@@ -1,3 +1,8 @@
+/**
+ * @file atom.c
+ * @brief Acorn Atom disk format
+ * @version 3.8.0
+ */
 /* atom.c - atomic objects from source */
 /* (c) in 2010-2012 by Volker Barthelmann and Frank Wille */
 

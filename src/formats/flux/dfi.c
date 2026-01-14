@@ -1,3 +1,8 @@
+/**
+ * @file dfi.c
+ * @brief DiscFerret DFI flux format
+ * @version 3.8.0
+ */
 #include "uft/formats/dfi.h"
 #include <stdio.h>
 #include <stdlib.h>

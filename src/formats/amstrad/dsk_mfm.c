@@ -1,3 +1,8 @@
+/**
+ * @file dsk_mfm.c
+ * @brief Amstrad CPC dsk_mfm format
+ * @version 3.8.0
+ */
 // dsk_mfm.c - DSK(MFM_DISK) container stub (C11)
 #include "uft/formats/dsk_mfm.h"
 #include <stdio.h>

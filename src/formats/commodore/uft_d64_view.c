@@ -1,3 +1,8 @@
+/**
+ * @file uft_d64_view.c
+ * @brief D64 disk image viewer utilities
+ * @version 3.8.0
+ */
 #include "uft_d64_view.h"
 #include <string.h>
 

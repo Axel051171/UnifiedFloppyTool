@@ -1,3 +1,8 @@
+/**
+ * @file mgt_sad_sdf.c
+ * @brief Amstrad CPC mgt_sad_sdf format
+ * @version 3.8.0
+ */
 // mgt_sad_sdf.c - ZX Spectrum +3 MGT/SAD/SDF (C11)
 #include "uft/formats/mgt_sad_sdf.h"
 #include <stdio.h>

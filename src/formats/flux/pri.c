@@ -1,3 +1,8 @@
+/**
+ * @file pri.c
+ * @brief PCE Raw Image format
+ * @version 3.8.0
+ */
 #include "uft/formats/pri.h"
 #include <stdio.h>
 #include <stdlib.h>

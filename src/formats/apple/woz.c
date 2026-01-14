@@ -1,3 +1,8 @@
+/**
+ * @file woz.c
+ * @brief Apple II WOZ flux-level disk image
+ * @version 3.8.0
+ */
 // woz.c - WOZ minimal parser (C11)
 
 #include "uft/formats/woz.h"

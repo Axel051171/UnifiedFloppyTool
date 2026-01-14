@@ -1,3 +1,8 @@
+/**
+ * @file msa_loader.c
+ * @brief Atari ST MSA compressed image loader
+ * @version 3.8.0
+ */
 /*
 //
 // Copyright (C) 2006-2025 Jean-François DEL NERO

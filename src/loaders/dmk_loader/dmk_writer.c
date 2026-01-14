@@ -1,3 +1,8 @@
+/**
+ * @file dmk_writer.c
+ * @brief DMK disk image format writer
+ * @version 3.8.0
+ */
 /*
 //
 // Copyright (C) 2006-2025 Jean-Franois DEL NERO

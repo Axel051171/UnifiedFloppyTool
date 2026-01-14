@@ -1,3 +1,8 @@
+/**
+ * @file bootblock.c
+ * @brief Amiga bootblock handling
+ * @version 3.8.0
+ */
 /*
 //
 //

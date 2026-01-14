@@ -1,3 +1,8 @@
+/**
+ * @file d71.c
+ * @brief Commodore 1571 D71 disk image format
+ * @version 3.8.0
+ */
 // d71.c - D71 implementation (C11)
 
 #include "uft/formats/d71.h"

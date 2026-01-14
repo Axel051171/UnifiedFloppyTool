@@ -1,3 +1,8 @@
+/**
+ * @file fdd.c
+ * @brief NEC PC-98 fdd format
+ * @version 3.8.0
+ */
 #include "uft/formats/fdd.h"
 #include <stdio.h>
 #include <stdlib.h>

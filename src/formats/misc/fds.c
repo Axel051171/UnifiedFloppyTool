@@ -1,3 +1,8 @@
+/**
+ * @file fds.c
+ * @brief Famicom Disk System FDS format
+ * @version 3.8.0
+ */
 #include "uft/formats/fds.h"
 #include <stdio.h>
 #include <stdlib.h>

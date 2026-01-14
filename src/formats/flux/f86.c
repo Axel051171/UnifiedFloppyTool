@@ -1,3 +1,8 @@
+/**
+ * @file f86.c
+ * @brief F86 flux format
+ * @version 3.8.0
+ */
 // f86.c - 86F analysis module (C11)
 
 #include "uft/formats/f86.h"

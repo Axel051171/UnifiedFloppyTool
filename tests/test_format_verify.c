@@ -46,7 +46,7 @@ static void test_woz_null_data(void) {
     TEST(woz_null_data);
     
     uft_verify_status_t status = uft_verify_woz(NULL, 0, NULL);
-    if (status == UFT_VERIFY_FORMAT_ERROR) {
+    if (status == UFT_VERIFY_SIZE_MISMATCH) {
         PASS();
     } else {
         FAIL("Expected FORMAT_ERROR for NULL data");
@@ -58,7 +58,7 @@ static void test_woz_small_data(void) {
     
     uint8_t data[4] = {0};
     uft_verify_status_t status = uft_verify_woz(data, sizeof(data), NULL);
-    if (status == UFT_VERIFY_FORMAT_ERROR) {
+    if (status == UFT_VERIFY_SIZE_MISMATCH) {
         PASS();
     } else {
         FAIL("Expected FORMAT_ERROR for small data");
@@ -109,7 +109,7 @@ static void test_a2r_null_data(void) {
     TEST(a2r_null_data);
     
     uft_verify_status_t status = uft_verify_a2r(NULL, 0, NULL);
-    if (status == UFT_VERIFY_FORMAT_ERROR) {
+    if (status == UFT_VERIFY_SIZE_MISMATCH) {
         PASS();
     } else {
         FAIL("Expected FORMAT_ERROR for NULL data");
@@ -180,7 +180,7 @@ static void test_td0_null_data(void) {
     TEST(td0_null_data);
     
     uft_verify_status_t status = uft_verify_td0(NULL, 0, NULL);
-    if (status == UFT_VERIFY_FORMAT_ERROR) {
+    if (status == UFT_VERIFY_SIZE_MISMATCH) {
         PASS();
     } else {
         FAIL("Expected FORMAT_ERROR for NULL data");

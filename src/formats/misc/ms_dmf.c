@@ -1,3 +1,8 @@
+/**
+ * @file ms_dmf.c
+ * @brief Microsoft DMF format
+ * @version 3.8.0
+ */
 // ms_dmf.c - Microsoft DMF implementation (C11)
 
 #include "uft/formats/ms_dmf.h"

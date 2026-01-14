@@ -1,3 +1,8 @@
+/**
+ * @file uft_flux_stream.c
+ * @brief KryoFlux flux stream processing
+ * @version 3.8.0
+ */
 #include "uft/flux/flux_stream.h"
 #include <stdlib.h>
 

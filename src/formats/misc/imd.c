@@ -1,3 +1,8 @@
+/**
+ * @file imd.c
+ * @brief ImageDisk IMD format
+ * @version 3.8.0
+ */
 // imd.c - ImageDisk (IMD) implementation (C11)
 
 #include "uft/formats/imd.h"

@@ -1,5 +1,10 @@
 /**
  * @file uft_kryoflux.c
+ * @brief KryoFlux flux stream processing
+ * @version 3.8.0
+ */
+/**
+ * @file uft_kryoflux.c
  * 
  * Based on Aufit by Jean Louis-Guerin / Software Preservation Society
  */

@@ -1,3 +1,8 @@
+/**
+ * @file d1m.c
+ * @brief D1M disk format
+ * @version 3.8.0
+ */
 // d1m.c - Commodore D1M (C11)
 
 #include "uft/formats/d1m.h"

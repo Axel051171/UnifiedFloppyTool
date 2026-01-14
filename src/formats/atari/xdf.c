@@ -1,3 +1,8 @@
+/**
+ * @file xdf.c
+ * @brief Atari XDF extended disk format
+ * @version 3.8.0
+ */
 #include "uft/formats/xdf.h"
 #include <stdio.h>
 #include <stdlib.h>

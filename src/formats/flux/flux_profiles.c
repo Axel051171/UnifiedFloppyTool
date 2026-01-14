@@ -1,3 +1,8 @@
+/**
+ * @file flux_profiles.c
+ * @brief Flux timing profiles
+ * @version 3.8.0
+ */
 #include "uft/formats/flux_profiles.h"
 #include <stdio.h>
 #include <stdlib.h>

@@ -1,3 +1,8 @@
+/**
+ * @file st.c
+ * @brief Atari ST raw sector image format
+ * @version 3.8.0
+ */
 // st.c - Atari ST .ST raw sector image (C11)
 
 #include "uft/formats/st.h"

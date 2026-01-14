@@ -1,3 +1,8 @@
+/**
+ * @file crc.c
+ * @brief Amiga CRC calculation
+ * @version 3.8.0
+ */
 /*
 //
 //

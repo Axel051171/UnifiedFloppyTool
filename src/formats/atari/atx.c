@@ -1,3 +1,8 @@
+/**
+ * @file atx.c
+ * @brief Atari 8-bit ATX VAPI format
+ * @version 3.8.0
+ */
 // atx.c - Atari ATX implementation (analysis-oriented, C11)
 
 #include "uft/formats/atx.h"

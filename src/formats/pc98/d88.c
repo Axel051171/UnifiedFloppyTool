@@ -1,3 +1,8 @@
+/**
+ * @file d88.c
+ * @brief NEC PC-98 d88 format
+ * @version 3.8.0
+ */
 // d88.c - D88/D77 sector container (C11, no deps)
 
 #include "uft/formats/d88.h"

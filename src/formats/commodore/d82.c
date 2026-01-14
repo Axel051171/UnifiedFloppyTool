@@ -1,3 +1,8 @@
+/**
+ * @file d82.c
+ * @brief Commodore 8250 D82 disk image format
+ * @version 3.8.0
+ */
 // d82.c - Commodore D82 (C11)
 
 #include "uft/formats/d82.h"

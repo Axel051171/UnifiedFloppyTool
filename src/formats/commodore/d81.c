@@ -1,3 +1,8 @@
+/**
+ * @file d81.c
+ * @brief Commodore 1581 D81 disk image format
+ * @version 3.8.0
+ */
 // d81.c - Commodore D81 (C11)
 
 #include "uft/formats/d81.h"

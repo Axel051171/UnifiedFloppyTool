@@ -1,3 +1,8 @@
+/**
+ * @file adz.c
+ * @brief Compressed ADF (ADZ) format
+ * @version 3.8.0
+ */
 // adz.c - ADZ (gzip-compressed ADF) wrapper (C11)
 
 #include "uft/formats/adz.h"

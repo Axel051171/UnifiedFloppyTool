@@ -1,3 +1,8 @@
+/**
+ * @file imz.c
+ * @brief Compressed IMG/IMZ format
+ * @version 3.8.0
+ */
 // imz.c - IMZ wrapper implementation (C11)
 
 #include "uft/formats/imz.h"

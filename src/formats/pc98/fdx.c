@@ -1,3 +1,8 @@
+/**
+ * @file fdx.c
+ * @brief NEC PC-98 fdx format
+ * @version 3.8.0
+ */
 // fdx.c - FDX heuristic raw sector image (C11)
 
 #include "uft/formats/fdx.h"

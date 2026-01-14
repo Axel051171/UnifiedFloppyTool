@@ -1,3 +1,8 @@
+/**
+ * @file atari_st.c
+ * @brief Atari ST disk image core functions
+ * @version 3.8.0
+ */
 /*
 //
 // Copyright (C) 2009-2023 Jean-François DEL NERO

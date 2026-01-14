@@ -1,3 +1,8 @@
+/**
+ * @file dsk.c
+ * @brief Amstrad CPC dsk format
+ * @version 3.8.0
+ */
 // dsk.c - minimal DSK implementation (C11)
 
 #include "uft/formats/dsk.h"

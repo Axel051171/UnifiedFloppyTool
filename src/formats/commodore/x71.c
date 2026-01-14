@@ -1,3 +1,8 @@
+/**
+ * @file x71.c
+ * @brief Commodore X71 extended D71 format
+ * @version 3.8.0
+ */
 // x71.c - X71 container (C11)
 
 #include "uft/formats/x71.h"

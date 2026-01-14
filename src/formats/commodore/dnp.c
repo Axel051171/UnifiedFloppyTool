@@ -1,3 +1,8 @@
+/**
+ * @file dnp.c
+ * @brief Commodore CMD DNP partition format
+ * @version 3.8.0
+ */
 // dnp.c - CMD Native Partition (C11)
 
 #include "uft/formats/dnp.h"

@@ -1,3 +1,8 @@
+/**
+ * @file d4m.c
+ * @brief D4M disk format
+ * @version 3.8.0
+ */
 // d4m.c - Commodore D4M (C11)
 
 #include "uft/formats/d4m.h"

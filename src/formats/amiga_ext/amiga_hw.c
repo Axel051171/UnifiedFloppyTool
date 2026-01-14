@@ -1,3 +1,8 @@
+/**
+ * @file amiga_hw.c
+ * @brief Amiga hardware abstraction layer
+ * @version 3.8.0
+ */
 /*
 //
 // Copyright (C) 2009-2016 Jean-Fran�ois DEL NERO

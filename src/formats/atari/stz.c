@@ -1,3 +1,8 @@
+/**
+ * @file stz.c
+ * @brief Atari ST compressed STZ format
+ * @version 3.8.0
+ */
 // stz.c - Atari STZ wrapper (C11)
 
 #include "uft/formats/stz.h"

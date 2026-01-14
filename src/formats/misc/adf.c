@@ -1,3 +1,8 @@
+/**
+ * @file adf.c
+ * @brief Amiga ADF disk image format
+ * @version 3.8.0
+ */
 // adf.c - Amiga ADF implementation (C11)
 
 #include "uft/formats/adf.h"

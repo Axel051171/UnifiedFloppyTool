@@ -1,3 +1,8 @@
+/**
+ * @file prodos_po_do.c
+ * @brief Apple ProDOS PO/DO disk order handling
+ * @version 3.8.0
+ */
 // prodos_po_do.c - Apple II ProDOS .PO/.DO implementation (C11)
 
 #include "uft/formats/prodos_po_do.h"

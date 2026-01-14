@@ -1,3 +1,8 @@
+/**
+ * @file prg.c
+ * @brief Commodore PRG program file format
+ * @version 3.8.0
+ */
 // prg.c - PRG raw program file (C11)
 
 #include "uft/formats/prg.h"

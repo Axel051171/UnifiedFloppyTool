@@ -1,3 +1,8 @@
+/**
+ * @file pc_img.c
+ * @brief PC raw sector IMG format
+ * @version 3.8.0
+ */
 // pc_img.c - Raw PC/DOS sector image (.IMG/.IMA/.DSK) (C11, no deps)
 
 #include "uft/formats/pc_img.h"

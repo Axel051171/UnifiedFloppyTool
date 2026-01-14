@@ -1,3 +1,8 @@
+/**
+ * @file tap.c
+ * @brief TAP tape image format
+ * @version 3.8.0
+ */
 // tap.c - TAP tape image (C11)
 
 #include "uft/formats/tap.h"

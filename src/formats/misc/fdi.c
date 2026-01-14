@@ -1,3 +1,8 @@
+/**
+ * @file fdi.c
+ * @brief Formatted Disk Image FDI format
+ * @version 3.8.0
+ */
 // fdi.c - Anex86 PC-98 FDI (C11, no deps)
 
 #include "uft/formats/fdi.h"

@@ -1,3 +1,8 @@
+/**
+ * @file apple2_do_loader.c
+ * @brief Apple II DO disk image loader
+ * @version 3.8.0
+ */
 /*
 //
 // Copyright (C) 2006-2025 Jean-François DEL NERO

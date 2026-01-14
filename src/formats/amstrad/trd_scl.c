@@ -1,3 +1,8 @@
+/**
+ * @file trd_scl.c
+ * @brief Amstrad CPC trd_scl format
+ * @version 3.8.0
+ */
 // trd_scl.c - ZX Spectrum TRD / SCL implementation (C11)
 
 #include "uft/formats/trd_scl.h"

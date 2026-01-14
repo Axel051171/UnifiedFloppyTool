@@ -1,3 +1,8 @@
+/**
+ * @file d64.c
+ * @brief Commodore 1541 D64 disk image format
+ * @version 3.8.0
+ */
 // d64.c - D64 implementation (C11)
 
 #include "uft/formats/d64.h"

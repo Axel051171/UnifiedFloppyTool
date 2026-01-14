@@ -1,3 +1,8 @@
+/**
+ * @file hdm.c
+ * @brief NEC PC-98 hdm format
+ * @version 3.8.0
+ */
 // hdm.c - HDM raw sector image (C11, no deps)
 
 #include "uft/formats/hdm.h"

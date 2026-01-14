@@ -1,3 +1,8 @@
+/**
+ * @file kfraw.c
+ * @brief KryoFlux raw stream format
+ * @version 3.8.0
+ */
 // kfraw.c - minimal KFRAW handler (C11)
 
 #include "uft/formats/kfraw.h"

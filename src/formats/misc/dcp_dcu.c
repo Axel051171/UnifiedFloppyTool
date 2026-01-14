@@ -1,3 +1,8 @@
+/**
+ * @file dcp_dcu.c
+ * @brief DCP/DCU disk copy format
+ * @version 3.8.0
+ */
 // dcp_dcu.c - X68000 DCU/DCP (C11)
 
 #include "uft/formats/dcp_dcu.h"

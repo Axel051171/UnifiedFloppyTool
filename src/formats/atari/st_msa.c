@@ -1,3 +1,8 @@
+/**
+ * @file st_msa.c
+ * @brief Atari ST MSA compressed format
+ * @version 3.8.0
+ */
 // st_msa.c - Atari ST .ST/.MSA implementation (C11)
 
 #include "uft/formats/st_msa.h"

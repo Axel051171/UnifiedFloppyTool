@@ -1,3 +1,8 @@
+/**
+ * @file edsk_extdsk.c
+ * @brief Amstrad CPC edsk_extdsk format
+ * @version 3.8.0
+ */
 // edsk_extdsk.c - Amstrad CPC EXTDSK (C11)
 #include "uft/formats/edsk_extdsk.h"
 #include <stdio.h>

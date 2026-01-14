@@ -1,3 +1,8 @@
+/**
+ * @file pfi.c
+ * @brief PCE Flux Image format
+ * @version 3.8.0
+ */
 #include "uft/formats/pfi.h"
 #include <stdio.h>
 #include <stdlib.h>

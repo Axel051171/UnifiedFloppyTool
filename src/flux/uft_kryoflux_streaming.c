@@ -1,3 +1,8 @@
+/**
+ * @file uft_kryoflux_streaming.c
+ * @brief KryoFlux flux stream processing
+ * @version 3.8.0
+ */
 #include "uft/compat/uft_platform.h"
 /**
  * @file uft_uft_kf_streaming.c

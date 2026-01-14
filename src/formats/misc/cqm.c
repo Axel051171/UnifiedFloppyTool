@@ -1,3 +1,8 @@
+/**
+ * @file cqm.c
+ * @brief CopyQM CQM disk image format
+ * @version 3.8.0
+ */
 // cqm.c - CopyQM CQM disk image (C11)
 
 #include "uft/formats/cqm.h"

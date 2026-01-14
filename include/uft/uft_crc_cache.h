@@ -45,6 +45,8 @@ extern "C" {
 /**
  * @brief CRC type identifier
  */
+#ifndef UFT_CRC_TYPE_DEFINED
+#define UFT_CRC_TYPE_DEFINED
 typedef enum uft_crc_type {
     UFT_CRC_TYPE_CRC16_CCITT = 0,
     UFT_CRC_TYPE_CRC16_IBM,
@@ -57,6 +59,7 @@ typedef enum uft_crc_type {
     UFT_CRC_TYPE_APPLE_CHECKSUM,
     UFT_CRC_TYPE_MAX
 } uft_crc_type_t;
+#endif /* UFT_CRC_TYPE_DEFINED */
 
 /**
  * @brief Cache entry key

@@ -1,3 +1,8 @@
+/**
+ * @file ipf.c
+ * @brief Interchangeable Preservation Format
+ * @version 3.8.0
+ */
 // ipf.c - IPF / CAPS stub implementation (C11)
 
 #include "uft/formats/ipf.h"

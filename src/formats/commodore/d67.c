@@ -1,3 +1,8 @@
+/**
+ * @file d67.c
+ * @brief Commodore 2040 D67 disk image format
+ * @version 3.8.0
+ */
 // d67.c - Commodore D67 (C11)
 
 #include "uft/formats/d67.h"

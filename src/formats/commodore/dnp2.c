@@ -1,3 +1,8 @@
+/**
+ * @file dnp2.c
+ * @brief Commodore CMD DNP2 partition format
+ * @version 3.8.0
+ */
 // dnp2.c - CMD Native Partition v2 (C11)
 
 #include "uft/formats/dnp2.h"

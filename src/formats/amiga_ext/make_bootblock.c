@@ -1,3 +1,8 @@
+/**
+ * @file make_bootblock.c
+ * @brief Amiga bootblock generator
+ * @version 3.8.0
+ */
 /*
 //
 //

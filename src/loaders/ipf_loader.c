@@ -1,3 +1,8 @@
+/**
+ * @file ipf_loader.c
+ * @brief Interchangeable Preservation Format (IPF) loader
+ * @version 3.8.0
+ */
 /*
 //
 // Copyright (C) 2006-2025 Jean-François DEL NERO

@@ -1,3 +1,8 @@
+/**
+ * @file mfi.c
+ * @brief MAME Floppy Image format
+ * @version 3.8.0
+ */
 // mfi.c - minimal MFI parser (C11)
 
 #include "uft/formats/mfi.h"

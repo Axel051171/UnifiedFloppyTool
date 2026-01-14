@@ -1,3 +1,8 @@
+/**
+ * @file amiga.c
+ * @brief Amiga disk format core functions
+ * @version 3.8.0
+ */
 /*
 //
 // Copyright (C) 2009-2023 Jean-François DEL NERO

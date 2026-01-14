@@ -1,3 +1,8 @@
+/**
+ * @file adf_writer.c
+ * @brief Amiga ADF disk image writer
+ * @version 3.8.0
+ */
 /*
 //
 // Copyright (C) 2006-2025 Jean-Franois DEL NERO

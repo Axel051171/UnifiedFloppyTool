@@ -1,3 +1,8 @@
+/**
+ * @file mStartup.c
+ * @brief Amiga startup code compatibility
+ * @version 3.8.0
+ */
 //CPP startup
 #include <string.h>
 #include <stdio.h>

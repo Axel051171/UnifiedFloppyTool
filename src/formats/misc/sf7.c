@@ -1,3 +1,8 @@
+/**
+ * @file sf7.c
+ * @brief SF7 disk format
+ * @version 3.8.0
+ */
 #include "uft/formats/sf7.h"
 #include <stdio.h>
 #include <stdlib.h>

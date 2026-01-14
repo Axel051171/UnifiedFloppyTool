@@ -1,3 +1,8 @@
+/**
+ * @file nib.c
+ * @brief Apple II NIB nibble image format
+ * @version 3.8.0
+ */
 // nib.c - NIB implementation (C11)
 
 #include "uft/formats/nib.h"

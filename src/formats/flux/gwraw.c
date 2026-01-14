@@ -1,3 +1,8 @@
+/**
+ * @file gwraw.c
+ * @brief Greaseweazle raw flux format
+ * @version 3.8.0
+ */
 
 #include "uft/formats/gwraw.h"
 #include <stdio.h>

@@ -1,3 +1,8 @@
+/**
+ * @file oric_dsk.c
+ * @brief Oric DSK disk format
+ * @version 3.8.0
+ */
 // oric_dsk.c - Oric DSK (C11)
 #include "uft/formats/oric_dsk.h"
 #include <stdio.h>

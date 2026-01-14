@@ -1,3 +1,8 @@
+/**
+ * @file fluxdec.c
+ * @brief Flux decoder utilities
+ * @version 3.8.0
+ */
 // fluxdec.c - Flux Decoder Core (C11)
 #include "uft/formats/fluxdec.h"
 #include <stdlib.h>

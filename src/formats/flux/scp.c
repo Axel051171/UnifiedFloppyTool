@@ -1,3 +1,8 @@
+/**
+ * @file scp.c
+ * @brief SuperCard Pro SCP flux format
+ * @version 3.8.0
+ */
 // scp.c - SCP flux reader (analysis-oriented, C11)
 
 #include "uft/formats/scp.h"

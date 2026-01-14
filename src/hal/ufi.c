@@ -1,3 +1,8 @@
+/**
+ * @file ufi.c
+ * @brief USB Floppy Interface (UFI) command implementation
+ * @version 3.8.0
+ */
 #include "uft/hal/ufi.h"
 #include <string.h>
 

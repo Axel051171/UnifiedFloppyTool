@@ -1,3 +1,8 @@
+/**
+ * @file kryofluxstream_writer.c
+ * @brief KryoFlux stream file writer
+ * @version 3.8.0
+ */
 /*
 //
 // Copyright (C) 2006-2025 Jean-Franois DEL NERO

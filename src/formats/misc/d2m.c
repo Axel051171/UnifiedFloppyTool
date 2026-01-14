@@ -1,3 +1,8 @@
+/**
+ * @file d2m.c
+ * @brief D2M disk format
+ * @version 3.8.0
+ */
 // d2m.c - Commodore D2M (C11)
 
 #include "uft/formats/d2m.h"

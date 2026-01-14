@@ -40,6 +40,10 @@ extern "C" {
  * CRC Types
  * ═══════════════════════════════════════════════════════════════════════════════ */
 
+/* Check if basic uft_crc_type_t is already defined in uft_crc.h */
+#ifndef UFT_CRC_TYPE_DEFINED
+#define UFT_CRC_TYPE_DEFINED
+
 typedef enum {
     /* === Floppy Disk CRCs === */
     UFT_CRC_IBM_MFM,            /* IBM PC MFM: CRC-16-CCITT */
@@ -98,6 +102,8 @@ typedef enum {
     
     UFT_CRC_TYPE_COUNT
 } uft_crc_type_t;
+
+#endif /* UFT_CRC_TYPE_DEFINED */
 
 /* ═══════════════════════════════════════════════════════════════════════════════
  * CRC Configuration
@@ -357,8 +363,8 @@ uint16_t uft_crc16_ccitt(const uint8_t *data, size_t length);
 /** CRC-16 XMODEM */
 uint16_t uft_crc16_xmodem(const uint8_t *data, size_t length);
 
-/** CRC-32 */
-uint32_t uft_crc32(const uint8_t *data, size_t length);
+/** CRC-32 (use uft_crc32_poly to avoid conflict with uft_crc.h) */
+uint32_t uft_crc32_poly(const uint8_t *data, size_t length);
 
 /** CRC-32C (Castagnoli) */
 uint32_t uft_crc32c(const uint8_t *data, size_t length);
@@ -394,8 +400,9 @@ const void *uft_crc_get_table(uft_crc_type_t type);
  * @param data Input data (including CRC at end)
  * @param length Data length including CRC
  * @return true if CRC matches
+ * @note Named uft_crc_verify_config to avoid conflict with uft_crc.h
  */
-bool uft_crc_verify(const uft_crc_config_t *config,
+bool uft_crc_verify_config(const uft_crc_config_t *config,
                     const uint8_t *data, size_t length);
 
 /**

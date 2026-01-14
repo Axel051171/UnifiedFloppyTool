@@ -1,3 +1,8 @@
+/**
+ * @file nfd.c
+ * @brief NEC PC-98 nfd format
+ * @version 3.8.0
+ */
 #include "uft/formats/nfd.h"
 #include <stdio.h>
 #include <stdlib.h>

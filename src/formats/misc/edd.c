@@ -1,3 +1,8 @@
+/**
+ * @file edd.c
+ * @brief EDD disk format
+ * @version 3.8.0
+ */
 #include "uft/formats/edd.h"
 #include <stdio.h>
 #include <stdlib.h>

@@ -1,3 +1,8 @@
+/**
+ * @file osd.c
+ * @brief OSD disk format
+ * @version 3.8.0
+ */
 // osd.c - OSD minimal implementation (C11)
 
 #include "uft/formats/osd.h"

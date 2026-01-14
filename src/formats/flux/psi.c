@@ -1,3 +1,8 @@
+/**
+ * @file psi.c
+ * @brief PCE Sector Image format
+ * @version 3.8.0
+ */
 #include "uft/formats/psi.h"
 #include <stdio.h>
 #include <stdlib.h>

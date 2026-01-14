@@ -1,3 +1,8 @@
+/**
+ * @file atr.c
+ * @brief Atari 8-bit ATR disk image format
+ * @version 3.8.0
+ */
 // atr.c - ATR implementation (C11)
 
 #include "uft/formats/atr.h"

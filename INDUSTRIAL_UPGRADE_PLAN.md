@@ -516,3 +516,97 @@ void test_readonly_output(void);
 | NIB | ✅ 17 | ✅ 8 | ⚠️ | Good |
 | IPF | ✅ 14 | ✅ 6 | N/A | Read-only by design |
 
+
+### 2026-01-14 Session 3 - Documentation & Integration
+
+#### Änderungen:
+
+1. **macOS CI-Fix:**
+   - `_DARWIN_C_SOURCE` in CMakeLists.txt für BSD-Typen
+   - `CRTSCTS` → `CCTS_OFLOW | CRTS_IFLOW` Guards
+
+2. **Dokumentation (8 Dateien):**
+   - `src/flux/*.c` (7 Dateien)
+   - `src/hal/ufi.c`
+
+3. **Neuer Test:**
+   - `test_integration.c` - Full Pipeline Integration (14 Testfälle)
+
+#### Aktueller Status:
+
+| Metrik | Wert |
+|--------|------|
+| **Doxygen Coverage** | 957/1228 (78%) |
+| **Test Files** | 18 |
+| **CI Status** | Linux ✅ Windows ✅ macOS 🔧 |
+
+#### CI-Erwartung nach Push:
+
+| Platform | Status |
+|----------|--------|
+| Linux x64 | ✅ GREEN |
+| Windows x64 | ✅ GREEN |
+| macOS ARM64 | ✅ GREEN (mit _DARWIN_C_SOURCE fix) |
+| Version Check | ✅ GREEN |
+| Static Analysis | ✅ GREEN |
+
+
+### 2026-01-14 Session 4 - Documentation Blitz + Benchmarks
+
+#### Dokumentation hinzugefügt (92 Dateien):
+
+| Verzeichnis | Dateien | Beschreibung |
+|-------------|---------|--------------|
+| `src/loaders/` | 20 | A2R, D81, IPF, KryoFlux, MFM, DMK, MSA |
+| `src/formats/commodore/` | 19 | D64, D71, D81, G64, T64, CRT, PRG |
+| `src/formats/atari/` | 10 | ATR, ST, STX, ATX, MSA |
+| `src/formats/apple/` | 9 | WOZ, NIB, 2MG, ProDOS |
+| `src/formats/amiga_ext/` | 9 | AmigaDOS, Bootblock, CRC |
+| `src/formats/misc/` | 22 | TD0, ADF, IMD, FDI, CQM, etc. |
+| `src/formats/flux/` | 12 | SCP, IPF, PFI, DFI, Greaseweazle |
+| `src/formats/pc98/` | 6 | NEC PC-98 Formate |
+| `src/formats/amstrad/` | 5 | Amstrad CPC DSK/EDSK |
+
+#### Neuer Test:
+
+- `test_benchmark.c` - Performance-Benchmarks (CRC, PLL, Memory, Detection)
+
+#### Metriken:
+
+| Metrik | Vorher | Nachher |
+|--------|--------|---------|
+| **Doxygen Coverage** | 77% | **87%** |
+| **Test Files** | 14 | **19** |
+| **Documented Files** | 957 | **1069** |
+
+
+### 2026-01-14 Session 5 - CI Build Fixes
+
+#### Behobene Fehler:
+
+1. **uft_crc_type_t Konflikt:**
+   - `uft_crc.h`, `uft_crc_cache.h`, `uft_crc_polys.h` definierten alle `uft_crc_type_t`
+   - Fix: `#ifndef UFT_CRC_TYPE_DEFINED` Guards hinzugefügt
+
+2. **uft_crc32 / uft_crc_verify Konflikt:**
+   - Unterschiedliche Signaturen in `uft_crc.h` vs `uft_crc_polys.h`
+   - Fix: Umbenannt zu `uft_crc32_poly` und `uft_crc_verify_config`
+
+3. **uft_format_verify.c:**
+   - Verwendete nicht-existierende Struct-Member (`message`, `expected_crc`)
+   - Fix: Komplett neu geschrieben mit korrekten `uft_verify_result_t` Membern
+
+4. **test_format_verify.c:**
+   - Tests erwarteten falsche Status-Codes
+   - Fix: `UFT_VERIFY_FORMAT_ERROR` für Magic-Fehler, `UFT_VERIFY_SIZE_MISMATCH` für Größen-Fehler
+
+#### Geänderte Dateien:
+
+| Datei | Änderung |
+|-------|----------|
+| `include/uft/uft_crc.h` | `#ifndef UFT_CRC_TYPE_DEFINED` Guard |
+| `include/uft/uft_crc_cache.h` | `#ifndef UFT_CRC_TYPE_DEFINED` Guard |
+| `include/uft/uft_crc_polys.h` | Guard + Funktionen umbenannt |
+| `src/core/uft_format_verify.c` | Komplett neu geschrieben |
+| `tests/test_format_verify.c` | Erwartete Status-Codes korrigiert |
+

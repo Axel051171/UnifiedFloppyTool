@@ -1,3 +1,8 @@
+/**
+ * @file a2r_loader.c
+ * @brief Apple II A2R flux stream loader
+ * @version 3.8.0
+ */
 /*
 //
 // Copyright (C) 2006-2025 Jean-Franois DEL NERO

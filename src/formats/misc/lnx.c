@@ -1,3 +1,8 @@
+/**
+ * @file lnx.c
+ * @brief Atari Lynx LNX format
+ * @version 3.8.0
+ */
 // lnx.c - LNX container (C11)
 
 #include "uft/formats/lnx.h"

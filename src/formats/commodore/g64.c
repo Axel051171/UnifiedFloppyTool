@@ -1,3 +1,8 @@
+/**
+ * @file g64.c
+ * @brief Commodore G64 GCR-encoded disk image
+ * @version 3.8.0
+ */
 // g64.c - G64 analysis module (C11)
 
 #include "uft/formats/g64.h"

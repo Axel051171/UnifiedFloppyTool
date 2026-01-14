@@ -1,3 +1,8 @@
+/**
+ * @file apple2_2mg_loader.c
+ * @brief Apple II 2MG image loader
+ * @version 3.8.0
+ */
 /*
 //
 // Copyright (C) 2006-2025 Jean-François DEL NERO

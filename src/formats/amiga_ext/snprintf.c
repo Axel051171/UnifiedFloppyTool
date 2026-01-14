@@ -1,3 +1,8 @@
+/**
+ * @file snprintf.c
+ * @brief Amiga snprintf compatibility
+ * @version 3.8.0
+ */
 /**************************************************************
  * Original:
  * Patrick Powell Tue Apr 11 09:48:21 PDT 1995
