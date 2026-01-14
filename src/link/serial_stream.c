@@ -19,7 +19,7 @@ static void set_last_err(uft_diag_t *diag, const char *prefix)
     uft_diag_set(diag, prefix);
 }
 
-uft_rc_t uft_serial_open(uft_serial_t *s, const char *device, const uft_serial_opts_t *opt, uft_diag_t *diag)
+uft_rc_t uft_stream_open(uft_serial_t *s, const char *device, const uft_serial_opts_t *opt, uft_diag_t *diag)
 {
     if (!s || !device || !opt) { uft_diag_set(diag, "serial: invalid args"); return UFT_EINVAL; }
     memset(s, 0, sizeof(*s));
@@ -54,7 +54,7 @@ uft_rc_t uft_serial_open(uft_serial_t *s, const char *device, const uft_serial_o
     return UFT_OK;
 }
 
-void uft_serial_close(uft_serial_t *s)
+void uft_stream_close(uft_serial_t *s)
 {
     if (!s || !s->is_open) return;
     CloseHandle((HANDLE)s->h);
@@ -62,7 +62,7 @@ void uft_serial_close(uft_serial_t *s)
     s->is_open = 0;
 }
 
-uft_rc_t uft_serial_read(uft_serial_t *s, void *buf, size_t n, size_t *out_n, uft_diag_t *diag)
+uft_rc_t uft_stream_read(uft_serial_t *s, void *buf, size_t n, size_t *out_n, uft_diag_t *diag)
 {
     if (out_n) *out_n = 0;
     if (!s || !s->is_open || !buf || n==0) { uft_diag_set(diag, "serial: invalid args"); return UFT_EINVAL; }
@@ -73,7 +73,7 @@ uft_rc_t uft_serial_read(uft_serial_t *s, void *buf, size_t n, size_t *out_n, uf
     return UFT_OK;
 }
 
-uft_rc_t uft_serial_write_all(uft_serial_t *s, const void *buf, size_t n, uft_diag_t *diag)
+uft_rc_t uft_stream_write_all(uft_serial_t *s, const void *buf, size_t n, uft_diag_t *diag)
 {
     if (!s || !s->is_open || !buf) { uft_diag_set(diag, "serial: invalid args"); return UFT_EINVAL; }
     const uint8_t *p = (const uint8_t*)buf;
@@ -130,7 +130,7 @@ static speed_t baud_to_speed(uint32_t baud)
     }
 }
 
-uft_rc_t uft_serial_open(uft_serial_t *s, const char *device, const uft_serial_opts_t *opt, uft_diag_t *diag)
+uft_rc_t uft_stream_open(uft_serial_t *s, const char *device, const uft_serial_opts_t *opt, uft_diag_t *diag)
 {
     if (!s || !device || !opt) { uft_diag_set(diag, "serial: invalid args"); return UFT_EINVAL; }
     memset(s, 0, sizeof(*s));
@@ -170,7 +170,7 @@ uft_rc_t uft_serial_open(uft_serial_t *s, const char *device, const uft_serial_o
     return UFT_OK;
 }
 
-void uft_serial_close(uft_serial_t *s)
+void uft_stream_close(uft_serial_t *s)
 {
     if (!s || !s->is_open) return;
     close(s->fd);
@@ -178,7 +178,7 @@ void uft_serial_close(uft_serial_t *s)
     s->is_open = 0;
 }
 
-uft_rc_t uft_serial_read(uft_serial_t *s, void *buf, size_t n, size_t *out_n, uft_diag_t *diag)
+uft_rc_t uft_stream_read(uft_serial_t *s, void *buf, size_t n, size_t *out_n, uft_diag_t *diag)
 {
     if (out_n) *out_n = 0;
     if (!s || !s->is_open || !buf || n==0) { uft_diag_set(diag, "serial: invalid args"); return UFT_EINVAL; }
@@ -206,7 +206,7 @@ uft_rc_t uft_serial_read(uft_serial_t *s, void *buf, size_t n, size_t *out_n, uf
     return UFT_OK;
 }
 
-uft_rc_t uft_serial_write_all(uft_serial_t *s, const void *buf, size_t n, uft_diag_t *diag)
+uft_rc_t uft_stream_write_all(uft_serial_t *s, const void *buf, size_t n, uft_diag_t *diag)
 {
     if (!s || !s->is_open || !buf) { uft_diag_set(diag, "serial: invalid args"); return UFT_EINVAL; }
     const uint8_t *p = (const uint8_t*)buf;

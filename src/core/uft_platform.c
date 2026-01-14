@@ -23,6 +23,7 @@
     #define access _access
     #define F_OK 0
 #else
+    #include <sys/types.h>
     #include <unistd.h>
     #include <sys/stat.h>
     #include <sys/time.h>
@@ -563,16 +564,22 @@ uft_serial_t* uft_serial_open(const char *port, const uft_serial_config_t *confi
         case 9600:   speed = B9600; break;
         case 19200:  speed = B19200; break;
         case 38400:  speed = B38400; break;
+#ifdef B57600
         case 57600:  speed = B57600; break;
+#endif
+#ifdef B115200
         case 115200: speed = B115200; break;
+#endif
+#ifdef B230400
         case 230400: speed = B230400; break;
+#endif
 #ifdef B460800
         case 460800: speed = B460800; break;
 #endif
 #ifdef B921600
         case 921600: speed = B921600; break;
 #endif
-        default: speed = B115200;
+        default: speed = B38400;
     }
     cfsetispeed(t, speed);
     cfsetospeed(t, speed);

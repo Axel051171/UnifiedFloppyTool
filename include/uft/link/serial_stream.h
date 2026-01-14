@@ -32,13 +32,13 @@ typedef struct uft_serial_opts {
     uint32_t read_timeout_ms; /* per read call */
 } uft_serial_opts_t;
 
-uft_rc_t uft_serial_open(uft_serial_t *s, const char *device, const uft_serial_opts_t *opt, uft_diag_t *diag);
-void     uft_serial_close(uft_serial_t *s);
+uft_rc_t uft_stream_open(uft_serial_t *s, const char *device, const uft_serial_opts_t *opt, uft_diag_t *diag);
+void     uft_stream_close(uft_serial_t *s);
 
 /* Read up to `n` bytes; returns bytes read in out_n. */
-uft_rc_t uft_serial_read(uft_serial_t *s, void *buf, size_t n, size_t *out_n, uft_diag_t *diag);
+uft_rc_t uft_stream_read(uft_serial_t *s, void *buf, size_t n, size_t *out_n, uft_diag_t *diag);
 /* Write exactly `n` bytes (best effort; retries partial writes). */
-uft_rc_t uft_serial_write_all(uft_serial_t *s, const void *buf, size_t n, uft_diag_t *diag);
+uft_rc_t uft_stream_write_all(uft_serial_t *s, const void *buf, size_t n, uft_diag_t *diag);
 
 #ifdef __cplusplus
 }

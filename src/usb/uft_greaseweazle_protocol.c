@@ -15,6 +15,9 @@
 #include <fcntl.h>
 #include <termios.h>
 #include <unistd.h>
+#ifndef B115200
+#define B115200 115200
+#endif
 #endif
 
 /* ═══════════════════════════════════════════════════════════════════════════════

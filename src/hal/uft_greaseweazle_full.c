@@ -21,6 +21,9 @@
     #include <fcntl.h>
     #include <unistd.h>
     #include <termios.h>
+    #ifndef B115200
+    #define B115200 115200
+    #endif
     #include <sys/ioctl.h>
     #include "uft/compat/uft_dirent.h"
     #include <errno.h>
