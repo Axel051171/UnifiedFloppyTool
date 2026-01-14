@@ -435,3 +435,84 @@ void test_readonly_output(void);
           exit 1
         fi
 ```
+
+---
+
+# PROGRESS LOG
+
+## 2026-01-14 Session Updates
+
+### ✅ COMPLETED
+
+| Item | Status | Notes |
+|------|--------|-------|
+| P0-001 fopen NULL-Check | ✅ DONE | Already implemented in codebase |
+| P0-002 Memory Leaks | ✅ OK | 419 free() vs 245 malloc() |
+| P0-003 Writer TODOs | ✅ DONE | No critical TODOs remaining |
+| P0-004 Test Suite | ✅ 14 Tests | Extended from 3 to 14 |
+| Scoring System | ✅ DONE | uft_decode_score.c/h |
+| Merge Engine | ✅ DONE | uft_merge_engine.c/h |
+| Verify Pipeline | ✅ DONE | uft_write_verify.c/h |
+| Multi-Decode | ✅ DONE | uft_multi_decode.c/h |
+| WOZ/A2R/TD0 Verify | ✅ NEW | uft_format_verify.c/h |
+
+### 🔧 CI FIXES APPLIED
+
+| Issue | Fix |
+|-------|-----|
+| CMakeLists.txt if/endif | Fixed orphan endif() statements |
+| Version mismatch | Updated uft_version.h to 3.8.0 |
+| serial_stream conflict | Renamed to uft_stream_* |
+| macOS sys/types.h | Added include |
+| macOS baud rates | Added ifdef guards |
+
+### 📊 CODE METRICS
+
+- Headers: 235
+- Source files: 1228  
+- Tests: 14
+- Doxygen coverage: ~78%
+
+### ⏳ REMAINING GAPS
+
+| Area | Status | Priority |
+|------|--------|----------|
+| Doxygen for formats/ | 128 files undocumented | P3 |
+| Golden Tests | Need sample images | P2 |
+| WOZ Writer | Read-only currently | P2 |
+| CI Green | Pending next run | P0 |
+
+
+### 2026-01-14 Session 2 - Test Suite Extension
+
+#### Neue Tests hinzugefügt:
+
+| Test | Beschreibung | Testfälle |
+|------|--------------|-----------|
+| `test_roundtrip.c` | Format roundtrip (D64, ADF, IMG, ST) | 9 |
+| `test_crc.c` | CRC-32, CRC-16, Amiga Checksum | 13 |
+| `test_pll.c` | PLL Algorithmus Validierung | 9 |
+
+#### Test-Suite Status:
+
+- **Vorher:** 14 Tests
+- **Nachher:** 17 Tests
+- **Coverage:** Core, CRC, PLL, Roundtrip, Format-Verify
+
+#### Parser Matrix Update (korrigiert):
+
+| Format | Read | Write | Verify | Status |
+|--------|------|-------|--------|--------|
+| D64 | ✅ 11 | ✅ 10 | ✅ | Complete |
+| G64 | ✅ 6 | ✅ 6 | ⚠️ | Good |
+| ADF | ✅ 21 | ✅ 12 | ✅ | Complete |
+| SCP | ✅ 22 | ✅ 15 | ⚠️ | Good |
+| HFE | ✅ 5 | ✅ 4 | ⚠️ | Good |
+| WOZ | ✅ 11 | ✅ 9 | ✅ | Complete |
+| A2R | ✅ 9 | ✅ 8 | ✅ | Complete |
+| TD0 | ✅ 14 | ✅ 8 | ✅ | Complete |
+| ST | ✅ 78 | ✅ 38 | ⚠️ | Good |
+| STX | ✅ 7 | ✅ 4 | ⚠️ | Good |
+| NIB | ✅ 17 | ✅ 8 | ⚠️ | Good |
+| IPF | ✅ 14 | ✅ 6 | N/A | Read-only by design |
+

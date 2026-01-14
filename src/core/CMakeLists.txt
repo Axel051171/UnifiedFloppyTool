@@ -8,6 +8,7 @@ set(CORE_SOURCES
     uft_crc_utils.c
     uft_endian.c
     uft_flux_utils.c
+    uft_format_verify.c
     uft_hal.c
     uft_operation_result.c
     uft_platform.c

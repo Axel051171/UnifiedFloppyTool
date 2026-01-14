@@ -37,6 +37,7 @@
 #endif
 
 #ifdef UFT_PLATFORM_MACOS
+    #include <sys/types.h>  /* Must come before mach/sysctl for BSD types */
     #include <mach/mach_time.h>
     #include <sys/sysctl.h>
 #endif
@@ -592,9 +593,18 @@ uft_serial_t* uft_serial_open(const char *port, const uft_serial_config_t *confi
     t->c_cflag |= CS8;
     
     if (cfg.flow_control) {
+#if defined(CRTSCTS)
         t->c_cflag |= CRTSCTS;
+#elif defined(CCTS_OFLOW) && defined(CRTS_IFLOW)
+        /* macOS hardware flow control */
+        t->c_cflag |= (CCTS_OFLOW | CRTS_IFLOW);
+#endif
     } else {
+#if defined(CRTSCTS)
         t->c_cflag &= ~CRTSCTS;
+#elif defined(CCTS_OFLOW) && defined(CRTS_IFLOW)
+        t->c_cflag &= ~(CCTS_OFLOW | CRTS_IFLOW);
+#endif
     }
     
     t->c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG);

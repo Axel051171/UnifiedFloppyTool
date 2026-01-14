@@ -1,3 +1,21 @@
+/**
+ * @file uft_media_probe.c
+ * @brief Media format detection and content probing
+ * 
+ * This module provides functionality for probing and analyzing
+ * various media formats, including:
+ * - C64 PRG/P00 file parsing
+ * - String extraction from binary data
+ * - Format auto-detection
+ * 
+ * Used for forensic analysis and content preview.
+ * 
+ * @version 3.8.0
+ * @date 2026-01-14
+ * 
+ * @see uft_media_probe.h for API documentation
+ */
+
 #include "uft_media_probe.h"
 #include <string.h>
 #include <ctype.h>

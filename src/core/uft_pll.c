@@ -1,3 +1,24 @@
+/**
+ * @file uft_pll.c
+ * @brief Phase-Locked Loop (PLL) implementation for flux-to-bits decoding
+ * 
+ * This module provides the core PLL algorithms for converting raw flux
+ * timing data into decoded bit streams. Supports multiple encoding formats
+ * including MFM (DD/HD), FM, and GCR.
+ * 
+ * Key features:
+ * - Adaptive clock recovery with configurable parameters
+ * - Support for MFM Double Density (DD) and High Density (HD)
+ * - Fixed-point arithmetic for efficiency (Q16 format)
+ * - Statistics collection for quality analysis
+ * 
+ * @version 3.8.0
+ * @date 2026-01-14
+ * 
+ * @see uft_pll.h for API documentation
+ * @see uft_flux_pll.h for advanced PLL configurations
+ */
+
 #include "uft/uft_pll.h"
 
 #include <string.h>
