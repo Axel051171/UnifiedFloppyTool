@@ -23,8 +23,8 @@
 #define UFT_FORMAT_DEFS_H
 
 #include <stdint.h>
-
 #include <stddef.h>
+#include "uft/uft_types.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -58,21 +58,7 @@ typedef enum uft_variant {
     UFT_VAR_DSED    = 0x0210    /**< Double-sided, extra-high-density */
 } uft_variant_t;
 
-/*============================================================================
- * Encoding Types
- *============================================================================*/
-
-typedef enum uft_encoding {
-    UFT_ENC_UNKNOWN = 0,
-    UFT_ENC_FM      = 1,        /**< FM (single density) */
-    UFT_ENC_MFM     = 2,        /**< MFM (double density) */
-    UFT_ENC_M2FM    = 3,        /**< Modified MFM */
-    UFT_ENC_GCR     = 4,        /**< Group Code Recording */
-    UFT_ENC_GCR5    = 5,        /**< Commodore GCR (4-to-5) */
-    UFT_ENC_GCR6    = 6,        /**< Apple GCR (6-and-2) */
-    UFT_ENC_APPLE   = 7,        /**< Apple II 13-sector */
-    UFT_ENC_RAW     = 255       /**< Raw/unknown */
-} uft_encoding_t;
+/* Note: uft_encoding_t is defined in uft_types.h */
 
 /*============================================================================
  * Format Descriptor

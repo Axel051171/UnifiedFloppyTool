@@ -21,6 +21,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "uft/uft_types.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -43,26 +44,20 @@ typedef enum uft_sector_status {
 } uft_sector_status_t;
 
 /* ═══════════════════════════════════════════════════════════════════════════
- * Encoding Types
+ * Encoding Types (local to this module)
  * ═══════════════════════════════════════════════════════════════════════════ */
 
 typedef enum uft_sector_encoding {
-    UFT_ENC_UNKNOWN = 0,
-    UFT_ENC_MFM,
-    UFT_ENC_FM,
+    UFT_SENC_UNKNOWN = 0,
+    UFT_SENC_MFM,
+    UFT_SENC_FM,
 } uft_sector_encoding_t;
 
 /* ═══════════════════════════════════════════════════════════════════════════
  * Data Structures
  * ═══════════════════════════════════════════════════════════════════════════ */
 
-/* ID fields (CHRN) */
-typedef struct uft_sector_id {
-    uint8_t cyl;    /* C - Cylinder */
-    uint8_t head;   /* H - Head */
-    uint8_t sec;    /* R - Record (sector number) */
-    uint8_t size_n; /* N - Size code (2^N * 128 bytes) */
-} uft_sector_id_t;
+/* Note: uft_sector_id_t is defined in uft_types.h */
 
 /* ID Address Mark Record */
 typedef struct uft_id_record {

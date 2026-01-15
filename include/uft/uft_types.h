@@ -35,7 +35,9 @@ extern "C" {
 typedef struct uft_disk uft_disk_t;
 
 /// Opaque Handle für Track  
+#ifndef UFT_TRACK_T_DEFINED
 typedef struct uft_track uft_track_t;
+#endif
 
 /// Opaque Handle für Device (Hardware)
 typedef struct uft_device uft_device_t;

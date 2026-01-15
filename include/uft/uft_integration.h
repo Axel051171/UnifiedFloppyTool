@@ -18,6 +18,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
+#include "uft/uft_types.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -36,10 +37,8 @@ extern "C" {
  * Forward Declarations
  * ============================================================================ */
 
-/* Core types */
-typedef struct uft_disk uft_disk_t;
-typedef struct uft_track uft_track_t;
-typedef struct uft_sector uft_sector_t;
+/* Core types - defined in uft_types.h */
+/* uft_disk_t, uft_track_t, uft_sector_t already defined */
 typedef struct uft_flux uft_flux_t;
 
 /* Integration contexts */
@@ -65,24 +64,7 @@ typedef enum {
     UFT_ERROR_INTERNAL,
 } uft_error_t;
 
-/* ============================================================================
- * Encoding Types
- * ============================================================================ */
-
-typedef enum {
-    UFT_ENC_UNKNOWN = 0,
-    UFT_ENC_FM,                 /**< FM (Single Density) */
-    UFT_ENC_MFM,                /**< MFM (Double/High Density) */
-    UFT_ENC_M2FM,               /**< DEC Modified MFM (RX02) */
-    UFT_ENC_GCR_C64,            /**< Commodore 64 GCR */
-    UFT_ENC_GCR_APPLE2,         /**< Apple II GCR */
-    UFT_ENC_GCR_MAC,            /**< Macintosh GCR */
-    UFT_ENC_GCR_VICTOR,         /**< Victor 9000 GCR */
-    UFT_ENC_AMIGA,              /**< Amiga MFM */
-    UFT_ENC_ACE,                /**< Jupiter Ace */
-    UFT_ENC_AGAT,               /**< Agat */
-    UFT_ENC_MIXED,              /**< Mixed encoding */
-} uft_encoding_t;
+/* Note: uft_encoding_t is defined in uft/uft_types.h */
 
 /* ============================================================================
  * Platform Types

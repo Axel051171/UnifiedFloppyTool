@@ -124,7 +124,10 @@ typedef struct uft_io_sector {
 
 /**
  * @brief Complete track with all data layers
+ * Note: If uft_track.h is included first, use its definition
  */
+#ifndef UFT_TRACK_T_DEFINED
+#define UFT_TRACK_T_DEFINED
 typedef struct uft_track {
     // Identity
     int             cylinder;
@@ -173,6 +176,7 @@ typedef struct uft_track {
         char        notes[256];
     } meta;
 } uft_track_t;
+#endif /* UFT_TRACK_T_DEFINED */
 
 // ============================================================================
 // I/O Source Interface

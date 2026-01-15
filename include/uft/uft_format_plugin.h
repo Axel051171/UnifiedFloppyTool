@@ -74,7 +74,10 @@ struct uft_disk {
 
 /**
  * @brief Interne Track-Struktur
+ * Note: If uft_track.h is included first, use its definition
  */
+#ifndef UFT_TRACK_T_DEFINED
+#define UFT_TRACK_T_DEFINED
 struct uft_track {
     // Position
     int                 cylinder;
@@ -104,6 +107,8 @@ struct uft_track {
     uft_disk_t*         disk;
     void*               plugin_data;
 };
+typedef struct uft_track uft_track_t;
+#endif /* UFT_TRACK_T_DEFINED */
 
 // ============================================================================
 // Format Plugin Interface

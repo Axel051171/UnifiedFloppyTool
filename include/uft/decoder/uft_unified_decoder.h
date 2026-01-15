@@ -25,6 +25,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include "uft/uft_types.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -35,8 +36,6 @@ extern "C" {
  *===========================================================================*/
 
 typedef struct uft_bitstream uft_bitstream_t;
-typedef struct uft_sector uft_sector_t;
-typedef struct uft_track uft_track_t;
 
 /*===========================================================================
  * Error Codes
@@ -141,29 +140,8 @@ struct uft_bitstream {
     float    avg_confidence;    /**< Average bit confidence */
 };
 
-/**
- * @brief Track decode result
- */
-struct uft_track {
-    uint16_t track_num;         /**< Track number */
-    uint8_t  side;              /**< Side */
-    
-    uft_sector_t *sectors;      /**< Decoded sectors */
-    size_t sector_count;        /**< Number of sectors */
-    size_t sector_capacity;     /**< Allocated capacity */
-    
-    /* Encoding info */
-    uft_encoding_t encoding;    /**< Detected encoding */
-    float detection_confidence; /**< Detection confidence */
-    
-    /* Statistics */
-    uint16_t good_sectors;      /**< Sectors with valid CRC */
-    uint16_t bad_sectors;       /**< Sectors with CRC errors */
-    uint16_t missing_sectors;   /**< Expected but not found */
-    
-    /* Raw data preservation */
-    uft_bitstream_t *bitstream; /**< Original bitstream (optional) */
-};
+/* Note: struct uft_track is defined in uft/uft_track.h */
+#include "uft/uft_track.h"
 
 /*===========================================================================
  * Decoder Interface

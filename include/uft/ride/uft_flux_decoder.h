@@ -26,6 +26,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
+#include "uft/uft_types.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -95,18 +96,11 @@ typedef int32_t uft_logtime_t;
  * ENUMERATIONS
  *============================================================================*/
 
-/**
- * @brief Encoding type
- */
-typedef enum {
-    UFT_ENC_UNKNOWN = 0,
-    UFT_ENC_FM,             /**< Single density (FM) */
-    UFT_ENC_MFM,            /**< Double/High density (MFM) */
-    UFT_ENC_GCR_APPLE,      /**< Apple II GCR */
-    UFT_ENC_GCR_C64,        /**< Commodore 64 GCR */
-    UFT_ENC_GCR_AMIGA,      /**< Amiga MFM variant */
-    UFT_ENC_RLL             /**< Hard disk RLL */
-} uft_encoding_t;
+/* Note: uft_encoding_t is now defined in uft/uft_types.h */
+/* Compatibility aliases for this module */
+#ifndef UFT_ENC_GCR_AMIGA
+#define UFT_ENC_GCR_AMIGA UFT_ENC_AMIGA_MFM
+#endif
 
 /**
  * @brief Media density

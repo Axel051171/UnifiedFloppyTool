@@ -28,6 +28,7 @@
 #include <stdio.h>
 
 #include "uft_crc_validate.h"
+#include "uft/uft_types.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -37,21 +38,19 @@ extern "C" {
  * Forward Declarations
  * ═══════════════════════════════════════════════════════════════════════════════ */
 
-/* Disk type - defined elsewhere */
-struct uft_disk;
-typedef struct uft_disk uft_disk_t;
+/* Note: uft_disk_t is defined in uft_types.h */
 
 /* Error type */
 typedef int uft_error_t;
 
-/* Encoding types */
+/* Encoding types (local naming to avoid conflicts) */
 typedef enum {
-    UFT_ENC_UNKNOWN = 0,
-    UFT_ENC_MFM,
-    UFT_ENC_FM,
-    UFT_ENC_GCR_CBM,
-    UFT_ENC_GCR_APPLE,
-    UFT_ENC_AMIGA_MFM
+    UFT_ENCID_UNKNOWN = 0,
+    UFT_ENCID_MFM,
+    UFT_ENCID_FM,
+    UFT_ENCID_GCR_CBM,
+    UFT_ENCID_GCR_APPLE,
+    UFT_ENCID_AMIGA_MFM
 } uft_encoding_id_t;
 
 /* CRC types */
