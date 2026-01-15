@@ -28,6 +28,7 @@
 #include <windows.h>
 #include <io.h>
 #include <fcntl.h>
+#include <time.h>  /* Include first so MSVC's timespec is used if available */
 #include <sys/stat.h>
 #include <time.h>
 
@@ -85,15 +86,19 @@ typedef int32_t ssize_t;
 #define CLOCK_MONOTONIC 1
 #define CLOCK_REALTIME  0
 
-/* Only define timespec if not already defined by MSVC */
-#if !defined(_TIMESPEC_DEFINED) && !defined(__struct_timespec_defined)
-#define _TIMESPEC_DEFINED
-#define __struct_timespec_defined
+/* MSVC 2015+ (version 1900+) provides struct timespec in time.h
+ * For older MSVC or MinGW without it, we define our own */
+#if defined(_MSC_VER) && _MSC_VER >= 1900
+    /* MSVC 2015+ has timespec - do nothing */
+#elif !defined(_TIMESPEC_DEFINED) && !defined(__struct_timespec_defined) && !defined(__timespec_defined)
+#define _TIMESPEC_DEFINED 1
+#define __struct_timespec_defined 1
+#define __timespec_defined 1
 struct timespec {
     time_t tv_sec;
     long   tv_nsec;
 };
-#endif /* _TIMESPEC_DEFINED */
+#endif
 
 static inline int clock_gettime(int clk_id, struct timespec *tp) {
     (void)clk_id;

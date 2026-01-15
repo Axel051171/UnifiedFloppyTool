@@ -21,29 +21,8 @@
 #include <stdbool.h>
 #include <time.h>
 
-/* Platform compatibility for clock_gettime */
-#ifdef _WIN32
-#include <windows.h>
-#ifndef CLOCK_MONOTONIC
-#define CLOCK_MONOTONIC 1
-#if !defined(_TIMESPEC_DEFINED)
-#define _TIMESPEC_DEFINED
-struct timespec {
-    time_t tv_sec;
-    long   tv_nsec;
-};
-#endif
-static inline int clock_gettime(int clk_id, struct timespec *tp) {
-    (void)clk_id;
-    LARGE_INTEGER freq, count;
-    QueryPerformanceFrequency(&freq);
-    QueryPerformanceCounter(&count);
-    tp->tv_sec = (time_t)(count.QuadPart / freq.QuadPart);
-    tp->tv_nsec = (long)((count.QuadPart % freq.QuadPart) * 1000000000LL / freq.QuadPart);
-    return 0;
-}
-#endif
-#endif
+/* Use UFT's platform compatibility layer */
+#include "uft/compat/uft_platform.h"
 
 /* ═══════════════════════════════════════════════════════════════════════════════
  * Timing Utilities

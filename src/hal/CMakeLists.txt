@@ -24,6 +24,11 @@ set(HAL_SOURCES
     ufi.c
 )
 
+# Linux-only: Native FDC support via /dev/fd0
+if(UNIX AND NOT APPLE)
+    list(APPEND HAL_SOURCES uft_linux_fdc.c)
+endif()
+
 add_library(uft_hal STATIC ${HAL_SOURCES})
 
 target_include_directories(uft_hal PUBLIC
