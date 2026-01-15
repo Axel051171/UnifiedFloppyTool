@@ -235,6 +235,9 @@ public:
     
     void setOperation(UftOperation op) { m_operation = op; }
     void setParameters(const QVariantMap &params) { m_params = params; }
+    void setHardwareDevice(void *device) { m_hwDevice = device; }
+    void setSourcePath(const QString &path) { m_sourcePath = path; }
+    void setDestPath(const QString &path) { m_destPath = path; }
 
 public slots:
     void process();
@@ -246,9 +249,17 @@ signals:
     void trackProcessed(int cylinder, int head, int errors);
 
 private:
+    bool processReadFromHardware();
+    bool processWriteToHardware();
+    bool processReadFromFile();
+    bool processWriteToFile();
+    
     UftMainController *m_controller;
     UftOperation m_operation = UftOperation::None;
     QVariantMap m_params;
+    void *m_hwDevice = nullptr;
+    QString m_sourcePath;
+    QString m_destPath;
     bool m_cancelled = false;
 };
 

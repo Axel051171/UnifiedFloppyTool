@@ -8,7 +8,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-#include "uft/hal/uft_greaseweazle.h"
+#include "uft/hal/uft_greaseweazle_full.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>

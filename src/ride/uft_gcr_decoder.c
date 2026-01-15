@@ -70,7 +70,7 @@ static inline int apple2_decode_nibble(uint8_t nibble) {
 
 int uft_gcr_decode_apple2_sector(const uint8_t *nibbles, size_t count,
                                   uint8_t *data, size_t data_size,
-                                  uft_sector_t *sector) {
+                                  uft_ride_sector_t *sector) {
     if (!nibbles || count < 400 || !data || data_size < 256 || !sector) {
         return -1;
     }
@@ -195,7 +195,7 @@ int uft_c64_sectors_per_track(int track) {
 
 int uft_gcr_decode_c64_sector(const uint8_t *gcr_data, size_t gcr_len,
                                uint8_t *data, size_t data_size,
-                               uft_sector_t *sector) {
+                               uft_ride_sector_t *sector) {
     if (!gcr_data || gcr_len < 360 || !data || data_size < 256 || !sector) {
         return -1;
     }
@@ -258,7 +258,7 @@ int uft_gcr_decode_c64_sector(const uint8_t *gcr_data, size_t gcr_len,
  *============================================================================*/
 
 int uft_gcr_decode_apple2_track(const uft_flux_buffer_t *flux,
-                                 uft_track_t *track) {
+                                 uft_ride_track_t *track) {
     if (!flux || !track) return -1;
     
     memset(track, 0, sizeof(*track));
@@ -303,7 +303,7 @@ int uft_gcr_decode_apple2_track(const uft_flux_buffer_t *flux,
 
 int uft_gcr_decode_c64_track(const uft_flux_buffer_t *flux,
                               int track_num,
-                              uft_track_t *track) {
+                              uft_ride_track_t *track) {
     if (!flux || !track || track_num < 1 || track_num > 40) return -1;
     
     memset(track, 0, sizeof(*track));

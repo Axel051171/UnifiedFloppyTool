@@ -214,31 +214,33 @@ typedef struct {
 } uft_iw_profile_t;
 
 /**
- * @brief Sector ID (CHRN)
+ * @brief Sector ID (CHRN) - RIDE decoder internal type
+ * @note This is different from uft_ride_sector_id_t in uft_types.h
  */
-typedef struct {
+typedef struct uft_ride_sector_id {
     uint8_t cylinder;       /**< Cylinder number */
     uint8_t head;           /**< Head/side number */
     uint8_t sector;         /**< Sector number */
     uint8_t size_code;      /**< Size code (0=128, 1=256, 2=512...) */
-} uft_sector_id_t;
+} uft_ride_sector_id_t;
 
 /**
- * @brief Sector header information
+ * @brief Sector header information - RIDE decoder internal type
  */
-typedef struct {
-    uft_sector_id_t     id;             /**< Sector ID (CHRN) */
+typedef struct uft_ride_sector_header {
+    uft_ride_sector_id_t id;            /**< Sector ID (CHRN) */
     uint16_t            header_crc;     /**< Header CRC */
     bool                header_crc_ok;  /**< Header CRC valid */
     uft_logtime_t       id_end_time;    /**< Time at end of ID field */
     uft_logtime_t       gap2_time;      /**< Gap2 duration */
-} uft_sector_header_t;
+} uft_ride_sector_header_t;
 
 /**
- * @brief Complete sector information
+ * @brief Complete sector information - RIDE decoder internal type
+ * @note This has different fields from uft_ride_sector_t in uft_types.h
  */
-typedef struct {
-    uft_sector_header_t header;         /**< Sector header */
+typedef struct uft_ride_sector {
+    uft_ride_sector_header_t header;    /**< Sector header */
     uint8_t             data_mark;      /**< DAM/DDAM */
     uint16_t            data_crc;       /**< Data CRC */
     bool                data_crc_ok;    /**< Data CRC valid */
@@ -249,12 +251,13 @@ typedef struct {
     uint8_t             revolution;     /**< Source revolution */
     float               confidence;     /**< Quality confidence (0.0-1.0) */
     uft_fdc_status_t    fdc_status;     /**< FDC status */
-} uft_sector_t;
+} uft_ride_sector_t;
 
 /**
- * @brief Track information
+ * @brief Track information - RIDE decoder internal type
+ * @note This has different fields from uft_ride_track_t in uft_track.h
  */
-typedef struct {
+typedef struct uft_ride_track {
     uint8_t             cylinder;       /**< Physical cylinder */
     uint8_t             head;           /**< Physical head */
     uft_encoding_t      encoding;       /**< Track encoding */
@@ -263,13 +266,13 @@ typedef struct {
     uint32_t            track_length;   /**< Track length in bits */
     uft_logtime_t       index_time;     /**< Index-to-index time */
     uint8_t             sector_count;   /**< Number of sectors found */
-    uft_sector_t        sectors[UFT_SECTORS_MAX]; /**< Sector array */
+    uft_ride_sector_t   sectors[UFT_SECTORS_MAX]; /**< Sector array */
     uint8_t             revolution_count; /**< Revolutions decoded */
     bool                consistent;     /**< All revolutions match */
     uint8_t             healthy_sectors; /**< Sectors with good CRC */
     uint8_t             bad_sectors;    /**< Sectors with errors */
     bool                modified;       /**< Track has been modified */
-} uft_track_t;
+} uft_ride_track_t;
 
 /**
  * @brief Decoder configuration
@@ -308,7 +311,7 @@ typedef struct {
     uint32_t    elapsed_ms;             /**< Time spent */
     uint8_t     best_healthy;           /**< Best healthy sector count */
     uint8_t     best_revolution;        /**< Best revolution index */
-    uft_track_t best_track;             /**< Best track result */
+    uft_ride_track_t best_track;             /**< Best track result */
 } uft_mining_result_t;
 
 /**
@@ -483,7 +486,7 @@ void uft_decoder_init_default(uft_decoder_config_t *config);
  */
 bool uft_decode_track(const uft_flux_buffer_t *flux,
                       const uft_decoder_config_t *config,
-                      uft_track_t *track);
+                      uft_ride_track_t *track);
 
 /**
  * @brief Decode MFM bits to bytes
@@ -531,19 +534,19 @@ uint16_t uft_crc_ccitt(const uint8_t *data, size_t len);
  * @param sector Sector to verify
  * @return true if CRC is valid
  */
-bool uft_sector_verify(const uft_sector_t *sector);
+bool uft_ride_sector_verify(const uft_ride_sector_t *sector);
 
 /**
  * @brief Free sector data
  * @param sector Sector to free
  */
-void uft_sector_free(uft_sector_t *sector);
+void uft_ride_sector_free(uft_ride_sector_t *sector);
 
 /**
  * @brief Free track data
  * @param track Track to free
  */
-void uft_track_free(uft_track_t *track);
+void uft_ride_track_free(uft_ride_track_t *track);
 
 /*============================================================================
  * TRACK MINING (DATA RECOVERY)
@@ -588,8 +591,8 @@ void uft_mine_cancel(void);
  * @param output Merged output track
  * @return true on success
  */
-bool uft_merge_revolutions(const uft_track_t *tracks, size_t count,
-                           uft_track_t *output);
+bool uft_merge_revolutions(const uft_ride_track_t *tracks, size_t count,
+                           uft_ride_track_t *output);
 
 /*============================================================================
  * ENCODING/DENSITY DETECTION
@@ -629,7 +632,7 @@ void uft_flux_histogram(const uft_flux_buffer_t *flux,
  * @param sector_times Output sector times (array of sector_count)
  * @param gap_times Output gap times (array of sector_count)
  */
-void uft_analyze_timing(const uft_track_t *track,
+void uft_analyze_timing(const uft_ride_track_t *track,
                         uint32_t *sector_times, uint32_t *gap_times);
 
 /**
@@ -638,7 +641,7 @@ void uft_analyze_timing(const uft_track_t *track,
  * @param b Second track
  * @return 0 if identical, negative if a<b, positive if a>b
  */
-int uft_compare_tracks(const uft_track_t *a, const uft_track_t *b);
+int uft_compare_tracks(const uft_ride_track_t *a, const uft_ride_track_t *b);
 
 /**
  * @brief Scan track and extract parse events
@@ -697,7 +700,7 @@ const char *uft_decoder_name(uft_decoder_algo_t algo);
  * @param buffer Output buffer
  * @param size Buffer size
  */
-void uft_sector_status_string(const uft_sector_t *sector,
+void uft_sector_status_string(const uft_ride_sector_t *sector,
                                char *buffer, size_t size);
 
 /**
@@ -706,7 +709,7 @@ void uft_sector_status_string(const uft_sector_t *sector,
  * @param buffer Output buffer
  * @param size Buffer size
  */
-void uft_track_summary_string(const uft_track_t *track,
+void uft_track_summary_string(const uft_ride_track_t *track,
                                char *buffer, size_t size);
 
 /**
@@ -816,7 +819,7 @@ int uft_flux_get_revolution(const uft_flux_buffer_t *flux, int rev,
  */
 int uft_gcr_decode_apple2_sector(const uint8_t *nibbles, size_t count,
                                   uint8_t *data, size_t data_size,
-                                  uft_sector_t *sector);
+                                  uft_ride_sector_t *sector);
 
 /**
  * @brief Get sectors per track for C64 track number
@@ -828,20 +831,20 @@ int uft_c64_sectors_per_track(int track);
  */
 int uft_gcr_decode_c64_sector(const uint8_t *gcr_data, size_t gcr_len,
                                uint8_t *data, size_t data_size,
-                               uft_sector_t *sector);
+                               uft_ride_sector_t *sector);
 
 /**
  * @brief Decode entire Apple II track
  */
 int uft_gcr_decode_apple2_track(const uft_flux_buffer_t *flux,
-                                 uft_track_t *track);
+                                 uft_ride_track_t *track);
 
 /**
  * @brief Decode entire C64 track
  */
 int uft_gcr_decode_c64_track(const uft_flux_buffer_t *flux,
                               int track_num,
-                              uft_track_t *track);
+                              uft_ride_track_t *track);
 
 /*============================================================================
  * HFE FORMAT API
@@ -967,7 +970,7 @@ int uft_mfm_to_udi_track(const uint8_t *mfm_data, size_t mfm_bits,
  */
 int uft_udi_extract_sectors(const uint8_t *track_data, size_t track_len,
                              const uint8_t *sync_map,
-                             uft_sector_t *sectors, int max_sectors);
+                             uft_ride_sector_t *sectors, int max_sectors);
 
 /*============================================================================
  * FORMAT VERIFICATION API

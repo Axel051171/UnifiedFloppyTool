@@ -13,14 +13,12 @@ set(HAL_SOURCES
     uft_applesauce.c
     uft_nibtools.c
     
+    # Greaseweazle - Full implementation
+    uft_greaseweazle_full.c
+    
     # Support
     uft_latency_tracking.c
     ufi.c
-    
-    # Disabled - API mismatch, needs update (P3):
-    # uft_hal_profiles.c
-    # uft_greaseweazle_full.c
-    # uft_hal_v3.c (duplicate of v2)
 )
 
 add_library(uft_hal STATIC ${HAL_SOURCES})

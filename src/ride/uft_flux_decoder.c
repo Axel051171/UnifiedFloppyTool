@@ -417,7 +417,7 @@ static size_t flux_to_bits(const uft_flux_buffer_t *flux,
  * @brief Parse MFM sector from bit stream
  */
 static bool parse_mfm_sector(const uint8_t *bits, size_t bit_count, 
-                             size_t *bit_pos, uft_sector_t *sector) {
+                             size_t *bit_pos, uft_ride_sector_t *sector) {
     if (!bits || !sector || *bit_pos + 640 > bit_count) return false;
     
     /* Temporary buffer for decoded data */
@@ -512,10 +512,10 @@ static bool parse_mfm_sector(const uint8_t *bits, size_t bit_count,
 
 bool uft_decode_track(const uft_flux_buffer_t *flux,
                       const uft_decoder_config_t *config,
-                      uft_track_t *track) {
+                      uft_ride_track_t *track) {
     if (!flux || !config || !track) return false;
     
-    memset(track, 0, sizeof(uft_track_t));
+    memset(track, 0, sizeof(uft_ride_track_t));
     track->encoding = config->encoding;
     track->density = config->density;
     
@@ -555,8 +555,8 @@ bool uft_decode_track(const uft_flux_buffer_t *flux,
         bit_pos = sync_pos + 3 * 16;  /* Skip 3x A1 sync */
         
         /* Try to parse sector */
-        uft_sector_t *sector = &track->sectors[track->sector_count];
-        memset(sector, 0, sizeof(uft_sector_t));
+        uft_ride_sector_t *sector = &track->sectors[track->sector_count];
+        memset(sector, 0, sizeof(uft_ride_sector_t));
         
         if (parse_mfm_sector(bits, bit_count, &bit_pos, sector)) {
             sector->revolution = 0;
@@ -593,12 +593,12 @@ bool uft_decode_track(const uft_flux_buffer_t *flux,
  * SECTOR/TRACK UTILITIES
  *============================================================================*/
 
-bool uft_sector_verify(const uft_sector_t *sector) {
+bool uft_ride_sector_verify(const uft_ride_sector_t *sector) {
     if (!sector) return false;
     return sector->header.header_crc_ok && sector->data_crc_ok;
 }
 
-void uft_sector_free(uft_sector_t *sector) {
+void uft_ride_sector_free(uft_ride_sector_t *sector) {
     if (!sector) return;
     if (sector->data) {
         free(sector->data);
@@ -606,10 +606,10 @@ void uft_sector_free(uft_sector_t *sector) {
     }
 }
 
-void uft_track_free(uft_track_t *track) {
+void uft_ride_track_free(uft_ride_track_t *track) {
     if (!track) return;
     for (int i = 0; i < track->sector_count; i++) {
-        uft_sector_free(&track->sectors[i]);
+        uft_ride_sector_free(&track->sectors[i]);
     }
     track->sector_count = 0;
 }
@@ -770,11 +770,11 @@ bool uft_mine_track(void *device, uint8_t cyl, uint8_t head,
     return result->success;
 }
 
-bool uft_merge_revolutions(const uft_track_t *tracks, size_t count,
-                           uft_track_t *output) {
+bool uft_merge_revolutions(const uft_ride_track_t *tracks, size_t count,
+                           uft_ride_track_t *output) {
     if (!tracks || !output || count == 0) return false;
     
-    memset(output, 0, sizeof(uft_track_t));
+    memset(output, 0, sizeof(uft_ride_track_t));
     
     /* Copy basic info from first track */
     output->cylinder = tracks[0].cylinder;
@@ -784,15 +784,15 @@ bool uft_merge_revolutions(const uft_track_t *tracks, size_t count,
     
     /* For each sector ID, find best version across revolutions */
     for (size_t t = 0; t < count; t++) {
-        const uft_track_t *track = &tracks[t];
+        const uft_ride_track_t *track = &tracks[t];
         
         for (int s = 0; s < track->sector_count; s++) {
-            const uft_sector_t *sector = &track->sectors[s];
+            const uft_ride_sector_t *sector = &track->sectors[s];
             
             /* Check if we already have this sector */
             bool found = false;
             for (int o = 0; o < output->sector_count; o++) {
-                uft_sector_t *existing = &output->sectors[o];
+                uft_ride_sector_t *existing = &output->sectors[o];
                 
                 if (existing->header.id.cylinder == sector->header.id.cylinder &&
                     existing->header.id.head == sector->header.id.head &&
@@ -803,8 +803,8 @@ bool uft_merge_revolutions(const uft_track_t *tracks, size_t count,
                     
                     /* Replace if new one is better */
                     if (sector->confidence > existing->confidence) {
-                        uft_sector_free(existing);
-                        memcpy(existing, sector, sizeof(uft_sector_t));
+                        uft_ride_sector_free(existing);
+                        memcpy(existing, sector, sizeof(uft_ride_sector_t));
                         
                         /* Deep copy data */
                         if (sector->data) {
@@ -821,8 +821,8 @@ bool uft_merge_revolutions(const uft_track_t *tracks, size_t count,
             
             /* Add new sector */
             if (!found && output->sector_count < UFT_SECTORS_MAX) {
-                uft_sector_t *new_sector = &output->sectors[output->sector_count];
-                memcpy(new_sector, sector, sizeof(uft_sector_t));
+                uft_ride_sector_t *new_sector = &output->sectors[output->sector_count];
+                memcpy(new_sector, sector, sizeof(uft_ride_sector_t));
                 
                 if (sector->data) {
                     new_sector->data = malloc(sector->data_size);
@@ -889,7 +889,7 @@ const char *uft_decoder_name(uft_decoder_algo_t algo) {
     }
 }
 
-void uft_sector_status_string(const uft_sector_t *sector,
+void uft_sector_status_string(const uft_ride_sector_t *sector,
                                char *buffer, size_t size) {
     if (!sector || !buffer || size == 0) return;
     
@@ -904,7 +904,7 @@ void uft_sector_status_string(const uft_sector_t *sector,
              sector->data_crc_ok ? "DATA:OK" : "DATA:BAD");
 }
 
-void uft_track_summary_string(const uft_track_t *track,
+void uft_track_summary_string(const uft_ride_track_t *track,
                                char *buffer, size_t size) {
     if (!track || !buffer || size == 0) return;
     

@@ -75,6 +75,17 @@ option(UFT_BUILD_EXAMPLES "Build example programs"         OFF)
 option(UFT_ENABLE_SIMD    "Enable SIMD optimizations"      ON)
 option(UFT_ENABLE_OPENMP  "Enable OpenMP parallelization"  ON)
 option(UFT_ENABLE_LTO     "Enable Link-Time Optimization"  OFF)
+option(UFT_ENABLE_HAL     "Enable Hardware Abstraction Layer (Greaseweazle etc.)" ON)
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# HAL Configuration
+# ═══════════════════════════════════════════════════════════════════════════════
+if(UFT_ENABLE_HAL)
+    add_compile_definitions(UFT_HAS_HAL=1)
+    message(STATUS "HAL: ENABLED (Greaseweazle, FluxEngine, etc.)")
+else()
+    message(STATUS "HAL: DISABLED")
+endif()
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Platform Detection
@@ -185,6 +196,14 @@ if(UFT_BUILD_GUI)
             ${CMAKE_SOURCE_DIR}/forms
             ${CMAKE_SOURCE_DIR}/gui/forms
         )
+        
+        # Check for SerialPort
+        if(TARGET Qt6::SerialPort)
+            add_compile_definitions(UFT_HAS_SERIALPORT=1)
+            message(STATUS "Qt6::SerialPort: ENABLED")
+        else()
+            message(STATUS "Qt6::SerialPort: NOT FOUND (port detection disabled)")
+        endif()
     else()
         message(STATUS "Qt6 not found - GUI will not be built")
         set(UFT_BUILD_GUI OFF)

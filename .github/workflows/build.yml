@@ -42,7 +42,46 @@ jobs:
           mkdir -p dist/UnifiedFloppyTool-${{ env.UFT_VERSION }}-linux-x64
           cp build/UnifiedFloppyTool dist/UnifiedFloppyTool-${{ env.UFT_VERSION }}-linux-x64/
           cp README.md LICENSE dist/UnifiedFloppyTool-${{ env.UFT_VERSION }}-linux-x64/ 2>/dev/null || true
+          echo "NOTE: This tar.gz requires Qt6 to be installed on your system." > dist/UnifiedFloppyTool-${{ env.UFT_VERSION }}-linux-x64/INSTALL.txt
+          echo "Install with: sudo apt install qt6-base-dev libusb-1.0-0" >> dist/UnifiedFloppyTool-${{ env.UFT_VERSION }}-linux-x64/INSTALL.txt
           cd dist && tar -czvf UnifiedFloppyTool-${{ env.UFT_VERSION }}-linux-x64.tar.gz UnifiedFloppyTool-${{ env.UFT_VERSION }}-linux-x64
+      
+      - name: Create AppImage
+        run: |
+          # Download linuxdeploy
+          wget -q https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
+          wget -q https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-x86_64.AppImage
+          chmod +x linuxdeploy*.AppImage
+          
+          # Create AppDir structure
+          mkdir -p AppDir/usr/bin
+          mkdir -p AppDir/usr/share/applications
+          mkdir -p AppDir/usr/share/icons/hicolor/256x256/apps
+          
+          cp build/UnifiedFloppyTool AppDir/usr/bin/
+          
+          # Create desktop file
+          cat > AppDir/usr/share/applications/unifiedfloppytool.desktop << 'DESKTOP'
+          [Desktop Entry]
+          Name=UnifiedFloppyTool
+          Comment=Professional Floppy Disk Preservation Tool
+          Exec=UnifiedFloppyTool
+          Icon=unifiedfloppytool
+          Terminal=false
+          Type=Application
+          Categories=Utility;System;
+          DESKTOP
+          
+          # Create simple icon (placeholder)
+          convert -size 256x256 xc:'#2196F3' -fill white -gravity center -pointsize 48 -annotate 0 'UFT' AppDir/usr/share/icons/hicolor/256x256/apps/unifiedfloppytool.png 2>/dev/null || \
+          echo "Icon creation skipped (imagemagick not available)"
+          
+          # Build AppImage
+          export QMAKE=/usr/lib/qt6/bin/qmake
+          ./linuxdeploy-x86_64.AppImage --appdir AppDir --plugin qt --output appimage || true
+          
+          # Move to dist
+          mv UnifiedFloppyTool*.AppImage dist/ 2>/dev/null || echo "AppImage creation failed, tar.gz still available"
       
       - name: Create .deb Package
         run: |
@@ -88,6 +127,13 @@ jobs:
         with:
           name: UFT-Linux-deb
           path: dist/*.deb
+      
+      - name: Upload AppImage
+        uses: actions/upload-artifact@v4
+        with:
+          name: UFT-Linux-AppImage
+          path: dist/*.AppImage
+        if: always()
 
   build-macos:
     runs-on: macos-latest

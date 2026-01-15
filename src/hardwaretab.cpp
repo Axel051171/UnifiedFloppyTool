@@ -26,12 +26,23 @@
 #include <QMessageBox>
 #include <QRandomGenerator>
 #include <QDebug>
+#include <QThread>
 
 #ifdef UFT_HAS_SERIALPORT
 #include <QSerialPortInfo>
 #define HAS_SERIALPORT 1
 #else
 #define HAS_SERIALPORT 0
+#endif
+
+// HAL includes for real hardware connection
+#ifdef UFT_HAS_HAL
+extern "C" {
+#include "uft/hal/uft_greaseweazle_full.h"
+}
+#define HAS_HAL 1
+#else
+#define HAS_HAL 0
 #endif
 
 // ============================================================================
@@ -49,6 +60,8 @@ HardwareTab::HardwareTab(QWidget *parent)
     , m_controllerRole(RoleSource)
     , m_sourceIsHardware(true)
     , m_destIsHardware(true)
+    , m_hwModel(0)
+    , m_gwDevice(nullptr)
     , m_detectedTracks(0)
     , m_detectedHeads(0)
     , m_detectedRPM(0)
@@ -70,6 +83,14 @@ HardwareTab::HardwareTab(QWidget *parent)
 
 HardwareTab::~HardwareTab()
 {
+    // Close HAL device if still open
+    #ifdef UFT_HAS_HAL
+    if (m_gwDevice != nullptr) {
+        uft_gw_close(static_cast<uft_gw_device_t*>(m_gwDevice));
+        m_gwDevice = nullptr;
+    }
+    #endif
+    
     if (m_motorTimer) {
         m_motorTimer->stop();
         delete m_motorTimer;
@@ -332,19 +353,65 @@ void HardwareTab::onConnect()
     
     updateStatus(tr("Connecting to %1 on %2...").arg(m_controllerType, m_portName));
     
-    // Simulate connection (real implementation would use HAL)
-    // TODO: Replace with real uft_hal_connect()
+    // Use real HAL connection for Greaseweazle
+    // Note: This runs in main thread - consider moving to worker for non-blocking
+    QString controller = ui->comboController->currentData().toString();
     
+    if (controller == "greaseweazle" || controller == "fluxengine") {
+        // Real HAL connection attempt
+        #ifdef UFT_HAS_HAL
+        uft_gw_device_t *gw = nullptr;
+        int ret = uft_gw_open(&gw, port.toLocal8Bit().constData());
+        
+        if (ret == 0 && gw != nullptr) {
+            // Get device info
+            uft_gw_info_t info;
+            if (uft_gw_get_info(gw, &info) == 0) {
+                m_firmwareVersion = QString("v%1.%2").arg(info.fw_major).arg(info.fw_minor);
+                m_hwModel = info.hw_model;
+            } else {
+                m_firmwareVersion = "Unknown";
+            }
+            
+            // Store handle for later use
+            m_gwDevice = gw;
+            m_connected = true;
+            setConnectionState(true);
+            
+            if (m_autoDetect) {
+                autoDetectDrive();
+            }
+            
+            updateStatus(tr("Connected to %1 F%2 (%3)")
+                .arg(m_controllerType)
+                .arg(m_hwModel)
+                .arg(m_firmwareVersion));
+            emit connectionChanged(true);
+            return;
+        } else {
+            updateStatus(tr("Connection failed: %1").arg(uft_gw_strerror(ret)));
+            QMessageBox::warning(this, tr("Connection Error"),
+                tr("Failed to connect to %1 on %2.\n\nError: %3")
+                .arg(m_controllerType, m_portName, QString::fromUtf8(uft_gw_strerror(ret))));
+            return;
+        }
+        #else
+        // HAL not available - fall back to simulated connection
+        qWarning() << "HAL not available, using simulated connection";
+        #endif
+    }
+    
+    // Fallback: Simulated connection for unsupported controllers
     QTimer::singleShot(500, this, [this]() {
         m_connected = true;
-        m_firmwareVersion = "v4.1";
+        m_firmwareVersion = "Simulated";
         setConnectionState(true);
         
         if (m_autoDetect) {
             autoDetectDrive();
         }
         
-        updateStatus(tr("Connected to %1 (%2)").arg(m_controllerType, m_firmwareVersion));
+        updateStatus(tr("Connected to %1 (%2) [SIMULATED]").arg(m_controllerType, m_firmwareVersion));
         emit connectionChanged(true);
     });
 }
@@ -355,7 +422,16 @@ void HardwareTab::onDisconnect()
         onMotorOff();
     }
     
+    // Close HAL device if open
+    #ifdef UFT_HAS_HAL
+    if (m_gwDevice != nullptr) {
+        uft_gw_close(static_cast<uft_gw_device_t*>(m_gwDevice));
+        m_gwDevice = nullptr;
+    }
+    #endif
+    
     m_connected = false;
+    m_hwModel = 0;
     setConnectionState(false);
     clearDetectedInfo();
     
@@ -413,21 +489,97 @@ void HardwareTab::autoDetectDrive()
 {
     updateStatus(tr("Detecting drive..."));
     
-    // Simulate detection (real implementation would use HAL)
-    QTimer::singleShot(1000, this, [this]() {
-        // Simulated detection results
-        QString driveType = "3.5\" HD";
-        int tracks = 80;
-        int heads = 2;
-        QString density = "HD";
-        int rpm = 300;
-        
-        applyDetectedSettings(driveType, tracks, heads, density, rpm);
-        setDetectedInfo(driveType, m_firmwareVersion, QString::number(rpm), "Yes");
-        
-        updateStatus(tr("Drive detected: %1, %2 tracks, %3 RPM")
-                    .arg(driveType).arg(tracks).arg(rpm));
-    });
+#if HAS_HAL
+    if (m_gwDevice == nullptr) {
+        updateStatus(tr("No device connected"));
+        return;
+    }
+    
+    uft_gw_device_t* gw = static_cast<uft_gw_device_t*>(m_gwDevice);
+    
+    // Select drive unit 0
+    int ret = uft_gw_select_drive(gw, 0);
+    if (ret != 0) {
+        updateStatus(tr("Failed to select drive: %1").arg(ret));
+        return;
+    }
+    
+    // Turn on motor
+    ret = uft_gw_set_motor(gw, true);
+    if (ret != 0) {
+        updateStatus(tr("Failed to turn on motor: %1").arg(ret));
+        return;
+    }
+    
+    // Wait for spin-up
+    QThread::msleep(500);
+    
+    // Try to seek to track 0 to detect drive presence
+    ret = uft_gw_seek(gw, 0);
+    if (ret != 0) {
+        uft_gw_set_motor(gw, false);
+        updateStatus(tr("No drive detected (seek failed)"));
+        return;
+    }
+    
+    // Detect drive type by seeking to high tracks
+    QString driveType = "Unknown";
+    int maxTracks = 80;
+    
+    // Try track 80 (HD drives)
+    ret = uft_gw_seek(gw, 80);
+    if (ret == 0) {
+        // Try track 82 (some drives support more)
+        ret = uft_gw_seek(gw, 82);
+        if (ret == 0) {
+            maxTracks = 83;
+        } else {
+            maxTracks = 80;
+        }
+    } else {
+        // Might be a 40-track drive
+        ret = uft_gw_seek(gw, 40);
+        if (ret == 0) {
+            maxTracks = 40;
+            driveType = "5.25\" DD";
+        }
+    }
+    
+    // Detect density by checking write protect and disk presence
+    bool writeProtected = uft_gw_is_write_protected(gw);
+    
+    // Determine drive type based on tracks
+    if (maxTracks >= 80) {
+        driveType = "3.5\" HD";  // Most common
+    } else if (maxTracks == 40) {
+        driveType = "5.25\" DD";
+    }
+    
+    int heads = 2;  // Assume double-sided
+    QString density = (maxTracks >= 80) ? "HD" : "DD";
+    int rpm = 300;  // Standard, will be measured in RPM test
+    
+    // Return to track 0
+    uft_gw_seek(gw, 0);
+    
+    // Turn off motor
+    uft_gw_set_motor(gw, false);
+    
+    // Apply detected settings
+    applyDetectedSettings(driveType, maxTracks, heads, density, rpm);
+    setDetectedInfo(driveType, m_firmwareVersion, QString::number(rpm), 
+                    writeProtected ? tr("Yes") : tr("No"));
+    
+    updateStatus(tr("Drive detected: %1, %2 tracks, Write Protected: %3")
+                .arg(driveType).arg(maxTracks).arg(writeProtected ? "Yes" : "No"));
+#else
+    // No HAL - show warning
+    QMessageBox::warning(this, tr("HAL Not Available"),
+        tr("Hardware Abstraction Layer is not compiled in.\n"
+           "Drive detection is not available.\n\n"
+           "Please rebuild UFT with UFT_HAS_HAL=ON"));
+    updateStatus(tr("HAL not available - detection skipped"));
+#endif
 }
 
 void HardwareTab::applyDetectedSettings(const QString& driveType, int tracks,
@@ -559,6 +711,17 @@ void HardwareTab::onMotorOn()
 {
     if (!m_connected) return;
     
+#if HAS_HAL
+    if (m_gwDevice != nullptr) {
+        uft_gw_device_t* gw = static_cast<uft_gw_device_t*>(m_gwDevice);
+        int ret = uft_gw_set_motor(gw, true);
+        if (ret != 0) {
+            updateStatus(tr("Failed to turn motor on: error %1").arg(ret));
+            return;
+        }
+    }
+#endif
+    
     m_motorRunning = true;
     updateMotorControlsEnabled();
     updateStatus(tr("Motor ON"));
@@ -577,6 +740,16 @@ void HardwareTab::onMotorOn()
 void HardwareTab::onMotorOff()
 {
     if (!m_connected) return;
+    
+#if HAS_HAL
+    if (m_gwDevice != nullptr) {
+        uft_gw_device_t* gw = static_cast<uft_gw_device_t*>(m_gwDevice);
+        int ret = uft_gw_set_motor(gw, false);
+        if (ret != 0) {
+            updateStatus(tr("Failed to turn motor off: error %1").arg(ret));
+        }
+    }
+#endif
     
     m_motorRunning = false;
     if (m_motorTimer) {
@@ -619,9 +792,44 @@ void HardwareTab::onSeekTest()
     if (!m_connected) return;
     
     updateStatus(tr("Running seek test..."));
-    QTimer::singleShot(2000, this, [this]() {
+    
+#if HAS_HAL
+    if (m_gwDevice == nullptr) {
+        updateStatus(tr("No device"));
+        return;
+    }
+    
+    uft_gw_device_t* gw = static_cast<uft_gw_device_t*>(m_gwDevice);
+    
+    // Turn on motor
+    uft_gw_set_motor(gw, true);
+    QThread::msleep(300);
+    
+    int errors = 0;
+    int maxTrack = m_detectedTracks > 0 ? m_detectedTracks : 80;
+    
+    // Seek to each track
+    for (int track = 0; track <= maxTrack; track += 10) {
+        int ret = uft_gw_seek(gw, track);
+        if (ret != 0) {
+            errors++;
+            updateStatus(tr("Seek error at track %1").arg(track));
+        }
+        QThread::msleep(10);
+    }
+    
+    // Return to track 0
+    uft_gw_seek(gw, 0);
+    uft_gw_set_motor(gw, false);
+    
+    if (errors == 0) {
         updateStatus(tr("Seek test complete - all tracks accessible."));
-    });
+    } else {
+        updateStatus(tr("Seek test complete - %1 errors.").arg(errors));
+    }
+#else
+    updateStatus(tr("Seek test requires HAL"));
+#endif
 }
 
 void HardwareTab::onReadTest()
@@ -629,9 +837,53 @@ void HardwareTab::onReadTest()
     if (!m_connected) return;
     
     updateStatus(tr("Running read test..."));
-    QTimer::singleShot(3000, this, [this]() {
-        updateStatus(tr("Read test complete - track 0 readable."));
-    });
+    
+#if HAS_HAL
+    if (m_gwDevice == nullptr) {
+        updateStatus(tr("No device"));
+        return;
+    }
+    
+    uft_gw_device_t* gw = static_cast<uft_gw_device_t*>(m_gwDevice);
+    
+    // Select drive and turn on motor
+    uft_gw_select_drive(gw, 0);
+    uft_gw_set_motor(gw, true);
+    QThread::msleep(500);
+    
+    // Seek to track 0
+    int ret = uft_gw_seek(gw, 0);
+    if (ret != 0) {
+        uft_gw_set_motor(gw, false);
+        updateStatus(tr("Read test failed: cannot seek to track 0"));
+        return;
+    }
+    
+    // Select head 0
+    uft_gw_select_head(gw, 0);
+    
+    // Try to read flux data
+    uft_gw_read_params_t params = {0};
+    params.revolutions = 1;
+    params.index_sync = true;
+    
+    uft_gw_flux_data_t flux = {0};
+    ret = uft_gw_read_flux(gw, &params, &flux);
+    
+    uft_gw_set_motor(gw, false);
+    
+    if (ret == 0 && flux.sample_count > 0) {
+        updateStatus(tr("Read test complete - Track 0 readable (%1 samples, %2 index pulses)")
+                    .arg(flux.sample_count).arg(flux.index_count));
+        // Free flux data
+        if (flux.samples) free(flux.samples);
+        if (flux.index_times) free(flux.index_times);
+    } else {
+        updateStatus(tr("Read test failed: no data or error %1").arg(ret));
+    }
+#else
+    updateStatus(tr("Read test requires HAL"));
+#endif
 }
 
 void HardwareTab::onRPMTest()
@@ -639,10 +891,51 @@ void HardwareTab::onRPMTest()
     if (!m_connected) return;
     
     updateStatus(tr("Measuring RPM..."));
-    QTimer::singleShot(2000, this, [this]() {
-        int rpm = 299 + QRandomGenerator::global()->bounded(3);
-        updateStatus(tr("RPM: %1 (target: 300)").arg(rpm));
-    });
+    
+#if HAS_HAL
+    if (m_gwDevice == nullptr) {
+        updateStatus(tr("No device"));
+        return;
+    }
+    
+    uft_gw_device_t* gw = static_cast<uft_gw_device_t*>(m_gwDevice);
+    
+    // Turn on motor
+    uft_gw_set_motor(gw, true);
+    QThread::msleep(1000);  // Wait for stable rotation
+    
+    // Read one revolution to measure index time
+    uft_gw_read_params_t params = {0};
+    params.revolutions = 2;  // Need 2 to measure interval
+    params.index_sync = true;
+    
+    uft_gw_flux_data_t flux = {0};
+    int ret = uft_gw_read_flux(gw, &params, &flux);
+    
+    uft_gw_set_motor(gw, false);
+    
+    if (ret == 0 && flux.index_count >= 2) {
+        // Calculate RPM from index times
+        uint32_t sample_freq = uft_gw_get_sample_freq(gw);
+        uint32_t interval_ticks = flux.index_times[1] - flux.index_times[0];
+        double interval_ms = (double)interval_ticks / sample_freq * 1000.0;
+        double rpm = 60000.0 / interval_ms;
+        
+        updateStatus(tr("RPM: %1 (interval: %2 ms)")
+                    .arg(rpm, 0, 'f', 1).arg(interval_ms, 0, 'f', 2));
+        
+        // Update detected RPM
+        m_detectedRPM = qRound(rpm);
+        
+        // Free flux data
+        if (flux.samples) free(flux.samples);
+        if (flux.index_times) free(flux.index_times);
+    } else {
+        updateStatus(tr("RPM measurement failed: insufficient index pulses"));
+    }
+#else
+    updateStatus(tr("RPM test requires HAL"));
+#endif
 }
 
 void HardwareTab::onCalibrate()
@@ -650,7 +943,40 @@ void HardwareTab::onCalibrate()
     if (!m_connected) return;
     
     updateStatus(tr("Calibrating drive..."));
-    QTimer::singleShot(5000, this, [this]() {
-        updateStatus(tr("Calibration complete."));
-    });
+    
+#if HAS_HAL
+    if (m_gwDevice == nullptr) {
+        updateStatus(tr("No device"));
+        return;
+    }
+    
+    uft_gw_device_t* gw = static_cast<uft_gw_device_t*>(m_gwDevice);
+    
+    // Turn on motor
+    uft_gw_set_motor(gw, true);
+    QThread::msleep(300);
+    
+    // Seek to track 0 (home position)
+    int ret = uft_gw_seek(gw, 0);
+    if (ret != 0) {
+        uft_gw_set_motor(gw, false);
+        updateStatus(tr("Calibration failed: cannot find track 0"));
+        return;
+    }
+    
+    // Move out and back to verify
+    uft_gw_seek(gw, 2);
+    QThread::msleep(50);
+    ret = uft_gw_seek(gw, 0);
+    
+    uft_gw_set_motor(gw, false);
+    
+    if (ret == 0) {
+        updateStatus(tr("Calibration complete - head at track 0"));
+    } else {
+        updateStatus(tr("Calibration error: track 0 sensor issue"));
+    }
+#else
+    updateStatus(tr("Calibration requires HAL"));
+#endif
 }

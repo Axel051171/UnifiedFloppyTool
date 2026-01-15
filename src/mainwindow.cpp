@@ -103,6 +103,12 @@ void MainWindow::loadTabWidgets()
     connect(workflowTab, &WorkflowTab::hardwareModeChanged,
             hardwareTab, &HardwareTab::setWorkflowModes);
     
+    // Connect HardwareTab connection state to MainWindow LED status
+    connect(hardwareTab, &HardwareTab::connectionChanged,
+            this, [this](bool connected) {
+                setLEDStatus(connected ? LEDStatus::Connected : LEDStatus::Disconnected);
+            });
+    
     // Tab 4: Settings - All settings as Sub-Tabs (Flux, Format, XCopy, Nibble, Forensic, Protection)
     FormatTab* formatTab = new FormatTab();
     QVBoxLayout* layout3 = new QVBoxLayout(ui->tab_format);

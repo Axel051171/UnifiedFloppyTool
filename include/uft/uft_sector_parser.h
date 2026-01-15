@@ -28,20 +28,34 @@ extern "C" {
 #endif
 
 /* ═══════════════════════════════════════════════════════════════════════════
- * Status Flags
+ * Status Flags (parser-specific)
  * ═══════════════════════════════════════════════════════════════════════════ */
 
-typedef enum uft_sector_status {
-    UFT_SECTOR_OK                = 0u,
-    UFT_SECTOR_CRC_ID_BAD        = 1u << 0,
-    UFT_SECTOR_CRC_DATA_BAD      = 1u << 1,
-    UFT_SECTOR_MISSING_DATA      = 1u << 2,
-    UFT_SECTOR_DUPLICATE_ID      = 1u << 3,
-    UFT_SECTOR_SIZE_MISMATCH     = 1u << 4,
-    UFT_SECTOR_TRUNCATED         = 1u << 5,
-    UFT_SECTOR_WEAK_SYNC         = 1u << 6,
-    UFT_SECTOR_UNUSUAL_MARK      = 1u << 7,
-} uft_sector_status_t;
+/* Use the global uft_sector_status from uft_types.h */
+#include "uft/uft_types.h"
+
+/* Parser-specific extended status flags */
+typedef enum uft_parser_status {
+    UFT_PARSER_OK                = 0u,
+    UFT_PARSER_CRC_ID_BAD        = 1u << 0,
+    UFT_PARSER_CRC_DATA_BAD      = 1u << 1,
+    UFT_PARSER_MISSING_DATA      = 1u << 2,
+    UFT_PARSER_DUPLICATE_ID      = 1u << 3,
+    UFT_PARSER_SIZE_MISMATCH     = 1u << 4,
+    UFT_PARSER_TRUNCATED         = 1u << 5,
+    UFT_PARSER_WEAK_SYNC         = 1u << 6,
+    UFT_PARSER_UNUSUAL_MARK      = 1u << 7,
+} uft_parser_status_t;
+
+/* Aliases for legacy code compatibility */
+#define UFT_SECTOR_CRC_ID_BAD       UFT_PARSER_CRC_ID_BAD
+#define UFT_SECTOR_CRC_DATA_BAD     UFT_PARSER_CRC_DATA_BAD
+#define UFT_SECTOR_MISSING_DATA     UFT_PARSER_MISSING_DATA
+#define UFT_SECTOR_DUPLICATE_ID     UFT_PARSER_DUPLICATE_ID
+#define UFT_SECTOR_SIZE_MISMATCH    UFT_PARSER_SIZE_MISMATCH
+#define UFT_SECTOR_TRUNCATED        UFT_PARSER_TRUNCATED
+#define UFT_SECTOR_WEAK_SYNC        UFT_PARSER_WEAK_SYNC
+#define UFT_SECTOR_UNUSUAL_MARK     UFT_PARSER_UNUSUAL_MARK
 
 /* ═══════════════════════════════════════════════════════════════════════════
  * Encoding Types (local to this module)

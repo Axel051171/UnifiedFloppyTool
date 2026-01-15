@@ -136,6 +136,8 @@ private:
     QString m_controllerType;
     QString m_portName;
     QString m_firmwareVersion;
+    int m_hwModel;              // Hardware model (e.g., F1=1, F7=7)
+    void *m_gwDevice;           // HAL device handle (uft_gw_device_t*)
     
     // Detected drive info
     QString m_detectedModel;

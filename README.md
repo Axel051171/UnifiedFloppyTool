@@ -77,6 +77,18 @@ cd UnifiedFloppyTool
 qmake && make
 ```
 
+**Note: "App is damaged" Warning**
+
+If macOS shows "UnifiedFloppyTool is damaged and can't be opened", this is because the app is not code-signed. To run it:
+
+```bash
+# Option 1: Remove quarantine attribute
+xattr -cr /Applications/UnifiedFloppyTool.app
+
+# Option 2: Right-click the app and select "Open"
+# Then click "Open" in the dialog that appears
+```
+
 ## Supported Hardware
 
 | Controller | Status |

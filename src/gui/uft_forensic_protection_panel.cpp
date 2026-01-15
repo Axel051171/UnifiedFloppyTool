@@ -9,6 +9,8 @@
 #include <QHBoxLayout>
 #include <QFormLayout>
 #include <QHeaderView>
+#include <QCryptographicHash>
+#include <QFile>
 
 /* ============================================================================
  * Forensic Panel
@@ -165,20 +167,135 @@ void UftForensicPanel::runAnalysis()
     m_detailsView->appendPlainText("Running analysis...");
     emit analysisStarted();
     
-    /* Simulate results */
-    m_resultsTable->setRowCount(5);
-    m_resultsTable->setItem(0, 0, new QTableWidgetItem("Format Detection"));
-    m_resultsTable->setItem(0, 1, new QTableWidgetItem("✓ OK"));
-    m_resultsTable->setItem(0, 2, new QTableWidgetItem("D64 35 Track"));
+    QString filePath = m_imagePath;
+    if (filePath.isEmpty()) {
+        m_detailsView->appendPlainText("Error: No image file specified");
+        emit analysisFinished();
+        return;
+    }
     
-    m_resultsTable->setItem(1, 0, new QTableWidgetItem("Structure"));
-    m_resultsTable->setItem(1, 1, new QTableWidgetItem("✓ Valid"));
+    QFile file(filePath);
+    if (!file.open(QIODevice::ReadOnly)) {
+        m_detailsView->appendPlainText("Error: Cannot open file");
+        emit analysisFinished();
+        return;
+    }
     
-    m_resultsTable->setItem(2, 0, new QTableWidgetItem("BAM"));
-    m_resultsTable->setItem(2, 1, new QTableWidgetItem("✓ Valid"));
+    QByteArray data = file.readAll();
+    file.close();
     
-    m_md5Result->setText("d41d8cd98f00b204e9800998ecf8427e");
-    m_crc32Result->setText("00000000");
+    m_resultsTable->setRowCount(0);
+    int row = 0;
+    
+    // Calculate checksums
+    if (m_md5->isChecked()) {
+        QByteArray md5 = QCryptographicHash::hash(data, QCryptographicHash::Md5);
+        m_md5Result->setText(md5.toHex());
+        m_resultsTable->insertRow(row);
+        m_resultsTable->setItem(row, 0, new QTableWidgetItem("MD5"));
+        m_resultsTable->setItem(row, 1, new QTableWidgetItem("✓ Calculated"));
+        m_resultsTable->setItem(row, 2, new QTableWidgetItem(md5.toHex()));
+        row++;
+    }
+    
+    if (m_sha1->isChecked()) {
+        QByteArray sha1 = QCryptographicHash::hash(data, QCryptographicHash::Sha1);
+        m_sha1Result->setText(sha1.toHex());
+        m_resultsTable->insertRow(row);
+        m_resultsTable->setItem(row, 0, new QTableWidgetItem("SHA-1"));
+        m_resultsTable->setItem(row, 1, new QTableWidgetItem("✓ Calculated"));
+        m_resultsTable->setItem(row, 2, new QTableWidgetItem(sha1.toHex()));
+        row++;
+    }
+    
+    if (m_sha256->isChecked()) {
+        QByteArray sha256 = QCryptographicHash::hash(data, QCryptographicHash::Sha256);
+        m_sha256Result->setText(sha256.toHex());
+        m_resultsTable->insertRow(row);
+        m_resultsTable->setItem(row, 0, new QTableWidgetItem("SHA-256"));
+        m_resultsTable->setItem(row, 1, new QTableWidgetItem("✓ Calculated"));
+        m_resultsTable->setItem(row, 2, new QTableWidgetItem(sha256.toHex().left(32) + "..."));
+        row++;
+    }
+    
+    if (m_crc32->isChecked()) {
+        // CRC32 calculation
+        uint32_t crc = 0xFFFFFFFF;
+        const uint8_t *ptr = reinterpret_cast<const uint8_t*>(data.constData());
+        for (int i = 0; i < data.size(); i++) {
+            crc ^= ptr[i];
+            for (int j = 0; j < 8; j++) {
+                crc = (crc >> 1) ^ (0xEDB88320 & -(crc & 1));
+            }
+        }
+        crc ^= 0xFFFFFFFF;
+        QString crcStr = QString("%1").arg(crc, 8, 16, QChar('0')).toUpper();
+        m_crc32Result->setText(crcStr);
+        m_resultsTable->insertRow(row);
+        m_resultsTable->setItem(row, 0, new QTableWidgetItem("CRC32"));
+        m_resultsTable->setItem(row, 1, new QTableWidgetItem("✓ Calculated"));
+        m_resultsTable->setItem(row, 2, new QTableWidgetItem(crcStr));
+        row++;
+    }
+    
+    // Format detection
+    if (m_analyzeFormat->isChecked()) {
+        QString format = "Unknown";
+        qint64 size = data.size();
+        
+        // Detect by size
+        if (size == 174848) format = "D64 (35 tracks)";
+        else if (size == 175531) format = "D64 with errors";
+        else if (size == 196608) format = "D64 (40 tracks)";
+        else if (size == 349696) format = "D71";
+        else if (size == 819200) format = "D81";
+        else if (size == 901120) format = "ADF (DD)";
+        else if (size == 1802240) format = "ADF (HD)";
+        else if (size == 143360) format = "Apple DOS 3.3";
+        else if (size == 737280) format = "720K DD";
+        else if (size == 1474560) format = "1.44MB HD";
+        else if (size == 2949120) format = "2.88MB ED";
+        else if (size == 368640) format = "Atari ST SS";
+        else if (size == 737280) format = "Atari ST DS";
+        
+        m_resultsTable->insertRow(row);
+        m_resultsTable->setItem(row, 0, new QTableWidgetItem("Format"));
+        m_resultsTable->setItem(row, 1, new QTableWidgetItem("✓ Detected"));
+        m_resultsTable->setItem(row, 2, new QTableWidgetItem(format));
+        row++;
+        
+        m_detailsView->appendPlainText(QString("Format: %1 (%2 bytes)").arg(format).arg(size));
+    }
+    
+    // Structure validation
+    if (m_validateStructure->isChecked()) {
+        bool valid = true;
+        QString details;
+        
+        // Check D64 BAM if applicable
+        if (data.size() >= 174848) {
+            // Track 18, Sector 0 is at offset 0x16500
+            int bamOffset = 0x16500;
+            if (bamOffset + 256 <= data.size()) {
+                uint8_t dirTrack = data[bamOffset];
+                uint8_t dirSector = data[bamOffset + 1];
+                uint8_t dosVersion = data[bamOffset + 2];
+                
+                if (dirTrack == 18 && dirSector == 1 && dosVersion == 0x41) {
+                    details = "D64 BAM valid";
+                } else {
+                    valid = false;
+                    details = "D64 BAM invalid or non-standard";
+                }
+            }
+        }
+        
+        m_resultsTable->insertRow(row);
+        m_resultsTable->setItem(row, 0, new QTableWidgetItem("Structure"));
+        m_resultsTable->setItem(row, 1, new QTableWidgetItem(valid ? "✓ Valid" : "✗ Invalid"));
+        m_resultsTable->setItem(row, 2, new QTableWidgetItem(details));
+        row++;
+    }
     
     m_detailsView->appendPlainText("Analysis complete.");
     emit analysisFinished();

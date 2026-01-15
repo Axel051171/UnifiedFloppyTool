@@ -531,7 +531,7 @@ int uft_verify_udi(const char *path, uft_verify_result_t *result) {
  */
 int uft_udi_extract_sectors(const uint8_t *track_data, size_t track_len,
                              const uint8_t *sync_map,
-                             uft_sector_t *sectors, int max_sectors) {
+                             uft_ride_sector_t *sectors, int max_sectors) {
     if (!track_data || track_len < 10 || !sectors || max_sectors < 1) {
         return -1;
     }
@@ -617,7 +617,7 @@ int uft_udi_extract_sectors(const uint8_t *track_data, size_t track_len,
                     /* Complete sector found */
                     int sector_size = 128 << (hdr_length & 3);
                     
-                    memset(&sectors[sector_count], 0, sizeof(uft_sector_t));
+                    memset(&sectors[sector_count], 0, sizeof(uft_ride_sector_t));
                     sectors[sector_count].header.id.cylinder = hdr_track;
                     sectors[sector_count].header.id.head = hdr_side;
                     sectors[sector_count].header.id.sector = hdr_sector;

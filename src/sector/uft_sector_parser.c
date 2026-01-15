@@ -140,10 +140,10 @@ static int find_next_record(const uft_sector_config_t *cfg,
 
 static int id_equals(const uft_sector_id_t *a, const uft_sector_id_t *b) {
     return a && b && 
-           a->cyl == b->cyl && 
+           a->cylinder == b->cylinder && 
            a->head == b->head && 
-           a->sec == b->sec && 
-           a->size_n == b->size_n;
+           a->sector == b->sector && 
+           a->size_code == b->size_code;
 }
 
 static int find_sector_by_id(uft_parsed_sector_t *sectors, size_t count, 
@@ -221,10 +221,10 @@ int uft_sector_parse_track(const uft_sector_config_t *cfg,
 
         /* Parse ID fields (CHRN) */
         uft_sector_id_t id = {
-            .cyl    = stream[mark_pos + 1],
+            .cylinder    = stream[mark_pos + 1],
             .head   = stream[mark_pos + 2],
-            .sec    = stream[mark_pos + 3],
-            .size_n = stream[mark_pos + 4],
+            .sector    = stream[mark_pos + 3],
+            .size_code = stream[mark_pos + 4],
         };
 
         /* Read and calculate CRC */
@@ -236,10 +236,10 @@ int uft_sector_parse_track(const uft_sector_config_t *cfg,
         tmp[1] = stream[sync_pos + 1];
         tmp[2] = stream[sync_pos + 2];
         tmp[3] = stream[mark_pos];
-        tmp[4] = id.cyl;
+        tmp[4] = id.cylinder;
         tmp[5] = id.head;
-        tmp[6] = id.sec;
-        tmp[7] = id.size_n;
+        tmp[6] = id.sector;
+        tmp[7] = id.size_code;
         uint16_t crc_calc = uft_sector_crc16(tmp, sizeof(tmp), 0xFFFF);
 
         /* Check for duplicate */
@@ -273,7 +273,7 @@ int uft_sector_parse_track(const uft_sector_config_t *cfg,
      * ───────────────────────────────────────────────────────────────────── */
     for (size_t si = 0; si < sector_count; si++) {
         uft_parsed_sector_t *s = &sectors[si];
-        uint16_t expected_len = uft_sector_length_from_n(s->id_rec.id.size_n);
+        uint16_t expected_len = uft_sector_length_from_n(s->id_rec.id.size_code);
         s->data_rec.expected_len = expected_len;
 
         /* Search range: after ID record */
