@@ -23,6 +23,8 @@
 #include <QDialog>
 #include <QImage>
 #include <QTimer>
+#include <QMap>
+#include <QPair>
 
 namespace Ui {
 class VisualDiskDialog;

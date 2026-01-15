@@ -37,6 +37,10 @@ set(UFT_FORMAT_SOURCES
     # ZX Spectrum / Sinclair (integrated from uft_drive_trx_scl_pack_v2)
     scl/uft_scl.c
     
+    # TI-99/4A Formats
+    ti99/uft_tifiles.c
+    ti99/uft_fiad.c
+    
     # XDF (IBM Extended Density Format)
     uft_xdf.c
     

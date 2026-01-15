@@ -229,6 +229,7 @@ add_subdirectory(src/tracks)
 add_subdirectory(src/formats/scp)
 add_subdirectory(src/formats/amstrad)
 add_subdirectory(src/formats/msa)
+add_subdirectory(src/formats/ti99)
 add_subdirectory(src/formats/flashfloppy)
 add_subdirectory(src/loaders/disk_formats)
 
