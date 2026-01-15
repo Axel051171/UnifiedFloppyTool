@@ -144,7 +144,7 @@ int uft_amigados_open(uft_amigados_ctx_t *ctx, const uint8_t *data, size_t size)
         ctx->fs_flags = bb[3];
         ctx->is_ffs = (ctx->fs_flags & FS_FFS) != 0;
         ctx->is_intl = (ctx->fs_flags & FS_INTL) != 0;
-        ctx->is_dcache = (ctx->fs_flags & FS_DCACHE) != 0;
+        ctx->is_dircache = (ctx->fs_flags & FS_DCACHE) != 0;
     } else {
         /* Not a DOS disk - might be NDOS or bootblock only */
         return -1;
@@ -491,7 +491,7 @@ int uft_amigados_report_json(const uft_amigados_ctx_t *ctx, char *buffer, size_t
         free_blocks,
         ctx->root_block,
         ctx->is_intl ? "true" : "false",
-        ctx->is_dcache ? "true" : "false",
+        ctx->is_dircache ? "true" : "false",
         ctx->size
     );
     

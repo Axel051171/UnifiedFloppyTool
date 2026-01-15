@@ -32,6 +32,10 @@ set(FS_SOURCES
     uft_fat12_format.c
     uft_fat12_lfn.c
     uft_fat12_validate.c
+    uft_fat32.c
+    uft_fat_atari.c
+    uft_fat_badblock.c
+    uft_fat_boot.c
     uft_fat_entry.c
     uft_fat_table.c
     uft_fbasic_fs.c

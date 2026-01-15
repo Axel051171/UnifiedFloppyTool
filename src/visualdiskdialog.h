@@ -21,10 +21,16 @@
 #define VISUALDISKDIALOG_H
 
 #include <QDialog>
+#include <QWidget>
 #include <QImage>
 #include <QTimer>
 #include <QMap>
 #include <QPair>
+#include <QList>
+#include <QByteArray>
+#include <QString>
+#include <QColor>
+#include <QPoint>
 
 namespace Ui {
 class VisualDiskDialog;

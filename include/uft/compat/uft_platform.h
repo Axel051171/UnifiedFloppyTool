@@ -19,6 +19,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include <string.h>
 
 #ifdef _WIN32
 /*===========================================================================*/
@@ -80,6 +81,25 @@ typedef int32_t ssize_t;
 /* Sleep function */
 #define usleep(us) Sleep((us) / 1000)
 #define sleep(s)   Sleep((s) * 1000)
+
+/* memmem - find subsequence in memory (not available on Windows) */
+static inline void *memmem(const void *haystack, size_t haystack_len,
+                           const void *needle, size_t needle_len) {
+    if (needle_len == 0) return (void *)haystack;
+    if (haystack_len < needle_len) return NULL;
+    
+    const unsigned char *h = (const unsigned char *)haystack;
+    const unsigned char *n = (const unsigned char *)needle;
+    const unsigned char *end = h + haystack_len - needle_len + 1;
+    
+    while (h < end) {
+        if (*h == *n && memcmp(h, n, needle_len) == 0) {
+            return (void *)h;
+        }
+        h++;
+    }
+    return NULL;
+}
 
 /* clock_gettime emulation for Windows */
 #ifndef CLOCK_MONOTONIC

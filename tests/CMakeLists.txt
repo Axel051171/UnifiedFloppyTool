@@ -17,6 +17,7 @@ set(EXCLUDED_TESTS
     "test_smoke"            # Missing smoke test framework
     "test_woz_writer"       # Missing WOZ writer test deps
     "test_writer_backend"   # Missing writer backend
+    "test_fat_extensions"   # Missing uft_fs module (not built in CI)
 )
 
 # Create test executables
@@ -37,11 +38,19 @@ foreach(test_source ${TEST_SOURCES})
         ${CMAKE_SOURCE_DIR}/include/uft
     )
     
-    target_link_libraries(${test_name} PRIVATE
-        uft_core
-        uft_crc
-        uft_ride
-    )
+    # Base libraries for all tests
+    set(TEST_LIBS uft_core uft_crc uft_ride)
+    
+    # Add test-specific dependencies
+    if(${test_name} STREQUAL "test_ti99_formats")
+        list(APPEND TEST_LIBS uft_ti99)
+    elseif(${test_name} STREQUAL "test_fat_extensions")
+        if(TARGET uft_fs)
+            list(APPEND TEST_LIBS uft_fs)
+        endif()
+    endif()
+    
+    target_link_libraries(${test_name} PRIVATE ${TEST_LIBS})
     
     # Register as CTest
     add_test(NAME ${test_name} COMMAND ${test_name})

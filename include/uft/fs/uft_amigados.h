@@ -134,8 +134,12 @@ typedef struct {
     bool                is_file;           /**< Is file */
     bool                is_softlink;       /**< Is soft link */
     bool                is_hardlink;       /**< Is hard link */
+    bool                is_link;           /**< Is any kind of link */
+    uint32_t            type;              /**< Block type (T_HEADER etc) */
     uint32_t            header_block;      /**< Header block number */
+    uint32_t            header_key;        /**< Alias for header_block */
     uint32_t            parent_block;      /**< Parent directory block */
+    uint32_t            parent;            /**< Alias for parent_block */
     uint32_t            hash_chain;        /**< Next in hash chain */
     uint32_t            size;              /**< File size in bytes */
     uint32_t            blocks;            /**< Blocks used */
@@ -146,6 +150,10 @@ typedef struct {
     int32_t             secondary_type;    /**< Secondary type */
     uint32_t            real_entry;        /**< For links: real header */
     char                link_target[UFT_AMIGA_MAX_PATH]; /**< Softlink target */
+    /* Raw date fields */
+    uint32_t            days;              /**< Days since 1978-01-01 */
+    uint32_t            mins;              /**< Minutes of day */
+    uint32_t            ticks;             /**< Ticks (1/50 second) */
 } uft_amiga_entry_t;
 
 /**
@@ -224,6 +232,7 @@ typedef struct {
     /* Filesystem info */
     bool                is_valid;          /**< Valid filesystem */
     uft_amiga_fs_type_t fs_type;           /**< Filesystem type */
+    uint8_t             fs_flags;          /**< Raw filesystem flags from bootblock */
     bool                is_ffs;            /**< FFS mode */
     bool                is_intl;           /**< International mode */
     bool                is_dircache;       /**< Directory cache */
@@ -232,6 +241,7 @@ typedef struct {
     /* Geometry */
     uint32_t            total_blocks;      /**< Total blocks */
     uint32_t            root_block;        /**< Root block number */
+    uint32_t            bitmap_flag;       /**< Bitmap validity flag from root */
     uint32_t            bitmap_blocks[UFT_AMIGA_MAX_BITMAP_BLOCKS];
     size_t              bitmap_count;      /**< Bitmap block count */
     
@@ -242,12 +252,20 @@ typedef struct {
     uint32_t            disk_days;         /**< Days since 1978-01-01 */
     uint32_t            disk_mins;         /**< Minutes of day */
     uint32_t            disk_ticks;        /**< Ticks (1/50 second) */
+    /* Aliases for legacy code */
+    uint32_t            days;              /**< Alias for disk_days */
+    uint32_t            mins;              /**< Alias for disk_mins */
+    uint32_t            ticks;             /**< Alias for disk_ticks */
     
     /* Options */
     bool                verify_checksums;  /**< Verify block checksums */
     bool                auto_fix;          /**< Auto-fix minor issues */
     bool                preserve_dates;    /**< Preserve timestamps */
 } uft_amiga_ctx_t;
+
+/* Compatibility aliases for legacy code */
+typedef uft_amiga_ctx_t   uft_amigados_ctx_t;
+typedef uft_amiga_entry_t uft_amigados_entry_t;
 
 /**
  * @brief Filesystem options
