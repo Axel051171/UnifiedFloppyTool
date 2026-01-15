@@ -23,6 +23,7 @@ jobs:
           sudo apt-get install -y \
             build-essential cmake \
             qt6-base-dev qt6-tools-dev \
+            libqt6serialport6-dev \
             libgl1-mesa-dev libusb-1.0-0-dev \
             dpkg-dev fakeroot
       
@@ -40,7 +41,14 @@ jobs:
       - name: Create tar.gz
         run: |
           mkdir -p dist/UnifiedFloppyTool-${{ env.UFT_VERSION }}-linux-x64
-          cp build/UnifiedFloppyTool dist/UnifiedFloppyTool-${{ env.UFT_VERSION }}-linux-x64/
+          # Copy GUI if it was built
+          if [ -f build/UnifiedFloppyTool ]; then
+            cp build/UnifiedFloppyTool dist/UnifiedFloppyTool-${{ env.UFT_VERSION }}-linux-x64/
+          else
+            echo "WARNING: GUI executable not found, packaging libraries only"
+            # List what was actually built
+            find build -name "*.a" -o -name "*.so" 2>/dev/null | head -20
+          fi
           cp README.md LICENSE dist/UnifiedFloppyTool-${{ env.UFT_VERSION }}-linux-x64/ 2>/dev/null || true
           echo "NOTE: This tar.gz requires Qt6 to be installed on your system." > dist/UnifiedFloppyTool-${{ env.UFT_VERSION }}-linux-x64/INSTALL.txt
           echo "Install with: sudo apt install qt6-base-dev libusb-1.0-0" >> dist/UnifiedFloppyTool-${{ env.UFT_VERSION }}-linux-x64/INSTALL.txt
@@ -149,7 +157,7 @@ jobs:
       - name: Configure
         run: |
           mkdir build && cd build
-          cmake .. -DCMAKE_BUILD_TYPE=Release -DUFT_BUILD_GUI=ON
+          cmake .. -DCMAKE_BUILD_TYPE=Release -DUFT_BUILD_GUI=ON -DUFT_BUILD_TESTS=OFF
       
       - name: Build
         run: cmake --build build --parallel $(sysctl -n hw.ncpu)
@@ -185,17 +193,20 @@ jobs:
         run: |
           mkdir build
           cd build
-          cmake .. -DCMAKE_BUILD_TYPE=Release -DUFT_BUILD_GUI=ON
+          cmake .. -DCMAKE_BUILD_TYPE=Release -DUFT_BUILD_GUI=ON -DUFT_BUILD_TESTS=OFF
       
       - name: Build
         run: cmake --build build --config Release --parallel
       
       - name: Deploy Qt
-        run: windeployqt build/Release/UnifiedFloppyTool.exe --release --no-translations
+        shell: cmd
+        run: |
+          windeployqt build\Release\UnifiedFloppyTool.exe --release --no-translations
       
       - name: Create tar.gz
+        shell: bash
         run: |
-          mkdir dist
+          mkdir -p dist
           cd build/Release
           tar -czvf ../../dist/UnifiedFloppyTool-${{ env.UFT_VERSION }}-windows-x64.tar.gz *
       
