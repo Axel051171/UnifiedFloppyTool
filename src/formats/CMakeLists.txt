@@ -42,6 +42,9 @@ set(UFT_FORMAT_SOURCES
     
     # Registry
     format_registry/uft_format_registry.c
+    
+    # V3 Bridge (Handler für D64, G64, SCP)
+    uft_v3_bridge.c
 )
 
 add_library(uft_formats STATIC ${UFT_FORMAT_SOURCES})

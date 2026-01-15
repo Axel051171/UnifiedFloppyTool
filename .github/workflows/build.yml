@@ -1,0 +1,125 @@
+name: Build UFT
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master ]
+  release:
+    types: [ created ]
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential cmake \
+            qt6-base-dev qt6-tools-dev \
+            libgl1-mesa-dev libusb-1.0-0-dev
+      
+      - name: Configure
+        run: |
+          mkdir build && cd build
+          cmake .. -DCMAKE_BUILD_TYPE=Release -DUFT_BUILD_GUI=ON
+      
+      - name: Build
+        run: cmake --build build --parallel $(nproc)
+      
+      - name: Run Tests
+        run: cd build && ctest --output-on-failure
+      
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: UFT-Linux
+          path: build/UnifiedFloppyTool
+
+  build-macos:
+    runs-on: macos-13
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v3
+        with:
+          version: '6.5.*'
+          modules: 'qtserialport'
+      
+      - name: Configure
+        run: |
+          mkdir build && cd build
+          cmake .. -DCMAKE_BUILD_TYPE=Release -DUFT_BUILD_GUI=ON
+      
+      - name: Build
+        run: cmake --build build --parallel $(sysctl -n hw.ncpu)
+      
+      - name: Deploy Qt Frameworks
+        run: |
+          macdeployqt build/UnifiedFloppyTool.app -always-overwrite
+      
+      - name: Create DMG
+        run: |
+          hdiutil create -volname "UnifiedFloppyTool" \
+            -srcfolder build/UnifiedFloppyTool.app \
+            -ov -format UDZO \
+            build/UnifiedFloppyTool.dmg
+      
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: UFT-macOS
+          path: build/UnifiedFloppyTool.dmg
+
+  build-windows:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v3
+        with:
+          version: '6.5.*'
+          modules: 'qtserialport'
+          arch: 'win64_msvc2019_64'
+      
+      - name: Configure
+        run: |
+          mkdir build
+          cd build
+          cmake .. -DCMAKE_BUILD_TYPE=Release -DUFT_BUILD_GUI=ON
+      
+      - name: Build
+        run: cmake --build build --config Release --parallel
+      
+      - name: Deploy Qt
+        run: |
+          windeployqt build/Release/UnifiedFloppyTool.exe --release --no-translations
+      
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: UFT-Windows
+          path: build/Release/
+
+  release:
+    needs: [build-linux, build-macos, build-windows]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release'
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        
+      - name: Upload Release Assets
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            UFT-Linux/*
+            UFT-macOS/*.dmg
+            UFT-Windows/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
