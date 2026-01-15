@@ -1,3 +1,8 @@
+/**
+ * @file fdi_loader.c
+ * @brief Formatted Disk Image FDI loader
+ * @version 3.8.0
+ */
 /*
 //
 // Copyright (C) 2006-2025 Jean-Franois DEL NERO

@@ -1,3 +1,8 @@
+/**
+ * @file cpcdsk_loader.c
+ * @brief Amstrad CPC DSK loader
+ * @version 3.8.0
+ */
 /*
 //
 // Copyright (C) 2006-2025 Jean-François DEL NERO

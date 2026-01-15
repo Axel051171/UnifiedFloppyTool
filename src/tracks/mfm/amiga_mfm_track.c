@@ -1,3 +1,8 @@
+/**
+ * @file amiga_mfm_track.c
+ * @brief Amiga MFM track handler
+ * @version 3.8.0
+ */
 /*
 //
 //

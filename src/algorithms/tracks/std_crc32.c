@@ -1,3 +1,8 @@
+/**
+ * @file std_crc32.c
+ * @brief Standard CRC-32 implementation
+ * @version 3.8.0
+ */
 /*-
  *  COPYRIGHT (C) 1986 Gary S. Brown.  You may use this program, or
  *  code or tables extracted from it, as desired without restriction.

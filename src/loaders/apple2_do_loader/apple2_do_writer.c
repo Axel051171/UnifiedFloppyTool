@@ -1,3 +1,8 @@
+/**
+ * @file apple2_do_writer.c
+ * @brief Apple II DO disk order writer
+ * @version 3.8.0
+ */
 /*
 //
 // Copyright (C) 2006-2025 Jean-Franois DEL NERO

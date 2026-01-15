@@ -836,6 +836,13 @@ int xdf_api_detect_format(const char *path, char *format, size_t size,
     uint8_t header[4096];
     size_t read_size = fread(header, 1, sizeof(header), f);
     
+    /* Need at least some header data */
+    if (read_size < 16) {
+        fclose(f);
+        xdf_api_destroy(api);
+        return -1;
+    }
+    
     fseek(f, 0, SEEK_END);
     size_t file_size = ftell(f);
     fclose(f);

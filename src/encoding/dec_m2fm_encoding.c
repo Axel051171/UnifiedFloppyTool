@@ -1,3 +1,8 @@
+/**
+ * @file dec_m2fm_encoding.c
+ * @brief DEC M2FM encoding (RX02)
+ * @version 3.8.0
+ */
 /*
 //
 //

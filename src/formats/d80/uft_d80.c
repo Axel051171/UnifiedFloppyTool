@@ -1,3 +1,8 @@
+/**
+ * @file uft_d80.c
+ * @brief Commodore 8050 D80 format core
+ * @version 3.8.0
+ */
 #include "uft/uft_format_common.h"
 
 #define D80_TRACKS 77

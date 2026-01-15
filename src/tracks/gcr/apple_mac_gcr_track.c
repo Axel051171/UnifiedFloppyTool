@@ -1,3 +1,8 @@
+/**
+ * @file apple_mac_gcr_track.c
+ * @brief Apple Macintosh GCR track handler
+ * @version 3.8.0
+ */
 /*
 //
 // Copyright (C) 2006-2025 Jean-François DEL NERO

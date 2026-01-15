@@ -1,13 +1,15 @@
 /**
  * @file parameterpanelwidget.cpp
  * @brief Three-Tier Parameter Panel - Full Implementation
- * @version 4.0.0
+ * @version 3.8.0
  */
 
 #include "parameterpanelwidget.h"
 #include <QFormLayout>
 #include <QFileDialog>
 #include <QTextStream>
+#include <QTimer>
+#include <QToolTip>
 
 // ============================================================================
 // Constructor / Destructor
@@ -380,14 +382,43 @@ void ParameterPanelWidget::setupUI()
     m_rawParamsEdit->setMaximumHeight(100);
     m_rawParamsEdit->setPlaceholderText("{ \"custom_key\": \"value\" }");
     
-    m_validateButton = new QPushButton("Validate", this);
+    m_validateButton = new QPushButton("✓ Validieren", this);
     connect(m_validateButton, &QPushButton::clicked, [this]() {
-        if (validate()) {
-            m_validationStatus->setText("✓ Valid");
-            m_validationStatus->setStyleSheet("color: green;");
+        QStringList errors = getValidationErrors();
+        
+        if (errors.isEmpty()) {
+            m_validationStatus->setText("✓ Alle Parameter gültig");
+            m_validationStatus->setStyleSheet("color: #4CAF50; font-weight: bold;");
+            
+            // Kurze Erfolgsmeldung
+            QToolTip::showText(m_validateButton->mapToGlobal(QPoint(0, -30)),
+                              "✓ Alle Eingaben sind gültig!", 
+                              m_validateButton, QRect(), 2000);
         } else {
-            m_validationStatus->setText("✕ Invalid");
-            m_validationStatus->setStyleSheet("color: red;");
+            m_validationStatus->setText(QString("✕ %1 Fehler gefunden").arg(errors.size()));
+            m_validationStatus->setStyleSheet("color: #F44336; font-weight: bold;");
+            
+            // Detaillierte Fehlermeldung anzeigen
+            QString errorHtml = QString(
+                "<div style='max-width: 400px; padding: 10px;'>"
+                "<h3 style='color: #F44336; margin: 0 0 10px 0;'>"
+                "⚠ Validierungsfehler</h3>"
+                "<p style='color: #666;'>%1 Problem(e) gefunden:</p>"
+                "<div style='background: #FFF8E1; padding: 10px; "
+                "border-left: 3px solid #FFC107; margin: 5px 0;'>"
+                "%2"
+                "</div>"
+                "<p style='font-size: 11px; color: #999; margin-top: 10px;'>"
+                "💡 Korrigieren Sie die markierten Felder</p>"
+                "</div>")
+                .arg(errors.size())
+                .arg(errors.join("<br><br>").replace("\n", "<br>"));
+            
+            QToolTip::showText(m_validateButton->mapToGlobal(QPoint(0, 30)),
+                              errorHtml, m_validateButton, QRect(), 10000);
+            
+            // Signal mit Fehlern senden
+            emit validationFailed(errors);
         }
     });
     
@@ -670,21 +701,68 @@ QStringList ParameterPanelWidget::getValidationErrors() const
     for (const auto& def : m_parameterDefs) {
         QVariant value = m_parameters.value(def.key);
         
-        // Range check
+        // Range check für Integer
         if (!def.minValue.isNull() && !def.maxValue.isNull()) {
             if (value.typeId() == QMetaType::Int) {
                 int v = value.toInt();
-                if (v < def.minValue.toInt() || v > def.maxValue.toInt()) {
-                    errors << QString("%1: Value %2 out of range [%3, %4]")
+                int minV = def.minValue.toInt();
+                int maxV = def.maxValue.toInt();
+                
+                if (v < minV) {
+                    errors << QString("⚠ %1: Wert %2 ist zu klein\n"
+                                     "   → Minimum: %3\n"
+                                     "   → Erhöhen Sie den Wert um %4")
                               .arg(def.label).arg(v)
-                              .arg(def.minValue.toInt()).arg(def.maxValue.toInt());
+                              .arg(minV).arg(minV - v);
+                }
+                else if (v > maxV) {
+                    errors << QString("⚠ %1: Wert %2 ist zu groß\n"
+                                     "   → Maximum: %3\n"
+                                     "   → Verringern Sie den Wert um %4")
+                              .arg(def.label).arg(v)
+                              .arg(maxV).arg(v - maxV);
+                }
+            }
+            else if (value.typeId() == QMetaType::Double) {
+                double v = value.toDouble();
+                double minV = def.minValue.toDouble();
+                double maxV = def.maxValue.toDouble();
+                
+                if (v < minV) {
+                    errors << QString("⚠ %1: Wert %.2f ist zu klein\n"
+                                     "   → Minimum: %.2f")
+                              .arg(def.label).arg(v).arg(minV);
+                }
+                else if (v > maxV) {
+                    errors << QString("⚠ %1: Wert %.2f ist zu groß\n"
+                                     "   → Maximum: %.2f")
+                              .arg(def.label).arg(v).arg(maxV);
                 }
             }
         }
         
-        // Custom validator
+        // Custom validator mit verbesserter Meldung
         if (def.validator && !def.validator(value)) {
-            errors << QString("%1: Validation failed").arg(def.label);
+            QString hint;
+            
+            // Kontextbezogene Hinweise
+            if (def.key.contains("track", Qt::CaseInsensitive)) {
+                hint = "\n   💡 Tracks: 0-79 (Standard), 0-83 (erweitert)";
+            }
+            else if (def.key.contains("sector", Qt::CaseInsensitive)) {
+                hint = "\n   💡 Sektoren variieren je nach Format";
+            }
+            else if (def.key.contains("bitrate", Qt::CaseInsensitive)) {
+                hint = "\n   💡 Standard: 250000 (DD) oder 500000 (HD)";
+            }
+            else if (def.key.contains("rpm", Qt::CaseInsensitive)) {
+                hint = "\n   💡 Standard: 300 RPM (PC/Amiga)";
+            }
+            
+            errors << QString("⚠ %1: Ungültiger Wert '%2'%3")
+                      .arg(def.label)
+                      .arg(value.toString())
+                      .arg(hint);
         }
     }
     
@@ -693,7 +771,33 @@ QStringList ParameterPanelWidget::getValidationErrors() const
         QJsonParseError error;
         QJsonDocument::fromJson(m_rawParamsEdit->toPlainText().toUtf8(), &error);
         if (error.error != QJsonParseError::NoError) {
-            errors << QString("Raw JSON: %1").arg(error.errorString());
+            QString jsonHint;
+            
+            // Spezifische JSON-Fehlerhinweise
+            switch (error.error) {
+                case QJsonParseError::UnterminatedString:
+                    jsonHint = "\n   💡 Prüfen Sie fehlende Anführungszeichen (\")";
+                    break;
+                case QJsonParseError::MissingNameSeparator:
+                    jsonHint = "\n   💡 Fehlt ein Doppelpunkt (:) zwischen Schlüssel und Wert?";
+                    break;
+                case QJsonParseError::UnterminatedArray:
+                case QJsonParseError::UnterminatedObject:
+                    jsonHint = "\n   💡 Fehlt eine schließende Klammer (] oder })?";
+                    break;
+                case QJsonParseError::MissingValueSeparator:
+                    jsonHint = "\n   💡 Fehlt ein Komma (,) zwischen Einträgen?";
+                    break;
+                default:
+                    jsonHint = "\n   💡 Prüfen Sie die JSON-Syntax";
+                    break;
+            }
+            
+            errors << QString("⚠ JSON-Fehler an Position %1:\n"
+                             "   %2%3")
+                      .arg(error.offset)
+                      .arg(error.errorString())
+                      .arg(jsonHint);
         }
     }
     
@@ -1039,4 +1143,73 @@ QString ParameterPanelWidget::riskToIcon(ParameterRisk risk) const
         case ParameterRisk::CRITICAL:return "🔴";
         default:                     return "";
     }
+}
+
+// ============================================================================
+// Verbesserte Validierungs-Feedback
+// ============================================================================
+
+void ParameterPanelWidget::showValidationWarning(const QString& key, const QString& message)
+{
+    // Widget finden
+    QWidget* widget = m_paramWidgets.value(key, nullptr);
+    QLabel* label = m_paramLabels.value(key, nullptr);
+    
+    if (!widget) return;
+    
+    // Stil anwenden
+    widget->setStyleSheet("border: 2px solid #F44336; background-color: #FFEBEE;");
+    
+    // Parameterdefinition finden für besseren Kontext
+    QString paramLabel = key;
+    QString hint;
+    QString example;
+    
+    for (const auto& def : m_parameterDefs) {
+        if (def.key == key) {
+            paramLabel = def.label;
+            
+            // Kontextbezogene Hinweise generieren
+            if (!def.minValue.isNull() && !def.maxValue.isNull()) {
+                hint = QString("Gültiger Bereich: %1 - %2")
+                      .arg(def.minValue.toString())
+                      .arg(def.maxValue.toString());
+                example = QString("Beispiel: %1")
+                         .arg((def.minValue.toDouble() + def.maxValue.toDouble()) / 2);
+            }
+            
+            if (!def.enumValues.isEmpty()) {
+                hint = QString("Erlaubte Werte: %1")
+                      .arg(def.enumValues.join(", "));
+                example = QString("Beispiel: %1").arg(def.enumValues.first());
+            }
+            break;
+        }
+    }
+    
+    // Tooltip mit detaillierter Fehlermeldung
+    QString tooltip = QString(
+        "<div style='max-width: 300px;'>"
+        "<h3 style='color: #F44336; margin: 0;'>⚠ Eingabefehler</h3>"
+        "<p><b>%1:</b> %2</p>"
+        "%3"
+        "%4"
+        "</div>")
+        .arg(paramLabel)
+        .arg(message)
+        .arg(hint.isEmpty() ? "" : QString("<p style='color: #666;'>💡 %1</p>").arg(hint))
+        .arg(example.isEmpty() ? "" : QString("<p style='font-style: italic;'>%1</p>").arg(example));
+    
+    widget->setToolTip(tooltip);
+    
+    // Label markieren
+    if (label) {
+        label->setStyleSheet("color: #F44336; font-weight: bold;");
+    }
+    
+    // Nach kurzer Zeit Tooltip anzeigen
+    QTimer::singleShot(100, [widget, tooltip]() {
+        QToolTip::showText(widget->mapToGlobal(QPoint(0, widget->height())), 
+                          tooltip, widget, QRect(), 5000);
+    });
 }

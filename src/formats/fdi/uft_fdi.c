@@ -1,3 +1,8 @@
+/**
+ * @file uft_fdi.c
+ * @brief Formatted Disk Image FDI core
+ * @version 3.8.0
+ */
 #include "uft/uft_format_common.h"
 
 typedef struct { FILE* file; uint16_t cyls, heads; } fdi_data_t;

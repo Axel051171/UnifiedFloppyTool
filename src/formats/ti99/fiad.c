@@ -1,3 +1,8 @@
+/**
+ * @file fiad.c
+ * @brief TI-99/4A FIAD format
+ * @version 3.8.0
+ */
 #include "uft/formats/fiad.h"
 #include <stdio.h>
 #include <stdlib.h>

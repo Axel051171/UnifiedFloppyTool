@@ -1,3 +1,8 @@
+/**
+ * @file guess.c
+ * @brief Format auto-detection heuristics
+ * @version 3.8.0
+ */
 #include "uft/formatid/guess.h"
 #include "uft/fs/fat_bpb.h"
 #include <string.h>

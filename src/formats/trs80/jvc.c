@@ -1,3 +1,8 @@
+/**
+ * @file jvc.c
+ * @brief TRS-80 JVC disk image format
+ * @version 3.8.0
+ */
 // jvc.c - JVC CoCo disk image (C11)
 #include "uft/formats/jvc.h"
 #include <stdio.h>

@@ -224,7 +224,7 @@ static char* get_temp_directory(void) {
         create_directory(temp);
         return temp;
     }
-    strcpy(temp, "C:\\Temp\\uft_kryoflux\\");
+    snprintf(temp, sizeof(temp), "C:\\Temp\\uft_kryoflux\\");
 #else
     const char *tmpdir = getenv("TMPDIR");
     if (!tmpdir) tmpdir = "/tmp";

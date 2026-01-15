@@ -1,3 +1,8 @@
+/**
+ * @file d81_loader.c
+ * @brief Commodore 1581 D81 loader (standalone)
+ * @version 3.8.0
+ */
 /*
 //
 // Copyright (C) 2006-2025 Jean-François DEL NERO

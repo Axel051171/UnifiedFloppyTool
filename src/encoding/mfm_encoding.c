@@ -1,3 +1,8 @@
+/**
+ * @file mfm_encoding.c
+ * @brief MFM (Modified Frequency Modulation) encoding/decoding
+ * @version 3.8.0
+ */
 /*
 //
 //

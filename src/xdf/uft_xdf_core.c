@@ -635,6 +635,9 @@ int xdf_import(xdf_context_t *ctx, const char *path) {
     long size = ftell(f);
     fseek(f, 0, SEEK_SET);
     
+    /* TODO: Use size for validation */
+    (void)size;
+    
     /* Read header */
     if (fread(&ctx->header, 1, sizeof(xdf_header_t), f) != sizeof(xdf_header_t)) {
         fclose(f);

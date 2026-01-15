@@ -1,30 +1,43 @@
 # UFT Core Module - Minimal Build
 # Many core files have type/error code conflicts (P0-2 TODO)
 
-# Only include files that compile cleanly
-set(CORE_SOURCES
-    uft_common.c
-    uft_const_correct.c
-    uft_crc_utils.c
-    uft_endian.c
-    uft_flux_utils.c
+# Get all existing .c files in this directory
+file(GLOB CORE_ALL_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/*.c")
+
+# List of files known to compile cleanly
+set(CORE_WHITELIST
+    uft_apd_format.c
+    uft_decode_score.c
+    uft_fat_editor.c
+    uft_format_registry.c
     uft_format_verify.c
-    uft_hal.c
+    uft_image_db.c
+    uft_merge_engine.c
+    uft_mfm_codec.c
     uft_operation_result.c
+    uft_param_bridge.c
     uft_platform.c
+    uft_pll_unified.c
+    uft_process.c
+    uft_protection_pipeline.c
+    uft_safe_alloc.c
+    uft_safe_io.c
     uft_safe_string.c
-    uft_string_utils.c
-    uft_timer.c
+    uft_settings.c
+    uft_sos_protection.c
     uft_track.c
-    uft_usb.c
-    uft_version.c
+    uft_write_verify_pipeline.c
 )
 
-# Filter to only existing files
+# Filter to only whitelisted files
 set(CORE_SOURCES_EXIST)
-foreach(src ${CORE_SOURCES})
-    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${src}")
-        list(APPEND CORE_SOURCES_EXIST ${CMAKE_CURRENT_SOURCE_DIR}/${src})
+foreach(src ${CORE_WHITELIST})
+    set(full_path "${CMAKE_CURRENT_SOURCE_DIR}/${src}")
+    if(EXISTS "${full_path}")
+        list(APPEND CORE_SOURCES_EXIST "${full_path}")
+        message(STATUS "uft_core: Adding ${src}")
+    else()
+        message(STATUS "uft_core: Skipping ${src} (not found)")
     endif()
 endforeach()
 
@@ -37,7 +50,7 @@ if(CORE_SOURCES_EXIST)
         ${CMAKE_SOURCE_DIR}/include/uft/core
         ${CMAKE_SOURCE_DIR}/include/uft/compat
     )
-    target_link_libraries(uft_core PUBLIC uft_crc)
+    target_link_libraries(uft_core PUBLIC uft_crc z)
     set_target_properties(uft_core PROPERTIES C_STANDARD 11)
     if(NOT MSVC)
         target_compile_options(uft_core PRIVATE -Wno-unused-parameter)

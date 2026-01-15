@@ -1,3 +1,8 @@
+/**
+ * @file northstar_mfm_track.c
+ * @brief North Star MFM track handler
+ * @version 3.8.0
+ */
 /*
 //
 //
@@ -236,7 +241,7 @@ void tg_addNorthstarSectorToTrack(track_generator *tg,LIBFLUX_SECTCFG * sectorco
 	// "zero"
 	for(i=0;i<78;i++)
 	{
-		if(tg->last_bit_offset < (currentside->tracklen - 1) )
+		if((uint32_t)tg->last_bit_offset < (currentside->tracklen - 1) )
 		{
 			pushTrackCode(tg,0x00,0xFF,currentside,NORTHSTAR_HS_DD);
 		}

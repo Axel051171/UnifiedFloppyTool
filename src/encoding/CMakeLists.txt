@@ -11,9 +11,9 @@ set(UFT_ENCODING_SOURCES
 
 set(UFT_ENCODING_HEADERS
     uft_encoding_types.h
-    fm_encoding.h
-    mfm_encoding.h
-    dec_m2fm_encoding.h
+    ${CMAKE_SOURCE_DIR}/src/algorithms/encoding/fm_encoding.h
+    ${CMAKE_SOURCE_DIR}/src/algorithms/encoding/mfm_encoding.h
+    ${CMAKE_SOURCE_DIR}/src/algorithms/encoding/dec_m2fm_encoding.h
     luts.h
 )
 
@@ -37,6 +37,7 @@ add_library(uft_encoding STATIC
 target_include_directories(uft_encoding PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/gcr
+    ${CMAKE_SOURCE_DIR}/src/algorithms/encoding
     ${CMAKE_SOURCE_DIR}/include
     ${CMAKE_SOURCE_DIR}/include/uft
     ${CMAKE_SOURCE_DIR}/include/uft/compat

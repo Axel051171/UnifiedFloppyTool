@@ -1,3 +1,8 @@
+/**
+ * @file uft_msa.c
+ * @brief Atari ST MSA format core
+ * @version 3.8.0
+ */
 /*
  * uft_msa.c - Atari ST MSA Format Parser Implementation
  *

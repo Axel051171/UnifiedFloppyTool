@@ -1,3 +1,8 @@
+/**
+ * @file whd_crc16.c
+ * @brief WHDLoad CRC-16 implementation
+ * @version 3.8.0
+ */
 #include "uft/whdload/whd_crc16.h"
 
 uint16_t uft_crc16_ansi(const void *data, size_t len)

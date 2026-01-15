@@ -1,3 +1,8 @@
+/**
+ * @file extadf_loader.c
+ * @brief Extended ADF format loader
+ * @version 3.8.0
+ */
 /*
 //
 // Copyright (C) 2006-2025 Jean-François DEL NERO

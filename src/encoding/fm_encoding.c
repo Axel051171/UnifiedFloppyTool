@@ -1,3 +1,8 @@
+/**
+ * @file fm_encoding.c
+ * @brief FM (Frequency Modulation) encoding/decoding
+ * @version 3.8.0
+ */
 /*
 //
 //

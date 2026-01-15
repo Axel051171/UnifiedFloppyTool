@@ -1,3 +1,8 @@
+/**
+ * @file h17_loader.c
+ * @brief Heathkit H17 disk image loader
+ * @version 3.8.0
+ */
 /*
 //
 // Copyright (C) 2006-2025 Jean-Franois DEL NERO

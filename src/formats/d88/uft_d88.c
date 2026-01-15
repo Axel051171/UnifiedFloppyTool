@@ -1,3 +1,8 @@
+/**
+ * @file uft_d88.c
+ * @brief NEC PC-88/98 D88 format core
+ * @version 3.8.0
+ */
 #include "uft/uft_format_common.h"
 
 #define D88_HEADER 0x2B0

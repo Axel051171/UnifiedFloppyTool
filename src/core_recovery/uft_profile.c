@@ -1,3 +1,8 @@
+/**
+ * @file uft_profile.c
+ * @brief Disk profile detection
+ * @version 3.8.0
+ */
 #include "uft/uft_profile.h"
 
 #include "uft/uft_params.h"

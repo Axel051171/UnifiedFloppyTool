@@ -2,6 +2,12 @@
  * @file greaseweazlehardwareprovider.cpp
  * @brief Greaseweazle hardware provider implementation
  * 
+ * Supports all Greaseweazle hardware versions:
+ * - F1 (STM32F1xx based)
+ * - F7 (STM32F7xx based)  
+ * - V4.0 (RP2040 based)
+ * - V4.1 (RP2040 based, USB-C)
+ * 
  * This file is conditionally compiled based on Qt SerialPort availability.
  */
 
@@ -9,6 +15,10 @@
 
 #include <QDebug>
 #include <QThread>
+
+#if GW_SERIAL_AVAILABLE
+#include <QSerialPortInfo>
+#endif
 
 /* ═══════════════════════════════════════════════════════════════════════════════
  * Constructor / Destructor
@@ -76,26 +86,179 @@ void GreaseweazleHardwareProvider::detectDrive()
 void GreaseweazleHardwareProvider::autoDetectDevice()
 {
 #if GW_SERIAL_AVAILABLE
-    // Scan common Greaseweazle ports
-    QStringList candidates;
+    emit statusMessage(tr("Scanning for Greaseweazle devices..."));
     
-#ifdef Q_OS_WIN
-    for (int i = 1; i <= 20; ++i) {
-        candidates << QString("COM%1").arg(i);
-    }
-#else
-    candidates << "/dev/ttyACM0" << "/dev/ttyACM1" << "/dev/ttyUSB0" << "/dev/ttyUSB1";
-#endif
+    /* Get all available serial ports */
+    const auto ports = QSerialPortInfo::availablePorts();
     
-    for (const QString &port : candidates) {
-        m_serialPort->setPortName(port);
-        if (m_serialPort->open(QIODevice::ReadWrite)) {
-            // Try to identify Greaseweazle
-            m_serialPort->close();
-            emit devicePathSuggested(port);
-            emit statusMessage(tr("Found potential Greaseweazle at %1").arg(port));
-            return;
+    qDebug() << "GreaseweazleHardwareProvider: Scanning" << ports.size() << "ports";
+    
+    /* Greaseweazle protocol constants */
+    const char CMD_GET_INFO = 0x00;
+    const char CMD_LEN = 0x03;
+    const char GETINFO_FIRMWARE = 0x00;
+    
+    /* First pass: Check VID/PID and descriptions */
+    for (const QSerialPortInfo &port : ports) {
+        QString portName = port.portName();
+        quint16 vid = port.vendorIdentifier();
+        quint16 pid = port.productIdentifier();
+        QString desc = port.description();
+        QString mfr = port.manufacturer();
+        
+        qDebug() << "  Checking:" << portName 
+                 << "VID:" << QString::number(vid, 16)
+                 << "PID:" << QString::number(pid, 16)
+                 << "Desc:" << desc;
+        
+        bool isCandidate = false;
+        
+        /* Official Greaseweazle VID/PID */
+        if (vid == 0x1209 && pid == 0x4D69) {
+            isCandidate = true;
         }
+        /* RP2040 VID (GW V4.x) */
+        else if (vid == 0x2E8A) {
+            isCandidate = true;
+        }
+        /* STM32 VID (GW F1/F7) */
+        else if (vid == 0x0483) {
+            isCandidate = true;
+        }
+        /* Description match */
+        else if (desc.contains("Greaseweazle", Qt::CaseInsensitive) ||
+                 desc.contains("GW", Qt::CaseInsensitive) ||
+                 mfr.contains("Greaseweazle", Qt::CaseInsensitive)) {
+            isCandidate = true;
+        }
+        
+        if (isCandidate) {
+            /* Verify with protocol handshake */
+            QSerialPort testPort;
+            testPort.setPortName(portName);
+            testPort.setBaudRate(115200);
+            testPort.setDataBits(QSerialPort::Data8);
+            testPort.setParity(QSerialPort::NoParity);
+            testPort.setStopBits(QSerialPort::OneStop);
+            testPort.setFlowControl(QSerialPort::NoFlowControl);
+            
+            if (testPort.open(QIODevice::ReadWrite)) {
+                testPort.clear();
+                QThread::msleep(50);
+                
+                /* Send GET_INFO command */
+                QByteArray cmd;
+                cmd.append(CMD_GET_INFO);
+                cmd.append(CMD_LEN);
+                cmd.append(GETINFO_FIRMWARE);
+                
+                testPort.write(cmd);
+                testPort.waitForBytesWritten(200);
+                
+                if (testPort.waitForReadyRead(500)) {
+                    QByteArray response = testPort.readAll();
+                    QThread::msleep(50);
+                    while (testPort.waitForReadyRead(100)) {
+                        response.append(testPort.readAll());
+                    }
+                    
+                    if (response.size() >= 4 &&
+                        static_cast<unsigned char>(response[0]) == 0x00 &&
+                        static_cast<unsigned char>(response[1]) == 0x00) {
+                        
+                        /* Valid Greaseweazle response! */
+                        testPort.close();
+                        
+                        /* Determine version from firmware */
+                        QString version = "Unknown";
+                        if (response.size() >= 4) {
+                            int fw = (static_cast<unsigned char>(response[2]) << 8) |
+                                      static_cast<unsigned char>(response[3]);
+                            if (fw >= 29) version = QString("V4.x (FW %1)").arg(fw);
+                            else if (fw >= 24) version = QString("F7 (FW %1)").arg(fw);
+                            else version = QString("F1 (FW %1)").arg(fw);
+                        }
+                        
+                        emit devicePathSuggested(portName);
+                        emit statusMessage(tr("Found Greaseweazle %1 at %2").arg(version).arg(portName));
+                        qDebug() << "  FOUND: Greaseweazle" << version << "at" << portName;
+                        return;
+                    }
+                }
+                testPort.close();
+            }
+        }
+    }
+    
+    /* Second pass: Try ALL serial ports with protocol handshake
+     * This catches GW V4.x on Windows where VID/PID may not be reported */
+    emit statusMessage(tr("Trying protocol handshake on all ports..."));
+    
+    for (const QSerialPortInfo &port : ports) {
+        QString portName = port.portName();
+        QString desc = port.description().toLower();
+        
+        /* Skip obviously wrong ports */
+        if (desc.contains("bluetooth") || 
+            desc.contains("modem") ||
+            desc.contains("dial-up") ||
+            desc.contains("printer")) {
+            continue;
+        }
+        
+        QSerialPort testPort;
+        testPort.setPortName(portName);
+        testPort.setBaudRate(115200);
+        testPort.setDataBits(QSerialPort::Data8);
+        testPort.setParity(QSerialPort::NoParity);
+        testPort.setStopBits(QSerialPort::OneStop);
+        testPort.setFlowControl(QSerialPort::NoFlowControl);
+        
+        if (!testPort.open(QIODevice::ReadWrite)) {
+            continue;
+        }
+        
+        testPort.clear();
+        QThread::msleep(50);
+        
+        /* Send GET_INFO command */
+        QByteArray cmd;
+        cmd.append(CMD_GET_INFO);
+        cmd.append(CMD_LEN);
+        cmd.append(GETINFO_FIRMWARE);
+        
+        testPort.write(cmd);
+        testPort.waitForBytesWritten(200);
+        
+        if (testPort.waitForReadyRead(500)) {
+            QByteArray response = testPort.readAll();
+            QThread::msleep(50);
+            while (testPort.waitForReadyRead(100)) {
+                response.append(testPort.readAll());
+            }
+            
+            if (response.size() >= 4 &&
+                static_cast<unsigned char>(response[0]) == 0x00 &&
+                static_cast<unsigned char>(response[1]) == 0x00) {
+                
+                testPort.close();
+                
+                QString version = "Unknown";
+                if (response.size() >= 4) {
+                    int fw = (static_cast<unsigned char>(response[2]) << 8) |
+                              static_cast<unsigned char>(response[3]);
+                    if (fw >= 29) version = QString("V4.x (FW %1)").arg(fw);
+                    else if (fw >= 24) version = QString("F7 (FW %1)").arg(fw);
+                    else version = QString("F1 (FW %1)").arg(fw);
+                }
+                
+                emit devicePathSuggested(portName);
+                emit statusMessage(tr("Found Greaseweazle %1 at %2 (via handshake)").arg(version).arg(portName));
+                qDebug() << "  FOUND via handshake: Greaseweazle" << version << "at" << portName;
+                return;
+            }
+        }
+        testPort.close();
     }
     
     emit statusMessage(tr("No Greaseweazle device found"));

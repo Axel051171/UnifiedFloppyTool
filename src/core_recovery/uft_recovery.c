@@ -1,3 +1,8 @@
+/**
+ * @file uft_recovery.c
+ * @brief Data recovery algorithms
+ * @version 3.8.0
+ */
 #include "uft/uft_recovery.h"
 
 #include "uft/uft_pll.h"

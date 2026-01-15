@@ -37,6 +37,9 @@ set(UFT_FORMAT_SOURCES
     # XDF (IBM Extended Density Format)
     uft_xdf.c
     
+    # APD (Acorn Protected Disk)
+    uft_apd_format.c
+    
     # Registry
     format_registry/uft_format_registry.c
 )

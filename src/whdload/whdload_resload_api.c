@@ -1,3 +1,8 @@
+/**
+ * @file whdload_resload_api.c
+ * @brief WHDLoad ResLoad API
+ * @version 3.8.0
+ */
 #include "uft/whdload/whdload_resload_api.h"
 
 static const uft_whd_resload_api_t g_api[] = {

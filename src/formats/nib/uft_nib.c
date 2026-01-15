@@ -1,3 +1,8 @@
+/**
+ * @file uft_nib.c
+ * @brief Apple II NIB nibble format core
+ * @version 3.8.0
+ */
 #include "uft/uft_format_common.h"
 
 #define NIB_TRACKS 35

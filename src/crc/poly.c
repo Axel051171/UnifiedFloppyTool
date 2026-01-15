@@ -1,3 +1,8 @@
+/**
+ * @file poly.c
+ * @brief CRC polynomial operations
+ * @version 3.8.0
+ */
 /* poly.c
  * Greg Cook, 7/Aug/2024
  *

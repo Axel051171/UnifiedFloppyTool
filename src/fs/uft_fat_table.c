@@ -1,3 +1,8 @@
+/**
+ * @file uft_fat_table.c
+ * @brief FAT table handling
+ * @version 3.8.0
+ */
 /*
  * table.c
  * Copyright (C) 2016 <sgerwk@aol.com>

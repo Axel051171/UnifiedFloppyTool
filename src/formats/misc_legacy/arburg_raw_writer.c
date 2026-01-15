@@ -1,3 +1,8 @@
+/**
+ * @file arburg_raw_writer.c
+ * @brief Arburg raw format writer
+ * @version 3.8.0
+ */
 /*
 //
 // Copyright (C) 2006-2025 Jean-Franois DEL NERO

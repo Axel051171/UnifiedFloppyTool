@@ -1,3 +1,8 @@
+/**
+ * @file tifiles.c
+ * @brief TI-99/4A TIFILES format
+ * @version 3.8.0
+ */
 #include "uft/formats/tifiles.h"
 #include <stdio.h>
 #include <stdlib.h>

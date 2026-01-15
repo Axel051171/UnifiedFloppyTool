@@ -1,3 +1,8 @@
+/**
+ * @file luts.c
+ * @brief Lookup tables for encoding
+ * @version 3.8.0
+ */
 /*
 //
 //

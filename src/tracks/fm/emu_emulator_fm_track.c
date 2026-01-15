@@ -1,3 +1,8 @@
+/**
+ * @file emu_emulator_fm_track.c
+ * @brief E-mu Emulator FM track handler
+ * @version 3.8.0
+ */
 /*
 //
 //

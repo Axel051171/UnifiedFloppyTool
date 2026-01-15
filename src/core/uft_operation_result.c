@@ -12,6 +12,42 @@
 #include <time.h>
 
 /* ============================================================================
+ * Error String Implementation (required by uft_error.h)
+ * ============================================================================ */
+
+const char* uft_strerror(uft_rc_t rc)
+{
+    switch (rc) {
+        case UFT_SUCCESS:             return "Success";
+        case UFT_ERR_INTERNAL:        return "Internal error";
+        case UFT_ERR_INVALID_ARG:     return "Invalid argument";
+        case UFT_ERR_BUFFER_TOO_SMALL: return "Buffer too small";
+        case UFT_ERR_MEMORY:          return "Memory allocation failed";
+        case UFT_ERR_RESOURCE:        return "Resource unavailable";
+        case UFT_ERR_BUSY:            return "Resource busy";
+        case UFT_ERR_FORMAT:          return "Format error";
+        case UFT_ERR_FORMAT_DETECT:   return "Format detection failed";
+        case UFT_ERR_FORMAT_VARIANT:  return "Format variant error";
+        case UFT_ERR_CORRUPTED:       return "Data corrupted";
+        case UFT_ERR_CRC:             return "CRC error";
+        case UFT_ERR_IO:              return "I/O error";
+        case UFT_ERR_FILE_NOT_FOUND:  return "File not found";
+        case UFT_ERR_PERMISSION:      return "Permission denied";
+        case UFT_ERR_FILE_EXISTS:     return "File already exists";
+        case UFT_ERR_EOF:             return "End of file";
+        case UFT_ERR_TIMEOUT:         return "Operation timeout";
+        case UFT_ERR_NOT_SUPPORTED:   return "Not supported";
+        case UFT_ERR_NOT_IMPLEMENTED: return "Not implemented";
+        case UFT_ERR_NOT_PERMITTED:   return "Operation not permitted";
+        case UFT_ERR_HARDWARE:        return "Hardware error";
+        case UFT_ERR_USB:             return "USB error";
+        case UFT_ERR_DEVICE_NOT_FOUND: return "Device not found";
+        case UFT_ERR_ASSERTION:       return "Assertion failed";
+        default:                      return "Unknown error";
+    }
+}
+
+/* ============================================================================
  * String Tables
  * ============================================================================ */
 

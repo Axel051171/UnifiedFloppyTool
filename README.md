@@ -1,6 +1,7 @@
 # UnifiedFloppyTool
 
-[![Build](https://github.com/Axel051171/UnifiedFloppyTool/actions/workflows/build.yml/badge.svg)](https://github.com/Axel051171/UnifiedFloppyTool/actions/workflows/build.yml)
+[![CI Build](https://github.com/Axel051171/UnifiedFloppyTool/actions/workflows/ci.yml/badge.svg)](https://github.com/Axel051171/UnifiedFloppyTool/actions/workflows/ci.yml)
+[![Static Analysis](https://github.com/Axel051171/UnifiedFloppyTool/actions/workflows/analysis.yml/badge.svg)](https://github.com/Axel051171/UnifiedFloppyTool/actions/workflows/analysis.yml)
 [![Release](https://img.shields.io/github/v/release/Axel051171/UnifiedFloppyTool)](https://github.com/Axel051171/UnifiedFloppyTool/releases)
 [![License](https://img.shields.io/github/license/Axel051171/UnifiedFloppyTool)](LICENSE)
 

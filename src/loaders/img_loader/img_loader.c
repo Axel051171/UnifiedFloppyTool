@@ -1,3 +1,8 @@
+/**
+ * @file img_loader.c
+ * @brief Raw IMG sector image loader
+ * @version 3.8.0
+ */
 /*
 //
 // Copyright (C) 2006-2025 Jean-Franois DEL NERO

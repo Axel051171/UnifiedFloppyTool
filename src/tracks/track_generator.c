@@ -1,3 +1,8 @@
+/**
+ * @file track_generator.c
+ * @brief Track data generation utilities
+ * @version 3.8.0
+ */
 /*
 //
 // Copyright (C) 2006-2025 Jean-François DEL NERO

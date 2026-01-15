@@ -28,8 +28,13 @@
 #else
     #include <pthread.h>
     #include <unistd.h>
-    #include <sys/sysinfo.h>
     #include <time.h>
+    #ifdef __linux__
+        #include <sys/sysinfo.h>
+    #endif
+    #ifdef __APPLE__
+        #include <sys/sysctl.h>
+    #endif
     typedef pthread_t thread_t;
     typedef pthread_mutex_t mutex_t;
     typedef pthread_cond_t cond_t;

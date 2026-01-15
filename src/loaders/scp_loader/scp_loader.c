@@ -1,3 +1,8 @@
+/**
+ * @file scp_loader.c
+ * @brief SuperCard Pro SCP flux loader
+ * @version 3.8.0
+ */
 /*
 //
 // Copyright (C) 2006-2025 Jean-Franois DEL NERO

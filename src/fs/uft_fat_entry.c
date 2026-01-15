@@ -1,3 +1,8 @@
+/**
+ * @file uft_fat_entry.c
+ * @brief FAT entry manipulation
+ * @version 3.8.0
+ */
 /*
  * entry.c
  * Copyright (C) 2016 <sgerwk@aol.com>

@@ -1,3 +1,8 @@
+/**
+ * @file uft_usb.c
+ * @brief USB device handling
+ * @version 3.8.0
+ */
 #include "uft/compat/uft_platform.h"
 // SPDX-License-Identifier: MIT
 /*

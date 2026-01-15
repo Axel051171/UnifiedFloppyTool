@@ -1,3 +1,8 @@
+/**
+ * @file uft_crc.c
+ * @brief CRC calculation for recovery
+ * @version 3.8.0
+ */
 #include "uft/uft_crc.h"
 
 static uint16_t crc16_ccitt_false_update(uint16_t crc, const uint8_t *p, size_t len)

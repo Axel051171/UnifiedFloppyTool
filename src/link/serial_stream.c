@@ -1,3 +1,8 @@
+/**
+ * @file serial_stream.c
+ * @brief Serial port streaming interface
+ * @version 3.8.0
+ */
 /* Enable BSD extensions on macOS for cfmakeraw and higher baud rates */
 #if defined(__APPLE__)
 #define _DARWIN_C_SOURCE 1

@@ -1,3 +1,8 @@
+/**
+ * @file centurion_mfm_track.c
+ * @brief Centurion MFM track handler
+ * @version 3.8.0
+ */
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>

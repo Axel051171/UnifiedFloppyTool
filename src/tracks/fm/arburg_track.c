@@ -1,3 +1,8 @@
+/**
+ * @file arburg_track.c
+ * @brief Arburg FM track handler
+ * @version 3.8.0
+ */
 /*
 //
 //

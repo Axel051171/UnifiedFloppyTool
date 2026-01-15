@@ -1,3 +1,8 @@
+/**
+ * @file uft_ssd.c
+ * @brief BBC Micro SSD format core
+ * @version 3.8.0
+ */
 #include "uft/uft_format_common.h"
 
 typedef struct { FILE* file; uint8_t tracks, sides, spt; } ssd_data_t;

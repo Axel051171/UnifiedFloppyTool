@@ -1,3 +1,8 @@
+/**
+ * @file dmk.c
+ * @brief TRS-80 DMK disk image format
+ * @version 3.8.0
+ */
 // dmk.c - DMK minimal parser (C11)
 
 #include "uft/formats/dmk.h"

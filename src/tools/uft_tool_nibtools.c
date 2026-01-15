@@ -1,4 +1,9 @@
 /**
+ * @file uft_tool_nibtools.c
+ * @brief NIBTools integration utilities
+ * @version 3.8.0
+ */
+/**
  * 
  * Unterstützt:
  * - D64/G64/NBZ lesen

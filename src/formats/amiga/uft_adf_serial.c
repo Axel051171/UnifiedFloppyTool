@@ -1,3 +1,8 @@
+/**
+ * @file uft_adf_serial.c
+ * @brief Amiga ADF serial number handling
+ * @version 3.8.0
+ */
 #include "uft/format/adf.h"
 #include <string.h>
 

@@ -1,3 +1,8 @@
+/**
+ * @file sector_extractor.c
+ * @brief Sector extraction from track data
+ * @version 3.8.0
+ */
 /*
 //
 // Copyright (C) 2006-2025 Jean-Franois DEL NERO

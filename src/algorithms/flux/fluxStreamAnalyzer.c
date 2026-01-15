@@ -1,3 +1,8 @@
+/**
+ * @file fluxStreamAnalyzer.c
+ * @brief Flux stream analysis and timing
+ * @version 3.8.0
+ */
 /*
 //
 // Copyright (C) 2006-2025 Jean-François DEL NERO

@@ -1,3 +1,8 @@
+/**
+ * @file uft_trd.c
+ * @brief ZX Spectrum TRD format core
+ * @version 3.8.0
+ */
 #include "uft/uft_format_common.h"
 
 #define TRD_SEC_SIZE 256

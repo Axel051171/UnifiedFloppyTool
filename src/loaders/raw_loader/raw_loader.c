@@ -1,3 +1,8 @@
+/**
+ * @file raw_loader.c
+ * @brief Raw sector image loader
+ * @version 3.8.0
+ */
 #include "uft/uft_memory.h"
 /*
 //

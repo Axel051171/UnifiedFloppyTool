@@ -1,3 +1,8 @@
+/**
+ * @file uft_rs.c
+ * @brief Reed-Solomon error correction
+ * @version 3.8.0
+ */
 #include "uft/uft_rs.h"
 
 #include <string.h>

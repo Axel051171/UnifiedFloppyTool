@@ -1,3 +1,8 @@
+/**
+ * @file d88_loader.c
+ * @brief NEC PC-88/98 D88 image loader
+ * @version 3.8.0
+ */
 /*
 //
 // Copyright (C) 2006-2025 Jean-Franois DEL NERO

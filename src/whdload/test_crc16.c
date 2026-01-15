@@ -1,3 +1,8 @@
+/**
+ * @file test_crc16.c
+ * @brief WHDLoad CRC-16 test
+ * @version 3.8.0
+ */
 #include "uft/whdload/whd_crc16.h"
 #include <stdio.h>
 #include <string.h>

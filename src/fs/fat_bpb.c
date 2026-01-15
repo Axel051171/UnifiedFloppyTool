@@ -1,3 +1,8 @@
+/**
+ * @file fat_bpb.c
+ * @brief FAT BIOS Parameter Block
+ * @version 3.8.0
+ */
 #include "uft/fs/fat_bpb.h"
 #include <string.h>
 

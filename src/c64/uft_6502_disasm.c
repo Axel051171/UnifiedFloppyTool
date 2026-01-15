@@ -1,3 +1,8 @@
+/**
+ * @file uft_6502_disasm.c
+ * @brief 6502 CPU disassembler for Commodore
+ * @version 3.8.0
+ */
 #include "uft/c64/uft_6502_disasm.h"
 #include <string.h>
 

@@ -1,3 +1,8 @@
+/**
+ * @file uft_sector_parser.c
+ * @brief Sector parsing and extraction
+ * @version 3.8.0
+ */
 /*
  * uft_sector_parser.c - IBM FM/MFM Sector Parser Implementation
  *

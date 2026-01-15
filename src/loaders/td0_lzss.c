@@ -1,3 +1,8 @@
+/**
+ * @file td0_lzss.c
+ * @brief Teledisk LZSS decompression (standalone)
+ * @version 3.8.0
+ */
 /*
  * TD02IMD - Convert Teledisk .TD0 images to ImageDisk .IMD format
  *

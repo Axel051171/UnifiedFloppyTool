@@ -1,3 +1,8 @@
+/**
+ * @file aed6200p_track.c
+ * @brief AED 6200P track handler
+ * @version 3.8.0
+ */
 /*
 //
 //

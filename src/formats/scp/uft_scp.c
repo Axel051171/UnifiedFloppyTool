@@ -1,3 +1,8 @@
+/**
+ * @file uft_scp.c
+ * @brief SuperCard Pro SCP format core
+ * @version 3.8.0
+ */
 #include "uft/formats/uft_scp.h"
 
 #include <string.h>

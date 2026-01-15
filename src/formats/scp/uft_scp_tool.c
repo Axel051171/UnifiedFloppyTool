@@ -1,3 +1,8 @@
+/**
+ * @file uft_scp_tool.c
+ * @brief SCP format utilities
+ * @version 3.8.0
+ */
 /*
  * uft_scp_tool.c — CLI helper for SCP images (C99)
  *

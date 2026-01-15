@@ -34,6 +34,7 @@ include_directories(
     ${CMAKE_SOURCE_DIR}/include/uft/flux
     ${CMAKE_SOURCE_DIR}/include/uft/decoders
     ${CMAKE_SOURCE_DIR}/include/uft/recovery
+    ${CMAKE_SOURCE_DIR}/include/uft/ride
     ${CMAKE_SOURCE_DIR}/include/uft/PRIVATE
     ${CMAKE_SOURCE_DIR}/include/uft/PRIVATE/compat
     ${CMAKE_SOURCE_DIR}/include/tracks
@@ -46,7 +47,23 @@ include_directories(
     ${CMAKE_SOURCE_DIR}/src/algorithms
     ${CMAKE_SOURCE_DIR}/src/algorithms/tracks
     ${CMAKE_SOURCE_DIR}/src/algorithms/encoding
+    # === Zentrale Include-Pfade für deduplizierte Headers ===
+    ${CMAKE_SOURCE_DIR}/src/loaders
+    ${CMAKE_SOURCE_DIR}/src/algorithms/bitstream
+    ${CMAKE_SOURCE_DIR}/src/algorithms/disk
+    ${CMAKE_SOURCE_DIR}/src/algorithms/core
+    ${CMAKE_SOURCE_DIR}/src/algorithms/data
+    ${CMAKE_SOURCE_DIR}/src/algorithms/fluxio
+    ${CMAKE_SOURCE_DIR}/src/algorithms/imageio
+    ${CMAKE_SOURCE_DIR}/src/filesystems
+    ${CMAKE_SOURCE_DIR}/src/formats/legacy
+    ${CMAKE_SOURCE_DIR}/src/formats/bbc
+    ${CMAKE_SOURCE_DIR}/src/formats/apple
+    ${CMAKE_SOURCE_DIR}/src/core
+    ${CMAKE_SOURCE_DIR}/src/fdc
+    ${CMAKE_SOURCE_DIR}/src/hal/win32/external
 )
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Build Options
@@ -270,6 +287,11 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/src/xdf/CMakeLists.txt")
     add_subdirectory(src/xdf)
 endif()
 
+# RIDE Integration (Flux Decoder, DOS Recognition)
+if(EXISTS "${CMAKE_SOURCE_DIR}/src/ride/CMakeLists.txt")
+    add_subdirectory(src/ride)
+endif()
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # GUI Application
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -304,6 +326,7 @@ if(UFT_BUILD_GUI AND Qt6_FOUND)
             uft_decoders
             uft_hal
             uft_sector
+            uft_ride
         )
         
         # Windows-specific libraries
@@ -311,12 +334,49 @@ if(UFT_BUILD_GUI AND Qt6_FOUND)
             target_link_libraries(${PROJECT_NAME} PRIVATE ws2_32 shlwapi shell32 advapi32)
         endif()
         
-        # macOS-specific frameworks
+        # macOS-specific frameworks and bundle settings
         if(APPLE)
             target_link_libraries(${PROJECT_NAME} PRIVATE
                 "-framework CoreFoundation"
                 "-framework IOKit"
+                "-framework Security"
             )
+            
+            # Enable app bundle
+            set_target_properties(${PROJECT_NAME} PROPERTIES
+                MACOSX_BUNDLE TRUE
+                MACOSX_BUNDLE_INFO_PLIST "${CMAKE_SOURCE_DIR}/cmake/MacOSXBundleInfo.plist.in"
+                MACOSX_BUNDLE_GUI_IDENTIFIER "com.uft.UnifiedFloppyTool"
+                MACOSX_BUNDLE_BUNDLE_NAME "UnifiedFloppyTool"
+                MACOSX_BUNDLE_BUNDLE_VERSION "${PROJECT_VERSION}"
+                MACOSX_BUNDLE_SHORT_VERSION_STRING "${PROJECT_VERSION}"
+                # RPATH configuration for finding Qt frameworks
+                INSTALL_RPATH "@executable_path/../Frameworks"
+                BUILD_WITH_INSTALL_RPATH TRUE
+            )
+            
+            # High-DPI support
+            set_target_properties(${PROJECT_NAME} PROPERTIES
+                MACOSX_BUNDLE_INFO_STRING "UnifiedFloppyTool - Floppy Disk Preservation Tool"
+            )
+            
+            # === Qt Deployment for macOS ===
+            # Find macdeployqt
+            find_program(MACDEPLOYQT_EXECUTABLE macdeployqt HINTS "${Qt6_DIR}/../../../bin")
+            
+            if(MACDEPLOYQT_EXECUTABLE)
+                # Add post-build step to deploy Qt frameworks into the bundle
+                add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+                    COMMAND "${MACDEPLOYQT_EXECUTABLE}"
+                        "$<TARGET_BUNDLE_DIR:${PROJECT_NAME}>"
+                        -always-overwrite
+                    COMMENT "Running macdeployqt to bundle Qt frameworks..."
+                )
+                message(STATUS "macdeployqt found: ${MACDEPLOYQT_EXECUTABLE}")
+            else()
+                message(WARNING "macdeployqt not found! The app bundle will not be self-contained.")
+                message(WARNING "Run manually: macdeployqt UnifiedFloppyTool.app")
+            endif()
         endif()
         
         install(TARGETS ${PROJECT_NAME} RUNTIME DESTINATION bin)

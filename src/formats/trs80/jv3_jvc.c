@@ -1,3 +1,8 @@
+/**
+ * @file jv3_jvc.c
+ * @brief TRS-80 JV3/JVC disk format
+ * @version 3.8.0
+ */
 // jv3_jvc.c - JV3/JVC minimal implementation (C11)
 
 #include "uft/formats/jv3_jvc.h"

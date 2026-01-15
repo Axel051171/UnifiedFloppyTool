@@ -6,11 +6,11 @@
  */
 
 #include "uft/uft_protection_pipeline.h"
-#include "uft/uft_safe_io.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 #include <time.h>
+#include <stdarg.h>
 
 /* ═══════════════════════════════════════════════════════════════════════════════
  * Pipeline Structure
@@ -342,7 +342,7 @@ uft_error_t uft_protection_analyze_file(
     
     /* Read file */
     FILE *f = fopen(path, "rb");
-    if (!f) return UFT_ERR_IO;
+    if (!f) return UFT_ERROR_FILE_OPEN;
     
     fseek(f, 0, SEEK_END);
     size_t file_size = ftell(f);
@@ -357,7 +357,7 @@ uft_error_t uft_protection_analyze_file(
     if (fread(data, 1, file_size, f) != file_size) {
         free(data);
         fclose(f);
-        return UFT_ERR_IO;
+        return UFT_ERROR_FILE_READ;
     }
     fclose(f);
     

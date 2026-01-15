@@ -335,8 +335,10 @@ static int import_adf(xdf_context_t *ctx, const uint8_t *data, size_t size) {
     int sectors_per_track = (size == 901120) ? 11 : 22;
     int sector_size = 512;
     
-    /* Track data would be stored in context */
+    /* TODO: Track data would be stored in context */
     /* This is a simplified implementation */
+    (void)sectors_per_track;
+    (void)sector_size;
     
     return 0;
 }
@@ -371,6 +373,9 @@ static int import_d64(xdf_context_t *ctx, const uint8_t *data, size_t size) {
     
     bool has_errors = (size == 175531 || size == 197376);
     int tracks = (size <= 175531) ? 35 : 40;
+    
+    /* TODO: Use has_errors to handle error bytes at end of D64 */
+    (void)has_errors;
     
     /* C64 has 4 density zones */
     static const int sectors_per_track[] = {

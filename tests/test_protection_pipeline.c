@@ -236,7 +236,9 @@ TEST(format_protection_support) {
     bool adf_bad = true;    /* ADF can have bad sectors via filesystem */
     
     ASSERT(scp_weak == true);
+    ASSERT(scp_timing == true);
     ASSERT(adf_weak == false);
+    ASSERT(adf_bad == true);
 }
 
 TEST(protection_map_geometry) {

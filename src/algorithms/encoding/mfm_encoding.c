@@ -1,3 +1,8 @@
+/**
+ * @file mfm_encoding.c
+ * @brief MFM encoding/decoding algorithms
+ * @version 3.8.0
+ */
 /*
 //
 //

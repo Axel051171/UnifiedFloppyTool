@@ -1,3 +1,8 @@
+/**
+ * @file uft_pll.c
+ * @brief PLL timing recovery
+ * @version 3.8.0
+ */
 #include "uft/uft_pll.h"
 
 #include <string.h>

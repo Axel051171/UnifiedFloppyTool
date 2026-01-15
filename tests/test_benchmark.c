@@ -112,14 +112,23 @@ static int bench_pll_decode(const uint32_t *flux_times, size_t count,
  * Memory Operations for Benchmarking
  * ═══════════════════════════════════════════════════════════════════════════════ */
 
+#ifdef __GNUC__
+__attribute__((unused))
+#endif
 static void bench_memset_pattern(uint8_t *data, size_t size, uint8_t pattern) {
     memset(data, pattern, size);
 }
 
+#ifdef __GNUC__
+__attribute__((unused))
+#endif
 static void bench_memcpy_data(uint8_t *dst, const uint8_t *src, size_t size) {
     memcpy(dst, src, size);
 }
 
+#ifdef __GNUC__
+__attribute__((unused))
+#endif
 static int bench_memcmp_data(const uint8_t *a, const uint8_t *b, size_t size) {
     return memcmp(a, b, size);
 }

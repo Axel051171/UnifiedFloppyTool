@@ -1,3 +1,8 @@
+/**
+ * @file cpcdsk_writer.c
+ * @brief Amstrad CPC DSK writer
+ * @version 3.8.0
+ */
 /*
 //
 // Copyright (C) 2006-2025 Jean-Franois DEL NERO

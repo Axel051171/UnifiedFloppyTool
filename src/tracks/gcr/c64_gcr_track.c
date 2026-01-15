@@ -1,3 +1,8 @@
+/**
+ * @file c64_gcr_track.c
+ * @brief Commodore 64 GCR track handler
+ * @version 3.8.0
+ */
 /*
 //
 // Copyright (C) 2006-2025 Jean-François DEL NERO

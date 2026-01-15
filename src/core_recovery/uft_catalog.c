@@ -1,3 +1,8 @@
+/**
+ * @file uft_catalog.c
+ * @brief Disk catalog recovery
+ * @version 3.8.0
+ */
 #include "uft/uft_catalog.h"
 
 #include "uft/uft_profile.h"

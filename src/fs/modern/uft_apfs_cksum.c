@@ -1,4 +1,9 @@
 /**
+ * @file uft_apfs_cksum.c
+ * @brief APFS checksum utilities
+ * @version 3.8.0
+ */
+/**
  * Functions related to Fletcher-64 checksums.
  */
 

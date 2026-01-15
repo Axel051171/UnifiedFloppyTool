@@ -58,7 +58,7 @@ void UftHardwarePanel::createControllerGroup()
     layout->addWidget(new QLabel("Controller:"), 0, 0);
     m_controllerType = new QComboBox();
     m_controllerType->addItem("None", CONTROLLER_NONE);
-    m_controllerType->addItem("Greaseweazle F7/F7+", CONTROLLER_GREASEWEAZLE);
+    m_controllerType->addItem("Greaseweazle (All Versions)", CONTROLLER_GREASEWEAZLE);
     m_controllerType->addItem("KryoFlux", CONTROLLER_KRYOFLUX);
     m_controllerType->addItem("FluxEngine", CONTROLLER_FLUXENGINE);
     m_controllerType->addItem("SuperCard Pro", CONTROLLER_SUPERCARD_PRO);
@@ -71,13 +71,21 @@ void UftHardwarePanel::createControllerGroup()
     layout->addWidget(new QLabel("Device:"), 1, 0);
     m_devicePath = new QComboBox();
     m_devicePath->setEditable(true);
+#ifdef Q_OS_WIN
+    /* Windows: COM ports */
+    for (int i = 1; i <= 20; ++i) {
+        m_devicePath->addItem(QString("COM%1").arg(i));
+    }
+#else
+    /* Linux/Mac: tty devices */
     m_devicePath->addItem("/dev/ttyACM0");
+    m_devicePath->addItem("/dev/ttyACM1");
     m_devicePath->addItem("/dev/ttyUSB0");
-    m_devicePath->addItem("COM3");
-    m_devicePath->addItem("COM4");
+    m_devicePath->addItem("/dev/ttyUSB1");
+#endif
     layout->addWidget(m_devicePath, 1, 1, 1, 2);
     
-    m_detectButton = new QPushButton("Detect");
+    m_detectButton = new QPushButton("Auto-Detect");
     m_connectButton = new QPushButton("Connect");
     layout->addWidget(m_detectButton, 2, 1);
     layout->addWidget(m_connectButton, 2, 2);
@@ -237,21 +245,211 @@ void UftHardwarePanel::createStatusGroup()
 void UftHardwarePanel::detectHardware()
 {
     m_logList->addItem("Detecting hardware...");
-    
-    /* Simulate detection */
     m_devicePath->clear();
     
+    QStringList foundDevices;
+    
+#if defined(UFT_HAS_SERIALPORT) || defined(QT_SERIALPORT_LIB)
+    /* Use Qt SerialPort for detection */
+    const auto ports = QSerialPortInfo::availablePorts();
+    
+    m_logList->addItem(QString("Scanning %1 serial ports...").arg(ports.size()));
+    
+    /* Greaseweazle protocol constants */
+    const char CMD_GET_INFO = 0x00;
+    const char CMD_LEN = 0x03;
+    const char GETINFO_FIRMWARE = 0x00;
+    
+    for (const QSerialPortInfo &port : ports) {
+        QString portName = port.portName();
+        QString desc = port.description();
+        quint16 vid = port.vendorIdentifier();
+        quint16 pid = port.productIdentifier();
+        
+        m_logList->addItem(QString("  Checking %1 (VID:%2 PID:%3)")
+            .arg(portName)
+            .arg(QString::number(vid, 16))
+            .arg(QString::number(pid, 16)));
+        
+        bool isCandidate = false;
+        
+        /* Check known VID/PIDs */
+        if (vid == 0x1209 && pid == 0x4D69) isCandidate = true;  /* Official GW */
+        else if (vid == 0x2E8A) isCandidate = true;  /* RP2040 (GW V4.x) */
+        else if (vid == 0x0483) isCandidate = true;  /* STM32 (GW F1/F7) */
+        else if (vid == 0x16D0 && pid == 0x0CE5) isCandidate = true;  /* SCP */
+        else if (vid == 0x03EB && pid == 0x6124) isCandidate = true;  /* KryoFlux */
+        
+        /* Also check description strings */
+        QString descLower = desc.toLower();
+        if (descLower.contains("greaseweazle") ||
+            descLower.contains("supercard") ||
+            descLower.contains("kryoflux") ||
+            descLower.contains("fluxengine")) {
+            isCandidate = true;
+        }
+        
+        /* Skip obviously wrong ports */
+        if (descLower.contains("bluetooth") || 
+            descLower.contains("modem") ||
+            descLower.contains("dial-up")) {
+            continue;
+        }
+        
+        if (isCandidate) {
+            /* Try to verify with protocol handshake */
+            QSerialPort testPort;
+            testPort.setPortName(portName);
+            testPort.setBaudRate(115200);
+            testPort.setDataBits(QSerialPort::Data8);
+            testPort.setParity(QSerialPort::NoParity);
+            testPort.setStopBits(QSerialPort::OneStop);
+            testPort.setFlowControl(QSerialPort::NoFlowControl);
+            
+            if (testPort.open(QIODevice::ReadWrite)) {
+                testPort.clear();
+                QThread::msleep(50);
+                
+                /* Send Greaseweazle GET_INFO command */
+                QByteArray cmd;
+                cmd.append(CMD_GET_INFO);
+                cmd.append(CMD_LEN);
+                cmd.append(GETINFO_FIRMWARE);
+                
+                testPort.write(cmd);
+                testPort.waitForBytesWritten(200);
+                
+                if (testPort.waitForReadyRead(500)) {
+                    QByteArray response = testPort.readAll();
+                    QThread::msleep(50);
+                    while (testPort.waitForReadyRead(100)) {
+                        response.append(testPort.readAll());
+                    }
+                    
+                    if (response.size() >= 4 &&
+                        static_cast<unsigned char>(response[0]) == 0x00 &&
+                        static_cast<unsigned char>(response[1]) == 0x00) {
+                        
+                        /* Valid Greaseweazle! */
+                        QString version;
+                        int fw = (static_cast<unsigned char>(response[2]) << 8) |
+                                  static_cast<unsigned char>(response[3]);
+                        if (fw >= 29) version = QString("V4.x (FW %1)").arg(fw);
+                        else if (fw >= 24) version = QString("F7 (FW %1)").arg(fw);
+                        else version = QString("F1 (FW %1)").arg(fw);
+                        
+                        foundDevices << portName;
+                        m_devicePath->addItem(QString("%1 - Greaseweazle %2")
+                            .arg(portName).arg(version), portName);
+                        m_logList->addItem(QString("  FOUND: Greaseweazle %1 at %2")
+                            .arg(version).arg(portName));
+                        
+                        testPort.close();
+                        continue;
+                    }
+                }
+                testPort.close();
+            }
+        }
+        
+        /* Add as generic option if VID/PID suggests it might be a flux device */
+        if (vid != 0) {
+            m_devicePath->addItem(QString("%1 - %2").arg(portName).arg(desc), portName);
+        }
+    }
+    
+    /* Fallback: If no devices found, try ALL ports with handshake */
+    if (foundDevices.isEmpty()) {
+        m_logList->addItem("No devices found by VID/PID, trying protocol handshake...");
+        
+        for (const QSerialPortInfo &port : ports) {
+            QString portName = port.portName();
+            QString desc = port.description().toLower();
+            
+            if (desc.contains("bluetooth") || desc.contains("modem")) {
+                continue;
+            }
+            
+            if (foundDevices.contains(portName)) continue;
+            
+            QSerialPort testPort;
+            testPort.setPortName(portName);
+            testPort.setBaudRate(115200);
+            testPort.setDataBits(QSerialPort::Data8);
+            testPort.setParity(QSerialPort::NoParity);
+            testPort.setStopBits(QSerialPort::OneStop);
+            testPort.setFlowControl(QSerialPort::NoFlowControl);
+            
+            if (!testPort.open(QIODevice::ReadWrite)) continue;
+            
+            testPort.clear();
+            QThread::msleep(50);
+            
+            QByteArray cmd;
+            cmd.append(CMD_GET_INFO);
+            cmd.append(CMD_LEN);
+            cmd.append(GETINFO_FIRMWARE);
+            
+            testPort.write(cmd);
+            testPort.waitForBytesWritten(200);
+            
+            if (testPort.waitForReadyRead(500)) {
+                QByteArray response = testPort.readAll();
+                QThread::msleep(50);
+                while (testPort.waitForReadyRead(100)) {
+                    response.append(testPort.readAll());
+                }
+                
+                if (response.size() >= 4 &&
+                    static_cast<unsigned char>(response[0]) == 0x00 &&
+                    static_cast<unsigned char>(response[1]) == 0x00) {
+                    
+                    QString version;
+                    int fw = (static_cast<unsigned char>(response[2]) << 8) |
+                              static_cast<unsigned char>(response[3]);
+                    if (fw >= 29) version = QString("V4.x (FW %1)").arg(fw);
+                    else if (fw >= 24) version = QString("F7 (FW %1)").arg(fw);
+                    else version = QString("F1 (FW %1)").arg(fw);
+                    
+                    foundDevices << portName;
+                    m_devicePath->addItem(QString("%1 - Greaseweazle %2 (found via handshake)")
+                        .arg(portName).arg(version), portName);
+                    m_logList->addItem(QString("  FOUND (handshake): Greaseweazle %1 at %2")
+                        .arg(version).arg(portName));
+                }
+            }
+            testPort.close();
+        }
+    }
+    
+#else
+    /* No SerialPort support - add common port names */
+    m_logList->addItem("SerialPort module not available, using defaults...");
+    
 #ifdef Q_OS_WIN
-    m_devicePath->addItem("COM3");
-    m_devicePath->addItem("COM4");
+    for (int i = 1; i <= 10; ++i) {
+        m_devicePath->addItem(QString("COM%1").arg(i));
+    }
 #else
     m_devicePath->addItem("/dev/ttyACM0");
+    m_devicePath->addItem("/dev/ttyACM1");
     m_devicePath->addItem("/dev/ttyUSB0");
+    m_devicePath->addItem("/dev/ttyUSB1");
+#endif
 #endif
     
-    m_logList->addItem("Found 2 potential devices");
-    
-    /* TODO: Real detection using libusb or serial enumeration */
+    if (foundDevices.isEmpty()) {
+        m_logList->addItem("No flux controllers detected. Please check connections.");
+    } else {
+        m_logList->addItem(QString("Detection complete: Found %1 device(s)").arg(foundDevices.size()));
+        
+        /* Auto-select first found device */
+        m_devicePath->setCurrentIndex(0);
+        
+        /* Auto-select Greaseweazle controller type if GW was found */
+        m_controllerType->setCurrentIndex(
+            m_controllerType->findData(CONTROLLER_GREASEWEAZLE));
+    }
 }
 
 void UftHardwarePanel::connectController()

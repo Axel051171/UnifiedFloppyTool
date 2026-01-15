@@ -1,3 +1,8 @@
+/**
+ * @file uft_dmk.c
+ * @brief TRS-80 DMK format core
+ * @version 3.8.0
+ */
 #include "uft/uft_format_common.h"
 
 #define DMK_HDR 16

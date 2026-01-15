@@ -1,3 +1,8 @@
+/**
+ * @file uft_cqm.c
+ * @brief CopyQM CQM format core
+ * @version 3.8.0
+ */
 #include "uft/uft_format_common.h"
 
 typedef struct { 

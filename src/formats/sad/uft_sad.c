@@ -1,3 +1,8 @@
+/**
+ * @file uft_sad.c
+ * @brief SAM Coupé SAD format core
+ * @version 3.8.0
+ */
 #include "uft/uft_format_common.h"
 
 #define SAD_SIZE 819200

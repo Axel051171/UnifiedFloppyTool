@@ -1,3 +1,8 @@
+/**
+ * @file xml_db_writer.c
+ * @brief XML database format writer
+ * @version 3.8.0
+ */
 /*
 //
 // Copyright (C) 2006-2025 Jean-François DEL NERO

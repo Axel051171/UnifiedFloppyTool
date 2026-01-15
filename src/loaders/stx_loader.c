@@ -1,3 +1,8 @@
+/**
+ * @file stx_loader.c
+ * @brief Atari ST STX Pasti loader
+ * @version 3.8.0
+ */
 /*
 //
 // Copyright (C) 2006-2025 Jean-Franois DEL NERO

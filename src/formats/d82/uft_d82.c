@@ -1,3 +1,8 @@
+/**
+ * @file uft_d82.c
+ * @brief Commodore 8250 D82 format core
+ * @version 3.8.0
+ */
 #include "uft/uft_format_common.h"
 
 #define D82_TRACKS 77

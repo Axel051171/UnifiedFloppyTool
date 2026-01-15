@@ -1,5 +1,6 @@
 #include "advanceddialogs.h"
 #include <QLineEdit>
+#include <QToolTip>
 
 // ============================================================================
 // FLUX ADVANCED DIALOG
@@ -23,6 +24,13 @@ void FluxAdvancedDialog::setupUi() {
     m_pllFrequency->setRange(100000, 10000000);
     m_pllFrequency->setValue(2000000);
     m_pllFrequency->setDecimals(0);
+    m_pllFrequency->setToolTip(tr(
+        "<b>PLL-Frequenz</b><br><br>"
+        "Standard-Werte:<br>"
+        "• MFM DD: 2.000.000 Hz<br>"
+        "• MFM HD: 4.000.000 Hz<br>"
+        "• FM: 1.000.000 Hz<br><br>"
+        "<i>💡 Niedrigere Werte für beschädigte Disks</i>"));
     pllLayout->addWidget(m_pllFrequency, 0, 1);
     
     pllLayout->addWidget(new QLabel(tr("Bandwidth:")), 0, 2);
@@ -30,6 +38,12 @@ void FluxAdvancedDialog::setupUi() {
     m_pllBandwidth->setRange(0.0, 1.0);
     m_pllBandwidth->setValue(0.5);
     m_pllBandwidth->setSingleStep(0.1);
+    m_pllBandwidth->setToolTip(tr(
+        "<b>PLL-Bandbreite</b><br><br>"
+        "0.0 = Sehr eng (stabil, langsam)<br>"
+        "0.5 = Standard (empfohlen)<br>"
+        "1.0 = Sehr weit (schnell, instabil)<br><br>"
+        "<i>💡 Niedrigere Werte bei Timing-Schwankungen</i>"));
     pllLayout->addWidget(m_pllBandwidth, 0, 3);
     
     pllLayout->addWidget(new QLabel(tr("Phase Adjust:")), 1, 0);
@@ -37,12 +51,25 @@ void FluxAdvancedDialog::setupUi() {
     m_pllPhase->setRange(-1.0, 1.0);
     m_pllPhase->setValue(0.0);
     m_pllPhase->setSingleStep(0.1);
+    m_pllPhase->setToolTip(tr(
+        "<b>Phasen-Anpassung</b><br><br>"
+        "-1.0 = Früh abtasten<br>"
+        " 0.0 = Neutral (Standard)<br>"
+        "+1.0 = Spät abtasten<br><br>"
+        "<i>💡 Anpassen bei systematischen Bitfehlern</i>"));
     pllLayout->addWidget(m_pllPhase, 1, 1);
     
     pllLayout->addWidget(new QLabel(tr("Lock Threshold (%):")), 1, 2);
     m_pllLockThreshold = new QSpinBox();
     m_pllLockThreshold->setRange(1, 100);
     m_pllLockThreshold->setValue(80);
+    m_pllLockThreshold->setToolTip(tr(
+        "<b>Lock-Schwellwert</b><br><br>"
+        "Prozent der Bits, die korrekt sein müssen:<br>"
+        "• 80%+ = Normale Disks<br>"
+        "• 50-79% = Beschädigte Disks<br>"
+        "• <50% = Stark beschädigt<br><br>"
+        "<i>💡 Niedrigere Werte für Recovery-Versuche</i>"));
     pllLayout->addWidget(m_pllLockThreshold, 1, 3);
     
     mainLayout->addWidget(pllGroup);
@@ -56,12 +83,26 @@ void FluxAdvancedDialog::setupUi() {
     m_bitcellPeriod->setRange(0.5, 10.0);
     m_bitcellPeriod->setValue(2.0);
     m_bitcellPeriod->setDecimals(3);
+    m_bitcellPeriod->setToolTip(tr(
+        "<b>Bitcell-Periode</b><br><br>"
+        "Dauer einer Bitzelle in Mikrosekunden:<br>"
+        "• MFM DD (250kbit/s): 2.0 µs<br>"
+        "• MFM HD (500kbit/s): 1.0 µs<br>"
+        "• FM (125kbit/s): 4.0 µs<br><br>"
+        "<i>💡 Formel: 1.000.000 / Bitrate</i>"));
     timingLayout->addWidget(m_bitcellPeriod, 0, 1);
     
     timingLayout->addWidget(new QLabel(tr("Clock Tolerance (%):")), 0, 2);
     m_clockTolerance = new QDoubleSpinBox();
     m_clockTolerance->setRange(1.0, 50.0);
     m_clockTolerance->setValue(10.0);
+    m_clockTolerance->setToolTip(tr(
+        "<b>Takt-Toleranz</b><br><br>"
+        "Akzeptable Abweichung vom Soll-Timing:<br>"
+        "• 5-10% = Normale Disks<br>"
+        "• 15-25% = Alte/abgenutzte Disks<br>"
+        "• >30% = Stark beschädigt<br><br>"
+        "<i>💡 Höhere Toleranz = mehr Fehler akzeptiert</i>"));
     timingLayout->addWidget(m_clockTolerance, 0, 3);
     
     mainLayout->addWidget(timingGroup);
@@ -74,21 +115,45 @@ void FluxAdvancedDialog::setupUi() {
     m_revsToRead = new QSpinBox();
     m_revsToRead->setRange(1, 20);
     m_revsToRead->setValue(5);
+    m_revsToRead->setToolTip(tr(
+        "<b>Umdrehungen lesen</b><br><br>"
+        "Anzahl der Disk-Umdrehungen:<br>"
+        "• 1-3: Schnell, weniger Daten<br>"
+        "• 5: Standard (empfohlen)<br>"
+        "• 10+: Recovery, mehr Chancen<br><br>"
+        "<i>💡 Mehr Revs = bessere Fehlerkorrektur</i>"));
     revLayout->addWidget(m_revsToRead, 0, 1);
     
     revLayout->addWidget(new QLabel(tr("Revs to Use:")), 0, 2);
     m_revsToUse = new QSpinBox();
     m_revsToUse->setRange(1, 20);
     m_revsToUse->setValue(3);
+    m_revsToUse->setToolTip(tr(
+        "<b>Umdrehungen verwenden</b><br><br>"
+        "Anzahl für die Dekodierung:<br>"
+        "• Sollte ≤ 'Revs to Read' sein<br>"
+        "• 3: Guter Kompromiss<br>"
+        "• 1: Schnellste Verarbeitung<br><br>"
+        "<i>💡 Beste Revs werden automatisch gewählt</i>"));
     revLayout->addWidget(m_revsToUse, 0, 3);
     
     m_mergeRevs = new QCheckBox(tr("Merge Revolutions"));
     m_mergeRevs->setChecked(true);
+    m_mergeRevs->setToolTip(tr(
+        "<b>Umdrehungen zusammenführen</b><br><br>"
+        "Kombiniert Daten mehrerer Umdrehungen<br>"
+        "für bessere Fehlerkorrektur.<br><br>"
+        "<i>💡 Für Recovery empfohlen!</i>"));
     revLayout->addWidget(m_mergeRevs, 1, 0, 1, 2);
     
     revLayout->addWidget(new QLabel(tr("Merge Mode:")), 1, 2);
     m_mergeMode = new QComboBox();
     m_mergeMode->addItems({tr("First"), tr("Best"), tr("All")});
+    m_mergeMode->setToolTip(tr(
+        "<b>Merge-Modus</b><br><br>"
+        "• <b>First</b>: Erste gültige Rev<br>"
+        "• <b>Best</b>: Beste Qualität (empfohlen)<br>"
+        "• <b>All</b>: Alle kombinieren"));
     revLayout->addWidget(m_mergeMode, 1, 3);
     
     mainLayout->addWidget(revGroup);

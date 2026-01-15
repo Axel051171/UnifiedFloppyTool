@@ -1,3 +1,8 @@
+/**
+ * @file scp_writer.c
+ * @brief SuperCard Pro SCP flux writer
+ * @version 3.8.0
+ */
 /*
 //
 // Copyright (C) 2006-2025 Jean-Franois DEL NERO

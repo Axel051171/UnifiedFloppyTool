@@ -1,3 +1,8 @@
+/**
+ * @file model.c
+ * @brief CRC model definitions
+ * @version 3.8.0
+ */
 /* model.c
  * Greg Cook, 7/Aug/2024
  *

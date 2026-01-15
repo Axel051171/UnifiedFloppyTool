@@ -50,6 +50,15 @@
  * Path Handling
  * ═══════════════════════════════════════════════════════════════════════════════ */
 
+/**
+ * @brief Normalize path separators for the current platform
+ * 
+ * Converts all path separators to the native format:
+ * - Windows: backslash (\)
+ * - Unix/macOS: forward slash (/)
+ * 
+ * @param path Path string to normalize (modified in place)
+ */
 void uft_path_normalize(char *path)
 {
     if (!path) return;
@@ -65,6 +74,18 @@ void uft_path_normalize(char *path)
 #endif
 }
 
+/**
+ * @brief Join two path components
+ * 
+ * Combines a base path and relative path into a single normalized path.
+ * Handles trailing separators and empty components correctly.
+ * 
+ * @param dest Destination buffer for the joined path
+ * @param dest_size Size of destination buffer
+ * @param base Base path (can be NULL or empty)
+ * @param rel Relative path to append
+ * @return 0 on success, -1 on error
+ */
 int uft_path_join(char *dest, size_t dest_size, const char *base, const char *rel)
 {
     if (!dest || !dest_size) return -1;
@@ -139,6 +160,12 @@ int uft_path_dirname(const char *path, char *dir, size_t dir_size)
  * File System
  * ═══════════════════════════════════════════════════════════════════════════════ */
 
+/**
+ * @brief Check if a file exists
+ * 
+ * @param path Path to check
+ * @return true if file exists and is a regular file, false otherwise
+ */
 bool uft_file_exists(const char *path)
 {
     if (!path) return false;
@@ -151,6 +178,12 @@ bool uft_file_exists(const char *path)
 #endif
 }
 
+/**
+ * @brief Check if a directory exists
+ * 
+ * @param path Path to check
+ * @return true if path exists and is a directory, false otherwise
+ */
 bool uft_dir_exists(const char *path)
 {
     if (!path) return false;
@@ -163,6 +196,12 @@ bool uft_dir_exists(const char *path)
 #endif
 }
 
+/**
+ * @brief Get file size in bytes
+ * 
+ * @param path Path to file
+ * @return File size in bytes, or -1 on error
+ */
 int64_t uft_file_size(const char *path)
 {
     if (!path) return -1;
@@ -177,6 +216,14 @@ int64_t uft_file_size(const char *path)
 #endif
 }
 
+/**
+ * @brief Create directory and all parent directories
+ * 
+ * Similar to Unix `mkdir -p` command.
+ * 
+ * @param path Directory path to create
+ * @return 0 on success, -1 on error
+ */
 int uft_mkdir_p(const char *path)
 {
     if (!path || !*path) return -1;

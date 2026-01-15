@@ -1,3 +1,8 @@
+/**
+ * @file imd_writer.c
+ * @brief ImageDisk IMD format writer
+ * @version 3.8.0
+ */
 /*
 //
 // Copyright (C) 2006-2025 Jean-Franois DEL NERO

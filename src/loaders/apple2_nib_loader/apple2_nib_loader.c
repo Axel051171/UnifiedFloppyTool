@@ -1,3 +1,8 @@
+/**
+ * @file apple2_nib_loader.c
+ * @brief Apple II NIB nibble image loader
+ * @version 3.8.0
+ */
 /*
 //
 // Copyright (C) 2006-2025 Jean-François DEL NERO

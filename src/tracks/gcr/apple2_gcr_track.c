@@ -1,3 +1,8 @@
+/**
+ * @file apple2_gcr_track.c
+ * @brief Apple II GCR track handler
+ * @version 3.8.0
+ */
 /*
 //
 // Copyright (C) 2006-2025 Jean-François DEL NERO

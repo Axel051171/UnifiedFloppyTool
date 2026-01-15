@@ -216,8 +216,6 @@ typedef struct {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════════
- * Write Options (mit Verify)
-/* ═══════════════════════════════════════════════════════════════════════════════
  * Write with Verify Options
  * 
  * Note: This is uft_write_verify_options_t, not uft_write_options_t

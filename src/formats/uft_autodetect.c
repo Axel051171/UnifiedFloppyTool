@@ -1,3 +1,8 @@
+/**
+ * @file uft_autodetect.c
+ * @brief Automatic format detection engine
+ * @version 3.8.0
+ */
 // uft_autodetect.c - Unified format auto-detection & vtable routing (C11)
 
 #include "uft_autodetect.h"

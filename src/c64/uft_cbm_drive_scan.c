@@ -1,3 +1,8 @@
+/**
+ * @file uft_cbm_drive_scan.c
+ * @brief Commodore drive detection and scanning
+ * @version 3.8.0
+ */
 #include "uft/c64/uft_cbm_drive_scan.h"
 #include <string.h>
 #include <stdlib.h>

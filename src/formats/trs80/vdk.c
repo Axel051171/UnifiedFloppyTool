@@ -1,3 +1,8 @@
+/**
+ * @file vdk.c
+ * @brief TRS-80 VDK virtual disk format
+ * @version 3.8.0
+ */
 // vdk.c - Dragon 32/64 VDK (C11)
 #include "uft/formats/vdk.h"
 #include <stdio.h>

@@ -1,3 +1,8 @@
+/**
+ * @file test_sector_parser.c
+ * @brief Sector parser test utilities
+ * @version 3.8.0
+ */
 /*
  * test_sector_parser.c - Unit tests for UFT Sector Parser
  */

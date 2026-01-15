@@ -1,3 +1,8 @@
+/**
+ * @file trackutils.c
+ * @brief Track manipulation utilities
+ * @version 3.8.0
+ */
 /*
 //
 // Copyright (C) 2006-2025 Jean-François DEL NERO

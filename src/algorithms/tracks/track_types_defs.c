@@ -1,3 +1,8 @@
+/**
+ * @file track_types_defs.c
+ * @brief Track type definitions
+ * @version 3.8.0
+ */
 /*
 //
 //

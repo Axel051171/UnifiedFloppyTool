@@ -1,3 +1,8 @@
+/**
+ * @file d88_writer.c
+ * @brief NEC PC-88/98 D88 image writer
+ * @version 3.8.0
+ */
 /*
 //
 // Copyright (C) 2006-2025 Jean-Franois DEL NERO

@@ -1,3 +1,8 @@
+/**
+ * @file crc.c
+ * @brief Track CRC calculation
+ * @version 3.8.0
+ */
 /*************************************************************************
  * Example Table Driven CRC16 Routine using 4-bit message chunks
  *

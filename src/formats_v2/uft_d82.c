@@ -1,3 +1,8 @@
+/**
+ * @file uft_d82.c
+ * @brief D82 format v2 implementation
+ * @version 3.8.0
+ */
 #include <stdio.h>  // FIXED R18
 #include "uft/uft_format_common.h"
 

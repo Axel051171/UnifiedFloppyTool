@@ -1,3 +1,8 @@
+/**
+ * @file apple2_2mg_loader.c
+ * @brief Apple II 2MG universal image loader
+ * @version 3.8.0
+ */
 #include "uft/uft_memory.h"
 /*
 //

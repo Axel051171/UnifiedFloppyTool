@@ -1,3 +1,8 @@
+/**
+ * @file floppy_sector_parser.c
+ * @brief Floppy sector parsing engine
+ * @version 3.8.0
+ */
 #include "uft_floppy_sector_parser.h"
 #include <string.h>
 

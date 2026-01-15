@@ -8,8 +8,8 @@
  * - VFS Filesystems (11)
  * - Format Loaders (118)
  * 
- * @author UFT Team / GOD MODE
- * @version 5.28.0
+ * @author UFT Team
+ * @version 3.8.0
  */
 
 #ifndef UFT_INTEGRATION_H
@@ -27,10 +27,10 @@ extern "C" {
  * Version
  * ============================================================================ */
 
-#define UFT_INTEGRATION_VERSION_MAJOR   5
-#define UFT_INTEGRATION_VERSION_MINOR   28
+#define UFT_INTEGRATION_VERSION_MAJOR   3
+#define UFT_INTEGRATION_VERSION_MINOR   8
 #define UFT_INTEGRATION_VERSION_PATCH   0
-#define UFT_INTEGRATION_VERSION_STRING  "5.28.0"
+#define UFT_INTEGRATION_VERSION_STRING  "3.8.0"
 
 /* ============================================================================
  * Forward Declarations

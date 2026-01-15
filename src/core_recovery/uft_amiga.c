@@ -1,3 +1,8 @@
+/**
+ * @file uft_amiga.c
+ * @brief Amiga-specific recovery
+ * @version 3.8.0
+ */
 #include "uft/uft_amiga.h"
 #include "uft/uft_endian.h"
 

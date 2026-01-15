@@ -1,3 +1,8 @@
+/**
+ * @file st_writer.c
+ * @brief Atari ST raw image writer
+ * @version 3.8.0
+ */
 /*
 //
 // Copyright (C) 2006-2025 Jean-François DEL NERO

@@ -1,3 +1,8 @@
+/**
+ * @file preset.c
+ * @brief CRC preset configurations
+ * @version 3.8.0
+ */
 /* preset.c
  * Greg Cook, 7/Aug/2024
  *

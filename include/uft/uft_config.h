@@ -1,17 +1,17 @@
 /**
  * @file uft_config.h
  * @brief UnifiedFloppyTool - Master Configuration Header
- * @version 1.6.1
- * @date 2025-12-30
+ * @version 3.8.0
+ * @date 2026-01-15
  * 
- * CHANGELOG v1.6.1:
+ * CHANGELOG v3.8.0:
  * - Consolidated all feature flags
  * - Added cache-line alignment for False Sharing prevention
  * - Platform detection macros
  * - Endianness detection
  * - Compiler-specific optimizations
  * 
- * Copyright (c) 2025 UFT Project
+ * Copyright (c) 2025-2026 UFT Project
  * SPDX-License-Identifier: MIT
  */
 
@@ -22,10 +22,10 @@
  * VERSION INFO
  *============================================================================*/
 
-#define UFT_VERSION_MAJOR   1
-#define UFT_VERSION_MINOR   6
-#define UFT_VERSION_PATCH   1
-#define UFT_VERSION_STRING  "1.6.1"
+#define UFT_CONFIG_VERSION_MAJOR   3
+#define UFT_CONFIG_VERSION_MINOR   8
+#define UFT_CONFIG_VERSION_PATCH   0
+#define UFT_CONFIG_VERSION_STRING  "3.8.0"
 
 /*============================================================================
  * PLATFORM DETECTION

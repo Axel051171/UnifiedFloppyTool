@@ -1,3 +1,8 @@
+/**
+ * @file arburg_raw_loader.c
+ * @brief Arburg raw format loader
+ * @version 3.8.0
+ */
 /*
 //
 // Copyright (C) 2006-2025 Jean-Franois DEL NERO

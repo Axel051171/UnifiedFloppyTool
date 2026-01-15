@@ -247,13 +247,228 @@ static void test_td0_compressed_magic(void) {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════════
+ * IMG Tests
+ * ═══════════════════════════════════════════════════════════════════════════════ */
+
+static void test_img_null_data(void) {
+    TEST(img_null_data);
+    
+    uft_verify_status_t status = uft_verify_img_buffer(NULL, 0, NULL);
+    if (status == UFT_VERIFY_SIZE_MISMATCH) {
+        PASS();
+    } else {
+        FAIL("Expected SIZE_MISMATCH for NULL data");
+    }
+}
+
+static void test_img_valid_size_360k(void) {
+    TEST(img_valid_size_360k);
+    
+    /* Allocate 360KB of zeros (valid disk size) */
+    size_t size = 360 * 1024;
+    uint8_t *data = (uint8_t *)calloc(size, 1);
+    if (!data) {
+        FAIL("Memory allocation failed");
+        return;
+    }
+    
+    uft_verify_status_t status = uft_verify_img_buffer(data, size, NULL);
+    free(data);
+    
+    if (status == UFT_VERIFY_OK) {
+        PASS();
+    } else {
+        FAIL("Expected OK for valid 360KB size");
+    }
+}
+
+static void test_img_invalid_size(void) {
+    TEST(img_invalid_size);
+    
+    /* Odd size that's not a valid disk image */
+    uint8_t data[12345];
+    memset(data, 0, sizeof(data));
+    
+    uft_verify_status_t status = uft_verify_img_buffer(data, sizeof(data), NULL);
+    if (status == UFT_VERIFY_SIZE_MISMATCH) {
+        PASS();
+    } else {
+        FAIL("Expected SIZE_MISMATCH for odd size");
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+ * IMD Tests
+ * ═══════════════════════════════════════════════════════════════════════════════ */
+
+static void test_imd_null_data(void) {
+    TEST(imd_null_data);
+    
+    uft_verify_status_t status = uft_verify_imd_buffer(NULL, 0, NULL);
+    if (status == UFT_VERIFY_SIZE_MISMATCH) {
+        PASS();
+    } else {
+        FAIL("Expected SIZE_MISMATCH for NULL data");
+    }
+}
+
+static void test_imd_bad_magic(void) {
+    TEST(imd_bad_magic);
+    
+    uint8_t data[16] = {'B', 'A', 'D', ' '};
+    uft_verify_status_t status = uft_verify_imd_buffer(data, sizeof(data), NULL);
+    if (status == UFT_VERIFY_FORMAT_ERROR) {
+        PASS();
+    } else {
+        FAIL("Expected FORMAT_ERROR for bad magic");
+    }
+}
+
+static void test_imd_good_magic(void) {
+    TEST(imd_good_magic);
+    
+    /* Valid IMD header with 0x1A terminator and track data */
+    uint8_t data[64] = {
+        'I', 'M', 'D', ' ', '1', '.', '0', ' ',
+        'T', 'e', 's', 't', 0x1A,  /* Header with terminator */
+        0x00,  /* Mode (FM 500kbps) */
+        0x00,  /* Cylinder 0 */
+        0x00,  /* Head 0 */
+        0x09,  /* 9 sectors */
+        0x02,  /* 512 bytes per sector */
+    };
+    
+    uft_verify_result_t result = {0};
+    uft_verify_status_t status = uft_verify_imd_buffer(data, sizeof(data), &result);
+    if (status == UFT_VERIFY_OK) {
+        PASS();
+    } else {
+        FAIL("Expected OK for valid IMD");
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+ * D71 Tests
+ * ═══════════════════════════════════════════════════════════════════════════════ */
+
+static void test_d71_invalid_size(void) {
+    TEST(d71_invalid_size);
+    
+    uint8_t data[1024] = {0};
+    uft_verify_status_t status = uft_verify_d71_buffer(data, sizeof(data), NULL);
+    if (status == UFT_VERIFY_SIZE_MISMATCH) {
+        PASS();
+    } else {
+        FAIL("Expected SIZE_MISMATCH for wrong size");
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+ * D81 Tests
+ * ═══════════════════════════════════════════════════════════════════════════════ */
+
+static void test_d81_invalid_size(void) {
+    TEST(d81_invalid_size);
+    
+    uint8_t data[1024] = {0};
+    uft_verify_status_t status = uft_verify_d81_buffer(data, sizeof(data), NULL);
+    if (status == UFT_VERIFY_SIZE_MISMATCH) {
+        PASS();
+    } else {
+        FAIL("Expected SIZE_MISMATCH for wrong size");
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+ * HFE Tests
+ * ═══════════════════════════════════════════════════════════════════════════════ */
+
+static void test_hfe_null_data(void) {
+    TEST(hfe_null_data);
+    
+    uft_verify_status_t status = uft_verify_hfe_buffer(NULL, 0, NULL);
+    if (status == UFT_VERIFY_SIZE_MISMATCH) {
+        PASS();
+    } else {
+        FAIL("Expected SIZE_MISMATCH for NULL data");
+    }
+}
+
+static void test_hfe_bad_magic(void) {
+    TEST(hfe_bad_magic);
+    
+    uint8_t data[512] = {'B', 'A', 'D', 'M', 'A', 'G', 'I', 'C'};
+    uft_verify_status_t status = uft_verify_hfe_buffer(data, sizeof(data), NULL);
+    if (status == UFT_VERIFY_FORMAT_ERROR) {
+        PASS();
+    } else {
+        FAIL("Expected FORMAT_ERROR for bad magic");
+    }
+}
+
+static void test_hfe_good_header(void) {
+    TEST(hfe_good_header);
+    
+    uint8_t data[512] = {0};
+    /* Magic: HXCPICFE */
+    memcpy(data, "HXCPICFE", 8);
+    data[8] = 0;    /* Revision 0 */
+    data[9] = 80;   /* 80 tracks */
+    data[10] = 2;   /* 2 sides */
+    data[11] = 1;   /* IBM MFM encoding */
+    data[18] = 1;   /* Track list at block 1 (offset 512) */
+    data[19] = 0;
+    
+    /* Need at least track list offset */
+    uft_verify_status_t status = uft_verify_hfe_buffer(data, sizeof(data), NULL);
+    if (status == UFT_VERIFY_SIZE_MISMATCH) {
+        /* Track list at block 1 = offset 512 which equals size */
+        PASS();  /* Expected since track list is at edge */
+    } else if (status == UFT_VERIFY_OK) {
+        PASS();
+    } else {
+        FAIL("Expected OK or SIZE_MISMATCH");
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+ * D88 Tests
+ * ═══════════════════════════════════════════════════════════════════════════════ */
+
+static void test_d88_small_data(void) {
+    TEST(d88_small_data);
+    
+    uint8_t data[100] = {0};
+    uft_verify_status_t status = uft_verify_d88_buffer(data, sizeof(data), NULL);
+    if (status == UFT_VERIFY_SIZE_MISMATCH) {
+        PASS();
+    } else {
+        FAIL("Expected SIZE_MISMATCH for small data");
+    }
+}
+
+static void test_d88_bad_media_type(void) {
+    TEST(d88_bad_media_type);
+    
+    uint8_t data[1024] = {0};
+    data[0x1B] = 0xFF;  /* Invalid media type */
+    
+    uft_verify_status_t status = uft_verify_d88_buffer(data, sizeof(data), NULL);
+    if (status == UFT_VERIFY_FORMAT_ERROR) {
+        PASS();
+    } else {
+        FAIL("Expected FORMAT_ERROR for bad media type");
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
  * Main
  * ═══════════════════════════════════════════════════════════════════════════════ */
 
 int main(void) {
     printf("\n");
     printf("═══════════════════════════════════════════════════════════════\n");
-    printf("  UFT Format Verify Tests\n");
+    printf("  UFT Format Verify Tests (Extended)\n");
     printf("═══════════════════════════════════════════════════════════════\n\n");
     
     printf("WOZ Format Tests:\n");
@@ -273,6 +488,31 @@ int main(void) {
     test_td0_bad_magic();
     test_td0_good_magic_bad_version();
     test_td0_compressed_magic();
+    
+    printf("\nIMG Format Tests:\n");
+    test_img_null_data();
+    test_img_valid_size_360k();
+    test_img_invalid_size();
+    
+    printf("\nIMD Format Tests:\n");
+    test_imd_null_data();
+    test_imd_bad_magic();
+    test_imd_good_magic();
+    
+    printf("\nD71 Format Tests:\n");
+    test_d71_invalid_size();
+    
+    printf("\nD81 Format Tests:\n");
+    test_d81_invalid_size();
+    
+    printf("\nHFE Format Tests:\n");
+    test_hfe_null_data();
+    test_hfe_bad_magic();
+    test_hfe_good_header();
+    
+    printf("\nD88 Format Tests:\n");
+    test_d88_small_data();
+    test_d88_bad_media_type();
     
     printf("\n═══════════════════════════════════════════════════════════════\n");
     printf("  Results: %d/%d tests passed\n", tests_passed, tests_run);

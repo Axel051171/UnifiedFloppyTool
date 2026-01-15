@@ -1,3 +1,8 @@
+/**
+ * @file ssd_dsd.c
+ * @brief BBC Micro SSD/DSD format
+ * @version 3.8.0
+ */
 // ssd_dsd.c - BBC Micro DFS SSD/DSD (C11)
 #include "uft/formats/ssd_dsd.h"
 #include <stdio.h>

@@ -1,3 +1,8 @@
+/**
+ * @file uft_aes_xts.c
+ * @brief AES-XTS encryption for disk images
+ * @version 3.8.0
+ */
 /*
 * Copyright (c) 2012 by naehrwert
 * This file is released under the GPLv2.
