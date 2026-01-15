@@ -295,6 +295,7 @@ HEADERS += \
 SOURCES += src/core/uft_advanced_mode.c
 
 HEADERS += include/uft/uft_advanced_mode.h
+HEADERS += include/uft/uft_v3_bridge.h
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Additional Format Parsers
@@ -316,6 +317,7 @@ SOURCES += \
 
 SOURCES += \
     src/formats/uft_format_registry.c \
+    src/formats/uft_v3_bridge.c \
     src/core/uft_format_plugin.c
 
 # ═══════════════════════════════════════════════════════════════════════════════

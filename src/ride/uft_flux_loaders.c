@@ -25,8 +25,11 @@
 #define SCP_HEADER_SIZE     16
 #define SCP_TRACK_HEADER    4
 
+#include "uft/uft_packed.h"
+
 /* SCP Header (offset 0x00) */
-typedef struct __attribute__((packed)) {
+UFT_PACK_BEGIN
+typedef struct {
     char     magic[3];          /* "SCP" */
     uint8_t  version;           /* Version (currently 0x19) */
     uint8_t  disk_type;         /* Disk type */
@@ -39,19 +42,24 @@ typedef struct __attribute__((packed)) {
     uint8_t  resolution;        /* 25ns resolution multiplier */
     uint32_t checksum;          /* File checksum */
 } scp_header_t;
+UFT_PACK_END
 
 /* Track Data Header */
-typedef struct __attribute__((packed)) {
+UFT_PACK_BEGIN
+typedef struct {
     char     trk_magic[3];      /* "TRK" */
     uint8_t  track_num;         /* Track number */
 } scp_track_header_t;
+UFT_PACK_END
 
 /* Revolution Header */
-typedef struct __attribute__((packed)) {
+UFT_PACK_BEGIN
+typedef struct {
     uint32_t index_time;        /* Index to index time (25ns units) */
     uint32_t flux_count;        /* Number of flux transitions */
     uint32_t data_offset;       /* Offset to flux data (from track header) */
 } scp_rev_header_t;
+UFT_PACK_END
 
 /* SCP Flags */
 #define SCP_FLAG_INDEX      0x01    /* Index signal stored */
