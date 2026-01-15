@@ -14,6 +14,7 @@
 
 #include "uft/ride/uft_flux_decoder.h"
 #include "uft/uft_common.h"
+#include "uft/uft_packed.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -466,7 +467,8 @@ int uft_verify_d81(const char *path, uft_verify_result_t *result) {
  *============================================================================*/
 
 /* Atari ST boot sector structure */
-typedef struct __attribute__((packed)) {
+UFT_PACK_BEGIN
+typedef struct {
     uint8_t  branch[2];         /* BRA.S to boot code or 0x0000 */
     uint8_t  oem[6];            /* OEM name */
     uint8_t  serial[3];         /* Serial number */
@@ -483,6 +485,7 @@ typedef struct __attribute__((packed)) {
     uint16_t hidden_sectors;
     /* Extended fields for larger disks */
 } st_boot_sector_t;
+UFT_PACK_END
 
 /**
  * @brief Known Atari ST disk sizes
@@ -620,13 +623,15 @@ int uft_verify_st(const char *path, uft_verify_result_t *result) {
 
 #define MSA_MAGIC           0x0E0F
 
-typedef struct __attribute__((packed)) {
+UFT_PACK_BEGIN
+typedef struct {
     uint16_t magic;             /* 0x0E0F */
     uint16_t sectors_per_track;
     uint16_t sides;             /* 0 = SS, 1 = DS */
     uint16_t start_track;
     uint16_t end_track;
 } msa_header_t;
+UFT_PACK_END
 
 /**
  * @brief Verify Atari ST MSA compressed image

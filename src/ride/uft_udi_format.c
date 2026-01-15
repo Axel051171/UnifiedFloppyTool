@@ -18,6 +18,7 @@
 
 #include "uft/ride/uft_flux_decoder.h"
 #include "uft/uft_common.h"
+#include "uft/uft_packed.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -31,6 +32,7 @@
 #define UDI_VERSION         0x00        /* Current version */
 
 /* UDI Header (16 bytes) */
+UFT_PACK_BEGIN
 typedef struct {
     uint32_t signature;     /* "UDI!" = 0x21494455 */
     uint32_t file_size;     /* Total file size including CRC */
@@ -39,13 +41,16 @@ typedef struct {
     uint8_t  max_head;      /* Maximum head (0 or 1) */
     uint8_t  reserved;      /* Reserved, must be 0 */
     uint32_t ext_header;    /* Extended header size (usually 0) */
-} __attribute__((packed)) udi_header_t;
+} udi_header_t;
+UFT_PACK_END
 
 /* UDI Track Header (3 bytes) */
+UFT_PACK_BEGIN
 typedef struct {
     uint8_t  type;          /* Track type (0 = MFM) */
     uint16_t length;        /* Track data length in bytes */
-} __attribute__((packed)) udi_track_header_t;
+} udi_track_header_t;
+UFT_PACK_END
 
 /*============================================================================
  * CRC-32 IMPLEMENTATION (UDI-specific polynomial)

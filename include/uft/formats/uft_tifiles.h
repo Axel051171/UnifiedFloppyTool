@@ -30,6 +30,17 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+/* Cross-platform packed struct support */
+#ifdef _MSC_VER
+    #define UFT_TIFILES_PACK_BEGIN __pragma(pack(push, 1))
+    #define UFT_TIFILES_PACK_END   __pragma(pack(pop))
+    #define UFT_TIFILES_PACKED
+#else
+    #define UFT_TIFILES_PACK_BEGIN
+    #define UFT_TIFILES_PACK_END
+    #define UFT_TIFILES_PACKED __attribute__((packed))
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -84,7 +95,8 @@ typedef enum {
 /**
  * @brief TIFILES header structure (128 bytes)
  */
-typedef struct __attribute__((packed)) {
+UFT_TIFILES_PACK_BEGIN
+typedef struct {
     uint8_t     signature[8];       /**< 0x07 + "TIFILES" */
     uint8_t     sectors_hi;         /**< Total sectors (high byte) */
     uint8_t     sectors_lo;         /**< Total sectors (low byte) */
@@ -100,7 +112,8 @@ typedef struct __attribute__((packed)) {
     uint8_t     creation_time[4];   /**< Creation timestamp */
     uint8_t     update_time[4];     /**< Last update timestamp */
     uint8_t     reserved2[92];      /**< Reserved (zeros) */
-} uft_tifiles_header_t;
+} UFT_TIFILES_PACKED uft_tifiles_header_t;
+UFT_TIFILES_PACK_END
 
 /**
  * @brief TIFILES file information (parsed header)

@@ -31,6 +31,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include "uft/uft_packed.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -83,7 +84,8 @@ typedef enum {
  * 
  * This matches the File Descriptor Record layout on TI-99/4A disks.
  */
-typedef struct __attribute__((packed)) {
+UFT_PACK_BEGIN
+typedef struct {
     char        filename[10];       /**< Filename (space-padded, ASCII) */
     uint8_t     ext_rec_len_hi;     /**< Extended record length (high) */
     uint8_t     ext_rec_len_lo;     /**< Extended record length (low) */
@@ -99,6 +101,7 @@ typedef struct __attribute__((packed)) {
     uint8_t     update_date[4];     /**< Last update date/time */
     uint8_t     reserved[100];      /**< Padding to 128 bytes */
 } uft_fiad_header_t;
+UFT_PACK_END
 
 /**
  * @brief FIAD file information (parsed header)

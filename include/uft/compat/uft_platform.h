@@ -247,6 +247,8 @@ static inline uint64_t uft_bswap64(uint64_t x) {
 #ifdef _WIN32
 #define uft_snprintf _snprintf
 #define uft_vsnprintf _vsnprintf
+#define strcasecmp _stricmp
+#define strncasecmp _strnicmp
 #else
 #define uft_snprintf snprintf
 #define uft_vsnprintf vsnprintf

@@ -20,6 +20,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "uft/uft_packed.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -81,6 +82,7 @@ extern "C" {
 /**
  * @brief Partition table entry (MBR format, 16 bytes)
  */
+UFT_PACK_BEGIN
 typedef struct {
     uint8_t  boot_flag;         /**< 0x80 = bootable, 0x00 = not bootable */
     uint8_t  start_head;        /**< Starting head (CHS) */
@@ -92,20 +94,24 @@ typedef struct {
     uint8_t  end_cylinder;      /**< Ending cylinder */
     uint32_t lba_start;         /**< Starting LBA address */
     uint32_t lba_count;         /**< Number of sectors */
-} __attribute__((packed)) uft_partition_entry_t;
+} uft_partition_entry_t;
+UFT_PACK_END
 
 /**
  * @brief Master Boot Record structure (512 bytes)
  */
+UFT_PACK_BEGIN
 typedef struct {
     uint8_t  bootstrap[446];            /**< Bootstrap code area */
     uft_partition_entry_t partitions[4]; /**< Partition table entries */
     uint16_t signature;                  /**< MBR signature (0xAA55) */
-} __attribute__((packed)) uft_mbr_t;
+} uft_mbr_t;
+UFT_PACK_END
 
 /**
  * @brief FAT32 Boot Sector / BPB structure
  */
+UFT_PACK_BEGIN
 typedef struct {
     uint8_t  jump_boot[3];          /**< Jump instruction to boot code */
     uint8_t  oem_name[8];           /**< OEM name (e.g., "MSWIN4.1") */
@@ -137,11 +143,13 @@ typedef struct {
     uint8_t  fs_type[8];            /**< Filesystem type ("FAT32   ") */
     uint8_t  boot_code[420];        /**< Boot code */
     uint16_t signature;             /**< Sector signature (0xAA55) */
-} __attribute__((packed)) uft_fat32_boot_sector_t;
+} uft_fat32_boot_sector_t;
+UFT_PACK_END
 
 /**
  * @brief FAT32 FSInfo structure
  */
+UFT_PACK_BEGIN
 typedef struct {
     uint32_t lead_signature;    /**< Lead signature (0x41615252) */
     uint8_t  reserved1[480];    /**< Reserved */
@@ -150,11 +158,13 @@ typedef struct {
     uint32_t next_free;         /**< Next free cluster hint */
     uint8_t  reserved2[12];     /**< Reserved */
     uint32_t trail_signature;   /**< Trail signature (0xAA550000) */
-} __attribute__((packed)) uft_fat32_fsinfo_t;
+} uft_fat32_fsinfo_t;
+UFT_PACK_END
 
 /**
  * @brief FAT32 directory entry (32 bytes)
  */
+UFT_PACK_BEGIN
 typedef struct {
     uint8_t  name[11];          /**< Short name (8.3 format, space padded) */
     uint8_t  attributes;        /**< File attributes */
@@ -168,7 +178,8 @@ typedef struct {
     uint16_t modify_date;       /**< Modification date */
     uint16_t cluster_low;       /**< Low 16 bits of first cluster */
     uint32_t file_size;         /**< File size in bytes */
-} __attribute__((packed)) uft_fat32_dir_entry_t;
+} uft_fat32_dir_entry_t;
+UFT_PACK_END
 
 /**
  * @brief FAT32 format parameters
