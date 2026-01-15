@@ -85,10 +85,15 @@ typedef int32_t ssize_t;
 #define CLOCK_MONOTONIC 1
 #define CLOCK_REALTIME  0
 
+/* Only define timespec if not already defined by MSVC */
+#if !defined(_TIMESPEC_DEFINED) && !defined(__struct_timespec_defined)
+#define _TIMESPEC_DEFINED
+#define __struct_timespec_defined
 struct timespec {
     time_t tv_sec;
     long   tv_nsec;
 };
+#endif /* _TIMESPEC_DEFINED */
 
 static inline int clock_gettime(int clk_id, struct timespec *tp) {
     (void)clk_id;

@@ -34,6 +34,7 @@ set(FS_SOURCES
     uft_fat12_validate.c
     uft_fat_entry.c
     uft_fat_table.c
+    uft_fbasic_fs.c
     uft_human68k.c
     uft_scandisk.c
     uft_spartados.c

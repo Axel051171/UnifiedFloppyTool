@@ -16,7 +16,12 @@
 #include <string.h>
 #include <stdbool.h>
 #include <stdint.h>
+
+#ifdef _WIN32
+#include <windows.h>
+#else
 #include <unistd.h>
+#endif
 
 /*============================================================================
  * TEST FRAMEWORK

@@ -16,6 +16,9 @@ set(HAL_SOURCES
     # Greaseweazle - Full implementation
     uft_greaseweazle_full.c
     
+    # Pauline - Professional floppy controller
+    uft_pauline.c
+    
     # Support
     uft_latency_tracking.c
     ufi.c
