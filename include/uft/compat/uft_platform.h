@@ -80,6 +80,27 @@ typedef int32_t ssize_t;
 #define usleep(us) Sleep((us) / 1000)
 #define sleep(s)   Sleep((s) * 1000)
 
+/* clock_gettime emulation for Windows */
+#ifndef CLOCK_MONOTONIC
+#define CLOCK_MONOTONIC 1
+#define CLOCK_REALTIME  0
+
+struct timespec {
+    time_t tv_sec;
+    long   tv_nsec;
+};
+
+static inline int clock_gettime(int clk_id, struct timespec *tp) {
+    (void)clk_id;
+    LARGE_INTEGER freq, count;
+    QueryPerformanceFrequency(&freq);
+    QueryPerformanceCounter(&count);
+    tp->tv_sec = (time_t)(count.QuadPart / freq.QuadPart);
+    tp->tv_nsec = (long)((count.QuadPart % freq.QuadPart) * 1000000000LL / freq.QuadPart);
+    return 0;
+}
+#endif /* CLOCK_MONOTONIC */
+
 /* Thread-local storage */
 #define UFT_THREAD_LOCAL __declspec(thread)
 

@@ -524,31 +524,34 @@ bool UftOperationWorker::processReadFromHardware()
                          QString("Reading C%1 H%2").arg(cyl).arg(head));
             
             // Read flux data
-            uft_gw_read_params_t params = {0};
+            uft_gw_read_params_t params = {};
             params.revolutions = revolutions;
             params.index_sync = true;
             
-            uft_gw_flux_data_t flux = {0};
+            uft_gw_flux_data_t *flux = nullptr;
             ret = uft_gw_read_flux(gw, &params, &flux);
             
             int trackErrors = 0;
-            if (ret != 0 || flux.sample_count == 0) {
+            if (ret != 0 || flux == nullptr || flux->sample_count == 0) {
                 trackErrors = 1;
                 errors++;
             } else {
                 // TODO: Decode flux and write to file
                 // For now, store raw flux (SCP-like format)
-                if (outFile.isOpen() && flux.samples) {
+                if (outFile.isOpen() && flux->samples) {
                     // Simple raw dump (would need proper format handling)
-                    // outFile.write((char*)flux.samples, flux.sample_count * 4);
+                    // outFile.write((char*)flux->samples, flux->sample_count * 4);
                 }
             }
             
             emit trackProcessed(cyl, head, trackErrors);
             
             // Free flux data
-            if (flux.samples) free(flux.samples);
-            if (flux.index_times) free(flux.index_times);
+            if (flux) {
+                if (flux->samples) free(flux->samples);
+                if (flux->index_times) free(flux->index_times);
+                free(flux);
+            }
             
             currentTrack++;
             

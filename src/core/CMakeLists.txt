@@ -1,12 +1,14 @@
 # UFT Core Module - Minimal Build
 # Many core files have type/error code conflicts (P0-2 TODO)
 
+# Check for zlib
+find_package(ZLIB QUIET)
+
 # Get all existing .c files in this directory
 file(GLOB CORE_ALL_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/*.c")
 
 # List of files known to compile cleanly
 set(CORE_WHITELIST
-    uft_apd_format.c
     uft_decode_score.c
     uft_fat_editor.c
     uft_format_registry.c
@@ -29,6 +31,14 @@ set(CORE_WHITELIST
     uft_write_verify_pipeline.c
 )
 
+# APD format requires zlib
+if(ZLIB_FOUND)
+    list(APPEND CORE_WHITELIST uft_apd_format.c)
+    message(STATUS "uft_core: zlib found - APD format enabled")
+else()
+    message(STATUS "uft_core: zlib not found - APD format disabled")
+endif()
+
 # Filter to only whitelisted files
 set(CORE_SOURCES_EXIST)
 foreach(src ${CORE_WHITELIST})
@@ -50,7 +60,15 @@ if(CORE_SOURCES_EXIST)
         ${CMAKE_SOURCE_DIR}/include/uft/core
         ${CMAKE_SOURCE_DIR}/include/uft/compat
     )
-    target_link_libraries(uft_core PUBLIC uft_crc z)
+    
+    # Link zlib only if found
+    if(ZLIB_FOUND)
+        target_link_libraries(uft_core PUBLIC uft_crc ZLIB::ZLIB)
+        target_compile_definitions(uft_core PRIVATE UFT_HAS_ZLIB=1)
+    else()
+        target_link_libraries(uft_core PUBLIC uft_crc)
+    endif()
+    
     set_target_properties(uft_core PROPERTIES C_STANDARD 11)
     if(NOT MSVC)
         target_compile_options(uft_core PRIVATE -Wno-unused-parameter)

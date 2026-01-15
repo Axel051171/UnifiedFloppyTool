@@ -17,6 +17,9 @@
 #ifndef UFT_PLATFORM_H
 #define UFT_PLATFORM_H
 
+/* Include compatibility layer first for POSIX functions on Windows */
+#include "uft/compat/uft_platform.h"
+
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>

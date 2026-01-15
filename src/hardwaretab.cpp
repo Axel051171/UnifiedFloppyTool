@@ -361,7 +361,7 @@ void HardwareTab::onConnect()
         // Real HAL connection attempt
         #ifdef UFT_HAS_HAL
         uft_gw_device_t *gw = nullptr;
-        int ret = uft_gw_open(&gw, port.toLocal8Bit().constData());
+        int ret = uft_gw_open(port.toLocal8Bit().constData(), &gw);
         
         if (ret == 0 && gw != nullptr) {
             // Get device info
@@ -863,21 +863,22 @@ void HardwareTab::onReadTest()
     uft_gw_select_head(gw, 0);
     
     // Try to read flux data
-    uft_gw_read_params_t params = {0};
+    uft_gw_read_params_t params = {};
     params.revolutions = 1;
     params.index_sync = true;
     
-    uft_gw_flux_data_t flux = {0};
+    uft_gw_flux_data_t *flux = nullptr;
     ret = uft_gw_read_flux(gw, &params, &flux);
     
     uft_gw_set_motor(gw, false);
     
-    if (ret == 0 && flux.sample_count > 0) {
+    if (ret == 0 && flux != nullptr && flux->sample_count > 0) {
         updateStatus(tr("Read test complete - Track 0 readable (%1 samples, %2 index pulses)")
-                    .arg(flux.sample_count).arg(flux.index_count));
+                    .arg(flux->sample_count).arg(flux->index_count));
         // Free flux data
-        if (flux.samples) free(flux.samples);
-        if (flux.index_times) free(flux.index_times);
+        if (flux->samples) free(flux->samples);
+        if (flux->index_times) free(flux->index_times);
+        free(flux);
     } else {
         updateStatus(tr("Read test failed: no data or error %1").arg(ret));
     }
@@ -905,19 +906,19 @@ void HardwareTab::onRPMTest()
     QThread::msleep(1000);  // Wait for stable rotation
     
     // Read one revolution to measure index time
-    uft_gw_read_params_t params = {0};
+    uft_gw_read_params_t params = {};
     params.revolutions = 2;  // Need 2 to measure interval
     params.index_sync = true;
     
-    uft_gw_flux_data_t flux = {0};
+    uft_gw_flux_data_t *flux = nullptr;
     int ret = uft_gw_read_flux(gw, &params, &flux);
     
     uft_gw_set_motor(gw, false);
     
-    if (ret == 0 && flux.index_count >= 2) {
+    if (ret == 0 && flux != nullptr && flux->index_count >= 2) {
         // Calculate RPM from index times
         uint32_t sample_freq = uft_gw_get_sample_freq(gw);
-        uint32_t interval_ticks = flux.index_times[1] - flux.index_times[0];
+        uint32_t interval_ticks = flux->index_times[1] - flux->index_times[0];
         double interval_ms = (double)interval_ticks / sample_freq * 1000.0;
         double rpm = 60000.0 / interval_ms;
         
@@ -928,8 +929,9 @@ void HardwareTab::onRPMTest()
         m_detectedRPM = qRound(rpm);
         
         // Free flux data
-        if (flux.samples) free(flux.samples);
-        if (flux.index_times) free(flux.index_times);
+        if (flux->samples) free(flux->samples);
+        if (flux->index_times) free(flux->index_times);
+        free(flux);
     } else {
         updateStatus(tr("RPM measurement failed: insufficient index pulses"));
     }
