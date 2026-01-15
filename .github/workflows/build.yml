@@ -38,20 +38,42 @@ jobs:
       - name: Run Tests
         run: cd build && ctest --output-on-failure
       
-      - name: Create tar.gz
+      - name: Create tar.gz with Qt libraries
         run: |
-          mkdir -p dist/UnifiedFloppyTool-${{ env.UFT_VERSION }}-linux-x64
-          # Copy GUI if it was built
+          mkdir -p dist/UnifiedFloppyTool-${{ env.UFT_VERSION }}-linux-x64/lib
+          # Copy GUI executable
           if [ -f build/UnifiedFloppyTool ]; then
             cp build/UnifiedFloppyTool dist/UnifiedFloppyTool-${{ env.UFT_VERSION }}-linux-x64/
+            
+            # Copy required Qt6 libraries
+            for lib in Core Gui Widgets SerialPort DBus XcbQpa; do
+              libpath=$(find /usr -name "libQt6${lib}.so*" 2>/dev/null | head -1)
+              if [ -n "$libpath" ]; then
+                cp -L "$libpath" dist/UnifiedFloppyTool-${{ env.UFT_VERSION }}-linux-x64/lib/ 2>/dev/null || true
+              fi
+            done
+            
+            # Copy Qt plugins
+            mkdir -p dist/UnifiedFloppyTool-${{ env.UFT_VERSION }}-linux-x64/plugins/platforms
+            cp -r /usr/lib/x86_64-linux-gnu/qt6/plugins/platforms/libqxcb.so \
+                  dist/UnifiedFloppyTool-${{ env.UFT_VERSION }}-linux-x64/plugins/platforms/ 2>/dev/null || true
+            
+            # Create launcher script
+            cat > dist/UnifiedFloppyTool-${{ env.UFT_VERSION }}-linux-x64/UnifiedFloppyTool.sh << 'LAUNCHER'
+#!/bin/bash
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+export LD_LIBRARY_PATH="$SCRIPT_DIR/lib:$LD_LIBRARY_PATH"
+export QT_PLUGIN_PATH="$SCRIPT_DIR/plugins"
+exec "$SCRIPT_DIR/UnifiedFloppyTool" "$@"
+LAUNCHER
+            chmod +x dist/UnifiedFloppyTool-${{ env.UFT_VERSION }}-linux-x64/UnifiedFloppyTool.sh
           else
-            echo "WARNING: GUI executable not found, packaging libraries only"
-            # List what was actually built
+            echo "WARNING: GUI executable not found"
             find build -name "*.a" -o -name "*.so" 2>/dev/null | head -20
           fi
           cp README.md LICENSE dist/UnifiedFloppyTool-${{ env.UFT_VERSION }}-linux-x64/ 2>/dev/null || true
-          echo "NOTE: This tar.gz requires Qt6 to be installed on your system." > dist/UnifiedFloppyTool-${{ env.UFT_VERSION }}-linux-x64/INSTALL.txt
-          echo "Install with: sudo apt install qt6-base-dev libusb-1.0-0" >> dist/UnifiedFloppyTool-${{ env.UFT_VERSION }}-linux-x64/INSTALL.txt
+          echo "Run ./UnifiedFloppyTool.sh to start the application" > dist/UnifiedFloppyTool-${{ env.UFT_VERSION }}-linux-x64/README_LINUX.txt
+          echo "If Qt libraries are missing, install: sudo apt install qt6-base-dev libusb-1.0-0" >> dist/UnifiedFloppyTool-${{ env.UFT_VERSION }}-linux-x64/README_LINUX.txt
           cd dist && tar -czvf UnifiedFloppyTool-${{ env.UFT_VERSION }}-linux-x64.tar.gz UnifiedFloppyTool-${{ env.UFT_VERSION }}-linux-x64
       
       - name: Create AppImage
@@ -68,17 +90,17 @@ jobs:
           
           cp build/UnifiedFloppyTool AppDir/usr/bin/
           
-          # Create desktop file
-          cat > AppDir/usr/share/applications/unifiedfloppytool.desktop << 'DESKTOP'
-          [Desktop Entry]
-          Name=UnifiedFloppyTool
-          Comment=Professional Floppy Disk Preservation Tool
-          Exec=UnifiedFloppyTool
-          Icon=unifiedfloppytool
-          Terminal=false
-          Type=Application
-          Categories=Utility;System;
-          DESKTOP
+          # Create desktop file (no leading whitespace!)
+          cat > AppDir/usr/share/applications/unifiedfloppytool.desktop << 'EOF'
+[Desktop Entry]
+Name=UnifiedFloppyTool
+Comment=Professional Floppy Disk Preservation Tool
+Exec=UnifiedFloppyTool
+Icon=unifiedfloppytool
+Terminal=false
+Type=Application
+Categories=Utility;System;
+EOF
           
           # Create simple icon (placeholder)
           convert -size 256x256 xc:'#2196F3' -fill white -gravity center -pointsize 48 -annotate 0 'UFT' AppDir/usr/share/icons/hicolor/256x256/apps/unifiedfloppytool.png 2>/dev/null || \
@@ -164,6 +186,15 @@ jobs:
       
       - name: Deploy Qt Frameworks
         run: macdeployqt build/UnifiedFloppyTool.app -always-overwrite
+      
+      - name: Ad-hoc Code Sign
+        run: |
+          # Remove any existing signatures and re-sign with ad-hoc identity
+          codesign --remove-signature build/UnifiedFloppyTool.app 2>/dev/null || true
+          codesign --deep --force --sign - build/UnifiedFloppyTool.app
+          # Verify the signature
+          codesign --verify --deep --strict build/UnifiedFloppyTool.app
+          echo "Code signing successful"
       
       - name: Create tar.gz
         run: |

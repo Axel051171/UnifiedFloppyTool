@@ -104,10 +104,12 @@ void MainWindow::loadTabWidgets()
             hardwareTab, &HardwareTab::setWorkflowModes);
     
     // Connect HardwareTab connection state to MainWindow LED status
+    // Use Qt::QueuedConnection to ensure UI updates happen in main thread
     connect(hardwareTab, &HardwareTab::connectionChanged,
             this, [this](bool connected) {
+                qDebug() << "HardwareTab connectionChanged signal received:" << connected;
                 setLEDStatus(connected ? LEDStatus::Connected : LEDStatus::Disconnected);
-            });
+            }, Qt::QueuedConnection);
     
     // Tab 4: Settings - All settings as Sub-Tabs (Flux, Format, XCopy, Nibble, Forensic, Protection)
     FormatTab* formatTab = new FormatTab();
