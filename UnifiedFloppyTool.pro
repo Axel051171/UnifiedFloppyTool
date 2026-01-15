@@ -242,6 +242,13 @@ SOURCES += \
 SOURCES += \
     src/formats/adf/uft_adf_parser_v3.c \
 
+# HDF - Amiga Hard Disk (P1 Feature)
+SOURCES += \
+    src/formats/uft_hdf_parser.c
+
+HEADERS += \
+    src/formats/uft_hdf_parser.h
+
 # SCP - SuperCard Pro raw flux
 SOURCES += \
     src/formats/scp/uft_scp_parser_v3.c \
@@ -326,3 +333,13 @@ SOURCES += \
 
 SOURCES += \
     src/analysis/uft_track_analysis.c
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# AmigaDOS Extended (P2 Feature - inspired by amitools)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+SOURCES += \
+    src/fs/uft_amigados_extended.c
+
+HEADERS += \
+    include/uft/fs/uft_amigados_extended.h

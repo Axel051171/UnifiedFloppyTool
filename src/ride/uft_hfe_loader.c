@@ -9,6 +9,7 @@
  */
 
 #include "uft/ride/uft_flux_decoder.h"
+#include "uft/uft_packed.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -23,7 +24,8 @@
 #define HFE_BLOCK_SIZE      512
 
 /* HFE Header (offset 0x00) */
-typedef struct __attribute__((packed)) {
+UFT_PACK_BEGIN
+typedef struct {
     char     magic[8];              /* "HXCPICFE" or "HXCHFEV3" */
     uint8_t  format_revision;       /* File format revision */
     uint8_t  number_of_tracks;      /* Total tracks */
@@ -41,12 +43,15 @@ typedef struct __attribute__((packed)) {
     uint8_t  track1_alt_encoding;   /* Track 1 encoding */
     uint8_t  reserved2[5];
 } hfe_header_t;
+UFT_PACK_END
 
 /* Track entry in track list */
-typedef struct __attribute__((packed)) {
+UFT_PACK_BEGIN
+typedef struct {
     uint16_t offset;                /* Track data offset (blocks) */
     uint16_t track_len;             /* Track length (bytes) */
 } hfe_track_entry_t;
+UFT_PACK_END
 
 /* HFE encoding types */
 #define HFE_ENC_UNKNOWN     0x00

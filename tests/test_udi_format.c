@@ -15,6 +15,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include "uft/uft_common.h"
 
 /*============================================================================
  * TEST FRAMEWORK

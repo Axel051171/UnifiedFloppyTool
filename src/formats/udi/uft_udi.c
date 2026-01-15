@@ -15,6 +15,7 @@
 #include <string.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include "uft/uft_packed.h"
 
 /*============================================================================
  * UDI FORMAT CONSTANTS
@@ -35,7 +36,8 @@
 /**
  * @brief UDI file header
  */
-typedef struct __attribute__((packed)) {
+UFT_PACK_BEGIN
+typedef struct {
     char     signature[4];      /* "UDI!" */
     uint32_t file_size;         /* Total file size */
     uint8_t  version;           /* Format version (0) */
@@ -44,14 +46,17 @@ typedef struct __attribute__((packed)) {
     uint8_t  reserved;          /* Reserved */
     uint32_t ext_header_size;   /* Extended header size (0) */
 } uft_udi_header_t;
+UFT_PACK_END
 
 /**
  * @brief UDI track header
  */
-typedef struct __attribute__((packed)) {
+UFT_PACK_BEGIN
+typedef struct {
     uint8_t  track_type;        /* Track type (0=MFM, 1=FM) */
     uint16_t track_length;      /* Track data length in bytes */
 } uft_udi_track_header_t;
+UFT_PACK_END
 
 /**
  * @brief UDI file info

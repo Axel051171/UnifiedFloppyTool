@@ -7,6 +7,7 @@ set(FS_SOURCES
     uft_amigados_core.c
     uft_amigados_dir.c
     uft_amigados_file.c
+    uft_amigados_extended.c
     uft_apple_core.c
     uft_apple_dos33.c
     uft_apple_dos_core.c

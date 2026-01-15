@@ -6,6 +6,9 @@ set(UFT_FORMAT_SOURCES
     g64/uft_g64.c
     adf/uft_adf.c
     img/uft_img.c
+    
+    # HDF (Amiga Hard Disk) - P1 Feature
+    uft_hdf_parser.c
     scp/uft_scp.c
     hfe/uft_hfe.c
     

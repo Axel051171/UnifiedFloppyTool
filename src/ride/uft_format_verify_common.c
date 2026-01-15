@@ -13,6 +13,7 @@
  */
 
 #include "uft/ride/uft_flux_decoder.h"
+#include "uft/uft_common.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

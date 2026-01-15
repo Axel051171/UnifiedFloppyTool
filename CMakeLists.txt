@@ -379,6 +379,13 @@ if(UFT_BUILD_GUI AND Qt6_FOUND)
             endif()
         endif()
         
+        # macOS install with bundle destination
+        install(TARGETS ${PROJECT_NAME}
+            BUNDLE DESTINATION .
+            RUNTIME DESTINATION bin
+        )
+    else()
+        # Linux/Other install
         install(TARGETS ${PROJECT_NAME} RUNTIME DESTINATION bin)
     endif()
 endif()
