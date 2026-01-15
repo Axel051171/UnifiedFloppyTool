@@ -59,13 +59,11 @@ jobs:
                   dist/UnifiedFloppyTool-${{ env.UFT_VERSION }}-linux-x64/plugins/platforms/ 2>/dev/null || true
             
             # Create launcher script
-            cat > dist/UnifiedFloppyTool-${{ env.UFT_VERSION }}-linux-x64/UnifiedFloppyTool.sh << 'LAUNCHER'
-#!/bin/bash
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-export LD_LIBRARY_PATH="$SCRIPT_DIR/lib:$LD_LIBRARY_PATH"
-export QT_PLUGIN_PATH="$SCRIPT_DIR/plugins"
-exec "$SCRIPT_DIR/UnifiedFloppyTool" "$@"
-LAUNCHER
+            echo '#!/bin/bash' > dist/UnifiedFloppyTool-${{ env.UFT_VERSION }}-linux-x64/UnifiedFloppyTool.sh
+            echo 'SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"' >> dist/UnifiedFloppyTool-${{ env.UFT_VERSION }}-linux-x64/UnifiedFloppyTool.sh
+            echo 'export LD_LIBRARY_PATH="$SCRIPT_DIR/lib:$LD_LIBRARY_PATH"' >> dist/UnifiedFloppyTool-${{ env.UFT_VERSION }}-linux-x64/UnifiedFloppyTool.sh
+            echo 'export QT_PLUGIN_PATH="$SCRIPT_DIR/plugins"' >> dist/UnifiedFloppyTool-${{ env.UFT_VERSION }}-linux-x64/UnifiedFloppyTool.sh
+            echo 'exec "$SCRIPT_DIR/UnifiedFloppyTool" "$@"' >> dist/UnifiedFloppyTool-${{ env.UFT_VERSION }}-linux-x64/UnifiedFloppyTool.sh
             chmod +x dist/UnifiedFloppyTool-${{ env.UFT_VERSION }}-linux-x64/UnifiedFloppyTool.sh
           else
             echo "WARNING: GUI executable not found"
@@ -90,17 +88,15 @@ LAUNCHER
           
           cp build/UnifiedFloppyTool AppDir/usr/bin/
           
-          # Create desktop file (no leading whitespace!)
-          cat > AppDir/usr/share/applications/unifiedfloppytool.desktop << 'EOF'
-[Desktop Entry]
-Name=UnifiedFloppyTool
-Comment=Professional Floppy Disk Preservation Tool
-Exec=UnifiedFloppyTool
-Icon=unifiedfloppytool
-Terminal=false
-Type=Application
-Categories=Utility;System;
-EOF
+          # Create desktop file
+          echo '[Desktop Entry]' > AppDir/usr/share/applications/unifiedfloppytool.desktop
+          echo 'Name=UnifiedFloppyTool' >> AppDir/usr/share/applications/unifiedfloppytool.desktop
+          echo 'Comment=Professional Floppy Disk Preservation Tool' >> AppDir/usr/share/applications/unifiedfloppytool.desktop
+          echo 'Exec=UnifiedFloppyTool' >> AppDir/usr/share/applications/unifiedfloppytool.desktop
+          echo 'Icon=unifiedfloppytool' >> AppDir/usr/share/applications/unifiedfloppytool.desktop
+          echo 'Terminal=false' >> AppDir/usr/share/applications/unifiedfloppytool.desktop
+          echo 'Type=Application' >> AppDir/usr/share/applications/unifiedfloppytool.desktop
+          echo 'Categories=Utility;System;' >> AppDir/usr/share/applications/unifiedfloppytool.desktop
           
           # Create simple icon (placeholder)
           convert -size 256x256 xc:'#2196F3' -fill white -gravity center -pointsize 48 -annotate 0 'UFT' AppDir/usr/share/icons/hicolor/256x256/apps/unifiedfloppytool.png 2>/dev/null || \
@@ -121,28 +117,26 @@ EOF
           
           cp build/UnifiedFloppyTool deb/usr/bin/
           
-          cat > deb/DEBIAN/control << 'EOF'
-          Package: unifiedfloppytool
-          Version: ${{ env.UFT_VERSION }}
-          Section: utils
-          Priority: optional
-          Architecture: amd64
-          Depends: libqt6core6, libqt6gui6, libqt6widgets6, libusb-1.0-0
-          Maintainer: UFT Contributors
-          Description: Professional Floppy Disk Preservation Tool
-           UnifiedFloppyTool (UFT) is a comprehensive floppy disk
-           forensics and preservation tool.
-          EOF
+          # Create control file
+          echo 'Package: unifiedfloppytool' > deb/DEBIAN/control
+          echo 'Version: ${{ env.UFT_VERSION }}' >> deb/DEBIAN/control
+          echo 'Section: utils' >> deb/DEBIAN/control
+          echo 'Priority: optional' >> deb/DEBIAN/control
+          echo 'Architecture: amd64' >> deb/DEBIAN/control
+          echo 'Depends: libqt6core6, libqt6gui6, libqt6widgets6, libusb-1.0-0' >> deb/DEBIAN/control
+          echo 'Maintainer: UFT Contributors' >> deb/DEBIAN/control
+          echo 'Description: Professional Floppy Disk Preservation Tool' >> deb/DEBIAN/control
+          echo ' UnifiedFloppyTool (UFT) is a comprehensive floppy disk' >> deb/DEBIAN/control
+          echo ' forensics and preservation tool.' >> deb/DEBIAN/control
           
-          cat > deb/usr/share/applications/unifiedfloppytool.desktop << 'EOF'
-          [Desktop Entry]
-          Name=UnifiedFloppyTool
-          Comment=Floppy Disk Preservation Tool
-          Exec=/usr/bin/UnifiedFloppyTool
-          Terminal=false
-          Type=Application
-          Categories=Utility;
-          EOF
+          # Create desktop file
+          echo '[Desktop Entry]' > deb/usr/share/applications/unifiedfloppytool.desktop
+          echo 'Name=UnifiedFloppyTool' >> deb/usr/share/applications/unifiedfloppytool.desktop
+          echo 'Comment=Floppy Disk Preservation Tool' >> deb/usr/share/applications/unifiedfloppytool.desktop
+          echo 'Exec=/usr/bin/UnifiedFloppyTool' >> deb/usr/share/applications/unifiedfloppytool.desktop
+          echo 'Terminal=false' >> deb/usr/share/applications/unifiedfloppytool.desktop
+          echo 'Type=Application' >> deb/usr/share/applications/unifiedfloppytool.desktop
+          echo 'Categories=Utility;' >> deb/usr/share/applications/unifiedfloppytool.desktop
           
           dpkg-deb --build deb dist/unifiedfloppytool_${{ env.UFT_VERSION }}_amd64.deb
       
