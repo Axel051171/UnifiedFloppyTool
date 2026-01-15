@@ -8,6 +8,9 @@ on:
   release:
     types: [ created ]
 
+env:
+  UFT_VERSION: "3.8.0"
+
 jobs:
   build-linux:
     runs-on: ubuntu-22.04
@@ -20,7 +23,8 @@ jobs:
           sudo apt-get install -y \
             build-essential cmake \
             qt6-base-dev qt6-tools-dev \
-            libgl1-mesa-dev libusb-1.0-0-dev
+            libgl1-mesa-dev libusb-1.0-0-dev \
+            dpkg-dev fakeroot
       
       - name: Configure
         run: |
@@ -33,11 +37,57 @@ jobs:
       - name: Run Tests
         run: cd build && ctest --output-on-failure
       
-      - name: Upload Artifact
+      - name: Create tar.gz
+        run: |
+          mkdir -p dist/UnifiedFloppyTool-${{ env.UFT_VERSION }}-linux-x64
+          cp build/UnifiedFloppyTool dist/UnifiedFloppyTool-${{ env.UFT_VERSION }}-linux-x64/
+          cp README.md LICENSE dist/UnifiedFloppyTool-${{ env.UFT_VERSION }}-linux-x64/ 2>/dev/null || true
+          cd dist && tar -czvf UnifiedFloppyTool-${{ env.UFT_VERSION }}-linux-x64.tar.gz UnifiedFloppyTool-${{ env.UFT_VERSION }}-linux-x64
+      
+      - name: Create .deb Package
+        run: |
+          mkdir -p deb/DEBIAN
+          mkdir -p deb/usr/bin
+          mkdir -p deb/usr/share/applications
+          
+          cp build/UnifiedFloppyTool deb/usr/bin/
+          
+          cat > deb/DEBIAN/control << 'EOF'
+          Package: unifiedfloppytool
+          Version: ${{ env.UFT_VERSION }}
+          Section: utils
+          Priority: optional
+          Architecture: amd64
+          Depends: libqt6core6, libqt6gui6, libqt6widgets6, libusb-1.0-0
+          Maintainer: UFT Contributors
+          Description: Professional Floppy Disk Preservation Tool
+           UnifiedFloppyTool (UFT) is a comprehensive floppy disk
+           forensics and preservation tool.
+          EOF
+          
+          cat > deb/usr/share/applications/unifiedfloppytool.desktop << 'EOF'
+          [Desktop Entry]
+          Name=UnifiedFloppyTool
+          Comment=Floppy Disk Preservation Tool
+          Exec=/usr/bin/UnifiedFloppyTool
+          Terminal=false
+          Type=Application
+          Categories=Utility;
+          EOF
+          
+          dpkg-deb --build deb dist/unifiedfloppytool_${{ env.UFT_VERSION }}_amd64.deb
+      
+      - name: Upload tar.gz
         uses: actions/upload-artifact@v4
         with:
-          name: UFT-Linux
-          path: build/UnifiedFloppyTool
+          name: UFT-Linux-tar
+          path: dist/*.tar.gz
+      
+      - name: Upload .deb
+        uses: actions/upload-artifact@v4
+        with:
+          name: UFT-Linux-deb
+          path: dist/*.deb
 
   build-macos:
     runs-on: macos-latest
@@ -59,21 +109,19 @@ jobs:
         run: cmake --build build --parallel $(sysctl -n hw.ncpu)
       
       - name: Deploy Qt Frameworks
-        run: |
-          macdeployqt build/UnifiedFloppyTool.app -always-overwrite
+        run: macdeployqt build/UnifiedFloppyTool.app -always-overwrite
       
-      - name: Create DMG
+      - name: Create tar.gz
         run: |
-          hdiutil create -volname "UnifiedFloppyTool" \
-            -srcfolder build/UnifiedFloppyTool.app \
-            -ov -format UDZO \
-            build/UnifiedFloppyTool.dmg
+          mkdir -p dist
+          cd build
+          tar -czvf ../dist/UnifiedFloppyTool-${{ env.UFT_VERSION }}-macos-arm64.tar.gz UnifiedFloppyTool.app
       
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: UFT-macOS
-          path: build/UnifiedFloppyTool.dmg
+          name: UFT-macOS-tar
+          path: dist/*.tar.gz
 
   build-windows:
     runs-on: windows-2022
@@ -97,29 +145,39 @@ jobs:
         run: cmake --build build --config Release --parallel
       
       - name: Deploy Qt
+        run: windeployqt build/Release/UnifiedFloppyTool.exe --release --no-translations
+      
+      - name: Create tar.gz
         run: |
-          windeployqt build/Release/UnifiedFloppyTool.exe --release --no-translations
+          mkdir dist
+          cd build/Release
+          tar -czvf ../../dist/UnifiedFloppyTool-${{ env.UFT_VERSION }}-windows-x64.tar.gz *
       
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: UFT-Windows
-          path: build/Release/
+          name: UFT-Windows-tar
+          path: dist/*.tar.gz
 
   release:
     needs: [build-linux, build-macos, build-windows]
     runs-on: ubuntu-latest
     if: github.event_name == 'release'
+    permissions:
+      contents: write
     steps:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
-        
+        with:
+          path: artifacts
+          
       - name: Upload Release Assets
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            UFT-Linux/*
-            UFT-macOS/*.dmg
-            UFT-Windows/*
+            artifacts/UFT-Linux-tar/*.tar.gz
+            artifacts/UFT-Linux-deb/*.deb
+            artifacts/UFT-macOS-tar/*.tar.gz
+            artifacts/UFT-Windows-tar/*.tar.gz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
