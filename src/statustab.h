@@ -71,6 +71,7 @@ private slots:
     void onBAMViewerClicked();
     void onBootblockClicked();
     void onProtectionClicked();
+    void onDmkAnalysisClicked();
 
 signals:
     void decodeCompleted(bool success);

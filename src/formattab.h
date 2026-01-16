@@ -174,6 +174,9 @@ private slots:
     void onValidateStructureToggled(bool checked);
     void onReportFormatChanged(int index);
     
+    // GW→DMK Direct
+    void onGw2DmkOpenClicked();
+    
     // Preset management
     void onLoadPreset();
     void onSavePreset();

@@ -272,22 +272,29 @@ static int serial_flush(uft_gw_device_t* dev) {
 
 /**
  * @brief Send command and receive response
+ * 
+ * Greaseweazle protocol format:
+ * - Byte 0: Command opcode
+ * - Byte 1: Total message length (including cmd and len bytes)
+ * - Byte 2+: Parameters
  */
 static int uft_gw_command(uft_gw_device_t* dev, uint8_t cmd, const uint8_t* params,
                       size_t param_len, uint8_t* response, size_t* resp_len) {
     if (!dev) return UFT_GW_ERR_NOT_CONNECTED;
     
-    /* Build command packet */
+    /* Build command packet with length byte */
     dev->cmd_buf[0] = cmd;
+    dev->cmd_buf[1] = (uint8_t)(2 + param_len);  /* Length = cmd + len + params */
+    
     if (params && param_len > 0) {
-        if (param_len > UFT_GW_MAX_CMD_SIZE - 1) {
+        if (param_len > UFT_GW_MAX_CMD_SIZE - 2) {
             return UFT_GW_ERR_OVERFLOW;
         }
-        memcpy(dev->cmd_buf + 1, params, param_len);
+        memcpy(dev->cmd_buf + 2, params, param_len);
     }
     
-    /* Send command */
-    int ret = serial_write(dev, dev->cmd_buf, 1 + param_len);
+    /* Send command (2 header bytes + params) */
+    int ret = serial_write(dev, dev->cmd_buf, 2 + param_len);
     if (ret != UFT_GW_OK) return ret;
     
     /* Read response (at least 2 bytes: cmd echo + ack) */
@@ -490,10 +497,14 @@ int uft_gw_reset(uft_gw_device_t* device) {
 int uft_gw_get_info(uft_gw_device_t* device, uft_gw_info_t* info) {
     if (!device || !info) return UFT_GW_ERR_INVALID;
     
+    /* GET_INFO requires a 16-bit subindex (little-endian)
+     * Subindex 0 = GETINFO_FIRMWARE */
+    uint8_t params[2] = {0x00, 0x00};  /* Subindex = 0 (firmware info) */
+    
     uint8_t resp[32];
     size_t resp_len = sizeof(resp);
     
-    int ret = uft_gw_command(device, UFT_GW_CMD_GET_INFO, NULL, 0, resp, &resp_len);
+    int ret = uft_gw_command(device, UFT_GW_CMD_GET_INFO, params, 2, resp, &resp_len);
     if (ret != UFT_GW_OK) return ret;
     
     if (resp_len < 8) return UFT_GW_ERR_PROTOCOL;

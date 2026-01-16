@@ -27,11 +27,14 @@
 #include "workflowtab.h"
 #include "ui_tab_workflow.h"
 #include "decodejob.h"
+#include "uft_flux_histogram_widget.h"
 #include <QMessageBox>
 #include <QFileDialog>
 #include <QThread>
 #include <QFileInfo>
 #include <QLocale>
+#include <QDialog>
+#include <QVBoxLayout>
 
 // ============================================================================
 // Construction / Destruction
@@ -109,6 +112,8 @@ void WorkflowTab::connectSignals()
             this, &WorkflowTab::onDestModeChanged);
     connect(ui->btnStartAbort, &QPushButton::clicked, 
             this, &WorkflowTab::onStartAbortClicked);
+    connect(ui->btnHistogram, &QPushButton::clicked,
+            this, &WorkflowTab::onHistogramClicked);
 }
 
 // ============================================================================
@@ -531,4 +536,21 @@ QString WorkflowTab::getModeString(Mode mode) const
     case File: return tr("Image File");
     default:   return tr("Unknown");
     }
+}
+
+void WorkflowTab::onHistogramClicked()
+{
+    // Create dialog with Flux Histogram Panel
+    QDialog *dlg = new QDialog(this);
+    dlg->setWindowTitle(tr("Flux Timing Histogram"));
+    dlg->setMinimumSize(800, 600);
+    dlg->setAttribute(Qt::WA_DeleteOnClose);
+    
+    QVBoxLayout *layout = new QVBoxLayout(dlg);
+    layout->setContentsMargins(4, 4, 4, 4);
+    
+    UftFluxHistogramPanel *panel = new UftFluxHistogramPanel(dlg);
+    layout->addWidget(panel);
+    
+    dlg->show();
 }

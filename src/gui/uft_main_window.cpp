@@ -17,6 +17,8 @@
 #include "uft_file_browser_panel.h"
 #include "uft_hardware_panel.h"
 #include "uft_track_grid_widget.h"
+#include "uft_dmk_analyzer_panel.h"
+#include "uft_gw2dmk_panel.h"
 
 /* P2-12: AnalyzerToolbar */
 #include "AnalyzerToolbar.h"
@@ -54,7 +56,7 @@ UftMainWindow::UftMainWindow(QWidget *parent)
     setupAnalyzerConnections();  /* P2-13 */
     loadSettings();
     
-    setWindowTitle("UnifiedFloppyTool v5.33");
+    setWindowTitle("UnifiedFloppyTool v4.0.0 - DMK Analyzer");
 }
 
 UftMainWindow::~UftMainWindow()
@@ -76,6 +78,8 @@ void UftMainWindow::setupCentralWidget()
     m_fileBrowserPanel = new UftFileBrowserPanel(this);
     m_hexViewerPanel = new UftHexViewerPanel(this);
     m_hardwarePanel = new UftHardwarePanel(this);
+    m_dmkAnalyzerPanel = new UftDmkAnalyzerPanel(this);
+    m_gw2DmkPanel = new UftGw2DmkPanel(this);
     
     /* Add panels to tabs */
     ui->tabFormat->setLayout(new QVBoxLayout);
@@ -107,6 +111,12 @@ void UftMainWindow::setupCentralWidget()
     
     ui->tabHardware->setLayout(new QVBoxLayout);
     ui->tabHardware->layout()->addWidget(m_hardwarePanel);
+    
+    ui->tabDmkAnalyzer->setLayout(new QVBoxLayout);
+    ui->tabDmkAnalyzer->layout()->addWidget(m_dmkAnalyzerPanel);
+    
+    ui->tabGw2Dmk->setLayout(new QVBoxLayout);
+    ui->tabGw2Dmk->layout()->addWidget(m_gw2DmkPanel);
     
     /* Create track grid widget */
     m_trackGrid = new UftTrackGridWidget(this);

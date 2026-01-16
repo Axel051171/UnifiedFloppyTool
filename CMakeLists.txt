@@ -4,7 +4,7 @@
 
 cmake_minimum_required(VERSION 3.16)
 
-project(UnifiedFloppyTool VERSION 3.8.0
+project(UnifiedFloppyTool VERSION 4.0.0
     DESCRIPTION "Cross-platform floppy disk preservation and analysis tool"
     LANGUAGES CXX C
 )
@@ -232,6 +232,14 @@ add_subdirectory(src/formats/msa)
 add_subdirectory(src/formats/ti99)
 add_subdirectory(src/formats/flashfloppy)
 add_subdirectory(src/loaders/disk_formats)
+
+# v3.9.0 Format Modules
+if(EXISTS "${CMAKE_SOURCE_DIR}/src/formats/mame/CMakeLists.txt")
+    add_subdirectory(src/formats/mame)
+endif()
+if(EXISTS "${CMAKE_SOURCE_DIR}/src/formats/86box/CMakeLists.txt")
+    add_subdirectory(src/formats/86box)
+endif()
 
 # Optional modules
 if(EXISTS "${CMAKE_SOURCE_DIR}/src/decoder/CMakeLists.txt")

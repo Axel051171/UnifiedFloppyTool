@@ -3,7 +3,7 @@
  <class>MainWindow</class>
  <widget class="QMainWindow" name="MainWindow">
   <property name="geometry"><rect><x>0</x><y>0</y><width>1000</width><height>780</height></rect></property>
-  <property name="windowTitle"><string>UnifiedFloppyTool v3.7.0</string></property>
+  <property name="windowTitle"><string>UnifiedFloppyTool v4.0.0</string></property>
   <property name="acceptDrops"><bool>true</bool></property>
   
   <widget class="QWidget" name="centralwidget">

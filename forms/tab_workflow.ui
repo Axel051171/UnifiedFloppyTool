@@ -601,6 +601,19 @@ Errors: 0</string>
        </property>
       </widget>
      </item>
+     <item>
+      <widget class="QPushButton" name="btnHistogram">
+       <property name="text">
+        <string>📊 Histogram</string>
+       </property>
+       <property name="toolTip">
+        <string>Analyze flux timing histogram</string>
+       </property>
+       <property name="minimumHeight">
+        <number>40</number>
+       </property>
+      </widget>
+     </item>
     </layout>
    </item>
    

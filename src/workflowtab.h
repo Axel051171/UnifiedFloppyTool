@@ -70,6 +70,7 @@ private slots:
     void onSourceFileClicked();
     void onDestFileClicked();
     void onStartAbortClicked();
+    void onHistogramClicked();
 
 private:
     Ui::TabWorkflow *ui;

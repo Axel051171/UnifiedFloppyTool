@@ -23,6 +23,9 @@ set(UFT_GUI_SOURCES
     uft_hex_file_panel.cpp
     uft_hardware_panel.cpp
     uft_track_grid_widget.cpp
+    uft_gw2dmk_panel.cpp
+    uft_dmk_analyzer_panel.cpp
+    uft_flux_histogram_widget.cpp
     # P2-12: AnalyzerToolbar
     AnalyzerToolbar.cpp
 )
@@ -41,6 +44,9 @@ set(UFT_GUI_HEADERS
     uft_file_browser_panel.h
     uft_hardware_panel.h
     uft_track_grid_widget.h
+    uft_gw2dmk_panel.h
+    uft_dmk_analyzer_panel.h
+    uft_flux_histogram_widget.h
     # P2-12: AnalyzerToolbar
     AnalyzerToolbar.h
 )

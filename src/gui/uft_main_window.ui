@@ -333,6 +333,16 @@ QSplitter::handle:hover {
          <string>Hardware</string>
         </attribute>
        </widget>
+       <widget class="QWidget" name="tabDmkAnalyzer">
+        <attribute name="title">
+         <string>DMK Analyzer</string>
+        </attribute>
+       </widget>
+       <widget class="QWidget" name="tabGw2Dmk">
+        <attribute name="title">
+         <string>GW→DMK</string>
+        </attribute>
+       </widget>
       </widget>
      </widget>
     </item>

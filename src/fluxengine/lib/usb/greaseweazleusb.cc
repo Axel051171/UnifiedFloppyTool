@@ -112,7 +112,8 @@ public:
 private:
     int getVersion()
     {
-        do_command({CMD_GET_INFO, 3, GETINFO_FIRMWARE});
+        /* GET_INFO requires 4-byte message: cmd + len + 16-bit subindex */
+        do_command({CMD_GET_INFO, 4, GETINFO_FIRMWARE, 0x00});
 
         Bytes response = _serial->readBytes(32);
         ByteReader br(response);

@@ -7,9 +7,10 @@ on:
     branches: [ main, master ]
   release:
     types: [ created ]
+  workflow_dispatch:
 
 env:
-  UFT_VERSION: "3.8.0"
+  UFT_VERSION: "4.0.0"
 
 jobs:
   build-linux:

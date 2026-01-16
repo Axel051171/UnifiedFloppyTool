@@ -1,7 +1,7 @@
 #-------------------------------------------------
 #
 # UnifiedFloppyTool - Qt Project File
-# Version: 3.7.8
+# Version: 4.0.0
 # "Bei uns geht kein Bit verloren"
 #
 # Compatible with Qt 6.5+ (including 6.10.x)
@@ -343,3 +343,17 @@ SOURCES += \
 
 HEADERS += \
     include/uft/fs/uft_amigados_extended.h
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# v4.0 GUI Panels (DMK Analyzer, GW→DMK, Flux Histogram)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+SOURCES += \
+    src/uft_dmk_analyzer_panel.cpp \
+    src/uft_gw2dmk_panel.cpp \
+    src/uft_flux_histogram_widget.cpp
+
+HEADERS += \
+    src/uft_dmk_analyzer_panel.h \
+    src/uft_gw2dmk_panel.h \
+    src/uft_flux_histogram_widget.h

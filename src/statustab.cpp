@@ -15,11 +15,14 @@
 
 #include "statustab.h"
 #include "ui_tab_status.h"
+#include "uft_dmk_analyzer_panel.h"
 
 #include <QScrollBar>
 #include <QDateTime>
 #include <QDebug>
 #include <QMessageBox>
+#include <QDialog>
+#include <QVBoxLayout>
 
 // ============================================================================
 // Construction / Destruction
@@ -77,6 +80,8 @@ void StatusTab::setupConnections()
             this, &StatusTab::onBootblockClicked);
     connect(ui->btnProtection, &QPushButton::clicked, 
             this, &StatusTab::onProtectionClicked);
+    connect(ui->btnDmkAnalysis, &QPushButton::clicked, 
+            this, &StatusTab::onDmkAnalysisClicked);
 }
 
 // ============================================================================
@@ -164,6 +169,25 @@ void StatusTab::onProtectionClicked()
     }
     
     QMessageBox::information(this, tr("Protection Analysis"), protInfo);
+}
+
+void StatusTab::onDmkAnalysisClicked()
+{
+    appendLog("DMK Analysis requested", "INFO");
+    
+    // Create dialog with DMK Analyzer Panel
+    QDialog *dlg = new QDialog(this);
+    dlg->setWindowTitle(tr("DMK Disk Image Analyzer"));
+    dlg->setMinimumSize(900, 700);
+    dlg->setAttribute(Qt::WA_DeleteOnClose);
+    
+    QVBoxLayout *layout = new QVBoxLayout(dlg);
+    layout->setContentsMargins(4, 4, 4, 4);
+    
+    UftDmkAnalyzerPanel *panel = new UftDmkAnalyzerPanel(dlg);
+    layout->addWidget(panel);
+    
+    dlg->show();
 }
 
 // ============================================================================

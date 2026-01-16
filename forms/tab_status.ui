@@ -51,6 +51,12 @@
           <property name="enabled"><bool>false</bool></property>
          </widget>
         </item>
+        <item>
+         <widget class="QPushButton" name="btnDmkAnalysis">
+          <property name="text"><string>🔎 DMK Analysis</string></property>
+          <property name="toolTip"><string>Analyze DMK disk image structure (TRS-80)</string></property>
+         </widget>
+        </item>
        </layout>
       </item>
       

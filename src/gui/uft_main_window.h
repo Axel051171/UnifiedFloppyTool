@@ -40,6 +40,8 @@ class UftHexViewerPanel;
 class UftFileBrowserPanel;
 class UftHardwarePanel;
 class UftTrackGridWidget;
+class UftDmkAnalyzerPanel;
+class UftGw2DmkPanel;
 class AnalyzerToolbar;
 class TrackAnalyzerWidget;
 struct ToolbarAnalysisResult;
@@ -129,6 +131,8 @@ private:
     UftHexViewerPanel  *m_hexViewerPanel;
     UftFileBrowserPanel *m_fileBrowserPanel;
     UftHardwarePanel   *m_hardwarePanel;
+    UftDmkAnalyzerPanel *m_dmkAnalyzerPanel;
+    UftGw2DmkPanel     *m_gw2DmkPanel;
     
     /* Track Visualization */
     UftTrackGridWidget *m_trackGrid;

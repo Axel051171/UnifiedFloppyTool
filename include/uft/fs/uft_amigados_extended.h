@@ -62,11 +62,11 @@ int uft_amiga_get_volume_info(uft_amigados_ctx_t *ctx,
 int uft_amiga_relabel(uft_amigados_ctx_t *ctx, const char *new_name);
 
 /**
- * @brief Format disk with specified filesystem type
+ * @brief Format disk with specified filesystem type (extended)
  * @param dos_type: 0=OFS, 1=FFS, 2=OFS-INTL, 3=FFS-INTL, etc.
  */
-int uft_amiga_format(uft_amigados_ctx_t *ctx, const char *name, 
-                      uint8_t dos_type, bool install_boot);
+int uft_amiga_format_ext(uft_amigados_ctx_t *ctx, const char *name, 
+                         uint8_t dos_type, bool install_boot);
 
 /* ═══════════════════════════════════════════════════════════════════════════════
  * Pattern Matching Operations
@@ -75,7 +75,7 @@ int uft_amiga_format(uft_amigados_ctx_t *ctx, const char *name,
 /**
  * @brief File match callback
  */
-typedef int (*uft_amiga_match_cb)(const uft_amiga_dir_entry_t *entry,
+typedef int (*uft_amiga_match_cb)(const uft_amigados_entry_t *entry,
                                    const char *full_path,
                                    void *user_data);
 
@@ -90,11 +90,11 @@ int uft_amiga_find_pattern(uft_amigados_ctx_t *ctx,
                             void *user_data);
 
 /**
- * @brief List all files recursively
+ * @brief List all files recursively (extended version)
  */
-int uft_amiga_list_all(uft_amigados_ctx_t *ctx,
-                        uft_amiga_match_cb callback,
-                        void *user_data);
+int uft_amiga_list_all_ext(uft_amigados_ctx_t *ctx,
+                            uft_amiga_match_cb callback,
+                            void *user_data);
 
 /* ═══════════════════════════════════════════════════════════════════════════════
  * Pack/Unpack Operations (Host Filesystem <-> Disk Image)
@@ -145,10 +145,10 @@ typedef struct {
 } uft_amiga_bootblock_t;
 
 /**
- * @brief Read bootblock
+ * @brief Read bootblock (extended version)
  */
-int uft_amiga_read_bootblock(uft_amigados_ctx_t *ctx, 
-                              uft_amiga_bootblock_t *boot);
+int uft_amiga_read_bootblock_ext(uft_amigados_ctx_t *ctx, 
+                                  uft_amiga_bootblock_t *boot);
 
 /**
  * @brief Write bootblock (install standard boot code)
@@ -193,10 +193,10 @@ typedef struct {
 } uft_amiga_validate_result_t;
 
 /**
- * @brief Validate disk structure
+ * @brief Validate disk structure (extended version)
  */
-int uft_amiga_validate(uft_amigados_ctx_t *ctx, 
-                        uft_amiga_validate_result_t *result);
+int uft_amiga_validate_ext(uft_amigados_ctx_t *ctx, 
+                            uft_amiga_validate_result_t *result);
 
 /**
  * @brief Repair bitmap (recalculate from directory)

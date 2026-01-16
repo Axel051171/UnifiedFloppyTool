@@ -95,7 +95,7 @@ void GreaseweazleHardwareProvider::autoDetectDevice()
     
     /* Greaseweazle protocol constants */
     const char CMD_GET_INFO = 0x00;
-    const char CMD_LEN = 0x03;
+    const char CMD_LEN = 0x04;          /* Total length: cmd(1) + len(1) + subindex(2) */
     const char GETINFO_FIRMWARE = 0x00;
     
     /* First pass: Check VID/PID and descriptions */
@@ -146,11 +146,12 @@ void GreaseweazleHardwareProvider::autoDetectDevice()
                 testPort.clear();
                 QThread::msleep(50);
                 
-                /* Send GET_INFO command */
+                /* Send GET_INFO command (4 bytes: cmd + len + subindex_lo + subindex_hi) */
                 QByteArray cmd;
                 cmd.append(CMD_GET_INFO);
                 cmd.append(CMD_LEN);
-                cmd.append(GETINFO_FIRMWARE);
+                cmd.append(GETINFO_FIRMWARE);       // Subindex low byte
+                cmd.append(static_cast<char>(0));   // Subindex high byte
                 
                 testPort.write(cmd);
                 testPort.waitForBytesWritten(200);
@@ -221,11 +222,12 @@ void GreaseweazleHardwareProvider::autoDetectDevice()
         testPort.clear();
         QThread::msleep(50);
         
-        /* Send GET_INFO command */
+        /* Send GET_INFO command (4 bytes: cmd + len + subindex_lo + subindex_hi) */
         QByteArray cmd;
         cmd.append(CMD_GET_INFO);
         cmd.append(CMD_LEN);
-        cmd.append(GETINFO_FIRMWARE);
+        cmd.append(GETINFO_FIRMWARE);       // Subindex low byte
+        cmd.append(static_cast<char>(0));   // Subindex high byte
         
         testPort.write(cmd);
         testPort.waitForBytesWritten(200);

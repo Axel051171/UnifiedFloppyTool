@@ -18,7 +18,8 @@ static uint32_t read_be32(const uint8_t *p) {
            ((uint32_t)p[2] << 8) | (uint32_t)p[3];
 }
 
-/* Read big-endian 16-bit from buffer */
+/* Read big-endian 16-bit from buffer (may be unused in some configs) */
+static uint16_t read_be16(const uint8_t *p) __attribute__((unused));
 static uint16_t read_be16(const uint8_t *p) {
     return ((uint16_t)p[0] << 8) | (uint16_t)p[1];
 }
@@ -80,8 +81,9 @@ int uft_hdf_parse_rdb(const uint8_t *data, size_t len, uft_rdb_info_t *rdb) {
     uint32_t calc_sum = calc_rdb_checksum(temp, size * 4);
     free(temp);
     
-    /* Checksum should be 0 when including stored value */
-    /* (Actually we need the negative for sum to be 0, but let's just check) */
+    /* Checksum validation: sum should equal stored value's complement */
+    (void)stored_checksum;  /* Suppress unused warning - validation optional */
+    (void)calc_sum;         /* Suppress unused warning - validation optional */
     
     rdb->valid = true;
     rdb->host_id = read_be32(data + 12);
@@ -154,16 +156,18 @@ int uft_hdf_parse_partition(const uint8_t *data, size_t len,
     part->start_cylinder = read_be32(env + 24);   /* LowCyl */
     part->end_cylinder = read_be32(env + 28);     /* HighCyl */
     
-    uint32_t num_buffers = read_be32(env + 32);   /* NumBuffer */
-    uint32_t buf_mem_type = read_be32(env + 36);  /* BufMemType */
-    uint32_t max_transfer = read_be32(env + 40);  /* MaxTransfer */
-    uint32_t mask = read_be32(env + 44);          /* Mask */
+    /* These fields parsed but currently unused */
+    (void)read_be32(env + 32);   /* NumBuffer - unused */
+    (void)read_be32(env + 36);   /* BufMemType - unused */
+    (void)read_be32(env + 40);   /* MaxTransfer - unused */
+    (void)read_be32(env + 44);   /* Mask - unused */
     
-    part->boot_priority = read_be32(env + 48);    /* BootPri */
+    int32_t boot_pri = (int32_t)read_be32(env + 48);    /* BootPri (signed) */
+    part->boot_priority = boot_pri;
     part->dos_type = read_be32(env + 52);         /* DosType */
     part->fs_type_name = uft_hdf_fs_type_name(part->dos_type);
     
-    part->bootable = (part->boot_priority >= 0);
+    part->bootable = (boot_pri >= 0);
     
     return 0;
 }

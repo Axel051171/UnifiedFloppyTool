@@ -30,6 +30,8 @@ static void print_usage(const char* prog) {
     printf("  analyze <file>           Analyze disk health\n");
     printf("  convert <in> <out>       Convert between formats\n");
     printf("  read <file> -t C:H:S     Read sector to stdout\n");
+    printf("  hist <file>              Flux timing histogram\n");
+    printf("  check <file>             Validate disk image\n");
     printf("  formats                  List supported formats\n");
     printf("  help                     Show this help\n");
     printf("  version                  Show version\n\n");
@@ -37,6 +39,9 @@ static void print_usage(const char* prog) {
     printf("  -v, --verbose            Verbose output\n");
     printf("  -q, --quiet              Quiet mode\n");
     printf("  -f, --format <fmt>       Force format\n\n");
+    printf("For command-specific help:\n");
+    printf("  %s hist --help\n", prog);
+    printf("  %s check --help\n", prog);
 }
 
 static void log_handler(uft_log_level_t level, const char* msg, void* user) {

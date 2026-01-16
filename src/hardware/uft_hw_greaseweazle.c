@@ -241,10 +241,11 @@ static int uft_gw_serial_read(HANDLE h, uint8_t* data, size_t len) {
 static uft_error_t uft_gw_command(uft_gw_state_t* gw, uint8_t cmd,
                               const uint8_t* params, size_t param_len,
                               uint8_t* response, size_t* response_len) {
-    // Kommando-Frame: [Length] [CMD] [Params...]
+    /* Greaseweazle protocol frame: [CMD] [Length] [Params...]
+     * Length = total message size including CMD and Length bytes */
     uint8_t frame[256];
-    frame[0] = (uint8_t)(2 + param_len);  // Length
-    frame[1] = cmd;
+    frame[0] = cmd;
+    frame[1] = (uint8_t)(2 + param_len);  /* Length */
     
     if (params && param_len > 0) {
         memcpy(&frame[2], params, param_len);
@@ -275,7 +276,10 @@ static uft_error_t uft_gw_command(uft_gw_state_t* gw, uint8_t cmd,
     return UFT_ERROR_NOT_SUPPORTED;
 #endif
     
-    // ACK prüfen
+    // ACK prüfen - response is [CMD_ECHO, ACK_CODE]
+    if (ack[0] != cmd) {
+        return UFT_ERROR_DEVICE_ERROR;  /* Command echo mismatch */
+    }
     if (ack[1] != UFT_GW_ACK_OKAY) {
         switch (ack[1]) {
             case UFT_GW_ACK_WRPROT:     return UFT_ERROR_DISK_PROTECTED;
@@ -288,21 +292,16 @@ static uft_error_t uft_gw_command(uft_gw_state_t* gw, uint8_t cmd,
     
     // Optionale Response-Daten
     if (response && response_len && *response_len > 0) {
-        size_t resp_frame_len = ack[0] - 2;
-        if (resp_frame_len > 0 && resp_frame_len <= *response_len) {
-            ssize_t n = 0;
+        ssize_t n = 0;
 #ifdef UFT_OS_LINUX
-            n = uft_gw_serial_read(gw->fd, response, resp_frame_len);
+        n = uft_gw_serial_read(gw->fd, response, *response_len);
 #elif defined(UFT_OS_WINDOWS)
-            n = uft_gw_serial_read(gw->handle, response, resp_frame_len);
+        n = uft_gw_serial_read(gw->handle, response, *response_len);
 #endif
-            if (n < 0) {
-                return UFT_ERROR_DEVICE_ERROR;
-            }
-            *response_len = (size_t)n;
-        } else {
-            *response_len = 0;
+        if (n < 0) {
+            return UFT_ERROR_DEVICE_ERROR;
         }
+        *response_len = (size_t)n;
     }
     
     return UFT_OK;
@@ -312,10 +311,13 @@ static uft_error_t uft_gw_command(uft_gw_state_t* gw, uint8_t cmd,
  * @brief Get Info
  */
 static uft_error_t uft_gw_get_info(uft_gw_state_t* gw) {
+    /* GET_INFO requires 16-bit subindex (little-endian)
+     * Subindex 0 = GETINFO_FIRMWARE */
+    uint8_t params[2] = {0x00, 0x00};  /* Subindex = 0 */
     uint8_t response[32];
     size_t response_len = sizeof(response);
     
-    uft_error_t err = uft_gw_command(gw, UFT_GW_CMD_GET_INFO, NULL, 0, 
+    uft_error_t err = uft_gw_command(gw, UFT_GW_CMD_GET_INFO, params, 2, 
                                  response, &response_len);
     if (UFT_FAILED(err)) {
         return err;

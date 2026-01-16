@@ -98,19 +98,29 @@ static int serial_read(int fd, void *data, size_t len) {
 
 static int gw_send_cmd(gw_handle_t *gw, uint8_t cmd, const uint8_t *params, size_t param_len) {
     uint8_t buf[64];
+    
+    /* Greaseweazle protocol format:
+     * Byte 0: Command
+     * Byte 1: Total message length (cmd + len + params)
+     * Byte 2+: Parameters
+     */
     buf[0] = cmd;
+    buf[1] = (uint8_t)(2 + param_len);  /* Length includes cmd and len bytes */
+    
     if (params && param_len > 0) {
-        memcpy(buf + 1, params, param_len);
+        memcpy(buf + 2, params, param_len);
     }
+    
+    size_t total_len = 2 + param_len;
     
 #ifdef _WIN32
     DWORD written;
-    if (!WriteFile(gw->serial, buf, 1 + param_len, &written, NULL)) {
+    if (!WriteFile(gw->serial, buf, (DWORD)total_len, &written, NULL)) {
         snprintf(gw->last_error, sizeof(gw->last_error), "Write failed");
         return -1;
     }
 #else
-    if (serial_write(gw->fd, buf, 1 + param_len) < 0) {
+    if (serial_write(gw->fd, buf, total_len) < 0) {
         snprintf(gw->last_error, sizeof(gw->last_error), "Write failed");
         return -1;
     }
@@ -283,8 +293,9 @@ const char* gw_last_error(gw_handle_t *gw) {
 int gw_get_info(gw_handle_t *gw, gw_info_t *info) {
     if (!gw || !info) return -1;
     
-    uint8_t params[] = {GW_INFO_FIRMWARE};
-    if (gw_send_cmd(gw, GW_CMD_GET_INFO, params, 1) != 0) {
+    /* GET_INFO uses a 16-bit subindex (little-endian) */
+    uint8_t params[] = {GW_INFO_FIRMWARE & 0xFF, (GW_INFO_FIRMWARE >> 8) & 0xFF};
+    if (gw_send_cmd(gw, GW_CMD_GET_INFO, params, 2) != 0) {
         return -1;
     }
     

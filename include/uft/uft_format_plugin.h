@@ -305,7 +305,7 @@ const uft_sector_t* uft_track_find_sector(const uft_track_t* track, int sector);
 /**
  * @brief Sektor-Daten kopieren
  */
-uft_error_t uft_sector_copy(uft_sector_t* dst, const uft_sector_t* src);
+uft_error_t uft_sector_copy_plugin(uft_sector_t* dst, const uft_sector_t* src);
 
 /**
  * @brief Sektor-Ressourcen freigeben
@@ -336,6 +336,60 @@ extern const uft_format_plugin_t uft_format_plugin_d64;
 
 /// G64 Format Plugin (C64 GCR)
 extern const uft_format_plugin_t uft_format_plugin_g64;
+
+/// CQM Format Plugin (CopyQM)
+extern const uft_format_plugin_t uft_format_plugin_cqm;
+
+/// ApriDisk Format Plugin
+extern const uft_format_plugin_t uft_format_plugin_apridisk;
+
+/// NanoWasp Format Plugin (Microbee)
+extern const uft_format_plugin_t uft_format_plugin_nanowasp;
+
+/// QRST Format Plugin (Compaq)
+extern const uft_format_plugin_t uft_format_plugin_qrst;
+
+/// CFI Format Plugin (Compressed Floppy Image)
+extern const uft_format_plugin_t uft_format_plugin_cfi;
+
+/// YDSK Format Plugin (YAZE CP/M)
+extern const uft_format_plugin_t uft_format_plugin_ydsk;
+
+/// SIMH Format Plugin (SIMH Simulator)
+extern const uft_format_plugin_t uft_format_plugin_simh;
+
+/// Logical Format Plugin
+extern const uft_format_plugin_t uft_format_plugin_logical;
+
+/// CP/M Format Plugin
+extern const uft_format_plugin_t uft_format_plugin_cpm;
+
+/// X68000 Format Plugin (XDF/DIM)
+extern const uft_format_plugin_t uft_format_plugin_x68k;
+
+/// Hard-Sector Format Plugin (8"/5.25")
+extern const uft_format_plugin_t uft_format_plugin_hardsector;
+
+/// POSIX Format Plugin (raw + geometry file)
+extern const uft_format_plugin_t uft_format_plugin_posix;
+
+/// OPUS Format Plugin (ZX Spectrum OPUS Discovery)
+extern const uft_format_plugin_t uft_format_plugin_opus;
+
+/// MGT Format Plugin (ZX Spectrum +D/DISCiPLE)
+extern const uft_format_plugin_t uft_format_plugin_mgt;
+
+/// LDBS Format Plugin (LibDsk Block Store)
+extern const uft_format_plugin_t uft_format_plugin_ldbs;
+
+/// RCPMFS Format Plugin (Remote CP/M File System)
+extern const uft_format_plugin_t uft_format_plugin_rcpmfs;
+
+/// DFI Format Plugin (DiscFerret Flux Image)
+extern const uft_format_plugin_t uft_format_plugin_dfi;
+
+/// MYZ80 Format Plugin (MYZ80 CP/M Emulator)
+extern const uft_format_plugin_t uft_format_plugin_myz80;
 
 // ============================================================================
 // Alle Built-in Plugins registrieren

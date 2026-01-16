@@ -256,7 +256,7 @@ void uft_track_cleanup(uft_track_t* track) {
     memset(track, 0, sizeof(*track));
 }
 
-uft_error_t uft_sector_copy(uft_sector_t* dst, const uft_sector_t* src) {
+uft_error_t uft_sector_copy_plugin(uft_sector_t* dst, const uft_sector_t* src) {
     if (!dst || !src) return UFT_ERROR_NULL_POINTER;
     
     *dst = *src;

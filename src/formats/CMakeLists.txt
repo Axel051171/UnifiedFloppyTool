@@ -34,6 +34,32 @@ set(UFT_FORMAT_SOURCES
     fdi/uft_fdi.c
     cqm/uft_cqm.c
     
+    # libdsk-derived formats (v3.9.0)
+    apridisk/uft_apridisk.c
+    nanowasp/uft_nanowasp.c
+    qrst/uft_qrst.c
+    cfi/uft_cfi.c
+    ydsk/uft_ydsk.c
+    simh/uft_simh.c
+    logical/uft_logical.c
+    cpm/uft_cpm_diskdef.c
+    cpm/uft_cpm_diskdefs.c
+    
+    # X68000 / Human68k (v3.9.0)
+    x68k/uft_x68k.c
+    
+    # Hard-Sector Disk Support (v3.9.0)
+    hardsector/uft_hardsector.c
+    
+    # Additional libdsk formats (v3.9.0)
+    posix/uft_posix.c
+    opus/uft_opus.c
+    mgt/uft_mgt.c
+    ldbs/uft_ldbs.c
+    rcpmfs/uft_rcpmfs.c
+    dfi/uft_dfi.c
+    myz80/uft_myz80.c
+    
     # ZX Spectrum / Sinclair (integrated from uft_drive_trx_scl_pack_v2)
     scl/uft_scl.c
     

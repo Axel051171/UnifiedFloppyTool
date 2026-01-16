@@ -10,6 +10,7 @@
 
 #include "formattab.h"
 #include "ui_tab_format.h"
+#include "uft_gw2dmk_panel.h"
 #include <QDebug>
 #include <QFileDialog>
 #include <QInputDialog>
@@ -19,6 +20,8 @@
 #include <QDir>
 #include <QFile>
 #include <QSettings>
+#include <QDialog>
+#include <QVBoxLayout>
 
 // ============================================================================
 // Construction / Destruction
@@ -459,6 +462,10 @@ void FormatTab::setupConnections() {
             this, [this](bool) { emit formatSettingsChanged(); });
     connect(ui->checkUseIndex, &QCheckBox::toggled,
             this, [this](bool) { emit formatSettingsChanged(); });
+    
+    // GW→DMK Direct
+    connect(ui->btnGw2DmkOpen, &QPushButton::clicked,
+            this, &FormatTab::onGw2DmkOpenClicked);
 }
 
 
@@ -1444,3 +1451,29 @@ void FormatTab::onNibbleAdvanced() {
     }
 }
 
+void FormatTab::onGw2DmkOpenClicked()
+{
+    // Create dialog with GW→DMK Panel
+    QDialog *dlg = new QDialog(this);
+    dlg->setWindowTitle(tr("GW→DMK Direct Read (TRS-80)"));
+    dlg->setMinimumSize(800, 600);
+    dlg->setAttribute(Qt::WA_DeleteOnClose);
+    
+    QVBoxLayout *layout = new QVBoxLayout(dlg);
+    layout->setContentsMargins(4, 4, 4, 4);
+    
+    UftGw2DmkPanel *panel = new UftGw2DmkPanel(dlg);
+    layout->addWidget(panel);
+    
+    // Apply preset from combo if available
+    QString preset = ui->comboGw2DmkPreset->currentText();
+    if (preset.contains("SSSD")) {
+        panel->setPreset(0);  // Model I/III SSSD
+    } else if (preset.contains("SSDD")) {
+        panel->setPreset(1);  // Model I/III SSDD
+    } else if (preset.contains("Model 4")) {
+        panel->setPreset(2);  // Model 4 DSDD
+    }
+    
+    dlg->show();
+}

@@ -28,7 +28,7 @@
 
 /* Greaseweazle protocol commands */
 #define GW_CMD_GET_INFO         0x00
-#define GW_CMD_GET_INFO_LEN     3
+#define GW_CMD_GET_INFO_LEN     4       /* Total message length: cmd(1) + len(1) + subindex(2) */
 #define GW_GETINFO_FIRMWARE     0
 
 /* Known USB serial chip VID/PIDs that GW might appear as on Windows */
@@ -201,12 +201,13 @@ bool GwDeviceDetector::isGreaseweazle(const QString &portName)
         QThread::msleep(50);
         
         /* Greaseweazle protocol: Send GET_INFO command
-         * Format: [CMD_GET_INFO, LENGTH, GETINFO_FIRMWARE]
+         * Format: [CMD_GET_INFO, LENGTH(4), SUBINDEX_LO, SUBINDEX_HI]
          * Response: [CMD_GET_INFO, ACK, ...data...] */
         QByteArray cmd;
         cmd.append(static_cast<char>(GW_CMD_GET_INFO));
         cmd.append(static_cast<char>(GW_CMD_GET_INFO_LEN));
-        cmd.append(static_cast<char>(GW_GETINFO_FIRMWARE));
+        cmd.append(static_cast<char>(GW_GETINFO_FIRMWARE & 0xFF));       // Subindex low byte
+        cmd.append(static_cast<char>((GW_GETINFO_FIRMWARE >> 8) & 0xFF)); // Subindex high byte
         
         port.write(cmd);
         if (!port.waitForBytesWritten(200)) {

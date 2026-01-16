@@ -396,12 +396,17 @@ static int serial_read(HANDLE h, void *buf, size_t len) {
 static int gw_command(uft_hal_t *hal, uint8_t cmd, const uint8_t *params, 
                       size_t param_len, uint8_t *response, size_t resp_len) {
     uint8_t buf[64];
+    
+    /* Greaseweazle protocol: [CMD, LENGTH, PARAMS...] 
+     * Length = total message size including CMD and LENGTH bytes */
     buf[0] = cmd;
+    buf[1] = (uint8_t)(2 + param_len);
+    
     if (params && param_len > 0) {
-        memcpy(buf + 1, params, param_len);
+        memcpy(buf + 2, params, param_len);
     }
     
-    if (serial_write(hal->serial, buf, 1 + param_len) < 0) {
+    if (serial_write(hal->serial, buf, 2 + param_len) < 0) {
         snprintf(hal->error, sizeof(hal->error), "Write failed");
         return -1;
     }
@@ -438,9 +443,10 @@ static int gw_open(uft_hal_t *hal, const char *path) {
         return -1;
     }
     
-    /* Get device info */
+    /* Get device info - GET_INFO requires 16-bit subindex */
+    uint8_t subindex[2] = {0x00, 0x00};  /* Subindex 0 = GETINFO_FIRMWARE */
     uint8_t info[32];
-    if (gw_command(hal, GW_CMD_GET_INFO, NULL, 0, info, 32) != 0) {
+    if (gw_command(hal, GW_CMD_GET_INFO, subindex, 2, info, 32) != 0) {
         serial_close(hal->serial);
         return -1;
     }
