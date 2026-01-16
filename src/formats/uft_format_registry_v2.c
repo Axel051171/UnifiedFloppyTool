@@ -383,6 +383,42 @@ static const format_info_t g_extended_format_info[] = {
     {"VFD", "vfd", "Virtual Floppy Disk", "PC", 2},
     {"XFD", "xfd", "Atari XFD (headerless)", "Atari", 2},
     
+    // Additional Apple Formats
+    {"A2R", "a2r", "Applesauce Flux", "Apple", 0},
+    {"D13", "d13,dsk", "Apple 13-sector", "Apple", 2},
+    {"DC42", "dc42,image", "DiskCopy 4.2", "Mac", 2},
+    {"DART", "dart", "DART Archive", "Mac", 2},
+    
+    // Additional Commodore Formats
+    {"P64", "p64", "Parallel Port 64", "Commodore", 1},
+    
+    // Additional Atari Formats
+    {"DCM", "dcm", "DiskComm", "Atari", 2},
+    {"PRO", "pro", "APE Protected", "Atari", 1},
+    {"XEX", "xex", "Atari Executable", "Atari", 3},
+    
+    // Additional Amiga Formats
+    {"DMS", "dms", "Disk Masher System", "Amiga", 2},
+    
+    // Additional PC Formats
+    {"IMA", "ima", "PC Raw Image", "PC", 2},
+    {"DMF", "dmf", "Distrib Media Format", "PC", 2},
+    {"RAW", "raw,bin", "Raw Sector Dump", "Multi", 2},
+    {"MFM", "mfm", "MFM Bitstream", "Multi", 1},
+    
+    // Additional BBC/Acorn Formats
+    {"ADL", "adl", "Acorn DFS Large", "BBC", 2},
+    {"UEF", "uef", "Unified Emulator Format", "BBC", 3},
+    
+    // Additional Japanese Formats
+    {"D77", "d77", "PC-88/PC-98 Disk", "PC-98", 2},
+    
+    // Additional Spectrum Formats
+    {"TZX", "tzx", "ZX Spectrum Tape", "Spectrum", 3},
+    
+    // Additional TRS-80 Formats
+    {"JV1", "jv1", "JV1 Format", "TRS-80", 2},
+    
     // Sentinel
     {NULL, NULL, NULL, NULL, 0}
 };

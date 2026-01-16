@@ -48,6 +48,13 @@ public:
         File = 2    // Image File
     };
     
+    enum OperationMode {
+        OpRead = 0,    // Read from source
+        OpWrite = 1,   // Write to destination
+        OpVerify = 2,  // Verify disk
+        OpConvert = 3  // Convert format
+    };
+    
     /**
      * @brief Combination validity result
      */
@@ -71,6 +78,9 @@ private slots:
     void onDestFileClicked();
     void onStartAbortClicked();
     void onHistogramClicked();
+    void onPauseClicked();
+    void onLogClicked();
+    void onAnalyzeClicked();
 
 private:
     Ui::TabWorkflow *ui;
@@ -80,11 +90,14 @@ private:
     
     Mode m_sourceMode;
     Mode m_destMode;
+    OperationMode m_operationMode;
     
     QString m_sourceFile;
     QString m_destFile;
+    QString m_logBuffer;
     
     bool m_isRunning;
+    bool m_isPaused;
     QThread* m_workerThread;
     DecodeJob* m_decodeJob;
     
@@ -93,6 +106,7 @@ private:
     void updateSourceStatus();
     void updateDestinationStatus();
     void resetUI();
+    void updateOperationModeUI();
     
     // Combination validation
     CombinationInfo validateCombination() const;

@@ -85,7 +85,7 @@ void FormatTab::setupFormatDatabase() {
     // AMIGA
     // ========================================================================
     m_systemFormats["Amiga"] = {
-        "ADF", "ADF-OFS", "ADF-FFS", "ADF-HD", "ADZ", "HDF", "DMS", "IPF"
+        "ADF", "ADZ", "HDF", "DMS", "IPF"
     };
     
     // ========================================================================
@@ -100,7 +100,7 @@ void FormatTab::setupFormatDatabase() {
     };
     
     m_systemFormats["Macintosh (400K/800K)"] = {
-        "DC42", "IMG", "DiskCopy", "DART"
+        "DC42", "IMG", "DART"
     };
     
     // ========================================================================
@@ -129,7 +129,7 @@ void FormatTab::setupFormatDatabase() {
     // AMSTRAD
     // ========================================================================
     m_systemFormats["Amstrad CPC"] = {
-        "DSK", "EDSK", "RAW", "IPF", "SCP", "CPT"
+        "DSK", "EDSK", "RAW", "IPF", "SCP"
     };
     
     m_systemFormats["Amstrad PCW"] = {
@@ -140,18 +140,18 @@ void FormatTab::setupFormatDatabase() {
     // MSX
     // ========================================================================
     m_systemFormats["MSX"] = {
-        "DSK", "DMK", "IMG", "DI", "XSA"
+        "DSK", "DMK", "IMG", "DIM"
     };
     
     // ========================================================================
     // BBC / ACORN
     // ========================================================================
     m_systemFormats["BBC Micro"] = {
-        "SSD", "DSD", "ADF", "ADL", "UEF", "MMB"
+        "SSD", "DSD", "ADF", "ADL", "UEF"
     };
     
     m_systemFormats["Acorn Archimedes"] = {
-        "ADF", "ADL", "APD", "JFD"
+        "ADF", "ADL"
     };
     
     // ========================================================================
@@ -166,11 +166,11 @@ void FormatTab::setupFormatDatabase() {
     // JAPANESE SYSTEMS
     // ========================================================================
     m_systemFormats["NEC PC-98"] = {
-        "D88", "D77", "NFD", "FDI", "HDM", "XDF", "DUP"
+        "D88", "D77", "NFD", "FDI", "HDM", "XDF"
     };
     
     m_systemFormats["Sharp X68000"] = {
-        "XDF", "DIM", "D88", "HDS"
+        "XDF", "DIM", "D88"
     };
     
     m_systemFormats["FM Towns"] = {
@@ -199,11 +199,11 @@ void FormatTab::setupFormatDatabase() {
     // FRENCH SYSTEMS
     // ========================================================================
     m_systemFormats["Thomson MO/TO"] = {
-        "FD", "SAP", "HFE", "QD"
+        "SAP", "HFE"
     };
     
     m_systemFormats["Oric Atmos"] = {
-        "DSK", "TAP", "ORI"
+        "DSK", "TAP"
     };
     
     // ========================================================================
@@ -218,14 +218,14 @@ void FormatTab::setupFormatDatabase() {
     };
     
     m_systemFormats["North Star"] = {
-        "NSI", "IMG", "TD0"
+        "NorthStar", "IMG", "TD0"
     };
     
     // ========================================================================
     // DEC
     // ========================================================================
     m_systemFormats["DEC PDP/VAX"] = {
-        "RX01", "RX02", "IMG"
+        "IMG", "TD0", "IMD"
     };
     
     // ========================================================================
@@ -243,7 +243,7 @@ void FormatTab::setupFormatDatabase() {
     // FLUX / RAW FORMATS
     // ========================================================================
     m_systemFormats["Flux (raw)"] = {
-        "SCP", "HFE", "RAW", "KF", "CT", "A2R", "WOZ", "IPF", "FDI", "MFM"
+        "SCP", "HFE", "RAW", "KFRAW", "GWRAW", "A2R", "WOZ", "IPF", "FDI", "MFM", "MFI", "86F"
     };
 
     // ========================================================================

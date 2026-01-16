@@ -28,13 +28,18 @@
 #include "ui_tab_workflow.h"
 #include "decodejob.h"
 #include "uft_flux_histogram_widget.h"
-#include <QMessageBox>
+#include <QTextEdit>
 #include <QFileDialog>
-#include <QThread>
 #include <QFileInfo>
+#include <QMessageBox>
+#include <QThread>
 #include <QLocale>
 #include <QDialog>
 #include <QVBoxLayout>
+#include <QHBoxLayout>
+#include <QPushButton>
+#include <QFile>
+#include <QFont>
 
 // ============================================================================
 // Construction / Destruction
@@ -47,7 +52,9 @@ WorkflowTab::WorkflowTab(QWidget *parent)
     , m_destGroup(nullptr)
     , m_sourceMode(Flux)
     , m_destMode(File)
+    , m_operationMode(OpRead)
     , m_isRunning(false)
+    , m_isPaused(false)
     , m_workerThread(nullptr)
     , m_decodeJob(nullptr)
 {
@@ -114,6 +121,34 @@ void WorkflowTab::connectSignals()
             this, &WorkflowTab::onStartAbortClicked);
     connect(ui->btnHistogram, &QPushButton::clicked,
             this, &WorkflowTab::onHistogramClicked);
+    
+    // Operation mode radio buttons
+    connect(ui->radioRead, &QRadioButton::toggled, this, [this](bool checked) {
+        if (checked) m_operationMode = OpRead;
+        updateOperationModeUI();
+    });
+    connect(ui->radioWrite, &QRadioButton::toggled, this, [this](bool checked) {
+        if (checked) m_operationMode = OpWrite;
+        updateOperationModeUI();
+    });
+    connect(ui->radioVerify, &QRadioButton::toggled, this, [this](bool checked) {
+        if (checked) m_operationMode = OpVerify;
+        updateOperationModeUI();
+    });
+    connect(ui->radioConvert, &QRadioButton::toggled, this, [this](bool checked) {
+        if (checked) m_operationMode = OpConvert;
+        updateOperationModeUI();
+    });
+    
+    // Pause button
+    connect(ui->btnPause, &QPushButton::clicked, this, &WorkflowTab::onPauseClicked);
+    ui->btnPause->setEnabled(false); // Only enabled during operation
+    
+    // Log button
+    connect(ui->btnLog, &QPushButton::clicked, this, &WorkflowTab::onLogClicked);
+    
+    // Analyze button
+    connect(ui->btnAnalyze, &QPushButton::clicked, this, &WorkflowTab::onAnalyzeClicked);
 }
 
 // ============================================================================
@@ -551,6 +586,215 @@ void WorkflowTab::onHistogramClicked()
     
     UftFluxHistogramPanel *panel = new UftFluxHistogramPanel(dlg);
     layout->addWidget(panel);
+    
+    dlg->show();
+}
+
+// ============================================================================
+// Operation Mode Handling
+// ============================================================================
+
+void WorkflowTab::updateOperationModeUI()
+{
+    // Update UI based on operation mode
+    switch (m_operationMode) {
+    case OpRead:
+        // Read: Source should be hardware, Dest should be file
+        ui->btnSourceFlux->setEnabled(true);
+        ui->btnSourceUSB->setEnabled(true);
+        ui->btnSourceFile->setEnabled(false);
+        ui->btnDestFile->setEnabled(true);
+        ui->btnDestFlux->setEnabled(false);
+        ui->btnDestUSB->setEnabled(false);
+        if (m_sourceMode == File) {
+            ui->btnSourceFlux->setChecked(true);
+            m_sourceMode = Flux;
+        }
+        if (m_destMode != File) {
+            ui->btnDestFile->setChecked(true);
+            m_destMode = File;
+        }
+        break;
+        
+    case OpWrite:
+        // Write: Source should be file, Dest should be hardware
+        ui->btnSourceFile->setEnabled(true);
+        ui->btnSourceFlux->setEnabled(false);
+        ui->btnSourceUSB->setEnabled(false);
+        ui->btnDestFlux->setEnabled(true);
+        ui->btnDestUSB->setEnabled(true);
+        ui->btnDestFile->setEnabled(false);
+        if (m_sourceMode != File) {
+            ui->btnSourceFile->setChecked(true);
+            m_sourceMode = File;
+        }
+        if (m_destMode == File) {
+            ui->btnDestFlux->setChecked(true);
+            m_destMode = Flux;
+        }
+        break;
+        
+    case OpVerify:
+        // Verify: Source is hardware only
+        ui->btnSourceFlux->setEnabled(true);
+        ui->btnSourceUSB->setEnabled(true);
+        ui->btnSourceFile->setEnabled(false);
+        ui->btnDestFlux->setEnabled(false);
+        ui->btnDestUSB->setEnabled(false);
+        ui->btnDestFile->setEnabled(false);
+        break;
+        
+    case OpConvert:
+        // Convert: File to file only
+        ui->btnSourceFile->setEnabled(true);
+        ui->btnSourceFlux->setEnabled(false);
+        ui->btnSourceUSB->setEnabled(false);
+        ui->btnDestFile->setEnabled(true);
+        ui->btnDestFlux->setEnabled(false);
+        ui->btnDestUSB->setEnabled(false);
+        if (m_sourceMode != File) {
+            ui->btnSourceFile->setChecked(true);
+            m_sourceMode = File;
+        }
+        if (m_destMode != File) {
+            ui->btnDestFile->setChecked(true);
+            m_destMode = File;
+        }
+        break;
+    }
+    
+    updateCombinationUI();
+}
+
+void WorkflowTab::onPauseClicked()
+{
+    if (!m_isRunning) return;
+    
+    m_isPaused = !m_isPaused;
+    
+    if (m_isPaused) {
+        ui->btnPause->setText(tr("▶ RESUME"));
+        ui->btnPause->setStyleSheet("background-color: #4CAF50; color: white;");
+        if (m_decodeJob) {
+            // Signal pause to worker (if supported)
+            // m_decodeJob->requestPause();
+        }
+    } else {
+        ui->btnPause->setText(tr("⏸ PAUSE"));
+        ui->btnPause->setStyleSheet("");
+        if (m_decodeJob) {
+            // Signal resume to worker (if supported)
+            // m_decodeJob->requestResume();
+        }
+    }
+}
+
+void WorkflowTab::onLogClicked()
+{
+    // Show log window
+    QDialog *dlg = new QDialog(this);
+    dlg->setWindowTitle(tr("Operation Log"));
+    dlg->setMinimumSize(600, 400);
+    dlg->setAttribute(Qt::WA_DeleteOnClose);
+    
+    QVBoxLayout *layout = new QVBoxLayout(dlg);
+    
+    QTextEdit *logView = new QTextEdit(dlg);
+    logView->setReadOnly(true);
+    logView->setFont(QFont("Monospace", 9));
+    logView->setPlainText(m_logBuffer.isEmpty() ? 
+        tr("No log entries yet.\n\nStart an operation to see log output here.") : 
+        m_logBuffer);
+    layout->addWidget(logView);
+    
+    QPushButton *btnClear = new QPushButton(tr("Clear Log"), dlg);
+    connect(btnClear, &QPushButton::clicked, [this, logView]() {
+        m_logBuffer.clear();
+        logView->clear();
+    });
+    
+    QPushButton *btnSave = new QPushButton(tr("Save Log..."), dlg);
+    connect(btnSave, &QPushButton::clicked, [this, dlg]() {
+        QString path = QFileDialog::getSaveFileName(dlg, tr("Save Log"), 
+            QString(), tr("Text Files (*.txt);;All Files (*)"));
+        if (!path.isEmpty()) {
+            QFile file(path);
+            if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+                file.write(m_logBuffer.toUtf8());
+                file.close();
+            }
+        }
+    });
+    
+    QHBoxLayout *btnLayout = new QHBoxLayout;
+    btnLayout->addWidget(btnClear);
+    btnLayout->addWidget(btnSave);
+    btnLayout->addStretch();
+    layout->addLayout(btnLayout);
+    
+    dlg->show();
+}
+
+void WorkflowTab::onAnalyzeClicked()
+{
+    // Analyze source file
+    QString path = m_sourceFile;
+    
+    if (path.isEmpty()) {
+        path = QFileDialog::getOpenFileName(this, tr("Select Disk Image to Analyze"),
+            QString(), tr("Disk Images (*.d64 *.g64 *.adf *.scp *.hfe *.dmk *.img *.dsk);;All Files (*)"));
+        if (path.isEmpty()) return;
+    }
+    
+    // Show analysis dialog
+    QDialog *dlg = new QDialog(this);
+    dlg->setWindowTitle(tr("Disk Analysis: %1").arg(QFileInfo(path).fileName()));
+    dlg->setMinimumSize(700, 500);
+    dlg->setAttribute(Qt::WA_DeleteOnClose);
+    
+    QVBoxLayout *layout = new QVBoxLayout(dlg);
+    
+    QTextEdit *output = new QTextEdit(dlg);
+    output->setReadOnly(true);
+    output->setFont(QFont("Monospace", 9));
+    layout->addWidget(output);
+    
+    // Perform analysis
+    output->append(tr("═══════════════════════════════════════════════"));
+    output->append(tr("Analyzing: %1").arg(path));
+    output->append(tr("═══════════════════════════════════════════════\n"));
+    
+    QFileInfo fi(path);
+    output->append(tr("File Size: %1 bytes (%2 KB)")
+        .arg(fi.size())
+        .arg(fi.size() / 1024.0, 0, 'f', 1));
+    output->append(tr("Extension: %1").arg(fi.suffix().toUpper()));
+    output->append(tr("Modified: %1").arg(fi.lastModified().toString()));
+    output->append("");
+    
+    // Try to detect format
+    QFile file(path);
+    if (file.open(QIODevice::ReadOnly)) {
+        QByteArray header = file.read(256);
+        file.close();
+        
+        // Simple format detection
+        if (fi.size() == 174848 || fi.size() == 175531) {
+            output->append(tr("Format: D64 (C64 1541 Disk)"));
+            output->append(tr("Tracks: 35, Sectors: 683"));
+        } else if (fi.size() == 901120) {
+            output->append(tr("Format: ADF (Amiga DD)"));
+            output->append(tr("Tracks: 80, Sectors: 1760"));
+        } else if (header.startsWith("SCP")) {
+            output->append(tr("Format: SCP (SuperCard Pro Flux)"));
+        } else if (header.startsWith("HxCFE") || header.startsWith("HXCPICFE")) {
+            output->append(tr("Format: HFE (HxC Floppy Emulator)"));
+        } else if (fi.suffix().toLower() == "dmk") {
+            output->append(tr("Format: DMK (TRS-80 Track Image)"));
+        } else {
+            output->append(tr("Format: Unknown (raw sector image?)"));
+        }
+    }
     
     dlg->show();
 }
