@@ -38,6 +38,80 @@ typedef enum {
     HAL_CTRL_COUNT
 } uft_hal_controller_t;
 
+/**
+ * @brief Controller type enum (UFT_CTRL_ prefix version)
+ */
+typedef enum {
+    UFT_CTRL_NONE = 0,
+    UFT_CTRL_GREASEWEAZLE,
+    UFT_CTRL_FLUXENGINE,
+    UFT_CTRL_KRYOFLUX,
+    UFT_CTRL_FC5025,
+    UFT_CTRL_XUM1541,
+    UFT_CTRL_SUPERCARD_PRO,
+    UFT_CTRL_PAULINE,
+    UFT_CTRL_APPLESAUCE,
+    UFT_CTRL_COUNT
+} uft_controller_type_t;
+
+/* Maximum number of limitation strings */
+#define UFT_CAPS_MAX_LIMITATIONS 16
+
+/**
+ * @brief Controller capabilities structure
+ */
+typedef struct {
+    uft_controller_type_t type;       /**< Controller type */
+    const char* name;                 /**< Controller name */
+    const char* version;              /**< Version/model string */
+    
+    /* Timing characteristics */
+    double sample_rate_mhz;           /**< Sample rate in MHz */
+    double sample_resolution_ns;      /**< Sample resolution in nanoseconds */
+    double jitter_ns;                 /**< Timing jitter in nanoseconds */
+    
+    /* Read capabilities */
+    bool can_read_flux;               /**< Can read raw flux data */
+    bool can_read_bitstream;          /**< Can read decoded bitstream */
+    bool can_read_sector;             /**< Can read sector data */
+    
+    /* Write capabilities */
+    bool can_write_flux;              /**< Can write raw flux data */
+    bool can_write_bitstream;         /**< Can write from bitstream */
+    
+    /* Index handling */
+    bool hardware_index;              /**< Has hardware index sensing */
+    double index_accuracy_ns;         /**< Index pulse accuracy in ns */
+    int max_revolutions;              /**< Maximum revolutions per read */
+    
+    /* Physical limits */
+    int max_cylinders;                /**< Maximum cylinder number */
+    int max_heads;                    /**< Maximum number of heads */
+    bool supports_half_tracks;        /**< Half-track stepping support */
+    
+    /* Data rate */
+    double max_data_rate_kbps;        /**< Maximum data rate in kbps */
+    bool variable_data_rate;          /**< Supports variable data rate */
+    
+    /* Copy protection */
+    bool copy_protection_support;     /**< Copy protection analysis support */
+    bool weak_bit_detection;          /**< Can detect weak bits */
+    bool density_select;              /**< Has density select control */
+    
+    /* Limitations (NULL-terminated array of strings) */
+    const char* limitations[UFT_CAPS_MAX_LIMITATIONS];
+} uft_controller_caps_t;
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+ * Predefined Controller Capabilities
+ * ═══════════════════════════════════════════════════════════════════════════════ */
+
+extern const uft_controller_caps_t UFT_CAPS_GREASEWEAZLE;
+extern const uft_controller_caps_t UFT_CAPS_FLUXENGINE;
+extern const uft_controller_caps_t UFT_CAPS_KRYOFLUX;
+extern const uft_controller_caps_t UFT_CAPS_FC5025;
+extern const uft_controller_caps_t UFT_CAPS_XUM1541;
+
 /* ═══════════════════════════════════════════════════════════════════════════════
  * Capability Flags
  * ═══════════════════════════════════════════════════════════════════════════════ */
@@ -185,6 +259,26 @@ const char* uft_hal_get_controller_name_by_index(int index);
  * @return true if implemented, false if stub
  */
 bool uft_hal_is_controller_implemented(uft_hal_controller_t type);
+
+/**
+ * @brief Get drive profile by type
+ * @param type Drive type
+ * @return Profile pointer or NULL if invalid
+ */
+const uft_drive_profile_t* uft_hal_get_drive_profile(uft_drive_type_t type);
+
+/**
+ * @brief Get controller capabilities by type
+ * @param type Controller type
+ * @return Capabilities pointer or NULL if invalid
+ */
+const uft_controller_caps_t* uft_hal_get_controller_caps(uft_controller_type_t type);
+
+/**
+ * @brief Print controller capabilities to stdout
+ * @param caps Capabilities to print
+ */
+void uft_hal_print_controller_caps(const uft_controller_caps_t* caps);
 
 #ifdef __cplusplus
 }

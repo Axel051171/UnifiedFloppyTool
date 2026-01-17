@@ -2,58 +2,50 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <key>CFBundleDevelopmentRegion</key>
-    <string>en</string>
+    <key>CFBundleDisplayName</key>
+    <string>UnifiedFloppyTool</string>
     <key>CFBundleExecutable</key>
-    <string>${MACOSX_BUNDLE_EXECUTABLE_NAME}</string>
+    <string>UnifiedFloppyTool</string>
     <key>CFBundleIconFile</key>
-    <string></string>
+    <string>uft.icns</string>
     <key>CFBundleIdentifier</key>
-    <string>${MACOSX_BUNDLE_GUI_IDENTIFIER}</string>
+    <string>com.uft.UnifiedFloppyTool</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>
-    <string>${MACOSX_BUNDLE_BUNDLE_NAME}</string>
+    <string>UnifiedFloppyTool</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>${MACOSX_BUNDLE_SHORT_VERSION_STRING}</string>
+    <string>4.0.0</string>
     <key>CFBundleVersion</key>
-    <string>${MACOSX_BUNDLE_BUNDLE_VERSION}</string>
+    <string>4.0.0</string>
     <key>LSMinimumSystemVersion</key>
-    <string>11.0</string>
+    <string>14.0</string>
     <key>NSHighResolutionCapable</key>
     <true/>
     <key>NSPrincipalClass</key>
     <string>NSApplication</string>
     <key>NSHumanReadableCopyright</key>
-    <string>Copyright © 2024-2026 UFT Contributors. All rights reserved.</string>
-    <key>LSApplicationCategoryType</key>
-    <string>public.app-category.utilities</string>
+    <string>Copyright © 2025-2026 UFT Project. All rights reserved.</string>
     <key>CFBundleDocumentTypes</key>
     <array>
         <dict>
             <key>CFBundleTypeName</key>
             <string>Disk Image</string>
-            <key>CFBundleTypeRole</key>
-            <string>Editor</string>
-            <key>LSItemContentTypes</key>
-            <array>
-                <string>public.disk-image</string>
-            </array>
             <key>CFBundleTypeExtensions</key>
             <array>
-                <string>adf</string>
                 <string>d64</string>
+                <string>d71</string>
+                <string>d81</string>
                 <string>g64</string>
+                <string>adf</string>
                 <string>scp</string>
                 <string>hfe</string>
-                <string>woz</string>
-                <string>img</string>
-                <string>ima</string>
-                <string>dsk</string>
                 <string>ipf</string>
             </array>
+            <key>CFBundleTypeRole</key>
+            <string>Editor</string>
         </dict>
     </array>
 </dict>

@@ -1,0 +1,317 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE TS>
+<TS version="2.1" language="de_DE">
+<context>
+    <name>MainWindow</name>
+    <message>
+        <source>File</source>
+        <translation>Datei</translation>
+    </message>
+    <message>
+        <source>Open...</source>
+        <translation>Öffnen...</translation>
+    </message>
+    <message>
+        <source>Save</source>
+        <translation>Speichern</translation>
+    </message>
+    <message>
+        <source>Save As...</source>
+        <translation>Speichern unter...</translation>
+    </message>
+    <message>
+        <source>Exit</source>
+        <translation>Beenden</translation>
+    </message>
+    <message>
+        <source>Edit</source>
+        <translation>Bearbeiten</translation>
+    </message>
+    <message>
+        <source>View</source>
+        <translation>Ansicht</translation>
+    </message>
+    <message>
+        <source>Tools</source>
+        <translation>Werkzeuge</translation>
+    </message>
+    <message>
+        <source>Help</source>
+        <translation>Hilfe</translation>
+    </message>
+    <message>
+        <source>About</source>
+        <translation>Über</translation>
+    </message>
+    <message>
+        <source>Ready</source>
+        <translation>Bereit</translation>
+    </message>
+    <message>
+        <source>Settings</source>
+        <translation>Einstellungen</translation>
+    </message>
+</context>
+<context>
+    <name>ExplorerTab</name>
+    <message>
+        <source>Name</source>
+        <translation>Name</translation>
+    </message>
+    <message>
+        <source>Size</source>
+        <translation>Größe</translation>
+    </message>
+    <message>
+        <source>Type</source>
+        <translation>Typ</translation>
+    </message>
+    <message>
+        <source>Attributes</source>
+        <translation>Attribute</translation>
+    </message>
+    <message>
+        <source>Open</source>
+        <translation>Öffnen</translation>
+    </message>
+    <message>
+        <source>Extract...</source>
+        <translation>Extrahieren...</translation>
+    </message>
+    <message>
+        <source>View Hex</source>
+        <translation>Hex-Ansicht</translation>
+    </message>
+    <message>
+        <source>View as Text</source>
+        <translation>Als Text anzeigen</translation>
+    </message>
+    <message>
+        <source>Rename</source>
+        <translation>Umbenennen</translation>
+    </message>
+    <message>
+        <source>Delete</source>
+        <translation>Löschen</translation>
+    </message>
+    <message>
+        <source>Copy Path</source>
+        <translation>Pfad kopieren</translation>
+    </message>
+    <message>
+        <source>Properties...</source>
+        <translation>Eigenschaften...</translation>
+    </message>
+    <message>
+        <source>No Image</source>
+        <translation>Kein Image</translation>
+    </message>
+    <message>
+        <source>Please open a disk image first.</source>
+        <translation>Bitte öffnen Sie zuerst ein Disk-Image.</translation>
+    </message>
+    <message>
+        <source>New Folder</source>
+        <translation>Neuer Ordner</translation>
+    </message>
+    <message>
+        <source>Folder name:</source>
+        <translation>Ordnername:</translation>
+    </message>
+</context>
+<context>
+    <name>WorkflowTab</name>
+    <message>
+        <source>Read</source>
+        <translation>Lesen</translation>
+    </message>
+    <message>
+        <source>Write</source>
+        <translation>Schreiben</translation>
+    </message>
+    <message>
+        <source>Verify</source>
+        <translation>Prüfen</translation>
+    </message>
+    <message>
+        <source>Convert</source>
+        <translation>Konvertieren</translation>
+    </message>
+    <message>
+        <source>START</source>
+        <translation>START</translation>
+    </message>
+    <message>
+        <source>ABORT</source>
+        <translation>ABBRECHEN</translation>
+    </message>
+    <message>
+        <source>PAUSE</source>
+        <translation>PAUSE</translation>
+    </message>
+    <message>
+        <source>RESUME</source>
+        <translation>FORTSETZEN</translation>
+    </message>
+    <message>
+        <source>Source</source>
+        <translation>Quelle</translation>
+    </message>
+    <message>
+        <source>Destination</source>
+        <translation>Ziel</translation>
+    </message>
+    <message>
+        <source>Flux Device</source>
+        <translation>Flux-Gerät</translation>
+    </message>
+    <message>
+        <source>USB Floppy</source>
+        <translation>USB-Diskette</translation>
+    </message>
+    <message>
+        <source>Image File</source>
+        <translation>Image-Datei</translation>
+    </message>
+</context>
+<context>
+    <name>HardwareTab</name>
+    <message>
+        <source>Connect</source>
+        <translation>Verbinden</translation>
+    </message>
+    <message>
+        <source>Disconnect</source>
+        <translation>Trennen</translation>
+    </message>
+    <message>
+        <source>Refresh Ports</source>
+        <translation>Ports aktualisieren</translation>
+    </message>
+    <message>
+        <source>Controller</source>
+        <translation>Controller</translation>
+    </message>
+    <message>
+        <source>Port</source>
+        <translation>Port</translation>
+    </message>
+    <message>
+        <source>Drive Type</source>
+        <translation>Laufwerkstyp</translation>
+    </message>
+    <message>
+        <source>Tracks</source>
+        <translation>Spuren</translation>
+    </message>
+    <message>
+        <source>Sides</source>
+        <translation>Seiten</translation>
+    </message>
+    <message>
+        <source>Connected</source>
+        <translation>Verbunden</translation>
+    </message>
+    <message>
+        <source>Disconnected</source>
+        <translation>Getrennt</translation>
+    </message>
+</context>
+<context>
+    <name>FormatTab</name>
+    <message>
+        <source>System</source>
+        <translation>System</translation>
+    </message>
+    <message>
+        <source>Format</source>
+        <translation>Format</translation>
+    </message>
+    <message>
+        <source>Encoding</source>
+        <translation>Kodierung</translation>
+    </message>
+    <message>
+        <source>Sectors</source>
+        <translation>Sektoren</translation>
+    </message>
+    <message>
+        <source>Sector Size</source>
+        <translation>Sektorgröße</translation>
+    </message>
+</context>
+<context>
+    <name>ToolsTab</name>
+    <message>
+        <source>Disk Info</source>
+        <translation>Disk-Info</translation>
+    </message>
+    <message>
+        <source>Hex View</source>
+        <translation>Hex-Ansicht</translation>
+    </message>
+    <message>
+        <source>Convert</source>
+        <translation>Konvertieren</translation>
+    </message>
+    <message>
+        <source>Compare</source>
+        <translation>Vergleichen</translation>
+    </message>
+    <message>
+        <source>Repair</source>
+        <translation>Reparieren</translation>
+    </message>
+    <message>
+        <source>Create Blank</source>
+        <translation>Leer erstellen</translation>
+    </message>
+    <message>
+        <source>Batch Processing</source>
+        <translation>Stapelverarbeitung</translation>
+    </message>
+</context>
+<context>
+    <name>Common</name>
+    <message>
+        <source>Error</source>
+        <translation>Fehler</translation>
+    </message>
+    <message>
+        <source>Warning</source>
+        <translation>Warnung</translation>
+    </message>
+    <message>
+        <source>Information</source>
+        <translation>Information</translation>
+    </message>
+    <message>
+        <source>Success</source>
+        <translation>Erfolg</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation>Abbrechen</translation>
+    </message>
+    <message>
+        <source>OK</source>
+        <translation>OK</translation>
+    </message>
+    <message>
+        <source>Yes</source>
+        <translation>Ja</translation>
+    </message>
+    <message>
+        <source>No</source>
+        <translation>Nein</translation>
+    </message>
+    <message>
+        <source>Close</source>
+        <translation>Schließen</translation>
+    </message>
+    <message>
+        <source>Browse...</source>
+        <translation>Durchsuchen...</translation>
+    </message>
+</context>
+</TS>

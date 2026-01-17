@@ -16,14 +16,23 @@
 #include <QDebug>
 #include <QInputDialog>
 #include <QHeaderView>
+#include <QClipboard>
+#include <QApplication>
+#include <QAction>
+#include <QTextEdit>
+#include <QVBoxLayout>
+#include <QDialog>
+#include <QFont>
 
 ExplorerTab::ExplorerTab(QWidget *parent)
     : QWidget(parent)
     , ui(new Ui::TabExplorer)
+    , m_contextMenu(nullptr)
     , m_imageLoaded(false)
 {
     ui->setupUi(this);
     setupConnections();
+    setupContextMenu();
     
     // Configure table
     ui->tableFiles->setColumnCount(4);
@@ -34,6 +43,7 @@ ExplorerTab::ExplorerTab(QWidget *parent)
     ui->tableFiles->horizontalHeader()->setSectionResizeMode(3, QHeaderView::ResizeToContents);
     ui->tableFiles->setSelectionBehavior(QAbstractItemView::SelectRows);
     ui->tableFiles->setSelectionMode(QAbstractItemView::ExtendedSelection);
+    ui->tableFiles->setContextMenuPolicy(Qt::CustomContextMenu);
     
     clear();
 }
@@ -67,6 +77,8 @@ void ExplorerTab::setupConnections()
             this, &ExplorerTab::onItemDoubleClicked);
     connect(ui->tableFiles, &QTableWidget::itemSelectionChanged,
             this, &ExplorerTab::onSelectionChanged);
+    connect(ui->tableFiles, &QTableWidget::customContextMenuRequested,
+            this, &ExplorerTab::showContextMenu);
 }
 
 void ExplorerTab::loadImage(const QString& imagePath)
@@ -459,4 +471,161 @@ void ExplorerTab::onValidate()
     // TODO: Implement disk validation
     QMessageBox::information(this, tr("Validate"),
         tr("Disk validation is not yet implemented."));
+}
+
+// ============================================================================
+// Context Menu Implementation
+// ============================================================================
+
+void ExplorerTab::setupContextMenu()
+{
+    m_contextMenu = new QMenu(this);
+    
+    // File operations
+    QAction *actOpen = m_contextMenu->addAction(QIcon::fromTheme("document-open"), tr("Open"));
+    connect(actOpen, &QAction::triggered, this, [this]() {
+        QList<QTableWidgetItem*> selected = ui->tableFiles->selectedItems();
+        if (!selected.isEmpty()) {
+            int row = selected.first()->row();
+            onItemDoubleClicked(row, 0);
+        }
+    });
+    
+    QAction *actExtract = m_contextMenu->addAction(QIcon::fromTheme("document-save-as"), tr("Extract..."));
+    connect(actExtract, &QAction::triggered, this, &ExplorerTab::onExtractSelected);
+    
+    m_contextMenu->addSeparator();
+    
+    // View options
+    QAction *actHex = m_contextMenu->addAction(QIcon::fromTheme("accessories-text-editor"), tr("View Hex"));
+    connect(actHex, &QAction::triggered, this, &ExplorerTab::onViewHex);
+    
+    QAction *actText = m_contextMenu->addAction(QIcon::fromTheme("text-x-generic"), tr("View as Text"));
+    connect(actText, &QAction::triggered, this, &ExplorerTab::onViewText);
+    
+    m_contextMenu->addSeparator();
+    
+    // Edit operations
+    QAction *actRename = m_contextMenu->addAction(QIcon::fromTheme("edit-rename"), tr("Rename"));
+    connect(actRename, &QAction::triggered, this, &ExplorerTab::onRename);
+    
+    QAction *actDelete = m_contextMenu->addAction(QIcon::fromTheme("edit-delete"), tr("Delete"));
+    connect(actDelete, &QAction::triggered, this, &ExplorerTab::onDelete);
+    
+    m_contextMenu->addSeparator();
+    
+    // Clipboard
+    QAction *actCopy = m_contextMenu->addAction(QIcon::fromTheme("edit-copy"), tr("Copy Path"));
+    connect(actCopy, &QAction::triggered, this, &ExplorerTab::onCopyToClipboard);
+    
+    m_contextMenu->addSeparator();
+    
+    // Properties
+    QAction *actProps = m_contextMenu->addAction(QIcon::fromTheme("document-properties"), tr("Properties..."));
+    connect(actProps, &QAction::triggered, this, &ExplorerTab::onViewProperties);
+}
+
+void ExplorerTab::showContextMenu(const QPoint& pos)
+{
+    QTableWidgetItem *item = ui->tableFiles->itemAt(pos);
+    if (item && m_imageLoaded) {
+        m_contextMenu->exec(ui->tableFiles->mapToGlobal(pos));
+    }
+}
+
+void ExplorerTab::onViewHex()
+{
+    QList<QTableWidgetItem*> selected = ui->tableFiles->selectedItems();
+    if (selected.isEmpty()) return;
+    
+    QString fileName = ui->tableFiles->item(selected.first()->row(), 0)->text();
+    
+    // Create hex view dialog
+    QDialog *dlg = new QDialog(this);
+    dlg->setWindowTitle(tr("Hex View: %1").arg(fileName));
+    dlg->setMinimumSize(700, 500);
+    dlg->setAttribute(Qt::WA_DeleteOnClose);
+    
+    QVBoxLayout *layout = new QVBoxLayout(dlg);
+    
+    QTextEdit *hexView = new QTextEdit(dlg);
+    hexView->setReadOnly(true);
+    hexView->setFont(QFont("Monospace", 9));
+    layout->addWidget(hexView);
+    
+    // TODO: Read actual file data from disk image
+    // For now, show placeholder
+    QString hexText;
+    hexText += tr("=== Hex View: %1 ===\n\n").arg(fileName);
+    hexText += tr("Offset    00 01 02 03 04 05 06 07  08 09 0A 0B 0C 0D 0E 0F   ASCII\n");
+    hexText += tr("--------  -----------------------------------------------   ----------------\n");
+    hexText += tr("00000000  XX XX XX XX XX XX XX XX  XX XX XX XX XX XX XX XX   ................\n");
+    hexText += tr("\n(File reading not yet implemented)\n");
+    
+    hexView->setPlainText(hexText);
+    dlg->show();
+}
+
+void ExplorerTab::onViewText()
+{
+    QList<QTableWidgetItem*> selected = ui->tableFiles->selectedItems();
+    if (selected.isEmpty()) return;
+    
+    QString fileName = ui->tableFiles->item(selected.first()->row(), 0)->text();
+    
+    // Create text view dialog
+    QDialog *dlg = new QDialog(this);
+    dlg->setWindowTitle(tr("Text View: %1").arg(fileName));
+    dlg->setMinimumSize(600, 400);
+    dlg->setAttribute(Qt::WA_DeleteOnClose);
+    
+    QVBoxLayout *layout = new QVBoxLayout(dlg);
+    
+    QTextEdit *textView = new QTextEdit(dlg);
+    textView->setReadOnly(true);
+    layout->addWidget(textView);
+    
+    // TODO: Read actual file data from disk image
+    textView->setPlainText(tr("(Text viewing not yet implemented for: %1)").arg(fileName));
+    
+    dlg->show();
+}
+
+void ExplorerTab::onViewProperties()
+{
+    QList<QTableWidgetItem*> selected = ui->tableFiles->selectedItems();
+    if (selected.isEmpty()) return;
+    
+    int row = selected.first()->row();
+    QString fileName = ui->tableFiles->item(row, 0)->text();
+    QString fileSize = ui->tableFiles->item(row, 1)->text();
+    QString fileType = ui->tableFiles->item(row, 2)->text();
+    QString fileAttr = ui->tableFiles->item(row, 3)->text();
+    
+    QString info;
+    info += tr("═══════════════════════════════════════\n");
+    info += tr("File Properties\n");
+    info += tr("═══════════════════════════════════════\n\n");
+    info += tr("Name:       %1\n").arg(fileName);
+    info += tr("Size:       %1\n").arg(fileSize);
+    info += tr("Type:       %1\n").arg(fileType);
+    info += tr("Attributes: %1\n").arg(fileAttr);
+    info += tr("\nLocation:   %1\n").arg(m_currentDir.isEmpty() ? "/" : m_currentDir);
+    info += tr("Image:      %1\n").arg(QFileInfo(m_imagePath).fileName());
+    
+    QMessageBox::information(this, tr("Properties: %1").arg(fileName), info);
+}
+
+void ExplorerTab::onCopyToClipboard()
+{
+    QList<QTableWidgetItem*> selected = ui->tableFiles->selectedItems();
+    if (selected.isEmpty()) return;
+    
+    QString fileName = ui->tableFiles->item(selected.first()->row(), 0)->text();
+    QString fullPath = m_currentDir.isEmpty() ? fileName : (m_currentDir + "/" + fileName);
+    
+    QClipboard *clipboard = QApplication::clipboard();
+    clipboard->setText(fullPath);
+    
+    emit statusMessage(tr("Copied to clipboard: %1").arg(fullPath));
 }

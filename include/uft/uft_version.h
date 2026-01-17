@@ -2,18 +2,18 @@
  * @file uft_version.h
  * @brief UnifiedFloppyTool Version Information
  * 
- * This file is auto-generated and should match CMakeLists.txt VERSION.
- * CI will verify consistency.
+ * SINGLE SOURCE OF TRUTH for version numbers.
+ * All other version strings must reference these defines.
  */
 #ifndef UFT_VERSION_H
 #define UFT_VERSION_H
 
-#define UFT_VERSION_MAJOR 3
-#define UFT_VERSION_MINOR 8
+#define UFT_VERSION_MAJOR 4
+#define UFT_VERSION_MINOR 0
 #define UFT_VERSION_PATCH 0
 
-#define UFT_VERSION_STRING "3.8.0"
-#define UFT_VERSION_FULL "UnifiedFloppyTool v3.8.0"
+#define UFT_VERSION_STRING "4.0.0"
+#define UFT_VERSION_FULL "UnifiedFloppyTool v4.0.0"
 
 /* Build info - set by CI or build system */
 #ifndef UFT_BUILD_DATE

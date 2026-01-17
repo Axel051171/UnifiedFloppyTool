@@ -571,3 +571,286 @@ int uft_apple2_result_to_json(const uft_apple2_prot_result_t *result,
     
     return written;
 }
+
+/* ============================================================================
+ * SPIRADISC PROTECTION - Sierra On-Line (Mark Duchaineau)
+ * 
+ * Spiradisc was developed by Mark Duchaineau for Sierra On-Line.
+ * Instead of writing data in concentric circles (normal disk format),
+ * Spiradisc writes data in a spiral pattern across the disk surface.
+ * 
+ * Key characteristics:
+ * - Data spans multiple tracks in a continuous spiral
+ * - Track-to-track synchronization is critical
+ * - Standard nibble copiers fail because they read track by track
+ * - Eventually defeated by Copy II Plus v5.0
+ * 
+ * References:
+ * - Steven Levy "Hackers" (2010 ed.), Chapter 19 "Applefest"
+ * - Computist Magazine Issue 25, 41, 82, 83 (softkeys)
+ * ============================================================================ */
+
+/**
+ * @brief Known Spiradisc-protected titles
+ */
+typedef struct {
+    const char *title;
+    const char *publisher;
+    int year;
+    const char *notes;
+} spiradisc_title_t;
+
+static const spiradisc_title_t g_spiradisc_titles[] = {
+    /* Sierra On-Line titles - primary Spiradisc user */
+    {"Lunar Leepers", "Sierra On-Line", 1982, "Early Spiradisc title"},
+    {"Frogger", "Sierra On-Line", 1982, "Sega license"},
+    {"Jawbreaker", "Sierra On-Line", 1981, "Early Spiradisc title"},
+    {"Ultima II", "Sierra On-Line", 1982, "Very early versions only"},
+    {"Maze Craze Construction Set", "Sierra On-Line", 1983, "Spiradisc protected"},
+    {"Pest Patrol", "Sierra On-Line", 1982, "Spiradisc protected"},
+    {"Crossfire", "Sierra On-Line", 1981, "Spiradisc protected"},
+    {"Threshold", "Sierra On-Line", 1981, "Spiradisc protected"},
+    {"Cannonball Blitz", "Sierra On-Line", 1982, "Spiradisc protected"},
+    {"Missile Defense", "Sierra On-Line", 1981, "Spiradisc protected"},
+    {"Marauder", "Sierra On-Line", 1982, "Spiradisc protected"},
+    {"Mousie", "Sierra On-Line", 1983, "Spiradisc protected"},
+    {"Oil's Well", "Sierra On-Line", 1983, "Spiradisc protected"},
+    {"Screenwriter II", "Sierra On-Line", 1982, "Spiradisc protected"},
+    {"The General Manager", "Sierra On-Line", 1982, "Spiradisc protected"},
+    
+    /* End marker */
+    {NULL, NULL, 0, NULL}
+};
+
+#define SPIRADISC_TITLE_COUNT (sizeof(g_spiradisc_titles) / sizeof(g_spiradisc_titles[0]) - 1)
+
+/**
+ * @brief Detect Spiradisc protection characteristics
+ * 
+ * Spiradisc detection looks for:
+ * 1. Consistent rotation offset between adjacent tracks
+ * 2. Data patterns that span track boundaries
+ * 3. Unusual sync patterns at track edges
+ * 4. Cross-track byte sequences
+ */
+typedef struct {
+    bool detected;
+    double confidence;
+    int spiral_tracks;              /* Number of tracks in spiral */
+    double rotation_offset;         /* Rotation offset per track */
+    int cross_track_sequences;      /* Number of cross-track byte sequences */
+    uint8_t spiral_start_track;     /* First track of spiral */
+    uint8_t spiral_end_track;       /* Last track of spiral */
+    char matched_title[64];         /* Matched known title (if any) */
+} spiradisc_result_t;
+
+/**
+ * @brief Lookup title in Spiradisc database
+ */
+static const spiradisc_title_t *lookup_spiradisc_title(const char *title) {
+    if (!title) return NULL;
+    
+    for (size_t i = 0; i < SPIRADISC_TITLE_COUNT; i++) {
+        /* Case-insensitive substring match */
+        const char *db_title = g_spiradisc_titles[i].title;
+        const char *t1 = title;
+        const char *t2 = db_title;
+        
+        while (*t1 && *t2) {
+            char c1 = (*t1 >= 'A' && *t1 <= 'Z') ? *t1 + 32 : *t1;
+            char c2 = (*t2 >= 'A' && *t2 <= 'Z') ? *t2 + 32 : *t2;
+            if (c1 != c2) break;
+            t1++; t2++;
+        }
+        
+        if (*t2 == '\0') {
+            return &g_spiradisc_titles[i];
+        }
+    }
+    
+    return NULL;
+}
+
+/**
+ * @brief Detect cross-track data sequences characteristic of Spiradisc
+ * 
+ * Spiradisc writes data continuously across track boundaries.
+ * We look for byte sequences that appear at the end of one track
+ * and continue at the beginning of the next track.
+ */
+static int detect_cross_track_sequences(const uint8_t **tracks, 
+                                         const size_t *track_lens,
+                                         uint8_t track_count,
+                                         int *sequence_count) {
+    *sequence_count = 0;
+    const int MATCH_LEN = 8;  /* Minimum bytes to match */
+    
+    for (uint8_t t = 0; t < track_count - 1; t++) {
+        if (!tracks[t] || !tracks[t + 1]) continue;
+        if (track_lens[t] < MATCH_LEN || track_lens[t + 1] < MATCH_LEN) continue;
+        
+        /* Look for data at end of track t that continues at start of track t+1 */
+        size_t end_pos = track_lens[t] - MATCH_LEN;
+        
+        /* Skip sync bytes at track boundaries */
+        while (end_pos > 0 && tracks[t][end_pos] == 0xFF) end_pos--;
+        if (end_pos < MATCH_LEN) continue;
+        
+        /* Find where non-sync data starts on next track */
+        size_t start_pos = 0;
+        while (start_pos < track_lens[t + 1] && tracks[t + 1][start_pos] == 0xFF) {
+            start_pos++;
+        }
+        if (start_pos + MATCH_LEN > track_lens[t + 1]) continue;
+        
+        /* Check for matching sequence */
+        /* In Spiradisc, data flows continuously, so there should be
+           a correlation between track end and next track start */
+        int matches = 0;
+        for (int i = 0; i < MATCH_LEN; i++) {
+            /* Look for XOR correlation (Spiradisc uses XOR scrambling) */
+            uint8_t b1 = tracks[t][end_pos - MATCH_LEN + i];
+            uint8_t b2 = tracks[t + 1][start_pos + i];
+            
+            /* Check for direct match or XOR pattern */
+            if (b1 == b2 || (b1 ^ b2) == 0xFF || (b1 ^ b2) == 0xAA) {
+                matches++;
+            }
+        }
+        
+        if (matches >= MATCH_LEN / 2) {
+            (*sequence_count)++;
+        }
+    }
+    
+    return (*sequence_count > 0) ? 0 : -1;
+}
+
+/**
+ * @brief Detect Spiradisc protection
+ * 
+ * @param tracks Array of track data
+ * @param track_lens Array of track lengths
+ * @param track_count Number of tracks
+ * @param title Optional title for database lookup
+ * @param result Output Spiradisc result
+ * @return 0 on success
+ */
+int uft_apple2_detect_spiradisc(const uint8_t **tracks, const size_t *track_lens,
+                                uint8_t track_count, const char *title,
+                                spiradisc_result_t *result) {
+    if (!tracks || !track_lens || !result || track_count < 3) return -1;
+    
+    memset(result, 0, sizeof(*result));
+    
+    /* First check if title is in known Spiradisc database */
+    if (title) {
+        const spiradisc_title_t *known = lookup_spiradisc_title(title);
+        if (known) {
+            result->detected = true;
+            result->confidence = 0.95;  /* High confidence for known title */
+            strncpy(result->matched_title, known->title, 
+                    sizeof(result->matched_title) - 1);
+        }
+    }
+    
+    /* Detect spiral track characteristics */
+    uft_spiral_track_t spiral;
+    int spiral_err = uft_apple2_detect_spiral(tracks, track_lens, track_count, 
+                                               0, &spiral);
+    
+    if (spiral_err == 0 && spiral.detected) {
+        result->spiral_tracks = spiral.track_count;
+        result->rotation_offset = spiral.rotation_offset;
+        result->spiral_start_track = spiral.start_track;
+        result->spiral_end_track = spiral.end_track;
+        
+        /* Adjust confidence based on spiral characteristics */
+        if (!result->detected) {
+            result->detected = true;
+            result->confidence = spiral.confidence;
+        } else {
+            /* Combine confidences */
+            result->confidence = 1.0 - (1.0 - result->confidence) * 
+                                       (1.0 - spiral.confidence);
+        }
+    }
+    
+    /* Detect cross-track sequences */
+    int cross_sequences = 0;
+    detect_cross_track_sequences(tracks, track_lens, track_count, &cross_sequences);
+    result->cross_track_sequences = cross_sequences;
+    
+    if (cross_sequences > 3) {
+        if (!result->detected) {
+            result->detected = true;
+            result->confidence = 0.7 + (cross_sequences * 0.05);
+            if (result->confidence > 0.95) result->confidence = 0.95;
+        } else {
+            result->confidence += 0.1;
+            if (result->confidence > 1.0) result->confidence = 1.0;
+        }
+    }
+    
+    return 0;
+}
+
+/**
+ * @brief Get number of known Spiradisc titles
+ */
+int uft_apple2_get_spiradisc_title_count(void) {
+    return (int)SPIRADISC_TITLE_COUNT;
+}
+
+/**
+ * @brief Get Spiradisc title by index
+ */
+const char *uft_apple2_get_spiradisc_title(int index) {
+    if (index < 0 || index >= (int)SPIRADISC_TITLE_COUNT) return NULL;
+    return g_spiradisc_titles[index].title;
+}
+
+/**
+ * @brief Generate Spiradisc analysis report
+ */
+int uft_apple2_spiradisc_report(const spiradisc_result_t *result,
+                                 char *buffer, size_t buffer_size) {
+    if (!result || !buffer || buffer_size < 256) return -1;
+    
+    int written = snprintf(buffer, buffer_size,
+        "╔══════════════════════════════════════════════════════════════════╗\n"
+        "║       SPIRADISC PROTECTION ANALYSIS (Sierra On-Line)            ║\n"
+        "╚══════════════════════════════════════════════════════════════════╝\n\n"
+        "Detected: %s\n"
+        "Confidence: %.1f%%\n\n",
+        result->detected ? "YES" : "No",
+        result->confidence * 100.0);
+    
+    if (result->detected) {
+        if (result->matched_title[0]) {
+            written += snprintf(buffer + written, buffer_size - written,
+                "Matched Title: %s\n\n", result->matched_title);
+        }
+        
+        written += snprintf(buffer + written, buffer_size - written,
+            "Spiral Characteristics:\n"
+            "  Tracks in Spiral: %d\n"
+            "  Rotation Offset: %.4f\n"
+            "  Start Track: %d\n"
+            "  End Track: %d\n"
+            "  Cross-Track Sequences: %d\n\n",
+            result->spiral_tracks,
+            result->rotation_offset,
+            result->spiral_start_track,
+            result->spiral_end_track,
+            result->cross_track_sequences);
+        
+        written += snprintf(buffer + written, buffer_size - written,
+            "Notes:\n"
+            "  - Spiradisc developed by Mark Duchaineau (Sierra On-Line)\n"
+            "  - Data written in spiral pattern across disk surface\n"
+            "  - Defeated by Copy II Plus v5.0 (1983)\n");
+    }
+    
+    return written;
+}

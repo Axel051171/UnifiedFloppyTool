@@ -103,6 +103,10 @@ void MainWindow::loadTabWidgets()
     connect(workflowTab, &WorkflowTab::hardwareModeChanged,
             hardwareTab, &HardwareTab::setWorkflowModes);
     
+    // Connect HardwareTab device info to WorkflowTab status display
+    connect(hardwareTab, &HardwareTab::deviceInfoChanged,
+            workflowTab, &WorkflowTab::onDeviceInfoChanged);
+    
     // Connect HardwareTab connection state to MainWindow LED status
     // Use Qt::QueuedConnection to ensure UI updates happen in main thread
     connect(hardwareTab, &HardwareTab::connectionChanged,
@@ -343,7 +347,7 @@ void MainWindow::onHelp()
 void MainWindow::onAbout()
 {
     QMessageBox::about(this, tr("About UnifiedFloppyTool"),
-        tr("<h2>UnifiedFloppyTool v4.0.0</h2>"
+        tr("<h2>UnifiedFloppyTool v4.1.0</h2>"
            "<p>Bei uns geht kein Bit verloren</p>"
            "<p>A comprehensive floppy disk preservation and analysis tool.</p>"
            "<p>Supports: Commodore, Amiga, Apple, Atari, PC, BBC Micro, and more.</p>"

@@ -100,70 +100,112 @@ typedef enum uft_geometry_preset {
 
 /**
  * @brief Unterstützte Disk-Image-Formate
+ * ZENTRALE DEFINITION - alle anderen Header verweisen hierher
  */
 typedef enum uft_format {
     UFT_FORMAT_UNKNOWN = 0,
     
-    // Sektor-Images (dekodiert)
+    /*=== Sektor-Images (dekodiert) ===*/
     UFT_FORMAT_RAW,          ///< Raw sector dump
     UFT_FORMAT_IMG,          ///< Generic IMG/IMA
-    UFT_FORMAT_ADF,          ///< Amiga Disk File
-    UFT_FORMAT_D64,          ///< C64 Disk Image
-    UFT_FORMAT_DSK,          ///< Generic DSK
-    UFT_FORMAT_ST,           ///< Atari ST
-    UFT_FORMAT_MSA,          ///< Atari MSA (compressed)
-    UFT_FORMAT_STX,          ///< Atari STX (Pasti)
-    UFT_FORMAT_IMD,          ///< ImageDisk
+    UFT_FORMAT_IMA,          ///< Raw floppy image (alias)
     
-    // Flux-Images (raw)
-    UFT_FORMAT_SCP,          ///< SuperCard Pro
-    UFT_FORMAT_UFT_KF_STREAM,    ///< KryoFlux Stream
-    UFT_FORMAT_UFT_KF_RAW,       ///< KryoFlux Raw
-    UFT_FORMAT_KRYOFLUX,     ///< KryoFlux (alias)
-    UFT_FORMAT_HFE,          ///< UFT HFE Format
-    UFT_FORMAT_IPF,          ///< Interchangeable Preservation Format
-    UFT_FORMAT_CT_RAW,       ///< CatWeasel Raw
-    UFT_FORMAT_A2R,          ///< Applesauce A2R
-    UFT_FORMAT_FLUX,         ///< Generic Flux
-    
-    // Spezial
-    UFT_FORMAT_G64,          ///< C64 GCR Image
-    UFT_FORMAT_G71,          ///< C128 GCR Image
-    UFT_FORMAT_NIB,          ///< Apple Nibble
-    UFT_FORMAT_NBZ,          ///< Nibble Compressed
-    UFT_FORMAT_WOZ,          ///< WOZ (Apple II)
-    UFT_FORMAT_FDI,          ///< Formatted Disk Image
-    UFT_FORMAT_TD0,          ///< Teledisk
-    UFT_FORMAT_DMK,          ///< TRS-80 DMK
-    UFT_FORMAT_D71,          ///< C128 D71
-    UFT_FORMAT_D81,          ///< C128 D81
+    /*=== Commodore ===*/
+    UFT_FORMAT_D64,          ///< C64 1541 disk (170k)
+    UFT_FORMAT_D71,          ///< C128 1571 disk (340k)
+    UFT_FORMAT_D81,          ///< C128 1581 disk (800k)
     UFT_FORMAT_D80,          ///< CBM D80
     UFT_FORMAT_D82,          ///< CBM D82
+    UFT_FORMAT_G64,          ///< C64 GCR Image
+    UFT_FORMAT_G71,          ///< C128 GCR Image
+    UFT_FORMAT_NIB,          ///< Nibbler format
+    
+    /*=== Amiga ===*/
+    UFT_FORMAT_ADF,          ///< Amiga Disk File
+    UFT_FORMAT_ADZ,          ///< Compressed ADF (gzip)
+    UFT_FORMAT_DMS,          ///< Disk Masher System
+    
+    /*=== Apple ===*/
+    UFT_FORMAT_DO,           ///< Apple DOS 3.3 order
+    UFT_FORMAT_PO,           ///< Apple ProDOS order
+    UFT_FORMAT_WOZ,          ///< WOZ (Apple II flux)
+    UFT_FORMAT_NIB_APPLE,    ///< Apple nibble format
+    UFT_FORMAT_2MG,          ///< Apple 2IMG container
+    UFT_FORMAT_2IMG,         ///< Apple 2IMG (alias)
+    UFT_FORMAT_NBZ,          ///< Nibble Compressed
+    UFT_FORMAT_A2R,          ///< Applesauce A2R
+    
+    /*=== Atari ===*/
     UFT_FORMAT_ATR,          ///< Atari 8-bit
-    UFT_FORMAT_XFD,          ///< Atari XFD
-    UFT_FORMAT_SSD,          ///< BBC Micro SSD
-    UFT_FORMAT_DSD,          ///< BBC Micro DSD
-    UFT_FORMAT_TRD,          ///< TR-DOS
-    UFT_FORMAT_SAD,          ///< SAM Coupe SAD
-    UFT_FORMAT_DSK_CPC,      ///< Amstrad CPC DSK
-    UFT_FORMAT_D88,          ///< PC-98/X68000 D88
+    UFT_FORMAT_XFD,          ///< Atari raw sector
+    UFT_FORMAT_DCM,          ///< DiskCommunicator
+    UFT_FORMAT_ST,           ///< Atari ST raw
+    UFT_FORMAT_STX,          ///< Atari ST extended (Pasti)
+    UFT_FORMAT_MSA,          ///< Magic Shadow Archiver
+    
+    /*=== IBM PC / DOS ===*/
+    UFT_FORMAT_DSK,          ///< Generic DSK
+    UFT_FORMAT_XDF,          ///< eXtended Density Format
     UFT_FORMAT_CQM,          ///< CopyQM
-    UFT_FORMAT_DC42,         ///< DiskCopy 4.2 (Macintosh)
-    UFT_FORMAT_2MG,          ///< Apple 2IMG
-    UFT_FORMAT_DO,           ///< Apple DOS Order
-    UFT_FORMAT_PO,           ///< Apple ProDOS Order
-    UFT_FORMAT_EDSK,         ///< Extended DSK (Amstrad)
-    UFT_FORMAT_JV1,          ///< JV1 TRS-80
-    UFT_FORMAT_JV3,          ///< JV3 TRS-80
-    UFT_FORMAT_ADF_ACORN,    ///< Acorn ADFS
+    
+    /*=== Japanese ===*/
+    UFT_FORMAT_D88,          ///< PC-88/98/X1 D88
+    UFT_FORMAT_D77,          ///< FM-7/77 D77
+    UFT_FORMAT_FDI,          ///< Formatted Disk Image / PC-98
+    UFT_FORMAT_DIM,          ///< X68000 DIM
     UFT_FORMAT_HDM,          ///< PC-98 HDM
     UFT_FORMAT_NFD,          ///< PC-98 NFD
     UFT_FORMAT_FDD,          ///< PC-98 FDD
-    UFT_FORMAT_SCL,          ///< Sinclair SCL
-    UFT_FORMAT_MSX_DSK,      ///< MSX DSK
-    UFT_FORMAT_DSK_SAM,      ///< SAM Coupe DSK
     
-    UFT_FORMAT_MAX
+    /*=== ZX Spectrum ===*/
+    UFT_FORMAT_TRD,          ///< TR-DOS
+    UFT_FORMAT_SCL,          ///< Sinclair SCL
+    UFT_FORMAT_FDI_SPEC,     ///< Spectrum FDI
+    
+    /*=== BBC Micro / Acorn ===*/
+    UFT_FORMAT_SSD,          ///< BBC Micro Single-sided DFS
+    UFT_FORMAT_DSD,          ///< BBC Micro Double-sided DFS
+    UFT_FORMAT_ADF_ACORN,    ///< Acorn ADFS
+    UFT_FORMAT_ADF_BBC,      ///< BBC ADFS (alias)
+    
+    /*=== Amstrad / CPC ===*/
+    UFT_FORMAT_DSK_CPC,      ///< Amstrad CPC DSK
+    UFT_FORMAT_EDSK,         ///< Extended DSK (Amstrad)
+    
+    /*=== Mac ===*/
+    UFT_FORMAT_DC42,         ///< DiskCopy 4.2
+    UFT_FORMAT_DART,         ///< DART archive
+    UFT_FORMAT_NDIF,         ///< Apple NDIF
+    
+    /*=== TRS-80 ===*/
+    UFT_FORMAT_DMK,          ///< TRS-80 DMK
+    UFT_FORMAT_JV1,          ///< JV1 TRS-80
+    UFT_FORMAT_JV3,          ///< JV3 TRS-80
+    
+    /*=== Other platforms ===*/
+    UFT_FORMAT_SAD,          ///< SAM Coupe SAD
+    UFT_FORMAT_DSK_SAM,      ///< SAM Coupe DSK
+    UFT_FORMAT_MSX_DSK,      ///< MSX DSK
+    
+    /*=== Universal / Container ===*/
+    UFT_FORMAT_IMD,          ///< ImageDisk
+    UFT_FORMAT_TD0,          ///< Teledisk
+    
+    /*=== Flux-Images (raw) ===*/
+    UFT_FORMAT_SCP,          ///< SuperCard Pro
+    UFT_FORMAT_HFE,          ///< HxC Floppy Emulator
+    UFT_FORMAT_IPF,          ///< Interchangeable Preservation Format (SPS)
+    UFT_FORMAT_KFX,          ///< KryoFlux raw
+    UFT_FORMAT_UFT_KF_STREAM,///< KryoFlux Stream
+    UFT_FORMAT_UFT_KF_RAW,   ///< KryoFlux Raw
+    UFT_FORMAT_KRYOFLUX,     ///< KryoFlux (alias)
+    UFT_FORMAT_CT_RAW,       ///< CatWeasel Raw
+    UFT_FORMAT_CTR,          ///< CAPS CT Raw
+    UFT_FORMAT_MFI,          ///< MAME Floppy Image
+    UFT_FORMAT_FLUX,         ///< Generic Flux
+    
+    UFT_FORMAT_COUNT,        ///< Number of formats (for arrays)
+    UFT_FORMAT_MAX = UFT_FORMAT_COUNT  ///< Alias
 } uft_format_t;
 
 /**

@@ -11,8 +11,25 @@
 
 QT += core gui widgets
 
-# Optional modules - only add if installed
-qtHaveModule(serialport): QT += serialport
+# Try to use SerialPort if available
+packagesExist(Qt6SerialPort) | packagesExist(Qt5SerialPort) {
+    QT += serialport
+    DEFINES += UFT_HAS_SERIALPORT
+    message("Qt SerialPort found")
+}
+
+# Also check with qtHaveModule (Qt 6 style)
+qtHaveModule(serialport) {
+    QT += serialport
+    DEFINES += UFT_HAS_SERIALPORT  
+    message("Qt SerialPort found via qtHaveModule")
+}
+
+# ═══════════════════════════════════════════════════════════════════════════
+# HAL (Hardware Abstraction Layer) - ALWAYS ENABLED
+# ═══════════════════════════════════════════════════════════════════════════
+DEFINES += UFT_HAS_HAL
+message("HAL (Hardware Abstraction Layer) ENABLED")
 
 TARGET = UnifiedFloppyTool
 TEMPLATE = app
@@ -30,6 +47,9 @@ greaterThan(QT_MAJOR_VERSION, 5) {
 
 CONFIG += sdk_no_version_check
 
+# Enable console output for debugging (remove for release)
+win32:CONFIG += console
+
 # Compiler flags - suppress warnings for legacy code
 # Compiler flags moved to platform-specific sections below
 QMAKE_CFLAGS += -Wall -Wextra -Wno-unused-parameter
@@ -42,7 +62,9 @@ win32 {
 
 # macOS specific
 macx {
-    QMAKE_MACOSX_DEPLOYMENT_TARGET = 11.0
+    QMAKE_MACOSX_DEPLOYMENT_TARGET = 14.0
+    QMAKE_INFO_PLIST = $$PWD/resources/Info.plist
+    ICON = $$PWD/resources/icons/uft.icns
 }
 
 # Include paths
@@ -51,11 +73,14 @@ INCLUDEPATH += \
     include \
     include/uft \
     include/uft/flux \
+    include/uft/hal \
+    include/uft/compat \
     src \
     src/samdisk \
     src/hardware_providers \
     src/widgets \
-    src/flux/fdc_bitstream
+    src/flux/fdc_bitstream \
+    src/hal
 
 # Forms
 FORMS += \
@@ -290,10 +315,12 @@ HEADERS += \
 # ═══════════════════════════════════════════════════════════════════════════════
 
 SOURCES += \
-    src/core/uft_smart_open.c
+    src/core/uft_smart_open.c \
+    src/core/uft_unified_types.c
 
 HEADERS += \
-    include/uft/uft_smart_open.h
+    include/uft/uft_smart_open.h \
+    include/uft/core/uft_unified_types.h
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # UFT Advanced Mode
@@ -357,3 +384,30 @@ HEADERS += \
     src/uft_dmk_analyzer_panel.h \
     src/uft_gw2dmk_panel.h \
     src/uft_flux_histogram_widget.h
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# HAL (Hardware Abstraction Layer) - Greaseweazle, KryoFlux, SuperCard Pro
+# ═══════════════════════════════════════════════════════════════════════════════
+
+SOURCES += \
+    src/hal/uft_greaseweazle_full.c \
+    src/hal/uft_hal_unified.c \
+    src/hal/uft_hal_profiles.c \
+    src/hal/uft_kryoflux_dtc.c \
+    src/hal/uft_drive.c \
+    src/core/uft_ir_format.c
+
+# Note: uft_hal.c and uft_hal_v3.c removed to avoid multiple definition errors
+# uft_hal_unified.c provides the complete unified implementation
+
+HEADERS += \
+    include/uft/hal/uft_greaseweazle_full.h \
+    include/uft/hal/uft_hal.h \
+    include/uft/hal/uft_hal_unified.h \
+    include/uft/hal/uft_hal_profiles.h \
+    include/uft/hal/uft_hal_v3.h \
+    include/uft/hal/uft_hal_v2.h \
+    include/uft/hal/uft_greaseweazle.h \
+    include/uft/hal/uft_drive.h \
+    include/uft/hal/uft_kryoflux.h \
+    include/uft/uft_ir_format.h

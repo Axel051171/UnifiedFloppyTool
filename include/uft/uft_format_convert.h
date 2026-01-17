@@ -67,12 +67,19 @@ extern "C" {
 // ============================================================================
 
 typedef enum uft_format_class {
-    UFT_FCLASS_FLUX,        // Raw flux timing
-    UFT_FCLASS_BITSTREAM,   // Encoded bitstream
-    UFT_FCLASS_CONTAINER,   // Container with metadata
-    UFT_FCLASS_SECTOR,      // Sector data only
-    UFT_FCLASS_ARCHIVE,     // Compressed archive
+    UFT_CLASS_FLUX = 0,      // Raw flux timing (SCP, Kryoflux, A2R)
+    UFT_CLASS_BITSTREAM,     // Encoded bitstream (HFE, G64, WOZ)
+    UFT_CLASS_SECTOR,        // Sector data only (D64, ADF, IMG)
+    UFT_CLASS_CONTAINER,     // Container with metadata (IPF, STX)
+    UFT_CLASS_ARCHIVE,       // Compressed archive (TD0, NBZ)
 } uft_format_class_t;
+
+/* Legacy aliases for backwards compatibility */
+#define UFT_FCLASS_FLUX      UFT_CLASS_FLUX
+#define UFT_FCLASS_BITSTREAM UFT_CLASS_BITSTREAM
+#define UFT_FCLASS_CONTAINER UFT_CLASS_CONTAINER
+#define UFT_FCLASS_SECTOR    UFT_CLASS_SECTOR
+#define UFT_FCLASS_ARCHIVE   UFT_CLASS_ARCHIVE
 
 // ============================================================================
 // Conversion Quality

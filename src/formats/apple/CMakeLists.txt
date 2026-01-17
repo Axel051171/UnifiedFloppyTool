@@ -1,6 +1,6 @@
 # UFT Apple Format Module
 # Part of UnifiedFloppyTool
-# Supports: Apple II (DO/PO/NIB/2MG/WOZ), Macintosh (DSK/GCR)
+# Supports: Apple II (DO/PO/NIB/2MG/WOZ), Macintosh (DSK/GCR/DiskCopy/NDIF/SMI)
 
 file(GLOB APPLE_SOURCES "*.c")
 file(GLOB APPLE_HEADERS "*.h")
@@ -36,3 +36,5 @@ if(MSVC)
 else()
     target_compile_options(uft_format_apple PRIVATE $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall> $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wextra> $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wno-unused-parameter>)
 endif()
+
+# Note: WOZ disk image format (uft_woz.c) is included via GLOB

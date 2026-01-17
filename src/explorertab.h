@@ -10,6 +10,7 @@
 
 #include <QWidget>
 #include <QStringList>
+#include <QMenu>
 
 namespace Ui { class TabExplorer; }
 
@@ -56,15 +57,23 @@ private slots:
     void onNewFolder();
     void onNewDisk();
     void onValidate();
+    /* Context Menu */
+    void showContextMenu(const QPoint& pos);
+    void onViewHex();
+    void onViewText();
+    void onViewProperties();
+    void onCopyToClipboard();
 
 private:
     void setupConnections();
+    void setupContextMenu();
     void updateFileList();
     void populateFileTable(const QList<FileEntry>& entries);
     QString formatSize(qint64 size) const;
     QList<FileEntry> readDirectory(const QString& path);
     
     Ui::TabExplorer *ui;
+    QMenu *m_contextMenu;
     
     QString m_imagePath;
     QString m_currentDir;

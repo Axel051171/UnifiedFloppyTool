@@ -24,90 +24,12 @@
 #include <stddef.h>
 #include <stdbool.h>
 
+/* Use central format definition from uft_types.h */
+#include "uft/uft_types.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-/*============================================================================
- * FORMAT ENUMERATION
- *============================================================================*/
-
-/**
- * @brief Supported disk image formats
- */
-typedef enum uft_format {
-    UFT_FORMAT_UNKNOWN = 0,
-    
-    /* Commodore */
-    UFT_FORMAT_D64,         /**< C64 1541 disk (170k) */
-    UFT_FORMAT_D71,         /**< C128 1571 disk (340k) */
-    UFT_FORMAT_D81,         /**< C128 1581 disk (800k) */
-    UFT_FORMAT_G64,         /**< GCR-encoded 1541 */
-    UFT_FORMAT_NIB,         /**< Nibbler format */
-    
-    /* Amiga */
-    UFT_FORMAT_ADF,         /**< Amiga Disk File */
-    UFT_FORMAT_ADZ,         /**< Compressed ADF */
-    UFT_FORMAT_DMS,         /**< Disk Masher System */
-    
-    /* Apple */
-    UFT_FORMAT_DO,          /**< Apple DOS 3.3 order */
-    UFT_FORMAT_PO,          /**< Apple ProDOS order */
-    UFT_FORMAT_WOZ,         /**< Apple II flux */
-    UFT_FORMAT_NIB_APPLE,   /**< Apple nibble */
-    UFT_FORMAT_2IMG,        /**< Apple 2IMG container */
-    
-    /* Atari */
-    UFT_FORMAT_ATR,         /**< Atari 8-bit */
-    UFT_FORMAT_XFD,         /**< Atari raw sector */
-    UFT_FORMAT_DCM,         /**< DiskCommunicator */
-    UFT_FORMAT_ST,          /**< Atari ST raw */
-    UFT_FORMAT_STX,         /**< Atari ST extended */
-    UFT_FORMAT_MSA,         /**< Magic Shadow Archiver */
-    
-    /* IBM PC / DOS */
-    UFT_FORMAT_FAT12,       /**< FAT12 floppy */
-    UFT_FORMAT_FAT16,       /**< FAT16 disk */
-    UFT_FORMAT_IMG,         /**< Raw sector image */
-    UFT_FORMAT_IMA,         /**< Raw floppy image */
-    UFT_FORMAT_XDF,         /**< eXtended Density Format */
-    
-    /* Japanese */
-    UFT_FORMAT_D88,         /**< PC-88/98/X1 */
-    UFT_FORMAT_D77,         /**< FM-7/77 */
-    UFT_FORMAT_FDI,         /**< PC-98 FDI */
-    UFT_FORMAT_DIM,         /**< X68000 DIM */
-    UFT_FORMAT_XDF_PC98,    /**< PC-98 XDF */
-    
-    /* ZX Spectrum */
-    UFT_FORMAT_TRD,         /**< TR-DOS */
-    UFT_FORMAT_SCL,         /**< Sinclair SCL */
-    UFT_FORMAT_FDI_SPEC,    /**< Spectrum FDI */
-    
-    /* Universal / Container */
-    UFT_FORMAT_IMD,         /**< ImageDisk */
-    UFT_FORMAT_TD0,         /**< Teledisk */
-    UFT_FORMAT_DSK,         /**< CPC/Spectrum DSK */
-    UFT_FORMAT_EDSK,        /**< Extended DSK */
-    UFT_FORMAT_HFE,         /**< HxC Floppy Emulator */
-    UFT_FORMAT_SCP,         /**< SuperCard Pro flux */
-    UFT_FORMAT_KFX,         /**< KryoFlux raw */
-    UFT_FORMAT_MFI,         /**< MAME Floppy Image */
-    UFT_FORMAT_IPF,         /**< SPS Interchangeable */
-    UFT_FORMAT_CTR,         /**< CAPS CT Raw */
-    
-    /* Mac */
-    UFT_FORMAT_DC42,        /**< DiskCopy 4.2 */
-    UFT_FORMAT_DART,        /**< DART archive */
-    UFT_FORMAT_NDIF,        /**< Apple NDIF */
-    
-    /* BBC Micro */
-    UFT_FORMAT_SSD,         /**< Single-sided DFS */
-    UFT_FORMAT_DSD,         /**< Double-sided DFS */
-    UFT_FORMAT_ADF_BBC,     /**< BBC ADFS */
-    
-    UFT_FORMAT_COUNT        /**< Number of formats */
-} uft_format_t;
 
 /*============================================================================
  * DETECTION RESULT

@@ -275,8 +275,6 @@ uft_params_t *uft_params_create_defaults(void) {
                 default:
                     /* Unknown type - skip */
                     break;
-            default:
-                break;
             }
         }
     }
@@ -387,8 +385,6 @@ uft_params_t *uft_params_from_cli(int argc, char **argv) {
                     break;
                 default:
                     break;
-            default:
-                break;
             }
             params->values[idx].is_set = true;
         }
@@ -1059,8 +1055,6 @@ const char *uft_param_type_string(uft_param_type_t type) {
         case UFT_PARAM_TYPE_PATH:   return "path";
         case UFT_PARAM_TYPE_RANGE:  return "range";
         default:                    return "unknown";
-            default:
-                break;
     }
 }
 

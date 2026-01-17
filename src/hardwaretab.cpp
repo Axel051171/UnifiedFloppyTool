@@ -27,12 +27,16 @@
 #include <QRandomGenerator>
 #include <QDebug>
 #include <QThread>
+#include <QFileInfo>
+#include <QStandardItemModel>
+#include <cstdio>  // For printf debugging
 
 #ifdef UFT_HAS_SERIALPORT
 #include <QSerialPortInfo>
-#define HAS_SERIALPORT 1
-#else
-#define HAS_SERIALPORT 0
+#endif
+
+#ifdef Q_OS_WIN
+#include <windows.h>
 #endif
 
 // HAL includes for real hardware connection
@@ -67,6 +71,7 @@ HardwareTab::HardwareTab(QWidget *parent)
     , m_detectedRPM(0)
     , m_motorTimer(nullptr)
     , m_statusTimer(nullptr)
+    , m_portRefreshTimer(nullptr)
 {
     ui->setupUi(this);
     
@@ -79,6 +84,11 @@ HardwareTab::HardwareTab(QWidget *parent)
     setConnectionState(false);
     updateRoleButtonsEnabled();
     updateStatus(tr("Ready. Select controller and port, then click Connect."));
+    
+    // Auto-refresh ports every 2 seconds when not connected
+    m_portRefreshTimer = new QTimer(this);
+    connect(m_portRefreshTimer, &QTimer::timeout, this, &HardwareTab::autoRefreshPorts);
+    m_portRefreshTimer->start(2000);
 }
 
 HardwareTab::~HardwareTab()
@@ -94,6 +104,10 @@ HardwareTab::~HardwareTab()
     if (m_motorTimer) {
         m_motorTimer->stop();
         delete m_motorTimer;
+    }
+    if (m_portRefreshTimer) {
+        m_portRefreshTimer->stop();
+        delete m_portRefreshTimer;
     }
     delete ui;
 }
@@ -184,17 +198,51 @@ void HardwareTab::populateControllerList()
     ui->comboController->blockSignals(true);
     ui->comboController->clear();
     
-    // Flux controllers (always available)
+    // === Flux Controllers (Universal) ===
+    ui->comboController->addItem(tr("── Flux Controllers ──"), "separator_flux");
     ui->comboController->addItem(tr("Greaseweazle (F1/F7)"), "greaseweazle");
     ui->comboController->addItem(tr("SuperCard Pro"), "scp");
     ui->comboController->addItem(tr("KryoFlux"), "kryoflux");
+    ui->comboController->addItem(tr("FluxEngine"), "fluxengine");
+    
+    // === Commodore Controllers (IEC/IEEE-488) ===
+    ui->comboController->addItem(tr("── Commodore USB ──"), "separator_cbm_usb");
+    ui->comboController->addItem(tr("ZoomFloppy"), "zoomfloppy");
+    ui->comboController->addItem(tr("XUM1541 / XUM1541-II"), "xum1541");
+    
+    // === Legacy Parallel Port (X1541 Series) ===
+    ui->comboController->addItem(tr("── Commodore LPT (Legacy) ──"), "separator_cbm_lpt");
+    ui->comboController->addItem(tr("XA1541 (Active Cable)"), "xa1541");
+    ui->comboController->addItem(tr("XAP1541 (Active + Parallel)"), "xap1541");
+    ui->comboController->addItem(tr("XM1541 (Multitask)"), "xm1541");
+    ui->comboController->addItem(tr("XE1541 (Extended)"), "xe1541");
+    ui->comboController->addItem(tr("X1541 (Original)"), "x1541");
     
     // USB Floppy - only for Destination mode
     if (m_controllerRole == RoleDestination) {
+        ui->comboController->addItem(tr("── Standard USB ──"), "separator_usb");
         ui->comboController->addItem(tr("USB Floppy Drive"), "usb_floppy");
     }
     
+    // Disable separator items
+    for (int i = 0; i < ui->comboController->count(); i++) {
+        QString data = ui->comboController->itemData(i).toString();
+        if (data.startsWith("separator_")) {
+            // Make separator items non-selectable
+            QStandardItemModel *model = qobject_cast<QStandardItemModel*>(ui->comboController->model());
+            if (model) {
+                QStandardItem *item = model->item(i);
+                item->setFlags(item->flags() & ~Qt::ItemIsEnabled);
+            }
+        }
+    }
+    
     ui->comboController->blockSignals(false);
+    
+    // Select first valid controller (skip separator)
+    if (ui->comboController->count() > 1) {
+        ui->comboController->setCurrentIndex(1);
+    }
 }
 
 void HardwareTab::updateControllerListForRole()
@@ -288,14 +336,18 @@ void HardwareTab::detectSerialPorts()
 {
     ui->comboPort->clear();
     
-#if HAS_SERIALPORT
+#ifdef UFT_HAS_SERIALPORT
+    qDebug() << "Using QSerialPortInfo for port detection";
     QList<QSerialPortInfo> ports = QSerialPortInfo::availablePorts();
+    qDebug() << "Found" << ports.size() << "serial ports";
     
     for (const QSerialPortInfo& port : ports) {
         QString portName = port.portName();
         QString description = port.description();
         uint16_t vid = port.vendorIdentifier();
         uint16_t pid = port.productIdentifier();
+        
+        qDebug() << "  Port:" << portName << "VID:" << Qt::hex << vid << "PID:" << pid << "Desc:" << description;
         
         QString displayName;
         QString controllerHint;
@@ -307,6 +359,8 @@ void HardwareTab::detectSerialPorts()
             controllerHint = "SuperCard Pro";
         } else if (vid == 0x0403 && pid == 0x6001) {
             controllerHint = "KryoFlux (FTDI)";
+        } else if (vid == 0x16D0 && pid == 0x0504) {
+            controllerHint = "ZoomFloppy/XUM1541";
         }
         
         if (!controllerHint.isEmpty()) {
@@ -319,6 +373,51 @@ void HardwareTab::detectSerialPorts()
         
         ui->comboPort->addItem(displayName, portName);
     }
+#else
+    // Fallback: Read COM ports from Windows Registry
+    qDebug() << "UFT_HAS_SERIALPORT not defined - using Windows Registry fallback";
+#ifdef Q_OS_WIN
+    HKEY hKey;
+    if (RegOpenKeyExW(HKEY_LOCAL_MACHINE, 
+                      L"HARDWARE\\DEVICEMAP\\SERIALCOMM",
+                      0, KEY_READ, &hKey) == ERROR_SUCCESS) {
+        
+        WCHAR valueName[256];
+        WCHAR valueData[256];
+        DWORD valueNameSize, valueDataSize, valueType;
+        DWORD index = 0;
+        
+        while (true) {
+            valueNameSize = sizeof(valueName) / sizeof(WCHAR);
+            valueDataSize = sizeof(valueData);
+            
+            LONG result = RegEnumValueW(hKey, index, valueName, &valueNameSize,
+                                        NULL, &valueType, (LPBYTE)valueData, &valueDataSize);
+            
+            if (result != ERROR_SUCCESS) break;
+            
+            if (valueType == REG_SZ) {
+                QString portName = QString::fromWCharArray(valueData);
+                QString deviceName = QString::fromWCharArray(valueName);
+                
+                QString displayName = portName;
+                
+                // Try to identify device type from registry path
+                if (deviceName.contains("USBSER", Qt::CaseInsensitive) ||
+                    deviceName.contains("VCP", Qt::CaseInsensitive)) {
+                    displayName = QString("%1 - USB Serial").arg(portName);
+                }
+                
+                qDebug() << "  Found:" << portName << "Device:" << deviceName;
+                ui->comboPort->addItem(displayName, portName);
+            }
+            index++;
+        }
+        RegCloseKey(hKey);
+    } else {
+        qDebug() << "Failed to open registry key for COM ports";
+    }
+#endif
 #endif
     
     if (ui->comboPort->count() == 0) {
@@ -329,10 +428,98 @@ void HardwareTab::detectSerialPorts()
     }
 }
 
+void HardwareTab::detectParallelPorts()
+{
+    ui->comboPort->clear();
+    
+#ifdef Q_OS_LINUX
+    // Check for /dev/parportX devices on Linux
+    QStringList parports;
+    for (int i = 0; i < 4; i++) {
+        QString devPath = QString("/dev/parport%1").arg(i);
+        QFileInfo fi(devPath);
+        if (fi.exists()) {
+            parports << devPath;
+        }
+    }
+    
+    // Also check for /dev/lp devices
+    for (int i = 0; i < 4; i++) {
+        QString devPath = QString("/dev/lp%1").arg(i);
+        QFileInfo fi(devPath);
+        if (fi.exists() && !parports.contains(QString("/dev/parport%1").arg(i))) {
+            parports << devPath;
+        }
+    }
+    
+    // Add standard LPT addresses
+    QStringList stdPorts = {"LPT1 (0x378)", "LPT2 (0x278)", "LPT3 (0x3BC)"};
+    QStringList stdAddrs = {"0x378", "0x278", "0x3BC"};
+    
+    if (parports.isEmpty()) {
+        // No /dev/parport found, show standard addresses
+        for (int i = 0; i < stdPorts.size(); i++) {
+            ui->comboPort->addItem(stdPorts[i], stdAddrs[i]);
+        }
+    } else {
+        for (const QString& port : parports) {
+            ui->comboPort->addItem(port, port);
+        }
+    }
+#endif
+
+#ifdef Q_OS_WIN
+    // Windows parallel ports
+    ui->comboPort->addItem(tr("LPT1"), "LPT1");
+    ui->comboPort->addItem(tr("LPT2"), "LPT2");
+    ui->comboPort->addItem(tr("LPT3"), "LPT3");
+#endif
+    
+    if (ui->comboPort->count() == 0) {
+        ui->comboPort->addItem(tr("(No parallel port - use USB adapter)"), "");
+        ui->btnConnect->setEnabled(false);
+        updateStatus(tr("No parallel port found. Consider using ZoomFloppy or XUM1541 USB adapter."));
+    } else {
+        ui->btnConnect->setEnabled(true);
+        updateStatus(tr("Legacy X1541 mode - select parallel port."));
+    }
+}
+
 void HardwareTab::onRefreshPorts()
 {
     detectSerialPorts();
     updateStatus(tr("Port list refreshed."));
+}
+
+void HardwareTab::autoRefreshPorts()
+{
+    // Only auto-refresh when not connected
+    if (m_connected) return;
+    
+    // Save current selection
+    QString currentPort = ui->comboPort->currentData().toString();
+    
+    // Get current port count before refresh
+    int oldCount = ui->comboPort->count();
+    bool hadNoPorts = (oldCount == 1 && ui->comboPort->itemData(0).toString().isEmpty());
+    
+    // Refresh ports
+    detectSerialPorts();
+    
+    // Restore selection if still available
+    if (!currentPort.isEmpty()) {
+        int idx = ui->comboPort->findData(currentPort);
+        if (idx >= 0) {
+            ui->comboPort->setCurrentIndex(idx);
+        }
+    }
+    
+    // Notify user if ports appeared
+    int newCount = ui->comboPort->count();
+    bool hasNoPorts = (newCount == 1 && ui->comboPort->itemData(0).toString().isEmpty());
+    if (hadNoPorts && !hasNoPorts) {
+        updateStatus(tr("Port detected: %1").arg(ui->comboPort->currentText()));
+    }
 }
 
 // ============================================================================
@@ -342,6 +529,19 @@ void HardwareTab::onRefreshPorts()
 void HardwareTab::onConnect()
 {
     QString port = ui->comboPort->currentData().toString();
+    QString controller = ui->comboController->currentData().toString();
+    
+    // Use both printf and qDebug to ensure output is visible
+    printf("=== onConnect called ===\n");
+    printf("Port: %s\n", port.toUtf8().constData());
+    printf("Controller: %s\n", controller.toUtf8().constData());
+    fflush(stdout);
+    
+    qDebug() << "=== onConnect called ===";
+    qDebug() << "Port:" << port;
+    qDebug() << "Controller data:" << controller;
+    qDebug() << "Controller text:" << ui->comboController->currentText();
+    
     if (port.isEmpty()) {
         QMessageBox::warning(this, tr("Connection Error"),
             tr("Please select a valid port."));
@@ -355,13 +555,26 @@ void HardwareTab::onConnect()
     
     // Use real HAL connection for Greaseweazle
     // Note: This runs in main thread - consider moving to worker for non-blocking
-    QString controller = ui->comboController->currentData().toString();
+    
+    qDebug() << "Checking if controller is greaseweazle or fluxengine...";
     
     if (controller == "greaseweazle" || controller == "fluxengine") {
+        qDebug() << "YES - using HAL connection";
+        printf(">>> Entering HAL connection code path\n");
+        fflush(stdout);
         // Real HAL connection attempt
         #ifdef UFT_HAS_HAL
+        printf(">>> UFT_HAS_HAL is defined\n");
+        fflush(stdout);
+        qDebug() << "HardwareTab: Attempting HAL connection to" << port;
+        
+        printf(">>> Calling uft_gw_open(%s)\n", port.toUtf8().constData());
+        fflush(stdout);
+        
         uft_gw_device_t *gw = nullptr;
         int ret = uft_gw_open(port.toLocal8Bit().constData(), &gw);
+        
+        qDebug() << "HardwareTab: uft_gw_open returned" << ret << "device=" << (void*)gw;
         
         if (ret == 0 && gw != nullptr) {
             // Get device info
@@ -369,8 +582,10 @@ void HardwareTab::onConnect()
             if (uft_gw_get_info(gw, &info) == 0) {
                 m_firmwareVersion = QString("v%1.%2").arg(info.fw_major).arg(info.fw_minor);
                 m_hwModel = info.hw_model;
+                qDebug() << "HardwareTab: Device info - FW:" << m_firmwareVersion << "Model:" << m_hwModel;
             } else {
                 m_firmwareVersion = "Unknown";
+                qDebug() << "HardwareTab: Failed to get device info (but connection OK)";
             }
             
             // Store handle for later use
@@ -382,13 +597,15 @@ void HardwareTab::onConnect()
                 autoDetectDrive();
             }
             
-            updateStatus(tr("Connected to %1 F%2 (%3)")
-                .arg(m_controllerType)
-                .arg(m_hwModel)
+            QString deviceName = getDeviceName();
+            updateStatus(tr("Connected to %1 (%2)")
+                .arg(deviceName)
                 .arg(m_firmwareVersion));
             emit connectionChanged(true);
+            emit deviceInfoChanged(deviceName, m_firmwareVersion);
             return;
         } else {
+            qDebug() << "HardwareTab: Connection failed - ret=" << ret << "error=" << uft_gw_strerror(ret);
             updateStatus(tr("Connection failed: %1").arg(uft_gw_strerror(ret)));
             QMessageBox::warning(this, tr("Connection Error"),
                 tr("Failed to connect to %1 on %2.\n\nError: %3")
@@ -399,9 +616,12 @@ void HardwareTab::onConnect()
         // HAL not available - fall back to simulated connection
         qWarning() << "HAL not available, using simulated connection";
         #endif
+    } else {
+        qDebug() << "NO - controller is not greaseweazle/fluxengine, using simulated";
     }
     
     // Fallback: Simulated connection for unsupported controllers
+    qDebug() << "Using SIMULATED connection";
     QTimer::singleShot(500, this, [this]() {
         m_connected = true;
         m_firmwareVersion = "Simulated";
@@ -437,6 +657,7 @@ void HardwareTab::onDisconnect()
     
     updateStatus(tr("Disconnected."));
     emit connectionChanged(false);
+    emit deviceInfoChanged(QString(), QString());
 }
 
 void HardwareTab::onControllerChanged(int index)
@@ -444,14 +665,59 @@ void HardwareTab::onControllerChanged(int index)
     Q_UNUSED(index);
     QString controller = ui->comboController->currentData().toString();
     
+    // Skip separators
+    if (controller.startsWith("separator_")) {
+        // Move to next valid item
+        int nextIdx = ui->comboController->currentIndex() + 1;
+        if (nextIdx < ui->comboController->count()) {
+            ui->comboController->setCurrentIndex(nextIdx);
+        }
+        return;
+    }
+    
     // USB Floppy has different capabilities
     bool isUSB = (controller == "usb_floppy");
     
-    // Disable flux-specific options for USB
-    ui->groupAdvanced->setEnabled(!isUSB);
+    // Check if this is a Commodore controller
+    bool isCommodoreUSB = (controller == "zoomfloppy" || controller == "xum1541");
+    bool isCommodoreLPT = (controller == "xa1541" || controller == "xap1541" ||
+                          controller == "xm1541" || controller == "xe1541" ||
+                          controller == "x1541");
+    bool isCommodore = isCommodoreUSB || isCommodoreLPT;
+    bool isFlux = (controller == "greaseweazle" || controller == "scp" ||
+                   controller == "kryoflux" || controller == "fluxengine");
     
-    if (isUSB) {
+    // Disable flux-specific options for USB and Commodore
+    ui->groupAdvanced->setEnabled(isFlux);
+    
+    // Update port list based on controller type
+    if (isCommodoreLPT) {
+        // Show parallel ports for legacy X1541 cables
+        detectParallelPorts();
+        updateStatus(tr("Legacy LPT adapter selected - requires parallel port."));
+    } else if (isCommodoreUSB) {
+        // Show USB devices for ZoomFloppy/XUM1541
+        detectSerialPorts();
+        updateStatus(tr("Commodore USB adapter selected - uses OpenCBM."));
+    } else if (isUSB) {
+        detectSerialPorts();
         updateStatus(tr("USB Floppy selected - limited to standard formats."));
+    } else {
+        detectSerialPorts();
+        updateStatus(tr("Flux controller selected."));
+    }
+    
+    // Update drive selection for Commodore (device 8-15)
+    if (isCommodore) {
+        ui->comboDriveSelect->clear();
+        ui->comboDriveSelect->addItem(tr("Device 8"), 8);
+        ui->comboDriveSelect->addItem(tr("Device 9"), 9);
+        ui->comboDriveSelect->addItem(tr("Device 10"), 10);
+        ui->comboDriveSelect->addItem(tr("Device 11"), 11);
+    } else {
+        ui->comboDriveSelect->clear();
+        ui->comboDriveSelect->addItem(tr("Drive 0"), 0);
+        ui->comboDriveSelect->addItem(tr("Drive 1"), 1);
     }
 }
 
@@ -624,6 +890,15 @@ void HardwareTab::setConnectionState(bool connected)
     ui->comboController->setEnabled(!connected);
     ui->comboPort->setEnabled(!connected);
     ui->btnRefreshPorts->setEnabled(!connected);
+    
+    // Stop/start auto-refresh timer based on connection state
+    if (m_portRefreshTimer) {
+        if (connected) {
+            m_portRefreshTimer->stop();
+        } else {
+            m_portRefreshTimer->start(2000);
+        }
+    }
     
     updateDriveSettingsEnabled();
     updateMotorControlsEnabled();
@@ -981,4 +1256,35 @@ void HardwareTab::onCalibrate()
 #else
     updateStatus(tr("Calibration requires HAL"));
 #endif
+}
+
+QString HardwareTab::getDeviceName() const
+{
+    if (!m_connected) {
+        return tr("Not connected");
+    }
+    
+    // Build device name based on controller type and model
+    QString name;
+    
+    if (m_controllerType.contains("Greaseweazle", Qt::CaseInsensitive)) {
+        // Greaseweazle models: F1=1, F7=7, V4=4, Plus=5
+        switch (m_hwModel) {
+            case 1: name = "Greaseweazle F1"; break;
+            case 4: name = "Greaseweazle V4"; break;
+            case 5: name = "Greaseweazle Plus"; break;
+            case 7: name = "Greaseweazle F7"; break;
+            default: name = QString("Greaseweazle (Model %1)").arg(m_hwModel); break;
+        }
+    } else if (m_controllerType.contains("FluxEngine", Qt::CaseInsensitive)) {
+        name = "FluxEngine";
+    } else if (m_controllerType.contains("SuperCard", Qt::CaseInsensitive)) {
+        name = "SuperCard Pro";
+    } else if (m_controllerType.contains("KryoFlux", Qt::CaseInsensitive)) {
+        name = "KryoFlux";
+    } else {
+        name = m_controllerType;
+    }
+    
+    return name;
 }

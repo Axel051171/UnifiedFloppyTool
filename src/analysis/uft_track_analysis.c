@@ -342,7 +342,8 @@ const char *uft_platform_name(uft_platform_t platform) {
     }
 }
 
-const char *uft_encoding_name(uft_encoding_t encoding) {
+/* Local encoding name helper - uses global function from uft_unified_types.c */
+static const char *track_analysis_encoding_name(uft_encoding_t encoding) {
     switch (encoding) {
         case ENCODING_FM:           return "FM";
         case ENCODING_MFM:          return "MFM";
@@ -1014,7 +1015,7 @@ void uft_print_track_analysis(const uft_track_analysis_t *result) {
     printf("=== Track Analysis ===\n");
     printf("Type:           %s\n", uft_track_type_name(result->type));
     printf("Platform:       %s\n", uft_platform_name(result->detected_platform));
-    printf("Encoding:       %s\n", uft_encoding_name(result->detected_encoding));
+    printf("Encoding:       %s\n", track_analysis_encoding_name(result->detected_encoding));
     printf("Format:         %s\n", result->format_name);
     printf("Track Length:   %zu bytes\n", result->track_length);
     printf("Sync Pattern:   0x%04X (%d found)\n", 
@@ -1055,7 +1056,7 @@ int uft_track_analysis_to_json(const uft_track_analysis_t *result,
         "}",
         uft_track_type_name(result->type),
         uft_platform_name(result->detected_platform),
-        uft_encoding_name(result->detected_encoding),
+        track_analysis_encoding_name(result->detected_encoding),
         result->format_name,
         result->track_length,
         result->sync.primary_pattern,

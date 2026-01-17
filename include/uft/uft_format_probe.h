@@ -43,16 +43,10 @@ typedef enum uft_confidence_level {
 } uft_confidence_level_t;
 
 // ============================================================================
-// Format Classification
+// Format Classification - Use central definition
 // ============================================================================
 
-typedef enum uft_format_class {
-    UFT_CLASS_FLUX,         // Raw flux timing (SCP, Kryoflux, A2R)
-    UFT_CLASS_BITSTREAM,    // Encoded bitstream (HFE, G64, WOZ)
-    UFT_CLASS_SECTOR,       // Sector data only (D64, ADF, IMG)
-    UFT_CLASS_CONTAINER,    // Container with metadata (IPF, STX)
-    UFT_CLASS_ARCHIVE,      // Compressed archive (TD0, NBZ)
-} uft_format_class_t;
+#include "uft_format_convert.h"  /* For uft_format_class_t */
 
 // ============================================================================
 // Format Variant Definition

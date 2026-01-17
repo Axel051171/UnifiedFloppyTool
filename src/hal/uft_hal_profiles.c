@@ -5,6 +5,7 @@
 
 #include "uft/hal/uft_hal.h"
 #include <string.h>
+#include <stdio.h>
 
 // ============================================================================
 // Drive Profiles

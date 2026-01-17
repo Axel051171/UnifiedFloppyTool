@@ -115,7 +115,7 @@
             <widget class="QLabel" name="labelSourceStatus">
              <property name="text">
               <string>Mode: Flux Device
-Device: Greaseweazle v4.1 (COM3) ✓
+Device: (See Hardware Tab)
 Drive: Drive 0 (3.5")</string>
              </property>
              <property name="styleSheet">

@@ -73,6 +73,9 @@ set(UFT_FORMAT_SOURCES
     # APD (Acorn Protected Disk)
     uft_apd_format.c
     
+    # FAT Boot Sector Analysis (based on OpenGate.at article)
+    fat/uft_fat_bootsector.c
+    
     # Registry
     format_registry/uft_format_registry.c
     

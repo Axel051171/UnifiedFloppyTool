@@ -191,8 +191,12 @@ extern "C" {
 
 /**
  * @brief Error result type
+ * Note: May already be defined by uft_error.h as alias for uft_rc_t
  */
+#ifndef UFT_ERROR_T_DEFINED
+#define UFT_ERROR_T_DEFINED
 typedef int uft_error_t;
+#endif
 
 /**
  * @brief Check if result is success

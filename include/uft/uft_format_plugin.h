@@ -20,22 +20,20 @@ extern "C" {
 #endif
 
 // ============================================================================
-// Plugin Capabilities
+// Plugin Capabilities - Use central definition from format registry
 // ============================================================================
 
-/**
- * @brief Format-Plugin Fähigkeiten
- */
-typedef enum uft_format_caps {
-    UFT_FORMAT_CAP_READ         = (1 << 0),  ///< Kann lesen
-    UFT_FORMAT_CAP_WRITE        = (1 << 1),  ///< Kann schreiben
-    UFT_FORMAT_CAP_CREATE       = (1 << 2),  ///< Kann neue erstellen
-    UFT_FORMAT_CAP_FLUX         = (1 << 3),  ///< Hat Flux-Daten
-    UFT_FORMAT_CAP_TIMING       = (1 << 4),  ///< Erhält Timing
-    UFT_FORMAT_CAP_WEAK_BITS    = (1 << 5),  ///< Unterstützt Weak Bits
-    UFT_FORMAT_CAP_MULTI_REV    = (1 << 6),  ///< Multiple Revolutions
-    UFT_FORMAT_CAP_STREAMING    = (1 << 7),  ///< Streaming I/O
-} uft_format_caps_t;
+#include "uft/core/uft_format_registry.h"  /* For uft_format_caps_t */
+
+/* Legacy aliases for backwards compatibility */
+#define UFT_FORMAT_CAP_READ      UFT_FCAP_READ
+#define UFT_FORMAT_CAP_WRITE     UFT_FCAP_WRITE
+#define UFT_FORMAT_CAP_CREATE    UFT_FCAP_CREATE
+#define UFT_FORMAT_CAP_FLUX      UFT_FCAP_FLUX
+#define UFT_FORMAT_CAP_TIMING    UFT_FCAP_TIMING
+#define UFT_FORMAT_CAP_WEAK_BITS UFT_FCAP_WEAK_BITS
+#define UFT_FORMAT_CAP_MULTI_REV UFT_FCAP_MULTI_REV
+#define UFT_FORMAT_CAP_STREAMING (1 << 14)  /* Not in registry, add here */
 
 // ============================================================================
 // Internal Disk Structure (für Plugins)

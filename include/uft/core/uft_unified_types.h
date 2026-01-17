@@ -77,6 +77,14 @@ typedef enum {
     
 } uft_error_t;
 
+/* Error code aliases for compatibility */
+#define UFT_ERR_INVALID_ARG    UFT_ERR_INVALID_PARAM
+#define UFT_ERC_FORMAT         UFT_ERR_CORRUPT
+#define UFT_ERR_FILE_OPEN      UFT_ERR_IO
+#define UFT_ERR_FILE_READ      UFT_ERR_IO
+#define UFT_ERR_FILE_WRITE     UFT_ERR_IO
+#define UFT_ERR_INVALID_STATE  UFT_ERR_INVALID_PARAM
+
 /**
  * @brief Get error description string
  */

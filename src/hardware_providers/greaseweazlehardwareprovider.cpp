@@ -15,6 +15,7 @@
 
 #include <QDebug>
 #include <QThread>
+#include <QRegularExpression>
 
 #if GW_SERIAL_AVAILABLE
 #include <QSerialPortInfo>
@@ -135,7 +136,17 @@ void GreaseweazleHardwareProvider::autoDetectDevice()
         if (isCandidate) {
             /* Verify with protocol handshake */
             QSerialPort testPort;
+            
+#ifdef Q_OS_WIN
+            /* Add Windows device prefix for reliable COM port access */
+            QString winPortName = portName;
+            if (!winPortName.startsWith("\\\\.\\")) {
+                winPortName = "\\\\.\\" + winPortName;
+            }
+            testPort.setPortName(winPortName);
+#else
             testPort.setPortName(portName);
+#endif
             testPort.setBaudRate(115200);
             testPort.setDataBits(QSerialPort::Data8);
             testPort.setParity(QSerialPort::NoParity);
@@ -208,7 +219,17 @@ void GreaseweazleHardwareProvider::autoDetectDevice()
         }
         
         QSerialPort testPort;
+        
+#ifdef Q_OS_WIN
+        /* Add Windows device prefix for reliable COM port access */
+        QString winPortName = portName;
+        if (!winPortName.startsWith("\\\\.\\")) {
+            winPortName = "\\\\.\\" + winPortName;
+        }
+        testPort.setPortName(winPortName);
+#else
         testPort.setPortName(portName);
+#endif
         testPort.setBaudRate(115200);
         testPort.setDataBits(QSerialPort::Data8);
         testPort.setParity(QSerialPort::NoParity);
@@ -283,7 +304,28 @@ bool GreaseweazleHardwareProvider::connect()
     
     QMutexLocker locker(&m_mutex);
     
-    m_serialPort->setPortName(m_devicePath);
+    /* Windows COM port handling:
+     * - Extract just "COMx" if path contains description (e.g., "COM4 - Greaseweazle")
+     * - Add \\.\\ prefix for reliable access on Windows */
+    QString portName = m_devicePath;
+    
+#ifdef Q_OS_WIN
+    /* Extract COM port if it contains extra text */
+    QRegularExpression comRegex("(COM\\d+)", QRegularExpression::CaseInsensitiveOption);
+    QRegularExpressionMatch match = comRegex.match(portName);
+    if (match.hasMatch()) {
+        portName = match.captured(1).toUpper();
+    }
+    
+    /* Add Windows device prefix for reliable COM port access */
+    if (!portName.startsWith("\\\\.\\")) {
+        portName = "\\\\.\\" + portName;
+    }
+    
+    qDebug() << "Windows COM port:" << m_devicePath << "->" << portName;
+#endif
+    
+    m_serialPort->setPortName(portName);
     m_serialPort->setBaudRate(m_baudRate);
     m_serialPort->setDataBits(QSerialPort::Data8);
     m_serialPort->setParity(QSerialPort::NoParity);

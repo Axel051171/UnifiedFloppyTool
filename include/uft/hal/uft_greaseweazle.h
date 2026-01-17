@@ -50,6 +50,11 @@ typedef enum {
     UFT_GW_ERR_BAD_PARAM        = -9,
     UFT_GW_ERR_NO_MEMORY        = -10,
     UFT_GW_ERR_NOT_CONNECTED    = -11,
+    /* Aliases for compatibility */
+    UFT_GW_ERR_IO               = -3,   /* Alias for UFT_GW_ERR_COMM */
+    UFT_GW_ERR_WRPROT           = -7,   /* Alias for UFT_GW_ERR_WRITE_PROTECT */
+    UFT_GW_ERR_INVALID          = -9,   /* Alias for UFT_GW_ERR_BAD_PARAM */
+    UFT_GW_ERR_NOMEM            = -10,  /* Alias for UFT_GW_ERR_NO_MEMORY */
 } uft_gw_error_t;
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -271,18 +276,70 @@ int uft_gw_erase_track(uft_gw_device_t* device, uint8_t revolutions);
  */
 void uft_gw_free_flux(uft_gw_flux_data_t* flux);
 
+/**
+ * @brief Free flux data (alias)
+ */
+#define uft_gw_flux_free uft_gw_free_flux
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * API: CONVERSION HELPERS
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+/**
+ * @brief Convert Greaseweazle ticks to nanoseconds
+ * @param ticks Tick count
+ * @param sample_freq Sample frequency in Hz
+ * @return Time in nanoseconds
+ */
+static inline uint32_t uft_gw_ticks_to_ns(uint32_t ticks, uint32_t sample_freq) {
+    return (uint32_t)(((uint64_t)ticks * 1000000000ULL) / sample_freq);
+}
+
+/**
+ * @brief Convert nanoseconds to Greaseweazle ticks
+ * @param ns Time in nanoseconds
+ * @param sample_freq Sample frequency in Hz
+ * @return Tick count
+ */
+static inline uint32_t uft_gw_ns_to_ticks(uint32_t ns, uint32_t sample_freq) {
+    return (uint32_t)(((uint64_t)ns * sample_freq) / 1000000000ULL);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * API: DEVICE DISCOVERY
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+/**
+ * @brief Discovery callback type
+ */
+typedef void (*uft_gw_discover_cb)(void* user_data, const char* port, const uft_gw_info_t* info);
+
+/**
+ * @brief Discover all connected Greaseweazle devices
+ * @param callback Called for each discovered device
+ * @param user_data User context passed to callback
+ * @return Number of devices found
+ */
+int uft_gw_discover(uft_gw_discover_cb callback, void* user_data);
+
 /* ═══════════════════════════════════════════════════════════════════════════
  * API: HIGH-LEVEL OPERATIONS
  * ═══════════════════════════════════════════════════════════════════════════ */
 
 /**
  * @brief Read complete track (seek + read)
+ * @param device Device handle
+ * @param cylinder Target cylinder
+ * @param head Target head
+ * @param revolutions Number of revolutions to capture
+ * @param flux Output: flux data (caller must free with uft_gw_free_flux)
+ * @return 0 on success, error code on failure
  */
 int uft_gw_read_track(uft_gw_device_t* device,
                       uint8_t cylinder,
                       uint8_t head,
                       uint8_t revolutions,
-                      uft_gw_flux_data_t* flux);
+                      uft_gw_flux_data_t** flux);
 
 /**
  * @brief Write complete track (seek + write)

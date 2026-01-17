@@ -230,10 +230,10 @@ static inline const uft_forensic_log_t* uft_recovery_get_log(
  * Version Info
  * ============================================================================ */
 
-#define UFT_RECOVERY_VERSION_MAJOR  3
+#define UFT_RECOVERY_VERSION_MAJOR  4
 #define UFT_RECOVERY_VERSION_MINOR  0
 #define UFT_RECOVERY_VERSION_PATCH  0
-#define UFT_RECOVERY_VERSION_STRING "3.0.0 GOD MODE"
+#define UFT_RECOVERY_VERSION_STRING "4.0.0 GOD MODE"
 
 /**
  * @brief Get recovery system version

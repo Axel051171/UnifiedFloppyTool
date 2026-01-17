@@ -33,6 +33,9 @@ typedef enum {
     UFT_DRIVE_APPLE,         /**< Apple II Disk II */
     UFT_DRIVE_AMIGA_DD,      /**< Amiga DD */
     UFT_DRIVE_AMIGA_HD,      /**< Amiga HD */
+    UFT_DRIVE_CBM_1541,      /**< Commodore 1541 (alias) */
+    UFT_DRIVE_CBM_1571,      /**< Commodore 1571 */
+    UFT_DRIVE_APPLE_525,     /**< Apple II 5.25" (alias) */
     UFT_DRIVE_COUNT
 } uft_drive_type_t;
 
@@ -53,7 +56,9 @@ typedef enum {
     DRIVE_ENC_FM = 0,        /**< FM encoding */
     DRIVE_ENC_MFM,           /**< MFM encoding */
     DRIVE_ENC_GCR,           /**< GCR encoding (C64, Apple) */
-    DRIVE_ENC_M2FM           /**< M2FM encoding (rare) */
+    DRIVE_ENC_M2FM,          /**< M2FM encoding (rare) */
+    DRIVE_ENC_GCR_CBM,       /**< GCR encoding (Commodore specific) */
+    DRIVE_ENC_GCR_APPLE      /**< GCR encoding (Apple specific) */
 } uft_drive_encoding_t;
 
 /* ═══════════════════════════════════════════════════════════════════════════════
@@ -79,6 +84,7 @@ typedef struct {
     /* Data rates */
     double data_rate_dd;          /**< DD data rate (kbit/s) */
     double data_rate_hd;          /**< HD data rate (kbit/s) */
+    double data_rate_ed;          /**< ED data rate (kbit/s) */
     double bit_cell_dd;           /**< DD bit cell (µs) */
     double bit_cell_hd;           /**< HD bit cell (µs) */
     
@@ -86,6 +92,10 @@ typedef struct {
     int track_length_bits;        /**< Nominal track length (bits) */
     int write_precomp_ns;         /**< Write precompensation (ns) */
     uft_drive_encoding_t default_encoding;  /**< Default encoding */
+    
+    /* Special features */
+    bool half_tracks;             /**< Supports half-track stepping */
+    int speed_zones;              /**< Number of speed zones (0 if constant) */
 } uft_drive_profile_t;
 
 /* ═══════════════════════════════════════════════════════════════════════════════
@@ -103,6 +113,9 @@ extern const uft_drive_profile_t UFT_DRIVE_PROFILE_1541;
 extern const uft_drive_profile_t UFT_DRIVE_PROFILE_APPLE;
 extern const uft_drive_profile_t UFT_DRIVE_PROFILE_AMIGA_DD;
 extern const uft_drive_profile_t UFT_DRIVE_PROFILE_AMIGA_HD;
+extern const uft_drive_profile_t UFT_DRIVE_PROFILE_CBM_1541;
+extern const uft_drive_profile_t UFT_DRIVE_PROFILE_CBM_1571;
+extern const uft_drive_profile_t UFT_DRIVE_PROFILE_APPLE_525;
 
 /* ═══════════════════════════════════════════════════════════════════════════════
  * API Functions

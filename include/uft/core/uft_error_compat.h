@@ -16,6 +16,25 @@
 
 /* Legacy error code aliases - only if not already defined */
 
+/* Bridge between error systems: uft_error.h uses CORRUPTED, unified_types uses CORRUPT */
+#ifndef UFT_ERR_CORRUPT
+#define UFT_ERR_CORRUPT UFT_ERR_CORRUPTED
+#endif
+
+#ifndef UFT_ERR_NOT_FOUND
+#define UFT_ERR_NOT_FOUND UFT_ERR_FILE_NOT_FOUND
+#endif
+
+/* UFT_ERR_INVALID_ARG is the canonical name in uft_error.h, provide reverse alias */
+#ifndef UFT_ERR_INVALID_ARG
+#define UFT_ERR_INVALID_ARG UFT_ERR_INVALID_PARAM
+#endif
+
+/* Typo alias: UFT_ERC_FORMAT -> UFT_ERR_CORRUPT */
+#ifndef UFT_ERC_FORMAT
+#define UFT_ERC_FORMAT UFT_ERR_CORRUPT
+#endif
+
 #ifndef UFT_ERROR_FORMAT_NOT_SUPPORTED
 #define UFT_ERROR_FORMAT_NOT_SUPPORTED UFT_ERR_NOT_SUPPORTED
 #endif
@@ -30,6 +49,22 @@
 
 #ifndef UFT_ERR_FILE_OPEN
 #define UFT_ERR_FILE_OPEN UFT_ERR_IO
+#endif
+
+#ifndef UFT_ERR_FILE_READ
+#define UFT_ERR_FILE_READ UFT_ERR_IO
+#endif
+
+#ifndef UFT_ERR_FILE_CREATE
+#define UFT_ERR_FILE_CREATE UFT_ERR_IO
+#endif
+
+#ifndef UFT_ERR_FORMAT
+#define UFT_ERR_FORMAT UFT_ERR_CORRUPT
+#endif
+
+#ifndef UFT_ENCODING_GCR
+#define UFT_ENCODING_GCR UFT_ENCODING_GCR_COMMODORE
 #endif
 
 #ifndef UFT_ERROR_INVALID_STATE

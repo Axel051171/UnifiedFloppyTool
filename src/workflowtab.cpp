@@ -371,9 +371,18 @@ void WorkflowTab::updateSourceStatus()
     
     switch (m_sourceMode) {
     case Flux:
-        status = tr("Mode: Flux Device\n"
-                   "Device: Greaseweazle v4.1 (COM3)\n"
-                   "Status: Ready");
+        if (m_deviceName.isEmpty()) {
+            status = tr("Mode: Flux Device\n"
+                       "Device: Not connected\n"
+                       "Status: Connect in Hardware Tab");
+        } else {
+            status = tr("Mode: Flux Device\n"
+                       "Device: %1\n"
+                       "Firmware: %2\n"
+                       "Status: Ready")
+                    .arg(m_deviceName)
+                    .arg(m_deviceFirmware);
+        }
         break;
     case USB:
         status = tr("Mode: USB Device\n"
@@ -407,9 +416,18 @@ void WorkflowTab::updateDestinationStatus()
     
     switch (m_destMode) {
     case Flux:
-        status = tr("Mode: Flux Device\n"
-                   "Device: Greaseweazle v4.1 (COM3)\n"
-                   "Status: Ready");
+        if (m_deviceName.isEmpty()) {
+            status = tr("Mode: Flux Device\n"
+                       "Device: Not connected\n"
+                       "Status: Connect in Hardware Tab");
+        } else {
+            status = tr("Mode: Flux Device\n"
+                       "Device: %1\n"
+                       "Firmware: %2\n"
+                       "Status: Ready")
+                    .arg(m_deviceName)
+                    .arg(m_deviceFirmware);
+        }
         break;
     case USB:
         status = tr("Mode: USB Device\n"
@@ -797,4 +815,16 @@ void WorkflowTab::onAnalyzeClicked()
     }
     
     dlg->show();
+}
+
+void WorkflowTab::onDeviceInfoChanged(const QString& deviceName, const QString& firmware)
+{
+    m_deviceName = deviceName;
+    m_deviceFirmware = firmware;
+    
+    // Update status displays
+    updateSourceStatus();
+    updateDestinationStatus();
+    
+    qDebug() << "WorkflowTab: Device info updated -" << deviceName << firmware;
 }

@@ -128,6 +128,91 @@
 #include "uft/formats/oric_dsk.h"
 #include "uft/formats/osd.h"
 #include "uft/formats/dhd.h"
+
+// ============================================================================
+// Format Includes - 6809/FLEX
+// ============================================================================
+#include "uft/formats/uft_flex.h"
+
+// ============================================================================
+// Format Includes - DEC
+// ============================================================================
+#include "uft/formats/uft_rx50.h"
+
+// ============================================================================
+// Format Includes - Nordic (ABC 80/800)
+// ============================================================================
+#include "uft/formats/uft_abc800.h"
+
+// ============================================================================
+// Format Includes - Soviet/Eastern European (BK-0010)
+// ============================================================================
+#include "uft/formats/uft_bk0010.h"
+
+// ============================================================================
+// Format Includes - Motorola (VersaDOS)
+// ============================================================================
+#include "uft/formats/uft_versados.h"
+
+// ============================================================================
+// Format Includes - Obscure/Niche (PMC, Calcomp, Pyldin, RC759, Applix)
+// ============================================================================
+#include "uft/formats/uft_pmc_micromate.h"
+#include "uft/formats/uft_calcomp.h"
+#include "uft/formats/uft_pyldin.h"
+#include "uft/formats/uft_rc759.h"
+#include "uft/formats/uft_applix.h"
+
+// ============================================================================
+// Format Includes - Eastern European (KC 85, Pravetz, Meritum)
+// ============================================================================
+#include "uft/formats/uft_kc85.h"
+#include "uft/formats/uft_pravetz.h"
+#include "uft/formats/uft_meritum.h"
+
+// ============================================================================
+// Format Includes - Minicomputer (Data General Nova, Prime)
+// ============================================================================
+#include "uft/formats/uft_dg_nova.h"
+#include "uft/formats/uft_prime.h"
+
+// ============================================================================
+// Format Includes - Embedded/Industrial (Heathkit, Cromemco)
+// ============================================================================
+#include "uft/formats/uft_heathkit.h"
+#include "uft/formats/uft_cromemco.h"
+
+// ============================================================================
+// Format Includes - Japanese Extended (Sharp X1, Sanyo MBC)
+// ============================================================================
+#include "uft/formats/uft_sharp_x1.h"
+#include "uft/formats/uft_sanyo_mbc.h"
+
+// ============================================================================
+// Format Includes - East Block (Robotron, Pravetz, Meritum)
+// ============================================================================
+#include "uft/formats/uft_robotron.h"
+#include "uft/formats/uft_pravetz.h"
+#include "uft/formats/uft_meritum.h"
+
+// ============================================================================
+// Format Includes - Minicomputer (Data General, Prime)
+// ============================================================================
+#include "uft/formats/uft_dg_nova.h"
+#include "uft/formats/uft_prime.h"
+
+// ============================================================================
+// Format Includes - Industrial (Heathkit, Cromemco)
+// ============================================================================
+#include "uft/formats/uft_heathkit.h"
+#include "uft/formats/uft_cromemco.h"
+
+// ============================================================================
+// Format Includes - Japanese Extended (Sharp X1, Sanyo, Hitachi)
+// ============================================================================
+#include "uft/formats/uft_sharp_x1.h"
+#include "uft/formats/uft_sanyo_mbc.h"
+#include "uft/formats/uft_hitachi_s1.h"
 #include "uft/formats/edd.h"
 #include "uft/formats/lnx.h"
 #include "uft/formats/fds.h"
@@ -153,17 +238,23 @@ static const format_info_t g_format_info[] = {
     {"D80", "d80", "8050 Single-sided", "Commodore", 2},
     {"D81", "d81", "1581 3.5\" MFM", "Commodore", 2},
     {"D82", "d82", "8250 Double-sided", "Commodore", 2},
+    {"D1M", "d1m", "CMD FD2000 DD 720KB", "Commodore", 2},
+    {"D2M", "d2m", "CMD FD2000 HD 1.44MB", "Commodore", 2},
+    {"D4M", "d4m", "CMD FD4000 ED 2.88MB", "Commodore", 2},
     {"D90", "d90", "CMD D9060 HD", "Commodore", 2},
     {"D91", "d91", "CMD D9090 HD", "Commodore", 2},
     {"X64", "x64", "Extended D64", "Commodore", 2},
     {"X71", "x71", "Extended D71", "Commodore", 2},
     {"X81", "x81", "Extended D81", "Commodore", 2},
     {"G64", "g64", "GCR Track Image", "Commodore", 1},
+    {"G71", "g71", "1571 GCR Track Image", "Commodore", 1},
     {"DNP", "dnp", "CMD Native Partition", "Commodore", 2},
     {"DNP2", "dnp2", "CMD Native v2", "Commodore", 2},
     {"P00", "p00,p01,p02", "PC64 File", "Commodore", 3},
     {"PRG", "prg", "C64 Program", "Commodore", 3},
     {"T64", "t64", "Tape Archive", "Commodore", 3},
+    {"M2I", "m2i", "Tape Image", "Commodore", 3},
+    {"TAP", "tap", "Raw Tape Image", "Commodore", 1},
     {"CRT", "crt", "Cartridge Image", "Commodore", 3},
     
     // Atari
@@ -247,6 +338,50 @@ static const format_info_t g_format_info[] = {
     {"DCU", "dcu", "Disk Copy Ultra", "Mac", 2},
     {"ORIC_DSK", "dsk", "Oric Disk", "Oric", 2},
     {"OSD", "osd", "OS-9 Disk", "OS-9", 2},
+    
+    // FLEX/UniFLEX (6809 Systems)
+    {"FLEX", "dsk", "FLEX Disk Image", "6809", 2},
+    {"UNIFLEX", "dsk", "UniFLEX Disk Image", "6809", 2},
+    
+    // DEC Formats
+    {"RX50", "img,dsk", "DEC RX50 Disk", "DEC", 2},
+    
+    // Nordic Formats
+    {"ABC800", "dsk,img", "Luxor ABC 80/800 Disk", "Nordic", 2},
+    
+    // Soviet/Eastern European Formats
+    {"BK0010", "bkd,img", "BK-0010/0011 Disk", "Soviet", 2},
+    
+    // Motorola Formats (FC5025 compatible)
+    {"VersaDOS", "vdo,img", "Motorola VersaDOS", "Motorola", 2},
+    
+    // FC5025 Compatible Obscure Formats
+    {"PMC", "pmc,img", "PMC MicroMate CP/M", "PMC", 2},
+    {"Calcomp", "cal,img", "Calcomp Vistagraphics 4500", "Calcomp", 2},
+    
+    // Niche/Regional Formats
+    {"Pyldin", "pyl,img", "Pyldin 601 (Bulgaria)", "Pyldin", 2},
+    {"RC759", "rc7,img", "RC759 Piccoline (Denmark)", "RC759", 2},
+    {"Applix", "apx,img", "Applix 1616 (Australia)", "Applix", 2},
+    
+    // East Block Formats
+    {"Robotron", "kcc,img", "Robotron KC 85/87 (DDR)", "Robotron", 2},
+    {"Pravetz", "prv,img", "Pravetz 82/8M (Bulgaria)", "Pravetz", 2},
+    {"Meritum", "mrt,img", "Meritum/TNS (Poland/CZ)", "Meritum", 2},
+    
+    // Minicomputer Formats
+    {"DGNova", "dg,img", "Data General Nova/Eclipse", "DG", 2},
+    {"Prime", "prm,img", "Prime Computer (PRIMOS)", "Prime", 2},
+    
+    // Industrial/Embedded Formats
+    {"Heathkit", "h8d,h17,img", "Heathkit H8/H89 (HDOS)", "Heathkit", 2},
+    {"Cromemco", "cro,img", "Cromemco CDOS (S-100)", "Cromemco", 2},
+    
+    // Extended Japanese Formats
+    {"SharpX1", "2d,img", "Sharp X1/X1 Turbo", "SharpX1", 2},
+    {"SanyoMBC", "mbc,img", "Sanyo MBC-55x", "Sanyo", 2},
+    {"HitachiS1", "s1,img", "Hitachi S1 Business", "Hitachi", 2},
+    
     {"DHD", "dhd", "Hard Disk Image", "Multi", 2},
     {"EDD", "edd", "Enhanced Density", "Preservation", 0},
     {"LNX", "lnx", "Atari Lynx Cart", "Lynx", 3},
@@ -369,6 +504,7 @@ static const format_info_t g_extended_format_info[] = {
     {"OPD", "opd,opu", "Opus Discovery", "Spectrum", 2},
     {"CPM", "cpm", "CP/M Generic", "CP/M", 2},
     {"CFI", "cfi", "Catweasel Flux Image", "Flux", 0},
+    {"LDBS", "ldbs", "LibDsk Block Store", "Multi", 2},
     {"DTI", "dti", "Disk Tool Image", "Multi", 1},
     {"PDI", "pdi", "PDI Format", "Multi", 2},
     {"MBD", "mbd", "MBD820/MBD1804", "Multi", 2},

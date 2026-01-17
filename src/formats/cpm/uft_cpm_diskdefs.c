@@ -875,6 +875,235 @@ const cpm_diskdef_t cpm_micromate = {
 };
 
 /* ============================================================================
+ * Additional libdsk-derived definitions
+ * ============================================================================ */
+
+/* IMSAI VIO */
+const cpm_diskdef_t cpm_imsai = {
+    .name = "imsai",
+    .description = "IMSAI VIO",
+    .cylinders = 77, .heads = 1, .sectors = 32, .sector_size = 128,
+    .dpb = {
+        .spt = 32, .bsh = 3, .blm = 7, .exm = 0,
+        .dsm = 299, .drm = 63, .al0 = 0xC0, .al1 = 0x00,
+        .cks = 16, .off = 2, .psh = 0, .phm = 0
+    },
+    .first_sector = 1, .skew_mode = CPM_SKEW_NONE, .skew_table = NULL,
+    .boot_mode = CPM_BOOT_STANDARD, .double_sided = false,
+    .high_density = false, .is_mfm = false
+};
+
+/* Morrow Micro Decision MD3 */
+const cpm_diskdef_t cpm_morrow_md3 = {
+    .name = "morrow-md3",
+    .description = "Morrow Micro Decision MD3",
+    .cylinders = 80, .heads = 2, .sectors = 5, .sector_size = 1024,
+    .dpb = {
+        .spt = 40, .bsh = 4, .blm = 15, .exm = 1,
+        .dsm = 394, .drm = 127, .al0 = 0xC0, .al1 = 0x00,
+        .cks = 32, .off = 2, .psh = 3, .phm = 7
+    },
+    .first_sector = 1, .skew_mode = CPM_SKEW_NONE, .skew_table = NULL,
+    .boot_mode = CPM_BOOT_STANDARD, .double_sided = true,
+    .high_density = false, .is_mfm = true
+};
+
+/* Microbee */
+const cpm_diskdef_t cpm_microbee = {
+    .name = "microbee",
+    .description = "Microbee CP/M",
+    .cylinders = 40, .heads = 2, .sectors = 10, .sector_size = 512,
+    .dpb = {
+        .spt = 40, .bsh = 4, .blm = 15, .exm = 0,
+        .dsm = 194, .drm = 63, .al0 = 0xC0, .al1 = 0x00,
+        .cks = 16, .off = 2, .psh = 2, .phm = 3
+    },
+    .first_sector = 1, .skew_mode = CPM_SKEW_NONE, .skew_table = NULL,
+    .boot_mode = CPM_BOOT_STANDARD, .double_sided = true,
+    .high_density = false, .is_mfm = true
+};
+
+/* Commodore 128 CP/M */
+const cpm_diskdef_t cpm_c128_dsdd = {
+    .name = "c128-dd",
+    .description = "Commodore 128 CP/M DSDD",
+    .cylinders = 80, .heads = 2, .sectors = 9, .sector_size = 512,
+    .dpb = {
+        .spt = 36, .bsh = 4, .blm = 15, .exm = 0,
+        .dsm = 354, .drm = 127, .al0 = 0xC0, .al1 = 0x00,
+        .cks = 32, .off = 2, .psh = 2, .phm = 3
+    },
+    .first_sector = 1, .skew_mode = CPM_SKEW_NONE, .skew_table = NULL,
+    .boot_mode = CPM_BOOT_STANDARD, .double_sided = true,
+    .high_density = false, .is_mfm = true
+};
+
+/* Amstrad PCW 720K */
+const cpm_diskdef_t cpm_pcw720 = {
+    .name = "pcw720",
+    .description = "Amstrad PCW 720K",
+    .cylinders = 80, .heads = 2, .sectors = 9, .sector_size = 512,
+    .dpb = {
+        .spt = 36, .bsh = 4, .blm = 15, .exm = 0,
+        .dsm = 354, .drm = 255, .al0 = 0xF0, .al1 = 0x00,
+        .cks = 64, .off = 1, .psh = 2, .phm = 3
+    },
+    .first_sector = 1, .skew_mode = CPM_SKEW_NONE, .skew_table = NULL,
+    .boot_mode = CPM_BOOT_STANDARD, .double_sided = true,
+    .high_density = false, .is_mfm = true
+};
+
+/* Tatung Einstein */
+const cpm_diskdef_t cpm_einstein = {
+    .name = "einstein",
+    .description = "Tatung Einstein",
+    .cylinders = 40, .heads = 1, .sectors = 10, .sector_size = 512,
+    .dpb = {
+        .spt = 20, .bsh = 3, .blm = 7, .exm = 0,
+        .dsm = 92, .drm = 63, .al0 = 0xC0, .al1 = 0x00,
+        .cks = 16, .off = 4, .psh = 2, .phm = 3
+    },
+    .first_sector = 0, .skew_mode = CPM_SKEW_NONE, .skew_table = NULL,
+    .boot_mode = CPM_BOOT_STANDARD, .double_sided = false,
+    .high_density = false, .is_mfm = true
+};
+
+/* Gemini */
+const cpm_diskdef_t cpm_gemini = {
+    .name = "gemini",
+    .description = "Gemini Galaxy",
+    .cylinders = 40, .heads = 2, .sectors = 9, .sector_size = 512,
+    .dpb = {
+        .spt = 36, .bsh = 4, .blm = 15, .exm = 1,
+        .dsm = 174, .drm = 63, .al0 = 0x80, .al1 = 0x00,
+        .cks = 16, .off = 2, .psh = 2, .phm = 3
+    },
+    .first_sector = 1, .skew_mode = CPM_SKEW_NONE, .skew_table = NULL,
+    .boot_mode = CPM_BOOT_STANDARD, .double_sided = true,
+    .high_density = false, .is_mfm = true
+};
+
+/* RML 380Z */
+const cpm_diskdef_t cpm_rml380z = {
+    .name = "rml380z",
+    .description = "Research Machines 380Z",
+    .cylinders = 40, .heads = 1, .sectors = 10, .sector_size = 512,
+    .dpb = {
+        .spt = 20, .bsh = 4, .blm = 15, .exm = 1,
+        .dsm = 98, .drm = 63, .al0 = 0x80, .al1 = 0x00,
+        .cks = 16, .off = 3, .psh = 2, .phm = 3
+    },
+    .first_sector = 1, .skew_mode = CPM_SKEW_NONE, .skew_table = NULL,
+    .boot_mode = CPM_BOOT_STANDARD, .double_sided = false,
+    .high_density = false, .is_mfm = true
+};
+
+/* Superbrain QD */
+const cpm_diskdef_t cpm_superbrain_qd = {
+    .name = "superbrain-qd",
+    .description = "Superbrain QD (Quad Density)",
+    .cylinders = 80, .heads = 2, .sectors = 10, .sector_size = 512,
+    .dpb = {
+        .spt = 40, .bsh = 4, .blm = 15, .exm = 0,
+        .dsm = 394, .drm = 127, .al0 = 0xC0, .al1 = 0x00,
+        .cks = 32, .off = 2, .psh = 2, .phm = 3
+    },
+    .first_sector = 1, .skew_mode = CPM_SKEW_NONE, .skew_table = NULL,
+    .boot_mode = CPM_BOOT_STANDARD, .double_sided = true,
+    .high_density = false, .is_mfm = true
+};
+
+/* Wang Professional */
+const cpm_diskdef_t cpm_wang = {
+    .name = "wang",
+    .description = "Wang Professional Computer",
+    .cylinders = 80, .heads = 2, .sectors = 8, .sector_size = 512,
+    .dpb = {
+        .spt = 32, .bsh = 4, .blm = 15, .exm = 0,
+        .dsm = 314, .drm = 127, .al0 = 0xC0, .al1 = 0x00,
+        .cks = 32, .off = 2, .psh = 2, .phm = 3
+    },
+    .first_sector = 0, .skew_mode = CPM_SKEW_NONE, .skew_table = NULL,
+    .boot_mode = CPM_BOOT_STANDARD, .double_sided = true,
+    .high_density = false, .is_mfm = true
+};
+
+/* Torch CPN */
+const cpm_diskdef_t cpm_torch = {
+    .name = "torch",
+    .description = "Torch CPN",
+    .cylinders = 80, .heads = 1, .sectors = 10, .sector_size = 512,
+    .dpb = {
+        .spt = 20, .bsh = 4, .blm = 15, .exm = 0,
+        .dsm = 194, .drm = 63, .al0 = 0xC0, .al1 = 0x00,
+        .cks = 16, .off = 1, .psh = 2, .phm = 3
+    },
+    .first_sector = 0, .skew_mode = CPM_SKEW_NONE, .skew_table = NULL,
+    .boot_mode = CPM_BOOT_STANDARD, .double_sided = false,
+    .high_density = false, .is_mfm = true
+};
+
+/* Jonos Escort */
+const cpm_diskdef_t cpm_jonos = {
+    .name = "jonos",
+    .description = "Jonos Escort",
+    .cylinders = 40, .heads = 2, .sectors = 10, .sector_size = 512,
+    .dpb = {
+        .spt = 40, .bsh = 4, .blm = 15, .exm = 0,
+        .dsm = 195, .drm = 127, .al0 = 0xC0, .al1 = 0x00,
+        .cks = 32, .off = 1, .psh = 2, .phm = 3
+    },
+    .first_sector = 1, .skew_mode = CPM_SKEW_NONE, .skew_table = NULL,
+    .boot_mode = CPM_BOOT_STANDARD, .double_sided = true,
+    .high_density = false, .is_mfm = true
+};
+
+/* Otrona Attache */
+const cpm_diskdef_t cpm_otrona = {
+    .name = "otrona",
+    .description = "Otrona Attache",
+    .cylinders = 40, .heads = 2, .sectors = 10, .sector_size = 512,
+    .dpb = {
+        .spt = 40, .bsh = 4, .blm = 15, .exm = 0,
+        .dsm = 194, .drm = 63, .al0 = 0x80, .al1 = 0x00,
+        .cks = 16, .off = 2, .psh = 2, .phm = 3
+    },
+    .first_sector = 1, .skew_mode = CPM_SKEW_NONE, .skew_table = NULL,
+    .boot_mode = CPM_BOOT_STANDARD, .double_sided = true,
+    .high_density = false, .is_mfm = true
+};
+
+/* NEC APC */
+const cpm_diskdef_t cpm_nec_apc = {
+    .name = "nec-apc",
+    .description = "NEC Advanced Personal Computer",
+    .cylinders = 77, .heads = 2, .sectors = 8, .sector_size = 1024,
+    .dpb = {
+        .spt = 64, .bsh = 5, .blm = 31, .exm = 3,
+        .dsm = 299, .drm = 255, .al0 = 0xC0, .al1 = 0x00,
+        .cks = 64, .off = 2, .psh = 4, .phm = 15
+    },
+    .first_sector = 1, .skew_mode = CPM_SKEW_NONE, .skew_table = NULL,
+    .boot_mode = CPM_BOOT_STANDARD, .double_sided = true,
+    .high_density = true, .is_mfm = true
+};
+
+/* Sord M23 */
+const cpm_diskdef_t cpm_sord = {
+    .name = "sord",
+    .description = "Sord M23",
+    .cylinders = 40, .heads = 2, .sectors = 16, .sector_size = 256,
+    .dpb = {
+        .spt = 64, .bsh = 4, .blm = 15, .exm = 0,
+        .dsm = 155, .drm = 63, .al0 = 0xC0, .al1 = 0x00,
+        .cks = 16, .off = 2, .psh = 1, .phm = 1
+    },
+    .first_sector = 1, .skew_mode = CPM_SKEW_NONE, .skew_table = NULL,
+    .boot_mode = CPM_BOOT_STANDARD, .double_sided = true,
+    .high_density = false, .is_mfm = true
+};
+
+/* ============================================================================
  * Format Table
  * ============================================================================ */
 
@@ -921,6 +1150,22 @@ static const cpm_diskdef_t *all_diskdefs[] = {
     &cpm_dps1,
     &cpm_z100,
     &cpm_micromate,
+    /* libdsk-derived definitions */
+    &cpm_imsai,
+    &cpm_morrow_md3,
+    &cpm_microbee,
+    &cpm_c128_dsdd,
+    &cpm_pcw720,
+    &cpm_einstein,
+    &cpm_gemini,
+    &cpm_rml380z,
+    &cpm_superbrain_qd,
+    &cpm_wang,
+    &cpm_torch,
+    &cpm_jonos,
+    &cpm_otrona,
+    &cpm_nec_apc,
+    &cpm_sord,
     NULL
 };
 

@@ -15,8 +15,8 @@
  * SPDX-License-Identifier: MIT
  */
 
-#ifndef UFT_HAL_H
-#define UFT_HAL_H
+#ifndef UFT_HAL_V3_H
+#define UFT_HAL_V3_H
 
 #include <stdint.h>
 #include <stddef.h>
@@ -384,4 +384,4 @@ const char* uft_hal_strerror(int err);
 }
 #endif
 
-#endif /* UFT_HAL_H */
+#endif /* UFT_HAL_V3_H */

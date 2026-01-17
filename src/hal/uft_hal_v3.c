@@ -8,7 +8,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-#include "uft/hal/uft_hal.h"
+#include "uft/hal/uft_hal_v3.h"
 #include "uft/hal/uft_greaseweazle.h"
 #include <stdlib.h>
 #include <string.h>
@@ -71,10 +71,6 @@ static int uft_gw_flux_to_ir_track(const uft_gw_flux_data_t* flux, uint8_t cylin
     
     /* Split flux data into revolutions using index times */
     if (flux->index_count > 1) {
-        uint32_t start_sample = 0;
-        uint32_t current_tick = 0;
-        uint32_t sample_idx = 0;
-        
         for (int rev = 0; rev < flux->index_count - 1 && rev < UFT_IR_MAX_REVOLUTIONS; rev++) {
             uint32_t index_start = flux->index_times[rev];
             uint32_t index_end = flux->index_times[rev + 1];
@@ -590,7 +586,7 @@ int uft_hal_write_track(uft_hal_device_t* device, const uft_ir_track_t* track) {
             if (ret != UFT_HAL_OK) return ret;
             
             ret = uft_gw_write_track(device->handle.greaseweazle, track->cylinder,
-                                 track->head, samples, sample_count);
+                                 track->head, samples, sample_count, false);
             
             free(samples);
             return uft_gw_to_hal_error(ret);

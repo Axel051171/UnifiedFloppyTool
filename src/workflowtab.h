@@ -71,6 +71,9 @@ signals:
     void progressChanged(int percentage);
     void hardwareModeChanged(bool sourceIsHardware, bool destIsHardware);
 
+public slots:
+    void onDeviceInfoChanged(const QString& deviceName, const QString& firmware);
+
 private slots:
     void onSourceModeChanged(int id);
     void onDestModeChanged(int id);
@@ -100,6 +103,10 @@ private:
     bool m_isPaused;
     QThread* m_workerThread;
     DecodeJob* m_decodeJob;
+    
+    // Device info from HardwareTab
+    QString m_deviceName;
+    QString m_deviceFirmware;
     
     void setupButtonGroups();
     void connectSignals();

@@ -139,13 +139,18 @@ static inline int clock_gettime(int clk_id, struct timespec *tp) {
 #define UFT_PACKED_END __pragma(pack(pop))
 
 /* Function attributes */
+#ifdef _MSC_VER
 #define UFT_INLINE __forceinline
 #define UFT_NOINLINE __declspec(noinline)
-
 /* Disable specific MSVC warnings */
 #pragma warning(disable: 4996)  /* deprecated POSIX names */
 #pragma warning(disable: 4244)  /* conversion warnings */
 #pragma warning(disable: 4267)  /* size_t to int */
+#else
+/* MinGW/GCC on Windows */
+#define UFT_INLINE static inline __attribute__((always_inline))
+#define UFT_NOINLINE __attribute__((noinline))
+#endif
 
 #else
 /*===========================================================================*/

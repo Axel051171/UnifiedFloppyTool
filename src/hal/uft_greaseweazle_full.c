@@ -91,46 +91,101 @@ static void msleep(uint32_t ms) {
 
 #ifdef UFT_GW_PLATFORM_WINDOWS
 
+/* ═══════════════════════════════════════════════════════════════════════════
+ * WINDOWS SERIAL - SYNCHRONOUS I/O (simpler approach)
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
 static int serial_open(uft_gw_device_t* dev, const char* port) {
     char full_port[280];
     snprintf(full_port, sizeof(full_port), "\\\\.\\%s", port);
     
-    dev->handle = CreateFileA(full_port, GENERIC_READ | GENERIC_WRITE,
-                              0, NULL, OPEN_EXISTING, 0, NULL);
+    fprintf(stderr, "[GW] Opening: %s\n", full_port);
+    fflush(stderr);
+    
+    /* Synchronous I/O - KEIN FILE_FLAG_OVERLAPPED */
+    dev->handle = CreateFileA(full_port, 
+                              GENERIC_READ | GENERIC_WRITE,
+                              0, NULL, OPEN_EXISTING,
+                              FILE_ATTRIBUTE_NORMAL,
+                              NULL);
+    
     if (dev->handle == INVALID_HANDLE_VALUE) {
+        DWORD err = GetLastError();
+        fprintf(stderr, "[GW] CreateFile failed: %lu\n", err);
         return UFT_GW_ERR_OPEN_FAILED;
     }
     
-    /* Configure serial port */
+    fprintf(stderr, "[GW] Handle: %p\n", dev->handle);
+    
+    /* Buffer sizes */
+    SetupComm(dev->handle, 4096, 4096);
+    
+    /* 8N1, DTR+RTS enabled */
     DCB dcb;
     memset(&dcb, 0, sizeof(dcb));
     dcb.DCBlength = sizeof(dcb);
     
     if (!GetCommState(dev->handle, &dcb)) {
+        fprintf(stderr, "[GW] GetCommState failed: %lu\n", GetLastError());
         CloseHandle(dev->handle);
         return UFT_GW_ERR_OPEN_FAILED;
     }
     
-    dcb.BaudRate = CBR_115200;
+    dcb.BaudRate = CBR_9600;
     dcb.ByteSize = 8;
     dcb.StopBits = ONESTOPBIT;
     dcb.Parity = NOPARITY;
+    dcb.fBinary = TRUE;
+    dcb.fParity = FALSE;
     dcb.fDtrControl = DTR_CONTROL_ENABLE;
-    dcb.fRtsControl = RTS_CONTROL_DISABLE;
+    dcb.fRtsControl = RTS_CONTROL_ENABLE;
+    dcb.fOutxCtsFlow = FALSE;
+    dcb.fOutxDsrFlow = FALSE;
+    dcb.fDsrSensitivity = FALSE;
+    dcb.fOutX = FALSE;
+    dcb.fInX = FALSE;
+    dcb.fErrorChar = FALSE;
+    dcb.fNull = FALSE;
+    dcb.fAbortOnError = FALSE;
     
     if (!SetCommState(dev->handle, &dcb)) {
+        fprintf(stderr, "[GW] SetCommState failed: %lu\n", GetLastError());
         CloseHandle(dev->handle);
         return UFT_GW_ERR_OPEN_FAILED;
     }
     
-    /* Set timeouts */
-    COMMTIMEOUTS timeouts;
-    timeouts.ReadIntervalTimeout = 50;
-    timeouts.ReadTotalTimeoutConstant = UFT_GW_USB_TIMEOUT_MS;
-    timeouts.ReadTotalTimeoutMultiplier = 10;
-    timeouts.WriteTotalTimeoutConstant = UFT_GW_USB_TIMEOUT_MS;
-    timeouts.WriteTotalTimeoutMultiplier = 10;
-    SetCommTimeouts(dev->handle, &timeouts);
+    /* Timeouts - KRITISCH für synchrones I/O
+     * ReadIntervalTimeout: Max time between bytes (MAXDWORD = return immediately with available data)
+     * ReadTotalTimeoutMultiplier: Per-byte multiplier
+     * ReadTotalTimeoutConstant: Base timeout
+     */
+    COMMTIMEOUTS to;
+    to.ReadIntervalTimeout = MAXDWORD;
+    to.ReadTotalTimeoutMultiplier = MAXDWORD;
+    to.ReadTotalTimeoutConstant = 3000;  /* 3 Sekunden */
+    to.WriteTotalTimeoutMultiplier = 0;
+    to.WriteTotalTimeoutConstant = 3000;
+    
+    if (!SetCommTimeouts(dev->handle, &to)) {
+        fprintf(stderr, "[GW] SetCommTimeouts failed: %lu\n", GetLastError());
+        CloseHandle(dev->handle);
+        return UFT_GW_ERR_OPEN_FAILED;
+    }
+    
+    /* Purge & clear errors */
+    PurgeComm(dev->handle, PURGE_RXCLEAR | PURGE_TXCLEAR | PURGE_RXABORT | PURGE_TXABORT);
+    DWORD errors; COMSTAT stat;
+    ClearCommError(dev->handle, &errors, &stat);
+    
+    /* DTR explizit setzen */
+    EscapeCommFunction(dev->handle, SETDTR);
+    EscapeCommFunction(dev->handle, SETRTS);
+    
+    Sleep(200);  /* Warten bis Gerät bereit */
+    PurgeComm(dev->handle, PURGE_RXCLEAR | PURGE_TXCLEAR);
+    
+    fprintf(stderr, "[GW] Port ready (sync I/O, 3s timeout)\n");
+    fflush(stderr);
     
     strncpy(dev->port, port, sizeof(dev->port) - 1);
     return UFT_GW_OK;
@@ -138,41 +193,188 @@ static int serial_open(uft_gw_device_t* dev, const char* port) {
 
 static void serial_close(uft_gw_device_t* dev) {
     if (dev->handle != INVALID_HANDLE_VALUE) {
+        EscapeCommFunction(dev->handle, CLRDTR);
         CloseHandle(dev->handle);
         dev->handle = INVALID_HANDLE_VALUE;
     }
 }
 
 static int serial_write(uft_gw_device_t* dev, const uint8_t* data, size_t len) {
-    DWORD written;
+    DWORD written = 0;
+    
+    fprintf(stderr, "[GW] Writing %zu bytes...\n", len);
+    
     if (!WriteFile(dev->handle, data, (DWORD)len, &written, NULL)) {
+        DWORD err = GetLastError();
+        fprintf(stderr, "[GW] WriteFile failed: %lu\n", err);
         return UFT_GW_ERR_IO;
     }
-    return (written == len) ? UFT_GW_OK : UFT_GW_ERR_IO;
-}
-
-static int serial_read(uft_gw_device_t* dev, uint8_t* data, size_t len, size_t* actual) {
-    DWORD read_bytes;
-    if (!ReadFile(dev->handle, data, (DWORD)len, &read_bytes, NULL)) {
+    
+    fprintf(stderr, "[GW] Wrote %lu bytes\n", written);
+    
+    if (written != len) {
+        fprintf(stderr, "[GW] Write incomplete!\n");
         return UFT_GW_ERR_IO;
     }
-    if (actual) *actual = read_bytes;
+    
     return UFT_GW_OK;
 }
 
+static int serial_read(uft_gw_device_t* dev, uint8_t* data, size_t len, size_t* actual) {
+    DWORD bytes_read = 0;
+    
+    fprintf(stderr, "[GW] Reading up to %zu bytes...\n", len);
+    
+    /* Check what's available first */
+    DWORD errors;
+    COMSTAT stat;
+    if (ClearCommError(dev->handle, &errors, &stat)) {
+        fprintf(stderr, "[GW] Bytes in queue: %lu, errors: 0x%lX\n", stat.cbInQue, errors);
+    }
+    
+    if (!ReadFile(dev->handle, data, (DWORD)len, &bytes_read, NULL)) {
+        DWORD err = GetLastError();
+        fprintf(stderr, "[GW] ReadFile failed: %lu\n", err);
+        if (actual) *actual = 0;
+        return UFT_GW_ERR_IO;
+    }
+    
+    fprintf(stderr, "[GW] Read %lu bytes\n", bytes_read);
+    
+    if (actual) *actual = bytes_read;
+    return (bytes_read > 0) ? UFT_GW_OK : UFT_GW_ERR_TIMEOUT;
+}
+
 static int serial_flush(uft_gw_device_t* dev) {
-    FlushFileBuffers(dev->handle);
     PurgeComm(dev->handle, PURGE_RXCLEAR | PURGE_TXCLEAR);
+    return UFT_GW_OK;
+}
+
+/* Hex dump */
+static void gw_hexdump(const char* tag, const uint8_t* data, size_t len) {
+    fprintf(stderr, "%s (%zu): ", tag, len);
+    for (size_t i = 0; i < len && i < 32; i++) fprintf(stderr, "%02X ", data[i]);
+    if (len > 32) fprintf(stderr, "...");
+    fprintf(stderr, "\n");
+    fflush(stderr);
+}
+
+/* Send command and receive response - verwendet serial_write/serial_read */
+static int gw_send_command(HANDLE h, uint8_t cmd, const uint8_t* params, size_t param_len,
+                           uint8_t* resp, size_t* resp_len, int timeout_ms) {
+    uint8_t tx[64], rx[256];
+    DWORD written, bytes_read;
+    
+    /* Build: cmd + len + params */
+    size_t tx_len = 2 + param_len;
+    tx[0] = cmd;
+    tx[1] = (uint8_t)tx_len;
+    if (param_len > 0 && params) memcpy(tx + 2, params, param_len);
+    
+    /* Clear buffers */
+    PurgeComm(h, PURGE_RXCLEAR | PURGE_TXCLEAR);
+    
+    /* Send */
+    gw_hexdump("[GW TX]", tx, tx_len);
+    if (!WriteFile(h, tx, (DWORD)tx_len, &written, NULL) || written != tx_len) {
+        fprintf(stderr, "[GW] Write failed\n");
+        return UFT_GW_ERR_IO;
+    }
+    
+    /* KRITISCH: FlushFileBuffers erzwingt dass Daten wirklich gesendet werden! */
+    FlushFileBuffers(h);
+    
+    /* Warte auf Antwort - Poll bis Daten da sind */
+    DWORD errors;
+    COMSTAT stat;
+    int wait_ms = 0;
+    while (wait_ms < timeout_ms) {
+        ClearCommError(h, &errors, &stat);
+        if (stat.cbInQue > 0) {
+            fprintf(stderr, "[GW] Data available after %d ms: %lu bytes\n", wait_ms, stat.cbInQue);
+            break;
+        }
+        Sleep(10);
+        wait_ms += 10;
+    }
+    
+    if (stat.cbInQue == 0) {
+        fprintf(stderr, "[GW] No response after %d ms\n", timeout_ms);
+        return UFT_GW_ERR_TIMEOUT;
+    }
+    
+    /* Kurz warten damit alle Daten ankommen */
+    Sleep(50);
+    ClearCommError(h, &errors, &stat);
+    fprintf(stderr, "[GW] Final RX queue: %lu bytes\n", stat.cbInQue);
+    
+    /* Read response */
+    COMMTIMEOUTS to;
+    to.ReadIntervalTimeout = 100;
+    to.ReadTotalTimeoutMultiplier = 0;
+    to.ReadTotalTimeoutConstant = 500;
+    to.WriteTotalTimeoutMultiplier = 0;
+    to.WriteTotalTimeoutConstant = 500;
+    SetCommTimeouts(h, &to);
+    
+    if (!ReadFile(h, rx, sizeof(rx), &bytes_read, NULL)) {
+        fprintf(stderr, "[GW] Read failed: %lu\n", GetLastError());
+        return UFT_GW_ERR_IO;
+    }
+    
+    if (bytes_read == 0) {
+        fprintf(stderr, "[GW] Read returned 0 bytes\n");
+        return UFT_GW_ERR_TIMEOUT;
+    }
+    
+    gw_hexdump("[GW RX]", rx, bytes_read);
+    
+    /* Validate */
+    if (bytes_read < 2) return UFT_GW_ERR_PROTOCOL;
+    if (rx[0] != cmd) {
+        fprintf(stderr, "[GW] Bad echo: expected %02X got %02X\n", cmd, rx[0]);
+        return UFT_GW_ERR_PROTOCOL;
+    }
+    if (rx[1] != 0x00) {
+        fprintf(stderr, "[GW] NAK: %02X\n", rx[1]);
+        return UFT_GW_ERR_PROTOCOL;
+    }
+    
+    /* Copy response data */
+    if (resp && resp_len && bytes_read > 2) {
+        size_t n = bytes_read - 2;
+        if (n > *resp_len) n = *resp_len;
+        memcpy(resp, rx + 2, n);
+        *resp_len = n;
+    }
+    
     return UFT_GW_OK;
 }
 
 #else /* POSIX */
 
 static int serial_open(uft_gw_device_t* dev, const char* port) {
+    fprintf(stderr, "[GW DIAG] Opening serial port: %s\n", port);
+    fflush(stderr);
+    
     dev->fd = open(port, O_RDWR | O_NOCTTY | O_NONBLOCK);
     if (dev->fd < 0) {
+        int err = errno;
+        fprintf(stderr, "[GW DIAG] open() failed: %s (errno=%d)\n", strerror(err), err);
+        if (err == EACCES) {
+            fprintf(stderr, "[GW DIAG]   Permission denied!\n");
+            fprintf(stderr, "[GW DIAG]   Linux:  sudo usermod -a -G dialout $USER && logout\n");
+            fprintf(stderr, "[GW DIAG]   Or install: sudo cp tools/99-floppy-devices.rules /etc/udev/rules.d/\n");
+        } else if (err == ENOENT) {
+            fprintf(stderr, "[GW DIAG]   Device not found - is Greaseweazle connected?\n");
+        } else if (err == EBUSY) {
+            fprintf(stderr, "[GW DIAG]   Device busy - close other programs using it\n");
+        }
+        fflush(stderr);
         return UFT_GW_ERR_OPEN_FAILED;
     }
+    
+    fprintf(stderr, "[GW DIAG] Port opened (fd=%d)\n", dev->fd);
     
     /* Clear non-blocking */
     int flags = fcntl(dev->fd, F_GETFL, 0);
@@ -183,6 +385,7 @@ static int serial_open(uft_gw_device_t* dev, const char* port) {
     memset(&tty, 0, sizeof(tty));
     
     if (tcgetattr(dev->fd, &tty) != 0) {
+        fprintf(stderr, "[GW DIAG] tcgetattr failed: %s\n", strerror(errno));
         close(dev->fd);
         return UFT_GW_ERR_OPEN_FAILED;
     }
@@ -213,13 +416,20 @@ static int serial_open(uft_gw_device_t* dev, const char* port) {
     tty.c_cc[VMIN] = 0;
     
     if (tcsetattr(dev->fd, TCSANOW, &tty) != 0) {
+        fprintf(stderr, "[GW DIAG] tcsetattr failed: %s\n", strerror(errno));
         close(dev->fd);
         return UFT_GW_ERR_OPEN_FAILED;
     }
     
+    /* Flush stale data */
+    tcflush(dev->fd, TCIOFLUSH);
+    
     /* Set DTR */
     int dtr = TIOCM_DTR;
     ioctl(dev->fd, TIOCMBIS, &dtr);
+    
+    fprintf(stderr, "[GW DIAG] Serial port configured (8N1, no flow control)\n");
+    fflush(stderr);
     
     strncpy(dev->port, port, sizeof(dev->port) - 1);
     return UFT_GW_OK;
@@ -293,27 +503,55 @@ static int uft_gw_command(uft_gw_device_t* dev, uint8_t cmd, const uint8_t* para
         memcpy(dev->cmd_buf + 2, params, param_len);
     }
     
+    fflush(stderr); fprintf(stderr, "[GW DEBUG] Sending cmd=0x%02X len=%d: ", cmd, (int)(2 + param_len));
+    for (size_t i = 0; i < 2 + param_len && i < 16; i++) {
+        fprintf(stderr, "%02X ", dev->cmd_buf[i]);
+    }
+    fprintf(stderr, "\n");
+    
     /* Send command (2 header bytes + params) */
     int ret = serial_write(dev, dev->cmd_buf, 2 + param_len);
-    if (ret != UFT_GW_OK) return ret;
+    if (ret != UFT_GW_OK) {
+        fflush(stderr); fprintf(stderr, "[GW DEBUG] serial_write failed: %d\n", ret);
+        return ret;
+    }
     
-    /* Read response (at least 2 bytes: cmd echo + ack) */
+    /* Read entire response at once (header + data)
+     * Greaseweazle response format: cmd_echo (1) + ack (1) + data (variable) */
+    size_t max_read = 2 + (resp_len ? *resp_len : 0);
+    if (max_read > sizeof(dev->resp_buf)) {
+        max_read = sizeof(dev->resp_buf);
+    }
+    
     size_t read_len = 0;
-    ret = serial_read(dev, dev->resp_buf, 2, &read_len);
-    if (ret != UFT_GW_OK) return ret;
+    ret = serial_read(dev, dev->resp_buf, max_read, &read_len);
+    if (ret != UFT_GW_OK) {
+        fflush(stderr); fprintf(stderr, "[GW DEBUG] serial_read failed: %d\n", ret);
+        return ret;
+    }
+    
+    fflush(stderr); fprintf(stderr, "[GW DEBUG] Read %zu bytes: ", read_len);
+    for (size_t i = 0; i < read_len && i < 32; i++) {
+        fprintf(stderr, "%02X ", dev->resp_buf[i]);
+    }
+    fprintf(stderr, "\n");
     
     if (read_len < 2) {
+        fflush(stderr); fprintf(stderr, "[GW DEBUG] Timeout - only got %zu bytes\n", read_len);
         return UFT_GW_ERR_TIMEOUT;
     }
     
     /* Verify command echo */
     if (dev->resp_buf[0] != cmd) {
+        fflush(stderr); fprintf(stderr, "[GW DEBUG] Protocol error - expected echo 0x%02X, got 0x%02X\n", 
+                cmd, dev->resp_buf[0]);
         return UFT_GW_ERR_PROTOCOL;
     }
     
     /* Check ACK */
     uint8_t ack = dev->resp_buf[1];
     if (ack != UFT_GW_ACK_OK) {
+        fflush(stderr); fprintf(stderr, "[GW DEBUG] Device returned error: 0x%02X\n", ack);
         /* Map device error to our error code */
         switch (ack) {
             case UFT_GW_ACK_NO_INDEX:     return UFT_GW_ERR_NO_INDEX;
@@ -325,11 +563,15 @@ static int uft_gw_command(uft_gw_device_t* dev, uint8_t cmd, const uint8_t* para
         }
     }
     
-    /* Copy response if requested */
+    /* Copy response data (everything after the 2-byte header) */
     if (response && resp_len && *resp_len > 0) {
-        size_t to_read = *resp_len;
-        ret = serial_read(dev, response, to_read, resp_len);
-        if (ret != UFT_GW_OK) return ret;
+        size_t data_len = (read_len > 2) ? (read_len - 2) : 0;
+        if (data_len > *resp_len) data_len = *resp_len;
+        if (data_len > 0) {
+            memcpy(response, dev->resp_buf + 2, data_len);
+        }
+        *resp_len = data_len;
+        fflush(stderr); fprintf(stderr, "[GW DEBUG] Response data (%zu bytes)\n", data_len);
     }
     
     return UFT_GW_OK;
@@ -380,19 +622,45 @@ int uft_gw_list_ports(char** ports, int max_ports) {
         }
     }
 #else
-    /* Look for /dev/ttyACM* and /dev/ttyUSB* */
-    const char* patterns[] = {"/dev/ttyACM", "/dev/ttyUSB", NULL};
+    /* Linux: /dev/ttyACM*, /dev/ttyUSB*
+     * macOS: /dev/cu.usbmodem* */
     
+    /* First try numbered devices (Linux) */
+    const char* patterns[] = {"/dev/ttyACM", "/dev/ttyUSB", NULL};
     for (int p = 0; patterns[p] && count < max_ports; p++) {
         for (int i = 0; i < 16 && count < max_ports; i++) {
-            char port_name[64];
+            char port_name[128];
             snprintf(port_name, sizeof(port_name), "%s%d", patterns[p], i);
-            
             if (access(port_name, F_OK) == 0) {
                 ports[count] = strdup(port_name);
                 if (ports[count]) count++;
             }
         }
+    }
+    
+    /* Scan /dev for macOS usbmodem devices */
+    DIR* dir = opendir("/dev");
+    if (dir) {
+        struct dirent* entry;
+        while ((entry = readdir(dir)) != NULL && count < max_ports) {
+            /* macOS: cu.usbmodem*, Linux: ttyACM* (might have been missed) */
+            if (strncmp(entry->d_name, "cu.usbmodem", 11) == 0 ||
+                strncmp(entry->d_name, "ttyACM", 6) == 0) {
+                char port_name[128];
+                snprintf(port_name, sizeof(port_name), "/dev/%s", entry->d_name);
+                
+                /* Avoid duplicates */
+                int dup = 0;
+                for (int d = 0; d < count; d++) {
+                    if (strcmp(ports[d], port_name) == 0) { dup = 1; break; }
+                }
+                if (!dup) {
+                    ports[count] = strdup(port_name);
+                    if (ports[count]) count++;
+                }
+            }
+        }
+        closedir(dir);
     }
 #endif
     
@@ -401,6 +669,12 @@ int uft_gw_list_ports(char** ports, int max_ports) {
 
 int uft_gw_open(const char* port, uft_gw_device_t** device) {
     if (!port || !device) return UFT_GW_ERR_INVALID;
+    
+    /* Ensure debug output is visible immediately */
+    setvbuf(stderr, NULL, _IONBF, 0);
+    
+    fflush(stderr); fprintf(stderr, "[GW DEBUG] Opening port: %s\n", port);
+    fflush(stderr);
     
     uft_gw_device_t* dev = (uft_gw_device_t*)safe_calloc(1, sizeof(uft_gw_device_t));
     if (!dev) return UFT_GW_ERR_NOMEM;
@@ -411,23 +685,27 @@ int uft_gw_open(const char* port, uft_gw_device_t** device) {
     dev->fd = -1;
 #endif
     
-    /* Open serial port */
+    /* Open serial port (includes DTR reset cycle) */
     int ret = serial_open(dev, port);
     if (ret != UFT_GW_OK) {
+        fflush(stderr); fprintf(stderr, "[GW DEBUG] serial_open failed: %d\n", ret);
         free(dev);
         return ret;
     }
     
-    /* Short delay for device to reset */
-    msleep(100);
-    serial_flush(dev);
+    fflush(stderr); fprintf(stderr, "[GW DEBUG] Serial port opened successfully\n");
+    fflush(stderr); fprintf(stderr, "[GW DEBUG] Sending GET_INFO command...\n");
     
     ret = uft_gw_get_info(dev, &dev->info);
     if (ret != UFT_GW_OK) {
+        fflush(stderr); fprintf(stderr, "[GW DEBUG] uft_gw_get_info failed: %d\n", ret);
         serial_close(dev);
         free(dev);
         return UFT_GW_ERR_NOT_FOUND;
     }
+    
+    fflush(stderr); fprintf(stderr, "[GW DEBUG] Device info: FW v%d.%d, model=%d\n", 
+            dev->info.fw_major, dev->info.fw_minor, dev->info.hw_model);
     
     /* Format version string */
     snprintf(dev->version_str, sizeof(dev->version_str), "%d.%d",
@@ -494,45 +772,259 @@ int uft_gw_reset(uft_gw_device_t* device) {
  * DEVICE INFORMATION
  * ═══════════════════════════════════════════════════════════════════════════ */
 
+/* ═══════════════════════════════════════════════════════════════════════════
+ * POSIX GREASEWEAZLE COMMUNICATION (Linux / macOS)
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+#ifdef UFT_GW_PLATFORM_POSIX
+
+#include <sys/time.h>
+#include <sys/select.h>
+
+static void gw_hexdump_posix(const char* tag, const uint8_t* data, size_t len) {
+    fprintf(stderr, "%s (%zu): ", tag, len);
+    for (size_t i = 0; i < len && i < 40; i++) {
+        fprintf(stderr, "%02X ", data[i]);
+    }
+    if (len > 40) fprintf(stderr, "...");
+    fprintf(stderr, "\n");
+    fflush(stderr);
+}
+
+static int gw_read_with_timeout_posix(int fd, uint8_t* buf, size_t bufsize, 
+                                       size_t* actual, int timeout_ms) {
+    struct timeval start, now;
+    gettimeofday(&start, NULL);
+    size_t total = 0;
+    
+    while (total < bufsize) {
+        gettimeofday(&now, NULL);
+        long elapsed = (now.tv_sec - start.tv_sec) * 1000 + (now.tv_usec - start.tv_usec) / 1000;
+        long remaining = timeout_ms - elapsed;
+        if (remaining <= 0) break;
+        
+        fd_set rfds;
+        FD_ZERO(&rfds);
+        FD_SET(fd, &rfds);
+        
+        struct timeval tv;
+        tv.tv_sec = remaining / 1000;
+        tv.tv_usec = (remaining % 1000) * 1000;
+        
+        int ret = select(fd + 1, &rfds, NULL, NULL, &tv);
+        if (ret < 0) { if (errno == EINTR) continue; break; }
+        if (ret == 0) break;
+        
+        ssize_t n = read(fd, buf + total, bufsize - total);
+        if (n > 0) {
+            total += (size_t)n;
+            /* Nach ersten Daten kurzes Timeout für Rest */
+            if (total > 0 && elapsed < timeout_ms - 100) {
+                timeout_ms = elapsed + 100;
+            }
+        } else if (n <= 0 && errno != EAGAIN) {
+            break;
+        }
+    }
+    
+    *actual = total;
+    return (total > 0) ? UFT_GW_OK : UFT_GW_ERR_TIMEOUT;
+}
+
+static int gw_write_posix(int fd, const uint8_t* data, size_t len) {
+    size_t total = 0;
+    while (total < len) {
+        ssize_t n = write(fd, data + total, len - total);
+        if (n <= 0) { if (errno == EINTR) continue; return UFT_GW_ERR_IO; }
+        total += (size_t)n;
+    }
+    tcdrain(fd);
+    return UFT_GW_OK;
+}
+
+static void gw_drain_posix(int fd) {
+    uint8_t drain[256];
+    int flags = fcntl(fd, F_GETFL, 0);
+    fcntl(fd, F_SETFL, flags | O_NONBLOCK);
+    while (read(fd, drain, sizeof(drain)) > 0) { }
+    fcntl(fd, F_SETFL, flags);
+    tcflush(fd, TCIOFLUSH);
+}
+
+static int gw_send_command_posix(int fd, uint8_t cmd, const uint8_t* params, size_t param_len,
+                                  uint8_t* resp, size_t* resp_len, int timeout_ms) {
+    uint8_t tx[64], rx[256];
+    size_t rx_len;
+    
+    size_t tx_len = 2 + param_len;
+    tx[0] = cmd;
+    tx[1] = (uint8_t)tx_len;
+    if (param_len > 0 && params) memcpy(tx + 2, params, param_len);
+    
+    tcflush(fd, TCIFLUSH);
+    gw_hexdump_posix("[GW TX]", tx, tx_len);
+    
+    if (gw_write_posix(fd, tx, tx_len) != UFT_GW_OK) {
+        fprintf(stderr, "[GW ERR] Write failed: %s\n", strerror(errno));
+        return UFT_GW_ERR_IO;
+    }
+    
+    usleep(20000);
+    
+    if (gw_read_with_timeout_posix(fd, rx, sizeof(rx), &rx_len, timeout_ms) != UFT_GW_OK || rx_len == 0) {
+        fprintf(stderr, "[GW ERR] Read timeout\n");
+        return UFT_GW_ERR_TIMEOUT;
+    }
+    
+    gw_hexdump_posix("[GW RX]", rx, rx_len);
+    
+    if (rx_len < 2 || rx[0] != cmd) {
+        fprintf(stderr, "[GW ERR] Protocol error\n");
+        return UFT_GW_ERR_PROTOCOL;
+    }
+    if (rx[1] != 0x00) {
+        fprintf(stderr, "[GW ERR] Command rejected: ack=0x%02X\n", rx[1]);
+        return UFT_GW_ERR_PROTOCOL;
+    }
+    
+    if (resp && resp_len && rx_len > 2) {
+        size_t data_len = rx_len - 2;
+        if (data_len > *resp_len) data_len = *resp_len;
+        memcpy(resp, rx + 2, data_len);
+        *resp_len = data_len;
+    }
+    
+    return UFT_GW_OK;
+}
+
+#endif /* UFT_GW_PLATFORM_POSIX */
+
+/* ═══════════════════════════════════════════════════════════════════════════
+ * CROSS-PLATFORM GET_INFO
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
 int uft_gw_get_info(uft_gw_device_t* device, uft_gw_info_t* info) {
     if (!device || !info) return UFT_GW_ERR_INVALID;
     
-    /* GET_INFO requires a 16-bit subindex (little-endian)
-     * Subindex 0 = GETINFO_FIRMWARE */
-    uint8_t params[2] = {0x00, 0x00};  /* Subindex = 0 (firmware info) */
+    uint8_t resp[64];
+    size_t resp_len;
+    int ret;
+    int retry;
     
-    uint8_t resp[32];
-    size_t resp_len = sizeof(resp);
+    fprintf(stderr, "\n[GW] ===== GET_INFO Sequence =====\n");
+    fflush(stderr);
     
-    int ret = uft_gw_command(device, UFT_GW_CMD_GET_INFO, params, 2, resp, &resp_len);
-    if (ret != UFT_GW_OK) return ret;
+#ifdef UFT_GW_PLATFORM_WINDOWS
     
-    if (resp_len < 8) return UFT_GW_ERR_PROTOCOL;
+    /* Mehrere Versuche mit unterschiedlichen Strategien */
+    for (retry = 0; retry < 3; retry++) {
+        fprintf(stderr, "[GW] Attempt %d/3\n", retry + 1);
+        fflush(stderr);
+        
+        /* Purge buffers */
+        PurgeComm(device->handle, PURGE_RXCLEAR | PURGE_TXCLEAR);
+        
+        /* Bei Retry: DTR toggle für Reset */
+        if (retry > 0) {
+            fprintf(stderr, "[GW] Toggling DTR for reset...\n");
+            EscapeCommFunction(device->handle, CLRDTR);
+            Sleep(100);
+            EscapeCommFunction(device->handle, SETDTR);
+            Sleep(500);  /* Warten auf Boot */
+            PurgeComm(device->handle, PURGE_RXCLEAR | PURGE_TXCLEAR);
+        }
+        
+        /* GET_INFO Format A: mit 1-byte subindex (Firmware v1.x) 
+         * Sendet: 00 03 00 (cmd=0, len=3, subindex=0) */
+        fprintf(stderr, "[GW] Sending GET_INFO (format A)...\n");
+        {
+            uint8_t params[1] = {0x00};  /* Nur 1 Byte subindex! */
+            resp_len = sizeof(resp);
+            ret = gw_send_command(device->handle, 0x00, params, 1, resp, &resp_len, 3000);
+            if (ret == UFT_GW_OK && resp_len >= 4) goto parse_info;
+            fprintf(stderr, "[GW] Format A: ret=%d, len=%zu\n", ret, resp_len);
+        }
+        
+        /* GET_INFO Format B: ohne subindex (ältere Firmware) */
+        fprintf(stderr, "[GW] Sending GET_INFO (format B)...\n");
+        {
+            resp_len = sizeof(resp);
+            ret = gw_send_command(device->handle, 0x00, NULL, 0, resp, &resp_len, 3000);
+            if (ret == UFT_GW_OK && resp_len >= 4) goto parse_info;
+            fprintf(stderr, "[GW] Format B: ret=%d, len=%zu\n", ret, resp_len);
+        }
+        
+        Sleep(200);
+    }
     
-    /* Parse response */
+#else /* POSIX (Linux / macOS) */
+    
+    for (retry = 0; retry < 3; retry++) {
+        fprintf(stderr, "[GW] Attempt %d/3\n", retry + 1);
+        fflush(stderr);
+        
+        /* Drain old data */
+        gw_drain_posix(device->fd);
+        
+        /* Bei Retry: DTR toggle */
+        if (retry > 0) {
+            fprintf(stderr, "[GW] Toggling DTR for reset...\n");
+            int dtr = TIOCM_DTR;
+            ioctl(device->fd, TIOCMBIC, &dtr);  /* Clear DTR */
+            usleep(100000);
+            ioctl(device->fd, TIOCMBIS, &dtr);  /* Set DTR */
+            usleep(500000);
+            gw_drain_posix(device->fd);
+        }
+        
+        /* GET_INFO Format A */
+        fprintf(stderr, "[GW] Sending GET_INFO (format A)...\n");
+        {
+            uint8_t params[1] = {0x00};  /* Nur 1 Byte subindex! */
+            resp_len = sizeof(resp);
+            ret = gw_send_command_posix(device->fd, 0x00, params, 1, resp, &resp_len, 3000);
+            if (ret == UFT_GW_OK && resp_len >= 4) goto parse_info;
+            fprintf(stderr, "[GW] Format A: ret=%d, len=%zu\n", ret, resp_len);
+        }
+        
+        /* GET_INFO Format B */
+        fprintf(stderr, "[GW] Sending GET_INFO (format B)...\n");
+        {
+            resp_len = sizeof(resp);
+            ret = gw_send_command_posix(device->fd, 0x00, NULL, 0, resp, &resp_len, 3000);
+            if (ret == UFT_GW_OK && resp_len >= 4) goto parse_info;
+            fprintf(stderr, "[GW] Format B: ret=%d, len=%zu\n", ret, resp_len);
+        }
+        
+        usleep(200000);
+    }
+    
+#endif
+    
+    fprintf(stderr, "[GW] ===== GET_INFO FAILED =====\n\n");
+    return UFT_GW_ERR_PROTOCOL;
+    
+parse_info:
     memset(info, 0, sizeof(*info));
     info->fw_major = resp[0];
     info->fw_minor = resp[1];
-    info->is_main_fw = resp[2];
-    info->max_cmd = resp[3];
-    info->sample_freq = (uint32_t)resp[4] | 
-                        ((uint32_t)resp[5] << 8) |
-                        ((uint32_t)resp[6] << 16) |
-                        ((uint32_t)resp[7] << 24);
+    info->is_main_fw = (resp_len > 2) ? resp[2] : 1;
+    info->max_cmd = (resp_len > 3) ? resp[3] : 0x20;
     
-    /* Set default sample frequency if not reported */
-    if (info->sample_freq == 0) {
-        info->sample_freq = UFT_GW_SAMPLE_FREQ_HZ;
+    if (resp_len >= 8) {
+        info->sample_freq = (uint32_t)resp[4] | ((uint32_t)resp[5] << 8) |
+                            ((uint32_t)resp[6] << 16) | ((uint32_t)resp[7] << 24);
     }
+    if (info->sample_freq == 0) info->sample_freq = UFT_GW_SAMPLE_FREQ_HZ;
+    if (resp_len >= 9) info->hw_model = resp[8];
+    if (resp_len >= 10) info->hw_submodel = resp[9];
+    if (resp_len >= 11) info->usb_speed = resp[10];
     
-    /* Extended info if available */
-    if (resp_len >= 10) {
-        info->hw_model = resp[8];
-        info->hw_submodel = resp[9];
-    }
-    if (resp_len >= 11) {
-        info->usb_speed = resp[10];
-    }
+    fprintf(stderr, "[GW] ===== SUCCESS =====\n");
+    fprintf(stderr, "[GW] Firmware: v%d.%d, Model: %d.%d\n", 
+            info->fw_major, info->fw_minor, info->hw_model, info->hw_submodel);
+    fprintf(stderr, "[GW] ====================\n\n");
+    fflush(stderr);
     
     return UFT_GW_OK;
 }
@@ -824,15 +1316,9 @@ int uft_gw_read_flux_raw(uft_gw_device_t* device, uint8_t* buffer, size_t buffer
     if (!device || !buffer || !bytes_read) return UFT_GW_ERR_INVALID;
     
     /* Simple read without decoding */
-    uft_gw_read_params_t params = {
-        .revolutions = 1,
-        .index_sync = true,
-        .ticks = 0,
-        .read_flux_ticks = false
-    };
-    
+    /* params struct kept for documentation - not currently used */
     uint8_t cmd_params[5] = {0};
-    cmd_params[4] = 1;
+    cmd_params[4] = 1;  /* revolutions = 1 */
     
     int ret = uft_gw_command(device, UFT_GW_CMD_READ_FLUX, cmd_params, 5, NULL, NULL);
     if (ret != UFT_GW_OK) return ret;

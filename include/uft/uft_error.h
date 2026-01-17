@@ -99,8 +99,11 @@ typedef enum {
     UFT_ERR_UNKNOWN = -100
 } uft_rc_t;
 
-/** @brief Alias for compatibility */
+/** @brief Alias for compatibility - mark as defined to avoid redefinition */
+#ifndef UFT_ERROR_T_DEFINED
+#define UFT_ERROR_T_DEFINED
 typedef uft_rc_t uft_error_t;
+#endif
 
 /** @brief Alias for NULL pointer error */
 #define UFT_ERROR_NULL_POINTER UFT_ERR_INVALID_ARG

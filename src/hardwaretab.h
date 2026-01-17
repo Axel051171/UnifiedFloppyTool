@@ -37,10 +37,17 @@ public:
     bool isConnected() const { return m_connected; }
     QString currentController() const { return m_controllerType; }
     ControllerRole currentRole() const { return m_controllerRole; }
+    
+    // Device info getters
+    QString getDeviceName() const;
+    QString getFirmwareVersion() const { return m_firmwareVersion; }
+    QString getPortName() const { return m_portName; }
+    int getHardwareModel() const { return m_hwModel; }
 
 signals:
     void connectionChanged(bool connected);
     void statusMessage(const QString& message);
+    void deviceInfoChanged(const QString& deviceName, const QString& firmware);
 
 public slots:
     /**
@@ -53,6 +60,7 @@ public slots:
 private slots:
     // Connection
     void onRefreshPorts();
+    void autoRefreshPorts();
     void onConnect();
     void onDisconnect();
     void onControllerChanged(int index);
@@ -92,6 +100,7 @@ private:
     void setupConnections();
     void setupButtonGroups();
     void detectSerialPorts();
+    void detectParallelPorts();
     
     // Controller list management
     void populateControllerList();
@@ -149,6 +158,7 @@ private:
     // Timers
     QTimer *m_motorTimer;
     QTimer *m_statusTimer;
+    QTimer *m_portRefreshTimer;
 };
 
 #endif // HARDWARETAB_H
