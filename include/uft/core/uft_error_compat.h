@@ -3,15 +3,18 @@
  * @brief Error Code Compatibility Layer
  * 
  * This header provides aliases for legacy error code names.
- * Include AFTER uft_error.h
+ * Automatically includes uft_error.h for base definitions.
  */
 
 #ifndef UFT_ERROR_COMPAT_H
 #define UFT_ERROR_COMPAT_H
 
+/* Include base error definitions first */
+#include "uft/uft_error.h"
+
 /* 
- * This file should be included after uft_error.h
- * It only adds missing definitions, not duplicates
+ * This file provides compatibility aliases for legacy code.
+ * All aliases point to the canonical names defined in uft_error.h
  */
 
 /* Legacy error code aliases - only if not already defined */
@@ -25,10 +28,8 @@
 #define UFT_ERR_NOT_FOUND UFT_ERR_FILE_NOT_FOUND
 #endif
 
-/* UFT_ERR_INVALID_ARG is the canonical name in uft_error.h, provide reverse alias */
-#ifndef UFT_ERR_INVALID_ARG
-#define UFT_ERR_INVALID_ARG UFT_ERR_INVALID_PARAM
-#endif
+/* UFT_ERR_INVALID_ARG is defined in uft_error.h enum - don't create circular alias */
+/* Both UFT_ERR_INVALID_ARG and UFT_ERR_INVALID_PARAM should map to the same value */
 
 /* Typo alias: UFT_ERC_FORMAT -> UFT_ERR_CORRUPT */
 #ifndef UFT_ERC_FORMAT
@@ -59,9 +60,10 @@
 #define UFT_ERR_FILE_CREATE UFT_ERR_IO
 #endif
 
-#ifndef UFT_ERR_FORMAT
-#define UFT_ERR_FORMAT UFT_ERR_CORRUPT
-#endif
+/* UFT_ERR_FORMAT is defined in uft_error.h enum - DO NOT redefine here!
+ * The enum value UFT_ERR_FORMAT = -20 is the correct one.
+ * Legacy code using UFT_ERR_CORRUPT should use UFT_ERR_CORRUPTED instead.
+ */
 
 #ifndef UFT_ENCODING_GCR
 #define UFT_ENCODING_GCR UFT_ENCODING_GCR_COMMODORE
