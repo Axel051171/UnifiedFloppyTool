@@ -108,6 +108,9 @@ typedef uft_rc_t uft_error_t;
 /** @brief Alias for NULL pointer error */
 #define UFT_ERROR_NULL_POINTER UFT_ERR_INVALID_ARG
 
+/** @brief Alias for invalid parameter (same as INVALID_ARG) */
+#define UFT_ERR_INVALID_PARAM UFT_ERR_INVALID_ARG
+
 /** @brief Standard OK return */
 #define UFT_OK UFT_SUCCESS
 
