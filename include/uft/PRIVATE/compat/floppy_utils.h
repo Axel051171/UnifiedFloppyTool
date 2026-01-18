@@ -11,14 +11,20 @@
 
 #include "uft/uft_floppy_utils.h"
 
-/* Bit manipulation macros for track data */
+/* Bit manipulation macros for track data
+ * Only define if not already provided by libflux_compat.h
+ */
 #ifndef HAVE_GETBIT
 #define HAVE_GETBIT 1
+#endif
 
+#ifndef getbit
 static inline int getbit(const unsigned char *data, int bit_offset) {
     return (data[bit_offset >> 3] >> (7 - (bit_offset & 7))) & 1;
 }
+#endif
 
+#ifndef setbit
 static inline void setbit(unsigned char *data, int bit_offset, int value) {
     int byte_idx = bit_offset >> 3;
     int bit_pos = 7 - (bit_offset & 7);
@@ -27,7 +33,6 @@ static inline void setbit(unsigned char *data, int bit_offset, int value) {
     else
         data[byte_idx] &= ~(1 << bit_pos);
 }
-
-#endif /* HAVE_GETBIT */
+#endif
 
 #endif /* UFT_PRIVATE_FLOPPY_UTILS_H */
