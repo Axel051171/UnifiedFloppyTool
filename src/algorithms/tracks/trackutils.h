@@ -9,10 +9,8 @@
 
 #include <stdint.h>
 
-/* getbit/setbit provided by floppy_utils.h or libflux_compat.h */
-#ifndef HAVE_GETBIT
-#include "uft/PRIVATE/compat/floppy_utils.h"
-#endif
+/* getbit/setbit provided by libflux_compat.h - the canonical source */
+#include "libflux_compat.h"
 
 void setfieldbit(unsigned char * dstbuffer,unsigned char byte,int bitoffset,int size);
 
