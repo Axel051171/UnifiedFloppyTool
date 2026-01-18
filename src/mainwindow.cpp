@@ -103,6 +103,12 @@ void MainWindow::loadTabWidgets()
     connect(workflowTab, &WorkflowTab::hardwareModeChanged,
             hardwareTab, &HardwareTab::setWorkflowModes);
     
+    // Connect WorkflowTab hardware read/write requests to HardwareTab
+    connect(workflowTab, &WorkflowTab::requestHardwareRead,
+            hardwareTab, &HardwareTab::readDiskToFile);
+    connect(workflowTab, &WorkflowTab::requestHardwareWrite,
+            hardwareTab, &HardwareTab::writeFileToDisk);
+    
     // Connect HardwareTab device info to WorkflowTab status display
     connect(hardwareTab, &HardwareTab::deviceInfoChanged,
             workflowTab, &WorkflowTab::onDeviceInfoChanged);

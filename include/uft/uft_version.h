@@ -10,10 +10,10 @@
 
 #define UFT_VERSION_MAJOR 4
 #define UFT_VERSION_MINOR 0
-#define UFT_VERSION_PATCH 0
+#define UFT_VERSION_PATCH 1
 
-#define UFT_VERSION_STRING "4.0.0"
-#define UFT_VERSION_FULL "UnifiedFloppyTool v4.0.0"
+#define UFT_VERSION_STRING "4.0.1"
+#define UFT_VERSION_FULL "UnifiedFloppyTool v4.0.1"
 
 /* Build info - set by CI or build system */
 #ifndef UFT_BUILD_DATE

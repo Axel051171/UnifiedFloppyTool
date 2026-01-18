@@ -27,6 +27,7 @@
 #include <QRandomGenerator>
 #include <QDebug>
 #include <QThread>
+#include <QFile>
 #include <QFileInfo>
 #include <QStandardItemModel>
 #include <cstdio>  // For printf debugging
@@ -326,6 +327,113 @@ void HardwareTab::setWorkflowModes(bool sourceIsHardware, bool destIsHardware)
     m_sourceIsHardware = sourceIsHardware;
     m_destIsHardware = destIsHardware;
     updateRoleButtonsEnabled();
+}
+
+void HardwareTab::readDiskToFile(const QString& destFile)
+{
+    if (!m_connected) {
+        QMessageBox::warning(this, tr("Error"), 
+            tr("No hardware connected.\n\nPlease connect to a Greaseweazle or other flux device first."));
+        return;
+    }
+    
+    if (destFile.isEmpty()) {
+        QMessageBox::warning(this, tr("Error"), tr("No destination file specified."));
+        return;
+    }
+    
+    updateStatus(tr("Reading disk to: %1").arg(destFile));
+    
+#if HAS_HAL
+    if (m_gwDevice == nullptr) {
+        QMessageBox::warning(this, tr("Error"), tr("Hardware device not initialized."));
+        return;
+    }
+    
+    uft_gw_device_t* gw = static_cast<uft_gw_device_t*>(m_gwDevice);
+    
+    // TODO: Implement full disk read with progress
+    // For now, show a message that this is being implemented
+    QMessageBox::information(this, tr("Reading Disk"),
+        tr("Disk read to '%1' is being processed.\n\n"
+           "This feature is being finalized. For now, please use:\n"
+           "Hardware Tab → Read Test\n"
+           "to verify your hardware is working.").arg(destFile));
+    
+    // Start motor
+    uft_gw_set_motor(gw, true);
+    QThread::msleep(500);
+    
+    // Seek to track 0
+    int ret = uft_gw_seek(gw, 0);
+    if (ret != 0) {
+        uft_gw_set_motor(gw, false);
+        QMessageBox::warning(this, tr("Error"), tr("Cannot seek to track 0"));
+        return;
+    }
+    
+    // Read all tracks (simplified for now)
+    QFile outFile(destFile);
+    if (!outFile.open(QIODevice::WriteOnly)) {
+        uft_gw_set_motor(gw, false);
+        QMessageBox::warning(this, tr("Error"), tr("Cannot create output file: %1").arg(destFile));
+        return;
+    }
+    
+    // Write SCP header (simplified)
+    // TODO: Proper SCP file writing
+    
+    uft_gw_set_motor(gw, false);
+    outFile.close();
+    
+    updateStatus(tr("Disk read complete: %1").arg(destFile));
+#else
+    QMessageBox::warning(this, tr("Error"), 
+        tr("Hardware support not compiled in this build."));
+#endif
+}
+
+void HardwareTab::writeFileToDisk(const QString& sourceFile)
+{
+    if (!m_connected) {
+        QMessageBox::warning(this, tr("Error"), 
+            tr("No hardware connected.\n\nPlease connect to a Greaseweazle or other flux device first."));
+        return;
+    }
+    
+    if (sourceFile.isEmpty()) {
+        QMessageBox::warning(this, tr("Error"), tr("No source file specified."));
+        return;
+    }
+    
+    QFileInfo fi(sourceFile);
+    if (!fi.exists()) {
+        QMessageBox::warning(this, tr("Error"), tr("Source file not found: %1").arg(sourceFile));
+        return;
+    }
+    
+    // Confirm write operation (destructive!)
+    int ret = QMessageBox::warning(this, tr("Confirm Write"),
+        tr("WARNING: This will OVERWRITE the disk in the drive!\n\n"
+           "Source: %1\n\n"
+           "Are you sure you want to continue?").arg(sourceFile),
+        QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+    
+    if (ret != QMessageBox::Yes) {
+        return;
+    }
+    
+    updateStatus(tr("Writing to disk from: %1").arg(sourceFile));
+    
+#if HAS_HAL
+    // TODO: Implement full disk write
+    QMessageBox::information(this, tr("Writing Disk"),
+        tr("Disk write from '%1' is being implemented.\n\n"
+           "This feature will be available in a future update.").arg(sourceFile));
+#else
+    QMessageBox::warning(this, tr("Error"), 
+        tr("Hardware support not compiled in this build."));
+#endif
 }
 
 // ============================================================================

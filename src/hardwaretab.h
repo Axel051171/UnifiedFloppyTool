@@ -56,6 +56,18 @@ public slots:
      * @param destMode true if Workflow dest is Flux/USB, false if File
      */
     void setWorkflowModes(bool sourceIsHardware, bool destIsHardware);
+    
+    /**
+     * @brief Read disk to file (called from WorkflowTab)
+     * @param destFile Destination file path for the disk image
+     */
+    void readDiskToFile(const QString& destFile);
+    
+    /**
+     * @brief Write file to disk (called from WorkflowTab)
+     * @param sourceFile Source file path of the disk image
+     */
+    void writeFileToDisk(const QString& sourceFile);
 
 private slots:
     // Connection

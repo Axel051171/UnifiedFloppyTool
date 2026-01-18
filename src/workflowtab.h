@@ -70,6 +70,8 @@ signals:
     void operationFinished(bool success);
     void progressChanged(int percentage);
     void hardwareModeChanged(bool sourceIsHardware, bool destIsHardware);
+    void requestHardwareRead(const QString& destFile);   // Flux/USB → File
+    void requestHardwareWrite(const QString& sourceFile); // File → Flux/USB
 
 public slots:
     void onDeviceInfoChanged(const QString& deviceName, const QString& firmware);

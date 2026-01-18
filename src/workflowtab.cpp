@@ -504,6 +504,40 @@ void WorkflowTab::onStartAbortClicked()
         
         emit operationStarted();
         
+        // =====================================================================
+        // ROUTE BASED ON SOURCE/DESTINATION MODE
+        // =====================================================================
+        
+        if (m_sourceMode == Flux || m_sourceMode == USB) {
+            // Reading from hardware - emit signal to hardware tab
+            if (m_destMode == File && !m_destFile.isEmpty()) {
+                // Flux/USB → File: Request hardware read
+                emit requestHardwareRead(m_destFile);
+                resetUI();
+                return;
+            } else {
+                QMessageBox::warning(this, tr("Not Implemented"),
+                    tr("Direct hardware-to-hardware copy is not yet supported.\n\n"
+                       "Workaround:\n"
+                       "1. Read disk to file first (Flux → File)\n"
+                       "2. Then write file to disk (File → Flux)"));
+                emit operationFinished(false);
+                resetUI();
+                return;
+            }
+        }
+        
+        if (m_destMode == Flux || m_destMode == USB) {
+            // Writing to hardware
+            if (m_sourceMode == File && !m_sourceFile.isEmpty()) {
+                // File → Flux/USB: Request hardware write
+                emit requestHardwareWrite(m_sourceFile);
+                resetUI();
+                return;
+            }
+        }
+        
+        // File → File: Use DecodeJob
         // Create worker thread
         m_workerThread = new QThread(this);
         m_decodeJob = new DecodeJob();

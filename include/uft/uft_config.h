@@ -25,7 +25,7 @@
 #define UFT_CONFIG_VERSION_MAJOR   4
 #define UFT_CONFIG_VERSION_MINOR   0
 #define UFT_CONFIG_VERSION_PATCH   0
-#define UFT_CONFIG_VERSION_STRING  "4.0.0"
+#define UFT_CONFIG_VERSION_STRING  "4.0.1"
 
 /*============================================================================
  * PLATFORM DETECTION
