@@ -208,7 +208,7 @@ bool UftOtdrPanel::loadFluxImage(const QString &path)
     int rc = uft_scp_open(m_scpCtx, path.toUtf8().constData());
     if (rc != 0) {
         m_statusLabel->setText(QString("Failed to open SCP: %1").arg(rc));
-        uft_scp_free(m_scpCtx);
+        uft_scp_destroy(m_scpCtx);
         m_scpCtx = nullptr;
         return false;
     }
@@ -219,7 +219,7 @@ bool UftOtdrPanel::loadFluxImage(const QString &path)
     if (totalTracks <= 0 || totalTracks > 332) {
         m_statusLabel->setText("Invalid track range in SCP");
         uft_scp_close(m_scpCtx);
-        uft_scp_free(m_scpCtx);
+        uft_scp_destroy(m_scpCtx);
         m_scpCtx = nullptr;
         return false;
     }
@@ -230,7 +230,7 @@ bool UftOtdrPanel::loadFluxImage(const QString &path)
     if (!m_disk) {
         m_statusLabel->setText("Failed to create disk analysis");
         uft_scp_close(m_scpCtx);
-        uft_scp_free(m_scpCtx);
+        uft_scp_destroy(m_scpCtx);
         m_scpCtx = nullptr;
         return false;
     }
@@ -250,7 +250,7 @@ bool UftOtdrPanel::loadFluxImage(const QString &path)
             m_disk->tracks[t].head      = (uint8_t)(t % 2);
             m_disk->tracks[t].track_num = (uint8_t)t;
 
-            for (int r = 0; r < (int)td.num_revolutions && r < OTDR_MAX_REVOLUTIONS; r++) {
+            for (int r = 0; r < (int)td.revolution_count && r < OTDR_MAX_REVOLUTIONS; r++) {
                 if (td.revolutions[r].flux_data && td.revolutions[r].flux_count > 0) {
                     otdr_track_load_flux(&m_disk->tracks[t],
                                         td.revolutions[r].flux_data,
@@ -522,7 +522,7 @@ void UftOtdrPanel::updateStatsDisplay()
 void UftOtdrPanel::freeCurrentAnalysis()
 {
     if (m_disk) { otdr_disk_free(m_disk); m_disk = nullptr; }
-    if (m_scpCtx) { uft_scp_close(m_scpCtx); uft_scp_free(m_scpCtx); m_scpCtx = nullptr; }
+    if (m_scpCtx) { uft_scp_close(m_scpCtx); uft_scp_destroy(m_scpCtx); m_scpCtx = nullptr; }
     m_currentTrack = -1;
     m_currentFile.clear();
 }
