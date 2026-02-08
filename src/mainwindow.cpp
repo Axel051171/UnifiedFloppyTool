@@ -12,6 +12,7 @@
 #include "formattab.h"
 #include "explorertab.h"
 #include "toolstab.h"
+#include "uft_otdr_panel.h"
 
 #include <QVBoxLayout>
 #include <QFileDialog>
@@ -132,6 +133,12 @@ void MainWindow::loadTabWidgets()
     QVBoxLayout* layout5 = new QVBoxLayout(ui->tab_tools);
     layout5->setContentsMargins(0, 0, 0, 0);
     layout5->addWidget(toolsTab);
+    
+    // Tab 7: Signal Analysis — OTDR-style flux quality visualization
+    m_otdrPanel = new UftOtdrPanel();
+    QVBoxLayout* layoutOtdr = new QVBoxLayout(ui->tab_signal_analysis);
+    layoutOtdr->setContentsMargins(0, 0, 0, 0);
+    layoutOtdr->addWidget(m_otdrPanel);
 }
 
 void MainWindow::setupConnections()
@@ -280,6 +287,13 @@ void MainWindow::openFile(const QString &filename)
     // Start decode job for status display
     startDecode(filename);
     emit imageLoaded(filename, info);
+    
+    // Auto-trigger Signal Analysis for flux format images
+    if (info.isFluxFormat && m_otdrPanel) {
+        if (m_otdrPanel->loadFluxImage(filename)) {
+            ui->tabWidget->setCurrentWidget(ui->tab_signal_analysis);
+        }
+    }
 }
 
 void MainWindow::updateRecentFilesMenu()

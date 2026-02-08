@@ -313,6 +313,11 @@ QSplitter::handle:hover {
          <string>Forensic</string>
         </attribute>
        </widget>
+       <widget class="QWidget" name="tabSignalAnalysis">
+        <attribute name="title">
+         <string>Signal Analysis</string>
+        </attribute>
+       </widget>
        <widget class="QWidget" name="tabProtection">
         <attribute name="title">
          <string>Protection</string>

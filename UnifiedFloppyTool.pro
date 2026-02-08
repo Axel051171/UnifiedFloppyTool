@@ -58,6 +58,9 @@ unix:QMAKE_CFLAGS += -Wall -Wextra -Wno-unused-parameter
 win32 {
     LIBS += -lshlwapi -lshell32 -ladvapi32 -lws2_32
     DEFINES += _CRT_SECURE_NO_WARNINGS
+    # POSIX shims for hactool (getopt.h, strings.h)
+    INCLUDEPATH += $$PWD/src/switch/hactool/compat
+    SOURCES += src/switch/hactool/compat/getopt.c
 }
 
 # macOS specific
@@ -77,6 +80,8 @@ INCLUDEPATH += \
     include/uft/detect \
     include/uft/analysis \
     src \
+    src/gui \
+    src/analysis/otdr \
     src/samdisk \
     src/hardware_providers \
     src/widgets \
@@ -143,7 +148,9 @@ SOURCES += \
     src/settingsmanager.cpp \
     src/gw_device_detector.cpp \
     src/gw_output_parser.cpp \
-    src/qmake_stubs/uft_protection_stubs.cpp
+    src/qmake_stubs/uft_protection_stubs.cpp \
+    src/gui/uft_otdr_panel.cpp \
+    src/flux/uft_scp_parser.c
 
 # Main GUI Headers (CRITICAL for MOC!)
 HEADERS += \
@@ -163,12 +170,9 @@ HEADERS += \
     include/uft/analysis/otdr_event_core_v2.h \
     include/uft/analysis/uft_denoise_bridge.h \
     include/uft/analysis/phi_otdr_denoise_1d.h \
-           include/uft/formats/uft_dms.h \
-           include/uft/detect \
+    include/uft/formats/uft_dms.h \
     include/uft/analysis/mfm_detect.h \
-           include/uft/detect \
     include/uft/analysis/cpm_fs.h \
-           include/uft/detect \
     include/uft/analysis/uft_mfm_detect_bridge.h \
     src/advanceddialogs.h \
     src/mainwindow.h \
@@ -192,7 +196,9 @@ HEADERS += \
     src/gw_device_detector.h \
     src/gw_output_parser.h \
     src/inputvalidation.h \
-    src/pathutils.h
+    src/pathutils.h \
+    src/gui/uft_otdr_panel.h \
+    include/uft/flux/uft_scp_parser.h
 
 # FDC Bitstream Sources (VFO/PLL implementations)
 SOURCES += \

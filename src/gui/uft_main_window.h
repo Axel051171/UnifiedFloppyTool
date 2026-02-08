@@ -39,6 +39,7 @@ class UftProtectionPanel;
 class UftHexViewerPanel;
 class UftFileBrowserPanel;
 class UftHardwarePanel;
+class UftOtdrPanel;
 class UftTrackGridWidget;
 class UftDmkAnalyzerPanel;
 class UftGw2DmkPanel;
@@ -131,6 +132,7 @@ private:
     UftHexViewerPanel  *m_hexViewerPanel;
     UftFileBrowserPanel *m_fileBrowserPanel;
     UftHardwarePanel   *m_hardwarePanel;
+    UftOtdrPanel       *m_otdrPanel;
     UftDmkAnalyzerPanel *m_dmkAnalyzerPanel;
     UftGw2DmkPanel     *m_gw2DmkPanel;
     

@@ -58,6 +58,7 @@
       <widget class="QWidget" name="tab_format"><attribute name="title"><string>Settings</string></attribute></widget>
       <widget class="QWidget" name="tab_explorer"><attribute name="title"><string>Explorer</string></attribute></widget>
       <widget class="QWidget" name="tab_tools"><attribute name="title"><string>Tools</string></attribute></widget>
+      <widget class="QWidget" name="tab_signal_analysis"><attribute name="title"><string>Signal Analysis</string></attribute></widget>
      </widget>
     </item>
    </layout>

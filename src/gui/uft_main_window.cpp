@@ -17,6 +17,7 @@
 #include "uft_hex_viewer_panel.h"
 #include "uft_file_browser_panel.h"
 #include "uft_hardware_panel.h"
+#include "uft_otdr_panel.h"
 #include "uft_track_grid_widget.h"
 #include "uft_dmk_analyzer_panel.h"
 #include "uft_gw2dmk_panel.h"
@@ -79,6 +80,7 @@ void UftMainWindow::setupCentralWidget()
     m_fileBrowserPanel = new UftFileBrowserPanel(this);
     m_hexViewerPanel = new UftHexViewerPanel(this);
     m_hardwarePanel = new UftHardwarePanel(this);
+    m_otdrPanel = new UftOtdrPanel(this);
     m_dmkAnalyzerPanel = new UftDmkAnalyzerPanel(this);
     m_gw2DmkPanel = new UftGw2DmkPanel(this);
     
@@ -100,6 +102,9 @@ void UftMainWindow::setupCentralWidget()
     
     ui->tabForensic->setLayout(new QVBoxLayout);
     ui->tabForensic->layout()->addWidget(m_forensicPanel);
+    
+    ui->tabSignalAnalysis->setLayout(new QVBoxLayout);
+    ui->tabSignalAnalysis->layout()->addWidget(m_otdrPanel);
     
     ui->tabProtection->setLayout(new QVBoxLayout);
     ui->tabProtection->layout()->addWidget(m_protectionPanel);
@@ -265,6 +270,13 @@ bool UftMainWindow::openImage(const QString &path)
     
     /* Load file browser */
     m_fileBrowserPanel->loadDirectory(path);
+    
+    /* Auto-trigger Signal Analysis for flux files */
+    if (detectedFormat.startsWith("SCP") || detectedFormat.startsWith("HFE")) {
+        if (m_otdrPanel->loadFluxImage(path)) {
+            ui->mainTabs->setCurrentWidget(ui->tabSignalAnalysis);
+        }
+    }
     
     emit imageLoaded(path);
     return true;

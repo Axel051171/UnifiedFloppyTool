@@ -21,6 +21,7 @@ QT_END_NAMESPACE
 class VisualDiskWindow;
 class StatusTab;
 class DecodeJob;
+class UftOtdrPanel;
 
 class MainWindow : public QMainWindow
 {
@@ -82,6 +83,7 @@ private:
     
     // Tab references for signal connections
     StatusTab* m_statusTab = nullptr;
+    UftOtdrPanel* m_otdrPanel = nullptr;
     
     // Decode thread
     QThread* m_decodeThread = nullptr;
