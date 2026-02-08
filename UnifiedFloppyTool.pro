@@ -406,7 +406,7 @@ SOURCES += \
     src/analysis/events/otdr_event_core_v2.c \
     src/analysis/denoise/uft_denoise_bridge.c \
     src/analysis/denoise/phi_otdr_denoise_1d.c \
-    src/formats/d64/uft_d64_parser_v3.c \
+    src/formats/d64/uft_d64_parser_v3.c
 
 # G64 - Commodore 64 with timing data
 SOURCES += \
@@ -426,7 +426,7 @@ SOURCES += \
     src/analysis/events/otdr_event_core_v2.c \
     src/analysis/denoise/uft_denoise_bridge.c \
     src/analysis/denoise/phi_otdr_denoise_1d.c \
-    src/formats/g64/uft_g64_parser_v3.c \
+    src/formats/g64/uft_g64_parser_v3.c
 
 # ADF - Amiga
 SOURCES += \
@@ -446,7 +446,7 @@ SOURCES += \
     src/analysis/events/otdr_event_core_v2.c \
     src/analysis/denoise/uft_denoise_bridge.c \
     src/analysis/denoise/phi_otdr_denoise_1d.c \
-    src/formats/adf/uft_adf_parser_v3.c \
+    src/formats/adf/uft_adf_parser_v3.c
 
 # HDF - Amiga Hard Disk (P1 Feature)
 SOURCES += \
@@ -528,7 +528,7 @@ SOURCES += \
     src/analysis/events/otdr_event_core_v2.c \
     src/analysis/denoise/uft_denoise_bridge.c \
     src/analysis/denoise/phi_otdr_denoise_1d.c \
-    src/formats/scp/uft_scp_parser_v3.c \
+    src/formats/scp/uft_scp_parser_v3.c
 
 # IMD - ImageDisk
 SOURCES += \
@@ -548,7 +548,7 @@ SOURCES += \
     src/analysis/events/otdr_event_core_v2.c \
     src/analysis/denoise/uft_denoise_bridge.c \
     src/analysis/denoise/phi_otdr_denoise_1d.c \
-    src/formats/imd/uft_imd_parser_v3.c \
+    src/formats/imd/uft_imd_parser_v3.c
 
 # DSK - Standard disk image
 SOURCES += \
@@ -691,7 +691,7 @@ HEADERS += \
 # UFT Advanced Mode
 # ═══════════════════════════════════════════════════════════════════════════════
 
-SOURCES += src/core/uft_advanced_mode.c
+SOURCES += src/core/uft_advanced_mode.c \
     src/analysis/events/uft_export_bridge.c \
     src/analysis/events/otdr_event_core_v12.c \
     src/analysis/events/uft_pipeline_bridge.c \
@@ -707,9 +707,9 @@ SOURCES += src/core/uft_advanced_mode.c
     src/analysis/events/uft_event_bridge.c \
     src/analysis/events/otdr_event_core_v2.c \
     src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
+    src/analysis/denoise/phi_otdr_denoise_1d.c
 
-HEADERS += include/uft/uft_advanced_mode.h
+HEADERS += include/uft/uft_advanced_mode.h \
     include/uft/analysis/uft_export_bridge.h \
     include/uft/analysis/otdr_event_core_v12.h \
     include/uft/analysis/uft_pipeline_bridge.h \
@@ -725,8 +725,8 @@ HEADERS += include/uft/uft_advanced_mode.h
     include/uft/analysis/uft_event_bridge.h \
     include/uft/analysis/otdr_event_core_v2.h \
     include/uft/analysis/uft_denoise_bridge.h \
-    include/uft/analysis/phi_otdr_denoise_1d.h \
-HEADERS += include/uft/uft_v3_bridge.h
+    include/uft/analysis/phi_otdr_denoise_1d.h
+HEADERS += include/uft/uft_v3_bridge.h \
     include/uft/analysis/uft_export_bridge.h \
     include/uft/analysis/otdr_event_core_v12.h \
     include/uft/analysis/uft_pipeline_bridge.h \
@@ -742,7 +742,7 @@ HEADERS += include/uft/uft_v3_bridge.h
     include/uft/analysis/uft_event_bridge.h \
     include/uft/analysis/otdr_event_core_v2.h \
     include/uft/analysis/uft_denoise_bridge.h \
-    include/uft/analysis/phi_otdr_denoise_1d.h \
+    include/uft/analysis/phi_otdr_denoise_1d.h
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Additional Format Parsers
@@ -1386,7 +1386,7 @@ SOURCES += \
     src/formats/uft_d64_writer.c \
     src/formats/uft_format_extensions.c \
     src/formats/uft_format_names_extended.c \
-    src/formats/uft_format_versions.c \
+    src/formats/uft_format_versions.c
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -1472,7 +1472,7 @@ SOURCES += \
     src/formats/logical/uft_logical.c \
     src/formats/posix/uft_posix.c
 
-SOURCES += src/formats/mega65/uft_mega65_d81.c
+SOURCES += src/formats/mega65/uft_mega65_d81.c \
     src/analysis/events/uft_export_bridge.c \
     src/analysis/events/otdr_event_core_v12.c \
     src/analysis/events/uft_pipeline_bridge.c \
@@ -1488,7 +1488,7 @@ SOURCES += src/formats/mega65/uft_mega65_d81.c
     src/analysis/events/uft_event_bridge.c \
     src/analysis/events/otdr_event_core_v2.c \
     src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
+    src/analysis/denoise/phi_otdr_denoise_1d.c
 
 # v4.0 GUI Panels (DMK Analyzer, GW→DMK, Flux Histogram)
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -1692,7 +1692,7 @@ SOURCES += \
 # Note: hactool wrappers renamed to hactool_aes.c/hactool_rsa.c to avoid collision
 MBEDTLS_PATH = $$PWD/src/switch/hactool/mbedtls/library
 MBEDTLS_SOURCES = $$files($$MBEDTLS_PATH/*.c)
-SOURCES += $$MBEDTLS_SOURCES
+SOURCES += $$MBEDTLS_SOURCES \
     src/analysis/events/uft_export_bridge.c \
     src/analysis/events/otdr_event_core_v12.c \
     src/analysis/events/uft_pipeline_bridge.c \
@@ -1708,7 +1708,7 @@ SOURCES += $$MBEDTLS_SOURCES
     src/analysis/events/uft_event_bridge.c \
     src/analysis/events/otdr_event_core_v2.c \
     src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
+    src/analysis/denoise/phi_otdr_denoise_1d.c
 
 # Suppress warnings in third-party code
 QMAKE_CFLAGS += -Wno-unused-parameter -Wno-sign-compare
@@ -2124,7 +2124,7 @@ SOURCES += \
     src/analysis/events/uft_event_bridge.c \
     src/analysis/events/otdr_event_core_v2.c \
     src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
+    src/analysis/denoise/phi_otdr_denoise_1d.c
 
 # Brother (1 files)
 SOURCES += \
@@ -2220,7 +2220,7 @@ SOURCES += \
     src/analysis/events/uft_event_bridge.c \
     src/analysis/events/otdr_event_core_v2.c \
     src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
+    src/analysis/denoise/phi_otdr_denoise_1d.c
 
 # CMD FD (1 files)
 SOURCES += \
@@ -2239,7 +2239,7 @@ SOURCES += \
     src/analysis/events/uft_event_bridge.c \
     src/analysis/events/otdr_event_core_v2.c \
     src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
+    src/analysis/denoise/phi_otdr_denoise_1d.c
 
 # CPM (5 files)
 SOURCES += \
@@ -2469,7 +2469,7 @@ SOURCES += \
     src/analysis/events/uft_event_bridge.c \
     src/analysis/events/otdr_event_core_v2.c \
     src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
+    src/analysis/denoise/phi_otdr_denoise_1d.c
 
 # Geometry (1 files)
 SOURCES += \
@@ -2488,7 +2488,7 @@ SOURCES += \
     src/analysis/events/uft_event_bridge.c \
     src/analysis/events/otdr_event_core_v2.c \
     src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
+    src/analysis/denoise/phi_otdr_denoise_1d.c
 
 # HP (1 files)
 SOURCES += \
@@ -2527,7 +2527,7 @@ SOURCES += \
     src/analysis/events/uft_event_bridge.c \
     src/analysis/events/otdr_event_core_v2.c \
     src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
+    src/analysis/denoise/phi_otdr_denoise_1d.c
 
 # Industrial (2 files)
 SOURCES += \
@@ -2590,7 +2590,7 @@ SOURCES += \
     src/analysis/events/otdr_event_core_v2.c \
     src/analysis/denoise/uft_denoise_bridge.c \
     src/analysis/denoise/phi_otdr_denoise_1d.c \
-    src/formats/kryoflux/uft_kryoflux_checker.c \
+    src/formats/kryoflux/uft_kryoflux_checker.c
 
 # Legacy (4 files)
 SOURCES += \
@@ -2631,7 +2631,7 @@ SOURCES += \
     src/analysis/events/uft_event_bridge.c \
     src/analysis/events/otdr_event_core_v2.c \
     src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
+    src/analysis/denoise/phi_otdr_denoise_1d.c
 
 # MAME (1 files)
 SOURCES += \
@@ -2710,7 +2710,7 @@ SOURCES += \
     src/analysis/events/uft_event_bridge.c \
     src/analysis/events/otdr_event_core_v2.c \
     src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
+    src/analysis/denoise/phi_otdr_denoise_1d.c
 
 # Micropolis (1 files)
 SOURCES += \
@@ -2770,7 +2770,7 @@ SOURCES += \
     src/analysis/events/uft_event_bridge.c \
     src/analysis/events/otdr_event_core_v2.c \
     src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
+    src/analysis/denoise/phi_otdr_denoise_1d.c
 
 # NEC (1 files)
 SOURCES += \
@@ -2809,7 +2809,7 @@ SOURCES += \
     src/analysis/events/uft_event_bridge.c \
     src/analysis/events/otdr_event_core_v2.c \
     src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
+    src/analysis/denoise/phi_otdr_denoise_1d.c
 
 # Nintendo (7 files)
 SOURCES += \
@@ -2918,7 +2918,7 @@ SOURCES += \
     src/analysis/events/uft_event_bridge.c \
     src/analysis/events/otdr_event_core_v2.c \
     src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
+    src/analysis/denoise/phi_otdr_denoise_1d.c
 
 # Posix (1 files)
 SOURCES += \
@@ -2937,7 +2937,7 @@ SOURCES += \
     src/analysis/events/uft_event_bridge.c \
     src/analysis/events/otdr_event_core_v2.c \
     src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
+    src/analysis/denoise/phi_otdr_denoise_1d.c
 
 # QL (1 files)
 SOURCES += \
@@ -2976,7 +2976,7 @@ SOURCES += \
     src/analysis/events/uft_event_bridge.c \
     src/analysis/events/otdr_event_core_v2.c \
     src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
+    src/analysis/denoise/phi_otdr_denoise_1d.c
 
 # RCPMFS (1 files)
 SOURCES += \
@@ -2995,7 +2995,7 @@ SOURCES += \
     src/analysis/events/uft_event_bridge.c \
     src/analysis/events/otdr_event_core_v2.c \
     src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
+    src/analysis/denoise/phi_otdr_denoise_1d.c
 
 # Roland (1 files)
 SOURCES += \
@@ -3014,7 +3014,7 @@ SOURCES += \
     src/analysis/events/uft_event_bridge.c \
     src/analysis/events/otdr_event_core_v2.c \
     src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
+    src/analysis/denoise/phi_otdr_denoise_1d.c
 
 # Russian (1 files)
 SOURCES += \
@@ -3033,7 +3033,7 @@ SOURCES += \
     src/analysis/events/uft_event_bridge.c \
     src/analysis/events/otdr_event_core_v2.c \
     src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
+    src/analysis/denoise/phi_otdr_denoise_1d.c
 
 # SIMH (1 files)
 SOURCES += \
@@ -3052,7 +3052,7 @@ SOURCES += \
     src/analysis/events/uft_event_bridge.c \
     src/analysis/events/otdr_event_core_v2.c \
     src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
+    src/analysis/denoise/phi_otdr_denoise_1d.c
 
 # SNK (2 files)
 SOURCES += \
@@ -3154,7 +3154,7 @@ SOURCES += \
     src/analysis/events/uft_event_bridge.c \
     src/analysis/events/otdr_event_core_v2.c \
     src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
+    src/analysis/denoise/phi_otdr_denoise_1d.c
 
 # TI99 (4 files)
 SOURCES += \
@@ -3235,7 +3235,7 @@ SOURCES += \
     src/analysis/events/uft_event_bridge.c \
     src/analysis/events/otdr_event_core_v2.c \
     src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
+    src/analysis/denoise/phi_otdr_denoise_1d.c
 
 # YDSK (1 files)
 SOURCES += \
@@ -3254,7 +3254,7 @@ SOURCES += \
     src/analysis/events/uft_event_bridge.c \
     src/analysis/events/otdr_event_core_v2.c \
     src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
+    src/analysis/denoise/phi_otdr_denoise_1d.c
 
 # Zilog (1 files)
 SOURCES += \
