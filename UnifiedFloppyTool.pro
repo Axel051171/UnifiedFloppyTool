@@ -3305,3 +3305,16 @@ INCLUDEPATH += \
     $$PWD/src/formats/nintendo \
     $$PWD/src/formats/sega \
     $$PWD/include/uft/floppy
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# BUILD FIXES (v4.1.0)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Fix 1: Deduplicate SOURCES/HEADERS (OTDR bridge files 100× duplicated)
+SOURCES = $$unique(SOURCES)
+HEADERS = $$unique(HEADERS)
+
+# Fix 2: MSVC C11 mode for .c files (MSVC defaults to C89)
+win32-msvc* {
+    QMAKE_CFLAGS += /std:c11
+}

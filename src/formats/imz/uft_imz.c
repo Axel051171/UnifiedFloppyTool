@@ -182,7 +182,7 @@ uft_imz_t* uft_imz_open(const char *path) {
     if (fread(&local, sizeof(local), 1, f) != 1) {
     if (ferror(f)) {
         fclose(f);
-        return UFT_ERR_IO;
+        return NULL;
     }
                 fclose(f);
         return NULL;
@@ -191,7 +191,7 @@ uft_imz_t* uft_imz_open(const char *path) {
     if (local.signature != ZIP_LOCAL_SIG) {
     if (ferror(f)) {
         fclose(f);
-        return UFT_ERR_IO;
+        return NULL;
     }
                 fclose(f);
         return NULL;
@@ -205,7 +205,7 @@ uft_imz_t* uft_imz_open(const char *path) {
     if (!compressed) {
     if (ferror(f)) {
         fclose(f);
-        return UFT_ERR_IO;
+        return NULL;
     }
                 fclose(f);
         return NULL;
@@ -215,7 +215,7 @@ uft_imz_t* uft_imz_open(const char *path) {
         free(compressed);
         if (ferror(f)) {
             fclose(f);
-            return UFT_ERR_IO;
+            return NULL;
         }
                 fclose(f);
         return NULL;
