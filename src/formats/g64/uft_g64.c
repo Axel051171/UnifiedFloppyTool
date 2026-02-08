@@ -750,10 +750,10 @@ static uft_error_t g64_write_track(uft_disk_t* disk, int cylinder, int head,
             
             /* Header block: 0x08, checksum, sector, track+1, id2, id1, 0x0F, 0x0F */
             uint8_t trk1 = (uint8_t)(cylinder + 1);
-            uint8_t hdr_cksum = (uint8_t)(track->sectors[si].sector_id ^ trk1 ^ 0x00 ^ 0x00);
+            uint8_t hdr_cksum = (uint8_t)(track->sectors[si].id.sector ^ trk1 ^ 0x00 ^ 0x00);
             GCR_ENCODE_BYTE(0x08, gcr_track, bp);
             GCR_ENCODE_BYTE(hdr_cksum, gcr_track, bp);
-            GCR_ENCODE_BYTE(track->sectors[si].sector_id, gcr_track, bp);
+            GCR_ENCODE_BYTE(track->sectors[si].id.sector, gcr_track, bp);
             GCR_ENCODE_BYTE(trk1, gcr_track, bp);
             GCR_ENCODE_BYTE(0x00, gcr_track, bp);  /* id2 */
             GCR_ENCODE_BYTE(0x00, gcr_track, bp);  /* id1 */

@@ -318,7 +318,7 @@ char* uft_d64_v3_get_diagnosis(void* handle) {
     len += snprintf(diag + len, 1024 - len, "D64 Disk Diagnosis:\n");
     
     /* Check track count */
-    size_t disk_size = h->buffer_size;
+    size_t disk_size = h->raw_size;
     int tracks = (disk_size <= 174848) ? 35 : (disk_size <= 196608) ? 40 : 35;
     len += snprintf(diag + len, 1024 - len, "  Tracks: %d\n", tracks);
     len += snprintf(diag + len, 1024 - len, "  Size: %zu bytes\n", disk_size);
