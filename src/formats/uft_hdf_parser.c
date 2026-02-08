@@ -19,7 +19,7 @@ static uint32_t read_be32(const uint8_t *p) {
 }
 
 /* Read big-endian 16-bit from buffer (may be unused in some configs) */
-static uint16_t read_be16(const uint8_t *p) __attribute__((unused));
+static uint16_t read_be16(const uint8_t *p);
 static uint16_t read_be16(const uint8_t *p) {
     return ((uint16_t)p[0] << 8) | (uint16_t)p[1];
 }

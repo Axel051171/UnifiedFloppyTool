@@ -64,7 +64,6 @@ static uint32_t read_le32(const uint8_t* p) {
     return (uint32_t)(p[0] | (p[1] << 8) | ((uint32_t)p[2] << 16) | ((uint32_t)p[3] << 24));
 }
 
-__attribute__((unused))
 static void write_le16(uint8_t* p, uint16_t v) {
     p[0] = v & 0xFF;
     p[1] = (v >> 8) & 0xFF;

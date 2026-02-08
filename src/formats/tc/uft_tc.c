@@ -68,7 +68,7 @@ uft_tc_t* uft_tc_open(const char *path) {
     if (fread(&header, sizeof(header), 1, f) != 1) {
     if (ferror(f)) {
         fclose(f);
-        return UFT_ERR_IO;
+        return NULL;
     }
                 fclose(f);
         return NULL;
@@ -78,7 +78,7 @@ uft_tc_t* uft_tc_open(const char *path) {
     if (header.signature != UFT_TC_SIGNATURE) {
     if (ferror(f)) {
         fclose(f);
-        return UFT_ERR_IO;
+        return NULL;
     }
                 fclose(f);
         return NULL;
@@ -89,7 +89,7 @@ uft_tc_t* uft_tc_open(const char *path) {
     if (!tc) {
     if (ferror(f)) {
         fclose(f);
-        return UFT_ERR_IO;
+        return NULL;
     }
                 fclose(f);
         return NULL;
@@ -107,7 +107,7 @@ uft_tc_t* uft_tc_open(const char *path) {
         free(tc);
         if (ferror(f)) {
             fclose(f);
-            return UFT_ERR_IO;
+            return NULL;
         }
                 fclose(f);
         return NULL;

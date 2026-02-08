@@ -1,6 +1,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#ifdef _MSC_VER
+#include <malloc.h>
+#endif
 #include "save.h"
 #include "aes.h"
 #include "sha.h"
@@ -194,7 +197,11 @@ void save_ivfc_storage_init(hierarchical_integrity_verification_storage_ctx_t *c
         {"HierarchicalIntegrityVerificationStorage::L4", 44},
         {"HierarchicalIntegrityVerificationStorage::L5", 44}
     };
+#ifdef _MSC_VER
+    integrity_verification_info_ctx_t *init_info = (integrity_verification_info_ctx_t *)_alloca(ivfc->num_levels * sizeof(integrity_verification_info_ctx_t));
+#else
     integrity_verification_info_ctx_t init_info[ivfc->num_levels];
+#endif
 
     init_info[0].data = &levels[0];
     init_info[0].block_size = 0;

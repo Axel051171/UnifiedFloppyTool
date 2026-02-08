@@ -54,7 +54,7 @@ uft_mfm_context_t* uft_mfm_open(const char *path) {
     if (fread(&header, sizeof(header), 1, f) != 1) {
     if (ferror(f)) {
         fclose(f);
-        return UFT_ERR_IO;
+        return NULL;
     }
                 fclose(f);
         return NULL;
@@ -64,7 +64,7 @@ uft_mfm_context_t* uft_mfm_open(const char *path) {
     if (memcmp(header.signature, "HXCMFM", 6) != 0) {
     if (ferror(f)) {
         fclose(f);
-        return UFT_ERR_IO;
+        return NULL;
     }
                 fclose(f);
         return NULL;
@@ -75,7 +75,7 @@ uft_mfm_context_t* uft_mfm_open(const char *path) {
     if (!ctx) {
     if (ferror(f)) {
         fclose(f);
-        return UFT_ERR_IO;
+        return NULL;
     }
                 fclose(f);
         return NULL;
@@ -112,7 +112,7 @@ uft_mfm_context_t* uft_mfm_create(const char *path,
     if (!ctx) {
     if (ferror(f)) {
         fclose(f);
-        return UFT_ERR_IO;
+        return NULL;
     }
                 fclose(f);
         return NULL;

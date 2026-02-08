@@ -96,7 +96,7 @@ uft_psi_t* uft_psi_open(const char *path) {
         header.magic != UFT_PSI_MAGIC) {
         if (ferror(f)) {
             fclose(f);
-            return UFT_ERR_IO;
+            return NULL;
         }
                 fclose(f);
         return NULL;
@@ -106,7 +106,7 @@ uft_psi_t* uft_psi_open(const char *path) {
     if (!psi) {
     if (ferror(f)) {
         fclose(f);
-        return UFT_ERR_IO;
+        return NULL;
     }
                 fclose(f);
         return NULL;
@@ -122,7 +122,7 @@ uft_psi_t* uft_psi_open(const char *path) {
         free(psi);
         if (ferror(f)) {
             fclose(f);
-            return UFT_ERR_IO;
+            return NULL;
         }
                 fclose(f);
         return NULL;
@@ -385,7 +385,7 @@ uft_pri_t* uft_pri_open(const char *path) {
         header.magic != UFT_PRI_MAGIC) {
         if (ferror(f)) {
             fclose(f);
-            return UFT_ERR_IO;
+            return NULL;
         }
                 fclose(f);
         return NULL;
@@ -395,7 +395,7 @@ uft_pri_t* uft_pri_open(const char *path) {
     if (!pri) {
     if (ferror(f)) {
         fclose(f);
-        return UFT_ERR_IO;
+        return NULL;
     }
                 fclose(f);
         return NULL;
@@ -411,7 +411,7 @@ uft_pri_t* uft_pri_open(const char *path) {
         free(pri);
         if (ferror(f)) {
             fclose(f);
-            return UFT_ERR_IO;
+            return NULL;
         }
                 fclose(f);
         return NULL;

@@ -2269,7 +2269,6 @@ SOURCES += \
     src/analysis/events/otdr_event_core_v2.c \
     src/analysis/denoise/uft_denoise_bridge.c \
     src/analysis/denoise/phi_otdr_denoise_1d.c \
-    src/formats/cpm/cpm.c \
     src/formats/cpm/uft_supercopy_detect.c \
     src/formats/cpm/uft_cpm_diskdef.c \
     src/formats/cpm/uft_cpm_diskdefs.c \

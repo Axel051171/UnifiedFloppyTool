@@ -49,7 +49,7 @@ static bool ogg_parse(const uint8_t* data, size_t size, ogg_file_t* ogg) {
                 ogg->is_vorbis = true;
             } else if (memcmp(data + content_start, "OpusHead", 8) == 0) {
                 ogg->is_opus = true;
-            } else if (memcmp(data + content_start, "\x7FFLAC", 5) == 0) {
+            } else if (memcmp(data + content_start, "\x7F" "FLAC", 5) == 0) {
                 ogg->is_flac = true;
             }
         }

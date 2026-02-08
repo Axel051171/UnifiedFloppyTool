@@ -30,7 +30,12 @@
 
 //  CCITT CRC 16 - 0x1021
 //  Parameters used with the generator : inv_poly 0, inv_index 0, inv_array_index 0, xchg_array 1, inv_array_value 0.
-static const unsigned int crc_array[16*2] __attribute__ ((aligned (4))) =
+#ifdef _MSC_VER
+#define ALIGN4 __declspec(align(4))
+#else
+#define ALIGN4 __attribute__((aligned(4)))
+#endif
+static const unsigned int ALIGN4 crc_array[16*2] =
 {
 	0x0000, 0x3112, 0x6224, 0x5336, 0xC448, 0xF55A, 0xA66C, 0x977E,
 	0x8891, 0xB983, 0xEAB5, 0xDBA7, 0x4CD9, 0x7DCB, 0x2EFD, 0x1FEF,

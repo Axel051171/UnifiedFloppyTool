@@ -28,7 +28,7 @@
 // ============================================================================
 
 // Commodore GCR: 4 bits -> 5 bits encoding
-static const uint8_t gcr_encode_cbm[16] __attribute__((unused)) = {
+static const uint8_t gcr_encode_cbm[16]  = {
     0x0A, 0x0B, 0x12, 0x13, 0x0E, 0x0F, 0x16, 0x17,
     0x09, 0x19, 0x1A, 0x1B, 0x0D, 0x1D, 0x1E, 0x15
 };
