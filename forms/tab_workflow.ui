@@ -1,0 +1,624 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>TabWorkflow</class>
+ <widget class="QWidget" name="TabWorkflow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>900</width>
+    <height>700</height>
+   </rect>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout_main">
+   <property name="spacing">
+    <number>8</number>
+   </property>
+   
+   <!-- SOURCE + DESTINATION (Equal Size!) -->
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout_sourceDestination">
+     <property name="spacing">
+      <number>8</number>
+     </property>
+     
+     <!-- SOURCE (Read From) -->
+     <item>
+      <widget class="QGroupBox" name="groupSource">
+       <property name="title">
+        <string>📂 SOURCE (Read From)</string>
+       </property>
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+         <horstretch>1</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="minimumSize">
+        <size>
+         <width>400</width>
+         <height>0</height>
+        </size>
+       </property>
+       <layout class="QVBoxLayout" name="verticalLayout_source">
+        
+        <!-- Source Type Buttons -->
+        <item>
+         <layout class="QVBoxLayout" name="verticalLayout_sourceButtons">
+          <item>
+           <widget class="QPushButton" name="btnSourceFlux">
+            <property name="text">
+             <string>📡 Flux Device</string>
+            </property>
+            <property name="checkable">
+             <bool>true</bool>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+            <property name="minimumHeight">
+             <number>35</number>
+            </property>
+            <property name="styleSheet">
+             <string>QPushButton:checked { background-color: #4CAF50; color: white; font-weight: bold; }</string>
+            </property>
+           </widget>
+          </item>
+          
+          <item>
+           <widget class="QPushButton" name="btnSourceUSB">
+            <property name="text">
+             <string>🔌 USB Device</string>
+            </property>
+            <property name="checkable">
+             <bool>true</bool>
+            </property>
+            <property name="minimumHeight">
+             <number>35</number>
+            </property>
+            <property name="styleSheet">
+             <string>QPushButton:checked { background-color: #4CAF50; color: white; font-weight: bold; }</string>
+            </property>
+           </widget>
+          </item>
+          
+          <item>
+           <widget class="QPushButton" name="btnSourceFile">
+            <property name="text">
+             <string>📁 Image File</string>
+            </property>
+            <property name="checkable">
+             <bool>true</bool>
+            </property>
+            <property name="minimumHeight">
+             <number>35</number>
+            </property>
+            <property name="styleSheet">
+             <string>QPushButton:checked { background-color: #4CAF50; color: white; font-weight: bold; }</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        
+        <!-- Source Status -->
+        <item>
+         <widget class="QGroupBox" name="groupSourceStatus">
+          <property name="title">
+           <string>Status</string>
+          </property>
+          <property name="minimumHeight">
+           <number>80</number>
+          </property>
+          <layout class="QVBoxLayout" name="verticalLayout_sourceStatus">
+           <item>
+            <widget class="QLabel" name="labelSourceStatus">
+             <property name="text">
+              <string>Mode: Flux Device
+Device: (See Hardware Tab)
+Drive: Drive 0 (3.5")</string>
+             </property>
+             <property name="styleSheet">
+              <string>color: green; font-weight: bold;</string>
+             </property>
+             <property name="wordWrap">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        
+       </layout>
+      </widget>
+     </item>
+     
+     <!-- DESTINATION (Write To) -->
+     <item>
+      <widget class="QGroupBox" name="groupDestination">
+       <property name="title">
+        <string>💾 DESTINATION (Write To)</string>
+       </property>
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+         <horstretch>1</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="minimumSize">
+        <size>
+         <width>400</width>
+         <height>0</height>
+        </size>
+       </property>
+       <layout class="QVBoxLayout" name="verticalLayout_destination">
+        
+        <!-- Destination Type Buttons -->
+        <item>
+         <layout class="QVBoxLayout" name="verticalLayout_destButtons">
+          <item>
+           <widget class="QPushButton" name="btnDestFlux">
+            <property name="text">
+             <string>📡 Flux Device</string>
+            </property>
+            <property name="checkable">
+             <bool>true</bool>
+            </property>
+            <property name="minimumHeight">
+             <number>35</number>
+            </property>
+            <property name="styleSheet">
+             <string>QPushButton:checked { background-color: #2196F3; color: white; font-weight: bold; }</string>
+            </property>
+           </widget>
+          </item>
+          
+          <item>
+           <widget class="QPushButton" name="btnDestUSB">
+            <property name="text">
+             <string>🔌 USB Device</string>
+            </property>
+            <property name="checkable">
+             <bool>true</bool>
+            </property>
+            <property name="minimumHeight">
+             <number>35</number>
+            </property>
+            <property name="styleSheet">
+             <string>QPushButton:checked { background-color: #2196F3; color: white; font-weight: bold; }</string>
+            </property>
+           </widget>
+          </item>
+          
+          <item>
+           <widget class="QPushButton" name="btnDestFile">
+            <property name="text">
+             <string>📁 Image File</string>
+            </property>
+            <property name="checkable">
+             <bool>true</bool>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+            <property name="minimumHeight">
+             <number>35</number>
+            </property>
+            <property name="styleSheet">
+             <string>QPushButton:checked { background-color: #2196F3; color: white; font-weight: bold; }</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        
+        <!-- Destination Status -->
+        <item>
+         <widget class="QGroupBox" name="groupDestStatus">
+          <property name="title">
+           <string>Status</string>
+          </property>
+          <property name="minimumHeight">
+           <number>80</number>
+          </property>
+          <layout class="QVBoxLayout" name="verticalLayout_destStatus">
+           <item>
+            <widget class="QLabel" name="labelDestStatus">
+             <property name="text">
+              <string>Mode: Image File
+File: C:\Images\disk001.scp ✓
+Auto-increment: Enabled</string>
+             </property>
+             <property name="styleSheet">
+              <string>color: blue; font-weight: bold;</string>
+             </property>
+             <property name="wordWrap">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        
+       </layout>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   
+   <!-- OPERATION MODE -->
+   <item>
+    <widget class="QGroupBox" name="groupOperation">
+     <property name="title">
+      <string>⚙️ OPERATION</string>
+     </property>
+     <property name="maximumHeight">
+      <number>70</number>
+     </property>
+     <layout class="QHBoxLayout">
+      <item>
+       <widget class="QRadioButton" name="radioRead">
+        <property name="text">
+         <string>📖 Read</string>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QRadioButton" name="radioWrite">
+        <property name="text">
+         <string>📝 Write</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QRadioButton" name="radioVerify">
+        <property name="text">
+         <string>✓ Verify</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QRadioButton" name="radioConvert">
+        <property name="text">
+         <string>🔄 Convert</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="btnAnalyze">
+        <property name="text">
+         <string>📊 Analyze...</string>
+        </property>
+        <property name="styleSheet">
+         <string>QPushButton { background-color: #9C27B0; color: white; font-weight: bold; padding: 5px 15px; }</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer>
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QLabel" name="labelOperationHint">
+        <property name="text">
+         <string>💡 Hardware in Tab 2, Format in Tab 3</string>
+        </property>
+        <property name="styleSheet">
+         <string>color: #2196F3; font-style: italic;</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   
+   <!-- TRACK STATUS (QUADRATISCH!) -->
+   <item>
+    <widget class="QGroupBox" name="groupTracks">
+     <property name="title">
+      <string>📊 TRACK STATUS</string>
+     </property>
+     <layout class="QHBoxLayout">
+      <item>
+       <widget class="QFrame" name="frameSide0">
+        <property name="minimumSize">
+         <size>
+          <width>240</width>
+          <height>240</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>240</width>
+          <height>240</height>
+         </size>
+        </property>
+        <property name="frameShape">
+         <enum>QFrame::Box</enum>
+        </property>
+        <layout class="QVBoxLayout">
+         <item>
+          <widget class="QLabel" name="labelSide0">
+           <property name="text">
+            <string>Side 0</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignCenter</set>
+           </property>
+           <property name="font">
+            <font>
+             <pointsize>10</pointsize>
+             <weight>75</weight>
+             <bold>true</bold>
+            </font>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="labelGridSide0">
+           <property name="text">
+            <string>Track Grid
+(10×8 matrix)
+
+⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜
+⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜
+⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜
+⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜
+⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜
+⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜
+⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜
+⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignCenter</set>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>220</width>
+             <height>200</height>
+            </size>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      
+      <item>
+       <widget class="QFrame" name="frameSide1">
+        <property name="minimumSize">
+         <size>
+          <width>240</width>
+          <height>240</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>240</width>
+          <height>240</height>
+         </size>
+        </property>
+        <property name="frameShape">
+         <enum>QFrame::Box</enum>
+        </property>
+        <layout class="QVBoxLayout">
+         <item>
+          <widget class="QLabel" name="labelSide1">
+           <property name="text">
+            <string>Side 1</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignCenter</set>
+           </property>
+           <property name="font">
+            <font>
+             <pointsize>10</pointsize>
+             <weight>75</weight>
+             <bold>true</bold>
+            </font>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="labelGridSide1">
+           <property name="text">
+            <string>Track Grid
+(10×8 matrix)
+
+⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜
+⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜
+⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜
+⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜
+⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜
+⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜
+⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜
+⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignCenter</set>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>220</width>
+             <height>200</height>
+            </size>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      
+      <item>
+       <layout class="QVBoxLayout">
+        <item>
+         <widget class="QLabel" name="labelLegend">
+          <property name="text">
+           <string>&lt;b&gt;Legend:&lt;/b&gt;
+⬜ Not read
+🟦 Reading
+🟩 Good
+🟨 Warning
+🟥 Error
+🟧 Protected</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="Line" name="line">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="labelStats">
+          <property name="text">
+           <string>&lt;b&gt;Statistics:&lt;/b&gt;
+Tracks: 80×2
+Good: 0
+Warnings: 0
+Errors: 0</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <spacer>
+          <property name="orientation">
+           <enum>Qt::Vertical</enum>
+          </property>
+         </spacer>
+        </item>
+       </layout>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   
+   <!-- PROGRESS -->
+   <item>
+    <widget class="QGroupBox" name="groupProgress">
+     <property name="title">
+      <string>📈 PROGRESS</string>
+     </property>
+     <property name="maximumHeight">
+      <number>80</number>
+     </property>
+     <layout class="QVBoxLayout">
+      <item>
+       <widget class="QProgressBar" name="progressBar">
+        <property name="value">
+         <number>0</number>
+        </property>
+        <property name="format">
+         <string>%p% - Track 0/80</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <layout class="QHBoxLayout">
+        <item>
+         <widget class="QLabel" name="labelTime">
+          <property name="text">
+           <string>Elapsed: 00:00:00 / Remaining: --:--:--</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <spacer>
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+         </spacer>
+        </item>
+        <item>
+         <widget class="QLabel" name="labelSpeed">
+          <property name="text">
+           <string>300 RPM</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   
+   <!-- ACTION BUTTONS (START → ABBRECHEN!) -->
+   <item>
+    <layout class="QHBoxLayout">
+     <item>
+      <widget class="QPushButton" name="btnStartAbort">
+       <property name="text">
+        <string>▶ START</string>
+       </property>
+       <property name="minimumHeight">
+        <number>40</number>
+       </property>
+       <property name="styleSheet">
+        <string>QPushButton { background-color: #4CAF50; color: white; font-weight: bold; font-size: 12pt; } QPushButton:hover { background-color: #45a049; }</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btnPause">
+       <property name="text">
+        <string>⏸ PAUSE</string>
+       </property>
+       <property name="minimumHeight">
+        <number>40</number>
+       </property>
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
+       <property name="styleSheet">
+        <string>QPushButton { background-color: #FFC107; color: white; font-weight: bold; font-size: 12pt; }</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer>
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btnLog">
+       <property name="text">
+        <string>📋 VIEW LOG</string>
+       </property>
+       <property name="minimumHeight">
+        <number>40</number>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btnHistogram">
+       <property name="text">
+        <string>📊 Histogram</string>
+       </property>
+       <property name="toolTip">
+        <string>Analyze flux timing histogram</string>
+       </property>
+       <property name="minimumHeight">
+        <number>40</number>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

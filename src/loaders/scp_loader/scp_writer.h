@@ -1,0 +1,8 @@
+#ifndef UFT_LOADERS_SCP_LOADER_SCP_WRITER_H
+#define UFT_LOADERS_SCP_LOADER_SCP_WRITER_H
+
+
+int SCP_libWrite_DiskFile(LIBFLUX_IMGLDR* imgldr_ctx,LIBFLUX_FLOPPY * floppy,char * filename);
+
+
+#endif /* UFT_LOADERS_SCP_LOADER_SCP_WRITER_H */

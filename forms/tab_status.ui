@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>TabStatus</class>
+ <widget class="QWidget" name="TabStatus">
+  <property name="geometry">
+   <rect><x>0</x><y>0</y><width>400</width><height>500</height></rect>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout_main">
+   <property name="leftMargin"><number>4</number></property>
+   <property name="topMargin"><number>4</number></property>
+   <property name="rightMargin"><number>4</number></property>
+   <property name="bottomMargin"><number>4</number></property>
+   <property name="spacing"><number>4</number></property>
+   
+   <!-- STATUS GROUP -->
+   <item>
+    <widget class="QGroupBox" name="groupStatus">
+     <property name="title"><string>Status</string></property>
+     <property name="styleSheet"><string>QGroupBox { font-weight: bold; }</string></property>
+     <layout class="QVBoxLayout">
+      <property name="spacing"><number>4</number></property>
+      
+      <!-- TOOL BUTTONS ROW -->
+      <item>
+       <layout class="QHBoxLayout">
+        <item>
+         <widget class="QPushButton" name="btnLabelEditor">
+          <property name="text"><string>🏷️ Label Editor</string></property>
+          <property name="toolTip"><string>Edit disk name and ID</string></property>
+          <property name="enabled"><bool>false</bool></property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="btnBAMViewer">
+          <property name="text"><string>📊 BAM/FAT</string></property>
+          <property name="toolTip"><string>View Block Allocation Map / File Allocation Table</string></property>
+          <property name="enabled"><bool>false</bool></property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="btnBootblock">
+          <property name="text"><string>🥾 Bootblock</string></property>
+          <property name="toolTip"><string>View and edit boot sector</string></property>
+          <property name="enabled"><bool>false</bool></property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="btnProtection">
+          <property name="text"><string>🛡️ Protection</string></property>
+          <property name="toolTip"><string>Analyze copy protection</string></property>
+          <property name="enabled"><bool>false</bool></property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="btnDmkAnalysis">
+          <property name="text"><string>🔎 DMK Analysis</string></property>
+          <property name="toolTip"><string>Analyze DMK disk image structure (TRS-80)</string></property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      
+      <!-- Progress bars -->
+      <item>
+       <widget class="QProgressBar" name="progressTrack">
+        <property name="maximum"><number>100</number></property>
+        <property name="value"><number>0</number></property>
+        <property name="textVisible"><bool>false</bool></property>
+        <property name="maximumHeight"><number>8</number></property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QProgressBar" name="progressTotal">
+        <property name="maximum"><number>100</number></property>
+        <property name="value"><number>0</number></property>
+        <property name="textVisible"><bool>false</bool></property>
+        <property name="maximumHeight"><number>8</number></property>
+       </widget>
+      </item>
+      
+      <!-- Track : Side info -->
+      <item>
+       <widget class="QLabel" name="labelTrackSide">
+        <property name="text"><string>Track : 0 Side : 0</string></property>
+        <property name="styleSheet"><string>font-family: monospace; font-size: 10pt; background-color: #f0f0f0; padding: 4px; border: 1px solid #ccc;</string></property>
+       </widget>
+      </item>
+      
+      <!-- Sector Info -->
+      <item>
+       <widget class="QTextEdit" name="textSectorInfo">
+        <property name="readOnly"><bool>true</bool></property>
+        <property name="styleSheet"><string>font-family: monospace; font-size: 9pt; background-color: #f8f8f8;</string></property>
+        <property name="minimumHeight"><number>160</number></property>
+        <property name="plainText"><string></string></property>
+       </widget>
+      </item>
+      
+      <!-- Hex Dump -->
+      <item>
+       <widget class="QTextEdit" name="textHexDump">
+        <property name="readOnly"><bool>true</bool></property>
+        <property name="styleSheet"><string>font-family: monospace; font-size: 8pt; background-color: #1a1a1a; color: #00ff00;</string></property>
+        <property name="minimumHeight"><number>180</number></property>
+        <property name="plainText"><string></string></property>
+       </widget>
+      </item>
+      
+      <!-- Scroll slider -->
+      <item>
+       <layout class="QHBoxLayout">
+        <item>
+         <widget class="QSlider" name="sliderHexScroll">
+          <property name="orientation"><enum>Qt::Horizontal</enum></property>
+          <property name="minimum"><number>0</number></property>
+          <property name="maximum"><number>100</number></property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      
+     </layout>
+    </widget>
+   </item>
+   
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

@@ -1,0 +1,274 @@
+# ============================================================================
+# UnifiedFloppyTool - Release Build CI/CD
+#
+# Triggers on: push tag v*
+# Produces:
+#   - macOS:  UnifiedFloppyTool-{ver}-macOS.dmg + .tar.gz
+#   - Linux:  UnifiedFloppyTool-{ver}-linux-amd64.deb + .tar.gz
+#   - Windows: UnifiedFloppyTool-{ver}-windows-x64.tar.gz
+# ============================================================================
+
+name: Release Build
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+env:
+  QT_VERSION: '6.7.3'
+  BUILD_TYPE: Release
+
+jobs:
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # Linux (.deb + .tar.gz)
+  # ══════════════════════════════════════════════════════════════════════════
+  build-linux:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          host: linux
+          target: desktop
+          modules: 'qtserialport'
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libusb-1.0-0-dev \
+            libgl1-mesa-dev \
+            dpkg-dev \
+            fakeroot
+
+      - name: Read version
+        id: version
+        run: echo "version=$(cat UFT_VERSION.txt)" >> $GITHUB_OUTPUT
+
+      - name: Build (qmake)
+        run: |
+          mkdir build && cd build
+          qmake ../UnifiedFloppyTool.pro \
+            CONFIG+=release \
+            QMAKE_CFLAGS+="-DUFT_VERSION_STRING=\\\"${{ steps.version.outputs.version }}\\\"" \
+            QMAKE_CXXFLAGS+="-DUFT_VERSION_STRING=\\\"${{ steps.version.outputs.version }}\\\""
+          make -j$(nproc)
+
+      - name: Package .tar.gz
+        run: |
+          VER=${{ steps.version.outputs.version }}
+          DIST="UnifiedFloppyTool-${VER}-linux-amd64"
+          mkdir -p "${DIST}/bin"
+          cp build/UnifiedFloppyTool "${DIST}/bin/"
+          cp LICENSE README.md CHANGELOG.md "${DIST}/"
+          cp tools/99-floppy-devices.rules "${DIST}/" 2>/dev/null || true
+          tar czf "${DIST}.tar.gz" "${DIST}"
+
+      - name: Package .deb
+        run: |
+          VER=${{ steps.version.outputs.version }}
+          PKG="unifiedfloppytool_${VER}_amd64"
+          mkdir -p "${PKG}/DEBIAN"
+          mkdir -p "${PKG}/usr/bin"
+          mkdir -p "${PKG}/usr/share/applications"
+          mkdir -p "${PKG}/usr/share/icons/hicolor/256x256/apps"
+          mkdir -p "${PKG}/usr/share/doc/unifiedfloppytool"
+
+          cp build/UnifiedFloppyTool "${PKG}/usr/bin/"
+          cp packaging/linux/UnifiedFloppyTool.desktop "${PKG}/usr/share/applications/"
+          cp resources/icons/app_256.png "${PKG}/usr/share/icons/hicolor/256x256/apps/UnifiedFloppyTool.png"
+          cp LICENSE "${PKG}/usr/share/doc/unifiedfloppytool/copyright"
+          cp CHANGELOG.md "${PKG}/usr/share/doc/unifiedfloppytool/"
+
+          cat > "${PKG}/DEBIAN/control" << DEBEOF
+          Package: unifiedfloppytool
+          Version: ${VER}
+          Architecture: amd64
+          Maintainer: Axel Kramer <axel@example.com>
+          Depends: libqt6widgets6 (>= 6.5), libqt6gui6 (>= 6.5), libqt6serialport6, libusb-1.0-0
+          Section: utils
+          Priority: optional
+          Homepage: https://github.com/Axel051171/UnifiedFloppyTool
+          Description: Forensic Floppy Disk Preservation Tool
+           UnifiedFloppyTool is a comprehensive tool for reading, analyzing,
+           and preserving floppy disk images across all major retro formats.
+           Supports Amiga ADF, C64 D64/G64, Atari ST, Apple II, SCP, HFE,
+           KryoFlux stream, and 700+ additional formats.
+          DEBEOF
+          # Fix indentation (DEBIAN/control requires no leading spaces)
+          sed -i 's/^          //' "${PKG}/DEBIAN/control"
+
+          chmod 755 "${PKG}/usr/bin/UnifiedFloppyTool"
+          dpkg-deb --build "${PKG}"
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-release
+          path: |
+            UnifiedFloppyTool-*-linux-amd64.tar.gz
+            unifiedfloppytool_*_amd64.deb
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # macOS (.dmg + .tar.gz)
+  # ══════════════════════════════════════════════════════════════════════════
+  build-macos:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          host: mac
+          target: desktop
+          arch: clang_64
+          modules: 'qtserialport'
+
+      - name: Read version
+        id: version
+        run: echo "version=$(cat UFT_VERSION.txt)" >> $GITHUB_OUTPUT
+
+      - name: Build (qmake)
+        run: |
+          mkdir build && cd build
+          qmake ../UnifiedFloppyTool.pro \
+            CONFIG+=release \
+            QMAKE_APPLE_DEVICE_ARCHS="x86_64 arm64" \
+            QMAKE_CFLAGS+="-DUFT_VERSION_STRING=\\\"${{ steps.version.outputs.version }}\\\"" \
+            QMAKE_CXXFLAGS+="-DUFT_VERSION_STRING=\\\"${{ steps.version.outputs.version }}\\\""
+          make -j$(sysctl -n hw.ncpu)
+
+      - name: Deploy Qt frameworks
+        run: |
+          cd build
+          macdeployqt UnifiedFloppyTool.app -dmg
+
+      - name: Package
+        run: |
+          VER=${{ steps.version.outputs.version }}
+
+          # Rename DMG
+          mv build/UnifiedFloppyTool.dmg \
+             "UnifiedFloppyTool-${VER}-macOS.dmg"
+
+          # Also create .tar.gz of the .app bundle
+          DIST="UnifiedFloppyTool-${VER}-macOS"
+          mkdir "${DIST}"
+          cp -R build/UnifiedFloppyTool.app "${DIST}/"
+          cp LICENSE README.md CHANGELOG.md "${DIST}/"
+          tar czf "${DIST}.tar.gz" "${DIST}"
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-release
+          path: |
+            UnifiedFloppyTool-*-macOS.dmg
+            UnifiedFloppyTool-*-macOS.tar.gz
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # Windows (.tar.gz)
+  # ══════════════════════════════════════════════════════════════════════════
+  build-windows:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          host: windows
+          target: desktop
+          arch: win64_msvc2019_64
+          modules: 'qtserialport'
+
+      - name: Setup MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: amd64
+
+      - name: Read version
+        id: version
+        shell: bash
+        run: echo "version=$(cat UFT_VERSION.txt)" >> $GITHUB_OUTPUT
+
+      - name: Build (qmake)
+        shell: cmd
+        run: |
+          mkdir build
+          cd build
+          qmake ..\UnifiedFloppyTool.pro CONFIG+=release
+          nmake
+
+      - name: Deploy Qt DLLs
+        shell: cmd
+        run: |
+          cd build\release
+          windeployqt --release --no-translations --no-opengl-sw UnifiedFloppyTool.exe
+
+      - name: Package .tar.gz
+        shell: bash
+        run: |
+          VER=${{ steps.version.outputs.version }}
+          DIST="UnifiedFloppyTool-${VER}-windows-x64"
+          mkdir -p "${DIST}"
+          cp build/release/UnifiedFloppyTool.exe "${DIST}/"
+          cp build/release/*.dll "${DIST}/" 2>/dev/null || true
+          cp -r build/release/platforms "${DIST}/" 2>/dev/null || true
+          cp -r build/release/styles "${DIST}/" 2>/dev/null || true
+          cp -r build/release/imageformats "${DIST}/" 2>/dev/null || true
+          cp LICENSE README.md CHANGELOG.md "${DIST}/"
+          tar czf "${DIST}.tar.gz" "${DIST}"
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-release
+          path: UnifiedFloppyTool-*-windows-x64.tar.gz
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # Create GitHub Release
+  # ══════════════════════════════════════════════════════════════════════════
+  create-release:
+    needs: [build-linux, build-macos, build-windows]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read version
+        id: version
+        run: echo "version=$(cat UFT_VERSION.txt)" >> $GITHUB_OUTPUT
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-artifacts
+          merge-multiple: true
+
+      - name: List artifacts
+        run: find release-artifacts -type f | sort
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "UnifiedFloppyTool v${{ steps.version.outputs.version }}"
+          body_path: RELEASE_NOTES.md
+          draft: false
+          prerelease: false
+          files: |
+            release-artifacts/**/*.dmg
+            release-artifacts/**/*.deb
+            release-artifacts/**/*.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

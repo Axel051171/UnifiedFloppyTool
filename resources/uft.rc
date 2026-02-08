@@ -1,0 +1,35 @@
+// UnifiedFloppyTool Windows Resource File
+// SPDX-License-Identifier: GPL-2.0-or-later
+
+#include <windows.h>
+
+IDI_ICON1 ICON "icons/app.ico"
+
+VS_VERSION_INFO VERSIONINFO
+FILEVERSION     4,1,0,0
+PRODUCTVERSION  4,1,0,0
+FILEFLAGSMASK   VS_FFI_FILEFLAGSMASK
+FILEFLAGS       0
+FILEOS          VOS_NT_WINDOWS32
+FILETYPE        VFT_APP
+FILESUBTYPE     VFT2_UNKNOWN
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904E4"
+        BEGIN
+            VALUE "CompanyName",      "Axel Kramer"
+            VALUE "FileDescription",  "UnifiedFloppyTool - Forensic Floppy Preservation"
+            VALUE "FileVersion",      "4.1.0.0"
+            VALUE "InternalName",     "uft"
+            VALUE "LegalCopyright",   "Copyright (C) 2024-2026 Axel Kramer. GPL-2.0"
+            VALUE "OriginalFilename", "UnifiedFloppyTool.exe"
+            VALUE "ProductName",      "UnifiedFloppyTool"
+            VALUE "ProductVersion",   "4.1.0.0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1252
+    END
+END

@@ -1,0 +1,6 @@
+#ifndef UFT_FORMATS_AMIGA_EXT_HARDWARE_H
+#define UFT_FORMATS_AMIGA_EXT_HARDWARE_H
+
+#define L_INDIAN(var) (((var&0x000000FF)<<24) |((var&0x0000FF00)<<8) |((var&0x00FF0000)>>8) |((var&0xFF000000)>>24))
+
+#endif /* UFT_FORMATS_AMIGA_EXT_HARDWARE_H */

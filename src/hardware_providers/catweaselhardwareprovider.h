@@ -1,0 +1,26 @@
+#ifndef CATWEASELHARDWAREPROVIDER_H
+#define CATWEASELHARDWAREPROVIDER_H
+
+#include "hardwareprovider.h"
+
+class CatweaselHardwareProvider : public HardwareProvider
+{
+    Q_OBJECT
+
+public:
+    explicit CatweaselHardwareProvider(QObject *parent = nullptr);
+
+    QString displayName() const override;
+    void setHardwareType(const QString &hardwareType) override;
+    void setDevicePath(const QString &devicePath) override;
+    void setBaudRate(int baudRate) override;
+    void detectDrive() override;
+    void autoDetectDevice() override;
+
+private:
+    QString m_hardwareType;
+    QString m_devicePath;
+    int m_baudRate = 0;
+};
+
+#endif // CATWEASELHARDWAREPROVIDER_H

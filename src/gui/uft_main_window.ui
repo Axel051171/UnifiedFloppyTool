@@ -1,0 +1,552 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>UftMainWindow</class>
+ <widget class="QMainWindow" name="UftMainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1400</width>
+    <height>900</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>UnifiedFloppyTool v5.32</string>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">
+/* Light Theme */
+QMainWindow {
+    background-color: #f5f5f5;
+}
+
+QMenuBar {
+    background-color: #ffffff;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+QMenuBar::item:selected {
+    background-color: #e3f2fd;
+}
+
+QMenu {
+    background-color: #ffffff;
+    border: 1px solid #e0e0e0;
+}
+
+QMenu::item:selected {
+    background-color: #e3f2fd;
+}
+
+QToolBar {
+    background-color: #ffffff;
+    border-bottom: 1px solid #e0e0e0;
+    spacing: 4px;
+    padding: 4px;
+}
+
+QToolButton {
+    background-color: transparent;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    padding: 4px;
+}
+
+QToolButton:hover {
+    background-color: #e3f2fd;
+    border: 1px solid #90caf9;
+}
+
+QToolButton:pressed {
+    background-color: #bbdefb;
+}
+
+QTabWidget::pane {
+    border: 1px solid #e0e0e0;
+    background-color: #ffffff;
+}
+
+QTabBar::tab {
+    background-color: #f5f5f5;
+    border: 1px solid #e0e0e0;
+    border-bottom: none;
+    padding: 8px 16px;
+    margin-right: 2px;
+}
+
+QTabBar::tab:selected {
+    background-color: #ffffff;
+    border-bottom: 2px solid #1976d2;
+}
+
+QTabBar::tab:hover:!selected {
+    background-color: #e3f2fd;
+}
+
+QGroupBox {
+    font-weight: bold;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    margin-top: 12px;
+    padding-top: 8px;
+    background-color: #ffffff;
+}
+
+QGroupBox::title {
+    subcontrol-origin: margin;
+    subcontrol-position: top left;
+    padding: 0 8px;
+    color: #1976d2;
+}
+
+QComboBox, QSpinBox, QDoubleSpinBox, QLineEdit {
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    padding: 4px 8px;
+    background-color: #ffffff;
+}
+
+QComboBox:focus, QSpinBox:focus, QDoubleSpinBox:focus, QLineEdit:focus {
+    border: 1px solid #1976d2;
+}
+
+QComboBox::drop-down {
+    border: none;
+    width: 20px;
+}
+
+QPushButton {
+    background-color: #1976d2;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 16px;
+    font-weight: bold;
+}
+
+QPushButton:hover {
+    background-color: #1565c0;
+}
+
+QPushButton:pressed {
+    background-color: #0d47a1;
+}
+
+QPushButton:disabled {
+    background-color: #bdbdbd;
+}
+
+QPushButton[flat="true"] {
+    background-color: transparent;
+    color: #1976d2;
+}
+
+QPushButton[flat="true"]:hover {
+    background-color: #e3f2fd;
+}
+
+QCheckBox, QRadioButton {
+    spacing: 8px;
+}
+
+QCheckBox::indicator, QRadioButton::indicator {
+    width: 18px;
+    height: 18px;
+}
+
+QTreeWidget, QTableWidget, QListWidget {
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    background-color: #ffffff;
+    alternate-background-color: #fafafa;
+}
+
+QTreeWidget::item:selected, QTableWidget::item:selected, QListWidget::item:selected {
+    background-color: #e3f2fd;
+    color: #000000;
+}
+
+QHeaderView::section {
+    background-color: #f5f5f5;
+    border: none;
+    border-right: 1px solid #e0e0e0;
+    border-bottom: 1px solid #e0e0e0;
+    padding: 8px;
+    font-weight: bold;
+}
+
+QProgressBar {
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    background-color: #f5f5f5;
+    text-align: center;
+}
+
+QProgressBar::chunk {
+    background-color: #4caf50;
+    border-radius: 3px;
+}
+
+QStatusBar {
+    background-color: #ffffff;
+    border-top: 1px solid #e0e0e0;
+}
+
+QScrollBar:vertical {
+    border: none;
+    background-color: #f5f5f5;
+    width: 12px;
+    margin: 0;
+}
+
+QScrollBar::handle:vertical {
+    background-color: #bdbdbd;
+    border-radius: 6px;
+    min-height: 30px;
+}
+
+QScrollBar::handle:vertical:hover {
+    background-color: #9e9e9e;
+}
+
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+    height: 0;
+}
+
+QSplitter::handle {
+    background-color: #e0e0e0;
+}
+
+QSplitter::handle:hover {
+    background-color: #1976d2;
+}
+   </string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QVBoxLayout" name="verticalLayout">
+    <property name="spacing">
+     <number>0</number>
+    </property>
+    <property name="leftMargin">
+     <number>0</number>
+    </property>
+    <property name="topMargin">
+     <number>0</number>
+    </property>
+    <property name="rightMargin">
+     <number>0</number>
+    </property>
+    <property name="bottomMargin">
+     <number>0</number>
+    </property>
+    <item>
+     <widget class="QSplitter" name="mainSplitter">
+      <property name="orientation">
+       <enum>Qt::Horizontal</enum>
+      </property>
+      <!-- Left Panel: Profile Tree + Track Grid -->
+      <widget class="QWidget" name="leftPanel">
+       <layout class="QVBoxLayout" name="leftLayout">
+        <item>
+         <widget class="QGroupBox" name="profileGroup">
+          <property name="title">
+           <string>Profile</string>
+          </property>
+          <layout class="QVBoxLayout" name="profileLayout">
+           <item>
+            <widget class="QTreeWidget" name="profileTree">
+             <property name="minimumWidth">
+              <number>250</number>
+             </property>
+             <property name="headerHidden">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item>
+         <widget class="QGroupBox" name="trackGridGroup">
+          <property name="title">
+           <string>Tracks</string>
+          </property>
+          <layout class="QVBoxLayout" name="trackGridLayout">
+           <!-- UftTrackGridWidget will be added here -->
+          </layout>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+      <!-- Center Panel: Main Tab Widget -->
+      <widget class="QTabWidget" name="mainTabs">
+       <property name="currentIndex">
+        <number>0</number>
+       </property>
+       <widget class="QWidget" name="tabFormat">
+        <attribute name="title">
+         <string>Format</string>
+        </attribute>
+       </widget>
+       <widget class="QWidget" name="tabFlux">
+        <attribute name="title">
+         <string>Flux</string>
+        </attribute>
+       </widget>
+       <widget class="QWidget" name="tabXCopy">
+        <attribute name="title">
+         <string>XCopy</string>
+        </attribute>
+       </widget>
+       <widget class="QWidget" name="tabNibble">
+        <attribute name="title">
+         <string>Nibble</string>
+        </attribute>
+       </widget>
+       <widget class="QWidget" name="tabRecovery">
+        <attribute name="title">
+         <string>Recovery</string>
+        </attribute>
+       </widget>
+       <widget class="QWidget" name="tabForensic">
+        <attribute name="title">
+         <string>Forensic</string>
+        </attribute>
+       </widget>
+       <widget class="QWidget" name="tabProtection">
+        <attribute name="title">
+         <string>Protection</string>
+        </attribute>
+       </widget>
+       <widget class="QWidget" name="tabFiles">
+        <attribute name="title">
+         <string>Files</string>
+        </attribute>
+       </widget>
+       <widget class="QWidget" name="tabHex">
+        <attribute name="title">
+         <string>Hex View</string>
+        </attribute>
+       </widget>
+       <widget class="QWidget" name="tabHardware">
+        <attribute name="title">
+         <string>Hardware</string>
+        </attribute>
+       </widget>
+       <widget class="QWidget" name="tabDmkAnalyzer">
+        <attribute name="title">
+         <string>DMK Analyzer</string>
+        </attribute>
+       </widget>
+       <widget class="QWidget" name="tabGw2Dmk">
+        <attribute name="title">
+         <string>GW→DMK</string>
+        </attribute>
+       </widget>
+      </widget>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>1400</width>
+     <height>24</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menuFile">
+    <property name="title">
+     <string>&amp;File</string>
+    </property>
+    <addaction name="actionOpen"/>
+    <addaction name="actionSave"/>
+    <addaction name="actionSaveAs"/>
+    <addaction name="separator"/>
+    <addaction name="actionExport"/>
+    <addaction name="actionImport"/>
+    <addaction name="separator"/>
+    <addaction name="actionExit"/>
+   </widget>
+   <widget class="QMenu" name="menuDisk">
+    <property name="title">
+     <string>&amp;Disk</string>
+    </property>
+    <addaction name="actionReadDisk"/>
+    <addaction name="actionWriteDisk"/>
+    <addaction name="actionVerifyDisk"/>
+    <addaction name="separator"/>
+    <addaction name="actionFormatDisk"/>
+   </widget>
+   <widget class="QMenu" name="menuTools">
+    <property name="title">
+     <string>&amp;Tools</string>
+    </property>
+    <addaction name="actionConvert"/>
+    <addaction name="actionAnalyze"/>
+    <addaction name="actionRepair"/>
+    <addaction name="actionCompare"/>
+   </widget>
+   <widget class="QMenu" name="menuHardware">
+    <property name="title">
+     <string>&amp;Hardware</string>
+    </property>
+    <addaction name="actionDetectHardware"/>
+    <addaction name="actionHardwareSettings"/>
+   </widget>
+   <widget class="QMenu" name="menuHelp">
+    <property name="title">
+     <string>&amp;Help</string>
+    </property>
+    <addaction name="actionHelp"/>
+    <addaction name="actionAbout"/>
+   </widget>
+   <addaction name="menuFile"/>
+   <addaction name="menuDisk"/>
+   <addaction name="menuTools"/>
+   <addaction name="menuHardware"/>
+   <addaction name="menuHelp"/>
+  </widget>
+  <widget class="QToolBar" name="mainToolBar">
+   <property name="windowTitle">
+    <string>Main Toolbar</string>
+   </property>
+   <attribute name="toolBarArea">
+    <enum>TopToolBarArea</enum>
+   </attribute>
+   <addaction name="actionOpen"/>
+   <addaction name="actionSave"/>
+   <addaction name="separator"/>
+   <addaction name="actionReadDisk"/>
+   <addaction name="actionWriteDisk"/>
+   <addaction name="separator"/>
+   <addaction name="actionConvert"/>
+   <addaction name="actionAnalyze"/>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+  <action name="actionOpen">
+   <property name="text">
+    <string>&amp;Open...</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+O</string>
+   </property>
+  </action>
+  <action name="actionSave">
+   <property name="text">
+    <string>&amp;Save</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+S</string>
+   </property>
+  </action>
+  <action name="actionSaveAs">
+   <property name="text">
+    <string>Save &amp;As...</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+S</string>
+   </property>
+  </action>
+  <action name="actionExport">
+   <property name="text">
+    <string>&amp;Export Files...</string>
+   </property>
+  </action>
+  <action name="actionImport">
+   <property name="text">
+    <string>&amp;Import Files...</string>
+   </property>
+  </action>
+  <action name="actionExit">
+   <property name="text">
+    <string>E&amp;xit</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Q</string>
+   </property>
+  </action>
+  <action name="actionReadDisk">
+   <property name="text">
+    <string>&amp;Read Disk</string>
+   </property>
+   <property name="shortcut">
+    <string>F5</string>
+   </property>
+  </action>
+  <action name="actionWriteDisk">
+   <property name="text">
+    <string>&amp;Write Disk</string>
+   </property>
+   <property name="shortcut">
+    <string>F6</string>
+   </property>
+  </action>
+  <action name="actionVerifyDisk">
+   <property name="text">
+    <string>&amp;Verify Disk</string>
+   </property>
+   <property name="shortcut">
+    <string>F7</string>
+   </property>
+  </action>
+  <action name="actionFormatDisk">
+   <property name="text">
+    <string>&amp;Format Disk</string>
+   </property>
+  </action>
+  <action name="actionConvert">
+   <property name="text">
+    <string>&amp;Convert...</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+K</string>
+   </property>
+  </action>
+  <action name="actionAnalyze">
+   <property name="text">
+    <string>&amp;Analyze</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+A</string>
+   </property>
+  </action>
+  <action name="actionRepair">
+   <property name="text">
+    <string>&amp;Repair...</string>
+   </property>
+  </action>
+  <action name="actionCompare">
+   <property name="text">
+    <string>C&amp;ompare...</string>
+   </property>
+  </action>
+  <action name="actionDetectHardware">
+   <property name="text">
+    <string>&amp;Detect Hardware</string>
+   </property>
+  </action>
+  <action name="actionHardwareSettings">
+   <property name="text">
+    <string>Hardware &amp;Settings...</string>
+   </property>
+  </action>
+  <action name="actionHelp">
+   <property name="text">
+    <string>&amp;Help</string>
+   </property>
+   <property name="shortcut">
+    <string>F1</string>
+   </property>
+  </action>
+  <action name="actionAbout">
+   <property name="text">
+    <string>&amp;About UFT</string>
+   </property>
+  </action>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

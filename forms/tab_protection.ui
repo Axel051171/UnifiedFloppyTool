@@ -1,0 +1,967 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>TabProtection</class>
+ <widget class="QWidget" name="TabProtection">
+ <property name="geometry">
+ <rect>
+ <x>0</x>
+ <y>0</y>
+ <width>850</width>
+ <height>650</height>
+ </rect>
+ </property>
+ <layout class="QVBoxLayout" name="verticalLayout">
+ <item>
+ <widget class="QGroupBox" name="groupProfiles">
+ <property name="title">
+ <string>Protection Profiles (Auto-activates Sub-Tabs)</string>
+ </property>
+ <layout class="QFormLayout" name="formLayout">
+ <item row="0" column="0">
+ <widget class="QLabel" name="labelProfile">
+ <property name="text">
+ <string>Active Profile:</string>
+ </property>
+ </widget>
+ </item>
+ <item row="0" column="1">
+ <widget class="QComboBox" name="comboProfile">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="maximumWidth"><number>250</number></property>
+ <item>
+ <property name="text">
+ <string>Custom (User-Defined)</string>
+ </property>
+ </item>
+ <item>
+ <property name="text">
+ <string>Amiga Standard (X-Copy + dd*)</string>
+ </property>
+ </item>
+ <item>
+ <property name="text">
+ <string>Amiga Advanced (Rob Northen, NDOS, etc.)</string>
+ </property>
+ </item>
+ <item>
+ <property name="text">
+ <string>C64 Standard (Weak Bits, GCR) → Activates C64 Tab!</string>
+ </property>
+ </item>
+ <item>
+ <property name="text">
+ <string>C64 Advanced (Half-Tracks, Nibbler) → Activates C64 Tab!</string>
+ </property>
+ </item>
+ <item>
+ <property name="text">
+ <string>Atari Standard (Bad Sectors, Phantom Sectors)</string>
+ </property>
+ </item>
+ <item>
+ <property name="text">
+ <string>Atari Advanced (Happy, Speedy, Duplicator)</string>
+ </property>
+ </item>
+ <item>
+ <property name="text">
+ <string>PC DOS (Weak Bits, Track Timing)</string>
+ </property>
+ </item>
+ <item>
+ <property name="text">
+ <string>Apple II (Nibble Count, Self-Sync)</string>
+ </property>
+ </item>
+ <item>
+ <property name="text">
+ <string>Archive Mode (Preserve EVERYTHING!)</string>
+ </property>
+ </item>
+ <item>
+ <property name="text">
+ <string>Quick Mode (Ignore Protection, Fast Read)</string>
+ </property>
+ </item>
+ </widget>
+ </item>
+ <item row="1" column="0">
+ <widget class="QLabel" name="labelProfileName">
+ <property name="text">
+ <string>Profile Name:</string>
+ </property>
+ </widget>
+ </item>
+ <item row="1" column="1">
+ <widget class="QLineEdit" name="lineProfileName">
+ <property name="placeholderText">
+ <string>Enter custom profile name...</string>
+ </property>
+ </widget>
+ </item>
+ <item row="2" column="0" colspan="2">
+ <layout class="QHBoxLayout" name="horizontalLayout">
+ <item>
+ <widget class="QPushButton" name="btnSaveProfile">
+ <property name="text">
+ <string>Save Profile</string>
+ </property>
+ </widget>
+ </item>
+ <item>
+ <widget class="QPushButton" name="btnLoadProfile">
+ <property name="text">
+ <string>Load Profile</string>
+ </property>
+ </widget>
+ </item>
+ <item>
+ <widget class="QPushButton" name="btnDeleteProfile">
+ <property name="text">
+ <string>Delete Profile</string>
+ </property>
+ </widget>
+ </item>
+ <item>
+ <spacer name="horizontalSpacer">
+ <property name="orientation">
+ <enum>Qt::Horizontal</enum>
+ </property>
+ </spacer>
+ </item>
+ </layout>
+ </item>
+ </layout>
+ </widget>
+ </item>
+ <item>
+ <widget class="QGroupBox" name="groupDetection">
+ <property name="title">
+ <string>General Protection Detection</string>
+ </property>
+ <layout class="QVBoxLayout" name="verticalLayout_2">
+ <item>
+ <widget class="QCheckBox" name="checkAutoDetect">
+ <property name="text">
+ <string>Auto-Detect Copy Protection</string>
+ </property>
+ <property name="checked">
+ <bool>true</bool>
+ </property>
+ </widget>
+ </item>
+ <item>
+ <widget class="QCheckBox" name="checkPreserveProtection">
+ <property name="text">
+ <string>Preserve Protection Features</string>
+ </property>
+ <property name="checked">
+ <bool>true</bool>
+ </property>
+ </widget>
+ </item>
+ <item>
+ <widget class="QCheckBox" name="checkReportProtection">
+ <property name="text">
+ <string>Report Protection Type</string>
+ </property>
+ <property name="checked">
+ <bool>true</bool>
+ </property>
+ </widget>
+ </item>
+ <item>
+ <widget class="QCheckBox" name="checkLogDetails">
+ <property name="text">
+ <string>Log Protection Details</string>
+ </property>
+ </widget>
+ </item>
+ </layout>
+ </widget>
+ </item>
+ <item>
+ <widget class="QTabWidget" name="tabProtectionTypes">
+ <property name="currentIndex">
+ <number>0</number>
+ </property>
+ <widget class="QWidget" name="tabXCopy">
+ <attribute name="title">
+ <string>X-Copy (Amiga)</string>
+ </attribute>
+ <layout class="QVBoxLayout" name="verticalLayout_3">
+ <item>
+ <widget class="QCheckBox" name="checkXCopyEnable">
+ <property name="text">
+ <string>Enable X-Copy Analysis</string>
+ </property>
+ <property name="checked">
+ <bool>true</bool>
+ </property>
+ </widget>
+ </item>
+ <item>
+ <widget class="QLabel" name="labelXCopyInfo">
+ <property name="text">
+ <string>X-Copy Errors (read-only, auto-detected):</string>
+ </property>
+ </widget>
+ </item>
+ <item>
+ <widget class="QCheckBox" name="checkErr1">
+ <property name="text">
+ <string>Error 1: Sector Count != 11 (PROTECTION!)</string>
+ </property>
+ <property name="enabled">
+ <bool>false</bool>
+ </property>
+ </widget>
+ </item>
+ <item>
+ <widget class="QCheckBox" name="checkErr2">
+ <property name="text">
+ <string>Error 2: No Sync Found</string>
+ </property>
+ <property name="enabled">
+ <bool>false</bool>
+ </property>
+ </widget>
+ </item>
+ <item>
+ <widget class="QCheckBox" name="checkErr3">
+ <property name="text">
+ <string>Error 3: No Sync After GAP</string>
+ </property>
+ <property name="enabled">
+ <bool>false</bool>
+ </property>
+ </widget>
+ </item>
+ <item>
+ <widget class="QCheckBox" name="checkErr4">
+ <property name="text">
+ <string>Error 4: Header Checksum Error</string>
+ </property>
+ <property name="enabled">
+ <bool>false</bool>
+ </property>
+ </widget>
+ </item>
+ <item>
+ <widget class="QCheckBox" name="checkErr5">
+ <property name="text">
+ <string>Error 5: Header/Format Long Error</string>
+ </property>
+ <property name="enabled">
+ <bool>false</bool>
+ </property>
+ </widget>
+ </item>
+ <item>
+ <widget class="QCheckBox" name="checkErr6">
+ <property name="text">
+ <string>Error 6: Datablock Checksum Error</string>
+ </property>
+ <property name="enabled">
+ <bool>false</bool>
+ </property>
+ </widget>
+ </item>
+ <item>
+ <widget class="QCheckBox" name="checkErr7">
+ <property name="text">
+ <string>Error 7: Long Track (PROTECTION!)</string>
+ </property>
+ <property name="enabled">
+ <bool>false</bool>
+ </property>
+ </widget>
+ </item>
+ <item>
+ <widget class="QCheckBox" name="checkErr8">
+ <property name="text">
+ <string>Error 8: Verify Error</string>
+ </property>
+ <property name="enabled">
+ <bool>false</bool>
+ </property>
+ </widget>
+ </item>
+ <item>
+ <spacer name="verticalSpacer_2">
+ <property name="orientation">
+ <enum>Qt::Vertical</enum>
+ </property>
+ </spacer>
+ </item>
+ </layout>
+ </widget>
+ <widget class="QWidget" name="tabDiskDupe">
+ <attribute name="title">
+ <string>Recovery</string>
+ </attribute>
+ <layout class="QVBoxLayout" name="verticalLayout_4">
+ <item>
+ <widget class="QCheckBox" name="checkDDEnable">
+ <property name="text">
+ <string>Enable Recovery (dd*) Analysis</string>
+ </property>
+ <property name="checked">
+ <bool>true</bool>
+ </property>
+ </widget>
+ </item>
+ <item>
+ <widget class="QLabel" name="labelDDInfo">
+ <property name="text">
+ <string>Recovery Errors (read-only, auto-detected):</string>
+ </property>
+ </widget>
+ </item>
+ <item>
+ <widget class="QCheckBox" name="checkDD1">
+ <property name="text">
+ <string>dd1: Half-Track Detection</string>
+ </property>
+ <property name="enabled">
+ <bool>false</bool>
+ </property>
+ </widget>
+ </item>
+ <item>
+ <widget class="QCheckBox" name="checkDD2">
+ <property name="text">
+ <string>dd2: Variable Sync Detection</string>
+ </property>
+ <property name="enabled">
+ <bool>false</bool>
+ </property>
+ </widget>
+ </item>
+ <item>
+ <widget class="QCheckBox" name="checkDD3">
+ <property name="text">
+ <string>dd3: Track Checksum Mismatch</string>
+ </property>
+ <property name="enabled">
+ <bool>false</bool>
+ </property>
+ </widget>
+ </item>
+ <item>
+ <widget class="QCheckBox" name="checkDD4">
+ <property name="text">
+ <string>dd4: Sector Timing Anomaly</string>
+ </property>
+ <property name="enabled">
+ <bool>false</bool>
+ </property>
+ </widget>
+ </item>
+ <item>
+ <widget class="QCheckBox" name="checkDD5">
+ <property name="text">
+ <string>dd5: Custom Sync Marks</string>
+ </property>
+ <property name="enabled">
+ <bool>false</bool>
+ </property>
+ </widget>
+ </item>
+ <item>
+ <widget class="QCheckBox" name="checkDDExpertMode">
+ <property name="text">
+ <string>Expert Mode (Show Advanced Parameters)</string>
+ </property>
+ </widget>
+ </item>
+ <item>
+ <widget class="QGroupBox" name="groupDDExpert">
+ <property name="title">
+ <string>Recovery Expert Parameters</string>
+ </property>
+ <property name="enabled">
+ <bool>false</bool>
+ </property>
+ <layout class="QFormLayout" name="formLayout_2">
+ <item row="0" column="0">
+ <widget class="QLabel" name="labelHalfTrackThreshold">
+ <property name="text">
+ <string>Half-Track Threshold:</string>
+ </property>
+ </widget>
+ </item>
+ <item row="0" column="1">
+ <widget class="QSpinBox" name="spinHalfTrackThreshold">
+ <property name="maximum">
+ <number>100</number>
+ </property>
+ <property name="value">
+ <number>50</number>
+ </property>
+ </widget>
+ </item>
+ <item row="1" column="0">
+ <widget class="QLabel" name="labelSyncVariance">
+ <property name="text">
+ <string>Sync Variance (µs):</string>
+ </property>
+ </widget>
+ </item>
+ <item row="1" column="1">
+ <widget class="QSpinBox" name="spinSyncVariance">
+ <property name="maximum">
+ <number>1000</number>
+ </property>
+ <property name="value">
+ <number>100</number>
+ </property>
+ </widget>
+ </item>
+ <item row="2" column="0">
+ <widget class="QLabel" name="labelTimingTolerance">
+ <property name="text">
+ <string>Timing Tolerance (%):</string>
+ </property>
+ </widget>
+ </item>
+ <item row="2" column="1">
+ <widget class="QSpinBox" name="spinTimingTolerance">
+ <property name="maximum">
+ <number>100</number>
+ </property>
+ <property name="value">
+ <number>10</number>
+ </property>
+ </widget>
+ </item>
+ </layout>
+ </widget>
+ </item>
+ <item>
+ <spacer name="verticalSpacer_3">
+ <property name="orientation">
+ <enum>Qt::Vertical</enum>
+ </property>
+ </spacer>
+ </item>
+ </layout>
+ </widget>
+ <widget class="QWidget" name="tabC64Nibbler">
+ <attribute name="title">
+ <string>C64 Nibbler </string>
+ </attribute>
+ <layout class="QVBoxLayout" name="verticalLayout_5">
+ <item>
+ <widget class="QCheckBox" name="checkC64Enable">
+ <property name="text">
+ <string>Enable C64 Nibbler Mode (GCR Format)</string>
+ </property>
+ <property name="checked">
+ <bool>true</bool>
+ </property>
+ </widget>
+ </item>
+ <item>
+ <widget class="QLabel" name="labelC64Info">
+ <property name="text">
+ <string>⚠️ C64 Nibbler Mode replaces Format/Geometry tabs for this disk!</string>
+ </property>
+ <property name="styleSheet">
+ <string notr="true">color: rgb(255, 128, 0); font-weight: bold;</string>
+ </property>
+ </widget>
+ </item>
+ <item>
+ <widget class="QGroupBox" name="groupGCR">
+ <property name="title">
+ <string>GCR Settings</string>
+ </property>
+ <layout class="QFormLayout" name="formLayout_3">
+ <item row="0" column="0">
+ <widget class="QLabel" name="labelSpeedZones">
+ <property name="text">
+ <string>Speed Zones:</string>
+ </property>
+ </widget>
+ </item>
+ <item row="0" column="1">
+ <layout class="QHBoxLayout" name="horizontalLayout_2">
+ <item>
+ <widget class="QRadioButton" name="radioSpeedAuto">
+ <property name="text">
+ <string>Auto (Standard 1541)</string>
+ </property>
+ <property name="checked">
+ <bool>true</bool>
+ </property>
+ </widget>
+ </item>
+ <item>
+ <widget class="QRadioButton" name="radioSpeedManual">
+ <property name="text">
+ <string>Manual</string>
+ </property>
+ </widget>
+ </item>
+ </layout>
+ </item>
+ <item row="1" column="0">
+ <widget class="QLabel" name="labelSync">
+ <property name="text">
+ <string>Sync Detection:</string>
+ </property>
+ </widget>
+ </item>
+ <item row="1" column="1">
+ <widget class="QComboBox" name="comboSync">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="maximumWidth"><number>250</number></property>
+ <item>
+ <property name="text">
+ <string>Standard ($FF × 10)</string>
+ </property>
+ </item>
+ <item>
+ <property name="text">
+ <string>Custom Sync (Protection)</string>
+ </property>
+ </item>
+ <item>
+ <property name="text">
+ <string>Variable Sync</string>
+ </property>
+ </item>
+ </widget>
+ </item>
+ <item row="2" column="0">
+ <widget class="QLabel" name="labelGAP">
+ <property name="text">
+ <string>GAP Detection:</string>
+ </property>
+ </widget>
+ </item>
+ <item row="2" column="1">
+ <widget class="QCheckBox" name="checkGAPAuto">
+ <property name="text">
+ <string>Auto-Detect GAP</string>
+ </property>
+ <property name="checked">
+ <bool>true</bool>
+ </property>
+ </widget>
+ </item>
+ </layout>
+ </widget>
+ </item>
+ <item>
+ <widget class="QGroupBox" name="groupHalfTrack">
+ <property name="title">
+ <string>Half-Track Options</string>
+ </property>
+ <layout class="QFormLayout" name="formLayout_4">
+ <item row="0" column="0" colspan="2">
+ <widget class="QCheckBox" name="checkHalfTrack">
+ <property name="text">
+ <string>Enable Half-Track Detection (0.5 steps)</string>
+ </property>
+ <property name="checked">
+ <bool>true</bool>
+ </property>
+ </widget>
+ </item>
+ <item row="1" column="0">
+ <widget class="QLabel" name="labelHalfTrackRange">
+ <property name="text">
+ <string>Track Range:</string>
+ </property>
+ </widget>
+ </item>
+ <item row="1" column="1">
+ <layout class="QHBoxLayout" name="horizontalLayout_3">
+ <item>
+ <widget class="QDoubleSpinBox" name="spinHalfTrackStart">
+ <property name="maximum">
+ <double>41.500000000000000</double>
+ </property>
+ <property name="singleStep">
+ <double>0.500000000000000</double>
+ </property>
+ </widget>
+ </item>
+ <item>
+ <widget class="QLabel" name="labelTo">
+ <property name="text">
+ <string>to</string>
+ </property>
+ </widget>
+ </item>
+ <item>
+ <widget class="QDoubleSpinBox" name="spinHalfTrackEnd">
+ <property name="maximum">
+ <double>41.500000000000000</double>
+ </property>
+ <property name="singleStep">
+ <double>0.500000000000000</double>
+ </property>
+ <property name="value">
+ <double>40.500000000000000</double>
+ </property>
+ </widget>
+ </item>
+ </layout>
+ </item>
+ <item row="2" column="0">
+ <widget class="QLabel" name="labelHalfTrackStep">
+ <property name="text">
+ <string>Step Size:</string>
+ </property>
+ </widget>
+ </item>
+ <item row="2" column="1">
+ <widget class="QComboBox" name="comboHalfTrackStep">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="maximumWidth"><number>250</number></property>
+ <item>
+ <property name="text">
+ <string>0.5 (Standard)</string>
+ </property>
+ </item>
+ <item>
+ <property name="text">
+ <string>0.25 (High Precision)</string>
+ </property>
+ </item>
+ <item>
+ <property name="text">
+ <string>1.0 (Full Tracks Only)</string>
+ </property>
+ </item>
+ </widget>
+ </item>
+ </layout>
+ </widget>
+ </item>
+ <item>
+ <widget class="QGroupBox" name="groupC64Protection">
+ <property name="title">
+ <string>C64 Protection Detection</string>
+ </property>
+ <layout class="QGridLayout" name="gridLayout">
+ <item row="0" column="0">
+ <widget class="QCheckBox" name="checkC64WeakBits">
+ <property name="text">
+ <string>Weak Bits</string>
+ </property>
+ <property name="checked">
+ <bool>true</bool>
+ </property>
+ </widget>
+ </item>
+ <item row="0" column="1">
+ <widget class="QCheckBox" name="checkC64VarTiming">
+ <property name="text">
+ <string>Variable Timing</string>
+ </property>
+ <property name="checked">
+ <bool>true</bool>
+ </property>
+ </widget>
+ </item>
+ <item row="1" column="0">
+ <widget class="QCheckBox" name="checkC64Alignment">
+ <property name="text">
+ <string>Track Alignment Issues</string>
+ </property>
+ <property name="checked">
+ <bool>true</bool>
+ </property>
+ </widget>
+ </item>
+ <item row="1" column="1">
+ <widget class="QCheckBox" name="checkC64SectorCount">
+ <property name="text">
+ <string>Sector Count Anomalies</string>
+ </property>
+ <property name="checked">
+ <bool>true</bool>
+ </property>
+ </widget>
+ </item>
+ </layout>
+ </widget>
+ </item>
+ <item>
+ <widget class="QGroupBox" name="groupC64Output">
+ <property name="title">
+ <string>Output Format</string>
+ </property>
+ <layout class="QVBoxLayout" name="verticalLayout_6">
+ <item>
+ <widget class="QRadioButton" name="radioOutputG64">
+ <property name="text">
+ <string>G64 (GCR with Alignment) - Recommended for Protection!</string>
+ </property>
+ <property name="checked">
+ <bool>true</bool>
+ </property>
+ </widget>
+ </item>
+ <item>
+ <widget class="QRadioButton" name="radioOutputD64">
+ <property name="text">
+ <string>D64 (Standard) - Loses Protection!</string>
+ </property>
+ </widget>
+ </item>
+ <item>
+ <widget class="QRadioButton" name="radioOutputNIB">
+ <property name="text">
+ <string>NIB (Nibbler Format)</string>
+ </property>
+ </widget>
+ </item>
+ <item>
+ <widget class="QRadioButton" name="radioOutputFlux">
+ <property name="text">
+ <string>Raw Flux (Complete)</string>
+ </property>
+ </widget>
+ </item>
+ </layout>
+ </widget>
+ </item>
+ <item>
+ <widget class="QCheckBox" name="checkC64Expert">
+ <property name="text">
+ <string>Expert Mode (Advanced Parameters)</string>
+ </property>
+ </widget>
+ </item>
+ <item>
+ <widget class="QGroupBox" name="groupC64ExpertParams">
+ <property name="title">
+ <string>C64 Expert Parameters</string>
+ </property>
+ <property name="enabled">
+ <bool>false</bool>
+ </property>
+ <layout class="QFormLayout" name="formLayout_5">
+ <item row="0" column="0">
+ <widget class="QLabel" name="labelGCRTolerance">
+ <property name="text">
+ <string>GCR Decode Tolerance (%):</string>
+ </property>
+ </widget>
+ </item>
+ <item row="0" column="1">
+ <widget class="QSpinBox" name="spinGCRTolerance">
+ <property name="maximum">
+ <number>100</number>
+ </property>
+ <property name="value">
+ <number>10</number>
+ </property>
+ </widget>
+ </item>
+ <item row="1" column="0">
+ <widget class="QLabel" name="labelBitSlip">
+ <property name="text">
+ <string>Bit Slip Correction:</string>
+ </property>
+ </widget>
+ </item>
+ <item row="1" column="1">
+ <widget class="QCheckBox" name="checkBitSlip">
+ <property name="text">
+ <string>Enable</string>
+ </property>
+ <property name="checked">
+ <bool>true</bool>
+ </property>
+ </widget>
+ </item>
+ <item row="2" column="0">
+ <widget class="QLabel" name="labelRevAlignment">
+ <property name="text">
+ <string>Revolution Alignment:</string>
+ </property>
+ </widget>
+ </item>
+ <item row="2" column="1">
+ <widget class="QCheckBox" name="checkRevAlignment">
+ <property name="text">
+ <string>Enable</string>
+ </property>
+ <property name="checked">
+ <bool>true</bool>
+ </property>
+ </widget>
+ </item>
+ <item row="3" column="0">
+ <widget class="QLabel" name="labelTrackVariance">
+ <property name="text">
+ <string>Track Variance Threshold:</string>
+ </property>
+ </widget>
+ </item>
+ <item row="3" column="1">
+ <widget class="QSpinBox" name="spinTrackVariance">
+ <property name="maximum">
+ <number>1000</number>
+ </property>
+ <property name="value">
+ <number>100</number>
+ </property>
+ </widget>
+ </item>
+ </layout>
+ </widget>
+ </item>
+ </layout>
+ </widget>
+ <widget class="QWidget" name="tabFlags">
+ <attribute name="title">
+ <string>Protection Flags</string>
+ </attribute>
+ <layout class="QVBoxLayout" name="verticalLayout_7">
+ <item>
+ <widget class="QLabel" name="labelFlags">
+ <property name="text">
+ <string>Copy Protection Flags (UFM) - Auto-detected, read-only:</string>
+ </property>
+ </widget>
+ </item>
+ <item>
+ <widget class="QGroupBox" name="groupFlags">
+ <property name="title">
+ <string>Detected Protection Features</string>
+ </property>
+ <layout class="QGridLayout" name="gridLayout_2">
+ <item row="0" column="0">
+ <widget class="QCheckBox" name="checkWeakBits">
+ <property name="text">
+ <string>Weak Bits</string>
+ </property>
+ <property name="enabled">
+ <bool>false</bool>
+ </property>
+ </widget>
+ </item>
+ <item row="0" column="1">
+ <widget class="QCheckBox" name="checkLongTrack">
+ <property name="text">
+ <string>Long Track</string>
+ </property>
+ <property name="enabled">
+ <bool>false</bool>
+ </property>
+ </widget>
+ </item>
+ <item row="1" column="0">
+ <widget class="QCheckBox" name="checkShortTrack">
+ <property name="text">
+ <string>Short Track</string>
+ </property>
+ <property name="enabled">
+ <bool>false</bool>
+ </property>
+ </widget>
+ </item>
+ <item row="1" column="1">
+ <widget class="QCheckBox" name="checkBadCRC">
+ <property name="text">
+ <string>Bad CRC (intentional)</string>
+ </property>
+ <property name="enabled">
+ <bool>false</bool>
+ </property>
+ </widget>
+ </item>
+ <item row="2" column="0">
+ <widget class="QCheckBox" name="checkDupIDs">
+ <property name="text">
+ <string>Duplicate IDs</string>
+ </property>
+ <property name="enabled">
+ <bool>false</bool>
+ </property>
+ </widget>
+ </item>
+ <item row="2" column="1">
+ <widget class="QCheckBox" name="checkNonStdGAP">
+ <property name="text">
+ <string>Non-Standard GAP</string>
+ </property>
+ <property name="enabled">
+ <bool>false</bool>
+ </property>
+ </widget>
+ </item>
+ <item row="3" column="0">
+ <widget class="QCheckBox" name="checkSyncAnomaly">
+ <property name="text">
+ <string>Sync Anomaly</string>
+ </property>
+ <property name="enabled">
+ <bool>false</bool>
+ </property>
+ </widget>
+ </item>
+ <item row="3" column="1">
+ <widget class="QCheckBox" name="checkCustom">
+ <property name="text">
+ <string>Custom Protection</string>
+ </property>
+ <property name="enabled">
+ <bool>false</bool>
+ </property>
+ </widget>
+ </item>
+ </layout>
+ </widget>
+ </item>
+ <item>
+ <spacer name="verticalSpacer_4">
+ <property name="orientation">
+ <enum>Qt::Vertical</enum>
+ </property>
+ </spacer>
+ </item>
+ </layout>
+ </widget>
+ </widget>
+ </item>
+ </layout>
+ </widget>
+ <resources/>
+ <connections>
+ <connection>
+ <sender>checkDDExpertMode</sender>
+ <signal>toggled(bool)</signal>
+ <receiver>groupDDExpert</receiver>
+ <slot>setEnabled(bool)</slot>
+ </connection>
+ <connection>
+ <sender>checkC64Expert</sender>
+ <signal>toggled(bool)</signal>
+ <receiver>groupC64ExpertParams</receiver>
+ <slot>setEnabled(bool)</slot>
+ </connection>
+ </connections>
+</ui>

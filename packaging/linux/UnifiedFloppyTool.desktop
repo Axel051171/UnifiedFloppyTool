@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=UnifiedFloppyTool
+GenericName=Floppy Disk Preservation Tool
+Comment=Read, analyze, and preserve floppy disk images
+Exec=UnifiedFloppyTool %F
+Icon=UnifiedFloppyTool
+Terminal=false
+Type=Application
+Categories=Utility;System;
+MimeType=application/x-adf;application/x-d64;
+Keywords=floppy;disk;preservation;retro;amiga;c64;atari;

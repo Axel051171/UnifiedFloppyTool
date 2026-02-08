@@ -1,0 +1,496 @@
+/**
+ * @file kryofluxstream_loader.c
+ * @brief KryoFlux stream file loader
+ * @version 3.8.0
+ */
+/*
+//
+// Copyright (C) 2006-2025 Jean-François DEL NERO
+//
+//
+// that this copyright statement is not removed from the file and that any
+// derivative work contains the original copyright notice and the associated
+// disclaimer.
+//
+// and/or modify  it under the terms of the GNU General Public License
+// as published by the Free Software Foundation; either version 2
+// of the License, or (at your option) any later version.
+//
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+//   See the GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+//
+*/
+///////////////////////////////////////////////////////////////////////////////////
+//-------------------------------------------------------------------------------//
+//-------------------------------------------------------------------------------//
+//-----------H----H--X----X-----CCCCC----22222----0000-----0000------11----------//
+//----------H----H----X-X-----C--------------2---0----0---0----0--1--1-----------//
+//---------HHHHHH-----X------C----------22222---0----0---0----0-----1------------//
+//--------H----H----X--X----C----------2-------0----0---0----0-----1-------------//
+//-------H----H---X-----X---CCCCC-----222222----0000-----0000----1111------------//
+//-------------------------------------------------------------------------------//
+
+///////////////////////////////////////////////////////////////////////////////////
+//
+// Written by: Jean-François DEL NERO
+//
+// Change History (most recent first):
+///////////////////////////////////////////////////////////////////////////////////
+
+#include <string.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <sys/stat.h>
+
+#include <math.h>
+
+#include "types.h"
+
+#include "libflux.h"
+#include "libflux.h"
+
+#include "uft_floppy_loader.h"
+#include "uft_floppy_utils.h"
+
+#include "kryofluxstream_loader.h"
+#include "kryofluxstream_format.h"
+#include "kryofluxstream.h"
+
+#include "kryofluxstream_writer.h"
+
+#include "uft_compat.h"
+
+#include "misc/env.h"
+#include "misc/script_exec.h"
+
+int KryoFluxStream_libIsValidDiskFile( LIBFLUX_IMGLDR * imgldr_ctx, LIBFLUX_IMGLDR_FILEINFOS * imgfile )
+{
+	int found,track,side;
+	char * filepath;
+	FILE * f;
+	s_oob_header oob;
+	char filename[512];
+
+	imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"KryoFluxStream_libIsValidDiskFile");
+
+	if(imgfile)
+	{
+		if( imgfile->is_dir )
+		{
+			filepath = malloc( strlen(imgfile->path) + 32 );
+			if(!filepath)
+				return LIBFLUX_BADFILE;
+
+			track=0;
+			side=0;
+			found=0;
+			do
+			{
+				snprintf(filepath, sizeof(filepath),"%s"DIR_SEPARATOR"track%.2d.%d.raw",imgfile->path,track,side);
+				f = libflux_fopen(filepath,"rb");
+				if(f)
+				{
+					libflux_fread(&oob,sizeof(s_oob_header),f);
+					if(oob.Sign==OOB_SIGN)
+					{
+						found=1;
+					}
+					libflux_fclose(f);
+				}
+				side++;
+				if(side>1)
+				{
+					side = 0;
+					track++;
+				}
+
+			}while(track<84);
+
+			free( filepath );
+
+			if(found)
+			{
+				return LIBFLUX_VALIDFILE;
+			}
+			else
+			{
+				return LIBFLUX_BADFILE;
+			}
+
+		}
+		else
+		{
+			libflux_getfilenamebase(imgfile->path,(char*)&filename,SYS_PATH_TYPE);
+			libflux_strlower((char*)&filename);
+			found=0;
+
+			if(!strstr(filename,".0.raw") && !strstr(filename,".1.raw") )
+			{
+				return LIBFLUX_BADFILE;
+			}
+
+			memcpy(&oob,imgfile->file_header,sizeof(s_oob_header));
+
+			if( ( oob.Sign == OOB_SIGN ) && ( oob.Type>=1 && oob.Type<=4 ) )
+			{
+				found=1;
+			}
+
+			if(found)
+			{
+				return LIBFLUX_VALIDFILE;
+			}
+			else
+			{
+				return LIBFLUX_BADFILE;
+			}
+		}
+	}
+
+	return LIBFLUX_BADPARAMETER;
+}
+
+static LIBFLUX_SIDE* decodestream(LIBFLUX_CTX* flux_ctx,char * file,short * rpm,float timecoef,int phasecorrection,int bitrate,int filter,int filterpasses, int bmpexport, int track, int side)
+{
+	LIBFLUX_SIDE* currentside;
+
+	LIBFLUX_TRKSTREAM *track_dump;
+	LIBFLUX_FXSA * fxs;
+	char tmp_filename[512];
+	currentside=0;
+
+	flux_ctx->libflux_printf(MSG_DEBUG,"------------------------------------------------");
+
+	flux_ctx->libflux_printf(MSG_DEBUG,"Loading %s...",libflux_getfilenamebase(file,0,SYS_PATH_TYPE));
+
+	fxs = libflux_initFxStream(flux_ctx);
+	if(fxs)
+	{
+		track_dump=DecodeKFStreamFile(flux_ctx,fxs,file);
+		if(track_dump)
+		{
+			libflux_FxStream_ChangeSpeed(fxs,track_dump,timecoef);
+
+			libflux_FxStream_setBitrate(fxs,bitrate);
+
+			libflux_FxStream_setPhaseCorrectionFactor(fxs,phasecorrection);
+
+			libflux_FxStream_setFilterParameters(fxs,filterpasses,filter);
+
+			fxs->pll.track = track;
+			fxs->pll.side = side;
+			currentside = libflux_FxStream_AnalyzeAndGetTrack(fxs,track_dump);
+
+			if( bmpexport )
+			{
+				strncpy(tmp_filename, file, sizeof(tmp_filename)-1); tmp_filename[sizeof(tmp_filename)-1] = '\0';
+				strncat(tmp_filename, ".bmp", sizeof(tmp_filename) - strlen(tmp_filename) - 1);
+				libflux_FxStream_ExportToBmp(fxs,track_dump, tmp_filename);
+			}
+
+			if(rpm && currentside)
+				*rpm = (short)( 60 / GetTrackPeriod(flux_ctx,currentside) );
+
+			if(currentside)
+			{
+				currentside->stream_dump = track_dump;
+			}
+			else
+			{
+				libflux_FxStream_FreeStream(fxs,track_dump);
+			}
+		}
+
+		libflux_deinitFxStream(fxs);
+	}
+
+	flux_ctx->libflux_printf(MSG_DEBUG,"------------------------------------------------");
+
+	return currentside;
+}
+
+extern float clv_track2rpm(int track, int type);
+
+int KryoFluxStream_libLoad_DiskFile(LIBFLUX_IMGLDR * imgldr_ctx,LIBFLUX_FLOPPY * floppydisk,char * imgfile,void * parameters)
+{
+	FILE * f;
+	char * filepath;
+	char * folder;
+	char fname[512];
+	int mintrack,maxtrack;
+	int minside,maxside,singleside;
+	short rpm;
+	unsigned short i,j;
+	int trackstep;
+	LIBFLUX_CYLINDER* currentcylinder;
+	int len;
+	int found,track,side;
+	struct stat staterep;
+	s_oob_header oob;
+	LIBFLUX_SIDE * curside;
+	int nbtrack,nbside;
+	float timecoef;
+
+	int phasecorrection;
+	int bitrate;
+	int filterpasses,filter;
+	int bmp_export;
+	int mac_clv,c64_clv,victor9k_clv;
+	envvar_entry * backup_env;
+	envvar_entry * tmp_env;
+
+	imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"KryoFluxStream_libLoad_DiskFile");
+
+	backup_env = NULL;
+	folder = NULL;
+	filepath = NULL;
+
+	if(imgfile)
+	{
+		if(!libflux_stat(imgfile,&staterep))
+		{
+			tmp_env = initEnv( (envvar_entry *)imgldr_ctx->ctx->envvar, NULL );
+			if(!tmp_env)
+				goto error;
+
+			backup_env = imgldr_ctx->ctx->envvar;
+			imgldr_ctx->ctx->envvar = tmp_env;
+			setget_env_script(imgldr_ctx->ctx->scriptctx, tmp_env);
+
+			len = libflux_getpathfolder(imgfile,0,SYS_PATH_TYPE);
+
+			folder = (char*)malloc(len+1);
+			if(!folder)
+				goto error;
+
+			libflux_getpathfolder(imgfile,folder,SYS_PATH_TYPE);
+
+			if(staterep.st_mode&S_IFDIR)
+			{
+				snprintf(fname, sizeof(fname),"track");
+			}
+			else
+			{
+				libflux_getfilenamebase(imgfile,(char*)&fname,SYS_PATH_TYPE);
+				if(!strstr(fname,".0.raw") && !strstr(fname,".1.raw") )
+				{
+					tmp_env = (envvar_entry *)imgldr_ctx->ctx->envvar;
+					imgldr_ctx->ctx->envvar = backup_env;
+					setget_env_script(imgldr_ctx->ctx->scriptctx, backup_env);
+					deinitEnv( tmp_env );
+
+					free(folder);
+					return LIBFLUX_BADFILE;
+				}
+
+				fname[strlen(fname)-8]=0;
+			}
+
+			filepath = malloc( strlen(imgfile) + 32 );
+			if(!filepath)
+				goto error;
+
+			snprintf(filepath, sizeof(filepath),"%s%s",folder,"config.script");
+			libflux_execScriptFile(imgldr_ctx->ctx, filepath);
+
+			if( libflux_getEnvVarValue( imgldr_ctx->ctx, "KFRAWLOADER_DOUBLE_STEP" ) & 1 )
+				trackstep = 2;
+			else
+				trackstep = 1;
+
+			mac_clv = libflux_getEnvVarValue( imgldr_ctx->ctx, "FLUXSTREAM_IMPORT_PCCAV_TO_MACCLV" );
+			c64_clv = libflux_getEnvVarValue( imgldr_ctx->ctx, "FLUXSTREAM_IMPORT_PCCAV_TO_C64CLV" );
+			victor9k_clv = libflux_getEnvVarValue( imgldr_ctx->ctx, "FLUXSTREAM_IMPORT_PCCAV_TO_VICTOR9KCLV" );
+
+			singleside = libflux_getEnvVarValue( imgldr_ctx->ctx, "KFRAWLOADER_SINGLE_SIDE" )&1;
+
+			timecoef=1;
+			if( !strcmp(libflux_getEnvVar( imgldr_ctx->ctx, "FLUXSTREAM_RPMFIX", NULL),"360TO300RPM") )
+			{
+				timecoef=(float)1.2;
+			}
+
+			if( !strcmp(libflux_getEnvVar( imgldr_ctx->ctx, "FLUXSTREAM_RPMFIX", NULL),"300TO360RPM") )
+			{
+				timecoef=(float)0.833;
+			}
+
+			phasecorrection = libflux_getEnvVarValue( imgldr_ctx->ctx, "FLUXSTREAM_PLL_PHASE_CORRECTION_DIVISOR" );
+			filterpasses = libflux_getEnvVarValue( imgldr_ctx->ctx, "FLUXSTREAM_BITRATE_FILTER_PASSES" );
+			filter = libflux_getEnvVarValue( imgldr_ctx->ctx, "FLUXSTREAM_BITRATE_FILTER_WINDOW" );
+			bitrate = libflux_getEnvVarValue( imgldr_ctx->ctx, "KFRAWLOADER_BITRATE" );
+			bmp_export = libflux_getEnvVarValue( imgldr_ctx->ctx, "KFRAWLOADER_BMPEXPORT" );
+
+			track=0;
+			side=0;
+			found=0;
+
+			mintrack=0;
+			maxtrack=0;
+			minside=0;
+			maxside=0;
+
+			do
+			{
+				snprintf(filepath, sizeof(filepath),"%s%s%.2d.%d.raw",folder,fname,track,side);
+				f = libflux_fopen(filepath,"rb");
+				if(f)
+				{
+					libflux_fread(&oob,sizeof(s_oob_header),f);
+					if(oob.Sign==OOB_SIGN)
+					{
+						if(mintrack>track) mintrack = track;
+						if(maxtrack<track) maxtrack = track;
+						if(minside>side) minside = side;
+						if(maxside<side) maxside = side;
+						found=1;
+					}
+					libflux_fclose(f);
+				}
+				side++;
+				if(side>1)
+				{
+					side = 0;
+					track=track+trackstep;
+				}
+			}while(track<84);
+
+			if(!found)
+			{
+				tmp_env = (envvar_entry *)imgldr_ctx->ctx->envvar;
+				imgldr_ctx->ctx->envvar = backup_env;
+				setget_env_script(imgldr_ctx->ctx->scriptctx, backup_env);
+				deinitEnv( tmp_env );
+
+				free( folder );
+				free( filepath );
+				return LIBFLUX_BADFILE;
+			}
+
+			nbside=(maxside-minside)+1;
+			if(singleside)
+				nbside = 1;
+			nbtrack=(maxtrack-mintrack)+1;
+			if(trackstep==2)
+				nbtrack=(nbtrack/trackstep) + 1;
+
+			imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"%d track (%d - %d), %d sides (%d - %d)",nbtrack,mintrack,maxtrack,nbside,minside,maxside);
+
+			floppydisk->floppyiftype=GENERIC_SHUGART_DD_FLOPPYMODE;
+			floppydisk->floppyBitRate=VARIABLEBITRATE;
+			floppydisk->floppyNumberOfTrack=nbtrack;
+			floppydisk->floppyNumberOfSide=nbside;
+			floppydisk->floppySectorPerTrack=-1;
+
+			floppydisk->tracks = (LIBFLUX_CYLINDER**)malloc(sizeof(LIBFLUX_CYLINDER*)*floppydisk->floppyNumberOfTrack);
+			if(!floppydisk->tracks)
+				goto error;
+
+			memset(floppydisk->tracks,0,sizeof(LIBFLUX_CYLINDER*)*floppydisk->floppyNumberOfTrack);
+
+			rpm = 300;
+
+			for(j=0;j<floppydisk->floppyNumberOfTrack*trackstep;j=j+trackstep)
+			{
+				for(i=0;i<floppydisk->floppyNumberOfSide;i++)
+				{
+					libflux_imgCallProgressCallback(imgldr_ctx,(j<<1) | (i&1),(floppydisk->floppyNumberOfTrack*trackstep)*2 );
+
+					snprintf(filepath, sizeof(filepath),"%s%s%.2d.%d.raw",folder,fname,j,i);
+
+					if(mac_clv)
+						timecoef = (float)mac_clv / clv_track2rpm(j,1);
+
+					if(c64_clv)
+						timecoef = (float)c64_clv / clv_track2rpm(j,2);
+
+					if(victor9k_clv)
+						timecoef = (float)victor9k_clv / clv_track2rpm(j,3);
+
+					rpm = 300;
+					curside = decodestream(imgldr_ctx->ctx,filepath,&rpm,timecoef,phasecorrection,bitrate,filter,filterpasses,bmp_export,j,i);
+
+					if(!floppydisk->tracks[j/trackstep])
+					{
+						floppydisk->tracks[j/trackstep] = allocCylinderEntry(rpm,floppydisk->floppyNumberOfSide);
+					}
+
+					currentcylinder = floppydisk->tracks[j/trackstep];
+					currentcylinder->sides[i] = curside;
+				}
+			}
+
+			// Adjust track timings.
+			for(j=0;j<floppydisk->floppyNumberOfTrack;j++)
+			{
+				for(i=0;i<floppydisk->floppyNumberOfSide;i++)
+				{
+					curside = floppydisk->tracks[j]->sides[i];
+					if(curside && floppydisk->tracks[0]->sides[0])
+					{
+						AdjustTrackPeriod(imgldr_ctx->ctx,floppydisk->tracks[0]->sides[0],curside);
+					}
+				}
+			}
+
+			imgldr_ctx->ctx->libflux_printf(MSG_INFO_1,"track file successfully loaded and encoded!");
+
+			free( folder );
+			free( filepath );
+
+			libflux_sanityCheck(imgldr_ctx->ctx,floppydisk);
+
+			tmp_env = (envvar_entry *)imgldr_ctx->ctx->envvar;
+			imgldr_ctx->ctx->envvar = backup_env;
+			setget_env_script(imgldr_ctx->ctx->scriptctx, backup_env);
+			deinitEnv( tmp_env );
+
+			return LIBFLUX_NOERROR;
+		}
+	}
+
+	return LIBFLUX_BADFILE;
+
+error:
+	free(folder);
+	free(filepath);
+
+	if( backup_env )
+	{
+		tmp_env = (envvar_entry *)imgldr_ctx->ctx->envvar;
+		imgldr_ctx->ctx->envvar = backup_env;
+		setget_env_script(imgldr_ctx->ctx->scriptctx, backup_env);
+		deinitEnv( tmp_env );
+	}
+
+	return LIBFLUX_INTERNALERROR;
+}
+
+int KryoFluxStream_libGetPluginInfo(LIBFLUX_IMGLDR * imgldr_ctx,uint32_t infotype,void * returnvalue)
+{
+	static const char plug_id[]="KRYOFLUXSTREAM";
+	static const char plug_desc[]="KryoFlux Stream Loader";
+	static const char plug_ext[]="raw";
+
+	plugins_ptr plug_funcs=
+	{
+		(ISVALIDDISKFILE)   KryoFluxStream_libIsValidDiskFile,
+		(LOADDISKFILE)      KryoFluxStream_libLoad_DiskFile,
+		(WRITEDISKFILE)     KryoFluxStream_libWrite_DiskFile,
+		(GETPLUGININFOS)    KryoFluxStream_libGetPluginInfo
+	};
+
+	return libGetPluginInfo(
+			imgldr_ctx,
+			infotype,
+			returnvalue,
+			plug_id,
+			plug_desc,
+			&plug_funcs,
+			plug_ext
+			);
+}

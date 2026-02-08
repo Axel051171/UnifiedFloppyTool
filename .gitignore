@@ -1,0 +1,50 @@
+# Build
+build/
+cmake-build-*/
+*.o
+*.a
+*.so
+*.so.*
+*.dylib
+*.dll
+*.lib
+*.exe
+*.app
+
+# Qt / qmake
+Makefile
+*.pro.user
+*.pro.user.*
+moc_*.cpp
+moc_*.h
+qrc_*.cpp
+ui_*.h
+*.qm
+
+# IDE
+.vscode/
+.idea/
+.qtcreator/
+*.swp
+*.swo
+*~
+*.orig
+*.bak
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Temp
+/tmp/
+*.tmp
+*.log
+core
+core.*
+
+# Packaging
+*.deb
+*.dmg
+*.tar.gz
+*.zip
