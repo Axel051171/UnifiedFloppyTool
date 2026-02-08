@@ -52,7 +52,7 @@ win32:CONFIG += console
 
 # Compiler flags - suppress warnings for legacy code
 # Compiler flags moved to platform-specific sections below
-QMAKE_CFLAGS += -Wall -Wextra -Wno-unused-parameter
+unix:QMAKE_CFLAGS += -Wall -Wextra -Wno-unused-parameter
 
 # Windows specific
 win32 {
@@ -75,6 +75,7 @@ INCLUDEPATH += \
     include/uft/compat \
     include/uft/formats \
     include/uft/detect \
+    include/uft/analysis \
     src \
     src/samdisk \
     src/hardware_providers \
@@ -163,9 +164,12 @@ HEADERS += \
     include/uft/analysis/uft_denoise_bridge.h \
     include/uft/analysis/phi_otdr_denoise_1d.h \
            include/uft/formats/uft_dms.h \
-           include/uft/detect/mfm_detect.h \
-           include/uft/detect/cpm_fs.h \
-           include/uft/detect/uft_mfm_detect_bridge.h \
+           include/uft/detect \
+    include/uft/analysis/mfm_detect.h \
+           include/uft/detect \
+    include/uft/analysis/cpm_fs.h \
+           include/uft/detect \
+    include/uft/analysis/uft_mfm_detect_bridge.h \
     src/advanceddialogs.h \
     src/mainwindow.h \
     src/diskanalyzerwindow.h \
@@ -1711,7 +1715,7 @@ SOURCES += $$MBEDTLS_SOURCES \
     src/analysis/denoise/phi_otdr_denoise_1d.c
 
 # Suppress warnings in third-party code
-QMAKE_CFLAGS += -Wno-unused-parameter -Wno-sign-compare
+unix:QMAKE_CFLAGS += -Wno-unused-parameter -Wno-sign-compare
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Cart7/Cart8 Multi-System Cartridge Reader (NES, SNES, N64, MD, GBA, GB, 3DS)
