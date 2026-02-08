@@ -6,10 +6,6 @@
 
 **„Bei uns geht kein Bit verloren"** — Open-source forensic floppy disk preservation for 700+ formats and 8 hardware controllers.
 
-<p align="center">
-  <img src="resources/icons/app_256.png" alt="UnifiedFloppyTool" width="128">
-</p>
-
 ---
 
 ## Downloads
