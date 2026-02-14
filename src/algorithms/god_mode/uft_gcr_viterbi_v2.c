@@ -36,14 +36,22 @@ static const uint8_t GCR_CBM_DECODE[32] = {
 };
 
 // Commodore GCR: 4 bits → 5 bits (for encoding/verification)
-static const uint8_t GCR_CBM_ENCODE[16] __attribute__((unused)) = {
+static const uint8_t GCR_CBM_ENCODE[16]
+#ifndef _MSC_VER
+    __attribute__((unused))
+#endif
+= {
     0x0A, 0x0B, 0x12, 0x13, 0x0E, 0x0F, 0x16, 0x17,
     0x09, 0x19, 0x1A, 0x1B, 0x0D, 0x1D, 0x1E, 0x15
 };
 
 // Apple II GCR: 6-and-2 encoding (disk II)
 // 6 bits → 8 bits
-static const uint8_t GCR_APPLE_DECODE[64] __attribute__((unused)) = {
+static const uint8_t GCR_APPLE_DECODE[64]
+#ifndef _MSC_VER
+    __attribute__((unused))
+#endif
+= {
     // Complex table - simplified for this implementation
     0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
     0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,

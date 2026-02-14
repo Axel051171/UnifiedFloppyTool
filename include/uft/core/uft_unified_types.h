@@ -77,6 +77,9 @@ typedef enum {
     
 } uft_error_t;
 
+/* Prevent uft_error_compat.h from redefining enum values as macros */
+#define UFT_HAS_UNIFIED_ERROR_ENUM 1
+
 /* Error code aliases for compatibility */
 #define UFT_ERR_INVALID_ARG    UFT_ERR_INVALID_PARAM
 #define UFT_ERC_FORMAT         UFT_ERR_CORRUPT

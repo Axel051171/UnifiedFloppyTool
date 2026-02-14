@@ -8,7 +8,6 @@
  */
 
 #include "uft/formats/uft_cfi.h"
-#include "uft/uft_track.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>

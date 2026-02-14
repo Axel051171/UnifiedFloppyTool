@@ -11,8 +11,8 @@
  * - Maximum match length: 18 (3 + 15)
  */
 
-#include "uft/core/uft_error_compat.h"
 #include "uft/formats/uft_cqm.h"
+#include "uft/core/uft_error_compat.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>

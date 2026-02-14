@@ -28,6 +28,10 @@
 extern "C" {
 #endif
 
+/* Track allocation - defined in uft_unified_types.c */
+uft_track_t* uft_track_alloc(size_t max_sectors, size_t max_raw_bits);
+void uft_track_free(uft_track_t *track);
+
 // ============================================================================
 // Byte-Order Helpers
 // ============================================================================
