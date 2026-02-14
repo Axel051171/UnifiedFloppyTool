@@ -27,6 +27,8 @@
 #ifndef ATARI_DOS_H
 #define ATARI_DOS_H
 
+#pragma pack(push, 1)
+
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -216,7 +218,7 @@ typedef enum {
  * ========================================================================== */
 
 /* ATR Header (16 Bytes) */
-typedef struct __attribute__((packed)) {
+typedef struct {
     uint16_t magic;             /* $0296 = Summe "NICKATARI" */
     uint16_t size_paragraphs;   /* Image-Größe / 16 (Low Word) */
     uint16_t sector_size;       /* 128, 256 oder 512 */
@@ -678,5 +680,7 @@ const char *ados_error_str(atari_error_t err);
 #ifdef __cplusplus
 }
 #endif
+
+#pragma pack(pop)
 
 #endif /* ATARI_DOS_H */

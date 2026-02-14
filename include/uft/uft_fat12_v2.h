@@ -148,6 +148,7 @@ typedef struct {
     uint32_t hidden_sectors;        /**< Hidden sectors */
     uint32_t total_sectors_32;      /**< Total sectors (32-bit) */
 } uft_fat12_bpb_t;
+#pragma pack(pop)
 
 /**
  * @brief Boot sector structure
@@ -166,6 +167,7 @@ typedef struct {
     uint8_t  boot_code[448];        /**< Boot code */
     uint16_t signature;             /**< Boot signature (0xAA55) */
 } uft_fat12_boot_t;
+#pragma pack(pop)
 
 /**
  * @brief Directory entry structure
@@ -181,6 +183,7 @@ typedef struct {
     uint16_t cluster;               /**< First cluster number */
     uint32_t size;                  /**< File size in bytes */
 } uft_fat12_dirent_t;
+#pragma pack(pop)
 
 /**
  * @brief FAT12 filesystem handle

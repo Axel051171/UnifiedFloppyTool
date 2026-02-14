@@ -16,7 +16,16 @@
 #include <stddef.h>
 #include <stdbool.h>
 #include <time.h>
-#include <sys/types.h>  /* ssize_t */
+/* ssize_t portability */
+#ifdef _MSC_VER
+  #include <BaseTsd.h>
+  #ifndef _SSIZE_T_DEFINED
+  #define _SSIZE_T_DEFINED
+  typedef SSIZE_T ssize_t;
+  #endif
+#else
+  #include <sys/types.h>
+#endif
 
 #ifdef __cplusplus
 extern "C" {

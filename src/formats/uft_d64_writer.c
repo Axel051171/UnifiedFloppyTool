@@ -9,6 +9,7 @@
 #include "uft/uft_cbm_gcr.h"
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 /* ═══════════════════════════════════════════════════════════════════════════════
  * Track Layout Tables

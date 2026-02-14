@@ -98,6 +98,7 @@ typedef struct {
     uint8_t  marker_ff;           /**< 0xFF */
     uint8_t  marker_lf_cr_lf[3];  /**< 0x0A 0x0D 0x0A */
 } uft_a2r_header_t;
+#pragma pack(pop)
 
 /**
  * @brief A2R chunk header (8 bytes)
@@ -107,6 +108,7 @@ typedef struct {
     uint8_t  id[4];               /**< Chunk ID (INFO, STRM, META) */
     uint32_t size;                /**< Chunk size (little-endian) */
 } uft_a2r_chunk_header_t;
+#pragma pack(pop)
 
 /**
  * @brief A2R INFO chunk (36 bytes)
@@ -119,6 +121,7 @@ typedef struct {
     uint8_t  write_protected;     /**< Write protected flag */
     uint8_t  synchronized;        /**< Track synchronized flag */
 } uft_a2r_info_t;
+#pragma pack(pop)
 
 /**
  * @brief A2R STRM flux record header
@@ -130,6 +133,7 @@ typedef struct {
     uint32_t data_length;         /**< Length of flux data */
     uint32_t tick_count;          /**< Number of ticks in this capture */
 } uft_a2r_strm_record_t;
+#pragma pack(pop)
 
 /*============================================================================
  * A2R Runtime Structures

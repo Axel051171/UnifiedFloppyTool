@@ -1206,7 +1206,7 @@ int uft_kf_write_track(uft_kf_config_t* config, int track, int side,
     uint8_t* raw_data = malloc(raw_size);
     if (!raw_data) return -1;
     
-    ssize_t raw_len = uft_kf_flux_to_raw(flux, count, NULL, 0, raw_data, raw_size);
+    int raw_len = uft_kf_flux_to_raw(flux, count, NULL, 0, raw_data, raw_size);
     if (raw_len < 0) {
         free(raw_data);
         return -1;

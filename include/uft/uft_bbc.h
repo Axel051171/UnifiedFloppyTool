@@ -145,6 +145,7 @@ typedef struct {
     uint8_t     freeend;        /**< Pointer to end of free list */
     uint8_t     check1;         /**< Second checksum */
 } uft_adfs_oldmap_t;
+#pragma pack(pop)
 
 /** ADFS disc record (60 bytes) */
 #pragma pack(push, 1)
@@ -174,6 +175,7 @@ typedef struct {
     uint32_t    root_size;      /**< Root directory size (E+/F+) */
     uint8_t     reserved2[8];
 } uft_adfs_discrecord_t;
+#pragma pack(pop)
 
 /** ADFS directory entry */
 typedef struct {
@@ -350,6 +352,7 @@ typedef struct {
     uint8_t     sides;          /**< Number of sides */
     uint16_t    crc;            /**< Header CRC */
 } uft_td0_header_t;
+#pragma pack(pop)
 
 /** Teledisk comment block */
 #pragma pack(push, 1)
@@ -363,6 +366,7 @@ typedef struct {
     uint8_t     minute;         /**< Minute */
     uint8_t     second;         /**< Second */
 } uft_td0_comment_t;
+#pragma pack(pop)
 
 /** Teledisk track header */
 #pragma pack(push, 1)
@@ -372,6 +376,7 @@ typedef struct {
     uint8_t     head;           /**< Head number */
     uint8_t     crc;            /**< Track CRC */
 } uft_td0_track_t;
+#pragma pack(pop)
 
 /** Teledisk sector header */
 #pragma pack(push, 1)
@@ -383,6 +388,7 @@ typedef struct {
     uint8_t     flags;          /**< Flags */
     uint8_t     crc;            /**< Sector CRC */
 } uft_td0_sector_t;
+#pragma pack(pop)
 
 /** Teledisk data header */
 #pragma pack(push, 1)
@@ -390,6 +396,7 @@ typedef struct {
     uint16_t    blocksize;      /**< Block size + 1 */
     uint8_t     encoding;       /**< Encoding method */
 } uft_td0_data_t;
+#pragma pack(pop)
 
 /*============================================================================
  * Teledisk API

@@ -121,6 +121,7 @@ typedef struct {
     uint8_t     track0s1_altencoding; /**< Alt encoding for T0S1 */
     uint8_t     track0s1_encoding;  /**< Encoding for T0S1 */
 } uft_hfe_header_t;
+#pragma pack(pop)
 
 /** Track lookup table entry */
 #pragma pack(push, 1)
@@ -128,6 +129,7 @@ typedef struct {
     uint16_t    offset;             /**< Track offset in blocks */
     uint16_t    track_len;          /**< Track length in bytes */
 } uft_hfe_track_entry_t;
+#pragma pack(pop)
 
 /** Track information */
 typedef struct {

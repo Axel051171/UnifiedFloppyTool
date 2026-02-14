@@ -123,6 +123,7 @@ typedef struct {
     /* Rest is boot code */
     uint8_t  boot_code[119];
 } uft_atari_boot_t;
+#pragma pack(pop)
 
 /* ═══════════════════════════════════════════════════════════════════════════════
  * VTOC - Volume Table of Contents (Sector 360)
@@ -138,12 +139,14 @@ typedef struct {
     /* Each bit: 1=free, 0=used */
     /* Bit 0 of byte 0 = sector 0, etc. */
 } uft_atari_vtoc_t;
+#pragma pack(pop)
 
 /* Extended VTOC for DOS 2.5 (Sector 1024) */
 #pragma pack(push, 1)
 typedef struct {
     uint8_t  bitmap[128];       /* Additional bitmap for sectors 720-1023 */
 } uft_atari_vtoc2_t;
+#pragma pack(pop)
 
 /* ═══════════════════════════════════════════════════════════════════════════════
  * Directory Entry (16 bytes)
@@ -157,6 +160,7 @@ typedef struct {
     char     filename[8];       /* Filename (space-padded) */
     char     extension[3];      /* Extension (space-padded) */
 } uft_atari_dirent_t;
+#pragma pack(pop)
 
 /* ═══════════════════════════════════════════════════════════════════════════════
  * Data Sector Link (DOS 2.x format)
@@ -178,6 +182,7 @@ typedef struct {
     uint8_t  next_lo;           /* Next sector low byte */
     uint8_t  bytes_used;        /* Bytes used in this sector (0-125) */
 } uft_atari_sector_sd_t;
+#pragma pack(pop)
 
 #pragma pack(push, 1)
 typedef struct {
@@ -186,6 +191,7 @@ typedef struct {
     uint8_t  next_hi;           /* Next sector high bits */
     uint8_t  next_lo;           /* Next sector low byte */
 } uft_atari_sector_dd_t;
+#pragma pack(pop)
 
 /* ═══════════════════════════════════════════════════════════════════════════════
  * SpartaDOS Structures
@@ -219,6 +225,7 @@ typedef struct {
     uint16_t first_data;        /* First data sector */
     /* Boot code follows */
 } uft_sparta_boot_t;
+#pragma pack(pop)
 
 /* SpartaDOS Directory Entry (23 bytes) */
 #pragma pack(push, 1)
@@ -236,6 +243,7 @@ typedef struct {
     uint8_t  time_min;          /* Minute (0-59) */
     uint8_t  time_sec;          /* Second (0-59) */
 } uft_sparta_dirent_t;
+#pragma pack(pop)
 
 /* ═══════════════════════════════════════════════════════════════════════════════
  * MyDOS Structures
@@ -250,6 +258,7 @@ typedef struct {
     uint8_t  reserved[5];
     uint8_t  bitmap[118];       /* Extended bitmap */
 } uft_mydos_vtoc_t;
+#pragma pack(pop)
 
 /* MyDOS Subdirectory Entry */
 #pragma pack(push, 1)
@@ -260,6 +269,7 @@ typedef struct {
     char     dirname[8];
     char     padding[3];        /* Always spaces */
 } uft_mydos_subdir_t;
+#pragma pack(pop)
 
 /* ═══════════════════════════════════════════════════════════════════════════════
  * Disk Image Structure

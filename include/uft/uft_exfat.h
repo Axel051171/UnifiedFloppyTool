@@ -110,6 +110,7 @@ typedef struct {
     uint8_t  boot_code[390];        /* Boot code */
     uint16_t boot_signature;        /* 0xAA55 */
 } uft_exfat_boot_sector_t;
+#pragma pack(pop)
 
 /* ═══════════════════════════════════════════════════════════════════════════════
  * Extended Boot Sectors (sectors 1-8)
@@ -120,6 +121,7 @@ typedef struct {
     uint8_t  extended_boot_code[510];
     uint16_t extended_boot_signature; /* 0xAA55 */
 } uft_exfat_extended_boot_t;
+#pragma pack(pop)
 
 /* ═══════════════════════════════════════════════════════════════════════════════
  * OEM Parameters (sector 9)
@@ -130,6 +132,7 @@ typedef struct {
     uint8_t  parameters[480];
     uint8_t  reserved[32];
 } uft_exfat_oem_params_t;
+#pragma pack(pop)
 
 /* ═══════════════════════════════════════════════════════════════════════════════
  * Boot Checksum (sector 11)
@@ -149,6 +152,7 @@ typedef struct {
     uint32_t first_cluster;         /* First cluster */
     uint64_t data_length;           /* Data length */
 } uft_exfat_dir_entry_t;
+#pragma pack(pop)
 
 /* File directory entry (type 0x85) */
 #pragma pack(push, 1)
@@ -171,6 +175,7 @@ typedef struct {
     
     uint8_t  reserved2[7];
 } uft_exfat_file_entry_t;
+#pragma pack(pop)
 
 /* Stream extension entry (type 0xC0) */
 #pragma pack(push, 1)
@@ -187,6 +192,7 @@ typedef struct {
     uint32_t first_cluster;         /* First cluster of data */
     uint64_t data_length;           /* Allocated data length */
 } uft_exfat_stream_entry_t;
+#pragma pack(pop)
 
 /* File name extension entry (type 0xC1) */
 #pragma pack(push, 1)
@@ -195,6 +201,7 @@ typedef struct {
     uint8_t  general_secondary_flags;
     uint16_t file_name[15];         /* Up to 15 UTF-16 characters */
 } uft_exfat_name_entry_t;
+#pragma pack(pop)
 
 /* Volume label entry (type 0x83) */
 #pragma pack(push, 1)
@@ -204,6 +211,7 @@ typedef struct {
     uint16_t volume_label[11];      /* UTF-16 label */
     uint8_t  reserved[8];
 } uft_exfat_label_entry_t;
+#pragma pack(pop)
 
 /* Allocation bitmap entry (type 0x81) */
 #pragma pack(push, 1)
@@ -214,6 +222,7 @@ typedef struct {
     uint32_t first_cluster;         /* First cluster of bitmap */
     uint64_t data_length;           /* Size of bitmap in bytes */
 } uft_exfat_bitmap_entry_t;
+#pragma pack(pop)
 
 /* Upcase table entry (type 0x82) */
 #pragma pack(push, 1)
@@ -225,6 +234,7 @@ typedef struct {
     uint32_t first_cluster;         /* First cluster of table */
     uint64_t data_length;           /* Size of table */
 } uft_exfat_upcase_entry_t;
+#pragma pack(pop)
 
 /* ═══════════════════════════════════════════════════════════════════════════════
  * Timestamp Conversion

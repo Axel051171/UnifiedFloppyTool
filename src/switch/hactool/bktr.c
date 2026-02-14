@@ -1,5 +1,6 @@
 #include "bktr.h"
 #include "utils.h"
+#include <stdio.h>
 
 bktr_relocation_bucket_t *bktr_get_relocation_bucket(bktr_relocation_block_t *block, uint32_t i) {
     return (bktr_relocation_bucket_t *)((uint8_t *)block->buckets + (sizeof(bktr_relocation_bucket_t) + sizeof(bktr_relocation_entry_t)) * i);

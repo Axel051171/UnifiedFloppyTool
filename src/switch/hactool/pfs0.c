@@ -1,5 +1,7 @@
 #include <string.h>
+#include <stdlib.h>
 #include "pfs0.h"
+#include <stdio.h>
 
 void pfs0_process(pfs0_ctx_t *ctx) {
     /* Read *just* safe amount. */

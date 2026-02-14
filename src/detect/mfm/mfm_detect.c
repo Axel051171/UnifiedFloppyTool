@@ -7,6 +7,7 @@
 #include "mfm_detect.h"
 #include <ctype.h>
 #include <math.h>
+#include <stdio.h>
 
 
 /* =============================================================================

@@ -282,8 +282,12 @@ static inline void uft_file_guard_cleanup(uft_file_guard_t* guard) {
     }
 }
 
+#ifdef _MSC_VER
+#define UFT_FILE_GUARD(fp)  /* cleanup attribute not supported on MSVC */
+#else
 #define UFT_FILE_GUARD(fp) \
     uft_file_guard_t _guard_##fp __attribute__((cleanup(uft_file_guard_cleanup))) = { &(fp) }
+#endif
 
 /**
  * @brief Cleanup-Guard für malloc'd memory
@@ -299,8 +303,12 @@ static inline void uft_mem_guard_cleanup(uft_mem_guard_t* guard) {
     }
 }
 
+#ifdef _MSC_VER
+#define UFT_MEM_GUARD(ptr)  /* cleanup attribute not supported on MSVC */
+#else
 #define UFT_MEM_GUARD(ptr) \
     uft_mem_guard_t _guard_##ptr __attribute__((cleanup(uft_mem_guard_cleanup))) = { (void**)&(ptr) }
+#endif
 
 // ============================================================================
 // Error Propagation

@@ -413,7 +413,10 @@ int uft_kf_config_to_params(const uft_kf_config_t *cfg, void *params);
 /* Platform compatibility for ssize_t */
 #ifdef _MSC_VER
     #include <BaseTsd.h>
+    #ifndef _SSIZE_T_DEFINED
+    #define _SSIZE_T_DEFINED
     typedef SSIZE_T ssize_t;
+    #endif
 #else
     #include <sys/types.h>
 #endif

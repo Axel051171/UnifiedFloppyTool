@@ -24,7 +24,10 @@
 #if defined(_MSC_VER) || defined(_WIN32)
     /* Windows: Use SSIZE_T from BaseTsd.h */
     #include <BaseTsd.h>
+    #ifndef _SSIZE_T_DEFINED
+    #define _SSIZE_T_DEFINED
     typedef SSIZE_T ssize_t;
+    #endif
 #else
     /* POSIX systems (Linux, macOS, BSD) */
     #include <sys/types.h>

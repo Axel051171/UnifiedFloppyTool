@@ -68,6 +68,7 @@ typedef struct {
     uint8_t  unused[5];         /* Reserved */
     uint8_t  write_protect;     /* 0=R/W, 1=R/O */
 } uft_atr_header_t;
+#pragma pack(pop)
 
 /* ATR Disk Flags */
 #define UFT_ATR_FLAG_COPY_PROTECTED  0x01
@@ -99,6 +100,7 @@ typedef struct {
     uint32_t end_track;         /* Offset past last track record */
     uint8_t  padding[12];       /* Pad to 48 bytes */
 } uft_atx_header_t;
+#pragma pack(pop)
 
 /* ATX Track Record Header */
 #pragma pack(push, 1)
@@ -115,6 +117,7 @@ typedef struct {
     uint32_t header_size;       /* Size of this header */
     uint64_t reserved3;
 } uft_atx_track_t;
+#pragma pack(pop)
 
 /* ATX Sector Header */
 #pragma pack(push, 1)
@@ -124,6 +127,7 @@ typedef struct {
     uint16_t position;          /* Angular position (0-26041) */
     uint32_t start_time;        /* Start timing (in bit cells) */
 } uft_atx_sector_t;
+#pragma pack(pop)
 
 /* ATX Sector Status Flags */
 #define UFT_ATX_SECTOR_MISSING      0x01    /* Sector not present */
@@ -151,6 +155,7 @@ typedef struct {
     uint8_t  density;           /* Density + last flag */
     /* Variable data follows */
 } uft_dcm_header_t;
+#pragma pack(pop)
 
 /* DCM Block Types */
 #define UFT_DCM_PASS_END        0x45        /* End of pass */
@@ -178,6 +183,7 @@ typedef struct {
     uint32_t phantom_flags;     /* Phantom sector bitmap */
     /* Track data follows */
 } uft_pro_header_t;
+#pragma pack(pop)
 
 /* ═══════════════════════════════════════════════════════════════════════════════
  * CAS - Cassette Format
@@ -190,6 +196,7 @@ typedef struct {
     char     magic[4];          /* "FUJI" */
     /* Chunk-based format follows */
 } uft_cas_header_t;
+#pragma pack(pop)
 
 /* CAS Chunk Types */
 #define UFT_CAS_CHUNK_FUJI      0x4955554A  /* "FUJI" - header */
@@ -209,6 +216,7 @@ typedef struct {
     uint8_t  aux2;              /* Auxiliary byte 2 */
     /* Data follows */
 } uft_cas_chunk_t;
+#pragma pack(pop)
 
 /* ═══════════════════════════════════════════════════════════════════════════════
  * Disk Geometry

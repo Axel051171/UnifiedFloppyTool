@@ -422,6 +422,7 @@ typedef struct {
     uint8_t  sector;        /**< Sector number */
     uint8_t  size_code;     /**< Sector size code (0=128, 1=256, 2=512...) */
 } uft_sector_id_t;
+#pragma pack(pop)
 
 /**
  * @brief Complete sector header with CRC
@@ -433,6 +434,7 @@ typedef struct {
     uft_sector_id_t id;     /**< Sector ID */
     uint16_t crc;           /**< CRC-16 */
 } uft_mfm_sector_header_t;
+#pragma pack(pop)
 
 #ifdef __cplusplus
 }

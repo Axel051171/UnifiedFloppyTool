@@ -20,6 +20,8 @@
 #ifndef CART7_PROTOCOL_H
 #define CART7_PROTOCOL_H
 
+#pragma pack(push, 1)
+
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -240,7 +242,7 @@ typedef enum {
  * FRAME STRUCTURES
  *============================================================================*/
 
-typedef struct __attribute__((packed)) {
+typedef struct {
     uint8_t  sync;          /* 0xC7 */
     uint8_t  cmd;
     uint16_t length;
@@ -248,7 +250,7 @@ typedef struct __attribute__((packed)) {
     /* crc8 */
 } cart7_cmd_header_t;
 
-typedef struct __attribute__((packed)) {
+typedef struct {
     uint8_t  sync;          /* 0x7C */
     uint8_t  status;
     uint8_t  cmd;
@@ -265,7 +267,7 @@ typedef struct __attribute__((packed)) {
  * @brief Device info response
  * Command: CART7_CMD_GET_INFO
  */
-typedef struct __attribute__((packed)) {
+typedef struct {
     uint8_t  protocol_version;
     uint8_t  hw_revision;
     char     fw_version[16];
@@ -288,7 +290,7 @@ typedef struct __attribute__((packed)) {
  * @brief Device status response
  * Command: CART7_CMD_GET_STATUS
  */
-typedef struct __attribute__((packed)) {
+typedef struct {
     uint8_t  current_slot;
     uint8_t  cart_inserted;
     uint8_t  operation_active;
@@ -301,7 +303,7 @@ typedef struct __attribute__((packed)) {
  * @brief Select slot command
  * Command: CART7_CMD_SELECT_SLOT
  */
-typedef struct __attribute__((packed)) {
+typedef struct {
     uint8_t  slot;                  /* cart7_slot_t */
     uint8_t  voltage;               /* 0=auto, 33=3.3V, 50=5V */
     uint8_t  flags;
@@ -312,7 +314,7 @@ typedef struct __attribute__((packed)) {
  * @brief Cartridge status response
  * Command: CART7_CMD_GET_CART_STATUS
  */
-typedef struct __attribute__((packed)) {
+typedef struct {
     uint8_t  inserted;
     uint8_t  slot_type;
     uint8_t  detected_system;       /* Auto-detected system */
@@ -329,7 +331,7 @@ typedef struct __attribute__((packed)) {
  * @brief NES header info response
  * Command: CART7_CMD_NES_GET_HEADER
  */
-typedef struct __attribute__((packed)) {
+typedef struct {
     uint32_t prg_size;              /* PRG-ROM size in bytes */
     uint32_t chr_size;              /* CHR-ROM size in bytes (0 = CHR-RAM) */
     uint16_t mapper;                /* Mapper number */
@@ -356,7 +358,7 @@ typedef struct __attribute__((packed)) {
  * @brief NES read PRG/CHR command
  * Command: CART7_CMD_NES_READ_PRG, CART7_CMD_NES_READ_CHR
  */
-typedef struct __attribute__((packed)) {
+typedef struct {
     uint32_t offset;
     uint32_t length;
     uint16_t chunk_size;            /* 0 = default */
@@ -368,7 +370,7 @@ typedef struct __attribute__((packed)) {
  * @brief NES mapper detect response
  * Command: CART7_CMD_NES_DETECT_MAPPER
  */
-typedef struct __attribute__((packed)) {
+typedef struct {
     uint16_t mapper;
     uint8_t  submapper;
     uint8_t  confidence;            /* 0-100% */
@@ -417,7 +419,7 @@ typedef enum {
  * @brief SNES header info response
  * Command: CART7_CMD_SNES_GET_HEADER
  */
-typedef struct __attribute__((packed)) {
+typedef struct {
     char     title[22];             /* Internal title */
     uint8_t  rom_type;              /* snes_rom_type_t */
     uint8_t  special_chip;          /* snes_chip_t */
@@ -437,7 +439,7 @@ typedef struct __attribute__((packed)) {
  * @brief SNES read ROM command
  * Command: CART7_CMD_SNES_READ_ROM
  */
-typedef struct __attribute__((packed)) {
+typedef struct {
     uint32_t offset;
     uint32_t length;
     uint16_t chunk_size;
@@ -480,7 +482,7 @@ typedef enum {
  * @brief N64 header info response
  * Command: CART7_CMD_N64_GET_HEADER
  */
-typedef struct __attribute__((packed)) {
+typedef struct {
     uint8_t  pi_settings[4];        /* PI BSD Domain settings */
     uint32_t clock_rate;
     uint32_t boot_address;
@@ -502,7 +504,7 @@ typedef struct __attribute__((packed)) {
  * @brief N64 read ROM command
  * Command: CART7_CMD_N64_READ_ROM
  */
-typedef struct __attribute__((packed)) {
+typedef struct {
     uint32_t offset;
     uint32_t length;
     uint16_t chunk_size;
@@ -514,7 +516,7 @@ typedef struct __attribute__((packed)) {
  * @brief N64 save type detect response
  * Command: CART7_CMD_N64_DETECT_SAVE
  */
-typedef struct __attribute__((packed)) {
+typedef struct {
     uint8_t  save_type;             /* n64_save_type_t */
     uint8_t  confidence;
     uint16_t size;                  /* Size in bytes */
@@ -529,7 +531,7 @@ typedef struct __attribute__((packed)) {
  * @brief Mega Drive header info response
  * Command: CART7_CMD_MD_GET_HEADER
  */
-typedef struct __attribute__((packed)) {
+typedef struct {
     char     console[16];           /* "SEGA MEGA DRIVE" or "SEGA GENESIS" */
     char     copyright[16];         /* Copyright info */
     char     title_domestic[48];    /* Japanese title */
@@ -556,7 +558,7 @@ typedef struct __attribute__((packed)) {
  * @brief Mega Drive read ROM command
  * Command: CART7_CMD_MD_READ_ROM
  */
-typedef struct __attribute__((packed)) {
+typedef struct {
     uint32_t offset;
     uint32_t length;
     uint16_t chunk_size;
@@ -595,7 +597,7 @@ typedef enum {
  * @brief GBA header info response
  * Command: CART7_CMD_GBA_GET_HEADER
  */
-typedef struct __attribute__((packed)) {
+typedef struct {
     uint32_t entry_point;
     uint8_t  logo[156];             /* Nintendo logo (compressed in response) */
     char     title[12];
@@ -620,7 +622,7 @@ typedef struct __attribute__((packed)) {
  * @brief GBA read ROM command
  * Command: CART7_CMD_GBA_READ_ROM
  */
-typedef struct __attribute__((packed)) {
+typedef struct {
     uint32_t offset;
     uint32_t length;
     uint16_t chunk_size;
@@ -632,7 +634,7 @@ typedef struct __attribute__((packed)) {
  * @brief GBA RTC data
  * Command: CART7_CMD_GBA_READ_GPIO (for RTC)
  */
-typedef struct __attribute__((packed)) {
+typedef struct {
     uint8_t  year;                  /* 0-99 */
     uint8_t  month;                 /* 1-12 */
     uint8_t  day;                   /* 1-31 */
@@ -683,7 +685,7 @@ typedef enum {
  * @brief Game Boy header info response
  * Command: CART7_CMD_GB_GET_HEADER
  */
-typedef struct __attribute__((packed)) {
+typedef struct {
     uint8_t  entry[4];              /* Entry point */
     uint8_t  logo[48];              /* Nintendo logo */
     char     title[16];             /* Title (11 for CGB, 15 for DMG) */
@@ -716,7 +718,7 @@ typedef struct __attribute__((packed)) {
  * @brief Game Boy read ROM command
  * Command: CART7_CMD_GB_READ_ROM
  */
-typedef struct __attribute__((packed)) {
+typedef struct {
     uint32_t offset;
     uint32_t length;
     uint16_t chunk_size;
@@ -728,7 +730,7 @@ typedef struct __attribute__((packed)) {
  * @brief Game Boy RTC data (MBC3)
  * Command: CART7_CMD_GB_READ_RTC
  */
-typedef struct __attribute__((packed)) {
+typedef struct {
     uint8_t  seconds;               /* 0-59 */
     uint8_t  minutes;               /* 0-59 */
     uint8_t  hours;                 /* 0-23 */
@@ -745,7 +747,7 @@ typedef struct __attribute__((packed)) {
  * PROGRESS EVENT
  *============================================================================*/
 
-typedef struct __attribute__((packed)) {
+typedef struct {
     uint8_t  operation;
     uint8_t  slot;
     uint16_t progress;              /* 0-1000 */
@@ -791,5 +793,7 @@ static inline uint32_t gb_ram_size(uint8_t code) {
 #ifdef __cplusplus
 }
 #endif
+
+#pragma pack(pop)
 
 #endif /* CART7_PROTOCOL_H */

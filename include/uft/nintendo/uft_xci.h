@@ -17,6 +17,8 @@
 #ifndef UFT_XCI_H
 #define UFT_XCI_H
 
+#pragma pack(push, 1)
+
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -97,7 +99,7 @@ typedef enum {
  * Key Index (packed byte)
  *============================================================================*/
 
-typedef struct __attribute__((packed)) {
+typedef struct {
     uint8_t kek_index        : 4;
     uint8_t titlekey_dec_idx : 4;
 } xci_key_index_t;
@@ -137,7 +139,7 @@ typedef enum {
  * Version Structure (4 bytes)
  *============================================================================*/
 
-typedef struct __attribute__((packed)) {
+typedef struct {
     uint8_t micro;
     uint8_t minor;
     uint8_t major;
@@ -148,7 +150,7 @@ typedef struct __attribute__((packed)) {
  * Card Info (encrypted with XCI header key) - 0x70 bytes
  *============================================================================*/
 
-typedef struct __attribute__((packed)) {
+typedef struct {
     uint64_t fw_version;            /* FW version enum or UINT64_MAX for T2 */
     uint32_t acc_ctrl_1;            /* Access control */
     uint32_t wait_1_time_read;      /* Always 0x1388 */
@@ -168,7 +170,7 @@ typedef struct __attribute__((packed)) {
  * XCI Header (at offset 0x1000, size 0x200)
  *============================================================================*/
 
-typedef struct __attribute__((packed)) {
+typedef struct {
     /* 0x000 */ uint8_t signature[0x100];       /* RSA-2048-PKCS#1 v1.5 with SHA-256 */
     /* 0x100 */ uint32_t magic;                  /* "HEAD" (0x48454144) */
     /* 0x104 */ uint32_t rom_area_start_page;    /* In XCI_PAGE_SIZE units */
@@ -196,7 +198,7 @@ typedef struct __attribute__((packed)) {
  * Key Area Structures (precedes header)
  *============================================================================*/
 
-typedef struct __attribute__((packed)) {
+typedef struct {
     union {
         uint8_t value[0x10];
         struct {
@@ -206,7 +208,7 @@ typedef struct __attribute__((packed)) {
     };
 } xci_key_source_t;
 
-typedef struct __attribute__((packed)) {
+typedef struct {
     xci_key_source_t key_source;
     uint8_t encrypted_titlekey[0x10];  /* AES-128-CCM encrypted */
     uint8_t mac[0x10];                 /* Titlekey MAC */
@@ -214,18 +216,18 @@ typedef struct __attribute__((packed)) {
     uint8_t reserved[0x1C4];
 } xci_initial_data_t;
 
-typedef struct __attribute__((packed)) {
+typedef struct {
     uint8_t titlekey[0x10];            /* Decrypted titlekey (zeroes in retail) */
     uint8_t reserved[0xCF0];
 } xci_titlekey_area_t;
 
-typedef struct __attribute__((packed)) {
+typedef struct {
     uint8_t titlekey_enc_key[0x10];    /* AES-128-CTR key */
     uint8_t titlekey_enc_iv[0x10];     /* AES-128-CTR IV */
     uint8_t reserved[0xE0];
 } xci_titlekey_area_enc_t;
 
-typedef struct __attribute__((packed)) {
+typedef struct {
     xci_initial_data_t initial_data;           /* 0x000-0x1FF */
     xci_titlekey_area_t titlekey_area;         /* 0x200-0xEFF */
     xci_titlekey_area_enc_t titlekey_area_enc; /* 0xF00-0xFFF */
@@ -340,5 +342,7 @@ bool xci_dump_header(const xci_context_t *ctx, const char *filename);
 #ifdef __cplusplus
 }
 #endif
+
+#pragma pack(pop)
 
 #endif /* UFT_XCI_H */

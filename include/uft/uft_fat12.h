@@ -89,6 +89,7 @@ typedef struct {
     uint8_t  media_descriptor;        /**< 0xF0, 0xF8-0xFF */
     uint16_t sectors_per_fat;         /**< FAT12/16 only */
 } uft_bpb_dos20_t;
+#pragma pack(pop)
 
 /**
  * @brief DOS 3.31 BPB extension (8 additional bytes)
@@ -99,6 +100,7 @@ typedef struct {
     uint16_t head_count;              /**< Number of heads */
     uint32_t hidden_sectors;          /**< Hidden sectors before partition */
 } uft_bpb_dos331_t;
+#pragma pack(pop)
 
 /**
  * @brief DOS 4.0 BPB extension (for disks > 32MB)
@@ -107,6 +109,7 @@ typedef struct {
 typedef struct {
     uint32_t total_sectors_32;        /**< Total sectors if > 65535 */
 } uft_bpb_dos40_t;
+#pragma pack(pop)
 
 /**
  * @brief Boot sector with BPB
@@ -125,6 +128,7 @@ typedef struct {
     char     volume_label[11];        /**< Volume label */
     char     fs_type[8];              /**< "FAT12   " */
 } uft_boot_sector_t;
+#pragma pack(pop)
 
 /*============================================================================
  * FAT12 Runtime Structures
@@ -178,6 +182,7 @@ typedef struct {
     uint16_t cluster_low;             /**< Starting cluster */
     uint32_t file_size;               /**< File size in bytes */
 } uft_dir_entry_t;
+#pragma pack(pop)
 
 /**
  * @brief FAT12 table context

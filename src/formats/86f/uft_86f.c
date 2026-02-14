@@ -73,7 +73,7 @@ uft_86f_t* uft_86f_open(const char *path) {
     if (fread(&header, sizeof(header), 1, f) != 1) {
     if (ferror(f)) {
         fclose(f);
-        return NULL;
+        return UFT_ERR_IO;
     }
                 fclose(f);
         return NULL;
@@ -83,7 +83,7 @@ uft_86f_t* uft_86f_open(const char *path) {
     if (memcmp(header.magic, UFT_86F_MAGIC, 4) != 0) {
     if (ferror(f)) {
         fclose(f);
-        return NULL;
+        return UFT_ERR_IO;
     }
                 fclose(f);
         return NULL;
@@ -94,7 +94,7 @@ uft_86f_t* uft_86f_open(const char *path) {
     if (!ctx) {
     if (ferror(f)) {
         fclose(f);
-        return NULL;
+        return UFT_ERR_IO;
     }
                 fclose(f);
         return NULL;
@@ -116,7 +116,7 @@ uft_86f_t* uft_86f_open(const char *path) {
         free(ctx);
         if (ferror(f)) {
             fclose(f);
-            return NULL;
+            return UFT_ERR_IO;
         }
                 fclose(f);
         return NULL;

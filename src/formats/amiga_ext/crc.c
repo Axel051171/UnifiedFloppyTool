@@ -27,6 +27,7 @@
 // Size constrained table based crc16 routine.
 
 #include "crc.h"
+#include <stdio.h>
 
 //  CCITT CRC 16 - 0x1021
 //  Parameters used with the generator : inv_poly 0, inv_index 0, inv_array_index 0, xchg_array 1, inv_array_value 0.

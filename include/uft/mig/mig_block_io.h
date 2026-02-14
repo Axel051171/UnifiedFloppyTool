@@ -1,6 +1,8 @@
 #ifndef MIG_BLOCK_IO_H
 #define MIG_BLOCK_IO_H
 
+#pragma pack(push, 1)
+
 /**
  * @file mig_block_io.h
  * @brief MIG-Flash Block I/O Interface
@@ -111,7 +113,7 @@ static const uint8_t MIG_GPT_MSDATA_GUID[16] = {
 /**
  * XCI file header (0x200 bytes)
  */
-typedef struct __attribute__((packed)) {
+typedef struct {
     uint8_t  signature[0x100];      /* RSA-2048 signature */
     uint8_t  magic[4];              /* "HEAD" */
     uint32_t secure_area_start;     /* Sectors */
@@ -377,5 +379,7 @@ int64_t mig_write_raw(mig_device_t *device,
 #ifdef __cplusplus
 }
 #endif
+
+#pragma pack(pop)
 
 #endif /* MIG_BLOCK_IO_H */

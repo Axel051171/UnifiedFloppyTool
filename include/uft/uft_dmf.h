@@ -218,6 +218,7 @@ typedef struct {
     uint32_t    hidden_sects;   /**< Hidden sectors */
     uint32_t    total_sects_32; /**< Total sectors (32-bit) */
 } uft_bpb_t;
+#pragma pack(pop)
 
 /**
  * @brief Parse BPB from boot sector

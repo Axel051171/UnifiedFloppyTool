@@ -111,6 +111,7 @@ typedef struct {
     uint8_t  reserved[7];       /**< Reserved (should be 0) */
     uint32_t native_flag;       /**< 0x12345678 if native mode */
 } uft_dmk_header_t;
+#pragma pack(pop)
 
 /**
  * @brief DMK IDAM entry (parsed)

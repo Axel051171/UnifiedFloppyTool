@@ -20,6 +20,8 @@
 #ifndef CART7_3DS_PROTOCOL_H
 #define CART7_3DS_PROTOCOL_H
 
+#pragma pack(push, 1)
+
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
@@ -93,7 +95,7 @@ typedef enum {
 #define CTR_PARTITION_O3DS_UPDATE   7
 
 /* NCSD Header */
-typedef struct __attribute__((packed)) {
+typedef struct {
     uint8_t  signature[0x100];
     uint8_t  magic[4];
     uint32_t size;
@@ -113,7 +115,7 @@ typedef struct __attribute__((packed)) {
 } ctr_ncsd_header_t;
 
 /* NCCH Header */
-typedef struct __attribute__((packed)) {
+typedef struct {
     uint8_t  signature[0x100];
     uint8_t  magic[4];
     uint32_t content_size;
@@ -146,7 +148,7 @@ typedef struct __attribute__((packed)) {
 } ctr_ncch_header_t;
 
 /* ExeFS Header */
-typedef struct __attribute__((packed)) {
+typedef struct {
     struct {
         char     name[8];
         uint32_t offset;
@@ -157,14 +159,14 @@ typedef struct __attribute__((packed)) {
 } ctr_exefs_header_t;
 
 /* SMDH Title */
-typedef struct __attribute__((packed)) {
+typedef struct {
     uint16_t short_desc[0x40];
     uint16_t long_desc[0x80];
     uint16_t publisher[0x40];
 } ctr_smdh_title_t;
 
 /* SMDH Header */
-typedef struct __attribute__((packed)) {
+typedef struct {
     uint8_t  magic[4];
     uint16_t version;
     uint16_t reserved1;
@@ -213,5 +215,7 @@ static inline bool ctr_ncch_is_valid(const ctr_ncch_header_t *h) { return h && m
 #ifdef __cplusplus
 }
 #endif
+
+#pragma pack(pop)
 
 #endif /* CART7_3DS_PROTOCOL_H */

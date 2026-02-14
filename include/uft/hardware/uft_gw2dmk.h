@@ -20,6 +20,8 @@
 #ifndef UFT_GW2DMK_H
 #define UFT_GW2DMK_H
 
+#pragma pack(push, 1)
+
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
@@ -51,7 +53,7 @@ extern "C" {
 /**
  * @brief DMK file header
  */
-typedef struct __attribute__((packed)) {
+typedef struct {
     uint8_t  write_protect;         /**< 0x00=RW, 0xFF=RO */
     uint8_t  num_tracks;            /**< Number of tracks */
     uint16_t track_length;          /**< Track length in bytes (little endian) */
@@ -384,5 +386,7 @@ const char* uft_gw_dam_name(uft_dam_type_t dam);
 #ifdef __cplusplus
 }
 #endif
+
+#pragma pack(pop)
 
 #endif /* UFT_GW2DMK_H */

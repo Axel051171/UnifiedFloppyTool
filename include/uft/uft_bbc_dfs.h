@@ -87,6 +87,7 @@ typedef struct {
      */
     uint8_t  entries[248];      /**< File entries (31 max) */
 } uft_dfs_cat0_t;
+#pragma pack(pop)
 
 /**
  * @brief DFS Catalog Sector 1 (256 bytes)
@@ -109,6 +110,7 @@ typedef struct {
      */
     uint8_t  info[248];         /**< File info entries */
 } uft_dfs_cat1_t;
+#pragma pack(pop)
 
 /**
  * @brief DFS File Catalog Entry (combined from sectors 0 and 1)
@@ -181,6 +183,7 @@ typedef struct {
     uint8_t  start[3];          /**< Start sector (24-bit, little-endian) */
     uint8_t  length[3];         /**< Length in sectors (24-bit, little-endian) */
 } uft_adfs_free_entry_t;
+#pragma pack(pop)
 
 /**
  * @brief ADFS Old Directory Entry (26 bytes)
@@ -193,6 +196,7 @@ typedef struct {
     uint32_t length;            /**< File length */
     uint8_t  start[3];          /**< Start sector (24-bit) */
 } uft_adfs_dir_entry_t;
+#pragma pack(pop)
 
 #define UFT_ADFS_ENTRY_SIZE         26
 #define UFT_ADFS_DIR_ENTRIES        47      /**< Max entries per directory */
@@ -234,6 +238,7 @@ typedef struct {
     uint8_t  spare[4];          /**< Reserved */
     uint16_t header_crc;        /**< Header CRC-16 (big-endian) */
 } uft_bbc_tape_header_t;
+#pragma pack(pop)
 
 /**
  * @brief Complete tape block structure

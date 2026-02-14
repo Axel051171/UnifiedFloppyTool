@@ -498,6 +498,7 @@ typedef struct {
     uint32_t flags;             /**< Flags */
     uint8_t reserved[4];        /**< Reserved */
 } uft_a8_atr_header_t;
+#pragma pack(pop)
 
 /** ATR magic number */
 #define UFT_A8_ATR_MAGIC    0x0296
@@ -521,6 +522,7 @@ typedef struct {
     uint32_t end_data;          /**< Offset to end of data */
     uint8_t reserved3[12];      /**< Reserved */
 } uft_a8_atx_header_t;
+#pragma pack(pop)
 
 /** ATX signature */
 #define UFT_A8_ATX_SIGNATURE    "AT8X"

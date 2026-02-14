@@ -149,6 +149,7 @@ typedef struct {
     uint8_t  resolution;      /**< Resolution multiplier */
     uint32_t checksum;        /**< CRC32 (0=skip) */
 } uft_scp_header_t;
+#pragma pack(pop)
 
 /**
  * @brief SCP track header (4 bytes)
@@ -158,6 +159,7 @@ typedef struct {
     uint8_t  signature[3];    /**< "TRK" */
     uint8_t  track_number;    /**< Track number */
 } uft_scp_track_header_t;
+#pragma pack(pop)
 
 /**
  * @brief SCP revolution entry (12 bytes)
@@ -168,6 +170,7 @@ typedef struct {
     uint32_t flux_count;      /**< Number of flux transitions */
     uint32_t data_offset;     /**< Offset to flux data (from track header) */
 } uft_scp_revolution_t;
+#pragma pack(pop)
 
 /*============================================================================
  * Kryoflux Format
@@ -197,6 +200,7 @@ typedef struct {
     uint32_t stream_pos;      /**< Stream position */
     uint32_t transfer_time;   /**< Transfer time (ms) */
 } uft_kfx_stream_info_t;
+#pragma pack(pop)
 
 /**
  * @brief Kryoflux index block
@@ -208,6 +212,7 @@ typedef struct {
     uint32_t sample_counter;  /**< Sample counter */
     uint32_t index_counter;   /**< Index counter */
 } uft_kfx_index_block_t;
+#pragma pack(pop)
 
 /**
  * @brief Kryoflux stream end block
@@ -218,6 +223,7 @@ typedef struct {
     uint32_t stream_pos;      /**< Stream position */
     uint32_t hw_status;       /**< Hardware status (0=OK, 1=buffer, 2=no index) */
 } uft_kfx_stream_end_t;
+#pragma pack(pop)
 
 /*============================================================================
  * Teledisk (TD0) Format
@@ -251,6 +257,7 @@ typedef struct {
     uint8_t  heads;           /**< Number of heads */
     uint16_t crc;             /**< CRC16 */
 } uft_td0_header_t;
+#pragma pack(pop)
 
 /**
  * @brief Teledisk comment header (10 bytes)
@@ -266,6 +273,7 @@ typedef struct {
     uint8_t  minute;          /**< Minute (0-59) */
     uint8_t  second;          /**< Second (0-59) */
 } uft_td0_comment_t;
+#pragma pack(pop)
 
 /**
  * @brief Teledisk track header (4 bytes)
@@ -277,6 +285,7 @@ typedef struct {
     uint8_t  head;            /**< Head number */
     uint8_t  crc;             /**< CRC8 */
 } uft_td0_track_t;
+#pragma pack(pop)
 
 /**
  * @brief Teledisk sector header (6 bytes)
@@ -290,6 +299,7 @@ typedef struct {
     uint8_t  flags;           /**< Sector flags */
     uint8_t  crc;             /**< Data CRC8 */
 } uft_td0_sector_t;
+#pragma pack(pop)
 
 /**
  * @brief TD0 CRC16 calculation (polynomial 0xA097)
@@ -337,6 +347,7 @@ typedef struct {
     uint32_t id;              /**< Chunk ID (4 chars, big-endian) */
     uint32_t size;            /**< Chunk size */
 } uft_ipf_chunk_t;
+#pragma pack(pop)
 
 /**
  * @brief IPF INFO record
@@ -360,6 +371,7 @@ typedef struct {
     uint32_t creator_id;
     uint32_t reserved[3];
 } uft_ipf_info_t;
+#pragma pack(pop)
 
 /*============================================================================
  * HFE (UFT HFE Format) Format
@@ -399,6 +411,7 @@ typedef struct {
     uint8_t  track0s1_altenc;
     uint8_t  track0s1_enc;
 } uft_hfe_header_t;
+#pragma pack(pop)
 
 /**
  * @brief HFE track entry (4 bytes)
@@ -408,6 +421,7 @@ typedef struct {
     uint16_t offset;          /**< Track data offset (in blocks of 512) */
     uint16_t length;          /**< Track data length (bytes) */
 } uft_hfe_track_entry_t;
+#pragma pack(pop)
 
 /*============================================================================
  * IMD (ImageDisk) Format
@@ -443,6 +457,7 @@ typedef struct {
     uint8_t  sectors;
     uint8_t  size_code;
 } uft_imd_track_t;
+#pragma pack(pop)
 
 /*============================================================================
  * Format Detection Functions

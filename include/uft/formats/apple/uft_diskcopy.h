@@ -17,6 +17,8 @@
 #ifndef UFT_DISKCOPY_H
 #define UFT_DISKCOPY_H
 
+#pragma pack(push, 1)
+
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
@@ -106,7 +108,7 @@ typedef enum {
  *   81:    Format byte (0x22 = Mac, 0x24 = ProDOS)
  *   82-83: Private/Magic (should be 0x0100)
  */
-typedef struct __attribute__((packed)) {
+typedef struct {
     uint8_t     volume_name[64];    /**< Pascal string: length + name */
     uint32_t    data_size;          /**< Sector data size (big-endian) */
     uint32_t    tag_size;           /**< Tag data size (big-endian) */
@@ -124,7 +126,7 @@ typedef struct __attribute__((packed)) {
 /**
  * @brief MacBinary II/III header
  */
-typedef struct __attribute__((packed)) {
+typedef struct {
     uint8_t     old_version;        /**< 0x00: Old version (must be 0) */
     uint8_t     filename_len;       /**< 0x01: Filename length (1-63) */
     uint8_t     filename[63];       /**< 0x02-0x40: Filename */
@@ -484,5 +486,7 @@ int smi_extract_image(const uint8_t *data, size_t size,
 #ifdef __cplusplus
 }
 #endif
+
+#pragma pack(pop)
 
 #endif /* UFT_DISKCOPY_H */

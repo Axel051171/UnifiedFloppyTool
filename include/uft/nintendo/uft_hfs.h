@@ -16,6 +16,8 @@
 #ifndef UFT_HFS_H
 #define UFT_HFS_H
 
+#pragma pack(push, 1)
+
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -52,7 +54,7 @@ typedef enum {
  * HFS0 Header (at start of each partition)
  *============================================================================*/
 
-typedef struct __attribute__((packed)) {
+typedef struct {
     uint32_t magic;             /* "HFS0" (0x48465330) */
     uint32_t entry_count;       /* Number of files in partition */
     uint32_t name_table_size;   /* Size of name table after entries */
@@ -65,7 +67,7 @@ _Static_assert(sizeof(hfs_header_t) == 0x10, "hfs_header_t size mismatch");
  * HFS0 Entry (one per file)
  *============================================================================*/
 
-typedef struct __attribute__((packed)) {
+typedef struct {
     uint64_t offset;            /* File offset (relative to end of header+names) */
     uint64_t size;              /* File size */
     uint32_t name_offset;       /* Offset into name table */
@@ -232,5 +234,7 @@ static inline const char* hfs_get_entry_name_raw(const uint8_t *header_data, con
 #ifdef __cplusplus
 }
 #endif
+
+#pragma pack(pop)
 
 #endif /* UFT_HFS_H */

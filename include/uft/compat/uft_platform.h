@@ -34,7 +34,8 @@
 #include <time.h>
 
 /* ssize_t is not defined in Windows */
-#ifndef ssize_t
+#ifndef _SSIZE_T_DEFINED
+#define _SSIZE_T_DEFINED
 #ifdef _WIN64
 typedef int64_t ssize_t;
 #else

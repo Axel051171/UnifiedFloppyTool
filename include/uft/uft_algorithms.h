@@ -151,6 +151,7 @@ typedef struct {
     uint32_t total_sectors_32;
     /* Boot code follows */
 } uft_human68k_boot_t;
+#pragma pack(pop)
 
 /* Human68K Directory Entry (32 bytes) */
 #pragma pack(push, 1)
@@ -164,6 +165,7 @@ typedef struct {
     uint16_t first_cluster;     /* First cluster */
     uint32_t file_size;         /* File size */
 } uft_human68k_dirent_t;
+#pragma pack(pop)
 
 /* Human68K Volume */
 typedef struct {
@@ -238,6 +240,7 @@ typedef struct {
     uint8_t  record_count;      /* Records in this extent (0-128) */
     uint8_t  allocation[16];    /* Allocation blocks */
 } uft_cpm_dirent_t;
+#pragma pack(pop)
 
 /* Tarbell Disk Geometry */
 typedef struct {
@@ -336,6 +339,7 @@ typedef struct {
     char     game_name[992];    /* Game title (null-terminated) */
     /* Debug info follows... */
 } uft_gcm_header_t;
+#pragma pack(pop)
 
 /* Disc Header Info (at offset 0x420) */
 #pragma pack(push, 1)
@@ -351,6 +355,7 @@ typedef struct {
     uint32_t user_size;
     uint8_t  unused2[4];
 } uft_gcm_disc_info_t;
+#pragma pack(pop)
 
 /* FST Entry (12 bytes) */
 #pragma pack(push, 1)
@@ -360,6 +365,7 @@ typedef struct {
     uint32_t offset_or_parent;  /* File: offset, Dir: parent index */
     uint32_t size_or_next;      /* File: size, Dir: next entry index */
 } uft_gcm_fst_entry_t;
+#pragma pack(pop)
 
 typedef struct {
     char     name[256];

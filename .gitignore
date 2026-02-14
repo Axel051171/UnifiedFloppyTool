@@ -40,8 +40,8 @@ desktop.ini
 /tmp/
 *.tmp
 *.log
-/core
-/core.*
+core
+core.*
 
 # Packaging
 *.deb

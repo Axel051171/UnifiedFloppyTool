@@ -30,6 +30,8 @@
 #ifndef UFT_WOZ_H
 #define UFT_WOZ_H
 
+#pragma pack(push, 1)
+
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
@@ -106,7 +108,7 @@ extern "C" {
 /**
  * @brief WOZ file header (12 bytes)
  */
-typedef struct __attribute__((packed)) {
+typedef struct {
     uint32_t signature;         /* 'WOZ1' or 'WOZ2' */
     uint8_t  high_bit;          /* 0xFF - verify high bits work */
     uint8_t  lf_cr_lf[3];       /* 0x0A 0x0D 0x0A - detect conversion */
@@ -116,7 +118,7 @@ typedef struct __attribute__((packed)) {
 /**
  * @brief WOZ chunk header (8 bytes)
  */
-typedef struct __attribute__((packed)) {
+typedef struct {
     uint32_t chunk_id;          /* 4-char ASCII identifier */
     uint32_t chunk_size;        /* Size of chunk data in bytes */
 } woz_chunk_header_t;
@@ -124,7 +126,7 @@ typedef struct __attribute__((packed)) {
 /**
  * @brief WOZ INFO chunk (60 bytes)
  */
-typedef struct __attribute__((packed)) {
+typedef struct {
     uint8_t  version;           /* INFO chunk version (1, 2, or 3) */
     uint8_t  disk_type;         /* 1 = 5.25", 2 = 3.5" */
     uint8_t  write_protected;   /* 1 = write protected */
@@ -150,7 +152,7 @@ typedef struct __attribute__((packed)) {
 /**
  * @brief WOZ track entry (TRK) - 8 bytes each
  */
-typedef struct __attribute__((packed)) {
+typedef struct {
     uint16_t starting_block;    /* First block of BITS data (relative to file) */
     uint16_t block_count;       /* Number of 512-byte blocks */
     uint32_t bit_count;         /* Number of bits (or bytes for flux) */
@@ -159,7 +161,7 @@ typedef struct __attribute__((packed)) {
 /**
  * @brief WOZ write command (WCMD) - 12 bytes
  */
-typedef struct __attribute__((packed)) {
+typedef struct {
     uint32_t start_bit;         /* Index of starting bit */
     uint32_t bit_count;         /* Number of bits to write */
     uint8_t  leader_nibble;     /* Leader nibble value (0xFF typical) */
@@ -171,7 +173,7 @@ typedef struct __attribute__((packed)) {
 /**
  * @brief WOZ track write entry (WTRK)
  */
-typedef struct __attribute__((packed)) {
+typedef struct {
     uint8_t  track_number;      /* Track number (quarter-tracks for 5.25") */
     uint8_t  command_count;     /* Number of write commands */
     uint8_t  write_flags;       /* Bit 0: wipe track before writing */
@@ -441,5 +443,7 @@ uint8_t woz_read_nibble_mc3470(const uint8_t *bit_stream, uint32_t bit_count,
 #ifdef __cplusplus
 }
 #endif
+
+#pragma pack(pop)
 
 #endif /* UFT_WOZ_H */

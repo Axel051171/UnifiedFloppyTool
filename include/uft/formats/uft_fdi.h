@@ -135,7 +135,6 @@ typedef struct {
     uint8_t  fs_type[8];        /**< Filesystem type ("FAT12   ") */
 } uft_fdi_boot_sector_t;
 #pragma pack(pop)
-#pragma pack(pop)
 
 /**
  * @brief FAT Directory Entry (32 bytes)
@@ -151,7 +150,6 @@ typedef struct {
     uint16_t cluster;           /**< First cluster */
     uint32_t size;              /**< File size in bytes */
 } uft_fdi_dir_entry_t;
-#pragma pack(pop)
 #pragma pack(pop)
 
 /*============================================================================

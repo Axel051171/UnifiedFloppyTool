@@ -25,6 +25,8 @@
 #ifndef UFT_FAT_BOOTSECTOR_H
 #define UFT_FAT_BOOTSECTOR_H
 
+#pragma pack(push, 1)
+
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
@@ -125,7 +127,7 @@ extern const fat_disk_geometry_t fat_geometry_2880k;  /* 3.5" DS/ED 80T 36S */
  * 0x1C-0x1F: Hidden sectors (32-bit)
  * 0x20-0x23: Total sectors (32-bit, if 16-bit is 0)
  */
-typedef struct __attribute__((packed)) {
+typedef struct {
     /* Jump instruction (3 bytes) */
     uint8_t  jmp_boot[3];           /* 0x00: JMP SHORT xx, NOP or JMP NEAR */
     
@@ -154,7 +156,7 @@ typedef struct __attribute__((packed)) {
  * @brief Extended BPB (EBPB) for FAT12/FAT16
  * Follows BPB at offset 0x24
  */
-typedef struct __attribute__((packed)) {
+typedef struct {
     uint8_t  drive_number;          /* 0x24: BIOS drive number (0x00 or 0x80) */
     uint8_t  reserved1;             /* 0x25: Reserved (used by Windows NT) */
     uint8_t  boot_signature;        /* 0x26: Extended boot signature (0x29) */
@@ -167,7 +169,7 @@ typedef struct __attribute__((packed)) {
  * @brief Extended BPB for FAT32
  * Different layout than FAT12/16
  */
-typedef struct __attribute__((packed)) {
+typedef struct {
     uint32_t sectors_per_fat_32;    /* 0x24: Sectors per FAT */
     uint16_t ext_flags;             /* 0x28: Extended flags */
     uint16_t fs_version;            /* 0x2A: File system version */
@@ -190,7 +192,7 @@ typedef struct __attribute__((packed)) {
 /**
  * @brief Complete FAT boot sector (512 bytes)
  */
-typedef struct __attribute__((packed)) {
+typedef struct {
     fat_bpb_t bpb;                  /* 0x00-0x23: BPB */
     union {
         fat_ebpb_t fat16;           /* FAT12/FAT16 EBPB */
@@ -371,5 +373,7 @@ void fat_format_serial(uint32_t serial, char *buffer);
 #ifdef __cplusplus
 }
 #endif
+
+#pragma pack(pop)
 
 #endif /* UFT_FAT_BOOTSECTOR_H */

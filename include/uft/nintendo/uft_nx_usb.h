@@ -19,6 +19,8 @@
 #ifndef UFT_NX_USB_H
 #define UFT_NX_USB_H
 
+#pragma pack(push, 1)
+
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -105,7 +107,7 @@ typedef enum {
  * Command Header (0x10 bytes)
  *============================================================================*/
 
-typedef struct __attribute__((packed)) {
+typedef struct {
     uint32_t magic;         /* NX_USB_MAGIC */
     uint32_t cmd;           /* nx_usb_cmd_t */
     uint32_t cmd_block_size;/* Size of following command data */
@@ -118,7 +120,7 @@ _Static_assert(sizeof(nx_usb_cmd_header_t) == 0x10, "nx_usb_cmd_header_t size mi
  * Status Response (0x10 bytes)
  *============================================================================*/
 
-typedef struct __attribute__((packed)) {
+typedef struct {
     uint32_t magic;             /* NX_USB_MAGIC */
     uint32_t status;            /* nx_usb_status_t */
     uint16_t max_packet_size;   /* USB endpoint max packet size */
@@ -131,7 +133,7 @@ _Static_assert(sizeof(nx_usb_status_t_struct) == 0x10, "nx_usb_status_t_struct s
  * Command: Start Session (0x10 bytes)
  *============================================================================*/
 
-typedef struct __attribute__((packed)) {
+typedef struct {
     uint8_t app_ver_major;
     uint8_t app_ver_minor;
     uint8_t app_ver_micro;
@@ -146,7 +148,7 @@ _Static_assert(sizeof(nx_usb_cmd_start_session_t) == 0x10, "nx_usb_cmd_start_ses
  * Command: Send File Properties (0x320 bytes)
  *============================================================================*/
 
-typedef struct __attribute__((packed)) {
+typedef struct {
     uint64_t file_size;
     uint32_t filename_length;
     uint32_t nsp_header_size;   /* 0 if not NSP mode */
@@ -160,7 +162,7 @@ _Static_assert(sizeof(nx_usb_cmd_file_properties_t) == 0x320, "nx_usb_cmd_file_p
  * Command: Start FS Dump (0x310 bytes)
  *============================================================================*/
 
-typedef struct __attribute__((packed)) {
+typedef struct {
     uint64_t fs_size;
     char root_path[NX_USB_MAX_FILENAME_LEN];
     uint8_t reserved[0x6];
@@ -172,7 +174,7 @@ _Static_assert(sizeof(nx_usb_cmd_start_fs_dump_t) == 0x310, "nx_usb_cmd_start_fs
  * Command: Get Device Info Response
  *============================================================================*/
 
-typedef struct __attribute__((packed)) {
+typedef struct {
     char device_name[64];
     char firmware_version[32];
     uint8_t device_type;        /* 0=Switch, 1=SwitchLite, 2=SwitchOLED */
@@ -185,7 +187,7 @@ _Static_assert(sizeof(nx_usb_device_info_t) == 128, "nx_usb_device_info_t size m
  * Command: Gamecard Info Response
  *============================================================================*/
 
-typedef struct __attribute__((packed)) {
+typedef struct {
     uint64_t total_size;
     uint64_t trimmed_size;
     uint64_t rom_capacity;
@@ -301,5 +303,7 @@ bool nx_usb_needs_zlt(uint64_t size, uint16_t max_packet_size);
 #ifdef __cplusplus
 }
 #endif
+
+#pragma pack(pop)
 
 #endif /* UFT_NX_USB_H */

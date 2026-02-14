@@ -156,6 +156,7 @@ typedef struct {
     uint8_t  lf2;             /**< 0x0A (LF) */
     uint32_t crc32;           /**< CRC32 of all data after header */
 } uft_woz_header_t;
+#pragma pack(pop)
 
 /**
  * @brief WOZ chunk header
@@ -165,6 +166,7 @@ typedef struct {
     uint32_t id;              /**< Chunk ID (4 chars) */
     uint32_t size;            /**< Chunk data size */
 } uft_woz_chunk_header_t;
+#pragma pack(pop)
 
 /**
  * @brief WOZ INFO chunk (60 bytes)
@@ -189,6 +191,7 @@ typedef struct {
     uint16_t largest_flux;    /**< Largest flux track block count */
     uint8_t  reserved[10];    /**< Reserved for future use */
 } uft_woz_info_t;
+#pragma pack(pop)
 
 /**
  * @brief WOZ1 track entry (in TRKS chunk)
@@ -203,6 +206,7 @@ typedef struct {
     uint8_t  splice_bit_count;/**< Bits in splice nibble */
     uint16_t reserved;        /**< Reserved */
 } uft_woz1_track_t;
+#pragma pack(pop)
 
 /**
  * @brief WOZ2 track entry (8 bytes)
@@ -213,6 +217,7 @@ typedef struct {
     uint16_t block_count;     /**< Number of blocks */
     uint32_t bit_count;       /**< Number of valid bits */
 } uft_woz2_track_entry_t;
+#pragma pack(pop)
 
 /**
  * @brief WOZ WRIT chunk entry (per track)
@@ -223,6 +228,7 @@ typedef struct {
     uint16_t track_block_count;   /**< Track block count */
     uint32_t track_bit_count;     /**< Track bit count */
 } uft_woz_writ_entry_t;
+#pragma pack(pop)
 
 /*============================================================================
  * Sector Format Types

@@ -19,6 +19,8 @@
 #ifndef UFT_NCA_H
 #define UFT_NCA_H
 
+#pragma pack(push, 1)
+
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -160,7 +162,7 @@ typedef enum {
  * FS Section Info
  *============================================================================*/
 
-typedef struct __attribute__((packed)) {
+typedef struct {
     uint32_t start_sector;      /* In NCA_SECTOR_SIZE units */
     uint32_t end_sector;        /* In NCA_SECTOR_SIZE units */
     uint32_t hash_sector;
@@ -173,7 +175,7 @@ _Static_assert(sizeof(nca_fs_info_t) == 0x10, "nca_fs_info_t size mismatch");
  * FS Header Hash
  *============================================================================*/
 
-typedef struct __attribute__((packed)) {
+typedef struct {
     uint8_t hash[SHA256_HASH_SIZE];
 } nca_fs_header_hash_t;
 
@@ -183,7 +185,7 @@ _Static_assert(sizeof(nca_fs_header_hash_t) == 0x20, "nca_fs_header_hash_t size 
  * Encrypted Key Area
  *============================================================================*/
 
-typedef struct __attribute__((packed)) {
+typedef struct {
     union {
         uint8_t keys[NCA_KEY_AREA_KEY_COUNT][AES_128_KEY_SIZE];
         struct {
@@ -203,7 +205,7 @@ _Static_assert(sizeof(nca_key_area_t) == NCA_KEY_AREA_SIZE, "nca_key_area_t size
  * SDK Version
  *============================================================================*/
 
-typedef struct __attribute__((packed)) {
+typedef struct {
     uint8_t micro;
     uint8_t minor;
     uint8_t major;
@@ -216,7 +218,7 @@ _Static_assert(sizeof(nca_sdk_version_t) == 4, "nca_sdk_version_t size mismatch"
  * Rights ID (for titlekey crypto)
  *============================================================================*/
 
-typedef struct __attribute__((packed)) {
+typedef struct {
     uint8_t id[0x10];
 } nca_rights_id_t;
 
@@ -226,7 +228,7 @@ _Static_assert(sizeof(nca_rights_id_t) == 0x10, "nca_rights_id_t size mismatch")
  * NCA Header (0x400 bytes, encrypted with header key)
  *============================================================================*/
 
-typedef struct __attribute__((packed)) {
+typedef struct {
     /* 0x000 */ uint8_t main_signature[0x100];      /* RSA-2048-PSS with SHA-256 */
     /* 0x100 */ uint8_t acid_signature[0x100];      /* For Program NCAs */
     /* 0x200 */ uint32_t magic;                      /* "NCA0"/"NCA2"/"NCA3" */
@@ -349,5 +351,7 @@ bool nca_is_nca_filename(const char *filename);
 #ifdef __cplusplus
 }
 #endif
+
+#pragma pack(pop)
 
 #endif /* UFT_NCA_H */

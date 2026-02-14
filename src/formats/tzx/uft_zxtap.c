@@ -10,7 +10,11 @@
 #include "uft_zxtap.h"
 #include <stdlib.h>
 #include <string.h>
+#ifdef _MSC_VER
+#define strcasecmp _stricmp
+#else
 #include <strings.h>
+#endif
 
 /* ═══════════════════════════════════════════════════════════════════════════
  * TZX Constants (for conversion)
@@ -592,6 +596,7 @@ void zxtap_print_info(const zxtap_file_t* tap, FILE* out) {
 
 #ifdef ZXTAP_TEST
 #include <assert.h>
+#include <stdio.h>
 
 int main(int argc, char* argv[]) {
     printf("=== ZX Spectrum TAP Tests ===\n\n");
