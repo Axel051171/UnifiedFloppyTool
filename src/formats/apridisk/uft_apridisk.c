@@ -8,6 +8,7 @@
  */
 
 #include "uft/formats/uft_apridisk.h"
+#include "uft/uft_track.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
