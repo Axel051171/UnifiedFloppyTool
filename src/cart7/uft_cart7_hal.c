@@ -26,6 +26,12 @@
     #ifdef __linux__
         #include <linux/serial.h>
     #endif
+    #ifdef __APPLE__
+        #include <sys/ioccom.h>
+        #ifndef IOSSIOSPEED
+            #define IOSSIOSPEED _IOW('T', 2, speed_t)
+        #endif
+    #endif
 #endif
 
 /*============================================================================
@@ -157,8 +163,13 @@ static int serial_open(cart7_device_t *dev, const char *port) {
         return -1;
     }
     
+#ifdef B921600
     cfsetispeed(&tty, B921600);
     cfsetospeed(&tty, B921600);
+#else
+    cfsetispeed(&tty, B230400);
+    cfsetospeed(&tty, B230400);
+#endif
     
     tty.c_cflag &= ~PARENB;
     tty.c_cflag &= ~CSTOPB;
@@ -186,6 +197,14 @@ static int serial_open(cart7_device_t *dev, const char *port) {
         close(dev->fd);
         return -1;
     }
+    
+#if defined(__APPLE__) && !defined(B921600)
+    /* macOS: use IOSSIOSPEED ioctl for non-standard baud rates */
+    {
+        speed_t speed = 921600;
+        ioctl(dev->fd, IOSSIOSPEED, &speed);
+    }
+#endif
     
     /* Set DTR */
     int status;

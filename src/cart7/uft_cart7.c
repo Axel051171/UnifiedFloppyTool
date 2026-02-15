@@ -21,6 +21,12 @@
 #include <termios.h>
 #include <dirent.h>
 #include <sys/ioctl.h>
+#ifdef __APPLE__
+#include <sys/ioccom.h>
+#ifndef IOSSIOSPEED
+#define IOSSIOSPEED _IOW('T', 2, speed_t)
+#endif
+#endif
 #endif
 
 /*============================================================================
@@ -163,8 +169,14 @@ static int serial_open(uft_cart7_device_t *dev, const char *port) {
         return -1;
     }
     
+#ifdef B921600
     cfsetospeed(&tty, B921600);
     cfsetispeed(&tty, B921600);
+#else
+    /* macOS doesn't define B921600; use highest available, then ioctl */
+    cfsetospeed(&tty, B230400);
+    cfsetispeed(&tty, B230400);
+#endif
     
     tty.c_cflag = (tty.c_cflag & ~CSIZE) | CS8;
     tty.c_cflag &= ~(PARENB | PARODD);
@@ -179,6 +191,14 @@ static int serial_open(uft_cart7_device_t *dev, const char *port) {
     tty.c_cc[VTIME] = 50;  /* 5 second timeout */
     
     tcsetattr(dev->fd, TCSANOW, &tty);
+    
+#if defined(__APPLE__) && !defined(B921600)
+    /* macOS: use IOSSIOSPEED ioctl for non-standard baud rates */
+    {
+        speed_t speed = 921600;
+        ioctl(dev->fd, IOSSIOSPEED, &speed);
+    }
+#endif
     
     /* Set DTR */
     int status;

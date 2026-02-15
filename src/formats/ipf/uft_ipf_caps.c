@@ -14,6 +14,8 @@
 
 #ifdef _WIN32
 #include <windows.h>
+/* windows.h with UNICODE defines LoadImage → LoadImageW, conflicts with caps_lib_t.LoadImage */
+#undef LoadImage
 #define CAPS_LIB_NAME "CAPSImg.dll"
 #else
 #include <dlfcn.h>
