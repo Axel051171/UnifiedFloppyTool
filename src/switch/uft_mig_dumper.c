@@ -22,6 +22,13 @@
     #include <sys/ioctl.h>
     #include <dirent.h>
     #include <errno.h>
+    #ifdef __APPLE__
+        /* IOSSIOSPEED for non-standard baud rates on macOS */
+        #include <sys/ioccom.h>
+        #ifndef IOSSIOSPEED
+            #define IOSSIOSPEED _IOW('T', 2, speed_t)
+        #endif
+    #endif
     #define MIG_PLATFORM_POSIX 1
 #endif
 
@@ -121,8 +128,14 @@ static int serial_open(uft_mig_device_t *dev, const char *port) {
         return UFT_MIG_ERR_USB;
     }
     
+#ifdef B921600
     cfsetospeed(&tty, B921600);
     cfsetispeed(&tty, B921600);
+#else
+    /* macOS doesn't define B921600; use highest available */
+    cfsetospeed(&tty, B230400);
+    cfsetispeed(&tty, B230400);
+#endif
     
     tty.c_cflag = (tty.c_cflag & ~CSIZE) | CS8;
     tty.c_iflag &= ~IGNBRK;
@@ -141,6 +154,16 @@ static int serial_open(uft_mig_device_t *dev, const char *port) {
         dev->fd = -1;
         return UFT_MIG_ERR_USB;
     }
+    
+#if defined(__APPLE__) && !defined(B921600)
+    /* macOS: use IOSSIOSPEED ioctl for non-standard baud rates */
+    {
+        speed_t speed = 921600;
+        if (ioctl(dev->fd, IOSSIOSPEED, &speed) == -1) {
+            /* Non-fatal: continue at B230400 */
+        }
+    }
+#endif
     
     return UFT_MIG_OK;
 }

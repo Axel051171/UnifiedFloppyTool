@@ -272,6 +272,12 @@ typedef struct caps_revolution_info {
  * CAPS Library Handle (Dynamic Loading)
  * ═══════════════════════════════════════════════════════════════════════════════ */
 
+/* Windows <windows.h> defines LoadImage as LoadImageW when UNICODE is set.
+ * We must undefine it to use LoadImage as a struct member name. */
+#ifdef LoadImage
+#undef LoadImage
+#endif
+
 typedef struct caps_lib {
     void *handle;     /**< Dynamic library handle */
     bool  loaded;     /**< True if library is loaded */
