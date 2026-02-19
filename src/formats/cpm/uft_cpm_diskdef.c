@@ -767,7 +767,8 @@ uft_error_t uft_cpm_read_directory(const uft_disk_image_t *disk,
             if (!found) {
                 /* New file */
                 files[file_idx].user = entry->user;
-                strcpy(files[file_idx].filename, filename);
+                strncpy(files[file_idx].filename, filename, sizeof(files[file_idx].filename) - 1);
+                files[file_idx].filename[sizeof(files[file_idx].filename) - 1] = '\0';
                 files[file_idx].read_only = (entry->ext[0] & 0x80) != 0;
                 files[file_idx].system = (entry->ext[1] & 0x80) != 0;
                 files[file_idx].archived = (entry->ext[2] & 0x80) != 0;

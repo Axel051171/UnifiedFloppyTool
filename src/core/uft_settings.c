@@ -151,7 +151,7 @@ const char* uft_settings_get_string(const char *key, const char *def) {
 int uft_settings_get_int(const char *key, int def) {
     const char *val = uft_settings_get_string(key, NULL);
     if (!val) return def;
-    return atoi(val);
+    return (int)strtol(val, NULL, 10);
 }
 
 float uft_settings_get_float(const char *key, float def) {

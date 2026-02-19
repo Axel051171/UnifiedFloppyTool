@@ -24,7 +24,7 @@ typedef struct {
     uint8_t tracks;
     uint8_t sectors_per_track;
     uint8_t sides;
-    uint8_t sector_size;
+    uint16_t sector_size;
     bool is_trsdos;
     size_t source_size;
     bool valid;

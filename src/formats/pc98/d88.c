@@ -153,7 +153,7 @@ static int d88_index_tracks(D88Ctx *ctx, FloppyDevice *dev) {
     if (!ctx || !dev) return UFT_EINVAL;
 
     /* Walk each track offset; parse sector headers until next track offset or disk_size */
-    uint32_t last_valid_track = 0;
+    uint32_t last_valid_track = 0; (void)last_valid_track;
     uint64_t disk_end = ctx->disk_size ? (uint64_t)ctx->disk_size : ctx->file_size;
 
     /* Pre-allocate a conservative sector list (will grow) */

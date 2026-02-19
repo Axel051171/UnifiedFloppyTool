@@ -267,7 +267,7 @@ size_t otdr_rle_segments_merged(const otdr_event_result_t *res, size_t n,
                 /* find next ATTENUATION possibly separated by NONE segments (small gap) */
                 size_t j = i + 1;
                 size_t gap = 0;
-                size_t gap_end = s.end;
+                size_t gap_end = s.end; (void)gap_end;
 
                 while (j < ns) {
                     if (tmp[j].label == OTDR_EVT_NONE) {

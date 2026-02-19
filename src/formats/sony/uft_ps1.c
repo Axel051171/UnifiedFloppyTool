@@ -354,14 +354,14 @@ int ps1_get_game_id(const ps1_image_t *image, char *game_id)
     if (!image || !game_id) return -1;
     
     if (image->game.game_id[0]) {
-        strcpy(game_id, image->game.game_id);
+        strncpy(game_id, image->game.game_id, 15); game_id[15] = '\0';
         return 0;
     }
     
     /* Try to parse if not cached */
     ps1_game_info_t game;
     if (ps1_parse_system_cnf(image, &game) == 0 && game.game_id[0]) {
-        strcpy(game_id, game.game_id);
+        strncpy(game_id, game.game_id, 15); game_id[15] = '\0';
         return 0;
     }
     
@@ -405,7 +405,7 @@ int ps1_parse_cue(const char *cue_data, size_t cue_size, ps1_cue_t *cue)
             p += 5;
             while (p < end && *p == ' ') p++;
             
-            int track_num = atoi(p);
+            int track_num = (int)strtol(p, NULL, 10);
             if (track_num > 0 && track_num <= 99) {
                 cue->tracks[cue->num_tracks].number = track_num;
                 
@@ -433,7 +433,7 @@ int ps1_parse_cue(const char *cue_data, size_t cue_size, ps1_cue_t *cue)
             p += 5;
             while (p < end && *p == ' ') p++;
             
-            int index_num = atoi(p);
+            int index_num = (int)strtol(p, NULL, 10);
             while (p < end && *p != ' ') p++;
             while (p < end && *p == ' ') p++;
             

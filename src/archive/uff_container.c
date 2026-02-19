@@ -193,8 +193,9 @@ uff_container_t* uff_open(const char* path, int level) {
     
     uff->fp = fp;
     uff->filepath = strdup(path);
+    if (!uff->filepath) { fclose(fp); free(uff); return NULL; }
     uff->writable = false;
-    
+
     // Read header
     if (fread(&uff->header, sizeof(uff_file_header_t), 1, fp) != 1) {
         uff->last_error = UFF_ERR_FILE;
@@ -280,6 +281,7 @@ uff_container_t* uff_create(const char* path) {
     
     uff->fp = fp;
     uff->filepath = strdup(path);
+    if (!uff->filepath) { fclose(fp); free(uff); return NULL; }
     uff->writable = true;
     
     // Initialize header
@@ -659,6 +661,7 @@ int uff_finalize(uff_container_t* uff, const uff_write_options_t* options) {
     uff_hash_header_t hash_header = {0};
     hash_header.count = uff->toc_count;
     
+    if (hash_header.count > SIZE_MAX / sizeof(uff_hash_entry_t)) return UFF_ERR_MEMORY;
     size_t hash_size = sizeof(hash_header) + hash_header.count * sizeof(uff_hash_entry_t);
     uint8_t* hash_data = calloc(1, hash_size);
     if (!hash_data) return UFF_ERR_MEMORY;

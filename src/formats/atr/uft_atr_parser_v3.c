@@ -340,7 +340,7 @@ static bool atr_extract_file(const uint8_t* data, size_t size, const atr_disk_t*
         pos += data_bytes;
         
         /* Check for end of file */
-        if ((file_bits & 0x03) != (file_bits & 0x03)) break;  /* Sanity */
+        /* Placeholder sanity check - always false, kept for structure */
         if (next_sector == 0 || bytes_used < (disk->sector_size - 3)) break;
         
         current = next_sector;

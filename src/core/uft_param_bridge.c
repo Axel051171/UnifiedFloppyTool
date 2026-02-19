@@ -261,7 +261,7 @@ static void parse_default_value(uft_param_value_t *val, const uft_param_def_t *d
             break;
         case UFT_PARAM_TYPE_INT:
         case UFT_PARAM_TYPE_RANGE:
-            val->value.int_val = atoi(def->default_value);
+            val->value.int_val = (int)strtol(def->default_value, NULL, 10);
             break;
         case UFT_PARAM_TYPE_FLOAT:
             val->value.float_val = (float)atof(def->default_value);

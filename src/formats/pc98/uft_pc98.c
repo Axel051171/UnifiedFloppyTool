@@ -754,6 +754,7 @@ uft_pc98_rc_t uft_pc98_analyze(const char* path, uft_pc98_report_t* report) {
     
     if (detect.has_sjis_label) {
         strncpy(report->label_utf8, detect.label_utf8, sizeof(report->label_utf8) - 1);
+        report->label_utf8[sizeof(report->label_utf8) - 1] = '\0';
     }
     
     /* Open file for analysis */

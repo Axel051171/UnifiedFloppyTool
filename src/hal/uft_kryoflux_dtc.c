@@ -984,7 +984,7 @@ int uft_kf_config_parse_args(uft_kf_config_t *cfg, int argc, char **argv) {
             uft_kf_set_dtc_path(cfg, argv[++i]);
         }
         else if (strcmp(argv[i], "--device") == 0 && i + 1 < argc) {
-            cfg->device_index = atoi(argv[++i]);
+            cfg->device_index = (int)strtol(argv[++i], NULL, 10);
         }
         else if (strcmp(argv[i], "--tracks") == 0 && i + 1 < argc) {
             int s, e;
@@ -997,17 +997,17 @@ int uft_kf_config_parse_args(uft_kf_config_t *cfg, int argc, char **argv) {
             if (strcmp(arg, "both") == 0) {
                 cfg->side = -1;
             } else {
-                cfg->side = atoi(arg);
+                cfg->side = (int)strtol(arg, NULL, 10);
             }
         }
         else if (strcmp(argv[i], "--revs") == 0 && i + 1 < argc) {
-            uft_kf_set_revolutions(cfg, atoi(argv[++i]));
+            uft_kf_set_revolutions(cfg, (int)strtol(argv[++i], NULL, 10));
         }
         else if (strcmp(argv[i], "--double-step") == 0) {
             cfg->double_step = true;
         }
         else if (strcmp(argv[i], "--retries") == 0 && i + 1 < argc) {
-            uft_kf_set_retry_count(cfg, atoi(argv[++i]));
+            uft_kf_set_retry_count(cfg, (int)strtol(argv[++i], NULL, 10));
         }
         else if (strcmp(argv[i], "--platform") == 0 && i + 1 < argc) {
             const char *name = argv[++i];

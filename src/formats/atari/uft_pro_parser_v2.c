@@ -454,7 +454,8 @@ static const char* pro_sector_flags_str(uint8_t flags) {
     if (flags & PRO_FLAG_TIMING) strncat(buf, "T", sizeof(buf) - strlen(buf) - 1);
     if (flags & PRO_FLAG_PROTECTED) strncat(buf, "X", sizeof(buf) - strlen(buf) - 1);
     
-    if (buf[0] == '\0') strncpy(buf, "-", sizeof(buf)-1); buf[sizeof(buf)-1] = '\0';
+    if (buf[0] == '\0') strncpy(buf, "-", sizeof(buf)-1);
+    buf[sizeof(buf)-1] = '\0';
     
     return buf;
 }

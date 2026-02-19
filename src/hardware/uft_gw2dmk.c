@@ -739,7 +739,7 @@ int uft_gw2dmk_open(uft_gw2dmk_ctx_t *ctx)
         strncpy(device_path, ctx->config.device_path, sizeof(device_path) - 1);
     } else {
 #ifdef _WIN32
-        strcpy(device_path, "\\\\.\\COM3");  /* Default Windows */
+        strncpy(device_path, "\\\\.\\COM3", sizeof(device_path) - 1);  /* Default Windows */
 #else
         if (find_greaseweazle_device(device_path, sizeof(device_path)) < 0) {
             snprintf(ctx->error_msg, sizeof(ctx->error_msg),

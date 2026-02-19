@@ -304,12 +304,12 @@ int uft_z80_disasm(const uint8_t *data, size_t len, uint16_t pc,
             if (temp[0] == 'H' && temp[1] == ',') {
                 char new_temp[64];
                 snprintf(new_temp, sizeof(new_temp), "%s%s", idx_h, temp + 1);
-                strcpy(temp, new_temp);
+                strncpy(temp, new_temp, sizeof(temp) - 1); temp[sizeof(temp) - 1] = '\0';
             }
             if (temp[0] == 'L' && temp[1] == ',') {
                 char new_temp[64];
                 snprintf(new_temp, sizeof(new_temp), "%s%s", idx_l, temp + 1);
-                strcpy(temp, new_temp);
+                strncpy(temp, new_temp, sizeof(temp) - 1); temp[sizeof(temp) - 1] = '\0';
             }
         }
     }

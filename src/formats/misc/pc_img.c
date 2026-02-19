@@ -294,18 +294,3 @@ static uint32_t pc_img_crc32_ieee(const uint8_t *data, size_t len) {
     return ~crc;
 }
 
-static int generate_flux_pattern(uint8_t *out_bits, size_t out_bits_len,
-                          uint32_t seed, uint32_t nominal_cell_ns, uint32_t jitter_ns) {
-    (void)nominal_cell_ns;
-    (void)jitter_ns;
-    if (!out_bits || out_bits_len == 0) return UFT_EINVAL;
-
-    uint32_t x = seed ? seed : 0xA5A5A5A5u;
-    for (size_t i = 0; i < out_bits_len; i++) {
-        x ^= x << 13;
-        x ^= x >> 17;
-        x ^= x << 5;
-        out_bits[i] = (uint8_t)(x & 1u);
-    }
-    return UFT_OK;
-}

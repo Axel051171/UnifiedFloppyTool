@@ -483,13 +483,13 @@ static inline const char* uft_copylock_serial_usage_str(int usage) {
         return "None";
     }
     
-    if (usage & UFT_SERIAL_USAGE_DECODE_PROG) strcat(buf, "Program decoding, ");
-    if (usage & UFT_SERIAL_USAGE_RETURN) strcat(buf, "Returned to caller, ");
-    if (usage & UFT_SERIAL_USAGE_SAVE_MEM) strcat(buf, "Saved in memory, ");
-    if (usage & UFT_SERIAL_USAGE_MAGIC_MEM) strcat(buf, "Magic value, ");
-    if (usage & UFT_SERIAL_USAGE_EOR_MEM) strcat(buf, "XOR-ed in memory, ");
-    if (usage & UFT_SERIAL_USAGE_OTHER_MEM) strcat(buf, "External decode, ");
-    if (usage & UFT_SERIAL_USAGE_UNKNOWN) strcat(buf, "Unknown, ");
+    if (usage & UFT_SERIAL_USAGE_DECODE_PROG) strncat(buf, "Program decoding, ", sizeof(buf) - strlen(buf) - 1);
+    if (usage & UFT_SERIAL_USAGE_RETURN) strncat(buf, "Returned to caller, ", sizeof(buf) - strlen(buf) - 1);
+    if (usage & UFT_SERIAL_USAGE_SAVE_MEM) strncat(buf, "Saved in memory, ", sizeof(buf) - strlen(buf) - 1);
+    if (usage & UFT_SERIAL_USAGE_MAGIC_MEM) strncat(buf, "Magic value, ", sizeof(buf) - strlen(buf) - 1);
+    if (usage & UFT_SERIAL_USAGE_EOR_MEM) strncat(buf, "XOR-ed in memory, ", sizeof(buf) - strlen(buf) - 1);
+    if (usage & UFT_SERIAL_USAGE_OTHER_MEM) strncat(buf, "External decode, ", sizeof(buf) - strlen(buf) - 1);
+    if (usage & UFT_SERIAL_USAGE_UNKNOWN) strncat(buf, "Unknown, ", sizeof(buf) - strlen(buf) - 1);
     
     /* Remove trailing ", " */
     size_t len = strlen(buf);

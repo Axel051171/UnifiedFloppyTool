@@ -42,7 +42,7 @@ static bool toml_parse(const uint8_t* data, size_t size, toml_file_t* toml) {
                 }
             }
         }
-        if (data[i] == '=' && (i == 0 || data[i-1] != '!' && data[i-1] != '<' && data[i-1] != '>')) {
+        if (data[i] == '=' && (i == 0 || (data[i-1] != '!' && data[i-1] != '<' && data[i-1] != '>'))) {
             toml->key_count++;
         }
     }

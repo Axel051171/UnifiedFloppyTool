@@ -641,11 +641,12 @@ uint32_t uft_batch_add_job(uft_batch_ctx_t *ctx, uft_job_type_t type,
                            uft_job_priority_t priority)
 {
     if (!ctx || !input_path) return 0;
-    
+
     lock_ctx(ctx);
-    
+
     /* Expand array if needed */
     if (ctx->job_count >= ctx->job_capacity) {
+        if (ctx->job_capacity > UINT32_MAX / 2) { unlock_ctx(ctx); return 0; }
         uint32_t new_capacity = ctx->job_capacity * 2;
         uft_batch_job_t *new_jobs = realloc(ctx->jobs, 
                                             new_capacity * sizeof(uft_batch_job_t));

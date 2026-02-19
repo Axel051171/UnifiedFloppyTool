@@ -306,6 +306,7 @@ static int read_scp_flux(const char *filename, int track, int side,
     
     /* Convert to 32-bit with overflow handling */
     *flux_data = malloc(sample_count * sizeof(uint32_t));
+    if (!*flux_data) { free(raw); fclose(f); return -1; }
     *flux_count = 0;
     
     uint32_t accum = 0;
@@ -343,6 +344,7 @@ static int read_raw_flux(const char *filename, uint32_t **flux_data, size_t *flu
     
     /* Estimate max samples */
     *flux_data = malloc(size * sizeof(uint32_t));
+    if (!*flux_data) { free(raw); return -1; }
     *flux_count = 0;
     
     /* Parse based on file type detection */

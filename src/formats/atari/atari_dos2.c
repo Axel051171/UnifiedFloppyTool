@@ -685,7 +685,7 @@ atari_error_t dos2_write_file(atari_disk_t *disk, const char *filename,
                     dos2_free_sector(disk, cur);
                     /* Follow chain to next allocated sector */
                     uint8_t sec_data[128];
-                    size_t br = 0;
+                    uint16_t br = 0;
                     if (ados_atr_read_sector(disk, cur, sec_data, &br) == ATARI_OK) {
                         cur = ((sec_data[0] & 0x03) << 8) | sec_data[1];
                     } else {

@@ -152,9 +152,9 @@ void ados_print_directory(const atari_disk_t *disk, FILE *out)
             if (e->is_deleted) continue;
 
             char flags[16] = "";
-            if (e->is_subdir) strcat(flags, "D");
-            if (e->is_locked) strcat(flags, "L");
-            if (e->is_hidden) strcat(flags, "H");
+            if (e->is_subdir) strncat(flags, "D", sizeof(flags) - strlen(flags) - 1);
+            if (e->is_locked) strncat(flags, "L", sizeof(flags) - strlen(flags) - 1);
+            if (e->is_hidden) strncat(flags, "H", sizeof(flags) - strlen(flags) - 1);
 
             fprintf(out, " %-8s %-3s  %8u  %02d.%02d.%02d    %s\n",
                     e->filename, e->extension, e->file_size,

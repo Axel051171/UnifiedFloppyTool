@@ -302,7 +302,6 @@ private:
 
         QPainterPath path;
         bool first = true;
-        QColor prevColor;
 
         for (int px = 0; px < area.width(); px++) {
             uint32_t bc = xToBitcell(area.left() + px);
@@ -317,7 +316,6 @@ private:
             float db = (n > 0) ? sum / n : -40.0f;
 
             int y = dbToY(db, area);
-            QColor c = OtdrColors::heatmapColor(db);
 
             if (first) {
                 path.moveTo(area.left() + px, y);

@@ -291,7 +291,11 @@ int tdfc_segment_from_changepoints(const tdfc_result *r,
             for (size_t k = si + 1; k < out->n_seg; k++) out->seg[k - 1] = out->seg[k];
             out->n_seg--;
             tdfc_segment *ns = (tdfc_segment*)realloc(out->seg, out->n_seg * sizeof(tdfc_segment));
-            if (ns || out->n_seg == 0) out->seg = ns;
+            if (ns) {
+                out->seg = ns;
+            } else if (out->n_seg == 0) {
+                out->seg = NULL;
+            }
 
             merged_any = 1;
             break;

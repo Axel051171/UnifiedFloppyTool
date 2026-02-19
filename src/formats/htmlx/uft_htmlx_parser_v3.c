@@ -11,6 +11,24 @@
 #include <string.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <ctype.h>
+
+/* strcasestr is POSIX but not available on Windows/MinGW */
+#if defined(_WIN32) || defined(__MINGW32__) || defined(__MINGW64__)
+static const char *uft_strcasestr(const char *haystack, const char *needle)
+{
+    if (!needle[0]) return haystack;
+    for (; *haystack; haystack++) {
+        const char *h = haystack, *n = needle;
+        while (*h && *n && tolower((unsigned char)*h) == tolower((unsigned char)*n)) {
+            h++; n++;
+        }
+        if (!*n) return haystack;
+    }
+    return NULL;
+}
+#define strcasestr uft_strcasestr
+#endif
 
 typedef struct {
     bool has_doctype;

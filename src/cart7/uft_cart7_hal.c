@@ -14,9 +14,13 @@
 #include <errno.h>
 
 #ifdef _WIN32
+    #include <initguid.h>
     #include <windows.h>
     #include <setupapi.h>
+    #include <devguid.h>
+    #ifdef _MSC_VER
     #pragma comment(lib, "setupapi.lib")
+    #endif
 #else
     #include <fcntl.h>
     #include <unistd.h>
@@ -364,6 +368,7 @@ int cart7_enumerate(char **ports, int max_ports) {
                              (LPBYTE)portName, &size) == ERROR_SUCCESS) {
             if (count < max_ports && ports) {
                 ports[count] = strdup(portName);
+                if (!ports[count]) continue;
                 count++;
             }
         }
@@ -387,6 +392,7 @@ int cart7_enumerate(char **ports, int max_ports) {
             
             if (ports) {
                 ports[count] = strdup(path);
+                if (!ports[count]) continue;
             }
             count++;
         }

@@ -10,8 +10,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-enum { OK=0, EINVAL=-1, EIO=-2, ENOENT=-3, ENOTSUP=-4, EBOUNDS=-5 };
-
 typedef struct {
     FILE *fp;
     bool ro;
@@ -23,19 +21,19 @@ static void logm(FloppyDevice*d,const char*m){
 }
 
 int uft_cpc_edsk_extdsk_open(FloppyDevice *dev,const char*path){
-    if(!dev||!path) return EINVAL;
+    if(!dev||!path) return UFT_EINVAL;
     Ctx *ctx = calloc(1,sizeof(Ctx));
-    if(!ctx) return EIO;
+    if(!ctx) return UFT_EIO;
 
     FILE *fp=fopen(path,"r+b");
     bool ro=false;
     if(!fp){ fp=fopen(path,"rb"); ro=true; }
-    if(!fp){ free(ctx); return ENOENT; }
+    if(!fp){ free(ctx); return UFT_ENOENT; }
 
     char sig[34]={0};
     if (fread(sig,1,34,fp) != 34) { /* I/O error */ }
     if(strncmp(sig,"EXTENDED CPC DSK File",21)!=0){
-        fclose(fp); free(ctx); return EINVAL;
+        fclose(fp); free(ctx); return UFT_EINVAL;
     }
 
     ctx->fp=fp;
@@ -50,29 +48,29 @@ int uft_cpc_edsk_extdsk_open(FloppyDevice *dev,const char*path){
     dev->internal_ctx=ctx;
 
     logm(dev,"EXTDSK opened (Amstrad CPC).");
-    return OK;
+    return 0;
 }
 
 int uft_cpc_edsk_extdsk_close(FloppyDevice *dev){
-    if(!dev||!dev->internal_ctx) return EINVAL;
+    if(!dev||!dev->internal_ctx) return UFT_EINVAL;
     Ctx *ctx=dev->internal_ctx;
     fclose(ctx->fp);
     free(ctx);
     dev->internal_ctx=NULL;
-    return OK;
+    return 0;
 }
 
 int uft_cpc_edsk_extdsk_read_sector(FloppyDevice *dev,uint32_t t,uint32_t h,uint32_t s,uint8_t *buf){
     (void)dev;(void)t;(void)h;(void)s;(void)buf;
-    return ENOTSUP;
+    return UFT_ENOTSUP;
 }
 
 int uft_cpc_edsk_extdsk_write_sector(FloppyDevice *dev,uint32_t t,uint32_t h,uint32_t s,const uint8_t *buf){
     (void)dev;(void)t;(void)h;(void)s;(void)buf;
-    return ENOTSUP;
+    return UFT_ENOTSUP;
 }
 
 int uft_cpc_edsk_extdsk_analyze_protection(FloppyDevice *dev){
     logm(dev,"Analyzer(EXTDSK): CRC flags, deleted data, non-standard sector sizes preserved.");
-    return OK;
+    return 0;
 }

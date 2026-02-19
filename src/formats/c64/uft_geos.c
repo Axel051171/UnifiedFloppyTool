@@ -222,8 +222,8 @@ void geos_format_timestamp(const geos_timestamp_t *ts, char *buffer)
     int year = 1900 + ts->year;
     if (ts->year < 80) year += 100;  /* Y2K handling */
     
-    sprintf(buffer, "%04d-%02d-%02d %02d:%02d",
-            year, ts->month, ts->day, ts->hour, ts->minute);
+    snprintf(buffer, 20, "%04d-%02d-%02d %02d:%02d",
+             year, ts->month, ts->day, ts->hour, ts->minute);
 }
 
 /* ============================================================================

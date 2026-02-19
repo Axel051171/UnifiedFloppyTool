@@ -32,8 +32,6 @@ static int read_exact(FILE *fp, void *buf, size_t n){
     return fread(buf,1,n,fp) == n;
 }
 
-static uint16_t rd_le16(const uint8_t *p){ return (uint16_t)p[0] | ((uint16_t)p[1] << 8); }
-
 static int media_to_geom(uint8_t media, uint32_t *tracks, uint32_t *heads, uint32_t *spt, uint32_t *ssz){
     *tracks=80; *heads=2; *ssz=512;
     switch(media){

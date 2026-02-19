@@ -406,5 +406,5 @@ void nsp_print_info(const switch_ctx_t *ctx, FILE *fp)
 void switch_title_id_str(uint64_t title_id, char *buffer)
 {
     if (!buffer) return;
-    sprintf(buffer, "%016llX", (unsigned long long)title_id);
+    snprintf(buffer, 20, "%016llX", (unsigned long long)title_id);
 }

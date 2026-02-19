@@ -258,7 +258,7 @@ int gb_get_info(const gb_rom_t *rom, gb_info_t *info)
         info->licensee[0] = rom->gb_header.new_licensee[0];
         info->licensee[1] = rom->gb_header.new_licensee[1];
     } else {
-        sprintf(info->licensee, "%02X", rom->gb_header.old_licensee);
+        snprintf(info->licensee, sizeof(info->licensee), "%02X", rom->gb_header.old_licensee);
     }
     
     return 0;

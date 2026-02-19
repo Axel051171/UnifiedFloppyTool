@@ -100,7 +100,7 @@ struct uft_imz_context {
  *===========================================================================*/
 
 static uint32_t crc32_table[256];
-static int crc32_inited = 0;
+static int crc32_inited = 0; /* Note: not thread-safe, call from main thread */
 
 static void init_crc32(void) {
     if (crc32_inited) return;

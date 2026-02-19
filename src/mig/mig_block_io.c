@@ -22,7 +22,9 @@
 #include <setupapi.h>
 #include <initguid.h>
 #include <devguid.h>
+#ifdef _MSC_VER
 #pragma comment(lib, "setupapi.lib")
+#endif
 #else
 #include <fcntl.h>
 #include <unistd.h>

@@ -43,7 +43,7 @@ static bool flac_parse(const uint8_t* data, size_t size, flac_file_t* flac) {
             flac->max_block_size = (data[10] << 8) | data[11];
             flac->sample_rate = (data[18] << 12) | (data[19] << 4) | (data[20] >> 4);
             flac->channels = ((data[20] >> 1) & 0x07) + 1;
-            flac->bits_per_sample = ((data[20] & 1) << 4) | (data[21] >> 4) + 1;
+            flac->bits_per_sample = (((data[20] & 1) << 4) | (data[21] >> 4)) + 1;
         }
         flac->valid = true;
     }

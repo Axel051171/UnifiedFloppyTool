@@ -317,7 +317,8 @@ uft_error_t uft_rcpmfs_write(const uft_disk_image_t *disk,
     if (disk_name) {
         strncpy(entry->name, disk_name, sizeof(entry->name) - 1);
     } else {
-        strcpy(entry->name, "DISK_A");
+        strncpy(entry->name, "DISK_A", sizeof(entry->name) - 1);
+        entry->name[sizeof(entry->name) - 1] = '\0';
     }
     if (diskdef_name) {
         strncpy(entry->diskdef, diskdef_name, sizeof(entry->diskdef) - 1);

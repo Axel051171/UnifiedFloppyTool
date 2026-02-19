@@ -3,6 +3,9 @@
  * @brief Amiga snprintf compatibility
  * @version 3.8.0
  */
+#ifdef __GNUC__
+#pragma GCC diagnostic ignored "-Wattributes"
+#endif
 /**************************************************************
  * Original:
  * Patrick Powell Tue Apr 11 09:48:21 PDT 1995
@@ -97,6 +100,7 @@ static void dopr( buffer, format, args )
                        case '-': ljust = 1; goto nextch;
                        case '0': /* set zero padding if len not set */
                                if(len==0) zpad = '0';
+                               /* fall through */
                        case '1': case '2': case '3':
                        case '4': case '5': case '6':
                        case '7': case '8': case '9':

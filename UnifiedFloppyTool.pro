@@ -53,10 +53,18 @@ win32:CONFIG += console
 # Compiler flags - suppress warnings for legacy code
 # Compiler flags moved to platform-specific sections below
 unix:QMAKE_CFLAGS += -Wall -Wextra -Wno-unused-parameter
+win32-g++:QMAKE_CFLAGS += -Wall -Wextra \
+    -Wno-unused-parameter -Wno-unused-function -Wno-sign-compare \
+    -Wno-unused-variable -Wno-unused-const-variable \
+    -Wno-stringop-truncation -Wno-type-limits -Wno-pragmas
+win32-g++:QMAKE_CXXFLAGS += -Wall -Wextra \
+    -Wno-unused-parameter -Wno-unused-function -Wno-sign-compare \
+    -Wno-unused-variable -Wno-unused-const-variable \
+    -Wno-stringop-truncation -Wno-type-limits -Wno-pragmas
 
 # Windows specific
 win32 {
-    LIBS += -lshlwapi -lshell32 -ladvapi32 -lws2_32
+    LIBS += -lshlwapi -lshell32 -ladvapi32 -lws2_32 -lsetupapi
     DEFINES += _CRT_SECURE_NO_WARNINGS
     # POSIX shims for hactool (getopt.h, strings.h)
     INCLUDEPATH += $$PWD/src/switch/hactool/compat

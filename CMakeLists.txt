@@ -141,7 +141,7 @@ if(UNIX AND NOT APPLE)
 endif()
 
 if(WIN32)
-    target_link_libraries(${PROJECT_NAME} PRIVATE shlwapi shell32 advapi32 ws2_32)
+    target_link_libraries(${PROJECT_NAME} PRIVATE shlwapi shell32 advapi32 ws2_32 setupapi)
 endif()
 
 # Compile definitions

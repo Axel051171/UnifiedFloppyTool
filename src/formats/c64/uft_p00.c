@@ -342,7 +342,8 @@ void p00_make_pc_filename(const char *c64_filename, char *pc_filename,
     /* Add extension */
     pc_filename[j++] = '.';
     const char *ext = p00_type_extension(type);
-    strcpy(pc_filename + j, ext);
+    strncpy(pc_filename + j, ext, 255 - j);
+    pc_filename[255] = '\0';
 }
 
 void p00_petscii_to_ascii(const uint8_t *petscii, char *ascii, int len)

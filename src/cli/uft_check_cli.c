@@ -169,7 +169,7 @@ static int check_dmk(const char *filename, check_options_t *opts, check_stats_t 
     }
     
     /* Check file size */
-    fseek(f, 0, SEEK_END);
+    if (fseek(f, 0, SEEK_END) != 0) { fclose(f); return -1; }
     long file_size = ftell(f);
     long expected = DMK_HEADER_SIZE + (long)tracks * heads * track_len;
     

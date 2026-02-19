@@ -8,27 +8,26 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-enum { OK=0, EINVAL=-1, EIO=-2, ENOENT=-3, ENOTSUP=-4, EBOUNDS=-5 };
 typedef struct { FILE*fp; bool ro; uint32_t size; } Ctx;
 static void logm(FloppyDevice*d,const char*m){ if(d&&d->log_callback) d->log_callback(m); }
 int uft_msc_sf7_open(FloppyDevice*dev,const char*path){
-    if(!dev||!path) return EINVAL;
-    Ctx*ctx=calloc(1,sizeof(*ctx)); if(!ctx) return EIO;
-    FILE*fp=fopen(path,"rb"); if(!fp){ free(ctx); return ENOENT; }
+    if(!dev||!path) return UFT_EINVAL;
+    Ctx*ctx=calloc(1,sizeof(*ctx)); if(!ctx) return UFT_EIO;
+    FILE*fp=fopen(path,"rb"); if(!fp){ free(ctx); return UFT_ENOENT; }
     (void)fseek(fp,0,SEEK_END); long sz=ftell(fp); (void)fseek(fp,0,SEEK_SET);
     ctx->fp=fp; ctx->ro=true; ctx->size=(uint32_t)sz;
     dev->tracks=0; dev->heads=0; dev->sectors=ctx->size; dev->sectorSize=1;
     dev->flux_supported=false;
     dev->internal_ctx=ctx;
     logm(dev,"SF7 opened (container stub: raw bytes).");
-    return OK;
+    return 0;
 }
-int uft_msc_sf7_close(FloppyDevice*dev){ if(!dev||!dev->internal_ctx) return EINVAL;
-    Ctx*ctx=dev->internal_ctx; fclose(ctx->fp); free(ctx); dev->internal_ctx=NULL; return OK; }
+int uft_msc_sf7_close(FloppyDevice*dev){ if(!dev||!dev->internal_ctx) return UFT_EINVAL;
+    Ctx*ctx=dev->internal_ctx; fclose(ctx->fp); free(ctx); dev->internal_ctx=NULL; return 0; }
 int uft_msc_sf7_read_sector(FloppyDevice*dev,uint32_t t,uint32_t h,uint32_t s,uint8_t*buf){
-    (void)t;(void)h; if(!dev||!dev->internal_ctx||!buf) return EINVAL;
-    Ctx*ctx=dev->internal_ctx; if(s>=ctx->size) return EBOUNDS;
-    (void)fseek(ctx->fp,(long)s,SEEK_SET); *buf=(uint8_t)fgetc(ctx->fp); return OK;
+    (void)t;(void)h; if(!dev||!dev->internal_ctx||!buf) return UFT_EINVAL;
+    Ctx*ctx=dev->internal_ctx; if(s>=ctx->size) return UFT_EBOUNDS;
+    (void)fseek(ctx->fp,(long)s,SEEK_SET); *buf=(uint8_t)fgetc(ctx->fp); return 0;
 }
-int uft_msc_sf7_write_sector(FloppyDevice*dev,uint32_t t,uint32_t h,uint32_t s,const uint8_t*buf){ (void)dev;(void)t;(void)h;(void)s;(void)buf; return ENOTSUP; }
-int uft_msc_sf7_analyze_protection(FloppyDevice*dev){ logm(dev,"Analyzer(SF7): X68000 image; need samples to implement real geometry."); return OK; }
+int uft_msc_sf7_write_sector(FloppyDevice*dev,uint32_t t,uint32_t h,uint32_t s,const uint8_t*buf){ (void)dev;(void)t;(void)h;(void)s;(void)buf; return UFT_ENOTSUP; }
+int uft_msc_sf7_analyze_protection(FloppyDevice*dev){ logm(dev,"Analyzer(SF7): X68000 image; need samples to implement real geometry."); return 0; }

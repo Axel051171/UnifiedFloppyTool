@@ -477,6 +477,7 @@ uft_cart7_error_t uft_cart7_get_info(uft_cart7_device_t *device,
     
     if (len >= 48) {
         strncpy(info->port, device->port, sizeof(info->port) - 1);
+        info->port[sizeof(info->port) - 1] = '\0';
         info->hw_revision = data[1];
         memcpy(info->firmware_version, &data[2], 16);
         info->firmware_version[16] = '\0';

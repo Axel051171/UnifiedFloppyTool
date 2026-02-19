@@ -166,13 +166,13 @@ static inline const char* uft_st_prg_flag_desc(uint32_t flags) {
     static char buf[128];
     buf[0] = '\0';
     
-    if (flags & UFT_ST_PRG_FLAG_FASTLOAD)    strcat(buf, "Fastload ");
-    if (flags & UFT_ST_PRG_FLAG_TTRAMONLY)   strcat(buf, "TT-RAM-Only ");
-    if (flags & UFT_ST_PRG_FLAG_TTRAMMEM)    strcat(buf, "TT-Malloc ");
-    if (flags & UFT_ST_PRG_FLAG_SHARED_TEXT) strcat(buf, "Shared-Text ");
-    if (flags & UFT_ST_PRG_FLAG_RELOCED)     strcat(buf, "Relocated ");
-    
-    if (buf[0] == '\0') strcpy(buf, "None");
+    if (flags & UFT_ST_PRG_FLAG_FASTLOAD)    strncat(buf, "Fastload ", sizeof(buf) - strlen(buf) - 1);
+    if (flags & UFT_ST_PRG_FLAG_TTRAMONLY)   strncat(buf, "TT-RAM-Only ", sizeof(buf) - strlen(buf) - 1);
+    if (flags & UFT_ST_PRG_FLAG_TTRAMMEM)    strncat(buf, "TT-Malloc ", sizeof(buf) - strlen(buf) - 1);
+    if (flags & UFT_ST_PRG_FLAG_SHARED_TEXT) strncat(buf, "Shared-Text ", sizeof(buf) - strlen(buf) - 1);
+    if (flags & UFT_ST_PRG_FLAG_RELOCED)     strncat(buf, "Relocated ", sizeof(buf) - strlen(buf) - 1);
+
+    if (buf[0] == '\0') { strncpy(buf, "None", sizeof(buf) - 1); buf[sizeof(buf) - 1] = '\0'; }
     return buf;
 }
 

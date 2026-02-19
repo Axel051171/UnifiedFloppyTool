@@ -443,7 +443,8 @@ int dc_analyze(const uint8_t *data, size_t size, dc_analysis_result_t *result) {
                 if (dc42_parse_header(data + img_offset, 
                                       size - img_offset, &inner) == 0) {
                     /* Copy relevant fields */
-                    strcpy(result->volume_name, inner.volume_name);
+                    strncpy(result->volume_name, inner.volume_name, sizeof(result->volume_name) - 1);
+                    result->volume_name[sizeof(result->volume_name) - 1] = '\0';
                     result->data_size = inner.data_size;
                     result->tag_size = inner.tag_size;
                     result->disk_format = inner.disk_format;

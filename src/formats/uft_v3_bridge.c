@@ -309,7 +309,7 @@ char* uft_d64_v3_get_diagnosis(void* handle) {
     
     /* Build diagnosis string from disk analysis */
     v3_handle_t* h = (v3_handle_t*)handle;
-    if (!h->disk_buffer) return NULL;
+    if (!h->valid) return NULL;
     
     char *diag = malloc(1024);
     if (!diag) return NULL;

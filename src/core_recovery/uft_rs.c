@@ -10,7 +10,7 @@
 /* GF(256) with primitive poly 0x11d */
 static uint8_t gf_exp[512];
 static uint8_t gf_log[256];
-static int gf_inited = 0;
+static int gf_inited = 0; /* Note: not thread-safe, call from main thread */
 
 static void gf_init_tables(void)
 {

@@ -16,7 +16,7 @@
 
 typedef struct {
     char signature[17];
-    uint16_t page_size;
+    uint32_t page_size;
     uint8_t write_version;
     uint8_t read_version;
     uint32_t page_count;

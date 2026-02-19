@@ -397,11 +397,11 @@ int uft_m2i_get_info(const char *path, char *buf, size_t buf_size) {
         "Directory:\n",
         img->version, img->entry_count);
     
-    for (size_t i = 0; i < img->entry_count && offset < buf_size; i++) {
+    for (int i = 0; i < img->entry_count && offset < buf_size; i++) {
         m2i_file_entry_t *e = &img->entries[i];
         offset += snprintf(buf + offset, buf_size - offset,
             "  %2d: %-16s  %s%s  %5u bytes  $%04X\n",
-            i, e->filename, 
+            i, e->filename,
             m2i_type_name(e->file_type),
             e->locked ? "<" : " ",
             (unsigned)e->file_size,

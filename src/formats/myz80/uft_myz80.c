@@ -49,7 +49,8 @@ void uft_myz80_read_options_init(myz80_read_options_t *opts) {
 void uft_myz80_write_options_init(myz80_write_options_t *opts) {
     if (!opts) return;
     memset(opts, 0, sizeof(*opts));
-    strcpy(opts->label, "UFT DISK");
+    strncpy(opts->label, "UFT DISK", sizeof(opts->label) - 1);
+    opts->label[sizeof(opts->label) - 1] = '\0';
 }
 
 /* ============================================================================
@@ -322,7 +323,8 @@ uft_error_t uft_myz80_write(const uft_disk_image_t *disk,
         strncpy(header->label, opts->label, sizeof(header->label) - 1);
         strncpy(header->comment, opts->comment, sizeof(header->comment) - 1);
     } else {
-        strcpy(header->label, "UFT DISK");
+        strncpy(header->label, "UFT DISK", sizeof(header->label) - 1);
+        header->label[sizeof(header->label) - 1] = '\0';
     }
     
     /* Write disk data */

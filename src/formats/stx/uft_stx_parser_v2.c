@@ -206,7 +206,8 @@ static const char* stx_track_flags_str(uint16_t flags) {
     if (flags & STX_TRACK_FUZZY_MASK) strncat(buf, "FUZZY ", sizeof(buf) - strlen(buf) - 1);
     if (flags & STX_TRACK_PROTECTED) strncat(buf, "PROTECTED ", sizeof(buf) - strlen(buf) - 1);
     
-    if (buf[0] == '\0') strncpy(buf, "NONE", sizeof(buf)-1); buf[sizeof(buf)-1] = '\0';
+    if (buf[0] == '\0') strncpy(buf, "NONE", sizeof(buf)-1);
+    buf[sizeof(buf)-1] = '\0';
     return buf;
 }
 
@@ -222,7 +223,8 @@ static const char* stx_sector_flags_str(uint8_t fdcr) {
     if (fdcr & STX_SECTOR_DELETED) strncat(buf, "DEL ", sizeof(buf) - strlen(buf) - 1);
     if (fdcr & STX_SECTOR_FUZZY) strncat(buf, "FUZZY ", sizeof(buf) - strlen(buf) - 1);
     
-    if (buf[0] == '\0') strncpy(buf, "OK", sizeof(buf)-1); buf[sizeof(buf)-1] = '\0';
+    if (buf[0] == '\0') strncpy(buf, "OK", sizeof(buf)-1);
+    buf[sizeof(buf)-1] = '\0';
     return buf;
 }
 

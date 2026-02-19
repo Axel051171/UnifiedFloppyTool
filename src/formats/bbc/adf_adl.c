@@ -9,8 +9,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-enum { OK=0, EINVAL=-1, EIO=-2, ENOENT=-3, ENOTSUP=-4, EBOUNDS=-5 };
-
 typedef struct {
     FILE *fp;
     bool ro;
@@ -27,21 +25,21 @@ static int infer_geom(long sz, uint32_t* tracks, uint32_t* heads){
 }
 
 int uft_bbc_adf_adl_open(FloppyDevice *dev,const char*path){
-    if(!dev||!path) return EINVAL;
+    if(!dev||!path) return UFT_EINVAL;
     Ctx *ctx=calloc(1,sizeof(Ctx));
-    if(!ctx) return EIO;
+    if(!ctx) return UFT_EIO;
 
     FILE *fp=fopen(path,"r+b");
     bool ro=false;
     if(!fp){ fp=fopen(path,"rb"); ro=true; }
-    if(!fp){ free(ctx); return ENOENT; }
+    if(!fp){ free(ctx); return UFT_ENOENT; }
 
     if (fseek(fp,0,SEEK_END) != 0) { /* seek error */ }
     long sz=ftell(fp);
     if (fseek(fp,0,SEEK_SET) != 0) { /* seek error */ }
     uint32_t tr=0, hd=0;
     if(infer_geom(sz,&tr,&hd)!=0){
-        fclose(fp); free(ctx); return EINVAL;
+        fclose(fp); free(ctx); return UFT_EINVAL;
     }
 
     ctx->fp=fp; ctx->ro=ro; ctx->tracks=tr; ctx->heads=hd;
@@ -54,47 +52,47 @@ int uft_bbc_adf_adl_open(FloppyDevice *dev,const char*path){
     dev->internal_ctx=ctx;
 
     logm(dev,"ADF/ADL opened (Acorn ADFS).");
-    return OK;
+    return 0;
 }
 
 int uft_bbc_adf_adl_close(FloppyDevice *dev){
-    if(!dev||!dev->internal_ctx) return EINVAL;
+    if(!dev||!dev->internal_ctx) return UFT_EINVAL;
     Ctx *ctx=dev->internal_ctx;
     fclose(ctx->fp);
     free(ctx);
     dev->internal_ctx=NULL;
-    return OK;
+    return 0;
 }
 
 int uft_bbc_adf_adl_read_sector(FloppyDevice *dev,uint32_t t,uint32_t h,uint32_t s,uint8_t *buf){
-    if(!dev||!dev->internal_ctx||!buf) return EINVAL;
+    if(!dev||!dev->internal_ctx||!buf) return UFT_EINVAL;
     Ctx *ctx=dev->internal_ctx;
-    if(t>=ctx->tracks||h>=ctx->heads||s==0||s>16) return EBOUNDS;
+    if(t>=ctx->tracks||h>=ctx->heads||s==0||s>16) return UFT_EBOUNDS;
 
     uint32_t lba = (t*ctx->heads + h)*16 + (s-1);
     uint32_t off = lba*256u;
 
-    if(fseek(ctx->fp,(long)off,SEEK_SET)!=0) return EIO;
-    if(fread(buf,1,256,ctx->fp)!=256) return EIO;
-    return OK;
+    if(fseek(ctx->fp,(long)off,SEEK_SET)!=0) return UFT_EIO;
+    if(fread(buf,1,256,ctx->fp)!=256) return UFT_EIO;
+    return 0;
 }
 
 int uft_bbc_adf_adl_write_sector(FloppyDevice *dev,uint32_t t,uint32_t h,uint32_t s,const uint8_t *buf){
-    if(!dev||!dev->internal_ctx||!buf) return EINVAL;
+    if(!dev||!dev->internal_ctx||!buf) return UFT_EINVAL;
     Ctx *ctx=dev->internal_ctx;
-    if(ctx->ro) return ENOTSUP;
-    if(t>=ctx->tracks||h>=ctx->heads||s==0||s>16) return EBOUNDS;
+    if(ctx->ro) return UFT_ENOTSUP;
+    if(t>=ctx->tracks||h>=ctx->heads||s==0||s>16) return UFT_EBOUNDS;
 
     uint32_t lba = (t*ctx->heads + h)*16 + (s-1);
     uint32_t off = lba*256u;
 
-    if(fseek(ctx->fp,(long)off,SEEK_SET)!=0) return EIO;
-    if(fwrite(buf,1,256,ctx->fp)!=256) return EIO;
+    if(fseek(ctx->fp,(long)off,SEEK_SET)!=0) return UFT_EIO;
+    if(fwrite(buf,1,256,ctx->fp)!=256) return UFT_EIO;
     fflush(ctx->fp);
-    return OK;
+    return 0;
 }
 
 int uft_bbc_adf_adl_analyze_protection(FloppyDevice *dev){
     logm(dev,"Analyzer(ADF/ADL): ADFS sector image (no flux-level protection).");
-    return OK;
+    return 0;
 }

@@ -262,7 +262,8 @@ int uft_adf_mount_volume(uft_adf_context_t *ctx, int vol_index) {
     }
     
     ctx->current_vol = vol_index;
-    strcpy(ctx->current_path, "/");
+    strncpy(ctx->current_path, "/", sizeof(ctx->current_path) - 1);
+    ctx->current_path[sizeof(ctx->current_path) - 1] = '\0';
     return 0;
 }
 
@@ -299,7 +300,8 @@ int uft_adf_change_dir(uft_adf_context_t *ctx, const char *path) {
 void uft_adf_to_root(uft_adf_context_t *ctx) {
     if (ctx && ctx->vol) {
         adfToRootDir(ctx->vol);
-        strcpy(ctx->current_path, "/");
+        strncpy(ctx->current_path, "/", sizeof(ctx->current_path) - 1);
+        ctx->current_path[sizeof(ctx->current_path) - 1] = '\0';
     }
 }
 

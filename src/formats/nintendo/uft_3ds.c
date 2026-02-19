@@ -373,7 +373,7 @@ int n3ds_exefs_extract(const n3ds_ctx_t *ctx, const char *name,
 void n3ds_title_id_str(uint64_t title_id, char *buffer)
 {
     if (!buffer) return;
-    sprintf(buffer, "%016llX", (unsigned long long)title_id);
+    snprintf(buffer, 20, "%016llX", (unsigned long long)title_id);
 }
 
 void n3ds_print_info(const n3ds_ctx_t *ctx, FILE *fp)

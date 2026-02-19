@@ -10,8 +10,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-enum { OK=0, EINVAL=-1, EIO=-2, ENOENT=-3, ENOTSUP=-4 };
-
 typedef struct {
     FILE *fp;
     bool ro;
@@ -22,18 +20,18 @@ static void logm(FloppyDevice*d,const char*m){
 }
 
 int uft_msc_td0_open(FloppyDevice *dev,const char*path){
-    if(!dev||!path) return EINVAL;
+    if(!dev||!path) return UFT_EINVAL;
 
     Ctx *ctx = calloc(1,sizeof(Ctx));
-    if(!ctx) return EIO;
+    if(!ctx) return UFT_EIO;
 
     FILE *fp=fopen(path,"rb");
-    if(!fp){ free(ctx); return ENOENT; }
+    if(!fp){ free(ctx); return UFT_ENOENT; }
 
     unsigned char sig[2];
     if (fread(sig,1,2,fp) != 2) { /* I/O error */ }
     if(sig[0]!='T' || sig[1]!='D'){
-        fclose(fp); free(ctx); return EINVAL;
+        fclose(fp); free(ctx); return UFT_EINVAL;
     }
 
     ctx->fp = fp;
@@ -47,29 +45,29 @@ int uft_msc_td0_open(FloppyDevice *dev,const char*path){
     dev->internal_ctx = ctx;
 
     logm(dev,"TD0 opened (TeleDisk container).");
-    return OK;
+    return 0;
 }
 
 int uft_msc_td0_close(FloppyDevice *dev){
-    if(!dev||!dev->internal_ctx) return EINVAL;
+    if(!dev||!dev->internal_ctx) return UFT_EINVAL;
     Ctx *ctx = dev->internal_ctx;
     fclose(ctx->fp);
     free(ctx);
     dev->internal_ctx=NULL;
-    return OK;
+    return 0;
 }
 
 int uft_msc_td0_read_sector(FloppyDevice *dev,uint32_t t,uint32_t h,uint32_t s,uint8_t *buf){
-    (void)t;(void)h;(void)s;(void)buf;
-    return ENOTSUP;
+    (void)dev;(void)t;(void)h;(void)s;(void)buf;
+    return UFT_ENOTSUP;
 }
 
 int uft_msc_td0_write_sector(FloppyDevice *dev,uint32_t t,uint32_t h,uint32_t s,const uint8_t *buf){
     (void)dev;(void)t;(void)h;(void)s;(void)buf;
-    return ENOTSUP;
+    return UFT_ENOTSUP;
 }
 
 int uft_msc_td0_analyze_protection(FloppyDevice *dev){
     logm(dev,"Analyzer(TD0): supports bad CRC flags, missing sectors, non-standard tracks.");
-    return OK;
+    return 0;
 }
