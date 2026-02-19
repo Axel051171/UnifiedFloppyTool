@@ -192,7 +192,7 @@ jobs:
           target: desktop
           arch: win64_mingw
           modules: 'qtserialport'
-          tools: 'tools_mingw1120'
+          tools: 'tools_mingw1310'
 
       - name: Read version
         id: version
@@ -202,7 +202,7 @@ jobs:
       - name: Build (qmake + MinGW)
         shell: bash
         run: |
-          export PATH="${IQTA_TOOLS}/mingw1120_64/bin:${PATH}"
+          export PATH="${IQTA_TOOLS}/mingw1310_64/bin:${PATH}"
           mkdir build && cd build
           qmake ../UnifiedFloppyTool.pro \
             CONFIG+=release \
@@ -213,7 +213,7 @@ jobs:
       - name: Deploy Qt DLLs
         shell: bash
         run: |
-          export PATH="${IQTA_TOOLS}/mingw1120_64/bin:${PATH}"
+          export PATH="${IQTA_TOOLS}/mingw1310_64/bin:${PATH}"
           cd build/release
           windeployqt --release --no-translations --no-opengl-sw UnifiedFloppyTool.exe
 

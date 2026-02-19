@@ -87,12 +87,12 @@ jobs:
           target: desktop
           arch: win64_mingw
           modules: 'qtserialport'
-          tools: 'tools_mingw1120'
+          tools: 'tools_mingw1310'
 
       - name: Build
         shell: bash
         run: |
-          export PATH="${IQTA_TOOLS}/mingw1120_64/bin:${PATH}"
+          export PATH="${IQTA_TOOLS}/mingw1310_64/bin:${PATH}"
           mkdir build && cd build
           qmake ../UnifiedFloppyTool.pro CONFIG+=release
           mingw32-make -j$(nproc)
