@@ -190,33 +190,31 @@ jobs:
           version: ${{ env.QT_VERSION }}
           host: windows
           target: desktop
-          arch: win64_msvc2019_64
+          arch: win64_mingw
           modules: 'qtserialport'
-
-      - name: Setup MSVC
-        uses: ilammy/msvc-dev-cmd@v1
-        with:
-          arch: amd64
+          tools: 'tools_mingw1120'
 
       - name: Read version
         id: version
         shell: bash
         run: echo "version=$(cat UFT_VERSION.txt)" >> $GITHUB_OUTPUT
 
-      - name: Build (qmake)
-        shell: cmd
+      - name: Build (qmake + MinGW)
+        shell: bash
         run: |
-          mkdir build
-          cd build
-          qmake ..\UnifiedFloppyTool.pro CONFIG+=release
-          @rem Ensure object subdirectories exist for NMAKE with object_parallel_to_source
-          xcopy /t /e ..\src release\src\ >nul 2>&1
-          nmake
+          export PATH="${IQTA_TOOLS}/mingw1120_64/bin:${PATH}"
+          mkdir build && cd build
+          qmake ../UnifiedFloppyTool.pro \
+            CONFIG+=release \
+            QMAKE_CFLAGS+="-DUFT_VERSION_STRING=\\\"${{ steps.version.outputs.version }}\\\"" \
+            QMAKE_CXXFLAGS+="-DUFT_VERSION_STRING=\\\"${{ steps.version.outputs.version }}\\\""
+          mingw32-make -j$(nproc)
 
       - name: Deploy Qt DLLs
-        shell: cmd
+        shell: bash
         run: |
-          cd build\release
+          export PATH="${IQTA_TOOLS}/mingw1120_64/bin:${PATH}"
+          cd build/release
           windeployqt --release --no-translations --no-opengl-sw UnifiedFloppyTool.exe
 
       - name: Package .tar.gz
@@ -261,6 +259,13 @@ jobs:
       - name: List artifacts
         run: find release-artifacts -type f | sort
 
+      - name: Generate SHA256SUMS
+        run: |
+          cd release-artifacts
+          find . -type f \( -name '*.tar.gz' -o -name '*.dmg' -o -name '*.deb' \) \
+            -exec sha256sum {} \; | sed 's|  \./|  |' | sort > ../SHA256SUMS.txt
+          cat ../SHA256SUMS.txt
+
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
@@ -272,5 +277,6 @@ jobs:
             release-artifacts/**/*.dmg
             release-artifacts/**/*.deb
             release-artifacts/**/*.tar.gz
+            SHA256SUMS.txt
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
