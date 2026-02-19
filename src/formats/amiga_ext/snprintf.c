@@ -3,6 +3,12 @@
  * @brief Amiga snprintf compatibility
  * @version 3.8.0
  */
+
+/* MSVC CRT already provides snprintf/vsnprintf - skip this entire file */
+#if defined(_MSC_VER)
+/* nothing */
+#else
+
 #ifdef __GNUC__
 #pragma GCC diagnostic ignored "-Wattributes"
 #endif
@@ -270,3 +276,5 @@ static void dopr_outch( c )
                *output++ = c;
        }
 }
+
+#endif /* !_MSC_VER */

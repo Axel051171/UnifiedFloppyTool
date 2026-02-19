@@ -96,6 +96,7 @@ public slots:
     void readTrack();
     void stopOperation();
     void browseOutput();
+    void setPreset(int index);  ///< Set disk type preset
 
 private slots:
     void onDeviceDetected(const QString &info);

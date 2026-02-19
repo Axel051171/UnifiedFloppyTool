@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include "uft/uft_compat.h"
 
 // ============================================================================
 // Magic Bytes

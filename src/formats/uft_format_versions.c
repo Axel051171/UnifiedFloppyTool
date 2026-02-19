@@ -16,6 +16,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include "uft/uft_compat.h"
 
 /* ============================================================================
  * Padding Helper (PERF-FIX: replaces byte-by-byte loops)

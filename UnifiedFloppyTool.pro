@@ -71,6 +71,11 @@ win32 {
     SOURCES += src/switch/hactool/compat/getopt.c
 }
 
+# MSVC specific - POSIX string functions not available
+msvc {
+    DEFINES += strcasecmp=_stricmp strncasecmp=_strnicmp
+}
+
 # macOS specific
 macx {
     QMAKE_MACOSX_DEPLOYMENT_TARGET = 11.0
@@ -210,22 +215,6 @@ HEADERS += \
 
 # FDC Bitstream Sources (VFO/PLL implementations)
 SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
     src/flux/fdc_bitstream/bit_array.cpp \
     src/flux/fdc_bitstream/fdc_bitstream.cpp \
     src/flux/fdc_bitstream/fdc_crc.cpp \
@@ -1688,6 +1677,7 @@ SOURCES += \
     src/switch/hactool/pfs0.c \
     src/switch/hactool/hfs0.c \
     src/switch/hactool/romfs.c \
+    src/switch/hactool/nca0_romfs.c \
     src/switch/hactool/save.c \
     src/switch/hactool/npdm.c \
     src/switch/hactool/kip.c \

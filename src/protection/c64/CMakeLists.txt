@@ -3,6 +3,8 @@
 
 add_library(uft_c64_protection STATIC
     uft_c64_protection.c
+    c64_protection_db.c
+    c64_protection_analysis.c
 )
 
 target_include_directories(uft_c64_protection PUBLIC 

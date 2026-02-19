@@ -9,6 +9,7 @@
 #include "uft/formats/uft_format_adapter.h"
 #include <string.h>
 #include <stdio.h>
+#include "uft/uft_compat.h"
 
 // ============================================================================
 // Format Includes - Commodore

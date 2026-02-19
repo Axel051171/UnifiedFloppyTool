@@ -13,6 +13,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <ctype.h>
+#include "uft/uft_compat.h"
 
 /* ============================================================================
  * Predefined CP/M Disk Definitions

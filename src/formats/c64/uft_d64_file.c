@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include "uft/uft_compat.h"
 
 /* ============================================================================
  * Static Data
