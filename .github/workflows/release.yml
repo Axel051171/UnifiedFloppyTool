@@ -209,6 +209,8 @@ jobs:
           mkdir build
           cd build
           qmake ..\UnifiedFloppyTool.pro CONFIG+=release
+          @rem Ensure object subdirectories exist for NMAKE with object_parallel_to_source
+          xcopy /t /e ..\src release\src\ >nul 2>&1
           nmake
 
       - name: Deploy Qt DLLs
