@@ -1,0 +1,103 @@
+# ============================================================================
+# UnifiedFloppyTool - CI Build
+#
+# Triggers on: pull requests, pushes to main
+# Verifies the project builds on all platforms.
+# ============================================================================
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+env:
+  QT_VERSION: '6.7.3'
+
+jobs:
+
+  build-linux:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          host: linux
+          target: desktop
+          modules: 'qtserialport'
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libusb-1.0-0-dev libgl1-mesa-dev
+
+      - name: Build
+        run: |
+          mkdir build && cd build
+          qmake ../UnifiedFloppyTool.pro CONFIG+=release
+          make -j$(nproc)
+
+      - name: Smoke test
+        run: |
+          file build/UnifiedFloppyTool
+          ldd build/UnifiedFloppyTool
+
+  build-macos:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          host: mac
+          target: desktop
+          arch: clang_64
+          modules: 'qtserialport'
+
+      - name: Build
+        run: |
+          mkdir build && cd build
+          qmake ../UnifiedFloppyTool.pro CONFIG+=release
+          make -j$(sysctl -n hw.ncpu)
+
+      - name: Smoke test
+        run: |
+          file build/UnifiedFloppyTool.app/Contents/MacOS/UnifiedFloppyTool
+
+  build-windows:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          host: windows
+          target: desktop
+          arch: win64_mingw
+          modules: 'qtserialport'
+          tools: 'tools_mingw1120'
+
+      - name: Build
+        shell: bash
+        run: |
+          export PATH="${IQTA_TOOLS}/mingw1120_64/bin:${PATH}"
+          mkdir build && cd build
+          qmake ../UnifiedFloppyTool.pro CONFIG+=release
+          mingw32-make -j$(nproc)
+
+      - name: Smoke test
+        shell: bash
+        run: |
+          file build/release/UnifiedFloppyTool.exe

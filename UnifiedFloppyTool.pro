@@ -47,9 +47,6 @@ greaterThan(QT_MAJOR_VERSION, 5) {
 
 CONFIG += sdk_no_version_check
 
-# Prevent NMAKE inference rule collisions when multiple source files
-# share the same basename in different directories (e.g. src/core/ vs src/formats/)
-CONFIG += object_parallel_to_source
 
 # Enable console output for debugging (remove for release)
 win32:CONFIG += console
