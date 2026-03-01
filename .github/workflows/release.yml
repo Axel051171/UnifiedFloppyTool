@@ -110,7 +110,7 @@ jobs:
           dpkg-deb --build "${PKG}"
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: linux-release
           path: |
@@ -169,7 +169,7 @@ jobs:
           tar czf "${DIST}.tar.gz" "${DIST}"
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: macos-release
           path: |
@@ -232,7 +232,7 @@ jobs:
           tar czf "${DIST}.tar.gz" "${DIST}"
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: windows-release
           path: UnifiedFloppyTool-*-windows-x64.tar.gz
