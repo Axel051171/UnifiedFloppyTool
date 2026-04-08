@@ -789,17 +789,30 @@ void UftSectorEditor::save()
         saveAs();
         return;
     }
-    
+
+    QMessageBox::StandardButton reply = QMessageBox::question(this,
+        tr("Save Changes"),
+        tr("Save changes to %1?\n\nThis will overwrite the original file. "
+           "For forensic preservation, consider using 'Save As' instead.")
+            .arg(QFileInfo(m_diskPath).fileName()),
+        QMessageBox::Save | QMessageBox::Cancel,
+        QMessageBox::Cancel);
+    if (reply != QMessageBox::Save) return;
+
+    /* Create .bak backup before overwriting */
+    QString bakPath = m_diskPath + ".bak";
+    QFile::copy(m_diskPath, bakPath);
+
     QFile file(m_diskPath);
     if (!file.open(QIODevice::WriteOnly)) {
         QMessageBox::warning(this, tr("Error"),
             tr("Cannot save file: %1").arg(m_diskPath));
         return;
     }
-    
+
     file.write(m_diskData);
     file.close();
-    
+
     m_modified = false;
     QMessageBox::information(this, tr("Saved"),
         tr("Disk image saved successfully."));

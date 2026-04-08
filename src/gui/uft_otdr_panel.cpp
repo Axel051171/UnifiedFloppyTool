@@ -357,6 +357,11 @@ bool UftOtdrPanel::loadFluxImage(const QString &path)
             }
             uft_scp_free_track(&td);
         }
+
+        if (t % 10 == 0) {
+            m_statusLabel->setText(QString("Loading track %1/%2...").arg(t).arg(totalTracks));
+            QApplication::processEvents();
+        }
     }
 
     m_disk->rpm = 300;
@@ -414,6 +419,11 @@ void UftOtdrPanel::analyzeFullDisk()
 {
     if (!m_disk) return;
 
+    /* Prevent re-entry and signal busy state */
+    m_analyzeBtn->setEnabled(false);
+    m_analyzeAllBtn->setEnabled(false);
+    setCursor(Qt::WaitCursor);
+
     m_progressBar->setVisible(true);
     m_progressBar->setRange(0, (int)m_disk->track_count);
 
@@ -426,6 +436,8 @@ void UftOtdrPanel::analyzeFullDisk()
         if (m_disk->tracks[t].flux_count > 0)
             otdr_track_analyze(&m_disk->tracks[t], &m_config);
         m_progressBar->setValue(t + 1);
+        m_statusLabel->setText(QString("Analyzing track %1/%2...")
+                                .arg(t + 1).arg(m_disk->track_count));
         QApplication::processEvents();
     }
 
@@ -440,6 +452,11 @@ void UftOtdrPanel::analyzeFullDisk()
     m_progressBar->setVisible(false);
     m_statusLabel->setText(QString("Done — %1")
         .arg(otdr_quality_name(m_disk->stats.overall)));
+
+    m_analyzeBtn->setEnabled(true);
+    m_analyzeAllBtn->setEnabled(true);
+    unsetCursor();
+
     emit analysisComplete(m_disk->stats.quality_mean);
 }
 
