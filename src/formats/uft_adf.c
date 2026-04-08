@@ -812,6 +812,105 @@ return 0;
 }
 
 /*============================================================================
+ * Path Lookup
+ *============================================================================*/
+
+/**
+ * @brief Helper: case-insensitive Amiga filename compare
+ */
+static int adf_namecmp(const char *a, const char *b) {
+    while (*a && *b) {
+        char ca = *a, cb = *b;
+        if (ca >= 'a' && ca <= 'z') ca -= 32;
+        if (cb >= 'a' && cb <= 'z') cb -= 32;
+        if (ca != cb) return ca - cb;
+        a++; b++;
+    }
+    return (unsigned char)*a - (unsigned char)*b;
+}
+
+int uft_adf_lookup(uft_adf_volume_t *vol, const char *path,
+                   uft_adf_entry_t *entry) {
+    if (!vol || !path || !entry) return -1;
+
+    /* Skip leading slash */
+    if (*path == '/') path++;
+    if (*path == '\0') {
+        /* Root directory itself */
+        memset(entry, 0, sizeof(*entry));
+        strncpy(entry->name, vol->name, UFT_ADF_MAX_NAME);
+        entry->block = vol->root_block;
+        entry->is_dir = true;
+        return 0;
+    }
+
+    /* Walk path components */
+    uint32_t dir_block = vol->root_block;
+    char component[UFT_ADF_MAX_NAME + 1];
+
+    while (*path) {
+        /* Extract next path component */
+        const char *slash = strchr(path, '/');
+        size_t len = slash ? (size_t)(slash - path) : strlen(path);
+        if (len == 0) { path++; continue; }
+        if (len > UFT_ADF_MAX_NAME) return -1;
+        memcpy(component, path, len);
+        component[len] = '\0';
+        path += len;
+        if (*path == '/') path++;
+
+        /* Search directory for this component */
+        uft_adf_dir_iter_t *iter = uft_adf_opendir_block(vol, dir_block);
+        if (!iter) return -1;
+
+        bool found = false;
+        uft_adf_entry_t e;
+        while (uft_adf_readdir(iter, &e) == 0) {
+            if (adf_namecmp(e.name, component) == 0) {
+                found = true;
+                break;
+            }
+        }
+        uft_adf_closedir(iter);
+
+        if (!found) return -1;
+
+        if (*path == '\0') {
+            /* Last component -- this is the result */
+            *entry = e;
+            return 0;
+        }
+
+        /* Must be a directory to descend into */
+        if (!e.is_dir) return -1;
+        dir_block = e.block;
+    }
+
+    return -1;
+}
+
+/*============================================================================
+ * File Add (stub -- write support not yet complete)
+ *============================================================================*/
+
+int uft_adf_add_file(uft_adf_volume_t *vol, const char *src_path,
+                     const char *dst_path) {
+    (void)vol; (void)src_path; (void)dst_path;
+    /* TODO: implement full file injection into ADF filesystem */
+    return -1;
+}
+
+/*============================================================================
+ * Delete (stub -- write support not yet complete)
+ *============================================================================*/
+
+int uft_adf_delete(uft_adf_volume_t *vol, const char *path) {
+    (void)vol; (void)path;
+    /* TODO: implement file/directory deletion from ADF filesystem */
+    return -1;
+}
+
+/*============================================================================
  * Self-Test
  *============================================================================*/
 

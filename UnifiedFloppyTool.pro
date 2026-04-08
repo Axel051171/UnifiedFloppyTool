@@ -47,6 +47,9 @@ greaterThan(QT_MAJOR_VERSION, 5) {
 
 CONFIG += sdk_no_version_check
 
+# Mirror source tree in object output dirs to avoid MSVC/NMAKE basename collisions
+# (e.g. src/core/uft_format_registry.c vs src/formats/uft_format_registry.c)
+CONFIG += object_parallel_to_source
 
 # Enable console output for debugging (remove for release)
 win32:CONFIG += console
@@ -174,7 +177,11 @@ SOURCES += \
     src/gw_output_parser.cpp \
     src/qmake_stubs/uft_protection_stubs.cpp \
     src/gui/uft_otdr_panel.cpp \
-    src/flux/uft_scp_parser.c
+    src/gui/ProtectionAnalysisWidget.cpp \
+    src/gui/uft_sector_editor.cpp \
+    src/flux/uft_scp_parser.c \
+    src/flux/uft_flux_decoder.c \
+    src/fileops/uft_file_ops_extended.c
 
 # Main GUI Headers (CRITICAL for MOC!)
 HEADERS += \
@@ -222,6 +229,8 @@ HEADERS += \
     src/inputvalidation.h \
     src/pathutils.h \
     src/gui/uft_otdr_panel.h \
+    src/gui/ProtectionAnalysisWidget.h \
+    src/gui/uft_sector_editor.h \
     include/uft/flux/uft_scp_parser.h
 
 # FDC Bitstream Sources (VFO/PLL implementations)
