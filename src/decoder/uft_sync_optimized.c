@@ -12,6 +12,7 @@
  */
 
 #include "uft/decoder/uft_sync_optimized.h"
+#include "uft/uft_simd.h"
 #include <string.h>
 #include <stdlib.h>
 
@@ -394,8 +395,10 @@ void sync_stream_reset(sync_finder_ctx_t *ctx) {
  * ============================================================================ */
 
 bool sync_simd_available(void) {
-#if defined(__SSE2__) || defined(__ARM_NEON)
-    return true;
+#if defined(__SSE2__)
+    return uft_simd_has_sse2();
+#elif defined(__ARM_NEON)
+    return uft_simd_has_neon();
 #else
     return false;
 #endif

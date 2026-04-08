@@ -373,9 +373,9 @@ uft_status_t uft_load(uft_context_t *ctx, const char *path, uft_image_t **image)
     }
     
     /* Get size */
-    if (fseek(f, 0, SEEK_END) != 0) { /* seek error */ }
+    if (fseek(f, 0, SEEK_END) != 0) { fclose(f); return UFT_ERR_IO; }
     size_t size = ftell(f);
-    if (fseek(f, 0, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(f, 0, SEEK_SET) != 0) { fclose(f); return UFT_ERR_IO; }
     if (size == 0 || size > 100*1024*1024) {  /* Max 100MB */
         fclose(f);
         set_error(ctx, "Invalid file size: %zu", size);

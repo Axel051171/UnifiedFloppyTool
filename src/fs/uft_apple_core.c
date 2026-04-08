@@ -363,9 +363,9 @@ int uft_apple_open_file(uft_apple_ctx_t *ctx, const char *filename) {
     if (!fp) return UFT_APPLE_ERR_IO;
     
     /* Get file size */
-    if (fseek(fp, 0, SEEK_END) != 0) { /* seek error */ }
+    if (fseek(fp, 0, SEEK_END) != 0) { fclose(fp); return UFT_APPLE_ERR_IO; }
     long size = ftell(fp);
-    if (fseek(fp, 0, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(fp, 0, SEEK_SET) != 0) { fclose(fp); return UFT_APPLE_ERR_IO; }
     if (size <= 0) {
         fclose(fp);
         return UFT_APPLE_ERR_IO;

@@ -435,9 +435,9 @@ int uft_amiga_open_file(uft_amiga_ctx_t *ctx, const char *filename,
     if (!f) return -1;
     
     /* Get file size */
-    if (fseek(f, 0, SEEK_END) != 0) { /* seek error */ }
+    if (fseek(f, 0, SEEK_END) != 0) { fclose(f); return -1; }
     long fsize = ftell(f);
-    if (fseek(f, 0, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(f, 0, SEEK_SET) != 0) { fclose(f); return -1; }
     if (fsize < 0 || fsize > 100 * 1024 * 1024) {  /* Max 100MB */
         fclose(f);
         return -1;

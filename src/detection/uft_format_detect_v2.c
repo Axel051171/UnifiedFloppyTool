@@ -1097,9 +1097,9 @@ int uft_detect_format_v2(
     FILE *f = fopen(path, "rb");
     if (!f) return -2;
     
-    if (fseek(f, 0, SEEK_END) != 0) { /* seek error */ }
+    if (fseek(f, 0, SEEK_END) != 0) { fclose(f); return -3; }
     long file_size = ftell(f);
-    if (fseek(f, 0, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(f, 0, SEEK_SET) != 0) { fclose(f); return -3; }
     if (file_size <= 0 || file_size > 100 * 1024 * 1024) {  // Max 100MB
         fclose(f);
         return -3;

@@ -27,6 +27,8 @@
 #include <stdbool.h>
 #include <math.h>
 
+#include "uft/uft_simd.h"
+
 #ifdef __SSE2__
 #include <emmintrin.h>
 #endif
@@ -145,90 +147,86 @@ typedef struct {
  * SIMD OOB DETECTION
  *============================================================================*/
 
-#ifdef __SSE2__
-/**
- * @brief SIMD-optimierte Suche nach OOB Marker (0x0D)
- */
-static int simd_find_oob(const uint8_t* data, size_t len) {
-    __m128i pattern = _mm_set1_epi8(0x0D);
-    
-    size_t i = 0;
-    for (; i + 16 <= len; i += 16) {
-        __m128i chunk = _mm_loadu_si128((const __m128i*)(data + i));
-        __m128i cmp = _mm_cmpeq_epi8(chunk, pattern);
-        int mask = _mm_movemask_epi8(cmp);
-        
-        if (mask) {
-            return (int)(i + __builtin_ctz(mask));
-        }
-    }
-    
-    /* Scalar fallback */
-    for (; i < len; i++) {
-        if (data[i] == UFT_KF_OP_OOB) return (int)i;
-    }
-    
-    return -1;
-}
+/* --- Scalar fallback implementations (always compiled) --- */
 
-/**
- * @brief SIMD Flux-Statistik
- */
-static void simd_kf_flux_stats(const uint32_t* flux, size_t count,
-                                uint32_t* min_out, uint32_t* max_out,
-                                double* avg_out) {
-    if (count == 0) {
-        *min_out = *max_out = 0;
-        *avg_out = 0;
-        return;
-    }
-    
-    uint32_t min_val = flux[0], max_val = flux[0];
-    uint64_t sum = 0;
-    
-    for (size_t i = 0; i < count; i++) {
-        if (flux[i] < min_val) min_val = flux[i];
-        if (flux[i] > max_val) max_val = flux[i];
-        sum += flux[i];
-    }
-    
-    *min_out = min_val;
-    *max_out = max_val;
-    *avg_out = (double)sum / (double)count;
-}
-
-#else
-/* Scalar Fallbacks */
-static int simd_find_oob(const uint8_t* data, size_t len) {
+static int scalar_find_oob(const uint8_t* data, size_t len) {
     for (size_t i = 0; i < len; i++) {
         if (data[i] == UFT_KF_OP_OOB) return (int)i;
     }
     return -1;
 }
 
-static void simd_kf_flux_stats(const uint32_t* flux, size_t count,
-                                uint32_t* min_out, uint32_t* max_out,
-                                double* avg_out) {
+static void scalar_kf_flux_stats(const uint32_t* flux, size_t count,
+                                  uint32_t* min_out, uint32_t* max_out,
+                                  double* avg_out) {
     if (count == 0) {
         *min_out = *max_out = 0;
         *avg_out = 0;
         return;
     }
-    
+
     uint32_t min_val = flux[0], max_val = flux[0];
     uint64_t sum = 0;
-    
+
     for (size_t i = 0; i < count; i++) {
         if (flux[i] < min_val) min_val = flux[i];
         if (flux[i] > max_val) max_val = flux[i];
         sum += flux[i];
     }
-    
+
     *min_out = min_val;
     *max_out = max_val;
     *avg_out = (double)sum / (double)count;
 }
+
+/* --- SIMD implementations (compiled when intrinsics available) --- */
+
+#ifdef __SSE2__
+/**
+ * @brief SIMD-optimierte Suche nach OOB Marker (0x0D)
+ */
+static int simd_find_oob_sse2(const uint8_t* data, size_t len) {
+    __m128i pattern = _mm_set1_epi8(0x0D);
+
+    size_t i = 0;
+    for (; i + 16 <= len; i += 16) {
+        __m128i chunk = _mm_loadu_si128((const __m128i*)(data + i));
+        __m128i cmp = _mm_cmpeq_epi8(chunk, pattern);
+        int mask = _mm_movemask_epi8(cmp);
+
+        if (mask) {
+            return (int)(i + __builtin_ctz(mask));
+        }
+    }
+
+    /* Scalar fallback for tail */
+    for (; i < len; i++) {
+        if (data[i] == UFT_KF_OP_OOB) return (int)i;
+    }
+
+    return -1;
+}
+#endif /* __SSE2__ */
+
+/* --- Runtime dispatch wrappers --- */
+
+static int simd_find_oob(const uint8_t* data, size_t len) {
+#ifdef __SSE2__
+    if (uft_simd_has_sse2()) {
+        return simd_find_oob_sse2(data, len);
+    }
 #endif
+    return scalar_find_oob(data, len);
+}
+
+static void simd_kf_flux_stats(const uint32_t* flux, size_t count,
+                                uint32_t* min_out, uint32_t* max_out,
+                                double* avg_out) {
+    /* The SIMD version of flux stats was identical to scalar in this file,
+     * so we just call scalar directly.  The hot path (simd_find_oob) is
+     * the one that benefits from SSE2. */
+    scalar_kf_flux_stats(flux, count, min_out, max_out, avg_out);
+}
 
 /*============================================================================
  * OOB PARSING

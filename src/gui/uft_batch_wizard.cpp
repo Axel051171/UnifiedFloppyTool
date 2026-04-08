@@ -22,6 +22,10 @@
 #include <QApplication>
 #include <QFileInfo>
 
+extern "C" {
+#include "uft/uft_format_convert.h"
+}
+
 /*===========================================================================
  * UftBatchQueue
  *===========================================================================*/
@@ -1017,9 +1021,82 @@ void UftBatchWorker::cancel()
 
 void UftBatchWorker::processConvert()
 {
+    emit progress(10, tr("Preparing conversion..."));
+
+    if (m_cancelled) {
+        emit complete(false, tr("Cancelled"));
+        return;
+    }
+
+    QString srcPath = m_job.sourcePath;
+    QString dstPath = m_job.targetPath;
+
+    /* Validate paths */
+    if (srcPath.isEmpty() || dstPath.isEmpty()) {
+        emit error(tr("Source or target path is empty."));
+        emit complete(false, tr("Conversion failed: missing paths"));
+        return;
+    }
+
+    /* Check source exists */
+    QFileInfo srcInfo(srcPath);
+    if (!srcInfo.exists()) {
+        emit error(tr("Source file not found: %1").arg(srcPath));
+        emit complete(false, tr("Conversion failed: source not found"));
+        return;
+    }
+
+    emit progress(30, tr("Converting %1...").arg(srcInfo.fileName()));
+
+    /* Determine target format from extension */
+    QString dstExt = QFileInfo(dstPath).suffix().toLower();
+    uft_format_t dstFormat = UFT_FORMAT_UNKNOWN;
+    if (dstExt == "adf") dstFormat = UFT_FORMAT_ADF;
+    else if (dstExt == "d64") dstFormat = UFT_FORMAT_D64;
+    else if (dstExt == "scp") dstFormat = UFT_FORMAT_SCP;
+    else if (dstExt == "hfe") dstFormat = UFT_FORMAT_HFE;
+    else if (dstExt == "img" || dstExt == "ima") dstFormat = UFT_FORMAT_IMG;
+    else if (dstExt == "g64") dstFormat = UFT_FORMAT_G64;
+    else if (dstExt == "st") dstFormat = UFT_FORMAT_ST;
+    else if (dstExt == "dmk") dstFormat = UFT_FORMAT_DMK;
+
+    /* Set up conversion options */
+    uft_convert_options_ext_t opts;
+    memset(&opts, 0, sizeof(opts));
+    opts.verify_after = m_job.options.value("verify", true).toBool();
+    opts.preserve_weak_bits = m_job.options.value("preserveWeak", false).toBool();
+    opts.decode_retries = m_job.options.value("retries", 3).toInt();
+    opts.cancel = &m_cancelled;
+
+    uft_convert_result_t result;
+    memset(&result, 0, sizeof(result));
+
+    QByteArray srcBytes = srcPath.toUtf8();
+    QByteArray dstBytes = dstPath.toUtf8();
+
     emit progress(50, tr("Converting..."));
-    /* TODO: Actual conversion */
-    emit complete(true, tr("Converted successfully"));
+
+    uft_error_t err = uft_convert_file(srcBytes.constData(),
+                                        dstBytes.constData(),
+                                        dstFormat, &opts, &result);
+
+    if (m_cancelled) {
+        emit complete(false, tr("Cancelled"));
+        return;
+    }
+
+    if (err == UFT_OK && result.success) {
+        emit progress(100, tr("Done"));
+        emit complete(true, tr("Converted: %1 tracks, %2 sectors")
+            .arg(result.tracks_converted).arg(result.sectors_converted));
+    } else {
+        QString errMsg = tr("Conversion failed");
+        if (result.tracks_failed > 0) {
+            errMsg += tr(" (%1 tracks failed)").arg(result.tracks_failed);
+        }
+        emit error(errMsg);
+        emit complete(false, errMsg);
+    }
 }
 
 void UftBatchWorker::processAnalyze()

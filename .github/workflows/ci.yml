@@ -50,6 +50,16 @@ jobs:
           file build/UnifiedFloppyTool
           ldd build/UnifiedFloppyTool
 
+      - name: Build tests (CMake)
+        run: |
+          cmake -B build-tests -DCMAKE_BUILD_TYPE=Release -DUFT_BUILD_TESTS=ON
+          cmake --build build-tests --parallel $(nproc) --target all
+
+      - name: Run tests
+        run: |
+          cd build-tests
+          ctest --output-on-failure --timeout 120
+
   build-macos:
     runs-on: macos-14
     steps:

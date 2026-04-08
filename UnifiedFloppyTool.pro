@@ -75,6 +75,16 @@ win32 {
 # MSVC specific - POSIX string functions not available
 msvc {
     DEFINES += strcasecmp=_stricmp strncasecmp=_strnicmp
+    # MSVC hardening: buffer security check, ASLR, DEP, Control Flow Guard
+    QMAKE_CFLAGS_RELEASE += /GS /DYNAMICBASE /NXCOMPAT
+    QMAKE_CXXFLAGS_RELEASE += /GS /DYNAMICBASE /NXCOMPAT
+    QMAKE_LFLAGS += /DYNAMICBASE /NXCOMPAT
+}
+
+# GCC/Clang hardening (Linux, macOS, MinGW)
+!msvc {
+    QMAKE_CFLAGS_RELEASE += -fstack-protector-strong -D_FORTIFY_SOURCE=2
+    QMAKE_CXXFLAGS_RELEASE += -fstack-protector-strong -D_FORTIFY_SOURCE=2
 }
 
 # macOS specific
@@ -629,9 +639,23 @@ SOURCES += \
     src/algorithms/god_mode/uft_multi_rev_fusion.c \
     src/algorithms/god_mode/uft_crc_correction_v2.c \
     src/algorithms/god_mode/uft_fuzzy_sync_v2.c \
-    src/algorithms/god_mode/uft_decoder_metrics.c
+    src/algorithms/god_mode/uft_decoder_metrics.c \
+    src/algorithms/encoding/uft_otdr_encoding_boost.c \
+    src/algorithms/recovery/uft_otdr_adaptive_decode.c \
+    src/analysis/deepread/uft_deepread_splice.c \
+    src/analysis/deepread/uft_deepread_aging.c \
+    src/analysis/deepread/uft_deepread_crosstrack.c \
+    src/analysis/deepread/uft_deepread_fingerprint.c \
+    src/analysis/deepread/uft_deepread_soft_decode.c
 
 HEADERS += \
+    include/uft/encoding/uft_otdr_encoding_boost.h \
+    include/uft/recovery/uft_otdr_adaptive_decode.h \
+    include/uft/analysis/uft_deepread_splice.h \
+    include/uft/analysis/uft_deepread_aging.h \
+    include/uft/analysis/uft_deepread_crosstrack.h \
+    include/uft/analysis/uft_deepread_fingerprint.h \
+    include/uft/analysis/uft_deepread_soft_decode.h \
     include/uft/analysis/uft_export_bridge.h \
     include/uft/analysis/otdr_event_core_v12.h \
     include/uft/analysis/uft_pipeline_bridge.h \
@@ -699,7 +723,8 @@ HEADERS += \
 # UFT Advanced Mode
 # ═══════════════════════════════════════════════════════════════════════════════
 
-SOURCES += src/core/uft_advanced_mode.c \
+SOURCES += src/core_recovery/uft_simd.c \
+    src/core/uft_advanced_mode.c \
     src/analysis/events/uft_export_bridge.c \
     src/analysis/events/otdr_event_core_v12.c \
     src/analysis/events/uft_pipeline_bridge.c \
@@ -1872,6 +1897,7 @@ SOURCES += \
     src/formats/apple/prodos_po_do.c \
     src/formats/apple/uft_2mg_parser.c \
     src/formats/apple/uft_diskcopy.c \
+    src/formats/apple/uft_moof_parser.c \
     src/formats/apple/uft_woz.c \
     src/formats/apple/woz.c
 
@@ -2335,7 +2361,8 @@ HEADERS += \
     include/uft/analysis/otdr_event_core_v2.h \
     include/uft/analysis/uft_denoise_bridge.h \
     include/uft/analysis/phi_otdr_denoise_1d.h \
-    include/uft/formats/polyglot_boot.h
+    include/uft/formats/polyglot_boot.h \
+    include/uft/formats/apple/uft_moof.h
 
 # Atari DOS Filesystem Module
 SOURCES += \

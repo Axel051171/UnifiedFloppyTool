@@ -31,7 +31,7 @@ static void log_msg(FloppyDevice *d,const char*m){
 
 static int is_zip(FILE *fp){
     unsigned char sig[4];
-    if (fseek(fp,0,SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(fp,0,SEEK_SET) != 0) { return 0; }
     if (fread(sig,1,4,fp) != 4) { /* I/O error */ }
     return sig[0]==0x50 && sig[1]==0x4B && sig[2]==0x03 && sig[3]==0x04;
 }

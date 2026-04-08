@@ -26,6 +26,8 @@
 #include <stdbool.h>
 #include <math.h>
 
+#include "uft/uft_simd.h"
+
 #ifdef __SSE2__
 #include <emmintrin.h>
 #endif
@@ -354,7 +356,7 @@ static size_t decode_flux_8(const uint8_t* src, size_t src_len,
 }
 
 /**
- * @brief Auto-select best decoder
+ * @brief Auto-select best decoder (runtime SIMD dispatch)
  */
 static size_t decode_flux(const uint8_t* src, size_t src_len,
                          uint32_t* dst, size_t dst_capacity,
@@ -362,14 +364,18 @@ static size_t decode_flux(const uint8_t* src, size_t src_len,
     if (is_8bit) {
         return decode_flux_8(src, src_len, dst, dst_capacity);
     }
-    
+
 #ifdef __AVX2__
-    return simd_decode_flux_16_avx2(src, src_len, dst, dst_capacity);
-#elif defined(__SSE2__)
-    return simd_decode_flux_16_sse2(src, src_len, dst, dst_capacity);
-#else
-    return scalar_decode_flux_16(src, src_len, dst, dst_capacity);
+    if (uft_simd_has_avx2()) {
+        return simd_decode_flux_16_avx2(src, src_len, dst, dst_capacity);
+    }
 #endif
+#ifdef __SSE2__
+    if (uft_simd_has_sse2()) {
+        return simd_decode_flux_16_sse2(src, src_len, dst, dst_capacity);
+    }
+#endif
+    return scalar_decode_flux_16(src, src_len, dst, dst_capacity);
 }
 
 /*============================================================================

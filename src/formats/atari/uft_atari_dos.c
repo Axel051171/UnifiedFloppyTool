@@ -99,9 +99,9 @@ int uft_atari_disk_open(const char *filename, uft_atari_disk_t *disk)
     if (!f) return -1;
     
     /* Get file size */
-    if (fseek(f, 0, SEEK_END) != 0) { /* seek error */ }
+    if (fseek(f, 0, SEEK_END) != 0) { fclose(f); return -1; }
     long size = ftell(f);
-    if (fseek(f, 0, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(f, 0, SEEK_SET) != 0) { fclose(f); return -1; }
     if (size <= 0) {
         fclose(f);
         return -1;

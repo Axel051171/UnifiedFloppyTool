@@ -47,9 +47,9 @@ int uft_cbm_d82_open(FloppyDevice *dev, const char *path){
     if(!fp){ fp=fopen(path,"rb"); ro=true; }
     if(!fp){ free(ctx); return UFT_ENOENT; }
 
-    if (fseek(fp,0,SEEK_END) != 0) { /* seek error */ }
+    if (fseek(fp,0,SEEK_END) != 0) { fclose(fp); free(ctx); return UFT_EIO; }
     long szl=ftell(fp);
-    if (fseek(fp,0,SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(fp,0,SEEK_SET) != 0) { fclose(fp); free(ctx); return UFT_EIO; }
     /* Expected size: 2 * sum(spt) * 256 */
     uint32_t per_side=0;
     for(int i=0;i<77;i++) per_side += spt[i];

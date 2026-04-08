@@ -461,9 +461,9 @@ uft_ti99_error_t uft_ti99_inject_from_file(uft_ti99_ctx_t *ctx,
         return UFT_TI99_ERR_READ;
     }
     
-    if (fseek(f, 0, SEEK_END) != 0) { /* seek error */ }
+    if (fseek(f, 0, SEEK_END) != 0) { fclose(f); return UFT_TI99_ERR_READ; }
     long file_size = ftell(f);
-    if (fseek(f, 0, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(f, 0, SEEK_SET) != 0) { fclose(f); return UFT_TI99_ERR_READ; }
     if (file_size < 0 || file_size > 0x100000) {  /* 1MB max */
         fclose(f);
         return UFT_TI99_ERR_PARAM;

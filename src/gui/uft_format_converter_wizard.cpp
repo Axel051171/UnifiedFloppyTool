@@ -19,6 +19,10 @@
 #include <QStyle>
 #include <QApplication>
 
+extern "C" {
+#include "uft/uft_format_convert.h"
+}
+
 /*===========================================================================
  * Format Data (matching uft_format_registry)
  *===========================================================================*/
@@ -1014,8 +1018,126 @@ void UftConversionWorker::setOptions(const UftConversionOptions &opts)
 
 void UftConversionWorker::process()
 {
-    /* TODO: Implement actual conversion logic */
-    emit complete(true, "Conversion complete");
+    emit progress(0, tr("Starting conversion..."));
+
+    if (m_cancelled) {
+        emit complete(false, tr("Cancelled"));
+        return;
+    }
+
+    /* Validate paths */
+    if (m_options.source_path.isEmpty() || m_options.target_path.isEmpty()) {
+        emit error(tr("Source or target path is empty."));
+        emit complete(false, tr("Conversion failed: missing paths"));
+        return;
+    }
+
+    QFileInfo srcInfo(m_options.source_path);
+    if (!srcInfo.exists()) {
+        emit error(tr("Source file not found: %1").arg(m_options.source_path));
+        emit complete(false, tr("Source file not found"));
+        return;
+    }
+
+    emit progress(10, tr("Analyzing source: %1").arg(srcInfo.fileName()));
+
+    /* Determine target format from extension or explicit format string */
+    QString dstExt = m_options.target_format.toLower();
+    if (dstExt.isEmpty()) {
+        dstExt = QFileInfo(m_options.target_path).suffix().toLower();
+    }
+
+    uft_format_t dstFormat = UFT_FORMAT_UNKNOWN;
+    if (dstExt == "adf") dstFormat = UFT_FORMAT_ADF;
+    else if (dstExt == "d64") dstFormat = UFT_FORMAT_D64;
+    else if (dstExt == "d71") dstFormat = UFT_FORMAT_D71;
+    else if (dstExt == "d81") dstFormat = UFT_FORMAT_D81;
+    else if (dstExt == "scp") dstFormat = UFT_FORMAT_SCP;
+    else if (dstExt == "hfe") dstFormat = UFT_FORMAT_HFE;
+    else if (dstExt == "img" || dstExt == "ima") dstFormat = UFT_FORMAT_IMG;
+    else if (dstExt == "g64") dstFormat = UFT_FORMAT_G64;
+    else if (dstExt == "st") dstFormat = UFT_FORMAT_ST;
+    else if (dstExt == "atr") dstFormat = UFT_FORMAT_ATR;
+    else if (dstExt == "dmk") dstFormat = UFT_FORMAT_DMK;
+    else if (dstExt == "imd") dstFormat = UFT_FORMAT_IMD;
+    else if (dstExt == "woz") dstFormat = UFT_FORMAT_WOZ;
+
+    if (dstFormat == UFT_FORMAT_UNKNOWN) {
+        emit error(tr("Unknown target format: %1").arg(dstExt));
+        emit complete(false, tr("Unsupported target format"));
+        return;
+    }
+
+    /* Set up conversion options */
+    uft_convert_options_ext_t opts;
+    memset(&opts, 0, sizeof(opts));
+    opts.verify_after = m_options.verify_after_convert;
+    opts.preserve_errors = false;
+    opts.preserve_weak_bits = m_options.preserve_weak_bits;
+    opts.decode_retries = m_options.max_retries > 0 ? m_options.max_retries : 3;
+    opts.use_multiple_revs = m_options.multi_revolution;
+    opts.cancel = &m_cancelled;
+
+    /* Progress callback */
+    struct ProgressCtx {
+        UftConversionWorker *self;
+    };
+    static auto progressCb = [](int percent, const char *stage, void *user) {
+        auto *ctx = static_cast<ProgressCtx*>(user);
+        QMetaObject::invokeMethod(ctx->self, [ctx, percent, msg = QString::fromUtf8(stage)]() {
+            emit ctx->self->progress(10 + (percent * 80 / 100), msg);
+        }, Qt::QueuedConnection);
+    };
+    ProgressCtx ctx{this};
+    opts.progress_cb = progressCb;
+    opts.progress_user = &ctx;
+
+    uft_convert_result_t result;
+    memset(&result, 0, sizeof(result));
+
+    QByteArray srcBytes = m_options.source_path.toUtf8();
+    QByteArray dstBytes = m_options.target_path.toUtf8();
+
+    emit progress(20, tr("Converting..."));
+
+    uft_error_t err = uft_convert_file(srcBytes.constData(),
+                                        dstBytes.constData(),
+                                        dstFormat, &opts, &result);
+
+    if (m_cancelled) {
+        emit complete(false, tr("Conversion cancelled by user"));
+        return;
+    }
+
+    emit progress(95, tr("Finalizing..."));
+
+    /* Report warnings */
+    for (int i = 0; i < result.warning_count && i < 8; i++) {
+        emit warning(QString::fromUtf8(result.warnings[i]));
+    }
+
+    if (err == UFT_OK && result.success) {
+        QString summary = tr("Conversion complete: %1 tracks (%2 sectors), %3 bytes written")
+            .arg(result.tracks_converted)
+            .arg(result.sectors_converted)
+            .arg(result.bytes_written);
+
+        if (result.tracks_failed > 0) {
+            summary += tr("\n%1 tracks failed").arg(result.tracks_failed);
+        }
+
+        emit progress(100, tr("Done"));
+        emit complete(true, summary);
+    } else {
+        QString errMsg = tr("Conversion failed");
+        if (result.tracks_failed > 0) {
+            errMsg += tr(": %1 of %2 tracks failed")
+                .arg(result.tracks_failed)
+                .arg(result.tracks_converted + result.tracks_failed);
+        }
+        emit error(errMsg);
+        emit complete(false, errMsg);
+    }
 }
 
 void UftConversionWorker::cancel()

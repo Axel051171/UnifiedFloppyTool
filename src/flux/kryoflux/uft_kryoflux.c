@@ -409,9 +409,9 @@ uft_kf_status_t uft_kf_decode_file(uft_kf_stream_t *stream, const char *filename
     }
     
     /* Get file size */
-    if (fseek(f, 0, SEEK_END) != 0) { /* seek error */ }
+    if (fseek(f, 0, SEEK_END) != 0) { fclose(f); return UFT_UFT_KF_STATUS_READ_ERROR; }
     long size = ftell(f);
-    if (fseek(f, 0, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(f, 0, SEEK_SET) != 0) { fclose(f); return UFT_UFT_KF_STATUS_READ_ERROR; }
     if (size <= 0 || size > 100 * 1024 * 1024) {  /* 100MB limit */
         fclose(f);
         return UFT_UFT_KF_STATUS_READ_ERROR;

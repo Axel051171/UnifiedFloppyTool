@@ -42,8 +42,8 @@ uft_error_t uft_file_open(const char *path, const char *mode, FILE **out_file) {
     
     /* Security check: validate path if enabled */
     if (g_uft_path_security_enabled) {
-        /* Check for directory traversal attempts */
-        if (strstr(path, "..") != NULL) {
+        /* Check for directory traversal attempts (component-level check) */
+        if (!uft_path_no_dotdot_component(path)) {
             return UFT_ERROR_SECURITY;
         }
     }

@@ -58,8 +58,8 @@ static uft_error_t d80_read_track(uft_disk_t* disk, int cyl, int head, uft_track
     uft_track_init(track, cyl, head);
     uint8_t buf[256];
     for (int s = 0; s < d80_spt[cyl]; s++) {
-        if (fseek(p->file, (d80_off[cyl] + s) * 256, SEEK_SET) != 0) { /* seek error */ }
-        if (fread(buf, 1, 256, p->file) != 256) { /* I/O error */ }
+        if (fseek(p->file, (d80_off[cyl] + s) * 256, SEEK_SET) != 0) continue;
+        if (fread(buf, 1, 256, p->file) != 256) continue;
         uft_format_add_sector(track, s, buf, 256, cyl, head);
     }
     return UFT_OK;

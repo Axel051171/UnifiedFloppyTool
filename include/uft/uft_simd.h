@@ -301,6 +301,32 @@ void uft_benchmark_gcr(const uint64_t *flux_data, size_t count, int iterations);
 #endif
 
 /* =============================================================================
+ * RUNTIME SIMD DISPATCH HELPERS
+ *
+ * These query uft_cpu_detect() (cached after first call) so that callers
+ * can decide at runtime which SIMD path to take.  Compile-time #ifdef guards
+ * are still needed around the actual intrinsic code, but the *decision* to
+ * enter those paths now happens at runtime.
+ * ============================================================================= */
+
+static inline bool uft_simd_has_sse2(void) {
+    return uft_cpu_has_feature(UFT_CPU_SSE2);
+}
+
+static inline bool uft_simd_has_avx2(void) {
+    return uft_cpu_has_feature(UFT_CPU_AVX2);
+}
+
+static inline bool uft_simd_has_avx512(void) {
+    return uft_cpu_has_feature(UFT_CPU_AVX512F) &&
+           uft_cpu_has_feature(UFT_CPU_AVX512BW);
+}
+
+static inline bool uft_simd_has_neon(void) {
+    return uft_cpu_has_feature(UFT_CPU_NEON);
+}
+
+/* =============================================================================
  * COMPILER HINTS (legacy - now provided by uft_compiler.h)
  * These are kept as guards only for backward compatibility
  * ============================================================================= */

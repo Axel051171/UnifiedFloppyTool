@@ -580,9 +580,9 @@ dcm_context_t* dcm_open(const char* filename) {
     ctx->filename = filename;
     
     /* Get file size */
-    if (fseek(ctx->fp, 0, SEEK_END) != 0) { /* seek error */ }
+    if (fseek(ctx->fp, 0, SEEK_END) != 0) { fclose(ctx->fp); free(ctx); return NULL; }
     ctx->file_size = ftell(ctx->fp);
-    if (fseek(ctx->fp, 0, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(ctx->fp, 0, SEEK_SET) != 0) { fclose(ctx->fp); free(ctx); return NULL; }
     /* Read first pass header to get geometry */
     if (!dcm_read_pass_header(ctx)) {
         fclose(ctx->fp);

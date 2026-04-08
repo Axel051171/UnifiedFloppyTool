@@ -25,8 +25,17 @@ else()
     target_link_libraries(hardware_providers PUBLIC Qt5::Core)
 endif()
 
-# Link to C hardware backends
-target_link_libraries(hardware_providers PUBLIC flux_hw)
+# Link to C hardware backends (if available)
+if(TARGET flux_hw)
+    target_link_libraries(hardware_providers PUBLIC flux_hw)
+endif()
+
+# Link SerialPort if available
+if(TARGET Qt6::SerialPort)
+    target_link_libraries(hardware_providers PUBLIC Qt6::SerialPort)
+elseif(TARGET Qt5::SerialPort)
+    target_link_libraries(hardware_providers PUBLIC Qt5::SerialPort)
+endif()
 
 # Compiler warnings
 target_compile_options(hardware_providers PRIVATE

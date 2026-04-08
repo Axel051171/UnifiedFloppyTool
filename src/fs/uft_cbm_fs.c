@@ -346,9 +346,9 @@ uft_rc_t uft_cbm_fs_open(uft_cbm_fs_t* fs, const char* path, bool writable) {
     FILE* f = fopen(path, "rb");
     if (!f) return UFT_ERR_FILE_NOT_FOUND;
     
-    if (fseek(f, 0, SEEK_END) != 0) { /* seek error */ }
+    if (fseek(f, 0, SEEK_END) != 0) { fclose(f); return UFT_ERR_FORMAT; }
     long file_size = ftell(f);
-    if (fseek(f, 0, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(f, 0, SEEK_SET) != 0) { fclose(f); return UFT_ERR_FORMAT; }
     if (file_size < 0 || file_size > 10 * 1024 * 1024) {  /* Max 10MB */
         fclose(f);
         return UFT_ERR_FORMAT;

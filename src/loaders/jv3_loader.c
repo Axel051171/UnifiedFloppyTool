@@ -156,9 +156,9 @@ int jv3_load(const char *filename, jv3_image_t *img)
     FILE *fp = fopen(filename, "rb");
     if (!fp) return -1;
     
-    if (fseek(fp, 0, SEEK_END) != 0) { /* seek error */ }
+    if (fseek(fp, 0, SEEK_END) != 0) { fclose(fp); return -1; }
     size_t size = ftell(fp);
-    if (fseek(fp, 0, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(fp, 0, SEEK_SET) != 0) { fclose(fp); return -1; }
     if (size < JV3_HEADER_SIZE) {
         fclose(fp);
         return -1;

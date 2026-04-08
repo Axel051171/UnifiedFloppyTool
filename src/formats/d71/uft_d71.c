@@ -69,9 +69,9 @@ static uft_error_t d71_open(uft_disk_t* disk, const char* path, bool read_only) 
     FILE* f = fopen(path, read_only ? "rb" : "r+b");
     if (!f) return UFT_ERROR_FILE_OPEN;
     
-    if (fseek(f, 0, SEEK_END) != 0) { /* seek error */ }
+    if (fseek(f, 0, SEEK_END) != 0) { fclose(f); return UFT_ERROR_FILE_OPEN; }
     size_t file_size = ftell(f);
-    if (fseek(f, 0, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(f, 0, SEEK_SET) != 0) { fclose(f); return UFT_ERROR_FILE_OPEN; }
     bool has_errors;
     if (!d71_detect_variant(file_size, &has_errors)) { fclose(f); return UFT_ERROR_FORMAT_INVALID; }
     
@@ -86,8 +86,8 @@ static uft_error_t d71_open(uft_disk_t* disk, const char* path, bool read_only) 
     if (has_errors) {
         pdata->error_table = malloc(D71_TOTAL_SECTORS);
         if (pdata->error_table) {
-            if (fseek(f, D71_SIZE_STANDARD, SEEK_SET) != 0) { /* seek error */ }
-            if (fread(pdata->error_table, 1, D71_TOTAL_SECTORS, f) != D71_TOTAL_SECTORS) { /* I/O error */ }
+            if (fseek(f, D71_SIZE_STANDARD, SEEK_SET) != 0) { free(pdata->error_table); pdata->error_table = NULL; pdata->has_errors = false; }
+            else if (fread(pdata->error_table, 1, D71_TOTAL_SECTORS, f) != D71_TOTAL_SECTORS) { free(pdata->error_table); pdata->error_table = NULL; pdata->has_errors = false; }
         }
     }
     
@@ -126,7 +126,7 @@ static uft_error_t d71_read_track(uft_disk_t* disk, int cyl, int head, uft_track
     uint8_t sector_buf[D71_SECTOR_SIZE];
     for (int sec = 0; sec < num_sectors; sec++) {
         size_t offset = d71_get_offset(actual_track, sec);
-        if (fseek(pdata->file, offset, SEEK_SET) != 0) { /* seek error */ }
+        if (fseek(pdata->file, offset, SEEK_SET) != 0) continue;
         if (fread(sector_buf, 1, D71_SECTOR_SIZE, pdata->file) == D71_SECTOR_SIZE) {
             uft_format_add_sector(track, sec, sector_buf, D71_SECTOR_SIZE, cyl, head);
         }

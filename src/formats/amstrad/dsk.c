@@ -71,7 +71,7 @@ int uft_cpc_dsk_read_sector(FloppyDevice *dev,uint32_t t,uint32_t h,uint32_t s,u
     DskCtx *ctx=dev->internal_ctx;
     uint32_t lba=(t*dev->heads+h)*dev->sectors+(s-1);
     uint32_t off=ctx->data_offset+lba*dev->sectorSize;
-    if (fseek(ctx->fp,(long)off,SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(ctx->fp,(long)off,SEEK_SET) != 0) { return UFT_EIO; }
     if (fread(buf,1,dev->sectorSize,ctx->fp) != dev->sectorSize) { /* I/O error */ }
     return UFT_OK;
 }
@@ -83,7 +83,7 @@ int uft_cpc_dsk_write_sector(FloppyDevice *dev,uint32_t t,uint32_t h,uint32_t s,
     int rc=bounds(dev,t,h,s); if(rc) return rc;
     uint32_t lba=(t*dev->heads+h)*dev->sectors+(s-1);
     uint32_t off=ctx->data_offset+lba*dev->sectorSize;
-    if (fseek(ctx->fp,(long)off,SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(ctx->fp,(long)off,SEEK_SET) != 0) { return UFT_EIO; }
     if (fwrite(buf,1,dev->sectorSize,ctx->fp) != dev->sectorSize) { /* I/O error */ }
     fflush(ctx->fp);
     return UFT_OK;

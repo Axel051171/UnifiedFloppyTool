@@ -27,7 +27,7 @@ static void log_msg(FloppyDevice *d,const char*m){
 
 static int is_scl(FILE *fp){
     char sig[8]={0};
-    if (fseek(fp,0,SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(fp,0,SEEK_SET) != 0) { return 0; }
     if (fread(sig,1,8,fp) != 8) { /* I/O error */ }
     return memcmp(sig,"SINCLAIR",8)==0;
 }
@@ -43,9 +43,9 @@ int uft_cpc_trd_scl_open(FloppyDevice *dev,const char*path){
     if(!fp){ fp=fopen(path,"rb"); ro=true; }
     if(!fp){ free(ctx); return UFT_ENOENT; }
 
-    if (fseek(fp,0,SEEK_END) != 0) { /* seek error */ }
+    if (fseek(fp,0,SEEK_END) != 0) { fclose(fp); free(ctx); return UFT_EIO; }
     long sz=ftell(fp);
-    if (fseek(fp,0,SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(fp,0,SEEK_SET) != 0) { fclose(fp); free(ctx); return UFT_EIO; }
     if(is_scl(fp)){
         ctx->type = IMG_SCL;
         ctx->fp = fp;

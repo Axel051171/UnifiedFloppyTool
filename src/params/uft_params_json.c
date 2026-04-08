@@ -657,9 +657,9 @@ int uft_params_load_from_file(const char *path, uft_canonical_params_t *params) 
     FILE *f = fopen(path, "r");
     if (!f) return -1;
     
-    if (fseek(f, 0, SEEK_END) != 0) { /* seek error */ }
+    if (fseek(f, 0, SEEK_END) != 0) { fclose(f); return -1; }
     long size = ftell(f);
-    if (fseek(f, 0, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(f, 0, SEEK_SET) != 0) { fclose(f); return -1; }
     if (size <= 0 || size > 1024 * 1024) {
         fclose(f);
         return -1;

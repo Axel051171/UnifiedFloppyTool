@@ -43,7 +43,7 @@ int uft_cbm_p00_open(FloppyDevice *dev,const char*path){
         fclose(fp); free(ctx); return UFT_EINVAL;
     }
 
-    if (fseek(fp,0,SEEK_END) != 0) { /* seek error */ }
+    if (fseek(fp,0,SEEK_END) != 0) { fclose(fp); free(ctx); return UFT_EIO; }
     long szl=ftell(fp);
     ctx->data_off=26;
     ctx->size=(uint32_t)(szl-ctx->data_off);
@@ -75,7 +75,7 @@ int uft_cbm_p00_read_sector(FloppyDevice *dev,uint32_t t,uint32_t h,uint32_t s,u
     if(!dev||!dev->internal_ctx||!buf) return UFT_EINVAL;
     P00Ctx *ctx=dev->internal_ctx;
     if(s>=ctx->size) return UFT_EINVAL;
-    if (fseek(ctx->fp,(long)(ctx->data_off+s),SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(ctx->fp,(long)(ctx->data_off+s),SEEK_SET) != 0) return UFT_EIO;
     *buf = (uint8_t)fgetc(ctx->fp);
     return UFT_OK;
 }
@@ -85,7 +85,7 @@ int uft_cbm_p00_write_sector(FloppyDevice *dev,uint32_t t,uint32_t h,uint32_t s,
     if(!dev||!dev->internal_ctx||!buf) return UFT_EINVAL;
     P00Ctx *ctx=dev->internal_ctx;
     if(ctx->read_only) return UFT_ENOTSUP;
-    if (fseek(ctx->fp,(long)(ctx->data_off+s),SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(ctx->fp,(long)(ctx->data_off+s),SEEK_SET) != 0) return UFT_EIO;
     fputc(*buf,ctx->fp);
     fflush(ctx->fp);
     return UFT_OK;

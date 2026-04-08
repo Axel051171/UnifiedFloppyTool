@@ -21,7 +21,8 @@
 #elif defined(__GNUC__) || defined(__clang__)
     #define UFT_THREAD_LOCAL __thread
 #else
-    #define UFT_THREAD_LOCAL  // Fallback: kein TLS
+    #warning "No TLS support detected — error context is NOT thread-safe"
+    #define UFT_THREAD_LOCAL  /* Fallback: not thread-safe */
 #endif
 
 /**

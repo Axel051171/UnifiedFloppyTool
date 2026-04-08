@@ -296,9 +296,9 @@ uft_trsdos_err_t uft_trsdos_inject_from_file(uft_trsdos_ctx_t *ctx,
         return UFT_TRSDOS_ERR_IO;
     }
     
-    if (fseek(fp, 0, SEEK_END) != 0) { /* seek error */ }
+    if (fseek(fp, 0, SEEK_END) != 0) { fclose(fp); return UFT_TRSDOS_ERR_IO; }
     long file_size = ftell(fp);
-    if (fseek(fp, 0, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(fp, 0, SEEK_SET) != 0) { fclose(fp); return UFT_TRSDOS_ERR_IO; }
     if (file_size <= 0 || file_size > 1024 * 1024) { /* Max 1MB */
         fclose(fp);
         return UFT_TRSDOS_ERR_RANGE;

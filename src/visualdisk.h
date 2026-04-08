@@ -33,4 +33,7 @@ private:
     
     Ui::VisualDiskWindow *ui;
     bool m_diskViewMode;  // true = disk, false = grid
+    double m_zoomLevel;
+    int m_numTracks;
+    int m_sectorsPerTrack;
 };

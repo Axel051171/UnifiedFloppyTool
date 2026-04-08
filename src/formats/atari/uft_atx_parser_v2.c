@@ -431,9 +431,9 @@ atx_reader_t* atx_open(const char* path) {
     reader->path = strdup(path);
     
     /* Dateigröße */
-    if (fseek(fp, 0, SEEK_END) != 0) { /* seek error */ }
+    if (fseek(fp, 0, SEEK_END) != 0) { fclose(fp); free(reader->path); free(reader); return NULL; }
     reader->file_size = ftell(fp);
-    if (fseek(fp, 0, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(fp, 0, SEEK_SET) != 0) { fclose(fp); free(reader->path); free(reader); return NULL; }
     /* Header lesen */
     if (fread(&reader->header, sizeof(atx_header_t), 1, fp) != 1) {
         fclose(fp);
@@ -462,7 +462,7 @@ atx_reader_t* atx_open(const char* path) {
                           ATX_SECTOR_SIZE_MFM : ATX_SECTOR_SIZE_FM;
     
     /* Track Offsets scannen */
-    if (fseek(fp, reader->header.start_track, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(fp, reader->header.start_track, SEEK_SET) != 0) { fclose(fp); free(reader->path); free(reader); return NULL; }
     uint32_t pos = reader->header.start_track;
     int track_idx = 0;
     
@@ -479,7 +479,7 @@ atx_reader_t* atx_open(const char* path) {
         }
         
         pos += chunk.size;
-        if (fseek(fp, pos, SEEK_SET) != 0) { /* seek error */ }
+        if (fseek(fp, pos, SEEK_SET) != 0) { break; }
     }
     
     reader->total_tracks = track_idx;
@@ -514,7 +514,7 @@ int atx_read_track_v2(atx_reader_t* reader, uint8_t track_num, uint8_t side,
     uint32_t offset = reader->track_offsets[idx];
     if (offset == 0) return -3;  /* Track nicht vorhanden */
     
-    if (fseek(reader->fp, offset, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(reader->fp, offset, SEEK_SET) != 0) { return -4; }
     /* Track Header lesen */
     atx_track_chunk_t track_chunk;
     if (fread(&track_chunk, sizeof(track_chunk), 1, reader->fp) != 1) {
@@ -527,7 +527,7 @@ int atx_read_track_v2(atx_reader_t* reader, uint8_t track_num, uint8_t side,
     
     /* Sector List suchen */
     uint32_t chunk_end = offset + track_chunk.size;
-    if (fseek(reader->fp, offset + sizeof(track_chunk), SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(reader->fp, offset + sizeof(track_chunk), SEEK_SET) != 0) { return -4; }
     while (ftell(reader->fp) < chunk_end) {
         uint32_t chunk_size;
         uint16_t chunk_type;
@@ -562,7 +562,7 @@ int atx_read_track_v2(atx_reader_t* reader, uint8_t track_num, uint8_t side,
                 /* Sektor-Daten lesen */
                 if (hdr.data_offset > 0 && hdr.data_size > 0) {
                     long save_pos = ftell(reader->fp);
-                    if (fseek(reader->fp, offset + hdr.data_offset, SEEK_SET) != 0) { /* seek error */ }
+                    if (fseek(reader->fp, offset + hdr.data_offset, SEEK_SET) != 0) { sec->valid = false; continue; }
                     size_t to_read = (hdr.data_size > ATX_SECTOR_SIZE_MFM) ?
                                      ATX_SECTOR_SIZE_MFM : hdr.data_size;
                     size_t read_count = fread(sec->data, 1, to_read, reader->fp);
@@ -571,7 +571,7 @@ int atx_read_track_v2(atx_reader_t* reader, uint8_t track_num, uint8_t side,
                         sec->valid = false;
                     }
                     
-                    if (fseek(reader->fp, save_pos, SEEK_SET) != 0) { /* seek error */ }
+                    if (fseek(reader->fp, save_pos, SEEK_SET) != 0) { return -4; }
                 }
             }
         }
@@ -594,11 +594,11 @@ int atx_read_track_v2(atx_reader_t* reader, uint8_t track_num, uint8_t side,
                 sec->confidence = 0.3f;  /* Schwache Sektoren haben niedrige Konfidenz */
             }
             
-            if (fseek(reader->fp, chunk_size - sizeof(weak_chunk), SEEK_CUR) != 0) { /* seek error */ }
+            if (fseek(reader->fp, chunk_size - sizeof(weak_chunk), SEEK_CUR) != 0) { return -4; }
         }
         else {
             /* Unbekannter Chunk - überspringen */
-            if (fseek(reader->fp, chunk_size, SEEK_CUR) != 0) { /* seek error */ }
+            if (fseek(reader->fp, chunk_size, SEEK_CUR) != 0) { return -4; }
         }
     }
     

@@ -251,6 +251,7 @@ signals:
 private:
     bool processReadFromHardware();
     bool processWriteToHardware();
+    bool processVerifyFromHardware();
     bool processReadFromFile();
     bool processWriteToFile();
     

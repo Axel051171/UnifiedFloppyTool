@@ -55,7 +55,7 @@ int uft_apl_woz_open(FloppyDevice *dev, const char *path){
     ctx->meta.tracks = NULL;
 
     /* Minimal chunk scan: look for 'TRKS' */
-    if (fseek(fp,12,SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(fp,12,SEEK_SET) != 0) { fclose(fp); free(ctx); return UFT_EIO; }
     while(!feof(fp)){
         uint8_t ch[8];
         if(fread(ch,1,8,fp)!=8) break;
@@ -63,10 +63,10 @@ int uft_apl_woz_open(FloppyDevice *dev, const char *path){
         if(!memcmp(ch,"TRKS",4)){
             /* We won't fully decode; just note presence */
             log_msg(dev,"WOZ: TRKS chunk found (track bitstreams present).");
-            if (fseek(fp,size,SEEK_CUR) != 0) { /* seek error */ }
+            if (fseek(fp,size,SEEK_CUR) != 0) { fclose(fp); free(ctx); return UFT_EIO; }
             break;
         } else {
-            if (fseek(fp,size,SEEK_CUR) != 0) { /* seek error */ }
+            if (fseek(fp,size,SEEK_CUR) != 0) { fclose(fp); free(ctx); return UFT_EIO; }
         }
     }
 

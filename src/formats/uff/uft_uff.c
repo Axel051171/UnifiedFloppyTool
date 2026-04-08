@@ -26,6 +26,8 @@
 #include <math.h>
 #include <time.h>
 
+#include "uft/uft_simd.h"
+
 #ifdef __SSE2__
 #include <emmintrin.h>
 #endif
@@ -394,7 +396,11 @@ static int fuse_flux_data(uff_track_data_t* track) {
         float variance;
         
 #ifdef __AVX2__
-        variance = simd_variance_avx2(values, track->revolution_count, mean);
+        if (uft_simd_has_avx2()) {
+            variance = simd_variance_avx2(values, track->revolution_count, mean);
+        } else {
+            variance = scalar_variance(values, track->revolution_count, mean);
+        }
 #else
         variance = scalar_variance(values, track->revolution_count, mean);
 #endif
@@ -619,11 +625,18 @@ uff_file_t* uff_open(const char* path) {
     
     /* Read track index */
     if (uff->header.track_count > 0 && uff->header.index_offset > 0) {
-        if (fseek(f, uff->header.index_offset, SEEK_SET) != 0) { /* I/O error */ }
-        
+        if (fseek(f, uff->header.index_offset, SEEK_SET) != 0) {
+            uff->error_code = UFF_ERR_FILE;
+            snprintf(uff->error_msg, sizeof(uff->error_msg), "Seek to track index failed");
+            fclose(f);
+            free(uff->path);
+            free(uff);
+            return NULL;
+        }
+
         uff->track_index_count = uff->header.track_count;
         uff->track_index = calloc(uff->track_index_count, sizeof(uff_track_index_t));
-        
+
         if (!uff->track_index) {
             uff->error_code = UFF_ERR_MEMORY;
             fclose(f);
@@ -642,16 +655,19 @@ uff_file_t* uff_open(const char* path) {
     /* Read metadata if present */
     if ((uff->header.flags & UFF_FLAG_HAS_METADATA) && 
         uff->header.metadata_offset > 0) {
-        if (fseek(f, uff->header.metadata_offset, SEEK_SET) != 0) { /* I/O error */ }
-        
-        uint32_t meta_size;
-        if (fread(&meta_size, sizeof(uint32_t), 1, f) == 1 &&
-            meta_size < UFF_MAX_METADATA_SIZE) {
-            uff->json_metadata = malloc(meta_size + 1);
-            if (uff->json_metadata) {
-                if (fread(uff->json_metadata, 1, meta_size, f) == meta_size) {
-                    uff->json_metadata[meta_size] = '\0';
-                    uff->metadata_size = meta_size;
+        if (fseek(f, uff->header.metadata_offset, SEEK_SET) != 0) {
+            snprintf(uff->error_msg, sizeof(uff->error_msg), "Seek to metadata failed");
+            /* Non-fatal: continue without metadata */
+        } else {
+            uint32_t meta_size;
+            if (fread(&meta_size, sizeof(uint32_t), 1, f) == 1 &&
+                meta_size < UFF_MAX_METADATA_SIZE) {
+                uff->json_metadata = malloc(meta_size + 1);
+                if (uff->json_metadata) {
+                    if (fread(uff->json_metadata, 1, meta_size, f) == meta_size) {
+                        uff->json_metadata[meta_size] = '\0';
+                        uff->metadata_size = meta_size;
+                    }
                 }
             }
         }
@@ -660,13 +676,15 @@ uff_file_t* uff_open(const char* path) {
     /* Read forensic block if present */
     if ((uff->header.flags & UFF_FLAG_HAS_FORENSIC) && 
         uff->header.forensic_offset > 0) {
-        if (fseek(f, uff->header.forensic_offset, SEEK_SET) != 0) { /* I/O error */ }
-        
-        uff->forensic = malloc(sizeof(uff_forensic_t));
-        if (uff->forensic) {
-            if (fread(uff->forensic, sizeof(uff_forensic_t), 1, f) != 1) {
-                free(uff->forensic);
-                uff->forensic = NULL;
+        if (fseek(f, uff->header.forensic_offset, SEEK_SET) != 0) {
+            /* Non-fatal: continue without forensic data */
+        } else {
+            uff->forensic = malloc(sizeof(uff_forensic_t));
+            if (uff->forensic) {
+                if (fread(uff->forensic, sizeof(uff_forensic_t), 1, f) != 1) {
+                    free(uff->forensic);
+                    uff->forensic = NULL;
+                }
             }
         }
     }
@@ -761,7 +779,7 @@ void uff_close(uff_file_t* uff) {
                                               sizeof(uff_header_t) - sizeof(uint32_t) - 8);
         
         /* Get file size */
-        if (fseek(f, 0, SEEK_END) != 0) { /* I/O error */ }
+        if (fseek(f, 0, SEEK_END) != 0) { uff->error_code = UFF_ERR_FILE; }
         uff->header.file_size = ftell(f);
         
         /* Write footer */
@@ -801,7 +819,7 @@ void uff_close(uff_file_t* uff) {
         if (fwrite(&footer, sizeof(uff_footer_t), 1, f) != 1) { /* write error */ }
         
         /* Rewrite header */
-        if (fseek(f, 0, SEEK_SET) != 0) { /* I/O error */ }
+        if (fseek(f, 0, SEEK_SET) != 0) { uff->error_code = UFF_ERR_FILE; }
         if (fwrite(&uff->header, sizeof(uff_header_t), 1, f) != 1) { /* write error */ }
         
         /* Rewrite track index */
@@ -841,7 +859,7 @@ int uff_read_track(uff_file_t* uff, uint8_t cylinder, uint8_t head,
     }
     
     FILE* f = (FILE*)uff->handle;
-    if (fseek(f, idx->offset, SEEK_SET) != 0) { /* I/O error */ }
+    if (fseek(f, idx->offset, SEEK_SET) != 0) { return UFF_ERR_FILE; }
     
     /* Read track header */
     uff_track_header_t thdr;
@@ -900,7 +918,7 @@ int uff_read_track(uff_file_t* uff, uint8_t cylinder, uint8_t head,
     
     /* Read weak bit map if present */
     if (thdr.weak_map_offset > 0) {
-        if (fseek(f, idx->offset + thdr.weak_map_offset, SEEK_SET) != 0) { /* I/O error */ }
+        if (fseek(f, idx->offset + thdr.weak_map_offset, SEEK_SET) != 0) { return UFF_ERR_FILE; }
         
         uint32_t weak_count;
         if (fread(&weak_count, sizeof(uint32_t), 1, f) == 1 && weak_count > 0) {
@@ -916,8 +934,8 @@ int uff_read_track(uff_file_t* uff, uint8_t cylinder, uint8_t head,
     
     /* Read hash if present */
     if (thdr.hash_offset > 0) {
-        if (fseek(f, idx->offset + thdr.hash_offset, SEEK_SET) != 0) { /* I/O error */ }
-        if (fread(track->sha256, 32, 1, f) != 1) { /* I/O error */ }
+        if (fseek(f, idx->offset + thdr.hash_offset, SEEK_SET) != 0) { return UFF_ERR_FILE; }
+        if (fread(track->sha256, 32, 1, f) != 1) { return UFF_ERR_FILE; }
     }
     
     track->crc32 = idx->crc32;
@@ -938,7 +956,7 @@ int uff_write_track(uff_file_t* uff, const uff_track_data_t* track) {
     }
     
     /* Seek to end of file for new track data */
-    if (fseek(f, 0, SEEK_END) != 0) { /* I/O error */ }
+    if (fseek(f, 0, SEEK_END) != 0) { return UFF_ERR_FILE; }
     uint32_t track_offset = (uint32_t)ftell(f);
     
     /* Build track header */

@@ -48,7 +48,7 @@ static uft_error_t sad_read_track(uft_disk_t* disk, int cyl, int head, uft_track
                  disk->geometry.sectors * 512;
     uint8_t buf[512];
     for (int s = 0; s < disk->geometry.sectors; s++) {
-        if (fseek(p->file, off + s * 512, SEEK_SET) != 0) { /* seek error */ }
+        if (fseek(p->file, off + s * 512, SEEK_SET) != 0) { return UFT_ERROR_FILE_READ; }
         if (fread(buf, 1, 512, p->file) != 512) { /* I/O error */ }
         uft_format_add_sector(track, s, buf, 512, cyl, head);
     }

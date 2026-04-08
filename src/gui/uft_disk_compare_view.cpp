@@ -586,10 +586,11 @@ void UftDiskCompareView::onCompareClicked()
 
 void UftDiskCompareView::startComparison()
 {
+    m_aborted = false;
     emit comparisonStarted();
     m_progressBar->show();
     m_statusLabel->setText(tr("Comparing..."));
-    
+
     performComparison();
     
     m_progressBar->hide();
@@ -697,10 +698,15 @@ void UftDiskCompareView::performComparison()
                 sc.data_match ? "-" : QString::number(sc.diff_count)));
         }
         
-        /* Update progress */
+        /* Update progress and check for cancellation */
         if (s % 100 == 0) {
             m_progressBar->setValue((s * 100) / maxSectors);
             QApplication::processEvents();
+            if (m_aborted) {
+                m_statusLabel->setText(tr("Comparison cancelled."));
+                m_progressBar->hide();
+                return;
+            }
         }
     }
     
@@ -822,7 +828,13 @@ void UftDiskCompareView::clear()
 
 void UftDiskCompareView::cancelComparison()
 {
-    /* TODO: Implement cancellation */
+    /* Set abort flag to stop any running comparison */
+    m_aborted = true;
+
+    m_progressBar->hide();
+    m_statusLabel->setText(tr("Comparison cancelled."));
+    m_compareButton->setEnabled(!m_leftDiskPath.isEmpty() &&
+                                 !m_rightDiskPath.isEmpty());
 }
 
 void UftDiskCompareView::exportReport()

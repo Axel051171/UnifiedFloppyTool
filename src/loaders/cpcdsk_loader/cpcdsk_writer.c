@@ -290,9 +290,9 @@ int CPCDSK_libWrite_DiskFile(LIBFLUX_IMGLDR* imgldr_ctx,LIBFLUX_FLOPPY * floppy,
 						cpcdsk_s.data_length *= 3;
 					}
 
-					if (fseek(outfile,sectorlistoffset+(k*sizeof(cpcdsk_sector)),SEEK_SET) != 0) { /* seek error */ }
+					if (fseek(outfile,sectorlistoffset+(k*sizeof(cpcdsk_sector)),SEEK_SET) != 0) { goto error; }
 					if (fwrite(&cpcdsk_s,sizeof(cpcdsk_sector),1,outfile) != 1) { /* I/O error */ }
-					if (fseek(outfile,0,SEEK_END) != 0) { /* seek error */ }
+					if (fseek(outfile,0,SEEK_END) != 0) { goto error; }
 					if(sca[k]->input_data)
 					{
 						if(weak_sector)
@@ -403,7 +403,7 @@ int CPCDSK_libWrite_DiskFile(LIBFLUX_IMGLDR* imgldr_ctx,LIBFLUX_FLOPPY * floppy,
 		}
 	}
 
-	if (fseek(outfile,0,SEEK_SET) != 0) { /* seek error */ }
+	if (fseek(outfile,0,SEEK_SET) != 0) { goto error; }
 	if (fwrite(&disk_info_block,0x100,1,outfile) != 1) { /* I/O error */ }
 	libflux_fclose(outfile);
 

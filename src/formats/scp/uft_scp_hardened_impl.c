@@ -61,7 +61,7 @@ static size_t get_file_size(FILE *f) {
     if (current < 0) return 0;
     if (fseek(f, 0, SEEK_END) != 0) return 0;
     long end = ftell(f);
-    if (fseek(f, current, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(f, current, SEEK_SET) != 0) return 0;
     return (end < 0) ? 0 : (size_t)end;
 }
 

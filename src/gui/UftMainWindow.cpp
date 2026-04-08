@@ -29,6 +29,15 @@
 #include <QCheckBox>
 #include <QLabel>
 #include <QSplitter>
+#include <QTabWidget>
+#include <QDialog>
+#include <QDesktopServices>
+#include <QUrl>
+#include <QSettings>
+
+#include "uft_format_converter_wizard.h"
+#include "uft_disk_compare_view.h"
+#include "uft_batch_wizard.h"
 
 UftMainWindow::UftMainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -404,17 +413,220 @@ void UftMainWindow::onOpenRecent()
 
 void UftMainWindow::onUndo() { m_controller->parameterModel()->undo(); }
 void UftMainWindow::onRedo() { m_controller->parameterModel()->redo(); }
-void UftMainWindow::onPreferences() { /* TODO */ }
+void UftMainWindow::onPreferences()
+{
+    QDialog dlg(this);
+    dlg.setWindowTitle(tr("Preferences"));
+    dlg.resize(500, 400);
+
+    auto *mainLayout = new QVBoxLayout(&dlg);
+    auto *tabs = new QTabWidget(&dlg);
+
+    /* General tab */
+    auto *generalTab = new QWidget();
+    auto *generalForm = new QFormLayout(generalTab);
+    auto *langCombo = new QComboBox();
+    langCombo->addItems({"English", "Deutsch"});
+    generalForm->addRow(tr("Language:"), langCombo);
+    auto *autoDetectCheck = new QCheckBox(tr("Auto-detect format on open"));
+    autoDetectCheck->setChecked(true);
+    generalForm->addRow("", autoDetectCheck);
+    auto *confirmWriteCheck = new QCheckBox(tr("Confirm before write operations"));
+    confirmWriteCheck->setChecked(true);
+    generalForm->addRow("", confirmWriteCheck);
+    tabs->addTab(generalTab, tr("General"));
+
+    /* Hardware tab */
+    auto *hwTab = new QWidget();
+    auto *hwForm = new QFormLayout(hwTab);
+    auto *defaultHwCombo = new QComboBox();
+    defaultHwCombo->addItems({"auto", "Greaseweazle", "FluxEngine", "KryoFlux", "SuperCard Pro"});
+    hwForm->addRow(tr("Default Hardware:"), defaultHwCombo);
+    auto *defaultDeviceEdit = new QLineEdit();
+    defaultDeviceEdit->setPlaceholderText(tr("/dev/ttyACM0 or COM3"));
+    hwForm->addRow(tr("Default Device:"), defaultDeviceEdit);
+    auto *autoConnectCheck = new QCheckBox(tr("Auto-connect on startup"));
+    hwForm->addRow("", autoConnectCheck);
+    tabs->addTab(hwTab, tr("Hardware"));
+
+    /* Formats tab */
+    auto *fmtTab = new QWidget();
+    auto *fmtForm = new QFormLayout(fmtTab);
+    auto *defaultFmtCombo = new QComboBox();
+    defaultFmtCombo->addItems({"auto", "ADF", "D64", "SCP", "HFE", "IMG", "ST"});
+    fmtForm->addRow(tr("Default Format:"), defaultFmtCombo);
+    auto *defaultEncCombo = new QComboBox();
+    defaultEncCombo->addItems({"auto", "MFM", "FM", "GCR"});
+    fmtForm->addRow(tr("Default Encoding:"), defaultEncCombo);
+    tabs->addTab(fmtTab, tr("Formats"));
+
+    /* Advanced tab */
+    auto *advTab = new QWidget();
+    auto *advForm = new QFormLayout(advTab);
+    auto *logLevelCombo = new QComboBox();
+    logLevelCombo->addItems({"Error", "Warning", "Info", "Debug"});
+    logLevelCombo->setCurrentIndex(2);
+    advForm->addRow(tr("Log Level:"), logLevelCombo);
+    auto *threadsSpin = new QSpinBox();
+    threadsSpin->setRange(1, 16);
+    threadsSpin->setValue(4);
+    advForm->addRow(tr("Worker Threads:"), threadsSpin);
+    tabs->addTab(advTab, tr("Advanced"));
+
+    mainLayout->addWidget(tabs);
+
+    /* Load current settings */
+    QSettings settings("UnifiedFloppyTool", "UFT");
+    langCombo->setCurrentText(settings.value("prefs/language", "English").toString());
+    autoDetectCheck->setChecked(settings.value("prefs/autoDetect", true).toBool());
+    confirmWriteCheck->setChecked(settings.value("prefs/confirmWrite", true).toBool());
+    defaultHwCombo->setCurrentText(settings.value("prefs/defaultHardware", "auto").toString());
+    defaultDeviceEdit->setText(settings.value("prefs/defaultDevice").toString());
+    autoConnectCheck->setChecked(settings.value("prefs/autoConnect", false).toBool());
+    defaultFmtCombo->setCurrentText(settings.value("prefs/defaultFormat", "auto").toString());
+    defaultEncCombo->setCurrentText(settings.value("prefs/defaultEncoding", "auto").toString());
+    logLevelCombo->setCurrentIndex(settings.value("prefs/logLevel", 2).toInt());
+    threadsSpin->setValue(settings.value("prefs/workerThreads", 4).toInt());
+
+    /* OK / Cancel buttons */
+    auto *btnLayout = new QHBoxLayout();
+    btnLayout->addStretch();
+    auto *okBtn = new QPushButton(tr("OK"));
+    auto *cancelBtn = new QPushButton(tr("Cancel"));
+    btnLayout->addWidget(okBtn);
+    btnLayout->addWidget(cancelBtn);
+    mainLayout->addLayout(btnLayout);
+
+    connect(okBtn, &QPushButton::clicked, &dlg, &QDialog::accept);
+    connect(cancelBtn, &QPushButton::clicked, &dlg, &QDialog::reject);
+
+    if (dlg.exec() == QDialog::Accepted) {
+        settings.setValue("prefs/language", langCombo->currentText());
+        settings.setValue("prefs/autoDetect", autoDetectCheck->isChecked());
+        settings.setValue("prefs/confirmWrite", confirmWriteCheck->isChecked());
+        settings.setValue("prefs/defaultHardware", defaultHwCombo->currentText());
+        settings.setValue("prefs/defaultDevice", defaultDeviceEdit->text());
+        settings.setValue("prefs/autoConnect", autoConnectCheck->isChecked());
+        settings.setValue("prefs/defaultFormat", defaultFmtCombo->currentText());
+        settings.setValue("prefs/defaultEncoding", defaultEncCombo->currentText());
+        settings.setValue("prefs/logLevel", logLevelCombo->currentIndex());
+        settings.setValue("prefs/workerThreads", threadsSpin->value());
+    }
+}
 
 void UftMainWindow::onReadDisk() { m_controller->startRead(); }
 void UftMainWindow::onWriteDisk() { m_controller->startWrite(); }
 void UftMainWindow::onVerifyDisk() { m_controller->startVerify(); }
-void UftMainWindow::onFormatDisk() { /* TODO */ }
+void UftMainWindow::onFormatDisk()
+{
+    QDialog dlg(this);
+    dlg.setWindowTitle(tr("Format Disk"));
+    dlg.resize(400, 300);
+
+    auto *layout = new QVBoxLayout(&dlg);
+
+    auto *fmtGroup = new QGroupBox(tr("Format Selection"), &dlg);
+    auto *fmtForm = new QFormLayout(fmtGroup);
+
+    auto *fmtCombo = new QComboBox();
+    fmtCombo->addItem(tr("Amiga DD (880K)"), "amiga_dd");
+    fmtCombo->addItem(tr("Amiga HD (1.76M)"), "amiga_hd");
+    fmtCombo->addItem(tr("Commodore D64"), "c64_d64");
+    fmtCombo->addItem(tr("PC 720K (DD)"), "pc_720k");
+    fmtCombo->addItem(tr("PC 1.44M (HD)"), "pc_1440k");
+    fmtForm->addRow(tr("Disk Format:"), fmtCombo);
+
+    auto *labelEdit = new QLineEdit();
+    labelEdit->setPlaceholderText(tr("Optional volume label"));
+    labelEdit->setMaxLength(30);
+    fmtForm->addRow(tr("Volume Label:"), labelEdit);
+
+    auto *verifyCheck = new QCheckBox(tr("Verify after format"));
+    verifyCheck->setChecked(true);
+    fmtForm->addRow("", verifyCheck);
+
+    layout->addWidget(fmtGroup);
+
+    auto *warnLabel = new QLabel(tr("<b>Warning:</b> This will erase all data on the disk!"));
+    warnLabel->setStyleSheet("color: red;");
+    layout->addWidget(warnLabel);
+
+    layout->addStretch();
+
+    auto *btnLayout = new QHBoxLayout();
+    btnLayout->addStretch();
+    auto *formatBtn = new QPushButton(tr("Format"));
+    auto *cancelBtn = new QPushButton(tr("Cancel"));
+    btnLayout->addWidget(formatBtn);
+    btnLayout->addWidget(cancelBtn);
+    layout->addLayout(btnLayout);
+
+    connect(cancelBtn, &QPushButton::clicked, &dlg, &QDialog::reject);
+    connect(formatBtn, &QPushButton::clicked, &dlg, &QDialog::accept);
+
+    if (dlg.exec() == QDialog::Accepted) {
+        int ret = QMessageBox::warning(this, tr("Format Disk"),
+            tr("All data on the disk will be erased. Are you sure?"),
+            QMessageBox::Yes | QMessageBox::No);
+        if (ret == QMessageBox::Yes) {
+            QString formatId = fmtCombo->currentData().toString();
+            QString label = labelEdit->text();
+            m_statusLabel->setText(tr("Formatting disk as %1...").arg(fmtCombo->currentText()));
+            m_controller->startFormat(formatId, label);
+        }
+    }
+}
 void UftMainWindow::onAnalyzeDisk() { m_controller->startAnalyze(); }
 
-void UftMainWindow::onConvert() { /* TODO */ }
-void UftMainWindow::onCompare() { /* TODO */ }
-void UftMainWindow::onBatchProcess() { /* TODO */ }
+void UftMainWindow::onConvert()
+{
+    auto *wizard = new UftFormatConverterWizard(this);
+    wizard->setAttribute(Qt::WA_DeleteOnClose);
+
+    /* Pre-fill source if a file is currently open */
+    QString currentFile = m_controller->currentFile();
+    if (!currentFile.isEmpty()) {
+        wizard->setSourceFile(currentFile);
+    }
+
+    connect(wizard, &UftFormatConverterWizard::conversionComplete,
+            this, [this](const QString &outputPath) {
+                m_statusLabel->setText(tr("Conversion complete: %1").arg(outputPath));
+            });
+
+    wizard->show();
+}
+void UftMainWindow::onCompare()
+{
+    QDialog dlg(this);
+    dlg.setWindowTitle(tr("Compare Disk Images"));
+    dlg.resize(700, 500);
+
+    auto *layout = new QVBoxLayout(&dlg);
+    auto *compareView = new UftDiskCompareView(&dlg);
+    layout->addWidget(compareView);
+
+    /* Pre-fill left disk if a file is currently open */
+    QString currentFile = m_controller->currentFile();
+    if (!currentFile.isEmpty()) {
+        compareView->setLeftDisk(currentFile);
+    }
+
+    dlg.exec();
+}
+void UftMainWindow::onBatchProcess()
+{
+    auto *wizard = new UftBatchWizard(this);
+    wizard->setAttribute(Qt::WA_DeleteOnClose);
+
+    connect(wizard, &UftBatchWizard::batchComplete,
+            this, [this](int successful, int failed) {
+                m_statusLabel->setText(tr("Batch complete: %1 succeeded, %2 failed")
+                    .arg(successful).arg(failed));
+            });
+
+    wizard->show();
+}
 
 void UftMainWindow::onAbout()
 {
@@ -426,7 +638,35 @@ void UftMainWindow::onAbout()
         .arg(uftApp->version(), uftApp->buildDate()));
 }
 
-void UftMainWindow::onHelp() { /* TODO */ }
+void UftMainWindow::onHelp()
+{
+    QUrl helpUrl("https://github.com/Axel051171/UnifiedFloppyTool/wiki");
+    if (!QDesktopServices::openUrl(helpUrl)) {
+        /* Fallback: show built-in help */
+        QMessageBox::information(this, tr("UnifiedFloppyTool Help"),
+            tr("<h3>Quick Start Guide</h3>"
+               "<ol>"
+               "<li><b>Open</b> a disk image via File &gt; Open (Ctrl+O)</li>"
+               "<li><b>Select format</b> in the Format tab or let auto-detect choose</li>"
+               "<li><b>Read/Write</b> physical disks via the Disk menu</li>"
+               "<li><b>Convert</b> between formats via Tools &gt; Convert Format</li>"
+               "<li><b>Compare</b> two images via Tools &gt; Compare Disks</li>"
+               "<li><b>Batch process</b> multiple files via Tools &gt; Batch Process</li>"
+               "</ol>"
+               "<h3>Keyboard Shortcuts</h3>"
+               "<table>"
+               "<tr><td>Ctrl+O</td><td>Open file</td></tr>"
+               "<tr><td>Ctrl+S</td><td>Save file</td></tr>"
+               "<tr><td>Ctrl+R</td><td>Read disk</td></tr>"
+               "<tr><td>Ctrl+W</td><td>Write disk</td></tr>"
+               "<tr><td>Ctrl+Z</td><td>Undo</td></tr>"
+               "<tr><td>Ctrl+Y</td><td>Redo</td></tr>"
+               "</table>"
+               "<p>For more help, visit:<br>"
+               "<a href='https://github.com/Axel051171/UnifiedFloppyTool'>"
+               "https://github.com/Axel051171/UnifiedFloppyTool</a></p>"));
+    }
+}
 
 void UftMainWindow::onBusyChanged(bool busy)
 {

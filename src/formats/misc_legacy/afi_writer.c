@@ -386,12 +386,12 @@ int AFI_libWrite_DiskFile(LIBFLUX_IMGLDR* imgldr_ctx,LIBFLUX_FLOPPY * floppy,cha
 
 					///rewrite///
 					temp_fileptr=ftell(hxcafifile);
-					if (fseek(hxcafifile,track_fileptr,SEEK_SET) != 0) { /* seek error */ }
+					if (fseek(hxcafifile,track_fileptr,SEEK_SET) != 0) { libflux_fclose(hxcafifile); return LIBFLUX_ACCESSERROR; }
 					if (fwrite(&afitrack,sizeof(afitrack),1,hxcafifile) != 1) { /* I/O error */ }
 					if (fwrite(&data_list,afitrack.number_of_data_chunk*sizeof(uint32_t),1,hxcafifile) != 1) { /* I/O error */ }
 					tempcrc=getcrc(&afitrack,sizeof(afitrack),data_list,afitrack.number_of_data_chunk*sizeof(uint32_t));
 					if (fwrite(&tempcrc, sizeof(tempcrc), 1, hxcafifile) != 1) { /* I/O error */ }            //temporary crc
-					if (fseek(hxcafifile,temp_fileptr,SEEK_SET) != 0) { /* seek error */ }
+					if (fseek(hxcafifile,temp_fileptr,SEEK_SET) != 0) { libflux_fclose(hxcafifile); return LIBFLUX_ACCESSERROR; }
 					//////////////////////////////////////////////
 
 					dataposition=dataposition+sizeof(AFIDATA)+block_size+sizeof(tempcrc);
@@ -403,12 +403,12 @@ int AFI_libWrite_DiskFile(LIBFLUX_IMGLDR* imgldr_ctx,LIBFLUX_FLOPPY * floppy,cha
 
 					///rewrite///
 					temp_fileptr=ftell(hxcafifile);
-					if (fseek(hxcafifile,track_fileptr,SEEK_SET) != 0) { /* seek error */ }
+					if (fseek(hxcafifile,track_fileptr,SEEK_SET) != 0) { libflux_fclose(hxcafifile); return LIBFLUX_ACCESSERROR; }
 					if (fwrite(&afitrack,sizeof(afitrack),1,hxcafifile) != 1) { /* I/O error */ }
 					if (fwrite(&data_list,afitrack.number_of_data_chunk*sizeof(uint32_t),1,hxcafifile) != 1) { /* I/O error */ }
 					tempcrc=getcrc(&afitrack,sizeof(afitrack),data_list,afitrack.number_of_data_chunk*sizeof(uint32_t));
 					if (fwrite(&tempcrc, sizeof(tempcrc), 1, hxcafifile) != 1) { /* I/O error */ }            //temporary crc
-					if (fseek(hxcafifile,temp_fileptr,SEEK_SET) != 0) { /* seek error */ }
+					if (fseek(hxcafifile,temp_fileptr,SEEK_SET) != 0) { libflux_fclose(hxcafifile); return LIBFLUX_ACCESSERROR; }
 					//////////////////////////////////////////////
 
 					dataposition=dataposition+sizeof(AFIDATA)+block_size+sizeof(tempcrc);
@@ -451,12 +451,12 @@ int AFI_libWrite_DiskFile(LIBFLUX_IMGLDR* imgldr_ctx,LIBFLUX_FLOPPY * floppy,cha
 
 					///rewrite///
 					temp_fileptr=ftell(hxcafifile);
-					if (fseek(hxcafifile,track_fileptr,SEEK_SET) != 0) { /* seek error */ }
+					if (fseek(hxcafifile,track_fileptr,SEEK_SET) != 0) { libflux_fclose(hxcafifile); return LIBFLUX_ACCESSERROR; }
 					if (fwrite(&afitrack,sizeof(afitrack),1,hxcafifile) != 1) { /* I/O error */ }
 					if (fwrite(&data_list,afitrack.number_of_data_chunk*sizeof(uint32_t),1,hxcafifile) != 1) { /* I/O error */ }
 					tempcrc=getcrc(&afitrack,sizeof(afitrack),data_list,afitrack.number_of_data_chunk*sizeof(uint32_t));
 					if (fwrite(&tempcrc, sizeof(tempcrc), 1, hxcafifile) != 1) { /* I/O error */ }            //temporary crc
-					if (fseek(hxcafifile,temp_fileptr,SEEK_SET) != 0) { /* seek error */ }
+					if (fseek(hxcafifile,temp_fileptr,SEEK_SET) != 0) { libflux_fclose(hxcafifile); return LIBFLUX_ACCESSERROR; }
 					//////////////////////////////////////////////
 
 					dataposition=dataposition+sizeof(AFIDATA)+block_size+sizeof(tempcrc);
@@ -482,12 +482,12 @@ int AFI_libWrite_DiskFile(LIBFLUX_IMGLDR* imgldr_ctx,LIBFLUX_FLOPPY * floppy,cha
 
 					///rewrite///
 					temp_fileptr=ftell(hxcafifile);
-					if (fseek(hxcafifile,track_fileptr,SEEK_SET) != 0) { /* seek error */ }
+					if (fseek(hxcafifile,track_fileptr,SEEK_SET) != 0) { libflux_fclose(hxcafifile); return LIBFLUX_ACCESSERROR; }
 					if (fwrite(&afitrack,sizeof(afitrack),1,hxcafifile) != 1) { /* I/O error */ }
 					if (fwrite(&data_list,afitrack.number_of_data_chunk*sizeof(uint32_t),1,hxcafifile) != 1) { /* I/O error */ }
 					tempcrc=getcrc(&afitrack,sizeof(afitrack),data_list,afitrack.number_of_data_chunk*sizeof(uint32_t));
 					if (fwrite(&tempcrc, sizeof(tempcrc), 1, hxcafifile) != 1) { /* I/O error */ }            //temporary crc
-					if (fseek(hxcafifile,temp_fileptr,SEEK_SET) != 0) { /* seek error */ }
+					if (fseek(hxcafifile,temp_fileptr,SEEK_SET) != 0) { libflux_fclose(hxcafifile); return LIBFLUX_ACCESSERROR; }
 					//////////////////////////////////////////////
 
 					dataposition=dataposition+sizeof(AFIDATA)+block_size+sizeof(tempcrc);
@@ -500,10 +500,10 @@ int AFI_libWrite_DiskFile(LIBFLUX_IMGLDR* imgldr_ctx,LIBFLUX_FLOPPY * floppy,cha
 
 			temp_fileptr=ftell(hxcafifile);
 			tempcrc=getcrc(&afitracklist,sizeof(afitracklist),track_list,afitracklist.number_of_track*sizeof(uint32_t));
-			if (fseek(hxcafifile,track_listptr,SEEK_SET) != 0) { /* seek error */ }
+			if (fseek(hxcafifile,track_listptr,SEEK_SET) != 0) { libflux_fclose(hxcafifile); return LIBFLUX_ACCESSERROR; }
 			if (fwrite(track_list,afitracklist.number_of_track*sizeof(uint32_t),1,hxcafifile) != 1) { /* I/O error */ }
 			if (fwrite(&tempcrc, sizeof(tempcrc), 1, hxcafifile) != 1) { /* I/O error */ }            //temporary crc
-			if (fseek(hxcafifile,temp_fileptr,SEEK_SET) != 0) { /* seek error */ }
+			if (fseek(hxcafifile,temp_fileptr,SEEK_SET) != 0) { libflux_fclose(hxcafifile); return LIBFLUX_ACCESSERROR; }
 			afiheader.floppyinfo_offset=ftell(hxcafifile);
 			if (fwrite(&afiinfo,sizeof(AFIIMGINFO),1,hxcafifile) != 1) { /* I/O error */ }
 			tempcrc=getcrc(&afiinfo,sizeof(AFIIMGINFO),0,0);
@@ -511,10 +511,10 @@ int AFI_libWrite_DiskFile(LIBFLUX_IMGLDR* imgldr_ctx,LIBFLUX_FLOPPY * floppy,cha
 
 
 			temp_fileptr=ftell(hxcafifile);
-			if (fseek(hxcafifile,0,SEEK_SET) != 0) { /* seek error */ }
+			if (fseek(hxcafifile,0,SEEK_SET) != 0) { libflux_fclose(hxcafifile); return LIBFLUX_ACCESSERROR; }
 			afiheader.header_crc=getcrc(&afiheader,sizeof(afiheader)-2,0,0);
 			if (fwrite(&afiheader, sizeof(afiheader), 1, hxcafifile) != 1) { /* I/O error */ }        //write temporary file header
-			if (fseek(hxcafifile,temp_fileptr,SEEK_SET) != 0) { /* seek error */ }
+			if (fseek(hxcafifile,temp_fileptr,SEEK_SET) != 0) { libflux_fclose(hxcafifile); return LIBFLUX_ACCESSERROR; }
 			free(track_list);
 		}
 

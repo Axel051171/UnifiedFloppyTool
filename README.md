@@ -3,6 +3,7 @@
 [![Release](https://img.shields.io/github/v/release/Axel051171/UnifiedFloppyTool)](https://github.com/Axel051171/UnifiedFloppyTool/releases)
 [![Build](https://github.com/Axel051171/UnifiedFloppyTool/actions/workflows/release.yml/badge.svg)](https://github.com/Axel051171/UnifiedFloppyTool/actions)
 [![License: GPL-2.0](https://img.shields.io/badge/License-GPL%202.0-blue.svg)](LICENSE)
+[![Coverage](https://codecov.io/gh/Axel051171/UnifiedFloppyTool/branch/main/graph/badge.svg)](https://codecov.io/gh/Axel051171/UnifiedFloppyTool)
 
 **„Bei uns geht kein Bit verloren"** — Open-source forensic floppy disk preservation for 700+ formats and 8 hardware controllers.
 

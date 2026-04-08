@@ -87,7 +87,7 @@ int uft_msc_dcp_dcu_open(FloppyDevice *dev, const char *path){
         fclose(fp); free(ctx); return UFT_EINVAL;
     }
 
-    if (fseek(fp,0,SEEK_END) != 0) { /* seek error */ }
+    if (fseek(fp,0,SEEK_END) != 0) { fclose(fp); free(ctx); return UFT_EIO; }
     long szl=ftell(fp);
     if(szl < (long)HDR_SIZE){ fclose(fp); free(ctx); return UFT_EINVAL; }
     uint32_t datasz=(uint32_t)(szl - (long)HDR_SIZE);

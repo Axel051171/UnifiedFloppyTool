@@ -22,7 +22,7 @@ static void log_msg(FloppyDevice *d, const char *m){
 
 static int is_gzip(FILE *fp){
     unsigned char b[2]={0};
-    if (fseek(fp,0,SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(fp,0,SEEK_SET) != 0) { return 0; }
     if(fread(b,1,2,fp)!=2) return 0;
     return (b[0]==0x1F && b[1]==0x8B);
 }

@@ -146,14 +146,20 @@ int D88_libLoad_DiskFile(LIBFLUX_IMGLDR * imgldr_ctx,LIBFLUX_FLOPPY * floppydisk
 		{
 			imgldr_ctx->ctx->libflux_printf(MSG_INFO_1,"%s",fileheader.name);
 
-			if (fseek(f,fileheader.file_size-sizeof(fileheader),SEEK_CUR) != 0) { /* seek error */ }
+			if (fseek(f,fileheader.file_size-sizeof(fileheader),SEEK_CUR) != 0) {
+				libflux_fclose(f);
+				return LIBFLUX_BADFILE;
+			}
 			totalfilesize=totalfilesize+fileheader.file_size;
 			partcount++;
 		}
 		else
 		{
 			truetotalfilesize=totalfilesize;
-			if (fseek(f,truetotalfilesize,SEEK_SET) != 0) { /* seek error */ }
+			if (fseek(f,truetotalfilesize,SEEK_SET) != 0) {
+				libflux_fclose(f);
+				return LIBFLUX_BADFILE;
+			}
 		}
 	}
 
@@ -166,7 +172,10 @@ int D88_libLoad_DiskFile(LIBFLUX_IMGLDR * imgldr_ctx,LIBFLUX_FLOPPY * floppydisk
 	}
 
 	imgldr_ctx->ctx->libflux_printf(MSG_INFO_1,"%d floppy in this file.",partcount);
-	if (fseek(f,0,SEEK_SET) != 0) { /* seek error */ }
+	if (fseek(f,0,SEEK_SET) != 0) {
+		libflux_fclose(f);
+		return LIBFLUX_BADFILE;
+	}
 	//////////////////////////////////////////////////////
 
 	//////////////////////////////////////////////////////
@@ -181,7 +190,10 @@ int D88_libLoad_DiskFile(LIBFLUX_IMGLDR * imgldr_ctx,LIBFLUX_FLOPPY * floppydisk
 	while(indexfile)
 	{
 		libflux_fread(&fileheader,sizeof(fileheader),f);
-		if (fseek(f,fileheader.file_size-sizeof(fileheader),SEEK_CUR) != 0) { /* seek error */ }
+		if (fseek(f,fileheader.file_size-sizeof(fileheader),SEEK_CUR) != 0) {
+			libflux_fclose(f);
+			return LIBFLUX_BADFILE;
+		}
 		indexfile--;
 	}
 
@@ -234,7 +246,10 @@ int D88_libLoad_DiskFile(LIBFLUX_IMGLDR * imgldr_ctx,LIBFLUX_FLOPPY * floppydisk
 		imgldr_ctx->ctx->libflux_printf(MSG_INFO_1,"write protected disk");
 	}
 
-	if (fseek(f,basefileptr+sizeof(d88_fileheader),SEEK_SET) != 0) { /* seek error */ }
+	if (fseek(f,basefileptr+sizeof(d88_fileheader),SEEK_SET) != 0) {
+		libflux_fclose(f);
+		return LIBFLUX_BADFILE;
+	}
 	track_offset = 0;
 	number_of_track = 0;
 
@@ -251,7 +266,10 @@ int D88_libLoad_DiskFile(LIBFLUX_IMGLDR * imgldr_ctx,LIBFLUX_FLOPPY * floppydisk
 		number_of_track = (track_offset - sizeof(d88_fileheader))/sizeof(uint32_t);
 		do
 		{
-			if (fseek(f,basefileptr+sizeof(d88_fileheader)+((number_of_track-1)*sizeof(uint32_t)),SEEK_SET) != 0) { /* seek error */ }
+			if (fseek(f,basefileptr+sizeof(d88_fileheader)+((number_of_track-1)*sizeof(uint32_t)),SEEK_SET) != 0) {
+				libflux_fclose(f);
+				return LIBFLUX_BADFILE;
+			}
 			libflux_fread(&track_offset,sizeof(uint32_t),f);
 			if(!track_offset)
 			{
@@ -282,7 +300,10 @@ int D88_libLoad_DiskFile(LIBFLUX_IMGLDR * imgldr_ctx,LIBFLUX_FLOPPY * floppydisk
 
 	imgldr_ctx->ctx->libflux_printf(MSG_INFO_1,"Number of track: %d",number_of_track);
 
-	if (fseek(f,basefileptr+sizeof(d88_fileheader),SEEK_SET) != 0) { /* seek error */ }
+	if (fseek(f,basefileptr+sizeof(d88_fileheader),SEEK_SET) != 0) {
+		libflux_fclose(f);
+		return LIBFLUX_BADFILE;
+	}
 	libflux_fread(&track_offset,sizeof(uint32_t),f);
 	imgldr_ctx->ctx->libflux_printf(MSG_ERROR,"first track offset:%X",track_offset);
 
@@ -311,7 +332,10 @@ int D88_libLoad_DiskFile(LIBFLUX_IMGLDR * imgldr_ctx,LIBFLUX_FLOPPY * floppydisk
 
 		if(track_offset)
 		{
-			if (fseek(f,track_offset+basefileptr,SEEK_SET) != 0) { /* seek error */ }
+			if (fseek(f,track_offset+basefileptr,SEEK_SET) != 0) {
+				libflux_fclose(f);
+				return LIBFLUX_BADFILE;
+			}
 			libflux_fread(&sectorheader,sizeof(d88_sector),f);
 
 			number_of_sector=sectorheader.number_of_sectors;
@@ -451,13 +475,19 @@ int D88_libLoad_DiskFile(LIBFLUX_IMGLDR * imgldr_ctx,LIBFLUX_FLOPPY * floppydisk
 		{
 			i++;
 			imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"Track %d offset: 0x%X",i,track_offset);
-			if (fseek(f,basefileptr + sizeof(d88_fileheader)  + (i * sizeof(uint32_t)),SEEK_SET) != 0) { /* seek error */ }
+			if (fseek(f,basefileptr + sizeof(d88_fileheader)  + (i * sizeof(uint32_t)),SEEK_SET) != 0) {
+				libflux_fclose(f);
+				return LIBFLUX_BADFILE;
+			}
 		}
 		else
 		{
 			i=i+2;
 			imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"Track %d offset: 0x%X",i>>1,track_offset);
-			if (fseek(f,basefileptr + sizeof(d88_fileheader)  + ((i>>1) * sizeof(uint32_t)),SEEK_SET) != 0) { /* seek error */ }
+			if (fseek(f,basefileptr + sizeof(d88_fileheader)  + ((i>>1) * sizeof(uint32_t)),SEEK_SET) != 0) {
+				libflux_fclose(f);
+				return LIBFLUX_BADFILE;
+			}
 		}
 
 		libflux_fread(&track_offset,sizeof(uint32_t),f);

@@ -73,12 +73,12 @@ static uft_error_t imd_open(uft_disk_t* disk, const char* path, bool read_only) 
             uint8_t dtype = fgetc(f);
             if (dtype == IMD_SEC_UNAVAILABLE) continue;
             else if (dtype == IMD_SEC_COMPRESSED || dtype == 4 || dtype == 6 || dtype == 8)
-                if (fseek(f, 1, SEEK_CUR) != 0) { /* seek error */ }
+                { if (fseek(f, 1, SEEK_CUR) != 0) { break; } }
             else
-                if (fseek(f, sec_size, SEEK_CUR) != 0) { /* seek error */ }
+                { if (fseek(f, sec_size, SEEK_CUR) != 0) { break; } }
         }
     }
-    
+
     pdata->max_cyl = max_cyl;
     pdata->max_head = max_head;
     pdata->max_sec = max_sec;
@@ -107,7 +107,7 @@ static uft_error_t imd_read_track(uft_disk_t* disk, int cyl, int head, uft_track
     if (!pdata || !pdata->file) return UFT_ERROR_INVALID_STATE;
     
     uft_track_init(track, cyl, head);
-    if (fseek(pdata->file, pdata->data_start, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(pdata->file, pdata->data_start, SEEK_SET) != 0) { return UFT_ERROR_INVALID_STATE; }
     while (!feof(pdata->file)) {
         uint8_t hdr[5];
         if (fread(hdr, 1, 5, pdata->file) != 5) break;
@@ -145,9 +145,9 @@ static uft_error_t imd_read_track(uft_disk_t* disk, int cyl, int head, uft_track
                 uint8_t dtype = fgetc(pdata->file);
                 if (dtype == IMD_SEC_UNAVAILABLE) continue;
                 else if (dtype == IMD_SEC_COMPRESSED || dtype == 4 || dtype == 6 || dtype == 8)
-                    if (fseek(pdata->file, 1, SEEK_CUR) != 0) { /* seek error */ }
+                    { if (fseek(pdata->file, 1, SEEK_CUR) != 0) { break; } }
                 else
-                    if (fseek(pdata->file, sec_size, SEEK_CUR) != 0) { /* seek error */ }
+                    { if (fseek(pdata->file, sec_size, SEEK_CUR) != 0) { break; } }
             }
         }
     }

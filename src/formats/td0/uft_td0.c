@@ -60,7 +60,11 @@ static uft_error_t td0_open(uft_disk_t* disk, const char* path, bool read_only) 
         uint8_t com_hdr[10];
         if (fread(com_hdr, 1, 10, f) != 10) { /* I/O error */ }
         uint16_t com_len = uft_read_le16(com_hdr + 2);
-        if (fseek(f, com_len, SEEK_CUR) != 0) { /* seek error */ }
+        if (fseek(f, com_len, SEEK_CUR) != 0) {
+            free(pdata);
+            fclose(f);
+            return UFT_ERROR_FILE_READ;
+        }
     }
     pdata->data_start = ftell(f);
     
@@ -82,7 +86,11 @@ static uft_error_t td0_open(uft_disk_t* disk, const char* path, bool read_only) 
                 uint8_t len_buf[2];
                 if (fread(len_buf, 1, 2, f) != 2) { /* I/O error */ }
                 uint16_t len = uft_read_le16(len_buf);
-                if (fseek(f, len - 1, SEEK_CUR) != 0) { /* seek error */ }
+                if (fseek(f, len - 1, SEEK_CUR) != 0) {
+                    free(pdata);
+                    fclose(f);
+                    return UFT_ERROR_FILE_READ;
+                }
             }
         }
     }

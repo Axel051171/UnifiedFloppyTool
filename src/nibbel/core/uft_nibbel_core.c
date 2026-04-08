@@ -477,9 +477,9 @@ uft_nibbel_error_t uft_nibbel_detect_format(
     if (!f) return UFT_NIB_ERROR_FILE_OPEN;
     
     // Get size
-    if (fseek(f, 0, SEEK_END) != 0) { /* seek error */ }
+    if (fseek(f, 0, SEEK_END) != 0) { fclose(f); return UFT_NIB_ERROR_FILE_OPEN; }
     long size = ftell(f);
-    if (fseek(f, 0, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(f, 0, SEEK_SET) != 0) { fclose(f); return UFT_NIB_ERROR_FILE_OPEN; }
     // Read header
     uint8_t header[512];
     size_t read = fread(header, 1, sizeof(header), f);

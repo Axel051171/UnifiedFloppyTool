@@ -118,7 +118,7 @@ static LIBFLUX_SIDE* decodestream(LIBFLUX_CTX* flux_ctx,FILE * f,int track,uint3
 
 	flux_ctx->libflux_printf(MSG_DEBUG,"Loading SCP track...");
 
-	if(nb_of_revs <= 0)
+	if(nb_of_revs <= 0 || nb_of_revs > 16)
 	{
 		flux_ctx->libflux_printf(MSG_ERROR,"Track with bad revolution(s) count ! (%d)",nb_of_revs);
 		return NULL;
@@ -133,8 +133,15 @@ static LIBFLUX_SIDE* decodestream(LIBFLUX_CTX* flux_ctx,FILE * f,int track,uint3
 
 		libflux_FxStream_setFilterParameters(fxs,filterpasses,filter);
 
-		if (fseek(f,foffset,SEEK_SET) != 0) { /* seek error */ }
-		trkh = malloc( sizeof(scp_track_header) + ( nb_of_revs * sizeof(scp_index_pos) ) + sizeof(uint32_t) );
+		if (fseek(f,foffset,SEEK_SET) != 0) {
+			libflux_deinitFxStream(fxs);
+			return NULL;
+		}
+		/* Overflow check: nb_of_revs already capped at 16 above */
+		{
+			size_t trkh_alloc = sizeof(scp_track_header) + ( (size_t)nb_of_revs * sizeof(scp_index_pos) ) + sizeof(uint32_t);
+			trkh = malloc( trkh_alloc );
+		}
 		if(!trkh)
 		{
 			flux_ctx->libflux_printf(MSG_ERROR,"Track header allocation failed !");
@@ -176,9 +183,17 @@ static LIBFLUX_SIDE* decodestream(LIBFLUX_CTX* flux_ctx,FILE * f,int track,uint3
 
 			totallength++;
 
+			/* Sanity cap: max 10 million flux values per track */
+			if(totallength > 10000000)
+			{
+				free(trkh);
+				libflux_deinitFxStream(fxs);
+				return NULL;
+			}
+
 			if(totallength)
 			{
-				trackbuf = malloc(totallength*sizeof(unsigned short));
+				trackbuf = malloc((size_t)totallength*sizeof(unsigned short));
 				if(trackbuf)
 				{
 					memset(trackbuf,0x00,totallength*sizeof(unsigned short));
@@ -187,7 +202,12 @@ static LIBFLUX_SIDE* decodestream(LIBFLUX_CTX* flux_ctx,FILE * f,int track,uint3
 
 					for(i=0;i<nb_of_revs;i++)
 					{
-						if (fseek(f,foffset + trkh->index_position[i].track_offset,SEEK_SET) != 0) { /* seek error */ }
+						if (fseek(f,foffset + trkh->index_position[i].track_offset,SEEK_SET) != 0) {
+							free(trackbuf);
+							free(trkh);
+							libflux_deinitFxStream(fxs);
+							return NULL;
+						}
 						libflux_fread(&trackbuf[offset], (trkh->index_position[i].track_length*sizeof(unsigned short)), f);
 
 #ifdef SCPDEBUG
@@ -206,7 +226,7 @@ static LIBFLUX_SIDE* decodestream(LIBFLUX_CTX* flux_ctx,FILE * f,int track,uint3
 
 					realnumberofpulses = 0;
 
-					trackbuf_dword = malloc((totallength+1)*sizeof(uint32_t));
+					trackbuf_dword = malloc(((size_t)totallength+1)*sizeof(uint32_t));
 					if(trackbuf_dword)
 					{
 						memset(trackbuf_dword,0x00,(totallength+1)*sizeof(uint32_t));
@@ -592,14 +612,20 @@ int SCP_libLoad_DiskFile(LIBFLUX_IMGLDR * imgldr_ctx,LIBFLUX_FLOPPY * floppydisk
 
 			floppydisk->floppyNumberOfTrack = ((k >> 1) + 1) / trackstep;
 
-			floppydisk->tracks = (LIBFLUX_CYLINDER**)malloc(sizeof(LIBFLUX_CYLINDER*)*floppydisk->floppyNumberOfTrack);
+			/* Sanity cap: max 168 tracks (SCP maximum) */
+			if(floppydisk->floppyNumberOfTrack > 168)
+			{
+				libflux_fclose(f);
+				return LIBFLUX_INTERNALERROR;
+			}
+			floppydisk->tracks = (LIBFLUX_CYLINDER**)malloc(sizeof(LIBFLUX_CYLINDER*)*(size_t)floppydisk->floppyNumberOfTrack);
 			if(!floppydisk->tracks)
 			{
 				libflux_fclose(f);
 				return LIBFLUX_INTERNALERROR;
 			}
 
-			memset(floppydisk->tracks,0,sizeof(LIBFLUX_CYLINDER*)*floppydisk->floppyNumberOfTrack);
+			memset(floppydisk->tracks,0,sizeof(LIBFLUX_CYLINDER*)*(size_t)floppydisk->floppyNumberOfTrack);
 
 			for(j=0;j<floppydisk->floppyNumberOfTrack*trackstep;j=j+trackstep)
 			{

@@ -98,9 +98,9 @@ int uft_pc98_dim_open(FloppyDevice *dev, const char *path){
     }
 
     /* Determine filesize and expected size for "full image" */
-    if (fseek(fp,0,SEEK_END) != 0) { /* seek error */ }
+    if (fseek(fp,0,SEEK_END) != 0) { fclose(fp); free(ctx); return UFT_EIO; }
     long szl = ftell(fp);
-    if (fseek(fp, DIM_HDR_SIZE, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(fp, DIM_HDR_SIZE, SEEK_SET) != 0) { fclose(fp); free(ctx); return UFT_EIO; }
     if(szl < (long)DIM_HDR_SIZE){ fclose(fp); free(ctx); return UFT_EINVAL; }
 
     uint32_t datasz = (uint32_t)(szl - (long)DIM_HDR_SIZE);

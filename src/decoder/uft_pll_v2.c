@@ -22,6 +22,8 @@
 #include <stdbool.h>
 #include <math.h>
 
+#include "uft/uft_simd.h"
+
 #ifdef __SSE2__
 #include <emmintrin.h>
 #endif
@@ -296,17 +298,23 @@ int uft_pll_extract_bits(uft_pll_state_t* pll,
     memset(output, 0, output_size);
     
     int bits;
-    
+
 #ifdef __AVX2__
-    bits = extract_bits_avx2(flux_ns, count, pll->bit_cell_ns, output);
-    pll->simd_ops += count / 4;
-#elif defined(__SSE2__)
-    bits = extract_bits_sse2(flux_ns, count, pll->bit_cell_ns, output);
-    pll->simd_ops += count / 2;
-#else
-    bits = extract_bits_scalar(flux_ns, count, pll->bit_cell_ns, output);
-    pll->scalar_ops += count;
+    if (uft_simd_has_avx2()) {
+        bits = extract_bits_avx2(flux_ns, count, pll->bit_cell_ns, output);
+        pll->simd_ops += count / 4;
+    } else
 #endif
+#ifdef __SSE2__
+    if (uft_simd_has_sse2()) {
+        bits = extract_bits_sse2(flux_ns, count, pll->bit_cell_ns, output);
+        pll->simd_ops += count / 2;
+    } else
+#endif
+    {
+        bits = extract_bits_scalar(flux_ns, count, pll->bit_cell_ns, output);
+        pll->scalar_ops += count;
+    }
     
     pll->total_bits += bits;
     return bits;

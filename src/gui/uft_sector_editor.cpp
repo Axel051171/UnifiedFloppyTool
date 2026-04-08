@@ -865,7 +865,57 @@ void UftSectorEditor::findNext()
 
 void UftSectorEditor::replace()
 {
-    /* TODO */
+    /* Open find/replace dialog for in-place sector editing */
+    bool ok;
+    QString findText = QInputDialog::getText(this, tr("Find"),
+        tr("Enter hex bytes to find (e.g., 4C 00 10):"), QLineEdit::Normal, "", &ok);
+    if (!ok || findText.isEmpty()) return;
+
+    QString replText = QInputDialog::getText(this, tr("Replace"),
+        tr("Enter hex bytes to replace with:"), QLineEdit::Normal, "", &ok);
+    if (!ok || replText.isEmpty()) return;
+
+    /* Parse find pattern */
+    QByteArray findPattern, replPattern;
+    QStringList findParts = findText.split(' ', Qt::SkipEmptyParts);
+    for (const QString &p : findParts) {
+        bool ok2;
+        uint8_t b = static_cast<uint8_t>(p.toUInt(&ok2, 16));
+        if (ok2) findPattern.append(static_cast<char>(b));
+    }
+    QStringList replParts = replText.split(' ', Qt::SkipEmptyParts);
+    for (const QString &p : replParts) {
+        bool ok2;
+        uint8_t b = static_cast<uint8_t>(p.toUInt(&ok2, 16));
+        if (ok2) replPattern.append(static_cast<char>(b));
+    }
+
+    if (findPattern.isEmpty() || replPattern.isEmpty()) {
+        QMessageBox::warning(this, tr("Replace"), tr("Invalid hex pattern."));
+        return;
+    }
+
+    /* Search and replace in current sector data */
+    QByteArray data = m_hexEdit->data();
+    int pos = data.indexOf(findPattern);
+    int replCount = 0;
+
+    while (pos >= 0) {
+        /* Replace bytes at position */
+        for (int i = 0; i < replPattern.size() && pos + i < data.size(); i++) {
+            m_hexEdit->setByteAt(pos + i, static_cast<uint8_t>(replPattern[i]));
+        }
+        replCount++;
+        pos = data.indexOf(findPattern, pos + replPattern.size());
+    }
+
+    if (replCount > 0) {
+        saveSector();
+        QMessageBox::information(this, tr("Replace"),
+            tr("Replaced %1 occurrence(s).").arg(replCount));
+    } else {
+        QMessageBox::information(this, tr("Replace"), tr("Pattern not found."));
+    }
 }
 
 void UftSectorEditor::goTo()

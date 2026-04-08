@@ -239,7 +239,7 @@ int ST_libLoad_DiskFile(LIBFLUX_IMGLDR * imgldr_ctx,LIBFLUX_FLOPPY * floppydisk,
 
 	if( getfloppyconfig( boot_sector, filesize, &rawcfg) == 1 )
 	{
-		if (fseek(f_img,0,SEEK_SET) != 0) { /* seek error */ }
+		if (fseek(f_img,0,SEEK_SET) != 0) { libflux_fclose(f_img); return LIBFLUX_ACCESSERROR; }
 		ret = raw_iso_loader(imgldr_ctx, floppydisk, f_img, 0, 0, &rawcfg);
 
 		libflux_fclose(f_img);

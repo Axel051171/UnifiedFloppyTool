@@ -69,12 +69,12 @@ int sap_read_sector(SapDevice *dev, uint32_t t, uint32_t s, uint8_t *buf) {
     if (!f) return -1;
     
     // Skip header
-    if (fseek(f, sizeof(SapHeader), SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(f, sizeof(SapHeader), SEEK_SET) != 0) { fclose(f); return -1; }
     // Each sector has 4-byte header + data
     size_t sector_size = sizeof(SapSector) + dev->sectorSize;
     size_t offset = sizeof(SapHeader) + (t * dev->sectors + s) * sector_size;
-    
-    if (fseek(f, offset + sizeof(SapSector), SEEK_SET) != 0) { /* seek error */ }
+
+    if (fseek(f, offset + sizeof(SapSector), SEEK_SET) != 0) { fclose(f); return -1; }
     size_t read = fread(buf, 1, dev->sectorSize, f);
     fclose(f);
     

@@ -23,7 +23,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <limits.h>
 #include <math.h>
+
+#ifndef SIZE_MAX
+#define SIZE_MAX ((size_t)-1)
+#endif
 
 /*============================================================================
  * Internal Structures
@@ -268,11 +273,16 @@ static ipf_error_t parse_imge_record(ipf_context_t *ctx,
     uint32_t data_key = read_be32(data + 52);
     
     /* Find or create track slot */
+    /* Sanity check: cylinder and head from file header */
+    if (cylinder > 85 || head > 1) return IPF_ERR_BAD_RECORD;
+
     uint8_t track_idx = cylinder * 2 + head;
     if (track_idx >= ctx->track_count) {
         /* Reallocate tracks array */
         uint8_t new_count = track_idx + 1;
-        ipf_track_t *new_tracks = realloc(ctx->tracks, 
+        if ((size_t)new_count > SIZE_MAX / sizeof(ipf_track_t))
+            return IPF_ERR_ALLOC;
+        ipf_track_t *new_tracks = realloc(ctx->tracks,
                                           new_count * sizeof(ipf_track_t));
         if (!new_tracks) return IPF_ERR_ALLOC;
         
@@ -343,6 +353,8 @@ static ipf_error_t parse_data_record(ipf_context_t *ctx,
         
         /* If track has no data yet, assign this data */
         if (track->raw_data == NULL && raw_len > 0) {
+            /* Sanity cap: max 16MB per track */
+            if (raw_len > 16 * 1024 * 1024) return IPF_ERR_CORRUPT;
             track->raw_data = malloc(raw_len);
             if (track->raw_data) {
                 memcpy(track->raw_data, raw, raw_len);
@@ -403,9 +415,9 @@ ipf_context_t *ipf_open(const char *path) {
     if (!f) return NULL;
     
     /* Get file size */
-    if (fseek(f, 0, SEEK_END) != 0) { /* seek error */ }
+    if (fseek(f, 0, SEEK_END) != 0) { fclose(f); return NULL; }
     long file_size = ftell(f);
-    if (fseek(f, 0, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(f, 0, SEEK_SET) != 0) { fclose(f); return NULL; }
     if (file_size < 24) {  /* Minimum: header + one record */
         fclose(f);
         return NULL;
@@ -575,6 +587,9 @@ ipf_error_t ipf_read_track(ipf_context_t *ctx,
     
     /* Deep copy cell timings */
     if (src->cell_timings && src->timing_count > 0) {
+        /* Overflow check: timing_count * sizeof(uint32_t) */
+        if (src->timing_count > SIZE_MAX / sizeof(uint32_t))
+            return IPF_ERR_ALLOC;
         track->cell_timings = malloc(src->timing_count * sizeof(uint32_t));
         if (track->cell_timings) {
             memcpy(track->cell_timings, src->cell_timings,

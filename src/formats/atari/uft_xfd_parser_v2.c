@@ -327,7 +327,7 @@ bool xfd_probe(const char* filename) {
     if (!fp) return false;
     
     /* Get file size */
-    if (fseek(fp, 0, SEEK_END) != 0) { /* seek error */ }
+    if (fseek(fp, 0, SEEK_END) != 0) { fclose(fp); return false; }
     long size = ftell(fp);
     fclose(fp);
     
@@ -383,9 +383,9 @@ xfd_context_t* xfd_open(const char* filename) {
     ctx->filename = filename;
     
     /* Get file size */
-    if (fseek(ctx->fp, 0, SEEK_END) != 0) { /* seek error */ }
+    if (fseek(ctx->fp, 0, SEEK_END) != 0) { fclose(ctx->fp); free(ctx); return NULL; }
     ctx->file_size = ftell(ctx->fp);
-    if (fseek(ctx->fp, 0, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(ctx->fp, 0, SEEK_SET) != 0) { fclose(ctx->fp); free(ctx); return NULL; }
     if (ctx->file_size < 128) {
         snprintf(ctx->error, sizeof(ctx->error), "File too small: %u bytes", ctx->file_size);
         ctx->has_error = true;

@@ -59,7 +59,8 @@ typedef enum {
     UFT_FMT_A2R,            /* Applesauce Raw */
     UFT_FMT_DSK_APPLE,      /* Apple DSK */
     UFT_FMT_DC42,           /* Disk Copy 4.2 */
-    
+    UFT_FMT_MOOF,           /* Applesauce Mac Flux */
+
     /* Atari Formats */
     UFT_FMT_ATR,            /* Atari 8-Bit */
     UFT_FMT_ATX,            /* VAPI Protected */
@@ -185,7 +186,8 @@ static const magic_entry_t MAGIC_TABLE[] = {
     { UFT_FMT_A2R,      0, 4, {'A','2','R','2'}, "A2R", "2.0" },
     { UFT_FMT_A2R,      0, 4, {'A','2','R','3'}, "A2R", "3.0" },
     { UFT_FMT_DC42,     0, 4, {0x00,0x00,0x01,0x00}, "DC42", "4.2" },
-    
+    { UFT_FMT_MOOF,     0, 4, {'M','O','O','F'}, "MOOF", "1.0" },
+
     /* Commodore */
     { UFT_FMT_G64,      0, 8, {'G','C','R','-','1','5','4','1'}, "G64", "1541" },
     { UFT_FMT_G71,      0, 8, {'G','C','R','-','1','5','7','1'}, "G71", "1571" },
@@ -214,9 +216,10 @@ static const magic_entry_t MAGIC_TABLE[] = {
     /* Flux */
     { UFT_FMT_SCP,      0, 3, {'S','C','P'}, "SCP", "" },
     { UFT_FMT_HFE,      0, 8, {'H','X','C','P','I','C','F','E'}, "HFE", "v1" },
+    { UFT_FMT_HFE,      0, 8, {'H','X','C','H','F','E','V','2'}, "HFE", "v2" },
     { UFT_FMT_HFE_V3,   0, 8, {'H','X','C','H','F','E','V','3'}, "HFE", "v3" },
-    { UFT_FMT_DMK,      0, 1, {0x00}, "DMK", "" },  /* Needs size check */
-    { UFT_FMT_FLX,      0, 4, {'F','L','U','X'}, "FLX", "" },
+    /* DMK: No reliable magic — detected via validate_structure() + extension */
+    { UFT_FMT_RAW_FLUX,      0, 4, {'F','L','U','X'}, "FLX", "" },
     
     /* Spectrum */
     { UFT_FMT_TZX,      0, 7, {'Z','X','T','a','p','e','!'}, "TZX", "" },
@@ -228,10 +231,10 @@ static const magic_entry_t MAGIC_TABLE[] = {
     { UFT_FMT_ADF_ACORN,0, 4, {'H','u','g','o'}, "ADFS", "Hugo" },
     
     /* Japanese */
-    { UFT_FMT_D88,      0, 1, {0x00}, "D88", "" },  /* Needs offset 0x1A check */
+    /* D88: No reliable magic — detected via validate_structure() + extension */
     { UFT_FMT_NFD,      0, 14, {'T','9','8','F','D','D','I','M','A','G','E','.','R','0'}, "NFD", "r0" },
     { UFT_FMT_NFD,      0, 14, {'T','9','8','F','D','D','I','M','A','G','E','.','R','1'}, "NFD", "r1" },
-    { UFT_FMT_HDM,      0, 2, {0x00,0x00}, "HDM", "" },  /* Size check needed */
+    /* HDM: No reliable magic — detected via size (1261568) + extension */
     { UFT_FMT_XDF,      0, 4, {'X','D','F','1'}, "XDF", "X68000" },
     
     /* MSX */
@@ -285,9 +288,10 @@ static const size_entry_t SIZE_TABLE[] = {
     { UFT_FMT_XFD,       184320, "XFD", "DD 180K", 70 },
     
     /* Atari ST */
-    { UFT_FMT_ST,        368640, "ST", "SS 360K", 75 },
-    { UFT_FMT_ST,        737280, "ST", "DS 720K", 75 },
-    { UFT_FMT_ST,        819200, "ST", "DS 800K", 70 },
+    { UFT_FMT_ST,        357376, "ST", "SS 9sec", 70 },
+    { UFT_FMT_ST,        368640, "ST", "SS 10sec", 70 },
+    { UFT_FMT_ST,        737280, "ST", "DS 9sec", 75 },
+    { UFT_FMT_ST,        819200, "ST", "DS 10sec", 75 },
     
     /* PC */
     { UFT_FMT_IMG,       163840, "IMG", "160K SS/SD", 60 },
@@ -362,7 +366,8 @@ static const ext_entry_t EXT_TABLE[] = {
     { "woz", UFT_FMT_WOZ, "WOZ" },
     { "a2r", UFT_FMT_A2R, "A2R" },
     { "dc", UFT_FMT_DC42, "DC42" },
-    
+    { "moof", UFT_FMT_MOOF, "MOOF" },
+
     /* Atari */
     { "atr", UFT_FMT_ATR, "ATR" },
     { "atx", UFT_FMT_ATX, "ATX" },
@@ -388,9 +393,9 @@ static const ext_entry_t EXT_TABLE[] = {
     /* Flux */
     { "scp", UFT_FMT_SCP, "SCP" },
     { "hfe", UFT_FMT_HFE, "HFE" },
-    { "raw", UFT_FMT_KRYOFLUX, "KryoFlux" },
+    { "raw", UFT_FMT_RAW_FLUX, "KryoFlux" },
     { "dmk", UFT_FMT_DMK, "DMK" },
-    { "flx", UFT_FMT_FLX, "FLX" },
+    { "flx", UFT_FMT_RAW_FLUX, "FLX" },
     { "ct", UFT_FMT_CT, "CT" },
     
     /* Spectrum */
@@ -413,6 +418,7 @@ static const ext_entry_t EXT_TABLE[] = {
     
     /* Japanese */
     { "d88", UFT_FMT_D88, "D88" },
+    { "d77", UFT_FMT_D88, "D77" },
     { "88d", UFT_FMT_D88, "D88" },
     { "nfd", UFT_FMT_NFD, "NFD" },
     { "hdm", UFT_FMT_HDM, "HDM" },
@@ -462,7 +468,8 @@ static const char* format_system(uft_format_t fmt)
         case UFT_FMT_WOZ:
         case UFT_FMT_A2R:
         case UFT_FMT_DC42:
-            return "Apple II";
+        case UFT_FMT_MOOF:
+            return "Apple / Macintosh";
             
         case UFT_FMT_ATR:
         case UFT_FMT_ATX:
@@ -493,9 +500,8 @@ static const char* format_system(uft_format_t fmt)
         case UFT_FMT_SCP:
         case UFT_FMT_HFE:
         case UFT_FMT_HFE_V3:
-        case UFT_FMT_KRYOFLUX:
+        case UFT_FMT_RAW_FLUX:
         case UFT_FMT_DMK:
-        case UFT_FMT_FLX:
             return "Flux (Universal)";
             
         case UFT_FMT_TRD:
@@ -589,7 +595,10 @@ static uint64_t get_file_size(const char *path)
     FILE *fp = fopen(path, "rb");
     if (!fp) return 0;
     
-    if (fseek(fp, 0, SEEK_END) != 0) { /* seek error */ }
+    if (fseek(fp, 0, SEEK_END) != 0) {
+        fclose(fp);
+        return 0;
+    }
     long size = ftell(fp);
     fclose(fp);
     
@@ -669,8 +678,11 @@ static int validate_structure(const char *path, const uint8_t *header,
                 FILE *fp = fopen(path, "rb");
                 if (fp) {
                     uint8_t bam[256];
-                    if (fseek(fp, 0x16500, SEEK_SET) != 0) { /* seek error */ }
-                    if (fread(bam, 1, 256, fp) != 256) { /* I/O error */ }
+                    if (fseek(fp, 0x16500, SEEK_SET) != 0 ||
+                        fread(bam, 1, 256, fp) != 256) {
+                        fclose(fp);
+                        break;
+                    }
                     fclose(fp);
                     
                     /* Check directory pointer */
@@ -732,30 +744,166 @@ static int validate_structure(const char *path, const uint8_t *header,
             }
             break;
             
+        case UFT_FMT_DO:
+        case UFT_FMT_PO:
+            /* Apple II DO/PO disambiguation for 143360-byte images.
+             * ProDOS: Block 2 (offset 0x400) = Volume Directory Header
+             *   Byte 0x04: storage_type|name_length, high nibble = 0xF (vol header)
+             * DOS 3.3: T17/S0 (offset 0x11000) = VTOC
+             *   Byte 0x01: catalog track (typically 0x11) */
+            if (size == 143360) {
+                FILE *fp_apple = fopen(path, "rb");
+                if (fp_apple) {
+                    uint8_t probe[16];
+
+                    /* Check ProDOS volume directory at block 2 (offset 0x400) */
+                    if (fseek(fp_apple, 0x400, SEEK_SET) == 0 &&
+                        fread(probe, 1, 6, fp_apple) == 6) {
+                        uint8_t storage_type = (probe[4] >> 4) & 0x0F;
+                        if (storage_type == 0x0F) {
+                            /* ProDOS volume header found */
+                            if (info->format == UFT_FMT_PO) bonus = 25;
+                            else bonus = -10; /* Not DO if ProDOS header */
+                        }
+                    }
+
+                    /* Check DOS 3.3 VTOC at T17/S0 (offset 0x11000) */
+                    if (bonus == 0 && fseek(fp_apple, 0x11000, SEEK_SET) == 0 &&
+                        fread(probe, 1, 4, fp_apple) == 4) {
+                        if (probe[1] == 0x11 && probe[2] >= 0x01 && probe[2] <= 0x0F) {
+                            /* DOS 3.3 VTOC: catalog track = 0x11, sector valid */
+                            if (info->format == UFT_FMT_DO) bonus = 25;
+                            else bonus = -10;
+                        }
+                    }
+                    fclose(fp_apple);
+                }
+                info->tracks = 35;
+                info->sectors = 16;
+                info->sector_size = 256;
+            }
+            break;
+
+        case UFT_FMT_DMK:
+        case UFT_FMT_DMK_TRS:
+            /* DMK: no magic, validate header structure */
+            {
+                uint8_t wp = header[0];           /* 0x00 or 0xFF */
+                uint8_t ntracks = header[1];      /* 1-96 */
+                uint16_t tlen = header[2] | ((uint16_t)header[3] << 8);
+                uint8_t flags = header[4];
+
+                bool wp_ok = (wp == 0x00 || wp == 0xFF);
+                bool tracks_ok = (ntracks >= 1 && ntracks <= 96);
+                bool tlen_ok = (tlen >= 0x0C80 && tlen <= 0x3480); /* 3200-13440 */
+                bool flags_ok = ((flags & 0xC0) == 0 || (flags & 0xC0) == 0x40 ||
+                                 (flags & 0xC0) == 0x80);
+                /* Verify file size plausibility */
+                uint8_t sides = (flags & 0x10) ? 1 : 2;
+                uint64_t expected = 16 + (uint64_t)ntracks * sides * tlen;
+                bool size_ok = (size >= expected - tlen && size <= expected + tlen);
+
+                if (wp_ok && tracks_ok && tlen_ok && flags_ok && size_ok) {
+                    info->tracks = ntracks;
+                    info->sides = sides;
+                    info->write_protected = (wp == 0xFF);
+                    bonus = 30;
+                }
+            }
+            break;
+
         case UFT_FMT_D88:
-            /* Check D88 header */
+            /* Check D88/D77 header structure */
             {
                 uint32_t d88_size = header[0x1C] | (header[0x1D] << 8) |
                                     ((uint32_t)header[0x1E] << 16) | ((uint32_t)header[0x1F] << 24);
                 if (d88_size > 0 && d88_size <= size) {
                     info->write_protected = header[0x1A] != 0;
                     uint8_t media = header[0x1B];
-                    
-                    switch (media) {
-                        case 0x00: snprintf(info->version, sizeof(info->version), "2D"); break;
-                        case 0x10: snprintf(info->version, sizeof(info->version), "2DD"); break;
-                        case 0x20: snprintf(info->version, sizeof(info->version), "2HD"); break;
-                        default:   snprintf(info->version, sizeof(info->version), "Unknown"); break;
+
+                    /* Validate media type byte */
+                    bool media_ok = (media == 0x00 || media == 0x10 ||
+                                     media == 0x20 || media == 0x30 ||
+                                     media == 0x40 || media == 0x01);
+                    if (!media_ok) break;
+
+                    /* Validate disk name (first 17 bytes): printable ASCII or null */
+                    bool name_ok = true;
+                    for (int j = 0; j < 17; j++) {
+                        uint8_t ch = header[j];
+                        if (ch != 0 && (ch < 0x20 || ch > 0x7E)) {
+                            name_ok = false;
+                            break;
+                        }
+                    }
+                    if (!name_ok) break;
+
+                    /* D77 variant: media type 0x01 */
+                    if (media == 0x01) {
+                        snprintf(info->version, sizeof(info->version), "D77");
+                    } else {
+                        switch (media) {
+                            case 0x00: snprintf(info->version, sizeof(info->version), "2D"); break;
+                            case 0x10: snprintf(info->version, sizeof(info->version), "2DD"); break;
+                            case 0x20: snprintf(info->version, sizeof(info->version), "2HD"); break;
+                            case 0x30: snprintf(info->version, sizeof(info->version), "1DD"); break;
+                            case 0x40: snprintf(info->version, sizeof(info->version), "1D"); break;
+                            default: break;
+                        }
                     }
                     bonus = 25;
                 }
             }
             break;
             
+        case UFT_FMT_IMG:
+        case UFT_FMT_IMA:
+            /* IMG/IMA: sector-aligned heuristic for non-standard sizes */
+            if (size > 0 && (size % 512) == 0) {
+                uint64_t sector_count = size / 512;
+                if (sector_count < 6000) {
+                    /* Not a known magic of another format */
+                    bool is_other = (header[0] == 'S' && header[1] == 'C' && header[2] == 'P') ||
+                                    (memcmp(header, "HXCPICFE", 8) == 0) ||
+                                    (header[0] == 'D' && header[1] == 'O' && header[2] == 'S');
+                    if (!is_other) {
+                        bonus = 10;
+                        /* Extra bonus if within standard geometry (CHS-plausible) */
+                        if (sector_count == 720 || sector_count == 1440 ||
+                            sector_count == 2400 || sector_count == 2880 ||
+                            sector_count == 5760 ||
+                            (sector_count % 9 == 0) || (sector_count % 18 == 0)) {
+                            bonus += 5;
+                        }
+                        info->sector_size = 512;
+                    }
+                }
+            }
+            break;
+
+        case UFT_FMT_ST:
+            /* Atari ST BPB validation */
+            {
+                /* Check for 68000 BRA.S (0x60) or x86 JMP (0xE9) at byte 0 */
+                bool bpb_jump = (header[0] == 0x60 || header[0] == 0xE9);
+                /* Check OEM string at bytes 8-10 for printable ASCII */
+                bool oem_ok = true;
+                for (int j = 8; j < 11; j++) {
+                    if (header[j] < 0x20 || header[j] > 0x7E) {
+                        oem_ok = false;
+                        break;
+                    }
+                }
+                if (bpb_jump && oem_ok) {
+                    bonus = 15;
+                }
+            }
+            break;
+
         default:
             break;
     }
-    
+
     return bonus;
 }
 
@@ -918,8 +1066,9 @@ const char* uft_format_name(uft_format_t format)
         [UFT_FMT_EDSK] = "EDSK",
         [UFT_FMT_SCP] = "SCP",
         [UFT_FMT_HFE] = "HFE",
-        [UFT_FMT_KRYOFLUX] = "KryoFlux",
+        [UFT_FMT_RAW_FLUX] = "KryoFlux",
         [UFT_FMT_DMK] = "DMK",
+        [UFT_FMT_MOOF] = "MOOF",
         [UFT_FMT_TRD] = "TRD",
         [UFT_FMT_SSD] = "SSD",
         [UFT_FMT_DSD] = "DSD",

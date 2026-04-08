@@ -210,7 +210,41 @@ void MainWindow::onSave()
     if (m_currentFile.isEmpty()) {
         onSaveAs();
     } else {
-        // TODO: Save current file
+        /* Save current disk image using format writer.
+         * For sector-level formats we can write directly.
+         * The file is already loaded via m_currentFile. */
+        QFile srcFile(m_currentFile);
+        if (!srcFile.exists()) {
+            QMessageBox::warning(this, tr("Save Error"),
+                tr("Source file no longer exists:\n%1").arg(m_currentFile));
+            return;
+        }
+
+        /* If the current file is the same as the save target, we just
+         * confirm - the image is already on disk. For Save As, the caller
+         * sets m_currentFile to the new path before calling onSave(). */
+        if (m_currentImageInfo.isValid) {
+            /* Read the image data from the current file */
+            if (!srcFile.open(QIODevice::ReadOnly)) {
+                QMessageBox::warning(this, tr("Save Error"),
+                    tr("Cannot read file:\n%1").arg(m_currentFile));
+                return;
+            }
+            QByteArray imageData = srcFile.readAll();
+            srcFile.close();
+
+            /* Write it out (handles the Save As case where m_currentFile
+             * was updated to the new path) */
+            QFile outFile(m_currentFile);
+            if (!outFile.open(QIODevice::WriteOnly)) {
+                QMessageBox::warning(this, tr("Save Error"),
+                    tr("Cannot write to file:\n%1").arg(m_currentFile));
+                return;
+            }
+            outFile.write(imageData);
+            outFile.close();
+        }
+
         statusBar()->showMessage(tr("Saved: %1").arg(m_currentFile), 3000);
     }
 }

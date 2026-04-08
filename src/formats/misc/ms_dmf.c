@@ -33,9 +33,9 @@ int uft_msc_ms_dmf_open(FloppyDevice *dev,const char*path){
     if(!fp){ fp=fopen(path,"rb"); ro=true; }
     if(!fp){ free(ctx); return UFT_ENOENT; }
 
-    if (fseek(fp,0,SEEK_END) != 0) { /* seek error */ }
+    if (fseek(fp,0,SEEK_END) != 0) { fclose(fp); free(ctx); return UFT_EIO; }
     long sz=ftell(fp);
-    if (fseek(fp,0,SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(fp,0,SEEK_SET) != 0) { fclose(fp); free(ctx); return UFT_EIO; }
     /* Microsoft DMF size: 1,720,320 bytes */
     if(sz != 1720320){
         fclose(fp); free(ctx);

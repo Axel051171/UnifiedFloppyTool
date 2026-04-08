@@ -49,9 +49,15 @@ extern "C" {
 #endif
 #include "uft/analysis/floppy_otdr.h"
 #include "uft/flux/uft_scp_parser.h"
+/* uft_otdr_adaptive_decode.h and uft_otdr_encoding_boost.h
+ * included in .cpp only — C headers clash with C++ keywords */
 #ifdef __cplusplus
 }
 #endif
+
+#include <QSettings>
+#include <QSlider>
+#include <QDoubleSpinBox>
 
 class UftOtdrPanel : public QWidget
 {
@@ -95,18 +101,25 @@ public slots:
     void onAnalyzeClicked();
     void onAnalyzeAllClicked();
     void onExportReport();
+    void onDeepReadToggled(bool enabled);
+    void onDeepReadModeChanged(int index);
 
 private:
     void setupUi();
     void setupControlPanel(QHBoxLayout *layout);
+    void setupDeepReadPanel(QVBoxLayout *layout);
     void setupVisualization(QSplitter *splitter);
     void setupEventTable(QSplitter *splitter);
     void setupStatsPanel(QVBoxLayout *layout);
     void updateTrackDisplay();
     void updateEventTable();
     void updateStatsDisplay();
+    void updateDeepReadStats(uint32_t sectors_improved, uint32_t sectors_attempted,
+                             bool used_otdr, float avg_quality);
     void populateTrackCombo();
     void freeCurrentAnalysis();
+    void loadDeepReadSettings();
+    void saveDeepReadSettings();
 
     /* ── Visualization ── */
     FloppyOtdrWidget    *m_otdrWidget;      /**< OTDR trace/heatmap/histogram */
@@ -124,6 +137,15 @@ private:
     QPushButton         *m_analyzeAllBtn;    /**< Analyze full disk */
     QPushButton         *m_exportBtn;        /**< Export report */
     QSpinBox            *m_smoothWindow;     /**< Smoothing window size */
+
+    /* ── DeepRead Controls ── */
+    QGroupBox           *m_deepReadGroup;    /**< DeepRead collapsible group */
+    QCheckBox           *m_deepReadEnabled;  /**< Master toggle */
+    QComboBox           *m_deepReadMode;     /**< Lite / Full */
+    QDoubleSpinBox      *m_confThreshold;    /**< Confidence threshold */
+    QDoubleSpinBox      *m_pllTolerance;     /**< PLL tolerance % */
+    QLabel              *m_lblDeepReadStatus;/**< "3 sectors improved" etc. */
+    QLabel              *m_lblDeepReadConf;  /**< Average confidence */
 
     /* ── Event Table ── */
     QTreeWidget         *m_eventTree;        /**< Event list */
@@ -146,6 +168,11 @@ private:
     otdr_config_t        m_config;           /**< Analysis configuration */
     int                  m_currentTrack;     /**< Currently displayed track */
     QString              m_currentFile;      /**< Currently loaded file */
+
+    /* ── DeepRead State ── */
+    bool                 m_deepReadActive;   /**< DeepRead currently active */
+    uint32_t             m_deepReadImproved; /**< Total sectors improved */
+    uint32_t             m_deepReadAttempted;/**< Total sectors attempted */
 };
 
 #endif /* UFT_OTDR_PANEL_H */

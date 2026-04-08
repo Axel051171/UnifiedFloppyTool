@@ -26,13 +26,17 @@ typedef struct {
     uint32_t*   timing;         /**< Per-bit timing (ns, can be NULL) */
     float       quality;        /**< Revolution quality score */
     bool        valid;          /**< Data is valid */
+    /* OTDR-weighted voting (optional) */
+    const float *otdr_bit_conf; /**< Per-bit OTDR confidence [0..1], NULL=legacy */
+    uint32_t    otdr_conf_count;/**< Length of otdr_bit_conf array */
+    float       otdr_rev_weight;/**< Revolution-level SNR weight [0..1] */
 } rev_data_t;
 
 /** Voting accumulator per bit position */
 typedef struct {
-    uint8_t     count_0;        /**< Votes for 0 */
-    uint8_t     count_1;        /**< Votes for 1 */
-    uint8_t     count_miss;     /**< Missing votes */
+    float       fcount_0;       /**< Weighted votes for 0 */
+    float       fcount_1;       /**< Weighted votes for 1 */
+    uint8_t     count_miss;     /**< Missing votes (unweighted) */
     uint32_t    timing_sum;     /**< Sum of timings */
     uint32_t    timing_sqsum;   /**< Sum of timing squares */
     uint8_t     timing_count;   /**< Timing samples */
@@ -314,15 +318,37 @@ int uft_mrv_add_flux(uft_mrv_context_t* ctx, const uint32_t* deltas,
     
     rev->valid = true;
     rev->quality = 1.0f;  /* Will be calculated later */
-    
+    rev->otdr_bit_conf = NULL;
+    rev->otdr_conf_count = 0;
+    rev->otdr_rev_weight = 0.0f;
+
     /* Update max bits */
     if (rev->bit_count > ctx->max_bits) {
         ctx->max_bits = rev->bit_count;
     }
-    
+
     ctx->rev_count++;
     ctx->analyzed = false;
-    
+
+    return UFT_MRV_OK;
+}
+
+/**
+ * @brief Add flux revolution with OTDR confidence weighting
+ */
+int uft_mrv_add_flux_weighted(uft_mrv_context_t* ctx, const uint32_t* deltas,
+                              uint32_t count, uint32_t bitcell_ns,
+                              const float *otdr_bit_conf, uint32_t conf_count,
+                              float rev_weight) {
+    int ret = uft_mrv_add_flux(ctx, deltas, count, bitcell_ns);
+    if (ret != UFT_MRV_OK) return ret;
+
+    /* Patch the just-added revolution with OTDR data */
+    rev_data_t* rev = &ctx->revolutions[ctx->rev_count - 1];
+    rev->otdr_bit_conf = otdr_bit_conf;   /* Borrowed pointer */
+    rev->otdr_conf_count = conf_count;
+    rev->otdr_rev_weight = (rev_weight > 0.0f) ? rev_weight : 1.0f;
+
     return UFT_MRV_OK;
 }
 
@@ -471,13 +497,25 @@ static int accumulate_votes(uft_mrv_context_t* ctx) {
                 conf = rev->confidence[b];
             }
             
+            /* Calculate vote weight */
+            float weight;
+            if (rev->otdr_bit_conf && b < rev->otdr_conf_count) {
+                /* OTDR-weighted: per-bit confidence * revolution weight */
+                float rw = (rev->otdr_rev_weight > 0.0f)
+                           ? rev->otdr_rev_weight : 1.0f;
+                weight = rev->otdr_bit_conf[b] * rw;
+            } else {
+                /* Legacy: confidence/100 as weight */
+                weight = (float)conf / 100.0f;
+            }
+
             /* Only count confident bits */
-            if (conf < 20) {
+            if (weight < 0.05f) {
                 acc->count_miss++;
             } else if (bit) {
-                acc->count_1++;
+                acc->fcount_1 += weight;
             } else {
-                acc->count_0++;
+                acc->fcount_0 += weight;
             }
             
             /* Accumulate timing statistics */
@@ -524,8 +562,8 @@ static int perform_voting(uft_mrv_context_t* ctx, uft_mrv_result_t* result) {
         uft_mrv_bit_stats_t* stat = &result->bit_stats[b];
         
         stat->position = b;
-        stat->votes_0 = acc->count_0;
-        stat->votes_1 = acc->count_1;
+        stat->votes_0 = (uint8_t)(acc->fcount_0 + 0.5f);
+        stat->votes_1 = (uint8_t)(acc->fcount_1 + 0.5f);
         stat->votes_missing = acc->count_miss;
         
         /* Calculate timing spread */
@@ -534,29 +572,30 @@ static int perform_voting(uft_mrv_context_t* ctx, uft_mrv_result_t* result) {
             stat->timing_spread = (uint16_t)(stddev + 0.5f);
         }
         
-        /* Determine winner and confidence */
-        int total_votes = acc->count_0 + acc->count_1;
+        /* Determine winner and confidence (float-weighted) */
+        float total_weight = acc->fcount_0 + acc->fcount_1;
         uint8_t voted_bit;
         uint8_t confidence;
         uft_mrv_bit_class_t bit_class;
-        
-        if (total_votes == 0) {
+
+        if (total_weight < 0.001f) {
             /* No valid votes */
             voted_bit = 0;
             confidence = 0;
             bit_class = UFT_MRV_BIT_MISSING;
             result->missing_bits++;
         } else {
-            int winner_votes = (acc->count_1 > acc->count_0) ? acc->count_1 : acc->count_0;
-            voted_bit = (acc->count_1 > acc->count_0) ? 1 : 0;
-            
-            /* Calculate confidence as percentage of agreement */
-            confidence = (uint8_t)((winner_votes * 100) / total_votes);
+            float winner_weight = (acc->fcount_1 > acc->fcount_0)
+                                  ? acc->fcount_1 : acc->fcount_0;
+            voted_bit = (acc->fcount_1 > acc->fcount_0) ? 1 : 0;
+
+            /* Calculate confidence as percentage of weighted agreement */
+            confidence = (uint8_t)((winner_weight * 100.0f) / total_weight);
             
             /* Apply strategy adjustments */
             if (ctx->params.strategy == UFT_MRV_STRATEGY_CONSENSUS) {
-                /* Require all votes agree */
-                if (winner_votes != total_votes) {
+                /* Require all weight on one value */
+                if (winner_weight < total_weight - 0.001f) {
                     confidence = (uint8_t)(confidence * 0.5f);
                 }
             } else if (ctx->params.strategy == UFT_MRV_STRATEGY_WEIGHTED) {
@@ -736,7 +775,7 @@ int uft_mrv_analyze_quick(uft_mrv_context_t* ctx, uint8_t* data,
     /* Simple majority voting */
     for (uint32_t b = 0; b < max_bits; b++) {
         vote_accum_t* acc = &ctx->accumulators[b];
-        uint8_t voted_bit = (acc->count_1 > acc->count_0) ? 1 : 0;
+        uint8_t voted_bit = (acc->fcount_1 > acc->fcount_0) ? 1 : 0;
         set_bit(data, b, voted_bit);
     }
     

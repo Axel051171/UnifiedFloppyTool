@@ -26,6 +26,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#include "uft/uft_simd.h"
+
 #ifdef __SSE2__
 #include <emmintrin.h>
 #endif
@@ -224,112 +226,9 @@ typedef struct {
  * SIMD SYNC SEARCH
  *============================================================================*/
 
-#ifdef __SSE2__
-/**
- * @brief SIMD-optimierte Suche nach D5 AA 96 Prologue
- * @return Position oder -1 wenn nicht gefunden
- */
-static int simd_find_address_prologue(const uint8_t* data, size_t len) {
-    if (len < 3) return -1;
-    
-    __m128i pattern_d5 = _mm_set1_epi8((char)0xD5);
-    __m128i pattern_aa = _mm_set1_epi8((char)0xAA);
-    
-    size_t i = 0;
-    for (; i + 16 <= len - 2; i += 16) {
-        __m128i chunk = _mm_loadu_si128((const __m128i*)(data + i));
-        __m128i cmp_d5 = _mm_cmpeq_epi8(chunk, pattern_d5);
-        int mask = _mm_movemask_epi8(cmp_d5);
-        
-        while (mask) {
-            int bit = __builtin_ctz(mask);
-            size_t pos = i + bit;
-            
-            if (pos + 2 < len &&
-                data[pos] == 0xD5 &&
-                data[pos + 1] == 0xAA &&
-                (data[pos + 2] == 0x96 || data[pos + 2] == 0xB5)) {
-                return (int)pos;
-            }
-            
-            mask &= mask - 1;
-        }
-    }
-    
-    /* Scalar fallback */
-    for (; i < len - 2; i++) {
-        if (data[i] == 0xD5 && data[i + 1] == 0xAA &&
-            (data[i + 2] == 0x96 || data[i + 2] == 0xB5)) {
-            return (int)i;
-        }
-    }
-    
-    return -1;
-}
+/* --- Scalar implementations (always available) --- */
 
-/**
- * @brief SIMD-optimierte Suche nach D5 AA AD Data Prologue
- */
-static int simd_find_data_prologue(const uint8_t* data, size_t len) {
-    if (len < 3) return -1;
-    
-    __m128i pattern_d5 = _mm_set1_epi8((char)0xD5);
-    
-    size_t i = 0;
-    for (; i + 16 <= len - 2; i += 16) {
-        __m128i chunk = _mm_loadu_si128((const __m128i*)(data + i));
-        __m128i cmp = _mm_cmpeq_epi8(chunk, pattern_d5);
-        int mask = _mm_movemask_epi8(cmp);
-        
-        while (mask) {
-            int bit = __builtin_ctz(mask);
-            size_t pos = i + bit;
-            
-            if (pos + 2 < len &&
-                data[pos] == 0xD5 &&
-                data[pos + 1] == 0xAA &&
-                data[pos + 2] == 0xAD) {
-                return (int)pos;
-            }
-            
-            mask &= mask - 1;
-        }
-    }
-    
-    /* Scalar fallback */
-    for (; i < len - 2; i++) {
-        if (data[i] == 0xD5 && data[i + 1] == 0xAA && data[i + 2] == 0xAD) {
-            return (int)i;
-        }
-    }
-    
-    return -1;
-}
-
-/**
- * @brief SIMD Sync Byte Counter (0xFF Sequenzen)
- */
-static int simd_count_sync_bytes(const uint8_t* data, size_t len) {
-    __m128i pattern_ff = _mm_set1_epi8((char)0xFF);
-    int count = 0;
-    
-    size_t i = 0;
-    for (; i + 16 <= len; i += 16) {
-        __m128i chunk = _mm_loadu_si128((const __m128i*)(data + i));
-        __m128i cmp = _mm_cmpeq_epi8(chunk, pattern_ff);
-        count += __builtin_popcount(_mm_movemask_epi8(cmp));
-    }
-    
-    for (; i < len; i++) {
-        if (data[i] == 0xFF) count++;
-    }
-    
-    return count;
-}
-
-#else
-/* Scalar Fallbacks */
-static int simd_find_address_prologue(const uint8_t* data, size_t len) {
+static int find_address_prologue_scalar(const uint8_t* data, size_t len) {
     for (size_t i = 0; i + 2 < len; i++) {
         if (data[i] == 0xD5 && data[i + 1] == 0xAA &&
             (data[i + 2] == 0x96 || data[i + 2] == 0xB5)) {
@@ -339,7 +238,7 @@ static int simd_find_address_prologue(const uint8_t* data, size_t len) {
     return -1;
 }
 
-static int simd_find_data_prologue(const uint8_t* data, size_t len) {
+static int find_data_prologue_scalar(const uint8_t* data, size_t len) {
     for (size_t i = 0; i + 2 < len; i++) {
         if (data[i] == 0xD5 && data[i + 1] == 0xAA && data[i + 2] == 0xAD) {
             return (int)i;
@@ -348,14 +247,148 @@ static int simd_find_data_prologue(const uint8_t* data, size_t len) {
     return -1;
 }
 
-static int simd_count_sync_bytes(const uint8_t* data, size_t len) {
+static int count_sync_bytes_scalar(const uint8_t* data, size_t len) {
     int count = 0;
     for (size_t i = 0; i < len; i++) {
         if (data[i] == 0xFF) count++;
     }
     return count;
 }
+
+/* --- SSE2 implementations (compiled when intrinsics available) --- */
+
+#ifdef __SSE2__
+/**
+ * @brief SSE2-optimierte Suche nach D5 AA 96 Prologue
+ * @return Position oder -1 wenn nicht gefunden
+ */
+static int find_address_prologue_sse2(const uint8_t* data, size_t len) {
+    if (len < 3) return -1;
+
+    __m128i pattern_d5 = _mm_set1_epi8((char)0xD5);
+    __m128i pattern_aa = _mm_set1_epi8((char)0xAA);
+
+    size_t i = 0;
+    for (; i + 16 <= len - 2; i += 16) {
+        __m128i chunk = _mm_loadu_si128((const __m128i*)(data + i));
+        __m128i cmp_d5 = _mm_cmpeq_epi8(chunk, pattern_d5);
+        int mask = _mm_movemask_epi8(cmp_d5);
+
+        while (mask) {
+            int bit = __builtin_ctz(mask);
+            size_t pos = i + bit;
+
+            if (pos + 2 < len &&
+                data[pos] == 0xD5 &&
+                data[pos + 1] == 0xAA &&
+                (data[pos + 2] == 0x96 || data[pos + 2] == 0xB5)) {
+                return (int)pos;
+            }
+
+            mask &= mask - 1;
+        }
+    }
+
+    /* Scalar tail */
+    for (; i < len - 2; i++) {
+        if (data[i] == 0xD5 && data[i + 1] == 0xAA &&
+            (data[i + 2] == 0x96 || data[i + 2] == 0xB5)) {
+            return (int)i;
+        }
+    }
+
+    return -1;
+}
+
+/**
+ * @brief SSE2-optimierte Suche nach D5 AA AD Data Prologue
+ */
+static int find_data_prologue_sse2(const uint8_t* data, size_t len) {
+    if (len < 3) return -1;
+
+    __m128i pattern_d5 = _mm_set1_epi8((char)0xD5);
+
+    size_t i = 0;
+    for (; i + 16 <= len - 2; i += 16) {
+        __m128i chunk = _mm_loadu_si128((const __m128i*)(data + i));
+        __m128i cmp = _mm_cmpeq_epi8(chunk, pattern_d5);
+        int mask = _mm_movemask_epi8(cmp);
+
+        while (mask) {
+            int bit = __builtin_ctz(mask);
+            size_t pos = i + bit;
+
+            if (pos + 2 < len &&
+                data[pos] == 0xD5 &&
+                data[pos + 1] == 0xAA &&
+                data[pos + 2] == 0xAD) {
+                return (int)pos;
+            }
+
+            mask &= mask - 1;
+        }
+    }
+
+    /* Scalar tail */
+    for (; i < len - 2; i++) {
+        if (data[i] == 0xD5 && data[i + 1] == 0xAA && data[i + 2] == 0xAD) {
+            return (int)i;
+        }
+    }
+
+    return -1;
+}
+
+/**
+ * @brief SSE2 Sync Byte Counter (0xFF Sequenzen)
+ */
+static int count_sync_bytes_sse2(const uint8_t* data, size_t len) {
+    __m128i pattern_ff = _mm_set1_epi8((char)0xFF);
+    int count = 0;
+
+    size_t i = 0;
+    for (; i + 16 <= len; i += 16) {
+        __m128i chunk = _mm_loadu_si128((const __m128i*)(data + i));
+        __m128i cmp = _mm_cmpeq_epi8(chunk, pattern_ff);
+        count += __builtin_popcount(_mm_movemask_epi8(cmp));
+    }
+
+    for (; i < len; i++) {
+        if (data[i] == 0xFF) count++;
+    }
+
+    return count;
+}
+#endif /* __SSE2__ */
+
+/* --- Runtime dispatch wrappers --- */
+
+static int simd_find_address_prologue(const uint8_t* data, size_t len) {
+#ifdef __SSE2__
+    if (uft_simd_has_sse2()) {
+        return find_address_prologue_sse2(data, len);
+    }
 #endif
+    return find_address_prologue_scalar(data, len);
+}
+
+static int simd_find_data_prologue(const uint8_t* data, size_t len) {
+#ifdef __SSE2__
+    if (uft_simd_has_sse2()) {
+        return find_data_prologue_sse2(data, len);
+    }
+#endif
+    return find_data_prologue_scalar(data, len);
+}
+
+static int simd_count_sync_bytes(const uint8_t* data, size_t len) {
+#ifdef __SSE2__
+    if (uft_simd_has_sse2()) {
+        return count_sync_bytes_sse2(data, len);
+    }
+#endif
+    return count_sync_bytes_scalar(data, len);
+}
 
 /*============================================================================
  * 6-AND-2 DECODING

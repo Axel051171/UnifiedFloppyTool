@@ -133,7 +133,10 @@ int atx_load(const char *filename, atx_image_t *img)
     img->density = img->header.image_type - 1;
     
     /* Seek to track data */
-    if (fseek(fp, img->header.start, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(fp, img->header.start, SEEK_SET) != 0) {
+        fclose(fp);
+        return -1;
+    }
     /* Read tracks */
     while (ftell(fp) < (long)img->header.end) {
         atx_track_header_t track_hdr;
@@ -142,7 +145,10 @@ int atx_load(const char *filename, atx_image_t *img)
         
         if (track_hdr.type == ATX_CHUNK_END) break;
         if (track_hdr.type != ATX_CHUNK_TRACK) {
-            if (fseek(fp, track_hdr.size - sizeof(track_hdr), SEEK_CUR) != 0) { /* seek error */ }
+            if (fseek(fp, track_hdr.size - sizeof(track_hdr), SEEK_CUR) != 0) {
+                fclose(fp);
+                return -1;
+            }
             continue;
         }
         
@@ -174,15 +180,27 @@ int atx_load(const char *filename, atx_image_t *img)
             /* Read sector data */
             if (sect_hdr.start_data > 0) {
                 long cur = ftell(fp);
-                if (fseek(fp, sector_data_start + sect_hdr.start_data, SEEK_SET) != 0) { /* seek error */ }
+                if (fseek(fp, sector_data_start + sect_hdr.start_data, SEEK_SET) != 0) {
+                    fclose(fp);
+                    atx_free(img);
+                    return -1;
+                }
                 int sector_size = (img->density == 2) ? 256 : 128;
                 if (fread(img->tracks[t].sectors[s].data, 1, sector_size, fp) != sector_size) { /* I/O error */ }
-                if (fseek(fp, cur, SEEK_SET) != 0) { /* seek error */ }
+                if (fseek(fp, cur, SEEK_SET) != 0) {
+                    fclose(fp);
+                    atx_free(img);
+                    return -1;
+                }
             }
         }
         
         /* Skip to end of track chunk */
-        if (fseek(fp, sector_data_start + track_hdr.size - sizeof(track_hdr) - track_hdr.header_size, SEEK_CUR) != 0) { /* seek error */ }
+        if (fseek(fp, sector_data_start + track_hdr.size - sizeof(track_hdr) - track_hdr.header_size, SEEK_CUR) != 0) {
+            fclose(fp);
+            atx_free(img);
+            return -1;
+        }
         if (t >= img->num_tracks) img->num_tracks = t + 1;
     }
     if (ferror(fp)) {

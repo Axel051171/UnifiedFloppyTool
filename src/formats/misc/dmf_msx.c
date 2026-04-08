@@ -30,9 +30,9 @@ int uft_msc_dmf_msx_open(FloppyDevice *dev, const char *path){
     if(!fp){ fp=fopen(path,"rb"); ro=true; }
     if(!fp){ free(ctx); return UFT_ENOENT; }
 
-    if (fseek(fp,0,SEEK_END) != 0) { /* seek error */ }
+    if (fseek(fp,0,SEEK_END) != 0) { fclose(fp); free(ctx); return UFT_EIO; }
     long sz = ftell(fp);
-    if (fseek(fp,0,SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(fp,0,SEEK_SET) != 0) { fclose(fp); free(ctx); return UFT_EIO; }
     /* Common DMF sizes: 720KB, 360KB */
     if(!(sz==720*1024 || sz==360*1024)){
         fclose(fp); free(ctx); return UFT_EINVAL;

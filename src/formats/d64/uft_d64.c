@@ -261,9 +261,9 @@ d64_image_t* d64_open(const char* path) {
     FILE* f = fopen(path, "rb");
     if (!f) return NULL;
     
-    if (fseek(f, 0, SEEK_END) != 0) { /* seek error */ }
+    if (fseek(f, 0, SEEK_END) != 0) { fclose(f); return NULL; }
     long size = ftell(f);
-    if (fseek(f, 0, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(f, 0, SEEK_SET) != 0) { fclose(f); return NULL; }
     if (size <= 0 || size > 10 * 1024 * 1024) {
         fclose(f);
         return NULL;

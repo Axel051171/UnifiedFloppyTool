@@ -374,9 +374,9 @@ int streaming_hash_file(const char* path, int algorithms, hash_result_t* result)
     if (!f) return -1;
     
     /* Get file size */
-    if (fseek(f, 0, SEEK_END) != 0) { /* seek error */ }
+    if (fseek(f, 0, SEEK_END) != 0) { fclose(f); return -1; }
     long size = ftell(f);
-    if (fseek(f, 0, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(f, 0, SEEK_SET) != 0) { fclose(f); return -1; }
     streaming_hash_t* sh = streaming_hash_create(algorithms);
     if (!sh) {
         fclose(f);

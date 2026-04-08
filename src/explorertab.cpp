@@ -9,10 +9,18 @@
 #include "ui_tab_explorer.h"
 #include "disk_image_validator.h"
 
+#include <uft_file_ops.h>
+#include <uft/uft_adf.h>
+#include <uft/formats/uft_fat12.h>
+#include <uft/uft_format_validate.h>
+#include <uft/uft_vfs.h>
+
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QFile>
 #include <QFileInfo>
+#include <QDir>
+#include <QDirIterator>
 #include <QDebug>
 #include <QInputDialog>
 #include <QHeaderView>
@@ -23,6 +31,12 @@
 #include <QVBoxLayout>
 #include <QDialog>
 #include <QFont>
+#include <QScrollBar>
+#include <QStringDecoder>
+
+#include <algorithm>
+#include <cstring>
+#include <cstdlib>
 
 ExplorerTab::ExplorerTab(QWidget *parent)
     : QWidget(parent)
@@ -372,10 +386,90 @@ void ExplorerTab::onImportFiles()
         QString(), tr("All Files (*)"));
     
     if (files.isEmpty()) return;
-    
-    // TODO: Implement actual file import to disk image
-    QMessageBox::information(this, tr("Import"),
-        tr("Import of %1 files to disk image is not yet implemented.").arg(files.size()));
+
+    QFileInfo imgInfo(m_imagePath);
+    QString ext = imgInfo.suffix().toLower();
+
+    int imported = 0;
+    int failed = 0;
+    QStringList errors;
+
+    for (const QString& filePath : files) {
+        QFileInfo fi(filePath);
+        QFile f(filePath);
+        if (!f.open(QIODevice::ReadOnly)) {
+            errors << tr("Cannot open: %1").arg(fi.fileName());
+            failed++;
+            continue;
+        }
+        QByteArray fileData = f.readAll();
+        f.close();
+
+        int rc = -1;
+        QByteArray nameUtf8 = fi.fileName().toUtf8();
+
+        if (ext == "d64" || ext == "d71" || ext == "d81") {
+            // Use unified inject API for Commodore formats
+            QByteArray imgPathUtf8 = m_imagePath.toUtf8();
+            uft_file_type_t ftype = UFT_FTYPE_PRG;
+            // Determine type from extension
+            QString fext = fi.suffix().toLower();
+            if (fext == "seq") ftype = UFT_FTYPE_SEQ;
+            else if (fext == "usr") ftype = UFT_FTYPE_USR;
+            else if (fext == "rel") ftype = UFT_FTYPE_REL;
+
+            rc = uft_inject_file(imgPathUtf8.constData(), nameUtf8.constData(),
+                                 filePath.toUtf8().constData(), ftype);
+        } else if (ext == "adf") {
+            // Use Amiga ADF API
+            uft_adf_volume_t *vol = uft_adf_open(m_imagePath.toUtf8().constData(), false);
+            if (vol) {
+                QString destPath = (m_currentDir == "/" ? "/" : m_currentDir) + fi.fileName();
+                rc = uft_adf_add_file(vol, filePath.toUtf8().constData(),
+                                      destPath.toUtf8().constData());
+                uft_adf_close(vol);
+            }
+        } else if (ext == "img" || ext == "ima" || ext == "st") {
+            // Use unified inject for FAT12/raw sector images
+            QByteArray imgPathUtf8 = m_imagePath.toUtf8();
+            rc = uft_inject_file(imgPathUtf8.constData(), nameUtf8.constData(),
+                                 filePath.toUtf8().constData(), UFT_FTYPE_BINARY);
+        } else if (ext == "ssd" || ext == "dsd") {
+            // BBC Micro inject via unified API
+            QByteArray imgPathUtf8 = m_imagePath.toUtf8();
+            rc = uft_inject_file(imgPathUtf8.constData(), nameUtf8.constData(),
+                                 filePath.toUtf8().constData(), UFT_FTYPE_BINARY);
+        } else {
+            errors << tr("Import not supported for .%1 format").arg(ext);
+            failed++;
+            continue;
+        }
+
+        if (rc == 0) {
+            imported++;
+        } else {
+            errors << tr("Failed to import: %1").arg(fi.fileName());
+            failed++;
+        }
+    }
+
+    // Refresh the file list
+    updateFileList();
+
+    QString msg = tr("Imported %1 of %2 file(s).").arg(imported).arg(files.size());
+    if (!errors.isEmpty()) {
+        msg += "\n\n" + tr("Errors:") + "\n" + errors.join("\n");
+    }
+
+    if (failed > 0) {
+        QMessageBox::warning(this, tr("Import"), msg);
+    } else {
+        QMessageBox::information(this, tr("Import"), msg);
+    }
+
+    if (imported > 0) {
+        emit statusMessage(tr("Imported %1 file(s) into %2").arg(imported).arg(imgInfo.fileName()));
+    }
 }
 
 void ExplorerTab::onImportFolder()
@@ -388,10 +482,98 @@ void ExplorerTab::onImportFolder()
     QString dir = QFileDialog::getExistingDirectory(this, tr("Select Folder to Import"));
     
     if (dir.isEmpty()) return;
-    
-    // TODO: Implement actual folder import to disk image
-    QMessageBox::information(this, tr("Import"),
-        tr("Import of folder to disk image is not yet implemented."));
+
+    QFileInfo imgInfo(m_imagePath);
+    QString ext = imgInfo.suffix().toLower();
+
+    // Collect all files in the folder recursively
+    QStringList filesToImport;
+    QDirIterator it(dir, QDir::Files, QDirIterator::Subdirectories);
+    while (it.hasNext()) {
+        filesToImport << it.next();
+    }
+
+    if (filesToImport.isEmpty()) {
+        QMessageBox::information(this, tr("Import"),
+            tr("The selected folder contains no files."));
+        return;
+    }
+
+    int imported = 0;
+    int failed = 0;
+    QStringList errors;
+
+    for (const QString& filePath : filesToImport) {
+        QFileInfo fi(filePath);
+        // Compute the relative path from the import folder root
+        QString relPath = QDir(dir).relativeFilePath(filePath);
+
+        int rc = -1;
+
+        if (ext == "d64" || ext == "d71" || ext == "d81") {
+            // D64 is flat (no subdirectories), use just the filename
+            QByteArray imgPathUtf8 = m_imagePath.toUtf8();
+            uft_file_type_t ftype = UFT_FTYPE_PRG;
+            QString fext = fi.suffix().toLower();
+            if (fext == "seq") ftype = UFT_FTYPE_SEQ;
+            else if (fext == "usr") ftype = UFT_FTYPE_USR;
+            else if (fext == "rel") ftype = UFT_FTYPE_REL;
+
+            rc = uft_inject_file(imgPathUtf8.constData(),
+                                 fi.fileName().toUtf8().constData(),
+                                 filePath.toUtf8().constData(), ftype);
+        } else if (ext == "adf") {
+            uft_adf_volume_t *vol = uft_adf_open(m_imagePath.toUtf8().constData(), false);
+            if (vol) {
+                // Create subdirectories as needed, then add file
+                QString destDir = m_currentDir;
+                QStringList parts = relPath.split('/');
+                // Create intermediate directories
+                for (int i = 0; i < parts.size() - 1; i++) {
+                    destDir += parts[i] + "/";
+                    // Try to create dir; ignore if it already exists
+                    uft_adf_mkdir(vol, destDir.toUtf8().constData());
+                }
+                QString destFile = destDir + parts.last();
+                rc = uft_adf_add_file(vol, filePath.toUtf8().constData(),
+                                      destFile.toUtf8().constData());
+                uft_adf_close(vol);
+            }
+        } else if (ext == "img" || ext == "ima" || ext == "st") {
+            QByteArray imgPathUtf8 = m_imagePath.toUtf8();
+            rc = uft_inject_file(imgPathUtf8.constData(),
+                                 fi.fileName().toUtf8().constData(),
+                                 filePath.toUtf8().constData(), UFT_FTYPE_BINARY);
+        } else {
+            errors << tr("Folder import not supported for .%1 format").arg(ext);
+            failed += filesToImport.size();
+            break;
+        }
+
+        if (rc == 0) {
+            imported++;
+        } else {
+            errors << tr("Failed: %1").arg(relPath);
+            failed++;
+        }
+    }
+
+    updateFileList();
+
+    QString msg = tr("Imported %1 of %2 file(s) from folder.").arg(imported).arg(filesToImport.size());
+    if (!errors.isEmpty()) {
+        msg += "\n\n" + tr("Errors:") + "\n" + errors.join("\n");
+    }
+
+    if (failed > 0) {
+        QMessageBox::warning(this, tr("Import Folder"), msg);
+    } else {
+        QMessageBox::information(this, tr("Import Folder"), msg);
+    }
+
+    if (imported > 0) {
+        emit statusMessage(tr("Imported %1 file(s) from folder into %2").arg(imported).arg(imgInfo.fileName()));
+    }
 }
 
 void ExplorerTab::onRename()
@@ -407,9 +589,70 @@ void ExplorerTab::onRename()
         return;
     }
     
-    // TODO: Implement actual rename
-    QMessageBox::information(this, tr("Rename"),
-        tr("Rename is not yet implemented."));
+    int row = selected.first()->row();
+    QString oldName = ui->tableFiles->item(row, 0)->text();
+    QString fileType = ui->tableFiles->item(row, 2)->text();
+
+    bool ok;
+    QString newName = QInputDialog::getText(this, tr("Rename"),
+        tr("New name for '%1':").arg(oldName), QLineEdit::Normal, oldName, &ok);
+
+    if (!ok || newName.isEmpty() || newName == oldName) return;
+
+    QFileInfo imgInfo(m_imagePath);
+    QString ext = imgInfo.suffix().toLower();
+    int rc = -1;
+
+    if (ext == "adf") {
+        // Amiga ADF supports rename directly
+        uft_adf_volume_t *vol = uft_adf_open(m_imagePath.toUtf8().constData(), false);
+        if (vol) {
+            QString fullPath = m_currentDir + oldName;
+            rc = uft_adf_rename(vol, fullPath.toUtf8().constData(),
+                                newName.toUtf8().constData());
+            uft_adf_close(vol);
+        }
+    } else if (ext == "img" || ext == "ima" || ext == "st") {
+        // FAT12 images: load image data, find and rename directory entry
+        QFile imgFile(m_imagePath);
+        if (imgFile.open(QIODevice::ReadWrite)) {
+            QByteArray imgData = imgFile.readAll();
+            uft_fat12_t fs;
+            memset(&fs, 0, sizeof(fs));
+            if (uft_fat12_init(&fs, reinterpret_cast<uint8_t*>(imgData.data()),
+                               static_cast<size_t>(imgData.size()), false) == 0) {
+                // FAT12 has no direct rename API, but we can delete + recreate
+                // For now, indicate limitation
+                uft_fat12_free(&fs);
+            }
+            imgFile.close();
+        }
+        // FAT12 rename is not directly available in the low-level API
+        QMessageBox::information(this, tr("Rename"),
+            tr("Rename is not yet supported for .%1 format.\n"
+               "Consider extracting, renaming, and re-importing the file.").arg(ext));
+        return;
+    } else if (ext == "d64" || ext == "d71" || ext == "d81") {
+        // Commodore DOS has no direct rename in the extract/insert API.
+        // We would need to modify the directory entry in-place.
+        QMessageBox::information(this, tr("Rename"),
+            tr("Rename is not yet supported for .%1 format.\n"
+               "Commodore DOS does not provide a standard rename API.\n"
+               "Consider extracting, renaming, and re-importing the file.").arg(ext));
+        return;
+    } else {
+        QMessageBox::information(this, tr("Rename"),
+            tr("Rename is not supported for .%1 format.").arg(ext));
+        return;
+    }
+
+    if (rc == 0) {
+        updateFileList();
+        emit statusMessage(tr("Renamed '%1' to '%2'").arg(oldName, newName));
+    } else {
+        QMessageBox::warning(this, tr("Rename"),
+            tr("Failed to rename '%1' to '%2'.").arg(oldName, newName));
+    }
 }
 
 void ExplorerTab::onDelete()
@@ -429,10 +672,88 @@ void ExplorerTab::onDelete()
         tr("Are you sure you want to delete the selected files?"),
         QMessageBox::Yes | QMessageBox::No);
     
-    if (reply == QMessageBox::Yes) {
-        // TODO: Implement actual delete
-        QMessageBox::information(this, tr("Delete"),
-            tr("Delete is not yet implemented."));
+    if (reply != QMessageBox::Yes) return;
+
+    QFileInfo imgInfo(m_imagePath);
+    QString ext = imgInfo.suffix().toLower();
+
+    // Collect unique selected rows
+    QSet<int> rows;
+    for (auto* item : selected) {
+        rows.insert(item->row());
+    }
+
+    int deleted = 0;
+    int failed = 0;
+    QStringList errors;
+
+    // Sort rows in reverse order so that indices remain valid during deletion
+    QList<int> sortedRows = rows.values();
+    std::sort(sortedRows.begin(), sortedRows.end(), std::greater<int>());
+
+    for (int row : sortedRows) {
+        QString fileName = ui->tableFiles->item(row, 0)->text();
+        QString fullPath = m_currentDir + fileName;
+        int rc = -1;
+
+        if (ext == "adf") {
+            uft_adf_volume_t *vol = uft_adf_open(m_imagePath.toUtf8().constData(), false);
+            if (vol) {
+                rc = uft_adf_delete(vol, fullPath.toUtf8().constData());
+                uft_adf_close(vol);
+            }
+        } else if (ext == "img" || ext == "ima" || ext == "st") {
+            // FAT12: load, delete, write back
+            QFile imgFile(m_imagePath);
+            if (imgFile.open(QIODevice::ReadWrite)) {
+                QByteArray imgData = imgFile.readAll();
+                uft_fat12_t fs;
+                memset(&fs, 0, sizeof(fs));
+                if (uft_fat12_init(&fs, reinterpret_cast<uint8_t*>(imgData.data()),
+                                   static_cast<size_t>(imgData.size()), false) == 0) {
+                    rc = uft_fat12_delete(&fs, fullPath.toUtf8().constData());
+                    if (rc == 0 && fs.modified) {
+                        imgFile.seek(0);
+                        imgFile.write(reinterpret_cast<const char*>(fs.data),
+                                      static_cast<qint64>(fs.data_size));
+                    }
+                    uft_fat12_free(&fs);
+                }
+                imgFile.close();
+            }
+        } else if (ext == "d64" || ext == "d71" || ext == "d81") {
+            // Commodore: no direct delete in the file ops API; mark as deleted
+            // Use the low-level d64_inject approach: not available.
+            // Show limitation message for first failure.
+            errors << tr("Delete not directly supported for .%1 format").arg(ext);
+            failed++;
+            continue;
+        } else {
+            errors << tr("Delete not supported for .%1 format").arg(ext);
+            failed++;
+            continue;
+        }
+
+        if (rc == 0) {
+            deleted++;
+        } else {
+            errors << tr("Failed to delete: %1").arg(fileName);
+            failed++;
+        }
+    }
+
+    updateFileList();
+
+    if (deleted > 0) {
+        emit statusMessage(tr("Deleted %1 file(s)").arg(deleted));
+    }
+
+    if (failed > 0) {
+        QString msg = tr("Deleted %1 file(s), %2 failed.").arg(deleted).arg(failed);
+        if (!errors.isEmpty()) {
+            msg += "\n\n" + errors.join("\n");
+        }
+        QMessageBox::warning(this, tr("Delete"), msg);
     }
 }
 
@@ -447,10 +768,63 @@ void ExplorerTab::onNewFolder()
     QString name = QInputDialog::getText(this, tr("New Folder"),
         tr("Folder name:"), QLineEdit::Normal, tr("New Folder"), &ok);
     
-    if (ok && !name.isEmpty()) {
-        // TODO: Implement actual folder creation
+    if (!ok || name.isEmpty()) return;
+
+    QFileInfo imgInfo(m_imagePath);
+    QString ext = imgInfo.suffix().toLower();
+    int rc = -1;
+
+    if (ext == "adf") {
+        // Amiga FFS/OFS supports directories
+        uft_adf_volume_t *vol = uft_adf_open(m_imagePath.toUtf8().constData(), false);
+        if (vol) {
+            QString dirPath = m_currentDir + name;
+            rc = uft_adf_mkdir(vol, dirPath.toUtf8().constData());
+            uft_adf_close(vol);
+        }
+    } else if (ext == "img" || ext == "ima" || ext == "st") {
+        // FAT12 supports directories
+        QFile imgFile(m_imagePath);
+        if (imgFile.open(QIODevice::ReadWrite)) {
+            QByteArray imgData = imgFile.readAll();
+            uft_fat12_t fs;
+            memset(&fs, 0, sizeof(fs));
+            if (uft_fat12_init(&fs, reinterpret_cast<uint8_t*>(imgData.data()),
+                               static_cast<size_t>(imgData.size()), false) == 0) {
+                QString dirPath = m_currentDir + name;
+                rc = uft_fat12_create_entry(&fs, dirPath.toUtf8().constData(),
+                                            UFT_FAT12_ATTR_DIRECTORY);
+                if (rc == 0 && fs.modified) {
+                    imgFile.seek(0);
+                    imgFile.write(reinterpret_cast<const char*>(fs.data),
+                                  static_cast<qint64>(fs.data_size));
+                }
+                uft_fat12_free(&fs);
+            }
+            imgFile.close();
+        }
+    } else if (ext == "d64" || ext == "d71") {
         QMessageBox::information(this, tr("New Folder"),
-            tr("Folder creation is not yet implemented."));
+            tr("Commodore D64/D71 does not support directories."));
+        return;
+    } else if (ext == "d81") {
+        // D81 supports partitions/subdirectories in theory, but the API
+        // does not provide direct support yet.
+        QMessageBox::information(this, tr("New Folder"),
+            tr("Directory creation is not yet supported for D81 format."));
+        return;
+    } else {
+        QMessageBox::information(this, tr("New Folder"),
+            tr("Directory creation is not supported for .%1 format.").arg(ext));
+        return;
+    }
+
+    if (rc == 0) {
+        updateFileList();
+        emit statusMessage(tr("Created folder '%1'").arg(name));
+    } else {
+        QMessageBox::warning(this, tr("New Folder"),
+            tr("Failed to create folder '%1'.").arg(name));
     }
 }
 
@@ -468,9 +842,117 @@ void ExplorerTab::onValidate()
         return;
     }
     
-    // TODO: Implement disk validation
-    QMessageBox::information(this, tr("Validate"),
-        tr("Disk validation is not yet implemented."));
+    QFileInfo imgInfo(m_imagePath);
+    QString ext = imgInfo.suffix().toLower();
+
+    // Read the entire image into memory for validation
+    QFile imgFile(m_imagePath);
+    if (!imgFile.open(QIODevice::ReadOnly)) {
+        QMessageBox::warning(this, tr("Validate"),
+            tr("Cannot open image file for validation."));
+        return;
+    }
+    QByteArray imgData = imgFile.readAll();
+    imgFile.close();
+
+    const uint8_t *data = reinterpret_cast<const uint8_t*>(imgData.constData());
+    size_t dataSize = static_cast<size_t>(imgData.size());
+
+    uft_validation_result_t result;
+    memset(&result, 0, sizeof(result));
+
+    bool supported = true;
+    uft_error_t err = UFT_SUCCESS;
+
+    if (ext == "d64" || ext == "d71") {
+        err = uft_validate_d64(data, dataSize, UFT_VALIDATE_THOROUGH, &result);
+    } else if (ext == "adf") {
+        err = uft_validate_adf(data, dataSize, UFT_VALIDATE_THOROUGH, &result);
+    } else if (ext == "scp") {
+        err = uft_validate_scp(data, dataSize, UFT_VALIDATE_THOROUGH, &result);
+    } else if (ext == "g64") {
+        err = uft_validate_g64(data, dataSize, UFT_VALIDATE_THOROUGH, &result);
+    } else {
+        supported = false;
+    }
+    Q_UNUSED(err);
+
+    if (!supported) {
+        QMessageBox::information(this, tr("Validate"),
+            tr("Validation is not supported for .%1 format.").arg(ext));
+        return;
+    }
+
+    // Build the report
+    QString report;
+    report += tr("Disk Validation Report\n");
+    report += tr("==============================================\n\n");
+    report += tr("Image: %1\n").arg(imgInfo.fileName());
+    report += tr("Format: %1\n").arg(ext.toUpper());
+    report += tr("Size: %1\n\n").arg(formatSize(imgData.size()));
+
+    report += tr("Overall: %1\n").arg(result.valid ? tr("VALID") : tr("ERRORS FOUND"));
+    report += tr("Score: %1/100\n\n").arg(result.score);
+
+    report += tr("Sectors: %1 total, %2 bad, %3 empty\n")
+        .arg(result.total_sectors).arg(result.bad_sectors).arg(result.empty_sectors);
+    report += tr("Checksum errors: %1\n\n").arg(result.checksum_errors);
+
+    // Format-specific summary
+    if (ext == "d64" || ext == "d71") {
+        report += tr("BAM valid: %1\n").arg(result.d64.bam_valid ? tr("Yes") : tr("No"));
+        report += tr("Used blocks: %1\n").arg(result.d64.used_blocks);
+        report += tr("Free blocks: %1\n").arg(result.d64.free_blocks);
+        report += tr("Directory entries: %1\n").arg(result.d64.directory_entries);
+    } else if (ext == "adf") {
+        report += tr("Boot block valid: %1\n").arg(result.adf.bootblock_valid ? tr("Yes") : tr("No"));
+        report += tr("Root block valid: %1\n").arg(result.adf.rootblock_valid ? tr("Yes") : tr("No"));
+        report += tr("Used blocks: %1\n").arg(result.adf.used_blocks);
+        report += tr("Free blocks: %1\n").arg(result.adf.free_blocks);
+    }
+
+    if (result.issue_count > 0) {
+        report += tr("\nIssues (%1):\n").arg(result.issue_count);
+        report += tr("----------------------------------------------\n");
+        for (int i = 0; i < result.issue_count && i < 64; i++) {
+            const uft_validation_issue_t& issue = result.issues[i];
+            QString severity;
+            switch (issue.severity) {
+                case 0: severity = tr("INFO"); break;
+                case 1: severity = tr("WARN"); break;
+                case 2: severity = tr("ERROR"); break;
+                case 3: severity = tr("CRITICAL"); break;
+                default: severity = tr("???"); break;
+            }
+            report += tr("[%1] %2").arg(severity, QString::fromUtf8(issue.message));
+            if (issue.track >= 0) {
+                report += tr(" (track %1").arg(issue.track);
+                if (issue.sector >= 0) report += tr(", sector %1").arg(issue.sector);
+                report += ")";
+            }
+            report += "\n";
+        }
+    } else {
+        report += tr("\nNo issues found.\n");
+    }
+
+    // Show in a dialog with a monospace text view
+    QDialog *dlg = new QDialog(this);
+    dlg->setWindowTitle(tr("Disk Validation: %1").arg(imgInfo.fileName()));
+    dlg->setMinimumSize(600, 450);
+    dlg->setAttribute(Qt::WA_DeleteOnClose);
+
+    QVBoxLayout *layout = new QVBoxLayout(dlg);
+    QTextEdit *textView = new QTextEdit(dlg);
+    textView->setReadOnly(true);
+    textView->setFont(QFont("Monospace", 9));
+    textView->setPlainText(report);
+    layout->addWidget(textView);
+
+    dlg->show();
+
+    emit statusMessage(tr("Validation complete: %1 - Score %2/100, %3 issue(s)")
+        .arg(imgInfo.fileName()).arg(result.score).arg(result.issue_count));
 }
 
 // ============================================================================
@@ -553,15 +1035,127 @@ void ExplorerTab::onViewHex()
     hexView->setFont(QFont("Monospace", 9));
     layout->addWidget(hexView);
     
-    // TODO: Read actual file data from disk image
-    // For now, show placeholder
+    // Extract file data from disk image
+    QByteArray fileData;
+    bool extracted = false;
+
+    QFileInfo imgInfo(m_imagePath);
+    QString ext = imgInfo.suffix().toLower();
+
+    if (ext == "d64" || ext == "d71" || ext == "d81") {
+        uint8_t *outData = nullptr;
+        size_t outSize = 0;
+        QFile imgFile(m_imagePath);
+        if (imgFile.open(QIODevice::ReadOnly)) {
+            QByteArray imgBytes = imgFile.readAll();
+            imgFile.close();
+            if (d64_extract_file(reinterpret_cast<const uint8_t*>(imgBytes.constData()),
+                                 static_cast<size_t>(imgBytes.size()),
+                                 fileName.toUtf8().constData(),
+                                 &outData, &outSize) == 0 && outData) {
+                fileData = QByteArray(reinterpret_cast<const char*>(outData),
+                                      static_cast<int>(outSize));
+                free(outData);
+                extracted = true;
+            }
+        }
+    } else if (ext == "adf") {
+        uft_adf_volume_t *vol = uft_adf_open(m_imagePath.toUtf8().constData(), true);
+        if (vol) {
+            uft_adf_entry_t entry;
+            QString fullPath = m_currentDir + fileName;
+            if (uft_adf_lookup(vol, fullPath.toUtf8().constData(), &entry) == 0 && !entry.is_dir) {
+                fileData.resize(static_cast<int>(entry.size));
+                ssize_t bytesRead = uft_adf_read_file(vol, entry.block, 0,
+                    fileData.data(), static_cast<size_t>(entry.size));
+                if (bytesRead > 0) {
+                    fileData.resize(static_cast<int>(bytesRead));
+                    extracted = true;
+                }
+            }
+            uft_adf_close(vol);
+        }
+    } else if (ext == "img" || ext == "ima" || ext == "st") {
+        uint8_t *outData = nullptr;
+        size_t outSize = 0;
+        QFile imgFile(m_imagePath);
+        if (imgFile.open(QIODevice::ReadOnly)) {
+            QByteArray imgBytes = imgFile.readAll();
+            imgFile.close();
+            if (fat12_extract_file(reinterpret_cast<const uint8_t*>(imgBytes.constData()),
+                                   static_cast<size_t>(imgBytes.size()),
+                                   fileName.toUtf8().constData(),
+                                   &outData, &outSize) == 0 && outData) {
+                fileData = QByteArray(reinterpret_cast<const char*>(outData),
+                                      static_cast<int>(outSize));
+                free(outData);
+                extracted = true;
+            }
+        }
+    } else if (ext == "ssd" || ext == "dsd") {
+        uint8_t *outData = nullptr;
+        size_t outSize = 0;
+        QFile imgFile(m_imagePath);
+        if (imgFile.open(QIODevice::ReadOnly)) {
+            QByteArray imgBytes = imgFile.readAll();
+            imgFile.close();
+            if (ssd_extract_file(reinterpret_cast<const uint8_t*>(imgBytes.constData()),
+                                 static_cast<size_t>(imgBytes.size()),
+                                 fileName.toUtf8().constData(),
+                                 &outData, &outSize) == 0 && outData) {
+                fileData = QByteArray(reinterpret_cast<const char*>(outData),
+                                      static_cast<int>(outSize));
+                free(outData);
+                extracted = true;
+            }
+        }
+    }
+
+    // Build hex dump
     QString hexText;
-    hexText += tr("=== Hex View: %1 ===\n\n").arg(fileName);
-    hexText += tr("Offset    00 01 02 03 04 05 06 07  08 09 0A 0B 0C 0D 0E 0F   ASCII\n");
-    hexText += tr("--------  -----------------------------------------------   ----------------\n");
-    hexText += tr("00000000  XX XX XX XX XX XX XX XX  XX XX XX XX XX XX XX XX   ................\n");
-    hexText += tr("\n(File reading not yet implemented)\n");
-    
+    if (!extracted || fileData.isEmpty()) {
+        hexText = tr("=== Hex View: %1 ===\n\n"
+                     "Could not extract file data from disk image.\n"
+                     "Format: .%2\n").arg(fileName, ext);
+    } else {
+        hexText += tr("=== Hex View: %1 (%2 bytes) ===\n\n").arg(fileName).arg(fileData.size());
+        hexText += tr("Offset    00 01 02 03 04 05 06 07  08 09 0A 0B 0C 0D 0E 0F   ASCII\n");
+        hexText += tr("--------  -----------------------------------------------   ----------------\n");
+
+        const int bytesPerLine = 16;
+        int totalBytes = fileData.size();
+        // Limit display to first 64KB to avoid performance issues
+        int displayLimit = qMin(totalBytes, 65536);
+
+        for (int offset = 0; offset < displayLimit; offset += bytesPerLine) {
+            // Offset column
+            QString line = QString("%1  ").arg(offset, 8, 16, QChar('0'));
+
+            // Hex columns
+            QString hexPart;
+            QString asciiPart;
+            for (int i = 0; i < bytesPerLine; i++) {
+                if (i == 8) hexPart += " ";
+                if (offset + i < totalBytes) {
+                    uint8_t byte = static_cast<uint8_t>(fileData[offset + i]);
+                    hexPart += QString("%1 ").arg(byte, 2, 16, QChar('0')).toUpper();
+                    asciiPart += (byte >= 0x20 && byte < 0x7F) ? QChar(byte) : QChar('.');
+                } else {
+                    hexPart += "   ";
+                    asciiPart += " ";
+                }
+            }
+
+            line += hexPart + "  " + asciiPart + "\n";
+            hexText += line;
+        }
+
+        if (totalBytes > displayLimit) {
+            hexText += tr("\n... (showing first %1 of %2 bytes)\n")
+                .arg(displayLimit).arg(totalBytes);
+        }
+    }
+
     hexView->setPlainText(hexText);
     dlg->show();
 }
@@ -585,9 +1179,120 @@ void ExplorerTab::onViewText()
     textView->setReadOnly(true);
     layout->addWidget(textView);
     
-    // TODO: Read actual file data from disk image
-    textView->setPlainText(tr("(Text viewing not yet implemented for: %1)").arg(fileName));
-    
+    // Extract file data from disk image
+    QByteArray fileData;
+    bool extracted = false;
+
+    QFileInfo imgInfo(m_imagePath);
+    QString ext = imgInfo.suffix().toLower();
+
+    if (ext == "d64" || ext == "d71" || ext == "d81") {
+        uint8_t *outData = nullptr;
+        size_t outSize = 0;
+        QFile imgFile(m_imagePath);
+        if (imgFile.open(QIODevice::ReadOnly)) {
+            QByteArray imgBytes = imgFile.readAll();
+            imgFile.close();
+            if (d64_extract_file(reinterpret_cast<const uint8_t*>(imgBytes.constData()),
+                                 static_cast<size_t>(imgBytes.size()),
+                                 fileName.toUtf8().constData(),
+                                 &outData, &outSize) == 0 && outData) {
+                fileData = QByteArray(reinterpret_cast<const char*>(outData),
+                                      static_cast<int>(outSize));
+                free(outData);
+                extracted = true;
+            }
+        }
+    } else if (ext == "adf") {
+        uft_adf_volume_t *vol = uft_adf_open(m_imagePath.toUtf8().constData(), true);
+        if (vol) {
+            uft_adf_entry_t entry;
+            QString fullPath = m_currentDir + fileName;
+            if (uft_adf_lookup(vol, fullPath.toUtf8().constData(), &entry) == 0 && !entry.is_dir) {
+                fileData.resize(static_cast<int>(entry.size));
+                ssize_t bytesRead = uft_adf_read_file(vol, entry.block, 0,
+                    fileData.data(), static_cast<size_t>(entry.size));
+                if (bytesRead > 0) {
+                    fileData.resize(static_cast<int>(bytesRead));
+                    extracted = true;
+                }
+            }
+            uft_adf_close(vol);
+        }
+    } else if (ext == "img" || ext == "ima" || ext == "st") {
+        uint8_t *outData = nullptr;
+        size_t outSize = 0;
+        QFile imgFile(m_imagePath);
+        if (imgFile.open(QIODevice::ReadOnly)) {
+            QByteArray imgBytes = imgFile.readAll();
+            imgFile.close();
+            if (fat12_extract_file(reinterpret_cast<const uint8_t*>(imgBytes.constData()),
+                                   static_cast<size_t>(imgBytes.size()),
+                                   fileName.toUtf8().constData(),
+                                   &outData, &outSize) == 0 && outData) {
+                fileData = QByteArray(reinterpret_cast<const char*>(outData),
+                                      static_cast<int>(outSize));
+                free(outData);
+                extracted = true;
+            }
+        }
+    } else if (ext == "ssd" || ext == "dsd") {
+        uint8_t *outData = nullptr;
+        size_t outSize = 0;
+        QFile imgFile(m_imagePath);
+        if (imgFile.open(QIODevice::ReadOnly)) {
+            QByteArray imgBytes = imgFile.readAll();
+            imgFile.close();
+            if (ssd_extract_file(reinterpret_cast<const uint8_t*>(imgBytes.constData()),
+                                 static_cast<size_t>(imgBytes.size()),
+                                 fileName.toUtf8().constData(),
+                                 &outData, &outSize) == 0 && outData) {
+                fileData = QByteArray(reinterpret_cast<const char*>(outData),
+                                      static_cast<int>(outSize));
+                free(outData);
+                extracted = true;
+            }
+        }
+    }
+
+    if (!extracted || fileData.isEmpty()) {
+        textView->setPlainText(tr("Could not extract file data for: %1\n"
+                                  "Format: .%2").arg(fileName, ext));
+    } else {
+        // Convert to text, replacing non-printable characters
+        // For C64 PETSCII content, do a basic conversion
+        QString text;
+        if (ext == "d64" || ext == "d71" || ext == "d81") {
+            // Basic PETSCII to ASCII conversion for Commodore files
+            for (int i = 0; i < fileData.size(); i++) {
+                uint8_t ch = static_cast<uint8_t>(fileData[i]);
+                if (ch == 0x0D) {
+                    text += '\n';  // Commodore CR -> LF
+                } else if (ch >= 0x41 && ch <= 0x5A) {
+                    text += QChar(ch + 0x20);  // Uppercase PETSCII -> lowercase
+                } else if (ch >= 0xC1 && ch <= 0xDA) {
+                    text += QChar(ch - 0x80);  // Shifted uppercase
+                } else if (ch >= 0x20 && ch < 0x7F) {
+                    text += QChar(ch);
+                } else {
+                    text += QChar(0xB7);  // Middle dot for non-printable
+                }
+            }
+        } else {
+            // Standard text conversion: try UTF-8, fall back to Latin-1
+            QStringDecoder utf8Decoder(QStringDecoder::Utf8);
+            QString decoded = utf8Decoder(fileData);
+            if (utf8Decoder.hasError()) {
+                text = QString::fromLatin1(fileData);
+            } else {
+                text = decoded;
+            }
+        }
+
+        textView->setFont(QFont("Monospace", 9));
+        textView->setPlainText(text);
+    }
+
     dlg->show();
 }
 

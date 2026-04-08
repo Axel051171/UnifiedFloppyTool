@@ -24,6 +24,7 @@
 #include <QVariant>
 #include <QHash>
 #include <QUndoStack>
+#include <QMutex>
 
 extern "C" {
     struct uft_params;
@@ -306,6 +307,9 @@ private:
     
     /* Backend pointer */
     uft_params_t *m_backendParams = nullptr;
+
+    /* Thread safety: protects all member variables from concurrent access */
+    mutable QMutex m_mutex;
 };
 
 #endif /* UFT_PARAMETER_MODEL_H */

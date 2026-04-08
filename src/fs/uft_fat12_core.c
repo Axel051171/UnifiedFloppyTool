@@ -483,9 +483,9 @@ int uft_fat_open_file(uft_fat_ctx_t *ctx, const char *filename) {
     if (!f) return UFT_FAT_ERR_IO;
     
     /* Get file size */
-    if (fseek(f, 0, SEEK_END) != 0) { /* seek error */ }
+    if (fseek(f, 0, SEEK_END) != 0) { fclose(f); return UFT_FAT_ERR_IO; }
     long size = ftell(f);
-    if (fseek(f, 0, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(f, 0, SEEK_SET) != 0) { fclose(f); return UFT_FAT_ERR_IO; }
     if (size <= 0 || size > 10 * 1024 * 1024) {
         fclose(f);
         return UFT_FAT_ERR_INVALID;

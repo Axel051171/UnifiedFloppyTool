@@ -294,9 +294,9 @@ static uft_error_t hfe_open(uft_disk_t* disk, const char* path, bool read_only) 
     }
     
     // Dateigröße ermitteln
-    if (fseek(f, 0, SEEK_END) != 0) { /* seek error */ }
+    if (fseek(f, 0, SEEK_END) != 0) { fclose(f); return UFT_ERROR_FILE_SEEK; }
     size_t file_size = (size_t)ftell(f);
-    if (fseek(f, 0, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(f, 0, SEEK_SET) != 0) { fclose(f); return UFT_ERROR_FILE_SEEK; }
     // Header lesen
     hfe_header_t header;
     if (fread(&header, sizeof(header), 1, f) != 1) {

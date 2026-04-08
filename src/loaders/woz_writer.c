@@ -359,15 +359,15 @@ int woz_save(const woz_image_t *img, const char *filename)
     }
     
     /* Calculate and write CRC */
-    if (fseek(fp, 0, SEEK_END) != 0) { /* seek error */ }
+    if (fseek(fp, 0, SEEK_END) != 0) { fclose(fp); return UFT_ERR_IO; }
     size_t file_size = ftell(fp);
-    if (fseek(fp, 12, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(fp, 12, SEEK_SET) != 0) { fclose(fp); return UFT_ERR_IO; }
     uint8_t *buffer = malloc(file_size - 12);
     if (fread(buffer, 1, file_size - 12, fp) != file_size - 12) { /* I/O error */ }
     uint32_t crc = woz_crc32(buffer, file_size - 12);
     free(buffer);
-    
-    if (fseek(fp, crc_pos, SEEK_SET) != 0) { /* seek error */ }
+
+    if (fseek(fp, crc_pos, SEEK_SET) != 0) { fclose(fp); return UFT_ERR_IO; }
     if (fwrite(&crc, 4, 1, fp) != 1) { /* I/O error */ }
     if (ferror(fp)) {
         fclose(fp);

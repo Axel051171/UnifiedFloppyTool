@@ -353,7 +353,7 @@ int A2R_libLoad_DiskFile(LIBFLUX_IMGLDR * imgldr_ctx,LIBFLUX_FLOPPY * floppydisk
 					while( str_offset < a2r_chunkh.chunk_size - 1)
 					{
 						libflux_fread(&capture, sizeof(a2r_capture), f);
-						if (fseek(f,capture.data_length,SEEK_CUR) != 0) { /* seek error */ }
+						if (fseek(f,capture.data_length,SEEK_CUR) != 0) { libflux_fclose(f); return LIBFLUX_ACCESSERROR; }
 						if(max_location < capture.location)
 							max_location = capture.location;
 
@@ -361,7 +361,7 @@ int A2R_libLoad_DiskFile(LIBFLUX_IMGLDR * imgldr_ctx,LIBFLUX_FLOPPY * floppydisk
 						str_offset += capture.data_length;
 					}
 
-					if (fseek(f,stream_start_pos,SEEK_SET) != 0) { /* seek error */ }
+					if (fseek(f,stream_start_pos,SEEK_SET) != 0) { libflux_fclose(f); return LIBFLUX_ACCESSERROR; }
 					maxside = nbside;
 					maxtrack = max_location / nbside;
 
@@ -536,7 +536,7 @@ int A2R_libLoad_DiskFile(LIBFLUX_IMGLDR * imgldr_ctx,LIBFLUX_FLOPPY * floppydisk
 					}
 				}
 
-				if (fseek(f,foffset + sizeof(a2r_chunk_header) + a2r_chunkh.chunk_size, SEEK_SET) != 0) { /* seek error */ }
+				if (fseek(f,foffset + sizeof(a2r_chunk_header) + a2r_chunkh.chunk_size, SEEK_SET) != 0) { libflux_fclose(f); return LIBFLUX_ACCESSERROR; }
 				foffset = ftell(f);
 
 				imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"Scan offset : %d",foffset);

@@ -20,6 +20,8 @@
 #include <stdbool.h>
 #include <math.h>
 
+#include "uft/uft_simd.h"
+
 #ifdef __SSE2__
 #include <emmintrin.h>
 #endif
@@ -71,15 +73,27 @@ typedef struct {
  * SIMD-OPTIMIZED BYTE COMPARISON
  *============================================================================*/
 
-#ifdef __SSE2__
 /**
- * @brief SIMD-optimized memory comparison (16 bytes at a time)
+ * @brief Scalar memory comparison
  * @return Number of matching bytes
  */
-static inline int simd_memcmp_count(const uint8_t* a, const uint8_t* b, size_t len) {
+static inline int memcmp_count_scalar(const uint8_t* a, const uint8_t* b, size_t len) {
+    int matches = 0;
+    for (size_t i = 0; i < len; i++) {
+        if (a[i] == b[i]) matches++;
+    }
+    return matches;
+}
+
+#ifdef __SSE2__
+/**
+ * @brief SSE2-optimized memory comparison (16 bytes at a time)
+ * @return Number of matching bytes
+ */
+static inline int memcmp_count_sse2(const uint8_t* a, const uint8_t* b, size_t len) {
     int matches = 0;
     size_t i = 0;
-    
+
     // Process 16 bytes at a time with SSE2
     for (; i + 16 <= len; i += 16) {
         __m128i va = _mm_loadu_si128((const __m128i*)(a + i));
@@ -88,23 +102,28 @@ static inline int simd_memcmp_count(const uint8_t* a, const uint8_t* b, size_t l
         int mask = _mm_movemask_epi8(cmp);
         matches += __builtin_popcount(mask);
     }
-    
+
     // Remainder
     for (; i < len; i++) {
         if (a[i] == b[i]) matches++;
     }
-    
-    return matches;
-}
-#else
-static inline int simd_memcmp_count(const uint8_t* a, const uint8_t* b, size_t len) {
-    int matches = 0;
-    for (size_t i = 0; i < len; i++) {
-        if (a[i] == b[i]) matches++;
-    }
+
     return matches;
 }
 #endif
+
+/**
+ * @brief SIMD-dispatched memory comparison with runtime CPU detection
+ * @return Number of matching bytes
+ */
+static inline int simd_memcmp_count(const uint8_t* a, const uint8_t* b, size_t len) {
+#ifdef __SSE2__
+    if (uft_simd_has_sse2()) {
+        return memcmp_count_sse2(a, b, len);
+    }
+#endif
+    return memcmp_count_scalar(a, b, len);
+}
 
 /*============================================================================
  * CONFIDENCE SCORING - SAFE STRING OPERATIONS

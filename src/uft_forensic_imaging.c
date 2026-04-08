@@ -7,6 +7,7 @@
  */
 
 #include "uft/uft_forensic_imaging.h"
+#include "uft/uft_simd.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -36,7 +37,7 @@
 #endif
 
 /*===========================================================================
- * SIMD DETECTION
+ * SIMD DETECTION - delegates to central uft_cpu_detect()
  *===========================================================================*/
 
 static uft_fi_cpu_caps_t g_cpu_caps = {0};
@@ -44,35 +45,13 @@ static bool g_cpu_caps_detected = false;
 
 void uft_fi_detect_cpu_caps(uft_fi_cpu_caps_t *caps) {
     if (!caps) return;
-    
-#if defined(__x86_64__) || defined(__i386__)
-    uint32_t eax, ebx, ecx, edx;
-    
-    /* Check for CPUID support and get features */
-    __asm__ volatile(
-        "cpuid"
-        : "=a"(eax), "=b"(ebx), "=c"(ecx), "=d"(edx)
-        : "a"(1)
-    );
-    
-    caps->has_sse2 = (edx & (1 << 26)) != 0;
-    
-    /* Check for AVX2 */
-    if (eax >= 7) {
-        __asm__ volatile(
-            "cpuid"
-            : "=a"(eax), "=b"(ebx), "=c"(ecx), "=d"(edx)
-            : "a"(7), "c"(0)
-        );
-        caps->has_avx2 = (ebx & (1 << 5)) != 0;
-    }
-#elif defined(__arm__) || defined(__aarch64__)
-    caps->has_neon = true;  /* Most ARM64 has NEON */
-#ifdef __ARM_FEATURE_SVE
-    caps->has_sve = true;
-#endif
-#endif
-    
+
+    /* Delegate to the central CPU detection in uft_simd.c */
+    caps->has_sse2 = uft_simd_has_sse2();
+    caps->has_avx2 = uft_simd_has_avx2();
+    caps->has_neon = uft_simd_has_neon();
+    caps->has_sve  = false;  /* SVE not yet tracked by central detection */
+
     g_cpu_caps = *caps;
     g_cpu_caps_detected = true;
 }

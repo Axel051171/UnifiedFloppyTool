@@ -39,9 +39,9 @@ int uft_cbm_crt_open(FloppyDevice *dev,const char*path){
         fclose(fp); free(ctx); return UFT_EINVAL;
     }
 
-    if (fseek(fp,0,SEEK_END) != 0) { /* seek error */ }
+    if (fseek(fp,0,SEEK_END) != 0) { fclose(fp); free(ctx); return UFT_EIO; }
     ctx->size=(uint32_t)ftell(fp);
-    if (fseek(fp,0,SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(fp,0,SEEK_SET) != 0) { fclose(fp); free(ctx); return UFT_EIO; }
     ctx->fp=fp;
 
     dev->tracks=0;
@@ -69,7 +69,7 @@ int uft_cbm_crt_read_sector(FloppyDevice *dev,uint32_t t,uint32_t h,uint32_t s,u
     if(!dev||!dev->internal_ctx||!buf) return UFT_EINVAL;
     CRTCtr *ctx=dev->internal_ctx;
     if(s>=ctx->size) return UFT_EINVAL;
-    if (fseek(ctx->fp,(long)s,SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(ctx->fp,(long)s,SEEK_SET) != 0) return UFT_EIO;
     *buf=(uint8_t)fgetc(ctx->fp);
     return UFT_OK;
 }

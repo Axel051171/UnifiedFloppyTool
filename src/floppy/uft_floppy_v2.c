@@ -291,9 +291,9 @@ int uft_disk_open_file(uft_disk_t *disk, const char *filename)
         return -1;
     }
     
-    if (fseek(f, 0, SEEK_END) != 0) { /* seek error */ }
+    if (fseek(f, 0, SEEK_END) != 0) { fclose(f); return -1; }
     size_t size = ftell(f);
-    if (fseek(f, 0, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(f, 0, SEEK_SET) != 0) { fclose(f); return -1; }
     uint8_t *data = malloc(size);
     if (!data) {
         fclose(f);

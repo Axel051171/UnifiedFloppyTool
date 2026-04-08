@@ -1,5 +1,7 @@
 #include "hardwaremanager.h"
 
+#include <QDebug>
+
 // All hardware providers
 #include "mockhardwareprovider.h"
 #include "greaseweazlehardwareprovider.h"
@@ -12,6 +14,30 @@
 #include "catweaselhardwareprovider.h"
 #include "adfcopyhardwareprovider.h"
 
+/**
+ * @brief RAII guard that sets m_operationActive for the duration of a scope.
+ *
+ * On construction it locks m_hwMutex, sets m_operationActive = true, then
+ * unlocks. On destruction it locks again, clears the flag, and unlocks.
+ */
+class HwOperationGuard {
+public:
+    explicit HwOperationGuard(QMutex &mutex, bool &flag)
+        : m_mutex(mutex), m_flag(flag)
+    {
+        QMutexLocker lk(&m_mutex);
+        m_flag = true;
+    }
+    ~HwOperationGuard()
+    {
+        QMutexLocker lk(&m_mutex);
+        m_flag = false;
+    }
+private:
+    QMutex &m_mutex;
+    bool   &m_flag;
+};
+
 HardwareManager::HardwareManager(QObject *parent)
     : QObject(parent)
 {
@@ -19,10 +45,18 @@ HardwareManager::HardwareManager(QObject *parent)
     setProvider(std::make_unique<GreaseweazleHardwareProvider>(this));
 }
 
-void HardwareManager::setHardwareType(const QString &hardwareType)
+bool HardwareManager::setHardwareType(const QString &hardwareType)
 {
+    {
+        QMutexLocker locker(&m_hwMutex);
+        if (m_operationActive) {
+            qWarning() << "HardwareManager: cannot change hardware type while operation is active";
+            return false;
+        }
+    }
+
     m_hardwareType = hardwareType;
-    
+
     // Switch provider based on type
     if (hardwareType.contains("Mock", Qt::CaseInsensitive) ||
         hardwareType.contains("Test", Qt::CaseInsensitive)) {
@@ -45,14 +79,24 @@ void HardwareManager::setHardwareType(const QString &hardwareType)
         setProvider(std::make_unique<Xum1541HardwareProvider>(this));
     } else if (hardwareType.contains("Catweasel", Qt::CaseInsensitive)) {
         setProvider(std::make_unique<CatweaselHardwareProvider>(this));
-    } else if (hardwareType.contains("ADF", Qt::CaseInsensitive)) {
+    } else if (hardwareType.contains("ADF-Copy", Qt::CaseInsensitive) ||
+               hardwareType.contains("ADFCopy", Qt::CaseInsensitive) ||
+               hardwareType.contains("ADF-Drive", Qt::CaseInsensitive) ||
+               hardwareType.contains("adfcopy", Qt::CaseInsensitive)) {
         setProvider(std::make_unique<ADFCopyHardwareProvider>(this));
     } else {
         // Default to Greaseweazle for unknown types
         setProvider(std::make_unique<GreaseweazleHardwareProvider>(this));
     }
-    
+
     applySettingsToProvider();
+    return true;
+}
+
+bool HardwareManager::isOperationActive() const
+{
+    QMutexLocker locker(&m_hwMutex);
+    return m_operationActive;
 }
 
 void HardwareManager::setDevicePath(const QString &devicePath)
@@ -74,6 +118,7 @@ void HardwareManager::setBaudRate(int baudRate)
 void HardwareManager::detectDrive()
 {
     if (m_provider) {
+        HwOperationGuard guard(m_hwMutex, m_operationActive);
         m_provider->detectDrive();
     }
 }
@@ -81,6 +126,7 @@ void HardwareManager::detectDrive()
 void HardwareManager::autoDetectDevice()
 {
     if (m_provider) {
+        HwOperationGuard guard(m_hwMutex, m_operationActive);
         m_provider->autoDetectDevice();
     }
 }

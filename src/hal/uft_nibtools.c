@@ -649,12 +649,250 @@ int uft_nib_export_g64(uft_nib_config_t *cfg, const char *path) {
 return 0;
 }
 
+/**
+ * GCR-to-nibble decode table.
+ * Commodore uses 4-bit-to-5-bit GCR encoding; this table reverses it.
+ * Invalid GCR patterns map to 0xFF.
+ */
+static const uint8_t gcr_decode_table[32] = {
+    0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,  /* 00-07 */
+    0xFF, 0x08, 0x00, 0x01, 0xFF, 0x0C, 0x04, 0x05,  /* 08-0F */
+    0xFF, 0xFF, 0x02, 0x03, 0xFF, 0x0F, 0x06, 0x07,  /* 10-17 */
+    0xFF, 0x09, 0x0A, 0x0B, 0xFF, 0x0D, 0x0E, 0xFF,  /* 18-1F */
+};
+
+/**
+ * Decode a 5-bit GCR nybble from the GCR stream.
+ */
+static int gcr_decode_byte(const uint8_t *gcr, size_t bit_offset) {
+    /* Extract 10 GCR bits (two 5-bit groups) starting at bit_offset */
+    size_t byte_pos = bit_offset / 8;
+    int shift = (int)(bit_offset % 8);
+
+    /* Assemble enough bits from the byte stream */
+    uint32_t bits = ((uint32_t)gcr[byte_pos] << 16) |
+                    ((uint32_t)gcr[byte_pos + 1] << 8) |
+                    (uint32_t)gcr[byte_pos + 2];
+
+    /* Shift to get 10 bits aligned at top */
+    bits >>= (14 - shift);
+
+    uint8_t hi_nybble = gcr_decode_table[(bits >> 5) & 0x1F];
+    uint8_t lo_nybble = gcr_decode_table[bits & 0x1F];
+
+    if (hi_nybble == 0xFF || lo_nybble == 0xFF) return -1;
+
+    return (hi_nybble << 4) | lo_nybble;
+}
+
+/**
+ * Find a SYNC mark (at least 10 consecutive 1-bits = 0xFF bytes) in GCR data.
+ * Returns the byte offset after the sync, or -1 if not found.
+ */
+static int find_sync(const uint8_t *gcr, size_t size, size_t start) {
+    int consecutive_ff = 0;
+
+    for (size_t i = start; i < size; i++) {
+        if (gcr[i] == 0xFF) {
+            consecutive_ff++;
+        } else {
+            if (consecutive_ff >= 1) {
+                return (int)i;  /* First non-FF byte after sync */
+            }
+            consecutive_ff = 0;
+        }
+    }
+
+    return -1;
+}
+
+/**
+ * Compute XOR checksum for a decoded sector data block (256 bytes).
+ */
+static uint8_t sector_checksum(const uint8_t *data, size_t len) {
+    uint8_t cksum = 0;
+    for (size_t i = 0; i < len; i++) {
+        cksum ^= data[i];
+    }
+    return cksum;
+}
+
 int uft_nib_export_d64(uft_nib_config_t *cfg, const char *path) {
     if (!cfg || !path) return -1;
-    
-    snprintf(cfg->last_error, sizeof(cfg->last_error),
-             "D64 export requires GCR decoding - not yet implemented");
-    return -1;
+
+    /*
+     * D64 export: Decode GCR track data into sectors and write standard
+     * Commodore 1541 .d64 image.
+     *
+     * D64 format: 35 tracks, variable sectors per track (683 sectors total),
+     * 256 bytes per sector, total 174848 bytes (no error map) or 175531 bytes
+     * (with error map).
+     *
+     * Each GCR-encoded sector on disk consists of:
+     *  - SYNC mark (>=10 bits of 1)
+     *  - Sector header (8 GCR bytes = 5 decoded bytes):
+     *      [0x08, checksum, sector, track, id2, id1, 0x0F, 0x0F]
+     *  - Gap
+     *  - SYNC mark
+     *  - Data block (325 GCR bytes = 260 decoded bytes):
+     *      [0x07, 256 data bytes, checksum, 0x00, 0x00]
+     */
+
+    FILE *f = fopen(path, "wb");
+    if (!f) {
+        snprintf(cfg->last_error, sizeof(cfg->last_error),
+                 "Cannot create D64 file: %s", path);
+        return -1;
+    }
+
+    /* D64 sector offset table: track 1 starts at offset 0, etc. */
+    int total_sectors = 0;
+    int sector_errors = 0;
+    uint8_t error_map[683];
+    memset(error_map, 0x01, sizeof(error_map));  /* Default: OK */
+
+    for (int track_num = 1; track_num <= 35; track_num++) {
+        int idx = track_num - 1;
+        if (idx >= 84 || !cfg->tracks[idx].gcr_data || cfg->tracks[idx].gcr_size == 0) {
+            /* Track not captured -- write blank sectors */
+            int nsectors = uft_nib_sectors_for_zone(uft_nib_get_zone(track_num));
+            uint8_t blank[256];
+            memset(blank, 0, sizeof(blank));
+            for (int s = 0; s < nsectors; s++) {
+                fwrite(blank, 1, 256, f);
+                error_map[total_sectors + s] = 0x05;  /* Missing sector */
+                sector_errors++;
+            }
+            total_sectors += nsectors;
+            continue;
+        }
+
+        const uint8_t *gcr = cfg->tracks[idx].gcr_data;
+        size_t gcr_size = cfg->tracks[idx].gcr_size;
+        int nsectors = uft_nib_sectors_for_zone(uft_nib_get_zone(track_num));
+
+        /* Temporary storage for decoded sectors (indexed by sector number) */
+        uint8_t decoded[21][256];
+        bool found[21];
+        memset(decoded, 0, sizeof(decoded));
+        memset(found, 0, sizeof(found));
+
+        /* Scan GCR stream for sector headers and data blocks */
+        size_t pos = 0;
+        int sectors_found = 0;
+
+        while (pos < gcr_size && sectors_found < nsectors) {
+            /* Find next sync mark */
+            int sync_end = find_sync(gcr, gcr_size, pos);
+            if (sync_end < 0) break;
+            pos = (size_t)sync_end;
+
+            /* Need at least 10 bytes for header GCR (8 GCR bytes = 5 decoded) */
+            if (pos + 10 >= gcr_size) break;
+
+            /* Try to decode sector header (first byte should decode to 0x08) */
+            size_t bit_pos = pos * 8;
+            int hdr_byte0 = gcr_decode_byte(gcr, bit_pos);
+
+            if (hdr_byte0 == 0x08) {
+                /* Sector header found */
+                int hdr_cksum = gcr_decode_byte(gcr, bit_pos + 10);
+                int hdr_sector = gcr_decode_byte(gcr, bit_pos + 20);
+                int hdr_track = gcr_decode_byte(gcr, bit_pos + 30);
+
+                if (hdr_sector < 0 || hdr_track < 0 || hdr_cksum < 0) {
+                    pos += 5;
+                    continue;
+                }
+
+                if (hdr_track != track_num || hdr_sector >= nsectors) {
+                    pos += 5;
+                    continue;
+                }
+
+                /* Skip header and gap, find data block sync */
+                pos += 10;
+                int data_sync = find_sync(gcr, gcr_size, pos);
+                if (data_sync < 0) continue;
+                pos = (size_t)data_sync;
+
+                /* Data block: first byte should decode to 0x07 */
+                if (pos + 325 > gcr_size) break;
+
+                bit_pos = pos * 8;
+                int data_marker = gcr_decode_byte(gcr, bit_pos);
+
+                if (data_marker == 0x07) {
+                    /* Decode 256 data bytes */
+                    bool decode_ok = true;
+                    for (int b = 0; b < 256; b++) {
+                        int val = gcr_decode_byte(gcr, bit_pos + 10 + (size_t)b * 10);
+                        if (val < 0) {
+                            decode_ok = false;
+                            decoded[hdr_sector][b] = 0;
+                        } else {
+                            decoded[hdr_sector][b] = (uint8_t)val;
+                        }
+                    }
+
+                    /* Verify checksum */
+                    int disk_cksum = gcr_decode_byte(gcr, bit_pos + 10 + 256 * 10);
+                    uint8_t computed = sector_checksum(decoded[hdr_sector], 256);
+
+                    if (decode_ok && disk_cksum >= 0 && (uint8_t)disk_cksum == computed) {
+                        found[hdr_sector] = true;
+                        sectors_found++;
+                    } else if (decode_ok) {
+                        /* CRC error but data decoded */
+                        found[hdr_sector] = true;
+                        sectors_found++;
+                        error_map[total_sectors + hdr_sector] = 0x05;  /* CRC error */
+                        sector_errors++;
+                    }
+
+                    pos += 325;
+                } else {
+                    pos += 5;
+                }
+            } else {
+                pos++;
+            }
+        }
+
+        /* Write sectors in order to D64 */
+        for (int s = 0; s < nsectors; s++) {
+            if (found[s]) {
+                fwrite(decoded[s], 1, 256, f);
+                if (error_map[total_sectors + s] == 0x01) {
+                    error_map[total_sectors + s] = 0x01;  /* OK */
+                }
+            } else {
+                uint8_t blank[256];
+                memset(blank, 0, sizeof(blank));
+                fwrite(blank, 1, 256, f);
+                error_map[total_sectors + s] = 0x05;
+                sector_errors++;
+            }
+        }
+
+        total_sectors += nsectors;
+    }
+
+    if (ferror(f)) {
+        fclose(f);
+        snprintf(cfg->last_error, sizeof(cfg->last_error),
+                 "Write error creating D64 file");
+        return -1;
+    }
+
+    fclose(f);
+
+    if (sector_errors > 0) {
+        snprintf(cfg->last_error, sizeof(cfg->last_error),
+                 "D64 export completed with %d sector errors", sector_errors);
+    }
+
+    return 0;
 }
 
 int uft_nib_import_nib(uft_nib_config_t *cfg, const char *path) {

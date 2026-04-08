@@ -92,6 +92,10 @@ uft_mfm_codec_t* uft_mfm_codec_create_ex(const uft_codec_options_t *opts) {
     }
     
     /* Calculate bit time */
+    if (codec->opts.data_rate == 0) {
+        free(codec);
+        return NULL;
+    }
     codec->bit_time_ns = 1000000000UL / codec->opts.data_rate;
     
     return codec;

@@ -74,7 +74,7 @@ uint16_t filecheckcrc(FILE * f,uint32_t fileoffset,uint32_t size)
 	CRC16_Init(&crc16h,&crc16l,(unsigned char*)crctable,0x1021,0xFFFF);
 
 	temp_fileptr=ftell(f);
-	if (fseek(f,fileoffset,SEEK_SET) != 0) { /* seek error */ }
+	if (fseek(f,fileoffset,SEEK_SET) != 0) { return 0xFFFF; }
 	s=size;
 	while(s)
 	{
@@ -99,7 +99,7 @@ uint16_t filecheckcrc(FILE * f,uint32_t fileoffset,uint32_t size)
 		}
 
 	}
-	if (fseek(f,temp_fileptr,SEEK_SET) != 0) { /* seek error */ }
+	if (fseek(f,temp_fileptr,SEEK_SET) != 0) { return 0xFFFF; }
 	return (uint16_t)((crc16l<<8) | crc16h);
 }
 
@@ -227,7 +227,7 @@ int AFI_libLoad_DiskFile(LIBFLUX_IMGLDR * imgldr_ctx,LIBFLUX_FLOPPY * floppydisk
 				return LIBFLUX_BADFILE;
 		}
 
-		if (fseek(f,header.floppyinfo_offset,SEEK_SET) != 0) { /* seek error */ }
+		if (fseek(f,header.floppyinfo_offset,SEEK_SET) != 0) { libflux_fclose(f); return LIBFLUX_ACCESSERROR; }
 		libflux_fread(&afiinfo,sizeof(afiinfo),f);
 
 		floppydisk->floppyNumberOfTrack=afiinfo.end_track+1;
@@ -304,7 +304,7 @@ int AFI_libLoad_DiskFile(LIBFLUX_IMGLDR * imgldr_ctx,LIBFLUX_FLOPPY * floppydisk
 
 		memset(floppydisk->tracks,0,sizeof(LIBFLUX_CYLINDER*)*floppydisk->floppyNumberOfTrack);
 
-		if (fseek(f,header.track_list_offset,SEEK_SET) != 0) { /* seek error */ }
+		if (fseek(f,header.track_list_offset,SEEK_SET) != 0) { libflux_fclose(f); return LIBFLUX_ACCESSERROR; }
 		libflux_fread(&trackliststruct,sizeof(trackliststruct),f);
 		if(strncmp((char*)trackliststruct.afi_img_track_list_tag,AFI_TRACKLIST_TAG,strlen(AFI_TRACKLIST_TAG)))
 		{
@@ -327,7 +327,7 @@ int AFI_libLoad_DiskFile(LIBFLUX_IMGLDR * imgldr_ctx,LIBFLUX_FLOPPY * floppydisk
 		{
 			libflux_imgCallProgressCallback(imgldr_ctx,i,trackliststruct.number_of_track );
 
-			if (fseek(f,header.track_list_offset+tracklistoffset[i],SEEK_SET) != 0) { /* seek error */ }
+			if (fseek(f,header.track_list_offset+tracklistoffset[i],SEEK_SET) != 0) { libflux_fclose(f); return LIBFLUX_ACCESSERROR; }
 			libflux_fread(&track,sizeof(track),f);
 			if(strncmp((char*)track.afi_track_tag,AFI_TRACK_TAG,strlen(AFI_TRACK_TAG)))
 			{
@@ -409,7 +409,7 @@ int AFI_libLoad_DiskFile(LIBFLUX_IMGLDR * imgldr_ctx,LIBFLUX_FLOPPY * floppydisk
 			currentside->flakybitsbuffer=0;
 			for(j=0;j<(int)track.number_of_data_chunk;j++)
 			{
-				if (fseek(f,header.track_list_offset+tracklistoffset[i]+datalistoffset[j],SEEK_SET) != 0) { /* seek error */ }
+				if (fseek(f,header.track_list_offset+tracklistoffset[i]+datalistoffset[j],SEEK_SET) != 0) { libflux_fclose(f); return LIBFLUX_ACCESSERROR; }
 				libflux_fread(&datablock,sizeof(datablock),f);
 
 				if(strncmp((char*)datablock.afi_data_tag,AFI_DATA_TAG,strlen(AFI_DATA_TAG)))

@@ -410,7 +410,7 @@ int dms_save(const dms_image_t *img, const char *filename)
     header.pack_size = pack_size;
     header.crc = dms_crc16((uint8_t*)&header, 50);
     
-    if (fseek(fp, header_pos, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(fp, header_pos, SEEK_SET) != 0) { fclose(fp); return UFT_ERR_IO; }
     if (fwrite(&header, sizeof(header), 1, fp) != 1) { /* I/O error */ }
     if (ferror(fp)) {
         fclose(fp);

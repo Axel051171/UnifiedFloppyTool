@@ -23,7 +23,16 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <limits.h>
 #include <math.h>
+
+#ifndef SIZE_MAX
+#define SIZE_MAX ((size_t)-1)
+#endif
+
+/* Sanity caps for A2R allocations */
+#define A2R_MAX_FLUX_BYTES_PER_CAPTURE (16 * 1024 * 1024)  /* 16MB per capture */
+#define A2R_MAX_NIBBLE_BYTES           (256 * 1024)          /* 256KB nibbles */
 
 /*============================================================================
  * Internal Structures
@@ -202,29 +211,33 @@ static a2r_error_t parse_strm_chunk(a2r_context_t *ctx,
     }
     
     if (ctx->track_count == 0) return A2R_ERR_NO_FLUX;
-    
+
+    /* Overflow check: track_count * sizeof(a2r_track_t) */
+    if (ctx->track_count > SIZE_MAX / sizeof(a2r_track_t))
+        return A2R_ERR_ALLOC;
+
     /* Allocate tracks */
     ctx->tracks = calloc(ctx->track_count, sizeof(a2r_track_t));
     if (!ctx->tracks) return A2R_ERR_ALLOC;
-    
+
     /* Parse entries */
     uint8_t track_idx = 0;
     uint8_t current_location = 0xFF;
     a2r_track_t *current_track = NULL;
-    
+
     ptr = data;
     while (ptr + 10 <= end) {
         uint8_t location = ptr[0];
         uint8_t capture_type = ptr[1];
         uint32_t data_len = read_le32(&ptr[2]);
         uint32_t tick_count = read_le32(&ptr[6]);
-        
+
         if (location == 0xFF) break;
         if (location >= A2R_MAX_TRACKS) {
             ptr += 10 + data_len;
             continue;
         }
-        
+
         /* New track? */
         if (location != current_location) {
             current_location = location;
@@ -233,18 +246,23 @@ static a2r_error_t parse_strm_chunk(a2r_context_t *ctx,
             current_track->side = 0;  /* v2 is always side 0 */
             current_track->capture_count = 0;
         }
-        
+
         /* Add capture */
-        if (current_track && 
+        if (current_track &&
             current_track->capture_count < A2R_MAX_CAPTURES) {
-            
+
             a2r_capture_t *cap = &current_track->captures[current_track->capture_count];
             cap->capture_type = capture_type;
             cap->data_length = data_len;
             cap->tick_count = tick_count;
-            
+
             /* Copy flux data */
             if (ptr + 10 + data_len <= end && data_len > 0) {
+                /* Sanity cap on flux data size */
+                if (data_len > A2R_MAX_FLUX_BYTES_PER_CAPTURE) {
+                    ptr += 10 + data_len;
+                    continue;
+                }
                 cap->data = malloc(data_len);
                 if (cap->data) {
                     memcpy(cap->data, ptr + 10, data_len);
@@ -328,11 +346,15 @@ static a2r_error_t parse_rwcp_chunk(a2r_context_t *ctx,
     }
     
     if (ctx->track_count == 0) return A2R_ERR_NO_FLUX;
-    
+
+    /* Overflow check: track_count * sizeof(a2r_track_t) */
+    if (ctx->track_count > SIZE_MAX / sizeof(a2r_track_t))
+        return A2R_ERR_ALLOC;
+
     /* Allocate tracks */
     ctx->tracks = calloc(ctx->track_count, sizeof(a2r_track_t));
     if (!ctx->tracks) return A2R_ERR_ALLOC;
-    
+
     /* Second pass: parse data */
     ptr = data;
     uint8_t track_idx = 0;
@@ -368,10 +390,15 @@ static a2r_error_t parse_rwcp_chunk(a2r_context_t *ctx,
             cap->tick_count = 0;
             
             if (ptr + 10 + data_len <= end && data_len > 0) {
+                /* Sanity cap on capture data size */
+                if (data_len > A2R_MAX_FLUX_BYTES_PER_CAPTURE) {
+                    ptr += 10 + data_len;
+                    continue;
+                }
                 cap->data = malloc(data_len);
                 if (cap->data) {
                     memcpy(cap->data, ptr + 10, data_len);
-                    
+
                     /* Calculate duration from flux data */
                     uint64_t total_ticks = 0;
                     const uint8_t *flux = cap->data;
@@ -425,7 +452,10 @@ static a2r_error_t parse_meta_chunk(a2r_context_t *ctx,
     }
     
     if (count == 0) return A2R_OK;
-    
+
+    /* Overflow check: count * sizeof(a2r_meta_entry_t) */
+    if (count > SIZE_MAX / sizeof(a2r_meta_entry_t)) return A2R_ERR_ALLOC;
+
     /* Allocate entries */
     ctx->metadata = calloc(count, sizeof(a2r_meta_entry_t));
     if (!ctx->metadata) return A2R_ERR_ALLOC;
@@ -485,6 +515,8 @@ static a2r_error_t parse_slvd_chunk(a2r_context_t *ctx,
                 
                 ctx->tracks[i].has_solved = true;
                 ctx->tracks[i].nibble_count = nibble_len;
+                /* Sanity cap on nibble data size */
+                if (nibble_len > A2R_MAX_NIBBLE_BYTES) break;
                 ctx->tracks[i].nibbles = malloc(nibble_len);
                 
                 if (ctx->tracks[i].nibbles) {
@@ -511,9 +543,9 @@ a2r_context_t *a2r_open(const char *path) {
     if (!f) return NULL;
     
     /* Get file size */
-    if (fseek(f, 0, SEEK_END) != 0) { /* seek error */ }
+    if (fseek(f, 0, SEEK_END) != 0) { fclose(f); return NULL; }
     long file_size = ftell(f);
-    if (fseek(f, 0, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(f, 0, SEEK_SET) != 0) { fclose(f); return NULL; }
     if (file_size < A2R_HEADER_SIZE + 8) {
         fclose(f);
         return NULL;

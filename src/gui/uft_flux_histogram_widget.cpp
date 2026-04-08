@@ -26,6 +26,11 @@
 #include <cmath>
 #include <algorithm>
 
+extern "C" {
+#include "uft/uft_format_parsers.h"
+#include "uft/uft_core.h"
+}
+
 /*===========================================================================
  * UftFluxHistogramWidget
  *===========================================================================*/
@@ -612,15 +617,165 @@ UftFluxHistogramPanel::~UftFluxHistogramPanel()
 
 void UftFluxHistogramPanel::loadFromFile(const QString &filename)
 {
-    // TODO: Load flux data from SCP, RAW, or other flux formats
-    Q_UNUSED(filename);
+    if (filename.isEmpty()) return;
+
+    /* Read file into memory */
+    QFile file(filename);
+    if (!file.open(QIODevice::ReadOnly)) {
+        QMessageBox::warning(this, tr("Load Error"),
+            tr("Cannot open file: %1").arg(filename));
+        return;
+    }
+
+    QByteArray fileData = file.readAll();
+    file.close();
+
+    if (fileData.isEmpty()) {
+        QMessageBox::warning(this, tr("Load Error"),
+            tr("File is empty: %1").arg(filename));
+        return;
+    }
+
+    const uint8_t *data = reinterpret_cast<const uint8_t*>(fileData.constData());
+    size_t dataSize = static_cast<size_t>(fileData.size());
+
+    /* Detect format */
+    uft_format_type_t fmt = uft_format_detect(data, dataSize);
+
+    if (fmt == UFT_FORMAT_SCP) {
+        /* Parse SCP file */
+        uft_scp_file_t scp = {};
+        int ret = uft_scp_read(data, dataSize, &scp);
+        if (ret != 0) {
+            QMessageBox::warning(this, tr("SCP Parse Error"),
+                tr("Failed to parse SCP file (error %1)").arg(ret));
+            return;
+        }
+
+        /* Load flux from the currently selected track/revolution */
+        int track = m_trackSpin->value() * 2 + m_headSpin->value();
+        QVector<double> fluxDeltas(65536);
+        int count = uft_scp_get_track_flux(&scp, track, 0,
+                                            fluxDeltas.data(), fluxDeltas.size());
+        if (count > 0) {
+            fluxDeltas.resize(count);
+            m_histogram->setFluxData(fluxDeltas);
+            m_histogram->autoFitRange();
+        } else {
+            QMessageBox::information(this, tr("No Data"),
+                tr("No flux data found for track %1").arg(track));
+        }
+
+        uft_scp_free(&scp);
+    } else if (fmt == UFT_FORMAT_KRYOFLUX) {
+        /* Parse Kryoflux stream */
+        uft_kfx_stream_t stream = {};
+        int ret = uft_kfx_read_stream(data, dataSize, &stream);
+        if (ret != 0) {
+            QMessageBox::warning(this, tr("Kryoflux Parse Error"),
+                tr("Failed to parse Kryoflux stream (error %1)").arg(ret));
+            return;
+        }
+
+        if (stream.flux_count > 0 && stream.flux_deltas) {
+            /* Kryoflux deltas are already in nanoseconds via SCK */
+            QVector<double> fluxNs(stream.flux_count);
+            for (size_t i = 0; i < stream.flux_count; i++) {
+                fluxNs[i] = stream.flux_deltas[i];
+            }
+            m_histogram->setFluxData(fluxNs);
+            m_histogram->autoFitRange();
+        }
+
+        uft_kfx_free(&stream);
+    } else {
+        /* Try to open as a generic disk image and extract flux if available */
+        QByteArray pathBa = filename.toUtf8();
+        uft_disk_t *disk = uft_disk_open(pathBa.constData(), true);
+        if (disk) {
+            int track = m_trackSpin->value();
+            int head = m_headSpin->value();
+            uft_track_t *trk = uft_track_read(disk, track, head, nullptr);
+            if (trk && uft_track_has_flux(trk)) {
+                uint32_t *flux = nullptr;
+                size_t fluxCount = 0;
+                if (uft_track_get_flux(trk, &flux, &fluxCount) == UFT_OK
+                    && flux && fluxCount > 0) {
+                    /* Convert tick values to nanoseconds (assume 72 MHz GW clock) */
+                    QVector<double> fluxNs(fluxCount);
+                    const double nsPerTick = 1e9 / 72000000.0;
+                    for (size_t i = 0; i < fluxCount; i++) {
+                        fluxNs[i] = flux[i] * nsPerTick;
+                    }
+                    m_histogram->setFluxData(fluxNs);
+                    m_histogram->autoFitRange();
+                    free(flux);
+                }
+            }
+            if (trk) uft_track_free(trk);
+            uft_disk_close(disk);
+        } else {
+            QMessageBox::warning(this, tr("Unsupported Format"),
+                tr("Cannot extract flux data from this file format.\n"
+                   "Supported: SCP, Kryoflux, and flux-capable disk images."));
+        }
+    }
+
+    updateStatistics();
 }
 
 void UftFluxHistogramPanel::loadFromTrack(int track, int head)
 {
-    // TODO: Load from current disk image
-    Q_UNUSED(track);
-    Q_UNUSED(head);
+    /* Load flux data from the currently loaded disk image.
+     * This requires a disk handle to be set externally.
+     * For now, we use the property-based approach:
+     * the parent widget should call loadFromFile() first to load an image,
+     * or this gets called via onTrackChanged when the user changes track/head. */
+
+    /* Try to find the disk image path from the parent widget hierarchy.
+     * In practice, the main window would pass a file path or disk handle. */
+    QString diskPath = property("diskImagePath").toString();
+    if (diskPath.isEmpty()) {
+        /* No disk loaded - clear histogram */
+        m_histogram->clear();
+        return;
+    }
+
+    QByteArray pathBa = diskPath.toUtf8();
+    uft_disk_t *disk = uft_disk_open(pathBa.constData(), true);
+    if (!disk) {
+        qWarning() << "loadFromTrack: cannot open disk" << diskPath;
+        m_histogram->clear();
+        return;
+    }
+
+    uft_track_t *trk = uft_track_read(disk, track, head, nullptr);
+    if (trk && uft_track_has_flux(trk)) {
+        uint32_t *flux = nullptr;
+        size_t fluxCount = 0;
+        if (uft_track_get_flux(trk, &flux, &fluxCount) == UFT_OK
+            && flux && fluxCount > 0) {
+            /* Convert tick values to nanoseconds */
+            QVector<double> fluxNs(fluxCount);
+            const double nsPerTick = 1e9 / 72000000.0;  /* 72 MHz GW default */
+            for (size_t i = 0; i < fluxCount; i++) {
+                fluxNs[i] = flux[i] * nsPerTick;
+            }
+            m_histogram->setFluxData(fluxNs);
+            m_histogram->autoFitRange();
+            free(flux);
+        } else {
+            m_histogram->clear();
+        }
+    } else {
+        /* No flux data available for this track */
+        m_histogram->clear();
+    }
+
+    if (trk) uft_track_free(trk);
+    uft_disk_close(disk);
+
+    updateStatistics();
 }
 
 void UftFluxHistogramPanel::onTrackChanged(int track, int head)

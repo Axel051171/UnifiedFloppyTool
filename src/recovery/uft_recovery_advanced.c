@@ -495,9 +495,9 @@ int uft_recovery_run(uft_recovery_t *rec,
     }
     
     /* Pre-allocate output file */
-    if (fseek(dst, total_size - 1, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(dst, total_size - 1, SEEK_SET) != 0) { fclose(dst); close_device(src); return -1; }
     fputc(0, dst);
-    if (fseek(dst, 0, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(dst, 0, SEEK_SET) != 0) { fclose(dst); close_device(src); return -1; }
     rec->stats.bytes_total = total_size;
     rec->stats.sectors_total = total_size / 512;
     
@@ -531,14 +531,14 @@ int uft_recovery_run(uft_recovery_t *rec,
         
         /* Write what we got */
         if (got > 0) {
-            if (fseek(dst, pos, SEEK_SET) != 0) { /* seek error */ }
+            if (fseek(dst, pos, SEEK_SET) != 0) { break; }
             if (fwrite(buffer, 1, got, dst) != got) { /* I/O error */ }
         }
         
         /* Fill remaining with pattern if needed */
         if (got < read_size && rec->config.fill_bad_sectors) {
             memset(buffer, rec->config.bad_sector_fill, read_size - got);
-            if (fseek(dst, pos + got, SEEK_SET) != 0) { /* seek error */ }
+            if (fseek(dst, pos + got, SEEK_SET) != 0) { break; }
             if (fwrite(buffer, 1, read_size - got, dst) != read_size - got) { /* I/O error */ }
         }
         

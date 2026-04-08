@@ -256,12 +256,12 @@ int H17_libLoad_DiskFile(LIBFLUX_IMGLDR * imgldr_ctx,LIBFLUX_FLOPPY * floppydisk
 
 		block_pos += (sizeof(h17_block) + BIGENDIAN_DWORD(blk.lenght) );
 
-		if (fseek(f, block_pos, SEEK_SET) != 0) { /* seek error */ }
+		if (fseek(f, block_pos, SEEK_SET) != 0) { libflux_fclose(f); return LIBFLUX_ACCESSERROR; }
 	}while( block_pos < (filesize - sizeof(h17_block) ) && block_pos >= 0 );
 
 	block_pos = sizeof(h17_header);
 
-	if (fseek(f, block_pos, SEEK_SET) != 0) { /* seek error */ }
+	if (fseek(f, block_pos, SEEK_SET) != 0) { libflux_fclose(f); return LIBFLUX_ACCESSERROR; }
 	do
 	{
 		block_pos = ftell(f);
@@ -431,7 +431,7 @@ int H17_libLoad_DiskFile(LIBFLUX_IMGLDR * imgldr_ctx,LIBFLUX_FLOPPY * floppydisk
 
 		block_pos += (sizeof(h17_block) + BIGENDIAN_DWORD(blk.lenght) );
 
-		if (fseek(f, block_pos, SEEK_SET) != 0) { /* seek error */ }
+		if (fseek(f, block_pos, SEEK_SET) != 0) { libflux_fclose(f); return LIBFLUX_ACCESSERROR; }
 	}while( block_pos < (filesize - sizeof(h17_block) ) && block_pos >= 0 );
 
 	free(sector_metadata);

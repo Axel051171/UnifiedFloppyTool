@@ -125,12 +125,12 @@ int FDI_libLoad_DiskFile(LIBFLUX_IMGLDR * imgldr_ctx,LIBFLUX_FLOPPY * floppydisk
 		return LIBFLUX_BADFILE;
 	}
 
-	if (fseek(f,f_header.diskdescription_offset,SEEK_SET) != 0) { /* seek error */ }
+	if (fseek(f,f_header.diskdescription_offset,SEEK_SET) != 0) { libflux_fclose(f); return LIBFLUX_ACCESSERROR; }
 	libflux_fread(tempsector,f_header.data_offset - f_header.diskdescription_offset,f);
 	imgldr_ctx->ctx->libflux_printf(MSG_INFO_1,"Disk:%s",tempsector);
 
 	trackoffset=f_header.additionnal_infos_len+0xE;
-	if (fseek(f,trackoffset,SEEK_SET) != 0) { /* seek error */ }
+	if (fseek(f,trackoffset,SEEK_SET) != 0) { libflux_fclose(f); return LIBFLUX_ACCESSERROR; }
 	number_of_track=f_header.number_of_cylinders;
 	number_of_side =f_header.number_of_heads;
 	number_of_sectorpertrack=-1;
@@ -212,12 +212,12 @@ int FDI_libLoad_DiskFile(LIBFLUX_IMGLDR * imgldr_ctx,LIBFLUX_FLOPPY * floppydisk
 						sectorconfig[k].input_data = malloc(sectorconfig[k].sectorsize);
 						if(sectorconfig[k].input_data)
 						{
-							if (fseek(f,file_offset,SEEK_SET) != 0) { /* seek error */ }
+							if (fseek(f,file_offset,SEEK_SET) != 0) { goto alloc_error; }
 							libflux_fread(sectorconfig[k].input_data,sectorconfig[k].sectorsize,f);
 						}
 					}
 
-					if (fseek(f,tempoffset,SEEK_SET) != 0) { /* seek error */ }
+					if (fseek(f,tempoffset,SEEK_SET) != 0) { goto alloc_error; }
 				}
 
 				if(currentcylinder)

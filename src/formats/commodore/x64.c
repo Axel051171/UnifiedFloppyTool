@@ -44,11 +44,11 @@ int uft_cbm_x64_open(FloppyDevice *dev,const char*path){
         fclose(fp); free(ctx); return UFT_EINVAL;
     }
 
-    if (fseek(fp,0,SEEK_END) != 0) { /* seek error */ }
+    if (fseek(fp,0,SEEK_END) != 0) { fclose(fp); free(ctx); return UFT_EIO; }
     long szl=ftell(fp);
     ctx->data_off = 64;
     ctx->data_size = (uint32_t)(szl - ctx->data_off);
-    if (fseek(fp,ctx->data_off,SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(fp,ctx->data_off,SEEK_SET) != 0) { fclose(fp); free(ctx); return UFT_EIO; }
     /* Expect embedded D64 size (174848 or variants) */
     if(ctx->data_size < 174848){
         fclose(fp); free(ctx); return UFT_EINVAL;

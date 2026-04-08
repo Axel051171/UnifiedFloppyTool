@@ -11,6 +11,27 @@
 #include <string.h>
 
 /*===========================================================================
+ * Thread Safety: Platform-specific mutex for allocation stats
+ *===========================================================================*/
+
+#ifdef _WIN32
+#include <windows.h>
+static CRITICAL_SECTION alloc_lock;
+static LONG alloc_lock_init = 0;
+static void ensure_lock(void) {
+    if (InterlockedCompareExchange(&alloc_lock_init, 1, 0) == 0)
+        InitializeCriticalSection(&alloc_lock);
+}
+#define LOCK()   do { ensure_lock(); EnterCriticalSection(&alloc_lock); } while(0)
+#define UNLOCK() LeaveCriticalSection(&alloc_lock)
+#else
+#include <pthread.h>
+static pthread_mutex_t alloc_lock = PTHREAD_MUTEX_INITIALIZER;
+#define LOCK()   pthread_mutex_lock(&alloc_lock)
+#define UNLOCK() pthread_mutex_unlock(&alloc_lock)
+#endif
+
+/*===========================================================================
  * Global Statistics
  *===========================================================================*/
 
@@ -23,10 +44,11 @@ bool uft_alloc_tracking_enabled = false;
 
 void* uft_malloc(size_t size) {
     if (size == 0) return NULL;
-    
+
     void *ptr = malloc(size);
-    
+
     if (uft_alloc_tracking_enabled) {
+        LOCK();
         if (ptr) {
             uft_alloc_stats.total_allocations++;
             uft_alloc_stats.current_bytes += size;
@@ -36,25 +58,29 @@ void* uft_malloc(size_t size) {
         } else {
             uft_alloc_stats.failed_allocations++;
         }
+        UNLOCK();
     }
-    
+
     return ptr;
 }
 
 void* uft_calloc(size_t count, size_t size) {
     if (count == 0 || size == 0) return NULL;
-    
+
     /* Check for overflow */
     if (count > SIZE_MAX / size) {
         if (uft_alloc_tracking_enabled) {
+            LOCK();
             uft_alloc_stats.failed_allocations++;
+            UNLOCK();
         }
         return NULL;
     }
-    
+
     void *ptr = calloc(count, size);
-    
+
     if (uft_alloc_tracking_enabled) {
+        LOCK();
         if (ptr) {
             uft_alloc_stats.total_allocations++;
             uft_alloc_stats.current_bytes += count * size;
@@ -64,8 +90,9 @@ void* uft_calloc(size_t count, size_t size) {
         } else {
             uft_alloc_stats.failed_allocations++;
         }
+        UNLOCK();
     }
-    
+
     return ptr;
 }
 
@@ -74,10 +101,11 @@ void* uft_realloc(void *ptr, size_t new_size) {
         uft_free(ptr);
         return NULL;
     }
-    
+
     void *new_ptr = realloc(ptr, new_size);
-    
+
     if (uft_alloc_tracking_enabled) {
+        LOCK();
         if (new_ptr) {
             if (ptr == NULL) {
                 uft_alloc_stats.total_allocations++;
@@ -86,19 +114,22 @@ void* uft_realloc(void *ptr, size_t new_size) {
         } else {
             uft_alloc_stats.failed_allocations++;
         }
+        UNLOCK();
     }
-    
+
     return new_ptr;
 }
 
 void uft_free(void *ptr) {
     if (!ptr) return;
-    
+
     if (uft_alloc_tracking_enabled) {
+        LOCK();
         uft_alloc_stats.total_frees++;
+        UNLOCK();
         /* Note: We can't track size without malloc_usable_size */
     }
-    
+
     free(ptr);
 }
 
@@ -177,22 +208,30 @@ const uft_alloc_stats_t* uft_alloc_get_stats(void) {
 }
 
 void uft_alloc_reset_stats(void) {
+    LOCK();
     memset(&uft_alloc_stats, 0, sizeof(uft_alloc_stats));
+    UNLOCK();
 }
 
 void uft_alloc_set_tracking(bool enable) {
+    LOCK();
     uft_alloc_tracking_enabled = enable;
+    UNLOCK();
 }
 
 void uft_alloc_print_stats(void) {
+    LOCK();
+    uft_alloc_stats_t snapshot = uft_alloc_stats;
+    UNLOCK();
+
     printf("═══════════════════════════════════════════════════════════\n");
     printf("  UFT Allocation Statistics\n");
     printf("═══════════════════════════════════════════════════════════\n");
-    printf("  Total allocations:  %zu\n", uft_alloc_stats.total_allocations);
-    printf("  Total frees:        %zu\n", uft_alloc_stats.total_frees);
-    printf("  Failed allocations: %zu\n", uft_alloc_stats.failed_allocations);
-    printf("  Peak bytes:         %zu\n", uft_alloc_stats.peak_bytes);
-    printf("  Outstanding:        %zu\n", 
-           uft_alloc_stats.total_allocations - uft_alloc_stats.total_frees);
+    printf("  Total allocations:  %zu\n", snapshot.total_allocations);
+    printf("  Total frees:        %zu\n", snapshot.total_frees);
+    printf("  Failed allocations: %zu\n", snapshot.failed_allocations);
+    printf("  Peak bytes:         %zu\n", snapshot.peak_bytes);
+    printf("  Outstanding:        %zu\n",
+           snapshot.total_allocations - snapshot.total_frees);
     printf("═══════════════════════════════════════════════════════════\n");
 }

@@ -258,10 +258,10 @@ int H17_libWrite_DiskFile(LIBFLUX_IMGLDR* imgldr_ctx,LIBFLUX_FLOPPY * floppy,cha
 
 		offset2 = ftell(h8dfile);
 		// update size
-		if (fseek(h8dfile,offset - sizeof(blk),SEEK_SET) != 0) { /* seek error */ }
+		if (fseek(h8dfile,offset - sizeof(blk),SEEK_SET) != 0) { libflux_fclose(h8dfile); return LIBFLUX_ACCESSERROR; }
 		blk.lenght = BIGENDIAN_DWORD( offset2 - offset );
 		if (fwrite(&blk,sizeof(blk),1,h8dfile) != 1) { /* I/O error */ }
-		if (fseek(h8dfile,0,SEEK_END) != 0) { /* seek error */ }
+		if (fseek(h8dfile,0,SEEK_END) != 0) { libflux_fclose(h8dfile); return LIBFLUX_ACCESSERROR; }
 		blk.id = BLKID_SecM;
 		blk.lenght = 0;
 		if (fwrite(&blk,sizeof(blk),1,h8dfile) != 1) { /* I/O error */ }
@@ -272,10 +272,10 @@ int H17_libWrite_DiskFile(LIBFLUX_IMGLDR* imgldr_ctx,LIBFLUX_FLOPPY * floppy,cha
 		offset2 = ftell(h8dfile);
 
 		// update size
-		if (fseek(h8dfile,offset - sizeof(blk),SEEK_SET) != 0) { /* seek error */ }
+		if (fseek(h8dfile,offset - sizeof(blk),SEEK_SET) != 0) { libflux_fclose(h8dfile); return LIBFLUX_ACCESSERROR; }
 		blk.lenght = BIGENDIAN_DWORD( offset2 - offset );
 		if (fwrite(&blk,sizeof(blk),1,h8dfile) != 1) { /* I/O error */ }
-		if (fseek(h8dfile,0,SEEK_END) != 0) { /* seek error */ }
+		if (fseek(h8dfile,0,SEEK_END) != 0) { libflux_fclose(h8dfile); return LIBFLUX_ACCESSERROR; }
 		libflux_fclose(h8dfile);
 	}
 

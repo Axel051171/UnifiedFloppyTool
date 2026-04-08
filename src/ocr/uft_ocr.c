@@ -200,9 +200,9 @@ int uft_ocr_load_image(const char *path, uft_image_t *image)
     FILE *f = fopen(path, "rb");
     if (!f) return -1;
     
-    if (fseek(f, 0, SEEK_END) != 0) { /* seek error */ }
+    if (fseek(f, 0, SEEK_END) != 0) { fclose(f); return -1; }
     image->size = ftell(f);
-    if (fseek(f, 0, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(f, 0, SEEK_SET) != 0) { fclose(f); return -1; }
     if (image->size > UFT_OCR_MAX_IMAGE_SIZE) {
         fclose(f);
         return -1;

@@ -98,7 +98,7 @@ static uft_error_t atr_read_track(uft_disk_t* disk, int cyl, int head, uft_track
                             ATR_BOOT_SECTOR_SIZE : pdata->sector_size;
         
         memset(sec_buf, 0, pdata->sector_size);
-        if (fseek(pdata->file, atr_sector_offset(sector_num, pdata->sector_size), SEEK_SET) != 0) { /* seek error */ }
+        if (fseek(pdata->file, atr_sector_offset(sector_num, pdata->sector_size), SEEK_SET) != 0) { free(sec_buf); return UFT_ERROR_IO; }
         if (fread(sec_buf, 1, this_size, pdata->file) != this_size) { /* I/O error */ }
         uft_format_add_sector(track, s, sec_buf, this_size, cyl, head);
     }

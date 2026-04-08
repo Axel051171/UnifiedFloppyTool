@@ -199,3 +199,24 @@ else()
 endif()
 
 include(CPack)
+
+# ============================================================================
+# Tests (CMake-based unit test suite)
+# ============================================================================
+# Build library targets that the test suite links against, then add tests.
+# The main app above uses a monolithic GLOB; tests use modular static libs.
+
+option(UFT_BUILD_TESTS "Build the UFT test suite" ON)
+
+if(UFT_BUILD_TESTS)
+    enable_testing()
+
+    # Library targets required by tests
+    add_subdirectory(src/crc)
+    add_subdirectory(src/core)
+    add_subdirectory(src/ride)
+    add_subdirectory(src/protection/c64)
+    add_subdirectory(src/hardware_providers)
+
+    add_subdirectory(tests)
+endif()

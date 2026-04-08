@@ -110,9 +110,9 @@ int uft_cbm_d64_open(FloppyDevice *dev, const char *path){
 
     ctx->fp=fp; ctx->read_only=ro;
 
-    if (fseek(fp,0,SEEK_END) != 0) { /* seek error */ }
+    if (fseek(fp,0,SEEK_END) != 0) { fclose(fp); free(ctx); return UFT_EIO; }
     long size=ftell(fp);
-    if (fseek(fp,0,SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(fp,0,SEEK_SET) != 0) { fclose(fp); free(ctx); return UFT_EIO; }
     if(size==174848)      { ctx->tracks=35; ctx->total_sectors=D64_SECTORS_35; ctx->has_errors=false; }
     else if(size==175531) { ctx->tracks=35; ctx->total_sectors=D64_SECTORS_35; ctx->has_errors=true; }
     else if(size==196608) { ctx->tracks=40; ctx->total_sectors=D64_SECTORS_40; ctx->has_errors=false; }
@@ -131,7 +131,7 @@ int uft_cbm_d64_open(FloppyDevice *dev, const char *path){
                     ctx->has_errors = false;
                 }
             }
-            if (fseek(fp, 0, SEEK_SET) != 0) { /* reset */ }
+            if (fseek(fp, 0, SEEK_SET) != 0) { free(ctx->error_bytes); fclose(fp); free(ctx); return UFT_EIO; }
 
             /* Log error byte summary */
             if (ctx->error_bytes) {

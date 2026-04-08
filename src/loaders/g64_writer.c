@@ -224,7 +224,7 @@ int g64_write(const char *filename, const uint8_t *d64_data, size_t d64_size)
     }
     
     /* Update offset tables */
-    if (fseek(fp, offset_table_pos, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(fp, offset_table_pos, SEEK_SET) != 0) { free(track_buf); free(track_offsets); free(speed_offsets); fclose(fp); return UFT_ERR_IO; }
     if (fwrite(track_offsets, sizeof(uint32_t), G64_MAX_TRACKS, fp) != G64_MAX_TRACKS) { /* I/O error */ }
     if (fwrite(speed_offsets, sizeof(uint32_t), G64_MAX_TRACKS, fp) != G64_MAX_TRACKS) { /* I/O error */ }
     free(track_buf);
@@ -246,9 +246,9 @@ int g64_convert_from_d64(const char *d64_file, const char *g64_file)
     FILE *fp = fopen(d64_file, "rb");
     if (!fp) return -1;
     
-    if (fseek(fp, 0, SEEK_END) != 0) { /* seek error */ }
+    if (fseek(fp, 0, SEEK_END) != 0) { fclose(fp); return -1; }
     size_t size = ftell(fp);
-    if (fseek(fp, 0, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(fp, 0, SEEK_SET) != 0) { fclose(fp); return -1; }
     uint8_t *data = malloc(size);
     if (!data) {
         fclose(fp);

@@ -73,7 +73,7 @@ int qdos_read_sector(QdosDevice *dev, uint32_t c, uint32_t h, uint32_t s, uint8_
     if (!f) return -1;
     
     size_t offset = ((c * dev->heads + h) * dev->sectors + s) * 512;
-    if (fseek(f, offset, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(f, offset, SEEK_SET) != 0) { fclose(f); return -1; }
     size_t read = fread(buf, 1, 512, f);
     fclose(f);
     

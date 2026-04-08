@@ -470,14 +470,148 @@ int uft_pauline_write_track(uft_pauline_device_t *dev,
     if (uft_pauline_seek(dev, track) != 0) return -1;
     if (uft_pauline_select_head(dev, head) != 0) return -1;
 
-    /* Upload stream data to device and write.
-     * In production, this should use SCP or FTP to upload the file,
-     * then trigger the write via SSH command. */
-    /* TODO: implement proper file upload + write trigger */
+    /*
+     * Upload stream data to device and trigger write.
+     *
+     * Strategy: Write data to local temp file, upload via SCP to Pauline's
+     * /tmp directory, then trigger write via SSH command.
+     * Alternative: HTTP POST to Pauline's web server upload endpoint.
+     */
 
+#ifndef _WIN32
+    /* Write stream data to local temp file */
+    char local_tmp[256];
+    snprintf(local_tmp, sizeof(local_tmp), "/tmp/uft_pauline_write_%d_%d.hfe",
+             track, head);
+
+    FILE *fp = fopen(local_tmp, "wb");
+    if (!fp) {
+        snprintf(dev->last_error, sizeof(dev->last_error),
+                 "Pauline write: cannot create temp file %s", local_tmp);
+        return -1;
+    }
+    if (fwrite(stream_data, 1, stream_len, fp) != stream_len) {
+        fclose(fp);
+        remove(local_tmp);
+        snprintf(dev->last_error, sizeof(dev->last_error),
+                 "Pauline write: failed writing %zu bytes to temp file", stream_len);
+        return -1;
+    }
+    fclose(fp);
+
+    /* Upload via SCP to Pauline device */
+    char scp_cmd[1024];
+    if (dev->ssh_keyfile[0]) {
+        snprintf(scp_cmd, sizeof(scp_cmd),
+                 "scp -i %s -o StrictHostKeyChecking=no -o ConnectTimeout=10 "
+                 "%s %s@%s:/tmp/uft_write.hfe 2>/dev/null",
+                 dev->ssh_keyfile, local_tmp, dev->ssh_user, dev->hostname);
+    } else {
+        snprintf(scp_cmd, sizeof(scp_cmd),
+                 "scp -o StrictHostKeyChecking=no -o ConnectTimeout=10 "
+                 "%s %s@%s:/tmp/uft_write.hfe 2>/dev/null",
+                 local_tmp, dev->ssh_user, dev->hostname);
+    }
+
+    if (system(scp_cmd) != 0) {
+        /* SCP failed -- try HTTP POST as fallback */
+        int sock = socket(AF_INET, SOCK_STREAM, 0);
+        if (sock < 0) {
+            remove(local_tmp);
+            snprintf(dev->last_error, sizeof(dev->last_error),
+                     "Pauline write: SCP upload failed and HTTP fallback unavailable");
+            return -1;
+        }
+
+        struct timeval tv = { .tv_sec = 15, .tv_usec = 0 };
+        setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
+
+        struct hostent *he = gethostbyname(dev->hostname);
+        if (!he) {
+            close(sock);
+            remove(local_tmp);
+            snprintf(dev->last_error, sizeof(dev->last_error),
+                     "Pauline write: cannot resolve %s", dev->hostname);
+            return -1;
+        }
+
+        struct sockaddr_in addr;
+        memset(&addr, 0, sizeof(addr));
+        addr.sin_family = AF_INET;
+        addr.sin_port = htons(dev->http_port);
+        memcpy(&addr.sin_addr, he->h_addr_list[0], he->h_length);
+
+        if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+            close(sock);
+            remove(local_tmp);
+            snprintf(dev->last_error, sizeof(dev->last_error),
+                     "Pauline write: HTTP connect failed to %s:%d",
+                     dev->hostname, dev->http_port);
+            return -1;
+        }
+
+        /* Send HTTP POST with stream data */
+        char http_hdr[512];
+        int hdr_len = snprintf(http_hdr, sizeof(http_hdr),
+            "POST /upload_and_write?track=%d&head=%d HTTP/1.0\r\n"
+            "Host: %s\r\n"
+            "Content-Type: application/octet-stream\r\n"
+            "Content-Length: %zu\r\n"
+            "\r\n",
+            track, head, dev->hostname, stream_len);
+
+        if (write(sock, http_hdr, hdr_len) != hdr_len ||
+            write(sock, stream_data, stream_len) != (ssize_t)stream_len) {
+            close(sock);
+            remove(local_tmp);
+            snprintf(dev->last_error, sizeof(dev->last_error),
+                     "Pauline write: HTTP POST send failed");
+            return -1;
+        }
+
+        /* Read HTTP response */
+        char resp[256] = {0};
+        read(sock, resp, sizeof(resp) - 1);
+        close(sock);
+
+        if (!strstr(resp, "200") && !strstr(resp, "OK")) {
+            remove(local_tmp);
+            snprintf(dev->last_error, sizeof(dev->last_error),
+                     "Pauline write: HTTP POST rejected (%.80s)", resp);
+            return -1;
+        }
+
+        remove(local_tmp);
+        return 0;
+    }
+
+    /* SCP upload succeeded -- trigger write via SSH */
+    char write_cmd[256];
+    snprintf(write_cmd, sizeof(write_cmd),
+             "pauline_cli write_track /tmp/uft_write.hfe %d %d",
+             track, head);
+
+    char output[256];
+    if (ssh_exec(dev, write_cmd, output, sizeof(output)) != 0) {
+        remove(local_tmp);
+        snprintf(dev->last_error, sizeof(dev->last_error),
+                 "Pauline write: write_track command failed: %.128s", output);
+        return -1;
+    }
+
+    /* Cleanup remote and local temp files */
+    ssh_exec(dev, "rm -f /tmp/uft_write.hfe", NULL, 0);
+    remove(local_tmp);
+    return 0;
+#else
+    /* Windows: SSH/SCP not available in same way; use HTTP POST only */
+    (void)stream_data;
+    (void)stream_len;
     snprintf(dev->last_error, sizeof(dev->last_error),
-             "Pauline write: not yet fully implemented");
+             "Pauline write: requires SSH/SCP tools (not available on this platform). "
+             "Install OpenSSH or use Linux/macOS.");
     return -1;
+#endif
 }
 
 const char* uft_pauline_get_error(const uft_pauline_device_t *dev) {

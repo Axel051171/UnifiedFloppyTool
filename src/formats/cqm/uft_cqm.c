@@ -56,7 +56,7 @@ static uft_error_t cqm_open(uft_disk_t* disk, const char* path, bool read_only) 
     p->tracks = hdr[15];
     
     uint16_t com_len = uft_read_le16(&hdr[16]);
-    if (fseek(f, 18 + com_len, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(f, 18 + com_len, SEEK_SET) != 0) { fclose(f); free(p); return UFT_ERROR_FILE_OPEN; }
     p->size = (size_t)p->tracks * p->heads * p->spt * p->sec_size;
     p->data = malloc(p->size);
     if(!p->data) { fclose(f); free(p); return UFT_ERR_NOMEM; } /* P0-SEC-001 */

@@ -777,9 +777,46 @@ void DDParamsWidget::startOperation()
     m_statusTimer->start(100);  // 10 Hz update
     
     emit operationStarted();
-    
-    // TODO: Start actual operation in thread
-    // For now, just simulate
+
+    /* Start the dd operation in a worker thread */
+    QThread *workerThread = new QThread(this);
+
+    /* Capture config by value for thread safety */
+    dd_config_t threadConfig = m_config;
+
+    /* Move work to thread using a lambda via QTimer::singleShot trick */
+    connect(workerThread, &QThread::started, this, [this, threadConfig, workerThread]() {
+        int result = dd_start(&threadConfig);
+
+        /* Signal back to main thread when done */
+        QMetaObject::invokeMethod(this, [this, result, workerThread]() {
+            m_statusTimer->stop();
+            m_startButton->setEnabled(true);
+            m_pauseButton->setEnabled(false);
+            m_pauseButton->setText(tr("Pause"));
+            m_cancelButton->setEnabled(false);
+
+            /* Final status update */
+            updateStatus();
+
+            if (result == 0) {
+                m_progressBar->setValue(100);
+                QMessageBox::information(this, tr("Complete"),
+                    tr("Operation completed successfully."));
+            } else {
+                QMessageBox::warning(this, tr("Error"),
+                    tr("Operation failed with error code: %1").arg(result));
+            }
+
+            emit operationFinished(result);
+
+            workerThread->quit();
+            workerThread->wait();
+            workerThread->deleteLater();
+        }, Qt::QueuedConnection);
+    });
+
+    workerThread->start();
 }
 
 void DDParamsWidget::pauseOperation()

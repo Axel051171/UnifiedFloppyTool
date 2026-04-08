@@ -463,17 +463,88 @@ void UftHardwarePanel::connectController()
     }
     
     m_logList->addItem(QString("Connecting to %1 on %2...").arg(m_controllerType->currentText(), device));
-    
-    /* TODO: Real connection */
-    
-    /* Simulate success */
-    m_statusLabel->setText("Connected");
-    m_statusLabel->setStyleSheet("color: #388e3c;");
-    m_firmwareLabel->setText("v1.0");
-    
-    m_logList->addItem("Connected successfully!");
-    
-    emit controllerConnected(m_controllerType->currentText());
+
+    /* Extract actual device path from combo item (may contain description) */
+    QString actualDevice = m_devicePath->currentData().isValid()
+        ? m_devicePath->currentData().toString()
+        : device.split(" - ").first().trimmed();
+
+    bool connected = false;
+    QString firmware = "-";
+
+#if defined(UFT_HAS_SERIALPORT) || defined(QT_SERIALPORT_LIB)
+    /* Attempt real serial connection */
+    QSerialPort port;
+    port.setPortName(actualDevice);
+    port.setBaudRate(115200);
+    port.setDataBits(QSerialPort::Data8);
+    port.setParity(QSerialPort::NoParity);
+    port.setStopBits(QSerialPort::OneStop);
+    port.setFlowControl(QSerialPort::NoFlowControl);
+
+    if (port.open(QIODevice::ReadWrite)) {
+        port.clear();
+        QThread::msleep(50);
+
+        /* Send Greaseweazle GET_INFO command for handshake */
+        QByteArray cmd;
+        cmd.append((char)0x00);  /* CMD_GET_INFO */
+        cmd.append((char)0x03);  /* length */
+        cmd.append((char)0x00);  /* GETINFO_FIRMWARE */
+
+        port.write(cmd);
+        port.waitForBytesWritten(200);
+
+        if (port.waitForReadyRead(1000)) {
+            QByteArray response = port.readAll();
+            QThread::msleep(50);
+            while (port.waitForReadyRead(100)) {
+                response.append(port.readAll());
+            }
+
+            if (response.size() >= 4 &&
+                static_cast<unsigned char>(response[0]) == 0x00 &&
+                static_cast<unsigned char>(response[1]) == 0x00) {
+                connected = true;
+                int fw = (static_cast<unsigned char>(response[2]) << 8) |
+                          static_cast<unsigned char>(response[3]);
+                firmware = QString("FW %1").arg(fw);
+                m_logList->addItem(QString("Greaseweazle handshake OK (firmware: %1)").arg(fw));
+            } else {
+                m_logList->addItem("Handshake failed - unexpected response.");
+            }
+        } else {
+            m_logList->addItem("No response from device (timeout).");
+        }
+        port.close();
+    } else {
+        m_logList->addItem(QString("Cannot open port: %1").arg(port.errorString()));
+    }
+#else
+    /* No SerialPort module - simulate connection for development */
+    m_logList->addItem("SerialPort module not available, simulating connection...");
+    connected = true;
+    firmware = "v1.0 (simulated)";
+#endif
+
+    if (connected) {
+        m_statusLabel->setText("Connected");
+        m_statusLabel->setStyleSheet("color: #388e3c;");
+        m_firmwareLabel->setText(firmware);
+        m_connectButton->setText("Disconnect");
+        disconnect(m_connectButton, &QPushButton::clicked, this, &UftHardwarePanel::connectController);
+        connect(m_connectButton, &QPushButton::clicked, this, &UftHardwarePanel::disconnectController);
+        m_logList->addItem("Connected successfully!");
+        emit controllerConnected(m_controllerType->currentText());
+    } else {
+        m_statusLabel->setText("Connection failed");
+        m_statusLabel->setStyleSheet("color: #d32f2f;");
+        m_logList->addItem("Connection failed. Check device and try again.");
+        QMessageBox::warning(this, "Connection Error",
+            QString("Failed to connect to %1 on %2.\n"
+                    "Please check the device is connected and the correct port is selected.")
+            .arg(m_controllerType->currentText(), actualDevice));
+    }
 }
 
 void UftHardwarePanel::disconnectController()
@@ -481,9 +552,14 @@ void UftHardwarePanel::disconnectController()
     m_statusLabel->setText("Disconnected");
     m_statusLabel->setStyleSheet("color: #d32f2f;");
     m_firmwareLabel->setText("-");
-    
+
+    /* Reset connect button to Connect mode */
+    m_connectButton->setText("Connect");
+    disconnect(m_connectButton, &QPushButton::clicked, this, &UftHardwarePanel::disconnectController);
+    connect(m_connectButton, &QPushButton::clicked, this, &UftHardwarePanel::connectController);
+
     m_logList->addItem("Disconnected");
-    
+
     emit controllerDisconnected();
 }
 

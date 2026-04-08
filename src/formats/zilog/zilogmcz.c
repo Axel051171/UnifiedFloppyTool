@@ -30,10 +30,10 @@ int zilogmcz_open(ZilogMczDevice *dev, const char *path) {
     FILE *f = fopen(path, "rb");
     if (!f) return -1;
     
-    if (fseek(f, 0, SEEK_END) != 0) { /* seek error */ }
+    if (fseek(f, 0, SEEK_END) != 0) { fclose(f); return -1; }
     size_t size = ftell(f);
     fclose(f);
-    
+
     if (size != ZILOG_TRACKS * ZILOG_SECTORS * ZILOG_SECTOR_SIZE) {
         return -1;
     }
@@ -62,7 +62,7 @@ int zilogmcz_read_sector(ZilogMczDevice *dev, uint32_t t, uint32_t s, uint8_t *b
     if (!f) return -1;
     
     size_t offset = (t * dev->sectors + s) * dev->sectorSize;
-    if (fseek(f, offset, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(f, offset, SEEK_SET) != 0) { fclose(f); return -1; }
     size_t read = fread(buf, 1, dev->sectorSize, f);
     fclose(f);
     

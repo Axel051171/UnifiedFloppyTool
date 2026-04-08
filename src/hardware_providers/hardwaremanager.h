@@ -2,6 +2,8 @@
 #define HARDWAREMANAGER_H
 
 #include <QObject>
+#include <QMutex>
+#include <QMutexLocker>
 #include <memory>
 
 #include "hardwareprovider.h"
@@ -20,9 +22,10 @@ class HardwareManager : public QObject
 public:
     explicit HardwareManager(QObject *parent = nullptr);
 
-    void setHardwareType(const QString &hardwareType);
+    bool setHardwareType(const QString &hardwareType);
     void setDevicePath(const QString &devicePath);
     void setBaudRate(int baudRate);
+    bool isOperationActive() const;
 
 public slots:
     void detectDrive();
@@ -42,6 +45,10 @@ private:
     QString m_devicePath;
     int m_baudRate = 0;
     std::unique_ptr<HardwareProvider> m_provider;
+
+    /* Thread safety: prevents hardware type change during active operations */
+    mutable QMutex m_hwMutex;
+    bool m_operationActive = false;
 };
 
 #endif // HARDWAREMANAGER_H

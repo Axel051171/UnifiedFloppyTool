@@ -89,7 +89,7 @@ static uft_error_t dsk_read_track(uft_disk_t* disk, int cyl, int head, uft_track
         offset += track_idx * pdata->track_size;
     }
     
-    if (fseek(pdata->file, offset, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(pdata->file, offset, SEEK_SET) != 0) { return UFT_ERROR_FILE_READ; }
     uint8_t track_info[DSK_TRACK_INFO_SIZE];
     if (fread(track_info, 1, DSK_TRACK_INFO_SIZE, pdata->file) != DSK_TRACK_INFO_SIZE)
         return UFT_ERROR_FILE_READ;

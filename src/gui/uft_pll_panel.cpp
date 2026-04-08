@@ -724,7 +724,90 @@ void UftPllPanel::updateHistogram(const double* timings, size_t count)
         m_statsTable->item(2, 1)->setText(QString("%1 ns").arg(rmsJitter, 0, 'f', 2));
     }
     
-    // TODO: Draw histogram in m_histogramWidget
+    /* Draw histogram of bit cell timings on m_histogramWidget */
+    {
+        int w = m_histogramWidget->width();
+        int h = m_histogramWidget->height();
+        if (w <= 0 || h <= 0) return;
+
+        QPixmap pixmap(w, h);
+        pixmap.fill(QColor(0x1a, 0x1a, 0x1a));
+
+        QPainter painter(&pixmap);
+        painter.setRenderHint(QPainter::Antialiasing);
+
+        /* Build histogram bins */
+        const int numBins = 64;
+        double minVal = timings[0], maxVal = timings[0];
+        for (size_t i = 1; i < count; ++i) {
+            if (timings[i] < minVal) minVal = timings[i];
+            if (timings[i] > maxVal) maxVal = timings[i];
+        }
+
+        double range = maxVal - minVal;
+        if (range < 1.0) range = 1.0;
+        double binWidth = range / numBins;
+
+        int bins[numBins];
+        memset(bins, 0, sizeof(bins));
+        int maxBin = 0;
+
+        for (size_t i = 0; i < count; ++i) {
+            int bin = static_cast<int>((timings[i] - minVal) / binWidth);
+            if (bin < 0) bin = 0;
+            if (bin >= numBins) bin = numBins - 1;
+            bins[bin]++;
+            if (bins[bin] > maxBin) maxBin = bins[bin];
+        }
+
+        if (maxBin == 0) maxBin = 1;
+
+        /* Draw bars */
+        int margin = 10;
+        int plotW = w - 2 * margin;
+        int plotH = h - 2 * margin;
+        double barW = (double)plotW / numBins;
+
+        /* Draw expected bit cell line */
+        double expectedPos = (m_params.bitCellTime - minVal) / range;
+        if (expectedPos >= 0.0 && expectedPos <= 1.0) {
+            int xLine = margin + static_cast<int>(expectedPos * plotW);
+            painter.setPen(QPen(QColor(255, 255, 0, 128), 1, Qt::DashLine));
+            painter.drawLine(xLine, margin, xLine, h - margin);
+        }
+
+        for (int b = 0; b < numBins; b++) {
+            double barH = (double)bins[b] / maxBin * plotH;
+            QRectF rect(margin + b * barW, h - margin - barH, barW - 1, barH);
+
+            /* Color: green near center, red at edges */
+            double dist = std::abs((b + 0.5) / numBins - 0.5) * 2.0;
+            int red = static_cast<int>(dist * 255);
+            int green = static_cast<int>((1.0 - dist) * 255);
+            QColor color(qBound(0, red, 255), qBound(0, green, 255), 50);
+
+            painter.fillRect(rect, color);
+        }
+
+        /* Draw axes */
+        painter.setPen(QPen(QColor(100, 100, 100), 1));
+        painter.drawLine(margin, h - margin, w - margin, h - margin);
+        painter.drawLine(margin, margin, margin, h - margin);
+
+        /* Labels */
+        painter.setPen(QColor(180, 180, 180));
+        painter.setFont(QFont("Arial", 7));
+        painter.drawText(margin, h - 1, QString("%1 ns").arg(minVal, 0, 'f', 0));
+        painter.drawText(w - margin - 50, h - 1, QString("%1 ns").arg(maxVal, 0, 'f', 0));
+
+        painter.end();
+
+        /* Apply to widget */
+        QPalette pal = m_histogramWidget->palette();
+        pal.setBrush(QPalette::Window, pixmap);
+        m_histogramWidget->setPalette(pal);
+        m_histogramWidget->setAutoFillBackground(true);
+    }
 }
 
 void UftPllPanel::resetToDefaults()

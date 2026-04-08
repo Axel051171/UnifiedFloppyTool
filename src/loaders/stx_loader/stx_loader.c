@@ -127,7 +127,10 @@ int * getSectorHeaderOffset(LIBFLUX_CTX* flux_ctx,unsigned char * trackbuffer,in
 
 	if(numsector)
 	{
-		offsetlist = malloc(sizeof(int) * numsector);
+		/* Sanity cap: max 256 sectors per track */
+		if(numsector > 256)
+			return NULL;
+		offsetlist = malloc(sizeof(int) * (size_t)numsector);
 		if( !offsetlist )
 			return NULL;
 
@@ -479,13 +482,13 @@ int STX_libLoad_DiskFile(LIBFLUX_IMGLDR * imgldr_ctx,LIBFLUX_FLOPPY * floppydisk
 			{
 				numberoftrackperside=trackheader.track_code&0x7F;
 			}
-			if (fseek(f,trackheaderpos,SEEK_SET) != 0) { /* seek error */ }
-			if (fseek(f,trackheader.track_block_size,SEEK_CUR) != 0) { /* seek error */ }
+			if (fseek(f,trackheaderpos,SEEK_SET) != 0) { goto alloc_error; }
+			if (fseek(f,trackheader.track_block_size,SEEK_CUR) != 0) { goto alloc_error; }
 		}
 
 		numberoftrackperside++;
 
-		if (fseek(f,t,SEEK_SET) != 0) { /* seek error */ }
+		if (fseek(f,t,SEEK_SET) != 0) { goto alloc_error; }
 		if(presenceside[0] && presenceside[1])
 		{
 			numberofside=2;
@@ -521,14 +524,20 @@ int STX_libLoad_DiskFile(LIBFLUX_IMGLDR * imgldr_ctx,LIBFLUX_FLOPPY * floppydisk
 #endif
 		if(floppydisk->floppyNumberOfTrack)
 		{
-			floppydisk->tracks = (LIBFLUX_CYLINDER**)malloc(sizeof(LIBFLUX_CYLINDER*)*floppydisk->floppyNumberOfTrack);
+			/* Sanity cap: max 168 tracks (STX maximum) */
+			if(floppydisk->floppyNumberOfTrack > 168)
+			{
+				libflux_fclose(f);
+				return LIBFLUX_INTERNALERROR;
+			}
+			floppydisk->tracks = (LIBFLUX_CYLINDER**)malloc(sizeof(LIBFLUX_CYLINDER*)*(size_t)floppydisk->floppyNumberOfTrack);
 			if( !floppydisk->tracks )
 			{
 				libflux_fclose(f);
 				return LIBFLUX_INTERNALERROR;
 			}
 
-			memset(floppydisk->tracks,0,sizeof(LIBFLUX_CYLINDER*)*floppydisk->floppyNumberOfTrack);
+			memset(floppydisk->tracks,0,sizeof(LIBFLUX_CYLINDER*)*(size_t)floppydisk->floppyNumberOfTrack);
 
 			for(i=0;i<numberoftrack;i++)
 			{
@@ -585,13 +594,16 @@ int STX_libLoad_DiskFile(LIBFLUX_IMGLDR * imgldr_ctx,LIBFLUX_FLOPPY * floppydisk
 #endif
 						if(trackheader.numberofsector > 0)
 						{
-							sector = malloc(sizeof(pasti_sector)*trackheader.numberofsector);
-							sectorconfig = (LIBFLUX_SECTCFG *) malloc(sizeof(LIBFLUX_SECTCFG)* trackheader.numberofsector);
+							/* Sanity cap: max 256 sectors per track */
+							if(trackheader.numberofsector > 256)
+								goto alloc_error;
+							sector = malloc(sizeof(pasti_sector)*(size_t)trackheader.numberofsector);
+							sectorconfig = (LIBFLUX_SECTCFG *) malloc(sizeof(LIBFLUX_SECTCFG)*(size_t)trackheader.numberofsector);
 							if( !sector || !sectorconfig )
 								goto alloc_error;
 
-							memset(sectorconfig,0,sizeof(LIBFLUX_SECTCFG)* trackheader.numberofsector);
-							memset(sector,0,sizeof(pasti_sector)*trackheader.numberofsector);
+							memset(sectorconfig,0,sizeof(LIBFLUX_SECTCFG)*(size_t)trackheader.numberofsector);
+							memset(sector,0,sizeof(pasti_sector)*(size_t)trackheader.numberofsector);
 
 							// lecture de l'ensemble des descripteurs de secteur
 							for(j=0;j<(trackheader.numberofsector);j++)
@@ -599,7 +611,7 @@ int STX_libLoad_DiskFile(LIBFLUX_IMGLDR * imgldr_ctx,LIBFLUX_FLOPPY * floppydisk
 								// Chargement du descripteur de secteur.
 								if(trackheader.flags&0x01)
 								{
-									if (fseek(f,sectorlistoffset + (sizeof(pasti_sector)*j) ,SEEK_SET) != 0) { /* seek error */ }
+									if (fseek(f,sectorlistoffset + (sizeof(pasti_sector)*j) ,SEEK_SET) != 0) { goto alloc_error; }
 									libflux_fread( &sector[j], sizeof(pasti_sector), f );
 
 									sectorconfig[j].use_alternate_data_crc=0;
@@ -707,7 +719,7 @@ int STX_libLoad_DiskFile(LIBFLUX_IMGLDR * imgldr_ctx,LIBFLUX_FLOPPY * floppydisk
 						// Calcul de la position des donnees
 						weaksectoroffset=ftell(f);
 						trackpos=ftell(f)+ weaksectortotalsize;
-						if (fseek(f,trackpos,SEEK_SET) != 0) { /* seek error */ }
+						if (fseek(f,trackpos,SEEK_SET) != 0) { goto alloc_error; }
 						if(trackheader.flags&0x80)
 						{
 							libflux_fread( &temp_val, sizeof(unsigned short), f );
@@ -722,7 +734,7 @@ int STX_libLoad_DiskFile(LIBFLUX_IMGLDR * imgldr_ctx,LIBFLUX_FLOPPY * floppydisk
 #ifdef PASTI_DBG
 							imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"Reading Sector data %d at: 0x%.8X",j,trackpos + sector[j].sector_pos);
 #endif
-							if (fseek(f,trackpos + sector[j].sector_pos,SEEK_SET) != 0) { /* seek error */ }
+							if (fseek(f,trackpos + sector[j].sector_pos,SEEK_SET) != 0) { goto alloc_error; }
 							sectorconfig[j].input_data = malloc(sectorconfig[j].sectorsize);
 							if(sectorconfig[j].input_data)
 								libflux_fread(sectorconfig[j].input_data,sectorconfig[j].sectorsize,f);
@@ -773,7 +785,7 @@ int STX_libLoad_DiskFile(LIBFLUX_IMGLDR * imgldr_ctx,LIBFLUX_FLOPPY * floppydisk
 								weaksectorbuffer = malloc(128<<sector[j].sector_size);
 								if(weaksectorbuffer)
 								{
-									if (fseek(f,weaksectoroffset,SEEK_SET) != 0) { /* seek error */ }
+									if (fseek(f,weaksectoroffset,SEEK_SET) != 0) { goto alloc_error; }
 									libflux_fread(weaksectorbuffer,128<<sector[j].sector_size, f);
 
 									for(k=0;(k<(128<<sector[j].sector_size)*2);k=k+2)
@@ -830,13 +842,16 @@ int STX_libLoad_DiskFile(LIBFLUX_IMGLDR * imgldr_ctx,LIBFLUX_FLOPPY * floppydisk
 						// allocation buffers secteurs
 						if(trackheader.numberofsector > 0)
 						{
-							sector = malloc(sizeof(pasti_sector)*trackheader.numberofsector);
-							sectorconfig = (LIBFLUX_SECTCFG *) malloc(sizeof(LIBFLUX_SECTCFG)* trackheader.numberofsector);
+							/* Sanity cap: max 256 sectors per track */
+							if(trackheader.numberofsector > 256)
+								goto alloc_error;
+							sector = malloc(sizeof(pasti_sector)*(size_t)trackheader.numberofsector);
+							sectorconfig = (LIBFLUX_SECTCFG *) malloc(sizeof(LIBFLUX_SECTCFG)*(size_t)trackheader.numberofsector);
 							if( !sector || !sectorconfig )
 								goto alloc_error;
 
-							memset(sector,0,sizeof(pasti_sector)*trackheader.numberofsector);
-							memset(sectorconfig,0,sizeof(LIBFLUX_SECTCFG)* trackheader.numberofsector);
+							memset(sector,0,sizeof(pasti_sector)*(size_t)trackheader.numberofsector);
+							memset(sectorconfig,0,sizeof(LIBFLUX_SECTCFG)*(size_t)trackheader.numberofsector);
 						}
 						else
 						{
@@ -847,7 +862,7 @@ int STX_libLoad_DiskFile(LIBFLUX_IMGLDR * imgldr_ctx,LIBFLUX_FLOPPY * floppydisk
 						// lecture de l'ensemble des descripteurs de secteur
 						for(j=0;j<(trackheader.numberofsector);j++)
 						{
-							if (fseek(f,sectorlistoffset + (sizeof(pasti_sector)*j) ,SEEK_SET) != 0) { /* seek error */ }
+							if (fseek(f,sectorlistoffset + (sizeof(pasti_sector)*j) ,SEEK_SET) != 0) { goto alloc_error; }
 							libflux_fread( &sector[j], sizeof(pasti_sector), f );
 						}
 
@@ -948,7 +963,7 @@ int STX_libLoad_DiskFile(LIBFLUX_IMGLDR * imgldr_ctx,LIBFLUX_FLOPPY * floppydisk
 						// Calcul de la position des donnees
 						weaksectoroffset=ftell(f);
 						trackpos=ftell(f)+ weaksectortotalsize;
-						if (fseek(f,trackpos,SEEK_SET) != 0) { /* seek error */ }
+						if (fseek(f,trackpos,SEEK_SET) != 0) { goto alloc_error; }
 						if(trackheader.flags&0x80)
 						{
 							libflux_fread( &index_sync, sizeof(unsigned short), f );
@@ -987,8 +1002,8 @@ int STX_libLoad_DiskFile(LIBFLUX_IMGLDR * imgldr_ctx,LIBFLUX_FLOPPY * floppydisk
 										memset(sectorconfig[j].input_data,0,sectorconfig[j].sectorsize);
 								}
 
-								if (fseek(f,trackpos,SEEK_SET) != 0) { /* seek error */ }
-								if (fseek(f,sector[j].sector_pos,SEEK_CUR) != 0) { /* seek error */ }
+								if (fseek(f,trackpos,SEEK_SET) != 0) { goto alloc_error; }
+								if (fseek(f,sector[j].sector_pos,SEEK_CUR) != 0) { goto alloc_error; }
 								libflux_fread(sectorconfig[j].input_data,sectorconfig[j].sectorsize,f);
 							}
 
@@ -1082,7 +1097,7 @@ int STX_libLoad_DiskFile(LIBFLUX_IMGLDR * imgldr_ctx,LIBFLUX_FLOPPY * floppydisk
 									weaksectorbuffer=malloc(128<<sector[j].sector_size);
 									if(weaksectorbuffer)
 									{
-										if (fseek(f,weaksectoroffset,SEEK_SET) != 0) { /* seek error */ }
+										if (fseek(f,weaksectoroffset,SEEK_SET) != 0) { goto alloc_error; }
 										libflux_fread(weaksectorbuffer,128<<sector[j].sector_size,f);
 
 										for(k=0;(k<(128<<sector[j].sector_size)*2);k=k+2)
@@ -1144,8 +1159,8 @@ int STX_libLoad_DiskFile(LIBFLUX_IMGLDR * imgldr_ctx,LIBFLUX_FLOPPY * floppydisk
 					break;
 				}
 
-				if (fseek(f,trackheaderpos,SEEK_SET) != 0) { /* seek error */ }
-				if (fseek(f,trackheader.track_block_size,SEEK_CUR) != 0) { /* seek error */ }
+				if (fseek(f,trackheaderpos,SEEK_SET) != 0) { goto alloc_error; }
+				if (fseek(f,trackheader.track_block_size,SEEK_CUR) != 0) { goto alloc_error; }
 			}
 		}
 

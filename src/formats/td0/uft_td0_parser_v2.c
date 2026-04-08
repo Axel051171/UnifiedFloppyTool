@@ -23,6 +23,11 @@
 #include <string.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <limits.h>
+
+#ifndef SIZE_MAX
+#define SIZE_MAX ((size_t)-1)
+#endif
 
 /*============================================================================
  * TD0 FORMAT STRUCTURES
@@ -372,9 +377,17 @@ td0_context_t* td0_open(const char *filename) {
     }
     
     /* Get file size */
-    if (fseek(ctx->fp, 0, SEEK_END) != 0) { /* seek error */ }
+    if (fseek(ctx->fp, 0, SEEK_END) != 0) {
+        fclose(ctx->fp);
+        free(ctx);
+        return NULL;
+    }
     ctx->file_size = (size_t)ftell(ctx->fp);
-    if (fseek(ctx->fp, 0, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(ctx->fp, 0, SEEK_SET) != 0) {
+        fclose(ctx->fp);
+        free(ctx);
+        return NULL;
+    }
     /* Read header */
     if (fread(&ctx->header, sizeof(td0_header_t), 1, ctx->fp) != 1) {
         fclose(ctx->fp);
@@ -423,6 +436,12 @@ td0_context_t* td0_open(const char *filename) {
         }
         
         /* Allocate decompression buffer (estimate 10x expansion) */
+        if (comp_size > SIZE_MAX / 10) {
+            free(comp_data);
+            fclose(ctx->fp);
+            free(ctx);
+            return NULL;
+        }
         ctx->decomp_size = comp_size * 10;
         ctx->decomp_buffer = malloc(ctx->decomp_size);
         if (!ctx->decomp_buffer) {
@@ -514,12 +533,12 @@ int td0_read_sector(td0_context_t *ctx, uint8_t cyl, uint8_t head,
         ctx->decomp_pos = ctx->has_comment ? 
             (sizeof(td0_comment_header_t) + ctx->comment_length) : 0;
     } else {
-        if (fseek(ctx->fp, sizeof(td0_header_t), SEEK_SET) != 0) { /* seek error */ }
+        if (fseek(ctx->fp, sizeof(td0_header_t), SEEK_SET) != 0) return -1;
         if (ctx->has_comment) {
-            if (fseek(ctx->fp, sizeof(td0_comment_header_t) + ctx->comment_length, SEEK_CUR) != 0) { /* seek error */ }
+            if (fseek(ctx->fp, sizeof(td0_comment_header_t) + ctx->comment_length, SEEK_CUR) != 0) return -1;
         }
     }
-    
+
     /* Search for sector */
     while (1) {
         td0_track_header_t track_hdr;
@@ -545,15 +564,16 @@ int td0_read_sector(td0_context_t *ctx, uint8_t cyl, uint8_t head,
                 if (fread(&sec_hdr, sizeof(sec_hdr), 1, ctx->fp) != 1) return -1;
             }
             
-            /* Calculate sector size */
+            /* Calculate sector size - cap size_code to prevent absurd shifts */
+            if (sec_hdr.size_code > 6) return -1;  /* max 8192 bytes */
             size_t sec_size = (size_t)128 << sec_hdr.size_code;
-            
+
             /* Check for data */
             bool has_data = !(sec_hdr.flags & (TD0_SEC_SKIPPED | TD0_SEC_NO_DAM | TD0_SEC_NO_ID));
-            
+
             if (has_data) {
                 td0_sector_data_t data_hdr;
-                
+
                 if (ctx->advanced_compression) {
                     uint8_t hdr_buf[3];
                     if (td0_lzss_decompress(ctx, hdr_buf, 3) < 3) return -1;
@@ -561,9 +581,12 @@ int td0_read_sector(td0_context_t *ctx, uint8_t cyl, uint8_t head,
                 } else {
                     if (fread(&data_hdr, sizeof(data_hdr), 1, ctx->fp) != 1) return -1;
                 }
-                
-                size_t comp_size = data_hdr.data_size + 1;
-                
+
+                size_t comp_size = (size_t)data_hdr.data_size + 1;
+
+                /* Sanity cap: compressed data cannot exceed sector size */
+                if (comp_size > TD0_MAX_SECTOR_SIZE) return -1;
+
                 /* Read compressed data */
                 uint8_t *comp_data = malloc(comp_size);
                 if (!comp_data) return -1;
@@ -632,12 +655,12 @@ int td0_analyze_geometry(td0_context_t *ctx) {
         ctx->decomp_pos = ctx->has_comment ? 
             (sizeof(td0_comment_header_t) + ctx->comment_length) : 0;
     } else {
-        if (fseek(ctx->fp, sizeof(td0_header_t), SEEK_SET) != 0) { /* seek error */ }
+        if (fseek(ctx->fp, sizeof(td0_header_t), SEEK_SET) != 0) return -1;
         if (ctx->has_comment) {
-            if (fseek(ctx->fp, sizeof(td0_comment_header_t) + ctx->comment_length, SEEK_CUR) != 0) { /* seek error */ }
+            if (fseek(ctx->fp, sizeof(td0_comment_header_t) + ctx->comment_length, SEEK_CUR) != 0) return -1;
         }
     }
-    
+
     uint8_t max_cyl = 0;
     uint8_t max_head = 0;
     uint8_t max_sector = 0;
@@ -673,21 +696,22 @@ int td0_analyze_geometry(td0_context_t *ctx) {
             
             if (sec_hdr.sector > max_sector) max_sector = sec_hdr.sector;
             
-            /* Update sector size */
+            /* Update sector size - cap size_code to prevent absurd shifts */
+            if (sec_hdr.size_code > 6) break;  /* max 8192 bytes */
             uint16_t sec_size = (uint16_t)(128 << sec_hdr.size_code);
             if (sec_size > ctx->sector_size) ctx->sector_size = sec_size;
-            
+
             /* Count flags */
             if (sec_hdr.flags & TD0_SEC_CRC_ERROR) ctx->error_sectors++;
             if (sec_hdr.flags & TD0_SEC_DELETED) ctx->deleted_sectors++;
             if (sec_hdr.flags & TD0_SEC_SKIPPED) ctx->skipped_sectors++;
-            
+
             /* Skip sector data if present */
             bool has_data = !(sec_hdr.flags & (TD0_SEC_SKIPPED | TD0_SEC_NO_DAM | TD0_SEC_NO_ID));
-            
+
             if (has_data) {
                 td0_sector_data_t data_hdr;
-                
+
                 if (ctx->advanced_compression) {
                     uint8_t hdr_buf[3];
                     if (td0_lzss_decompress(ctx, hdr_buf, 3) < 3) break;
@@ -695,9 +719,12 @@ int td0_analyze_geometry(td0_context_t *ctx) {
                 } else {
                     if (fread(&data_hdr, sizeof(data_hdr), 1, ctx->fp) != 1) break;
                 }
-                
-                size_t comp_size = data_hdr.data_size + 1;
-                
+
+                size_t comp_size = (size_t)data_hdr.data_size + 1;
+
+                /* Sanity cap */
+                if (comp_size > TD0_MAX_SECTOR_SIZE) break;
+
                 if (ctx->advanced_compression) {
                     uint8_t *skip_buf = malloc(comp_size);
                     if (skip_buf) {
@@ -705,7 +732,7 @@ int td0_analyze_geometry(td0_context_t *ctx) {
                         free(skip_buf);
                     }
                 } else {
-                    if (fseek(ctx->fp, (long)comp_size, SEEK_CUR) != 0) { /* seek error */ }
+                    if (fseek(ctx->fp, (long)comp_size, SEEK_CUR) != 0) return -1;
                 }
             }
         }

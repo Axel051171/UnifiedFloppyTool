@@ -76,6 +76,9 @@ typedef struct {
     uint8_t     quality;            /**< Read quality (0-100) */
     bool        crc_ok;             /**< CRC passed */
     double      timing_variance;    /**< Timing variance */
+    /* OTDR-weighted voting (optional, NULL = use legacy flat weights) */
+    const float *otdr_confidence;   /**< Per-byte OTDR confidence [0..1] */
+    float       otdr_rev_weight;    /**< Per-revolution SNR weight [0..1] */
 } multiread_pass_t;
 
 /**
@@ -205,44 +208,60 @@ static uint8_t vote_byte(const multiread_pass_t *passes, uint8_t pass_count,
         return 0;
     }
     
-    /* Count occurrences of each value */
-    uint8_t counts[256] = {0};
+    /* Weighted vote: use OTDR confidence if available, else legacy weights */
+    float fweights[256];
+    memset(fweights, 0, sizeof(fweights));
+    float total_weight = 0.0f;
     uint8_t valid_count = 0;
-    
+
     for (uint8_t p = 0; p < pass_count; p++) {
-        if (offset < passes[p].data_len && passes[p].data) {
-            counts[passes[p].data[offset]]++;
-            valid_count++;
+        if (offset >= passes[p].data_len || !passes[p].data) continue;
+
+        uint8_t val = passes[p].data[offset];
+        float w;
+
+        if (passes[p].otdr_confidence && offset < passes[p].data_len) {
+            /* OTDR-weighted: per-byte confidence * revolution weight */
+            float rev_w = (passes[p].otdr_rev_weight > 0.0f)
+                          ? passes[p].otdr_rev_weight : 1.0f;
+            w = passes[p].otdr_confidence[offset] * rev_w;
+        } else {
+            /* Legacy: CRC-OK=3, CRC-FAIL=1 */
+            w = passes[p].crc_ok ? 3.0f : 1.0f;
         }
+
+        fweights[val] += w;
+        total_weight += w;
+        valid_count++;
     }
-    
-    if (valid_count == 0) {
+
+    if (valid_count == 0 || total_weight < 0.001f) {
         if (confidence) *confidence = 0;
         if (is_weak) *is_weak = true;
         return 0;
     }
-    
-    /* Find most common value */
-    uint8_t max_count = 0;
+
+    /* Find highest-weighted value */
+    float max_weight = 0.0f;
     uint8_t max_val = 0;
-    
+
     for (int v = 0; v < 256; v++) {
-        if (counts[v] > max_count) {
-            max_count = counts[v];
+        if (fweights[v] > max_weight) {
+            max_weight = fweights[v];
             max_val = (uint8_t)v;
         }
     }
-    
+
     /* Calculate confidence */
     if (confidence) {
-        *confidence = (uint8_t)((max_count * 100) / valid_count);
+        *confidence = (uint8_t)((max_weight * 100.0f) / total_weight);
     }
-    
-    /* Detect weak bits (not unanimous) */
+
+    /* Detect weak bits (not all weight on one value) */
     if (is_weak) {
-        *is_weak = (max_count < valid_count);
+        *is_weak = (max_weight < total_weight - 0.001f);
     }
-    
+
     return max_val;
 }
 
@@ -385,16 +404,48 @@ multiread_error_t multiread_add_pass(multiread_ctx_t *ctx,
     pass->quality = quality;
     pass->crc_ok = crc_ok;
     pass->timing_variance = 0;
-    
+    pass->otdr_confidence = NULL;
+    pass->otdr_rev_weight = 0.0f;
+
     ctx->pass_count++;
     ctx->total_reads++;
-    
+
     if (crc_ok) {
         ctx->successful_reads++;
     } else {
         ctx->failed_reads++;
     }
-    
+
+    return MULTIREAD_OK;
+}
+
+/**
+ * @brief Add a read pass with OTDR confidence weighting
+ *
+ * @param ctx        Pipeline context
+ * @param data       Read data
+ * @param len        Data length
+ * @param quality    Read quality (0-100)
+ * @param crc_ok     CRC verification passed
+ * @param otdr_conf  Per-byte OTDR confidence [0..1], NULL = legacy weighting
+ * @param rev_weight Revolution-level SNR weight [0..1], 0 = use default
+ * @return MULTIREAD_OK on success
+ */
+multiread_error_t multiread_add_pass_weighted(multiread_ctx_t *ctx,
+                                               const uint8_t *data,
+                                               size_t len,
+                                               uint8_t quality,
+                                               bool crc_ok,
+                                               const float *otdr_conf,
+                                               float rev_weight) {
+    multiread_error_t err = multiread_add_pass(ctx, data, len, quality, crc_ok);
+    if (err != MULTIREAD_OK) return err;
+
+    /* Patch the just-added pass with OTDR data */
+    multiread_pass_t *pass = &ctx->passes[ctx->pass_count - 1];
+    pass->otdr_confidence = otdr_conf;  /* Borrowed pointer, caller owns */
+    pass->otdr_rev_weight = (rev_weight > 0.0f) ? rev_weight : 1.0f;
+
     return MULTIREAD_OK;
 }
 

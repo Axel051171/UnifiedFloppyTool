@@ -541,9 +541,99 @@ void FatEditorWidget::onClusterMapClicked(int row, int col)
     if (item) selectCluster(item->data(Qt::UserRole).toUInt());
 }
 
-void FatEditorWidget::onClusterValueChanged() { /* TODO */ }
-void FatEditorWidget::onBootSectorFieldChanged() { /* TODO */ }
-void FatEditorWidget::onContextMenuRequested(const QPoint &) { /* TODO */ }
+void FatEditorWidget::onClusterValueChanged()
+{
+    if (!m_fat || m_selectedCluster < 2) return;
+
+    /* Parse the new cluster value from the edit field */
+    QString text = m_clusterValueEdit->text().trimmed();
+    bool ok;
+    uint32_t newValue;
+    if (text.startsWith("0x", Qt::CaseInsensitive))
+        newValue = text.mid(2).toUInt(&ok, 16);
+    else
+        newValue = text.toUInt(&ok, 16);
+
+    if (!ok) {
+        QMessageBox::warning(this, tr("Invalid Value"),
+            tr("Enter a valid hex cluster value (e.g., 0x003)."));
+        return;
+    }
+
+    /* Write the new value to the FAT */
+    if (uft_fat_set_cluster(m_fat, m_selectedCluster, newValue) == 0) {
+        m_modified = true;
+        emit modified();
+        emit statusMessage(tr("Cluster %1 set to 0x%2")
+            .arg(m_selectedCluster)
+            .arg(newValue, 0, 16).toUpper());
+        refresh();
+    } else {
+        QMessageBox::warning(this, tr("Error"),
+            tr("Failed to set cluster value."));
+    }
+}
+
+void FatEditorWidget::onBootSectorFieldChanged()
+{
+    if (!m_fat) return;
+
+    /* Update OEM name if changed */
+    QString oemName = m_oemNameEdit->text().trimmed();
+    if (!oemName.isEmpty()) {
+        uft_fat_set_oem_name(m_fat, oemName.toLatin1().constData());
+    }
+
+    /* Update volume label if changed */
+    QString volumeLabel = m_volumeLabelEdit->text().trimmed();
+    if (!volumeLabel.isEmpty()) {
+        uft_fat_set_volume_label(m_fat, volumeLabel.toLatin1().constData());
+    }
+
+    m_modified = true;
+    emit modified();
+    emit statusMessage(tr("Boot sector fields updated"));
+}
+
+void FatEditorWidget::onContextMenuRequested(const QPoint &pos)
+{
+    QMenu menu(this);
+
+    QAction *actSelectCluster = menu.addAction(tr("Select Cluster"));
+    QAction *actShowChain = menu.addAction(tr("Show Cluster Chain"));
+    menu.addSeparator();
+    QAction *actMarkBad = menu.addAction(tr("Mark as Bad"));
+    QAction *actMarkFree = menu.addAction(tr("Mark as Free"));
+    menu.addSeparator();
+    QAction *actViewHex = menu.addAction(tr("View in Hex"));
+    menu.addSeparator();
+    QAction *actFindLost = menu.addAction(tr("Find Lost Clusters"));
+    QAction *actRepair = menu.addAction(tr("Repair Filesystem"));
+
+    QAction *chosen = menu.exec(mapToGlobal(pos));
+    if (!chosen) return;
+
+    if (chosen == actSelectCluster) {
+        selectCluster(m_selectedCluster);
+    } else if (chosen == actShowChain) {
+        if (m_selectedCluster >= 2)
+            showClusterChain(m_selectedCluster);
+    } else if (chosen == actMarkBad) {
+        markClusterBad();
+    } else if (chosen == actMarkFree) {
+        markClusterFree();
+    } else if (chosen == actViewHex) {
+        if (m_selectedCluster >= 2) {
+            m_hexSectorSpin->setValue(m_selectedCluster);
+            updateHexView(m_selectedCluster);
+            m_tabWidget->setCurrentIndex(3);
+        }
+    } else if (chosen == actFindLost) {
+        findLostClusters();
+    } else if (chosen == actRepair) {
+        repairFilesystem();
+    }
+}
 
 /*===========================================================================
  * HELPERS

@@ -51,7 +51,7 @@ static uft_error_t d88_read_track(uft_disk_t* disk, int cyl, int head, uft_track
     if (idx >= 164 || p->track_off[idx] == 0) return UFT_ERROR_INVALID_ARG;
     
     uft_track_init(track, cyl, head);
-    if (fseek(p->file, p->track_off[idx], SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(p->file, p->track_off[idx], SEEK_SET) != 0) { return UFT_ERROR_INVALID_ARG; }
     uint8_t sec_hdr[16];
     for (int s = 0; s < disk->geometry.sectors; s++) {
         if (fread(sec_hdr, 1, 16, p->file) != 16) break;

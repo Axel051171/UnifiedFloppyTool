@@ -35,9 +35,9 @@ int uft_cbm_dnp_open(FloppyDevice *dev,const char*path){
     if(!fp){ fp=fopen(path,"rb"); ro=true; }
     if(!fp){ free(ctx); return UFT_ENOENT; }
 
-    if (fseek(fp,0,SEEK_END) != 0) { /* seek error */ }
+    if (fseek(fp,0,SEEK_END) != 0) { fclose(fp); free(ctx); return UFT_EIO; }
     long szl=ftell(fp);
-    if (fseek(fp,0,SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(fp,0,SEEK_SET) != 0) { fclose(fp); free(ctx); return UFT_EIO; }
     if(szl<=0){ fclose(fp); free(ctx); return UFT_EINVAL; }
 
     /* Minimal DNP header is 256 bytes; blocks follow */

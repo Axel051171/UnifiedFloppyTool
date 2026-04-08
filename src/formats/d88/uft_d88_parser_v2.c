@@ -234,7 +234,7 @@ static int d88_parse_disk(d88_context_t *ctx, int disk_idx, long start_offset) {
     d88_disk_info_t *disk = &ctx->disks[disk_idx];
     disk->file_offset = start_offset;
     
-    if (fseek(ctx->fp, start_offset, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(ctx->fp, start_offset, SEEK_SET) != 0) { return -1; }
     /* Read header */
     if (fread(&disk->header, sizeof(d88_header_t), 1, ctx->fp) != 1) {
         return -1;
@@ -264,7 +264,7 @@ static int d88_parse_disk(d88_context_t *ctx, int disk_idx, long start_offset) {
         track->head = (uint8_t)(t % 2);
         
         long track_offset = start_offset + track->offset;
-        if (fseek(ctx->fp, track_offset, SEEK_SET) != 0) { /* seek error */ }
+        if (fseek(ctx->fp, track_offset, SEEK_SET) != 0) { continue; }
         /* Read first sector header to get sector count */
         d88_sector_header_t first_sec;
         if (fread(&first_sec, sizeof(first_sec), 1, ctx->fp) != 1) {
@@ -280,7 +280,7 @@ static int d88_parse_disk(d88_context_t *ctx, int disk_idx, long start_offset) {
         }
         
         /* Seek back and read all sectors */
-        if (fseek(ctx->fp, track_offset, SEEK_SET) != 0) { /* seek error */ }
+        if (fseek(ctx->fp, track_offset, SEEK_SET) != 0) { continue; }
         for (int s = 0; s < track->sector_count; s++) {
             d88_sector_info_t *sec = &track->sectors[s];
             
@@ -300,11 +300,16 @@ static int d88_parse_disk(d88_context_t *ctx, int disk_idx, long start_offset) {
                 ctx->deleted_sectors++;
             }
             
+            /* Validate sector data_size before seeking */
+            if (sec->header.data_size > D88_MAX_SECTOR_SIZE) {
+                break;  /* Corrupt sector header */
+            }
+
             /* Skip sector data */
-            if (fseek(ctx->fp, sec->header.data_size, SEEK_CUR) != 0) { /* seek error */ }
+            if (fseek(ctx->fp, sec->header.data_size, SEEK_CUR) != 0) { break; }
         }
     }
-    
+
     return 0;
 }
 
@@ -326,9 +331,9 @@ d88_context_t* d88_open(const char *filename) {
     }
     
     /* Get file size */
-    if (fseek(ctx->fp, 0, SEEK_END) != 0) { /* seek error */ }
+    if (fseek(ctx->fp, 0, SEEK_END) != 0) { fclose(ctx->fp); free(ctx); return NULL; }
     ctx->file_size = (size_t)ftell(ctx->fp);
-    if (fseek(ctx->fp, 0, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(ctx->fp, 0, SEEK_SET) != 0) { fclose(ctx->fp); free(ctx); return NULL; }
     if (ctx->file_size < sizeof(d88_header_t)) {
         fclose(ctx->fp);
         free(ctx);
@@ -341,10 +346,10 @@ d88_context_t* d88_open(const char *filename) {
     
     while (offset < (long)ctx->file_size && ctx->disk_count < D88_MAX_DISKS) {
         /* Try to parse a disk at this offset */
-        if (fseek(ctx->fp, offset, SEEK_SET) != 0) { /* seek error */ }
+        if (fseek(ctx->fp, offset, SEEK_SET) != 0) { break; }
         /* Peek at disk size */
         uint32_t disk_size;
-        if (fseek(ctx->fp, offset + 0x1C, SEEK_SET) != 0) { /* seek error */ }
+        if (fseek(ctx->fp, offset + 0x1C, SEEK_SET) != 0) { break; }
         if (fread(&disk_size, 4, 1, ctx->fp) != 1) break;
         
         if (disk_size == 0 || disk_size > ctx->file_size - (size_t)offset) {
@@ -421,12 +426,16 @@ int d88_read_sector(d88_context_t *ctx, uint8_t cyl, uint8_t head,
             sec->header.head == head) {
             
             /* Seek to sector data */
-            if (fseek(ctx->fp, disk->file_offset + track->offset + 
-                  sizeof(d88_sector_header_t) * (s + 1) - 
-                  sizeof(d88_sector_header_t) + sizeof(d88_sector_header_t), 
-                  SEEK_SET) != 0) { /* seek error */ }
+            if (fseek(ctx->fp, disk->file_offset + track->offset +
+                  sizeof(d88_sector_header_t) * (s + 1) -
+                  sizeof(d88_sector_header_t) + sizeof(d88_sector_header_t),
+                  SEEK_SET) != 0) { return -1; }
             /* Actually, use stored offset */
-            if (fseek(ctx->fp, sec->file_offset, SEEK_SET) != 0) { /* seek error */ }
+            if (fseek(ctx->fp, sec->file_offset, SEEK_SET) != 0) { return -1; }
+
+            /* Validate data_size from file header */
+            if (sec->header.data_size > D88_MAX_SECTOR_SIZE) return -1;
+
             size_t read_size = sec->header.data_size;
             if (read_size > buf_size) read_size = buf_size;
             

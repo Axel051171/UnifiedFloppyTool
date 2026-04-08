@@ -20,6 +20,11 @@
 #include <string.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <limits.h>
+
+#ifndef SIZE_MAX
+#define SIZE_MAX ((size_t)-1)
+#endif
 
 /* ═══════════════════════════════════════════════════════════════════════════
  * CONSTANTS
@@ -302,9 +307,18 @@ static bool dmk_parse(const uint8_t* data, size_t size, dmk_disk_t* disk) {
     disk->single_density = (disk->header.flags & DMK_FLAG_SINGLE_DENSITY) != 0;
     disk->write_protected = (disk->header.write_protect == 0xFF);
     disk->num_sides = disk->single_sided ? 1 : 2;
-    
-    /* Allocate tracks */
+
+    /* Validate and allocate tracks */
+    if (disk->num_tracks == 0 || disk->num_tracks > 96) {
+        snprintf(disk->error, sizeof(disk->error), "Invalid track count: %u", disk->num_tracks);
+        return false;
+    }
     disk->track_count = disk->num_tracks * disk->num_sides;
+    /* Overflow check: track_count * sizeof(dmk_track_t) */
+    if (disk->track_count > SIZE_MAX / sizeof(dmk_track_t)) {
+        snprintf(disk->error, sizeof(disk->error), "Track allocation overflow");
+        return false;
+    }
     disk->tracks = calloc(disk->track_count, sizeof(dmk_track_t));
     if (!disk->tracks) {
         snprintf(disk->error, sizeof(disk->error), "Memory allocation failed");

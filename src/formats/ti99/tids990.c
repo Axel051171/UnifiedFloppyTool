@@ -23,10 +23,10 @@ int tids990_open(TiDs990Device *dev, const char *path) {
     FILE *f = fopen(path, "rb");
     if (!f) return -1;
     
-    if (fseek(f, 0, SEEK_END) != 0) { /* seek error */ }
+    if (fseek(f, 0, SEEK_END) != 0) { fclose(f); return -1; }
     size_t size = ftell(f);
     fclose(f);
-    
+
     dev->tracks = 77;
     dev->heads = 1;
     dev->sectors = 26;
@@ -61,7 +61,7 @@ int tids990_read_sector(TiDs990Device *dev, uint32_t c, uint32_t h, uint32_t s, 
     if (!f) return -1;
     
     size_t offset = ((c * dev->heads + h) * dev->sectors + s) * dev->sectorSize;
-    if (fseek(f, offset, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(f, offset, SEEK_SET) != 0) { fclose(f); return -1; }
     size_t read = fread(buf, 1, dev->sectorSize, f);
     fclose(f);
     

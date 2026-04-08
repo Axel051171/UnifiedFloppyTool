@@ -443,9 +443,9 @@ int uft_kf_load_track(const char *base_path, int track, int side,
     FILE *f = fopen(filename, "rb");
     if (!f) return -1;
     
-    if (fseek(f, 0, SEEK_END) != 0) { /* seek error */ }
+    if (fseek(f, 0, SEEK_END) != 0) { fclose(f); return -1; }
     size_t size = ftell(f);
-    if (fseek(f, 0, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(f, 0, SEEK_SET) != 0) { fclose(f); return -1; }
     uint8_t *data = malloc(size);
     if (!data) {
         fclose(f);

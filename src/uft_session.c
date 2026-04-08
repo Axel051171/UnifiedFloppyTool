@@ -523,9 +523,9 @@ uft_session_t *uft_session_load(const char *path) {
     FILE *f = fopen(path, "r");
     if (!f) return NULL;
     
-    if (fseek(f, 0, SEEK_END) != 0) { /* seek error */ }
+    if (fseek(f, 0, SEEK_END) != 0) { fclose(f); return NULL; }
     long size = ftell(f);
-    if (fseek(f, 0, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(f, 0, SEEK_SET) != 0) { fclose(f); return NULL; }
     char *json = malloc(size + 1);
     if (!json) {
         fclose(f);
@@ -972,9 +972,9 @@ uft_error_t uft_session_load_track_result(const uft_session_t *session, int cyli
     FILE *f = fopen(path, "rb");
     if (!f) return UFT_ERR_NOT_FOUND;
     
-    if (fseek(f, 0, SEEK_END) != 0) { /* seek error */ }
+    if (fseek(f, 0, SEEK_END) != 0) { fclose(f); return UFT_ERR_IO; }
     *size = ftell(f);
-    if (fseek(f, 0, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(f, 0, SEEK_SET) != 0) { fclose(f); return UFT_ERR_IO; }
     *data = malloc(*size);
     if (!*data) {
         fclose(f);
@@ -1019,15 +1019,15 @@ char *uft_session_load_report(const uft_session_t *session) {
     FILE *f = fopen(path, "r");
     if (!f) return NULL;
     
-    if (fseek(f, 0, SEEK_END) != 0) { /* seek error */ }
+    if (fseek(f, 0, SEEK_END) != 0) { fclose(f); return NULL; }
     long size = ftell(f);
-    if (fseek(f, 0, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(f, 0, SEEK_SET) != 0) { fclose(f); return NULL; }
     char *json = malloc(size + 1);
     if (!json) {
         fclose(f);
         return NULL;
     }
-    
+
     if (fread(json, 1, size, f) != size) { /* I/O error */ }
     json[size] = '\0';
     fclose(f);

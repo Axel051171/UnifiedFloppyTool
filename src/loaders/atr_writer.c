@@ -247,9 +247,15 @@ int atr_from_raw(const char *raw_file, const char *atr_file,
     FILE *fp = fopen(raw_file, "rb");
     if (!fp) return -1;
     
-    if (fseek(fp, 0, SEEK_END) != 0) { /* seek error */ }
+    if (fseek(fp, 0, SEEK_END) != 0) {
+        fclose(fp);
+        return -1;
+    }
     size_t size = ftell(fp);
-    if (fseek(fp, 0, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(fp, 0, SEEK_SET) != 0) {
+        fclose(fp);
+        return -1;
+    }
     uint8_t *data = malloc(size);
     if (!data) {
         fclose(fp);
@@ -257,7 +263,7 @@ int atr_from_raw(const char *raw_file, const char *atr_file,
     }
     if (fread(data, 1, size, fp) != size) { /* I/O error */ }
     fclose(fp);
-    
+
     atr_image_t img;
     atr_create(&img, format);
     
@@ -281,9 +287,15 @@ int atr_from_xfd(const char *xfd_file, const char *atr_file)
     FILE *fp = fopen(xfd_file, "rb");
     if (!fp) return -1;
     
-    if (fseek(fp, 0, SEEK_END) != 0) { /* seek error */ }
+    if (fseek(fp, 0, SEEK_END) != 0) {
+        fclose(fp);
+        return -1;
+    }
     size_t size = ftell(fp);
-    if (fseek(fp, 0, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(fp, 0, SEEK_SET) != 0) {
+        fclose(fp);
+        return -1;
+    }
     /* Determine format from size */
     atr_format_t format;
     if (size <= 92160) {

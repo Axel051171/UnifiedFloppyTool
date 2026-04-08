@@ -105,15 +105,45 @@ void uft_fc_config_destroy(uft_fc_config_t *cfg) {
 
 int uft_fc_open(uft_fc_config_t *cfg) {
     if (!cfg) return -1;
-    
-    /* 
-     * FC5025 requires libusb for direct communication.
-     * Alternative: Use fc5025 command-line tools via popen().
+
+    /*
+     * FC5025 uses a SCSI-like CBW/CSW protocol over USB bulk transfers.
+     * USB VID:PID = 0x16C0:0x06D6 (Van Ooijen Technische Informatica).
+     *
+     * Since libusb may not be available at compile time, we first try the
+     * fc5025 CLI tools (fcimage, fcformat) via popen(), which is the
+     * recommended and portable approach.
+     *
+     * If the CLI tools are not found, report an actionable error.
      */
+
+    /* Check if fc5025 CLI tools are available */
+#ifdef _WIN32
+    FILE *fp = _popen("where fcimage 2>nul", "r");
+#else
+    FILE *fp = popen("which fcimage 2>/dev/null", "r");
+#endif
+
+    if (fp) {
+        char tool_path[256] = {0};
+        bool found = (fgets(tool_path, sizeof(tool_path), fp) != NULL);
+#ifdef _WIN32
+        _pclose(fp);
+#else
+        pclose(fp);
+#endif
+
+        if (found && tool_path[0]) {
+            /* CLI tools available -- mark as connected.
+             * Actual USB device presence will be verified on first read. */
+            cfg->connected = true;
+            return 0;
+        }
+    }
+
     snprintf(cfg->last_error, sizeof(cfg->last_error),
-             "FC5025 requires libusb integration or fc5025 command-line tools. "
+             "FC5025 requires 'fcimage' command-line tools. "
              "Install from: http://www.deviceside.com/fc5025.html");
-    
     return -1;
 }
 
@@ -212,23 +242,199 @@ int uft_fc_get_firmware_version(uft_fc_config_t *cfg, int *version) {
 int uft_fc_read_track(uft_fc_config_t *cfg, int track, int side,
                        uint8_t **data, size_t *size) {
     if (!cfg || !data || !size) return -1;
-    
-    (void)track;
-    (void)side;
-    
-    snprintf(cfg->last_error, sizeof(cfg->last_error),
-             "FC5025 track read not implemented - requires libusb");
-    return -1;
+
+    *data = NULL;
+    *size = 0;
+
+    if (!cfg->connected) {
+        snprintf(cfg->last_error, sizeof(cfg->last_error),
+                 "FC5025 not connected");
+        return -1;
+    }
+
+    /*
+     * FC5025 USB Protocol (SCSI-like CBW/CSW):
+     *
+     * Command Block Wrapper (CBW) - 15 bytes:
+     *   [0x55, 0x46, 0x43, 0x01]  - CBW signature "UFC\x01"
+     *   [cmd_byte]                 - Command (0xC6 = READ_FLEXIBLE)
+     *   [format_byte]              - Disk format
+     *   [track_byte]               - Track number
+     *   [side_byte]                - Side (0 or 1)
+     *   [sector_start]             - Starting sector
+     *   [sector_count]             - Number of sectors
+     *   [flags]                    - Flags (double-step, etc.)
+     *   [timeout_lo, timeout_hi]   - Timeout in ms
+     *   [reserved, reserved]       - Reserved
+     *
+     * We use the 'fcimage' CLI tool to read a single track to a temp file,
+     * then load the result. This is the safe, portable approach.
+     */
+
+    /* Determine format-specific parameters */
+    int sectors = 0;
+    int sector_size = 256;
+    const char *format_flag = "";
+
+    for (size_t i = 0; i < FORMAT_COUNT; i++) {
+        if (g_formats[i].format == cfg->format) {
+            sectors = g_formats[i].sectors;
+            sector_size = g_formats[i].sector_size;
+            break;
+        }
+    }
+
+    if (sectors <= 0 && cfg->format != UFT_FC_FMT_AUTO &&
+        cfg->format != UFT_FC_FMT_RAW_FM && cfg->format != UFT_FC_FMT_RAW_MFM) {
+        snprintf(cfg->last_error, sizeof(cfg->last_error),
+                 "Unknown sector count for format %d", cfg->format);
+        return -1;
+    }
+
+    /* Map format to fcimage format argument */
+    switch (cfg->format) {
+        case UFT_FC_FMT_APPLE_DOS32:  format_flag = "-f apple33"; break;
+        case UFT_FC_FMT_APPLE_DOS33:  format_flag = "-f apple33"; break;
+        case UFT_FC_FMT_APPLE_PRODOS: format_flag = "-f apple33"; break;
+        case UFT_FC_FMT_IBM_FM:       format_flag = "-f ibm8sssd"; break;
+        case UFT_FC_FMT_IBM_MFM:      format_flag = "-f ibm"; break;
+        case UFT_FC_FMT_TRS80_SSSD:   format_flag = "-f trs80sssd"; break;
+        case UFT_FC_FMT_TRS80_SSDD:   format_flag = "-f trs80ssdd"; break;
+        case UFT_FC_FMT_KAYPRO:       format_flag = "-f kaypro"; break;
+        case UFT_FC_FMT_OSBORNE:      format_flag = "-f osborne"; break;
+        case UFT_FC_FMT_TI994A:       format_flag = "-f ti99"; break;
+        default:                       format_flag = ""; break;
+    }
+
+    /* Build command to read single track */
+    char temp_file[128];
+    char cmd[512];
+
+#ifdef _WIN32
+    snprintf(temp_file, sizeof(temp_file), "%%TEMP%%\\uft_fc_%d_%d.raw", track, side);
+#else
+    snprintf(temp_file, sizeof(temp_file), "/tmp/uft_fc_%d_%d.raw", track, side);
+#endif
+
+    snprintf(cmd, sizeof(cmd),
+             "fcimage %s -t %d -s %d %s-o %s 2>&1",
+             format_flag, track, side,
+             cfg->double_step ? "--double-step " : "",
+             temp_file);
+
+    /* Execute with retries */
+    int attempt;
+    int status = -1;
+    for (attempt = 0; attempt <= cfg->retries; attempt++) {
+        FILE *fp = popen(cmd, "r");
+        if (!fp) continue;
+
+        char output[512];
+        while (fgets(output, sizeof(output), fp)) {
+            /* Check for errors */
+        }
+        status = pclose(fp);
+        if (status == 0) break;
+    }
+
+    if (status != 0) {
+        snprintf(cfg->last_error, sizeof(cfg->last_error),
+                 "fcimage failed for track %d side %d after %d attempts",
+                 track, side, attempt);
+        return -1;
+    }
+
+    /* Read the resulting file */
+    FILE *f = fopen(temp_file, "rb");
+    if (!f) {
+        snprintf(cfg->last_error, sizeof(cfg->last_error),
+                 "Cannot read FC5025 output file: %s", temp_file);
+        return -1;
+    }
+
+    fseek(f, 0, SEEK_END);
+    long file_size = ftell(f);
+    fseek(f, 0, SEEK_SET);
+
+    if (file_size <= 0) {
+        fclose(f);
+        remove(temp_file);
+        snprintf(cfg->last_error, sizeof(cfg->last_error),
+                 "Empty output for track %d side %d", track, side);
+        return -1;
+    }
+
+    *data = malloc((size_t)file_size);
+    if (!*data) {
+        fclose(f);
+        remove(temp_file);
+        return -1;
+    }
+
+    *size = fread(*data, 1, (size_t)file_size, f);
+    fclose(f);
+    remove(temp_file);
+
+    return 0;
 }
 
 int uft_fc_read_disk(uft_fc_config_t *cfg, uft_fc_callback_t callback, void *user) {
     if (!cfg || !callback) return -1;
-    
-    (void)user;
-    
-    snprintf(cfg->last_error, sizeof(cfg->last_error),
-             "FC5025 disk read not implemented - requires libusb");
-    return -1;
+
+    if (!cfg->connected) {
+        snprintf(cfg->last_error, sizeof(cfg->last_error),
+                 "FC5025 not connected");
+        return -1;
+    }
+
+    /* Determine number of sides from format */
+    int num_sides = 1;
+    for (size_t i = 0; i < FORMAT_COUNT; i++) {
+        if (g_formats[i].format == cfg->format) {
+            /* Formats with DS in name or explicit 2-sided */
+            if (cfg->format == UFT_FC_FMT_TRS80_DSDD ||
+                cfg->format == UFT_FC_FMT_IBM_MFM) {
+                num_sides = 2;
+            }
+            break;
+        }
+    }
+
+    int captured = 0;
+
+    for (int track = cfg->start_track; track <= cfg->end_track; track++) {
+        for (int side = 0; side < num_sides; side++) {
+            if (cfg->side >= 0 && side != cfg->side) continue;
+
+            uft_fc_track_t result;
+            memset(&result, 0, sizeof(result));
+            result.track = track;
+            result.side = side;
+
+            if (uft_fc_read_track(cfg, track, side,
+                                  &result.data, &result.size) == 0) {
+                result.success = true;
+                /* Calculate sector count from data size and format */
+                int fmt_sectors = uft_fc_sectors_for_format(cfg->format);
+                result.sector_count = fmt_sectors > 0 ? fmt_sectors : 0;
+                captured++;
+            } else {
+                result.success = false;
+                result.error = cfg->last_error;
+            }
+
+            int cb_result = callback(&result, user);
+
+            free(result.data);
+            free(result.sector_status);
+
+            if (cb_result != 0) {
+                return captured;  /* User abort */
+            }
+        }
+    }
+
+    return captured;
 }
 
 /*============================================================================

@@ -126,9 +126,9 @@ const uft_format_plugin_t* uft_find_format_plugin_for_file(const char* path) {
     if (!f) return NULL;
     
     // Dateigröße ermitteln
-    if (fseek(f, 0, SEEK_END) != 0) { /* seek error */ }
+    if (fseek(f, 0, SEEK_END) != 0) { fclose(f); return NULL; }
     size_t file_size = ftell(f);
-    if (fseek(f, 0, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(f, 0, SEEK_SET) != 0) { fclose(f); return NULL; }
     // Header lesen (mind. 512 Bytes für die meisten Formate)
     uint8_t header[4096];
     size_t header_size = fread(header, 1, sizeof(header), f);

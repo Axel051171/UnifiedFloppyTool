@@ -413,9 +413,9 @@ int uft_load_image(const char *path, uft_disk_image_t *image, int *detected_vers
     FILE *fp = fopen(path, "rb");
     if (!fp) return -1;
     
-    if (fseek(fp, 0, SEEK_END) != 0) { /* seek error */ }
+    if (fseek(fp, 0, SEEK_END) != 0) { fclose(fp); return -1; }
     image->size = ftell(fp);
-    if (fseek(fp, 0, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(fp, 0, SEEK_SET) != 0) { fclose(fp); return -1; }
     image->data = malloc(image->size);
     if (!image->data) {
         fclose(fp);

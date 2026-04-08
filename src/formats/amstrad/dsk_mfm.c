@@ -27,9 +27,9 @@ int uft_cpc_dsk_mfm_open(FloppyDevice *dev,const char*path){
     if(!fp){ fp=fopen(path,"rb"); ro=true; }
     if(!fp){ free(ctx); return UFT_ENOENT; }
 
-    if (fseek(fp,0,SEEK_END) != 0) { /* seek error */ }
+    if (fseek(fp,0,SEEK_END) != 0) { fclose(fp); free(ctx); return UFT_EIO; }
     long sz=ftell(fp);
-    if (fseek(fp,0,SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(fp,0,SEEK_SET) != 0) { fclose(fp); free(ctx); return UFT_EIO; }
     if(sz<=0){ fclose(fp); free(ctx); return UFT_EINVAL; }
 
     ctx->fp=fp; ctx->ro=ro; ctx->size=(uint32_t)sz;
@@ -58,7 +58,7 @@ int uft_cpc_dsk_mfm_read_sector(FloppyDevice *dev,uint32_t t,uint32_t h,uint32_t
     if(!dev||!dev->internal_ctx||!buf) return UFT_EINVAL;
     Ctx *ctx=dev->internal_ctx;
     if(s>=ctx->size) return UFT_EBOUNDS;
-    if (fseek(ctx->fp,(long)s,SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(ctx->fp,(long)s,SEEK_SET) != 0) { return UFT_EIO; }
     *buf=(uint8_t)fgetc(ctx->fp);
     return 0;
 }
@@ -69,7 +69,7 @@ int uft_cpc_dsk_mfm_write_sector(FloppyDevice *dev,uint32_t t,uint32_t h,uint32_
     Ctx *ctx=dev->internal_ctx;
     if(ctx->ro) return UFT_ENOTSUP;
     if(s>=ctx->size) return UFT_EBOUNDS;
-    if (fseek(ctx->fp,(long)s,SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(ctx->fp,(long)s,SEEK_SET) != 0) { return UFT_EIO; }
     fputc(*buf,ctx->fp);
     fflush(ctx->fp);
     return 0;

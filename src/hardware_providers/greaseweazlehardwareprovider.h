@@ -102,12 +102,17 @@ private:
     int m_currentCylinder = 0;
     int m_currentHead = 0;
     bool m_motorOn = false;
+    uint32_t m_sampleFreq = 72000000;  // Default: F7 sample frequency
+    uint8_t m_fwMajor = 0;
+    uint8_t m_fwMinor = 0;
+    uint8_t m_hwModel = 0;
     mutable QMutex m_mutex;
-    
+
     // Protocol helpers
     bool sendCommand(uint8_t cmd, const QByteArray &payload = QByteArray());
     QByteArray readResponse(int expectedSize, int timeoutMs = 5000);
     bool waitForAck(int timeoutMs = 1000);
+    QByteArray readStreamUntilEnd(int timeoutMs = 10000);
 };
 
 #endif // GREASEWEAZLEHARDWAREPROVIDER_H

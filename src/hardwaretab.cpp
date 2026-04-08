@@ -204,7 +204,8 @@ void HardwareTab::populateControllerList()
     ui->comboController->addItem(tr("SuperCard Pro"), "scp");
     ui->comboController->addItem(tr("KryoFlux"), "kryoflux");
     ui->comboController->addItem(tr("FluxEngine"), "fluxengine");
-    
+    ui->comboController->addItem(tr("ADF-Copy (Amiga)"), "adfcopy");
+
     // === Commodore Controllers (IEC/IEEE-488) ===
     ui->comboController->addItem(tr("── Commodore USB ──"), "separator_cbm_usb");
     ui->comboController->addItem(tr("ZoomFloppy"), "zoomfloppy");
@@ -558,7 +559,7 @@ void HardwareTab::onConnect()
     
     qDebug() << "Checking if controller is greaseweazle or fluxengine...";
     
-    if (controller == "greaseweazle" || controller == "fluxengine") {
+    if (controller == "greaseweazle" || controller == "fluxengine" || controller == "adfcopy") {
         qDebug() << "YES - using HAL connection";
         printf(">>> Entering HAL connection code path\n");
         fflush(stdout);

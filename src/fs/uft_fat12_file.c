@@ -574,9 +574,9 @@ int uft_fat_inject_from_file(uft_fat_ctx_t *ctx, const char *path,
     FILE *fp = fopen(src_path, "rb");
     if (!fp) return UFT_FAT_ERR_IO;
     
-    if (fseek(fp, 0, SEEK_END) != 0) { /* seek error */ }
+    if (fseek(fp, 0, SEEK_END) != 0) { fclose(fp); return UFT_FAT_ERR_IO; }
     long file_size = ftell(fp);
-    if (fseek(fp, 0, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(fp, 0, SEEK_SET) != 0) { fclose(fp); return UFT_FAT_ERR_IO; }
     if (file_size < 0) {
         fclose(fp);
         return UFT_FAT_ERR_IO;

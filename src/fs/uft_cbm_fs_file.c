@@ -496,9 +496,9 @@ uft_rc_t uft_cbm_file_load(uft_cbm_fs_t* fs, const char* filename,
     FILE* f = fopen(path, "rb");
     if (!f) return UFT_ERR_FILE_NOT_FOUND;
     
-    if (fseek(f, 0, SEEK_END) != 0) { /* seek error */ }
+    if (fseek(f, 0, SEEK_END) != 0) { fclose(f); return UFT_ERR_INVALID_ARG; }
     long file_size = ftell(f);
-    if (fseek(f, 0, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(f, 0, SEEK_SET) != 0) { fclose(f); return UFT_ERR_INVALID_ARG; }
     if (file_size < 0 || file_size > 16 * 1024 * 1024) {  /* Max 16MB */
         fclose(f);
         return UFT_ERR_INVALID_ARG;

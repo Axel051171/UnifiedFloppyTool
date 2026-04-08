@@ -172,7 +172,7 @@ int ARBURG_RAW_libLoad_DiskFile(LIBFLUX_IMGLDR * imgldr_ctx,LIBFLUX_FLOPPY * flo
 			fileoffset = (10*ARBURB_DATATRACK_SIZE) + ((i-10)*blocksize);
 		}
 
-		if (fseek(f,fileoffset,SEEK_SET) != 0) { /* seek error */ }
+		if (fseek(f,fileoffset,SEEK_SET) != 0) { libflux_fclose(f); return LIBFLUX_ACCESSERROR; }
 		libflux_fread(&sector_data,blocksize,f);
 
 		if(!floppydisk->tracks[tracknumber])

@@ -329,7 +329,10 @@ int edsk_parser_read_track(
     
     /* Read sector info blocks (follow track info header) */
     /* Seek back to read sector info from proper position */
-    if (fseek(ctx->file, track_offset + 24, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(ctx->file, track_offset + 24, SEEK_SET) != 0) {
+        free(track);
+        return -1;
+    }
     edsk_sector_info_t* sec_infos = malloc(track->sector_count * sizeof(edsk_sector_info_t));
     if (!sec_infos) {
         free(track);
@@ -382,7 +385,9 @@ int edsk_parser_read_track(
         
         /* Read sector data */
         if (sector->actual_size > 0) {
-            if (fseek(ctx->file, data_offset, SEEK_SET) != 0) { /* seek error */ }
+            if (fseek(ctx->file, data_offset, SEEK_SET) != 0) {
+                continue;  /* Skip sector on seek failure */
+            }
             sector->data = malloc(sector->actual_size);
             if (sector->data) {
                 if (fread(sector->data, 1, sector->actual_size, ctx->file) 

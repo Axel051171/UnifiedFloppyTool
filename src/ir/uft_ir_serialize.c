@@ -542,7 +542,7 @@ uft_ir_reader_t *uft_ir_reader_open(const char *path)
     }
     
     /* Reset to after header */
-    if (fseek(reader->file, sizeof(uft_ir_header_t), SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(reader->file, sizeof(uft_ir_header_t), SEEK_SET) != 0) { fclose(reader->file); free(reader); return NULL; }
     reader->file_position = sizeof(uft_ir_header_t);
     
     return reader;
@@ -609,7 +609,7 @@ int uft_ir_read_track(uft_ir_reader_t *reader,
     }
     
     /* Seek to track */
-    if (fseek(reader->file, offset, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(reader->file, offset, SEEK_SET) != 0) { return -3; }
     /* Read block header */
     uft_ir_block_header_t block;
     if (fread(&block, sizeof(block), 1, reader->file) != 1) {
@@ -662,7 +662,7 @@ int uft_ir_read_sector(uft_ir_reader_t *reader,
     if (track_offset == 0) return -2;
     
     /* Scan for sector block after track */
-    if (fseek(reader->file, track_offset, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(reader->file, track_offset, SEEK_SET) != 0) { return -3; }
     uft_ir_block_header_t block;
     while (fread(&block, sizeof(block), 1, reader->file) == 1) {
         if (block.type == UFT_IR_BLOCK_EOF || 
@@ -692,7 +692,7 @@ int uft_ir_read_sector(uft_ir_reader_t *reader,
                 }
                 
                 /* Skip sector data */
-                if (fseek(reader->file, sect_hdr.data_size, SEEK_CUR) != 0) { /* seek error */ }
+                if (fseek(reader->file, sect_hdr.data_size, SEEK_CUR) != 0) { return -3; }
                 continue;
             }
         }

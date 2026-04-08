@@ -246,9 +246,9 @@ pro_reader_t* pro_open(const char* path) {
     reader->path = strdup(path);
     
     /* Dateigröße */
-    if (fseek(fp, 0, SEEK_END) != 0) { /* seek error */ }
+    if (fseek(fp, 0, SEEK_END) != 0) { fclose(fp); free(reader->path); free(reader); return NULL; }
     reader->file_size = (size_t)ftell(fp);
-    if (fseek(fp, 0, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(fp, 0, SEEK_SET) != 0) { fclose(fp); free(reader->path); free(reader); return NULL; }
     /* Minimale Größe prüfen */
     if (reader->file_size < sizeof(pro_header_t)) {
         fclose(fp);
@@ -268,7 +268,7 @@ pro_reader_t* pro_open(const char* path) {
     /* Signatur prüfen */
     if (!pro_check_signature(reader->header.signature)) {
         /* Versuche Raw-PRO ohne Header */
-        if (fseek(fp, 0, SEEK_SET) != 0) { /* seek error */ }
+        if (fseek(fp, 0, SEEK_SET) != 0) { fclose(fp); free(reader->path); free(reader); return NULL; }
         /* Standard-Geometrie annehmen */
         reader->tracks = PRO_TRACKS_SD;
         reader->sides = 1;
@@ -330,7 +330,7 @@ int pro_read_track_v2(pro_reader_t* reader, uint8_t track_num, uint8_t side,
         /* Mit Header: Track-Header lesen */
         uint32_t header_pos = reader->header.data_offset + 
                               track_idx * sizeof(pro_track_header_t);
-        if (fseek(reader->fp, header_pos, SEEK_SET) != 0) { /* seek error */ }
+        if (fseek(reader->fp, header_pos, SEEK_SET) != 0) { return -4; }
         pro_track_header_t thdr;
         if (fread(&thdr, sizeof(thdr), 1, reader->fp) != 1) {
             return -4;
@@ -348,7 +348,7 @@ int pro_read_track_v2(pro_reader_t* reader, uint8_t track_num, uint8_t side,
     }
     
     /* Sektoren lesen */
-    if (fseek(reader->fp, track_offset, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(reader->fp, track_offset, SEEK_SET) != 0) { return -4; }
     uint8_t sector_counts[PRO_MAX_SECTORS] = {0};
     
     for (int i = 0; i < track->sector_count && i < PRO_MAX_SECTORS; i++) {

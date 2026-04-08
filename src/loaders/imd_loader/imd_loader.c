@@ -149,15 +149,15 @@ int IMD_libLoad_DiskFile(LIBFLUX_IMGLDR * imgldr_ctx,LIBFLUX_FLOPPY * floppydisk
 
 			if(libflux_fread(&trackcfg,sizeof(trackcfg),f)>0)
 			{
-				if (fseek(f,trackcfg.number_of_sector,SEEK_CUR) != 0) { /* seek error */ }
+				if (fseek(f,trackcfg.number_of_sector,SEEK_CUR) != 0) { libflux_fclose(f); return LIBFLUX_ACCESSERROR; }
 				if(trackcfg.physical_head & SEC_CYL_MAP)
 				{
-					if (fseek(f,trackcfg.number_of_sector,SEEK_CUR) != 0) { /* seek error */ }
+					if (fseek(f,trackcfg.number_of_sector,SEEK_CUR) != 0) { libflux_fclose(f); return LIBFLUX_ACCESSERROR; }
 				}
 
 				if(trackcfg.physical_head & SEC_HEAD_MAP)
 				{
-					if (fseek(f,trackcfg.number_of_sector,SEEK_CUR) != 0) { /* seek error */ }
+					if (fseek(f,trackcfg.number_of_sector,SEEK_CUR) != 0) { libflux_fclose(f); return LIBFLUX_ACCESSERROR; }
 				}
 
 				if(trackcount<trackcfg.physical_cylinder)
@@ -180,28 +180,28 @@ int IMD_libLoad_DiskFile(LIBFLUX_IMGLDR * imgldr_ctx,LIBFLUX_FLOPPY * floppydisk
 
 							break;
 						case 0x01:
-							if (fseek(f,(128<<trackcfg.sector_size_code),SEEK_CUR) != 0) { /* seek error */ }
+							if (fseek(f,(128<<trackcfg.sector_size_code),SEEK_CUR) != 0) { libflux_fclose(f); return LIBFLUX_ACCESSERROR; }
 							break;
 						case 0x02:
-							if (fseek(f,1,SEEK_CUR) != 0) { /* seek error */ }
+							if (fseek(f,1,SEEK_CUR) != 0) { libflux_fclose(f); return LIBFLUX_ACCESSERROR; }
 							break;
 						case 0x03:
-							if (fseek(f,(128<<trackcfg.sector_size_code),SEEK_CUR) != 0) { /* seek error */ }
+							if (fseek(f,(128<<trackcfg.sector_size_code),SEEK_CUR) != 0) { libflux_fclose(f); return LIBFLUX_ACCESSERROR; }
 							break;
 						case 0x04:
-							if (fseek(f,1,SEEK_CUR) != 0) { /* seek error */ }
+							if (fseek(f,1,SEEK_CUR) != 0) { libflux_fclose(f); return LIBFLUX_ACCESSERROR; }
 							break;
 						case 0x05:
-							if (fseek(f,(128<<trackcfg.sector_size_code),SEEK_CUR) != 0) { /* seek error */ }
+							if (fseek(f,(128<<trackcfg.sector_size_code),SEEK_CUR) != 0) { libflux_fclose(f); return LIBFLUX_ACCESSERROR; }
 							break;
 						case 0x06:
-							if (fseek(f,1,SEEK_CUR) != 0) { /* seek error */ }
+							if (fseek(f,1,SEEK_CUR) != 0) { libflux_fclose(f); return LIBFLUX_ACCESSERROR; }
 							break;
 						case 0x07:
-							if (fseek(f,(128<<trackcfg.sector_size_code),SEEK_CUR) != 0) { /* seek error */ }
+							if (fseek(f,(128<<trackcfg.sector_size_code),SEEK_CUR) != 0) { libflux_fclose(f); return LIBFLUX_ACCESSERROR; }
 							break;
 						case 0x08:
-							if (fseek(f,1,SEEK_CUR) != 0) { /* seek error */ }
+							if (fseek(f,1,SEEK_CUR) != 0) { libflux_fclose(f); return LIBFLUX_ACCESSERROR; }
 							break;
 						default:
 							break;
@@ -233,7 +233,7 @@ int IMD_libLoad_DiskFile(LIBFLUX_IMGLDR * imgldr_ctx,LIBFLUX_FLOPPY * floppydisk
 
 		memset(floppydisk->tracks,0,sizeof(LIBFLUX_CYLINDER*)*floppydisk->floppyNumberOfTrack);
 
-		if (fseek(f,0,SEEK_SET) != 0) { /* seek error */ }
+		if (fseek(f,0,SEEK_SET) != 0) { libflux_fclose(f); return LIBFLUX_ACCESSERROR; }
 		// recherche fin entete / comentaire(s).
 		i = 0;
 		do

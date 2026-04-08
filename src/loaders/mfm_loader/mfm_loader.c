@@ -140,9 +140,9 @@ int MFM_libLoad_DiskFile(LIBFLUX_IMGLDR * imgldr_ctx,LIBFLUX_FLOPPY * floppydisk
 
 			libflux_imgCallProgressCallback(imgldr_ctx,i,(floppydisk->floppyNumberOfTrack*floppydisk->floppyNumberOfSide) );
 
-			if (fseek(f,(header.mfmtracklistoffset)+(i*sizeof(trackdesc)),SEEK_SET) != 0) { /* seek error */ }
+			if (fseek(f,(header.mfmtracklistoffset)+(i*sizeof(trackdesc)),SEEK_SET) != 0) { goto alloc_error; }
 			libflux_fread(&trackdesc,sizeof(trackdesc),f);
-			if (fseek(f,trackdesc.mfmtrackoffset,SEEK_SET) != 0) { /* seek error */ }
+			if (fseek(f,trackdesc.mfmtrackoffset,SEEK_SET) != 0) { goto alloc_error; }
 			if(!floppydisk->tracks[trackdesc.track_number])
 			{
 				floppydisk->tracks[trackdesc.track_number]=allocCylinderEntry(header.floppyRPM,floppydisk->floppyNumberOfSide);

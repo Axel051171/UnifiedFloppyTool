@@ -77,9 +77,9 @@ int raw_iso_loader(LIBFLUX_IMGLDR * imgldr_ctx,LIBFLUX_FLOPPY * floppydisk, FILE
 	if( f_img )
 	{
 		cur_offset = ftell(f_img);
-		if (fseek(f_img,0, SEEK_END) != 0) { /* seek error */ }
+		if (fseek(f_img,0, SEEK_END) != 0) { return LIBFLUX_ACCESSERROR; }
 		size = ftell(f_img);
-		if (fseek(f_img,cur_offset, SEEK_SET) != 0) { /* seek error */ }
+		if (fseek(f_img,cur_offset, SEEK_SET) != 0) { return LIBFLUX_ACCESSERROR; }
 	}
 
 	if( !size )

@@ -24,7 +24,7 @@ extern "C" {
  * @brief Enable/disable path security checks
  * @param enabled 1 to enable (default), 0 to disable
  * 
- * When enabled, uft_file_open() will reject paths containing ".."
+ * When enabled, uft_file_open() will reject paths with ".." components.
  * Disable only for trusted paths where traversal is intentional.
  */
 void uft_file_set_security(int enabled);
@@ -42,7 +42,7 @@ int uft_file_get_security(void);
  * @param out_file Output file handle
  * @return UFT_OK on success, error code on failure
  * 
- * @note If security is enabled, paths with ".." will be rejected
+ * @note If security is enabled, paths with ".." components will be rejected
  */
 uft_error_t uft_file_open(const char *path, const char *mode, FILE **out_file);
 

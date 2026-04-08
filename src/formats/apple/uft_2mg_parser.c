@@ -270,8 +270,8 @@ img2_parser_ctx_t* img2_parser_open(const char* path) {
     if (ctx->header.comment_offset > 0 && ctx->header.comment_size > 0) {
         ctx->comment = malloc(ctx->header.comment_size + 1);
         if (ctx->comment) {
-            if (fseek(f, ctx->header.comment_offset, SEEK_SET) != 0) { /* seek error */ }
-            if (fread(ctx->comment, 1, ctx->header.comment_size, f) 
+            if (fseek(f, ctx->header.comment_offset, SEEK_SET) != 0) { free(ctx->comment); ctx->comment = NULL; }
+            if (ctx->comment && fread(ctx->comment, 1, ctx->header.comment_size, f)
                 == ctx->header.comment_size) {
                 ctx->comment[ctx->header.comment_size] = '\0';
             } else {
@@ -285,8 +285,8 @@ img2_parser_ctx_t* img2_parser_open(const char* path) {
     if (ctx->header.creator_offset > 0 && ctx->header.creator_size > 0) {
         ctx->creator_data = malloc(ctx->header.creator_size);
         if (ctx->creator_data) {
-            if (fseek(f, ctx->header.creator_offset, SEEK_SET) != 0) { /* seek error */ }
-            if (fread(ctx->creator_data, 1, ctx->header.creator_size, f) 
+            if (fseek(f, ctx->header.creator_offset, SEEK_SET) != 0) { free(ctx->creator_data); ctx->creator_data = NULL; }
+            if (ctx->creator_data && fread(ctx->creator_data, 1, ctx->header.creator_size, f)
                 != ctx->header.creator_size) {
                 free(ctx->creator_data);
                 ctx->creator_data = NULL;

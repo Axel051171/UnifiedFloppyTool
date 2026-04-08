@@ -327,9 +327,9 @@ static int process_job(uft_batch_ctx_t *ctx, uft_batch_job_t *job)
                     break;
                 }
                 
-                if (fseek(fp, 0, SEEK_END) != 0) { /* P1-IO-001 */ }
+                if (fseek(fp, 0, SEEK_END) != 0) { fclose(fp); result = -1; strncpy(job->result_msg, "Seek error", sizeof(job->result_msg)); break; }
                 size_t size = ftell(fp);
-                if (fseek(fp, 0, SEEK_SET) != 0) { /* P1-IO-001 */ }
+                if (fseek(fp, 0, SEEK_SET) != 0) { fclose(fp); result = -1; strncpy(job->result_msg, "Seek error", sizeof(job->result_msg)); break; }
                 
                 uint8_t *data = (uint8_t*)malloc(size);
                 if (!data) {
@@ -409,9 +409,9 @@ static int process_job(uft_batch_ctx_t *ctx, uft_batch_job_t *job)
                     break;
                 }
                 
-                if (fseek(fp, 0, SEEK_END) != 0) { /* P1-IO-001 */ }
+                if (fseek(fp, 0, SEEK_END) != 0) { fclose(fp); result = -1; strncpy(job->result_msg, "Seek error", sizeof(job->result_msg)); break; }
                 size_t size = ftell(fp);
-                if (fseek(fp, 0, SEEK_SET) != 0) { /* P1-IO-001 */ }
+                if (fseek(fp, 0, SEEK_SET) != 0) { fclose(fp); result = -1; strncpy(job->result_msg, "Seek error", sizeof(job->result_msg)); break; }
                 
                 /* Simple checksum for now (real MD5/SHA256 would need crypto lib) */
                 uint32_t crc = 0xFFFFFFFF;

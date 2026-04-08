@@ -694,8 +694,8 @@ int uff_finalize(uff_container_t* uff, const uff_write_options_t* options) {
         free(chunk_data);
     }
     
-    if (fseek(uff->fp, 0, SEEK_END) != 0) { /* I/O error */ }
-    
+    if (fseek(uff->fp, 0, SEEK_END) != 0) { free(hash_data); return UFF_ERR_FILE; }
+
     result = write_chunk(uff, UFF_CHUNK_HASH, hash_data, hash_size,
                         &uff->toc[uff->toc_count++]);
     free(hash_data);
@@ -735,7 +735,7 @@ int uff_finalize(uff_container_t* uff, const uff_write_options_t* options) {
     uff->header.header_crc32 = uff_crc32((uint8_t*)&uff->header, 
                                          offsetof(uff_file_header_t, header_crc32));
     
-    if (fseek(uff->fp, 0, SEEK_SET) != 0) { /* I/O error */ }
+    if (fseek(uff->fp, 0, SEEK_SET) != 0) { return UFF_ERR_FILE; }
     if (fwrite(&uff->header, sizeof(uff->header), 1, uff->fp) != 1) {
         return UFF_ERR_FILE;
     }

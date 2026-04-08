@@ -51,7 +51,7 @@ static uft_error_t dmk_read_track(uft_disk_t* disk, int cyl, int head, uft_track
     uft_track_init(track, cyl, head);
     
     size_t off = DMK_HDR + ((size_t)cyl * (p->ss ? 1 : 2) + head) * p->track_len;
-    if (fseek(p->file, off, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(p->file, off, SEEK_SET) != 0) { return UFT_ERR_IO; }
     uint8_t* tbuf = malloc(p->track_len);
     if (!tbuf) return UFT_ERR_MEMORY;
     if (fread(tbuf, 1, p->track_len, p->file) != p->track_len) { free(tbuf); return UFT_ERR_IO; }

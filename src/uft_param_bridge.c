@@ -607,9 +607,9 @@ uft_params_t *uft_params_load_json(const char *path) {
     }
     if (!f) return NULL;
     
-    if (fseek(f, 0, SEEK_END) != 0) { /* seek error */ }
+    if (fseek(f, 0, SEEK_END) != 0) { fclose(f); return NULL; }
     long size = ftell(f);
-    if (fseek(f, 0, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(f, 0, SEEK_SET) != 0) { fclose(f); return NULL; }
     char *json = malloc(size + 1);
     if (!json) {
         fclose(f);

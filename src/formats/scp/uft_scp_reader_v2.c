@@ -22,7 +22,15 @@
 #include <string.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <stddef.h>
+#include <limits.h>
 #include <math.h>
+
+#ifndef SIZE_MAX
+#define SIZE_MAX ((size_t)-1)
+#endif
+
+#include "uft/uft_simd.h"
 
 #ifdef __SSE2__
 #include <emmintrin.h>
@@ -183,62 +191,108 @@ typedef struct {
  * SIMD FLUX CONVERSION
  *============================================================================*/
 
+/* --- Scalar fallback implementations (always compiled) --- */
+
+static void scalar_convert_flux_16to32(const uint16_t* src, uint32_t* dst,
+                                        size_t count, uint8_t resolution) {
+    uint32_t scale = (resolution + 1) * 25;
+    uint32_t overflow_acc = 0;
+
+    for (size_t i = 0; i < count; i++) {
+        uint16_t val = (src[i] >> 8) | (src[i] << 8);
+
+        if (val == 0) {
+            overflow_acc += 65536;
+        } else {
+            dst[i] = (val + overflow_acc) * scale;
+            overflow_acc = 0;
+        }
+    }
+}
+
+static void scalar_flux_statistics(const uint32_t* flux, size_t count,
+                                    uint32_t* min_out, uint32_t* max_out,
+                                    float* avg_out) {
+    if (count == 0) {
+        *min_out = *max_out = 0;
+        *avg_out = 0;
+        return;
+    }
+
+    uint32_t min_val = flux[0], max_val = flux[0];
+    uint64_t sum = 0;
+
+    for (size_t i = 0; i < count; i++) {
+        if (flux[i] < min_val) min_val = flux[i];
+        if (flux[i] > max_val) max_val = flux[i];
+        sum += flux[i];
+    }
+
+    *min_out = min_val;
+    *max_out = max_val;
+    *avg_out = (float)sum / (float)count;
+}
+
+/* --- SIMD implementations (compiled when intrinsics available) --- */
+
 #ifdef __SSE2__
 /**
  * @brief SIMD 16-bit zu 32-bit Flux-Konvertierung
  * Konvertiert Big-Endian 16-bit Werte zu 32-bit mit Overflow-Handling
  */
-static void simd_convert_flux_16to32(const uint16_t* src, uint32_t* dst,
-                                      size_t count, uint8_t resolution) {
+static void simd_convert_flux_16to32_sse2(const uint16_t* src, uint32_t* dst,
+                                           size_t count, uint8_t resolution) {
     uint32_t scale = (resolution + 1) * 25;  /* ns per tick */
     uint32_t overflow_acc = 0;
-    
+
     size_t i = 0;
-    
+
 #ifdef __AVX2__
-    /* AVX2: 16 Werte parallel */
-    for (; i + 16 <= count; i += 16) {
-        __m256i src_vec = _mm256_loadu_si256((const __m256i*)(src + i));
-        
-        /* Byte-Swap für Big-Endian */
-        __m256i swap_mask = _mm256_setr_epi8(
-            1, 0, 3, 2, 5, 4, 7, 6, 9, 8, 11, 10, 13, 12, 15, 14,
-            1, 0, 3, 2, 5, 4, 7, 6, 9, 8, 11, 10, 13, 12, 15, 14
-        );
-        src_vec = _mm256_shuffle_epi8(src_vec, swap_mask);
-        
-        /* Zu 32-bit erweitern (lower 8) */
-        __m256i lo = _mm256_cvtepu16_epi32(_mm256_extracti128_si256(src_vec, 0));
-        __m256i hi = _mm256_cvtepu16_epi32(_mm256_extracti128_si256(src_vec, 1));
-        
-        _mm256_storeu_si256((__m256i*)(dst + i), lo);
-        _mm256_storeu_si256((__m256i*)(dst + i + 8), hi);
+    if (uft_simd_has_avx2()) {
+        /* AVX2: 16 Werte parallel */
+        for (; i + 16 <= count; i += 16) {
+            __m256i src_vec = _mm256_loadu_si256((const __m256i*)(src + i));
+
+            /* Byte-Swap fuer Big-Endian */
+            __m256i swap_mask = _mm256_setr_epi8(
+                1, 0, 3, 2, 5, 4, 7, 6, 9, 8, 11, 10, 13, 12, 15, 14,
+                1, 0, 3, 2, 5, 4, 7, 6, 9, 8, 11, 10, 13, 12, 15, 14
+            );
+            src_vec = _mm256_shuffle_epi8(src_vec, swap_mask);
+
+            /* Zu 32-bit erweitern (lower 8) */
+            __m256i lo = _mm256_cvtepu16_epi32(_mm256_extracti128_si256(src_vec, 0));
+            __m256i hi = _mm256_cvtepu16_epi32(_mm256_extracti128_si256(src_vec, 1));
+
+            _mm256_storeu_si256((__m256i*)(dst + i), lo);
+            _mm256_storeu_si256((__m256i*)(dst + i + 8), hi);
+        }
     }
 #endif
-    
+
     /* SSE2: 8 Werte parallel */
     for (; i + 8 <= count; i += 8) {
         __m128i src_vec = _mm_loadu_si128((const __m128i*)(src + i));
-        
-        /* Byte-Swap für Big-Endian */
+
+        /* Byte-Swap fuer Big-Endian */
         /* SSE2 hat kein shuffle_epi8, manuell swappen */
         __m128i hi_bytes = _mm_srli_epi16(src_vec, 8);
         __m128i lo_bytes = _mm_slli_epi16(src_vec, 8);
         src_vec = _mm_or_si128(hi_bytes, lo_bytes);
-        
+
         /* Zu 32-bit erweitern */
         __m128i zero = _mm_setzero_si128();
         __m128i lo = _mm_unpacklo_epi16(src_vec, zero);
         __m128i hi = _mm_unpackhi_epi16(src_vec, zero);
-        
+
         _mm_storeu_si128((__m128i*)(dst + i), lo);
         _mm_storeu_si128((__m128i*)(dst + i + 4), hi);
     }
-    
+
     /* Scalar fallback + Overflow-Handling */
     for (; i < count; i++) {
         uint16_t val = (src[i] >> 8) | (src[i] << 8);  /* Swap bytes */
-        
+
         if (val == 0) {
             /* Overflow marker */
             overflow_acc += 65536;
@@ -252,56 +306,56 @@ static void simd_convert_flux_16to32(const uint16_t* src, uint32_t* dst,
 /**
  * @brief SIMD Flux-Statistik berechnen
  */
-static void simd_flux_statistics(const uint32_t* flux, size_t count,
-                                  uint32_t* min_out, uint32_t* max_out,
-                                  float* avg_out) {
+static void simd_flux_statistics_sse2(const uint32_t* flux, size_t count,
+                                       uint32_t* min_out, uint32_t* max_out,
+                                       float* avg_out) {
     if (count == 0) {
         *min_out = 0;
         *max_out = 0;
         *avg_out = 0;
         return;
     }
-    
+
     uint32_t min_val = flux[0], max_val = flux[0];
     uint64_t sum = 0;
-    
+
 #ifdef __SSE4_1__
     /* SSE4.1 Version mit _mm_min_epi32 / _mm_max_epi32 */
     __m128i min_vec = _mm_set1_epi32(0x7FFFFFFF);
     __m128i max_vec = _mm_setzero_si128();
     __m128i sum_lo = _mm_setzero_si128();
     __m128i sum_hi = _mm_setzero_si128();
-    
+
     size_t i = 0;
     for (; i + 4 <= count; i += 4) {
         __m128i val = _mm_loadu_si128((const __m128i*)(flux + i));
-        
+
         min_vec = _mm_min_epi32(min_vec, val);
         max_vec = _mm_max_epi32(max_vec, val);
-        
+
         __m128i val_lo = _mm_unpacklo_epi32(val, _mm_setzero_si128());
         __m128i val_hi = _mm_unpackhi_epi32(val, _mm_setzero_si128());
         sum_lo = _mm_add_epi64(sum_lo, val_lo);
         sum_hi = _mm_add_epi64(sum_hi, val_hi);
     }
-    
+
     uint32_t mins[4], maxs[4];
     uint64_t sums[4];
-    
+
     _mm_storeu_si128((__m128i*)mins, min_vec);
     _mm_storeu_si128((__m128i*)maxs, max_vec);
     _mm_storeu_si128((__m128i*)sums, sum_lo);
     _mm_storeu_si128((__m128i*)(sums + 2), sum_hi);
-    
+
     min_val = mins[0];
     max_val = maxs[0];
     sum = sums[0] + sums[1] + sums[2] + sums[3];
-    
+
     for (int j = 1; j < 4; j++) {
         if (mins[j] < min_val) min_val = mins[j];
         if (maxs[j] > max_val) max_val = maxs[j];
     }
-    
+
     for (; i < count; i++) {
         if (flux[i] < min_val) min_val = flux[i];
         if (flux[i] > max_val) max_val = flux[i];
@@ -315,55 +369,37 @@ static void simd_flux_statistics(const uint32_t* flux, size_t count,
         sum += flux[i];
     }
 #endif
-    
+
     *min_out = min_val;
     *max_out = max_val;
     *avg_out = (float)sum / (float)count;
 }
+#endif /* __SSE2__ */
 
-#else
-/* Scalar Fallbacks */
+/* --- Runtime dispatch wrappers --- */
+
 static void simd_convert_flux_16to32(const uint16_t* src, uint32_t* dst,
                                       size_t count, uint8_t resolution) {
-    uint32_t scale = (resolution + 1) * 25;
-    uint32_t overflow_acc = 0;
-    
-    for (size_t i = 0; i < count; i++) {
-        uint16_t val = (src[i] >> 8) | (src[i] << 8);
-        
-        if (val == 0) {
-            overflow_acc += 65536;
-        } else {
-            dst[i] = (val + overflow_acc) * scale;
-            overflow_acc = 0;
-        }
+#ifdef __SSE2__
+    if (uft_simd_has_sse2()) {
+        simd_convert_flux_16to32_sse2(src, dst, count, resolution);
+        return;
     }
+#endif
+    scalar_convert_flux_16to32(src, dst, count, resolution);
 }
 
 static void simd_flux_statistics(const uint32_t* flux, size_t count,
                                   uint32_t* min_out, uint32_t* max_out,
                                   float* avg_out) {
-    if (count == 0) {
-        *min_out = *max_out = 0;
-        *avg_out = 0;
+#ifdef __SSE2__
+    if (uft_simd_has_sse2()) {
+        simd_flux_statistics_sse2(flux, count, min_out, max_out, avg_out);
         return;
     }
-    
-    uint32_t min_val = flux[0], max_val = flux[0];
-    uint64_t sum = 0;
-    
-    for (size_t i = 0; i < count; i++) {
-        if (flux[i] < min_val) min_val = flux[i];
-        if (flux[i] > max_val) max_val = flux[i];
-        sum += flux[i];
-    }
-    
-    *min_out = min_val;
-    *max_out = max_val;
-    *avg_out = (float)sum / (float)count;
-}
-
 #endif
+    scalar_flux_statistics(flux, count, min_out, max_out, avg_out);
+}
 
 /*============================================================================
  * MULTI-REVOLUTION ALIGNMENT
@@ -570,7 +606,12 @@ scp_reader_t* scp_open(const char* path) {
     
     /* Footer prüfen */
     if (reader->header.flags & SCP_FLAG_FOOTER) {
-        if (fseek(fp, -(long)sizeof(scp_footer_t), SEEK_END) != 0) { /* seek error */ }
+        if (fseek(fp, -(long)sizeof(scp_footer_t), SEEK_END) != 0) {
+            fclose(fp);
+            free(reader->path);
+            free(reader);
+            return NULL;
+        }
         if (fread(&reader->footer, sizeof(scp_footer_t), 1, fp) == 1) {
             if (memcmp(reader->footer.signature, "FPCS", 4) == 0) {
                 reader->has_footer = true;
@@ -579,7 +620,12 @@ scp_reader_t* scp_open(const char* path) {
     }
     
     /* Dateigröße */
-    if (fseek(fp, 0, SEEK_END) != 0) { /* seek error */ }
+    if (fseek(fp, 0, SEEK_END) != 0) {
+        fclose(fp);
+        free(reader->path);
+        free(reader);
+        return NULL;
+    }
     reader->file_size = ftell(fp);
     
     return reader;
@@ -619,7 +665,7 @@ int scp_read_track_v2(scp_reader_t* reader, int track_num, scp_track_t* track) {
     uint32_t offset = reader->track_offsets[track_num];
     if (offset == 0) return -3;
     
-    if (fseek(reader->fp, offset, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(reader->fp, offset, SEEK_SET) != 0) return -4;
     /* Track Header lesen */
     scp_track_data_t track_data;
     if (fread(&track_data.header, sizeof(scp_track_header_t), 1, 
@@ -646,20 +692,31 @@ int scp_read_track_v2(scp_reader_t* reader, int track_num, scp_track_t* track) {
     /* Flux-Daten lesen und konvertieren */
     for (int r = 0; r < track->revolutions; r++) {
         if (track->flux_count[r] == 0) continue;
-        
+
+        /* Sanity cap: max 10 million flux transitions per revolution */
+        if (track->flux_count[r] > 10000000) return -6;
+
         /* Raw 16-bit Daten lesen */
+        if (track->flux_count[r] > SIZE_MAX / sizeof(uint16_t)) return -6;
         size_t raw_size = track->flux_count[r] * sizeof(uint16_t);
         uint16_t* raw_flux = malloc(raw_size);
         if (!raw_flux) return -6;
         
-        if (fseek(reader->fp, offset + track_data.revolutions[r].data_offset, 
-              SEEK_SET) != 0) { /* seek error */ }
+        if (fseek(reader->fp, offset + track_data.revolutions[r].data_offset,
+              SEEK_SET) != 0) {
+            free(raw_flux);
+            return -7;
+        }
         if (fread(raw_flux, raw_size, 1, reader->fp) != 1) {
             free(raw_flux);
             return -7;
         }
         
         /* Zu 32-bit konvertieren (SIMD-optimiert) */
+        if (track->flux_count[r] > SIZE_MAX / sizeof(uint32_t)) {
+            free(raw_flux);
+            return -8;
+        }
         track->flux[r] = malloc(track->flux_count[r] * sizeof(uint32_t));
         if (!track->flux[r]) {
             free(raw_flux);

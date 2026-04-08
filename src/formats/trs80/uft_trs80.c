@@ -596,10 +596,10 @@ uft_trs80_rc_t uft_trs80_open(uft_trs80_ctx_t* ctx, const char* path, bool writa
     if (!fp) return UFT_TRS80_ERR_IO;
     
     /* Get file size */
-    if (fseek(fp, 0, SEEK_END) != 0) { /* I/O error */ }
+    if (fseek(fp, 0, SEEK_END) != 0) { fclose(fp); return UFT_TRS80_ERR_IO; }
     ctx->file_size = (uint64_t)ftell(fp);
-    if (fseek(fp, 0, SEEK_SET) != 0) { /* I/O error */ }
-    
+    if (fseek(fp, 0, SEEK_SET) != 0) { fclose(fp); return UFT_TRS80_ERR_IO; }
+
     /* Read header/first sectors for detection */
     uint8_t header[8704];  /* Enough for JV3 header */
     size_t header_read = fread(header, 1, sizeof(header), fp);

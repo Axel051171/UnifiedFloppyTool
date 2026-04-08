@@ -493,11 +493,104 @@ static uft_error_t uft_kf_read_flux(uft_hw_device_t *device, uint32_t *flux,
  * KryoFlux write support is limited and requires DTC -w flag.
  * Not all firmware versions support writing.
  */
+/**
+ * KryoFlux write support via DTC -w flag.
+ *
+ * Approach:
+ *  1. Convert flux nanosecond values back to KryoFlux sample ticks
+ *  2. Encode into KryoFlux stream format (raw file)
+ *  3. Write stream file to temp directory
+ *  4. Invoke DTC with -w flag to write the stream to disk
+ *
+ * Note: Not all KryoFlux firmware versions support writing.
+ * DTC write command: dtc -w -t<track> -e<track> -s<side> -i0 -f<path>
+ */
 static uft_error_t uft_kf_write_flux(uft_hw_device_t *device,
                                      const uint32_t *flux, size_t flux_count) {
-    (void)device; (void)flux; (void)flux_count;
-    return UFT_ERROR_NOT_SUPPORTED;
-    /* TODO: implement via DTC -w if firmware supports it */
+    if (!device || !device->handle || !flux || flux_count == 0)
+        return UFT_ERROR_NULL_POINTER;
+
+    uft_kf_state_t *kf = device->handle;
+    if (!kf->dtc_available) return UFT_ERROR_NOT_SUPPORTED;
+
+    /* Convert ns flux values to KryoFlux sample ticks and encode as stream */
+    size_t stream_capacity = flux_count * 3 + 256;  /* Generous estimate */
+    uint8_t *stream = malloc(stream_capacity);
+    if (!stream) return UFT_ERROR_NO_MEMORY;
+
+    size_t pos = 0;
+
+    for (size_t i = 0; i < flux_count && pos < stream_capacity - 16; i++) {
+        /* Convert nanoseconds to KryoFlux sample ticks */
+        uint32_t ticks = (uint32_t)((double)flux[i] / KF_TICK_NS + 0.5);
+
+        /* Add overflow markers for large values */
+        while (ticks >= 0x10000) {
+            stream[pos++] = KF_OP_OVERFLOW16;  /* 0x0B: add 0x10000 */
+            ticks -= 0x10000;
+        }
+
+        if (ticks <= 0x07FF) {
+            /* 2-byte flux encoding: high byte (0x00-0x07), low byte */
+            stream[pos++] = (uint8_t)((ticks >> 8) & 0x07);
+            stream[pos++] = (uint8_t)(ticks & 0xFF);
+        } else {
+            /* 16-bit value via 0x0C opcode (big-endian) */
+            stream[pos++] = KF_OP_VALUE16;  /* 0x0C */
+            stream[pos++] = (uint8_t)((ticks >> 8) & 0xFF);
+            stream[pos++] = (uint8_t)(ticks & 0xFF);
+        }
+    }
+
+    /* Write OOB EOF marker */
+    stream[pos++] = KF_OP_OOB;      /* 0x0D */
+    stream[pos++] = KF_OOB_EOF;     /* 0x0D */
+    stream[pos++] = 0x00;           /* Size low */
+    stream[pos++] = 0x00;           /* Size high */
+
+    /* Write stream data to temp file */
+    char stream_path[350];
+    snprintf(stream_path, sizeof(stream_path), "%s/write%02d.%d.raw",
+             kf->temp_dir, kf->current_track, kf->current_head);
+
+    FILE *fp = fopen(stream_path, "wb");
+    if (!fp) {
+        free(stream);
+        return UFT_ERROR_IO;
+    }
+
+    if (fwrite(stream, 1, pos, fp) != pos) {
+        fclose(fp);
+        free(stream);
+        return UFT_ERROR_IO;
+    }
+    fclose(fp);
+    free(stream);
+
+    /* Invoke DTC write command */
+    char args[512];
+    snprintf(args, sizeof(args),
+             "-w -t%d -e%d -s%d -i0 -f%s/write",
+             kf->current_track, kf->current_track,
+             kf->current_head, kf->temp_dir);
+
+    char output[1024];
+    uft_error_t result;
+    if (run_dtc(kf, args, output, sizeof(output)) != 0) {
+        /* Check if DTC reported "write not supported" */
+        if (strstr(output, "not supported") || strstr(output, "write")) {
+            result = UFT_ERROR_NOT_SUPPORTED;
+        } else {
+            result = UFT_ERROR_IO;
+        }
+    } else {
+        result = UFT_OK;
+    }
+
+    /* Cleanup temp file */
+    remove(stream_path);
+
+    return result;
 }
 
 /* ============================================================================

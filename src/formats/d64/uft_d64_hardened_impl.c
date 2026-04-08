@@ -170,8 +170,8 @@ uft_d64_error_t uft_d64_open_safe(const char *path, bool read_only,
         
         size_t err_off = (size_t)img->total_sectors * UFT_D64_SECTOR_SIZE;
         if (fseek(img->f, (long)err_off, SEEK_SET) != 0 ||
-            if (fread(img->error_info, 1, img->total_sectors, img->f) != img->total_sectors) {
-            free(img->error_info) != img->total_sectors) { /* I/O error */ }
+            fread(img->error_info, 1, img->total_sectors, img->f) != img->total_sectors) {
+            free(img->error_info);
             fclose(img->f);
             free(img);
             return UFT_D64_EIO;

@@ -132,9 +132,9 @@ uft_msx_rc_t uft_msx_open(uft_msx_ctx_t* ctx, const char* path, bool writable) {
     if (!fp) return UFT_MSX_ERR_IO;
     
     /* Get file size */
-    if (fseek(fp, 0, SEEK_END) != 0) { /* seek error */ }
+    if (fseek(fp, 0, SEEK_END) != 0) { fclose(fp); return UFT_MSX_ERR_IO; }
     ctx->file_size = (uint64_t)ftell(fp);
-    if (fseek(fp, 0, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(fp, 0, SEEK_SET) != 0) { fclose(fp); return UFT_MSX_ERR_IO; }
     /* Read boot sector */
     uint8_t boot_sector[512];
     if (fread(boot_sector, 1, 512, fp) != 512) {

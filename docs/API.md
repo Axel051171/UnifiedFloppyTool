@@ -1,7 +1,7 @@
 # UnifiedFloppyTool API Documentation
 
-**Version:** 3.8.7  
-**Date:** 2026-01-13
+**Version:** 4.1.0
+**Date:** 2026-04-08
 
 ---
 
@@ -325,6 +325,7 @@ d64_writer_destroy(writer);
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 4.1.0 | 2026-04-08 | MEGA65, MOOF, OTDR, hardware providers, CI hardening |
 | 3.8.7 | 2026-01-13 | Config Manager, Recovery APIs |
 | 3.8.6 | 2026-01-13 | Cross-Platform, D64/WOZ Writers |
 | 3.8.5 | 2026-01-12 | GUI Consolidation, Protection Pipeline |

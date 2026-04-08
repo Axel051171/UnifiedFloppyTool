@@ -178,7 +178,7 @@ int nfd_load(const char *filename, nfd_image_t *img)
     if (fread(sig, 1, 15, fp) != 15) { /* I/O error */ }
     sig[15] = '\0';
     
-    if (fseek(fp, 0, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(fp, 0, SEEK_SET) != 0) { fclose(fp); return -1; }
     if (strncmp(sig, NFD_R0_SIGNATURE, 14) == 0) {
         /* NFD r0 format */
         img->is_r1 = false;
@@ -198,7 +198,7 @@ int nfd_load(const char *filename, nfd_image_t *img)
                 
                 if (header.track_offset[idx] == 0) continue;
                 
-                if (fseek(fp, header.track_offset[idx], SEEK_SET) != 0) { /* seek error */ }
+                if (fseek(fp, header.track_offset[idx], SEEK_SET) != 0) { fclose(fp); return -1; }
                 /* r0 assumes fixed 8 sectors of 1024 bytes for 2HD */
                 int sectors = 8;
                 int sector_size = 1024;

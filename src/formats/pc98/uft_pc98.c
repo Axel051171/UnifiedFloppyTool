@@ -402,10 +402,10 @@ uft_pc98_rc_t uft_fdi98_open(uft_fdi98_ctx_t* ctx, const char* path, bool writab
     if (!fp) return UFT_PC98_ERR_IO;
     
     /* Get file size */
-    if (fseek(fp, 0, SEEK_END) != 0) { /* I/O error */ }
+    if (fseek(fp, 0, SEEK_END) != 0) { fclose(fp); return UFT_PC98_ERR_IO; }
     ctx->file_size = (uint64_t)ftell(fp);
-    if (fseek(fp, 0, SEEK_SET) != 0) { /* I/O error */ }
-    
+    if (fseek(fp, 0, SEEK_SET) != 0) { fclose(fp); return UFT_PC98_ERR_IO; }
+
     /* Read header */
     if (fread(&ctx->header, sizeof(ctx->header), 1, fp) != 1) {
         fclose(fp);
@@ -554,7 +554,7 @@ uft_pc98_rc_t uft_fdi98_to_raw(uft_fdi98_ctx_t* ctx, const char* output_path) {
     }
     
     /* Skip header */
-    if (fseek(fin, (long)ctx->data_offset, SEEK_SET) != 0) { /* I/O error */ }
+    if (fseek(fin, (long)ctx->data_offset, SEEK_SET) != 0) { fclose(fin); fclose(fout); return UFT_PC98_ERR_IO; }
     
     /* Copy data */
     uint8_t buffer[4096];
@@ -661,10 +661,10 @@ uft_pc98_rc_t uft_pc98_detect(const char* path, uft_pc98_detect_result_t* result
     if (!fp) return UFT_PC98_ERR_IO;
     
     /* Get file size */
-    if (fseek(fp, 0, SEEK_END) != 0) { /* I/O error */ }
+    if (fseek(fp, 0, SEEK_END) != 0) { fclose(fp); return UFT_PC98_ERR_IO; }
     uint64_t file_size = (uint64_t)ftell(fp);
-    if (fseek(fp, 0, SEEK_SET) != 0) { /* I/O error */ }
-    
+    if (fseek(fp, 0, SEEK_SET) != 0) { fclose(fp); return UFT_PC98_ERR_IO; }
+
     /* Read header for format detection */
     uint8_t header[4096];
     size_t header_read = fread(header, 1, sizeof(header), fp);
@@ -769,7 +769,7 @@ uft_pc98_rc_t uft_pc98_analyze(const char* path, uft_pc98_report_t* report) {
     
     /* Read boot sector */
     uint8_t boot_sector[1024];
-    if (fseek(fp, data_offset, SEEK_SET) != 0) { /* I/O error */ }
+    if (fseek(fp, data_offset, SEEK_SET) != 0) { fclose(fp); return UFT_PC98_ERR_IO; }
     size_t boot_read = fread(boot_sector, 1, report->geometry.sector_size, fp);
     
     if (boot_read >= 512) {

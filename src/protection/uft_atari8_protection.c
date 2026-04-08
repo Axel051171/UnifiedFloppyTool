@@ -388,9 +388,9 @@ uft_a8prot_result_t *uft_a8prot_scan_image(const char *path,
     if (!f) return NULL;
     
     /* Get file size */
-    if (fseek(f, 0, SEEK_END) != 0) { /* seek error */ }
+    if (fseek(f, 0, SEEK_END) != 0) { fclose(f); return NULL; }
     long file_size = ftell(f);
-    if (fseek(f, 0, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(f, 0, SEEK_SET) != 0) { fclose(f); return NULL; }
     if (file_size <= 0 || file_size > 16 * 1024 * 1024) {
         fclose(f);
         return NULL;

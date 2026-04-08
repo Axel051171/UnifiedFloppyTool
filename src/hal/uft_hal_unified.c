@@ -926,12 +926,142 @@ static int scp_get_caps(uft_hal_t *hal, uft_hal_caps_t *caps) {
 
 static int scp_read_flux(uft_hal_t *hal, int track, int side, int revs,
                          uint32_t **flux, size_t *count) {
-    snprintf(hal->error, sizeof(hal->error),
-             "SCP flux read: Track %d Side %d not yet implemented", track, side);
-    (void)revs;
-    (void)flux;
-    (void)count;
-    return -1;
+    if (!hal || !flux || !count) return -1;
+
+    *flux = NULL;
+    *count = 0;
+
+    /*
+     * SuperCard Pro serial protocol for track read:
+     *
+     *  1. Select drive: send 'a' (select)
+     *  2. Motor on: send 'm'
+     *  3. Seek to track: send 's' followed by track byte
+     *  4. Set side: SCP uses combined track addressing:
+     *     physical_track = track * 2 + side
+     *  5. Read track: send 'R' followed by [revolutions, flags]
+     *  6. Device responds with:
+     *     - Status byte (0x4F = OK)
+     *     - For each revolution: [uint32_t index_time, uint32_t data_length]
+     *     - Flux data as 16-bit big-endian sample values (25ns per tick at 40MHz)
+     *  7. Motor off: send 'M'
+     *
+     * SCP sample rate: 40 MHz = 25ns per tick
+     */
+
+    /* Compute physical track: SCP uses track*2+side addressing */
+    uint8_t phys_track = (uint8_t)(track * 2 + (side & 1));
+
+    /* Motor on if needed */
+    if (!hal->motor_on) {
+        uint8_t motor_cmd = SCP_CMD_MOTOR_ON;
+        if (serial_write(hal->serial, &motor_cmd, 1) < 0) {
+            snprintf(hal->error, sizeof(hal->error), "SCP motor on failed");
+            return -1;
+        }
+        uint8_t ack;
+        serial_read(hal->serial, &ack, 1);
+        hal->motor_on = true;
+    }
+
+    /* Seek to track */
+    uint8_t seek_cmd[2] = { SCP_CMD_SEEK_TRACK, phys_track };
+    if (serial_write(hal->serial, seek_cmd, 2) < 0) {
+        snprintf(hal->error, sizeof(hal->error), "SCP seek failed");
+        return -1;
+    }
+    uint8_t seek_ack;
+    if (serial_read(hal->serial, &seek_ack, 1) != 1 || seek_ack != 0x4F) {
+        snprintf(hal->error, sizeof(hal->error), "SCP seek rejected (0x%02X)", seek_ack);
+        return -1;
+    }
+
+    hal->current_track = track;
+    hal->current_side = side;
+
+    /* Read track: send 'R' + revolutions byte */
+    if (revs < 1) revs = 2;
+    if (revs > 5) revs = 5;
+    uint8_t read_cmd[2] = { SCP_CMD_READ_TRACK, (uint8_t)revs };
+    if (serial_write(hal->serial, read_cmd, 2) < 0) {
+        snprintf(hal->error, sizeof(hal->error), "SCP read command failed");
+        return -1;
+    }
+
+    /* Read status byte */
+    uint8_t status;
+    if (serial_read(hal->serial, &status, 1) != 1 || status != 0x4F) {
+        snprintf(hal->error, sizeof(hal->error),
+                 "SCP read track %d side %d failed (status 0x%02X)", track, side, status);
+        return -1;
+    }
+
+    /* Read revolution headers: each revolution has [index_time(4), data_len(4)] */
+    size_t total_samples = 0;
+    uint32_t rev_lengths[5];
+
+    for (int r = 0; r < revs; r++) {
+        uint8_t rev_hdr[8];
+        if (serial_read(hal->serial, rev_hdr, 8) != 8) {
+            snprintf(hal->error, sizeof(hal->error),
+                     "SCP: failed reading revolution %d header", r);
+            return -1;
+        }
+        /* data_length is in bytes (each sample is 2 bytes) */
+        rev_lengths[r] = (uint32_t)rev_hdr[4] | ((uint32_t)rev_hdr[5] << 8) |
+                          ((uint32_t)rev_hdr[6] << 16) | ((uint32_t)rev_hdr[7] << 24);
+        total_samples += rev_lengths[r] / 2;
+    }
+
+    if (total_samples == 0 || total_samples > 2000000) {
+        snprintf(hal->error, sizeof(hal->error),
+                 "SCP: invalid sample count %zu", total_samples);
+        return -1;
+    }
+
+    /* Allocate output flux array */
+    uint32_t *flux_data = malloc(total_samples * sizeof(uint32_t));
+    if (!flux_data) {
+        snprintf(hal->error, sizeof(hal->error), "Memory allocation failed");
+        return -1;
+    }
+
+    /* Read all flux samples and convert */
+    size_t out_idx = 0;
+    uint32_t overflow = 0;
+    double ns_per_tick = 25.0;  /* 40MHz clock = 25ns per tick */
+
+    for (int r = 0; r < revs; r++) {
+        size_t samples_in_rev = rev_lengths[r] / 2;
+        for (size_t s = 0; s < samples_in_rev && out_idx < total_samples; s++) {
+            uint8_t sample_bytes[2];
+            if (serial_read(hal->serial, sample_bytes, 2) != 2) {
+                snprintf(hal->error, sizeof(hal->error),
+                         "SCP: data read truncated at rev %d sample %zu", r, s);
+                /* Return what we have so far */
+                if (out_idx > 0) break;
+                free(flux_data);
+                return -1;
+            }
+
+            /* SCP samples are 16-bit big-endian; 0x0000 = overflow (add 65536) */
+            uint16_t sample = ((uint16_t)sample_bytes[0] << 8) | sample_bytes[1];
+
+            if (sample == 0) {
+                overflow += 65536;
+                continue;
+            }
+
+            uint32_t ticks = (uint32_t)sample + overflow;
+            overflow = 0;
+            flux_data[out_idx++] = (uint32_t)(ticks * ns_per_tick + 0.5);
+        }
+    }
+
+    *flux = flux_data;
+    *count = out_idx;
+
+    return (out_idx > 0) ? 0 : -1;
 }
 
 static int scp_enumerate(uft_hal_controller_t *out, int max) {
@@ -968,9 +1098,40 @@ static int scp_enumerate(uft_hal_controller_t *out, int max) {
  * STUB DRIVER
  *============================================================================*/
 
+/*
+ * Stub driver functions.
+ *
+ * These stubs serve controllers that either:
+ * (a) have dedicated HAL modules (uft_applesauce.c, uft_fc5025.c,
+ *     uft_xum1541.c) and are dispatched through the specialized API, or
+ * (b) require external libraries/hardware not available at build time.
+ *
+ * Each stub logs an actionable message telling the user which SDK or
+ * driver is needed to enable the controller.
+ */
+
 static int stub_open(uft_hal_t *hal, const char *path) {
+    const char *hint = "";
+
+    switch (hal->type) {
+        case HAL_CTRL_APPLESAUCE:
+            hint = " Use uft_as_open() from uft_applesauce.h for Applesauce access.";
+            break;
+        case HAL_CTRL_XUM1541:
+        case HAL_CTRL_ZOOMFLOPPY:
+            hint = " Use uft_xum_open() from uft_xum1541.h. Requires OpenCBM library.";
+            break;
+        case HAL_CTRL_FC5025:
+            hint = " Use uft_fc_open() from uft_fc5025.h. Requires fc5025 tools.";
+            break;
+        default:
+            hint = " No dedicated driver available for this controller.";
+            break;
+    }
+
     snprintf(hal->error, sizeof(hal->error),
-             "%s driver not implemented", hal->driver->name);
+             "%s: unified HAL open not available for this controller.%s",
+             hal->driver->name, hint);
     (void)path;
     return -1;
 }
@@ -984,14 +1145,40 @@ static int stub_get_caps(uft_hal_t *hal, uft_hal_caps_t *caps) {
     memset(caps, 0, sizeof(*caps));
     caps->max_tracks = 84;
     caps->max_sides = 2;
-    (void)hal;
+
+    /* Report known capabilities based on controller type */
+    switch (hal->type) {
+        case HAL_CTRL_APPLESAUCE:
+            caps->can_read_flux = true;
+            caps->can_write_flux = true;
+            caps->sample_rate_hz = 8000000;  /* 8MHz */
+            caps->capabilities = HAL_CAP_READ_FLUX | HAL_CAP_WRITE_FLUX |
+                                HAL_CAP_INDEX_SENSE;
+            break;
+        case HAL_CTRL_XUM1541:
+        case HAL_CTRL_ZOOMFLOPPY:
+            caps->can_read_flux = false;
+            caps->can_write_flux = false;
+            caps->capabilities = 0;  /* Sector-level only via IEC */
+            break;
+        case HAL_CTRL_FC5025:
+            caps->can_read_flux = false;
+            caps->can_write_flux = false;  /* Read-only device */
+            caps->capabilities = 0;
+            break;
+        default:
+            break;
+    }
+
     return 0;
 }
 
 static int stub_read_flux(uft_hal_t *hal, int track, int side, int revs,
                           uint32_t **flux, size_t *count) {
     snprintf(hal->error, sizeof(hal->error),
-             "%s: read_flux not implemented", hal->driver->name);
+             "%s: read_flux not available via unified HAL. "
+             "Use the dedicated HAL module for this controller.",
+             hal->driver->name);
     (void)track;
     (void)side;
     (void)revs;
@@ -1003,7 +1190,9 @@ static int stub_read_flux(uft_hal_t *hal, int track, int side, int revs,
 static int stub_write_flux(uft_hal_t *hal, int track, int side,
                            const uint32_t *flux, size_t count) {
     snprintf(hal->error, sizeof(hal->error),
-             "%s: write_flux not implemented", hal->driver->name);
+             "%s: write_flux not available via unified HAL. "
+             "Use the dedicated HAL module for this controller.",
+             hal->driver->name);
     (void)track;
     (void)side;
     (void)flux;

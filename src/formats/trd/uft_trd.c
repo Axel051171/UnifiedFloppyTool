@@ -21,9 +21,9 @@ bool trd_probe(const uint8_t* data, size_t size, size_t file_size, int* confiden
 static uft_error_t trd_open(uft_disk_t* disk, const char* path, bool read_only) {
     FILE* f = fopen(path, "rb");
     if (!f) return UFT_ERROR_FILE_OPEN;
-    if (fseek(f, 0, SEEK_END) != 0) { /* seek error */ }
+    if (fseek(f, 0, SEEK_END) != 0) { fclose(f); return UFT_ERROR_FILE_READ; }
     size_t sz = ftell(f);
-    if (fseek(f, 0, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(f, 0, SEEK_SET) != 0) { fclose(f); return UFT_ERROR_FILE_READ; }
     trd_data_t* p = calloc(1, sizeof(trd_data_t));
     p->file = f;
     if (sz == 655360) { p->tracks = 80; p->sides = 2; }
@@ -50,7 +50,7 @@ static uft_error_t trd_read_track(uft_disk_t* disk, int cyl, int head, uft_track
     size_t off = ((size_t)cyl * p->sides + head) * TRD_SPT * TRD_SEC_SIZE;
     uint8_t buf[TRD_SEC_SIZE];
     for (int s = 0; s < TRD_SPT; s++) {
-        if (fseek(p->file, off + s * TRD_SEC_SIZE, SEEK_SET) != 0) { /* seek error */ }
+        if (fseek(p->file, off + s * TRD_SEC_SIZE, SEEK_SET) != 0) { return UFT_ERROR_FILE_READ; }
         if (fread(buf, 1, TRD_SEC_SIZE, p->file) != TRD_SEC_SIZE) { /* I/O error */ }
         uft_format_add_sector(track, s, buf, TRD_SEC_SIZE, cyl, head);
     }

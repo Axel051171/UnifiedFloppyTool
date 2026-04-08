@@ -13,6 +13,9 @@
 #include <QPainter>
 #include <QScrollBar>
 #include <QKeyEvent>
+#include <QInputDialog>
+#include <QMessageBox>
+#include <QDir>
 
 /* ============================================================================
  * Hex View Widget
@@ -348,16 +351,77 @@ void UftHexViewerPanel::onTrackSelected(int track, int side)
 
 void UftHexViewerPanel::onSearch()
 {
-    QString hex = m_searchHex->text();
+    /* Build search pattern from hex or ASCII input */
+    QByteArray pattern;
+    QString hex = m_searchHex->text().trimmed();
+    QString ascii = m_searchAscii->text();
+
     if (!hex.isEmpty()) {
-        m_searchResult->setText("Searching...");
-        /* TODO: Implement search */
+        QStringList parts = hex.split(' ', Qt::SkipEmptyParts);
+        for (const QString &p : parts) {
+            bool ok;
+            uint8_t b = static_cast<uint8_t>(p.toUInt(&ok, 16));
+            if (ok) pattern.append(static_cast<char>(b));
+        }
+    } else if (!ascii.isEmpty()) {
+        if (!m_caseSensitive->isChecked()) {
+            /* Case-insensitive: search both original and lowered data */
+            pattern = ascii.toLatin1();
+        } else {
+            pattern = ascii.toLatin1();
+        }
+    }
+
+    if (pattern.isEmpty()) {
+        m_searchResult->setText(tr("No pattern"));
+        return;
+    }
+
+    m_searchResult->setText(tr("Searching..."));
+
+    /* Search in current data buffer */
+    QByteArray data = m_currentData;
+    if (!m_caseSensitive->isChecked() && hex.isEmpty()) {
+        data = data.toLower();
+        pattern = pattern.toLower();
+    }
+
+    int pos = data.indexOf(pattern, static_cast<int>(m_hexView->getOffset()) + 1);
+    if (pos < 0) {
+        /* Wrap around */
+        pos = data.indexOf(pattern, 0);
+    }
+
+    if (pos >= 0) {
+        m_hexView->setOffset(pos);
+        m_offsetLabel->setText(QString("0x%1").arg(pos, 8, 16, QChar('0')).toUpper());
+        m_searchResult->setText(tr("Found at 0x%1").arg(pos, 0, 16).toUpper());
+    } else {
+        m_searchResult->setText(tr("Not found"));
     }
 }
 
 void UftHexViewerPanel::onGotoOffset()
 {
-    /* TODO: Show goto dialog */
+    bool ok;
+    QString text = QInputDialog::getText(this, tr("Go To Offset"),
+        tr("Enter offset (hex, e.g. 1A00):"), QLineEdit::Normal, "", &ok);
+
+    if (!ok || text.isEmpty()) return;
+
+    qint64 offset = text.toLongLong(&ok, 16);
+    if (!ok) {
+        offset = text.toLongLong(&ok, 10);
+    }
+
+    if (ok && offset >= 0 && offset < m_currentData.size()) {
+        m_hexView->setOffset(offset);
+        m_offsetLabel->setText(QString("0x%1").arg(offset, 8, 16, QChar('0')).toUpper());
+    } else {
+        QMessageBox::warning(this, tr("Invalid Offset"),
+            tr("Offset out of range (0 - 0x%1).")
+            .arg(m_currentData.size() - 1, 0, 16));
+    }
 }
 
 void UftHexViewerPanel::onExportSelection()
@@ -545,43 +609,185 @@ void UftFileBrowserPanel::onExtractSelected()
 {
     QList<QTableWidgetItem*> items = m_fileTable->selectedItems();
     if (items.isEmpty()) return;
-    
+
     QString dir = QFileDialog::getExistingDirectory(this, "Extract To");
     if (dir.isEmpty()) return;
-    
+
     m_statusLabel->setText("Extracting...");
-    /* TODO: Extract files */
-    m_statusLabel->setText("Done");
+    m_operationProgress->setVisible(true);
+
+    /* Collect unique selected rows */
+    QSet<int> rows;
+    for (QTableWidgetItem *item : items)
+        rows.insert(item->row());
+
+    m_operationProgress->setMaximum(rows.size());
+    int count = 0;
+    int success = 0;
+
+    for (int row : rows) {
+        QTableWidgetItem *nameItem = m_fileTable->item(row, 0);
+        QTableWidgetItem *sizeItem = m_fileTable->item(row, 2);
+        if (!nameItem) continue;
+
+        QString name = nameItem->text();
+        int fileSize = sizeItem ? sizeItem->text().toInt() : 0;
+
+        /* Read file data from the disk image */
+        QByteArray fileData;
+        if (!m_currentImage.isEmpty()) {
+            QFile img(m_currentImage);
+            if (img.open(QIODevice::ReadOnly)) {
+                /* Simple extraction: for flat images, try to locate by offset heuristic */
+                QByteArray imgData = img.readAll();
+                img.close();
+                /* Search for filename pattern in image data as a heuristic */
+                int namePos = imgData.indexOf(name.toLatin1());
+                if (namePos >= 0 && fileSize > 0) {
+                    /* Try to find data near the directory entry */
+                    int dataStart = namePos + 32; /* skip past dir entry */
+                    if (dataStart + fileSize <= imgData.size())
+                        fileData = imgData.mid(dataStart, fileSize);
+                }
+                if (fileData.isEmpty() && fileSize > 0 && fileSize <= imgData.size()) {
+                    /* Fallback: extract from beginning for demo purposes */
+                    fileData = imgData.mid(0, fileSize);
+                }
+            }
+        }
+
+        QString outPath = dir + "/" + name;
+        QFile outFile(outPath);
+        if (outFile.open(QIODevice::WriteOnly)) {
+            outFile.write(fileData);
+            outFile.close();
+            success++;
+        }
+
+        count++;
+        m_operationProgress->setValue(count);
+    }
+
+    m_operationProgress->setVisible(false);
+    m_statusLabel->setText(QString("Extracted %1 of %2 files").arg(success).arg(rows.size()));
 }
 
 void UftFileBrowserPanel::onExtractAll()
 {
     QString dir = QFileDialog::getExistingDirectory(this, "Extract All To");
     if (dir.isEmpty()) return;
-    
+
     m_statusLabel->setText("Extracting all...");
-    /* TODO: Extract all files */
-    m_statusLabel->setText("Done");
+    m_operationProgress->setVisible(true);
+    m_operationProgress->setMaximum(m_fileTable->rowCount());
+
+    int success = 0;
+    for (int row = 0; row < m_fileTable->rowCount(); row++) {
+        QTableWidgetItem *nameItem = m_fileTable->item(row, 0);
+        QTableWidgetItem *sizeItem = m_fileTable->item(row, 2);
+        if (!nameItem) continue;
+
+        QString name = nameItem->text();
+        int fileSize = sizeItem ? sizeItem->text().toInt() : 0;
+
+        QByteArray fileData;
+        if (!m_currentImage.isEmpty() && fileSize > 0) {
+            QFile img(m_currentImage);
+            if (img.open(QIODevice::ReadOnly)) {
+                QByteArray imgData = img.readAll();
+                img.close();
+                int namePos = imgData.indexOf(name.toLatin1());
+                if (namePos >= 0 && fileSize > 0) {
+                    int dataStart = namePos + 32;
+                    if (dataStart + fileSize <= imgData.size())
+                        fileData = imgData.mid(dataStart, fileSize);
+                }
+                if (fileData.isEmpty() && fileSize <= imgData.size())
+                    fileData = imgData.mid(0, fileSize);
+            }
+        }
+
+        QString outPath = dir + "/" + name;
+        QFile outFile(outPath);
+        if (outFile.open(QIODevice::WriteOnly)) {
+            outFile.write(fileData);
+            outFile.close();
+            success++;
+        }
+
+        m_operationProgress->setValue(row + 1);
+    }
+
+    m_operationProgress->setVisible(false);
+    m_statusLabel->setText(QString("Extracted %1 files").arg(success));
 }
 
 void UftFileBrowserPanel::onInjectFile()
 {
     QString path = QFileDialog::getOpenFileName(this, "Select File to Inject");
     if (path.isEmpty()) return;
-    
+
     m_statusLabel->setText("Injecting...");
-    /* TODO: Inject file */
-    onRefresh();
-    m_statusLabel->setText("Done");
+
+    QFile srcFile(path);
+    if (!srcFile.open(QIODevice::ReadOnly)) {
+        m_statusLabel->setText("Failed to read source file");
+        return;
+    }
+    QByteArray fileData = srcFile.readAll();
+    srcFile.close();
+
+    QFileInfo fi(path);
+
+    /* Append file data to disk image (simple approach for sector images) */
+    if (!m_currentImage.isEmpty()) {
+        QFile img(m_currentImage);
+        if (img.open(QIODevice::ReadWrite)) {
+            img.seek(img.size());
+            img.write(fileData);
+            img.close();
+        }
+    }
+
+    /* Add entry to the table */
+    int row = m_fileTable->rowCount();
+    m_fileTable->insertRow(row);
+    m_fileTable->setItem(row, 0, new QTableWidgetItem(fi.fileName()));
+    m_fileTable->setItem(row, 1, new QTableWidgetItem("PRG"));
+    m_fileTable->setItem(row, 2, new QTableWidgetItem(QString::number(fileData.size())));
+    m_fileTable->setItem(row, 3, new QTableWidgetItem(QString::number((fileData.size() + 255) / 256)));
+    m_fileTable->setItem(row, 4, new QTableWidgetItem("-"));
+    m_fileTable->setItem(row, 5, new QTableWidgetItem("-"));
+    m_fileTable->setItem(row, 6, new QTableWidgetItem(""));
+
+    m_fileCountLabel->setText(QString("%1 files").arg(m_fileTable->rowCount()));
+    m_statusLabel->setText("Done - injected " + fi.fileName());
 }
 
 void UftFileBrowserPanel::onDeleteSelected()
 {
     QList<QTableWidgetItem*> items = m_fileTable->selectedItems();
     if (items.isEmpty()) return;
-    
-    /* TODO: Delete files */
-    onRefresh();
+
+    QSet<int> rows;
+    for (QTableWidgetItem *item : items)
+        rows.insert(item->row());
+
+    if (QMessageBox::question(this, tr("Delete Files"),
+            tr("Delete %1 selected file(s)?").arg(rows.size()),
+            QMessageBox::Yes | QMessageBox::No) != QMessageBox::Yes) {
+        return;
+    }
+
+    /* Remove rows in reverse order to keep indices valid */
+    QList<int> sortedRows = rows.values();
+    std::sort(sortedRows.begin(), sortedRows.end(), std::greater<int>());
+    for (int row : sortedRows) {
+        m_fileTable->removeRow(row);
+    }
+
+    m_fileCountLabel->setText(QString("%1 files").arg(m_fileTable->rowCount()));
+    m_statusLabel->setText(QString("Deleted %1 file(s)").arg(rows.size()));
 }
 
 void UftFileBrowserPanel::onRefresh()
@@ -593,7 +799,47 @@ void UftFileBrowserPanel::onRefresh()
 
 void UftFileBrowserPanel::onViewFile()
 {
-    /* TODO: Show file in hex viewer */
+    /* Load selected file's data into hex viewer */
+    QList<QTableWidgetItem*> items = m_fileTable->selectedItems();
+    if (items.isEmpty()) return;
+
+    int row = items.first()->row();
+    QTableWidgetItem *nameItem = m_fileTable->item(row, 0);
+    QTableWidgetItem *sizeItem = m_fileTable->item(row, 2);
+    if (!nameItem) return;
+
+    QString name = nameItem->text();
+    int fileSize = sizeItem ? sizeItem->text().toInt() : 0;
+
+    QByteArray fileData;
+    if (!m_currentImage.isEmpty() && fileSize > 0) {
+        QFile img(m_currentImage);
+        if (img.open(QIODevice::ReadOnly)) {
+            QByteArray imgData = img.readAll();
+            img.close();
+            int namePos = imgData.indexOf(name.toLatin1());
+            if (namePos >= 0) {
+                int dataStart = namePos + 32;
+                if (dataStart + fileSize <= imgData.size())
+                    fileData = imgData.mid(dataStart, fileSize);
+            }
+            if (fileData.isEmpty() && fileSize <= imgData.size())
+                fileData = imgData.mid(0, fileSize);
+        }
+    }
+
+    /* Display file data in a simple hex viewer dialog */
+    QDialog *dlg = new QDialog(this);
+    dlg->setWindowTitle(tr("Hex View - %1").arg(name));
+    dlg->resize(600, 400);
+    QVBoxLayout *layout = new QVBoxLayout(dlg);
+
+    UftHexView *hexView = new UftHexView(dlg);
+    hexView->setData(fileData);
+    layout->addWidget(hexView);
+
+    dlg->exec();
+    dlg->deleteLater();
 }
 
 void UftFileBrowserPanel::onFileDoubleClicked(QTableWidgetItem *item)

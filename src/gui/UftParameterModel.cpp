@@ -11,6 +11,7 @@
 #include <QJsonObject>
 #include <QDateTime>
 #include <QDebug>
+#include <QMutexLocker>
 
 /* ═══════════════════════════════════════════════════════════════════════════════
  * Constructor / Destructor
@@ -33,6 +34,7 @@ UftParameterModel::~UftParameterModel()
 
 void UftParameterModel::setInputPath(const QString &path)
 {
+    QMutexLocker locker(&m_mutex);
     if (m_inputPath != path) {
         recordChange("inputPath", m_inputPath, path);
         m_inputPath = path;
@@ -43,6 +45,7 @@ void UftParameterModel::setInputPath(const QString &path)
 
 void UftParameterModel::setOutputPath(const QString &path)
 {
+    QMutexLocker locker(&m_mutex);
     if (m_outputPath != path) {
         recordChange("outputPath", m_outputPath, path);
         m_outputPath = path;
@@ -53,6 +56,7 @@ void UftParameterModel::setOutputPath(const QString &path)
 
 void UftParameterModel::setVerbose(bool v)
 {
+    QMutexLocker locker(&m_mutex);
     if (m_verbose != v) {
         recordChange("verbose", m_verbose, v);
         m_verbose = v;
@@ -63,6 +67,7 @@ void UftParameterModel::setVerbose(bool v)
 
 void UftParameterModel::setQuiet(bool q)
 {
+    QMutexLocker locker(&m_mutex);
     if (m_quiet != q) {
         recordChange("quiet", m_quiet, q);
         m_quiet = q;
@@ -73,6 +78,7 @@ void UftParameterModel::setQuiet(bool q)
 
 void UftParameterModel::setFormat(const QString &fmt)
 {
+    QMutexLocker locker(&m_mutex);
     if (m_format != fmt) {
         recordChange("format", m_format, fmt);
         m_format = fmt;
@@ -83,6 +89,7 @@ void UftParameterModel::setFormat(const QString &fmt)
 
 void UftParameterModel::setCylinders(int c)
 {
+    QMutexLocker locker(&m_mutex);
     c = qBound(1, c, 200);
     if (m_cylinders != c) {
         recordChange("cylinders", m_cylinders, c);
@@ -94,6 +101,7 @@ void UftParameterModel::setCylinders(int c)
 
 void UftParameterModel::setHeads(int h)
 {
+    QMutexLocker locker(&m_mutex);
     h = qBound(1, h, 2);
     if (m_heads != h) {
         recordChange("heads", m_heads, h);
@@ -105,6 +113,7 @@ void UftParameterModel::setHeads(int h)
 
 void UftParameterModel::setSectors(int s)
 {
+    QMutexLocker locker(&m_mutex);
     s = qBound(1, s, 64);
     if (m_sectors != s) {
         recordChange("sectors", m_sectors, s);
@@ -116,6 +125,7 @@ void UftParameterModel::setSectors(int s)
 
 void UftParameterModel::setEncoding(const QString &enc)
 {
+    QMutexLocker locker(&m_mutex);
     if (m_encoding != enc) {
         recordChange("encoding", m_encoding, enc);
         m_encoding = enc;
@@ -126,6 +136,7 @@ void UftParameterModel::setEncoding(const QString &enc)
 
 void UftParameterModel::setHardware(const QString &hw)
 {
+    QMutexLocker locker(&m_mutex);
     if (m_hardware != hw) {
         recordChange("hardware", m_hardware, hw);
         m_hardware = hw;
@@ -136,6 +147,7 @@ void UftParameterModel::setHardware(const QString &hw)
 
 void UftParameterModel::setDevicePath(const QString &path)
 {
+    QMutexLocker locker(&m_mutex);
     if (m_devicePath != path) {
         recordChange("devicePath", m_devicePath, path);
         m_devicePath = path;
@@ -146,6 +158,7 @@ void UftParameterModel::setDevicePath(const QString &path)
 
 void UftParameterModel::setDriveNumber(int d)
 {
+    QMutexLocker locker(&m_mutex);
     d = qBound(0, d, 3);
     if (m_driveNumber != d) {
         recordChange("driveNumber", m_driveNumber, d);
@@ -157,6 +170,7 @@ void UftParameterModel::setDriveNumber(int d)
 
 void UftParameterModel::setRetries(int r)
 {
+    QMutexLocker locker(&m_mutex);
     r = qBound(0, r, 100);
     if (m_retries != r) {
         recordChange("retries", m_retries, r);
@@ -168,6 +182,7 @@ void UftParameterModel::setRetries(int r)
 
 void UftParameterModel::setRevolutions(int r)
 {
+    QMutexLocker locker(&m_mutex);
     r = qBound(1, r, 20);
     if (m_revolutions != r) {
         recordChange("revolutions", m_revolutions, r);
@@ -179,6 +194,7 @@ void UftParameterModel::setRevolutions(int r)
 
 void UftParameterModel::setWeakBits(bool w)
 {
+    QMutexLocker locker(&m_mutex);
     if (m_weakBits != w) {
         recordChange("weakBits", m_weakBits, w);
         m_weakBits = w;
@@ -189,6 +205,7 @@ void UftParameterModel::setWeakBits(bool w)
 
 void UftParameterModel::setPllPhaseGain(double g)
 {
+    QMutexLocker locker(&m_mutex);
     g = qBound(0.01, g, 1.0);
     if (!qFuzzyCompare(m_pllPhaseGain, g)) {
         recordChange("pllPhaseGain", m_pllPhaseGain, g);
@@ -200,6 +217,7 @@ void UftParameterModel::setPllPhaseGain(double g)
 
 void UftParameterModel::setPllFreqGain(double g)
 {
+    QMutexLocker locker(&m_mutex);
     g = qBound(0.001, g, 0.5);
     if (!qFuzzyCompare(m_pllFreqGain, g)) {
         recordChange("pllFreqGain", m_pllFreqGain, g);
@@ -211,6 +229,7 @@ void UftParameterModel::setPllFreqGain(double g)
 
 void UftParameterModel::setPllWindowTolerance(double t)
 {
+    QMutexLocker locker(&m_mutex);
     t = qBound(0.1, t, 0.5);
     if (!qFuzzyCompare(m_pllWindowTolerance, t)) {
         recordChange("pllWindowTolerance", m_pllWindowTolerance, t);
@@ -222,6 +241,7 @@ void UftParameterModel::setPllWindowTolerance(double t)
 
 void UftParameterModel::setPllPreset(const QString &preset)
 {
+    QMutexLocker locker(&m_mutex);
     if (m_pllPreset != preset) {
         recordChange("pllPreset", m_pllPreset, preset);
         m_pllPreset = preset;
@@ -249,6 +269,7 @@ void UftParameterModel::setPllPreset(const QString &preset)
 
 void UftParameterModel::setVerifyAfterWrite(bool v)
 {
+    QMutexLocker locker(&m_mutex);
     if (m_verifyAfterWrite != v) {
         recordChange("verifyAfterWrite", m_verifyAfterWrite, v);
         m_verifyAfterWrite = v;
@@ -259,6 +280,7 @@ void UftParameterModel::setVerifyAfterWrite(bool v)
 
 void UftParameterModel::setWriteRetries(int r)
 {
+    QMutexLocker locker(&m_mutex);
     r = qBound(0, r, 10);
     if (m_writeRetries != r) {
         recordChange("writeRetries", m_writeRetries, r);
@@ -274,6 +296,7 @@ void UftParameterModel::setWriteRetries(int r)
 
 bool UftParameterModel::isValid() const
 {
+    QMutexLocker locker(&m_mutex);
     /* Basic validation */
     if (m_inputPath.isEmpty()) return false;
     if (m_cylinders < 1 || m_cylinders > 200) return false;
@@ -288,6 +311,7 @@ bool UftParameterModel::isValid() const
 
 void UftParameterModel::reset()
 {
+    QMutexLocker locker(&m_mutex);
     loadDefaults();
     m_history.clear();
     m_historyIndex = -1;
@@ -408,6 +432,7 @@ bool UftParameterModel::saveToFile(const QString &path)
 
 void UftParameterModel::syncToBackend()
 {
+    QMutexLocker locker(&m_mutex);
     /* Sync Qt model values to C backend struct */
     /* Note: Full implementation requires uft_param_bridge.h linking */
     
@@ -449,6 +474,7 @@ void UftParameterModel::syncToBackend()
 
 void UftParameterModel::syncFromBackend()
 {
+    QMutexLocker locker(&m_mutex);
     /* Sync C backend struct values to Qt model */
 
 #ifdef UFT_HAS_PARAM_BRIDGE
@@ -557,6 +583,7 @@ void UftParameterModel::markModified()
 
 QVariant UftParameterModel::getValue(const QString &name) const
 {
+    QMutexLocker locker(&m_mutex);
     if (name == "inputPath") return m_inputPath;
     if (name == "outputPath") return m_outputPath;
     if (name == "verbose") return m_verbose;

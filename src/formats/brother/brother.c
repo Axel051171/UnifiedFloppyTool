@@ -45,7 +45,7 @@ int brother_open(BrotherDevice *dev, const char *path) {
     FILE *f = fopen(path, "rb");
     if (!f) return -1;
     
-    if (fseek(f, 0, SEEK_END) != 0) { /* seek error */ }
+    if (fseek(f, 0, SEEK_END) != 0) { fclose(f); return -1; }
     size_t size = ftell(f);
     fclose(f);
     
@@ -84,10 +84,10 @@ int brother_read_sector(BrotherDevice *dev, uint32_t t, uint32_t s, uint8_t *buf
     if (!f) return -1;
     
     size_t offset = (t * dev->sectors + s) * dev->sectorSize;
-    if (fseek(f, offset, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(f, offset, SEEK_SET) != 0) { fclose(f); return -1; }
     size_t read = fread(buf, 1, dev->sectorSize, f);
     fclose(f);
-    
+
     return (read == dev->sectorSize) ? 0 : -1;
 }
 
@@ -99,7 +99,7 @@ int brother_write_sector(BrotherDevice *dev, uint32_t t, uint32_t s, const uint8
     if (!f) return -1;
     
     size_t offset = (t * dev->sectors + s) * dev->sectorSize;
-    if (fseek(f, offset, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(f, offset, SEEK_SET) != 0) { fclose(f); return -1; }
     size_t written = fwrite(buf, 1, dev->sectorSize, f);
     fclose(f);
     

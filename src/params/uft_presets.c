@@ -624,9 +624,9 @@ static uft_error_t json_to_preset(const char* path, uft_preset_t* preset) {
     FILE* f = fopen(path, "r");
     if (!f) return UFT_ERROR_NOT_FOUND;
     
-    if (fseek(f, 0, SEEK_END) != 0) { /* seek error */ }
+    if (fseek(f, 0, SEEK_END) != 0) { fclose(f); return UFT_ERROR_IO; }
     long size = ftell(f);
-    if (fseek(f, 0, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(f, 0, SEEK_SET) != 0) { fclose(f); return UFT_ERROR_IO; }
     char* json = malloc(size + 1);
     if (!json) { fclose(f); return UFT_ERROR_NO_MEMORY; }
     

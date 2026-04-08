@@ -42,6 +42,13 @@
 #include <cstring>
 #include <cstdint>
 
+extern "C" {
+#include "uft/uft_format_convert.h"
+}
+
+#include "uft/hardwareprovider.h"
+#include <QApplication>
+
 UftMainWindow::UftMainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::UftMainWindow)
@@ -313,12 +320,41 @@ bool UftMainWindow::convertImage(const QString &srcPath, const QString &dstPath)
         /* Same format - just copy */
         QFile::copy(srcPath, dstPath);
     } else {
-        /* Different format - need actual conversion */
-        /* TODO: Implement format conversion pipeline */
-        m_statusLabel->setText(QString("Conversion %1 -> %2 not yet implemented")
-                              .arg(srcExt.toUpper())
-                              .arg(dstExt.toUpper()));
-        return false;
+        /* Different format - use UFT core conversion */
+        uft_convert_options_ext_t opts;
+        memset(&opts, 0, sizeof(opts));
+        opts.verify_after = true;
+        opts.preserve_errors = false;
+        opts.preserve_weak_bits = false;
+        opts.decode_retries = 3;
+        opts.use_multiple_revs = true;
+
+        uft_convert_result_t result;
+        memset(&result, 0, sizeof(result));
+
+        QByteArray srcBytes = srcPath.toUtf8();
+        QByteArray dstBytes = dstPath.toUtf8();
+
+        /* Determine target format from extension */
+        uft_format_t dstFormat = UFT_FORMAT_UNKNOWN;
+        if (dstExt == "adf") dstFormat = UFT_FORMAT_ADF;
+        else if (dstExt == "d64") dstFormat = UFT_FORMAT_D64;
+        else if (dstExt == "scp") dstFormat = UFT_FORMAT_SCP;
+        else if (dstExt == "hfe") dstFormat = UFT_FORMAT_HFE;
+        else if (dstExt == "img" || dstExt == "ima") dstFormat = UFT_FORMAT_IMG;
+        else if (dstExt == "st") dstFormat = UFT_FORMAT_ST;
+        else if (dstExt == "g64") dstFormat = UFT_FORMAT_G64;
+        else if (dstExt == "dmk") dstFormat = UFT_FORMAT_DMK;
+
+        uft_error_t err = uft_convert_file(srcBytes.constData(),
+                                            dstBytes.constData(),
+                                            dstFormat, &opts, &result);
+        if (err != UFT_OK || !result.success) {
+            m_statusLabel->setText(QString("Conversion failed: %1 -> %2")
+                                  .arg(srcExt.toUpper())
+                                  .arg(dstExt.toUpper()));
+            return false;
+        }
     }
     
     m_statusLabel->setText(QString("Converted: %1 -> %2").arg(srcPath, dstPath));
@@ -395,8 +431,63 @@ void UftMainWindow::onReadDisk()
     m_progressBar->setVisible(true);
     m_progressBar->setValue(0);
     
-    /* TODO: Implement disk reading */
+    /* Use hardware panel to read disk via provider */
+    if (!m_hardwarePanel) {
+        QMessageBox::warning(this, "Read Disk", "Hardware panel not available.");
+        m_progressBar->setVisible(false);
+        return;
+    }
+
+    HardwareProvider *provider = m_hardwarePanel->findChild<HardwareProvider*>();
+    if (!provider || !provider->isConnected()) {
+        QMessageBox::warning(this, "Read Disk",
+            "No hardware connected. Please connect a controller first.");
+        m_progressBar->setVisible(false);
+        m_statusLabel->setText("Ready");
+        return;
+    }
+
     emit operationStarted("Read Disk");
+
+    /* Ask for output file */
+    QString savePath = QFileDialog::getSaveFileName(this, "Save Read Data",
+        QString(), "All Supported (*.adf *.d64 *.scp *.hfe *.img);;All Files (*)");
+    if (savePath.isEmpty()) {
+        m_progressBar->setVisible(false);
+        m_statusLabel->setText("Read cancelled.");
+        return;
+    }
+
+    /* Read all tracks */
+    QVector<TrackData> tracks = provider->readDisk(0, -1, 2);
+
+    /* Assemble data and write to file */
+    QByteArray diskData;
+    int goodTracks = 0;
+    for (const auto &track : tracks) {
+        if (track.valid) {
+            diskData.append(track.data);
+            goodTracks++;
+        }
+        int pct = tracks.isEmpty() ? 0 : (goodTracks * 100 / tracks.size());
+        m_progressBar->setValue(pct);
+        QApplication::processEvents();
+    }
+
+    QFile outFile(savePath);
+    if (outFile.open(QIODevice::WriteOnly)) {
+        outFile.write(diskData);
+        outFile.close();
+        m_statusLabel->setText(QString("Read complete: %1 tracks, %2 bytes saved to %3")
+            .arg(goodTracks).arg(diskData.size()).arg(savePath));
+        openImage(savePath);
+    } else {
+        QMessageBox::warning(this, "Read Disk",
+            QString("Cannot write to %1").arg(savePath));
+        m_statusLabel->setText("Read failed: cannot write output file.");
+    }
+
+    m_progressBar->setVisible(false);
 }
 
 void UftMainWindow::onWriteDisk()
@@ -554,17 +645,81 @@ void UftMainWindow::onAnalyzerQuickScan()
     
     m_analyzerToolbar->setAnalyzing(true);
     
-    /* TODO: Implement actual analysis using TrackAnalyzerWidget */
-    /* For now, simulate with dummy result */
-    
+    /* Analyze loaded image to determine platform, encoding, and protection */
     ToolbarAnalysisResult result;
-    result.platform = m_currentFormat.isEmpty() ? "Unknown" : m_currentFormat;
+    result.platform = "Unknown";
     result.encoding = "MFM";
-    result.sectorsPerTrack = 11;
+    result.sectorsPerTrack = 0;
     result.protectionDetected = false;
     result.protectionName = "";
     result.recommendedMode = CopyMode::Normal;
-    result.confidence = 85;
+    result.confidence = 0;
+
+    if (!m_currentFile.isEmpty()) {
+        QFileInfo fi(m_currentFile);
+        qint64 size = fi.size();
+        QString ext = fi.suffix().toLower();
+
+        /* Detect platform by file size and extension */
+        if (ext == "adf" && size == 901120) {
+            result.platform = "Amiga DD";
+            result.encoding = "MFM";
+            result.sectorsPerTrack = 11;
+            result.confidence = 95;
+        } else if (ext == "adf" && size == 1802240) {
+            result.platform = "Amiga HD";
+            result.encoding = "MFM";
+            result.sectorsPerTrack = 22;
+            result.confidence = 95;
+        } else if (ext == "d64") {
+            result.platform = "Commodore 64";
+            result.encoding = "GCR";
+            result.sectorsPerTrack = 21;  /* varies by zone */
+            result.confidence = 95;
+        } else if (ext == "g64" || ext == "nib") {
+            result.platform = "Commodore 64";
+            result.encoding = "GCR";
+            result.sectorsPerTrack = 21;
+            result.recommendedMode = CopyMode::NibbleCopy;
+            result.confidence = 90;
+        } else if (ext == "st" || ext == "msa") {
+            result.platform = "Atari ST";
+            result.encoding = "MFM";
+            result.sectorsPerTrack = (size <= 737280) ? 9 : 10;
+            result.confidence = 90;
+        } else if (ext == "img" || ext == "ima") {
+            result.platform = "PC/IBM";
+            result.encoding = "MFM";
+            result.sectorsPerTrack = (size == 1474560) ? 18 : (size == 737280 ? 9 : 18);
+            result.confidence = 85;
+        } else if (ext == "scp") {
+            result.platform = "Flux Image";
+            result.encoding = "Flux";
+            result.recommendedMode = CopyMode::FluxCopy;
+            result.confidence = 80;
+        } else if (ext == "hfe") {
+            result.platform = "HFE Bitstream";
+            result.encoding = "MFM";
+            result.recommendedMode = CopyMode::TrackCopy;
+            result.confidence = 80;
+        } else if (ext == "ipf") {
+            result.platform = "CAPS/SPS";
+            result.encoding = "MFM";
+            result.protectionDetected = true;
+            result.protectionName = "CAPS Protected";
+            result.recommendedMode = CopyMode::FluxCopy;
+            result.confidence = 85;
+        } else if (ext == "woz") {
+            result.platform = "Apple II";
+            result.encoding = "GCR";
+            result.sectorsPerTrack = 16;
+            result.recommendedMode = CopyMode::FluxCopy;
+            result.confidence = 90;
+        } else if (!m_currentFormat.isEmpty()) {
+            result.platform = m_currentFormat;
+            result.confidence = 50;
+        }
+    }
     
     m_analyzerToolbar->setAnalysisResult(result);
     
@@ -580,9 +735,87 @@ void UftMainWindow::onAnalyzerFullAnalysis()
     /* Switch to Forensic tab for full analysis */
     ui->mainTabs->setCurrentWidget(ui->tabForensic);
     
-    /* TODO: Start full track-by-track analysis */
-    
-    m_statusLabel->setText("Full analysis started...");
+    /* Start full track-by-track analysis on the loaded image */
+    if (m_currentFile.isEmpty()) {
+        m_analyzerToolbar->setAnalyzing(false);
+        m_statusLabel->setText("No image loaded for full analysis.");
+        return;
+    }
+
+    /* Open and read the file for analysis */
+    QFile file(m_currentFile);
+    if (!file.open(QIODevice::ReadOnly)) {
+        m_analyzerToolbar->setAnalyzing(false);
+        m_statusLabel->setText("Cannot open file for analysis.");
+        return;
+    }
+
+    QByteArray data = file.readAll();
+    file.close();
+
+    /* Iterate all tracks and analyze */
+    int trackSize = 512 * 11;  /* Default: Amiga DD track */
+    QFileInfo fi(m_currentFile);
+    QString ext = fi.suffix().toLower();
+    if (ext == "d64") {
+        trackSize = 256 * 21;  /* Approximate D64 track */
+    } else if (ext == "img" || ext == "ima") {
+        trackSize = 512 * 18;  /* PC HD track */
+    } else if (ext == "st") {
+        trackSize = 512 * 9;   /* Atari ST track */
+    }
+
+    int totalTracks = (trackSize > 0) ? (data.size() / trackSize) : 0;
+    int errorTracks = 0;
+    int goodTracks = 0;
+
+    for (int t = 0; t < totalTracks; t++) {
+        int offset = t * trackSize;
+        QByteArray trackData = data.mid(offset, trackSize);
+
+        /* Check for empty/zeroed tracks (potential errors) */
+        bool allZero = true;
+        for (int i = 0; i < trackData.size() && allZero; i++) {
+            if (trackData[i] != 0) allZero = false;
+        }
+
+        if (allZero) {
+            errorTracks++;
+        } else {
+            goodTracks++;
+        }
+
+        /* Update track grid if available */
+        if (m_trackGrid) {
+            int cyl = t / 2;
+            int head = t % 2;
+            UftTrackGridWidget::Status status = allZero
+                ? UftTrackGridWidget::STATUS_BAD
+                : UftTrackGridWidget::STATUS_GOOD;
+            m_trackGrid->setTrackStatus(cyl, head, status);
+        }
+
+        /* Periodic UI update */
+        if (t % 10 == 0) {
+            m_statusLabel->setText(QString("Analyzing track %1/%2...").arg(t + 1).arg(totalTracks));
+            QApplication::processEvents();
+        }
+    }
+
+    /* Build full analysis result */
+    ToolbarAnalysisResult fullResult;
+    fullResult.platform = m_currentFormat.isEmpty() ? ext.toUpper() : m_currentFormat;
+    fullResult.encoding = "MFM";
+    fullResult.sectorsPerTrack = 0;
+    fullResult.protectionDetected = (errorTracks > 5);
+    fullResult.protectionName = fullResult.protectionDetected ? "Possible protection" : "";
+    fullResult.recommendedMode = fullResult.protectionDetected ? CopyMode::FluxCopy : CopyMode::Normal;
+    fullResult.confidence = totalTracks > 0 ? (goodTracks * 100 / totalTracks) : 0;
+
+    m_analyzerToolbar->setAnalysisResult(fullResult);
+
+    m_statusLabel->setText(QString("Full analysis complete: %1 tracks (%2 good, %3 errors)")
+        .arg(totalTracks).arg(goodTracks).arg(errorTracks));
 }
 
 void UftMainWindow::onAnalyzerApply(CopyMode mode)

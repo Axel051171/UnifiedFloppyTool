@@ -9,6 +9,11 @@
 #include <QMessageBox>
 #include <QDateTime>
 
+extern "C" {
+#include "uft/uft_format_parsers.h"
+#include "uft/formats/c64/uft_d64_g64.h"
+}
+
 ProtectionAnalysisWidget::ProtectionAnalysisWidget(QWidget *parent)
     : QWidget(parent)
     , m_confidence(0)
@@ -371,24 +376,235 @@ void ProtectionAnalysisWidget::onSchemeFilterChanged(int index)
 
 void ProtectionAnalysisWidget::loadFluxData(const uint8_t *data, size_t len)
 {
-    Q_UNUSED(data);
-    Q_UNUSED(len);
-    
-    // TODO: Parse flux data and populate m_trackMetrics
-    // This would call the flux decoder to extract per-track metrics
-    
     m_trackMetrics.clear();
     clearResults();
+
+    if (!data || len == 0) return;
+
+    /* Detect if this is SCP data and parse it */
+    uft_format_type_t fmt = uft_format_detect(data, len);
+
+    if (fmt == UFT_FORMAT_SCP) {
+        uft_scp_file_t scp = {};
+        int ret = uft_scp_read(data, len, &scp);
+        if (ret != 0) {
+            QMessageBox::warning(this, tr("Parse Error"),
+                tr("Failed to parse SCP flux data (error %1)").arg(ret));
+            return;
+        }
+
+        /* Iterate tracks and compute per-track metrics */
+        int numTracks = scp.header.end_track - scp.header.start_track + 1;
+        if (numTracks > (int)scp.track_count) numTracks = (int)scp.track_count;
+
+        for (int t = scp.header.start_track; t <= scp.header.end_track; t++) {
+            QVector<double> deltas(65536);
+            int count = uft_scp_get_track_flux(&scp, t, 0,
+                                                deltas.data(), deltas.size());
+            if (count <= 0) continue;
+
+            ufm_c64_track_metrics_t metrics = {};
+            metrics.track_x2 = t;
+            metrics.revolutions = scp.header.revolutions;
+            metrics.has_meaningful_data = (count > 100);
+
+            /* Compute timing histogram for this track */
+            double minDelta = 1e9, maxDelta = 0;
+            int weakCount = 0;
+            int maxRunLen = 0, currentRun = 0;
+
+            for (int i = 0; i < count; i++) {
+                double d = deltas[i];
+                if (d < minDelta) minDelta = d;
+                if (d > maxDelta) maxDelta = d;
+
+                /* Detect weak bits: transitions that are far outside
+                   the normal range suggest unstable magnetic regions */
+                bool isWeak = (d < 1000.0 || d > 8000.0); // extreme timing
+                if (isWeak) {
+                    currentRun++;
+                    weakCount++;
+                } else {
+                    if (currentRun > maxRunLen) maxRunLen = currentRun;
+                    currentRun = 0;
+                }
+            }
+            if (currentRun > maxRunLen) maxRunLen = currentRun;
+
+            metrics.bitlen_min = (uint32_t)minDelta;
+            metrics.bitlen_max = (uint32_t)maxDelta;
+            metrics.weak_region_bits = weakCount;
+            metrics.weak_region_max_run = maxRunLen;
+
+            /* Estimate track length in bits based on total timing */
+            double totalNs = 0;
+            for (int i = 0; i < count; i++) totalNs += deltas[i];
+            /* Standard C64 track at 300 RPM = 200ms = 200,000,000 ns */
+            bool isLongTrack = (totalNs > 210000000.0);  /* >105% of normal */
+            bool isShortTrack = (totalNs < 190000000.0);  /* <95% of normal */
+            metrics.is_half_track = ((t % 2) != 0);
+
+            /* Store in metrics (using remaining fields via bitlen range) */
+            if (isLongTrack) {
+                metrics.bitlen_max = (uint32_t)(totalNs / 1000.0);
+            }
+
+            m_trackMetrics.append(metrics);
+        }
+
+        uft_scp_free(&scp);
+    } else {
+        /* For non-SCP flux data, we'd need format-specific parsing.
+           Show a message for unsupported flux formats. */
+        QMessageBox::information(this, tr("Flux Format"),
+            tr("Flux data loaded (%1 bytes). Format: %2\n\n"
+               "Direct flux analysis is best supported for SCP files.\n"
+               "Use 'Load G64' for GCR-level analysis of C64 images.")
+            .arg(len).arg(uft_format_get_name(fmt)));
+        return;
+    }
+
+    /* Resize heatmap if needed */
+    int maxTrack = 0;
+    for (const auto &m : m_trackMetrics) {
+        int t = m.track_x2 / 2;
+        if (t > maxTrack) maxTrack = t;
+    }
+    if (maxTrack >= m_heatmapTable->rowCount()) {
+        m_heatmapTable->setRowCount(maxTrack + 1);
+        QStringList labels;
+        for (int i = 1; i <= maxTrack + 1; i++) labels << QString::number(i);
+        m_heatmapTable->setVerticalHeaderLabels(labels);
+        /* Initialize new cells */
+        for (int row = 42; row <= maxTrack; row++) {
+            for (int col = 0; col < m_heatmapTable->columnCount(); col++) {
+                if (!m_heatmapTable->item(row, col)) {
+                    QTableWidgetItem *item = new QTableWidgetItem();
+                    item->setBackground(QColor(TRAIT_COLOR_NONE));
+                    item->setFlags(item->flags() & ~Qt::ItemIsEditable);
+                    m_heatmapTable->setItem(row, col, item);
+                }
+            }
+        }
+    }
+
+    m_analyzeButton->setEnabled(!m_trackMetrics.isEmpty());
 }
 
 void ProtectionAnalysisWidget::loadG64(const char *path)
 {
-    Q_UNUSED(path);
-    
-    // TODO: Load G64 file and populate m_trackMetrics
-    
     m_trackMetrics.clear();
     clearResults();
+
+    if (!path) return;
+
+    /* Load G64 file using g64_load() */
+    g64_image_t *g64 = nullptr;
+    int ret = g64_load(path, &g64);
+    if (ret != 0 || !g64) {
+        QMessageBox::warning(this, tr("G64 Load Error"),
+            tr("Failed to load G64 file: %1 (error %2)")
+            .arg(QString::fromUtf8(path)).arg(ret));
+        return;
+    }
+
+    /* Iterate tracks and analyze GCR data per track */
+    for (int halftrack = 2; halftrack <= g64->num_tracks * 2 && halftrack < G64_MAX_TRACKS; halftrack++) {
+        const uint8_t *trackData = nullptr;
+        size_t trackLen = 0;
+        uint8_t speed = 0;
+
+        ret = g64_get_track(g64, halftrack, &trackData, &trackLen, &speed);
+        if (ret != 0 || !trackData || trackLen == 0) continue;
+
+        ufm_c64_track_metrics_t metrics = {};
+        metrics.track_x2 = halftrack;
+        metrics.revolutions = 1;
+        metrics.is_half_track = ((halftrack % 2) != 0);
+        metrics.has_meaningful_data = (trackLen > 10);
+
+        /* Analyze GCR data for this track */
+
+        /* Track length analysis: standard C64 tracks are ~6250 bytes */
+        int trackNumber = halftrack / 2;
+        size_t expectedLen = d64_track_capacity(trackNumber);
+        bool isLongTrack = (trackLen > expectedLen + expectedLen / 10);
+        bool isShortTrack = (expectedLen > 0 && trackLen < expectedLen - expectedLen / 10);
+
+        metrics.bitlen_min = (uint32_t)trackLen;
+        metrics.bitlen_max = (uint32_t)trackLen;
+
+        /* Scan for illegal GCR patterns (bytes containing $00 nibbles) */
+        int illegalGcr = 0;
+        int maxSyncRun = 0;
+        int currentSyncRun = 0;
+        int weakRegion = 0;
+        int maxWeakRun = 0;
+        int currentWeakRun = 0;
+
+        for (size_t i = 0; i < trackLen; i++) {
+            uint8_t b = trackData[i];
+
+            /* Check for sync bytes (0xFF) */
+            if (b == 0xFF) {
+                currentSyncRun++;
+                if (currentSyncRun > maxSyncRun) maxSyncRun = currentSyncRun;
+            } else {
+                currentSyncRun = 0;
+            }
+
+            /* Check for illegal GCR: in valid GCR, no nibble should be
+               one of the "illegal" 4-bit patterns (0, 1, 2, 3) when decoded.
+               Quick heuristic: bytes 0x00-0x03 are definitely illegal GCR. */
+            if (b <= 0x03) {
+                illegalGcr++;
+            }
+
+            /* Weak bit detection: regions of 0x00 or erratic patterns */
+            if (b == 0x00) {
+                currentWeakRun++;
+                weakRegion++;
+            } else {
+                if (currentWeakRun > maxWeakRun) maxWeakRun = currentWeakRun;
+                currentWeakRun = 0;
+            }
+        }
+        if (currentWeakRun > maxWeakRun) maxWeakRun = currentWeakRun;
+
+        metrics.illegal_gcr_events = illegalGcr;
+        metrics.max_sync_run_bits = maxSyncRun * 8; /* bytes to bits */
+        metrics.weak_region_bits = weakRegion * 8;
+        metrics.weak_region_max_run = maxWeakRun * 8;
+
+        m_trackMetrics.append(metrics);
+    }
+
+    g64_free(g64);
+
+    /* Resize heatmap if needed */
+    int maxTrack = 0;
+    for (const auto &m : m_trackMetrics) {
+        int t = m.track_x2 / 2;
+        if (t > maxTrack) maxTrack = t;
+    }
+    if (maxTrack >= m_heatmapTable->rowCount()) {
+        m_heatmapTable->setRowCount(maxTrack + 1);
+        QStringList labels;
+        for (int i = 1; i <= maxTrack + 1; i++) labels << QString::number(i);
+        m_heatmapTable->setVerticalHeaderLabels(labels);
+        for (int row = 42; row <= maxTrack; row++) {
+            for (int col = 0; col < m_heatmapTable->columnCount(); col++) {
+                if (!m_heatmapTable->item(row, col)) {
+                    QTableWidgetItem *item = new QTableWidgetItem();
+                    item->setBackground(QColor(TRAIT_COLOR_NONE));
+                    item->setFlags(item->flags() & ~Qt::ItemIsEditable);
+                    m_heatmapTable->setItem(row, col, item);
+                }
+            }
+        }
+    }
+
+    m_analyzeButton->setEnabled(!m_trackMetrics.isEmpty());
 }
 
 void ProtectionAnalysisWidget::clearResults()

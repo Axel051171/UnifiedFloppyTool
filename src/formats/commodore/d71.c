@@ -75,9 +75,9 @@ int uft_cbm_d71_open(FloppyDevice *dev, const char *path){
     if(!fp){ free(ctx); return UFT_ENOENT; }
 
     /* size check */
-    if (fseek(fp,0,SEEK_END) != 0) { /* seek error */ }
+    if (fseek(fp,0,SEEK_END) != 0) { fclose(fp); free(ctx); return UFT_EIO; }
     long sz = ftell(fp);
-    if (fseek(fp,0,SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(fp,0,SEEK_SET) != 0) { fclose(fp); free(ctx); return UFT_EIO; }
     if(sz != 349696){
         fclose(fp); free(ctx); return UFT_EINVAL;
     }

@@ -241,7 +241,7 @@ uft_error_t uft_image_open(uft_unified_image_t* img, const char* path) {
     size_t header_size = fread(header, 1, sizeof(header), f);
     
     // Get file size
-    if (fseek(f, 0, SEEK_END) != 0) { /* seek error */ }
+    if (fseek(f, 0, SEEK_END) != 0) { fclose(f); return UFT_ERROR_IO; }
     size_t file_size = (size_t)ftell(f);
     fclose(f);
     

@@ -129,7 +129,10 @@ int D64_libLoad_DiskFile(LIBFLUX_IMGLDR * imgldr_ctx,LIBFLUX_FLOPPY * floppydisk
 
 			errormap_size=683;
 			memset(errormap,0,errormap_size);
-			if (fseek(f,errormap_size,SEEK_END) != 0) { /* seek error */ }
+			if (fseek(f,errormap_size,SEEK_END) != 0) {
+				libflux_fclose(f);
+				return LIBFLUX_BADFILE;
+			}
 			libflux_fread(errormap,errormap_size,f);
 
 			break;
@@ -145,7 +148,10 @@ int D64_libLoad_DiskFile(LIBFLUX_IMGLDR * imgldr_ctx,LIBFLUX_FLOPPY * floppydisk
 
 			errormap_size=768;
 			memset(errormap,0,errormap_size);
-			if (fseek(f,errormap_size,SEEK_END) != 0) { /* seek error */ }
+			if (fseek(f,errormap_size,SEEK_END) != 0) {
+				libflux_fclose(f);
+				return LIBFLUX_BADFILE;
+			}
 			libflux_fread(errormap,errormap_size,f);
 
 			break;

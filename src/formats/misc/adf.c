@@ -42,9 +42,9 @@ int uft_msc_adf_open(FloppyDevice *dev, const char *path){
     if(!fp){ fp=fopen(path,"rb"); ro=true; }
     if(!fp){ free(ctx); return UFT_ENOENT; }
 
-    if (fseek(fp,0,SEEK_END) != 0) { /* seek error */ }
+    if (fseek(fp,0,SEEK_END) != 0) { fclose(fp); free(ctx); return UFT_EIO; }
     uint64_t size=(uint64_t)ftell(fp);
-    if (fseek(fp,0,SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(fp,0,SEEK_SET) != 0) { fclose(fp); free(ctx); return UFT_EIO; }
     if(infer_geom(size,&ctx->tracks,&ctx->heads,&ctx->sectors)!=0){
         fclose(fp); free(ctx); return UFT_EINVAL;
     }

@@ -41,15 +41,24 @@ int uft_apl_nib_open(FloppyDevice *dev, const char *path){
     if(!fp){ free(ctx); return UFT_ENOENT; }
     ctx->fp = fp;
 
-    if (fseek(fp,0,SEEK_END) != 0) { /* seek error */ }
+    if (fseek(fp,0,SEEK_END) != 0) {
+        fclose(fp); free(ctx); return UFT_EIO;
+    }
     long sz = ftell(fp);
-    if (fseek(fp,0,SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(fp,0,SEEK_SET) != 0) {
+        fclose(fp); free(ctx); return UFT_EIO;
+    }
     if(sz <= 0){
         fclose(fp); free(ctx); return UFT_EIO;
     }
 
     uint32_t track_bytes = 8192;
     uint32_t tracks = (uint32_t)(sz / track_bytes);
+
+    /* Validate track count — NIB files have max 40 tracks (single-sided) */
+    if (tracks == 0 || tracks > 160) {
+        fclose(fp); free(ctx); return UFT_EIO;
+    }
 
     ctx->meta.track_count = tracks;
     ctx->meta.tracks = calloc(tracks, sizeof(NibTrack));

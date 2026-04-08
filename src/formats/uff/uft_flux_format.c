@@ -435,7 +435,7 @@ uff_file_t* uff_open(const char* path) {
             
             default:
                 /* Skip unknown chunk */
-                if (fseek(uff->fp, chunk.size, SEEK_CUR) != 0) { /* I/O error */ }
+                if (fseek(uff->fp, chunk.size, SEEK_CUR) != 0) { break; }
                 break;
         }
         
@@ -589,8 +589,9 @@ void uff_close(uff_file_t* uff) {
         uff->header.crc32 = calc_crc32(&uff->header, 
                                         sizeof(uff_header_t) - sizeof(uint32_t) - 24);
         
-        if (fseek(uff->fp, 0, SEEK_SET) != 0) { /* I/O error */ }
-        if (fwrite(&uff->header, sizeof(uff_header_t), 1, uff->fp) != 1) { /* write error */ }
+        if (fseek(uff->fp, 0, SEEK_SET) == 0) {
+            if (fwrite(&uff->header, sizeof(uff_header_t), 1, uff->fp) != 1) { /* write error */ }
+        }
     }
     
     /* Free track data */

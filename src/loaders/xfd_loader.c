@@ -103,9 +103,9 @@ int xfd_load(const char *filename, xfd_image_t *img)
     FILE *fp = fopen(filename, "rb");
     if (!fp) return -1;
     
-    if (fseek(fp, 0, SEEK_END) != 0) { /* seek error */ }
+    if (fseek(fp, 0, SEEK_END) != 0) { fclose(fp); return -1; }
     size_t size = ftell(fp);
-    if (fseek(fp, 0, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(fp, 0, SEEK_SET) != 0) { fclose(fp); return -1; }
     xfd_format_t format = xfd_detect_format(size);
     if (format == XFD_FORMAT_UNKNOWN) {
         fclose(fp);

@@ -154,9 +154,15 @@ int uft_fdi_read(const char* filename, uft_fdi_image_t* img)
     FILE* fp = fopen(filename, "rb");
     if (!fp) return -1;
     
-    if (fseek(fp, 0, SEEK_END) != 0) { /* seek error */ }
+    if (fseek(fp, 0, SEEK_END) != 0) {
+        fclose(fp);
+        return -1;
+    }
     long size = ftell(fp);
-    if (fseek(fp, 0, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(fp, 0, SEEK_SET) != 0) {
+        fclose(fp);
+        return -1;
+    }
     if (size <= 0 || size > 64*1024*1024) {
         fclose(fp);
         return -1;

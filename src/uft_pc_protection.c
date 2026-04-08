@@ -718,9 +718,9 @@ uft_pc_scan_result_t *uft_pc_scan_file(const char *path,
     FILE *f = fopen(path, "rb");
     if (!f) return NULL;
     
-    if (fseek(f, 0, SEEK_END) != 0) { /* seek error */ }
+    if (fseek(f, 0, SEEK_END) != 0) { fclose(f); return NULL; }
     size_t size = ftell(f);
-    if (fseek(f, 0, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(f, 0, SEEK_SET) != 0) { fclose(f); return NULL; }
     uint8_t *data = malloc(size);
     if (!data) {
         fclose(f);

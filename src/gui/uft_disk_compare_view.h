@@ -258,6 +258,7 @@ private:
     UftDiskCompareSummary m_summary;
     QList<UftTrackCompare> m_trackResults;
     QList<UftSectorCompare> m_sectorResults;
+    bool m_aborted = false;
 };
 
 #endif /* UFT_DISK_COMPARE_VIEW_H */

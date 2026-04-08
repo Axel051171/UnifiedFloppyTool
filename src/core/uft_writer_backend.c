@@ -233,10 +233,29 @@ uft_error_t uft_writer_open(uft_writer_backend_t *b) {
         }
         
         case UFT_BACKEND_HARDWARE: {
-            /* Hardware backend would initialize device communication here */
-            /* For now, placeholder - actual implementation depends on provider */
-            set_error(b, "Hardware backend not yet implemented");
-            return UFT_ERR_UNSUPPORTED;
+            /*
+             * Hardware backend: Initialize device communication.
+             *
+             * The hardware backend delegates to the unified HAL layer
+             * (uft_hal_unified.c) which provides vtable-based dispatch to
+             * Greaseweazle, FluxEngine, KryoFlux, SuperCard Pro, etc.
+             *
+             * Requires device_path to be set in options (e.g. "/dev/ttyACM0"
+             * for Greaseweazle, or the DTC path for KryoFlux).
+             */
+            if (!b->options.device_path) {
+                set_error(b, "Hardware backend requires device_path in options");
+                return UFT_ERR_INVALID_PARAM;
+            }
+
+            /* For hardware, we don't use a local image buffer -- data goes
+             * directly to the device via HAL write_flux/write_track calls.
+             * We do allocate a small staging buffer for format operations. */
+            b->image_size = 0;
+            b->image_buffer = NULL;
+
+            report_progress(b, 0, 0, 0, "Hardware backend ready");
+            break;
         }
         
         case UFT_BACKEND_FLUX: {

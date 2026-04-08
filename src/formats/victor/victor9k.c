@@ -44,10 +44,10 @@ int victor9k_open(Victor9kDevice *dev, const char *path) {
     FILE *f = fopen(path, "rb");
     if (!f) return -1;
     
-    if (fseek(f, 0, SEEK_END) != 0) { /* seek error */ }
+    if (fseek(f, 0, SEEK_END) != 0) { fclose(f); return -1; }
     size_t size = ftell(f);
     fclose(f);
-    
+
     int expected_ss = 0;
     for (int t = 0; t < 80; t++) {
         expected_ss += victor9k_get_sectors_for_track(t) * 512;
@@ -86,7 +86,7 @@ int victor9k_read_sector(Victor9kDevice *dev, uint32_t t, uint32_t h, uint32_t s
     }
     
     size_t offset = (h * side_size) + get_track_offset(t) + (s * 512);
-    if (fseek(f, offset, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(f, offset, SEEK_SET) != 0) { fclose(f); return -1; }
     size_t read = fread(buf, 1, 512, f);
     fclose(f);
     

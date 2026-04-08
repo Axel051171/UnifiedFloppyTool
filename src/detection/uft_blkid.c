@@ -339,9 +339,9 @@ uft_blkid_probe_t *uft_blkid_new_probe_from_filename(const char *filename)
     FILE *f = fopen(filename, "rb");
     if (!f) return NULL;
     
-    if (fseek(f, 0, SEEK_END) != 0) { /* seek error */ }
+    if (fseek(f, 0, SEEK_END) != 0) { fclose(f); return NULL; }
     long size = ftell(f);
-    if (fseek(f, 0, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(f, 0, SEEK_SET) != 0) { fclose(f); return NULL; }
     if (size <= 0 || size > 100 * 1024 * 1024) {  /* Limit to 100MB for probe */
         fclose(f);
         return NULL;

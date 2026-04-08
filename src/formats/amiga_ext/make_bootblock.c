@@ -172,9 +172,9 @@ unsigned char * loadfile(char *filename,void * destptr, int * size)
     if (!f_in) { fprintf(stderr, "Cannot open file\n"); return 1; }
 	if(f_in)
 	{
-		if (fseek(f_in,0,SEEK_END) != 0) { /* seek error */ }
+		if (fseek(f_in,0,SEEK_END) != 0) { fclose(f_in); return NULL; }
 		code_size = ftell(f_in);
-		if (fseek(f_in,0,SEEK_SET) != 0) { /* seek error */ }
+		if (fseek(f_in,0,SEEK_SET) != 0) { fclose(f_in); return NULL; }
 		printf("Reading %s... %d byte(s)\n",filename,code_size);
 		if(code_size  <= *size )
 		{

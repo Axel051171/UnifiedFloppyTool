@@ -1,13 +1,13 @@
 # UFT CI/CD Pipeline Dokumentation
 
-## 📁 Workflow-Dateien
+## Workflow-Dateien
 
 ```
 .github/workflows/
 ├── ci.yml          # Haupt-Build (Linux/macOS/Windows + Tests)
 ├── release.yml     # Automatische Releases bei Tags
-├── analysis.yml    # Cppcheck, ASan, UBSan
-└── quick-check.yml # Schneller PR-Check (Core only)
+├── sanitizers.yml  # ASan/UBSan Builds
+└── coverage.yml    # Code-Coverage-Berichte
 ```
 
 ---
@@ -36,7 +36,7 @@
 
 ## 🚀 release.yml - Release-Pipeline
 
-**Trigger**: Tags `v*` (z.B. `v3.8.0`, `v4.0.0-beta`)
+**Trigger**: Tags `v*` (z.B. `v4.1.0`, `v5.0.0-beta`)
 
 **Ablauf**:
 1. Version aus Tag extrahieren
@@ -48,44 +48,17 @@
 ```bash
 # Über GitHub UI: Actions → Release → Run workflow
 # Oder per Tag:
-git tag v3.8.0
-git push origin v3.8.0
+git tag v4.1.0
+git push origin v4.1.0
 ```
 
 ---
 
-## 🔍 analysis.yml - Statische Analyse
-
-**Trigger**: Push, PRs, wöchentlich (Sonntag 00:00 UTC)
-
-**Jobs**:
-| Job | Tool | Beschreibung |
-|-----|------|--------------|
-| `cppcheck` | Cppcheck 2.x | Statische C/C++ Analyse |
-| `warnings` | GCC | Compiler-Warnungen zählen |
-| `asan` | AddressSanitizer | Memory-Fehler erkennen |
-| `ubsan` | UBSanitizer | Undefined Behavior erkennen |
-
----
-
-## ⚡ quick-check.yml - Schneller PR-Check
-
-**Trigger**: Push auf Feature-Branches, PR-Öffnung
-
-**Jobs**:
-- Linux Core Build (ohne GUI)
-- Cppcheck Quick Scan
-- TODO/FIXME Zählung
-
-**Zweck**: Schnelles Feedback (< 2 Min)
-
----
-
-## 🏷️ Badges für README
+## Badges für README
 
 ```markdown
 [![CI Build](https://github.com/OWNER/REPO/actions/workflows/ci.yml/badge.svg)](...)
-[![Static Analysis](https://github.com/OWNER/REPO/actions/workflows/analysis.yml/badge.svg)](...)
+[![Sanitizers](https://github.com/OWNER/REPO/actions/workflows/sanitizers.yml/badge.svg)](...)
 [![Release](https://img.shields.io/github/v/release/OWNER/REPO)](...)
 ```
 
@@ -97,12 +70,12 @@ git push origin v3.8.0
 
 ```bash
 # Version in UFT_VERSION.txt setzen
-echo "3.8.0" > UFT_VERSION.txt
+echo "4.1.0" > UFT_VERSION.txt
 
 # Commit und Tag
 git add .
-git commit -m "Release v3.8.0"
-git tag v3.8.0
+git commit -m "Release v4.1.0"
+git tag v4.1.0
 git push origin main --tags
 ```
 
@@ -110,7 +83,7 @@ git push origin main --tags
 
 1. GitHub → Actions → Release
 2. "Run workflow" klicken
-3. Version eingeben (z.B. `v3.8.0`)
+3. Version eingeben (z.B. `v4.1.0`)
 
 ---
 

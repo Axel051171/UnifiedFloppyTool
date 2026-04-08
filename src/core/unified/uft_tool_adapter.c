@@ -344,9 +344,9 @@ static uft_error_t uft_gw_read_disk(void* context,
     }
     
     /* Get file size */
-    if (fseek(f, 0, SEEK_END) != 0) { /* seek error */ }
+    if (fseek(f, 0, SEEK_END) != 0) { fclose(f); return UFT_ERROR_IO; }
     long fsize = ftell(f);
-    if (fseek(f, 0, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(f, 0, SEEK_SET) != 0) { fclose(f); return UFT_ERROR_IO; }
     if (fsize <= 0) {
         fclose(f);
         unlink(tmpfile);

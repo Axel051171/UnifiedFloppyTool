@@ -194,9 +194,17 @@ uint32_t write_scp_track(LIBFLUX_IMGLDR* imgldr_ctx,FILE *f,LIBFLUX_SIDE * track
 
 	file_checksum = update_checksum(file_checksum,(unsigned char*)trkh, scp_trkh_size);
 
-	if (fseek(f,fpos,SEEK_SET) != 0) { /* seek error */ }
+	if (fseek(f,fpos,SEEK_SET) != 0) {
+		deinitStreamConvert(strconv);
+		free(trkh);
+		return 0;
+	}
 	if (fwrite(trkh,scp_trkh_size,1,f) != 1) { /* I/O error */ }
-	if (fseek(f,0,SEEK_END) != 0) { /* seek error */ }
+	if (fseek(f,0,SEEK_END) != 0) {
+		deinitStreamConvert(strconv);
+		free(trkh);
+		return 0;
+	}
 	file_checksum =  file_checksum + checksum;
 
 	if(csum)
@@ -351,7 +359,10 @@ int SCP_libWrite_DiskFile(LIBFLUX_IMGLDR* imgldr_ctx,LIBFLUX_FLOPPY * floppy,cha
 		{
 			libflux_imgCallProgressCallback(imgldr_ctx,i,tracknumber);
 
-			if (fseek(f,0,SEEK_END) != 0) { /* seek error */ }
+			if (fseek(f,0,SEEK_END) != 0) {
+				libflux_fclose(f);
+				return LIBFLUX_ACCESSERROR;
+			}
 			if(floppy->floppyNumberOfSide == 2)
 			{
 				tracksoffset[i] = LITTLEENDIAN_DWORD(ftell(f));
@@ -366,11 +377,17 @@ int SCP_libWrite_DiskFile(LIBFLUX_IMGLDR* imgldr_ctx,LIBFLUX_FLOPPY * floppy,cha
 			file_checksum = file_checksum + track_checksum;
 		}
 
-		if (fseek(f,tracklist_offset,SEEK_SET) != 0) { /* seek error */ }
+		if (fseek(f,tracklist_offset,SEEK_SET) != 0) {
+			libflux_fclose(f);
+			return LIBFLUX_ACCESSERROR;
+		}
 		if (fwrite(&tracksoffset,sizeof(tracksoffset),1,f) != 1) { /* I/O error */ }
 		file_checksum = update_checksum(file_checksum,(unsigned char*)&tracksoffset,sizeof(tracksoffset));
 
-		if (fseek(f,0,SEEK_SET) != 0) { /* seek error */ }
+		if (fseek(f,0,SEEK_SET) != 0) {
+			libflux_fclose(f);
+			return LIBFLUX_ACCESSERROR;
+		}
 		scph.file_data_checksum = LITTLEENDIAN_DWORD(file_checksum);
 		if (fwrite(&scph,sizeof(scp_header),1,f) != 1) { /* I/O error */ }
 		libflux_fclose(f);

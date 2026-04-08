@@ -467,9 +467,9 @@ uft_atari_error_t uft_atari_inject_from_file(uft_atari_ctx_t *ctx,
         return UFT_ATARI_ERR_READ;
     }
     
-    if (fseek(f, 0, SEEK_END) != 0) { /* seek error */ }
+    if (fseek(f, 0, SEEK_END) != 0) { fclose(f); return UFT_ATARI_ERR_READ; }
     long file_size = ftell(f);
-    if (fseek(f, 0, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(f, 0, SEEK_SET) != 0) { fclose(f); return UFT_ATARI_ERR_READ; }
     if (file_size < 0) {
         fclose(f);
         return UFT_ATARI_ERR_READ;

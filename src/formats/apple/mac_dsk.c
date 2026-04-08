@@ -27,9 +27,9 @@ int uft_apl_mac_dsk_open(FloppyDevice *dev,const char*path){
     FILE *fp=fopen(path,"rb");
     if(!fp) return UFT_ENOENT;
 
-    if (fseek(fp,0,SEEK_END) != 0) { /* seek error */ }
+    if (fseek(fp,0,SEEK_END) != 0) { fclose(fp); return UFT_EIO; }
     long sz=ftell(fp);
-    if (fseek(fp,0,SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(fp,0,SEEK_SET) != 0) { fclose(fp); return UFT_EIO; }
     /* Known sizes: 400K (409600), 800K (819200) */
     if(!(sz==409600 || sz==819200)){
         fclose(fp);

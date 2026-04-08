@@ -203,7 +203,7 @@ int WOZ_libLoad_DiskFile(LIBFLUX_IMGLDR * imgldr_ctx,LIBFLUX_FLOPPY * floppydisk
 
 	memset(file_buffer,0,filesize);
 
-	if (fseek(f,0,SEEK_SET) != 0) { /* seek error */ }
+	if (fseek(f,0,SEEK_SET) != 0) { free(file_buffer); libflux_fclose(f); return LIBFLUX_ACCESSERROR; }
 	libflux_fread( file_buffer, filesize, f );
 
 	libflux_fclose(f);

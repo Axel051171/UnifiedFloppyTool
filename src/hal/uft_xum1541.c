@@ -356,23 +356,152 @@ int uft_xum_read_track(uft_xum_config_t *cfg, int track, int side,
                         uint8_t *sectors, int *sector_count,
                         uint8_t *errors) {
     if (!cfg || !cfg->connected || !sectors || !sector_count) return -1;
-    
+
     int num_sectors = uft_xum_sectors_for_track(cfg->drive_type, track);
     if (num_sectors <= 0) {
         snprintf(cfg->last_error, sizeof(cfg->last_error),
                  "Invalid track %d for drive type", track);
         return -1;
     }
-    
-    (void)side;
-    (void)errors;
-    
-    /* Would use OpenCBM parallel/serial protocol here */
-    snprintf(cfg->last_error, sizeof(cfg->last_error),
-             "Sector read not yet implemented - requires custom drive code upload");
-    
-    *sector_count = 0;
-    return -1;
+
+    (void)side;  /* CBM drives use track number only (not CHS) */
+
+    if (!g_opencbm.available || !g_opencbm.listen || !g_opencbm.talk ||
+        !g_opencbm.raw_read || !g_opencbm.raw_write) {
+        snprintf(cfg->last_error, sizeof(cfg->last_error),
+                 "OpenCBM library functions not available");
+        return -1;
+    }
+
+    /*
+     * Commodore IEC bus sector read protocol:
+     *
+     * For each sector on the track:
+     * 1. Send memory-read command to drive to position to track/sector
+     *    - LISTEN device, secondary channel 15 (command channel)
+     *    - Send "U1:2 0 <track> <sector>\r" (block-read to buffer)
+     *    - UNLISTEN
+     * 2. Check drive status on channel 15
+     *    - TALK device, secondary channel 15
+     *    - Read status string (e.g. "00, OK,00,00")
+     *    - UNTALK
+     * 3. Read sector data from channel 2
+     *    - TALK device, secondary channel 2
+     *    - Read 256 bytes
+     *    - UNTALK
+     */
+
+    /* Open data channel (#2) for block reads */
+    unsigned char dev = (unsigned char)cfg->device_num;
+    char open_cmd[32];
+    snprintf(open_cmd, sizeof(open_cmd), "#");
+
+    /* LISTEN device on channel 2, send "#" to open direct-access buffer */
+    if (g_opencbm.listen(cfg->cbm_fd, dev, 2) != 0) {
+        snprintf(cfg->last_error, sizeof(cfg->last_error),
+                 "IEC LISTEN failed for device %d", cfg->device_num);
+        *sector_count = 0;
+        return -1;
+    }
+    g_opencbm.raw_write(cfg->cbm_fd, open_cmd, 1);
+    if (g_opencbm.unlisten) g_opencbm.unlisten(cfg->cbm_fd);
+
+    int sectors_read = 0;
+    int sector_errors = 0;
+
+    for (int sector = 0; sector < num_sectors; sector++) {
+        /* Send U1 (block-read) command on command channel (15) */
+        char cmd[64];
+        snprintf(cmd, sizeof(cmd), "U1:2 0 %d %d", track, sector);
+
+        if (g_opencbm.listen(cfg->cbm_fd, dev, 15) != 0) {
+            if (errors) errors[sector] = 0xFF;
+            sector_errors++;
+            continue;
+        }
+        g_opencbm.raw_write(cfg->cbm_fd, cmd, strlen(cmd));
+        if (g_opencbm.unlisten) g_opencbm.unlisten(cfg->cbm_fd);
+
+        /* Check drive status */
+        char status[64] = {0};
+        if (g_opencbm.device_status) {
+            g_opencbm.device_status(cfg->cbm_fd, dev, status, sizeof(status));
+        } else {
+            /* Read status manually */
+            if (g_opencbm.talk(cfg->cbm_fd, dev, 15) == 0) {
+                g_opencbm.raw_read(cfg->cbm_fd, status, sizeof(status) - 1);
+                if (g_opencbm.untalk) g_opencbm.untalk(cfg->cbm_fd);
+            }
+        }
+
+        /* Check for error status (starts with "00" = OK) */
+        int status_code = 0;
+        if (status[0] >= '0' && status[0] <= '9') {
+            status_code = (status[0] - '0') * 10 + (status[1] - '0');
+        }
+
+        if (status_code != 0 && status_code != 1) {
+            /* Drive error (e.g., 21=READ ERROR, 22=READ ERROR, etc.) */
+            if (errors) errors[sector] = (uint8_t)status_code;
+            sector_errors++;
+
+            /* Retry logic */
+            bool retry_ok = false;
+            for (int retry = 0; retry < cfg->retries && !retry_ok; retry++) {
+                if (g_opencbm.listen(cfg->cbm_fd, dev, 15) != 0) continue;
+                g_opencbm.raw_write(cfg->cbm_fd, cmd, strlen(cmd));
+                if (g_opencbm.unlisten) g_opencbm.unlisten(cfg->cbm_fd);
+
+                if (g_opencbm.device_status) {
+                    g_opencbm.device_status(cfg->cbm_fd, dev, status, sizeof(status));
+                }
+                status_code = (status[0] - '0') * 10 + (status[1] - '0');
+                if (status_code == 0 || status_code == 1) {
+                    retry_ok = true;
+                    sector_errors--;
+                    if (errors) errors[sector] = 0;
+                }
+            }
+
+            if (!retry_ok) continue;  /* Skip this sector */
+        } else {
+            if (errors) errors[sector] = 0;
+        }
+
+        /* Read 256 bytes of sector data from channel 2 */
+        if (g_opencbm.talk(cfg->cbm_fd, dev, 2) != 0) {
+            if (errors) errors[sector] = 0xFE;
+            continue;
+        }
+
+        int bytes_read = g_opencbm.raw_read(cfg->cbm_fd,
+                                             sectors + (sector * 256), 256);
+        if (g_opencbm.untalk) g_opencbm.untalk(cfg->cbm_fd);
+
+        if (bytes_read == 256) {
+            sectors_read++;
+        } else {
+            if (errors) errors[sector] = 0xFD;
+            sector_errors++;
+        }
+    }
+
+    /* Close data channel */
+    if (g_opencbm.listen(cfg->cbm_fd, dev, 15) == 0) {
+        const char *close_cmd = "I";  /* Initialize (resets channels) */
+        g_opencbm.raw_write(cfg->cbm_fd, close_cmd, 1);
+        if (g_opencbm.unlisten) g_opencbm.unlisten(cfg->cbm_fd);
+    }
+
+    *sector_count = sectors_read;
+
+    if (sectors_read == 0) {
+        snprintf(cfg->last_error, sizeof(cfg->last_error),
+                 "No sectors read on track %d (%d errors)", track, sector_errors);
+        return -1;
+    }
+
+    return 0;
 }
 
 int uft_xum_read_disk(uft_xum_config_t *cfg, uft_xum_callback_t callback,

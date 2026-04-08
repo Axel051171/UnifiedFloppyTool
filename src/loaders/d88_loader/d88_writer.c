@@ -236,7 +236,10 @@ int D88_libWrite_DiskFile(LIBFLUX_IMGLDR* imgldr_ctx,LIBFLUX_FLOPPY * floppy,cha
 	}
 
 	d88_fh.file_size = libflux_fgetsize(outfile);
-	if (fseek(outfile,0,SEEK_SET) != 0) { /* seek error */ }
+	if (fseek(outfile,0,SEEK_SET) != 0) {
+		libflux_fclose(outfile);
+		return LIBFLUX_BADFILE;
+	}
 	if (fwrite(&d88_fh,sizeof(d88_fileheader),1,outfile) != 1) { /* I/O error */ }
 	if (fwrite(&tracktable, sizeof(tracktable),1,outfile) != 1) { /* I/O error */ }
 	libflux_fclose(outfile);

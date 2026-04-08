@@ -221,7 +221,7 @@ uft_error_t uft_detect_format(const char* path,
     uint8_t header[4096];
     size_t header_size = fread(header, 1, sizeof(header), f);
     
-    if (fseek(f, 0, SEEK_END) != 0) { /* seek error */ }
+    if (fseek(f, 0, SEEK_END) != 0) { fclose(f); return UFT_ERROR_IO; }
     size_t file_size = (size_t)ftell(f);
     fclose(f);
     

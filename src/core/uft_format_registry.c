@@ -368,7 +368,7 @@ int uft_format_detect_file(const char *path,
     size_t read = fread(header, 1, sizeof(header), f);
     
     /* Get file size */
-    if (fseek(f, 0, SEEK_END) != 0) { /* seek error */ }
+    if (fseek(f, 0, SEEK_END) != 0) { fclose(f); result->confidence = 0.0f; return -1; }
     size_t file_size = (size_t)ftell(f);
     fclose(f);
     

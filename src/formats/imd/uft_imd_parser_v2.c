@@ -197,8 +197,13 @@ static const char* imd_sector_type_name(uint8_t type) {
  * @brief Calculate sector size from size code
  */
 static uint16_t imd_sector_size(uint8_t size_code) {
-    if (size_code > 6) return 0;
+    if (size_code > 6) return 0;  /* Max: 128 << 6 = 8192 */
     return (uint16_t)(128 << size_code);
+}
+
+/* Validate sector count from untrusted file header */
+static bool imd_valid_sector_count(uint8_t sectors) {
+    return sectors <= IMD_MAX_SECTORS;  /* max 64 */
 }
 
 /*============================================================================
@@ -262,7 +267,7 @@ static int imd_parse_header(imd_context_t *ctx) {
  * @brief Parse all tracks
  */
 static int imd_parse_tracks(imd_context_t *ctx) {
-    if (fseek(ctx->fp, ctx->data_offset, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(ctx->fp, ctx->data_offset, SEEK_SET) != 0) { return -1; }
     ctx->track_count = 0;
     ctx->tracks = 0;
     ctx->sides = 0;
@@ -289,7 +294,12 @@ static int imd_parse_tracks(imd_context_t *ctx) {
         track->header.head &= 0x0F;  /* Clear flags */
         
         track->sector_size = imd_sector_size(track->header.size_code);
-        
+
+        /* Validate sector count from file */
+        if (!imd_valid_sector_count(track->header.sectors)) {
+            return -1;
+        }
+
         /* Update geometry stats */
         if (track->header.cylinder >= ctx->tracks) {
             ctx->tracks = track->header.cylinder + 1;
@@ -363,7 +373,7 @@ static int imd_parse_tracks(imd_context_t *ctx) {
                 if (fread(&sec->fill_byte, 1, 1, ctx->fp) != 1) return -1;
             } else {
                 /* Full sector data */
-                if (fseek(ctx->fp, track->sector_size, SEEK_CUR) != 0) { /* seek error */ }
+                if (fseek(ctx->fp, track->sector_size, SEEK_CUR) != 0) { return -1; }
             }
         }
         
@@ -391,9 +401,9 @@ imd_context_t* imd_open(const char *filename) {
     }
     
     /* Get file size */
-    if (fseek(ctx->fp, 0, SEEK_END) != 0) { /* seek error */ }
+    if (fseek(ctx->fp, 0, SEEK_END) != 0) { fclose(ctx->fp); free(ctx); return NULL; }
     ctx->file_size = (size_t)ftell(ctx->fp);
-    if (fseek(ctx->fp, 0, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(ctx->fp, 0, SEEK_SET) != 0) { fclose(ctx->fp); free(ctx); return NULL; }
     /* Parse header */
     if (imd_parse_header(ctx) < 0) {
         fclose(ctx->fp);
@@ -444,9 +454,9 @@ int imd_read_sector(imd_context_t *ctx, uint8_t cyl, uint8_t head,
     if (!track) return -1;
     
     /* Seek to track start */
-    if (fseek(ctx->fp, track->file_offset + sizeof(imd_track_header_t), SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(ctx->fp, track->file_offset + sizeof(imd_track_header_t), SEEK_SET) != 0) { return -1; }
     /* Skip sector map */
-    if (fseek(ctx->fp, track->header.sectors, SEEK_CUR) != 0) { /* seek error */ }
+    if (fseek(ctx->fp, track->header.sectors, SEEK_CUR) != 0) { return -1; }
     /* Skip optional maps */
     if (track->has_cyl_map) (void)fseek(ctx->fp, track->header.sectors, SEEK_CUR);
     if (track->has_head_map) (void)fseek(ctx->fp, track->header.sectors, SEEK_CUR);
@@ -490,10 +500,10 @@ int imd_read_sector(imd_context_t *ctx, uint8_t cyl, uint8_t head,
                    type == IMD_SEC_ERR_COMP || type == IMD_SEC_DEL_ERR_C) {
             (void)fseek(ctx->fp, 1, SEEK_CUR);  /* Fill byte only */
         } else {
-            if (fseek(ctx->fp, track->sector_size, SEEK_CUR) != 0) { /* seek error */ }
+            if (fseek(ctx->fp, track->sector_size, SEEK_CUR) != 0) { return -1; }
         }
     }
-    
+
     return -1;  /* Sector not found */
 }
 
@@ -579,12 +589,16 @@ int imd_convert_to_raw(imd_context_t *ctx, const char *outfile) {
     if (!out) return -1;
     
     int result = 0;
+    if (ctx->max_sector_size == 0 || ctx->max_sector_size > IMD_MAX_SECTOR_SIZE) {
+        fclose(out);
+        return -1;
+    }
     uint8_t *sector_buf = malloc(ctx->max_sector_size);
     if (!sector_buf) {
         fclose(out);
         return -1;
     }
-    
+
     /* Determine sectors per track (use first track) */
     uint8_t sectors_per_track = ctx->max_sectors;
     

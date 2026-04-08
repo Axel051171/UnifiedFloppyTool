@@ -14,6 +14,7 @@ Complete guide to setting up floppy disk controllers with UnifiedFloppyTool.
 | **FluxEngine** | ✅ | ✅ | ✅ | $15 | Medium |
 | **Catweasel** | ✅ | ✅ | ✅ | Rare | Hard |
 | **XUM1541** | ✅ | ✅ | ❌ | $25 | Easy |
+| **ADF-Copy** | ✅ | ✅ | ⚠️ | DIY | Easy |
 | **USB Floppy** | ✅ | ✅ | ❌ | $15 | Easy |
 
 ---
@@ -220,6 +221,83 @@ fluxengine upgradefluxengine
 1. Hardware → Detect Hardware
 2. Select "FluxEngine"
 3. May show as "Cypress FX2" initially
+
+---
+
+## ADF-Copy / ADF-Drive (Amiga)
+
+### What You Need
+
+- ADF-Copy or ADF-Drive board (Teensy 3.2 based, by Nick's Labor)
+- Firmware v1.100 or later (platformio-based)
+- PC 3.5" floppy drive
+- 34-pin ribbon cable (Shugart header)
+- USB-A to Micro-USB cable
+- Stable 5V power supply for the floppy drive
+
+### Hardware Setup
+
+```
+┌─────────────────┐         ┌─────────────────┐
+│   ADF-Copy      │◄────────│   Floppy Drive  │
+│   (Teensy 3.2)  │ 34-pin  │                 │
+│    [USB]────────┼─────────│   [Power]◄──────┤
+└─────────────────┘         └─────────────────┘
+      │                            │
+      ▼                            ▼
+    Computer                   5V Power Supply
+```
+
+**Power Note:** The floppy drive needs stable 5V.
+Recommended: buffer capacitor 800–1000 µF on drive power rail
+(see Nick's schematic at https://nickslabor.niteto.de/projekte/adf-copy-english/)
+
+### PCB Versions
+
+| PCB Version | Read | Write | Flux Capture |
+|-------------|:----:|:-----:|:------------:|
+| v1 / v3 / v5 | ✅ | ✅ | ❌ |
+| v2 / v4 / v6 | ✅ | ✅ | ✅ (~20 ns) |
+
+**Flux capture** requires PCB v2/v4/v6 **and** a USB 2.0 host port (not USB 3.x).
+
+### Firmware Update
+
+- Download: https://nickslabor.niteto.de/download/
+- Source: https://github.com/Niteto/ADF-Drive-Firmware
+- Flash via PlatformIO or Teensy Loader
+
+### Driver Installation
+
+- **Windows 10/11:** Driver included in OS (automatic)
+- **Windows XP–7:** https://www.pjrc.com/teensy/serial_install.exe
+- **Linux/macOS:** No driver needed. On Linux, install udev rules:
+
+```bash
+sudo cp tools/99-floppy-devices.rules /etc/udev/rules.d/
+sudo udevadm control --reload-rules
+sudo udevadm trigger
+```
+
+### UFT Configuration
+
+1. **Hardware Tab** → Click "Detect Hardware"
+2. Select "ADF-Copy (Amiga)" from the Flux Controllers dropdown
+3. The Teensy board is auto-detected via USB VID/PID (0x16C0:0x0483)
+4. Configure:
+   - **Port**: Auto-detected serial port
+   - **Retries**: 3 (default, per track)
+   - **Index Align**: Optional for write operations
+
+### Troubleshooting
+
+| Problem | Solution |
+|---------|----------|
+| "No device found" | Check USB cable, try different port |
+| "Permission denied" (Linux) | Install udev rules or add user to `dialout` group |
+| "Flux not supported" | PCB v1/3/5 cannot capture flux — use v2/4/6 |
+| "Write-protected" | Check disk's write-protect tab |
+| Unstable reads | Add 800–1000 µF capacitor on drive 5V rail |
 
 ---
 

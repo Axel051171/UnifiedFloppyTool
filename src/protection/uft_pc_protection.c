@@ -754,9 +754,9 @@ uft_pcprot_result_t *uft_pcprot_scan_file(const char *path)
     FILE *f = fopen(path, "rb");
     if (!f) return NULL;
     
-    if (fseek(f, 0, SEEK_END) != 0) { /* seek error */ }
+    if (fseek(f, 0, SEEK_END) != 0) { fclose(f); return NULL; }
     long size = ftell(f);
-    if (fseek(f, 0, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(f, 0, SEEK_SET) != 0) { fclose(f); return NULL; }
     if (size <= 0 || size > 100 * 1024 * 1024) {  /* Max 100MB */
         fclose(f);
         return NULL;

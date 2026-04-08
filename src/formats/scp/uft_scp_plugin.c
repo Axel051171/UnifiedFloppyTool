@@ -229,9 +229,15 @@ static uft_error_t scp_open(uft_disk_t* disk, const char* path, bool read_only) 
     }
     
     // Dateigröße
-    if (fseek(f, 0, SEEK_END) != 0) { /* seek error */ }
+    if (fseek(f, 0, SEEK_END) != 0) {
+        fclose(f);
+        return UFT_ERROR_FILE_READ;
+    }
     size_t file_size = ftell(f);
-    if (fseek(f, 0, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(f, 0, SEEK_SET) != 0) {
+        fclose(f);
+        return UFT_ERROR_FILE_READ;
+    }
     // Header lesen
     scp_header_t header;
     if (fread(&header, sizeof(header), 1, f) != 1) {

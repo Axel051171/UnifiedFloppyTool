@@ -296,7 +296,14 @@ stx_parser_ctx_t* stx_parser_open(const char* path) {
     ctx->file = f;
     memcpy(&ctx->header, &header, sizeof(header));
     ctx->track_count = header.track_count;
-    
+
+    /* Validate track count against maximum */
+    if (ctx->track_count > STX_MAX_TRACKS) {
+        fclose(f);
+        free(ctx);
+        return NULL;
+    }
+
     /* Build track offset table */
     ctx->track_offsets = calloc(ctx->track_count, sizeof(uint32_t));
     if (!ctx->track_offsets) {
@@ -405,7 +412,7 @@ int stx_parser_read_track(
     track->has_timing = (td.flags & STX_TF_TIMING_DATA) != 0;
     
     /* Read sector descriptors */
-    if (td.sector_count > 0) {
+    if (td.sector_count > 0 && td.sector_count <= STX_MAX_SECTORS) {
         stx_sector_descriptor_t* sec_descs = malloc(
             td.sector_count * sizeof(stx_sector_descriptor_t));
         
