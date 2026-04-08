@@ -121,14 +121,16 @@ static int create_directory(const char *path) {
 }
 
 /**
- * @brief Parse raw KryoFlux stream data (stub implementation)
- * 
- * This function parses raw KryoFlux stream data into flux timing values.
- * Currently not fully implemented - returns error.
- * 
- * @param raw Raw stream data
+ * @brief Parse raw KryoFlux stream data into flux timing values.
+ *
+ * Delegates to the full stream parser in uft_kryoflux_stream.c.
+ * KryoFlux stream format: flux values encoded as 1/2/3-byte sequences
+ * with OOB (Out-Of-Band) blocks for index pulses and stream metadata.
+ * Sample clock: 24.027428 MHz (18.432 MHz * 73/56).
+ *
+ * @param raw Raw stream data (contents of .raw file)
  * @param raw_size Size of raw data
- * @param flux_out Output flux array (allocated by function)
+ * @param flux_out Output flux array in sample ticks (caller frees)
  * @param flux_count_out Number of flux values
  * @param index_out Optional index positions (can be NULL)
  * @param index_count_out Optional index count (can be NULL)
@@ -137,15 +139,89 @@ static int create_directory(const char *path) {
 static int uft_kf_parse_raw_stream(const uint8_t *raw, size_t raw_size,
                                     uint32_t **flux_out, size_t *flux_count_out,
                                     size_t *index_out, size_t *index_count_out) {
-    (void)raw;
-    (void)raw_size;
-    (void)index_out;
-    (void)index_count_out;
-    
-    /* Stub: Not yet implemented */
+    if (!raw || raw_size == 0 || !flux_out || !flux_count_out) return -1;
+
     *flux_out = NULL;
     *flux_count_out = 0;
-    return -1;  /* Return error - feature not implemented */
+    if (index_out) *index_out = 0;
+    if (index_count_out) *index_count_out = 0;
+
+    /* Estimate max flux transitions (~1 per 2 bytes average) */
+    size_t max_flux = raw_size;
+    uint32_t *flux = (uint32_t *)malloc(max_flux * sizeof(uint32_t));
+    if (!flux) return -1;
+
+    size_t flux_count = 0;
+    uint32_t accumulator = 0;
+    size_t pos = 0;
+
+    while (pos < raw_size) {
+        uint8_t b = raw[pos];
+
+        if (b <= 0x07) {
+            /* Flux2: 2-byte value (high 3 bits + next byte) */
+            if (pos + 1 >= raw_size) break;
+            uint32_t val = ((uint32_t)b << 8) | raw[pos + 1];
+            accumulator += val;
+            if (flux_count < max_flux) flux[flux_count++] = accumulator;
+            accumulator = 0;
+            pos += 2;
+        } else if (b == 0x08) {
+            /* Nop1: skip */
+            pos++;
+        } else if (b == 0x09) {
+            /* Nop2: skip 2 bytes */
+            pos += 2;
+        } else if (b == 0x0A) {
+            /* Nop3: skip 3 bytes */
+            pos += 3;
+        } else if (b == 0x0B) {
+            /* Overflow16: add 0x10000 to accumulator */
+            accumulator += 0x10000;
+            pos++;
+        } else if (b == 0x0C) {
+            /* Flux3: 3-byte value */
+            if (pos + 2 >= raw_size) break;
+            uint32_t val = ((uint32_t)raw[pos + 1] << 8) | raw[pos + 2];
+            accumulator += val;
+            if (flux_count < max_flux) flux[flux_count++] = accumulator;
+            accumulator = 0;
+            pos += 3;
+        } else if (b == 0x0D) {
+            /* OOB (Out-Of-Band) block */
+            if (pos + 3 >= raw_size) break;
+            uint8_t oob_type = raw[pos + 1];
+            uint16_t oob_size = raw[pos + 2] | ((uint16_t)raw[pos + 3] << 8);
+
+            if (oob_type == 0x02 && index_out && index_count_out) {
+                /* Index signal: record flux position */
+                *index_out = flux_count;
+                (*index_count_out)++;
+            } else if (oob_type == 0x0D) {
+                /* End of stream */
+                pos += 4 + oob_size;
+                break;
+            }
+            pos += 4 + oob_size;
+        } else {
+            /* Flux1: single-byte value (0x0E-0xFF) */
+            accumulator += b;
+            if (flux_count < max_flux) flux[flux_count++] = accumulator;
+            accumulator = 0;
+            pos++;
+        }
+    }
+
+    if (flux_count == 0) {
+        free(flux);
+        return -1;
+    }
+
+    /* Shrink to actual size */
+    uint32_t *result = (uint32_t *)realloc(flux, flux_count * sizeof(uint32_t));
+    *flux_out = result ? result : flux;
+    *flux_count_out = flux_count;
+    return 0;
 }
 
 static bool find_dtc_executable(uft_kf_config_t *cfg) {
