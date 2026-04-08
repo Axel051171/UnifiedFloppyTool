@@ -140,8 +140,10 @@ typedef enum uft_gw_drive_type {
 } uft_gw_drive_type_t;
 
 /* ═══════════════════════════════════════════════════════════════════════════
- * STRUCTURES
+ * STRUCTURES (guarded to avoid redefinition conflicts with gw_protocol.h)
  * ═══════════════════════════════════════════════════════════════════════════ */
+#ifndef UFT_GW_INFO_T_DEFINED
+#define UFT_GW_INFO_T_DEFINED
 
 /**
  * @brief Device information structure
@@ -168,6 +170,7 @@ typedef struct uft_gw_delays {
     uint16_t    motor_delay_ms;     /**< Motor spin-up delay */
     uint16_t    auto_off_ms;        /**< Auto motor-off timeout */
 } uft_gw_delays_t;
+#endif /* UFT_GW_INFO_T_DEFINED */
 
 /**
  * @brief Flux read parameters

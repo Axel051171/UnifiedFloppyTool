@@ -242,9 +242,9 @@ void GreaseweazleHardwareProvider::autoDetectDevice()
                 
                 /* Send GET_INFO command (4 bytes: cmd + len + subindex_lo + subindex_hi) */
                 QByteArray cmd;
-                cmd.append(CMD_GET_INFO);
-                cmd.append(CMD_LEN);
-                cmd.append(GETINFO_FIRMWARE);       // Subindex low byte
+                cmd.append(static_cast<char>(CMD_GET_INFO));
+                cmd.append(static_cast<char>(CMD_LEN));
+                cmd.append(static_cast<char>(GETINFO_FIRMWARE));
                 cmd.append(static_cast<char>(0));   // Subindex high byte
                 
                 testPort.write(cmd);
@@ -328,9 +328,9 @@ void GreaseweazleHardwareProvider::autoDetectDevice()
         
         /* Send GET_INFO command (4 bytes: cmd + len + subindex_lo + subindex_hi) */
         QByteArray cmd;
-        cmd.append(CMD_GET_INFO);
-        cmd.append(CMD_LEN);
-        cmd.append(GETINFO_FIRMWARE);       // Subindex low byte
+        cmd.append(static_cast<char>(CMD_GET_INFO));
+        cmd.append(static_cast<char>(CMD_LEN));
+        cmd.append(static_cast<char>(GETINFO_FIRMWARE));
         cmd.append(static_cast<char>(0));   // Subindex high byte
         
         testPort.write(cmd);

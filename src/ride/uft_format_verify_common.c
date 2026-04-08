@@ -432,7 +432,13 @@ int uft_verify_d81(const char *path, uft_verify_result_t *result) {
     /* Read BAM for additional validation */
     long bam_offset = (D81_BAM_TRACK - 1) * D81_TRACK_SIZE * 2 + 
                       D81_BAM_SECTOR * 512;
-    if (fseek(f, bam_offset, SEEK_SET) != 0) continue;
+    if (fseek(f, bam_offset, SEEK_SET) != 0) {
+        fclose(f);
+        result->valid = false;
+        result->error_code = 3;
+        snprintf(result->details, sizeof(result->details), "Seek error reading BAM");
+        return 0;
+    }
     
     uint8_t bam[512];
     if (fread(bam, 1, 512, f) != 512) {
