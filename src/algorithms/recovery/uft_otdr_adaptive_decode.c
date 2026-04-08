@@ -332,8 +332,11 @@ flux_status_t uft_otdr_adaptive_decode(const flux_raw_data_t *flux,
     for (size_t s = 0; s < result->normal_track.sector_count; s++) {
         flux_decoded_sector_t *normal_sec = &result->normal_track.sectors[s];
 
-        /* Skip sectors that already have good CRC */
-        if (normal_sec->data_crc_ok) continue;
+        /* Skip sectors that already have good CRC — mark as NORMAL source */
+        if (normal_sec->data_crc_ok) {
+            if (s < 64) result->sector_source[s] = UFT_SECTOR_SRC_NORMAL;
+            continue;
+        }
         if (!normal_sec->data || normal_sec->data_size == 0) continue;
 
         result->sectors_attempted++;
@@ -358,6 +361,7 @@ flux_status_t uft_otdr_adaptive_decode(const flux_raw_data_t *flux,
             memcpy(normal_sec->data, agg_sec->data, normal_sec->data_size);
             normal_sec->data_crc_ok = true;
             result->sectors_improved++;
+            if (s < 64) result->sector_source[s] = UFT_SECTOR_SRC_AGGRESSIVE;
             continue;
         }
 
@@ -391,6 +395,9 @@ flux_status_t uft_otdr_adaptive_decode(const flux_raw_data_t *flux,
                 memcpy(normal_sec->data, fused, normal_sec->data_size);
                 normal_sec->data_crc_ok = true;
                 result->sectors_improved++;
+                if (s < 64) result->sector_source[s] = UFT_SECTOR_SRC_FUSED;
+            } else {
+                if (s < 64) result->sector_source[s] = UFT_SECTOR_SRC_FAILED;
             }
         }
 

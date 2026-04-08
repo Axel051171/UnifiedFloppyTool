@@ -67,6 +67,14 @@ typedef struct {
     int      sector_idx;        /**< Which sector this overlaps (-1 = gap) */
 } uft_low_conf_region_t;
 
+/** Sector data provenance — how was this sector decoded? */
+typedef enum {
+    UFT_SECTOR_SRC_NORMAL     = 0, /**< Standard PLL decode, original CRC OK */
+    UFT_SECTOR_SRC_AGGRESSIVE = 1, /**< Aggressive PLL (wider tolerance) fixed CRC */
+    UFT_SECTOR_SRC_FUSED      = 2, /**< OTDR quality-weighted fusion of normal+aggressive */
+    UFT_SECTOR_SRC_FAILED     = 3  /**< All attempts failed, data unreliable */
+} uft_sector_source_t;
+
 /** Adaptive decode result */
 typedef struct {
     flux_decoded_track_t normal_track;      /**< Normal decode result */
@@ -76,6 +84,9 @@ typedef struct {
     uint32_t sectors_crc_ok_normal; /**< CRC-OK sectors from normal decode */
     uint32_t sectors_improved;      /**< Sectors fixed by adaptive decode */
     uint32_t sectors_attempted;     /**< CRC-failed sectors that were re-tried */
+
+    /** Per-sector provenance: how each sector was decoded (FORENSIC) */
+    uft_sector_source_t sector_source[64]; /**< Source flag per sector index */
 
     uint32_t low_conf_regions;      /**< Number of low-confidence regions */
     uft_low_conf_region_t regions[UFT_ADAPTIVE_MAX_REGIONS];

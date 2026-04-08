@@ -1043,9 +1043,35 @@ static uft_error_t convert_scp_to_mfm_sectors(const uint8_t* src_data,
     }
 
 done_mfm:
+    /* FORENSIC SAFETY: Do NOT write an all-zero file as "success".
+     * Check if any actual sector data was extracted by scanning for non-zero content. */
+    {
+        bool has_data = false;
+        for (size_t i = 0; i < output_size && !has_data; i++) {
+            if (output[i] != 0) has_data = true;
+        }
+
+        if (!has_data) {
+            /* No sector data extracted — MFM parser not yet integrated */
+            result->error = UFT_ERR_NOT_IMPLEMENTED;
+            result->success = false;
+            snprintf(result->warnings[result->warning_count < 8
+                         ? result->warning_count : 7],
+                     sizeof(result->warnings[0]),
+                     "CRITICAL: No sector data extracted from flux. "
+                     "MFM IDAM/DAM sector parser integration required. "
+                     "Output file NOT written to prevent silent data loss.");
+            if (result->warning_count < 8) result->warning_count++;
+
+            free(output);
+            uft_scp_free(&scp);
+            report_progress(opts, 100, "SCP->sector FAILED (no data extracted)");
+            return UFT_ERR_NOT_IMPLEMENTED;
+        }
+    }
+
     report_progress(opts, 90, "Writing output");
 
-    /* Write whatever we have */
     uft_error_t err = write_output_file(dst_path, output, output_size);
     if (err == UFT_OK) {
         result->success = true;
