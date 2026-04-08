@@ -77,7 +77,7 @@ void GreaseweazleHardwareProvider::detectDrive()
     /* Send GET_INFO command: [CMD_GET_INFO, 3, GETINFO_FIRMWARE]
      * Response: 2-byte header [cmd_echo, ack] + 32-byte info struct */
     QByteArray payload;
-    payload.append(static_cast<char>(GETINFO_FIRMWARE));
+    payload.append(static_cast<char>(GETINFO_FIRMWARE & 0xFF));
     if (!sendCommand(CMD_GET_INFO, payload)) {
         emit operationError(tr("Failed to send GET_INFO command"));
         return;
@@ -178,10 +178,13 @@ void GreaseweazleHardwareProvider::autoDetectDevice()
     
     qDebug() << "GreaseweazleHardwareProvider: Scanning" << ports.size() << "ports";
     
-    /* Greaseweazle protocol constants */
-    const char CMD_GET_INFO = 0x00;
-    const char CMD_LEN = 0x04;          /* Total length: cmd(1) + len(1) + subindex(2) */
-    const char GETINFO_FIRMWARE = 0x00;
+    /* Greaseweazle protocol constants — use macros from gw_protocol.h
+     * if available, otherwise define locally with unique names */
+#ifndef CMD_GET_INFO
+    #define CMD_GET_INFO      0x00
+    #define GETINFO_FIRMWARE  0x00
+#endif
+    const char GW_CMD_LEN = 0x04;  /* Total length: cmd(1) + len(1) + subindex(2) */
     
     /* First pass: Check VID/PID and descriptions */
     for (const QSerialPortInfo &port : ports) {
@@ -242,9 +245,9 @@ void GreaseweazleHardwareProvider::autoDetectDevice()
                 
                 /* Send GET_INFO command (4 bytes: cmd + len + subindex_lo + subindex_hi) */
                 QByteArray cmd;
-                cmd.append(static_cast<char>(CMD_GET_INFO));
-                cmd.append(static_cast<char>(CMD_LEN));
-                cmd.append(static_cast<char>(GETINFO_FIRMWARE));
+                cmd.append(static_cast<char>(CMD_GET_INFO & 0xFF));
+                cmd.append(GW_CMD_LEN);
+                cmd.append(static_cast<char>(GETINFO_FIRMWARE & 0xFF));
                 cmd.append(static_cast<char>(0));   // Subindex high byte
                 
                 testPort.write(cmd);
@@ -328,9 +331,9 @@ void GreaseweazleHardwareProvider::autoDetectDevice()
         
         /* Send GET_INFO command (4 bytes: cmd + len + subindex_lo + subindex_hi) */
         QByteArray cmd;
-        cmd.append(static_cast<char>(CMD_GET_INFO));
-        cmd.append(static_cast<char>(CMD_LEN));
-        cmd.append(static_cast<char>(GETINFO_FIRMWARE));
+        cmd.append(static_cast<char>(CMD_GET_INFO & 0xFF));
+        cmd.append(GW_CMD_LEN);
+        cmd.append(static_cast<char>(GETINFO_FIRMWARE & 0xFF));
         cmd.append(static_cast<char>(0));   // Subindex high byte
         
         testPort.write(cmd);

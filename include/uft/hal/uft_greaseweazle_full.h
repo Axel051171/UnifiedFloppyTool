@@ -142,35 +142,31 @@ typedef enum uft_gw_drive_type {
 /* ═══════════════════════════════════════════════════════════════════════════
  * STRUCTURES (guarded to avoid redefinition conflicts with gw_protocol.h)
  * ═══════════════════════════════════════════════════════════════════════════ */
-#ifndef UFT_GW_INFO_T_DEFINED
-#define UFT_GW_INFO_T_DEFINED
+/* These types are also defined in uft_greaseweazle.h and gw_protocol.h.
+ * Skip if either header was already included. */
+#if !defined(UFT_GREASEWEAZLE_H) && !defined(UFT_GW_PROTOCOL_H)
 
-/**
- * @brief Device information structure
- */
 typedef struct uft_gw_info {
-    uint8_t     fw_major;           /**< Firmware major version */
-    uint8_t     fw_minor;           /**< Firmware minor version */
-    uint8_t     is_main_fw;         /**< 1 if main firmware, 0 if bootloader */
-    uint8_t     max_cmd;            /**< Maximum supported command */
-    uint32_t    sample_freq;        /**< Sample frequency in Hz */
-    uint8_t     hw_model;           /**< Hardware model */
-    uint8_t     hw_submodel;        /**< Hardware sub-model */
-    uint8_t     usb_speed;          /**< USB speed (1=Full, 2=High) */
-    char        serial[32];         /**< Serial number string */
+    uint8_t     fw_major;
+    uint8_t     fw_minor;
+    uint8_t     is_main_fw;
+    uint8_t     max_cmd;
+    uint32_t    sample_freq;
+    uint8_t     hw_model;
+    uint8_t     hw_submodel;
+    uint8_t     usb_speed;
+    char        serial[32];
 } uft_gw_info_t;
 
-/**
- * @brief Drive delay parameters
- */
 typedef struct uft_gw_delays {
-    uint16_t    select_delay_us;    /**< Delay after drive select */
-    uint16_t    step_delay_us;      /**< Delay after step pulse */
-    uint16_t    settle_delay_ms;    /**< Head settle delay */
-    uint16_t    motor_delay_ms;     /**< Motor spin-up delay */
-    uint16_t    auto_off_ms;        /**< Auto motor-off timeout */
+    uint16_t    select_delay_us;
+    uint16_t    step_delay_us;
+    uint16_t    settle_delay_ms;
+    uint16_t    motor_delay_ms;
+    uint16_t    auto_off_ms;
 } uft_gw_delays_t;
-#endif /* UFT_GW_INFO_T_DEFINED */
+
+#endif /* !UFT_GREASEWEAZLE_H && !UFT_GW_PROTOCOL_H */
 
 /**
  * @brief Flux read parameters
