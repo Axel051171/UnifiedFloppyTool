@@ -2119,7 +2119,8 @@ SOURCES += \
     src/analysis/events/otdr_event_core_v2.c \
     src/analysis/denoise/uft_denoise_bridge.c \
     src/analysis/denoise/phi_otdr_denoise_1d.c \
-    src/formats/amiga/uft_amiga_protection.c
+    src/formats/amiga/uft_amiga_protection.c \
+    src/protection/ufm_c64_scheme_detect.c
 
 # Amiga Extended (9 files)
 SOURCES += \
