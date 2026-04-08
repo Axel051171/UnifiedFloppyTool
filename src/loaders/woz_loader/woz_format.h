@@ -3,7 +3,7 @@
 
 /*
 //
-// Copyright (C) 2006-2025 Jean-François DEL NERO
+// Copyright (C) 2006-2025 Jean-Franï¿½ois DEL NERO
 //
 //
 // that this copyright statement is not removed from the file and that any
@@ -33,6 +33,8 @@
 #define CHUNK_META 0x4154454D
 // v2
 #define CHUNK_WRIT 0x54495257
+// v2.1
+#define CHUNK_FLUX 0x58554C46
 
 typedef struct woz_fileheader_
 {

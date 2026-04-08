@@ -159,6 +159,18 @@ typedef struct {
 } woz_trk_t;
 
 /**
+ * @brief WOZ flux track data (decoded from FLUX chunk, WOZ 2.1)
+ *
+ * Each flux track stores raw flux transition timing values captured at
+ * 125ns resolution (8 MHz clock). The flux_data array holds consecutive
+ * timing intervals between flux transitions on the disk surface.
+ */
+typedef struct {
+    uint32_t *flux_data;    /* Flux timing values (125ns ticks) */
+    uint32_t  flux_count;   /* Number of flux transitions */
+} woz_flux_track_t;
+
+/**
  * @brief WOZ write command (WCMD) - 12 bytes
  */
 typedef struct {
@@ -228,6 +240,10 @@ typedef struct {
     /* FLUX chunk - flux track mapping (v2.1) */
     uint8_t flux_map[WOZ_TMAP_SIZE];
     bool    has_flux;
+
+    /* Decoded flux timing data per track (v2.1) */
+    woz_flux_track_t flux_tracks[WOZ_MAX_TRACKS];
+    int     flux_track_count;   /* Number of populated flux tracks */
     
     /* TRKS chunk - track data */
     woz_trk_t trks[WOZ_MAX_TRACKS];
@@ -309,7 +325,7 @@ int woz_get_track_35(const woz_image_t *image, int track, int side,
                       const uint8_t **data, uint32_t *bit_count);
 
 /**
- * @brief Get flux data for a track (WOZ 2.1)
+ * @brief Get raw flux data for a track (WOZ 2.1)
  * @param image WOZ image
  * @param quarter_track Quarter-track number
  * @param data Output pointer to flux data
@@ -318,6 +334,21 @@ int woz_get_track_35(const woz_image_t *image, int track, int side,
  */
 int woz_get_flux(const woz_image_t *image, int quarter_track,
                   const uint8_t **data, uint32_t *byte_count);
+
+/**
+ * @brief Get decoded flux timing data for a track (WOZ 2.1)
+ *
+ * Returns the decoded flux timing array for the given track index.
+ * Each entry in flux_data is a timing interval in 125ns ticks (8MHz clock).
+ *
+ * @param image WOZ image (must have been loaded with FLUX chunk present)
+ * @param track_idx Physical track index (from TMAP/flux_map lookup)
+ * @param flux_data Output pointer to array of flux timing values
+ * @param flux_count Output number of flux transitions
+ * @return 0 on success, -1 if no flux data for this track
+ */
+int woz_get_flux_track(const woz_image_t *image, int track_idx,
+                        const uint32_t **flux_data, uint32_t *flux_count);
 
 /**
  * @brief Convert WOZ to DSK/DO format (sector-based)

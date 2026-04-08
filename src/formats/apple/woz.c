@@ -54,20 +54,18 @@ int uft_apl_woz_open(FloppyDevice *dev, const char *path){
     ctx->meta.track_count = 0;
     ctx->meta.tracks = NULL;
 
-    /* Minimal chunk scan: look for 'TRKS' */
+    /* Minimal chunk scan: look for 'TRKS' and 'FLUX' */
     if (fseek(fp,12,SEEK_SET) != 0) { fclose(fp); free(ctx); return UFT_EIO; }
     while(!feof(fp)){
         uint8_t ch[8];
         if(fread(ch,1,8,fp)!=8) break;
         uint32_t size = rd32le(&ch[4]);
         if(!memcmp(ch,"TRKS",4)){
-            /* We won't fully decode; just note presence */
             log_msg(dev,"WOZ: TRKS chunk found (track bitstreams present).");
-            if (fseek(fp,size,SEEK_CUR) != 0) { fclose(fp); free(ctx); return UFT_EIO; }
-            break;
-        } else {
-            if (fseek(fp,size,SEEK_CUR) != 0) { fclose(fp); free(ctx); return UFT_EIO; }
+        } else if(!memcmp(ch,"FLUX",4)){
+            log_msg(dev,"WOZ: FLUX chunk found (WOZ 2.1 raw flux timing data).");
         }
+        if (fseek(fp,size,SEEK_CUR) != 0) { fclose(fp); free(ctx); return UFT_EIO; }
     }
 
     dev->tracks = 0;

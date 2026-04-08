@@ -128,25 +128,52 @@ typedef struct {
 } uft_scp_track_header_t;
 
 /**
- * @brief Extension footer
+ * @brief On-disk extension footer (52 bytes, 13 x uint32 little-endian)
+ *
+ * Located at end of file (before optional 4-byte checksum).
+ * Present when FLAG bit 5 (0x20) is set in the header.
+ * String offsets point to null-terminated strings earlier in the file.
  */
 typedef struct {
-    uint32_t drive_mfg_offset;
-    uint32_t drive_model_offset;
-    uint32_t drive_serial_offset;
-    uint32_t creator_offset;
-    uint32_t app_name_offset;
-    uint32_t comments_offset;
-    uint64_t creation_timestamp;
-    uint64_t modification_timestamp;
-    uint8_t  app_version;
-    uint8_t  scp_hw_version;
-    uint8_t  scp_fw_version;
-    uint8_t  format_revision;
-    uint8_t  footer_sig[4];     /**< "FPCS" */
+    uint32_t drive_mfg_offset;      /**< Manufacturer string offset */
+    uint32_t drive_model_offset;    /**< Model string offset */
+    uint32_t drive_serial_offset;   /**< Serial number string offset */
+    uint32_t creator_offset;        /**< Creator string offset */
+    uint32_t app_name_offset;       /**< Application name string offset */
+    uint32_t app_version_offset;    /**< Application version string offset */
+    uint32_t comments_offset;       /**< Comments string offset */
+    uint32_t creation_timestamp;    /**< Creation time (Unix epoch) */
+    uint32_t modification_timestamp;/**< Modification time (Unix epoch) */
+    uint32_t app_version_bcd;       /**< Application version (BCD) */
+    uint32_t hw_version_bcd;        /**< Hardware version (BCD) */
+    uint32_t fw_version_bcd;        /**< Firmware version (BCD) */
+    uint32_t format_revision;       /**< Image format revision */
 } uft_scp_footer_t;
 
 #pragma pack(pop)
+
+/**
+ * @brief Parsed extension footer with resolved strings
+ *
+ * Populated by reading the on-disk footer and then resolving each
+ * string offset to a null-terminated string copied into fixed buffers.
+ */
+typedef struct {
+    char     manufacturer[64];
+    char     model[64];
+    char     serial[64];
+    char     creator[64];
+    char     application[64];
+    char     app_version[32];
+    char     comments[256];
+    uint32_t created_timestamp;
+    uint32_t modified_timestamp;
+    uint32_t app_version_bcd;
+    uint32_t hw_version_bcd;
+    uint32_t fw_version_bcd;
+    uint32_t format_revision;
+    bool     present;
+} scp_extension_footer_t;
 
 /*============================================================================
  * Parser Context
@@ -194,9 +221,10 @@ typedef struct {
     /* Footer (optional) */
     bool     has_footer;
     uft_scp_footer_t footer;
+    scp_extension_footer_t ext_footer;
     char*    creator_string;
     char*    app_name;
-    
+
     /* File handle */
     FILE*    file;
     size_t   file_size;

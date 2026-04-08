@@ -287,6 +287,7 @@ int woz_load_from_memory(const uint8_t *data, size_t size, woz_image_t **image)
                 if (chunk_size >= WOZ_TMAP_SIZE) {
                     memcpy(img->flux_map, data + pos, WOZ_TMAP_SIZE);
                     img->has_flux = true;
+                    img->flux_track_count = 0;
                 }
                 break;
                 
@@ -323,7 +324,98 @@ int woz_load_from_memory(const uint8_t *data, size_t size, woz_image_t **image)
             }
         }
     }
-    
+
+    /* Decode FLUX chunk data (WOZ 2.1) ------------------------------------ */
+    /* The flux_map[] maps logical quarter-tracks to TRK indices, just like  */
+    /* tmap[]. Each referenced TRK entry points to blocks of raw flux bytes. */
+    /* Raw encoding: each byte is a timing interval in 125ns ticks.          */
+    /* A byte value of 0xFF means "add 255 and read the next byte" so that   */
+    /* intervals longer than 254 ticks can be represented.                   */
+    /* We decode these into uint32_t arrays stored in flux_tracks[].         */
+    if (img->has_flux && img->version >= 2 && img->track_data != NULL) {
+        /* Determine which physical TRK indices are referenced by flux_map */
+        bool flux_trk_seen[WOZ_MAX_TRACKS];
+        memset(flux_trk_seen, 0, sizeof(flux_trk_seen));
+
+        for (int i = 0; i < WOZ_TMAP_SIZE; i++) {
+            uint8_t idx = img->flux_map[i];
+            if (idx != WOZ_TMAP_EMPTY && idx < WOZ_MAX_TRACKS) {
+                flux_trk_seen[idx] = true;
+            }
+        }
+
+        for (int t = 0; t < WOZ_MAX_TRACKS; t++) {
+            if (!flux_trk_seen[t]) continue;
+
+            const woz_trk_t *trk = &img->trks[t];
+            if (trk->starting_block == 0 || trk->block_count == 0) continue;
+
+            /* Locate raw flux bytes within track_data.                   */
+            /* starting_block is relative to file start; track_data       */
+            /* begins at block 3 (byte 1536).                             */
+            size_t raw_offset = ((size_t)trk->starting_block - 3) * WOZ_BLOCK_SIZE;
+            size_t raw_size   = (size_t)trk->block_count * WOZ_BLOCK_SIZE;
+
+            if (raw_offset >= img->track_data_size) continue;
+            if (raw_offset + raw_size > img->track_data_size) {
+                raw_size = img->track_data_size - raw_offset;
+            }
+
+            const uint8_t *raw = img->track_data + raw_offset;
+
+            /* bit_count for flux TRK entries represents the number of   */
+            /* raw bytes to consume (not bits).                           */
+            size_t byte_count = trk->bit_count;
+            if (byte_count > raw_size) byte_count = raw_size;
+
+            /* First pass: count the number of decoded flux transitions   */
+            /* so we can allocate exactly.                                */
+            uint32_t n_transitions = 0;
+            {
+                size_t bi = 0;
+                while (bi < byte_count) {
+                    /* Accumulate extended value */
+                    while (bi < byte_count && raw[bi] == 0xFF) bi++;
+                    if (bi < byte_count) {
+                        n_transitions++;
+                        bi++;
+                    }
+                }
+            }
+
+            if (n_transitions == 0) continue;
+
+            /* Allocate decoded array */
+            uint32_t *decoded = malloc((size_t)n_transitions * sizeof(uint32_t));
+            if (!decoded) continue;  /* Skip track on OOM; non-fatal */
+
+            /* Second pass: decode the flux timing values */
+            {
+                size_t bi = 0;
+                uint32_t di = 0;
+                while (bi < byte_count && di < n_transitions) {
+                    uint32_t accum = 0;
+                    while (bi < byte_count && raw[bi] == 0xFF) {
+                        accum += 255;
+                        bi++;
+                    }
+                    if (bi < byte_count) {
+                        accum += raw[bi];
+                        bi++;
+                        decoded[di++] = accum;
+                    }
+                }
+                /* di should equal n_transitions */
+            }
+
+            img->flux_tracks[t].flux_data  = decoded;
+            img->flux_tracks[t].flux_count = n_transitions;
+            if (t >= img->flux_track_count) {
+                img->flux_track_count = t + 1;
+            }
+        }
+    }
+
     *image = img;
     return WOZ_OK;
 }
@@ -370,7 +462,12 @@ int woz_load(const char *filename, woz_image_t **image)
 void woz_free(woz_image_t *image)
 {
     if (!image) return;
-    
+
+    /* Free decoded flux track arrays */
+    for (int i = 0; i < WOZ_MAX_TRACKS; i++) {
+        free(image->flux_tracks[i].flux_data);
+    }
+
     free(image->track_data);
     free(image->write_hints);
     free(image);
@@ -423,18 +520,43 @@ int woz_get_track_35(const woz_image_t *image, int track, int side,
 int woz_get_flux(const woz_image_t *image, int quarter_track,
                   const uint8_t **data, uint32_t *byte_count)
 {
-    if (!image || !image->has_flux) return -1;
-    
+    if (!image || !data || !byte_count || !image->has_flux) return -1;
+    if (quarter_track < 0 || quarter_track >= WOZ_TMAP_SIZE) return -1;
+
     uint8_t trk_idx = image->flux_map[quarter_track];
-    if (trk_idx == WOZ_TMAP_EMPTY) {
+    if (trk_idx == WOZ_TMAP_EMPTY || trk_idx >= WOZ_MAX_TRACKS) {
         return -1;
     }
-    
+
     const woz_trk_t *trk = &image->trks[trk_idx];
+    if (trk->starting_block < 3 || trk->block_count == 0) {
+        return -1;
+    }
+
     size_t offset = ((size_t)trk->starting_block - 3) * WOZ_BLOCK_SIZE;
-    
+    if (!image->track_data || offset >= image->track_data_size) {
+        return -1;
+    }
+
     *data = image->track_data + offset;
     *byte_count = trk->bit_count;  /* For flux, bit_count is actually byte_count */
+    return 0;
+}
+
+int woz_get_flux_track(const woz_image_t *image, int track_idx,
+                        const uint32_t **flux_data, uint32_t *flux_count)
+{
+    if (!image || !flux_data || !flux_count) return -1;
+    if (!image->has_flux) return -1;
+    if (track_idx < 0 || track_idx >= WOZ_MAX_TRACKS) return -1;
+
+    const woz_flux_track_t *ft = &image->flux_tracks[track_idx];
+    if (ft->flux_count == 0 || ft->flux_data == NULL) {
+        return -1;
+    }
+
+    *flux_data  = ft->flux_data;
+    *flux_count = ft->flux_count;
     return 0;
 }
 
@@ -578,7 +700,27 @@ int woz_info_string(const woz_image_t *image, char *buffer, size_t size)
                 "Image Date:       %s\n", image->metadata.image_date);
         }
     }
-    
+
+    /* Add flux data summary if present */
+    if (image->has_flux) {
+        int flux_trk_count = 0;
+        uint64_t total_transitions = 0;
+        for (int i = 0; i < WOZ_MAX_TRACKS; i++) {
+            if (image->flux_tracks[i].flux_count > 0) {
+                flux_trk_count++;
+                total_transitions += image->flux_tracks[i].flux_count;
+            }
+        }
+        written += snprintf(buffer + written, size - (size_t)written,
+            "\nFlux Data (WOZ 2.1):\n"
+            "--------------------------------------\n"
+            "Flux Tracks:      %d\n"
+            "Total Transitions: %llu\n"
+            "Resolution:       125 ns (8 MHz)\n",
+            flux_trk_count,
+            (unsigned long long)total_transitions);
+    }
+
     return written;
 }
 

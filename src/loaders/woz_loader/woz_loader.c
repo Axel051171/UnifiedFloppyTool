@@ -238,6 +238,9 @@ int WOZ_libLoad_DiskFile(LIBFLUX_IMGLDR * imgldr_ctx,LIBFLUX_FLOPPY * floppydisk
 			case CHUNK_WRIT:
 				imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"WRIT Chunk id : 0x%.8X, Offset : 0x%.8X, Size : %d",chunk->id,offset,chunk->size);
 			break;
+			case CHUNK_FLUX:
+				imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"FLUX Chunk id : 0x%.8X, Offset : 0x%.8X, Size : %d (WOZ 2.1 flux data)",chunk->id,offset,chunk->size);
+			break;
 
 			default:
 				imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"Unknown Chunk id : 0x%.8X, Offset : 0x%.8X, Size : %d",chunk->id,offset,chunk->size);
@@ -305,6 +308,20 @@ int WOZ_libLoad_DiskFile(LIBFLUX_IMGLDR * imgldr_ctx,LIBFLUX_FLOPPY * floppydisk
 
 	trks = (woz_trk*)&file_buffer[offset + 8];
 	trks_v1 = (woz_trk_v1*)&file_buffer[offset + 8];
+
+	// Check for FLUX chunk (WOZ 2.1)
+	unsigned char * flux_tmap = NULL;
+	offset = get_woz_chunk(file_buffer, filesize, 0, CHUNK_FLUX);
+	if( offset > 0 )
+	{
+		chunk = (woz_chunk *)&file_buffer[offset];
+		if(chunk->size >= 160)
+		{
+			flux_tmap = (unsigned char*)&file_buffer[offset + 8];
+			imgldr_ctx->ctx->libflux_printf(MSG_INFO_1,"WOZ 2.1 FLUX chunk detected - raw flux timing data available (%d bytes)", chunk->size);
+		}
+	}
+	(void)flux_tmap; /* Available for future flux-to-bitstream conversion */
 
 	max_track = 0;
 	switch( info->disk_type )

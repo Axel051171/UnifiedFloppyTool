@@ -109,22 +109,42 @@ typedef struct {
     scp_revolution_t   revolutions[SCP_MAX_REVOLUTIONS];
 } scp_track_data_t;
 
-/* Footer (optional) */
+/* On-disk extension footer (52 bytes, 13 x uint32 LE) */
 typedef struct {
-    uint32_t drive_manufacturer;
-    uint32_t drive_model;
-    uint32_t drive_serial;
-    uint32_t creator;
-    uint32_t creator_version;
-    char     creator_name[32];
-    uint64_t timestamp;
-    uint8_t  sides;
-    uint8_t  resolution_ns;
-    uint8_t  reserved[6];
-    char     signature[4];      /* "FPCS" */
+    uint32_t drive_mfg_offset;
+    uint32_t drive_model_offset;
+    uint32_t drive_serial_offset;
+    uint32_t creator_offset;
+    uint32_t app_name_offset;
+    uint32_t app_version_offset;
+    uint32_t comments_offset;
+    uint32_t creation_timestamp;
+    uint32_t modification_timestamp;
+    uint32_t app_version_bcd;
+    uint32_t hw_version_bcd;
+    uint32_t fw_version_bcd;
+    uint32_t format_revision;
 } scp_footer_t;
 
 #pragma pack(pop)
+
+/* Parsed extension footer with resolved strings */
+typedef struct {
+    char     manufacturer[64];
+    char     model[64];
+    char     serial[64];
+    char     creator[64];
+    char     application[64];
+    char     app_version_str[32];
+    char     comments[256];
+    uint32_t created_timestamp;
+    uint32_t modified_timestamp;
+    uint32_t app_version_bcd;
+    uint32_t hw_version_bcd;
+    uint32_t fw_version_bcd;
+    uint32_t format_revision;
+    bool     present;
+} scp_ext_footer_t;
 
 /*============================================================================
  * INTERNAL STRUCTURES
@@ -135,7 +155,8 @@ typedef struct {
     scp_header_t header;
     bool         has_footer;
     scp_footer_t footer;
-    
+    scp_ext_footer_t ext_footer;
+
     /* Track offsets (from TDH) */
     uint32_t track_offsets[SCP_MAX_TRACKS];
     
@@ -560,6 +581,100 @@ static void calculate_rpms(scp_track_t* track) {
 }
 
 /*============================================================================
+ * FOOTER HELPERS
+ *============================================================================*/
+
+static uint32_t scp_rd_le32(const uint8_t *p) {
+    return (uint32_t)p[0] | ((uint32_t)p[1] << 8) |
+           ((uint32_t)p[2] << 16) | ((uint32_t)p[3] << 24);
+}
+
+/**
+ * @brief Read null-terminated string from file offset into fixed buffer.
+ */
+static void scp_read_string_at(FILE *fp, size_t file_size,
+                                uint32_t offset, char *dst, size_t dst_size) {
+    dst[0] = '\0';
+    if (offset == 0 || (size_t)offset >= file_size) return;
+
+    long saved = ftell(fp);
+    if (saved < 0) return;
+    if (fseek(fp, (long)offset, SEEK_SET) != 0) return;
+
+    size_t i = 0;
+    int ch;
+    while (i < dst_size - 1 && (ch = fgetc(fp)) != EOF && ch != '\0') {
+        dst[i++] = (char)ch;
+    }
+    dst[i] = '\0';
+
+    (void)fseek(fp, saved, SEEK_SET);
+}
+
+/**
+ * @brief Parse extension footer and resolve string offsets.
+ */
+static void scp_parse_ext_footer(scp_reader_t *reader) {
+    const size_t footer_bytes = 52;  /* 13 x uint32_t */
+    if (reader->file_size < footer_bytes) return;
+
+    long footer_pos = (long)(reader->file_size - footer_bytes);
+    if (fseek(reader->fp, footer_pos, SEEK_SET) != 0) return;
+
+    uint8_t raw[52];
+    if (fread(raw, 1, footer_bytes, reader->fp) != footer_bytes) return;
+
+    reader->footer.drive_mfg_offset      = scp_rd_le32(&raw[0]);
+    reader->footer.drive_model_offset    = scp_rd_le32(&raw[4]);
+    reader->footer.drive_serial_offset   = scp_rd_le32(&raw[8]);
+    reader->footer.creator_offset        = scp_rd_le32(&raw[12]);
+    reader->footer.app_name_offset       = scp_rd_le32(&raw[16]);
+    reader->footer.app_version_offset    = scp_rd_le32(&raw[20]);
+    reader->footer.comments_offset       = scp_rd_le32(&raw[24]);
+    reader->footer.creation_timestamp    = scp_rd_le32(&raw[28]);
+    reader->footer.modification_timestamp= scp_rd_le32(&raw[32]);
+    reader->footer.app_version_bcd       = scp_rd_le32(&raw[36]);
+    reader->footer.hw_version_bcd        = scp_rd_le32(&raw[40]);
+    reader->footer.fw_version_bcd        = scp_rd_le32(&raw[44]);
+    reader->footer.format_revision       = scp_rd_le32(&raw[48]);
+
+    scp_ext_footer_t *ext = &reader->ext_footer;
+    memset(ext, 0, sizeof(*ext));
+
+    scp_read_string_at(reader->fp, reader->file_size,
+                       reader->footer.drive_mfg_offset,
+                       ext->manufacturer, sizeof(ext->manufacturer));
+    scp_read_string_at(reader->fp, reader->file_size,
+                       reader->footer.drive_model_offset,
+                       ext->model, sizeof(ext->model));
+    scp_read_string_at(reader->fp, reader->file_size,
+                       reader->footer.drive_serial_offset,
+                       ext->serial, sizeof(ext->serial));
+    scp_read_string_at(reader->fp, reader->file_size,
+                       reader->footer.creator_offset,
+                       ext->creator, sizeof(ext->creator));
+    scp_read_string_at(reader->fp, reader->file_size,
+                       reader->footer.app_name_offset,
+                       ext->application, sizeof(ext->application));
+    scp_read_string_at(reader->fp, reader->file_size,
+                       reader->footer.app_version_offset,
+                       ext->app_version_str, sizeof(ext->app_version_str));
+    scp_read_string_at(reader->fp, reader->file_size,
+                       reader->footer.comments_offset,
+                       ext->comments, sizeof(ext->comments));
+
+    ext->created_timestamp  = reader->footer.creation_timestamp;
+    ext->modified_timestamp = reader->footer.modification_timestamp;
+    ext->app_version_bcd    = reader->footer.app_version_bcd;
+    ext->hw_version_bcd     = reader->footer.hw_version_bcd;
+    ext->fw_version_bcd     = reader->footer.fw_version_bcd;
+    ext->format_revision    = reader->footer.format_revision;
+    ext->present            = true;
+
+    reader->has_footer = true;
+}
+
+/*============================================================================
  * SCP READER API
  *============================================================================*/
 
@@ -604,22 +719,7 @@ scp_reader_t* scp_open(const char* path) {
         reader->total_tracks++;
     }
     
-    /* Footer prüfen */
-    if (reader->header.flags & SCP_FLAG_FOOTER) {
-        if (fseek(fp, -(long)sizeof(scp_footer_t), SEEK_END) != 0) {
-            fclose(fp);
-            free(reader->path);
-            free(reader);
-            return NULL;
-        }
-        if (fread(&reader->footer, sizeof(scp_footer_t), 1, fp) == 1) {
-            if (memcmp(reader->footer.signature, "FPCS", 4) == 0) {
-                reader->has_footer = true;
-            }
-        }
-    }
-    
-    /* Dateigröße */
+    /* Dateigröße ermitteln (needed before footer parsing) */
     if (fseek(fp, 0, SEEK_END) != 0) {
         fclose(fp);
         free(reader->path);
@@ -627,6 +727,11 @@ scp_reader_t* scp_open(const char* path) {
         return NULL;
     }
     reader->file_size = ftell(fp);
+
+    /* Extension Footer prüfen und parsen (FLAG bit 5) */
+    if (reader->header.flags & SCP_FLAG_FOOTER) {
+        scp_parse_ext_footer(reader);
+    }
     
     return reader;
 }
