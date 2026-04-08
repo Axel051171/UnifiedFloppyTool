@@ -350,7 +350,7 @@ int dms_save(const dms_image_t *img, const char *filename)
     header.unpack_size = unpack_size;
     
     long header_pos = ftell(fp);
-    if (fwrite(&header, sizeof(header), 1, fp) != 1) { /* I/O error */ }
+    if (fwrite(&header, sizeof(header), 1, fp) != 1) { fclose(fp); return -1; }
     /* Write banner if present */
     if (img->banner && strlen(img->banner) > 0) {
         dms_track_header_t banner_hdr = {0};
@@ -359,8 +359,8 @@ int dms_save(const dms_image_t *img, const char *filename)
         banner_hdr.pack_size = banner_hdr.unpack_size;
         banner_hdr.header_crc = dms_crc16((uint8_t*)&banner_hdr, 18);
         
-        if (fwrite(&banner_hdr, sizeof(banner_hdr), 1, fp) != 1) { /* I/O error */ }
-        if (fwrite(img->banner, 1, strlen(img->banner), fp) != strlen(img->banner)) { /* I/O error */ }
+        if (fwrite(&banner_hdr, sizeof(banner_hdr), 1, fp) != 1) { fclose(fp); return -1; }
+        if (fwrite(img->banner, 1, strlen(img->banner), fp) != strlen(img->banner)) { fclose(fp); return -1; }
         pack_size += sizeof(banner_hdr) + strlen(img->banner);
     }
     
@@ -399,8 +399,8 @@ int dms_save(const dms_image_t *img, const char *filename)
         track_hdr.data_crc_hi = (track_hdr.pack_crc >> 8) & 0xFF;
         track_hdr.header_crc = dms_crc16((uint8_t*)&track_hdr, 18);
         
-        if (fwrite(&track_hdr, sizeof(track_hdr), 1, fp) != 1) { /* I/O error */ }
-        if (fwrite(comp_buf, 1, comp_size, fp) != comp_size) { /* I/O error */ }
+        if (fwrite(&track_hdr, sizeof(track_hdr), 1, fp) != 1) { free(comp_buf); fclose(fp); return -1; }
+        if (fwrite(comp_buf, 1, comp_size, fp) != comp_size) { free(comp_buf); fclose(fp); return -1; }
         pack_size += sizeof(track_hdr) + comp_size;
     }
     
@@ -411,7 +411,7 @@ int dms_save(const dms_image_t *img, const char *filename)
     header.crc = dms_crc16((uint8_t*)&header, 50);
     
     if (fseek(fp, header_pos, SEEK_SET) != 0) { fclose(fp); return UFT_ERR_IO; }
-    if (fwrite(&header, sizeof(header), 1, fp) != 1) { /* I/O error */ }
+    if (fwrite(&header, sizeof(header), 1, fp) != 1) { fclose(fp); return -1; }
     if (ferror(fp)) {
         fclose(fp);
         return UFT_ERR_IO;

@@ -241,7 +241,7 @@ int DMK_libWrite_DiskFile(LIBFLUX_IMGLDR* imgldr_ctx,LIBFLUX_FLOPPY * floppy,cha
 		{
 			memset(track_buf,0xAA,track_size);
 
-			if (fwrite(&dmkheader,sizeof(dmk_header),1,dmkdskfile) != 1) { /* I/O error */ }
+			if (fwrite(&dmkheader,sizeof(dmk_header),1,dmkdskfile) != 1) { free(track_buf); libflux_fclose(dmkdskfile); return LIBFLUX_ACCESSERROR; }
 			ss=libflux_initSectorAccess(imgldr_ctx->ctx,floppy);
 			if(ss)
 			{
@@ -400,8 +400,8 @@ int DMK_libWrite_DiskFile(LIBFLUX_IMGLDR* imgldr_ctx,LIBFLUX_FLOPPY * floppy,cha
 							free(sca_fm);
 						}
 
-						if (fwrite(&IDAMbuf,128,1,dmkdskfile) != 1) { /* I/O error */ }
-						if (fwrite(track_buf,track_size,1,dmkdskfile) != 1) { /* I/O error */ }
+						if (fwrite(&IDAMbuf,128,1,dmkdskfile) != 1) { libflux_deinitSectorAccess(ss); free(track_buf); libflux_fclose(dmkdskfile); return LIBFLUX_ACCESSERROR; }
+						if (fwrite(track_buf,track_size,1,dmkdskfile) != 1) { libflux_deinitSectorAccess(ss); free(track_buf); libflux_fclose(dmkdskfile); return LIBFLUX_ACCESSERROR; }
 					}
 				}
 

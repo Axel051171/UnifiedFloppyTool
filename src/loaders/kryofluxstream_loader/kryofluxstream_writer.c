@@ -70,7 +70,7 @@ int nextbyte(FILE *f,int i,unsigned char * trackbuffer)
 
 	if(!(i&0xFF))
 	{
-		if (fwrite(trackbuffer,256,1,f) != 1) { /* I/O error */ }
+		if (fwrite(trackbuffer,256,1,f) != 1) { return -1; }
 	}
 
 	return i;
@@ -92,7 +92,7 @@ int alignOOB(FILE * f)
 			buffer[0] = 0xA;
 			buffer[1] = 0x9;
 			buffer[2] = 0x8;
-			if (fwrite(&buffer,3,1,f) != 1) { /* I/O error */ }
+			if (fwrite(&buffer,3,1,f) != 1) { return -1; }
 			i=i+3;
 			j += 3;
 		}
@@ -103,7 +103,7 @@ int alignOOB(FILE * f)
 				memset(buffer,0x00,8);
 				buffer[0] = 0x9;
 				buffer[1] = 0x8;
-				if (fwrite(&buffer,2,1,f) != 1) { /* I/O error */ }
+				if (fwrite(&buffer,2,1,f) != 1) { return -1; }
 				i=i+2;
 
 				j += 2;
@@ -112,7 +112,7 @@ int alignOOB(FILE * f)
 			{
 				memset(buffer,0x00,8);
 				buffer[0] = 0x8;
-				if (fwrite(&buffer,1,1,f) != 1) { /* I/O error */ }
+				if (fwrite(&buffer,1,1,f) != 1) { return -1; }
 				i++;
 
 				j += 1;
@@ -185,8 +185,8 @@ uint32_t write_kf_stream_track(LIBFLUX_IMGLDR * imgldr_ctx,char * filepath,LIBFL
 		oobh.Sign = 0xD;
 		oobh.Size = strlen(kfinfobuffer)+1;
 		oobh.Type = OOBTYPE_String;
-		if (fwrite(&oobh,sizeof(s_oob_header),1,f) != 1) { /* I/O error */ }
-		if (fwrite(kfinfobuffer,1,oobh.Size,f) != oobh.Size) { /* I/O error */ }
+		if (fwrite(&oobh,sizeof(s_oob_header),1,f) != 1) { deinitStreamConvert(strconv); libflux_fclose(f); return 0; }
+		if (fwrite(kfinfobuffer,1,oobh.Size,f) != oobh.Size) { deinitStreamConvert(strconv); libflux_fclose(f); return 0; }
 		// KFInfo : software information and clocks
 		envstr = libflux_getEnvVar(imgldr_ctx->ctx,"LIBVERSION",0);
 		if(envstr)
@@ -197,19 +197,19 @@ uint32_t write_kf_stream_track(LIBFLUX_IMGLDR * imgldr_ctx,char * filepath,LIBFL
 			oobh.Sign = 0xD;
 			oobh.Size = strlen(kfinfobuffer)+1;
 			oobh.Type = OOBTYPE_String;
-			if (fwrite(&oobh,sizeof(s_oob_header),1,f) != 1) { /* I/O error */ }
-			if (fwrite(kfinfobuffer,1,oobh.Size,f) != oobh.Size) { /* I/O error */ }
+			if (fwrite(&oobh,sizeof(s_oob_header),1,f) != 1) { deinitStreamConvert(strconv); libflux_fclose(f); return 0; }
+			if (fwrite(kfinfobuffer,1,oobh.Size,f) != oobh.Size) { deinitStreamConvert(strconv); libflux_fclose(f); return 0; }
 		}
 
 		memset(&oobh,0,sizeof(s_oob_header));
 		oobh.Sign = 0xD;
 		oobh.Size = sizeof(s_oob_StreamRead);
 		oobh.Type = OOBTYPE_Stream_Read;
-		if (fwrite(&oobh,sizeof(s_oob_header),1,f) != 1) { /* I/O error */ }
+		if (fwrite(&oobh,sizeof(s_oob_header),1,f) != 1) { deinitStreamConvert(strconv); libflux_fclose(f); return 0; }
 		memset(&oobsr,0,sizeof(s_oob_StreamRead));
 		oobsr.StreamPosition = streampos;
 		oobsr.TrTime = 0x0;
-		if (fwrite(&oobsr,sizeof(s_oob_StreamRead),1,f) != 1) { /* I/O error */ }
+		if (fwrite(&oobsr,sizeof(s_oob_StreamRead),1,f) != 1) { deinitStreamConvert(strconv); libflux_fclose(f); return 0; }
 		SRcntdown = 0x7FF4;
 
 		iclk = 0;
@@ -286,7 +286,7 @@ uint32_t write_kf_stream_track(LIBFLUX_IMGLDR * imgldr_ctx,char * filepath,LIBFL
 				{
 					if(i)
 					{
-						if (fwrite(trackbuffer,i,1,f) != 1) { /* I/O error */ }
+						if (fwrite(trackbuffer,i,1,f) != 1) { deinitStreamConvert(strconv); libflux_fclose(f); return 0; }
 					}
 
 					streamsize += alignOOB(f);
@@ -296,13 +296,13 @@ uint32_t write_kf_stream_track(LIBFLUX_IMGLDR * imgldr_ctx,char * filepath,LIBFL
 					oobh.Sign = 0xD;
 					oobh.Size = sizeof(s_oob_DiskIndex);
 					oobh.Type = OOBTYPE_Index;
-					if (fwrite(&oobh,sizeof(s_oob_header),1,f) != 1) { /* I/O error */ }
+					if (fwrite(&oobh,sizeof(s_oob_header),1,f) != 1) { deinitStreamConvert(strconv); libflux_fclose(f); return 0; }
 					memset(&oobdi,0,sizeof(s_oob_DiskIndex));
 					oobdi.StreamPosition = streampos + streamsize;
 					iclk = iclk + ((totalcelllen/16) * 2);
 					oobdi.SysClk = iclk;
 					totalcelllen = 0;
-					if (fwrite(&oobdi,sizeof(s_oob_DiskIndex),1,f) != 1) { /* I/O error */ }
+					if (fwrite(&oobdi,sizeof(s_oob_DiskIndex),1,f) != 1) { deinitStreamConvert(strconv); libflux_fclose(f); return 0; }
 					imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"write_kf_stream_track : Index added (Stream pos : %d, Sysclk : %d)",oobdi.StreamPosition,oobdi.SysClk);
 				}
 
@@ -313,7 +313,7 @@ uint32_t write_kf_stream_track(LIBFLUX_IMGLDR * imgldr_ctx,char * filepath,LIBFL
 				{
 					if(i)
 					{
-						if (fwrite(trackbuffer,i,1,f) != 1) { /* I/O error */ }
+						if (fwrite(trackbuffer,i,1,f) != 1) { deinitStreamConvert(strconv); libflux_fclose(f); return 0; }
 					}
 					i=0;
 
@@ -324,11 +324,11 @@ uint32_t write_kf_stream_track(LIBFLUX_IMGLDR * imgldr_ctx,char * filepath,LIBFL
 					oobh.Sign = 0xD;
 					oobh.Size = sizeof(s_oob_StreamRead);
 					oobh.Type = OOBTYPE_Stream_Read;
-					if (fwrite(&oobh,sizeof(s_oob_header),1,f) != 1) { /* I/O error */ }
+					if (fwrite(&oobh,sizeof(s_oob_header),1,f) != 1) { deinitStreamConvert(strconv); libflux_fclose(f); return 0; }
 					memset(&oobsr,0,sizeof(s_oob_StreamRead));
 					oobsr.StreamPosition = streampos + streamsize;
 					oobsr.TrTime = 0x0;
-					if (fwrite(&oobsr,sizeof(s_oob_StreamRead),1,f) != 1) { /* I/O error */ }
+					if (fwrite(&oobsr,sizeof(s_oob_StreamRead),1,f) != 1) { deinitStreamConvert(strconv); libflux_fclose(f); return 0; }
 					SRcntdown = 0x7FF4;
 
 				}
@@ -339,7 +339,7 @@ uint32_t write_kf_stream_track(LIBFLUX_IMGLDR * imgldr_ctx,char * filepath,LIBFL
 
 			if(i)
 			{
-				if (fwrite(trackbuffer,i,1,f) != 1) { /* I/O error */ }
+				if (fwrite(trackbuffer,i,1,f) != 1) { deinitStreamConvert(strconv); libflux_fclose(f); return 0; }
 				i = 0;
 			}
 
@@ -354,13 +354,13 @@ uint32_t write_kf_stream_track(LIBFLUX_IMGLDR * imgldr_ctx,char * filepath,LIBFL
 		oobh.Sign = 0xD;
 		oobh.Size = sizeof(s_oob_StreamEnd);
 		oobh.Type = OOBTYPE_Stream_End;
-		if (fwrite(&oobh,sizeof(s_oob_header),1,f) != 1) { /* I/O error */ }
+		if (fwrite(&oobh,sizeof(s_oob_header),1,f) != 1) { deinitStreamConvert(strconv); libflux_fclose(f); return 0; }
 		memset(&oobse,0,sizeof(s_oob_StreamEnd));
 		oobse.StreamPosition = streampos;
 		oobse.Result = 0x0;
-		if (fwrite(&oobse,sizeof(s_oob_StreamEnd),1,f) != 1) { /* I/O error */ }
+		if (fwrite(&oobse,sizeof(s_oob_StreamEnd),1,f) != 1) { deinitStreamConvert(strconv); libflux_fclose(f); return 0; }
 		memset(trackbuffer,0x0D,7);
-		if (fwrite(&trackbuffer,7,1,f) != 1) { /* I/O error */ }
+		if (fwrite(&trackbuffer,7,1,f) != 1) { deinitStreamConvert(strconv); libflux_fclose(f); return 0; }
 		imgldr_ctx->ctx->libflux_printf(MSG_WARNING,"write_kf_stream_track : End of the track ! (StreamPosition : %d)",oobse.StreamPosition);
 
 		libflux_fclose(f);

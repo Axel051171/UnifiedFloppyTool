@@ -171,7 +171,7 @@ int atx_load(const char *filename, atx_image_t *img)
         
         for (int s = 0; s < track_hdr.sector_count; s++) {
             atx_sector_header_t sect_hdr;
-            if (fread(&sect_hdr, sizeof(sect_hdr), 1, fp) != 1) { /* I/O error */ }
+            if (fread(&sect_hdr, sizeof(sect_hdr), 1, fp) != 1) { fclose(fp); atx_free(img); return -1; }
             img->tracks[t].sectors[s].sector_num = sect_hdr.sector_num;
             img->tracks[t].sectors[s].status = sect_hdr.status;
             img->tracks[t].sectors[s].position = sect_hdr.position;
@@ -186,7 +186,7 @@ int atx_load(const char *filename, atx_image_t *img)
                     return -1;
                 }
                 int sector_size = (img->density == 2) ? 256 : 128;
-                if (fread(img->tracks[t].sectors[s].data, 1, sector_size, fp) != sector_size) { /* I/O error */ }
+                if (fread(img->tracks[t].sectors[s].data, 1, sector_size, fp) != sector_size) { fclose(fp); atx_free(img); return -1; }
                 if (fseek(fp, cur, SEEK_SET) != 0) {
                     fclose(fp);
                     atx_free(img);
@@ -301,7 +301,7 @@ int atx_to_atr(const atx_image_t *atx, const char *atr_file)
     header[5] = (sector_size >> 8) & 0xFF;
     header[6] = (paragraphs >> 16) & 0xFF;
     
-    if (fwrite(header, 1, 16, fp) != 16) { /* I/O error */ }
+    if (fwrite(header, 1, 16, fp) != 16) { fclose(fp); return -1; }
     /* Write sectors */
     uint8_t empty[256] = {0};
     
@@ -313,9 +313,9 @@ int atx_to_atr(const atx_image_t *atx, const char *atr_file)
         int size = (sector <= 3) ? 128 : sector_size;
         
         if (atx_read_sector(atx, track, sect_in_track, data, NULL) == 0) {
-            if (fwrite(data, 1, size, fp) != size) { /* I/O error */ }
+            if (fwrite(data, 1, size, fp) != size) { fclose(fp); return -1; }
         } else {
-            if (fwrite(empty, 1, size, fp) != size) { /* I/O error */ }
+            if (fwrite(empty, 1, size, fp) != size) { fclose(fp); return -1; }
         }
     }
     if (ferror(fp)) {

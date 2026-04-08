@@ -529,7 +529,7 @@ int uft_list_files_extended(const char *path, uft_directory_t *dir)
         return -1;
     }
     
-    if (fread(image, 1, size, fp) != size) { /* I/O error */ }
+    if (fread(image, 1, size, fp) != size) { free(image); fclose(fp); return -1; }
     fclose(fp);
     
     int result = -1;

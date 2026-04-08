@@ -182,14 +182,14 @@ int g64_write(const char *filename, const uint8_t *d64_data, size_t d64_size)
     header.num_tracks = num_tracks * 2;  /* Half-tracks */
     header.max_track_size = 7928;
     
-    if (fwrite(&header, sizeof(header), 1, fp) != 1) { /* I/O error */ }
+    if (fwrite(&header, sizeof(header), 1, fp) != 1) { fclose(fp); return -1; }
     /* Reserve space for track offset table */
     uint32_t *track_offsets = calloc(G64_MAX_TRACKS, sizeof(uint32_t));
     uint32_t *speed_offsets = calloc(G64_MAX_TRACKS, sizeof(uint32_t));
     
     long offset_table_pos = ftell(fp);
-    if (fwrite(track_offsets, sizeof(uint32_t), G64_MAX_TRACKS, fp) != G64_MAX_TRACKS) { /* I/O error */ }
-    if (fwrite(speed_offsets, sizeof(uint32_t), G64_MAX_TRACKS, fp) != G64_MAX_TRACKS) { /* I/O error */ }
+    if (fwrite(track_offsets, sizeof(uint32_t), G64_MAX_TRACKS, fp) != G64_MAX_TRACKS) { free(track_offsets); free(speed_offsets); fclose(fp); return -1; }
+    if (fwrite(speed_offsets, sizeof(uint32_t), G64_MAX_TRACKS, fp) != G64_MAX_TRACKS) { free(track_offsets); free(speed_offsets); fclose(fp); return -1; }
     /* Encode each track */
     uint8_t *track_buf = malloc(8192);
     size_t d64_offset = 0;
@@ -205,7 +205,7 @@ int g64_write(const char *filename, const uint8_t *d64_data, size_t d64_size)
         speed_offsets[t * 2] = zone;
         
         /* Write track size */
-        if (fwrite(&track_size, sizeof(uint16_t), 1, fp) != 1) { /* I/O error */ }
+        if (fwrite(&track_size, sizeof(uint16_t), 1, fp) != 1) { free(track_buf); free(track_offsets); free(speed_offsets); fclose(fp); return -1; }
         /* Encode all sectors */
         size_t gcr_pos = 0;
         memset(track_buf, 0x55, track_size);  /* Fill with gap bytes */
@@ -220,13 +220,13 @@ int g64_write(const char *filename, const uint8_t *d64_data, size_t d64_size)
             if (gcr_pos >= track_size - 400) break;  /* Safety margin */
         }
         
-        if (fwrite(track_buf, 1, track_size, fp) != track_size) { /* I/O error */ }
+        if (fwrite(track_buf, 1, track_size, fp) != track_size) { free(track_buf); free(track_offsets); free(speed_offsets); fclose(fp); return -1; }
     }
     
     /* Update offset tables */
     if (fseek(fp, offset_table_pos, SEEK_SET) != 0) { free(track_buf); free(track_offsets); free(speed_offsets); fclose(fp); return UFT_ERR_IO; }
-    if (fwrite(track_offsets, sizeof(uint32_t), G64_MAX_TRACKS, fp) != G64_MAX_TRACKS) { /* I/O error */ }
-    if (fwrite(speed_offsets, sizeof(uint32_t), G64_MAX_TRACKS, fp) != G64_MAX_TRACKS) { /* I/O error */ }
+    if (fwrite(track_offsets, sizeof(uint32_t), G64_MAX_TRACKS, fp) != G64_MAX_TRACKS) { free(track_buf); free(track_offsets); free(speed_offsets); fclose(fp); return -1; }
+    if (fwrite(speed_offsets, sizeof(uint32_t), G64_MAX_TRACKS, fp) != G64_MAX_TRACKS) { free(track_buf); free(track_offsets); free(speed_offsets); fclose(fp); return -1; }
     free(track_buf);
     free(track_offsets);
     free(speed_offsets);
@@ -255,9 +255,9 @@ int g64_convert_from_d64(const char *d64_file, const char *g64_file)
         return -1;
     }
     
-    if (fread(data, 1, size, fp) != size) { /* I/O error */ }
+    if (fread(data, 1, size, fp) != size) { free(data); fclose(fp); return -1; }
     fclose(fp);
-    
+
     int result = g64_write(g64_file, data, size);
     free(data);
     

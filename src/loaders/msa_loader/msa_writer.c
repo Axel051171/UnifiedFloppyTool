@@ -276,7 +276,7 @@ int MSA_libWrite_DiskFile(LIBFLUX_IMGLDR* imgldr_ctx,LIBFLUX_FLOPPY * floppy,cha
 		msadskfile = libflux_fopen(filename,"wb");
 		if(msadskfile)
 		{
-			if (fwrite(&msah,sizeof(msa_header),1,msadskfile) != 1) { /* I/O error */ }
+			if (fwrite(&msah,sizeof(msa_header),1,msadskfile) != 1) { free(flat_track); free(packed_track); libflux_fclose(msadskfile); return LIBFLUX_ACCESSERROR; }
 			ss = libflux_initSectorAccess(imgldr_ctx->ctx,floppy);
 			if(ss)
 			{
@@ -305,7 +305,7 @@ int MSA_libWrite_DiskFile(LIBFLUX_IMGLDR* imgldr_ctx,LIBFLUX_FLOPPY * floppy,cha
 						}
 
 						outsize = msapacktrack(flat_track,k*512,packed_track);
-						if (fwrite(packed_track,outsize,1,msadskfile) != 1) { /* I/O error */ }
+						if (fwrite(packed_track,outsize,1,msadskfile) != 1) { libflux_deinitSectorAccess(ss); free(flat_track); free(packed_track); libflux_fclose(msadskfile); return LIBFLUX_ACCESSERROR; }
 					}
 				}
 

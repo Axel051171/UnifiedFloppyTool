@@ -197,7 +197,7 @@ int fdi_save(const fdi_image_t *img, const char *filename)
     header.data_offset = data_offset;
     header.extra_offset = 0;
     
-    if (fwrite(&header, sizeof(header), 1, fp) != 1) { /* I/O error */ }
+    if (fwrite(&header, sizeof(header), 1, fp) != 1) { fclose(fp); return -1; }
     /* Write track table */
     uint32_t current_data_offset = 0;
     size_t current_sector_header_offset = desc_offset + desc_len;
@@ -213,15 +213,15 @@ int fdi_save(const fdi_image_t *img, const char *filename)
                 img->tracks[t].sector_count * sizeof(fdi_sector_entry_t);
         }
         
-        if (fwrite(&entry, sizeof(entry), 1, fp) != 1) { /* I/O error */ }
+        if (fwrite(&entry, sizeof(entry), 1, fp) != 1) { fclose(fp); return -1; }
     }
     
     /* Write description */
     if (img->description) {
-        if (fwrite(img->description, 1, strlen(img->description) + 1, fp) != strlen(img->description) + 1) { /* I/O error */ }
+        if (fwrite(img->description, 1, strlen(img->description) + 1, fp) != strlen(img->description) + 1) { fclose(fp); return -1; }
     } else {
         uint8_t zero = 0;
-        if (fwrite(&zero, 1, 1, fp) != 1) { /* I/O error */ }
+        if (fwrite(&zero, 1, 1, fp) != 1) { fclose(fp); return -1; }
     }
     
     /* Write sector headers and track data */
@@ -240,7 +240,7 @@ int fdi_save(const fdi_image_t *img, const char *filename)
             sect.flags = img->tracks[t].sectors[s].flags;
             sect.offset = track_offset;
             
-            if (fwrite(&sect, sizeof(sect), 1, fp) != 1) { /* I/O error */ }
+            if (fwrite(&sect, sizeof(sect), 1, fp) != 1) { fclose(fp); return -1; }
             track_offset += img->tracks[t].sectors[s].size;
         }
     }
@@ -249,7 +249,7 @@ int fdi_save(const fdi_image_t *img, const char *filename)
     for (int t = 0; t < img->track_count; t++) {
         for (int s = 0; s < img->tracks[t].sector_count; s++) {
             if (fwrite(img->tracks[t].sectors[s].data, 1,
-                   img->tracks[t].sectors[s].size, fp) != img->tracks[t].sectors[s].size) { /* I/O error */ }
+                   img->tracks[t].sectors[s].size, fp) != img->tracks[t].sectors[s].size) { fclose(fp); return -1; }
         }
     }
     if (ferror(fp)) {

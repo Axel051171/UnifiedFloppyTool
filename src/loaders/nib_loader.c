@@ -217,7 +217,7 @@ int nib_load(const char *filename, nib_image_t *img)
             return -1;
         }
         
-        if (fread(img->tracks[t], 1, NIB_TRACK_SIZE, fp) != NIB_TRACK_SIZE) { /* I/O error */ }
+        if (fread(img->tracks[t], 1, NIB_TRACK_SIZE, fp) != NIB_TRACK_SIZE) { fclose(fp); nib_free(img); return -1; }
         img->track_size[t] = NIB_TRACK_SIZE;
     }
     if (ferror(fp)) {
@@ -435,10 +435,10 @@ int nib_save(const nib_image_t *nib, const char *filename)
     
     for (int t = 0; t < nib->num_tracks; t++) {
         if (nib->tracks[t]) {
-            if (fwrite(nib->tracks[t], 1, NIB_TRACK_SIZE, fp) != NIB_TRACK_SIZE) { /* I/O error */ }
+            if (fwrite(nib->tracks[t], 1, NIB_TRACK_SIZE, fp) != NIB_TRACK_SIZE) { fclose(fp); return -1; }
         } else {
             uint8_t empty[NIB_TRACK_SIZE] = {0};
-            if (fwrite(empty, 1, NIB_TRACK_SIZE, fp) != NIB_TRACK_SIZE) { /* I/O error */ }
+            if (fwrite(empty, 1, NIB_TRACK_SIZE, fp) != NIB_TRACK_SIZE) { fclose(fp); return -1; }
         }
     }
     if (ferror(fp)) {

@@ -175,7 +175,7 @@ int nfd_load(const char *filename, nfd_image_t *img)
     
     /* Read signature */
     char sig[16];
-    if (fread(sig, 1, 15, fp) != 15) { /* I/O error */ }
+    if (fread(sig, 1, 15, fp) != 15) { fclose(fp); return -1; }
     sig[15] = '\0';
     
     if (fseek(fp, 0, SEEK_SET) != 0) { fclose(fp); return -1; }
@@ -184,7 +184,7 @@ int nfd_load(const char *filename, nfd_image_t *img)
         img->is_r1 = false;
         
         nfd_r0_header_t header;
-        if (fread(&header, sizeof(header), 1, fp) != 1) { /* I/O error */ }
+        if (fread(&header, sizeof(header), 1, fp) != 1) { fclose(fp); return -1; }
         memcpy(img->title, header.title, 100);
         img->title[100] = '\0';
         img->write_protect = header.write_protect != 0;
@@ -214,7 +214,7 @@ int nfd_load(const char *filename, nfd_image_t *img)
                     img->track_data[idx].sectors[s].mfm = true;
                     img->track_data[idx].sectors[s].data = malloc(sector_size);
                     
-                    if (fread(img->track_data[idx].sectors[s].data, 1, sector_size, fp) != sector_size) { /* I/O error */ }
+                    if (fread(img->track_data[idx].sectors[s].data, 1, sector_size, fp) != sector_size) { fclose(fp); return -1; }
                 }
             }
         }
@@ -224,7 +224,7 @@ int nfd_load(const char *filename, nfd_image_t *img)
         img->is_r1 = true;
         
         nfd_r1_header_t header;
-        if (fread(&header, sizeof(header), 1, fp) != 1) { /* I/O error */ }
+        if (fread(&header, sizeof(header), 1, fp) != 1) { fclose(fp); return -1; }
         memcpy(img->title, header.title, 100);
         img->title[100] = '\0';
         img->write_protect = header.write_protect != 0;
@@ -244,7 +244,7 @@ int nfd_load(const char *filename, nfd_image_t *img)
             /* Read sector headers */
             for (int s = 0; s < track_hdr.sectors; s++) {
                 nfd_r1_sector_header_t sect_hdr;
-                if (fread(&sect_hdr, sizeof(sect_hdr), 1, fp) != 1) { /* I/O error */ }
+                if (fread(&sect_hdr, sizeof(sect_hdr), 1, fp) != 1) { fclose(fp); return -1; }
                 img->track_data[t].sectors[s].cylinder = sect_hdr.cylinder;
                 img->track_data[t].sectors[s].head = sect_hdr.head;
                 img->track_data[t].sectors[s].sector = sect_hdr.sector;
@@ -257,7 +257,7 @@ int nfd_load(const char *filename, nfd_image_t *img)
             for (int s = 0; s < track_hdr.sectors; s++) {
                 int size = img->track_data[t].sectors[s].size;
                 img->track_data[t].sectors[s].data = malloc(size);
-                if (fread(img->track_data[t].sectors[s].data, 1, size, fp) != size) { /* I/O error */ }
+                if (fread(img->track_data[t].sectors[s].data, 1, size, fp) != size) { fclose(fp); return -1; }
             }
         }
         
@@ -344,13 +344,13 @@ int nfd_save(const nfd_image_t *img, const char *filename)
         header.write_protect = img->write_protect ? 1 : 0;
         header.heads = img->heads;
         
-        if (fwrite(&header, sizeof(header), 1, fp) != 1) { /* I/O error */ }
+        if (fwrite(&header, sizeof(header), 1, fp) != 1) { fclose(fp); return -1; }
         /* Write tracks */
         for (int t = 0; t < 164; t++) {
             nfd_r1_track_header_t track_hdr = {0};
             track_hdr.sectors = img->track_data[t].sector_count;
             
-            if (fwrite(&track_hdr, sizeof(track_hdr), 1, fp) != 1) { /* I/O error */ }
+            if (fwrite(&track_hdr, sizeof(track_hdr), 1, fp) != 1) { fclose(fp); return -1; }
             if (track_hdr.sectors == 0) continue;
             
             /* Write sector headers */
@@ -363,13 +363,13 @@ int nfd_save(const nfd_image_t *img, const char *filename)
                 sect_hdr.mfm = img->track_data[t].sectors[s].mfm ? 1 : 0;
                 sect_hdr.deleted = img->track_data[t].sectors[s].deleted ? 1 : 0;
                 
-                if (fwrite(&sect_hdr, sizeof(sect_hdr), 1, fp) != 1) { /* I/O error */ }
+                if (fwrite(&sect_hdr, sizeof(sect_hdr), 1, fp) != 1) { fclose(fp); return -1; }
             }
             
             /* Write sector data */
             for (int s = 0; s < track_hdr.sectors; s++) {
                 if (fwrite(img->track_data[t].sectors[s].data, 1,
-                       img->track_data[t].sectors[s].size, fp) != img->track_data[t].sectors[s].size) { /* I/O error */ }
+                       img->track_data[t].sectors[s].size, fp) != img->track_data[t].sectors[s].size) { fclose(fp); return -1; }
             }
         }
         
@@ -395,12 +395,12 @@ int nfd_save(const nfd_image_t *img, const char *filename)
             }
         }
         
-        if (fwrite(&header, sizeof(header), 1, fp) != 1) { /* I/O error */ }
+        if (fwrite(&header, sizeof(header), 1, fp) != 1) { fclose(fp); return -1; }
         /* Write track data */
         for (int t = 0; t < 164; t++) {
             for (int s = 0; s < img->track_data[t].sector_count; s++) {
                 if (fwrite(img->track_data[t].sectors[s].data, 1,
-                       img->track_data[t].sectors[s].size, fp) != img->track_data[t].sectors[s].size) { /* I/O error */ }
+                       img->track_data[t].sectors[s].size, fp) != img->track_data[t].sectors[s].size) { fclose(fp); return -1; }
             }
         }
     }

@@ -119,7 +119,7 @@ int xfd_load(const char *filename, xfd_image_t *img)
     
     /* Read all data */
     size_t read_size = (size < img->size) ? size : img->size;
-    if (fread(img->data, 1, read_size, fp) != read_size) { /* I/O error */ }
+    if (fread(img->data, 1, read_size, fp) != read_size) { xfd_free(img); fclose(fp); return -1; }
     if (ferror(fp)) {
         fclose(fp);
         return UFT_ERR_IO;
@@ -232,9 +232,9 @@ int xfd_from_atr(const char *atr_file, const char *xfd_file)
     
     /* Read data (skip header) */
     size_t read_size = (data_size < xfd.size) ? data_size : xfd.size;
-    if (fread(xfd.data, 1, read_size, fp) != read_size) { /* I/O error */ }
+    if (fread(xfd.data, 1, read_size, fp) != read_size) { xfd_free(&xfd); fclose(fp); return -1; }
     fclose(fp);
-    
+
     int result = xfd_save(&xfd, xfd_file);
     xfd_free(&xfd);
     
@@ -267,8 +267,8 @@ int xfd_to_atr(const char *xfd_file, const char *atr_file)
     header[5] = (xfd.sector_size >> 8) & 0xFF;
     header[6] = (paragraphs >> 16) & 0xFF;
     
-    if (fwrite(header, 1, 16, fp) != 16) { /* I/O error */ }
-    if (fwrite(xfd.data, 1, xfd.size, fp) != xfd.size) { /* I/O error */ }
+    if (fwrite(header, 1, 16, fp) != 16) { fclose(fp); xfd_free(&xfd); return -1; }
+    if (fwrite(xfd.data, 1, xfd.size, fp) != xfd.size) { fclose(fp); xfd_free(&xfd); return -1; }
     fclose(fp);
     xfd_free(&xfd);
     

@@ -157,7 +157,7 @@ int dfs_load(const char *filename, dfs_image_t *img)
     
     /* Read data */
     size_t read_size = (size < img->size) ? size : img->size;
-    if (fread(img->data, 1, read_size, fp) != read_size) { /* I/O error */ }
+    if (fread(img->data, 1, read_size, fp) != read_size) { dfs_free(img); fclose(fp); return -1; }
     if (ferror(fp)) {
         fclose(fp);
         return UFT_ERR_IO;

@@ -17,6 +17,12 @@
 #include <QDateTime>
 #include <QMimeData>
 #include <QDrag>
+#include <QDialog>
+#include <QFormLayout>
+#include <QGroupBox>
+#include <QPushButton>
+#include <QLabel>
+#include <QFileInfo>
 
 AdfFileBrowser::AdfFileBrowser(QWidget *parent)
     : QWidget(parent)
@@ -490,16 +496,149 @@ void AdfFileBrowser::extractAll()
 
 void AdfFileBrowser::addFiles()
 {
-    // TODO: Implement file adding
+    if (!m_adfContext) return;
+
+    QStringList paths = QFileDialog::getOpenFileNames(
+        this, tr("Select Files to Add"));
+    if (paths.isEmpty()) return;
+
+    /* Confirm the write operation */
+    if (QMessageBox::question(this, tr("Add Files"),
+            tr("Add %1 file(s) to the disk image?\n\n"
+               "This will modify the disk image on disk.")
+            .arg(paths.size()),
+            QMessageBox::Yes | QMessageBox::No) != QMessageBox::Yes) {
+        return;
+    }
+
+    /* Re-open in read-write mode if needed */
+    QString imagePath = m_imagePath;
+    closeImage();
+
+    void *rwCtx = uft_adf_open(imagePath.toUtf8().constData(), false);
+    if (!rwCtx) {
+        QMessageBox::warning(this, tr("Add Files"),
+            tr("Read-only: filesystem write support not available.\n%1")
+            .arg(QString::fromUtf8(uft_adf_last_error())));
+        /* Re-open read-only */
+        openImage(imagePath);
+        return;
+    }
+
+    if (uft_adf_mount_volume((uft_adf_context_t*)rwCtx, m_currentVolume) != 0) {
+        QMessageBox::warning(this, tr("Add Files"),
+            tr("Failed to mount volume: %1")
+            .arg(QString::fromUtf8(uft_adf_last_error())));
+        uft_adf_close((uft_adf_context_t*)rwCtx);
+        openImage(imagePath);
+        return;
+    }
+
+    /* Navigate to current directory */
+    if (m_currentPath != "/" && !m_currentPath.isEmpty()) {
+        uft_adf_to_root((uft_adf_context_t*)rwCtx);
+        QStringList parts = m_currentPath.split('/', Qt::SkipEmptyParts);
+        for (const QString &part : parts) {
+            uft_adf_change_dir((uft_adf_context_t*)rwCtx, part.toUtf8().constData());
+        }
+    }
+
+    int success = 0, failed = 0;
+    for (const QString &path : paths) {
+        QFileInfo fi(path);
+        QString adfName = fi.fileName();
+
+        if (uft_adf_add_file((uft_adf_context_t*)rwCtx,
+                              path.toUtf8().constData(),
+                              adfName.toUtf8().constData()) == 0) {
+            success++;
+        } else {
+            failed++;
+        }
+    }
+
+    uft_adf_close((uft_adf_context_t*)rwCtx);
+
+    /* Re-open read-only and refresh */
+    openImage(imagePath);
+
     QMessageBox::information(this, tr("Add Files"),
-        tr("File adding not yet implemented."));
+        tr("Added %1 file(s) successfully.\n%2 file(s) failed.")
+        .arg(success).arg(failed));
 }
 
 void AdfFileBrowser::deleteSelected()
 {
-    // TODO: Implement file deletion
+    if (!m_adfContext) return;
+
+    QModelIndexList selection = m_treeView->selectionModel()->selectedRows();
+    if (selection.isEmpty()) return;
+
+    /* Build list of names to delete */
+    QStringList names;
+    for (const QModelIndex &idx : selection) {
+        QStandardItem *item = m_model->item(idx.row(), 0);
+        if (item) names.append(item->text());
+    }
+
+    /* Confirm deletion */
+    if (QMessageBox::question(this, tr("Delete Files"),
+            tr("Delete %1 file(s) from the disk image?\n\n%2\n\n"
+               "This will modify the disk image on disk.")
+            .arg(names.size()).arg(names.join(", ")),
+            QMessageBox::Yes | QMessageBox::No) != QMessageBox::Yes) {
+        return;
+    }
+
+    /* Re-open in read-write mode */
+    QString imagePath = m_imagePath;
+    QString savedPath = m_currentPath;
+    int savedVolume = m_currentVolume;
+    closeImage();
+
+    void *rwCtx = uft_adf_open(imagePath.toUtf8().constData(), false);
+    if (!rwCtx) {
+        QMessageBox::warning(this, tr("Delete"),
+            tr("Read-only: filesystem write support not available.\n%1")
+            .arg(QString::fromUtf8(uft_adf_last_error())));
+        openImage(imagePath);
+        return;
+    }
+
+    if (uft_adf_mount_volume((uft_adf_context_t*)rwCtx, savedVolume) != 0) {
+        uft_adf_close((uft_adf_context_t*)rwCtx);
+        openImage(imagePath);
+        return;
+    }
+
+    /* Navigate to the directory containing the files */
+    if (savedPath != "/" && !savedPath.isEmpty()) {
+        uft_adf_to_root((uft_adf_context_t*)rwCtx);
+        QStringList parts = savedPath.split('/', Qt::SkipEmptyParts);
+        for (const QString &part : parts) {
+            uft_adf_change_dir((uft_adf_context_t*)rwCtx, part.toUtf8().constData());
+        }
+    }
+
+    int success = 0, failed = 0;
+    for (const QString &name : names) {
+        if (uft_adf_delete_file((uft_adf_context_t*)rwCtx,
+                                 name.toUtf8().constData()) == 0) {
+            success++;
+        } else {
+            failed++;
+        }
+    }
+
+    uft_adf_close((uft_adf_context_t*)rwCtx);
+
+    /* Re-open and navigate back */
+    openImage(imagePath);
+    if (savedPath != "/") goToPath(savedPath);
+
     QMessageBox::information(this, tr("Delete"),
-        tr("File deletion not yet implemented."));
+        tr("Deleted %1 file(s) successfully.\n%2 file(s) failed.")
+        .arg(success).arg(failed));
 }
 
 void AdfFileBrowser::showDeleted()
@@ -510,16 +649,155 @@ void AdfFileBrowser::showDeleted()
 
 void AdfFileBrowser::recoverSelected()
 {
-    // TODO: Implement file recovery
+    if (!m_adfContext) return;
+
+    QModelIndexList selection = m_treeView->selectionModel()->selectedRows();
+    if (selection.isEmpty()) return;
+
+    /* Collect deleted file names */
+    QStringList names;
+    for (const QModelIndex &idx : selection) {
+        QStandardItem *item = m_model->item(idx.row(), 0);
+        if (item && item->data(Qt::UserRole + 1).toBool()) {
+            names.append(item->text());
+        }
+    }
+
+    if (names.isEmpty()) {
+        QMessageBox::information(this, tr("Recover"),
+            tr("No deleted files selected."));
+        return;
+    }
+
+    /* Confirm recovery */
+    if (QMessageBox::question(this, tr("Recover Files"),
+            tr("Attempt to recover %1 deleted file(s)?\n\n%2\n\n"
+               "This will modify the disk image on disk.")
+            .arg(names.size()).arg(names.join(", ")),
+            QMessageBox::Yes | QMessageBox::No) != QMessageBox::Yes) {
+        return;
+    }
+
+    /* Re-open in read-write mode */
+    QString imagePath = m_imagePath;
+    QString savedPath = m_currentPath;
+    int savedVolume = m_currentVolume;
+    closeImage();
+
+    void *rwCtx = uft_adf_open(imagePath.toUtf8().constData(), false);
+    if (!rwCtx) {
+        QMessageBox::warning(this, tr("Recover"),
+            tr("Read-only: filesystem write support not available.\n%1")
+            .arg(QString::fromUtf8(uft_adf_last_error())));
+        openImage(imagePath);
+        return;
+    }
+
+    if (uft_adf_mount_volume((uft_adf_context_t*)rwCtx, savedVolume) != 0) {
+        uft_adf_close((uft_adf_context_t*)rwCtx);
+        openImage(imagePath);
+        return;
+    }
+
+    /* Navigate to the directory */
+    if (savedPath != "/" && !savedPath.isEmpty()) {
+        uft_adf_to_root((uft_adf_context_t*)rwCtx);
+        QStringList parts = savedPath.split('/', Qt::SkipEmptyParts);
+        for (const QString &part : parts) {
+            uft_adf_change_dir((uft_adf_context_t*)rwCtx, part.toUtf8().constData());
+        }
+    }
+
+    int success = 0, failed = 0;
+    for (const QString &name : names) {
+        if (uft_adf_recover_file((uft_adf_context_t*)rwCtx,
+                                  name.toUtf8().constData()) == 0) {
+            success++;
+        } else {
+            failed++;
+        }
+    }
+
+    uft_adf_close((uft_adf_context_t*)rwCtx);
+
+    /* Re-open and navigate back */
+    openImage(imagePath);
+    if (savedPath != "/") goToPath(savedPath);
+
     QMessageBox::information(this, tr("Recover"),
-        tr("File recovery not yet implemented."));
+        tr("Recovered %1 file(s) successfully.\n%2 file(s) failed.")
+        .arg(success).arg(failed));
 }
 
 void AdfFileBrowser::showProperties()
 {
-    // TODO: Implement properties dialog
-    QMessageBox::information(this, tr("Properties"),
-        tr("Properties dialog not yet implemented."));
+    if (!m_adfContext) return;
+
+    QModelIndexList selection = m_treeView->selectionModel()->selectedRows();
+    if (selection.isEmpty()) return;
+
+    int row = selection.first().row();
+    QStandardItem *nameItem = m_model->item(row, 0);
+    QStandardItem *sizeItem = m_model->item(row, 1);
+    QStandardItem *typeItem = m_model->item(row, 2);
+    QStandardItem *dateItem = m_model->item(row, 3);
+    QStandardItem *commentItem = m_model->item(row, 4);
+    if (!nameItem) return;
+
+    QString name = nameItem->text();
+    QString size = sizeItem ? sizeItem->text() : tr("N/A");
+    QString type = typeItem ? typeItem->text() : tr("Unknown");
+    QString date = dateItem ? dateItem->text() : tr("N/A");
+    QString comment = commentItem ? commentItem->text() : QString();
+    bool isDeleted = nameItem->data(Qt::UserRole + 1).toBool();
+
+    /* Build properties dialog */
+    QDialog dlg(this);
+    dlg.setWindowTitle(tr("Properties - %1").arg(name));
+    dlg.setMinimumWidth(320);
+
+    QVBoxLayout *layout = new QVBoxLayout(&dlg);
+
+    QGroupBox *infoGroup = new QGroupBox(tr("File Information"), &dlg);
+    QFormLayout *formLayout = new QFormLayout(infoGroup);
+
+    formLayout->addRow(tr("Name:"), new QLabel(name));
+    formLayout->addRow(tr("Type:"), new QLabel(type));
+    formLayout->addRow(tr("Size:"), new QLabel(size.isEmpty() ? tr("N/A") :
+        tr("%1 bytes").arg(size)));
+    formLayout->addRow(tr("Date:"), new QLabel(date));
+
+    if (!comment.isEmpty()) {
+        formLayout->addRow(tr("Comment:"), new QLabel(comment));
+    }
+
+    if (isDeleted) {
+        QLabel *deletedLabel = new QLabel(tr("Yes"));
+        deletedLabel->setStyleSheet("color: red; font-weight: bold;");
+        formLayout->addRow(tr("Deleted:"), deletedLabel);
+    }
+
+    /* Volume info */
+    uft_adf_volume_info_t volInfo;
+    if (uft_adf_get_volume_info((uft_adf_context_t*)m_adfContext,
+                                 m_currentVolume, &volInfo) == 0) {
+        formLayout->addRow(tr("Volume:"), new QLabel(QString::fromUtf8(volInfo.name)));
+        formLayout->addRow(tr("Filesystem:"),
+            new QLabel(QString::fromUtf8(uft_adf_fs_type_name(volInfo.fs_type))));
+        formLayout->addRow(tr("Free Blocks:"),
+            new QLabel(tr("%1 / %2").arg(volInfo.free_blocks).arg(volInfo.num_blocks)));
+    }
+
+    formLayout->addRow(tr("Path:"), new QLabel(m_currentPath));
+    formLayout->addRow(tr("Image:"), new QLabel(m_imagePath));
+
+    layout->addWidget(infoGroup);
+
+    QPushButton *closeBtn = new QPushButton(tr("Close"), &dlg);
+    connect(closeBtn, &QPushButton::clicked, &dlg, &QDialog::accept);
+    layout->addWidget(closeBtn);
+
+    dlg.exec();
 }
 
 void AdfFileBrowser::setCurrentVolume(int index)

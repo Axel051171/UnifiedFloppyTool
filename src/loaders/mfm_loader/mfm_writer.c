@@ -74,7 +74,7 @@ int MFM_libWrite_DiskFile(LIBFLUX_IMGLDR* imgldr_ctx,LIBFLUX_FLOPPY * floppy,cha
 		mfmheader.floppyRPM=0;//floppy->floppyRPM;
 		mfmheader.floppyiftype=(unsigned char)floppy->floppyiftype;
 		mfmheader.mfmtracklistoffset=sizeof(mfmheader);
-		if (fwrite(&mfmheader,sizeof(mfmheader),1,hxcmfmfile) != 1) { /* I/O error */ }
+		if (fwrite(&mfmheader,sizeof(mfmheader),1,hxcmfmfile) != 1) { libflux_fclose(hxcmfmfile); return LIBFLUX_ACCESSERROR; }
 		imgldr_ctx->ctx->libflux_printf(MSG_INFO_1,"%d Tracks, %d side(s)",mfmheader.number_of_track,mfmheader.number_of_side);
 
 		offsettrack = (int32_t*) malloc(((mfmheader.number_of_track*mfmheader.number_of_side)+1)*sizeof(int32_t));
@@ -114,7 +114,7 @@ int MFM_libWrite_DiskFile(LIBFLUX_IMGLDR* imgldr_ctx,LIBFLUX_FLOPPY * floppy,cha
 					trackpos=(trackpos&(~0x1FF))+0x200;
 				}
 
-				if (fwrite(&mfmtrackdesc,sizeof(mfmtrackdesc),1,hxcmfmfile) != 1) { /* I/O error */ }
+				if (fwrite(&mfmtrackdesc,sizeof(mfmtrackdesc),1,hxcmfmfile) != 1) { free(offsettrack); libflux_fclose(hxcmfmfile); return LIBFLUX_ACCESSERROR; }
 			}
 
 			i++;
@@ -146,12 +146,12 @@ int MFM_libWrite_DiskFile(LIBFLUX_IMGLDR* imgldr_ctx,LIBFLUX_FLOPPY * floppy,cha
 				if(ftell(hxcmfmfile)<offsettrack[(i*mfmheader.number_of_side)+j])
 				{
 					memset(mfmtrack,0,offsettrack[(i*mfmheader.number_of_side)+j]-ftell(hxcmfmfile));
-					if (fwrite(mfmtrack,offsettrack[(i*mfmheader.number_of_side)+j]-ftell(hxcmfmfile),1,hxcmfmfile) != 1) { /* I/O error */ }
+					if (fwrite(mfmtrack,offsettrack[(i*mfmheader.number_of_side)+j]-ftell(hxcmfmfile),1,hxcmfmfile) != 1) { free(mfmtrack); free(offsettrack); libflux_fclose(hxcmfmfile); return LIBFLUX_ACCESSERROR; }
 				}
 
 				memcpy(mfmtrack,floppy->tracks[i]->sides[j]->databuffer,mfmsize);
 
-				if (fwrite(mfmtrack,mfmsize,1,hxcmfmfile) != 1) { /* I/O error */ }
+				if (fwrite(mfmtrack,mfmsize,1,hxcmfmfile) != 1) { free(mfmtrack); free(offsettrack); libflux_fclose(hxcmfmfile); return LIBFLUX_ACCESSERROR; }
 				free(mfmtrack);
 				mfmtrack = NULL;
 			}

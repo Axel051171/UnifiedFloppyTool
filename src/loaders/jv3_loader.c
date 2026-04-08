@@ -167,10 +167,10 @@ int jv3_load(const char *filename, jv3_image_t *img)
     memset(img, 0, sizeof(*img));
     
     /* Read sector headers */
-    if (fread(img->headers, 1, JV3_HEADER_SIZE, fp) != JV3_HEADER_SIZE) { /* I/O error */ }
+    if (fread(img->headers, 1, JV3_HEADER_SIZE, fp) != JV3_HEADER_SIZE) { fclose(fp); return -1; }
     /* Check for write protect byte */
     uint8_t wp_byte;
-    if (fread(&wp_byte, 1, 1, fp) != 1) { /* I/O error */ }
+    if (fread(&wp_byte, 1, 1, fp) != 1) { fclose(fp); return -1; }
     img->write_protect = (wp_byte == 0xFF);
     
     /* Calculate data size and allocate */
@@ -182,7 +182,7 @@ int jv3_load(const char *filename, jv3_image_t *img)
         return -1;
     }
     
-    if (fread(img->raw_data, 1, img->data_size, fp) != img->data_size) { /* I/O error */ }
+    if (fread(img->raw_data, 1, img->data_size, fp) != img->data_size) { free(img->raw_data); img->raw_data = NULL; fclose(fp); return -1; }
     fclose(fp);
     
     /* Parse sectors */
@@ -294,14 +294,14 @@ int jv3_save(const jv3_image_t *img, const char *filename)
     if (!fp) return -1;
     
     /* Write sector headers */
-    if (fwrite(img->headers, 1, JV3_HEADER_SIZE, fp) != JV3_HEADER_SIZE) { /* I/O error */ }
+    if (fwrite(img->headers, 1, JV3_HEADER_SIZE, fp) != JV3_HEADER_SIZE) { fclose(fp); return -1; }
     /* Write protect byte */
     uint8_t wp = img->write_protect ? 0xFF : 0x00;
-    if (fwrite(&wp, 1, 1, fp) != 1) { /* I/O error */ }
+    if (fwrite(&wp, 1, 1, fp) != 1) { fclose(fp); return -1; }
     /* Write sector data */
     for (int i = 0; i < img->sector_count; i++) {
         if (img->sectors[i].data) {
-            if (fwrite(img->sectors[i].data, 1, img->sectors[i].size, fp) != img->sectors[i].size) { /* I/O error */ }
+            if (fwrite(img->sectors[i].data, 1, img->sectors[i].size, fp) != img->sectors[i].size) { fclose(fp); return -1; }
         }
     }
     if (ferror(fp)) {
@@ -325,7 +325,7 @@ int jv3_from_dmk(const char *dmk_file, const char *jv3_file)
     
     /* Read DMK header */
     uint8_t header[16];
-    if (fread(header, 1, 16, fp) != 16) { /* I/O error */ }
+    if (fread(header, 1, 16, fp) != 16) { fclose(fp); return -1; }
     int tracks = header[1];
     int track_len = header[2] | (header[3] << 8);
     bool double_sided = !(header[4] & 0x10);
@@ -342,7 +342,7 @@ int jv3_from_dmk(const char *dmk_file, const char *jv3_file)
     
     for (int t = 0; t < tracks; t++) {
         for (int s = 0; s < sides; s++) {
-            if (fread(track_buf, 1, track_len, fp) != track_len) { /* I/O error */ }
+            if (fread(track_buf, 1, track_len, fp) != track_len) { free(track_buf); fclose(fp); jv3_free(&jv3); return -1; }
             /* Parse IDAM table */
             uint16_t *idam = (uint16_t*)track_buf;
             

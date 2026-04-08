@@ -536,8 +536,85 @@ uft_error_t uft_image_ensure_layer(uft_unified_image_t* img, uft_layer_t target)
             break;
             
         case UFT_LAYER_FLUX:
-            /* Synthesis from sectors/bitstream - complex, not yet implemented */
-            return UFT_ERROR_NOT_IMPLEMENTED;
+            if (uft_image_has_layer(img, UFT_LAYER_BITSTREAM)) {
+                /* Bitstream -> Flux: synthesize flux transitions from bit data.
+                 * Each '1' bit generates a transition; cell spacing is derived
+                 * from the encoding's nominal bit cell time. */
+                for (size_t i = 0; i < img->track_count && result == UFT_OK; i++) {
+                    uft_unified_track_t* track = img->tracks[i];
+                    if (!track || !track->bitstream) continue;
+
+                    uft_bitstream_track_t* bs = track->bitstream;
+                    if (!bs->bits || bs->bit_count == 0) continue;
+
+                    /* Determine nominal cell time from encoding */
+                    uint32_t cell_ns = 2000;  /* MFM DD default */
+                    if (bs->encoding == UFT_ENCODING_FM) {
+                        cell_ns = 8000;       /* FM SD */
+                    } else if (bs->encoding == UFT_ENCODING_GCR_CBM) {
+                        cell_ns = 3500;       /* CBM GCR mid-zone */
+                    } else if (bs->encoding == UFT_ENCODING_GCR_APPLE) {
+                        cell_ns = 4000;       /* Apple II */
+                    }
+
+                    /* Allocate flux track */
+                    uft_flux_track_data_t* flux = uft_flux_track_create(
+                        track->cylinder, track->head);
+                    if (!flux) { result = UFT_ERROR_NO_MEMORY; break; }
+
+                    /* Count transitions (number of 1-bits) */
+                    size_t trans_count = 0;
+                    for (size_t b = 0; b < bs->bit_count; b++) {
+                        if (bs->bits[b / 8] & (0x80 >> (b % 8)))
+                            trans_count++;
+                    }
+
+                    if (trans_count == 0) {
+                        uft_flux_track_destroy(flux);
+                        continue;
+                    }
+
+                    /* Build a single revolution of synthetic transitions */
+                    uint32_t* samples = malloc(trans_count * sizeof(uint32_t));
+                    if (!samples) {
+                        uft_flux_track_destroy(flux);
+                        result = UFT_ERROR_NO_MEMORY;
+                        break;
+                    }
+
+                    size_t si = 0;
+                    uint32_t gap = 0;
+                    for (size_t b = 0; b < bs->bit_count; b++) {
+                        gap += cell_ns;
+                        if (bs->bits[b / 8] & (0x80 >> (b % 8))) {
+                            samples[si++] = gap;
+                            gap = 0;
+                        }
+                    }
+
+                    /* sample_rate isn't meaningful for ns-based data; use 1GHz */
+                    uft_error_t err = uft_flux_track_add_revolution(
+                        flux, samples, si, 1000000000u);
+                    free(samples);
+
+                    if (err != UFT_OK) {
+                        uft_flux_track_destroy(flux);
+                        result = err;
+                        break;
+                    }
+
+                    /* Replace any existing flux data */
+                    free_flux_track_data(track->flux);
+                    track->flux = flux;
+                    track->available_layers |= UFT_LAYER_FLUX;
+                }
+                if (result == UFT_OK) {
+                    img->available_layers |= UFT_LAYER_FLUX;
+                }
+                return result;
+            }
+            /* No bitstream or sector source available for flux synthesis */
+            return UFT_ERROR_NO_DATA;
             
         default:
             return UFT_ERROR_INVALID_ARG;
@@ -613,8 +690,72 @@ uft_error_t uft_image_get_flux_track(uft_unified_image_t* img, int cyl, int head
     if (!track->flux) {
         // Try to load/generate flux data
         if (track->source_layer == UFT_LAYER_FLUX) {
-            // Load from source
-            return UFT_ERROR_NOT_IMPLEMENTED;
+            /*
+             * The track's source was flux but data isn't loaded yet.
+             * The current format plugin API (uft_format_plugin_t) only
+             * exposes read_track for sector-level data; there is no
+             * generic read_flux callback.  If a bitstream layer is
+             * available we can synthesize flux from it.  Otherwise,
+             * try the image-level ensure_layer path which handles
+             * bitstream-to-flux conversion.
+             */
+            if (track->bitstream && track->bitstream->bits &&
+                track->bitstream->bit_count > 0) {
+                /* Determine cell time from encoding */
+                uint32_t cell_ns = 2000;
+                if (track->bitstream->encoding == UFT_ENCODING_FM)
+                    cell_ns = 8000;
+                else if (track->bitstream->encoding == UFT_ENCODING_GCR_CBM)
+                    cell_ns = 3500;
+                else if (track->bitstream->encoding == UFT_ENCODING_GCR_APPLE)
+                    cell_ns = 4000;
+
+                uft_bitstream_track_t* bs = track->bitstream;
+
+                /* Count transitions */
+                size_t trans_count = 0;
+                for (size_t b = 0; b < bs->bit_count; b++) {
+                    if (bs->bits[b / 8] & (0x80 >> (b % 8)))
+                        trans_count++;
+                }
+
+                if (trans_count > 0) {
+                    uft_flux_track_data_t* ft = uft_flux_track_create(cyl, head);
+                    if (!ft) return UFT_ERROR_NO_MEMORY;
+
+                    uint32_t* samples = malloc(trans_count * sizeof(uint32_t));
+                    if (!samples) {
+                        uft_flux_track_destroy(ft);
+                        return UFT_ERROR_NO_MEMORY;
+                    }
+
+                    size_t si = 0;
+                    uint32_t gap = 0;
+                    for (size_t b = 0; b < bs->bit_count; b++) {
+                        gap += cell_ns;
+                        if (bs->bits[b / 8] & (0x80 >> (b % 8))) {
+                            samples[si++] = gap;
+                            gap = 0;
+                        }
+                    }
+
+                    uft_error_t err = uft_flux_track_add_revolution(
+                        ft, samples, si, 1000000000u);
+                    free(samples);
+
+                    if (err != UFT_OK) {
+                        uft_flux_track_destroy(ft);
+                        return err;
+                    }
+
+                    track->flux = ft;
+                    track->available_layers |= UFT_LAYER_FLUX;
+                } else {
+                    return UFT_ERROR_NO_DATA;
+                }
+            } else {
+                return UFT_ERROR_NO_DATA;
+            }
         } else {
             return UFT_ERROR_NO_DATA;
         }

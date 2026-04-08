@@ -160,22 +160,45 @@ uft_error_t uft_decode_track_auto(const uft_flux_track_data_t* flux,
 }
 
 // ============================================================================
-// Built-in Decoders
+// Built-in Decoders — V2 delegation
 // ============================================================================
 
-// Forward declarations for built-in decoders
+// V2 decoders are defined in src/decoders/unified/ and provide the real
+// implementations.  We import them and delegate the built-in stubs so
+// callers of the old static decoder ops get the full V2 behaviour.
+
+extern const uft_decoder_ops_t uft_decoder_fm_v2;
+extern const uft_decoder_ops_t uft_decoder_gcr_cbm_v2;
+extern const uft_decoder_ops_t uft_decoder_gcr_apple_v2;
+
+// Forward declarations for MFM (still handled locally)
 static int mfm_probe(const uft_flux_track_data_t* flux, int* confidence);
 static uft_error_t mfm_decode(const uft_flux_track_data_t* flux, uft_track_t* sectors, const uft_decode_options_t* opts);
 static void mfm_defaults(uft_decode_options_t* opts);
 
-static int fm_probe(const uft_flux_track_data_t* flux, int* confidence);
-static uft_error_t fm_decode(const uft_flux_track_data_t* flux, uft_track_t* sectors, const uft_decode_options_t* opts);
+// Delegate wrappers for FM — forward to V2 decoder
+static int fm_probe(const uft_flux_track_data_t* flux, int* confidence) {
+    return uft_decoder_fm_v2.probe(flux, confidence);
+}
+static uft_error_t fm_decode(const uft_flux_track_data_t* flux, uft_track_t* sectors, const uft_decode_options_t* opts) {
+    return uft_decoder_fm_v2.decode_track(flux, sectors, opts);
+}
 
-static int gcr_cbm_probe(const uft_flux_track_data_t* flux, int* confidence);
-static uft_error_t gcr_cbm_decode(const uft_flux_track_data_t* flux, uft_track_t* sectors, const uft_decode_options_t* opts);
+// Delegate wrappers for GCR CBM — forward to V2 decoder
+static int gcr_cbm_probe(const uft_flux_track_data_t* flux, int* confidence) {
+    return uft_decoder_gcr_cbm_v2.probe(flux, confidence);
+}
+static uft_error_t gcr_cbm_decode(const uft_flux_track_data_t* flux, uft_track_t* sectors, const uft_decode_options_t* opts) {
+    return uft_decoder_gcr_cbm_v2.decode_track(flux, sectors, opts);
+}
 
-static int gcr_apple_probe(const uft_flux_track_data_t* flux, int* confidence);
-static uft_error_t gcr_apple_decode(const uft_flux_track_data_t* flux, uft_track_t* sectors, const uft_decode_options_t* opts);
+// Delegate wrappers for GCR Apple — forward to V2 decoder
+static int gcr_apple_probe(const uft_flux_track_data_t* flux, int* confidence) {
+    return uft_decoder_gcr_apple_v2.probe(flux, confidence);
+}
+static uft_error_t gcr_apple_decode(const uft_flux_track_data_t* flux, uft_track_t* sectors, const uft_decode_options_t* opts) {
+    return uft_decoder_gcr_apple_v2.decode_track(flux, sectors, opts);
+}
 
 // MFM Decoder
 static const uft_decoder_ops_t g_decoder_mfm = {
@@ -189,7 +212,7 @@ static const uft_decoder_ops_t g_decoder_mfm = {
     .get_default_options = mfm_defaults,
 };
 
-// FM Decoder
+// FM Decoder — delegates to uft_decoder_fm_v2
 static const uft_decoder_ops_t g_decoder_fm = {
     .name = "FM",
     .description = "Frequency Modulation (Single Density)",
@@ -201,7 +224,7 @@ static const uft_decoder_ops_t g_decoder_fm = {
     .get_default_options = NULL,
 };
 
-// GCR CBM Decoder
+// GCR CBM Decoder — delegates to uft_decoder_gcr_cbm_v2
 static const uft_decoder_ops_t g_decoder_gcr_cbm = {
     .name = "GCR-CBM",
     .description = "Group Coded Recording (Commodore 64/128)",
@@ -213,7 +236,7 @@ static const uft_decoder_ops_t g_decoder_gcr_cbm = {
     .get_default_options = NULL,
 };
 
-// GCR Apple Decoder
+// GCR Apple Decoder — delegates to uft_decoder_gcr_apple_v2
 static const uft_decoder_ops_t g_decoder_gcr_apple = {
     .name = "GCR-Apple",
     .description = "Group Coded Recording (Apple II)",
@@ -227,12 +250,12 @@ static const uft_decoder_ops_t g_decoder_gcr_apple = {
 
 void uft_register_builtin_decoders(void) {
     if (g_decoder_registry.initialized) return;
-    
+
     uft_decoder_register(&g_decoder_mfm);
     uft_decoder_register(&g_decoder_fm);
     uft_decoder_register(&g_decoder_gcr_cbm);
     uft_decoder_register(&g_decoder_gcr_apple);
-    
+
     g_decoder_registry.initialized = true;
 }
 
@@ -326,103 +349,6 @@ static void mfm_defaults(uft_decode_options_t* opts) {
 }
 
 // ============================================================================
-// FM Decoder Stub
+// Note: FM, GCR-CBM, and GCR-Apple decode/probe functions are defined above
+// as delegate wrappers to the V2 decoders in src/decoders/unified/.
 // ============================================================================
-
-static int fm_probe(const uft_flux_track_data_t* flux, int* confidence) {
-    if (!flux || flux->revolution_count == 0) return 0;
-    
-    const uft_flux_revolution_t* rev = &flux->revolutions[0];
-    if (rev->count == 0) return 0;
-    
-    double avg_ns = (double)rev->total_time_ns / rev->count;
-    
-    // FM: ~4000-8000ns average (slower than MFM)
-    if (avg_ns >= 3500 && avg_ns <= 10000) {
-        *confidence = 60;
-        return 1;
-    }
-    
-    return 0;
-}
-
-static uft_error_t fm_decode(const uft_flux_track_data_t* flux,
-                              uft_track_t* sectors,
-                              const uft_decode_options_t* opts) {
-    if (!flux || !sectors) return UFT_ERROR_NULL_POINTER;
-    
-    memset(sectors, 0, sizeof(*sectors));
-    sectors->cylinder = flux->cylinder;
-    sectors->head = flux->head;
-    
-    return UFT_ERROR_NOT_IMPLEMENTED;
-}
-
-// ============================================================================
-// GCR CBM Decoder Stub
-// ============================================================================
-
-static int gcr_cbm_probe(const uft_flux_track_data_t* flux, int* confidence) {
-    if (!flux || flux->revolution_count == 0) return 0;
-    
-    // CBM GCR has 4 timing zones
-    // Average transition time varies by zone
-    
-    const uft_flux_revolution_t* rev = &flux->revolutions[0];
-    if (rev->count == 0) return 0;
-    
-    double avg_ns = (double)rev->total_time_ns / rev->count;
-    
-    // CBM GCR: ~3200-4200ns depending on zone
-    if (avg_ns >= 2800 && avg_ns <= 4500) {
-        *confidence = 65;
-        return 1;
-    }
-    
-    return 0;
-}
-
-static uft_error_t gcr_cbm_decode(const uft_flux_track_data_t* flux,
-                                   uft_track_t* sectors,
-                                   const uft_decode_options_t* opts) {
-    if (!flux || !sectors) return UFT_ERROR_NULL_POINTER;
-    
-    memset(sectors, 0, sizeof(*sectors));
-    sectors->cylinder = flux->cylinder;
-    sectors->head = flux->head;
-    
-    return UFT_ERROR_NOT_IMPLEMENTED;
-}
-
-// ============================================================================
-// GCR Apple Decoder Stub
-// ============================================================================
-
-static int gcr_apple_probe(const uft_flux_track_data_t* flux, int* confidence) {
-    if (!flux || flux->revolution_count == 0) return 0;
-    
-    const uft_flux_revolution_t* rev = &flux->revolutions[0];
-    if (rev->count == 0) return 0;
-    
-    double avg_ns = (double)rev->total_time_ns / rev->count;
-    
-    // Apple GCR: ~4000ns average
-    if (avg_ns >= 3500 && avg_ns <= 5000) {
-        *confidence = 60;
-        return 1;
-    }
-    
-    return 0;
-}
-
-static uft_error_t gcr_apple_decode(const uft_flux_track_data_t* flux,
-                                     uft_track_t* sectors,
-                                     const uft_decode_options_t* opts) {
-    if (!flux || !sectors) return UFT_ERROR_NULL_POINTER;
-    
-    memset(sectors, 0, sizeof(*sectors));
-    sectors->cylinder = flux->cylinder;
-    sectors->head = flux->head;
-    
-    return UFT_ERROR_NOT_IMPLEMENTED;
-}

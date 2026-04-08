@@ -227,9 +227,9 @@ int atr_save(const atr_image_t *img, const char *filename)
     if (!fp) return -1;
     
     /* Write header */
-    if (fwrite(&img->header, ATR_HEADER_SIZE, 1, fp) != 1) { /* I/O error */ }
+    if (fwrite(&img->header, ATR_HEADER_SIZE, 1, fp) != 1) { fclose(fp); return -1; }
     /* Write data */
-    if (fwrite(img->data, 1, img->data_size, fp) != img->data_size) { /* I/O error */ }
+    if (fwrite(img->data, 1, img->data_size, fp) != img->data_size) { fclose(fp); return -1; }
     if (ferror(fp)) {
         fclose(fp);
         return UFT_ERR_IO;
@@ -261,12 +261,12 @@ int atr_from_raw(const char *raw_file, const char *atr_file,
         fclose(fp);
         return -1;
     }
-    if (fread(data, 1, size, fp) != size) { /* I/O error */ }
+    if (fread(data, 1, size, fp) != size) { free(data); fclose(fp); return -1; }
     fclose(fp);
 
     atr_image_t img;
     atr_create(&img, format);
-    
+
     /* Copy data */
     size_t copy_size = (size < img.data_size) ? size : img.data_size;
     memcpy(img.data, data, copy_size);
@@ -309,12 +309,12 @@ int atr_from_xfd(const char *xfd_file, const char *atr_file)
     }
     
     uint8_t *data = malloc(size);
-    if (fread(data, 1, size, fp) != size) { /* I/O error */ }
+    if (fread(data, 1, size, fp) != size) { free(data); fclose(fp); return -1; }
     fclose(fp);
-    
+
     atr_image_t img;
     atr_create(&img, format);
-    
+
     memcpy(img.data, data, (size < img.data_size) ? size : img.data_size);
     free(data);
     

@@ -126,7 +126,7 @@ int STX_libWrite_DiskFile(LIBFLUX_IMGLDR* imgldr_ctx,LIBFLUX_FLOPPY * floppy,cha
 	stxdskfile = libflux_fopen(filename,"w+b");
 	if(stxdskfile)
 	{
-		if (fwrite(&header,sizeof(pasti_fileheader),1,stxdskfile) != 1) { /* I/O error */ }
+		if (fwrite(&header,sizeof(pasti_fileheader),1,stxdskfile) != 1) { fclose(stxdskfile); return LIBFLUX_ACCESSERROR; }
 		for(i=0;i<number_of_track;i++)
 		{
 			for(j=0;j<number_of_side;j++)
@@ -144,7 +144,7 @@ int STX_libWrite_DiskFile(LIBFLUX_IMGLDR* imgldr_ctx,LIBFLUX_FLOPPY * floppy,cha
 				tracksize = sizeof(pasti_trackheader);
 				cur_track_file_offset = ftell(stxdskfile);
 
-				if (fwrite(&track_header,sizeof(pasti_trackheader),1,stxdskfile) != 1) { /* I/O error */ }
+				if (fwrite(&track_header,sizeof(pasti_trackheader),1,stxdskfile) != 1) { fclose(stxdskfile); return LIBFLUX_ACCESSERROR; }
 				flakey_mask_size = 0;
 				sect_cnt = 0;
 				ss = libflux_initSectorAccess(imgldr_ctx->ctx,floppy);
@@ -209,7 +209,7 @@ int STX_libWrite_DiskFile(LIBFLUX_IMGLDR* imgldr_ctx,LIBFLUX_FLOPPY * floppy,cha
 							}
 							sector_header.sector_size = size_to_code(sc->sectorsize);
 
-							if (fwrite(&sector_header,sizeof(pasti_sector),1,stxdskfile) != 1) { /* I/O error */ }
+							if (fwrite(&sector_header,sizeof(pasti_sector),1,stxdskfile) != 1) { fclose(stxdskfile); return LIBFLUX_ACCESSERROR; }
 							tracksize += sizeof(pasti_sector);
 						}
 					}while(sc);
@@ -223,7 +223,7 @@ int STX_libWrite_DiskFile(LIBFLUX_IMGLDR* imgldr_ctx,LIBFLUX_FLOPPY * floppy,cha
 						if( flakey_mask_buffer )
 						{
 							memset(flakey_mask_buffer,0xFF,flakey_mask_size);
-							if (fwrite(flakey_mask_buffer,flakey_mask_size,1,stxdskfile) != 1) { /* I/O error */ }
+							if (fwrite(flakey_mask_buffer,flakey_mask_size,1,stxdskfile) != 1) { fclose(stxdskfile); return LIBFLUX_ACCESSERROR; }
 						}
 					}
 					libflux_resetSearchTrackPosition(ss);
@@ -244,9 +244,9 @@ int STX_libWrite_DiskFile(LIBFLUX_IMGLDR* imgldr_ctx,LIBFLUX_FLOPPY * floppy,cha
 							if( sc->input_data )
 							{
 								sector_header.sector_pos = tracksectsize;
-								if (fwrite(sc->input_data,sc->sectorsize,1,stxdskfile) != 1) { /* I/O error */ }
+								if (fwrite(sc->input_data,sc->sectorsize,1,stxdskfile) != 1) { fclose(stxdskfile); return LIBFLUX_ACCESSERROR; }
 								if (fseek(stxdskfile,cur_track_file_offset + sizeof(pasti_trackheader) + (sizeof(pasti_sector)*sect_cnt),SEEK_SET) != 0) { fclose(stxdskfile); return LIBFLUX_ACCESSERROR; }
-								if (fwrite(&sector_header,sizeof(pasti_sector),1,stxdskfile) != 1) { /* I/O error */ }
+								if (fwrite(&sector_header,sizeof(pasti_sector),1,stxdskfile) != 1) { fclose(stxdskfile); return LIBFLUX_ACCESSERROR; }
 								if( sector_header.FDC_status & 0x80 )
 								{
 									if( flakey_mask_buffer )
@@ -293,7 +293,7 @@ int STX_libWrite_DiskFile(LIBFLUX_IMGLDR* imgldr_ctx,LIBFLUX_FLOPPY * floppy,cha
 				if(flakey_mask_buffer)
 				{
 					if (fseek(stxdskfile,flakey_mask_file_offset,SEEK_SET) != 0) { fclose(stxdskfile); return LIBFLUX_ACCESSERROR; }
-					if (fwrite(flakey_mask_buffer,flakey_mask_size,1,stxdskfile) != 1) { /* I/O error */ }
+					if (fwrite(flakey_mask_buffer,flakey_mask_size,1,stxdskfile) != 1) { fclose(stxdskfile); return LIBFLUX_ACCESSERROR; }
 					free(flakey_mask_buffer);
 				}
 
@@ -302,8 +302,8 @@ int STX_libWrite_DiskFile(LIBFLUX_IMGLDR* imgldr_ctx,LIBFLUX_FLOPPY * floppy,cha
 				{
 					track_header.flags |= 0x0040;
 					rawtracksize = track_header.track_size;
-					if (fwrite(&rawtracksize,sizeof(rawtracksize),1,stxdskfile) != 1) { /* I/O error */ }
-					if (fwrite(floppy->tracks[i]->sides[j]->databuffer,rawtracksize,1,stxdskfile) != 1) { /* I/O error */ }
+					if (fwrite(&rawtracksize,sizeof(rawtracksize),1,stxdskfile) != 1) { fclose(stxdskfile); return LIBFLUX_ACCESSERROR; }
+					if (fwrite(floppy->tracks[i]->sides[j]->databuffer,rawtracksize,1,stxdskfile) != 1) { fclose(stxdskfile); return LIBFLUX_ACCESSERROR; }
 					rawtracksize += 2;
 				}
 
@@ -312,7 +312,7 @@ int STX_libWrite_DiskFile(LIBFLUX_IMGLDR* imgldr_ctx,LIBFLUX_FLOPPY * floppy,cha
 				track_header.flakey_mask_size = flakey_mask_size;
 
 				if (fseek(stxdskfile,cur_track_file_offset,SEEK_SET) != 0) { fclose(stxdskfile); return LIBFLUX_ACCESSERROR; }
-				if (fwrite(&track_header,sizeof(pasti_trackheader),1,stxdskfile) != 1) { /* I/O error */ }
+				if (fwrite(&track_header,sizeof(pasti_trackheader),1,stxdskfile) != 1) { fclose(stxdskfile); return LIBFLUX_ACCESSERROR; }
 			}
 		}
 

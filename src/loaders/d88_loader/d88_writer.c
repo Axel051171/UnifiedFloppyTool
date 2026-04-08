@@ -83,9 +83,9 @@ int D88_libWrite_DiskFile(LIBFLUX_IMGLDR* imgldr_ctx,LIBFLUX_FLOPPY * floppy,cha
 
 	memset(&d88_fh,0,sizeof(d88_fileheader));
 	memcpy(d88_fh.name, "UFTOOL", 6);  /* Fixed tag */
-	if (fwrite(&d88_fh,sizeof(d88_fileheader),1,outfile) != 1) { /* I/O error */ }
+	if (fwrite(&d88_fh,sizeof(d88_fileheader),1,outfile) != 1) { libflux_fclose(outfile); return LIBFLUX_ACCESSERROR; }
 	memset(tracktable,0,sizeof(tracktable));
-	if (fwrite(&tracktable, sizeof(tracktable),1,outfile) != 1) { /* I/O error */ }
+	if (fwrite(&tracktable, sizeof(tracktable),1,outfile) != 1) { libflux_fclose(outfile); return LIBFLUX_ACCESSERROR; }
 	ss = libflux_initSectorAccess(imgldr_ctx->ctx,floppy);
 	if( !ss )
 		goto error;
@@ -189,9 +189,9 @@ int D88_libWrite_DiskFile(LIBFLUX_IMGLDR* imgldr_ctx,LIBFLUX_FLOPPY * floppy,cha
 								}
 							}
 
-							if (fwrite(&d88_s,sizeof(d88_sector),1,outfile) != 1) { /* I/O error */ }
+							if (fwrite(&d88_s,sizeof(d88_sector),1,outfile) != 1) { libflux_fclose(outfile); return LIBFLUX_ACCESSERROR; }
 							if(d88_s.sector_length)
-								if (fwrite(sca[k]->input_data,sca[k]->sectorsize,1,outfile) != 1) { /* I/O error */ }
+								if (fwrite(sca[k]->input_data,sca[k]->sectorsize,1,outfile) != 1) { libflux_fclose(outfile); return LIBFLUX_ACCESSERROR; }
 						}
 
 						libflux_freeSectorConfig( 0, sca[k]);
@@ -240,8 +240,8 @@ int D88_libWrite_DiskFile(LIBFLUX_IMGLDR* imgldr_ctx,LIBFLUX_FLOPPY * floppy,cha
 		libflux_fclose(outfile);
 		return LIBFLUX_BADFILE;
 	}
-	if (fwrite(&d88_fh,sizeof(d88_fileheader),1,outfile) != 1) { /* I/O error */ }
-	if (fwrite(&tracktable, sizeof(tracktable),1,outfile) != 1) { /* I/O error */ }
+	if (fwrite(&d88_fh,sizeof(d88_fileheader),1,outfile) != 1) { libflux_fclose(outfile); return LIBFLUX_ACCESSERROR; }
+	if (fwrite(&tracktable, sizeof(tracktable),1,outfile) != 1) { libflux_fclose(outfile); return LIBFLUX_ACCESSERROR; }
 	libflux_fclose(outfile);
 
 	return LIBFLUX_NOERROR;

@@ -357,18 +357,34 @@ void FatEditorWidget::updateDirectoryView()
 {
     if (!m_fat) return;
     m_directoryTree->clear();
-    
+
     uft_fat_file_info_t entries[256];
     int count = uft_fat_read_root(m_fat, entries, 256);
-    
+
     for (int i = 0; i < count; i++) {
+        const uft_fat_file_info_t &e = entries[i];
+
         QTreeWidgetItem *item = new QTreeWidgetItem(m_directoryTree);
-        item->setText(0, QString::fromLatin1(entries[i].short_name));
-        item->setText(1, (entries[i].attributes & 0x10) ? 
-            tr("<DIR>") : formatSize(entries[i].file_size));
-        item->setText(2, formatDateTime(entries[i].modify_date, entries[i].modify_time));
-        item->setText(4, QString::number(entries[i].first_cluster));
-        item->setData(0, Qt::UserRole, entries[i].first_cluster);
+        item->setText(0, QString::fromLatin1(e.short_name));
+        item->setText(1, (e.attributes & UFT_ATTR_DIRECTORY) ?
+            tr("<DIR>") : formatSize(e.file_size));
+        item->setText(2, formatDateTime(e.modify_date, e.modify_time));
+
+        /* Build attribute string */
+        QString attrStr;
+        if (e.attributes & UFT_ATTR_READ_ONLY) attrStr += "R";
+        if (e.attributes & UFT_ATTR_HIDDEN)    attrStr += "H";
+        if (e.attributes & UFT_ATTR_SYSTEM)    attrStr += "S";
+        if (e.attributes & UFT_ATTR_ARCHIVE)   attrStr += "A";
+        item->setText(3, attrStr);
+
+        item->setText(4, QString::number(e.first_cluster));
+        item->setData(0, Qt::UserRole, e.first_cluster);
+
+        /* Recursively populate subdirectories */
+        if ((e.attributes & UFT_ATTR_DIRECTORY) && e.first_cluster >= 2) {
+            populateDirectory(item, e.first_cluster);
+        }
     }
 }
 
@@ -672,6 +688,43 @@ QString FatEditorWidget::formatDateTime(uint16_t date, uint16_t time)
         .arg(hour, 2, 10, QChar('0')).arg(minute, 2, 10, QChar('0'));
 }
 
-void FatEditorWidget::populateDirectory(QTreeWidgetItem *, uint32_t) { /* TODO */ }
+void FatEditorWidget::populateDirectory(QTreeWidgetItem *parent, uint32_t cluster)
+{
+    if (!m_fat || cluster < 2) return;
+
+    uft_fat_file_info_t entries[256];
+    int count = uft_fat_read_dir(m_fat, cluster, entries, 256);
+
+    for (int i = 0; i < count; i++) {
+        const uft_fat_file_info_t &e = entries[i];
+
+        /* Skip . and .. pseudo-entries */
+        if (e.short_name[0] == '.' && (e.short_name[1] == '\0' ||
+            (e.short_name[1] == '.' && e.short_name[2] == '\0')))
+            continue;
+
+        QTreeWidgetItem *item = new QTreeWidgetItem(parent);
+        item->setText(0, QString::fromLatin1(e.short_name));
+        item->setText(1, (e.attributes & UFT_ATTR_DIRECTORY) ?
+            tr("<DIR>") : formatSize(e.file_size));
+        item->setText(2, formatDateTime(e.modify_date, e.modify_time));
+
+        /* Build attribute string */
+        QString attrStr;
+        if (e.attributes & UFT_ATTR_READ_ONLY) attrStr += "R";
+        if (e.attributes & UFT_ATTR_HIDDEN)    attrStr += "H";
+        if (e.attributes & UFT_ATTR_SYSTEM)    attrStr += "S";
+        if (e.attributes & UFT_ATTR_ARCHIVE)   attrStr += "A";
+        item->setText(3, attrStr);
+
+        item->setText(4, QString::number(e.first_cluster));
+        item->setData(0, Qt::UserRole, e.first_cluster);
+
+        /* Recursively populate subdirectories */
+        if ((e.attributes & UFT_ATTR_DIRECTORY) && e.first_cluster >= 2) {
+            populateDirectory(item, e.first_cluster);
+        }
+    }
+}
 
 } // namespace UFT

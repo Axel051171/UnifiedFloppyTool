@@ -193,7 +193,7 @@ int IMD_libWrite_DiskFile(LIBFLUX_IMGLDR* imgldr_ctx,LIBFLUX_FLOPPY * floppy,cha
 				imd_th.sector_size_code = size_to_code(sca[0]->sectorsize);
 			}
 
-			if (fwrite(&imd_th,sizeof(imd_trackheader),1,outfile) != 1) { /* I/O error */ }
+			if (fwrite(&imd_th,sizeof(imd_trackheader),1,outfile) != 1) { libflux_deinitSectorAccess(ss); libflux_fclose(outfile); return LIBFLUX_ACCESSERROR; }
 			for(k=0;k<nbsector;k++)
 			{
 				sector_numbering_map[k] = sca[k]->sector;
@@ -201,11 +201,11 @@ int IMD_libWrite_DiskFile(LIBFLUX_IMGLDR* imgldr_ctx,LIBFLUX_FLOPPY * floppy,cha
 				side_numbering_map[k] = sca[k]->head;
 			}
 
-			if (fwrite(sector_numbering_map,imd_th.number_of_sector,1,outfile) != 1) { /* I/O error */ }
+			if (fwrite(sector_numbering_map,imd_th.number_of_sector,1,outfile) != 1) { libflux_deinitSectorAccess(ss); libflux_fclose(outfile); return LIBFLUX_ACCESSERROR; }
 			if(imd_th.physical_head & 0x80)
-				if (fwrite(cylinder_numbering_map,imd_th.number_of_sector,1,outfile) != 1) { /* I/O error */ }
+				if (fwrite(cylinder_numbering_map,imd_th.number_of_sector,1,outfile) != 1) { libflux_deinitSectorAccess(ss); libflux_fclose(outfile); return LIBFLUX_ACCESSERROR; }
 			if(imd_th.physical_head & 0x40)
-				if (fwrite(side_numbering_map,imd_th.number_of_sector,1,outfile) != 1) { /* I/O error */ }
+				if (fwrite(side_numbering_map,imd_th.number_of_sector,1,outfile) != 1) { libflux_deinitSectorAccess(ss); libflux_fclose(outfile); return LIBFLUX_ACCESSERROR; }
 			if(nbsector)
 			{
 				k=0;
@@ -256,8 +256,8 @@ int IMD_libWrite_DiskFile(LIBFLUX_IMGLDR* imgldr_ctx,LIBFLUX_FLOPPY * floppy,cha
 								}
 							}
 
-							if (fwrite(&sector_type,1,1,outfile) != 1) { /* I/O error */ }
-							if (fwrite(sca[k]->input_data,sca[k]->sectorsize,1,outfile) != 1) { /* I/O error */ }
+							if (fwrite(&sector_type,1,1,outfile) != 1) { libflux_deinitSectorAccess(ss); libflux_fclose(outfile); return LIBFLUX_ACCESSERROR; }
+							if (fwrite(sca[k]->input_data,sca[k]->sectorsize,1,outfile) != 1) { libflux_deinitSectorAccess(ss); libflux_fclose(outfile); return LIBFLUX_ACCESSERROR; }
 						}
 						else
 						{
@@ -295,15 +295,15 @@ int IMD_libWrite_DiskFile(LIBFLUX_IMGLDR* imgldr_ctx,LIBFLUX_FLOPPY * floppy,cha
 								}
 							}
 
-							if (fwrite(&sector_type,1,1,outfile) != 1) { /* I/O error */ }
-							if (fwrite(sca[k]->input_data,1,1,outfile) != 1) { /* I/O error */ }
+							if (fwrite(&sector_type,1,1,outfile) != 1) { libflux_deinitSectorAccess(ss); libflux_fclose(outfile); return LIBFLUX_ACCESSERROR; }
+							if (fwrite(sca[k]->input_data,1,1,outfile) != 1) { libflux_deinitSectorAccess(ss); libflux_fclose(outfile); return LIBFLUX_ACCESSERROR; }
 						}
 					}
 					else
 					{
 						// Missing Data mark
 						sector_type = 0;
-						if (fwrite(&sector_type,1,1,outfile) != 1) { /* I/O error */ }
+						if (fwrite(&sector_type,1,1,outfile) != 1) { libflux_deinitSectorAccess(ss); libflux_fclose(outfile); return LIBFLUX_ACCESSERROR; }
 					}
 
 					log_str = libflux_dyn_sprintfcat(log_str,"%d ",sca[k]->sector);

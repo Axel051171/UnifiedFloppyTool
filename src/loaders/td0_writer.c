@@ -311,11 +311,11 @@ static int write_sector_data(FILE *fp, const uint8_t *data, int size,
             /* RLE: repeat single byte */
             uint16_t block_size = 4;
             uint8_t encoding = 1;  /* RLE */
-            if (fwrite(&block_size, 2, 1, fp) != 1) { /* I/O error */ }
-            if (fwrite(&encoding, 1, 1, fp) != 1) { /* I/O error */ }
+            if (fwrite(&block_size, 2, 1, fp) != 1) { fclose(fp); return -1; }
+            if (fwrite(&encoding, 1, 1, fp) != 1) { fclose(fp); return -1; }
             uint16_t count = size;
-            if (fwrite(&count, 2, 1, fp) != 1) { /* I/O error */ }
-            if (fwrite(&data[0], 1, 1, fp) != 1) { /* I/O error */ }
+            if (fwrite(&count, 2, 1, fp) != 1) { fclose(fp); return -1; }
+            if (fwrite(&data[0], 1, 1, fp) != 1) { fclose(fp); return -1; }
             return 0;
         }
     }
@@ -324,9 +324,9 @@ static int write_sector_data(FILE *fp, const uint8_t *data, int size,
     uint16_t block_size = size + 1;
     uint8_t encoding = 0;  /* Raw */
     
-    if (fwrite(&block_size, 2, 1, fp) != 1) { /* I/O error */ }
-    if (fwrite(&encoding, 1, 1, fp) != 1) { /* I/O error */ }
-    if (fwrite(data, 1, size, fp) != size) { /* I/O error */ }
+    if (fwrite(&block_size, 2, 1, fp) != 1) { fclose(fp); return -1; }
+    if (fwrite(&encoding, 1, 1, fp) != 1) { fclose(fp); return -1; }
+    if (fwrite(data, 1, size, fp) != size) { fclose(fp); return -1; }
     return 0;
 }
 
@@ -344,7 +344,7 @@ int td0_save(const td0_image_t *img, const char *filename)
     td0_header_t header = img->header;
     header.crc = td0_crc16((uint8_t*)&header, 10);
     
-    if (fwrite(&header, sizeof(header), 1, fp) != 1) { /* I/O error */ }
+    if (fwrite(&header, sizeof(header), 1, fp) != 1) { fclose(fp); return -1; }
     /* Write comment if present */
     if (img->comment && strlen(img->comment) > 0) {
         time_t now = time(NULL);
@@ -360,8 +360,8 @@ int td0_save(const td0_image_t *img, const char *filename)
         comment.second = tm->tm_sec;
         comment.crc = td0_crc16((uint8_t*)img->comment, comment.length);
         
-        if (fwrite(&comment, sizeof(comment), 1, fp) != 1) { /* I/O error */ }
-        if (fwrite(img->comment, 1, comment.length, fp) != comment.length) { /* I/O error */ }
+        if (fwrite(&comment, sizeof(comment), 1, fp) != 1) { fclose(fp); return -1; }
+        if (fwrite(img->comment, 1, comment.length, fp) != comment.length) { fclose(fp); return -1; }
     }
     
     /* Write tracks */
@@ -378,7 +378,7 @@ int td0_save(const td0_image_t *img, const char *filename)
             track.head = h;
             track.crc = td0_crc16((uint8_t*)&track, 3);
             
-            if (fwrite(&track, sizeof(track), 1, fp) != 1) { /* I/O error */ }
+            if (fwrite(&track, sizeof(track), 1, fp) != 1) { fclose(fp); return -1; }
             /* Sectors */
             for (int s = 0; s < img->tracks[track_idx].sector_count; s++) {
                 td0_sector_t sector;
@@ -389,7 +389,7 @@ int td0_save(const td0_image_t *img, const char *filename)
                 sector.flags = img->tracks[track_idx].sectors[s].flags;
                 sector.crc = td0_crc16((uint8_t*)&sector, 5);
                 
-                if (fwrite(&sector, sizeof(sector), 1, fp) != 1) { /* I/O error */ }
+                if (fwrite(&sector, sizeof(sector), 1, fp) != 1) { fclose(fp); return -1; }
                 /* Sector data */
                 write_sector_data(fp, 
                     img->tracks[track_idx].sectors[s].data,
@@ -401,7 +401,7 @@ int td0_save(const td0_image_t *img, const char *filename)
     
     /* End marker */
     uint8_t end = 0xFF;
-    if (fwrite(&end, 1, 1, fp) != 1) { /* I/O error */ }
+    if (fwrite(&end, 1, 1, fp) != 1) { fclose(fp); return -1; }
     if (ferror(fp)) {
         fclose(fp);
         return UFT_ERR_IO;

@@ -100,14 +100,14 @@ int ADF_libWrite_DiskFile(LIBFLUX_IMGLDR* imgldr_ctx,LIBFLUX_FLOPPY * floppy,cha
 							sectorsize = sc->sectorsize;
 							if(sectorsize == 512)
 							{
-								if (fwrite(sc->input_data,sectorsize,1,rawfile) != 1) { /* I/O error */ }
+								if (fwrite(sc->input_data,sectorsize,1,rawfile) != 1) { libflux_deinitSectorAccess(ss); libflux_fclose(rawfile); return LIBFLUX_ACCESSERROR; }
 							}
 							else
 							{
 								memset(blankblock,0x00,sizeof(blankblock));
 								for(k=0;k<32;k++)
 									strncat((char*)blankblock, ">MISSING BLOCK<!", 16);
-								if (fwrite(blankblock,sizeof(blankblock),1,rawfile) != 1) { /* I/O error */ }
+								if (fwrite(blankblock,sizeof(blankblock),1,rawfile) != 1) { libflux_deinitSectorAccess(ss); libflux_fclose(rawfile); return LIBFLUX_ACCESSERROR; }
 							}
 
 							libflux_freeSectorConfig( ss, sc );
@@ -120,7 +120,7 @@ int ADF_libWrite_DiskFile(LIBFLUX_IMGLDR* imgldr_ctx,LIBFLUX_FLOPPY * floppy,cha
 							memset(blankblock,0x00,sizeof(blankblock));
 							for(k=0;k<31;k++)
 								strncat((char*)blankblock, ">MISSING BLOCK<!", 16);
-							if (fwrite(blankblock,sizeof(blankblock),1,rawfile) != 1) { /* I/O error */ }
+							if (fwrite(blankblock,sizeof(blankblock),1,rawfile) != 1) { libflux_deinitSectorAccess(ss); libflux_fclose(rawfile); return LIBFLUX_ACCESSERROR; }
 						}
 					}
 				}

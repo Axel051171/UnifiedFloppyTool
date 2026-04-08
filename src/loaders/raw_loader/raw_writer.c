@@ -137,7 +137,7 @@ int RAW_libWrite_DiskFile(LIBFLUX_IMGLDR* imgldr_ctx,LIBFLUX_FLOPPY * floppy,cha
 							}
 
 							if(sca[k]->input_data)
-								if (fwrite(sca[k]->input_data,sca[k]->sectorsize,1,outfile) != 1) { /* I/O error */ }
+								if (fwrite(sca[k]->input_data,sca[k]->sectorsize,1,outfile) != 1) { goto error; }
 							log_str = libflux_dyn_sprintfcat(log_str,"%d ",sca[k]->sector);
 
 							break;

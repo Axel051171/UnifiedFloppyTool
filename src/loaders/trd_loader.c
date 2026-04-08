@@ -136,7 +136,7 @@ int trd_load(const char *filename, trd_image_t *img)
         return -1;
     }
     
-    if (fread(img->data, 1, size, fp) != size) { /* I/O error */ }
+    if (fread(img->data, 1, size, fp) != size) { free(img->data); img->data = NULL; fclose(fp); return -1; }
     if (ferror(fp)) {
         fclose(fp);
         return UFT_ERR_IO;

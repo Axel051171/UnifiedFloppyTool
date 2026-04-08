@@ -16,6 +16,11 @@
 #include <QInputDialog>
 #include <QMessageBox>
 #include <QDir>
+#include <cstring>
+
+extern "C" {
+#include "uft/c64/uft_cbm_disk.h"
+}
 
 /* ============================================================================
  * Hex View Widget
@@ -567,23 +572,73 @@ void UftFileBrowserPanel::loadDirectory(const QString &imagePath)
 {
     m_currentImage = imagePath;
     m_fileTable->setRowCount(0);
-    
-    /* TODO: Call UFT core to list files */
-    
-    /* Simulate some files */
-    QStringList names = {"LOADER", "GAME.PRG", "SPRITES.DAT", "MUSIC.SID"};
-    for (int i = 0; i < names.size(); i++) {
-        m_fileTable->insertRow(i);
-        m_fileTable->setItem(i, 0, new QTableWidgetItem(names[i]));
-        m_fileTable->setItem(i, 1, new QTableWidgetItem("PRG"));
-        m_fileTable->setItem(i, 2, new QTableWidgetItem(QString::number(1024 * (i + 1))));
-        m_fileTable->setItem(i, 3, new QTableWidgetItem(QString::number(4 * (i + 1))));
-        m_fileTable->setItem(i, 4, new QTableWidgetItem("17"));
-        m_fileTable->setItem(i, 5, new QTableWidgetItem(QString::number(i)));
-        m_fileTable->setItem(i, 6, new QTableWidgetItem(""));
+    m_files.clear();
+
+    /* Attempt to load as CBM disk image via UFT core */
+    uft_cbm_disk_t disk;
+    memset(&disk, 0, sizeof(disk));
+
+    if (uft_cbm_disk_load_file(imagePath.toUtf8().constData(), &disk) == 0) {
+        /* Read the directory */
+        if (uft_cbm_read_directory(&disk) == 0 && disk.directory && disk.dir_count > 0) {
+            int row = 0;
+            for (size_t i = 0; i < disk.dir_count; i++) {
+                const uft_cbm_dir_entry_t *e = &disk.directory[i];
+
+                /* Skip deleted entries unless they have a filename */
+                if (e->type == UFT_CBM_FILE_DEL && e->filename[0] == '\0')
+                    continue;
+
+                m_fileTable->insertRow(row);
+                m_fileTable->setItem(row, 0,
+                    new QTableWidgetItem(QString::fromLatin1(e->filename)));
+                m_fileTable->setItem(row, 1,
+                    new QTableWidgetItem(QString::fromUtf8(
+                        uft_cbm_file_type_name(e->type))));
+                m_fileTable->setItem(row, 2,
+                    new QTableWidgetItem(e->size_bytes > 0 ?
+                        QString::number(e->size_bytes) : QString("-")));
+                m_fileTable->setItem(row, 3,
+                    new QTableWidgetItem(QString::number(e->blocks)));
+                m_fileTable->setItem(row, 4,
+                    new QTableWidgetItem(QString::number(e->start_track)));
+                m_fileTable->setItem(row, 5,
+                    new QTableWidgetItem(QString::number(e->start_sector)));
+
+                /* Build flags string */
+                QString flags;
+                if (e->flags & 0x40) flags += "L";  /* Locked */
+                if (e->type == UFT_CBM_FILE_DEL) flags += "*DEL*";
+                if (e->is_geos) flags += "GEOS";
+                m_fileTable->setItem(row, 6, new QTableWidgetItem(flags));
+
+                row++;
+            }
+
+            m_fileCountLabel->setText(QString("%1 files").arg(row));
+
+            /* Update disk info from BAM */
+            m_diskNameLabel->setText(QString::fromLatin1(disk.bam.disk_name));
+            m_diskIdLabel->setText(QString::fromLatin1(disk.bam.disk_id));
+            m_filesystemLabel->setText("CBM DOS");
+            m_totalBlocksLabel->setText(QString::number(disk.bam.blocks_total));
+            m_freeBlocksLabel->setText(QString::number(disk.bam.blocks_free));
+            m_usedBlocksLabel->setText(QString::number(disk.bam.blocks_used));
+
+            int usage = disk.bam.blocks_total > 0 ?
+                (disk.bam.blocks_used * 100) / disk.bam.blocks_total : 0;
+            m_usageBar->setValue(usage);
+
+            uft_cbm_disk_free(&disk);
+            return;
+        }
+
+        uft_cbm_disk_free(&disk);
     }
-    
-    m_fileCountLabel->setText(QString("%1 files").arg(names.size()));
+
+    /* Fallback: display basic file info from raw image */
+    m_fileCountLabel->setText("0 files");
+    m_statusLabel->setText(tr("Could not read directory from image"));
     updateDiskInfo();
 }
 
@@ -596,13 +651,36 @@ void UftFileBrowserPanel::clear()
 
 void UftFileBrowserPanel::updateDiskInfo()
 {
-    m_diskNameLabel->setText("MY DISK");
-    m_diskIdLabel->setText("AB");
-    m_filesystemLabel->setText("CBM DOS");
-    m_totalBlocksLabel->setText("664");
-    m_freeBlocksLabel->setText("600");
-    m_usedBlocksLabel->setText("64");
-    m_usageBar->setValue(10);
+    /* Attempt to load disk info from the current image */
+    if (!m_currentImage.isEmpty()) {
+        uft_cbm_disk_t disk;
+        memset(&disk, 0, sizeof(disk));
+        if (uft_cbm_disk_load_file(m_currentImage.toUtf8().constData(), &disk) == 0) {
+            if (uft_cbm_read_directory(&disk) == 0) {
+                m_diskNameLabel->setText(QString::fromLatin1(disk.bam.disk_name));
+                m_diskIdLabel->setText(QString::fromLatin1(disk.bam.disk_id));
+                m_filesystemLabel->setText("CBM DOS");
+                m_totalBlocksLabel->setText(QString::number(disk.bam.blocks_total));
+                m_freeBlocksLabel->setText(QString::number(disk.bam.blocks_free));
+                m_usedBlocksLabel->setText(QString::number(disk.bam.blocks_used));
+                int usage = disk.bam.blocks_total > 0 ?
+                    (disk.bam.blocks_used * 100) / disk.bam.blocks_total : 0;
+                m_usageBar->setValue(usage);
+                uft_cbm_disk_free(&disk);
+                return;
+            }
+            uft_cbm_disk_free(&disk);
+        }
+    }
+
+    /* Fallback: show unknown disk info */
+    m_diskNameLabel->setText("-");
+    m_diskIdLabel->setText("-");
+    m_filesystemLabel->setText("Unknown");
+    m_totalBlocksLabel->setText("-");
+    m_freeBlocksLabel->setText("-");
+    m_usedBlocksLabel->setText("-");
+    m_usageBar->setValue(0);
 }
 
 void UftFileBrowserPanel::onExtractSelected()

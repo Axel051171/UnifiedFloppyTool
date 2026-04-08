@@ -910,7 +910,7 @@ int uft_extract_file(const char *image_path, const char *filename,
         FILE *out = fopen(output_path, "wb");
     if (!out) { return UFT_ERR_FILE_OPEN; }
         if (out) {
-            if (fwrite(data, 1, data_size, out) != data_size) { /* I/O error */ }
+            if (fwrite(data, 1, data_size, out) != data_size) { fclose(out); free(data); return -1; }
             fclose(out);
         } else {
             result = -1;
@@ -942,7 +942,7 @@ int uft_inject_file(const char *image_path, const char *filename,
         return -1;
     }
     
-    if (fread(data, 1, data_size, in) != data_size) { /* I/O error */ }
+    if (fread(data, 1, data_size, in) != data_size) { free(data); fclose(in); return -1; }
     fclose(in);
     
     /* Read disk image */
@@ -962,7 +962,7 @@ int uft_inject_file(const char *image_path, const char *filename,
         return -1;
     }
     
-    if (fread(image, 1, img_size, fp) != img_size) { /* I/O error */ }
+    if (fread(image, 1, img_size, fp) != img_size) { free(image); free(data); fclose(fp); return -1; }
     int result = -1;
     
     const char *ext = strrchr(image_path, '.');
@@ -975,7 +975,7 @@ int uft_inject_file(const char *image_path, const char *filename,
     
     if (result == 0) {
         if (fseek(fp, 0, SEEK_SET) != 0) { result = -2; }
-        if (fwrite(image, 1, img_size, fp) != img_size) { /* I/O error */ }
+        if (fwrite(image, 1, img_size, fp) != img_size) { free(image); free(data); fclose(fp); return -1; }
     }
     
     free(image);

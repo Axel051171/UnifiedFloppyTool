@@ -79,9 +79,9 @@ void write_record_header(unsigned char * r_sign,unsigned char * data, unsigned l
 	ipfh.crc = std_crc32(ipfh.crc, data, size);
 
 	ipfh.crc = BIGENDIAN_DWORD( ipfh.crc );
-	if (fwrite(&ipfh,sizeof(ipf_header),1,f) != 1) { /* I/O error */ }
+	if (fwrite(&ipfh,sizeof(ipf_header),1,f) != 1) { return; }
 	if(data)
-		if (fwrite(data,size,1,f) != 1) { /* I/O error */ }
+		if (fwrite(data,size,1,f) != 1) { return; }
 }
 
 // Main writer function

@@ -288,20 +288,20 @@ int woz_save(const woz_image_t *img, const char *filename)
         .signature = img->is_woz2 ? WOZ2_SIGNATURE : WOZ1_SIGNATURE,
         .magic = WOZ_MAGIC
     };
-    if (fwrite(&header, sizeof(header), 1, fp) != 1) { /* I/O error */ }
+    if (fwrite(&header, sizeof(header), 1, fp) != 1) { fclose(fp); return -1; }
     /* Placeholder for CRC */
     uint32_t crc_placeholder = 0;
     long crc_pos = ftell(fp);
-    if (fwrite(&crc_placeholder, 4, 1, fp) != 1) { /* I/O error */ }
+    if (fwrite(&crc_placeholder, 4, 1, fp) != 1) { fclose(fp); return -1; }
     /* INFO chunk */
     woz_chunk_header_t chunk = { CHUNK_INFO, 60 };
-    if (fwrite(&chunk, sizeof(chunk), 1, fp) != 1) { /* I/O error */ }
-    if (fwrite(&img->info, 60, 1, fp) != 1) { /* I/O error */ }
+    if (fwrite(&chunk, sizeof(chunk), 1, fp) != 1) { fclose(fp); return -1; }
+    if (fwrite(&img->info, 60, 1, fp) != 1) { fclose(fp); return -1; }
     /* TMAP chunk */
     chunk.chunk_id = CHUNK_TMAP;
     chunk.chunk_size = 160;
-    if (fwrite(&chunk, sizeof(chunk), 1, fp) != 1) { /* I/O error */ }
-    if (fwrite(img->tmap, 160, 1, fp) != 1) { /* I/O error */ }
+    if (fwrite(&chunk, sizeof(chunk), 1, fp) != 1) { fclose(fp); return -1; }
+    if (fwrite(img->tmap, 160, 1, fp) != 1) { fclose(fp); return -1; }
     /* TRKS chunk */
     chunk.chunk_id = CHUNK_TRKS;
     
@@ -314,7 +314,7 @@ int woz_save(const woz_image_t *img, const char *filename)
             }
         }
         chunk.chunk_size = 160 * 8 + total_bits / 8;
-        if (fwrite(&chunk, sizeof(chunk), 1, fp) != 1) { /* I/O error */ }
+        if (fwrite(&chunk, sizeof(chunk), 1, fp) != 1) { fclose(fp); return -1; }
         /* TRK entries */
         uint16_t block = 3;  /* First data block */
         for (int t = 0; t < 160; t++) {
@@ -326,14 +326,14 @@ int woz_save(const woz_image_t *img, const char *filename)
                 entry.bit_count = img->tracks[real_track].bit_count;
                 block += entry.block_count;
             }
-            if (fwrite(&entry, sizeof(entry), 1, fp) != 1) { /* I/O error */ }
+            if (fwrite(&entry, sizeof(entry), 1, fp) != 1) { fclose(fp); return -1; }
         }
         
         /* Track data (512-byte aligned) */
         for (int t = 0; t < 40; t++) {
             if (img->tracks[t].data) {
                 size_t aligned = ((img->tracks[t].byte_count + 511) / 512) * 512;
-                if (fwrite(img->tracks[t].data, 1, img->tracks[t].byte_count, fp) != img->tracks[t].byte_count) { /* I/O error */ }
+                if (fwrite(img->tracks[t].data, 1, img->tracks[t].byte_count, fp) != img->tracks[t].byte_count) { fclose(fp); return -1; }
                 /* Padding */
                 uint8_t pad[512] = {0};
                 size_t padding = aligned - img->tracks[t].byte_count;
@@ -343,18 +343,18 @@ int woz_save(const woz_image_t *img, const char *filename)
     } else {
         /* WOZ1: simpler format */
         chunk.chunk_size = 40 * (2 + 2 + 6646);
-        if (fwrite(&chunk, sizeof(chunk), 1, fp) != 1) { /* I/O error */ }
+        if (fwrite(&chunk, sizeof(chunk), 1, fp) != 1) { fclose(fp); return -1; }
         for (int t = 0; t < 40; t++) {
             uint16_t bytes_used = img->tracks[t].byte_count;
             uint16_t bit_count_lo = img->tracks[t].bit_count & 0xFFFF;
-            if (fwrite(&bytes_used, 2, 1, fp) != 1) { /* I/O error */ }
-            if (fwrite(&bit_count_lo, 2, 1, fp) != 1) { /* I/O error */ }
+            if (fwrite(&bytes_used, 2, 1, fp) != 1) { fclose(fp); return -1; }
+            if (fwrite(&bit_count_lo, 2, 1, fp) != 1) { fclose(fp); return -1; }
             uint8_t track_data[6646] = {0};
             if (img->tracks[t].data) {
                 memcpy(track_data, img->tracks[t].data, 
                        bytes_used < 6646 ? bytes_used : 6646);
             }
-            if (fwrite(track_data, 1, 6646, fp) != 6646) { /* I/O error */ }
+            if (fwrite(track_data, 1, 6646, fp) != 6646) { fclose(fp); return -1; }
         }
     }
     
@@ -363,12 +363,12 @@ int woz_save(const woz_image_t *img, const char *filename)
     size_t file_size = ftell(fp);
     if (fseek(fp, 12, SEEK_SET) != 0) { fclose(fp); return UFT_ERR_IO; }
     uint8_t *buffer = malloc(file_size - 12);
-    if (fread(buffer, 1, file_size - 12, fp) != file_size - 12) { /* I/O error */ }
+    if (fread(buffer, 1, file_size - 12, fp) != file_size - 12) { free(buffer); fclose(fp); return -1; }
     uint32_t crc = woz_crc32(buffer, file_size - 12);
     free(buffer);
 
     if (fseek(fp, crc_pos, SEEK_SET) != 0) { fclose(fp); return UFT_ERR_IO; }
-    if (fwrite(&crc, 4, 1, fp) != 1) { /* I/O error */ }
+    if (fwrite(&crc, 4, 1, fp) != 1) { fclose(fp); return -1; }
     if (ferror(fp)) {
         fclose(fp);
         return UFT_ERR_IO;

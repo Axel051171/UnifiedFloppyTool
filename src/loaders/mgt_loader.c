@@ -116,7 +116,7 @@ int mgt_load(const char *filename, mgt_image_t *img)
     }
     
     size_t read_size = (size < img->size) ? size : img->size;
-    if (fread(img->data, 1, read_size, fp) != read_size) { /* I/O error */ }
+    if (fread(img->data, 1, read_size, fp) != read_size) { mgt_free(img); fclose(fp); return -1; }
     if (ferror(fp)) {
         fclose(fp);
         return UFT_ERR_IO;
@@ -314,7 +314,7 @@ int mgt_from_raw(const char *raw_file, const char *mgt_file)
     mgt_image_t img;
     mgt_create(&img);
     
-    if (fread(img.data, 1, img.size, fp) != img.size) { /* I/O error */ }
+    if (fread(img.data, 1, img.size, fp) != img.size) { mgt_free(&img); fclose(fp); return -1; }
     fclose(fp);
     
     int result = mgt_save(&img, mgt_file);

@@ -113,7 +113,7 @@ uint32_t write_scp_track(LIBFLUX_IMGLDR* imgldr_ctx,FILE *f,LIBFLUX_SIDE * track
 
 	fpos = ftell(f);
 
-	if (fwrite(trkh,scp_trkh_size,1,f) != 1) { /* I/O error */ }
+	if (fwrite(trkh,scp_trkh_size,1,f) != 1) { deinitStreamConvert(strconv); free(trkh); return 0; }
 	memset(trackbuffer,0,sizeof(trackbuffer));
 
 	offset = scp_trkh_size;
@@ -154,7 +154,7 @@ uint32_t write_scp_track(LIBFLUX_IMGLDR* imgldr_ctx,FILE *f,LIBFLUX_SIDE * track
 
 			if(!(i&0xFF))
 			{
-				if (fwrite(trackbuffer,sizeof(trackbuffer),1,f) != 1) { /* I/O error */ }
+				if (fwrite(trackbuffer,sizeof(trackbuffer),1,f) != 1) { deinitStreamConvert(strconv); free(trkh); return 0; }
 				checksum = update_checksum(checksum,(unsigned char*)trackbuffer,sizeof(trackbuffer));
 				size = size + sizeof(trackbuffer);
 			}
@@ -162,7 +162,7 @@ uint32_t write_scp_track(LIBFLUX_IMGLDR* imgldr_ctx,FILE *f,LIBFLUX_SIDE * track
 
 		if(i)
 		{
-			if (fwrite(trackbuffer,i*sizeof(unsigned short),1,f) != 1) { /* I/O error */ }
+			if (fwrite(trackbuffer,i*sizeof(unsigned short),1,f) != 1) { deinitStreamConvert(strconv); free(trkh); return 0; }
 			checksum = update_checksum(checksum,(unsigned char*)trackbuffer,i*sizeof(unsigned short));
 			size = size + ( i * sizeof(unsigned short) );
 		}
@@ -186,7 +186,7 @@ uint32_t write_scp_track(LIBFLUX_IMGLDR* imgldr_ctx,FILE *f,LIBFLUX_SIDE * track
 
 	memset(timestamp,0,sizeof(timestamp));
 	snprintf(timestamp, sizeof(timestamp),"%d/%d/%d %d:%d:%d",curtime->tm_mon+1,curtime->tm_mday,(curtime->tm_year+1900),curtime->tm_hour,curtime->tm_min,curtime->tm_sec);
-	if (fwrite(timestamp,strlen(timestamp),1,f) != 1) { /* I/O error */ }
+	if (fwrite(timestamp,strlen(timestamp),1,f) != 1) { deinitStreamConvert(strconv); free(trkh); return 0; }
 	file_checksum = update_checksum(file_checksum,(unsigned char*)&timestamp,strlen(timestamp));
 
 	// track_data_checksum
@@ -199,7 +199,7 @@ uint32_t write_scp_track(LIBFLUX_IMGLDR* imgldr_ctx,FILE *f,LIBFLUX_SIDE * track
 		free(trkh);
 		return 0;
 	}
-	if (fwrite(trkh,scp_trkh_size,1,f) != 1) { /* I/O error */ }
+	if (fwrite(trkh,scp_trkh_size,1,f) != 1) { deinitStreamConvert(strconv); free(trkh); return 0; }
 	if (fseek(f,0,SEEK_END) != 0) {
 		deinitStreamConvert(strconv);
 		free(trkh);
@@ -346,13 +346,13 @@ int SCP_libWrite_DiskFile(LIBFLUX_IMGLDR* imgldr_ctx,LIBFLUX_FLOPPY * floppy,cha
 		imgldr_ctx->ctx->libflux_printf(MSG_DEBUG,"SCP_libWrite_DiskFile : Flags=0x%.2X Disktype=0x%.2X NumberOfRevolution=%d Version=%d NbTrack=%d NbSide:%d",scph.flags,scph.disk_type,scph.number_of_revolution,scph.version,floppy->floppyNumberOfTrack,floppy->floppyNumberOfSide);
 
 		// Header
-		if (fwrite(&scph,sizeof(scp_header),1,f) != 1) { /* I/O error */ }
+		if (fwrite(&scph,sizeof(scp_header),1,f) != 1) { libflux_fclose(f); return LIBFLUX_ACCESSERROR; }
 		file_checksum = 0;
 
 		// Track list
 		tracklist_offset = sizeof(scp_header);
 		memset(tracksoffset,0,sizeof(tracksoffset));
-		if (fwrite(&tracksoffset,sizeof(tracksoffset),1,f) != 1) { /* I/O error */ }
+		if (fwrite(&tracksoffset,sizeof(tracksoffset),1,f) != 1) { libflux_fclose(f); return LIBFLUX_ACCESSERROR; }
 		file_checksum = update_checksum(file_checksum,(unsigned char*)&tracksoffset,sizeof(tracksoffset));
 
 		for(i=0;i<tracknumber;i++)
@@ -381,7 +381,7 @@ int SCP_libWrite_DiskFile(LIBFLUX_IMGLDR* imgldr_ctx,LIBFLUX_FLOPPY * floppy,cha
 			libflux_fclose(f);
 			return LIBFLUX_ACCESSERROR;
 		}
-		if (fwrite(&tracksoffset,sizeof(tracksoffset),1,f) != 1) { /* I/O error */ }
+		if (fwrite(&tracksoffset,sizeof(tracksoffset),1,f) != 1) { libflux_fclose(f); return LIBFLUX_ACCESSERROR; }
 		file_checksum = update_checksum(file_checksum,(unsigned char*)&tracksoffset,sizeof(tracksoffset));
 
 		if (fseek(f,0,SEEK_SET) != 0) {
@@ -389,7 +389,7 @@ int SCP_libWrite_DiskFile(LIBFLUX_IMGLDR* imgldr_ctx,LIBFLUX_FLOPPY * floppy,cha
 			return LIBFLUX_ACCESSERROR;
 		}
 		scph.file_data_checksum = LITTLEENDIAN_DWORD(file_checksum);
-		if (fwrite(&scph,sizeof(scp_header),1,f) != 1) { /* I/O error */ }
+		if (fwrite(&scph,sizeof(scp_header),1,f) != 1) { libflux_fclose(f); return LIBFLUX_ACCESSERROR; }
 		libflux_fclose(f);
 
 		return LIBFLUX_NOERROR;

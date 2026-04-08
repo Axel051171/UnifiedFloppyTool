@@ -158,7 +158,7 @@ int Apple2_do_libWrite_DiskFile(LIBFLUX_IMGLDR* imgldr_ctx,LIBFLUX_FLOPPY * flop
 							}while(k<nbsector);
 						}
 
-						if (fwrite(track_buffer,total_track_size,1,outfile) != 1) { /* I/O error */ }
+						if (fwrite(track_buffer,total_track_size,1,outfile) != 1) { free(track_buffer); goto error; }
 						free(track_buffer);
 					}
 				}

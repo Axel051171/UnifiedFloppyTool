@@ -220,12 +220,12 @@ int d71_from_d64_pair(const char *d64_side0, const char *d64_side1,
     d71_create(&img, false);
     
     /* Read side 0 */
-    if (fread(img.data, 1, D64_SIDE_SIZE, fp0) != D64_SIDE_SIZE) { /* I/O error */ }
+    if (fread(img.data, 1, D64_SIDE_SIZE, fp0) != D64_SIDE_SIZE) { fclose(fp0); if (fp1) fclose(fp1); free(img.data); return -1; }
     fclose(fp0);
     
     /* Read side 1 if provided */
     if (fp1) {
-        if (fread(img.data + D64_SIDE_SIZE, 1, D64_SIDE_SIZE, fp1) != D64_SIDE_SIZE) { /* I/O error */ }
+        if (fread(img.data + D64_SIDE_SIZE, 1, D64_SIDE_SIZE, fp1) != D64_SIDE_SIZE) { fclose(fp1); free(img.data); return -1; }
         fclose(fp1);
     }
     
