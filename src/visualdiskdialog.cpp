@@ -496,7 +496,7 @@ void VisualDiskDialog::loadDiskImage(const QString& path)
     uft_geometry_t geom;
     uft_disk_get_geometry(disk, &geom);
 
-    int tracks = geom.tracks > 0 ? geom.tracks : 80;
+    int tracks = geom.cylinders > 0 ? geom.cylinders : 80;
     int sides = geom.heads > 0 ? geom.heads : 2;
     int spt = geom.sectors > 0 ? geom.sectors : 18;
     int sectorSize = geom.sector_size > 0 ? geom.sector_size : 512;
