@@ -51,7 +51,7 @@ void uft_recovery_config_default(uft_recovery_config_t* config) {
 
 void uft_recovery_config_paranoid(uft_recovery_config_t* config) {
     uft_recovery_config_default(config);
-    
+
     config->max_retries = 20;
     config->min_confidence = 0.99;
     config->min_revolutions = 5;
@@ -59,6 +59,7 @@ void uft_recovery_config_paranoid(uft_recovery_config_t* config) {
     config->revs_after_success = 5;
     config->preserve_all_passes = true;
     config->preserve_flux_timing = true;
+    config->preserve_weak_bits = true;  /* Paranoid mode must keep weak bits */
     config->create_audit_log = true;
     config->aggressive_mode = false;
 }

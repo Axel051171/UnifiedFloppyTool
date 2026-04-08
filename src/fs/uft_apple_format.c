@@ -344,15 +344,14 @@ int uft_apple_convert_order(const uint8_t *src, uint8_t *dst, size_t size,
         return 0;
     }
     
-    /* DOS <-> ProDOS sector interleave conversion */
+    /* Canonical DOS 3.3 to ProDOS sector map — matches CiderPress/AppleWin */
     static const uint8_t dos_to_prodos[16] = {
-        0x0, 0xE, 0xD, 0xC, 0xB, 0xA, 0x9, 0x8,
-        0x7, 0x6, 0x5, 0x4, 0x3, 0x2, 0x1, 0xF
+        0, 13, 11, 9, 7, 5, 3, 1, 14, 12, 10, 8, 6, 4, 2, 15
     };
-    
+
+    /* Canonical ProDOS to DOS 3.3 sector map — inverse of above */
     static const uint8_t prodos_to_dos[16] = {
-        0x0, 0xE, 0xD, 0xC, 0xB, 0xA, 0x9, 0x8,
-        0x7, 0x6, 0x5, 0x4, 0x3, 0x2, 0x1, 0xF
+        0, 7, 14, 6, 13, 5, 12, 4, 11, 3, 10, 2, 9, 1, 8, 15
     };
     
     const uint8_t *map;

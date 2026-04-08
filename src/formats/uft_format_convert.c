@@ -118,14 +118,14 @@ static const uft_conversion_path_t g_conversion_paths[] = {
         .source = UFT_FORMAT_SCP, .target = UFT_FORMAT_ADF,
         .quality = UFT_CONV_LOSSY,
         .requires_decode = true,
-        .warning = "Timing information will be lost",
+        .warning = "Timing and weak bit/copy protection information will be lost",
         .description = "Decode SCP flux to ADF sectors"
     },
     {
         .source = UFT_FORMAT_SCP, .target = UFT_FORMAT_IMG,
         .quality = UFT_CONV_LOSSY,
         .requires_decode = true,
-        .warning = "Timing information will be lost",
+        .warning = "Timing and weak bit/copy protection information will be lost",
         .description = "Decode SCP flux to raw IMG"
     },
     {
@@ -139,7 +139,7 @@ static const uft_conversion_path_t g_conversion_paths[] = {
         .source = UFT_FORMAT_KRYOFLUX, .target = UFT_FORMAT_ADF,
         .quality = UFT_CONV_LOSSY,
         .requires_decode = true,
-        .warning = "Timing information will be lost",
+        .warning = "Timing and weak bit/copy protection information will be lost",
         .description = "Decode Kryoflux to ADF"
     },
 
@@ -176,6 +176,7 @@ static const uft_conversion_path_t g_conversion_paths[] = {
         .source = UFT_FORMAT_HFE, .target = UFT_FORMAT_ADF,
         .quality = UFT_CONV_LOSSY,
         .requires_decode = true,
+        .warning = "Bitstream encoding and weak bit/copy protection information will be lost",
         .description = "Decode HFE to ADF"
     },
     {
@@ -189,6 +190,7 @@ static const uft_conversion_path_t g_conversion_paths[] = {
         .source = UFT_FORMAT_NIB, .target = UFT_FORMAT_DSK,
         .quality = UFT_CONV_LOSSY,
         .requires_decode = true,
+        .warning = "Nibble encoding and copy protection features will be lost",
         .description = "Decode NIB nibbles to DSK sectors"
     },
 
@@ -329,6 +331,7 @@ static const uft_conversion_path_t g_conversion_paths[] = {
         .source = UFT_FORMAT_STX, .target = UFT_FORMAT_IMG,
         .quality = UFT_CONV_LOSSY,
         .requires_decode = true,
+        .warning = "Atari ST protection features and timing will be lost",
         .description = "STX to raw IMG"
     },
 
@@ -344,6 +347,7 @@ static const uft_conversion_path_t g_conversion_paths[] = {
         .source = UFT_FORMAT_STX, .target = UFT_FORMAT_SCP,
         .quality = UFT_CONV_LOSSY,
         .requires_decode = true,
+        .warning = "Some STX protection timing may not convert perfectly",
         .description = "STX to SCP flux"
     },
 

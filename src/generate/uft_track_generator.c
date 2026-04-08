@@ -293,8 +293,11 @@ int uft_gen_amiga_track(const uft_gen_params_t *params, uft_track_buffer_t *buf)
         amiga_encode_odd_even(label, enc_label, 16);
         buf_append_data(buf, enc_label, 32);
         
-        /* Header checksum */
-        uint32_t hdr_check = amiga_checksum(enc_header, 40);
+        /* Header checksum — covers enc_header (8 bytes) + enc_label (32 bytes) = 40 bytes */
+        uint8_t enc_combined[40];
+        memcpy(enc_combined, enc_header, 8);
+        memcpy(enc_combined + 8, enc_label, 32);
+        uint32_t hdr_check = amiga_checksum(enc_combined, 40);
         uint8_t hdr_check_bytes[4] = {
             (hdr_check >> 24) & 0xFF,
             (hdr_check >> 16) & 0xFF,

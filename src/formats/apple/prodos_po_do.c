@@ -21,8 +21,8 @@ typedef struct {
 
 static void log_msg(FloppyDevice *d, const char *m){ if(d && d->log_callback) d->log_callback(m); }
 
-/* Apple II DOS vs ProDOS sector order mapping */
-static const uint8_t dos_to_prodos[16]  = {0,7,14,5,12,3,10,1,8,15,6,13,4,11,2,9};
+/* Canonical DOS 3.3 to ProDOS sector map — matches CiderPress/AppleWin */
+static const uint8_t dos_to_prodos[16]  = {0,13,11,9,7,5,3,1,14,12,10,8,6,4,2,15};
 static uint8_t prodos_to_dos[16];
 
 static void init_reverse_map(void){

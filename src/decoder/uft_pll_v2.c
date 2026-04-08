@@ -159,6 +159,22 @@ void uft_pll_init(uft_pll_state_t* pll, uft_encoding_t encoding) {
     pll->scalar_ops = 0;
 }
 
+/* NOTE: PLL uses fixed bit_cell_ns per session. For zone-based encoding (C64 GCR),
+ * callers MUST create a new PLL or call uft_pll_set_bitcell() per track.
+ * The format hints system (uft_format_hints.c) handles this at track level. */
+
+/**
+ * @brief Set bit cell period for zone-based encoding changes
+ *
+ * For formats like C64 GCR where the bit cell varies by track zone,
+ * call this before processing each track to update the expected timing.
+ */
+void uft_pll_set_bitcell(uft_pll_state_t* pll, double bit_cell_ns) {
+    if (!pll || bit_cell_ns < 1.0) return;
+    pll->bit_cell_ns = bit_cell_ns;
+    pll->clock_ns = bit_cell_ns;
+}
+
 /*============================================================================
  * SIMD-OPTIMIZED BIT EXTRACTION
  *============================================================================*/
@@ -177,7 +193,7 @@ static int extract_bits_avx2(const double* flux_ns, size_t count,
     if (count < 8) return 0;
     
     __m256d v_cell = _mm256_set1_pd(bit_cell);
-    __m256d v_half = _mm256_set1_pd(bit_cell * 0.5);
+    __m256d v_half = _mm256_set1_pd(0.5);  /* for round-half-up: truncate(ratio + 0.5) */
     
     int bit_pos = 0;
     size_t i = 0;
@@ -188,16 +204,17 @@ static int extract_bits_avx2(const double* flux_ns, size_t count,
         __m256d v_next = _mm256_loadu_pd(&flux_ns[i + 1]);
         __m256d v_delta = _mm256_sub_pd(v_next, v_curr);
         
-        // Calculate bit count: round(delta / bit_cell)
+        // Calculate bit count: round-half-up (consistent with SSE2/scalar)
         __m256d v_ratio = _mm256_div_pd(v_delta, v_cell);
-        __m256d v_rounded = _mm256_round_pd(v_ratio, _MM_FROUND_TO_NEAREST_INT);
-        
+        __m256d v_biased = _mm256_add_pd(v_ratio, v_half);
+        __m128i v_trunc = _mm256_cvttpd_epi32(v_biased);
+
         // Extract results
-        double results[4];
-        _mm256_storeu_pd(results, v_rounded);
-        
+        int results[4];
+        _mm_storeu_si128((__m128i*)results, v_trunc);
+
         for (int j = 0; j < 4 && i + j < count - 1; j++) {
-            int bits = (int)results[j];
+            int bits = results[j];
             if (bits < 1) bits = 1;
             if (bits > 3) bits = 3;
             

@@ -81,12 +81,14 @@ typedef struct {
     uint8_t *error_bytes;      /**< per-sector error codes, or NULL */
 } D64Ctx;
 
-/* sectors per track table for 1541 */
+/* sectors per track table for 1541 (tracks 1-40)
+ * Tracks 36-40 use 17 sectors (same as zone 4, tracks 31-35) */
 static const uint8_t spt[41] = {
     0,
     21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,
     19,19,19,19,19,19,19,
     18,18,18,18,18,18,
+    17,17,17,17,17,
     17,17,17,17,17
 };
 

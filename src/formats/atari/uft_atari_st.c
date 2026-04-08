@@ -291,7 +291,17 @@ int st_get_info(const st_disk_t *disk, st_info_t *info)
     info->disk_name = st_disk_type_name(info->disk_type);
     
     info->has_boot_sector = (disk->boot.bps == 512);
-    info->is_bootable = (disk->data[0] == 0x60 || disk->data[0] == 0xE9);
+
+    /* Atari ST bootable: sum of all 256 big-endian uint16 words == 0x1234 */
+    if (disk->size >= 512) {
+        uint16_t sum = 0;
+        for (int i = 0; i < 512; i += 2) {
+            sum += ((uint16_t)disk->data[i] << 8) | disk->data[i + 1];
+        }
+        info->is_bootable = (sum == 0x1234);
+    } else {
+        info->is_bootable = false;
+    }
     
     return 0;
 }

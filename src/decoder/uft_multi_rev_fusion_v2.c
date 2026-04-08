@@ -155,33 +155,51 @@ void uft_fusion_reset(uft_fusion_state_t* state) {
 /**
  * @brief Calculate correlation between two bit sequences
  */
-static float calculate_correlation(const uint8_t* a, const uint8_t* b, 
+static float calculate_correlation(const uint8_t* a, const uint8_t* b,
                                    size_t len, int offset) {
-    if (offset < 0 || (size_t)offset >= len) return 0.0f;
-    
-    int matches = 0;
-    int comparisons = 0;
-    
-    size_t compare_len = len - offset;
+    /* Handle negative offsets by advancing into a instead of b */
+    const uint8_t *src_a = a;
+    const uint8_t *src_b = b;
+    size_t abs_offset;
+
+    if (offset >= 0) {
+        abs_offset = (size_t)offset;
+        src_b += abs_offset / 8;
+    } else {
+        abs_offset = (size_t)(-offset);
+        src_a += abs_offset / 8;
+    }
+
+    if (abs_offset >= len) return 0.0f;
+
+    size_t compare_len = len - abs_offset;
     if (compare_len > UFT_SYNC_WINDOW_BITS * 8) {
         compare_len = UFT_SYNC_WINDOW_BITS * 8;
     }
-    
+    if (compare_len < 64) return 0.0f;
+
+    int matches = 0;
+    int comparisons = 0;
+
+    /* Bit offset within the first byte after byte-level adjustment */
+    int bit_off = (int)(abs_offset % 8);
+
     for (size_t i = 0; i < compare_len; i++) {
         size_t byte_a = i / 8;
-        size_t byte_b = (i + offset) / 8;
-        int bit_a = 7 - (i % 8);
-        int bit_b = 7 - ((i + offset) % 8);
-        
-        if (byte_a < len / 8 && byte_b < len / 8) {
-            int val_a = (a[byte_a] >> bit_a) & 1;
-            int val_b = (b[byte_b] >> bit_b) & 1;
-            
+        size_t byte_b = (i + bit_off) / 8;
+        int bit_a = 7 - (int)(i % 8);
+        int bit_b = 7 - (int)((i + bit_off) % 8);
+
+        size_t max_bytes = (len - abs_offset) / 8;
+        if (byte_a < max_bytes && byte_b < max_bytes) {
+            int val_a = (src_a[byte_a] >> bit_a) & 1;
+            int val_b = (src_b[byte_b] >> bit_b) & 1;
+
             if (val_a == val_b) matches++;
             comparisons++;
         }
     }
-    
+
     if (comparisons == 0) return 0.0f;
     return (float)matches / (float)comparisons;
 }

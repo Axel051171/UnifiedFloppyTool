@@ -9,8 +9,8 @@
  * @date 2025-01-08
  */
 
-#ifndef UFT_APPLESAUCE_H
-#define UFT_APPLESAUCE_H
+#ifndef UFT_HAL_APPLESAUCE_H
+#define UFT_HAL_APPLESAUCE_H
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -119,4 +119,4 @@ const char* uft_as_format_name(uft_as_format_t format);
 }
 #endif
 
-#endif /* UFT_APPLESAUCE_H */
+#endif /* UFT_HAL_APPLESAUCE_H */
