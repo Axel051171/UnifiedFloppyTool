@@ -11,8 +11,8 @@
  * SPDX-License-Identifier: MIT
  */
 
-#ifndef UFT_FORMAT_REGISTRY_H
-#define UFT_FORMAT_REGISTRY_H
+#ifndef UFT_PROFILES_FORMAT_REGISTRY_H
+#define UFT_PROFILES_FORMAT_REGISTRY_H
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -453,4 +453,4 @@ static inline void uft_format_print_detection(const uft_format_detection_t* resu
 }
 #endif
 
-#endif /* UFT_FORMAT_REGISTRY_H */
+#endif /* UFT_PROFILES_FORMAT_REGISTRY_H */

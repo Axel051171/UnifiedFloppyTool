@@ -6,8 +6,8 @@
  * Include AFTER uft_error.h
  */
 
-#ifndef UFT_ERROR_COMPAT_H
-#define UFT_ERROR_COMPAT_H
+#ifndef UFT_ERROR_COMPAT_LEGACY_H
+#define UFT_ERROR_COMPAT_LEGACY_H
 
 /* 
  * This file should be included after uft_error.h
@@ -68,4 +68,4 @@
 #define UFT_ERR_NULL_PTR UFT_ERR_INVALID_ARG
 #endif
 
-#endif /* UFT_ERROR_COMPAT_H */
+#endif /* UFT_ERROR_COMPAT_LEGACY_H */

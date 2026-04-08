@@ -11,8 +11,8 @@
  * - Dock Widgets für Tools
  */
 
-#ifndef UFT_MAIN_WINDOW_H
-#define UFT_MAIN_WINDOW_H
+#ifndef UFT_MVVM_MAIN_WINDOW_H
+#define UFT_MVVM_MAIN_WINDOW_H
 
 #include <QMainWindow>
 #include <QTabWidget>
@@ -162,4 +162,4 @@ private:
     QLineEdit *m_outputPathEdit = nullptr;
 };
 
-#endif /* UFT_MAIN_WINDOW_H */
+#endif /* UFT_MVVM_MAIN_WINDOW_H */

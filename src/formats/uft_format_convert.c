@@ -25,6 +25,8 @@
 #include "uft/formats/uft_mfm.h"
 #include "uft/uft_imd.h"
 
+#include "uft/core/uft_forensic_constants.h"
+
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -897,11 +899,23 @@ static uft_error_t convert_scp_to_d64(const uint8_t* src_data, size_t src_size,
             if (sector_found[s]) {
                 d64_set_sector(d64, track, s, sector_data[s], D64_ERR_OK);
             } else {
-                /* Fill unread sector, mark error */
+                /* Fill unread sector with forensic fill byte (0x01).
+                 * Using UFT_FORENSIC_FILL_BYTE instead of 0x00 so that
+                 * filled sectors are distinguishable from legitimately
+                 * blank/zeroed data in forensic analysis. */
                 uint8_t fill[256];
-                memset(fill, 0x00, 256);
+                memset(fill, UFT_FORENSIC_FILL_BYTE, 256);
                 d64_set_sector(d64, track, s, fill, D64_ERR_DATA_NOT_FOUND);
                 result->sectors_failed++;
+
+                /* Log which sectors were forensic-filled */
+                if (result->warning_count < 8) {
+                    snprintf(result->warnings[result->warning_count++],
+                             sizeof(result->warnings[0]),
+                             "Track %d sector %d: GCR decode failed, "
+                             "filled with 0x%02X",
+                             track, s, UFT_FORENSIC_FILL_BYTE);
+                }
             }
         }
 
