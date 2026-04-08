@@ -180,6 +180,22 @@ int uft_deepread_crosstrack_analyze(const otdr_disk_t *disk,
         }
     }
 
+    /* --- Check if high-NCC damage overlaps known copy protection ranges ---
+     * CopyLock typically uses tracks 0-2; RapidLok uses tracks 36+.
+     * If "radial damage" falls in those ranges, it may actually be
+     * intentional copy protection rather than physical damage. */
+    result->may_be_protection = false;
+    for (uint16_t t = 0; t + 1 < tc; t++) {
+        float ncc = matrix[t * tc + (t + 1)];
+        if (ncc > 0.7f && track_is_damaged(&disk->tracks[t])) {
+            uint16_t track_num = disk->tracks[t].track_number;
+            if (track_num <= 2 || track_num >= 36) {
+                result->may_be_protection = true;
+                break;
+            }
+        }
+    }
+
     /* --- Fill result structure --- */
     result->correlation_matrix = matrix;
     result->matrix_size        = tc;

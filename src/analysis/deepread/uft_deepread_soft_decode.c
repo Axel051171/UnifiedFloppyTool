@@ -25,9 +25,6 @@
 /** Threshold below which a bit is considered low-confidence. */
 #define LOW_CONF_THRESH  0.5f
 
-/** Minimum sigma to avoid division by zero (nanoseconds). */
-#define SIGMA_FLOOR      1.0f
-
 /** MFM bitcells per data byte (8 data + 8 clock). */
 #define MFM_BITCELLS_PER_BYTE  16
 
@@ -104,8 +101,13 @@ int uft_deepread_compute_llr(
              *   sigma = nominal_cell_ns * 10^(-quality_dB / 20)            */
             double quality_db = (double)quality_profile[qidx];
             double sigma = nominal * pow(10.0, -quality_db / 20.0);
-            if (sigma < (double)SIGMA_FLOOR)
-                sigma = (double)SIGMA_FLOOR;
+
+            /* Clamp sigma to a reasonable range to prevent over-sensitivity
+             * at high SNR and complete loss of ranking at low SNR. */
+            double sigma_min = nominal * 0.01;  /* 1% of cell = minimum */
+            double sigma_max = nominal * 2.0;   /* 200% of cell = maximum */
+            if (sigma < sigma_min) sigma = sigma_min;
+            if (sigma > sigma_max) sigma = sigma_max;
 
             /* Quality normalisation factor for "no-transition" bits */
             double quality_norm = quality_db / 20.0;

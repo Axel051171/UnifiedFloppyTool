@@ -82,8 +82,9 @@ static const uft_conversion_path_t g_conversion_paths[] = {
     // === FLUX -> BITSTREAM (Lossless) ===
     {
         .source = UFT_FORMAT_SCP, .target = UFT_FORMAT_HFE,
-        .quality = UFT_CONV_LOSSLESS,
-        .preserves_timing = true, .preserves_weak = true,
+        .quality = UFT_CONV_LOSSY,
+        .preserves_timing = true, .preserves_weak = false,
+        .warning = "HFE writer does not currently preserve weak bit masks. Copy protection data may be lost.",
         .description = "SCP flux to HFE bitstream"
     },
     {
@@ -101,8 +102,9 @@ static const uft_conversion_path_t g_conversion_paths[] = {
     },
     {
         .source = UFT_FORMAT_KRYOFLUX, .target = UFT_FORMAT_HFE,
-        .quality = UFT_CONV_LOSSLESS,
-        .preserves_timing = true,
+        .quality = UFT_CONV_LOSSY,
+        .preserves_timing = true, .preserves_weak = false,
+        .warning = "HFE writer does not currently preserve weak bit masks. Copy protection data may be lost.",
         .description = "Kryoflux stream to HFE"
     },
 

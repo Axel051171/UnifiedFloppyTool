@@ -35,6 +35,12 @@ otdr10_config_t otdr10_default_config(void) {
     otdr10_config_t c;
     memset(&c, 0, sizeof(c));
 
+    /* Confidence fusion weights — initial engineering estimates, v4.1.0.
+     * Agreement (multi-rev consensus) weighted highest because it directly
+     * measures bit stability. SNR (signal strength) second because it
+     * predicts decode success. Integrity (hardware flags) lowest because
+     * it only catches extreme cases (dropout, saturation).
+     * TODO: Calibrate against reference disk corpus with known-bad sectors. */
     c.w_agreement  = 0.40f;
     c.w_snr        = 0.35f;
     c.w_integrity  = 0.25f;

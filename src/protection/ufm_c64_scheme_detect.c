@@ -135,11 +135,20 @@ bool ufm_c64_prot_analyze(const ufm_c64_track_metrics_t *metrics,
                     m->track, 70, "Invalid GCR byte sequences");
         }
 
-        /* Duplicate sector IDs */
+        /* Duplicate sector IDs — confidence scaled by number of affected tracks.
+         * A single track with duplicate IDs could be media damage, so we start
+         * at 50% and scale up as more tracks exhibit the pattern. */
         if (m->duplicate_ids > 0) {
             dup_id_tracks++;
+            uint8_t dup_conf;
+            if (dup_id_tracks >= 4)
+                dup_conf = 85;
+            else if (dup_id_tracks >= 2)
+                dup_conf = 70;
+            else
+                dup_conf = 50;
             add_hit(hits_out, max_hits, &hit_count, UFM_PROT_DUPLICATE_ID,
-                    m->track, 90, "Duplicate sector header IDs");
+                    m->track, dup_conf, "Duplicate sector header IDs");
         }
 
         /* V-MAX! */

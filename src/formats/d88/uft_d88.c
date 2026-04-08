@@ -35,6 +35,25 @@ static uft_error_t d88_open(uft_disk_t* disk, const char* path, bool read_only) 
     disk->geometry.heads = 2;
     disk->geometry.sectors = (p->media == 0x20) ? 8 : 16;
     disk->geometry.sector_size = (p->media == 0x20) ? 1024 : 256;
+
+    /* Read actual geometry from first track's sector headers rather than
+     * relying solely on the media type byte (which is often wrong for
+     * non-standard or custom-formatted disks). */
+    fseek(f, 0, SEEK_END);
+    long file_size = ftell(f);
+    if (p->track_off[0] > 0 && p->track_off[0] < (uint32_t)file_size - 16) {
+        uint8_t trk_hdr[16];
+        if (fseek(f, p->track_off[0], SEEK_SET) == 0 &&
+            fread(trk_hdr, 1, 16, f) == 16) {
+            uint16_t sec_size  = trk_hdr[14] | ((uint16_t)trk_hdr[15] << 8);
+            uint16_t sec_count = trk_hdr[4]  | ((uint16_t)trk_hdr[5] << 8);
+            if (sec_size > 0 && sec_size <= 8192 && sec_count > 0 && sec_count <= 64) {
+                disk->geometry.sector_size = sec_size;
+                disk->geometry.sectors = sec_count;
+            }
+        }
+    }
+
     return UFT_OK;
 }
 

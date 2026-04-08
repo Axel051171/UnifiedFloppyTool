@@ -42,6 +42,7 @@ typedef struct {
     float        mean_correlation;      /**< Mean NCC across adjacent pairs */
     uint32_t     radial_damage_count;   /**< Number of radial damage regions */
     uft_damage_type_t overall;          /**< Overall damage classification */
+    bool         may_be_protection;     /**< True if damage overlaps known protection track ranges */
 } uft_crosstrack_result_t;
 
 /* ===================================================================
