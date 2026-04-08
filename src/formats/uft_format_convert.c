@@ -23,6 +23,7 @@
 #include "uft/formats/uft_td0.h"
 #include "uft/uft_flux_pll.h"
 #include "uft/formats/uft_mfm.h"
+#include "uft/uft_imd.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -215,6 +216,12 @@ static const uft_conversion_path_t g_conversion_paths[] = {
         .quality = UFT_CONV_SYNTHETIC,
         .warning = "GCR encoding will be synthesized (no original timing)",
         .description = "Encode D64 to G64 (synthetic GCR)"
+    },
+    {
+        .source = UFT_FORMAT_D64, .target = UFT_FORMAT_HFE,
+        .quality = UFT_CONV_SYNTHETIC,
+        .warning = "GCR encoding synthesized via G64 intermediate",
+        .description = "D64 to HFE via G64 (for HxC/Gotek)"
     },
     {
         .source = UFT_FORMAT_ADF, .target = UFT_FORMAT_HFE,
@@ -2636,6 +2643,508 @@ static uft_error_t convert_kryoflux_to_hfe(const uint8_t* src_data,
 }
 
 // ============================================================================
+// IMD <-> IMG Conversions
+// ============================================================================
+
+/**
+ * @brief IMD -> IMG: Extract raw sector data from ImageDisk format
+ *
+ * Parses the IMD file, then uses uft_imd_to_raw() to extract sequential
+ * sector data into a flat raw image suitable for use with standard tools.
+ */
+static uft_error_t convert_imd_to_img(const uint8_t* src_data, size_t src_size,
+                                       const char* dst_path,
+                                       const uft_convert_options_ext_t* opts,
+                                       uft_convert_result_t* result) {
+    uft_imd_image_t imd;
+    uft_imd_init(&imd);
+
+    report_progress(opts, 10, "Parsing IMD image");
+
+    int rc = uft_imd_read_mem(src_data, src_size, &imd);
+    if (rc != 0) {
+        uft_imd_free(&imd);
+        result->error = UFT_ERR_FORMAT;
+        snprintf(result->warnings[result->warning_count++],
+                 sizeof(result->warnings[0]),
+                 "IMD parse failed (error %d)", rc);
+        return UFT_ERR_FORMAT;
+    }
+
+    report_progress(opts, 50, "Extracting raw sectors");
+
+    uint8_t* raw_data = NULL;
+    size_t raw_size = 0;
+    rc = uft_imd_to_raw(&imd, &raw_data, &raw_size, 0xE5);
+    if (rc != 0 || !raw_data) {
+        uft_imd_free(&imd);
+        result->error = UFT_ERR_FORMAT;
+        snprintf(result->warnings[result->warning_count++],
+                 sizeof(result->warnings[0]),
+                 "IMD sector extraction failed (error %d)", rc);
+        return UFT_ERR_FORMAT;
+    }
+
+    report_progress(opts, 80, "Writing IMG output");
+
+    uft_error_t err = write_output_file(dst_path, raw_data, raw_size);
+    if (err != UFT_OK) {
+        free(raw_data);
+        uft_imd_free(&imd);
+        result->error = err;
+        return err;
+    }
+
+    result->success = true;
+    result->bytes_written = (int)raw_size;
+    result->tracks_converted = imd.num_tracks;
+
+    /* Report statistics */
+    snprintf(result->warnings[result->warning_count++],
+             sizeof(result->warnings[0]),
+             "Extracted %d tracks (%d cyls x %d heads), %zu bytes output",
+             imd.num_tracks, imd.num_cylinders, imd.num_heads, raw_size);
+
+    if (imd.bad_sectors > 0 || imd.unavail_sectors > 0) {
+        snprintf(result->warnings[result->warning_count++],
+                 sizeof(result->warnings[0]),
+                 "Warning: %u bad sectors, %u unavailable sectors",
+                 imd.bad_sectors, imd.unavail_sectors);
+    }
+
+    free(raw_data);
+    uft_imd_free(&imd);
+
+    report_progress(opts, 100, "IMD->IMG complete");
+    return UFT_OK;
+}
+
+/**
+ * @brief IMG -> IMD: Convert raw sector image to ImageDisk format
+ *
+ * Analyzes the raw image size to determine geometry (cylinders, heads,
+ * sectors per track, sector size), then uses uft_imd_from_raw() to
+ * create a properly formatted IMD file with track metadata.
+ */
+static uft_error_t convert_img_to_imd(const uint8_t* src_data, size_t src_size,
+                                       const char* dst_path,
+                                       const uft_convert_options_ext_t* opts,
+                                       uft_convert_result_t* result) {
+    report_progress(opts, 10, "Analyzing IMG geometry");
+
+    /* Determine geometry from file size */
+    int cylinders = 80, heads = 2, sectors = 18, sector_size = 512;
+    uint8_t mode = UFT_IMD_MODE_250K_MFM; /* Default: 250K MFM (DD) */
+
+    if (src_size <= 163840) {
+        /* 160K: 40 cyl, 1 head, 8 sec */
+        cylinders = 40; heads = 1; sectors = 8;
+    } else if (src_size <= 184320) {
+        /* 180K: 40 cyl, 1 head, 9 sec */
+        cylinders = 40; heads = 1; sectors = 9;
+    } else if (src_size <= 327680) {
+        /* 320K: 40 cyl, 2 heads, 8 sec */
+        cylinders = 40; heads = 2; sectors = 8;
+    } else if (src_size <= 368640) {
+        /* 360K: 40 cyl, 2 heads, 9 sec */
+        cylinders = 40; heads = 2; sectors = 9;
+    } else if (src_size <= 655360) {
+        /* 640K: 80 cyl, 2 heads, 8 sec */
+        cylinders = 80; heads = 2; sectors = 8;
+    } else if (src_size <= 737280) {
+        /* 720K: 80 cyl, 2 heads, 9 sec */
+        cylinders = 80; heads = 2; sectors = 9;
+    } else if (src_size <= 1228800) {
+        /* 1.2M: 80 cyl, 2 heads, 15 sec, 500K */
+        cylinders = 80; heads = 2; sectors = 15;
+        mode = UFT_IMD_MODE_500K_MFM;
+    } else {
+        /* 1.44M: 80 cyl, 2 heads, 18 sec, 500K */
+        cylinders = 80; heads = 2; sectors = 18;
+        mode = UFT_IMD_MODE_500K_MFM;
+    }
+
+    uint8_t sec_size_code = uft_imd_bytes_to_ssize((uint16_t)sector_size);
+
+    report_progress(opts, 20, "Building IMD file");
+
+    /* Build IMD header comment */
+    char imd_header[256];
+    int hdr_len = snprintf(imd_header, sizeof(imd_header),
+                           "IMD 1.18: Converted from IMG by UFT\x1a");
+
+    /* Calculate required output size:
+     * header + per-track: 5-byte header + nsectors smap + nsectors*(1 + sec_size) */
+    int total_tracks = cylinders * heads;
+    size_t data_per_track = (size_t)sectors * (1 + sector_size) + sectors; /* smap */
+    size_t imd_size = (size_t)hdr_len + (size_t)total_tracks * (5 + data_per_track);
+
+    uint8_t* imd_data = malloc(imd_size);
+    if (!imd_data) {
+        result->error = UFT_ERR_MEMORY;
+        return UFT_ERR_MEMORY;
+    }
+
+    size_t pos = 0;
+    memcpy(imd_data + pos, imd_header, hdr_len);
+    pos += hdr_len;
+
+    report_progress(opts, 40, "Writing track records");
+
+    for (int cyl = 0; cyl < cylinders; cyl++) {
+        for (int hd = 0; hd < heads; hd++) {
+            if (is_cancelled(opts)) break;
+
+            /* Track header: mode, cylinder, head, nsectors, sector_size_code */
+            imd_data[pos++] = mode;
+            imd_data[pos++] = (uint8_t)cyl;
+            imd_data[pos++] = (uint8_t)hd;
+            imd_data[pos++] = (uint8_t)sectors;
+            imd_data[pos++] = sec_size_code;
+
+            /* Sector numbering map (1-based) */
+            for (int s = 0; s < sectors; s++) {
+                imd_data[pos++] = (uint8_t)(s + 1);
+            }
+
+            /* Sector data records */
+            for (int s = 0; s < sectors; s++) {
+                size_t src_offset = ((size_t)cyl * heads * sectors +
+                                     (size_t)hd * sectors + s) * sector_size;
+
+                if (src_offset + sector_size <= src_size) {
+                    /* Check if sector is all same value (compress) */
+                    const uint8_t* sec = src_data + src_offset;
+                    bool all_same = true;
+                    for (int b = 1; b < sector_size; b++) {
+                        if (sec[b] != sec[0]) {
+                            all_same = false;
+                            break;
+                        }
+                    }
+
+                    if (all_same) {
+                        imd_data[pos++] = UFT_IMD_SEC_COMPRESSED;
+                        imd_data[pos++] = sec[0];
+                    } else {
+                        imd_data[pos++] = UFT_IMD_SEC_NORMAL;
+                        memcpy(imd_data + pos, sec, sector_size);
+                        pos += sector_size;
+                    }
+                } else {
+                    /* Beyond source data: fill sector */
+                    imd_data[pos++] = UFT_IMD_SEC_COMPRESSED;
+                    imd_data[pos++] = 0xE5;
+                }
+
+                result->sectors_converted++;
+            }
+
+            result->tracks_converted++;
+        }
+
+        report_progress(opts, 40 + (cyl * 50 / cylinders), "Encoding IMD tracks");
+    }
+
+    report_progress(opts, 95, "Writing IMD output");
+
+    uft_error_t err = write_output_file(dst_path, imd_data, pos);
+    if (err == UFT_OK) {
+        result->success = true;
+        result->bytes_written = (int)pos;
+    } else {
+        result->error = err;
+    }
+
+    snprintf(result->warnings[result->warning_count++],
+             sizeof(result->warnings[0]),
+             "Created IMD: %d cyls x %d heads x %d secs (%s), %zu bytes",
+             cylinders, heads, sectors,
+             uft_imd_mode_name((uft_imd_mode_t)mode), pos);
+
+    free(imd_data);
+    report_progress(opts, 100, "IMG->IMD complete");
+    return err;
+}
+
+// ============================================================================
+// G64 <-> HFE Conversions (Bitstream <-> Bitstream)
+// ============================================================================
+
+/**
+ * @brief G64 -> HFE: Wrap C64 GCR bitstream in HFE container
+ *
+ * G64 stores CBM GCR-encoded track data with variable speed zones.
+ * HFE stores bitstream data interleaved by head in 256-byte blocks.
+ *
+ * The C64 is a single-sided drive (head 0 only), so head 1 is filled
+ * with zeros. The bit rate is set per the dominant speed zone.
+ *
+ * C64 speed zones map to approximate bitrates:
+ *   Zone 0 (tracks 1-17):  ~307 kbit/s
+ *   Zone 1 (tracks 18-24): ~285 kbit/s
+ *   Zone 2 (tracks 25-30): ~266 kbit/s
+ *   Zone 3 (tracks 31-35): ~250 kbit/s
+ *
+ * HFE v1 only supports a single global bitrate, so we use 250 kbit/s
+ * (the base C64 rate) and store the raw GCR bitstream as-is.
+ * HxC firmware handles C64 mode correctly at this rate.
+ */
+static uft_error_t convert_g64_to_hfe(const uint8_t* src_data, size_t src_size,
+                                       const char* dst_path,
+                                       const uft_convert_options_ext_t* opts,
+                                       uft_convert_result_t* result) {
+    report_progress(opts, 10, "Loading G64 image");
+
+    g64_image_t* g64 = NULL;
+    int rc = g64_load_buffer(src_data, src_size, &g64);
+    if (rc != 0 || !g64) {
+        result->error = UFT_ERR_FORMAT;
+        snprintf(result->warnings[result->warning_count++],
+                 sizeof(result->warnings[0]),
+                 "G64 parse failed (error %d)", rc);
+        return UFT_ERR_FORMAT;
+    }
+
+    /* C64 is single-sided with up to 42 tracks (84 halftracks) */
+    int num_tracks = (int)g64->num_tracks;
+    if (num_tracks > 42) num_tracks = 42;
+    int cylinders = num_tracks; /* One cylinder per track (single-sided) */
+    int heads = 1;
+
+    /* Use C64 DD interface, GCR stored as raw bitstream */
+    uint16_t bitrate_kbps = 250;
+    hfe_track_encoding_t encoding = HFE_ENC_ISOIBM_MFM; /* Raw bitstream */
+    hfe_floppy_interface_t iface = HFE_IF_C64_DD;
+
+    /* Track length: G64 max track size is ~7928 bytes, round up to 256 */
+    int track_len_aligned = ((G64_MAX_TRACK_SIZE + 255) / 256) * 256;
+
+    /* Calculate HFE file layout */
+    size_t lut_blocks = ((size_t)cylinders * sizeof(hfe_track_entry_t) + 511) / 512;
+    size_t data_start_block = 1 + lut_blocks;
+    size_t blocks_per_track = ((size_t)track_len_aligned * 2 + 511) / 512;
+    size_t total_size = (data_start_block + (size_t)cylinders * blocks_per_track) * 512;
+
+    uint8_t* hfe_data = calloc(1, total_size);
+    if (!hfe_data) {
+        g64_free(g64);
+        result->error = UFT_ERR_MEMORY;
+        return UFT_ERR_MEMORY;
+    }
+
+    /* Write HFE header */
+    hfe_header_t* hdr = (hfe_header_t*)hfe_data;
+    hfe_init_header(hdr, false);
+    hdr->n_cylinders = (uint8_t)cylinders;
+    hdr->n_heads = (uint8_t)heads;
+    hdr->track_encoding = (uint8_t)encoding;
+    hdr->data_bit_rate = bitrate_kbps;
+    hdr->drive_rpm = 300;
+    hdr->uft_floppy_interface = (uint8_t)iface;
+    hdr->track_list_offset = 1;
+
+    /* Write track lookup table */
+    hfe_track_entry_t* lut = (hfe_track_entry_t*)(hfe_data + 512);
+    for (int cyl = 0; cyl < cylinders; cyl++) {
+        lut[cyl].offset = (uint16_t)(data_start_block + (size_t)cyl * blocks_per_track);
+        lut[cyl].length = (uint16_t)track_len_aligned;
+    }
+
+    report_progress(opts, 30, "Converting GCR tracks to HFE");
+
+    for (int track = 1; track <= num_tracks; track++) {
+        if (is_cancelled(opts)) break;
+
+        int halftrack = track * 2;
+        const uint8_t* track_data = NULL;
+        size_t track_len = 0;
+        uint8_t speed = 0;
+
+        rc = g64_get_track(g64, halftrack, &track_data, &track_len, &speed);
+        if (rc != 0 || !track_data || track_len == 0) {
+            result->tracks_failed++;
+            continue;
+        }
+
+        /* Prepare head 0 bitstream for HFE */
+        uint8_t head0_bits[32768];
+        uint8_t head1_bits[32768];
+        memset(head0_bits, 0x00, track_len_aligned);
+        memset(head1_bits, 0x00, track_len_aligned);
+
+        /* Copy GCR bitstream data */
+        size_t copy_len = (track_len <= (size_t)track_len_aligned)
+                          ? track_len : (size_t)track_len_aligned;
+        memcpy(head0_bits, track_data, copy_len);
+
+        /* HFE stores bits LSB-first, so reverse each byte */
+        hfe_reverse_bits(head0_bits, (uint32_t)track_len_aligned);
+
+        /* Interleave head 0/1 into HFE track block */
+        int cyl_idx = track - 1;
+        uint8_t* track_dest = hfe_data + (size_t)lut[cyl_idx].offset * 512;
+        hfe_interleave_track(head0_bits, head1_bits,
+                              (uint16_t)track_len_aligned, track_dest);
+
+        result->tracks_converted++;
+        report_progress(opts, 30 + (track * 60 / num_tracks),
+                         "Wrapping GCR tracks in HFE");
+    }
+
+    report_progress(opts, 95, "Writing HFE output");
+
+    uft_error_t err = write_output_file(dst_path, hfe_data, total_size);
+    if (err == UFT_OK) {
+        result->success = true;
+        result->bytes_written = (int)total_size;
+    } else {
+        result->error = err;
+    }
+
+    snprintf(result->warnings[result->warning_count++],
+             sizeof(result->warnings[0]),
+             "G64->HFE: %d tracks wrapped in HFE container (C64 DD mode)",
+             result->tracks_converted);
+
+    free(hfe_data);
+    g64_free(g64);
+    report_progress(opts, 100, "G64->HFE complete");
+    return err;
+}
+
+/**
+ * @brief HFE -> G64: Extract C64 GCR bitstream from HFE container
+ *
+ * Reads HFE track data, de-interleaves head 0, and stores the raw
+ * GCR bitstream in a G64 container. Only works for C64-compatible
+ * HFE files (single-sided GCR data).
+ *
+ * The speed zone for each track is inferred from the track number
+ * using the standard C64 1541 zone mapping.
+ */
+static uft_error_t convert_hfe_to_g64(const uint8_t* src_data, size_t src_size,
+                                       const char* dst_path,
+                                       const uft_convert_options_ext_t* opts,
+                                       uft_convert_result_t* result) {
+    report_progress(opts, 10, "Parsing HFE file");
+
+    if (src_size < sizeof(hfe_header_t)) {
+        result->error = UFT_ERR_FORMAT;
+        return UFT_ERR_FORMAT;
+    }
+
+    const hfe_header_t* hdr = (const hfe_header_t*)src_data;
+    if (!hfe_is_valid_header(hdr)) {
+        result->error = UFT_ERR_FORMAT;
+        snprintf(result->warnings[result->warning_count++],
+                 sizeof(result->warnings[0]),
+                 "Invalid HFE header");
+        return UFT_ERR_FORMAT;
+    }
+
+    int cylinders = hdr->n_cylinders;
+    if (cylinders > 42) cylinders = 42; /* G64 max 42 tracks */
+
+    /* Warn if this doesn't look like a C64 disk */
+    if (hdr->uft_floppy_interface != HFE_IF_C64_DD &&
+        hdr->uft_floppy_interface != (uint8_t)HFE_IF_GENERIC_SHUGART) {
+        snprintf(result->warnings[result->warning_count++],
+                 sizeof(result->warnings[0]),
+                 "HFE interface type 0x%02X is not C64; "
+                 "G64 output may not be valid CBM GCR",
+                 hdr->uft_floppy_interface);
+    }
+
+    /* Create G64 image */
+    g64_image_t* g64 = g64_create(cylinders, false);
+    if (!g64) {
+        result->error = UFT_ERR_MEMORY;
+        return UFT_ERR_MEMORY;
+    }
+
+    report_progress(opts, 20, "Extracting GCR tracks from HFE");
+
+    /* Read track LUT */
+    const hfe_track_entry_t* lut = (const hfe_track_entry_t*)
+                                    (src_data + hdr->track_list_offset * 512);
+
+    for (int cyl = 0; cyl < cylinders; cyl++) {
+        if (is_cancelled(opts)) break;
+
+        uint16_t track_offset_blocks = lut[cyl].offset;
+        uint16_t track_len = lut[cyl].length;
+
+        if (track_offset_blocks == 0 || track_len == 0) {
+            result->tracks_failed++;
+            continue;
+        }
+
+        const uint8_t* interleaved = src_data + (size_t)track_offset_blocks * 512;
+
+        /* De-interleave head 0 (C64 is single-sided) */
+        uint8_t* track_bits = malloc(track_len);
+        if (!track_bits) {
+            result->tracks_failed++;
+            continue;
+        }
+
+        hfe_deinterleave_track(interleaved, track_len, 0, track_bits);
+
+        /* HFE stores bits LSB-first, reverse to MSB-first for G64 */
+        hfe_reverse_bits(track_bits, track_len);
+
+        /* Determine effective track length (trim trailing zeros) */
+        size_t effective_len = track_len;
+        while (effective_len > 0 && track_bits[effective_len - 1] == 0x00) {
+            effective_len--;
+        }
+        if (effective_len == 0) {
+            free(track_bits);
+            result->tracks_failed++;
+            continue;
+        }
+
+        /* Cap track length to G64 maximum */
+        if (effective_len > G64_MAX_TRACK_SIZE) {
+            effective_len = G64_MAX_TRACK_SIZE;
+        }
+
+        /* Get speed zone from track number (1-based) */
+        int track_num = cyl + 1;
+        uint8_t speed = (uint8_t)d64_speed_zone(track_num);
+
+        /* Store in G64 (halftrack = track * 2) */
+        int halftrack = track_num * 2;
+        g64_set_track(g64, halftrack, track_bits, effective_len, speed);
+
+        free(track_bits);
+        result->tracks_converted++;
+
+        report_progress(opts, 20 + (cyl * 70 / cylinders),
+                         "Extracting GCR tracks");
+    }
+
+    report_progress(opts, 95, "Writing G64 output");
+
+    int rc = g64_save(dst_path, g64);
+    if (rc == 0) {
+        result->success = true;
+    } else {
+        result->error = UFT_ERR_IO;
+    }
+
+    snprintf(result->warnings[result->warning_count++],
+             sizeof(result->warnings[0]),
+             "HFE->G64: %d tracks extracted to G64 container",
+             result->tracks_converted);
+
+    g64_free(g64);
+    report_progress(opts, 100, "HFE->G64 complete");
+    return result->success ? UFT_OK : result->error;
+}
+
+// ============================================================================
 // API Implementation
 // ============================================================================
 
@@ -2744,6 +3253,14 @@ static uft_error_t dispatch_conversion(uft_format_t src_format,
         return convert_nbz_to_g64(src_data, src_size, dst_path, opts, result);
     }
 
+    /* ===== Sector <-> Sector (format conversions) ===== */
+    if (src_format == UFT_FORMAT_IMD && dst_format == UFT_FORMAT_IMG) {
+        return convert_imd_to_img(src_data, src_size, dst_path, opts, result);
+    }
+    if (src_format == UFT_FORMAT_IMG && dst_format == UFT_FORMAT_IMD) {
+        return convert_img_to_imd(src_data, src_size, dst_path, opts, result);
+    }
+
     /* ===== Flux -> Sector (decode pipeline) ===== */
     if (src_format == UFT_FORMAT_SCP && dst_format == UFT_FORMAT_D64) {
         return convert_scp_to_d64(src_data, src_size, dst_path, opts, result);
@@ -2780,6 +3297,41 @@ static uft_error_t dispatch_conversion(uft_format_t src_format,
         dst_format == UFT_FORMAT_HFE) {
         return convert_sectors_to_hfe(src_data, src_size, dst_path,
                                        src_format, opts, result);
+    }
+    if (src_format == UFT_FORMAT_D64 && dst_format == UFT_FORMAT_HFE) {
+        /* D64 -> HFE: Chain D64 -> G64 (GCR encode) -> HFE (bitstream wrap) */
+        report_progress(opts, 5, "D64->HFE via G64 intermediate");
+
+        d64_image_t* d64 = NULL;
+        int rc = d64_load_buffer(src_data, src_size, &d64);
+        if (rc != 0 || !d64) {
+            result->error = UFT_ERR_FORMAT;
+            return UFT_ERR_FORMAT;
+        }
+
+        g64_image_t* g64 = NULL;
+        rc = d64_to_g64(d64, &g64, NULL, NULL);
+        d64_free(d64);
+        if (rc != 0 || !g64) {
+            result->error = UFT_ERR_FORMAT;
+            return UFT_ERR_FORMAT;
+        }
+
+        /* Serialize G64 to buffer */
+        uint8_t* g64_buf = NULL;
+        size_t g64_size = 0;
+        rc = g64_save_buffer(g64, &g64_buf, &g64_size);
+        g64_free(g64);
+        if (rc != 0 || !g64_buf) {
+            result->error = UFT_ERR_FORMAT;
+            return UFT_ERR_FORMAT;
+        }
+
+        /* Now convert G64 -> HFE */
+        uft_error_t err = convert_g64_to_hfe(g64_buf, g64_size, dst_path,
+                                              opts, result);
+        free(g64_buf);
+        return err;
     }
 
     /* ===== Bitstream -> Flux ===== */
@@ -2936,22 +3488,10 @@ static uft_error_t dispatch_conversion(uft_format_t src_format,
 
     /* ===== Bitstream -> Bitstream ===== */
     if (src_format == UFT_FORMAT_G64 && dst_format == UFT_FORMAT_HFE) {
-        /* G64 -> HFE: wrap GCR bitstream in HFE container */
-        /* TODO: Needs GCR-aware HFE builder */
-        result->error = UFT_ERR_NOT_IMPLEMENTED;
-        snprintf(result->warnings[result->warning_count++],
-                 sizeof(result->warnings[0]),
-                 "G64->HFE requires GCR-to-HFE container wrapper (TODO)");
-        return UFT_ERR_NOT_IMPLEMENTED;
+        return convert_g64_to_hfe(src_data, src_size, dst_path, opts, result);
     }
     if (src_format == UFT_FORMAT_HFE && dst_format == UFT_FORMAT_G64) {
-        /* HFE -> G64: extract CBM GCR tracks from HFE */
-        /* TODO: Needs CBM-specific bitstream extraction */
-        result->error = UFT_ERR_NOT_IMPLEMENTED;
-        snprintf(result->warnings[result->warning_count++],
-                 sizeof(result->warnings[0]),
-                 "HFE->G64 requires CBM GCR extraction from HFE (TODO)");
-        return UFT_ERR_NOT_IMPLEMENTED;
+        return convert_hfe_to_g64(src_data, src_size, dst_path, opts, result);
     }
 
     /* Fallback: unsupported conversion */
@@ -3060,8 +3600,11 @@ uft_error_t uft_convert_file(const char* src_path,
             result->error = err;
         }
     } else if (src_class == UFT_FCLASS_SECTOR &&
-               dst_class == UFT_FCLASS_SECTOR) {
-        /* Sector -> Sector: raw copy with format awareness */
+               dst_class == UFT_FCLASS_SECTOR &&
+               !((src_format == UFT_FORMAT_IMD && dst_format == UFT_FORMAT_IMG) ||
+                 (src_format == UFT_FORMAT_IMG && dst_format == UFT_FORMAT_IMD))) {
+        /* Sector -> Sector: raw copy with format awareness
+         * (except IMD<->IMG which need actual format conversion) */
         err = write_output_file(dst_path, src_data, src_size);
         if (err == UFT_OK) {
             result->success = true;
@@ -3150,7 +3693,9 @@ uft_error_t uft_convert_memory(const uint8_t* src_data, size_t src_size,
     uft_format_class_t src_class = uft_format_get_class(src_format);
     uft_format_class_t dst_class = uft_format_get_class(dst_format);
 
-    if (src_class == UFT_FCLASS_SECTOR && dst_class == UFT_FCLASS_SECTOR) {
+    if (src_class == UFT_FCLASS_SECTOR && dst_class == UFT_FCLASS_SECTOR &&
+        !((src_format == UFT_FORMAT_IMD && dst_format == UFT_FORMAT_IMG) ||
+          (src_format == UFT_FORMAT_IMG && dst_format == UFT_FORMAT_IMD))) {
         *dst_data = malloc(src_size);
         if (!*dst_data) {
             result->error = UFT_ERR_MEMORY;
@@ -3169,6 +3714,27 @@ uft_error_t uft_convert_memory(const uint8_t* src_data, size_t src_size,
      */
 
     /* Handle conversions that have in-memory support via existing APIs */
+
+    /* IMD -> IMG */
+    if (src_format == UFT_FORMAT_IMD && dst_format == UFT_FORMAT_IMG) {
+        uft_imd_image_t imd;
+        uft_imd_init(&imd);
+        int rc = uft_imd_read_mem(src_data, src_size, &imd);
+        if (rc != 0) {
+            uft_imd_free(&imd);
+            result->error = UFT_ERR_FORMAT;
+            return UFT_ERR_FORMAT;
+        }
+        rc = uft_imd_to_raw(&imd, dst_data, dst_size, 0xE5);
+        uft_imd_free(&imd);
+        if (rc != 0 || !*dst_data) {
+            result->error = UFT_ERR_FORMAT;
+            return UFT_ERR_FORMAT;
+        }
+        result->success = true;
+        result->bytes_written = (int)*dst_size;
+        return UFT_OK;
+    }
 
     /* TD0 -> IMG */
     if (src_format == UFT_FORMAT_TD0 && dst_format == UFT_FORMAT_IMG) {
