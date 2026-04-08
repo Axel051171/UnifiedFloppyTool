@@ -7,6 +7,7 @@
 #include "uft/flux/uft_flux_decoder.h"
 #include "uft/formats/uft_scp.h"
 #include "uft/formats/uft_dfi.h"
+#include "uft/core/uft_forensic_constants.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -259,6 +260,12 @@ flux_status_t flux_decode_kryoflux_files(const char *base_path,
             size_t size = ftell(fp);
             fseek(fp, 0, SEEK_SET);
             
+            /* Guard against corrupt / malicious file size */
+            if (size > UFT_MAX_FLUX_FILE_SIZE) {
+                fclose(fp);
+                continue;
+            }
+
             uint8_t *data = malloc(size);
             if (!data) {
                 fclose(fp);

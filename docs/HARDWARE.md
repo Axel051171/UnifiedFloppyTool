@@ -15,6 +15,8 @@ Complete guide to setting up floppy disk controllers with UnifiedFloppyTool.
 | **Catweasel** | ✅ | ✅ | ✅ | Rare | Hard |
 | **XUM1541** | ✅ | ✅ | ❌ | $25 | Easy |
 | **ADF-Copy** | ✅ | ✅ | ⚠️ | DIY | Easy |
+| **FC5025** | ✅ | ❌ | ❌ | $50 | Easy |
+| **Applesauce** | ✅ | ✅ | ✅ | $80 | Easy |
 | **USB Floppy** | ✅ | ✅ | ❌ | $15 | Easy |
 
 ---
@@ -338,6 +340,122 @@ sudo usermod -a -G plugdev $USER
 3. Configure:
    - **Device Number**: 8-11 (usually 8)
    - **Transfer Mode**: Parallel (fastest) or Serial
+
+---
+
+## FC5025 (Device Side Data)
+
+### What You Need
+
+- FC5025 USB 5.25" floppy controller
+- 5.25" floppy drive
+- 34-pin ribbon cable
+- USB cable
+- Power supply for drive
+
+### Overview
+
+The FC5025 is a **read-only** USB 5.25" floppy controller by Device Side Data.
+
+- **USB VID/PID**: `0x16C0:0x06D6`
+- **Supported formats**: 18 disk formats including Apple DOS 3.2/3.3, C64 (1541), IBM PC (FM/MFM), TRS-80, Atari 810, North Star, Commodore 8050, and more
+- **No flux capture** — sector-level reads only
+- **Forensic limitation**: No timing data, no copy protection preservation
+
+### Driver Installation
+
+**Windows / macOS:**
+- Download `fcimage` CLI tool from Device Side Data website
+
+**Linux:**
+- Uses libusb — no kernel driver needed
+- Install udev rule for non-root access:
+
+```bash
+sudo cp tools/99-floppy-devices.rules /etc/udev/rules.d/
+sudo udevadm control --reload-rules
+sudo udevadm trigger
+```
+
+### UFT Configuration
+
+1. **Hardware Tab** → Click "Detect Hardware"
+2. Select "FC5025" from dropdown
+3. Configure:
+   - **Port**: Auto-detected USB device
+   - **Format**: Select target disk format from 18 supported types
+   - **Drive**: Single drive only (read-only)
+
+### Troubleshooting
+
+| Problem | Solution |
+|---------|----------|
+| "No device found" | Check USB connection, verify VID:PID with `lsusb` |
+| "Permission denied" (Linux) | Install udev rules or run as root |
+| Unreadable sectors | Clean drive heads, try different drive speed |
+| Wrong format detected | Manually select correct format from list |
+
+**Website:** http://deviceside.com/fc5025.html
+
+---
+
+## Applesauce (Evolution Interactive)
+
+### What You Need
+
+- Applesauce or Applesauce+ controller
+- Apple II / Macintosh compatible floppy drive (5.25" or 3.5")
+- USB cable
+- Power supply for drive
+
+### Overview
+
+Applesauce is an Apple II / Macintosh specialized flux controller by Evolution Interactive.
+
+- **USB VID/PID**: `0x16C0:0x0483`
+- **Protocol**: Text-based USB serial (human-readable commands)
+- **Supported drives**: 5.25", 3.5", and PC drives
+- **Applesauce+ variant**: 420K buffer, 100+ Mbps transfer speed
+- **Full flux read/write**, RPM measurement, write-protect detection
+- **Output formats**: A2R, WOZ, MOOF
+
+### Driver Installation
+
+**Windows:**
+- Detected as USB serial device, driver installs automatically
+
+**Linux:**
+- No driver needed. Install udev rule for non-root access:
+
+```bash
+sudo cp tools/99-floppy-devices.rules /etc/udev/rules.d/
+sudo udevadm control --reload-rules
+sudo udevadm trigger
+```
+
+**macOS:**
+- No driver needed — native USB serial support
+
+### UFT Configuration
+
+1. **Hardware Tab** → Click "Detect Hardware"
+2. Select "Applesauce" from dropdown
+3. Configure:
+   - **Port**: Auto-detected serial port
+   - **Drive Type**: 5.25", 3.5", or PC
+   - **Output Format**: A2R, WOZ, or MOOF
+
+### Troubleshooting
+
+| Problem | Solution |
+|---------|----------|
+| "No device found" | Check USB connection, try different port |
+| "Permission denied" (Linux) | Install udev rules or add user to `dialout` group |
+| Slow transfers | Use Applesauce+ for 100+ Mbps speeds |
+| Write failures | Check write-protect detection, verify drive compatibility |
+
+**Website:** https://applesaucefdc.com/
+**Wiki:** https://wiki.applesaucefdc.com/
 
 ---
 

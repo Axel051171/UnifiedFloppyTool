@@ -11,6 +11,7 @@
 #include <math.h>
 
 #include "uft/flux/uft_uft_kf_parser.h"
+#include "uft/core/uft_forensic_constants.h"
 
 /*============================================================================
  * Constants
@@ -72,6 +73,13 @@ int uft_kf_load_file(uft_kf_ctx_t* ctx, const char* filename)
     ctx->stream_size = ftell(f);
     (void)fseek(f, 0, SEEK_SET);
     
+    /* Guard against corrupt / malicious file size */
+    if (ctx->stream_size > UFT_MAX_FLUX_FILE_SIZE) {
+        fclose(f);
+        ctx->last_error = UFT_UFT_KF_ERR_MEMORY;
+        return UFT_UFT_KF_ERR_MEMORY;
+    }
+
     /* Allocate and read */
     ctx->stream_data = malloc(ctx->stream_size);
     if (!ctx->stream_data) {

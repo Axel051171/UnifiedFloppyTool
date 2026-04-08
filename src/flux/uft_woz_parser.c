@@ -11,6 +11,7 @@
 #include <stdio.h>
 
 #include "uft/flux/uft_woz_parser.h"
+#include "uft/core/uft_forensic_constants.h"
 
 /*============================================================================
  * CRC32 Implementation
@@ -232,6 +233,13 @@ int uft_woz_open(uft_woz_ctx_t* ctx, const char* filename)
     ctx->file_size = ftell(f);
     (void)fseek(f, 0, SEEK_SET);
     
+    /* Guard against corrupt / malicious file size */
+    if (ctx->file_size > UFT_MAX_FLUX_FILE_SIZE) {
+        fclose(f);
+        ctx->last_error = UFT_WOZ_ERR_FORMAT;
+        return UFT_WOZ_ERR_FORMAT;
+    }
+
     /* Allocate and read */
     ctx->file_data = malloc(ctx->file_size);
     if (!ctx->file_data) {

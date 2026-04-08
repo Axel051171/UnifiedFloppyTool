@@ -17,4 +17,9 @@
 #define UFT_SECTOR_FLAG_RECOVERED   0x02
 #define UFT_SECTOR_FLAG_FUSED       0x03
 
+/* Maximum allowed flux file size before malloc.
+ * Files larger than this are almost certainly corrupt headers or
+ * malicious inputs.  512 MB is well above any real flux capture. */
+#define UFT_MAX_FLUX_FILE_SIZE  (512UL * 1024 * 1024)  /* 512 MB */
+
 #endif

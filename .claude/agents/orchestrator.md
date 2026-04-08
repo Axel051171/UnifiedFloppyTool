@@ -23,10 +23,12 @@ Batch C: `refactoring-agent` | `test-fuzzing` | `copyprotection-analyst`
 Batch D: `performance-memory` | `compatibility-import-export` | `gui-ux-workflow` | `gui-conflict-ux-guardian`
 
 ### Phase 4 — Abschluss
-`build-ci-release` → `documentation`
+`build-ci-release` | `github-expert` → `documentation`
 
 ### Optional (nur auf Anfrage)
-`research-roadmap` — teuer, nur wenn Roadmap-Entscheidung nötig
+`research-roadmap` — Strategische Planung, Konkurrenzanalyse
+- `info-finder` — Taktische Web-Intelligence, aktuelle Infos zu konkreten Themen
+- `innovation-catalyst` — Ideen generieren + Spezialisten-Konsultation orchestrieren
 
 ## Konfliktmatrix (verbindlich)
 | Konflikt | Gewinner | Begründung |

@@ -9,6 +9,7 @@
 #include <QHBoxLayout>
 #include <QFormLayout>
 #include <QFileDialog>
+#include <QFileInfo>
 #include <QHeaderView>
 #include <QPainter>
 #include <QScrollBar>
@@ -809,7 +810,9 @@ void UftFileBrowserPanel::onInjectFile()
 
     QFile srcFile(path);
     if (!srcFile.open(QIODevice::ReadOnly)) {
-        m_statusLabel->setText("Failed to read source file");
+        m_statusLabel->setText(QString("Cannot read '%1'. The file may be locked, "
+            "moved, or you may not have read permission.")
+            .arg(QFileInfo(path).fileName()));
         return;
     }
     QByteArray fileData = srcFile.readAll();

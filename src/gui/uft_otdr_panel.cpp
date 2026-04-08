@@ -292,7 +292,9 @@ bool UftOtdrPanel::loadFluxImage(const QString &path)
     QString ext = fi.suffix().toLower();
 
     if (ext != "scp") {
-        m_statusLabel->setText("Currently only SCP files supported for OTDR analysis");
+        m_statusLabel->setText(QString("Cannot analyze '%1' — only SCP flux files are supported "
+            "for OTDR signal analysis. Convert to SCP first, or open an .scp file.")
+            .arg(fi.fileName()));
         return false;
     }
 
@@ -304,7 +306,9 @@ bool UftOtdrPanel::loadFluxImage(const QString &path)
 
     int rc = uft_scp_open(m_scpCtx, path.toUtf8().constData());
     if (rc != 0) {
-        m_statusLabel->setText(QString("Failed to open SCP: %1").arg(rc));
+        m_statusLabel->setText(QString("Could not open '%1' (error %2). "
+            "The file may be corrupted, too large, or in use by another program.")
+            .arg(fi.fileName()).arg(rc));
         uft_scp_destroy(m_scpCtx);
         m_scpCtx = nullptr;
         return false;
@@ -314,7 +318,9 @@ bool UftOtdrPanel::loadFluxImage(const QString &path)
     uint8_t end_track = m_scpCtx->header.end_track;
     int totalTracks = end_track - start_track + 1;
     if (totalTracks <= 0 || totalTracks > 332) {
-        m_statusLabel->setText("Invalid track range in SCP");
+        m_statusLabel->setText(QString("Invalid track range in '%1' (tracks %2-%3). "
+            "The SCP file header may be corrupted — try re-dumping the disk.")
+            .arg(fi.fileName()).arg(start_track).arg(end_track));
         uft_scp_close(m_scpCtx);
         uft_scp_destroy(m_scpCtx);
         m_scpCtx = nullptr;
@@ -399,6 +405,8 @@ void UftOtdrPanel::analyzeTrack(int cylinder, int head)
     otdr_track_t *trk = &m_disk->tracks[idx];
     if (trk->flux_count == 0) return;
 
+    setCursor(Qt::WaitCursor);
+
     m_config.encoding = (otdr_encoding_t)m_encodingCombo->currentData().toInt();
     m_config.smooth_window = (uint32_t)m_smoothWindow->value();
 
@@ -413,6 +421,8 @@ void UftOtdrPanel::analyzeTrack(int cylinder, int head)
 
     m_statusLabel->setText(QString("C%1:H%2 — %3")
         .arg(cylinder).arg(head).arg(otdr_quality_name(trk->stats.overall)));
+
+    unsetCursor();
 }
 
 void UftOtdrPanel::analyzeFullDisk()

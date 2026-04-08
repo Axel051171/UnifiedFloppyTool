@@ -16,6 +16,7 @@
  */
 
 #include "uft/flux/uft_uft_kf_stream.h"
+#include "uft/core/uft_forensic_constants.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -446,6 +447,12 @@ int uft_kf_load_track(const char *base_path, int track, int side,
     if (fseek(f, 0, SEEK_END) != 0) { fclose(f); return -1; }
     size_t size = ftell(f);
     if (fseek(f, 0, SEEK_SET) != 0) { fclose(f); return -1; }
+    /* Guard against corrupt / malicious file size */
+    if (size > UFT_MAX_FLUX_FILE_SIZE) {
+        fclose(f);
+        return -1;
+    }
+
     uint8_t *data = malloc(size);
     if (!data) {
         fclose(f);

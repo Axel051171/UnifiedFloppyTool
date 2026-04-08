@@ -15,6 +15,7 @@
 #include <QCheckBox>
 #include <QPushButton>
 #include <QFileDialog>
+#include <QFileInfo>
 #include <QMessageBox>
 #include <QPainter>
 #include <QMouseEvent>
@@ -623,7 +624,9 @@ void UftFluxHistogramPanel::loadFromFile(const QString &filename)
     QFile file(filename);
     if (!file.open(QIODevice::ReadOnly)) {
         QMessageBox::warning(this, tr("Load Error"),
-            tr("Cannot open file: %1").arg(filename));
+            tr("Cannot open '%1'. The file may have been moved, deleted, "
+               "or is in use by another program. Check the path and try again.")
+            .arg(QFileInfo(filename).fileName()));
         return;
     }
 
@@ -648,7 +651,10 @@ void UftFluxHistogramPanel::loadFromFile(const QString &filename)
         int ret = uft_scp_read(data, dataSize, &scp);
         if (ret != 0) {
             QMessageBox::warning(this, tr("SCP Parse Error"),
-                tr("Failed to parse SCP file (error %1)").arg(ret));
+                tr("Failed to parse SCP flux data in '%1' (error %2). "
+                   "The file may be truncated or not a valid SCP image. "
+                   "Try re-dumping with your hardware tool.")
+                .arg(QFileInfo(filename).fileName()).arg(ret));
             return;
         }
 
