@@ -8,6 +8,7 @@
 #include <QMessageBox>
 #include <QFileDialog>
 #include <QPainter>
+#include <QPainterPath>
 #include <QPixmap>
 #include <QtMath>
 

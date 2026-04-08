@@ -10,6 +10,7 @@
 
 #include "uft/ride/uft_flux_decoder.h"
 #include "uft/uft_packed.h"
+#include "uft/core/uft_error_compat.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

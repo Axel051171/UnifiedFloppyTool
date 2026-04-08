@@ -145,16 +145,16 @@ void DiskAnalyzerWindow::loadImage(const QString &filename)
     }
     crc = ~crc;
 
-    int side0Sectors = geom.tracks * geom.sectors;
-    int side1Sectors = (geom.heads > 1) ? geom.tracks * geom.sectors : 0;
+    int side0Sectors = geom.cylinders * geom.sectors;
+    int side1Sectors = (geom.heads > 1) ? geom.cylinders * geom.sectors : 0;
 
     ui->labelSide0Info->setText(QString("%1 Tracks, %2 Sectors, %3 Bytes")
-        .arg(geom.tracks).arg(side0Sectors).arg(side0Sectors * geom.sector_size));
+        .arg(geom.cylinders).arg(side0Sectors).arg(side0Sectors * geom.sector_size));
     ui->labelSide0Format->setText("ISO MFM");
 
     if (geom.heads > 1) {
         ui->labelSide1Info->setText(QString("%1 Tracks, %2 Sectors, %3 Bytes")
-            .arg(geom.tracks).arg(side1Sectors).arg(side1Sectors * geom.sector_size));
+            .arg(geom.cylinders).arg(side1Sectors).arg(side1Sectors * geom.sector_size));
         ui->labelSide1Format->setText("ISO MFM");
     } else {
         ui->labelSide1Info->setText("N/A");
@@ -163,8 +163,8 @@ void DiskAnalyzerWindow::loadImage(const QString &filename)
 
     ui->labelCRC->setText(QString("CRC32: 0x%1").arg(crc, 8, 16, QChar('0')).toUpper());
 
-    ui->spinTrackNumber->setMaximum(geom.tracks > 0 ? geom.tracks - 1 : 0);
-    ui->sliderTrack->setMaximum(geom.tracks > 0 ? geom.tracks - 1 : 0);
+    ui->spinTrackNumber->setMaximum(geom.cylinders > 0 ? geom.cylinders - 1 : 0);
+    ui->sliderTrack->setMaximum(geom.cylinders > 0 ? geom.cylinders - 1 : 0);
     ui->spinSideNumber->setMaximum(geom.heads > 0 ? geom.heads - 1 : 0);
     ui->sliderSide->setMaximum(geom.heads > 0 ? geom.heads - 1 : 0);
 
