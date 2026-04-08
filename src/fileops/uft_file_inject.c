@@ -858,9 +858,9 @@ int uft_inject_file_extended(const char *image_path, const char *filename,
     FILE *in = fopen(input_path, "rb");
     if (!in) return -1;
     
-    if (fseek(in, 0, SEEK_END) != 0) { /* seek error */ }
+    if (fseek(in, 0, SEEK_END) != 0) { fclose(in); return -1; }
     size_t data_size = ftell(in);
-    if (fseek(in, 0, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(in, 0, SEEK_SET) != 0) { fclose(in); return -1; }
     uint8_t *data = malloc(data_size);
     if (!data) {
         fclose(in);
@@ -873,17 +873,17 @@ int uft_inject_file_extended(const char *image_path, const char *filename,
         return -1;
     }
     fclose(in);
-    
+
     /* Read disk image */
     FILE *fp = fopen(image_path, "r+b");
     if (!fp) {
         free(data);
         return -1;
     }
-    
-    if (fseek(fp, 0, SEEK_END) != 0) { /* seek error */ }
+
+    if (fseek(fp, 0, SEEK_END) != 0) { free(data); fclose(fp); return -1; }
     size_t img_size = ftell(fp);
-    if (fseek(fp, 0, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(fp, 0, SEEK_SET) != 0) { free(data); fclose(fp); return -1; }
     uint8_t *image = malloc(img_size);
     if (!image) {
         free(data);
@@ -917,7 +917,7 @@ int uft_inject_file_extended(const char *image_path, const char *filename,
     /* D64 inject is in uft_file_ops.c */
     
     if (result == 0) {
-        if (fseek(fp, 0, SEEK_SET) != 0) { /* seek error */ }
+        if (fseek(fp, 0, SEEK_SET) != 0) { result = -2; }
         /* P1-IO-001: Check fwrite return */
         if (fwrite(image, 1, img_size, fp) != img_size) {
             result = -2;  /* Write failed */

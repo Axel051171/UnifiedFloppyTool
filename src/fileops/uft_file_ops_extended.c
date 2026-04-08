@@ -520,9 +520,9 @@ int uft_list_files_extended(const char *path, uft_directory_t *dir)
     FILE *fp = fopen(path, "rb");
     if (!fp) return -1;
     
-    if (fseek(fp, 0, SEEK_END) != 0) { /* seek error */ }
+    if (fseek(fp, 0, SEEK_END) != 0) { fclose(fp); return -1; }
     size_t size = ftell(fp);
-    if (fseek(fp, 0, SEEK_SET) != 0) { /* seek error */ }
+    if (fseek(fp, 0, SEEK_SET) != 0) { fclose(fp); return -1; }
     uint8_t *image = malloc(size);
     if (!image) {
         fclose(fp);
