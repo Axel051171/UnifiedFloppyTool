@@ -25,6 +25,9 @@ Batch D: `performance-memory` | `compatibility-import-export` | `gui-ux-workflow
 ### Phase 4 — Abschluss
 `build-ci-release` | `github-expert` → `documentation`
 
+### Release-Pipeline (auf Anfrage)
+`release-manager` → koordiniert: `dependency-scanner` + alle Pflicht-Checks + Artefakt-Erstellung
+
 ### Optional (nur auf Anfrage)
 `research-roadmap` — Strategische Planung, Konkurrenzanalyse
 - `info-finder` — Taktische Web-Intelligence, aktuelle Infos zu konkreten Themen
