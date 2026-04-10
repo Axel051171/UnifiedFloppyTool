@@ -188,7 +188,7 @@ int uft_deepread_crosstrack_analyze(const otdr_disk_t *disk,
     for (uint16_t t = 0; t + 1 < tc; t++) {
         float ncc = matrix[t * tc + (t + 1)];
         if (ncc > 0.7f && track_is_damaged(&disk->tracks[t])) {
-            uint16_t track_num = disk->tracks[t].track_number;
+            uint16_t track_num = disk->tracks[t].track_num;
             if (track_num <= 2 || track_num >= 36) {
                 result->may_be_protection = true;
                 break;
