@@ -114,7 +114,9 @@ INCLUDEPATH += \
     src/hardware_providers \
     src/widgets \
     src/flux/fdc_bitstream \
-    src/hal
+    src/hal \
+    include/uft/protection \
+    src/protection
 
 # Forms
 FORMS += \
@@ -2149,7 +2151,11 @@ SOURCES += \
     src/analysis/denoise/uft_denoise_bridge.c \
     src/analysis/denoise/phi_otdr_denoise_1d.c \
     src/formats/amiga/uft_amiga_protection.c \
-    src/protection/ufm_c64_scheme_detect.c
+    src/protection/ufm_c64_scheme_detect.c \
+    src/protection/uft_protection_unified.c \
+    src/protection/uft_c64_missing_schemes.c \
+    src/protection/uft_amiga_missing_schemes.c \
+    src/protection/uft_atarist_missing_schemes.c
 
 # Amiga Extended (9 files)
 SOURCES += \
