@@ -135,7 +135,13 @@ typedef enum {
     UFT_FMT_DSK_DRAGON,     /* Dragon 32/64 */
     UFT_FMT_VDK,            /* Virtual Disk (Dragon) */
     UFT_FMT_OS9,            /* OS-9 */
-    
+
+    /* Nintendo Formats */
+    UFT_FMT_FDS,            /* Famicom Disk System */
+
+    /* MAME Formats */
+    UFT_FMT_CHD,            /* MAME Compressed Hunks of Data */
+
     UFT_FMT_COUNT
 } uft_format_t;
 
@@ -239,7 +245,13 @@ static const magic_entry_t MAGIC_TABLE[] = {
     
     /* MSX */
     { UFT_FMT_CAS,      0, 8, {0x1F,0xA6,0xDE,0xBA,0xCC,0x13,0x7D,0x74}, "CAS", "MSX" },
-    
+
+    /* Nintendo */
+    { UFT_FMT_FDS,      0, 4, {'F','D','S',0x1A}, "FDS", "Famicom" },
+
+    /* MAME */
+    { UFT_FMT_CHD,      0, 8, {'M','C','o','m','p','r','H','D'}, "CHD", "MAME" },
+
     /* End marker */
     { UFT_FMT_UNKNOWN, 0, 0, {0}, "", "" }
 };
@@ -324,7 +336,11 @@ static const size_entry_t SIZE_TABLE[] = {
     /* Japanese */
     { UFT_FMT_D88,      1261568, "D88", "2HD 1.2M", 70 },
     { UFT_FMT_D88,       348160, "D88", "2DD 320K", 70 },
-    
+
+    /* Nintendo FDS */
+    { UFT_FMT_FDS,        65516, "FDS", "1-side", 85 },
+    { UFT_FMT_FDS,       131016, "FDS", "2-side", 85 },
+
     /* End marker */
     { UFT_FMT_UNKNOWN, 0, "", "", 0 }
 };
@@ -430,7 +446,13 @@ static const ext_entry_t EXT_TABLE[] = {
     
     /* MSX */
     { "cas", UFT_FMT_CAS, "CAS" },
-    
+
+    /* Nintendo */
+    { "fds", UFT_FMT_FDS, "FDS" },
+
+    /* MAME */
+    { "chd", UFT_FMT_CHD, "CHD" },
+
     { NULL, UFT_FMT_UNKNOWN, "" }
 };
 
@@ -543,7 +565,13 @@ static const char* format_system(uft_format_t fmt)
         case UFT_FMT_DSK_MSX:
         case UFT_FMT_CAS:
             return "MSX";
-            
+
+        case UFT_FMT_FDS:
+            return "Nintendo Famicom";
+
+        case UFT_FMT_CHD:
+            return "MAME";
+
         default:
             return "Unknown";
     }

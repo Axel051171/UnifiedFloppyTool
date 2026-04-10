@@ -56,7 +56,7 @@ win32:CONFIG += console
 
 # Compiler flags - suppress warnings for legacy code
 # Compiler flags moved to platform-specific sections below
-unix:QMAKE_CFLAGS += -Wall -Wextra -Wno-unused-parameter
+unix:QMAKE_CFLAGS += -Wall -Wextra -Wno-unused-parameter -Wno-sign-compare
 win32-g++:QMAKE_CFLAGS += -Wall -Wextra \
     -Wno-unused-parameter -Wno-unused-function -Wno-sign-compare \
     -Wno-unused-variable -Wno-unused-const-variable \
@@ -139,6 +139,8 @@ FORMS += \
     forms/tab_xcopy.ui
 
 # Main GUI Sources
+# NOTE: analysis/events + analysis/denoise sources are listed here ONCE;
+#       they appear duplicated in later SOURCES blocks but $$unique() deduplicates
 SOURCES += \
     src/analysis/events/uft_export_bridge.c \
     src/analysis/events/otdr_event_core_v12.c \
@@ -1775,8 +1777,8 @@ SOURCES += $$MBEDTLS_SOURCES \
     src/analysis/denoise/uft_denoise_bridge.c \
     src/analysis/denoise/phi_otdr_denoise_1d.c
 
-# Suppress warnings in third-party code
-unix:QMAKE_CFLAGS += -Wno-unused-parameter -Wno-sign-compare
+# NOTE: Warning suppressions already set globally (lines 59-67, 413)
+# -Wno-unused-parameter, -Wno-sign-compare are still required (860+ source files)
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Cart7/Cart8 Multi-System Cartridge Reader (NES, SNES, N64, MD, GBA, GB, 3DS)
@@ -2722,7 +2724,11 @@ SOURCES += \
     src/analysis/events/otdr_event_core_v2.c \
     src/analysis/denoise/uft_denoise_bridge.c \
     src/analysis/denoise/phi_otdr_denoise_1d.c \
-    src/formats/mame/uft_mame_mfi.c
+    src/formats/mame/uft_mame_mfi.c \
+    src/formats/mame/uft_chd.c
+
+HEADERS += \
+    include/uft/formats/mame/uft_chd.h
 
 # MFM Native (1 files)
 SOURCES += \
@@ -2906,7 +2912,11 @@ SOURCES += \
     src/formats/nintendo/uft_nds.c \
     src/formats/nintendo/uft_nes.c \
     src/formats/nintendo/uft_snes.c \
-    src/formats/nintendo/uft_switch.c
+    src/formats/nintendo/uft_switch.c \
+    src/formats/nintendo/uft_fds.c
+
+HEADERS += \
+    include/uft/formats/nintendo/uft_fds.h
 
 # Nordic (1 files)
 SOURCES += \
@@ -3513,7 +3523,10 @@ HEADERS += src/protection/c64/c64_protection_internal.h
 # BUILD FIXES (v4.1.0)
 # ═══════════════════════════════════════════════════════════════════════════════
 
-# Fix 1: Deduplicate SOURCES/HEADERS (OTDR bridge files 100× duplicated)
+# Fix 1: Deduplicate SOURCES/HEADERS (OTDR bridge files 100x duplicated)
+# NOTE: qmake deduplicates, but clean listing preferred
+# TODO: Remove duplicate analysis/events + analysis/denoise entries from each
+#       SOURCES block above — they are listed 99x but only needed once (lines 144-160)
 SOURCES = $$unique(SOURCES)
 HEADERS = $$unique(HEADERS)
 
