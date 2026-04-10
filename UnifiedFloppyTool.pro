@@ -181,10 +181,12 @@ SOURCES += \
     src/gui/uft_sector_editor.cpp \
     src/flux/uft_scp_parser.c \
     src/flux/uft_flux_decoder.c \
-    src/fileops/uft_file_ops_extended.c
+    src/fileops/uft_file_ops_extended.c \
+    src/analysis/uft_sector_compare.c
 
 # Main GUI Headers (CRITICAL for MOC!)
 HEADERS += \
+    include/uft/analysis/uft_sector_compare.h \
     include/uft/analysis/uft_export_bridge.h \
     include/uft/analysis/otdr_event_core_v12.h \
     include/uft/analysis/uft_pipeline_bridge.h \
@@ -205,6 +207,7 @@ HEADERS += \
     include/uft/analysis/mfm_detect.h \
     include/uft/analysis/cpm_fs.h \
     include/uft/analysis/uft_mfm_detect_bridge.h \
+    include/uft/analysis/uft_triage.h \
     src/advanceddialogs.h \
     src/mainwindow.h \
     src/diskanalyzerwindow.h \
@@ -863,6 +866,7 @@ SOURCES += \
     src/analysis/denoise/uft_denoise_bridge.c \
     src/analysis/denoise/phi_otdr_denoise_1d.c \
     src/analysis/uft_track_analysis.c \
+    src/analysis/uft_triage.c \
     src/analysis/otdr/floppy_otdr.c \
     src/analysis/otdr/tdfc.c \
     src/analysis/otdr/tdfc_plus.c \
@@ -3351,6 +3355,12 @@ INCLUDEPATH += \
     $$PWD/src/formats/nintendo \
     $$PWD/src/formats/sega \
     $$PWD/include/uft/floppy
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Forensic Provenance Chain
+# ═══════════════════════════════════════════════════════════════════════════════
+SOURCES += src/forensic/uft_provenance.c
+HEADERS += include/uft/forensic/uft_provenance.h
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # BUILD FIXES (v4.1.0)
