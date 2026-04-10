@@ -658,7 +658,9 @@ SOURCES += \
     src/analysis/deepread/uft_deepread_aging.c \
     src/analysis/deepread/uft_deepread_crosstrack.c \
     src/analysis/deepread/uft_deepread_fingerprint.c \
-    src/analysis/deepread/uft_deepread_soft_decode.c
+    src/analysis/deepread/uft_deepread_soft_decode.c \
+    src/analysis/uft_anomaly_detect.c \
+    src/analysis/uft_ml_protection.c
 
 HEADERS += \
     include/uft/encoding/uft_otdr_encoding_boost.h \
@@ -668,6 +670,8 @@ HEADERS += \
     include/uft/analysis/uft_deepread_crosstrack.h \
     include/uft/analysis/uft_deepread_fingerprint.h \
     include/uft/analysis/uft_deepread_soft_decode.h \
+    include/uft/analysis/uft_anomaly_detect.h \
+    include/uft/analysis/uft_ml_protection.h \
     include/uft/analysis/uft_export_bridge.h \
     include/uft/analysis/otdr_event_core_v12.h \
     include/uft/analysis/uft_pipeline_bridge.h \
@@ -3361,6 +3365,17 @@ INCLUDEPATH += \
 # ═══════════════════════════════════════════════════════════════════════════════
 SOURCES += src/forensic/uft_provenance.c
 HEADERS += include/uft/forensic/uft_provenance.h
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Recovery Wizard + Format Suggestion Engine
+# ═══════════════════════════════════════════════════════════════════════════════
+SOURCES += \
+    src/recovery/uft_recovery_wizard.c \
+    src/analysis/uft_format_suggest.c
+
+HEADERS += \
+    include/uft/recovery/uft_recovery_wizard.h \
+    include/uft/analysis/uft_format_suggest.h
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # BUILD FIXES (v4.1.0)
