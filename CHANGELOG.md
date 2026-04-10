@@ -1,5 +1,41 @@
 # Changelog
 
+## [4.2.0] - 2026-04-10
+
+### Added
+- DeepRead forensic modules: write-splice, aging, cross-track, fingerprint, soft-decode
+- OTDR adaptive decode, weighted voting, encoding boost
+- ML anomaly detection and copy protection classifier
+- 9 format parsers: FDS, CHD, NDIF, EDD, DART, Aaru, HxCStream, 86F, SaveDskF
+- FC5025, XUM1541/ZoomFloppy, Applesauce hardware providers
+- Unified copy protection API (55+ schemes, 10 platforms)
+- Triage mode, sector compare, provenance chain, recovery wizard, format suggestion
+- GUI: state machine, smart export dialog, recovery wizard dialog, compare dialog
+- GUI: drag & drop, keyboard shortcuts, status bar info
+- CI: sanitizers.yml (ASan+UBSan), coverage.yml (Codecov)
+- 25 specialized agent definitions
+
+### Fixed
+- ~610 silent fseek/fread/fwrite error handling fixes
+- Integer overflow guards in 9 parsers
+- Real SHA-256 replacing fake FNV1a-based hash
+- SIMD rounding mismatch (AVX2 vs SSE2/scalar)
+- Multi-revolution negative alignment offset blocking
+- Amiga MFM header buffer overread
+- Apple II DOS-to-ProDOS sector map (3 conflicting tables → 1 canonical)
+- Atari ST boot detection (proper 0x1234 checksum)
+- C64 40-track D64 spt table incomplete
+- Path traversal security (component-level walk)
+- Thread safety: uft_safe_alloc, UftParameterModel, HardwareManager
+- Compiler hardening: -fstack-protector-strong, -D_FORTIFY_SOURCE=2
+
+### Changed
+- God-file split: uft_format_convert.c (3944 lines) → 7 modular files
+- 33 protection source files added to build (were dead code)
+- SCP Extension Footer parsing implemented
+- WOZ 2.1 FLUX chunk decoding implemented
+- Format detection improved: D88/D77, IMG/IMA, Atari ST, Apple DO/PO, HFE v2
+
 ## [4.1.0] - 2026-02-08
 
 ### Fixed – Hardware Protocol Audit

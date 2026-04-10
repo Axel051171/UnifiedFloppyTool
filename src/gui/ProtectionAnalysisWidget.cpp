@@ -230,9 +230,9 @@ void ProtectionAnalysisWidget::updateHeatmap()
     
     // Apply hits
     for (const auto &hit : m_hits) {
-        int track = hit.track_x2 / 2 - 1;  // Convert to 0-based
+        int track = hit.track - 1;  // Convert to 0-based
         if (track < 0 || track >= m_heatmapTable->rowCount()) continue;
-        
+
         int col = -1;
         switch (hit.type) {
             case UFM_C64_PROT_WEAK_BITS:      col = 0; break;
@@ -244,22 +244,22 @@ void ProtectionAnalysisWidget::updateHeatmap()
             case UFM_C64_PROT_SECTOR_ANOMALY: col = 6; break;
             default: continue;
         }
-        
+
         if (col < 0 || col >= m_heatmapTable->columnCount()) continue;
-        
-        // Color based on severity
+
+        // Color based on confidence
         QString color;
-        if (hit.severity_0_100 >= 80) color = TRAIT_COLOR_CRITICAL;
-        else if (hit.severity_0_100 >= 60) color = TRAIT_COLOR_HIGH;
-        else if (hit.severity_0_100 >= 40) color = TRAIT_COLOR_MEDIUM;
+        if (hit.confidence >= 80) color = TRAIT_COLOR_CRITICAL;
+        else if (hit.confidence >= 60) color = TRAIT_COLOR_HIGH;
+        else if (hit.confidence >= 40) color = TRAIT_COLOR_MEDIUM;
         else color = TRAIT_COLOR_LOW;
-        
+
         QTableWidgetItem *item = m_heatmapTable->item(track, col);
         item->setBackground(QColor(color));
-        item->setText(QString::number(hit.severity_0_100));
+        item->setText(QString::number(hit.confidence));
         item->setTextAlignment(Qt::AlignCenter);
-        
-        emit traitDetected(track + 1, m_traitNames[col], hit.severity_0_100);
+
+        emit traitDetected(track + 1, m_traitNames[col], hit.confidence);
     }
 }
 
@@ -285,7 +285,7 @@ void ProtectionAnalysisWidget::updateSchemeList()
     
     for (const auto &hit : m_hits) {
         if (hit.type == UFM_C64_PROT_LONG_SYNC) hasLongSync = true;
-        if (hit.track_x2 == 72) hasTrack36 = true;  // Track 36
+        if (hit.track == 36) hasTrack36 = true;  // Track 36
         if (hit.type == UFM_C64_PROT_WEAK_BITS) weakBitTracks++;
     }
     
@@ -354,10 +354,10 @@ void ProtectionAnalysisWidget::updateDetailView(int track)
     details += "DETECTED TRAITS:\n";
     bool foundHit = false;
     for (const auto &hit : m_hits) {
-        if (hit.track_x2 / 2 == track) {
-            details += QString("  - %1 (severity: %2%)\n")
+        if (hit.track == track) {
+            details += QString("  - %1 (confidence: %2%)\n")
                 .arg(ufm_c64_prot_type_name(hit.type))
-                .arg(hit.severity_0_100);
+                .arg(hit.confidence);
             foundHit = true;
         }
     }
@@ -654,10 +654,10 @@ void ProtectionAnalysisWidget::exportReport()
     out << "DETECTED TRAITS:\n";
     out << "----------------\n";
     for (const auto &hit : m_hits) {
-        out << QString("Track %1: %2 (severity %3%)\n")
-            .arg(hit.track_x2 / 2)
+        out << QString("Track %1: %2 (confidence %3%)\n")
+            .arg(hit.track)
             .arg(ufm_c64_prot_type_name(hit.type))
-            .arg(hit.severity_0_100);
+            .arg(hit.confidence);
     }
     
     file.close();

@@ -1,4 +1,4 @@
-# UnifiedFloppyTool (UFT) v4.1.0
+# UnifiedFloppyTool (UFT) v4.2.0
 
 ## Was ist das?
 
@@ -151,9 +151,10 @@ tests/                 — 77 C-Tests + 1 Qt-Test
 - ~860 Source-Dateien, ~200.000+ Zeilen C/C++
 - 138 Format-IDs, 44 Konvertierungspfade
 - 6 Hardware-Controller
-- 35+ Kopierschutz-Schemes
+- 55+ Kopierschutz-Schemes
 - 8 DeepRead-Module + 12 OTDR-Pipeline-Stufen
 - 9 SIMD-Dispatch-Punkte (SSE2/AVX2 Runtime)
 - ~610 Error-Handling-Fixes (fseek + I/O)
 - Thread-Safety: 3 Subsysteme mit Mutex
 - Compiler-Hardening: stack-protector, FORTIFY_SOURCE, ASLR
+- 25 Agent-Definitionen

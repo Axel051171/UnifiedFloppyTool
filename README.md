@@ -25,16 +25,56 @@
 
 ---
 
-## What's New in v4.1.0
+## What's New in v4.2.0
 
-**Complete hardware protocol audit** — all 6 hardware backends rewritten against original manufacturer specifications. 24+ critical protocol bugs fixed.
+### DeepRead Forensic Analysis
+- 5 forensic modules: Write-Splice Detection, Magnetic Aging, Cross-Track Correlation, Revolution Fingerprint, Soft-Decision LLR
+- 3 decode boosters: Adaptive Decode, Weighted Voting, Encoding Boost
+- GUI: DeepRead panel with Lite/Full mode, persistent settings
 
-- **SuperCard Pro** — SDK v1.7 binary protocol (replacing fabricated ASCII commands)
-- **FC5025** — SCSI-like CBW/CSW from DeviceSide driver source (correctly marked read-only)
-- **KryoFlux** — DTC subprocess wrapper (proprietary USB protocol acknowledged)
-- **Pauline** — HTTP/SSH control matching real DE10-nano FPGA architecture
-- **Greaseweazle** — 16 fixes against `gw_protocol.h` v1.23
-- **GitHub Actions CI/CD** — automated builds for macOS, Linux, Windows
+### ML-Based Analysis
+- Anomaly detection (autoencoder-inspired statistical scoring)
+- Copy protection classifier (15 known scheme signatures)
+- Bayesian format detection
+
+### New Format Parsers (9)
+- FDS (Famicom Disk System), CHD (MAME), NDIF (Mac DiskCopy 6.x)
+- EDD (Essential Data Duplicator), DART (Mac compressed), Aaru (DICF)
+- HxCStream (HxC native flux), 86F (86Box), SaveDskF (IBM OS/2)
+
+### Hardware Controllers
+- FC5025 USB 5.25" controller (full implementation)
+- XUM1541/ZoomFloppy with OpenCBM IEC bus protocol
+- Applesauce with text-based USB serial protocol
+
+### Copy Protection (55+ schemes)
+- Unified cross-platform detection API (10 platforms)
+- 19 new scheme detectors (C64, Amiga, Atari ST)
+- ML-based unknown protection detection
+
+### Forensic Features
+- Triage Mode: 10-second quick quality assessment
+- Sector Compare: byte-for-byte disk image diff
+- Provenance Chain: SHA-256 cryptographic chain-of-custody
+- Recovery Wizard: guided step-by-step recovery workflow
+- Format Suggestion: intelligent export format recommendation
+
+### GUI Overhaul
+- Application state machine (8 states, mutual exclusion)
+- Smart Export Dialog with preservation flags
+- Recovery Wizard (QWizard, 5 steps)
+- Drag & Drop, keyboard shortcuts, status bar info
+
+### Parser Hardening
+- ~610 silent error handling fixes (fseek + fread/fwrite)
+- Integer overflow guards in 9 critical parsers
+- Real SHA-256 (FIPS 180-4) replacing fake hash
+- Path traversal security fix
+
+### CI/CD
+- Sanitizer workflows (ASan + UBSan)
+- Code coverage with Codecov
+- SIMD runtime detection (9 dispatch points)
 
 → [Full Changelog](CHANGELOG.md)
 

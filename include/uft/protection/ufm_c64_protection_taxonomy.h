@@ -32,6 +32,12 @@ typedef enum {
     UFM_PROT_BAD_GCR,           /**< Invalid GCR sequences */
     UFM_PROT_TIMING,            /**< Timing-based checks */
     UFM_PROT_UNKNOWN,           /**< Unknown scheme */
+    UFM_C64_PROT_WEAK_BITS,     /**< Weak/fuzzy bits */
+    UFM_C64_PROT_SHORT_TRACK,   /**< Shorter than nominal track */
+    UFM_C64_PROT_HALF_TRACK_DATA, /**< Data on half-tracks */
+    UFM_C64_PROT_ILLEGAL_GCR,   /**< Illegal GCR encodings */
+    UFM_C64_PROT_LONG_SYNC,     /**< Extended sync patterns */
+    UFM_C64_PROT_SECTOR_ANOMALY, /**< Sector structure anomalies */
     UFM_PROT_COUNT
 } ufm_c64_prot_type_t;
 

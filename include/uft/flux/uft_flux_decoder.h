@@ -174,6 +174,7 @@ typedef struct {
     double   freq_gain;         /* Frequency adjustment gain */
     double   phase_gain;        /* Phase adjustment gain */
     uint32_t last_transition;   /* Last transition time */
+    bool     use_pll;           /* Enable PLL tracking */
 } flux_pll_t;
 
 /* ============================================================================
