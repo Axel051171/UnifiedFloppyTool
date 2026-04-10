@@ -3402,6 +3402,114 @@ HEADERS += \
     src/gui/uft_recovery_dialog.h
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# Copy Protection Detection (complete set — 38 source files)
+# Previously only 5 files were compiled; audit found 33 missing.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Include path for c64 internal headers
+INCLUDEPATH += $$PWD/src/protection/c64
+
+# C64 Protection Subdirectory (5 files)
+SOURCES += \
+    src/protection/c64/c64_protection_analysis.c \
+    src/protection/c64/c64_protection_db.c \
+    src/protection/c64/uft_c64_protection.c \
+    src/protection/c64/uft_c64_protection_ext.c \
+    src/protection/c64/uft_track_align.c
+
+# Core Protection Framework (4 files)
+SOURCES += \
+    src/protection/uft_protection.c \
+    src/protection/uft_protection_api.c \
+    src/protection/uft_protection_classify.c \
+    src/protection/uft_protection_detect.c
+
+# Protection Extensions & Stubs (4 files)
+SOURCES += \
+    src/protection/uft_protection_ext.c \
+    src/protection/uft_protection_extended.c \
+    src/protection/uft_protection_params.c \
+    src/protection/uft_protection_stubs.c
+
+# Amiga Protection (3 files)
+SOURCES += \
+    src/protection/uft_amiga_caps.c \
+    src/protection/uft_amiga_protection.c \
+    src/protection/uft_amiga_protection_full.c
+
+# Atari ST Protection (5 files)
+SOURCES += \
+    src/protection/uft_atarist_copylock.c \
+    src/protection/uft_atarist_dec0de.c \
+    src/protection/uft_atarist_macrodos.c \
+    src/protection/uft_atarist_protection.c \
+    src/protection/uft_atari8_protection.c
+
+# C64 Protection — Top-level (2 files)
+SOURCES += \
+    src/protection/uft_c64_protection_enhanced.c \
+    src/protection/uft_geos_protection.c
+
+# Apple II Protection (1 file)
+SOURCES += \
+    src/protection/uft_apple2_protection.c
+
+# PC Protection (2 files)
+SOURCES += \
+    src/protection/uft_pc_protection.c \
+    src/protection/uft_pc_cdrom_protection.c
+
+# Individual Scheme Detectors (5 files)
+SOURCES += \
+    src/protection/uft_copylock.c \
+    src/protection/uft_fuzzy_bits.c \
+    src/protection/uft_longtrack.c \
+    src/protection/uft_rapidlok.c \
+    src/protection/uft_speedlock.c
+
+# Support Modules (2 files)
+SOURCES += \
+    src/protection/uft_magnetic_state.c \
+    src/protection/uft_rtc_decompress.c
+
+# Protection Headers (31 files)
+HEADERS += \
+    include/uft/protection/ufm_c64_protection_taxonomy.h \
+    include/uft/protection/ufm_c64_scheme_detect.h \
+    include/uft/protection/ufm_cbm_protection_methods.h \
+    include/uft/protection/uft_amiga_caps.h \
+    include/uft/protection/uft_amiga_protection_full.h \
+    include/uft/protection/uft_amiga_protection_registry.h \
+    include/uft/protection/uft_apple2_protection.h \
+    include/uft/protection/uft_atari8_protection.h \
+    include/uft/protection/uft_atarist_copylock.h \
+    include/uft/protection/uft_atarist_dec0de.h \
+    include/uft/protection/uft_atarist_macrodos.h \
+    include/uft/protection/uft_atarist_protection.h \
+    include/uft/protection/uft_c64_protection.h \
+    include/uft/protection/uft_c64_protection_enhanced.h \
+    include/uft/protection/uft_c64_protection_ext.h \
+    include/uft/protection/uft_copylock.h \
+    include/uft/protection/uft_fuzzy_bits.h \
+    include/uft/protection/uft_geos_protection.h \
+    include/uft/protection/uft_longtrack.h \
+    include/uft/protection/uft_magnetic_state.h \
+    include/uft/protection/uft_pc_cdrom_protection.h \
+    include/uft/protection/uft_protection.h \
+    include/uft/protection/uft_protection_classify.h \
+    include/uft/protection/uft_protection_ext.h \
+    include/uft/protection/uft_protection_extended.h \
+    include/uft/protection/uft_protection_params.h \
+    include/uft/protection/uft_protection_stubs.h \
+    include/uft/protection/uft_protection_unified.h \
+    include/uft/protection/uft_rtc_decompress.h \
+    include/uft/protection/uft_speedlock.h \
+    include/uft/protection/uft_track_align.h
+
+# Internal header (not in include/uft/)
+HEADERS += src/protection/c64/c64_protection_internal.h
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # BUILD FIXES (v4.1.0)
 # ═══════════════════════════════════════════════════════════════════════════════
 
