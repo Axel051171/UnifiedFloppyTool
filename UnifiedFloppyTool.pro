@@ -1905,7 +1905,7 @@ SOURCES += \
     src/formats/amstrad/trd_scl.c \
     src/formats/amstrad/uft_edsk_parser.c
 
-# Apple formats (12 files)
+# Apple formats (15 files)
 SOURCES += \
     src/analysis/events/uft_export_bridge.c \
     src/analysis/events/otdr_event_core_v12.c \
@@ -1932,7 +1932,10 @@ SOURCES += \
     src/formats/apple/uft_diskcopy.c \
     src/formats/apple/uft_moof_parser.c \
     src/formats/apple/uft_woz.c \
-    src/formats/apple/woz.c
+    src/formats/apple/woz.c \
+    src/formats/apple/uft_ndif.c \
+    src/formats/apple/uft_edd.c \
+    src/formats/apple/uft_dart.c
 
 # Atari formats (19 files)
 SOURCES += \
@@ -2400,7 +2403,10 @@ HEADERS += \
     include/uft/analysis/uft_denoise_bridge.h \
     include/uft/analysis/phi_otdr_denoise_1d.h \
     include/uft/formats/polyglot_boot.h \
-    include/uft/formats/apple/uft_moof.h
+    include/uft/formats/apple/uft_moof.h \
+    include/uft/formats/apple/uft_ndif.h \
+    include/uft/formats/apple/uft_edd.h \
+    include/uft/formats/apple/uft_dart.h
 
 # Atari DOS Filesystem Module
 SOURCES += \
@@ -3406,6 +3412,25 @@ HEADERS += src/gui/uft_smart_export_dialog.h
 SOURCES += \
     src/gui/uft_compare_dialog.cpp \
     src/gui/uft_recovery_dialog.cpp
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# New Format Parsers: Aaru, HxCStream, 86F (pc), SaveDskF
+# ═══════════════════════════════════════════════════════════════════════════════
+SOURCES += \
+    src/formats/modern/uft_aaru.c \
+    src/formats/flux/uft_hxcstream.c \
+    src/formats/pc/uft_86f.c \
+    src/formats/pc/uft_savedskf.c
+
+HEADERS += \
+    include/uft/formats/modern/uft_aaru.h \
+    include/uft/formats/flux/uft_hxcstream.h \
+    include/uft/formats/pc/uft_86f.h \
+    include/uft/formats/pc/uft_savedskf.h
+
+INCLUDEPATH += \
+    $$PWD/src/formats/modern \
+    $$PWD/src/formats/pc
 
 HEADERS += \
     src/gui/uft_compare_dialog.h \

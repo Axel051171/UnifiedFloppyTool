@@ -60,6 +60,9 @@ typedef enum {
     UFT_FMT_DSK_APPLE,      /* Apple DSK */
     UFT_FMT_DC42,           /* Disk Copy 4.2 */
     UFT_FMT_MOOF,           /* Applesauce Mac Flux */
+    UFT_FMT_NDIF,           /* NDIF (DiskCopy 6.x) */
+    UFT_FMT_EDD,            /* Essential Data Duplicator */
+    UFT_FMT_DART,           /* Disk Archive/Retrieval Tool */
 
     /* Atari Formats */
     UFT_FMT_ATR,            /* Atari 8-Bit */
@@ -141,6 +144,12 @@ typedef enum {
 
     /* MAME Formats */
     UFT_FMT_CHD,            /* MAME Compressed Hunks of Data */
+
+    /* Modern Preservation Formats */
+    UFT_FMT_AARU,           /* Aaru/DICF (Disc Image Chef Format) */
+    UFT_FMT_HXCSTREAM,      /* HxC Floppy Emulator flux stream */
+    UFT_FMT_86F,            /* 86Box 86F surface format */
+    UFT_FMT_SAVEDSKF,       /* IBM OS/2 SaveDskF */
 
     UFT_FMT_COUNT
 } uft_format_t;
@@ -252,6 +261,12 @@ static const magic_entry_t MAGIC_TABLE[] = {
     /* MAME */
     { UFT_FMT_CHD,      0, 8, {'M','C','o','m','p','r','H','D'}, "CHD", "MAME" },
 
+    /* Modern Preservation */
+    { UFT_FMT_AARU,     0, 5, {'A','A','R','U','F'}, "AARU", "DICF" },
+    { UFT_FMT_HXCSTREAM,0, 9, {'H','X','C','S','T','R','E','A','M'}, "HxCStream", "" },
+    { UFT_FMT_86F,      0, 4, {'8','6','B','F'}, "86F", "86Box" },
+    { UFT_FMT_SAVEDSKF, 0, 2, {0x5A,0x4B}, "SaveDskF", "OS/2" },
+
     /* End marker */
     { UFT_FMT_UNKNOWN, 0, 0, {0}, "", "" }
 };
@@ -290,7 +305,9 @@ static const size_entry_t SIZE_TABLE[] = {
     { UFT_FMT_DO,        143360, "DO/DSK", "DOS 3.3", 70 },
     { UFT_FMT_PO,        143360, "PO", "ProDOS", 70 },
     { UFT_FMT_NIB_APPLE, 232960, "NIB", "Apple 35T", 80 },
-    
+    { UFT_FMT_EDD,       232960, "EDD", "v3 35T", 60 },
+    { UFT_FMT_EDD,       465920, "EDD", "v4 35T+timing", 70 },
+
     /* Atari 8-Bit */
     { UFT_FMT_ATR,        92176, "ATR", "SD 90K", 60 },
     { UFT_FMT_ATR,       133136, "ATR", "ED 130K", 60 },
@@ -383,6 +400,8 @@ static const ext_entry_t EXT_TABLE[] = {
     { "a2r", UFT_FMT_A2R, "A2R" },
     { "dc", UFT_FMT_DC42, "DC42" },
     { "moof", UFT_FMT_MOOF, "MOOF" },
+    { "edd", UFT_FMT_EDD, "EDD" },
+    { "dart", UFT_FMT_DART, "DART" },
 
     /* Atari */
     { "atr", UFT_FMT_ATR, "ATR" },
@@ -453,6 +472,14 @@ static const ext_entry_t EXT_TABLE[] = {
     /* MAME */
     { "chd", UFT_FMT_CHD, "CHD" },
 
+    /* Modern Preservation */
+    { "aaru", UFT_FMT_AARU, "AARU" },
+    { "dicf", UFT_FMT_AARU, "AARU" },
+    { "aaruf", UFT_FMT_AARU, "AARU" },
+    { "hxcstream", UFT_FMT_HXCSTREAM, "HxCStream" },
+    { "86f", UFT_FMT_86F, "86F" },
+    { "dskf", UFT_FMT_SAVEDSKF, "SaveDskF" },
+
     { NULL, UFT_FMT_UNKNOWN, "" }
 };
 
@@ -491,6 +518,9 @@ static const char* format_system(uft_format_t fmt)
         case UFT_FMT_A2R:
         case UFT_FMT_DC42:
         case UFT_FMT_MOOF:
+        case UFT_FMT_NDIF:
+        case UFT_FMT_EDD:
+        case UFT_FMT_DART:
             return "Apple / Macintosh";
             
         case UFT_FMT_ATR:
@@ -571,6 +601,18 @@ static const char* format_system(uft_format_t fmt)
 
         case UFT_FMT_CHD:
             return "MAME";
+
+        case UFT_FMT_AARU:
+            return "Aaru (Modern Preservation)";
+
+        case UFT_FMT_HXCSTREAM:
+            return "HxC Floppy Emulator";
+
+        case UFT_FMT_86F:
+            return "86Box PC Emulator";
+
+        case UFT_FMT_SAVEDSKF:
+            return "IBM OS/2";
 
         default:
             return "Unknown";
@@ -924,6 +966,75 @@ static int validate_structure(const char *path, const uint8_t *header,
                 }
                 if (bpb_jump && oem_ok) {
                     bonus = 15;
+                }
+            }
+            break;
+
+        case UFT_FMT_AARU:
+            /* Aaru: validate version bytes after magic */
+            if (memcmp(header, "AARUF", 5) == 0) {
+                snprintf(info->version, sizeof(info->version),
+                         "%d.%d", header[5], header[6]);
+                snprintf(info->description, sizeof(info->description),
+                         "Aaru/DICF disk preservation format");
+                bonus = 15;
+            }
+            break;
+
+        case UFT_FMT_HXCSTREAM:
+            /* HxCStream: validate track/side counts */
+            if (memcmp(header, "HXCSTREAM", 9) == 0) {
+                uint8_t ntracks = header[10];
+                uint8_t nsides = header[11];
+                if (ntracks >= 1 && ntracks <= 84 &&
+                    nsides >= 1 && nsides <= 2) {
+                    info->tracks = ntracks;
+                    info->sides = nsides;
+                    bonus = 15;
+                }
+            }
+            break;
+
+        case UFT_FMT_86F:
+            /* 86F: validate disk type and geometry */
+            if (memcmp(header, "86BF", 4) == 0) {
+                uint8_t dtype = header[8];
+                uint8_t ntracks = header[11];
+                uint8_t nsides = header[12];
+                if (dtype <= 2 && ntracks >= 1 && ntracks <= 100 &&
+                    nsides >= 1 && nsides <= 2) {
+                    info->tracks = ntracks;
+                    info->sides = nsides;
+                    snprintf(info->version, sizeof(info->version),
+                             "v%d.%d", header[4], header[5]);
+                    bonus = 15;
+                }
+            }
+            break;
+
+        case UFT_FMT_SAVEDSKF:
+            /* SaveDskF: validate geometry after 2-byte magic */
+            {
+                uint16_t sec_size = header[2] | ((uint16_t)header[3] << 8);
+                uint16_t spt = header[4] | ((uint16_t)header[5] << 8);
+                uint16_t heads = header[6] | ((uint16_t)header[7] << 8);
+                uint16_t cyls = header[8] | ((uint16_t)header[9] << 8);
+                uint8_t comp = header[10];
+
+                bool sec_ok = (sec_size == 128 || sec_size == 256 ||
+                               sec_size == 512 || sec_size == 1024);
+                bool spt_ok = (spt >= 1 && spt <= 36);
+                bool heads_ok = (heads >= 1 && heads <= 2);
+                bool cyls_ok = (cyls >= 1 && cyls <= 85);
+                bool comp_ok = (comp <= 2);
+
+                if (sec_ok && spt_ok && heads_ok && cyls_ok && comp_ok) {
+                    info->tracks = cyls;
+                    info->sides = heads;
+                    info->sectors = spt;
+                    info->sector_size = sec_size;
+                    info->compressed = (comp != 0);
+                    bonus = 20;  /* Extra validation for weak 2-byte magic */
                 }
             }
             break;
