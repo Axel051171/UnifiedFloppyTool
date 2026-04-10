@@ -38,6 +38,7 @@ typedef enum {
     UFM_C64_PROT_ILLEGAL_GCR,   /**< Illegal GCR encodings */
     UFM_C64_PROT_LONG_SYNC,     /**< Extended sync patterns */
     UFM_C64_PROT_SECTOR_ANOMALY, /**< Sector structure anomalies */
+    UFM_C64_PROT_LONG_TRACK,    /**< Extended track length (C64 alias) */
     UFM_PROT_COUNT
 } ufm_c64_prot_type_t;
 
@@ -55,6 +56,17 @@ typedef struct {
     float    jitter_rms;
     bool     has_half_track;
     bool     has_custom_sync;
+    /* Extended fields for GUI + detailed analysis */
+    uint32_t revolutions;         /**< Revolutions captured for this track */
+    float    bitlen_min;          /**< Minimum bitcell length (ns) */
+    float    bitlen_max;          /**< Maximum bitcell length (ns) */
+    uint32_t weak_region_bits;    /**< Total weak bit count */
+    uint32_t weak_region_max_run; /**< Longest consecutive weak run */
+    uint32_t illegal_gcr_events;  /**< Count of illegal GCR sequences */
+    uint32_t max_sync_run_bits;   /**< Longest sync run in bits */
+    bool     is_half_track;       /**< Alias for has_half_track */
+    bool     has_meaningful_data;  /**< Track contains decodable data */
+    int      track_x2;            /**< Half-track index (track*2, +1 for half) */
 } ufm_c64_track_metrics_t;
 
 /** Single protection detection hit */
