@@ -1430,6 +1430,17 @@ SOURCES += \
     src/formats/uft_format_names_extended.c \
     src/formats/uft_format_versions.c
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# Format Conversion Engine (split from uft_format_convert.c)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+SOURCES += \
+    src/formats/uft_format_convert_tables.c \
+    src/formats/uft_format_convert_archive.c \
+    src/formats/uft_format_convert_flux.c \
+    src/formats/uft_format_convert_bitstream.c \
+    src/formats/uft_format_convert_sector.c \
+    src/formats/uft_format_convert_dispatch.c
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Phase 2d: Additional Utilities & Format Support
