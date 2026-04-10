@@ -337,11 +337,17 @@ void UftTargetPage::setupUi()
     m_compatibilityLabel = new QLabel();
     m_compatibilityLabel->setWordWrap(true);
     descLayout->addWidget(m_compatibilityLabel);
+
+    /* Conversion warning (same-format / lossy) */
+    m_conversionWarning = new QLabel();
+    m_conversionWarning->setWordWrap(true);
+    m_conversionWarning->setVisible(false);
+    descLayout->addWidget(m_conversionWarning);
     descLayout->addStretch();
-    
+
     listLayout->addLayout(descLayout);
     layout->addLayout(listLayout);
-    
+
     /* Output path */
     QGroupBox *outputGroup = new QGroupBox(tr("Output"));
     QHBoxLayout *outputLayout = new QHBoxLayout(outputGroup);
@@ -369,8 +375,8 @@ void UftTargetPage::setupUi()
                     m_formatDescription->setText(QString("<b>%1</b><br>%2")
                         .arg(f->name).arg(f->description));
                     m_compatibilityLabel->setText(
-                        f->can_write ? tr("✓ Writing supported") : 
-                                       tr("✗ Read-only format"));
+                        f->can_write ? tr("\xe2\x9c\x93 Writing supported") :
+                                       tr("\xe2\x9c\x97 Read-only format"));
                     if (m_autoExtension->isChecked()) {
                         updateExtension();
                     }
@@ -378,6 +384,7 @@ void UftTargetPage::setupUi()
                 }
             }
         }
+        updateConversionWarning();
         emit completeChanged();
     });
     
@@ -469,7 +476,16 @@ void UftTargetPage::updateExtension()
 
 bool UftTargetPage::isComplete() const
 {
-    return m_formatList->currentRow() >= 0 && !m_targetPath->text().isEmpty();
+    if (m_formatList->currentRow() < 0 || m_targetPath->text().isEmpty())
+        return false;
+
+    /* Block if source and target format are identical */
+    QString targetId = m_formatList->currentItem()->data(Qt::UserRole).toString();
+    if (!m_sourceFormat.isEmpty()
+        && targetId.compare(m_sourceFormat, Qt::CaseInsensitive) == 0)
+        return false;
+
+    return true;
 }
 
 QString UftTargetPage::getTargetFormat() const
@@ -483,6 +499,65 @@ QString UftTargetPage::getTargetFormat() const
 QString UftTargetPage::getTargetPath() const
 {
     return m_targetPath->text();
+}
+
+void UftTargetPage::setSourceFormat(const QString &format)
+{
+    m_sourceFormat = format.toUpper();
+    updateConversionWarning();
+    emit completeChanged();
+}
+
+void UftTargetPage::updateConversionWarning()
+{
+    if (m_formatList->currentRow() < 0) {
+        m_conversionWarning->setVisible(false);
+        return;
+    }
+
+    QString targetId = m_formatList->currentItem()->data(Qt::UserRole).toString();
+    QString targetCat = m_formatList->currentItem()->data(Qt::UserRole + 1).toString();
+
+    /* Same format selected as source */
+    if (!m_sourceFormat.isEmpty()
+        && targetId.compare(m_sourceFormat, Qt::CaseInsensitive) == 0) {
+        m_conversionWarning->setStyleSheet(
+            "color: #d32f2f; font-weight: bold; padding: 4px;");
+        m_conversionWarning->setText(
+            tr("Source and target format are the same. "
+               "Please select a different target format."));
+        m_conversionWarning->setVisible(true);
+        return;
+    }
+
+    /* Detect lossy conversions: flux/bitstream -> sector loses timing data */
+    QString sourceCat;
+    for (const FormatEntry *f = FORMATS; f->id; f++) {
+        if (m_sourceFormat.compare(f->id, Qt::CaseInsensitive) == 0) {
+            sourceCat = f->category;
+            break;
+        }
+    }
+
+    QStringList lostData;
+    if ((sourceCat == "flux" || sourceCat == "bitstream") && targetCat == "sector") {
+        lostData << tr("timing information") << tr("weak/fuzzy bits");
+        if (sourceCat == "flux")
+            lostData << tr("multi-revolution data");
+    } else if (sourceCat == "flux" && targetCat == "bitstream") {
+        lostData << tr("multi-revolution data") << tr("raw flux timing");
+    }
+
+    if (!lostData.isEmpty()) {
+        m_conversionWarning->setStyleSheet(
+            "color: #e67e00; padding: 4px;");
+        m_conversionWarning->setText(
+            tr("Lossy conversion: %1 will be lost.")
+            .arg(lostData.join(", ")));
+        m_conversionWarning->setVisible(true);
+    } else {
+        m_conversionWarning->setVisible(false);
+    }
 }
 
 /*===========================================================================
@@ -984,6 +1059,10 @@ UftConversionOptions UftFormatConverterWizard::getOptions() const
 void UftFormatConverterWizard::onPageChanged(int id)
 {
     if (id == Page_Target) {
+        /* Pass detected source format to target page for conflict detection */
+        QString detectedFormat = m_sourcePage->getDetectedFormat();
+        m_targetPage->setSourceFormat(detectedFormat);
+
         /* Auto-generate output path based on source */
         QString source = m_sourcePage->getSourcePath();
         if (!source.isEmpty()) {

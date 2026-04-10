@@ -391,8 +391,11 @@ QSplitter::handle:hover {
     </property>
     <addaction name="actionConvert"/>
     <addaction name="actionAnalyze"/>
-    <addaction name="actionRepair"/>
+    <addaction name="separator"/>
     <addaction name="actionCompare"/>
+    <addaction name="separator"/>
+    <addaction name="actionRepair"/>
+    <addaction name="actionRecoveryWizard"/>
    </widget>
    <widget class="QMenu" name="menuHardware">
     <property name="title">
@@ -526,6 +529,11 @@ QSplitter::handle:hover {
   <action name="actionCompare">
    <property name="text">
     <string>C&amp;ompare...</string>
+   </property>
+  </action>
+  <action name="actionRecoveryWizard">
+   <property name="text">
+    <string>Recovery &amp;Wizard...</string>
    </property>
   </action>
   <action name="actionDetectHardware">

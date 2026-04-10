@@ -26,6 +26,10 @@
 #include "AnalyzerToolbar.h"
 #include "TrackAnalyzerWidget.h"
 
+/* Sector Compare + Recovery Wizard dialogs */
+#include "uft_compare_dialog.h"
+#include "uft_recovery_dialog.h"
+
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QSettings>
@@ -36,6 +40,12 @@
 #include <QVBoxLayout>
 #include <QFile>
 #include <QFileInfo>
+#include <QPushButton>
+#include <QDragEnterEvent>
+#include <QDropEvent>
+#include <QMimeData>
+#include <QLocale>
+#include <QToolBar>
 
 /* C includes for UFT core */
 #include <cstdio>
@@ -44,6 +54,7 @@
 
 extern "C" {
 #include "uft/uft_format_convert.h"
+#include "uft/analysis/uft_triage.h"
 }
 
 #include "uft/hardwareprovider.h"
@@ -54,17 +65,31 @@ UftMainWindow::UftMainWindow(QWidget *parent)
     , ui(new Ui::UftMainWindow)
     , m_analyzerToolbar(nullptr)
     , m_trackAnalyzer(nullptr)
+    , m_triageBtn(nullptr)
     , m_modified(false)
+    , m_appState(AppState::Empty)
+    , m_hardwareConnected(false)
+    , m_hasFluxData(false)
 {
     ui->setupUi(this);
-    
+
+    /* Quick-Win 2: Enable Drag & Drop */
+    setAcceptDrops(true);
+
     setupCentralWidget();
     setupAnalyzerToolbar();  /* P2-12 */
     setupStatusBar();
     setupConnections();
     setupAnalyzerConnections();  /* P2-13 */
+    setupKeyboardShortcuts();    /* Quick-Win 3 */
     loadSettings();
-    
+
+    /* Quick-Win 4: Initial status bar state */
+    updateStatusBar();
+
+    /* Initial button states: no file loaded, nothing enabled */
+    setAppState(AppState::Empty);
+
     setWindowTitle(QString("UnifiedFloppyTool v%1").arg(UFT_VERSION_STRING));
 }
 
@@ -172,10 +197,11 @@ void UftMainWindow::setupConnections()
     connect(ui->actionAnalyze, &QAction::triggered, this, &UftMainWindow::onAnalyze);
     connect(ui->actionRepair, &QAction::triggered, this, &UftMainWindow::onRepair);
     connect(ui->actionCompare, &QAction::triggered, this, &UftMainWindow::onCompare);
-    
+    connect(ui->actionRecoveryWizard, &QAction::triggered, this, &UftMainWindow::onRecoveryWizard);
+
     connect(ui->actionDetectHardware, &QAction::triggered, this, &UftMainWindow::onDetectHardware);
     connect(ui->actionHardwareSettings, &QAction::triggered, this, &UftMainWindow::onHardwareSettings);
-    
+
     connect(ui->actionHelp, &QAction::triggered, this, &UftMainWindow::onHelp);
     connect(ui->actionAbout, &QAction::triggered, this, &UftMainWindow::onAbout);
     
@@ -189,9 +215,28 @@ void UftMainWindow::setupConnections()
         m_formatLabel->setText(profile);
     });
     
-    /* Hardware connection */
+    /* Hardware connection — track state for button management */
     connect(m_hardwarePanel, &UftHardwarePanel::controllerConnected, this, [this](const QString &name) {
+        m_hardwareConnected = true;
         m_hardwareLabel->setText(name);
+        updateButtonStates();
+    });
+
+    connect(m_hardwarePanel, &UftHardwarePanel::controllerDisconnected, this, [this]() {
+        m_hardwareConnected = false;
+        m_hardwareLabel->setText(tr("No hardware"));
+        updateButtonStates();
+    });
+
+    /* OTDR analysis started — enter busy state */
+    connect(m_otdrPanel, &UftOtdrPanel::analysisStarted, this, [this]() {
+        setAppState(AppState::Analyzing);
+    });
+
+    /* OTDR analysis complete — return to non-busy state */
+    connect(m_otdrPanel, &UftOtdrPanel::analysisComplete, this, [this](float) {
+        if (m_appState == AppState::Analyzing)
+            setAppState(AppState::Analyzed);
     });
 }
 
@@ -266,25 +311,33 @@ bool UftMainWindow::openImage(const QString &path)
     }
     
     m_currentFile = path;
+    m_currentFormat = detectedFormat;
     m_modified = false;
-    
+
     /* Update UI */
     setWindowTitle(QString("UnifiedFloppyTool - %1").arg(QFileInfo(path).fileName()));
-    m_statusLabel->setText(QString("Loaded: %1 (%2, %3 bytes)")
-                          .arg(path)
-                          .arg(detectedFormat)
-                          .arg(fileSize));
-    
+
+    /* Quick-Win 4: Update status bar with file info */
+    updateStatusBar();
+
     /* Load file browser */
     m_fileBrowserPanel->loadDirectory(path);
     
+    /* Track whether this is a flux image */
+    m_hasFluxData = detectedFormat.startsWith("SCP") || detectedFormat.startsWith("HFE")
+                    || detectedFormat.startsWith("KF") || detectedFormat.startsWith("WOZ")
+                    || detectedFormat.startsWith("A2R");
+
     /* Auto-trigger Signal Analysis for flux files */
     if (detectedFormat.startsWith("SCP") || detectedFormat.startsWith("HFE")) {
         if (m_otdrPanel->loadFluxImage(path)) {
             ui->mainTabs->setCurrentWidget(ui->tabSignalAnalysis);
         }
     }
-    
+
+    /* Transition to FileLoaded state — enables Analyze, Export, etc. */
+    setAppState(AppState::FileLoaded);
+
     emit imageLoaded(path);
     return true;
 }
@@ -430,7 +483,7 @@ void UftMainWindow::onReadDisk()
     m_statusLabel->setText("Reading disk...");
     m_progressBar->setVisible(true);
     m_progressBar->setValue(0);
-    
+
     /* Use hardware panel to read disk via provider */
     if (!m_hardwarePanel) {
         QMessageBox::warning(this, "Read Disk", "Hardware panel not available.");
@@ -447,8 +500,6 @@ void UftMainWindow::onReadDisk()
         return;
     }
 
-    emit operationStarted("Read Disk");
-
     /* Ask for output file */
     QString savePath = QFileDialog::getSaveFileName(this, "Save Read Data",
         QString(), "All Supported (*.adf *.d64 *.scp *.hfe *.img);;All Files (*)");
@@ -457,6 +508,10 @@ void UftMainWindow::onReadDisk()
         m_statusLabel->setText("Read cancelled.");
         return;
     }
+
+    /* Lock UI: disable conflicting operations during hardware read */
+    setAppState(AppState::HardwareRead);
+    emit operationStarted("Read Disk");
 
     /* Read all tracks */
     QVector<TrackData> tracks = provider->readDisk(0, -1, 2);
@@ -480,11 +535,13 @@ void UftMainWindow::onReadDisk()
         outFile.close();
         m_statusLabel->setText(QString("Read complete: %1 tracks, %2 bytes saved to %3")
             .arg(goodTracks).arg(diskData.size()).arg(savePath));
-        openImage(savePath);
+        openImage(savePath);  /* This calls setAppState(FileLoaded) */
     } else {
         QMessageBox::warning(this, "Read Disk",
             QString("Cannot write to %1").arg(savePath));
         m_statusLabel->setText("Read failed: cannot write output file.");
+        /* Restore previous state */
+        setAppState(m_currentFile.isEmpty() ? AppState::Empty : AppState::FileLoaded);
     }
 
     m_progressBar->setVisible(false);
@@ -502,6 +559,7 @@ void UftMainWindow::onWriteDisk()
         QMessageBox::Yes | QMessageBox::No);
     
     if (result == QMessageBox::Yes) {
+        setAppState(AppState::HardwareWrite);
         m_statusLabel->setText("Writing disk...");
         emit operationStarted("Write Disk");
     }
@@ -518,8 +576,9 @@ void UftMainWindow::onFormatDisk()
     int result = QMessageBox::question(this, "Format Disk",
         "This will erase all data on the disk. Continue?",
         QMessageBox::Yes | QMessageBox::No);
-    
+
     if (result == QMessageBox::Yes) {
+        setAppState(AppState::HardwareWrite);
         m_statusLabel->setText("Formatting disk...");
         emit operationStarted("Format Disk");
     }
@@ -533,18 +592,41 @@ void UftMainWindow::onConvert()
 
 void UftMainWindow::onAnalyze()
 {
+    setAppState(AppState::Analyzing);
     ui->mainTabs->setCurrentWidget(ui->tabForensic);
     m_forensicPanel->runAnalysis();
 }
 
 void UftMainWindow::onRepair()
 {
-    ui->mainTabs->setCurrentWidget(ui->tabRecovery);
+    if (m_currentFile.isEmpty()) {
+        /* No image loaded -- just switch to the Recovery tab */
+        ui->mainTabs->setCurrentWidget(ui->tabRecovery);
+        return;
+    }
+
+    UftRecoveryDialog dlg(m_currentFile, this);
+    dlg.exec();
 }
 
 void UftMainWindow::onCompare()
 {
-    m_forensicPanel->compareImages();
+    UftCompareDialog dlg(this);
+    if (!m_currentFile.isEmpty())
+        dlg.setPathA(m_currentFile);
+    dlg.exec();
+}
+
+void UftMainWindow::onRecoveryWizard()
+{
+    if (m_currentFile.isEmpty()) {
+        QMessageBox::information(this, tr("Recovery Wizard"),
+            tr("Please open a disk image first."));
+        return;
+    }
+
+    UftRecoveryDialog dlg(m_currentFile, this);
+    dlg.exec();
 }
 
 void UftMainWindow::onDetectHardware()
@@ -597,12 +679,20 @@ void UftMainWindow::setupAnalyzerToolbar()
 {
     m_analyzerToolbar = new AnalyzerToolbar(this);
     m_analyzerToolbar->setObjectName("analyzerToolbar");
-    
+
     /* Add below main toolbar */
     addToolBar(Qt::TopToolBarArea, m_analyzerToolbar);
-    
+
     /* Initially hidden until image is loaded */
     m_analyzerToolbar->setVisible(false);
+
+    /* Quick-Win 1: Add Triage "Quick Check" button to main toolbar */
+    m_triageBtn = new QPushButton(tr("Quick Check"));
+    m_triageBtn->setToolTip(tr("10-second disk quality assessment (Ctrl+T)"));
+    m_triageBtn->setIcon(QIcon::fromTheme("dialog-information"));
+    ui->mainToolBar->addSeparator();
+    ui->mainToolBar->addWidget(m_triageBtn);
+    connect(m_triageBtn, &QPushButton::clicked, this, &UftMainWindow::onTriageClicked);
 }
 
 /* ============================================================================
@@ -729,15 +819,17 @@ void UftMainWindow::onAnalyzerQuickScan()
 void UftMainWindow::onAnalyzerFullAnalysis()
 {
     if (!m_analyzerToolbar) return;
-    
+
     m_analyzerToolbar->setAnalyzing(true);
-    
+    setAppState(AppState::Analyzing);
+
     /* Switch to Forensic tab for full analysis */
     ui->mainTabs->setCurrentWidget(ui->tabForensic);
-    
+
     /* Start full track-by-track analysis on the loaded image */
     if (m_currentFile.isEmpty()) {
         m_analyzerToolbar->setAnalyzing(false);
+        setAppState(AppState::Empty);
         m_statusLabel->setText("No image loaded for full analysis.");
         return;
     }
@@ -746,6 +838,7 @@ void UftMainWindow::onAnalyzerFullAnalysis()
     QFile file(m_currentFile);
     if (!file.open(QIODevice::ReadOnly)) {
         m_analyzerToolbar->setAnalyzing(false);
+        setAppState(AppState::FileLoaded);
         m_statusLabel->setText("Cannot open file for analysis.");
         return;
     }
@@ -814,6 +907,9 @@ void UftMainWindow::onAnalyzerFullAnalysis()
 
     m_analyzerToolbar->setAnalysisResult(fullResult);
 
+    /* Return to non-busy state after full analysis */
+    setAppState(AppState::Analyzed);
+
     m_statusLabel->setText(QString("Full analysis complete: %1 tracks (%2 good, %3 errors)")
         .arg(totalTracks).arg(goodTracks).arg(errorTracks));
 }
@@ -859,13 +955,209 @@ void UftMainWindow::onQuickScanComplete(const ToolbarAnalysisResult &result)
 void UftMainWindow::onImageLoadedForAnalysis(const QString &path)
 {
     Q_UNUSED(path);
-    
+
     /* Show analyzer toolbar when image is loaded */
     if (m_analyzerToolbar) {
         m_analyzerToolbar->setVisible(true);
         m_analyzerToolbar->clearResult();
-        
+
         /* Auto-start quick scan */
         QTimer::singleShot(500, this, &UftMainWindow::onAnalyzerQuickScan);
     }
+}
+
+/* ============================================================================
+ * Quick-Win 1: Triage Button with Traffic-Light Dialog
+ * ============================================================================ */
+
+void UftMainWindow::onTriageClicked()
+{
+    if (m_currentFile.isEmpty()) {
+        QMessageBox::information(this, tr("Quick Check"),
+            tr("Please open a disk image first."));
+        return;
+    }
+
+    uft_triage_result_t result;
+    memset(&result, 0, sizeof(result));
+    setCursor(Qt::WaitCursor);
+    int rc = uft_triage_analyze(m_currentFile.toUtf8().constData(), &result);
+    unsetCursor();
+
+    if (rc != 0) {
+        QMessageBox::warning(this, tr("Quick Check"),
+            tr("Triage analysis failed."));
+        return;
+    }
+
+    /* Determine traffic-light color */
+    QString color;
+    QString symbol;
+    switch (result.level) {
+        case UFT_TRIAGE_GREEN:  color = "#22cc66"; symbol = QString::fromUtf8("\xe2\x97\x8f"); break; /* ● */
+        case UFT_TRIAGE_YELLOW: color = "#ffaa00"; symbol = QString::fromUtf8("\xe2\x97\x8f"); break; /* ● */
+        case UFT_TRIAGE_RED:    color = "#ee3333"; symbol = QString::fromUtf8("\xe2\x97\x8f"); break; /* ● */
+        case UFT_TRIAGE_WHITE:  color = "#4a9eff"; symbol = QString::fromUtf8("\xe2\x97\x86"); break; /* ◆ */
+    }
+
+    QMessageBox box(this);
+    box.setWindowTitle(tr("Quick Check Result"));
+    box.setTextFormat(Qt::RichText);
+    box.setText(QString(
+        "<div style='text-align:center'>"
+        "<div style='font-size:48px; color:%1'>%2</div>"
+        "<h2 style='color:%1'>%3</h2>"
+        "<p>Quality: %4/100</p>"
+        "<p>%5</p>"
+        "<hr><p><i>%6</i></p>"
+        "</div>")
+        .arg(color)
+        .arg(symbol)
+        .arg(QString::fromUtf8(uft_triage_level_name(result.level)))
+        .arg(result.quality_score)
+        .arg(QString::fromUtf8(result.summary))
+        .arg(QString::fromUtf8(result.recommendation)));
+    box.exec();
+}
+
+/* ============================================================================
+ * Quick-Win 2: Drag & Drop Support
+ * ============================================================================ */
+
+void UftMainWindow::dragEnterEvent(QDragEnterEvent *event)
+{
+    if (event->mimeData()->hasUrls())
+        event->acceptProposedAction();
+}
+
+void UftMainWindow::dropEvent(QDropEvent *event)
+{
+    const QList<QUrl> urls = event->mimeData()->urls();
+    for (const QUrl &url : urls) {
+        QString path = url.toLocalFile();
+        if (!path.isEmpty()) {
+            openImage(path);
+            break;  /* Open only the first file */
+        }
+    }
+}
+
+/* ============================================================================
+ * Quick-Win 3: Keyboard Shortcuts
+ * ============================================================================ */
+
+void UftMainWindow::setupKeyboardShortcuts()
+{
+    /* Triage / Quick Check */
+    if (m_triageBtn) {
+        m_triageBtn->setShortcut(QKeySequence(tr("Ctrl+T")));
+    }
+
+    /* Export — only if no shortcut set yet */
+    if (ui->actionExport && ui->actionExport->shortcut().isEmpty()) {
+        ui->actionExport->setShortcut(QKeySequence(tr("Ctrl+E")));
+    }
+
+    /* Repair */
+    if (ui->actionRepair && ui->actionRepair->shortcut().isEmpty()) {
+        ui->actionRepair->setShortcut(QKeySequence(tr("Ctrl+R")));
+    }
+
+    /* Compare */
+    if (ui->actionCompare && ui->actionCompare->shortcut().isEmpty()) {
+        ui->actionCompare->setShortcut(QKeySequence(tr("Ctrl+M")));
+    }
+
+    /* Import */
+    if (ui->actionImport && ui->actionImport->shortcut().isEmpty()) {
+        ui->actionImport->setShortcut(QKeySequence(tr("Ctrl+I")));
+    }
+
+    /* Update tooltips to include shortcuts */
+    ui->actionExport->setToolTip(tr("Export Files (Ctrl+E)"));
+    ui->actionRepair->setToolTip(tr("Repair Image (Ctrl+R)"));
+    ui->actionCompare->setToolTip(tr("Compare Images (Ctrl+M)"));
+    ui->actionImport->setToolTip(tr("Import Files (Ctrl+I)"));
+}
+
+/* ============================================================================
+ * Quick-Win 4: Status Bar Info
+ * ============================================================================ */
+
+void UftMainWindow::updateStatusBar()
+{
+    if (m_currentFile.isEmpty()) {
+        m_statusLabel->setText(tr("No file loaded — drag & drop or Ctrl+O to open"));
+        m_formatLabel->setText(tr("No image loaded"));
+        return;
+    }
+
+    QFileInfo fi(m_currentFile);
+    QString sizeStr = QLocale().formattedDataSize(fi.size());
+    QString formatStr = m_currentFormat.isEmpty() ? tr("Unknown") : m_currentFormat;
+
+    m_statusLabel->setText(QString("%1 | %2 | %3")
+        .arg(fi.fileName())
+        .arg(sizeStr)
+        .arg(formatStr));
+    m_formatLabel->setText(formatStr);
+}
+
+/* ============================================================================
+ * GUI State Machine — Mutual Exclusion & Context-Sensitive Buttons
+ * ============================================================================ */
+
+void UftMainWindow::setAppState(AppState state)
+{
+    m_appState = state;
+    updateButtonStates();
+}
+
+void UftMainWindow::updateButtonStates()
+{
+    bool hasFile = (m_appState != AppState::Empty);
+    bool isBusy  = (m_appState == AppState::Analyzing
+                 || m_appState == AppState::HardwareRead
+                 || m_appState == AppState::HardwareWrite
+                 || m_appState == AppState::Converting
+                 || m_appState == AppState::BatchMode);
+    bool hasFlux = hasFile && m_hasFluxData;
+
+    /* ── File operations ── */
+    ui->actionOpen->setEnabled(!isBusy);
+    ui->actionSave->setEnabled(hasFile && !isBusy);
+    ui->actionSaveAs->setEnabled(hasFile && !isBusy);
+    ui->actionExport->setEnabled(hasFile && !isBusy);
+    ui->actionImport->setEnabled(hasFile && !isBusy);
+
+    /* ── Tools that require a loaded file ── */
+    ui->actionAnalyze->setEnabled(hasFile && !isBusy);
+    ui->actionConvert->setEnabled(hasFile && !isBusy);
+    ui->actionRepair->setEnabled(hasFile && !isBusy);
+    ui->actionCompare->setEnabled(hasFile && !isBusy);
+    ui->actionRecoveryWizard->setEnabled(hasFile && !isBusy);
+
+    /* ── Triage button ── */
+    if (m_triageBtn)
+        m_triageBtn->setEnabled(hasFile && !isBusy);
+
+    /* ── Hardware operations: mutually exclusive with each other ── */
+    ui->actionReadDisk->setEnabled(!isBusy && m_hardwareConnected);
+    ui->actionWriteDisk->setEnabled(!isBusy && m_hardwareConnected && hasFile);
+    ui->actionVerifyDisk->setEnabled(!isBusy && m_hardwareConnected);
+    ui->actionFormatDisk->setEnabled(!isBusy && m_hardwareConnected);
+
+    /* ── Hardware detect is always available unless hardware-busy ── */
+    ui->actionDetectHardware->setEnabled(
+        m_appState != AppState::HardwareRead
+        && m_appState != AppState::HardwareWrite);
+
+    /* ── Signal Analysis tab: only relevant with flux data ── */
+    if (m_otdrPanel) {
+        m_otdrPanel->setEnabled(hasFlux && !isBusy);
+    }
+
+    /* ── Analyzer toolbar: show only when file loaded ── */
+    if (m_analyzerToolbar)
+        m_analyzerToolbar->setEnabled(hasFile && !isBusy);
 }

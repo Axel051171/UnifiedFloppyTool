@@ -49,6 +49,9 @@ extern "C" {
 #endif
 #include "uft/analysis/floppy_otdr.h"
 #include "uft/flux/uft_scp_parser.h"
+#include "uft/analysis/uft_anomaly_detect.h"
+#include "uft/analysis/uft_ml_protection.h"
+#include "uft/forensic/uft_provenance.h"
 /* uft_otdr_adaptive_decode.h and uft_otdr_encoding_boost.h
  * included in .cpp only — C headers clash with C++ keywords */
 #ifdef __cplusplus
@@ -103,6 +106,7 @@ public slots:
     void onExportReport();
     void onDeepReadToggled(bool enabled);
     void onDeepReadModeChanged(int index);
+    void onExportProvenance();
 
 private:
     void setupUi();
@@ -111,9 +115,12 @@ private:
     void setupVisualization(QSplitter *splitter);
     void setupEventTable(QSplitter *splitter);
     void setupStatsPanel(QVBoxLayout *layout);
+    void setupForensicPanel(QVBoxLayout *layout);
     void updateTrackDisplay();
     void updateEventTable();
     void updateStatsDisplay();
+    void runMLAnalysis();
+    void updateProvenanceDisplay();
     void updateDeepReadStats(uint32_t sectors_improved, uint32_t sectors_attempted,
                              bool used_otdr, float avg_quality);
     void populateTrackCombo();
@@ -159,8 +166,16 @@ private:
     QLabel              *m_lblFluxCount;     /**< Flux transition count */
     QLabel              *m_lblWeakBits;      /**< Weak bit count */
     QLabel              *m_lblProtection;    /**< Protection detected */
+    QLabel              *m_lblAnomaly;       /**< ML anomaly detection result */
+    QLabel              *m_lblMLProtection;  /**< ML protection classifier result */
     QProgressBar        *m_progressBar;      /**< Analysis progress */
     QLabel              *m_statusLabel;      /**< Status text */
+
+    /* ── Provenance Chain ── */
+    QGroupBox           *m_provGroup;        /**< Provenance chain group box */
+    QLabel              *m_lblProvStatus;    /**< Chain entry count */
+    QLabel              *m_lblProvHash;      /**< Last chain hash (truncated) */
+    QPushButton         *m_provExportBtn;    /**< Export chain button */
 
     /* ── Analysis State ── */
     uft_scp_ctx_t       *m_scpCtx;          /**< SCP parser context */
@@ -173,6 +188,9 @@ private:
     bool                 m_deepReadActive;   /**< DeepRead currently active */
     uint32_t             m_deepReadImproved; /**< Total sectors improved */
     uint32_t             m_deepReadAttempted;/**< Total sectors attempted */
+
+    /* ── ML / Provenance State ── */
+    uft_provenance_chain_t *m_provChain;    /**< Forensic provenance chain */
 };
 
 #endif /* UFT_OTDR_PANEL_H */

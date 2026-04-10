@@ -20,6 +20,9 @@
 #include <QPlainTextEdit>
 #include <QSplitter>
 #include <QTimer>
+#include <QDragEnterEvent>
+#include <QDropEvent>
+#include <QMimeData>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class UftMainWindow; }
@@ -29,6 +32,7 @@ QT_END_NAMESPACE
  * Forward Declarations
  * ============================================================================ */
 
+class QPushButton;
 class UftFluxPanel;
 class UftFormatPanel;
 class UftXCopyPanel;
@@ -47,6 +51,21 @@ class AnalyzerToolbar;
 class TrackAnalyzerWidget;
 struct ToolbarAnalysisResult;
 enum class CopyMode;
+
+/* ============================================================================
+ * Application State Machine
+ * ============================================================================ */
+
+enum class AppState {
+    Empty,          /* No file loaded */
+    FileLoaded,     /* File loaded, not analyzed */
+    Analyzing,      /* Analysis in progress */
+    Analyzed,       /* Analysis complete */
+    HardwareRead,   /* Reading from hardware */
+    HardwareWrite,  /* Writing to hardware */
+    Converting,     /* Format conversion in progress */
+    BatchMode       /* Batch processing active */
+};
 
 /* ============================================================================
  * Main Window
@@ -85,6 +104,7 @@ public slots:
     void onAnalyze();
     void onRepair();
     void onCompare();
+    void onRecoveryWizard();
 
     /* Hardware */
     void onDetectHardware();
@@ -93,6 +113,14 @@ public slots:
     /* Help */
     void onAbout();
     void onHelp();
+
+    /* Quick-Win: Triage */
+    void onTriageClicked();
+
+protected:
+    /* Quick-Win: Drag & Drop */
+    void dragEnterEvent(QDragEnterEvent *event) override;
+    void dropEvent(QDropEvent *event) override;
 
 signals:
     void imageLoaded(const QString &path);
@@ -110,6 +138,10 @@ private:
     void setupCentralWidget();
     void setupConnections();
     void setupAnalyzerConnections();  /* P2-13: Analyzer ↔ XCopy */
+    void setupKeyboardShortcuts();    /* Quick-Win 3 */
+    void updateStatusBar();           /* Quick-Win 4 */
+    void setAppState(AppState state); /* GUI state machine */
+    void updateButtonStates();        /* Enable/disable based on state */
     void loadSettings();
     void saveSettings();
 
@@ -121,6 +153,9 @@ private:
     AnalyzerToolbar *m_analyzerToolbar;
     TrackAnalyzerWidget *m_trackAnalyzer;
     
+    /* Quick-Win: Triage Button */
+    QPushButton *m_triageBtn;
+
     /* Panels */
     UftFluxPanel       *m_fluxPanel;
     UftFormatPanel     *m_formatPanel;
@@ -149,6 +184,9 @@ private:
     QString m_currentFile;
     QString m_currentFormat;
     bool m_modified;
+    AppState m_appState;
+    bool m_hardwareConnected;
+    bool m_hasFluxData;
 
 private slots:
     /* Analyzer Integration - P2-12/P2-13 */

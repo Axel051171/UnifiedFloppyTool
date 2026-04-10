@@ -106,6 +106,7 @@ INCLUDEPATH += \
     include/uft/formats \
     include/uft/detect \
     include/uft/analysis \
+    include/uft/forensic \
     src \
     src/gui \
     src/analysis/otdr \
@@ -3376,6 +3377,23 @@ SOURCES += \
 HEADERS += \
     include/uft/recovery/uft_recovery_wizard.h \
     include/uft/analysis/uft_format_suggest.h
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Smart Export Dialog + ML Analysis GUI
+# ═══════════════════════════════════════════════════════════════════════════════
+SOURCES += src/gui/uft_smart_export_dialog.cpp
+HEADERS += src/gui/uft_smart_export_dialog.h
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Sector Compare Dialog + Recovery Wizard Dialog
+# ═══════════════════════════════════════════════════════════════════════════════
+SOURCES += \
+    src/gui/uft_compare_dialog.cpp \
+    src/gui/uft_recovery_dialog.cpp
+
+HEADERS += \
+    src/gui/uft_compare_dialog.h \
+    src/gui/uft_recovery_dialog.h
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # BUILD FIXES (v4.1.0)

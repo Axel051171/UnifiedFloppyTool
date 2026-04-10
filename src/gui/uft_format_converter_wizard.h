@@ -121,41 +121,50 @@ private:
 class UftTargetPage : public QWizardPage
 {
     Q_OBJECT
-    
+
 public:
     explicit UftTargetPage(QWidget *parent = nullptr);
-    
+
     bool isComplete() const override;
-    
+
     QString getTargetFormat() const;
     QString getTargetPath() const;
+
+    /** Set the detected source format (e.g. "ADF", "D64") to prevent
+     *  source==target selection and show lossy-conversion warnings. */
+    void setSourceFormat(const QString &format);
 
 private slots:
     void browseTarget();
     void updateExtension();
     void filterFormats(const QString &text);
+    void updateConversionWarning();
 
 private:
     void setupUi();
     void populateFormats();
-    
+
     /* Format selection */
     QLineEdit *m_formatFilter;
     QListWidget *m_formatList;
     QLabel *m_formatDescription;
     QLabel *m_compatibilityLabel;
-    
+    QLabel *m_conversionWarning;     /**< Lossy / same-format warning */
+
     /* Output path */
     QLineEdit *m_targetPath;
     QPushButton *m_browseButton;
     QCheckBox *m_autoExtension;
-    
+
     /* Format categories */
     QButtonGroup *m_categoryGroup;
     QRadioButton *m_catAll;
     QRadioButton *m_catSector;
     QRadioButton *m_catBitstream;
     QRadioButton *m_catFlux;
+
+    /* Source format for conflict detection */
+    QString m_sourceFormat;
 };
 
 /**

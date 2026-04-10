@@ -11,6 +11,8 @@
 #include <QMessageBox>
 #include <QApplication>
 #include <cstring>
+#include <cstdlib>
+#include <cstdio>
 
 /* C API headers — only encoding boost (no C++ keyword conflicts).
  * Adaptive decode (uft_otdr_adaptive_decode.h) has flux_decoded_track_t
@@ -61,14 +63,21 @@ UftOtdrPanel::UftOtdrPanel(QWidget *parent)
     , m_lblFluxCount(nullptr)
     , m_lblWeakBits(nullptr)
     , m_lblProtection(nullptr)
+    , m_lblAnomaly(nullptr)
+    , m_lblMLProtection(nullptr)
     , m_progressBar(nullptr)
     , m_statusLabel(nullptr)
+    , m_provGroup(nullptr)
+    , m_lblProvStatus(nullptr)
+    , m_lblProvHash(nullptr)
+    , m_provExportBtn(nullptr)
     , m_scpCtx(nullptr)
     , m_disk(nullptr)
     , m_currentTrack(-1)
     , m_deepReadActive(false)
     , m_deepReadImproved(0)
     , m_deepReadAttempted(0)
+    , m_provChain(nullptr)
 {
     otdr_config_defaults(&m_config);
     setupUi();
@@ -78,6 +87,10 @@ UftOtdrPanel::UftOtdrPanel(QWidget *parent)
 UftOtdrPanel::~UftOtdrPanel()
 {
     freeCurrentAnalysis();
+    if (m_provChain) {
+        uft_prov_free(m_provChain);
+        m_provChain = nullptr;
+    }
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
@@ -105,6 +118,7 @@ void UftOtdrPanel::setupUi()
 
     auto *bottomLayout = new QVBoxLayout();
     setupStatsPanel(bottomLayout);
+    setupForensicPanel(bottomLayout);
     mainLayout->addLayout(bottomLayout);
 }
 
@@ -265,6 +279,8 @@ void UftOtdrPanel::setupStatsPanel(QVBoxLayout *layout)
     addStat("Flux:", m_lblFluxCount);
     addStat("Weak:", m_lblWeakBits);
     addStat("Protection:", m_lblProtection);
+    addStat("Anomaly:", m_lblAnomaly);
+    addStat("ML-Prot:", m_lblMLProtection);
 
     statsLayout->addStretch();
     layout->addLayout(statsLayout);
@@ -432,7 +448,9 @@ void UftOtdrPanel::analyzeFullDisk()
     /* Prevent re-entry and signal busy state */
     m_analyzeBtn->setEnabled(false);
     m_analyzeAllBtn->setEnabled(false);
+    m_exportBtn->setEnabled(false);
     setCursor(Qt::WaitCursor);
+    emit analysisStarted();
 
     m_progressBar->setVisible(true);
     m_progressBar->setRange(0, (int)m_disk->track_count);
@@ -459,12 +477,31 @@ void UftOtdrPanel::analyzeFullDisk()
     populateTrackCombo();
     updateStatsDisplay();
 
+    /* Run ML-based analysis after OTDR completes */
+    if (m_deepReadActive) {
+        m_statusLabel->setText("Running ML analysis...");
+        QApplication::processEvents();
+        runMLAnalysis();
+    }
+
+    /* Add provenance entry for this analysis */
+    if (!m_provChain)
+        m_provChain = uft_prov_create();
+    if (m_provChain) {
+        uft_prov_add(m_provChain, UFT_PROV_ANALYZE,
+                      NULL, 0,
+                      "OTDR full-disk analysis performed",
+                      "operator");
+        updateProvenanceDisplay();
+    }
+
     m_progressBar->setVisible(false);
     m_statusLabel->setText(QString("Done — %1")
         .arg(otdr_quality_name(m_disk->stats.overall)));
 
     m_analyzeBtn->setEnabled(true);
     m_analyzeAllBtn->setEnabled(true);
+    m_exportBtn->setEnabled(true);
     unsetCursor();
 
     emit analysisComplete(m_disk->stats.quality_mean);
@@ -744,6 +781,154 @@ void UftOtdrPanel::updateStatsDisplay()
             .arg(m_disk->stats.protection_type));
     else
         m_lblProtection->setText("None");
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+ * Forensic Panel Setup
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+void UftOtdrPanel::setupForensicPanel(QVBoxLayout *layout)
+{
+    m_provGroup = new QGroupBox(tr("Provenance Chain"));
+    m_provGroup->setStyleSheet(
+        "QGroupBox { font-weight: bold; border: 1px solid #555; "
+        "border-radius: 3px; margin-top: 4px; padding-top: 12px; } "
+        "QGroupBox::title { color: #888; subcontrol-position: top left; "
+        "padding: 0 4px; }");
+    auto *provLayout = new QHBoxLayout(m_provGroup);
+    provLayout->setContentsMargins(6, 2, 6, 2);
+
+    m_lblProvStatus = new QLabel(tr("No chain"));
+    m_lblProvStatus->setStyleSheet("color: #888;");
+    provLayout->addWidget(m_lblProvStatus);
+
+    m_lblProvHash = new QLabel();
+    m_lblProvHash->setStyleSheet("font-family: monospace; color: #666; font-size: 10px;");
+    provLayout->addWidget(m_lblProvHash);
+
+    provLayout->addStretch();
+
+    m_provExportBtn = new QPushButton(tr("Export Chain"));
+    m_provExportBtn->setEnabled(false);
+    connect(m_provExportBtn, &QPushButton::clicked,
+            this, &UftOtdrPanel::onExportProvenance);
+    provLayout->addWidget(m_provExportBtn);
+
+    layout->addWidget(m_provGroup);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+ * ML Analysis
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+void UftOtdrPanel::runMLAnalysis()
+{
+    if (!m_disk || m_disk->track_count == 0) return;
+
+    const QString dash = QString::fromUtf8("\xe2\x80\x94");
+    int nTracks = (int)m_disk->track_count;
+    if (nTracks > 166) nTracks = 166;
+
+    /* ── Anomaly Detection ── */
+    uft_anomaly_model_t *model = uft_anomaly_model_create();
+    if (model) {
+        /* Convert uint32 histogram bins to float arrays for the ML API */
+        float (*histograms)[256] = (float (*)[256])calloc((size_t)nTracks,
+                                                           256 * sizeof(float));
+        if (histograms) {
+            for (int t = 0; t < nTracks; t++) {
+                /* Normalise: sum bins, divide each by total so values are 0..1 */
+                uint64_t total = 0;
+                for (int b = 0; b < 256; b++)
+                    total += m_disk->tracks[t].histogram.bins[b];
+                float scale = (total > 0) ? (1.0f / (float)total) : 0.0f;
+                for (int b = 0; b < 256; b++)
+                    histograms[t][b] = (float)m_disk->tracks[t].histogram.bins[b] * scale;
+            }
+
+            uft_anomaly_result_t anomResult;
+            memset(&anomResult, 0, sizeof(anomResult));
+            if (uft_anomaly_detect_disk(model, histograms, nTracks, &anomResult) == 0) {
+                m_lblAnomaly->setText(QString("%1 anomalies").arg(anomResult.anomalous_tracks));
+                if (anomResult.anomalous_tracks > 0)
+                    m_lblAnomaly->setStyleSheet("color: #ff8844; font-weight: bold;");
+                else
+                    m_lblAnomaly->setStyleSheet("color: #22cc66;");
+            } else {
+                m_lblAnomaly->setText(dash);
+            }
+
+            /* ── ML Protection Classification ── */
+            /* Extract feature vectors from the histogram data and track stats */
+            float (*features)[UFT_ML_PROT_FEATURES] =
+                (float (*)[UFT_ML_PROT_FEATURES])calloc((size_t)nTracks,
+                    UFT_ML_PROT_FEATURES * sizeof(float));
+            if (features) {
+                for (int t = 0; t < nTracks; t++) {
+                    const otdr_track_t *trk = &m_disk->tracks[t];
+                    uft_ml_extract_features(
+                        histograms[t],
+                        1.0f,   /* track_length_ratio — nominal */
+                        0,      /* sync_count */
+                        0,      /* bad_gcr_count */
+                        0,      /* duplicate_ids */
+                        trk->stats.jitter_rms,
+                        false,  /* has_half_track */
+                        false,  /* has_custom_sync */
+                        features[t]);
+                }
+
+                uft_ml_prot_result_t protResult;
+                memset(&protResult, 0, sizeof(protResult));
+                if (uft_ml_detect_protection(features, nTracks, &protResult) == 0) {
+                    m_lblMLProtection->setText(QString::fromUtf8(protResult.summary));
+                    if (protResult.is_protected)
+                        m_lblMLProtection->setStyleSheet("color: #ff4444; font-weight: bold;");
+                    else
+                        m_lblMLProtection->setStyleSheet("color: #22cc66;");
+                } else {
+                    m_lblMLProtection->setText(dash);
+                }
+                free(features);
+            }
+            free(histograms);
+        }
+        uft_anomaly_model_free(model);
+    }
+}
+
+void UftOtdrPanel::updateProvenanceDisplay()
+{
+    if (!m_provChain || m_provChain->count == 0) {
+        m_lblProvStatus->setText(tr("No chain"));
+        m_lblProvHash->setText(QString());
+        m_provExportBtn->setEnabled(false);
+        return;
+    }
+
+    m_lblProvStatus->setText(QString("%1 entries").arg(m_provChain->count));
+    m_lblProvStatus->setStyleSheet("color: #22cc66;");
+
+    /* Show last 16 hex chars of the latest chain hash */
+    const uint8_t *hash = m_provChain->entries[m_provChain->count - 1].chain_hash;
+    char hex[65];
+    for (int i = 0; i < 32; i++)
+        snprintf(hex + i * 2, 3, "%02x", hash[i]);
+    hex[64] = '\0';
+    m_lblProvHash->setText(QString("...%1").arg(QString(hex).right(16)));
+
+    m_provExportBtn->setEnabled(true);
+}
+
+void UftOtdrPanel::onExportProvenance()
+{
+    if (!m_provChain || m_provChain->count == 0) return;
+
+    QString path = m_currentFile + ".provenance.json";
+    if (uft_prov_export_json(m_provChain, path.toUtf8().constData()) == 0)
+        m_statusLabel->setText(QString("Provenance chain exported: %1").arg(path));
+    else
+        m_statusLabel->setText("Provenance export failed");
 }
 
 void UftOtdrPanel::freeCurrentAnalysis()
