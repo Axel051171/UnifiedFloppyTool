@@ -12,12 +12,14 @@
 #define UFT_SECTOR_EDITOR_H
 
 #include <QWidget>
+#include <QDialog>
 #include <QScrollArea>
 #include <QSpinBox>
 #include <QComboBox>
 #include <QCheckBox>
 #include <QPushButton>
 #include <QLabel>
+#include <QFormLayout>
 #include <QGroupBox>
 #include <QToolBar>
 #include <QUndoStack>
