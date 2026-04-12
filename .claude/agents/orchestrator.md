@@ -30,6 +30,9 @@ Batch D: `performance-memory` | `compatibility-import-export` | `gui-expert`
 ### Release-Pipeline (auf Anfrage)
 `release-manager` → koordiniert: `dependency-scanner` + alle Pflicht-Checks + Artefakt-Erstellung
 
+### Vor jedem Release
+`preflight-check` → Lokale Simulation aller CI-Fehler (läuft ZUERST)
+
 ### Optional (nur auf Anfrage)
 `research-roadmap` — Strategische Planung, Konkurrenzanalyse
 - `info-finder` — Taktische Web-Intelligence, aktuelle Infos zu konkreten Themen
