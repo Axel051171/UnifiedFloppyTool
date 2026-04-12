@@ -16,6 +16,7 @@
  */
 
 #include "uft/formats/uft_g71.h"
+#include "uft/uft_types.h"
 /* Note: uft_g71.h includes uft/core/uft_unified_types.h which provides:
  *   - uft_track_t, uft_disk_image_t, uft_sector_t
  *   - Error codes: UFT_OK, UFT_ERR_*, UFT_ERC_*
