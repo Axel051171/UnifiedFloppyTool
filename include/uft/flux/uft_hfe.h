@@ -46,6 +46,12 @@ typedef enum {
     UFT_HFE_ENC_EMU_FM = 3,         /**< Emulator FM */
     UFT_HFE_ENC_UNKNOWN = 0xFF      /**< Unknown encoding */
 } uft_hfe_encoding_t;
+
+/* Aliases for headers that use UFT_HFE_ENCODING_* prefix */
+#define UFT_HFE_ENCODING_ISOIBM_MFM  UFT_HFE_ENC_ISOIBM_MFM
+#define UFT_HFE_ENCODING_AMIGA_MFM   UFT_HFE_ENC_AMIGA_MFM
+#define UFT_HFE_ENCODING_ISOIBM_FM   UFT_HFE_ENC_ISOIBM_FM
+#define UFT_HFE_ENCODING_EMU_FM      UFT_HFE_ENC_EMU_FM
 #endif /* UFT_HFE_ENCODING_T_DEFINED */
 
 /**
