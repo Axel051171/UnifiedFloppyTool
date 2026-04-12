@@ -35,6 +35,8 @@ extern "C" {
 /**
  * @brief Supported disk image formats
  */
+#ifndef UFT_FORMAT_ENUM_DEFINED
+#define UFT_FORMAT_ENUM_DEFINED
 typedef enum uft_format {
     UFT_FORMAT_UNKNOWN = 0,
     
@@ -108,6 +110,7 @@ typedef enum uft_format {
     
     UFT_FORMAT_COUNT        /**< Number of formats */
 } uft_format_t;
+#endif /* UFT_FORMAT_ENUM_DEFINED */
 
 /*============================================================================
  * DETECTION RESULT
