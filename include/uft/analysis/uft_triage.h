@@ -2,6 +2,7 @@
 #define UFT_TRIAGE_H
 
 #include <stdint.h>
+#include <stddef.h>
 #include <stdbool.h>
 
 #ifdef __cplusplus

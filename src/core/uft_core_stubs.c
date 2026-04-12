@@ -6,7 +6,9 @@
  * the full dependency chain (uft_strerror, plugin registry, etc.)
  */
 
-#include "uft/uft_format_plugin.h"
+/* Only include uft_disk.h for the full struct definition.
+ * Do NOT include uft_format_plugin.h here — it has a conflicting
+ * struct uft_disk definition that causes redefinition errors. */
 #include "uft/uft_disk.h"
 #include <stddef.h>
 #include <stdlib.h>
@@ -37,11 +39,11 @@ void uft_disk_close(uft_disk_t *disk) {
     }
 
     /* Free image buffer */
-    free(disk->image_data);
-    disk->image_data = NULL;
+    if (disk->image_data) {
+        free(disk->image_data);
+        disk->image_data = NULL;
+    }
 
     disk->is_open = false;
-
-    /* Free the handle itself */
     free(disk);
 }
