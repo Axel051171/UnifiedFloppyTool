@@ -67,6 +67,9 @@ extern "C" {
 // Format Classification
 // ============================================================================
 
+/* Guard against redefinition — also defined in uft_format_probe.h */
+#ifndef UFT_FORMAT_CLASS_DEFINED
+#define UFT_FORMAT_CLASS_DEFINED
 typedef enum uft_format_class {
     UFT_FCLASS_FLUX,        // Raw flux timing
     UFT_FCLASS_BITSTREAM,   // Encoded bitstream
@@ -74,6 +77,7 @@ typedef enum uft_format_class {
     UFT_FCLASS_SECTOR,      // Sector data only
     UFT_FCLASS_ARCHIVE,     // Compressed archive
 } uft_format_class_t;
+#endif
 
 // ============================================================================
 // Conversion Quality
@@ -209,7 +213,5 @@ const char* uft_format_get_name(uft_format_t format);
 #ifdef __cplusplus
 }
 #endif
-
-#endif // UFT_FORMAT_CONVERT_H
 
 #endif /* UFT_FORMAT_CONVERT_H */

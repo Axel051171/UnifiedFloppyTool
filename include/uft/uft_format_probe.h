@@ -46,6 +46,9 @@ typedef enum uft_confidence_level {
 // Format Classification
 // ============================================================================
 
+/* Guard against redefinition — also defined in uft_format_convert.h */
+#ifndef UFT_FORMAT_CLASS_DEFINED
+#define UFT_FORMAT_CLASS_DEFINED
 typedef enum uft_format_class {
     UFT_CLASS_FLUX,         // Raw flux timing (SCP, Kryoflux, A2R)
     UFT_CLASS_BITSTREAM,    // Encoded bitstream (HFE, G64, WOZ)
@@ -53,6 +56,7 @@ typedef enum uft_format_class {
     UFT_CLASS_CONTAINER,    // Container with metadata (IPF, STX)
     UFT_CLASS_ARCHIVE,      // Compressed archive (TD0, NBZ)
 } uft_format_class_t;
+#endif
 
 // ============================================================================
 // Format Variant Definition
