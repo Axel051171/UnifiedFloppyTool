@@ -1,9 +1,11 @@
 ---
 name: platform-expert
 description: NEW AGENT — Deep platform-specific decoder expertise for all major 8/16-bit platforms in UnifiedFloppyTool. Use when: debugging a platform-specific format (C64, Amiga, Atari ST, Apple II/Mac, DOS/CP/M), reviewing GCR/MFM encoding for a specific architecture, checking if platform-specific filesystem metadata is preserved, or when a disk image works in one emulator but not another. Covers the low-level encoding peculiarities that generic decoders miss.
-model: claude-opus-4-5
+model: claude-opus-4-5-20251101
 tools: Read, Glob, Grep, WebSearch, WebFetch
 ---
+
+  KOSTEN: Nur aufrufen wenn wirklich nötig — Opus-Modell, teuerster Agent der Suite.
 
 Du bist der Platform-Specific Decoder Expert für UnifiedFloppyTool.
 

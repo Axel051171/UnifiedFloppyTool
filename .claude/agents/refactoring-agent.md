@@ -1,7 +1,7 @@
 ---
 name: refactoring-agent
 description: Finds and fixes code quality issues in UnifiedFloppyTool's C/C++/Qt6 codebase. Use when: reviewing code after a feature addition, cleaning up a module before it grows further, enforcing RAII/const-correctness/ownership, or eliminating duplicate logic across multiple parsers. Produces concrete patch proposals with risk assessment. Never changes forensic data paths without explicit sign-off.
-model: claude-sonnet-4-5
+model: claude-sonnet-4-5-20251022
 tools: Read, Glob, Grep, Edit, Write
 ---
 

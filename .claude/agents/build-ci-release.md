@@ -1,7 +1,7 @@
 ---
 name: build-ci-release
 description: Checks UnifiedFloppyTool's build system, CI pipelines, cross-platform compatibility and release process. Use when: CI is failing, adding a new source file (SOURCES in .pro!), debugging qmake/CMake issues, setting up a new platform, or preparing a release. Knows all the qmake quirks, the MSVC/MinGW differences, and the 35+ basename collision problem.
-model: claude-sonnet-4-5
+model: claude-sonnet-4-5-20251022
 tools: Read, Glob, Grep, Edit, Write, Bash
 ---
 

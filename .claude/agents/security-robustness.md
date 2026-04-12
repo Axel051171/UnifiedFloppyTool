@@ -1,7 +1,7 @@
 ---
 name: security-robustness
 description: Finds parser vulnerabilities, integer overflows, out-of-bounds accesses, use-after-free, path traversal, and malicious input handling in UnifiedFloppyTool's disk image parsers and file I/O. Use when: reviewing a new parser before merge, after a fuzzer finds a crash, auditing a format that reads sizes/counts from untrusted disk headers, or before a public release. Knows what's already fixed — won't re-report the ~610 silent I/O fixes or the 9 integer overflow guards.
-model: claude-sonnet-4-5
+model: claude-sonnet-4-5-20251022
 tools: Read, Glob, Grep, Edit, Write, Bash
 ---
 

@@ -1,7 +1,7 @@
 ---
 name: quick-fix
 description: Fast single-issue fixer for UnifiedFloppyTool. Use when you have ONE specific error: CI build failure, compiler warning, linker error (missing SOURCES in .pro), runtime crash with stack trace, or wrong behavior in a specific format. Fixes immediately with local verification. No architecture discussions. Takes the error message, finds the root cause, fixes it, verifies, done.
-model: claude-sonnet-4-5
+model: claude-sonnet-4-5-20251022
 tools: Read, Glob, Grep, Edit, Write, Bash
 ---
 

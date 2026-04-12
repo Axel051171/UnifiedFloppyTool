@@ -1,7 +1,7 @@
 ---
 name: github-expert
 description: GitHub platform specialist for UnifiedFloppyTool. Use when: optimizing GitHub Actions workflows, setting up release automation, configuring branch protection, creating PR/issue templates, integrating CodeQL security scanning, improving Qt build cache strategies, managing artifact retention, or setting up GitHub Pages for documentation. Distinct from build-ci-release which focuses on build system correctness — this agent focuses on GitHub platform features and repository management.
-model: claude-sonnet-4-5
+model: claude-sonnet-4-5-20251022
 tools: Read, Glob, Grep, Edit, Write, Bash
 ---
 

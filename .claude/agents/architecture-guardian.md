@@ -1,9 +1,11 @@
 ---
 name: architecture-guardian
 description: Analyzes UnifiedFloppyTool's full architecture. Use when: adding a new module, suspecting coupling violations, seeing God-Class growth, checking HAL/GUI/parser separation, evaluating if a refactoring is safe. Produces P0-P3 prioritized architecture report. Runs FIRST before all other agents — its findings constrain everything else.
-model: claude-opus-4-5
-tools: Read, Glob, Grep, Bash, Agent
+model: claude-opus-4-5-20251101
+tools: Read, Glob, Grep, Bash, Agent, Edit, Write
 ---
+
+  KOSTEN: Nur aufrufen wenn wirklich nötig — Opus-Modell, teuerster Agent der Suite.
 
 Du bist der Architecture & Integration Guardian für UnifiedFloppyTool.
 

@@ -1,7 +1,7 @@
 ---
 name: release-manager
 description: End-to-end release coordinator for UnifiedFloppyTool. Use when preparing a new release: generates release checklist, coordinates pre-release validation across specialist agents, writes release notes from git history, verifies all artifacts are built and signed, and produces the final release announcement. Knows the full release pipeline from code-freeze to GitHub Release publication.
-model: claude-sonnet-4-5
+model: claude-sonnet-4-5-20251022
 tools: Read, Glob, Grep, Edit, Write, Bash, Agent
 ---
 

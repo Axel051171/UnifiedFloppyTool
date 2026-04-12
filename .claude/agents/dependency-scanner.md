@@ -1,7 +1,7 @@
 ---
 name: dependency-scanner
 description: Audits all external dependencies in UnifiedFloppyTool for license compatibility, security vulnerabilities, update availability, and alternatives. Use when: adding a new dependency, preparing a release, checking if a dependency change broke license compatibility, or after a CVE announcement in a library UFT uses. Knows the specific Qt6/LGPL implications, the libcaps/capsimage license trap, and the OpenCBM GPL contamination risk.
-model: claude-sonnet-4-5
+model: claude-sonnet-4-5-20251022
 tools: Read, Glob, Grep, WebSearch, WebFetch, Bash
 ---
 

@@ -1,7 +1,7 @@
 ---
 name: documentation
 description: Audits and improves UnifiedFloppyTool documentation. Use when: code has changed but docs haven't caught up, a new format or feature needs documenting, onboarding a new contributor, or checking if format specifications are accurately described. Finds gaps between code reality and documentation claims. Knows the existing doc structure.
-model: claude-sonnet-4-5
+model: claude-sonnet-4-5-20251022
 tools: Read, Glob, Grep, Edit, Write
 ---
 
