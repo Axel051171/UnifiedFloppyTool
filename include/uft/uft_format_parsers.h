@@ -151,54 +151,8 @@ typedef enum {
     UFT_SCP_MFR_HDD        = 0xF0
 } uft_scp_manufacturer_t;
 
-/**
- * @brief SCP file header (16 bytes)
- */
-#ifndef UFT_SCP_HEADER_T_DEFINED
-#define UFT_SCP_HEADER_T_DEFINED
-#pragma pack(push, 1)
-typedef struct {
-    uint8_t  signature[3];    /**< "SCP" */
-    uint8_t  version;         /**< Version (high nibble=major, low=minor) */
-    uint8_t  disk_type;       /**< Manufacturer + subtype */
-    uint8_t  revolutions;     /**< Number of revolutions */
-    uint8_t  start_track;     /**< Starting track */
-    uint8_t  end_track;       /**< Ending track */
-    uint8_t  flags;           /**< Feature flags */
-    uint8_t  bit_cell_width;  /**< Bit cell width (0=variable) */
-    uint8_t  heads;           /**< Number of heads (0=both, 1=0 only, 2=1 only) */
-    uint8_t  resolution;      /**< Resolution multiplier */
-    uint32_t checksum;        /**< CRC32 (0=skip) */
-} uft_scp_header_t;
-#pragma pack(pop)
-#endif /* UFT_SCP_HEADER_T_DEFINED */
-
-/**
- * @brief SCP track header (4 bytes)
- */
-#ifndef UFT_SCP_TRACK_HEADER_T_DEFINED
-#define UFT_SCP_TRACK_HEADER_T_DEFINED
-#pragma pack(push, 1)
-typedef struct {
-    uint8_t  signature[3];    /**< "TRK" */
-    uint8_t  track_number;    /**< Track number */
-} uft_scp_track_header_t;
-#pragma pack(pop)
-#endif /* UFT_SCP_TRACK_HEADER_T_DEFINED */
-
-/**
- * @brief SCP revolution entry (12 bytes)
- */
-#ifndef UFT_SCP_REVOLUTION_T_DEFINED
-#define UFT_SCP_REVOLUTION_T_DEFINED
-#pragma pack(push, 1)
-typedef struct {
-    uint32_t index_time;      /**< Time from index (25ns units) */
-    uint32_t flux_count;      /**< Number of flux transitions */
-    uint32_t data_offset;     /**< Offset to flux data (from track header) */
-} uft_scp_revolution_t;
-#pragma pack(pop)
-#endif /* UFT_SCP_REVOLUTION_T_DEFINED */
+/* SCP types consolidated into canonical header */
+#include "uft/flux/uft_scp_parser.h"
 
 /*============================================================================
  * Kryoflux Format
@@ -269,23 +223,8 @@ typedef struct {
 #define UFT_TD0_SECTOR_SKIPPED      0x10
 #define UFT_TD0_SECTOR_NO_DAM       0x20
 
-/**
- * @brief Teledisk file header (12 bytes)
- */
-#pragma pack(push, 1)
-typedef struct {
-    uint16_t signature;       /**< "TD" or "td" */
-    uint8_t  sequence;        /**< Sequence number */
-    uint8_t  check_seq;       /**< Check sequence */
-    uint8_t  version;         /**< Version number */
-    uint8_t  data_rate;       /**< Data rate (0=250K, 1=300K, 2=500K) */
-    uint8_t  drive_type;      /**< Drive type */
-    uint8_t  stepping;        /**< Stepping mode */
-    uint8_t  dos_alloc;       /**< DOS allocation flag */
-    uint8_t  heads;           /**< Number of heads */
-    uint16_t crc;             /**< CRC16 */
-} uft_td0_header_t;
-#pragma pack(pop)
+/* TD0 types consolidated into canonical header */
+#include "uft/formats/uft_td0.h"
 
 /**
  * @brief Teledisk comment header (10 bytes)
@@ -301,32 +240,6 @@ typedef struct {
     uint8_t  minute;          /**< Minute (0-59) */
     uint8_t  second;          /**< Second (0-59) */
 } uft_td0_comment_t;
-#pragma pack(pop)
-
-/**
- * @brief Teledisk track header (4 bytes)
- */
-#pragma pack(push, 1)
-typedef struct {
-    uint8_t  sectors;         /**< Sector count (0xFF = end) */
-    uint8_t  cylinder;        /**< Cylinder number */
-    uint8_t  head;            /**< Head number */
-    uint8_t  crc;             /**< CRC8 */
-} uft_td0_track_t;
-#pragma pack(pop)
-
-/**
- * @brief Teledisk sector header (6 bytes)
- */
-#pragma pack(push, 1)
-typedef struct {
-    uint8_t  cylinder;        /**< Cylinder in ID */
-    uint8_t  head;            /**< Head in ID */
-    uint8_t  sector;          /**< Sector number */
-    uint8_t  size_code;       /**< Size code (N) */
-    uint8_t  flags;           /**< Sector flags */
-    uint8_t  crc;             /**< Data CRC8 */
-} uft_td0_sector_t;
 #pragma pack(pop)
 
 /**
@@ -423,45 +336,8 @@ typedef enum {
 } uft_hfe_encoding_t;
 #endif /* UFT_HFE_ENCODING_T_DEFINED */
 
-/**
- * @brief HFE file header (512 bytes)
- */
-#ifndef UFT_HFE_HEADER_T_DEFINED
-#define UFT_HFE_HEADER_T_DEFINED
-#pragma pack(push, 1)
-typedef struct {
-    char     signature[8];    /**< "HXCPICFE" */
-    uint8_t  format_revision; /**< Format revision (0) */
-    uint8_t  track_count;     /**< Number of tracks */
-    uint8_t  side_count;      /**< Number of sides (1 or 2) */
-    uint8_t  track_encoding;  /**< Track encoding mode */
-    uint16_t bit_rate;        /**< Bit rate in Kbps */
-    uint16_t rpm;             /**< RPM (0=default) */
-    uint8_t  interface_mode;  /**< Interface mode */
-    uint8_t  reserved;        /**< Reserved (1) */
-    uint16_t track_list_offset; /**< Track list offset (in blocks) */
-    uint8_t  write_allowed;   /**< Write allowed flag */
-    uint8_t  single_step;     /**< Single step (0xFF=auto) */
-    uint8_t  track0s0_altenc;
-    uint8_t  track0s0_enc;
-    uint8_t  track0s1_altenc;
-    uint8_t  track0s1_enc;
-} uft_hfe_header_t;
-#pragma pack(pop)
-#endif /* UFT_HFE_HEADER_T_DEFINED */
-
-/**
- * @brief HFE track entry (4 bytes)
- */
-#ifndef UFT_HFE_TRACK_ENTRY_T_DEFINED
-#define UFT_HFE_TRACK_ENTRY_T_DEFINED
-#pragma pack(push, 1)
-typedef struct {
-    uint16_t offset;          /**< Track data offset (in blocks of 512) */
-    uint16_t length;          /**< Track data length (bytes) */
-} uft_hfe_track_entry_t;
-#pragma pack(pop)
-#endif /* UFT_HFE_TRACK_ENTRY_T_DEFINED */
+/* HFE types consolidated into canonical header */
+#include "uft/flux/uft_hfe.h"
 
 /*============================================================================
  * IMD (ImageDisk) Format
@@ -496,21 +372,8 @@ typedef enum {
 #define UFT_IMD_SECTOR_DELETED      0x02
 #define UFT_IMD_SECTOR_ERROR        0x04
 
-/**
- * @brief IMD track header
- */
-#ifndef UFT_IMD_TRACK_T_DEFINED
-#define UFT_IMD_TRACK_T_DEFINED
-#pragma pack(push, 1)
-typedef struct {
-    uint8_t  mode;
-    uint8_t  cylinder;
-    uint8_t  head;
-    uint8_t  sectors;
-    uint8_t  size_code;
-} uft_imd_track_t;
-#pragma pack(pop)
-#endif /* UFT_IMD_TRACK_T_DEFINED */
+/* IMD track type consolidated into canonical header */
+#include "uft/formats/uft_imd.h"
 
 /*============================================================================
  * Format Detection Functions

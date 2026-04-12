@@ -125,52 +125,8 @@ typedef struct {
  * SCP Format (SuperCard Pro)
  *============================================================================*/
 
-#pragma pack(push, 1)
-
-/**
- * @brief SCP file header
- */
-#ifndef UFT_SCP_HEADER_T_DEFINED
-#define UFT_SCP_HEADER_T_DEFINED
-typedef struct {
-    uint8_t  signature[3];      /**< "SCP" */
-    uint8_t  version;           /**< Version (high nibble = major) */
-    uint8_t  disk_type;
-    uint8_t  nr_revolutions;
-    uint8_t  start_track;
-    uint8_t  end_track;
-    uint8_t  flags;
-    uint8_t  bitcell_width;     /**< 0 = 16-bit, other = bits */
-    uint16_t heads;             /**< 0 = both, 1 = side 0, 2 = side 1 */
-    uint8_t  resolution;        /**< 0 = 25ns */
-    uint32_t checksum;
-} uft_scp_header_t;
-#endif /* UFT_SCP_HEADER_T_DEFINED */
-
-/**
- * @brief SCP track header
- */
-#ifndef UFT_SCP_TRACK_HEADER_T_DEFINED
-#define UFT_SCP_TRACK_HEADER_T_DEFINED
-typedef struct {
-    uint8_t  signature[3];      /**< "TRK" */
-    uint8_t  track_num;
-} uft_scp_track_header_t;
-#endif /* UFT_SCP_TRACK_HEADER_T_DEFINED */
-
-/**
- * @brief SCP revolution header
- */
-#ifndef UFT_SCP_REVOLUTION_T_DEFINED
-#define UFT_SCP_REVOLUTION_T_DEFINED
-typedef struct {
-    uint32_t duration;          /**< Index time in ticks */
-    uint32_t length;            /**< Flux data length */
-    uint32_t offset;            /**< Offset from track start */
-} uft_scp_revolution_t;
-#endif /* UFT_SCP_REVOLUTION_T_DEFINED */
-
-#pragma pack(pop)
+/* SCP types consolidated into canonical header */
+#include "uft/flux/uft_scp_parser.h"
 
 /** SCP disk types */
 #define UFT_SCP_DISK_C64            0x00

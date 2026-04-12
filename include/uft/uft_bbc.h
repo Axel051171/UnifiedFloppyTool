@@ -338,23 +338,10 @@ const char *uft_adfs_filetype_name(uint16_t filetype);
  * Teledisk Structures
  *============================================================================*/
 
-/** Teledisk file header */
-#pragma pack(push, 1)
-typedef struct {
-    uint8_t     signature[2];   /**< "TD" or "td" */
-    uint8_t     sequence;       /**< Sequence (volume) number */
-    uint8_t     checkseq;       /**< Check sequence */
-    uint8_t     version;        /**< Version */
-    uint8_t     datarate;       /**< Data rate + density */
-    uint8_t     drivetype;      /**< Drive type */
-    uint8_t     stepping;       /**< Track stepping */
-    uint8_t     dosflag;        /**< DOS allocation flag */
-    uint8_t     sides;          /**< Number of sides */
-    uint16_t    crc;            /**< Header CRC */
-} uft_td0_header_t;
-#pragma pack(pop)
+/* TD0 types consolidated into canonical header */
+#include "uft/formats/uft_td0.h"
 
-/** Teledisk comment block */
+/** Teledisk comment block (BBC-local alias) */
 #pragma pack(push, 1)
 typedef struct {
     uint16_t    crc;            /**< CRC of data + header */
@@ -368,29 +355,7 @@ typedef struct {
 } uft_td0_comment_t;
 #pragma pack(pop)
 
-/** Teledisk track header */
-#pragma pack(push, 1)
-typedef struct {
-    uint8_t     sectors;        /**< Sectors in track (0xFF = end) */
-    uint8_t     track;          /**< Track number */
-    uint8_t     head;           /**< Head number */
-    uint8_t     crc;            /**< Track CRC */
-} uft_td0_track_t;
-#pragma pack(pop)
-
-/** Teledisk sector header */
-#pragma pack(push, 1)
-typedef struct {
-    uint8_t     track;          /**< Logical track */
-    uint8_t     head;           /**< Logical head */
-    uint8_t     sector;         /**< Sector number */
-    uint8_t     size;           /**< Sector size code */
-    uint8_t     flags;          /**< Flags */
-    uint8_t     crc;            /**< Sector CRC */
-} uft_td0_sector_t;
-#pragma pack(pop)
-
-/** Teledisk data header */
+/** Teledisk data header (BBC-local alias) */
 #pragma pack(push, 1)
 typedef struct {
     uint16_t    blocksize;      /**< Block size + 1 */

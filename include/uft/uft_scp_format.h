@@ -182,75 +182,8 @@ typedef enum {
 } uft_scp_flags_t;
 #endif /* UFT_SCP_FLAGS_DEFINED */
 
-/*============================================================================
- * SCP FILE HEADER (16 bytes)
- *============================================================================*/
-
-#if defined(_MSC_VER)
-    #pragma pack(push, 1)
-#endif
-
-#ifndef UFT_SCP_HEADER_T_DEFINED
-#define UFT_SCP_HEADER_T_DEFINED
-typedef struct
-#if defined(__GNUC__) || defined(__clang__)
-
-#endif
-{
-    uint8_t  signature[3];      /* 0x00: "SCP" */
-    uint8_t  version;           /* 0x03: Version (0x18 = v1.8) */
-    uint8_t  disk_type;         /* 0x04: Disk type (see enum) */
-    uint8_t  nr_revs;           /* 0x05: Number of revolutions */
-    uint8_t  start_track;       /* 0x06: Start track */
-    uint8_t  end_track;         /* 0x07: End track */
-    uint8_t  flags;             /* 0x08: Flags (see enum) */
-    uint8_t  cell_width;        /* 0x09: Bit cell width (0 = default) */
-    uint8_t  heads;             /* 0x0A: Number of heads (0=both, 1=head0, 2=head1) */
-    uint8_t  resolution;        /* 0x0B: Capture resolution (0 = 25ns) */
-    uint32_t checksum;          /* 0x0C: Checksum of data after header */
-} uft_scp_header_t;
-#endif /* UFT_SCP_HEADER_T_DEFINED */
-
-#if defined(_MSC_VER)
-    #pragma pack(pop)
-#endif
-
-/*============================================================================
- * SCP TRACK DATA HEADER (TDH) - 12 bytes per revolution
- *============================================================================*/
-
-#if defined(_MSC_VER)
-    #pragma pack(push, 1)
-#endif
-
-#ifndef UFT_SCP_TRACK_HEADER_T_DEFINED
-#define UFT_SCP_TRACK_HEADER_T_DEFINED
-typedef struct
-#if defined(__GNUC__) || defined(__clang__)
-
-#endif
-{
-    uint8_t  signature[3];      /* "TRK" */
-    uint8_t  track_nr;          /* Track number */
-} uft_scp_track_header_t;
-#endif /* UFT_SCP_TRACK_HEADER_T_DEFINED */
-
-#ifndef UFT_SCP_REVOLUTION_T_DEFINED
-#define UFT_SCP_REVOLUTION_T_DEFINED
-typedef struct
-#if defined(__GNUC__) || defined(__clang__)
-
-#endif
-{
-    uint32_t index_time;        /* Time for this revolution in SCP ticks */
-    uint32_t flux_count;        /* Number of flux entries */
-    uint32_t data_offset;       /* Offset to flux data (from track header) */
-} uft_scp_revolution_t;
-#endif /* UFT_SCP_REVOLUTION_T_DEFINED */
-
-#if defined(_MSC_VER)
-    #pragma pack(pop)
-#endif
+/* SCP types consolidated into canonical header */
+#include "uft/flux/uft_scp_parser.h"
 
 /*============================================================================
  * SCP EXTENSION BLOCKS

@@ -85,20 +85,8 @@ typedef struct uft_cqm_header {
 #define UFT_IMD_SIGNATURE       "IMD"
 #define UFT_IMD_HEADER_END      0x1A
 
-#ifndef UFT_IMD_TRACK_T_DEFINED
-#define UFT_IMD_TRACK_T_DEFINED
-typedef struct uft_imd_track {
-    uint8_t  mode;              /* Recording mode */
-    uint8_t  cylinder;          /* Cylinder number */
-    uint8_t  head;              /* Head number + flags */
-    uint8_t  sector_count;      /* Number of sectors */
-    uint8_t  sector_size;       /* Sector size code (128 << n) */
-    /* Followed by sector numbering map */
-    /* Optional: cylinder map (if head & 0x80) */
-    /* Optional: head map (if head & 0x40) */
-    /* Sector data follows */
-} uft_imd_track_t;
-#endif /* UFT_IMD_TRACK_T_DEFINED */
+/* IMD track type consolidated into canonical header */
+#include "uft/formats/uft_imd.h"
 
 /* IMD recording modes */
 typedef enum uft_imd_mode {
@@ -131,18 +119,8 @@ typedef enum uft_imd_sector_type {
 #define UFT_TD0_ADV_SIGNATURE   "td"    /* Advanced compression */
 #define UFT_TD0_HEADER_SIZE     12
 
-typedef struct uft_td0_header {
-    uint8_t  signature[2];      /* "TD" or "td" */
-    uint8_t  volume_seq;        /* Volume sequence (0 for first) */
-    uint8_t  check_sig;         /* Check signature */
-    uint8_t  version;           /* TD0 version */
-    uint8_t  data_rate;         /* Data rate */
-    uint8_t  drive_type;        /* Drive type */
-    uint8_t  stepping;          /* Stepping */
-    uint8_t  dos_alloc;         /* DOS allocation flag */
-    uint8_t  heads;             /* Number of sides */
-    uint16_t crc;               /* Header CRC */
-} uft_td0_header_t;
+/* TD0 header consolidated into canonical header */
+#include "uft/formats/uft_td0.h"
 
 /* TD0 data rates */
 typedef enum uft_td0_rate {

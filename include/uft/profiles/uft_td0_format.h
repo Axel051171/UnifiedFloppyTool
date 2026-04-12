@@ -145,23 +145,8 @@ typedef enum {
  * TD0 Structures
  * ═══════════════════════════════════════════════════════════════════════════ */
 
-/**
- * @brief TD0 main file header (12 bytes)
- */
-#pragma pack(push, 1)
-typedef struct {
-    uint8_t signature[2];       /**< "TD" or "td" */
-    uint8_t sequence;           /**< Volume sequence (0 for single) */
-    uint8_t check_sig;          /**< Check signature (should match) */
-    uint8_t version;            /**< TD0 version (10, 11, 15, 20, 21) */
-    uint8_t data_rate;          /**< Data rate + FM flag */
-    uint8_t drive_type;         /**< Source drive type */
-    uint8_t stepping;           /**< Track stepping mode */
-    uint8_t dos_alloc;          /**< DOS allocation flag */
-    uint8_t sides;              /**< Number of sides (1 or 2) */
-    uint16_t crc;               /**< CRC of header (bytes 0-9) */
-} uft_td0_header_t;
-#pragma pack(pop)
+/* TD0 header consolidated into canonical header */
+#include "uft/formats/uft_td0.h"
 
 /**
  * @brief TD0 comment header (10 bytes, optional)

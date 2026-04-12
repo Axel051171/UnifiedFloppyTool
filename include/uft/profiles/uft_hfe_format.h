@@ -51,40 +51,8 @@ extern "C" {
 #define UFT_HFE_V3_OP_SKIPBITS      0xF3
 #define UFT_HFE_V3_OP_RAND          0xF4
 
-#ifndef UFT_HFE_HEADER_T_DEFINED
-#define UFT_HFE_HEADER_T_DEFINED
-#pragma pack(push, 1)
-typedef struct {
-    char     signature[8];
-    uint8_t  format_revision;
-    uint8_t  track_count;
-    uint8_t  side_count;
-    uint8_t  track_encoding;
-    uint16_t bitrate;
-    uint16_t rpm;
-    uint8_t  interface_mode;
-    uint8_t  reserved1;
-    uint16_t track_list_offset;
-    uint8_t  write_allowed;
-    uint8_t  single_step;
-    uint8_t  track0s0_altencoding;
-    uint8_t  track0s0_encoding;
-    uint8_t  track0s1_altencoding;
-    uint8_t  track0s1_encoding;
-    uint8_t  reserved2[486];
-} uft_hfe_header_t;
-#pragma pack(pop)
-#endif /* UFT_HFE_HEADER_T_DEFINED */
-
-#ifndef UFT_HFE_TRACK_ENTRY_T_DEFINED
-#define UFT_HFE_TRACK_ENTRY_T_DEFINED
-#pragma pack(push, 1)
-typedef struct {
-    uint16_t offset;
-    uint16_t length;
-} uft_hfe_track_entry_t;
-#pragma pack(pop)
-#endif /* UFT_HFE_TRACK_ENTRY_T_DEFINED */
+/* HFE types consolidated into canonical header */
+#include "uft/flux/uft_hfe.h"
 
 typedef struct {
     uint8_t     mode;

@@ -90,23 +90,8 @@ typedef enum {
  * DATA STRUCTURES
  *============================================================================*/
 
-/**
- * @brief TD0 file header (12 bytes)
- */
-#pragma pack(push, 1)
-typedef struct uft_td0_header {
-    uint8_t signature[2];           /**< "TD" or "td" */
-    uint8_t sequence;               /**< Volume sequence (0=first) */
-    uint8_t check_sequence;         /**< Check sequence */
-    uint8_t version;                /**< Version (e.g., 21 = 2.1) */
-    uint8_t data_rate;              /**< Data rate and FM flag */
-    uint8_t drive_type;             /**< Drive type */
-    uint8_t stepping;               /**< Stepping and comment flag */
-    uint8_t dos_alloc_flag;         /**< DOS allocation flag */
-    uint8_t sides;                  /**< Number of sides (1 or 2) */
-    uint16_t crc;                   /**< CRC-16 of header (little-endian) */
-} uft_td0_header_t;
-#pragma pack(pop)
+/* TD0 header consolidated into canonical header */
+#include "uft/formats/uft_td0.h"
 
 /**
  * @brief TD0 comment block
@@ -123,81 +108,30 @@ typedef struct uft_td0_comment {
     char* text;                     /**< Comment text (allocated) */
 } uft_td0_comment_t;
 
-/**
- * @brief TD0 track header
- */
-#pragma pack(push, 1)
-typedef struct uft_td0_track_header {
-    uint8_t sector_count;           /**< Number of sectors (255 = end) */
-    uint8_t cylinder;               /**< Physical cylinder */
-    uint8_t head;                   /**< Physical head */
-    uint8_t crc;                    /**< CRC-8 of track header */
-} uft_td0_track_header_t;
-#pragma pack(pop)
+/* TD0 on-disk types (track_header_t, sector_header_t, data_header_t)
+ * and expanded types (sector_t, track_t) now provided by uft/formats/uft_td0.h
+ * included above via the uft_td0_header_t consolidation. */
 
 /**
- * @brief TD0 sector header
+ * @brief TD0 image (teledisk variant - uses canonical uft_td0_image_t if available)
  */
-#pragma pack(push, 1)
-typedef struct uft_td0_sector_header {
-    uint8_t cylinder;               /**< ID cylinder */
-    uint8_t head;                   /**< ID head */
-    uint8_t sector;                 /**< ID sector number */
-    uint8_t size_code;              /**< Sector size code */
-    uint8_t flags;                  /**< Flags (bit 0 = dup, bit 2 = CRC error, etc.) */
-    uint8_t crc;                    /**< CRC-8 */
-} uft_td0_sector_header_t;
-#pragma pack(pop)
-
-/**
- * @brief TD0 sector data header
- */
-#pragma pack(push, 1)
-typedef struct uft_td0_data_header {
-    uint16_t size;                  /**< Data size (little-endian) */
-    uint8_t encoding;               /**< Encoding method */
-} uft_td0_data_header_t;
-#pragma pack(pop)
-
-/**
- * @brief TD0 sector
- */
-typedef struct uft_td0_sector {
-    uft_td0_sector_header_t header;
-    uint8_t* data;                  /**< Decoded sector data */
-    size_t data_size;               /**< Size of decoded data */
-    bool has_data;                  /**< Whether sector has data */
-    bool crc_error;                 /**< CRC error flag */
-    bool deleted;                   /**< Deleted data mark */
-} uft_td0_sector_t;
-
-/**
- * @brief TD0 track
- */
-typedef struct uft_td0_track {
-    int cylinder;
-    int head;
-    int sector_count;
-    uft_td0_sector_t* sectors;      /**< Array of sectors */
-} uft_td0_track_t;
-
-/**
- * @brief TD0 image
- */
+#ifndef UFT_TD0_IMAGE_T_DEFINED
+#define UFT_TD0_IMAGE_T_DEFINED
 typedef struct uft_td0_image {
     uft_td0_header_t header;
     uft_td0_comment_t comment;
     bool has_comment;
-    
+
     int track_count;
     uft_td0_track_t* tracks;        /**< Array of tracks */
-    
+
     /* Derived geometry */
     int max_cylinder;
     int max_head;
     int max_sector;
     int sector_size;
 } uft_td0_image_t;
+#endif /* UFT_TD0_IMAGE_T_DEFINED */
 
 /*============================================================================
  * DECOMPRESSION FUNCTIONS

@@ -527,22 +527,8 @@ typedef struct {
 #define UFT_TD0_SIGNATURE_NORMAL    0x4454  /* "TD" */
 #define UFT_TD0_SIGNATURE_ADVANCED  0x6474  /* "td" (advanced compression) */
 
-#pragma pack(push, 1)
-
-typedef struct {
-    uint16_t signature;         /* "TD" or "td" */
-    uint8_t  sequence;          /* Volume sequence (0 for single) */
-    uint8_t  check_sequence;    /* Check byte for sequence */
-    uint8_t  version;           /* TeleDisk version */
-    uint8_t  data_rate;         /* 0=250K, 1=300K, 2=500K */
-    uint8_t  drive_type;        /* 1=360K, 2=1.2M, 3=720K, 4=1.44M */
-    uint8_t  stepping;          /* 0=single, 1=double stepping */
-    uint8_t  dos_alloc;         /* DOS allocation flag */
-    uint8_t  sides;             /* Number of sides */
-    uint16_t crc;               /* Header CRC */
-} uft_td0_header_t;
-
-#pragma pack(pop)
+/* TD0 header consolidated into canonical header */
+#include "uft/formats/uft_td0.h"
 
 /*===========================================================================*/
 /*                           FORMAT DETECTION MAGIC                           */

@@ -172,31 +172,12 @@ typedef enum {
  * SCP Structures
  * ═══════════════════════════════════════════════════════════════════════════ */
 
-/**
- * @brief SCP file header (16 bytes)
- */
-#ifndef UFT_SCP_HEADER_T_DEFINED
-#define UFT_SCP_HEADER_T_DEFINED
-#pragma pack(push, 1)
-typedef struct {
-    uint8_t signature[3];       /**< "SCP" signature */
-    uint8_t version;            /**< Format version */
-    uint8_t disk_type;          /**< Disk type code */
-    uint8_t revolutions;        /**< Number of revolutions per track */
-    uint8_t start_track;        /**< Starting track number */
-    uint8_t end_track;          /**< Ending track number */
-    uint8_t flags;              /**< Header flags */
-    uint8_t bit_cell_width;     /**< Bit cell width (0=16-bit, non-0=custom) */
-    uint8_t heads;              /**< Number of heads (0=both) */
-    uint8_t resolution;         /**< Capture resolution (0=25ns) */
-    uint32_t checksum;          /**< Data checksum */
-} uft_scp_header_t;
-#pragma pack(pop)
-#endif /* UFT_SCP_HEADER_T_DEFINED */
+/* SCP types consolidated into canonical header */
+#include "uft/flux/uft_scp_parser.h"
 
 /**
  * @brief SCP track data header (TDH) entry (4 bytes)
- * 
+ *
  * Stored as array after main header, one per track
  */
 #pragma pack(push, 1)
@@ -204,19 +185,6 @@ typedef struct {
     uint32_t offset;            /**< Offset to track data (0 = no track) */
 } uft_scp_track_entry_t;
 #pragma pack(pop)
-
-/**
- * @brief SCP track data header
- */
-#ifndef UFT_SCP_TRACK_HEADER_T_DEFINED
-#define UFT_SCP_TRACK_HEADER_T_DEFINED
-#pragma pack(push, 1)
-typedef struct {
-    uint8_t signature[3];       /**< "TRK" signature */
-    uint8_t track_number;       /**< Track number */
-} uft_scp_track_header_t;
-#pragma pack(pop)
-#endif /* UFT_SCP_TRACK_HEADER_T_DEFINED */
 
 /**
  * @brief SCP revolution header (12 bytes per revolution)

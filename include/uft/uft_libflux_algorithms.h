@@ -646,82 +646,20 @@ static inline uint16_t uft_libflux_crc16_get(uft_libflux_crc16_t *crc)
 
 #pragma pack(push, 1)
 
-/**
- * HFE File Header (native HxC format)
- */
-#ifndef UFT_HFE_HEADER_T_DEFINED
-#define UFT_HFE_HEADER_T_DEFINED
-typedef struct {
-    uint8_t  signature[8];          /* "HXCPICFE" or "HXCHFEV3" */
-    uint8_t  format_revision;
-    uint8_t  number_of_track;
-    uint8_t  number_of_side;
-    uint8_t  track_encoding;
-    uint16_t bitrate;               /* In Kbit/s, 250 for DD, 500 for HD */
-    uint16_t uft_floppy_rpm;            /* 300 or 360 */
-    uint8_t  uft_floppy_interface_mode;
-    uint8_t  write_protected;
-    uint16_t track_list_offset;     /* In 512-byte blocks */
-    uint8_t  write_allowed;
-    uint8_t  single_step;
-    uint8_t  track0s0_altencoding;
-    uint8_t  track0s0_encoding;
-    uint8_t  track0s1_altencoding;
-    uint8_t  track0s1_encoding;
-} uft_hfe_header_t;
-#endif /* UFT_HFE_HEADER_T_DEFINED */
+/* HFE types consolidated into canonical header */
+#include "uft/flux/uft_hfe.h"
+
+/* SCP types consolidated into canonical header */
+#include "uft/flux/uft_scp_parser.h"
 
 /**
- * HFE Track Entry
- */
-#ifndef UFT_HFE_TRACK_T_DEFINED
-#define UFT_HFE_TRACK_T_DEFINED
-typedef struct {
-    uint16_t offset;                /* In 512-byte blocks */
-    uint16_t track_len;             /* In bytes */
-} uft_hfe_track_t;
-#endif /* UFT_HFE_TRACK_T_DEFINED */
-
-/**
- * SCP File Header (SuperCard Pro format)
- */
-#ifndef UFT_SCP_HEADER_T_DEFINED
-#define UFT_SCP_HEADER_T_DEFINED
-typedef struct {
-    uint8_t  sign[3];               /* "SCP" */
-    uint8_t  version;               /* (Version<<4)|Revision */
-    uint8_t  disk_type;
-    uint8_t  number_of_revolution;
-    uint8_t  start_track;
-    uint8_t  end_track;
-    uint8_t  flags;
-    uint8_t  bit_cell_width;        /* 0 = 16 bits */
-    uint8_t  number_of_heads;       /* 0=both, 1=side0, 2=side1 */
-    uint8_t  resolution;            /* 0=25ns, 1=50ns, etc. */
-    uint32_t file_data_checksum;
-} uft_scp_header_t;
-#endif /* UFT_SCP_HEADER_T_DEFINED */
-
-/**
- * SCP Track Revolution Entry
+ * SCP Track Revolution Entry (legacy alias)
  */
 typedef struct {
     uint32_t index_time;            /* Duration in 25ns ticks */
     uint32_t track_length;          /* Number of bitcells */
     uint32_t track_offset;          /* Offset from TDH start */
 } uft_scp_index_pos_t;
-
-/**
- * SCP Track Data Header
- */
-#ifndef UFT_SCP_TRACK_HEADER_T_DEFINED
-#define UFT_SCP_TRACK_HEADER_T_DEFINED
-typedef struct {
-    uint8_t  trk_sign[3];           /* "TRK" */
-    uint8_t  track_number;
-    /* Followed by scp_index_pos entries */
-} uft_scp_track_header_t;
-#endif /* UFT_SCP_TRACK_HEADER_T_DEFINED */
 
 /**
  */

@@ -132,6 +132,8 @@ typedef enum {
 /**
  * @brief TD0 main image header (12 bytes)
  */
+#ifndef UFT_TD0_HEADER_T_DEFINED
+#define UFT_TD0_HEADER_T_DEFINED
 UFT_PACK_BEGIN
 typedef struct {
     uint16_t signature;     /**< "TD" (0x4454) or "td" (0x6474) */
@@ -146,6 +148,7 @@ typedef struct {
     uint16_t crc;           /**< Header CRC-16 */
 } uft_td0_header_t;
 UFT_PACK_END
+#endif /* UFT_TD0_HEADER_T_DEFINED */
 
 /**
  * @brief TD0 comment block header (10 bytes)
@@ -238,41 +241,50 @@ typedef struct {
 /**
  * @brief TD0 sector data (expanded)
  */
+#ifndef UFT_TD0_SECTOR_T_DEFINED
+#define UFT_TD0_SECTOR_T_DEFINED
 typedef struct {
     uft_td0_sector_header_t header;
     uint8_t* data;          /**< Sector data (NULL if no data) */
     uint16_t data_size;     /**< Actual data size */
 } uft_td0_sector_t;
+#endif /* UFT_TD0_SECTOR_T_DEFINED */
 
 /**
  * @brief TD0 track data (expanded)
  */
+#ifndef UFT_TD0_TRACK_T_DEFINED
+#define UFT_TD0_TRACK_T_DEFINED
 typedef struct {
     uft_td0_track_header_t header;
     uint8_t  nsectors;      /**< Number of sectors */
     uft_td0_sector_t* sectors;
 } uft_td0_track_t;
+#endif /* UFT_TD0_TRACK_T_DEFINED */
 
 /**
  * @brief TD0 image (expanded)
  */
+#ifndef UFT_TD0_IMAGE_T_DEFINED
+#define UFT_TD0_IMAGE_T_DEFINED
 typedef struct {
     uft_td0_header_t header;
-    
+
     /* Comment */
     uft_td0_comment_header_t comment_header;
     char*    comment;
     bool     has_comment;
-    
+
     /* Tracks */
     uint16_t num_tracks;
     uft_td0_track_t* tracks;
-    
+
     /* Metadata */
     uint16_t cylinders;
     uint8_t  heads;
     bool     advanced_compression;
 } uft_td0_image_t;
+#endif /* UFT_TD0_IMAGE_T_DEFINED */
 
 /*============================================================================
  * Huffman Decode Tables (from Teledisk reverse-engineering)
