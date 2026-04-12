@@ -413,20 +413,8 @@ static inline uint16_t uft_crc16_ibm(const uint8_t *data, size_t length)
  * Sector Header Structure
  *===========================================================================*/
 
-/**
- * @brief IBM-format sector ID field
- */
-#ifndef UFT_SECTOR_ID_T_DEFINED
-#define UFT_SECTOR_ID_T_DEFINED
-UFT_PACK_BEGIN
-typedef struct {
-    uint8_t  track;         /**< Track number (cylinder) */
-    uint8_t  head;          /**< Head/side number */
-    uint8_t  sector;        /**< Sector number */
-    uint8_t  size_code;     /**< Sector size code (0=128, 1=256, 2=512...) */
-} uft_sector_id_t;
-UFT_PACK_END
-#endif /* UFT_SECTOR_ID_T_DEFINED */
+/* uft_sector_id_t — canonical definition in uft/uft_types.h */
+#include "uft/uft_types.h"
 
 /**
  * @brief Complete sector header with CRC

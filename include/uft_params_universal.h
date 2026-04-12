@@ -318,20 +318,8 @@ typedef struct {
  * SECTOR PARAMETERS
  * ═══════════════════════════════════════════════════════════════════════════ */
 
-/**
- * @brief Sector ID field (IDAM)
- */
-#ifndef UFT_SECTOR_ID_T_DEFINED
-#define UFT_SECTOR_ID_T_DEFINED
-typedef struct {
-    uint8_t track;                    /* Track from ID field */
-    uint8_t side;                     /* Side from ID field */
-    uint8_t sector;                   /* Sector number */
-    uint8_t size_code;                /* Size code (0=128, 1=256, ...) */
-    uint16_t crc;                     /* ID field CRC */
-    bool crc_valid;                   /* CRC verification result */
-} uft_sector_id_t;
-#endif /* UFT_SECTOR_ID_T_DEFINED */
+/* uft_sector_id_t — canonical definition in uft/uft_types.h */
+#include "uft/uft_types.h"
 
 /**
  * @brief Sector data parameters

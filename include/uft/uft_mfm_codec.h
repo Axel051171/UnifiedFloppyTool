@@ -68,20 +68,8 @@ typedef enum {
     UFT_AM_DEL_DATA = 0xF8      /**< Deleted data mark */
 } uft_address_mark_t;
 
-/**
- * @brief IBM sector ID
- */
-#ifndef UFT_SECTOR_ID_T_DEFINED
-#define UFT_SECTOR_ID_T_DEFINED
-typedef struct {
-    uint8_t cylinder;           /**< Track/cylinder number */
-    uint8_t head;               /**< Head/side number */
-    uint8_t sector;             /**< Sector number */
-    uint8_t size_code;          /**< Size: 0=128, 1=256, 2=512, 3=1024 */
-    uint16_t crc;               /**< CRC of ID field */
-    bool crc_ok;                /**< CRC verification result */
-} uft_sector_id_t;
-#endif /* UFT_SECTOR_ID_T_DEFINED */
+/* uft_sector_id_t — canonical definition in uft/uft_types.h */
+#include "uft/uft_types.h"
 
 /**
  * @brief IBM sector data
