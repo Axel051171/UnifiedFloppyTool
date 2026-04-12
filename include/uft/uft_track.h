@@ -188,7 +188,11 @@ void uft_track_free(uft_track_t *track);
 /**
  * @brief Initialize existing track (for stack allocation)
  */
+/* uft_track_init: canonical declaration in uft_format_plugin.h
+ * (has additional cylinder, head params) */
+#ifndef UFT_TRACK_INIT_DECLARED
 void uft_track_init(uft_track_t *track);
+#endif
 
 /**
  * @brief Clone a track (deep copy)
@@ -232,8 +236,11 @@ const uft_sector_t* uft_track_get_sectors(const uft_track_t *track, size_t *coun
  * Flux Operations
  * ═══════════════════════════════════════════════════════════════════════════ */
 
-int uft_track_set_flux(uft_track_t *track, const uint32_t *samples, 
+/* uft_track_set_flux: canonical in uft_format_plugin.h (returns uft_error_t) */
+#ifndef UFT_TRACK_SET_FLUX_DECLARED
+int uft_track_set_flux(uft_track_t *track, const uint32_t *samples,
                        size_t count, double sample_rate_mhz);
+#endif
 int uft_track_add_revolution(uft_track_t *track, const uint32_t *samples, size_t count);
 
 /* ═══════════════════════════════════════════════════════════════════════════

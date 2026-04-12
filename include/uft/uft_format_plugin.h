@@ -354,6 +354,7 @@ size_t uft_list_format_plugins(const uft_format_plugin_t** plugins, size_t max);
 /**
  * @brief Track-Struktur initialisieren
  */
+#define UFT_TRACK_INIT_DECLARED
 void uft_track_init(uft_track_t* track, int cylinder, int head);
 
 /**
@@ -364,7 +365,8 @@ uft_error_t uft_track_add_sector(uft_track_t* track, const uft_sector_t* sector)
 /**
  * @brief Flux-Daten zu Track hinzufügen
  */
-uft_error_t uft_track_set_flux(uft_track_t* track, const uint32_t* flux, 
+#define UFT_TRACK_SET_FLUX_DECLARED
+uft_error_t uft_track_set_flux(uft_track_t* track, const uint32_t* flux,
                                 size_t count, uint32_t tick_ns);
 
 /**
