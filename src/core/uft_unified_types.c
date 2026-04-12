@@ -4,6 +4,7 @@
  */
 
 #include "uft/core/uft_unified_types.h"
+#include "uft/uft_types.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
