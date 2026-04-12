@@ -25,6 +25,8 @@
 #include <stddef.h>
 #include <stdbool.h>
 
+#include "uft/uft_types.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -103,44 +105,7 @@ typedef struct uft_track_quality {
     int     signal_strength;    /**< 0-100 */
 } uft_track_quality_t;
 
-/* ═══════════════════════════════════════════════════════════════════════════
- * Sector Structure (unified)
- * ═══════════════════════════════════════════════════════════════════════════ */
-
-#ifndef UFT_SECTOR_T_DEFINED
-#define UFT_SECTOR_T_DEFINED
-typedef struct uft_sector {
-    /* ID field (CHRN) */
-    uint8_t cylinder;       /**< C - Cylinder from ID */
-    uint8_t head;           /**< H - Head from ID */
-    uint8_t sector_id;      /**< R - Sector number */
-    uint8_t size_code;      /**< N - Size code (2^N * 128) */
-    
-    /* Computed */
-    uint16_t logical_size;  /**< Actual data size */
-    
-    /* Data */
-    uint8_t *data;          /**< Sector data */
-    size_t data_len;        /**< Data length */
-    
-    /* CRC */
-    uint16_t crc_stored;    /**< CRC from disk */
-    uint16_t crc_calculated;/**< Computed CRC */
-    bool crc_ok;            /**< CRC match */
-    
-    /* Flags */
-    bool deleted;           /**< Deleted data mark */
-    bool weak;              /**< Contains weak bits */
-    
-    /* Retry info */
-    int read_count;         /**< Number of read attempts */
-    float confidence;       /**< Sector confidence 0.0-1.0 */
-    
-    /* Position in bitstream (NEW) */
-    size_t id_offset;       /**< Bit offset of ID field */
-    size_t data_offset;     /**< Bit offset of data field */
-} uft_sector_t;
-#endif /* UFT_SECTOR_T_DEFINED */
+/* uft_sector_t — canonical definition in uft/uft_types.h (included above) */
 
 /* ═══════════════════════════════════════════════════════════════════════════
  * Flux Data Layer
@@ -200,73 +165,8 @@ typedef struct uft_sector_layer {
     int missing;
 } uft_sector_layer_t;
 
-/* ═══════════════════════════════════════════════════════════════════════════
- * Main Track Structure (CANONICAL)
- * ═══════════════════════════════════════════════════════════════════════════ */
-
-#ifndef UFT_TRACK_T_DEFINED
-#define UFT_TRACK_T_DEFINED
-
-/**
- * @brief Unified track data structure
- * 
- * This is the CANONICAL track structure for UFT v3.7.0+
- * 
- * Memory ownership:
- * - uft_track_alloc() creates track, owns all internal memory
- * - uft_track_free() releases track and all internal memory
- * - Never manually free internal pointers!
- */
-typedef struct uft_track {
-    /* ═══ Identity ═══ */
-    uint8_t         cylinder;       /**< Physical cylinder (0-83) */
-    uint8_t         head;           /**< Head/side (0-1) */
-    int8_t          quarter_offset; /**< Quarter-track offset (-2 to +2) */
-    bool            is_half_track;  /**< True for half-track */
-    
-    /* ═══ Encoding ═══ */
-    uint32_t        encoding;       /**< Detected encoding type (UFT_ENC_*) */
-    uint32_t        bitrate;        /**< Bit rate in bps (legacy compat) */
-    uint32_t        rpm;            /**< Drive RPM (legacy compat) */
-    double          nominal_bit_rate_kbps; /**< 250, 300, 500 kbps */
-    double          nominal_rpm;    /**< 300.0 or 360.0 */
-    
-    /* ═══ Status ═══ */
-    uint32_t        status;         /**< uft_track_status_t flags */
-    uint32_t        available_layers; /**< uft_layer_flags_t */
-    bool            decoded;        /**< Legacy: true if sectors decoded */
-    int             errors;         /**< Legacy: error count */
-    float           quality;        /**< Legacy: 0.0-1.0 */
-    
-    /* ═══ Quality Metrics (extended) ═══ */
-    uft_track_quality_t quality_ext;
-    
-    /* ═══ Data Layers ═══ */
-    uft_flux_layer_t*       flux;       /**< Layer 0: Flux (optional) */
-    uft_bitstream_layer_t*  bitstream;  /**< Layer 1: Bits (optional) */
-    uft_sector_layer_t*     sector_layer; /**< Layer 2: Sectors (optional) */
-    
-    /* ═══ Legacy Compatibility ═══ */
-    uint8_t*        raw_data;       /**< Legacy: raw track data */
-    size_t          raw_len;        /**< Legacy: raw data length */
-    uft_sector_t    sectors[UFT_MAX_SECTORS]; /**< Legacy: fixed array */
-    int             sector_count;   /**< Legacy: sector count */
-    uint32_t*       flux_data;      /**< Legacy: flux pointer */
-    size_t          flux_count;     /**< Legacy: flux count */
-    
-    /* ═══ Timing ═══ */
-    uint32_t        track_time_ns;  /**< Total track time */
-    uint32_t        write_splice_ns;/**< Write splice location */
-    
-    /* ═══ User Data ═══ */
-    void*           user_data;      /**< Application-specific */
-    
-    /* ═══ Internal ═══ */
-    uint32_t        _magic;         /**< UFT_TRACK_MAGIC */
-    uint32_t        _version;       /**< UFT_TRACK_VERSION */
-} uft_track_t;
-
-#endif /* UFT_TRACK_T_DEFINED */
+/* uft_track_t — canonical definition in uft/uft_format_plugin.h */
+#include "uft/uft_format_plugin.h"
 
 /* ═══════════════════════════════════════════════════════════════════════════
  * Lifecycle Functions

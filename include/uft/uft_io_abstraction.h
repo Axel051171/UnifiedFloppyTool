@@ -125,7 +125,8 @@ typedef struct uft_io_sector {
 
 /**
  * @brief Complete track with all data layers
- * Note: If uft_track.h is included first, use its definition
+ * Note: This definition uses nested structs for the I/O abstraction layer.
+ * If uft_format_plugin.h is included first, its canonical definition is used.
  */
 #ifndef UFT_TRACK_T_DEFINED
 #define UFT_TRACK_T_DEFINED
@@ -133,10 +134,10 @@ typedef struct uft_track {
     // Identity
     int             cylinder;
     int             head;
-    
+
     // Available layers (bitmask)
     uint32_t        available_layers;
-    
+
     // Layer 0: Flux data
     struct {
         uint32_t*   samples;            // Flux timing samples
@@ -145,13 +146,13 @@ typedef struct uft_track {
         double      sample_rate_mhz;
         double      index_time_us;      // Time between index pulses
     } flux;
-    
+
     // Layer 1: Bitstream
     struct {
         uint8_t*    bits;               // Packed bitstream
         size_t      bit_count;
         double      bit_rate_kbps;
-        
+
         // Encoding info
         enum {
             ENC_MFM,
@@ -161,7 +162,7 @@ typedef struct uft_track {
             ENC_AMIGA_MFM,
         } encoding;
     } bitstream;
-    
+
     // Layer 2: Sectors
     struct {
         uft_io_sector_t* sectors;
@@ -169,7 +170,7 @@ typedef struct uft_track {
         int           sector_size;      // Common size
         int           interleave;       // Sector interleave
     } sectors;
-    
+
     // Metadata
     struct {
         bool        copy_protected;
@@ -323,7 +324,5 @@ void uft_io_sink_close(uft_io_sink_t* sink);
 #ifdef __cplusplus
 }
 #endif
-
-#endif // UFT_IO_ABSTRACTION_H
 
 #endif /* UFT_IO_ABSTRACTION_H */

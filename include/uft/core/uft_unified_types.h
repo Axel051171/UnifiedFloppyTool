@@ -19,6 +19,8 @@
 #include <stddef.h>
 #include <stdbool.h>
 
+#include "uft/uft_types.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -227,104 +229,11 @@ static inline bool uft_sector_id_equal(const uft_sector_id_t *a,
 #endif
 #endif
 
-/* ============================================================================
- * Sector Data (Unified)
- * ============================================================================ */
+/* uft_sector_t — canonical definition in uft/uft_types.h (included above) */
 
-/**
- * @brief Unified sector data with metadata
- */
-#ifndef UFT_SECTOR_T_DEFINED
-#define UFT_SECTOR_T_DEFINED
-typedef struct {
-    uft_sector_id_t id;       /**< Sector identification */
-
-    /* Data */
-    uint8_t *data;            /**< Sector data (NULL if missing) */
-    size_t   data_len;        /**< Data length in bytes */
-
-    /* Quality metrics */
-    uint8_t *confidence;      /**< Per-byte confidence 0-255 (optional) */
-    uint8_t *weak_mask;       /**< Per-byte weak bit flags (optional) */
-
-    /* CRC */
-    uint32_t crc_stored;      /**< CRC from disk */
-    uint32_t crc_calculated;  /**< Calculated CRC */
-    bool     crc_valid;       /**< True if CRCs match */
-
-    /* Timing (optional, for flux) */
-    double  *timing_ns;       /**< Per-bit timing in nanoseconds */
-    size_t   timing_count;    /**< Number of timing entries */
-
-    /* Error info */
-    uft_error_t error;        /**< Primary error code */
-    uint8_t     retry_count;  /**< Number of retries used */
-
-    /* Position in track */
-    size_t  bit_offset;       /**< Bit position in track */
-    size_t  byte_offset;      /**< Byte position (for sector formats) */
-
-} uft_sector_t;
-#endif /* UFT_SECTOR_T_DEFINED */
-
-/* ============================================================================
- * Track Data (Unified - P0-002)
- * ============================================================================ */
-
-/**
- * @brief Unified track data structure
- *
- * Replaces various track structs across modules.
- */
-#ifndef UFT_TRACK_T_DEFINED
-#define UFT_TRACK_T_DEFINED
-typedef struct {
-    /* Identification */
-    uint16_t track_num;       /**< Track number */
-    uint8_t  head;            /**< Head/side */
-    uint8_t  encoding;        /**< Primary encoding */
-
-    /* Sectors */
-    uft_sector_t *sectors;    /**< Array of sectors */
-    size_t        sector_count;
-    size_t        sector_capacity;
-
-    /* Raw data (bitstream) */
-    uint8_t *raw_data;        /**< Raw track bits */
-    size_t   raw_bits;        /**< Number of bits */
-    size_t   raw_capacity;    /**< Allocated bytes */
-
-    /* Flux data (optional) */
-    double  *flux_times;      /**< Flux transition times (ns) */
-    size_t   flux_count;      /**< Number of transitions */
-
-    /* Multi-revision data */
-    struct {
-        uint8_t *data;
-        size_t   bits;
-        uint8_t  quality;     /**< 0-100 quality score */
-    } *revisions;
-    size_t revision_count;
-
-    /* Quality metrics */
-    uint8_t *confidence;      /**< Per-bit confidence */
-    bool    *weak_mask;       /**< Per-bit weak flags */
-
-    /* Track-level status */
-    uft_error_t error;        /**< Primary error */
-    uint8_t     quality;      /**< Overall quality 0-100 */
-    bool        complete;     /**< All sectors found */
-    bool        protected;    /**< Copy protection detected */
-
-    /* Timing */
-    uint64_t rotation_ns;     /**< Rotation time */
-    double   data_rate;       /**< Data rate in bits/sec */
-
-    /* Ownership */
-    bool owns_data;           /**< True = free on destroy */
-
-} uft_track_t;
-#endif /* UFT_TRACK_T_DEFINED */
+/* uft_track_t — canonical definition in uft/uft_format_plugin.h
+ * (available via uft/uft_types.h forward decl + uft/uft_format_plugin.h full def) */
+#include "uft/uft_format_plugin.h"
 
 /* ============================================================================
  * Disk Image (Unified)

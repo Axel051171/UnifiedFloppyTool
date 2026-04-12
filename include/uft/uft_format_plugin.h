@@ -72,40 +72,115 @@ struct uft_disk {
     void*               log_user;
 };
 
+/* Forward declarations for layer types (full defs in uft_track.h) */
+struct uft_flux_layer;
+struct uft_bitstream_layer;
+struct uft_sector_layer;
+
 /**
- * @brief Interne Track-Struktur
- * Note: If uft_track.h is included first, use its definition
+ * @brief Unified Track Structure (CANONICAL — superset of all variants)
+ *
+ * This is the ONE definition of uft_track_t used across the entire project.
+ * All fields from uft_format_plugin.h, uft_track.h, uft_io_abstraction.h,
+ * and uft_unified_types.h are merged here.
+ *
+ * Memory ownership:
+ * - uft_track_alloc() creates track, owns all internal memory
+ * - uft_track_free() releases track and all internal memory
+ * - Never manually free internal pointers!
  */
 #ifndef UFT_TRACK_T_DEFINED
 #define UFT_TRACK_T_DEFINED
 struct uft_track {
-    // Position
-    int                 cylinder;
-    int                 head;
-    
-    // Dekodierte Sektoren
-    uft_sector_t*       sectors;
+    /* ═══ Identity ═══ */
+    int                 cylinder;               ///< Physical cylinder
+    int                 head;                   ///< Head/side
+    int8_t              quarter_offset;         ///< Quarter-track offset (-2 to +2)
+    bool                is_half_track;          ///< True for half-track
+
+    /* ═══ Encoding ═══ */
+    uft_encoding_t      encoding;               ///< Disk-Encoding (MFM/FM/GCR)
+    uint32_t            bitrate;                ///< Bit rate in bps
+    uint32_t            rpm;                    ///< Drive RPM
+    double              nominal_bit_rate_kbps;  ///< 250, 300, 500 kbps
+    double              nominal_rpm;            ///< 300.0 or 360.0
+    double              data_rate;              ///< Data rate in bits/sec
+
+    /* ═══ Status ═══ */
+    uint32_t            status;                 ///< uft_track_status_t flags
+    uint32_t            available_layers;       ///< uft_layer_flags_t
+    bool                decoded;                ///< true if sectors decoded
+    int                 errors;                 ///< error count
+    float               quality_score;          ///< 0.0-1.0 quality
+    bool                complete;               ///< All sectors found
+    bool                copy_protected;         ///< Copy protection detected
+
+    /* ═══ Metrics ═══ */
+    uft_track_metrics_t metrics;
+    /* Inline quality metrics (from uft_track_quality_t) */
+    double              avg_bit_cell_ns;        ///< Average bit cell time (ns)
+    double              jitter_ns;              ///< Timing jitter (ns)
+    double              jitter_percent;         ///< Jitter as % of bit cell
+    int                 decode_errors;          ///< PLL/decode errors
+    float               detection_confidence;   ///< Detection confidence 0.0-1.0
+    int                 signal_strength;        ///< 0-100
+
+    /* ═══ Decoded Sectors ═══ */
+    uft_sector_t*       sectors;                ///< Dynamic sector array
     size_t              sector_count;
     size_t              sector_capacity;
-    
-    // Flux-Daten (optional)
-    uint32_t*           flux;          ///< Flux-Zeiten (ns oder ticks)
+    uft_sector_t        sectors_fixed[64];      ///< Legacy fixed array (UFT_MAX_SECTORS)
+    int                 sector_count_legacy;    ///< Legacy sector count
+
+    /* ═══ Data Layers (extended) ═══ */
+    struct uft_flux_layer*      flux_layer;     ///< Layer 0: Flux (optional)
+    struct uft_bitstream_layer* bitstream;      ///< Layer 1: Bits (optional)
+    struct uft_sector_layer*    sector_layer;   ///< Layer 2: Sectors (optional)
+
+    /* ═══ Flux Data ═══ */
+    uint32_t*           flux;                   ///< Flux timing (ns or ticks)
     size_t              flux_count;
     size_t              flux_capacity;
-    uint32_t            flux_tick_ns;  ///< Tick-Dauer in ns
-    
-    // Encoding und Metriken
-    uft_encoding_t      encoding;      ///< Disk-Encoding (MFM/FM/GCR)
-    uft_track_metrics_t metrics;
-    uint32_t            status;
-    
-    // Raw-Daten (für einige Formate)
-    uint8_t*            raw_data;
-    size_t              raw_size;
-    
-    // Owner
-    uft_disk_t*         disk;
-    void*               plugin_data;
+    uint32_t            flux_tick_ns;           ///< Tick duration in ns
+    uint32_t*           flux_data;              ///< Legacy flux pointer
+    double*             flux_times;             ///< Flux transition times (ns)
+
+    /* ═══ Raw Data (bitstream) ═══ */
+    uint8_t*            raw_data;               ///< Raw track data
+    size_t              raw_size;               ///< Raw data size (bytes)
+    size_t              raw_len;                ///< Raw data length (alias)
+    size_t              raw_bits;               ///< Number of bits
+    size_t              raw_capacity;           ///< Allocated bytes
+
+    /* ═══ Multi-Revision Data ═══ */
+    struct {
+        uint8_t *data;
+        size_t   bits;
+        uint8_t  quality;                       ///< 0-100 quality score
+    } *revisions;
+    size_t              revision_count;
+
+    /* ═══ Quality Maps ═══ */
+    uint8_t*            confidence;             ///< Per-bit confidence
+    bool*               weak_mask;              ///< Per-bit weak flags
+
+    /* ═══ Timing ═══ */
+    uint32_t            track_time_ns;          ///< Total track time
+    uint32_t            write_splice_ns;        ///< Write splice location
+    uint64_t            rotation_ns;            ///< Rotation time
+
+    /* ═══ Error Info ═══ */
+    int                 error;                  ///< Primary error code (uft_error_t compatible)
+
+    /* ═══ Owner / User Data ═══ */
+    uft_disk_t*         disk;                   ///< Owning disk
+    void*               plugin_data;            ///< Plugin-specific data
+    void*               user_data;              ///< Application-specific
+    bool                owns_data;              ///< True = free on destroy
+
+    /* ═══ Internal ═══ */
+    uint32_t            _magic;                 ///< UFT_TRACK_MAGIC
+    uint32_t            _version;               ///< UFT_TRACK_VERSION
 };
 typedef struct uft_track uft_track_t;
 #endif /* UFT_TRACK_T_DEFINED */

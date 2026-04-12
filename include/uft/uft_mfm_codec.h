@@ -71,21 +71,7 @@ typedef enum {
 /* uft_sector_id_t — canonical definition in uft/uft_types.h */
 #include "uft/uft_types.h"
 
-/**
- * @brief IBM sector data
- */
-#ifndef UFT_SECTOR_T_DEFINED
-#define UFT_SECTOR_T_DEFINED
-typedef struct {
-    uft_sector_id_t id;
-    uint8_t data_mark;          /**< Data or deleted data mark */
-    uint8_t *data;              /**< Sector data */
-    size_t data_size;           /**< Actual data size */
-    uint16_t data_crc;          /**< Data CRC */
-    bool data_crc_ok;           /**< Data CRC result */
-    int bit_offset;             /**< Position in track (bits) */
-} uft_sector_t;
-#endif /* UFT_SECTOR_T_DEFINED */
+/* uft_sector_t — canonical definition in uft/uft_types.h (included above) */
 
 /**
  * @brief Decoded track info

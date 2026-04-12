@@ -272,20 +272,56 @@ typedef enum uft_sector_status {
 #define UFT_SECTOR_DATA_CRC_ERROR   UFT_SECTOR_CRC_ERROR
 
 /**
- * @brief Einzelner Sektor
+ * @brief Einzelner Sektor (CANONICAL — superset of all variants)
+ *
+ * This is the ONE definition of uft_sector_t used across the entire project.
+ * All fields from uft_types.h, uft_mfm_codec.h, uft_track.h,
+ * uft_unified_types.h, and uft_track_v1_backup.h are merged here.
  */
 #ifndef UFT_SECTOR_T_DEFINED
 #define UFT_SECTOR_T_DEFINED
 typedef struct uft_sector {
-    uft_sector_id_t  id;           ///< Sektor-ID
-    uint8_t*         data;         ///< Sektor-Daten
-    uint16_t         data_size;    ///< Tatsächliche Datengröße
-    uint16_t         data_crc;     ///< Daten-CRC
-    uint32_t         status;       ///< uft_sector_status_t Flags
-    
-    // Timing-Info (wenn verfügbar)
-    uint32_t         bit_position; ///< Position im Track (Bits)
-    uint32_t         gap_before;   ///< Gap-Größe vor diesem Sektor
+    uft_sector_id_t  id;              ///< Sektor-ID (CHRN)
+
+    /* Data */
+    uint8_t*         data;            ///< Sektor-Daten
+    size_t           data_len;        ///< Datenlänge in Bytes
+    uint16_t         data_size;       ///< Tatsächliche Datengröße (legacy)
+    uint8_t          data_mark;       ///< Data address mark (0xFB/0xF8)
+
+    /* CRC */
+    uint32_t         crc_stored;      ///< CRC from disk
+    uint32_t         crc_calculated;  ///< Computed CRC
+    uint16_t         data_crc;        ///< Daten-CRC (legacy alias)
+    bool             crc_ok;          ///< CRC match
+    bool             data_crc_ok;     ///< Data CRC result (legacy alias)
+
+    /* Status flags */
+    uint32_t         status;          ///< uft_sector_status_t Flags
+    bool             deleted;         ///< Deleted data mark
+    bool             weak;            ///< Contains weak bits
+
+    /* Quality metrics */
+    uint8_t*         confidence_map;  ///< Per-byte confidence 0-255 (optional)
+    uint8_t*         weak_mask;       ///< Per-byte weak bit flags (optional)
+    float            confidence;      ///< Sector confidence 0.0-1.0
+    int              read_count;      ///< Number of read attempts
+    uint8_t          retry_count;     ///< Number of retries used
+
+    /* Timing (optional, for flux) */
+    double*          timing_ns;       ///< Per-bit timing in nanoseconds
+    size_t           timing_count;    ///< Number of timing entries
+
+    /* Position in track */
+    size_t           id_offset;       ///< Bit offset of ID field
+    size_t           data_offset;     ///< Bit offset of data field
+    uint32_t         bit_position;    ///< Position im Track (Bits, legacy)
+    size_t           bit_offset;      ///< Bit position in track
+    size_t           byte_offset;     ///< Byte position (for sector formats)
+    uint32_t         gap_before;      ///< Gap-Größe vor diesem Sektor
+
+    /* Error info */
+    int              error;           ///< Primary error code (uft_error_t compatible)
 } uft_sector_t;
 #endif /* UFT_SECTOR_T_DEFINED */
 
