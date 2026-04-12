@@ -39,9 +39,12 @@ extern "C" {
  * Known Format Types
  * ============================================================================ */
 
+#ifndef UFT_FORMAT_ENUM_DEFINED
+#define UFT_FORMAT_ENUM_DEFINED
+#define UFT_FORMAT_TYPE_T_DEFINED
 typedef enum {
     UFT_FORMAT_UNKNOWN = 0,
-    
+
     /* IBM PC */
     UFT_FORMAT_IBM_FM,          /**< IBM FM (SD) */
     UFT_FORMAT_IBM_MFM,         /**< IBM MFM (DD/HD) */
@@ -50,22 +53,22 @@ typedef enum {
     UFT_FORMAT_IBM_1200K,       /**< IBM 1.2MB */
     UFT_FORMAT_IBM_1440K,       /**< IBM 1.44MB */
     UFT_FORMAT_IBM_2880K,       /**< IBM 2.88MB */
-    
+
     /* Commodore */
     UFT_FORMAT_C64_GCR,         /**< C64/1541 GCR */
     UFT_FORMAT_C128_MFM,        /**< C128/1571 MFM side */
     UFT_FORMAT_AMIGA_MFM,       /**< Amiga MFM */
-    
+
     /* Apple */
     UFT_FORMAT_APPLE2_GCR,      /**< Apple II GCR */
     UFT_FORMAT_MAC_GCR,         /**< Macintosh GCR */
     UFT_FORMAT_MAC_MFM,         /**< Macintosh MFM (HD) */
-    
+
     /* Atari */
     UFT_FORMAT_ATARI_FM,        /**< Atari 8-bit FM */
     UFT_FORMAT_ATARI_MFM,       /**< Atari 8-bit MFM */
     UFT_FORMAT_ATARI_ST,        /**< Atari ST */
-    
+
     /* Other */
     UFT_FORMAT_BBC_FM,          /**< BBC Micro FM */
     UFT_FORMAT_BBC_MFM,         /**< BBC Micro MFM */
@@ -73,9 +76,15 @@ typedef enum {
     UFT_FORMAT_PC98,            /**< NEC PC-98 */
     UFT_FORMAT_X68000,          /**< Sharp X68000 */
     UFT_FORMAT_FM_TOWNS,        /**< FM Towns */
-    
+
     UFT_FORMAT_CUSTOM,          /**< Custom/Unknown format */
 } uft_format_type_t;
+#else
+#ifndef UFT_FORMAT_TYPE_T_DEFINED
+#define UFT_FORMAT_TYPE_T_DEFINED
+typedef int uft_format_type_t;
+#endif
+#endif /* UFT_FORMAT_ENUM_DEFINED */
 
 /* ============================================================================
  * Types
@@ -423,7 +432,10 @@ bool uft_format_get_params(uft_format_type_t format,
 /**
  * @brief Get format name
  */
+#ifndef UFT_FORMAT_GET_NAME_DECLARED
+#define UFT_FORMAT_GET_NAME_DECLARED
 const char* uft_format_get_name(uft_format_type_t format);
+#endif /* UFT_FORMAT_GET_NAME_DECLARED */
 
 /**
  * @brief Identify format from signature

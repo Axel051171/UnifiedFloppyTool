@@ -48,11 +48,28 @@ extern "C" {
  * TRACK FORMAT TYPES
  *============================================================================*/
 
+#ifndef UFT_FORMAT_ENUM_DEFINED
+#define UFT_FORMAT_ENUM_DEFINED
+#define UFT_TRACK_FORMAT_T_DEFINED
 typedef enum {
     UFT_FORMAT_UNKNOWN = 0,
     UFT_FORMAT_FM      = 1,     /* Single density (FM) */
     UFT_FORMAT_MFM     = 2      /* Double density (MFM) */
 } uft_track_format_t;
+#else
+/* Another header already defined the format enum -- provide typedef alias
+ * and macro fallbacks for enumerator values used in inline functions. */
+#ifndef UFT_TRACK_FORMAT_T_DEFINED
+#define UFT_TRACK_FORMAT_T_DEFINED
+typedef int uft_track_format_t;
+#endif
+#ifndef UFT_FORMAT_FM
+#define UFT_FORMAT_FM   1
+#endif
+#ifndef UFT_FORMAT_MFM
+#define UFT_FORMAT_MFM  2
+#endif
+#endif /* UFT_FORMAT_ENUM_DEFINED */
 
 /*============================================================================
  * DISK GEOMETRY LIMITS

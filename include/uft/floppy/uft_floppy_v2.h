@@ -23,7 +23,13 @@ extern "C" {
 /* Opaque disk handle */
 typedef struct uft_disk_s uft_disk_t;
 
-/* Disk format types */
+/* Disk format types -- guard shared with other headers that define
+ * overlapping UFT_FORMAT_* enumerator values. Whichever header is
+ * included first provides the canonical enum; the others are skipped.
+ * The typedef alias uft_disk_format_t is always provided via int so
+ * code that uses this header's type name still compiles. */
+#ifndef UFT_FORMAT_ENUM_DEFINED
+#define UFT_FORMAT_ENUM_DEFINED
 typedef enum {
     UFT_FORMAT_UNKNOWN = 0,
     UFT_FORMAT_RAW,         /* Raw sector image (IMG, IMA, DSK) */
@@ -43,6 +49,11 @@ typedef enum {
     UFT_FORMAT_WOZ,         /* Apple WOZ */
     UFT_FORMAT_FLUX         /* Raw flux */
 } uft_disk_format_t;
+#else
+/* Another header already defined the format enum -- provide the typedef
+ * alias so this header's API signatures remain valid. */
+typedef int uft_disk_format_t;
+#endif /* UFT_FORMAT_ENUM_DEFINED */
 
 /* Disk geometry */
 typedef struct {

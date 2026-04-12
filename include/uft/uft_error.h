@@ -27,10 +27,12 @@ extern "C" {
  * All public UFT functions should return one of these codes.
  * Success is 0, all errors are negative.
  */
+#ifndef UFT_ERROR_ENUM_DEFINED
+#define UFT_ERROR_ENUM_DEFINED
 typedef enum {
     /** Operation completed successfully */
     UFT_SUCCESS = 0,
-    
+
     /* Argument errors (-1 to -9) */
     /** Invalid argument provided (NULL pointer, out of range, etc.) */
     UFT_ERR_INVALID_ARG = -1,
@@ -38,7 +40,7 @@ typedef enum {
     UFT_ERR_BUFFER_TOO_SMALL = -2,
     /** Invalid path or filename */
     UFT_ERR_INVALID_PATH = -3,
-    
+
     /* I/O errors (-10 to -19) */
     /** General I/O error */
     UFT_ERR_IO = -10,
@@ -50,7 +52,7 @@ typedef enum {
     UFT_ERR_FILE_EXISTS = -13,
     /** End of file reached */
     UFT_ERR_EOF = -14,
-    
+
     /* Format errors (-20 to -29) */
     /** Unknown or invalid format */
     UFT_ERR_FORMAT = -20,
@@ -62,7 +64,7 @@ typedef enum {
     UFT_ERR_CORRUPTED = -23,
     /** CRC/checksum mismatch */
     UFT_ERR_CRC = -24,
-    
+
     /* Resource errors (-30 to -39) */
     /** Memory allocation failed */
     UFT_ERR_MEMORY = -30,
@@ -70,7 +72,7 @@ typedef enum {
     UFT_ERR_RESOURCE = -31,
     /** Resource busy */
     UFT_ERR_BUSY = -32,
-    
+
     /* Feature errors (-40 to -49) */
     /** Feature not supported */
     UFT_ERR_NOT_SUPPORTED = -40,
@@ -78,7 +80,7 @@ typedef enum {
     UFT_ERR_NOT_IMPLEMENTED = -41,
     /** Operation not permitted in current state */
     UFT_ERR_NOT_PERMITTED = -42,
-    
+
     /* Hardware errors (-50 to -59) */
     /** Hardware communication error */
     UFT_ERR_HARDWARE = -50,
@@ -88,25 +90,42 @@ typedef enum {
     UFT_ERR_DEVICE_NOT_FOUND = -52,
     /** Timeout */
     UFT_ERR_TIMEOUT = -53,
-    
+
     /* Internal errors (-90 to -99) */
     /** Internal error (should not happen) */
     UFT_ERR_INTERNAL = -90,
     /** Assertion failed */
     UFT_ERR_ASSERTION = -91,
-    
+
     /** Unknown error */
     UFT_ERR_UNKNOWN = -100
 } uft_rc_t;
 
 /** @brief Alias for compatibility */
+#ifndef UFT_ERROR_T_DEFINED
+#define UFT_ERROR_T_DEFINED
 typedef uft_rc_t uft_error_t;
+#endif /* UFT_ERROR_T_DEFINED */
+#else
+/* Error enum already defined by another header (e.g. uft_unified_types.h).
+ * Provide typedef aliases so the rest of this header still compiles. */
+typedef int uft_rc_t;
+#ifndef UFT_ERROR_T_DEFINED
+#define UFT_ERROR_T_DEFINED
+typedef int uft_error_t;
+#endif
+#ifndef UFT_SUCCESS
+#define UFT_SUCCESS 0
+#endif
+#endif /* UFT_ERROR_ENUM_DEFINED */
 
 /** @brief Alias for NULL pointer error */
 #define UFT_ERROR_NULL_POINTER UFT_ERR_INVALID_ARG
 
 /** @brief Standard OK return */
+#ifndef UFT_OK
 #define UFT_OK UFT_SUCCESS
+#endif
 
 /* Legacy error code aliases */
 #define UFT_ERROR_NO_MEMORY      UFT_ERR_MEMORY

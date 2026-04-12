@@ -225,23 +225,26 @@ typedef struct {
 /**
  * @brief IMD track data (expanded for processing)
  */
+#ifndef UFT_IMD_TRACK_T_DEFINED
+#define UFT_IMD_TRACK_T_DEFINED
 typedef struct {
     uft_imd_track_header_t header;
-    
+
     uint8_t  smap[UFT_IMD_MAX_SECTORS];  /**< Sector numbering map */
     uint8_t  cmap[UFT_IMD_MAX_SECTORS];  /**< Cylinder map (optional) */
     uint8_t  hmap[UFT_IMD_MAX_SECTORS];  /**< Head map (optional) */
     uint8_t  stype[UFT_IMD_MAX_SECTORS]; /**< Sector types */
     uint16_t ssize[UFT_IMD_MAX_SECTORS]; /**< Sector sizes (if variable) */
-    
+
     bool     has_cylmap;        /**< Cylinder map present */
     bool     has_headmap;       /**< Head map present */
     bool     has_varsizes;      /**< Variable sector sizes */
-    
+
     uint8_t* data;              /**< Sector data buffer */
     size_t   data_size;         /**< Total data size */
     size_t   sector_offsets[UFT_IMD_MAX_SECTORS]; /**< Offset to each sector */
 } uft_imd_track_t;
+#endif /* UFT_IMD_TRACK_T_DEFINED */
 
 /**
  * @brief IMD image structure

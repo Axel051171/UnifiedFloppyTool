@@ -88,6 +88,8 @@ extern "C" {
 /**
  * @brief SCP file header (16 bytes)
  */
+#ifndef UFT_SCP_HEADER_T_DEFINED
+#define UFT_SCP_HEADER_T_DEFINED
 typedef struct {
     uint8_t  signature[3];      /**< "SCP" */
     uint8_t  version;           /**< Version<<4 | Revision */
@@ -101,6 +103,7 @@ typedef struct {
     uint8_t  resolution;        /**< Multiplier for 25ns base */
     uint32_t checksum;          /**< File data checksum */
 } uft_scp_header_t;
+#endif /* UFT_SCP_HEADER_T_DEFINED */
 
 /**
  * @brief Track offset table entry
@@ -112,20 +115,26 @@ typedef struct {
 /**
  * @brief Revolution info within track header
  */
+#ifndef UFT_SCP_REVOLUTION_T_DEFINED
+#define UFT_SCP_REVOLUTION_T_DEFINED
 typedef struct {
     uint32_t index_time;        /**< Index time in 25ns units */
     uint32_t track_length;      /**< Number of flux entries */
     uint32_t data_offset;       /**< Offset from track header start */
 } uft_scp_revolution_t;
+#endif /* UFT_SCP_REVOLUTION_T_DEFINED */
 
 /**
  * @brief Track data header
  */
+#ifndef UFT_SCP_TRACK_HEADER_T_DEFINED
+#define UFT_SCP_TRACK_HEADER_T_DEFINED
 typedef struct {
     uint8_t  signature[3];      /**< "TRK" */
     uint8_t  track_number;      /**< Track number */
     /* Followed by revolution entries and flux data */
 } uft_scp_track_header_t;
+#endif /* UFT_SCP_TRACK_HEADER_T_DEFINED */
 
 /**
  * @brief On-disk extension footer (52 bytes, 13 x uint32 little-endian)

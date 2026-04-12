@@ -38,29 +38,32 @@ extern "C" {
 /**
  * @brief Disk image format types
  */
+#ifndef UFT_FORMAT_ENUM_DEFINED
+#define UFT_FORMAT_ENUM_DEFINED
+#define UFT_FORMAT_TYPE_T_DEFINED
 typedef enum {
     UFT_FORMAT_UNKNOWN     = 0,
-    
+
     /* Raw/Sector formats */
     UFT_FORMAT_RAW         = 1,    /**< Raw sector image */
     UFT_FORMAT_DSK         = 2,    /**< Apple DSK */
     UFT_FORMAT_ADF         = 3,    /**< Amiga ADF */
     UFT_FORMAT_D64         = 4,    /**< C64 D64 */
     UFT_FORMAT_ST          = 5,    /**< Atari ST */
-    
+
     /* Bitstream formats */
     UFT_FORMAT_IMD         = 10,   /**< ImageDisk */
     UFT_FORMAT_TD0         = 11,   /**< Teledisk */
     UFT_FORMAT_HFE         = 12,   /**< UFT HFE Format */
     UFT_FORMAT_MFM         = 13,   /**< Raw MFM bitstream */
     UFT_FORMAT_86F         = 14,   /**< PCem 86F */
-    
+
     /* Flux formats */
     UFT_FORMAT_SCP         = 20,   /**< SuperCardPro */
     UFT_FORMAT_KRYOFLUX    = 21,   /**< Kryoflux raw */
     UFT_FORMAT_IPF         = 22,   /**< SPS/CAPS IPF */
     UFT_FORMAT_A2R         = 23,   /**< Applesauce A2R */
-    
+
     /* Container formats */
     UFT_FORMAT_WOZ         = 30,   /**< Apple WOZ */
     UFT_FORMAT_MOOF        = 31,   /**< Mac MOOF */
@@ -69,16 +72,26 @@ typedef enum {
     UFT_FORMAT_PSI         = 34,   /**< PCE Sector Image */
     UFT_FORMAT_PFI         = 35,   /**< PCE Flux Image */
     UFT_FORMAT_TC          = 36,   /**< TransCopy */
-    
+
     /* Archive/compressed */
     UFT_FORMAT_IMZ         = 40,   /**< Compressed IMG (zip) */
     UFT_FORMAT_ADZ         = 41,   /**< Compressed ADF (gzip) */
     UFT_FORMAT_2MG         = 42    /**< Apple 2MG container */
 } uft_format_type_t;
+#else
+/* Enum already defined by another header. Provide typedef alias
+ * only if uft_format_type_t was not yet introduced. */
+#ifndef UFT_FORMAT_TYPE_T_DEFINED
+#define UFT_FORMAT_TYPE_T_DEFINED
+typedef int uft_format_type_t;
+#endif
+#endif /* UFT_FORMAT_ENUM_DEFINED */
 
 /**
  * @brief Format capabilities flags
  */
+#ifndef UFT_FORMAT_CAPS_DEFINED
+#define UFT_FORMAT_CAPS_DEFINED
 typedef enum {
     UFT_CAP_READ           = 0x0001,  /**< Can read format */
     UFT_CAP_WRITE          = 0x0002,  /**< Can write format */
@@ -91,6 +104,7 @@ typedef enum {
     UFT_CAP_VARIABLE_RATE  = 0x0100,  /**< Variable data rate */
     UFT_CAP_COPY_PROTECT   = 0x0200   /**< Copy protection info */
 } uft_format_caps_t;
+#endif /* UFT_FORMAT_CAPS_DEFINED */
 
 /*============================================================================
  * SCP (SuperCardPro) Format
@@ -135,6 +149,8 @@ typedef enum {
 /**
  * @brief SCP file header (16 bytes)
  */
+#ifndef UFT_SCP_HEADER_T_DEFINED
+#define UFT_SCP_HEADER_T_DEFINED
 #pragma pack(push, 1)
 typedef struct {
     uint8_t  signature[3];    /**< "SCP" */
@@ -150,20 +166,26 @@ typedef struct {
     uint32_t checksum;        /**< CRC32 (0=skip) */
 } uft_scp_header_t;
 #pragma pack(pop)
+#endif /* UFT_SCP_HEADER_T_DEFINED */
 
 /**
  * @brief SCP track header (4 bytes)
  */
+#ifndef UFT_SCP_TRACK_HEADER_T_DEFINED
+#define UFT_SCP_TRACK_HEADER_T_DEFINED
 #pragma pack(push, 1)
 typedef struct {
     uint8_t  signature[3];    /**< "TRK" */
     uint8_t  track_number;    /**< Track number */
 } uft_scp_track_header_t;
 #pragma pack(pop)
+#endif /* UFT_SCP_TRACK_HEADER_T_DEFINED */
 
 /**
  * @brief SCP revolution entry (12 bytes)
  */
+#ifndef UFT_SCP_REVOLUTION_T_DEFINED
+#define UFT_SCP_REVOLUTION_T_DEFINED
 #pragma pack(push, 1)
 typedef struct {
     uint32_t index_time;      /**< Time from index (25ns units) */
@@ -171,6 +193,7 @@ typedef struct {
     uint32_t data_offset;     /**< Offset to flux data (from track header) */
 } uft_scp_revolution_t;
 #pragma pack(pop)
+#endif /* UFT_SCP_REVOLUTION_T_DEFINED */
 
 /*============================================================================
  * Kryoflux Format
@@ -352,6 +375,8 @@ typedef struct {
 /**
  * @brief IPF INFO record
  */
+#ifndef UFT_IPF_INFO_T_DEFINED
+#define UFT_IPF_INFO_T_DEFINED
 #pragma pack(push, 1)
 typedef struct {
     uint32_t media_type;
@@ -372,6 +397,7 @@ typedef struct {
     uint32_t reserved[3];
 } uft_ipf_info_t;
 #pragma pack(pop)
+#endif /* UFT_IPF_INFO_T_DEFINED */
 
 /*============================================================================
  * HFE (UFT HFE Format) Format
@@ -392,6 +418,8 @@ typedef enum {
 /**
  * @brief HFE file header (512 bytes)
  */
+#ifndef UFT_HFE_HEADER_T_DEFINED
+#define UFT_HFE_HEADER_T_DEFINED
 #pragma pack(push, 1)
 typedef struct {
     char     signature[8];    /**< "HXCPICFE" */
@@ -412,6 +440,7 @@ typedef struct {
     uint8_t  track0s1_enc;
 } uft_hfe_header_t;
 #pragma pack(pop)
+#endif /* UFT_HFE_HEADER_T_DEFINED */
 
 /**
  * @brief HFE track entry (4 bytes)
@@ -431,6 +460,15 @@ typedef struct {
 #define UFT_IMD_SIGNATURE           "IMD "
 
 /** IMD mode values */
+#ifndef UFT_IMD_MODE_T_DEFINED
+#define UFT_IMD_MODE_T_DEFINED
+/* Undefine macros if a prior header defined these as #define constants */
+#undef UFT_IMD_MODE_500K_FM
+#undef UFT_IMD_MODE_300K_FM
+#undef UFT_IMD_MODE_250K_FM
+#undef UFT_IMD_MODE_500K_MFM
+#undef UFT_IMD_MODE_300K_MFM
+#undef UFT_IMD_MODE_250K_MFM
 typedef enum {
     UFT_IMD_MODE_500K_FM    = 0,
     UFT_IMD_MODE_300K_FM    = 1,
@@ -439,6 +477,7 @@ typedef enum {
     UFT_IMD_MODE_300K_MFM   = 4,
     UFT_IMD_MODE_250K_MFM   = 5
 } uft_imd_mode_t;
+#endif /* UFT_IMD_MODE_T_DEFINED */
 
 /** IMD sector flags */
 #define UFT_IMD_SECTOR_NORMAL       0x00
@@ -449,6 +488,8 @@ typedef enum {
 /**
  * @brief IMD track header
  */
+#ifndef UFT_IMD_TRACK_T_DEFINED
+#define UFT_IMD_TRACK_T_DEFINED
 #pragma pack(push, 1)
 typedef struct {
     uint8_t  mode;
@@ -458,6 +499,7 @@ typedef struct {
     uint8_t  size_code;
 } uft_imd_track_t;
 #pragma pack(pop)
+#endif /* UFT_IMD_TRACK_T_DEFINED */
 
 /*============================================================================
  * Format Detection Functions
@@ -481,7 +523,10 @@ uint32_t uft_format_get_caps(uft_format_type_t format);
 /**
  * @brief Get format name string
  */
+#ifndef UFT_FORMAT_GET_NAME_DECLARED
+#define UFT_FORMAT_GET_NAME_DECLARED
 const char *uft_format_get_name(uft_format_type_t format);
+#endif /* UFT_FORMAT_GET_NAME_DECLARED */
 
 /*============================================================================
  * SCP Parser Functions

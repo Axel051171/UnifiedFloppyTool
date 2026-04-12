@@ -45,16 +45,19 @@ extern "C" {
 /**
  * @brief Format type enumeration
  */
+#ifndef UFT_FORMAT_ENUM_DEFINED
+#define UFT_FORMAT_ENUM_DEFINED
+#define UFT_FORMAT_TYPE_T_DEFINED
 typedef enum {
     UFT_FORMAT_UNKNOWN = 0,
-    
+
     /* Core formats */
     UFT_FORMAT_HFE,             /**< HxC Floppy Emulator */
     UFT_FORMAT_WOZ,             /**< Apple II WOZ */
     UFT_FORMAT_DC42,            /**< Apple DiskCopy 4.2 */
     UFT_FORMAT_D88,             /**< NEC PC-88/PC-98 */
     UFT_FORMAT_D77,             /**< Fujitsu FM-7/FM-77 */
-    
+
     /* P1 formats */
     UFT_FORMAT_IMD,             /**< ImageDisk */
     UFT_FORMAT_TD0,             /**< Teledisk */
@@ -84,6 +87,12 @@ typedef enum {
     
     UFT_FORMAT_MAX
 } uft_format_type_t;
+#else
+#ifndef UFT_FORMAT_TYPE_T_DEFINED
+#define UFT_FORMAT_TYPE_T_DEFINED
+typedef int uft_format_type_t;
+#endif
+#endif /* UFT_FORMAT_ENUM_DEFINED */
 
 /**
  * @brief Format category
@@ -245,10 +254,13 @@ static inline const uft_format_descriptor_t* uft_format_get_descriptor(uft_forma
 /**
  * @brief Get format name
  */
+#ifndef UFT_FORMAT_GET_NAME_DECLARED
+#define UFT_FORMAT_GET_NAME_DECLARED
 static inline const char* uft_format_get_name(uft_format_type_t type) {
     const uft_format_descriptor_t* desc = uft_format_get_descriptor(type);
     return desc ? desc->name : "UNKNOWN";
 }
+#endif /* UFT_FORMAT_GET_NAME_DECLARED */
 
 /**
  * @brief Get format description

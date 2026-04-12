@@ -60,7 +60,10 @@ bool uft_format_can_convert(uft_format_t src, uft_format_t dst,
 /**
  * @brief Format-Informationen
  */
+#ifndef UFT_FORMAT_GET_NAME_DECLARED
+#define UFT_FORMAT_GET_NAME_DECLARED
 const char* uft_format_get_name(uft_format_t format);
+#endif /* UFT_FORMAT_GET_NAME_DECLARED */
 const char* uft_format_get_extension(uft_format_t format);
 bool uft_format_supports_flux(uft_format_t format);
 

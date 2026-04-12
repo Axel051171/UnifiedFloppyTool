@@ -31,9 +31,13 @@ extern "C" {
  * Error Codes (Unified across all modules)
  * ============================================================================ */
 
+#ifndef UFT_ERROR_ENUM_DEFINED
+#define UFT_ERROR_ENUM_DEFINED
+#ifndef UFT_ERROR_T_DEFINED
+#define UFT_ERROR_T_DEFINED
 typedef enum {
     UFT_OK = 0,
-    
+
     /* Read Errors (0x01-0x1F) */
     UFT_ERR_CRC = 0x01,              /**< CRC mismatch */
     UFT_ERR_SYNC_LOST = 0x02,        /**< Lost sync during read */
@@ -46,25 +50,25 @@ typedef enum {
     UFT_ERR_INCOMPLETE = 0x09,       /**< Incomplete read */
     UFT_ERR_PLL_UNLOCK = 0x0A,       /**< PLL lost lock */
     UFT_ERR_ENCODING = 0x0B,         /**< Encoding error (illegal pattern) */
-    
+
     /* Write Errors (0x20-0x3F) */
     UFT_ERR_WRITE_PROTECT = 0x20,    /**< Write protected */
     UFT_ERR_VERIFY_FAIL = 0x21,      /**< Verify after write failed */
     UFT_ERR_WRITE_FAULT = 0x22,      /**< Hardware write fault */
     UFT_ERR_TRACK_OVERFLOW = 0x23,   /**< Track too long for format */
-    
+
     /* Protection Errors (0x40-0x5F) */
     UFT_ERR_PROTECTION = 0x40,       /**< Generic protection error */
     UFT_ERR_COPY_DENIED = 0x41,      /**< Copy protection active */
     UFT_ERR_LONG_TRACK = 0x42,       /**< Long track protection */
     UFT_ERR_NON_STANDARD = 0x43,     /**< Non-standard format */
-    
+
     /* Format Errors (0x60-0x7F) */
     UFT_ERR_UNKNOWN_FORMAT = 0x60,   /**< Format not recognized */
     UFT_ERR_UNSUPPORTED = 0x61,      /**< Format not supported */
     UFT_ERR_CORRUPT = 0x62,          /**< File/data corrupt */
     UFT_ERR_VERSION = 0x63,          /**< Version mismatch */
-    
+
     /* System Errors (0x80+) */
     UFT_ERR_IO = 0x80,               /**< I/O error */
     UFT_ERR_MEMORY = 0x81,           /**< Memory allocation failed */
@@ -74,19 +78,39 @@ typedef enum {
     UFT_ERR_CANCELLED = 0x85,        /**< Operation cancelled */
     UFT_ERR_BUSY = 0x86,             /**< Resource busy */
     UFT_ERR_INTERNAL = 0xFF,         /**< Internal error */
-    
+
 } uft_error_t;
+#endif /* UFT_ERROR_T_DEFINED */
+#else
+/* Error enum already defined by another header. Provide typedef alias. */
+#ifndef UFT_ERROR_T_DEFINED
+#define UFT_ERROR_T_DEFINED
+typedef int uft_error_t;
+#endif
+#endif /* UFT_ERROR_ENUM_DEFINED */
 
 /* Prevent uft_error_compat.h from redefining enum values as macros */
 #define UFT_HAS_UNIFIED_ERROR_ENUM 1
 
-/* Error code aliases for compatibility */
+/* Error code aliases for compatibility -- only when unified enum was used */
+#ifndef UFT_ERR_INVALID_ARG
 #define UFT_ERR_INVALID_ARG    UFT_ERR_INVALID_PARAM
+#endif
+#ifndef UFT_ERC_FORMAT
 #define UFT_ERC_FORMAT         UFT_ERR_CORRUPT
+#endif
+#ifndef UFT_ERR_FILE_OPEN
 #define UFT_ERR_FILE_OPEN      UFT_ERR_IO
+#endif
+#ifndef UFT_ERR_FILE_READ
 #define UFT_ERR_FILE_READ      UFT_ERR_IO
+#endif
+#ifndef UFT_ERR_FILE_WRITE
 #define UFT_ERR_FILE_WRITE     UFT_ERR_IO
+#endif
+#ifndef UFT_ERR_INVALID_STATE
 #define UFT_ERR_INVALID_STATE  UFT_ERR_INVALID_PARAM
+#endif
 
 /**
  * @brief Get error description string
@@ -111,6 +135,8 @@ bool uft_error_recoverable(uft_error_t err);
  * - c64_sector_id_t (c64_protection.h)
  * - mfm_idam_t (mfm_decode.h)
  */
+#ifndef UFT_SECTOR_ID_T_DEFINED
+#define UFT_SECTOR_ID_T_DEFINED
 typedef struct {
     uint16_t track;           /**< Physical track number (0-83+) */
     uint8_t  head;            /**< Head/side (0-1) */
@@ -120,6 +146,7 @@ typedef struct {
     uint8_t  encoding;        /**< Encoding type (UFT_ENC_*) */
     uint8_t  reserved;        /**< Reserved for alignment */
 } uft_sector_id_t;
+#endif /* UFT_SECTOR_ID_T_DEFINED */
 
 /* Sector status flags */
 #define UFT_SECTOR_OK           0x00
@@ -166,35 +193,38 @@ static inline bool uft_sector_id_equal(const uft_sector_id_t *a,
 /**
  * @brief Unified sector data with metadata
  */
+#ifndef UFT_SECTOR_T_DEFINED
+#define UFT_SECTOR_T_DEFINED
 typedef struct {
     uft_sector_id_t id;       /**< Sector identification */
-    
+
     /* Data */
     uint8_t *data;            /**< Sector data (NULL if missing) */
     size_t   data_len;        /**< Data length in bytes */
-    
+
     /* Quality metrics */
     uint8_t *confidence;      /**< Per-byte confidence 0-255 (optional) */
     uint8_t *weak_mask;       /**< Per-byte weak bit flags (optional) */
-    
+
     /* CRC */
     uint32_t crc_stored;      /**< CRC from disk */
     uint32_t crc_calculated;  /**< Calculated CRC */
     bool     crc_valid;       /**< True if CRCs match */
-    
+
     /* Timing (optional, for flux) */
     double  *timing_ns;       /**< Per-bit timing in nanoseconds */
     size_t   timing_count;    /**< Number of timing entries */
-    
+
     /* Error info */
     uft_error_t error;        /**< Primary error code */
     uint8_t     retry_count;  /**< Number of retries used */
-    
+
     /* Position in track */
     size_t  bit_offset;       /**< Bit position in track */
     size_t  byte_offset;      /**< Byte position (for sector formats) */
-    
+
 } uft_sector_t;
+#endif /* UFT_SECTOR_T_DEFINED */
 
 /* ============================================================================
  * Track Data (Unified - P0-002)
@@ -202,29 +232,31 @@ typedef struct {
 
 /**
  * @brief Unified track data structure
- * 
+ *
  * Replaces various track structs across modules.
  */
+#ifndef UFT_TRACK_T_DEFINED
+#define UFT_TRACK_T_DEFINED
 typedef struct {
     /* Identification */
     uint16_t track_num;       /**< Track number */
     uint8_t  head;            /**< Head/side */
     uint8_t  encoding;        /**< Primary encoding */
-    
+
     /* Sectors */
     uft_sector_t *sectors;    /**< Array of sectors */
     size_t        sector_count;
     size_t        sector_capacity;
-    
+
     /* Raw data (bitstream) */
     uint8_t *raw_data;        /**< Raw track bits */
     size_t   raw_bits;        /**< Number of bits */
     size_t   raw_capacity;    /**< Allocated bytes */
-    
+
     /* Flux data (optional) */
     double  *flux_times;      /**< Flux transition times (ns) */
     size_t   flux_count;      /**< Number of transitions */
-    
+
     /* Multi-revision data */
     struct {
         uint8_t *data;
@@ -232,25 +264,26 @@ typedef struct {
         uint8_t  quality;     /**< 0-100 quality score */
     } *revisions;
     size_t revision_count;
-    
+
     /* Quality metrics */
     uint8_t *confidence;      /**< Per-bit confidence */
     bool    *weak_mask;       /**< Per-bit weak flags */
-    
+
     /* Track-level status */
     uft_error_t error;        /**< Primary error */
     uint8_t     quality;      /**< Overall quality 0-100 */
     bool        complete;     /**< All sectors found */
     bool        protected;    /**< Copy protection detected */
-    
+
     /* Timing */
     uint64_t rotation_ns;     /**< Rotation time */
     double   data_rate;       /**< Data rate in bits/sec */
-    
+
     /* Ownership */
     bool owns_data;           /**< True = free on destroy */
-    
+
 } uft_track_t;
+#endif /* UFT_TRACK_T_DEFINED */
 
 /* ============================================================================
  * Disk Image (Unified)

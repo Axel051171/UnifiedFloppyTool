@@ -130,6 +130,8 @@ typedef struct {
 /**
  * @brief SCP file header
  */
+#ifndef UFT_SCP_HEADER_T_DEFINED
+#define UFT_SCP_HEADER_T_DEFINED
 typedef struct {
     uint8_t  signature[3];      /**< "SCP" */
     uint8_t  version;           /**< Version (high nibble = major) */
@@ -143,23 +145,30 @@ typedef struct {
     uint8_t  resolution;        /**< 0 = 25ns */
     uint32_t checksum;
 } uft_scp_header_t;
+#endif /* UFT_SCP_HEADER_T_DEFINED */
 
 /**
  * @brief SCP track header
  */
+#ifndef UFT_SCP_TRACK_HEADER_T_DEFINED
+#define UFT_SCP_TRACK_HEADER_T_DEFINED
 typedef struct {
     uint8_t  signature[3];      /**< "TRK" */
     uint8_t  track_num;
 } uft_scp_track_header_t;
+#endif /* UFT_SCP_TRACK_HEADER_T_DEFINED */
 
 /**
  * @brief SCP revolution header
  */
+#ifndef UFT_SCP_REVOLUTION_T_DEFINED
+#define UFT_SCP_REVOLUTION_T_DEFINED
 typedef struct {
     uint32_t duration;          /**< Index time in ticks */
     uint32_t length;            /**< Flux data length */
     uint32_t offset;            /**< Offset from track start */
 } uft_scp_revolution_t;
+#endif /* UFT_SCP_REVOLUTION_T_DEFINED */
 
 #pragma pack(pop)
 
@@ -204,6 +213,8 @@ typedef struct {
 /**
  * @brief IPF INFO record
  */
+#ifndef UFT_IPF_INFO_T_DEFINED
+#define UFT_IPF_INFO_T_DEFINED
 typedef struct {
     uint32_t media_type;        /**< 1 = floppy */
     uint32_t encoder_type;      /**< 1 = CAPS */
@@ -222,6 +233,7 @@ typedef struct {
     uint32_t creator_id;
     uint32_t reserved[3];
 } uft_ipf_info_t;
+#endif /* UFT_IPF_INFO_T_DEFINED */
 
 #pragma pack(pop)
 
@@ -277,13 +289,15 @@ typedef struct {
 
 #pragma pack(pop)
 
-/** IMD modes */
+/** IMD modes -- guarded to avoid conflict with uft_imd_mode_t enum */
+#ifndef UFT_IMD_MODE_T_DEFINED
 #define UFT_IMD_MODE_500K_FM    0
 #define UFT_IMD_MODE_300K_FM    1
 #define UFT_IMD_MODE_250K_FM    2
 #define UFT_IMD_MODE_500K_MFM   3
 #define UFT_IMD_MODE_300K_MFM   4
 #define UFT_IMD_MODE_250K_MFM   5
+#endif
 
 /** IMD sector data types */
 #define UFT_IMD_DATA_UNAVAILABLE    0
@@ -341,9 +355,12 @@ typedef struct {
 /**
  * @brief Detected format type
  */
+#ifndef UFT_FORMAT_ENUM_DEFINED
+#define UFT_FORMAT_ENUM_DEFINED
+#define UFT_FORMAT_TYPE_T_DEFINED
 typedef enum {
     UFT_FORMAT_UNKNOWN      = 0,
-    
+
     /* Apple */
     UFT_FORMAT_WOZ          = 10,
     UFT_FORMAT_WOZ_V1       = 11,
@@ -353,13 +370,13 @@ typedef enum {
     UFT_FORMAT_DO           = 15,
     UFT_FORMAT_PO           = 16,
     UFT_FORMAT_2MG          = 17,
-    
+
     /* Preservation */
     UFT_FORMAT_SCP          = 20,
     UFT_FORMAT_IPF          = 21,
     UFT_FORMAT_KRYOFLUX     = 22,
     UFT_FORMAT_A2R          = 23,
-    
+
     /* Commodore */
     UFT_FORMAT_D64          = 30,
     UFT_FORMAT_G64          = 31,
@@ -367,39 +384,45 @@ typedef enum {
     UFT_FORMAT_D71          = 33,
     UFT_FORMAT_D80          = 34,
     UFT_FORMAT_D82          = 35,
-    
+
     /* Amiga */
     UFT_FORMAT_ADF          = 40,
     UFT_FORMAT_ADZ          = 41,
     UFT_FORMAT_DMS          = 42,
     UFT_FORMAT_FDI          = 43,
-    
+
     /* Atari */
     UFT_FORMAT_STX          = 50,
     UFT_FORMAT_ST           = 51,
     UFT_FORMAT_MSA          = 52,
-    
+
     /* TRS-80 */
     UFT_FORMAT_DMK          = 60,
     UFT_FORMAT_JV1          = 61,
     UFT_FORMAT_JV3          = 62,
-    
+
     /* PC/IBM */
     UFT_FORMAT_IMD          = 70,
     UFT_FORMAT_IMG          = 71,
     UFT_FORMAT_TD0          = 72,
     UFT_FORMAT_DSK          = 73,
-    
+
     /* HxC */
     UFT_FORMAT_HFE          = 80,
     UFT_FORMAT_HFE_V3       = 81,
     UFT_FORMAT_MFM          = 82,
     UFT_FORMAT_AFI          = 83,
-    
+
     /* Other */
     UFT_FORMAT_RAW          = 90,
     UFT_FORMAT_FLUX         = 91,
 } uft_format_type_t;
+#else
+#ifndef UFT_FORMAT_TYPE_T_DEFINED
+#define UFT_FORMAT_TYPE_T_DEFINED
+typedef int uft_format_type_t;
+#endif
+#endif /* UFT_FORMAT_ENUM_DEFINED */
 
 /**
  * @brief Format detection result

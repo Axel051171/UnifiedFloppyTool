@@ -73,6 +73,8 @@ typedef enum {
 } uft_track_encoding_t;
 
 /* Format types from HxC */
+#ifndef UFT_TRACK_FORMAT_T_DEFINED
+#define UFT_TRACK_FORMAT_T_DEFINED
 typedef enum {
     UFT_IBMFORMAT_SD = 0x00,
     UFT_IBMFORMAT_DD = 0x01,
@@ -97,6 +99,7 @@ typedef enum {
     UFT_MICRALN_SD = 0x14,
     UFT_CENTURION_DD = 0x15
 } uft_track_format_t;
+#endif /* UFT_TRACK_FORMAT_T_DEFINED */
 
 /* Interface modes from HxC */
 typedef enum {
@@ -646,6 +649,8 @@ static inline uint16_t uft_libflux_crc16_get(uft_libflux_crc16_t *crc)
 /**
  * HFE File Header (native HxC format)
  */
+#ifndef UFT_HFE_HEADER_T_DEFINED
+#define UFT_HFE_HEADER_T_DEFINED
 typedef struct {
     uint8_t  signature[8];          /* "HXCPICFE" or "HXCHFEV3" */
     uint8_t  format_revision;
@@ -664,6 +669,7 @@ typedef struct {
     uint8_t  track0s1_altencoding;
     uint8_t  track0s1_encoding;
 } uft_hfe_header_t;
+#endif /* UFT_HFE_HEADER_T_DEFINED */
 
 /**
  * HFE Track Entry
@@ -676,6 +682,8 @@ typedef struct {
 /**
  * SCP File Header (SuperCard Pro format)
  */
+#ifndef UFT_SCP_HEADER_T_DEFINED
+#define UFT_SCP_HEADER_T_DEFINED
 typedef struct {
     uint8_t  sign[3];               /* "SCP" */
     uint8_t  version;               /* (Version<<4)|Revision */
@@ -689,6 +697,7 @@ typedef struct {
     uint8_t  resolution;            /* 0=25ns, 1=50ns, etc. */
     uint32_t file_data_checksum;
 } uft_scp_header_t;
+#endif /* UFT_SCP_HEADER_T_DEFINED */
 
 /**
  * SCP Track Revolution Entry
@@ -702,11 +711,14 @@ typedef struct {
 /**
  * SCP Track Data Header
  */
+#ifndef UFT_SCP_TRACK_HEADER_T_DEFINED
+#define UFT_SCP_TRACK_HEADER_T_DEFINED
 typedef struct {
     uint8_t  trk_sign[3];           /* "TRK" */
     uint8_t  track_number;
     /* Followed by scp_index_pos entries */
 } uft_scp_track_header_t;
+#endif /* UFT_SCP_TRACK_HEADER_T_DEFINED */
 
 /**
  */

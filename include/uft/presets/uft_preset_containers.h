@@ -85,6 +85,8 @@ typedef struct uft_cqm_header {
 #define UFT_IMD_SIGNATURE       "IMD"
 #define UFT_IMD_HEADER_END      0x1A
 
+#ifndef UFT_IMD_TRACK_T_DEFINED
+#define UFT_IMD_TRACK_T_DEFINED
 typedef struct uft_imd_track {
     uint8_t  mode;              /* Recording mode */
     uint8_t  cylinder;          /* Cylinder number */
@@ -96,6 +98,7 @@ typedef struct uft_imd_track {
     /* Optional: head map (if head & 0x40) */
     /* Sector data follows */
 } uft_imd_track_t;
+#endif /* UFT_IMD_TRACK_T_DEFINED */
 
 /* IMD recording modes */
 typedef enum uft_imd_mode {

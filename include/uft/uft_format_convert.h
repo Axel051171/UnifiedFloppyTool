@@ -208,7 +208,10 @@ uft_format_class_t uft_format_get_class(uft_format_t format);
 /**
  * @brief Get format name
  */
+#ifndef UFT_FORMAT_GET_NAME_DECLARED
+#define UFT_FORMAT_GET_NAME_DECLARED
 const char* uft_format_get_name(uft_format_t format);
+#endif /* UFT_FORMAT_GET_NAME_DECLARED */
 
 #ifdef __cplusplus
 }

@@ -169,6 +169,8 @@ typedef enum {
 /**
  * @brief SCP file header (16 bytes)
  */
+#ifndef UFT_SCP_HEADER_T_DEFINED
+#define UFT_SCP_HEADER_T_DEFINED
 #pragma pack(push, 1)
 typedef struct {
     uint8_t signature[3];       /**< "SCP" signature */
@@ -184,6 +186,7 @@ typedef struct {
     uint32_t checksum;          /**< Data checksum */
 } uft_scp_header_t;
 #pragma pack(pop)
+#endif /* UFT_SCP_HEADER_T_DEFINED */
 
 /**
  * @brief SCP track data header (TDH) entry (4 bytes)
