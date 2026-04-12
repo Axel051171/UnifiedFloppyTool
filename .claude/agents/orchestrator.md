@@ -30,6 +30,9 @@ Batch D: `performance-memory` | `compatibility-import-export` | `gui-expert`
 ### Release-Pipeline (auf Anfrage)
 `release-manager` → koordiniert: `dependency-scanner` + alle Pflicht-Checks + Artefakt-Erstellung
 
+### Bei Header-Architektur-Konflikten
+`header-consolidator` → koordiniert mit `architecture-guardian` + `forensic-integrity`
+
 ### Vor jedem Release
 `preflight-check` → Lokale Simulation aller CI-Fehler (läuft ZUERST)
 

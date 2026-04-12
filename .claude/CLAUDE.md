@@ -34,6 +34,7 @@ Qt6 C/C++ Desktop-Applikation (~860 Quelldateien, ~17 Subsysteme).
 | `release-manager` | Sonnet | End-to-End Release-Koordination |
 | `documentation` | Sonnet | Docs-Gap-Analyse, Onboarding |
 | `preflight-check` | Sonnet | Vor git push: alle 62 CI-Fehler lokal simulieren |
+| `header-consolidator` | Opus | L-Refactoring: Duplikate, Error-Systeme, Format-Registries |
 | `code-auditor` | Sonnet | C++/Qt6 Audit → findings.json → Routing |
 | `quick-fix` | Sonnet | EIN Problem → EIN Fix sofort |
 | `code-auditor` | Sonnet | Python-Tool Audit + Routing |
