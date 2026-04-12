@@ -34,11 +34,12 @@ extern "C" {
 /// Opaque Handle für Disk
 typedef struct uft_disk uft_disk_t;
 
-/// Opaque Handle für Track
+/// Opaque Handle für Track — forward declaration only.
+/// Do NOT set UFT_TRACK_T_DEFINED here — the full struct is in
+/// uft_format_plugin.h and must not be blocked by this.
 #ifndef UFT_TRACK_T_DEFINED
-#define UFT_TRACK_T_DEFINED
 typedef struct uft_track uft_track_t;
-#endif /* UFT_TRACK_T_DEFINED */
+#endif
 
 /// Opaque Handle für Device (Hardware)
 typedef struct uft_device uft_device_t;
