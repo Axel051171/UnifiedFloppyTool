@@ -35,6 +35,8 @@ typedef enum {
 } uft_data_rate_t;
 
 /** Encoding types */
+#ifndef UFT_ENCODING_DEFINED
+#define UFT_ENCODING_DEFINED
 typedef enum {
     UFT_ENC_FM,
     UFT_ENC_MFM,
@@ -46,6 +48,7 @@ typedef enum {
     UFT_ENC_RLL_ADAPTEC,
     UFT_ENC_CUSTOM
 } uft_encoding_t;
+#endif /* UFT_ENCODING_DEFINED */
 
 /** PLL state */
 typedef enum {

@@ -537,6 +537,8 @@ static inline uint16_t uft_crc16_ccitt_std(const uint8_t *data, size_t len) {
  *============================================================================*/
 
 /* HFE track encoding types */
+#ifndef UFT_HFE_ENCODING_T_DEFINED
+#define UFT_HFE_ENCODING_T_DEFINED
 typedef enum {
     UFT_HFE_ENC_ISOIBM_MFM  = 0,
     UFT_HFE_ENC_AMIGA_MFM   = 1,
@@ -544,6 +546,7 @@ typedef enum {
     UFT_HFE_ENC_EMU_FM      = 3,
     UFT_HFE_ENC_UNKNOWN     = 0xFF
 } uft_hfe_encoding_t;
+#endif /* UFT_HFE_ENCODING_T_DEFINED */
 
 /* HFE interface modes */
 typedef enum {

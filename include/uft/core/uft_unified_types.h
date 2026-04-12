@@ -148,42 +148,37 @@ typedef struct {
 } uft_sector_id_t;
 #endif /* UFT_SECTOR_ID_T_DEFINED */
 
-/* Sector status flags */
-#define UFT_SECTOR_OK           0x00
-#define UFT_SECTOR_CRC_ERROR    0x01
-#define UFT_SECTOR_DELETED      0x02
-#define UFT_SECTOR_MISSING      0x04
-#define UFT_SECTOR_WEAK         0x08
-#define UFT_SECTOR_TIMING_ERR   0x10
-#define UFT_SECTOR_RECOVERED    0x20
-#define UFT_SECTOR_PROTECTED    0x40
-#define UFT_SECTOR_PARTIAL      0x80
+/* Sector status and encoding constants are intentionally NOT defined here
+ * as macros. They are defined as enum members in uft_types.h and other
+ * headers. Defining them as macros would clobber enum member names when
+ * this header is included before those that define the enums.
+ *
+ * Use the uft_sector_status_t and uft_encoding_t enums from the
+ * appropriate header instead. The uint8_t status/encoding fields in the
+ * structs below accept the integer values from those enums. */
 
-/* Encoding types */
-#define UFT_ENC_UNKNOWN         0x00
-#define UFT_ENC_FM              0x01
-#define UFT_ENC_MFM             0x02
-#define UFT_ENC_M2FM            0x03
-#define UFT_ENC_GCR_C64         0x10
-#define UFT_ENC_GCR_APPLE       0x11
-#define UFT_ENC_GCR_MAC         0x12
-#define UFT_ENC_AMIGA_MFM       0x20
-
-/* Sector ID comparison */
-static inline bool uft_sector_id_equal(const uft_sector_id_t *a, 
+/* Sector ID comparison -- works with all uft_sector_id_t variants.
+ * All variants have the same first 3 fields (track/cylinder, head, sector)
+ * as uint8_t at the same offsets. */
+#ifndef UFT_SECTOR_ID_EQUAL_DEFINED
+#define UFT_SECTOR_ID_EQUAL_DEFINED
+static inline bool uft_sector_id_equal(const uft_sector_id_t *a,
                                        const uft_sector_id_t *b) {
     if (!a || !b) return false;
-    return a->track == b->track && 
-           a->head == b->head && 
-           a->sector == b->sector;
+    const uint8_t *pa = (const uint8_t *)a;
+    const uint8_t *pb = (const uint8_t *)b;
+    return pa[0] == pb[0] && pa[1] == pb[1] && pa[2] == pb[2];
 }
+#endif /* UFT_SECTOR_ID_EQUAL_DEFINED */
 
 /* Compatibility macros for legacy code */
 #ifdef UFT_COMPAT_LEGACY_TYPES
-#define UFT_SECTOR_CYLINDER(id)  ((id)->track)
+#ifndef UFT_SECTOR_CYLINDER
+#define UFT_SECTOR_CYLINDER(id)  (((const uint8_t*)(id))[0])
 #define UFT_SECTOR_SIDE(id)      ((id)->head)
 #define UFT_SECTOR_NUM(id)       ((id)->sector)
 #define UFT_SECTOR_SIZE(id)      (128U << (id)->size_code)
+#endif
 #endif
 
 /* ============================================================================
@@ -477,7 +472,10 @@ const char* uft_format_name(uft_format_id_t format);
 /**
  * @brief Get encoding name string
  */
+#ifndef UFT_ENCODING_NAME_DECLARED
+#define UFT_ENCODING_NAME_DECLARED
 const char* uft_encoding_name(uint8_t encoding);
+#endif /* UFT_ENCODING_NAME_DECLARED */
 
 /**
  * @brief Calculate sector size from size code

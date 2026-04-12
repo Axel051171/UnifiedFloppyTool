@@ -51,6 +51,8 @@ extern "C" {
 #define UFT_HFE_V3_OP_SKIPBITS      0xF3
 #define UFT_HFE_V3_OP_RAND          0xF4
 
+#ifndef UFT_HFE_HEADER_T_DEFINED
+#define UFT_HFE_HEADER_T_DEFINED
 #pragma pack(push, 1)
 typedef struct {
     char     signature[8];
@@ -72,13 +74,17 @@ typedef struct {
     uint8_t  reserved2[486];
 } uft_hfe_header_t;
 #pragma pack(pop)
+#endif /* UFT_HFE_HEADER_T_DEFINED */
 
+#ifndef UFT_HFE_TRACK_ENTRY_T_DEFINED
+#define UFT_HFE_TRACK_ENTRY_T_DEFINED
 #pragma pack(push, 1)
 typedef struct {
     uint16_t offset;
     uint16_t length;
 } uft_hfe_track_entry_t;
 #pragma pack(pop)
+#endif /* UFT_HFE_TRACK_ENTRY_T_DEFINED */
 
 typedef struct {
     uint8_t     mode;

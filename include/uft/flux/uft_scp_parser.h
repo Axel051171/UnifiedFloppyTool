@@ -22,7 +22,9 @@ extern "C" {
  * Constants
  *============================================================================*/
 
+#ifndef UFT_SCP_SIGNATURE
 #define UFT_SCP_SIGNATURE       "SCP"
+#endif
 #define UFT_SCP_TRACK_SIG       "TRK"
 #define UFT_SCP_FOOTER_SIG      "FPCS"
 #define UFT_SCP_MAX_TRACKS      168
@@ -70,6 +72,8 @@ extern "C" {
  * Flags
  *============================================================================*/
 
+#ifndef UFT_SCP_FLAGS_DEFINED
+#define UFT_SCP_FLAGS_DEFINED
 #define UFT_SCP_FLAG_INDEX      0x01  /* Used index mark */
 #define UFT_SCP_FLAG_96TPI      0x02  /* 96 TPI drive */
 #define UFT_SCP_FLAG_360RPM     0x04  /* 360 RPM (vs 300) */
@@ -78,6 +82,7 @@ extern "C" {
 #define UFT_SCP_FLAG_FOOTER     0x20  /* Has extension footer */
 #define UFT_SCP_FLAG_EXTENDED   0x40  /* Extended mode */
 #define UFT_SCP_FLAG_CREATOR    0x80  /* Creator info */
+#endif /* UFT_SCP_FLAGS_DEFINED */
 
 /*============================================================================
  * Structures
@@ -331,7 +336,10 @@ void uft_scp_free_track(uft_scp_track_data_t* data);
  * @param disk_type Disk type byte
  * @return Name string
  */
+#ifndef UFT_SCP_DISK_TYPE_NAME_DECLARED
+#define UFT_SCP_DISK_TYPE_NAME_DECLARED
 const char* uft_scp_disk_type_name(uint8_t disk_type);
+#endif /* UFT_SCP_DISK_TYPE_NAME_DECLARED */
 
 /**
  * @brief Get manufacturer name

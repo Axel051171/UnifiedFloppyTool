@@ -88,12 +88,15 @@ typedef enum {
 /**
  * @brief Data encoding types
  */
+#ifndef UFT_ENCODING_DEFINED
+#define UFT_ENCODING_DEFINED
 typedef enum {
     UFT_ENCODING_FM    = 0,   /**< FM (Single Density) */
     UFT_ENCODING_MFM   = 1,   /**< MFM (Double Density) */
     UFT_ENCODING_GCR   = 2,   /**< GCR (Apple/Commodore) */
     UFT_ENCODING_RAW   = 3    /**< Raw bitstream */
 } uft_encoding_t;
+#endif /* UFT_ENCODING_DEFINED */
 
 /**
  * @brief Data rate enum

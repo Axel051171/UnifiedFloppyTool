@@ -32,12 +32,15 @@ extern "C" {
 #define UFT_SCP_MAX_TRACKS       168
 
 /* SCP Flags */
+#ifndef UFT_SCP_FLAGS_DEFINED
+#define UFT_SCP_FLAGS_DEFINED
 #define UFT_SCP_FLAG_INDEXED     (1 << 0)  /**< Index signal present */
 #define UFT_SCP_FLAG_96TPI       (1 << 1)  /**< 96 TPI drive */
 #define UFT_SCP_FLAG_360RPM      (1 << 2)  /**< 360 RPM (else 300) */
 #define UFT_SCP_FLAG_NORMALIZED  (1 << 3)  /**< Flux normalized */
 #define UFT_SCP_FLAG_READWRITE   (1 << 4)  /**< Read/write capable */
 #define UFT_SCP_FLAG_FOOTER      (1 << 5)  /**< Has footer */
+#endif /* UFT_SCP_FLAGS_DEFINED */
 
 /* ============================================================================
  * ERROR CODES
@@ -249,11 +252,14 @@ void uft_scp_fused_free(uft_scp_fused_track_t* fused);
 
 /**
  * Get disk type name
- * 
+ *
  * @param disk_type SCP disk type byte
  * @return Human-readable name
  */
+#ifndef UFT_SCP_DISK_TYPE_NAME_DECLARED
+#define UFT_SCP_DISK_TYPE_NAME_DECLARED
 const char* uft_scp_disk_type_name(uint8_t disk_type);
+#endif /* UFT_SCP_DISK_TYPE_NAME_DECLARED */
 
 /**
  * Get version string

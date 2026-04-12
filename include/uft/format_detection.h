@@ -15,12 +15,15 @@
 extern "C" {
 #endif
 
+#ifndef UFT_ENCODING_DEFINED
+#define UFT_ENCODING_DEFINED
 typedef enum {
     UFT_ENCODING_MFM,
     UFT_ENCODING_FM,
     UFT_ENCODING_GCR,
     UFT_ENCODING_UNKNOWN
 } uft_encoding_t;
+#endif /* UFT_ENCODING_DEFINED */
 
 typedef enum {
     UFT_FAMILY_FAT12,

@@ -674,10 +674,13 @@ typedef struct {
 /**
  * HFE Track Entry
  */
+#ifndef UFT_HFE_TRACK_T_DEFINED
+#define UFT_HFE_TRACK_T_DEFINED
 typedef struct {
     uint16_t offset;                /* In 512-byte blocks */
     uint16_t track_len;             /* In bytes */
 } uft_hfe_track_t;
+#endif /* UFT_HFE_TRACK_T_DEFINED */
 
 /**
  * SCP File Header (SuperCard Pro format)
@@ -735,12 +738,15 @@ typedef struct {
 #define UFT_SCP_DEFAULT_PERIOD_NS   25000
 
 /* SCP Flag definitions */
+#ifndef UFT_SCP_FLAGS_DEFINED
+#define UFT_SCP_FLAGS_DEFINED
 #define UFT_SCP_FLAG_INDEX          0x01
 #define UFT_SCP_FLAG_96TPI          0x02
 #define UFT_SCP_FLAG_360RPM         0x04
 #define UFT_SCP_FLAG_NORMALIZED     0x08
 #define UFT_SCP_FLAG_READWRITE      0x10
 #define UFT_SCP_FLAG_FOOTER         0x20
+#endif /* UFT_SCP_FLAGS_DEFINED */
 
 #define UFT_UFT_KF_OOB_SIGN             0x0D
 #define UFT_UFT_KF_OOBTYPE_STREAM_READ  0x01

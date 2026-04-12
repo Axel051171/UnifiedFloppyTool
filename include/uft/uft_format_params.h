@@ -27,6 +27,8 @@ typedef enum {
 
 // ============================================================================
 // ============================================================================
+#ifndef UFT_ENCODING_DEFINED
+#define UFT_ENCODING_DEFINED
 typedef enum {
     UFT_ENCODING_UNKNOWN = 0,
     UFT_ENCODING_FM,        // Frequency Modulation (SD)
@@ -40,6 +42,7 @@ typedef enum {
     UFT_ENCODING_AMIGA,     // Amiga MFM variant
     UFT_ENCODING_RX02,      // DEC RX02 encoding
 } uft_encoding_t;
+#endif /* UFT_ENCODING_DEFINED */
 
 // ============================================================================
 // ============================================================================

@@ -217,10 +217,13 @@ void uft_scp_write_options_init(scp_write_options_t *opts);
 /**
  * @brief Read SCP file
  */
+#ifndef UFT_SCP_READ_DECLARED
+#define UFT_SCP_READ_DECLARED
 uft_error_t uft_scp_read(const char *path,
                          scp_image_t *image,
                          const scp_read_options_t *opts,
                          scp_read_result_t *result);
+#endif /* UFT_SCP_READ_DECLARED */
 
 /**
  * @brief Read SCP from memory
@@ -252,7 +255,10 @@ bool uft_scp_probe(const uint8_t *data, size_t size, int *confidence);
 /**
  * @brief Get disk type name
  */
+#ifndef UFT_SCP_DISK_TYPE_NAME_DECLARED
+#define UFT_SCP_DISK_TYPE_NAME_DECLARED
 const char* uft_scp_disk_type_name(uint8_t disk_type);
+#endif /* UFT_SCP_DISK_TYPE_NAME_DECLARED */
 
 /**
  * @brief Get track from SCP image

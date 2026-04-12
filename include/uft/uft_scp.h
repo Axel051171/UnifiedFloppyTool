@@ -67,10 +67,13 @@ typedef struct uft_scp_track_rev {
     uint32_t data_offset;   /* byte offset from track block start */
 } uft_scp_track_rev_t;
 
+#ifndef UFT_SCP_TRACK_HEADER_T_DEFINED
+#define UFT_SCP_TRACK_HEADER_T_DEFINED
 typedef struct uft_scp_track_header {
     uint8_t signature[3];   /* "TRK" */
     uint8_t track_number;
 } uft_scp_track_header_t;
+#endif /* UFT_SCP_TRACK_HEADER_T_DEFINED */
 #pragma pack(pop)
 
 /* ----- parsed image handle ----- */

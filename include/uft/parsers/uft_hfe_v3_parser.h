@@ -113,6 +113,8 @@ typedef struct {
 } uft_hfe_track_side_t;
 
 /* Complete track with both sides */
+#ifndef UFT_HFE_TRACK_T_DEFINED
+#define UFT_HFE_TRACK_T_DEFINED
 typedef struct {
     int track_number;
     int number_of_sides;
@@ -120,6 +122,7 @@ typedef struct {
     uint16_t rpm;                  /* Track RPM */
     bool valid;
 } uft_hfe_track_t;
+#endif /* UFT_HFE_TRACK_T_DEFINED */
 
 /*============================================================================
  * PUBLIC API

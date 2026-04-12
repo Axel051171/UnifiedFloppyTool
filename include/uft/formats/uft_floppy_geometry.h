@@ -51,6 +51,8 @@ typedef enum {
  * Data Encoding Methods
  *===========================================================================*/
 
+#ifndef UFT_ENCODING_DEFINED
+#define UFT_ENCODING_DEFINED
 typedef enum {
     UFT_ENCODING_FM         = 1,    /**< Frequency Modulation (Single Density) */
     UFT_ENCODING_MFM        = 2,    /**< Modified FM (Double Density+) */
@@ -59,6 +61,7 @@ typedef enum {
     UFT_ENCODING_GCR_APPLE  = 5,    /**< Apple-specific GCR variants */
     UFT_ENCODING_GCR_C64    = 6     /**< Commodore-specific GCR */
 } uft_encoding_t;
+#endif /* UFT_ENCODING_DEFINED */
 
 /*===========================================================================
  * Sectoring Types

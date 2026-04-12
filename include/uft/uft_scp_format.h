@@ -32,7 +32,9 @@ extern "C" {
  * SCP CONSTANTS
  *============================================================================*/
 
+#ifndef UFT_SCP_SIGNATURE
 #define UFT_SCP_SIGNATURE       "SCP"
+#endif
 #define UFT_SCP_TRACK_SIG       "TRK"
 #define UFT_SCP_EXT_SIG         "EXTS"
 #define UFT_SCP_WRSP_SIG        "WRSP"
@@ -50,9 +52,11 @@ extern "C" {
 
 /**
  * @brief SCP disk type identifiers
- * 
+ *
  * Used in the header to identify the disk format
  */
+#ifndef UFT_SCP_DISK_TYPE_T_DEFINED
+#define UFT_SCP_DISK_TYPE_T_DEFINED
 typedef enum {
     /* Commodore */
     UFT_SCP_DISK_C64            = 0x00,
@@ -113,10 +117,13 @@ typedef enum {
     UFT_SCP_DISK_HDD_MFM        = 0xF0,
     UFT_SCP_DISK_HDD_RLL        = 0xF1
 } uft_scp_disk_type_t;
+#endif /* UFT_SCP_DISK_TYPE_T_DEFINED */
 
 /**
  * @brief Get disk type name
  */
+#ifndef UFT_SCP_DISK_TYPE_NAME_DECLARED
+#define UFT_SCP_DISK_TYPE_NAME_DECLARED
 static inline const char* uft_scp_disk_type_name(uft_scp_disk_type_t type) {
     switch (type) {
         case UFT_SCP_DISK_C64:          return "Commodore 64";
@@ -155,11 +162,14 @@ static inline const char* uft_scp_disk_type_name(uft_scp_disk_type_t type) {
         default:                        return "Unknown";
     }
 }
+#endif /* UFT_SCP_DISK_TYPE_NAME_DECLARED */
 
 /*============================================================================
  * SCP HEADER FLAGS
  *============================================================================*/
 
+#ifndef UFT_SCP_FLAGS_DEFINED
+#define UFT_SCP_FLAGS_DEFINED
 typedef enum {
     UFT_SCP_FLAG_INDEXED        = (1 << 0),  /* Index-cued tracks */
     UFT_SCP_FLAG_TPI_96         = (1 << 1),  /* 96 TPI drive (else 48 TPI) */
@@ -170,6 +180,7 @@ typedef enum {
     UFT_SCP_FLAG_EXTENDED_MODE  = (1 << 6),  /* Extended type for other media */
     UFT_SCP_FLAG_FLUX_CREATOR   = (1 << 7)   /* Not created by SuperCard Pro */
 } uft_scp_flags_t;
+#endif /* UFT_SCP_FLAGS_DEFINED */
 
 /*============================================================================
  * SCP FILE HEADER (16 bytes)
@@ -384,18 +395,28 @@ static inline size_t uft_scp_encode_flux(const uint32_t *flux, size_t flux_count
  * SCP HEADER VALIDATION
  *============================================================================*/
 
+/* Only compile this if the uft_scp_format.h version of uft_scp_header_t
+ * is active (it has nr_revs, start_track, end_track fields) */
+#ifndef UFT_SCP_VALIDATE_HEADER_DECLARED
+#define UFT_SCP_VALIDATE_HEADER_DECLARED
 static inline bool uft_scp_validate_header(const uft_scp_header_t *hdr) {
-    if (memcmp(hdr->signature, UFT_SCP_SIGNATURE, 3) != 0)
+    if (hdr->signature[0] != 'S' || hdr->signature[1] != 'C' ||
+        hdr->signature[2] != 'P')
         return false;
-    
-    if (hdr->nr_revs == 0)
-        return false;
-    
-    if (hdr->end_track < hdr->start_track)
-        return false;
-    
+
+    /* Field names vary across uft_scp_header_t versions.
+     * Check byte offsets directly for portability. */
+    const uint8_t *raw = (const uint8_t *)hdr;
+    uint8_t revs = raw[5];        /* nr_revs / revolutions */
+    uint8_t start = raw[6];       /* start_track */
+    uint8_t end = raw[7];         /* end_track */
+
+    if (revs == 0) return false;
+    if (end < start) return false;
+
     return true;
 }
+#endif /* UFT_SCP_VALIDATE_HEADER_DECLARED */
 
 /*============================================================================
  * SCP CHECKSUM

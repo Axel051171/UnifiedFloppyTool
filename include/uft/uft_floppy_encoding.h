@@ -54,6 +54,8 @@ extern "C" {
  * @param data Data byte to encode
  * @return 16-bit encoded value (clock+data interleaved)
  */
+#ifndef UFT_FM_ENCODE_BYTE_DECLARED
+#define UFT_FM_ENCODE_BYTE_DECLARED
 static inline uint16_t uft_fm_encode_byte(uint8_t data)
 {
     uint16_t result = 0;
@@ -64,12 +66,15 @@ static inline uint16_t uft_fm_encode_byte(uint8_t data)
     }
     return result;
 }
+#endif /* UFT_FM_ENCODE_BYTE_DECLARED */
 
 /**
  * @brief Decode FM to data byte
  * @param fm 16-bit FM encoded value
  * @return Decoded data byte
  */
+#ifndef UFT_FM_DECODE_BYTE_DECLARED
+#define UFT_FM_DECODE_BYTE_DECLARED
 static inline uint8_t uft_fm_decode_byte(uint16_t fm)
 {
     uint8_t result = 0;
@@ -79,6 +84,7 @@ static inline uint8_t uft_fm_decode_byte(uint16_t fm)
     }
     return result;
 }
+#endif /* UFT_FM_DECODE_BYTE_DECLARED */
 
 /*===========================================================================
  * MFM (Modified Frequency Modulation) Encoding
@@ -130,6 +136,8 @@ static inline void uft_mfm_init(uft_mfm_state_t *state)
  * @param data Data byte to encode
  * @return 16-bit encoded value
  */
+#ifndef UFT_MFM_ENCODE_BYTE_DECLARED
+#define UFT_MFM_ENCODE_BYTE_DECLARED
 static inline uint16_t uft_mfm_encode_byte(uft_mfm_state_t *state, uint8_t data)
 {
     uint16_t result = 0;
@@ -144,12 +152,15 @@ static inline uint16_t uft_mfm_encode_byte(uft_mfm_state_t *state, uint8_t data)
     }
     return result;
 }
+#endif /* UFT_MFM_ENCODE_BYTE_DECLARED */
 
 /**
  * @brief Decode MFM to data byte
  * @param mfm 16-bit MFM encoded value
  * @return Decoded data byte
  */
+#ifndef UFT_MFM_DECODE_BYTE_DECLARED
+#define UFT_MFM_DECODE_BYTE_DECLARED
 static inline uint8_t uft_mfm_decode_byte(uint16_t mfm)
 {
     uint8_t result = 0;
@@ -159,6 +170,7 @@ static inline uint8_t uft_mfm_decode_byte(uint16_t mfm)
     }
     return result;
 }
+#endif /* UFT_MFM_DECODE_BYTE_DECLARED */
 
 /*===========================================================================
  * GCR (Group Coded Recording) - Apple II
@@ -415,6 +427,8 @@ static inline uint16_t uft_crc16_ibm(const uint8_t *data, size_t length)
 /**
  * @brief IBM-format sector ID field
  */
+#ifndef UFT_SECTOR_ID_T_DEFINED
+#define UFT_SECTOR_ID_T_DEFINED
 #pragma pack(push, 1)
 typedef struct {
     uint8_t  track;         /**< Track number (cylinder) */
@@ -423,10 +437,13 @@ typedef struct {
     uint8_t  size_code;     /**< Sector size code (0=128, 1=256, 2=512...) */
 } uft_sector_id_t;
 #pragma pack(pop)
+#endif /* UFT_SECTOR_ID_T_DEFINED */
 
 /**
  * @brief Complete sector header with CRC
  */
+#ifndef UFT_MFM_SECTOR_HEADER_T_DEFINED
+#define UFT_MFM_SECTOR_HEADER_T_DEFINED
 #pragma pack(push, 1)
 typedef struct {
     uint8_t  sync[3];       /**< 0xA1 sync bytes */
@@ -435,6 +452,7 @@ typedef struct {
     uint16_t crc;           /**< CRC-16 */
 } uft_mfm_sector_header_t;
 #pragma pack(pop)
+#endif /* UFT_MFM_SECTOR_HEADER_T_DEFINED */
 
 #ifdef __cplusplus
 }

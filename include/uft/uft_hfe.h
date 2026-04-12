@@ -89,6 +89,8 @@ typedef enum {
  * HFE Encoding Modes
  *============================================================================*/
 
+#ifndef UFT_HFE_ENCODING_T_DEFINED
+#define UFT_HFE_ENCODING_T_DEFINED
 typedef enum {
     UFT_HFE_ENC_ISOIBM_MFM  = 0x00,     /**< ISO IBM MFM */
     UFT_HFE_ENC_AMIGA_MFM   = 0x01,     /**< Amiga MFM */
@@ -96,12 +98,15 @@ typedef enum {
     UFT_HFE_ENC_EMU_FM      = 0x03,     /**< Emu FM */
     UFT_HFE_ENC_UNKNOWN     = 0xFF,     /**< Unknown encoding */
 } uft_hfe_encoding_t;
+#endif /* UFT_HFE_ENCODING_T_DEFINED */
 
 /*============================================================================
  * HFE Structures
  *============================================================================*/
 
 /** HFE file header (512 bytes total, 26 bytes used) */
+#ifndef UFT_HFE_HEADER_T_DEFINED
+#define UFT_HFE_HEADER_T_DEFINED
 #pragma pack(push, 1)
 typedef struct {
     uint8_t     signature[8];       /**< "HXCPICFE" or "HXCHFEV3" */
@@ -122,21 +127,28 @@ typedef struct {
     uint8_t     track0s1_encoding;  /**< Encoding for T0S1 */
 } uft_hfe_header_t;
 #pragma pack(pop)
+#endif /* UFT_HFE_HEADER_T_DEFINED */
 
 /** Track lookup table entry */
+#ifndef UFT_HFE_TRACK_ENTRY_T_DEFINED
+#define UFT_HFE_TRACK_ENTRY_T_DEFINED
 #pragma pack(push, 1)
 typedef struct {
     uint16_t    offset;             /**< Track offset in blocks */
     uint16_t    track_len;          /**< Track length in bytes */
 } uft_hfe_track_entry_t;
 #pragma pack(pop)
+#endif /* UFT_HFE_TRACK_ENTRY_T_DEFINED */
 
 /** Track information */
+#ifndef UFT_HFE_TRACK_T_DEFINED
+#define UFT_HFE_TRACK_T_DEFINED
 typedef struct {
     uint16_t    offset;             /**< Offset in blocks */
     uint16_t    length;             /**< Length in bytes */
     uint8_t    *data;               /**< Track data (both sides interleaved) */
 } uft_hfe_track_t;
+#endif /* UFT_HFE_TRACK_T_DEFINED */
 
 /** HFE image handle */
 typedef struct {

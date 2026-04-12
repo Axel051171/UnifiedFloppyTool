@@ -88,6 +88,8 @@ typedef enum {
 /**
  * @brief Data encoding types
  */
+#ifndef UFT_ENCODING_DEFINED
+#define UFT_ENCODING_DEFINED
 typedef enum {
     UFT_ENCODING_UNKNOWN = 0,
     UFT_ENCODING_FM,              /* Single density */
@@ -100,6 +102,7 @@ typedef enum {
     UFT_ENCODING_RAW_FLUX,        /* Raw flux transitions */
     UFT_ENCODING_COUNT
 } uft_encoding_t;
+#endif /* UFT_ENCODING_DEFINED */
 
 /**
  * @brief Disk geometry types
@@ -139,6 +142,8 @@ typedef enum {
 /**
  * @brief Sector status flags
  */
+#ifndef UFT_SECTOR_STATUS_DEFINED
+#define UFT_SECTOR_STATUS_DEFINED
 typedef enum {
     UFT_SECTOR_OK           = 0x00,
     UFT_SECTOR_CRC_ERROR    = 0x01,
@@ -150,6 +155,7 @@ typedef enum {
     UFT_SECTOR_NO_DAM       = 0x40,
     UFT_SECTOR_RECOVERED    = 0x80
 } uft_sector_status_t;
+#endif /* UFT_SECTOR_STATUS_DEFINED */
 
 /**
  * @brief Track status flags
@@ -315,6 +321,8 @@ typedef struct {
 /**
  * @brief Sector ID field (IDAM)
  */
+#ifndef UFT_SECTOR_ID_T_DEFINED
+#define UFT_SECTOR_ID_T_DEFINED
 typedef struct {
     uint8_t track;                    /* Track from ID field */
     uint8_t side;                     /* Side from ID field */
@@ -323,6 +331,7 @@ typedef struct {
     uint16_t crc;                     /* ID field CRC */
     bool crc_valid;                   /* CRC verification result */
 } uft_sector_id_t;
+#endif /* UFT_SECTOR_ID_T_DEFINED */
 
 /**
  * @brief Sector data parameters

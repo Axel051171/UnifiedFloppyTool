@@ -71,6 +71,8 @@ typedef enum {
 /**
  * @brief Flux Encoding (aus UFT_HxC_Extract uft_fluxprofiles.h)
  */
+#ifndef UFT_ENCODING_DEFINED
+#define UFT_ENCODING_DEFINED
 typedef enum {
     UFT_ENC_AUTO = 0,
     UFT_ENC_FM = 1,
@@ -80,6 +82,7 @@ typedef enum {
     UFT_ENC_MAC_GCR = 5,
     UFT_ENC_CUSTOM = 255
 } uft_encoding_t;
+#endif /* UFT_ENCODING_DEFINED */
 
 /**
  */
@@ -349,6 +352,8 @@ typedef struct uft_gui_forensic_settings {
 /*============================================================================
  *============================================================================*/
 
+#ifndef UFT_SECTOR_STATUS_DEFINED
+#define UFT_SECTOR_STATUS_DEFINED
 typedef enum {
     UFT_SECTOR_EMPTY = 0,         /**< Nicht gelesen */
     UFT_SECTOR_HEAD_BAD,          /**< Header CRC Fehler */
@@ -358,6 +363,7 @@ typedef enum {
     UFT_SECTOR_WEAK,              /**< Weak/Unstable Data */
     UFT_SECTOR_PROTECTED          /**< Copy Protection detected */
 } uft_sector_status_t;
+#endif /* UFT_SECTOR_STATUS_DEFINED */
 
 /**
  * @brief Sector Flags (aus UFT_HxC uft_sector_api.h)

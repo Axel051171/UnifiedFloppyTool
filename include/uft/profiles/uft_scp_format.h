@@ -97,6 +97,8 @@ extern "C" {
 /**
  * @brief SCP disk type codes
  */
+#ifndef UFT_SCP_DISK_TYPE_T_DEFINED
+#define UFT_SCP_DISK_TYPE_T_DEFINED
 typedef enum {
     /* Commodore */
     UFT_SCP_DISK_C64            = 0x00,     /**< Commodore 64 */
@@ -145,6 +147,7 @@ typedef enum {
     UFT_SCP_DISK_360RPM         = 0xFE,     /**< Flux image - 360 RPM */
     UFT_SCP_DISK_300RPM         = 0xFF      /**< Flux image - 300 RPM */
 } uft_scp_disk_type_t;
+#endif /* UFT_SCP_DISK_TYPE_T_DEFINED */
 
 /* ═══════════════════════════════════════════════════════════════════════════
  * SCP Header Flags
@@ -153,6 +156,8 @@ typedef enum {
 /**
  * @brief SCP header flag bits
  */
+#ifndef UFT_SCP_FLAGS_DEFINED
+#define UFT_SCP_FLAGS_DEFINED
 #define UFT_SCP_FLAG_INDEX          0x01    /**< Flux data starts at index */
 #define UFT_SCP_FLAG_TPI_96         0x02    /**< 96 TPI (vs 48 TPI) */
 #define UFT_SCP_FLAG_RPM_360        0x04    /**< 360 RPM (vs 300 RPM) */
@@ -161,6 +166,7 @@ typedef enum {
 #define UFT_SCP_FLAG_FOOTER         0x20    /**< Footer present */
 #define UFT_SCP_FLAG_EXTENDED       0x40    /**< Extended mode (non-floppy) */
 #define UFT_SCP_FLAG_CREATOR        0x80    /**< Creator info present */
+#endif /* UFT_SCP_FLAGS_DEFINED */
 
 /* ═══════════════════════════════════════════════════════════════════════════
  * SCP Structures
@@ -202,12 +208,15 @@ typedef struct {
 /**
  * @brief SCP track data header
  */
+#ifndef UFT_SCP_TRACK_HEADER_T_DEFINED
+#define UFT_SCP_TRACK_HEADER_T_DEFINED
 #pragma pack(push, 1)
 typedef struct {
     uint8_t signature[3];       /**< "TRK" signature */
     uint8_t track_number;       /**< Track number */
 } uft_scp_track_header_t;
 #pragma pack(pop)
+#endif /* UFT_SCP_TRACK_HEADER_T_DEFINED */
 
 /**
  * @brief SCP revolution header (12 bytes per revolution)
@@ -341,6 +350,8 @@ static inline const char* uft_scp_version_name(uint8_t version) {
  * @param disk_type Disk type code
  * @return Disk type description
  */
+#ifndef UFT_SCP_DISK_TYPE_NAME_DECLARED
+#define UFT_SCP_DISK_TYPE_NAME_DECLARED
 static inline const char* uft_scp_disk_type_name(uint8_t disk_type) {
     switch (disk_type) {
         case UFT_SCP_DISK_C64:       return "Commodore 64/1541";
@@ -371,6 +382,7 @@ static inline const char* uft_scp_disk_type_name(uint8_t disk_type) {
         default: return "Unknown";
     }
 }
+#endif /* UFT_SCP_DISK_TYPE_NAME_DECLARED */
 
 /**
  * @brief Describe header flags

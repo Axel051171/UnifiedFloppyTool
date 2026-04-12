@@ -103,6 +103,8 @@ bool uft_ipf_record_type_known(uint32_t type);
  * IPF INFO Record Structure (parsed)
  * ═══════════════════════════════════════════════════════════════════════════════ */
 
+#ifndef UFT_IPF_INFO_T_DEFINED
+#define UFT_IPF_INFO_T_DEFINED
 typedef struct uft_ipf_info {
     uint32_t media_type;      /**< Media type (0=unknown, 1=floppy, etc.) */
     uint32_t encoder_type;    /**< Encoder used */
@@ -122,6 +124,7 @@ typedef struct uft_ipf_info {
     uint32_t reserved[3];     /**< Reserved fields */
     bool     parsed;          /**< True if successfully parsed */
 } uft_ipf_info_t;
+#endif /* UFT_IPF_INFO_T_DEFINED */
 
 /* ═══════════════════════════════════════════════════════════════════════════════
  * IPF IMGE Record Structure (parsed)

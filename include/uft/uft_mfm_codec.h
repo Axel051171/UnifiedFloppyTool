@@ -33,6 +33,8 @@ extern "C" {
 /**
  * @brief Encoding type
  */
+#ifndef UFT_ENCODING_DEFINED
+#define UFT_ENCODING_DEFINED
 typedef enum {
     UFT_ENC_FM = 0,             /**< Single density FM */
     UFT_ENC_MFM,                /**< Double density MFM */
@@ -40,6 +42,7 @@ typedef enum {
     UFT_ENC_GCR_APPLE,          /**< Apple II GCR */
     UFT_ENC_GCR_C64             /**< Commodore GCR */
 } uft_encoding_t;
+#endif /* UFT_ENCODING_DEFINED */
 
 /**
  * @brief Data rate
@@ -68,6 +71,8 @@ typedef enum {
 /**
  * @brief IBM sector ID
  */
+#ifndef UFT_SECTOR_ID_T_DEFINED
+#define UFT_SECTOR_ID_T_DEFINED
 typedef struct {
     uint8_t cylinder;           /**< Track/cylinder number */
     uint8_t head;               /**< Head/side number */
@@ -76,10 +81,13 @@ typedef struct {
     uint16_t crc;               /**< CRC of ID field */
     bool crc_ok;                /**< CRC verification result */
 } uft_sector_id_t;
+#endif /* UFT_SECTOR_ID_T_DEFINED */
 
 /**
  * @brief IBM sector data
  */
+#ifndef UFT_SECTOR_T_DEFINED
+#define UFT_SECTOR_T_DEFINED
 typedef struct {
     uft_sector_id_t id;
     uint8_t data_mark;          /**< Data or deleted data mark */
@@ -89,6 +97,7 @@ typedef struct {
     bool data_crc_ok;           /**< Data CRC result */
     int bit_offset;             /**< Position in track (bits) */
 } uft_sector_t;
+#endif /* UFT_SECTOR_T_DEFINED */
 
 /**
  * @brief Decoded track info
@@ -166,7 +175,10 @@ void uft_mfm_codec_default_options(uft_codec_options_t *opts);
  * @param prev_bit Previous bit (for MFM clock generation)
  * @return 16-bit MFM encoded word
  */
+#ifndef UFT_MFM_ENCODE_BYTE_DECLARED
+#define UFT_MFM_ENCODE_BYTE_DECLARED
 uint16_t uft_mfm_encode_byte(uint8_t data, int prev_bit);
+#endif /* UFT_MFM_ENCODE_BYTE_DECLARED */
 
 /**
  * @brief Encode data buffer to MFM bitstream
@@ -213,7 +225,10 @@ int uft_mfm_encode_track(uft_mfm_codec_t *codec,
  * @param data Data byte
  * @return 16-bit FM encoded word
  */
+#ifndef UFT_FM_ENCODE_BYTE_DECLARED
+#define UFT_FM_ENCODE_BYTE_DECLARED
 uint16_t uft_fm_encode_byte(uint8_t data);
+#endif /* UFT_FM_ENCODE_BYTE_DECLARED */
 
 /**
  * @brief Encode data buffer to FM bitstream
@@ -233,7 +248,10 @@ uint16_t uft_fm_encode_mark(uint8_t mark);
 /**
  * @brief Decode MFM word to data byte
  */
+#ifndef UFT_MFM_DECODE_BYTE_DECLARED
+#define UFT_MFM_DECODE_BYTE_DECLARED
 uint8_t uft_mfm_decode_byte(uint16_t mfm);
+#endif /* UFT_MFM_DECODE_BYTE_DECLARED */
 
 /**
  * @brief Decode MFM bitstream to data
@@ -283,7 +301,10 @@ int uft_mfm_find_address_mark(const uint8_t *mfm, size_t mfm_bits,
 /**
  * @brief Decode FM word to data byte
  */
+#ifndef UFT_FM_DECODE_BYTE_DECLARED
+#define UFT_FM_DECODE_BYTE_DECLARED
 uint8_t uft_fm_decode_byte(uint16_t fm);
+#endif /* UFT_FM_DECODE_BYTE_DECLARED */
 
 /**
  * @brief Decode FM bitstream to data
@@ -412,7 +433,10 @@ void uft_track_data_print(const uft_track_data_t *track);
 /**
  * @brief Get encoding name
  */
+#ifndef UFT_ENCODING_NAME_DECLARED
+#define UFT_ENCODING_NAME_DECLARED
 const char* uft_encoding_name(uft_encoding_t enc);
+#endif /* UFT_ENCODING_NAME_DECLARED */
 
 /**
  * @brief Reverse bits in byte

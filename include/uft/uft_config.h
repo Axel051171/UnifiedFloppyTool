@@ -298,6 +298,8 @@
  * ERROR CODES
  *============================================================================*/
 
+#ifndef UFT_ERROR_T_DEFINED
+#define UFT_ERROR_T_DEFINED
 typedef enum uft_error {
     UFT_OK                  = 0,
     UFT_ERR_INVALID_ARG     = -1,
@@ -311,6 +313,7 @@ typedef enum uft_error {
     UFT_ERR_BUFFER_TOO_SMALL = -9,
     UFT_ERR_INTERNAL        = -99,
 } uft_error_t;
+#endif /* UFT_ERROR_T_DEFINED */
 
 /**
  * @brief Get error message for error code

@@ -34,10 +34,11 @@ extern "C" {
 /// Opaque Handle für Disk
 typedef struct uft_disk uft_disk_t;
 
-/// Opaque Handle für Track  
+/// Opaque Handle für Track
 #ifndef UFT_TRACK_T_DEFINED
+#define UFT_TRACK_T_DEFINED
 typedef struct uft_track uft_track_t;
-#endif
+#endif /* UFT_TRACK_T_DEFINED */
 
 /// Opaque Handle für Device (Hardware)
 typedef struct uft_device uft_device_t;
@@ -189,9 +190,11 @@ typedef struct uft_format_info {
 /**
  * @brief Disk-Kodierungen
  */
+#ifndef UFT_ENCODING_DEFINED
+#define UFT_ENCODING_DEFINED
 typedef enum uft_encoding {
     UFT_ENC_UNKNOWN = 0,
-    
+
     // IBM-kompatibel
     UFT_ENC_FM,              ///< Single Density FM (generic)
     UFT_ENC_FM_SD,           ///< Single Density FM (SD drives)
@@ -200,31 +203,32 @@ typedef enum uft_encoding {
     UFT_ENC_MFM_DD,          ///< MFM Double Density
     UFT_ENC_MFM_HD,          ///< MFM High Density
     UFT_ENC_MFM_ED,          ///< MFM Extra Density
-    
+
     // Amiga
     UFT_ENC_AMIGA_MFM,       ///< Amiga-spezifisches MFM
-    
+
     // GCR (Commodore)
     UFT_ENC_GCR_CBM,         ///< C64/1541 GCR
     UFT_ENC_GCR_CBM_V,       ///< GCR mit Variationen (Copy Protection)
-    
+
     // GCR (Apple)
     UFT_ENC_GCR_APPLE_525,   ///< Apple II 5.25"
     UFT_ENC_GCR_APPLE_35,    ///< Apple 3.5" (Sony GCR)
-    
+
     // Andere
     UFT_ENC_MIXED,           ///< Gemischte Kodierung
     UFT_ENC_RLL,             ///< RLL Encoding
     UFT_ENC_M2FM,            ///< DEC M2FM (Modified MFM)
     UFT_ENC_GCR_VICTOR,      ///< Victor 9000 GCR
     UFT_ENC_AUTO,            ///< Auto-detect encoding
-    
+
     UFT_ENC_MAX,
-    
+
     // Aliases für Kompatibilität
     UFT_ENC_GCR_C64 = UFT_ENC_GCR_CBM,
     UFT_ENC_GCR_APPLE = UFT_ENC_GCR_APPLE_525,
 } uft_encoding_t;
+#endif /* UFT_ENCODING_DEFINED */
 
 // ============================================================================
 // Sektor-Strukturen
@@ -233,6 +237,8 @@ typedef enum uft_encoding {
 /**
  * @brief Sektor-ID (Address Mark)
  */
+#ifndef UFT_SECTOR_ID_T_DEFINED
+#define UFT_SECTOR_ID_T_DEFINED
 typedef struct uft_sector_id {
     uint8_t  cylinder;       ///< C - Zylinder (oft logisch, nicht physisch!)
     uint8_t  head;           ///< H - Seite
@@ -241,10 +247,13 @@ typedef struct uft_sector_id {
     uint16_t crc;            ///< ID CRC
     bool     crc_ok;         ///< CRC valid?
 } uft_sector_id_t;
+#endif /* UFT_SECTOR_ID_T_DEFINED */
 
 /**
  * @brief Sektor-Status-Flags
  */
+#ifndef UFT_SECTOR_STATUS_DEFINED
+#define UFT_SECTOR_STATUS_DEFINED
 typedef enum uft_sector_status {
     UFT_SECTOR_OK           = 0,
     UFT_SECTOR_CRC_ERROR    = (1 << 0),  ///< Daten-CRC falsch
@@ -255,6 +264,7 @@ typedef enum uft_sector_status {
     UFT_SECTOR_DUPLICATE    = (1 << 5),  ///< Mehrfach vorhanden
     UFT_SECTOR_EXTRA        = (1 << 6),  ///< Über Normal hinaus
 } uft_sector_status_t;
+#endif /* UFT_SECTOR_STATUS_DEFINED */
 
 /* Sector status aliases */
 #define UFT_SECTOR_HEADER_CRC_ERROR UFT_SECTOR_ID_CRC_ERROR

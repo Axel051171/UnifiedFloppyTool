@@ -62,6 +62,8 @@ typedef enum {
 /**
  * @brief Disk encoding types
  */
+#ifndef UFT_ENCODING_DEFINED
+#define UFT_ENCODING_DEFINED
 typedef enum {
     /* Frequency Modulation */
     UFT_ENC_FM = 0,             /**< Single-density FM */
@@ -86,6 +88,7 @@ typedef enum {
     
     UFT_ENC_COUNT               /**< Number of encoding types */
 } uft_encoding_t;
+#endif /* UFT_ENCODING_DEFINED */
 
 /*===========================================================================
  * Core Structures

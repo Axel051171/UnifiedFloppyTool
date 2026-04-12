@@ -215,6 +215,8 @@ typedef struct {
 /**
  * @brief Parsed IPF information
  */
+#ifndef UFT_IPF_INFO_T_DEFINED
+#define UFT_IPF_INFO_T_DEFINED
 typedef struct {
     uint32_t encoder_type;          /**< Encoder type */
     uint32_t release;               /**< SPS release */
@@ -231,6 +233,7 @@ typedef struct {
     uint8_t sides;                  /**< Detected sides */
     uint8_t cylinders;              /**< Detected cylinders */
 } uft_ipf_info_t;
+#endif /* UFT_IPF_INFO_T_DEFINED */
 
 /* ═══════════════════════════════════════════════════════════════════════════
  * Compile-time Size Verification

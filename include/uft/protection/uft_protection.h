@@ -200,6 +200,8 @@ size_t uft_find_flux_anomalies(
 /**
  * @brief Sector anomaly types
  */
+#ifndef UFT_SECTOR_STATUS_DEFINED
+#define UFT_SECTOR_STATUS_DEFINED
 typedef enum {
     UFT_SECTOR_OK = 0,              /**< Normal sector */
     UFT_SECTOR_BAD_CRC,             /**< CRC error */
@@ -210,6 +212,7 @@ typedef enum {
     UFT_SECTOR_WRONG_SIZE,          /**< Non-standard size */
     UFT_SECTOR_WEAK,                /**< Contains weak bits */
 } uft_sector_status_t;
+#endif /* UFT_SECTOR_STATUS_DEFINED */
 
 /**
  * @brief Sector analysis result

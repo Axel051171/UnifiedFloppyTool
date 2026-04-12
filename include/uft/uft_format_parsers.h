@@ -111,7 +111,9 @@ typedef enum {
  *============================================================================*/
 
 /** SCP signature "SCP" */
+#ifndef UFT_SCP_SIGNATURE
 #define UFT_SCP_SIGNATURE           0x504353
+#endif
 
 /** SCP base capture resolution (25 ns) */
 #define UFT_SCP_BASE_RESOLUTION     25
@@ -120,6 +122,8 @@ typedef enum {
 #define UFT_SCP_TRACK_COUNT         168
 
 /** SCP flags */
+#ifndef UFT_SCP_FLAGS_DEFINED
+#define UFT_SCP_FLAGS_DEFINED
 #define UFT_SCP_FLAG_INDEX          0x01  /**< Index signal present */
 #define UFT_SCP_FLAG_TPI            0x02  /**< 96 TPI */
 #define UFT_SCP_FLAG_RPM            0x04  /**< 360 RPM */
@@ -128,6 +132,7 @@ typedef enum {
 #define UFT_SCP_FLAG_FOOTER         0x20  /**< Footer present */
 #define UFT_SCP_FLAG_EXTENDED       0x40  /**< Extended mode */
 #define UFT_SCP_FLAG_NON_SCP        0x80  /**< Non-SCP capture */
+#endif /* UFT_SCP_FLAGS_DEFINED */
 
 /**
  * @brief SCP disk manufacturer codes
@@ -407,6 +412,8 @@ typedef struct {
 #define UFT_HFE_SIGNATURE           "HXCPICFE"
 
 /** HFE encoding modes */
+#ifndef UFT_HFE_ENCODING_T_DEFINED
+#define UFT_HFE_ENCODING_T_DEFINED
 typedef enum {
     UFT_HFE_ENCODING_ISOIBM_MFM    = 0x00,
     UFT_HFE_ENCODING_AMIGA_MFM     = 0x01,
@@ -414,6 +421,7 @@ typedef enum {
     UFT_HFE_ENCODING_EMU_FM        = 0x03,
     UFT_HFE_ENCODING_UNKNOWN       = 0xFF
 } uft_hfe_encoding_t;
+#endif /* UFT_HFE_ENCODING_T_DEFINED */
 
 /**
  * @brief HFE file header (512 bytes)
@@ -445,12 +453,15 @@ typedef struct {
 /**
  * @brief HFE track entry (4 bytes)
  */
+#ifndef UFT_HFE_TRACK_ENTRY_T_DEFINED
+#define UFT_HFE_TRACK_ENTRY_T_DEFINED
 #pragma pack(push, 1)
 typedef struct {
     uint16_t offset;          /**< Track data offset (in blocks of 512) */
     uint16_t length;          /**< Track data length (bytes) */
 } uft_hfe_track_entry_t;
 #pragma pack(pop)
+#endif /* UFT_HFE_TRACK_ENTRY_T_DEFINED */
 
 /*============================================================================
  * IMD (ImageDisk) Format
@@ -540,7 +551,10 @@ typedef struct {
     size_t data_size;
 } uft_scp_file_t;
 
+#ifndef UFT_SCP_READ_DECLARED
+#define UFT_SCP_READ_DECLARED
 int uft_scp_read(const uint8_t *data, size_t size, uft_scp_file_t *scp);
+#endif /* UFT_SCP_READ_DECLARED */
 int uft_scp_get_track_flux(const uft_scp_file_t *scp, int track, int revolution,
                            double *out_deltas, size_t max_deltas);
 void uft_scp_free(uft_scp_file_t *scp);

@@ -72,22 +72,25 @@ typedef enum {
  * SECTOR STATUS
  *============================================================================*/
 
+#ifndef UFT_SECTOR_STATUS_DEFINED
+#define UFT_SECTOR_STATUS_DEFINED
 typedef struct {
     int track;
     int side;
     int sector;
-    
+
     uft_rec_error_t error;      /**< Error type */
     uft_repair_method_t repair; /**< Repair method used */
     bool recovered;             /**< true if sector was recovered */
-    
+
     uint16_t crc_stored;
     uint16_t crc_calculated;
-    
+
     double confidence;          /**< Recovery confidence (0.0-1.0) */
     int retries;                /**< Number of retries */
     int revisions_used;         /**< Revolutions used for fusion */
 } uft_sector_status_t;
+#endif /* UFT_SECTOR_STATUS_DEFINED */
 
 /*============================================================================
  * TRACK STATUS

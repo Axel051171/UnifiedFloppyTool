@@ -186,6 +186,8 @@ typedef struct {
 #define UFT_SCP_DISK_IBM_1440       0x4C
 
 /** SCP flags */
+#ifndef UFT_SCP_FLAGS_DEFINED
+#define UFT_SCP_FLAGS_DEFINED
 #define UFT_SCP_FLAG_INDEX          0x01
 #define UFT_SCP_FLAG_96TPI          0x02
 #define UFT_SCP_FLAG_360RPM         0x04
@@ -194,6 +196,7 @@ typedef struct {
 #define UFT_SCP_FLAG_FOOTER         0x20
 #define UFT_SCP_FLAG_EXTENDED       0x40
 #define UFT_SCP_FLAG_CREATOR        0x80
+#endif /* UFT_SCP_FLAGS_DEFINED */
 
 /*============================================================================
  * IPF Format (CAPS/SPS Preservation)

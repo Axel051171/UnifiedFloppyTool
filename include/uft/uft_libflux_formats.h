@@ -61,6 +61,8 @@ typedef struct {
     uint32_t crc;               /* CRC32 */
 } uft_ipf_header_t;
 
+#ifndef UFT_IPF_INFO_T_DEFINED
+#define UFT_IPF_INFO_T_DEFINED
 typedef struct {
     uint32_t type;
     uint32_t encoder;           /* CAPS or SPS */
@@ -79,6 +81,7 @@ typedef struct {
     uint32_t user_id;
     uint32_t reserved[3];
 } uft_ipf_info_t;
+#endif /* UFT_IPF_INFO_T_DEFINED */
 
 typedef struct {
     uint32_t cyl;

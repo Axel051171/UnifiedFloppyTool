@@ -37,6 +37,8 @@ extern "C" {
 /**
  * @brief Track encoding types
  */
+#ifndef UFT_HFE_ENCODING_T_DEFINED
+#define UFT_HFE_ENCODING_T_DEFINED
 typedef enum {
     UFT_HFE_ENC_ISOIBM_MFM = 0,    /**< Standard ISO/IBM MFM */
     UFT_HFE_ENC_AMIGA_MFM = 1,      /**< Amiga MFM */
@@ -44,6 +46,7 @@ typedef enum {
     UFT_HFE_ENC_EMU_FM = 3,         /**< Emulator FM */
     UFT_HFE_ENC_UNKNOWN = 0xFF      /**< Unknown encoding */
 } uft_hfe_encoding_t;
+#endif /* UFT_HFE_ENCODING_T_DEFINED */
 
 /**
  * @brief Floppy interface modes
@@ -73,6 +76,8 @@ typedef enum {
 /**
  * @brief HFE file header (512 bytes total, padded)
  */
+#ifndef UFT_HFE_HEADER_T_DEFINED
+#define UFT_HFE_HEADER_T_DEFINED
 #pragma pack(push, 1)
 typedef struct {
     char     signature[8];          /**< "HXCPICFE" */
@@ -93,16 +98,20 @@ typedef struct {
     uint8_t  track0s1_encoding;     /**< Track 0 side 1 encoding override */
 } uft_hfe_header_t;
 #pragma pack(pop)
+#endif /* UFT_HFE_HEADER_T_DEFINED */
 
 /**
  * @brief HFE track LUT entry
  */
+#ifndef UFT_HFE_TRACK_ENTRY_T_DEFINED
+#define UFT_HFE_TRACK_ENTRY_T_DEFINED
 #pragma pack(push, 1)
 typedef struct {
     uint16_t offset;     /**< Track data offset in 512-byte blocks (LE) */
     uint16_t track_len;  /**< Track length in bytes for both heads (LE) */
 } uft_hfe_track_entry_t;
 #pragma pack(pop)
+#endif /* UFT_HFE_TRACK_ENTRY_T_DEFINED */
 
 /**
  * @brief HFE file context

@@ -63,12 +63,15 @@ typedef enum {
 /**
  * @brief Encoding type for a disk format.
  */
+#ifndef UFT_ENCODING_DEFINED
+#define UFT_ENCODING_DEFINED
 typedef enum {
     UFT_ENCODING_UNKNOWN = 0,
     UFT_ENCODING_FM,
     UFT_ENCODING_MFM,
     UFT_ENCODING_GCR
 } uft_encoding_t;
+#endif /* UFT_ENCODING_DEFINED */
 
 /**
  * @brief Validation issue codes returned by the validator.

@@ -51,6 +51,8 @@ typedef struct uft_filesystem uft_filesystem_t;
  * Error Codes
  * ============================================================================ */
 
+#ifndef UFT_ERROR_T_DEFINED
+#define UFT_ERROR_T_DEFINED
 typedef enum {
     UFT_OK = 0,
     UFT_ERROR_INVALID_PARAM,
@@ -63,6 +65,7 @@ typedef enum {
     UFT_ERROR_DECODE,
     UFT_ERROR_INTERNAL,
 } uft_error_t;
+#endif /* UFT_ERROR_T_DEFINED */
 
 /* Note: uft_encoding_t is defined in uft/uft_types.h */
 
