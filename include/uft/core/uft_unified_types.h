@@ -112,6 +112,52 @@ typedef int uft_error_t;
 #define UFT_ERR_INVALID_STATE  UFT_ERR_INVALID_PARAM
 #endif
 
+/* Compatibility aliases for uft_config.h legacy error names */
+#ifndef UFT_ERR_OUT_OF_MEMORY
+#define UFT_ERR_OUT_OF_MEMORY  UFT_ERR_MEMORY
+#endif
+#ifndef UFT_ERR_IO_ERROR
+#define UFT_ERR_IO_ERROR       UFT_ERR_IO
+#endif
+#ifndef UFT_ERR_FORMAT_ERROR
+#define UFT_ERR_FORMAT_ERROR   UFT_ERR_CORRUPT
+#endif
+#ifndef UFT_ERR_CRC_ERROR
+#define UFT_ERR_CRC_ERROR      UFT_ERR_CRC
+#endif
+#ifndef UFT_ERR_NOT_FOUND
+#define UFT_ERR_NOT_FOUND      UFT_ERR_NO_DATA
+#endif
+
+/* Compatibility aliases for uft_integration.h legacy error names */
+#ifndef UFT_ERROR_INVALID_PARAM
+#define UFT_ERROR_INVALID_PARAM  UFT_ERR_INVALID_PARAM
+#endif
+#ifndef UFT_ERROR_NO_MEMORY
+#define UFT_ERROR_NO_MEMORY      UFT_ERR_MEMORY
+#endif
+#ifndef UFT_ERROR_NOT_SUPPORTED
+#define UFT_ERROR_NOT_SUPPORTED  UFT_ERR_UNSUPPORTED
+#endif
+#ifndef UFT_ERROR_NOT_FOUND
+#define UFT_ERROR_NOT_FOUND      UFT_ERR_NO_DATA
+#endif
+#ifndef UFT_ERROR_IO
+#define UFT_ERROR_IO             UFT_ERR_IO
+#endif
+#ifndef UFT_ERROR_FORMAT
+#define UFT_ERROR_FORMAT         UFT_ERR_CORRUPT
+#endif
+#ifndef UFT_ERROR_CRC
+#define UFT_ERROR_CRC            UFT_ERR_CRC
+#endif
+#ifndef UFT_ERROR_DECODE
+#define UFT_ERROR_DECODE         UFT_ERR_ENCODING
+#endif
+#ifndef UFT_ERROR_INTERNAL
+#define UFT_ERROR_INTERNAL       UFT_ERR_INTERNAL
+#endif
+
 /**
  * @brief Get error description string
  */

@@ -295,44 +295,9 @@
 #define UFT_ROTATION_TIME_360RPM    (166667 * UFT_NS_PER_US) /* 166.67ms */
 
 /*============================================================================
- * ERROR CODES
+ * ERROR CODES — canonical definition in uft_unified_types.h
  *============================================================================*/
 
-#ifndef UFT_ERROR_T_DEFINED
-#define UFT_ERROR_T_DEFINED
-typedef enum uft_error {
-    UFT_OK                  = 0,
-    UFT_ERR_INVALID_ARG     = -1,
-    UFT_ERR_OUT_OF_MEMORY   = -2,
-    UFT_ERR_IO_ERROR        = -3,
-    UFT_ERR_FORMAT_ERROR    = -4,
-    UFT_ERR_CRC_ERROR       = -5,
-    UFT_ERR_NOT_FOUND       = -6,
-    UFT_ERR_TIMEOUT         = -7,
-    UFT_ERR_UNSUPPORTED     = -8,
-    UFT_ERR_BUFFER_TOO_SMALL = -9,
-    UFT_ERR_INTERNAL        = -99,
-} uft_error_t;
-#endif /* UFT_ERROR_T_DEFINED */
-
-/**
- * @brief Get error message for error code
- */
-UFT_INLINE const char* uft_error_string(uft_error_t err) {
-    switch (err) {
-        case UFT_OK:                return "Success";
-        case UFT_ERR_INVALID_ARG:   return "Invalid argument";
-        case UFT_ERR_OUT_OF_MEMORY: return "Out of memory";
-        case UFT_ERR_IO_ERROR:      return "I/O error";
-        case UFT_ERR_FORMAT_ERROR:  return "Format error";
-        case UFT_ERR_CRC_ERROR:     return "CRC error";
-        case UFT_ERR_NOT_FOUND:     return "Not found";
-        case UFT_ERR_TIMEOUT:       return "Timeout";
-        case UFT_ERR_UNSUPPORTED:   return "Unsupported operation";
-        case UFT_ERR_BUFFER_TOO_SMALL: return "Buffer too small";
-        case UFT_ERR_INTERNAL:      return "Internal error";
-        default:                    return "Unknown error";
-    }
-}
+#include "uft/core/uft_unified_types.h"
 
 #endif /* UFT_CONFIG_H */

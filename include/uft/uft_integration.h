@@ -48,24 +48,10 @@ typedef struct uft_track_decoder uft_track_decoder_t;
 typedef struct uft_filesystem uft_filesystem_t;
 
 /* ============================================================================
- * Error Codes
+ * Error Codes — canonical definition in uft_unified_types.h
  * ============================================================================ */
 
-#ifndef UFT_ERROR_T_DEFINED
-#define UFT_ERROR_T_DEFINED
-typedef enum {
-    UFT_OK = 0,
-    UFT_ERROR_INVALID_PARAM,
-    UFT_ERROR_NO_MEMORY,
-    UFT_ERROR_NOT_SUPPORTED,
-    UFT_ERROR_NOT_FOUND,
-    UFT_ERROR_IO,
-    UFT_ERROR_FORMAT,
-    UFT_ERROR_CRC,
-    UFT_ERROR_DECODE,
-    UFT_ERROR_INTERNAL,
-} uft_error_t;
-#endif /* UFT_ERROR_T_DEFINED */
+#include "uft/core/uft_unified_types.h"
 
 /* Note: uft_encoding_t is defined in uft/uft_types.h */
 
