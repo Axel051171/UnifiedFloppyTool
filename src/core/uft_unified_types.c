@@ -126,7 +126,7 @@ static const char* encoding_names[] = {
     [UFT_ENC_M2FM] = "M2FM",
     [UFT_ENC_GCR_C64] = "GCR (C64)",
     [UFT_ENC_GCR_APPLE] = "GCR (Apple)",
-    [UFT_ENC_GCR_MAC] = "GCR (Mac)",
+    [UFT_ENC_GCR_APPLE_35] = "GCR (Mac)",
     [UFT_ENC_AMIGA_MFM] = "Amiga MFM",
 };
 
