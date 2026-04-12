@@ -101,6 +101,8 @@ typedef enum uft_geometry_preset {
 /**
  * @brief Unterstützte Disk-Image-Formate
  */
+#ifndef UFT_FORMAT_ENUM_DEFINED
+#define UFT_FORMAT_ENUM_DEFINED
 typedef enum uft_format {
     UFT_FORMAT_UNKNOWN = 0,
     
@@ -165,6 +167,7 @@ typedef enum uft_format {
     
     UFT_FORMAT_MAX
 } uft_format_t;
+#endif /* UFT_FORMAT_ENUM_DEFINED */
 
 /**
  * @brief Format-Eigenschaften
