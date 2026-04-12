@@ -203,7 +203,8 @@
 #define UFT_FMT_IMG             UFT_FORMAT_IMG
 #endif
 
-/* Encoding type aliases (UFT_ENCODING_* → UFT_ENC_*) */
+/* Encoding type aliases — only define if encoding enum is available */
+#ifdef UFT_ENCODING_DEFINED
 #ifndef UFT_ENCODING_MFM
 #define UFT_ENCODING_MFM        UFT_ENC_MFM
 #endif
@@ -216,6 +217,7 @@
 #ifndef UFT_ENC_GCR
 #define UFT_ENC_GCR             UFT_ENC_GCR_C64
 #endif
+#endif /* UFT_ENCODING_DEFINED */
 
 /* Encoding type for files using typedef - only if uft_types.h not included */
 #if !defined(_UFT_ENCODING_T_DEFINED) && !defined(UFT_TYPES_H)

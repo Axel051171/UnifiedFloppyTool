@@ -10,6 +10,7 @@
  */
 
 #include "uft/formats/uft_ldbs.h"
+#include "uft/uft_types.h"
 #include "uft/core/uft_unified_types.h"
 #include "uft/core/uft_error_compat.h"
 #include <stdlib.h>
