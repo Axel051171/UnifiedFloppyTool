@@ -255,30 +255,8 @@ typedef struct {
 } uft_imd_track_t;
 #endif /* UFT_IMD_TRACK_T_DEFINED */
 
-/**
- * @brief IMD image structure
- */
-#ifndef UFT_IMD_IMAGE_T_DEFINED
-#define UFT_IMD_IMAGE_T_DEFINED
-typedef struct {
-    uft_imd_header_t header;    /**< Parsed header */
-    char*    comment;           /**< Comment text (null-terminated) */
-    size_t   comment_len;       /**< Comment length */
-    
-    uint16_t num_tracks;        /**< Number of tracks */
-    uint16_t num_cylinders;     /**< Number of cylinders */
-    uint8_t  num_heads;         /**< Number of heads (1 or 2) */
-    
-    uft_imd_track_t* tracks;    /**< Track array */
-    
-    /* Statistics */
-    uint32_t total_sectors;     /**< Total sector count */
-    uint32_t compressed_sectors;/**< Compressed sector count */
-    uint32_t deleted_sectors;   /**< Deleted sector count */
-    uint32_t bad_sectors;       /**< Bad sector count */
-    uint32_t unavail_sectors;   /**< Unavailable sector count */
-} uft_imd_image_t;
-#endif /* UFT_IMD_IMAGE_T_DEFINED */
+/* uft_imd_image_t: canonical definition in formats/uft_imd.h
+ * (included via delegation at top of this file) */
 
 /*============================================================================
  * Gap Length Table (from IMD source)
