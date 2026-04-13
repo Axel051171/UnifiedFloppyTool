@@ -362,7 +362,8 @@ typedef enum {
     UFT_IMD_MODE_250K_FM    = 2,
     UFT_IMD_MODE_500K_MFM   = 3,
     UFT_IMD_MODE_300K_MFM   = 4,
-    UFT_IMD_MODE_250K_MFM   = 5
+    UFT_IMD_MODE_250K_MFM   = 5,
+    UFT_IMD_MODE_MAX        = 5
 } uft_imd_mode_t;
 #endif /* UFT_IMD_MODE_DEFINED */
 
