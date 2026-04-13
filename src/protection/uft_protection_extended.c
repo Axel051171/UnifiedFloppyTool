@@ -11,6 +11,9 @@
 #include <strings.h>
 #include <stdio.h>
 
+/* Forward declaration for local renamed function */
+static const char* uft_protection_name_by_id(uft_protection_id_t id);
+
 /* ============================================================================
  * Protection Signatures
  * ============================================================================ */
@@ -627,7 +630,7 @@ int uft_protection_analyze_disk(
  * Utility Functions
  * ============================================================================ */
 
-const char* uft_protection_name_by_id(uft_protection_id_t id) {
+static const char* uft_protection_name_by_id(uft_protection_id_t id) {
     const uft_protection_info_t *info = uft_protection_get_info(id);
     if (info) return info->name;
     
