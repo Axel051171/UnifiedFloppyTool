@@ -182,7 +182,7 @@ int uft_convert_list_targets(uft_format_t src,
 uft_error_t uft_convert_file(const char* src_path,
                               const char* dst_path,
                               uft_format_t dst_format,
-                              const uft_convert_options_ext_t* options,
+                              const uft_convert_options_t* options,
                               uft_convert_result_t* result);
 
 /**

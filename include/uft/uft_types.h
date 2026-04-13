@@ -431,6 +431,14 @@ typedef struct uft_convert_options {
     bool            preserve_errors;  ///< Fehler erhalten
     bool            preserve_timing;  ///< Timing erhalten
     bool            normalize;        ///< Normalisieren
+    bool            verify_after;     ///< Verify after convert
+    bool            preserve_weak_bits; ///< Preserve weak bit info
+    bool            use_multiple_revs;  ///< Use multi-rev fusion
+    bool            interpolate_errors; ///< Interpolate error sectors
+    double          synthetic_cell_time_us;    ///< Cell time for synthesis
+    double          synthetic_jitter_percent;  ///< Jitter for synthesis
+    uint32_t        synthetic_revolutions;     ///< Revolutions for synthesis
+    uint32_t        decode_retries;            ///< Decode retry count
     uft_progress_fn progress;
     void*           progress_user;
 } uft_convert_options_t;

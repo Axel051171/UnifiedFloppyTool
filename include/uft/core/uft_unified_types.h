@@ -159,6 +159,12 @@ typedef int uft_error_t;
 #ifndef UFT_ERROR_INTERNAL
 #define UFT_ERROR_INTERNAL       UFT_ERR_INTERNAL
 #endif
+#ifndef UFT_ERROR_INVALID_FORMAT
+#define UFT_ERROR_INVALID_FORMAT UFT_ERR_UNKNOWN_FORMAT
+#endif
+#ifndef UFT_ERROR_NO_DATA
+#define UFT_ERROR_NO_DATA        UFT_ERR_NO_DATA
+#endif
 
 /**
  * @brief Get error description string
