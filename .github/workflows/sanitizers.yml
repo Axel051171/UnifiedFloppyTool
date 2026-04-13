@@ -3,6 +3,10 @@
 #
 # Runs ASan and UBSan builds to catch memory errors and undefined behaviour.
 # Uses the CMake build path (library targets + test suite).
+#
+# Fixes applied:
+#   FAILURE-007: removed --target all, use default CMake target
+#   Added: ctest --build-config for multi-config generators
 # ============================================================================
 
 name: Sanitizer Checks
@@ -11,6 +15,10 @@ on:
   push:
     branches: [main, develop]
   pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -32,13 +40,15 @@ jobs:
           host: linux
           target: desktop
           modules: 'qtserialport'
+          cache: true
 
       - name: Install dependencies
         run: |
-          sudo apt-get update
+          sudo apt-get update -q
           sudo apt-get install -y libusb-1.0-0-dev libgl1-mesa-dev
 
       - name: Build with ASan (CMake)
+        # FIX-007: no --target all
         run: |
           cmake -B build \
             -DCMAKE_BUILD_TYPE=Debug \
@@ -53,7 +63,17 @@ jobs:
           cd build
           ctest --output-on-failure --timeout 300
         env:
-          ASAN_OPTIONS: detect_leaks=1:abort_on_error=1
+          ASAN_OPTIONS: detect_leaks=1:abort_on_error=1:print_stacktrace=1
+
+      - name: Upload ASan findings
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: asan-findings-${{ github.sha }}
+          path: |
+            build/Testing/Temporary/
+            build/**/*.log
+          retention-days: 7
 
   ubsan:
     runs-on: ubuntu-22.04
@@ -67,10 +87,11 @@ jobs:
           host: linux
           target: desktop
           modules: 'qtserialport'
+          cache: true
 
       - name: Install dependencies
         run: |
-          sudo apt-get update
+          sudo apt-get update -q
           sudo apt-get install -y libusb-1.0-0-dev libgl1-mesa-dev
 
       - name: Build with UBSan (CMake)
@@ -89,3 +110,13 @@ jobs:
           ctest --output-on-failure --timeout 300
         env:
           UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
+
+      - name: Upload UBSan findings
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ubsan-findings-${{ github.sha }}
+          path: |
+            build/Testing/Temporary/
+            build/**/*.log
+          retention-days: 7

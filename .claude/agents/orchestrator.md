@@ -39,6 +39,7 @@ Batch D: `performance-memory` | `compatibility-import-export` | `gui-expert`
 ### Optional (nur auf Anfrage)
 `research-roadmap` — Strategische Planung, Konkurrenzanalyse
 - `info-finder` — Taktische Web-Intelligence, aktuelle Infos zu konkreten Themen
+- `ci-guardian` — Interaktiver CI-Failure-Spezialist: kennt alle 7 UFT-Workflow-Failures, liefert ready-to-paste Fixes
 - `innovation-catalyst` — Ideen generieren + Spezialisten-Konsultation orchestrieren
 
 ## Konfliktmatrix (verbindlich)

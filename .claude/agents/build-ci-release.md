@@ -19,6 +19,47 @@ NICHT vermischen: qmake-Build ≠ CMake-Build!
 qmake ist für die Applikation, CMake nur für Unit-Tests.
 ```
 
+## Echte CI-Workflow-Struktur (Stand: Repo-Analyse April 2026)
+
+```
+.github/workflows/
+  ci.yml          → ubuntu-22.04, macos-14, windows-2022
+                    Qt 6.7.3 via jurplel/install-qt-action@v4
+                    qmake Build + CMake Tests (getrennte Build-Verzeichnisse)
+                    
+  release.yml     → Trigger: git tag v*
+                    Linux: .deb + .tar.gz (dpkg-deb)
+                    macOS: .dmg (macdeployqt) + .tar.gz
+                    Windows: .tar.gz (windeployqt + MinGW)
+                    
+  sanitizers.yml  → ASan + UBSan, CMake-Build, ubuntu-22.04
+  coverage.yml    → gcov/lcov + Codecov, ubuntu-22.04
+
+BEKANNTE FIXES (bereits in Workflows eingebaut):
+  ✓ add-tools-to-path: true → kein manuelles IQTA_TOOLS
+  ✓ arch: clang_64 entfernt → macos-14 ARM64 auto-detect
+  ✓ UFT_VERSION via env: statt YAML-Escaping
+  ✓ printf statt heredoc für debian/control
+  ✓ --target all entfernt (CMake Default-Target)
+  ✓ concurrency: cancel-in-progress: true
+```
+
+## Workflow-Debugging: Welcher Job schlägt fehl?
+
+```
+→ ci-guardian Agent aufrufen: kennt alle 7 Failure-Pattern mit Fix
+→ Fehlermeldung aus GitHub Actions einfügen → sofort zugeordnet
+
+Häufigste Fehler und ihr Agent:
+  "qmake not found" / "arch mismatch" → ci-guardian FAILURE-001
+  "mingw32-make not found"            → ci-guardian FAILURE-002
+  "expected ',' or ')' before"        → ci-guardian FAILURE-003
+  "dpkg-deb: field has blank value"   → ci-guardian FAILURE-004
+  "lipo: same architectures"          → ci-guardian FAILURE-005
+  "windeployqt: command not found"    → ci-guardian FAILURE-006
+  "cmake: no target 'all'"            → ci-guardian FAILURE-007
+```
+
 ## Kritische qmake-Eigenheiten (NICHT vergessen)
 
 ### object_parallel_to_source — ZWINGEND
