@@ -20,7 +20,7 @@ set(CORE_WHITELIST
     uft_param_bridge.c
     uft_platform.c
     uft_pll_unified.c
-    uft_process.c
+    # uft_process.c  # incomplete type uft_async_process_t — needs header fix
     uft_protection_pipeline.c
     uft_safe_alloc.c
     uft_safe_io.c
