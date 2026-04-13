@@ -247,6 +247,9 @@ typedef struct uft_sector_id {
     uint8_t  size_code;      ///< N - Größencode (2^N * 128)
     uint16_t crc;            ///< ID CRC
     bool     crc_ok;         ///< CRC valid?
+    /* Backward compatibility aliases */
+    uint8_t  track;          ///< Alias for cylinder (legacy code)
+    uint32_t status;         ///< Sector status flags (legacy, moved from ID)
 } uft_sector_id_t;
 #endif /* UFT_SECTOR_ID_T_DEFINED */
 
