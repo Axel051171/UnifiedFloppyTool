@@ -262,6 +262,17 @@ int uft_atarist_detect_all(const uint8_t **tracks, const size_t *track_lens,
                            uft_atarist_prot_result_t *result);
 
 /**
+ * @brief Simple protection detection from raw track data
+ */
+int uft_atarist_prot_detect(const uint8_t *data, size_t data_len,
+                            uft_atarist_prot_result_t *result);
+
+/**
+ * @brief Initialize protection result
+ */
+void uft_atarist_prot_init(uft_atarist_prot_result_t *result);
+
+/**
  * @brief Get protection type name
  */
 const char *uft_atarist_prot_name(uft_atarist_prot_type_t type);

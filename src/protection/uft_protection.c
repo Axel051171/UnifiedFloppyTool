@@ -389,7 +389,7 @@ uft_protection_type_t uft_detect_all_protections(uft_protection_ctx_t* ctx) {
  * CopyLock Reconstruction
  *============================================================================*/
 
-size_t uft_copylock_reconstruct(uint32_t seed, uint8_t* output, bool old_style) {
+size_t uft_copylock_reconstruct_legacy(uint32_t seed, uint8_t* output, bool old_style) {
     if (!output) return 0;
     
     uint32_t state = seed;

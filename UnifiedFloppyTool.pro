@@ -195,7 +195,7 @@ SOURCES += \
     src/settingsmanager.cpp \
     src/gw_device_detector.cpp \
     src/gw_output_parser.cpp \
-    src/qmake_stubs/uft_protection_stubs.cpp \
+    # src/qmake_stubs/uft_protection_stubs.cpp \ # DISABLED: conflicts with real impls
     src/gui/uft_otdr_panel.cpp \
     src/gui/ProtectionAnalysisWidget.cpp \
     src/gui/uft_sector_editor.cpp \

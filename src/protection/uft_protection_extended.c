@@ -611,13 +611,13 @@ int uft_protection_analyze_disk(
     } else if (analysis->protection_count == 1) {
         snprintf(analysis->summary, sizeof(analysis->summary),
                 "Detected: %s (confidence: %u%%)",
-                uft_protection_name(analysis->protections[0].id),
+                uft_protection_name_by_id(analysis->protections[0].id),
                 analysis->protections[0].confidence);
     } else {
         snprintf(analysis->summary, sizeof(analysis->summary),
                 "Detected %zu protections, primary: %s",
                 analysis->protection_count,
-                uft_protection_name(analysis->protections[0].id));
+                uft_protection_name_by_id(analysis->protections[0].id));
     }
     
     return 0;
@@ -627,7 +627,7 @@ int uft_protection_analyze_disk(
  * Utility Functions
  * ============================================================================ */
 
-const char* uft_protection_name(uft_protection_id_t id) {
+const char* uft_protection_name_by_id(uft_protection_id_t id) {
     const uft_protection_info_t *info = uft_protection_get_info(id);
     if (info) return info->name;
     
@@ -697,7 +697,7 @@ size_t uft_protection_analysis_to_json(
         const uft_protection_result_t *p = &analysis->protections[i];
         APPEND("    {\n");
         APPEND("      \"id\": %d,\n", p->id);
-        APPEND("      \"name\": \"%s\",\n", uft_protection_name(p->id));
+        APPEND("      \"name\": \"%s\",\n", uft_protection_name_by_id(p->id));
         APPEND("      \"confidence\": %u,\n", p->confidence);
         APPEND("      \"track_found\": %u,\n", p->track_found);
         APPEND("      \"sector_found\": %u,\n", p->sector_found);

@@ -71,7 +71,7 @@ static uint32_t read_be32(const uint8_t *p)
  * IPF Parsing
  *===========================================================================*/
 
-bool uft_caps_is_ipf(const uint8_t *data, size_t size)
+static bool caps_is_ipf(const uint8_t *data, size_t size)
 {
     if (!data || size < 12) return false;
     return read_be32(data) == UFT_IPF_CAPS;
@@ -311,7 +311,7 @@ int uft_caps_analyze_ipf(const uint8_t *data, size_t size,
     memset(result, 0, sizeof(*result));
     
     /* Verify IPF signature */
-    if (!uft_caps_is_ipf(data, size)) {
+    if (!caps_is_ipf(data, size)) {
         return -1;
     }
     result->valid_ipf = true;
