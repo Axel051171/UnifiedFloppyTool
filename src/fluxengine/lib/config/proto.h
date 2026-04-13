@@ -33,8 +33,14 @@ public:
     google::protobuf::Message* getMessage() const;
     std::string getBytes() const;
 
+#if __cplusplus >= 202002L
     bool operator==(const ProtoField& other) const = default;
     std::strong_ordering operator<=>(const ProtoField& other) const = default;
+#else
+    bool operator==(const ProtoField& other) const { return _path == other._path; }
+    bool operator!=(const ProtoField& other) const { return !(*this == other); }
+    bool operator<(const ProtoField& other) const { return _path < other._path; }
+#endif
 
     const std::string& path() const
     {

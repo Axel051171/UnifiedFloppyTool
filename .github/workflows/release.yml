@@ -27,7 +27,7 @@ permissions:
   contents: write
 
 env:
-  QT_VERSION: '6.10.0'
+  QT_VERSION: '6.10.1'
 
 jobs:
 
@@ -69,6 +69,7 @@ jobs:
           mkdir build && cd build
           qmake ../UnifiedFloppyTool.pro \
             CONFIG+=release \
+            CONFIG+=cxx20 \
             "DEFINES+=UFT_VERSION_STRING=\\\"${UFT_VERSION}\\\""
           make -j$(nproc)
 
@@ -160,6 +161,7 @@ jobs:
           mkdir build && cd build
           qmake ../UnifiedFloppyTool.pro \
             CONFIG+=release \
+            CONFIG+=cxx20 \
             "DEFINES+=UFT_VERSION_STRING=\\\"${UFT_VERSION}\\\""
           make -j$(sysctl -n hw.ncpu)
 
@@ -233,6 +235,7 @@ jobs:
           mkdir build && cd build
           qmake ../UnifiedFloppyTool.pro \
             CONFIG+=release \
+            CONFIG+=cxx20 \
             "DEFINES+=UFT_VERSION_STRING=\\\"${UFT_VERSION}\\\""
           mingw32-make -j$(nproc)
 

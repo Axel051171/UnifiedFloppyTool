@@ -1,0 +1,11 @@
+# Advanced Algorithms
+
+Production algorithms for difficult disk recovery:
+- uft_god_mode_api.c    -- High-level API for advanced decode
+- uft_kalman_pll_v2.c   -- Kalman filter PLL (used by DeepRead)
+- uft_gcr_viterbi.c/v2  -- Viterbi decoder for GCR (used by C64 recovery)
+- uft_bayesian_detect.c/v2 -- Bayesian format detection
+- uft_multi_rev_fusion.c -- Multi-revolution fusion
+- uft_crc_correction_v2.c -- CRC-based error correction
+- uft_fuzzy_sync_v2.c   -- Fuzzy sync pattern matching
+- uft_decoder_metrics.c  -- Decoder quality metrics

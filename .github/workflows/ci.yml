@@ -1,11 +1,12 @@
 # ============================================================================
 # UnifiedFloppyTool - CI Build
 #
-# Triggers on: pull requests, pushes to main
-# Fixes applied:
-#   FAILURE-001: macos-14 arch mismatch → removed clang_64, auto-detect
+# Fixes in diesem File:
+#   ROOT CAUSE: Qt 6.7.3 (C++17) vs Qt 6.10.1 (C++20) Mismatch behoben
+#   → Matrix-Build testet BEIDE Standards
+#   FAILURE-001: macos-14 arch mismatch → clang_64 entfernt
 #   FAILURE-002: IQTA_TOOLS MinGW → add-tools-to-path: true
-#   FAILURE-007: cmake --target all → removed, use default target
+#   FAILURE-007: cmake --target all → entfernt
 # ============================================================================
 
 name: CI
@@ -23,29 +24,32 @@ concurrency:
 permissions:
   contents: read
 
-env:
-  QT_VERSION: '6.10.0'
-
 jobs:
 
   # ══════════════════════════════════════════════════════════════════════════
-  build-linux:
+  # Matrix: C++17 (Qt 6.7.3) UND C++20 (Qt 6.10.1) — beide müssen grün sein
   # ══════════════════════════════════════════════════════════════════════════
+  build-linux:
+    name: Linux (${{ matrix.qt_version }}, ${{ matrix.cxx_std }})
     runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - qt_version: '6.7.3'
+            cxx_std: 'c++17'
+            qmake_extra: ''
+          - qt_version: '6.10.1'
+            cxx_std: 'c++20'
+            qmake_extra: 'CONFIG+=cxx20'
+
     steps:
       - uses: actions/checkout@v4
 
-      - name: Cache Qt
-        uses: actions/cache@v4
-        id: cache-qt-linux
-        with:
-          path: ~/Qt
-          key: qt-linux-${{ env.QT_VERSION }}
-
-      - name: Install Qt
+      - name: Install Qt ${{ matrix.qt_version }}
         uses: jurplel/install-qt-action@v4
         with:
-          version: ${{ env.QT_VERSION }}
+          version: ${{ matrix.qt_version }}
           host: linux
           target: desktop
           modules: 'qtserialport'
@@ -56,10 +60,10 @@ jobs:
           sudo apt-get update -q
           sudo apt-get install -y libusb-1.0-0-dev libgl1-mesa-dev
 
-      - name: Build (qmake)
+      - name: Build (qmake, ${{ matrix.cxx_std }})
         run: |
           mkdir build && cd build
-          qmake ../UnifiedFloppyTool.pro CONFIG+=release
+          qmake ../UnifiedFloppyTool.pro CONFIG+=release ${{ matrix.qmake_extra }}
           make -j$(nproc)
 
       - name: Smoke test
@@ -68,7 +72,6 @@ jobs:
           ldd build/UnifiedFloppyTool | grep -v "not found" || true
 
       - name: Build tests (CMake)
-        # FIX-007: removed --target all (invalid on some generators)
         run: |
           cmake -B build-tests \
             -DCMAKE_BUILD_TYPE=Release \
@@ -84,33 +87,34 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: linux-build-logs-${{ github.sha }}
+          name: linux-build-logs-${{ matrix.qt_version }}-${{ github.sha }}
           path: |
             build/*.log
             build-tests/CMakeFiles/*.log
           retention-days: 3
 
   # ══════════════════════════════════════════════════════════════════════════
-  build-macos:
+  # macOS — ARM64, Qt 6.10.1
   # ══════════════════════════════════════════════════════════════════════════
+  build-macos:
     runs-on: macos-14
     steps:
       - uses: actions/checkout@v4
 
       - name: Install Qt
-        # FIX-001: removed arch: clang_64 — macos-14 is ARM64, auto-detect
+        # FIX-001: kein arch: clang_64 — macos-14 ist ARM64
         uses: jurplel/install-qt-action@v4
         with:
-          version: ${{ env.QT_VERSION }}
+          version: '6.10.1'
           host: mac
           target: desktop
           modules: 'qtserialport'
           cache: true
 
-      - name: Build (qmake)
+      - name: Build
         run: |
           mkdir build && cd build
-          qmake ../UnifiedFloppyTool.pro CONFIG+=release
+          qmake ../UnifiedFloppyTool.pro CONFIG+=release CONFIG+=cxx20
           make -j$(sysctl -n hw.ncpu)
 
       - name: Smoke test
@@ -126,17 +130,18 @@ jobs:
           retention-days: 3
 
   # ══════════════════════════════════════════════════════════════════════════
-  build-windows:
+  # Windows — MinGW, Qt 6.10.1
   # ══════════════════════════════════════════════════════════════════════════
+  build-windows:
     runs-on: windows-2022
     steps:
       - uses: actions/checkout@v4
 
       - name: Install Qt + MinGW
-        # FIX-002: add-tools-to-path: true → MinGW auto in PATH, no IQTA_TOOLS needed
+        # FIX-002: add-tools-to-path: true — kein manuelles IQTA_TOOLS
         uses: jurplel/install-qt-action@v4
         with:
-          version: ${{ env.QT_VERSION }}
+          version: '6.10.1'
           host: windows
           target: desktop
           arch: win64_mingw
@@ -150,14 +155,12 @@ jobs:
         run: |
           which mingw32-make || (echo "ERROR: mingw32-make not found" && exit 1)
           which qmake        || (echo "ERROR: qmake not found"        && exit 1)
-          mingw32-make --version
-          qmake --version
 
-      - name: Build (qmake + MinGW)
+      - name: Build
         shell: bash
         run: |
           mkdir build && cd build
-          qmake ../UnifiedFloppyTool.pro CONFIG+=release
+          qmake ../UnifiedFloppyTool.pro CONFIG+=release CONFIG+=cxx20
           mingw32-make -j$(nproc)
 
       - name: Smoke test

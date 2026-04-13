@@ -69,9 +69,21 @@ class Config
 private:
     struct OptionInfo
     {
+#if __cplusplus >= 202002L
         bool operator==(const OptionInfo& other) const = default;
         std::strong_ordering operator<=>(
             const OptionInfo& other) const = default;
+#else
+        bool operator==(const OptionInfo& o) const {
+            return group == o.group && option == o.option && usesValue == o.usesValue;
+        }
+        bool operator!=(const OptionInfo& o) const { return !(*this == o); }
+        bool operator<(const OptionInfo& o) const {
+            if (group != o.group) return group < o.group;
+            if (option != o.option) return option < o.option;
+            return usesValue < o.usesValue;
+        }
+#endif
 
         const OptionGroupProto* group;
         const OptionProto* option;

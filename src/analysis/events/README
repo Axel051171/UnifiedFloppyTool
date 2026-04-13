@@ -1,0 +1,17 @@
+# OTDR Event Pipeline
+
+This is NOT 7 competing versions -- it is a 7-stage pipeline.
+v12 is the entry point that orchestrates v2 -> v7 -> v8 -> v9 -> v10 -> v11.
+
+Stage overview:
+  v2:  baseline event detection
+  v7:  multi-pass alignment + fusion
+  v8:  multi-scale feature extraction
+  v9:  signal integrity analysis
+  v10: confidence map fusion
+  v11: streaming pipeline
+  v12: export + golden vectors (entry point)
+
+Bridge files (uft_*_bridge.c) connect these stages to the UFT API.
+
+See CLAUDE.md for the full pipeline architecture.

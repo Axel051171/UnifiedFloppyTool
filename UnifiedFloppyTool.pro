@@ -35,14 +35,16 @@ TARGET = UnifiedFloppyTool
 TEMPLATE = app
 
 # Qt 6.10+ requires C++20
-greaterThan(QT_MAJOR_VERSION, 5) {
-    greaterThan(QT_MINOR_VERSION, 9) {
-        CONFIG += c++20
-    } else {
-        CONFIG += c++17
-    }
+# C++ Standard: immer c++17 als Basis.
+# C++20-Features im Code sind mit #if __cplusplus >= 202002L abgesichert.
+# Für C++20-Build explizit: qmake CONFIG+=cxx20
+cxx20 {
+    CONFIG += c++20
+    DEFINES += UFT_CXX20
+    message("C++20 aktiv (explizit angefordert)")
 } else {
     CONFIG += c++17
+    message("C++17 aktiv (Standard)")
 }
 
 CONFIG += sdk_no_version_check
@@ -70,9 +72,11 @@ win32-g++:QMAKE_CXXFLAGS += -Wall -Wextra \
 win32 {
     LIBS += -lshlwapi -lshell32 -ladvapi32 -lws2_32 -lsetupapi
     DEFINES += _CRT_SECURE_NO_WARNINGS
-    # POSIX shims for hactool (getopt.h, strings.h)
-    INCLUDEPATH += $$PWD/src/switch/hactool/compat
-    SOURCES += src/switch/hactool/compat/getopt.c
+    # POSIX shims for hactool (getopt.h, strings.h) — only with switch_support
+    switch_support {
+        INCLUDEPATH += $$PWD/src/switch/hactool/compat
+        SOURCES += src/switch/hactool/compat/getopt.c
+    }
 }
 
 # MSVC specific - POSIX string functions not available
@@ -141,6 +145,17 @@ FORMS += \
 # Main GUI Sources
 # NOTE: analysis/events + analysis/denoise sources are listed here ONCE;
 #       they appear duplicated in later SOURCES blocks but $$unique() deduplicates
+#
+# OTDR Analysis Pipeline — v12 is the current entry point.
+# v2-v11 are NOT dead code — they are pipeline stages called by v12:
+#   v2:  baseline event detection
+#   v7:  multi-pass alignment + fusion
+#   v8:  multi-scale feature extraction
+#   v9:  signal integrity analysis
+#   v10: confidence map fusion
+#   v11: streaming pipeline
+#   v12: export + golden vectors (entry point)
+# Bridge files connect these stages to the UFT API.
 SOURCES += \
     src/analysis/events/uft_export_bridge.c \
     src/analysis/events/otdr_event_core_v12.c \
@@ -630,7 +645,9 @@ SOURCES += \
     src/formats/stx/uft_stx_air.c
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# God-Mode Algorithms
+# Advanced Algorithms (formerly "god_mode")
+# Production algorithms for difficult disk recovery.
+# See src/algorithms/advanced/README for module descriptions.
 # ═══════════════════════════════════════════════════════════════════════════════
 
 SOURCES += \
@@ -650,16 +667,16 @@ SOURCES += \
     src/analysis/events/otdr_event_core_v2.c \
     src/analysis/denoise/uft_denoise_bridge.c \
     src/analysis/denoise/phi_otdr_denoise_1d.c \
-    src/algorithms/god_mode/uft_god_mode_api.c \
-    src/algorithms/god_mode/uft_kalman_pll_v2.c \
-    src/algorithms/god_mode/uft_gcr_viterbi.c \
-    src/algorithms/god_mode/uft_gcr_viterbi_v2.c \
-    src/algorithms/god_mode/uft_bayesian_detect.c \
-    src/algorithms/god_mode/uft_bayesian_detect_v2.c \
-    src/algorithms/god_mode/uft_multi_rev_fusion.c \
-    src/algorithms/god_mode/uft_crc_correction_v2.c \
-    src/algorithms/god_mode/uft_fuzzy_sync_v2.c \
-    src/algorithms/god_mode/uft_decoder_metrics.c \
+    src/algorithms/advanced/uft_god_mode_api.c \
+    src/algorithms/advanced/uft_kalman_pll_v2.c \
+    src/algorithms/advanced/uft_gcr_viterbi.c \
+    src/algorithms/advanced/uft_gcr_viterbi_v2.c \
+    src/algorithms/advanced/uft_bayesian_detect.c \
+    src/algorithms/advanced/uft_bayesian_detect_v2.c \
+    src/algorithms/advanced/uft_multi_rev_fusion.c \
+    src/algorithms/advanced/uft_crc_correction_v2.c \
+    src/algorithms/advanced/uft_fuzzy_sync_v2.c \
+    src/algorithms/advanced/uft_decoder_metrics.c \
     src/algorithms/encoding/uft_otdr_encoding_boost.c \
     src/algorithms/recovery/uft_otdr_adaptive_decode.c \
     src/analysis/deepread/uft_deepread_splice.c \
@@ -1629,182 +1646,96 @@ HEADERS += \
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Switch/MIG Dumper Module (Nintendo Switch Cartridge Support)
+# Optional — enable with: qmake CONFIG+=switch_support
 # ═══════════════════════════════════════════════════════════════════════════════
 
-DEFINES += UFT_HAS_SWITCH
-message("Switch/MIG Dumper Module ENABLED")
+switch_support {
+    DEFINES += UFT_HAS_SWITCH
+    message("Switch/MIG Dumper Module ENABLED")
 
-INCLUDEPATH += \
-    $$PWD/src/switch \
-    $$PWD/src/switch/hactool \
-    $$PWD/src/switch/hactool/mbedtls/include
+    INCLUDEPATH += \
+        $$PWD/src/switch \
+        $$PWD/src/switch/hactool \
+        $$PWD/src/switch/hactool/mbedtls/include
 
-SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
-    src/switch/uft_mig_dumper.c \
-    src/switch/uft_xci_parser_stubs.c \
-    src/gui/uft_switch_panel.cpp
+    SOURCES += \
+        src/switch/uft_mig_dumper.c \
+        src/switch/uft_xci_parser_stubs.c \
+        src/gui/uft_switch_panel.cpp
 
-HEADERS += \
-    include/uft/analysis/uft_export_bridge.h \
-    include/uft/analysis/otdr_event_core_v12.h \
-    include/uft/analysis/uft_pipeline_bridge.h \
-    include/uft/analysis/otdr_event_core_v11.h \
-    include/uft/analysis/uft_confidence_bridge.h \
-    include/uft/analysis/otdr_event_core_v10.h \
-    include/uft/analysis/uft_integrity_bridge.h \
-    include/uft/analysis/otdr_event_core_v9.h \
-    include/uft/analysis/uft_event_v8_bridge.h \
-    include/uft/analysis/otdr_event_core_v8.h \
-    include/uft/analysis/uft_align_fuse_bridge.h \
-    include/uft/analysis/otdr_event_core_v7.h \
-    include/uft/analysis/uft_event_bridge.h \
-    include/uft/analysis/otdr_event_core_v2.h \
-    include/uft/analysis/uft_denoise_bridge.h \
-    include/uft/analysis/phi_otdr_denoise_1d.h \
-    src/switch/uft_switch_types.h \
-    src/switch/uft_mig_dumper.h \
-    src/switch/uft_xci_parser.h \
-    src/gui/uft_switch_panel.h
+    HEADERS += \
+        src/switch/uft_switch_types.h \
+        src/switch/uft_mig_dumper.h \
+        src/switch/uft_xci_parser.h \
+        src/gui/uft_switch_panel.h
 
-# hactool sources (ISC License - third party)
-SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
-    src/switch/hactool/xci.c \
-    src/switch/hactool/nca.c \
-    src/switch/hactool/pfs0.c \
-    src/switch/hactool/hfs0.c \
-    src/switch/hactool/romfs.c \
-    src/switch/hactool/nca0_romfs.c \
-    src/switch/hactool/save.c \
-    src/switch/hactool/npdm.c \
-    src/switch/hactool/kip.c \
-    src/switch/hactool/nso.c \
-    src/switch/hactool/nax0.c \
-    src/switch/hactool/packages.c \
-    src/switch/hactool/pki.c \
-    src/switch/hactool/extkeys.c \
-    src/switch/hactool/hactool_aes.c \
-    src/switch/hactool/sha.c \
-    src/switch/hactool/hactool_rsa.c \
-    src/switch/hactool/utils.c \
-    src/switch/hactool/filepath.c \
-    src/switch/hactool/lz4.c \
-    src/switch/hactool/bktr.c \
-    src/switch/hactool/ConvertUTF.c \
-    src/switch/hactool/cJSON.c
+    # hactool sources (ISC License - third party)
+    SOURCES += \
+        src/switch/hactool/xci.c \
+        src/switch/hactool/nca.c \
+        src/switch/hactool/pfs0.c \
+        src/switch/hactool/hfs0.c \
+        src/switch/hactool/romfs.c \
+        src/switch/hactool/nca0_romfs.c \
+        src/switch/hactool/save.c \
+        src/switch/hactool/npdm.c \
+        src/switch/hactool/kip.c \
+        src/switch/hactool/nso.c \
+        src/switch/hactool/nax0.c \
+        src/switch/hactool/packages.c \
+        src/switch/hactool/pki.c \
+        src/switch/hactool/extkeys.c \
+        src/switch/hactool/hactool_aes.c \
+        src/switch/hactool/sha.c \
+        src/switch/hactool/hactool_rsa.c \
+        src/switch/hactool/utils.c \
+        src/switch/hactool/filepath.c \
+        src/switch/hactool/lz4.c \
+        src/switch/hactool/bktr.c \
+        src/switch/hactool/ConvertUTF.c \
+        src/switch/hactool/cJSON.c
 
-# mbedtls (Apache 2.0 License - third party)
-# Note: hactool wrappers renamed to hactool_aes.c/hactool_rsa.c to avoid collision
-MBEDTLS_PATH = $$PWD/src/switch/hactool/mbedtls/library
-MBEDTLS_SOURCES = $$files($$MBEDTLS_PATH/*.c)
-SOURCES += $$MBEDTLS_SOURCES \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c
+    # mbedtls (Apache 2.0 License - vendor copy, see src/switch/hactool/mbedtls/VENDOR.md)
+    # Note: hactool wrappers renamed to hactool_aes.c/hactool_rsa.c to avoid collision
+    MBEDTLS_PATH = $$PWD/src/switch/hactool/mbedtls/library
+    MBEDTLS_SOURCES = $$files($$MBEDTLS_PATH/*.c)
+    SOURCES += $$MBEDTLS_SOURCES
+} else {
+    message("Switch/MIG Dumper Module DISABLED (use CONFIG+=switch_support to enable)")
+}
 
 # NOTE: Warning suppressions already set globally (lines 59-67, 413)
 # -Wno-unused-parameter, -Wno-sign-compare are still required (860+ source files)
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Cart7/Cart8 Multi-System Cartridge Reader (NES, SNES, N64, MD, GBA, GB, 3DS)
+# Optional — enable with: qmake CONFIG+=cart7_support
 # ═══════════════════════════════════════════════════════════════════════════════
 
-DEFINES += UFT_HAS_CART7
-message("Cart7/Cart8 Cartridge Reader Module ENABLED")
+cart7_support {
+    DEFINES += UFT_HAS_CART7
+    message("Cart7/Cart8 Cartridge Reader Module ENABLED")
 
-INCLUDEPATH += \
-    $$PWD/src/cart7 \
-    $$PWD/include/uft/cart7
+    INCLUDEPATH += \
+        $$PWD/src/cart7 \
+        $$PWD/include/uft/cart7
 
-SOURCES += \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c \
-    src/cart7/uft_cart7.c \
-    src/cart7/uft_cart7_3ds.c \
-    src/cart7/uft_cart7_hal.c \
-    src/gui/uft_cart7_panel.cpp
+    SOURCES += \
+        src/cart7/uft_cart7.c \
+        src/cart7/uft_cart7_3ds.c \
+        src/cart7/uft_cart7_hal.c \
+        src/gui/uft_cart7_panel.cpp
 
-HEADERS += \
-    include/uft/analysis/uft_export_bridge.h \
-    include/uft/analysis/otdr_event_core_v12.h \
-    include/uft/analysis/uft_pipeline_bridge.h \
-    include/uft/analysis/otdr_event_core_v11.h \
-    include/uft/analysis/uft_confidence_bridge.h \
-    include/uft/analysis/otdr_event_core_v10.h \
-    include/uft/analysis/uft_integrity_bridge.h \
-    include/uft/analysis/otdr_event_core_v9.h \
-    include/uft/analysis/uft_event_v8_bridge.h \
-    include/uft/analysis/otdr_event_core_v8.h \
-    include/uft/analysis/uft_align_fuse_bridge.h \
-    include/uft/analysis/otdr_event_core_v7.h \
-    include/uft/analysis/uft_event_bridge.h \
-    include/uft/analysis/otdr_event_core_v2.h \
-    include/uft/analysis/uft_denoise_bridge.h \
-    include/uft/analysis/phi_otdr_denoise_1d.h \
-    include/uft/cart7/cart7_protocol.h \
-    include/uft/cart7/cart7_3ds_protocol.h \
-    include/uft/cart7/uft_cart7.h \
-    include/uft/cart7/uft_cart7_3ds.h \
-    src/cart7/uft_cart7_hal.h \
-    src/gui/uft_cart7_panel.h
+    HEADERS += \
+        include/uft/cart7/cart7_protocol.h \
+        include/uft/cart7/cart7_3ds_protocol.h \
+        include/uft/cart7/uft_cart7.h \
+        include/uft/cart7/uft_cart7_3ds.h \
+        src/cart7/uft_cart7_hal.h \
+        src/gui/uft_cart7_panel.h
+} else {
+    message("Cart7/Cart8 Cartridge Reader Module DISABLED (use CONFIG+=cart7_support to enable)")
+}
 
 # ============================================================================
 # Legacy FloppyDevice Format Modules

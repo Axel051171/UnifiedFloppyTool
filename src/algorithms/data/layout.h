@@ -142,8 +142,16 @@ public:
      * maximum track and side settings. */
     struct LayoutBounds
     {
+#if __cplusplus >= 202002L
         std::strong_ordering operator<=>(
             const LayoutBounds& other) const = default;
+#else
+        bool operator==(const LayoutBounds& o) const {
+            return minCylinder == o.minCylinder && maxCylinder == o.maxCylinder
+                && minHead == o.minHead && maxHead == o.maxHead;
+        }
+        bool operator!=(const LayoutBounds& o) const { return !(*this == o); }
+#endif
 
         int minCylinder, maxCylinder, minHead, maxHead;
     };

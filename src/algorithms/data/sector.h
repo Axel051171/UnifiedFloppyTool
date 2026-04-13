@@ -46,10 +46,19 @@ struct Sector : public LogicalLocation
             logicalCylinder, logicalHead, logicalSector, status);
     }
 
+#if __cplusplus >= 202002L
     std::strong_ordering operator<=>(const Sector& rhs) const
     {
         return key() <=> rhs.key();
     }
+#else
+    bool operator<(const Sector& rhs) const { return key() < rhs.key(); }
+    bool operator==(const Sector& rhs) const { return key() == rhs.key(); }
+    bool operator!=(const Sector& rhs) const { return !(*this == rhs); }
+    bool operator>(const Sector& rhs) const { return rhs < *this; }
+    bool operator<=(const Sector& rhs) const { return !(rhs < *this); }
+    bool operator>=(const Sector& rhs) const { return !(*this < rhs); }
+#endif
 };
 
 template <>
