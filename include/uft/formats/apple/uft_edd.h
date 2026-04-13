@@ -65,6 +65,7 @@ typedef enum {
     UFT_EDD_ERR_INVALID     = -5,
     UFT_EDD_ERR_MEMORY      = -6,
     UFT_EDD_ERR_TRACK       = -7,
+    UFT_EDD_ERR_TRUNCATED   = -8,
 } uft_edd_error_t;
 
 /* ============================================================================
