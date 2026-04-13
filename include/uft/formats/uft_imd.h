@@ -38,6 +38,19 @@ extern "C" {
 #define UFT_IMD_MAX_TRACK_SIZE  32768
 
 /*============================================================================
+ * IMD Head Flags
+ *============================================================================*/
+
+/** Head value mask (actual head number) */
+#define UFT_IMD_HEAD_MASK       0x01
+
+/** Sector Cylinder Map present flag */
+#define UFT_IMD_HEAD_CYLMAP     0x80
+
+/** Sector Head Map present flag */
+#define UFT_IMD_HEAD_HEADMAP    0x40
+
+/*============================================================================
  * IMD Mode Values (Data Rate / Density)
  *============================================================================*/
 
