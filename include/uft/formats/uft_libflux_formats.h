@@ -249,7 +249,7 @@ typedef struct {
 #pragma pack(pop)
 
 /** IMD modes -- guarded to avoid conflict with uft_imd_mode_t enum */
-#ifndef UFT_IMD_MODE_T_DEFINED
+#ifndef UFT_IMD_MODE_DEFINED
 #define UFT_IMD_MODE_500K_FM    0
 #define UFT_IMD_MODE_300K_FM    1
 #define UFT_IMD_MODE_250K_FM    2

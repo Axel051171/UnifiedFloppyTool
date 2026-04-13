@@ -69,15 +69,20 @@ extern "C" {
  *   4 = 300 kbps (??? - rare)
  *   5 = 250 kbps (??? - rare)
  */
+/* IMD mode enum — canonical definition in formats/uft_imd.h */
+#ifndef UFT_IMD_MODE_DEFINED
+#define UFT_IMD_MODE_DEFINED
 typedef enum {
     UFT_IMD_MODE_500K_FM    = 0,    /**< 500 kbps FM encoding */
-    UFT_IMD_MODE_500K_MFM   = 1,    /**< 500 kbps MFM encoding */
-    UFT_IMD_MODE_300K_FM    = 2,    /**< 300 kbps FM encoding */
-    UFT_IMD_MODE_300K_MFM   = 3,    /**< 300 kbps MFM encoding */
-    UFT_IMD_MODE_250K_FM    = 4,    /**< 250 kbps FM encoding */
+    UFT_IMD_MODE_300K_FM    = 1,    /**< 300 kbps FM encoding */
+    UFT_IMD_MODE_250K_FM    = 2,    /**< 250 kbps FM encoding */
+    UFT_IMD_MODE_500K_MFM   = 3,    /**< 500 kbps MFM encoding */
+    UFT_IMD_MODE_300K_MFM   = 4,    /**< 300 kbps MFM encoding */
     UFT_IMD_MODE_250K_MFM   = 5,    /**< 250 kbps MFM encoding */
+    UFT_IMD_MODE_MAX        = 5,
     UFT_IMD_MODE_INVALID    = 0xFF  /**< Invalid/unknown mode */
 } uft_imd_mode_t;
+#endif
 
 /* ═══════════════════════════════════════════════════════════════════════════
  * IMD Sector Status Flags

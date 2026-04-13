@@ -47,6 +47,8 @@ extern "C" {
  * - Modes 0-2: FM (Single Density)
  * - Modes 3-5: MFM (Double Density)
  */
+#ifndef UFT_IMD_MODE_DEFINED
+#define UFT_IMD_MODE_DEFINED
 typedef enum {
     UFT_IMD_MODE_500K_FM  = 0,  /**< 500 kbps FM (250 kbps effective) */
     UFT_IMD_MODE_300K_FM  = 1,  /**< 300 kbps FM (150 kbps effective) */
@@ -56,6 +58,7 @@ typedef enum {
     UFT_IMD_MODE_250K_MFM = 5,  /**< 250 kbps MFM */
     UFT_IMD_MODE_MAX      = 5
 } uft_imd_mode_t;
+#endif
 
 /**
  * @brief Get data rate in kbps from mode
@@ -249,6 +252,8 @@ typedef struct {
 /**
  * @brief IMD image structure
  */
+#ifndef UFT_IMD_IMAGE_T_DEFINED
+#define UFT_IMD_IMAGE_T_DEFINED
 typedef struct {
     uft_imd_header_t header;    /**< Parsed header */
     char*    comment;           /**< Comment text (null-terminated) */
@@ -267,6 +272,7 @@ typedef struct {
     uint32_t bad_sectors;       /**< Bad sector count */
     uint32_t unavail_sectors;   /**< Unavailable sector count */
 } uft_imd_image_t;
+#endif /* UFT_IMD_IMAGE_T_DEFINED */
 
 /*============================================================================
  * Gap Length Table (from IMD source)
