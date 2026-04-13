@@ -95,6 +95,8 @@ struct uft_track {
     /* ═══ Identity ═══ */
     int                 cylinder;               ///< Physical cylinder
     int                 head;                   ///< Head/side
+    uint16_t            track_num;              ///< Linear track index (cyl*heads+head)
+    uint8_t             side;                   ///< Side (alias for head, backward compat)
     int8_t              quarter_offset;         ///< Quarter-track offset (-2 to +2)
     bool                is_half_track;          ///< True for half-track
 
@@ -112,6 +114,7 @@ struct uft_track {
     bool                decoded;                ///< true if sectors decoded
     int                 errors;                 ///< error count
     float               quality_score;          ///< 0.0-1.0 quality
+    uint8_t             quality;                ///< Track quality enum (backward compat)
     bool                complete;               ///< All sectors found
     bool                copy_protected;         ///< Copy protection detected
 

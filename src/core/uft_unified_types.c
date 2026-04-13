@@ -282,9 +282,12 @@ int uft_track_copy(uft_track_t *dest, const uft_track_t *src) {
     
     dest->cylinder = src->cylinder;
     dest->head = src->head;
+    dest->track_num = src->track_num;
+    dest->side = src->side;
     dest->encoding = src->encoding;
     dest->error = src->error;
     dest->quality_score = src->quality_score;
+    dest->quality = src->quality;
     dest->complete = src->complete;
     dest->copy_protected = src->copy_protected;
     dest->rotation_ns = src->rotation_ns;

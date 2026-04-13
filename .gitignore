@@ -41,8 +41,9 @@ desktop.ini
 /tmp/
 *.tmp
 *.log
-core
-core.*
+# Unix core dumps (not src/core/)
+/core
+/core.*
 
 # Packaging
 *.deb
