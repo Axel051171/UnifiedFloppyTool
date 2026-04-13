@@ -7,6 +7,7 @@
  */
 
 #include "uft/uft_image_db.h"
+#include "uft/core/uft_unified_types.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
