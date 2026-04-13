@@ -255,7 +255,7 @@ typedef struct {
  */
 #ifndef UFT_IMD_IMAGE_T_DEFINED
 #define UFT_IMD_IMAGE_T_DEFINED
-typedef struct {
+typedef struct uft_imd_image_t {
     uft_imd_header_t header;    /**< Parsed header */
     char*    comment;           /**< Comment text (null-terminated) */
     size_t   comment_len;       /**< Comment length */
