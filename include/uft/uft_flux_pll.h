@@ -98,6 +98,17 @@ typedef enum {
 } uft_encoding_t;
 #endif /* UFT_ENCODING_DEFINED */
 
+/* Ensure legacy names are available even when uft_types.h defines UFT_ENC_* */
+#ifndef UFT_ENCODING_FM
+#define UFT_ENCODING_FM   UFT_ENC_FM
+#endif
+#ifndef UFT_ENCODING_MFM
+#define UFT_ENCODING_MFM  UFT_ENC_MFM
+#endif
+#ifndef UFT_ENCODING_GCR
+#define UFT_ENCODING_GCR  UFT_ENC_GCR_C64
+#endif
+
 /**
  * @brief Data rate enum
  */

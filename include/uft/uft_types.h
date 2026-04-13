@@ -229,6 +229,15 @@ typedef enum uft_encoding {
     UFT_ENC_GCR_C64 = UFT_ENC_GCR_CBM,
     UFT_ENC_GCR_APPLE = UFT_ENC_GCR_APPLE_525,
 } uft_encoding_t;
+
+/* Legacy name aliases (used in ~180 files) */
+#define UFT_ENCODING_FM      UFT_ENC_FM
+#define UFT_ENCODING_MFM     UFT_ENC_MFM
+#define UFT_ENCODING_GCR     UFT_ENC_GCR_C64
+#define UFT_ENCODING_RAW     0  /* No direct equivalent, treat as unknown */
+#define UFT_ENCODING_AMIGA   UFT_ENC_AMIGA_MFM
+#define UFT_ENCODING_UNKNOWN UFT_ENC_UNKNOWN
+
 #endif /* UFT_ENCODING_DEFINED */
 
 // ============================================================================

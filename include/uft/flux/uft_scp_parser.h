@@ -45,28 +45,8 @@ extern "C" {
 #define UFT_SCP_MAN_ROLAND      0x60
 #define UFT_SCP_MAN_OTHER       0x80
 
-/* CBM disk types */
-#define UFT_SCP_DISK_C64        0x00
-#define UFT_SCP_DISK_AMIGA      0x04
-
-/* Atari disk types */
-#define UFT_SCP_DISK_ATARI_FM_SS    0x00
-#define UFT_SCP_DISK_ATARI_FM_DS    0x01
-#define UFT_SCP_DISK_ATARI_ST_SS    0x04
-#define UFT_SCP_DISK_ATARI_ST_DS    0x05
-
-/* Apple disk types */
-#define UFT_SCP_DISK_APPLE_II       0x00
-#define UFT_SCP_DISK_APPLE_II_PRO   0x01
-#define UFT_SCP_DISK_APPLE_400K     0x04
-#define UFT_SCP_DISK_APPLE_800K     0x05
-#define UFT_SCP_DISK_APPLE_1440K    0x06
-
-/* PC disk types */
-#define UFT_SCP_DISK_PC_360K    0x00
-#define UFT_SCP_DISK_PC_720K    0x01
-#define UFT_SCP_DISK_PC_1200K   0x02
-#define UFT_SCP_DISK_PC_1440K   0x03
+/* SCP disk type constants are defined as enums in uft_scp_format.h
+ * (uft_scp_disk_type_t). Do NOT duplicate as #defines here. */
 
 /*============================================================================
  * Flags

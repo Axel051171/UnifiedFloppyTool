@@ -26,6 +26,8 @@ extern "C" {
 /**
  * @brief Format-Plugin Fähigkeiten
  */
+#ifndef UFT_FORMAT_CAPS_DEFINED
+#define UFT_FORMAT_CAPS_DEFINED
 typedef enum uft_format_caps {
     UFT_FORMAT_CAP_READ         = (1 << 0),  ///< Kann lesen
     UFT_FORMAT_CAP_WRITE        = (1 << 1),  ///< Kann schreiben
@@ -36,6 +38,7 @@ typedef enum uft_format_caps {
     UFT_FORMAT_CAP_MULTI_REV    = (1 << 6),  ///< Multiple Revolutions
     UFT_FORMAT_CAP_STREAMING    = (1 << 7),  ///< Streaming I/O
 } uft_format_caps_t;
+#endif /* UFT_FORMAT_CAPS_DEFINED */
 
 // ============================================================================
 // Internal Disk Structure (für Plugins)
