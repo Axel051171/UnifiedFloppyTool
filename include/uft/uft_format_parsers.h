@@ -346,9 +346,9 @@ typedef enum {
 /** IMD signature "IMD " */
 #define UFT_IMD_SIGNATURE           "IMD "
 
-/** IMD mode values */
-#ifndef UFT_IMD_MODE_T_DEFINED
-#define UFT_IMD_MODE_T_DEFINED
+/** IMD mode values — use canonical guard name */
+#ifndef UFT_IMD_MODE_DEFINED
+#define UFT_IMD_MODE_DEFINED
 /* Undefine macros if a prior header defined these as #define constants */
 #undef UFT_IMD_MODE_500K_FM
 #undef UFT_IMD_MODE_300K_FM
@@ -364,7 +364,7 @@ typedef enum {
     UFT_IMD_MODE_300K_MFM   = 4,
     UFT_IMD_MODE_250K_MFM   = 5
 } uft_imd_mode_t;
-#endif /* UFT_IMD_MODE_T_DEFINED */
+#endif /* UFT_IMD_MODE_DEFINED */
 
 /** IMD sector flags */
 #define UFT_IMD_SECTOR_NORMAL       0x00
