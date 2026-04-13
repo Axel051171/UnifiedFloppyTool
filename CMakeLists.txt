@@ -79,6 +79,9 @@ list(FILTER UFT_SOURCES EXCLUDE REGEX ".*/test_.*")
 # Remove example files (not compiled, but AUTOMOC scans them)
 list(FILTER UFT_SOURCES EXCLUDE REGEX ".*_example\\.cpp$")
 
+# Remove dead code directories
+list(FILTER UFT_SOURCES EXCLUDE REGEX ".*/formats_v2/.*")
+
 # Remove duplicate main.cpp (use src/gui/main.cpp)
 list(FILTER UFT_SOURCES EXCLUDE REGEX "src/main\\.cpp$")
 
@@ -114,6 +117,14 @@ else()
         ${UFT_SOURCES} ${UFT_HEADERS} ${UFT_FORMS} ${UFT_RESOURCES}
     )
 endif()
+
+# Skip AUTOUIC/AUTOMOC for C files that include ui_*.h (non-Qt headers)
+# and for files with Q_OBJECT that shouldn't be MOC'd
+foreach(_src ${UFT_SOURCES})
+    if(_src MATCHES "\\.c$")
+        set_source_files_properties(${_src} PROPERTIES SKIP_AUTOUIC ON SKIP_AUTOMOC ON)
+    endif()
+endforeach()
 
 target_include_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_SOURCE_DIR}/include
