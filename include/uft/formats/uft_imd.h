@@ -9,8 +9,8 @@
  * @copyright UFT Project - Based on public domain IMD format specification
  */
 
-#ifndef UFT_IMD_H
-#define UFT_IMD_H
+#ifndef UFT_FORMATS_IMD_H
+#define UFT_FORMATS_IMD_H
 
 #include <stdint.h>
 #include <stddef.h>
@@ -136,13 +136,13 @@ static inline uint8_t uft_imd_bytes_to_ssize(uint16_t bytes) {
  *============================================================================*/
 
 /** Head value mask (actual head number) */
-#define UFT_IMD_HEAD_MASK       0x01
+#define UFT_FORMATS_IMD_HEAD_MASK       0x01
 
 /** Sector Cylinder Map present flag */
-#define UFT_IMD_HEAD_CYLMAP     0x80
+#define UFT_FORMATS_IMD_HEAD_CYLMAP     0x80
 
 /** Sector Head Map present flag */
-#define UFT_IMD_HEAD_HEADMAP    0x40
+#define UFT_FORMATS_IMD_HEAD_HEADMAP    0x40
 
 /*============================================================================
  * IMD Sector Data Record Types
@@ -423,4 +423,4 @@ void uft_imd_print_info(const uft_imd_image_t* img, bool verbose);
 }
 #endif
 
-#endif /* UFT_IMD_H */
+#endif /* UFT_FORMATS_IMD_H */
