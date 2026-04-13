@@ -35,6 +35,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTORCC ON)
+set(CMAKE_AUTOUIC_SEARCH_PATHS "${CMAKE_SOURCE_DIR}/forms")
 
 # ============================================================================
 # Dependencies
@@ -74,6 +75,9 @@ set(UFT_RESOURCES resources/resources.qrc)
 # Remove test files from main build
 list(FILTER UFT_SOURCES EXCLUDE REGEX ".*/tests?/.*")
 list(FILTER UFT_SOURCES EXCLUDE REGEX ".*/test_.*")
+
+# Remove example files (not compiled, but AUTOMOC scans them)
+list(FILTER UFT_SOURCES EXCLUDE REGEX ".*_example\\.cpp$")
 
 # Remove duplicate main.cpp (use src/gui/main.cpp)
 list(FILTER UFT_SOURCES EXCLUDE REGEX "src/main\\.cpp$")

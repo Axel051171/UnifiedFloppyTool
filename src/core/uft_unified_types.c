@@ -161,7 +161,7 @@ void uft_sector_free(uft_sector_t *sector) {
     if (!sector) return;
     
     free(sector->data);
-    free(sector->confidence);
+    free(sector->confidence_map);
     free(sector->weak_mask);
     free(sector->timing_ns);
     free(sector);
@@ -173,7 +173,7 @@ int uft_sector_copy(uft_sector_t *dest, const uft_sector_t *src) {
     dest->id = src->id;
     dest->crc_stored = src->crc_stored;
     dest->crc_calculated = src->crc_calculated;
-    dest->crc_valid = src->crc_valid;
+    dest->crc_ok = src->crc_ok;
     dest->error = src->error;
     dest->retry_count = src->retry_count;
     dest->bit_offset = src->bit_offset;
@@ -187,13 +187,14 @@ int uft_sector_copy(uft_sector_t *dest, const uft_sector_t *src) {
         dest->data_len = src->data_len;
     }
     
-    /* Copy confidence */
-    if (src->confidence && src->data_len > 0) {
-        dest->confidence = malloc(src->data_len);
-        if (dest->confidence) {
-            memcpy(dest->confidence, src->confidence, src->data_len);
+    /* Copy confidence map */
+    if (src->confidence_map && src->data_len > 0) {
+        dest->confidence_map = malloc(src->data_len);
+        if (dest->confidence_map) {
+            memcpy(dest->confidence_map, src->confidence_map, src->data_len);
         }
     }
+    dest->confidence = src->confidence;
     
     /* Copy weak mask */
     if (src->weak_mask && src->data_len > 0) {
@@ -255,7 +256,7 @@ void uft_track_free(uft_track_t *track) {
     if (track->owns_data) {
         for (size_t i = 0; i < track->sector_count; i++) {
             free(track->sectors[i].data);
-            free(track->sectors[i].confidence);
+            free(track->sectors[i].confidence_map);
             free(track->sectors[i].weak_mask);
             free(track->sectors[i].timing_ns);
         }
@@ -279,13 +280,13 @@ void uft_track_free(uft_track_t *track) {
 int uft_track_copy(uft_track_t *dest, const uft_track_t *src) {
     if (!dest || !src) return -1;
     
-    dest->track_num = src->track_num;
+    dest->cylinder = src->cylinder;
     dest->head = src->head;
     dest->encoding = src->encoding;
     dest->error = src->error;
-    dest->quality = src->quality;
+    dest->quality_score = src->quality_score;
     dest->complete = src->complete;
-    dest->protected = src->protected;
+    dest->copy_protected = src->copy_protected;
     dest->rotation_ns = src->rotation_ns;
     dest->data_rate = src->data_rate;
     dest->owns_data = true;
