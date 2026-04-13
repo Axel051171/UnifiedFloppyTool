@@ -12,6 +12,12 @@
 #ifndef UFT_IMD_H
 #define UFT_IMD_H
 
+/* Delegate to canonical IMD header */
+#include "uft/formats/uft_imd.h"
+
+/* Legacy compatibility — this header just re-exports formats/uft_imd.h.
+ * New code should include formats/uft_imd.h directly. */
+
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
