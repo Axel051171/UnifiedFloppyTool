@@ -94,70 +94,105 @@ typedef int uft_error_t;
 /* Prevent uft_error_compat.h from redefining enum values as macros */
 #define UFT_HAS_UNIFIED_ERROR_ENUM 1
 
-/* Error code aliases for compatibility -- only when unified enum was used */
+/* Error code aliases — use numeric values to avoid include-order issues */
 #ifndef UFT_ERR_INVALID_ARG
-#define UFT_ERR_INVALID_ARG    UFT_ERR_INVALID_PARAM
+#define UFT_ERR_INVALID_ARG    0x82  /* UFT_ERR_INVALID_PARAM */
 #endif
 #ifndef UFT_ERC_FORMAT
-#define UFT_ERC_FORMAT         UFT_ERR_CORRUPT
+#define UFT_ERC_FORMAT         0x62  /* UFT_ERR_CORRUPT */
 #endif
 #ifndef UFT_ERR_FILE_OPEN
-#define UFT_ERR_FILE_OPEN      UFT_ERR_IO
+#define UFT_ERR_FILE_OPEN      0x80  /* UFT_ERR_IO */
 #endif
 #ifndef UFT_ERR_FILE_READ
-#define UFT_ERR_FILE_READ      UFT_ERR_IO
+#define UFT_ERR_FILE_READ      0x80  /* UFT_ERR_IO */
 #endif
 #ifndef UFT_ERR_FILE_WRITE
-#define UFT_ERR_FILE_WRITE     UFT_ERR_IO
+#define UFT_ERR_FILE_WRITE     0x80  /* UFT_ERR_IO */
 #endif
 #ifndef UFT_ERR_INVALID_STATE
-#define UFT_ERR_INVALID_STATE  UFT_ERR_INVALID_PARAM
+#define UFT_ERR_INVALID_STATE  0x82  /* UFT_ERR_INVALID_PARAM */
 #endif
-
-/* Compatibility aliases for uft_config.h legacy error names */
 #ifndef UFT_ERR_OUT_OF_MEMORY
-#define UFT_ERR_OUT_OF_MEMORY  UFT_ERR_MEMORY
+#define UFT_ERR_OUT_OF_MEMORY  0x81  /* UFT_ERR_MEMORY */
 #endif
 #ifndef UFT_ERR_IO_ERROR
-#define UFT_ERR_IO_ERROR       UFT_ERR_IO
+#define UFT_ERR_IO_ERROR       0x80  /* UFT_ERR_IO */
 #endif
 #ifndef UFT_ERR_FORMAT_ERROR
-#define UFT_ERR_FORMAT_ERROR   UFT_ERR_CORRUPT
+#define UFT_ERR_FORMAT_ERROR   0x62  /* UFT_ERR_CORRUPT */
 #endif
 #ifndef UFT_ERR_CRC_ERROR
-#define UFT_ERR_CRC_ERROR      UFT_ERR_CRC
+#define UFT_ERR_CRC_ERROR      0x01  /* UFT_ERR_CRC */
 #endif
+/* Ensure core error names exist even when enum was skipped */
+#ifndef UFT_ERR_NO_DATA
+#define UFT_ERR_NO_DATA        0x03
+#endif
+#ifndef UFT_ERR_UNKNOWN_FORMAT
+#define UFT_ERR_UNKNOWN_FORMAT 0x60
+#endif
+#ifndef UFT_ERR_IO
+#define UFT_ERR_IO             0x80
+#endif
+#ifndef UFT_ERR_CORRUPT
+#define UFT_ERR_CORRUPT        0x62
+#endif
+#ifndef UFT_ERR_CRC
+#define UFT_ERR_CRC            0x01
+#endif
+#ifndef UFT_ERR_INVALID_PARAM
+#define UFT_ERR_INVALID_PARAM  0x82
+#endif
+#ifndef UFT_ERR_MEMORY
+#define UFT_ERR_MEMORY         0x81
+#endif
+#ifndef UFT_ERR_UNSUPPORTED
+#define UFT_ERR_UNSUPPORTED    0x61
+#endif
+#ifndef UFT_ERR_ENCODING
+#define UFT_ERR_ENCODING       0x0B
+#endif
+#ifndef UFT_ERR_INTERNAL
+#define UFT_ERR_INTERNAL       0xFF
+#endif
+/* Compatibility aliases using numeric values (enum may not be visible
+ * due to include guard ordering with UFT_ERROR_ENUM_DEFINED) */
 #ifndef UFT_ERR_NOT_FOUND
-#define UFT_ERR_NOT_FOUND      UFT_ERR_NO_DATA
+#define UFT_ERR_NOT_FOUND        0x03  /* UFT_ERR_NO_DATA */
 #endif
-
-/* Compatibility aliases for uft_integration.h legacy error names */
+#ifndef UFT_ERR_FORMAT_ERROR
+#define UFT_ERR_FORMAT_ERROR     0x62  /* UFT_ERR_CORRUPT */
+#endif
+#ifndef UFT_ERR_CRC_ERROR
+#define UFT_ERR_CRC_ERROR        0x01  /* UFT_ERR_CRC */
+#endif
 #ifndef UFT_ERROR_INVALID_PARAM
-#define UFT_ERROR_INVALID_PARAM  UFT_ERR_INVALID_PARAM
+#define UFT_ERROR_INVALID_PARAM  0x82  /* UFT_ERR_INVALID_PARAM */
 #endif
 #ifndef UFT_ERROR_NO_MEMORY
-#define UFT_ERROR_NO_MEMORY      UFT_ERR_MEMORY
+#define UFT_ERROR_NO_MEMORY      0x81  /* UFT_ERR_MEMORY */
 #endif
 #ifndef UFT_ERROR_NOT_SUPPORTED
-#define UFT_ERROR_NOT_SUPPORTED  UFT_ERR_UNSUPPORTED
+#define UFT_ERROR_NOT_SUPPORTED  0x61  /* UFT_ERR_UNSUPPORTED */
 #endif
 #ifndef UFT_ERROR_NOT_FOUND
-#define UFT_ERROR_NOT_FOUND      UFT_ERR_NO_DATA
+#define UFT_ERROR_NOT_FOUND      0x03  /* UFT_ERR_NO_DATA */
 #endif
 #ifndef UFT_ERROR_IO
-#define UFT_ERROR_IO             UFT_ERR_IO
+#define UFT_ERROR_IO             0x80  /* UFT_ERR_IO */
 #endif
 #ifndef UFT_ERROR_FORMAT
-#define UFT_ERROR_FORMAT         UFT_ERR_CORRUPT
+#define UFT_ERROR_FORMAT         0x62  /* UFT_ERR_CORRUPT */
 #endif
 #ifndef UFT_ERROR_CRC
-#define UFT_ERROR_CRC            UFT_ERR_CRC
+#define UFT_ERROR_CRC            0x01  /* UFT_ERR_CRC */
 #endif
 #ifndef UFT_ERROR_DECODE
-#define UFT_ERROR_DECODE         UFT_ERR_ENCODING
+#define UFT_ERROR_DECODE         0x0B  /* UFT_ERR_ENCODING */
 #endif
 #ifndef UFT_ERROR_INTERNAL
-#define UFT_ERROR_INTERNAL       UFT_ERR_INTERNAL
+#define UFT_ERROR_INTERNAL       0xFF  /* UFT_ERR_INTERNAL */
 #endif
 #ifndef UFT_ERROR_INVALID_FORMAT
 #define UFT_ERROR_INVALID_FORMAT 0x60  /* UFT_ERR_UNKNOWN_FORMAT */
