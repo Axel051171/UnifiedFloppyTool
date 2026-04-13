@@ -160,10 +160,10 @@ typedef int uft_error_t;
 #define UFT_ERROR_INTERNAL       UFT_ERR_INTERNAL
 #endif
 #ifndef UFT_ERROR_INVALID_FORMAT
-#define UFT_ERROR_INVALID_FORMAT UFT_ERR_UNKNOWN_FORMAT
+#define UFT_ERROR_INVALID_FORMAT 0x60  /* UFT_ERR_UNKNOWN_FORMAT */
 #endif
 #ifndef UFT_ERROR_NO_DATA
-#define UFT_ERROR_NO_DATA        UFT_ERR_NO_DATA
+#define UFT_ERROR_NO_DATA        0x03  /* UFT_ERR_NO_DATA */
 #endif
 
 /**
