@@ -1,6 +1,6 @@
 # Changelog
 
-## [4.2.0] - 2026-04-10
+## [Unreleased] (planned 4.2.0)
 
 ### Added
 - DeepRead forensic modules: write-splice, aging, cross-track, fingerprint, soft-decode
