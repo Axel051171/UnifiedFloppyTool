@@ -1,7 +1,41 @@
 /**
  * @file uft_crc_unified.c
  * @brief Unified CRC Implementation (P2-ARCH-002)
- * 
+ *
+ * CANONICAL CRC API for UnifiedFloppyTool.
+ *
+ * This is the single authoritative CRC implementation. All new code should use
+ * the uft_crc_*() functions declared in <uft/core/uft_crc_unified.h>.
+ *
+ * Canonical CRC source files (production):
+ *   src/core/uft_crc_unified.c   -- this file: unified API (all CRC types)
+ *   src/crc/uft_crc_extended.c   -- extended table-driven variants
+ *   src/crc/uft_crc32_tables.c   -- pre-computed CRC-32 lookup tables
+ *   src/crc/uft_crc_bfs.c        -- brute-force CRC search (forensics)
+ *   src/crc/uft_crc_reveng.c     -- CRC reverse-engineering utilities
+ *   src/crc/uft_crc_polys.h      -- polynomial definitions
+ *
+ * Third-party CRC code (DO NOT MODIFY -- upstream libraries):
+ *   src/flux/fdc_bitstream/fdc_crc.cpp   -- fdc_bitstream library (Yasunori Shimura)
+ *   src/fluxengine/lib/core/crc.cc       -- FluxEngine library
+ *   src/formats/amiga_ext/crc.c          -- SAMdisk / Amiga-specific CRC
+ *
+ * Legacy / inactive CRC files (NOT in .pro SOURCES -- dead code):
+ *   src/core/uft_crc16_ccitt.c           -- superseded by this file
+ *   src/core/uft_crc_cache.c             -- CRC caching layer (unused)
+ *   src/core/uft_crc_v2.c               -- older CRC version
+ *   src/core/uft_crc_v9.c               -- older CRC version
+ *   src/core_recovery/uft_crc.c          -- recovery-specific (unused)
+ *   src/decoder/uft_crc.c               -- decoder-specific (unused)
+ *   src/tracks/crc.c                     -- SAMdisk-derived (unused)
+ *   src/algorithms/core/crc.cc           -- SAMdisk-derived (unused)
+ *   src/algorithms/crc/uft_crc_aligned.c -- SIMD-aligned variant (unused)
+ *   src/algorithms/tracks/std_crc32.c    -- standalone CRC-32 (unused)
+ *   src/whdload/whd_crc16.c             -- WHDLoad-specific (unused)
+ *
+ * Active non-duplicate (CRC correction, not CRC computation):
+ *   src/algorithms/god_mode/uft_crc_correction_v2.c -- bit-error correction
+ *
  * @version 1.0.0
  * @date 2026-01-05
  */

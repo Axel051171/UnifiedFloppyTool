@@ -241,7 +241,10 @@ HEADERS += \
     src/gui/uft_sector_editor.h \
     include/uft/flux/uft_scp_parser.h
 
-# FDC Bitstream Sources (VFO/PLL implementations)
+# FDC Bitstream Sources (third-party library by Yasunori Shimura)
+# VFO/PLL: The vfo_* files are EXPERIMENTAL VFO implementations from this library.
+# Production PLL is in src/decoder/uft_pll_v2.c (with SIMD dispatch) and
+# src/flux/pll/uft_pll_pi.c (PI controller variant) -- neither is in this block.
 SOURCES += \
     src/flux/fdc_bitstream/bit_array.cpp \
     src/flux/fdc_bitstream/fdc_bitstream.cpp \
@@ -1017,7 +1020,6 @@ SOURCES += \
     src/formats/a2r/uft_a2r_parser_v3.c \
     src/formats/a52/uft_a52_parser_v3.c \
     src/formats/a78/uft_a78_parser_v3.c \
-    src/formats/aac/uft_aac_parser_v3.c \
     src/formats/ace/uft_ace_parser_v3.c \
     src/formats/adf_arc/uft_adf_arc_parser_v3.c \
     src/formats/adl/uft_adl_parser_v3.c \
@@ -1032,17 +1034,13 @@ SOURCES += \
     src/formats/ast/uft_ast_parser_v3.c \
     src/formats/atr/uft_atr_parser_v3.c \
     src/formats/atx/uft_atx_parser_v3.c \
-    src/formats/avi/uft_avi_parser_v3.c \
-    src/formats/avif/uft_avif_parser_v3.c \
     src/formats/axex/uft_axex_parser_v3.c \
     src/formats/ay/uft_ay_parser_v3.c \
     src/formats/bal/uft_bal_parser_v3.c \
     src/formats/bin/uft_bin_parser_v3.c \
     src/formats/bkm/uft_bkm_parser_v3.c \
-    src/formats/bmp/uft_bmp_parser_v3.c \
     src/formats/bps/uft_bps_parser_v3.c \
     src/formats/bst/uft_bst_parser_v3.c \
-    src/formats/bsx/uft_bsx_parser_v3.c \
     src/formats/bz2/uft_bz2_parser_v3.c \
     src/formats/c128/uft_c128_parser_v3.c \
     src/formats/c16/uft_c16_parser_v3.c \
@@ -1154,18 +1152,14 @@ SOURCES += \
     src/formats/edk/uft_edk_parser_v3.c \
     src/formats/edsk/uft_edsk_parser_v3.c \
     src/formats/elf/uft_elf_parser_v3.c \
-    src/formats/epub/uft_epub_parser_v3.c \
     src/formats/eve/uft_eve_parser_v3.c \
-    src/formats/exr/uft_exr_parser_v3.c \
     src/formats/fcm/uft_fcm_parser_v3.c \
     src/formats/fdd/uft_fdd_parser_v3.c \
     src/formats/fdi/uft_fdi_parser_v3.c \
     src/formats/fds/uft_fds_parser_v3.c \
     src/formats/fdx/uft_fdx_parser_v3.c \
-    src/formats/flac/uft_flac_parser_v3.c \
     src/formats/fld/uft_fld_parser_v3.c \
     src/formats/flp/uft_flp_parser_v3.c \
-    src/formats/flv/uft_flv_parser_v3.c \
     src/formats/fm2/uft_fm2_parser_v3.c \
     src/formats/fmenc/uft_fm_parser_v3.c \
     src/formats/g71/uft_g71_parser_v3.c \
@@ -1177,7 +1171,6 @@ SOURCES += \
     src/formats/gcr/uft_gcr_parser_v3.c \
     src/formats/gdi/uft_gdi_parser_v3.c \
     src/formats/gen/uft_gen_parser_v3.c \
-    src/formats/gif/uft_gif_parser_v3.c \
     src/formats/giz/uft_giz_parser_v3.c \
     src/formats/gmv/uft_gmv_parser_v3.c \
     src/formats/god/uft_god_parser_v3.c \
@@ -1188,7 +1181,6 @@ SOURCES += \
     src/formats/gz/uft_gz_parser_v3.c \
     src/formats/hdf/uft_hdf_parser_v3.c \
     src/formats/hdm/uft_hdm_parser_v3.c \
-    src/formats/heif/uft_heif_parser_v3.c \
     src/formats/hes/uft_hes_parser_v3.c \
     src/formats/hfe/uft_hfe_parser_v3.c \
     src/formats/htmlx/uft_htmlx_parser_v3.c \
@@ -1202,12 +1194,10 @@ SOURCES += \
     src/formats/iso/uft_iso_parser_v3.c \
     src/formats/it/uft_it_parser_v3.c \
     src/formats/jag/uft_jag_parser_v3.c \
-    src/formats/jpeg/uft_jpeg_parser_v3.c \
     src/formats/json/uft_json_parser_v3.c \
     src/formats/jv1/uft_jv1_parser_v3.c \
     src/formats/jv3/uft_jv3_parser_v3.c \
     src/formats/jvc/uft_jvc_parser_v3.c \
-    src/formats/jxl/uft_jxl_parser_v3.c \
     src/formats/kcs/uft_kcs_parser_v3.c \
     src/formats/kfx/uft_kfx_parser_v3.c \
     src/formats/kfx/uft_kfstream_air.c \
@@ -1217,7 +1207,6 @@ SOURCES += \
     src/formats/lda/uft_lda_parser_v3.c \
     src/formats/lnx/uft_lnx_parser_v3.c \
     src/formats/ltm/uft_ltm_parser_v3.c \
-    src/formats/lua/uft_lua_parser_v3.c \
     src/formats/lz4/uft_lz4_parser_v3.c \
     src/formats/lzh/uft_lzh_parser_v3.c \
     src/formats/m3u/uft_m3u_parser_v3.c \
@@ -1235,10 +1224,7 @@ SOURCES += \
     src/formats/mgt/uft_mgt_parser_v3.c \
     src/formats/mid/uft_mid_parser_v3.c \
     src/formats/midi/uft_midi_parser_v3.c \
-    src/formats/mkv/uft_mkv_parser_v3.c \
     src/formats/mod/uft_mod_parser_v3.c \
-    src/formats/mp3/uft_mp3_parser_v3.c \
-    src/formats/mp4/uft_mp4_parser_v3.c \
     src/formats/msa/uft_msa_parser_v3.c \
     src/formats/n3ds/uft_n3ds_parser_v3.c \
     src/formats/n64/uft_n64_parser_v3.c \
@@ -1257,9 +1243,7 @@ SOURCES += \
     src/formats/nuo/uft_nuo_parser_v3.c \
     src/formats/o2/uft_o2_parser_v3.c \
     src/formats/ode/uft_ode_parser_v3.c \
-    src/formats/ogg/uft_ogg_parser_v3.c \
     src/formats/opd/uft_opd_parser_v3.c \
-    src/formats/otf/uft_otf_parser_v3.c \
     src/formats/p00/uft_p00_parser_v3.c \
     src/formats/p4/uft_p4_parser_v3.c \
     src/formats/p64/uft_p64_parser_v3.c \
@@ -1267,15 +1251,12 @@ SOURCES += \
     src/formats/pc99/uft_pc99_parser_v3.c \
     src/formats/pce/uft_pce_parser_v3.c \
     src/formats/pcx/uft_pcx_parser_v3.c \
-    src/formats/pdf/uft_pdf_parser_v3.c \
-    src/formats/pdfx/uft_pdfx_parser_v3.c \
     src/formats/pdi/uft_pdi_parser_v3.c \
     src/formats/pdp/uft_pdp_parser_v3.c \
     src/formats/pet/uft_pet_parser_v3.c \
     src/formats/pip/uft_pip_parser_v3.c \
     src/formats/pkm/uft_pkm_parser_v3.c \
     src/formats/pls/uft_pls_parser_v3.c \
-    src/formats/png/uft_png_parser_v3.c \
     src/formats/po/uft_po_parser_v3.c \
     src/formats/ppg/uft_ppg_parser_v3.c \
     src/formats/prg/uft_prg_parser_v3.c \
@@ -1284,7 +1265,6 @@ SOURCES += \
     src/formats/ps2/uft_ps2_parser_v3.c \
     src/formats/ps3/uft_ps3_parser_v3.c \
     src/formats/ps4/uft_ps4_parser_v3.c \
-    src/formats/psd/uft_psd_parser_v3.c \
     src/formats/psf/uft_psf_parser_v3.c \
     src/formats/psio/uft_psio_parser_v3.c \
     src/formats/psp/uft_psp_parser_v3.c \
@@ -1295,7 +1275,6 @@ SOURCES += \
     src/formats/rar/uft_rar_parser_v3.c \
     src/formats/rawflux/uft_raw_parser_v3.c \
     src/formats/rca/uft_rca_parser_v3.c \
-    src/formats/rvz/uft_rvz_parser_v3.c \
     src/formats/rx/uft_rx_parser_v3.c \
     src/formats/s3m/uft_s3m_parser_v3.c \
     src/formats/sad/uft_sad_parser_v3.c \
@@ -1315,7 +1294,6 @@ SOURCES += \
     src/formats/soc/uft_soc_parser_v3.c \
     src/formats/sol/uft_sol_parser_v3.c \
     src/formats/spc/uft_spc_parser_v3.c \
-    src/formats/sqlite/uft_sqlite_parser_v3.c \
     src/formats/sram/uft_sram_parser_v3.c \
     src/formats/srm/uft_srm_parser_v3.c \
     src/formats/ssd/uft_ssd_parser_v3.c \
@@ -1324,8 +1302,6 @@ SOURCES += \
     src/formats/st/uft_st_parser_v3.c \
     src/formats/sva/uft_sva_parser_v3.c \
     src/formats/svd/uft_svd_parser_v3.c \
-    src/formats/svg/uft_svg_parser_v3.c \
-    src/formats/swf/uft_swf_parser_v3.c \
     src/formats/syn/uft_syn_parser_v3.c \
     src/formats/t1k/uft_t1k_parser_v3.c \
     src/formats/t64/uft_t64_parser_v3.c \
@@ -1338,10 +1314,7 @@ SOURCES += \
     src/formats/tga/uft_tga_parser_v3.c \
     src/formats/tgc/uft_tgc_parser_v3.c \
     src/formats/tif/uft_tif_parser_v3.c \
-    src/formats/tiff/uft_tiff_parser_v3.c \
-    src/formats/toml/uft_toml_parser_v3.c \
     src/formats/trd/uft_trd_parser_v3.c \
-    src/formats/ttf/uft_ttf_parser_v3.c \
     src/formats/tzx/uft_tzx_parser_v3.c \
     src/formats/udi/uft_udi_parser_v3.c \
     src/formats/uef/uft_uef_parser_v3.c \
@@ -1358,11 +1331,7 @@ SOURCES += \
     src/formats/vhd/uft_vhd_parser_v3.c \
     src/formats/vmdk/uft_vmdk_parser_v3.c \
     src/formats/wav/uft_wav_parser_v3.c \
-    src/formats/webp/uft_webp_parser_v3.c \
-    src/formats/wia/uft_wia_parser_v3.c \
     src/formats/wii/uft_wii_parser_v3.c \
-    src/formats/woff/uft_woff_parser_v3.c \
-    src/formats/woff2/uft_woff2_parser_v3.c \
     src/formats/woz/uft_woz_parser_v3.c \
     src/formats/wsc/uft_wsc_parser_v3.c \
     src/formats/wsv/uft_wsv_parser_v3.c \
