@@ -439,8 +439,11 @@ uft_error_t uft_writer_write_track(uft_writer_backend_t *b,
             break;
             
         case UFT_BACKEND_HARDWARE:
-            /* Would dispatch to hardware provider */
-            set_error(b, "Hardware write not implemented");
+            /* Hardware write does NOT go through writer backend.
+             * Dispatch: HardwareManager → HardwareProvider → HAL.
+             * To write physically: use uft_hal_write_track() directly.
+             * This path is intentionally unsupported. */
+            set_error(b, "Hardware write: use uft_hal_write_track() directly");
             err = UFT_ERR_UNSUPPORTED;
             break;
             

@@ -460,29 +460,53 @@ int uft_encode_standard_track(uft_flux_buffer_t *buf,
             size_code++;
         }
         uft_encode_mfm_byte(buf, size_code, &prev_bit);
-        
-        /* ID CRC (placeholder) */
-        uft_encode_mfm_byte(buf, 0x00, &prev_bit);
-        uft_encode_mfm_byte(buf, 0x00, &prev_bit);
-        
+
+        /* ID CRC — CRC-CCITT over 3×A1 + FE + C H R N
+         * Init with 0xCDB4 (CRC of 3× 0xA1 sync bytes with 0xFFFF init) */
+        {
+            uint8_t id_bytes[5] = { 0xFE, (uint8_t)track, (uint8_t)side,
+                                    (uint8_t)(s + 1), (uint8_t)size_code };
+            uint16_t id_crc = 0xCDB4;  /* CRC after 3× A1 */
+            for (int ci = 0; ci < 5; ci++) {
+                id_crc ^= (uint16_t)id_bytes[ci] << 8;
+                for (int cj = 0; cj < 8; cj++)
+                    id_crc = (id_crc & 0x8000) ? (id_crc << 1) ^ 0x1021 : (id_crc << 1);
+            }
+            uft_encode_mfm_byte(buf, (id_crc >> 8) & 0xFF, &prev_bit);
+            uft_encode_mfm_byte(buf, id_crc & 0xFF, &prev_bit);
+        }
+
         /* GAP 2 */
         uft_encode_gap(buf, 22);
-        
+
         /* Data field */
         uft_encode_sync_a1(buf, 3);
         prev_bit = 0;
         uft_encode_mfm_byte(buf, 0xFB, &prev_bit);
-        
+
         /* Sector data */
-        const uint8_t *sector_data = data ? data + s * sector_size : NULL;
+        const uint8_t *sector_data = data ? data + (size_t)s * sector_size : NULL;
         for (size_t b = 0; b < sector_size; b++) {
             uint8_t byte = sector_data ? sector_data[b] : 0xE5;
             uft_encode_mfm_byte(buf, byte, &prev_bit);
         }
-        
-        /* Data CRC */
-        uft_encode_mfm_byte(buf, 0x00, &prev_bit);
-        uft_encode_mfm_byte(buf, 0x00, &prev_bit);
+
+        /* Data CRC — CRC-CCITT over 3×A1 + FB + sector data */
+        {
+            uint16_t data_crc = 0xCDB4;  /* CRC after 3× A1 */
+            uint8_t dam = 0xFB;
+            data_crc ^= (uint16_t)dam << 8;
+            for (int cj = 0; cj < 8; cj++)
+                data_crc = (data_crc & 0x8000) ? (data_crc << 1) ^ 0x1021 : (data_crc << 1);
+            for (size_t b = 0; b < sector_size; b++) {
+                uint8_t byte = sector_data ? sector_data[b] : 0xE5;
+                data_crc ^= (uint16_t)byte << 8;
+                for (int cj = 0; cj < 8; cj++)
+                    data_crc = (data_crc & 0x8000) ? (data_crc << 1) ^ 0x1021 : (data_crc << 1);
+            }
+            uft_encode_mfm_byte(buf, (data_crc >> 8) & 0xFF, &prev_bit);
+            uft_encode_mfm_byte(buf, data_crc & 0xFF, &prev_bit);
+        }
         
         /* GAP 3 */
         uft_encode_gap(buf, 80);

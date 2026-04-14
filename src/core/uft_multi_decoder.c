@@ -404,13 +404,10 @@ int uft_mdec_generate_candidates(uft_mdec_session_t *session,
     if (!session || !bitstream) return UFT_MDEC_ERR_NULL;
     if (bit_count == 0) return UFT_MDEC_ERR_INVALID_PARAM;
     
-    /* This is a placeholder for actual decoder integration */
-    /* The real implementation would:
-     * 1. Run PLL/clock recovery on bitstream
-     * 2. Identify sync marks
-     * 3. Decode sectors with multiple interpretations for weak bits
-     * 4. Generate N candidates per sector
-     */
+    /* NOT IMPLEMENTED: Candidate generation for DeepRead.
+     * Waiting for uft_decode_session (pipeline integration).
+     * Returns 0 → callers fall back to standard single-pass decoding.
+     * This is safe: no false results, no error. */
     
     (void)track;
     (void)head;

@@ -273,13 +273,11 @@ uint32_t uft_crc32_combine(uint32_t crc1, uint32_t crc2, size_t len2)
     
     init_crc32_ieee();
     
-    /* For now, just recalculate if needed */
-    /* A proper implementation would use the matrix method */
-    
-    (void)len2;  /* Suppress unused warning */
-    
-    /* XOR is not correct but serves as placeholder */
-    return crc1 ^ crc2;
+    /* CRC32 combine requires the matrix power method (GF(2) polynomial).
+     * Not implemented — return sentinel value instead of silently wrong result.
+     * Callers should use uft_crc32_ieee() on the full buffer instead. */
+    (void)crc1; (void)crc2; (void)len2;
+    return 0xDEADBEEF;  /* Intentionally invalid — easy to spot in debugging */
 }
 
 int uft_crc32_verify(const uint8_t *data, size_t length, uint32_t expected)
