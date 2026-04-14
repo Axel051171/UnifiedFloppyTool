@@ -170,15 +170,15 @@ static uft_error_t dsk_gen_read_track(uft_disk_t *disk, int cyl, int head,
  * This avoids 50 nearly-identical source files.
  * ============================================================================ */
 
-#define DSK_PLUGIN(INDEX, SUFFIX) \
+#define DSK_PLUGIN(INDEX, SUFFIX, NAME, DESC, EXT) \
     static bool dsk_probe_##SUFFIX(const uint8_t *d, size_t s, size_t fs, int *c) \
         { return dsk_gen_probe_idx(INDEX, d, s, fs, c); } \
     static uft_error_t dsk_open_##SUFFIX(uft_disk_t *disk, const char *path, bool ro) \
         { return dsk_gen_open_idx(INDEX, disk, path, ro); } \
     const uft_format_plugin_t uft_format_plugin_dsk_##SUFFIX = { \
-        .name = dsk_geometries[INDEX].name, \
-        .description = dsk_geometries[INDEX].description, \
-        .extensions = dsk_geometries[INDEX].extensions, \
+        .name = NAME, \
+        .description = DESC, \
+        .extensions = EXT, \
         .format = UFT_FORMAT_DSK, \
         .capabilities = UFT_FORMAT_CAP_READ, \
         .probe = dsk_probe_##SUFFIX, \
@@ -188,20 +188,52 @@ static uft_error_t dsk_gen_read_track(uft_disk_t *disk, int cyl, int head,
     };
 
 /* Generate all 49 DSK variant plugins */
-DSK_PLUGIN(0,  fm7)    DSK_PLUGIN(1,  msx)    DSK_PLUGIN(2,  pcw)
-DSK_PLUGIN(3,  cg)     DSK_PLUGIN(4,  bk)     DSK_PLUGIN(5,  kc)
-DSK_PLUGIN(6,  mtx)    DSK_PLUGIN(7,  nas)    DSK_PLUGIN(8,  sc3)
-DSK_PLUGIN(9,  sv)     DSK_PLUGIN(10, vec)    DSK_PLUGIN(11, nb)
-DSK_PLUGIN(12, smc)    DSK_PLUGIN(13, uni)    DSK_PLUGIN(14, aq)
-DSK_PLUGIN(15, emu)    DSK_PLUGIN(16, eqx)    DSK_PLUGIN(17, krg)
-DSK_PLUGIN(18, px)     DSK_PLUGIN(19, aln)    DSK_PLUGIN(20, m5)
-DSK_PLUGIN(21, lyn)    DSK_PLUGIN(22, tok)    DSK_PLUGIN(23, rld)
-DSK_PLUGIN(24, fp)     DSK_PLUGIN(25, ak)     DSK_PLUGIN(26, ein)
-DSK_PLUGIN(27, agt)    DSK_PLUGIN(28, nec)    DSK_PLUGIN(29, rc)
-DSK_PLUGIN(30, san)    DSK_PLUGIN(31, x820)   DSK_PLUGIN(32, bw)
-DSK_PLUGIN(33, xm)     DSK_PLUGIN(34, vt)     DSK_PLUGIN(35, mz)
-DSK_PLUGIN(36, oli)    DSK_PLUGIN(37, cro)    DSK_PLUGIN(38, wng)
-DSK_PLUGIN(39, hk)     DSK_PLUGIN(40, hp)     DSK_PLUGIN(41, ace)
-DSK_PLUGIN(42, flex)   DSK_PLUGIN(43, ns)     DSK_PLUGIN(44, vic)
-DSK_PLUGIN(45, os9)    DSK_PLUGIN(46, orc)    DSK_PLUGIN(47, dc42v)
-DSK_PLUGIN(48, p3)
+DSK_PLUGIN(0,  fm7,  "DSK_FM7",  "Fujitsu FM-7",        "dsk;d77")
+DSK_PLUGIN(1,  msx,  "DSK_MSX",  "MSX",                 "dsk")
+DSK_PLUGIN(2,  pcw,  "DSK_PCW",  "Amstrad PCW",         "dsk")
+DSK_PLUGIN(3,  cg,   "DSK_CG",   "SHARP MZ (CG)",       "dsk")
+DSK_PLUGIN(4,  bk,   "DSK_BK",   "Elektronika BK-0010", "dsk;bkd")
+DSK_PLUGIN(5,  kc,   "DSK_KC",   "Robotron KC85",       "dsk")
+DSK_PLUGIN(6,  mtx,  "DSK_MTX",  "Memotech MTX",        "dsk")
+DSK_PLUGIN(7,  nas,  "DSK_NAS",  "Nascom",              "dsk")
+DSK_PLUGIN(8,  sc3,  "DSK_SC3",  "SHARP SC-3000",       "dsk;sc")
+DSK_PLUGIN(9,  sv,   "DSK_SV",   "Spectravideo SVI",    "dsk")
+DSK_PLUGIN(10, vec,  "DSK_VEC",  "Vectrex BIOS",        "dsk")
+DSK_PLUGIN(11, nb,   "DSK_NB",   "Bondwell (NB)",       "dsk")
+DSK_PLUGIN(12, smc,  "DSK_SMC",  "SMC-777",             "dsk")
+DSK_PLUGIN(13, uni,  "DSK_UNI",  "Universal DSK",       "dsk")
+DSK_PLUGIN(14, aq,   "DSK_AQ",   "Mattel Aquarius",     "dsk")
+DSK_PLUGIN(15, emu,  "DSK_EMU",  "Emulator Generic",    "dsk;img")
+DSK_PLUGIN(16, eqx,  "DSK_EQX",  "Equinox",             "dsk")
+DSK_PLUGIN(17, krg,  "DSK_KRG",  "Generic DD",          "dsk")
+DSK_PLUGIN(18, px,   "DSK_PX",   "Epson PX-8",          "dsk")
+DSK_PLUGIN(19, aln,  "DSK_ALN",  "Alphatronic PC",      "dsk")
+DSK_PLUGIN(20, m5,   "DSK_M5",   "Sord M5",             "dsk")
+DSK_PLUGIN(21, lyn,  "DSK_LYN",  "Camputers Lynx",      "dsk")
+DSK_PLUGIN(22, tok,  "DSK_TOK",  "Toshiba T100",        "dsk")
+DSK_PLUGIN(23, rld,  "DSK_RLD",  "Roland DSK",          "dsk")
+DSK_PLUGIN(24, fp,   "DSK_FP",   "Epson FP-1100",       "dsk")
+DSK_PLUGIN(25, ak,   "DSK_AK",   "AKI Keyboard",        "dsk")
+DSK_PLUGIN(26, ein,  "DSK_EIN",  "Einstein TC-01",      "dsk")
+DSK_PLUGIN(27, agt,  "DSK_AGT",  "AGT",                 "dsk")
+DSK_PLUGIN(28, nec,  "DSK_NEC",  "NEC PC-6001",         "dsk")
+DSK_PLUGIN(29, rc,   "DSK_RC",   "RC702/Piccoline",     "dsk")
+DSK_PLUGIN(30, san,  "DSK_SAN",  "Sanyo MBC-55x",       "dsk")
+DSK_PLUGIN(31, x820, "DSK_X820", "Xerox 820",           "dsk")
+DSK_PLUGIN(32, bw,   "DSK_BW",   "Bondwell 12/14",      "dsk")
+DSK_PLUGIN(33, xm,   "DSK_XM",   "Sharp X1 (XM)",       "dsk;2d")
+DSK_PLUGIN(34, vt,   "DSK_VT",   "DEC VT180",           "dsk")
+DSK_PLUGIN(35, mz,   "DSK_MZ",   "SHARP MZ-800",        "dsk")
+DSK_PLUGIN(36, oli,  "DSK_OLI",  "Olivetti M20",        "dsk")
+DSK_PLUGIN(37, cro,  "DSK_CRO",  "Cromemco",            "dsk")
+DSK_PLUGIN(38, wng,  "DSK_WNG",  "Wang",                "dsk")
+DSK_PLUGIN(39, hk,   "DSK_HK",   "HK Computer",         "dsk")
+DSK_PLUGIN(40, hp,   "DSK_HP",   "HP LIF",              "dsk")
+DSK_PLUGIN(41, ace,  "DSK_ACE",  "Jupiter Ace",         "dsk;ace")
+DSK_PLUGIN(42, flex, "DSK_FLEX", "Flex OS",             "dsk")
+DSK_PLUGIN(43, ns,   "DSK_NS",   "North Star",          "dsk")
+DSK_PLUGIN(44, vic,  "DSK_VIC",  "Commodore VIC-1540",  "dsk")
+DSK_PLUGIN(45, os9,  "DSK_OS9",  "OS-9",                "dsk")
+DSK_PLUGIN(46, orc,  "DSK_ORC",  "Oric Microdisc",      "dsk;ort")
+DSK_PLUGIN(47, dc42v,"DSK_DC42V","DiskCopy variant",    "dsk")
+DSK_PLUGIN(48, p3,   "DSK_P3",   "Spectrum +3",         "dsk")
