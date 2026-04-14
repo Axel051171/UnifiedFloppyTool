@@ -51,11 +51,14 @@
 #include <QVector>
 #include <QColor>
 #include <QTimer>
+#if __has_include(<QChart>)
 #include <QChart>
 #include <QChartView>
 #include <QScatterSeries>
 #include <QBarSeries>
 #include <QLineSeries>
+#define UFT_HAS_QT_CHARTS 1
+#endif
 
 #include <stdbool.h>
 

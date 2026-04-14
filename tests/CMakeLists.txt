@@ -9,11 +9,11 @@ file(GLOB TEST_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/test_*.c")
 # Exclude tests with missing dependencies (TODO: implement these modules)
 set(EXCLUDED_TESTS
     "test_mega65"           # Needs uft_mega65 module (header is stub-only)
-    "test_mega65_fat32"     # Needs uft_fat32_mbr module (functions not in uft_core)
+    # "test_mega65_fat32"   # Re-enabled: compiles standalone
     "test_libdsk_formats"   # Needs format plugin modules (apridisk, nanowasp, etc.)
-    "test_ti99_formats"     # Needs TIFILES/FIAD modules
-    "test_new_formats"      # Needs image_db, fat_editor, mfm_codec, sos, apd modules
-    "test_fat_extensions"   # Needs uft_fs module (not built in CI)
+    # "test_ti99_formats"   # Re-enabled: TIFILES/FIAD modules exist
+    # "test_new_formats"    # Re-enabled: compiles standalone
+    # "test_fat_extensions"  # Re-enabled: compiles standalone
 )
 
 # Create test executables

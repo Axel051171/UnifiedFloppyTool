@@ -42,13 +42,20 @@ set(CMAKE_AUTOUIC_SEARCH_PATHS "${CMAKE_SOURCE_DIR}/forms")
 # ============================================================================
 
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets)
-find_package(Qt6 OPTIONAL_COMPONENTS SerialPort)
+find_package(Qt6 OPTIONAL_COMPONENTS SerialPort Charts)
 
 if(Qt6SerialPort_FOUND)
     add_compile_definitions(UFT_HAS_SERIALPORT)
     message(STATUS "Qt SerialPort: FOUND")
 else()
     message(STATUS "Qt SerialPort: NOT FOUND (serial features disabled)")
+endif()
+
+if(Qt6Charts_FOUND)
+    add_compile_definitions(UFT_HAS_QT_CHARTS)
+    message(STATUS "Qt Charts: FOUND")
+else()
+    message(STATUS "Qt Charts: NOT FOUND (chart widgets disabled)")
 endif()
 
 # Platform libraries
