@@ -229,16 +229,32 @@ int woz_load_from_memory(const uint8_t *data, size_t size, woz_image_t **image)
             case WOZ_CHUNK_TRKS:
                 /* Read TRK entries */
                 if (img->version == 1) {
-                    /* WOZ 1.0: Fixed 6656-byte tracks */
+                    /* WOZ 1.0: Fixed 6656-byte tracks, inline in TRKS chunk.
+                     * Each track: 6646 bytes bitstream + 2 bytes bytes_used
+                     *             + 2 bytes bit_count + 6 reserved.
+                     * Reference: https://applesaucefdc.com/woz/reference1/ */
                     int num_tracks = (int)(chunk_size / 6656);
                     img->track_data_size = chunk_size;
                     img->track_data = malloc(chunk_size);
                     if (img->track_data) {
                         memcpy(img->track_data, data + pos, chunk_size);
-                        /* Create TRK entries for v1 format */
+                        /* Create synthetic TRK entries so woz_get_track_525()
+                         * can access v1 tracks the same way as v2. We fake
+                         * starting_block relative to block 3 (track_data). */
                         for (int i = 0; i < num_tracks && i < WOZ_MAX_TRACKS; i++) {
-                            /* In v1, track data is inline at known offsets */
-                            /* We'll handle this differently */
+                            size_t entry_off = (size_t)i * 6656;
+                            /* starting_block: offset in 512-byte blocks
+                             * relative to file block 3, but for v1 track_data
+                             * IS the TRKS chunk, so we use a sentinel. */
+                            img->trks[i].starting_block = 3 + (uint16_t)(entry_off / 512);
+                            img->trks[i].block_count = (6656 + 511) / 512;
+                            /* bit_count at offset 6648 within each entry (LE16) */
+                            if (entry_off + 6650 <= chunk_size) {
+                                uint16_t bc = read_u16_le(data + pos + entry_off + 6648);
+                                img->trks[i].bit_count = (bc > 0) ? bc : 6646 * 8;
+                            } else {
+                                img->trks[i].bit_count = 6646 * 8;
+                            }
                         }
                     }
                 } else {
