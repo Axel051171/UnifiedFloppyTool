@@ -1233,7 +1233,7 @@ SOURCES += \
     src/formats/jv3/uft_jv3_parser_v3.c \
     src/formats/jvc/uft_jvc_parser_v3.c \
     src/formats/kcs/uft_kcs_parser_v3.c \
-    src/formats/kfx/uft_kfx_parser_v3.c \
+    src/formats/kfx/uft_kfx.c \
     src/formats/kfx/uft_kfstream_air.c \
     src/formats/kfx/uft_kf_histogram.c \
     src/formats/kon/uft_kon_parser_v3.c \
