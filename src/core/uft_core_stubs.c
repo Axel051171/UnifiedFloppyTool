@@ -240,6 +240,77 @@ void uft_mfm_decode_flux_avx2(const uint32_t *flux, size_t count,
 }
 
 /* ============================================================================
+ * PLL stubs (uft_pll.h — real impl in src/core/uft_pll.c, not in build)
+ * ============================================================================ */
+
+typedef struct {
+    uint32_t cell_ns;
+    uint32_t cell_ns_min;
+    uint32_t cell_ns_max;
+    uint32_t alpha_q16;
+    uint32_t max_run_cells;
+} uft_pll_cfg_stub_t;
+
+uft_pll_cfg_stub_t uft_pll_cfg_default_mfm_dd(void) {
+    uft_pll_cfg_stub_t cfg = { 4000, 3000, 5600, 3277, 4 };
+    return cfg;  /* 4µs cell = 250kbps DD */
+}
+
+uft_pll_cfg_stub_t uft_pll_cfg_default_mfm_hd(void) {
+    uft_pll_cfg_stub_t cfg = { 2000, 1500, 2800, 3277, 4 };
+    return cfg;  /* 2µs cell = 500kbps HD */
+}
+
+size_t uft_flux_to_bits_pll(
+    const uint64_t *timestamps_ns, size_t count,
+    const void *cfg,
+    uint8_t *out_bits, size_t out_bits_capacity_bits,
+    uint32_t *out_final_cell_ns, size_t *out_dropped_transitions)
+{
+    if (!timestamps_ns || count < 2 || !cfg || !out_bits)
+        return 0;
+
+    const uft_pll_cfg_stub_t *c = (const uft_pll_cfg_stub_t *)cfg;
+    uint32_t cell = c->cell_ns;
+    uint32_t alpha = c->alpha_q16;
+    size_t bits = 0;
+    size_t dropped = 0;
+
+    for (size_t i = 1; i < count && bits < out_bits_capacity_bits; i++) {
+        uint64_t delta = timestamps_ns[i] - timestamps_ns[i - 1];
+        if (delta == 0) { dropped++; continue; }
+
+        /* How many cells fit in this interval? */
+        uint32_t n = (uint32_t)((delta + cell / 2) / cell);
+        if (n == 0) n = 1;
+        if (n > c->max_run_cells) { n = c->max_run_cells; dropped++; }
+
+        /* Write n-1 zero bits + 1 one bit */
+        for (uint32_t b = 0; b < n - 1 && bits < out_bits_capacity_bits; b++) {
+            /* zero bit: already 0 from calloc */
+            bits++;
+        }
+        if (bits < out_bits_capacity_bits) {
+            size_t byte_idx = bits / 8;
+            size_t bit_idx = 7 - (bits % 8);
+            out_bits[byte_idx] |= (1u << bit_idx);
+            bits++;
+        }
+
+        /* Adjust cell size (PI loop, Q16 fixed point) */
+        int32_t err = (int32_t)(delta - (uint64_t)n * cell);
+        int32_t adj = (int32_t)((int64_t)err * alpha >> 16);
+        cell = (uint32_t)((int32_t)cell + adj);
+        if (cell < c->cell_ns_min) cell = c->cell_ns_min;
+        if (cell > c->cell_ns_max) cell = c->cell_ns_max;
+    }
+
+    if (out_final_cell_ns) *out_final_cell_ns = cell;
+    if (out_dropped_transitions) *out_dropped_transitions = dropped;
+    return bits;
+}
+
+/* ============================================================================
  * Misc stubs
  * ============================================================================ */
 
