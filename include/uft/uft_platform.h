@@ -61,6 +61,7 @@ extern "C" {
  * Compiler Detection
  * ═══════════════════════════════════════════════════════════════════════════════ */
 
+#ifndef UFT_COMPILER_VERSION
 #if defined(_MSC_VER)
     #define UFT_COMPILER_MSVC 1
     #define UFT_COMPILER_NAME "MSVC"
@@ -78,6 +79,7 @@ extern "C" {
     #define UFT_COMPILER_NAME "Unknown"
     #define UFT_COMPILER_VERSION 0
 #endif
+#endif /* UFT_COMPILER_VERSION */
 
 /* ═══════════════════════════════════════════════════════════════════════════════
  * Architecture Detection
@@ -214,6 +216,7 @@ static inline void uft_write_be32(void *p, uint32_t v) {
  * Alignment & Memory
  * ═══════════════════════════════════════════════════════════════════════════════ */
 
+#ifndef UFT_PACKED
 #ifdef UFT_COMPILER_MSVC
     #define UFT_ALIGNED(n) __declspec(align(n))
     #define UFT_PACKED
@@ -227,6 +230,7 @@ static inline void uft_write_be32(void *p, uint32_t v) {
     #define UFT_PACK_BEGIN
     #define UFT_PACK_END
 #endif
+#endif /* UFT_PACKED */
 
 /* Cache line size (typical) */
 #define UFT_CACHE_LINE_SIZE 64
@@ -238,6 +242,7 @@ static inline void uft_write_be32(void *p, uint32_t v) {
  * Export/Import Macros
  * ═══════════════════════════════════════════════════════════════════════════════ */
 
+#ifndef UFT_API
 #ifdef UFT_PLATFORM_WINDOWS
     #ifdef UFT_BUILDING_DLL
         #define UFT_API __declspec(dllexport)
@@ -253,6 +258,7 @@ static inline void uft_write_be32(void *p, uint32_t v) {
         #define UFT_API
     #endif
 #endif
+#endif /* UFT_API */
 
 /* ═══════════════════════════════════════════════════════════════════════════════
  * Path Handling

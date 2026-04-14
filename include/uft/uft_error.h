@@ -127,12 +127,22 @@ typedef int uft_error_t;
 #define UFT_OK UFT_SUCCESS
 #endif
 
-/* Legacy error code aliases */
+/* Legacy error code aliases (guarded to prevent redefinition warnings) */
+#ifndef UFT_ERROR_NO_MEMORY
 #define UFT_ERROR_NO_MEMORY      UFT_ERR_MEMORY
-#define UFT_ERR_NOMEM            UFT_ERR_MEMORY  /* CI check compatibility */
+#endif
+#ifndef UFT_ERR_NOMEM
+#define UFT_ERR_NOMEM            UFT_ERR_MEMORY
+#endif
+#ifndef UFT_ERROR_NOT_SUPPORTED
 #define UFT_ERROR_NOT_SUPPORTED  UFT_ERR_NOT_SUPPORTED
+#endif
+#ifndef UFT_ERROR_FILE_OPEN
 #define UFT_ERROR_FILE_OPEN      UFT_ERR_IO
+#endif
+#ifndef UFT_ERROR_DISK_PROTECTED
 #define UFT_ERROR_DISK_PROTECTED UFT_ERR_NOT_PERMITTED
+#endif
 #define UFT_ERROR_TRACK_NOT_FOUND UFT_ERR_FORMAT
 #define UFT_ERROR_SECTOR_NOT_FOUND UFT_ERR_FORMAT
 #define UFT_ERROR_CRC_ERROR      UFT_ERR_CRC
@@ -141,7 +151,9 @@ typedef int uft_error_t;
 #define UFT_ERROR_CANCELLED      UFT_ERR_TIMEOUT
 #define UFT_ERROR_FILE_WRITE     UFT_ERR_IO
 #define UFT_ERROR_FILE_READ      UFT_ERR_IO
+#ifndef UFT_ERROR_IO
 #define UFT_ERROR_IO             UFT_ERR_IO
+#endif
 #define UFT_ERROR_TOOL_FAILED    UFT_ERR_INTERNAL
 #define UFT_ERROR               UFT_ERR_INTERNAL
 #define UFT_ERROR_UNKNOWN_ENCODING UFT_ERR_FORMAT
@@ -207,8 +219,12 @@ typedef int uft_error_t;
 #define UFT_ERROR_FORMAT_UNSUPPORTED UFT_ERR_NOT_SUPPORTED
 #define UFT_ERROR_INVALID_ARGUMENT UFT_ERR_INVALID_ARG
 #define UFT_ERROR_OVERFLOW       UFT_ERR_INVALID_ARG
+#ifndef UFT_ERROR_CRC
 #define UFT_ERROR_CRC            UFT_ERR_CRC
+#endif
+#ifndef UFT_ERROR_INTERNAL
 #define UFT_ERROR_INTERNAL       UFT_ERR_INTERNAL
+#endif
 
 /**
  * @brief Extended error context
