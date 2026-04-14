@@ -1088,7 +1088,7 @@ SOURCES += \
     src/formats/d4m/uft_d4m_parser_v3.c \
     src/formats/d67/uft_d67_parser_v3.c \
     src/formats/d71/uft_d71_parser_v3.c \
-    src/formats/d77/uft_d77_parser_v3.c \
+    src/formats/d77/uft_d77.c \
     src/formats/d80/uft_d80_parser_v3.c \
     src/formats/d81/uft_d81_parser_v3.c \
     src/formats/d82/uft_d82_parser_v3.c \
@@ -1096,12 +1096,12 @@ SOURCES += \
     src/formats/dae/uft_dae_parser_v3.c \
     src/formats/dart/uft_dart_parser_v3.c \
     src/formats/dbf/uft_dbf_parser_v3.c \
-    src/formats/dc42/uft_dc42_parser_v3.c \
+    src/formats/dc42/uft_dc42.c \
     src/formats/dcm/uft_dcm_parser_v3.c \
     src/formats/dds/uft_dds_parser_v3.c \
     src/formats/dfi/uft_dfi_parser_v3.c \
     src/formats/dhd/uft_dhd_parser_v3.c \
-    src/formats/dim/uft_dim_parser_v3.c \
+    src/formats/dim/uft_dim.c \
     src/formats/dmg/uft_dmg_parser_v3.c \
     src/formats/dmk/uft_dmk_parser_v3.c \
     src/formats/dms/uft_dms_parser_v3.c \
@@ -1316,7 +1316,7 @@ SOURCES += \
     src/formats/ssd/uft_ssd_parser_v3.c \
     src/formats/ssf/uft_ssf_parser_v3.c \
     src/formats/ssy/uft_ssy_parser_v3.c \
-    src/formats/st/uft_st_parser_v3.c \
+    src/formats/st/uft_st.c \
     src/formats/sva/uft_sva_parser_v3.c \
     src/formats/svd/uft_svd_parser_v3.c \
     src/formats/syn/uft_syn_parser_v3.c \
