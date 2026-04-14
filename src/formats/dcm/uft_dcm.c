@@ -24,7 +24,7 @@ typedef struct {
     uint32_t    total_sectors;
 } dcm_data_t;
 
-bool dcm_probe(const uint8_t *data, size_t size, size_t file_size, int *confidence) {
+static bool uft_dcm_plugin_probe(const uint8_t *data, size_t size, size_t file_size, int *confidence) {
     (void)file_size;
     if (size < 5) return false;
     if (data[0] == DCM_MAGIC || data[0] == DCM_MAGIC_ALT) {
@@ -84,7 +84,7 @@ const uft_format_plugin_t uft_format_plugin_dcm = {
     .name = "DCM", .description = "DiskComm Compressed Atari",
     .extensions = "dcm", .format = UFT_FORMAT_DSK,
     .capabilities = UFT_FORMAT_CAP_READ,
-    .probe = dcm_probe, .open = dcm_open, .close = dcm_close,
+    .probe = uft_dcm_plugin_probe, .open = dcm_open, .close = dcm_close,
     .read_track = dcm_read_track,
 };
 UFT_REGISTER_FORMAT_PLUGIN(dcm)

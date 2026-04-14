@@ -13,7 +13,7 @@
 
 typedef struct { FILE* file; uint16_t ss; uint32_t total; } xfd_data_t;
 
-bool xfd_probe(const uint8_t *d, size_t s, size_t fs, int *c) {
+static bool uft_xfd_plugin_probe(const uint8_t *d, size_t s, size_t fs, int *c) {
     (void)d; (void)s;
     if (fs == 92160 || fs == 184320 || fs == 133120 || fs == 266240) {
         *c = 40; return true;
@@ -71,7 +71,7 @@ const uft_format_plugin_t uft_format_plugin_xfd = {
     .name = "XFD", .description = "Atari 8-bit Raw Disk",
     .extensions = "xfd", .format = UFT_FORMAT_DSK,
     .capabilities = UFT_FORMAT_CAP_READ,
-    .probe = xfd_probe, .open = xfd_open, .close = xfd_close,
+    .probe = uft_xfd_plugin_probe, .open = xfd_open, .close = xfd_close,
     .read_track = xfd_read_track,
 };
 UFT_REGISTER_FORMAT_PLUGIN(xfd)

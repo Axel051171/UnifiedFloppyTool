@@ -38,7 +38,7 @@ static bool ssd_detect(size_t file_size, uint8_t *cyl, uint8_t *heads)
     return false;
 }
 
-bool ssd_probe(const uint8_t *data, size_t size, size_t file_size,
+static bool uft_ssd_plugin_probe(const uint8_t *data, size_t size, size_t file_size,
                int *confidence)
 {
     (void)data; (void)size;
@@ -108,11 +108,11 @@ static uft_error_t ssd_read_track(uft_disk_t *disk, int cyl, int head,
     return UFT_OK;
 }
 
-const uft_format_plugin_t uft_format_plugin_ssd = {
+const uft_format_plugin_t uft_format_plugin_ssd_bbc = {
     .name = "SSD", .description = "BBC Micro SSD/DSD",
     .extensions = "ssd;dsd", .format = UFT_FORMAT_DSK,
     .capabilities = UFT_FORMAT_CAP_READ,
-    .probe = ssd_probe, .open = ssd_open, .close = ssd_close,
+    .probe = uft_ssd_plugin_probe, .open = ssd_open, .close = ssd_close,
     .read_track = ssd_read_track,
 };
-UFT_REGISTER_FORMAT_PLUGIN(ssd)
+UFT_REGISTER_FORMAT_PLUGIN(ssd_bbc)
