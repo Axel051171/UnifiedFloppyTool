@@ -344,24 +344,37 @@ int uft_encode_copylock(uft_flux_buffer_t *buf, const uft_copylock_params_t *par
     uft_encode_mfm_byte(buf, params->side, &prev_bit);
     uft_encode_mfm_byte(buf, params->sector, &prev_bit);
     uft_encode_mfm_byte(buf, 2, &prev_bit);  /* 512 bytes */
-    
-    /* CRC (simplified) */
-    uft_encode_mfm_byte(buf, 0x00, &prev_bit);
-    uft_encode_mfm_byte(buf, 0x00, &prev_bit);
-    
+
+    /* ID CRC — CRC-CCITT 0xCDB4 init over FE + C H R N */
+    {
+        uint8_t id[5] = { 0xFE, params->track, params->side, params->sector, 2 };
+        uint16_t crc = 0xCDB4;
+        for (int i = 0; i < 5; i++) { crc ^= (uint16_t)id[i] << 8;
+            for (int j = 0; j < 8; j++) crc = (crc & 0x8000) ? (crc << 1) ^ 0x1021 : (crc << 1); }
+        uft_encode_mfm_byte(buf, (crc >> 8) & 0xFF, &prev_bit);
+        uft_encode_mfm_byte(buf, crc & 0xFF, &prev_bit);
+    }
+
     /* Gap 2 */
     uft_encode_gap(buf, 22);
-    
+
     /* Data field with weak bits */
     uft_encode_sync_a1(buf, 3);
     prev_bit = 0;
     uft_encode_mfm_byte(buf, 0xFB, &prev_bit);  /* DAM */
-    
+
     uft_encode_weak_sector(buf, lfsr_data, 512, weak_mask);
-    
-    /* CRC */
-    uft_encode_mfm_byte(buf, 0x00, &prev_bit);
-    uft_encode_mfm_byte(buf, 0x00, &prev_bit);
+
+    /* Data CRC — CRC-CCITT 0xCDB4 init over FB + data */
+    {
+        uint16_t crc = 0xCDB4;
+        crc ^= (uint16_t)0xFB << 8;
+        for (int j = 0; j < 8; j++) crc = (crc & 0x8000) ? (crc << 1) ^ 0x1021 : (crc << 1);
+        for (int i = 0; i < 512; i++) { crc ^= (uint16_t)lfsr_data[i] << 8;
+            for (int j = 0; j < 8; j++) crc = (crc & 0x8000) ? (crc << 1) ^ 0x1021 : (crc << 1); }
+        uft_encode_mfm_byte(buf, (crc >> 8) & 0xFF, &prev_bit);
+        uft_encode_mfm_byte(buf, crc & 0xFF, &prev_bit);
+    }
     
     /* Gap 3 */
     uft_encode_gap(buf, 80);
@@ -392,12 +405,19 @@ int uft_encode_speedlock(uft_flux_buffer_t *buf,
         uft_encode_mfm_byte(buf, params->side, &prev_bit);
         uft_encode_mfm_byte(buf, s + 1, &prev_bit);
         uft_encode_mfm_byte(buf, params->size_code, &prev_bit);
-        
-        /* CRC */
-        uft_encode_mfm_byte(buf, 0x00, &prev_bit);
-        uft_encode_mfm_byte(buf, 0x00, &prev_bit);
-        
-        /* Gap 2 - this is the timing-critical part */
+
+        /* ID CRC — CRC-CCITT */
+        {
+            uint8_t id[5] = { 0xFE, params->track, params->side,
+                              (uint8_t)(s + 1), params->size_code };
+            uint16_t crc = 0xCDB4;
+            for (int i = 0; i < 5; i++) { crc ^= (uint16_t)id[i] << 8;
+                for (int j = 0; j < 8; j++) crc = (crc & 0x8000) ? (crc << 1) ^ 0x1021 : (crc << 1); }
+            uft_encode_mfm_byte(buf, (crc >> 8) & 0xFF, &prev_bit);
+            uft_encode_mfm_byte(buf, crc & 0xFF, &prev_bit);
+        }
+
+        /* Gap 2 - timing-critical */
         for (int g = 0; g < params->timing_gaps[s % 16]; g++) {
             double time = MFM_2T_US;
             if (params->timing_variance > 0) {
@@ -405,20 +425,28 @@ int uft_encode_speedlock(uft_flux_buffer_t *buf,
             }
             uft_flux_buffer_add(buf, time);
         }
-        
+
         /* Data */
         uft_encode_sync_a1(buf, 3);
         prev_bit = 0;
         uft_encode_mfm_byte(buf, 0xFB, &prev_bit);
-        
-        /* Sector data */
-        for (int b = 0; b < (128 << params->size_code); b++) {
-            uft_encode_mfm_byte(buf, 0xE5, &prev_bit);  /* Format fill */
+
+        /* Sector data — format fill 0xE5 */
+        int sec_bytes = 128 << params->size_code;
+        for (int b = 0; b < sec_bytes; b++) {
+            uft_encode_mfm_byte(buf, 0xE5, &prev_bit);
         }
-        
-        /* CRC */
-        uft_encode_mfm_byte(buf, 0x00, &prev_bit);
-        uft_encode_mfm_byte(buf, 0x00, &prev_bit);
+
+        /* Data CRC — CRC-CCITT over FB + fill data */
+        {
+            uint16_t crc = 0xCDB4;
+            crc ^= (uint16_t)0xFB << 8;
+            for (int j = 0; j < 8; j++) crc = (crc & 0x8000) ? (crc << 1) ^ 0x1021 : (crc << 1);
+            for (int b = 0; b < sec_bytes; b++) { crc ^= (uint16_t)0xE5 << 8;
+                for (int j = 0; j < 8; j++) crc = (crc & 0x8000) ? (crc << 1) ^ 0x1021 : (crc << 1); }
+            uft_encode_mfm_byte(buf, (crc >> 8) & 0xFF, &prev_bit);
+            uft_encode_mfm_byte(buf, crc & 0xFF, &prev_bit);
+        }
     }
     
     return 0;
