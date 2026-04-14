@@ -4,7 +4,7 @@
 [![Build](https://github.com/Axel051171/UnifiedFloppyTool/actions/workflows/ci.yml/badge.svg)](https://github.com/Axel051171/UnifiedFloppyTool/actions)
 [![License: GPL-2.0](https://img.shields.io/badge/License-GPL%202.0-blue.svg)](LICENSE)
 
-**"Kein Bit verloren"** — Open-source forensic floppy disk preservation tool with 212+ format parsers and 10 hardware controllers.
+**"Kein Bit verloren"** — Open-source forensic floppy disk preservation tool with 212+ format parsers and 11 hardware controllers.
 
 ---
 
@@ -86,6 +86,7 @@ Complete audit and rewrite of all hardware controller protocols against official
 | FC5025 | Yes | No | No | CLI wrapper (read-only HW) |
 | Pauline | Yes | No | Yes | HTTP/SSH (DE10-nano FPGA), not in default build |
 | Catweasel | Yes | No | Yes | Minimal (stub provider) |
+| USB Floppy | Yes | Yes | No | UFI SCSI pass-through (Linux SG_IO + Windows) |
 
 ### Copy Protection Analysis
 

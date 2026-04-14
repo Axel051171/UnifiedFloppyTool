@@ -13,6 +13,7 @@
 #include "xum1541hardwareprovider.h"
 #include "catweaselhardwareprovider.h"
 #include "adfcopyhardwareprovider.h"
+#include "usbfloppyhardwareprovider.h"
 
 /**
  * @brief RAII guard that sets m_operationActive for the duration of a scope.
