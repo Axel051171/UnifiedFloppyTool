@@ -319,7 +319,12 @@ SOURCES += \
     src/hardware_providers/fc5025hardwareprovider.cpp \
     src/hardware_providers/xum1541hardwareprovider.cpp \
     src/hardware_providers/catweaselhardwareprovider.cpp \
-    src/hardware_providers/adfcopyhardwareprovider.cpp
+    src/hardware_providers/adfcopyhardwareprovider.cpp \
+    src/hardware_providers/usbfloppyhardwareprovider.cpp
+
+# USB Floppy UFI Backend (C)
+SOURCES += src/hal/uft_ufi_backend.c \
+           src/hal/ufi.c
 
 # Hardware Provider Headers (CRITICAL for MOC!)
 HEADERS += \
@@ -351,6 +356,7 @@ HEADERS += \
     src/hardware_providers/xum1541hardwareprovider.h \
     src/hardware_providers/catweaselhardwareprovider.h \
     src/hardware_providers/adfcopyhardwareprovider.h \
+    src/hardware_providers/usbfloppyhardwareprovider.h \
     src/hardware_providers/fc5025_usb.h \
     src/hardware_providers/xum1541_usb.h
 

@@ -16,7 +16,7 @@ static uft_rc_t ensure_backend(uft_diag_t *diag)
 {
     if (!g_ops || !g_ops->open || !g_ops->close || !g_ops->exec_cdb) {
         uft_diag_set(diag, "ufi: backend not set (NOT_IMPLEMENTED)");
-        return UFT_ENOT_IMPLEMENTED;
+        return UFT_ERR_NOT_IMPLEMENTED;
     }
     return UFT_OK;
 }
@@ -78,5 +78,5 @@ uft_rc_t uft_ufi_format_floppy(const char *path, uint16_t cyl, uint8_t heads, ui
        We provide a conservative NOT_IMPLEMENTED placeholder to avoid fake success. */
     (void)path; (void)cyl; (void)heads; (void)spt; (void)bps;
     uft_diag_set(diag, "ufi: format_floppy NOT_IMPLEMENTED (device-specific parameter list)");
-    return UFT_ENOT_IMPLEMENTED;
+    return UFT_ERR_NOT_IMPLEMENTED;
 }
