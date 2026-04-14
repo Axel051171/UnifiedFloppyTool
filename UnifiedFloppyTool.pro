@@ -1062,7 +1062,7 @@ SOURCES += \
     src/formats/c128/uft_c128_parser_v3.c \
     src/formats/c16/uft_c16_parser_v3.c \
     src/formats/car/uft_car_parser_v3.c \
-    src/formats/cas/uft_cas_parser_v3.c \
+    src/formats/cas/uft_cas.c \
     src/formats/cd32/uft_cd32_parser_v3.c \
     src/formats/cdi/uft_cdi_parser_v3.c \
     src/formats/cdtv/uft_cdtv_parser_v3.c \
@@ -1173,7 +1173,7 @@ SOURCES += \
     src/formats/fcm/uft_fcm_parser_v3.c \
     src/formats/fdd/uft_fdd_parser_v3.c \
     src/formats/fdi/uft_fdi_parser_v3.c \
-    src/formats/fds/uft_fds_parser_v3.c \
+    src/formats/fds/uft_fds_plugin.c \
     src/formats/fdx/uft_fdx_parser_v3.c \
     src/formats/fld/uft_fld_parser_v3.c \
     src/formats/flp/uft_flp_parser_v3.c \
@@ -1236,7 +1236,7 @@ SOURCES += \
     src/formats/mdv/uft_mdv_parser_v3.c \
     src/formats/mdx/uft_mdx_parser_v3.c \
     src/formats/mes/uft_mes_parser_v3.c \
-    src/formats/mfi/uft_mfi_parser_v3.c \
+    src/formats/mfi/uft_mfi.c \
     src/formats/mfm/uft_mfm_parser_v3.c \
     src/formats/mgt/uft_mgt_parser_v3.c \
     src/formats/mid/uft_mid_parser_v3.c \
