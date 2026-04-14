@@ -399,13 +399,26 @@ int uft_pc86f_decode_track(const uft_pc86f_image_t *image,
         }
         sec->data_size = sec_size;
 
-        /* Read CRC (2 bytes after sector data) */
+        /* Read and verify CRC (2 bytes after sector data) */
         uint8_t crc_bytes[2];
         if (decode_mfm_bytes(track->bitcell_data, bit_count,
                              (size_t)dam_pos + sec_size * 16,
                              crc_bytes, 2) == 2) {
-            /* TODO: verify CRC-CCITT, for now assume OK */
-            sec->crc_ok = true;
+            uint16_t stored_crc = ((uint16_t)crc_bytes[0] << 8) | crc_bytes[1];
+            /* CRC-CCITT: init 0xCDB4 (after 3× A1), over DAM + data */
+            uint16_t calc = 0xCDB4;
+            uint8_t dam_byte = 0xFB;
+            calc ^= (uint16_t)dam_byte << 8;
+            for (int cj = 0; cj < 8; cj++)
+                calc = (calc & 0x8000) ? (calc << 1) ^ 0x1021 : (calc << 1);
+            if (sec->data) {
+                for (uint16_t ci = 0; ci < sec_size; ci++) {
+                    calc ^= (uint16_t)sec->data[ci] << 8;
+                    for (int cj = 0; cj < 8; cj++)
+                        calc = (calc & 0x8000) ? (calc << 1) ^ 0x1021 : (calc << 1);
+                }
+            }
+            sec->crc_ok = (calc == stored_crc);
         }
 
         found++;

@@ -389,8 +389,9 @@ struct uft_tifiles_file;
 
 uft_fiad_error_t uft_fiad_to_tifiles(const uft_fiad_file_t *fiad,
                                       struct uft_tifiles_file *tifiles) {
-    /* Implementation would require including uft_tifiles.h */
-    /* For now, return not implemented */
+    /* FIAD→TIFILES conversion requires uft_tifiles.h which has
+     * struct conflicts with this translation unit.
+     * Use uft_tifiles_from_fiad() in uft_tifiles.c instead. */
     (void)fiad;
     (void)tifiles;
     return UFT_FIAD_ERR_PARAM;

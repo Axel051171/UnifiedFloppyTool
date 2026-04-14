@@ -393,8 +393,10 @@ int uft_g71_to_d71(const uft_disk_image_t *g71, uft_disk_image_t **d71_out) {
         return UFT_ERR_MEMORY;
     }
     
-    /* Convert GCR tracks to sectors - simplified, real implementation needs GCR decoder */
-    /* This is a placeholder - full GCR decode would be needed */
+    /* GCR→sector decode NOT YET IMPLEMENTED.
+     * G71 stores raw GCR bitstreams (correct). Full decode requires:
+     *   GCR 5-to-4 + sector header/data checksum verification.
+     * Use uft_gcr_decode_track() when connecting to decode pipeline. */
     
     *d71_out = d71;
     return UFT_OK;
