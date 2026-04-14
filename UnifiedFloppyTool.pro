@@ -637,7 +637,8 @@ SOURCES += \
     src/analysis/events/otdr_event_core_v2.c \
     src/analysis/denoise/uft_denoise_bridge.c \
     src/analysis/denoise/phi_otdr_denoise_1d.c \
-    src/formats/dsk/uft_dsk_parser_v3.c
+    src/formats/dsk/uft_dsk_parser_v3.c \
+    src/formats/dsk_generic/uft_dsk_generic.c
 
 # STX - Atari ST with protection
 SOURCES += \
@@ -1129,55 +1130,55 @@ SOURCES += \
     src/formats/dnp/uft_dnp_parser_v3.c \
     src/formats/do/uft_do_parser_v3.c \
     # src/formats/dol/uft_dol_parser_v3.c  # non-floppy \
-    src/formats/dsk_ace/uft_dsk_ace_parser_v3.c \
-    src/formats/dsk_agt/uft_dsk_agt_parser_v3.c \
-    src/formats/dsk_ak/uft_dsk_ak_parser_v3.c \
-    src/formats/dsk_alp/uft_dsk_alp_parser_v3.c \
-    src/formats/dsk_aq/uft_dsk_aq_parser_v3.c \
-    src/formats/dsk_bk/uft_dsk_bk_parser_v3.c \
-    src/formats/dsk_bw/uft_dsk_bw_parser_v3.c \
-    src/formats/dsk_cg/uft_dsk_cg_parser_v3.c \
-    src/formats/dsk_cro/uft_dsk_cro_parser_v3.c \
-    src/formats/dsk_dc42/uft_dsk_dc42_parser_v3.c \
-    src/formats/dsk_ein/uft_dsk_ein_parser_v3.c \
-    src/formats/dsk_emu/uft_dsk_emu_parser_v3.c \
-    src/formats/dsk_eqx/uft_dsk_eqx_parser_v3.c \
-    src/formats/dsk_flex/uft_dsk_flex_parser_v3.c \
-    src/formats/dsk_fm7/uft_dsk_fm7_parser_v3.c \
-    src/formats/dsk_fp/uft_dsk_fp_parser_v3.c \
-    src/formats/dsk_hk/uft_dsk_hk_parser_v3.c \
-    src/formats/dsk_hp/uft_dsk_hp_parser_v3.c \
-    src/formats/dsk_kc/uft_dsk_kc_parser_v3.c \
-    src/formats/dsk_krg/uft_dsk_krg_parser_v3.c \
-    src/formats/dsk_lyn/uft_dsk_lyn_parser_v3.c \
-    src/formats/dsk_m5/uft_dsk_m5_parser_v3.c \
-    src/formats/dsk_msx/uft_dsk_msx_parser_v3.c \
-    src/formats/dsk_mtx/uft_dsk_mtx_parser_v3.c \
-    src/formats/dsk_mz/uft_dsk_mz_parser_v3.c \
-    src/formats/dsk_nas/uft_dsk_nas_parser_v3.c \
-    src/formats/dsk_nb/uft_dsk_nb_parser_v3.c \
-    src/formats/dsk_nec/uft_dsk_nec_parser_v3.c \
-    src/formats/dsk_ns/uft_dsk_ns_parser_v3.c \
-    src/formats/dsk_oli/uft_dsk_oli_parser_v3.c \
-    src/formats/dsk_orc/uft_dsk_orc_parser_v3.c \
-    src/formats/dsk_os9/uft_dsk_os9_parser_v3.c \
-    src/formats/dsk_p3/uft_dsk_p3_parser_v3.c \
-    src/formats/dsk_pcw/uft_dsk_pcw_parser_v3.c \
-    src/formats/dsk_px/uft_dsk_px_parser_v3.c \
-    src/formats/dsk_rc/uft_dsk_rc_parser_v3.c \
-    src/formats/dsk_rld/uft_dsk_rld_parser_v3.c \
-    src/formats/dsk_san/uft_dsk_san_parser_v3.c \
-    src/formats/dsk_sc3/uft_dsk_sc3_parser_v3.c \
-    src/formats/dsk_smc/uft_dsk_smc_parser_v3.c \
-    src/formats/dsk_sv/uft_dsk_sv_parser_v3.c \
-    src/formats/dsk_tok/uft_dsk_tok_parser_v3.c \
-    src/formats/dsk_uni/uft_dsk_uni_parser_v3.c \
-    src/formats/dsk_vec/uft_dsk_vec_parser_v3.c \
-    src/formats/dsk_vic/uft_dsk_vic_parser_v3.c \
-    src/formats/dsk_vt/uft_dsk_vt_parser_v3.c \
-    src/formats/dsk_wng/uft_dsk_wng_parser_v3.c \
-    src/formats/dsk_x820/uft_dsk_x820_parser_v3.c \
-    src/formats/dsk_xm/uft_dsk_xm_parser_v3.c \
+    # src/formats/dsk_ace/uft_dsk_ace_parser_v3.c  # → dsk_generic \
+    # src/formats/dsk_agt/uft_dsk_agt_parser_v3.c  # → dsk_generic \
+    # src/formats/dsk_ak/uft_dsk_ak_parser_v3.c  # → dsk_generic \
+    # src/formats/dsk_alp/uft_dsk_alp_parser_v3.c  # → dsk_generic \
+    # src/formats/dsk_aq/uft_dsk_aq_parser_v3.c  # → dsk_generic \
+    # src/formats/dsk_bk/uft_dsk_bk_parser_v3.c  # → dsk_generic \
+    # src/formats/dsk_bw/uft_dsk_bw_parser_v3.c  # → dsk_generic \
+    # src/formats/dsk_cg/uft_dsk_cg_parser_v3.c  # → dsk_generic \
+    # src/formats/dsk_cro/uft_dsk_cro_parser_v3.c  # → dsk_generic \
+    # src/formats/dsk_dc42/uft_dsk_dc42_parser_v3.c  # → dsk_generic \
+    # src/formats/dsk_ein/uft_dsk_ein_parser_v3.c  # → dsk_generic \
+    # src/formats/dsk_emu/uft_dsk_emu_parser_v3.c  # → dsk_generic \
+    # src/formats/dsk_eqx/uft_dsk_eqx_parser_v3.c  # → dsk_generic \
+    # src/formats/dsk_flex/uft_dsk_flex_parser_v3.c  # → dsk_generic \
+    # src/formats/dsk_fm7/uft_dsk_fm7_parser_v3.c  # → dsk_generic \
+    # src/formats/dsk_fp/uft_dsk_fp_parser_v3.c  # → dsk_generic \
+    # src/formats/dsk_hk/uft_dsk_hk_parser_v3.c  # → dsk_generic \
+    # src/formats/dsk_hp/uft_dsk_hp_parser_v3.c  # → dsk_generic \
+    # src/formats/dsk_kc/uft_dsk_kc_parser_v3.c  # → dsk_generic \
+    # src/formats/dsk_krg/uft_dsk_krg_parser_v3.c  # → dsk_generic \
+    # src/formats/dsk_lyn/uft_dsk_lyn_parser_v3.c  # → dsk_generic \
+    # src/formats/dsk_m5/uft_dsk_m5_parser_v3.c  # → dsk_generic \
+    # src/formats/dsk_msx/uft_dsk_msx_parser_v3.c  # → dsk_generic \
+    # src/formats/dsk_mtx/uft_dsk_mtx_parser_v3.c  # → dsk_generic \
+    # src/formats/dsk_mz/uft_dsk_mz_parser_v3.c  # → dsk_generic \
+    # src/formats/dsk_nas/uft_dsk_nas_parser_v3.c  # → dsk_generic \
+    # src/formats/dsk_nb/uft_dsk_nb_parser_v3.c  # → dsk_generic \
+    # src/formats/dsk_nec/uft_dsk_nec_parser_v3.c  # → dsk_generic \
+    # src/formats/dsk_ns/uft_dsk_ns_parser_v3.c  # → dsk_generic \
+    # src/formats/dsk_oli/uft_dsk_oli_parser_v3.c  # → dsk_generic \
+    # src/formats/dsk_orc/uft_dsk_orc_parser_v3.c  # → dsk_generic \
+    # src/formats/dsk_os9/uft_dsk_os9_parser_v3.c  # → dsk_generic \
+    # src/formats/dsk_p3/uft_dsk_p3_parser_v3.c  # → dsk_generic \
+    # src/formats/dsk_pcw/uft_dsk_pcw_parser_v3.c  # → dsk_generic \
+    # src/formats/dsk_px/uft_dsk_px_parser_v3.c  # → dsk_generic \
+    # src/formats/dsk_rc/uft_dsk_rc_parser_v3.c  # → dsk_generic \
+    # src/formats/dsk_rld/uft_dsk_rld_parser_v3.c  # → dsk_generic \
+    # src/formats/dsk_san/uft_dsk_san_parser_v3.c  # → dsk_generic \
+    # src/formats/dsk_sc3/uft_dsk_sc3_parser_v3.c  # → dsk_generic \
+    # src/formats/dsk_smc/uft_dsk_smc_parser_v3.c  # → dsk_generic \
+    # src/formats/dsk_sv/uft_dsk_sv_parser_v3.c  # → dsk_generic \
+    # src/formats/dsk_tok/uft_dsk_tok_parser_v3.c  # → dsk_generic \
+    # src/formats/dsk_uni/uft_dsk_uni_parser_v3.c  # → dsk_generic \
+    # src/formats/dsk_vec/uft_dsk_vec_parser_v3.c  # → dsk_generic \
+    # src/formats/dsk_vic/uft_dsk_vic_parser_v3.c  # → dsk_generic \
+    # src/formats/dsk_vt/uft_dsk_vt_parser_v3.c  # → dsk_generic \
+    # src/formats/dsk_wng/uft_dsk_wng_parser_v3.c  # → dsk_generic \
+    # src/formats/dsk_x820/uft_dsk_x820_parser_v3.c  # → dsk_generic \
+    # src/formats/dsk_xm/uft_dsk_xm_parser_v3.c  # → dsk_generic \
     src/formats/dsv/uft_dsv_parser_v3.c \
     src/formats/dtm/uft_dtm_parser_v3.c \
     # src/formats/ecm/uft_ecm_parser_v3.c  # non-floppy \
