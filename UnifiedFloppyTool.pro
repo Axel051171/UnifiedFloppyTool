@@ -1046,6 +1046,7 @@ SOURCES += \
     src/analysis/events/otdr_event_core_v2.c \
     src/analysis/denoise/uft_denoise_bridge.c \
     src/analysis/denoise/phi_otdr_denoise_1d.c \
+    src/core/uft_decode_pipeline.c \
     src/formats/2img/uft_2img_parser_v3.c \
     src/formats/2sf/uft_2sf_parser_v3.c \
     src/formats/7z/uft_7z_parser_v3.c \
@@ -1183,7 +1184,7 @@ SOURCES += \
     src/formats/ecv/uft_ecv_parser_v3.c \
     src/formats/ede/uft_ede_parser_v3.c \
     src/formats/edk/uft_edk_parser_v3.c \
-    src/formats/edsk/uft_edsk_parser_v3.c \
+    src/formats/amstrad/uft_edsk.c \
     src/formats/elf/uft_elf_parser_v3.c \
     src/formats/eve/uft_eve_parser_v3.c \
     src/formats/fcm/uft_fcm_parser_v3.c \
