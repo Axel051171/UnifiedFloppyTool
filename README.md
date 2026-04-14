@@ -4,7 +4,7 @@
 [![Build](https://github.com/Axel051171/UnifiedFloppyTool/actions/workflows/ci.yml/badge.svg)](https://github.com/Axel051171/UnifiedFloppyTool/actions)
 [![License: GPL-2.0](https://img.shields.io/badge/License-GPL%202.0-blue.svg)](LICENSE)
 
-**"Kein Bit verloren"** — Open-source forensic floppy disk preservation tool with 138+ format parsers and 6 hardware controllers.
+**"Kein Bit verloren"** — Open-source forensic floppy disk preservation tool with 149+ format parsers and 6 hardware controllers.
 
 ---
 
@@ -57,7 +57,7 @@ Complete audit and rewrite of all hardware controller protocols against official
 
 ## Features
 
-### 138+ Disk Image Formats
+### 149+ Disk Image Formats
 
 | Platform | Formats |
 |----------|---------|

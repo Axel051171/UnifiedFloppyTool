@@ -1,5 +1,23 @@
 # Changelog
 
+## [4.1.1] - 2026-04-14
+
+### Added
+- 11 new Plugin-B format parsers: ST, D77, DIM, DC42, FDS, CAS, MFI, PRI, EDSK, KFX
+- A2R parser (1104 LOC) activated from existing code
+- Decode Pipeline: unified Flux → PLL → Bits → Sectors → OTDR session
+- Canonical PLL API header (uft_pll.h) with 11 platform presets
+
+### Fixed
+- WOZ 1.0 TRKS chunk: track bitstream data now accessible (was empty)
+- 10 macro redefinition warnings eliminated (#ifndef guards)
+- Qt Charts made optional (CMake builds without Charts module)
+- 4 previously disabled tests re-enabled (ti99, fat_extensions, mega65_fat32, new_formats)
+
+### Changed
+- PLL consolidation: vfo_fixed removed, vfo_experimental + kalman_pll optional (CONFIG flags)
+- Format count: 138 → 149 fully implemented parsers
+
 ## [Unreleased] (planned 4.2.0)
 
 ### Added

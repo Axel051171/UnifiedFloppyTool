@@ -7,10 +7,10 @@
 
 #define UFT_VERSION_MAJOR 4
 #define UFT_VERSION_MINOR 1
-#define UFT_VERSION_PATCH 0
+#define UFT_VERSION_PATCH 1
 
-#define UFT_VERSION_STRING "4.1.0"
-#define UFT_VERSION_FULL "UnifiedFloppyTool v4.1.0"
+#define UFT_VERSION_STRING "4.1.1"
+#define UFT_VERSION_FULL "UnifiedFloppyTool v4.1.1"
 
 #ifndef UFT_BUILD_DATE
 #define UFT_BUILD_DATE __DATE__
