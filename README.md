@@ -4,7 +4,7 @@
 [![Build](https://github.com/Axel051171/UnifiedFloppyTool/actions/workflows/ci.yml/badge.svg)](https://github.com/Axel051171/UnifiedFloppyTool/actions)
 [![License: GPL-2.0](https://img.shields.io/badge/License-GPL%202.0-blue.svg)](LICENSE)
 
-**"Kein Bit verloren"** — Open-source forensic floppy disk preservation tool with 149+ format parsers and 9 hardware controllers.
+**"Kein Bit verloren"** — Open-source forensic floppy disk preservation tool with 149+ format parsers and 10 hardware controllers.
 
 ---
 
@@ -79,6 +79,7 @@ Complete audit and rewrite of all hardware controller protocols against official
 | Greaseweazle | Yes | Yes | Yes | Protocol v1.23, 72MHz capture |
 | SuperCard Pro | Yes | Yes | Yes | SDK v1.7, 25MHz capture |
 | KryoFlux | Yes | Limited | Yes | Via DTC tool, write conditional |
+| ADF-Copy | Yes | Yes | Yes | Amiga specialist (ADF + SCP flux) |
 | Applesauce | Yes | Yes | Yes | Text-based serial protocol |
 | XUM1541/ZoomFloppy | Yes | Yes | No | OpenCBM IEC bus (C64/1541) |
 | FluxEngine | Yes | Yes | Yes | Via libfluxengine |
