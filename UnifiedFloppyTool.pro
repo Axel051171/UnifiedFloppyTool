@@ -1229,8 +1229,8 @@ SOURCES += \
     src/formats/it/uft_it_parser_v3.c \
     src/formats/jag/uft_jag_parser_v3.c \
     src/formats/json/uft_json_parser_v3.c \
-    src/formats/jv1/uft_jv1_parser_v3.c \
-    src/formats/jv3/uft_jv3_parser_v3.c \
+    src/formats/jv1/uft_jv1.c \
+    src/formats/jv3/uft_jv3.c \
     src/formats/jvc/uft_jvc_parser_v3.c \
     src/formats/kcs/uft_kcs_parser_v3.c \
     src/formats/kfx/uft_kfx.c \
@@ -1330,7 +1330,7 @@ SOURCES += \
     src/formats/spc/uft_spc_parser_v3.c \
     src/formats/sram/uft_sram_parser_v3.c \
     src/formats/srm/uft_srm_parser_v3.c \
-    src/formats/ssd/uft_ssd_parser_v3.c \
+    src/formats/ssd/uft_ssd_plugin.c \
     src/formats/ssf/uft_ssf_parser_v3.c \
     src/formats/ssy/uft_ssy_parser_v3.c \
     src/formats/st/uft_st.c \
