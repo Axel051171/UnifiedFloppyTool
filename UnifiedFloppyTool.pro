@@ -1050,7 +1050,7 @@ SOURCES += \
     src/formats/2sf/uft_2sf_parser_v3.c \
     src/formats/7z/uft_7z_parser_v3.c \
     src/formats/a26/uft_a26_parser_v3.c \
-    src/formats/a2r/uft_a2r_parser_v3.c \
+    src/parsers/a2r/uft_a2r_parser.c \
     src/formats/a52/uft_a52_parser_v3.c \
     src/formats/a78/uft_a78_parser_v3.c \
     src/formats/ace/uft_ace_parser_v3.c \
@@ -1293,7 +1293,7 @@ SOURCES += \
     src/formats/po/uft_po_parser_v3.c \
     src/formats/ppg/uft_ppg_parser_v3.c \
     src/formats/prg/uft_prg_parser_v3.c \
-    src/formats/pri/uft_pri_parser_v3.c \
+    src/formats/pri/uft_pri.c \
     src/formats/pro/uft_pro_parser_v3.c \
     src/formats/ps2/uft_ps2_parser_v3.c \
     src/formats/ps3/uft_ps3_parser_v3.c \
@@ -1365,7 +1365,7 @@ SOURCES += \
     src/formats/vmdk/uft_vmdk_parser_v3.c \
     src/formats/wav/uft_wav_parser_v3.c \
     src/formats/wii/uft_wii_parser_v3.c \
-    src/formats/woz/uft_woz_parser_v3.c \
+    # WOZ: real impl in src/formats/apple/uft_woz.c (already in SOURCES below)
     src/formats/wsc/uft_wsc_parser_v3.c \
     src/formats/wsv/uft_wsv_parser_v3.c \
     src/formats/x32/uft_x32_parser_v3.c \
