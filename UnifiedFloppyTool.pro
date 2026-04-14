@@ -475,7 +475,7 @@ SOURCES += \
     src/analysis/events/otdr_event_core_v2.c \
     src/analysis/denoise/uft_denoise_bridge.c \
     src/analysis/denoise/phi_otdr_denoise_1d.c \
-    # src/formats/d64/uft_d64_parser_v3.c  # redundant: real impl exists
+    src/formats/d64/uft_d64_parser_v3.c \
 
 # G64 - Commodore 64 with timing data
 SOURCES += \
@@ -495,7 +495,7 @@ SOURCES += \
     src/analysis/events/otdr_event_core_v2.c \
     src/analysis/denoise/uft_denoise_bridge.c \
     src/analysis/denoise/phi_otdr_denoise_1d.c \
-    # src/formats/g64/uft_g64_parser_v3.c  # redundant: real impl exists
+    src/formats/g64/uft_g64_parser_v3.c \
 
 # ADF - Amiga
 SOURCES += \
@@ -515,8 +515,7 @@ SOURCES += \
     src/analysis/events/otdr_event_core_v2.c \
     src/analysis/denoise/uft_denoise_bridge.c \
     src/analysis/denoise/phi_otdr_denoise_1d.c \
-    # src/formats/adf/uft_adf_parser_v3.c  # redundant: real impl exists
-
+    src/formats/adf/uft_adf_parser_v3.c \n
 # HDF - Amiga Hard Disk (P1 Feature)
 SOURCES += \
     src/analysis/events/uft_export_bridge.c \
@@ -597,7 +596,7 @@ SOURCES += \
     src/analysis/events/otdr_event_core_v2.c \
     src/analysis/denoise/uft_denoise_bridge.c \
     src/analysis/denoise/phi_otdr_denoise_1d.c \
-    # src/formats/scp/uft_scp_parser_v3.c  # redundant: real impl exists
+    src/formats/scp/uft_scp_parser_v3.c \
 
 # IMD - ImageDisk
 SOURCES += \
@@ -617,8 +616,7 @@ SOURCES += \
     src/analysis/events/otdr_event_core_v2.c \
     src/analysis/denoise/uft_denoise_bridge.c \
     src/analysis/denoise/phi_otdr_denoise_1d.c \
-    # src/formats/imd/uft_imd_parser_v3.c  # redundant: real impl exists
-
+    src/formats/imd/uft_imd_parser_v3.c \n
 # DSK - Standard disk image
 SOURCES += \
     src/analysis/events/uft_export_bridge.c \
@@ -637,8 +635,7 @@ SOURCES += \
     src/analysis/events/otdr_event_core_v2.c \
     src/analysis/denoise/uft_denoise_bridge.c \
     src/analysis/denoise/phi_otdr_denoise_1d.c \
-    # src/formats/dsk/uft_dsk_parser_v3.c  # redundant: real impl exists \
-    src/formats/dsk_generic/uft_dsk_generic.c
+    src/formats/dsk/uft_dsk_parser_v3.c \n    src/formats/dsk_generic/uft_dsk_generic.c
 
 # STX - Atari ST with protection
 SOURCES += \
@@ -658,8 +655,7 @@ SOURCES += \
     src/analysis/events/otdr_event_core_v2.c \
     src/analysis/denoise/uft_denoise_bridge.c \
     src/analysis/denoise/phi_otdr_denoise_1d.c \
-    # src/formats/stx/uft_stx_parser_v3.c  # redundant \
-    src/formats/stx/uft_stx_air.c
+    src/formats/stx/uft_stx_parser_v3.c \n    src/formats/stx/uft_stx_air.c
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Advanced Algorithms (formerly "god_mode")
@@ -1057,19 +1053,15 @@ SOURCES += \
     # src/formats/a78/uft_a78_parser_v3.c  # non-floppy \
     # src/formats/ace/uft_ace_parser_v3.c  # non-floppy \
     src/formats/adf_arc/uft_adf_arc.c \
-    # src/formats/adl/uft_adl_parser_v3.c  # redundant \
-    # src/formats/adx/uft_adx_parser_v3.c  # non-floppy \
-    # src/formats/adz/uft_adz_parser_v3.c  # redundant \
-    # src/formats/alt/uft_alt_parser_v3.c  # non-floppy \
+    src/formats/adl/uft_adl_parser_v3.c \n    # src/formats/adx/uft_adx_parser_v3.c  # non-floppy \
+    src/formats/adz/uft_adz_parser_v3.c \n    # src/formats/alt/uft_alt_parser_v3.c  # non-floppy \
     # src/formats/apf/uft_apf_parser_v3.c  # non-floppy \
     # src/formats/apx/uft_apx_parser_v3.c  # non-floppy \
     # src/formats/aqu/uft_aqu_parser_v3.c  # non-floppy \
     # src/formats/arc/uft_arc_parser_v3.c  # non-floppy \
     # src/formats/asf/uft_asf_parser_v3.c  # non-floppy \
     # src/formats/ast/uft_ast_parser_v3.c  # non-floppy \
-    # src/formats/atr/uft_atr_parser_v3.c  # redundant: real impl exists \
-    # src/formats/atx/uft_atx_parser_v3.c  # redundant: real impl exists \
-    # src/formats/axex/uft_axex_parser_v3.c  # non-floppy \
+    src/formats/atr/uft_atr_parser_v3.c \n    src/formats/atx/uft_atx_parser_v3.c \n    # src/formats/axex/uft_axex_parser_v3.c  # non-floppy \
     # src/formats/ay/uft_ay_parser_v3.c  # non-floppy \
     # src/formats/bal/uft_bal_parser_v3.c  # non-floppy \
     # src/formats/bin/uft_bin_parser_v3.c  # non-floppy \
@@ -1093,43 +1085,25 @@ SOURCES += \
     # src/formats/col/uft_col_parser_v3.c  # non-floppy \
     # src/formats/com/uft_com_parser_v3.c  # non-floppy \
     # src/formats/cps/uft_cps_parser_v3.c  # non-floppy \
-    # src/formats/cqm/uft_cqm_parser_v3.c  # redundant \
-    # src/formats/crt/uft_crt_parser_v3.c  # redundant: real impl exists \
-    # src/formats/cso/uft_cso_parser_v3.c  # non-floppy \
+    src/formats/cqm/uft_cqm_parser_v3.c \n    src/formats/crt/uft_crt_parser_v3.c \n    # src/formats/cso/uft_cso_parser_v3.c  # non-floppy \
     # src/formats/css/uft_css_parser_v3.c  # non-floppy \
     # src/formats/csvx/uft_csvx_parser_v3.c  # non-floppy \
     # src/formats/ctr/uft_ctr_parser_v3.c  # non-floppy \
     # src/formats/cue/uft_cue_parser_v3.c  # non-floppy \
     # src/formats/cv/uft_cv_parser_v3.c  # non-floppy \
-    # src/formats/d1m/uft_d1m_parser_v3.c  # redundant \
-    # src/formats/d2m/uft_d2m_parser_v3.c  # redundant \
-    # src/formats/d4m/uft_d4m_parser_v3.c  # redundant \
-    # src/formats/d67/uft_d67_parser_v3.c  # redundant \
-    # src/formats/d71/uft_d71_parser_v3.c  # redundant: real impl exists \
-    src/formats/d77/uft_d77.c \
-    # src/formats/d80/uft_d80_parser_v3.c  # redundant \
-    # src/formats/d81/uft_d81_parser_v3.c  # redundant: real impl exists \
-    # src/formats/d82/uft_d82_parser_v3.c  # redundant \
-    # src/formats/d88/uft_d88_parser_v3.c  # redundant: real impl exists \
-    # src/formats/dae/uft_dae_parser_v3.c  # non-floppy \
-    # src/formats/dart/uft_dart_parser_v3.c  # redundant \
-    # src/formats/dbf/uft_dbf_parser_v3.c  # non-floppy \
+    src/formats/d1m/uft_d1m_parser_v3.c \n    src/formats/d2m/uft_d2m_parser_v3.c \n    src/formats/d4m/uft_d4m_parser_v3.c \n    src/formats/d67/uft_d67_parser_v3.c \n    src/formats/d71/uft_d71_parser_v3.c \n    src/formats/d77/uft_d77.c \
+    src/formats/d80/uft_d80_parser_v3.c \n    src/formats/d81/uft_d81_parser_v3.c \n    src/formats/d82/uft_d82_parser_v3.c \n    src/formats/d88/uft_d88_parser_v3.c \n    # src/formats/dae/uft_dae_parser_v3.c  # non-floppy \
+    src/formats/dart/uft_dart_parser_v3.c \n    # src/formats/dbf/uft_dbf_parser_v3.c  # non-floppy \
     src/formats/dc42/uft_dc42.c \
     src/formats/dcm/uft_dcm.c \
     # src/formats/dds/uft_dds_parser_v3.c  # non-floppy \
-    # src/formats/dfi/uft_dfi_parser_v3.c  # redundant \
-    # src/formats/dhd/uft_dhd_parser_v3.c  # redundant \
-    src/formats/dim/uft_dim.c \
+    src/formats/dfi/uft_dfi_parser_v3.c \n    src/formats/dhd/uft_dhd_parser_v3.c \n    src/formats/dim/uft_dim.c \
     # src/formats/dmg/uft_dmg_parser_v3.c  # non-floppy \
-    # src/formats/dmk/uft_dmk_parser_v3.c  # redundant: real impl exists \
-    # src/formats/dms/uft_dms_parser_v3.c  # redundant: real impl exists \
-    src/formats/dms/uft_dms.c \
+    src/formats/dmk/uft_dmk_parser_v3.c \n    src/formats/dms/uft_dms_parser_v3.c \n    src/formats/dms/uft_dms.c \
     src/detect/mfm/mfm_detect.c \
     src/detect/mfm/cpm_fs.c \
     src/detect/mfm/uft_mfm_detect_bridge.c \
-    # src/formats/dnp/uft_dnp_parser_v3.c  # redundant \
-    # src/formats/do/uft_do_parser_v3.c  # redundant \
-    # src/formats/dol/uft_dol_parser_v3.c  # non-floppy \
+    src/formats/dnp/uft_dnp_parser_v3.c \n    src/formats/do/uft_do_parser_v3.c \n    # src/formats/dol/uft_dol_parser_v3.c  # non-floppy \
     # src/formats/dsk_ace/uft_dsk_ace_parser_v3.c  # → dsk_generic \
     # src/formats/dsk_agt/uft_dsk_agt_parser_v3.c  # → dsk_generic \
     # src/formats/dsk_ak/uft_dsk_ak_parser_v3.c  # → dsk_generic \
@@ -1183,28 +1157,18 @@ SOURCES += \
     # src/formats/dtm/uft_dtm_parser_v3.c  # non-floppy \
     # src/formats/ecm/uft_ecm_parser_v3.c  # non-floppy \
     # src/formats/ecv/uft_ecv_parser_v3.c  # non-floppy \
-    # src/formats/ede/uft_ede_parser_v3.c  # redundant \
-    src/formats/edk/uft_edk.c \
+    src/formats/ede/uft_ede_parser_v3.c \n    src/formats/edk/uft_edk.c \
     src/formats/amstrad/uft_edsk.c \
     # src/formats/elf/uft_elf_parser_v3.c  # non-floppy \
     # src/formats/eve/uft_eve_parser_v3.c  # non-floppy \
-    # src/formats/fcm/uft_fcm_parser_v3.c  # redundant \
-    # src/formats/fdd/uft_fdd_parser_v3.c  # redundant \
-    # src/formats/fdi/uft_fdi_parser_v3.c  # redundant \
-    src/formats/fds/uft_fds_plugin.c \
-    # src/formats/fdx/uft_fdx_parser_v3.c  # redundant \
-    # src/formats/fld/uft_fld_parser_v3.c  # redundant \
-    # src/formats/flp/uft_flp_parser_v3.c  # redundant \
-    # src/formats/fm2/uft_fm2_parser_v3.c  # redundant \
-    # src/formats/fmenc/uft_fm_parser_v3.c  # helper, not standalone format \
-    # src/formats/g71/uft_g71_parser_v3.c  # redundant \
-    # src/formats/gam/uft_gam_parser_v3.c  # non-floppy \
+    src/formats/fcm/uft_fcm_parser_v3.c \n    src/formats/fdd/uft_fdd_parser_v3.c \n    src/formats/fdi/uft_fdi_parser_v3.c \n    src/formats/fds/uft_fds_plugin.c \
+    src/formats/fdx/uft_fdx_parser_v3.c \n    src/formats/fld/uft_fld_parser_v3.c \n    src/formats/flp/uft_flp_parser_v3.c \n    src/formats/fm2/uft_fm2_parser_v3.c \n    # src/formats/fmenc/uft_fm_parser_v3.c  # helper, not standalone format \
+    src/formats/g71/uft_g71_parser_v3.c \n    # src/formats/gam/uft_gam_parser_v3.c  # non-floppy \
     # src/formats/gb/uft_gb_parser_v3.c  # non-floppy \
     # src/formats/gba/uft_gba_parser_v3.c  # non-floppy \
     # src/formats/gbs/uft_gbs_parser_v3.c  # non-floppy \
     # src/formats/gcm/uft_gcm_parser_v3.c  # non-floppy \
-    # src/formats/gcr/uft_gcr_parser_v3.c  # redundant \
-    # src/formats/gdi/uft_gdi_parser_v3.c  # non-floppy \
+    src/formats/gcr/uft_gcr_parser_v3.c \n    # src/formats/gdi/uft_gdi_parser_v3.c  # non-floppy \
     # src/formats/gen/uft_gen_parser_v3.c  # non-floppy \
     # src/formats/giz/uft_giz_parser_v3.c  # non-floppy \
     # src/formats/gmv/uft_gmv_parser_v3.c  # non-floppy \
@@ -1214,26 +1178,19 @@ SOURCES += \
     # src/formats/gsf/uft_gsf_parser_v3.c  # non-floppy \
     # src/formats/gym/uft_gym_parser_v3.c  # non-floppy \
     # src/formats/gz/uft_gz_parser_v3.c  # non-floppy \
-    # src/formats/hdf/uft_hdf_parser_v3.c  # redundant \
-    # src/formats/hdm/uft_hdm_parser_v3.c  # redundant \
-    # src/formats/hes/uft_hes_parser_v3.c  # non-floppy \
-    # src/formats/hfe/uft_hfe_parser_v3.c  # redundant: real impl exists \
-    # src/formats/htmlx/uft_htmlx_parser_v3.c  # non-floppy \
+    src/formats/hdf/uft_hdf_parser_v3.c \n    src/formats/hdm/uft_hdm_parser_v3.c \n    # src/formats/hes/uft_hes_parser_v3.c  # non-floppy \
+    src/formats/hfe/uft_hfe_parser_v3.c \n    # src/formats/htmlx/uft_htmlx_parser_v3.c  # non-floppy \
     # src/formats/ico/uft_ico_parser_v3.c  # non-floppy \
-    # src/formats/imz/uft_imz_parser_v3.c  # redundant \
-    # src/formats/ini/uft_ini_parser_v3.c  # non-floppy \
+    src/formats/imz/uft_imz_parser_v3.c \n    # src/formats/ini/uft_ini_parser_v3.c  # non-floppy \
     # src/formats/int/uft_int_parser_v3.c  # non-floppy \
-    # src/formats/ipf/uft_ipf_parser_v3.c  # redundant: real impl exists \
-    # src/formats/ips/uft_ips_parser_v3.c  # non-floppy \
-    # src/formats/irm/uft_irm_parser_v3.c  # redundant \
-    # src/formats/iso/uft_iso_parser_v3.c  # non-floppy \
+    src/formats/ipf/uft_ipf_parser_v3.c \n    # src/formats/ips/uft_ips_parser_v3.c  # non-floppy \
+    src/formats/irm/uft_irm_parser_v3.c \n    # src/formats/iso/uft_iso_parser_v3.c  # non-floppy \
     # src/formats/it/uft_it_parser_v3.c  # non-floppy \
     # src/formats/jag/uft_jag_parser_v3.c  # non-floppy \
     # src/formats/json/uft_json_parser_v3.c  # non-floppy \
     src/formats/jv1/uft_jv1.c \
     src/formats/jv3/uft_jv3.c \
-    # src/formats/jvc/uft_jvc_parser_v3.c  # redundant \
-    # src/formats/kcs/uft_kcs_parser_v3.c  # non-floppy \
+    src/formats/jvc/uft_jvc_parser_v3.c \n    # src/formats/kcs/uft_kcs_parser_v3.c  # non-floppy \
     src/formats/kfx/uft_kfx.c \
     src/formats/kfx/uft_kfstream_air.c \
     src/formats/kfx/uft_kf_histogram.c \
@@ -1241,61 +1198,45 @@ SOURCES += \
     # src/formats/kss/uft_kss_parser_v3.c  # non-floppy \
     # src/formats/lda/uft_lda_parser_v3.c  # non-floppy \
     # src/formats/lnx/uft_lnx_parser_v3.c  # non-floppy \
-    # src/formats/ltm/uft_ltm_parser_v3.c  # redundant \
-    # src/formats/lz4/uft_lz4_parser_v3.c  # non-floppy \
+    src/formats/ltm/uft_ltm_parser_v3.c \n    # src/formats/lz4/uft_lz4_parser_v3.c  # non-floppy \
     # src/formats/lzh/uft_lzh_parser_v3.c  # non-floppy \
     # src/formats/m3u/uft_m3u_parser_v3.c  # non-floppy \
     # src/formats/m64/uft_m64_parser_v3.c  # non-floppy \
     # src/formats/mbc/uft_mbc_parser_v3.c  # non-floppy \
-    # src/formats/mbd/uft_mbd_parser_v3.c  # redundant \
-    # src/formats/mcr/uft_mcr_parser_v3.c  # redundant \
-    # src/formats/mdk/uft_mdk_parser_v3.c  # non-floppy \
+    src/formats/mbd/uft_mbd_parser_v3.c \n    src/formats/mcr/uft_mcr_parser_v3.c \n    # src/formats/mdk/uft_mdk_parser_v3.c  # non-floppy \
     # src/formats/mds/uft_mds_parser_v3.c  # non-floppy \
-    # src/formats/mdv/uft_mdv_parser_v3.c  # redundant \
-    # src/formats/mdx/uft_mdx_parser_v3.c  # redundant \
-    # src/formats/mes/uft_mes_parser_v3.c  # non-floppy \
+    src/formats/mdv/uft_mdv_parser_v3.c \n    src/formats/mdx/uft_mdx_parser_v3.c \n    # src/formats/mes/uft_mes_parser_v3.c  # non-floppy \
     src/formats/mfi/uft_mfi.c \
-    # src/formats/mfm/uft_mfm_parser_v3.c  # redundant \
-    # src/formats/mgt/uft_mgt_parser_v3.c  # redundant \
-    # src/formats/mid/uft_mid_parser_v3.c  # non-floppy \
+    src/formats/mfm/uft_mfm_parser_v3.c \n    src/formats/mgt/uft_mgt_parser_v3.c \n    # src/formats/mid/uft_mid_parser_v3.c  # non-floppy \
     # src/formats/midi/uft_midi_parser_v3.c  # non-floppy \
     # src/formats/mod/uft_mod_parser_v3.c  # non-floppy \
-    # src/formats/msa/uft_msa_parser_v3.c  # redundant \
-    # src/formats/n3ds/uft_n3ds_parser_v3.c  # non-floppy \
+    src/formats/msa/uft_msa_parser_v3.c \n    # src/formats/n3ds/uft_n3ds_parser_v3.c  # non-floppy \
     # src/formats/n64/uft_n64_parser_v3.c  # non-floppy \
     # src/formats/nam/uft_nam_parser_v3.c  # non-floppy \
     # src/formats/nds/uft_nds_parser_v3.c  # non-floppy \
     # src/formats/neo/uft_neo_parser_v3.c  # non-floppy \
     # src/formats/nes/uft_nes_parser_v3.c  # non-floppy \
-    # src/formats/nfd/uft_nfd_parser_v3.c  # redundant \
-    # src/formats/nge/uft_nge_parser_v3.c  # non-floppy \
+    src/formats/nfd/uft_nfd_parser_v3.c \n    # src/formats/nge/uft_nge_parser_v3.c  # non-floppy \
     # src/formats/ngp/uft_ngp_parser_v3.c  # non-floppy \
-    # src/formats/nib/uft_nib_parser_v3.c  # redundant: real impl exists \
-    # src/formats/nrg/uft_nrg_parser_v3.c  # non-floppy \
+    src/formats/nib/uft_nib_parser_v3.c \n    # src/formats/nrg/uft_nrg_parser_v3.c  # non-floppy \
     # src/formats/nsf/uft_nsf_parser_v3.c  # non-floppy \
     # src/formats/nsfe/uft_nsfe_parser_v3.c  # non-floppy \
     # src/formats/nsp/uft_nsp_parser_v3.c  # non-floppy \
     # src/formats/nuo/uft_nuo_parser_v3.c  # non-floppy \
     # src/formats/o2/uft_o2_parser_v3.c  # non-floppy \
     # src/formats/ode/uft_ode_parser_v3.c  # non-floppy \
-    # src/formats/opd/uft_opd_parser_v3.c  # redundant \
-    # src/formats/p00/uft_p00_parser_v3.c  # redundant \
-    # src/formats/p4/uft_p4_parser_v3.c  # non-floppy \
+    src/formats/opd/uft_opd_parser_v3.c \n    src/formats/p00/uft_p00_parser_v3.c \n    # src/formats/p4/uft_p4_parser_v3.c  # non-floppy \
     # src/formats/p64/uft_p64_parser_v3.c  # non-floppy \
     # src/formats/pbp/uft_pbp_parser_v3.c  # non-floppy \
-    # src/formats/pc99/uft_pc99_parser_v3.c  # redundant \
-    # src/formats/pce/uft_pce_parser_v3.c  # non-floppy \
+    src/formats/pc99/uft_pc99_parser_v3.c \n    # src/formats/pce/uft_pce_parser_v3.c  # non-floppy \
     # src/formats/pcx/uft_pcx_parser_v3.c  # non-floppy \
-    # src/formats/pdi/uft_pdi_parser_v3.c  # redundant \
-    src/formats/pdp/uft_pdp.c \
+    src/formats/pdi/uft_pdi_parser_v3.c \n    src/formats/pdp/uft_pdp.c \
     # src/formats/pet/uft_pet_parser_v3.c  # non-floppy \
     # src/formats/pip/uft_pip_parser_v3.c  # non-floppy \
     # src/formats/pkm/uft_pkm_parser_v3.c  # non-floppy \
     # src/formats/pls/uft_pls_parser_v3.c  # non-floppy \
-    # src/formats/po/uft_po_parser_v3.c  # redundant \
-    # src/formats/ppg/uft_ppg_parser_v3.c  # non-floppy \
-    # src/formats/prg/uft_prg_parser_v3.c  # redundant: real impl exists \
-    src/formats/pri/uft_pri.c \
+    src/formats/po/uft_po_parser_v3.c \n    # src/formats/ppg/uft_ppg_parser_v3.c  # non-floppy \
+    src/formats/prg/uft_prg_parser_v3.c \n    src/formats/pri/uft_pri.c \
     # src/formats/pro/uft_pro_parser_v3.c  # non-floppy \
     # src/formats/ps2/uft_ps2_parser_v3.c  # non-floppy \
     # src/formats/ps3/uft_ps3_parser_v3.c  # non-floppy \
@@ -1310,16 +1251,13 @@ SOURCES += \
     # src/formats/rar/uft_rar_parser_v3.c  # non-floppy \
     # src/formats/rawflux/uft_raw_parser_v3.c  # helper, not standalone format \
     # src/formats/rca/uft_rca_parser_v3.c  # non-floppy \
-    # src/formats/rx/uft_rx_parser_v3.c  # redundant \
-    # src/formats/s3m/uft_s3m_parser_v3.c  # non-floppy \
-    # src/formats/sad/uft_sad_parser_v3.c  # redundant \
-    src/formats/sam/uft_sam.c \
+    src/formats/rx/uft_rx_parser_v3.c \n    # src/formats/s3m/uft_s3m_parser_v3.c  # non-floppy \
+    src/formats/sad/uft_sad_parser_v3.c \n    src/formats/sam/uft_sam.c \
     # src/formats/sap/uft_sap_parser_v3.c  # non-floppy (Atari SAP music) \
     # src/formats/sat/uft_sat_parser_v3.c  # non-floppy \
     # src/formats/sav/uft_sav_parser_v3.c  # non-floppy \
     # src/formats/scd/uft_scd_parser_v3.c  # non-floppy \
-    # src/formats/scl/uft_scl_parser_v3.c  # redundant \
-    # src/formats/sfm/uft_sfm_parser_v3.c  # non-floppy \
+    src/formats/scl/uft_scl_parser_v3.c \n    # src/formats/sfm/uft_sfm_parser_v3.c  # non-floppy \
     # src/formats/sg/uft_sg_parser_v3.c  # non-floppy \
     # src/formats/sid/uft_sid_parser_v3.c  # non-floppy \
     # src/formats/sms/uft_sms_parser_v3.c  # non-floppy \
@@ -1339,30 +1277,20 @@ SOURCES += \
     # src/formats/svd/uft_svd_parser_v3.c  # non-floppy \
     src/formats/syn/uft_syn.c \
     src/formats/t1k/uft_t1k.c \
-    # src/formats/t64/uft_t64_parser_v3.c  # redundant: real impl exists \
-    # src/formats/tai/uft_tai_parser_v3.c  # non-floppy \
+    src/formats/t64/uft_t64_parser_v3.c \n    # src/formats/tai/uft_tai_parser_v3.c  # non-floppy \
     src/formats/tan/uft_tan.c \
-    # src/formats/tap/uft_tap_parser_v3.c  # redundant: real impl exists \
-    # src/formats/tar/uft_tar_parser_v3.c  # non-floppy \
-    # src/formats/td0/uft_td0_parser_v3.c  # redundant: real impl exists \
-    # src/formats/tdo/uft_tdo_parser_v3.c  # non-floppy \
+    src/formats/tap/uft_tap_parser_v3.c \n    # src/formats/tar/uft_tar_parser_v3.c  # non-floppy \
+    src/formats/td0/uft_td0_parser_v3.c \n    # src/formats/tdo/uft_tdo_parser_v3.c  # non-floppy \
     # src/formats/tga/uft_tga_parser_v3.c  # non-floppy \
     # src/formats/tgc/uft_tgc_parser_v3.c  # non-floppy \
     # src/formats/tif/uft_tif_parser_v3.c  # non-floppy \
-    # src/formats/trd/uft_trd_parser_v3.c  # redundant: real impl exists \
-    # src/formats/tzx/uft_tzx_parser_v3.c  # redundant: real impl exists \
-    # src/formats/udi/uft_udi_parser_v3.c  # redundant \
-    # src/formats/uef/uft_uef_parser_v3.c  # redundant \
-    # src/formats/ups/uft_ups_parser_v3.c  # non-floppy \
+    src/formats/trd/uft_trd_parser_v3.c \n    src/formats/tzx/uft_tzx_parser_v3.c \n    src/formats/udi/uft_udi_parser_v3.c \n    src/formats/uef/uft_uef_parser_v3.c \n    # src/formats/ups/uft_ups_parser_v3.c  # non-floppy \
     # src/formats/usf/uft_usf_parser_v3.c  # non-floppy \
     # src/formats/v20/uft_v20_parser_v3.c  # non-floppy \
-    # src/formats/v9t9/uft_v9t9_parser_v3.c  # redundant \
-    # src/formats/vb/uft_vb_parser_v3.c  # non-floppy \
+    src/formats/v9t9/uft_v9t9_parser_v3.c \n    # src/formats/vb/uft_vb_parser_v3.c  # non-floppy \
     # src/formats/vbm/uft_vbm_parser_v3.c  # non-floppy \
     # src/formats/vcs/uft_vcs_parser_v3.c  # non-floppy \
-    # src/formats/vdk/uft_vdk_parser_v3.c  # redundant \
-    # src/formats/vdk_drg/uft_vdk_drg_parser_v3.c  # redundant \
-    # src/formats/vgm/uft_vgm_parser_v3.c  # non-floppy \
+    src/formats/vdk/uft_vdk_parser_v3.c \n    src/formats/vdk_drg/uft_vdk_drg_parser_v3.c \n    # src/formats/vgm/uft_vgm_parser_v3.c  # non-floppy \
     # src/formats/vhd/uft_vhd_parser_v3.c  # non-floppy \
     # src/formats/vmdk/uft_vmdk_parser_v3.c  # non-floppy \
     # src/formats/wav/uft_wav_parser_v3.c  # non-floppy \
@@ -1374,8 +1302,7 @@ SOURCES += \
     # src/formats/x64/uft_x64_parser_v3.c  # non-floppy \
     # src/formats/xbe/uft_xbe_parser_v3.c  # non-floppy \
     # src/formats/xci/uft_xci_parser_v3.c  # non-floppy \
-    # src/formats/xdf/uft_xdf_parser_v3.c  # redundant \
-    src/formats/xdm86/uft_xdm86.c \
+    src/formats/xdf/uft_xdf_parser_v3.c \n    src/formats/xdm86/uft_xdm86.c \
     # src/formats/xegs/uft_xegs_parser_v3.c  # non-floppy \
     # src/formats/xex/uft_xex_parser_v3.c  # non-floppy \
     src/formats/xfd/uft_xfd.c \
@@ -1388,9 +1315,7 @@ SOURCES += \
     # src/formats/zip/uft_zip_parser_v3.c  # non-floppy \
     # src/formats/zod/uft_zod_parser_v3.c  # non-floppy \
     # src/formats/zstd/uft_zstd_parser_v3.c  # non-floppy \
-    # src/formats/zx81/uft_zx81_parser_v3.c  # redundant \
-    # src/formats/zxs/uft_zxs_parser_v3.c  # redundant
-
+    src/formats/zx81/uft_zx81_parser_v3.c \n    src/formats/zxs/uft_zxs_parser_v3.c \n
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Phase 2c: v2 Parsers, Utilities & Extended Format Support
@@ -2257,8 +2182,7 @@ SOURCES += \
     src/formats/cpm/uft_cpm_diskdef.c \
     src/formats/cpm/uft_cpm_diskdefs.c \
     src/formats/rcpmfs/uft_rcpmfs.c \
-    # src/formats/cpm/uft_cpm_parser_v3.c  # redundant: real impl exists \
-    src/formats/retro_image/uft_retro_image_detect.c
+    src/formats/cpm/uft_cpm_parser_v3.c \n    src/formats/retro_image/uft_retro_image_detect.c
 
 # Dec (1 files)
 SOURCES += \
