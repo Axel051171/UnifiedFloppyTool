@@ -267,13 +267,29 @@ SOURCES += \
     src/flux/fdc_bitstream/fdc_misc.cpp \
     src/flux/fdc_bitstream/fdc_vfo_base.cpp \
     src/flux/fdc_bitstream/mfm_codec.cpp \
-    src/flux/fdc_bitstream/vfo_experimental.cpp \
-    src/flux/fdc_bitstream/vfo_fixed.cpp \
     src/flux/fdc_bitstream/vfo_pid.cpp \
     src/flux/fdc_bitstream/vfo_pid2.cpp \
     src/flux/fdc_bitstream/vfo_pid3.cpp \
     src/flux/fdc_bitstream/vfo_simple.cpp \
     src/flux/fdc_bitstream/vfo_simple2.cpp
+
+# Optional: experimental VFO (reads vfo_settings.txt at runtime)
+experimental_vfo {
+    SOURCES += src/flux/fdc_bitstream/vfo_experimental.cpp
+    DEFINES += UFT_HAS_EXPERIMENTAL_VFO
+    message("Experimental VFO enabled")
+}
+
+# vfo_fixed.cpp removed: 7 LOC trivial stub, never selected by VFO_TYPE_DEFAULT
+
+# Optional: Kalman filter PLL (research, not battle-tested)
+kalman_pll {
+    SOURCES += \
+        src/algorithms/advanced/uft_kalman_pll_v2.c \
+        src/algorithms/uft_kalman_pll.c
+    DEFINES += UFT_HAS_KALMAN_PLL
+    message("Kalman PLL enabled (experimental)")
+}
 
 # ALL Hardware Provider Sources
 SOURCES += \
@@ -668,7 +684,7 @@ SOURCES += \
     src/analysis/denoise/uft_denoise_bridge.c \
     src/analysis/denoise/phi_otdr_denoise_1d.c \
     src/algorithms/advanced/uft_god_mode_api.c \
-    src/algorithms/advanced/uft_kalman_pll_v2.c \
+    # src/algorithms/advanced/uft_kalman_pll_v2.c \ # optional: CONFIG+=kalman_pll
     src/algorithms/advanced/uft_gcr_viterbi.c \
     src/algorithms/advanced/uft_gcr_viterbi_v2.c \
     src/algorithms/advanced/uft_bayesian_detect.c \
