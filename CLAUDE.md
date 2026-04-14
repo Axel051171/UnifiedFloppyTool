@@ -11,7 +11,7 @@ UnifiedFloppyTool ist eine Qt6 C/C++ Desktop-Anwendung für die **forensische Si
 ## Kernfunktionen
 
 ### 1. Disk-Imaging (Lesen/Schreiben)
-Unterstützt 6 Hardware-Controller:
+Unterstützt 9 Hardware-Controller:
 - **Greaseweazle** (72MHz Flux-Capture, USB)
 - **SuperCard Pro** (25MHz, USB)
 - **KryoFlux** (24MHz, USB via DTC-Tool)
@@ -150,7 +150,7 @@ tests/                 — 77 C-Tests + 1 Qt-Test
 
 - ~860 Source-Dateien, ~200.000+ Zeilen C/C++
 - 138 Format-IDs, 44 Konvertierungspfade
-- 6 Hardware-Controller
+- 9 Hardware-Controller
 - 55+ Kopierschutz-Schemes
 - 8 DeepRead-Module + 12 OTDR-Pipeline-Stufen
 - 9 SIMD-Dispatch-Punkte (SSE2/AVX2 Runtime)
