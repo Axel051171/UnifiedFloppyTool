@@ -285,39 +285,8 @@ static const uft_ufi_ops_t win_ops = {
 
 #endif /* UFI_PLATFORM_WINDOWS */
 
-/* ============================================================================
- * High-level UFI commands (read/write sectors)
- * ============================================================================ */
-
-uft_rc_t uft_ufi_read_sectors(const char *path,
-                               uint32_t lba, uint16_t count,
-                               uint8_t *buffer, size_t buffer_size,
-                               uft_diag_t *diag)
-{
-    uft_ufi_device_t *dev = NULL;
-    uft_rc_t rc;
-
-    /* Ensure backend is set */
-    uint8_t cdb[10] = {0};
-    cdb[0] = (uint8_t)UFT_UFI_READ_10;
-    cdb[2] = (uint8_t)((lba >> 24) & 0xFF);
-    cdb[3] = (uint8_t)((lba >> 16) & 0xFF);
-    cdb[4] = (uint8_t)((lba >>  8) & 0xFF);
-    cdb[5] = (uint8_t)((lba >>  0) & 0xFF);
-    cdb[7] = (uint8_t)((count >> 8) & 0xFF);
-    cdb[8] = (uint8_t)((count >> 0) & 0xFF);
-
-    rc = uft_ufi_inquiry(path, (char[9]){0}, (char[17]){0}, (char[5]){0}, diag);
-    /* Use the registered global backend */
-    /* Actually we need direct access — reopen */
-
-    /* For simplicity, use the existing ufi.c high-level API which already
-     * handles open/exec_cdb/close via the registered backend. We just
-     * need to provide the backend registration call. */
-    (void)dev; (void)buffer; (void)buffer_size;
-    uft_diag_set(diag, "ufi: read_sectors — use registered backend");
-    return UFT_OK;
-}
+/* High-level UFI commands are in ufi.c (not here). This file only
+ * provides the platform backends (Linux SG_IO, Windows SCSI_PASS_THROUGH). */
 
 /* ============================================================================
  * Backend initialization — call once at startup
