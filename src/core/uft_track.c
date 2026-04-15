@@ -390,7 +390,7 @@ int uft_track_set_weak_mask(uft_track_t *track, const uint8_t *mask, size_t byte
  * Sector Operations
  * ═══════════════════════════════════════════════════════════════════════════ */
 
-int uft_track_add_sector(uft_track_t *track, const uft_sector_t *sector)
+uft_error_t uft_track_add_sector(uft_track_t *track, const uft_sector_t *sector)
 {
     if (!track || !sector) return -1;
     
