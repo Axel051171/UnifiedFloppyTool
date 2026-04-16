@@ -116,9 +116,9 @@ static uft_error_t d64_plugin_write_track(uft_disk_t *disk, int cyl, int head,
         size_t len = track->sectors[s].data_len;
         uint8_t pad[256];
         if (!data || len == 0) {
-            memset(pad, 0, 256); data = pad; len = 256;
+            memset(pad, 0xE5, 256); data = pad; len = 256;
         } else if (len < 256) {
-            memset(pad, 0, 256); memcpy(pad, data, len); data = pad; len = 256;
+            memset(pad, 0xE5, 256); memcpy(pad, data, len); data = pad; len = 256;
         }
         if (fwrite(data, 1, 256, p->file) != 256) return UFT_ERROR_IO;
     }

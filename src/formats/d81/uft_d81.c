@@ -112,7 +112,7 @@ static uft_error_t d81_write_track(uft_disk_t* disk, int cyl, int head,
         const uint8_t *data = track->sectors[s].data;
         uint8_t pad[D81_SECTOR_SIZE];
         if (!data || track->sectors[s].data_len == 0) {
-            memset(pad, 0, D81_SECTOR_SIZE); data = pad;
+            memset(pad, 0xE5, D81_SECTOR_SIZE); data = pad;
         }
         if (fwrite(data, 1, D81_SECTOR_SIZE, pdata->file) != D81_SECTOR_SIZE)
             return UFT_ERROR_IO;

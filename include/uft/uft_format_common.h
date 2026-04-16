@@ -169,6 +169,31 @@ static inline bool uft_write_file(const char* path, const uint8_t* data, size_t 
 }
 
 // ============================================================================
+// Safety limits for untrusted file data
+// ============================================================================
+
+/** Maximum allocation from file-controlled values (16 MB) */
+#define UFT_MAX_ALLOC_SIZE      (16u * 1024 * 1024)
+/** Maximum cylinders from file header */
+#define UFT_MAX_CYLINDERS       256
+/** Maximum heads */
+#define UFT_MAX_HEADS           2
+/** Maximum sectors per track */
+#define UFT_MAX_SPT             64
+/** Maximum sector size */
+#define UFT_MAX_SECTOR_SIZE     16384
+
+/** Validate geometry before use */
+static inline bool uft_geometry_sane(uint16_t cyl, uint8_t heads, uint8_t spt, uint16_t ss) {
+    if (cyl > UFT_MAX_CYLINDERS || heads > UFT_MAX_HEADS ||
+        spt > UFT_MAX_SPT || ss > UFT_MAX_SECTOR_SIZE || ss == 0)
+        return false;
+    /* Overflow check: cyl * heads * spt * ss must fit in uint32_t */
+    uint64_t total = (uint64_t)cyl * heads * spt * ss;
+    return total <= UFT_MAX_ALLOC_SIZE;
+}
+
+// ============================================================================
 // Standard Sektor-Größen
 // ============================================================================
 

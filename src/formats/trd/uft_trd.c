@@ -83,10 +83,10 @@ static uft_error_t trd_write_track(uft_disk_t* disk, int cyl, int head,
         size_t len = track->sectors[s].data_len;
         uint8_t pad[TRD_SEC_SIZE];
         if (!data || len == 0) {
-            memset(pad, 0, TRD_SEC_SIZE);
+            memset(pad, 0xE5, TRD_SEC_SIZE);
             data = pad; len = TRD_SEC_SIZE;
         } else if (len < TRD_SEC_SIZE) {
-            memset(pad, 0, TRD_SEC_SIZE);
+            memset(pad, 0xE5, TRD_SEC_SIZE);
             memcpy(pad, data, len);
             data = pad; len = TRD_SEC_SIZE;
         }

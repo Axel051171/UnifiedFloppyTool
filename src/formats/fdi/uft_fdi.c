@@ -118,7 +118,7 @@ static uft_error_t fdi_read_track(uft_disk_t *disk, int cyl, int head,
         uint16_t data_size = uft_read_le16(sec_desc + 5);
         uint16_t real_size = (sec_n < 7) ? (128 << sec_n) : data_size;
 
-        if (data_size > 0 && real_size > 0) {
+        if (data_size > 0 && real_size > 0 && real_size <= UFT_MAX_SECTOR_SIZE) {
             long saved = ftell(p->file);
             if (saved < 0) break;
 
