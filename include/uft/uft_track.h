@@ -191,7 +191,10 @@ void uft_track_free(uft_track_t *track);
 /* uft_track_init: canonical declaration in uft_format_plugin.h
  * (has additional cylinder, head params) */
 #ifndef UFT_TRACK_INIT_DECLARED
-void uft_track_init(uft_track_t *track);
+/* Canonical signature: uft_track_init(track, cyl, head) in uft_format_plugin.h
+ * This legacy no-arg version exists for backward compat */
+void uft_track_init(uft_track_t *track, int cylinder, int head);
+#define UFT_TRACK_INIT_DECLARED
 #endif
 
 /**

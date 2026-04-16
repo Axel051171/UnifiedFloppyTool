@@ -334,6 +334,13 @@ typedef struct uft_sector {
 
     /* Error info */
     int              error;           ///< Primary error code (uft_error_t compatible)
+
+    /* Backward-compatibility aliases (old code uses these names) */
+    bool             crc_valid;       ///< Alias for crc_ok
+    uint32_t         stored_crc;      ///< Alias for crc_stored
+    /* data_size already exists at line 301 as uint16_t */
+    int              good_sectors;    ///< Track-level stat (compat, unused in sector)
+    int              bad_sectors;     ///< Track-level stat (compat, unused in sector)
 } uft_sector_t;
 #endif /* UFT_SECTOR_T_DEFINED */
 

@@ -488,6 +488,29 @@ bool uft_verify_crc(
     uint32_t expected_crc
 );
 
+/* ═══════════════════════════════════════════════════════════════════════════════
+ * Opaque context types for write-verify module (uft_write_verify.c)
+ * ═══════════════════════════════════════════════════════════════════════════════ */
+
+/** Opaque write-verify context */
+typedef struct uft_wv_context uft_wv_context_t;
+
+/** Write-verify options */
+typedef struct {
+    uft_verify_mode_t   mode;
+    int                 retries;
+    bool                abort_on_error;
+    double              flux_tolerance;
+} uft_wv_options_t;
+
+/** Write-verify callback */
+typedef void (*uft_wv_callback_t)(int cyl, int head, uft_verify_status_t status, void *user);
+
+/** API */
+uft_wv_context_t* uft_wv_create(void *disk, const uft_wv_options_t *options);
+void uft_wv_destroy(uft_wv_context_t *ctx);
+void uft_wv_set_callback(uft_wv_context_t *ctx, uft_wv_callback_t cb, void *user);
+
 #ifdef __cplusplus
 }
 #endif
