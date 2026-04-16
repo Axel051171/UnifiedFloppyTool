@@ -89,6 +89,7 @@ static uft_error_t imd_open(uft_disk_t* disk, const char* path, bool read_only) 
     disk->geometry.heads = max_head + 1;
     disk->geometry.sectors = max_sec;
     disk->geometry.sector_size = pdata->sector_size;
+    disk->geometry.total_sectors = (uint32_t)pdata->max_cyl * pdata->max_head * pdata->max_sec;
     
     return UFT_OK;
 }

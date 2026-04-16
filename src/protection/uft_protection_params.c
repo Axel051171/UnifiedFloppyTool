@@ -3,7 +3,7 @@
  * @brief Protection Parameter Management Implementation
  */
 
-#include "uft_protection_params.h"
+#include "uft/protection/uft_protection_params.h"
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>

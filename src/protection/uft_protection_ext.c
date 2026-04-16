@@ -9,7 +9,7 @@
  * @copyright UFT Project
  */
 
-#include "uft_protection_ext.h"
+#include "uft/protection/uft_protection_ext.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>

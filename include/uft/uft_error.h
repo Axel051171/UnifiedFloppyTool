@@ -127,6 +127,26 @@ typedef int uft_error_t;
 #define UFT_OK UFT_SUCCESS
 #endif
 
+/* Error code aliases used in core/ files but not in the main enum */
+#ifndef UFT_ERR_INVALID_PARAM
+#define UFT_ERR_INVALID_PARAM  UFT_ERR_INVALID_ARG
+#endif
+#ifndef UFT_ERR_STATE
+#define UFT_ERR_STATE          UFT_ERR_INVALID_ARG
+#endif
+#ifndef UFT_ERR_NULL_PTR
+#define UFT_ERR_NULL_PTR       UFT_ERR_INVALID_ARG
+#endif
+#ifndef UFT_ERR_BOUNDS
+#define UFT_ERR_BOUNDS         UFT_ERR_INVALID_ARG
+#endif
+#ifndef UFT_ERR_VERIFY
+#define UFT_ERR_VERIFY         UFT_ERR_CRC
+#endif
+#ifndef UFT_ERR_UNSUPPORTED
+#define UFT_ERR_UNSUPPORTED    UFT_ERR_NOT_SUPPORTED
+#endif
+
 /* Legacy error code aliases (guarded to prevent redefinition warnings) */
 #ifndef UFT_ERROR_NO_MEMORY
 #define UFT_ERROR_NO_MEMORY      UFT_ERR_MEMORY

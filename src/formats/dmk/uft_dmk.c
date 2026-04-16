@@ -38,6 +38,7 @@ static uft_error_t dmk_open(uft_disk_t* disk, const char* path, bool read_only) 
     disk->geometry.heads = p->ss ? 1 : 2;
     disk->geometry.sectors = 18;
     disk->geometry.sector_size = 256;
+    disk->geometry.total_sectors = (uint32_t)disk->geometry.cylinders * disk->geometry.heads * disk->geometry.sectors;
     return UFT_OK;
 }
 

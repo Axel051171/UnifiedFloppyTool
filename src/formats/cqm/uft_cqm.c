@@ -69,6 +69,7 @@ static uft_error_t cqm_open(uft_disk_t* disk, const char* path, bool read_only) 
     disk->geometry.heads = p->heads;
     disk->geometry.sectors = p->spt;
     disk->geometry.sector_size = p->sec_size;
+    disk->geometry.total_sectors = (uint32_t)p->tracks * p->heads * p->spt;
     return UFT_OK;
 }
 

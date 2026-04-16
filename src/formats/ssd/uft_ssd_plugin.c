@@ -108,11 +108,33 @@ static uft_error_t ssd_read_track(uft_disk_t *disk, int cyl, int head,
     return UFT_OK;
 }
 
+static uft_error_t ssd_write_track(uft_disk_t *disk, int cyl, int head,
+                                    const uft_track_t *track) {
+    ssd_data_t *p = disk->plugin_data;
+    if (!p || !p->file) return UFT_ERROR_INVALID_STATE;
+    if (disk->read_only) return UFT_ERROR_NOT_SUPPORTED;
+    long offset = p->interleaved ?
+        (long)((cyl * 2 + head) * SSD_SPT * SSD_SECTOR_SIZE) :
+        (long)(cyl * SSD_SPT * SSD_SECTOR_SIZE);
+    for (size_t s = 0; s < track->sector_count && (int)s < SSD_SPT; s++) {
+        if (fseek(p->file, offset + (long)s * SSD_SECTOR_SIZE, SEEK_SET) != 0)
+            return UFT_ERROR_IO;
+        const uint8_t *data = track->sectors[s].data;
+        uint8_t pad[SSD_SECTOR_SIZE];
+        if (!data || track->sectors[s].data_len == 0) {
+            memset(pad, 0xE5, SSD_SECTOR_SIZE); data = pad;
+        }
+        if (fwrite(data, 1, SSD_SECTOR_SIZE, p->file) != SSD_SECTOR_SIZE)
+            return UFT_ERROR_IO;
+    }
+    return UFT_OK;
+}
+
 const uft_format_plugin_t uft_format_plugin_ssd_bbc = {
     .name = "SSD", .description = "BBC Micro SSD/DSD",
     .extensions = "ssd;dsd", .format = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE,
     .probe = uft_ssd_plugin_probe, .open = ssd_open, .close = ssd_close,
-    .read_track = ssd_read_track,
+    .read_track = ssd_read_track, .write_track = ssd_write_track,
 };
 UFT_REGISTER_FORMAT_PLUGIN(ssd_bbc)
