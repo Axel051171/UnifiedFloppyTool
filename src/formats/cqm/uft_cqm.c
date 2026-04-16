@@ -91,9 +91,33 @@ static uft_error_t cqm_read_track(uft_disk_t* disk, int cyl, int head, uft_track
     return UFT_OK;
 }
 
+/* Write track: modifies decompressed CQM buffer in memory.
+ * The original CQM file is NOT modified (re-compression not supported).
+ * This enables format conversion workflows (read CQM -> modify -> write as IMG). */
+static uft_error_t cqm_write_track(uft_disk_t* disk, int cyl, int head,
+                                     const uft_track_t* track) {
+    cqm_data_t* p = disk->plugin_data;
+    if (!p || !p->data) return UFT_ERROR_INVALID_STATE;
+    if (disk->read_only) return UFT_ERROR_NOT_SUPPORTED;
+
+    size_t trk_off = ((size_t)cyl * p->heads + head) * p->spt * p->sec_size;
+    for (size_t s = 0; s < track->sector_count && (int)s < p->spt; s++) {
+        size_t soff = trk_off + s * p->sec_size;
+        if (soff + p->sec_size > p->size) break;
+        const uint8_t* data = track->sectors[s].data;
+        uint8_t pad[8192];
+        if (!data || track->sectors[s].data_len == 0) {
+            memset(pad, 0xE5, p->sec_size); data = pad;
+        }
+        memcpy(p->data + soff, data, p->sec_size);
+    }
+    return UFT_OK;
+}
+
 const uft_format_plugin_t uft_format_plugin_cqm = {
     .name = "CQM", .description = "CopyQM Compressed", .extensions = "cqm",
-    .format = UFT_FORMAT_DSK, .capabilities = UFT_FORMAT_CAP_READ,
-    .probe = cqm_probe, .open = cqm_open, .close = cqm_close, .read_track = cqm_read_track,
+    .format = UFT_FORMAT_DSK, .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE,
+    .probe = cqm_probe, .open = cqm_open, .close = cqm_close,
+    .read_track = cqm_read_track, .write_track = cqm_write_track,
 };
 UFT_REGISTER_FORMAT_PLUGIN(cqm)

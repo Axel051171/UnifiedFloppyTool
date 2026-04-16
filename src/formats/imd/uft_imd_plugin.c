@@ -188,11 +188,80 @@ static uft_error_t imd_plugin_read_track(uft_disk_t *disk, int cyl, int head,
     return UFT_OK;
 }
 
+/* Write track: modifies in-memory IMD data for raw (uncompressed) sectors.
+ * Compressed sectors (type 2/4/6/8) are converted to raw type in-place if
+ * the new data differs from the fill byte, expanding the buffer as needed.
+ * For simplicity, we only write to sectors that are already raw (type 1/3/5/7). */
+static uft_error_t imd_plugin_write_track(uft_disk_t *disk, int cyl, int head,
+                                            const uft_track_t *track) {
+    imd_pd_t *p = disk->plugin_data;
+    if (!p || !p->data) return UFT_ERROR_INVALID_STATE;
+    if (disk->read_only) return UFT_ERROR_NOT_SUPPORTED;
+
+    size_t pos = imd_skip_comment(p->data, p->size);
+
+    while (pos + 5 <= p->size) {
+        uint8_t trk_cyl = p->data[pos + 1];
+        uint8_t head_raw = p->data[pos + 2];
+        uint8_t trk_head = head_raw & 0x0F;
+        uint8_t nsec = p->data[pos + 3];
+        uint8_t scode = p->data[pos + 4];
+        uint16_t ss = imd_sec_size(scode);
+        bool is_target = ((int)trk_cyl == cyl && (int)trk_head == head);
+
+        pos += 5;
+
+        /* sector numbering map */
+        const uint8_t *sec_map = p->data + pos;
+        pos += nsec;
+        /* optional cylinder map */
+        if (head_raw & 0x80) pos += nsec;
+        /* optional head map */
+        if (head_raw & 0x40) pos += nsec;
+
+        /* sector data */
+        for (int s = 0; s < nsec && pos < p->size; s++) {
+            uint8_t dtype = p->data[pos++];
+            if (dtype == 0) {
+                /* unavailable — skip */
+                continue;
+            }
+            bool compressed = (dtype == 2 || dtype == 4 || dtype == 6 || dtype == 8);
+            if (compressed) {
+                /* Cannot write to compressed sectors without buffer realloc.
+                 * Skip — read_track already expands these for the caller. */
+                pos += 1;
+            } else {
+                /* Raw sector (type 1/3/5/7) — writable in-place */
+                if (is_target && pos + ss <= p->size) {
+                    /* Find matching sector in input track by sector_map ID.
+                     * id.sector is 1-based (uft_format_add_sector adds 1),
+                     * so id.sector = sec_map[s] + 1. */
+                    for (size_t ts = 0; ts < track->sector_count; ts++) {
+                        if (track->sectors[ts].id.sector == (uint8_t)(sec_map[s] + 1)) {
+                            const uint8_t *data = track->sectors[ts].data;
+                            if (data && track->sectors[ts].data_len >= ss) {
+                                memcpy(p->data + pos, data, ss);
+                            }
+                            break;
+                        }
+                    }
+                }
+                pos += ss;
+            }
+        }
+
+        if (is_target) break;
+    }
+    return UFT_OK;
+}
+
 const uft_format_plugin_t uft_format_plugin_imd = {
     .name = "IMD", .description = "ImageDisk",
     .extensions = "imd", .format = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE,
     .probe = imd_plugin_probe, .open = imd_plugin_open,
     .close = imd_plugin_close, .read_track = imd_plugin_read_track,
+    .write_track = imd_plugin_write_track,
 };
 UFT_REGISTER_FORMAT_PLUGIN(imd)

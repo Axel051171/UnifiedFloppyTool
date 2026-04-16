@@ -131,11 +131,35 @@ static uft_error_t msa_plugin_read_track(uft_disk_t *disk, int cyl, int head,
     return UFT_OK;
 }
 
+/* Write track: modifies decompressed ST buffer in memory.
+ * The original MSA file is NOT modified (re-compression not supported).
+ * This enables format conversion workflows (read MSA -> modify -> write as ST). */
+static uft_error_t msa_plugin_write_track(uft_disk_t *disk, int cyl, int head,
+                                            const uft_track_t *track) {
+    msa_plugin_data_t *p = disk->plugin_data;
+    if (!p || !p->st_data) return UFT_ERROR_INVALID_STATE;
+    if (disk->read_only) return UFT_ERROR_NOT_SUPPORTED;
+
+    size_t trk_off = ((size_t)cyl * p->heads + head) * p->spt * 512;
+    for (size_t s = 0; s < track->sector_count && (int)s < p->spt; s++) {
+        size_t soff = trk_off + s * 512;
+        if (soff + 512 > p->st_size) break;
+        const uint8_t *data = track->sectors[s].data;
+        uint8_t pad[512];
+        if (!data || track->sectors[s].data_len == 0) {
+            memset(pad, 0xE5, 512); data = pad;
+        }
+        memcpy(p->st_data + soff, data, 512);
+    }
+    return UFT_OK;
+}
+
 const uft_format_plugin_t uft_format_plugin_msa = {
     .name = "MSA", .description = "Atari ST Compressed (Magic Shadow)",
     .extensions = "msa", .format = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE,
     .probe = msa_plugin_probe, .open = msa_plugin_open,
     .close = msa_plugin_close, .read_track = msa_plugin_read_track,
+    .write_track = msa_plugin_write_track,
 };
 UFT_REGISTER_FORMAT_PLUGIN(msa)

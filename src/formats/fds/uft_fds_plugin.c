@@ -94,9 +94,14 @@ bool fds_probe(const uint8_t *data, size_t size, size_t file_size,
 static uft_error_t fds_open(uft_disk_t *disk, const char *path,
                              bool read_only)
 {
-    (void)read_only;
-    FILE *f = fopen(path, "rb");
+    FILE *f = fopen(path, read_only ? "rb" : "r+b");
+    if (!f) {
+        /* Fallback to read-only if r+b fails */
+        f = fopen(path, "rb");
+        read_only = true;
+    }
     if (!f) return UFT_ERROR_FILE_OPEN;
+    disk->read_only = read_only;
 
     /* Get file size */
     if (fseek(f, 0, SEEK_END) != 0) { fclose(f); return UFT_ERROR_IO; }
@@ -196,6 +201,41 @@ static uft_error_t fds_read_track(uft_disk_t *disk, int cyl, int head,
 }
 
 /* ============================================================================
+ * write_track — write virtual sectors back to the FDS file
+ * ============================================================================ */
+
+static uft_error_t fds_write_track(uft_disk_t *disk, int cyl, int head,
+                                    const uft_track_t *track)
+{
+    fds_data_t *pdata = disk->plugin_data;
+    if (!pdata || !pdata->file) return UFT_ERROR_INVALID_STATE;
+    if (disk->read_only) return UFT_ERROR_NOT_SUPPORTED;
+    if (head != 0 || cyl >= pdata->side_count)
+        return UFT_ERROR_INVALID_STATE;
+
+    long base = (long)(pdata->data_offset + (size_t)cyl * FDS_SIDE_SIZE);
+    size_t remaining = FDS_SIDE_SIZE;
+
+    for (size_t s = 0; s < track->sector_count &&
+         (int)s < FDS_VIRTUAL_SPT && remaining > 0; s++) {
+        size_t chunk = (remaining < FDS_VIRTUAL_SS) ? remaining : FDS_VIRTUAL_SS;
+        long off = base + (long)(s * FDS_VIRTUAL_SS);
+        if (fseek(pdata->file, off, SEEK_SET) != 0)
+            return UFT_ERROR_IO;
+        const uint8_t *data = track->sectors[s].data;
+        uint8_t pad[FDS_VIRTUAL_SS];
+        if (!data || track->sectors[s].data_len == 0) {
+            memset(pad, 0, FDS_VIRTUAL_SS); data = pad;
+        }
+        if (fwrite(data, 1, chunk, pdata->file) != chunk)
+            return UFT_ERROR_IO;
+        remaining -= chunk;
+    }
+    fflush(pdata->file);
+    return UFT_OK;
+}
+
+/* ============================================================================
  * Plugin registration
  * ============================================================================ */
 
@@ -205,11 +245,12 @@ const uft_format_plugin_t uft_format_plugin_fds = {
     .extensions   = "fds",
     .version      = 0x00010000,
     .format       = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE,
     .probe        = fds_probe,
     .open         = fds_open,
     .close        = fds_close,
     .read_track   = fds_read_track,
+    .write_track  = fds_write_track,
 };
 
 UFT_REGISTER_FORMAT_PLUGIN(fds)

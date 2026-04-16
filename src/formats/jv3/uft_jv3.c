@@ -76,7 +76,6 @@ bool jv3_probe(const uint8_t *data, size_t size, size_t file_size,
 static uft_error_t jv3_open(uft_disk_t *disk, const char *path,
                               bool read_only)
 {
-    (void)read_only;
     size_t file_size = 0;
     uint8_t *file_data = uft_read_file(path, &file_size);
     if (!file_data || file_size < JV3_HEADER_SIZE + 256) {
@@ -87,9 +86,15 @@ static uft_error_t jv3_open(uft_disk_t *disk, const char *path,
     jv3_data_t *pdata = calloc(1, sizeof(jv3_data_t));
     if (!pdata) { free(file_data); return UFT_ERROR_NO_MEMORY; }
 
-    /* Reopen as FILE for read_track */
-    pdata->file = fopen(path, "rb");
+    /* Reopen as FILE — r+b for write, rb for read-only */
+    pdata->file = fopen(path, read_only ? "rb" : "r+b");
+    if (!pdata->file) {
+        /* Fallback to read-only if r+b fails (e.g. permissions) */
+        pdata->file = fopen(path, "rb");
+        read_only = true;
+    }
     if (!pdata->file) { free(pdata); free(file_data); return UFT_ERROR_FILE_OPEN; }
+    disk->read_only = read_only;
 
     /* Parse directory */
     uint32_t data_off = JV3_HEADER_SIZE;
@@ -174,11 +179,54 @@ static uft_error_t jv3_read_track(uft_disk_t *disk, int cyl, int head,
     return UFT_OK;
 }
 
+/* Write track: seeks to each sector's data_offset in the JV3 file and writes.
+ * JV3 sectors have known offsets from the directory, so we can write in-place.
+ * Matches incoming sectors by sector_id to directory entries. */
+static uft_error_t jv3_write_track(uft_disk_t *disk, int cyl, int head,
+                                    const uft_track_t *track)
+{
+    jv3_data_t *p = disk->plugin_data;
+    if (!p || !p->file) return UFT_ERROR_INVALID_STATE;
+    if (disk->read_only) return UFT_ERROR_NOT_SUPPORTED;
+
+    for (size_t s = 0; s < track->sector_count; s++) {
+        /* id.sector is 1-based (from uft_format_add_sector: sector_num + 1).
+         * JV3 sector_id is the raw value from disk. In read_track we passed
+         * sec_num = sector_id - 1 to uft_format_add_sector, so
+         * id.sector = (sector_id - 1) + 1 = sector_id. */
+        uint8_t sec_id = track->sectors[s].id.sector;
+        /* Find matching directory entry */
+        for (int i = 0; i < p->entry_count; i++) {
+            jv3_dir_entry_t *e = &p->entries[i];
+            uint8_t e_head = (e->flags & 0x10) ? 1 : 0;
+            if (e->track != (uint8_t)cyl || e_head != (uint8_t)head)
+                continue;
+            if (e->sector_id != sec_id) continue;
+
+            /* Found matching entry — write sector data */
+            if (fseek(p->file, (long)e->data_offset, SEEK_SET) != 0)
+                return UFT_ERROR_IO;
+            const uint8_t *data = track->sectors[s].data;
+            uint16_t sz = e->size;
+            if (sz > 1024) sz = 1024;
+            uint8_t pad[1024];
+            if (!data || track->sectors[s].data_len == 0) {
+                memset(pad, 0xE5, sz); data = pad;
+            }
+            if (fwrite(data, 1, sz, p->file) != sz)
+                return UFT_ERROR_IO;
+            break;
+        }
+    }
+    fflush(p->file);
+    return UFT_OK;
+}
+
 const uft_format_plugin_t uft_format_plugin_jv3 = {
     .name = "JV3", .description = "TRS-80 JV3 (with sector directory)",
     .extensions = "jv3;dsk", .format = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE,
     .probe = jv3_probe, .open = jv3_open, .close = jv3_close,
-    .read_track = jv3_read_track,
+    .read_track = jv3_read_track, .write_track = jv3_write_track,
 };
 UFT_REGISTER_FORMAT_PLUGIN(jv3)

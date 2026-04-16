@@ -884,11 +884,35 @@ static uft_error_t dms_read_track(uft_disk_t *disk, int cyl, int head,
     return UFT_OK;
 }
 
+/* Write track: modifies decompressed ADF buffer in memory.
+ * The original DMS file is NOT modified (re-compression not supported).
+ * This enables format conversion workflows (read DMS -> modify -> write as ADF). */
+static uft_error_t dms_write_track(uft_disk_t *disk, int cyl, int head,
+                                    const uft_track_t *track)
+{
+    dms_pd_t *p = disk->plugin_data;
+    if (!p || !p->adf) return UFT_ERROR_INVALID_STATE;
+    if (disk->read_only) return UFT_ERROR_NOT_SUPPORTED;
+
+    size_t trk_off = ((size_t)cyl * AMIGA_HEADS + head) * AMIGA_TRACK_SIZE;
+    for (size_t s = 0; s < track->sector_count && (int)s < AMIGA_SPT; s++) {
+        size_t soff = trk_off + s * AMIGA_SS;
+        if (soff + AMIGA_SS > p->adf_size) break;
+        const uint8_t *data = track->sectors[s].data;
+        uint8_t pad[AMIGA_SS];
+        if (!data || track->sectors[s].data_len == 0) {
+            memset(pad, 0xE5, AMIGA_SS); data = pad;
+        }
+        memcpy(p->adf + soff, data, AMIGA_SS);
+    }
+    return UFT_OK;
+}
+
 const uft_format_plugin_t uft_format_plugin_dms = {
     .name = "DMS", .description = "Amiga DMS (Disk Masher System)",
     .extensions = "dms", .format = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE,
     .probe = dms_probe, .open = dms_open, .close = dms_close,
-    .read_track = dms_read_track,
+    .read_track = dms_read_track, .write_track = dms_write_track,
 };
 UFT_REGISTER_FORMAT_PLUGIN(dms)

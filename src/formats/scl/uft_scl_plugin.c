@@ -79,11 +79,34 @@ static uft_error_t scl_read_track(uft_disk_t *disk, int cyl, int head,
     return UFT_OK;
 }
 
+/* Write track: modifies in-memory SCL data buffer directly.
+ * Sector data lives at data_start + sec_idx * 256 in the raw buffer. */
+static uft_error_t scl_write_track(uft_disk_t *disk, int cyl, int head,
+                                    const uft_track_t *track) {
+    scl_pd_t *p = disk->plugin_data;
+    if (!p || !p->data || head != 0) return UFT_ERROR_INVALID_STATE;
+    if (disk->read_only) return UFT_ERROR_NOT_SUPPORTED;
+
+    for (size_t s = 0; s < track->sector_count && (int)s < 16; s++) {
+        uint32_t sec_idx = (uint32_t)cyl * 16 + (uint32_t)s;
+        size_t off = p->data_start + (size_t)sec_idx * SCL_SECTOR_SIZE;
+        if (off + SCL_SECTOR_SIZE > p->data_size) break;
+        const uint8_t *data = track->sectors[s].data;
+        uint8_t pad[SCL_SECTOR_SIZE];
+        if (!data || track->sectors[s].data_len == 0) {
+            memset(pad, 0xE5, SCL_SECTOR_SIZE); data = pad;
+        }
+        memcpy(p->data + off, data, SCL_SECTOR_SIZE);
+    }
+    return UFT_OK;
+}
+
 const uft_format_plugin_t uft_format_plugin_scl = {
     .name = "SCL", .description = "ZX Spectrum SCL Container",
     .extensions = "scl", .format = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE,
     .probe = scl_plugin_probe, .open = scl_open,
     .close = scl_close, .read_track = scl_read_track,
+    .write_track = scl_write_track,
 };
 UFT_REGISTER_FORMAT_PLUGIN(scl)
