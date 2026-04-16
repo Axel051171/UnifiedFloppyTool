@@ -5,7 +5,7 @@
 
 #include "uft/analysis/mfm_detect.h"
 #include "uft/analysis/cpm_fs.h"
-#include "uft_mfm_detect_bridge.h"
+#include "uft/analysis/uft_mfm_detect_bridge.h"
 
 #include <stdio.h>
 #include <stdlib.h>
