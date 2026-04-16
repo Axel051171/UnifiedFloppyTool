@@ -14,14 +14,19 @@
 typedef struct { FILE* file; uint16_t ss; uint32_t total; } xfd_data_t;
 
 static bool uft_xfd_plugin_probe(const uint8_t *d, size_t s, size_t fs, int *c) {
-    (void)d; (void)s;
-    if (fs == 92160 || fs == 184320 || fs == 133120 || fs == 266240) {
-        *c = 40; return true;
-    }
-    if (fs > 0 && (fs % 128 == 0 || fs % 256 == 0) && fs <= 266240) {
+    if (fs != 92160 && fs != 184320 && fs != 133120 && fs != 266240) {
+        if (fs == 0 || (fs % 128 != 0 && fs % 256 != 0) || fs > 266240) return false;
         *c = 25; return true;
     }
-    return false;
+    *c = 40;
+
+    /* Atari DOS boot sector: byte 0 = boot flag (0x00 or 0x01),
+     * bytes 1-2 = sector count (LE16), byte 3 = load address high */
+    if (s >= 4) {
+        if ((d[0] == 0x00 || d[0] == 0x01) && d[3] >= 0x07 && d[3] <= 0xBF)
+            *c = 82;
+    }
+    return true;
 }
 
 static uft_error_t xfd_open(uft_disk_t *disk, const char *path, bool ro) {

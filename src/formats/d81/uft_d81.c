@@ -19,11 +19,18 @@ typedef struct {
 } d81_data_t;
 
 bool d81_probe(const uint8_t* data, size_t size, size_t file_size, int* confidence) {
-    if (file_size == D81_SIZE_STANDARD || file_size == D81_SIZE_WITH_ERRORS) {
-        *confidence = 85;
-        return true;
+    if (file_size != D81_SIZE_STANDARD && file_size != D81_SIZE_WITH_ERRORS)
+        return false;
+    *confidence = 80;
+
+    /* D81 header at track 40 sector 0 (offset 0x61800):
+     * Byte 0-1 = directory link (40/3 typical)
+     * Byte 2 = DOS version 'D' (0x44) for 1581 */
+    if (size >= 0x61803) {
+        if (data[0x61800] == 40 && data[0x61801] == 3) *confidence = 92;
+        else if (data[0x61802] == 0x44) *confidence = 88;
     }
-    return false;
+    return true;
 }
 
 static uft_error_t d81_open(uft_disk_t* disk, const char* path, bool read_only) {

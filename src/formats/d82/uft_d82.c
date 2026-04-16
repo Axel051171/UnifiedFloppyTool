@@ -27,9 +27,12 @@ static void d82_init_off(void) {
 }
 
 bool d82_probe(const uint8_t* data, size_t size, size_t file_size, int* confidence) {
-    (void)data; (void)size;
-    if (file_size == D82_SIZE) { *confidence = 75; return true; }
-    return false;
+    if (file_size != D82_SIZE) return false;
+    *confidence = 75;
+    /* D82 = dual-sided D80. BAM at same track structure */
+    if (size >= 0x33002 && data[0x33000] == 39 && data[0x33001] == 1)
+        *confidence = 88;
+    return true;
 }
 
 static uft_error_t d82_open(uft_disk_t* disk, const char* path, bool read_only) {

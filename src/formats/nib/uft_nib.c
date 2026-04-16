@@ -23,8 +23,23 @@ static const uint8_t gcr62_decode[256] = {
 typedef struct { uint8_t* data; } nib_data_t;
 
 bool nib_probe(const uint8_t* data, size_t size, size_t file_size, int* confidence) {
-    if (file_size == NIB_FILE_SIZE) { *confidence = 85; return true; }
-    return false;
+    if (file_size != NIB_FILE_SIZE) return false;
+    *confidence = 80;
+
+    /* NIB: 35 tracks × 6656 bytes. Each track has Apple II GCR sync
+     * bytes (0xFF runs) and address field markers (D5 AA 96). */
+    if (size >= 6656) {
+        int ff_count = 0, d5_count = 0;
+        for (size_t i = 0; i < 6656; i++) {
+            if (data[i] == 0xFF) ff_count++;
+            if (i + 2 < 6656 && data[i] == 0xD5 && data[i+1] == 0xAA && data[i+2] == 0x96)
+                d5_count++;
+        }
+        /* Good NIB track has ~1000+ sync bytes and ~16 address fields */
+        if (d5_count >= 10 && ff_count > 500) *confidence = 95;
+        else if (ff_count > 200) *confidence = 88;
+    }
+    return true;
 }
 
 static uft_error_t nib_open(uft_disk_t* disk, const char* path, bool read_only) {

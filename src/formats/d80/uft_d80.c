@@ -26,9 +26,12 @@ static void d80_init_off(void) {
 }
 
 bool d80_probe(const uint8_t* data, size_t size, size_t file_size, int* confidence) {
-    (void)data; (void)size;
-    if (file_size == D80_SIZE) { *confidence = 75; return true; }
-    return false;
+    if (file_size != D80_SIZE) return false;
+    *confidence = 75;
+    /* BAM at track 39 sector 0 — D80 link to 39/1 */
+    if (size >= 0x33002 && data[0x33000] == 39 && data[0x33001] == 1)
+        *confidence = 90;
+    return true;
 }
 
 static uft_error_t d80_open(uft_disk_t* disk, const char* path, bool read_only) {

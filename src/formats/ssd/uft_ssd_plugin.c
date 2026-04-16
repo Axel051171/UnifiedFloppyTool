@@ -41,10 +41,22 @@ static bool ssd_detect(size_t file_size, uint8_t *cyl, uint8_t *heads)
 static bool uft_ssd_plugin_probe(const uint8_t *data, size_t size, size_t file_size,
                int *confidence)
 {
-    (void)data; (void)size;
     uint8_t cyl, heads;
     if (!ssd_detect(file_size, &cyl, &heads)) return false;
     *confidence = 30;
+
+    /* BBC Micro DFS catalog: sector 1 bytes 0x100-0x107 contain
+     * the disk title (continued from sector 0). Sector 1 byte 0x104
+     * holds sector count (low byte), typically 0x20 for 40-track. */
+    if (size >= 0x108) {
+        uint8_t sec_count_lo = data[0x107];
+        /* Valid sector counts: 0x90=400, 0x20=800, 0xA0=1280 */
+        if (sec_count_lo == 0x90 || sec_count_lo == 0x20 || sec_count_lo == 0xA0)
+            *confidence = 82;
+        /* Boot option (bits 4-5 of byte 0x106) should be 0-3 */
+        if ((data[0x106] >> 4) <= 3 && sec_count_lo > 0)
+            *confidence = 85;
+    }
     return true;
 }
 
