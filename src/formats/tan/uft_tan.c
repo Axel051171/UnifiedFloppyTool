@@ -56,11 +56,27 @@ static uft_error_t tan_read_track(uft_disk_t *d, int cyl, int head, uft_track_t 
     return UFT_OK;
 }
 
+static uft_error_t tan_write_track(uft_disk_t *d, int cyl, int head,
+                                    const uft_track_t *t) {
+    tan_data_t *p = d->plugin_data;
+    if (!p || !p->file) return UFT_ERROR_INVALID_STATE;
+    if (d->read_only) return UFT_ERROR_NOT_SUPPORTED;
+    long off = (long)((head * p->cyl + cyl) * p->spt * p->ss);
+    for (size_t s = 0; s < t->sector_count && (int)s < p->spt; s++) {
+        if (fseek(p->file, off + (long)s * p->ss, SEEK_SET) != 0) return UFT_ERROR_IO;
+        const uint8_t *data = t->sectors[s].data;
+        uint8_t pad[256];
+        if (!data || t->sectors[s].data_len == 0) { memset(pad, 0xE5, p->ss); data = pad; }
+        if (fwrite(data, 1, p->ss, p->file) != p->ss) return UFT_ERROR_IO;
+    }
+    return UFT_OK;
+}
+
 const uft_format_plugin_t uft_format_plugin_tan = {
     .name = "TAN", .description = "Tandy TRS-80",
     .extensions = "dsk;trs", .format = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE,
     .probe = tan_probe, .open = tan_open, .close = tan_close,
-    .read_track = tan_read_track,
+    .read_track = tan_read_track, .write_track = tan_write_track,
 };
 UFT_REGISTER_FORMAT_PLUGIN(tan)

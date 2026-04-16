@@ -231,6 +231,47 @@ static uft_error_t dc42_read_track(uft_disk_t *disk, int cyl, int head,
 }
 
 /* ============================================================================
+ * write_track
+ * ============================================================================ */
+
+static uft_error_t dc42_write_track(uft_disk_t *disk, int cyl, int head,
+                                     const uft_track_t *track)
+{
+    dc42_data_t *pdata = disk->plugin_data;
+    if (!pdata || !pdata->file) return UFT_ERROR_INVALID_STATE;
+    if (disk->read_only) return UFT_ERROR_NOT_SUPPORTED;
+    if (cyl >= pdata->cylinders || head >= pdata->heads)
+        return UFT_ERROR_INVALID_STATE;
+
+    uint32_t track_idx = (uint32_t)cyl * pdata->heads + (uint32_t)head;
+    long offset = DC42_HEADER_SIZE +
+                  (long)(track_idx * pdata->sectors_per_track *
+                         DC42_SECTOR_SIZE);
+
+    /* Check bounds against data_size */
+    uint32_t track_end = (uint32_t)(offset - DC42_HEADER_SIZE) +
+                         (uint32_t)pdata->sectors_per_track * DC42_SECTOR_SIZE;
+    if (track_end > pdata->data_size)
+        return UFT_ERROR_INVALID_STATE;
+
+    for (size_t s = 0; s < track->sector_count &&
+         (int)s < pdata->sectors_per_track; s++) {
+        if (fseek(pdata->file, offset + (long)s * DC42_SECTOR_SIZE,
+                  SEEK_SET) != 0)
+            return UFT_ERROR_IO;
+        const uint8_t *data = track->sectors[s].data;
+        uint8_t pad[DC42_SECTOR_SIZE];
+        if (!data || track->sectors[s].data_len == 0) {
+            memset(pad, 0xE5, DC42_SECTOR_SIZE);
+            data = pad;
+        }
+        if (fwrite(data, 1, DC42_SECTOR_SIZE, pdata->file) != DC42_SECTOR_SIZE)
+            return UFT_ERROR_IO;
+    }
+    return UFT_OK;
+}
+
+/* ============================================================================
  * Plugin registration
  * ============================================================================ */
 
@@ -240,11 +281,12 @@ const uft_format_plugin_t uft_format_plugin_dc42 = {
     .extensions   = "dc42;image;img",
     .version      = 0x00010000,
     .format       = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE,
     .probe        = dc42_probe,
     .open         = dc42_open,
     .close        = dc42_close,
     .read_track   = dc42_read_track,
+    .write_track  = dc42_write_track,
 };
 
 UFT_REGISTER_FORMAT_PLUGIN(dc42)

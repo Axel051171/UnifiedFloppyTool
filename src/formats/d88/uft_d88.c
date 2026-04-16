@@ -98,9 +98,49 @@ static uft_error_t d88_read_track(uft_disk_t* disk, int cyl, int head, uft_track
     return UFT_OK;
 }
 
+static uft_error_t d88_write_track(uft_disk_t* disk, int cyl, int head,
+                                    const uft_track_t* track) {
+    d88_data_t* p = disk->plugin_data;
+    if (!p || !p->file) return UFT_ERROR_INVALID_STATE;
+    if (disk->read_only) return UFT_ERROR_NOT_SUPPORTED;
+
+    int idx = cyl * 2 + head;
+    if (idx >= 164 || p->track_off[idx] == 0) return UFT_ERROR_INVALID_ARG;
+
+    if (fseek(p->file, p->track_off[idx], SEEK_SET) != 0) return UFT_ERROR_IO;
+
+    uint8_t sec_hdr[16];
+    for (int s = 0; s < disk->geometry.sectors; s++) {
+        long hdr_pos = ftell(p->file);
+        if (hdr_pos < 0) return UFT_ERROR_IO;
+        if (fread(sec_hdr, 1, 16, p->file) != 16) break;
+        uint16_t dsize = uft_read_le16(&sec_hdr[14]);
+        if (dsize == 0 || dsize > 8192) break;
+
+        /* Write sector data if we have a matching sector in track */
+        if ((size_t)s < track->sector_count) {
+            const uint8_t *data = track->sectors[s].data;
+            uint8_t *pad = NULL;
+            if (!data || track->sectors[s].data_len == 0) {
+                pad = malloc(dsize);
+                if (!pad) return UFT_ERROR_NO_MEMORY;
+                memset(pad, 0xE5, dsize);
+                data = pad;
+            }
+            if (fwrite(data, 1, dsize, p->file) != dsize) { free(pad); return UFT_ERROR_IO; }
+            free(pad);
+        } else {
+            /* Skip past this sector's data */
+            if (fseek(p->file, (long)dsize, SEEK_CUR) != 0) return UFT_ERROR_IO;
+        }
+    }
+    return UFT_OK;
+}
+
 const uft_format_plugin_t uft_format_plugin_d88 = {
     .name = "D88", .description = "PC-88/PC-98", .extensions = "d88;88d;d98",
-    .format = UFT_FORMAT_DSK, .capabilities = UFT_FORMAT_CAP_READ,
-    .probe = d88_probe, .open = d88_open, .close = d88_close, .read_track = d88_read_track,
+    .format = UFT_FORMAT_DSK, .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE,
+    .probe = d88_probe, .open = d88_open, .close = d88_close,
+    .read_track = d88_read_track, .write_track = d88_write_track,
 };
 UFT_REGISTER_FORMAT_PLUGIN(d88)

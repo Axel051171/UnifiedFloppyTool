@@ -25,7 +25,7 @@ bool dsk_probe(const uint8_t* data, size_t size, size_t file_size, int* confiden
 }
 
 static uft_error_t dsk_open(uft_disk_t* disk, const char* path, bool read_only) {
-    FILE* f = fopen(path, "rb");
+    FILE* f = fopen(path, read_only ? "rb" : "r+b");
     if (!f) return UFT_ERROR_FILE_OPEN;
     
     uint8_t header[DSK_HEADER_SIZE];
@@ -130,17 +130,79 @@ static uft_error_t dsk_read_track(uft_disk_t* disk, int cyl, int head, uft_track
     return UFT_OK;
 }
 
+static uft_error_t dsk_write_track(uft_disk_t* disk, int cyl, int head,
+                                    const uft_track_t* track) {
+    dsk_data_t* pdata = disk->plugin_data;
+    if (!pdata || !pdata->file) return UFT_ERROR_INVALID_STATE;
+    if (disk->read_only) return UFT_ERROR_NOT_SUPPORTED;
+
+    /* Calculate track offset — same as read_track */
+    size_t offset = DSK_HEADER_SIZE;
+    int track_idx = cyl * pdata->sides + head;
+
+    if (pdata->extended) {
+        for (int i = 0; i < track_idx; i++) {
+            offset += pdata->track_sizes[i] * 256;
+        }
+    } else {
+        offset += track_idx * pdata->track_size;
+    }
+
+    /* Read track info block to get sector layout */
+    if (fseek(pdata->file, offset, SEEK_SET) != 0) return UFT_ERROR_IO;
+    uint8_t track_info[DSK_TRACK_INFO_SIZE];
+    if (fread(track_info, 1, DSK_TRACK_INFO_SIZE, pdata->file) != DSK_TRACK_INFO_SIZE)
+        return UFT_ERROR_IO;
+
+    uint8_t num_sec = track_info[0x15];
+    uint8_t sec_size_code = track_info[0x14];
+    uint16_t sec_size = dsk_sector_sizes[sec_size_code & 7];
+
+    /* Sector data starts right after the track info block */
+    size_t data_pos = offset + DSK_TRACK_INFO_SIZE;
+
+    for (int s = 0; s < num_sec; s++) {
+        uint8_t* sec_info = &track_info[0x18 + s * 8];
+        uint16_t actual_size = sec_size;
+
+        if (pdata->extended && sec_info[6] + sec_info[7] > 0) {
+            actual_size = uft_read_le16(&sec_info[6]);
+        }
+
+        if (fseek(pdata->file, (long)data_pos, SEEK_SET) != 0) return UFT_ERROR_IO;
+
+        if ((size_t)s < track->sector_count) {
+            const uint8_t *data = track->sectors[s].data;
+            uint8_t *pad = NULL;
+            if (!data || track->sectors[s].data_len == 0) {
+                pad = malloc(actual_size);
+                if (!pad) return UFT_ERROR_NO_MEMORY;
+                memset(pad, 0xE5, actual_size);
+                data = pad;
+            }
+            if (fwrite(data, 1, actual_size, pdata->file) != actual_size) {
+                free(pad);
+                return UFT_ERROR_IO;
+            }
+            free(pad);
+        }
+        data_pos += actual_size;
+    }
+    return UFT_OK;
+}
+
 const uft_format_plugin_t uft_format_plugin_dsk_cpc = {
     .name = "DSK",
     .description = "Amstrad CPC/Spectrum DSK",
     .extensions = "dsk",
     .version = 0x00010000,
     .format = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ,  /* write not implemented yet */
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE,
     .probe = dsk_probe,
     .open = dsk_open,
     .close = dsk_close,
     .read_track = dsk_read_track,
+    .write_track = dsk_write_track,
 };
 
 UFT_REGISTER_FORMAT_PLUGIN(dsk_cpc)

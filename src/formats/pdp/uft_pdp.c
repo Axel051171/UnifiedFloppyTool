@@ -52,11 +52,27 @@ static uft_error_t pdp_read_track(uft_disk_t *d, int cyl, int head, uft_track_t 
     return UFT_OK;
 }
 
+static uft_error_t pdp_write_track(uft_disk_t *d, int cyl, int head,
+                                    const uft_track_t *t) {
+    pdp_data_t *p = d->plugin_data;
+    if (!p || !p->file || head != 0) return UFT_ERROR_INVALID_STATE;
+    if (d->read_only) return UFT_ERROR_NOT_SUPPORTED;
+    long off = (long)(cyl * 26 * p->ss);
+    for (size_t s = 0; s < t->sector_count && (int)s < 26; s++) {
+        if (fseek(p->file, off + (long)s * p->ss, SEEK_SET) != 0) return UFT_ERROR_IO;
+        const uint8_t *data = t->sectors[s].data;
+        uint8_t pad[256];
+        if (!data || t->sectors[s].data_len == 0) { memset(pad, 0xE5, p->ss); data = pad; }
+        if (fwrite(data, 1, p->ss, p->file) != p->ss) return UFT_ERROR_IO;
+    }
+    return UFT_OK;
+}
+
 const uft_format_plugin_t uft_format_plugin_pdp = {
     .name = "PDP", .description = "DEC PDP-11 RX01/RX02",
     .extensions = "rx;rx01;rx02;dsk", .format = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE,
     .probe = pdp_probe, .open = pdp_open, .close = pdp_close,
-    .read_track = pdp_read_track,
+    .read_track = pdp_read_track, .write_track = pdp_write_track,
 };
 UFT_REGISTER_FORMAT_PLUGIN(pdp)

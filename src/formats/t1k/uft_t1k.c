@@ -60,11 +60,27 @@ static uft_error_t t1k_read_track(uft_disk_t *d, int cyl, int head, uft_track_t 
     return UFT_OK;
 }
 
+static uft_error_t t1k_write_track(uft_disk_t *d, int cyl, int head,
+                                    const uft_track_t *t) {
+    t1k_data_t *p = d->plugin_data;
+    if (!p || !p->file) return UFT_ERROR_INVALID_STATE;
+    if (d->read_only) return UFT_ERROR_NOT_SUPPORTED;
+    long off = (long)(((uint32_t)cyl * p->heads + head) * p->spt * 512);
+    for (size_t s = 0; s < t->sector_count && (int)s < p->spt; s++) {
+        if (fseek(p->file, off + (long)s * 512, SEEK_SET) != 0) return UFT_ERROR_IO;
+        const uint8_t *data = t->sectors[s].data;
+        uint8_t pad[512];
+        if (!data || t->sectors[s].data_len == 0) { memset(pad, 0xE5, 512); data = pad; }
+        if (fwrite(data, 1, 512, p->file) != 512) return UFT_ERROR_IO;
+    }
+    return UFT_OK;
+}
+
 const uft_format_plugin_t uft_format_plugin_t1k = {
     .name = "T1K", .description = "Tandy 1000 Disk",
     .extensions = "dsk;t1k", .format = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE,
     .probe = t1k_probe, .open = t1k_open, .close = t1k_close,
-    .read_track = t1k_read_track,
+    .read_track = t1k_read_track, .write_track = t1k_write_track,
 };
 UFT_REGISTER_FORMAT_PLUGIN(t1k)

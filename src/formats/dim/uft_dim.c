@@ -209,6 +209,42 @@ static uft_error_t dim_read_track(uft_disk_t *disk, int cyl, int head,
 }
 
 /* ============================================================================
+ * write_track
+ * ============================================================================ */
+
+static uft_error_t dim_write_track(uft_disk_t *disk, int cyl, int head,
+                                    const uft_track_t *track)
+{
+    dim_data_t *pdata = disk->plugin_data;
+    if (!pdata || !pdata->file) return UFT_ERROR_INVALID_STATE;
+    if (disk->read_only) return UFT_ERROR_NOT_SUPPORTED;
+    if (cyl >= pdata->cylinders || head >= pdata->heads)
+        return UFT_ERROR_INVALID_STATE;
+
+    uint32_t track_index = (uint32_t)cyl * pdata->heads + (uint32_t)head;
+    long offset = DIM_HEADER_SIZE +
+                  (long)(track_index * pdata->sectors_per_track *
+                         pdata->sector_size);
+
+    for (size_t s = 0; s < track->sector_count &&
+         (int)s < pdata->sectors_per_track; s++) {
+        if (fseek(pdata->file, offset + (long)s * pdata->sector_size,
+                  SEEK_SET) != 0)
+            return UFT_ERROR_IO;
+        const uint8_t *data = track->sectors[s].data;
+        uint8_t pad[DIM_MAX_SECTOR_SIZE];
+        if (!data || track->sectors[s].data_len == 0) {
+            memset(pad, 0xE5, pdata->sector_size);
+            data = pad;
+        }
+        if (fwrite(data, 1, pdata->sector_size, pdata->file) !=
+            pdata->sector_size)
+            return UFT_ERROR_IO;
+    }
+    return UFT_OK;
+}
+
+/* ============================================================================
  * Plugin registration
  * ============================================================================ */
 
@@ -218,11 +254,12 @@ const uft_format_plugin_t uft_format_plugin_dim = {
     .extensions   = "dim;xdf",
     .version      = 0x00010000,
     .format       = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE,
     .probe        = dim_probe,
     .open         = dim_open,
     .close        = dim_close,
     .read_track   = dim_read_track,
+    .write_track  = dim_write_track,
 };
 
 UFT_REGISTER_FORMAT_PLUGIN(dim)

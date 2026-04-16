@@ -236,6 +236,63 @@ static uft_error_t d77_read_track(uft_disk_t *disk, int cyl, int head,
 }
 
 /* ============================================================================
+ * write_track
+ * ============================================================================ */
+
+static uft_error_t d77_write_track(uft_disk_t *disk, int cyl, int head,
+                                    const uft_track_t *track)
+{
+    d77_data_t *pdata = disk->plugin_data;
+    if (!pdata || !pdata->file) return UFT_ERROR_INVALID_STATE;
+    if (disk->read_only) return UFT_ERROR_NOT_SUPPORTED;
+
+    int idx = cyl * disk->geometry.heads + head;
+    if (idx >= D77_MAX_TRACKS) return UFT_ERROR_INVALID_STATE;
+    if (pdata->track_offsets[idx] == 0) return UFT_ERROR_INVALID_STATE;
+
+    if (fseek(pdata->file, (long)pdata->track_offsets[idx], SEEK_SET) != 0)
+        return UFT_ERROR_IO;
+
+    /* Walk sector headers, write only the data portion */
+    for (int s = 0; s < D77_MAX_SPT; s++) {
+        uint8_t sec_hdr[D77_SEC_HDR_SIZE];
+        if (fread(sec_hdr, 1, D77_SEC_HDR_SIZE, pdata->file) !=
+            D77_SEC_HDR_SIZE)
+            break;
+
+        uint16_t data_size = uft_read_le16(sec_hdr + 14);
+        uint16_t num_sectors = uft_read_le16(sec_hdr + 4);
+
+        if (data_size == 0 || data_size > D77_MAX_SECTOR_SIZE) break;
+        if (num_sectors == 0) break;
+        if (s >= num_sectors) break;
+
+        /* Write sector data if we have a matching sector in track */
+        if ((size_t)s < track->sector_count) {
+            const uint8_t *data = track->sectors[s].data;
+            uint8_t *pad = NULL;
+            if (!data || track->sectors[s].data_len == 0) {
+                pad = malloc(data_size);
+                if (!pad) return UFT_ERROR_NO_MEMORY;
+                memset(pad, 0xE5, data_size);
+                data = pad;
+            }
+            if (fwrite(data, 1, data_size, pdata->file) != data_size) {
+                free(pad);
+                return UFT_ERROR_IO;
+            }
+            free(pad);
+        } else {
+            /* Skip past this sector's data */
+            if (fseek(pdata->file, (long)data_size, SEEK_CUR) != 0)
+                return UFT_ERROR_IO;
+        }
+    }
+
+    return UFT_OK;
+}
+
+/* ============================================================================
  * Plugin registration
  * ============================================================================ */
 
@@ -245,11 +302,12 @@ const uft_format_plugin_t uft_format_plugin_d77 = {
     .extensions   = "d77;1dd",
     .version      = 0x00010000,
     .format       = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE,
     .probe        = d77_probe,
     .open         = d77_open,
     .close        = d77_close,
     .read_track   = d77_read_track,
+    .write_track  = d77_write_track,
 };
 
 UFT_REGISTER_FORMAT_PLUGIN(d77)

@@ -43,11 +43,26 @@ static uft_error_t edk_read_track(uft_disk_t *d, int cyl, int head, uft_track_t 
     }
     return UFT_OK;
 }
+static uft_error_t edk_write_track(uft_disk_t *d, int cyl, int head,
+                                    const uft_track_t *t) {
+    edk_data_t *p = d->plugin_data;
+    if (!p || !p->file) return UFT_ERROR_INVALID_STATE;
+    if (d->read_only) return UFT_ERROR_NOT_SUPPORTED;
+    long off = (long)(((uint32_t)cyl*2+head)*p->spt*512);
+    for (size_t s = 0; s < t->sector_count && (int)s < p->spt; s++) {
+        if (fseek(p->file, off + (long)s * 512, SEEK_SET) != 0) return UFT_ERROR_IO;
+        const uint8_t *data = t->sectors[s].data;
+        uint8_t pad[512];
+        if (!data || t->sectors[s].data_len == 0) { memset(pad, 0xE5, 512); data = pad; }
+        if (fwrite(data, 1, 512, p->file) != 512) return UFT_ERROR_IO;
+    }
+    return UFT_OK;
+}
 const uft_format_plugin_t uft_format_plugin_edk = {
     .name = "EDK", .description = "Ensoniq EPS/ASR Disk",
     .extensions = "ede;edk;eds", .format = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE,
     .probe = edk_probe, .open = edk_open, .close = edk_close,
-    .read_track = edk_read_track,
+    .read_track = edk_read_track, .write_track = edk_write_track,
 };
 UFT_REGISTER_FORMAT_PLUGIN(edk)
