@@ -3,8 +3,8 @@
  * ======================================================================
  */
 
-#include "otdr_event_core_v7.h"
-#include "uft_align_fuse_bridge.h"
+#include "uft/analysis/otdr_event_core_v7.h"
+#include "uft/analysis/uft_align_fuse_bridge.h"
 
 #include <stdio.h>
 #include <stdlib.h>

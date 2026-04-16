@@ -2,8 +2,8 @@
  * test_export_v12.c — Tests for OTDR v12 Export/Integration + UFT Bridge
  */
 
-#include "otdr_event_core_v12.h"
-#include "uft_export_bridge.h"
+#include "uft/analysis/otdr_event_core_v12.h"
+#include "uft/analysis/uft_export_bridge.h"
 
 #include <stdio.h>
 #include <stdlib.h>

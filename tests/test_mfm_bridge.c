@@ -3,8 +3,8 @@
  * =====================================================
  */
 
-#include "mfm_detect.h"
-#include "cpm_fs.h"
+#include "uft/analysis/mfm_detect.h"
+#include "uft/analysis/cpm_fs.h"
 #include "uft_mfm_detect_bridge.h"
 
 #include <stdio.h>

@@ -4,7 +4,7 @@
  * =============================================================================
  */
 
-#include "mfm_detect.h"
+#include "uft/analysis/mfm_detect.h"
 #include <assert.h>
 
 /** Local big-endian 32-bit helper for tests */

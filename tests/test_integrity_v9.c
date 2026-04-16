@@ -2,8 +2,8 @@
  * test_integrity_v9.c — Tests for OTDR v9 Integrity + UFT Bridge
  */
 
-#include "otdr_event_core_v9.h"
-#include "uft_integrity_bridge.h"
+#include "uft/analysis/otdr_event_core_v9.h"
+#include "uft/analysis/uft_integrity_bridge.h"
 
 #include <stdio.h>
 #include <stdlib.h>

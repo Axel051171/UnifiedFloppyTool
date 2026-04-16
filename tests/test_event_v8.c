@@ -2,8 +2,8 @@
  * test_event_v8.c — Tests for OTDR Event Core v8 + UFT Bridge
  */
 
-#include "otdr_event_core_v8.h"
-#include "uft_event_v8_bridge.h"
+#include "uft/analysis/otdr_event_core_v8.h"
+#include "uft/analysis/uft_event_v8_bridge.h"
 
 #include <stdio.h>
 #include <stdlib.h>

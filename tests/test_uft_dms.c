@@ -8,7 +8,7 @@
  * valid DMS structures in memory to exercise each code path.
  */
 
-#include "uft_dms.h"
+#include "uft/formats/uft_dms.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

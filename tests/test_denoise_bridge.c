@@ -3,8 +3,8 @@
  * ========================================================================
  */
 
-#include "phi_otdr_denoise_1d.h"
-#include "uft_denoise_bridge.h"
+#include "uft/analysis/phi_otdr_denoise_1d.h"
+#include "uft/analysis/uft_denoise_bridge.h"
 
 #include <stdio.h>
 #include <stdlib.h>

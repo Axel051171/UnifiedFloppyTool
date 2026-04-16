@@ -2,8 +2,8 @@
  * test_confidence_v10.c — Tests for OTDR v10 Confidence + UFT Bridge
  */
 
-#include "otdr_event_core_v10.h"
-#include "uft_confidence_bridge.h"
+#include "uft/analysis/otdr_event_core_v10.h"
+#include "uft/analysis/uft_confidence_bridge.h"
 
 #include <stdio.h>
 #include <stdlib.h>

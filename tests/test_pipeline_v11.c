@@ -2,8 +2,8 @@
  * test_pipeline_v11.c — Tests for OTDR v11 Pipeline + UFT Bridge
  */
 
-#include "otdr_event_core_v11.h"
-#include "uft_pipeline_bridge.h"
+#include "uft/analysis/otdr_event_core_v11.h"
+#include "uft/analysis/uft_pipeline_bridge.h"
 
 #include <stdio.h>
 #include <stdlib.h>

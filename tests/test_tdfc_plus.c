@@ -2,7 +2,7 @@
  * test_tdfc_plus.c — Tests for TDFC+ extensions
  * Robust stats, envelope dropout, amplitude dropout, segmentation
  */
-#include "tdfc.h"
+#include "uft/analysis/tdfc.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
