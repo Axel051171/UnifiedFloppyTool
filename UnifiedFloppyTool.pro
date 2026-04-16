@@ -673,6 +673,10 @@ SOURCES += \
     src/formats/edk/uft_edk.c \
     src/formats/d64/uft_d64_plugin.c \
     src/formats/dcm/uft_dcm.c \
+    src/formats/atx/uft_atx.c \
+    src/formats/adf/uft_adf_plugin.c \
+    src/formats/scl/uft_scl_plugin.c \
+    src/formats/format_registry/uft_format_registry.c \
     src/core/uft_decode_pipeline.c \
     src/parsers/a2r/uft_a2r_parser.c
 
