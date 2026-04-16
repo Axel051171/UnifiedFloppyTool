@@ -118,12 +118,13 @@ static uft_error_t imd_read_track(uft_disk_t* disk, int cyl, int head, uft_track
         
         uint16_t sec_size = imd_sector_sizes[sz < 7 ? sz : 2];
         uint8_t sec_map[256];
-        if (fread(sec_map, 1, num_sec, pdata->file) != num_sec) { /* I/O error */ }
+        if (fread(sec_map, 1, num_sec, pdata->file) != num_sec) break;
         if (hdr[2] & 0x80) (void)fseek(pdata->file, num_sec, SEEK_CUR);
         if (hdr[2] & 0x40) (void)fseek(pdata->file, num_sec, SEEK_CUR);
         
         if (t_cyl == cyl && t_head == head) {
             uint8_t* sec_buf = malloc(sec_size);
+            if (!sec_buf) return UFT_ERROR_NO_MEMORY;
             for (int s = 0; s < num_sec; s++) {
                 uint8_t dtype = fgetc(pdata->file);
                 memset(sec_buf, 0, sec_size);
@@ -134,7 +135,9 @@ static uft_error_t imd_read_track(uft_disk_t* disk, int cyl, int head, uft_track
                     uint8_t fill = fgetc(pdata->file);
                     memset(sec_buf, fill, sec_size);
                 } else {
-                    if (fread(sec_buf, 1, sec_size, pdata->file) != sec_size) { /* I/O error */ }
+                    if (fread(sec_buf, 1, sec_size, pdata->file) != sec_size) {
+                        memset(sec_buf, 0xE5, sec_size); /* forensic fill */
+                    }
                 }
                 uft_format_add_sector(track, sec_map[s] - 1, sec_buf, sec_size, cyl, head);
             }

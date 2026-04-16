@@ -24,8 +24,9 @@ static uft_error_t d88_open(uft_disk_t* disk, const char* path, bool read_only) 
     if (!f) return UFT_ERROR_FILE_OPEN;
     
     uint8_t hdr[D88_HEADER];
-    if (fread(hdr, 1, D88_HEADER, f) != D88_HEADER) { /* I/O error */ }
+    if (fread(hdr, 1, D88_HEADER, f) != D88_HEADER) { fclose(f); return UFT_ERROR_IO; }
     d88_data_t* p = calloc(1, sizeof(d88_data_t));
+    if (!p) { fclose(f); return UFT_ERROR_NO_MEMORY; }
     p->file = f;
     p->media = hdr[0x1B];
     for (int i = 0; i < 164; i++) p->track_off[i] = uft_read_le32(&hdr[0x20 + i*4]);

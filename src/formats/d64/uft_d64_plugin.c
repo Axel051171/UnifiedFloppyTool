@@ -89,11 +89,38 @@ static uft_error_t d64_plugin_read_track(uft_disk_t *disk, int cyl, int head,
     return UFT_OK;
 }
 
+static uft_error_t d64_plugin_write_track(uft_disk_t *disk, int cyl, int head,
+                                           const uft_track_t *track) {
+    d64_pd_t *p = disk->plugin_data;
+    if (!p || !p->file || head != 0) return UFT_ERROR_INVALID_STATE;
+    if (disk->read_only) return UFT_ERROR_NOT_SUPPORTED;
+
+    int d64_track = cyl + 1;
+    if (d64_track < 1 || d64_track > p->max_track) return UFT_OK;
+    int nsectors = d64_spt[d64_track];
+
+    for (size_t s = 0; s < track->sector_count && (int)s < nsectors; s++) {
+        long off = d64_offset(d64_track, (int)s);
+        if (fseek(p->file, off, SEEK_SET) != 0) return UFT_ERROR_IO;
+        const uint8_t *data = track->sectors[s].data;
+        size_t len = track->sectors[s].data_len;
+        uint8_t pad[256];
+        if (!data || len == 0) {
+            memset(pad, 0, 256); data = pad; len = 256;
+        } else if (len < 256) {
+            memset(pad, 0, 256); memcpy(pad, data, len); data = pad; len = 256;
+        }
+        if (fwrite(data, 1, 256, p->file) != 256) return UFT_ERROR_IO;
+    }
+    return UFT_OK;
+}
+
 const uft_format_plugin_t uft_format_plugin_d64 = {
     .name = "D64", .description = "Commodore 1541 D64",
     .extensions = "d64", .format = UFT_FORMAT_DSK,
     .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE,
     .probe = d64_plugin_probe, .open = d64_plugin_open,
     .close = d64_plugin_close, .read_track = d64_plugin_read_track,
+    .write_track = d64_plugin_write_track,
 };
 UFT_REGISTER_FORMAT_PLUGIN(d64)
