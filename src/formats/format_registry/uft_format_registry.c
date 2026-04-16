@@ -163,7 +163,61 @@ extern const uft_format_plugin_t uft_format_plugin_micropolis;
 extern const uft_format_plugin_t uft_format_plugin_northstar;
 
 /* ============================================================================
- * Plugin Array (81 entries)
+ * Tier 4: DSK Generic variants (49 plugins from dsk_generic.c macro)
+ * ============================================================================ */
+
+extern const uft_format_plugin_t uft_format_plugin_dsk_fm7;
+extern const uft_format_plugin_t uft_format_plugin_dsk_msx;
+extern const uft_format_plugin_t uft_format_plugin_dsk_pcw;
+extern const uft_format_plugin_t uft_format_plugin_dsk_cg;
+extern const uft_format_plugin_t uft_format_plugin_dsk_bk;
+extern const uft_format_plugin_t uft_format_plugin_dsk_kc;
+extern const uft_format_plugin_t uft_format_plugin_dsk_mtx;
+extern const uft_format_plugin_t uft_format_plugin_dsk_nas;
+extern const uft_format_plugin_t uft_format_plugin_dsk_sc3;
+extern const uft_format_plugin_t uft_format_plugin_dsk_sv;
+extern const uft_format_plugin_t uft_format_plugin_dsk_vec;
+extern const uft_format_plugin_t uft_format_plugin_dsk_nb;
+extern const uft_format_plugin_t uft_format_plugin_dsk_smc;
+extern const uft_format_plugin_t uft_format_plugin_dsk_uni;
+extern const uft_format_plugin_t uft_format_plugin_dsk_aq;
+extern const uft_format_plugin_t uft_format_plugin_dsk_emu;
+extern const uft_format_plugin_t uft_format_plugin_dsk_eqx;
+extern const uft_format_plugin_t uft_format_plugin_dsk_krg;
+extern const uft_format_plugin_t uft_format_plugin_dsk_px;
+extern const uft_format_plugin_t uft_format_plugin_dsk_aln;
+extern const uft_format_plugin_t uft_format_plugin_dsk_m5;
+extern const uft_format_plugin_t uft_format_plugin_dsk_lyn;
+extern const uft_format_plugin_t uft_format_plugin_dsk_tok;
+extern const uft_format_plugin_t uft_format_plugin_dsk_rld;
+extern const uft_format_plugin_t uft_format_plugin_dsk_fp;
+extern const uft_format_plugin_t uft_format_plugin_dsk_ak;
+extern const uft_format_plugin_t uft_format_plugin_dsk_ein;
+extern const uft_format_plugin_t uft_format_plugin_dsk_agt;
+extern const uft_format_plugin_t uft_format_plugin_dsk_nec;
+extern const uft_format_plugin_t uft_format_plugin_dsk_rc;
+extern const uft_format_plugin_t uft_format_plugin_dsk_san;
+extern const uft_format_plugin_t uft_format_plugin_dsk_x820;
+extern const uft_format_plugin_t uft_format_plugin_dsk_bw;
+extern const uft_format_plugin_t uft_format_plugin_dsk_xm;
+extern const uft_format_plugin_t uft_format_plugin_dsk_vt;
+extern const uft_format_plugin_t uft_format_plugin_dsk_mz;
+extern const uft_format_plugin_t uft_format_plugin_dsk_oli;
+extern const uft_format_plugin_t uft_format_plugin_dsk_cro;
+extern const uft_format_plugin_t uft_format_plugin_dsk_wng;
+extern const uft_format_plugin_t uft_format_plugin_dsk_hk;
+extern const uft_format_plugin_t uft_format_plugin_dsk_hp;
+extern const uft_format_plugin_t uft_format_plugin_dsk_ace;
+extern const uft_format_plugin_t uft_format_plugin_dsk_flex;
+extern const uft_format_plugin_t uft_format_plugin_dsk_ns;
+extern const uft_format_plugin_t uft_format_plugin_dsk_vic;
+extern const uft_format_plugin_t uft_format_plugin_dsk_os9;
+extern const uft_format_plugin_t uft_format_plugin_dsk_orc;
+extern const uft_format_plugin_t uft_format_plugin_dsk_dc42v;
+extern const uft_format_plugin_t uft_format_plugin_dsk_p3;
+
+/* ============================================================================
+ * Plugin Array (130 entries)
  * ============================================================================ */
 
 static const uft_format_plugin_t* all_plugins[] = {
@@ -253,6 +307,57 @@ static const uft_format_plugin_t* all_plugins[] = {
     &uft_format_plugin_victor9k,
     &uft_format_plugin_micropolis,
     &uft_format_plugin_northstar,
+
+    /* Tier 4: DSK Generic variants (49) */
+    &uft_format_plugin_dsk_fm7,
+    &uft_format_plugin_dsk_msx,
+    &uft_format_plugin_dsk_pcw,
+    &uft_format_plugin_dsk_cg,
+    &uft_format_plugin_dsk_bk,
+    &uft_format_plugin_dsk_kc,
+    &uft_format_plugin_dsk_mtx,
+    &uft_format_plugin_dsk_nas,
+    &uft_format_plugin_dsk_sc3,
+    &uft_format_plugin_dsk_sv,
+    &uft_format_plugin_dsk_vec,
+    &uft_format_plugin_dsk_nb,
+    &uft_format_plugin_dsk_smc,
+    &uft_format_plugin_dsk_uni,
+    &uft_format_plugin_dsk_aq,
+    &uft_format_plugin_dsk_emu,
+    &uft_format_plugin_dsk_eqx,
+    &uft_format_plugin_dsk_krg,
+    &uft_format_plugin_dsk_px,
+    &uft_format_plugin_dsk_aln,
+    &uft_format_plugin_dsk_m5,
+    &uft_format_plugin_dsk_lyn,
+    &uft_format_plugin_dsk_tok,
+    &uft_format_plugin_dsk_rld,
+    &uft_format_plugin_dsk_fp,
+    &uft_format_plugin_dsk_ak,
+    &uft_format_plugin_dsk_ein,
+    &uft_format_plugin_dsk_agt,
+    &uft_format_plugin_dsk_nec,
+    &uft_format_plugin_dsk_rc,
+    &uft_format_plugin_dsk_san,
+    &uft_format_plugin_dsk_x820,
+    &uft_format_plugin_dsk_bw,
+    &uft_format_plugin_dsk_xm,
+    &uft_format_plugin_dsk_vt,
+    &uft_format_plugin_dsk_mz,
+    &uft_format_plugin_dsk_oli,
+    &uft_format_plugin_dsk_cro,
+    &uft_format_plugin_dsk_wng,
+    &uft_format_plugin_dsk_hk,
+    &uft_format_plugin_dsk_hp,
+    &uft_format_plugin_dsk_ace,
+    &uft_format_plugin_dsk_flex,
+    &uft_format_plugin_dsk_ns,
+    &uft_format_plugin_dsk_vic,
+    &uft_format_plugin_dsk_os9,
+    &uft_format_plugin_dsk_orc,
+    &uft_format_plugin_dsk_dc42v,
+    &uft_format_plugin_dsk_p3,
     NULL
 };
 

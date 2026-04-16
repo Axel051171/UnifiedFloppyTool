@@ -163,6 +163,30 @@ static uft_error_t dsk_gen_read_track(uft_disk_t *disk, int cyl, int head,
     return UFT_OK;
 }
 
+static uft_error_t dsk_gen_write_track(uft_disk_t *disk, int cyl, int head,
+                                        const uft_track_t *track)
+{
+    dsk_gen_data_t *p = disk->plugin_data;
+    if (!p || !p->file) return UFT_ERROR_INVALID_STATE;
+    if (disk->read_only) return UFT_ERROR_NOT_SUPPORTED;
+    const dsk_geometry_t *g = p->geom;
+    if (cyl >= g->cylinders || head >= g->heads) return UFT_ERROR_INVALID_STATE;
+
+    long offset = (long)(((uint32_t)cyl * g->heads + head) * g->spt * g->sector_size);
+    for (size_t s = 0; s < track->sector_count && (int)s < g->spt; s++) {
+        if (fseek(p->file, offset + (long)s * g->sector_size, SEEK_SET) != 0)
+            return UFT_ERROR_IO;
+        const uint8_t *data = track->sectors[s].data;
+        uint8_t pad[1024];
+        if (!data || track->sectors[s].data_len == 0) {
+            memset(pad, 0xE5, g->sector_size); data = pad;
+        }
+        if (fwrite(data, 1, g->sector_size, p->file) != g->sector_size)
+            return UFT_ERROR_IO;
+    }
+    return UFT_OK;
+}
+
 /* ============================================================================
  * Macro to generate plugin instances from the geometry table
  *
@@ -180,11 +204,12 @@ static uft_error_t dsk_gen_read_track(uft_disk_t *disk, int cyl, int head,
         .description = DESC, \
         .extensions = EXT, \
         .format = UFT_FORMAT_DSK, \
-        .capabilities = UFT_FORMAT_CAP_READ, \
+        .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE, \
         .probe = dsk_probe_##SUFFIX, \
         .open = dsk_open_##SUFFIX, \
         .close = dsk_gen_close, \
         .read_track = dsk_gen_read_track, \
+        .write_track = dsk_gen_write_track, \
     };
 
 /* Generate all 49 DSK variant plugins */
