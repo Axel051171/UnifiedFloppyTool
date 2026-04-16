@@ -11,6 +11,9 @@ set(EXCLUDED_TESTS
     "test_mega65"           # Needs uft_mega65 module (header is stub-only)
     # "test_mega65_fat32"   # Re-enabled: compiles standalone
     "test_libdsk_formats"   # Needs format plugin modules (apridisk, nanowasp, etc.)
+    "test_track_writer"     # src/hardware/uft_track_writer.c removed in cleanup
+    "test_flux_analysis"    # src/flux/uft_flux_analysis.c removed in cleanup
+    "test_c64_bam"          # src/formats/c64/uft_c64_bam.c removed in cleanup
     # "test_ti99_formats"   # Re-enabled: TIFILES/FIAD modules exist
     # "test_new_formats"    # Re-enabled: compiles standalone
     # "test_fat_extensions"  # Re-enabled: compiles standalone
