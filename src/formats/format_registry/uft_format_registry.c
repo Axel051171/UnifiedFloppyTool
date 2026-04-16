@@ -26,6 +26,7 @@ extern const uft_format_plugin_t uft_format_plugin_sad;
 extern const uft_format_plugin_t uft_format_plugin_dmk;
 extern const uft_format_plugin_t uft_format_plugin_fdi;
 extern const uft_format_plugin_t uft_format_plugin_cqm;
+extern const uft_format_plugin_t uft_format_plugin_hfe;
 
 static const uft_format_plugin_t* all_plugins[] = {
     &uft_format_plugin_d71,
@@ -48,6 +49,7 @@ static const uft_format_plugin_t* all_plugins[] = {
     &uft_format_plugin_dmk,
     &uft_format_plugin_fdi,
     &uft_format_plugin_cqm,
+    &uft_format_plugin_hfe,
     NULL
 };
 

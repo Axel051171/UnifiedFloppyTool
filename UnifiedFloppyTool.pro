@@ -667,6 +667,9 @@ SOURCES += \
     src/formats/xdm86/uft_xdm86.c \
     src/formats/pdp/uft_pdp.c \
     src/formats/syn/uft_syn.c \
+    src/formats/msa/uft_msa_plugin.c \
+    src/formats/ipf/uft_ipf_plugin.c \
+    src/formats/apple/uft_woz_plugin.c \
     src/formats/edk/uft_edk.c \
     src/formats/dcm/uft_dcm.c \
     src/core/uft_decode_pipeline.c \

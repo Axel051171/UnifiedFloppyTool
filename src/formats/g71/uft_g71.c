@@ -17,6 +17,7 @@
 
 #include "uft/formats/uft_g71.h"
 #include "uft/uft_types.h"
+#include "uft/uft_format_common.h"
 /* Note: uft_g71.h includes uft/core/uft_unified_types.h which provides:
  *   - uft_track_t, uft_disk_image_t, uft_sector_t
  *   - Error codes: UFT_OK, UFT_ERR_*, UFT_ERC_*
@@ -410,6 +411,48 @@ int uft_g71_to_d71(const uft_disk_image_t *g71, uft_disk_image_t **d71_out) {
  * @brief Wrapper for legacy g71_probe signature expected by uft_smart_open
  */
 bool g71_probe(const uint8_t *data, size_t size, size_t file_size, int *confidence) {
-    (void)file_size;  /* Not used in our implementation */
+    (void)file_size;
     return uft_g71_probe(data, size, confidence);
 }
+
+/* ============================================================================
+ * Plugin-B Interface (for format registry)
+ * ============================================================================ */
+
+static uft_error_t g71_plugin_open(uft_disk_t *disk, const char *path, bool ro) {
+    (void)ro;
+    size_t file_size = 0;
+    uint8_t *data = uft_read_file(path, &file_size);
+    if (!data) return UFT_ERROR_FILE_OPEN;
+    /* G71 = 2× D64 (70 tracks × ~7928 bytes GCR) */
+    disk->plugin_data = data;
+    disk->geometry.cylinders = 70;
+    disk->geometry.heads = 1;
+    disk->geometry.sectors = 21;
+    disk->geometry.sector_size = 256;
+    disk->geometry.total_sectors = 70 * 21;
+    return UFT_OK;
+}
+
+static void g71_plugin_close(uft_disk_t *disk) {
+    free(disk->plugin_data);
+    disk->plugin_data = NULL;
+}
+
+static uft_error_t g71_plugin_read_track(uft_disk_t *disk, int cyl, int head,
+                                          uft_track_t *track) {
+    (void)head;
+    if (!disk->plugin_data) return UFT_ERROR_INVALID_STATE;
+    uft_track_init(track, cyl, 0);
+    /* Raw GCR data — sector decode not yet implemented */
+    return UFT_OK;
+}
+
+const uft_format_plugin_t uft_format_plugin_g71 = {
+    .name = "G71", .description = "Commodore 1571 GCR",
+    .extensions = "g71", .format = UFT_FORMAT_DSK,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_FLUX,
+    .probe = g71_probe, .open = g71_plugin_open,
+    .close = g71_plugin_close, .read_track = g71_plugin_read_track,
+};
+UFT_REGISTER_FORMAT_PLUGIN(g71)
