@@ -33,6 +33,11 @@ extern const uft_format_plugin_t uft_format_plugin_adf;
 extern const uft_format_plugin_t uft_format_plugin_scl;
 extern const uft_format_plugin_t uft_format_plugin_stx;
 extern const uft_format_plugin_t uft_format_plugin_pro;
+extern const uft_format_plugin_t uft_format_plugin_do;
+extern const uft_format_plugin_t uft_format_plugin_po;
+extern const uft_format_plugin_t uft_format_plugin_adl;
+extern const uft_format_plugin_t uft_format_plugin_v9t9;
+extern const uft_format_plugin_t uft_format_plugin_vdk;
 
 static const uft_format_plugin_t* all_plugins[] = {
     &uft_format_plugin_d71,
@@ -62,6 +67,11 @@ static const uft_format_plugin_t* all_plugins[] = {
     &uft_format_plugin_scl,
     &uft_format_plugin_stx,
     &uft_format_plugin_pro,
+    &uft_format_plugin_do,
+    &uft_format_plugin_po,
+    &uft_format_plugin_adl,
+    &uft_format_plugin_v9t9,
+    &uft_format_plugin_vdk,
     NULL
 };
 
