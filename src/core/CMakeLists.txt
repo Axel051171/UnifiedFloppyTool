@@ -23,11 +23,11 @@ set(CORE_WHITELIST
     # uft_process.c  # incomplete type uft_async_process_t — needs header fix
     uft_protection_pipeline.c
     uft_safe_alloc.c
-    uft_safe_io.c
+    # uft_safe_io.c  # C11 threads.h not available on all platforms
     uft_safe_string.c
     uft_settings.c
-    uft_sos_protection.c
-    uft_track.c
+    # uft_sos_protection.c  # uft_sos_track_t member mismatch
+    # uft_track.c  # conflicting uft_track_init, uses uft_format_plugin.c instead
     uft_write_verify_pipeline.c
 )
 

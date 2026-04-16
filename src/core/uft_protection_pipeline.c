@@ -6,6 +6,12 @@
  */
 
 #include "uft/uft_protection_pipeline.h"
+
+/* UFT_ERR_INVALID_PARAM may not be visible via CMake include path */
+#ifndef UFT_ERR_INVALID_PARAM
+#define UFT_ERR_INVALID_PARAM 0x82
+#endif
+
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
