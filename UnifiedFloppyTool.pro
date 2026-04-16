@@ -684,6 +684,11 @@ SOURCES += \
     src/formats/adl/uft_adl.c \
     src/formats/v9t9/uft_v9t9.c \
     src/formats/vdk/uft_vdk_plugin.c \
+    src/formats/dim_atari/uft_dim_atari.c \
+    src/formats/fdi_pc98/uft_fdi_pc98.c \
+    src/formats/d13/uft_d13.c \
+    src/formats/sap/uft_sap_plugin.c \
+    src/formats/86box/uft_86f_plugin.c \
     src/core/uft_decode_pipeline.c \
     src/parsers/a2r/uft_a2r_parser.c
 
@@ -1166,7 +1171,7 @@ SOURCES += \
     # src/formats/dds/uft_dds_parser_v3.c  # non-floppy \
     src/formats/dfi/uft_dfi_parser_v3.c \
     src/formats/dhd/uft_dhd_parser_v3.c \
-    src/formats/dim/uft_dim.c \
+    # src/formats/dim/uft_dim.c  # already in main SOURCES block \
     # src/formats/dmg/uft_dmg_parser_v3.c  # non-floppy \
     src/formats/dmk/uft_dmk_parser_v3.c \
     src/formats/dms/uft_dms_parser_v3.c \

@@ -38,6 +38,12 @@ extern const uft_format_plugin_t uft_format_plugin_po;
 extern const uft_format_plugin_t uft_format_plugin_adl;
 extern const uft_format_plugin_t uft_format_plugin_v9t9;
 extern const uft_format_plugin_t uft_format_plugin_vdk;
+extern const uft_format_plugin_t uft_format_plugin_dim;
+extern const uft_format_plugin_t uft_format_plugin_dim_atari;
+extern const uft_format_plugin_t uft_format_plugin_fdi_pc98;
+extern const uft_format_plugin_t uft_format_plugin_d13;
+extern const uft_format_plugin_t uft_format_plugin_sap_thomson;
+extern const uft_format_plugin_t uft_format_plugin_86f;
 
 static const uft_format_plugin_t* all_plugins[] = {
     &uft_format_plugin_d71,
@@ -72,6 +78,12 @@ static const uft_format_plugin_t* all_plugins[] = {
     &uft_format_plugin_adl,
     &uft_format_plugin_v9t9,
     &uft_format_plugin_vdk,
+    &uft_format_plugin_dim,
+    &uft_format_plugin_dim_atari,
+    &uft_format_plugin_fdi_pc98,
+    &uft_format_plugin_d13,
+    &uft_format_plugin_sap_thomson,
+    &uft_format_plugin_86f,
     NULL
 };
 
