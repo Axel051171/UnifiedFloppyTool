@@ -136,7 +136,34 @@ extern const uft_format_plugin_t uft_format_plugin_posix;
 extern const uft_format_plugin_t uft_format_plugin_qrst;
 
 /* ============================================================================
- * Plugin Array (72 entries)
+ * Tier 3: New implementations (9 plugins)
+ * ============================================================================ */
+
+/* TRS-80 additional */
+extern const uft_format_plugin_t uft_format_plugin_jvc;
+
+/* Amiga additional */
+extern const uft_format_plugin_t uft_format_plugin_dms;
+
+/* Commodore additional */
+extern const uft_format_plugin_t uft_format_plugin_d67;
+
+/* MSX */
+extern const uft_format_plugin_t uft_format_plugin_msx_disk;
+
+/* Spectrum additional */
+extern const uft_format_plugin_t uft_format_plugin_udi;
+
+/* Japanese additional */
+extern const uft_format_plugin_t uft_format_plugin_nfd;
+
+/* Exotic hardware */
+extern const uft_format_plugin_t uft_format_plugin_victor9k;
+extern const uft_format_plugin_t uft_format_plugin_micropolis;
+extern const uft_format_plugin_t uft_format_plugin_northstar;
+
+/* ============================================================================
+ * Plugin Array (81 entries)
  * ============================================================================ */
 
 static const uft_format_plugin_t* all_plugins[] = {
@@ -215,6 +242,17 @@ static const uft_format_plugin_t* all_plugins[] = {
     &uft_format_plugin_opus,
     &uft_format_plugin_posix,
     &uft_format_plugin_qrst,
+
+    /* Tier 3: New implementations (9) */
+    &uft_format_plugin_jvc,
+    &uft_format_plugin_dms,
+    &uft_format_plugin_d67,
+    &uft_format_plugin_msx_disk,
+    &uft_format_plugin_udi,
+    &uft_format_plugin_nfd,
+    &uft_format_plugin_victor9k,
+    &uft_format_plugin_micropolis,
+    &uft_format_plugin_northstar,
     NULL
 };
 

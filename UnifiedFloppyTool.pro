@@ -684,13 +684,22 @@ SOURCES += \
     src/formats/adl/uft_adl.c \
     src/formats/v9t9/uft_v9t9.c \
     src/formats/vdk/uft_vdk_plugin.c \
+    src/formats/victor9k/uft_victor9k.c \
+    src/formats/micropolis/uft_micropolis.c \
+    src/formats/northstar/uft_northstar.c \
     src/formats/dim_atari/uft_dim_atari.c \
     src/formats/fdi_pc98/uft_fdi_pc98.c \
     src/formats/d13/uft_d13.c \
     src/formats/sap/uft_sap_plugin.c \
     src/formats/86box/uft_86f_plugin.c \
     src/core/uft_decode_pipeline.c \
-    src/parsers/a2r/uft_a2r_parser.c
+    src/parsers/a2r/uft_a2r_parser.c \
+    src/formats/jvc/uft_jvc_plugin.c \
+    src/formats/dms/uft_dms_plugin.c \
+    src/formats/d67/uft_d67.c \
+    src/formats/dsk_msx/uft_dsk_msx.c \
+    src/formats/udi/uft_udi_plugin.c \
+    src/formats/nfd/uft_nfd_plugin.c
 
 # STX - Atari ST with protection
 SOURCES += \
