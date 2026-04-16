@@ -10,7 +10,7 @@ file(GLOB TEST_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/test_*.c")
 set(EXCLUDED_TESTS
     "test_mega65"           # Needs uft_mega65 module (header is stub-only)
     # "test_mega65_fat32"   # Re-enabled: compiles standalone
-    "test_libdsk_formats"   # Needs format plugin modules (apridisk, nanowasp, etc.)
+    # "test_libdsk_formats" # Re-enabled: apridisk, nanowasp, qrst, cfi now in registry
     "test_track_writer"     # src/hardware/uft_track_writer.c removed in cleanup
     "test_flux_analysis"    # src/flux/uft_flux_analysis.c removed in cleanup
     "test_c64_bam"          # src/formats/c64/uft_c64_bam.c removed in cleanup
