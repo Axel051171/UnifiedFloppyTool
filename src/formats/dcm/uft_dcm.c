@@ -306,6 +306,38 @@ static uft_error_t dcm_read_track(uft_disk_t *disk, int cyl, int head,
 }
 
 /* ============================================================================
+ * write_track — modify decompressed in-memory buffer
+ * ============================================================================ */
+
+static uft_error_t dcm_write_track(uft_disk_t *disk, int cyl, int head,
+                                     const uft_track_t *track)
+{
+    dcm_plugin_data_t *p = disk->plugin_data;
+    if (!p || !p->disk_data || head != 0) return UFT_ERROR_INVALID_STATE;
+    if (disk->read_only) return UFT_ERROR_NOT_SUPPORTED;
+
+    for (int s = 0; s < 18; s++) {
+        uint32_t sec_num = (uint32_t)(cyl * 18 + s + 1);
+        if (sec_num > p->total_sectors) break;
+
+        uint16_t sz = dcm_sec_size(sec_num, p->sector_size);
+        size_t off = dcm_sector_offset(sec_num, p->sector_size);
+        if (off + sz > p->disk_size) break;
+
+        /* Find matching sector in input track */
+        for (size_t ts = 0; ts < track->sector_count; ts++) {
+            if (track->sectors[ts].id.sector == (uint8_t)s) {
+                const uint8_t *src = track->sectors[ts].data;
+                if (src && track->sectors[ts].data_len >= sz)
+                    memcpy(p->disk_data + off, src, sz);
+                break;
+            }
+        }
+    }
+    return UFT_OK;
+}
+
+/* ============================================================================
  * Plugin registration
  * ============================================================================ */
 
@@ -315,11 +347,12 @@ const uft_format_plugin_t uft_format_plugin_dcm = {
     .extensions   = "dcm",
     .version      = 0x00020000,
     .format       = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE,
     .probe        = uft_dcm_plugin_probe,
     .open         = dcm_open,
     .close        = dcm_close,
     .read_track   = dcm_read_track,
+    .write_track  = dcm_write_track,
 };
 
 UFT_REGISTER_FORMAT_PLUGIN(dcm)

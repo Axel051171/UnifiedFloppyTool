@@ -86,9 +86,63 @@ static uft_error_t dmk_read_track(uft_disk_t* disk, int cyl, int head, uft_track
     return UFT_OK;
 }
 
+static uft_error_t dmk_write_track(uft_disk_t* disk, int cyl, int head,
+                                     const uft_track_t* track) {
+    dmk_data_t* p = disk->plugin_data;
+    if (!p || !p->file) return UFT_ERROR_INVALID_STATE;
+    if (disk->read_only) return UFT_ERROR_NOT_SUPPORTED;
+
+    size_t off = DMK_HDR + ((size_t)cyl * (p->ss ? 1 : 2) + head) * p->track_len;
+    if (fseek(p->file, (long)off, SEEK_SET) != 0) return UFT_ERR_IO;
+    if (p->track_len > UFT_MAX_ALLOC_SIZE) return UFT_ERR_IO;
+
+    uint8_t* tbuf = malloc(p->track_len);
+    if (!tbuf) return UFT_ERR_MEMORY;
+    if (fread(tbuf, 1, p->track_len, p->file) != p->track_len) { free(tbuf); return UFT_ERR_IO; }
+
+    /* Walk IDAM table, find each sector's DAM, replace data */
+    for (int i = 0; i < 64; i++) {
+        uint16_t ptr = uft_read_le16(&tbuf[i * 2]);
+        if (ptr == 0 || ptr == 0xFFFF) break;
+        uint16_t idam_off = (ptr & 0x3FFF) - DMK_IDAM_SIZE;
+        if (idam_off >= p->track_len - 20) continue;
+
+        uint8_t* idam = &tbuf[DMK_IDAM_SIZE + idam_off];
+        if (idam[0] != 0xFE) continue;
+
+        uint8_t sec_id = idam[3], sz = idam[4] & 3;
+        uint16_t sec_sz = 128 << sz;
+
+        /* Find DAM (0xFB or 0xF8) */
+        for (int j = 7; j < 60 && idam_off + j < p->track_len - sec_sz; j++) {
+            if (idam[j] == 0xFB || idam[j] == 0xF8) {
+                /* Find matching sector in input track (sec_id is 1-based in DMK) */
+                for (size_t ts = 0; ts < track->sector_count; ts++) {
+                    if (track->sectors[ts].id.sector == (uint8_t)(sec_id - 1)) {
+                        const uint8_t *src = track->sectors[ts].data;
+                        if (src && track->sectors[ts].data_len >= sec_sz)
+                            memcpy(&idam[j + 1], src, sec_sz);
+                        break;
+                    }
+                }
+                break;
+            }
+        }
+    }
+
+    /* Write modified track buffer back */
+    if (fseek(p->file, (long)off, SEEK_SET) != 0) { free(tbuf); return UFT_ERR_IO; }
+    if (fwrite(tbuf, 1, p->track_len, p->file) != p->track_len) { free(tbuf); return UFT_ERR_IO; }
+    fflush(p->file);
+
+    free(tbuf);
+    return UFT_OK;
+}
+
 const uft_format_plugin_t uft_format_plugin_dmk = {
     .name = "DMK", .description = "TRS-80 David Keil", .extensions = "dmk",
-    .format = UFT_FORMAT_DSK, .capabilities = UFT_FORMAT_CAP_READ,
+    .format = UFT_FORMAT_DSK, .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE,
     .probe = dmk_probe, .open = dmk_open, .close = dmk_close, .read_track = dmk_read_track,
+    .write_track = dmk_write_track,
 };
 UFT_REGISTER_FORMAT_PLUGIN(dmk)

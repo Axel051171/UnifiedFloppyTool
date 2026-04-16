@@ -106,11 +106,42 @@ static uft_error_t pro_read_track(uft_disk_t *disk, int cyl, int head,
     return UFT_OK;
 }
 
+static uft_error_t pro_write_track(uft_disk_t *disk, int cyl, int head,
+                                    const uft_track_t *track) {
+    pro_pd_t *p = disk->plugin_data;
+    if (!p || !p->file_data || head != 0) return UFT_ERROR_INVALID_STATE;
+    if (disk->read_only) return UFT_ERROR_NOT_SUPPORTED;
+
+    uint32_t total_secs = (uint32_t)p->tracks * p->spt;
+    size_t table_size = total_secs * 4;
+    size_t data_start = PRO_HEADER_SIZE + table_size;
+
+    for (int s = 0; s < p->spt; s++) {
+        uint32_t sec_idx = (uint32_t)cyl * p->spt + s;
+        if (sec_idx >= total_secs) break;
+
+        size_t sec_data = data_start + (size_t)sec_idx * PRO_SECTOR_SIZE;
+        if (sec_data + PRO_SECTOR_SIZE > p->file_size) break;
+
+        /* Find matching sector in input track */
+        for (size_t ts = 0; ts < track->sector_count; ts++) {
+            if (track->sectors[ts].id.sector == (uint8_t)s) {
+                const uint8_t *src = track->sectors[ts].data;
+                if (src && track->sectors[ts].data_len >= PRO_SECTOR_SIZE)
+                    memcpy(p->file_data + sec_data, src, PRO_SECTOR_SIZE);
+                break;
+            }
+        }
+    }
+    return UFT_OK;
+}
+
 const uft_format_plugin_t uft_format_plugin_pro = {
     .name = "PRO", .description = "Atari 8-bit Protected (APE Pro)",
     .extensions = "pro;atx", .format = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WEAK_BITS,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE | UFT_FORMAT_CAP_WEAK_BITS,
     .probe = pro_plugin_probe, .open = pro_open,
     .close = pro_close, .read_track = pro_read_track,
+    .write_track = pro_write_track,
 };
 UFT_REGISTER_FORMAT_PLUGIN(pro)

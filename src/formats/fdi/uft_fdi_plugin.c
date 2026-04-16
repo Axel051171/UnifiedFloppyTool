@@ -126,11 +126,53 @@ static uft_error_t fdi_plugin_read_track(uft_disk_t *disk, int cyl, int head,
     return UFT_OK;
 }
 
+static uft_error_t fdi_plugin_write_track(uft_disk_t *disk, int cyl, int head,
+                                            const uft_track_t *track) {
+    fdi_pd_t *p = disk->plugin_data;
+    if (!p || !p->data) return UFT_ERROR_INVALID_STATE;
+    if (disk->read_only) return UFT_ERROR_NOT_SUPPORTED;
+    if (cyl >= p->cyls || head >= p->heads) return UFT_ERROR_INVALID_ARG;
+
+    /* Track table: entry at FDI_HDR + (cyl * heads + head) * 4 */
+    size_t entry_off = FDI_HDR + ((size_t)cyl * p->heads + head) * 4;
+    if (entry_off + 4 > p->size) return UFT_ERROR_INVALID_ARG;
+
+    uint32_t trk_off = uft_read_le32(p->data + entry_off);
+    size_t abs_off = (size_t)p->data_off + trk_off;
+    if (abs_off >= p->size) return UFT_ERROR_INVALID_ARG;
+
+    uint8_t nsec = p->data[abs_off];
+    size_t pos = abs_off + 1;
+
+    for (int s = 0; s < nsec && pos + 5 <= p->size; s++) {
+        uint8_t sec_r = p->data[pos + 2];
+        uint8_t sec_n = p->data[pos + 3];
+        pos += 5;
+
+        uint16_t ss = (sec_n <= 6) ? (uint16_t)(128 << sec_n) : 512;
+        if (pos + ss > p->size) break;
+
+        /* Find matching sector in input track by R field */
+        uint8_t match_id = sec_r > 0 ? sec_r - 1 : 0;
+        for (size_t ts = 0; ts < track->sector_count; ts++) {
+            if (track->sectors[ts].id.sector == match_id) {
+                const uint8_t *src = track->sectors[ts].data;
+                if (src && track->sectors[ts].data_len >= ss)
+                    memcpy(p->data + pos, src, ss);
+                break;
+            }
+        }
+        pos += ss;
+    }
+    return UFT_OK;
+}
+
 const uft_format_plugin_t uft_format_plugin_fdi = {
     .name = "FDI", .description = "Formatted Disk Image",
     .extensions = "fdi", .format = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE,
     .probe = fdi_plugin_probe, .open = fdi_plugin_open,
     .close = fdi_plugin_close, .read_track = fdi_plugin_read_track,
+    .write_track = fdi_plugin_write_track,
 };
 UFT_REGISTER_FORMAT_PLUGIN(fdi)

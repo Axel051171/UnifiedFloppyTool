@@ -211,11 +211,54 @@ static uft_error_t nfd_read_track(uft_disk_t *disk, int cyl, int head,
     return UFT_OK;
 }
 
+static uft_error_t nfd_write_track(uft_disk_t *disk, int cyl, int head,
+                                     const uft_track_t *track)
+{
+    nfd_pd_t *p = disk->plugin_data;
+    if (!p || !p->data) return UFT_ERROR_INVALID_STATE;
+    if (disk->read_only) return UFT_ERROR_NOT_SUPPORTED;
+
+    /* Search index table for entries matching (cyl, head) */
+    for (int i = 0; i < NFD_INDEX_COUNT; i++) {
+        size_t off = NFD_INDEX_OFF + (size_t)i * NFD_INDEX_ENTRY;
+        if (off + NFD_INDEX_ENTRY > p->size) break;
+
+        uint8_t e_cyl    = p->data[off + 1];
+        uint8_t e_head   = p->data[off + 2];
+        uint8_t e_nsec   = p->data[off + 3];
+        uint8_t e_scode  = p->data[off + 4];
+        uint32_t data_off = uft_read_le32(p->data + off + 12);
+
+        if ((int)e_cyl != cyl || (int)e_head != head) continue;
+        if (e_nsec == 0 && data_off == 0) continue;
+
+        uint16_t ss = nfd_sec_size(e_scode);
+
+        for (int s = 0; s < e_nsec; s++) {
+            size_t soff = (size_t)data_off + (size_t)s * ss;
+            if (soff + ss > p->size) break;
+
+            /* Find matching sector in input track */
+            for (size_t ts = 0; ts < track->sector_count; ts++) {
+                if (track->sectors[ts].id.sector == (uint8_t)s) {
+                    const uint8_t *src = track->sectors[ts].data;
+                    if (src && track->sectors[ts].data_len >= ss)
+                        memcpy(p->data + soff, src, ss);
+                    break;
+                }
+            }
+        }
+        break; /* Found matching track entry */
+    }
+    return UFT_OK;
+}
+
 const uft_format_plugin_t uft_format_plugin_nfd = {
     .name = "NFD", .description = "T98-Next PC-98 (NFD)",
     .extensions = "nfd", .format = UFT_FORMAT_NFD,
-    .capabilities = UFT_FORMAT_CAP_READ,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE,
     .probe = nfd_probe, .open = nfd_open, .close = nfd_close,
     .read_track = nfd_read_track,
+    .write_track = nfd_write_track,
 };
 UFT_REGISTER_FORMAT_PLUGIN(nfd)

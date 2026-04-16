@@ -195,15 +195,58 @@ static uft_error_t sap_plugin_read_track(uft_disk_t *disk, int cyl, int head,
     return UFT_OK;
 }
 
+static uft_error_t sap_plugin_write_track(uft_disk_t *disk, int cyl, int head,
+                                            const uft_track_t *track) {
+    sap_pd_t *p = disk->plugin_data;
+    if (!p || !p->data) return UFT_ERROR_INVALID_STATE;
+    if (disk->read_only) return UFT_ERROR_NOT_SUPPORTED;
+    if (head != 0) return UFT_ERROR_INVALID_STATE;
+    if (cyl < 0 || cyl >= SAP_TRACKS) return UFT_ERROR_INVALID_STATE;
+
+    size_t sector_record = SAP_SEC_HDR + p->sector_size + SAP_CRC_SIZE;
+    size_t track_offset = SAP_HEADER_SIZE +
+                          (size_t)cyl * SAP_SPT * sector_record;
+
+    for (int s = 0; s < SAP_SPT; s++) {
+        size_t sec_offset = track_offset + (size_t)s * sector_record;
+        if (sec_offset + sector_record > p->data_size) break;
+
+        /* Read sector number from SAP header to find matching input sector */
+        uint8_t sec_num = p->data[sec_offset + 3];
+        uint8_t sec_idx = (sec_num > 0) ? (sec_num - 1) : (uint8_t)s;
+
+        /* Find matching sector in input track */
+        for (size_t ts = 0; ts < track->sector_count; ts++) {
+            if (track->sectors[ts].id.sector == sec_idx) {
+                const uint8_t *src = track->sectors[ts].data;
+                if (src && track->sectors[ts].data_len >= p->sector_size) {
+                    /* Write sector data after the 4-byte header */
+                    uint8_t *sec_data = p->data + sec_offset + SAP_SEC_HDR;
+                    memcpy(sec_data, src, p->sector_size);
+
+                    /* Update CRC-16-CCITT */
+                    uint16_t crc = sap_crc16(sec_data, p->sector_size);
+                    uint8_t *crc_bytes = sec_data + p->sector_size;
+                    crc_bytes[0] = (crc >> 8) & 0xFF;
+                    crc_bytes[1] = crc & 0xFF;
+                }
+                break;
+            }
+        }
+    }
+    return UFT_OK;
+}
+
 const uft_format_plugin_t uft_format_plugin_sap_thomson = {
     .name = "SAP",
     .description = "Thomson MO/TO SAP",
     .extensions = "sap",
     .format = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE,
     .probe = sap_plugin_probe,
     .open = sap_plugin_open,
     .close = sap_plugin_close,
     .read_track = sap_plugin_read_track,
+    .write_track = sap_plugin_write_track,
 };
 UFT_REGISTER_FORMAT_PLUGIN(sap_thomson)
