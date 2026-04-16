@@ -671,6 +671,7 @@ SOURCES += \
     src/formats/ipf/uft_ipf_plugin.c \
     src/formats/apple/uft_woz_plugin.c \
     src/formats/edk/uft_edk.c \
+    src/formats/d64/uft_d64_plugin.c \
     src/formats/dcm/uft_dcm.c \
     src/core/uft_decode_pipeline.c \
     src/parsers/a2r/uft_a2r_parser.c

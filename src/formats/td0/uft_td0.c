@@ -113,6 +113,121 @@ static void td0_close(uft_disk_t* disk) {
     }
 }
 
+static uft_error_t td0_read_track(uft_disk_t *disk, int cyl, int head,
+                                   uft_track_t *track) {
+    td0_data_t *p = disk->plugin_data;
+    if (!p || !p->file) return UFT_ERR_INVALID_ARG;
+
+    uft_track_init(track, cyl, head);
+
+    /* Seek to data start and scan forward to the requested track */
+    if (fseek(p->file, p->data_start, SEEK_SET) != 0)
+        return UFT_ERR_IO;
+
+    while (!feof(p->file)) {
+        uint8_t trk_hdr[4];
+        if (fread(trk_hdr, 1, 4, p->file) != 4) break;
+        if (trk_hdr[0] == 0xFF) break;  /* End marker */
+
+        uint8_t num_sec = trk_hdr[0];
+        uint8_t trk_cyl = trk_hdr[1];
+        uint8_t trk_head = trk_hdr[2];
+        /* trk_hdr[3] = CRC */
+
+        bool is_target = (trk_cyl == cyl && trk_head == head);
+
+        for (int s = 0; s < num_sec; s++) {
+            uint8_t sec_hdr[6];
+            if (fread(sec_hdr, 1, 6, p->file) != 6) goto done;
+
+            uint8_t sec_cyl = sec_hdr[0];
+            uint8_t sec_head = sec_hdr[1];
+            uint8_t sec_num = sec_hdr[2];
+            uint8_t sec_size_code = sec_hdr[3];
+            uint8_t sec_flags = sec_hdr[4];
+
+            uint16_t sec_size = (sec_size_code < 7) ? (128 << sec_size_code) : 512;
+
+            if (sec_flags & 0x30) {
+                /* No data for this sector */
+                if (is_target) {
+                    uft_format_add_empty_sector(track, sec_num > 0 ? sec_num - 1 : 0,
+                                                 (uint16_t)sec_size, 0xE5,
+                                                 (uint8_t)cyl, (uint8_t)head);
+                }
+                continue;
+            }
+
+            /* Read data length */
+            uint8_t len_buf[2];
+            if (fread(len_buf, 1, 2, p->file) != 2) goto done;
+            uint16_t data_len = uft_read_le16(len_buf);
+
+            if (is_target && data_len > 0) {
+                /* Read and decode sector data */
+                uint8_t *raw = malloc(data_len);
+                if (!raw) goto done;
+                if (fread(raw, 1, data_len, p->file) != data_len) {
+                    free(raw); goto done;
+                }
+
+                /* TD0 encoding: byte 0 = method (0=raw, 1=repeat, 2=pattern) */
+                uint8_t *decoded = calloc(1, sec_size);
+                if (decoded) {
+                    if (raw[0] == 0 && data_len > 1) {
+                        /* Raw data */
+                        size_t cp = (data_len - 1 < sec_size) ? data_len - 1 : sec_size;
+                        memcpy(decoded, raw + 1, cp);
+                    } else if (raw[0] == 1 && data_len >= 5) {
+                        /* Repeat: 2-byte count + 2-byte pattern */
+                        uint16_t count = uft_read_le16(raw + 1);
+                        uint8_t p0 = raw[3], p1 = raw[4];
+                        for (uint16_t i = 0; i < count && i * 2 + 1 < sec_size; i++) {
+                            decoded[i * 2] = p0;
+                            decoded[i * 2 + 1] = p1;
+                        }
+                    } else if (raw[0] == 2 && data_len > 1) {
+                        /* Pattern blocks */
+                        size_t sp = 1, dp = 0;
+                        while (sp < data_len && dp < sec_size) {
+                            if (sp + 1 >= data_len) break;
+                            uint8_t type = raw[sp++];
+                            uint8_t count = raw[sp++];
+                            if (type == 0) {
+                                /* Literal bytes */
+                                for (int i = 0; i < count && sp < data_len && dp < sec_size; i++)
+                                    decoded[dp++] = raw[sp++];
+                            } else {
+                                /* Repeat pattern */
+                                size_t pat_start = sp;
+                                sp += type;
+                                for (int i = 0; i < count; i++)
+                                    for (int j = 0; j < type && dp < sec_size; j++)
+                                        decoded[dp++] = raw[pat_start + j];
+                            }
+                        }
+                    }
+
+                    uft_format_add_sector(track, sec_num > 0 ? sec_num - 1 : 0,
+                                          decoded, (uint16_t)sec_size,
+                                          (uint8_t)cyl, (uint8_t)head);
+                    free(decoded);
+                }
+                free(raw);
+            } else {
+                /* Skip data */
+                if (data_len > 1) {
+                    if (fseek(p->file, data_len, SEEK_CUR) != 0) goto done;
+                }
+            }
+        }
+
+        if (is_target) break;  /* Found our track, done */
+    }
+done:
+    return UFT_OK;
+}
+
 const uft_format_plugin_t uft_format_plugin_td0 = {
     .name = "TD0",
     .description = "Teledisk Archive",
@@ -123,6 +238,7 @@ const uft_format_plugin_t uft_format_plugin_td0 = {
     .probe = td0_probe,
     .open = td0_open,
     .close = td0_close,
+    .read_track = td0_read_track,
 };
 
 UFT_REGISTER_FORMAT_PLUGIN(td0)
