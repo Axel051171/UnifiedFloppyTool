@@ -1578,7 +1578,7 @@ SOURCES += \
     src/formats/logical/uft_logical.c \
     src/formats/posix/uft_posix.c
 
-SOURCES += src/formats/mega65/uft_mega65_d81.c \
+# SOURCES += src/formats/mega65/uft_mega65_d81.c  # deleted (35 compile errors) \
     src/analysis/events/uft_export_bridge.c \
     src/analysis/events/otdr_event_core_v12.c \
     src/analysis/events/uft_pipeline_bridge.c \
