@@ -41,7 +41,7 @@ static uft_error_t d88_open(uft_disk_t* disk, const char* path, bool read_only) 
     /* Read actual geometry from first track's sector headers rather than
      * relying solely on the media type byte (which is often wrong for
      * non-standard or custom-formatted disks). */
-    fseek(f, 0, SEEK_END);
+    (void)fseek(f, 0, SEEK_END);  /* best-effort geometry detection */
     long file_size = ftell(f);
     if (p->track_off[0] > 0 && p->track_off[0] < (uint32_t)file_size - 16) {
         uint8_t trk_hdr[16];

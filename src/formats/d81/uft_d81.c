@@ -92,6 +92,27 @@ static uft_error_t d81_read_track(uft_disk_t* disk, int cyl, int head, uft_track
     return UFT_OK;
 }
 
+static uft_error_t d81_write_track(uft_disk_t* disk, int cyl, int head,
+                                    const uft_track_t* track) {
+    d81_data_t* pdata = disk->plugin_data;
+    if (!pdata || !pdata->file || head != 0) return UFT_ERROR_INVALID_STATE;
+    if (disk->read_only) return UFT_ERROR_NOT_SUPPORTED;
+
+    long track_offset = (long)cyl * D81_SECTORS_PER_TRACK * D81_SECTOR_SIZE;
+    for (size_t s = 0; s < track->sector_count && (int)s < D81_SECTORS_PER_TRACK; s++) {
+        if (fseek(pdata->file, track_offset + (long)s * D81_SECTOR_SIZE, SEEK_SET) != 0)
+            return UFT_ERROR_IO;
+        const uint8_t *data = track->sectors[s].data;
+        uint8_t pad[D81_SECTOR_SIZE];
+        if (!data || track->sectors[s].data_len == 0) {
+            memset(pad, 0, D81_SECTOR_SIZE); data = pad;
+        }
+        if (fwrite(data, 1, D81_SECTOR_SIZE, pdata->file) != D81_SECTOR_SIZE)
+            return UFT_ERROR_IO;
+    }
+    return UFT_OK;
+}
+
 const uft_format_plugin_t uft_format_plugin_d81 = {
     .name = "D81",
     .description = "Commodore 1581 3.5\" Disk Image",
@@ -103,6 +124,7 @@ const uft_format_plugin_t uft_format_plugin_d81 = {
     .open = d81_open,
     .close = d81_close,
     .read_track = d81_read_track,
+    .write_track = d81_write_track,
 };
 
 UFT_REGISTER_FORMAT_PLUGIN(d81)
