@@ -120,11 +120,31 @@ static uft_error_t jv1_read_track(uft_disk_t *disk, int cyl, int head,
     return UFT_OK;
 }
 
+static uft_error_t jv1_write_track(uft_disk_t *disk, int cyl, int head,
+                                    const uft_track_t *track) {
+    jv1_data_t *p = disk->plugin_data;
+    if (!p || !p->file) return UFT_ERROR_INVALID_STATE;
+    if (disk->read_only) return UFT_ERROR_NOT_SUPPORTED;
+    long offset = (long)((head * p->cylinders + cyl) * JV1_SPT * JV1_SECTOR_SIZE);
+    for (size_t s = 0; s < track->sector_count && (int)s < JV1_SPT; s++) {
+        if (fseek(p->file, offset + (long)s * JV1_SECTOR_SIZE, SEEK_SET) != 0)
+            return UFT_ERROR_IO;
+        const uint8_t *data = track->sectors[s].data;
+        uint8_t pad[JV1_SECTOR_SIZE];
+        if (!data || track->sectors[s].data_len == 0) {
+            memset(pad, 0xE5, JV1_SECTOR_SIZE); data = pad;
+        }
+        if (fwrite(data, 1, JV1_SECTOR_SIZE, p->file) != JV1_SECTOR_SIZE)
+            return UFT_ERROR_IO;
+    }
+    return UFT_OK;
+}
+
 const uft_format_plugin_t uft_format_plugin_jv1 = {
     .name = "JV1", .description = "TRS-80 JV1 (Jeff Vavasour)",
     .extensions = "jv1;dsk", .format = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE,
     .probe = jv1_probe, .open = jv1_open, .close = jv1_close,
-    .read_track = jv1_read_track,
+    .read_track = jv1_read_track, .write_track = jv1_write_track,
 };
 UFT_REGISTER_FORMAT_PLUGIN(jv1)

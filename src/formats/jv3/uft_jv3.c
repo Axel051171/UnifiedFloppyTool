@@ -163,6 +163,13 @@ static uft_error_t jv3_read_track(uft_disk_t *disk, int cyl, int head,
         if (sec_num > 0) sec_num--;
         uft_format_add_sector(track, sec_num, buf, sz,
                               (uint8_t)cyl, (uint8_t)head);
+        /* JV3 flags: bit 3=CRC error, bit 6=deleted DAM */
+        if (track->sector_count > 0) {
+            if (e->flags & 0x08)
+                track->sectors[track->sector_count - 1].crc_ok = false;
+            if (e->flags & 0x40)
+                track->sectors[track->sector_count - 1].deleted = true;
+        }
     }
     return UFT_OK;
 }

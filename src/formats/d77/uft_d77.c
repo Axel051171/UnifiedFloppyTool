@@ -222,6 +222,13 @@ static uft_error_t d77_read_track(uft_disk_t *disk, int cyl, int head,
 
         uft_format_add_sector(track, sec_num, buf, data_size,
                               (uint8_t)cyl, (uint8_t)head);
+        /* D77 sector flags: byte 7=deleted (0x10), byte 8=status (0x00=OK) */
+        if (track->sector_count > 0) {
+            if (sec_hdr[7] == 0x10)
+                track->sectors[track->sector_count - 1].deleted = true;
+            if (sec_hdr[8] != 0x00)
+                track->sectors[track->sector_count - 1].crc_ok = false;
+        }
         free(buf);
     }
 

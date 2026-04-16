@@ -53,11 +53,27 @@ static uft_error_t sam_read_track(uft_disk_t *d, int cyl, int head, uft_track_t 
     return UFT_OK;
 }
 
+static uft_error_t sam_write_track(uft_disk_t *d, int cyl, int head,
+                                    const uft_track_t *t) {
+    sam_data_t *p = d->plugin_data;
+    if (!p || !p->file) return UFT_ERROR_INVALID_STATE;
+    if (d->read_only) return UFT_ERROR_NOT_SUPPORTED;
+    long off = (long)(((uint32_t)cyl * SAM_HEAD + head) * SAM_SPT * SAM_SS);
+    for (size_t s = 0; s < t->sector_count && (int)s < SAM_SPT; s++) {
+        if (fseek(p->file, off + (long)s * SAM_SS, SEEK_SET) != 0) return UFT_ERROR_IO;
+        const uint8_t *data = t->sectors[s].data;
+        uint8_t pad[SAM_SS];
+        if (!data || t->sectors[s].data_len == 0) { memset(pad, 0xE5, SAM_SS); data = pad; }
+        if (fwrite(data, 1, SAM_SS, p->file) != SAM_SS) return UFT_ERROR_IO;
+    }
+    return UFT_OK;
+}
+
 const uft_format_plugin_t uft_format_plugin_sam = {
     .name = "SAM", .description = "MGT SAM Coupe",
     .extensions = "mgt;sad;sdf", .format = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE,
     .probe = sam_probe, .open = sam_open, .close = sam_close,
-    .read_track = sam_read_track,
+    .read_track = sam_read_track, .write_track = sam_write_track,
 };
 UFT_REGISTER_FORMAT_PLUGIN(sam)
