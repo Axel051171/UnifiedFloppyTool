@@ -43,6 +43,7 @@ static uft_error_t nib_open(uft_disk_t* disk, const char* path, bool read_only) 
     disk->geometry.heads = 1;
     disk->geometry.sectors = 16;
     disk->geometry.sector_size = 256;
+    disk->geometry.total_sectors = (uint32_t)disk->geometry.cylinders * 16;
     return UFT_OK;
 }
 

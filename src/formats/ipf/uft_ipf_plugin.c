@@ -42,6 +42,7 @@ static uft_error_t ipf_plugin_open(uft_disk_t *disk, const char *path, bool ro) 
     disk->geometry.heads = 2;
     disk->geometry.sectors = 11;  /* Amiga typical */
     disk->geometry.sector_size = 512;
+    disk->geometry.total_sectors = 84 * 2 * 11;
     return UFT_OK;
 }
 

@@ -100,7 +100,8 @@ static uft_error_t td0_open(uft_disk_t* disk, const char* path, bool read_only) 
     disk->geometry.heads = pdata->sides;
     disk->geometry.sectors = max_sec;
     disk->geometry.sector_size = 512;
-    
+    disk->geometry.total_sectors = (uint32_t)(max_cyl + 1) * pdata->sides * max_sec;
+
     return UFT_OK;
 }
 

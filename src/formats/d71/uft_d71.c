@@ -135,6 +135,32 @@ static uft_error_t d71_read_track(uft_disk_t* disk, int cyl, int head, uft_track
     return UFT_OK;
 }
 
+static uft_error_t d71_write_track(uft_disk_t* disk, int cyl, int head,
+                                    const uft_track_t* track) {
+    d71_data_t* pdata = disk->plugin_data;
+    if (!pdata || !pdata->file) return UFT_ERROR_INVALID_STATE;
+    if (disk->read_only) return UFT_ERROR_NOT_SUPPORTED;
+
+    int actual_track = (head == 0) ? (cyl + 1) : (cyl + 1 + D71_TRACKS_PER_SIDE);
+    if (actual_track < 1 || actual_track > D71_TOTAL_TRACKS) return UFT_ERROR_INVALID_STATE;
+
+    int side_track = cyl + 1;
+    int num_sectors = d71_sectors_per_track[side_track - 1];
+
+    for (size_t s = 0; s < track->sector_count && (int)s < num_sectors; s++) {
+        size_t offset = d71_get_offset(actual_track, (int)s);
+        if (fseek(pdata->file, (long)offset, SEEK_SET) != 0) return UFT_ERROR_IO;
+        const uint8_t *data = track->sectors[s].data;
+        uint8_t pad[D71_SECTOR_SIZE];
+        if (!data || track->sectors[s].data_len == 0) {
+            memset(pad, 0, D71_SECTOR_SIZE); data = pad;
+        }
+        if (fwrite(data, 1, D71_SECTOR_SIZE, pdata->file) != D71_SECTOR_SIZE)
+            return UFT_ERROR_IO;
+    }
+    return UFT_OK;
+}
+
 const uft_format_plugin_t uft_format_plugin_d71 = {
     .name = "D71",
     .description = "Commodore 1571 Disk Image",
@@ -146,6 +172,7 @@ const uft_format_plugin_t uft_format_plugin_d71 = {
     .open = d71_open,
     .close = d71_close,
     .read_track = d71_read_track,
+    .write_track = d71_write_track,
 };
 
 UFT_REGISTER_FORMAT_PLUGIN(d71)

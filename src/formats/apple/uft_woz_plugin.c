@@ -31,6 +31,8 @@ static uft_error_t woz_plugin_open(uft_disk_t *disk, const char *path, bool ro) 
     disk->geometry.heads = img->is_525 ? 1 : (img->info.disk_sides ? img->info.disk_sides : 1);
     disk->geometry.sectors = img->is_525 ? 16 : 12;
     disk->geometry.sector_size = 256;
+    disk->geometry.total_sectors = (uint32_t)disk->geometry.cylinders *
+                                   disk->geometry.heads * disk->geometry.sectors;
     return UFT_OK;
 }
 

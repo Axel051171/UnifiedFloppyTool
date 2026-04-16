@@ -58,7 +58,8 @@ static uft_error_t dsk_open(uft_disk_t* disk, const char* path, bool read_only) 
     disk->geometry.heads = pdata->sides;
     disk->geometry.sectors = 9;
     disk->geometry.sector_size = 512;
-    
+    disk->geometry.total_sectors = (uint32_t)pdata->tracks * pdata->sides * 9;
+
     return UFT_OK;
 }
 
