@@ -86,20 +86,23 @@ static int find_data(const uint8_t* t, size_t len, size_t start) {
     return -1;
 }
 
-static bool decode_sector(const uint8_t* gcr, uint8_t* out) {
-    uint8_t buf[342];
-    for (int i = 0; i < 342; i++) {
+static int decode_sector(const uint8_t* gcr, uint8_t* out) {
+    /* Returns: 1=OK, 0=GCR decode error, -1=checksum error */
+    uint8_t buf[343]; /* 342 data + 1 checksum */
+    for (int i = 0; i < 343; i++) {
         uint8_t b = gcr[i];
-        if (gcr62_decode[b] == 0 && b != 0x96) return false;
+        if (gcr62_decode[b] == 0 && b != 0x96) return 0;
         buf[i] = gcr62_decode[b];
     }
     uint8_t prev = 0;
-    for (int i = 0; i < 342; i++) { buf[i] ^= prev; prev = buf[i]; }
+    for (int i = 0; i < 343; i++) { buf[i] ^= prev; prev = buf[i]; }
+    /* After XOR chain, byte 342 should be 0 (checksum) */
+    bool checksum_ok = (buf[342] == 0);
     for (int i = 0; i < 256; i++) {
         int aux_idx = i % 86, shift = (i / 86) * 2;
         out[i] = (buf[86 + i] << 2) | ((buf[aux_idx] >> shift) & 0x03);
     }
-    return true;
+    return checksum_ok ? 1 : -1;
 }
 
 static uft_error_t nib_read_track(uft_disk_t* disk, int cyl, int head, uft_track_t* track) {
@@ -120,8 +123,12 @@ static uft_error_t nib_read_track(uft_disk_t* disk, int cyl, int head, uft_track
         int data_start = find_data(tdata, NIB_TRACK_SIZE, addr_end);
         if (data_start < 0 || data_start + 343 > NIB_TRACK_SIZE) { pos = addr_end; continue; }
         
-        if (decode_sector(&tdata[data_start], sec_buf)) {
+        int dec_rc = decode_sector(&tdata[data_start], sec_buf);
+        if (dec_rc != 0) {
             uft_format_add_sector(track, sec, sec_buf, 256, cyl, head);
+            /* GCR checksum mismatch → mark CRC error but keep data */
+            if (dec_rc == -1 && track->sector_count > 0)
+                track->sectors[track->sector_count - 1].crc_ok = false;
         }
         pos = data_start + 343;
     }

@@ -51,10 +51,29 @@ static uft_error_t po_read_track(uft_disk_t *disk, int cyl, int head, uft_track_
     return UFT_OK;
 }
 
+static uft_error_t po_write_track(uft_disk_t *disk, int cyl, int head,
+                                   const uft_track_t *track) {
+    po_pd_t *p = disk->plugin_data;
+    if (!p || !p->file || head != 0) return UFT_ERROR_INVALID_STATE;
+    if (disk->read_only) return UFT_ERROR_NOT_SUPPORTED;
+    for (size_t s = 0; s < track->sector_count && (int)s < PO_SPT; s++) {
+        if (fseek(p->file, (long)(cyl * PO_SPT + (int)s) * PO_SS, SEEK_SET) != 0)
+            return UFT_ERROR_IO;
+        const uint8_t *data = track->sectors[s].data;
+        uint8_t pad[PO_SS];
+        if (!data || track->sectors[s].data_len == 0) {
+            memset(pad, 0xE5, PO_SS); data = pad;
+        }
+        if (fwrite(data, 1, PO_SS, p->file) != PO_SS) return UFT_ERROR_IO;
+    }
+    return UFT_OK;
+}
+
 const uft_format_plugin_t uft_format_plugin_po = {
     .name = "PO", .description = "Apple II ProDOS Order",
     .extensions = "po;dsk", .format = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ,
-    .probe = po_probe, .open = po_open, .close = po_close, .read_track = po_read_track,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE,
+    .probe = po_probe, .open = po_open, .close = po_close,
+    .read_track = po_read_track, .write_track = po_write_track,
 };
 UFT_REGISTER_FORMAT_PLUGIN(po)

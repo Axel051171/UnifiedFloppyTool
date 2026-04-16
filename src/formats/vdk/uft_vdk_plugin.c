@@ -65,11 +65,29 @@ static uft_error_t vdk_read_track(uft_disk_t *disk, int cyl, int head, uft_track
     return UFT_OK;
 }
 
+static uft_error_t vdk_write_track(uft_disk_t *disk, int cyl, int head,
+                                    const uft_track_t *track) {
+    vdk_pd_t *p = disk->plugin_data;
+    if (!p || !p->file) return UFT_ERROR_INVALID_STATE;
+    if (disk->read_only) return UFT_ERROR_NOT_SUPPORTED;
+    long off = (long)(p->hdr_size + ((size_t)cyl * p->sides + head) * VDK_SPT * VDK_SS);
+    for (size_t s = 0; s < track->sector_count && (int)s < VDK_SPT; s++) {
+        if (fseek(p->file, off + (long)s * VDK_SS, SEEK_SET) != 0) return UFT_ERROR_IO;
+        const uint8_t *data = track->sectors[s].data;
+        uint8_t pad[VDK_SS];
+        if (!data || track->sectors[s].data_len == 0) {
+            memset(pad, 0xE5, VDK_SS); data = pad;
+        }
+        if (fwrite(data, 1, VDK_SS, p->file) != VDK_SS) return UFT_ERROR_IO;
+    }
+    return UFT_OK;
+}
+
 const uft_format_plugin_t uft_format_plugin_vdk = {
     .name = "VDK", .description = "Tandy CoCo Virtual Disk",
     .extensions = "vdk;dsk", .format = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE,
     .probe = vdk_probe, .open = vdk_open, .close = vdk_close,
-    .read_track = vdk_read_track,
+    .read_track = vdk_read_track, .write_track = vdk_write_track,
 };
 UFT_REGISTER_FORMAT_PLUGIN(vdk)

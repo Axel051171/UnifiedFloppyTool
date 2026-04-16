@@ -83,6 +83,16 @@ static uft_error_t d88_read_track(uft_disk_t* disk, int cyl, int head, uft_track
         if (!buf) break;
         if (fread(buf, 1, dsize, p->file) != dsize) { free(buf); break; }
         uft_format_add_sector(track, sec_hdr[2] - 1, buf, dsize, cyl, head);
+        /* D88 sector status byte: sec_hdr[13]
+         * 0x00=normal, 0x10=deleted, 0xA0=ID CRC error,
+         * 0xB0=data CRC error, 0xE0=no address mark, 0xF0=no data */
+        if (track->sector_count > 0) {
+            uint8_t st = sec_hdr[13];
+            if (st == 0xA0 || st == 0xB0)
+                track->sectors[track->sector_count - 1].crc_ok = false;
+            if (st == 0x10)
+                track->sectors[track->sector_count - 1].deleted = true;
+        }
         free(buf);
     }
     return UFT_OK;

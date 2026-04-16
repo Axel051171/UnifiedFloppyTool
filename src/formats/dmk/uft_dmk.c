@@ -71,10 +71,12 @@ static uft_error_t dmk_read_track(uft_disk_t* disk, int cyl, int head, uft_track
         uint8_t sec_id = idam[3], sz = idam[4] & 3;
         uint16_t sec_sz = 128 << sz;
         
-        // Find DAM
+        // Find DAM (0xFB=normal, 0xF8=deleted)
         for (int j = 7; j < 60 && idam_off + j < p->track_len - sec_sz; j++) {
             if (idam[j] == 0xFB || idam[j] == 0xF8) {
                 uft_format_add_sector(track, sec_id - 1, &idam[j + 1], sec_sz, cyl, head);
+                if (idam[j] == 0xF8 && track->sector_count > 0)
+                    track->sectors[track->sector_count - 1].deleted = true;
                 break;
             }
         }

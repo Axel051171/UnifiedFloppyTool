@@ -51,10 +51,29 @@ static uft_error_t adl_read_track(uft_disk_t *disk, int cyl, int head, uft_track
     return UFT_OK;
 }
 
+static uft_error_t adl_write_track(uft_disk_t *disk, int cyl, int head,
+                                    const uft_track_t *track) {
+    adl_pd_t *p = disk->plugin_data;
+    if (!p || !p->file || head != 0) return UFT_ERROR_INVALID_STATE;
+    if (disk->read_only) return UFT_ERROR_NOT_SUPPORTED;
+    for (size_t s = 0; s < track->sector_count && (int)s < ADL_SPT; s++) {
+        if (fseek(p->file, (long)(cyl * ADL_SPT + (int)s) * ADL_SS, SEEK_SET) != 0)
+            return UFT_ERROR_IO;
+        const uint8_t *data = track->sectors[s].data;
+        uint8_t pad[ADL_SS];
+        if (!data || track->sectors[s].data_len == 0) {
+            memset(pad, 0xE5, ADL_SS); data = pad;
+        }
+        if (fwrite(data, 1, ADL_SS, p->file) != ADL_SS) return UFT_ERROR_IO;
+    }
+    return UFT_OK;
+}
+
 const uft_format_plugin_t uft_format_plugin_adl = {
     .name = "ADL", .description = "Acorn DFS Large (80-track)",
     .extensions = "adl;adf", .format = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ,
-    .probe = adl_probe, .open = adl_open, .close = adl_close, .read_track = adl_read_track,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE,
+    .probe = adl_probe, .open = adl_open, .close = adl_close,
+    .read_track = adl_read_track, .write_track = adl_write_track,
 };
 UFT_REGISTER_FORMAT_PLUGIN(adl)

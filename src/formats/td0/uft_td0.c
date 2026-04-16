@@ -155,6 +155,12 @@ static uft_error_t td0_read_track(uft_disk_t *disk, int cyl, int head,
                     uft_format_add_empty_sector(track, sec_num > 0 ? sec_num - 1 : 0,
                                                  (uint16_t)sec_size, 0xE5,
                                                  (uint8_t)cyl, (uint8_t)head);
+                    if (track->sector_count > 0) {
+                        if (sec_flags & 0x01)
+                            track->sectors[track->sector_count - 1].crc_ok = false;
+                        if (sec_flags & 0x04)
+                            track->sectors[track->sector_count - 1].deleted = true;
+                    }
                 }
                 continue;
             }
@@ -212,6 +218,13 @@ static uft_error_t td0_read_track(uft_disk_t *disk, int cyl, int head,
                     uft_format_add_sector(track, sec_num > 0 ? sec_num - 1 : 0,
                                           decoded, (uint16_t)sec_size,
                                           (uint8_t)cyl, (uint8_t)head);
+                    /* Propagate TD0 sector flags */
+                    if (track->sector_count > 0) {
+                        if (sec_flags & 0x01)
+                            track->sectors[track->sector_count - 1].crc_ok = false;
+                        if (sec_flags & 0x04)
+                            track->sectors[track->sector_count - 1].deleted = true;
+                    }
                     free(decoded);
                 }
                 free(raw);

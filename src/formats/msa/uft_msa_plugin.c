@@ -59,7 +59,7 @@ static uft_error_t msa_plugin_open(uft_disk_t *disk, const char *path, bool ro) 
     if (magic != MSA_MAGIC) { free(msa); return UFT_ERROR_FORMAT_INVALID; }
 
     uint16_t spt = ((uint16_t)msa[2] << 8) | msa[3];
-    uint16_t sides = ((uint16_t)msa[4] << 8) | msa[5] + 1;
+    uint16_t sides = (((uint16_t)msa[4] << 8) | msa[5]) + 1;
     uint16_t start_trk = ((uint16_t)msa[6] << 8) | msa[7];
     uint16_t end_trk = ((uint16_t)msa[8] << 8) | msa[9];
 

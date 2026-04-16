@@ -324,3 +324,32 @@ int uft_lzhuf_decompress(const uint8_t *src, size_t src_len,
     (void)src; (void)src_len; (void)dst; (void)dst_len;
     return -1;
 }
+
+/* ============================================================================
+ * Provenance chain stubs (uft_provenance.c not yet created)
+ * ============================================================================ */
+
+typedef struct uft_prov_chain uft_prov_chain_t;
+
+uft_prov_chain_t* uft_prov_create(void) { return NULL; }
+void uft_prov_free(uft_prov_chain_t *chain) { (void)chain; }
+int uft_prov_add(uft_prov_chain_t *chain, const char *event,
+                 const char *detail) {
+    (void)chain; (void)event; (void)detail; return -1;
+}
+int uft_prov_export_json(const uft_prov_chain_t *chain,
+                          const char *path) {
+    (void)chain; (void)path; return -1;
+}
+
+/* ============================================================================
+ * UFI backend stub (uft_ufi_backend.c not yet created)
+ * ============================================================================ */
+
+int uft_ufi_backend_init(void) { return -1; }
+
+/* ============================================================================
+ * CPU feature detection stub (uft_simd.c not yet created)
+ * ============================================================================ */
+
+int uft_cpu_has_feature(int feature) { (void)feature; return 0; }

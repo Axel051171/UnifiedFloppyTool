@@ -100,6 +100,7 @@ static uft_error_t dsk_read_track(uft_disk_t* disk, int cyl, int head, uft_track
     uint16_t sec_size = dsk_sector_sizes[sec_size_code & 7];
     
     uint8_t* sec_buf = malloc(sec_size);
+    if (!sec_buf) return UFT_ERROR_NO_MEMORY;
     for (int s = 0; s < num_sec; s++) {
         uint8_t* sec_info = &track_info[0x18 + s * 8];
         uint8_t sec_id = sec_info[2];
@@ -112,6 +113,17 @@ static uft_error_t dsk_read_track(uft_disk_t* disk, int cyl, int head, uft_track
         memset(sec_buf, 0xE5, sec_size);
         if (fread(sec_buf, 1, actual_size, pdata->file) != actual_size) { free(sec_buf); break; }
         uft_format_add_sector(track, sec_id - 1, sec_buf, sec_size, cyl, head);
+        /* FDC status bytes: sec_info[4]=ST1, sec_info[5]=ST2
+         * ST1 bit 5 (0x20) = Data Error (CRC error in data field)
+         * ST2 bit 5 (0x20) = CRC Error in data
+         * ST2 bit 6 (0x40) = Control Mark (deleted data) */
+        if (track->sector_count > 0) {
+            uint8_t st1 = sec_info[4], st2 = sec_info[5];
+            if ((st1 & 0x20) || (st2 & 0x20))
+                track->sectors[track->sector_count - 1].crc_ok = false;
+            if (st2 & 0x40)
+                track->sectors[track->sector_count - 1].deleted = true;
+        }
     }
     free(sec_buf);
     

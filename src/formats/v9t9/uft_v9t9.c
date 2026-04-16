@@ -57,11 +57,29 @@ static uft_error_t v9t9_read_track(uft_disk_t *disk, int cyl, int head, uft_trac
     return UFT_OK;
 }
 
+static uft_error_t v9t9_write_track(uft_disk_t *disk, int cyl, int head,
+                                     const uft_track_t *track) {
+    v9t9_pd_t *p = disk->plugin_data;
+    if (!p || !p->file) return UFT_ERROR_INVALID_STATE;
+    if (disk->read_only) return UFT_ERROR_NOT_SUPPORTED;
+    long off = (long)((cyl * p->heads + head) * p->spt * 256);
+    for (size_t s = 0; s < track->sector_count && (int)s < p->spt; s++) {
+        if (fseek(p->file, off + (long)s * 256, SEEK_SET) != 0) return UFT_ERROR_IO;
+        const uint8_t *data = track->sectors[s].data;
+        uint8_t pad[256];
+        if (!data || track->sectors[s].data_len == 0) {
+            memset(pad, 0xE5, 256); data = pad;
+        }
+        if (fwrite(data, 1, 256, p->file) != 256) return UFT_ERROR_IO;
+    }
+    return UFT_OK;
+}
+
 const uft_format_plugin_t uft_format_plugin_v9t9 = {
     .name = "V9T9", .description = "TI-99/4A V9T9",
     .extensions = "v9t9;dsk", .format = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE,
     .probe = v9t9_probe, .open = v9t9_open, .close = v9t9_close,
-    .read_track = v9t9_read_track,
+    .read_track = v9t9_read_track, .write_track = v9t9_write_track,
 };
 UFT_REGISTER_FORMAT_PLUGIN(v9t9)

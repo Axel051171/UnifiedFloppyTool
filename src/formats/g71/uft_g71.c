@@ -185,7 +185,10 @@ int uft_g71_read(const char *path, uft_disk_image_t **out) {
         return UFT_ERR_MEMORY;
     }
     
-    if (fseek(f, G71_OFFSET_TABLE, SEEK_SET) != 0) return UFT_ERR_IO;
+    if (fseek(f, G71_OFFSET_TABLE, SEEK_SET) != 0) {
+        free(offsets); free(speeds); free(disk->track_data); free(disk); fclose(f);
+        return UFT_ERR_IO;
+    }
     for (int i = 0; i < G71_HALF_TRACKS; i++) {
         uint8_t buf[4];
         if (fread(buf, 4, 1, f) != 1) { free(offsets); free(speeds); free(disk->track_data); free(disk); fclose(f); return UFT_ERR_IO; }

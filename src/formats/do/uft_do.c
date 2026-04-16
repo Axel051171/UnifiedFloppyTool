@@ -53,11 +53,29 @@ static uft_error_t do_read_track(uft_disk_t *disk, int cyl, int head,
     return UFT_OK;
 }
 
+static uft_error_t do_write_track(uft_disk_t *disk, int cyl, int head,
+                                   const uft_track_t *track) {
+    do_pd_t *p = disk->plugin_data;
+    if (!p || !p->file || head != 0) return UFT_ERROR_INVALID_STATE;
+    if (disk->read_only) return UFT_ERROR_NOT_SUPPORTED;
+    for (size_t s = 0; s < track->sector_count && (int)s < DO_SPT; s++) {
+        long off = (long)(cyl * DO_SPT + (int)s) * DO_SS;
+        if (fseek(p->file, off, SEEK_SET) != 0) return UFT_ERROR_IO;
+        const uint8_t *data = track->sectors[s].data;
+        uint8_t pad[DO_SS];
+        if (!data || track->sectors[s].data_len == 0) {
+            memset(pad, 0xE5, DO_SS); data = pad;
+        }
+        if (fwrite(data, 1, DO_SS, p->file) != DO_SS) return UFT_ERROR_IO;
+    }
+    return UFT_OK;
+}
+
 const uft_format_plugin_t uft_format_plugin_do = {
     .name = "DO", .description = "Apple II DOS 3.3",
     .extensions = "do;dsk", .format = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE,
     .probe = do_probe, .open = do_open, .close = do_close,
-    .read_track = do_read_track,
+    .read_track = do_read_track, .write_track = do_write_track,
 };
 UFT_REGISTER_FORMAT_PLUGIN(do)

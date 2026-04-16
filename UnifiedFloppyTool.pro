@@ -323,8 +323,7 @@ SOURCES += \
     src/hardware_providers/usbfloppyhardwareprovider.cpp
 
 # USB Floppy UFI Backend (C)
-SOURCES += src/hal/uft_ufi_backend.c \
-           src/hal/ufi.c
+SOURCES += src/hal/ufi.c
 
 # Hardware Provider Headers (CRITICAL for MOC!)
 HEADERS += \
@@ -623,7 +622,9 @@ SOURCES += \
     src/analysis/events/otdr_event_core_v2.c \
     src/analysis/denoise/uft_denoise_bridge.c \
     src/analysis/denoise/phi_otdr_denoise_1d.c \
-    src/formats/imd/uft_imd_parser_v3.c
+    src/formats/imd/uft_imd_parser_v3.c \
+    src/formats/imd/uft_imd_plugin.c \
+    src/formats/fdi/uft_fdi_plugin.c
 
 # DSK - Standard disk image
 SOURCES += \
@@ -657,7 +658,6 @@ SOURCES += \
     src/formats/kfx/uft_kfx.c \
     src/formats/jv1/uft_jv1.c \
     src/formats/jv3/uft_jv3.c \
-    src/formats/ssd/uft_ssd_plugin.c \
     src/formats/xfd/uft_xfd.c \
     src/formats/tan/uft_tan.c \
     src/formats/t1k/uft_t1k.c \
@@ -828,7 +828,7 @@ HEADERS += \
 # UFT Advanced Mode
 # ═══════════════════════════════════════════════════════════════════════════════
 
-SOURCES += src/core_recovery/uft_simd.c \
+SOURCES += \
     src/core/uft_advanced_mode.c \
     src/analysis/events/uft_export_bridge.c \
     src/analysis/events/otdr_event_core_v12.c \
@@ -1057,7 +1057,7 @@ SOURCES += \
     src/formats/hfe/uft_hfe.c \
     src/formats/sad/uft_sad.c \
     src/formats/scl/uft_scl.c \
-    src/formats/ssd/uft_ssd.c \
+    src/formats/ssd/uft_ssd_plugin.c \
     src/formats/td0/uft_td0.c \
     src/formats/udi/uft_udi.c \
     src/formats/dsk_cpc/uft_dsk_cpc.c \
@@ -1124,7 +1124,9 @@ SOURCES += \
     # src/formats/bps/uft_bps_parser_v3.c  # non-floppy \
     # src/formats/bst/uft_bst_parser_v3.c  # non-floppy \
     # src/formats/bz2/uft_bz2_parser_v3.c  # non-floppy \
-    src/formats/c128/uft_c128_parser_v3.c \n    src/formats/c16/uft_c16_parser_v3.c \n    # src/formats/car/uft_car_parser_v3.c  # non-floppy \
+    src/formats/c128/uft_c128_parser_v3.c \
+    src/formats/c16/uft_c16_parser_v3.c \
+    # src/formats/car/uft_car_parser_v3.c  # non-floppy \
     src/formats/cas/uft_cas.c \
     # src/formats/cd32/uft_cd32_parser_v3.c  # non-floppy \
     src/formats/cdi/uft_cdi_parser_v3.c \
@@ -1278,7 +1280,8 @@ SOURCES += \
     src/formats/jv1/uft_jv1_parser_v3.c \
     src/formats/jv3/uft_jv3_parser_v3.c \
     src/formats/jvc/uft_jvc_parser_v3.c \
-    src/formats/kcs/uft_kcs_parser_v3.c \n    src/formats/kfx/uft_kfx.c \
+    src/formats/kcs/uft_kcs_parser_v3.c \
+    src/formats/kfx/uft_kfx.c \
     src/formats/kfx/uft_kfstream_air.c \
     src/formats/kfx/uft_kf_histogram.c \
     src/formats/kon/uft_kon_parser_v3.c \
@@ -1332,7 +1335,8 @@ SOURCES += \
     # src/formats/pcx/uft_pcx_parser_v3.c  # non-floppy \
     src/formats/pdi/uft_pdi_parser_v3.c \
     src/formats/pdp/uft_pdp_parser_v3.c \
-    src/formats/pet/uft_pet_parser_v3.c \n    # src/formats/pip/uft_pip_parser_v3.c  # non-floppy \
+    src/formats/pet/uft_pet_parser_v3.c \
+    # src/formats/pip/uft_pip_parser_v3.c  # non-floppy \
     # src/formats/pkm/uft_pkm_parser_v3.c  # non-floppy \
     # src/formats/pls/uft_pls_parser_v3.c  # non-floppy \
     src/formats/po/uft_po_parser_v3.c \
@@ -1408,7 +1412,8 @@ SOURCES += \
     # src/formats/vgm/uft_vgm_parser_v3.c  # non-floppy \
     src/formats/vhd/uft_vhd_parser_v3.c \
     # src/formats/vmdk/uft_vmdk_parser_v3.c  # non-floppy \
-    src/formats/wav/uft_wav_parser_v3.c \n    # src/formats/wii/uft_wii_parser_v3.c  # non-floppy \
+    src/formats/wav/uft_wav_parser_v3.c \
+    # src/formats/wii/uft_wii_parser_v3.c  # non-floppy \
     # WOZ: real impl in src/formats/apple/uft_woz.c (already in SOURCES below)
     # src/formats/wsc/uft_wsc_parser_v3.c  # non-floppy \
     # src/formats/wsv/uft_wsv_parser_v3.c  # non-floppy \
@@ -1584,26 +1589,10 @@ SOURCES += \
     src/formats/logical/uft_logical.c \
     src/formats/posix/uft_posix.c
 
-# SOURCES += src/formats/mega65/uft_mega65_d81.c  # deleted (35 compile errors) \
-    src/analysis/events/uft_export_bridge.c \
-    src/analysis/events/otdr_event_core_v12.c \
-    src/analysis/events/uft_pipeline_bridge.c \
-    src/analysis/events/otdr_event_core_v11.c \
-    src/analysis/events/uft_confidence_bridge.c \
-    src/analysis/events/otdr_event_core_v10.c \
-    src/analysis/events/uft_integrity_bridge.c \
-    src/analysis/events/otdr_event_core_v9.c \
-    src/analysis/events/uft_event_v8_bridge.c \
-    src/analysis/events/otdr_event_core_v8.c \
-    src/analysis/events/uft_align_fuse_bridge.c \
-    src/analysis/events/otdr_align_fuse_v7.c \
-    src/analysis/events/uft_event_bridge.c \
-    src/analysis/events/otdr_event_core_v2.c \
-    src/analysis/denoise/uft_denoise_bridge.c \
-    src/analysis/denoise/phi_otdr_denoise_1d.c
+# SOURCES += src/formats/mega65/uft_mega65_d81.c  # deleted (35 compile errors)
 
-# v4.0 GUI Panels (DMK Analyzer, GW→DMK, Flux Histogram)
-# ═══════════════════════════════════════════════════════════════════════════════
+# v4.0 GUI Panels (DMK Analyzer, GW-to-DMK, Flux Histogram)
+# ===============================================================================
 
 SOURCES += \
     src/analysis/events/uft_export_bridge.c \
@@ -3346,8 +3335,8 @@ INCLUDEPATH += \
 # ═══════════════════════════════════════════════════════════════════════════════
 # Forensic Provenance Chain
 # ═══════════════════════════════════════════════════════════════════════════════
-SOURCES += src/forensic/uft_provenance.c
-HEADERS += include/uft/forensic/uft_provenance.h
+# SOURCES += src/forensic/uft_provenance.c  # not yet created
+# HEADERS += include/uft/forensic/uft_provenance.h
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Recovery Wizard + Format Suggestion Engine
