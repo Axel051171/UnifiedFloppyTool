@@ -47,7 +47,7 @@ static uft_error_t ssd_read_track(uft_disk_t* disk, int cyl, int head, uft_track
     uint8_t buf[256];
     for (int s = 0; s < p->spt; s++) {
         if (fseek(p->file, off + s * 256, SEEK_SET) != 0) { return UFT_ERROR_FILE_READ; }
-        if (fread(buf, 1, 256, p->file) != 256) { /* I/O error */ }
+        if (fread(buf, 1, 256, p->file) != 256) { memset(buf, 0xE5, 256); }
         uft_format_add_sector(track, s, buf, 256, cyl, head);
     }
     return UFT_OK;

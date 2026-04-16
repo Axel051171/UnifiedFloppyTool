@@ -480,7 +480,7 @@ static uft_error_t hfe_create(uft_disk_t* disk, const char* path,
     size_t lut_padding = lut_blocks * HFE_BLOCK_SIZE - lut_written;
     uint8_t zero = 0;
     for (size_t i = 0; i < lut_padding; i++) {
-        if (fwrite(&zero, 1, 1, f) != 1) { /* I/O error */ }
+        if (fwrite(&zero, 1, 1, f) != 1) { break; }
     }
     
     // Leere Track-Daten schreiben (0x00 = keine Flux-Transitions)
