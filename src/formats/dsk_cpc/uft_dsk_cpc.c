@@ -109,7 +109,7 @@ static uft_error_t dsk_read_track(uft_disk_t* disk, int cyl, int head, uft_track
         }
         
         memset(sec_buf, 0xE5, sec_size);
-        if (fread(sec_buf, 1, actual_size, pdata->file) != actual_size) { /* I/O error */ }
+        if (fread(sec_buf, 1, actual_size, pdata->file) != actual_size) { free(sec_buf); break; }
         uft_format_add_sector(track, sec_id - 1, sec_buf, sec_size, cyl, head);
     }
     free(sec_buf);

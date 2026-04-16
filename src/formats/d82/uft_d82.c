@@ -36,6 +36,7 @@ static uft_error_t d82_open(uft_disk_t* disk, const char* path, bool read_only) 
     FILE* f = fopen(path, "rb");
     if (!f) return UFT_ERROR_FILE_OPEN;
     d82_data_t* p = calloc(1, sizeof(d82_data_t));
+    if (!p) { fclose(f); return UFT_ERROR_NO_MEMORY; }
     p->file = f;
     disk->plugin_data = p;
     disk->geometry.cylinders = D82_TRACKS;

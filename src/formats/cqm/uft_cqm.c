@@ -45,7 +45,7 @@ static uft_error_t cqm_open(uft_disk_t* disk, const char* path, bool read_only) 
     if (!f) return UFT_ERROR_FILE_OPEN;
     
     uint8_t hdr[18];
-    if (fread(hdr, 1, 18, f) != 18) { /* I/O error */ }
+    if (fread(hdr, 1, 18, f) != 18) { fclose(f); return UFT_ERROR_IO; }
     if (hdr[0] != 'C' || hdr[1] != 'Q') { fclose(f); return UFT_ERROR_FORMAT_INVALID; }
     
     cqm_data_t* p = calloc(1, sizeof(cqm_data_t));

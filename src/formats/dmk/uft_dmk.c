@@ -25,8 +25,9 @@ static uft_error_t dmk_open(uft_disk_t* disk, const char* path, bool read_only) 
     if (!f) return UFT_ERROR_FILE_OPEN;
     
     uint8_t hdr[DMK_HDR];
-    if (fread(hdr, 1, DMK_HDR, f) != DMK_HDR) { /* I/O error */ }
+    if (fread(hdr, 1, DMK_HDR, f) != DMK_HDR) { fclose(f); return UFT_ERR_IO; }
     dmk_data_t* p = calloc(1, sizeof(dmk_data_t));
+    if (!p) { fclose(f); return UFT_ERR_MEMORY; }
     p->file = f;
     p->tracks = hdr[1];
     p->track_len = uft_read_le16(&hdr[2]);
