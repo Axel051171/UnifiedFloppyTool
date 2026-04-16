@@ -52,11 +52,13 @@ static void ipf_plugin_close(uft_disk_t *disk) {
 
 static uft_error_t ipf_plugin_read_track(uft_disk_t *disk, int cyl, int head,
                                           uft_track_t *track) {
-    (void)disk; (void)cyl; (void)head;
+    ipf_data_t *p = (ipf_data_t *)disk->plugin_data;
+    if (!p) return UFT_ERROR_INVALID_STATE;
     uft_track_init(track, cyl, head);
-    /* IPF track decode requires record parsing — not yet integrated.
-     * Raw data is accessible via plugin_data. */
-    return UFT_OK;
+    /* IPF: identification + metadata only. Track decode requires CAPS
+     * record parsing which is not yet integrated. probe() + open() work,
+     * read_track() returns empty. Use raw data via plugin_data for analysis. */
+    return UFT_ERR_NOT_IMPLEMENTED;
 }
 
 const uft_format_plugin_t uft_format_plugin_ipf = {

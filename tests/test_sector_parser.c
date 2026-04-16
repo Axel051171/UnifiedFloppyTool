@@ -125,10 +125,10 @@ static void test_parse_mfm_track(void) {
     assert(result.warnings == 0);
     
     /* Check ID */
-    assert(sectors[0].id_rec.id.cyl == 0);
+    assert(sectors[0].id_rec.id.cylinder == 0);
     assert(sectors[0].id_rec.id.head == 0);
-    assert(sectors[0].id_rec.id.sec == 1);
-    assert(sectors[0].id_rec.id.size_n == 2);
+    assert(sectors[0].id_rec.id.sector == 1);
+    assert(sectors[0].id_rec.id.size_code == 2);
     assert(sectors[0].id_rec.status == UFT_SECTOR_OK);
     
     /* Check data */
