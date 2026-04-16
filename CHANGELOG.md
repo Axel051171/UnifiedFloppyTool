@@ -1,5 +1,33 @@
 # Changelog
 
+## [4.1.2] - 2026-04-15
+
+### Added
+- D64 Plugin-B wrapper (Commodore 1541, variable SPT zones)
+- TD0 read_track (Teledisk: raw/repeat/pattern decode)
+- FDI read_track (track offset table + sector descriptors)
+- MSA Plugin-B (Atari ST RLE decompression)
+- WOZ Plugin-B (Apple II v1/v2/v2.1 via woz_load API)
+- IPF Plugin-B (CAPS/SPS identification)
+- G71 Plugin-B (Commodore 1571 GCR raw)
+- Format registry: 22 plugins, all with read_track
+- MFM sector extraction in SCP→sector flux converter
+
+### Fixed
+- 4 legacy MFM encoder CRC placeholders → real CRC-CCITT (0xCDB4)
+- 86F CRC verification (was always true, now computed)
+- CRC32 combine XOR bug → sentinel value
+- uft_track_add_sector return type harmonized (int → uft_error_t)
+- Duplicate uft_ufi_read_sectors removed from backend
+- USBFloppyHardwareProvider interface mismatch with base class
+- 10 broken tests repaired (include paths: 78→88 OK)
+- 3 missing forwarding headers created
+
+### Changed
+- Format registry expanded from 21 to 22 plugins (D64 added)
+- IPF read_track returns NOT_IMPLEMENTED honestly
+- Test compilation: 88 of 94 tests compile cleanly
+
 ## [4.1.1] - 2026-04-14
 
 ### Added
