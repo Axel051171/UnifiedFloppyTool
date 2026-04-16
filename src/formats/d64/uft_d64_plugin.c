@@ -29,10 +29,20 @@ typedef struct { FILE *file; int max_track; } d64_pd_t;
 
 static bool d64_plugin_probe(const uint8_t *data, size_t size,
                               size_t file_size, int *confidence) {
-    (void)data; (void)size;
-    if (file_size == 174848 || file_size == 175531) { *confidence = 80; return true; }
-    if (file_size == 196608 || file_size == 197376) { *confidence = 80; return true; }
-    return false;
+    /* D64 sizes: 174848 (35trk), 175531 (35+err), 196608 (40trk), 197376 (40+err) */
+    if (file_size != 174848 && file_size != 175531 &&
+        file_size != 196608 && file_size != 197376)
+        return false;
+    *confidence = 75;
+
+    /* BAM at track 18 sector 0 (offset 0x16500 for 35-track) */
+    if (size >= 0x16600) {
+        /* BAM starts with track/sector link to directory (usually 18/1) */
+        if (data[0x16500] == 18 && data[0x16501] == 1) *confidence = 92;
+        /* DOS version byte at 0x16502: 'A' = CBM DOS 2.6 */
+        else if (data[0x16502] == 0x41) *confidence = 88;
+    }
+    return true;
 }
 
 static uft_error_t d64_plugin_open(uft_disk_t *disk, const char *path, bool ro) {

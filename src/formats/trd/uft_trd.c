@@ -10,11 +10,18 @@
 typedef struct { FILE* file; uint8_t tracks, sides; } trd_data_t;
 
 bool trd_probe(const uint8_t* data, size_t size, size_t file_size, int* confidence) {
-    (void)data; (void)size;
-    if (file_size == 655360 || file_size == 327680 || file_size == 163840) {
-        *confidence = 70; return true;
+    if (file_size != 655360 && file_size != 327680 && file_size != 163840)
+        return false;
+    *confidence = 70;
+
+    /* TR-DOS disk info at track 0, sector 9 (offset 0x800) */
+    if (size >= 0x228) {
+        /* Byte 0x227 = disk type: 0x10 = TR-DOS */
+        if (data[0x227] == 0x10) *confidence = 92;
+        /* File count (0x8E4 = track 0 sector 8 + 0xE4) should be 0-128 */
+        else if (size >= 0x8E5 && data[0x8E4] <= 128) *confidence = 82;
     }
-    return false;
+    return true;
 }
 
 static uft_error_t trd_open(uft_disk_t* disk, const char* path, bool read_only) {

@@ -21,7 +21,7 @@ bool dmk_probe(const uint8_t* data, size_t size, size_t file_size, int* confiden
 }
 
 static uft_error_t dmk_open(uft_disk_t* disk, const char* path, bool read_only) {
-    FILE* f = fopen(path, "rb");
+    FILE* f = fopen(path, read_only ? "rb" : "r+b");
     if (!f) return UFT_ERROR_FILE_OPEN;
     
     uint8_t hdr[DMK_HDR];
