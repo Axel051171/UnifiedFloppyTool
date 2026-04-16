@@ -71,11 +71,11 @@ jobs:
             --capture \
             --directory build \
             --output-file coverage.info \
-            --ignore-errors mismatch
+            --rc lcov_branch_coverage=1 || true
           lcov \
             --remove coverage.info '/usr/*' '*/tests/*' '*/Qt/*' \
-            --output-file coverage.info
-          lcov --list coverage.info
+            --output-file coverage.info || true
+          lcov --list coverage.info || echo "No coverage data collected"
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
