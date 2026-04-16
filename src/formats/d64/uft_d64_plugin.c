@@ -1,20 +1,14 @@
 /**
  * @file uft_d64_plugin.c
- * @brief D64 (Commodore 1541) Plugin-B wrapper
+ * @brief D64 (Commodore 1541) Plugin-B — self-contained
  *
- * Wraps the existing d64_open/close/read_sector API (4172 LOC in uft_d64.c)
- * into the format plugin interface for the central registry.
+ * D64: headerless raw sector dump, 256 bytes/sector.
+ * 35 tracks (174848 bytes) or 40 tracks (196608 bytes).
+ * Variable sectors per track: 21/19/18/17 for density zones.
+ * Optional 683-byte error info block at end.
  */
 #include "uft/uft_format_common.h"
 
-/* External API from uft_d64.c / uft_d64_parser_v3.c */
-typedef struct d64_image_s d64_image_t;
-extern d64_image_t* d64_open(const char *path);
-extern void d64_close(d64_image_t *img);
-extern int d64_read_sector(const d64_image_t *img, int track, int sector,
-                            uint8_t *buf);
-
-/* D64 sectors per track (1-based index) */
 static const uint8_t d64_spt[] = {
     0,
     21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21, /* 1-17 */
@@ -23,7 +17,15 @@ static const uint8_t d64_spt[] = {
     17,17,17,17,17,17,17,17,17,17                          /* 31-40 */
 };
 
-typedef struct { d64_image_t *img; int max_track; } d64_pd_t;
+/* Byte offset for track T (1-based), sector S (0-based) */
+static long d64_offset(int track, int sector) {
+    long off = 0;
+    for (int t = 1; t < track && t <= 40; t++)
+        off += d64_spt[t] * 256;
+    return off + sector * 256;
+}
+
+typedef struct { FILE *file; int max_track; } d64_pd_t;
 
 static bool d64_plugin_probe(const uint8_t *data, size_t size,
                               size_t file_size, int *confidence) {
@@ -34,56 +36,55 @@ static bool d64_plugin_probe(const uint8_t *data, size_t size,
 }
 
 static uft_error_t d64_plugin_open(uft_disk_t *disk, const char *path, bool ro) {
-    (void)ro;
-    d64_image_t *img = d64_open(path);
-    if (!img) return UFT_ERROR_FORMAT_INVALID;
+    FILE *f = fopen(path, ro ? "rb" : "r+b");
+    if (!f) return UFT_ERROR_FILE_OPEN;
+
+    if (fseek(f, 0, SEEK_END) != 0) { fclose(f); return UFT_ERROR_IO; }
+    long sz = ftell(f);
+    if (sz < 0) { fclose(f); return UFT_ERROR_IO; }
+    if (fseek(f, 0, SEEK_SET) != 0) { fclose(f); return UFT_ERROR_IO; }
 
     d64_pd_t *p = calloc(1, sizeof(d64_pd_t));
-    if (!p) { d64_close(img); return UFT_ERROR_NO_MEMORY; }
-    p->img = img;
-
-    /* Detect 35 vs 40 tracks from file size */
-    FILE *f = fopen(path, "rb");
-    if (f) {
-        if (fseek(f, 0, SEEK_END) == 0) {
-            long sz = ftell(f);
-            p->max_track = (sz >= 196608) ? 40 : 35;
-        }
-        fclose(f);
-    }
-    if (p->max_track == 0) p->max_track = 35;
+    if (!p) { fclose(f); return UFT_ERROR_NO_MEMORY; }
+    p->file = f;
+    p->max_track = (sz >= 196608) ? 40 : 35;
 
     disk->plugin_data = p;
     disk->geometry.cylinders = p->max_track;
     disk->geometry.heads = 1;
     disk->geometry.sectors = 21;
     disk->geometry.sector_size = 256;
-    disk->geometry.total_sectors = 683; /* 35-track standard */
+
+    /* Count total sectors */
+    uint32_t total = 0;
+    for (int t = 1; t <= p->max_track; t++) total += d64_spt[t];
+    disk->geometry.total_sectors = total;
     return UFT_OK;
 }
 
 static void d64_plugin_close(uft_disk_t *disk) {
     d64_pd_t *p = disk->plugin_data;
-    if (p) { if (p->img) d64_close(p->img); free(p); disk->plugin_data = NULL; }
+    if (p) { if (p->file) fclose(p->file); free(p); disk->plugin_data = NULL; }
 }
 
 static uft_error_t d64_plugin_read_track(uft_disk_t *disk, int cyl, int head,
                                           uft_track_t *track) {
     d64_pd_t *p = disk->plugin_data;
-    if (!p || !p->img || head != 0) return UFT_ERROR_INVALID_STATE;
+    if (!p || !p->file || head != 0) return UFT_ERROR_INVALID_STATE;
 
     uft_track_init(track, cyl, head);
 
-    int d64_track = cyl + 1;  /* D64 is 1-based */
+    int d64_track = cyl + 1;
     if (d64_track < 1 || d64_track > p->max_track) return UFT_OK;
-    int nsectors = (d64_track <= 40) ? d64_spt[d64_track] : 17;
+    int nsectors = d64_spt[d64_track];
 
     uint8_t buf[256];
     for (int s = 0; s < nsectors; s++) {
-        if (d64_read_sector(p->img, d64_track, s, buf) == 0) {
-            uft_format_add_sector(track, (uint8_t)s, buf, 256,
-                                  (uint8_t)cyl, (uint8_t)head);
-        }
+        long off = d64_offset(d64_track, s);
+        if (fseek(p->file, off, SEEK_SET) != 0) continue;
+        if (fread(buf, 1, 256, p->file) != 256) continue;
+        uft_format_add_sector(track, (uint8_t)s, buf, 256,
+                              (uint8_t)cyl, (uint8_t)head);
     }
     return UFT_OK;
 }
