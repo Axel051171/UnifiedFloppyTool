@@ -31,6 +31,8 @@ extern const uft_format_plugin_t uft_format_plugin_d64;
 extern const uft_format_plugin_t uft_format_plugin_atx;
 extern const uft_format_plugin_t uft_format_plugin_adf;
 extern const uft_format_plugin_t uft_format_plugin_scl;
+extern const uft_format_plugin_t uft_format_plugin_stx;
+extern const uft_format_plugin_t uft_format_plugin_pro;
 
 static const uft_format_plugin_t* all_plugins[] = {
     &uft_format_plugin_d71,
@@ -58,6 +60,8 @@ static const uft_format_plugin_t* all_plugins[] = {
     &uft_format_plugin_atx,
     &uft_format_plugin_adf,
     &uft_format_plugin_scl,
+    &uft_format_plugin_stx,
+    &uft_format_plugin_pro,
     NULL
 };
 

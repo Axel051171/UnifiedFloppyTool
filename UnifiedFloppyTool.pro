@@ -677,6 +677,8 @@ SOURCES += \
     src/formats/adf/uft_adf_plugin.c \
     src/formats/scl/uft_scl_plugin.c \
     src/formats/format_registry/uft_format_registry.c \
+    src/formats/stx/uft_stx_plugin.c \
+    src/formats/atari/uft_pro_plugin.c \
     src/core/uft_decode_pipeline.c \
     src/parsers/a2r/uft_a2r_parser.c
 
