@@ -5,7 +5,7 @@
  * P1-005: Optional verify after write operations
  */
 
-#include "uft/uft_writer_verify.h"
+#include "uft/uft_write_verify.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>

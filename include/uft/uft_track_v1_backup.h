@@ -66,7 +66,7 @@ typedef struct uft_track {
 
 #endif /* UFT_TRACK_T_DEFINED */
 
-void uft_track_init(uft_track_t *track);
+void uft_track_init(uft_track_t *track, int cylinder, int head);
 void uft_track_free(uft_track_t *track);
 
 #ifdef __cplusplus

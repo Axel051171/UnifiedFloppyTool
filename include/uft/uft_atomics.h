@@ -167,6 +167,28 @@ extern "C" {
     #define atomic_thread_fence(order)  ((void)0)
 #endif
 
+/*===========================================================================
+ * UFT-specific atomic type aliases (used by uft_memory.c, uft_streaming_hash.c)
+ *===========================================================================*/
+
+#if defined(UFT_ATOMICS_C11)
+    typedef _Atomic size_t  uft_atomic_size;
+    typedef _Atomic int     uft_atomic_bool;
+#elif defined(UFT_ATOMICS_MSVC)
+    typedef volatile LONG   uft_atomic_size;
+    typedef volatile LONG   uft_atomic_bool;
+#elif defined(UFT_ATOMICS_GNUC)
+    typedef volatile size_t uft_atomic_size;
+    typedef volatile int    uft_atomic_bool;
+#else
+    typedef volatile size_t uft_atomic_size;
+    typedef volatile int    uft_atomic_bool;
+#endif
+
+#ifndef UFT_ATOMIC_INIT
+#define UFT_ATOMIC_INIT(val) (val)
+#endif
+
 #ifdef __cplusplus
 }
 #endif

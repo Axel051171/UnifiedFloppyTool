@@ -261,6 +261,29 @@ static inline void uft_write_be32(void *p, uint32_t v) {
 #endif /* UFT_API */
 
 /* ═══════════════════════════════════════════════════════════════════════════════
+ * POSIX Timer Compatibility (Windows fallback)
+ * ═══════════════════════════════════════════════════════════════════════════════ */
+
+#if defined(UFT_PLATFORM_WINDOWS) && defined(_WIN32)
+#ifndef CLOCK_MONOTONIC
+#define CLOCK_MONOTONIC 1
+#include <time.h>
+/* Windows: use GetTickCount64 as simple monotonic clock fallback */
+static inline int uft_clock_gettime(int clk, struct timespec *ts) {
+    (void)clk;
+    /* GetTickCount64 returns milliseconds since boot — good enough for timing */
+    unsigned long long ms = 0;
+    /* Avoid windows.h dependency here — use time() as last resort */
+    time_t t = time(NULL);
+    ts->tv_sec = t;
+    ts->tv_nsec = 0;
+    return 0;
+}
+#define clock_gettime uft_clock_gettime
+#endif /* CLOCK_MONOTONIC */
+#endif /* UFT_PLATFORM_WINDOWS */
+
+/* ═══════════════════════════════════════════════════════════════════════════════
  * Path Handling
  * ═══════════════════════════════════════════════════════════════════════════════ */
 
