@@ -320,7 +320,8 @@ SOURCES += \
     src/hardware_providers/xum1541hardwareprovider.cpp \
     src/hardware_providers/catweaselhardwareprovider.cpp \
     src/hardware_providers/adfcopyhardwareprovider.cpp \
-    src/hardware_providers/usbfloppyhardwareprovider.cpp
+    src/hardware_providers/usbfloppyhardwareprovider.cpp \
+    src/hardware_providers/unified_hal_bridge.cpp
 
 # USB Floppy UFI Backend (C)
 SOURCES += src/hal/ufi.c
@@ -356,6 +357,7 @@ HEADERS += \
     src/hardware_providers/catweaselhardwareprovider.h \
     src/hardware_providers/adfcopyhardwareprovider.h \
     src/hardware_providers/usbfloppyhardwareprovider.h \
+    src/hardware_providers/unified_hal_bridge.h \
     src/hardware_providers/fc5025_usb.h \
     src/hardware_providers/xum1541_usb.h
 
