@@ -10,6 +10,7 @@
  */
 #include "uft/uft_format_plugin.h"
 #include "uft/uft_error.h"
+#include "uft/uft_format_autodetect.h"
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -53,6 +54,45 @@ const uft_sector_t *uft_track_get_sector(const uft_track_t *track, size_t index)
     if (!track || !track->sectors) return NULL;
     if (index >= track->sector_count) return NULL;
     return &track->sectors[index];
+}
+
+/* Copies the track's flux buffer into a newly-allocated array, so the
+ * caller is free to modify / outlive the source track. Returns UFT_OK
+ * with *count_out = 0 and *flux_out = NULL if the track has no flux. */
+uft_error_t uft_track_get_flux(const uft_track_t *track,
+                                 uint32_t **flux_out, size_t *count_out)
+{
+    if (!track || !flux_out || !count_out) return UFT_ERROR_NULL_POINTER;
+    *flux_out = NULL;
+    *count_out = 0;
+    if (!track->flux || track->flux_count == 0) return UFT_OK;
+
+    size_t bytes = track->flux_count * sizeof(uint32_t);
+    uint32_t *copy = (uint32_t *)malloc(bytes);
+    if (!copy) return UFT_ERROR_NO_MEMORY;
+    memcpy(copy, track->flux, bytes);
+    *flux_out = copy;
+    *count_out = track->flux_count;
+    return UFT_OK;
+}
+
+/* uft_detect_result_t is a fixed-layout POD — init is memset, free is
+ * a no-op. Declared in uft_format_autodetect.h, never implemented until
+ * now; callers relied on zero-initialized stack state which worked
+ * incidentally but broke as soon as a static/global was used. */
+void uft_detect_result_init(uft_detect_result_t *result)
+{
+    if (!result) return;
+    memset(result, 0, sizeof(*result));
+}
+
+void uft_detect_result_free(uft_detect_result_t *result)
+{
+    if (!result) return;
+    /* No heap-owned members — all arrays are inline. Reset the counts
+     * so a freed result can't be accidentally reused with stale data. */
+    result->candidate_count = 0;
+    result->warning_count   = 0;
 }
 
 /* ============================================================================

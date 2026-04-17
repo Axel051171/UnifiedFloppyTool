@@ -1,18 +1,8 @@
 /**
  * @file uft_fs_amigados_driver.c
- * @brief Reference adapter — wraps uft_amiga_* for the generic FS registry.
- *
- * NOT COMPILED: this file is deliberately excluded from the .pro.
- *
- * Rationale: include/uft/fs/uft_amigados.h declares the full uft_amiga_*
- * API (create/open_buffer/detect/load_dir_path/extract_file_alloc/…) but
- * the backend is not implemented anywhere in the tree (as of v4.1.0
- * there are ~287 declared-but-stubbed APIs and AmigaDOS is one of them).
- *
- * This adapter is kept as a reference so that when the AmigaDOS backend
- * lands, enabling it is a one-line .pro change. The shape of probe /
- * mount / unmount / readdir / read / stat is how every future FS
- * adapter should plug into uft_fs_driver_register().
+ * @brief First uft_fs_driver_t adapter — wraps uft_amiga_* for the
+ *        generic FS registry. Activated by the AmigaDOS backend landing
+ *        in src/fs/uft_amigados.c.
  *
  * Probe strategy: look at disk->image_data / image_size, call
  * uft_amiga_detect(), return 90 if bootblock checksum is valid else 40.
@@ -21,8 +11,6 @@
  * opened via uft_amiga_open_buffer(copy=true) so the mounted FS owns
  * its own copy of the data.
  */
-
-#if 0  /* Build-disabled until AmigaDOS backend is implemented. */
 
 #include "uft/uft_integration.h"
 #include "uft/uft_error.h"
@@ -183,5 +171,3 @@ static void amigados_driver_register(void)
 {
     uft_fs_driver_register(&amigados_driver);
 }
-
-#endif  /* 0 — AmigaDOS backend missing */
