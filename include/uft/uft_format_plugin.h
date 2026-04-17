@@ -37,6 +37,7 @@ typedef enum uft_format_caps {
     UFT_FORMAT_CAP_WEAK_BITS    = (1 << 5),  ///< Unterstützt Weak Bits
     UFT_FORMAT_CAP_MULTI_REV    = (1 << 6),  ///< Multiple Revolutions
     UFT_FORMAT_CAP_STREAMING    = (1 << 7),  ///< Streaming I/O
+    UFT_FORMAT_CAP_VERIFY       = (1 << 8),  ///< Kann verify_track
 } uft_format_caps_t;
 #endif /* UFT_FORMAT_CAPS_DEFINED */
 
@@ -275,7 +276,26 @@ typedef struct uft_format_plugin {
      */
     uft_error_t (*write_track)(uft_disk_t* disk, int cylinder, int head,
                                 const uft_track_t* track);
-    
+
+    /**
+     * @brief Track verifizieren
+     *
+     * Vergleicht den Disk-Inhalt mit einer Referenz. Formatspezifische
+     * Implementierung (z.B. Weak-Bit-Toleranz) oder uft_generic_verify_track.
+     *
+     * @return UFT_OK wenn übereinstimmend, UFT_ERROR_VERIFY_FAILED sonst
+     */
+    uft_error_t (*verify_track)(uft_disk_t* disk, int cylinder, int head,
+                                 const uft_track_t* reference);
+
+    /**
+     * @brief Einzel-Sektor verifizieren (optional)
+     */
+    uft_error_t (*verify_sector)(uft_disk_t* disk, int cyl, int head,
+                                  uint8_t sector_id,
+                                  const uint8_t* expected_data,
+                                  size_t expected_len);
+
     // === Optionale Erweiterungen ===
     
     /**
@@ -317,8 +337,18 @@ typedef struct uft_format_plugin {
 // ============================================================================
 
 /**
+ * @brief Generische Verify-Implementierung
+ *
+ * Default-Implementierung für verify_track. Liest Track, vergleicht
+ * Sektor-für-Sektor mit der Referenz. Für Standard-Sector-Formate geeignet.
+ * Formate mit Weak-Bits/Timing brauchen eigene verify_track-Funktion.
+ */
+uft_error_t uft_generic_verify_track(uft_disk_t *disk, int cyl, int head,
+                                      const uft_track_t *reference);
+
+/**
  * @brief Format-Plugin registrieren
- * 
+ *
  * @param plugin Plugin-Struktur (muss statisch/global sein)
  * @return UFT_OK bei Erfolg
  */
