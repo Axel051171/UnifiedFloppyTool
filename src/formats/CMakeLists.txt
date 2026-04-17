@@ -27,7 +27,7 @@ set(UFT_FORMAT_SOURCES
     nib/uft_nib.c
     woz/uft_woz.c
     trd/uft_trd.c
-    ssd/uft_ssd.c
+    ssd/uft_ssd_plugin.c
     d88/uft_d88.c
     sad/uft_sad.c
     dmk/uft_dmk.c
