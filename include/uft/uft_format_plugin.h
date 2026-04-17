@@ -114,6 +114,9 @@ struct uft_disk {
     /* Callbacks */
     uft_log_fn          log_fn;
     void*               log_user;
+
+    /* Metadata (Key-Value + Annotations, set via uft_meta_* API) */
+    void*               meta;          ///< Opaque uft_meta_store_t*
 };
 
 /* Forward declarations for layer types (full defs in uft_track.h) */

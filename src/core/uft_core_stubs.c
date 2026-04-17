@@ -77,6 +77,9 @@ void* uft_disk_open(const char *path, int read_only) {
     return disk;
 }
 
+/* Forward decl — uft_metadata.c */
+extern void uft_meta_free(uft_disk_t *disk);
+
 void uft_disk_close(void *disk_v) {
     uft_disk_t *disk = (uft_disk_t *)disk_v;
     if (!disk) return;
@@ -88,7 +91,8 @@ void uft_disk_close(void *disk_v) {
             plugin->close(disk);
     }
     disk->is_open = false;
-    free(disk->image_data);  /* If GUI stored raw image */
+    uft_meta_free(disk);       /* Metadata store, if any */
+    free(disk->image_data);     /* If GUI stored raw image */
     free(disk);
 }
 
