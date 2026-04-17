@@ -1,72 +1,131 @@
 /**
  * @file uft_core_stubs.c
- * @brief Minimal core function stubs for linking
+ * @brief Core glue layer — high-level disk API built on plugin system
  *
- * These stub functions avoid including heavy headers that cause
- * enum/struct redefinition conflicts. They use opaque void* pointers
- * and return safe default values (NULL, 0, -1).
- *
- * TODO: Replace stubs with real implementations once header
- * consolidation is complete (L-refactoring).
+ * Previously all functions here were NULL-returning stubs. Phase 2 of
+ * core consolidation replaces them with real plugin-delegation where
+ * possible. Remaining stubs (flux decoders, provenance, compression)
+ * return UFT_ERROR_NOT_SUPPORTED or safe defaults until the respective
+ * subsystems are implemented.
  */
+#include "uft/uft_format_plugin.h"
+#include "uft/uft_error.h"
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
 /* ============================================================================
- * Track/Sector stubs
+ * Track/Sector helpers
  * ============================================================================ */
 
-const void* uft_track_find_sector(const void* track, int sector) {
-    (void)track; (void)sector;
+const uft_sector_t* uft_track_find_sector(const uft_track_t* track, int sector) {
+    if (!track) return NULL;
+    for (size_t i = 0; i < track->sector_count; i++) {
+        if (track->sectors[i].id.sector == (uint8_t)sector)
+            return &track->sectors[i];
+    }
     return NULL;
 }
 
-uint32_t uft_track_get_status(const void* track) {
-    (void)track;
-    return 0;
+uint32_t uft_track_get_status(const void* track_v) {
+    const uft_track_t *t = (const uft_track_t *)track_v;
+    if (!t) return 0;
+    uint32_t status = 0;
+    for (size_t i = 0; i < t->sector_count; i++)
+        status |= t->sectors[i].status;
+    return status;
 }
 
 /* ============================================================================
- * Disk stubs
+ * Disk Open / Close / Get-Geometry — real plugin delegation
  * ============================================================================ */
 
-void uft_disk_close(void *disk) {
-    free(disk);
-}
-
 void* uft_disk_create(void) {
-    return NULL;
+    uft_disk_t *disk = calloc(1, sizeof(uft_disk_t));
+    if (!disk) return NULL;
+    disk->read_only = true;
+    return disk;
 }
 
 void* uft_disk_open(const char *path, int read_only) {
-    (void)path; (void)read_only;
-    return NULL;
+    if (!path) return NULL;
+
+    /* 1. Probe to find the right plugin */
+    const uft_format_plugin_t *plugin = uft_probe_file_format(path);
+    if (!plugin || !plugin->open) return NULL;
+
+    /* 2. Allocate disk handle */
+    uft_disk_t *disk = calloc(1, sizeof(uft_disk_t));
+    if (!disk) return NULL;
+
+    /* 3. Store path (use internal buffer + pointer for legacy compat) */
+    strncpy(disk->path_buf, path, sizeof(disk->path_buf) - 1);
+    disk->path_buf[sizeof(disk->path_buf) - 1] = '\0';
+    disk->path = disk->path_buf;
+    disk->format = plugin->format;
+    disk->read_only = read_only ? true : false;
+
+    /* 4. Delegate to plugin */
+    uft_error_t err = plugin->open(disk, path, disk->read_only);
+    if (err != UFT_OK) {
+        free(disk);
+        return NULL;
+    }
+
+    disk->is_open = true;
+    return disk;
 }
 
-int uft_disk_get_geometry(const void *disk, void *geometry) {
-    (void)disk; (void)geometry;
-    return -1;
+void uft_disk_close(void *disk_v) {
+    uft_disk_t *disk = (uft_disk_t *)disk_v;
+    if (!disk) return;
+
+    /* Plugin close if opened */
+    if (disk->is_open) {
+        const uft_format_plugin_t *plugin = uft_get_format_plugin(disk->format);
+        if (plugin && plugin->close)
+            plugin->close(disk);
+    }
+    disk->is_open = false;
+    free(disk->image_data);  /* If GUI stored raw image */
+    free(disk);
 }
 
-/* ============================================================================
- * Format detection stubs
- * ============================================================================ */
-
-int uft_detect_format(const char *path) {
-    (void)path;
-    return 0;  /* UFT_FMT_UNKNOWN */
-}
-
-int uft_detect_buffer(const uint8_t *data, size_t size) {
-    (void)data; (void)size;
+int uft_disk_get_geometry(const void *disk_v, void *geom_v) {
+    const uft_disk_t *disk = (const uft_disk_t *)disk_v;
+    uft_geometry_t *geom = (uft_geometry_t *)geom_v;
+    if (!disk || !geom) return -1;
+    *geom = disk->geometry;
     return 0;
 }
 
+/* ============================================================================
+ * Format detection — real via plugin probe chain
+ * ============================================================================ */
+
+int uft_detect_format(const char *path) {
+    if (!path) return 0;
+    const uft_format_plugin_t *plugin = uft_probe_file_format(path);
+    return plugin ? (int)plugin->format : 0;
+}
+
+int uft_detect_buffer(const uint8_t *data, size_t size) {
+    if (!data || size == 0) return 0;
+    const uft_format_plugin_t *plugin =
+        uft_probe_buffer_format(data, size, size);
+    return plugin ? (int)plugin->format : 0;
+}
+
 int uft_probe_format(const char *path, void *result) {
-    (void)path; (void)result;
-    return -1;
+    if (!path) return -1;
+    const uft_format_plugin_t *plugin = uft_probe_file_format(path);
+    if (!plugin) return -1;
+    /* result is opaque to callers — they either cast or don't use it */
+    if (result) {
+        *(const uft_format_plugin_t **)result = plugin;
+    }
+    return (int)plugin->format;
 }
 
 /* ============================================================================

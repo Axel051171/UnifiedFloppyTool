@@ -91,6 +91,53 @@ const uft_format_plugin_t* uft_get_format_plugin(uft_format_t format) {
     return NULL;
 }
 
+/* ============================================================================
+ * Plugin Probing — Buffer and File
+ * ============================================================================ */
+
+const uft_format_plugin_t* uft_probe_buffer_format(const uint8_t *data,
+                                                     size_t size,
+                                                     size_t file_size) {
+    if (!data || size == 0) return NULL;
+    int best_conf = 0;
+    const uft_format_plugin_t *best = NULL;
+    for (size_t i = 0; i < g_format_plugin_count; i++) {
+        const uft_format_plugin_t *p = g_format_plugins[i];
+        if (!p || !p->probe) continue;
+        int conf = 0;
+        if (p->probe(data, size, file_size, &conf) && conf > best_conf) {
+            best_conf = conf;
+            best = p;
+        }
+    }
+    return best;
+}
+
+const uft_format_plugin_t* uft_probe_file_format(const char *path) {
+    if (!path) return NULL;
+    FILE *f = fopen(path, "rb");
+    if (!f) return NULL;
+
+    if (fseek(f, 0, SEEK_END) != 0) { fclose(f); return NULL; }
+    long fs = ftell(f);
+    if (fs < 0) { fclose(f); return NULL; }
+    if (fseek(f, 0, SEEK_SET) != 0) { fclose(f); return NULL; }
+
+    size_t probe_size = (fs < 4096) ? (size_t)fs : 4096;
+    uint8_t *buf = malloc(probe_size);
+    if (!buf) { fclose(f); return NULL; }
+
+    if (fread(buf, 1, probe_size, f) != probe_size) {
+        free(buf); fclose(f); return NULL;
+    }
+    fclose(f);
+
+    const uft_format_plugin_t *plugin =
+        uft_probe_buffer_format(buf, probe_size, (size_t)fs);
+    free(buf);
+    return plugin;
+}
+
 const uft_format_plugin_t* uft_find_format_plugin_by_extension(const char* ext) {
     if (!ext || !*ext) return NULL;
     

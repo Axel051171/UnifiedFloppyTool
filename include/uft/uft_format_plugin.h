@@ -452,6 +452,20 @@ uft_error_t uft_unregister_format_plugin(uft_format_t format);
 const uft_format_plugin_t* uft_get_format_plugin(uft_format_t format);
 
 /**
+ * @brief Plugin für Buffer-Daten finden (via probe-Chain)
+ *
+ * Probiert alle registrierten Plugins, wählt das mit höchster Confidence.
+ */
+const uft_format_plugin_t* uft_probe_buffer_format(const uint8_t *data,
+                                                    size_t size,
+                                                    size_t file_size);
+
+/**
+ * @brief Plugin für Datei finden (liest Anfang + probed)
+ */
+const uft_format_plugin_t* uft_probe_file_format(const char *path);
+
+/**
  * @brief Plugin für Extension finden
  */
 const uft_format_plugin_t* uft_find_format_plugin_by_extension(const char* ext);
