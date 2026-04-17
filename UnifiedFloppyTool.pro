@@ -690,6 +690,7 @@ SOURCES += \
     src/core/uft_log.c \
     src/core/uft_hw_batch.c \
     src/hal/greaseweazle_backend.c \
+    src/hal/sync_backends.c \
     src/formats/stx/uft_stx_plugin.c \
     src/formats/atari/uft_pro_plugin.c \
     src/formats/do/uft_do.c \
