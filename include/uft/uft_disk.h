@@ -36,10 +36,14 @@ typedef struct uft_writer_backend uft_writer_backend_t;
  */
 uft_disk_t* uft_disk_create(void);
 
-/**
- * @brief Open disk from file
- */
-uft_error_t uft_disk_open(uft_disk_t *disk, const char *path, bool readonly);
+/* NOTE: the 3-arg form `uft_error_t uft_disk_open(uft_disk_t*, const char*,
+ * bool)` used to live here but conflicted with the canonical handle-returning
+ * form in uft_core.h:
+ *
+ *     uft_disk_t* uft_disk_open(const char *path, bool read_only);
+ *
+ * The canonical form wins (6 callers vs 1). Include uft/uft_core.h for it.
+ * This header retains only the non-conflicting entries below. */
 
 /**
  * @brief Close disk

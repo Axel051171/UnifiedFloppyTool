@@ -86,8 +86,13 @@ void uft_disk_destroy(uft_disk_t *disk);
  * @param data Image data
  * @param size Image size
  * @return 0 on success, -1 on error
+ *
+ * REMOVED: the (disk, data, size) buffer-mount form never had any caller
+ * and collided with the canonical (path, bool) form. Callers that want
+ * buffer-mount semantics should allocate a disk via uft_disk_create() and
+ * call the format plugin's open-from-buffer path directly.
  */
-int uft_disk_open(uft_disk_t *disk, const uint8_t *data, size_t size);
+/* int uft_disk_open(uft_disk_t *disk, const uint8_t *data, size_t size); */
 
 /**
  * Open a disk image from file

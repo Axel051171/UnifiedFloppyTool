@@ -12,8 +12,8 @@
 #include <string.h>
 
 /* uft_disk_open/close sind in uft_core_stubs.c */
-extern void* uft_disk_open(const char *path, int read_only);
-extern void  uft_disk_close(void *disk);
+extern uft_disk_t* uft_disk_open(const char *path, bool read_only);
+extern void        uft_disk_close(void *disk);
 
 static void detail_append(uft_batch_result_t *r, const char *path,
                             uft_error_t err, const char *msg)

@@ -106,7 +106,7 @@ void* uft_disk_create(void) {
     return disk;
 }
 
-void* uft_disk_open(const char *path, int read_only) {
+uft_disk_t* uft_disk_open(const char *path, bool read_only) {
     if (!path) return NULL;
 
     /* 1. Probe to find the right plugin */
@@ -122,7 +122,7 @@ void* uft_disk_open(const char *path, int read_only) {
     disk->path_buf[sizeof(disk->path_buf) - 1] = '\0';
     disk->path = disk->path_buf;
     disk->format = plugin->format;
-    disk->read_only = read_only ? true : false;
+    disk->read_only = read_only;
 
     /* 4. Delegate to plugin */
     uft_error_t err = plugin->open(disk, path, disk->read_only);

@@ -11,7 +11,8 @@
 #include <QVBoxLayout>
 
 extern "C" {
-#include <uft/uft_disk.h>
+#include <uft/uft_core.h>   /* canonical disk API: open/close/get_geometry */
+#include <uft/uft_format_plugin.h>  /* struct uft_disk field access */
 #include <uft/uft_types.h>
 }
 
@@ -65,16 +66,9 @@ void DiskAnalyzerWindow::loadImage(const QString &filename)
 {
     m_currentFile = filename;
 
-    /* Open disk image via core API */
-    uft_disk_t *disk = uft_disk_create();
+    /* Open disk image via core API (canonical handle-returning form). */
+    uft_disk_t *disk = uft_disk_open(filename.toUtf8().constData(), /*read_only=*/true);
     if (!disk) {
-        QMessageBox::warning(this, tr("Error"), tr("Failed to allocate disk handle."));
-        return;
-    }
-
-    uft_error_t err = uft_disk_open(disk, filename.toUtf8().constData(), true);
-    if (err != UFT_SUCCESS) {
-        uft_disk_free(disk);
         /* Fall back to file-size based analysis */
         QFile f(filename);
         if (!f.open(QIODevice::ReadOnly)) {
@@ -168,8 +162,7 @@ void DiskAnalyzerWindow::loadImage(const QString &filename)
     ui->spinSideNumber->setMaximum(geom.heads > 0 ? geom.heads - 1 : 0);
     ui->sliderSide->setMaximum(geom.heads > 0 ? geom.heads - 1 : 0);
 
-    uft_disk_close(disk);
-    uft_disk_free(disk);
+    uft_disk_close(disk);   /* also frees the handle — see uft_core_stubs.c */
 
     updateDiskView();
 }

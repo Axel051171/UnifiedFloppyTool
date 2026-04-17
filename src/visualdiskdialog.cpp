@@ -21,7 +21,8 @@
 #include <QtMath>
 
 extern "C" {
-#include <uft/uft_disk.h>
+#include <uft/uft_core.h>   /* canonical disk API: open/close/get_geometry */
+#include <uft/uft_format_plugin.h>  /* struct uft_disk field access */
 #include <uft/uft_types.h>
 }
 
@@ -427,15 +428,8 @@ void VisualDiskDialog::loadDiskImage(const QString& path)
     setWindowTitle(tr("Visual Floppy Disk - %1").arg(QFileInfo(path).fileName()));
 
     /* Attempt to load via uft_disk_open for track/sector analysis */
-    uft_disk_t *disk = uft_disk_create();
+    uft_disk_t *disk = uft_disk_open(path.toUtf8().constData(), /*read_only=*/true);
     if (!disk) {
-        generateSampleData();
-        return;
-    }
-
-    uft_error_t err = uft_disk_open(disk, path.toUtf8().constData(), true);
-    if (err != UFT_SUCCESS) {
-        uft_disk_free(disk);
         /* Fall back to file-size heuristic */
         QFile f(path);
         if (!f.open(QIODevice::ReadOnly)) {
@@ -537,8 +531,7 @@ void VisualDiskDialog::loadDiskImage(const QString& path)
         }
     }
 
-    uft_disk_close(disk);
-    uft_disk_free(disk);
+    uft_disk_close(disk);   /* also frees the handle — see uft_core_stubs.c */
 
     updateInfoLabels();
 }
