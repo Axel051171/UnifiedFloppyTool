@@ -74,4 +74,45 @@ QVector<TrackData> readDiskViaUnifiedHal(uft_hw_device_t *device,
     return result;
 }
 
+QVector<TrackData> readDiskByType(uft_hw_type_t hwType,
+                                  int startCyl, int endCyl,
+                                  int heads, int revolutions,
+                                  QString *errorOut)
+{
+    QVector<TrackData> empty;
+    auto fail = [&](const QString &msg) -> QVector<TrackData>& {
+        if (errorOut) *errorOut = msg;
+        qWarning("readDiskByType: %s", qPrintable(msg));
+        return empty;
+    };
+
+    constexpr size_t MAX_DEVS = 16;
+    uft_hw_info_t devs[MAX_DEVS];
+    std::memset(devs, 0, sizeof(devs));
+    size_t found = 0;
+
+    uft_error_t err = uft_hw_enumerate(devs, MAX_DEVS, &found);
+    if (err != UFT_OK || found == 0)
+        return fail(QStringLiteral("enumerate failed (err=%1, found=%2)")
+                        .arg(err).arg(found));
+
+    const uft_hw_info_t *pick = nullptr;
+    for (size_t i = 0; i < found; ++i) {
+        if (devs[i].type == hwType) { pick = &devs[i]; break; }
+    }
+    if (!pick)
+        return fail(QStringLiteral("no device of type %1 found").arg(int(hwType)));
+
+    uft_hw_device_t *device = nullptr;
+    err = uft_hw_open(pick, &device);
+    if (err != UFT_OK || !device)
+        return fail(QStringLiteral("open failed (err=%1)").arg(err));
+
+    QVector<TrackData> tracks =
+        readDiskViaUnifiedHal(device, startCyl, endCyl, heads, revolutions);
+
+    uft_hw_close(device);
+    return tracks;
+}
+
 } // namespace uft_hal_bridge

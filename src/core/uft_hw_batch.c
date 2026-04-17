@@ -103,6 +103,45 @@ size_t uft_hw_backend_count(void) {
     return g_backend_count;
 }
 
+/* ============================================================================
+ * Top-level enumerate/open/close — iterate over registered backends
+ * ============================================================================ */
+
+uft_error_t uft_hw_enumerate(uft_hw_info_t *devices, size_t max_devices,
+                              size_t *found)
+{
+    if (!devices || !found) return UFT_ERROR_NULL_POINTER;
+    *found = 0;
+    for (size_t i = 0; i < g_backend_count; i++) {
+        const uft_hw_backend_t *be = g_backends[i];
+        if (!be || !be->enumerate) continue;
+        if (*found >= max_devices) break;
+        size_t got = 0;
+        uft_error_t err = be->enumerate(devices + *found,
+                                        max_devices - *found, &got);
+        if (err == UFT_OK) *found += got;
+        /* non-fatal: one backend failing must not stop the others */
+    }
+    return UFT_OK;
+}
+
+uft_error_t uft_hw_open(const uft_hw_info_t *info, uft_hw_device_t **device)
+{
+    if (!info || !device) return UFT_ERROR_NULL_POINTER;
+    for (size_t i = 0; i < g_backend_count; i++) {
+        const uft_hw_backend_t *be = g_backends[i];
+        if (be && be->type == info->type && be->open)
+            return be->open(info, device);
+    }
+    return UFT_ERROR_NOT_SUPPORTED;
+}
+
+void uft_hw_close(uft_hw_device_t *device)
+{
+    if (!device || !device->backend || !device->backend->close) return;
+    device->backend->close(device);
+}
+
 uft_error_t uft_hw_read_tracks(uft_hw_device_t *device,
                                  int cyl_start, int cyl_end,
                                  int head_mask,

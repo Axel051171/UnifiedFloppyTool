@@ -45,6 +45,30 @@ QVector<TrackData> readDiskViaUnifiedHal(uft_hw_device_t *device,
                                          int startCyl, int endCyl,
                                          int heads, int revolutions);
 
+/**
+ * @brief End-to-end unified capture: enumerate, open, read, close.
+ *
+ * Picks the first enumerated device whose backend type equals @p hwType
+ * (e.g. UFT_HW_GREASEWEAZLE). Useful for first-consumer testing of the
+ * bridge without having to migrate Qt provider internals.
+ *
+ * @param hwType       Target backend type.
+ * @param startCyl     First cylinder (inclusive).
+ * @param endCyl       Last cylinder (exclusive).
+ * @param heads        1 or 2.
+ * @param revolutions  0 = backend default.
+ * @param errorOut     Optional: populated with a human message on failure.
+ * @return TrackData vector, empty on any failure.
+ *
+ * Caveat: the Qt-side HardwareProvider for the same physical device MUST
+ * be disconnected before calling this — only one process owner per COM
+ * port. This function does NOT touch Qt provider state.
+ */
+QVector<TrackData> readDiskByType(uft_hw_type_t hwType,
+                                  int startCyl, int endCyl,
+                                  int heads, int revolutions,
+                                  QString *errorOut = nullptr);
+
 } // namespace uft_hal_bridge
 
 #endif /* UFT_UNIFIED_HAL_BRIDGE_H */
