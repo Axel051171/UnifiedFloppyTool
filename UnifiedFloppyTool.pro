@@ -682,6 +682,9 @@ SOURCES += \
     src/core/uft_disk_verify.c \
     src/core/uft_disk_stats.c \
     src/core/uft_disk_compare.c \
+    src/core/uft_disk_transaction.c \
+    src/core/uft_disk_convert.c \
+    src/core/uft_disk_batch.c \
     src/formats/stx/uft_stx_plugin.c \
     src/formats/atari/uft_pro_plugin.c \
     src/formats/do/uft_do.c \
