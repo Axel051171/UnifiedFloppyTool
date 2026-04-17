@@ -8,6 +8,7 @@
  */
 
 #include "uft/formats/uft_cfi.h"
+#include "uft/uft_format_common.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -547,6 +548,8 @@ static uft_error_t cfi_open(uft_disk_t *disk, const char *path, bool read_only) 
         disk->geometry.heads = image->heads;
         disk->geometry.sectors = image->sectors_per_track;
         disk->geometry.sector_size = image->bytes_per_sector;
+        disk->geometry.total_sectors = (uint32_t)image->tracks * image->heads *
+                                       image->sectors_per_track;
     }
     return err;
 }

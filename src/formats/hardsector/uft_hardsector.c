@@ -8,6 +8,7 @@
  */
 
 #include "uft/formats/uft_hardsector.h"
+#include "uft/uft_format_common.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
