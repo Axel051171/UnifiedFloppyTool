@@ -393,12 +393,17 @@ typedef bool (*uft_progress_fn)(int cylinder, int head, int percent,
 /**
  * @brief Log-Callback
  */
+#ifndef UFT_LOG_LEVEL_T_DEFINED
+#define UFT_LOG_LEVEL_T_DEFINED
 typedef enum uft_log_level {
     UFT_LOG_DEBUG = 0,
-    UFT_LOG_INFO,
-    UFT_LOG_WARN,
-    UFT_LOG_ERROR
+    UFT_LOG_INFO  = 1,
+    UFT_LOG_WARN  = 2,
+    UFT_LOG_ERROR = 3,
+    UFT_LOG_NONE  = 4,
+    UFT_LOG_TRACE = 5
 } uft_log_level_t;
+#endif
 
 typedef void (*uft_log_fn)(uft_log_level_t level, const char* message, void* user);
 

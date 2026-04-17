@@ -10,6 +10,7 @@
 #include "uft/uft_god_mode.h"
 #include "uft/uft_format_probes.h"
 #include "uft/uft_protection.h"
+#include "uft/uft_log.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -185,7 +186,7 @@ uft_error_t uft_advanced_open(const char* path, uft_advanced_handle_t** out_hand
     h->detection_confidence = confidence;
     
     if (g_config.verbose_logging) {
-        fprintf(stderr, "[UFT-ADV] Detected format %d with %d%% confidence\n", 
+        UFT_INFO("[UFT-ADV] Detected format %d with %d%% confidence",
                 (int)fmt, confidence);
     }
     
@@ -199,7 +200,7 @@ uft_error_t uft_advanced_open(const char* path, uft_advanced_handle_t** out_hand
                 if (err == UFT_OK) {
                     h->using_v3 = true;
                     if (g_config.verbose_logging)
-                        fprintf(stderr, "[UFT-ADV] Using D64 v3 parser\n");
+                        UFT_INFO("[UFT-ADV] Using D64 v3 parser");
                 }
                 break;
                 
@@ -208,7 +209,7 @@ uft_error_t uft_advanced_open(const char* path, uft_advanced_handle_t** out_hand
                 if (err == UFT_OK) {
                     h->using_v3 = true;
                     if (g_config.verbose_logging)
-                        fprintf(stderr, "[UFT-ADV] Using G64 v3 parser\n");
+                        UFT_INFO("[UFT-ADV] Using G64 v3 parser");
                 }
                 break;
                 
@@ -217,7 +218,7 @@ uft_error_t uft_advanced_open(const char* path, uft_advanced_handle_t** out_hand
                 if (err == UFT_OK) {
                     h->using_v3 = true;
                     if (g_config.verbose_logging)
-                        fprintf(stderr, "[UFT-ADV] Using SCP v3 parser\n");
+                        UFT_INFO("[UFT-ADV] Using SCP v3 parser");
                 }
                 break;
                 
@@ -252,7 +253,7 @@ uft_error_t uft_advanced_open(const char* path, uft_advanced_handle_t** out_hand
         }
         
         if (h->protection_detected && g_config.verbose_logging) {
-            fprintf(stderr, "[UFT-ADV] Protection detected: %s\n", h->protection_name);
+            UFT_WARN("[UFT-ADV] Protection detected: %s", h->protection_name);
         }
     }
     
@@ -374,8 +375,8 @@ uft_error_t uft_advanced_read_track(uft_advanced_handle_t* handle,
         handle->god_mode_active = true;
         
         if (g_config.verbose_logging) {
-            fprintf(stderr, "[UFT-ADV] God-Mode engaged for track %d/%d (quality: %.1f%%)\n",
-                    cylinder, head, q.quality * 100);
+            UFT_INFO("[UFT-ADV] God-Mode engaged for track %d/%d (quality: %.1f%%)",
+                     cylinder, head, q.quality * 100);
         }
         
         /* Apply God-Mode algorithms */

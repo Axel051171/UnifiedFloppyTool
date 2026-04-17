@@ -29,14 +29,20 @@ extern "C" {
  * LOG LEVELS
  *===========================================================================*/
 
+/* NOTE: uft_log_level_t is also declared in uft_types.h with different order.
+ * Use uft_types.h values (DEBUG=0, INFO=1, WARN=2, ERROR=3) as canonical
+ * since it's part of the wider API. Extend with NONE/TRACE for filtering. */
+#ifndef UFT_LOG_LEVEL_T_DEFINED
+#define UFT_LOG_LEVEL_T_DEFINED
 typedef enum {
-    UFT_LOG_NONE  = 0,
-    UFT_LOG_ERROR = 1,
+    UFT_LOG_DEBUG = 0,
+    UFT_LOG_INFO  = 1,
     UFT_LOG_WARN  = 2,
-    UFT_LOG_INFO  = 3,
-    UFT_LOG_DEBUG = 4,
+    UFT_LOG_ERROR = 3,
+    UFT_LOG_NONE  = 4,
     UFT_LOG_TRACE = 5
 } uft_log_level_t;
+#endif
 
 /*===========================================================================
  * LOG OUTPUT
