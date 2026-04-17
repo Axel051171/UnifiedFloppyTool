@@ -347,6 +347,33 @@ uft_error_t uft_generic_verify_track(uft_disk_t *disk, int cyl, int head,
                                       const uft_track_t *reference);
 
 /**
+ * @brief Format-Gruppen-Metadaten (CBM, ATARI, APPLE, ...)
+ *
+ * Ordnet Format-Plugins semantisch zu Plattformen. Nützlich für GUI/CLI
+ * die Formate nach Plattform präsentieren (z.B. "alle Commodore-Formate").
+ */
+typedef struct {
+    const char *name;                          /* "CBM", "ATARI", "APPLE", ... */
+    const char *description;                   /* "Commodore 8-bit computers" */
+    const uft_format_plugin_t *const *plugins; /* Array of plugin pointers */
+    size_t plugin_count;
+} uft_format_group_t;
+
+/**
+ * @brief Alle Format-Gruppen abrufen
+ * @param count [out] Anzahl der Gruppen
+ * @return Array von Gruppen (konstant, nicht freigeben)
+ */
+const uft_format_group_t* uft_format_get_groups(size_t *count);
+
+/**
+ * @brief Gruppe nach Namen suchen
+ * @param name Gruppen-Name ("CBM", "ATARI", ...)
+ * @return Gruppe oder NULL wenn nicht gefunden
+ */
+const uft_format_group_t* uft_format_find_group(const char *name);
+
+/**
  * @brief Format-Plugin registrieren
  *
  * @param plugin Plugin-Struktur (muss statisch/global sein)
