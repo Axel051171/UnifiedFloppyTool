@@ -71,8 +71,9 @@ static uft_error_t woz_plugin_read_track(uft_disk_t *disk, int cyl, int head,
 const uft_format_plugin_t uft_format_plugin_woz = {
     .name = "WOZ", .description = "Apple II WOZ (v1/v2/v2.1)",
     .extensions = "woz", .format = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_FLUX | UFT_FORMAT_CAP_WEAK_BITS,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_FLUX | UFT_FORMAT_CAP_WEAK_BITS | UFT_FORMAT_CAP_VERIFY,
     .probe = woz_plugin_probe, .open = woz_plugin_open,
     .close = woz_plugin_close, .read_track = woz_plugin_read_track,
+    .verify_track = uft_flux_verify_track,
 };
 UFT_REGISTER_FORMAT_PLUGIN(woz)

@@ -137,8 +137,9 @@ static uft_error_t stx_read_track(uft_disk_t *disk, int cyl, int head,
 const uft_format_plugin_t uft_format_plugin_stx = {
     .name = "STX", .description = "Atari ST Pasti (Protected)",
     .extensions = "stx", .format = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_TIMING,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_TIMING | UFT_FORMAT_CAP_VERIFY,
     .probe = stx_plugin_probe, .open = stx_open,
     .close = stx_close, .read_track = stx_read_track,
+    .verify_track = uft_weak_bit_verify_track,
 };
 UFT_REGISTER_FORMAT_PLUGIN(stx)

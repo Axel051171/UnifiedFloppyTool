@@ -252,12 +252,13 @@ const uft_format_plugin_t uft_format_plugin_mfi = {
     .extensions   = "mfi",
     .version      = 0x00010000,
     .format       = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_FLUX,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_FLUX | UFT_FORMAT_CAP_VERIFY,
     .probe        = mfi_probe,
     .open         = mfi_open,
     .close        = mfi_close,
     .read_track   = mfi_read_track,
     .write_track  = mfi_write_track,
+    .verify_track = uft_flux_verify_track,
 };
 
 UFT_REGISTER_FORMAT_PLUGIN(mfi)

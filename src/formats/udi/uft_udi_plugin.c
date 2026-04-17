@@ -173,9 +173,10 @@ static uft_error_t udi_write_track(uft_disk_t *disk, int cyl, int head,
 const uft_format_plugin_t uft_format_plugin_udi = {
     .name = "UDI", .description = "Ultra Disk Image (Spectrum)",
     .extensions = "udi", .format = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_FLUX,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_FLUX | UFT_FORMAT_CAP_VERIFY,
     .probe = udi_probe, .open = udi_open, .close = udi_close,
     .read_track = udi_read_track,
     .write_track = udi_write_track,
+    .verify_track = uft_flux_verify_track,
 };
 UFT_REGISTER_FORMAT_PLUGIN(udi)

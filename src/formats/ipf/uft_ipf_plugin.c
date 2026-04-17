@@ -69,8 +69,9 @@ static uft_error_t ipf_plugin_read_track(uft_disk_t *disk, int cyl, int head,
 const uft_format_plugin_t uft_format_plugin_ipf = {
     .name = "IPF", .description = "CAPS/SPS Preservation Format",
     .extensions = "ipf;ct;ctr", .format = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_FLUX,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_FLUX | UFT_FORMAT_CAP_VERIFY,
     .probe = ipf_plugin_probe, .open = ipf_plugin_open,
     .close = ipf_plugin_close, .read_track = ipf_plugin_read_track,
+    .verify_track = uft_flux_verify_track,
 };
 UFT_REGISTER_FORMAT_PLUGIN(ipf)

@@ -241,12 +241,13 @@ const uft_format_plugin_t uft_format_plugin_pri = {
     .extensions   = "pri",
     .version      = 0x00010000,
     .format       = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_FLUX,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_FLUX | UFT_FORMAT_CAP_VERIFY,
     .probe        = pri_probe,
     .open         = pri_open,
     .close        = pri_close,
     .read_track   = pri_read_track,
     .write_track  = pri_write_track,
+    .verify_track = uft_flux_verify_track,
 };
 
 UFT_REGISTER_FORMAT_PLUGIN(pri)

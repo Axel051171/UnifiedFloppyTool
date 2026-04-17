@@ -347,6 +347,26 @@ uft_error_t uft_generic_verify_track(uft_disk_t *disk, int cyl, int head,
                                       const uft_track_t *reference);
 
 /**
+ * @brief Weak-Bit-tolerante Verify-Implementierung (ATX/STX/PRO)
+ *
+ * Vergleicht Sektor-Daten byteweise, ignoriert aber Bytes die in weak_mask
+ * als weak markiert sind. Sektoren mit weak-Flag aber ohne Mask werden
+ * übersprungen (nicht reproduzierbar).
+ */
+uft_error_t uft_weak_bit_verify_track(uft_disk_t *disk, int cyl, int head,
+                                       const uft_track_t *reference);
+
+/**
+ * @brief Flux-Level Verify-Implementierung (WOZ/IPF/KFX/MFI/PRI/UDI)
+ *
+ * Vergleicht primär raw_data/raw_bits (Bitstream-Ebene). Fällt auf
+ * Sektor-Vergleich zurück wenn raw_data nicht verfügbar. Weak-Sektoren
+ * werden toleriert (Flux kann nicht reproduzierbar dekodiert werden).
+ */
+uft_error_t uft_flux_verify_track(uft_disk_t *disk, int cyl, int head,
+                                   const uft_track_t *reference);
+
+/**
  * @brief Format-Gruppen-Metadaten (CBM, ATARI, APPLE, ...)
  *
  * Ordnet Format-Plugins semantisch zu Plattformen. Nützlich für GUI/CLI

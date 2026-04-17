@@ -139,9 +139,10 @@ static uft_error_t pro_write_track(uft_disk_t *disk, int cyl, int head,
 const uft_format_plugin_t uft_format_plugin_pro = {
     .name = "PRO", .description = "Atari 8-bit Protected (APE Pro)",
     .extensions = "pro;atx", .format = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE | UFT_FORMAT_CAP_WEAK_BITS,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE | UFT_FORMAT_CAP_WEAK_BITS | UFT_FORMAT_CAP_VERIFY,
     .probe = pro_plugin_probe, .open = pro_open,
     .close = pro_close, .read_track = pro_read_track,
     .write_track = pro_write_track,
+    .verify_track = uft_weak_bit_verify_track,
 };
 UFT_REGISTER_FORMAT_PLUGIN(pro)

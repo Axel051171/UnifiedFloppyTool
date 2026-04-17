@@ -180,12 +180,13 @@ const uft_format_plugin_t uft_format_plugin_kfx = {
     .extensions   = "raw",
     .version      = 0x00010000,
     .format       = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_FLUX,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_FLUX | UFT_FORMAT_CAP_VERIFY,
     .probe        = kfx_probe,
     .open         = kfx_open,
     .close        = kfx_close,
     .read_track   = kfx_read_track,
     .write_track  = kfx_write_track,
+    .verify_track = uft_flux_verify_track,
 };
 
 UFT_REGISTER_FORMAT_PLUGIN(kfx)
