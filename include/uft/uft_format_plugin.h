@@ -50,28 +50,68 @@ typedef enum uft_format_caps {
  * 
  * Diese Struktur wird von Plugins befüllt/gelesen.
  */
+/**
+ * @brief CANONICAL uft_disk — superset of all historical variants
+ *
+ * This is THE ONE definition of uft_disk. Previously there were 4 parallel
+ * definitions in uft_disk.h, uft_format_plugin_v2.h, uft_plugin_bridge.h,
+ * uft_format_plugin.h — all with different fields. GUI/Plugins never shared
+ * the same struct layout. Now consolidated here.
+ *
+ * Field groups:
+ *   Identity       — path, format, encoding, flags
+ *   Geometry       — geometry struct
+ *   State          — read_only/is_readonly, modified/is_modified, is_open
+ *   Plugin slot    — plugin_data (owned by plugin)
+ *   Backends       — reader_backend, writer_backend, hw_provider
+ *   Tracks         — track_cache, tracks[], image_data
+ *   File handle    — file (FILE* or opaque)
+ *   Callbacks      — log, progress
+ */
 struct uft_disk {
-    // Identifikation
-    char*               path;
+    /* Identity */
+    char                path_buf[512];  ///< Path buffer (internal storage)
+    char*               path;           ///< Path pointer — can reference path_buf or external
     uft_format_t        format;
+    uft_encoding_t      encoding;
     uint32_t            flags;
-    
-    // Geometrie
+
+    /* Geometry */
     uft_geometry_t      geometry;
-    
-    // State
+
+    /* State */
     bool                read_only;
     bool                modified;
-    void*               file;          ///< FILE* oder Handle
-    
-    // Plugin-spezifisch
-    void*               plugin_data;   ///< Private Daten des Plugins
-    
-    // Track Cache
-    uft_track_t**       track_cache;   ///< [cyl * heads + head]
+    bool                is_open;
+
+    /* Aliases for legacy API compat (point to same bytes) */
+    #define is_readonly  read_only
+    #define is_modified  modified
+
+    /* File handle */
+    void*               file;           ///< FILE* or opaque handle
+
+    /* Plugin-specific */
+    void*               plugin_data;    ///< Owned by plugin
+
+    /* Legacy backends */
+    void*               reader_backend;
+    void*               writer_backend;
+    void*               hw_provider;
+
+    /* Track storage (legacy GUI usage) */
+    uft_track_t**       tracks;         ///< Track array (legacy)
+    int                 track_count;
+
+    /* Image buffer (legacy disk-image-in-memory) */
+    uint8_t*            image_data;
+    size_t              image_size;
+
+    /* Plugin-B Track Cache */
+    uft_track_t**       track_cache;    ///< [cyl * heads + head]
     uint32_t            cache_size;
-    
-    // Callback
+
+    /* Callbacks */
     uft_log_fn          log_fn;
     void*               log_user;
 };

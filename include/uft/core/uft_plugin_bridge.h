@@ -58,27 +58,10 @@ typedef struct uft_writer_backend uft_writer_backend_t;
 typedef void (*uft_progress_fn)(void*, int, int);
 typedef void (*uft_log_fn)(void*, int, const char*);
 
-typedef struct uft_disk {
-    char                path[512];
-    uft_format_id_t     format;
-    uft_encoding_t      encoding;
-    uft_geometry_t      geometry;
-    bool                is_open;
-    bool                is_modified;
-    bool                is_readonly;
-    void                *reader_backend;
-    uft_writer_backend_t *writer_backend;
-    void                *hw_provider;
-    uft_track_t         **tracks;
-    int                 track_count;
-    uint8_t             *image_data;
-    size_t              image_size;
-    uft_progress_fn     progress;
-    void                *progress_user;
-    uft_log_fn          log;
-    void                *log_user;
-    void                *plugin_data;
-} uft_disk_t;
+/* NOTE (Phase 1): struct uft_disk definition removed — now lives only
+ * in uft_format_plugin.h (canonical, all legacy fields merged). */
+struct uft_disk;  /* forward decl only */
+typedef struct uft_disk uft_disk_t;
 
 #endif /* UFT_DISK_STRUCT_DEFINED */
 

@@ -188,15 +188,11 @@ typedef struct {
     uint32_t total_sectors;
 } uft_geometry_t;
 
+/* NOTE (Phase 1): struct uft_disk definition removed — now lives only
+ * in uft_format_plugin.h (canonical). This header is zero-use in the
+ * active codebase but kept for reference. */
+struct uft_disk;  /* forward decl only */
 typedef struct uft_disk uft_disk_v2_t;
-
-struct uft_disk {
-    void* plugin_data;          /**< [OWNED] Plugin-specific data */
-    uft_geometry_t geometry;
-    bool read_only;
-    bool is_open;
-    const struct uft_format_plugin* plugin;
-};
 
 /**
  * @brief Open disk image
