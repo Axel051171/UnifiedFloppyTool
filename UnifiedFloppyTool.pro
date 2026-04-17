@@ -678,6 +678,10 @@ SOURCES += \
     src/formats/scl/uft_scl_plugin.c \
     src/formats/format_registry/uft_format_registry.c \
     src/core/uft_format_verify.c \
+    src/core/uft_disk_stream.c \
+    src/core/uft_disk_verify.c \
+    src/core/uft_disk_stats.c \
+    src/core/uft_disk_compare.c \
     src/formats/stx/uft_stx_plugin.c \
     src/formats/atari/uft_pro_plugin.c \
     src/formats/do/uft_do.c \

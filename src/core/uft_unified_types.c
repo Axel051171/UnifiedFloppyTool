@@ -363,9 +363,11 @@ void uft_disk_free(uft_disk_image_t *disk) {
  * Comparison
  * ============================================================================ */
 
-int uft_disk_compare(const uft_disk_image_t *a, 
-                     const uft_disk_image_t *b,
-                     uft_compare_result_t *result) {
+/* Legacy image-vs-image compare (superseded by new uft_disk_compare API).
+ * Renamed to uft_disk_image_compare to avoid symbol clash. */
+int uft_disk_image_compare(const uft_disk_image_t *a,
+                            const uft_disk_image_t *b,
+                            uft_compare_result_t *result) {
     if (!a || !b || !result) return -1;
     
     *result = UFT_CMP_IDENTICAL;
