@@ -697,6 +697,7 @@ SOURCES += \
     src/fs/uft_fs_amigados_driver.c \
     src/fs/uft_fat12.c \
     src/formats/uft_fat12_legacy.c \
+    src/formats/uft_format_converters.c \
     src/hal/greaseweazle_backend.c \
     src/hal/sync_backends.c \
     src/formats/stx/uft_stx_plugin.c \
