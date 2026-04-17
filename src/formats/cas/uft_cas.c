@@ -188,6 +188,9 @@ static uft_error_t cas_read_track(uft_disk_t *disk, int cyl, int head,
 
 /* ============================================================================
  * Plugin registration
+ * NOTE: write_track omitted by design — CAS is a linear tape (cassette)
+ * image, not a floppy. It has no track/sector addressing, so writing a
+ * uft_track_t here has no meaningful mapping.
  * ============================================================================ */
 
 const uft_format_plugin_t uft_format_plugin_cas = {

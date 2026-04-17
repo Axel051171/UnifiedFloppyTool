@@ -306,19 +306,19 @@ static uft_error_t opus_read_track(uft_disk_t *disk, int cyl, int head,
                                     uft_track_t *track) {
     uft_disk_image_t *image = (uft_disk_image_t*)disk->plugin_data;
     if (!image || !track || head != 0) return UFT_ERR_INVALID_PARAM;
-    
+
     if (cyl >= image->tracks) {
         return UFT_ERR_INVALID_PARAM;
     }
-    
+
     uft_track_t *src = image->track_data[cyl];
     if (!src) return UFT_ERR_INVALID_PARAM;
-    
+
     track->cylinder = cyl;
     track->head = 0;
     track->sector_count = src->sector_count;
     track->encoding = src->encoding;
-    
+
     for (uint8_t s = 0; s < src->sector_count; s++) {
         track->sectors[s] = src->sectors[s];
         if (src->sectors[s].data) {
@@ -329,7 +329,33 @@ static uft_error_t opus_read_track(uft_disk_t *disk, int cyl, int head,
             }
         }
     }
-    
+
+    return UFT_OK;
+}
+
+/* In-memory write (side 0 only — OPUS is a single-sided Spectrum format).
+ * Persist via uft_opus_write(). */
+static uft_error_t opus_write_track(uft_disk_t *disk, int cyl, int head,
+                                     const uft_track_t *track) {
+    uft_disk_image_t *image = (uft_disk_image_t*)disk->plugin_data;
+    if (!image || !track) return UFT_ERR_INVALID_PARAM;
+    if (disk->read_only) return UFT_ERROR_NOT_SUPPORTED;
+    if (head != 0) return UFT_ERROR_NOT_SUPPORTED;
+    if (cyl >= image->tracks) return UFT_ERR_INVALID_PARAM;
+
+    uft_track_t *dst = image->track_data[cyl];
+    if (!dst) return UFT_ERR_INVALID_PARAM;
+
+    for (uint8_t s = 0; s < track->sector_count && s < dst->sector_count; s++) {
+        const uint8_t *src_data = track->sectors[s].data;
+        if (!src_data) continue;
+        if (dst->sectors[s].data && dst->sectors[s].data_size > 0) {
+            size_t src_len = track->sectors[s].data_size;
+            size_t n = src_len < dst->sectors[s].data_size
+                       ? src_len : dst->sectors[s].data_size;
+            memcpy(dst->sectors[s].data, src_data, n);
+        }
+    }
     return UFT_OK;
 }
 
@@ -343,6 +369,7 @@ const uft_format_plugin_t uft_format_plugin_opus = {
     .open = opus_open,
     .close = opus_close,
     .read_track = opus_read_track,
+    .write_track = opus_write_track,
 };
 
 UFT_REGISTER_FORMAT_PLUGIN(opus)

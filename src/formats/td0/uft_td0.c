@@ -242,6 +242,11 @@ done:
     return UFT_OK;
 }
 
+/* NOTE: write_track omitted by design — TD0 uses LZSS (Teledisk's own
+ * LZ-Huffman variant) plus per-sector RLE. Writing a track requires
+ * re-compressing the whole image as a stream, which cannot be done
+ * track-by-track via the plugin interface. Use a dedicated TD0 writer
+ * if round-trip is required. */
 const uft_format_plugin_t uft_format_plugin_td0 = {
     .name = "TD0",
     .description = "Teledisk Archive",

@@ -230,6 +230,19 @@ static uft_error_t mfi_read_track(uft_disk_t *disk, int cyl, int head,
 }
 
 /* ============================================================================
+ * write_track — not implemented (MFI stores compressed flux-cell streams
+ * per track; writing requires MFM encoder + zlib deflate + MAME-specific
+ * cell format regeneration).
+ * ============================================================================ */
+
+static uft_error_t mfi_write_track(uft_disk_t *disk, int cyl, int head,
+                                    const uft_track_t *track)
+{
+    (void)disk; (void)cyl; (void)head; (void)track;
+    return UFT_ERROR_NOT_SUPPORTED;
+}
+
+/* ============================================================================
  * Plugin registration
  * ============================================================================ */
 
@@ -244,6 +257,7 @@ const uft_format_plugin_t uft_format_plugin_mfi = {
     .open         = mfi_open,
     .close        = mfi_close,
     .read_track   = mfi_read_track,
+    .write_track  = mfi_write_track,
 };
 
 UFT_REGISTER_FORMAT_PLUGIN(mfi)

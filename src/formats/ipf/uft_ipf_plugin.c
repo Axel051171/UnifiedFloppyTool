@@ -62,6 +62,10 @@ static uft_error_t ipf_plugin_read_track(uft_disk_t *disk, int cyl, int head,
     return UFT_ERR_NOT_IMPLEMENTED;
 }
 
+/* NOTE: write_track omitted by design — IPF is a proprietary preservation
+ * format that requires libcapsimage (SPS, closed-source) to encode. Sector
+ * write would also bypass the copy-protection signatures that IPF is
+ * purpose-built to preserve. */
 const uft_format_plugin_t uft_format_plugin_ipf = {
     .name = "IPF", .description = "CAPS/SPS Preservation Format",
     .extensions = "ipf;ct;ctr", .format = UFT_FORMAT_DSK,

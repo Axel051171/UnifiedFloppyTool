@@ -154,6 +154,9 @@ static uft_error_t atx_read_track(uft_disk_t *disk, int cyl, int head,
     return UFT_OK;
 }
 
+/* NOTE: write_track omitted by design — ATX encodes per-sector timing
+ * anomalies (weak bits, duplicate sector IDs, fuzzy bits, copy-protection
+ * signatures) that cannot be synthesized from sector payload alone. */
 const uft_format_plugin_t uft_format_plugin_atx = {
     .name = "ATX", .description = "Atari 8-bit Protected (VAPI)",
     .extensions = "atx", .format = UFT_FORMAT_DSK,

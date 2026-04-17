@@ -130,6 +130,10 @@ static uft_error_t stx_read_track(uft_disk_t *disk, int cyl, int head,
     return UFT_OK;
 }
 
+/* NOTE: write_track omitted by design — STX stores fuzzy-bit streams and
+ * per-sector timing that cannot be regenerated from sector data alone.
+ * The Pasti format is purpose-built to preserve ST copy-protection, so
+ * round-tripping through a sector-level write would destroy protection. */
 const uft_format_plugin_t uft_format_plugin_stx = {
     .name = "STX", .description = "Atari ST Pasti (Protected)",
     .extensions = "stx", .format = UFT_FORMAT_DSK,

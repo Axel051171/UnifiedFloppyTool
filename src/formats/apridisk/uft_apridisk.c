@@ -598,36 +598,64 @@ static void apridisk_close(uft_disk_t *disk) {
     }
 }
 
-static uft_error_t apridisk_read_track(uft_disk_t *disk, int cyl, int head, 
+static uft_error_t apridisk_read_track(uft_disk_t *disk, int cyl, int head,
                                         uft_track_t *track) {
     uft_disk_image_t *image = (uft_disk_image_t*)disk->plugin_data;
     if (!image || !track) return UFT_ERR_INVALID_PARAM;
-    
+
     size_t idx = cyl * image->heads + head;
     if (idx >= (size_t)(image->tracks * image->heads)) {
         return UFT_ERR_INVALID_PARAM;
     }
-    
+
     uft_track_t *src = image->track_data[idx];
     if (!src) return UFT_ERR_INVALID_PARAM;
-    
+
     /* Copy track data */
     track->cylinder = cyl;
     track->head = head;
     track->sector_count = src->sector_count;
     track->encoding = src->encoding;
-    
+
     for (uint8_t s = 0; s < src->sector_count; s++) {
         track->sectors[s] = src->sectors[s];
         if (src->sectors[s].data) {
             track->sectors[s].data = malloc(src->sectors[s].data_size);
             if (track->sectors[s].data) {
-                memcpy(track->sectors[s].data, src->sectors[s].data, 
+                memcpy(track->sectors[s].data, src->sectors[s].data,
                        src->sectors[s].data_size);
             }
         }
     }
-    
+
+    return UFT_OK;
+}
+
+/* In-memory write: modifies the cached disk image. Call flush/close to persist
+ * changes via uft_apridisk_write(). */
+static uft_error_t apridisk_write_track(uft_disk_t *disk, int cyl, int head,
+                                         const uft_track_t *track) {
+    uft_disk_image_t *image = (uft_disk_image_t*)disk->plugin_data;
+    if (!image || !track) return UFT_ERR_INVALID_PARAM;
+    if (disk->read_only) return UFT_ERROR_NOT_SUPPORTED;
+
+    size_t idx = (size_t)cyl * image->heads + head;
+    if (idx >= (size_t)(image->tracks * image->heads))
+        return UFT_ERR_INVALID_PARAM;
+
+    uft_track_t *dst = image->track_data[idx];
+    if (!dst) return UFT_ERR_INVALID_PARAM;
+
+    for (uint8_t s = 0; s < track->sector_count && s < dst->sector_count; s++) {
+        const uint8_t *src_data = track->sectors[s].data;
+        if (!src_data) continue;
+        if (dst->sectors[s].data && dst->sectors[s].data_size > 0) {
+            size_t src_len = track->sectors[s].data_size;
+            size_t n = src_len < dst->sectors[s].data_size
+                       ? src_len : dst->sectors[s].data_size;
+            memcpy(dst->sectors[s].data, src_data, n);
+        }
+    }
     return UFT_OK;
 }
 
@@ -641,6 +669,7 @@ const uft_format_plugin_t uft_format_plugin_apridisk = {
     .open = apridisk_open,
     .close = apridisk_close,
     .read_track = apridisk_read_track,
+    .write_track = apridisk_write_track,
 };
 
 UFT_REGISTER_FORMAT_PLUGIN(apridisk)

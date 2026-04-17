@@ -157,6 +157,20 @@ static uft_error_t kfx_read_track(uft_disk_t *disk, int cyl, int head,
 }
 
 /* ============================================================================
+ * write_track — not implemented (KryoFlux streams are raw flux transition
+ * timings captured from hardware; writing would need synthesis of flux
+ * intervals from sector data plus a full MFM/FM encoder, plus regeneration
+ * of the index pulse events and KryoFlux protocol framing).
+ * ============================================================================ */
+
+static uft_error_t kfx_write_track(uft_disk_t *disk, int cyl, int head,
+                                    const uft_track_t *track)
+{
+    (void)disk; (void)cyl; (void)head; (void)track;
+    return UFT_ERROR_NOT_SUPPORTED;
+}
+
+/* ============================================================================
  * Plugin registration
  * ============================================================================ */
 
@@ -171,6 +185,7 @@ const uft_format_plugin_t uft_format_plugin_kfx = {
     .open         = kfx_open,
     .close        = kfx_close,
     .read_track   = kfx_read_track,
+    .write_track  = kfx_write_track,
 };
 
 UFT_REGISTER_FORMAT_PLUGIN(kfx)

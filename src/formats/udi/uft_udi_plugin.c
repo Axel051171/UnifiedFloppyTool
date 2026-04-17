@@ -160,11 +160,22 @@ static uft_error_t udi_read_track(uft_disk_t *disk, int cyl, int head,
     return UFT_OK;
 }
 
+/* write_track — not implemented. UDI stores raw MFM bitstream data per
+ * track; writing would require a full MFM encoder that rebuilds the
+ * bitstream from sector headers/data plus gap/sync bytes, plus CRC
+ * regeneration per sector. */
+static uft_error_t udi_write_track(uft_disk_t *disk, int cyl, int head,
+                                    const uft_track_t *track) {
+    (void)disk; (void)cyl; (void)head; (void)track;
+    return UFT_ERROR_NOT_SUPPORTED;
+}
+
 const uft_format_plugin_t uft_format_plugin_udi = {
     .name = "UDI", .description = "Ultra Disk Image (Spectrum)",
     .extensions = "udi", .format = UFT_FORMAT_DSK,
     .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_FLUX,
     .probe = udi_probe, .open = udi_open, .close = udi_close,
     .read_track = udi_read_track,
+    .write_track = udi_write_track,
 };
 UFT_REGISTER_FORMAT_PLUGIN(udi)

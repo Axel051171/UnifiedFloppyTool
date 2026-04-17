@@ -220,6 +220,18 @@ static uft_error_t pri_read_track(uft_disk_t *disk, int cyl, int head,
 }
 
 /* ============================================================================
+ * write_track — not implemented (requires MFM encoder + PRI event stream
+ * serializer; PRI stores raw flux transition events, not sector data).
+ * ============================================================================ */
+
+static uft_error_t pri_write_track(uft_disk_t *disk, int cyl, int head,
+                                    const uft_track_t *track)
+{
+    (void)disk; (void)cyl; (void)head; (void)track;
+    return UFT_ERROR_NOT_SUPPORTED;
+}
+
+/* ============================================================================
  * Plugin registration
  * ============================================================================ */
 
@@ -234,6 +246,7 @@ const uft_format_plugin_t uft_format_plugin_pri = {
     .open         = pri_open,
     .close        = pri_close,
     .read_track   = pri_read_track,
+    .write_track  = pri_write_track,
 };
 
 UFT_REGISTER_FORMAT_PLUGIN(pri)
