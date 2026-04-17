@@ -695,6 +695,7 @@ SOURCES += \
     src/core/uft_capture.c \
     src/fs/uft_amigados.c \
     src/fs/uft_fs_amigados_driver.c \
+    src/fs/uft_fat12.c \
     src/hal/greaseweazle_backend.c \
     src/hal/sync_backends.c \
     src/formats/stx/uft_stx_plugin.c \
