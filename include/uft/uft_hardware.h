@@ -33,6 +33,7 @@
 #include "uft_types.h"
 #include "uft_error.h"
 #include "uft_decoder_plugin.h"
+#include "uft_progress.h"   /* uft_unified_progress_fn for batch */
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -320,11 +321,49 @@ typedef struct uft_hw_backend {
     uft_error_t (*iec_command)(uft_hw_device_t* device,
                                uint8_t device_num, uint8_t command,
                                const uint8_t* data, size_t len);
-    
+
+    // === Optional: Batch-Reads ===
+
+    /**
+     * @brief Optional: Mehrere Tracks am Stück lesen.
+     *
+     * Backends mit Streaming-Architektur (KryoFlux, Greaseweazle Bulk-USB)
+     * implementieren das für deutlich bessere Performance bei komplettem
+     * Disk-Capture. Backends ohne internen Batch-Vorteil setzen diesen
+     * Pointer auf NULL — die Capture-API fällt dann auf eine Schleife
+     * über read_track() zurück.
+     */
+    uft_error_t (*read_tracks_batch)(uft_hw_device_t* device,
+                                       int cyl_start, int cyl_end,
+                                       int head_mask,
+                                       uft_track_t* tracks_out,
+                                       uint8_t revolutions,
+                                       uft_unified_progress_fn progress,
+                                       void* user_data);
+
+    // === Capabilities Bitmap (ORed uft_hw_capability_t) ===
+    uint32_t            capabilities;
+
     // === Private ===
     void*               private_data;
-    
+
 } uft_hw_backend_t;
+
+// ============================================================================
+// Hardware Capabilities
+// ============================================================================
+
+typedef enum {
+    UFT_HW_CAP_READ_TRACK      = (1 << 0),   /* Pflicht */
+    UFT_HW_CAP_WRITE_TRACK     = (1 << 1),   /* Pflicht */
+    UFT_HW_CAP_READ_FLUX       = (1 << 2),   /* Optional */
+    UFT_HW_CAP_WRITE_FLUX      = (1 << 3),   /* Optional */
+    UFT_HW_CAP_BATCH_READ      = (1 << 4),   /* read_tracks_batch vorhanden */
+    UFT_HW_CAP_PARALLEL_PORT   = (1 << 5),   /* CBM 1541 parallel */
+    UFT_HW_CAP_IEC_BUS         = (1 << 6),   /* CBM serial */
+    UFT_HW_CAP_DENSITY_SELECT  = (1 << 7),   /* DD/HD wechselbar */
+    UFT_HW_CAP_MULTI_DRIVE     = (1 << 8),   /* Mehrere Drives am gleichen Controller */
+} uft_hw_capability_t;
 
 // ============================================================================
 // API Functions
@@ -344,6 +383,44 @@ void uft_hw_shutdown(void);
  * @brief Backend registrieren
  */
 uft_error_t uft_hw_register_backend(const uft_hw_backend_t* backend);
+
+/**
+ * @brief Liest mehrere Tracks. Nutzt Backend-Batch wenn verfügbar, sonst Fallback.
+ *
+ * Das ist die API die Anwendungen (Capture, GUI) aufrufen sollen. Sie wählt
+ * selbst ob der native Batch-Hook des Backends oder der Schleifen-Fallback
+ * genutzt wird.
+ *
+ * @param device      geöffnetes Device
+ * @param cyl_start   inklusiv
+ * @param cyl_end     exklusiv
+ * @param head_mask   Bitmaske: 0x1=head0, 0x2=head1, 0x3=beide
+ * @param tracks_out  pre-allocated Array mit (cyl_end-cyl_start)*popcount(head_mask) Einträgen
+ * @param revolutions Umdrehungen pro Track (typ. 1-5)
+ * @param progress    optional, NULL = kein Progress
+ * @param user_data   an progress() weitergereicht
+ */
+uft_error_t uft_hw_read_tracks(uft_hw_device_t *device,
+                                 int cyl_start, int cyl_end,
+                                 int head_mask,
+                                 uft_track_t *tracks_out,
+                                 uint8_t revolutions,
+                                 uft_unified_progress_fn progress,
+                                 void *user_data);
+
+/**
+ * @brief Generischer Fallback — nutzt backend->read_track in Schleife.
+ *
+ * Wird automatisch von uft_hw_read_tracks genutzt wenn das Backend
+ * keinen nativen Batch-Hook hat.
+ */
+uft_error_t uft_hw_read_tracks_batch_default(uft_hw_device_t *device,
+                                                int cyl_start, int cyl_end,
+                                                int head_mask,
+                                                uft_track_t *tracks_out,
+                                                uint8_t revolutions,
+                                                uft_unified_progress_fn progress,
+                                                void *user_data);
 
 /**
  * @brief Alle verfügbaren Geräte auflisten
