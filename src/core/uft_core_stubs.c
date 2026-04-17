@@ -225,29 +225,10 @@ int uft_validate_adf(const uint8_t *data, size_t size) {
     return -1;
 }
 
-/* ============================================================================
- * FAT12 stubs
- * ============================================================================ */
-
-void* uft_fat12_init(const uint8_t *data, size_t size) {
-    (void)data; (void)size;
-    return NULL;
-}
-
-void uft_fat12_free(void *fat) {
-    free(fat);
-}
-
-int uft_fat12_create_entry(void *fat, const char *name, const uint8_t *data,
-                           size_t size) {
-    (void)fat; (void)name; (void)data; (void)size;
-    return -1;
-}
-
-int uft_fat12_delete(void *fat, const char *name) {
-    (void)fat; (void)name;
-    return -1;
-}
+/* Legacy uft_fat12_* API moved to src/formats/uft_fat12_legacy.c with
+ * correct signatures that match include/uft/formats/uft_fat12.h.
+ * Four previous stubs here had mismatched arity (caller passes 4 args,
+ * stub read 2) — a silent spec §1.3 violation. */
 
 /* ============================================================================
  * Validation stubs
