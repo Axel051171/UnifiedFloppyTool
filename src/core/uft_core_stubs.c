@@ -37,6 +37,24 @@ uint32_t uft_track_get_status(const void* track_v) {
     return status;
 }
 
+/* Declared in include/uft/uft_core.h — was a Kat-A gap (declared+called,
+ * no impl anywhere). Implementations are direct field reads; invariants
+ * match how uft_track_t is populated by every parser in the tree. */
+
+size_t uft_track_get_sector_count(const uft_track_t *track) {
+    return track ? track->sector_count : 0;
+}
+
+bool uft_track_has_flux(const uft_track_t *track) {
+    return track && track->flux != NULL && track->flux_count > 0;
+}
+
+const uft_sector_t *uft_track_get_sector(const uft_track_t *track, size_t index) {
+    if (!track || !track->sectors) return NULL;
+    if (index >= track->sector_count) return NULL;
+    return &track->sectors[index];
+}
+
 /* ============================================================================
  * Disk Open / Close / Get-Geometry — real plugin delegation
  * ============================================================================ */
