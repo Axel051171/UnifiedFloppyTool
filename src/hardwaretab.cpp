@@ -44,6 +44,11 @@
 extern "C" {
 #include "uft/hal/uft_greaseweazle_full.h"
 }
+/* HAL-H7: Unified Capture — unified_hal_bridge.h pulls in Qt's
+ * HardwareProvider (Q_OBJECT), so it lives OUTSIDE the extern "C" block. */
+#include <QPushButton>
+#include <QApplication>
+#include "hardware_providers/unified_hal_bridge.h"
 #define HAS_HAL 1
 #else
 #define HAS_HAL 0
@@ -187,6 +192,21 @@ void HardwareTab::setupConnections()
     connect(ui->btnReadTest, &QPushButton::clicked, this, &HardwareTab::onReadTest);
     connect(ui->btnRPMTest, &QPushButton::clicked, this, &HardwareTab::onRPMTest);
     connect(ui->btnCalibrate, &QPushButton::clicked, this, &HardwareTab::onCalibrate);
+
+    // HAL-H7: inject "Unified Capture" next to the existing test buttons.
+    // Added programmatically so no .ui XML edit is needed.
+    if (auto *parent = ui->btnReadTest->parentWidget()) {
+        if (auto *lay = parent->layout()) {
+            auto *btn = new QPushButton(tr("Unified Capture"), parent);
+            btn->setObjectName(QStringLiteral("btnUnifiedCapture"));
+            btn->setToolTip(tr(
+                "Capture disk via unified HAL dispatcher "
+                "(enumerate → open → uft_hw_read_tracks → close).\n"
+                "Greaseweazle backend is fully wired; others are stubs."));
+            lay->addWidget(btn);
+            connect(btn, &QPushButton::clicked, this, &HardwareTab::onUnifiedCapture);
+        }
+    }
 }
 
 // ============================================================================
@@ -1286,6 +1306,83 @@ QString HardwareTab::getDeviceName() const
     } else {
         name = m_controllerType;
     }
-    
+
     return name;
+}
+
+// ============================================================================
+// HAL-H7: Unified Capture — drives uft_hw_read_tracks via the C-HAL
+// ============================================================================
+
+void HardwareTab::onUnifiedCapture()
+{
+    /* Figure out which backend type to target from the currently-selected
+     * controller. For this first user-visible end-to-end we only claim
+     * Greaseweazle actually works; other types run but the backend stubs
+     * will report "no device found". */
+    uft_hw_type_t hwType = UFT_HW_UNKNOWN;
+    if (m_controllerType.contains("Greaseweazle", Qt::CaseInsensitive))
+        hwType = UFT_HW_GREASEWEAZLE;
+    else if (m_controllerType.contains("SuperCard", Qt::CaseInsensitive))
+        hwType = UFT_HW_SUPERCARD_PRO;
+    else if (m_controllerType.contains("KryoFlux", Qt::CaseInsensitive))
+        hwType = UFT_HW_KRYOFLUX;
+    else if (m_controllerType.contains("FC5025", Qt::CaseInsensitive))
+        hwType = UFT_HW_FC5025;
+    else if (m_controllerType.contains("XUM", Qt::CaseInsensitive))
+        hwType = UFT_HW_XUM1541;
+
+    if (hwType == UFT_HW_UNKNOWN) {
+        QMessageBox::information(this, tr("Unified Capture"),
+            tr("No recognisable controller selected.\n"
+               "Pick Greaseweazle (fully wired) or another HAL backend."));
+        return;
+    }
+
+    /* The HAL opens its OWN device, independent of the Qt-side
+     * QSerialPort / m_gwDevice. If the Qt side is currently connected
+     * to the same physical port, the HAL-side open will fail — warn. */
+    if (m_connected && hwType == UFT_HW_GREASEWEAZLE) {
+        auto btn = QMessageBox::question(this, tr("Unified Capture"),
+            tr("Hardware is currently connected via the Qt provider.\n"
+               "The unified path must open the same port itself — continue "
+               "and disconnect first?"),
+            QMessageBox::Yes | QMessageBox::No);
+        if (btn != QMessageBox::Yes) return;
+        onDisconnect();
+    }
+
+    updateStatus(tr("Unified Capture running…"));
+    QApplication::setOverrideCursor(Qt::WaitCursor);
+
+    QString errMsg;
+    QVector<TrackData> tracks = uft_hal_bridge::readDiskByType(
+        hwType,
+        /*startCyl=*/0, /*endCyl=*/80,
+        /*heads=*/2, /*revolutions=*/0,
+        &errMsg);
+
+    QApplication::restoreOverrideCursor();
+
+    if (tracks.isEmpty()) {
+        updateStatus(tr("Unified Capture failed"), /*isError=*/true);
+        QMessageBox::warning(this, tr("Unified Capture"),
+            tr("Capture failed: %1").arg(
+                errMsg.isEmpty() ? tr("no device found") : errMsg));
+        return;
+    }
+
+    int good = 0, bad = 0;
+    qint64 bytes = 0;
+    for (const auto &t : tracks) {
+        if (t.success) ++good; else ++bad;
+        bytes += t.data.size();
+    }
+
+    updateStatus(tr("Unified Capture: %1 tracks (%2 OK, %3 failed)")
+                     .arg(tracks.size()).arg(good).arg(bad));
+    QMessageBox::information(this, tr("Unified Capture"),
+        tr("Captured %1 tracks via unified HAL dispatcher.\n\n"
+           "OK: %2   Failed: %3   Bytes: %4")
+            .arg(tracks.size()).arg(good).arg(bad).arg(bytes));
 }

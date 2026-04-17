@@ -96,6 +96,9 @@ private slots:
     void onRPMTest();
     void onCalibrate();
 
+    // HAL-H7: Unified Capture via C-HAL dispatcher
+    void onUnifiedCapture();
+
 private:
     void setupConnections();
     void setupButtonGroups();
