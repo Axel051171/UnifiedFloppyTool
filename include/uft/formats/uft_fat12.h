@@ -1,11 +1,18 @@
 /**
- * @file uft_fat12.h
- * @brief FAT12 Filesystem Support for UFT
- * 
- * Support for reading and writing FAT12 filesystems commonly used
- * specifications.
- * 
- * @copyright UFT Project
+ * @file formats/uft_fat12.h  (LEGACY — do not use for new code)
+ *
+ * Declares a `uft_fat12_t` API still called from src/explorertab.cpp.
+ * All functions are declared here but NONE are implemented — the
+ * linker is currently satisfied by NULL-returning stubs in
+ * src/core/uft_core_stubs.c whose signatures don't even match this
+ * header (caller passes 4 args, stub reads 2). The explorertab FAT12
+ * code path therefore silently does nothing.
+ *
+ * Canonical FAT header for new work: include/uft/fs/uft_fat12.h
+ * (uft_fat_ctx_t pattern, matches sibling fs/uft_amigados.h).
+ *
+ * Migration task: rewrite the 4 call sites in src/explorertab.cpp
+ * around the fs/ API once a FAT12 backend lands in src/fs/uft_fat12.c.
  */
 
 #ifndef UFT_FAT12_H

@@ -1,11 +1,11 @@
 /**
- * @file uft_fat12.h
- * @brief FAT12 Filesystem Support for UFT
- * 
- * Support for reading and writing FAT12 filesystems commonly used
- * specifications.
- * 
- * @copyright UFT Project
+ * @file uft_fat12_v2.h  (DEPRECATED — duplicate of formats/uft_fat12.h,
+ *                         no callers anywhere in the tree)
+ *
+ * Use include/uft/fs/uft_fat12.h for new code — that one is canonical
+ * (uft_fat_ctx_t pattern, 60 functions, matches the fs/uft_amigados.h
+ * sibling). This header is kept only to avoid breaking stray external
+ * includes; will be deleted in a follow-up.
  */
 
 #ifndef UFT_FAT12_H

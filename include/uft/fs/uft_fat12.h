@@ -2,8 +2,20 @@
  * @file uft_fat12.h
  * @brief FAT12/FAT16 Filesystem Layer for Floppy Disk Preservation
  * @version 3.6.0
- * 
- * Complete FAT12/FAT16 filesystem implementation for floppy disk images:
+ *
+ * CANONICAL FAT header. Three alternative FAT headers existed historically:
+ *   include/uft/formats/uft_fat12.h      — uft_fat12_t  (1 legacy caller)
+ *   include/uft/uft_fat12_v2.h           — uft_fat12_t  (duplicate, 0 callers)
+ *   include/uft/uft_fat_editor.h         — uft_fat_t    (0 callers)
+ *   include/uft/uft_fatfs.h              — uft_fat_image_t (0 callers)
+ *   include/uft/uft_fat_filesystem.h     — POD helpers only
+ *
+ * This header (include/uft/fs/uft_fat12.h) is canonical because:
+ *   - Uses the uft_fat_ctx_t pattern matching the sibling uft_amigados.h
+ *     (see also src/fs/uft_amigados.c for the implementation template).
+ *   - Largest and most complete declaration set (60 functions, 1125 lines).
+ *
+ * Complete FAT12/FAT16 filesystem declarations:
  * - All standard PC floppy formats (160KB - 2.88MB)
  * - MSX-DOS, Atari ST, PC-98, Human68K variants
  * - Directory operations (list, find, create, delete)
@@ -11,7 +23,11 @@
  * - FAT table management and repair
  * - Long Filename (LFN) support
  * - Validation and forensic analysis
- * 
+ *
+ * Implementation status: backend not yet written. The adapter in
+ * src/fs/uft_fs_amigados_driver.c is the template for the future
+ * src/fs/uft_fs_fat12_driver.c.
+ *
  * @note Part of UnifiedFloppyTool preservation suite
  */
 

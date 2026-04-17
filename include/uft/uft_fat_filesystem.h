@@ -1,8 +1,11 @@
 /**
- * @file uft_fat_filesystem.h
- * @brief FAT12/FAT16/FAT32 Filesystem Structures and Recovery
- * @version 3.3.0
+ * @file uft_fat_filesystem.h  (DEPRECATED — struct-only POD header,
+ *                               0 callers, overlaps fs/uft_fat12.h)
  *
+ * Use include/uft/fs/uft_fat12.h for new code. This header contained
+ * only typedef structs with no function declarations, never wired in.
+ *
+ * Original intent:
  * - FAT12Extractor-master (msdosdir.c, msdosextr.c)
  * - DataRecovery-1-master (fatmbr.h, ntfs.h)
  *

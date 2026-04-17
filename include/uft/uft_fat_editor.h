@@ -1,8 +1,11 @@
 /**
- * @file uft_fat_editor.h
- * @brief FAT Filesystem Editor API
- * 
- * Features:
+ * @file uft_fat_editor.h  (DEPRECATED — 0 callers, overlaps fs/uft_fat12.h)
+ *
+ * Use include/uft/fs/uft_fat12.h for new code. This header declares a
+ * `uft_fat_t` editor type that never had any implementation and no
+ * longer has any callers in the tree.
+ *
+ * Features (nominal, unimplemented):
  * - FAT12/FAT16/FAT32 support
  * - Cluster chain visualization
  * - Bad cluster marking
@@ -10,7 +13,7 @@
  * - Directory entry manipulation
  * - Cross-linked file detection
  * - Lost cluster recovery
- * 
+ *
  * Inspired by DiskImageTool's FAT Editor.
  * 
  * @version 1.0.0

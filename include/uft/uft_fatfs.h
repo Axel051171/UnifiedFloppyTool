@@ -1,11 +1,13 @@
 /**
- * @file uft_fatfs.h
- * @brief FatFs Integration for UFT
- * 
- * Provides FAT12/16/32 filesystem support for disk images.
- * Uses ChaN's FatFs library with UFT-specific disk I/O.
- * 
- * @copyright UFT Project 2026
+ * @file uft_fatfs.h  (DEPRECATED — 0 callers, never wrapped ChaN FatFs)
+ *
+ * Use include/uft/fs/uft_fat12.h for new code. This header declared a
+ * `uft_fat_image_t` wrapper around ChaN's FatFs but the integration was
+ * never completed and no source file includes it.
+ *
+ * Original intent: FAT12/16/32 filesystem support for disk images via
+ * ChaN's FatFs library with UFT-specific disk I/O.
+ *
  * @see http://elm-chan.org/fsw/ff/
  */
 
