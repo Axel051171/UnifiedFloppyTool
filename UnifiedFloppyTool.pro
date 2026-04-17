@@ -691,6 +691,7 @@ SOURCES += \
     src/core/uft_recovery_fusion.c \
     src/core/uft_log.c \
     src/core/uft_hw_batch.c \
+    src/core/uft_fs_registry.c \
     src/hal/greaseweazle_backend.c \
     src/hal/sync_backends.c \
     src/formats/stx/uft_stx_plugin.c \
