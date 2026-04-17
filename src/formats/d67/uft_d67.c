@@ -159,8 +159,9 @@ static uft_error_t d67_write_track(uft_disk_t *disk, int cyl, int head,
 const uft_format_plugin_t uft_format_plugin_d67 = {
     .name = "D67", .description = "Commodore 2040/4040 (D67)",
     .extensions = "d67", .format = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE | UFT_FORMAT_CAP_VERIFY,
     .probe = d67_probe, .open = d67_open, .close = d67_close,
     .read_track = d67_read_track, .write_track = d67_write_track,
+    .verify_track = uft_generic_verify_track,
 };
 UFT_REGISTER_FORMAT_PLUGIN(d67)

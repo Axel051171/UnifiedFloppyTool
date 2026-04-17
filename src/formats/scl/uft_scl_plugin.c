@@ -104,9 +104,10 @@ static uft_error_t scl_write_track(uft_disk_t *disk, int cyl, int head,
 const uft_format_plugin_t uft_format_plugin_scl = {
     .name = "SCL", .description = "ZX Spectrum SCL Container",
     .extensions = "scl", .format = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE | UFT_FORMAT_CAP_VERIFY,
     .probe = scl_plugin_probe, .open = scl_open,
     .close = scl_close, .read_track = scl_read_track,
     .write_track = scl_write_track,
+    .verify_track = uft_generic_verify_track,
 };
 UFT_REGISTER_FORMAT_PLUGIN(scl)

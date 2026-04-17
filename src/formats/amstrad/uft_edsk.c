@@ -180,11 +180,12 @@ const uft_format_plugin_t uft_format_plugin_edsk = {
     .extensions   = "dsk;edsk",
     .version      = 0x00030302,
     .format       = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_VERIFY,
     .probe        = edsk_probe,
     .open         = edsk_open,
     .close        = edsk_close,
     .read_track   = edsk_read_track,
+    .verify_track = uft_generic_verify_track,
 };
 
 UFT_REGISTER_FORMAT_PLUGIN(edsk)

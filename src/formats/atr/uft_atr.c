@@ -138,12 +138,13 @@ const uft_format_plugin_t uft_format_plugin_atr = {
     .extensions = "atr;xfd",
     .version = 0x00010000,
     .format = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE | UFT_FORMAT_CAP_VERIFY,
     .probe = atr_probe,
     .open = atr_open,
     .close = atr_close,
     .read_track = atr_read_track,
     .write_track = atr_write_track,
+    .verify_track = uft_generic_verify_track,
 };
 
 UFT_REGISTER_FORMAT_PLUGIN(atr)

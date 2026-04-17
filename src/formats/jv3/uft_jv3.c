@@ -225,8 +225,9 @@ static uft_error_t jv3_write_track(uft_disk_t *disk, int cyl, int head,
 const uft_format_plugin_t uft_format_plugin_jv3 = {
     .name = "JV3", .description = "TRS-80 JV3 (with sector directory)",
     .extensions = "jv3;dsk", .format = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE | UFT_FORMAT_CAP_VERIFY,
     .probe = jv3_probe, .open = jv3_open, .close = jv3_close,
     .read_track = jv3_read_track, .write_track = jv3_write_track,
+    .verify_track = uft_generic_verify_track,
 };
 UFT_REGISTER_FORMAT_PLUGIN(jv3)

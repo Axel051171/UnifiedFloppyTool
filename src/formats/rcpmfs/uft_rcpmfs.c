@@ -500,12 +500,13 @@ const uft_format_plugin_t uft_format_plugin_rcpmfs = {
     .description = "Remote CP/M File System Container",
     .extensions = "rcpmfs,rcpm",
     .format = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE | UFT_FORMAT_CAP_VERIFY,
     .probe = rcpmfs_probe_plugin,
     .open = rcpmfs_open,
     .close = rcpmfs_close,
     .read_track = rcpmfs_read_track,
     .write_track = rcpmfs_write_track,
+    .verify_track = uft_generic_verify_track,
 };
 
 UFT_REGISTER_FORMAT_PLUGIN(rcpmfs)

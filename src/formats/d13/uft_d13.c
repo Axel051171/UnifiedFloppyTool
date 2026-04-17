@@ -119,11 +119,12 @@ const uft_format_plugin_t uft_format_plugin_d13 = {
     .description = "Apple II DOS 3.2 (13-sector)",
     .extensions = "d13",
     .format = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE | UFT_FORMAT_CAP_VERIFY,
     .probe = d13_probe,
     .open = d13_open,
     .close = d13_close,
     .read_track = d13_read_track,
     .write_track = d13_write_track,
+    .verify_track = uft_generic_verify_track,
 };
 UFT_REGISTER_FORMAT_PLUGIN(d13)

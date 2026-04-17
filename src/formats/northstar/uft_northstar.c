@@ -128,11 +128,12 @@ const uft_format_plugin_t uft_format_plugin_northstar = {
     .description = "North Star DOS (hard-sectored)",
     .extensions = "ns;nsi",
     .format = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE | UFT_FORMAT_CAP_VERIFY,
     .probe       = ns_probe,
     .open        = ns_open,
     .close       = ns_close,
     .read_track  = ns_read_track,
     .write_track = ns_write_track,
+    .verify_track = uft_generic_verify_track,
 };
 UFT_REGISTER_FORMAT_PLUGIN(northstar)

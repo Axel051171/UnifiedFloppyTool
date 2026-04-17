@@ -911,8 +911,9 @@ static uft_error_t dms_write_track(uft_disk_t *disk, int cyl, int head,
 const uft_format_plugin_t uft_format_plugin_dms = {
     .name = "DMS", .description = "Amiga DMS (Disk Masher System)",
     .extensions = "dms", .format = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE | UFT_FORMAT_CAP_VERIFY,
     .probe = dms_probe, .open = dms_open, .close = dms_close,
     .read_track = dms_read_track, .write_track = dms_write_track,
+    .verify_track = uft_generic_verify_track,
 };
 UFT_REGISTER_FORMAT_PLUGIN(dms)

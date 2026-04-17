@@ -234,11 +234,12 @@ const uft_format_plugin_t uft_format_plugin_fdi_pc98 = {
     .description = "PC-98 FDI (Anex86)",
     .extensions = "fdi",
     .format = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE | UFT_FORMAT_CAP_VERIFY,
     .probe = fdi_pc98_probe,
     .open = fdi_pc98_open,
     .close = fdi_pc98_close,
     .read_track = fdi_pc98_read_track,
     .write_track = fdi_pc98_write_track,
+    .verify_track = uft_generic_verify_track,
 };
 UFT_REGISTER_FORMAT_PLUGIN(fdi_pc98)

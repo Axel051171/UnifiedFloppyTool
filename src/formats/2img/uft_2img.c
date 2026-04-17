@@ -133,8 +133,9 @@ static uft_error_t img2_write_track(uft_disk_t *d, int cyl, int head,
 const uft_format_plugin_t uft_format_plugin_2img = {
     .name = "2IMG", .description = "Apple II Universal Disk Image",
     .extensions = "2img;2mg", .format = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE | UFT_FORMAT_CAP_VERIFY,
     .probe = img2_probe, .open = img2_open, .close = img2_close,
     .read_track = img2_read_track, .write_track = img2_write_track,
+    .verify_track = uft_generic_verify_track,
 };
 UFT_REGISTER_FORMAT_PLUGIN(2img)

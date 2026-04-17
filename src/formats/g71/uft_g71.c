@@ -454,8 +454,9 @@ static uft_error_t g71_plugin_read_track(uft_disk_t *disk, int cyl, int head,
 const uft_format_plugin_t uft_format_plugin_g71 = {
     .name = "G71", .description = "Commodore 1571 GCR",
     .extensions = "g71", .format = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_FLUX,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_FLUX | UFT_FORMAT_CAP_VERIFY,
     .probe = g71_probe, .open = g71_plugin_open,
     .close = g71_plugin_close, .read_track = g71_plugin_read_track,
+    .verify_track = uft_generic_verify_track,
 };
 UFT_REGISTER_FORMAT_PLUGIN(g71)

@@ -139,8 +139,9 @@ static uft_error_t d88_write_track(uft_disk_t* disk, int cyl, int head,
 
 const uft_format_plugin_t uft_format_plugin_d88 = {
     .name = "D88", .description = "PC-88/PC-98", .extensions = "d88;88d;d98",
-    .format = UFT_FORMAT_DSK, .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE,
+    .format = UFT_FORMAT_DSK, .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE | UFT_FORMAT_CAP_VERIFY,
     .probe = d88_probe, .open = d88_open, .close = d88_close,
     .read_track = d88_read_track, .write_track = d88_write_track,
+    .verify_track = uft_generic_verify_track,
 };
 UFT_REGISTER_FORMAT_PLUGIN(d88)

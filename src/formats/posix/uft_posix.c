@@ -479,12 +479,13 @@ const uft_format_plugin_t uft_format_plugin_posix = {
     .description = "POSIX Raw Disk with Geometry File",
     .extensions = "dsk,img,raw",
     .format = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE | UFT_FORMAT_CAP_VERIFY,
     .probe = posix_probe_plugin,
     .open = posix_open,
     .close = posix_close,
     .read_track = posix_read_track,
     .write_track = posix_write_track,
+    .verify_track = uft_generic_verify_track,
 };
 
 UFT_REGISTER_FORMAT_PLUGIN(posix)

@@ -79,8 +79,9 @@ static uft_error_t t1k_write_track(uft_disk_t *d, int cyl, int head,
 const uft_format_plugin_t uft_format_plugin_t1k = {
     .name = "T1K", .description = "Tandy 1000 Disk",
     .extensions = "dsk;t1k", .format = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE | UFT_FORMAT_CAP_VERIFY,
     .probe = t1k_probe, .open = t1k_open, .close = t1k_close,
     .read_track = t1k_read_track, .write_track = t1k_write_track,
+    .verify_track = uft_generic_verify_track,
 };
 UFT_REGISTER_FORMAT_PLUGIN(t1k)

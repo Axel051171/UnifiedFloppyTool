@@ -259,9 +259,10 @@ static uft_error_t imd_plugin_write_track(uft_disk_t *disk, int cyl, int head,
 const uft_format_plugin_t uft_format_plugin_imd = {
     .name = "IMD", .description = "ImageDisk",
     .extensions = "imd", .format = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE | UFT_FORMAT_CAP_VERIFY,
     .probe = imd_plugin_probe, .open = imd_plugin_open,
     .close = imd_plugin_close, .read_track = imd_plugin_read_track,
     .write_track = imd_plugin_write_track,
+    .verify_track = uft_generic_verify_track,
 };
 UFT_REGISTER_FORMAT_PLUGIN(imd)

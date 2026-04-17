@@ -128,9 +128,10 @@ static uft_error_t d64_plugin_write_track(uft_disk_t *disk, int cyl, int head,
 const uft_format_plugin_t uft_format_plugin_d64 = {
     .name = "D64", .description = "Commodore 1541 D64",
     .extensions = "d64", .format = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE | UFT_FORMAT_CAP_VERIFY,
     .probe = d64_plugin_probe, .open = d64_plugin_open,
     .close = d64_plugin_close, .read_track = d64_plugin_read_track,
     .write_track = d64_plugin_write_track,
+    .verify_track = uft_generic_verify_track,
 };
 UFT_REGISTER_FORMAT_PLUGIN(d64)

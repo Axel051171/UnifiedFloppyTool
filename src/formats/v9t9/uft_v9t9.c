@@ -78,8 +78,9 @@ static uft_error_t v9t9_write_track(uft_disk_t *disk, int cyl, int head,
 const uft_format_plugin_t uft_format_plugin_v9t9 = {
     .name = "V9T9", .description = "TI-99/4A V9T9",
     .extensions = "v9t9;dsk", .format = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE | UFT_FORMAT_CAP_VERIFY,
     .probe = v9t9_probe, .open = v9t9_open, .close = v9t9_close,
     .read_track = v9t9_read_track, .write_track = v9t9_write_track,
+    .verify_track = uft_generic_verify_track,
 };
 UFT_REGISTER_FORMAT_PLUGIN(v9t9)

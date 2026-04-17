@@ -168,8 +168,9 @@ static uft_error_t msx_write_track(uft_disk_t *disk, int cyl, int head,
 const uft_format_plugin_t uft_format_plugin_msx_disk = {
     .name = "MSX", .description = "MSX Disk Image (enhanced)",
     .extensions = "dsk;img", .format = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE | UFT_FORMAT_CAP_VERIFY,
     .probe = msx_probe, .open = msx_open, .close = msx_close,
     .read_track = msx_read_track, .write_track = msx_write_track,
+    .verify_track = uft_generic_verify_track,
 };
 UFT_REGISTER_FORMAT_PLUGIN(msx_disk)

@@ -170,9 +170,10 @@ static uft_error_t fdi_plugin_write_track(uft_disk_t *disk, int cyl, int head,
 const uft_format_plugin_t uft_format_plugin_fdi = {
     .name = "FDI", .description = "Formatted Disk Image",
     .extensions = "fdi", .format = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE | UFT_FORMAT_CAP_VERIFY,
     .probe = fdi_plugin_probe, .open = fdi_plugin_open,
     .close = fdi_plugin_close, .read_track = fdi_plugin_read_track,
     .write_track = fdi_plugin_write_track,
+    .verify_track = uft_generic_verify_track,
 };
 UFT_REGISTER_FORMAT_PLUGIN(fdi)

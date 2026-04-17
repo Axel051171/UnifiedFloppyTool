@@ -145,8 +145,9 @@ static uft_error_t ssd_write_track(uft_disk_t *disk, int cyl, int head,
 const uft_format_plugin_t uft_format_plugin_ssd = {
     .name = "SSD", .description = "BBC Micro SSD/DSD",
     .extensions = "ssd;dsd", .format = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE | UFT_FORMAT_CAP_VERIFY,
     .probe = uft_ssd_plugin_probe, .open = ssd_open, .close = ssd_close,
     .read_track = ssd_read_track, .write_track = ssd_write_track,
+    .verify_track = uft_generic_verify_track,
 };
 UFT_REGISTER_FORMAT_PLUGIN(ssd)

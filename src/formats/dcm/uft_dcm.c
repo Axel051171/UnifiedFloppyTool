@@ -347,12 +347,13 @@ const uft_format_plugin_t uft_format_plugin_dcm = {
     .extensions   = "dcm",
     .version      = 0x00020000,
     .format       = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE | UFT_FORMAT_CAP_VERIFY,
     .probe        = uft_dcm_plugin_probe,
     .open         = dcm_open,
     .close        = dcm_close,
     .read_track   = dcm_read_track,
     .write_track  = dcm_write_track,
+    .verify_track = uft_generic_verify_track,
 };
 
 UFT_REGISTER_FORMAT_PLUGIN(dcm)

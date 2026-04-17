@@ -75,8 +75,9 @@ static uft_error_t tan_write_track(uft_disk_t *d, int cyl, int head,
 const uft_format_plugin_t uft_format_plugin_tan = {
     .name = "TAN", .description = "Tandy TRS-80",
     .extensions = "dsk;trs", .format = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE | UFT_FORMAT_CAP_VERIFY,
     .probe = tan_probe, .open = tan_open, .close = tan_close,
     .read_track = tan_read_track, .write_track = tan_write_track,
+    .verify_track = uft_generic_verify_track,
 };
 UFT_REGISTER_FORMAT_PLUGIN(tan)

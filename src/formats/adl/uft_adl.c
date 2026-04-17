@@ -72,8 +72,9 @@ static uft_error_t adl_write_track(uft_disk_t *disk, int cyl, int head,
 const uft_format_plugin_t uft_format_plugin_adl = {
     .name = "ADL", .description = "Acorn DFS Large (80-track)",
     .extensions = "adl;adf", .format = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE | UFT_FORMAT_CAP_VERIFY,
     .probe = adl_probe, .open = adl_open, .close = adl_close,
     .read_track = adl_read_track, .write_track = adl_write_track,
+    .verify_track = uft_generic_verify_track,
 };
 UFT_REGISTER_FORMAT_PLUGIN(adl)

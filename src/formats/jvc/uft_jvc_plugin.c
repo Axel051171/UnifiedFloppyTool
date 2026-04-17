@@ -201,8 +201,9 @@ static uft_error_t jvc_write_track(uft_disk_t *disk, int cyl, int head,
 const uft_format_plugin_t uft_format_plugin_jvc = {
     .name = "JVC", .description = "TRS-80 JVC (JV1 with header)",
     .extensions = "jvc;dsk", .format = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE | UFT_FORMAT_CAP_VERIFY,
     .probe = jvc_probe, .open = jvc_open, .close = jvc_close,
     .read_track = jvc_read_track, .write_track = jvc_write_track,
+    .verify_track = uft_generic_verify_track,
 };
 UFT_REGISTER_FORMAT_PLUGIN(jvc)

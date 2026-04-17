@@ -160,9 +160,10 @@ static uft_error_t f86_write_track(uft_disk_t *disk, int cyl, int head,
 const uft_format_plugin_t uft_format_plugin_86f = {
     .name = "86F", .description = "86Box/PCem Floppy Image",
     .extensions = "86f", .format = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE | UFT_FORMAT_CAP_FLUX,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE | UFT_FORMAT_CAP_FLUX | UFT_FORMAT_CAP_VERIFY,
     .probe = f86_probe, .open = f86_open,
     .close = f86_close, .read_track = f86_read_track,
     .write_track = f86_write_track,
+    .verify_track = uft_generic_verify_track,
 };
 UFT_REGISTER_FORMAT_PLUGIN(86f)

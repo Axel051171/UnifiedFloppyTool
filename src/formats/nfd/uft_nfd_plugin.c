@@ -256,9 +256,10 @@ static uft_error_t nfd_write_track(uft_disk_t *disk, int cyl, int head,
 const uft_format_plugin_t uft_format_plugin_nfd = {
     .name = "NFD", .description = "T98-Next PC-98 (NFD)",
     .extensions = "nfd", .format = UFT_FORMAT_NFD,
-    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE | UFT_FORMAT_CAP_VERIFY,
     .probe = nfd_probe, .open = nfd_open, .close = nfd_close,
     .read_track = nfd_read_track,
     .write_track = nfd_write_track,
+    .verify_track = uft_generic_verify_track,
 };
 UFT_REGISTER_FORMAT_PLUGIN(nfd)

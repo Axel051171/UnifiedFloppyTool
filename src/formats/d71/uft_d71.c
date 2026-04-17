@@ -167,12 +167,13 @@ const uft_format_plugin_t uft_format_plugin_d71 = {
     .extensions = "d71",
     .version = 0x00010000,
     .format = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE | UFT_FORMAT_CAP_VERIFY,
     .probe = d71_probe,
     .open = d71_open,
     .close = d71_close,
     .read_track = d71_read_track,
     .write_track = d71_write_track,
+    .verify_track = uft_generic_verify_track,
 };
 
 UFT_REGISTER_FORMAT_PLUGIN(d71)

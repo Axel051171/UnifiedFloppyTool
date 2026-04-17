@@ -93,8 +93,9 @@ static uft_error_t d82_write_track(uft_disk_t* disk, int cyl, int head,
 const uft_format_plugin_t uft_format_plugin_d82 = {
     .name = "D82", .description = "Commodore 8250", .extensions = "d82",
     .format = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE | UFT_FORMAT_CAP_VERIFY,
     .probe = d82_probe, .open = d82_open, .close = d82_close,
     .read_track = d82_read_track, .write_track = d82_write_track,
+    .verify_track = uft_generic_verify_track,
 };
 UFT_REGISTER_FORMAT_PLUGIN(d82)

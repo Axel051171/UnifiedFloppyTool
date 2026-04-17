@@ -81,8 +81,9 @@ static uft_error_t adf_arc_write_track(uft_disk_t *d, int cyl, int head,
 const uft_format_plugin_t uft_format_plugin_adf_arc = {
     .name = "ADF_ARC", .description = "Acorn Archimedes ADFS",
     .extensions = "adf;adl;adm", .format = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE | UFT_FORMAT_CAP_VERIFY,
     .probe = adf_arc_probe, .open = adf_arc_open, .close = adf_arc_close,
     .read_track = adf_arc_read_track, .write_track = adf_arc_write_track,
+    .verify_track = uft_generic_verify_track,
 };
 UFT_REGISTER_FORMAT_PLUGIN(adf_arc)

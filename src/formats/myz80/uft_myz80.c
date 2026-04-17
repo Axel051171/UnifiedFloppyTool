@@ -459,12 +459,13 @@ const uft_format_plugin_t uft_format_plugin_myz80 = {
     .description = "MYZ80 CP/M Emulator Hard Drive Image",
     .extensions = "myz80,myz",
     .format = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE | UFT_FORMAT_CAP_VERIFY,
     .probe = myz80_probe_plugin,
     .open = myz80_open,
     .close = myz80_close,
     .read_track = myz80_read_track,
     .write_track = myz80_write_track,
+    .verify_track = uft_generic_verify_track,
 };
 
 UFT_REGISTER_FORMAT_PLUGIN(myz80)

@@ -245,12 +245,13 @@ const uft_format_plugin_t uft_format_plugin_fds = {
     .extensions   = "fds",
     .version      = 0x00010000,
     .format       = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE | UFT_FORMAT_CAP_VERIFY,
     .probe        = fds_probe,
     .open         = fds_open,
     .close        = fds_close,
     .read_track   = fds_read_track,
     .write_track  = fds_write_track,
+    .verify_track = uft_generic_verify_track,
 };
 
 UFT_REGISTER_FORMAT_PLUGIN(fds)

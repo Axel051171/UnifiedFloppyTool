@@ -77,8 +77,9 @@ static uft_error_t xdm86_write_track(uft_disk_t *d, int cyl, int head,
 const uft_format_plugin_t uft_format_plugin_xdm86 = {
     .name = "XDM86", .description = "TI-99/4A Disk Manager",
     .extensions = "dsk;v9t9", .format = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE | UFT_FORMAT_CAP_VERIFY,
     .probe = xdm86_probe, .open = xdm86_open, .close = xdm86_close,
     .read_track = xdm86_read_track, .write_track = xdm86_write_track,
+    .verify_track = uft_generic_verify_track,
 };
 UFT_REGISTER_FORMAT_PLUGIN(xdm86)

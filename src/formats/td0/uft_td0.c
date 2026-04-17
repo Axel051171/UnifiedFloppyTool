@@ -253,11 +253,12 @@ const uft_format_plugin_t uft_format_plugin_td0 = {
     .extensions = "td0",
     .version = 0x00010000,
     .format = UFT_FORMAT_TD0,
-    .capabilities = UFT_FORMAT_CAP_READ,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_VERIFY,
     .probe = td0_probe,
     .open = td0_open,
     .close = td0_close,
     .read_track = td0_read_track,
+    .verify_track = uft_generic_verify_track,
 };
 
 UFT_REGISTER_FORMAT_PLUGIN(td0)

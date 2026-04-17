@@ -71,8 +71,9 @@ static uft_error_t pdp_write_track(uft_disk_t *d, int cyl, int head,
 const uft_format_plugin_t uft_format_plugin_pdp = {
     .name = "PDP", .description = "DEC PDP-11 RX01/RX02",
     .extensions = "rx;rx01;rx02;dsk", .format = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE | UFT_FORMAT_CAP_VERIFY,
     .probe = pdp_probe, .open = pdp_open, .close = pdp_close,
     .read_track = pdp_read_track, .write_track = pdp_write_track,
+    .verify_track = uft_generic_verify_track,
 };
 UFT_REGISTER_FORMAT_PLUGIN(pdp)

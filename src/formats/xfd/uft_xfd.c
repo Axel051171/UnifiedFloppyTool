@@ -93,8 +93,9 @@ static uft_error_t xfd_write_track(uft_disk_t *d, int cyl, int head,
 const uft_format_plugin_t uft_format_plugin_xfd = {
     .name = "XFD", .description = "Atari 8-bit Raw Disk",
     .extensions = "xfd", .format = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE | UFT_FORMAT_CAP_VERIFY,
     .probe = uft_xfd_plugin_probe, .open = xfd_open, .close = xfd_close,
     .read_track = xfd_read_track, .write_track = xfd_write_track,
+    .verify_track = uft_generic_verify_track,
 };
 UFT_REGISTER_FORMAT_PLUGIN(xfd)

@@ -281,12 +281,13 @@ const uft_format_plugin_t uft_format_plugin_dc42 = {
     .extensions   = "dc42;image;img",
     .version      = 0x00010000,
     .format       = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE | UFT_FORMAT_CAP_VERIFY,
     .probe        = dc42_probe,
     .open         = dc42_open,
     .close        = dc42_close,
     .read_track   = dc42_read_track,
     .write_track  = dc42_write_track,
+    .verify_track = uft_generic_verify_track,
 };
 
 UFT_REGISTER_FORMAT_PLUGIN(dc42)

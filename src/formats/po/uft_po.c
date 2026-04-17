@@ -72,8 +72,9 @@ static uft_error_t po_write_track(uft_disk_t *disk, int cyl, int head,
 const uft_format_plugin_t uft_format_plugin_po = {
     .name = "PO", .description = "Apple II ProDOS Order",
     .extensions = "po;dsk", .format = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE | UFT_FORMAT_CAP_VERIFY,
     .probe = po_probe, .open = po_open, .close = po_close,
     .read_track = po_read_track, .write_track = po_write_track,
+    .verify_track = uft_generic_verify_track,
 };
 UFT_REGISTER_FORMAT_PLUGIN(po)

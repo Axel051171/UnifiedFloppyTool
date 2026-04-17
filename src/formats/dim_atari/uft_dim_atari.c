@@ -254,11 +254,12 @@ const uft_format_plugin_t uft_format_plugin_dim_atari = {
     .description = "Atari ST DIM (FastCopy Pro)",
     .extensions = "dim",
     .format = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE | UFT_FORMAT_CAP_VERIFY,
     .probe = dim_atari_probe,
     .open = dim_atari_open,
     .close = dim_atari_close,
     .read_track = dim_atari_read_track,
     .write_track = dim_atari_write_track,
+    .verify_track = uft_generic_verify_track,
 };
 UFT_REGISTER_FORMAT_PLUGIN(dim_atari)

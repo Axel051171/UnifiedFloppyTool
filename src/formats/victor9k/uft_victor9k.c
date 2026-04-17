@@ -160,11 +160,12 @@ const uft_format_plugin_t uft_format_plugin_victor9k = {
     .description = "Victor 9000 / Sirius 1 GCR",
     .extensions = "vic;v9k",
     .format = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE | UFT_FORMAT_CAP_VERIFY,
     .probe       = vic9k_probe,
     .open        = vic9k_open,
     .close       = vic9k_close,
     .read_track  = vic9k_read_track,
     .write_track = vic9k_write_track,
+    .verify_track = uft_generic_verify_track,
 };
 UFT_REGISTER_FORMAT_PLUGIN(victor9k)

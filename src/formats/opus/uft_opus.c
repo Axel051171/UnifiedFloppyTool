@@ -364,12 +364,13 @@ const uft_format_plugin_t uft_format_plugin_opus = {
     .description = "OPUS Discovery (ZX Spectrum)",
     .extensions = "opd,opus",
     .format = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE | UFT_FORMAT_CAP_VERIFY,
     .probe = opus_probe_plugin,
     .open = opus_open,
     .close = opus_close,
     .read_track = opus_read_track,
     .write_track = opus_write_track,
+    .verify_track = uft_generic_verify_track,
 };
 
 UFT_REGISTER_FORMAT_PLUGIN(opus)

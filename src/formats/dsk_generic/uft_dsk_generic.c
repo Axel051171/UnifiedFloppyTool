@@ -204,12 +204,13 @@ static uft_error_t dsk_gen_write_track(uft_disk_t *disk, int cyl, int head,
         .description = DESC, \
         .extensions = EXT, \
         .format = UFT_FORMAT_DSK, \
-        .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE, \
+        .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE | UFT_FORMAT_CAP_VERIFY, \
         .probe = dsk_probe_##SUFFIX, \
         .open = dsk_open_##SUFFIX, \
         .close = dsk_gen_close, \
         .read_track = dsk_gen_read_track, \
         .write_track = dsk_gen_write_track, \
+        .verify_track = uft_generic_verify_track, \
     };
 
 /* Generate all 49 DSK variant plugins */

@@ -86,8 +86,9 @@ static uft_error_t vdk_write_track(uft_disk_t *disk, int cyl, int head,
 const uft_format_plugin_t uft_format_plugin_vdk = {
     .name = "VDK", .description = "Tandy CoCo Virtual Disk",
     .extensions = "vdk;dsk", .format = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE,
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE | UFT_FORMAT_CAP_VERIFY,
     .probe = vdk_probe, .open = vdk_open, .close = vdk_close,
     .read_track = vdk_read_track, .write_track = vdk_write_track,
+    .verify_track = uft_generic_verify_track,
 };
 UFT_REGISTER_FORMAT_PLUGIN(vdk)
