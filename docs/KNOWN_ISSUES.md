@@ -16,13 +16,17 @@ aktiv abgearbeitet.
 ## Prinzip 1 — Niemals stille Datenverluste
 
 ### 1.1 `.loss.json` Sidecar-Format noch nicht implementiert
-- **Status:** OPEN
-- **Beschreibung:** Prinzip 1 verlangt Sidecar-Dateien für nicht-repräsentier-
-  bare Informationen bei LOSSY-DOCUMENTED-Konvertierungen. Das Schema und der
-  Writer existieren noch nicht. Aktuell werden Verluste im Audit-Log protokol-
-  liert, aber nicht als separate Machine-readable-Datei.
-- **Workaround:** Audit-Log inspizieren (`uft log --session=<id>`).
-- **Plan:** Siehe Roadmap Milestone "Lossless-Framework".
+- **Status:** MITIGATED (Writer implementiert, Integration pending)
+- **Beschreibung:** Schema `uft-loss-report-v1` + Writer-API
+  (`include/uft/core/uft_loss_report.h`, `src/core/uft_loss_report.c`) sind
+  da. 11 Verlust-Kategorien (WEAK_BITS, FLUX_TIMING, INDEX_PULSES,
+  SYNC_PATTERNS, MULTI_REVOLUTION, CUSTOM_METADATA, COPY_PROTECTION,
+  LONG_TRACKS, HALF_TRACKS, WRITE_SPLICE, OTHER). Schreibt JSON neben
+  Ziel-Datei als `<target>.loss.json`. Noch NICHT an die 44 Konvertierungs-
+  pfade angeschlossen — das passiert unter §1.2.
+- **Workaround:** CLI kann `uft_loss_report_write()` direkt nutzen.
+- **Plan:** §1.2 (Pre-Conversion-Report) wickelt alle `convert_*`-Pfade ein
+  und ruft den Writer auf.
 
 ### 1.2 Nicht alle Konvertierungen haben Pre-Conversion-Report
 - **Status:** OPEN
