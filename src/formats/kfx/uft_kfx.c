@@ -157,10 +157,29 @@ static uft_error_t kfx_read_track(uft_disk_t *disk, int cyl, int head,
 }
 
 /* ============================================================================
- * write_track — not implemented (KryoFlux streams are raw flux transition
- * timings captured from hardware; writing would need synthesis of flux
- * intervals from sector data plus a full MFM/FM encoder, plus regeneration
- * of the index pulse events and KryoFlux protocol framing).
+ * write_track — DOCUMENTED NOT_IMPLEMENTED per spec §1.3 Option 1.
+ *
+ * KFX is a KryoFlux streaming capture: raw flux transition timings
+ * emitted by hardware, not sector data. Writing requires synthesizing
+ * an analogous stream from decoded sectors.
+ *
+ * Implementation steps:
+ *   1. Encode sectors → MFM bitstream (address marks, sync, CRC, gap
+ *      bytes). Needs a proper MFM encoder — no `uft_encode_standard_track`
+ *      or equivalent exists in the tree yet.
+ *   2. Convert MFM cells → flux intervals in ns (bit-clock × {2,3,4}).
+ *   3. Generate Oscillator Overflow (OVL) codes for intervals > 0xFFFF
+ *      ticks; emit Nop1/Nop2/Nop3 between.
+ *   4. Emit Index pulse (OOB 0x02) at revolution boundaries.
+ *   5. Emit StreamEnd (OOB 0x03) with correct hw_status bits.
+ *   6. Framing: pack into the KF stream format with the OOB escape.
+ *
+ * Estimated effort: ~300 lines total including the shared MFM encoder
+ * — enough that a dedicated commit with test vectors is required
+ * (spec §7.3 threshold).
+ * Blocker: no MFM encoder in the tree + no round-trip test corpus
+ * for KF streams.
+ * Workaround: use SCP or HFE for flux-level writes.
  * ============================================================================ */
 
 static uft_error_t kfx_write_track(uft_disk_t *disk, int cyl, int head,

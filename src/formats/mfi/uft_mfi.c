@@ -230,9 +230,27 @@ static uft_error_t mfi_read_track(uft_disk_t *disk, int cyl, int head,
 }
 
 /* ============================================================================
- * write_track — not implemented (MFI stores compressed flux-cell streams
- * per track; writing requires MFM encoder + zlib deflate + MAME-specific
- * cell format regeneration).
+ * write_track — DOCUMENTED NOT_IMPLEMENTED per spec §1.3 Option 1.
+ *
+ * MFI (MAME Floppy Image) stores per-track zlib-deflated streams of
+ * 32-bit flux cells (lower 28 bits = position, upper 4 bits = type:
+ * neutral, MG_0, MG_1, MG_N). Writing needs MFM cell synthesis plus
+ * zlib compression plus file-offset-table recomputation.
+ *
+ * Implementation steps:
+ *   1. Encode sectors → MFM bits (same shared encoder KFX needs).
+ *   2. Map MFM cells → MFI 32-bit cell format (position in 200e6/2
+ *      units = 100 MHz, type in upper nibble).
+ *   3. zlib-deflate the cell array.
+ *   4. Update the file's track offset table and refresh each track
+ *      entry's compressed + uncompressed size.
+ *   5. Rewrite the 4096-byte header with total track count and the
+ *      variant string.
+ *
+ * Estimated effort: ~250 lines (above the shared MFM encoder).
+ * Blocker: shared MFM encoder not in the tree + zlib not linked.
+ * Workaround: use HFE/SCP for interchange; MAME reads HFE natively
+ * since 0.238.
  * ============================================================================ */
 
 static uft_error_t mfi_write_track(uft_disk_t *disk, int cyl, int head,

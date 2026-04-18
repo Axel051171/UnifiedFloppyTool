@@ -220,8 +220,27 @@ static uft_error_t pri_read_track(uft_disk_t *disk, int cyl, int head,
 }
 
 /* ============================================================================
- * write_track — not implemented (requires MFM encoder + PRI event stream
- * serializer; PRI stores raw flux transition events, not sector data).
+ * write_track — DOCUMENTED NOT_IMPLEMENTED per spec §1.3 Option 1.
+ *
+ * PRI (PCE Raw Image, from Hampa Hug's PCE emulator) is a chunk-based
+ * container for raw MFM bitstreams, with optional flux modulator-flag
+ * bits tracking weak/fuzzy cells per bit position. Writing requires
+ * MFM bit synthesis and PRI chunk serialization.
+ *
+ * Implementation steps:
+ *   1. Encode sectors → MFM bits (same shared encoder KFX/MFI need).
+ *   2. Build a TRAK chunk per track: 4-byte header {cyl,head,size,_}
+ *      followed by the raw MFM bitstream padded to byte boundary.
+ *   3. If modulator data needs preserving, emit a matching FXMD chunk
+ *      with per-bit flux-modulation flags.
+ *   4. Update the END chunk or rewrite the full file with recomputed
+ *      CRCs on every chunk.
+ *   5. Write DONE chunk and EOF.
+ *
+ * Estimated effort: ~180 lines (above the shared MFM encoder).
+ * Blocker: shared MFM encoder not in the tree + no PRI round-trip
+ * corpus to verify chunk layout.
+ * Workaround: PCE accepts HFE — use HFE writer for PCE interop.
  * ============================================================================ */
 
 static uft_error_t pri_write_track(uft_disk_t *disk, int cyl, int head,

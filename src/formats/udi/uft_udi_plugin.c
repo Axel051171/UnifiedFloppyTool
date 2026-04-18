@@ -160,10 +160,31 @@ static uft_error_t udi_read_track(uft_disk_t *disk, int cyl, int head,
     return UFT_OK;
 }
 
-/* write_track — not implemented. UDI stores raw MFM bitstream data per
- * track; writing would require a full MFM encoder that rebuilds the
- * bitstream from sector headers/data plus gap/sync bytes, plus CRC
- * regeneration per sector. */
+/* ============================================================================
+ * write_track — DOCUMENTED NOT_IMPLEMENTED per spec §1.3 Option 1.
+ *
+ * UDI (Ultra Disk Image, ZX Spectrum/+3 and Sam Coupé) stores per-track
+ * raw MFM bitstreams plus an optional weak-bit mask and a file-level
+ * CRC32 footer. Writing needs MFM bit synthesis and per-track layout
+ * updates.
+ *
+ * Implementation steps:
+ *   1. Encode sectors → MFM bitstream (same shared encoder KFX/MFI/PRI
+ *      need). Must include IAM/IDAM/DAM address marks with A1 sync.
+ *   2. For each track, write the 3-byte header {cyl, head, flags} plus
+ *      the bitstream length (2 bytes LE) plus the raw MFM bytes.
+ *   3. If the track has weak-bit annotations, write a matching weak
+ *      mask block of equal byte length.
+ *   4. Update the file header's track count + bitrate fields.
+ *   5. Recompute the CRC32 checksum over the entire file and write it
+ *      as the last 4 bytes.
+ *
+ * Estimated effort: ~200 lines (above the shared MFM encoder).
+ * Blocker: shared MFM encoder not in the tree + CRC32 needs to be
+ * exposed as a utility (currently only available inside uft_uff.c).
+ * Workaround: TRD or SCL for Spectrum writes; both are sector-level
+ * formats that already have working write_track hooks.
+ * ============================================================================ */
 static uft_error_t udi_write_track(uft_disk_t *disk, int cyl, int head,
                                     const uft_track_t *track) {
     (void)disk; (void)cyl; (void)head; (void)track;
