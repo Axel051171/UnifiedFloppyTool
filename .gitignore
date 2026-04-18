@@ -68,3 +68,24 @@ aqtinstall.log
 
 # Audit intermediate results
 .audit/*.tmp
+
+# qmake top-level generated files
+Makefile
+Makefile.Debug
+Makefile.Release
+mocinclude.opt
+debug/
+release/
+
+# Audit scratch data (inventory is tool-generated)
+.audit/called.txt
+.audit/dead_B.txt
+.audit/declared.txt
+.audit/gaps_A_all.txt
+.audit/gaps_A_declared.txt
+.audit/implemented.txt
+.audit/silent_C.txt
+
+# Claude session state (machine-local)
+.claude/settings.local.json
+.claude/settings.json

@@ -9,7 +9,7 @@
 #include "ui_tab_explorer.h"
 #include "disk_image_validator.h"
 
-#include <uft_file_ops.h>
+#include <uft/uft_file_ops.h>
 #include <uft/uft_adf.h>
 #include <uft/formats/uft_fat12.h>
 #include <uft/uft_format_validate.h>

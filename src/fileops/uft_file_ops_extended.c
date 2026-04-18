@@ -11,7 +11,7 @@
 #include <stdio.h>
 #include <ctype.h>
 
-#include "uft_file_ops.h"
+#include "uft/uft_file_ops.h"
 #include "uft/uft_compiler.h"
 
 /* ============================================================================

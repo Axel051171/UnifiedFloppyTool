@@ -11,7 +11,7 @@
 #include "uft/uft_format_plugin.h"
 #include "uft/uft_error.h"
 #include "uft/uft_format_autodetect.h"
-#include "uft_file_ops.h"                /* uft_file_type_t */
+#include "uft/uft_file_ops.h"                /* uft_file_type_t */
 #include "uft/uft_format_parsers.h"      /* uft_scp_file_t, uft_kfx_stream_t */
 #include <stddef.h>
 #include <stdint.h>
