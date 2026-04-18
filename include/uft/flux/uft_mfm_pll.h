@@ -63,6 +63,8 @@ static inline void uft_pll_params_default(uft_pll_params_t *params)
 /**
  * @brief PLL state machine
  */
+#ifndef UFT_PLL_STATE_T_DEFINED
+#define UFT_PLL_STATE_T_DEFINED
 typedef struct {
     /* NCO (Numerically Controlled Oscillator) */
     int32_t  nco_period;        /**< Current NCO period (fractional) */
@@ -79,6 +81,7 @@ typedef struct {
     /* Configuration */
     uft_pll_params_t params;
 } uft_pll_state_t;
+#endif /* UFT_PLL_STATE_T_DEFINED */
 
 /**
  * @brief Initialize PLL state

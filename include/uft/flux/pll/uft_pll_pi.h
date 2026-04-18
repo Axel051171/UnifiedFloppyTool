@@ -51,12 +51,15 @@ typedef enum {
 #endif /* UFT_ENCODING_DEFINED */
 
 /** PLL state */
+#ifndef UFT_PLL_STATE_T_DEFINED
+#define UFT_PLL_STATE_T_DEFINED
 typedef enum {
     UFT_PLL_SEEKING,        /**< Looking for sync pattern */
     UFT_PLL_SYNCING,        /**< Acquiring lock */
     UFT_PLL_LOCKED,         /**< Stable lock */
     UFT_PLL_TRACKING        /**< Decoding data */
 } uft_pll_state_t;
+#endif /* UFT_PLL_STATE_T_DEFINED */
 
 /** Sync tolerance presets */
 typedef enum {

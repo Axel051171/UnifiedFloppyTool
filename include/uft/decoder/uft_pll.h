@@ -31,6 +31,8 @@ typedef struct {
 /**
  * @brief PLL state information
  */
+#ifndef UFT_PLL_STATE_T_DEFINED
+#define UFT_PLL_STATE_T_DEFINED
 typedef struct {
     double current_frequency;   /**< Current tracked frequency */
     double current_phase;       /**< Current phase */
@@ -43,6 +45,7 @@ typedef struct {
     double avg_jitter;          /**< Average jitter */
     double confidence;          /**< Decode confidence (0.0-1.0) */
 } uft_pll_state_t;
+#endif /* UFT_PLL_STATE_T_DEFINED */
 
 /**
  * @brief PLL context (opaque)

@@ -188,6 +188,8 @@ typedef struct {
  * 
  * Used by adaptive decoders for clock recovery.
  */
+#ifndef UFT_PLL_STATE_T_DEFINED
+#define UFT_PLL_STATE_T_DEFINED
 typedef struct {
     double      frequency;      /**< Current PLL frequency (normalized) */
     double      phase;          /**< Current phase */
@@ -199,6 +201,7 @@ typedef struct {
     uint32_t    window_max;     /**< Maximum inspection window */
     uint32_t    window_current; /**< Current inspection window size */
 } uft_pll_state_t;
+#endif /* UFT_PLL_STATE_T_DEFINED */
 
 /**
  * @brief Inspection window profile

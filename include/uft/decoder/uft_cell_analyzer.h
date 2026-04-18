@@ -329,6 +329,8 @@ size_t uft_cell_result_to_json(
 /**
  * @brief PLL state for manual stepping
  */
+#ifndef UFT_PLL_STATE_T_DEFINED
+#define UFT_PLL_STATE_T_DEFINED
 typedef struct {
     double phase;             /**< Current phase in samples */
     double frequency;         /**< Current frequency in samples/cell */
@@ -338,6 +340,7 @@ typedef struct {
     bool locked;              /**< PLL is locked */
     uint64_t bit_position;    /**< Current bit position */
 } uft_pll_state_t;
+#endif /* UFT_PLL_STATE_T_DEFINED */
 
 /**
  * @brief Initialize PLL state

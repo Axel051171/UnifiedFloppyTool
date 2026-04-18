@@ -103,6 +103,8 @@ typedef struct {
 /**
  * @brief PLL state and configuration
  */
+#ifndef UFT_PLL_STATE_T_DEFINED
+#define UFT_PLL_STATE_T_DEFINED
 typedef struct {
     /* Configuration */
     uint32_t tick_freq;             /**< Tick frequency (Hz) */
@@ -136,6 +138,7 @@ typedef struct {
     uint64_t error_pulses;          /**< Pulses outside window */
     uint64_t sync_losses;           /**< Number of sync losses */
 } uft_pll_state_t;
+#endif /* UFT_PLL_STATE_T_DEFINED */
 
 /*============================================================================
  * Flux Stream Structure

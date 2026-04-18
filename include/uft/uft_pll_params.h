@@ -139,6 +139,8 @@ static const uft_pll_params_t UFT_PLL_AMIGA = {
 // PLL STATE
 // ============================================================================
 
+#ifndef UFT_PLL_STATE_T_DEFINED
+#define UFT_PLL_STATE_T_DEFINED
 typedef struct {
     int clock;                // Current clock period
     int flux;                 // Accumulated flux time
@@ -147,6 +149,7 @@ typedef struct {
     bool sync_lost;           // Sync lost flag
     bool index;               // Index pulse seen
 } uft_pll_state_t;
+#endif /* UFT_PLL_STATE_T_DEFINED */
 
 // ============================================================================
 // PLL FUNCTIONS
