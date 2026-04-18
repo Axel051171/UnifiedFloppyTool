@@ -26,7 +26,6 @@
  * causing nast effects.
  **************************************************************/
 
-static void dopr();
 static char *end;
 
 #include <sys/types.h>
@@ -37,6 +36,8 @@ static char *end;
 /* varargs declarations: */
 
 #include "snprintf.h"
+
+static void dopr( char *buffer, char *format, va_list args );
 
 int vsnprintf(str, count, fmt, args)
        char *str;
