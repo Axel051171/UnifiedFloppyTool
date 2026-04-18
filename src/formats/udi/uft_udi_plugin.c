@@ -24,6 +24,7 @@
  * Reference: UDI specification by Simon Owen, libdsk
  */
 #include "uft/uft_format_common.h"
+#include "uft/uft_mfm_encoder.h"
 
 #define UDI_MAGIC       "UDI!"
 #define UDI_HDR_SIZE    16
@@ -161,34 +162,77 @@ static uft_error_t udi_read_track(uft_disk_t *disk, int cyl, int head,
 }
 
 /* ============================================================================
- * write_track — DOCUMENTED NOT_IMPLEMENTED per spec §1.3 Option 1.
+ * UDI CRC32 — standard PKZIP polynomial 0xEDB88320, table-free.
+ * ============================================================================ */
+static uint32_t udi_crc32(const uint8_t *data, size_t len) {
+    uint32_t crc = 0xFFFFFFFFu;
+    for (size_t i = 0; i < len; i++) {
+        crc ^= data[i];
+        for (int b = 0; b < 8; b++) {
+            crc = (crc >> 1) ^ (0xEDB88320u & -(crc & 1));
+        }
+    }
+    return crc ^ 0xFFFFFFFFu;
+}
+
+/* ============================================================================
+ * write_track — in-place overwrite via shared MFM encoder.
  *
- * UDI (Ultra Disk Image, ZX Spectrum/+3 and Sam Coupé) stores per-track
- * raw MFM bitstreams plus an optional weak-bit mask and a file-level
- * CRC32 footer. Writing needs MFM bit synthesis and per-track layout
- * updates.
+ * Strategy (honest limits documented):
+ *   1. Encode the sector array to raw MFM via uft_mfm_encode_from_track.
+ *   2. Locate the target track's existing slot in the in-memory buffer.
+ *   3. Overwrite ONLY if the new MFM length matches the existing slot
+ *      exactly. UDI doesn't have per-track padding room, so any size
+ *      change would shift every following track + the CRC32 footer —
+ *      that's a full file rebuild which is out of scope here.
+ *   4. Recompute the CRC32 footer over the full file minus the last 4
+ *      bytes, write the updated buffer back to disk.
  *
- * Implementation steps:
- *   1. Encode sectors → MFM bitstream (same shared encoder KFX/MFI/PRI
- *      need). Must include IAM/IDAM/DAM address marks with A1 sync.
- *   2. For each track, write the 3-byte header {cyl, head, flags} plus
- *      the bitstream length (2 bytes LE) plus the raw MFM bytes.
- *   3. If the track has weak-bit annotations, write a matching weak
- *      mask block of equal byte length.
- *   4. Update the file header's track count + bitrate fields.
- *   5. Recompute the CRC32 checksum over the entire file and write it
- *      as the last 4 bytes.
- *
- * Estimated effort: ~200 lines (above the shared MFM encoder).
- * Blocker: shared MFM encoder not in the tree + CRC32 needs to be
- * exposed as a utility (currently only available inside uft_uff.c).
- * Workaround: TRD or SCL for Spectrum writes; both are sector-level
- * formats that already have working write_track hooks.
+ * Size-mismatch handling: returns UFT_ERROR_INVALID_ARG with intent
+ * clear in the caller's error path. This is honest: we don't silently
+ * corrupt the file.
  * ============================================================================ */
 static uft_error_t udi_write_track(uft_disk_t *disk, int cyl, int head,
-                                    const uft_track_t *track) {
-    (void)disk; (void)cyl; (void)head; (void)track;
-    return UFT_ERROR_NOT_SUPPORTED;
+                                    const uft_track_t *track)
+{
+    if (!disk || !track) return UFT_ERROR_NULL_POINTER;
+    if (disk->read_only) return UFT_ERROR_NOT_SUPPORTED;
+
+    udi_pd_t *p = disk->plugin_data;
+    if (!p || !p->data || p->size < UDI_HDR_SIZE + 4) return UFT_ERROR_INVALID_STATE;
+
+    uint8_t  ttype = 0;
+    uint16_t tlen  = 0;
+    size_t   pos   = udi_find_track(p, cyl, head, &ttype, &tlen);
+    if (pos == 0 || ttype != 0x00) return UFT_ERR_NOT_FOUND;
+
+    /* Encode sector payload to MFM. Use a scratch buffer sized to the
+     * existing slot — the caller gets UFT_ERROR_INVALID_ARG if the
+     * encoder output doesn't fit exactly. */
+    uint8_t *mfm = (uint8_t *)malloc(tlen);
+    if (!mfm) return UFT_ERROR_NO_MEMORY;
+    size_t n = uft_mfm_encode_from_track(track, mfm, tlen);
+    if (n != tlen) {
+        free(mfm);
+        return UFT_ERROR_INVALID_ARG;
+    }
+
+    /* In-place overwrite in the buffer. */
+    memcpy(p->data + pos + 3, mfm, tlen);
+    free(mfm);
+
+    /* Recompute CRC32 over everything except the last 4 bytes. */
+    size_t crc_region = p->size - 4;
+    uint32_t crc = udi_crc32(p->data, crc_region);
+    p->data[p->size - 4] = (uint8_t)(crc & 0xFF);
+    p->data[p->size - 3] = (uint8_t)((crc >> 8) & 0xFF);
+    p->data[p->size - 2] = (uint8_t)((crc >> 16) & 0xFF);
+    p->data[p->size - 1] = (uint8_t)((crc >> 24) & 0xFF);
+
+    /* Flush to disk. */
+    if (!disk->path) return UFT_ERROR_INVALID_STATE;
+    if (!uft_write_file(disk->path, p->data, p->size)) return UFT_ERROR_IO;
+    return UFT_OK;
 }
 
 const uft_format_plugin_t uft_format_plugin_udi = {
