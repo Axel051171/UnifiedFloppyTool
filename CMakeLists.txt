@@ -236,7 +236,6 @@ if(UFT_BUILD_TESTS)
     # Library targets required by tests
     add_subdirectory(src/crc)
     add_subdirectory(src/core)
-    add_subdirectory(src/ride)
     add_subdirectory(src/protection/c64)
     add_subdirectory(src/hardware_providers)
 
