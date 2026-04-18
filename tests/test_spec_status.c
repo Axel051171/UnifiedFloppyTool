@@ -64,13 +64,57 @@ TEST(explicit_status_preserved) {
     ASSERT(strcmp(uft_spec_status_string(p.spec_status), "REVERSE-ENGINEERED") == 0);
 }
 
+/* ─── Prinzip 7 §7.2 — Feature-Matrix API ─── */
+
+TEST(feature_support_enum_stable) {
+    ASSERT(UFT_FEATURE_UNSUPPORTED == 0);
+    ASSERT(UFT_FEATURE_PARTIAL     == 1);
+    ASSERT(UFT_FEATURE_SUPPORTED   == 2);
+}
+
+TEST(feature_support_stringify) {
+    ASSERT(strcmp(uft_feature_support_string(UFT_FEATURE_SUPPORTED),   "SUPPORTED")   == 0);
+    ASSERT(strcmp(uft_feature_support_string(UFT_FEATURE_PARTIAL),     "PARTIAL")     == 0);
+    ASSERT(strcmp(uft_feature_support_string(UFT_FEATURE_UNSUPPORTED), "UNSUPPORTED") == 0);
+    /* Out-of-range falls back to UNSUPPORTED. */
+    ASSERT(strcmp(uft_feature_support_string((uft_feature_support_t)99), "UNSUPPORTED") == 0);
+}
+
+TEST(feature_matrix_shape) {
+    /* Ein Plugin kann optional features[] setzen. NULL = nicht deklariert. */
+    static const uft_plugin_feature_t demo[] = {
+        { "Read",  UFT_FEATURE_SUPPORTED,   NULL },
+        { "Write", UFT_FEATURE_PARTIAL,     "read-only when compiled without libcapsimage" },
+        { "Flux",  UFT_FEATURE_UNSUPPORTED, NULL },
+    };
+    uft_format_plugin_t p = {
+        .name = "demo",
+        .features = demo,
+        .feature_count = sizeof(demo)/sizeof(*demo),
+    };
+    ASSERT(p.feature_count == 3);
+    ASSERT(p.features[0].status == UFT_FEATURE_SUPPORTED);
+    ASSERT(p.features[1].note != NULL);
+    ASSERT(p.features[2].note == NULL);
+}
+
+TEST(feature_matrix_default_null) {
+    uft_format_plugin_t p = { .name = "no-matrix" };
+    ASSERT(p.features == NULL);
+    ASSERT(p.feature_count == 0);
+}
+
 int main(void) {
-    printf("=== Prinzip 7 — Spec-Status API Tests ===\n");
+    printf("=== Prinzip 7 — Spec-Status + Feature-Matrix API Tests ===\n");
     RUN(enum_values_stable);
     RUN(stringify_all_five);
     RUN(stringify_out_of_range_fallback);
     RUN(default_plugin_status_is_unknown);
     RUN(explicit_status_preserved);
+    RUN(feature_support_enum_stable);
+    RUN(feature_support_stringify);
+    RUN(feature_matrix_shape);
+    RUN(feature_matrix_default_null);
     printf("Passed %d, Failed %d\n", _pass, _fail);
     return _fail == 0 ? 0 : 1;
 }

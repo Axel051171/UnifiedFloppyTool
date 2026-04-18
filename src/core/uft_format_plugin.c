@@ -351,3 +351,12 @@ const char* uft_spec_status_string(uft_spec_status_t status) {
         default:                          return "UNKNOWN";
     }
 }
+
+const char* uft_feature_support_string(uft_feature_support_t s) {
+    switch (s) {
+        case UFT_FEATURE_SUPPORTED:   return "SUPPORTED";
+        case UFT_FEATURE_PARTIAL:     return "PARTIAL";
+        case UFT_FEATURE_UNSUPPORTED: /* fallthrough */
+        default:                      return "UNSUPPORTED";
+    }
+}

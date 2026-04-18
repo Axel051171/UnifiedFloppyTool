@@ -778,6 +778,17 @@ static uft_error_t hfe_read_metadata(uft_disk_t* disk, const char* key,
 // Plugin Definition
 // ============================================================================
 
+/* Prinzip 7 Feature-Matrix */
+static const uft_plugin_feature_t hfe_features[] = {
+    { "HFE v1 (original)",         UFT_FEATURE_SUPPORTED,   NULL },
+    { "HFE v2 (HxC2001)",          UFT_FEATURE_SUPPORTED,   NULL },
+    { "HFE v3 (STM32 bootloader)", UFT_FEATURE_SUPPORTED,   NULL },
+    { "Per-track bitrate",         UFT_FEATURE_SUPPORTED,   NULL },
+    { "Write / encode",            UFT_FEATURE_SUPPORTED,   NULL },
+    { "Weak-bit annotation",       UFT_FEATURE_UNSUPPORTED,
+      "HFE does not carry weak-bit flags" },
+};
+
 const uft_format_plugin_t uft_format_plugin_hfe = {
     .name = "HFE",
     .description = "UFT HFE Format Image",
@@ -802,4 +813,6 @@ const uft_format_plugin_t uft_format_plugin_hfe = {
     .shutdown = NULL,
     .private_data = NULL,
     .spec_status = UFT_SPEC_OFFICIAL_PARTIAL,  /* HxC HFE docs public, some details community-filled */
+    .features = hfe_features,
+    .feature_count = sizeof(hfe_features) / sizeof(hfe_features[0]),
 };

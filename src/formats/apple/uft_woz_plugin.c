@@ -68,6 +68,18 @@ static uft_error_t woz_plugin_read_track(uft_disk_t *disk, int cyl, int head,
     return UFT_OK;
 }
 
+/* Prinzip 7 Feature-Matrix */
+static const uft_plugin_feature_t woz_features[] = {
+    { "WOZ1 container",            UFT_FEATURE_SUPPORTED,   NULL },
+    { "WOZ2 container",            UFT_FEATURE_SUPPORTED,   NULL },
+    { "WOZ2.1 container",          UFT_FEATURE_SUPPORTED,   NULL },
+    { "Quarter-track positions",   UFT_FEATURE_SUPPORTED,   NULL },
+    { "Weak bits (FLUX chunk)",    UFT_FEATURE_SUPPORTED,   NULL },
+    { "INFO + META metadata",      UFT_FEATURE_PARTIAL,
+      "read only; write not implemented" },
+    { "Write / encode",            UFT_FEATURE_UNSUPPORTED, NULL },
+};
+
 const uft_format_plugin_t uft_format_plugin_woz = {
     .name = "WOZ", .description = "Apple II WOZ (v1/v2/v2.1)",
     .extensions = "woz", .format = UFT_FORMAT_DSK,
@@ -76,5 +88,7 @@ const uft_format_plugin_t uft_format_plugin_woz = {
     .close = woz_plugin_close, .read_track = woz_plugin_read_track,
     .verify_track = uft_flux_verify_track,
     .spec_status = UFT_SPEC_OFFICIAL_FULL,  /* Applesauce project publishes full WOZ 1/2/2.1 specs */
+    .features = woz_features,
+    .feature_count = sizeof(woz_features) / sizeof(woz_features[0]),
 };
 UFT_REGISTER_FORMAT_PLUGIN(woz)

@@ -66,6 +66,20 @@ static uft_error_t ipf_plugin_read_track(uft_disk_t *disk, int cyl, int head,
  * format that requires libcapsimage (SPS, closed-source) to encode. Sector
  * write would also bypass the copy-protection signatures that IPF is
  * purpose-built to preserve. */
+
+/* Prinzip 7 Feature-Matrix — see docs/DESIGN_PRINCIPLES.md §7 */
+static const uft_plugin_feature_t ipf_features[] = {
+    { "Standard MFM Tracks",           UFT_FEATURE_SUPPORTED,   NULL },
+    { "Timing Tracks",                 UFT_FEATURE_SUPPORTED,   NULL },
+    { "Weak Bits",                     UFT_FEATURE_PARTIAL,
+      "Detection yes, exact position within +/- 3 bits" },
+    { "Data Cells",                    UFT_FEATURE_SUPPORTED,   NULL },
+    { "Multi-Revolution Samples",      UFT_FEATURE_UNSUPPORTED, NULL },
+    { "SPS Protection Markers",        UFT_FEATURE_UNSUPPORTED, NULL },
+    { "Write / encode",                UFT_FEATURE_UNSUPPORTED,
+      "requires closed-source libcapsimage" },
+};
+
 const uft_format_plugin_t uft_format_plugin_ipf = {
     .name = "IPF", .description = "CAPS/SPS Preservation Format",
     .extensions = "ipf;ct;ctr", .format = UFT_FORMAT_DSK,
@@ -74,5 +88,7 @@ const uft_format_plugin_t uft_format_plugin_ipf = {
     .close = ipf_plugin_close, .read_track = ipf_plugin_read_track,
     .verify_track = uft_flux_verify_track,
     .spec_status = UFT_SPEC_REVERSE_ENGINEERED,  /* SPS never published full IPF spec */
+    .features = ipf_features,
+    .feature_count = sizeof(ipf_features) / sizeof(ipf_features[0]),
 };
 UFT_REGISTER_FORMAT_PLUGIN(ipf)

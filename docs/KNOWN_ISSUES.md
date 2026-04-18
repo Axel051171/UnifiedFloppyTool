@@ -94,12 +94,16 @@ aktiv abgearbeitet.
   unter M.1).
 
 ### 7.2 Feature-Matrizen pro Plugin fehlen
-- **Status:** OPEN
-- **Beschreibung:** Keine strukturierte Feature-Matrix pro Format (welche
-  Sub-Features unterstützt / teilweise / nicht). "IPF unterstützt" aktuell
-  nicht spezifiziert auf welcher Ebene.
-- **Workaround:** README-Abschnitt pro Format manuell konsultieren.
-- **Plan:** Standard-Tabelle in Plugin-Metadaten in 4.3.
+- **Status:** MITIGATED (Infrastruktur da, Populierung 5/80)
+- **Beschreibung:** `uft_plugin_feature_t` Array + `features` / `feature_count`
+  Felder sind in `uft_format_plugin_t` implementiert. Status je Feature:
+  `UFT_FEATURE_SUPPORTED` / `UFT_FEATURE_PARTIAL` / `UFT_FEATURE_UNSUPPORTED`;
+  PARTIAL verlangt zwingend einen `note` der die Einschränkung erklärt.
+  Populiert: ADF, HFE, IPF, STX, WOZ. Rest hat `features = NULL`.
+- **Workaround:** `tests/test_spec_status.c` zeigt API-Form. Beispielmatrizen
+  in den 5 populierten Plugins.
+- **Plan:** Restliche Plugins in 4.2.x iterativ. CI-Audit der Plugins mit
+  `features == NULL` geplant (unter M.1).
 
 ### 7.3 287 Stub-Parser sind als "registriert" sichtbar
 - **Status:** WORKING-AS-DESIGNED-INTERIM

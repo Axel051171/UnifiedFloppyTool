@@ -90,6 +90,17 @@ static uft_error_t adf_write_track(uft_disk_t *disk, int cyl, int head,
     return UFT_OK;
 }
 
+/* Prinzip 7 Feature-Matrix */
+static const uft_plugin_feature_t adf_features[] = {
+    { "Standard DD (880 KB)",      UFT_FEATURE_SUPPORTED,   NULL },
+    { "HD variant (1760 KB)",      UFT_FEATURE_SUPPORTED,   NULL },
+    { "FFS / OFS filesystems",     UFT_FEATURE_SUPPORTED,   NULL },
+    { "Write / encode",            UFT_FEATURE_SUPPORTED,   NULL },
+    { "Custom sector layouts",     UFT_FEATURE_UNSUPPORTED,
+      "non-standard tracks require flux-level format (IPF/KFX/WOZ)" },
+    { "Copy-protection signatures", UFT_FEATURE_UNSUPPORTED, NULL },
+};
+
 const uft_format_plugin_t uft_format_plugin_adf = {
     .name = "ADF", .description = "Amiga Disk File",
     .extensions = "adf", .format = UFT_FORMAT_DSK,
@@ -99,5 +110,7 @@ const uft_format_plugin_t uft_format_plugin_adf = {
     .write_track = adf_write_track,
     .verify_track = uft_generic_verify_track,
     .spec_status = UFT_SPEC_OFFICIAL_PARTIAL,  /* AmigaDOS Rom Kernel Manual covers layout; not every variant */
+    .features = adf_features,
+    .feature_count = sizeof(adf_features) / sizeof(adf_features[0]),
 };
 UFT_REGISTER_FORMAT_PLUGIN(adf)

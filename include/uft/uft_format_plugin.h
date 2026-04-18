@@ -66,6 +66,44 @@ typedef enum uft_spec_status {
  */
 const char* uft_spec_status_string(uft_spec_status_t status);
 
+/**
+ * @brief Feature-Support-Stufe für einen einzelnen Sub-Aspekt eines Formats
+ *
+ * Siehe docs/DESIGN_PRINCIPLES.md §7 — Feature-Matrix pro Plugin.
+ * Werte explizit nummeriert (ABI).
+ */
+#ifndef UFT_FEATURE_SUPPORT_DEFINED
+#define UFT_FEATURE_SUPPORT_DEFINED
+typedef enum uft_feature_support {
+    UFT_FEATURE_UNSUPPORTED  = 0,
+    UFT_FEATURE_PARTIAL      = 1,
+    UFT_FEATURE_SUPPORTED    = 2,
+} uft_feature_support_t;
+#endif /* UFT_FEATURE_SUPPORT_DEFINED */
+
+/**
+ * @brief Ein Eintrag in der Feature-Matrix eines Plugins
+ *
+ * `name` und `note` zeigen auf statische Strings, die vom Plugin
+ * für die gesamte Laufzeit gehalten werden. `note` ist optional
+ * (NULL für SUPPORTED/UNSUPPORTED ohne Kommentar; Pflicht für
+ * PARTIAL um die Einschränkung zu erklären).
+ */
+#ifndef UFT_PLUGIN_FEATURE_DEFINED
+#define UFT_PLUGIN_FEATURE_DEFINED
+typedef struct uft_plugin_feature {
+    const char*           name;    ///< z.B. "Weak Bits"
+    uft_feature_support_t status;  ///< UNSUPPORTED/PARTIAL/SUPPORTED
+    const char*           note;    ///< Optional (Pflicht bei PARTIAL)
+} uft_plugin_feature_t;
+#endif /* UFT_PLUGIN_FEATURE_DEFINED */
+
+/**
+ * @brief Feature-Support als String
+ * @return statischer String (nie NULL)
+ */
+const char* uft_feature_support_string(uft_feature_support_t s);
+
 // ============================================================================
 // Internal Disk Structure (für Plugins)
 // ============================================================================
@@ -407,6 +445,15 @@ typedef struct uft_format_plugin {
      * Siehe docs/DESIGN_PRINCIPLES.md §7.
      */
     uft_spec_status_t   spec_status;
+
+    // === Prinzip 7 — Feature-Matrix (optional aber empfohlen) ===
+    /**
+     * @brief Zeigerarray auf feature-Einträge (statisch, Plugin-eigen).
+     * `features == NULL` zählt als nicht dokumentiert und wird vom Audit
+     * gemeldet.
+     */
+    const uft_plugin_feature_t* features;
+    size_t              feature_count;
 
 } uft_format_plugin_t;
 

@@ -134,6 +134,16 @@ static uft_error_t stx_read_track(uft_disk_t *disk, int cyl, int head,
  * per-sector timing that cannot be regenerated from sector data alone.
  * The Pasti format is purpose-built to preserve ST copy-protection, so
  * round-tripping through a sector-level write would destroy protection. */
+/* Prinzip 7 Feature-Matrix */
+static const uft_plugin_feature_t stx_features[] = {
+    { "Standard MFM sectors",     UFT_FEATURE_SUPPORTED,   NULL },
+    { "Weak sectors (fuzzy)",     UFT_FEATURE_SUPPORTED,   NULL },
+    { "Custom sector timing",     UFT_FEATURE_SUPPORTED,   NULL },
+    { "Long tracks",              UFT_FEATURE_PARTIAL,
+      "detected and preserved; not regenerated on re-encode" },
+    { "Write / encode",           UFT_FEATURE_UNSUPPORTED, NULL },
+};
+
 const uft_format_plugin_t uft_format_plugin_stx = {
     .name = "STX", .description = "Atari ST Pasti (Protected)",
     .extensions = "stx", .format = UFT_FORMAT_DSK,
@@ -142,5 +152,7 @@ const uft_format_plugin_t uft_format_plugin_stx = {
     .close = stx_close, .read_track = stx_read_track,
     .verify_track = uft_weak_bit_verify_track,
     .spec_status = UFT_SPEC_REVERSE_ENGINEERED,  /* Pasti never had a public spec */
+    .features = stx_features,
+    .feature_count = sizeof(stx_features) / sizeof(stx_features[0]),
 };
 UFT_REGISTER_FORMAT_PLUGIN(stx)
