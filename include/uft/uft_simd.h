@@ -129,47 +129,11 @@ void uft_cpu_print_info(void);
  * SIMD-OPTIMIZED FUNCTIONS - MFM DECODING
  * ============================================================================= */
 
-/**
- * @brief MFM Decode (automatic dispatcher)
- * Selects best available implementation at runtime
- */
-size_t uft_mfm_decode_flux(
-    const uint64_t *flux_transitions,
-    size_t transition_count,
-    uint8_t *output_bits
-);
-
-/**
- * @brief MFM Decode - Scalar implementation
- * Baseline, always available
- */
-size_t uft_mfm_decode_flux_scalar(
-    const uint64_t *flux_transitions,
-    size_t transition_count,
-    uint8_t *output_bits
-);
-
-/**
- * @brief MFM Decode - SSE2 implementation
- * ~3-5x faster than scalar
- * Requires: SSE2 (Pentium 4+)
- */
-size_t uft_mfm_decode_flux_sse2(
-    const uint64_t *flux_transitions,
-    size_t transition_count,
-    uint8_t *output_bits
-);
-
-/**
- * @brief MFM Decode - AVX2 implementation
- * ~8-10x faster than scalar
- * Requires: AVX2 (Haswell 2013+)
- */
-size_t uft_mfm_decode_flux_avx2(
-    const uint64_t *flux_transitions,
-    size_t transition_count,
-    uint8_t *output_bits
-);
+/* MFM flux decoder family removed per stub-elimination spec §1.4:
+ * zero callers anywhere in the tree — the SIMD dispatch was never
+ * wired into the actual decode path (src/core/uft_mfm_codec.c handles
+ * MFM directly without going through uft_simd). Keeping
+ * _avx512 variants below in case external benchmarking hooks exist. */
 
 /**
  * @brief MFM Decode - AVX-512 implementation
@@ -215,32 +179,9 @@ uint16_t uft_crc16_ccitt_avx512(const uint8_t *data, size_t length);
  * SIMD-OPTIMIZED FUNCTIONS - GCR DECODING
  * ============================================================================= */
 
-/**
- * @brief GCR 5-to-4 Decode (automatic dispatcher)
- */
-size_t uft_gcr_decode_5to4(
-    const uint64_t *flux_transitions,
-    size_t transition_count,
-    uint8_t *output_bytes
-);
-
-size_t uft_gcr_decode_5to4_scalar(
-    const uint64_t *flux_transitions,
-    size_t transition_count,
-    uint8_t *output_bytes
-);
-
-size_t uft_gcr_decode_5to4_sse2(
-    const uint64_t *flux_transitions,
-    size_t transition_count,
-    uint8_t *output_bytes
-);
-
-size_t uft_gcr_decode_5to4_avx2(
-    const uint64_t *flux_transitions,
-    size_t transition_count,
-    uint8_t *output_bytes
-);
+/* GCR 5-to-4 decoder family removed per stub-elimination spec §1.4:
+ * zero callers anywhere in the tree — the C64 GCR path lives in
+ * src/formats/c64/ and does not use uft_simd. */
 
 /* =============================================================================
  * SIMD-OPTIMIZED FUNCTIONS - BIT MANIPULATION

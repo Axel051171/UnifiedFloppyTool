@@ -293,48 +293,44 @@ void uft_kfx_free(uft_kfx_stream_t *stream) {
  * uft_td0_image_t* instead of the ABI-broken const void*). */
 
 /* ============================================================================
- * C64 parser stubs
+ * C64 GCR parser — ABI-correct honest impl
+ *
+ * Previous (void*) 1-arg + (void*,int) stubs were §1.3 mismatches
+ * against include/uft/uft_c64_gcr.h which declares:
+ *   void uft_c64_parser_init(uft_c64_parser_t *p, int track);
+ *   void uft_c64_parser_add_bit(uft_c64_parser_t *p, uint8_t bit,
+ *                                unsigned long position);
+ * The single caller (uft_format_convert_flux.c) passes those types;
+ * the old stubs silently did the wrong thing.
+ *
+ * init zeros the struct and sets the start state. add_bit folds the
+ * bit into the sliding window and counts bits/position. Full C64 GCR
+ * sync + sector extraction (~200 lines) is deferred — this minimal
+ * honest impl keeps counters consistent without inventing sectors.
  * ============================================================================ */
 
-void uft_c64_parser_init(void *parser) {
-    (void)parser;
+#include "uft/uft_c64_gcr.h"
+
+void uft_c64_parser_init(uft_c64_parser_t *parser, int track) {
+    if (!parser) return;
+    memset(parser, 0, sizeof(*parser));
+    parser->state = UFT_C64_STATE_IDLE;
+    parser->last_track = track;
 }
 
-int uft_c64_parser_add_bit(void *parser, int bit) {
-    (void)parser; (void)bit;
-    return -1;
+void uft_c64_parser_add_bit(uft_c64_parser_t *parser,
+                             uint8_t bit, unsigned long position) {
+    if (!parser) return;
+    parser->datacells = (uint16_t)((parser->datacells << 1) | (bit & 1));
+    parser->bits++;
+    parser->data_position = position;
+    /* Full sync-pattern detection + sector extraction deferred. */
 }
 
-/* ============================================================================
- * GCR/MFM SIMD dispatch stubs
- * ============================================================================ */
-
-void uft_gcr_decode_5to4_scalar(const uint8_t *in, uint8_t *out, size_t n) {
-    (void)in; (void)out; (void)n;
-}
-
-void uft_gcr_decode_5to4_sse2(const uint8_t *in, uint8_t *out, size_t n) {
-    (void)in; (void)out; (void)n;
-}
-
-void uft_gcr_decode_5to4_avx2(const uint8_t *in, uint8_t *out, size_t n) {
-    (void)in; (void)out; (void)n;
-}
-
-void uft_mfm_decode_flux_scalar(const uint32_t *flux, size_t count,
-                                uint8_t *bits, size_t *bit_count) {
-    (void)flux; (void)count; (void)bits; (void)bit_count;
-}
-
-void uft_mfm_decode_flux_sse2(const uint32_t *flux, size_t count,
-                              uint8_t *bits, size_t *bit_count) {
-    (void)flux; (void)count; (void)bits; (void)bit_count;
-}
-
-void uft_mfm_decode_flux_avx2(const uint32_t *flux, size_t count,
-                               uint8_t *bits, size_t *bit_count) {
-    (void)flux; (void)count; (void)bits; (void)bit_count;
-}
+/* Six SIMD decoder stubs (uft_gcr_decode_5to4_{scalar,sse2,avx2} +
+ * uft_mfm_decode_flux_{scalar,sse2,avx2}) deleted per spec §1.4 — zero
+ * callers anywhere in the tree. Declarations in include/uft/uft_simd.h
+ * removed in the same commit so future readers don't expect them. */
 
 /* ============================================================================
  * PLL stubs (uft_pll.h — real impl in src/core/uft_pll.c, not in build)
@@ -442,13 +438,59 @@ int uft_lzhuf_decompress(const uint8_t *src, size_t src_size,
  * another §1.3 ABI mismatch against include/uft/forensic/uft_provenance.h. */
 
 /* ============================================================================
- * UFI backend stub (uft_ufi_backend.c not yet created)
+ * UFI Backend-Initialisierung — documented NOT_IMPLEMENTED
+ *
+ * UFI (USB Floppy Interface via SCSI-CDB) needs platform-specific
+ * backend code that doesn't exist in the tree:
+ *
+ *   Linux:   SG_IO ioctl path     (src/hal/ufi_linux.c — absent)
+ *   Windows: SCSI_PASS_THROUGH   (src/hal/ufi_win.c    — absent)
+ *   macOS:   IOKit SCSITaskUserClient (src/hal/ufi_mac.c  — absent)
+ *
+ * Returning -1 lets callers see "no UFI backend" cleanly instead of
+ * crashing on an uninitialized device. Implementation lands when the
+ * platform-specific files arrive (HAL work package HW2).
  * ============================================================================ */
 
-int uft_ufi_backend_init(void) { return -1; }
+int uft_ufi_backend_init(void) {
+    return -1;   /* No platform backend registered. */
+}
 
 /* ============================================================================
- * CPU feature detection stub (uft_simd.c not yet created)
+ * CPU feature detection — real impl via __builtin_cpu_supports
+ *
+ * ABI now matches include/uft/uft_simd.h:
+ *   bool uft_cpu_has_feature(uft_cpu_features_t feature);
+ * (previously declared `int`-return and `int` arg — silent mismatch).
+ *
+ * Uses GCC/Clang's __builtin_cpu_supports where available, returns
+ * false on non-x86 or other compilers so callers take the scalar
+ * path. This is the full expected behaviour for the SIMD dispatch
+ * code everywhere else in the tree.
  * ============================================================================ */
 
-int uft_cpu_has_feature(int feature) { (void)feature; return 0; }
+#include "uft/uft_simd.h"
+
+bool uft_cpu_has_feature(uft_cpu_features_t feature) {
+#if defined(__GNUC__) && (defined(__x86_64__) || defined(__i386__))
+    switch (feature) {
+        case UFT_CPU_SSE2:     return __builtin_cpu_supports("sse2");
+        case UFT_CPU_SSE3:     return __builtin_cpu_supports("sse3");
+        case UFT_CPU_SSSE3:    return __builtin_cpu_supports("ssse3");
+        case UFT_CPU_SSE41:    return __builtin_cpu_supports("sse4.1");
+        case UFT_CPU_SSE42:    return __builtin_cpu_supports("sse4.2");
+        case UFT_CPU_AVX:      return __builtin_cpu_supports("avx");
+        case UFT_CPU_AVX2:     return __builtin_cpu_supports("avx2");
+        case UFT_CPU_AVX512F:  return __builtin_cpu_supports("avx512f");
+        case UFT_CPU_AVX512BW: return __builtin_cpu_supports("avx512bw");
+        case UFT_CPU_FMA:      return __builtin_cpu_supports("fma");
+        case UFT_CPU_POPCNT:   return __builtin_cpu_supports("popcnt");
+        case UFT_CPU_BMI1:     return __builtin_cpu_supports("bmi");
+        case UFT_CPU_BMI2:     return __builtin_cpu_supports("bmi2");
+        default:               return false;
+    }
+#else
+    (void)feature;
+    return false;
+#endif
+}
