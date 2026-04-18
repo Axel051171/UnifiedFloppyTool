@@ -56,3 +56,15 @@ desktop.ini
 .claude/settings.local.json
 .claude/worktree_meta.json
 .claude/tasks.json
+
+# Build verify leftovers
+build_verify/
+build_verify_ci/
+
+# Build logs (should never be committed)
+build_*.txt
+aqtinstall.log
+*.qmake.stash
+
+# Audit intermediate results
+.audit/*.tmp
