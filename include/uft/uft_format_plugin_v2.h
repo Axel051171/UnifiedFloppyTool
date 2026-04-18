@@ -180,6 +180,8 @@ UFT_NULLABLE const uft_sector_v2_t* uft_track_find_sector(
 // DISK
 // ============================================================================
 
+#ifndef UFT_GEOMETRY_T_DEFINED
+#define UFT_GEOMETRY_T_DEFINED
 typedef struct {
     int cylinders;
     int heads;
@@ -187,6 +189,7 @@ typedef struct {
     int sector_size;
     uint32_t total_sectors;
 } uft_geometry_t;
+#endif /* UFT_GEOMETRY_T_DEFINED */
 
 /* NOTE (Phase 1): struct uft_disk definition removed — now lives only
  * in uft_format_plugin.h (canonical). This header is zero-use in the

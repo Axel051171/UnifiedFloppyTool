@@ -32,12 +32,15 @@ extern "C" {
 /**
  * @brief Disk geometry specification
  */
+#ifndef UFT_GEOMETRY_T_DEFINED
+#define UFT_GEOMETRY_T_DEFINED
 typedef struct {
     uint32_t cylinders;      /**< Number of cylinders/tracks */
     uint32_t heads;          /**< Number of heads/sides */
     uint32_t sectors;        /**< Sectors per track */
     uint32_t sector_size;    /**< Bytes per sector */
 } uft_geometry_t;
+#endif /* UFT_GEOMETRY_T_DEFINED */
 
 /**
  * @brief Log level for callbacks

@@ -35,6 +35,8 @@ typedef enum {
 /**
  * @brief Disk geometry (dynamic, not hardcoded!)
  */
+#ifndef UFT_GEOMETRY_T_DEFINED
+#define UFT_GEOMETRY_T_DEFINED
 typedef struct {
     /* Basic CHS */
     uint32_t cylinders;
@@ -59,6 +61,7 @@ typedef struct {
     uint32_t total_sectors;
     
 } uft_geometry_t;
+#endif /* UFT_GEOMETRY_T_DEFINED */
 
 /**
  * @brief Initialize geometry structure

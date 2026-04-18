@@ -220,6 +220,8 @@ uft_error_t uft_write_mem(const uft_disk_image_t *disk,
 /**
  * @brief Get disk geometry
  */
+#ifndef UFT_GEOMETRY_T_DEFINED
+#define UFT_GEOMETRY_T_DEFINED
 typedef struct {
     uint16_t tracks;
     uint8_t heads;
@@ -227,6 +229,7 @@ typedef struct {
     uint16_t bytes_per_sector;  /* 0 = variable */
     uft_format_id_t format;
 } uft_geometry_t;
+#endif /* UFT_GEOMETRY_T_DEFINED */
 
 uft_error_t uft_get_geometry(const uft_disk_image_t *disk,
                              uft_geometry_t *out_geom);

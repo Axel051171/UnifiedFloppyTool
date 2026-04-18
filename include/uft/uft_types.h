@@ -49,8 +49,23 @@ typedef struct uft_device uft_device_t;
 // ============================================================================
 
 /**
- * @brief Disk-Geometrie
+ * @brief Disk-Geometrie — CANONICAL LAYOUT.
+ *
+ * Seven other headers historically defined uft_geometry_t with
+ * incompatible layouts (int-based, uint8-based, uint32-based, plus
+ * a variant with heap-pointers for variable SPT tables). All 7 were
+ * orphan (zero src-file includes) but one co-inclusion with this
+ * header would have caused either a redefinition compile-error or
+ * silent memory corruption via mis-matched offsets.
+ *
+ * Post Must-Fix-Hunter ABI-bomb sweep: all 8 definitions are now
+ * guarded by UFT_GEOMETRY_T_DEFINED so only one wins per TU, and
+ * that one always has the layout below (this file is canonical
+ * and wins first in every reasonable include graph via
+ * uft_format_plugin.h → uft_types.h).
  */
+#ifndef UFT_GEOMETRY_T_DEFINED
+#define UFT_GEOMETRY_T_DEFINED
 typedef struct uft_geometry {
     uint16_t cylinders;      ///< Anzahl Zylinder (typ. 80-84)
     uint16_t heads;          ///< Anzahl Köpfe (1 oder 2)
@@ -59,6 +74,7 @@ typedef struct uft_geometry {
     uint32_t total_sectors;  ///< Gesamtzahl Sektoren
     bool     double_step;    ///< 40-Track Disk in 80-Track Drive
 } uft_geometry_t;
+#endif /* UFT_GEOMETRY_T_DEFINED */
 
 /**
  * @brief Bekannte Geometrie-Presets

@@ -33,6 +33,8 @@ typedef enum {
     UFT_FAMILY_UNKNOWN
 } uft_format_family_t;
 
+#ifndef UFT_GEOMETRY_T_DEFINED
+#define UFT_GEOMETRY_T_DEFINED
 typedef struct {
     int tracks;
     int heads;
@@ -42,6 +44,7 @@ typedef struct {
     int rpm;
     uft_encoding_t encoding;
 } uft_geometry_t;
+#endif /* UFT_GEOMETRY_T_DEFINED */
 
 typedef struct {
     const char *id;

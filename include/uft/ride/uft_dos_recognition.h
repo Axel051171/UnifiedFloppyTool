@@ -95,6 +95,8 @@ typedef enum {
 /**
  * @brief Standard disk geometry
  */
+#ifndef UFT_GEOMETRY_T_DEFINED
+#define UFT_GEOMETRY_T_DEFINED
 typedef struct {
     uint8_t     cylinders;      /**< Number of cylinders */
     uint8_t     heads;          /**< Number of heads (1 or 2) */
@@ -104,6 +106,7 @@ typedef struct {
     uint8_t     interleave;     /**< Sector interleave */
     uint8_t     skew;           /**< Track skew */
 } uft_geometry_t;
+#endif /* UFT_GEOMETRY_T_DEFINED */
 
 /*============================================================================
  * DIRECTORY STRUCTURES
