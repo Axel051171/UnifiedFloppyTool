@@ -104,6 +104,20 @@ TEST(feature_matrix_default_null) {
     ASSERT(p.feature_count == 0);
 }
 
+/* ─── Prinzip 7 §7.3 — Stub-Marker ─── */
+
+TEST(is_stub_default_false) {
+    /* Plugins sind per Default NICHT als Stubs markiert.
+     * Das heisst: ein Stub MUSS aktiv is_stub=true setzen um ehrlich zu sein. */
+    uft_format_plugin_t p = { .name = "undeclared" };
+    ASSERT(p.is_stub == false);
+}
+
+TEST(is_stub_explicit_true) {
+    uft_format_plugin_t p = { .name = "stub-only", .is_stub = true };
+    ASSERT(p.is_stub == true);
+}
+
 int main(void) {
     printf("=== Prinzip 7 — Spec-Status + Feature-Matrix API Tests ===\n");
     RUN(enum_values_stable);
@@ -115,6 +129,8 @@ int main(void) {
     RUN(feature_support_stringify);
     RUN(feature_matrix_shape);
     RUN(feature_matrix_default_null);
+    RUN(is_stub_default_false);
+    RUN(is_stub_explicit_true);
     printf("Passed %d, Failed %d\n", _pass, _fail);
     return _fail == 0 ? 0 : 1;
 }

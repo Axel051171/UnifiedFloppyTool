@@ -114,14 +114,16 @@ aktiv abgearbeitet.
   `features == NULL` geplant (unter M.1).
 
 ### 7.3 287 Stub-Parser sind als "registriert" sichtbar
-- **Status:** WORKING-AS-DESIGNED-INTERIM
-- **Beschreibung:** Von 138+287 Format-IDs sind 287 aktuell Stubs. Sie sind
-  sichtbar im Plugin-Katalog ohne klare Kennzeichnung dass sie noch keinen
-  echten Parser haben. Das verstößt gegen den Geist von Prinzip 7.
-- **Workaround:** `uft formats --real-only` listet nur die 138 vollständigen.
-- **Plan:** Stub-Parser werden in `memory/project_stub_conversion.md`
-  priorisiert abgearbeitet (Tier 1 zuerst). Bis dahin: Kennzeichnung
-  `[STUB - no parser]` in der Default-Anzeige.
+- **Status:** MITIGATED (Marker da, Populierung 0/287)
+- **Beschreibung:** Feld `is_stub` ist in `uft_format_plugin_t` implementiert.
+  Default `false` — das heisst: ein Stub MUSS aktiv `is_stub = true` setzen
+  um ehrlich zu sein. CLI-Filter `uft formats --real-only` nutzt diesen Flag.
+  Die eigentliche Populierung der 287 Stub-Plugins ist noch ausstehend.
+- **Workaround:** Bis jeder Stub das Feld setzt, zählt ein Plugin ohne echten
+  Parser als Prinzip-Verstoß unter CI-Audit (siehe §M.1).
+- **Plan:** Stubs in `memory/project_stub_conversion.md` werden pro Tier
+  abgearbeitet. Jedes Stub-Plugin bekommt entweder echte Implementierung
+  ODER `is_stub = true` (stub-eliminator-Agent).
 
 ---
 

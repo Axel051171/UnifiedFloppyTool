@@ -455,6 +455,16 @@ typedef struct uft_format_plugin {
     const uft_plugin_feature_t* features;
     size_t              feature_count;
 
+    // === Prinzip 7 §7.3 — Stub-Marker ===
+    /**
+     * @brief True wenn das Plugin nur registriert ist aber keinen echten
+     *        Parser hat (probe/open geben UFT_ERROR_NOT_IMPLEMENTED).
+     *
+     * Default false. `uft formats --real-only` filtert mit diesem Flag.
+     * UFT lügt nicht: Stubs sind als Stubs erkennbar.
+     */
+    bool                is_stub;
+
 } uft_format_plugin_t;
 
 // ============================================================================
