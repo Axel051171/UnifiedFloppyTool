@@ -281,21 +281,9 @@ void uft_kfx_free(void *kfx) {
     free(kfx);
 }
 
-/* ============================================================================
- * Format conversion stubs
- * ============================================================================ */
-
-int uft_imd_to_raw(const void *img, uint8_t **data, size_t *size,
-                   uint8_t fill) {
-    (void)img; (void)data; (void)size; (void)fill;
-    return -1;
-}
-
-int uft_td0_to_raw(const void *img, uint8_t **data, size_t *size,
-                   uint8_t fill) {
-    (void)img; (void)data; (void)size; (void)fill;
-    return -1;
-}
+/* Format conversion impls moved to src/formats/uft_format_converters.c
+ * with correct-typed signatures (const uft_imd_image_t* / const
+ * uft_td0_image_t* instead of the ABI-broken const void*). */
 
 /* ============================================================================
  * C64 parser stubs

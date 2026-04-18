@@ -208,6 +208,90 @@ static uint8_t guess_imd_mode_mfm(uint8_t nsectors, uint8_t size_code) {
     return UFT_IMD_MODE_300K_MFM;                             /* QD / slow */
 }
 
+/* ==========================================================================
+ * uft_imd_to_raw — flatten an IMD image into a raw byte buffer
+ *
+ * Replaces the ABI-broken stub in uft_core_stubs.c (const void*). The new
+ * signature matches include/uft/formats/uft_imd.h exactly.
+ * ==========================================================================*/
+
+int uft_imd_to_raw(const uft_imd_image_t *img, uint8_t **data_out,
+                    size_t *size_out, uint8_t fill)
+{
+    if (!img || !data_out || !size_out) return -1;
+    *data_out = NULL; *size_out = 0;
+    if (img->num_tracks == 0 || !img->tracks) return -1;
+
+    /* Sum all tracks' nominal sizes. Variable-size tracks contribute
+     * sum-of-ssize[], fixed-size tracks contribute nsectors * ssize. */
+    size_t total = 0;
+    for (unsigned t = 0; t < img->num_tracks; t++) {
+        const uft_imd_track_t *tr = &img->tracks[t];
+        uint16_t nominal = uft_imd_ssize_to_bytes(tr->header.sector_size);
+        if (tr->has_varsizes) {
+            for (unsigned s = 0; s < tr->header.nsectors; s++)
+                total += tr->ssize[s];
+        } else {
+            total += (size_t)tr->header.nsectors * nominal;
+        }
+    }
+    if (total == 0) return -1;
+
+    uint8_t *out = (uint8_t *)malloc(total);
+    if (!out) return -1;
+    memset(out, fill, total);
+
+    size_t pos = 0;
+    for (unsigned t = 0; t < img->num_tracks; t++) {
+        const uft_imd_track_t *tr = &img->tracks[t];
+        uint16_t nominal = uft_imd_ssize_to_bytes(tr->header.sector_size);
+
+        /* Copy sectors in logical (smap) order. smap[i] is the sector ID;
+         * to_raw emits them in the logical 1..N ordering matched by smap. */
+        for (unsigned s = 0; s < tr->header.nsectors; s++) {
+            uint16_t sz = tr->has_varsizes ? tr->ssize[s] : nominal;
+            uint8_t stype = tr->stype[s];
+            if (stype == 0 /*UNAVAILABLE*/ || !tr->data) {
+                /* leave fill-byte in place */
+                pos += sz;
+                continue;
+            }
+            bool compressed = (stype == 2 || stype == 4 ||
+                                stype == 6 || stype == 8);
+            size_t off = tr->sector_offsets[s];
+            if (compressed) {
+                if (off >= tr->data_size) { free(out); return -1; }
+                memset(out + pos, tr->data[off], sz);
+            } else {
+                if (off + sz > tr->data_size) { free(out); return -1; }
+                memcpy(out + pos, tr->data + off, sz);
+            }
+            pos += sz;
+        }
+    }
+
+    *data_out = out;
+    *size_out = total;
+    return UFT_OK;
+}
+
+/* ==========================================================================
+ * uft_td0_to_raw — convert TD0 image to raw (delegates via to_imd + to_raw)
+ * ==========================================================================*/
+
+int uft_td0_to_raw(const uft_td0_image_t *td0, uint8_t **data_out,
+                    size_t *size_out, uint8_t fill)
+{
+    if (!td0 || !data_out || !size_out) return -1;
+    *data_out = NULL; *size_out = 0;
+
+    uft_imd_image_t imd;
+    if (uft_td0_to_imd(td0, &imd) != UFT_OK) return -1;
+    int rc = uft_imd_to_raw(&imd, data_out, size_out, fill);
+    uft_imd_free(&imd);
+    return rc;
+}
+
 int uft_td0_to_imd(const uft_td0_image_t *td0, struct uft_imd_image_t *imd)
 {
     if (!td0 || !imd) return -1;
