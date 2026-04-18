@@ -67,11 +67,21 @@ aktiv abgearbeitet.
   GUI-Sichtbarkeit + §1.2 Pre-Conversion-Report).
 
 ### 5.2 Keine Sichtbarkeit des Round-Trip-Status in der GUI
-- **Status:** OPEN
-- **Beschreibung:** Der Format-Converter-Dialog zeigt aktuell keinen
-  LL/LD/IM-Status. Nutzer sieht nur die Liste möglicher Targets.
-- **Workaround:** CLI `uft convert --list-status` zeigt verfügbare Status.
-- **Plan:** GUI-Integration in 4.2.x zusammen mit Pre-Conversion-Report.
+- **Status:** MITIGATED (Converter-Wizard angeschlossen, weitere GUI-Flächen ausstehend)
+- **Beschreibung:** `UftTargetPage::updateConversionWarning()` konsultiert
+  jetzt `uft_roundtrip_status()` / `uft_roundtrip_note()` sobald Quell- UND
+  Ziel-Format beide in der Roundtrip-Matrix hinterlegt sind
+  (`FormatEntry.rt_id`). Anzeige farbkodiert:
+  - **LOSSLESS** grün mit „byte-identical" Badge
+  - **LOSSY-DOCUMENTED** orange mit expliziter Verlustliste + Hinweis auf
+    `.loss.json` Sidecar
+  - **IMPOSSIBLE** rot mit Grund
+  - **UNTESTED** grau mit Verweis auf DESIGN_PRINCIPLES §5
+  Fallback auf die bisherige Heuristik wenn ein Format noch nicht auf
+  `uft_format_id_t` gemappt ist.
+- **Workaround:** Entfällt — Wizard zeigt den Status direkt bei Format-Auswahl.
+- **Plan:** Rest-GUI-Flächen (Main-Window Convert-Aktion, Batch-Dialog)
+  gleiche Info anbringen wenn die dort implementiert werden.
 
 ---
 

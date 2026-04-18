@@ -21,6 +21,8 @@
 
 extern "C" {
 #include "uft/uft_format_convert.h"
+#include "uft/uft_types.h"
+#include "uft/core/uft_roundtrip.h"
 }
 
 /*===========================================================================
@@ -34,63 +36,64 @@ struct FormatEntry {
     const char *extension;
     const char *category;  /* sector, bitstream, flux */
     bool can_write;
+    uft_format_id_t rt_id; /* Round-trip matrix ID (0 = unmapped) */
 };
 
 static const FormatEntry FORMATS[] = {
     /* Amiga */
-    { "ADF",  "Amiga Disk File",    "Standard Amiga sector image",     "adf",  "sector",    true  },
-    { "ADZ",  "Compressed ADF",     "Gzip-compressed ADF",             "adz",  "sector",    true  },
-    { "DMS",  "DiskMasher",         "Amiga DMS archive",               "dms",  "sector",    false },
-    
+    { "ADF",  "Amiga Disk File",    "Standard Amiga sector image",     "adf",  "sector",    true,  UFT_FORMAT_ADF  },
+    { "ADZ",  "Compressed ADF",     "Gzip-compressed ADF",             "adz",  "sector",    true,  0               },
+    { "DMS",  "DiskMasher",         "Amiga DMS archive",               "dms",  "sector",    false, 0               },
+
     /* Commodore */
-    { "D64",  "C64 1541 Disk",      "Standard C64 disk image",         "d64",  "sector",    true  },
-    { "D71",  "C128 1571 Disk",     "Double-sided C64/C128 image",     "d71",  "sector",    true  },
-    { "D81",  "C128 1581 Disk",     "3.5\" Commodore disk image",      "d81",  "sector",    true  },
-    { "G64",  "C64 GCR Bitstream",  "GCR-level C64 image",             "g64",  "bitstream", true  },
-    { "NIB",  "NIBTOOLS Format",    "Raw nibble data",                 "nib",  "bitstream", false },
-    
+    { "D64",  "C64 1541 Disk",      "Standard C64 disk image",         "d64",  "sector",    true,  UFT_FORMAT_D64  },
+    { "D71",  "C128 1571 Disk",     "Double-sided C64/C128 image",     "d71",  "sector",    true,  UFT_FORMAT_D71  },
+    { "D81",  "C128 1581 Disk",     "3.5\" Commodore disk image",      "d81",  "sector",    true,  UFT_FORMAT_D81  },
+    { "G64",  "C64 GCR Bitstream",  "GCR-level C64 image",             "g64",  "bitstream", true,  UFT_FORMAT_G64  },
+    { "NIB",  "NIBTOOLS Format",    "Raw nibble data",                 "nib",  "bitstream", false, UFT_FORMAT_NIB  },
+
     /* Atari */
-    { "ATR",  "Atari 8-bit",        "Standard Atari disk image",       "atr",  "sector",    true  },
-    { "ATX",  "Atari Extended",     "Protected Atari image",           "atx",  "bitstream", false },
-    { "ST",   "Atari ST",           "Atari ST sector image",           "st",   "sector",    true  },
-    { "STX",  "Atari ST Extended",  "Protected ST image",              "stx",  "bitstream", false },
-    { "MSA",  "Magic Shadow",       "Compressed ST image",             "msa",  "sector",    true  },
-    
+    { "ATR",  "Atari 8-bit",        "Standard Atari disk image",       "atr",  "sector",    true,  UFT_FORMAT_ATR  },
+    { "ATX",  "Atari Extended",     "Protected Atari image",           "atx",  "bitstream", false, 0               },
+    { "ST",   "Atari ST",           "Atari ST sector image",           "st",   "sector",    true,  UFT_FORMAT_ST   },
+    { "STX",  "Atari ST Extended",  "Protected ST image",              "stx",  "bitstream", false, UFT_FORMAT_STX  },
+    { "MSA",  "Magic Shadow",       "Compressed ST image",             "msa",  "sector",    true,  UFT_FORMAT_MSA  },
+
     /* Apple */
-    { "DSK",  "Apple II DOS",       "DOS 3.3 order image",             "dsk",  "sector",    true  },
-    { "PO",   "Apple ProDOS",       "ProDOS order image",              "po",   "sector",    true  },
-    { "2IMG", "2IMG Universal",     "Apple II universal format",       "2mg",  "sector",    true  },
-    { "WOZ",  "WOZ Flux",           "Apple II flux image",             "woz",  "flux",      true  },
-    { "A2R",  "Applesauce A2R",     "Multi-revolution flux",           "a2r",  "flux",      false },
-    { "DC42", "DiskCopy 4.2",       "Macintosh disk image",            "dc42", "sector",    true  },
-    
+    { "DSK",  "Apple II DOS",       "DOS 3.3 order image",             "dsk",  "sector",    true,  UFT_FORMAT_DSK  },
+    { "PO",   "Apple ProDOS",       "ProDOS order image",              "po",   "sector",    true,  UFT_FORMAT_PO   },
+    { "2IMG", "2IMG Universal",     "Apple II universal format",       "2mg",  "sector",    true,  0               },
+    { "WOZ",  "WOZ Flux",           "Apple II flux image",             "woz",  "flux",      true,  UFT_FORMAT_WOZ  },
+    { "A2R",  "Applesauce A2R",     "Multi-revolution flux",           "a2r",  "flux",      false, UFT_FORMAT_A2R  },
+    { "DC42", "DiskCopy 4.2",       "Macintosh disk image",            "dc42", "sector",    true,  UFT_FORMAT_DC42 },
+
     /* PC/IBM */
-    { "IMG",  "Raw Sector Image",   "Raw sector dump",                 "img",  "sector",    true  },
-    { "IMA",  "DOS Floppy",         "DOS floppy image",                "ima",  "sector",    true  },
-    { "IMD",  "ImageDisk",          "IMD with metadata",               "imd",  "sector",    true  },
-    { "TD0",  "Teledisk",           "Teledisk archive",                "td0",  "sector",    false },
-    { "D88",  "D88 Format",         "PC-98/X68000/FM-7 image",         "d88",  "sector",    true  },
-    
+    { "IMG",  "Raw Sector Image",   "Raw sector dump",                 "img",  "sector",    true,  UFT_FORMAT_IMG  },
+    { "IMA",  "DOS Floppy",         "DOS floppy image",                "ima",  "sector",    true,  UFT_FORMAT_IMG  },
+    { "IMD",  "ImageDisk",          "IMD with metadata",               "imd",  "sector",    true,  UFT_FORMAT_IMD  },
+    { "TD0",  "Teledisk",           "Teledisk archive",                "td0",  "sector",    false, UFT_FORMAT_TD0  },
+    { "D88",  "D88 Format",         "PC-98/X68000/FM-7 image",         "d88",  "sector",    true,  UFT_FORMAT_D88  },
+
     /* British */
-    { "SSD",  "BBC Single-Sided",   "BBC Micro SS image",              "ssd",  "sector",    true  },
-    { "DSD",  "BBC Double-Sided",   "BBC Micro DS image",              "dsd",  "sector",    true  },
-    { "EDSK", "Extended DSK",       "Amstrad/Spectrum extended",       "dsk",  "bitstream", true  },
-    { "TRD",  "TR-DOS",             "ZX Spectrum TR-DOS image",        "trd",  "sector",    true  },
-    
+    { "SSD",  "BBC Single-Sided",   "BBC Micro SS image",              "ssd",  "sector",    true,  UFT_FORMAT_SSD  },
+    { "DSD",  "BBC Double-Sided",   "BBC Micro DS image",              "dsd",  "sector",    true,  UFT_FORMAT_DSD  },
+    { "EDSK", "Extended DSK",       "Amstrad/Spectrum extended",       "dsk",  "bitstream", true,  UFT_FORMAT_EDSK },
+    { "TRD",  "TR-DOS",             "ZX Spectrum TR-DOS image",        "trd",  "sector",    true,  UFT_FORMAT_TRD  },
+
     /* Flux */
-    { "SCP",  "SuperCard Pro",      "Raw flux capture",                "scp",  "flux",      true  },
-    { "KF",   "KryoFlux Stream",    "KryoFlux raw stream",             "raw",  "flux",      false },
-    { "IPF",  "Interchangeable",    "CAPS/SPS format",                 "ipf",  "flux",      false },
-    
+    { "SCP",  "SuperCard Pro",      "Raw flux capture",                "scp",  "flux",      true,  UFT_FORMAT_SCP  },
+    { "KF",   "KryoFlux Stream",    "KryoFlux raw stream",             "raw",  "flux",      false, UFT_FORMAT_KRYOFLUX },
+    { "IPF",  "Interchangeable",    "CAPS/SPS format",                 "ipf",  "flux",      false, UFT_FORMAT_IPF  },
+
     /* Bitstream */
-    { "HFE",  "HxC Floppy",         "HxC emulator format",             "hfe",  "bitstream", true  },
-    { "MFM",  "MFM Bitstream",      "Raw MFM bitstream",               "mfm",  "bitstream", true  },
-    { "DMK",  "DMK Format",         "TRS-80 DMK format",               "dmk",  "bitstream", true  },
-    
+    { "HFE",  "HxC Floppy",         "HxC emulator format",             "hfe",  "bitstream", true,  UFT_FORMAT_HFE  },
+    { "MFM",  "MFM Bitstream",      "Raw MFM bitstream",               "mfm",  "bitstream", true,  0               },
+    { "DMK",  "DMK Format",         "TRS-80 DMK format",               "dmk",  "bitstream", true,  UFT_FORMAT_DMK  },
+
     /* UFT */
-    { "UIR",  "UFT Intermediate",   "UFT universal format",            "uir",  "flux",      true  },
-    
-    { nullptr, nullptr, nullptr, nullptr, nullptr, false }
+    { "UIR",  "UFT Intermediate",   "UFT universal format",            "uir",  "flux",      true,  0               },
+
+    { nullptr, nullptr, nullptr, nullptr, nullptr, false, 0 }
 };
 
 /*===========================================================================
@@ -530,15 +533,67 @@ void UftTargetPage::updateConversionWarning()
         return;
     }
 
-    /* Detect lossy conversions: flux/bitstream -> sector loses timing data */
+    /* Prinzip 5 §5.2: consult the authoritative round-trip matrix. */
     QString sourceCat;
+    uft_format_id_t srcRt = 0;
+    uft_format_id_t dstRt = 0;
     for (const FormatEntry *f = FORMATS; f->id; f++) {
         if (m_sourceFormat.compare(f->id, Qt::CaseInsensitive) == 0) {
             sourceCat = f->category;
-            break;
+            srcRt = f->rt_id;
+        }
+        if (targetId.compare(f->id, Qt::CaseInsensitive) == 0) {
+            dstRt = f->rt_id;
         }
     }
 
+    if (srcRt != 0 && dstRt != 0) {
+        uft_roundtrip_status_t rt = uft_roundtrip_status(srcRt, dstRt);
+        const char *rtNote = uft_roundtrip_note(srcRt, dstRt);
+
+        auto show = [this](const QString &style, const QString &text) {
+            m_conversionWarning->setStyleSheet(style);
+            m_conversionWarning->setText(text);
+            m_conversionWarning->setVisible(true);
+        };
+
+        switch (rt) {
+        case UFT_RT_LOSSLESS:
+            show(QStringLiteral("color: #2e7d32; font-weight: bold; padding: 4px;"),
+                 tr("LOSSLESS round-trip: %1 → %2 is byte-identical%3")
+                     .arg(m_sourceFormat, targetId,
+                          *rtNote ? QString(" (%1).").arg(QString::fromUtf8(rtNote))
+                                  : QStringLiteral(".")));
+            return;
+        case UFT_RT_LOSSY_DOCUMENTED:
+            show(QStringLiteral("color: #e67e00; font-weight: bold; padding: 4px;"),
+                 tr("LOSSY-DOCUMENTED: %1 → %2 loses %3. "
+                    "A .loss.json sidecar will be written next to the target.")
+                     .arg(m_sourceFormat, targetId,
+                          *rtNote ? QString::fromUtf8(rtNote)
+                                  : tr("information not yet enumerated")));
+            return;
+        case UFT_RT_IMPOSSIBLE:
+            show(QStringLiteral("color: #b00020; font-weight: bold; padding: 4px;"),
+                 tr("IMPOSSIBLE: %1 → %2 cannot be represented — %3")
+                     .arg(m_sourceFormat, targetId,
+                          *rtNote ? QString::fromUtf8(rtNote)
+                                  : tr("the target format cannot carry the source's data.")));
+            return;
+        case UFT_RT_UNTESTED:
+        default:
+            show(QStringLiteral("color: #757575; font-style: italic; padding: 4px;"),
+                 tr("UNTESTED: %1 → %2 is not in the round-trip matrix. "
+                    "Conversion is not guaranteed to be reversible or complete. "
+                    "See docs/DESIGN_PRINCIPLES.md §5.")
+                     .arg(m_sourceFormat, targetId));
+            return;
+        }
+    }
+
+    /* Fallback heuristic when one of the formats isn't yet mapped to the
+     * round-trip matrix — keeps the old category-based warning so the
+     * wizard never looks blank. */
     QStringList lostData;
     if ((sourceCat == "flux" || sourceCat == "bitstream") && targetCat == "sector") {
         lostData << tr("timing information") << tr("weak/fuzzy bits");
@@ -552,7 +607,7 @@ void UftTargetPage::updateConversionWarning()
         m_conversionWarning->setStyleSheet(
             "color: #e67e00; padding: 4px;");
         m_conversionWarning->setText(
-            tr("Lossy conversion: %1 will be lost.")
+            tr("Lossy conversion (heuristic): %1 will be lost.")
             .arg(lostData.join(", ")));
         m_conversionWarning->setVisible(true);
     } else {
