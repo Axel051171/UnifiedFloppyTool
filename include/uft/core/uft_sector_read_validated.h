@@ -54,11 +54,14 @@ typedef enum {
 } uft_encoding_id_t;
 
 /* CRC types */
+#ifndef UFT_CRC_TYPE_T_DEFINED
+#define UFT_CRC_TYPE_T_DEFINED
 typedef enum {
     UFT_CRC_CCITT = 0,
     UFT_CRC_IBM,
     UFT_CRC_CHECKSUM
 } uft_crc_type_t;
+#endif /* UFT_CRC_TYPE_T_DEFINED */
 
 /* ═══════════════════════════════════════════════════════════════════════════════
  * Constants

@@ -31,6 +31,8 @@ extern "C" {
 /**
  * @brief Supported CRC types
  */
+#ifndef UFT_CRC_TYPE_T_DEFINED
+#define UFT_CRC_TYPE_T_DEFINED
 typedef enum uft_crc_type {
     /* CRC-16 variants */
     UFT_CRC_CCITT_FALSE = 0,    /**< CRC-16/CCITT-FALSE (IBM, Amiga, etc.) */
@@ -60,6 +62,7 @@ typedef enum uft_crc_type {
     
     UFT_CRC_TYPE_COUNT
 } uft_crc_type_t;
+#endif /* UFT_CRC_TYPE_T_DEFINED */
 
 /*===========================================================================
  * CRC Configuration

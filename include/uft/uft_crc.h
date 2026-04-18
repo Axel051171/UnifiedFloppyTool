@@ -19,6 +19,8 @@ extern "C" {
  */
 #ifndef UFT_CRC_TYPE_DEFINED
 #define UFT_CRC_TYPE_DEFINED
+#ifndef UFT_CRC_TYPE_T_DEFINED
+#define UFT_CRC_TYPE_T_DEFINED
 typedef enum {
     CRC_TYPE_NONE = 0,
     CRC_TYPE_CRC16_CCITT,
@@ -26,6 +28,7 @@ typedef enum {
     CRC_TYPE_CRC32,
     CRC_TYPE_CHECKSUM
 } uft_crc_type_t;
+#endif /* UFT_CRC_TYPE_T_DEFINED */
 #endif /* UFT_CRC_TYPE_DEFINED */
 
 /**

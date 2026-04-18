@@ -44,6 +44,8 @@ extern "C" {
 #ifndef UFT_CRC_TYPE_DEFINED
 #define UFT_CRC_TYPE_DEFINED
 
+#ifndef UFT_CRC_TYPE_T_DEFINED
+#define UFT_CRC_TYPE_T_DEFINED
 typedef enum {
     /* === Floppy Disk CRCs === */
     UFT_CRC_IBM_MFM,            /* IBM PC MFM: CRC-16-CCITT */
@@ -102,6 +104,7 @@ typedef enum {
     
     UFT_CRC_TYPE_COUNT
 } uft_crc_type_t;
+#endif /* UFT_CRC_TYPE_T_DEFINED */
 
 #endif /* UFT_CRC_TYPE_DEFINED */
 
