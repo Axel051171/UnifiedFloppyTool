@@ -360,3 +360,13 @@ const char* uft_feature_support_string(uft_feature_support_t s) {
         default:                      return "UNSUPPORTED";
     }
 }
+
+const char* uft_emu_compat_string(uft_emu_compat_t c) {
+    switch (c) {
+        case UFT_EMU_COMPATIBLE:   return "COMPATIBLE";
+        case UFT_EMU_INCOMPATIBLE: return "INCOMPATIBLE";
+        case UFT_EMU_PARTIAL:      return "PARTIAL";
+        case UFT_EMU_UNTESTED:     /* fallthrough */
+        default:                   return "UNTESTED";
+    }
+}

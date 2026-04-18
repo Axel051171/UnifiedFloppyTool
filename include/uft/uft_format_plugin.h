@@ -104,6 +104,47 @@ typedef struct uft_plugin_feature {
  */
 const char* uft_feature_support_string(uft_feature_support_t s);
 
+/**
+ * @brief Kompatibilitätsstatus für einen Ziel-Konsumer (Prinzip 6)
+ *
+ * Ziel-Konsumer = Emulator, anderes Tool, echte Hardware etc.
+ * Werte explizit nummeriert (ABI).
+ */
+#ifndef UFT_EMU_COMPAT_DEFINED
+#define UFT_EMU_COMPAT_DEFINED
+typedef enum uft_emu_compat {
+    UFT_EMU_UNTESTED      = 0,  ///< Default — nie getestet
+    UFT_EMU_COMPATIBLE    = 1,  ///< Funktioniert
+    UFT_EMU_INCOMPATIBLE  = 2,  ///< Funktioniert nicht
+    UFT_EMU_PARTIAL       = 3,  ///< Teilweise — note erklärt
+} uft_emu_compat_t;
+#endif /* UFT_EMU_COMPAT_DEFINED */
+
+/**
+ * @brief Ein Eintrag in der Kompatibilitätsmatrix eines Plugins
+ *
+ * `consumer` = Name+Version der Ziel-Software, z.B. "WinUAE 5.3".
+ * `ci_tested` = true wenn ein automatisierter CI-Test diese Kombi
+ * regelmäßig durchspielt, sonst false (manuell getestet).
+ * `test_date` optional als "YYYY-MM-DD" wenn manuell.
+ */
+#ifndef UFT_PLUGIN_COMPAT_ENTRY_DEFINED
+#define UFT_PLUGIN_COMPAT_ENTRY_DEFINED
+typedef struct uft_plugin_compat_entry {
+    const char*      consumer;    ///< "WinUAE 5.3" / "FS-UAE 3.1" / "real 1541"
+    uft_emu_compat_t status;
+    const char*      note;        ///< optional; Pflicht für PARTIAL/INCOMPATIBLE
+    const char*      test_date;   ///< optional "YYYY-MM-DD"
+    bool             ci_tested;
+} uft_plugin_compat_entry_t;
+#endif /* UFT_PLUGIN_COMPAT_ENTRY_DEFINED */
+
+/**
+ * @brief Emu-Kompat-Status als String
+ * @return statischer String (nie NULL)
+ */
+const char* uft_emu_compat_string(uft_emu_compat_t c);
+
 // ============================================================================
 // Internal Disk Structure (für Plugins)
 // ============================================================================
@@ -464,6 +505,14 @@ typedef struct uft_format_plugin {
      * UFT lügt nicht: Stubs sind als Stubs erkennbar.
      */
     bool                is_stub;
+
+    // === Prinzip 6 — Emulator-Kompatibilitätsmatrix (optional aber empfohlen) ===
+    /**
+     * @brief Pro Export-Format Liste der geprüften Ziel-Konsumer.
+     * `compat_entries == NULL` heißt: nichts explizit getestet → Prinzip-6-Verstoß.
+     */
+    const uft_plugin_compat_entry_t* compat_entries;
+    size_t              compat_count;
 
 } uft_format_plugin_t;
 

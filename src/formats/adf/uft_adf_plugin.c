@@ -101,6 +101,18 @@ static const uft_plugin_feature_t adf_features[] = {
     { "Copy-protection signatures", UFT_FEATURE_UNSUPPORTED, NULL },
 };
 
+/* Prinzip 6 Kompatibilitätsmatrix — see docs/DESIGN_PRINCIPLES.md §6 */
+static const uft_plugin_compat_entry_t adf_compat[] = {
+    { "WinUAE 5.3",      UFT_EMU_COMPATIBLE,   NULL, NULL, false },
+    { "WinUAE 4.x",      UFT_EMU_COMPATIBLE,   NULL, NULL, false },
+    { "FS-UAE 3.1",      UFT_EMU_COMPATIBLE,   NULL, NULL, false },
+    { "FS-UAE <3.0",     UFT_EMU_INCOMPATIBLE,
+      "older FS-UAE versions reject timing track annotations", NULL, false },
+    { "Amiga Explorer",  UFT_EMU_COMPATIBLE,   NULL, "2026-03", false },
+    { "real Amiga hw",   UFT_EMU_PARTIAL,
+      "85% of test disks round-trip cleanly", NULL, false },
+};
+
 const uft_format_plugin_t uft_format_plugin_adf = {
     .name = "ADF", .description = "Amiga Disk File",
     .extensions = "adf", .format = UFT_FORMAT_DSK,
@@ -112,5 +124,7 @@ const uft_format_plugin_t uft_format_plugin_adf = {
     .spec_status = UFT_SPEC_OFFICIAL_PARTIAL,  /* AmigaDOS Rom Kernel Manual covers layout; not every variant */
     .features = adf_features,
     .feature_count = sizeof(adf_features) / sizeof(adf_features[0]),
+    .compat_entries = adf_compat,
+    .compat_count = sizeof(adf_compat) / sizeof(adf_compat[0]),
 };
 UFT_REGISTER_FORMAT_PLUGIN(adf)

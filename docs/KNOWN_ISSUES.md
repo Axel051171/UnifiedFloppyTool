@@ -74,14 +74,18 @@ aktiv abgearbeitet.
 - **Plan:** Initial ADF/WinUAE, D64/VICE in 4.3.
 
 ### 6.2 Kompatibilitäts-Matrizen pro Format fehlen größtenteils
-- **Status:** OPEN
-- **Beschreibung:** Außer bei ADF gibt es keine gepflegten Kompatibilitäts-
-  Matrizen (welche Emulator-Version / welches Tool konsumiert den Export
-  korrekt). Das blockiert ehrliche "funktioniert mit X" Claims.
-- **Workaround:** In Issues nach Format-Namen suchen — dort oft Erfahrungs-
-  berichte.
-- **Plan:** `compatibility-import-export`-Agent soll die Matrizen aus
-  Community-Tests aufbauen.
+- **Status:** MITIGATED (Infrastruktur da, Populierung 1/80)
+- **Beschreibung:** `uft_plugin_compat_entry_t` Array + `compat_entries` /
+  `compat_count` Felder sind in `uft_format_plugin_t`. Status pro
+  Konsumer: `UFT_EMU_COMPATIBLE` / `UFT_EMU_INCOMPATIBLE` / `UFT_EMU_PARTIAL`
+  / `UFT_EMU_UNTESTED`. Felder pro Eintrag: consumer-name,
+  status, note (Pflicht bei PARTIAL/INCOMPATIBLE), test_date, ci_tested.
+  Populiert: ADF (6 Konsumer-Einträge als Exemplar).
+- **Workaround:** Bis mehr Plugins populiert sind — in Issue-Tracker nach
+  Format-Namen suchen.
+- **Plan:** `compatibility-import-export`-Agent oder Community-PRs erweitern
+  die Matrizen iterativ. Langfrist: CI-Pipeline (§6.1) schreibt `ci_tested`
+  automatisch.
 
 ---
 

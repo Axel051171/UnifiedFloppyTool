@@ -118,6 +118,48 @@ TEST(is_stub_explicit_true) {
     ASSERT(p.is_stub == true);
 }
 
+/* ─── Prinzip 6 — Emulator-Kompat-Matrix ─── */
+
+TEST(emu_compat_enum_stable) {
+    ASSERT(UFT_EMU_UNTESTED     == 0);
+    ASSERT(UFT_EMU_COMPATIBLE   == 1);
+    ASSERT(UFT_EMU_INCOMPATIBLE == 2);
+    ASSERT(UFT_EMU_PARTIAL      == 3);
+}
+
+TEST(emu_compat_stringify) {
+    ASSERT(strcmp(uft_emu_compat_string(UFT_EMU_UNTESTED),     "UNTESTED")     == 0);
+    ASSERT(strcmp(uft_emu_compat_string(UFT_EMU_COMPATIBLE),   "COMPATIBLE")   == 0);
+    ASSERT(strcmp(uft_emu_compat_string(UFT_EMU_INCOMPATIBLE), "INCOMPATIBLE") == 0);
+    ASSERT(strcmp(uft_emu_compat_string(UFT_EMU_PARTIAL),      "PARTIAL")      == 0);
+    ASSERT(strcmp(uft_emu_compat_string((uft_emu_compat_t)99), "UNTESTED")     == 0);
+}
+
+TEST(compat_matrix_shape) {
+    static const uft_plugin_compat_entry_t demo[] = {
+        { "WinUAE 5.3", UFT_EMU_COMPATIBLE,   NULL, NULL,        true  },
+        { "FS-UAE",     UFT_EMU_PARTIAL,
+          "some disks fail", "2026-04-01",                        false },
+        { "old tool",   UFT_EMU_INCOMPATIBLE, "broken",  NULL,    false },
+    };
+    uft_format_plugin_t p = {
+        .name = "demo",
+        .compat_entries = demo,
+        .compat_count = sizeof(demo)/sizeof(*demo),
+    };
+    ASSERT(p.compat_count == 3);
+    ASSERT(p.compat_entries[0].ci_tested == true);
+    ASSERT(p.compat_entries[1].note != NULL);
+    ASSERT(p.compat_entries[1].test_date != NULL);
+    ASSERT(p.compat_entries[2].status == UFT_EMU_INCOMPATIBLE);
+}
+
+TEST(compat_matrix_default_null) {
+    uft_format_plugin_t p = { .name = "no-compat" };
+    ASSERT(p.compat_entries == NULL);
+    ASSERT(p.compat_count == 0);
+}
+
 int main(void) {
     printf("=== Prinzip 7 — Spec-Status + Feature-Matrix API Tests ===\n");
     RUN(enum_values_stable);
@@ -131,6 +173,10 @@ int main(void) {
     RUN(feature_matrix_default_null);
     RUN(is_stub_default_false);
     RUN(is_stub_explicit_true);
+    RUN(emu_compat_enum_stable);
+    RUN(emu_compat_stringify);
+    RUN(compat_matrix_shape);
+    RUN(compat_matrix_default_null);
     printf("Passed %d, Failed %d\n", _pass, _fail);
     return _fail == 0 ? 0 : 1;
 }
