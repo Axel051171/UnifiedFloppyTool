@@ -165,32 +165,20 @@ int uft_disk_get_geometry(const void *disk_v, void *geom_v) {
 }
 
 /* ============================================================================
- * Format detection — real via plugin probe chain
- * ============================================================================ */
-
-int uft_detect_format(const char *path) {
-    if (!path) return 0;
-    const uft_format_plugin_t *plugin = uft_probe_file_format(path);
-    return plugin ? (int)plugin->format : 0;
-}
-
-int uft_detect_buffer(const uint8_t *data, size_t size) {
-    if (!data || size == 0) return 0;
-    const uft_format_plugin_t *plugin =
-        uft_probe_buffer_format(data, size, size);
-    return plugin ? (int)plugin->format : 0;
-}
-
-int uft_probe_format(const char *path, void *result) {
-    if (!path) return -1;
-    const uft_format_plugin_t *plugin = uft_probe_file_format(path);
-    if (!plugin) return -1;
-    /* result is opaque to callers — they either cast or don't use it */
-    if (result) {
-        *(const uft_format_plugin_t **)result = plugin;
-    }
-    return (int)plugin->format;
-}
+ * Format detection — ABI-correct impls split by header (ABI-001/002 P0 fix).
+ *
+ * uft_detect_format  → src/core/uft_detect_format_impl.c  (detect/ header)
+ * uft_detect_buffer  → src/core/uft_detect_buffer_impl.c  (uft_format_detect.h)
+ * uft_probe_format   → src/core/uft_probe_format_impl.c   (uft_format_probe.h)
+ *
+ * Each lives in its own TU because the three sibling result-struct types
+ * (uft_detect_result_t × 2, uft_probe_result_t) have incompatible layouts.
+ * Keeping them separate means each TU only sees one definition.
+ *
+ * Previous stubs here silently corrupted callers: the old 2-arg
+ * uft_detect_buffer was called with 4 args — extra 2 sat in unused
+ * registers, stub returned 0 → callers thought every buffer was
+ * "not detected" regardless of content. Fixed by the three new files. */
 
 /* ============================================================================
  * File injection — ABI-correct stub
