@@ -693,6 +693,7 @@ SOURCES += \
     src/core/uft_hw_batch.c \
     src/core/uft_fs_registry.c \
     src/core/uft_capture.c \
+    src/core/uft_mfm_encoder.c \
     src/fs/uft_amigados.c \
     src/fs/uft_fs_amigados_driver.c \
     src/fs/uft_fat12.c \
