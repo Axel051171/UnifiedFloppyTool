@@ -137,5 +137,6 @@ const uft_format_plugin_t uft_format_plugin_2img = {
     .probe = img2_probe, .open = img2_open, .close = img2_close,
     .read_track = img2_read_track, .write_track = img2_write_track,
     .verify_track = uft_generic_verify_track,
+    .spec_status = UFT_SPEC_OFFICIAL_FULL,  /* 2IMG v1 header spec public since Apple IIgs Sweet16 days */
 };
 UFT_REGISTER_FORMAT_PLUGIN(2img)

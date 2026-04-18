@@ -800,5 +800,6 @@ const uft_format_plugin_t uft_format_plugin_hfe = {
     
     .init = NULL,
     .shutdown = NULL,
-    .private_data = NULL
+    .private_data = NULL,
+    .spec_status = UFT_SPEC_OFFICIAL_PARTIAL,  /* HxC HFE docs public, some details community-filled */
 };

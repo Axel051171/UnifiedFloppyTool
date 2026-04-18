@@ -75,5 +75,6 @@ const uft_format_plugin_t uft_format_plugin_woz = {
     .probe = woz_plugin_probe, .open = woz_plugin_open,
     .close = woz_plugin_close, .read_track = woz_plugin_read_track,
     .verify_track = uft_flux_verify_track,
+    .spec_status = UFT_SPEC_OFFICIAL_FULL,  /* Applesauce project publishes full WOZ 1/2/2.1 specs */
 };
 UFT_REGISTER_FORMAT_PLUGIN(woz)

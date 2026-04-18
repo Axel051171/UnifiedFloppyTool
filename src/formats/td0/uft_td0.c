@@ -259,6 +259,7 @@ const uft_format_plugin_t uft_format_plugin_td0 = {
     .close = td0_close,
     .read_track = td0_read_track,
     .verify_track = uft_generic_verify_track,
+    .spec_status = UFT_SPEC_REVERSE_ENGINEERED,  /* Sydex Teledisk was proprietary; RE'd by Dave Dunfield & wteledsk */
 };
 
 UFT_REGISTER_FORMAT_PLUGIN(td0)

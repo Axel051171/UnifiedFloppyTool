@@ -141,5 +141,6 @@ const uft_format_plugin_t uft_format_plugin_stx = {
     .probe = stx_plugin_probe, .open = stx_open,
     .close = stx_close, .read_track = stx_read_track,
     .verify_track = uft_weak_bit_verify_track,
+    .spec_status = UFT_SPEC_REVERSE_ENGINEERED,  /* Pasti never had a public spec */
 };
 UFT_REGISTER_FORMAT_PLUGIN(stx)

@@ -133,5 +133,6 @@ const uft_format_plugin_t uft_format_plugin_d64 = {
     .close = d64_plugin_close, .read_track = d64_plugin_read_track,
     .write_track = d64_plugin_write_track,
     .verify_track = uft_generic_verify_track,
+    .spec_status = UFT_SPEC_DERIVED,  /* 1541 DOS well-known but never formally specced; de-facto via VICE */
 };
 UFT_REGISTER_FORMAT_PLUGIN(d64)

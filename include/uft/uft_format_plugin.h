@@ -41,6 +41,31 @@ typedef enum uft_format_caps {
 } uft_format_caps_t;
 #endif /* UFT_FORMAT_CAPS_DEFINED */
 
+/**
+ * @brief Spec-Herkunft des Formats (Design-Prinzip 7)
+ *
+ * Pflicht-Metadatum für jedes Plugin. `UNKNOWN` ist der Default für nicht
+ * deklarierte Plugins und zählt als Prinzip-7-Verstoß im CI.
+ *
+ * Werte explizit nummeriert (ABI-bomb-detector: enum ohne Nummern ist Risiko).
+ */
+#ifndef UFT_SPEC_STATUS_DEFINED
+#define UFT_SPEC_STATUS_DEFINED
+typedef enum uft_spec_status {
+    UFT_SPEC_UNKNOWN             = 0,  ///< Nicht deklariert (Default — Prinzip-Verstoß)
+    UFT_SPEC_OFFICIAL_FULL       = 1,  ///< Öffentlich + vollständig spezifiziert
+    UFT_SPEC_OFFICIAL_PARTIAL    = 2,  ///< Öffentlich aber unvollständig
+    UFT_SPEC_REVERSE_ENGINEERED  = 3,  ///< Keine offizielle Spec, RE-basiert
+    UFT_SPEC_DERIVED             = 4,  ///< De-facto-Standard ohne formale Spec
+} uft_spec_status_t;
+#endif /* UFT_SPEC_STATUS_DEFINED */
+
+/**
+ * @brief Spec-Status als lesbarer String
+ * @return statischer String (nie NULL, nie freigeben)
+ */
+const char* uft_spec_status_string(uft_spec_status_t status);
+
 // ============================================================================
 // Internal Disk Structure (für Plugins)
 // ============================================================================
@@ -372,7 +397,17 @@ typedef struct uft_format_plugin {
     
     // === Private ===
     void*               private_data;
-    
+
+    // === Prinzip 7 — Spec-Herkunft ===
+    /**
+     * @brief Quelle der Format-Spezifikation.
+     *
+     * Plugins MÜSSEN dieses Feld setzen. `UFT_SPEC_UNKNOWN` (Default bei
+     * fehlender Initialisierung) wird vom CI-Audit als Verstoß gemeldet.
+     * Siehe docs/DESIGN_PRINCIPLES.md §7.
+     */
+    uft_spec_status_t   spec_status;
+
 } uft_format_plugin_t;
 
 // ============================================================================

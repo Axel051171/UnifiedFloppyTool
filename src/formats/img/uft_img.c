@@ -496,5 +496,6 @@ const uft_format_plugin_t uft_format_plugin_img = {
     
     .init = NULL,
     .shutdown = NULL,
-    .private_data = NULL
+    .private_data = NULL,
+    .spec_status = UFT_SPEC_DERIVED,  /* Raw sector dump; no formal spec but universal de-facto PC standard */
 };

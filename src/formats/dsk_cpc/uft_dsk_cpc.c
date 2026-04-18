@@ -204,6 +204,7 @@ const uft_format_plugin_t uft_format_plugin_dsk_cpc = {
     .read_track = dsk_read_track,
     .write_track = dsk_write_track,
     .verify_track = uft_generic_verify_track,
+    .spec_status = UFT_SPEC_OFFICIAL_FULL,  /* CPCWiki publishes the standard DSK specification */
 };
 
 UFT_REGISTER_FORMAT_PLUGIN(dsk_cpc)

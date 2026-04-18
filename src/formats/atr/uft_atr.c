@@ -145,6 +145,7 @@ const uft_format_plugin_t uft_format_plugin_atr = {
     .read_track = atr_read_track,
     .write_track = atr_write_track,
     .verify_track = uft_generic_verify_track,
+    .spec_status = UFT_SPEC_OFFICIAL_FULL,  /* SIO2PC/APE docs, Atari 810 hw reference fully describe ATR */
 };
 
 UFT_REGISTER_FORMAT_PLUGIN(atr)

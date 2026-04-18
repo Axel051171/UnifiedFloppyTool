@@ -73,5 +73,6 @@ const uft_format_plugin_t uft_format_plugin_ipf = {
     .probe = ipf_plugin_probe, .open = ipf_plugin_open,
     .close = ipf_plugin_close, .read_track = ipf_plugin_read_track,
     .verify_track = uft_flux_verify_track,
+    .spec_status = UFT_SPEC_REVERSE_ENGINEERED,  /* SPS never published full IPF spec */
 };
 UFT_REGISTER_FORMAT_PLUGIN(ipf)

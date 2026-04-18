@@ -98,5 +98,6 @@ const uft_format_plugin_t uft_format_plugin_adf = {
     .close = adf_close, .read_track = adf_read_track,
     .write_track = adf_write_track,
     .verify_track = uft_generic_verify_track,
+    .spec_status = UFT_SPEC_OFFICIAL_PARTIAL,  /* AmigaDOS Rom Kernel Manual covers layout; not every variant */
 };
 UFT_REGISTER_FORMAT_PLUGIN(adf)

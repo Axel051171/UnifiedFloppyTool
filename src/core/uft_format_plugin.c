@@ -336,3 +336,18 @@ uft_error_t uft_register_builtin_format_plugins(void) {
     // See: src/formats/uft_format_registry.c
     return UFT_OK;
 }
+
+// ============================================================================
+// Prinzip 7 — Spec-Status Helpers
+// ============================================================================
+
+const char* uft_spec_status_string(uft_spec_status_t status) {
+    switch (status) {
+        case UFT_SPEC_OFFICIAL_FULL:      return "OFFICIAL-FULL";
+        case UFT_SPEC_OFFICIAL_PARTIAL:   return "OFFICIAL-PARTIAL";
+        case UFT_SPEC_REVERSE_ENGINEERED: return "REVERSE-ENGINEERED";
+        case UFT_SPEC_DERIVED:            return "DERIVED";
+        case UFT_SPEC_UNKNOWN:            /* fallthrough */
+        default:                          return "UNKNOWN";
+    }
+}

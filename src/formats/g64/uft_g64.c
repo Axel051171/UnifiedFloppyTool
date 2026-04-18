@@ -875,5 +875,6 @@ const uft_format_plugin_t uft_format_plugin_g64 = {
     
     .init = NULL,
     .shutdown = NULL,
-    .private_data = NULL
+    .private_data = NULL,
+    .spec_status = UFT_SPEC_DERIVED,  /* VICE documented the container; underlying GCR is official Commodore */
 };

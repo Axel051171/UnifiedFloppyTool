@@ -120,5 +120,6 @@ const uft_format_plugin_t uft_format_plugin_cqm = {
     .probe = cqm_probe, .open = cqm_open, .close = cqm_close,
     .read_track = cqm_read_track, .write_track = cqm_write_track,
     .verify_track = uft_generic_verify_track,
+    .spec_status = UFT_SPEC_REVERSE_ENGINEERED,  /* CopyQM (Sydex) proprietary; RLE layout RE'd by community */
 };
 UFT_REGISTER_FORMAT_PLUGIN(cqm)

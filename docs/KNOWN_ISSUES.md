@@ -80,14 +80,18 @@ aktiv abgearbeitet.
 ## Prinzip 7 — Ehrlichkeit bei proprietären Formaten
 
 ### 7.1 Spec-Status-Marker pro Plugin fehlt
-- **Status:** OPEN
-- **Beschreibung:** Die 80 registrierten Plugins haben aktuell keinen
-  maschinenlesbaren Spec-Status-Marker (`OFFIZIELL-SPEC` / `REVERSE-ENGINEERED`
-  etc.). Nutzer kann nicht per `uft formats --list` sehen welche Plugins auf
-  offizieller vs. rekonstruierter Spec basieren.
-- **Workaround:** Einzelne Plugin-Header (`src/formats/*/uft_*.c`) im
-  Dateikommentar konsultieren — inkonsistent gepflegt.
-- **Plan:** Feld `spec_status` in `uft_format_plugin_t` in 4.2.x.
+- **Status:** MITIGATED (Infrastruktur da, Populierung 15/80)
+- **Beschreibung:** Feld `spec_status` (`uft_spec_status_t`) ist in
+  `uft_format_plugin_t` implementiert. 15 Plugins sind populiert (2IMG, ADF,
+  ATR, CQM, D64, DSK-CPC, EDSK, G64, HFE, IMD, IMG, IPF, STX, TD0, WOZ). Die
+  restlichen ~65 Plugins stehen defaultmäßig auf `UFT_SPEC_UNKNOWN` — das ist
+  ein Prinzip-Verstoß und muss populiert werden.
+- **Workaround:** `tests/test_spec_status.c` zeigt die API-Form; populierte
+  Plugins sind in den jeweiligen `uft_format_plugin_<name> = { .spec_status = …}`
+  Initializern dokumentiert.
+- **Plan:** Restliche Plugins in 4.2.x iterativ populieren. CI-Audit der
+  Plugins mit `spec_status == UFT_SPEC_UNKNOWN` ausschlägt (separater Eintrag
+  unter M.1).
 
 ### 7.2 Feature-Matrizen pro Plugin fehlen
 - **Status:** OPEN
