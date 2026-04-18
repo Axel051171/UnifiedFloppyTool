@@ -220,34 +220,15 @@ int uft_adf_rename(void *disk, const char *old_name, const char *new_name) {
     return -1;
 }
 
-int uft_validate_adf(const uint8_t *data, size_t size) {
-    (void)data; (void)size;
-    return -1;
-}
-
 /* Legacy uft_fat12_* API moved to src/formats/uft_fat12_legacy.c with
  * correct signatures that match include/uft/formats/uft_fat12.h.
  * Four previous stubs here had mismatched arity (caller passes 4 args,
  * stub read 2) — a silent spec §1.3 violation. */
 
-/* ============================================================================
- * Validation stubs
- * ============================================================================ */
-
-int uft_validate_d64(const uint8_t *data, size_t size) {
-    (void)data; (void)size;
-    return -1;
-}
-
-int uft_validate_g64(const uint8_t *data, size_t size) {
-    (void)data; (void)size;
-    return -1;
-}
-
-int uft_validate_scp(const uint8_t *data, size_t size) {
-    (void)data; (void)size;
-    return -1;
-}
+/* Validators uft_validate_{d64,adf,g64,scp} moved to
+ * src/formats/uft_format_validators.c with correct 4-argument
+ * signatures (level + result). Old 2-arg stubs were another §1.3
+ * ABI-mismatch case. */
 
 /* ============================================================================
  * SCP stubs
