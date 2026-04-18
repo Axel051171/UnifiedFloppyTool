@@ -390,9 +390,28 @@ const char* uft_longtrack_type_name(int type) {
     return "Unknown";
 }
 
-int uft_lzhuf_decompress(const uint8_t *src, size_t src_len,
-                         uint8_t *dst, size_t dst_len) {
-    (void)src; (void)src_len; (void)dst; (void)dst_len;
+/* Forward-decl the options struct so we don't pull in the whole
+ * uft_format_parsers.h here. */
+struct uft_lzhuf_options;
+
+/* LZHUF decompressor for DMS-Heavy / NBZ archives.
+ *
+ * Honest NOT_IMPLEMENTED per spec §1.3 Option 1. Full Okumura/Yoshizaki
+ * LZHUF = LZSS(4 KB, 60-byte lookahead) + adaptive Huffman is ~400 lines
+ * and can't be landed without verified test vectors (DMS-Heavy/NBZ
+ * sample files).
+ *
+ * Callers in src/formats/uft_format_convert_archive.c handle a negative
+ * return with a raw-D64 fallback, so returning -1 is the documented
+ * failure mode. ABI now matches the 5-arg declaration in
+ * include/uft/uft_format_parsers.h (previously the stub took 4 args —
+ * another silent spec §1.3 mismatch).
+ */
+int uft_lzhuf_decompress(const uint8_t *src, size_t src_size,
+                         uint8_t *dst, size_t dst_size,
+                         const struct uft_lzhuf_options *opts)
+{
+    (void)src; (void)src_size; (void)dst; (void)dst_size; (void)opts;
     return -1;
 }
 
