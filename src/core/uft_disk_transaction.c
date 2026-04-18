@@ -7,6 +7,7 @@
  */
 #include "uft/uft_disk_transaction.h"
 #include "uft/uft_format_plugin.h"
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -24,7 +25,29 @@ struct uft_transaction {
     size_t                  pending_count;
     size_t                  committed;
     bool                    aborted;
+
+    /* BACKUP_FILE mode: path of the pre-transaction copy so rollback
+     * can restore the file if commit was partial. NULL in other modes. */
+    char                   *backup_path;
 };
+
+/* Copy a file byte-for-byte. Used by BACKUP_FILE mode to snapshot the
+ * image at transaction-begin time. Returns 0 on success. */
+static int file_copy_all(const char *src_path, const char *dst_path) {
+    FILE *src = fopen(src_path, "rb");
+    if (!src) return -1;
+    FILE *dst = fopen(dst_path, "wb");
+    if (!dst) { fclose(src); return -1; }
+    uint8_t buf[8192];
+    size_t n;
+    int ok = 1;
+    while ((n = fread(buf, 1, sizeof(buf), src)) > 0) {
+        if (fwrite(buf, 1, n, dst) != n) { ok = 0; break; }
+    }
+    fclose(src);
+    fclose(dst);
+    return ok ? 0 : -1;
+}
 
 /* ============================================================================
  * Track deep-copy helpers
@@ -77,6 +100,38 @@ uft_error_t uft_disk_transaction_begin(uft_disk_t *disk,
     if (!tx) return UFT_ERROR_NO_MEMORY;
     tx->disk = disk;
     tx->mode = mode;
+
+    switch (mode) {
+        case UFT_TX_IN_MEMORY:
+            /* Nothing to do — pending list + track copies are the
+             * journal, no on-disk artefacts before commit. */
+            break;
+
+        case UFT_TX_BACKUP_FILE: {
+            /* Snapshot the image file to <path>.uftbak before any
+             * writes happen. Rollback restores from this copy. */
+            if (!disk->path) { free(tx); return UFT_ERROR_INVALID_STATE; }
+            size_t path_len = strlen(disk->path);
+            char *bp = (char *)malloc(path_len + 8);
+            if (!bp) { free(tx); return UFT_ERROR_NO_MEMORY; }
+            sprintf(bp, "%s.uftbak", disk->path);
+            if (file_copy_all(disk->path, bp) != 0) {
+                free(bp); free(tx);
+                return UFT_ERROR_IO;
+            }
+            tx->backup_path = bp;
+            break;
+        }
+
+        case UFT_TX_SHADOW_WRITE:
+            /* Shadow-write needs plugin-level cooperation (writes go to
+             * a shadow file, commit = rename). That's a per-plugin
+             * decision surface not available yet. Explicit NOT_SUPPORTED
+             * with a clear reason matches spec §1.3 Option 1. */
+            free(tx);
+            return UFT_ERROR_NOT_SUPPORTED;
+    }
+
     *tx_out = tx;
     return UFT_OK;
 }
@@ -136,8 +191,15 @@ uft_error_t uft_disk_transaction_commit(uft_transaction_t *tx) {
 void uft_disk_transaction_rollback(uft_transaction_t *tx) {
     if (!tx) return;
     tx->aborted = true;
-    /* IN_MEMORY mode: just discard pending. Nothing written to disk yet
-     * (if commit wasn't called). */
+
+    /* BACKUP_FILE: if commit already wrote some tracks, the on-disk
+     * file is partially modified. Restore from the .uftbak snapshot
+     * so the image goes back to its pre-transaction state. */
+    if (tx->mode == UFT_TX_BACKUP_FILE && tx->backup_path && tx->disk &&
+        tx->disk->path && tx->committed > 0) {
+        (void)file_copy_all(tx->backup_path, tx->disk->path);
+    }
+    /* IN_MEMORY mode: just discard pending (nothing on disk yet). */
 }
 
 void uft_disk_transaction_free(uft_transaction_t *tx) {
@@ -148,6 +210,13 @@ void uft_disk_transaction_free(uft_transaction_t *tx) {
         track_cleanup_copy(&p->track_copy);
         free(p);
         p = next;
+    }
+    /* BACKUP_FILE: on successful commit (not aborted) we remove the
+     * backup file; on abort we leave it in place so the user can
+     * inspect or manually restore. */
+    if (tx->backup_path) {
+        if (!tx->aborted) remove(tx->backup_path);
+        free(tx->backup_path);
     }
     free(tx);
 }
