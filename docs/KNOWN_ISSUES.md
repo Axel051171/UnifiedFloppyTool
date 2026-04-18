@@ -41,14 +41,18 @@ aktiv abgearbeitet.
 ## Prinzip 5 — Round-Trip als First-Class Funktion
 
 ### 5.1 Round-Trip-Matrix unvollständig getestet
-- **Status:** OPEN
-- **Beschreibung:** Für viele Format-Paare existiert noch kein automatisierter
-  Round-Trip-Test. Diese Paare haben formal Status `?` und sollten nicht als
-  Konvertierung angeboten werden — werden aber angeboten.
-- **Workaround:** Für forensisch kritische Archivierung nur SCP↔HFE nutzen
-  (einziger aktuell durchgängig getesteter LL-Pfad).
-- **Plan:** Matrix-Tests werden pro Release-Zyklus erweitert. Ziel 4.3: alle
-  angebotenen Pfade haben mindestens LD-Dokumentation.
+- **Status:** MITIGATED (Registry + API + 13 Paare, Rest UNTESTED)
+- **Beschreibung:** Registry implementiert (`include/uft/core/uft_roundtrip.h`,
+  `src/core/uft_roundtrip.c`). Status pro Paar: `UFT_RT_LOSSLESS` /
+  `UFT_RT_LOSSY_DOCUMENTED` / `UFT_RT_IMPOSSIBLE` / `UFT_RT_UNTESTED`.
+  Initial-Matrix hat 13 Einträge (SCP↔HFE LL, SCP→IMG/ADF/D64/IMD LD,
+  HFE→IMG/ADF LD, IMG/ADF→SCP IM, IMG→HFE IM, IPF→ADF LD, STX→ST LD).
+  Alles andere fällt auf UNTESTED und sollte nicht angeboten werden.
+  Struktur-Invarianten per Test erzwungen: LD+IM brauchen Notes,
+  keine Duplikate, UNTESTED nicht explizit gelistet.
+- **Workaround:** `uft_roundtrip_status(from, to)` vor Konvertierung abfragen.
+- **Plan:** Integration in CLI-Konvertierungspfad (nächster Schritt zu §5.2
+  GUI-Sichtbarkeit + §1.2 Pre-Conversion-Report).
 
 ### 5.2 Keine Sichtbarkeit des Round-Trip-Status in der GUI
 - **Status:** OPEN
