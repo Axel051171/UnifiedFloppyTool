@@ -59,7 +59,7 @@ jobs:
 
       - name: Read version
         id: version
-        run: echo "version=$(cat UFT_VERSION.txt | tr -d '[:space:]')" >> $GITHUB_OUTPUT
+        run: echo "version=$(cat VERSION.txt | tr -d '[:space:]')" >> $GITHUB_OUTPUT
 
       - name: Build (qmake)
         # FIX-003: version string passed via env var, not YAML-escaped inline
@@ -150,7 +150,7 @@ jobs:
 
       - name: Read version
         id: version
-        run: echo "version=$(cat UFT_VERSION.txt | tr -d '[:space:]')" >> $GITHUB_OUTPUT
+        run: echo "version=$(cat VERSION.txt | tr -d '[:space:]')" >> $GITHUB_OUTPUT
 
       - name: Build (qmake)
         # FIX-003: env var instead of inline YAML escaping
@@ -223,7 +223,7 @@ jobs:
       - name: Read version
         id: version
         shell: bash
-        run: echo "version=$(cat UFT_VERSION.txt | tr -d '[:space:]')" >> $GITHUB_OUTPUT
+        run: echo "version=$(cat VERSION.txt | tr -d '[:space:]')" >> $GITHUB_OUTPUT
 
       - name: Build (qmake + MinGW)
         # FIX-002: no manual PATH export needed
@@ -282,7 +282,7 @@ jobs:
 
       - name: Read version
         id: version
-        run: echo "version=$(cat UFT_VERSION.txt | tr -d '[:space:]')" >> $GITHUB_OUTPUT
+        run: echo "version=$(cat VERSION.txt | tr -d '[:space:]')" >> $GITHUB_OUTPUT
 
       - name: Download all artifacts
         uses: actions/download-artifact@v4

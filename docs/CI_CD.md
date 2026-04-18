@@ -69,8 +69,8 @@ git push origin v4.1.0
 ### Automatisch (empfohlen):
 
 ```bash
-# Version in UFT_VERSION.txt setzen
-echo "4.1.0" > UFT_VERSION.txt
+# Version in VERSION setzen
+echo "4.1.0" > VERSION
 
 # Commit und Tag
 git add .

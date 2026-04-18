@@ -20,7 +20,7 @@
 cmake_minimum_required(VERSION 3.20)
 
 # Read version from file
-file(READ "${CMAKE_SOURCE_DIR}/UFT_VERSION.txt" UFT_VERSION_RAW)
+file(READ "${CMAKE_SOURCE_DIR}/VERSION.txt" UFT_VERSION_RAW)
 string(STRIP "${UFT_VERSION_RAW}" UFT_VERSION)
 
 project(UnifiedFloppyTool

@@ -1,7 +1,7 @@
 #-------------------------------------------------
 #
 # UnifiedFloppyTool - Qt Project File
-# Version: 4.1.3  (canonical source: UFT_VERSION.txt)
+# Version: 4.1.3  (canonical source: VERSION.txt)
 # "Bei uns geht kein Bit verloren"
 #
 # Compatible with Qt 6.5+ (including 6.10.x)
