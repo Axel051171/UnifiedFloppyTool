@@ -243,6 +243,26 @@ else()
     message(STATUS "UFT Qt Tests SKIPPED: Qt6::Test not found")
 endif()
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# Principle-7 / §M.1 compliance audit (source-scan, no build needed)
+# ═══════════════════════════════════════════════════════════════════════════════
+find_package(Python3 COMPONENTS Interpreter QUIET)
+if(Python3_Interpreter_FOUND)
+    add_test(
+        NAME audit_plugin_compliance
+        COMMAND ${Python3_EXECUTABLE}
+                ${CMAKE_SOURCE_DIR}/scripts/audit_plugin_compliance.py
+                --root ${CMAKE_SOURCE_DIR}
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    )
+    set_tests_properties(audit_plugin_compliance PROPERTIES
+        LABELS "principle-compliance"
+    )
+    message(STATUS "UFT Audit ENABLED: audit_plugin_compliance (Python ${Python3_VERSION})")
+else()
+    message(STATUS "UFT Audit SKIPPED: Python3 interpreter not found")
+endif()
+
 message(STATUS "════════════════════════════════════════════════════")
 message(STATUS "UFT Tests: Run 'ctest' after build to execute")
 message(STATUS "════════════════════════════════════════════════════")

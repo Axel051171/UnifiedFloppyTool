@@ -146,12 +146,32 @@ aktiv abgearbeitet.
 ## Meta-Ebene
 
 ### M.1 Nicht alle Prinzipien haben automatisierte Tests
-- **Status:** OPEN
-- **Beschreibung:** Meta-Prinzip A verlangt für jede Zusage mindestens einen
-  CI-Test. Aktuell fehlen Tests für: Sidecar-Schema (1.1), Round-Trip-LL für
-  viele Paare (5.1), Emulator-Pipeline (6.1), Fehlermeldungs-Struktur (3).
-- **Workaround:** Keine — Prinzipien gelten sind nicht vollständig erzwungen.
-- **Plan:** Priorisierung in Roadmap-Milestones.
+- **Status:** MITIGATED (Kern-Audit live, weitere Checks ausstehend)
+- **Beschreibung:** Meta-Prinzip A verlangt für jede Zusage einen CI-Test.
+  Stand heute:
+
+  | Prinzip / §  | Test(s)                                 | Enforcement |
+  |--------------|-----------------------------------------|-------------|
+  | 1.1 Sidecar  | `tests/test_loss_report.c` (8)          | ctest       |
+  | 1.2 Preflight| `tests/test_preflight.c` (13)           | ctest       |
+  | 5.1 Roundtrip| `tests/test_roundtrip_matrix.c` (13)    | ctest       |
+  | 7.1–7.3      | `tests/test_spec_status.c` (15)         | ctest       |
+  | 7.x (plugin-weit) | `scripts/audit_plugin_compliance.py` | ctest (Python), regression-guard |
+
+  Der neue Plugin-Compliance-Audit scant alle 83 `uft_format_plugin_t`
+  Literale unter `src/formats/` und prüft `.spec_status`, `.features`,
+  `.compat_entries`, `.is_stub`. Baseline: **5 voll-compliant** (ADF, HFE,
+  IPF, STX, WOZ), **15 mit spec_status**. CI failt bei Regression.
+
+  Noch offen:
+  - §1 Round-Trip-LL-Tests für konkrete Format-Paare (nur Matrix-API getestet)
+  - §3 Fehlermeldungs-Struktur (Fix-Vorschlag + Warum + Was)
+  - §6 Emulator-Pipeline im CI
+- **Workaround:** `ctest --label-regex principle-compliance` führt alle
+  Prinzip-Tests lokal aus.
+- **Plan:** Integration der Audit-Baseline in CI-Job (als separater Schritt
+  oder im Coverage-Workflow). Monotones Hochsetzen der `--min-pass` /
+  `--min-spec-status` Baselines bei jeder Populierungs-Runde.
 
 ---
 
