@@ -435,15 +435,20 @@ void uft_audit_trail_destroy(uft_audit_trail_t *trail);
 
 /**
  * @brief Log audit event
- * @param trail Audit trail
- * @param event Event type
- * @param description Event description
- * @param cylinder Related cylinder
- * @param head Related head
- * @param sector Related sector
- */
-void uft_audit_log(uft_audit_trail_t *trail, uft_audit_event_t event,
-                    const char *description, int cylinder, int head, int sector);
+/* DEPRECATED: uft_audit_log() canonical declaration lives in
+ * include/uft/uft_audit_trail.h with a different signature:
+ *   uint64_t uft_audit_log(uft_audit_session_t*, uft_audit_event_t,
+ *                           uft_audit_severity_t, const char*);
+ * That version is what the macros in uft_audit_trail.h use.
+ *
+ * The (trail, event, description, cyl, head, sector) variant below
+ * was never called from anywhere in src/ and conflicted with the
+ * canonical via the shared name — removed per ABI-bomb-detector ABI-002.
+ *
+ * For track-context logging, use uft_audit_log_track() (see
+ * uft_audit_trail.h:~280). */
+/* void uft_audit_log(uft_audit_trail_t *trail, uft_audit_event_t event,
+                    const char *description, int cylinder, int head, int sector); */
 
 /**
  * @brief Export audit trail to JSON
