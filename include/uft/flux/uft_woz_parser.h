@@ -81,6 +81,8 @@ extern "C" {
 /**
  * @brief WOZ file header (12 bytes)
  */
+#ifndef UFT_WOZ_HEADER_T_DEFINED
+#define UFT_WOZ_HEADER_T_DEFINED
 typedef struct {
     uint8_t  signature[3];      /**< "WOZ" */
     uint8_t  version;           /**< '1', '2', or '3' */
@@ -88,6 +90,7 @@ typedef struct {
     uint8_t  lfcrlf[3];         /**< 0x0A 0x0D 0x0A */
     uint32_t crc32;             /**< CRC32 of remaining data */
 } uft_woz_header_t;
+#endif /* UFT_WOZ_HEADER_T_DEFINED */
 
 /**
  * @brief Chunk header (8 bytes)
@@ -100,6 +103,8 @@ typedef struct {
 /**
  * @brief INFO chunk (v1/v2/v3)
  */
+#ifndef UFT_WOZ_INFO_T_DEFINED
+#define UFT_WOZ_INFO_T_DEFINED
 typedef struct {
     /* v1, v2, v3 common */
     uint8_t  version;           /**< INFO version (1, 2, or 3) */
@@ -121,6 +126,7 @@ typedef struct {
     uint16_t flux_block;        /**< Starting block for flux data */
     uint16_t largest_flux_track;/**< Largest flux track in blocks */
 } uft_woz_info_t;
+#endif /* UFT_WOZ_INFO_T_DEFINED */
 
 /**
  * @brief Track entry for v2+ (8 bytes per track)

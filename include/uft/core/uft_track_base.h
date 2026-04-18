@@ -71,6 +71,8 @@ typedef enum uft_track_flags {
 /**
  * @brief Track quality rating
  */
+#ifndef UFT_TRACK_QUALITY_T_DEFINED
+#define UFT_TRACK_QUALITY_T_DEFINED
 typedef enum uft_track_quality {
     UFT_TQ_UNKNOWN      = 0,
     UFT_TQ_PERFECT      = 1,    /**< All sectors good, no issues */
@@ -79,6 +81,7 @@ typedef enum uft_track_quality {
     UFT_TQ_POOR         = 4,    /**< Many errors, partial data */
     UFT_TQ_UNREADABLE   = 5     /**< Cannot decode */
 } uft_track_quality_t;
+#endif /* UFT_TRACK_QUALITY_T_DEFINED */
 
 /*===========================================================================
  * Core Structures

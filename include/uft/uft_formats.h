@@ -65,12 +65,15 @@ typedef enum {
  */
 #ifndef UFT_ENCODING_DEFINED
 #define UFT_ENCODING_DEFINED
+#ifndef UFT_ENCODING_T_DEFINED
+#define UFT_ENCODING_T_DEFINED
 typedef enum {
     UFT_ENCODING_UNKNOWN = 0,
     UFT_ENCODING_FM,
     UFT_ENCODING_MFM,
     UFT_ENCODING_GCR
 } uft_encoding_t;
+#endif /* UFT_ENCODING_T_DEFINED */
 #endif /* UFT_ENCODING_DEFINED */
 
 /**

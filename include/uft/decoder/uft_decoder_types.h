@@ -28,6 +28,8 @@ extern "C" {
  */
 #ifndef UFT_ENCODING_DEFINED
 #define UFT_ENCODING_DEFINED
+#ifndef UFT_ENCODING_T_DEFINED
+#define UFT_ENCODING_T_DEFINED
 typedef enum {
     UFT_ENCODING_UNKNOWN = 0,
     UFT_ENCODING_FM,            /**< FM (Frequency Modulation) */
@@ -39,6 +41,7 @@ typedef enum {
     UFT_ENCODING_AMIGA,         /**< Amiga MFM with special sync */
     UFT_ENCODING_RAW,           /**< Raw flux (no encoding) */
 } uft_encoding_t;
+#endif /* UFT_ENCODING_T_DEFINED */
 #endif /* UFT_ENCODING_DEFINED */
 
 /*============================================================================

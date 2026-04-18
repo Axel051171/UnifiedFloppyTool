@@ -72,6 +72,8 @@ typedef enum {
 /**
  * @brief PLL configuration
  */
+#ifndef UFT_PLL_CONFIG_T_DEFINED
+#define UFT_PLL_CONFIG_T_DEFINED
 typedef struct {
     /* Basic PLL */
     double clock_gain;          /**< 0.01 - 0.50, default 0.05 */
@@ -86,6 +88,7 @@ typedef struct {
     uint16_t dpll_slow_divisor;  /**< 200-800, default 400 */
     double dpll_slow_tolerance;  /**< 0.1-10.0%, default 2.5 */
 } uft_pll_config_t;
+#endif /* UFT_PLL_CONFIG_T_DEFINED */
 
 /**
  * @brief PLL preset names
@@ -149,11 +152,14 @@ extern const uft_drive_timing_t UFT_TIMING_HD;
 /**
  * @brief Data transfer rates
  */
+#ifndef UFT_DATA_RATE_T_DEFINED
+#define UFT_DATA_RATE_T_DEFINED
 typedef struct {
     uint32_t rate_code;         /**< FDC rate code */
     uint32_t bps;               /**< Bits per second */
     const char *description;
 } uft_data_rate_t;
+#endif /* UFT_DATA_RATE_T_DEFINED */
 
 extern const uft_data_rate_t UFT_DATA_RATES[4];
 

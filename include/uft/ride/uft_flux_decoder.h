@@ -982,12 +982,15 @@ int uft_udi_extract_sectors(const uint8_t *track_data, size_t track_len,
 /**
  * @brief Unified format verification result
  */
+#ifndef UFT_VERIFY_RESULT_T_DEFINED
+#define UFT_VERIFY_RESULT_T_DEFINED
 typedef struct {
     const char *format_name;
     bool valid;
     int error_code;
     char details[256];
 } uft_verify_result_t;
+#endif /* UFT_VERIFY_RESULT_T_DEFINED */
 
 /**
  * @brief Verify disk image file (auto-detect format)

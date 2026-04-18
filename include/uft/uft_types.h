@@ -209,6 +209,8 @@ typedef struct uft_format_info {
  */
 #ifndef UFT_ENCODING_DEFINED
 #define UFT_ENCODING_DEFINED
+#ifndef UFT_ENCODING_T_DEFINED
+#define UFT_ENCODING_T_DEFINED
 typedef enum uft_encoding {
     UFT_ENC_UNKNOWN = 0,
 
@@ -245,6 +247,7 @@ typedef enum uft_encoding {
     UFT_ENC_GCR_C64 = UFT_ENC_GCR_CBM,
     UFT_ENC_GCR_APPLE = UFT_ENC_GCR_APPLE_525,
 } uft_encoding_t;
+#endif /* UFT_ENCODING_T_DEFINED */
 
 /* Legacy name aliases (used in ~180 files) */
 #define UFT_ENCODING_FM      UFT_ENC_FM
@@ -283,6 +286,8 @@ typedef struct uft_sector_id {
  */
 #ifndef UFT_SECTOR_STATUS_DEFINED
 #define UFT_SECTOR_STATUS_DEFINED
+#ifndef UFT_SECTOR_STATUS_T_DEFINED
+#define UFT_SECTOR_STATUS_T_DEFINED
 typedef enum uft_sector_status {
     UFT_SECTOR_OK           = 0,
     UFT_SECTOR_CRC_ERROR    = (1 << 0),  ///< Daten-CRC falsch
@@ -293,6 +298,7 @@ typedef enum uft_sector_status {
     UFT_SECTOR_DUPLICATE    = (1 << 5),  ///< Mehrfach vorhanden
     UFT_SECTOR_EXTRA        = (1 << 6),  ///< Über Normal hinaus
 } uft_sector_status_t;
+#endif /* UFT_SECTOR_STATUS_T_DEFINED */
 #endif /* UFT_SECTOR_STATUS_DEFINED */
 
 /* Sector status aliases */

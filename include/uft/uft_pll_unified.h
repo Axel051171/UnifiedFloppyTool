@@ -96,6 +96,8 @@ static const char* const UFT_PLL_PRESET_NAMES[] = {
 /**
  * @brief Extended PLL configuration
  */
+#ifndef UFT_PLL_CONFIG_T_DEFINED
+#define UFT_PLL_CONFIG_T_DEFINED
 typedef struct {
     /* Base parameters */
     uft_pll_params_t base;
@@ -119,6 +121,7 @@ typedef struct {
     /* Debug */
     bool debug_output;         /**< Enable debug logging */
 } uft_pll_config_t;
+#endif /* UFT_PLL_CONFIG_T_DEFINED */
 
 /**
  * @brief Default configuration

@@ -53,6 +53,8 @@ extern "C" {
 /**
  * @brief DMK file header
  */
+#ifndef UFT_DMK_HEADER_T_DEFINED
+#define UFT_DMK_HEADER_T_DEFINED
 typedef struct {
     uint8_t  write_protect;         /**< 0x00=RW, 0xFF=RO */
     uint8_t  num_tracks;            /**< Number of tracks */
@@ -61,6 +63,7 @@ typedef struct {
     uint8_t  reserved[7];           /**< Reserved, set to 0 */
     uint32_t real_disk_code;        /**< 0 for normal, other for special disks */
 } uft_dmk_header_t;
+#endif /* UFT_DMK_HEADER_T_DEFINED */
 
 /**
  * @brief DMK IDAM (ID Address Mark) pointer

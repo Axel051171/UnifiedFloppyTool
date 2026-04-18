@@ -18,6 +18,8 @@ extern "C" {
 /**
  * @brief PLL configuration
  */
+#ifndef UFT_PLL_CONFIG_T_DEFINED
+#define UFT_PLL_CONFIG_T_DEFINED
 typedef struct {
     double initial_frequency;   /**< Initial frequency (Hz) */
     double frequency_tolerance; /**< Frequency tolerance (0.0-1.0) */
@@ -27,6 +29,7 @@ typedef struct {
     bool adaptive_bandwidth;    /**< Use adaptive bandwidth */
     int lock_threshold;         /**< Lock detection threshold */
 } uft_pll_config_t;
+#endif /* UFT_PLL_CONFIG_T_DEFINED */
 
 /**
  * @brief PLL state information

@@ -29,6 +29,8 @@ extern "C" {
  * Format IDs (inspired by DTC -i parameter)
  * ============================================================================ */
 
+#ifndef UFT_FORMAT_ID_T_DEFINED
+#define UFT_FORMAT_ID_T_DEFINED
 typedef enum {
     /* Auto-detection */
     UFT_FMT_AUTO = 0,
@@ -88,6 +90,7 @@ typedef enum {
     /* Extended formats */
     UFT_FMT_CUSTOM = 0x1000
 } uft_format_id_t;
+#endif /* UFT_FORMAT_ID_T_DEFINED */
 
 /* ============================================================================
  * Encoding Types

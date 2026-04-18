@@ -95,12 +95,15 @@ extern "C" {
  * Data Rate Constants
  *===========================================================================*/
 
+#ifndef UFT_FDC_RATE_T_DEFINED
+#define UFT_FDC_RATE_T_DEFINED
 typedef enum {
     UFT_FDC_RATE_500K = 0,      /**< 500 kbps (HD) */
     UFT_FDC_RATE_300K = 1,      /**< 300 kbps (DD 5.25") */
     UFT_FDC_RATE_250K = 2,      /**< 250 kbps (DD 3.5") */
     UFT_FDC_RATE_1M   = 3       /**< 1 Mbps (ED) */
 } uft_fdc_rate_t;
+#endif /* UFT_FDC_RATE_T_DEFINED */
 
 /*===========================================================================
  * Gap Definitions

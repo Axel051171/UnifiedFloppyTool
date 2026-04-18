@@ -60,6 +60,8 @@ extern "C" {
 
 #ifndef UFT_ENCODING_DEFINED
 #define UFT_ENCODING_DEFINED
+#ifndef UFT_ENCODING_T_DEFINED
+#define UFT_ENCODING_T_DEFINED
 typedef enum {
     UFT_ENCODING_UNKNOWN    = 0,
     UFT_ENCODING_FM         = 1,    /**< FM (single density) */
@@ -69,6 +71,7 @@ typedef enum {
     UFT_ENCODING_APPLE_GCR  = 5,    /**< Apple II GCR */
     UFT_ENCODING_C64_GCR    = 6     /**< Commodore GCR */
 } uft_encoding_t;
+#endif /* UFT_ENCODING_T_DEFINED */
 #endif /* UFT_ENCODING_DEFINED */
 
 /*============================================================================

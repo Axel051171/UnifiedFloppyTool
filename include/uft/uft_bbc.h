@@ -46,12 +46,15 @@ extern "C" {
 #define UFT_DFS_MAX_FILES       31
 
 /** Boot option codes */
+#ifndef UFT_DFS_BOOT_T_DEFINED
+#define UFT_DFS_BOOT_T_DEFINED
 typedef enum {
     UFT_DFS_BOOT_NONE       = 0,    /**< No action */
     UFT_DFS_BOOT_LOAD       = 1,    /**< *LOAD !BOOT */
     UFT_DFS_BOOT_RUN        = 2,    /**< *RUN !BOOT */
     UFT_DFS_BOOT_EXEC       = 3,    /**< *EXEC !BOOT */
 } uft_dfs_boot_t;
+#endif /* UFT_DFS_BOOT_T_DEFINED */
 
 /*============================================================================
  * ADFS Constants

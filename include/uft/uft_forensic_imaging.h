@@ -619,12 +619,15 @@ typedef enum {
 /**
  * @brief Data transfer rate values
  */
+#ifndef UFT_FDC_RATE_T_DEFINED
+#define UFT_FDC_RATE_T_DEFINED
 typedef enum {
     UFT_FDC_RATE_500KBPS = 0x00,  /**< 500 Kbit/sec (HD) */
     UFT_FDC_RATE_300KBPS = 0x01,  /**< 300 Kbit/sec (360K in 1.2M) */
     UFT_FDC_RATE_250KBPS = 0x02,  /**< 250 Kbit/sec (DD) */
     UFT_FDC_RATE_1MBPS   = 0x03   /**< 1 Mbit/sec (ED) */
 } uft_fdc_rate_t;
+#endif /* UFT_FDC_RATE_T_DEFINED */
 
 /**
  * @brief Determine data rate from media state

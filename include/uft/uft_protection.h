@@ -56,6 +56,8 @@ extern "C" {
  *============================================================================*/
 
 /** Supported platforms for protection detection */
+#ifndef UFT_PLATFORM_T_DEFINED
+#define UFT_PLATFORM_T_DEFINED
 typedef enum {
     UFT_PLATFORM_UNKNOWN = 0,
     
@@ -89,6 +91,7 @@ typedef enum {
     
     UFT_PLATFORM_COUNT
 } uft_platform_t;
+#endif /* UFT_PLATFORM_T_DEFINED */
 
 /*============================================================================
  * PROTECTION SCHEME ENUMERATION

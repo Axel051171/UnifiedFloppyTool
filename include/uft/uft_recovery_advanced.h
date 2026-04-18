@@ -88,6 +88,8 @@ typedef enum {
 
 #ifndef UFT_SECTOR_STATUS_DEFINED
 #define UFT_SECTOR_STATUS_DEFINED
+#ifndef UFT_SECTOR_STATUS_T_DEFINED
+#define UFT_SECTOR_STATUS_T_DEFINED
 typedef enum {
     UFT_SECTOR_UNKNOWN      = 0,
     UFT_SECTOR_GOOD         = 1,
@@ -96,6 +98,7 @@ typedef enum {
     UFT_SECTOR_BAD          = 4,    /* Unrecoverable */
     UFT_SECTOR_SKIPPED      = 5     /* Skipped */
 } uft_sector_status_t;
+#endif /* UFT_SECTOR_STATUS_T_DEFINED */
 #endif /* UFT_SECTOR_STATUS_DEFINED */
 
 /* ═══════════════════════════════════════════════════════════════════════════════

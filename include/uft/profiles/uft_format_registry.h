@@ -109,6 +109,8 @@ typedef enum {
  */
 #ifndef UFT_PLATFORM_DEFINED
 #define UFT_PLATFORM_DEFINED
+#ifndef UFT_PLATFORM_T_DEFINED
+#define UFT_PLATFORM_T_DEFINED
 typedef enum {
     UFT_PLATFORM_GENERIC = 0,
     UFT_PLATFORM_AMIGA,
@@ -125,6 +127,7 @@ typedef enum {
     UFT_PLATFORM_ZX_SPECTRUM,
     UFT_PLATFORM_DDR             /**< East German (DDR) computers */
 } uft_platform_t;
+#endif /* UFT_PLATFORM_T_DEFINED */
 #endif
 
 /* ═══════════════════════════════════════════════════════════════════════════

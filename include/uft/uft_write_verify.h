@@ -146,6 +146,8 @@ typedef struct {
  * Full Verify Result
  * ═══════════════════════════════════════════════════════════════════════════════ */
 
+#ifndef UFT_VERIFY_RESULT_T_DEFINED
+#define UFT_VERIFY_RESULT_T_DEFINED
 typedef struct {
     uft_verify_status_t status;         /* Gesamt-Status */
     
@@ -176,6 +178,7 @@ typedef struct {
     double              total_time_ms;
     
 } uft_verify_result_t;
+#endif /* UFT_VERIFY_RESULT_T_DEFINED */
 
 /* ═══════════════════════════════════════════════════════════════════════════════
  * Verify Options

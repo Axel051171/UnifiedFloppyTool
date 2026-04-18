@@ -189,6 +189,8 @@ static const uft_atari_st_preset_t UFT_ATARI_ST_PRESETS[] = {
 
 #define UFT_MSA_SIGNATURE       0x0E0F
 
+#ifndef UFT_MSA_HEADER_T_DEFINED
+#define UFT_MSA_HEADER_T_DEFINED
 typedef struct uft_msa_header {
     uint16_t signature;     /* 0x0E0F */
     uint16_t sectors;       /* Sectors per track (9-11) */
@@ -196,6 +198,7 @@ typedef struct uft_msa_header {
     uint16_t start_track;   /* Starting track */
     uint16_t end_track;     /* Ending track */
 } uft_msa_header_t;
+#endif /* UFT_MSA_HEADER_T_DEFINED */
 
 /* ═══════════════════════════════════════════════════════════════════════════
  * API Functions

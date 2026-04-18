@@ -76,6 +76,8 @@ typedef struct {
 /**
  * @brief Track quality info
  */
+#ifndef UFT_TRACK_QUALITY_T_DEFINED
+#define UFT_TRACK_QUALITY_T_DEFINED
 typedef struct {
     int cylinder;
     int head;
@@ -86,6 +88,7 @@ typedef struct {
     bool god_mode_used;             /**< God-Mode was applied */
     int recovered_bits;             /**< Bits recovered by God-Mode */
 } uft_track_quality_t;
+#endif /* UFT_TRACK_QUALITY_T_DEFINED */
 
 /* ═══════════════════════════════════════════════════════════════════════════════
  * GLOBAL CONFIGURATION

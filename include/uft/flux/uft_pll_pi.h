@@ -23,6 +23,8 @@ extern "C" {
  * ============================================================================ */
 
 /** Standard data rates in bits per second */
+#ifndef UFT_DATA_RATE_T_DEFINED
+#define UFT_DATA_RATE_T_DEFINED
 typedef enum {
     UFT_RATE_FM_DD      = 125000,    /**< FM Double Density */
     UFT_RATE_FM_HD      = 150000,    /**< FM High Density */
@@ -33,10 +35,13 @@ typedef enum {
     UFT_RATE_RLL_HDD    = 7500000,   /**< RLL 2,7 Hard Drive */
     UFT_RATE_RLL_FAST   = 10000000   /**< Fast RLL */
 } uft_data_rate_t;
+#endif /* UFT_DATA_RATE_T_DEFINED */
 
 /** Encoding types */
 #ifndef UFT_ENCODING_DEFINED
 #define UFT_ENCODING_DEFINED
+#ifndef UFT_ENCODING_T_DEFINED
+#define UFT_ENCODING_T_DEFINED
 typedef enum {
     UFT_ENC_FM,
     UFT_ENC_MFM,
@@ -48,6 +53,7 @@ typedef enum {
     UFT_ENC_RLL_ADAPTEC,
     UFT_ENC_CUSTOM
 } uft_encoding_t;
+#endif /* UFT_ENCODING_T_DEFINED */
 #endif /* UFT_ENCODING_DEFINED */
 
 /** PLL state */
@@ -77,6 +83,8 @@ typedef enum {
 /**
  * @brief PI Loop Filter PLL Configuration
  */
+#ifndef UFT_PLL_CONFIG_T_DEFINED
+#define UFT_PLL_CONFIG_T_DEFINED
 typedef struct {
     double kp;              /**< Proportional constant (default: 0.5) */
     double ki;              /**< Integral constant (default: 0.0005) */
@@ -85,6 +93,7 @@ typedef struct {
     uft_encoding_t encoding;
     uint32_t data_rate;     /**< Data rate in bps */
 } uft_pll_config_t;
+#endif /* UFT_PLL_CONFIG_T_DEFINED */
 
 /**
  * @brief PI Loop Filter PLL State

@@ -74,6 +74,8 @@ typedef enum {
  * Sector Status
  * ═══════════════════════════════════════════════════════════════════════════════ */
 
+#ifndef UFT_SECTOR_STATUS_T_DEFINED
+#define UFT_SECTOR_STATUS_T_DEFINED
 typedef enum {
     UFT_SECTOR_OK           = 0,
     UFT_SECTOR_CRC_ERROR    = 1,
@@ -82,6 +84,7 @@ typedef enum {
     UFT_SECTOR_TIMEOUT      = 4,
     UFT_SECTOR_WEAK_BITS    = 5
 } uft_sector_status_t;
+#endif /* UFT_SECTOR_STATUS_T_DEFINED */
 
 /* ═══════════════════════════════════════════════════════════════════════════════
  * Result Structures

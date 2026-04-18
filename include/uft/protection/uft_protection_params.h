@@ -19,6 +19,8 @@ extern "C" {
  * Protection Types
  * ============================================================================ */
 
+#ifndef UFT_PROTECTION_TYPE_T_DEFINED
+#define UFT_PROTECTION_TYPE_T_DEFINED
 typedef enum {
     UFT_PROT_NONE               = 0x0000,
     UFT_PROT_FUZZY_BITS         = 0x0001,   /**< Fuzzy/weak bits */
@@ -36,6 +38,7 @@ typedef enum {
     UFT_PROT_SPEEDLOCK          = 0x1000,   /**< Speedlock protection */
     UFT_PROT_CUSTOM             = 0x8000,   /**< Custom/unknown */
 } uft_protection_type_t;
+#endif /* UFT_PROTECTION_TYPE_T_DEFINED */
 
 /* ============================================================================
  * Parameter Version & Flags

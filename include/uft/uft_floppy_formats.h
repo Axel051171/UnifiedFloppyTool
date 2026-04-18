@@ -25,6 +25,8 @@ extern "C" {
  *===========================================================================*/
 
 /** Data rate encoding for FDC */
+#ifndef UFT_DATA_RATE_T_DEFINED
+#define UFT_DATA_RATE_T_DEFINED
 typedef enum {
     UFT_RATE_500K   = 0x00,  /**< 500 kbps (HD) */
     UFT_RATE_300K   = 0x01,  /**< 300 kbps (DD 300 RPM) */
@@ -32,6 +34,7 @@ typedef enum {
     UFT_RATE_1000K  = 0x03,  /**< 1000 kbps (ED) */
     UFT_RATE_PERP   = 0x40,  /**< Perpendicular recording flag */
 } uft_data_rate_t;
+#endif /* UFT_DATA_RATE_T_DEFINED */
 
 /*===========================================================================
  * Stretch Field Flags

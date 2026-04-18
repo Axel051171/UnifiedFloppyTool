@@ -82,6 +82,8 @@ typedef struct {
  * MSA Header Structure (on-disk)
  *============================================================================*/
 
+#ifndef UFT_MSA_HEADER_T_DEFINED
+#define UFT_MSA_HEADER_T_DEFINED
 typedef struct {
     uint16_t id;              /**< 0x0E0F */
     uint16_t sectors_per_track;
@@ -89,6 +91,7 @@ typedef struct {
     uint16_t start_track;
     uint16_t end_track;
 } uft_msa_header_t;
+#endif /* UFT_MSA_HEADER_T_DEFINED */
 
 /*============================================================================
  * Inline Helper Functions

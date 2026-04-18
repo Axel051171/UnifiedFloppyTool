@@ -45,6 +45,8 @@ extern "C" {
 /**
  * @brief WOZ file header
  */
+#ifndef UFT_WOZ_HEADER_T_DEFINED
+#define UFT_WOZ_HEADER_T_DEFINED
 typedef struct {
     uint8_t  header_tag[3];     /**< "WOZ" */
     uint8_t  version;           /**< '1', '2', or '3' */
@@ -52,6 +54,7 @@ typedef struct {
     uint8_t  lfcrlf[3];         /**< 0x0A 0x0D 0x0A */
     uint32_t crc32;             /**< CRC32 of remaining content */
 } uft_woz_header_t;
+#endif /* UFT_WOZ_HEADER_T_DEFINED */
 
 /**
  * @brief WOZ chunk header
@@ -64,6 +67,8 @@ typedef struct {
 /**
  * @brief WOZ INFO chunk
  */
+#ifndef UFT_WOZ_INFO_T_DEFINED
+#define UFT_WOZ_INFO_T_DEFINED
 typedef struct {
     /* v1, v2, v3 */
     uint8_t  version;           /**< 1, 2, or 3 */
@@ -85,6 +90,7 @@ typedef struct {
     uint16_t flux_block;
     uint16_t largest_flux_track;
 } uft_woz_info_t;
+#endif /* UFT_WOZ_INFO_T_DEFINED */
 
 /**
  * @brief WOZ v2+ track descriptor
@@ -213,6 +219,8 @@ typedef struct {
 /**
  * @brief DMK file header
  */
+#ifndef UFT_DMK_HEADER_T_DEFINED
+#define UFT_DMK_HEADER_T_DEFINED
 typedef struct {
     uint8_t  write_protected;   /**< 0xFF = protected */
     uint8_t  tracks;            /**< Number of tracks */
@@ -221,6 +229,7 @@ typedef struct {
     uint8_t  reserved[7];
     uint32_t native_density;    /**< 0 = default */
 } uft_dmk_header_t;
+#endif /* UFT_DMK_HEADER_T_DEFINED */
 
 #pragma pack(pop)
 

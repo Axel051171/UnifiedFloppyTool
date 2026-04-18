@@ -91,12 +91,15 @@ typedef enum {
  */
 #ifndef UFT_ENCODING_DEFINED
 #define UFT_ENCODING_DEFINED
+#ifndef UFT_ENCODING_T_DEFINED
+#define UFT_ENCODING_T_DEFINED
 typedef enum {
     UFT_ENCODING_FM    = 0,   /**< FM (Single Density) */
     UFT_ENCODING_MFM   = 1,   /**< MFM (Double Density) */
     UFT_ENCODING_GCR   = 2,   /**< GCR (Apple/Commodore) */
     UFT_ENCODING_RAW   = 3    /**< Raw bitstream */
 } uft_encoding_t;
+#endif /* UFT_ENCODING_T_DEFINED */
 #endif /* UFT_ENCODING_DEFINED */
 
 /* Ensure legacy names are available even when uft_types.h defines UFT_ENC_* */
@@ -113,6 +116,8 @@ typedef enum {
 /**
  * @brief Data rate enum
  */
+#ifndef UFT_DATA_RATE_T_DEFINED
+#define UFT_DATA_RATE_T_DEFINED
 typedef enum {
     UFT_RATE_125KBPS  = 125000,   /**< 125 Kbps (FM SD) */
     UFT_RATE_250KBPS  = 250000,   /**< 250 Kbps (MFM DD) */
@@ -120,6 +125,7 @@ typedef enum {
     UFT_RATE_500KBPS  = 500000,   /**< 500 Kbps (MFM HD) */
     UFT_RATE_1000KBPS = 1000000   /**< 1000 Kbps (MFM ED) */
 } uft_data_rate_t;
+#endif /* UFT_DATA_RATE_T_DEFINED */
 
 /*============================================================================
  * Flux Statistics

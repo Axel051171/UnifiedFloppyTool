@@ -148,6 +148,8 @@ extern "C" {
  * @brief WOZ file header
  */
 #pragma pack(push, 1)
+#ifndef UFT_WOZ_HEADER_T_DEFINED
+#define UFT_WOZ_HEADER_T_DEFINED
 typedef struct {
     uint32_t magic;           /**< 'WOZ1' or 'WOZ2' */
     uint8_t  high_bits;       /**< 0xFF (verify high bits preserved) */
@@ -156,6 +158,7 @@ typedef struct {
     uint8_t  lf2;             /**< 0x0A (LF) */
     uint32_t crc32;           /**< CRC32 of all data after header */
 } uft_woz_header_t;
+#endif /* UFT_WOZ_HEADER_T_DEFINED */
 #pragma pack(pop)
 
 /**
@@ -172,6 +175,8 @@ typedef struct {
  * @brief WOZ INFO chunk (60 bytes)
  */
 #pragma pack(push, 1)
+#ifndef UFT_WOZ_INFO_T_DEFINED
+#define UFT_WOZ_INFO_T_DEFINED
 typedef struct {
     uint8_t  version;         /**< INFO chunk version (1 or 2) */
     uint8_t  disk_type;       /**< 1=5.25", 2=3.5" */
@@ -191,6 +196,7 @@ typedef struct {
     uint16_t largest_flux;    /**< Largest flux track block count */
     uint8_t  reserved[10];    /**< Reserved for future use */
 } uft_woz_info_t;
+#endif /* UFT_WOZ_INFO_T_DEFINED */
 #pragma pack(pop)
 
 /**

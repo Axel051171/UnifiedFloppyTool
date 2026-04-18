@@ -35,6 +35,8 @@ extern "C" {
  */
 #ifndef UFT_ENCODING_DEFINED
 #define UFT_ENCODING_DEFINED
+#ifndef UFT_ENCODING_T_DEFINED
+#define UFT_ENCODING_T_DEFINED
 typedef enum {
     UFT_ENC_FM = 0,             /**< Single density FM */
     UFT_ENC_MFM,                /**< Double density MFM */
@@ -42,17 +44,21 @@ typedef enum {
     UFT_ENC_GCR_APPLE,          /**< Apple II GCR */
     UFT_ENC_GCR_C64             /**< Commodore GCR */
 } uft_encoding_t;
+#endif /* UFT_ENCODING_T_DEFINED */
 #endif /* UFT_ENCODING_DEFINED */
 
 /**
  * @brief Data rate
  */
+#ifndef UFT_DATA_RATE_T_DEFINED
+#define UFT_DATA_RATE_T_DEFINED
 typedef enum {
     UFT_RATE_250K = 250000,     /**< DD 3.5" */
     UFT_RATE_300K = 300000,     /**< DD 5.25" */
     UFT_RATE_500K = 500000,     /**< HD 3.5" */
     UFT_RATE_1M   = 1000000     /**< ED 3.5" */
 } uft_data_rate_t;
+#endif /* UFT_DATA_RATE_T_DEFINED */
 
 /*===========================================================================
  * IBM FORMAT STRUCTURES

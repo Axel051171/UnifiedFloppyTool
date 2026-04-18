@@ -64,6 +64,8 @@ typedef enum {
  */
 #ifndef UFT_ENCODING_DEFINED
 #define UFT_ENCODING_DEFINED
+#ifndef UFT_ENCODING_T_DEFINED
+#define UFT_ENCODING_T_DEFINED
 typedef enum {
     /* Frequency Modulation */
     UFT_ENC_FM = 0,             /**< Single-density FM */
@@ -88,6 +90,7 @@ typedef enum {
     
     UFT_ENC_COUNT               /**< Number of encoding types */
 } uft_encoding_t;
+#endif /* UFT_ENCODING_T_DEFINED */
 #endif /* UFT_ENCODING_DEFINED */
 
 /*===========================================================================

@@ -51,6 +51,8 @@ typedef enum uft_msa_error {
  * MSA Header Structure
  * ═══════════════════════════════════════════════════════════════════════════ */
 
+#ifndef UFT_MSA_HEADER_T_DEFINED
+#define UFT_MSA_HEADER_T_DEFINED
 typedef struct uft_msa_header {
     uint16_t signature;         /* Must be 0x0E0F */
     uint16_t sectors_per_track; /* 9, 10, or 11 */
@@ -58,6 +60,7 @@ typedef struct uft_msa_header {
     uint16_t start_track;       /* Usually 0 */
     uint16_t end_track;         /* Usually 79 or 81 */
 } uft_msa_header_t;
+#endif /* UFT_MSA_HEADER_T_DEFINED */
 
 /* ═══════════════════════════════════════════════════════════════════════════
  * MSA Track Header

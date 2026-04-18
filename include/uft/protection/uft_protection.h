@@ -45,6 +45,8 @@ extern "C" {
 /**
  * @brief Known copy protection schemes
  */
+#ifndef UFT_PROTECTION_TYPE_T_DEFINED
+#define UFT_PROTECTION_TYPE_T_DEFINED
 typedef enum {
     UFT_PROT_NONE = 0,              /**< No protection detected */
     
@@ -88,6 +90,7 @@ typedef enum {
     
     UFT_PROT_COUNT                  /**< Number of protection types */
 } uft_protection_type_t;
+#endif /* UFT_PROTECTION_TYPE_T_DEFINED */
 
 /**
  * @brief Confidence level for protection detection
@@ -202,6 +205,8 @@ size_t uft_find_flux_anomalies(
  */
 #ifndef UFT_SECTOR_STATUS_DEFINED
 #define UFT_SECTOR_STATUS_DEFINED
+#ifndef UFT_SECTOR_STATUS_T_DEFINED
+#define UFT_SECTOR_STATUS_T_DEFINED
 typedef enum {
     UFT_SECTOR_OK = 0,              /**< Normal sector */
     UFT_SECTOR_BAD_CRC,             /**< CRC error */
@@ -212,6 +217,7 @@ typedef enum {
     UFT_SECTOR_WRONG_SIZE,          /**< Non-standard size */
     UFT_SECTOR_WEAK,                /**< Contains weak bits */
 } uft_sector_status_t;
+#endif /* UFT_SECTOR_STATUS_T_DEFINED */
 #endif /* UFT_SECTOR_STATUS_DEFINED */
 
 /**

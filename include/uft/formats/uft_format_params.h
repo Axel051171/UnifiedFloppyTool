@@ -60,6 +60,8 @@ typedef enum {
  * Format IDs (Extended)
  * ============================================================================ */
 
+#ifndef UFT_FORMAT_ID_T_DEFINED
+#define UFT_FORMAT_ID_T_DEFINED
 typedef enum {
     /* PC/DOS */
     UFT_FMT_IMG = 0,        /**< Raw sector image */
@@ -151,6 +153,7 @@ typedef enum {
     UFT_FMT_COUNT,
     UFT_FMT_UNKNOWN = -1
 } uft_format_id_t;
+#endif /* UFT_FORMAT_ID_T_DEFINED */
 
 /* ============================================================================
  * Encoding Types

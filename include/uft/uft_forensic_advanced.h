@@ -54,6 +54,8 @@ typedef enum uft_recovery_confidence {
 
 #ifndef UFT_SECTOR_STATUS_DEFINED
 #define UFT_SECTOR_STATUS_DEFINED
+#ifndef UFT_SECTOR_STATUS_T_DEFINED
+#define UFT_SECTOR_STATUS_T_DEFINED
 typedef enum uft_sector_status {
     UFT_SECTOR_OK           = 0,    /**< Sector OK */
     UFT_SECTOR_CRC_BAD      = 1,    /**< CRC mismatch */
@@ -65,6 +67,7 @@ typedef enum uft_sector_status {
     UFT_SECTOR_TIMING_ERR   = 7,    /**< Timing anomaly */
     UFT_SECTOR_DUPLICATE    = 8,    /**< Duplicate ID (copy prot) */
 } uft_sector_status_t;
+#endif /* UFT_SECTOR_STATUS_T_DEFINED */
 #endif /* UFT_SECTOR_STATUS_DEFINED */
 
 /**

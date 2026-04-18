@@ -153,12 +153,15 @@ typedef enum {
  * Data Rate Selection
  *============================================================================*/
 
+#ifndef UFT_FDC_RATE_T_DEFINED
+#define UFT_FDC_RATE_T_DEFINED
 typedef enum {
     UFT_FDC_RATE_500K   = 0x00,  /**< 500 kbps (HD, 8") */
     UFT_FDC_RATE_300K   = 0x01,  /**< 300 kbps (DD on HD drive) */
     UFT_FDC_RATE_250K   = 0x02,  /**< 250 kbps (DD) */
     UFT_FDC_RATE_1M     = 0x03   /**< 1 Mbps (ED) */
 } uft_fdc_rate_t;
+#endif /* UFT_FDC_RATE_T_DEFINED */
 
 /*============================================================================
  * Floppy Drive Parameters (from Linux kernel)

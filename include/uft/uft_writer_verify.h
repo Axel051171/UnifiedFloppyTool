@@ -71,6 +71,8 @@ typedef enum {
 /**
  * @brief Verification result status
  */
+#ifndef UFT_VERIFY_RESULT_T_DEFINED
+#define UFT_VERIFY_RESULT_T_DEFINED
 typedef enum {
     UFT_VRESULT_OK           = 0x00,    /**< Verification passed */
     UFT_VRESULT_MISMATCH     = 0x01,    /**< Data mismatch detected */
@@ -83,6 +85,7 @@ typedef enum {
     UFT_VRESULT_RETRY_OK     = 0x10,    /**< OK after retry */
     UFT_VRESULT_RETRY_FAIL   = 0x11     /**< Failed after retries */
 } uft_verify_result_t;
+#endif /* UFT_VERIFY_RESULT_T_DEFINED */
 
 /**
  * @brief Error location type

@@ -130,6 +130,8 @@ typedef enum {
  *============================================================================*/
 
 /** WOZ INFO chunk data */
+#ifndef UFT_WOZ_INFO_T_DEFINED
+#define UFT_WOZ_INFO_T_DEFINED
 typedef struct {
     uint8_t     version;        /**< INFO version (1 or 2) */
     uint8_t     disk_type;      /**< 1=5.25", 2=3.5" */
@@ -146,6 +148,7 @@ typedef struct {
     uint16_t    required_ram;   /**< Required RAM in KB */
     uint16_t    largest_track;  /**< Largest track in blocks */
 } uft_woz_info_t;
+#endif /* UFT_WOZ_INFO_T_DEFINED */
 
 /** WOZ1 track record (6656 bytes) */
 typedef struct {

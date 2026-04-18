@@ -31,6 +31,8 @@ extern "C" {
 /**
  * @brief Protection scheme family
  */
+#ifndef UFT_PROTECTION_TYPE_T_DEFINED
+#define UFT_PROTECTION_TYPE_T_DEFINED
 typedef enum {
     /* No protection */
     UFT_PROT_NONE = 0,
@@ -76,6 +78,7 @@ typedef enum {
     /* Unknown/Custom */
     UFT_PROT_UNKNOWN = 0xFFFF
 } uft_protection_type_t;
+#endif /* UFT_PROTECTION_TYPE_T_DEFINED */
 
 /**
  * @brief Protection detection result

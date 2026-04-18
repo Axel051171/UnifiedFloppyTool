@@ -70,6 +70,8 @@ typedef enum {
 /**
  * @brief MSA file header
  */
+#ifndef UFT_MSA_HEADER_T_DEFINED
+#define UFT_MSA_HEADER_T_DEFINED
 typedef struct {
     uint16_t magic;             /* 0x0E0F */
     uint16_t sectors_per_track;
@@ -77,6 +79,7 @@ typedef struct {
     uint16_t start_track;
     uint16_t end_track;
 } uft_msa_header_t;
+#endif /* UFT_MSA_HEADER_T_DEFINED */
 
 /**
  * @brief Decompress MSA file

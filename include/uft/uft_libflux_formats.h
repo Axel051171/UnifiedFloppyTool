@@ -144,6 +144,8 @@ typedef struct {
 
 #pragma pack(push, 1)
 
+#ifndef UFT_DMK_HEADER_T_DEFINED
+#define UFT_DMK_HEADER_T_DEFINED
 typedef struct {
     uint8_t  write_protected;
     uint8_t  track_number;
@@ -152,6 +154,7 @@ typedef struct {
     uint8_t  reserved1[7];      /* 0x05-0x0B */
     uint8_t  reserved2[4];      /* 0x0C-0x0F */
 } uft_dmk_header_t;
+#endif /* UFT_DMK_HEADER_T_DEFINED */
 
 #pragma pack(pop)
 
@@ -257,6 +260,8 @@ typedef struct {
     /* uint8_t data[]; */
 } uft_woz_chunk_t;
 
+#ifndef UFT_WOZ_INFO_T_DEFINED
+#define UFT_WOZ_INFO_T_DEFINED
 typedef struct {
     /* v1, v2, v3 */
     uint8_t  version;
@@ -276,6 +281,7 @@ typedef struct {
     uint16_t flux_block;
     uint16_t largest_flux_track;
 } uft_woz_info_t;
+#endif /* UFT_WOZ_INFO_T_DEFINED */
 
 /* v2+ track entry */
 typedef struct {
@@ -421,6 +427,8 @@ static const uint8_t UFT_D64_SPEED_ZONE[] = {
 
 #pragma pack(push, 1)
 
+#ifndef UFT_MSA_HEADER_T_DEFINED
+#define UFT_MSA_HEADER_T_DEFINED
 typedef struct {
     uint16_t signature;         /* 0x0E0F */
     uint16_t sectors_per_track; /* 9, 10, or 11 */
@@ -428,6 +436,7 @@ typedef struct {
     uint16_t start_track;       /* Usually 0 */
     uint16_t end_track;         /* Usually 79 or 80 */
 } uft_msa_header_t;
+#endif /* UFT_MSA_HEADER_T_DEFINED */
 
 #pragma pack(pop)
 

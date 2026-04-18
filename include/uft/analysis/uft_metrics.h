@@ -51,6 +51,8 @@ typedef enum {
  * Protection Type Enumeration
  *===========================================================================*/
 
+#ifndef UFT_PROTECTION_TYPE_T_DEFINED
+#define UFT_PROTECTION_TYPE_T_DEFINED
 typedef enum {
     UFT_PROT_NONE = 0,
     /* Amiga protections */
@@ -64,6 +66,7 @@ typedef enum {
     /* Other */
     UFT_PROT_CUSTOM
 } uft_protection_type_t;
+#endif /* UFT_PROTECTION_TYPE_T_DEFINED */
 
 /*===========================================================================
  * Flux Quality Metrics
@@ -131,6 +134,8 @@ typedef struct {
  * Track Quality Metrics
  *===========================================================================*/
 
+#ifndef UFT_TRACK_QUALITY_T_DEFINED
+#define UFT_TRACK_QUALITY_T_DEFINED
 typedef struct {
     uint8_t track;              /**< Track number */
     uint8_t side;               /**< Side (0 or 1) */
@@ -140,6 +145,7 @@ typedef struct {
     int     overall_score;      /**< Overall quality score 0-100 */
     uft_quality_grade_t grade;  /**< Quality grade */
 } uft_track_quality_t;
+#endif /* UFT_TRACK_QUALITY_T_DEFINED */
 
 /*===========================================================================
  * Revolution Comparison Result

@@ -38,6 +38,8 @@ extern "C" {
 /**
  * @brief Floppy disk format identifier
  */
+#ifndef UFT_FORMAT_ID_T_DEFINED
+#define UFT_FORMAT_ID_T_DEFINED
 typedef enum {
     /* Unknown/Invalid */
     UFT_FMT_UNKNOWN         = 0,
@@ -167,6 +169,7 @@ typedef enum {
     
     UFT_FMT_MAX             = 999
 } uft_format_id_t;
+#endif /* UFT_FORMAT_ID_T_DEFINED */
 
 /*===========================================================================
  * Format Descriptor Structure

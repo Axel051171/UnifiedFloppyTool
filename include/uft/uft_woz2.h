@@ -125,17 +125,22 @@ static const char* uft_woz_requires_machine[] = {
  * WOZ File Header
  *============================================================================*/
 
+#ifndef UFT_WOZ_HEADER_T_DEFINED
+#define UFT_WOZ_HEADER_T_DEFINED
 typedef struct {
     uint32_t signature;     /**< WOZ1/WOZ2/MOOF */
     uint8_t  ff_marker;     /**< Must be 0xFF */
     uint8_t  lf_cr_lf[3];   /**< Must be 0x0A 0x0D 0x0A */
     uint32_t crc32;         /**< CRC of all data after header */
 } uft_woz_header_t;
+#endif /* UFT_WOZ_HEADER_T_DEFINED */
 
 /*============================================================================
  * INFO Chunk (60 bytes)
  *============================================================================*/
 
+#ifndef UFT_WOZ_INFO_T_DEFINED
+#define UFT_WOZ_INFO_T_DEFINED
 typedef struct {
     uint8_t  version;           /**< INFO version (1 for WOZ1, 2+ for WOZ2) */
     uint8_t  disk_type;         /**< 1=5.25", 2=3.5" */
@@ -154,6 +159,7 @@ typedef struct {
     
     uint8_t  reserved[22];
 } uft_woz_info_t;
+#endif /* UFT_WOZ_INFO_T_DEFINED */
 
 /*============================================================================
  * TRKS Chunk Entry (WOZ2)

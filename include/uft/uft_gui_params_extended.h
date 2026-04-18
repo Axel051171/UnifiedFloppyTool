@@ -50,6 +50,8 @@ typedef enum {
 
 /**
  */
+#ifndef UFT_PLATFORM_T_DEFINED
+#define UFT_PLATFORM_T_DEFINED
 typedef enum {
     UFT_PLATFORM_AUTO = 0,
     UFT_PLATFORM_AMIGA,
@@ -67,12 +69,15 @@ typedef enum {
     UFT_PLATFORM_MAC_GCR,
     UFT_PLATFORM_COUNT
 } uft_platform_t;
+#endif /* UFT_PLATFORM_T_DEFINED */
 
 /**
  * @brief Flux Encoding (aus UFT_HxC_Extract uft_fluxprofiles.h)
  */
 #ifndef UFT_ENCODING_DEFINED
 #define UFT_ENCODING_DEFINED
+#ifndef UFT_ENCODING_T_DEFINED
+#define UFT_ENCODING_T_DEFINED
 typedef enum {
     UFT_ENC_AUTO = 0,
     UFT_ENC_FM = 1,
@@ -82,6 +87,7 @@ typedef enum {
     UFT_ENC_MAC_GCR = 5,
     UFT_ENC_CUSTOM = 255
 } uft_encoding_t;
+#endif /* UFT_ENCODING_T_DEFINED */
 #endif /* UFT_ENCODING_DEFINED */
 
 /**
@@ -354,6 +360,8 @@ typedef struct uft_gui_forensic_settings {
 
 #ifndef UFT_SECTOR_STATUS_DEFINED
 #define UFT_SECTOR_STATUS_DEFINED
+#ifndef UFT_SECTOR_STATUS_T_DEFINED
+#define UFT_SECTOR_STATUS_T_DEFINED
 typedef enum {
     UFT_SECTOR_EMPTY = 0,         /**< Nicht gelesen */
     UFT_SECTOR_HEAD_BAD,          /**< Header CRC Fehler */
@@ -363,6 +371,7 @@ typedef enum {
     UFT_SECTOR_WEAK,              /**< Weak/Unstable Data */
     UFT_SECTOR_PROTECTED          /**< Copy Protection detected */
 } uft_sector_status_t;
+#endif /* UFT_SECTOR_STATUS_T_DEFINED */
 #endif /* UFT_SECTOR_STATUS_DEFINED */
 
 /**

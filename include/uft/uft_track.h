@@ -96,6 +96,8 @@ typedef enum uft_layer_flags {
  * Quality Metrics
  * ═══════════════════════════════════════════════════════════════════════════ */
 
+#ifndef UFT_TRACK_QUALITY_T_DEFINED
+#define UFT_TRACK_QUALITY_T_DEFINED
 typedef struct uft_track_quality {
     double  avg_bit_cell_ns;    /**< Average bit cell time (ns) */
     double  jitter_ns;          /**< Timing jitter (ns) */
@@ -104,6 +106,7 @@ typedef struct uft_track_quality {
     float   confidence;         /**< Detection confidence 0.0-1.0 */
     int     signal_strength;    /**< 0-100 */
 } uft_track_quality_t;
+#endif /* UFT_TRACK_QUALITY_T_DEFINED */
 
 /* uft_sector_t — canonical definition in uft/uft_types.h (included above) */
 

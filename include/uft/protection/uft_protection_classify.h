@@ -60,6 +60,8 @@ extern "C" {
 /**
  * @brief Target platform for protection detection
  */
+#ifndef UFT_PLATFORM_T_DEFINED
+#define UFT_PLATFORM_T_DEFINED
 typedef enum {
     UFT_PLATFORM_UNKNOWN = 0,
     UFT_PLATFORM_AMIGA,            /**< Commodore Amiga */
@@ -74,6 +76,7 @@ typedef enum {
     UFT_PLATFORM_CPC,              /**< Amstrad CPC */
     UFT_PLATFORM_AUTO              /**< Auto-detect platform */
 } uft_platform_t;
+#endif /* UFT_PLATFORM_T_DEFINED */
 
 /*===========================================================================
  * Protection Category Enumeration
@@ -125,6 +128,8 @@ typedef enum {
 /**
  * @brief Specific protection scheme identifier
  */
+#ifndef UFT_PROTECTION_TYPE_T_DEFINED
+#define UFT_PROTECTION_TYPE_T_DEFINED
 typedef enum {
     UFT_PROT_UNKNOWN = 0,
     
@@ -174,6 +179,7 @@ typedef enum {
     /* Sentinel */
     UFT_PROT_TYPE_COUNT
 } uft_protection_type_t;
+#endif /* UFT_PROTECTION_TYPE_T_DEFINED */
 
 /*===========================================================================
  * Confidence Level

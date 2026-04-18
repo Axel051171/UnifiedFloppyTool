@@ -33,6 +33,8 @@ typedef struct {
  * Disk-Level Verify Result
  * ============================================================================ */
 
+#ifndef UFT_VERIFY_RESULT_T_DEFINED
+#define UFT_VERIFY_RESULT_T_DEFINED
 typedef struct {
     uft_error_t  overall_status;
 
@@ -50,6 +52,7 @@ typedef struct {
     size_t       track_results_count;
     size_t       track_results_capacity;
 } uft_verify_result_t;
+#endif /* UFT_VERIFY_RESULT_T_DEFINED */
 
 /* ============================================================================
  * Options

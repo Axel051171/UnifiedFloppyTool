@@ -30,6 +30,8 @@ extern "C" {
  * Stable identifiers for all supported formats.
  * IDs are grouped by category for easy navigation.
  */
+#ifndef UFT_FORMAT_ID_T_DEFINED
+#define UFT_FORMAT_ID_T_DEFINED
 typedef enum uft_format_id {
     UFT_FMT_UNKNOWN         = 0,
     
@@ -131,6 +133,7 @@ typedef enum uft_format_id {
     
     UFT_FMT_COUNT                   /**< Total format count */
 } uft_format_id_t;
+#endif /* UFT_FORMAT_ID_T_DEFINED */
 
 /*===========================================================================
  * Format Capabilities

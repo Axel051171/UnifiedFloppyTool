@@ -347,6 +347,8 @@ uft_status_t uft_decode_flux(uft_image_t *image,
 /**
  * @brief Verify image integrity
  */
+#ifndef UFT_VERIFY_RESULT_T_DEFINED
+#define UFT_VERIFY_RESULT_T_DEFINED
 typedef struct {
     bool passed;
     size_t total_sectors;
@@ -355,6 +357,7 @@ typedef struct {
     size_t missing_sectors;
     char details[1024];
 } uft_verify_result_t;
+#endif /* UFT_VERIFY_RESULT_T_DEFINED */
 
 uft_status_t uft_verify(uft_image_t *image, uft_verify_result_t *result);
 

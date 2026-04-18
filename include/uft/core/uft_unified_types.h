@@ -293,6 +293,8 @@ static inline bool uft_sector_id_equal(const uft_sector_id_t *a,
 /**
  * @brief Format identifier
  */
+#ifndef UFT_FORMAT_ID_T_DEFINED
+#define UFT_FORMAT_ID_T_DEFINED
 typedef enum {
     UFT_FMT_UNKNOWN = 0,
     
@@ -338,6 +340,7 @@ typedef enum {
     
     UFT_FMT_MAX
 } uft_format_id_t;
+#endif /* UFT_FORMAT_ID_T_DEFINED */
 
 /**
  * @brief Protection type

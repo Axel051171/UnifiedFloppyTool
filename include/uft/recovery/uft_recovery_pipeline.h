@@ -74,6 +74,8 @@ typedef enum {
 
 #ifndef UFT_SECTOR_STATUS_DEFINED
 #define UFT_SECTOR_STATUS_DEFINED
+#ifndef UFT_SECTOR_STATUS_T_DEFINED
+#define UFT_SECTOR_STATUS_T_DEFINED
 typedef struct {
     int track;
     int side;
@@ -90,6 +92,7 @@ typedef struct {
     int retries;                /**< Number of retries */
     int revisions_used;         /**< Revolutions used for fusion */
 } uft_sector_status_t;
+#endif /* UFT_SECTOR_STATUS_T_DEFINED */
 #endif /* UFT_SECTOR_STATUS_DEFINED */
 
 /*============================================================================

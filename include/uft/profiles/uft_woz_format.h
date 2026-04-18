@@ -64,11 +64,14 @@ extern "C" {
 #define UFT_WOZ_TIMING_35           16
 
 #pragma pack(push, 1)
+#ifndef UFT_WOZ_HEADER_T_DEFINED
+#define UFT_WOZ_HEADER_T_DEFINED
 typedef struct {
     uint32_t signature;
     uint32_t magic;
     uint32_t crc32;
 } uft_woz_header_t;
+#endif /* UFT_WOZ_HEADER_T_DEFINED */
 #pragma pack(pop)
 
 #pragma pack(push, 1)
@@ -80,6 +83,8 @@ typedef struct {
 
 /* WOZ INFO chunk - 60 bytes for WOZ2 format */
 #pragma pack(push, 1)
+#ifndef UFT_WOZ_INFO_T_DEFINED
+#define UFT_WOZ_INFO_T_DEFINED
 typedef struct {
     uint8_t  info_version;          /* 1 byte */
     uint8_t  disk_type;             /* 1 byte */
@@ -97,6 +102,7 @@ typedef struct {
     uint16_t largest_flux_track;    /* 2 bytes - WOZ2.1+ */
     uint8_t  reserved[10];          /* 10 bytes padding to 60 */
 } uft_woz_info_t;
+#endif /* UFT_WOZ_INFO_T_DEFINED */
 #pragma pack(pop)
 
 #pragma pack(push, 1)

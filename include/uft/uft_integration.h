@@ -59,6 +59,8 @@ typedef struct uft_filesystem uft_filesystem_t;
  * Platform Types
  * ============================================================================ */
 
+#ifndef UFT_PLATFORM_T_DEFINED
+#define UFT_PLATFORM_T_DEFINED
 typedef enum {
     UFT_PLATFORM_UNKNOWN = 0,
     UFT_PLATFORM_IBM_PC,
@@ -90,6 +92,7 @@ typedef enum {
     UFT_PLATFORM_OSBORNE,
     /* Add more as needed */
 } uft_platform_t;
+#endif /* UFT_PLATFORM_T_DEFINED */
 
 /* ============================================================================
  * Filesystem Types

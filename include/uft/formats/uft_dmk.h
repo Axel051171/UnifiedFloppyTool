@@ -101,6 +101,8 @@ extern "C" {
  * @brief DMK file header (16 bytes)
  */
 UFT_PACK_BEGIN
+#ifndef UFT_DMK_HEADER_T_DEFINED
+#define UFT_DMK_HEADER_T_DEFINED
 typedef struct {
     uint8_t  write_protect;     /**< 0x00=R/W, 0xFF=Read-only */
     uint8_t  tracks;            /**< Number of tracks */
@@ -109,6 +111,7 @@ typedef struct {
     uint8_t  reserved[7];       /**< Reserved (should be 0) */
     uint32_t native_flag;       /**< 0x12345678 if native mode */
 } uft_dmk_header_t;
+#endif /* UFT_DMK_HEADER_T_DEFINED */
 UFT_PACK_END
 
 /**

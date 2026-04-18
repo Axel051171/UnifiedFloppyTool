@@ -51,6 +51,8 @@ typedef enum {
  */
 #ifndef UFT_SECTOR_STATUS_DEFINED
 #define UFT_SECTOR_STATUS_DEFINED
+#ifndef UFT_SECTOR_STATUS_T_DEFINED
+#define UFT_SECTOR_STATUS_T_DEFINED
 typedef struct {
     uint16_t track;      /**< 0..n */
     uint8_t  head;       /**< 0/1 */
@@ -62,6 +64,7 @@ typedef struct {
     uint32_t flags;      /**< uft_sector_flags_t */
     uint32_t crc;        /**< computed CRC if available */
 } uft_sector_status_t;
+#endif /* UFT_SECTOR_STATUS_T_DEFINED */
 #endif /* UFT_SECTOR_STATUS_DEFINED */
 
 void uft_sector_status_init(uft_sector_status_t *s, uint16_t track, uint8_t head, uint16_t sector, uint16_t size);
