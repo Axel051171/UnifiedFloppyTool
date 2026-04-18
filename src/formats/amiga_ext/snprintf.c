@@ -26,6 +26,9 @@
  * causing nast effects.
  **************************************************************/
 
+static void dopr();
+static char *end;
+
 #include <sys/types.h>
 #include <string.h>
 
@@ -35,11 +38,11 @@
 
 #include "snprintf.h"
 
-/* Forward prototypes (C23: empty parens mean (void) — need real signatures). */
-static void dopr(char *buffer, const char *format, va_list args);
-static char *end;
-
-int vsnprintf(char *str, size_t count, const char *fmt, va_list args)
+int vsnprintf(str, count, fmt, args)
+       char *str;
+       size_t count;
+       const char *fmt;
+       va_list args;
 {
        str[0] = 0;
        end = str+count-1;
@@ -75,7 +78,10 @@ static void dostr( char * );
 static char *output;
 static void dopr_outch( int c );
 
-static void dopr(char *buffer, const char *format, va_list args)
+static void dopr( buffer, format, args )
+       char *buffer;
+       char *format;
+       va_list args;
 {
        int ch;
        long value;
@@ -165,7 +171,9 @@ static void dopr(char *buffer, const char *format, va_list args)
 }
 
 static void
-fmtstr(char *value, int ljust, int len, int zpad)
+fmtstr(  value, ljust, len, zpad )
+       char *value;
+       int ljust, len, zpad;
 {
        int padlen, strlen;     /* amount to pad */
 
@@ -188,7 +196,9 @@ fmtstr(char *value, int ljust, int len, int zpad)
 }
 
 static void
-fmtnum(long value, int base, int dosign, int ljust, int len, int zpad)
+fmtnum(  value, base, dosign, ljust, len, zpad )
+       long value;
+       int base, dosign, ljust, len, zpad;
 {
        int signvalue = 0;
        unsigned long uvalue;
@@ -245,12 +255,14 @@ fmtnum(long value, int base, int dosign, int ljust, int len, int zpad)
        }
 }
 
-static void dostr(char *str)
+static void dostr( str )
+       char *str;
 {
        while(*str) dopr_outch(*str++);
 }
 
-static void dopr_outch(int c)
+static void dopr_outch( c )
+       int c;
 {
 /*
        if( iscntrl(c) && c != '\n' && c != '\t' ){
