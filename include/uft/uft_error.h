@@ -4,12 +4,14 @@
 /**
  * @file uft_error.h
  * @brief Unified error handling for UnifiedFloppyTool
- * 
+ *
  * This header defines the standard error codes and handling mechanisms
  * used throughout UFT. All public APIs should return uft_rc_t.
- * 
- * @version 2.10.0
- * @date 2024-12-26
+ *
+ * CANONICAL enum: this file. Sister header
+ * include/uft/core/uft_unified_types.h pulls this in and adds
+ * extension aliases that map to these values (post-F1 Must-Fix
+ * elimination of the duplicate-enum ABI bomb).
  */
 
 #include <stddef.h>
