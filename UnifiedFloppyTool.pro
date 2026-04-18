@@ -3373,8 +3373,8 @@ INCLUDEPATH += \
 # ═══════════════════════════════════════════════════════════════════════════════
 # Forensic Provenance Chain
 # ═══════════════════════════════════════════════════════════════════════════════
-# SOURCES += src/forensic/uft_provenance.c  # not yet created
-# HEADERS += include/uft/forensic/uft_provenance.h
+SOURCES += src/forensic/uft_provenance.c
+HEADERS += include/uft/forensic/uft_provenance.h
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Recovery Wizard + Format Suggestion Engine

@@ -396,22 +396,11 @@ int uft_lzhuf_decompress(const uint8_t *src, size_t src_len,
     return -1;
 }
 
-/* ============================================================================
- * Provenance chain stubs (uft_provenance.c not yet created)
- * ============================================================================ */
-
-typedef struct uft_prov_chain uft_prov_chain_t;
-
-uft_prov_chain_t* uft_prov_create(void) { return NULL; }
-void uft_prov_free(uft_prov_chain_t *chain) { (void)chain; }
-int uft_prov_add(uft_prov_chain_t *chain, const char *event,
-                 const char *detail) {
-    (void)chain; (void)event; (void)detail; return -1;
-}
-int uft_prov_export_json(const uft_prov_chain_t *chain,
-                          const char *path) {
-    (void)chain; (void)path; return -1;
-}
+/* Provenance chain impls moved to src/forensic/uft_provenance.c with
+ * correct-signature implementations (uft_provenance_chain_t, 6-arg
+ * add, SHA-256 chain hashing, JSON export). The previous stubs here
+ * had a local uft_prov_chain_t typedef + 3-arg add(event, detail) —
+ * another §1.3 ABI mismatch against include/uft/forensic/uft_provenance.h. */
 
 /* ============================================================================
  * UFI backend stub (uft_ufi_backend.c not yet created)
