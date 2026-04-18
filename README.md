@@ -14,16 +14,16 @@
 
 | Platform | File | Notes |
 |----------|------|-------|
-| macOS | `UnifiedFloppyTool-4.1.0-macOS.dmg` | Universal (Intel + Apple Silicon) |
-| Linux | `unifiedfloppytool_4.1.0_amd64.deb` | Ubuntu/Debian |
-| Linux | `UnifiedFloppyTool-4.1.0-linux-amd64.tar.gz` | Portable binary |
-| Windows | `UnifiedFloppyTool-4.1.0-windows-x64.tar.gz` | Portable, Qt DLLs included |
+| macOS | `UnifiedFloppyTool-4.1.3-macOS.dmg` | Universal (Intel + Apple Silicon) |
+| Linux | `unifiedfloppytool_4.1.3_amd64.deb` | Ubuntu/Debian |
+| Linux | `UnifiedFloppyTool-4.1.3-linux-amd64.tar.gz` | Portable binary |
+| Windows | `UnifiedFloppyTool-4.1.3-windows-x64.tar.gz` | Portable, Qt DLLs included |
 
 > **macOS:** Falls "App ist beschadigt" erscheint: `xattr -cr UnifiedFloppyTool.app`
 
 ---
 
-## What's New in v4.1.0
+## What's New in v4.1.3
 
 ### Hardware Protocol Rewrite
 Complete audit and rewrite of all hardware controller protocols against official specifications:
