@@ -1,0 +1,26 @@
+# Linker-Truth Baseline — 2026-04-18
+# Build: qmake Debug, mingw32-make, GNU ld
+
+## Undefined references from linker
+# Extract: grep -E "undefined reference" build-truth/build.log
+0
+
+## Stub-Attrappen in src/core/uft_core_stubs.c
+# Functions with <= 6 lines, all-void-args, return -1/NULL/UFT_ERROR_NOT_SUPPORTED
+# These satisfy the linker but provide no functionality.
+# Not §1.3 violations (they return error honestly, not silent UFT_OK) —
+# but still "Klasse A echte Lücken" per the truth-test spec.
+
+uft_inject_file              # generic file injector
+uft_adf_mkdir                # ADF mkdir
+uft_adf_rename               # ADF rename
+uft_adf_read_file            # ADF file read
+uft_validate_d64             # D64 validator
+uft_validate_adf             # ADF validator
+uft_kfx_read_stream          # KryoFlux stream read
+uft_imd_to_raw               # IMD→raw (ABI-mismatch: const void* vs const uft_imd_image_t*)
+uft_td0_to_raw               # TD0→raw (same ABI issue)
+uft_lzhuf_decompress         # LZHUF decompression (needed by TD0)
+uft_prov_add                 # Provenance chain append
+uft_prov_export_json         # Provenance → JSON
+uft_scp_get_track_flux       # SCP flux accessor
