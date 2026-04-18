@@ -11,6 +11,8 @@
 #include "uft/uft_format_plugin.h"
 #include "uft/uft_error.h"
 #include "uft/uft_format_autodetect.h"
+#include "uft_file_ops.h"                /* uft_file_type_t */
+#include "uft/uft_format_parsers.h"      /* uft_scp_file_t, uft_kfx_stream_t */
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -191,12 +193,18 @@ int uft_probe_format(const char *path, void *result) {
 }
 
 /* ============================================================================
- * File injection stubs
+ * File injection — ABI-correct stub
+ *
+ * Declared in include/uft_file_ops.h as 4-arg with 3 char* + a
+ * uft_file_type_t — NOT the (void*disk, path, data, size) form this
+ * stub used to claim. Previous stub was another §1.3 ABI-mismatch.
+ * Fix: match the real signature, return -1, defer real impl until
+ * FS write-paths are in place (same wave as ADF write-ops).
  * ============================================================================ */
 
-int uft_inject_file(void *disk, const char *path, const uint8_t *data,
-                    size_t size) {
-    (void)disk; (void)path; (void)data; (void)size;
+int uft_inject_file(const char *image_path, const char *filename,
+                     const char *input_path, uft_file_type_t type) {
+    (void)image_path; (void)filename; (void)input_path; (void)type;
     return -1;
 }
 
@@ -221,35 +229,63 @@ int uft_inject_file(void *disk, const char *path, const uint8_t *data,
  * ABI-mismatch case. */
 
 /* ============================================================================
- * SCP stubs
+ * SCP — ABI-correct stubs
+ *
+ * Previous stubs had DIFFERENT signatures than the header declarations
+ * in uft_format_parsers.h. Callers passed (data, size, &scp) expecting
+ * int → the 1-arg(path) stub returned NULL = 0, which matches
+ * "SUCCESS" in the int-return contract. That's a catastrophic §1.3
+ * violation: the caller proceeds with uninitialized uft_scp_file_t.
+ *
+ * Fix: match the real signature, return -1 so callers see failure.
+ * Real impl lives in src/flux/uft_scp_parser.c but under different
+ * type (uft_scp_ctx_t not uft_scp_file_t) — unifying those types is
+ * a separate port.
  * ============================================================================ */
 
-void* uft_scp_read(const char *path) {
-    (void)path;
-    return NULL;
+int uft_scp_read(const uint8_t *data, size_t size, uft_scp_file_t *scp) {
+    (void)data; (void)size;
+    if (scp) memset(scp, 0, sizeof(*scp));
+    return -1;   /* HONEST: caller should fall back, not proceed */
 }
 
-void uft_scp_free(void *scp) {
-    free(scp);
+void uft_scp_free(uft_scp_file_t *scp) {
+    if (!scp) return;
+    free(scp->track_offsets);
+    free(scp->data);
+    scp->track_offsets = NULL;
+    scp->data = NULL;
+    scp->track_count = 0;
+    scp->data_size = 0;
 }
 
-int uft_scp_get_track_flux(const void *scp, int track, uint32_t **flux,
-                           size_t *count) {
-    (void)scp; (void)track; (void)flux; (void)count;
+int uft_scp_get_track_flux(const uft_scp_file_t *scp, int track, int revolution,
+                            double *out_deltas, size_t max_deltas) {
+    (void)scp; (void)track; (void)revolution; (void)out_deltas; (void)max_deltas;
     return -1;
 }
 
 /* ============================================================================
- * KryoFlux stubs
+ * KryoFlux — ABI-correct stub
+ *
+ * Same story: declared int-return 3-arg, stub was void*-return 2-arg.
+ * Callers got NULL cast to int = 0 = "success". Fixed.
  * ============================================================================ */
 
-void* uft_kfx_read_stream(const char *path, int track) {
-    (void)path; (void)track;
-    return NULL;
+int uft_kfx_read_stream(const uint8_t *data, size_t size, uft_kfx_stream_t *stream) {
+    (void)data; (void)size;
+    if (stream) memset(stream, 0, sizeof(*stream));
+    return -1;
 }
 
-void uft_kfx_free(void *kfx) {
-    free(kfx);
+void uft_kfx_free(uft_kfx_stream_t *stream) {
+    if (!stream) return;
+    free(stream->flux_deltas);
+    free(stream->index_times);
+    stream->flux_deltas = NULL;
+    stream->index_times = NULL;
+    stream->flux_count = 0;
+    stream->index_count = 0;
 }
 
 /* Format conversion impls moved to src/formats/uft_format_converters.c
@@ -380,26 +416,20 @@ const char* uft_longtrack_type_name(int type) {
     return "Unknown";
 }
 
-/* Forward-decl the options struct so we don't pull in the whole
- * uft_format_parsers.h here. */
-struct uft_lzhuf_options;
-
 /* LZHUF decompressor for DMS-Heavy / NBZ archives.
  *
  * Honest NOT_IMPLEMENTED per spec §1.3 Option 1. Full Okumura/Yoshizaki
  * LZHUF = LZSS(4 KB, 60-byte lookahead) + adaptive Huffman is ~400 lines
  * and can't be landed without verified test vectors (DMS-Heavy/NBZ
- * sample files).
+ * sample files). Callers in uft_format_convert_archive.c handle -1 via
+ * a raw-D64 fallback path.
  *
- * Callers in src/formats/uft_format_convert_archive.c handle a negative
- * return with a raw-D64 fallback, so returning -1 is the documented
- * failure mode. ABI now matches the 5-arg declaration in
- * include/uft/uft_format_parsers.h (previously the stub took 4 args —
- * another silent spec §1.3 mismatch).
+ * Signature now matches the 5-arg declaration in uft_format_parsers.h
+ * (uft_lzhuf_options_t pulled in via the #include above).
  */
 int uft_lzhuf_decompress(const uint8_t *src, size_t src_size,
                          uint8_t *dst, size_t dst_size,
-                         const struct uft_lzhuf_options *opts)
+                         const uft_lzhuf_options_t *opts)
 {
     (void)src; (void)src_size; (void)dst; (void)dst_size; (void)opts;
     return -1;
