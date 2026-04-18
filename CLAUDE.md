@@ -6,7 +6,11 @@ UnifiedFloppyTool ist eine Qt6 C/C++ Desktop-Anwendung für die **forensische Si
 
 **Zielgruppe:** Archive, Museen, Retrocomputing-Enthusiasten, digitale Forensiker, Kopierschutz-Forscher.
 
-**Philosophie:** "Kein Bit verloren" — jede Information auf der Diskette wird erfasst, auch Timing-Anomalien, Kopierschutz-Signaturen und beschädigte Bereiche.
+**Philosophie:** "Kein Bit verloren. Keine stille Veränderung. Keine erfundenen Daten." — jede Information auf der Diskette wird erfasst, auch Timing-Anomalien, Kopierschutz-Signaturen und beschädigte Bereiche.
+
+**Design-Prinzipien (verbindlich):** Siehe [`docs/DESIGN_PRINCIPLES.md`](docs/DESIGN_PRINCIPLES.md).
+Bei Konflikt zwischen Prinzip und Code-Änderung gewinnt das Prinzip. Bekannte
+Compliance-Lücken: [`docs/KNOWN_ISSUES.md`](docs/KNOWN_ISSUES.md).
 
 ## Kernfunktionen
 

@@ -3,7 +3,12 @@
 ## Projekt
 
 Qt6 C/C++ Desktop-Applikation (~860 Quelldateien, ~17 Subsysteme).
-**Kernprinzip:** „Kein Bit verloren." Forensische Integrität schlägt immer Performance, Komfort und Deadlines.
+**Kernprinzip:** „Kein Bit verloren. Keine stille Veränderung. Keine erfundenen Daten."
+Forensische Integrität schlägt immer Performance, Komfort und Deadlines.
+
+**Verbindliche Design-Prinzipien:** [`docs/DESIGN_PRINCIPLES.md`](../docs/DESIGN_PRINCIPLES.md)
+(7 Prinzipien + 4 Meta-Prinzipien). Jeder Agent prüft vor Code-Änderungen ob
+ein Prinzip verletzt würde. Bekannte Lücken: [`docs/KNOWN_ISSUES.md`](../docs/KNOWN_ISSUES.md).
 
 ---
 
