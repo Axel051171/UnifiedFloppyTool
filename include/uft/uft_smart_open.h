@@ -60,6 +60,8 @@ typedef struct {
 } uft_detection_result_t;
 
 /** Protection result */
+#ifndef UFT_PROTECTION_RESULT_T_DEFINED
+#define UFT_PROTECTION_RESULT_T_DEFINED
 typedef struct {
     bool detected;                  /**< True if protection found */
     char scheme_name[64];           /**< Protection scheme name */
@@ -67,6 +69,7 @@ typedef struct {
     int confidence;                 /**< Detection confidence */
     int indicator_count;            /**< Number of indicators found */
 } uft_protection_result_t;
+#endif /* UFT_PROTECTION_RESULT_T_DEFINED */
 
 /** Quality analysis result */
 typedef struct {

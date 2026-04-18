@@ -129,6 +129,8 @@ typedef struct {
 /**
  * @brief Detection result for single protection
  */
+#ifndef UFT_PROTECTION_RESULT_T_DEFINED
+#define UFT_PROTECTION_RESULT_T_DEFINED
 typedef struct {
     uft_protection_id_t id;
     uint8_t  confidence;       /**< 0-100% */
@@ -137,6 +139,7 @@ typedef struct {
     uint16_t flags_detected;   /**< Which characteristics found */
     char     details[256];     /**< Human-readable details */
 } uft_protection_result_t;
+#endif /* UFT_PROTECTION_RESULT_T_DEFINED */
 
 /**
  * @brief Full disk protection analysis

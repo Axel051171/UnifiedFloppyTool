@@ -118,11 +118,13 @@ typedef struct {
  * Detection Result
  * ============================================================================ */
 
+#ifndef UFT_PROTECTION_RESULT_T_DEFINED
+#define UFT_PROTECTION_RESULT_T_DEFINED
 typedef struct {
     /* What was found */
     uint32_t detected_types;            /**< Bitmask of detected types */
     int32_t confidence;                 /**< Overall confidence (0-100) */
-    
+
     /* Details per type */
     struct {
         uft_protection_type_t type;
@@ -133,11 +135,12 @@ typedef struct {
         char description[128];          /**< Human-readable description */
     } details[16];
     int32_t detail_count;
-    
+
     /* Summary */
     char summary[512];
-    
+
 } uft_protection_result_t;
+#endif /* UFT_PROTECTION_RESULT_T_DEFINED */
 
 /* ============================================================================
  * Preset IDs

@@ -83,6 +83,8 @@ typedef enum {
 /**
  * @brief Protection detection result
  */
+#ifndef UFT_PROTECTION_RESULT_T_DEFINED
+#define UFT_PROTECTION_RESULT_T_DEFINED
 typedef struct {
     uft_protection_type_t type;     /**< Detected protection type */
     const char *name;               /**< Human-readable name */
@@ -104,6 +106,7 @@ typedef struct {
     /* Additional info */
     char notes[256];                /**< Detection notes */
 } uft_protection_result_t;
+#endif /* UFT_PROTECTION_RESULT_T_DEFINED */
 
 /**
  * @brief Protection detection context

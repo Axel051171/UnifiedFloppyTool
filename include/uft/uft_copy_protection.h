@@ -182,12 +182,15 @@ typedef struct {
 /**
  * @brief Copy protection detection result
  */
+#ifndef UFT_PROTECTION_RESULT_T_DEFINED
+#define UFT_PROTECTION_RESULT_T_DEFINED
 typedef struct {
     uft_copy_protection_t type;
     const char           *name;
     int                   confidence;  /**< 0-100 confidence level */
     char                  details[256]; /**< Additional details */
 } uft_protection_result_t;
+#endif /* UFT_PROTECTION_RESULT_T_DEFINED */
 
 /*============================================================================
  * Detection Functions

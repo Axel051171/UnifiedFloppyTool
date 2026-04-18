@@ -71,8 +71,15 @@ typedef enum {
 /**
  * @brief Verification result status
  */
-#ifndef UFT_VERIFY_RESULT_T_DEFINED
-#define UFT_VERIFY_RESULT_T_DEFINED
+/* RENAMED from uft_verify_result_t → uft_verify_status_code_t per ABI-003
+ * consolidation. The name uft_verify_result_t is reserved for struct-type
+ * result bundles (4 struct variants across the tree, canonical in
+ * uft_disk_verify.h). This enum is a per-operation status code with a
+ * different semantic — giving it a distinct name eliminates the
+ * struct-vs-enum name collision. Zero callers of this enum today, so no
+ * migration needed. */
+#ifndef UFT_VERIFY_STATUS_CODE_T_DEFINED
+#define UFT_VERIFY_STATUS_CODE_T_DEFINED
 typedef enum {
     UFT_VRESULT_OK           = 0x00,    /**< Verification passed */
     UFT_VRESULT_MISMATCH     = 0x01,    /**< Data mismatch detected */
@@ -84,8 +91,8 @@ typedef enum {
     UFT_VRESULT_PARTIAL      = 0x07,    /**< Partial verification only */
     UFT_VRESULT_RETRY_OK     = 0x10,    /**< OK after retry */
     UFT_VRESULT_RETRY_FAIL   = 0x11     /**< Failed after retries */
-} uft_verify_result_t;
-#endif /* UFT_VERIFY_RESULT_T_DEFINED */
+} uft_verify_status_code_t;
+#endif /* UFT_VERIFY_STATUS_CODE_T_DEFINED */
 
 /**
  * @brief Error location type
@@ -143,7 +150,7 @@ typedef struct {
     uint8_t  head;                      /**< Head/side */
     uint8_t  sector;                    /**< Sector number */
     
-    uft_verify_result_t result;         /**< Overall result */
+    uft_verify_status_code_t result;         /**< Overall result */
     
     /* CRC comparison */
     bool     crc_match;                 /**< CRC matches */
@@ -178,7 +185,7 @@ typedef struct {
     uint8_t  track;                     /**< Track number */
     uint8_t  head;                      /**< Head/side */
     
-    uft_verify_result_t result;         /**< Overall result */
+    uft_verify_status_code_t result;         /**< Overall result */
     
     /* Sector results */
     uft_sector_verify_t *sectors;       /**< Array of sector results */
@@ -213,7 +220,7 @@ typedef struct {
     
     /* Per-pass results */
     struct {
-        uft_verify_result_t result;     /**< Pass result */
+        uft_verify_status_code_t result;     /**< Pass result */
         float    match_percent;         /**< Match percentage */
         uint32_t errors;                /**< Error count */
         float    timing_deviation;      /**< Average timing deviation */
@@ -246,7 +253,7 @@ typedef struct {
     float    timing_tolerance;          /**< Timing tolerance % */
     
     /* Results */
-    uft_verify_result_t overall_result; /**< Overall result */
+    uft_verify_status_code_t overall_result; /**< Overall result */
     
     /* Track results */
     uft_track_verify_t *tracks;         /**< Array of track results */
@@ -293,7 +300,7 @@ typedef void (*uft_verify_progress_cb)(
     uint8_t track,
     uint8_t head,
     uint8_t sector,
-    uft_verify_result_t result,
+    uft_verify_status_code_t result,
     float percent_complete,
     void *user_data
 );
@@ -340,7 +347,7 @@ int uft_wv_session_reset(uft_verify_session_t *session);
  * @param actual_size Actual data size
  * @return Verification result
  */
-uft_verify_result_t uft_wv_verify_sector(
+uft_verify_status_code_t uft_wv_verify_sector(
     uft_verify_session_t *session,
     uint8_t track,
     uint8_t head,
@@ -361,7 +368,7 @@ uft_verify_result_t uft_wv_verify_sector(
  * @param actual_crc Actual CRC from read-back
  * @return Verification result
  */
-uft_verify_result_t uft_wv_verify_sector_crc(
+uft_verify_status_code_t uft_wv_verify_sector_crc(
     uft_verify_session_t *session,
     uint8_t track,
     uint8_t head,
@@ -381,7 +388,7 @@ uft_verify_result_t uft_wv_verify_sector_crc(
  * @param actual_bits Actual bit count
  * @return Verification result
  */
-uft_verify_result_t uft_wv_verify_track_bitstream(
+uft_verify_status_code_t uft_wv_verify_track_bitstream(
     uft_verify_session_t *session,
     uint8_t track,
     uint8_t head,
@@ -403,7 +410,7 @@ uft_verify_result_t uft_wv_verify_track_bitstream(
  * @param sample_rate Sample rate in Hz
  * @return Verification result
  */
-uft_verify_result_t uft_wv_verify_flux_timing(
+uft_verify_status_code_t uft_wv_verify_flux_timing(
     uft_verify_session_t *session,
     uint8_t track,
     uint8_t head,
@@ -433,7 +440,7 @@ typedef int (*uft_wv_read_cb)(
     void *user_data
 );
 
-uft_verify_result_t uft_wv_multipass_verify(
+uft_verify_status_code_t uft_wv_multipass_verify(
     uft_verify_session_t *session,
     uint8_t track,
     uint8_t head,
@@ -479,7 +486,7 @@ typedef int (*uft_wv_read_sector_cb)(
     void *user_data
 );
 
-uft_verify_result_t uft_wv_retry_sector(
+uft_verify_status_code_t uft_wv_retry_sector(
     uft_verify_session_t *session,
     uint8_t track,
     uint8_t head,
@@ -627,7 +634,7 @@ void uft_wv_print_summary(const uft_verify_session_t *session);
  * @param result Result code
  * @return Static string
  */
-const char* uft_wv_result_name(uft_verify_result_t result);
+const char* uft_wv_result_name(uft_verify_status_code_t result);
 
 /**
  * @brief Get error location type name
