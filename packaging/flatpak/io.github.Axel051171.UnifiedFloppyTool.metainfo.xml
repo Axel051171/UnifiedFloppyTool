@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  AppStream metadata for the Flatpak / Flathub submission.
+  Schema: https://www.freedesktop.org/software/appstream/docs/chap-Metadata.html
+  Validate with: appstreamcli validate io.github.Axel051171.UnifiedFloppyTool.metainfo.xml
+-->
+<component type="desktop-application">
+  <id>io.github.Axel051171.UnifiedFloppyTool</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-2.0-or-later</project_license>
+
+  <name>UnifiedFloppyTool</name>
+  <summary>Forensic floppy disk preservation for archives and museums</summary>
+
+  <description>
+    <p>
+      UnifiedFloppyTool (UFT) is a Qt 6 desktop application for the forensic
+      capture, analysis and long-term preservation of historical floppy disks.
+      It targets archives, museums, digital forensics labs and serious
+      retrocomputing enthusiasts who need the full truth about the magnetic
+      layer — not just a working copy.
+    </p>
+    <p>Core capabilities:</p>
+    <ul>
+      <li>Reads and writes 80+ disk image formats across Commodore, Apple,
+          Atari, IBM PC, Amstrad, Spectrum, BBC/Acorn, Amiga, and Japanese
+          8-bit/16-bit systems (SCP, HFE, IPF, WOZ, ADF, D64, IMD, TD0 and
+          many more)</li>
+      <li>Drives six hardware controllers (Greaseweazle, SuperCard Pro,
+          KryoFlux, FC5025, XUM1541/ZoomFloppy, Applesauce)</li>
+      <li>DeepRead signal recovery pipeline (OTDR-inspired flux analysis,
+          adaptive PLL re-decode, multi-revolution weighted voting)</li>
+      <li>Detects and documents 35+ historical copy-protection schemes</li>
+      <li>Forensic report with hash chain, audit trail and sidecar metadata
+          that record every transformation in a lossy-documented format</li>
+    </ul>
+    <p>
+      UFT follows a strict preservation philosophy: no silent data loss, no
+      fabricated flux, no hidden normalisations. Every conversion is
+      categorised (lossless, lossy-documented, impossible) and destructive
+      operations require explicit consent.
+    </p>
+  </description>
+
+  <launchable type="desktop-id">io.github.Axel051171.UnifiedFloppyTool.desktop</launchable>
+
+  <url type="homepage">https://github.com/Axel051171/UnifiedFloppyTool</url>
+  <url type="bugtracker">https://github.com/Axel051171/UnifiedFloppyTool/issues</url>
+  <url type="vcs-browser">https://github.com/Axel051171/UnifiedFloppyTool</url>
+
+  <developer id="io.github.Axel051171">
+    <name>UnifiedFloppyTool Contributors</name>
+  </developer>
+
+  <categories>
+    <category>Utility</category>
+    <category>System</category>
+    <category>Archiving</category>
+  </categories>
+
+  <keywords>
+    <keyword>floppy</keyword>
+    <keyword>disk image</keyword>
+    <keyword>preservation</keyword>
+    <keyword>forensic</keyword>
+    <keyword>retro</keyword>
+    <keyword>amiga</keyword>
+    <keyword>commodore</keyword>
+    <keyword>atari</keyword>
+    <keyword>apple</keyword>
+    <keyword>greaseweazle</keyword>
+    <keyword>kryoflux</keyword>
+    <keyword>supercard pro</keyword>
+  </keywords>
+
+  <supports>
+    <control>keyboard</control>
+    <control>pointing</control>
+  </supports>
+
+  <content_rating type="oars-1.1" />
+
+  <screenshots>
+    <screenshot type="default">
+      <caption>Main window showing the OTDR-based flux analysis panel</caption>
+      <image>https://raw.githubusercontent.com/Axel051171/UnifiedFloppyTool/main/packaging/flatpak/screenshots/main-window.png</image>
+    </screenshot>
+  </screenshots>
+
+  <releases>
+    <release version="4.1.3" date="2026-04-18">
+      <description>
+        <p>
+          Design-principles release. Adds forensic-integrity infrastructure:
+          loss-report sidecar (.loss.json) schema v1, explicit round-trip
+          matrix with LL/LD/IM/UT statuses, preflight check for every
+          conversion, plugin metadata for spec-status / feature-matrix /
+          emulator-compatibility / stub-marker, GCC 15 (C23) build fix.
+        </p>
+      </description>
+    </release>
+    <release version="4.1.0" date="2026-04-13">
+      <description>
+        <p>
+          First tagged release with the full 80-plugin format catalogue and
+          6 hardware controllers. CI green on Linux (Qt 6.7/6.10), macOS and
+          Windows MinGW.
+        </p>
+      </description>
+    </release>
+  </releases>
+
+  <provides>
+    <mediatype>application/x-adf</mediatype>
+    <mediatype>application/x-d64</mediatype>
+    <mediatype>application/x-hfe</mediatype>
+    <mediatype>application/x-scp</mediatype>
+    <mediatype>application/x-woz</mediatype>
+    <mediatype>application/x-ipf</mediatype>
+  </provides>
+</component>

@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Name=UnifiedFloppyTool
+GenericName=Floppy Disk Preservation Tool
+Comment=Forensic floppy disk preservation for archives and museums
+Exec=UnifiedFloppyTool %F
+Icon=io.github.Axel051171.UnifiedFloppyTool
+Terminal=false
+Categories=Utility;System;Archiving;
+MimeType=application/x-adf;application/x-d64;application/x-hfe;application/x-scp;application/x-woz;application/x-ipf;
+Keywords=floppy;disk;image;preservation;forensic;retro;amiga;commodore;atari;apple;greaseweazle;kryoflux;supercard;
+StartupNotify=true
+StartupWMClass=UnifiedFloppyTool
