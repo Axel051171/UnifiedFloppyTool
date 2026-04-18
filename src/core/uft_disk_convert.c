@@ -70,7 +70,10 @@ uft_error_t uft_disk_convert_to_disk(uft_disk_t *source, uft_disk_t *target,
     uft_error_t err = uft_disk_stream_tracks(source, convert_visitor,
                                                &sopts, &ctx);
 
-    /* Final error summary */
+    /* Final error summary. If every track failed (zero converted) we
+     * report NOT_SUPPORTED — the source/target pair produced no output
+     * at all, which is functionally equivalent to the conversion path
+     * being unsupported. Per-track failures are already in result->. */
     if (result->tracks_failed > 0 && result->tracks_converted == 0)
         return UFT_ERROR_NOT_SUPPORTED;
     return err;
