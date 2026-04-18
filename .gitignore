@@ -50,3 +50,9 @@ desktop.ini
 *.dmg
 *.tar.gz
 *.zip
+
+# Claude Code agent scratch space (worktrees, session state)
+.claude/worktrees/
+.claude/settings.local.json
+.claude/worktree_meta.json
+.claude/tasks.json

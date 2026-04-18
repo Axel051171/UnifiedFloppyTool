@@ -11,15 +11,17 @@ UnifiedFloppyTool ist eine Qt6 C/C++ Desktop-Anwendung für die **forensische Si
 ## Kernfunktionen
 
 ### 1. Disk-Imaging (Lesen/Schreiben)
-Unterstützt 9 Hardware-Controller:
-- **Greaseweazle** (72MHz Flux-Capture, USB)
-- **SuperCard Pro** (25MHz, USB)
-- **KryoFlux** (24MHz, USB via DTC-Tool)
-- **FC5025** (USB 5.25" Read-Only)
-- **XUM1541/ZoomFloppy** (IEC-Bus für Commodore-Laufwerke)
-- **Applesauce** (Apple-spezialisiert, Text-basiertes USB-Protokoll)
+Unterstützt 6 Hardware-Controller (HAL fully wired):
+- **Greaseweazle** (72MHz Flux-Capture, USB) — read+write+flux, production
+- **SuperCard Pro** (25MHz, USB) — HAL backend stubbed, CLI available
+- **KryoFlux** (24MHz, USB via DTC-Tool) — read via subprocess
+- **FC5025** (USB 5.25" Read-Only) — read via fcimage CLI
+- **XUM1541/ZoomFloppy** (IEC-Bus für Commodore-Laufwerke) — HAL stubbed
+- **Applesauce** (Apple-spezialisiert, Text-basiertes USB-Protokoll) — HAL stubbed
 
-### 2. Format-Unterstützung (138+ Formate)
+(FluxEngine + UFI/USB-Floppy exist as Qt providers but not as HAL backends.)
+
+### 2. Format-Unterstützung (80 registered plugins, 138 format IDs)
 Liest/schreibt Disk-Images von praktisch jedem 8-Bit- und 16-Bit-Computer:
 - **Commodore:** D64, D71, D81, G64, T64, CRT, PRG, P00
 - **Apple:** DO, PO, WOZ (v1/v2/2.1), A2R, MOOF, 2MG, NIB, DC42
@@ -81,7 +83,7 @@ Erkennt und dokumentiert historische Kopierschutz-Verfahren:
 │  Greaseweazle │ SCP │ KryoFlux │ FC5025 │ XUM1541 │ AS  │
 ├─────────────────────────────────────────────────────────┤
 │                   Core Engine (C)                        │
-│  Format Parsers (138+) │ PLL Decoder │ MFM/FM/GCR Codec │
+│  Format Parsers (80 plugins, 138 IDs) │ PLL Decoder │ MFM/FM/GCR Codec │
 │  Flux Decoder │ Sector Extractor │ CRC Engine            │
 ├─────────────────────────────────────────────────────────┤
 │              Analysis Pipeline (C)                       │
@@ -131,7 +133,7 @@ src/
   algorithms/          — God-Mode Decoder, Viterbi, Encoding
   core/                — Kernmodule (Multirev, MFM, Error)
   decoder/             — PLL, Sync, Multi-Rev Fusion
-  formats/             — 138+ Format-Parser (nach System sortiert)
+  formats/             — ~80 Format-Plugins (138 IDs registriert) (nach System sortiert)
   formats_v2/          — DEPRECATED (19 Legacy-Dateien, README)
   fs/                  — Dateisystem-Implementierungen
   flux/                — KryoFlux, Flux Loader
@@ -149,8 +151,8 @@ tests/                 — 77 C-Tests + 1 Qt-Test
 ## Schlüssel-Metriken
 
 - ~860 Source-Dateien, ~200.000+ Zeilen C/C++
-- 138 Format-IDs, 44 Konvertierungspfade
-- 9 Hardware-Controller
+- 138 Format-IDs, 80 Plugin-B Registrierungen, 44 Konvertierungspfade
+- 6 Hardware-Controller (2-3 Nischen-HAL-Backends pending)
 - 55+ Kopierschutz-Schemes
 - 8 DeepRead-Module + 12 OTDR-Pipeline-Stufen
 - 9 SIMD-Dispatch-Punkte (SSE2/AVX2 Runtime)

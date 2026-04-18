@@ -181,7 +181,11 @@ typedef int uft_error_t;
 #define UFT_ERROR_IO             UFT_ERR_IO
 #endif
 #define UFT_ERROR_TOOL_FAILED    UFT_ERR_INTERNAL
-#define UFT_ERROR               UFT_ERR_INTERNAL
+/* Bare UFT_ERROR constant removed per Must-Fix-Hunter F15: collided
+ * with the function-like logging macro UFT_ERROR(cat, ...) declared in
+ * include/uft/core/uft_logging_v2.h. Zero data-constant callers found —
+ * only comments referenced it. Use UFT_ERR_INTERNAL directly for the
+ * value, or UFT_ERROR(category, fmt, ...) for logging. */
 #define UFT_ERROR_UNKNOWN_ENCODING UFT_ERR_FORMAT
 #define UFT_ERROR_PLUGIN_LOAD    UFT_ERR_INTERNAL
 #define UFT_ERROR_PLUGIN_NOT_FOUND UFT_ERR_NOT_SUPPORTED
