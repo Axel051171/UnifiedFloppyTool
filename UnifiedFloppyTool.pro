@@ -89,9 +89,16 @@ msvc {
 }
 
 # GCC/Clang hardening (Linux, macOS, MinGW)
+#
+# Flathub, RPM macros and many distro build systems already pass
+# -D_FORTIFY_SOURCE=2 (or =3) through CFLAGS, which produces
+# 'warning: _FORTIFY_SOURCE redefined' once per translation unit when
+# we add it again. -U_FORTIFY_SOURCE immediately before -D clears any
+# prior definition so our intended level wins without the warning.
+# See issue #16.
 !msvc {
-    QMAKE_CFLAGS_RELEASE += -fstack-protector-strong -D_FORTIFY_SOURCE=2
-    QMAKE_CXXFLAGS_RELEASE += -fstack-protector-strong -D_FORTIFY_SOURCE=2
+    QMAKE_CFLAGS_RELEASE   += -fstack-protector-strong -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2
+    QMAKE_CXXFLAGS_RELEASE += -fstack-protector-strong -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2
 }
 
 # macOS specific

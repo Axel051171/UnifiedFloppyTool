@@ -26,7 +26,17 @@
 #include <QMessageBox>
 #include <QRandomGenerator>
 #include <QDebug>
+#include <QLoggingCategory>
 #include <QThread>
+
+// Serial-port detection fires every few seconds; each call used to emit
+// one qDebug line per port (~32 on a typical Linux host), flooding the
+// system journal. Route those traces through a category that is off by
+// default. Users who want to debug hardware detection can re-enable it
+// with e.g.:
+//   QT_LOGGING_RULES="uft.hw.serial.debug=true" UnifiedFloppyTool
+// See issue #17.
+Q_LOGGING_CATEGORY(lcHwSerial, "uft.hw.serial", QtWarningMsg)
 #include <QFileInfo>
 #include <QStandardItemModel>
 #include <cstdio>  // For printf debugging
@@ -358,17 +368,17 @@ void HardwareTab::detectSerialPorts()
     ui->comboPort->clear();
     
 #ifdef UFT_HAS_SERIALPORT
-    qDebug() << "Using QSerialPortInfo for port detection";
+    qCDebug(lcHwSerial) << "Using QSerialPortInfo for port detection";
     QList<QSerialPortInfo> ports = QSerialPortInfo::availablePorts();
-    qDebug() << "Found" << ports.size() << "serial ports";
-    
+    qCDebug(lcHwSerial) << "Found" << ports.size() << "serial ports";
+
     for (const QSerialPortInfo& port : ports) {
         QString portName = port.portName();
         QString description = port.description();
         uint16_t vid = port.vendorIdentifier();
         uint16_t pid = port.productIdentifier();
-        
-        qDebug() << "  Port:" << portName << "VID:" << Qt::hex << vid << "PID:" << pid << "Desc:" << description;
+
+        qCDebug(lcHwSerial) << "  Port:" << portName << "VID:" << Qt::hex << vid << "PID:" << pid << "Desc:" << description;
         
         QString displayName;
         QString controllerHint;
@@ -396,7 +406,7 @@ void HardwareTab::detectSerialPorts()
     }
 #else
     // Fallback: Read COM ports from Windows Registry
-    qDebug() << "UFT_HAS_SERIALPORT not defined - using Windows Registry fallback";
+    qCDebug(lcHwSerial) << "UFT_HAS_SERIALPORT not defined - using Windows Registry fallback";
 #ifdef Q_OS_WIN
     HKEY hKey;
     if (RegOpenKeyExW(HKEY_LOCAL_MACHINE, 
@@ -429,14 +439,14 @@ void HardwareTab::detectSerialPorts()
                     displayName = QString("%1 - USB Serial").arg(portName);
                 }
                 
-                qDebug() << "  Found:" << portName << "Device:" << deviceName;
+                qCDebug(lcHwSerial) << "  Found:" << portName << "Device:" << deviceName;
                 ui->comboPort->addItem(displayName, portName);
             }
             index++;
         }
         RegCloseKey(hKey);
     } else {
-        qDebug() << "Failed to open registry key for COM ports";
+        qCWarning(lcHwSerial) << "Failed to open registry key for COM ports";
     }
 #endif
 #endif
