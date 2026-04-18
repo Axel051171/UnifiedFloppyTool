@@ -391,7 +391,10 @@ void UftTargetPage::setupUi()
         emit completeChanged();
     });
     
-    connect(m_categoryGroup, QOverload<int>::of(&QButtonGroup::buttonClicked),
+    // Qt6 removed the int overload of QButtonGroup::buttonClicked; the
+    // integer-id equivalent is idClicked(int), added in Qt 5.15 for this
+    // migration.
+    connect(m_categoryGroup, &QButtonGroup::idClicked,
             [this](int) { filterFormats(m_formatFilter->text()); });
     
     registerField("targetPath*", m_targetPath);
@@ -1202,28 +1205,40 @@ void UftConversionWorker::process()
         return;
     }
 
-    /* Set up conversion options */
-    uft_convert_options_ext_t opts;
+    /* Set up conversion options.
+     *
+     * uft_convert_file() takes uft_convert_options_t (from uft_types.h), not
+     * the _ext_t variant. The _t struct has no dedicated cancel pointer —
+     * cancellation is signalled by the progress callback returning false.
+     * We bridge the cancel flag through the progress context. */
+    uft_convert_options_t opts;
     memset(&opts, 0, sizeof(opts));
-    opts.verify_after = m_options.verify_after_convert;
-    opts.preserve_errors = false;
+    opts.verify_after       = m_options.verify_after_convert;
+    opts.preserve_errors    = false;
     opts.preserve_weak_bits = m_options.preserve_weak_bits;
-    opts.decode_retries = m_options.max_retries > 0 ? m_options.max_retries : 3;
-    opts.use_multiple_revs = m_options.multi_revolution;
-    opts.cancel = &m_cancelled;
+    opts.decode_retries     = m_options.max_retries > 0 ? m_options.max_retries : 3;
+    opts.use_multiple_revs  = m_options.multi_revolution;
 
-    /* Progress callback */
+    /* Progress callback bridging Qt + cancel flag. */
     struct ProgressCtx {
         UftConversionWorker *self;
+        volatile bool       *cancel;
     };
-    static auto progressCb = [](int percent, const char *stage, void *user) {
+    static auto progressCb = [](int cyl, int head, int percent,
+                                 const char *stage, void *user) -> bool {
+        (void)cyl;
+        (void)head;
         auto *ctx = static_cast<ProgressCtx*>(user);
-        QMetaObject::invokeMethod(ctx->self, [ctx, percent, msg = QString::fromUtf8(stage)]() {
-            emit ctx->self->progress(10 + (percent * 80 / 100), msg);
-        }, Qt::QueuedConnection);
+        QMetaObject::invokeMethod(ctx->self,
+            [ctx, percent, msg = QString::fromUtf8(stage)]() {
+                emit ctx->self->progress(10 + (percent * 80 / 100), msg);
+            },
+            Qt::QueuedConnection);
+        /* Return false to request cancellation. */
+        return !(ctx->cancel && *ctx->cancel);
     };
-    ProgressCtx ctx{this};
-    opts.progress_cb = progressCb;
+    ProgressCtx ctx{this, &m_cancelled};
+    opts.progress      = progressCb;
     opts.progress_user = &ctx;
 
     uft_convert_result_t result;
