@@ -1,0 +1,27 @@
+# Linker-Truth Final — 2026-04-18 (after L3 work)
+# Build: qmake Debug, mingw32-make, GNU ld
+
+## Undefined references from linker
+0
+
+## Remaining honest NOT_IMPLEMENTED stubs (spec §1.3 Option 1)
+# These match their header declarations exactly, return -1 on call.
+# Not attrappen — legitimate "explicit NOT_SUPPORTED with rationale".
+
+uft_inject_file           # needs FS write-paths (same wave as ADF mkdir)
+uft_scp_get_track_flux    # needs uft_scp_file_t/uft_scp_ctx_t unification
+uft_kfx_read_stream       # needs KryoFlux stream parser port
+uft_lzhuf_decompress      # needs DMS-Heavy/NBZ test vectors for validation
+
+## Session closures (8 commits)
+6834355  l3-1  imd_to_raw + td0_to_raw — real impls (ABI-fix)
+6329b19  l3-4  d64/adf/g64/scp validators — 4-arg ABI + real checks
+5031094  l3-3  provenance chain with SHA-256 — full impl
+2339b78  l3-2  lzhuf_decompress ABI-fix + honest NOT_IMPL
+6dd0c65  l3-5  adf_read_file impl + mkdir/rename honest stubs
+3654a99  l3-6  SCP/KryoFlux/inject_file stop silent "success" lies
+
+## Count transitions
+Baseline:  13 stub attrappen (some with silent-success ABI mismatches)
+Final:      4 honest NOT_IMPLEMENTED (all ABI-correct, return -1 on call)
+Real impls: 9 new functions implemented (imd/td0/adf/validators/prov/sha256)
