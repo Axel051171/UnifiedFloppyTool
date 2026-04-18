@@ -29,12 +29,24 @@ aktiv abgearbeitet.
   und ruft den Writer auf.
 
 ### 1.2 Nicht alle Konvertierungen haben Pre-Conversion-Report
-- **Status:** OPEN
-- **Beschreibung:** Einige der 44 Konvertierungspfade führen aktuell ohne
-  expliziten Verlust-Report aus. Der `--accept-data-loss`-Flag ist noch nicht
-  durchgängig erzwungen.
-- **Workaround:** Vor jeder Konvertierung `uft convert --dry-run` nutzen.
-- **Plan:** Einheitlicher Wrapper um alle `convert_*`-Pfade in 4.2.x.
+- **Status:** MITIGATED (Helper da, Wiring in Konvertierer ausstehend)
+- **Beschreibung:** Preflight-Helper implementiert
+  (`include/uft/core/uft_preflight.h`, `src/core/uft_preflight.c`). Kombiniert
+  §1.1 Sidecar-Writer + §5.1 Round-Trip-Matrix zu einer einheitlichen
+  Pre-Check/Commit-API. Vier Entscheidungen nach Prinzip 1+4+5:
+  - `OK` (LL still oder LD mit `accept_data_loss=true`)
+  - `ABORT_NEED_CONSENT` (LD ohne Zustimmung)
+  - `ABORT_IMPOSSIBLE` (Ziel kann Quelle nicht repräsentieren)
+  - `ABORT_UNTESTED` (Paar nicht in Matrix)
+
+  Aufrufer-Pattern: `uft_preflight_check()` vor Konvertierung; bei LD-OK
+  nach Konvertierung `uft_preflight_emit_sidecar()` mit echten Verlust-
+  Counts. Die Integration in die 44 bestehenden `convert_*`-Pfade ist
+  der verbleibende Schritt.
+- **Workaround:** Konvertierer die direkt `uft_loss_report_write()` nutzen,
+  sind weiterhin gültig — der Helper ist Syntax-Zucker.
+- **Plan:** Schrittweise Migration aller `convert_*`-Entry-Points auf
+  den Preflight-Helper (pro Konvertierer ~10 Zeilen Glue-Code).
 
 ---
 
