@@ -30,176 +30,186 @@ extern "C" {
 #define UFT_TYPES_VERSION_STR "1.0"
 
 /* ============================================================================
- * Error Codes (Unified across all modules)
+ * Error Codes — delegated to the canonical definition.
+ *
+ * PREVIOUSLY (pre Must-Fix-Hunter F1): this file defined its own
+ * uft_error_t enum with POSITIVE hex values (UFT_ERR_IO = 0x80,
+ * UFT_ERR_MEMORY = 0x81, UFT_ERR_INTERNAL = 0xFF, …) while the sister
+ * file include/uft/uft_error.h defined the same identifiers with
+ * NEGATIVE decimal values (UFT_ERR_IO = -10, UFT_ERR_MEMORY = -30,
+ * UFT_ERR_INTERNAL = -90, …). Both blocks were guarded by the same
+ * UFT_ERROR_ENUM_DEFINED sentinel — whichever header was included
+ * first won, and downstream hex-alias macros clobbered enum members
+ * in the other TUs. Silent ABI divergence depending on include order.
+ *
+ * FIX: the canonical enum lives in uft/uft_error.h. This header just
+ * pulls it in so callers that include only unified_types.h still get
+ * a consistent uft_error_t. Extension names that don't exist in
+ * uft_error.h (FILE_OPEN, INVALID_STATE, OUT_OF_MEMORY, the UFT_ERROR_*
+ * mixed-case aliases, the SYNC_LOST / WEAK_BITS / PROTECTION families)
+ * are mapped to the closest uft_error.h enum member using the enum
+ * identifier — NOT a hex number — so they resolve to the canonical
+ * value regardless of include order.
  * ============================================================================ */
 
-#ifndef UFT_ERROR_ENUM_DEFINED
-#define UFT_ERROR_ENUM_DEFINED
-#ifndef UFT_ERROR_T_DEFINED
-#define UFT_ERROR_T_DEFINED
-typedef enum {
-    UFT_OK = 0,
+#include "uft/uft_error.h"
 
-    /* Read Errors (0x01-0x1F) */
-    UFT_ERR_CRC = 0x01,              /**< CRC mismatch */
-    UFT_ERR_SYNC_LOST = 0x02,        /**< Lost sync during read */
-    UFT_ERR_NO_DATA = 0x03,          /**< No data found */
-    UFT_ERR_WEAK_BITS = 0x04,        /**< Weak/unstable bits detected */
-    UFT_ERR_TIMING = 0x05,           /**< Timing anomaly */
-    UFT_ERR_ID_MISMATCH = 0x06,      /**< Sector ID mismatch */
-    UFT_ERR_DELETED_DATA = 0x07,     /**< Deleted data mark */
-    UFT_ERR_MISSING_SECTOR = 0x08,   /**< Sector not found */
-    UFT_ERR_INCOMPLETE = 0x09,       /**< Incomplete read */
-    UFT_ERR_PLL_UNLOCK = 0x0A,       /**< PLL lost lock */
-    UFT_ERR_ENCODING = 0x0B,         /**< Encoding error (illegal pattern) */
-
-    /* Write Errors (0x20-0x3F) */
-    UFT_ERR_WRITE_PROTECT = 0x20,    /**< Write protected */
-    UFT_ERR_VERIFY_FAIL = 0x21,      /**< Verify after write failed */
-    UFT_ERR_WRITE_FAULT = 0x22,      /**< Hardware write fault */
-    UFT_ERR_TRACK_OVERFLOW = 0x23,   /**< Track too long for format */
-
-    /* Protection Errors (0x40-0x5F) */
-    UFT_ERR_PROTECTION = 0x40,       /**< Generic protection error */
-    UFT_ERR_COPY_DENIED = 0x41,      /**< Copy protection active */
-    UFT_ERR_LONG_TRACK = 0x42,       /**< Long track protection */
-    UFT_ERR_NON_STANDARD = 0x43,     /**< Non-standard format */
-
-    /* Format Errors (0x60-0x7F) */
-    UFT_ERR_UNKNOWN_FORMAT = 0x60,   /**< Format not recognized */
-    UFT_ERR_UNSUPPORTED = 0x61,      /**< Format not supported */
-    UFT_ERR_CORRUPT = 0x62,          /**< File/data corrupt */
-    UFT_ERR_VERSION = 0x63,          /**< Version mismatch */
-
-    /* System Errors (0x80+) */
-    UFT_ERR_IO = 0x80,               /**< I/O error */
-    UFT_ERR_MEMORY = 0x81,           /**< Memory allocation failed */
-    UFT_ERR_INVALID_PARAM = 0x82,    /**< Invalid parameter */
-    UFT_ERR_NOT_IMPL = 0x83,         /**< Not implemented */
-    UFT_ERR_TIMEOUT = 0x84,          /**< Operation timed out */
-    UFT_ERR_CANCELLED = 0x85,        /**< Operation cancelled */
-    UFT_ERR_BUSY = 0x86,             /**< Resource busy */
-    UFT_ERR_INTERNAL = 0xFF,         /**< Internal error */
-
-} uft_error_t;
-#endif /* UFT_ERROR_T_DEFINED */
-#else
-/* Error enum already defined by another header. Provide typedef alias. */
-#ifndef UFT_ERROR_T_DEFINED
-#define UFT_ERROR_T_DEFINED
-typedef int uft_error_t;
-#endif
-#endif /* UFT_ERROR_ENUM_DEFINED */
-
-/* Prevent uft_error_compat.h from redefining enum values as macros */
+/* Prevent uft_error_compat.h from redefining enum values as macros. */
 #define UFT_HAS_UNIFIED_ERROR_ENUM 1
 
-/* Error code aliases — use numeric values to avoid include-order issues */
-#ifndef UFT_ERR_INVALID_ARG
-#define UFT_ERR_INVALID_ARG    0x82  /* UFT_ERR_INVALID_PARAM */
-#endif
-#ifndef UFT_ERC_FORMAT
-#define UFT_ERC_FORMAT         0x62  /* UFT_ERR_CORRUPT */
-#endif
+/* Extension aliases: names used by some call sites but not present in
+ * uft_error.h. Each #define references the canonical enum identifier
+ * (not a hex value) — that way the alias always equals the enum value,
+ * no matter what order headers get pulled in.
+ *
+ * Pre-fix ABI note: old numeric values below in comments for archaeology.
+ * Any code that compared raw hex (e.g. `if (rc == 0x82)`) was already
+ * broken half the time; it now fails loudly and gets caught. */
 #ifndef UFT_ERR_FILE_OPEN
-#define UFT_ERR_FILE_OPEN      0x80  /* UFT_ERR_IO */
+#define UFT_ERR_FILE_OPEN       UFT_ERR_IO            /* was 0x80 */
 #endif
 #ifndef UFT_ERR_FILE_READ
-#define UFT_ERR_FILE_READ      0x80  /* UFT_ERR_IO */
+#define UFT_ERR_FILE_READ       UFT_ERR_IO            /* was 0x80 */
 #endif
 #ifndef UFT_ERR_FILE_WRITE
-#define UFT_ERR_FILE_WRITE     0x80  /* UFT_ERR_IO */
-#endif
-#ifndef UFT_ERR_INVALID_STATE
-#define UFT_ERR_INVALID_STATE  0x82  /* UFT_ERR_INVALID_PARAM */
-#endif
-#ifndef UFT_ERR_OUT_OF_MEMORY
-#define UFT_ERR_OUT_OF_MEMORY  0x81  /* UFT_ERR_MEMORY */
+#define UFT_ERR_FILE_WRITE      UFT_ERR_IO            /* was 0x80 */
 #endif
 #ifndef UFT_ERR_IO_ERROR
-#define UFT_ERR_IO_ERROR       0x80  /* UFT_ERR_IO */
+#define UFT_ERR_IO_ERROR        UFT_ERR_IO            /* was 0x80 */
 #endif
-#ifndef UFT_ERR_FORMAT_ERROR
-#define UFT_ERR_FORMAT_ERROR   0x62  /* UFT_ERR_CORRUPT */
-#endif
-#ifndef UFT_ERR_CRC_ERROR
-#define UFT_ERR_CRC_ERROR      0x01  /* UFT_ERR_CRC */
-#endif
-/* Ensure core error names exist even when enum was skipped */
-#ifndef UFT_ERR_NO_DATA
-#define UFT_ERR_NO_DATA        0x03
-#endif
-#ifndef UFT_ERR_UNKNOWN_FORMAT
-#define UFT_ERR_UNKNOWN_FORMAT 0x60
-#endif
-#ifndef UFT_ERR_IO
-#define UFT_ERR_IO             0x80
-#endif
-#ifndef UFT_ERR_CORRUPT
-#define UFT_ERR_CORRUPT        0x62
-#endif
-#ifndef UFT_ERR_CRC
-#define UFT_ERR_CRC            0x01
+#ifndef UFT_ERR_INVALID_STATE
+#define UFT_ERR_INVALID_STATE   UFT_ERR_INVALID_ARG   /* was 0x82 */
 #endif
 #ifndef UFT_ERR_INVALID_PARAM
-#define UFT_ERR_INVALID_PARAM  0x82
+#define UFT_ERR_INVALID_PARAM   UFT_ERR_INVALID_ARG   /* was 0x82 */
 #endif
-#ifndef UFT_ERR_MEMORY
-#define UFT_ERR_MEMORY         0x81
-#endif
-#ifndef UFT_ERR_UNSUPPORTED
-#define UFT_ERR_UNSUPPORTED    0x61
-#endif
-#ifndef UFT_ERR_ENCODING
-#define UFT_ERR_ENCODING       0x0B
-#endif
-#ifndef UFT_ERR_INTERNAL
-#define UFT_ERR_INTERNAL       0xFF
-#endif
-/* Compatibility aliases using numeric values (enum may not be visible
- * due to include guard ordering with UFT_ERROR_ENUM_DEFINED) */
-#ifndef UFT_ERR_NOT_FOUND
-#define UFT_ERR_NOT_FOUND        0x03  /* UFT_ERR_NO_DATA */
+#ifndef UFT_ERR_OUT_OF_MEMORY
+#define UFT_ERR_OUT_OF_MEMORY   UFT_ERR_MEMORY        /* was 0x81 */
 #endif
 #ifndef UFT_ERR_FORMAT_ERROR
-#define UFT_ERR_FORMAT_ERROR     0x62  /* UFT_ERR_CORRUPT */
+#define UFT_ERR_FORMAT_ERROR    UFT_ERR_FORMAT        /* was 0x62 */
 #endif
 #ifndef UFT_ERR_CRC_ERROR
-#define UFT_ERR_CRC_ERROR        0x01  /* UFT_ERR_CRC */
+#define UFT_ERR_CRC_ERROR       UFT_ERR_CRC           /* was 0x01 */
 #endif
+#ifndef UFT_ERR_CORRUPT
+#define UFT_ERR_CORRUPT         UFT_ERR_CORRUPTED     /* was 0x62 */
+#endif
+#ifndef UFT_ERR_UNSUPPORTED
+#define UFT_ERR_UNSUPPORTED     UFT_ERR_NOT_SUPPORTED /* was 0x61 */
+#endif
+#ifndef UFT_ERR_NOT_IMPL
+#define UFT_ERR_NOT_IMPL        UFT_ERR_NOT_IMPLEMENTED /* was 0x83 */
+#endif
+#ifndef UFT_ERR_UNKNOWN_FORMAT
+#define UFT_ERR_UNKNOWN_FORMAT  UFT_ERR_FORMAT        /* was 0x60 */
+#endif
+#ifndef UFT_ERR_NO_DATA
+#define UFT_ERR_NO_DATA         UFT_ERR_CORRUPTED     /* was 0x03 */
+#endif
+#ifndef UFT_ERR_ENCODING
+#define UFT_ERR_ENCODING        UFT_ERR_FORMAT        /* was 0x0B */
+#endif
+#ifndef UFT_ERR_NOT_FOUND
+#define UFT_ERR_NOT_FOUND       UFT_ERR_FILE_NOT_FOUND /* was 0x03 */
+#endif
+
+/* Read-/write-/protection-error sub-taxonomy from the old positive enum.
+ * Kept so call sites that reference them still compile; each maps to the
+ * closest canonical member. */
+#ifndef UFT_ERR_SYNC_LOST
+#define UFT_ERR_SYNC_LOST       UFT_ERR_CORRUPTED     /* was 0x02 */
+#endif
+#ifndef UFT_ERR_WEAK_BITS
+#define UFT_ERR_WEAK_BITS       UFT_ERR_CORRUPTED     /* was 0x04 */
+#endif
+#ifndef UFT_ERR_TIMING
+#define UFT_ERR_TIMING          UFT_ERR_CORRUPTED     /* was 0x05 */
+#endif
+#ifndef UFT_ERR_ID_MISMATCH
+#define UFT_ERR_ID_MISMATCH     UFT_ERR_CORRUPTED     /* was 0x06 */
+#endif
+#ifndef UFT_ERR_DELETED_DATA
+#define UFT_ERR_DELETED_DATA    UFT_ERR_CORRUPTED     /* was 0x07 */
+#endif
+#ifndef UFT_ERR_MISSING_SECTOR
+#define UFT_ERR_MISSING_SECTOR  UFT_ERR_FILE_NOT_FOUND /* was 0x08 */
+#endif
+#ifndef UFT_ERR_INCOMPLETE
+#define UFT_ERR_INCOMPLETE      UFT_ERR_CORRUPTED     /* was 0x09 */
+#endif
+#ifndef UFT_ERR_PLL_UNLOCK
+#define UFT_ERR_PLL_UNLOCK      UFT_ERR_CORRUPTED     /* was 0x0A */
+#endif
+#ifndef UFT_ERR_WRITE_PROTECT
+#define UFT_ERR_WRITE_PROTECT   UFT_ERR_NOT_PERMITTED /* was 0x20 */
+#endif
+#ifndef UFT_ERR_VERIFY_FAIL
+#define UFT_ERR_VERIFY_FAIL     UFT_ERR_CORRUPTED     /* was 0x21 */
+#endif
+#ifndef UFT_ERR_WRITE_FAULT
+#define UFT_ERR_WRITE_FAULT     UFT_ERR_HARDWARE      /* was 0x22 */
+#endif
+#ifndef UFT_ERR_TRACK_OVERFLOW
+#define UFT_ERR_TRACK_OVERFLOW  UFT_ERR_BUFFER_TOO_SMALL /* was 0x23 */
+#endif
+#ifndef UFT_ERR_PROTECTION
+#define UFT_ERR_PROTECTION      UFT_ERR_NOT_PERMITTED /* was 0x40 */
+#endif
+#ifndef UFT_ERR_COPY_DENIED
+#define UFT_ERR_COPY_DENIED     UFT_ERR_NOT_PERMITTED /* was 0x41 */
+#endif
+#ifndef UFT_ERR_LONG_TRACK
+#define UFT_ERR_LONG_TRACK      UFT_ERR_FORMAT        /* was 0x42 */
+#endif
+#ifndef UFT_ERR_NON_STANDARD
+#define UFT_ERR_NON_STANDARD    UFT_ERR_FORMAT_VARIANT /* was 0x43 */
+#endif
+#ifndef UFT_ERR_VERSION
+#define UFT_ERR_VERSION         UFT_ERR_FORMAT_VARIANT /* was 0x63 */
+#endif
+#ifndef UFT_ERR_CANCELLED
+#define UFT_ERR_CANCELLED       UFT_ERR_NOT_PERMITTED /* was 0x85 */
+#endif
+
+/* Mixed-case UFT_ERROR_* aliases (legacy, several call sites use these). */
 #ifndef UFT_ERROR_INVALID_PARAM
-#define UFT_ERROR_INVALID_PARAM  0x82  /* UFT_ERR_INVALID_PARAM */
+#define UFT_ERROR_INVALID_PARAM UFT_ERR_INVALID_ARG
 #endif
 #ifndef UFT_ERROR_NO_MEMORY
-#define UFT_ERROR_NO_MEMORY      0x81  /* UFT_ERR_MEMORY */
+#define UFT_ERROR_NO_MEMORY     UFT_ERR_MEMORY
 #endif
 #ifndef UFT_ERROR_NOT_SUPPORTED
-#define UFT_ERROR_NOT_SUPPORTED  0x61  /* UFT_ERR_UNSUPPORTED */
+#define UFT_ERROR_NOT_SUPPORTED UFT_ERR_NOT_SUPPORTED
 #endif
 #ifndef UFT_ERROR_NOT_FOUND
-#define UFT_ERROR_NOT_FOUND      0x03  /* UFT_ERR_NO_DATA */
+#define UFT_ERROR_NOT_FOUND     UFT_ERR_FILE_NOT_FOUND
 #endif
 #ifndef UFT_ERROR_IO
-#define UFT_ERROR_IO             0x80  /* UFT_ERR_IO */
+#define UFT_ERROR_IO            UFT_ERR_IO
 #endif
 #ifndef UFT_ERROR_FORMAT
-#define UFT_ERROR_FORMAT         0x62  /* UFT_ERR_CORRUPT */
+#define UFT_ERROR_FORMAT        UFT_ERR_FORMAT
 #endif
 #ifndef UFT_ERROR_CRC
-#define UFT_ERROR_CRC            0x01  /* UFT_ERR_CRC */
+#define UFT_ERROR_CRC           UFT_ERR_CRC
 #endif
 #ifndef UFT_ERROR_DECODE
-#define UFT_ERROR_DECODE         0x0B  /* UFT_ERR_ENCODING */
+#define UFT_ERROR_DECODE        UFT_ERR_FORMAT
 #endif
 #ifndef UFT_ERROR_INTERNAL
-#define UFT_ERROR_INTERNAL       0xFF  /* UFT_ERR_INTERNAL */
+#define UFT_ERROR_INTERNAL      UFT_ERR_INTERNAL
 #endif
 #ifndef UFT_ERROR_INVALID_FORMAT
-#define UFT_ERROR_INVALID_FORMAT 0x60  /* UFT_ERR_UNKNOWN_FORMAT */
+#define UFT_ERROR_INVALID_FORMAT UFT_ERR_FORMAT
 #endif
 #ifndef UFT_ERROR_NO_DATA
-#define UFT_ERROR_NO_DATA        0x03  /* UFT_ERR_NO_DATA */
+#define UFT_ERROR_NO_DATA       UFT_ERR_CORRUPTED
 #endif
+
+/* Note: UFT_ERC_FORMAT (typo for UFT_ERR_FORMAT) had 0 callers —
+ * deleted per F12. UFT_HAS_UNIFIED_ERROR_ENUM still defined above
+ * for compat with uft_error_compat.h. */
 
 /**
  * @brief Get error description string

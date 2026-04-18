@@ -146,7 +146,7 @@ int uft_g71_read(const char *path, uft_disk_image_t **out) {
     if (memcmp(header.signature, G71_SIGNATURE, G71_SIGNATURE_LEN) != 0 &&
         memcmp(header.signature, "GCR-1541", 8) != 0) {
         fclose(f);
-        return UFT_ERC_FORMAT;
+        return UFT_ERR_FORMAT;
     }
     
     int num_tracks = header.num_tracks;

@@ -159,7 +159,7 @@ int uft_m2i_read(const char *path, m2i_image_t **out) {
     /* Verify signature */
     if (memcmp(header.signature, M2I_SIGNATURE, M2I_SIGNATURE_LEN) != 0) {
         fclose(f);
-        return UFT_ERC_FORMAT;
+        return UFT_ERR_FORMAT;
     }
     
     /* Allocate image */
