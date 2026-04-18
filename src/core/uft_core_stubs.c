@@ -204,21 +204,11 @@ int uft_inject_file(void *disk, const char *path, const uint8_t *data,
  * ADF stubs
  * ============================================================================ */
 
-int uft_adf_mkdir(void *disk, const char *name) {
-    (void)disk; (void)name;
-    return -1;
-}
-
-int uft_adf_read_file(void *disk, const char *path, uint8_t **data,
-                      size_t *size) {
-    (void)disk; (void)path; (void)data; (void)size;
-    return -1;
-}
-
-int uft_adf_rename(void *disk, const char *old_name, const char *new_name) {
-    (void)disk; (void)old_name; (void)new_name;
-    return -1;
-}
+/* ADF write-ops uft_adf_mkdir / uft_adf_rename / uft_adf_read_file
+ * moved to src/formats/uft_adf.c with correct (uft_adf_volume_t*)
+ * signatures. read_file is a real read-only impl; mkdir/rename stay
+ * honest NOT_IMPLEMENTED until the ADF write-path lands. Previous
+ * (void*disk) stubs here were §1.3 ABI-mismatch violations. */
 
 /* Legacy uft_fat12_* API moved to src/formats/uft_fat12_legacy.c with
  * correct signatures that match include/uft/formats/uft_fat12.h.

@@ -911,6 +911,129 @@ int uft_adf_delete(uft_adf_volume_t *vol, const char *path) {
 }
 
 /*============================================================================
+ * uft_adf_read_file — read file data starting at a header block
+ *
+ * Replaces the ABI-broken (void*disk) stub in uft_core_stubs.c with the
+ * correct-typed signature from include/uft/uft_adf.h.
+ *
+ * Walks the file header's data-block list (72 entries, stored in reverse
+ * order at offset 24) plus any extension blocks chained from offset 0x1F0.
+ * Handles OFS (24-byte data block header, 488 bytes payload) and FFS
+ * (512 bytes raw payload) based on the volume's fs_type.
+ *============================================================================*/
+
+ssize_t uft_adf_read_file(uft_adf_volume_t *vol, uint32_t block,
+                           uint32_t offset, void *buffer, size_t size) {
+    if (!vol || !buffer || block == 0) return -1;
+
+    /* Read the file header block. */
+    uint8_t hdr[UFT_ADF_SECTOR_SIZE];
+    if (uft_adf_read_block(vol, block, hdr) != 0) return -1;
+
+    /* Total file size at offset 0x144 (big-endian u32). */
+    uint32_t file_size = ((uint32_t)hdr[0x144] << 24) |
+                         ((uint32_t)hdr[0x145] << 16) |
+                         ((uint32_t)hdr[0x146] << 8)  |
+                         (uint32_t)hdr[0x147];
+    if (offset >= file_size) return 0;
+    if (offset + size > file_size) size = file_size - offset;
+    if (size == 0) return 0;
+
+    bool is_ffs = (vol->fs_type == UFT_ADF_FS_FFS ||
+                   vol->fs_type == UFT_ADF_FS_FFS_INTL ||
+                   vol->fs_type == UFT_ADF_FS_FFS_DC ||
+                   vol->fs_type == UFT_ADF_FS_FFS_LNFS);
+    size_t payload = is_ffs ? UFT_ADF_SECTOR_SIZE : (UFT_ADF_SECTOR_SIZE - 24);
+    size_t data_off = is_ffs ? 0 : 24;
+
+    /* Walk header + extension-block chain, collecting data block refs in
+     * file-order (reverse of the stored list). */
+    uint8_t *out = (uint8_t *)buffer;
+    size_t written = 0;
+    size_t file_pos = 0;
+    uint32_t cur_hdr = block;
+    int guard = 16384;
+
+    while (cur_hdr != 0 && written < size && guard-- > 0) {
+        if (cur_hdr != block) {
+            if (uft_adf_read_block(vol, cur_hdr, hdr) != 0) break;
+        }
+        /* Data-block count at offset 0x10 (u32 BE), up to 72. */
+        uint32_t n = ((uint32_t)hdr[0x10] << 24) |
+                     ((uint32_t)hdr[0x11] << 16) |
+                     ((uint32_t)hdr[0x12] << 8)  |
+                     (uint32_t)hdr[0x13];
+        if (n > 72) n = 72;
+
+        /* Data blocks stored at offset 24..24+72*4, in REVERSE order —
+         * entry (71-i) corresponds to file-order i. */
+        for (uint32_t i = 0; i < n && written < size; i++) {
+            uint32_t slot = 71 - i;
+            size_t off_bytes = 24 + slot * 4;
+            uint32_t blk = ((uint32_t)hdr[off_bytes] << 24) |
+                           ((uint32_t)hdr[off_bytes+1] << 16) |
+                           ((uint32_t)hdr[off_bytes+2] << 8)  |
+                           (uint32_t)hdr[off_bytes+3];
+            if (blk == 0) continue;
+
+            /* Skip entire blocks if we haven't reached `offset` yet. */
+            if (file_pos + payload <= offset) {
+                file_pos += payload;
+                continue;
+            }
+
+            uint8_t data[UFT_ADF_SECTOR_SIZE];
+            if (uft_adf_read_block(vol, blk, data) != 0) return (ssize_t)written;
+
+            size_t block_skip = (file_pos < offset) ? (offset - file_pos) : 0;
+            size_t avail = payload - block_skip;
+            size_t want  = size - written;
+            size_t n_copy = avail < want ? avail : want;
+            memcpy(out + written, data + data_off + block_skip, n_copy);
+            written += n_copy;
+            file_pos += payload;
+        }
+
+        /* Next extension block at offset 0x1F0 (u32 BE). */
+        uint32_t next = ((uint32_t)hdr[0x1F0] << 24) |
+                        ((uint32_t)hdr[0x1F1] << 16) |
+                        ((uint32_t)hdr[0x1F2] << 8)  |
+                        (uint32_t)hdr[0x1F3];
+        if (next == cur_hdr) break;
+        cur_hdr = next;
+    }
+
+    return (ssize_t)written;
+}
+
+/*============================================================================
+ * uft_adf_mkdir / uft_adf_rename — honest NOT_IMPLEMENTED
+ *
+ * These close the ABI-broken stubs in uft_core_stubs.c. Write-support
+ * for ADF (bitmap alloc, directory hash insertion, checksum upkeep)
+ * needs the same underlying infrastructure as uft_adf_add_file and
+ * uft_adf_delete — both also still TODO. Return -1 so callers get the
+ * documented "error" signal.
+ *============================================================================*/
+
+int uft_adf_mkdir(uft_adf_volume_t *vol, const char *path) {
+    (void)vol; (void)path;
+    /* Needs: free-block search + dirty-bitmap write + parent-dir hash
+     * insertion + checksum recomputation. Part of the ADF write-path
+     * port that also covers add_file + delete + rename. */
+    return -1;
+}
+
+int uft_adf_rename(uft_adf_volume_t *vol, const char *old_path,
+                    const char *new_name) {
+    (void)vol; (void)old_path; (void)new_name;
+    /* Needs: lookup, unlink from old hash chain, rewrite filename in
+     * header block, reinsert into hash chain under new hash, checksum
+     * recomputation. Part of the ADF write-path port. */
+    return -1;
+}
+
+/*============================================================================
  * Self-Test
  *============================================================================*/
 
