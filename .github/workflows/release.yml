@@ -94,12 +94,16 @@ jobs:
           mkdir -p "${PKG}/usr/bin"
           mkdir -p "${PKG}/usr/share/applications"
           mkdir -p "${PKG}/usr/share/icons/hicolor/256x256/apps"
+          mkdir -p "${PKG}/usr/share/metainfo"
           mkdir -p "${PKG}/usr/share/doc/unifiedfloppytool"
 
           cp build/UnifiedFloppyTool          "${PKG}/usr/bin/"
-          cp packaging/linux/UnifiedFloppyTool.desktop \
+          cp packaging/linux/io.github.Axel051171.UnifiedFloppyTool.desktop \
                                               "${PKG}/usr/share/applications/"
-          cp resources/icons/app_256.png      "${PKG}/usr/share/icons/hicolor/256x256/apps/UnifiedFloppyTool.png"
+          cp packaging/flatpak/io.github.Axel051171.UnifiedFloppyTool.metainfo.xml \
+                                              "${PKG}/usr/share/metainfo/"
+          cp resources/icons/app_256.png \
+             "${PKG}/usr/share/icons/hicolor/256x256/apps/io.github.Axel051171.UnifiedFloppyTool.png"
           cp LICENSE                          "${PKG}/usr/share/doc/unifiedfloppytool/copyright"
           cp CHANGELOG.md                     "${PKG}/usr/share/doc/unifiedfloppytool/"
 
