@@ -90,15 +90,36 @@ msvc {
 
 # GCC/Clang hardening (Linux, macOS, MinGW)
 #
-# Flathub, RPM macros and many distro build systems already pass
-# -D_FORTIFY_SOURCE=2 (or =3) through CFLAGS, which produces
-# 'warning: _FORTIFY_SOURCE redefined' once per translation unit when
-# we add it again. -U_FORTIFY_SOURCE immediately before -D clears any
-# prior definition so our intended level wins without the warning.
-# See issue #16.
+# Principle 4 (no dangerous defaults): we do NOT set -D_FORTIFY_SOURCE
+# by default. Reasons, in order of importance:
+#
+#   1. Distros (Fedora, Debian, Ubuntu, Arch, openSUSE) and Flathub
+#      runtimes inject _FORTIFY_SOURCE through their own CFLAGS, often
+#      via -Wp,-D_FORTIFY_SOURCE=N which is passed DIRECTLY to the
+#      preprocessor and cannot be overridden reliably by -U/-D on the
+#      GCC command line — see issue #16, @hadess's analysis.
+#   2. Fedora / Ubuntu 24.04+ ship with =3, which is stricter than =2.
+#      Forcing =2 here would DOWNGRADE the distro's hardening level.
+#   3. _FORTIFY_SOURCE is only meaningful at -O2+; distros handle the
+#      interaction with their own optimisation defaults correctly.
+#
+# We keep -fstack-protector-strong because it is NOT uniformly set by
+# every distro and adds defense-in-depth without conflict risk.
+#
+# ─── Escape hatch for bare-metal developer builds ────────────────────
+#   qmake CONFIG+=uft_force_fortify
+# adds -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2 for people who build on
+# a plain toolchain without a distro hardening setup and want the
+# check anyway. Consciously opt-in, never a default.
 !msvc {
-    QMAKE_CFLAGS_RELEASE   += -fstack-protector-strong -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2
-    QMAKE_CXXFLAGS_RELEASE += -fstack-protector-strong -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2
+    QMAKE_CFLAGS_RELEASE   += -fstack-protector-strong
+    QMAKE_CXXFLAGS_RELEASE += -fstack-protector-strong
+
+    uft_force_fortify {
+        QMAKE_CFLAGS_RELEASE   += -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2
+        QMAKE_CXXFLAGS_RELEASE += -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2
+        message(UFT hardening: _FORTIFY_SOURCE=2 forced via uft_force_fortify)
+    }
 }
 
 # macOS specific
