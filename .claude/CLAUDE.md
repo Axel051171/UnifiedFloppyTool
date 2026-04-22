@@ -12,25 +12,29 @@ ein Prinzip verletzt würde. Bekannte Lücken: [`docs/KNOWN_ISSUES.md`](../docs/
 
 ---
 
-## Agenten-Übersicht (konsolidiert auf 10)
+## Agenten-Übersicht (11 Agenten)
 
-29 Agenten wurden reduziert auf 10 aktiv genutzte. Die entfernten Agenten
+29 Agenten wurden reduziert auf 11 aktiv genutzte. Die entfernten Agenten
 waren in 3 Monaten nicht aufgerufen oder von den neueren Must-Fix-Prävention-
 Agenten abgedeckt (siehe git-history für Details). Wenn ein seltener Einzelfall
 doch einen Spezialisten braucht, aus git zurückholen.
 
+Stand der Modelle: `claude-opus-4-7` / `claude-sonnet-4-6` (aktuelle
+Flaggschiffe).
+
 | Agent | Modell | Zweck |
 |---|---|---|
-| `orchestrator` | Opus | Master-Koordinator wenn externe Fan-Out nötig |
-| `forensic-integrity` | Opus | Datenverlust-Detektion vor großen Änderungen |
-| `deep-diagnostician` | Opus | "Was ist kaputt und warum" ohne klaren Fix |
-| `must-fix-hunter` | Opus | Proaktive Widersprüche-Jagd (Must-Fix-Prävention) |
-| `single-source-enforcer` | Opus | Single-Source-of-Truth durchsetzen |
-| `consistency-auditor` | Sonnet | Vor Commit/Push: Widersprüche blockieren |
-| `stub-eliminator` | Sonnet | Pro Stub: IMPLEMENT / DELEGATE / DOCUMENT / DELETE |
-| `preflight-check` | Sonnet | Vor git push: CI-Fehlerpattern lokal simulieren |
-| `github-expert` | Sonnet | GitHub Actions, Releases, Repository-Features |
-| `quick-fix` | Sonnet | EIN Problem → EIN Fix sofort |
+| `orchestrator` | Opus 4.7 | Master-Koordinator wenn externer Fan-Out nötig |
+| `forensic-integrity` | Opus 4.7 | Datenverlust-Detektion vor großen Änderungen |
+| `deep-diagnostician` | Opus 4.7 | "Was ist kaputt und warum" ohne klaren Fix |
+| `abi-bomb-detector` | Opus 4.7 | Public-API-Layouts auf ABI-Bruch ohne Compiler-Warnung prüfen |
+| `single-source-enforcer` | Opus 4.7 | Single-Source-of-Truth pro Fakt durchsetzen |
+| `must-fix-hunter` | Sonnet 4.6 | Proaktive Widersprüche-Jagd (Pattern-Scan, Sonnet reicht) |
+| `consistency-auditor` | Sonnet 4.6 | Vor Commit/Push: Widersprüche blockieren |
+| `stub-eliminator` | Sonnet 4.6 | Pro Stub: IMPLEMENT / DELEGATE / DOCUMENT / DELETE |
+| `preflight-check` | Sonnet 4.6 | Vor git push: CI-Fehlerpattern lokal simulieren |
+| `github-expert` | Sonnet 4.6 | GitHub Actions, Releases, Repository-Features |
+| `quick-fix` | Sonnet 4.6 | EIN Problem → EIN Fix sofort |
 
 ---
 

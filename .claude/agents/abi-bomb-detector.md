@@ -7,7 +7,7 @@ description: >
   Versions-Prefixe in Plugin-Interfaces, Typ-Duplikate (gleicher Name, verschiedene
   Layouts). Baseline-Vergleich vor jedem Release. Use when: vor Release-Tag, bei API-Änderungen,
   wenn Plugin-Architektur betroffen ist, periodisch als Nightly-Check.
-model: claude-opus-4-5-20251101
+model: claude-opus-4-7
 tools: Read, Glob, Grep, Bash, Edit, Write
 ---
 

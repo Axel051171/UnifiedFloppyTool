@@ -8,7 +8,7 @@ description: >
   scores, then hands specific sub-problems to the right specialist agents with
   precise questions. Think of this as the forensic pathologist of the codebase —
   determines cause of death before anyone picks up a scalpel.
-model: claude-opus-4-5
+model: claude-opus-4-7
 tools: Read, Glob, Grep, Bash, Agent
 ---
 

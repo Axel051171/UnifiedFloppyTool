@@ -8,7 +8,7 @@ description: >
   Aufräum-Liste mit Patch-Vorschlägen. Use when: nightly via CI, vor jedem Release,
   beim Onboarding einer neuen KI/Entwickler, wenn ein Must-Fix aufgetreten ist und
   man fragen will "was noch?".
-model: claude-sonnet-4-5-20251022
+model: claude-sonnet-4-6
 tools: Read, Glob, Grep, Bash, Edit, Write
 ---
 

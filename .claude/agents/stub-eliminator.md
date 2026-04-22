@@ -7,7 +7,7 @@ description: >
   mit Test. Use when: nach must-fix-hunter-Befund, beim Aufräumen eines Moduls,
   vor Release um sicherzustellen dass versprochene Funktionen geliefert werden.
   Begleitet die UFT_Stub_Elimination_Anweisung.md.
-model: claude-sonnet-4-5-20251022
+model: claude-sonnet-4-6
 tools: Read, Glob, Grep, Edit, Write, Bash
 ---
 

@@ -1,7 +1,7 @@
 ---
 name: forensic-integrity
 description: Checks every data path in UnifiedFloppyTool for forensic integrity violations. Use when: reviewing a new parser, checking if export preserves all metadata, evaluating if a "fix" silently corrupts data, preparing for museum/archive deployment. Finds silent data loss, normalization without warning, missing hash verification, broken chain-of-custody. Opus-level reasoning required — this is the most critical agent.
-model: claude-opus-4-5-20251101
+model: claude-opus-4-7
 tools: Read, Glob, Grep, Edit, Write
 ---
 

@@ -1,7 +1,7 @@
 ---
 name: orchestrator
 description: Master coordinator for all UnifiedFloppyTool agents. Use when running a full project audit, planning a release, generating a prioritized action list across all domains, or when unsure which specialist to call. Fans out to specialists in dependency order, deduplicates findings into one master P0-P3 action list. Resolves conflicts between agents — forensics always beats performance.
-model: claude-opus-4-5-20251101
+model: claude-opus-4-7
 tools: Read, Glob, Grep, Bash, Agent, Edit, Write
 ---
 

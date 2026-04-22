@@ -6,7 +6,7 @@ description: >
   (ci.yml, release.yml, sanitizers.yml, coverage.yml). Nutzt yamllint, Pattern-Scan,
   lokalen Build und ctest. Gibt GO / NO-GO mit konkreten Fix-Snippets.
   Use when: vor git push, vor Release-Tag, nach Workflow-Änderungen.
-model: claude-sonnet-4-5-20251022
+model: claude-sonnet-4-6
 tools:
   - type: bash
   - type: text_editor

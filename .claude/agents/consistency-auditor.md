@@ -6,7 +6,7 @@ description: >
   Error-Code-Mix, neue Stubs, hartkodierte Versions-Strings). Warnt bei weichen Verstößen
   (TODO-Wildwuchs, Include-Pfad-Inkonsistenz). Use when: vor git commit, in pre-commit hook,
   vor PR-Merge, vor Release-Tag. Reaktiver Gegenpart zum must-fix-hunter (proaktiv).
-model: claude-sonnet-4-5-20251022
+model: claude-sonnet-4-6
 tools: Read, Glob, Grep, Bash
 ---
 
