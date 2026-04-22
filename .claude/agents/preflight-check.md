@@ -7,9 +7,7 @@ description: >
   lokalen Build und ctest. Gibt GO / NO-GO mit konkreten Fix-Snippets.
   Use when: vor git push, vor Release-Tag, nach Workflow-Änderungen.
 model: claude-sonnet-4-6
-tools:
-  - type: bash
-  - type: text_editor
+tools: Read, Glob, Grep, Bash, Edit, Write, Agent
 ---
 
 # Pre-Flight Check — UFT CI Guardian Integration
@@ -238,3 +236,31 @@ NO-GO wenn:
 
 Bei NO-GO: ci-guardian Agent aufrufen mit der Failure-Nummer
 ```
+
+---
+
+## Zusammenarbeit
+
+Siehe `.claude/CONSULT_PROTOCOL.md`. Dieser Agent **darf direkt spawnen**
+(`Agent`-Tool) für den Fan-Out vor Release-Tags. Kaskaden-Regel: die
+Sub-Agenten dürfen nicht weiter spawnen.
+
+Typische direkte Spawns vor Release-Tag:
+
+- `must-fix-hunter` — vollen 9-Kategorien-Scan
+- `abi-bomb-detector --mode=compare --against=<last-tag>` — ABI-Diff gegen
+  letzten Release
+- `consistency-auditor --mode=release` — alle Checks gegen komplette
+  Baseline statt nur Diff
+
+CONSULT (statt Spawn) für Spezialfragen:
+
+- `TO: single-source-enforcer` — wenn wiederholt Versions-Drift auftaucht:
+  strukturelle Lösung ansetzen statt jedes Release patchen
+- `TO: github-expert` — wenn die Release-Automation selbst Fehler wirft
+- `TO: human` — GO/NO-GO-Entscheidung bleibt immer beim Maintainer; dieser
+  Agent gibt Empfehlung, nicht Freigabe
+
+Superpowers: `verification-before-completion` — GO nur melden wenn alle
+7 Pattern echt geprüft wurden (nicht „sieht gut aus"); `dispatching-
+parallel-agents` für den Release-Tag-Fan-Out der drei Sub-Scanner.

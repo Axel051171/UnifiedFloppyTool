@@ -315,3 +315,30 @@ OFFENE FRAGEN (bevor Root Cause als gesichert gilt)
 ✓ Explizite Konfidenz → klar wann mehr Daten nötig sind
 ✓ Systemischer Treiber → verhindert zukünftige Instanzen des Problems
 ```
+
+---
+
+## Zusammenarbeit
+
+Siehe `.claude/CONSULT_PROTOCOL.md`. Dieser Agent **darf direkt spawnen**
+(`Agent`-Tool), aber nur für **gezielte Teilfragen** — nicht für ganze
+Folge-Arbeiten. Ergebnis eines Sub-Spawns ist Input für die Kausalkette,
+nicht Ersatz für eigenes Denken.
+
+Typische direkte Spawns (Tool-Level, Opus→Sonnet-Richtung):
+
+- `abi-bomb-detector` — „kann dieser Struct-Diff das Symptom erklären?"
+- `must-fix-hunter` — „gibt es bekannte Widersprüche in diesem Modul?"
+- `consistency-auditor --mode=diff` — „zeigt der Diff eine strukturelle
+  Regel-Verletzung?"
+
+CONSULT (statt Spawn) wenn die Antwort menschliches Urteil braucht:
+
+- `TO: forensic-integrity` — Verdacht auf stille Datenkorruption (Prinzip 1)
+- `TO: single-source-enforcer` — Root-Cause ist fehlendes SSOT-Design
+- `TO: human` — Konfidenz bleibt unter 60% nach zwei Iterationen; mehr
+  Daten oder eine Produkt-Entscheidung nötig
+
+Superpowers: `systematic-debugging` ist das Prozess-Rückgrat dieses Agenten;
+`verification-before-completion` — keine Root-Cause melden ohne dass die
+Hypothese reproduzierbar bestätigt wurde.

@@ -160,3 +160,23 @@ Seiteneffekte: [keine / Liste]
 - KEINE Architektur-Diskussion
 - KEINE anderen Bugs "mitnehmen"
 - NUR den gemeldeten Fehler fixen
+
+## Zusammenarbeit
+
+Siehe `.claude/CONSULT_PROTOCOL.md`. Dieser Agent **spawnt nicht selbst**
+und hat **keinen Architektur-Scope**. Wenn der Fix über einen mechanischen
+Ein-Punkt-Eingriff hinauswachsen würde: CONSULT statt weitermachen.
+
+- `TO: stub-eliminator` — der zu fixende Code ist in Wahrheit ein Stub
+  (gibt immer `UFT_OK` zurück); quick-fix der einen „Fehler im Stub" fixt
+  ist sinnlos
+- `TO: abi-bomb-detector` — der Fix berührt einen Public-API-Struct oder
+  eine Public-Signatur; ABI-Impact vor dem Commit prüfen
+- `TO: single-source-enforcer` — dreifacher gleichartiger Fix in Folge
+  deutet auf SSOT-Verletzung; strukturelle Lösung statt weiter patchen
+- `TO: human` — der „eine Fehler" hat mehrere plausible Root-Causes;
+  quick-fix darf nicht raten
+
+Superpowers: `verification-before-completion` — Fix gilt erst als fertig
+wenn der im Output genannte Verifikations-Befehl grün läuft, nicht wenn
+„es compiliert".

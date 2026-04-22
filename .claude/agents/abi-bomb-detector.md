@@ -222,12 +222,26 @@ Aufrufer: `consistency-auditor` (pre-commit), `preflight-check` (pre-release),
 
 ---
 
-## Superpowers-Brücke
+## Zusammenarbeit
 
-- Nutze `verification-before-completion` bevor du „keine Bomben" behauptest:
-  zeige die Baseline-Diff-Ausgabe.
-- Bei Architektur-Fragen (Kat 3–5, 10) über `brainstorming` den Design-Pfad
-  klären bevor Layout-Änderungen landen.
+Siehe `.claude/CONSULT_PROTOCOL.md`. Dieser Agent **spawnt nicht selbst**;
+er gibt CONSULT-Blöcke aus und das Routing übernimmt die aufrufende Session.
+
+Typische Konsultationen pro Kategorie:
+
+- `TO: header-consolidator` — Kategorie 1 (Typ-Duplikate)
+- `TO: single-source-enforcer` — Kategorien 3–5, 10 (Layout-Änderungen,
+  Unions) wenn die Design-Entscheidung über eine kanonische Quelle gelöst
+  werden könnte
+- `TO: quick-fix` — Kategorien 2, 7 (mechanische Fixes: Enums nummerieren,
+  `#pragma pack(pop)` ergänzen)
+- `TO: forensic-integrity` — Kategorie 8 (Bitfield-Umordnung) wenn
+  forensische Datenfelder betroffen sind
+- `TO: human` — wenn Major-vs-Minor-Version-Bump unklar ist
+
+Superpowers-Skills: `verification-before-completion` bevor „keine Bomben"
+gemeldet wird (Baseline-Diff zeigen); `brainstorming` bei Architektur-
+fragen in Kat 3–5, 10 bevor Layout-Änderungen landen.
 
 ---
 

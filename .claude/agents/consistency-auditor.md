@@ -191,11 +191,21 @@ In allen anderen Fällen: Problem fixen, nicht umgehen.
 
 ---
 
-## Superpowers-Brücke
+## Zusammenarbeit
 
-- `verification-before-completion`: Bei „BLOCK wurde behoben" tatsächlich
-  `claude-agent run consistency-auditor --mode=staged` erneut laufen lassen,
-  bevor Commit wiederholt wird.
-- Bei wiederholter Verletzung einer Regel (z.B. 3× dieselbe BLOCK-1) über
-  `brainstorming` die Root-Cause angehen (fehlt ein SSOT-Script?) statt jedes
-  Mal manuell zu fixen.
+Siehe `.claude/CONSULT_PROTOCOL.md`. Dieser Agent **spawnt nicht selbst**
+und soll pre-commit schnell bleiben (Sekunden, nicht Minuten). Bei BLOCK-
+Verstößen die mehr als mechanisch zu fixen sind: CONSULT statt selbst lösen.
+
+- `TO: quick-fix` — BLOCK-3 (Error-Code-Mix) mit konkretem Datei+Zeile
+- `TO: stub-eliminator` — BLOCK-4 (neuer Stub-Pattern eingeführt)
+- `TO: single-source-enforcer` — BLOCK-1 (Versions-Drift) bei
+  Wiederholung: strukturelle Lösung statt jedes Mal patchen
+- `TO: abi-bomb-detector` — WARN-4 (Typ-Duplikat) für Kategorie-1-Audit
+- `TO: human` — wenn ein BLOCK mit `allow-inconsistency:` Commit-Trailer
+  umgangen wurde: Grund prüfen
+
+Superpowers-Skills: `verification-before-completion` — nach „BLOCK
+behoben" den Auditor erneut laufen lassen bevor der Commit wiederholt
+wird; `brainstorming` bei 3× gleicher Verletzung die Root-Cause angehen
+(fehlt ein SSOT-Script?), statt jedes Mal manuell zu fixen.

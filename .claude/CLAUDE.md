@@ -49,6 +49,40 @@ Faustformel:
 
 ---
 
+## Zusammenarbeit zwischen Agenten
+
+Siehe `.claude/CONSULT_PROTOCOL.md` für Details. Kurzfassung:
+
+**Zwei Mechanismen:**
+
+1. **CONSULT-Block (Standard):** Jeder Agent darf in seinem Output
+   ` ```consult ... ``` `-Blöcke ausgeben mit `TO / QUESTION / CONTEXT /
+   REASON / SEVERITY`. Haupt-Session oder `orchestrator` parst und routet.
+   Funktioniert ohne Änderung an den Agent-Tools, vollständig beobachtbar.
+
+2. **Direkter Agent-Spawn (sparsam):** Nur 4 von 11 Agenten haben
+   `Agent`-Tool in der Frontmatter:
+   - `orchestrator` — Master-Router, darf beliebig spawnen
+   - `deep-diagnostician` — gezielte Teilfragen
+   - `must-fix-hunter` — Fan-Out seiner 9 Scan-Kategorien
+   - `preflight-check` — Release-Tag-Fan-Out
+   Alle anderen konsultieren via Block, nie direkt.
+
+**Kaskaden-Regel:** Max eine Ebene. Ein gespawnter Sub-Agent darf NICHT
+selbst weiter spawnen; er gibt CONSULT-Blöcke zurück die der Router
+weiterverarbeitet.
+
+**Richtungs-Regel (Opus↔Sonnet):**
+
+| von → zu | erlaubt |
+|---|---|
+| Sonnet → Sonnet | ja |
+| Sonnet → Opus | ja (Architektur-Frage nach oben) |
+| Opus → Sonnet | ja (Standard-Delegation) |
+| Opus → Opus | nein (außer über `orchestrator`) |
+
+---
+
 ## Konflikt-Hierarchie
 
 | Konflikt | Gewinner |

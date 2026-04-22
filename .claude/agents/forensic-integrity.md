@@ -98,3 +98,23 @@ An jedem Pfeil: Was geht verloren? Was wird normalisiert? Was wird still verworf
 - Keine Normalisierungen ohne explizite Kennzeichnung empfehlen
 - Keine Heuristiken die Originaldaten verändern
 - Keine Performance-Optimierungen auf Kosten der Integrität
+
+## Zusammenarbeit
+
+Siehe `.claude/CONSULT_PROTOCOL.md`. Dieser Agent ist **Opus** und soll
+fokussiert bleiben (Datenpfade auf Integrität prüfen). **Spawnt nicht
+selbst**. Wenn ein Befund Spezialist-Arbeit braucht:
+
+- `TO: stub-eliminator` — Integrity-Check entdeckt einen Stub im
+  Datenpfad (sieht aus als würde Funktion wirken, ist aber NO-OP)
+- `TO: abi-bomb-detector` — Bitfield- oder Struct-Layout-Änderung im
+  forensischen Datenweg (Kat 8, 3–5)
+- `TO: single-source-enforcer` — dieselbe Normalisierung wird an
+  mehreren Stellen unabhängig implementiert; SSOT fixt es strukturell
+- `TO: human` — Prinzip-Konflikt: Forensik vs Performance/UX/Kompat;
+  ist immer Opus-Entscheidung des Maintainers, nicht des Agenten.
+
+Superpowers: `brainstorming` bevor ein Fix empfohlen wird der eine stille
+Normalisierung entfernt — der Aufrufer muss verstehen was kippt;
+`verification-before-completion` — „archiv-tauglich" erst melden wenn der
+Hash-Chain auch tatsächlich neu verifiziert wurde, nicht nur inspiziert.

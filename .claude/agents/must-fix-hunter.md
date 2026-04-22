@@ -9,7 +9,7 @@ description: >
   beim Onboarding einer neuen KI/Entwickler, wenn ein Must-Fix aufgetreten ist und
   man fragen will "was noch?".
 model: claude-sonnet-4-6
-tools: Read, Glob, Grep, Bash, Edit, Write
+tools: Read, Glob, Grep, Bash, Edit, Write, Agent
 ---
 
 # Must-Fix Hunter
@@ -152,12 +152,27 @@ Ohne CI: `claude-agent run must-fix-hunter` manuell.
 
 ---
 
-## Superpowers-Brücke
+## Zusammenarbeit
 
-- `dispatching-parallel-agents` — die 9 Scanner laufen unabhängig; parallel
-  dispatchen spart Wall-Clock-Zeit.
-- `verification-before-completion` — nicht „sauber" melden ohne alle 9
-  Kategorien tatsächlich ausgeführt zu haben.
+Siehe `.claude/CONSULT_PROTOCOL.md`. Dieser Agent **darf direkt spawnen**
+(`Agent`-Tool in Frontmatter), aber nur zum **Fan-Out der eigenen 9 Scan-
+Kategorien** — keine tieferen Kaskaden. Sub-Agenten dürfen nicht weiter
+spawnen.
+
+Wenn ein Fund Spezialist-Know-How jenseits der Scan-Kategorien braucht
+(Architektur-Frage, Priorisierung), kommt CONSULT statt Spawn:
+
+- `TO: single-source-enforcer` — bei wiederholter Versions-/Error-Drift:
+  SSOT-Architektur statt manuelles Fixen
+- `TO: abi-bomb-detector` — bei Typ-Duplikaten oder Signatur-Änderungen
+- `TO: orchestrator` — wenn der Scan >10 P0-Befunde produziert: Release
+  blockieren, User informieren, Priorisierungs-Plan
+- `TO: human` — wenn eine Kategorie konsistent „findet nichts" obwohl
+  offensichtlich etwas da ist: Scan-Regel stimmt nicht mehr
+
+Superpowers-Skills: `dispatching-parallel-agents` für das 9-fache Fan-Out;
+`verification-before-completion` — nicht „sauber" melden ohne dass alle
+9 Kategorien tatsächlich durchgelaufen sind.
 
 ---
 

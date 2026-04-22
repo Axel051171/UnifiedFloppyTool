@@ -182,13 +182,27 @@ Abschluss: Summary (count pro Aktion + verbleibende MANUAL-Fälle).
 
 ---
 
-## Superpowers-Brücke
+## Zusammenarbeit
 
-- `test-driven-development` ist für jeden IMPLEMENT Pflicht: Test vor Code.
-- `verification-before-completion` vor Meldung „Stub eliminiert": konkrete
-  Test-Ausgabe oder Grep-Leerheit zeigen.
-- Bei unklarem Scope (Schritt 6 des Entscheidungsbaums) `brainstorming`
-  bevor zwischen IMPLEMENT und DOCUMENT entschieden wird.
+Siehe `.claude/CONSULT_PROTOCOL.md`. Dieser Agent **spawnt nicht selbst**.
+Findet er einen Fall der außerhalb der vier Standard-Aktionen liegt, geht
+das als CONSULT raus:
+
+- `TO: quick-fix` — trivialer IMPLEMENT-Fall den quick-fix in unter
+  150 Zeilen erledigen kann (Validator, Getter, Cleanup)
+- `TO: single-source-enforcer` — Stub ist eigentlich SSOT-Verletzung
+  (derselbe Fakt an mehreren Stellen, manche Stellen sind Stubs)
+- `TO: forensic-integrity` — Stub liegt in einem Daten-Pfad; DOCUMENT
+  muss das Verhalten inkl. Auswirkung auf forensische Integrität erklären
+- `TO: abi-bomb-detector` — DELETE löscht eine Public-API-Deklaration:
+  ABI-Impact prüfen bevor committed wird
+- `TO: human` — Entscheidung zwischen IMPLEMENT und DOCUMENT bei
+  unklarem Scope; der Mensch sagt „ja, 300 Zeilen lohnen sich"
+
+Superpowers-Skills: `test-driven-development` für jeden IMPLEMENT Pflicht
+(Test vor Code); `verification-before-completion` vor „eliminiert"-Meldung
+mit konkretem Test-Output oder Grep-Leerheit; `brainstorming` bei
+unklarem Scope bevor zwischen IMPLEMENT/DOCUMENT entschieden wird.
 
 ---
 

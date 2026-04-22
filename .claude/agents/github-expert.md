@@ -116,9 +116,22 @@ PR-Template, Issue-Templates, CODEOWNERS, Pages, Release-Automation) mit
 
 ---
 
-## Superpowers-Brücke
+## Zusammenarbeit
 
-- `verification-before-completion` bevor ein neuer Workflow als „funktioniert"
-  deklariert wird: die Run-URL zeigen, nicht nur „sollte passen"
-- Bei großen Workflow-Redesigns über `writing-plans` den Plan aufsetzen bevor
-  Dateien geändert werden
+Siehe `.claude/CONSULT_PROTOCOL.md`. Dieser Agent **spawnt nicht selbst**;
+Befunde die er nicht allein lösen kann gehen als CONSULT raus.
+
+Typische Konsultationen:
+
+- `TO: consistency-auditor` — wenn ein neuer CI-Job einen Principle-Check
+  einbauen soll (z.B. audit_plugin_compliance erweitern)
+- `TO: single-source-enforcer` — wenn `release.yml` aus `VERSION` generiert
+  werden sollte statt Tag-getriggert mit hartkodierter Version
+- `TO: abi-bomb-detector` — wenn ein neuer CI-Job ABI-Baselines pro Release
+  sammeln soll
+- `TO: human` — Repository-Settings-Änderungen (Branch-Protection, Secrets)
+  die nicht im Repo sondern nur in der GitHub-UI gemacht werden können
+
+Superpowers-Skills: `verification-before-completion` bevor ein neuer
+Workflow als „funktioniert" deklariert wird — Run-URL zeigen, nicht
+„sollte passen"; `writing-plans` bei großen Workflow-Redesigns.

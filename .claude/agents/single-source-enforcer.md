@@ -190,14 +190,25 @@ Jeder Schritt ist ein eigener Commit mit klarer Message
 
 ---
 
-## Superpowers-Brücke
+## Zusammenarbeit
 
-- `writing-plans` vor dem Setup einer neuen SSOT-Quelle: Plan enthält
-  Inventar, Konflikt-Auflösung, Generator-Design, Cleanup-Schritte.
-- `verification-before-completion`: SSOT gilt erst als eingeführt wenn
-  `verify_generated.sh` grün läuft UND alle alten Fundstellen gelöscht sind.
-- `test-driven-development` für Generatoren: Generator-Test schreibt Input-TSV,
-  ruft Generator, prüft Output-Bytes deterministisch.
+Siehe `.claude/CONSULT_PROTOCOL.md`. Dieser Agent **spawnt nicht selbst**;
+er designed und emittiert Struktur, delegiert Teile per CONSULT.
+
+- `TO: abi-bomb-detector` — bevor ein generierter Header einen bestehenden
+  Header ablöst: ABI-Impact bestätigen (neue Layouts gegen Baseline)
+- `TO: github-expert` — `.gitattributes`, Make-/CMake-Target `generate`,
+  CI-Integration von `verify_generated.sh`
+- `TO: quick-fix` — mechanischer Cleanup der alten Fundstellen wenn der
+  neue Generator etabliert ist
+- `TO: human` — Konflikt-Auflösung bei widersprüchlichen Werten in den
+  alten Fundstellen (welcher Wert ist korrekt?)
+
+Superpowers-Skills: `writing-plans` vor Setup einer neuen SSOT-Quelle
+(Inventar, Konflikt-Auflösung, Generator-Design, Cleanup); `test-driven-
+development` für Generatoren (Input-TSV → Output-Bytes deterministisch);
+`verification-before-completion` — SSOT gilt erst als eingeführt wenn
+`verify_generated.sh` grün ist UND alle alten Fundstellen weg sind.
 
 ---
 
