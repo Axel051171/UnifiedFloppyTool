@@ -55,12 +55,12 @@ static uft_error_t udi_open(uft_disk_t *disk, const char *path, bool ro)
     uint8_t *data = uft_read_file(path, &file_size);
     if (!data || file_size < UDI_HDR_SIZE) {
         free(data);
-        return UFT_ERROR_FILE_OPEN;
+        return UFT_ERR_FILE_OPEN;
     }
 
     if (memcmp(data, UDI_MAGIC, 4) != 0) {
         free(data);
-        return UFT_ERROR_FORMAT_INVALID;
+        return UFT_ERR_FORMAT_INVALID;
     }
 
     uint8_t max_cyl = data[5];
@@ -68,11 +68,11 @@ static uft_error_t udi_open(uft_disk_t *disk, const char *path, bool ro)
 
     if (max_cyl > 200 || max_head > 1) {
         free(data);
-        return UFT_ERROR_FORMAT_INVALID;
+        return UFT_ERR_FORMAT_INVALID;
     }
 
     udi_pd_t *p = calloc(1, sizeof(udi_pd_t));
-    if (!p) { free(data); return UFT_ERROR_NO_MEMORY; }
+    if (!p) { free(data); return UFT_ERR_MEMORY; }
     p->data = data;
     p->size = file_size;
     p->max_cyl = max_cyl;
@@ -132,7 +132,7 @@ static uft_error_t udi_read_track(uft_disk_t *disk, int cyl, int head,
                                     uft_track_t *track)
 {
     udi_pd_t *p = disk->plugin_data;
-    if (!p || !p->data) return UFT_ERROR_INVALID_STATE;
+    if (!p || !p->data) return UFT_ERR_INVALID_STATE;
 
     uft_track_init(track, cyl, head);
 
@@ -150,7 +150,7 @@ static uft_error_t udi_read_track(uft_disk_t *disk, int cyl, int head,
 
     /* Allocate and copy raw data into the track */
     track->raw_data = malloc(tlen);
-    if (!track->raw_data) return UFT_ERROR_NO_MEMORY;
+    if (!track->raw_data) return UFT_ERR_MEMORY;
     memcpy(track->raw_data, p->data + data_off, tlen);
     track->raw_size = tlen;
     track->raw_len = tlen;
@@ -188,18 +188,18 @@ static uint32_t udi_crc32(const uint8_t *data, size_t len) {
  *   4. Recompute the CRC32 footer over the full file minus the last 4
  *      bytes, write the updated buffer back to disk.
  *
- * Size-mismatch handling: returns UFT_ERROR_INVALID_ARG with intent
+ * Size-mismatch handling: returns UFT_ERR_INVALID_ARG with intent
  * clear in the caller's error path. This is honest: we don't silently
  * corrupt the file.
  * ============================================================================ */
 static uft_error_t udi_write_track(uft_disk_t *disk, int cyl, int head,
                                     const uft_track_t *track)
 {
-    if (!disk || !track) return UFT_ERROR_NULL_POINTER;
-    if (disk->read_only) return UFT_ERROR_NOT_SUPPORTED;
+    if (!disk || !track) return UFT_ERR_NULL_POINTER;
+    if (disk->read_only) return UFT_ERR_NOT_SUPPORTED;
 
     udi_pd_t *p = disk->plugin_data;
-    if (!p || !p->data || p->size < UDI_HDR_SIZE + 4) return UFT_ERROR_INVALID_STATE;
+    if (!p || !p->data || p->size < UDI_HDR_SIZE + 4) return UFT_ERR_INVALID_STATE;
 
     uint8_t  ttype = 0;
     uint16_t tlen  = 0;
@@ -207,14 +207,14 @@ static uft_error_t udi_write_track(uft_disk_t *disk, int cyl, int head,
     if (pos == 0 || ttype != 0x00) return UFT_ERR_NOT_FOUND;
 
     /* Encode sector payload to MFM. Use a scratch buffer sized to the
-     * existing slot — the caller gets UFT_ERROR_INVALID_ARG if the
+     * existing slot — the caller gets UFT_ERR_INVALID_ARG if the
      * encoder output doesn't fit exactly. */
     uint8_t *mfm = (uint8_t *)malloc(tlen);
-    if (!mfm) return UFT_ERROR_NO_MEMORY;
+    if (!mfm) return UFT_ERR_MEMORY;
     size_t n = uft_mfm_encode_from_track(track, mfm, tlen);
     if (n != tlen) {
         free(mfm);
-        return UFT_ERROR_INVALID_ARG;
+        return UFT_ERR_INVALID_ARG;
     }
 
     /* In-place overwrite in the buffer. */
@@ -230,8 +230,8 @@ static uft_error_t udi_write_track(uft_disk_t *disk, int cyl, int head,
     p->data[p->size - 1] = (uint8_t)((crc >> 24) & 0xFF);
 
     /* Flush to disk. */
-    if (!disk->path) return UFT_ERROR_INVALID_STATE;
-    if (!uft_write_file(disk->path, p->data, p->size)) return UFT_ERROR_IO;
+    if (!disk->path) return UFT_ERR_INVALID_STATE;
+    if (!uft_write_file(disk->path, p->data, p->size)) return UFT_ERR_IO;
     return UFT_OK;
 }
 

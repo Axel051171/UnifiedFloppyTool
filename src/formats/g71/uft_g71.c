@@ -426,7 +426,7 @@ static uft_error_t g71_plugin_open(uft_disk_t *disk, const char *path, bool ro) 
     (void)ro;
     size_t file_size = 0;
     uint8_t *data = uft_read_file(path, &file_size);
-    if (!data) return UFT_ERROR_FILE_OPEN;
+    if (!data) return UFT_ERR_FILE_OPEN;
     /* G71 = 2× D64 (70 tracks × ~7928 bytes GCR) */
     disk->plugin_data = data;
     disk->geometry.cylinders = 70;
@@ -445,7 +445,7 @@ static void g71_plugin_close(uft_disk_t *disk) {
 static uft_error_t g71_plugin_read_track(uft_disk_t *disk, int cyl, int head,
                                           uft_track_t *track) {
     (void)head;
-    if (!disk->plugin_data) return UFT_ERROR_INVALID_STATE;
+    if (!disk->plugin_data) return UFT_ERR_INVALID_STATE;
     uft_track_init(track, cyl, 0);
     /* Raw GCR data — sector decode not yet implemented */
     return UFT_OK;

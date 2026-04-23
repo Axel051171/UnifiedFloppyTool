@@ -454,7 +454,7 @@ static uft_error_t posix_write_track(uft_disk_t *disk, int cyl, int head,
                                       const uft_track_t *track) {
     uft_disk_image_t *image = (uft_disk_image_t*)disk->plugin_data;
     if (!image || !track) return UFT_ERR_INVALID_PARAM;
-    if (disk->read_only) return UFT_ERROR_NOT_SUPPORTED;
+    if (disk->read_only) return UFT_ERR_NOT_SUPPORTED;
 
     size_t idx = (size_t)cyl * image->heads + head;
     if (idx >= (size_t)(image->tracks * image->heads))

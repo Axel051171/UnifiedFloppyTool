@@ -59,19 +59,19 @@ static char *dup_str(const char *s) {
  * ============================================================================ */
 
 uft_error_t uft_meta_set(uft_disk_t *disk, const char *key, const char *value) {
-    if (!disk || !key || !value) return UFT_ERROR_NULL_POINTER;
+    if (!disk || !key || !value) return UFT_ERR_NULL_POINTER;
     if (strlen(key) >= MAX_KEY_LEN || strlen(value) >= MAX_VALUE_LEN)
-        return UFT_ERROR_INVALID_ARG;
+        return UFT_ERR_INVALID_ARG;
 
     meta_store_t *s = get_store(disk, true);
-    if (!s) return UFT_ERROR_NO_MEMORY;
+    if (!s) return UFT_ERR_MEMORY;
 
     /* Existing key? Replace value. */
     for (size_t i = 0; i < s->kv_count; i++) {
         if (strcmp(s->kv[i].key, key) == 0) {
             free(s->kv[i].value);
             s->kv[i].value = dup_str(value);
-            return s->kv[i].value ? UFT_OK : UFT_ERROR_NO_MEMORY;
+            return s->kv[i].value ? UFT_OK : UFT_ERR_MEMORY;
         }
     }
 
@@ -79,7 +79,7 @@ uft_error_t uft_meta_set(uft_disk_t *disk, const char *key, const char *value) {
     if (s->kv_count >= s->kv_cap) {
         size_t n = s->kv_cap ? s->kv_cap * 2 : 8;
         meta_kv_t *p = realloc(s->kv, n * sizeof(*p));
-        if (!p) return UFT_ERROR_NO_MEMORY;
+        if (!p) return UFT_ERR_MEMORY;
         s->kv = p;
         s->kv_cap = n;
     }
@@ -88,7 +88,7 @@ uft_error_t uft_meta_set(uft_disk_t *disk, const char *key, const char *value) {
     if (!s->kv[s->kv_count].key || !s->kv[s->kv_count].value) {
         free(s->kv[s->kv_count].key);
         free(s->kv[s->kv_count].value);
-        return UFT_ERROR_NO_MEMORY;
+        return UFT_ERR_MEMORY;
     }
     s->kv_count++;
     return UFT_OK;
@@ -98,7 +98,7 @@ uft_error_t uft_meta_get(uft_disk_t *disk, const char *key,
                           char *value_out, size_t value_size)
 {
     if (!disk || !key || !value_out || value_size == 0)
-        return UFT_ERROR_NULL_POINTER;
+        return UFT_ERR_NULL_POINTER;
 
     meta_store_t *s = get_store(disk, false);
     if (!s) return UFT_ERR_NOT_FOUND;
@@ -114,7 +114,7 @@ uft_error_t uft_meta_get(uft_disk_t *disk, const char *key,
 }
 
 uft_error_t uft_meta_remove(uft_disk_t *disk, const char *key) {
-    if (!disk || !key) return UFT_ERROR_NULL_POINTER;
+    if (!disk || !key) return UFT_ERR_NULL_POINTER;
     meta_store_t *s = get_store(disk, false);
     if (!s) return UFT_ERR_NOT_FOUND;
 
@@ -135,7 +135,7 @@ uft_error_t uft_meta_remove(uft_disk_t *disk, const char *key) {
 uft_error_t uft_meta_list_keys(uft_disk_t *disk,
                                 char ***keys_out, size_t *count_out)
 {
-    if (!disk || !keys_out || !count_out) return UFT_ERROR_NULL_POINTER;
+    if (!disk || !keys_out || !count_out) return UFT_ERR_NULL_POINTER;
     meta_store_t *s = get_store(disk, false);
     if (!s || s->kv_count == 0) {
         *keys_out = NULL;
@@ -144,7 +144,7 @@ uft_error_t uft_meta_list_keys(uft_disk_t *disk,
     }
 
     char **arr = malloc(s->kv_count * sizeof(char *));
-    if (!arr) return UFT_ERROR_NO_MEMORY;
+    if (!arr) return UFT_ERR_MEMORY;
     for (size_t i = 0; i < s->kv_count; i++) {
         arr[i] = dup_str(s->kv[i].key);
     }
@@ -169,7 +169,7 @@ static uft_error_t add_annotation(meta_store_t *s, int cyl, int head, int sec,
     if (s->notes_count >= s->notes_cap) {
         size_t n = s->notes_cap ? s->notes_cap * 2 : 16;
         uft_annotation_t *p = realloc(s->notes, n * sizeof(*p));
-        if (!p) return UFT_ERROR_NO_MEMORY;
+        if (!p) return UFT_ERR_MEMORY;
         s->notes = p;
         s->notes_cap = n;
     }
@@ -180,7 +180,7 @@ static uft_error_t add_annotation(meta_store_t *s, int cyl, int head, int sec,
     a->level = level;
     a->text = dup_str(text);
     a->created = time(NULL);
-    if (!a->text) return UFT_ERROR_NO_MEMORY;
+    if (!a->text) return UFT_ERR_MEMORY;
     s->notes_count++;
     return UFT_OK;
 }
@@ -188,9 +188,9 @@ static uft_error_t add_annotation(meta_store_t *s, int cyl, int head, int sec,
 uft_error_t uft_meta_annotate_track(uft_disk_t *disk, int cyl, int head,
                                       uft_note_level_t level, const char *text)
 {
-    if (!disk || !text) return UFT_ERROR_NULL_POINTER;
+    if (!disk || !text) return UFT_ERR_NULL_POINTER;
     meta_store_t *s = get_store(disk, true);
-    if (!s) return UFT_ERROR_NO_MEMORY;
+    if (!s) return UFT_ERR_MEMORY;
     return add_annotation(s, cyl, head, -1, level, text);
 }
 
@@ -198,16 +198,16 @@ uft_error_t uft_meta_annotate_sector(uft_disk_t *disk, int cyl, int head,
                                        int sector, uft_note_level_t level,
                                        const char *text)
 {
-    if (!disk || !text) return UFT_ERROR_NULL_POINTER;
+    if (!disk || !text) return UFT_ERR_NULL_POINTER;
     meta_store_t *s = get_store(disk, true);
-    if (!s) return UFT_ERROR_NO_MEMORY;
+    if (!s) return UFT_ERR_MEMORY;
     return add_annotation(s, cyl, head, sector, level, text);
 }
 
 uft_error_t uft_meta_get_annotations(uft_disk_t *disk,
                                        uft_annotation_t **out, size_t *count)
 {
-    if (!disk || !out || !count) return UFT_ERROR_NULL_POINTER;
+    if (!disk || !out || !count) return UFT_ERR_NULL_POINTER;
     meta_store_t *s = get_store(disk, false);
     if (!s || s->notes_count == 0) {
         *out = NULL;
@@ -216,7 +216,7 @@ uft_error_t uft_meta_get_annotations(uft_disk_t *disk,
     }
 
     uft_annotation_t *copy = malloc(s->notes_count * sizeof(*copy));
-    if (!copy) return UFT_ERROR_NO_MEMORY;
+    if (!copy) return UFT_ERR_MEMORY;
     for (size_t i = 0; i < s->notes_count; i++) {
         copy[i] = s->notes[i];
         copy[i].text = dup_str(s->notes[i].text);
@@ -257,11 +257,11 @@ void uft_meta_free(uft_disk_t *disk) {
  * ============================================================================ */
 
 uft_error_t uft_meta_save(uft_disk_t *disk, const char *sidecar_path) {
-    if (!disk || !sidecar_path) return UFT_ERROR_NULL_POINTER;
+    if (!disk || !sidecar_path) return UFT_ERR_NULL_POINTER;
     meta_store_t *s = get_store(disk, false);
 
     FILE *f = fopen(sidecar_path, "w");
-    if (!f) return UFT_ERROR_FILE_OPEN;
+    if (!f) return UFT_ERR_FILE_OPEN;
 
     fprintf(f, "{\n  \"format\": \"uft-meta-1\",\n");
     fprintf(f, "  \"kv\": {");
@@ -296,11 +296,11 @@ uft_error_t uft_meta_save(uft_disk_t *disk, const char *sidecar_path) {
 }
 
 uft_error_t uft_meta_load(uft_disk_t *disk, const char *sidecar_path) {
-    if (!disk || !sidecar_path) return UFT_ERROR_NULL_POINTER;
+    if (!disk || !sidecar_path) return UFT_ERR_NULL_POINTER;
     /* Minimal loader: parse key=value lines + annotation records.
      * Full JSON parser is out of scope; producer is us, consumer is us. */
     FILE *f = fopen(sidecar_path, "r");
-    if (!f) return UFT_ERROR_FILE_OPEN;
+    if (!f) return UFT_ERR_FILE_OPEN;
 
     char line[MAX_VALUE_LEN + MAX_KEY_LEN + 32];
     while (fgets(line, sizeof(line), f)) {
@@ -323,14 +323,14 @@ uft_error_t uft_meta_load(uft_disk_t *disk, const char *sidecar_path) {
 }
 
 uft_error_t uft_meta_save_sidecar(uft_disk_t *disk) {
-    if (!disk || !disk->path) return UFT_ERROR_NULL_POINTER;
+    if (!disk || !disk->path) return UFT_ERR_NULL_POINTER;
     char path[1024];
     snprintf(path, sizeof(path), "%s.uft-meta.json", disk->path);
     return uft_meta_save(disk, path);
 }
 
 uft_error_t uft_meta_load_sidecar(uft_disk_t *disk) {
-    if (!disk || !disk->path) return UFT_ERROR_NULL_POINTER;
+    if (!disk || !disk->path) return UFT_ERR_NULL_POINTER;
     char path[1024];
     snprintf(path, sizeof(path), "%s.uft-meta.json", disk->path);
     return uft_meta_load(disk, path);

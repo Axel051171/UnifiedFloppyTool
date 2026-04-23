@@ -31,10 +31,10 @@ static uft_error_t ipf_plugin_open(uft_disk_t *disk, const char *path, bool ro) 
     (void)ro;
     size_t sz = 0;
     uint8_t *data = uft_read_file(path, &sz);
-    if (!data) return UFT_ERROR_FILE_OPEN;
+    if (!data) return UFT_ERR_FILE_OPEN;
 
     ipf_data_t *p = calloc(1, sizeof(ipf_data_t));
-    if (!p) { free(data); return UFT_ERROR_NO_MEMORY; }
+    if (!p) { free(data); return UFT_ERR_MEMORY; }
     p->data = data; p->size = sz;
 
     disk->plugin_data = p;
@@ -54,7 +54,7 @@ static void ipf_plugin_close(uft_disk_t *disk) {
 static uft_error_t ipf_plugin_read_track(uft_disk_t *disk, int cyl, int head,
                                           uft_track_t *track) {
     ipf_data_t *p = (ipf_data_t *)disk->plugin_data;
-    if (!p) return UFT_ERROR_INVALID_STATE;
+    if (!p) return UFT_ERR_INVALID_STATE;
     uft_track_init(track, cyl, head);
     /* IPF: identification + metadata only. Track decode requires CAPS
      * record parsing which is not yet integrated. probe() + open() work,

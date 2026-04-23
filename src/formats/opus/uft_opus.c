@@ -341,8 +341,8 @@ static uft_error_t opus_write_track(uft_disk_t *disk, int cyl, int head,
                                      const uft_track_t *track) {
     uft_disk_image_t *image = (uft_disk_image_t*)disk->plugin_data;
     if (!image || !track) return UFT_ERR_INVALID_PARAM;
-    if (disk->read_only) return UFT_ERROR_NOT_SUPPORTED;
-    if (head != 0) return UFT_ERROR_NOT_SUPPORTED;
+    if (disk->read_only) return UFT_ERR_NOT_SUPPORTED;
+    if (head != 0) return UFT_ERR_NOT_SUPPORTED;
     if (cyl >= image->tracks) return UFT_ERR_INVALID_PARAM;
 
     uft_track_t *dst = image->track_data[cyl];

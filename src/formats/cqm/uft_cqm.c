@@ -42,11 +42,11 @@ bool cqm_probe(const uint8_t* data, size_t size, size_t file_size, int* confiden
 
 static uft_error_t cqm_open(uft_disk_t* disk, const char* path, bool read_only) {
     FILE* f = fopen(path, "rb");
-    if (!f) return UFT_ERROR_FILE_OPEN;
+    if (!f) return UFT_ERR_FILE_OPEN;
     
     uint8_t hdr[18];
-    if (fread(hdr, 1, 18, f) != 18) { fclose(f); return UFT_ERROR_IO; }
-    if (hdr[0] != 'C' || hdr[1] != 'Q') { fclose(f); return UFT_ERROR_FORMAT_INVALID; }
+    if (fread(hdr, 1, 18, f) != 18) { fclose(f); return UFT_ERR_IO; }
+    if (hdr[0] != 'C' || hdr[1] != 'Q') { fclose(f); return UFT_ERR_FORMAT_INVALID; }
     
     cqm_data_t* p = calloc(1, sizeof(cqm_data_t));
     uint8_t sz_code = hdr[3];
@@ -56,9 +56,9 @@ static uft_error_t cqm_open(uft_disk_t* disk, const char* path, bool read_only) 
     p->tracks = hdr[15];
     
     uint16_t com_len = uft_read_le16(&hdr[16]);
-    if (fseek(f, 18 + com_len, SEEK_SET) != 0) { fclose(f); free(p); return UFT_ERROR_FILE_OPEN; }
+    if (fseek(f, 18 + com_len, SEEK_SET) != 0) { fclose(f); free(p); return UFT_ERR_FILE_OPEN; }
     p->size = (size_t)p->tracks * p->heads * p->spt * p->sec_size;
-    if (p->size > UFT_MAX_ALLOC_SIZE) { fclose(f); free(p); return UFT_ERROR_FORMAT_INVALID; }
+    if (p->size > UFT_MAX_ALLOC_SIZE) { fclose(f); free(p); return UFT_ERR_FORMAT_INVALID; }
     p->data = malloc(p->size);
     if(!p->data) { fclose(f); free(p); return UFT_ERR_NOMEM; } /* P0-SEC-001 */
     memset(p->data, 0, p->size);
@@ -81,7 +81,7 @@ static void cqm_close(uft_disk_t* disk) {
 
 static uft_error_t cqm_read_track(uft_disk_t* disk, int cyl, int head, uft_track_t* track) {
     cqm_data_t* p = disk->plugin_data;
-    if (!p || !p->data) return UFT_ERROR_INVALID_STATE;
+    if (!p || !p->data) return UFT_ERR_INVALID_STATE;
     uft_track_init(track, cyl, head);
     size_t off = ((size_t)cyl * p->heads + head) * p->spt * p->sec_size;
     for (int s = 0; s < p->spt && off + p->sec_size <= p->size; s++) {
@@ -97,8 +97,8 @@ static uft_error_t cqm_read_track(uft_disk_t* disk, int cyl, int head, uft_track
 static uft_error_t cqm_write_track(uft_disk_t* disk, int cyl, int head,
                                      const uft_track_t* track) {
     cqm_data_t* p = disk->plugin_data;
-    if (!p || !p->data) return UFT_ERROR_INVALID_STATE;
-    if (disk->read_only) return UFT_ERROR_NOT_SUPPORTED;
+    if (!p || !p->data) return UFT_ERR_INVALID_STATE;
+    if (disk->read_only) return UFT_ERR_NOT_SUPPORTED;
 
     size_t trk_off = ((size_t)cyl * p->heads + head) * p->spt * p->sec_size;
     for (size_t s = 0; s < track->sector_count && (int)s < p->spt; s++) {

@@ -379,7 +379,7 @@ uft_error_t uft_convert_file(const char* src_path,
                               const uft_convert_options_t* options,
                               uft_convert_result_t* result) {
     if (!src_path || !dst_path || !result) {
-        return UFT_ERROR_NULL_POINTER;
+        return UFT_ERR_NULL_POINTER;
     }
 
     memset(result, 0, sizeof(*result));
@@ -387,8 +387,8 @@ uft_error_t uft_convert_file(const char* src_path,
     /* Read source file */
     FILE* f = fopen(src_path, "rb");
     if (!f) {
-        result->error = UFT_ERROR_NOT_FOUND;
-        return UFT_ERROR_NOT_FOUND;
+        result->error = UFT_ERR_FILE_NOT_FOUND;
+        return UFT_ERR_FILE_NOT_FOUND;
     }
 
     if (fseek(f, 0, SEEK_END) != 0) { fclose(f); result->error = UFT_ERR_IO; return UFT_ERR_IO; }
@@ -403,8 +403,8 @@ uft_error_t uft_convert_file(const char* src_path,
     uint8_t* src_data = malloc(src_size);
     if (!src_data) {
         fclose(f);
-        result->error = UFT_ERROR_NO_MEMORY;
-        return UFT_ERROR_NO_MEMORY;
+        result->error = UFT_ERR_MEMORY;
+        return UFT_ERR_MEMORY;
     }
 
     if (fread(src_data, 1, src_size, f) != src_size) {
@@ -422,11 +422,11 @@ uft_error_t uft_convert_file(const char* src_path,
 
     if (src_format == UFT_FORMAT_UNKNOWN) {
         free(src_data);
-        result->error = UFT_ERROR_INVALID_FORMAT;
+        result->error = UFT_ERR_FORMAT_INVALID;
         snprintf(result->warnings[0], sizeof(result->warnings[0]),
                  "Could not detect source format");
         result->warning_count = 1;
-        return UFT_ERROR_INVALID_FORMAT;
+        return UFT_ERR_FORMAT_INVALID;
     }
 
     /* Check conversion path exists */
@@ -434,13 +434,13 @@ uft_error_t uft_convert_file(const char* src_path,
                                                               dst_format);
     if (!path) {
         free(src_data);
-        result->error = UFT_ERROR_FORMAT_NOT_SUPPORTED;
+        result->error = UFT_ERR_NOT_SUPPORTED;
         snprintf(result->warnings[0], sizeof(result->warnings[0]),
                  "No conversion path from %s to %s",
                  uft_format_get_name(src_format),
                  uft_format_get_name(dst_format));
         result->warning_count = 1;
-        return UFT_ERROR_FORMAT_NOT_SUPPORTED;
+        return UFT_ERR_NOT_SUPPORTED;
     }
 
     /* Add quality warning */
@@ -515,7 +515,7 @@ uft_error_t uft_convert_memory(const uint8_t* src_data, size_t src_size,
                                 const uft_convert_options_ext_t* options,
                                 uft_convert_result_t* result) {
     if (!src_data || !dst_data || !dst_size || !result) {
-        return UFT_ERROR_NULL_POINTER;
+        return UFT_ERR_NULL_POINTER;
     }
 
     memset(result, 0, sizeof(*result));
@@ -526,13 +526,13 @@ uft_error_t uft_convert_memory(const uint8_t* src_data, size_t src_size,
     const uft_conversion_path_t* path = uft_convert_get_path(src_format,
                                                               dst_format);
     if (!path) {
-        result->error = UFT_ERROR_FORMAT_NOT_SUPPORTED;
+        result->error = UFT_ERR_NOT_SUPPORTED;
         snprintf(result->warnings[result->warning_count++],
                  sizeof(result->warnings[0]),
                  "No conversion path from %s to %s",
                  uft_format_get_name(src_format),
                  uft_format_get_name(dst_format));
-        return UFT_ERROR_FORMAT_NOT_SUPPORTED;
+        return UFT_ERR_NOT_SUPPORTED;
     }
 
     if (path->warning) {

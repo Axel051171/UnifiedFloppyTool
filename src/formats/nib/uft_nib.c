@@ -44,7 +44,7 @@ bool nib_probe(const uint8_t* data, size_t size, size_t file_size, int* confiden
 
 static uft_error_t nib_open(uft_disk_t* disk, const char* path, bool read_only) {
     FILE* f = fopen(path, "rb");
-    if (!f) return UFT_ERROR_FILE_OPEN;
+    if (!f) return UFT_ERR_FILE_OPEN;
     
     nib_data_t* p = calloc(1, sizeof(nib_data_t));
     if (!p) { fclose(f); return UFT_ERR_MEMORY; }
@@ -107,7 +107,7 @@ static int decode_sector(const uint8_t* gcr, uint8_t* out) {
 
 static uft_error_t nib_read_track(uft_disk_t* disk, int cyl, int head, uft_track_t* track) {
     nib_data_t* p = disk->plugin_data;
-    if (!p || !p->data || head != 0 || cyl >= NIB_TRACKS) return UFT_ERROR_INVALID_STATE;
+    if (!p || !p->data || head != 0 || cyl >= NIB_TRACKS) return UFT_ERR_INVALID_STATE;
     
     uft_track_init(track, cyl, head);
     const uint8_t* tdata = p->data + cyl * NIB_TRACK_SIZE;

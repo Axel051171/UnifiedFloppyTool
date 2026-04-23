@@ -32,22 +32,22 @@ bool td0_probe(const uint8_t* data, size_t size, size_t file_size, int* confiden
 
 static uft_error_t td0_open(uft_disk_t* disk, const char* path, bool read_only) {
     FILE* f = fopen(path, "rb");
-    if (!f) return UFT_ERROR_FILE_OPEN;
+    if (!f) return UFT_ERR_FILE_OPEN;
     
     uint8_t header[TD0_HEADER_SIZE];
     if (fread(header, 1, TD0_HEADER_SIZE, f) != TD0_HEADER_SIZE) {
         fclose(f);
-        return UFT_ERROR_FORMAT_INVALID;
+        return UFT_ERR_FORMAT_INVALID;
     }
     
     uint16_t magic = uft_read_le16(header);
     if (magic != TD0_MAGIC_NORMAL && magic != TD0_MAGIC_ADVANCED) {
         fclose(f);
-        return UFT_ERROR_FORMAT_INVALID;
+        return UFT_ERR_FORMAT_INVALID;
     }
     
     td0_data_t* pdata = calloc(1, sizeof(td0_data_t));
-    if (!pdata) { fclose(f); return UFT_ERROR_NO_MEMORY; }
+    if (!pdata) { fclose(f); return UFT_ERR_MEMORY; }
     
     pdata->file = f;
     pdata->version = header[4];
@@ -58,12 +58,12 @@ static uft_error_t td0_open(uft_disk_t* disk, const char* path, bool read_only) 
     // Skip comment if present
     if (pdata->version >= 0x10) {
         uint8_t com_hdr[10];
-        if (fread(com_hdr, 1, 10, f) != 10) { free(pdata); fclose(f); return UFT_ERROR_IO; }
+        if (fread(com_hdr, 1, 10, f) != 10) { free(pdata); fclose(f); return UFT_ERR_IO; }
         uint16_t com_len = uft_read_le16(com_hdr + 2);
         if (fseek(f, com_len, SEEK_CUR) != 0) {
             free(pdata);
             fclose(f);
-            return UFT_ERROR_FILE_READ;
+            return UFT_ERR_FILE_READ;
         }
     }
     pdata->data_start = ftell(f);
@@ -89,7 +89,7 @@ static uft_error_t td0_open(uft_disk_t* disk, const char* path, bool read_only) 
                 if (fseek(f, len - 1, SEEK_CUR) != 0) {
                     free(pdata);
                     fclose(f);
-                    return UFT_ERROR_FILE_READ;
+                    return UFT_ERR_FILE_READ;
                 }
             }
         }

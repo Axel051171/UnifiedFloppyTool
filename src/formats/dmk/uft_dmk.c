@@ -22,7 +22,7 @@ bool dmk_probe(const uint8_t* data, size_t size, size_t file_size, int* confiden
 
 static uft_error_t dmk_open(uft_disk_t* disk, const char* path, bool read_only) {
     FILE* f = fopen(path, read_only ? "rb" : "r+b");
-    if (!f) return UFT_ERROR_FILE_OPEN;
+    if (!f) return UFT_ERR_FILE_OPEN;
     
     uint8_t hdr[DMK_HDR];
     if (fread(hdr, 1, DMK_HDR, f) != DMK_HDR) { fclose(f); return UFT_ERR_IO; }
@@ -49,7 +49,7 @@ static void dmk_close(uft_disk_t* disk) {
 
 static uft_error_t dmk_read_track(uft_disk_t* disk, int cyl, int head, uft_track_t* track) {
     dmk_data_t* p = disk->plugin_data;
-    if (!p || !p->file) return UFT_ERROR_INVALID_STATE;
+    if (!p || !p->file) return UFT_ERR_INVALID_STATE;
     uft_track_init(track, cyl, head);
     
     size_t off = DMK_HDR + ((size_t)cyl * (p->ss ? 1 : 2) + head) * p->track_len;
@@ -89,8 +89,8 @@ static uft_error_t dmk_read_track(uft_disk_t* disk, int cyl, int head, uft_track
 static uft_error_t dmk_write_track(uft_disk_t* disk, int cyl, int head,
                                      const uft_track_t* track) {
     dmk_data_t* p = disk->plugin_data;
-    if (!p || !p->file) return UFT_ERROR_INVALID_STATE;
-    if (disk->read_only) return UFT_ERROR_NOT_SUPPORTED;
+    if (!p || !p->file) return UFT_ERR_INVALID_STATE;
+    if (disk->read_only) return UFT_ERR_NOT_SUPPORTED;
 
     size_t off = DMK_HDR + ((size_t)cyl * (p->ss ? 1 : 2) + head) * p->track_len;
     if (fseek(p->file, (long)off, SEEK_SET) != 0) return UFT_ERR_IO;
