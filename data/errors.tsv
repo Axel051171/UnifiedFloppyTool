@@ -1,0 +1,202 @@
+# UnifiedFloppyTool canonical error-code table (SSOT for Fact 3).
+#
+# This file is the ONLY source of truth for UFT error codes.
+# All consumers (uft_error.h, uft_error_strings.c, uft_error_compat_gen.h,
+# docs/ERRORS.md) are generated from this file via
+# scripts/generators/gen_errors_*.py.
+#
+# NAMING CONVENTION:
+#   The enum member identifier is `UFT_ERR_<NAME>` (matches existing ABI
+#   in include/uft/uft_error.h — 848 uses in 76 files). The long-form
+#   alias `UFT_ERROR_<NAME>` is emitted as a preprocessor #define in
+#   include/uft/core/uft_error_compat_gen.h for the 1127 legacy sites
+#   that use the mixed-case spelling. Do NOT flip this; doing so breaks
+#   the ABI.
+#
+# COLUMNS (tab-separated):
+#   code         - signed decimal integer, negative for errors. 0 reserved for UFT_SUCCESS.
+#   name         - short identifier appended to UFT_ERR_ (e.g. "IO" -> UFT_ERR_IO).
+#   category     - one of: ARG, IO, FORMAT, RESOURCE, FEATURE, HARDWARE, INTERNAL, MISC.
+#   description  - one-line human-readable (used in uft_strerror and docs).
+#
+# RESERVED CODE RANGES (mirrors uft_error.h comments):
+#   -1  ..  -9   ARG        argument errors
+#   -10 .. -19   IO         I/O errors
+#   -20 .. -29   FORMAT     format/parse errors
+#   -30 .. -39   RESOURCE   memory/resource errors
+#   -40 .. -49   FEATURE    capability errors
+#   -50 .. -59   HARDWARE   hardware errors
+#   -90 .. -99   INTERNAL   internal / assertions
+#   -100         MISC       unknown / catchall
+#
+# ABI INVARIANT (verified by scripts/verify_errors_ssot.sh):
+#   The numeric code of every SAFE token (14 listed below) MUST match the
+#   value in the pre-SSOT uft_error.h. Changing a code is an ABI break
+#   and requires abi-bomb-detector sign-off.
+#
+# Lines starting with '#' are comments. Blank lines are allowed.
+# Rows marked "# PROPOSED" above them are awaiting human decision
+# (see consult block in single-source-enforcer dispatch output).
+#
+# code	name	category	description
+# ----  ----  --------  -----------
+
+# === SAFE: direct carry-over from canonical uft_error.h ===================
+0	SUCCESS	MISC	Operation completed successfully
+
+# ARG (-1..-9)
+-1	INVALID_ARG	ARG	Invalid argument (NULL pointer, out of range, etc.)
+-2	BUFFER_TOO_SMALL	ARG	Required buffer too small
+-3	INVALID_PATH	ARG	Invalid path or filename
+
+# IO (-10..-19)
+-10	IO	IO	General I/O error
+-11	FILE_NOT_FOUND	IO	File not found
+-12	PERMISSION	IO	Permission denied
+-13	FILE_EXISTS	IO	File already exists
+-14	EOF	IO	End of file reached
+
+# FORMAT (-20..-29)
+-20	FORMAT	FORMAT	Unknown or invalid format
+-21	FORMAT_DETECT	FORMAT	Format detection failed
+-22	FORMAT_VARIANT	FORMAT	Unsupported format variant
+-23	CORRUPTED	FORMAT	Corrupted or invalid data
+-24	CRC	FORMAT	CRC/checksum mismatch
+
+# RESOURCE (-30..-39)
+-30	MEMORY	RESOURCE	Memory allocation failed
+-31	RESOURCE	RESOURCE	Resource limit exceeded
+-32	BUSY	RESOURCE	Resource busy
+
+# FEATURE (-40..-49)
+-40	NOT_SUPPORTED	FEATURE	Feature not supported
+-41	NOT_IMPLEMENTED	FEATURE	Feature not implemented
+-42	NOT_PERMITTED	FEATURE	Operation not permitted in current state
+
+# HARDWARE (-50..-59)
+-50	HARDWARE	HARDWARE	Hardware communication error
+-51	USB	HARDWARE	USB error
+-52	DEVICE_NOT_FOUND	HARDWARE	Device not found
+-53	TIMEOUT	HARDWARE	Operation timed out
+
+# INTERNAL (-90..-99)
+-90	INTERNAL	INTERNAL	Internal error (should not happen)
+-91	ASSERTION	INTERNAL	Assertion failed
+
+# MISC
+-100	UNKNOWN	MISC	Unknown error
+
+
+# === PROPOSED: new canonical entries for the 31 UNSAFE legacy tokens =====
+# Each row below is PROPOSED by single-source-enforcer. Human review of the
+# consolidated CONSULT block is required before promotion. If accepted as-is,
+# delete the "# PROPOSED" comment above the row to confirm.
+#
+# The generator (gen_errors_h.py) will ACCEPT PROPOSED rows (they appear in
+# the emitted enum) but will EMIT a compile-time #pragma message listing
+# each proposed row so drift stays visible in every build log.
+
+# --- RESOURCE extension (memory alias consolidation) ---------------------
+# PROPOSED: resolves NOMEM vs MEMORY vs OUT_OF_MEMORY triplet.
+# Canonical stays UFT_ERR_MEMORY (code -30); the other two become compat
+# defines in uft_error_compat_gen.h, not distinct enum members.
+# No new row needed — handled by alias generation.
+
+# --- FORMAT extension (semantic-correctness fix for current compat bug) --
+# PROPOSED: new canonical for "format structurally invalid" which the old
+# compat header mis-mapped to CORRUPTED (semantic violation documented in
+# dispatch). Adds a distinct code so callers can differentiate
+# "data is garbled" (CORRUPTED) from "file claims to be IMD but isn't"
+# (FORMAT_INVALID).
+# PROPOSED
+-25	FORMAT_INVALID	FORMAT	Format structurally invalid (magic/header mismatch)
+# PROPOSED
+-26	UNKNOWN_FORMAT	FORMAT	Format could not be identified from content
+# PROPOSED
+-27	ENCODING	FORMAT	Encoding error (MFM/FM/GCR bit-level decode failed)
+# PROPOSED
+-28	LONG_TRACK	FORMAT	Track exceeds standard length (possible protection)
+# PROPOSED
+-29	NON_STANDARD	FORMAT	Non-standard format variant
+
+# --- FORMAT subcodes moved from compat to canonical ----------------------
+# PROPOSED: these were previously aliased to CORRUPTED or FILE_NOT_FOUND
+# by uft_unified_types.h — losing semantic info. Giving them distinct
+# codes in the -60..-79 forensics range.
+# PROPOSED
+-60	SYNC_LOST	FORMAT	PLL/sync lost during decode
+# PROPOSED
+-61	WEAK_BITS	FORMAT	Weak bits detected in data field
+# PROPOSED
+-62	TIMING	FORMAT	Timing anomaly (splice, density-mix)
+# PROPOSED
+-63	ID_MISMATCH	FORMAT	Sector ID header mismatch
+# PROPOSED
+-64	DELETED_DATA	FORMAT	Deleted-data address mark (0xF8)
+# PROPOSED
+-65	MISSING_SECTOR	FORMAT	Expected sector not found on track
+# PROPOSED
+-66	INCOMPLETE	FORMAT	Incomplete data (truncated sector/track)
+# PROPOSED
+-67	PLL_UNLOCK	FORMAT	PLL never achieved lock
+
+# --- PROTECTION (-80..-89) new subclass ----------------------------------
+# PROPOSED
+-80	PROTECTION	PROTECTION	Copy-protection scheme triggered
+# PROPOSED
+-81	COPY_DENIED	PROTECTION	Copy refused due to protection policy
+
+# --- HARDWARE extension (-54..-59) ---------------------------------------
+# PROPOSED
+-54	WRITE_PROTECT	HARDWARE	Disk is write-protected
+# PROPOSED
+-55	WRITE_FAULT	HARDWARE	Drive reports write fault
+# PROPOSED
+-56	TRACK_OVERFLOW	HARDWARE	Track buffer overflow during write
+
+# --- ARG extension (-4..-9) ----------------------------------------------
+# PROPOSED: distinct code for "verify operation failed" (was aliased to CRC).
+# Callers that verify a written image care whether they hit CRC mismatch
+# (media problem) vs. byte-level compare mismatch (write problem).
+# PROPOSED
+-4	VERIFY_FAIL	ARG	Verification compare failed
+
+# --- IO extension (-15..-19) ---------------------------------------------
+# PROPOSED
+-15	FILE_OPEN	IO	Cannot open file
+# PROPOSED
+-16	FILE_READ	IO	File read error
+# PROPOSED
+-17	FILE_CREATE	IO	Cannot create file
+
+# --- MISC / cancellation / versioning ------------------------------------
+# PROPOSED
+-92	CANCELLED	MISC	Operation cancelled by user or policy
+# PROPOSED
+-93	INVALID_STATE	INTERNAL	Object/context in invalid state for operation
+# PROPOSED
+-94	VERSION	MISC	Version mismatch
+
+# === ALIAS CONSOLIDATION (no new rows; handled by compat generator) ======
+# The following 12 legacy tokens DO NOT get dedicated rows. They are
+# emitted as #define aliases in uft_error_compat_gen.h by gen_errors_h.py.
+#
+#   NOT_IMPL       -> NOT_IMPLEMENTED      (duplicate, keep longer)
+#   UNSUPPORTED    -> NOT_SUPPORTED        (duplicate, keep canonical)
+#   NOMEM          -> MEMORY               (alias)
+#   OUT_OF_MEMORY  -> MEMORY               (alias)
+#   CORRUPT        -> CORRUPTED            (alias; dispatch said "keep
+#                                          CORRUPT" but canonical enum
+#                                          already uses CORRUPTED and
+#                                          848 UFT_ERR_CORRUPTED uses
+#                                          would break — INVERSION noted
+#                                          in CONSULT block)
+#   NOT_FOUND      -> FILE_NOT_FOUND       (alias)
+#   NULL_PTR       -> INVALID_ARG          (alias, documented behaviour)
+#   BOUNDS         -> INVALID_ARG          (alias)
+#   STATE          -> INVALID_ARG          (alias, distinct from INVALID_STATE above)
+#   UNSUPPORTED_*  -> NOT_SUPPORTED        (alias)
+#   OK             -> (dropped; UFT_SUCCESS is the sentinel)
+#   E_*  (short)   -> handled by compat generator
+#
+# End of file.
