@@ -1306,7 +1306,7 @@ uft_error_t uft_cpm_read_with_def(const char *path,
         return UFT_ERR_MEMORY;
     }
     
-    disk->format = UFT_FMT_RAW;
+    disk->format = UFT_FORMAT_RAW;
     snprintf(disk->format_name, sizeof(disk->format_name), "CP/M-%s", def->name);
     disk->sectors_per_track = def->sectors;
     disk->bytes_per_sector = def->sector_size;
@@ -1429,7 +1429,7 @@ uft_error_t uft_cpm_format(uft_disk_image_t **out_disk,
         return UFT_ERR_MEMORY;
     }
     
-    disk->format = UFT_FMT_RAW;
+    disk->format = UFT_FORMAT_RAW;
     snprintf(disk->format_name, sizeof(disk->format_name), "CP/M-%s", def->name);
     disk->sectors_per_track = def->sectors;
     disk->bytes_per_sector = def->sector_size;

@@ -197,7 +197,7 @@ uft_error_t uft_myz80_read_mem(const uint8_t *data, size_t size,
         return UFT_ERR_MEMORY;
     }
     
-    disk->format = UFT_FMT_RAW;
+    disk->format = UFT_FORMAT_RAW;
     snprintf(disk->format_name, sizeof(disk->format_name), "MYZ80");
     disk->sectors_per_track = sectors;
     disk->bytes_per_sector = sector_size;

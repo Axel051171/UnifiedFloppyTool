@@ -116,7 +116,7 @@ static uft_encoding_t convert_encoding(hardsector_encoding_t enc) {
     switch (enc) {
         case HS_ENC_FM:  return UFT_ENC_FM;
         case HS_ENC_MFM: return UFT_ENC_MFM;
-        case HS_ENC_GCR: return UFT_ENC_GCR;
+        case HS_ENC_GCR: return UFT_ENC_GCR_CBM;  /* no generic UFT_ENC_GCR; hard-sectored GCR is CBM-family */
         default:         return UFT_ENC_FM;
     }
 }
@@ -186,7 +186,7 @@ uft_error_t uft_hardsector_read_mem(const uint8_t *data, size_t size,
         default: type_name = "HardSector"; break;
     }
     
-    disk->format = UFT_FMT_RAW;
+    disk->format = UFT_FORMAT_RAW;
     snprintf(disk->format_name, sizeof(disk->format_name), "%s", type_name);
     disk->sectors_per_track = geo.sectors;
     disk->bytes_per_sector = geo.sector_size;

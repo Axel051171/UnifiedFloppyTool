@@ -238,7 +238,7 @@ uft_error_t uft_posix_read(const char *path,
         return UFT_ERR_MEMORY;
     }
     
-    disk->format = UFT_FMT_RAW;
+    disk->format = UFT_FORMAT_RAW;
     snprintf(disk->format_name, sizeof(disk->format_name), "POSIX");
     disk->sectors_per_track = geometry.sectors;
     disk->bytes_per_sector = geometry.sector_size;

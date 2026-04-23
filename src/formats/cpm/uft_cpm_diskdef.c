@@ -852,7 +852,7 @@ static uft_error_t cpm_open(uft_disk_t *disk, const char *path, bool read_only) 
         return UFT_ERR_MEMORY;
     }
     
-    image->format = UFT_FMT_RAW;
+    image->format = UFT_FORMAT_RAW;
     snprintf(image->format_name, sizeof(image->format_name), "CP/M (%s)", def->name);
     image->sectors_per_track = def->sectors;
     image->bytes_per_sector = def->sector_size;

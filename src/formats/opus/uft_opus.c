@@ -96,7 +96,7 @@ uft_error_t uft_opus_read_mem(const uint8_t *data, size_t size,
         return UFT_ERR_MEMORY;
     }
     
-    disk->format = UFT_FMT_RAW;
+    disk->format = UFT_FORMAT_RAW;
     snprintf(disk->format_name, sizeof(disk->format_name), "OPUS");
     disk->sectors_per_track = OPUS_SECTORS;
     disk->bytes_per_sector = OPUS_SECTOR_SIZE;
