@@ -148,4 +148,12 @@ void uft_error_clear_context(void);
 }
 #endif
 
+/* Pull in the full generated legacy-alias surface so every consumer of
+ * <uft/uft_error.h> (which transitively #includes this file) gets the
+ * UFT_ERROR_*, UFT_E_*, UFT_IR_ERR_*, UFT_DEC_ERR_*, UFT_IO_ERR_*
+ * compatibility spellings without a second include. Must come AFTER
+ * the hand-maintained section above so compat_gen's `#ifndef` guards
+ * see any human-added redefinitions first. */
+#include "uft/core/uft_error_compat_gen.h"
+
 #endif /* UFT_ERROR_EXT_H */
