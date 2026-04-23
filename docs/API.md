@@ -1,7 +1,7 @@
 # UnifiedFloppyTool API Documentation
 
-**Version:** 4.1.0
-**Date:** 2026-04-08
+**Version:** 4.1.3
+**Date:** 2026-04-19
 
 ---
 
