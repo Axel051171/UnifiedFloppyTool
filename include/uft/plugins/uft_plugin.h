@@ -29,6 +29,9 @@ extern "C" {
  * ============================================================================ */
 
 #define UFT_PLUGIN_ABI_VERSION  1
+/* Intentionally pinned: bumped only when the plugin struct layout or
+ * required symbol set changes in an ABI-incompatible way, not on every
+ * app release.  Current value matches the first 4.1.x ABI baseline. */
 #define UFT_PLUGIN_API_VERSION  "4.1.0"
 
 /* ============================================================================

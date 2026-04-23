@@ -1,10 +1,10 @@
 /**
  * @file sessionmanager.cpp
  * @brief Session Management - Full Implementation
- * @version 4.0.0
  */
 
 #include "sessionmanager.h"
+#include "uft/uft_version.h"
 #include <QFile>
 #include <QTextStream>
 #include <QStandardPaths>
@@ -51,7 +51,7 @@ QString SessionManager::newSession(const QString& operation)
     
     m_currentSession = SessionData();
     m_currentSession.id = generateSessionId();
-    m_currentSession.version = "4.0.0";
+    m_currentSession.version = UFT_VERSION_STRING;
     m_currentSession.startTime = QDateTime::currentDateTime();
     m_currentSession.operation = operation;
     m_currentSession.state = SessionState::IDLE;
