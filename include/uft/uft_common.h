@@ -42,7 +42,7 @@
 
 /* Error handling */
 #include "uft_error.h"
-#include "uft_error_compat.h"
+#include "uft/uft_error.h"
 
 /* Type definitions */
 #include "uft_types.h"

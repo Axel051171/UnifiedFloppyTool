@@ -13,7 +13,7 @@
  */
 
 #include "uft/formats/mame/uft_chd.h"
-#include "uft/core/uft_error_compat.h"
+#include "uft/uft_error.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>

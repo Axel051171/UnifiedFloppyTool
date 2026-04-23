@@ -5,7 +5,7 @@
  * Based on qbarnes/catweasel-cw and Tim Mann's cw2dmk documentation.
  */
 
-#include "uft/core/uft_error_compat.h"
+#include "uft/uft_error.h"
 #include "uft/formats/uft_cw_raw.h"
 #include <stdlib.h>
 #include <string.h>

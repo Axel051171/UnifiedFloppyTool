@@ -14,7 +14,7 @@
 #define UFT_PLUGIN_BRIDGE_H
 
 #include "uft/core/uft_unified_types.h"
-#include "uft/core/uft_error_compat.h"
+#include "uft/uft_error.h"
 
 #ifdef __cplusplus
 extern "C" {

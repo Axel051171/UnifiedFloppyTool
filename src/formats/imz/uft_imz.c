@@ -9,7 +9,7 @@
  * @date 2026-01-15
  */
 
-#include "uft/core/uft_error_compat.h"
+#include "uft/uft_error.h"
 #include "uft/formats/uft_imz.h"
 #include <stdio.h>
 #include <stdlib.h>

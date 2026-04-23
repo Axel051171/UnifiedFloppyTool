@@ -10,7 +10,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stddef.h>
-#include "uft_error_codes.h"
+#include "uft/uft_error.h"
 
 #ifdef __cplusplus
 extern "C" {

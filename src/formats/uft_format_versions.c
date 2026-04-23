@@ -10,7 +10,7 @@
  * PERF-FIX: P2-PERF-001 - Buffered padding writes instead of byte-by-byte
  */
 
-#include "uft/core/uft_error_compat.h"
+#include "uft/uft_error.h"
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>

@@ -11,7 +11,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
-#include "uft/core/uft_error_codes.h"
+#include "uft/uft_error.h"
 
 /* 86F Magic and Constants */
 #define BOX86F_MAGIC            "86BX"

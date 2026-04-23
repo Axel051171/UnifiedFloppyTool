@@ -16,7 +16,7 @@
  */
 
 #include "uft/analysis/uft_triage.h"
-#include "uft/core/uft_error_compat.h"
+#include "uft/uft_error.h"
 #include "uft/formats/uft_detect.h"
 
 #include <stdio.h>

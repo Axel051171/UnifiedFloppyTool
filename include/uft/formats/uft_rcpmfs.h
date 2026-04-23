@@ -21,7 +21,7 @@
 
 #include "uft/uft_format_common.h"
 #include "uft/core/uft_disk_image_compat.h"
-#include "uft/core/uft_error_compat.h"
+#include "uft/uft_error.h"
 #include "uft/formats/uft_cpm_diskdef.h"
 
 #ifdef __cplusplus

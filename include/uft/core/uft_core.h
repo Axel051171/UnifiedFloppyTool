@@ -20,7 +20,7 @@
 #define UFT_CORE_H
 
 /* Core unified types */
-#include "uft_error_codes.h"    /* P2-ARCH-006: Unified error codes */
+#include "uft/uft_error.h" /* P2-ARCH-006: Unified error codes */
 #include "uft_encoding.h"       /* P2-ARCH-003: Unified encoding */
 #include "uft_crc_unified.h"    /* P2-ARCH-002: Unified CRC */
 #include "uft_sector.h"         /* P2-ARCH-004: Unified sector */

@@ -22,7 +22,7 @@
 
 #include "uft/analysis/uft_format_suggest.h"
 #include "uft/detect/uft_format_detect.h"
-#include "uft/core/uft_error_compat.h"
+#include "uft/uft_error.h"
 
 #include <stdio.h>
 #include <stdlib.h>

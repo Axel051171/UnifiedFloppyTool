@@ -47,7 +47,7 @@ const char* uft_strerror(uft_rc_t rc) {
     return "Unknown UFT error code";
 }
 
-/* Extended lookup helpers — optional, used by uft_error_codes.h clients. */
+/* Extended lookup helpers (name + description) for diagnostic callers. */
 
 const char* uft_error_name(uft_error_t err) {
     for (const struct uft_err_entry* e = UFT_ERR_TABLE; e->name != NULL; ++e) {

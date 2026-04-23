@@ -6,7 +6,7 @@
  * @date 2026-01-16
  */
 
-#include "uft/core/uft_error_compat.h"
+#include "uft/uft_error.h"
 #include "uft/formats/c64/uft_bam_editor.h"
 #include <stdio.h>
 #include <stdlib.h>

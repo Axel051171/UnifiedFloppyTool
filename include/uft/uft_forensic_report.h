@@ -16,7 +16,7 @@
 #include <stdbool.h>
 #include <time.h>
 #include "uft_types.h"
-#include "uft/core/uft_error_codes.h"
+#include "uft/uft_error.h"
 
 #include <stddef.h>
 

@@ -10,7 +10,7 @@
  * @license MIT (implementation), GPL v3 compatible
  */
 
-#include "uft/core/uft_error_compat.h"
+#include "uft/uft_error.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

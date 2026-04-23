@@ -18,7 +18,7 @@
 
 #include "uft/uft_format_common.h"
 #include "uft/core/uft_disk_image_compat.h"
-#include "uft/core/uft_error_compat.h"
+#include "uft/uft_error.h"
 
 #ifdef __cplusplus
 extern "C" {

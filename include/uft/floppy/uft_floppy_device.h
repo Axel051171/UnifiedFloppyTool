@@ -24,8 +24,7 @@ extern "C" {
  * Error Code Aliases (short form used by format modules)
  * ============================================================================ */
 
-#include "uft/core/uft_error_codes.h"
-#include "uft/core/uft_error_compat.h"
+#include "uft/uft_error.h"
 
 #ifndef UFT_EBOUNDS
 #define UFT_EBOUNDS     UFT_E_BOUNDS

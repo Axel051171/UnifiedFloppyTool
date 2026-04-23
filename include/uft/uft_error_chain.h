@@ -16,7 +16,7 @@
 #include <stdbool.h>
 #include <stdarg.h>
 #include <stddef.h>
-#include "uft/core/uft_error_codes.h"  /* uft_error_t */
+#include "uft/uft_error.h" /* uft_error_t */
 
 #ifdef __cplusplus
 extern "C" {

@@ -6,7 +6,7 @@
  * @date 2026-01-17
  */
 
-#include "uft/core/uft_error_compat.h"
+#include "uft/uft_error.h"
 #include "uft/formats/c64/uft_sid.h"
 #include <stdlib.h>
 #include <string.h>

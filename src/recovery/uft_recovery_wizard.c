@@ -20,7 +20,7 @@
 
 #include "uft/recovery/uft_recovery_wizard.h"
 #include "uft/analysis/uft_triage.h"
-#include "uft/core/uft_error_compat.h"
+#include "uft/uft_error.h"
 
 #include <stdlib.h>
 #include <string.h>

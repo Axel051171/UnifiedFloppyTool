@@ -5,7 +5,7 @@
  * @copyright UFT Project 2025
  */
 
-#include "uft/core/uft_error_compat.h"
+#include "uft/uft_error.h"
 #include "uft/uft_adf.h"
 #include <stdio.h>
 #include <stdlib.h>

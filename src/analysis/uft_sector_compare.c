@@ -14,7 +14,7 @@
 
 #include "uft/analysis/uft_sector_compare.h"
 #include "uft/uft_format_detect.h"
-#include "uft/core/uft_error_codes.h"
+#include "uft/uft_error.h"
 
 #include <stdlib.h>
 #include <string.h>

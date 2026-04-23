@@ -13,7 +13,6 @@
 #include "uft/uft_format_convert.h"
 #include "uft/uft_format_probe.h"
 #include "uft/uft_error.h"
-#include "uft/uft_error_compat.h"
 
 /* Format parsers */
 #include "uft/uft_format_parsers.h"

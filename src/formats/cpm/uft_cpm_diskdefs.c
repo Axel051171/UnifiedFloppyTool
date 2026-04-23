@@ -9,7 +9,7 @@
 
 #include "uft/formats/uft_cpm_diskdefs.h"
 #include "uft/uft_format_common.h"
-#include "uft/core/uft_error_compat.h"
+#include "uft/uft_error.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
