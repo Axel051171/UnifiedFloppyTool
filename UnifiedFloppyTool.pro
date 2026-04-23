@@ -512,7 +512,6 @@ SOURCES += \
     src/analysis/events/otdr_event_core_v2.c \
     src/analysis/denoise/uft_denoise_bridge.c \
     src/analysis/denoise/phi_otdr_denoise_1d.c \
-    src/formats/d64/uft_d64_parser_v3.c
 
 # G64 - Commodore 64 with timing data
 SOURCES += \
@@ -532,7 +531,6 @@ SOURCES += \
     src/analysis/events/otdr_event_core_v2.c \
     src/analysis/denoise/uft_denoise_bridge.c \
     src/analysis/denoise/phi_otdr_denoise_1d.c \
-    src/formats/g64/uft_g64_parser_v3.c
 
 # ADF - Amiga
 SOURCES += \
@@ -1167,348 +1165,24 @@ SOURCES += \
     src/analysis/denoise/uft_denoise_bridge.c \
     src/analysis/denoise/phi_otdr_denoise_1d.c \
     src/core/uft_decode_pipeline.c \
-    src/formats/2img/uft_2img_parser_v3.c \
-    # src/formats/2sf/uft_2sf_parser_v3.c  # non-floppy \
-    # src/formats/7z/uft_7z_parser_v3.c  # non-floppy \
-    # src/formats/a26/uft_a26_parser_v3.c  # non-floppy \
     src/parsers/a2r/uft_a2r_parser.c \
-    # src/formats/a52/uft_a52_parser_v3.c  # non-floppy \
-    # src/formats/a78/uft_a78_parser_v3.c  # non-floppy \
-    # src/formats/ace/uft_ace_parser_v3.c  # non-floppy \
-    src/formats/adf_arc/uft_adf_arc_parser_v3.c \
-    src/formats/adl/uft_adl_parser_v3.c \
-    # src/formats/adx/uft_adx_parser_v3.c  # non-floppy \
-    src/formats/adz/uft_adz_parser_v3.c \
-    # src/formats/alt/uft_alt_parser_v3.c  # non-floppy \
-    # src/formats/apf/uft_apf_parser_v3.c  # non-floppy \
-    # src/formats/apx/uft_apx_parser_v3.c  # non-floppy \
-    # src/formats/aqu/uft_aqu_parser_v3.c  # non-floppy \
-    # src/formats/arc/uft_arc_parser_v3.c  # non-floppy \
-    # src/formats/asf/uft_asf_parser_v3.c  # non-floppy \
-    # src/formats/ast/uft_ast_parser_v3.c  # non-floppy \
-    src/formats/atr/uft_atr_parser_v3.c \
-    src/formats/atx/uft_atx_parser_v3.c \
-    src/formats/axex/uft_axex_parser_v3.c \
-    # src/formats/ay/uft_ay_parser_v3.c  # non-floppy \
-    # src/formats/bal/uft_bal_parser_v3.c  # non-floppy \
-    # src/formats/bin/uft_bin_parser_v3.c  # non-floppy \
-    # src/formats/bkm/uft_bkm_parser_v3.c  # non-floppy \
-    # src/formats/bps/uft_bps_parser_v3.c  # non-floppy \
-    # src/formats/bst/uft_bst_parser_v3.c  # non-floppy \
-    # src/formats/bz2/uft_bz2_parser_v3.c  # non-floppy \
-    src/formats/c128/uft_c128_parser_v3.c \
-    src/formats/c16/uft_c16_parser_v3.c \
-    # src/formats/car/uft_car_parser_v3.c  # non-floppy \
     src/formats/cas/uft_cas.c \
-    # src/formats/cd32/uft_cd32_parser_v3.c  # non-floppy \
-    #     src/formats/cdi/uft_cdi_parser_v3.c  # non-floppy (removed Phase 6) \
-    # src/formats/cdtv/uft_cdtv_parser_v3.c  # non-floppy \
-    # src/formats/cgb/uft_cgb_parser_v3.c  # non-floppy \
-    # src/formats/ch8/uft_ch8_parser_v3.c  # non-floppy \
-    #     src/formats/chd/uft_chd_parser_v3.c  # non-floppy (removed Phase 6) \
-    #     src/formats/chf/uft_chf_parser_v3.c  # non-floppy (removed Phase 6) \
-    # src/formats/cht/uft_cht_parser_v3.c  # non-floppy \
-    # src/formats/cia/uft_cia_parser_v3.c  # non-floppy \
-    # src/formats/col/uft_col_parser_v3.c  # non-floppy \
-    # src/formats/com/uft_com_parser_v3.c  # non-floppy \
-    # src/formats/cps/uft_cps_parser_v3.c  # non-floppy \
-    src/formats/cqm/uft_cqm_parser_v3.c \
-    src/formats/crt/uft_crt_parser_v3.c \
-    #     src/formats/cso/uft_cso_parser_v3.c  # non-floppy (removed Phase 6) \
-    # src/formats/css/uft_css_parser_v3.c  # non-floppy \
-    # src/formats/csvx/uft_csvx_parser_v3.c  # non-floppy \
-    #     src/formats/ctr/uft_ctr_parser_v3.c  # non-floppy (removed Phase 6) \
-    #     src/formats/cue/uft_cue_parser_v3.c  # non-floppy (removed Phase 6) \
-    # src/formats/cv/uft_cv_parser_v3.c  # non-floppy \
-    src/formats/d1m/uft_d1m_parser_v3.c \
-    src/formats/d2m/uft_d2m_parser_v3.c \
-    src/formats/d4m/uft_d4m_parser_v3.c \
-    src/formats/d67/uft_d67_parser_v3.c \
-    src/formats/d71/uft_d71_parser_v3.c \
     src/formats/d77/uft_d77.c \
-    src/formats/d80/uft_d80_parser_v3.c \
-    src/formats/d81/uft_d81_parser_v3.c \
-    src/formats/d82/uft_d82_parser_v3.c \
-    src/formats/d88/uft_d88_parser_v3.c \
-    # src/formats/dae/uft_dae_parser_v3.c  # non-floppy \
-    src/formats/dart/uft_dart_parser_v3.c \
-    #     src/formats/dbf/uft_dbf_parser_v3.c  # non-floppy (removed Phase 6) \
     src/formats/dc42/uft_dc42.c \
-    src/formats/dcm/uft_dcm_parser_v3.c \
-    # src/formats/dds/uft_dds_parser_v3.c  # non-floppy \
-    src/formats/dfi/uft_dfi_parser_v3.c \
-    src/formats/dhd/uft_dhd_parser_v3.c \
     # src/formats/dim/uft_dim.c  # already in main SOURCES block \
-    # src/formats/dmg/uft_dmg_parser_v3.c  # non-floppy \
-    src/formats/dmk/uft_dmk_parser_v3.c \
-    src/formats/dms/uft_dms_parser_v3.c \
     src/formats/dms/uft_dms.c \
     src/detect/mfm/mfm_detect.c \
     src/detect/mfm/cpm_fs.c \
     src/detect/mfm/uft_mfm_detect_bridge.c \
-    #     src/formats/dnp/uft_dnp_parser_v3.c  # non-floppy (removed Phase 6) \
-    src/formats/do/uft_do_parser_v3.c \
-    # src/formats/dol/uft_dol_parser_v3.c  # non-floppy \
-    src/formats/dsk_ace/uft_dsk_ace_parser_v3.c \
-    src/formats/dsk_agt/uft_dsk_agt_parser_v3.c \
-    src/formats/dsk_ak/uft_dsk_ak_parser_v3.c \
-    src/formats/dsk_alp/uft_dsk_alp_parser_v3.c \
-    src/formats/dsk_aq/uft_dsk_aq_parser_v3.c \
-    src/formats/dsk_bk/uft_dsk_bk_parser_v3.c \
-    src/formats/dsk_bw/uft_dsk_bw_parser_v3.c \
-    src/formats/dsk_cg/uft_dsk_cg_parser_v3.c \
-    src/formats/dsk_cro/uft_dsk_cro_parser_v3.c \
-    src/formats/dsk_dc42/uft_dsk_dc42_parser_v3.c \
-    src/formats/dsk_ein/uft_dsk_ein_parser_v3.c \
-    src/formats/dsk_emu/uft_dsk_emu_parser_v3.c \
-    src/formats/dsk_eqx/uft_dsk_eqx_parser_v3.c \
-    src/formats/dsk_flex/uft_dsk_flex_parser_v3.c \
-    src/formats/dsk_fm7/uft_dsk_fm7_parser_v3.c \
-    src/formats/dsk_fp/uft_dsk_fp_parser_v3.c \
-    src/formats/dsk_hk/uft_dsk_hk_parser_v3.c \
-    src/formats/dsk_hp/uft_dsk_hp_parser_v3.c \
-    src/formats/dsk_kc/uft_dsk_kc_parser_v3.c \
-    src/formats/dsk_krg/uft_dsk_krg_parser_v3.c \
-    src/formats/dsk_lyn/uft_dsk_lyn_parser_v3.c \
-    src/formats/dsk_m5/uft_dsk_m5_parser_v3.c \
-    src/formats/dsk_msx/uft_dsk_msx_parser_v3.c \
-    src/formats/dsk_mtx/uft_dsk_mtx_parser_v3.c \
-    src/formats/dsk_mz/uft_dsk_mz_parser_v3.c \
-    src/formats/dsk_nas/uft_dsk_nas_parser_v3.c \
-    src/formats/dsk_nb/uft_dsk_nb_parser_v3.c \
-    src/formats/dsk_nec/uft_dsk_nec_parser_v3.c \
-    src/formats/dsk_ns/uft_dsk_ns_parser_v3.c \
-    src/formats/dsk_oli/uft_dsk_oli_parser_v3.c \
-    src/formats/dsk_orc/uft_dsk_orc_parser_v3.c \
-    src/formats/dsk_os9/uft_dsk_os9_parser_v3.c \
-    src/formats/dsk_p3/uft_dsk_p3_parser_v3.c \
-    src/formats/dsk_pcw/uft_dsk_pcw_parser_v3.c \
-    src/formats/dsk_px/uft_dsk_px_parser_v3.c \
-    src/formats/dsk_rc/uft_dsk_rc_parser_v3.c \
-    src/formats/dsk_rld/uft_dsk_rld_parser_v3.c \
-    src/formats/dsk_san/uft_dsk_san_parser_v3.c \
-    src/formats/dsk_sc3/uft_dsk_sc3_parser_v3.c \
-    src/formats/dsk_smc/uft_dsk_smc_parser_v3.c \
-    src/formats/dsk_sv/uft_dsk_sv_parser_v3.c \
-    src/formats/dsk_tok/uft_dsk_tok_parser_v3.c \
-    src/formats/dsk_uni/uft_dsk_uni_parser_v3.c \
-    src/formats/dsk_vec/uft_dsk_vec_parser_v3.c \
-    src/formats/dsk_vic/uft_dsk_vic_parser_v3.c \
-    src/formats/dsk_vt/uft_dsk_vt_parser_v3.c \
-    src/formats/dsk_wng/uft_dsk_wng_parser_v3.c \
-    src/formats/dsk_x820/uft_dsk_x820_parser_v3.c \
-    src/formats/dsk_xm/uft_dsk_xm_parser_v3.c \
-    # src/formats/dsv/uft_dsv_parser_v3.c  # non-floppy \
-    # src/formats/dtm/uft_dtm_parser_v3.c  # non-floppy \
-    # src/formats/ecm/uft_ecm_parser_v3.c  # non-floppy \
-    # src/formats/ecv/uft_ecv_parser_v3.c  # non-floppy \
-    src/formats/ede/uft_ede_parser_v3.c \
-    src/formats/edk/uft_edk_parser_v3.c \
     src/formats/amstrad/uft_edsk.c \
-    # src/formats/elf/uft_elf_parser_v3.c  # non-floppy \
-    # src/formats/eve/uft_eve_parser_v3.c  # non-floppy \
-    # src/formats/fcm/uft_fcm_parser_v3.c  # non-floppy \
-    src/formats/fdd/uft_fdd_parser_v3.c \
-    src/formats/fdi/uft_fdi_parser_v3.c \
     src/formats/fds/uft_fds_plugin.c \
-    src/formats/fdx/uft_fdx_parser_v3.c \
-    src/formats/fld/uft_fld_parser_v3.c \
-    src/formats/flp/uft_flp_parser_v3.c \
-    #     src/formats/fm2/uft_fm2_parser_v3.c  # non-floppy (removed Phase 6) \
-    src/formats/fmenc/uft_fm_parser_v3.c \
-    src/formats/g71/uft_g71_parser_v3.c \
-    # src/formats/gam/uft_gam_parser_v3.c  # non-floppy \
-    # src/formats/gb/uft_gb_parser_v3.c  # non-floppy \
-    # src/formats/gba/uft_gba_parser_v3.c  # non-floppy \
-    # src/formats/gbs/uft_gbs_parser_v3.c  # non-floppy \
-    # src/formats/gcm/uft_gcm_parser_v3.c  # non-floppy \
-    src/formats/gcr/uft_gcr_parser_v3.c \
-    # src/formats/gdi/uft_gdi_parser_v3.c  # non-floppy \
-    # src/formats/gen/uft_gen_parser_v3.c  # non-floppy \
-    # src/formats/giz/uft_giz_parser_v3.c  # non-floppy \
-    # src/formats/gmv/uft_gmv_parser_v3.c  # non-floppy \
-    # src/formats/god/uft_god_parser_v3.c  # non-floppy \
-    # src/formats/gp32/uft_gp32_parser_v3.c  # non-floppy \
-    # src/formats/gpx/uft_gpx_parser_v3.c  # non-floppy \
-    # src/formats/gsf/uft_gsf_parser_v3.c  # non-floppy \
-    # src/formats/gym/uft_gym_parser_v3.c  # non-floppy \
-    # src/formats/gz/uft_gz_parser_v3.c  # non-floppy \
-    src/formats/hdf/uft_hdf_parser_v3.c \
-    src/formats/hdm/uft_hdm_parser_v3.c \
-    # src/formats/hes/uft_hes_parser_v3.c  # non-floppy \
-    src/formats/hfe/uft_hfe_parser_v3.c \
-    # src/formats/htmlx/uft_htmlx_parser_v3.c  # non-floppy \
-    # src/formats/ico/uft_ico_parser_v3.c  # non-floppy \
-    src/formats/imz/uft_imz_parser_v3.c \
-    # src/formats/ini/uft_ini_parser_v3.c  # non-floppy \
-    # src/formats/int/uft_int_parser_v3.c  # non-floppy \
-    src/formats/ipf/uft_ipf_parser_v3.c \
-    # src/formats/ips/uft_ips_parser_v3.c  # non-floppy \
-    # src/formats/irm/uft_irm_parser_v3.c  # non-floppy \
-    #     src/formats/iso/uft_iso_parser_v3.c  # non-floppy (removed Phase 6) \
-    # src/formats/it/uft_it_parser_v3.c  # non-floppy \
-    # src/formats/jag/uft_jag_parser_v3.c  # non-floppy \
-    # src/formats/json/uft_json_parser_v3.c  # non-floppy \
-    src/formats/jv1/uft_jv1_parser_v3.c \
-    src/formats/jv3/uft_jv3_parser_v3.c \
-    src/formats/jvc/uft_jvc_parser_v3.c \
-    src/formats/kcs/uft_kcs_parser_v3.c \
     src/formats/kfx/uft_kfx.c \
     src/formats/kfx/uft_kfstream_air.c \
     src/formats/kfx/uft_kf_histogram.c \
-    src/formats/kon/uft_kon_parser_v3.c \
-    # src/formats/kss/uft_kss_parser_v3.c  # non-floppy \
-    # src/formats/lda/uft_lda_parser_v3.c  # non-floppy \
-    # src/formats/lnx/uft_lnx_parser_v3.c  # non-floppy \
-    # src/formats/ltm/uft_ltm_parser_v3.c  # non-floppy \
-    # src/formats/lz4/uft_lz4_parser_v3.c  # non-floppy \
-    # src/formats/lzh/uft_lzh_parser_v3.c  # non-floppy \
-    # src/formats/m3u/uft_m3u_parser_v3.c  # non-floppy \
-    # src/formats/m64/uft_m64_parser_v3.c  # non-floppy \
-    # src/formats/mbc/uft_mbc_parser_v3.c  # non-floppy \
-    src/formats/mbd/uft_mbd_parser_v3.c \
-    # src/formats/mcr/uft_mcr_parser_v3.c  # non-floppy \
-    # src/formats/mdk/uft_mdk_parser_v3.c  # non-floppy \
-    # src/formats/mds/uft_mds_parser_v3.c  # non-floppy \
-    src/formats/mdv/uft_mdv_parser_v3.c \
-    src/formats/mdx/uft_mdx_parser_v3.c \
-    # src/formats/mes/uft_mes_parser_v3.c  # non-floppy \
     src/formats/mfi/uft_mfi.c \
-    src/formats/mfm/uft_mfm_parser_v3.c \
-    src/formats/mgt/uft_mgt_parser_v3.c \
-    # src/formats/mid/uft_mid_parser_v3.c  # non-floppy \
-    # src/formats/midi/uft_midi_parser_v3.c  # non-floppy \
-    # src/formats/mod/uft_mod_parser_v3.c  # non-floppy \
-    src/formats/msa/uft_msa_parser_v3.c \
-    # src/formats/n3ds/uft_n3ds_parser_v3.c  # non-floppy \
-    # src/formats/n64/uft_n64_parser_v3.c  # non-floppy \
-    # src/formats/nam/uft_nam_parser_v3.c  # non-floppy \
-    # src/formats/nds/uft_nds_parser_v3.c  # non-floppy \
-    # src/formats/neo/uft_neo_parser_v3.c  # non-floppy \
-    # src/formats/nes/uft_nes_parser_v3.c  # non-floppy \
-    src/formats/nfd/uft_nfd_parser_v3.c \
-    # src/formats/nge/uft_nge_parser_v3.c  # non-floppy \
-    # src/formats/ngp/uft_ngp_parser_v3.c  # non-floppy \
-    src/formats/nib/uft_nib_parser_v3.c \
-    #     src/formats/nrg/uft_nrg_parser_v3.c  # non-floppy (removed Phase 6) \
-    # src/formats/nsf/uft_nsf_parser_v3.c  # non-floppy \
-    # src/formats/nsfe/uft_nsfe_parser_v3.c  # non-floppy \
-    # src/formats/nsp/uft_nsp_parser_v3.c  # non-floppy \
-    # src/formats/nuo/uft_nuo_parser_v3.c  # non-floppy \
-    # src/formats/o2/uft_o2_parser_v3.c  # non-floppy \
-    #     src/formats/ode/uft_ode_parser_v3.c  # non-floppy (removed Phase 6) \
-    src/formats/opd/uft_opd_parser_v3.c \
-    src/formats/p00/uft_p00_parser_v3.c \
-    src/formats/p4/uft_p4_parser_v3.c \
-    src/formats/p64/uft_p64_parser_v3.c \
-    #     src/formats/pbp/uft_pbp_parser_v3.c  # non-floppy (removed Phase 6) \
-    src/formats/pc99/uft_pc99_parser_v3.c \
-    # src/formats/pce/uft_pce_parser_v3.c  # non-floppy \
-    # src/formats/pcx/uft_pcx_parser_v3.c  # non-floppy \
-    src/formats/pdi/uft_pdi_parser_v3.c \
-    src/formats/pdp/uft_pdp_parser_v3.c \
-    src/formats/pet/uft_pet_parser_v3.c \
-    # src/formats/pip/uft_pip_parser_v3.c  # non-floppy \
-    # src/formats/pkm/uft_pkm_parser_v3.c  # non-floppy \
-    # src/formats/pls/uft_pls_parser_v3.c  # non-floppy \
-    src/formats/po/uft_po_parser_v3.c \
-    # src/formats/ppg/uft_ppg_parser_v3.c  # non-floppy \
-    src/formats/prg/uft_prg_parser_v3.c \
     src/formats/pri/uft_pri.c \
-    src/formats/pro/uft_pro_parser_v3.c \
-    # src/formats/ps2/uft_ps2_parser_v3.c  # non-floppy \
-    # src/formats/ps3/uft_ps3_parser_v3.c  # non-floppy \
-    # src/formats/ps4/uft_ps4_parser_v3.c  # non-floppy \
-    # src/formats/psf/uft_psf_parser_v3.c  # non-floppy \
-    # src/formats/psio/uft_psio_parser_v3.c  # non-floppy \
-    # src/formats/psp/uft_psp_parser_v3.c  # non-floppy \
-    # src/formats/psu/uft_psu_parser_v3.c  # non-floppy \
-    # src/formats/psx/uft_psx_parser_v3.c  # non-floppy \
-    # src/formats/pv1/uft_pv1_parser_v3.c  # non-floppy \
-    # src/formats/qcow2/uft_qcow2_parser_v3.c  # non-floppy \
-    # src/formats/rar/uft_rar_parser_v3.c  # non-floppy \
-    src/formats/rawflux/uft_raw_parser_v3.c \
-    # src/formats/rca/uft_rca_parser_v3.c  # non-floppy \
-    src/formats/rx/uft_rx_parser_v3.c \
-    # src/formats/s3m/uft_s3m_parser_v3.c  # non-floppy \
-    src/formats/sad/uft_sad_parser_v3.c \
-    src/formats/sam/uft_sam_parser_v3.c \
-    src/formats/sap/uft_sap_parser_v3.c \
-    # src/formats/sat/uft_sat_parser_v3.c  # non-floppy \
-    # src/formats/sav/uft_sav_parser_v3.c  # non-floppy \
-    # src/formats/scd/uft_scd_parser_v3.c  # non-floppy \
-    src/formats/scl/uft_scl_parser_v3.c \
-    # src/formats/sfm/uft_sfm_parser_v3.c  # non-floppy \
-    # src/formats/sg/uft_sg_parser_v3.c  # non-floppy \
-    #     src/formats/sid/uft_sid_parser_v3.c  # non-floppy (removed Phase 6) \
-    # src/formats/sms/uft_sms_parser_v3.c  # non-floppy \
-    #     src/formats/smv/uft_smv_parser_v3.c  # non-floppy (removed Phase 6) \
-    # src/formats/snes/uft_snes_parser_v3.c  # non-floppy \
-    # src/formats/sns/uft_sns_parser_v3.c  # non-floppy \
-    # src/formats/soc/uft_soc_parser_v3.c  # non-floppy \
-    # src/formats/sol/uft_sol_parser_v3.c  # non-floppy \
-    # src/formats/spc/uft_spc_parser_v3.c  # non-floppy \
-    # src/formats/sram/uft_sram_parser_v3.c  # non-floppy \
-    # src/formats/srm/uft_srm_parser_v3.c  # non-floppy \
-    src/formats/ssd/uft_ssd_parser_v3.c \
-    # src/formats/ssf/uft_ssf_parser_v3.c  # non-floppy \
-    # src/formats/ssy/uft_ssy_parser_v3.c  # non-floppy \
     src/formats/st/uft_st.c \
-    # src/formats/sva/uft_sva_parser_v3.c  # non-floppy \
-    # src/formats/svd/uft_svd_parser_v3.c  # non-floppy \
-    src/formats/syn/uft_syn_parser_v3.c \
-    src/formats/t1k/uft_t1k_parser_v3.c \
-    src/formats/t64/uft_t64_parser_v3.c \
-    # src/formats/tai/uft_tai_parser_v3.c  # non-floppy \
-    src/formats/tan/uft_tan_parser_v3.c \
-    src/formats/tap/uft_tap_parser_v3.c \
-    #     src/formats/tar/uft_tar_parser_v3.c  # non-floppy (removed Phase 6) \
-    src/formats/td0/uft_td0_parser_v3.c \
-    # src/formats/tdo/uft_tdo_parser_v3.c  # non-floppy \
-    # src/formats/tga/uft_tga_parser_v3.c  # non-floppy \
-    # src/formats/tgc/uft_tgc_parser_v3.c  # non-floppy \
-    # src/formats/tif/uft_tif_parser_v3.c  # non-floppy \
-    src/formats/trd/uft_trd_parser_v3.c \
-    src/formats/tzx/uft_tzx_parser_v3.c \
-    src/formats/udi/uft_udi_parser_v3.c \
-    src/formats/uef/uft_uef_parser_v3.c \
-    #     src/formats/ups/uft_ups_parser_v3.c  # non-floppy (removed Phase 6) \
-    # src/formats/usf/uft_usf_parser_v3.c  # non-floppy \
-    src/formats/v20/uft_v20_parser_v3.c \
-    src/formats/v9t9/uft_v9t9_parser_v3.c \
-    # src/formats/vb/uft_vb_parser_v3.c  # non-floppy \
-    # src/formats/vbm/uft_vbm_parser_v3.c  # non-floppy \
-    # src/formats/vcs/uft_vcs_parser_v3.c  # non-floppy \
-    src/formats/vdk/uft_vdk_parser_v3.c \
-    src/formats/vdk_drg/uft_vdk_drg_parser_v3.c \
-    # src/formats/vgm/uft_vgm_parser_v3.c  # non-floppy \
-    src/formats/vhd/uft_vhd_parser_v3.c \
-    # src/formats/vmdk/uft_vmdk_parser_v3.c  # non-floppy \
-    src/formats/wav/uft_wav_parser_v3.c \
-    # src/formats/wii/uft_wii_parser_v3.c  # non-floppy \
     # WOZ: real impl in src/formats/apple/uft_woz.c (already in SOURCES below)
-    # src/formats/wsc/uft_wsc_parser_v3.c  # non-floppy \
-    # src/formats/wsv/uft_wsv_parser_v3.c  # non-floppy \
-    # src/formats/x32/uft_x32_parser_v3.c  # non-floppy \
-    src/formats/x64/uft_x64_parser_v3.c \
-    # src/formats/xbe/uft_xbe_parser_v3.c  # non-floppy \
-    # src/formats/xci/uft_xci_parser_v3.c  # non-floppy \
-    src/formats/xdf/uft_xdf_parser_v3.c \
-    src/formats/xdm86/uft_xdm86_parser_v3.c \
-    src/formats/xegs/uft_xegs_parser_v3.c \
-    # src/formats/xex/uft_xex_parser_v3.c  # non-floppy \
-    src/formats/xfd/uft_xfd_parser_v3.c \
-    # src/formats/xiso/uft_xiso_parser_v3.c  # non-floppy \
-    # src/formats/xm/uft_xm_parser_v3.c  # non-floppy \
-    # src/formats/xml/uft_xml_parser_v3.c  # non-floppy \
-    # src/formats/xz/uft_xz_parser_v3.c  # non-floppy \
-    # src/formats/ym/uft_ym_parser_v3.c  # non-floppy \
-    # src/formats/yml/uft_yml_parser_v3.c  # non-floppy \
-    # src/formats/zip/uft_zip_parser_v3.c  # non-floppy \
-    # src/formats/zod/uft_zod_parser_v3.c  # non-floppy \
-    # src/formats/zstd/uft_zstd_parser_v3.c  # non-floppy \
-    # src/formats/zx81/uft_zx81_parser_v3.c  # non-floppy \
-    # src/formats/zxs/uft_zxs_parser_v3.c  # non-floppy
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -2360,7 +2034,6 @@ SOURCES += \
     src/formats/cpm/uft_cpm_diskdef.c \
     src/formats/cpm/uft_cpm_diskdefs.c \
     src/formats/rcpmfs/uft_rcpmfs.c \
-    src/formats/cpm/uft_cpm_parser_v3.c \
     src/formats/retro_image/uft_retro_image_detect.c
 
 # Dec (1 files)
@@ -3181,7 +2854,6 @@ SOURCES += \
     src/analysis/denoise/uft_denoise_bridge.c \
     src/analysis/denoise/phi_otdr_denoise_1d.c \
     src/formats/snk/uft_neogeo.c \
-    # src/formats/snk/uft_snk_parser_v3.c  # non-floppy
 
 # Sega (3 files)
 SOURCES += \
