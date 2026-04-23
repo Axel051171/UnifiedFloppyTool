@@ -89,3 +89,7 @@ release/
 # Claude session state (machine-local)
 .claude/settings.local.json
 .claude/settings.json
+
+# Python
+__pycache__/
+*.pyc
