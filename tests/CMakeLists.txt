@@ -282,6 +282,29 @@ set_tests_properties(ssot_errors_compliance PROPERTIES
 )
 message(STATUS "UFT SSOT Check ENABLED: ssot_errors_compliance")
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# Build-system parity check (MF-006 regression guard)
+#
+# Compares the file set CMake's GLOB_RECURSE picks up against the explicit
+# SOURCES block in UnifiedFloppyTool.pro. Fails on NEW divergence since the
+# committed baseline in data/build_system_baseline.tsv. The baseline
+# captures the historical gap (samdisk vendor code, _parser_v3.c stubs,
+# mbedtls examples) which is shrunk by separate cleanup work.
+# ═══════════════════════════════════════════════════════════════════════════════
+if(Python3_Interpreter_FOUND)
+    add_test(
+        NAME build_system_parity
+        COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/scripts/verify_build_sources.py
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    )
+    set_tests_properties(build_system_parity PROPERTIES
+        LABELS "ssot-compliance"
+    )
+    message(STATUS "UFT SSOT Check ENABLED: build_system_parity")
+else()
+    message(STATUS "UFT SSOT Check SKIPPED: build_system_parity (Python3 not found)")
+endif()
+
 message(STATUS "════════════════════════════════════════════════════")
 message(STATUS "UFT Tests: Run 'ctest' after build to execute")
 message(STATUS "════════════════════════════════════════════════════")

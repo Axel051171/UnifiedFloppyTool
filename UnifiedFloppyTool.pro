@@ -75,7 +75,9 @@ win32 {
     # POSIX shims for hactool (getopt.h, strings.h) — only with switch_support
     switch_support {
         INCLUDEPATH += $$PWD/src/switch/hactool/compat
-        SOURCES += src/switch/hactool/compat/getopt.c
+        # getopt.c was removed in an earlier cleanup; the header-only
+        # pieces under compat/ (getopt.h, strings.h) are sufficient for
+        # MinGW via inline definitions.
     }
 }
 
