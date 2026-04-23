@@ -42,18 +42,13 @@ trap 'rm -rf "${TMPDIR}"' EXIT
 "${PY}" "${GEN_DIR}/gen_errors_strings.py" "${TSV}" > "${TMPDIR}/uft_error_strings.c"
 "${PY}" "${GEN_DIR}/gen_errors_compat.py"  "${TSV}" "${LEGACY_TSV}" > "${TMPDIR}/uft_error_compat_gen.h"
 
-# 2. Compare against committed copies IF they exist. During the cutover
-#    phase these files may not yet be committed (generator lives, consumer
-#    migration is a later step). In that mode we only verify the generators
-#    run cleanly and produce non-empty output.
-#
-# CUTOVER FLAG: while the hand-maintained uft_error.h is still the source
-# consumed by the build, drift is expected (the TSV is additive-compatible
-# but the prose/formatting differs). Set SSOT_ERRORS_CUTOVER=1 in the
-# environment (or exported by CMake during the transition) to downgrade
-# drift from FAIL to WARNING. Flip to 0 once the generator takes over.
+# 2. Compare against committed copies. Post-cutover (Phase 4b-4, 2026-04-23)
+#    the generator is canonical — any drift is a real error, not a warning.
+#    The SSOT_ERRORS_CUTOVER env var is retained as a local-dev escape
+#    hatch (set to 1 to downgrade drift to a warning while regenerating),
+#    but the default is now hard-fail. CI must not set it.
 STATUS=0
-CUTOVER="${SSOT_ERRORS_CUTOVER:-1}"
+CUTOVER="${SSOT_ERRORS_CUTOVER:-0}"
 check_one() {
     local generated="$1" committed="$2" label="$3"
     if [[ ! -s "${generated}" ]]; then
@@ -61,21 +56,22 @@ check_one() {
         STATUS=2
         return
     fi
-    if [[ -f "${committed}" ]]; then
-        if ! diff -u "${committed}" "${generated}" > "${TMPDIR}/${label}.diff"; then
-            if [[ "${CUTOVER}" == "1" ]]; then
-                echo "verify_errors_ssot: drift in ${label} (cutover mode — WARN only)" >&2
-            else
-                echo "verify_errors_ssot: DRIFT in ${label}" >&2
-                echo "  committed:  ${committed}" >&2
-                echo "  regenerated: ${generated}" >&2
-                echo "  run: make -C ${REPO_ROOT} generate-errors" >&2
-                head -n 40 "${TMPDIR}/${label}.diff" >&2 || true
-                STATUS=1
-            fi
+    if [[ ! -f "${committed}" ]]; then
+        echo "verify_errors_ssot: ${label} missing from tree (${committed})" >&2
+        STATUS=1
+        return
+    fi
+    if ! diff -u "${committed}" "${generated}" > "${TMPDIR}/${label}.diff"; then
+        if [[ "${CUTOVER}" == "1" ]]; then
+            echo "verify_errors_ssot: drift in ${label} (SSOT_ERRORS_CUTOVER=1 — WARN only)" >&2
+        else
+            echo "verify_errors_ssot: DRIFT in ${label}" >&2
+            echo "  committed:  ${committed}" >&2
+            echo "  regenerated: ${generated}" >&2
+            echo "  run: make -C ${REPO_ROOT} generate-errors" >&2
+            head -n 40 "${TMPDIR}/${label}.diff" >&2 || true
+            STATUS=1
         fi
-    else
-        echo "verify_errors_ssot: ${label} not yet committed (cutover phase — OK)"
     fi
 }
 

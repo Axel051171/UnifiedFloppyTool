@@ -263,6 +263,25 @@ else()
     message(STATUS "UFT Audit SKIPPED: Python3 interpreter not found")
 endif()
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# SSOT error-code compliance (post-4b-4 cutover — hard fail on drift)
+#
+# Runs scripts/verify_errors_ssot.sh which regenerates uft_error.h,
+# uft_error_strings.c, and uft_error_compat_gen.h into a temp dir from
+# data/errors.tsv + data/errors_legacy_aliases.tsv and diffs them
+# against the committed copies. Any mismatch = generator-forgotten or
+# hand-edit-of-generated-file drift.
+# ═══════════════════════════════════════════════════════════════════════════════
+add_test(
+    NAME ssot_errors_compliance
+    COMMAND bash ${CMAKE_SOURCE_DIR}/scripts/verify_errors_ssot.sh
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+)
+set_tests_properties(ssot_errors_compliance PROPERTIES
+    LABELS "ssot-compliance"
+)
+message(STATUS "UFT SSOT Check ENABLED: ssot_errors_compliance")
+
 message(STATUS "════════════════════════════════════════════════════")
 message(STATUS "UFT Tests: Run 'ctest' after build to execute")
 message(STATUS "════════════════════════════════════════════════════")
