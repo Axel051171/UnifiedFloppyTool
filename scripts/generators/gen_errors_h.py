@@ -7,11 +7,38 @@ no dict iteration ordering, rows emitted in file order).
 Usage:
     python3 scripts/generators/gen_errors_h.py data/errors.tsv > uft_error.h
 
-The output is the FULL canonical header including the enum, helper
-macros, the uft_error_ctx_t struct, and the uft_strerror() prototype.
-The rest of the runtime surface (context setters, inline helpers, etc.)
-is carried over unchanged from the pre-SSOT header so existing callers
-compile without modification.
+PHASE 4a STEP 3 decision — "option B" (separate hand-written tail header):
+--------------------------------------------------------------------------
+The pre-SSOT uft_error.h carries three kinds of content:
+
+  (a) the uft_rc_t enum     — derived from data/errors.tsv (generated).
+  (b) legacy alias #defines — emitted into uft_error_compat_gen.h
+                               (generated from errors_legacy_aliases.tsv).
+  (c) runtime surface       — uft_error_ctx_t struct, uft_strerror proto,
+                               UFT_CHECK_NULL / UFT_PROPAGATE / UFT_SET_ERROR
+                               macros, static inline uft_success / uft_failed
+                               helpers, thread-local context setters.
+
+(c) is orthogonal to the TSV and evolves independently (new macros, new
+struct fields would normally land in uft_error.h directly). Two strategies
+were considered:
+
+  A) Carry (c) as a literal "template tail" string appended by this
+     generator — simple, but conflates generated and hand-written concerns
+     in one file; the tail would have to be edited inside a Python string
+     literal, harming reviewability.
+
+  B) Move (c) into a separate hand-written header
+     include/uft/core/uft_error_ext.h and have the generated uft_error.h
+     `#include` it. Clean separation: (a) is 100% generator output, (c)
+     is 100% human-edited; no mixed-origin file. Extra include layer but
+     only one — every consumer that pulls <uft/uft_error.h> still gets
+     the full surface transitively.
+
+Chosen: OPTION B. Rationale above. The generated uft_error.h is now a
+thin shell that emits the enum and forwards to uft_error_ext.h. Any
+change to struct uft_error_ctx / helper macros / function prototypes
+lands in uft_error_ext.h directly (no regeneration needed).
 """
 from __future__ import annotations
 
@@ -33,9 +60,12 @@ TEMPLATE_HEAD = """#ifndef UFT_ERROR_H
  * This header is generated from data/errors.tsv by
  * scripts/generators/gen_errors_h.py. Edit the TSV, not this file.
  *
- * The legacy UFT_ERROR_* mixed-case spelling and short-form aliases
- * (UFT_ERR_NOMEM, UFT_ERR_NOT_IMPL, ...) are provided by the sister
- * header include/uft/core/uft_error_compat_gen.h (also generated).
+ * The runtime surface (struct uft_error_ctx, uft_strerror, helper
+ * macros) lives in the hand-maintained sibling header
+ * include/uft/core/uft_error_ext.h which this file `#include`s at
+ * the bottom. Legacy alias spellings (UFT_ERROR_*, UFT_E_*, etc.)
+ * are provided by the generated header
+ * include/uft/core/uft_error_compat_gen.h.
  */
 
 #include <stddef.h>
@@ -73,71 +103,15 @@ typedef int uft_error_t;
 #define UFT_OK UFT_SUCCESS
 #endif
 
-/* Error context (runtime, not generated from TSV) ------------------------ */
-typedef struct uft_error_ctx {
-    uft_rc_t    code;
-    int         sys_errno;
-    const char* file;
-    int         line;
-    char        message[256];
-    const char* function;
-    const char* extra;
-} uft_error_ctx_t;
-typedef uft_error_ctx_t uft_error_context_t;
-
-typedef struct uft_error_info {
-    uft_rc_t    code;
-    const char* name;
-    const char* message;
-    const char* category;
-} uft_error_info_t;
-
-/* Lookup ------------------------------------------------------------------ */
-const char* uft_strerror(uft_rc_t rc);
-#define uft_error_string(rc) uft_strerror(rc)
-
-#define UFT_FAILED(rc)    ((rc) < 0)
-#define UFT_SUCCEEDED(rc) ((rc) >= 0)
-
-static inline bool uft_success(uft_rc_t rc) { return rc == UFT_SUCCESS; }
-static inline bool uft_failed(uft_rc_t rc)  { return rc != UFT_SUCCESS; }
-
-void uft_error_set_context(const char* file, int line,
-                           const char* function, const char* message);
-const uft_error_context_t* uft_error_get_context(void);
-void uft_error_clear_context(void);
-
-#define UFT_CHECK_NULL(ptr) \\
-    do { if (!(ptr)) return UFT_ERR_INVALID_ARG; } while (0)
-
-#define UFT_CHECK_NULLS(...) \\
-    do { \\
-        void* ptrs[] = { __VA_ARGS__ }; \\
-        for (size_t i = 0; i < sizeof(ptrs)/sizeof(ptrs[0]); i++) { \\
-            if (!ptrs[i]) return UFT_ERR_INVALID_ARG; \\
-        } \\
-    } while (0)
-
-#define UFT_PROPAGATE(expr) \\
-    do { \\
-        uft_rc_t _rc = (expr); \\
-        if (uft_failed(_rc)) return _rc; \\
-    } while (0)
-
-#define UFT_SET_ERROR(err_ctx, err_code, msg, ...) \\
-    do { \\
-        (err_ctx).code = (err_code); \\
-        (err_ctx).file = __FILE__; \\
-        (err_ctx).line = __LINE__; \\
-        snprintf((err_ctx).message, sizeof((err_ctx).message), \\
-                 (msg), ##__VA_ARGS__); \\
-    } while (0)
-
-#define UFT_ERROR_NULL_POINTER UFT_ERR_INVALID_ARG
-
 #ifdef __cplusplus
 }
 #endif
+
+/* Runtime surface (struct uft_error_ctx, uft_strerror prototype, helper
+ * macros, inline predicates) lives in the hand-maintained sibling header.
+ * Pulled in last so every consumer of <uft/uft_error.h> transitively gets
+ * the full API without a second include. */
+#include "uft/core/uft_error_ext.h"
 
 #endif /* UFT_ERROR_H */
 """
@@ -167,13 +141,13 @@ def main(argv: list[str]) -> int:
 
     out.write(TEMPLATE_TAIL_ENUM)
 
-    # Proposed rows → #pragma messages so every build log reminds the
+    # Proposed rows → stderr note so every build log reminds the
     # maintainer that unreviewed decisions are live.
     proposed = [r for r in rows if r.proposed]
     if proposed:
         sys.stderr.write(
             f"gen_errors_h: {len(proposed)} PROPOSED rows in errors.tsv "
-            f"(visible in build log via #pragma message in compat header).\n"
+            f"(visible in generated enum via /* PROPOSED */ marker).\n"
         )
     return 0
 

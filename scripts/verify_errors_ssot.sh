@@ -15,10 +15,15 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 TSV="${REPO_ROOT}/data/errors.tsv"
+LEGACY_TSV="${REPO_ROOT}/data/errors_legacy_aliases.tsv"
 GEN_DIR="${REPO_ROOT}/scripts/generators"
 
 if [[ ! -f "${TSV}" ]]; then
     echo "verify_errors_ssot: ${TSV} missing" >&2
+    exit 2
+fi
+if [[ ! -f "${LEGACY_TSV}" ]]; then
+    echo "verify_errors_ssot: ${LEGACY_TSV} missing" >&2
     exit 2
 fi
 
@@ -35,7 +40,7 @@ trap 'rm -rf "${TMPDIR}"' EXIT
 # 1. Regenerate into TMPDIR.
 "${PY}" "${GEN_DIR}/gen_errors_h.py"       "${TSV}" > "${TMPDIR}/uft_error.h"
 "${PY}" "${GEN_DIR}/gen_errors_strings.py" "${TSV}" > "${TMPDIR}/uft_error_strings.c"
-"${PY}" "${GEN_DIR}/gen_errors_compat.py"  "${TSV}" > "${TMPDIR}/uft_error_compat_gen.h"
+"${PY}" "${GEN_DIR}/gen_errors_compat.py"  "${TSV}" "${LEGACY_TSV}" > "${TMPDIR}/uft_error_compat_gen.h"
 
 # 2. Compare against committed copies IF they exist. During the cutover
 #    phase these files may not yet be committed (generator lives, consumer

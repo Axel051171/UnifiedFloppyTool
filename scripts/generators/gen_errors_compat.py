@@ -3,10 +3,10 @@
 
 Produces the legacy-alias compat header:
 
-  - UFT_ERROR_<NAME>   (mixed-case, ~1127 legacy uses)
-  - UFT_E_<NAME>       (short-form)
-  - UFT_ERR_NOMEM / UFT_ERR_NOT_IMPL / UFT_ERR_UNSUPPORTED / ...
-    (hand-maintained alias table at bottom of this script)
+  - UFT_ERROR_<NAME>   (mixed-case; canonical rows → UFT_ERR_<NAME>)
+  - UFT_E_<NAME>       (short-form; canonical rows)
+  - Every legacy alias catalogued in data/errors_legacy_aliases.tsv
+    (80–120 symbols from the pre-SSOT compat sources).
 
 Each alias is `#define`d only if not already present, so including this
 header alongside the three legacy compat headers during the transition
@@ -17,6 +17,12 @@ __attribute__((deprecated)) wrapper) so new usages surface in build logs.
 The warning is opt-in via -DUFT_WARN_LEGACY_ERROR_ALIASES to avoid a
 flood during the transition; quick-fix turns it on repo-wide when
 mechanical cleanup starts.
+
+Inputs:
+    argv[1] — path to data/errors.tsv (canonical enum)
+    argv[2] — path to data/errors_legacy_aliases.tsv (legacy aliases);
+              optional for backward-compat — if omitted, only the
+              hard-coded minimum alias set is emitted.
 """
 from __future__ import annotations
 
@@ -27,63 +33,42 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from gen_errors_common import HEADER_BANNER, parse  # noqa: E402
 
 
-# Legacy short-form aliases that do NOT get their own TSV row — they are
-# pure compat spellings that funnel into a canonical token.
-# Format: legacy_short_name -> canonical TSV name
-LEGACY_ALIASES: dict[str, str] = {
-    # memory consolidation
-    "NOMEM":         "MEMORY",
-    "OUT_OF_MEMORY": "MEMORY",
-    # feature-gate consolidation
-    "NOT_IMPL":      "NOT_IMPLEMENTED",
-    "UNSUPPORTED":   "NOT_SUPPORTED",
-    # format/argument consolidation
-    "CORRUPT":       "CORRUPTED",
-    "INVALID_PARAM": "INVALID_ARG",
-    "NULL_PTR":      "INVALID_ARG",
-    "BOUNDS":        "INVALID_ARG",
-    "STATE":         "INVALID_ARG",
-    # file lookup consolidation (NOT_FOUND is ambiguous; map to file-side)
-    "NOT_FOUND":     "FILE_NOT_FOUND",
-    # CRC-ish aliases
-    "CRC_ERROR":     "CRC",
-    "VERIFY":        "CRC",
-    # NO_DATA: pre-SSOT compat headers mapped this to 3 different targets
-    # (CORRUPTED / CORRUPT / FORMAT). Forensically closest is MISSING_SECTOR
-    # ("sector header says data-of-length-N but no data found there").
-    "NO_DATA":       "MISSING_SECTOR",
-    # UFT_ERR_OK — the user approval dropped OK as a canonical name, but
-    # 2 doc-comment usages remain (fuzzy_bits.c). Alias to SUCCESS (=0) so
-    # `return UFT_ERR_OK;` still works for any straggler call site.
-    "OK":            "SUCCESS",
+def parse_legacy_aliases(path: Path) -> list[tuple[str, str, str]]:
+    """Parse errors_legacy_aliases.tsv.
 
-    # --- Second-round coverage gaps (UFT_ERROR_* spellings without a
-    #     matching canonical TSV row; user-approved 2026-04-23). Adding
-    #     them here (LEGACY_ALIASES) makes the compat generator emit
-    #     UFT_ERROR_<legacy>  AND  UFT_ERR_<legacy>  as #defines pointing
-    #     at the canonical target — covering both prefixes in one pass.
-    "NO_MEMORY":           "MEMORY",            # 123 uses
-    "OUT_OF_RANGE":        "INVALID_ARG",       #  10 uses (was BOUNDS)
-    "VERIFY_FAILED":       "VERIFY_FAIL",       #  17 uses (spelling variant)
-    "INVALID_FORMAT":      "FORMAT_INVALID",    #   2 uses (word-order variant)
-    "FORMAT_NOT_SUPPORTED":"NOT_SUPPORTED",     #   4 uses
-    "DISK_PROTECTED":      "WRITE_PROTECT",     #   3 uses
-    "READ_ONLY":           "WRITE_PROTECT",     #   1 use
-    "GEOMETRY_MISMATCH":   "FORMAT_VARIANT",    #   3 uses
-    "TRANSACTION_CONFLICT":"BUSY",              #   1 use
-}
+    Returns list of (symbol_name, source_file, proposed_canonical) tuples
+    in file order. Comment lines (starting with '#') and blank lines are
+    skipped. Malformed rows raise SystemExit(2).
+    """
+    if not path.is_file():
+        sys.stderr.write(f"gen_errors_compat: legacy TSV not found: {path}\n")
+        sys.exit(2)
 
-# Short UFT_E* posix-ish aliases used by a handful of files.
-SHORT_E_ALIASES: dict[str, str] = {
-    "EINVAL":          "INVALID_ARG",
-    "EIO":             "IO",
-    "EFORMAT":         "FORMAT",
-    "EUNSUPPORTED":    "NOT_SUPPORTED",
-    "ENOMEM":          "MEMORY",
-    "ECRC":            "CRC",
-    "ENOT_IMPLEMENTED":"NOT_IMPLEMENTED",
-    "ETIMEOUT":        "TIMEOUT",
-}
+    out: list[tuple[str, str, str]] = []
+    seen: set[str] = set()
+    with path.open("r", encoding="utf-8", newline="") as f:
+        for lineno, raw in enumerate(f, 1):
+            line = raw.rstrip("\r\n")
+            stripped = line.strip()
+            if not stripped or stripped.startswith("#"):
+                continue
+            parts = line.split("\t")
+            if len(parts) != 4:
+                sys.stderr.write(
+                    f"gen_errors_compat: {path}:{lineno}: "
+                    f"expected 4 tab-separated fields, got {len(parts)}\n"
+                )
+                sys.exit(2)
+            symbol, _current, source, canonical = (p.strip() for p in parts)
+            if symbol in seen:
+                sys.stderr.write(
+                    f"gen_errors_compat: {path}:{lineno}: "
+                    f"duplicate legacy symbol {symbol}\n"
+                )
+                sys.exit(2)
+            seen.add(symbol)
+            out.append((symbol, source, canonical))
+    return out
 
 
 HEAD = """#ifndef UFT_ERROR_COMPAT_GEN_H
@@ -93,13 +78,16 @@ HEAD = """#ifndef UFT_ERROR_COMPAT_GEN_H
  * @file uft_error_compat_gen.h
  * @brief Legacy error-alias compatibility (GENERATED).
  *
- * Generated from data/errors.tsv by
+ * Generated from data/errors.tsv + data/errors_legacy_aliases.tsv by
  * scripts/generators/gen_errors_compat.py. Do not edit by hand.
  *
- * Provides the following alias spellings for existing call sites:
+ * Provides every alias spelling catalogued in the four pre-SSOT
+ * compat sources:
  *   - UFT_ERROR_<NAME>   (mixed-case, ~1127 uses in 107 files)
  *   - UFT_E_<NAME>       (short-form P2-ARCH-006 spelling)
  *   - UFT_ERR_NOMEM / UFT_ERR_UNSUPPORTED / ... (legacy short names)
+ *   - UFT_E<short>       (posix-ish EINVAL, EIO, ...)
+ *   - UFT_IR_ERR_* / UFT_DEC_ERR_* / UFT_IO_ERR_* (subsystem families)
  *
  * Every alias is `#define`d only if not already present, so this header
  * can coexist with the pre-SSOT compat headers during the cutover
@@ -116,25 +104,21 @@ extern "C" {
 #endif
 
 /* ------------------------------------------------------------------------ */
-/* 1. UFT_ERROR_<NAME> — mixed-case canonical alias                        */
+/* 1. UFT_ERROR_<NAME> — mixed-case canonical alias (auto-emitted from TSV) */
 /* ------------------------------------------------------------------------ */
 """
 
 MID_1 = """
 /* ------------------------------------------------------------------------ */
-/* 2. UFT_E_<NAME> — short-form (P2-ARCH-006 / uft_error_codes.h)          */
+/* 2. UFT_E_<NAME> — short-form (auto-emitted from canonical TSV)           */
 /* ------------------------------------------------------------------------ */
 """
 
 MID_2 = """
 /* ------------------------------------------------------------------------ */
-/* 3. Legacy short-name aliases (NOMEM, NOT_IMPL, UNSUPPORTED, ...)         */
-/* ------------------------------------------------------------------------ */
-"""
-
-MID_3 = """
-/* ------------------------------------------------------------------------ */
-/* 4. UFT_E<short> posix-ish aliases                                       */
+/* 3. Legacy aliases catalogued in data/errors_legacy_aliases.tsv           */
+/*    (UFT_ERR_*, UFT_ERROR_*, UFT_E_*, UFT_IR_*, UFT_DEC_*, UFT_IO_*,      */
+/*     UFT_E<short>). Grouped by prefix for readability.                    */
 /* ------------------------------------------------------------------------ */
 """
 
@@ -154,64 +138,89 @@ TAIL = """
 
 
 def main(argv: list[str]) -> int:
-    if len(argv) != 2:
-        sys.stderr.write("usage: gen_errors_compat.py <path-to-errors.tsv>\n")
+    if len(argv) not in (2, 3):
+        sys.stderr.write(
+            "usage: gen_errors_compat.py "
+            "<errors.tsv> [errors_legacy_aliases.tsv]\n"
+        )
         return 2
+
     rows = parse(Path(argv[1]))
     canonical_names = {r.name for r in rows}
+
+    legacy_aliases: list[tuple[str, str, str]] = []
+    if len(argv) == 3:
+        legacy_aliases = parse_legacy_aliases(Path(argv[2]))
+
+    # Track every symbol we've emitted so the output has zero duplicates
+    # across the four emission loops.
+    emitted: set[str] = set()
+
+    def emit_define(sym: str, target_expr: str) -> None:
+        """Emit `#ifndef sym / #define sym target_expr / #endif` once."""
+        if sym in emitted:
+            return
+        emitted.add(sym)
+        sys.stdout.write(f"#ifndef {sym}\n")
+        sys.stdout.write(f"#define {sym} {target_expr}\n")
+        sys.stdout.write("#endif\n")
 
     out = sys.stdout
     out.write(HEADER_BANNER)
     out.write(HEAD)
 
-    # 1. UFT_ERROR_<NAME>
+    # 1. UFT_ERROR_<NAME> — auto from canonical TSV
     for r in rows:
         if r.name == "SUCCESS":
-            out.write("#ifndef UFT_ERROR_SUCCESS\n")
-            out.write("#define UFT_ERROR_SUCCESS UFT_SUCCESS\n")
-            out.write("#endif\n")
+            emit_define("UFT_ERROR_SUCCESS", "UFT_SUCCESS")
             continue
-        out.write(f"#ifndef UFT_ERROR_{r.name}\n")
-        out.write(f"#define UFT_ERROR_{r.name} UFT_ERR_{r.name}\n")
-        out.write("#endif\n")
+        emit_define(f"UFT_ERROR_{r.name}", f"UFT_ERR_{r.name}")
 
-    # 2. UFT_E_<NAME>
+    # 2. UFT_E_<NAME> — auto from canonical TSV
     out.write(MID_1)
     for r in rows:
         if r.name == "SUCCESS":
             continue
-        out.write(f"#ifndef UFT_E_{r.name}\n")
-        out.write(f"#define UFT_E_{r.name} UFT_ERR_{r.name}\n")
-        out.write("#endif\n")
+        emit_define(f"UFT_E_{r.name}", f"UFT_ERR_{r.name}")
 
-    # 3. Legacy short aliases
+    # 3. Every legacy alias from errors_legacy_aliases.tsv
     out.write(MID_2)
-    for legacy, canonical in LEGACY_ALIASES.items():
+    last_group: str | None = None
+    for symbol, _source, canonical in legacy_aliases:
         if canonical not in canonical_names:
             sys.stderr.write(
-                f"gen_errors_compat: alias {legacy} targets unknown "
+                f"gen_errors_compat: alias {symbol} targets unknown "
                 f"canonical {canonical}\n"
             )
-            sys.exit(2)
-        out.write(f"#ifndef UFT_ERR_{legacy}\n")
-        out.write(f"#define UFT_ERR_{legacy} UFT_ERR_{canonical}\n")
-        out.write("#endif\n")
-        out.write(f"#ifndef UFT_ERROR_{legacy}\n")
-        out.write(f"#define UFT_ERROR_{legacy} UFT_ERR_{canonical}\n")
-        out.write("#endif\n")
+            return 2
+        # Group header comment (prefix-based) when prefix changes.
+        # UFT_ERR_*, UFT_ERROR_*, UFT_E_*, UFT_IR_*, UFT_DEC_*, UFT_IO_*,
+        # UFT_E<uppercase-no-underscore> = short posix.
+        if symbol.startswith("UFT_ERR_"):
+            group = "UFT_ERR_*"
+        elif symbol.startswith("UFT_ERROR_"):
+            group = "UFT_ERROR_*"
+        elif symbol.startswith("UFT_E_"):
+            group = "UFT_E_*"
+        elif symbol.startswith("UFT_IR_"):
+            group = "UFT_IR_*"
+        elif symbol.startswith("UFT_DEC_"):
+            group = "UFT_DEC_*"
+        elif symbol.startswith("UFT_IO_"):
+            group = "UFT_IO_*"
+        else:
+            group = "UFT_E<short>"
+        if group != last_group:
+            out.write(f"\n/* --- {group} --- */\n")
+            last_group = group
 
-    # 4. UFT_E<short> posix-ish
-    out.write(MID_3)
-    for short, canonical in SHORT_E_ALIASES.items():
-        if canonical not in canonical_names:
-            sys.stderr.write(
-                f"gen_errors_compat: alias {short} targets unknown "
-                f"canonical {canonical}\n"
-            )
-            sys.exit(2)
-        out.write(f"#ifndef UFT_{short}\n")
-        out.write(f"#define UFT_{short} UFT_ERR_{canonical}\n")
-        out.write("#endif\n")
+        # SUCCESS / OK special-case: reference the sentinel UFT_SUCCESS
+        # rather than the non-existent UFT_ERR_SUCCESS identifier.
+        target = (
+            "UFT_SUCCESS" if canonical == "SUCCESS"
+            else f"UFT_ERR_{canonical}"
+        )
+        emit_define(symbol, target)
 
     out.write(TAIL)
     return 0
