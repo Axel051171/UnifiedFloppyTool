@@ -38,7 +38,7 @@ static int fds_parse_disk_data(const uint8_t *data, size_t size,
 {
     if (size < 58) {
         /* Need at least Block 1 (56 bytes) + Block 2 (2 bytes) */
-        return _UFTEC_CORRUPT;
+        return UFT_ERR_CORRUPTED;
     }
 
     size_t offset = 0;
@@ -53,7 +53,7 @@ static int fds_parse_disk_data(const uint8_t *data, size_t size,
         if (size >= 56 && memcmp(data + 1, FDS_NINTENDO_SIG, FDS_NINTENDO_LEN) == 0) {
             /* block type byte is present but we already checked */
         } else {
-            return _UFTEC_CORRUPT;
+            return UFT_ERR_CORRUPTED;
         }
     }
 
@@ -164,12 +164,12 @@ static int fds_parse_disk_data(const uint8_t *data, size_t size,
 
 int uft_fds_open_buffer(const uint8_t *data, size_t size, uft_fds_image_t *img)
 {
-    if (!data || !img) return _UFTEC_NULLPTR;
+    if (!data || !img) return UFT_ERR_NULL_POINTER;
     memset(img, 0, sizeof(uft_fds_image_t));
 
     if (size < FDS_DISK_SIZE) {
         /* Too small for even one headerless side */
-        return _UFTEC_CORRUPT;
+        return UFT_ERR_CORRUPTED;
     }
 
     const uint8_t *disk_data = data;
@@ -192,7 +192,7 @@ int uft_fds_open_buffer(const uint8_t *data, size_t size, uft_fds_image_t *img)
 
     /* Allocate and copy raw disk data */
     img->data = malloc(disk_size);
-    if (!img->data) return _UFTEC_MEM;
+    if (!img->data) return UFT_ERR_MEMORY;
 
     memcpy(img->data, disk_data, disk_size);
     img->data_size = disk_size;
@@ -203,37 +203,37 @@ int uft_fds_open_buffer(const uint8_t *data, size_t size, uft_fds_image_t *img)
 
 int uft_fds_open(const char *path, uft_fds_image_t *img)
 {
-    if (!path || !img) return _UFTEC_NULLPTR;
+    if (!path || !img) return UFT_ERR_NULL_POINTER;
 
     FILE *fp = fopen(path, "rb");
-    if (!fp) return _UFTEC_FOPEN;
+    if (!fp) return UFT_ERR_FILE_OPEN;
 
     /* Get file size */
     if (fseek(fp, 0, SEEK_END) != 0) {
         fclose(fp);
-        return _UFTEC_IO;
+        return UFT_ERR_IO;
     }
     long fsize = ftell(fp);
     if (fsize <= 0) {
         fclose(fp);
-        return _UFTEC_IO;
+        return UFT_ERR_IO;
     }
     if (fseek(fp, 0, SEEK_SET) != 0) {
         fclose(fp);
-        return _UFTEC_IO;
+        return UFT_ERR_IO;
     }
 
     size_t size = (size_t)fsize;
     uint8_t *data = malloc(size);
     if (!data) {
         fclose(fp);
-        return _UFTEC_MEM;
+        return UFT_ERR_MEMORY;
     }
 
     if (fread(data, 1, size, fp) != size) {
         free(data);
         fclose(fp);
-        return _UFTEC_FREAD;
+        return UFT_ERR_FILE_READ;
     }
     fclose(fp);
 
@@ -252,7 +252,7 @@ void uft_fds_close(uft_fds_image_t *img)
 
 int uft_fds_get_info_string(const uft_fds_image_t *img, char *buf, size_t buflen)
 {
-    if (!img || !buf || buflen == 0) return _UFTEC_NULLPTR;
+    if (!img || !buf || buflen == 0) return UFT_ERR_NULL_POINTER;
 
     int written = snprintf(buf, buflen,
         "FDS Image:\n"
@@ -277,6 +277,6 @@ int uft_fds_get_info_string(const uft_fds_image_t *img, char *buf, size_t buflen
         img->valid_signature ? "*NINTENDO-HVC* OK" : "missing/invalid",
         img->data_size);
 
-    if (written < 0) return _UFTEC_IO;
+    if (written < 0) return UFT_ERR_IO;
     return 0;
 }

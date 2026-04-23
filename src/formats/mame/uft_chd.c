@@ -89,8 +89,8 @@ static int chd_read_metadata_entry(FILE *fp, uint64_t meta_offset,
 
     /* Walk the metadata chain (limit iterations to prevent infinite loops) */
     for (int i = 0; i < 256 && offset != 0; i++) {
-        if (fseek(fp, (long)offset, SEEK_SET) != 0) return _UFTEC_IO;
-        if (fread(meta_hdr, 1, 16, fp) != 16) return _UFTEC_FREAD;
+        if (fseek(fp, (long)offset, SEEK_SET) != 0) return UFT_ERR_IO;
+        if (fread(meta_hdr, 1, 16, fp) != 16) return UFT_ERR_FILE_READ;
 
         uint32_t entry_tag = read_be32(meta_hdr);
         uint32_t flags_len = read_be32(meta_hdr + 4);
@@ -106,7 +106,7 @@ static int chd_read_metadata_entry(FILE *fp, uint64_t meta_offset,
             }
 
             size_t to_read = (data_len < valuelen - 1) ? data_len : valuelen - 1;
-            if (fread(value, 1, to_read, fp) != to_read) return _UFTEC_FREAD;
+            if (fread(value, 1, to_read, fp) != to_read) return UFT_ERR_FILE_READ;
             value[to_read] = '\0';
             return 0;
         }
@@ -114,7 +114,7 @@ static int chd_read_metadata_entry(FILE *fp, uint64_t meta_offset,
         offset = next_offset;
     }
 
-    return _UFTEC_FNOTFOUND; /* Tag not found */
+    return UFT_ERR_FILE_NOT_FOUND; /* Tag not found */
 }
 
 /* ============================================================================
@@ -270,11 +270,11 @@ static int chd_parse_v3(FILE *fp, const uint8_t *raw_hdr, uft_chd_info_t *info)
 
 int uft_chd_open(const char *path, uft_chd_info_t *info)
 {
-    if (!path || !info) return _UFTEC_NULLPTR;
+    if (!path || !info) return UFT_ERR_NULL_POINTER;
     memset(info, 0, sizeof(uft_chd_info_t));
 
     FILE *fp = fopen(path, "rb");
-    if (!fp) return _UFTEC_FOPEN;
+    if (!fp) return UFT_ERR_FILE_OPEN;
 
     /* Read enough for the largest header version */
     uint8_t raw_hdr[128];
@@ -282,13 +282,13 @@ int uft_chd_open(const char *path, uft_chd_info_t *info)
 
     if (fread(raw_hdr, 1, 16, fp) != 16) {
         fclose(fp);
-        return _UFTEC_FREAD;
+        return UFT_ERR_FILE_READ;
     }
 
     /* Verify magic */
     if (memcmp(raw_hdr, CHD_MAGIC, CHD_MAGIC_SIZE) != 0) {
         fclose(fp);
-        return _UFTEC_CORRUPT;
+        return UFT_ERR_CORRUPTED;
     }
 
     uint32_t header_size = read_be32(raw_hdr + 8);
@@ -307,13 +307,13 @@ int uft_chd_open(const char *path, uft_chd_info_t *info)
         fclose(fp);
         snprintf(info->description, sizeof(info->description),
                  "Unsupported CHD version %u (header_size=%u)", version, header_size);
-        return _UFTEC_UNSUP;
+        return UFT_ERR_NOT_SUPPORTED;
     }
 
     if (remaining > sizeof(raw_hdr) - 16) remaining = sizeof(raw_hdr) - 16;
     if (fread(raw_hdr + 16, 1, remaining, fp) != remaining) {
         fclose(fp);
-        return _UFTEC_FREAD;
+        return UFT_ERR_FILE_READ;
     }
 
     /* Parse version-specific header */
@@ -322,7 +322,7 @@ int uft_chd_open(const char *path, uft_chd_info_t *info)
         case 5:  rc = chd_parse_v5(fp, raw_hdr, info); break;
         case 4:  rc = chd_parse_v4(fp, raw_hdr, info); break;
         case 3:  rc = chd_parse_v3(fp, raw_hdr, info); break;
-        default: rc = _UFTEC_UNSUP; break;
+        default: rc = UFT_ERR_NOT_SUPPORTED; break;
     }
 
     if (rc != 0) {
@@ -392,23 +392,23 @@ int uft_chd_read_sector(const char *path, const uft_chd_info_t *info,
                          int cyl, int head, int sector,
                          uint8_t *buf, size_t buflen)
 {
-    if (!path || !info || !buf) return _UFTEC_NULLPTR;
+    if (!path || !info || !buf) return UFT_ERR_NULL_POINTER;
 
     if (info->is_compressed) {
-        return _UFTEC_UNSUP; /* Compressed CHD requires libchdr */
+        return UFT_ERR_NOT_SUPPORTED; /* Compressed CHD requires libchdr */
     }
 
     if (info->cylinders == 0 || info->heads == 0 || info->sectors == 0) {
-        return _UFTEC_CORRUPT; /* No geometry available */
+        return UFT_ERR_CORRUPTED; /* No geometry available */
     }
 
     if (cyl < 0 || (uint32_t)cyl >= info->cylinders ||
         head < 0 || (uint32_t)head >= info->heads ||
         sector < 1 || (uint32_t)sector > info->sectors) {
-        return _UFTEC_INVAL;
+        return UFT_ERR_INVALID_ARG;
     }
 
-    if (buflen < info->sector_size) return _UFTEC_INVAL;
+    if (buflen < info->sector_size) return UFT_ERR_INVALID_ARG;
 
     /* Calculate linear sector number (sector is 1-based) */
     uint64_t linear_sector = (uint64_t)cyl * info->heads * info->sectors +
@@ -427,12 +427,12 @@ int uft_chd_read_sector(const char *path, const uft_chd_info_t *info,
      * from the hunk map. */
 
     FILE *fp = fopen(path, "rb");
-    if (!fp) return _UFTEC_FOPEN;
+    if (!fp) return UFT_ERR_FILE_OPEN;
 
     uint32_t hunk_bytes = info->header.hunk_bytes;
     if (hunk_bytes == 0) {
         fclose(fp);
-        return _UFTEC_CORRUPT;
+        return UFT_ERR_CORRUPTED;
     }
 
     uint32_t hunk_index = (uint32_t)(byte_offset / hunk_bytes);
@@ -440,7 +440,7 @@ int uft_chd_read_sector(const char *path, const uft_chd_info_t *info,
 
     if (hunk_index >= info->hunk_count) {
         fclose(fp);
-        return _UFTEC_INVAL;
+        return UFT_ERR_INVALID_ARG;
     }
 
     if (info->version == 5) {
@@ -454,11 +454,11 @@ int uft_chd_read_sector(const char *path, const uft_chd_info_t *info,
 
         if (fseek(fp, (long)map_pos, SEEK_SET) != 0) {
             fclose(fp);
-            return _UFTEC_IO;
+            return UFT_ERR_IO;
         }
         if (fread(map_entry, 1, 4, fp) != 4) {
             fclose(fp);
-            return _UFTEC_FREAD;
+            return UFT_ERR_FILE_READ;
         }
 
         /* For uncompressed CHDs, the map entry stores the offset in units */
@@ -469,7 +469,7 @@ int uft_chd_read_sector(const char *path, const uft_chd_info_t *info,
 
         if (fseek(fp, (long)sector_file_offset, SEEK_SET) != 0) {
             fclose(fp);
-            return _UFTEC_IO;
+            return UFT_ERR_IO;
         }
     } else {
         /* v3/v4: hunk map starts at fixed offset after header.
@@ -480,11 +480,11 @@ int uft_chd_read_sector(const char *path, const uft_chd_info_t *info,
         uint8_t map_entry[8];
         if (fseek(fp, (long)map_pos, SEEK_SET) != 0) {
             fclose(fp);
-            return _UFTEC_IO;
+            return UFT_ERR_IO;
         }
         if (fread(map_entry, 1, 8, fp) != 8) {
             fclose(fp);
-            return _UFTEC_FREAD;
+            return UFT_ERR_FILE_READ;
         }
 
         uint64_t hunk_file_offset = read_be64(map_entry);
@@ -492,13 +492,13 @@ int uft_chd_read_sector(const char *path, const uft_chd_info_t *info,
 
         if (fseek(fp, (long)sector_file_offset, SEEK_SET) != 0) {
             fclose(fp);
-            return _UFTEC_IO;
+            return UFT_ERR_IO;
         }
     }
 
     if (fread(buf, 1, info->sector_size, fp) != info->sector_size) {
         fclose(fp);
-        return _UFTEC_FREAD;
+        return UFT_ERR_FILE_READ;
     }
 
     fclose(fp);
@@ -508,22 +508,22 @@ int uft_chd_read_sector(const char *path, const uft_chd_info_t *info,
 int uft_chd_get_metadata(const char *path, const char *tag,
                           char *value, size_t valuelen)
 {
-    if (!path || !tag || !value || valuelen == 0) return _UFTEC_NULLPTR;
-    if (strlen(tag) != 4) return _UFTEC_INVAL;
+    if (!path || !tag || !value || valuelen == 0) return UFT_ERR_NULL_POINTER;
+    if (strlen(tag) != 4) return UFT_ERR_INVALID_ARG;
 
     FILE *fp = fopen(path, "rb");
-    if (!fp) return _UFTEC_FOPEN;
+    if (!fp) return UFT_ERR_FILE_OPEN;
 
     /* Read and verify header to get meta_offset */
     uint8_t hdr[64];
     if (fread(hdr, 1, 56, fp) != 56) {
         fclose(fp);
-        return _UFTEC_FREAD;
+        return UFT_ERR_FILE_READ;
     }
 
     if (memcmp(hdr, CHD_MAGIC, CHD_MAGIC_SIZE) != 0) {
         fclose(fp);
-        return _UFTEC_CORRUPT;
+        return UFT_ERR_CORRUPTED;
     }
 
     uint32_t version = read_be32(hdr + 12);
@@ -535,12 +535,12 @@ int uft_chd_get_metadata(const char *path, const char *tag,
         meta_offset = read_be64(hdr + 36);
     } else {
         fclose(fp);
-        return _UFTEC_UNSUP;
+        return UFT_ERR_NOT_SUPPORTED;
     }
 
     if (meta_offset == 0) {
         fclose(fp);
-        return _UFTEC_FNOTFOUND;
+        return UFT_ERR_FILE_NOT_FOUND;
     }
 
     int rc = chd_read_metadata_entry(fp, meta_offset, tag, value, valuelen);
