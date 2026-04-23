@@ -48,6 +48,7 @@
 -1	INVALID_ARG	ARG	Invalid argument (NULL pointer, out of range, etc.)
 -2	BUFFER_TOO_SMALL	ARG	Required buffer too small
 -3	INVALID_PATH	ARG	Invalid path or filename
+-5	NULL_POINTER	ARG	Null pointer passed where non-null required (distinct diagnostic from generic INVALID_ARG; 86 call sites)
 
 # IO (-10..-19)
 -10	IO	IO	General I/O error
@@ -97,85 +98,60 @@
 # each proposed row so drift stays visible in every build log.
 
 # --- RESOURCE extension (memory alias consolidation) ---------------------
-# PROPOSED: resolves NOMEM vs MEMORY vs OUT_OF_MEMORY triplet.
 # Canonical stays UFT_ERR_MEMORY (code -30); the other two become compat
 # defines in uft_error_compat_gen.h, not distinct enum members.
 # No new row needed — handled by alias generation.
 
 # --- FORMAT extension (semantic-correctness fix for current compat bug) --
-# PROPOSED: new canonical for "format structurally invalid" which the old
 # compat header mis-mapped to CORRUPTED (semantic violation documented in
 # dispatch). Adds a distinct code so callers can differentiate
 # "data is garbled" (CORRUPTED) from "file claims to be IMD but isn't"
 # (FORMAT_INVALID).
-# PROPOSED
 -25	FORMAT_INVALID	FORMAT	Format structurally invalid (magic/header mismatch)
-# PROPOSED
 -26	UNKNOWN_FORMAT	FORMAT	Format could not be identified from content
-# PROPOSED
 -27	ENCODING	FORMAT	Encoding error (MFM/FM/GCR bit-level decode failed)
-# PROPOSED
 -28	LONG_TRACK	FORMAT	Track exceeds standard length (possible protection)
-# PROPOSED
 -29	NON_STANDARD	FORMAT	Non-standard format variant
 
 # --- FORMAT subcodes moved from compat to canonical ----------------------
-# PROPOSED: these were previously aliased to CORRUPTED or FILE_NOT_FOUND
 # by uft_unified_types.h — losing semantic info. Giving them distinct
 # codes in the -60..-79 forensics range.
-# PROPOSED
 -60	SYNC_LOST	FORMAT	PLL/sync lost during decode
-# PROPOSED
 -61	WEAK_BITS	FORMAT	Weak bits detected in data field
-# PROPOSED
 -62	TIMING	FORMAT	Timing anomaly (splice, density-mix)
-# PROPOSED
 -63	ID_MISMATCH	FORMAT	Sector ID header mismatch
-# PROPOSED
 -64	DELETED_DATA	FORMAT	Deleted-data address mark (0xF8)
-# PROPOSED
 -65	MISSING_SECTOR	FORMAT	Expected sector not found on track
-# PROPOSED
 -66	INCOMPLETE	FORMAT	Incomplete data (truncated sector/track)
-# PROPOSED
 -67	PLL_UNLOCK	FORMAT	PLL never achieved lock
 
 # --- PROTECTION (-80..-89) new subclass ----------------------------------
-# PROPOSED
 -80	PROTECTION	PROTECTION	Copy-protection scheme triggered
-# PROPOSED
 -81	COPY_DENIED	PROTECTION	Copy refused due to protection policy
 
 # --- HARDWARE extension (-54..-59) ---------------------------------------
-# PROPOSED
 -54	WRITE_PROTECT	HARDWARE	Disk is write-protected
-# PROPOSED
 -55	WRITE_FAULT	HARDWARE	Drive reports write fault
-# PROPOSED
 -56	TRACK_OVERFLOW	HARDWARE	Track buffer overflow during write
 
 # --- ARG extension (-4..-9) ----------------------------------------------
-# PROPOSED: distinct code for "verify operation failed" (was aliased to CRC).
 # Callers that verify a written image care whether they hit CRC mismatch
 # (media problem) vs. byte-level compare mismatch (write problem).
-# PROPOSED
 -4	VERIFY_FAIL	ARG	Verification compare failed
 
 # --- IO extension (-15..-19) ---------------------------------------------
-# PROPOSED
 -15	FILE_OPEN	IO	Cannot open file
-# PROPOSED
 -16	FILE_READ	IO	File read error
-# PROPOSED
 -17	FILE_CREATE	IO	Cannot create file
+-18	FILE_SEEK	IO	File seek error (offset out of range or device failure)
+-19	FILE_WRITE	IO	File write error
 
 # --- MISC / cancellation / versioning ------------------------------------
-# PROPOSED
 -92	CANCELLED	MISC	Operation cancelled by user or policy
-# PROPOSED
 -93	INVALID_STATE	INTERNAL	Object/context in invalid state for operation
-# PROPOSED
 -94	VERSION	MISC	Version mismatch
+-95	PLUGIN_LOAD	RESOURCE	Plugin load failed (ABI / dlopen / init error)
+-96	PLUGIN_NOT_FOUND	RESOURCE	Plugin not found by name or format id
 
 # === ALIAS CONSOLIDATION (no new rows; handled by compat generator) ======
 # The following 12 legacy tokens DO NOT get dedicated rows. They are

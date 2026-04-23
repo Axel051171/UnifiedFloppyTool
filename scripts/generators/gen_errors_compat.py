@@ -48,6 +48,29 @@ LEGACY_ALIASES: dict[str, str] = {
     # CRC-ish aliases
     "CRC_ERROR":     "CRC",
     "VERIFY":        "CRC",
+    # NO_DATA: pre-SSOT compat headers mapped this to 3 different targets
+    # (CORRUPTED / CORRUPT / FORMAT). Forensically closest is MISSING_SECTOR
+    # ("sector header says data-of-length-N but no data found there").
+    "NO_DATA":       "MISSING_SECTOR",
+    # UFT_ERR_OK — the user approval dropped OK as a canonical name, but
+    # 2 doc-comment usages remain (fuzzy_bits.c). Alias to SUCCESS (=0) so
+    # `return UFT_ERR_OK;` still works for any straggler call site.
+    "OK":            "SUCCESS",
+
+    # --- Second-round coverage gaps (UFT_ERROR_* spellings without a
+    #     matching canonical TSV row; user-approved 2026-04-23). Adding
+    #     them here (LEGACY_ALIASES) makes the compat generator emit
+    #     UFT_ERROR_<legacy>  AND  UFT_ERR_<legacy>  as #defines pointing
+    #     at the canonical target — covering both prefixes in one pass.
+    "NO_MEMORY":           "MEMORY",            # 123 uses
+    "OUT_OF_RANGE":        "INVALID_ARG",       #  10 uses (was BOUNDS)
+    "VERIFY_FAILED":       "VERIFY_FAIL",       #  17 uses (spelling variant)
+    "INVALID_FORMAT":      "FORMAT_INVALID",    #   2 uses (word-order variant)
+    "FORMAT_NOT_SUPPORTED":"NOT_SUPPORTED",     #   4 uses
+    "DISK_PROTECTED":      "WRITE_PROTECT",     #   3 uses
+    "READ_ONLY":           "WRITE_PROTECT",     #   1 use
+    "GEOMETRY_MISMATCH":   "FORMAT_VARIANT",    #   3 uses
+    "TRANSACTION_CONFLICT":"BUSY",              #   1 use
 }
 
 # Short UFT_E* posix-ish aliases used by a handful of files.
