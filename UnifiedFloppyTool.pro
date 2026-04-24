@@ -143,6 +143,7 @@ INCLUDEPATH += \
     include/uft/forensic \
     src \
     src/gui \
+    src/analysis \
     src/analysis/otdr \
     src/samdisk \
     src/hardware_providers \
@@ -726,13 +727,28 @@ SOURCES += \
     src/core/uft_detect_buffer_impl.c \
     src/core/uft_probe_format_impl.c \
     src/fs/uft_adf_bam.c \
+    src/analysis/profiles/uft_profile_japanese.c \
+    src/analysis/profiles/uft_profile_misc.c \
+    src/analysis/profiles/uft_profile_uk.c \
+    src/analysis/profiles/uft_profile_us.c \
+    src/analysis/profiles/uft_profile_xdf.c \
+    src/analysis/profiles/uft_profiles_all.c \
     src/analysis/uft_disk_quickscan.c \
     src/core/uft_sha256.c \
     src/core/uft_snapshot.c \
     src/diag/uft_disc_diagnostics.c \
     src/display/uft_display_track.c \
+    src/formats/xdf/uft_xdf_api.c \
+    src/formats/xdf/uft_xdf_core.c \
     src/policy/uft_write_gate.c \
+    src/recovery/uft_bitstream_recovery.c \
+    src/recovery/uft_cross_track.c \
+    src/recovery/uft_flux_recovery.c \
+    src/recovery/uft_multiread_pipeline.c \
+    src/recovery/uft_protection.c \
+    src/recovery/uft_recovery_meta.c \
     src/recovery/uft_salvage_fs.c \
+    src/recovery/uft_sector_recovery.c \
     src/whdload/whd_crc16.c \
     src/whdload/whdload_resload_api.c \
     src/fs/uft_amigados.c \
