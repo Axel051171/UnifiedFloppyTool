@@ -12,9 +12,9 @@ ein Prinzip verletzt würde. Bekannte Lücken: [`docs/KNOWN_ISSUES.md`](../docs/
 
 ---
 
-## Agenten-Übersicht (11 Agenten)
+## Agenten-Übersicht (12 Agenten)
 
-29 Agenten wurden reduziert auf 11 aktiv genutzte. Die entfernten Agenten
+29 Agenten wurden reduziert auf 12 aktiv genutzte. Die entfernten Agenten
 waren in 3 Monaten nicht aufgerufen oder von den neueren Must-Fix-Prävention-
 Agenten abgedeckt (siehe git-history für Details). Wenn ein seltener Einzelfall
 doch einen Spezialisten braucht, aus git zurückholen.
@@ -29,6 +29,7 @@ Flaggschiffe).
 | `deep-diagnostician` | Opus 4.7 | "Was ist kaputt und warum" ohne klaren Fix |
 | `abi-bomb-detector` | Opus 4.7 | Public-API-Layouts auf ABI-Bruch ohne Compiler-Warnung prüfen |
 | `single-source-enforcer` | Opus 4.7 | Single-Source-of-Truth pro Fakt durchsetzen |
+| `algorithm-hotpath-optimizer` | Opus 4.7 | Algorithmus-/Performance-Review von Decoder-/PLL-/CRC-Hotpaths (advisory, Read-only) |
 | `must-fix-hunter` | Sonnet 4.6 | Proaktive Widersprüche-Jagd (Pattern-Scan, Sonnet reicht) |
 | `consistency-auditor` | Sonnet 4.6 | Vor Commit/Push: Widersprüche blockieren |
 | `stub-eliminator` | Sonnet 4.6 | Pro Stub: IMPLEMENT / DELEGATE / DOCUMENT / DELETE |
@@ -60,7 +61,7 @@ Siehe `.claude/CONSULT_PROTOCOL.md` für Details. Kurzfassung:
    REASON / SEVERITY`. Haupt-Session oder `orchestrator` parst und routet.
    Funktioniert ohne Änderung an den Agent-Tools, vollständig beobachtbar.
 
-2. **Direkter Agent-Spawn (sparsam):** Nur 4 von 11 Agenten haben
+2. **Direkter Agent-Spawn (sparsam):** Nur 4 von 12 Agenten haben
    `Agent`-Tool in der Frontmatter:
    - `orchestrator` — Master-Router, darf beliebig spawnen
    - `deep-diagnostician` — gezielte Teilfragen
