@@ -2,6 +2,7 @@
 set(FS_SOURCES
     fat_bpb.c
     uft_fat_detect.c
+    uft_amiga_virus_db.c        # M2 T1: generated from amiga_bootblock_viruses.tsv
     uft_amigados.c
     uft_amigados_bitmap.c
     uft_amigados_core.c

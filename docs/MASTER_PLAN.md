@@ -139,11 +139,16 @@ Abschluss-Kriterium: `audit_skeleton_headers.py` zeigt <50 Skelette
 Production-Niveau.
 
 Muss:
-- [ ] **Amiga-Block** (`XCOPY_INTEGRATION_TODO.md`):
-  - T1 Virus-Signature-SSOT (`amiga_bootblock_viruses.tsv`)
-  - T2 `uft_bootblock_scanner.c` Implementation
-  - T3 `uft_amigados_extended.c` aus Stub-Zustand heben
-  - T5 BAMCOPY-Modus im ADF-Plugin
+- [~] **Amiga-Block** (`XCOPY_INTEGRATION_TODO.md`):
+  - [x] T1 Virus-Signature-SSOT (`data/amiga_bootblock_viruses.tsv`,
+        48 Einträge aus xvs.HISTORY + bekannten early viruses,
+        Generator `scripts/generators/gen_virus_db.py` → `src/fs/uft_amiga_virus_db.c`,
+        `include/uft/uft_amiga_virus_db.h` API, 8 Tests grün.
+        Alle Signatures PENDING — Schema + Infrastruktur fertig, echte
+        Byte-Pattern brauchen xvs.library-Binary-Extraktion in Folge-Commit.)
+  - [ ] T2 `uft_bootblock_scanner.c` Implementation (depends on T1 ✓)
+  - [ ] T3 `uft_amigados_extended.c` aus Stub-Zustand heben
+  - [ ] T5 BAMCOPY-Modus im ADF-Plugin
 - [ ] **Atari-Block** (`A8RAWCONV_INTEGRATION_TODO.md`):
   - [x] TA1 `uft_write_precomp.c` (portiert aus `compensation.cpp`,
         Mac-800K Peak-Shift-Compensation, 13 Tests grün)

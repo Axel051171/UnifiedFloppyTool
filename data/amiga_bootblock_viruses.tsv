@@ -1,0 +1,76 @@
+id	name	category	pattern_hex	pattern_mask_hex	first_seen	source	disinfect_strategy
+# SSOT for Amiga bootblock / link / file virus signatures.
+#
+# Schema:
+#   id                     — stable numeric ID (never reused)
+#   name                   — canonical virus name (xvs.library-compatible)
+#   category               — bootvirus|linkvirus|filevirus|bootblock|trojan
+#   pattern_hex            — byte signature, hex string (no spaces, uppercase).
+#                            "PENDING" if signature has not yet been extracted
+#                            from a reference source. Consumers skip matching
+#                            for PENDING rows.
+#   pattern_mask_hex       — byte-wise AND mask, same length as pattern_hex.
+#                            "FF" bytes = exact match, "00" = don't care.
+#                            "PENDING" when pattern is PENDING.
+#   first_seen             — year first documented (approx; "?" if unknown)
+#   source                 — primary reference (xvs.library / VHT-DK / public)
+#   disinfect_strategy     — REPORT_ONLY (always — UFT does not kill viruses)
+#
+# Rules:
+#   - Lines starting with # are comments, ignored by the generator.
+#   - disinfect_strategy MUST be REPORT_ONLY for every row. UFT is a
+#     forensic-preservation tool (see XCOPY_INTEGRATION_TODO § Anti-Features).
+#   - Patterns start at bootblock byte 12 (after DOS type header + 4-byte
+#     checksum + 4-byte root-block pointer) unless annotated otherwise.
+#   - See docs/XCOPY_INTEGRATION_TODO.md T1 for the full plan.
+#
+# === Well-documented early Amiga bootblock viruses (pattern in progress) ===
+1	SCA	bootvirus	PENDING	PENDING	1987	public	REPORT_ONLY
+2	Byte Bandit	bootvirus	PENDING	PENDING	1988	public	REPORT_ONLY
+3	Byte Warrior	bootvirus	PENDING	PENDING	1988	public	REPORT_ONLY
+4	Lamer Exterminator	bootvirus	PENDING	PENDING	1989	public	REPORT_ONLY
+5	Obelisk	bootvirus	PENDING	PENDING	1989	public	REPORT_ONLY
+6	Revenge	bootvirus	PENDING	PENDING	1989	xvs.library	REPORT_ONLY
+7	DiskDoctors	bootvirus	PENDING	PENDING	1989	xvs.library	REPORT_ONLY
+8	Suicide Machine	bootvirus	PENDING	PENDING	1990	xvs.library	REPORT_ONLY
+9	Travelling Jack	linkvirus	PENDING	PENDING	1990	xvs.library	REPORT_ONLY
+10	LSD	bootvirus	PENDING	PENDING	1990	public	REPORT_ONLY
+11	DAG	bootvirus	PENDING	PENDING	1990	public	REPORT_ONLY
+12	AEK	bootvirus	PENDING	PENDING	1990	public	REPORT_ONLY
+13	North Star	bootvirus	PENDING	PENDING	1989	public	REPORT_ONLY
+14	Ultrafox	bootvirus	PENDING	PENDING	1989	public	REPORT_ONLY
+15	XCopy2	bootvirus	PENDING	PENDING	?	xvs.library	REPORT_ONLY
+# === Entries extracted from xvs.HISTORY (names only, signatures pending) ===
+16	Antonio	linkvirus	PENDING	PENDING	?	xvs.library	REPORT_ONLY
+17	Bastard	linkvirus	PENDING	PENDING	?	xvs.library	REPORT_ONLY
+18	Bobek 2	linkvirus	PENDING	PENDING	?	xvs.library	REPORT_ONLY
+19	Bobek 3	linkvirus	PENDING	PENDING	?	xvs.library	REPORT_ONLY
+20	CCCP Clone	bootvirus	PENDING	PENDING	?	xvs.library	REPORT_ONLY
+21	Disk-Doktors 2	bootvirus	PENDING	PENDING	?	xvs.library	REPORT_ONLY
+22	Disk Doktors BJH	bootblock	PENDING	PENDING	?	xvs.library	REPORT_ONLY
+23	DiskJerk	filevirus	PENDING	PENDING	?	xvs.library	REPORT_ONLY
+24	Doubledensity	bootblock	PENDING	PENDING	?	xvs.library	REPORT_ONLY
+25	Explode Trigger	filevirus	PENDING	PENDING	?	xvs.library	REPORT_ONLY
+26	Explode Trojan	linkvirus	PENDING	PENDING	?	xvs.library	REPORT_ONLY
+27	GlobVec144	linkvirus	PENDING	PENDING	?	xvs.library	REPORT_ONLY
+28	HANF	linkvirus	PENDING	PENDING	?	xvs.library	REPORT_ONLY
+29	Jackal 2021	bootvirus	PENDING	PENDING	2021	xvs.library	REPORT_ONLY
+30	LOBO Hardc0re	linkvirus	PENDING	PENDING	?	xvs.library	REPORT_ONLY
+31	Liquid Acid	linkvirus	PENDING	PENDING	?	xvs.library	REPORT_ONLY
+32	MKey.exe Fake	trojan	PENDING	PENDING	?	xvs.library	REPORT_ONLY
+33	Mosh 3.0	bootvirus	PENDING	PENDING	?	xvs.library	REPORT_ONLY
+34	Motaba 3	linkvirus	PENDING	PENDING	?	xvs.library	REPORT_ONLY
+35	Nemesis	bootvirus	PENDING	PENDING	?	xvs.library	REPORT_ONLY
+36	Neurotic Death	linkvirus	PENDING	PENDING	?	xvs.library	REPORT_ONLY
+37	Penetrator 2001	linkvirus	PENDING	PENDING	?	xvs.library	REPORT_ONLY
+38	Port 2421	linkvirus	PENDING	PENDING	?	xvs.library	REPORT_ONLY
+39	ReOrgIt Fake	trojan	PENDING	PENDING	?	xvs.library	REPORT_ONLY
+40	Rene	bootblock	PENDING	PENDING	?	xvs.library	REPORT_ONLY
+41	Revenge Bootloader	bootblock	PENDING	PENDING	?	xvs.library	REPORT_ONLY
+42	Rexxfunc	trojan	PENDING	PENDING	?	xvs.library	REPORT_ONLY
+43	Silicon Penetration	bootvirus	PENDING	PENDING	?	xvs.library	REPORT_ONLY
+44	Traveling Jack	linkvirus	PENDING	PENDING	?	xvs.library	REPORT_ONLY
+45	VCS 2	bootblock	PENDING	PENDING	?	xvs.library	REPORT_ONLY
+46	VKill	bootvirus	PENDING	PENDING	?	xvs.library	REPORT_ONLY
+47	Warhawk 1 Aniga	bootvirus	PENDING	PENDING	?	xvs.library	REPORT_ONLY
+48	Xeno	linkvirus	PENDING	PENDING	?	xvs.library	REPORT_ONLY
