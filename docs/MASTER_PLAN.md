@@ -103,13 +103,14 @@ Abarbeiten:
 **Ziel:** Kein Phantom-Feature mehr. Was UFT anbietet, tut UFT auch.
 
 Muss:
-- [ ] MF-011 Skeleton-Header bereinigen
-  - DELETE-Welle: ~100 Header ohne jeden Konsument (automatisch via
-    Grep-Check)
-  - DOCUMENT-Welle: ~50 Header mit Konsument aber ohne Impl →
-    `/* PLANNED */` + `KNOWN_ISSUES`-Eintrag
-  - IMPLEMENT-Welle: ~25 Header mit echten Call-Sites →
-    entweder bauen oder die Call-Sites entfernen
+- [~] MF-011 Skeleton-Header bereinigen
+  - [x] DELETE-Welle: **24 Header** ohne Konsumenten gelöscht (Commit 5b551fb)
+    (Grep-Check ergab nur 24, nicht ~100 wie geschätzt — viele vermeintliche
+    Skeletons hatten Call-Sites die als DOCUMENT/IMPLEMENT gewertet wurden)
+  - [x] DOCUMENT-Welle: **98 Header** mit `/* PLANNED FEATURE */`-Banner markiert,
+    Index in `docs/PLANNED_APIS.md`, KNOWN_ISSUES.md §M.0 (Commit cab8be8+)
+  - [ ] IMPLEMENT-Welle: **53 Header** mit echten Call-Sites →
+    entweder bauen oder die Call-Sites entfernen (Status: offen)
 - [ ] MF-012 XCopy-Tab: `setEnabled(false)` + Tooltip, bis Backend steht
   (Stichwort: `XCOPY_INTEGRATION_TODO.md` T4A)
 - [ ] MF-007 Plugin-Test-Coverage von 11.8 % → 40 % (Ziel 32 von 80

@@ -13,6 +13,21 @@
  * @note Part of UnifiedFloppyTool preservation suite
  */
 
+/* ══════════════════════════════════════════════════════════════════════════ *
+ * UFT_SKELETON_PLANNED
+ * PLANNED FEATURE — Filesystem layer
+ *
+ * This header declares 34 public functions, of which 34 have no
+ * implementation in the source tree. Callers exist but will link-fail or
+ * silently no-op until the feature is implemented.
+ *
+ * Status: tracked in docs/KNOWN_ISSUES.md under "Planned APIs".
+ * Scope: see docs/MASTER_PLAN.md (M1/MF-011 DOCUMENT-Welle).
+ * Do NOT add new call sites to functions from this header without first
+ * implementing them or removing the prototype.
+ * ══════════════════════════════════════════════════════════════════════════ */
+
+
 #ifndef UFT_APPLE_DOS_H
 #define UFT_APPLE_DOS_H
 

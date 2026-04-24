@@ -155,6 +155,24 @@ aktiv abgearbeitet.
 
 ## Meta-Ebene
 
+### M.0 Planned APIs (MF-011 DOCUMENT-Welle)
+
+- **Status:** MARKED, nicht implementiert (2026-04-24)
+- **Beschreibung:** 98 Skeleton-Header in `include/uft/` deklarieren zusammen
+  **1 952 öffentliche `uft_*`-Funktionen ohne Implementation**. Jeder dieser
+  Header trägt jetzt einen `/* PLANNED FEATURE — <scope> */`-Banner, so dass
+  Consumer vor neuen Call-Sites gewarnt werden.
+- **Detailliste:** [`docs/PLANNED_APIS.md`](PLANNED_APIS.md) (auto-generiert
+  aus `docs/skeleton_triage.csv`)
+- **Workaround:** Bis zur Implementation linken Call-Sites entweder fehl (bei
+  tatsächlicher Nutzung) oder die Funktionen sind tot (keine Consumer).
+- **Plan:** Implementation erfolgt subsystem-weise in M2/M3 laut `MASTER_PLAN.md`.
+  Kein neuer Call darf gegen einen `PLANNED FEATURE`-Header hinzugefügt werden,
+  ohne zuerst die Implementation zu liefern oder das Prototyp zu entfernen
+  (Master-Plan Regel 1).
+
+---
+
 ### M.1 Nicht alle Prinzipien haben automatisierte Tests
 - **Status:** MITIGATED (Kern-Audit live, weitere Checks ausstehend)
 - **Beschreibung:** Meta-Prinzip A verlangt für jede Zusage einen CI-Test.

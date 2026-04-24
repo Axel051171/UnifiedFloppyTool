@@ -3,6 +3,21 @@
  * 
  */
 
+/* ══════════════════════════════════════════════════════════════════════════ *
+ * UFT_SKELETON_PLANNED
+ * PLANNED FEATURE — Root-level API
+ *
+ * This header declares 22 public functions, of which 22 have no
+ * implementation in the source tree. Callers exist but will link-fail or
+ * silently no-op until the feature is implemented.
+ *
+ * Status: tracked in docs/KNOWN_ISSUES.md under "Planned APIs".
+ * Scope: see docs/MASTER_PLAN.md (M1/MF-011 DOCUMENT-Welle).
+ * Do NOT add new call sites to functions from this header without first
+ * implementing them or removing the prototype.
+ * ══════════════════════════════════════════════════════════════════════════ */
+
+
 #ifndef UFT_UFT_SAM_H
 #define UFT_UFT_SAM_H
 
