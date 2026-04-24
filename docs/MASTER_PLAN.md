@@ -151,7 +151,12 @@ Muss:
         root-block extract, virus-DB matching, m68k-code heuristic,
         all-zeros detection. 15 Tests grün. Header + .c + tests wie in
         T2-Plan, ~180 LOC Implementation.
-  - [ ] T3 `uft_amigados_extended.c` aus Stub-Zustand heben
+  - [~] T3 `uft_amigados_extended.c` aus Stub-Zustand heben —
+        `uft_amiga_validate_ext` macht jetzt echte Validation
+        (Bootblock via T2, Root-Block + Bitmap-Block-Checksummen,
+        Unknown-DOS-Type-Flag). Stubs `_repair_bitmap` + `_salvage`
+        geben ehrliches -1 zurück (nicht faken). 7 Tests grün.
+        Offen: Directory-/File-Chain-Walk + DiskSalv-Port (T7).
   - [ ] T5 BAMCOPY-Modus im ADF-Plugin
 - [ ] **Atari-Block** (`A8RAWCONV_INTEGRATION_TODO.md`):
   - [x] TA1 `uft_write_precomp.c` (portiert aus `compensation.cpp`,
