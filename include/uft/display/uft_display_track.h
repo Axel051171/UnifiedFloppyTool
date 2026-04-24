@@ -1,6 +1,17 @@
 /**
  * @file uft_display_track.h
- * @brief Track Visualization API
+ * @brief Track Visualization API (ASCII, SVG, HTML output).
+ *
+ * Restored from UFT v3.7.0 with two rename for name-collision avoidance:
+ *   uft_sector_info_t → uft_display_sector_info_t
+ *     (collides with uft_protection.h's uft_sector_info_t)
+ *   uft_track_info_t  → uft_display_track_info_t
+ *     (collides with uft_unified_api.h's uft_track_info_t)
+ *   uft_disk_info_t   → uft_display_disk_info_t
+ *     (stays namespaced for consistency)
+ *
+ * The API is otherwise backwards-compatible with v3.7's signatures
+ * modulo these type renames.
  */
 
 #ifndef UFT_DISPLAY_TRACK_H
@@ -30,15 +41,15 @@ typedef struct {
     bool data_crc_ok;
     bool deleted;
     bool weak;
-} uft_sector_info_t;
+} uft_display_sector_info_t;
 
 typedef struct {
     int cylinder;
     int head;
     size_t track_length;
-    uft_sector_info_t sectors[64];
+    uft_display_sector_info_t sectors[64];
     int sector_count;
-} uft_track_info_t;
+} uft_display_track_info_t;
 
 typedef struct {
     const char *name;
@@ -46,16 +57,16 @@ typedef struct {
     int sides;
     int sectors_per_track;
     int *track_status;  /* Array[tracks * sides]: >0=OK, 0=missing, <0=error */
-} uft_disk_info_t;
+} uft_display_disk_info_t;
 
 /*===========================================================================
  * Functions
  *===========================================================================*/
 
-int uft_display_track_map(const uft_track_info_t *track, 
+int uft_display_track_map(const uft_display_track_info_t *track,
                           char *buffer, size_t size);
 
-int uft_display_sector_table(const uft_track_info_t *track,
+int uft_display_sector_table(const uft_display_track_info_t *track,
                              char *buffer, size_t size);
 
 int uft_display_timing_diagram(const uint32_t *flux_times, size_t count,
@@ -66,16 +77,16 @@ int uft_display_flux_histogram(const uint32_t *flux_times, size_t count,
                                double sample_clock,
                                char *buffer, size_t size);
 
-int uft_display_disk_view(const uft_disk_info_t *disk,
+int uft_display_disk_view(const uft_display_disk_info_t *disk,
                           char *buffer, size_t size);
 
-int uft_display_svg_track(const uft_track_info_t *track,
+int uft_display_svg_track(const uft_display_track_info_t *track,
                           char *buffer, size_t size);
 
-int uft_display_html_report(const uft_disk_info_t *disk,
+int uft_display_html_report(const uft_display_disk_info_t *disk,
                             char *buffer, size_t size);
 
-int uft_display_color_track(const uft_track_info_t *track,
+int uft_display_color_track(const uft_display_track_info_t *track,
                             char *buffer, size_t size, bool use_color);
 
 #ifdef __cplusplus
