@@ -1207,6 +1207,7 @@ SOURCES += \
     src/analysis/denoise/uft_denoise_bridge.c \
     src/analysis/denoise/phi_otdr_denoise_1d.c \
     src/formats/d64/uft_d64_parser_v2.c \
+    src/formats/d64/uft_d64_parser_v3.c \
     src/formats/d71/uft_d71_parser_v2.c \
     src/formats/d81/uft_d81_parser_v2.c \
     src/formats/d88/uft_d88.c \
@@ -1215,6 +1216,7 @@ SOURCES += \
     src/formats/dsk_cpc/uft_dsk_cpc_parser_v2.c \
     src/formats/fdi/uft_fdi_parser_v2.c \
     src/formats/g64/uft_g64.c \
+    src/formats/g64/uft_g64_parser_v3.c \
     src/formats/imd/uft_imd_parser_v2.c \
     src/formats/ipf/uft_caps_ipf.c \
     src/formats/ipf/uft_ipf_caps.c \
