@@ -162,6 +162,20 @@ Muss:
         safe-default (used-on-doubt). 9 Tests grün. ADF-Plugin-
         Integration (Fast-Imaging-Mode) folgt als M3-Item da sie
         HAL-Pfad berührt.
+  - [x] T6 CHECKDISK Pre-Capture-Scan: `uft_disk_quickscan` API —
+        Data-Model + Bitstream-Analyse (rolling-shift sync search +
+        CRC16/IBM-3740), Heatmap-Klassifikation GOOD/DEGRADED/
+        UNREADABLE/BLANK. 12 Tests grün. HAL-Sweep-Integration erfolgt
+        in M3 (per-Controller-spezifisch).
+  - [x] T7 DiskSalv-Konzept (Scaffold): 3 Strategien-API in
+        `uft_salvage_fs`. REPAIR_IN_PLACE → UFT_ERR_UNSUPPORTED
+        (Prinzip 1). RECOVER_BY_COPY → bit-exakte Kopie + loss.json.
+        FILE_BY_FILE → header-candidate-walk + chain-validation
+        (files_extracted bleibt 0 = honest scaffold). 7 Tests grün.
+  - [x] T8 XCopy-Panel Legacy-Cleanup: `src/gui/uft_xcopy_panel.cpp`
+        — Start-Button `setEnabled(false)` + Tooltip (analog MF-012),
+        source==destination safety-check in `startCopy()` für
+        späteren Backend-Merge, Status-Label ehrlich gemacht.
 - [ ] **Atari-Block** (`A8RAWCONV_INTEGRATION_TODO.md`):
   - [x] TA1 `uft_write_precomp.c` (portiert aus `compensation.cpp`,
         Mac-800K Peak-Shift-Compensation, 13 Tests grün)
@@ -179,20 +193,23 @@ Muss:
 Abschluss-Kriterium: XCopy-Tab wieder `setEnabled(true)`, ADF und ATX
 haben voll-populierte Feature-Matrizen (Prinzip 7 §7.2).
 
-### M3 — HAL-Stabilisierung + Release-Pipeline (4 Wochen)
+### M3 — HAL-Stabilisierung + Release-Pipeline (4-6 Wochen)
 
 **Ziel:** Die Hardware-Integrationen die heute als „stubbed" markiert
 sind auf Production-Niveau.
 
+Detail-Fahrplan: `docs/M3_HAL_PLAN.md` (M3.1 bis M3.7).
+
 Muss:
-- [ ] T4 SCP-Direct-HAL (aus `A8RAWCONV_INTEGRATION_TODO.md` TA4)
-- [ ] XUM1541 HAL real statt stubbed
-- [ ] Applesauce HAL real statt stubbed
-- [ ] CLAUDE.md Hardware-Abschnitt aktualisiert (keine „stubbed"-Einträge
-  mehr, alles entweder „production" oder „not planned")
-- [ ] Emulator-CI-Pipeline (§6.1 aus `KNOWN_ISSUES.md`) — mindestens
+- [ ] M3.1 SCP-Direct HAL (aus `A8RAWCONV_INTEGRATION_TODO.md` TA4)
+- [ ] M3.2 XUM1541 HAL real statt stubbed
+- [ ] M3.3 Applesauce HAL real statt stubbed
+- [ ] M3.4 UFI/Cowork-Backend (eigenes STM32H723-Firmware-Repo)
+- [ ] M3.5 Emulator-CI-Pipeline (§6.1 aus `KNOWN_ISSUES.md`) — mindestens
   WinUAE für ADF, VICE für D64
-- [ ] Tag v4.3.0 nach M3
+- [ ] M3.6 CLAUDE.md HAL-Status aktualisiert (keine „stubbed"-Einträge
+  mehr)
+- [ ] M3.7 Tag v4.3.0 nach M3
 
 ---
 

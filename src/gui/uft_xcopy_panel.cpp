@@ -15,6 +15,32 @@ UftXCopyPanel::UftXCopyPanel(QWidget *parent)
     : QWidget(parent)
 {
     setupUi();
+
+    /*
+     * T8 / MF-012 phantom-feature guard per MASTER_PLAN.md Regel 2.
+     *
+     * The start button's click signal (copyStarted) is currently not
+     * wired to any actual XCopy backend — clicking produces a label
+     * change only. To avoid misleading users, disable the Start button
+     * with an explanatory tooltip until the Amiga-XCopy backend lands
+     * (XCOPY_INTEGRATION_TODO T1..T5 in M2, panel integration in M3).
+     *
+     * Browse / configure / select stays active so the planned UI
+     * shape remains explorable.
+     */
+    if (m_startButton) {
+        m_startButton->setEnabled(false);
+        m_startButton->setToolTip(
+            tr("Amiga XCopy backend is planned for v4.2.0.\n"
+               "Current build emits copyStarted() but has no wired\n"
+               "backend consumer — clicking Start would be a no-op.\n"
+               "\n"
+               "See docs/XCOPY_INTEGRATION_TODO.md T1..T5 for scope,\n"
+               "docs/MASTER_PLAN.md for the roadmap."));
+    }
+    if (m_statusLabel) {
+        m_statusLabel->setText(tr("Backend planned — see tooltip on Start"));
+    }
 }
 
 void UftXCopyPanel::setupUi()
@@ -261,6 +287,29 @@ void UftXCopyPanel::createProgressGroup()
 
 void UftXCopyPanel::startCopy()
 {
+    /*
+     * Safety check — prevents source == destination from silently
+     * wiping the source drive when the backend lands (Prinzip 1).
+     * Compares both drive indices and file paths. Disabled state
+     * should gate this path today, but keep the check in place so
+     * future wiring can't bypass it.
+     */
+    bool same_drive = (m_sourceIsDrive && m_destIsDrive &&
+                        m_sourceDrive && m_destDrive &&
+                        m_sourceDrive->currentIndex() ==
+                            m_destDrive->currentIndex() &&
+                        m_sourceIsDrive->isChecked() &&
+                        m_destIsDrive->isChecked());
+    bool same_file  = (m_sourcePath && m_destPath &&
+                        !m_sourcePath->text().isEmpty() &&
+                        m_sourcePath->text() == m_destPath->text());
+    if (same_drive || same_file) {
+        if (m_statusLabel) {
+            m_statusLabel->setText(tr("ERROR: source == destination — aborted"));
+        }
+        return;
+    }
+
     m_startButton->setEnabled(false);
     m_stopButton->setEnabled(true);
     m_statusLabel->setText("Copying...");
