@@ -103,14 +103,17 @@ Abarbeiten:
 **Ziel:** Kein Phantom-Feature mehr. Was UFT anbietet, tut UFT auch.
 
 Muss:
-- [~] MF-011 Skeleton-Header bereinigen
+- [x] MF-011 Skeleton-Header bereinigen (Triage abgeschlossen)
   - [x] DELETE-Welle: **24 Header** ohne Konsumenten gelöscht (Commit 5b551fb)
     (Grep-Check ergab nur 24, nicht ~100 wie geschätzt — viele vermeintliche
     Skeletons hatten Call-Sites die als DOCUMENT/IMPLEMENT gewertet wurden)
   - [x] DOCUMENT-Welle: **98 Header** mit `/* PLANNED FEATURE */`-Banner markiert,
-    Index in `docs/PLANNED_APIS.md`, KNOWN_ISSUES.md §M.0 (Commit cab8be8+)
-  - [ ] IMPLEMENT-Welle: **53 Header** mit echten Call-Sites →
-    entweder bauen oder die Call-Sites entfernen (Status: offen)
+    Index in `docs/PLANNED_APIS.md`, KNOWN_ISSUES.md §M.0 (Commit d9aa7a7)
+  - [x] IMPLEMENT-Welle: **53 Header** mit `/* PARTIALLY IMPLEMENTED */`-Banner
+    markiert (some impls, some stubs, live hazard). Per-Funktion-Triage in M2/M3.
+  - **Ergebnis M1:** 175 Skeleton-Header → 24 gelöscht + 151 markiert. Jedes
+    verbliebene Skeleton trägt jetzt einen sichtbaren Banner. Master-Plan Regel 1
+    (keine neuen Skelette) ist durchsetzbar weil Altbestand dokumentiert ist.
 - [ ] MF-012 XCopy-Tab: `setEnabled(false)` + Tooltip, bis Backend steht
   (Stichwort: `XCOPY_INTEGRATION_TODO.md` T4A)
 - [ ] MF-007 Plugin-Test-Coverage von 11.8 % → 40 % (Ziel 32 von 80

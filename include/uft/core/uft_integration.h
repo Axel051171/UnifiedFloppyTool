@@ -10,6 +10,22 @@
  * - Data transfer APIs
  */
 
+/* ══════════════════════════════════════════════════════════════════════════ *
+ * UFT_SKELETON_PARTIAL
+ * PARTIALLY IMPLEMENTED — Core infrastructure
+ *
+ * This header declares 23 public functions; 22 are NOT implemented
+ * in the source tree (only 1 have a definition). Callers exist
+ * for some of the unimplemented prototypes, so this file is a live hazard:
+ * compile passes but link may fail depending on call pattern.
+ *
+ * Status: tracked in docs/KNOWN_ISSUES.md under "Planned APIs".
+ * Scope: see docs/MASTER_PLAN.md (M1/MF-011 IMPLEMENT-Welle).
+ * Decision per function: IMPLEMENT (finish it), or DELETE prototype + all
+ * call sites. Do NOT add new call sites until each prototype is resolved.
+ * ══════════════════════════════════════════════════════════════════════════ */
+
+
 #ifndef UFT_INTEGRATION_H
 #define UFT_INTEGRATION_H
 

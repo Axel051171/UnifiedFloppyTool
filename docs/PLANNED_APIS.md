@@ -1,22 +1,22 @@
-# Planned APIs (MF-011 DOCUMENT-Welle)
+# Planned APIs (MF-011 DOCUMENT+IMPLEMENT-Wellen)
 
-**Stand:** auto-generated, 98 headers · 1952 unimplemented declarations
+**Stand:** auto-generated, 151 headers · 2939 unimplemented declarations
 
-Every header listed below declares public `uft_*` functions that are promised by the API surface but have no implementation in `src/`. Each file now carries a `/* PLANNED FEATURE */` banner so consumers are aware before adding new call sites. Implementation belongs to M2/M3 depending on subsystem.
+Every header listed below declares public `uft_*` functions that are promised by the API surface but have no implementation in `src/`. DOCUMENT-bucket files have a `/* PLANNED FEATURE */` banner (zero impls); IMPLEMENT-bucket files have a `/* PARTIALLY IMPLEMENTED */` banner (some impls, some stubs). Consumers are warned before adding new call sites. Implementation belongs to M2/M3 depending on subsystem.
 
-## Batch processing
+## DOCUMENT/Batch processing
 
 | decls | missing | consumers | header |
 |------:|--------:|----------:|--------|
 | 30 | 30 | 2 | `include/uft/batch/uft_batch.h` |
 
-## CRC engines
+## DOCUMENT/CRC engines
 
 | decls | missing | consumers | header |
 |------:|--------:|----------:|--------|
 | 10 | 10 | 1 | `include/uft/crc/uft_crc_extended.h` |
 
-## Core infrastructure
+## DOCUMENT/Core infrastructure
 
 | decls | missing | consumers | header |
 |------:|--------:|----------:|--------|
@@ -27,7 +27,7 @@ Every header listed below declares public `uft_*` functions that are promised by
 | 14 | 14 | 1 | `include/uft/core/uft_limits.h` |
 | 11 | 11 | 7 | `include/uft/core/uft_encoding.h` |
 
-## Decoder pipeline
+## DOCUMENT/Decoder pipeline
 
 | decls | missing | consumers | header |
 |------:|--------:|----------:|--------|
@@ -35,7 +35,7 @@ Every header listed below declares public `uft_*` functions that are promised by
 | 14 | 14 | 1 | `include/uft/decoder/uft_gcr.h` |
 | 10 | 10 | 7 | `include/uft/decoder/uft_pll.h` |
 
-## Filesystem layer
+## DOCUMENT/Filesystem layer
 
 | decls | missing | consumers | header |
 |------:|--------:|----------:|--------|
@@ -48,7 +48,7 @@ Every header listed below declares public `uft_*` functions that are promised by
 | 18 | 18 | 3 | `include/uft/fs/uft_fat_atari.h` |
 | 12 | 12 | 4 | `include/uft/fs/uft_fat_boot.h` |
 
-## Flux analysis
+## DOCUMENT/Flux analysis
 
 | decls | missing | consumers | header |
 |------:|--------:|----------:|--------|
@@ -58,7 +58,7 @@ Every header listed below declares public `uft_*` functions that are promised by
 | 12 | 12 | 1 | `include/uft/flux/uft_sector_overlay.h` |
 | 10 | 10 | 1 | `include/uft/flux/uft_flux_instability.h` |
 
-## Format plugins
+## DOCUMENT/Format plugins
 
 | decls | missing | consumers | header |
 |------:|--------:|----------:|--------|
@@ -67,7 +67,7 @@ Every header listed below declares public `uft_*` functions that are promised by
 | 13 | 13 | 2 | `include/uft/formats/uft_dfi.h` |
 | 10 | 10 | 1 | `include/uft/formats/uft_x68k.h` |
 
-## HAL internals
+## DOCUMENT/HAL internals
 
 | decls | missing | consumers | header |
 |------:|--------:|----------:|--------|
@@ -78,7 +78,7 @@ Every header listed below declares public `uft_*` functions that are promised by
 | 17 | 17 | 1 | `include/uft/hal/internal/uft_ieee488.h` |
 | 17 | 17 | 1 | `include/uft/hal/internal/uft_xa1541.h` |
 
-## Hardware abstraction
+## DOCUMENT/Hardware abstraction
 
 | decls | missing | consumers | header |
 |------:|--------:|----------:|--------|
@@ -87,32 +87,32 @@ Every header listed below declares public `uft_*` functions that are promised by
 | 20 | 20 | 1 | `include/uft/hal/uft_fc5025.h` |
 | 20 | 20 | 1 | `include/uft/hal/uft_latency_tracking.h` |
 
-## Label OCR
+## DOCUMENT/Label OCR
 
 | decls | missing | consumers | header |
 |------:|--------:|----------:|--------|
 | 27 | 27 | 1 | `include/uft/ocr/uft_ocr.h` |
 
-## Machine-learning decode
+## DOCUMENT/Machine-learning decode
 
 | decls | missing | consumers | header |
 |------:|--------:|----------:|--------|
 | 34 | 34 | 2 | `include/uft/ml/uft_ml_training_gen.h` |
 | 22 | 22 | 7 | `include/uft/ml/uft_ml_decoder.h` |
 
-## Parameter registry
+## DOCUMENT/Parameter registry
 
 | decls | missing | consumers | header |
 |------:|--------:|----------:|--------|
 | 24 | 24 | 4 | `include/uft/params/uft_canonical_params.h` |
 
-## Recovery pipeline
+## DOCUMENT/Recovery pipeline
 
 | decls | missing | consumers | header |
 |------:|--------:|----------:|--------|
 | 16 | 16 | 7 | `include/uft/recovery/uft_recovery.h` |
 
-## Root-level API
+## DOCUMENT/Root-level API
 
 | decls | missing | consumers | header |
 |------:|--------:|----------:|--------|
@@ -171,4 +171,97 @@ Every header listed below declares public `uft_*` functions that are promised by
 | 10 | 10 | 3 | `include/uft/uft_format_verify.h` |
 | 10 | 10 | 1 | `include/uft/uft_xdf.h` |
 | 10 | 10 | 2 | `include/uft/generate/uft_track_generator.h` |
+
+## IMPLEMENT/Core infrastructure
+
+| decls | missing | consumers | header |
+|------:|--------:|----------:|--------|
+| 23 | 22 | 6 | `include/uft/core/uft_integration.h` |
+| 19 | 18 | 10 | `include/uft/core/uft_sector.h` |
+| 22 | 18 | 1 | `include/uft/core/uft_logging_v2.h` |
+| 17 | 15 | 7 | `include/uft/core/uft_disk.h` |
+| 16 | 14 | 6 | `include/uft/core/uft_format_registry.h` |
+| 12 | 11 | 1 | `include/uft/core/uft_crc_v2.h` |
+
+## IMPLEMENT/Decoder pipeline
+
+| decls | missing | consumers | header |
+|------:|--------:|----------:|--------|
+| 21 | 18 | 1 | `include/uft/decoder/uft_format_hints.h` |
+| 16 | 15 | 1 | `include/uft/decoder/uft_cell_analyzer.h` |
+| 15 | 13 | 1 | `include/uft/decoder/uft_sector_confidence.h` |
+| 12 | 10 | 1 | `include/uft/decoder/uft_unified_decoder.h` |
+| 11 | 9 | 2 | `include/uft/decoder/uft_fusion.h` |
+
+## IMPLEMENT/Filesystem layer
+
+| decls | missing | consumers | header |
+|------:|--------:|----------:|--------|
+| 54 | 53 | 3 | `include/uft/fs/uft_cbm_fs.h` |
+| 51 | 50 | 1 | `include/uft/fs/uft_cpm_fs.h` |
+| 42 | 38 | 5 | `include/uft/fs/uft_atari_dos.h` |
+| 22 | 20 | 1 | `include/uft/fs/uft_bbc_fs.h` |
+| 20 | 17 | 3 | `include/uft/fs/uft_fat32.h` |
+
+## IMPLEMENT/Flux analysis
+
+| decls | missing | consumers | header |
+|------:|--------:|----------:|--------|
+| 16 | 15 | 2 | `include/uft/flux/uft_flux_pll_v20.h` |
+| 16 | 15 | 1 | `include/uft/flux/uft_woz_parser.h` |
+| 15 | 14 | 3 | `include/uft/flux/uft_pll_pi.h` |
+| 15 | 14 | 3 | `include/uft/flux/pll/uft_pll_pi.h` |
+| 11 | 10 | 1 | `include/uft/flux/uft_libflux_pll_enhanced.h` |
+| 11 | 10 | 3 | `include/uft/flux/uft_pll_params.h` |
+| 10 | 9 | 3 | `include/uft/flux/uft_mfm_flux.h` |
+
+## IMPLEMENT/Format plugins
+
+| decls | missing | consumers | header |
+|------:|--------:|----------:|--------|
+| 21 | 19 | 2 | `include/uft/formats/ipf/uft_ipf.h` |
+| 23 | 19 | 18 | `include/uft/formats/uft_fat12.h` |
+| 19 | 18 | 3 | `include/uft/formats/uft_86f.h` |
+| 16 | 15 | 3 | `include/uft/formats/uft_dmk.h` |
+| 15 | 12 | 1 | `include/uft/formats/uft_jv3.h` |
+| 12 | 11 | 3 | `include/uft/formats/uft_woz.h` |
+
+## IMPLEMENT/Hardware abstraction
+
+| decls | missing | consumers | header |
+|------:|--------:|----------:|--------|
+| 33 | 28 | 3 | `include/uft/hal/uft_supercard.h` |
+| 23 | 19 | 3 | `include/uft/hal/uft_hal_v3.h` |
+
+## IMPLEMENT/RIDE integration
+
+| decls | missing | consumers | header |
+|------:|--------:|----------:|--------|
+| 62 | 57 | 15 | `include/uft/ride/uft_flux_decoder.h` |
+| 24 | 23 | 1 | `include/uft/ride/uft_dos_recognition.h` |
+
+## IMPLEMENT/Root-level API
+
+| decls | missing | consumers | header |
+|------:|--------:|----------:|--------|
+| 43 | 36 | 15 | `include/uft/uft_hardware.h` |
+| 32 | 29 | 1 | `include/uft/uft_public_api.h` |
+| 32 | 27 | 40 | `include/uft/uft_platform.h` |
+| 24 | 22 | 2 | `include/uft/uft_crc_polys.h` |
+| 20 | 19 | 1 | `include/uft/ir/uft_ir_serialize.h` |
+| 21 | 18 | 3 | `include/uft/c64/uft_cbm_disk.h` |
+| 22 | 18 | 6 | `include/uft/uft_integration.h` |
+| 18 | 17 | 1 | `include/uft/uft_parallel.h` |
+| 18 | 17 | 1 | `include/uft/uft_protection_pipeline.h` |
+| 17 | 16 | 4 | `include/uft/uft_write_verify.h` |
+| 16 | 15 | 3 | `include/uft/uft_dmk.h` |
+| 15 | 14 | 3 | `include/uft/uft_applesauce.h` |
+| 14 | 13 | 3 | `include/uft/uft_operation_result.h` |
+| 15 | 13 | 9 | `include/uft/uft_decoder_plugin.h` |
+| 16 | 13 | 11 | `include/uft/uft_format_detect.h` |
+| 13 | 12 | 20 | `include/uft/uft_simd.h` |
+| 14 | 12 | 1 | `include/uft/floppy/uft_floppy_v2.h` |
+| 11 | 10 | 3 | `include/uft/uft_adaptive_decoder.h` |
+| 11 | 9 | 1 | `include/uft/uft_io_abstraction.h` |
+| 10 | 8 | 1 | `include/uft/uft_operations.h` |
 
