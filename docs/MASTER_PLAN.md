@@ -146,7 +146,11 @@ Muss:
         `include/uft/uft_amiga_virus_db.h` API, 8 Tests grün.
         Alle Signatures PENDING — Schema + Infrastruktur fertig, echte
         Byte-Pattern brauchen xvs.library-Binary-Extraktion in Folge-Commit.)
-  - [ ] T2 `uft_bootblock_scanner.c` Implementation (depends on T1 ✓)
+  - [x] T2 `uft_bootblock_scanner.c` Implementation — DOS-type check
+        (OFS/FFS/Intl/DirCache), Amiga checksum (compute+validate),
+        root-block extract, virus-DB matching, m68k-code heuristic,
+        all-zeros detection. 15 Tests grün. Header + .c + tests wie in
+        T2-Plan, ~180 LOC Implementation.
   - [ ] T3 `uft_amigados_extended.c` aus Stub-Zustand heben
   - [ ] T5 BAMCOPY-Modus im ADF-Plugin
 - [ ] **Atari-Block** (`A8RAWCONV_INTEGRATION_TODO.md`):
