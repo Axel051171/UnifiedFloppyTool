@@ -201,7 +201,11 @@ sind auf Production-Niveau.
 Detail-Fahrplan: `docs/M3_HAL_PLAN.md` (M3.1 bis M3.7).
 
 Muss:
-- [ ] M3.1 SCP-Direct HAL (aus `A8RAWCONV_INTEGRATION_TODO.md` TA4)
+- [~] M3.1 SCP-Direct HAL Scaffold: API (`uft_scp_direct.h`),
+      honest NOT_IMPLEMENTED-Stubs, Hardware-Capabilities (can_read_flux,
+      can_write_flux, 40ns sample rate, 167 track slots, 5 revs),
+      Input-Validation aktiv, USB-VID/PID-Konstanten korrekt. 10 Tests
+      grün. libusb-Integration folgt in Folge-Commit.
 - [ ] M3.2 XUM1541 HAL real statt stubbed
 - [ ] M3.3 Applesauce HAL real statt stubbed
 - [ ] M3.4 UFI/Cowork-Backend (eigenes STM32H723-Firmware-Repo)
