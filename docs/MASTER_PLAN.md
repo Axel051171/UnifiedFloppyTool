@@ -157,7 +157,11 @@ Muss:
         Unknown-DOS-Type-Flag). Stubs `_repair_bitmap` + `_salvage`
         geben ehrliches -1 zurück (nicht faken). 7 Tests grün.
         Offen: Directory-/File-Chain-Walk + DiskSalv-Port (T7).
-  - [ ] T5 BAMCOPY-Modus im ADF-Plugin
+  - [x] T5 BAMCOPY-Modus: `uft_adf_bam` API für BAM-aware Reads.
+        Standalone Reader (root→bitmap-pages→per-block-bit) mit
+        safe-default (used-on-doubt). 9 Tests grün. ADF-Plugin-
+        Integration (Fast-Imaging-Mode) folgt als M3-Item da sie
+        HAL-Pfad berührt.
 - [ ] **Atari-Block** (`A8RAWCONV_INTEGRATION_TODO.md`):
   - [x] TA1 `uft_write_precomp.c` (portiert aus `compensation.cpp`,
         Mac-800K Peak-Shift-Compensation, 13 Tests grün)

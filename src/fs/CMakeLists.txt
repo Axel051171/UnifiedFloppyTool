@@ -2,6 +2,7 @@
 set(FS_SOURCES
     fat_bpb.c
     uft_fat_detect.c
+    uft_adf_bam.c               # M2 T5: BAM reader for BAMCOPY-style fast imaging
     uft_amiga_virus_db.c        # M2 T1: generated from amiga_bootblock_viruses.tsv
     uft_bootblock_scanner.c     # M2 T2: Amiga bootblock DOS-type + checksum + virus scan
     uft_amigados.c

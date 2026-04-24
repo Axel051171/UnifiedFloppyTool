@@ -725,6 +725,7 @@ SOURCES += \
     src/core/uft_detect_format_impl.c \
     src/core/uft_detect_buffer_impl.c \
     src/core/uft_probe_format_impl.c \
+    src/fs/uft_adf_bam.c \
     src/fs/uft_amigados.c \
     src/fs/uft_amiga_virus_db.c \
     src/fs/uft_bootblock_scanner.c \
@@ -938,6 +939,7 @@ HEADERS += include/uft/uft_advanced_mode.h \
     include/uft/analysis/phi_otdr_denoise_1d.h
 HEADERS += include/uft/core/uft_interleave.h \
            include/uft/core/uft_write_precomp.h \
+           include/uft/fs/uft_adf_bam.h \
            include/uft/fs/uft_bootblock_scanner.h \
            include/uft/uft_amiga_virus_db.h \
            include/uft/uft_v3_bridge.h \
