@@ -120,9 +120,13 @@ Muss:
   Bootblock-Analyse, BAMCOPY). Browse/Configure bleiben aktiv, so dass die
   geplante UI-Form sichtbar ist. Start-Button bleibt disabled bis M2 den
   echten XCopy-Backend liefert (`XCOPY_INTEGRATION_TODO.md` T1..T5).
-- [ ] MF-007 Plugin-Test-Coverage von 11.8 % → 40 % (Ziel 32 von 80
-  Plugins). Nur Top-Tier-Formate: alle Commodore, alle Apple, alle
-  Atari, alle IBM-PC.
+- [~] MF-007 Plugin-Test-Coverage (in Arbeit: 18 / 80 = 22.5 %)
+  - Start: 10 Plugin-Tests (12.5 %). Ziel: 32 (40 %).
+  - Neu diese Session (+8): CRT, T64, DC42, D64, MOOF, A2R, ADF, P00.
+    Alle 49 neuen Probe-Assertions grün unter `-Wall -Wextra -Werror`.
+  - Noch offen: 14 weitere Tests (~1500 LOC). Priorität Commodore (D71,
+    D81), Apple (WOZ-v2, 2IMG-extended), Atari (ATX, MSA), IBM-PC (IMG,
+    IMA, DMK-heuristics). Per Session ~4-8 Tests realistisch.
 - [ ] Tag v4.1.4 mit allen P0/P1-Fixes aus dieser Session
 
 Abschluss-Kriterium: `audit_skeleton_headers.py` zeigt <50 Skelette
