@@ -114,8 +114,12 @@ Muss:
   - **Ergebnis M1:** 175 Skeleton-Header → 24 gelöscht + 151 markiert. Jedes
     verbliebene Skeleton trägt jetzt einen sichtbaren Banner. Master-Plan Regel 1
     (keine neuen Skelette) ist durchsetzbar weil Altbestand dokumentiert ist.
-- [ ] MF-012 XCopy-Tab: `setEnabled(false)` + Tooltip, bis Backend steht
-  (Stichwort: `XCOPY_INTEGRATION_TODO.md` T4A)
+- [x] MF-012 XCopy-Tab: `btnStartCopy->setEnabled(false)` + Tooltip.
+  Die aktuelle `CopyWorker`-Backend-Implementierung macht nur generisches
+  Byte-Copy mit MD5-Verify, keine Amiga-spezifischen Features (Virus-Scan,
+  Bootblock-Analyse, BAMCOPY). Browse/Configure bleiben aktiv, so dass die
+  geplante UI-Form sichtbar ist. Start-Button bleibt disabled bis M2 den
+  echten XCopy-Backend liefert (`XCOPY_INTEGRATION_TODO.md` T1..T5).
 - [ ] MF-007 Plugin-Test-Coverage von 11.8 % → 40 % (Ziel 32 von 80
   Plugins). Nur Top-Tier-Formate: alle Commodore, alle Apple, alle
   Atari, alle IBM-PC.

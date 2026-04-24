@@ -137,6 +137,30 @@ XCopyTab::XCopyTab(QWidget *parent)
     setupConnections();
     setupDependencies();
     updateUIState(false);
+
+    /*
+     * MF-012: Phantom-feature guard per MASTER_PLAN.md Regel 2.
+     *
+     * This tab is labelled "XCopy" (Amiga) but the current CopyWorker
+     * does a generic byte-copy with MD5 verification only — no
+     * virus-scanner, no bootblock analysis, no BAMCOPY mode, no
+     * AmigaDOS-aware sector copy. Real XCopy backend is planned
+     * for v4.2.0 (see docs/XCOPY_INTEGRATION_TODO.md T1..T5).
+     *
+     * Until the backend lands, disable the Start button and show a
+     * clear tooltip so users are not misled into expecting Amiga
+     * XCopy functionality. Browse + configure stays active so the
+     * planned UI shape is visible.
+     */
+    if (ui->btnStartCopy) {
+        ui->btnStartCopy->setEnabled(false);
+        ui->btnStartCopy->setToolTip(
+            tr("Amiga XCopy backend planned for v4.2.0.\n"
+               "Current engine is generic file-copy only — not\n"
+               "compatible with Amiga-specific disk protection,\n"
+               "virus-scan, or BAMCOPY features.\n"
+               "See docs/XCOPY_INTEGRATION_TODO.md"));
+    }
 }
 
 XCopyTab::~XCopyTab()
