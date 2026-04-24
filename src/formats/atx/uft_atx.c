@@ -5,14 +5,21 @@
  * ATX stores Atari 8-bit disk data with FDC status, timing, and weak
  * bit information — critical for copy protection preservation.
  *
- * Header: "AT8X" (0x41543858 LE), version, track count, chunk table.
+ * Header: "AT8X" magic (4 bytes), version, track count, chunk table.
  * Each track: sector list chunk + data chunk + optional weak bits.
  *
  * Reference: VAPI (Vinculatum Atari Preservation Initiative) specification
  */
 #include "uft/uft_format_common.h"
 
-#define ATX_SIGNATURE   0x41543858u  /* "AT8X" LE */
+/*
+ * ATX signature as read by uft_read_le32 on the bytes 'A','T','8','X'
+ * (0x41, 0x54, 0x38, 0x58 in file order). A little-endian read yields
+ * 0x58385441, NOT 0x41543858 (which is the big-endian interpretation).
+ * Prior to MF-007 test authoring the constant was 0x41543858 and probe
+ * never matched a real ATX file — see KNOWN_ISSUES.md §M.-1.
+ */
+#define ATX_SIGNATURE   0x58385441u  /* "AT8X" as LE32 */
 #define ATX_HEADER_SIZE 48
 #define ATX_MAX_TRACKS  42
 #define ATX_MAX_SECTORS 26

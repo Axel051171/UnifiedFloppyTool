@@ -155,21 +155,21 @@ aktiv abgearbeitet.
 
 ## Meta-Ebene
 
-### M.-1 ATX-Probe Byte-Order-Bug (entdeckt 2026-04-24)
+### M.-1 ATX-Probe Byte-Order-Bug (entdeckt + behoben 2026-04-24)
 
-- **Status:** OPEN, benötigt One-Line-Fix
+- **Status:** CLOSED (Fix + Test-Aktivierung in derselben Session)
 - **Datei:** `src/formats/atx/uft_atx.c`
-- **Problem:** `ATX_SIGNATURE` ist als `0x41543858u` definiert mit Kommentar
+- **Ursprung:** `ATX_SIGNATURE` war als `0x41543858u` definiert mit Kommentar
   `"AT8X" LE`, aber das ist die **Big-Endian**-Darstellung. Der Probe nutzt
   `uft_read_le32(data)` auf einem Puffer mit Bytes 'A','T','8','X'
   (0x41, 0x54, 0x38, 0x58), was 0x58385441 ergibt — nicht 0x41543858.
-  Folge: `atx_plugin_probe` akzeptiert **nie** eine echte ATX-Datei.
-- **Fix:** `#define ATX_SIGNATURE   0x58385441u` (LE-korrekt).
-- **Beweis:** Der geplante Plugin-Test `test_atx_plugin.c` entdeckte die
-  Inkonsistenz beim Vergleich von Probe-Replikation mit echten ATX-Bytes.
-  Test wurde daher verschoben bis der Source-Bug behoben ist; siehe
-  session-commit-message der M1-Phase.
-- **Plan:** Fix im nächsten Bugfix-Commit; dann Test aktivieren.
+  Folge: `atx_plugin_probe` akzeptierte **nie** eine echte ATX-Datei.
+- **Fix:** `#define ATX_SIGNATURE   0x58385441u` (LE-korrekt) + Kommentar
+  der die Endianness dokumentiert.
+- **Regression-Schutz:** `tests/test_atx_plugin.c` mit 8 Assertions,
+  darunter `probe_signature_constant_matches_le32_read` und
+  `probe_old_buggy_constant_no_longer_matches`.
+- **Entdeckung:** MF-007 Plugin-Test-Authoring.
 
 ---
 
