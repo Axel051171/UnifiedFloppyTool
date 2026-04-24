@@ -145,9 +145,10 @@ Muss:
   - T3 `uft_amigados_extended.c` aus Stub-Zustand heben
   - T5 BAMCOPY-Modus im ADF-Plugin
 - [ ] **Atari-Block** (`A8RAWCONV_INTEGRATION_TODO.md`):
-  - TA1 `uft_write_precomp.c` (portiert aus `compensation.cpp`)
-  - TA2 `uft_interleave.c` (Sektor-Interleave-Calculator)
-  - TA3 ATX-Plugin auf 400 LOC (weak sectors, extra sectors)
+  - [x] TA1 `uft_write_precomp.c` (portiert aus `compensation.cpp`,
+        Mac-800K Peak-Shift-Compensation, 13 Tests grün)
+  - [x] TA2 `uft_interleave.c` (Sektor-Interleave-Calculator, 11 Tests grün)
+  - [ ] TA3 ATX-Plugin auf 400 LOC (weak sectors, extra sectors)
 - [ ] Tag v4.2.0 nach M2-Abschluss
 
 Abschluss-Kriterium: XCopy-Tab wieder `setEnabled(true)`, ADF und ATX

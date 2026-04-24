@@ -1,7 +1,7 @@
 # ============================================================================
 # UFT Core Module
 # ============================================================================
-# Contains the 9 real core .c files. All must exist — if one is missing,
+# Contains the 10 real core .c files. All must exist — if one is missing,
 # the build fails fast (no more "/* stub */" fallback library).
 # ============================================================================
 
@@ -17,6 +17,7 @@ set(CORE_SOURCES
     uft_ir_format.c
     uft_smart_open.c
     uft_unified_types.c
+    uft_write_precomp.c        # TA1 M2: Mac-800K peak-shift compensation
 )
 
 # Enforce: every source listed must actually exist (no dead whitelist)

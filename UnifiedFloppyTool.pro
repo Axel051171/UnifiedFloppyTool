@@ -935,6 +935,7 @@ HEADERS += include/uft/uft_advanced_mode.h \
     include/uft/analysis/uft_denoise_bridge.h \
     include/uft/analysis/phi_otdr_denoise_1d.h
 HEADERS += include/uft/core/uft_interleave.h \
+           include/uft/core/uft_write_precomp.h \
            include/uft/uft_v3_bridge.h \
     include/uft/analysis/uft_export_bridge.h \
     include/uft/analysis/otdr_event_core_v12.h \
@@ -1410,7 +1411,8 @@ SOURCES += \
     src/hal/uft_kryoflux_dtc.c \
     src/hal/uft_drive.c \
     src/core/uft_ir_format.c \
-    src/core/uft_interleave.c
+    src/core/uft_interleave.c \
+    src/core/uft_write_precomp.c
 
 # Note: uft_hal.c and uft_hal_v3.c removed to avoid multiple definition errors
 # uft_hal_unified.c provides the complete unified implementation
