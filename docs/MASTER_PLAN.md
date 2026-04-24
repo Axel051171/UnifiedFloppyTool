@@ -120,13 +120,14 @@ Muss:
   Bootblock-Analyse, BAMCOPY). Browse/Configure bleiben aktiv, so dass die
   geplante UI-Form sichtbar ist. Start-Button bleibt disabled bis M2 den
   echten XCopy-Backend liefert (`XCOPY_INTEGRATION_TODO.md` T1..T5).
-- [~] MF-007 Plugin-Test-Coverage (in Arbeit: 18 / 80 = 22.5 %)
-  - Start: 10 Plugin-Tests (12.5 %). Ziel: 32 (40 %).
-  - Neu diese Session (+8): CRT, T64, DC42, D64, MOOF, A2R, ADF, P00.
-    Alle 49 neuen Probe-Assertions grün unter `-Wall -Wextra -Werror`.
-  - Noch offen: 14 weitere Tests (~1500 LOC). Priorität Commodore (D71,
-    D81), Apple (WOZ-v2, 2IMG-extended), Atari (ATX, MSA), IBM-PC (IMG,
-    IMA, DMK-heuristics). Per Session ~4-8 Tests realistisch.
+- [x] MF-007 Plugin-Test-Coverage 40% TARGET ERREICHT (32 / 80 = 40 %)
+  - Start: 10 Plugin-Tests (12.5 %).
+  - Neu diese Session (+22 Tests): CRT, T64, DC42, D64, MOOF, A2R, ADF,
+    P00, D71, D81, WOZ, IMG, MSA, DSK, NIB, EDSK, SCP, FDI, XFD, DO, PO,
+    JV1. Alle 159 neuen Probe-Assertions grün unter `-Wall -Wextra -Werror`.
+  - Beifund: ATX-Probe-Bug entdeckt (Byte-Order-Mismatch in
+    `ATX_SIGNATURE`). Dokumentiert in KNOWN_ISSUES.md §M.-1, Test
+    verschoben bis Fix. Ein 23. Test wartet auf diesen Bugfix.
 - [ ] Tag v4.1.4 mit allen P0/P1-Fixes aus dieser Session
 
 Abschluss-Kriterium: `audit_skeleton_headers.py` zeigt <50 Skelette

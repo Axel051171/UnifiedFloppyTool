@@ -155,6 +155,24 @@ aktiv abgearbeitet.
 
 ## Meta-Ebene
 
+### M.-1 ATX-Probe Byte-Order-Bug (entdeckt 2026-04-24)
+
+- **Status:** OPEN, benötigt One-Line-Fix
+- **Datei:** `src/formats/atx/uft_atx.c`
+- **Problem:** `ATX_SIGNATURE` ist als `0x41543858u` definiert mit Kommentar
+  `"AT8X" LE`, aber das ist die **Big-Endian**-Darstellung. Der Probe nutzt
+  `uft_read_le32(data)` auf einem Puffer mit Bytes 'A','T','8','X'
+  (0x41, 0x54, 0x38, 0x58), was 0x58385441 ergibt — nicht 0x41543858.
+  Folge: `atx_plugin_probe` akzeptiert **nie** eine echte ATX-Datei.
+- **Fix:** `#define ATX_SIGNATURE   0x58385441u` (LE-korrekt).
+- **Beweis:** Der geplante Plugin-Test `test_atx_plugin.c` entdeckte die
+  Inkonsistenz beim Vergleich von Probe-Replikation mit echten ATX-Bytes.
+  Test wurde daher verschoben bis der Source-Bug behoben ist; siehe
+  session-commit-message der M1-Phase.
+- **Plan:** Fix im nächsten Bugfix-Commit; dann Test aktivieren.
+
+---
+
 ### M.0 Planned APIs (MF-011 DOCUMENT-Welle)
 
 - **Status:** MARKED, nicht implementiert (2026-04-24)
