@@ -12,9 +12,9 @@ ein Prinzip verletzt würde. Bekannte Lücken: [`docs/KNOWN_ISSUES.md`](../docs/
 
 ---
 
-## Agenten-Übersicht (12 Agenten)
+## Agenten-Übersicht (13 Agenten)
 
-29 Agenten wurden reduziert auf 12 aktiv genutzte. Die entfernten Agenten
+29 Agenten wurden reduziert auf 13 aktiv genutzte. Die entfernten Agenten
 waren in 3 Monaten nicht aufgerufen oder von den neueren Must-Fix-Prävention-
 Agenten abgedeckt (siehe git-history für Details). Wenn ein seltener Einzelfall
 doch einen Spezialisten braucht, aus git zurückholen.
@@ -30,6 +30,7 @@ Flaggschiffe).
 | `abi-bomb-detector` | Opus 4.7 | Public-API-Layouts auf ABI-Bruch ohne Compiler-Warnung prüfen |
 | `single-source-enforcer` | Opus 4.7 | Single-Source-of-Truth pro Fakt durchsetzen |
 | `algorithm-hotpath-optimizer` | Opus 4.7 | Algorithmus-/Performance-Review von Decoder-/PLL-/CRC-Hotpaths (advisory, Read-only) |
+| `structured-reviewer` | Opus 4.7 | Allgemeiner strukturierter Review/Audit (enforced AI_COLLABORATION.md, advisory, Read-only) |
 | `must-fix-hunter` | Sonnet 4.6 | Proaktive Widersprüche-Jagd (Pattern-Scan, Sonnet reicht) |
 | `consistency-auditor` | Sonnet 4.6 | Vor Commit/Push: Widersprüche blockieren |
 | `stub-eliminator` | Sonnet 4.6 | Pro Stub: IMPLEMENT / DELEGATE / DOCUMENT / DELETE |
@@ -61,7 +62,7 @@ Siehe `.claude/CONSULT_PROTOCOL.md` für Details. Kurzfassung:
    REASON / SEVERITY`. Haupt-Session oder `orchestrator` parst und routet.
    Funktioniert ohne Änderung an den Agent-Tools, vollständig beobachtbar.
 
-2. **Direkter Agent-Spawn (sparsam):** Nur 4 von 12 Agenten haben
+2. **Direkter Agent-Spawn (sparsam):** Nur 4 von 13 Agenten haben
    `Agent`-Tool in der Frontmatter:
    - `orchestrator` — Master-Router, darf beliebig spawnen
    - `deep-diagnostician` — gezielte Teilfragen
@@ -124,6 +125,52 @@ bool can_write = (type != KryoFlux);
 
 // 44 Konvertierungspfade im Format Converter
 // Verlustbehaftet kennzeichnen: Flux→Sektor verliert Timing+WeakBits
+```
+---
+
+```markdown
+## AI-Zusammenarbeit
+
+Dieses Projekt hat verbindliche Arbeits-Prinzipien für alle KI-Assistenten
+(Claude Code, Claude Chat, GPT, Gemini, etc.). Vollständiges Dokument:
+[`docs/AI_COLLABORATION.md`](docs/AI_COLLABORATION.md).
+
+### Hard-Rules (gelten immer, keine Ausnahmen)
+
+1. **Lies bevor du antwortest.** Keine Aussagen über ungelesenen Code.
+   Verwende `Read`/`Grep`/`Glob` aktiv, nicht passiv.
+2. **Struktur vor Prosa.** Output-Format: TL;DR → nummerierte Findings mit
+   `file:line` → Vorher/Nachher-Code → Effort/Impact → "Nicht geprüft".
+3. **Konfidenz als Range.** Speedup immer "5-8×" nie "Faktor 7". Wenn nicht
+   schätzbar: "needs measurement". Keine erfundenen Zahlen.
+4. **Perf ≠ Korrektheit.** Fixes klassifizieren: Performance / Correctness /
+   Architecture. Correctness-Fixes erfordern Tests.
+5. **Hardware-Dualität respektieren.** Desktop (x86-64, AVX2, BMI2) vs. STM32H723
+   (Cortex-M7, SP-FPU, 564KB SRAM). Immer fragen: "läuft das auf Firmware?"
+6. **Escalation statt Alleingang.** Bei Korrektheits-Bugs, Undefined Behavior
+   oder nötigem API-Break: STOP und flaggen, nicht weiterarbeiten.
+7. **Design-Prinzipien-Vorrang.** Bei Konflikt zwischen Code-Änderung und
+   [`docs/DESIGN_PRINCIPLES.md`](docs/DESIGN_PRINCIPLES.md) gewinnt das Prinzip.
+
+### Anti-Goals (tu das NICHT)
+
+- Keine Vermutungen als Fakten formulieren ("das sollte schneller sein" ohne Messung)
+- Keine Code-Verbesserungen für Style/Readability ohne explizite Anforderung
+- Keine neuen Dependencies vorschlagen (Minimalismus-Prinzip)
+- Keine Bestätigungs-Fragen am Ende wenn Aufgabe klar war
+- Keine Flausch-Antworten ("Spannende Frage!") — direkt zum Punkt
+- Keine stille Korrektur von Dingen außerhalb des Scope
+
+### Bevor du eine Änderung vorschlägst
+
+- [ ] Habe ich die relevanten Dateien gelesen, nicht nur vermutet?
+- [ ] Ist die Änderung Performance, Correctness oder Architecture?
+- [ ] Funktioniert das auch auf STM32 (falls Firmware-Pfad)?
+- [ ] Konfliktet das mit einem Design-Prinzip?
+- [ ] Habe ich Effort und Impact konkret beziffert?
+- [ ] Was habe ich NICHT geprüft?
+
+Agent-Graph und Delegation-Matrix: siehe `docs/AI_COLLABORATION.md` Abschnitt 4.
 ```
 
 ---
