@@ -148,7 +148,14 @@ Muss:
   - [x] TA1 `uft_write_precomp.c` (portiert aus `compensation.cpp`,
         Mac-800K Peak-Shift-Compensation, 13 Tests grün)
   - [x] TA2 `uft_interleave.c` (Sektor-Interleave-Calculator, 11 Tests grün)
-  - [ ] TA3 ATX-Plugin auf 400 LOC (weak sectors, extra sectors)
+  - [~] TA3 ATX-Plugin Rewrite (176 → 296 LOC, ~400 geplant)
+        - BUG-FIX: Chunk-Type war als uint16 gelesen, jetzt korrekt
+          uint8+uint8+uint16 — ohne diesen Fix hatte ATX nie
+          Sektordaten geliefert (alle Tracks leer)
+        - Hinzugefügt: WeakBits-Chunk (0x10), ExtSectorHeader-Chunk (0x11),
+          Long-Sector-Handling via ext_size_bits
+        - FDC-Status-Decoding: CRC-Error, Lost-Data, Missing-Data, Deleted
+        - Weak-Offset speicherort (byte-Mask Aufbau in Folge-Commit)
 - [ ] Tag v4.2.0 nach M2-Abschluss
 
 Abschluss-Kriterium: XCopy-Tab wieder `setEnabled(true)`, ADF und ATX
