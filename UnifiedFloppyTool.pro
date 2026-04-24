@@ -727,9 +727,13 @@ SOURCES += \
     src/core/uft_probe_format_impl.c \
     src/fs/uft_adf_bam.c \
     src/analysis/uft_disk_quickscan.c \
+    src/core/uft_sha256.c \
+    src/core/uft_snapshot.c \
     src/diag/uft_disc_diagnostics.c \
     src/display/uft_display_track.c \
+    src/policy/uft_write_gate.c \
     src/recovery/uft_salvage_fs.c \
+    src/whdload/whd_crc16.c \
     src/whdload/whdload_resload_api.c \
     src/fs/uft_amigados.c \
     src/fs/uft_amiga_virus_db.c \
