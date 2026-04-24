@@ -1,7 +1,7 @@
 # ============================================================================
 # UFT Core Module
 # ============================================================================
-# Contains the 8 real core .c files. All must exist — if one is missing,
+# Contains the 9 real core .c files. All must exist — if one is missing,
 # the build fails fast (no more "/* stub */" fallback library).
 # ============================================================================
 
@@ -13,6 +13,7 @@ set(CORE_SOURCES
     uft_decode_pipeline.c
     uft_format_plugin.c        # plugin registry + probe helpers
     uft_format_verify.c        # generic/weak/flux verify
+    uft_interleave.c           # TA2 M2: Atari sector interleave calculator
     uft_ir_format.c
     uft_smart_open.c
     uft_unified_types.c
@@ -42,6 +43,11 @@ if(ZLIB_FOUND)
 else()
     target_link_libraries(uft_core PUBLIC uft_crc)
     message(STATUS "uft_core: zlib not found — APD extras disabled")
+endif()
+
+# uft_interleave uses floorf from libm
+if(UNIX)
+    target_link_libraries(uft_core PUBLIC m)
 endif()
 
 set_target_properties(uft_core PROPERTIES C_STANDARD 11)
