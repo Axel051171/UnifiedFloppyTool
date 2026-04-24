@@ -1,0 +1,95 @@
+/**
+ * @file uft_fs_@@name@@.c
+ * @brief @@Description@@ filesystem layer.
+ *
+ * Sits above the format plugin: reads tracks/sectors and interprets them
+ * as directory entries and files.
+ */
+#include "uft/filesystem/uft_fs_@@name@@.h"
+#include <stdlib.h>
+#include <string.h>
+
+/* ========================================================================
+ * Private context
+ * ======================================================================*/
+
+typedef struct uft_fs_ctx {
+    uft_disk_t *disk;
+    int root_block;
+    /* TODO: add filesystem-specific caches (BAM, FAT, dir tree) */
+} uft_fs_ctx_t;
+
+/* ========================================================================
+ * Detection — decides whether THIS filesystem applies to the disk
+ * ======================================================================*/
+
+bool uft_fs_@@name@@_detect(const uft_disk_t *disk) {
+    if (!disk) return false;
+
+    /* TODO: examine bootblock/volume-header to confirm match.
+     * For AmigaDOS: check block 0 for "DOS\0"..."DOS\7" magic.
+     * For FAT: check boot sector signature at offset 510-511.
+     * For CBM: check track 18 sector 0 BAM marker. */
+    return false;
+}
+
+/* ========================================================================
+ * Mount / Unmount
+ * ======================================================================*/
+
+uft_error_t uft_fs_@@name@@_mount(uft_disk_t *disk, uft_fs_ctx_t **out_ctx) {
+    if (!disk || !out_ctx) return UFT_ERROR_INVALID_ARG;
+
+    if (!uft_fs_@@name@@_detect(disk)) return UFT_ERROR_FS_NOT_SUPPORTED;
+
+    uft_fs_ctx_t *ctx = calloc(1, sizeof(*ctx));
+    if (!ctx) return UFT_ERROR_NO_MEMORY;
+    ctx->disk = disk;
+    ctx->root_block = @@default_root_block@@;
+
+    /* TODO: parse BAM/FAT, cache directory tree */
+
+    *out_ctx = ctx;
+    return UFT_OK;
+}
+
+void uft_fs_@@name@@_unmount(uft_fs_ctx_t *ctx) {
+    if (!ctx) return;
+    /* TODO: free cached structures */
+    free(ctx);
+}
+
+/* ========================================================================
+ * List directory
+ * ======================================================================*/
+
+uft_error_t uft_fs_@@name@@_list(uft_fs_ctx_t *ctx, const char *path,
+                                   uft_fs_entry_t **out_entries,
+                                   size_t *out_count) {
+    if (!ctx || !path || !out_entries || !out_count) return UFT_ERROR_INVALID_ARG;
+
+    *out_entries = NULL;
+    *out_count = 0;
+
+    /* TODO: walk directory blocks starting from root, resolve path segments,
+     * yield entries. Handle these failure modes:
+     *   - corrupt block pointer → UFT_ERROR_FS_CORRUPTED + audit entry
+     *   - circular reference  → break at depth N, emit warning
+     *   - invalid name encoding → pass through with best-effort UTF-8
+     */
+    return UFT_ERROR_NOT_IMPLEMENTED;
+}
+
+/* ========================================================================
+ * Read file
+ * ======================================================================*/
+
+uft_error_t uft_fs_@@name@@_read(uft_fs_ctx_t *ctx, const char *path,
+                                   uint8_t **out_data, size_t *out_size) {
+    if (!ctx || !path || !out_data || !out_size) return UFT_ERROR_INVALID_ARG;
+
+    /* TODO: resolve path to file header block, follow data chain,
+     * return malloc'd buffer. Preserve exact byte-count (don't round to
+     * block size) by reading the file's declared length field. */
+    return UFT_ERROR_NOT_IMPLEMENTED;
+}

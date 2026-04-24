@@ -1,145 +1,89 @@
 ---
 name: uft-qt-widget
 description: |
-  Use when adding a new Qt6 widget/tab/dialog to UFT's GUI. Trigger
-  phrases: "neues Qt-widget", "neuer tab", "add Qt panel", "widget
-  für X analyse", "GUI-dialog für Y", "OTDR-style panel". Enforces
-  MASTER_PLAN Regel 2 (keine neuen GUI-Elemente ohne Backend) and
-  the UftOtdrPanel style conventions.
+  Use when adding a NEW Qt6 widget, tab, or dialog to UFT's GUI. Trigger
+  phrases: "neues Qt-widget", "neuer tab", "add Qt panel", "widget für X
+  analyse", "GUI-dialog für Y", "analysis panel für Z", "OTDR-style panel".
+  Enforces MASTER_PLAN Regel 2 (no GUI without working backend). DO NOT
+  use for: modifying existing widget (→ structured-reviewer), pure styling
+  changes (→ quick-fix), Qt Designer UI-file-only tweaks, plotting with
+  QCustomPlot/QtCharts (those have their own patterns).
 ---
 
-# UFT Qt6 Widget Template
+# UFT Qt6 Widget
 
-Use this skill when adding a widget, tab, or dialog. UFT's canonical
-style reference is `src/gui/uft_otdr_panel.cpp` — the DeepRead/OTDR
-analysis panel. Every GUI element MUST wire to a working backend OR be
-disabled with an explanatory tooltip (Regel 2).
+Use this skill when adding a new widget, tab, dialog, or dock to UFT's GUI.
+The canonical style reference is `src/gui/uft_otdr_panel.cpp`.
 
-## Step 1: Decide the shape
+## When to use this skill
 
-| Want | Template | Register where |
-|---|---|---|
-| Tab in main window | `src/xcopytab.cpp` | `src/mainwindow.cpp` tab init |
-| Analysis panel | `src/gui/uft_otdr_panel.cpp` | tabs or docked |
-| Modal dialog | `src/advanceddialogs.cpp` | direct caller in actions |
-| Dock widget | `src/widgets/fluxvisualizerwidget.cpp` | main window layout |
-| Reusable widget | `src/widgets/trackgridwidget.cpp` | embedded by others |
+- Adding a new analysis panel (OTDR-like, sector inspector, protection browser)
+- Adding a new tab to the main window
+- Adding a modal dialog (settings, preferences, import wizard)
+- Adding a dock widget (file browser, visualizer sidebar)
+- Adding a reusable sub-widget (shared across panels)
 
-## Step 2: File skeleton
+**Do NOT use this skill for:**
+- Modifying an existing widget — use `structured-reviewer`
+- Styling/theming changes only — use `quick-fix`
+- Qt Designer `.ui` tweaks without C++ changes
+- QCustomPlot/QtCharts plotting work — separate patterns
 
-Three files per widget (canonical pattern):
+## Widget type → template mapping
 
-```
-src/gui/uft_<name>_panel.h      — class declaration
-src/gui/uft_<name>_panel.cpp    — implementation
-ui/<name>.ui                    — Qt Designer form (optional but preferred)
-```
+| Widget type | Template reference | Location |
+|-------------|--------------------|----------|
+| Main-window tab | `src/xcopytab.cpp` | `src/` |
+| Analysis panel | `src/gui/uft_otdr_panel.cpp` | `src/gui/` |
+| Modal dialog | `src/advanceddialogs.cpp` | `src/` |
+| Dock widget | `src/widgets/fluxvisualizerwidget.cpp` | `src/widgets/` |
+| Reusable sub-widget | `src/widgets/trackgridwidget.cpp` | `src/widgets/` |
 
-Header skeleton:
+## Workflow
 
-```cpp
-/**
- * @file uft_<name>_panel.h
- * @brief <one-line description of the panel's purpose>
- */
-#pragma once
+### Step 1: Scaffold 3 files
 
-#include <QWidget>
-#include <memory>
-
-namespace Ui { class UftFooPanel; }
-
-class UftFooPanel : public QWidget {
-    Q_OBJECT
-public:
-    explicit UftFooPanel(QWidget *parent = nullptr);
-    ~UftFooPanel() override;
-
-    /* Public API — backend-driven */
-    void loadAnalysisResult(const uft_foo_result_t &result);
-    void clear();
-
-signals:
-    void exportRequested(const QString &path);
-    void analysisTriggered();
-
-private slots:
-    void onRefreshClicked();
-    void onParameterChanged();
-
-private:
-    std::unique_ptr<Ui::UftFooPanel> ui;
-    /* private state — pImpl if large */
-};
+```bash
+python3 .claude/skills/uft-qt-widget/scripts/scaffold_widget.py \
+    --name foo_panel \
+    --class UftFooPanel \
+    --kind analysis_panel
 ```
 
-## Step 3: Regel 2 — backend or setEnabled(false)
+Creates:
+- `src/gui/uft_foo_panel.h`
+- `src/gui/uft_foo_panel.cpp`
+- `ui/foo.ui` (stub Designer file, optional)
 
-MASTER_PLAN.md enforces this explicitly:
+### Step 2: Respect Regel 2 — backend or setEnabled(false)
 
-> Jeder neue Qt-Tab / Button / Dialog muss eine wirkende Backend-
-> Funktion triggern, oder `setEnabled(false)` mit Tooltip "Feature X:
-> planned for release Y" haben.
-
-In the constructor, IF the backend is not yet connected:
+Master-Plan mandate: every GUI element must either trigger real backend
+work OR be `setEnabled(false)` with an explanatory tooltip. No phantom
+features.
 
 ```cpp
 UftFooPanel::UftFooPanel(QWidget *parent)
-    : QWidget(parent), ui(std::make_unique<Ui::UftFooPanel>())
-{
+    : QWidget(parent), ui(std::make_unique<Ui::UftFooPanel>()) {
     ui->setupUi(this);
 
-    /* MF-012 pattern — if backend is phantom, guard it */
-    if (/* backend not wired yet */) {
-        ui->btnStart->setEnabled(false);
-        ui->btnStart->setToolTip(
-            tr("FOO analysis: planned for v4.2.0.\n"
+    /* MF-012 pattern — guard if backend not wired */
+    if (!backendAvailable()) {
+        ui->btnAnalyze->setEnabled(false);
+        ui->btnAnalyze->setToolTip(
+            tr("Foo analysis: planned for v4.2.0.\n"
                "See docs/MASTER_PLAN.md M2."));
     }
 }
 ```
 
-A CI test (`tests/test_gui_backend_wiring.cpp`, MASTER_PLAN Regel 2)
-checks that every `QPushButton::clicked` connect points to a non-empty
-slot. Empty-body slots or `/* TODO */` fail the test.
+A CI test (`tests/test_gui_backend_wiring.cpp`) verifies every
+`QPushButton::clicked` connect points to a non-empty slot. Empty-body
+slots or `/* TODO */` fail the test.
 
-## Step 4: Register in build system
+### Step 3: Long operations on a worker thread
 
-`.pro` file:
-```
-SOURCES += src/gui/uft_<name>_panel.cpp
-HEADERS += src/gui/uft_<name>_panel.h
-FORMS   += ui/<name>.ui              # if using Designer
-```
-
-Make sure `Q_OBJECT` is present — otherwise moc won't run.
-
-`CMakeLists.txt` (if adding to the Qt build tree):
-```cmake
-qt_add_executable(UnifiedFloppyTool
-    ...
-    src/gui/uft_<name>_panel.cpp
-    src/gui/uft_<name>_panel.h
-)
-```
-
-CMake with `CMAKE_AUTOMOC ON` handles moc automatically.
-
-## Step 5: OTDR-panel visual conventions
-
-Look at `src/gui/uft_otdr_panel.cpp` — it is the canonical style:
-
-- **Left pane**: parameter controls (QGroupBox with QFormLayout).
-- **Right pane**: result display (chart or tree or heatmap).
-- **Bottom bar**: status label + progress bar + Export button.
-- **Colors**: use `palette()` not hardcoded `#RRGGBB`. Dark-mode safe.
-- **Icons**: `QIcon::fromTheme()` with a .png fallback in `resources/`.
-- **Charts**: QtCharts if plotting, not custom QPainter (unless heatmap).
-
-## Step 6: Thread safety for backend calls
-
-UFT rule: **NEVER** block the UI thread on I/O or decoder operations.
-Any action that takes > 16 ms needs a worker:
+UFT rule: **any action taking >16 ms** must be on a worker. Use the
+`CopyWorker` pattern from `src/xcopytab.cpp`:
 
 ```cpp
 void UftFooPanel::onStartClicked() {
@@ -155,54 +99,90 @@ void UftFooPanel::onStartClicked() {
 }
 ```
 
-Template: see `CopyWorker` in `src/xcopytab.cpp`.
+### Step 4: OTDR visual conventions
 
-## Step 7: Tests
+Look at `src/gui/uft_otdr_panel.cpp`:
 
-Two test layers:
+- **Left pane:** parameter controls (QGroupBox + QFormLayout)
+- **Right pane:** result display (chart, tree, heatmap)
+- **Bottom bar:** status label + progress bar + Export button
+- **Colors:** use `palette()` roles, not hardcoded `#RRGGBB`
+- **Icons:** `QIcon::fromTheme()` with fallback in `resources/`
+- **Charts:** QtCharts if plotting; custom `QPainter` only for heatmaps
 
-1. **Widget smoke test** (`tests/test_<name>_panel.cpp`) — constructs
-   the widget, calls the public API with a mock result, verifies no
-   crash. Uses `QTest::qWaitForWindowExposed` for paint cycles.
-2. **Backend integration** — optional, via Qt Test framework with
-   `QSignalSpy` to capture emitted signals.
+### Step 5: Accessibility baseline (Principle 7)
 
-```cpp
-void TestUftFooPanel::test_load_result_displays_values() {
-    UftFooPanel panel;
-    uft_foo_result_t result = make_mock_result();
-    panel.loadAnalysisResult(result);
-    QVERIFY(panel.findChild<QLabel *>("valueLabel")->text() == "42");
-}
+Non-negotiable for museum deployment:
+
+- **Keyboard navigable** — every widget reachable via Tab
+- **Accessible names** — `accessibleName()` on custom widgets
+- **Status announcements** — emit `statusMessage()` signal wired to main
+  window status bar
+- **Minimum font size** 9pt, respect system scaling
+
+## Verification
+
+```bash
+# 1. Compile check (including moc)
+qmake && make -j$(nproc) 2>&1 | grep "uft_<n>" | grep -E "error|warning"
+# expect: empty output
+
+# 2. Widget smoke test
+cd tests && make test_<n>_panel && ./test_<n>_panel
+
+# 3. Backend-wiring CI check
+make test_gui_backend_wiring && ./test_gui_backend_wiring
+
+# 4. Manual GUI check
+./uft 2>&1 &   # launch and verify widget appears correctly
 ```
 
-## Step 8: Accessibility baseline
+## Common pitfalls
 
-Non-negotiable for museum deployment (Principle 7):
+### `QWidget::setStyleSheet` with hardcoded colors
 
-- **Keyboard navigable** — all widgets reachable via Tab, no mouse-only
-  actions.
-- **Accessible names** — set `accessibleName()` on custom widgets.
-- **Status announcements** — long operations emit `statusMessage()`
-  signal that gets wired to the main window status bar.
-- **Minimum font size** — 9pt, respect system scaling.
+Kills dark-mode support. Use `palette()` roles:
 
-## Anti-patterns
+```cpp
+/* WRONG */
+setStyleSheet("background: #ffffff; color: #000000;");
 
-- **Don't use QWidget::setStyleSheet with hardcoded colors** — kills
-  dark-mode support. Use palette roles.
-- **Don't hardcode paths** — use `QStandardPaths` for user data.
-- **Don't block the UI thread on a QMessageBox inside a worker signal
-  handler** — queue it on the main event loop.
-- **Don't create a panel without connecting signals to actual code** —
-  Regel 2 violation (phantom feature).
-- **Don't use `QTextStream::readLine()` for parsing binary data** —
-  locale / encoding issues.
+/* RIGHT */
+QPalette p = palette();
+p.setColor(QPalette::Base, p.color(QPalette::Window));
+setPalette(p);
+```
+
+### Blocking the UI thread on a QMessageBox inside a worker signal
+
+```cpp
+/* WRONG — deadlocks if signal arrives before main event loop */
+connect(worker, &Worker::error, [](QString msg) {
+    QMessageBox::critical(this, "Error", msg);
+});
+
+/* RIGHT — queue on main event loop */
+connect(worker, &Worker::error, this, [this](QString msg) {
+    QMetaObject::invokeMethod(this, [this, msg]() {
+        QMessageBox::critical(this, "Error", msg);
+    }, Qt::QueuedConnection);
+});
+```
+
+### Forgotten `Q_OBJECT` macro
+
+Without `Q_OBJECT`, moc doesn't run, signals/slots silently fail at runtime.
+Always check the generated `moc_<n>.cpp` exists after build.
+
+### Hardcoded paths to resources
+
+Use `QStandardPaths` for user data, `:/resources/` URI for bundled files.
+`/home/user/...` breaks for everyone but you.
 
 ## Related
 
-- `src/gui/uft_otdr_panel.cpp` — canonical reference
+- `src/gui/uft_otdr_panel.cpp` — canonical analysis-panel reference
+- `src/xcopytab.cpp` — canonical tab + worker pattern
 - `docs/MASTER_PLAN.md` Regel 2 (no GUI without backend)
-- `docs/DESIGN_PRINCIPLES.md` Principle 7 (honesty — setEnabled over
-  silent no-op)
-- `src/xcopytab.cpp` — MF-012 tooltip-guard example
+- `docs/DESIGN_PRINCIPLES.md` Principle 7 (honesty)
+- `.claude/skills/uft-hal-backend/` — if the panel triggers hardware I/O

@@ -1,0 +1,77 @@
+/**
+ * @file uft_@@scheme@@.c
+ * @brief @@Description@@ — copy-protection detector (read-only).
+ *
+ * First seen:  @@first_seen@@
+ * Platforms:   @@platforms@@
+ * Reference:   @@reference@@
+ *
+ * This detector is OBSERVATION-ONLY. It never modifies the image, never
+ * "repairs" the protection, never synthesizes a cleaner variant.
+ */
+#include "uft/protection/uft_protection.h"
+#include <string.h>
+
+/* ========================================================================
+ * Signature patterns (format-specific; adapt to your scheme)
+ * ======================================================================*/
+
+static const uint8_t @@SCHEME@@_SYNC_PATTERN[] = {
+    /* TODO: replace with real signature bytes */
+    0x44, 0x89, 0x44, 0x89
+};
+
+/* ========================================================================
+ * Detect — called once per track by uft_protection_detect_all()
+ * ======================================================================*/
+
+static uft_prot_result_t @@scheme@@_detect(const uft_track_t *track,
+                                             const uft_prot_ctx_t *ctx,
+                                             uft_prot_detail_t *out) {
+    if (!track || !track->bits) return UFT_PROT_NOT_DETECTED;
+    (void)ctx;
+
+    /* Signal 1: pattern match */
+    int pattern_matches = 0;
+    for (size_t i = 0; i + sizeof(@@SCHEME@@_SYNC_PATTERN) <= track->bits_len; i++) {
+        if (memcmp(track->bits + i, @@SCHEME@@_SYNC_PATTERN,
+                    sizeof(@@SCHEME@@_SYNC_PATTERN)) == 0) {
+            pattern_matches++;
+        }
+    }
+
+    /* Signal 2: corroborating test — TODO: replace with a structural check */
+    int track_length_suspicious =
+        (track->bits_len > 12500 && track->bits_len < 13000);
+
+    /* Decision: require at least 2 signals for DETECTED, 1 for POSSIBLE */
+    if (pattern_matches >= 3 && track_length_suspicious) {
+        out->scheme             = UFT_PROT_@@SCHEME@@;
+        out->confidence         = 92;
+        out->track_first_seen   = track->track_num;
+        out->description        = "@@Description@@ (strong signature)";
+        return UFT_PROT_DETECTED;
+    }
+
+    if (pattern_matches >= 1) {
+        out->scheme             = UFT_PROT_@@SCHEME@@;
+        out->confidence         = 60;
+        out->track_first_seen   = track->track_num;
+        out->description        = "@@Description@@ (weak signal)";
+        return UFT_PROT_POSSIBLE;
+    }
+
+    return UFT_PROT_NOT_DETECTED;
+}
+
+/* ========================================================================
+ * Registry entry
+ * ======================================================================*/
+
+static const uft_prot_detector_t @@scheme@@_detector = {
+    .scheme_id   = UFT_PROT_@@SCHEME@@,
+    .scheme_name = "@@Description@@",
+    .platforms   = @@platform_flags@@,
+    .detect      = @@scheme@@_detect,
+};
+UFT_REGISTER_PROT_DETECTOR(@@scheme@@)

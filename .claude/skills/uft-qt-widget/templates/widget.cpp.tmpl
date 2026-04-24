@@ -1,0 +1,46 @@
+/**
+ * @file uft_@@name@@.cpp
+ * @brief @@Description@@.
+ */
+#include "uft_@@name@@.h"
+#include "ui_@@name@@.h"
+
+#include <QThread>
+#include <QMessageBox>
+
+@@Class@@::@@Class@@(QWidget *parent)
+    : QWidget(parent), ui(std::make_unique<Ui::@@Class@@>()) {
+    ui->setupUi(this);
+
+    /* Regel 2 — guard UI elements whose backend isn't ready */
+    /*
+    if (!backendAvailable()) {
+        ui->btnStart->setEnabled(false);
+        ui->btnStart->setToolTip(
+            tr("@@Description@@: planned for v4.2.0.\n"
+               "See docs/MASTER_PLAN.md M2."));
+    }
+    */
+
+    connect(ui->btnStart, &QPushButton::clicked,
+            this,         &@@Class@@::onStartClicked);
+    connect(ui->btnReset, &QPushButton::clicked,
+            this,         &@@Class@@::onResetClicked);
+}
+
+@@Class@@::~@@Class@@() = default;
+
+void @@Class@@::clear() {
+    /* TODO: reset internal state and UI */
+}
+
+void @@Class@@::onStartClicked() {
+    /* TODO: dispatch to worker thread — never block UI thread */
+    emit statusMessage(tr("@@Description@@ started"));
+    emit analysisTriggered();
+}
+
+void @@Class@@::onResetClicked() {
+    clear();
+    emit statusMessage(tr("Reset"));
+}

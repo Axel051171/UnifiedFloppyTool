@@ -1,161 +1,198 @@
 ---
 name: uft-hal-backend
 description: |
-  Use when implementing a new Hardware-Abstraction-Layer backend for UFT.
-  Trigger phrases: "HAL backend für X", "neuer controller X", "implement
-  X HAL", "connect X hardware", "SCP-direct HAL", "XUM1541 HAL real
-  statt stubbed", "Applesauce HAL". Three backends are pending (M3 scope):
-  SCP-Direct, XUM1541, Applesauce. This skill enforces the unified-HAL
-  pattern from `src/hal/uft_hal_unified.c`.
+  Use when implementing a new HAL backend for hardware controllers
+  (Greaseweazle, SCP-Direct, KryoFlux, FC5025, XUM1541, Applesauce, UFI).
+  Trigger phrases: "neuer HAL backend", "HAL backend für X", "controller X
+  implementieren", "implement X HAL", "SCP-Direct HAL", "XUM1541 HAL real",
+  "Applesauce HAL", "UFI hardware". Scaffolds C HAL + Qt provider + registry.
+  DO NOT use for: bugfix in existing backend (→ structured-reviewer), changes
+  to capability flags only (→ quick-fix), firmware code on the device side
+  (separate UFI repo), protocol reverse engineering (different domain).
 ---
 
-# UFT HAL Backend Template
+# UFT HAL Backend
 
-Use this skill for implementing or completing a hardware backend
-(Greaseweazle, SuperCard Pro direct, KryoFlux, FC5025, Applesauce,
-XUM1541, UFI/UFI+Cowork). Greaseweazle is the canonical reference
-— it is production-ready and its patterns should be mirrored.
+Use this skill for implementing or completing a hardware controller backend.
+Greaseweazle (`src/hal/uft_greaseweazle_full.c`) is the canonical reference
+because it's production-ready.
 
-## Step 1: Identify the backend layer
+## When to use this skill
 
-UFT has two HAL layers — don't confuse them:
+- Implementing one of the pending backends: SCP-Direct, XUM1541, Applesauce,
+  UFI/Cowork
+- Adding a new controller (new hardware vendor)
+- Promoting a stubbed backend to functional
 
-| Layer | Location | Purpose |
-|---|---|---|
-| **Qt Provider** | `src/hardware_providers/` | UI-bound Qt wrapper (signals/slots) |
-| **C HAL**       | `src/hal/`                | Pure C, synchronous, no Qt deps |
+**Do NOT use this skill for:**
+- Fixing bugs in an existing backend — use `structured-reviewer`
+- Capability-flag adjustments only — use `quick-fix`
+- Firmware code that runs ON the device — that's a separate repo
+- Protocol reverse engineering — write a spec doc first, then this skill
 
-New backends go in **both** layers. Start with the C HAL (pure, testable),
-then wrap it with a Qt provider.
+## The 5 touchpoints
 
-## Step 2: C HAL implementation
+| # | File | Purpose |
+|---|------|---------|
+| 1 | `src/hal/uft_<backend>.c` | C HAL implementation (sync, no Qt) |
+| 2 | `src/hal/uft_<backend>.h` | C HAL header |
+| 3 | `src/hal/uft_hal_unified.c` | Registry entry |
+| 4 | `include/uft/hal/uft_hal_unified.h` | Enum + capability flags |
+| 5 | `src/hardware_providers/<backend>hardwareprovider.cpp` + `.h` | Qt wrapper |
 
-Template: `src/hal/uft_greaseweazle_full.c`. New file location:
-`src/hal/uft_<backend>.c` and `src/hal/uft_<backend>.h`.
+## Two-layer discipline
 
-Required struct and callback pattern:
+UFT has a strict split:
 
-```c
-#include "uft/hal/uft_hal_unified.h"
-
-typedef struct {
-    /* private state: file descriptor, USB handle, etc. */
-    FILE *port;
-    int   current_track;
-} backend_ctx_t;
-
-static uft_error_t backend_open(uft_hal_ctx_t *ctx, const char *device);
-static uft_error_t backend_close(uft_hal_ctx_t *ctx);
-static uft_error_t backend_seek(uft_hal_ctx_t *ctx, int track);
-static uft_error_t backend_read_flux(uft_hal_ctx_t *ctx, int side,
-                                      uint32_t *flux_out, size_t *count);
-static uft_error_t backend_write_flux(uft_hal_ctx_t *ctx, int side,
-                                       const uint32_t *flux, size_t count);
-static uft_error_t backend_get_capabilities(uft_hal_ctx_t *ctx,
-                                             uft_hal_capabilities_t *caps);
-
-/* Capability reporting — be honest, no silent NOP */
-static const uft_hal_capabilities_t BACKEND_CAPS = {
-    .can_read_flux   = true,
-    .can_write_flux  = true,
-    .can_read_sector = false,   /* pure flux, no FDC sector mode */
-    .max_revolutions = 5,
-    .max_tracks      = 84,
-};
-
-static const uft_hal_vtable_t backend_vtable = {
-    .open = backend_open, .close = backend_close,
-    .seek = backend_seek,
-    .read_flux = backend_read_flux, .write_flux = backend_write_flux,
-    .get_capabilities = backend_get_capabilities,
-};
+```
+┌─────────────────────────────────────┐
+│ Qt Provider (src/hardware_providers/)│  ← UI-bound, async, Qt deps
+│  emits signals, uses QThread         │
+├─────────────────────────────────────┤
+│ C HAL (src/hal/)                     │  ← pure C, synchronous, testable
+│  returns errors, no UI               │
+├─────────────────────────────────────┤
+│ Hardware / USB / Serial              │
+└─────────────────────────────────────┘
 ```
 
-## Step 3: Register the backend
+Start with the C HAL — it's pure and unit-testable. Wrap with Qt only after
+the HAL passes its standalone test.
 
-Add to `src/hal/uft_hal_unified.c` registry block:
+## Workflow
+
+### Step 1: Reference Greaseweazle
+
+Read `src/hal/uft_greaseweazle_full.c` end-to-end before writing. Note:
+
+- The vtable dispatch pattern
+- How errors propagate from USB layer
+- Where capabilities are declared vs. runtime-negotiated
+- Cancel support (`cancel_requested` flag checked per-track)
+
+### Step 2: Scaffold the C HAL
+
+```bash
+python3 .claude/skills/uft-hal-backend/scripts/scaffold_hal.py \
+    --backend xum1541 \
+    --description "XUM1541 ZoomFloppy (IEC bus)" \
+    --enum XUM1541 \
+    --can-read-flux false \
+    --can-write-flux false \
+    --can-read-sector true
+```
+
+### Step 3: Fill in the backend callbacks
+
+The scaffolded `uft_<backend>.c` has stubbed callbacks. Replace each
+`TODO: <n>` block:
+
+- `<backend>_open` — establish connection, probe device ID
+- `<backend>_seek` — move head to requested cylinder
+- `<backend>_read_flux` / `<backend>_read_sector` — the work
+- `<backend>_close` — release handles, flush buffers
+
+### Step 4: Qt provider wrapper
+
+After C HAL passes tests, scaffold the Qt wrapper:
+
+```bash
+python3 .claude/skills/uft-hal-backend/scripts/scaffold_qt_provider.py \
+    --backend xum1541
+```
+
+This creates the `.cpp`/`.h` pair with `QThread` moved worker pattern.
+
+### Step 5: Register
+
+`src/hal/uft_hal_unified.c`:
 
 ```c
+extern const uft_hal_vtable_t uft_hal_vtable_xum1541;
+
 const uft_hal_backend_info_t BACKENDS[] = {
-    { "greaseweazle", &gw_vtable,   UFT_HAL_BACKEND_GREASEWEAZLE },
-    { "scp",          &scp_vtable,  UFT_HAL_BACKEND_SCP },
-    { "<backend>",    &backend_vtable, UFT_HAL_BACKEND_<NAME> },  /* NEW */
+    { "greaseweazle", &gw_vtable,      UFT_HAL_BACKEND_GREASEWEAZLE },
+    { "xum1541",      &xum1541_vtable, UFT_HAL_BACKEND_XUM1541 },  /* NEW */
+    /* ... */
     { NULL }
 };
 ```
 
-Also add to `include/uft/hal/uft_hal_unified.h` the new enum value.
+## Verification
 
-## Step 4: Honesty rules (forensic-integrity)
+```bash
+# 1. Compile HAL isolated
+gcc -std=c11 -Wall -Wextra -Werror -fsyntax-only \
+    -I include/ src/hal/uft_<backend>.c
 
-These are HARD requirements — violations block merge:
+# 2. Full build including Qt provider
+qmake && make -j$(nproc)
 
-- **Never return UFT_OK from a stubbed callback.** Return
-  `UFT_ERR_NOT_IMPLEMENTED` explicitly.
-- **Never silently drop flux data.** If the hardware can't capture
-  timing resolution your caller requested, return `UFT_ERR_UNSUPPORTED`
-  with the actual resolution in the error context.
-- **Never fabricate sector data.** If the hardware returns garbage,
-  pass it through with low confidence — do NOT synthesize "plausible"
-  defaults.
-- Capability flags must match reality: if `can_write_flux = true` but
-  `write_flux()` always returns error, that's a phantom feature.
+# 3. Backend appears in list
+./uft hal list | grep <backend>
 
-## Step 5: Qt provider wrapper
+# 4. Registration smoke test
+cd tests && make test_<backend>_backend && ./test_<backend>_backend
 
-File: `src/hardware_providers/<backend>hardwareprovider.cpp` +
-`.h`. Template: `src/hardware_providers/greaseweazlehardwareprovider.cpp`.
+# 5. If you have the hardware: live test
+./uft read --hal <backend> --device /dev/ttyUSB0 --out /tmp/test.scp
+```
 
-- Inherit `HardwareProvider` (QObject).
-- Use `QThread` + `QObject::moveToThread` for async captures; **never**
-  block the UI thread on HAL calls.
-- Emit progress via signals at track granularity, not bit.
-- Cancel support: check `m_cancelRequested` after each track.
-
-## Step 6: Build integration
-
-- `UnifiedFloppyTool.pro`: add both `src/hal/uft_<backend>.c` and
-  `src/hardware_providers/<backend>hardwareprovider.cpp` to SOURCES.
-  Header to HEADERS. Qt provider needs moc — ensure `Q_OBJECT` is
-  in the class declaration.
-- `src/hal/CMakeLists.txt`: add the new .c to `HAL_SOURCES` list if
-  this is a Unix/release build target.
-- Run `python3 scripts/verify_build_sources.py`.
-
-## Step 7: Integration test
-
-At minimum: probe test (does it compile and register?). Full
-hardware-in-the-loop test belongs in M3's emulator-CI-pipeline,
-not in M2.
+## Honesty rules (hard requirements, forensic-integrity checks these)
 
 ```c
-/* tests/test_<backend>_backend.cpp */
-void TestBackendRegistration::test_appears_in_registry() {
-    QVERIFY(HalRegistry::find("<backend>") != nullptr);
+/* NEVER return UFT_OK from a stubbed callback */
+static uft_error_t <backend>_read_flux(/* ... */) {
+    return UFT_ERROR_NOT_IMPLEMENTED;   /* explicit, not silent zero */
+}
+
+/* NEVER silently degrade */
+if (requested_resolution_ns < HARDWARE_MIN_NS) {
+    /* Don't round up and pretend. */
+    return UFT_ERROR_UNSUPPORTED;
+}
+
+/* NEVER fabricate data to fill gaps */
+if (usb_read_returned_partial) {
+    /* Don't zero-pad. Either retry or error. */
 }
 ```
 
-## Current pending backends (M3 scope)
+Capability flags must match reality. If `can_write_flux = true` but
+`write_flux()` always returns `UFT_ERROR_NOT_IMPLEMENTED`, that's a phantom
+feature — blocks merge.
 
-| Backend | Status | Source reference |
-|---|---|---|
-| SCP-Direct | stubbed | `docs/A8RAWCONV_INTEGRATION_TODO.md` TA4 |
-| XUM1541    | stubbed | zoomfloppy firmware protocol |
-| Applesauce | stubbed | text-based USB protocol, 3.5" + 5.25" |
-| UFI/Cowork | planned | own firmware, STM32H723 target |
+## Common pitfalls
 
-## Anti-patterns
+### Blocking the UI thread
 
-- Don't add a provider without the C HAL layer — creates Qt-coupled
-  backend that can't be unit-tested.
-- Don't implement flux synthesis to "fake" controllers that only read
-  sectors. FC5025 stays `can_read_flux = false`.
-- Don't block the UI thread on USB I/O — always use a worker thread.
+USB I/O takes 50ms–30s. If you call HAL from the UI thread, UFT freezes.
+Always use the Qt provider's worker pattern; never call HAL directly from
+a button slot.
+
+### Forgetting cancel support
+
+Users press Cancel. HAL must check `ctx->cancel_requested` between tracks
+(not between bits — too fine) and return `UFT_ERROR_CANCELLED` promptly.
+
+### Capability flag drift
+
+Cap flags are declared statically in the vtable, but actual hardware might
+vary (some Greaseweazle firmware revisions support more than others). If
+you runtime-detect capabilities, populate them in `open()` and expose via
+`get_capabilities()` — don't contradict the static declaration.
+
+### Coupling C HAL to Qt types
+
+`QString` in `src/hal/`? No. The C HAL must be compilable without Qt. If
+you need to pass strings, use `const char *`. Qt-side conversions happen
+in the provider.
 
 ## Related
 
-- `src/hal/uft_greaseweazle_full.c` — canonical backend reference
-- `src/hardware_providers/greaseweazlehardwareprovider.cpp` — Qt wrapper
-- `docs/MASTER_PLAN.md` M3 (HAL stabilization)
-- `docs/A8RAWCONV_INTEGRATION_TODO.md` TA4 (SCP-Direct)
-- `CLAUDE.md` Hardware Controllers section
+- `src/hal/uft_greaseweazle_full.c` — canonical reference
+- `src/hardware_providers/greaseweazlehardwareprovider.cpp` — Qt wrapper reference
+- `.claude/agents/forensic-integrity.md` — reviews honesty violations
+- `.claude/skills/uft-stm32-portability/` — if this backend is UFI/firmware-adjacent
+- `docs/HARDWARE.md` — existing backend notes
+- `docs/MASTER_PLAN.md` M3 — HAL stabilization scope

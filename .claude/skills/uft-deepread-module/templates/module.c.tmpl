@@ -1,0 +1,58 @@
+/**
+ * @file uft_dr_@@module@@.c
+ * @brief @@Description@@ — DeepRead/OTDR pipeline module.
+ *
+ * Position requirement: must run AFTER @@depends_on@@.
+ * Pipeline: @@pipeline@@   (deepread / otdr)
+ *
+ * Effect on flux: @@flux_effect@@
+ * Effect on annotations: @@annotation_effect@@
+ * Expected confidence delta: @@confidence_delta@@
+ */
+#include "uft/deepread/uft_deepread.h"
+#include "uft/flux/uft_flux.h"
+#include <stdlib.h>
+#include <string.h>
+
+/* ========================================================================
+ * Module entry point
+ * ======================================================================*/
+
+uft_error_t uft_dr_@@module@@_process(uft_flux_t *in_out,
+                                        uft_annotations_t *annotations,
+                                        const uft_module_params_t *params) {
+    if (!in_out || !annotations) return UFT_ERROR_INVALID_ARG;
+    (void)params;
+
+    /* Fast-skip: can this module help given current state? */
+    if (!@@module@@_would_help(in_out, annotations)) {
+        uft_annotations_note(annotations, "@@module@@: skipped (no improvement possible)");
+        return UFT_OK;
+    }
+
+    /* TODO: implement the actual algorithm.
+     * Typical structure:
+     *   1. Analyze in_out->transitions[] to identify issue
+     *   2. Modify in_out->transitions[] in place
+     *   3. Record what was changed in annotations
+     *   4. Update confidence estimate
+     */
+
+    uft_annotations_note(annotations,
+                          "@@module@@: processed %zu transitions",
+                          in_out->transition_count);
+    return UFT_OK;
+}
+
+/* ========================================================================
+ * Helper: is this input a candidate for our processing?
+ * ======================================================================*/
+
+bool @@module@@_would_help(const uft_flux_t *flux,
+                             const uft_annotations_t *annotations) {
+    if (!flux || flux->transition_count == 0) return false;
+    (void)annotations;
+    /* TODO: cheap heuristic check.
+     * Return false early if input already meets quality target. */
+    return true;
+}

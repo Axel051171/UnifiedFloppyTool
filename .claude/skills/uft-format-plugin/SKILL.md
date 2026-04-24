@@ -2,126 +2,212 @@
 name: uft-format-plugin
 description: |
   Use when adding a new disk-image format plugin to UFT. Trigger phrases:
-  "füge plugin für X format", "neuer format plugin", "add X plugin", "X
-  format unterstützen", "plugin für X schreiben". Follows the 80-plugin
-  template pattern with probe + open/close/read_track + registry + test.
-  Enforces MF-007 (test coverage) and Principle 7 (honesty matrix).
+  "neuer format plugin", "füge plugin für X hinzu", "X format unterstützen",
+  "add X plugin", "plugin für Y schreiben", "support Z disk image".
+  Scaffolds the 6 touchpoints (plugin.c + enum + registry + .pro + test +
+  CMakeLists). DO NOT use for: modifying existing plugins (→ structured-
+  reviewer), conversion between formats (→ uft-format-converter),
+  filesystem-layer work (→ uft-filesystem), flux decoder changes (→ flux/).
 ---
 
-# UFT Format Plugin Template
+# UFT Format Plugin
 
-Use this skill when adding a NEW format plugin (e.g. Roland MC-500 `.roland`,
-Sinclair `.mdv`, obscure format). Always start from the template pattern of
-an existing plugin — do NOT invent your own structure.
+Use this skill when adding a NEW format plugin. 80 plugins exist — the
+pattern is stable. The skill provides a scaffold script that wires all
+6 touchpoints in one pass.
 
-## Step 1: Identify a template
+## When to use this skill
 
-Pick the closest-matching existing plugin:
+- Adding support for a new disk image format (e.g. Roland `.roland`,
+  Sinclair `.mdv`, TRS-80 `.jv1`)
+- Promoting an existing parser to a full plugin
+- Forking an existing plugin to handle a variant (D71 from D64)
+- Updating `spec_status` after finding documentation
 
-| If your format is… | Use as template |
-|---|---|
-| Size-based detection (no magic) | `src/formats/commodore/d64.c` |
-| Magic at offset 0 (ASCII) | `src/formats/commodore/crt.c` |
-| Magic + suffix guard (Applesauce family) | `src/formats/apple/uft_moof_parser.c` |
-| Chunk-based (RIFF-style) | `src/formats/atx/uft_atx.c` |
-| Header + track table | `src/formats/fdi/uft_fdi_plugin.c` |
+**Do NOT use this skill for:**
+- Modifying an existing plugin's logic — use `structured-reviewer`
+- Format-to-format conversion — use `uft-format-converter`
+- Filesystem semantics (FAT, ProDOS, AmigaDOS) — use `uft-filesystem`
+- Flux decoder tweaks — that's `src/flux/`, not `src/formats/`
+
+## The 6 touchpoints
+
+| # | File | Scaffolded? |
+|---|------|-------------|
+| 1 | `src/formats/<n>/uft_<n>_plugin.c` | yes, from `templates/plugin.c.tmpl` |
+| 2 | `include/uft/uft_format_plugin.h` (enum) | yes, inserted before `UFT_FORMAT_UNKNOWN` |
+| 3 | `src/formats/uft_format_registry.c` (entry) | yes, before sentinel |
+| 4 | `UnifiedFloppyTool.pro` (SOURCES) | yes, appended to last `src/formats/` line |
+| 5 | `tests/test_<n>_plugin.c` | yes, from `templates/test.c.tmpl` |
+| 6 | `tests/CMakeLists.txt` | yes, `add_executable` + `add_test` |
+
+## Workflow
+
+### Step 1: Gather format facts
+
+Before scaffolding, answer:
+
+- Size bounds: `--min-size` / `--max-size` (bytes)
+- Sector size: `--sector-size` (usually 256, 512, or 1024)
+- Magic bytes: if any, at what offset?
+- Writable? yes/no
+- Spec status: `OFFICIAL_FULL` / `OFFICIAL_PARTIAL` /
+  `REVERSE_ENGINEERED` / `DERIVED` / `UNKNOWN`
+- Closest existing plugin (for reference while editing):
+
+| Your format is… | Reference plugin |
+|-----------------|------------------|
+| Fixed sector dump, no header | `src/formats/d64/uft_d64_plugin.c` |
+| Magic-byte header + sectors | `src/formats/atr/uft_atr_plugin.c` |
+| Container wrapping DO/PO/NIB | `src/formats/2img/` |
+| Zone-variable sectors/track | `src/formats/d64/` (uses `d64_spt[]`) |
+| Amiga block format | `src/formats/adf/` |
+| Bitstream (G64/HFE) | `src/formats/g64/` |
+| Flux capture | `src/formats/scp/` |
 | Compressed (zlib/LZSS) | `src/formats/td0/uft_td0.c` |
 
-## Step 2: Write the plugin file
+### Step 2: Run the scaffold
 
-Location: `src/formats/<family>/uft_<name>.c` where `<family>` is the
-platform dir (commodore/apple/atari/...). Include pattern:
-
-```c
-#include "uft/uft_format_common.h"
-
-/* Your constants */
-#define FOO_MAGIC      "..."
-#define FOO_HEADER_SIZE ...
-
-/* Plugin private data */
-typedef struct { FILE *file; /* ... */ } foo_pd_t;
-
-/* Four required callbacks */
-static bool foo_probe(const uint8_t *d, size_t s, size_t fs, int *c) { ... }
-static uft_error_t foo_open(uft_disk_t *disk, const char *path, bool ro) { ... }
-static void foo_close(uft_disk_t *disk) { ... }
-static uft_error_t foo_read_track(uft_disk_t *disk, const uft_track_coord_t *coord,
-                                   uft_track_t *out) { ... }
-
-/* Registration — MUST be at file scope, MUST use this macro */
-static uft_format_plugin_t foo_plugin = {
-    .id = UFT_FORMAT_FOO,
-    .name = "FOO",
-    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_VERIFY,
-    .probe = foo_probe, .open = foo_open,
-    .close = foo_close, .read_track = foo_read_track,
-    .spec_status = UFT_SPEC_STATUS_VERIFIED,  /* or STUB / PARTIAL */
-    .is_stub = false,
-};
-UFT_REGISTER_FORMAT_PLUGIN(foo)
+```bash
+cd <uft-root>
+python3 .claude/skills/uft-format-plugin/scripts/scaffold_plugin.py \
+    --name trsdos \
+    --description "TRS-80 LDOS/LS-DOS" \
+    --ext jv1 \
+    --min-size 102400 \
+    --max-size 204800 \
+    --sector-size 256 \
+    --spec-status REVERSE_ENGINEERED
 ```
 
-## Step 3: Honesty matrix (Principle 7)
+The script creates/modifies all 6 touchpoints and is **idempotent** — re-run
+with `--dry-run` first to preview.
 
-Populate `features[]` and `compat_entries[]` truthfully. Unknown ≠ supported:
+### Step 3: Fill in the scaffolded plugin
+
+The scaffold produces a compiling-but-incomplete `uft_<n>_plugin.c`. Edit:
+
+1. `<n>_plugin_probe` — add magic-byte or structural checks beyond size
+2. `<n>_plugin_open` — set real geometry (heads, sectors per track)
+3. `<n>_plugin_read_track` — implement sector enumeration
+4. `<n>_plugin_write_track` (delete if read-only)
+
+See the template comments for each section — they flag where to edit.
+
+### Step 4: Fill in the test
+
+`tests/test_<n>_plugin.c` has 5 test cases scaffolded. Add at least:
+
+- One real-sample positive test (if you have a fixture in `tests/vectors/`)
+- One false-positive test against a neighbour format (e.g. D64 vs D71)
+
+### Step 5: Register the registry probe function
+
+The registry entry calls `uft_<n>_probe()` (note: underscore, not plugin's
+static probe). This public symbol lives in `uft_format_registry.c` or in a
+separate probe file. For simple plugins:
 
 ```c
-static const uft_format_feature_t foo_features[] = {
-    { "Weak sectors",    UFT_FEATURE_NOT_SUPPORTED, NULL },
-    { "Timing data",     UFT_FEATURE_SUPPORTED,     NULL },
-    { "Write support",   UFT_FEATURE_PLANNED,       "v4.2" },
-};
-/* Then in foo_plugin struct: */
-.features = foo_features, .feature_count = sizeof(foo_features)/sizeof(*foo_features),
+/* In src/formats/uft_format_registry.c, near the other probes: */
+int uft_<n>_probe(const void *data, size_t size, int *confidence) {
+    /* delegate to the plugin's static probe */
+    extern const uft_format_plugin_t uft_format_plugin_<n>;
+    return uft_format_plugin_<n>.probe(data, size, size, confidence);
+}
 ```
 
-## Step 4: Register the format ID
+For complex formats with large probe logic, create `src/formats/<n>/uft_<n>_probe.c`.
 
-Add to `include/uft/core/uft_format_registry.h`:
+## Verification
+
+```bash
+# 1. Build the plugin isolated (syntax check)
+gcc -std=c11 -Wall -Wextra -Werror -fsyntax-only \
+    -I include/ src/formats/<n>/uft_<n>_plugin.c
+
+# 2. Full qmake build — must produce no new warnings
+qmake && make -j$(nproc) 2>&1 | grep -E "error:|warning:" \
+    | grep -i "<n>" && echo "NEW WARNINGS" || echo "clean"
+
+# 3. Run the new test
+cd tests && cmake . -DUFT_BUILD_TESTS=ON && \
+    make test_<n>_plugin && ./test_<n>_plugin
+# expect: "N passed, 0 failed"
+
+# 4. Regression check — total test count should be old+1
+ctest --output-on-failure 2>&1 | tail -3
+# expect: "Total Test time ... X% (N/N tests passed)"
+
+# 5. Verify it appears in the format list
+./uft list-formats | grep -i "<n>"
+# expect: one line with your format name
+
+# 6. Compliance audit
+python3 scripts/audit_plugin_compliance.py | grep "<n>"
+# expect: no ERROR entries for your plugin
+```
+
+## Common pitfalls
+
+### Probe returns non-zero on partial match
+
 ```c
-UFT_FORMAT_FOO,  /* Your format description */
+/* WRONG */
+if (memcmp(data, MAGIC, 2) == 0) *confidence = 50;
+return true;  /* true even when magic didn't match */
+
+/* RIGHT */
+if (size < MIN_SIZE) return false;
+if (memcmp(data, MAGIC, MAGIC_LEN) != 0) return false;
+*confidence = 90;
+return true;
 ```
 
-## Step 5: Add to build system
+### Forgotten cleanup on error paths
 
-- `UnifiedFloppyTool.pro`: append `src/formats/<family>/uft_<name>.c \` to
-  SOURCES. Check for basename collision first:
-  `grep -c "uft_<name>\.c" UnifiedFloppyTool.pro` — must return 0.
-- CMake picks it up automatically via `file(GLOB_RECURSE)`.
-- Run `python3 scripts/verify_build_sources.py` — must pass.
+Every `fopen` needs `fclose` on every error path:
 
-## Step 6: Write the probe test (MANDATORY, MF-007)
+```c
+FILE *f = fopen(path, "rb");
+if (!f) return UFT_ERROR_FILE_OPEN;
+if (fseek(f, 0, SEEK_END) != 0) {
+    fclose(f);            /* MUST close */
+    return UFT_ERROR_IO;
+}
+```
 
-Location: `tests/test_<name>_plugin.c`. Use the self-contained template
-pattern from `tests/test_atr_plugin.c`:
+### Track indexing off-by-one
 
-- Replica the probe logic verbatim (no external linking)
-- Cover: valid magic, wrong magic, too small, boundary conditions,
-  format-neighbour confusion (e.g. D64 vs D71 vs D81)
-- Framework: the TEST/RUN/ASSERT macros at top
-- Compile check: `gcc -std=c11 -Wall -Wextra -Werror`
+- D64 tracks are 1-indexed (1..35)
+- UFT `cyl` parameter is 0-indexed (0..34)
+- Always: `int d64_track = cyl + 1;`
 
-## Verification checklist
+### `spec_status = UNKNOWN` is almost never right
 
-- [ ] `gcc -fsyntax-only` on the new .c clean
-- [ ] `python3 scripts/verify_build_sources.py`: OK
-- [ ] Test passes locally
-- [ ] Plugin appears in `python3 scripts/audit_plugin_compliance.py` output
-- [ ] Principle 7 feature matrix reflects reality (no "supported" lies)
+Default to `DERIVED` (de-facto from emulator) unless you really have no
+reference at all. `UNKNOWN` makes the forensic report say "we don't know
+if this plugin is correct".
 
-## Anti-patterns (don't)
+### Basename collision in `UnifiedFloppyTool.pro`
 
-- Don't modify `src/formats_v2/` — it's DEAD CODE, see CLAUDE.md
-- Don't skip the test ("will add later" → MF-007 regression)
-- Don't claim `is_stub = false` if any of the read/open paths return
-  `UFT_ERR_NOT_IMPLEMENTED`
-- Don't fabricate magic bytes — if the format has no magic, use size-based
-  probe with `confidence ≤ 60` (so magic-based plugins win ties)
+UFT has `CONFIG += object_parallel_to_source` because basename collisions
+exist (35+ files share names across dirs). Check before adding:
+
+```bash
+grep -c "uft_<n>_plugin\.c" UnifiedFloppyTool.pro
+# expect: 0 before, 1 after
+```
+
+If a plugin file named `uft_<n>_plugin.c` already exists in another
+directory, rename yours to `uft_<n>_<family>_plugin.c`.
 
 ## Related
 
-- `docs/DESIGN_PRINCIPLES.md` Principle 7 (Ehrlichkeit)
-- `docs/MASTER_PLAN.md` M1 MF-007 (plugin coverage)
-- `tests/test_atr_plugin.c` — canonical probe-test template
-- `scripts/audit_plugin_compliance.py` — CI compliance check
+- `.claude/skills/uft-crc-engine/` — CRC families (if format uses CRC)
+- `.claude/skills/uft-flux-fixtures/` — synthesize test data
+- `.claude/skills/uft-filesystem/` — if format needs a filesystem layer
+- `.claude/agents/structured-reviewer.md` — review the final plugin
+- `docs/DESIGN_PRINCIPLES.md` Principle 7 (honesty matrix)
+- `src/formats/d64/uft_d64_plugin.c` — canonical D-series reference
+- `src/formats/atr/uft_atr_plugin.c` — canonical magic-byte reference
+- `tests/test_atr_plugin.c` — canonical probe-test reference

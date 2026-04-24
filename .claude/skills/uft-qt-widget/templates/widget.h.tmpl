@@ -1,0 +1,34 @@
+/**
+ * @file uft_@@name@@.h
+ * @brief @@Description@@.
+ */
+#pragma once
+
+#include <QWidget>
+#include <memory>
+
+namespace Ui { class @@Class@@; }
+
+class @@Class@@ : public QWidget {
+    Q_OBJECT
+public:
+    explicit @@Class@@(QWidget *parent = nullptr);
+    ~@@Class@@() override;
+
+    /* Public API — backend-driven */
+    void clear();
+    /* TODO: add loadAnalysisResult() or similar */
+
+signals:
+    void analysisTriggered();
+    void exportRequested(const QString &path);
+    void statusMessage(const QString &msg);
+
+private slots:
+    void onStartClicked();
+    void onResetClicked();
+
+private:
+    std::unique_ptr<Ui::@@Class@@> ui;
+    /* TODO: backend handle, worker thread pointer */
+};

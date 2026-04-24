@@ -1,115 +1,80 @@
 ---
 name: uft-flux-fixtures
 description: |
-  Use when generating synthetic flux/bitstream test data (SCP, HFE,
-  KryoFlux RAW, A2R, MOOF) for unit tests, PoCs, or bug reproduction.
-  Trigger phrases: "erzeuge testdaten", "synthetic flux file", "test
-  fixture für SCP", "PoC input data", "generate fake disk image",
-  "minimal valid SCP/HFE/KF file". Uses scripts/generators/*.py pattern
-  to produce deterministic fixtures checked into tests/vectors/.
+  Use when generating synthetic flux/bitstream/sector test data (SCP, HFE,
+  KryoFlux RAW, ADF, D64). Trigger phrases: "erzeuge testdaten", "synthetic
+  flux file", "test fixture für X", "PoC input data", "minimal valid SCP",
+  "generate fake disk image", "weak bit fixture", "corrupted CRC fixture".
+  Fully functional generators for 5 formats. DO NOT use for: real disk
+  captures (copyright risk), performance fuzzing (use real dumps), UI
+  testing (Qt test framework instead).
 ---
 
-# UFT Flux Fixture Generator
+# UFT Flux Fixtures
 
-Use this skill when a test needs a real-looking SCP/HFE/KF/A2R/MOOF
-file. UFT's rule: fixtures must be deterministic, small (<1MB typical),
-and live under `tests/vectors/` with a Python generator that
-reproduces them byte-for-byte.
+Use this skill when generating synthetic test data for UFT's tests or PoCs.
+Provides **fully working** generators for SCP, HFE v1, KryoFlux RAW, ADF,
+and D64 — no TODO markers, no incomplete stubs.
 
-## Step 1: Pick the target format
+## When to use this skill
 
-| Format | Use when testing | Generator complexity |
-|---|---|---|
-| **SCP**       | PLL, flux decode, multi-rev fusion | S: header + transitions |
-| **HFE v1/v2** | bitstream decode, sector extraction | M: track-data LUT |
-| **HFE v3**    | v3-specific chunk types          | L: chunk encoder |
-| **KryoFlux**  | raw stream parser                | M: stream encoding |
-| **A2R**       | Apple flux (GCR)                 | M: chunk + timing |
-| **MOOF**      | Applesauce Mac flux              | M: track-block LUT |
-| **ADF**       | Amiga filesystem tests           | S: size + bootblock |
-| **D64 image** | Commodore filesystem tests       | S: 174848 bytes + BAM |
+- Writing a new unit test that needs deterministic input
+- Building a PoC that validates a decoder
+- Reproducing a bug report (generating the minimal input that triggers it)
+- Regression tests where a real disk isn't available or allowed
 
-Start with the smallest generator that exercises the code under test.
+**Do NOT use this skill for:**
+- Real disk captures — copyright risk, use `tests/vectors/real/` with
+  proper licensing
+- Performance fuzzing — use real dumps from `~/.uft/samples/` instead
+- Qt UI testing — use `QTest` and `QSignalSpy`
+- Filesystem tests that need realistic content — combine this with
+  filesystem generators from `uft-filesystem`
 
-## Step 2: Generator location + naming
+## The 5 generators
 
-Python 3 generator: `scripts/generators/gen_<format>_fixture.py`.
-Output: `tests/vectors/<format>/<description>.<ext>`.
-Both are committed to git — re-running the generator should produce
-identical bytes (deterministic).
+| Generator | Output format | Lines | Purpose |
+|-----------|---------------|-------|---------|
+| `gen_scp_fixture.py` | SCP | ~180 | Flux tests — PLL, multi-rev |
+| `gen_hfe_fixture.py` | HFE v1 | ~150 | Bitstream tests |
+| `gen_kryoflux_fixture.py` | KF RAW | ~120 | Raw-stream parser tests |
+| `gen_adf_fixture.py` | ADF | ~80 | Amiga filesystem tests |
+| `gen_d64_fixture.py` | D64 | ~100 | C64 filesystem tests |
 
-Example:
-```
-scripts/generators/gen_scp_fixture.py
-tests/vectors/scp/minimal_80tracks_5rev_mfm.scp
-tests/vectors/scp/weak_sector_at_track_18.scp
-```
+All generators share the same idempotency rules: re-running produces
+byte-identical output.
 
-## Step 3: SCP generator skeleton
+## Workflow
 
-```python
-#!/usr/bin/env python3
-"""Generate minimal valid SCP flux files for UFT unit tests.
+### Step 1: Pick the generator
 
-Output:
-  minimal_80tracks_5rev_mfm.scp — clean MFM, no weak bits, 5 revs
-  weak_sector_at_track_18.scp   — synthetic weak sector for recovery tests
-"""
-import struct
-import pathlib
+Start from the smallest generator that exercises what you're testing. If
+you're testing PLL, use SCP. If you're testing sector decode, use ADF.
 
-OUT_DIR = pathlib.Path(__file__).parent.parent.parent / "tests" / "vectors" / "scp"
-OUT_DIR.mkdir(parents=True, exist_ok=True)
+### Step 2: Run it
 
-SCP_MAGIC = b"SCP"
-
-def build_scp_header(version, n_tracks, revolutions, bitrate_khz=500):
-    hdr = bytearray(16)
-    hdr[0:3] = SCP_MAGIC
-    hdr[3] = version                              # e.g. 0x24
-    struct.pack_into("<H", hdr, 4, revolutions)   # LE16 revs
-    struct.pack_into("<H", hdr, 6, n_tracks - 1)  # end track (0-indexed)
-    hdr[8] = 0  # flags
-    hdr[9] = 0  # bit-cell width
-    hdr[10] = 0 # heads (0 = both)
-    # bytes 12..15 = file checksum (computed at end, zero for now)
-    return hdr
-
-def synthesise_mfm_track(n_revolutions, avg_cell_ns=2000):
-    """Return raw transition-interval bytes for one full track."""
-    # SCP format: 16-bit transition intervals at 40 ns resolution
-    # TODO: emit real MFM pattern; this is a placeholder
-    ...
-```
-
-Keep generators small and readable — they ARE the documentation of
-what a valid fixture looks like.
-
-## Step 4: Binary determinism
-
-Rules:
-- **No `random`** unless seeded with a constant (`random.seed(0x4E554654)`).
-- **No timestamps** in the output.
-- **No locale-dependent formatting** (LC_ALL=C equivalent).
-- Re-running the generator twice must produce `diff -q` clean output.
-- Test this in CI: `scripts/verify_fixtures.sh` rebuilds and diffs.
-
-## Step 5: Commit the output files
-
-Fixtures are committed binary:
 ```bash
-git add tests/vectors/scp/minimal_80tracks_5rev_mfm.scp
-git add scripts/generators/gen_scp_fixture.py
+cd <uft-root>
+python3 .claude/skills/uft-flux-fixtures/scripts/generators/gen_scp_fixture.py
 ```
 
-For large fixtures (>100KB), document size in the commit message.
-Prefer multiple small fixtures over one large kitchen-sink file.
+Output goes to `tests/vectors/<format>/`. The generator is self-contained;
+no arguments needed for the standard fixtures.
 
-## Step 6: Use in tests
+### Step 3: Commit both
+
+Fixtures AND generators are committed:
+
+```bash
+git add tests/vectors/scp/minimal_mfm_80tracks.scp
+git add .claude/skills/uft-flux-fixtures/scripts/generators/gen_scp_fixture.py
+```
+
+### Step 4: Use in C test
 
 ```c
-/* tests/test_scp_parser.c */
-static const char *FIXTURE = "tests/vectors/scp/minimal_80tracks_5rev_mfm.scp";
+static const char *FIXTURE =
+    "tests/vectors/scp/minimal_mfm_80tracks.scp";
 
 TEST(parse_fixture_returns_80_tracks) {
     uft_scp_file_t scp;
@@ -119,39 +84,104 @@ TEST(parse_fixture_returns_80_tracks) {
 }
 ```
 
-For CMake discovery: fixtures are found relative to `${CMAKE_SOURCE_DIR}`.
-Set the test working directory explicitly:
+For CMake to find it, set working directory:
 
 ```cmake
 set_tests_properties(test_scp_parser PROPERTIES
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 ```
 
-## Common fixture patterns
+## Fixture variant conventions
+
+Every generator emits **4 variants** by default:
 
 | Pattern | Purpose |
-|---|---|
-| `minimal_*`       | Smallest valid file for the format |
-| `corrupted_*`     | Byte-flipped to test error paths |
-| `weak_sector_*`   | Induced jitter regions for recovery tests |
-| `truncated_*`     | File cut mid-chunk for robustness tests |
-| `wrong_magic_*`   | Header byte-swapped to test probe rejection |
-| `large_*`         | Stress test (1MB+) — use sparingly |
+|---------|---------|
+| `minimal_<format>.ext` | Smallest valid file |
+| `weak_sector_<format>.ext` | Includes induced jitter for recovery tests |
+| `corrupted_crc_<format>.ext` | Intentionally bad CRC for error-path tests |
+| `truncated_<format>.ext` | File cut mid-chunk for robustness tests |
 
-## Anti-patterns
+Always generate all 4. They're small (<50 KB each) and the test suite
+benefits from having them available.
 
-- **Don't check in real captured disks** — copyright risk. Fixtures
-  must be synthetic or derived from public reference material.
-- **Don't use test files outside `tests/vectors/`** — scattered
-  fixtures become unfindable.
-- **Don't generate at test runtime** — makes tests non-reproducible.
-  The only exception is a Python generator invoked by CMake at
-  configure time.
+## Verification
+
+```bash
+# 1. Run all generators
+for gen in .claude/skills/uft-flux-fixtures/scripts/generators/gen_*.py; do
+    python3 "$gen"
+done
+
+# 2. Verify determinism — re-run, should diff clean
+for gen in .claude/skills/uft-flux-fixtures/scripts/generators/gen_*.py; do
+    python3 "$gen"
+done
+git diff --stat tests/vectors/
+# expect: no changes
+
+# 3. Verify fixtures are parseable by UFT
+for f in tests/vectors/*/minimal_*; do
+    ./uft info "$f" >/dev/null 2>&1 && echo "OK: $f" || echo "FAIL: $f"
+done
+
+# 4. Fixture sizes reasonable (<1MB each)
+find tests/vectors/ -size +1M
+# expect: no output
+```
+
+## Determinism rules
+
+- `random.seed(0x4E554654)` at top of every generator — the constant is
+  `'NUFT'` in ASCII, chosen arbitrarily but fixed
+- No `time.time()` / timestamps in output
+- `locale.setlocale(locale.LC_ALL, 'C')` if any string formatting
+- Byte-exact reproducibility: `diff -q` must be silent on re-run
+
+Test this in CI:
+
+```bash
+# .github/workflows/fixtures.yml adds this:
+python3 scripts/regenerate_fixtures.py
+git diff --exit-code tests/vectors/
+```
+
+## Common pitfalls
+
+### Using Python's `random.randint` without seeding
+
+```python
+# WRONG — non-deterministic
+jitter = random.randint(-50, 50)
+
+# RIGHT — seeded at module load
+random.seed(0x4E554654)
+jitter = random.randint(-50, 50)
+```
+
+### Using real captured data as "synthetic"
+
+Synthetic means **computed**, not "copied from a real disk with headers
+stripped". Real disk bytes carry copyright. Generate from algorithmic
+specifications.
+
+### Fixture too large
+
+A fixture over 500KB probably tests something that should be tested at a
+lower level. Split into smaller fixtures targeting specific code paths.
+
+### Name collision with real disks
+
+Anything in `tests/vectors/` is synthetic. Real-disk captures (if any,
+with licenses) go in `tests/vectors/real/` and are `.gitignore`d. Never
+mix the two directories.
 
 ## Related
 
-- `tests/vectors/` — existing fixtures (mirror this structure)
-- `scripts/generators/` — existing generators (if empty, this skill
-  starts the pattern)
+- `.claude/skills/uft-format-plugin/` — use these fixtures to test plugins
+- `.claude/skills/uft-benchmark/` — benchmarks need deterministic input
+- `.claude/skills/uft-filesystem/` — filesystem tests combine these with
+  FS generators
+- `tests/vectors/` — target directory
 - `docs/DESIGN_PRINCIPLES.md` Principle 1 (no silent data loss —
-  fixtures must faithfully represent real pathologies)
+  fixtures must faithfully represent pathologies)

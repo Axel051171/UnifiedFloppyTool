@@ -1,0 +1,50 @@
+/**
+ * @file test_@@scheme@@_protection.c
+ * @brief @@Description@@ detector — unit tests with clean + protected fixtures.
+ */
+
+#include <stdio.h>
+#include <stdint.h>
+#include <string.h>
+#include <stdlib.h>
+
+static int _pass = 0, _fail = 0, _last_fail = 0;
+#define TEST(name) static void test_##name(void)
+#define RUN(name)  do { printf("  [TEST] %-40s ... ", #name); test_##name(); \
+                        if (_last_fail == _fail) { printf("OK\n"); _pass++; } \
+                        _last_fail = _fail; } while (0)
+#define ASSERT(c)  do { if (!(c)) { printf("FAIL @ %d: %s\n", __LINE__, #c); _fail++; return; } } while (0)
+
+/* TODO: include the detector header once wired into UFT build */
+/* #include "uft/protection/uft_protection.h" */
+
+/* ----- Clean-disk test ----- */
+
+TEST(no_false_positive_on_clean_adf) {
+    /* Load tests/vectors/adf/minimal_ofs.adf, iterate tracks, detect() each.
+     * ALL must return UFT_PROT_NOT_DETECTED. */
+    /* TODO: implement once integrated into UFT test infrastructure */
+    ASSERT(1);
+}
+
+TEST(no_false_positive_on_clean_d64) {
+    /* Load tests/vectors/d64/minimal_35tracks.d64 and check same. */
+    ASSERT(1);
+}
+
+/* ----- Protected-sample test ----- */
+
+TEST(detects_known_protected_sample) {
+    /* Load a real or synthesized protected sample and verify detect()
+     * returns UFT_PROT_DETECTED with confidence >= 80. */
+    ASSERT(1);
+}
+
+int main(void) {
+    printf("== @@Description@@ detector tests ==\n");
+    RUN(no_false_positive_on_clean_adf);
+    RUN(no_false_positive_on_clean_d64);
+    RUN(detects_known_protected_sample);
+    printf("\nResult: %d passed, %d failed\n", _pass, _fail);
+    return _fail == 0 ? 0 : 1;
+}

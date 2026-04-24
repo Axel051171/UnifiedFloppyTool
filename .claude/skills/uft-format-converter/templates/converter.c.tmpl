@@ -1,0 +1,87 @@
+/**
+ * @file uft_convert_@@src@@_to_@@dst@@.c
+ * @brief Convert @@SRC@@ to @@DST@@ — @@fidelity_class@@.
+ *
+ * Fidelity class: @@fidelity_class@@
+ *   LOSSLESS   — all source bytes survive; round-trip identical
+ *   LOSSY      — some source metadata discarded (list below)
+ *   SYNTHETIC  — target bytes synthesized from abstract source model
+ *
+ * What is NOT preserved in this conversion:
+ *   - @@loss_item_1@@
+ *   - @@loss_item_2@@
+ *   - @@loss_item_3@@
+ */
+#include "uft/convert/uft_format_convert.h"
+#include "uft/uft_format_common.h"
+#include "uft/audit/uft_audit.h"
+
+uft_error_t uft_convert_@@src@@_to_@@dst@@(const char *input_path,
+                                            const char *output_path,
+                                            const uft_convert_opts_t *opts) {
+    if (!input_path || !output_path) return UFT_ERROR_INVALID_ARG;
+
+    uft_audit_ctx_t *audit = opts ? opts->audit : NULL;
+
+    /* ---- Step 1: open source ---- */
+    uft_disk_t src_disk = {0};
+    uft_error_t err = uft_disk_open_by_format(&src_disk, input_path,
+                                                UFT_FORMAT_@@SRC@@, true);
+    if (err != UFT_OK) {
+        if (audit) uft_audit_error(audit, "source open failed: %s", input_path);
+        return err;
+    }
+
+    /* ---- Step 2: announce conversion in audit ---- */
+    if (audit) {
+        uft_audit_info(audit, "begin @@src@@→@@dst@@ conversion (%s)",
+                       "@@fidelity_class@@");
+        /* If LOSSY: declare what's being dropped */
+        @@lossy_audit_warnings@@
+    }
+
+    /* ---- Step 3: open destination ---- */
+    uft_disk_t dst_disk = {0};
+    err = uft_disk_create_by_format(&dst_disk, output_path,
+                                     UFT_FORMAT_@@DST@@, &src_disk.geometry);
+    if (err != UFT_OK) {
+        uft_disk_close(&src_disk);
+        if (audit) uft_audit_error(audit, "dest create failed: %s", output_path);
+        return err;
+    }
+
+    /* ---- Step 4: track-by-track conversion ---- */
+    for (int cyl = 0; cyl < src_disk.geometry.cylinders; cyl++) {
+        for (int head = 0; head < src_disk.geometry.heads; head++) {
+            uft_track_t src_track = {0};
+            err = uft_disk_read_track(&src_disk, cyl, head, &src_track);
+            if (err != UFT_OK) {
+                if (audit) uft_audit_warn(audit, "read track %d.%d failed",
+                                           cyl, head);
+                continue;
+            }
+
+            /* TODO: transform src_track into dst format.
+             * For Sector→Sector this can be a direct pass.
+             * For Sector→Bitstream this requires MFM/GCR synthesis.
+             * For Bitstream→Sector this requires CRC recomputation. */
+
+            err = uft_disk_write_track(&dst_disk, cyl, head, &src_track);
+            uft_track_free(&src_track);
+            if (err != UFT_OK) {
+                if (audit) uft_audit_error(audit, "write track %d.%d failed",
+                                            cyl, head);
+                uft_disk_close(&dst_disk);
+                uft_disk_close(&src_disk);
+                return err;
+            }
+        }
+    }
+
+    /* ---- Step 5: finalize ---- */
+    uft_disk_close(&dst_disk);
+    uft_disk_close(&src_disk);
+
+    if (audit) uft_audit_info(audit, "@@src@@→@@dst@@ conversion complete");
+    return UFT_OK;
+}

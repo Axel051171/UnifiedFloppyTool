@@ -1,0 +1,78 @@
+/**
+ * @file test_convert_@@src@@_to_@@dst@@.c
+ * @brief Round-trip + fidelity test for @@SRC@@ → @@DST@@.
+ */
+
+#include <stdio.h>
+#include <stdint.h>
+#include <string.h>
+#include <stdlib.h>
+#include <unistd.h>
+
+static int _pass = 0, _fail = 0, _last_fail = 0;
+#define TEST(name) static void test_##name(void)
+#define RUN(name)  do { printf("  [TEST] %-40s ... ", #name); test_##name(); \
+                        if (_last_fail == _fail) { printf("OK\n"); _pass++; } \
+                        _last_fail = _fail; } while (0)
+#define ASSERT(c)  do { if (!(c)) { printf("FAIL @ %d: %s\n", __LINE__, #c); _fail++; return; } } while (0)
+
+#define SRC_FIXTURE  "tests/vectors/@@src@@/minimal.@@src_ext@@"
+#define DST_TEMP     "/tmp/uft_test_@@src@@_to_@@dst@@.@@dst_ext@@"
+#define ROUNDTRIP    "/tmp/uft_test_roundtrip.@@src_ext@@"
+
+static int run_cmd(const char *fmt, ...) {
+    char cmd[1024];
+    va_list ap;
+    va_start(ap, fmt);
+    vsnprintf(cmd, sizeof(cmd), fmt, ap);
+    va_end(ap);
+    return system(cmd);
+}
+
+TEST(fixture_exists) {
+    FILE *f = fopen(SRC_FIXTURE, "rb");
+    ASSERT(f != NULL);
+    fclose(f);
+}
+
+TEST(conversion_produces_valid_file) {
+    unlink(DST_TEMP);
+    int rc = run_cmd("./uft convert --from %s --to %s >/dev/null 2>&1",
+                     SRC_FIXTURE, DST_TEMP);
+    ASSERT(rc == 0);
+    FILE *f = fopen(DST_TEMP, "rb");
+    ASSERT(f != NULL);
+    fseek(f, 0, SEEK_END);
+    long sz = ftell(f);
+    fclose(f);
+    ASSERT(sz > 0);
+}
+
+TEST(target_format_accepts_output) {
+    int rc = run_cmd("./uft info %s >/dev/null 2>&1", DST_TEMP);
+    ASSERT(rc == 0);
+}
+
+/* Round-trip: only applicable for LOSSLESS conversions.
+ * Delete or adjust for LOSSY/SYNTHETIC classes. */
+TEST(roundtrip_preserves_data) {
+    unlink(ROUNDTRIP);
+    int rc = run_cmd("./uft convert --from %s --to %s >/dev/null 2>&1",
+                     DST_TEMP, ROUNDTRIP);
+    ASSERT(rc == 0);
+
+    rc = run_cmd("diff -q %s %s >/dev/null 2>&1", SRC_FIXTURE, ROUNDTRIP);
+    /* For LOSSLESS: ASSERT(rc == 0);
+     * For LOSSY:    expect rc != 0 and verify specific fields below. */
+    ASSERT(rc == 0);
+}
+
+int main(void) {
+    printf("== @@SRC@@ → @@DST@@ conversion tests ==\n");
+    RUN(fixture_exists);
+    RUN(conversion_produces_valid_file);
+    RUN(target_format_accepts_output);
+    RUN(roundtrip_preserves_data);
+    printf("\nResult: %d passed, %d failed\n", _pass, _fail);
+    return _fail == 0 ? 0 : 1;
+}

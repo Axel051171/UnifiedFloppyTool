@@ -1,0 +1,209 @@
+/**
+ * @file uft_@@name@@_plugin.c
+ * @brief @@Description@@ Plugin-B — self-contained
+ *
+ * Format:   @@format_summary@@
+ * Spec:     @@spec_source@@
+ * Samples:  @@sample_provenance@@
+ */
+#include "uft/uft_format_common.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+/* =========================================================================
+ * Format constants
+ * =======================================================================*/
+
+#define @@NAME@@_MIN_SIZE      @@min_size@@
+#define @@NAME@@_MAX_SIZE      @@max_size@@
+#define @@NAME@@_SECTOR_SIZE   @@sector_size@@
+
+/* Add MAGIC_BYTES / MAGIC_LEN / HEADER_SIZE here if applicable:
+ *   static const uint8_t @@NAME@@_MAGIC[] = { 0x00, 0x11 };
+ *   #define @@NAME@@_MAGIC_LEN  2
+ */
+
+/* =========================================================================
+ * Plugin-private data
+ * =======================================================================*/
+
+typedef struct {
+    FILE *file;
+    int   max_track;
+    /* Add format-specific fields: geometry hints, variant flags, etc. */
+} @@name@@_pd_t;
+
+/* =========================================================================
+ * Helpers (static, file-local)
+ * =======================================================================*/
+
+static long @@name@@_offset(int track, int sector) {
+    /* Example: flat sector layout. Adapt for your format. */
+    return (long)track * @@NAME@@_SECTOR_SIZE +
+           (long)sector * @@NAME@@_SECTOR_SIZE;
+}
+
+/* =========================================================================
+ * Probe
+ * =======================================================================*/
+
+/**
+ * Returns true if the bytes look like this format.
+ * *confidence in 0..100:
+ *   90+ — almost certain (magic bytes matched)
+ *   75+ — plausible (size + structural check)
+ *   50+ — weak match (size only)
+ *   <50 — do not return true
+ */
+static bool @@name@@_plugin_probe(const uint8_t *data, size_t size,
+                                   size_t file_size, int *confidence) {
+    if (file_size < @@NAME@@_MIN_SIZE || file_size > @@NAME@@_MAX_SIZE)
+        return false;
+
+    /* TODO: magic-byte check if format has one:
+     *   if (size < @@NAME@@_MAGIC_LEN) return false;
+     *   if (memcmp(data, @@NAME@@_MAGIC, @@NAME@@_MAGIC_LEN) != 0) return false;
+     *   *confidence = 92;
+     *   return true;
+     */
+
+    (void)data; (void)size;
+    *confidence = 75;
+    return true;
+}
+
+/* =========================================================================
+ * Open / Close
+ * =======================================================================*/
+
+static uft_error_t @@name@@_plugin_open(uft_disk_t *disk, const char *path,
+                                         bool ro) {
+    FILE *f = fopen(path, ro ? "rb" : "r+b");
+    if (!f) return UFT_ERROR_FILE_OPEN;
+
+    if (fseek(f, 0, SEEK_END) != 0) { fclose(f); return UFT_ERROR_IO; }
+    long sz = ftell(f);
+    if (sz < 0) { fclose(f); return UFT_ERROR_IO; }
+    if (fseek(f, 0, SEEK_SET) != 0) { fclose(f); return UFT_ERROR_IO; }
+
+    @@name@@_pd_t *p = calloc(1, sizeof(*p));
+    if (!p) { fclose(f); return UFT_ERROR_NO_MEMORY; }
+    p->file = f;
+
+    /* TODO: compute real max_track from file size */
+    p->max_track = (int)(sz / (@@NAME@@_SECTOR_SIZE * 18));
+
+    /* Populate geometry — callers depend on these being correct */
+    disk->plugin_data            = p;
+    disk->geometry.cylinders     = p->max_track;
+    disk->geometry.heads         = 1;     /* TODO: adjust for double-sided */
+    disk->geometry.sectors       = 18;    /* TODO: real sectors-per-track */
+    disk->geometry.sector_size   = @@NAME@@_SECTOR_SIZE;
+    disk->geometry.total_sectors = p->max_track * 18;
+
+    return UFT_OK;
+}
+
+static void @@name@@_plugin_close(uft_disk_t *disk) {
+    @@name@@_pd_t *p = disk->plugin_data;
+    if (p) {
+        if (p->file) fclose(p->file);
+        free(p);
+        disk->plugin_data = NULL;
+    }
+}
+
+/* =========================================================================
+ * Read track
+ * =======================================================================*/
+
+static uft_error_t @@name@@_plugin_read_track(uft_disk_t *disk,
+                                                int cyl, int head,
+                                                uft_track_t *track) {
+    @@name@@_pd_t *p = disk->plugin_data;
+    if (!p || !p->file) return UFT_ERROR_INVALID_STATE;
+    if (head != 0)      return UFT_ERROR_INVALID_STATE;  /* adjust if 2-sided */
+
+    uft_track_init(track, cyl, head);
+
+    if (cyl < 0 || cyl >= p->max_track) return UFT_OK;  /* empty is OK */
+
+    int nsectors = 18;  /* TODO: adapt for zone-variable formats */
+    uint8_t buf[@@NAME@@_SECTOR_SIZE];
+
+    for (int s = 0; s < nsectors; s++) {
+        long off = @@name@@_offset(cyl, s);
+        if (fseek(p->file, off, SEEK_SET) != 0) continue;
+        if (fread(buf, 1, @@NAME@@_SECTOR_SIZE, p->file) != @@NAME@@_SECTOR_SIZE)
+            continue;
+        uft_format_add_sector(track, (uint8_t)s, buf, @@NAME@@_SECTOR_SIZE,
+                              (uint8_t)cyl, (uint8_t)head);
+    }
+    return UFT_OK;
+}
+
+/* =========================================================================
+ * Write track
+ *   Delete this block AND remove UFT_FORMAT_CAP_WRITE below if read-only.
+ * =======================================================================*/
+
+static uft_error_t @@name@@_plugin_write_track(uft_disk_t *disk,
+                                                 int cyl, int head,
+                                                 const uft_track_t *track) {
+    @@name@@_pd_t *p = disk->plugin_data;
+    if (!p || !p->file)  return UFT_ERROR_INVALID_STATE;
+    if (disk->read_only) return UFT_ERROR_NOT_SUPPORTED;
+    if (head != 0)       return UFT_ERROR_INVALID_STATE;
+
+    if (cyl < 0 || cyl >= p->max_track) return UFT_OK;
+
+    int nsectors = 18;
+
+    for (size_t s = 0; s < track->sector_count && (int)s < nsectors; s++) {
+        long off = @@name@@_offset(cyl, (int)s);
+        if (fseek(p->file, off, SEEK_SET) != 0) return UFT_ERROR_IO;
+
+        const uint8_t *data = track->sectors[s].data;
+        size_t         len  = track->sectors[s].data_len;
+        uint8_t pad[@@NAME@@_SECTOR_SIZE];
+
+        if (!data || len == 0) {
+            memset(pad, 0xE5, @@NAME@@_SECTOR_SIZE);
+            data = pad; len = @@NAME@@_SECTOR_SIZE;
+        } else if (len < @@NAME@@_SECTOR_SIZE) {
+            memset(pad, 0xE5, @@NAME@@_SECTOR_SIZE);
+            memcpy(pad, data, len);
+            data = pad; len = @@NAME@@_SECTOR_SIZE;
+        }
+        if (fwrite(data, 1, @@NAME@@_SECTOR_SIZE, p->file) != @@NAME@@_SECTOR_SIZE)
+            return UFT_ERROR_IO;
+    }
+    return UFT_OK;
+}
+
+/* =========================================================================
+ * Plugin descriptor + registration
+ * =======================================================================*/
+
+const uft_format_plugin_t uft_format_plugin_@@name@@ = {
+    .name         = "@@NAME@@",
+    .description  = "@@Description@@",
+    .extensions   = "@@ext@@",
+    .format       = UFT_FORMAT_@@NAME@@,
+
+    /* Remove UFT_FORMAT_CAP_WRITE if write_track is deleted above */
+    .capabilities = UFT_FORMAT_CAP_READ
+                  | UFT_FORMAT_CAP_WRITE
+                  | UFT_FORMAT_CAP_VERIFY,
+
+    .probe        = @@name@@_plugin_probe,
+    .open         = @@name@@_plugin_open,
+    .close        = @@name@@_plugin_close,
+    .read_track   = @@name@@_plugin_read_track,
+    .write_track  = @@name@@_plugin_write_track,
+    .verify_track = uft_generic_verify_track,
+
+    .spec_status  = UFT_SPEC_@@spec_status@@,
+};
+UFT_REGISTER_FORMAT_PLUGIN(@@name@@)

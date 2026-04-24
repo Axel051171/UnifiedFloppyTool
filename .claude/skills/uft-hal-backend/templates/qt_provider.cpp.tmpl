@@ -1,0 +1,109 @@
+/**
+ * @file @@backend@@hardwareprovider.cpp
+ * @brief @@Description@@ — Qt wrapper around C HAL.
+ */
+#include "@@backend@@hardwareprovider.h"
+#include "uft/hal/uft_hal_unified.h"
+
+#include <QThread>
+#include <QDebug>
+
+extern "C" {
+#include "uft_@@backend@@.h"
+}
+
+/* ========================================================================
+ * Worker — runs on its own QThread to avoid blocking UI
+ * ======================================================================*/
+
+class @@Backend@@Worker : public QObject {
+    Q_OBJECT
+public:
+    explicit @@Backend@@Worker(const QString &device, QObject *parent = nullptr)
+        : QObject(parent), m_device(device) {}
+
+signals:
+    void progress(int trackCurrent, int trackTotal);
+    void trackCaptured(int cylinder, int side, QByteArray flux);
+    void finished(bool success, const QString &errorMessage);
+
+public slots:
+    void run() {
+        uft_hal_ctx_t ctx = {};
+        ctx.vtable = &uft_hal_vtable_@@backend@@;
+        ctx.cancel_requested = &m_cancelRequested;
+
+        uft_error_t err = ctx.vtable->open(&ctx, m_device.toUtf8().constData());
+        if (err != UFT_OK) {
+            emit finished(false, tr("open failed: %1").arg(err));
+            return;
+        }
+
+        const int tracks = 80;
+        for (int cyl = 0; cyl < tracks; cyl++) {
+            if (m_cancelRequested) break;
+
+            err = ctx.vtable->seek(&ctx, cyl);
+            if (err != UFT_OK) {
+                emit finished(false, tr("seek failed at track %1").arg(cyl));
+                ctx.vtable->close(&ctx);
+                return;
+            }
+
+            /* TODO: read flux or sector depending on capabilities */
+
+            emit progress(cyl + 1, tracks);
+        }
+
+        ctx.vtable->close(&ctx);
+        emit finished(true, QString());
+    }
+
+    void requestCancel() { m_cancelRequested = true; }
+
+private:
+    QString m_device;
+    volatile bool m_cancelRequested = false;
+};
+
+/* ========================================================================
+ * Provider
+ * ======================================================================*/
+
+@@Backend@@HardwareProvider::@@Backend@@HardwareProvider(QObject *parent)
+    : HardwareProvider(parent) {
+}
+
+@@Backend@@HardwareProvider::~@@Backend@@HardwareProvider() {
+    if (m_thread && m_thread->isRunning()) {
+        if (m_worker) m_worker->requestCancel();
+        m_thread->quit();
+        m_thread->wait(2000);
+    }
+}
+
+void @@Backend@@HardwareProvider::startCapture(const QString &device) {
+    m_worker = new @@Backend@@Worker(device);
+    m_thread = new QThread(this);
+    m_worker->moveToThread(m_thread);
+
+    connect(m_thread, &QThread::started, m_worker, &@@Backend@@Worker::run);
+    connect(m_worker, &@@Backend@@Worker::progress,
+            this,     &@@Backend@@HardwareProvider::progressChanged);
+    connect(m_worker, &@@Backend@@Worker::finished,
+            this,     &@@Backend@@HardwareProvider::captureFinished);
+    connect(m_worker, &@@Backend@@Worker::finished,
+            m_thread, &QThread::quit);
+    connect(m_thread, &QThread::finished,
+            m_worker, &QObject::deleteLater);
+    connect(m_thread, &QThread::finished,
+            m_thread, &QObject::deleteLater);
+
+    m_thread->start();
+}
+
+void @@Backend@@HardwareProvider::cancel() {
+    if (m_worker) m_worker->requestCancel();
+}
+
+#include "@@backend@@hardwareprovider.moc"

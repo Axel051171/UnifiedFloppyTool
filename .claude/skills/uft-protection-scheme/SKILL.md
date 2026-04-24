@@ -1,164 +1,200 @@
 ---
 name: uft-protection-scheme
 description: |
-  Use when adding a copy-protection detector (or completing one that
-  exists as stub). Trigger phrases: "neuer protection detector",
-  "X copy protection", "erkenne Y protection", "V-MAX detector",
-  "Copylock detection", "Rob Northen erkennen", "fuzzy bits", "long
-  track detection". 35+ schemes already registered — mirror the
-  existing pattern in src/protection/. Related to XCOPY_INTEGRATION_TODO
-  T6/T7 (virus + bootblock scan).
+  Use when adding a copy-protection DETECTOR to UFT's read-only forensic
+  pipeline. Trigger phrases: "neuer protection detector", "X copy protection
+  erkennen", "V-MAX detector", "Copylock detection", "Rob Northen erkennen",
+  "fuzzy bits detector", "long track detection". 35+ schemes registered;
+  pattern is stable. DO NOT use for: removing/cleaning protections (UFT is
+  read-only by design), format plugins (→ uft-format-plugin), filesystem
+  semantics (→ uft-filesystem), protection-scheme reverse-engineering (write
+  a spec doc first, then this skill).
 ---
 
-# UFT Protection-Scheme Detector Template
+# UFT Protection-Scheme Detector
 
-Use this skill when adding a new copy-protection detector. 35+ schemes
-exist, the pattern is stable. Never auto-kill or "fix" protections —
-UFT is read-only forensic (see XCOPY_INTEGRATION_TODO anti-features).
+Use this skill when adding a new copy-protection **detector**. UFT is
+read-only forensic software — detectors observe and report, never modify.
 
-## Step 1: Pick a template
+## When to use this skill
 
-| If the protection is… | Use as template |
-|---|---|
-| Track-structure based (long tracks, half tracks) | `src/protection/uft_longtrack.c` |
-| Sector-level (weak bits, duplicate sectors) | `src/protection/uft_fuzzy_bits.c` |
-| Sync-pattern based (custom 0x448n markers) | `src/protection/uft_copylock.c` |
-| Density mismatch (MFM ↔ FM transitions) | `src/protection/uft_speedlock.c` |
-| Amiga-specific (RNC, Copylock Amiga) | `src/protection/uft_amiga_caps.c` |
+- Adding a detector for a protection scheme UFT doesn't recognize yet
+- Completing a stubbed detector file
+- Adding platform variants (e.g. CopyLock Amiga vs. CopyLock Atari ST)
+
+**Do NOT use this skill for:**
+- "Cleaning" or "killing" a protection — UFT never modifies images
+- Repairing a protection that didn't match — detection is observation-only
+- Reverse-engineering a scheme from scratch — write a spec doc in
+  `docs/protection_schemes/` first, then use this skill to wire it in
+- Format-level work (SCP/HFE decoding) — that's `src/formats/` and `src/flux/`
+
+## The 4 touchpoints
+
+| # | File | Purpose |
+|---|------|---------|
+| 1 | `src/protection/uft_<scheme>.c` | Detector implementation |
+| 2 | `include/uft/protection/uft_protection_types.h` | Scheme ID enum |
+| 3 | `src/protection/uft_protection_detect.c` | Dispatch table entry |
+| 4 | `docs/protection_schemes.md` | Documentation (first-seen game, year) |
+
+## Workflow
+
+### Step 1: Pick a template by scheme class
+
+| Your protection is… | Reference detector |
+|---------------------|--------------------|
+| Long tracks, half tracks | `src/protection/uft_longtrack.c` |
+| Weak bits, duplicate sectors | `src/protection/uft_fuzzy_bits.c` |
+| Custom sync markers (non-4489) | `src/protection/uft_copylock.c` |
+| Density mismatch (MFM↔FM mix) | `src/protection/uft_speedlock.c` |
+| Amiga-specific (RNC, CopyLock) | `src/protection/uft_amiga_caps.c` |
 | C64-specific (V-MAX, RapidLok) | `src/protection/uft_rapidlok.c` |
-| Atari ST (Macrodos, dec0de) | `src/protection/uft_atarist_copylock.c` |
 
-## Step 2: Detector file structure
+Read the closest existing detector end-to-end before writing.
 
-Location: `src/protection/uft_<scheme>.c` (+ `.h` in
-`include/uft/protection/`). Required shape:
+### Step 2: Write the detector
 
-```c
-#include "uft/protection/uft_protection.h"
+Location: `src/protection/uft_<scheme>.c` using
+`templates/detector.c.tmpl`. Every detector is a single C file with:
 
-/* Scheme-specific detection state / signatures */
-static const uint8_t FOO_SIGNATURE[] = { /* bytes, masked patterns */ };
+- A signature pattern (hardcoded bytes or structural test)
+- A `detect()` function returning `UFT_PROT_NOT_DETECTED /
+  UFT_PROT_POSSIBLE / UFT_PROT_DETECTED`
+- Platform flags (`UFT_PLATFORM_C64 | UFT_PLATFORM_AMIGA | ...`)
+- A registration block at bottom
 
-/*
- * Detector signature. Called once per track. Returns:
- *   - UFT_PROT_NOT_DETECTED  — this scheme is not present
- *   - UFT_PROT_DETECTED      — strong match, populate result fields
- *   - UFT_PROT_POSSIBLE      — weak match, set confidence < 80
- */
-static uft_prot_result_t foo_detect(const uft_track_t *track,
-                                      const uft_prot_ctx_t *ctx,
-                                      uft_prot_detail_t *out_detail)
-{
-    if (!track || !track->bits) return UFT_PROT_NOT_DETECTED;
-
-    /* Detection logic: scan bits/sectors for the signature pattern. */
-    ...
-
-    if (match_score >= 95) {
-        out_detail->scheme = UFT_PROT_FOO;
-        out_detail->confidence = (uint8_t)match_score;
-        out_detail->track_first_seen = track->track_num;
-        out_detail->description = "FOO copy protection (trait X)";
-        return UFT_PROT_DETECTED;
-    }
-    return UFT_PROT_NOT_DETECTED;
-}
-
-/* Registry entry */
-static const uft_prot_detector_t foo_detector = {
-    .scheme_id = UFT_PROT_FOO,
-    .scheme_name = "FOO",
-    .platforms = UFT_PLATFORM_C64 | UFT_PLATFORM_AMIGA,
-    .detect = foo_detect,
-};
-UFT_REGISTER_PROT_DETECTOR(foo)
-```
-
-## Step 3: Add scheme ID
+### Step 3: Register the scheme ID
 
 `include/uft/protection/uft_protection_types.h`:
+
 ```c
-UFT_PROT_FOO,   /* Description: first seen in <game>, <year> */
+UFT_PROT_<SCHEME>,   /* Description: first seen in <game>, <year> */
 ```
 
-## Step 4: Anti-features (never do these)
+The comment is not optional — it's documentation that prevents future
+confusion about what each enum value means.
 
-From `XCOPY_INTEGRATION_TODO.md` §Anti-Features:
-- **No auto-kill**: never "clean" a protection. Detection is report-only.
-- **No in-place repair**: never modify the loaded image. Copy-on-write
-  only, new file on disk.
-- **No synthesis**: if a protection uses randomised weak bits, preserve
-  the actual jitter — don't substitute a "cleaner" pattern.
+### Step 4: Dispatch order matters
 
-## Step 5: False-positive discipline
-
-Copy-protection detectors are famously fragile. Required:
-
-- Detection threshold ≥ 80 for "DETECTED" status. Below → POSSIBLE.
-- Minimum 2 corroborating signals (e.g. sync pattern + track length).
-- Test against **clean disks** (standard AmigaDOS, DOS 3.3, CP/M) —
-  detector must NOT trigger on unprotected images.
-- Test against **at least one real sample** of the protected format
-  (public-domain cracks, preservation archives).
-
-## Step 6: Test file
-
-Location: `tests/test_<scheme>_protection.c`. Template:
-`tests/test_c64_protection.c`. Structure:
+`src/protection/uft_protection_detect.c`:
 
 ```c
-TEST(detects_foo_on_known_sample) {
-    uft_track_t track = { /* loaded from tests/vectors/ fixture */ };
-    uft_prot_detail_t detail;
-    ASSERT(foo_detect(&track, &ctx, &detail) == UFT_PROT_DETECTED);
-    ASSERT(detail.confidence >= 80);
-}
-
-TEST(no_false_positive_on_clean_adf) {
-    uft_track_t clean = load_fixture("clean_amigados.adf", 0);
-    uft_prot_detail_t detail;
-    ASSERT(foo_detect(&clean, &ctx, &detail) == UFT_PROT_NOT_DETECTED);
-}
-```
-
-## Step 7: Update the protection matrix
-
-`src/protection/uft_protection_detect.c` — the master dispatch:
-```c
-/* Order matters: more specific schemes before generic catch-alls */
 const uft_prot_detector_t *DETECTORS[] = {
-    &foo_detector,  /* NEW — specific pattern */
-    /* existing detectors... */
-    &generic_longtrack_detector,  /* catch-all last */
+    &specific_pattern_detector,        /* specific first */
+    /* ... existing ... */
+    &generic_longtrack_detector,       /* catch-alls last */
     NULL
 };
 ```
 
-## Step 8: Documentation requirements (Principle 7)
+Specific-pattern detectors go BEFORE catch-alls. Otherwise the catch-all
+"claims" protections that a specific detector would have identified better.
 
-Each new detector MUST have:
-- First-seen commit message entry in CHANGELOG.md
-- Entry in `docs/protection_schemes.md` (create if missing): scheme
-  name, year introduced, platforms, games known to use it, detection
-  rate %
-- Known-false-negatives disclosed (e.g. "does not detect the rare
-  v2 variant used in 3 Ocean games")
+### Step 5: Document in `docs/protection_schemes.md`
 
-## Anti-patterns
+```markdown
+## SCHEME_NAME
 
-- **Don't combine multiple schemes in one file** — `uft_combined.c`
-  becomes unmaintainable. One scheme, one file.
-- **Don't detect by filename/metadata** — it's the disk bits that
-  count, not the label.
-- **Don't hardcode game titles** — a detector for "Dungeon Master's
-  Fuzzy Bits" scheme, not for "Dungeon Master" itself.
-- **Don't let detectors mutate `uft_track_t`** — detection is
-  read-only (`const`).
+- **First seen:** <game>, <year>
+- **Platforms:** C64, Amiga
+- **Variant:** v1 / v2 (if applicable)
+- **Detection confidence:** 85% against known sample set
+- **Known false negatives:** <list>
+- **Reference:** <url or book citation>
+```
+
+## Verification
+
+```bash
+# 1. Compile the detector
+gcc -std=c11 -Wall -Wextra -Werror -fsyntax-only \
+    -I include/ src/protection/uft_<scheme>.c
+
+# 2. Full build
+qmake && make -j$(nproc)
+
+# 3. Run the detector's own test
+cd tests && make test_<scheme>_protection && ./test_<scheme>_protection
+
+# 4. Confirm no false positive on clean disks
+for clean in tests/vectors/*/minimal_*; do
+    ./uft detect-protection "$clean" | grep -q "<SCHEME>" && \
+        echo "FALSE POSITIVE: $clean"
+done
+
+# 5. Confirm detection on known protected sample (if you have one)
+./uft detect-protection tests/vectors/protected/<sample> | grep "<SCHEME>"
+
+# 6. Regression check
+ctest --output-on-failure -R protection
+```
+
+## Anti-features (enforced by forensic-integrity agent)
+
+These are hard rules — violations block merge:
+
+### Never modify the image
+
+```c
+/* WRONG — mutating the track destroys forensic integrity */
+void fix_protection(uft_track_t *track) { ... }
+
+/* RIGHT — observation only, track is const */
+uft_prot_result_t detect(const uft_track_t *track, ...) { ... }
+```
+
+### Never synthesize "clean" versions
+
+If a protection uses genuinely random weak bits (like fuzzy bits), preserve
+the actual jitter. Don't substitute a "cleaner" pattern because it decodes
+more reliably. The jitter IS the data.
+
+### Never auto-unlock
+
+UFT doesn't crack. A detector that identifies Rob Northen CopyLock **does
+not** generate a key patch. That's a separate tool in a separate repo
+with different legal context.
+
+## False-positive discipline
+
+Copy-protection detectors are notoriously fragile. Required for merge:
+
+- Detection threshold ≥ 80 for `DETECTED` status; below → `POSSIBLE`
+- Minimum 2 corroborating signals (e.g. sync pattern + track length)
+- Tested against clean disks (standard AmigaDOS, DOS 3.3, CP/M) — must NOT trigger
+- Tested against at least one real protected sample
+
+## Common pitfalls
+
+### Detecting by filename or metadata
+
+Detection MUST come from disk bits. A file named `dungeon_master.adf`
+can still be an unprotected copy.
+
+### Hardcoding game titles in the detector
+
+The detector identifies the **scheme** (fuzzy bits pattern), not the game.
+"Dungeon Master" is an example game that used the scheme, not the target
+of detection.
+
+### Confusing scheme with vendor
+
+"Rainbow Arts protection" is not a scheme — it's a publisher. Schemes are
+specific bit patterns. A publisher may have used multiple schemes.
+
+### Mutating `uft_track_t` inside detect
+
+Detectors take `const uft_track_t *`. If you find yourself needing to
+modify it, you're doing something wrong — probably mixing detection with
+"repair" logic. Split them into two phases.
 
 ## Related
 
-- `src/protection/uft_protection_unified.c` — registry
-- `docs/XCOPY_INTEGRATION_TODO.md` (T1, T2, T6, T7)
-- `CLAUDE.md` — Protection schemes section (35+ listed)
-- `.claude/agents/forensic-integrity.md` — review new detectors for
-  silent data loss
+- `.claude/skills/uft-format-plugin/` — plugins provide the tracks detectors analyze
+- `.claude/skills/uft-flux-fixtures/` — generate test samples with/without protection
+- `.claude/agents/forensic-integrity.md` — reviews detectors for hard-rule violations
+- `docs/protection_schemes.md` — scheme catalog
+- `docs/XCOPY_INTEGRATION_TODO.md` §Anti-Features — the "never modify" rule
+- `src/protection/uft_fuzzy_bits.c` — canonical reference (weak bits)
+- `src/protection/uft_copylock.c` — canonical reference (sync patterns)

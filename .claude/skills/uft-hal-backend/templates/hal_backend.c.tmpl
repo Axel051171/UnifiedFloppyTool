@@ -1,0 +1,125 @@
+/**
+ * @file uft_@@backend@@.c
+ * @brief @@Description@@ HAL backend — pure C, no Qt deps.
+ */
+#include "uft/hal/uft_hal_unified.h"
+#include "uft_@@backend@@.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+/* ========================================================================
+ * Private state
+ * ======================================================================*/
+
+typedef struct {
+    FILE *port;              /* TODO: replace with real USB/serial handle */
+    int   current_cylinder;
+    bool  open;
+} @@backend@@_ctx_t;
+
+#define CTX(hal_ctx)  ((@@backend@@_ctx_t *)(hal_ctx)->backend_state)
+
+/* ========================================================================
+ * Capabilities (static — declare what this hardware can do)
+ * ======================================================================*/
+
+static const uft_hal_capabilities_t @@BACKEND@@_CAPS = {
+    .can_read_flux    = @@can_read_flux@@,
+    .can_write_flux   = @@can_write_flux@@,
+    .can_read_sector  = @@can_read_sector@@,
+    .can_write_sector = false,      /* TODO: adjust */
+    .max_revolutions  = 5,
+    .max_tracks       = 84,
+    .min_tick_ns      = 25,         /* TODO: hardware-specific */
+};
+
+/* ========================================================================
+ * Callbacks
+ * ======================================================================*/
+
+static uft_error_t @@backend@@_open(uft_hal_ctx_t *ctx, const char *device) {
+    if (!ctx || !device) return UFT_ERROR_INVALID_ARG;
+
+    @@backend@@_ctx_t *c = calloc(1, sizeof(*c));
+    if (!c) return UFT_ERROR_NO_MEMORY;
+
+    /* TODO: replace with real USB/serial open */
+    c->port = fopen(device, "r+b");
+    if (!c->port) { free(c); return UFT_ERROR_FILE_OPEN; }
+
+    /* TODO: probe firmware version, verify device ID */
+
+    c->current_cylinder = -1;
+    c->open = true;
+    ctx->backend_state = c;
+    return UFT_OK;
+}
+
+static uft_error_t @@backend@@_close(uft_hal_ctx_t *ctx) {
+    if (!ctx) return UFT_ERROR_INVALID_ARG;
+    @@backend@@_ctx_t *c = CTX(ctx);
+    if (!c) return UFT_OK;
+
+    if (c->port) fclose(c->port);
+    free(c);
+    ctx->backend_state = NULL;
+    return UFT_OK;
+}
+
+static uft_error_t @@backend@@_seek(uft_hal_ctx_t *ctx, int cylinder) {
+    if (!ctx) return UFT_ERROR_INVALID_ARG;
+    @@backend@@_ctx_t *c = CTX(ctx);
+    if (!c || !c->open) return UFT_ERROR_INVALID_STATE;
+
+    if (cylinder == c->current_cylinder) return UFT_OK;
+
+    /* TODO: send seek command, wait for ready */
+    c->current_cylinder = cylinder;
+    return UFT_OK;
+}
+
+static uft_error_t @@backend@@_read_flux(uft_hal_ctx_t *ctx, int side,
+                                          uint32_t *flux_out, size_t *count) {
+    if (!ctx || !flux_out || !count) return UFT_ERROR_INVALID_ARG;
+    if (!@@BACKEND@@_CAPS.can_read_flux) return UFT_ERROR_NOT_SUPPORTED;
+
+    /* TODO: read flux transitions from hardware.
+     * If hardware gives timestamps rather than deltas, convert here.
+     * Respect cancel: check ctx->cancel_requested between blocks. */
+    (void)side;
+    *count = 0;
+    return UFT_ERROR_NOT_IMPLEMENTED;
+}
+
+static uft_error_t @@backend@@_write_flux(uft_hal_ctx_t *ctx, int side,
+                                           const uint32_t *flux, size_t count) {
+    if (!ctx || !flux) return UFT_ERROR_INVALID_ARG;
+    if (!@@BACKEND@@_CAPS.can_write_flux) return UFT_ERROR_NOT_SUPPORTED;
+
+    (void)side; (void)count;
+    return UFT_ERROR_NOT_IMPLEMENTED;
+}
+
+static uft_error_t @@backend@@_get_capabilities(uft_hal_ctx_t *ctx,
+                                                 uft_hal_capabilities_t *caps) {
+    if (!caps) return UFT_ERROR_INVALID_ARG;
+    (void)ctx;
+    *caps = @@BACKEND@@_CAPS;
+    return UFT_OK;
+}
+
+/* ========================================================================
+ * Vtable — the exported entry point
+ * ======================================================================*/
+
+const uft_hal_vtable_t uft_hal_vtable_@@backend@@ = {
+    .name             = "@@backend@@",
+    .description      = "@@Description@@",
+    .open             = @@backend@@_open,
+    .close            = @@backend@@_close,
+    .seek             = @@backend@@_seek,
+    .read_flux        = @@backend@@_read_flux,
+    .write_flux       = @@backend@@_write_flux,
+    .get_capabilities = @@backend@@_get_capabilities,
+};

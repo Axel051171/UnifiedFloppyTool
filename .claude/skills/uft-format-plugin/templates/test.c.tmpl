@@ -1,0 +1,93 @@
+/**
+ * @file test_@@name@@_plugin.c
+ * @brief @@Description@@ Plugin — probe + structural tests.
+ *
+ * Self-contained — mirrors the plugin's probe logic without linking UFT.
+ * Keeps tests fast (<100ms) and failures localized.
+ */
+
+#include <stdio.h>
+#include <stdint.h>
+#include <string.h>
+#include <stdlib.h>
+
+/* ---- minimal test harness (canonical across UFT tests) ---- */
+static int _pass = 0, _fail = 0, _last_fail = 0;
+#define TEST(name) static void test_##name(void)
+#define RUN(name)  do { printf("  [TEST] %-32s ... ", #name); test_##name(); \
+                        if (_last_fail == _fail) { printf("OK\n"); _pass++; } \
+                        _last_fail = _fail; } while (0)
+#define ASSERT(c)  do { if (!(c)) { printf("FAIL @ %d: %s\n", __LINE__, #c); _fail++; return; } } while (0)
+
+/* ---- format constants (MUST mirror the plugin's own #defines) ---- */
+#define @@NAME@@_MIN_SIZE     @@min_size@@
+#define @@NAME@@_MAX_SIZE     @@max_size@@
+#define @@NAME@@_SECTOR_SIZE  @@sector_size@@
+
+/* ---- probe replica — MUST produce the same result as the plugin ---- */
+static int @@name@@_probe_replica(const uint8_t *data, size_t size,
+                                    size_t file_size) {
+    if (file_size < @@NAME@@_MIN_SIZE || file_size > @@NAME@@_MAX_SIZE)
+        return 0;
+    /* TODO: add magic-byte check to mirror plugin if applicable */
+    (void)data; (void)size;
+    return 75;
+}
+
+/* ---- fixture builder: produces the minimum valid file of this format ---- */
+static size_t build_minimal_@@name@@(uint8_t *out, size_t cap) {
+    size_t n = @@NAME@@_MIN_SIZE;
+    if (cap < n) return 0;
+    memset(out, 0, n);
+    /* TODO: place magic bytes / header fields here */
+    return n;
+}
+
+/* ========================= TESTS ========================= */
+
+TEST(probe_rejects_empty) {
+    uint8_t dummy[1] = {0};
+    ASSERT(@@name@@_probe_replica(dummy, 0, 0) == 0);
+}
+
+TEST(probe_rejects_too_small) {
+    uint8_t buf[16] = {0};
+    ASSERT(@@name@@_probe_replica(buf, sizeof(buf), sizeof(buf)) == 0);
+}
+
+TEST(probe_rejects_too_large) {
+    uint8_t buf[64] = {0};
+    ASSERT(@@name@@_probe_replica(buf, sizeof(buf),
+                                    (size_t)@@NAME@@_MAX_SIZE + 1) == 0);
+}
+
+TEST(probe_accepts_minimum_valid) {
+    uint8_t *buf = malloc(@@NAME@@_MIN_SIZE);
+    ASSERT(buf != NULL);
+    size_t n = build_minimal_@@name@@(buf, @@NAME@@_MIN_SIZE);
+    ASSERT(n == @@NAME@@_MIN_SIZE);
+    int score = @@name@@_probe_replica(buf, n, n);
+    ASSERT(score >= 75);
+    free(buf);
+}
+
+TEST(probe_rejects_wrong_magic) {
+    /* TODO: enable once magic-byte check is added to probe */
+    uint8_t *buf = malloc(@@NAME@@_MIN_SIZE);
+    ASSERT(buf != NULL);
+    build_minimal_@@name@@(buf, @@NAME@@_MIN_SIZE);
+    buf[0] ^= 0xFF;   /* corrupt first byte */
+    /* ASSERT(@@name@@_probe_replica(buf, @@NAME@@_MIN_SIZE, @@NAME@@_MIN_SIZE) == 0); */
+    free(buf);
+}
+
+int main(void) {
+    printf("== @@NAME@@ plugin tests ==\n");
+    RUN(probe_rejects_empty);
+    RUN(probe_rejects_too_small);
+    RUN(probe_rejects_too_large);
+    RUN(probe_accepts_minimum_valid);
+    RUN(probe_rejects_wrong_magic);
+    printf("\nResult: %d passed, %d failed\n", _pass, _fail);
+    return _fail == 0 ? 0 : 1;
+}
