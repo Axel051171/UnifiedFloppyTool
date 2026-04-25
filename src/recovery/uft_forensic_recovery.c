@@ -437,9 +437,25 @@ static int try_single_bit_correction(
 
 /**
  * Attempt to correct 2-bit errors.
- * 
- * This is O(n²) but we limit the search space using confidence hints.
- * We only try flipping bits that have low confidence.
+ *
+ * O(n²) over the candidate-byte set; the set is restricted to
+ * low-confidence bytes via confidence_map (≤ 64 bytes ≈ 130k pairs)
+ * to keep this tractable.
+ *
+ * FORENSIC CONTRACT: the same uniqueness rule that applies to
+ * try_single_bit_correction applies here, and is in fact more
+ * important — the double-bit search space has C(len*8, 2) candidates,
+ * so the chance that two distinct pairs both happen to yield the
+ * expected CRC is much higher than for the single-bit path. Picking
+ * the first match silently fabricates one of multiple plausible
+ * corrections. Per Prinzip 1 ("keine erfundenen Daten") we refuse on
+ * ambiguity instead.
+ *
+ * Returns:
+ *   2   unique pair found and applied (data modified, bit1/bit2 set)
+ *   0   data was already CRC-valid (no flip needed)
+ *  -1   no 2-bit fix exists (data unchanged)
+ *  -2   ambiguous — two or more pairs both fix the CRC (data unchanged)
  */
 static int try_double_bit_correction(
     uint8_t *data,
@@ -454,57 +470,84 @@ static int try_double_bit_correction(
     if (current_crc == expected_crc) {
         return 0;  // Already correct
     }
-    
+
     // Collect low-confidence byte positions
     size_t low_conf_bytes[64];
     size_t low_conf_count = 0;
-    
+
     for (size_t i = 0; i < size && low_conf_count < 64; i++) {
         if (!confidence_map || confidence_map[i] < 200) {  // < ~78% confidence
             low_conf_bytes[low_conf_count++] = i;
         }
     }
-    
+
     // If no low-confidence bytes, try all (but limit)
     if (low_conf_count == 0) {
         for (size_t i = 0; i < size && low_conf_count < 32; i++) {
             low_conf_bytes[low_conf_count++] = i;
         }
     }
-    
-    // Try all pairs of bits in low-confidence bytes
+
+    // Search all pairs and count matches; refuse on ambiguity.
+    size_t hits         = 0;
+    size_t winner_byte1 = 0;
+    int    winner_b1    = 0;
+    size_t winner_byte2 = 0;
+    int    winner_b2    = 0;
+
     for (size_t i = 0; i < low_conf_count; i++) {
         size_t byte1 = low_conf_bytes[i];
-        
+
         for (int b1 = 0; b1 < 8; b1++) {
-            uint8_t mask1 = 0x80 >> b1;
+            uint8_t mask1 = (uint8_t)(0x80u >> b1);
             data[byte1] ^= mask1;
-            
+
             for (size_t j = i; j < low_conf_count; j++) {
                 size_t byte2 = low_conf_bytes[j];
                 int b2_start = (i == j) ? b1 + 1 : 0;
-                
+
                 for (int b2 = b2_start; b2 < 8; b2++) {
-                    uint8_t mask2 = 0x80 >> b2;
+                    uint8_t mask2 = (uint8_t)(0x80u >> b2);
                     data[byte2] ^= mask2;
-                    
-                    if (crc16_ccitt(data, size) == expected_crc) {
-                        *bit1 = byte1 * 8 + b1;
-                        *bit2 = byte2 * 8 + b2;
-                        uft_forensic_log(session, 3,
-                            "Double-bit correction at bytes %zu:%d and %zu:%d",
-                            byte1, b1, byte2, b2);
-                        return 2;
+
+                    int match = (crc16_ccitt(data, size) == expected_crc);
+
+                    data[byte2] ^= mask2;
+
+                    if (match) {
+                        hits++;
+                        winner_byte1 = byte1;
+                        winner_b1    = b1;
+                        winner_byte2 = byte2;
+                        winner_b2    = b2;
+                        if (hits > 1) {
+                            data[byte1] ^= mask1;  /* restore outer flip */
+                            uft_forensic_log(session, 2,
+                                "Double-bit correction REFUSED: ambiguous "
+                                "(>=2 candidate pairs yield expected CRC)");
+                            return -2;
+                        }
                     }
-                    
-                    data[byte2] ^= mask2;
                 }
             }
-            
+
             data[byte1] ^= mask1;
         }
     }
-    
+
+    if (hits == 1) {
+        uint8_t mask1 = (uint8_t)(0x80u >> winner_b1);
+        uint8_t mask2 = (uint8_t)(0x80u >> winner_b2);
+        data[winner_byte1] ^= mask1;
+        data[winner_byte2] ^= mask2;
+        *bit1 = winner_byte1 * 8 + (size_t)winner_b1;
+        *bit2 = winner_byte2 * 8 + (size_t)winner_b2;
+        uft_forensic_log(session, 3,
+            "Double-bit correction at bytes %zu:%d and %zu:%d (unique)",
+            winner_byte1, winner_b1, winner_byte2, winner_b2);
+        return 2;
+    }
+
     return -1;  // No 2-bit fix found
 }
 

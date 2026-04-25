@@ -149,30 +149,57 @@ static int try_single_bit_correction(uint8_t *data, size_t len,
 }
 
 /**
- * @brief Attempt double-bit CRC correction
+ * @brief Attempt double-bit CRC correction.
+ *
+ * Same forensic contract as try_single_bit_correction (Finding 02):
+ * a 2-bit pattern is only applied if it is UNIQUE across the search
+ * space. CRC-16 collision rate at the double-bit level is much higher
+ * than for single-bit (the pair search space is C(len*8, 2) ≈ 8M pairs
+ * for a 512-byte sector vs. ~4k single-bit candidates), so silently
+ * picking the first hit is even more dangerous here than in the
+ * single-bit path.
+ *
+ * Returns:
+ *   1  unique pair found and applied (data modified)
+ *   0  no pair fixes the CRC (data unchanged)
+ *  -1  ambiguous — two or more pairs both fix the CRC (data unchanged)
  */
 static int try_double_bit_correction(uint8_t *data, size_t len,
                                      uint16_t expected_crc)
 {
     size_t total_bits = len * 8;
-    
-    for (size_t i = 0; i < total_bits - 1; i++) {
+
+    size_t hits        = 0;
+    size_t winner_i    = 0;
+    size_t winner_j    = 0;
+
+    for (size_t i = 0; i + 1 < total_bits; i++) {
         for (size_t j = i + 1; j < total_bits; j++) {
-            /* Flip both bits */
-            data[i / 8] ^= (1 << (i % 8));
-            data[j / 8] ^= (1 << (j % 8));
-            
-            /* Check CRC */
-            if (crc16_ccitt(data, len) == expected_crc) {
-                return 1;  /* Success - leave bits flipped */
+            data[i / 8] ^= (uint8_t)(1u << (i % 8));
+            data[j / 8] ^= (uint8_t)(1u << (j % 8));
+
+            int match = (crc16_ccitt(data, len) == expected_crc);
+
+            data[i / 8] ^= (uint8_t)(1u << (i % 8));
+            data[j / 8] ^= (uint8_t)(1u << (j % 8));
+
+            if (match) {
+                hits++;
+                winner_i = i;
+                winner_j = j;
+                if (hits > 1) {
+                    return -1;  /* ambiguous — refuse */
+                }
             }
-            
-            /* Restore bits */
-            data[i / 8] ^= (1 << (i % 8));
-            data[j / 8] ^= (1 << (j % 8));
         }
     }
-    
+
+    if (hits == 1) {
+        data[winner_i / 8] ^= (uint8_t)(1u << (winner_i % 8));
+        data[winner_j / 8] ^= (uint8_t)(1u << (winner_j % 8));
+        return 1;
+    }
+
     return 0;
 }
 
@@ -345,8 +372,10 @@ int uft_bs_recover_crc(uint8_t *data, size_t len,
         return 0;
     }
 
-    /* Try double-bit correction */
-    if (try_double_bit_correction(data, len, expected_crc)) {
+    /* Try double-bit correction — strict equality on the unique-fix
+     * return code (1). Ambiguous (-1) and not-found (0) both fall
+     * through to "could not correct". */
+    if (try_double_bit_correction(data, len, expected_crc) == 1) {
         *corrections = 2;
         return 0;
     }
