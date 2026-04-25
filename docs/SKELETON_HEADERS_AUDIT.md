@@ -9,7 +9,7 @@ deklarierter zu implementierter `uft_*`-Funktionen.
 
 ## Kernbefund
 
-**Stand 2026-04-25 (live audit):** 135 Skelett-Header, 2 638 nicht
+**Stand 2026-04-25 (live audit):** 133 Skelett-Header, 2 605 nicht
 implementierte Funktions-Deklarationen.
 
 **Ursprünglich (2026-04-23):** 175 Skelett-Header, 3 355 nicht
@@ -62,6 +62,22 @@ Reduktion bisher:
     track_generator.h, track_types_defs.h, types.h, uft_floppy_utils.h)
   - Phantom-Bestätigung: CRC16_Update + CRC16_Init nirgends implementiert,
     nirgends gerufen — pure Phantom-Decls in 3 verschiedenen crc.h-Files
+- DELETE-Welle 14 (diese Session): 19 weitere Header in mixed-state-Verzeichnissen
+  identifiziert via Per-Datei-Manual-Audit. Methode: in jedem Verzeichnis hat
+  ein Großteil der Header keine Konsumenten, einige aber schon (z.B. `whd_crc16.h`
+  von `src/whdload/whd_crc16.c` konsumiert, `uft_write_precomp.h` von
+  `src/core/uft_write_precomp.c` im qmake) — nur die orphans gelöscht:
+  - `include/fhis/fhis.h` — komplettes Verzeichnis (1 File)
+  - `include/uft/algorithms/uft_gcr_viterbi.h` — Public-API-Header der
+    `src/algorithms/advanced/uft_gcr_viterbi.c` aber NICHT inkludiert wird
+    (die `.c` hat eigene interne Types, Header war Phantom-API)
+  - `include/uft/whdload/` — 3 von 5 Files (whdload_flags, whdload_tags,
+    whdload_tdreason) — `whd_crc16.h` und `whdload_resload_api.h` bleiben
+  - `include/uft/disk/` — 3 Files (uft_apple_dos33, uft_apple_prodos, uft_d80_format)
+  - `include/uft/hardware/` — 3 von 5 Files (crosstalk_filter, gw2dmk, ihs)
+  - `include/uft/executable/` — 4 Files (atari_st_prg, atari_xex, spectrum_nex, trs80_cmd)
+  - `include/uft/nintendo/` — 4 Files (hfs, nca, nx_usb, xci)
+  - Skeleton-Audit drops: 135 → 133 (-2), 2638 → 2605 phantom-decls (-33)
 - DELETE-Welle 13 (diese Session): 67 weitere Files (zwei vollständige Verzeichnisse):
   - `src/formats/misc_legacy/` (11 Files, 576 LOC) — Legacy-Format-Header
     (afi, h17, hdm, xml_db, arburg_raw_*) — alle orphan, kein Build, kein consumer
