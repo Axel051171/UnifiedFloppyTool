@@ -31,12 +31,23 @@ Reduktion bisher:
   (123 Files, 20 331 LOC). Dead-Code-Cluster aus dem fluxengine-Projekt-Import,
   ohne externe Konsumenten und nicht im Build. Skeleton-Audit zählt diese Files
   nicht (kein `uft_*`-Naming).
-- Noch offen (Welle 5+): drei sister-trees mit `#include "lib/..."`-Pfaden die
-  jetzt dangling sind — `src/algorithms/fluxio/` (21 Files, 2.2k LOC),
-  `src/filesystems/` (25 Files, 6.8k LOC), `src/algorithms/{core,data,imageio}/`
-  (52 Files, 7.4k LOC). Plus Einzeldateien in `src/formats/{amiga_ext,apple,ibm}/`
-  und `src/encoding/gcr/c64.h` (mixed-state Directories — Per-File-Audit nötig
-  bevor man ein ganzes Verzeichnis löschen kann).
+- DELETE-Welle 5 (diese Session): die fünf Sister-Trees zum gelöschten
+  `src/fluxengine/` — 98 Files, ~16k LOC:
+  - `src/algorithms/fluxio/` (21 Files, 2 205 LOC)
+  - `src/filesystems/` (25 Files, 6 760 LOC)
+  - `src/algorithms/core/` (13 Files, 1 788 LOC)
+  - `src/algorithms/data/` (16 Files, 2 070 LOC)
+  - `src/algorithms/imageio/` (23 Files, 3 582 LOC)
+- Noch offen (Welle 6+): mixed-state Verzeichnisse mit einzelnen toten
+  fluxengine-Headern neben Live-Code:
+  - `src/encoding/gcr/` (6 Files, alle orphan, kein Build-Ref) — fast Welle-5,
+    aber nicht in Welle-5-Scope dokumentiert; klares Welle-6 P0
+  - Einzelne Header: `src/formats/amiga_ext/amiga.h` u.ä. (4 Header, alle orphan,
+    in Verzeichnissen die auch Live-Code enthalten — nur die Header löschen,
+    nicht die Verzeichnisse)
+  - `src/encoding/libflux_compat.h` wird von `src/algorithms/encoding/{mfm,fm}_encoding.h`
+    konsumiert — Per-File-Audit nötig ob diese .h-Konsumenten ihrerseits
+    von Live-Code benutzt werden.
 - DOCUMENT-Welle (Commit `d9aa7a7`): 98 Header mit `/* PLANNED FEATURE */`-Banner.
 - IMPLEMENT-Welle: 53 Header mit `/* PARTIALLY IMPLEMENTED */`-Banner.
 

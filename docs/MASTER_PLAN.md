@@ -268,15 +268,14 @@ Total markers (TODO|FIXME|XXX|HACK):  214
   - todo_tracker.h (UFT-internal tracker):   28 — meta, not action items
   -> UFT-native:                              48 (76 raw incl. false positives)
 
-Real comment-style TODO/FIXME (excl. third-party):  40
+Real comment-style TODO/FIXME (excl. third-party):  38
 Davon:
   -  5  M3.1 SCP-Direct Stubs (uft_scp_direct.c) — getrackt im M3 Plan
   -  3  M2 T7 DiskSalv Scaffold (uft_salvage_fs) — getrackt im M2 Plan
-  -  1  fluxengine duplicate code in algorithms/fluxio (MF-011 Welle-3 entfernte
-        die 7 byte-identischen .cc-Files unter src/fluxengine/lib/fluxsink/)
+  -  0  fluxengine duplicate code — komplett gelöscht in MF-011 Welle-3/4/5
   -  4  samdisk imported code — out of scope (third-party-like)
   -  1  lexy_experimental (parser PoC) — out of scope
-  - 26  Real UFT action items, kategorisiert:
+  - 25  Real UFT action items, kategorisiert:
         * Format completion: ATX, XDF, ADF, IMD, SCP, JSON-serialize (12)
         * GUI features ohne Backend: explorertab, workflowtab, switch_panel,
           filesystem_browser, flux_histogram_widget, UftMainController (8)
@@ -295,12 +294,13 @@ Davon:
   gelöscht (7 Files, ~1500 LOC).
 - Der gesamte `src/fluxengine/`-Tree (123 Files, 20 331 LOC) wurde in
   MF-011 Welle-4 gelöscht — kein Build, keine externen Konsumenten,
-  reiner fluxengine-Projekt-Import-Drop. Die sister-trees
-  `src/algorithms/fluxio/`, `src/filesystems/` und
-  `src/algorithms/{core,data,imageio}/` (insgesamt ~98 Files, ~16k LOC)
-  haben jetzt dangling `#include "lib/..."`-Pfade — sie waren schon
-  vorher unbuildable, aber das Dangling macht ihren Tot-Status sichtbar.
-  Nächste Welle: Verifizierung pro Verzeichnis, dann Löschung.
+  reiner fluxengine-Projekt-Import-Drop.
+- Die fünf Sister-Trees (`src/algorithms/fluxio/`, `src/filesystems/`,
+  `src/algorithms/{core,data,imageio}/`) wurden in MF-011 Welle-5 gelöscht
+  (98 Files, ~16k LOC). Alle 0 qmake/CMake-Refs, nur Cross-Refs untereinander.
+- Welle 6+ Kandidaten: `src/encoding/gcr/` (6 Files, alle orphan), plus
+  einzelne tote Header in `src/formats/{amiga_ext,apple,ibm}/` (Mixed-State-
+  Verzeichnisse). Auch `src/encoding/libflux_compat.h` braucht Per-File-Audit.
 - M3.1/M3.2-getrackte Stubs zählen nicht als offene TODOs — sie sind
   honest Scaffolding mit dokumentiertem Pfad zur Implementation.
 
