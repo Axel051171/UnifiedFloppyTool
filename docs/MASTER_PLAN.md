@@ -154,9 +154,13 @@ Muss:
   - [~] T3 `uft_amigados_extended.c` aus Stub-Zustand heben —
         `uft_amiga_validate_ext` macht jetzt echte Validation
         (Bootblock via T2, Root-Block + Bitmap-Block-Checksummen,
-        Unknown-DOS-Type-Flag). Stubs `_repair_bitmap` + `_salvage`
-        geben ehrliches -1 zurück (nicht faken). 7 Tests grün.
-        Offen: Directory-/File-Chain-Walk + DiskSalv-Port (T7).
+        Unknown-DOS-Type-Flag, **Directory-Walker mit Hash-Table-
+        Traversierung + Cycle-Detection + File-Header-Checksum-
+        Validation**). Stubs `_repair_bitmap` + `_salvage` geben
+        ehrliches -1 zurück (nicht faken). 7 Tests grün, +117 LOC.
+        Offen: File-Data-Block-Chain-Walk (Extension-Blocks für
+        Files >72 Sektoren) + BAM↔used-blocks-Reconciliation —
+        gehört zum T7 DiskSalv-Port.
   - [x] T5 BAMCOPY-Modus: `uft_adf_bam` API für BAM-aware Reads.
         Standalone Reader (root→bitmap-pages→per-block-bit) mit
         safe-default (used-on-doubt). 9 Tests grün. ADF-Plugin-
@@ -180,14 +184,17 @@ Muss:
   - [x] TA1 `uft_write_precomp.c` (portiert aus `compensation.cpp`,
         Mac-800K Peak-Shift-Compensation, 13 Tests grün)
   - [x] TA2 `uft_interleave.c` (Sektor-Interleave-Calculator, 11 Tests grün)
-  - [~] TA3 ATX-Plugin Rewrite (176 → 296 LOC, ~400 geplant)
+  - [x] TA3 ATX-Plugin Rewrite (176 → 327 LOC, ~400 geplant — DONE)
         - BUG-FIX: Chunk-Type war als uint16 gelesen, jetzt korrekt
           uint8+uint8+uint16 — ohne diesen Fix hatte ATX nie
           Sektordaten geliefert (alle Tracks leer)
         - Hinzugefügt: WeakBits-Chunk (0x10), ExtSectorHeader-Chunk (0x11),
           Long-Sector-Handling via ext_size_bits
         - FDC-Status-Decoding: CRC-Error, Lost-Data, Missing-Data, Deleted
-        - Weak-Offset speicherort (byte-Mask Aufbau in Folge-Commit)
+        - **weak_mask Byte-Mask vollständig populiert** (Welle-TA3 Closeout):
+          calloc-Allocation, [0..weak_offset-1]=0 (solid),
+          [weak_offset..end]=0xFF (weak). Speicher freigegeben in
+          uft_track_free + Bug-Fix in uft_sector_cleanup (war Leak-Quelle).
 - [ ] Tag v4.2.0 nach M2-Abschluss
 
 Abschluss-Kriterium: XCopy-Tab wieder `setEnabled(true)`, ADF und ATX
