@@ -15,15 +15,16 @@ Compliance-Lücken: [`docs/KNOWN_ISSUES.md`](docs/KNOWN_ISSUES.md).
 ## Kernfunktionen
 
 ### 1. Disk-Imaging (Lesen/Schreiben)
-Unterstützt 6 Hardware-Controller (HAL fully wired):
+Unterstützt 6 Hardware-Controller (HAL teilweise wired — siehe pro Eintrag):
 - **Greaseweazle** (72MHz Flux-Capture, USB) — read+write+flux, production
-- **SuperCard Pro** (25MHz, USB) — HAL backend stubbed, CLI available
+- **SuperCard Pro** (25MHz, USB) — HAL backend stubbed (M3.1 scaffold), CLI available
 - **KryoFlux** (24MHz, USB via DTC-Tool) — read via subprocess
 - **FC5025** (USB 5.25" Read-Only) — read via fcimage CLI
-- **XUM1541/ZoomFloppy** (IEC-Bus für Commodore-Laufwerke) — HAL stubbed
-- **Applesauce** (Apple-spezialisiert, Text-basiertes USB-Protokoll) — HAL stubbed
+- **XUM1541/ZoomFloppy** (IEC-Bus für Commodore-Laufwerke) — HAL stubbed (M3.2)
+- **Applesauce** (Apple-spezialisiert, Text-basiertes USB-Protokoll) — HAL stubbed (M3.3)
 
-(FluxEngine + UFI/USB-Floppy exist as Qt providers but not as HAL backends.)
+(FluxEngine + UFI/USB-Floppy exist as Qt providers but not as HAL backends.
+ M3 plan: SCP-Direct, XUM1541, Applesauce HALs sind WIP — siehe `docs/MASTER_PLAN.md` §M3.)
 
 ### 2. Format-Unterstützung (80 registered plugins, 138 format IDs)
 Liest/schreibt Disk-Images von praktisch jedem 8-Bit- und 16-Bit-Computer:
@@ -106,7 +107,7 @@ Erkennt und dokumentiert historische Kopierschutz-Verfahren:
 
 ## Build-System
 
-- **Primär:** qmake (`.pro`-Datei), ~860 Source-Dateien
+- **Primär:** qmake (`.pro`-Datei), ~756 Source-Dateien (post MF-011-Cleanup)
 - **Tests:** CMake (`tests/CMakeLists.txt`), 77 Tests (6 excluded wg. fehlender Module)
 - **CI:** GitHub Actions — Linux (GCC), macOS (Clang), Windows (MinGW)
 - **Sanitizer:** ASan + UBSan Workflows
@@ -114,7 +115,6 @@ Erkennt und dokumentiert historische Kopierschutz-Verfahren:
 
 ### Wichtig für Entwickler:
 - `CONFIG += object_parallel_to_source` ist ZWINGEND (35+ Basename-Kollisionen)
-- `src/formats_v2/` ist TOTER CODE — nicht im Build, nicht anfassen
 - C-Header mit `protected` als Feldname → nicht direkt in C++ includierbar
 - Qt6 erfordert `static_cast<char>()` für `QByteArray::append()`
 
@@ -138,13 +138,11 @@ src/
   core/                — Kernmodule (Multirev, MFM, Error)
   decoder/             — PLL, Sync, Multi-Rev Fusion
   formats/             — ~80 Format-Plugins (138 IDs registriert) (nach System sortiert)
-  formats_v2/          — DEPRECATED (19 Legacy-Dateien, README)
   fs/                  — Dateisystem-Implementierungen
   flux/                — KryoFlux, Flux Loader
   gui/                 — Qt6 Widgets (OTDR Panel, Sector Editor, etc.)
   hal/                 — HAL-Implementierungen pro Controller
   hardware_providers/  — Qt-basierte Hardware-Provider
-  loaders/             — Format Loader/Writer (libflux-kompatibel)
   protection/          — Kopierschutz-Erkennung
   recovery/            — Recovery-Pipeline
 
@@ -154,9 +152,13 @@ tests/                 — 77 C-Tests + 1 Qt-Test
 
 ## Schlüssel-Metriken
 
-- ~860 Source-Dateien, ~200.000+ Zeilen C/C++
+- ~756 Source-Dateien, ~644 Header — Stand 2026-04-25 nach MF-011 19-Welle
+  Cleanup (785 dead-code Files / ~140k LOC entfernt, davon `src/fluxengine/`,
+  `src/algorithms/{core,data,fluxio,imageio,tracks}`, `src/loaders/`,
+  `src/filesystems/`, `src/encoding/`, plus 250+ einzelne orphan-Header)
 - 138 Format-IDs, 80 Plugin-B Registrierungen, 44 Konvertierungspfade
-- 6 Hardware-Controller (2-3 Nischen-HAL-Backends pending)
+- 6 Hardware-Controller (3 davon stubbed: SCP-Direct M3.1, XUM1541 M3.2,
+  Applesauce M3.3 — siehe `docs/MASTER_PLAN.md` §M3)
 - 55+ Kopierschutz-Schemes
 - 8 DeepRead-Module + 12 OTDR-Pipeline-Stufen
 - 9 SIMD-Dispatch-Punkte (SSE2/AVX2 Runtime)
