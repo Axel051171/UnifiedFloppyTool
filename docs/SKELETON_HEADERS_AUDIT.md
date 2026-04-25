@@ -62,6 +62,31 @@ Reduktion bisher:
     track_generator.h, track_types_defs.h, types.h, uft_floppy_utils.h)
   - Phantom-Bestätigung: CRC16_Update + CRC16_Init nirgends implementiert,
     nirgends gerufen — pure Phantom-Decls in 3 verschiedenen crc.h-Files
+- DELETE-Welle 15 (diese Session): 40 weitere orphan Header in 7 Verzeichnissen
+  via batch Per-File-Audit + Banner-Filter:
+  - 10 in `include/uft/tape/` (komplett: c64_t64, c64_tap, csw, kc85, kc_turbo,
+    pzx, tap, tzx, uef, z1013 — alle Tape-Format-Header ohne Konsumenten)
+  - 16 in `include/uft/core/` (von 17 — uft_const_correct, uft_constants,
+    uft_error_handling, uft_global_mutex, uft_mempool, uft_param_validator,
+    uft_perf, uft_plugin_bridge, uft_strbuf, uft_todo_tracker, uft_track_compat,
+    + 5 weitere). NICHT gelöscht: 5 mit PLANNED-Banner (uft_crc_v2, uft_histogram,
+    uft_json_export, uft_limits, uft_logging_v2)
+  - 9 in `include/uft/flux/` (image_d77, image_fdx, image_hfe, image_mfm,
+    image_raw, image_rdd, uft_auto_trim, uft_flux_stream, uft_revolution_solver).
+    NICHT gelöscht: 7 PLANNED-Banner (flux_instability, flux_pll_v20, fluxstat,
+    libflux_pll_enhanced, pattern_generator, sector_overlay, woz_parser)
+  - 5 in `include/uft/compat/` (fdc_ctrl, libflux, uft_bits, uft_openmp, uft_thread)
+  - 3 in `include/uft/fs/` (uft_fat_detect, uft_fat_floppy, uft_spartados).
+    NICHT gelöscht: 6 PLANNED-Banner (apple_dos, bbc_fs, cpm_fs, fbasic_fs,
+    ti99_fs, trsdos)
+  - 2 in `include/uft/decoder/` (uft_sync, uft_sync_optimized). NICHT gelöscht:
+    5 PLANNED-Banner
+  - 0 zusätzlich aus `include/uft/hal/` — alle 2 orphans (fc5025, xum1541)
+    haben PLANNED-Banner, behalten
+  - Methode: PER-Datei `#include`-Konsumenten-Check + qmake-Ref-Check, dann
+    Filter auf "PLANNED FEATURE" / "PARTIALLY IMPLEMENTED" Banner-Text. Diese
+    Banner-Header gehören zur Master-Plan M2/M3-Roadmap, bleiben erhalten.
+  - Skeleton-Audit: 133 → 133 unverändert. 9887 LOC entfernt.
 - DELETE-Welle 14 (diese Session): 19 weitere Header in mixed-state-Verzeichnissen
   identifiziert via Per-Datei-Manual-Audit. Methode: in jedem Verzeichnis hat
   ein Großteil der Header keine Konsumenten, einige aber schon (z.B. `whd_crc16.h`
