@@ -1489,7 +1489,6 @@ HEADERS += \
     include/uft/hal/internal/uft_hal_profiles.h \
     include/uft/hal/uft_hal_v3.h \
     include/uft/hal/internal/uft_hal_v2.h \
-    include/uft/hal/internal/uft_greaseweazle.h \
     include/uft/hal/uft_drive.h \
     include/uft/hal/uft_kryoflux.h \
     include/uft/uft_ir_format.h
