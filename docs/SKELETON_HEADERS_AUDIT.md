@@ -9,7 +9,7 @@ deklarierter zu implementierter `uft_*`-Funktionen.
 
 ## Kernbefund
 
-**Stand 2026-04-25 (live audit):** 134 Skelett-Header, 2 627 nicht
+**Stand 2026-04-25 (live audit):** 135 Skelett-Header, 2 659 nicht
 implementierte Funktions-Deklarationen.
 
 **Ursprünglich (2026-04-23):** 175 Skelett-Header, 3 355 nicht
@@ -62,6 +62,24 @@ Reduktion bisher:
     track_generator.h, track_types_defs.h, types.h, uft_floppy_utils.h)
   - Phantom-Bestätigung: CRC16_Update + CRC16_Init nirgends implementiert,
     nirgends gerufen — pure Phantom-Decls in 3 verschiedenen crc.h-Files
+- DELETE-Welle 19 (diese Session): 33 orphan Header in `include/uft/formats/`:
+  - 14 `_v3.h` Parser-Proliferation-Reste (adf_v3, d64_v3, dsk_v3, g64_v3,
+    hfe_v3, imd_v3, scp_v3, stx_v3 — Reste der MF-004 _parser_v3.c
+    Aufräumarbeit, deren Header verbliebenen)
+  - 4 Air-Spec-Files (uft_ipf_air_spec, uft_kfstream_air_spec,
+    uft_stx_air_spec) — Spezifikations-Header ohne Code
+  - 5 Format-Wrappers: uft_2mg_parser, uft_atx_writer, uft_caps_ipf,
+    uft_cbm_formats (gepaarte .c im qmake aber inkludiert die .h nicht),
+    uft_cqm, uft_edsk_parser, uft_nib, uft_stx_parser, uft_td0_writer,
+    uft_victor9k_gcr
+  - 4 c64/amiga/acorn-Subdir-Files: c64/uft_d2m, c64/uft_d64_files,
+    amiga/uft_adf_serial, acorn/uft_acorn_adfs
+  - 4 Top-Level: uft_altair, uft_altair_cpm, uft_amstrad_cpc,
+    uft_floppy_encoding (formats-Variante, separat zur Wurzel-Variante
+    in Welle 18), uft_floppy_geometry, uft_g64_extended, uft_scp_multirev,
+    uft_supercopy_detect
+  - Skeleton-Audit: 134 → 135 (+1) — gleicher static-inline-Unmasking-
+    Effekt wie Welle 18. Phantom-decls: 2627 → 2659 (+32). 6831 LOC entfernt.
 - DELETE-Welle 18 (diese Session): 84 orphan Header im `include/uft/` Wurzel-
   verzeichnis (alle banner-frei, alle ohne `#include`-Konsumenten):
   - Top-Level "Master Header" Files: `uft.h` selbst (war kein consumer mehr —
