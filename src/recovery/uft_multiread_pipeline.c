@@ -195,54 +195,68 @@ multiread_config_t multiread_config_default(void) {
  *============================================================================*/
 
 /**
- * @brief Vote on single byte position across passes
+ * @brief Vote on single byte position across passes.
+ *
+ * FORENSIC CONTRACT (Prinzip "verifizierbare Information dominiert"):
+ * When @p only_crc_ok is true, only passes whose CRC verified are
+ * counted. A read that failed its sector CRC has unknown integrity at
+ * EVERY byte — letting it sway the majority would let corrupted reads
+ * outvote authentic ones whenever they happen to be more numerous.
+ *
+ * The caller (vote_buffer) sets @p only_crc_ok = true whenever at
+ * least one crc_ok pass exists in the pool, and false otherwise (so
+ * that we still produce *some* answer when no read verified — the
+ * confidence map will then reflect the increased uncertainty).
  */
 static uint8_t vote_byte(const multiread_pass_t *passes, uint8_t pass_count,
-                         size_t offset, uint8_t *confidence, bool *is_weak) {
+                         size_t offset, bool only_crc_ok,
+                         uint8_t *confidence, bool *is_weak) {
     if (!passes || pass_count == 0) {
         if (confidence) *confidence = 0;
         if (is_weak) *is_weak = true;
         return 0;
     }
-    
-    /* Count occurrences of each value */
+
+    /* Count occurrences of each value, restricted to authoritative
+     * passes when at least one such pass is available. */
     uint8_t counts[256] = {0};
     uint8_t valid_count = 0;
-    
+
     for (uint8_t p = 0; p < pass_count; p++) {
+        if (only_crc_ok && !passes[p].crc_ok) continue;
         if (offset < passes[p].data_len && passes[p].data) {
             counts[passes[p].data[offset]]++;
             valid_count++;
         }
     }
-    
+
     if (valid_count == 0) {
         if (confidence) *confidence = 0;
         if (is_weak) *is_weak = true;
         return 0;
     }
-    
+
     /* Find most common value */
     uint8_t max_count = 0;
     uint8_t max_val = 0;
-    
+
     for (int v = 0; v < 256; v++) {
         if (counts[v] > max_count) {
             max_count = counts[v];
             max_val = (uint8_t)v;
         }
     }
-    
+
     /* Calculate confidence */
     if (confidence) {
         *confidence = (uint8_t)((max_count * 100) / valid_count);
     }
-    
+
     /* Detect weak bits (not unanimous) */
     if (is_weak) {
         *is_weak = (max_count < valid_count);
     }
-    
+
     return max_val;
 }
 
@@ -260,15 +274,23 @@ static multiread_error_t vote_buffer(const multiread_pass_t *passes,
     if (!passes || !output || pass_count == 0) {
         return MULTIREAD_ERR_NULL_PARAM;
     }
-    
+
+    /* Forensic precondition: if any pass has crc_ok = true, restrict
+     * voting to those passes — the others have unknown integrity. Only
+     * fall back to the full pool when no read verified. */
+    bool any_crc_ok = false;
+    for (uint8_t p = 0; p < pass_count; p++) {
+        if (passes[p].crc_ok) { any_crc_ok = true; break; }
+    }
+
     uint64_t total_confidence = 0;
     uint32_t weak_bits = 0;
-    
+
     for (size_t i = 0; i < output_len; i++) {
         uint8_t conf;
         bool weak;
-        
-        output[i] = vote_byte(passes, pass_count, i, &conf, &weak);
+
+        output[i] = vote_byte(passes, pass_count, i, any_crc_ok, &conf, &weak);
         
         if (confidence_map) {
             confidence_map[i] = conf;
