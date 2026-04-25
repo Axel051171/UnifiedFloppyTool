@@ -62,6 +62,25 @@ Reduktion bisher:
     track_generator.h, track_types_defs.h, types.h, uft_floppy_utils.h)
   - Phantom-Bestätigung: CRC16_Update + CRC16_Init nirgends implementiert,
     nirgends gerufen — pure Phantom-Decls in 3 verschiedenen crc.h-Files
+- DELETE-Welle 20 (diese Session, finale Welle): 35 letzte banner-freie orphans:
+  - 10 in `src/recovery/` — `uft_recovery_{bitstream,cross,filesystem,flux,format,
+    protection,sector,track,user,writer}.h` (Public-API-Schicht für Recovery,
+    aber kein paired-.c, kein consumer)
+  - 10 in `include/uft/presets/` — Preset-Header pro Plattform (acorn, apple,
+    atari_st, commodore, containers, historical, japanese, msx, pc98, trs80,
+    zx_spectrum)
+  - 5 in `include/uft/core/` — Utility-Header (uft_crc_validate, uft_ownership,
+    uft_path_safe, uft_safe_cast, uft_safe_parse)
+  - 4 in `src/formats/{ipf/capsimg,kcs/casutil}/` (CapsAPI, CommonTypes,
+    libdsk, wave)
+  - 3 Single-Files: `include/uft/flux/fdc_defs.h`, `include/uft/formats/uft_atx.h`,
+    `include/uft/hal/blockdev.h`, `include/uft/uft_format_advisor.h`,
+    `include/uft/uft_formats.h`
+  - 10166 LOC entfernt
+  - Skeleton-Audit: 135 unverändert, phantom-decls 2659 stable
+  - **Welle 20 ist die letzte für diese Session — verbleibende ~30 banner-freie
+    Headers liegen in `src/switch/hactool/` (conditional-live via
+    `CONFIG+=switch_support`, MUST KEEP).**
 - DELETE-Welle 19 (diese Session): 33 orphan Header in `include/uft/formats/`:
   - 14 `_v3.h` Parser-Proliferation-Reste (adf_v3, d64_v3, dsk_v3, g64_v3,
     hfe_v3, imd_v3, scp_v3, stx_v3 — Reste der MF-004 _parser_v3.c
