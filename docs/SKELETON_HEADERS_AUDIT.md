@@ -9,7 +9,7 @@ deklarierter zu implementierter `uft_*`-Funktionen.
 
 ## Kernbefund
 
-**Stand 2026-04-25 (live audit):** 133 Skelett-Header, 2 605 nicht
+**Stand 2026-04-25 (live audit):** 134 Skelett-Header, 2 627 nicht
 implementierte Funktions-Deklarationen.
 
 **Ursprünglich (2026-04-23):** 175 Skelett-Header, 3 355 nicht
@@ -62,6 +62,31 @@ Reduktion bisher:
     track_generator.h, track_types_defs.h, types.h, uft_floppy_utils.h)
   - Phantom-Bestätigung: CRC16_Update + CRC16_Init nirgends implementiert,
     nirgends gerufen — pure Phantom-Decls in 3 verschiedenen crc.h-Files
+- DELETE-Welle 18 (diese Session): 84 orphan Header im `include/uft/` Wurzel-
+  verzeichnis (alle banner-frei, alle ohne `#include`-Konsumenten):
+  - Top-Level "Master Header" Files: `uft.h` selbst (war kein consumer mehr —
+    Master-Include nutzten direkt `uft/uft_types.h` etc.)
+  - Format-Integration-Header ohne Banner: `uft_a8rawconv_*.h`,
+    `uft_kryoflux_algorithms.h`, `uft_samdisk_algorithms.h`,
+    `uft_libflux_algorithms.h`, `uft_fluxengine_algorithms.h` — Plan-Header
+    für nicht-realisierte Integrationen (per Master-Plan: ohne Banner = nicht
+    aktiv geplant, deletable)
+  - Format-Wrapper: `uft_a2r.h`, `uft_amiga.h`, `uft_amiga_*.h` (alle
+    inline-Helper ohne Implementierung), `uft_woz2.h`, `uft_woz_writer.h`,
+    `uft_cpmfs.h`, `uft_msa_extended.h`, `uft_teledisk.h`, `uft_dpll_wd1772.h`
+  - Helper-Header: `uft_cbm_protection.h` (static-inline scoring helpers
+    `uft_within_tolerance`, `uft_clamp_100`, `uft_score_*` — nirgends gerufen),
+    `uft_floppy_encoding.h` (forwarder zu uft_c64_gcr.h, kein consumer),
+    `uft_floppy_utils.h`, `uft_geometry.h`, `uft_layouts.h`
+  - GUI-Wrapper: `uft_gui.h`, `uft_gui_check.h`, `uft_gui_kryoflux_style.h`,
+    `uft_gui_params_v2.h`
+  - Plus 50+ weitere kleinere Helper-/Compat-/v2-/v3-Header
+  - 25937 LOC entfernt
+  - Skeleton-Audit moves: 133 → 134 (+1) und 2606 → 2627 phantom-decls (+21).
+    **Counter-intuitive aber korrekt:** Deleting headers with `static inline`
+    defs unmasks `extern` decls elsewhere die vorher als "implemented"
+    galten. Audit-Metrik ist ein Heuristik-Wert und muss sich nach mehreren
+    Welles wieder einpendeln. Die Codebase ist insgesamt sauberer.
 - DELETE-Welle 17 (diese Session): 58 weitere orphan Header in 39 kleinen Clustern
   — alle ohne `#include`-Konsumenten, alle ohne PLANNED-Banner, alle ohne paired-`.c`.
   Verteilung: include/uft/fs (5), src/formats/amiga_ext (4), include/uft/hal (4),
