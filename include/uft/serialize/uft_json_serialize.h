@@ -98,9 +98,11 @@ typedef enum {
  * Data Structures for Serialization
  *===========================================================================*/
 
-/** * TODO: Data structures for serialization are defined in implementation.
- * This header will be completed in future revisions.
- */
+/* PLANNED FEATURE — JSON serialization data structures not yet defined.
+ * The header currently exposes only uft_json_status_t (above). The
+ * promised serialization API is tracked in docs/PLANNED_APIS.md.
+ * Callers needing actual JSON output should use existing exporters in
+ * src/core/uft_json_export.c until this header is built out. */
 
 #ifdef __cplusplus
 }

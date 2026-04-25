@@ -83,7 +83,7 @@ Alle bisher aufgedeckten Findings in einer priorisierten Liste:
 | MF-006 | P0 | qmake/CMake Divergenz | ✓ CLOSED (baseline+guard) |
 | **MF-007** | **P1** | **Plugin-Test-Coverage 11.8 %** | **offen** |
 | MF-008 | P2 | docs / KNOWN_ISSUES stellenweise stale | offen |
-| MF-009 | P3 | 30 TODO/FIXME im Code | offen |
+| MF-009 | P3 | TODO/FIXME-Marker (Census 2026-04-25) | scoped (siehe §MF-009-Census) |
 | MF-010 | P2 | 318 nicht-kanonische Includes | offen |
 | **MF-011** | **P0** | **175 Skeleton-Header, 3355 Phantom-Funktionen** | **offen** |
 | **MF-012** | **P0** | **XCopy-Tab Phantom-Feature** (GUI ohne Backend) | **offen** |
@@ -255,6 +255,55 @@ Damit der Plan nicht wieder zerfällt:
 1. Tag setzen
 2. `KNOWN_ISSUES.md` durchgehen: CLOSED-Einträge archivieren
 3. `MASTER_PLAN.md` aktualisieren: Abschluss-Status pro Muss-Punkt
+
+---
+
+## MF-009-Census — TODO/FIXME-Marker (2026-04-25)
+
+Live audit (Stand 2026-04-25):
+
+```
+Total markers (TODO|FIXME|XXX|HACK):  214
+  - third-party (switch/hactool, mbedtls):  138 — out of scope
+  - todo_tracker.h (UFT-internal tracker):   28 — meta, not action items
+  -> UFT-native:                              48 (76 raw incl. false positives)
+
+Real comment-style TODO/FIXME (excl. third-party):  43
+Davon:
+  -  5  M3.1 SCP-Direct Stubs (uft_scp_direct.c) — getrackt im M3 Plan
+  -  3  M2 T7 DiskSalv Scaffold (uft_salvage_fs) — getrackt im M2 Plan
+  -  4  fluxengine duplicate code (algorithms/fluxio + fluxengine/lib/fluxsink) — MF-011
+  -  4  samdisk imported code — out of scope (third-party-like)
+  -  1  lexy_experimental (parser PoC) — out of scope
+  - 26  Real UFT action items, kategorisiert:
+        * Format completion: ATX, XDF, ADF, IMD, SCP, JSON-serialize (12)
+        * GUI features ohne Backend: explorertab, workflowtab, switch_panel,
+          filesystem_browser, flux_histogram_widget, UftMainController (8)
+        * Decode/Recovery refinement: otdr_event_calibration, multiread_voting,
+          rpm_sync_variance (3)
+        * Format-convert pipelines: SCP→D64, GCR→D64, TD0→IMD (3)
+```
+
+**Master-Plan-Lesart:**
+
+- Format-completion-TODOs gehören zu M2 (per-Format-Roadmap).
+- GUI-Phantom-TODOs sind Regel-2-Verstöße: müssen entweder
+  `setEnabled(false) + tooltip` bekommen oder echtes Backend in M2/M3.
+- `fluxengine/lib/fluxsink/*.cc` sind byte-identisch zu
+  `algorithms/fluxio/*.cc` und in keinem Build → MF-011 DELETE-Welle-3
+  Kandidat (out of MF-009 scope).
+- M3.1/M3.2-getrackte Stubs zählen nicht als offene TODOs — sie sind
+  honest Scaffolding mit dokumentiertem Pfad zur Implementation.
+
+**Was bleibt offen für MF-009 als eigenes Item:** ~26 echte UFT-Action-
+Items, die nicht schon in M2/M3 gerouted sind. Praktisch alle landen
+beim Bearbeiten ihres Format/Subsystems automatisch — keine separate
+"TODO-Sweep"-Welle nötig. MF-009 wird als **scoped** (kein eigenes
+Backlog mehr) geschlossen sobald die Format-/Subsystem-Items in M2/M3
+abgearbeitet sind.
+
+Reproduzierbar: `rg -n "(//|/\*|\*).*\b(TODO|FIXME)\b" src/ include/ |
+grep -vE "switch.hactool|todo_tracker"`
 
 ---
 
