@@ -9,7 +9,7 @@ deklarierter zu implementierter `uft_*`-Funktionen.
 
 ## Kernbefund
 
-**Stand 2026-04-25 (live audit):** 148 Skelett-Header, 2 819 nicht
+**Stand 2026-04-25 (live audit):** 145 Skelett-Header, 2 770 nicht
 implementierte Funktions-Deklarationen.
 
 **Ursprünglich (2026-04-23):** 175 Skelett-Header, 3 355 nicht
@@ -62,10 +62,17 @@ Reduktion bisher:
     track_generator.h, track_types_defs.h, types.h, uft_floppy_utils.h)
   - Phantom-Bestätigung: CRC16_Update + CRC16_Init nirgends implementiert,
     nirgends gerufen — pure Phantom-Decls in 3 verschiedenen crc.h-Files
-  - Konsequenz: `include/uft_params_universal.h` ist jetzt offensichtlich
-    broken (verweist auf gelöschte tracks/types.h). Es war aber schon
-    vorher orphan (0 Konsumenten), daher keine Live-Code-Auswirkung —
-    Welle-10-Kandidat für komplette Löschung der params-universal-Kette.
+- DELETE-Welle 10 (diese Session): 46 truly-orphan Header in `include/` —
+  systematischer Per-Datei-Audit (`scripts/welle10_audit.py`) ergab:
+  - 44 Header ohne `#include` von außen UND ohne deklarierte Funktions-
+    Identifier in src/include/tests/-Korpus
+  - 2 zusätzliche manuelle Funde: `include/uft_params_universal.h`
+    (567 LOC, paired-impl nur im Worktree-Backup, nicht im Live-Tree),
+    `include/uft/decoder/uft_unified_decoder.h` (gleicher Status)
+  - Skeleton-Audit drops: 148 → 145 Header (3 fehlten), 2819 → 2770
+    phantom decls (-49)
+  - Cluster: ml/, samdisk/, hal/internal/, formats/variants/parsers/,
+    forensic/, decoders/, archive/, plus Einzeldateien
 - DELETE-Welle 7 (diese Session): 32 systematisch identifizierte orphan-Header
   (Per-Datei-Verifikation: kein `#include` von außen, keine deklarierten
   Funktions-Identifier irgendwo im Source-Korpus referenziert):
