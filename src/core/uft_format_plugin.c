@@ -320,7 +320,14 @@ uft_error_t uft_sector_copy_plugin(uft_sector_t* dst, const uft_sector_t* src) {
 
 void uft_sector_cleanup(uft_sector_t* sector) {
     if (!sector) return;
+    /* Free all heap-owned pointers — keep parity with uft_sector_free()
+     * in uft_unified_types.c. Plugins that populate confidence_map,
+     * weak_mask or timing_ns (e.g. ATX after TA3) would otherwise leak
+     * when the sector is destroyed via this path. */
     free(sector->data);
+    free(sector->confidence_map);
+    free(sector->weak_mask);
+    free(sector->timing_ns);
     memset(sector, 0, sizeof(*sector));
 }
 

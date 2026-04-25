@@ -260,16 +260,41 @@ static uft_error_t atx_read_track(uft_disk_t *disk, int cyl, int head,
         last->data_mark = (fdc_status & ATX_FDC_DELETED) ? 0xF8u : 0xFBu;
     }
 
-    /* Apply weak-bit annotations (after sectors are created). */
+    /* Apply weak-bit annotations (after sectors are created).
+     *
+     * Per ATX spec (Atari VAPI), the WeakBits chunk (0x10) carries a
+     * sector-index + first-weak-byte offset; everything from that offset
+     * to the end of the sector data is considered weak. We allocate a
+     * per-byte mask (1 = weak, 0 = solid) so downstream multi-read
+     * voting / forensic export can preserve the information byte-exact.
+     *
+     * Memory: weak_mask is freed by uft_track_free() in uft_unified_types.c
+     * (already handles confidence_map / weak_mask / timing_ns alongside
+     * data). No leak as long as the caller owns the track. */
     for (int w = 0; w < weak_count; w++) {
         uint8_t idx = weak[w].sector_index;
         if (idx >= track->sector_count) continue;
         uft_sector_t *sec = &track->sectors[idx];
         sec->weak = true;
-        /* TODO: allocate weak_mask and set from weak_offset..end.
-         * For now just flag the sector; byte-mask population belongs
-         * to a follow-up refinement that touches uft_sector_cleanup. */
-        (void)weak[w].weak_offset;
+
+        /* Determine sector size for the mask. Prefer data_size (set by
+         * uft_format_add_sector); fall back to data_len. Skip if zero. */
+        size_t sec_size = sec->data_size ? sec->data_size : sec->data_len;
+        if (sec_size == 0) continue;
+
+        uint16_t first = weak[w].weak_offset;
+        if (first >= sec_size) continue;  /* offset past end — no bits weak */
+
+        /* Allocate (or reuse) the per-byte weak mask. calloc → bytes
+         * before `first` stay 0 (solid). */
+        if (!sec->weak_mask) {
+            sec->weak_mask = calloc(sec_size, 1);
+            if (!sec->weak_mask) {
+                /* Allocation failure: keep sec->weak flag, skip mask. */
+                continue;
+            }
+        }
+        memset(sec->weak_mask + first, 0xFF, sec_size - first);
     }
 
     return UFT_OK;
