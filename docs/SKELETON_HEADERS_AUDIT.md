@@ -44,10 +44,20 @@ Reduktion bisher:
     uft_encoding_detect) — nur `uft_otdr_encoding_boost.c` blieb (live, im qmake)
   - 3 einzelne Header in `src/formats/{amiga_ext,apple,ibm}/` — orphan, in
     mixed-state-Verzeichnissen (nur die toten .h-Files gelöscht)
-- Noch offen (Welle 7+):
-  - `src/formats/apple/data_gcr.h`, `applesauce.h` (vermutlich orphan, brauchen
-    Verifikation — nicht in Welle-6-Scope dokumentiert)
-  - Per-Subsystem-Audit der verbleibenden 148 Skeleton-Header (M2/M3-Arbeit)
+- DELETE-Welle 7 (diese Session): 32 systematisch identifizierte orphan-Header
+  (Per-Datei-Verifikation: kein `#include` von außen, keine deklarierten
+  Funktions-Identifier irgendwo im Source-Korpus referenziert):
+  - 12 Header in `src/formats/amiga_ext/` (alle ungenutzten Hardware-/FS-Header
+    aus dem ADF-Toolset-Import — `crc.c`/`snprintf.c` und ihre Header bleiben live)
+  - 4 Header in `src/algorithms/tracks/` (Legacy-Track-Subsystem)
+  - 3 Header in `src/formats/atari/` (atom.h, cache.h, conf.h)
+  - 2 Header in `src/formats/apple/` (applesauce.h, data_gcr.h — bestätigt orphan)
+  - 9 weitere Einzeldateien in `src/loaders/{common,ipf_loader,kryofluxstream_loader,
+    scp_loader}/`, `src/formats/kcs/casutil/`, `src/samdisk/`, `src/switch/hactool/`,
+    `src/visualization/`
+- Noch offen (Welle 8+): 166 "maybe-orphan" Header — kein `#include` von außen,
+  aber deklarierte Identifier kommen anderswo im Code vor (Risiko: Symbol-Kollision
+  vs. echte Verwendung). Per-Datei-Audit nötig.
 - DOCUMENT-Welle (Commit `d9aa7a7`): 98 Header mit `/* PLANNED FEATURE */`-Banner.
 - IMPLEMENT-Welle: 53 Header mit `/* PARTIALLY IMPLEMENTED */`-Banner.
 
