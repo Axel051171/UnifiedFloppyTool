@@ -763,21 +763,8 @@ int xdf_api_export_xdf(xdf_api_t *api, const char *path) {
     return rc;
 }
 
-/*
- * xdf_api_export_classic was in uft_xdf_api_impl.c (v3.7.0). That file
- * was deferred from this restore because it uses POSIX fnmatch() which
- * is absent on MinGW (see src/formats/xdf/DEFERRED.md).
- *
- * Local stub: any request to export to a non-XDF classic format fails
- * cleanly rather than linking against a missing symbol. Returning -1
- * matches the v3.7 error convention. When api_impl.c is restored,
- * replace this stub with a `extern` declaration.
- */
-int xdf_api_export_classic(xdf_api_t *api, const char *path) {
-    (void)path;
-    if (api) set_error(api, -1, "classic export not implemented in this build");
-    return -1;
-}
+/* xdf_api_export_classic is defined in uft_xdf_api_impl.c (now restored
+ * via the fnmatch shim — see include/uft/compat/uft_fnmatch.h). */
 
 int xdf_api_export_as(xdf_api_t *api, const char *path, const char *format) {
     if (!api || !api->context || !path || !format) return -1;

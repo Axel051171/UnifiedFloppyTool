@@ -284,12 +284,11 @@ static inline void uft_write_be32(void *p, uint32_t v) {
 #ifndef CLOCK_MONOTONIC
 #define CLOCK_MONOTONIC 1
 #include <time.h>
-/* Windows: use GetTickCount64 as simple monotonic clock fallback */
+/* Windows: use time() as simple monotonic clock fallback. */
 static inline int uft_clock_gettime(int clk, struct timespec *ts) {
     (void)clk;
-    /* GetTickCount64 returns milliseconds since boot — good enough for timing */
-    unsigned long long ms = 0;
-    /* Avoid windows.h dependency here — use time() as last resort */
+    /* GetTickCount64 would give ms since boot but pulls in windows.h.
+     * time() is good enough for current diagnostics use. */
     time_t t = time(NULL);
     ts->tv_sec = t;
     ts->tv_nsec = 0;
