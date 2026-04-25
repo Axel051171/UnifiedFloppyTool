@@ -38,16 +38,16 @@ Reduktion bisher:
   - `src/algorithms/core/` (13 Files, 1 788 LOC)
   - `src/algorithms/data/` (16 Files, 2 070 LOC)
   - `src/algorithms/imageio/` (23 Files, 3 582 LOC)
-- Noch offen (Welle 6+): mixed-state Verzeichnisse mit einzelnen toten
-  fluxengine-Headern neben Live-Code:
-  - `src/encoding/gcr/` (6 Files, alle orphan, kein Build-Ref) — fast Welle-5,
-    aber nicht in Welle-5-Scope dokumentiert; klares Welle-6 P0
-  - Einzelne Header: `src/formats/amiga_ext/amiga.h` u.ä. (4 Header, alle orphan,
-    in Verzeichnissen die auch Live-Code enthalten — nur die Header löschen,
-    nicht die Verzeichnisse)
-  - `src/encoding/libflux_compat.h` wird von `src/algorithms/encoding/{mfm,fm}_encoding.h`
-    konsumiert — Per-File-Audit nötig ob diese .h-Konsumenten ihrerseits
-    von Live-Code benutzt werden.
+- DELETE-Welle 6 (diese Session): 17 weitere fluxengine-import-Files entfernt:
+  - `src/encoding/` ganzes Verzeichnis (9 Files: 6 gcr/ + 3 root) — alle orphan
+  - 5 einzelne Header in `src/algorithms/encoding/` (dec_m2fm, fm, luts, mfm,
+    uft_encoding_detect) — nur `uft_otdr_encoding_boost.c` blieb (live, im qmake)
+  - 3 einzelne Header in `src/formats/{amiga_ext,apple,ibm}/` — orphan, in
+    mixed-state-Verzeichnissen (nur die toten .h-Files gelöscht)
+- Noch offen (Welle 7+):
+  - `src/formats/apple/data_gcr.h`, `applesauce.h` (vermutlich orphan, brauchen
+    Verifikation — nicht in Welle-6-Scope dokumentiert)
+  - Per-Subsystem-Audit der verbleibenden 148 Skeleton-Header (M2/M3-Arbeit)
 - DOCUMENT-Welle (Commit `d9aa7a7`): 98 Header mit `/* PLANNED FEATURE */`-Banner.
 - IMPLEMENT-Welle: 53 Header mit `/* PARTIALLY IMPLEMENTED */`-Banner.
 

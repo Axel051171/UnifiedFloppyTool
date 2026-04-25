@@ -298,9 +298,13 @@ Davon:
 - Die fünf Sister-Trees (`src/algorithms/fluxio/`, `src/filesystems/`,
   `src/algorithms/{core,data,imageio}/`) wurden in MF-011 Welle-5 gelöscht
   (98 Files, ~16k LOC). Alle 0 qmake/CMake-Refs, nur Cross-Refs untereinander.
-- Welle 6+ Kandidaten: `src/encoding/gcr/` (6 Files, alle orphan), plus
-  einzelne tote Header in `src/formats/{amiga_ext,apple,ibm}/` (Mixed-State-
-  Verzeichnisse). Auch `src/encoding/libflux_compat.h` braucht Per-File-Audit.
+- MF-011 Welle-6: `src/encoding/` ganzes Verzeichnis gelöscht (9 Files), plus
+  5 tote Header in `src/algorithms/encoding/` und 3 in `src/formats/{amiga_ext,
+  apple,ibm}/`. Insgesamt 17 Files. `src/algorithms/encoding/uft_otdr_encoding_boost.c`
+  blieb erhalten (live, qmake).
+- Welle 7+ Kandidaten: `src/formats/apple/data_gcr.h`, `applesauce.h`
+  (vermutlich orphan, Verifikation nötig). Plus Per-Subsystem-Audit der
+  verbleibenden 148 Skeleton-Header (M2/M3-Arbeit).
 - M3.1/M3.2-getrackte Stubs zählen nicht als offene TODOs — sie sind
   honest Scaffolding mit dokumentiertem Pfad zur Implementation.
 
