@@ -1,0 +1,76 @@
+/**
+ * @file uft_ml_@@module@@.c
+ * @brief Implementation of @@module@@ skeleton functions.
+ *
+ * Companion to include/uft/ml/uft_ml_@@module@@.h
+ *
+ * * * UFT_SKELETON_PROMOTED * * *
+ * Implementation status (this file):
+ *   IMPLEMENTED:
+ *     - uft_ml_@@module@@_init
+ *     - uft_ml_@@module@@_destroy
+ *     - <add as you go>
+ *   NOT_YET (will return UFT_ERROR_NOT_IMPLEMENTED):
+ *     - uft_ml_@@module@@_train
+ *     - uft_ml_@@module@@_predict
+ *     - <add as you go>
+ *   REMOVED (prototypes to delete from .h):
+ *     - <none yet>
+ *
+ * When IMPLEMENTED list is complete (no NOT_YET, no REMOVED), replace
+ * the UFT_SKELETON_PLANNED banner in the .h with: "STATUS: Implemented".
+ * * * * * * * * * * */
+
+#include "uft/ml/uft_ml_@@module@@.h"
+#include "uft/uft_error.h"
+
+#include <stdlib.h>
+#include <string.h>
+#include <math.h>
+
+/* ========================================================================
+ * Internal state
+ * ======================================================================*/
+
+struct uft_ml_@@module@@ {
+    /* TODO: state fields — model handle, weights, etc. */
+    int placeholder;
+};
+
+/* ========================================================================
+ * Implemented functions (move from NOT_YET as you finish each)
+ * ======================================================================*/
+
+uft_ml_@@module@@_t *uft_ml_@@module@@_init(void) {
+    uft_ml_@@module@@_t *m = calloc(1, sizeof(*m));
+    if (!m) return NULL;
+    /* TODO: real init */
+    return m;
+}
+
+void uft_ml_@@module@@_destroy(uft_ml_@@module@@_t *m) {
+    if (!m) return;
+    /* TODO: free internal allocations */
+    free(m);
+}
+
+/* ========================================================================
+ * NOT YET implemented — explicit failure, never silent UFT_OK
+ * ======================================================================*/
+
+uft_error_t uft_ml_@@module@@_train(uft_ml_@@module@@_t *m,
+                                     const void *training_data,
+                                     size_t n_samples) {
+    (void)m; (void)training_data; (void)n_samples;
+    return UFT_ERROR_NOT_IMPLEMENTED;
+}
+
+uft_error_t uft_ml_@@module@@_predict(uft_ml_@@module@@_t *m,
+                                       const void *input,
+                                       void *output) {
+    (void)m; (void)input; (void)output;
+    return UFT_ERROR_NOT_IMPLEMENTED;
+}
+
+/* TODO: each remaining skeleton function — copy declaration from .h,
+ * return UFT_ERROR_NOT_IMPLEMENTED, add to NOT_YET list above. */

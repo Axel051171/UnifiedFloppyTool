@@ -252,7 +252,7 @@ typedef struct uft_format_adapter {
  * @param adapter Adapter to register
  * @return UFT_SUCCESS or error code
  */
-uft_error_t uft_adapter_register(const uft_format_adapter_t *adapter);
+uft_error_t uft_xdf_adapter_register(const uft_format_adapter_t *adapter);
 
 /**
  * @brief Find adapter by format ID
@@ -322,12 +322,12 @@ void uft_sector_data_init(uft_sector_data_t *sector);
 /**
  * @brief Allocate sectors array for track
  */
-uft_error_t uft_track_alloc_sectors(uft_track_data_t *track, size_t count);
+uft_error_t uft_xdf_track_alloc_sectors(uft_track_data_t *track, size_t count);
 
 /**
  * @brief Find sector in track by ID
  */
-uft_sector_data_t *uft_track_find_sector(
+uft_sector_data_t *uft_xdf_track_find_sector(
     uft_track_data_t *track,
     uint8_t sector_id
 );

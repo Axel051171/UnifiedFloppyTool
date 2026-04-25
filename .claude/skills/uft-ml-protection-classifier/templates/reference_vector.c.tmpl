@@ -1,0 +1,40 @@
+/* @@SCHEME_NAME@@ — copy-protection reference vector
+ *
+ * First seen:    @@first_seen_year@@, @@first_seen_title@@
+ * Publisher(s):  @@publishers@@
+ * Platforms:     @@platforms@@
+ *
+ * Training set:
+ *   N = @@n_samples@@ disk samples from @@n_titles@@ titles
+ *   Source:        @@training_source@@
+ *
+ * Reference vector (UFT_ML_PROT_FEATURES dimensions):
+ *   Computed as mean across all training samples after per-track
+ *   averaging within each disk.
+ *
+ * Distinguishing dimensions (highest weight):
+ *   [@@dim_1_idx@@] @@dim_1_name@@ = @@dim_1_value@@
+ *   [@@dim_2_idx@@] @@dim_2_name@@ = @@dim_2_value@@
+ *   [@@dim_3_idx@@] @@dim_3_name@@ = @@dim_3_value@@
+ *
+ * Cross-confusion (cosine sim against existing references):
+ *   V-MAX!:    @@xc_vmax@@
+ *   RapidLok:  @@xc_rapidlok@@
+ *   CopyLock:  @@xc_copylock@@
+ *   Speedlock: @@xc_speedlock@@
+ *   (must all be < 0.85 — else feature space inadequate)
+ *
+ * Known false positives: @@false_positives@@
+ * Known false negatives: @@false_negatives@@
+ *
+ * Reference (paper / URL / book): @@reference@@
+ */
+{
+    .name = "@@SCHEME_NAME@@",
+    .vector = {
+        @@v0@@f, @@v1@@f, @@v2@@f, @@v3@@f,
+        @@v4@@f, @@v5@@f, @@v6@@f, @@v7@@f,
+        /* Add more dimensions if UFT_ML_PROT_FEATURES > 8 */
+    },
+    .scheme_id = UFT_PROT_@@SCHEME_ID@@,
+},

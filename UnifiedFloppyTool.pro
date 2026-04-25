@@ -734,6 +734,7 @@ SOURCES += \
     src/analysis/profiles/uft_profile_xdf.c \
     src/analysis/profiles/uft_profiles_all.c \
     src/analysis/uft_disk_quickscan.c \
+    src/core/uft_decoder_plugin_stub.c \
     src/core/uft_sha256.c \
     src/core/uft_snapshot.c \
     src/diag/uft_disc_diagnostics.c \

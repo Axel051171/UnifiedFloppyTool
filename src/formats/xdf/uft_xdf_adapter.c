@@ -21,7 +21,7 @@
 static const uft_format_adapter_t *g_adapters[MAX_ADAPTERS];
 static size_t g_adapter_count = 0;
 
-uft_error_t uft_adapter_register(const uft_format_adapter_t *adapter) {
+uft_error_t uft_xdf_adapter_register(const uft_format_adapter_t *adapter) {
     if (!adapter) {
         return UFT_ERR_INVALID_ARG;
     }
@@ -190,7 +190,7 @@ void uft_sector_data_init(uft_sector_data_t *sector) {
     memset(sector, 0, sizeof(*sector));
 }
 
-uft_error_t uft_track_alloc_sectors(uft_track_data_t *track, size_t count) {
+uft_error_t uft_xdf_track_alloc_sectors(uft_track_data_t *track, size_t count) {
     if (!track) return UFT_ERR_INVALID_ARG;
     
     if (track->sectors) {
@@ -206,7 +206,7 @@ uft_error_t uft_track_alloc_sectors(uft_track_data_t *track, size_t count) {
     return UFT_SUCCESS;
 }
 
-uft_sector_data_t *uft_track_find_sector(
+uft_sector_data_t *uft_xdf_track_find_sector(
     uft_track_data_t *track,
     uint8_t sector_id
 ) {
