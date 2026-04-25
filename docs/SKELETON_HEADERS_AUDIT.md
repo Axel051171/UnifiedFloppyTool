@@ -54,6 +54,18 @@ Reduktion bisher:
   - 1 Backup-File `track_generator.h.hxc_backup` (gehörte nie ins Repo)
   - Behalten: `src/tracks/crc.h` (Basename-Treffer in externen Konsumenten,
     Per-`-I`-Pfad-Analyse nötig); `src/tracks/CMakeLists.txt`
+- DELETE-Welle 9 (diese Session): 34 weitere Files —
+  - `src/algorithms/tracks/` ganzes Verzeichnis (6 Files: crc.h, font.h,
+    sector_extractor.h, std_crc32.h, trackutils.h, track_generator.h.hxc_backup)
+  - `include/tracks/` ganzes Verzeichnis (28 Files: 23 in track_formats/
+    plus root: crc.h, luts.h, sector_extractor.h, std_crc32.h, trackutils.h,
+    track_generator.h, track_types_defs.h, types.h, uft_floppy_utils.h)
+  - Phantom-Bestätigung: CRC16_Update + CRC16_Init nirgends implementiert,
+    nirgends gerufen — pure Phantom-Decls in 3 verschiedenen crc.h-Files
+  - Konsequenz: `include/uft_params_universal.h` ist jetzt offensichtlich
+    broken (verweist auf gelöschte tracks/types.h). Es war aber schon
+    vorher orphan (0 Konsumenten), daher keine Live-Code-Auswirkung —
+    Welle-10-Kandidat für komplette Löschung der params-universal-Kette.
 - DELETE-Welle 7 (diese Session): 32 systematisch identifizierte orphan-Header
   (Per-Datei-Verifikation: kein `#include` von außen, keine deklarierten
   Funktions-Identifier irgendwo im Source-Korpus referenziert):
