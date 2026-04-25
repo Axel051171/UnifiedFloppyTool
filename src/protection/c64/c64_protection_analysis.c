@@ -10,6 +10,54 @@
 #include "c64_protection_internal.h"
 
 /* ============================================================================
+ * Internal G64 bounds-check helpers
+ *
+ * G64 layout (verified against Pete Rittwage spec):
+ *   data[0..7]            "GCR-1541" signature
+ *   data[8]               version
+ *   data[9]               number of (half-)track entries (typ. 84)
+ *   data[10..11]          per-track payload size (LE)
+ *   data[12..]            track-offset table   (num_tracks × 4 bytes, LE)
+ *   data[12+nt*4..]       speed-zone table     (num_tracks × 4 bytes)
+ *   data[...]             per-track payload: 2-byte size LE + payload bytes
+ *
+ * Both helpers refuse to read a single byte past `size`. They reject
+ * malformed/maliciously-truncated images instead of producing OOB reads.
+ * ============================================================================ */
+
+static bool g64_track_offset(const uint8_t *data, size_t size,
+                             int track_idx, uint32_t *out_offset) {
+    if (!data || size < 12 || track_idx < 0) return false;
+    uint8_t num_tracks = data[9];
+    if (track_idx >= (int)num_tracks) return false;
+    /* Verify the entire offset table fits in the buffer. */
+    size_t table_end = (size_t)12 + (size_t)num_tracks * 4u;
+    if (table_end > size) return false;
+    size_t entry = (size_t)12 + (size_t)track_idx * 4u;
+    *out_offset = (uint32_t)data[entry] |
+                  ((uint32_t)data[entry + 1] << 8) |
+                  ((uint32_t)data[entry + 2] << 16) |
+                  ((uint32_t)data[entry + 3] << 24);
+    return true;
+}
+
+static bool g64_track_payload(const uint8_t *data, size_t size,
+                              uint32_t track_offset,
+                              uint16_t *out_payload_size,
+                              const uint8_t **out_payload_data) {
+    if (track_offset == 0) return false;
+    /* Need 2 bytes for the LE payload-size header. */
+    if ((size_t)track_offset + 2 > size) return false;
+    uint16_t track_size = (uint16_t)(data[track_offset] |
+                                     ((uint16_t)data[track_offset + 1] << 8));
+    /* Payload itself must fit. */
+    if ((size_t)track_offset + 2u + (size_t)track_size > size) return false;
+    *out_payload_size = track_size;
+    *out_payload_data = data + track_offset + 2;
+    return true;
+}
+
+/* ============================================================================
  * V-MAX! Version Detection
  * Based on Pete Rittwage and Lord Crass documentation
  * ============================================================================ */
@@ -42,31 +90,19 @@ c64_vmax_version_t c64_detect_vmax_version(const uint8_t *data, size_t size,
         return VMAX_VERSION_UNKNOWN;
     }
     
-    /* G64 analysis for V-MAX detection */
-    uint8_t num_tracks = data[9];
-    
-    /* Track offset table starts at byte 12 */
-    const uint8_t *track_offsets = data + 12;
-    
-    /* Check track 20 (V-MAX loader track) */
+    /* G64 analysis for V-MAX detection. Track 20 is the loader track. */
     uint32_t track20_offset = 0;
-    int track20_idx = 19 * 2; /* Track 20, full track (not half) */
-    
-    if (track20_idx < num_tracks) {
-        track20_offset = track_offsets[track20_idx * 4] |
-                        (track_offsets[track20_idx * 4 + 1] << 8) |
-                        (track_offsets[track20_idx * 4 + 2] << 16) |
-                        (track_offsets[track20_idx * 4 + 3] << 24);
-    }
-    
-    if (track20_offset == 0 || track20_offset >= size) {
+    if (!g64_track_offset(data, size, 19 * 2, &track20_offset)) {
         return VMAX_VERSION_UNKNOWN;
     }
-    
-    /* Analyze track 20 for V-MAX signatures */
-    uint16_t track20_size = data[track20_offset] | (data[track20_offset + 1] << 8);
-    const uint8_t *track20_data = data + track20_offset + 2;
-    
+
+    uint16_t track20_size = 0;
+    const uint8_t *track20_data = NULL;
+    if (!g64_track_payload(data, size, track20_offset,
+                           &track20_size, &track20_data)) {
+        return VMAX_VERSION_UNKNOWN;
+    }
+
     if (track20_size < 100) return VMAX_VERSION_UNKNOWN;
     
     /* Look for V-MAX signatures */
@@ -185,28 +221,19 @@ c64_rapidlok_version_t c64_detect_rapidlok_version(const uint8_t *data, size_t s
         return RAPIDLOK_VERSION_UNKNOWN;
     }
     
-    uint8_t num_tracks = data[9];
-    const uint8_t *track_offsets = data + 12;
-    
-    /* Check for track 36 (RapidLok key track) */
-    int track36_idx = 35 * 2; /* Track 36, full track */
-    if (track36_idx >= num_tracks) {
+    /* Check for track 36 (RapidLok key track). */
+    uint32_t track36_offset = 0;
+    if (!g64_track_offset(data, size, 35 * 2, &track36_offset)) {
         return RAPIDLOK_VERSION_UNKNOWN;
     }
-    
-    uint32_t track36_offset = track_offsets[track36_idx * 4] |
-                              (track_offsets[track36_idx * 4 + 1] << 8) |
-                              (track_offsets[track36_idx * 4 + 2] << 16) |
-                              (track_offsets[track36_idx * 4 + 3] << 24);
-    
-    if (track36_offset == 0 || track36_offset >= size) {
+
+    uint16_t track36_size = 0;
+    const uint8_t *track36_data = NULL;
+    if (!g64_track_payload(data, size, track36_offset,
+                           &track36_size, &track36_data)) {
         return RAPIDLOK_VERSION_UNKNOWN;
     }
-    
-    /* Analyze track 36 for RapidLok key sector */
-    uint16_t track36_size = data[track36_offset] | (data[track36_offset + 1] << 8);
-    const uint8_t *track36_data = data + track36_offset + 2;
-    
+
     if (track36_size < 100) return RAPIDLOK_VERSION_UNKNOWN;
     
     /* Look for RapidLok signatures */
@@ -247,21 +274,16 @@ c64_rapidlok_version_t c64_detect_rapidlok_version(const uint8_t *data, size_t s
     
     for (int track = 1; track <= 35; track++) {
         int track_idx = (track - 1) * 2;
-        if (track_idx >= num_tracks) continue;
-        
-        uint32_t offset = track_offsets[track_idx * 4] |
-                         (track_offsets[track_idx * 4 + 1] << 8) |
-                         (track_offsets[track_idx * 4 + 2] << 16) |
-                         (track_offsets[track_idx * 4 + 3] << 24);
-        
-        if (offset == 0 || offset >= size) continue;
-        
-        uint16_t track_size = data[offset] | (data[offset + 1] << 8);
-        const uint8_t *track_data = data + offset + 2;
-        
+        uint32_t offset = 0;
+        if (!g64_track_offset(data, size, track_idx, &offset)) continue;
+
+        uint16_t track_size = 0;
+        const uint8_t *track_data = NULL;
+        if (!g64_track_payload(data, size, offset, &track_size, &track_data)) continue;
+
         /* Count $7B bytes (extra sector signature) */
         int count_7b = 0;
-        for (uint16_t i = 0; i < track_size && (offset + 2 + i) < size; i++) {
+        for (uint16_t i = 0; i < track_size; i++) {
             if (track_data[i] == RAPIDLOK_EXTRA_SECTOR) {
                 count_7b++;
             }
@@ -278,9 +300,11 @@ c64_rapidlok_version_t c64_detect_rapidlok_version(const uint8_t *data, size_t s
         /* Look for $75 (sector header) and $6B (data block) markers */
         bool found_75 = false;
         bool found_6b = false;
-        for (uint16_t i = 0; i < track_size - 1 && (offset + 2 + i + 1) < size; i++) {
-            if (track_data[i] == RAPIDLOK_SECTOR_HEADER) found_75 = true;
-            if (track_data[i] == RAPIDLOK_DATA_BLOCK) found_6b = true;
+        if (track_size >= 1) {
+            for (uint16_t i = 0; i < (uint16_t)(track_size - 1); i++) {
+                if (track_data[i] == RAPIDLOK_SECTOR_HEADER) found_75 = true;
+                if (track_data[i] == RAPIDLOK_DATA_BLOCK) found_6b = true;
+            }
         }
         
         if (found_75 && found_6b) {
@@ -321,26 +345,18 @@ c64_rapidlok_version_t c64_detect_rapidlok_version(const uint8_t *data, size_t s
 
 bool c64_extract_rapidlok_key(const uint8_t *data, size_t size, uint8_t *key_table) {
     if (!data || !key_table || size < 12) return false;
-    
+
     /* Check for G64 signature */
     if (memcmp(data, "GCR-1541", 8) != 0) return false;
-    
-    uint8_t num_tracks = data[9];
-    const uint8_t *track_offsets = data + 12;
-    
-    /* Get track 36 offset */
-    int track36_idx = 35 * 2;
-    if (track36_idx >= num_tracks) return false;
-    
-    uint32_t track36_offset = track_offsets[track36_idx * 4] |
-                              (track_offsets[track36_idx * 4 + 1] << 8) |
-                              (track_offsets[track36_idx * 4 + 2] << 16) |
-                              (track_offsets[track36_idx * 4 + 3] << 24);
-    
-    if (track36_offset == 0 || track36_offset >= size) return false;
-    
-    uint16_t track36_size = data[track36_offset] | (data[track36_offset + 1] << 8);
-    const uint8_t *track36_data = data + track36_offset + 2;
+
+    /* Get track 36 (RapidLok key track) */
+    uint32_t track36_offset = 0;
+    if (!g64_track_offset(data, size, 35 * 2, &track36_offset)) return false;
+
+    uint16_t track36_size = 0;
+    const uint8_t *track36_data = NULL;
+    if (!g64_track_payload(data, size, track36_offset,
+                           &track36_size, &track36_data)) return false;
     
     /* Find key data after sync mark */
     int key_start = 0;
@@ -376,24 +392,19 @@ bool c64_detect_datasoft(const uint8_t *data, size_t size,
     }
     
     /* G64 analysis - look for long tracks */
-    uint8_t num_tracks = data[9];
-    const uint8_t *track_offsets = data + 12;
-    
     int long_track_count = 0;
     int max_track_bytes = 0;
-    
+
     for (int track = 1; track <= 35; track++) {
         int track_idx = (track - 1) * 2;
-        if (track_idx >= num_tracks) continue;
-        
-        uint32_t offset = track_offsets[track_idx * 4] |
-                         (track_offsets[track_idx * 4 + 1] << 8) |
-                         (track_offsets[track_idx * 4 + 2] << 16) |
-                         (track_offsets[track_idx * 4 + 3] << 24);
-        
-        if (offset == 0 || offset >= size) continue;
-        
-        uint16_t track_size = data[offset] | (data[offset + 1] << 8);
+        uint32_t offset = 0;
+        if (!g64_track_offset(data, size, track_idx, &offset)) continue;
+
+        uint16_t track_size = 0;
+        const uint8_t *track_data_unused = NULL;
+        if (!g64_track_payload(data, size, offset, &track_size,
+                               &track_data_unused)) continue;
+        (void)track_data_unused;
         
         /* Standard track sizes by zone:
          * Zone 1 (tracks 1-17):  ~7692 bytes
@@ -498,74 +509,68 @@ bool c64_detect_ssi_rdos(const uint8_t *data, size_t size,
 
 bool c64_detect_ssi_rdos_g64(const uint8_t *data, size_t size,
                               c64_protection_analysis_t *result) {
-    /* G64 analysis for SSI RapidDOS */
-    uint8_t num_tracks = data[9];
-    const uint8_t *track_offsets = data + 12;
-    
-    /* Check for track 36 (SSI key track) */
-    int track36_idx = 35 * 2;
-    if (track36_idx >= num_tracks) return false;
-    
-    uint32_t track36_offset = track_offsets[track36_idx * 4] |
-                              (track_offsets[track36_idx * 4 + 1] << 8) |
-                              (track_offsets[track36_idx * 4 + 2] << 16) |
-                              (track_offsets[track36_idx * 4 + 3] << 24);
-    
-    if (track36_offset == 0 || track36_offset >= size) return false;
-    
-    uint16_t track36_size = data[track36_offset] | (data[track36_offset + 1] << 8);
-    const uint8_t *track36_data = data + track36_offset + 2;
+    /* G64 analysis for SSI RapidDOS — track 36 (SSI key track). */
+    if (!data || size < 12) return false;
+
+    uint32_t track36_offset = 0;
+    if (!g64_track_offset(data, size, 35 * 2, &track36_offset)) return false;
+
+    uint16_t track36_size = 0;
+    const uint8_t *track36_data = NULL;
+    if (!g64_track_payload(data, size, track36_offset,
+                           &track36_size, &track36_data)) return false;
     
     /* Look for SSI RapidDOS signatures */
     /* SSI uses custom header marker $4B instead of standard $08 */
     int ssi_header_count = 0;
     bool found_key_pattern = false;
-    
-    for (uint16_t i = 0; i < track36_size - 10 && (track36_offset + 2 + i + 10) < size; i++) {
-        /* Look for SSI custom header marker */
-        if (track36_data[i] == SSI_RDOS_HEADER_MARKER) {
-            ssi_header_count++;
-        }
-        
-        /* SSI key pattern: specific byte sequence after sync */
-        if (i > 5 && track36_data[i - 1] == 0xFF && 
-            track36_data[i] != 0xFF && track36_data[i] != 0x00) {
-            /* Check for 10-sector structure */
-            int sector_count = 0;
-            for (uint16_t j = i; j < track36_size - 1 && j < i + 3000; j++) {
-                if (track36_data[j] == 0x08 || track36_data[j] == SSI_RDOS_HEADER_MARKER) {
-                    sector_count++;
-                }
+
+    /* Guard against tiny payloads — `track36_size - 10` underflows uint16. */
+    if (track36_size >= 11) {
+        for (uint16_t i = 0; i < (uint16_t)(track36_size - 10); i++) {
+            /* Look for SSI custom header marker */
+            if (track36_data[i] == SSI_RDOS_HEADER_MARKER) {
+                ssi_header_count++;
             }
-            if (sector_count >= 8 && sector_count <= 12) {
-                found_key_pattern = true;
+
+            /* SSI key pattern: specific byte sequence after sync */
+            if (i > 5 && track36_data[i - 1] == 0xFF &&
+                track36_data[i] != 0xFF && track36_data[i] != 0x00) {
+                /* Check for 10-sector structure */
+                int sector_count = 0;
+                uint16_t j_end = (track36_size >= 1) ? (uint16_t)(track36_size - 1) : 0;
+                for (uint16_t j = i; j < j_end && j < i + 3000; j++) {
+                    if (track36_data[j] == 0x08 || track36_data[j] == SSI_RDOS_HEADER_MARKER) {
+                        sector_count++;
+                    }
+                }
+                if (sector_count >= 8 && sector_count <= 12) {
+                    found_key_pattern = true;
+                }
             }
         }
     }
-    
+
     /* Check other tracks for 10-sector structure (instead of standard 17-21) */
     int tracks_with_10_sectors = 0;
-    
+
     for (int track = 1; track <= 35; track++) {
         int track_idx = (track - 1) * 2;
-        if (track_idx >= num_tracks) continue;
-        
-        uint32_t offset = track_offsets[track_idx * 4] |
-                         (track_offsets[track_idx * 4 + 1] << 8) |
-                         (track_offsets[track_idx * 4 + 2] << 16) |
-                         (track_offsets[track_idx * 4 + 3] << 24);
-        
-        if (offset == 0 || offset >= size) continue;
-        
-        uint16_t track_size = data[offset] | (data[offset + 1] << 8);
-        const uint8_t *track_data = data + offset + 2;
-        
+        uint32_t offset = 0;
+        if (!g64_track_offset(data, size, track_idx, &offset)) continue;
+
+        uint16_t track_size = 0;
+        const uint8_t *track_data = NULL;
+        if (!g64_track_payload(data, size, offset, &track_size, &track_data)) continue;
+
         /* Count sector headers (standard $08 or custom) */
         int sector_headers = 0;
-        for (uint16_t i = 0; i < track_size - 5 && (offset + 2 + i + 5) < size; i++) {
-            /* Standard sector header after sync: FF FF FF FF FF 08 */
-            if (track_data[i] == 0x08 && i >= 5 && track_data[i - 1] == 0xFF) {
-                sector_headers++;
+        if (track_size >= 6) {
+            for (uint16_t i = 0; i < (uint16_t)(track_size - 5); i++) {
+                /* Standard sector header after sync: FF FF FF FF FF 08 */
+                if (track_data[i] == 0x08 && i >= 5 && track_data[i - 1] == 0xFF) {
+                    sector_headers++;
+                }
             }
         }
         
