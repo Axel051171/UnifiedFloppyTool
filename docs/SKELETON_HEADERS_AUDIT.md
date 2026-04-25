@@ -1,6 +1,6 @@
 # Skeleton-Headers Audit
 
-**Stand:** 2026-04-23
+**Stand:** 2026-04-25 (DELETE-Welle 2: ride/uft_flux_decoder.h + flux/uft_gcr.h)
 **Methodik:** Automatischer Scan aller `include/uft/**/*.h` auf das Verhältnis
 deklarierter zu implementierter `uft_*`-Funktionen.
 **Scan-Skript:** hier im Dokument reproduzierbar (siehe §Methodik).
@@ -9,11 +9,21 @@ deklarierter zu implementierter `uft_*`-Funktionen.
 
 ## Kernbefund
 
-**175 von 969 Headern (18 %) sind Skelette** — sie deklarieren ≥10
-`uft_*`-Funktionen, von denen ≥80 % keine Implementation haben.
+**Stand 2026-04-25 (live audit):** 149 Skelett-Header, 2 872 nicht
+implementierte Funktions-Deklarationen.
 
-Aggregiert: **3 355 nicht implementierte Funktions-Deklarationen**
-verteilt über die 175 Header.
+**Ursprünglich (2026-04-23):** 175 Skelett-Header, 3 355 nicht
+implementierte Deklarationen.
+
+Reduktion bisher:
+- DELETE-Welle 1 (Commit `5b551fb`): 24 Header gelöscht.
+- DELETE-Welle 2 (diese Session): 2 weitere Header (`ride/uft_flux_decoder.h`
+  +57 phantom decls, `flux/uft_gcr.h` self-contained orphan).
+- DOCUMENT-Welle (Commit `d9aa7a7`): 98 Header mit `/* PLANNED FEATURE */`-Banner.
+- IMPLEMENT-Welle: 53 Header mit `/* PARTIALLY IMPLEMENTED */`-Banner.
+
+Skeleton-Definition: ≥10 deklarierte `uft_*`-Funktionen, von denen ≥80 %
+keine Implementation haben.
 
 Das ist ein systemischer **Prinzip-1-Verstoß**: Das Projekt kündigt öffentlich
 Funktionen an, die nicht existieren. Consumer die darauf verlinken bekommen

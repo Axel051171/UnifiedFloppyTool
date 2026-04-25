@@ -131,11 +131,8 @@ extern const uint8_t uft_gcr_4b5b_decode[32];
  *   extern const uint16_t uft_c64_cell_size[4];
  * were removed (Finding 04 / SSOT). They were declared here but never
  * defined in any translation unit, so any caller would have failed to
- * link. The same name `uft_c64_speed_zone` is used as a function in
- * include/uft/uft_c64_gcr.h, uft_cbm_protection.h, uft_floppy_encoding.h
- * and formats/uft_floppy_encoding.h — keeping a parallel array
- * declaration risks a redeclaration-with-conflicting-types compile
- * error the moment any TU happens to include both.
+ * link. `uft_c64_speed_zone` is now a `static inline` function with the
+ * canonical body in include/uft/uft_c64_gcr.h (MF-001-SSOT consolidation).
  */
 
 /*============================================================================
@@ -237,12 +234,11 @@ static inline size_t uft_gcr_4b5b_encoded_size(size_t in_len) {
 /*
  * Wrappers `uft_c64_get_zone`, `uft_c64_get_sectors`, and
  * `uft_c64_get_cell_size` were removed together with the dead extern
- * arrays they referenced (Finding 04 / SSOT). `uft_c64_get_zone` also
- * collided by name with a different definition in include/uft/flux/uft_gcr.h.
+ * arrays they referenced (Finding 04 / SSOT).
  *
  * Use `uft_c64_speed_zone(int)` from include/uft/uft_c64_gcr.h instead;
  * sectors-per-track is `uft_c64_sectors_per_track(int)` in the same
- * header.
+ * header (also SSOT-consolidated).
  */
 
 /**
