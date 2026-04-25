@@ -9,6 +9,11 @@
 #include <stddef.h>
 #include <stdbool.h>
 
+/* Pull in the rich types defined post-v3.7. The public API of this
+ * file is the union of the legacy uft_recovery_* aliases below and
+ * the uft_forensic_* surface declared in uft_forensic_types.h. */
+#include "uft/recovery/uft_forensic_types.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
