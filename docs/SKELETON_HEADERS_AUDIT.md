@@ -62,6 +62,16 @@ Reduktion bisher:
     track_generator.h, track_types_defs.h, types.h, uft_floppy_utils.h)
   - Phantom-Bestätigung: CRC16_Update + CRC16_Init nirgends implementiert,
     nirgends gerufen — pure Phantom-Decls in 3 verschiedenen crc.h-Files
+- DELETE-Welle 12 (diese Session): 9 weitere Files via dead-cluster Identifikation
+  (`scripts/welle12_audit.py` — Class-B-Methode: maybe-orphans deren Decl-Matches
+  ALLE in anderen orphan-Headern liegen):
+  - `src/algorithms/flux/fluxStreamAnalyzer.h` (Class B, single)
+  - `include/fatfs/` ganzer Tree (3 Files: diskio.h, ff.h, ffconf.h —
+    third-party FatFS-Drop, kein consumer)
+  - `include/uft/PRIVATE/` ganzer Tree (5 Files: 3 Header in compat/
+    plus 2 README.md die die jetzt gelöschten Header dokumentierten)
+  - Skeleton-Audit: unverändert (135 Header, 2638 phantom-decls — diese Files
+    waren nicht über dem Skeleton-Threshold oder verwenden keine `uft_*`-Naming)
 - DELETE-Welle 11 (diese Session): 30 weitere Header in twin-cluster (alle
   Members orphan) gelöscht — `scripts/welle11_audit.py`:
   - 5 Files in 2 byte-identischen Twin-Clustern:
