@@ -45,6 +45,122 @@ static bool amiga_block_checksum_ok(const uint8_t *block) {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════════
+ * Directory Walker (M2 T3 — partial DiskSalv-style structural validator)
+ *
+ * The walker traverses the AmigaDOS hash-table tree starting at the root
+ * block. For every header block it touches it verifies the checksum and
+ * follows hash chains (per-bucket linked list of files with the same hash).
+ * Files: header-block checksum verified, data-block chain NOT walked (that
+ * needs extension-block traversal — left for the DiskSalv follow-up T7).
+ *
+ * AmigaDOS block layout used here (DD floppy, 512-byte blocks):
+ *   off 0   : type      (T_HEADER = 2 for headers)
+ *   off 12  : hash_size (72 for root/dir headers)
+ *   off 24..: hash[72]  (block numbers, 0 = empty slot)
+ *   off 496 : next_hash (next entry in same hash chain, 0 = end)
+ *   off 508 : sec_type  (ST_ROOT=1, ST_USERDIR=2, ST_FILE=-3)
+ *
+ * Cycle detection via a visited-blocks bitmap. Depth cap = 32 (AmigaDOS
+ * convention; deeper trees are pathological/malicious).
+ * ═══════════════════════════════════════════════════════════════════════════════ */
+
+/* UFT_AMIGA_T_SHORT + UFT_AMIGA_ST_{ROOT,USERDIR,FILE} are already
+ * defined in uft/fs/uft_amigados.h — reuse those. We just add the
+ * walker-specific layout constants here. */
+#define UFT_AMIGA_HASH_TABLE_SZ  72u
+#define UFT_AMIGA_NEXT_HASH_OFF  496u
+#define UFT_AMIGA_SEC_TYPE_OFF   508u
+#define UFT_AMIGA_HASH_OFF       24u
+#define UFT_AMIGA_MAX_WALK_DEPTH 32
+
+typedef struct {
+    uint8_t *visited;        /* bitmap: 1 bit per block */
+    size_t   total_blocks;
+    size_t   dirs_visited;
+    size_t   files_visited;
+    int      bad_checksums;  /* delta to add to result->bad_checksums */
+    int      bad_types;      /* unexpected type/sec_type — delta to error_count */
+    int      cycles;         /* same-block visited twice — delta to error_count */
+} amiga_walk_state_t;
+
+static inline bool amiga_visited_test(const amiga_walk_state_t *st, size_t blk) {
+    if (blk >= st->total_blocks) return true;  /* out-of-range ⇒ pretend visited */
+    return (st->visited[blk >> 3] & (1u << (blk & 7))) != 0;
+}
+
+static inline void amiga_visited_set(amiga_walk_state_t *st, size_t blk) {
+    if (blk < st->total_blocks) st->visited[blk >> 3] |= (1u << (blk & 7));
+}
+
+static void amiga_walk(uft_amigados_ctx_t *ctx,
+                        amiga_walk_state_t *st,
+                        uint32_t block_num,
+                        int depth) {
+    if (depth > UFT_AMIGA_MAX_WALK_DEPTH) {
+        st->bad_types++;
+        return;
+    }
+    if (block_num == 0) return;                /* end of chain */
+    if (block_num >= st->total_blocks) {
+        st->bad_types++;
+        return;
+    }
+    if (amiga_visited_test(st, block_num)) {
+        st->cycles++;
+        return;
+    }
+    amiga_visited_set(st, block_num);
+
+    size_t off = (size_t)block_num * UFT_AMIGA_BLOCK_SIZE;
+    if (off + UFT_AMIGA_BLOCK_SIZE > ctx->size) {
+        st->bad_types++;
+        return;
+    }
+    const uint8_t *block = ctx->data + off;
+
+    if (!amiga_block_checksum_ok(block)) {
+        st->bad_checksums++;
+        return;  /* corrupt — don't follow further from this block */
+    }
+
+    uint32_t type     = amiga_rd_be32(block);
+    int32_t  sec_type = (int32_t)amiga_rd_be32(block + UFT_AMIGA_SEC_TYPE_OFF);
+
+    if (type != UFT_AMIGA_T_SHORT) {
+        st->bad_types++;
+        return;
+    }
+
+    if (sec_type == UFT_AMIGA_ST_ROOT || sec_type == UFT_AMIGA_ST_USERDIR) {
+        st->dirs_visited++;
+        /* Walk hash table — 72 buckets, each may chain via next_hash. */
+        for (uint32_t i = 0; i < UFT_AMIGA_HASH_TABLE_SZ; i++) {
+            uint32_t slot = amiga_rd_be32(block + UFT_AMIGA_HASH_OFF + i * 4);
+            uint32_t cur = slot;
+            int chain_depth = 0;
+            while (cur != 0 && chain_depth < 4096) {  /* huge chain = pathological */
+                amiga_walk(ctx, st, cur, depth + 1);
+                /* Read next_hash from the block we just visited. */
+                if (cur >= st->total_blocks) break;
+                size_t cur_off = (size_t)cur * UFT_AMIGA_BLOCK_SIZE;
+                if (cur_off + UFT_AMIGA_BLOCK_SIZE > ctx->size) break;
+                cur = amiga_rd_be32(ctx->data + cur_off + UFT_AMIGA_NEXT_HASH_OFF);
+                chain_depth++;
+            }
+            if (chain_depth >= 4096) st->bad_types++;
+        }
+    } else if (sec_type == UFT_AMIGA_ST_FILE) {
+        st->files_visited++;
+        /* File-header checksum already verified above. Data-block chain
+         * + extension blocks deliberately NOT walked here — that's the
+         * DiskSalv-style content-recovery work (T7). */
+    } else {
+        /* Unknown sec_type. */
+        st->bad_types++;
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
  * Volume Operations
  * ═══════════════════════════════════════════════════════════════════════════════ */
 
@@ -256,14 +372,54 @@ int uft_amiga_validate_ext(uft_amigados_ctx_t *ctx,
         }
     }
 
-    /* --- 4. Directory and file chains: not walked yet (future work) --- */
-    result->directory_valid = true;   /* optimistic — no walk done */
-    result->files_valid     = true;   /* optimistic — no walk done */
+    /* --- 4. Directory + file-header chain walk (T3 partial DiskSalv) --- */
+    if (result->rootblock_valid && ctx->root_block > 0) {
+        size_t total_blocks = ctx->size / UFT_AMIGA_BLOCK_SIZE;
+        amiga_walk_state_t st = {0};
+        st.total_blocks = total_blocks;
+        st.visited = calloc((total_blocks + 7) / 8, 1);
+
+        if (st.visited) {
+            amiga_walk(ctx, &st, ctx->root_block, 0);
+
+            result->bad_checksums   += st.bad_checksums;
+            result->error_count     += st.bad_types + st.cycles;
+            result->directory_valid  = (st.bad_checksums == 0 &&
+                                        st.bad_types == 0 &&
+                                        st.cycles == 0);
+            /* Files are valid if every reachable file-header checksum-passed
+             * and no walk-error fired in the file branches. We don't walk
+             * data-block chains yet (that's T7), so this is "header-level
+             * file-chain integrity", not "data integrity". */
+            result->files_valid      = result->directory_valid;
+
+            if (st.bad_checksums || st.bad_types || st.cycles) {
+                snprintf(result->details + strlen(result->details),
+                         sizeof(result->details) - strlen(result->details),
+                         "DirWalk: visited %zu dir(s) + %zu file(s); "
+                         "bad-checksums=%d, bad-types=%d, cycles=%d\n",
+                         st.dirs_visited, st.files_visited,
+                         st.bad_checksums, st.bad_types, st.cycles);
+            }
+            free(st.visited);
+        } else {
+            /* OOM during walker setup — be honest, don't claim valid. */
+            result->directory_valid = false;
+            result->files_valid     = false;
+            result->error_count++;
+        }
+    } else {
+        /* No valid root block ⇒ can't honestly walk. */
+        result->directory_valid = false;
+        result->files_valid     = false;
+    }
 
     /* Overall verdict. */
     result->valid = (result->error_count == 0) &&
                      result->rootblock_valid &&
-                     (result->bad_checksums == 0);
+                     (result->bad_checksums == 0) &&
+                     result->directory_valid &&
+                     result->files_valid;
     return 0;
 }
 
