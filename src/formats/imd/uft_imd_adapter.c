@@ -564,5 +564,5 @@ const uft_format_adapter_t *uft_imd_get_adapter(void) {
 }
 
 uft_error_t uft_imd_adapter_register(void) {
-    return uft_adapter_register(&imd_adapter);
+    return uft_xdf_adapter_register(&imd_adapter);
 }
