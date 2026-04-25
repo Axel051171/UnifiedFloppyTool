@@ -14,6 +14,9 @@
 #include <stddef.h>
 #include <stdbool.h>
 
+/* SSOT: C64 sectors-per-track / speed-zone helpers live in uft_c64_gcr.h. */
+#include "uft/uft_c64_gcr.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -184,15 +187,7 @@ static inline int uft_c64_get_zone(int track) {
     return -1;
 }
 
-/**
- * @brief Get sectors per track
- * @param track Track number (1-based)
- * @return Sectors per track (17-21), or 0 if invalid
- */
-static inline int uft_c64_sectors_per_track(int track) {
-    int zone = uft_c64_get_zone(track);
-    return (zone >= 0) ? uft_c64_zones[zone].sectors : 0;
-}
+/* uft_c64_sectors_per_track(int) — provided by uft_c64_gcr.h (SSOT). */
 
 /**
  * @brief Calculate D64 offset for sector

@@ -287,17 +287,8 @@ static inline uint16_t uft_gcr_c64_encode_byte(uint8_t byte)
  * Total: 683 sectors = 174,848 bytes (256 bytes/sector - 2 header)
  */
 
-/** Get sectors per track for C64/1541 */
-static inline int uft_c64_sectors_per_track(int track)
-{
-    if (track < 1 || track > 35) return 0;
-    if (track <= 17) return 21;
-    if (track <= 24) return 19;
-    if (track <= 30) return 18;
-    return 17;
-}
-
-/* uft_c64_speed_zone(int) — provided by uft_c64_gcr.h (SSOT). */
+/* uft_c64_sectors_per_track(int) — provided by uft_c64_gcr.h (SSOT). */
+/* uft_c64_speed_zone(int)         — provided by uft_c64_gcr.h (SSOT). */
 
 /*===========================================================================
  * Macintosh Variable Speed Zones

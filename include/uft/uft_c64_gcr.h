@@ -86,9 +86,17 @@ extern "C" {
  *============================================================================*/
 
 /**
- * Get sectors per track for given track number
+ * Get sectors per track for given track number.
+ *
+ * SSOT — canonical definition. Other headers (uft_floppy_encoding.h,
+ * formats/uft_floppy_encoding.h, flux/uft_gcr.h) `#include` this header
+ * and inherit the function; do not duplicate this body.
+ *
+ * Range matches uft_c64_speed_zone() (1..42 to cover 1541-IIC and modded
+ * drives). Returns 0 for invalid track — never invent a sector count.
  */
 static inline int uft_c64_sectors_per_track(int track) {
+    if (track < 1 || track > 42) return 0;
     if (track <= 17) return 21;
     if (track <= 24) return 19;
     if (track <= 30) return 18;

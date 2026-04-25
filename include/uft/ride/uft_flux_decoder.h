@@ -840,10 +840,12 @@ int uft_gcr_decode_apple2_sector(const uint8_t *nibbles, size_t count,
                                   uint8_t *data, size_t data_size,
                                   uft_ride_sector_t *sector);
 
-/**
- * @brief Get sectors per track for C64 track number
- */
-int uft_c64_sectors_per_track(int track);
+/* uft_c64_sectors_per_track(int) — provided as `static inline` by
+ * uft_c64_gcr.h (SSOT). The stale `extern` declaration that lived here
+ * never had a matching non-inline definition; including this header in
+ * the same TU as any provider (uft_c64_gcr.h, flux/uft_gcr.h,
+ * uft_floppy_encoding.h, formats/uft_floppy_encoding.h) used to risk an
+ * ODR conflict between `extern` and `static inline`. */
 
 /**
  * @brief Decode C64 sector from GCR data
