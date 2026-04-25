@@ -124,27 +124,19 @@ extern const uint8_t uft_gcr_4b5b_decode[32];
  * Commodore Zone Definitions
  *============================================================================*/
 
-/**
- * @brief C64/1541 speed zone by track
- * 
- * Zone | Tracks  | Sectors | Cell (µs) | Cell (ticks@16MHz)
- * -----|---------|---------|-----------|-------------------
- *  3   | 1-17    | 21      | 3.25      | 3250
- *  2   | 18-24   | 19      | 3.50      | 3500
- *  1   | 25-30   | 18      | 3.75      | 3750
- *  0   | 31-42   | 17      | 4.00      | 4000
+/*
+ * Note: the previous declarations
+ *   extern const uint8_t  uft_c64_speed_zone[42];
+ *   extern const uint8_t  uft_c64_sectors_per_track[42];
+ *   extern const uint16_t uft_c64_cell_size[4];
+ * were removed (Finding 04 / SSOT). They were declared here but never
+ * defined in any translation unit, so any caller would have failed to
+ * link. The same name `uft_c64_speed_zone` is used as a function in
+ * include/uft/uft_c64_gcr.h, uft_cbm_protection.h, uft_floppy_encoding.h
+ * and formats/uft_floppy_encoding.h — keeping a parallel array
+ * declaration risks a redeclaration-with-conflicting-types compile
+ * error the moment any TU happens to include both.
  */
-extern const uint8_t uft_c64_speed_zone[42];
-
-/**
- * @brief C64/1541 sectors per track
- */
-extern const uint8_t uft_c64_sectors_per_track[42];
-
-/**
- * @brief C64/1541 cell size per zone (in 1/10 µs)
- */
-extern const uint16_t uft_c64_cell_size[4];
 
 /*============================================================================
  * Encoding/Decoding Functions
@@ -242,32 +234,16 @@ static inline size_t uft_gcr_4b5b_encoded_size(size_t in_len) {
  * Track Utility Functions
  *============================================================================*/
 
-/**
- * @brief Get speed zone for C64 track
- * @param track Track number (1-42)
- * @return Zone (0-3) or 0 for invalid
+/*
+ * Wrappers `uft_c64_get_zone`, `uft_c64_get_sectors`, and
+ * `uft_c64_get_cell_size` were removed together with the dead extern
+ * arrays they referenced (Finding 04 / SSOT). `uft_c64_get_zone` also
+ * collided by name with a different definition in include/uft/flux/uft_gcr.h.
+ *
+ * Use `uft_c64_speed_zone(int)` from include/uft/uft_c64_gcr.h instead;
+ * sectors-per-track is `uft_c64_sectors_per_track(int)` in the same
+ * header.
  */
-static inline uint8_t uft_c64_get_zone(uint8_t track) {
-    if (track < 1 || track > 42) return 0;
-    return uft_c64_speed_zone[track - 1];
-}
-
-/**
- * @brief Get sectors per track for C64
- * @param track Track number (1-42)
- * @return Sectors (17-21) or 0 for invalid
- */
-static inline uint8_t uft_c64_get_sectors(uint8_t track) {
-    if (track < 1 || track > 42) return 0;
-    return uft_c64_sectors_per_track[track - 1];
-}
-
-/**
- * @brief Get cell size for C64 track (in 1/10 µs)
- */
-static inline uint16_t uft_c64_get_cell_size(uint8_t track) {
-    return uft_c64_cell_size[uft_c64_get_zone(track)];
-}
 
 /**
  * @brief Calculate XOR checksum (Commodore style)

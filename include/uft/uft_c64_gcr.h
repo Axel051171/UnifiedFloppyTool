@@ -96,9 +96,23 @@ static inline int uft_c64_sectors_per_track(int track) {
 }
 
 /**
- * Get speed zone for track
+ * Get speed zone for C64/1541 track.
+ *
+ * Forensic-canonical form (Finding 04 / SSOT — must remain bit-for-bit
+ * identical to the copies in uft_floppy_encoding.h, formats/uft_floppy_encoding.h
+ * and uft_cbm_protection.h, otherwise behaviour drifts between modules).
+ *
+ *   Zone 3: tracks  1..17  (21 sectors)
+ *   Zone 2: tracks 18..24  (19 sectors)
+ *   Zone 1: tracks 25..30  (18 sectors)
+ *   Zone 0: tracks 31..42  (17 sectors)  — 36..42 are the extended
+ *                                          range used by 1541-IIC and
+ *                                          host-modded drives; native
+ *                                          1541 stops at 35.
+ *   < 1 or > 42: -1 (invalid sentinel — callers MUST bounds-check).
  */
 static inline int uft_c64_speed_zone(int track) {
+    if (track < 1 || track > 42) return -1;
     if (track <= 17) return 3;
     if (track <= 24) return 2;
     if (track <= 30) return 1;
@@ -106,19 +120,23 @@ static inline int uft_c64_speed_zone(int track) {
 }
 
 /**
- * Get bitrate for track (bits per second)
+ * Get bitrate for track (bits per second). Returns 0 for invalid track.
  */
 static inline int uft_c64_track_bitrate(int track) {
+    int zone = uft_c64_speed_zone(track);
+    if (zone < 0) return 0;
     static const int rates[] = { 250000, 266667, 285714, 307692 };
-    return rates[uft_c64_speed_zone(track)];
+    return rates[zone];
 }
 
 /**
- * Get bytes per track (approximately)
+ * Get bytes per track (approximately). Returns 0 for invalid track.
  */
 static inline int uft_c64_bytes_per_track(int track) {
+    int zone = uft_c64_speed_zone(track);
+    if (zone < 0) return 0;
     static const int bytes[] = { 6250, 6667, 7143, 7692 };
-    return bytes[uft_c64_speed_zone(track)];
+    return bytes[zone];
 }
 
 /*============================================================================
