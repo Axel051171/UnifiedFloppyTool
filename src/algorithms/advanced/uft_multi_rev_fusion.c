@@ -24,8 +24,8 @@ typedef struct {
     uint8_t value;              // 0 or 1
     float confidence;           // 0.0 - 1.0
     bool weak_bit;              // Inconsistent across revolutions
-    uint8_t vote_ones;          // How many revolutions had 1
-    uint8_t vote_zeros;         // How many revolutions had 0
+    uint32_t vote_ones;         // How many revolutions had 1 (>=256 supported)
+    uint32_t vote_zeros;        // How many revolutions had 0 (>=256 supported)
 } fused_bit_t;
 
 typedef struct {
