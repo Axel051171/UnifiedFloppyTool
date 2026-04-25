@@ -22,6 +22,9 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+/* SSOT: speed-zone helper lives in uft_c64_gcr.h. */
+#include "uft/uft_c64_gcr.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -211,17 +214,7 @@ static inline bool uft_within_tolerance(uint32_t v, uint32_t t, uint32_t tol)
 
 static inline int uft_clamp_100(int v) { return v<0?0:(v>100?100:v); }
 
-/* Finding 04 / SSOT: must remain bit-for-bit identical to the copies in
- * uft_c64_gcr.h, uft_floppy_encoding.h and formats/uft_floppy_encoding.h.
- * Returns -1 for invalid track (< 1 or > 42). */
-static inline int uft_c64_speed_zone(int track)
-{
-    if (track < 1 || track > 42) return -1;
-    if (track <= 17) return 3;
-    if (track <= 24) return 2;
-    if (track <= 30) return 1;
-    return 0;
-}
+/* uft_c64_speed_zone(int) — provided by uft_c64_gcr.h (SSOT). */
 
 static inline uft_rl6_track_group_t uft_rl6_get_track_group(int track)
 {

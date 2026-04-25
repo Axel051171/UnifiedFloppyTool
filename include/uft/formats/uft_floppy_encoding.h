@@ -19,6 +19,9 @@
 #include <stdbool.h>
 #include "uft/uft_compiler.h"
 
+/* SSOT: C64 speed-zone helper lives in uft_c64_gcr.h. */
+#include "uft/uft_c64_gcr.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -283,18 +286,7 @@ static inline int uft_c64_sectors_per_track(int track)
     return 17;
 }
 
-/** Get speed zone for C64/1541 track.
- * Finding 04 / SSOT: must remain bit-for-bit identical to the copies in
- * uft_c64_gcr.h, uft_cbm_protection.h and uft_floppy_encoding.h.
- * Range extended to 1..42 to cover 1541-IIC / modded drives. */
-static inline int uft_c64_speed_zone(int track)
-{
-    if (track < 1 || track > 42) return -1;
-    if (track <= 17) return 3;
-    if (track <= 24) return 2;
-    if (track <= 30) return 1;
-    return 0;
-}
+/* uft_c64_speed_zone(int) — provided by uft_c64_gcr.h (SSOT). */
 
 /*===========================================================================
  * Macintosh Variable Speed Zones

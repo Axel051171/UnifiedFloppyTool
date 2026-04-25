@@ -98,9 +98,10 @@ static inline int uft_c64_sectors_per_track(int track) {
 /**
  * Get speed zone for C64/1541 track.
  *
- * Forensic-canonical form (Finding 04 / SSOT — must remain bit-for-bit
- * identical to the copies in uft_floppy_encoding.h, formats/uft_floppy_encoding.h
- * and uft_cbm_protection.h, otherwise behaviour drifts between modules).
+ * SSOT (Single Source of Truth) — this is the canonical definition.
+ * Other headers (uft_floppy_encoding.h, formats/uft_floppy_encoding.h,
+ * uft_cbm_protection.h) `#include` this header and inherit the function;
+ * they no longer carry their own copies. Do not duplicate this body.
  *
  *   Zone 3: tracks  1..17  (21 sectors)
  *   Zone 2: tracks 18..24  (19 sectors)
