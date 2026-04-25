@@ -126,49 +126,51 @@ static int average_sector_reads(const uint8_t **reads, size_t read_count,
  * ============================================================================ */
 
 /**
- * @brief Attempt to reconstruct sector from partial data
+ * @brief Reconstruct sector from partial data with explicit validity map.
+ *
+ * FORENSIC CONTRACT (Prinzip 1 — keine erfundenen Daten):
+ * Missing bytes are filled with the constant sentinel 0x00 — they are
+ * NEVER interpolated, pattern-extrapolated, or otherwise synthesized.
+ * Linear interpolation between two real bytes manufactures values that
+ * never existed on the medium and is forbidden on binary sector data.
+ *
+ * The caller MUST honour out_validity[] — every reconstructed byte
+ * (validity == 0) is to be treated as unknown by downstream code, even
+ * if a CRC happens to match. CRC equality on a partly-reconstructed
+ * sector indicates only that the chosen sentinel was a plausible
+ * reading, not that the data is authentic.
+ *
+ * @param partial_data    Best-effort source bytes (may contain garbage
+ *                        in slots whose valid_mask says invalid).
+ * @param partial_len     Bytes actually present in partial_data.
+ * @param valid_mask      Optional per-byte validity (1 = real, 0 = gap).
+ *                        If NULL, validity is derived from partial_len:
+ *                        bytes [0, partial_len) are real, rest are gaps.
+ * @param sector_size     Target output size.
+ * @param output          [out] sector_size bytes; gaps filled with 0x00.
+ * @param out_validity    [out, optional] sector_size bytes; 1 = real,
+ *                        0 = sentinel-filled gap. May be NULL.
+ *
+ * Returns 0 on success, -1 on argument error.
  */
 static int reconstruct_sector(const uint8_t *partial_data, size_t partial_len,
                               const uint8_t *valid_mask, size_t sector_size,
-                              uint8_t *output)
+                              uint8_t *output, uint8_t *out_validity)
 {
     if (!partial_data || !output) return -1;
-    
-    /* Start with partial data */
-    memcpy(output, partial_data, partial_len < sector_size ? partial_len : sector_size);
-    
-    /* Fill gaps with pattern detection */
-    bool in_gap = false;
-    size_t gap_start = 0;
-    
+
     for (size_t i = 0; i < sector_size; i++) {
         bool valid = valid_mask ? (valid_mask[i] != 0) : (i < partial_len);
-        
-        if (!valid && !in_gap) {
-            in_gap = true;
-            gap_start = i;
-        } else if (valid && in_gap) {
-            /* End of gap - try to interpolate */
-            size_t gap_len = i - gap_start;
-            
-            if (gap_len <= 4) {
-                /* Small gap - linear interpolate */
-                uint8_t start_val = (gap_start > 0) ? output[gap_start - 1] : 0;
-                uint8_t end_val = output[i];
-                
-                for (size_t j = 0; j < gap_len; j++) {
-                    output[gap_start + j] = start_val + 
-                        (end_val - start_val) * (j + 1) / (gap_len + 1);
-                }
-            } else {
-                /* Large gap - fill with zeros */
-                memset(output + gap_start, 0, gap_len);
-            }
-            
-            in_gap = false;
+
+        if (valid && i < partial_len) {
+            output[i] = partial_data[i];                    /* INTEGRITY-OK: out_validity set on next line */
+            if (out_validity) out_validity[i] = 1;
+        } else {
+            output[i] = 0x00;                               /* INTEGRITY-OK: out_validity=0 marks this byte unauthentic */
+            if (out_validity) out_validity[i] = 0;
         }
     }
-    
+
     return 0;
 }
 
@@ -296,7 +298,14 @@ int uft_sector_recover_average(uft_sector_t *sector,
 }
 
 /**
- * @brief Attempt sector reconstruction from partial data
+ * @brief Attempt sector reconstruction from partial data.
+ *
+ * Forensic note: gap bytes are filled with the 0x00 sentinel by
+ * reconstruct_sector() — they are NOT recovered values. A successful
+ * CRC match on a partly-reconstructed sector therefore indicates that
+ * the original bytes happened to be 0x00 (plausible for unwritten
+ * regions), not that the gaps were "decoded". Confidence is reduced
+ * to reflect the fraction of authentic bytes.
  */
 int uft_sector_recover_reconstruct(uft_sector_t *sector,
                                    const uint8_t *partial_data,
@@ -304,25 +313,41 @@ int uft_sector_recover_reconstruct(uft_sector_t *sector,
                                    const uint8_t *valid_mask)
 {
     if (!sector || !partial_data) return -1;
-    
+
     uint8_t *reconstructed = malloc(sector->data_len);
-    if (!reconstructed) return -1;
-    
+    uint8_t *validity      = malloc(sector->data_len);
+    if (!reconstructed || !validity) {
+        free(reconstructed);
+        free(validity);
+        return -1;
+    }
+
     reconstruct_sector(partial_data, partial_len, valid_mask,
-                       sector->data_len, reconstructed);
-    
-    /* Check if reconstruction fixed CRC */
+                       sector->data_len, reconstructed, validity);
+
+    /* Count authentic bytes — confidence cannot exceed this fraction. */
+    size_t real_bytes = 0;
+    for (size_t i = 0; i < sector->data_len; i++) {
+        if (validity[i]) real_bytes++;
+    }
+
+    /* CRC verification is necessary but not sufficient when gaps exist:
+     * a match means the 0x00 sentinel was consistent with the original
+     * data, which is plausible but not proven. Confidence reflects this. */
     uint16_t new_crc = crc16(reconstructed, sector->data_len);
-    
+
     if (new_crc == sector->data_crc) {
         memcpy(sector->data, reconstructed, sector->data_len);
         sector->status = UFT_SECTOR_RECOVERED;
-        sector->confidence = 70;  /* Reconstructed data has medium confidence */
+        /* Fraction of authentic bytes, capped at 100. */
+        sector->confidence = (uint8_t)((real_bytes * 100u) / sector->data_len);
         free(reconstructed);
+        free(validity);
         return 0;
     }
-    
+
     free(reconstructed);
+    free(validity);
     return -1;
 }
 
