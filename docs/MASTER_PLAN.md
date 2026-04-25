@@ -292,9 +292,15 @@ Davon:
   `setEnabled(false) + tooltip` bekommen oder echtes Backend in M2/M3.
 - `fluxengine/lib/fluxsink/*.cc` waren byte-identisch zu
   `algorithms/fluxio/*.cc` und in keinem Build → in MF-011 Welle-3
-  gelöscht (7 Files, ~1500 LOC). Der weitere `src/fluxengine/`-Tree
-  (≈21k LOC, 130 Files, kein Build) bleibt offen für eine separate
-  Welle nach Verifikation.
+  gelöscht (7 Files, ~1500 LOC).
+- Der gesamte `src/fluxengine/`-Tree (123 Files, 20 331 LOC) wurde in
+  MF-011 Welle-4 gelöscht — kein Build, keine externen Konsumenten,
+  reiner fluxengine-Projekt-Import-Drop. Die sister-trees
+  `src/algorithms/fluxio/`, `src/filesystems/` und
+  `src/algorithms/{core,data,imageio}/` (insgesamt ~98 Files, ~16k LOC)
+  haben jetzt dangling `#include "lib/..."`-Pfade — sie waren schon
+  vorher unbuildable, aber das Dangling macht ihren Tot-Status sichtbar.
+  Nächste Welle: Verifizierung pro Verzeichnis, dann Löschung.
 - M3.1/M3.2-getrackte Stubs zählen nicht als offene TODOs — sie sind
   honest Scaffolding mit dokumentiertem Pfad zur Implementation.
 

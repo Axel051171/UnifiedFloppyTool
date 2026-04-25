@@ -26,9 +26,17 @@ Reduktion bisher:
     `fs/uft_cbm_fs.h` inkludiert hat)
 - DELETE-Welle 3 (diese Session): 7 .cc-Duplikate in `src/fluxengine/lib/fluxsink/`
   byte-identisch zu `src/algorithms/fluxio/`, in keinem Build (~1500 LOC).
-  Skeleton-Audit zählt nur Header — diese Welle reduziert die Header-Zahl
-  nicht, beseitigt aber das Größenäquivalent. Restlicher `src/fluxengine/`-Tree
-  (≈21k LOC, 130 Files) noch offen.
+  Skeleton-Audit zählt nur Header — diese Welle reduziert die Header-Zahl nicht.
+- DELETE-Welle 4 (diese Session): kompletter `src/fluxengine/`-Tree gelöscht
+  (123 Files, 20 331 LOC). Dead-Code-Cluster aus dem fluxengine-Projekt-Import,
+  ohne externe Konsumenten und nicht im Build. Skeleton-Audit zählt diese Files
+  nicht (kein `uft_*`-Naming).
+- Noch offen (Welle 5+): drei sister-trees mit `#include "lib/..."`-Pfaden die
+  jetzt dangling sind — `src/algorithms/fluxio/` (21 Files, 2.2k LOC),
+  `src/filesystems/` (25 Files, 6.8k LOC), `src/algorithms/{core,data,imageio}/`
+  (52 Files, 7.4k LOC). Plus Einzeldateien in `src/formats/{amiga_ext,apple,ibm}/`
+  und `src/encoding/gcr/c64.h` (mixed-state Directories — Per-File-Audit nötig
+  bevor man ein ganzes Verzeichnis löschen kann).
 - DOCUMENT-Welle (Commit `d9aa7a7`): 98 Header mit `/* PLANNED FEATURE */`-Banner.
 - IMPLEMENT-Welle: 53 Header mit `/* PARTIALLY IMPLEMENTED */`-Banner.
 
