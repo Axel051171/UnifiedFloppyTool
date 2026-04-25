@@ -44,6 +44,16 @@ Reduktion bisher:
     uft_encoding_detect) — nur `uft_otdr_encoding_boost.c` blieb (live, im qmake)
   - 3 einzelne Header in `src/formats/{amiga_ext,apple,ibm}/` — orphan, in
     mixed-state-Verzeichnissen (nur die toten .h-Files gelöscht)
+- DELETE-Welle 8 (diese Session): 21 weitere Files in `src/tracks/` —
+  - 18 byte-identische Duplikate von `include/tracks/track_formats/*.h`
+    in `src/tracks/{fm,mfm,gcr}/` (von `scripts/welle8_audit.py` als
+    "maybe-orphan" mit 1-Site-Twin identifiziert, dann via `diff -q`
+    verifiziert)
+  - 2 weitere orphan Files in `src/tracks/`-Wurzel (`sector_extractor.h`,
+    `uft_floppy_utils.h`) — kein external consumer, no twin
+  - 1 Backup-File `track_generator.h.hxc_backup` (gehörte nie ins Repo)
+  - Behalten: `src/tracks/crc.h` (Basename-Treffer in externen Konsumenten,
+    Per-`-I`-Pfad-Analyse nötig); `src/tracks/CMakeLists.txt`
 - DELETE-Welle 7 (diese Session): 32 systematisch identifizierte orphan-Header
   (Per-Datei-Verifikation: kein `#include` von außen, keine deklarierten
   Funktions-Identifier irgendwo im Source-Korpus referenziert):
