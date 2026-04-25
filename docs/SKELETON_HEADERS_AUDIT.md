@@ -62,6 +62,13 @@ Reduktion bisher:
     track_generator.h, track_types_defs.h, types.h, uft_floppy_utils.h)
   - Phantom-Bestätigung: CRC16_Update + CRC16_Init nirgends implementiert,
     nirgends gerufen — pure Phantom-Decls in 3 verschiedenen crc.h-Files
+- DELETE-Welle 17 (diese Session): 58 weitere orphan Header in 39 kleinen Clustern
+  — alle ohne `#include`-Konsumenten, alle ohne PLANNED-Banner, alle ohne paired-`.c`.
+  Verteilung: include/uft/fs (5), src/formats/amiga_ext (4), include/uft/hal (4),
+  src/formats/ipf (3), src/core (3), je 2 in src/{recovery,pll,hal,formats/atari}
+  und include/uft/{flux,decoder,...}, plus 30+ Einzeldateien quer durch
+  src/algorithms/, src/formats/, include/uft/. Total -10018 LOC.
+  Skeleton-Audit: 133 unverändert.
 - DELETE-Welle 16 (diese Session): 29 weitere orphan Header — kleine Cluster +
   Top-Level-Files via Per-Datei-Audit:
   - 5 ganze 2-File-Clusters wo BEIDE Files orphan: `include/uft/cartridge/`
