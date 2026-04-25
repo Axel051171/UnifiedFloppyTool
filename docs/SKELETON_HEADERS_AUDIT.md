@@ -9,7 +9,7 @@ deklarierter zu implementierter `uft_*`-Funktionen.
 
 ## Kernbefund
 
-**Stand 2026-04-25 (live audit):** 149 Skelett-Header, 2 872 nicht
+**Stand 2026-04-25 (live audit):** 148 Skelett-Header, 2 819 nicht
 implementierte Funktions-Deklarationen.
 
 **Ursprünglich (2026-04-23):** 175 Skelett-Header, 3 355 nicht
@@ -17,8 +17,13 @@ implementierte Deklarationen.
 
 Reduktion bisher:
 - DELETE-Welle 1 (Commit `5b551fb`): 24 Header gelöscht.
-- DELETE-Welle 2 (diese Session): 2 weitere Header (`ride/uft_flux_decoder.h`
-  +57 phantom decls, `flux/uft_gcr.h` self-contained orphan).
+- DELETE-Welle 2 (diese Session): 3 weitere Header gelöscht.
+  - `ride/uft_flux_decoder.h` (61 decls, 57 missing — Skeleton #1)
+  - `flux/uft_gcr.h` (self-contained orphan; below skeleton-threshold but tot)
+  - `fs/uft_cbm_fs.h` (54 decls, 53 missing — silent ABI-conflict mit
+    `formats/uft_cbm_formats.h` über gleichnamige `uft_cbm_print_directory`
+    mit unterschiedlicher Signatur; Konflikt nie ausgelöst da niemand
+    `fs/uft_cbm_fs.h` inkludiert hat)
 - DOCUMENT-Welle (Commit `d9aa7a7`): 98 Header mit `/* PLANNED FEATURE */`-Banner.
 - IMPLEMENT-Welle: 53 Header mit `/* PARTIALLY IMPLEMENTED */`-Banner.
 
