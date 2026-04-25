@@ -142,7 +142,7 @@ typedef struct {
  * @param score Output score
  * @return UFT_OK if format recognized
  */
-uft_error_t uft_imd_probe(
+uft_error_t uft_imd_adapter_probe(
     const uint8_t *data,
     size_t size,
     uft_format_score_t *score
@@ -172,7 +172,7 @@ static inline bool uft_imd_check_signature(const uint8_t *data, size_t size) {
  * @param ctx Output context (caller-allocated or NULL to malloc)
  * @return UFT_OK on success
  */
-uft_error_t uft_imd_open(
+uft_error_t uft_imd_adapter_open(
     const uint8_t *data,
     size_t size,
     uft_imd_context_t **ctx
@@ -183,7 +183,7 @@ uft_error_t uft_imd_open(
  * 
  * @param ctx Context to close
  */
-void uft_imd_close(uft_imd_context_t *ctx);
+void uft_imd_adapter_close(uft_imd_context_t *ctx);
 
 /* ═══════════════════════════════════════════════════════════════════════════════
  * Track / Sector Access
@@ -235,7 +235,7 @@ uft_error_t uft_imd_get_sector(
  * @param bytes_read Output: bytes read
  * @return UFT_OK on success
  */
-uft_error_t uft_imd_read_sector(
+uft_error_t uft_imd_adapter_read_sector(
     const uft_imd_context_t *ctx,
     uint8_t track,
     uint8_t side,
@@ -269,7 +269,7 @@ uft_error_t uft_imd_get_info(
  * @param buf_size Buffer size
  * @return Comment length or 0 if none
  */
-size_t uft_imd_get_comment(
+size_t uft_imd_adapter_get_comment(
     const uft_imd_context_t *ctx,
     char *buffer,
     size_t buf_size
@@ -291,7 +291,7 @@ const uft_format_adapter_t *uft_imd_get_adapter(void);
  * 
  * @return UFT_OK on success
  */
-uft_error_t uft_imd_register(void);
+uft_error_t uft_imd_adapter_register(void);
 
 /* ═══════════════════════════════════════════════════════════════════════════════
  * Utility Functions
@@ -308,7 +308,7 @@ uft_error_t uft_imd_register(void);
  * @param header_end Output: offset after header
  * @return UFT_OK on success
  */
-uft_error_t uft_imd_parse_header(
+uft_error_t uft_imd_adapter_parse_header(
     const uint8_t *data,
     size_t size,
     char *version,
@@ -326,7 +326,7 @@ uft_error_t uft_imd_parse_header(
  * @param bytes_consumed Output: bytes consumed
  * @return UFT_OK on success
  */
-uft_error_t uft_imd_parse_track_header(
+uft_error_t uft_imd_adapter_parse_track_header(
     const uint8_t *data,
     size_t size,
     uft_imd_track_header_t *track,

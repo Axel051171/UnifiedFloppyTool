@@ -543,7 +543,7 @@ char* uft_meta_full_report(const uft_meta_ctx_t *ctx);
 /**
  * @brief Free meta context
  */
-void uft_meta_free(uft_meta_ctx_t *ctx);
+void uft_recovery_meta_ctx_free(uft_meta_ctx_t *ctx);
 
 #ifdef __cplusplus
 }

@@ -102,7 +102,7 @@ static char *extract_comment(const uint8_t *data, size_t header_end) {
  * Probe / Detection
  * ═══════════════════════════════════════════════════════════════════════════════ */
 
-uft_error_t uft_imd_probe(const uint8_t *data, size_t size, uft_format_score_t *score) {
+uft_error_t uft_imd_adapter_probe(const uint8_t *data, size_t size, uft_format_score_t *score) {
     if (!data || !score) return UFT_ERR_INVALID_PARAM;
     
     /* Initialize score */
@@ -152,7 +152,7 @@ uft_error_t uft_imd_probe(const uint8_t *data, size_t size, uft_format_score_t *
  * Header Parsing
  * ═══════════════════════════════════════════════════════════════════════════════ */
 
-uft_error_t uft_imd_parse_header(
+uft_error_t uft_imd_adapter_parse_header(
     const uint8_t *data,
     size_t size,
     char *version,
@@ -191,7 +191,7 @@ uft_error_t uft_imd_parse_header(
  * Track Header Parsing
  * ═══════════════════════════════════════════════════════════════════════════════ */
 
-uft_error_t uft_imd_parse_track_header(
+uft_error_t uft_imd_adapter_parse_track_header(
     const uint8_t *data,
     size_t size,
     uft_imd_track_header_t *track,
@@ -274,7 +274,7 @@ uft_error_t uft_imd_parse_track_header(
  * Open / Close
  * ═══════════════════════════════════════════════════════════════════════════════ */
 
-uft_error_t uft_imd_open(const uint8_t *data, size_t size, uft_imd_context_t **ctx) {
+uft_error_t uft_imd_adapter_open(const uint8_t *data, size_t size, uft_imd_context_t **ctx) {
     if (!data || !ctx) return UFT_ERR_INVALID_PARAM;
     
     /* Allocate context */
@@ -286,7 +286,7 @@ uft_error_t uft_imd_open(const uint8_t *data, size_t size, uft_imd_context_t **c
     
     /* Parse header */
     size_t header_end;
-    uft_error_t err = uft_imd_parse_header(
+    uft_error_t err = uft_imd_adapter_parse_header(
         data, size,
         c->version, c->date,
         &c->comment, &header_end
@@ -308,7 +308,7 @@ uft_error_t uft_imd_open(const uint8_t *data, size_t size, uft_imd_context_t **c
     while (pos < size && c->track_count < UFT_IMD_MAX_TRACKS) {
         size_t consumed = 0.0f;
         
-        err = uft_imd_parse_track_header(
+        err = uft_imd_adapter_parse_track_header(
             data + pos, size - pos,
             &c->tracks[c->track_count],
             &consumed
@@ -357,7 +357,7 @@ uft_error_t uft_imd_open(const uint8_t *data, size_t size, uft_imd_context_t **c
     return UFT_OK;
 }
 
-void uft_imd_close(uft_imd_context_t *ctx) {
+void uft_imd_adapter_close(uft_imd_context_t *ctx) {
     if (!ctx) return;
     if (ctx->comment) {
         free(ctx->comment);
@@ -369,7 +369,7 @@ void uft_imd_close(uft_imd_context_t *ctx) {
  * Track / Sector Access
  * ═══════════════════════════════════════════════════════════════════════════════ */
 
-uft_error_t uft_imd_read_sector(
+uft_error_t uft_imd_adapter_read_sector(
     const uft_imd_context_t *ctx,
     uint8_t track,
     uint8_t side,
@@ -393,7 +393,7 @@ uft_error_t uft_imd_read_sector(
         uft_imd_track_header_t tmp;
         
         /* Re-parse header to get to sector data */
-        if (uft_imd_parse_track_header(ctx->data + pos, ctx->data_size - pos, &tmp, &consumed) != UFT_OK) {
+        if (uft_imd_adapter_parse_track_header(ctx->data + pos, ctx->data_size - pos, &tmp, &consumed) != UFT_OK) {
             return UFT_E_FORMAT_INVALID;
         }
         pos += consumed;
@@ -444,7 +444,7 @@ uft_error_t uft_imd_read_sector(
  * Format Information
  * ═══════════════════════════════════════════════════════════════════════════════ */
 
-size_t uft_imd_get_comment(const uft_imd_context_t *ctx, char *buffer, size_t buf_size) {
+size_t uft_imd_adapter_get_comment(const uft_imd_context_t *ctx, char *buffer, size_t buf_size) {
     if (!ctx || !buffer || buf_size == 0) return 0;
     
     if (!ctx->comment || ctx->comment_len == 0) {
@@ -468,7 +468,7 @@ static uft_error_t imd_adapter_open(struct uft_xdf_context *ctx, const uint8_t *
     if (!ctx || !data) return UFT_ERR_INVALID_PARAM;
     
     uft_imd_context_t *imd_ctx = NULL;
-    uft_error_t err = uft_imd_open(data, size, &imd_ctx);
+    uft_error_t err = uft_imd_adapter_open(data, size, &imd_ctx);
     if (err != UFT_OK) return err;
     
     ctx->format_data = imd_ctx;
@@ -480,7 +480,7 @@ static uft_error_t imd_adapter_open(struct uft_xdf_context *ctx, const uint8_t *
 
 static void imd_adapter_close(struct uft_xdf_context *ctx) {
     if (!ctx) return;
-    uft_imd_close((uft_imd_context_t *)ctx->format_data);
+    uft_imd_adapter_close((uft_imd_context_t *)ctx->format_data);
     ctx->format_data = NULL;
 }
 
@@ -521,7 +521,7 @@ static uft_error_t imd_adapter_get_track(struct uft_xdf_context *ctx, uint16_t t
 static uft_format_score_t imd_probe_wrapper(const uint8_t *data, size_t size, const char *filename) {
     uft_format_score_t score;
     memset(&score, 0, sizeof(score));
-    uft_imd_probe(data, size, &score);
+    uft_imd_adapter_probe(data, size, &score);
     (void)filename; /* Unused */
     return score;
 }
@@ -563,6 +563,6 @@ const uft_format_adapter_t *uft_imd_get_adapter(void) {
     return &imd_adapter;
 }
 
-uft_error_t uft_imd_register(void) {
+uft_error_t uft_imd_adapter_register(void) {
     return uft_adapter_register(&imd_adapter);
 }

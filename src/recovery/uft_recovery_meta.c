@@ -688,7 +688,7 @@ char* uft_meta_full_report(const uft_meta_ctx_t *ctx) {
     return report;
 }
 
-void uft_meta_free(uft_meta_ctx_t *ctx) {
+void uft_recovery_meta_ctx_free(uft_meta_ctx_t *ctx) {
     if (!ctx) return;
     
     /* Free source map */
@@ -822,7 +822,7 @@ int main(void) {
     assert(report != NULL);
     free(report);
     
-    uft_meta_free(ctx);
+    uft_recovery_meta_ctx_free(ctx);
     printf("✓\n");
     
     printf("=== All Meta Recovery Tests Passed! ===\n");
