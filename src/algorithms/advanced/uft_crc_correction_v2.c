@@ -73,16 +73,20 @@ typedef struct {
 
 /**
  * @brief Attempt 1-bit correction
- * 
+ *
+ * Forensic contract: returns true ONLY if exactly one bit-flip yields the
+ * expected CRC. Multiple candidates → ambiguous → returns false (no silent
+ * fabrication; caller keeps the original bytes flagged uncorrectable).
+ *
  * Time complexity: O(n*8) where n = data length
  */
-bool try_1bit_correction(const uint8_t* data, size_t len, 
+bool try_1bit_correction(const uint8_t* data, size_t len,
                           uint16_t expected_crc,
                           crc_correction_result_t* result) {
     result->correction_attempts = 0;
     result->original_crc = crc16_ccitt(data, len);
     result->expected_crc = expected_crc;
-    
+
     // Already correct?
     if (result->original_crc == expected_crc) {
         result->corrected = true;
@@ -90,36 +94,50 @@ bool try_1bit_correction(const uint8_t* data, size_t len,
         result->final_crc = expected_crc;
         return true;
     }
-    
+
     // Allocate work buffer
     uint8_t* work = malloc(len);
     if (!work) return false;
     memcpy(work, data, len);
-    
-    // Try each bit
+
+    size_t hit_byte = 0;
+    int    hit_bit  = 0;
+    int    hits     = 0;
+
     for (size_t byte = 0; byte < len; byte++) {
         for (int bit = 0; bit < 8; bit++) {
             result->correction_attempts++;
-            
-            // Flip bit
+
             work[byte] ^= (1 << bit);
-            
-            uint16_t test_crc = crc16_ccitt(work, len);
-            if (test_crc == expected_crc) {
-                result->corrected = true;
-                result->bits_flipped = 1;
-                result->flip_positions[0] = byte * 8 + (7 - bit);
-                result->corrected_data = work;
-                result->data_len = len;
-                result->final_crc = expected_crc;
-                return true;
+            if (crc16_ccitt(work, len) == expected_crc) {
+                hits++;
+                if (hits == 1) {
+                    hit_byte = byte;
+                    hit_bit  = bit;
+                }
             }
-            
-            // Unflip
             work[byte] ^= (1 << bit);
+
+            if (hits > 1) {
+                /* Ambiguous: at least two distinct single-bit flips both
+                 * satisfy the CRC. Refuse to invent data. */
+                free(work);
+                return false;
+            }
         }
     }
-    
+
+    if (hits == 1) {
+        work[hit_byte] ^= (1 << hit_bit);
+        result->corrected = true;
+        result->bits_flipped = 1;
+        result->flip_positions[0] = hit_byte * 8 + (7 - hit_bit);
+        result->corrected_data = work;
+        result->data_len = len;
+        result->final_crc = expected_crc;
+        return true;
+    }
+
     free(work);
     return false;
 }
@@ -130,56 +148,75 @@ bool try_1bit_correction(const uint8_t* data, size_t len,
 
 /**
  * @brief Attempt 2-bit correction
- * 
+ *
+ * Forensic contract: returns true ONLY if exactly one 2-bit flip pair yields
+ * the expected CRC. Multiple candidates → ambiguous → returns false. CRC-16
+ * has many double-bit collisions; ambiguity is the rule, not the exception,
+ * so refusing ambiguous corrections is essential to avoid fabricated data.
+ *
  * Time complexity: O(n²*64) - only practical for small sectors
  * Recommended max size: 256 bytes (standard sector)
  */
 bool try_2bit_correction(const uint8_t* data, size_t len,
                           uint16_t expected_crc,
                           crc_correction_result_t* result) {
-    // Skip if 1-bit works
+    // Skip if 1-bit works (returns the unique 1-bit fix or refuses ambiguous)
     if (try_1bit_correction(data, len, expected_crc, result)) {
         return true;
     }
-    
+
     // Limit to reasonable size
     if (len > 512) return false;
-    
+
     uint8_t* work = malloc(len);
     if (!work) return false;
     memcpy(work, data, len);
-    
+
     size_t total_bits = len * 8;
-    
+    size_t hit_b1 = 0, hit_b2 = 0;
+    int    hits   = 0;
+
     for (size_t b1 = 0; b1 < total_bits; b1++) {
-        // Flip first bit
         work[b1 / 8] ^= (1 << (7 - (b1 % 8)));
-        
+
         for (size_t b2 = b1 + 1; b2 < total_bits; b2++) {
             result->correction_attempts++;
-            
-            // Flip second bit
+
             work[b2 / 8] ^= (1 << (7 - (b2 % 8)));
-            
             if (crc16_ccitt(work, len) == expected_crc) {
-                result->corrected = true;
-                result->bits_flipped = 2;
-                result->flip_positions[0] = b1;
-                result->flip_positions[1] = b2;
-                result->corrected_data = work;
-                result->data_len = len;
-                result->final_crc = expected_crc;
-                return true;
+                hits++;
+                if (hits == 1) {
+                    hit_b1 = b1;
+                    hit_b2 = b2;
+                }
             }
-            
-            // Unflip second
             work[b2 / 8] ^= (1 << (7 - (b2 % 8)));
+
+            if (hits > 1) {
+                /* Ambiguous: at least two distinct 2-bit pairs satisfy the
+                 * CRC. Restore outer flip and refuse. */
+                work[b1 / 8] ^= (1 << (7 - (b1 % 8)));
+                free(work);
+                return false;
+            }
         }
-        
-        // Unflip first
+
         work[b1 / 8] ^= (1 << (7 - (b1 % 8)));
     }
-    
+
+    if (hits == 1) {
+        work[hit_b1 / 8] ^= (1 << (7 - (hit_b1 % 8)));
+        work[hit_b2 / 8] ^= (1 << (7 - (hit_b2 % 8)));
+        result->corrected = true;
+        result->bits_flipped = 2;
+        result->flip_positions[0] = hit_b1;
+        result->flip_positions[1] = hit_b2;
+        result->corrected_data = work;
+        result->data_len = len;
+        result->final_crc = expected_crc;
+        return true;
+    }
+
     free(work);
     return false;
 }
