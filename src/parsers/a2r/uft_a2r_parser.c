@@ -959,25 +959,32 @@ a2r_error_t a2r_fuse_captures(const a2r_capture_t *captures,
     fused->data = malloc(ref->data_length);
     if (!fused->data) return A2R_ERR_ALLOC;
     
-    /* For each byte position, use majority vote */
+    /* For each byte position, use majority vote.
+     *
+     * counts[] and max_count widened from uint8_t to uint32_t (parallel
+     * to recovery Finding 06). `count` is uint8_t today so the bug is
+     * dormant, but the same future-proofing rationale applies: if the
+     * function signature is widened for a stress harness or external
+     * recovery wizard, a uint8_t counter wraps silently at 256 identical
+     * inputs and turns the majority winner into a near-loser. */
     for (uint32_t i = 0; i < ref->data_length; i++) {
-        uint8_t counts[256] = {0};
-        uint8_t max_val = 0;
-        uint8_t max_count = 0;
-        
+        uint32_t counts[256] = {0};
+        uint8_t  max_val   = 0;
+        uint32_t max_count = 0;
+
         for (uint8_t c = 0; c < count; c++) {
             if (i < captures[c].data_length) {
                 uint8_t val = captures[c].data[i];
                 counts[val]++;
                 if (counts[val] > max_count) {
                     max_count = counts[val];
-                    max_val = val;
+                    max_val   = val;
                 }
             }
         }
-        
+
         fused->data[i] = max_val;
-        
+
         /* Mark as weak if not unanimous */
         if (weak_mask && i / 8 < mask_size) {
             if (max_count < count) {

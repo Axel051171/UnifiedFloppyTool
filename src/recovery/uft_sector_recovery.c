@@ -312,11 +312,22 @@ int uft_sector_recover_average(uft_sector_t *sector,
  * the original bytes happened to be 0x00 (plausible for unwritten
  * regions), not that the gaps were "decoded". Confidence is reduced
  * to reflect the fraction of authentic bytes.
+ *
+ * @param out_validity  optional sector_size-byte buffer filled by this
+ *                      function on success: out_validity[i] == 1 means
+ *                      sector->data[i] is from the medium, == 0 means
+ *                      it is the 0x00 sentinel. May be NULL — but a
+ *                      caller that ignores the validity map cannot
+ *                      distinguish a 50%-sentinel-filled sector from a
+ *                      100%-real-but-noisy sector by `confidence`
+ *                      alone. Forensic preservation tools should
+ *                      always pass a buffer.
  */
 int uft_sector_recover_reconstruct(uft_sector_t *sector,
                                    const uint8_t *partial_data,
                                    size_t partial_len,
-                                   const uint8_t *valid_mask)
+                                   const uint8_t *valid_mask,
+                                   uint8_t *out_validity)
 {
     if (!sector || !partial_data) return -1;
 
@@ -344,6 +355,9 @@ int uft_sector_recover_reconstruct(uft_sector_t *sector,
 
     if (new_crc == sector->data_crc) {
         memcpy(sector->data, reconstructed, sector->data_len);
+        if (out_validity) {
+            memcpy(out_validity, validity, sector->data_len);
+        }
         sector->status = UFT_SECTOR_RECOVERED;
         /* Fraction of authentic bytes, capped at 100. */
         sector->confidence = (uint8_t)((real_bytes * 100u) / sector->data_len);
