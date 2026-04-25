@@ -363,9 +363,22 @@ static uint16_t crc16_ccitt(const uint8_t *data, size_t len) {
 
 /**
  * Attempt to correct a single-bit error using CRC properties.
- * 
- * Method: For each bit position, flip it and check if CRC becomes valid.
- * This is O(n) where n = number of bits, but very effective for 1-bit errors.
+ *
+ * Method: for each bit position, flip it and check if CRC becomes valid.
+ * O(n) where n = number of bits.
+ *
+ * FORENSIC CONTRACT: a correction is only applied if it is UNIQUE across
+ * the entire bit-flip search space. CRC-16 has a non-zero collision rate
+ * for random sector data; if two different single-bit flips both yield
+ * the expected CRC, the data is ambiguous and we must not silently choose
+ * one — that would manufacture a value rather than recover it
+ * (Prinzip 1: keine erfundenen Daten).
+ *
+ * Returns:
+ *   1   unique fix found and applied (data modified, *corrected_bit set)
+ *   0   data already CRC-valid (no flip needed)
+ *  -1   no single-bit fix exists (data unchanged)
+ *  -2   ambiguous — two or more single-bit fixes possible (data unchanged)
  */
 static int try_single_bit_correction(
     uint8_t *data,
@@ -378,32 +391,43 @@ static int try_single_bit_correction(
     if (current_crc == expected_crc) {
         return 0;  // Already correct
     }
-    
-    // Try flipping each bit
+
+    size_t hits         = 0;
+    size_t winner_byte  = 0;
+    int    winner_bit   = 0;
+
     for (size_t byte_idx = 0; byte_idx < size; byte_idx++) {
         for (int bit_idx = 0; bit_idx < 8; bit_idx++) {
-            uint8_t mask = 0x80 >> bit_idx;
-            
-            // Flip the bit
+            uint8_t mask = (uint8_t)(0x80u >> bit_idx);
+
             data[byte_idx] ^= mask;
-            
-            // Check CRC
             uint16_t new_crc = crc16_ccitt(data, size);
-            
-            if (new_crc == expected_crc) {
-                // Found it!
-                *corrected_bit = byte_idx * 8 + bit_idx;
-                uft_forensic_log(session, 3, 
-                    "Single-bit correction successful at byte %zu bit %d",
-                    byte_idx, bit_idx);
-                return 1;
-            }
-            
-            // Flip back
             data[byte_idx] ^= mask;
+
+            if (new_crc == expected_crc) {
+                hits++;
+                winner_byte = byte_idx;
+                winner_bit  = bit_idx;
+                if (hits > 1) {
+                    uft_forensic_log(session, 2,
+                        "Single-bit correction REFUSED: ambiguous "
+                        "(>=2 candidate flips yield expected CRC)");
+                    return -2;
+                }
+            }
         }
     }
-    
+
+    if (hits == 1) {
+        uint8_t mask = (uint8_t)(0x80u >> winner_bit);
+        data[winner_byte] ^= mask;
+        *corrected_bit = winner_byte * 8 + (size_t)winner_bit;
+        uft_forensic_log(session, 3,
+            "Single-bit correction successful at byte %zu bit %d (unique)",
+            winner_byte, winner_bit);
+        return 1;
+    }
+
     return -1;  // No single-bit fix found
 }
 

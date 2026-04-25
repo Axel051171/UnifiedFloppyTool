@@ -95,32 +95,57 @@ static uint16_t crc16_ccitt(const uint8_t *data, size_t len)
 
 /**
  * @brief Attempt single-bit CRC correction
- * 
- * Tries flipping each bit to see if CRC becomes valid
+ *
+ * Tries flipping each bit to see if CRC becomes valid. Forensic contract:
+ * a correction is only applied if it is UNIQUE across the entire search
+ * space. If two or more single-bit flips yield the expected CRC, the data
+ * is ambiguous and we refuse to silently pick one — that would manufacture
+ * a value rather than recover it (Prinzip 1: keine erfundenen Daten).
+ *
+ * Why: with random byte data and CRC-16 (16 bits), the probability of a
+ * second matching single-bit flip in a sector-sized payload is small but
+ * non-negligible (~len*8/65536). Forensic tools must not silently choose.
+ *
+ * Returns:
+ *   1  unique single-bit fix applied (data modified, *corrected_* set)
+ *   0  no single-bit fix exists (data unchanged)
+ *  -1  ambiguous — multiple single-bit fixes possible (data unchanged)
  */
-static int try_single_bit_correction(uint8_t *data, size_t len, 
+static int try_single_bit_correction(uint8_t *data, size_t len,
                                      uint16_t expected_crc,
                                      size_t *corrected_byte,
                                      uint8_t *corrected_bit)
 {
+    size_t  hits        = 0;
+    size_t  winner_byte = 0;
+    int     winner_bit  = 0;
+
     for (size_t i = 0; i < len; i++) {
         for (int b = 0; b < 8; b++) {
-            /* Flip bit */
-            data[i] ^= (1 << b);
-            
-            /* Check CRC */
+            data[i] ^= (uint8_t)(1u << b);
+
             if (crc16_ccitt(data, len) == expected_crc) {
-                *corrected_byte = i;
-                *corrected_bit = b;
-                return 1;  /* Success */
+                hits++;
+                winner_byte = i;
+                winner_bit  = b;
             }
-            
-            /* Restore bit */
-            data[i] ^= (1 << b);
+
+            data[i] ^= (uint8_t)(1u << b);
+
+            if (hits > 1) {
+                return -1;  /* ambiguous — refuse */
+            }
         }
     }
-    
-    return 0;  /* No single-bit correction found */
+
+    if (hits == 1) {
+        data[winner_byte] ^= (uint8_t)(1u << winner_bit);
+        *corrected_byte = winner_byte;
+        *corrected_bit  = (uint8_t)winner_bit;
+        return 1;
+    }
+
+    return 0;
 }
 
 /**
@@ -308,20 +333,24 @@ int uft_bs_recover_crc(uint8_t *data, size_t len,
         return 0;
     }
     
-    /* Try single-bit correction */
+    /* Try single-bit correction. Strict equality: only apply on the
+     * UNIQUE-fix return code (1). Ambiguous (-1) and not-found (0) both
+     * fall through to double-bit; double-bit may also be ambiguous, but
+     * its existing first-hit behaviour is left for a separate finding. */
     size_t corr_byte;
     uint8_t corr_bit;
-    if (try_single_bit_correction(data, len, expected_crc, &corr_byte, &corr_bit)) {
+    if (try_single_bit_correction(data, len, expected_crc,
+                                  &corr_byte, &corr_bit) == 1) {
         *corrections = 1;
         return 0;
     }
-    
+
     /* Try double-bit correction */
     if (try_double_bit_correction(data, len, expected_crc)) {
         *corrections = 2;
         return 0;
     }
-    
+
     return -1;  /* Could not correct */
 }
 
