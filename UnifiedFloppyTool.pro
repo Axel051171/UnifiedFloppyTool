@@ -280,8 +280,6 @@ HEADERS += \
     src/settingsmanager.h \
     src/gw_device_detector.h \
     src/gw_output_parser.h \
-    src/inputvalidation.h \
-    src/pathutils.h \
     src/gui/uft_otdr_panel.h \
     src/gui/ProtectionAnalysisWidget.h \
     src/gui/uft_sector_editor.h \

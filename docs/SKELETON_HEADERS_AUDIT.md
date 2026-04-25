@@ -62,6 +62,20 @@ Reduktion bisher:
     track_generator.h, track_types_defs.h, types.h, uft_floppy_utils.h)
   - Phantom-Bestätigung: CRC16_Update + CRC16_Init nirgends implementiert,
     nirgends gerufen — pure Phantom-Decls in 3 verschiedenen crc.h-Files
+- DELETE-Welle 16 (diese Session): 29 weitere orphan Header — kleine Cluster +
+  Top-Level-Files via Per-Datei-Audit:
+  - 5 ganze 2-File-Clusters wo BEIDE Files orphan: `include/uft/cartridge/`
+    (c64_crt, coco_ccc), `decoders/` (fm, mfm), `gcr/` (apple_gcr_fusion,
+    uft_gcr_tables), `gui/` (mapping, tooltips), `snapshot/` (cpc_sna, zx_sna)
+  - 14 orphan-members in mixed clusters: c64/, parsers/, presets/, recovery/,
+    crc/, detect/, analysis/ (jeweils 2 Files, andere bleiben)
+  - 5 odd-path Top-Level: `src/inputvalidation.h`, `src/pathutils.h`
+    (beide qmake-HEADERS-gelistet — Lines aus .pro entfernt),
+    `include/uft_parser_v3.h`, `uft_parser_v3_integration.h`, `uft_security.h`
+  - Sonderfall: `uft_gcr_tables.h` deklarierte uft_gcr5/6/_4b5b-Funktionen
+    die nirgends implementiert oder gerufen werden — pure Phantom-API,
+    historischer Welle-5-Kommentar-Forwarder ist jetzt selbst weg
+  - Skeleton-Audit: 133 unverändert. 8246 LOC entfernt.
 - DELETE-Welle 15 (diese Session): 40 weitere orphan Header in 7 Verzeichnissen
   via batch Per-File-Audit + Banner-Filter:
   - 10 in `include/uft/tape/` (komplett: c64_t64, c64_tap, csw, kc85, kc_turbo,
