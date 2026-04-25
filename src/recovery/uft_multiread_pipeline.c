@@ -218,9 +218,14 @@ static uint8_t vote_byte(const multiread_pass_t *passes, uint8_t pass_count,
     }
 
     /* Count occurrences of each value, restricted to authoritative
-     * passes when at least one such pass is available. */
-    uint8_t counts[256] = {0};
-    uint8_t valid_count = 0;
+     * passes when at least one such pass is available.
+     *
+     * counts[] and max_count widened to uint32_t (Finding 06):
+     * pass_count is uint8_t today (max 255) so the bug is dormant,
+     * but a future MULTIREAD_MAX_PASSES bump or a signature widening
+     * would silently overflow a uint8_t counter. Defense in depth. */
+    uint32_t counts[256] = {0};
+    uint8_t  valid_count = 0;
 
     for (uint8_t p = 0; p < pass_count; p++) {
         if (only_crc_ok && !passes[p].crc_ok) continue;
@@ -237,19 +242,19 @@ static uint8_t vote_byte(const multiread_pass_t *passes, uint8_t pass_count,
     }
 
     /* Find most common value */
-    uint8_t max_count = 0;
-    uint8_t max_val = 0;
+    uint32_t max_count = 0;
+    uint8_t  max_val   = 0;
 
     for (int v = 0; v < 256; v++) {
         if (counts[v] > max_count) {
             max_count = counts[v];
-            max_val = (uint8_t)v;
+            max_val   = (uint8_t)v;
         }
     }
 
     /* Calculate confidence */
     if (confidence) {
-        *confidence = (uint8_t)((max_count * 100) / valid_count);
+        *confidence = (uint8_t)((max_count * 100u) / valid_count);
     }
 
     /* Detect weak bits (not unanimous) */

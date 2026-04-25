@@ -91,30 +91,36 @@ static int average_sector_reads(const uint8_t **reads, size_t read_count,
     if (!reads || read_count == 0 || !output) return -1;
     
     for (size_t i = 0; i < sector_size; i++) {
-        /* Count occurrences of each byte value */
-        uint8_t counts[256] = {0};
-        
+        /* Count occurrences of each byte value. Widened from uint8_t
+         * to uint32_t (Finding 06): read_count is size_t, callers can
+         * legitimately pass ≥256 reads (stress harness, external
+         * recovery wizards), and a wrapped counter silently turns the
+         * majority winner into a near-loser. */
+        uint32_t counts[256] = {0};
+
         for (size_t r = 0; r < read_count; r++) {
             if (reads[r]) {
                 counts[reads[r][i]]++;
             }
         }
-        
+
         /* Find most common value */
-        uint8_t best_value = 0;
-        uint8_t best_count = 0;
-        
+        uint8_t  best_value = 0;
+        uint32_t best_count = 0;
+
         for (int v = 0; v < 256; v++) {
             if (counts[v] > best_count) {
                 best_count = counts[v];
-                best_value = v;
+                best_value = (uint8_t)v;
             }
         }
-        
+
         output[i] = best_value;
-        
+
         if (confidence_map) {
-            confidence_map[i] = (best_count * 255) / read_count;
+            /* (best_count * 255) / read_count fits in 32 bit while
+             * read_count ≤ 16 M, far above any plausible pass count. */
+            confidence_map[i] = (uint8_t)((best_count * 255u) / read_count);
         }
     }
     
