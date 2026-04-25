@@ -173,14 +173,26 @@ flux_status_t flux_to_bitstream(const flux_raw_data_t *flux,
         uint32_t time = flux->transitions[i];
         uint32_t delta = time - prev_time;
         double delta_ns = delta * ns_per_tick;
-        
+
+        /* Apply accumulated phase as a one-shot timing correction
+         * before discretising into cells. This is what makes
+         * pll->phase observable: previously the integrator was
+         * written every iteration but never read, leaving the loop a
+         * pure P-controller on `period` only. With the consumption
+         * here the loop becomes a full PI controller — phase tracks
+         * sub-cell drift, period tracks long-term cell width. */
+        if (pll->use_pll) {
+            delta_ns -= pll->phase;
+            if (delta_ns < 0.0) delta_ns = 0.0;
+        }
+
         /* Calculate number of bit cells in this interval */
         double cells = delta_ns / pll->period;
         int num_cells = (int)(cells + 0.5);
-        
+
         if (num_cells < 1) num_cells = 1;
         if (num_cells > 8) num_cells = 8;  /* Sanity limit */
-        
+
         /* Output zeros for empty cells, then a one for the transition */
         for (int c = 0; c < num_cells - 1 && out_bits < max_bits; c++) {
             bits[out_bits / 8] &= ~(1 << (7 - (out_bits % 8)));
@@ -190,25 +202,39 @@ flux_status_t flux_to_bitstream(const flux_raw_data_t *flux,
             bits[out_bits / 8] |= (1 << (7 - (out_bits % 8)));
             out_bits++;
         }
-        
+
         /* PLL adjustment */
         if (pll->use_pll) {
             double expected = num_cells * pll->period;
             double error = delta_ns - expected;
-            
-            /* Phase adjustment */
-            pll->phase += error * pll->phase_gain;
-            
+
+            /* Phase: leaky integrator. Old phase decays at rate
+             * phase_gain, new error integrates at the same rate.
+             * Equivalent to:
+             *   phase[n+1] = (1 - α) · phase[n] + α · error
+             * with α = phase_gain. Stable for 0 < α < 1. */
+            pll->phase = (1.0 - pll->phase_gain) * pll->phase
+                       + pll->phase_gain * error;
+
+            /* Bound phase to ±half a cell period to prevent runaway
+             * when the input is grossly mistimed (e.g. corrupt flux
+             * stream). Without this bound a single bad transition
+             * could shift the next several iterations off the cell
+             * grid and the loop never recovers. */
+            double phase_bound = pll->period * 0.5;
+            if (pll->phase >  phase_bound) pll->phase =  phase_bound;
+            if (pll->phase < -phase_bound) pll->phase = -phase_bound;
+
             /* Frequency adjustment */
             pll->period += error * pll->freq_gain / num_cells;
-            
+
             /* Clamp period to reasonable range */
             double min_period = bitcell_ns * 0.8;
             double max_period = bitcell_ns * 1.2;
             if (pll->period < min_period) pll->period = min_period;
             if (pll->period > max_period) pll->period = max_period;
         }
-        
+
         prev_time = time;
     }
     
