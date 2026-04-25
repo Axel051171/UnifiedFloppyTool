@@ -62,6 +62,22 @@ Reduktion bisher:
     track_generator.h, track_types_defs.h, types.h, uft_floppy_utils.h)
   - Phantom-Bestätigung: CRC16_Update + CRC16_Init nirgends implementiert,
     nirgends gerufen — pure Phantom-Decls in 3 verschiedenen crc.h-Files
+- DELETE-Welle 13 (diese Session): 67 weitere Files (zwei vollständige Verzeichnisse):
+  - `src/formats/misc_legacy/` (11 Files, 576 LOC) — Legacy-Format-Header
+    (afi, h17, hdm, xml_db, arburg_raw_*) — alle orphan, kein Build, kein consumer
+  - `src/loaders/` ganzer Tree (56 Files, 3.2k LOC) — 19 _loader-Subdirs
+    (a2r, adz, apple2_*, cpcdsk, d64, d81, d88, dmk, dms, extadf, fdi, imd,
+    img, ipf, kryofluxstream, mfm, msa, raw, scp, st, stx, teledisk, woz)
+    plus disk_formats/ und common/. Earlier basename-matches in
+    `include/uft/profiles/uft_format_registry.h` waren False-Positives:
+    der Live-Code includes `uft_a2r_format.h` (mit `uft_`-Prefix), nicht
+    bare `a2r_format.h` aus dem Loaders-Tree.
+  - Beide Trees komplett 0 qmake/CMake-Refs.
+  - Skeleton-Audit: unverändert (135/2638) — diese Header trafen den Threshold nicht.
+  - Frühere Welle-13-Idee (`src/switch/hactool/`-Tree) zurückgezogen: hactool
+    ist OPTIONAL ENABLED via `qmake CONFIG+=switch_support`, also nicht tot
+    sondern conditional-live. Korrektur in MASTER_PLAN MF-009 Census nötig
+    (138 hactool TODOs sind potenziell kompiliert, nicht "out of scope").
 - DELETE-Welle 12 (diese Session): 9 weitere Files via dead-cluster Identifikation
   (`scripts/welle12_audit.py` — Class-B-Methode: maybe-orphans deren Decl-Matches
   ALLE in anderen orphan-Headern liegen):
