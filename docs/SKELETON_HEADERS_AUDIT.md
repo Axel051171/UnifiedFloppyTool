@@ -24,6 +24,11 @@ Reduktion bisher:
     `formats/uft_cbm_formats.h` über gleichnamige `uft_cbm_print_directory`
     mit unterschiedlicher Signatur; Konflikt nie ausgelöst da niemand
     `fs/uft_cbm_fs.h` inkludiert hat)
+- DELETE-Welle 3 (diese Session): 7 .cc-Duplikate in `src/fluxengine/lib/fluxsink/`
+  byte-identisch zu `src/algorithms/fluxio/`, in keinem Build (~1500 LOC).
+  Skeleton-Audit zählt nur Header — diese Welle reduziert die Header-Zahl
+  nicht, beseitigt aber das Größenäquivalent. Restlicher `src/fluxengine/`-Tree
+  (≈21k LOC, 130 Files) noch offen.
 - DOCUMENT-Welle (Commit `d9aa7a7`): 98 Header mit `/* PLANNED FEATURE */`-Banner.
 - IMPLEMENT-Welle: 53 Header mit `/* PARTIALLY IMPLEMENTED */`-Banner.
 

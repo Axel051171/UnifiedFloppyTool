@@ -268,11 +268,12 @@ Total markers (TODO|FIXME|XXX|HACK):  214
   - todo_tracker.h (UFT-internal tracker):   28 — meta, not action items
   -> UFT-native:                              48 (76 raw incl. false positives)
 
-Real comment-style TODO/FIXME (excl. third-party):  43
+Real comment-style TODO/FIXME (excl. third-party):  40
 Davon:
   -  5  M3.1 SCP-Direct Stubs (uft_scp_direct.c) — getrackt im M3 Plan
   -  3  M2 T7 DiskSalv Scaffold (uft_salvage_fs) — getrackt im M2 Plan
-  -  4  fluxengine duplicate code (algorithms/fluxio + fluxengine/lib/fluxsink) — MF-011
+  -  1  fluxengine duplicate code in algorithms/fluxio (MF-011 Welle-3 entfernte
+        die 7 byte-identischen .cc-Files unter src/fluxengine/lib/fluxsink/)
   -  4  samdisk imported code — out of scope (third-party-like)
   -  1  lexy_experimental (parser PoC) — out of scope
   - 26  Real UFT action items, kategorisiert:
@@ -289,9 +290,11 @@ Davon:
 - Format-completion-TODOs gehören zu M2 (per-Format-Roadmap).
 - GUI-Phantom-TODOs sind Regel-2-Verstöße: müssen entweder
   `setEnabled(false) + tooltip` bekommen oder echtes Backend in M2/M3.
-- `fluxengine/lib/fluxsink/*.cc` sind byte-identisch zu
-  `algorithms/fluxio/*.cc` und in keinem Build → MF-011 DELETE-Welle-3
-  Kandidat (out of MF-009 scope).
+- `fluxengine/lib/fluxsink/*.cc` waren byte-identisch zu
+  `algorithms/fluxio/*.cc` und in keinem Build → in MF-011 Welle-3
+  gelöscht (7 Files, ~1500 LOC). Der weitere `src/fluxengine/`-Tree
+  (≈21k LOC, 130 Files, kein Build) bleibt offen für eine separate
+  Welle nach Verifikation.
 - M3.1/M3.2-getrackte Stubs zählen nicht als offene TODOs — sie sind
   honest Scaffolding mit dokumentiertem Pfad zur Implementation.
 
