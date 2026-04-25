@@ -11,15 +11,17 @@
  *
  * This header provides the struct shapes those .c files require.
  *
- * STATUS (2026-04-25): partial baseline. The v3.7 .c files reference
- * additional shapes (uft_error_info_t with .class/.bit_length/
- * .probability/.diagnosis/.recovery_attempted/.recovery_successful/
- * .correction_confidence + UFT_ERROR_SOFT_SINGLE_BIT/_MULTI_BIT enum;
- * sector->quality being a sub-struct with .corrections_applied) that
- * are NOT yet declared here. Restoring uft_forensic_recovery.c +
- * uft_forensic_track.c requires extending this header further.
- *
- * Tracking: docs/HARDENING_AUDIT.md and follow-up commit.
+ * STATUS (2026-04-25): full extension complete. Covers
+ *   - uft_error_info_t with all fields used by v3.7 (.class,
+ *     .bit_offset, .bit_length, .probability, .diagnosis,
+ *     .recovery_attempted, .recovery_successful, .correction_confidence)
+ *   - uft_error_class_t enum (SOFT_SINGLE_BIT, SOFT_MULTI_BIT,
+ *     HARD_WEAK_BITS)
+ *   - sector->quality as uft_sector_quality_t sub-struct with
+ *     overall, data, checksum, bits_certain, bits_uncertain,
+ *     passes_used, corrections_applied
+ * Allows uft_forensic_recovery.c + uft_forensic_track.c to compile
+ * against this header without modification.
  *
  * Part of the v3.7 → v4.1 module restoration effort. See
  * docs/HARDENING_AUDIT.md and per-batch DEFERRED.md files.
@@ -75,16 +77,50 @@ typedef struct uft_forensic_config {
 } uft_forensic_config_t;
 
 /*===========================================================================
- * Sector — recovered sector with provenance
+ * Error classification + record
  *===========================================================================*/
 
-typedef struct uft_forensic_sector_error {
-    uint32_t bit_offset;                 /**< bit position within sector */
-    uint8_t  original_bit;
-    uint8_t  corrected_bit;
-    uint8_t  source_pass;                /**< which read pass corrected it */
-    uint8_t  reason;                     /**< category of correction */
-} uft_forensic_sector_error_t;
+typedef enum {
+    UFT_ERROR_NONE             = 0,
+    UFT_ERROR_SOFT_SINGLE_BIT,    /**< 1 bit error, recoverable via CRC */
+    UFT_ERROR_SOFT_MULTI_BIT,     /**< 2-3 bit errors, recoverable */
+    UFT_ERROR_HARD_WEAK_BITS,     /**< intentional weak bits (protection) */
+    UFT_ERROR_HARD_SECTOR_LOST,   /**< sector unrecoverable */
+    UFT_ERROR_FORMAT_ANOMALY,     /**< format-spec violation */
+    UFT_ERROR_TIMING_ANOMALY,     /**< unexpected timing */
+} uft_error_class_t;
+
+typedef struct uft_error_info {
+    uft_error_class_t  class;            /**< category of error */
+    uint32_t           bit_offset;       /**< bit position within sector */
+    uint32_t           bit_length;       /**< how many bits affected */
+    float              probability;      /**< confidence in classification */
+    const char        *diagnosis;        /**< human-readable description */
+    bool               recovery_attempted;
+    bool               recovery_successful;
+    float              correction_confidence;
+} uft_error_info_t;
+
+/* Legacy alias — v3.7 used uft_forensic_sector_error_t in places. */
+typedef uft_error_info_t uft_forensic_sector_error_t;
+
+/*===========================================================================
+ * Sector quality (sub-struct embedded in uft_forensic_sector_t)
+ *===========================================================================*/
+
+typedef struct uft_sector_quality {
+    float    overall;                    /**< 0.0..1.0 — composite score */
+    float    data;                       /**< 0.0..1.0 — payload confidence */
+    float    checksum;                   /**< 1.0 if CRC OK, 0.0 if not */
+    uint32_t bits_certain;               /**< bits with high confidence */
+    uint32_t bits_uncertain;             /**< bits with low confidence */
+    uint8_t  passes_used;                /**< how many passes contributed */
+    uint16_t corrections_applied;        /**< total bit corrections */
+} uft_sector_quality_t;
+
+/*===========================================================================
+ * Sector — recovered sector with provenance
+ *===========================================================================*/
 
 typedef struct uft_forensic_sector {
     /* Identity. */
@@ -102,19 +138,16 @@ typedef struct uft_forensic_sector {
     bool     crc_valid;                  /**< stored == computed */
 
     /* Quality / provenance. */
-    float    quality;                    /**< 0.0..1.0 confidence */
+    uft_sector_quality_t quality;        /**< composite quality metrics */
     uint8_t *confidence_map;             /**< per-byte confidence, may be NULL */
     uint8_t *source_pass;                /**< per-byte: which pass produced it */
     uint32_t flags;                      /**< bitfield: weak/deleted/etc. */
 
     /* Errors / corrections applied. */
-    uft_forensic_sector_error_t *errors;
+    uft_error_info_t *errors;
     size_t   error_count;
     size_t   error_capacity;
 } uft_forensic_sector_t;
-
-/* Legacy alias. v3.7 .c uses both names interchangeably. */
-typedef uft_forensic_sector_error_t uft_error_info_t;
 
 /*===========================================================================
  * Track — collection of recovered sectors
@@ -192,6 +225,10 @@ int  uft_forensic_session_finish(uft_forensic_session_t *session);
 void uft_forensic_log(uft_forensic_session_t *session,
                        int level, const char *fmt, ...);
 
+/* Allocate a sector with `size`-byte payload + per-byte confidence
+ * + per-byte source-pass + initial 32-error capacity. */
+uft_forensic_sector_t *uft_forensic_sector_alloc(uint16_t size);
+
 void uft_forensic_sector_free(uft_forensic_sector_t *sector);
 int  uft_forensic_sector_add_error(uft_forensic_sector_t *sector,
                                      const uft_error_info_t *error);
@@ -207,7 +244,29 @@ int  uft_forensic_recover_sector(const uint8_t **passes,
                                    uint8_t head,
                                    uint16_t sector_id,
                                    uint16_t sector_size,
-                                   uft_forensic_sector_t *out);
+                                   uft_forensic_session_t *session,
+                                   uft_forensic_sector_t *out_sector);
+
+/* Sector flag bits stored in uft_forensic_sector_t.flags. */
+#define UFT_FSEC_FLAG_DATA_OK         (1u << 0)
+#define UFT_FSEC_FLAG_CRC_OK          (1u << 1)
+#define UFT_FSEC_FLAG_RECOVERED       (1u << 2)  /**< restored via recovery */
+#define UFT_FSEC_FLAG_WEAK_BITS       (1u << 3)
+#define UFT_FSEC_FLAG_DELETED         (1u << 4)
+#define UFT_FSEC_FLAG_PARTIAL         (1u << 5)
+#define UFT_FSEC_FLAG_CORRECTED       (1u << 6)
+#define UFT_FSEC_FLAG_MANUAL_REVIEW   (1u << 7)
+#define UFT_FSEC_FLAG_PROTECTED       (1u << 8)
+
+/* Track-level recovery — feeds flux from N revolutions, populates out_track. */
+int uft_forensic_recover_track(const uint64_t **flux_timestamps,
+                                 const size_t *flux_counts,
+                                 size_t revolution_count,
+                                 uint16_t cylinder,
+                                 uint8_t head,
+                                 const void *format_hint,
+                                 uft_forensic_session_t *session,
+                                 uft_forensic_track_t *out_track);
 
 #ifdef __cplusplus
 }

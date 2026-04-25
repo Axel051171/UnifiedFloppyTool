@@ -756,6 +756,8 @@ SOURCES += \
     src/recovery/uft_bitstream_recovery.c \
     src/recovery/uft_cross_track.c \
     src/recovery/uft_flux_recovery.c \
+    src/recovery/uft_forensic_recovery.c \
+    src/recovery/uft_forensic_track.c \
     src/recovery/uft_multiread_pipeline.c \
     src/recovery/uft_protection.c \
     src/recovery/uft_recovery_meta.c \
