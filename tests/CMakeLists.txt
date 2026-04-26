@@ -30,6 +30,7 @@ set(EXCLUDED_TESTS
     "test_track_writer"     # src/hardware/uft_track_writer.c removed in cleanup
     "test_flux_analysis"    # src/flux/uft_flux_analysis.c removed in cleanup
     "test_c64_bam"          # src/formats/c64/uft_c64_bam.c removed in cleanup
+    "test_write_verify_pipeline"  # src/core/uft_write_verify_pipeline.c removed in cleanup
     # "test_ti99_formats"   # Re-enabled: TIFILES/FIAD modules exist
     # "test_new_formats"    # Re-enabled: compiles standalone
     # "test_fat_extensions"  # Re-enabled: compiles standalone
@@ -219,6 +220,10 @@ foreach(test_source ${TEST_SOURCES})
         # Include align-fuse bridge source directly
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/analysis/events/uft_align_fuse_bridge.c)
+    elseif(${test_name} STREQUAL "test_write_gate")
+        # Include write-gate policy source directly
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/policy/uft_write_gate.c)
     endif()
     
     if(TEST_LIBS)
