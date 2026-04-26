@@ -981,6 +981,7 @@ HEADERS += include/uft/analysis/uft_disk_quickscan.h \
            include/uft/fs/uft_bootblock_scanner.h \
            include/uft/hal/uft_scp_direct.h \
            include/uft/hal/uft_xum1541.h \
+           include/uft/hal/uft_applesauce.h \
            include/uft/recovery/uft_salvage_fs.h \
            include/uft/uft_amiga_virus_db.h \
            include/uft/uft_v3_bridge.h \
@@ -1458,6 +1459,7 @@ SOURCES += \
     src/hal/uft_kryoflux_dtc.c \
     src/hal/uft_scp_direct.c \
     src/hal/uft_xum1541.c \
+    src/hal/uft_applesauce.c \
     src/hal/uft_drive.c \
     src/core/uft_ir_format.c \
     src/core/uft_interleave.c \

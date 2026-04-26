@@ -10,17 +10,22 @@
  */
 
 /* ══════════════════════════════════════════════════════════════════════════ *
- * UFT_SKELETON_PLANNED
- * PLANNED FEATURE — Hardware abstraction
+ * UFT_SKELETON_PARTIAL
+ * PARTIALLY IMPLEMENTED — Hardware abstraction (M3.3 in progress)
  *
- * This header declares 20 public functions, of which 20 have no
- * implementation in the source tree. Callers exist but will link-fail or
- * silently no-op until the feature is implemented.
+ * This header declares 20 public functions. As of MASTER_PLAN.md §M3.3
+ * partial scaffold:
+ *   - 13 are REAL: format_name, ticks_to_ns / ns_to_ticks /
+ *     get_sample_clock (pure-math conversions), config_create / _destroy /
+ *     _is_connected / _close (no-op safe), set_format / _drive /
+ *     _track_range / _side / _revolutions (input-validating), get_error.
+ *   - 7 are HONEST STUBS: return -1 with a "not implemented" error
+ *     string. Serial-port I/O (115200 8N1, text protocol) and capture
+ *     functions wait for the M3.3 follow-up.
  *
- * Status: tracked in docs/KNOWN_ISSUES.md under "Planned APIs".
- * Scope: see docs/MASTER_PLAN.md (M1/MF-011 DOCUMENT-Welle).
- * Do NOT add new call sites to functions from this header without first
- * implementing them or removing the prototype.
+ * 17 tests in tests/test_applesauce_hal.c verify the real functions
+ * and the stub honesty contract. When the serial layer lands, the
+ * stubs flip to real I/O without changing the API.
  * ══════════════════════════════════════════════════════════════════════════ */
 
 
