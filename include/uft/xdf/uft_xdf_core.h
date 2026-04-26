@@ -691,6 +691,13 @@ int xdf_phase_rebuild(xdf_context_t *ctx);
 /** Import from classic format */
 int xdf_import(xdf_context_t *ctx, const char *path);
 
+/** Import from an in-memory buffer (e.g. data captured directly from
+ *  hardware via libusb without intermediate disk landing). Mirrors the
+ *  semantics of xdf_import() — header magic check, optional file_crc32
+ *  verification (skipped if the field is 0 for legacy-file compat),
+ *  and table/data parsing as the implementation matures. */
+int xdf_import_memory(xdf_context_t *ctx, const uint8_t *data, size_t size);
+
 /** Import from flux capture */
 int xdf_import_flux(xdf_context_t *ctx, const char *path);
 

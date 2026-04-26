@@ -529,13 +529,36 @@ int xdf_api_open_memory(xdf_api_t *api, const uint8_t *data, size_t size,
         set_error(api, -1, "Cannot create context");
         return -1;
     }
-    
-    /* TODO: Implement memory import */
-    
+
+    /* Match the file-import path: propagate pipeline options, then
+     * delegate to xdf_import_memory() which mirrors xdf_import() but
+     * operates on the buffer directly (no temp file, no I/O round-trip). */
+    xdf_set_options(api->context, &api->config.pipeline);
+
+    int rc = xdf_import_memory(api->context, data, size);
+    if (rc != 0) {
+        const char *core_err = xdf_get_error(api->context);
+        set_error(api, -1, "Memory import failed: %s",
+                  core_err ? core_err : "(no detail)");
+        xdf_destroy(api->context);
+        api->context = NULL;
+        return -1;
+    }
+
     api->current_format = strdup(fmt->name);
     api->is_open = true;
     api->analyzed = false;
-    
+
+    /* Fire event — symmetry with xdf_api_open(). */
+    if (api->config.callback) {
+        xdf_event_t event = {
+            .type = XDF_EVENT_FILE_OPEN,
+            .source = "<memory>",
+            .message = "Memory buffer imported",
+        };
+        api->config.callback(&event, api->config.callback_user);
+    }
+
     return 0;
 }
 

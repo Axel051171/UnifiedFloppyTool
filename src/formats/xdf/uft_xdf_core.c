@@ -621,46 +621,129 @@ int xdf_phase_rebuild(xdf_context_t *ctx) {
  * Import/Export
  *===========================================================================*/
 
+/* Validate XDF magic bytes. Returns 0 if any of the recognised flavours
+ * matches, -1 otherwise. Pure check — does not touch ctx->last_error. */
+static int xdf_validate_magic(const xdf_header_t *hdr) {
+    if (memcmp(hdr->magic, XDF_MAGIC_CORE, 4) == 0 ||
+        memcmp(hdr->magic, XDF_MAGIC_AXDF, 4) == 0 ||
+        memcmp(hdr->magic, XDF_MAGIC_DXDF, 4) == 0 ||
+        memcmp(hdr->magic, XDF_MAGIC_PXDF, 4) == 0 ||
+        memcmp(hdr->magic, XDF_MAGIC_TXDF, 4) == 0 ||
+        memcmp(hdr->magic, XDF_MAGIC_ZXDF, 4) == 0) {
+        return 0;
+    }
+    return -1;
+}
+
+/* Verify the file_crc32 field against a CRC32 computed over the whole
+ * buffer with the CRC field zeroed. Matches the convention written by
+ * xdf_export(). file_crc32 == 0 in the buffer is treated as
+ * "legacy / unverified" and the function returns 0 without checking,
+ * keeping pre-CRC-era files readable. Returns 0 on pass, -1 on mismatch. */
+static int xdf_verify_crc(xdf_context_t *ctx, const uint8_t *buf,
+                           size_t size, uint32_t claimed) {
+    if (claimed == 0) {
+        /* legacy / unverified — silent accept */
+        return 0;
+    }
+    if (size < sizeof(xdf_header_t)) return -1;
+
+    uint8_t *tmp = (uint8_t *)malloc(size);
+    if (!tmp) {
+        snprintf(ctx->last_error, sizeof(ctx->last_error),
+                 "CRC verify: out of memory");
+        return -1;
+    }
+    memcpy(tmp, buf, size);
+    /* Zero out the CRC field at its known offset before recomputation —
+     * matches how xdf_export() computed the CRC in pass 1. */
+    memset(tmp + offsetof(xdf_header_t, file_crc32), 0, sizeof(uint32_t));
+    uint32_t computed = calc_crc32(tmp, size);
+    free(tmp);
+
+    if (computed != claimed) {
+        snprintf(ctx->last_error, sizeof(ctx->last_error),
+                 "CRC mismatch: claimed=0x%08X computed=0x%08X",
+                 claimed, computed);
+        return -1;
+    }
+    return 0;
+}
+
 int xdf_import(xdf_context_t *ctx, const char *path) {
     if (!ctx || !path) return -1;
-    
+
     FILE *f = fopen(path, "rb");
     if (!f) {
         snprintf(ctx->last_error, sizeof(ctx->last_error),
                  "Cannot open file: %s", path);
         return -1;
     }
-    
-    /* Get size (diagnostic only; parsing is header-driven). */
+
+    /* Slurp whole file so we can both parse and CRC-verify in-memory.
+     * Most XDF files are small enough that this is cheaper than seeking. */
     fseek(f, 0, SEEK_END);
-    (void)ftell(f);
+    long total = ftell(f);
     fseek(f, 0, SEEK_SET);
-    
-    /* Read header */
-    if (fread(&ctx->header, 1, sizeof(xdf_header_t), f) != sizeof(xdf_header_t)) {
-        fclose(f);
-        return -1;
-    }
-    
-    /* Verify magic */
-    if (memcmp(ctx->header.magic, XDF_MAGIC_CORE, 4) != 0 &&
-        memcmp(ctx->header.magic, XDF_MAGIC_AXDF, 4) != 0 &&
-        memcmp(ctx->header.magic, XDF_MAGIC_DXDF, 4) != 0 &&
-        memcmp(ctx->header.magic, XDF_MAGIC_PXDF, 4) != 0 &&
-        memcmp(ctx->header.magic, XDF_MAGIC_TXDF, 4) != 0 &&
-        memcmp(ctx->header.magic, XDF_MAGIC_ZXDF, 4) != 0) {
+    if (total < (long)sizeof(xdf_header_t)) {
         fclose(f);
         snprintf(ctx->last_error, sizeof(ctx->last_error),
-                 "Invalid XDF file format");
+                 "File too small for XDF header: %s", path);
         return -1;
     }
-    
-    /* Read tables and data */
-    /* ... implementation continues ... */
-    
+
+    uint8_t *buf = (uint8_t *)malloc((size_t)total);
+    if (!buf) {
+        fclose(f);
+        snprintf(ctx->last_error, sizeof(ctx->last_error),
+                 "Out of memory reading %s (%ld bytes)", path, total);
+        return -1;
+    }
+    if (fread(buf, 1, (size_t)total, f) != (size_t)total) {
+        free(buf); fclose(f);
+        return -1;
+    }
     fclose(f);
-    strncpy(ctx->header.capture_device, "XDF Import", 31);
-    
+
+    int rc = xdf_import_memory(ctx, buf, (size_t)total);
+    free(buf);
+    if (rc != 0) {
+        /* xdf_import_memory already populated last_error */
+        return rc;
+    }
+    /* Override the import label with one that reflects this entry-point. */
+    strncpy(ctx->header.capture_device, "XDF File Import", 31);
+    return 0;
+}
+
+int xdf_import_memory(xdf_context_t *ctx, const uint8_t *data, size_t size) {
+    if (!ctx || !data) return -1;
+    if (size < sizeof(xdf_header_t)) {
+        snprintf(ctx->last_error, sizeof(ctx->last_error),
+                 "Buffer too small for XDF header (%zu < %zu)",
+                 size, sizeof(xdf_header_t));
+        return -1;
+    }
+
+    /* Snapshot the header into the context. */
+    memcpy(&ctx->header, data, sizeof(xdf_header_t));
+
+    if (xdf_validate_magic(&ctx->header) != 0) {
+        snprintf(ctx->last_error, sizeof(ctx->last_error),
+                 "Invalid XDF magic in buffer");
+        return -1;
+    }
+
+    /* Optional integrity check (xdf_export writes file_crc32 != 0;
+     * pre-CRC-era files have 0 and skip the check). */
+    if (xdf_verify_crc(ctx, data, size, ctx->header.file_crc32) != 0) {
+        return -1;
+    }
+
+    /* TODO: parse tables and data — same stub state as xdf_import has
+     * carried since the format was introduced. The header round-trips
+     * cleanly; full payload parsing is tracked separately. */
+    strncpy(ctx->header.capture_device, "XDF Memory Import", 31);
     return 0;
 }
 
