@@ -10,17 +10,26 @@
  */
 
 /* ══════════════════════════════════════════════════════════════════════════ *
- * UFT_SKELETON_PLANNED
- * PLANNED FEATURE — Hardware abstraction
+ * UFT_SKELETON_PARTIAL
+ * PARTIALLY IMPLEMENTED — Hardware abstraction (M3.2 in progress)
  *
- * This header declares 26 public functions, of which 26 have no
- * implementation in the source tree. Callers exist but will link-fail or
- * silently no-op until the feature is implemented.
+ * This header declares 26 public functions. As of MASTER_PLAN.md §M3.2
+ * partial scaffold:
+ *   - 13 are REAL: uft_xum_drive_name, uft_xum_tracks_for_drive,
+ *     uft_xum_sectors_for_track, uft_xum_config_create / _destroy /
+ *     _is_connected, uft_xum_set_device / _track_range / _side / _retries,
+ *     uft_xum_get_error, uft_xum_close (no-op safe), uft_xum_iec_write
+ *     short-circuit on len==0.
+ *   - 13 are HONEST STUBS: return -1 with a "not implemented" error
+ *     string (uft_xum_get_error retrieves it). USB I/O + IEC bus +
+ *     track read/write all wait for the libusb layer (M3.2 follow-up).
  *
- * Status: tracked in docs/KNOWN_ISSUES.md under "Planned APIs".
- * Scope: see docs/MASTER_PLAN.md (M1/MF-011 DOCUMENT-Welle).
- * Do NOT add new call sites to functions from this header without first
- * implementing them or removing the prototype.
+ * 16 tests in tests/test_xum1541_hal.c verify the real functions and
+ * the stub honesty contract. When libusb wiring lands, the stubs flip
+ * to real I/O without changing the API.
+ *
+ * Do NOT add new call sites to the stub functions without checking
+ * the M3.2 status — they will currently always fail.
  * ══════════════════════════════════════════════════════════════════════════ */
 
 
