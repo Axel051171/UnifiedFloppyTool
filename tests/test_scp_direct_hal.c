@@ -101,7 +101,10 @@ TEST(constants_match_scp_hardware_spec) {
      * changes, something is off — the values come from SCP documentation. */
     ASSERT(UFT_SCP_USB_VID == 0x16C0);
     ASSERT(UFT_SCP_USB_PID == 0x0753);
-    ASSERT(UFT_SCP_FLUX_NS_PER_SAMPLE == 40);
+    /* SCP samples at 40 MHz = 25 ns per sample. The earlier value 40
+     * was a unit-confusion bug (MHz misread as ns) — see header
+     * comment for the cross-references. */
+    ASSERT(UFT_SCP_FLUX_NS_PER_SAMPLE == 25);
     ASSERT(UFT_SCP_MAX_REVOLUTIONS == 5);
     ASSERT(UFT_SCP_MAX_TRACK_INDEX == 167);
 }

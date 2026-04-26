@@ -49,8 +49,22 @@ extern "C" {
 /** Maximum tracks supported by SCP hardware (0..167 = 84 × 2 sides). */
 #define UFT_SCP_MAX_TRACK_INDEX    167
 
-/** Flux sample rate: SCP captures at 40 ns resolution. */
-#define UFT_SCP_FLUX_NS_PER_SAMPLE 40
+/**
+ * Flux sample rate: SCP samples at 40 MHz → 25 ns per sample.
+ *
+ * Canonical references (cross-checked):
+ *   - src/samdisk/scp.cpp:132   `flux_times.push_back(total_time * 25);
+ *                                 // 25ns sampling time`
+ *   - src/hardware_providers/scphardwareprovider.cpp file-header comment:
+ *     "Sample clock: 40 MHz (25 ns resolution)"
+ *   - SuperCard Pro SDK v1.7 (cbmstuff.com, December 2015)
+ *
+ * Earlier scaffold revisions had this as 40 — that was a unit-confusion
+ * bug (40 MHz misread as 40 ns) that would scale every flux interval
+ * by 40/25 = 1.6× when libusb wiring lands. Corrected to 25 here so
+ * the integration commit does not silently inherit the bug.
+ */
+#define UFT_SCP_FLUX_NS_PER_SAMPLE 25
 
 /** Per-capture limits. */
 #define UFT_SCP_MAX_REVOLUTIONS    5
@@ -124,7 +138,7 @@ typedef struct {
     bool     can_write_flux;     /**< true — SCP can write back */
     bool     can_read_sector;    /**< false — no FDC mode */
     uint32_t max_revolutions;    /**< UFT_SCP_MAX_REVOLUTIONS = 5 */
-    uint32_t flux_ns_per_sample; /**< 40 */
+    uint32_t flux_ns_per_sample; /**< 25 (40 MHz / 25 ns per sample) */
     uint32_t max_track_index;    /**< UFT_SCP_MAX_TRACK_INDEX = 167 */
 } uft_scp_direct_capabilities_t;
 
