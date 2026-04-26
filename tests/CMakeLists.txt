@@ -221,9 +221,14 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/analysis/events/uft_align_fuse_bridge.c)
     elseif(${test_name} STREQUAL "test_write_gate")
-        # Include write-gate policy source directly
+        # Include write-gate policy + snapshot sources
         target_sources(${test_name} PRIVATE
-            ${CMAKE_SOURCE_DIR}/src/policy/uft_write_gate.c)
+            ${CMAKE_SOURCE_DIR}/src/policy/uft_write_gate.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_snapshot.c)
+    elseif(${test_name} STREQUAL "test_xdf_api")
+        # Include XDF API source directly
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/xdf/uft_xdf_api.c)
     elseif(${test_name} STREQUAL "test_amiga_virus_db")
         # Include Amiga virus signature DB source directly
         target_sources(${test_name} PRIVATE
