@@ -44,7 +44,7 @@ jobs:
             qmake_extra: 'CONFIG+=cxx20'
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install Qt ${{ matrix.qt_version }}
         uses: jurplel/install-qt-action@v4
@@ -101,7 +101,7 @@ jobs:
   build-macos:
     runs-on: macos-14
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install Qt
         # FIX-001: kein arch: clang_64 — macos-14 ist ARM64
@@ -137,7 +137,7 @@ jobs:
   build-windows:
     runs-on: windows-2022
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install Qt + MinGW
         # FIX-002: add-tools-to-path: true — kein manuelles IQTA_TOOLS
