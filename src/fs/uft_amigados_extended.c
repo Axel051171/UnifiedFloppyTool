@@ -71,17 +71,34 @@ static bool amiga_block_checksum_ok(const uint8_t *block) {
 #define UFT_AMIGA_NEXT_HASH_OFF  496u
 #define UFT_AMIGA_SEC_TYPE_OFF   508u
 #define UFT_AMIGA_HASH_OFF       24u
+#define UFT_AMIGA_HIGH_SEQ_OFF   8u   /* file: # of data blocks; ext: same */
+#define UFT_AMIGA_DATA_BLK_OFF   24u  /* file/ext: data_blocks[0..71] */
+#define UFT_AMIGA_DATA_BLK_MAX   72u
+#define UFT_AMIGA_EXTENSION_OFF  504u /* file/ext: next extension block */
 #define UFT_AMIGA_MAX_WALK_DEPTH 32
+#define UFT_AMIGA_MAX_EXT_DEPTH  256  /* very large file = ~9MB OFS */
 
 typedef struct {
-    uint8_t *visited;        /* bitmap: 1 bit per block */
+    uint8_t *visited;        /* bitmap: 1 bit per block (header OR data) */
+    uint8_t *bam_used;       /* bitmap: BAM-says-used (1) (allocated lazily) */
     size_t   total_blocks;
     size_t   dirs_visited;
     size_t   files_visited;
+    size_t   data_blocks;    /* file data blocks reached */
+    size_t   extension_blks; /* T_LIST extension blocks reached */
     int      bad_checksums;  /* delta to add to result->bad_checksums */
     int      bad_types;      /* unexpected type/sec_type — delta to error_count */
-    int      cycles;         /* same-block visited twice — delta to error_count */
+    int      cycles;         /* header re-visited or data-block reused */
+    int      bad_data_ptr;   /* file pointed at out-of-range / zero data block */
 } amiga_walk_state_t;
+
+/* Forward decls — walker, file-data walker, extension walker, BAM reconcile. */
+static void amiga_walk(uft_amigados_ctx_t *ctx, amiga_walk_state_t *st,
+                        uint32_t block_num, int depth);
+static void amiga_walk_file_data(uft_amigados_ctx_t *ctx, amiga_walk_state_t *st,
+                                  const uint8_t *block, int depth);
+static void amiga_walk_extension(uft_amigados_ctx_t *ctx, amiga_walk_state_t *st,
+                                  uint32_t block_num, int depth, int ext_depth);
 
 static inline bool amiga_visited_test(const amiga_walk_state_t *st, size_t blk) {
     if (blk >= st->total_blocks) return true;  /* out-of-range ⇒ pretend visited */
@@ -151,13 +168,176 @@ static void amiga_walk(uft_amigados_ctx_t *ctx,
         }
     } else if (sec_type == UFT_AMIGA_ST_FILE) {
         st->files_visited++;
-        /* File-header checksum already verified above. Data-block chain
-         * + extension blocks deliberately NOT walked here — that's the
-         * DiskSalv-style content-recovery work (T7). */
+        /* File-header checksum already verified above. Walk the data-
+         * block table + extension chain. We don't validate OFS data-
+         * block headers here (T_DATA=8 + checksum + own seq) — that
+         * adds significant per-block I/O and is the next refinement. */
+        amiga_walk_file_data(ctx, st, block, depth);
     } else {
         /* Unknown sec_type. */
         st->bad_types++;
     }
+}
+
+/* Walk the data-block table of a file or T_LIST extension block.
+ * `block` points at the file/extension header; high_seq tells us how
+ * many of the 72 slots are valid. Each slot is a block number. We mark
+ * each in `visited` (a re-visit means the data block was claimed by
+ * two files = corruption or deliberate cross-link). After processing
+ * the inline table, follow the extension pointer at offset 504 if
+ * non-zero, recursing into amiga_walk_extension. */
+static void amiga_walk_file_data(uft_amigados_ctx_t *ctx,
+                                  amiga_walk_state_t *st,
+                                  const uint8_t *block,
+                                  int depth) {
+    uint32_t high_seq = amiga_rd_be32(block + UFT_AMIGA_HIGH_SEQ_OFF);
+    if (high_seq > UFT_AMIGA_DATA_BLK_MAX) {
+        st->bad_data_ptr++;
+        high_seq = UFT_AMIGA_DATA_BLK_MAX;
+    }
+
+    /* AmigaDOS quirk: data_blocks[] is stored REVERSED — slot 0 is the
+     * LAST data block in the file. We don't care about order for
+     * reachability; we just visit each non-zero entry. */
+    for (uint32_t i = 0; i < high_seq; i++) {
+        uint32_t blk = amiga_rd_be32(block + UFT_AMIGA_DATA_BLK_OFF + i * 4);
+        if (blk == 0 || blk >= st->total_blocks) {
+            if (blk != 0) st->bad_data_ptr++;
+            continue;
+        }
+        if (amiga_visited_test(st, blk)) {
+            st->cycles++;  /* data block claimed twice */
+            continue;
+        }
+        amiga_visited_set(st, blk);
+        st->data_blocks++;
+    }
+
+    uint32_t ext = amiga_rd_be32(block + UFT_AMIGA_EXTENSION_OFF);
+    if (ext != 0) amiga_walk_extension(ctx, st, ext, depth + 1, 0);
+}
+
+static void amiga_walk_extension(uft_amigados_ctx_t *ctx,
+                                  amiga_walk_state_t *st,
+                                  uint32_t block_num,
+                                  int depth,
+                                  int ext_depth) {
+    if (ext_depth > UFT_AMIGA_MAX_EXT_DEPTH) {
+        st->bad_data_ptr++;
+        return;
+    }
+    if (block_num == 0 || block_num >= st->total_blocks) {
+        if (block_num != 0) st->bad_data_ptr++;
+        return;
+    }
+    if (amiga_visited_test(st, block_num)) {
+        st->cycles++;
+        return;
+    }
+    amiga_visited_set(st, block_num);
+
+    size_t off = (size_t)block_num * UFT_AMIGA_BLOCK_SIZE;
+    if (off + UFT_AMIGA_BLOCK_SIZE > ctx->size) {
+        st->bad_data_ptr++;
+        return;
+    }
+    const uint8_t *block = ctx->data + off;
+
+    if (!amiga_block_checksum_ok(block)) {
+        st->bad_checksums++;
+        return;
+    }
+
+    /* T_LIST has type=16, sec_type same as the parent file (-3). We
+     * accept the block as long as type is T_LIST. */
+    uint32_t type = amiga_rd_be32(block);
+    if (type != UFT_AMIGA_T_LIST) {
+        st->bad_types++;
+        return;
+    }
+    st->extension_blks++;
+    /* Same data-block-table layout as file headers — reuse the walker. */
+    amiga_walk_file_data(ctx, st, block, depth);
+    (void)depth;  /* not used past here, but kept for symmetry */
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+ * BAM Reconciliation (M2 T7 partial)
+ *
+ * Compare the directory-tree reachability bitmap (`visited`) against the
+ * BAM "free/used" map. Per AmigaDOS spec, BAM bits are 1 = FREE, 0 = USED.
+ * Each BAM block holds:
+ *   off 0..3: checksum
+ *   off 4..511: 127 longwords × 32 bits = 4064 bits, covering 4064 blocks
+ * The bitmap covers blocks starting at block 2 (boot blocks 0,1 are
+ * permanent reserved and not in the BAM). bm_pages[] in the root block
+ * lists which blocks hold BAM data.
+ *
+ * Discrepancies:
+ *   "header found but BAM-marked free" → BAM is lying (count as bad_bam)
+ *   "BAM says used but unreachable from root" → orphan / deleted-file
+ *      data still on disk = forensically valuable, count as orphan_count
+ * ═══════════════════════════════════════════════════════════════════════════════ */
+
+static bool amiga_load_bam(const uft_amigados_ctx_t *ctx,
+                            amiga_walk_state_t *st) {
+    /* Allocate output bitmap if not already. */
+    if (!st->bam_used) {
+        st->bam_used = calloc((st->total_blocks + 7) / 8, 1);
+        if (!st->bam_used) return false;
+    }
+    /* Boot blocks 0,1 are permanent reserved — mark them used. */
+    if (st->total_blocks >= 1) st->bam_used[0] |= 0x01;
+    if (st->total_blocks >= 2) st->bam_used[0] |= 0x02;
+
+    if (ctx->bitmap_count == 0) return false;
+
+    /* Each BAM block holds 4064 bits, starting at block 2. */
+    uint32_t logical_block = 2;
+    for (size_t bi = 0; bi < ctx->bitmap_count; bi++) {
+        uint32_t bam_blk = ctx->bitmap_blocks[bi];
+        if (bam_blk == 0 || bam_blk >= st->total_blocks) continue;
+        size_t bam_off = (size_t)bam_blk * UFT_AMIGA_BLOCK_SIZE;
+        if (bam_off + UFT_AMIGA_BLOCK_SIZE > ctx->size) continue;
+        const uint8_t *bam_block = ctx->data + bam_off;
+
+        /* 127 longwords of bitmap data starting at offset 4. */
+        for (uint32_t w = 0; w < 127; w++) {
+            uint32_t bits = amiga_rd_be32(bam_block + 4 + w * 4);
+            for (uint32_t b = 0; b < 32; b++) {
+                if (logical_block >= st->total_blocks) break;
+                /* AmigaDOS: bit set (1) = FREE, bit clear (0) = USED.
+                 * Walk lowest-bit first within each longword. */
+                bool free = (bits & (1u << b)) != 0;
+                if (!free) {
+                    st->bam_used[logical_block >> 3] |=
+                        (uint8_t)(1u << (logical_block & 7));
+                }
+                logical_block++;
+            }
+            if (logical_block >= st->total_blocks) break;
+        }
+        if (logical_block >= st->total_blocks) break;
+    }
+    return true;
+}
+
+static void amiga_reconcile_bam(const amiga_walk_state_t *st,
+                                  size_t *out_bad_bam,
+                                  size_t *out_orphan_blocks) {
+    /* bad_bam: header reachable from root but BAM says free.
+     * orphan: BAM says used but block not reached from root.
+     * Boot blocks 0,1 are excluded (permanent reserved, never in walker). */
+    size_t bad = 0, orphan = 0;
+    for (size_t blk = 2; blk < st->total_blocks; blk++) {
+        bool reached  = (st->visited[blk >> 3] & (1u << (blk & 7))) != 0;
+        bool bam_used = st->bam_used &&
+                        (st->bam_used[blk >> 3] & (1u << (blk & 7))) != 0;
+        if (reached && !bam_used) bad++;
+        else if (bam_used && !reached) orphan++;
+    }
+    *out_bad_bam = bad;
+    *out_orphan_blocks = orphan;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════════
@@ -383,24 +563,60 @@ int uft_amiga_validate_ext(uft_amigados_ctx_t *ctx,
             amiga_walk(ctx, &st, ctx->root_block, 0);
 
             result->bad_checksums   += st.bad_checksums;
-            result->error_count     += st.bad_types + st.cycles;
+            result->error_count     += st.bad_types + st.cycles + st.bad_data_ptr;
             result->directory_valid  = (st.bad_checksums == 0 &&
                                         st.bad_types == 0 &&
                                         st.cycles == 0);
-            /* Files are valid if every reachable file-header checksum-passed
-             * and no walk-error fired in the file branches. We don't walk
-             * data-block chains yet (that's T7), so this is "header-level
-             * file-chain integrity", not "data integrity". */
-            result->files_valid      = result->directory_valid;
+            /* Files are valid if every reachable file-header + data-block
+             * pointer checksum-passed and no walker-error fired. After the
+             * T7-partial-2 commit, this also covers the file-data-block
+             * table + extension-block chain. OFS internal data-block
+             * checksums (T_DATA=8 with own checksum) are still NOT
+             * validated — that's the next refinement. */
+            result->files_valid      = result->directory_valid &&
+                                       (st.bad_data_ptr == 0);
 
-            if (st.bad_checksums || st.bad_types || st.cycles) {
+            if (st.bad_checksums || st.bad_types || st.cycles ||
+                st.bad_data_ptr) {
                 snprintf(result->details + strlen(result->details),
                          sizeof(result->details) - strlen(result->details),
-                         "DirWalk: visited %zu dir(s) + %zu file(s); "
-                         "bad-checksums=%d, bad-types=%d, cycles=%d\n",
+                         "DirWalk: %zu dir + %zu file + %zu ext + "
+                         "%zu data-blocks; bad-checksums=%d bad-types=%d "
+                         "cycles=%d bad-data-ptr=%d\n",
                          st.dirs_visited, st.files_visited,
-                         st.bad_checksums, st.bad_types, st.cycles);
+                         st.extension_blks, st.data_blocks,
+                         st.bad_checksums, st.bad_types, st.cycles,
+                         st.bad_data_ptr);
             }
+
+            /* --- 5. BAM reconciliation (T7 partial #2) --- */
+            if (amiga_load_bam(ctx, &st)) {
+                size_t bad_bam = 0, orphan = 0;
+                amiga_reconcile_bam(&st, &bad_bam, &orphan);
+                if (bad_bam) {
+                    /* Real corruption: header reachable but BAM says free.
+                     * If BAM allocator runs, that block could be reused
+                     * and overwrite live-file data. */
+                    result->error_count += (int)bad_bam;
+                    snprintf(result->details + strlen(result->details),
+                             sizeof(result->details) - strlen(result->details),
+                             "BAM: %zu reachable block(s) marked FREE — "
+                             "data-loss risk if disk gets writes\n",
+                             bad_bam);
+                }
+                if (orphan) {
+                    /* Forensically valuable: deleted-file content still
+                     * lives on disk. Warning, not error. */
+                    result->warning_count += (int)orphan;
+                    snprintf(result->details + strlen(result->details),
+                             sizeof(result->details) - strlen(result->details),
+                             "BAM: %zu orphan block(s) marked USED but "
+                             "unreachable from root — possible deleted "
+                             "content (forensic recovery candidate)\n",
+                             orphan);
+                }
+            }
+            free(st.bam_used);
             free(st.visited);
         } else {
             /* OOM during walker setup — be honest, don't claim valid. */
