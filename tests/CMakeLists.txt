@@ -3,6 +3,12 @@
 
 enable_testing()
 
+# Catch dangling library references at configure time, not at link time.
+# Without this, target_link_libraries(... uft_ride) where uft_ride is
+# neither a target nor a system library is passed straight to the linker
+# as -luft_ride, only failing during link with a confusing error.
+set(CMAKE_LINK_LIBRARIES_ONLY_TARGETS ON)
+
 # Find all test source files
 file(GLOB TEST_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/test_*.c")
 
@@ -37,8 +43,9 @@ foreach(test_source ${TEST_SOURCES})
         ${CMAKE_SOURCE_DIR}/include/uft
     )
     
-    # Base libraries for all tests
-    set(TEST_LIBS uft_core uft_crc uft_ride)
+    # Base libraries for all tests.
+    # uft_ride was removed in MF-011 (commit 386f3f6) — src/ride/ deleted.
+    set(TEST_LIBS uft_core uft_crc)
 
     # Self-contained tests: no UFT library dependencies at all
     set(_SELF_CONTAINED_TESTS

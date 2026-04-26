@@ -80,6 +80,10 @@ jobs:
           cmake --build build-tests --parallel $(nproc)
 
       - name: Run tests
+        # Only run if Build tests succeeded — otherwise ctest emits exit 8
+        # ("no tests were run") which produces a misleading second annotation
+        # on top of the real build failure.
+        if: success()
         continue-on-error: true
         run: |
           cd build-tests
