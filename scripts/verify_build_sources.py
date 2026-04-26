@@ -78,8 +78,20 @@ def parse_pro_headers(pro_path: Path) -> set[str]:
     return _parse_pro_lists(pro_path, key="HEADERS", exts=(".h", ".hpp"))
 
 
+# Opt-in qmake feature flags. SOURCES/HEADERS inside `<flag> { ... }` blocks
+# only ship when CONFIG+=<flag> is passed. CI does not enable any of these,
+# so the parser must skip their contents to mirror the default qmake build.
+_OPTIN_FLAGS: frozenset[str] = frozenset({
+    "experimental_vfo",
+    "kalman_pll",
+    "switch_support",
+})
+
+
 def _parse_pro_lists(pro_path: Path, key: str, exts: tuple[str, ...]) -> set[str]:
-    """Common parser for SOURCES/HEADERS — handles `+=` and line continuations."""
+    """Common parser for SOURCES/HEADERS — handles `+=`, line continuations,
+    and skips opt-in feature blocks (kalman_pll, experimental_vfo, etc.).
+    """
     if not pro_path.is_file():
         sys.stderr.write(f"verify_build_sources: {pro_path} not found\n")
         sys.exit(2)
@@ -88,8 +100,34 @@ def _parse_pro_lists(pro_path: Path, key: str, exts: tuple[str, ...]) -> set[str
     text = re.sub(r"\\\s*\n\s*", " ", text)  # join line continuations
 
     pat = re.compile(rf"^\s*{key}\s*\+?=\s*(.*?)\s*$")
+    optin_open = re.compile(r"^\s*([A-Za-z_][A-Za-z0-9_]*)\s*\{\s*$")
+    any_open = re.compile(r"\{\s*$")
+    any_close = re.compile(r"^\s*\}")
     out: set[str] = set()
+    skip_depth = 0   # nesting depth inside an opt-in block (0 = active)
+    brace_depth = 0  # absolute brace depth, for tracking the matching close
+    skip_origin = -1
     for line in text.splitlines():
+        if skip_depth == 0:
+            m_optin = optin_open.match(line)
+            if m_optin and m_optin.group(1) in _OPTIN_FLAGS:
+                skip_depth = 1
+                skip_origin = brace_depth
+                brace_depth += 1
+                continue
+        if any_open.search(line):
+            brace_depth += 1
+            if skip_depth > 0:
+                skip_depth += 1
+        if any_close.match(line):
+            brace_depth = max(0, brace_depth - 1)
+            if skip_depth > 0:
+                skip_depth -= 1
+                if skip_depth == 0 and brace_depth == skip_origin:
+                    skip_origin = -1
+            continue
+        if skip_depth > 0:
+            continue
         m = pat.match(line)
         if not m:
             continue
