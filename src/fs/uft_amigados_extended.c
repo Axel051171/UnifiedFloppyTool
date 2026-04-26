@@ -196,11 +196,24 @@ static void amiga_walk_file_data(uft_amigados_ctx_t *ctx,
         high_seq = UFT_AMIGA_DATA_BLK_MAX;
     }
 
-    /* AmigaDOS quirk: data_blocks[] is stored REVERSED — slot 0 is the
-     * LAST data block in the file. We don't care about order for
-     * reachability; we just visit each non-zero entry. */
+    /* AmigaDOS data_blocks[] convention (per ADFlib spec):
+     *   slot 71 (= UFT_AMIGA_DATA_BLK_MAX-1) holds the FIRST data block
+     *   slot 70                              holds the SECOND
+     *   ...
+     *   slot 71-(high_seq-1) holds the LAST  (= 72-high_seq)
+     *   slots 0 .. (71-high_seq)             are unused (zero) for partial files
+     *
+     * Walking slots 0..high_seq-1 is wrong for partial files (high_seq < 72):
+     * those slots are zero, real pointers live in the upper end. Cross-
+     * reference src/fs/uft_amigados.c:347 which correctly reads
+     * first_data from slot UFT_AMIGA_DATA_BLK_MAX-1.
+     *
+     * Earlier scaffold (commit 7a8f7da T7-partial-2) had the off-by-end
+     * bug — found by structured-reviewer Finding #3. */
     for (uint32_t i = 0; i < high_seq; i++) {
-        uint32_t blk = amiga_rd_be32(block + UFT_AMIGA_DATA_BLK_OFF + i * 4);
+        uint32_t slot = UFT_AMIGA_DATA_BLK_MAX - 1 - i;     /* 71, 70, ... */
+        uint32_t blk = amiga_rd_be32(block +
+                                      UFT_AMIGA_DATA_BLK_OFF + slot * 4);
         if (blk == 0 || blk >= st->total_blocks) {
             if (blk != 0) st->bad_data_ptr++;
             continue;

@@ -289,17 +289,25 @@ uft_error_t uft_track_set_flux(uft_track_t* track, const uint32_t* flux,
 
 void uft_track_cleanup(uft_track_t* track) {
     if (!track) return;
-    
+
     if (track->sectors) {
         for (size_t i = 0; i < track->sector_count; i++) {
-            free(track->sectors[i].data);
+            /* Use the canonical per-sector cleanup so confidence_map,
+             * weak_mask, and timing_ns are also freed. The earlier
+             * inline `free(sectors[i].data)` leaked those, which became
+             * material after TA3 (commit 81922aa) started populating
+             * weak_mask on ATX reads — every disk-verify or stream
+             * read on a weak-bit-bearing image would leak per-sector
+             * forensic state. Mirror of uft_sector_cleanup parity-fix
+             * applied in the same TA3 commit. */
+            uft_sector_cleanup(&track->sectors[i]);
         }
         free(track->sectors);
     }
-    
+
     free(track->flux);
     free(track->raw_data);
-    
+
     memset(track, 0, sizeof(*track));
 }
 

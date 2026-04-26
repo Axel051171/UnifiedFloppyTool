@@ -99,10 +99,26 @@ uft_error_t uft_weak_bit_verify_track(uft_disk_t *disk, int cyl, int head,
         /* Wenn Weak-Sektor ohne Mask: überspringen (nicht reproduzierbar) */
         if (a->weak && !a->weak_mask) continue;
 
-        /* Mit Weak-Mask: nur Non-Weak-Bytes vergleichen */
+        /* Mit Weak-Mask: nur Non-Weak-Bytes vergleichen.
+         *
+         * weak_mask Semantik (per uft_sector_t.weak_mask doc-comment in
+         * include/uft/uft_types.h:340 "Per-byte weak bit flags"):
+         *   weak_mask[i] == 0  ⇒  Byte i ist solid, byte-vergleichen
+         *   weak_mask[i] != 0  ⇒  Byte i ist weak, überspringen
+         *
+         * Producers folgen alle dem per-byte-Pattern:
+         *   - src/formats/atx/uft_atx.c:297       memset(..., 0xFF, ...)
+         *   - src/recovery/uft_multiread_pipeline.c:305  weak_mask[i] = 1
+         *
+         * Frühere per-bit-Lesart (`weak_mask[b/8] & (1 << (b%8))`) hatte
+         * 7/8 der wirklich-weak-Bytes fälschlich byte-verglichen — bei
+         * multiread-Output (per-byte 1) hätten reine zufällige Treffer
+         * den Verify zum Scheitern gebracht. ATX (per-byte 0xFF) hat
+         * by-accident funktioniert weil 0xFF alle Bits gesetzt hat.
+         * Per docs/AI_COLLABORATION.md / structured-reviewer Finding #2. */
         if (a->weak_mask) {
             for (size_t b = 0; b < rlen; b++) {
-                if (!(a->weak_mask[b / 8] & (1 << (b % 8)))) {
+                if (a->weak_mask[b] == 0) {
                     if (a->data[b] != r->data[b]) {
                         uft_track_free(&actual);
                         return UFT_ERROR_VERIFY_FAILED;
