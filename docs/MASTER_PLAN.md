@@ -219,8 +219,14 @@ Muss:
 - [ ] M3.2 XUM1541 HAL real statt stubbed
 - [ ] M3.3 Applesauce HAL real statt stubbed
 - [ ] M3.4 UFI/Cowork-Backend (eigenes STM32H723-Firmware-Repo)
-- [ ] M3.5 Emulator-CI-Pipeline (§6.1 aus `KNOWN_ISSUES.md`) — mindestens
-  WinUAE für ADF, VICE für D64
+- [~] M3.5 Emulator-CI-Pipeline (§6.1 aus `KNOWN_ISSUES.md`) — Scaffold
+  in `.github/workflows/emulator.yml` (Commit 792713e): VICE x64 +
+  c1541 installiert, deterministische D64-Fixture via Inline-Python,
+  Round-Trip-Assertion auf Disk-Header. ADF/WinUAE als Placeholder-Job
+  dokumentiert. Voll-Closure (ADF/D64 decode-Regression auto-detected)
+  braucht UFT-CLI-Tool das flux/sector → canonical D64/ADF kann (multi-
+  session, neuer Subsystem-Drop). Bis dahin testet die Pipeline VICE-
+  Substrate, nicht UFT-Output.
 - [ ] M3.6 CLAUDE.md HAL-Status aktualisiert (keine „stubbed"-Einträge
   mehr)
 - [ ] M3.7 Tag v4.3.0 nach M3
