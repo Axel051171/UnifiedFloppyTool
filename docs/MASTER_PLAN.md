@@ -213,7 +213,9 @@ Detail-Fahrplan: `docs/M3_HAL_PLAN.md` (M3.1 bis M3.7).
 Muss:
 - [~] M3.1 SCP-Direct HAL Scaffold: API (`uft_scp_direct.h`),
       honest NOT_IMPLEMENTED-Stubs, Hardware-Capabilities (can_read_flux,
-      can_write_flux, 40ns sample rate, 167 track slots, 5 revs),
+      can_write_flux, **25 ns sample rate** — Korrektur in Commit b52c491,
+      ehemals fälschlich 40 ns; das war ein Unit-Confusion-Bug,
+      40 MHz = 25 ns/Sample, nicht 40 ns), 167 track slots, 5 revs,
       Input-Validation aktiv, USB-VID/PID-Konstanten korrekt. 10 Tests
       grün. libusb-Integration folgt in Folge-Commit.
 - [ ] M3.2 XUM1541 HAL real statt stubbed
