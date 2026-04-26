@@ -243,8 +243,12 @@ Muss:
   braucht UFT-CLI-Tool das flux/sector → canonical D64/ADF kann (multi-
   session, neuer Subsystem-Drop). Bis dahin testet die Pipeline VICE-
   Substrate, nicht UFT-Output.
-- [ ] M3.6 CLAUDE.md HAL-Status aktualisiert (keine „stubbed"-Einträge
-  mehr)
+- [~] M3.6 CLAUDE.md HAL-Status aktualisiert — partial in Commit 9b1746d:
+      alle drei previously-"stubbed" Einträge auf [~] M3.x partial scaffold
+      promoted, plus side-fix der falschen "(25MHz)"-Angabe für SCP
+      (richtig: 40 MHz / 25 ns / 12 Mbps USB FT240-X). Wording "stubbed"
+      ist jetzt nirgends mehr in CLAUDE.md. Voll-Closure ("kein partial-
+      scaffold mehr") wartet auf M3.1/M3.2/M3.3 libusb-/Serial-Wiring.
 - [ ] M3.7 Tag v4.3.0 nach M3
 
 ---
