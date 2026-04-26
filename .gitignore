@@ -93,3 +93,5 @@ release/
 # Python
 __pycache__/
 *.pyc
+/tests/vectors/
+/welle*.txt

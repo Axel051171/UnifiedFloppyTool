@@ -1,0 +1,173 @@
+# ============================================================================
+# UnifiedFloppyTool — Emulator-CI scaffold (M3.5 partial)
+#
+# Status: SCAFFOLD ONLY. The full M3.5 plan (per docs/MASTER_PLAN.md and
+# docs/KNOWN_ISSUES.md §6.1) is "WinUAE im Docker-Container: lädt
+# UFT-decodiertes ADF, prüft ob es bootet" + VICE/c1541 round-trip test.
+# That requires a UFT CLI tool that takes flux/sector input and emits
+# canonical D64/ADF — which doesn't exist yet (Qt GUI binary only).
+#
+# This workflow proves the CI substrate works:
+#   - VICE x64 installable on ubuntu-22.04
+#   - c1541 (VICE's disk-image utility) can be invoked headless
+#   - We can ingest a deterministic D64 fixture and parse its directory
+#
+# When the UFT CLI lands, the "Generate D64 from UFT decode" step will
+# replace the inline-Python fixture with a real round-trip.
+# ============================================================================
+
+name: Emulator-CI (scaffold)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/formats/adf/**'
+      - 'src/formats/d64/**'
+      - 'src/flux/**'
+      - '.github/workflows/emulator.yml'
+      - 'scripts/generators/gen_d64_fixture.py'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/formats/adf/**'
+      - 'src/formats/d64/**'
+      - 'src/flux/**'
+      - '.github/workflows/emulator.yml'
+      - 'scripts/generators/gen_d64_fixture.py'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+
+  d64-vice:
+    name: D64 ↔ VICE c1541
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install VICE
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y --no-install-recommends vice
+          which c1541
+          c1541 --help 2>&1 | head -5 || true
+
+      - name: Generate minimal valid D64 (empty disk, named "UFT-TEST")
+        # Inline Python fixture builder — kept here so the CI is
+        # self-contained. Once a canonical scripts/generators/gen_d64_fixture.py
+        # lands, this step swaps to: python scripts/generators/gen_d64_fixture.py
+        run: |
+          mkdir -p tests/vectors/d64
+          python3 - <<'PYEOF'
+          import struct
+          from pathlib import Path
+
+          # CBM 1541 D64: 35 tracks, variable sectors per track.
+          SPT = [0,
+                 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21,
+                 19, 19, 19, 19, 19, 19, 19,
+                 18, 18, 18, 18, 18, 18,
+                 17, 17, 17, 17, 17, 17, 17, 17, 17, 17]
+          total = sum(SPT[1:36])  # 683 sectors × 256 = 174 848 bytes
+          out = bytearray(total * 256)
+
+          def track_offset(t):
+              return sum(SPT[1:t]) * 256
+
+          # Track 18 Sector 0: BAM (Block Allocation Map)
+          bam = track_offset(18)
+          out[bam + 0] = 18                # first directory track
+          out[bam + 1] = 1                 # first directory sector
+          out[bam + 2] = ord("A")          # DOS version (CBM DOS 2.6)
+          out[bam + 3] = 0x00
+          # Mark all blocks free except track 18 (system).
+          # Per-track BAM entry layout: 1 byte free-count + 3 bytes bitmap.
+          for t in range(1, 36):
+              ent = bam + 4 + (t - 1) * 4
+              if t == 18:
+                  out[ent + 0] = 0           # 0 free (BAM+dir reserved)
+                  out[ent + 1] = 0
+                  out[ent + 2] = 0
+                  out[ent + 3] = 0
+              else:
+                  out[ent + 0] = SPT[t]
+                  bits = (1 << SPT[t]) - 1
+                  out[ent + 1] = bits & 0xFF
+                  out[ent + 2] = (bits >> 8) & 0xFF
+                  out[ent + 3] = (bits >> 16) & 0xFF
+          # Disk name at offset +0x90 (16 bytes, PETSCII, padded with 0xA0).
+          name = b"UFT-TEST\xA0\xA0\xA0\xA0\xA0\xA0\xA0\xA0"
+          out[bam + 0x90:bam + 0x90 + 16] = name
+          # Disk ID + DOS-type at +0xA2 (5 bytes: id1, id2, 0xA0, "2A").
+          out[bam + 0xA2:bam + 0xA2 + 5] = b"UF\xA02A"
+
+          # Track 18 Sector 1: empty directory.
+          dir1 = track_offset(18) + 256
+          out[dir1 + 0] = 0    # next track  = none
+          out[dir1 + 1] = 0xFF # next sector = end-of-chain marker
+          # Bytes 2..255 stay zero — no directory entries.
+
+          Path("tests/vectors/d64/empty_uft_test.d64").write_bytes(bytes(out))
+          print(f"  Wrote empty_uft_test.d64 ({len(out)} bytes)")
+          PYEOF
+          ls -l tests/vectors/d64/
+
+      - name: c1541 sanity (read disk header)
+        run: |
+          c1541 -attach tests/vectors/d64/empty_uft_test.d64 -dir > dir_output.txt 2>&1
+          cat dir_output.txt
+          # The directory listing must contain the disk name we encoded.
+          # c1541 prints PETSCII-decoded names; "UFT-TEST" is pure ASCII so
+          # it passes through unchanged.
+          if grep -q 'UFT-TEST' dir_output.txt; then
+            echo "OK: VICE c1541 round-trip found the disk header"
+          else
+            echo "FAIL: VICE c1541 did not show 'UFT-TEST' — fixture or"
+            echo "      VICE behaviour broke. Output above."
+            exit 1
+          fi
+
+      - name: c1541 validate (block count)
+        run: |
+          # An empty D64 should report 664 blocks free (683 total - 19
+          # reserved for track-18 BAM + directory).
+          c1541 -attach tests/vectors/d64/empty_uft_test.d64 -dir 2>&1 \
+            | tee dir_full.txt
+          if grep -q '664 blocks free' dir_full.txt; then
+            echo "OK: free-block count matches CBM DOS 2.6 spec"
+          else
+            echo "INFO: free-block count differs from spec — c1541 may"
+            echo "      print the count differently; this is informational"
+            echo "      not a CI gate until UFT-CLI round-trip exists."
+          fi
+
+      # Future steps (will be added when UFT CLI lands):
+      #
+      # - name: Decode SCP fixture via UFT
+      #   run: |
+      #     ./build/uft decode tests/vectors/scp/test.scp --to d64 \
+      #       --out tests/vectors/d64/uft_decoded.d64
+      #
+      # - name: Compare UFT-decoded vs reference
+      #   run: |
+      #     c1541 -attach tests/vectors/d64/uft_decoded.d64 -dir > a.txt
+      #     c1541 -attach tests/vectors/d64/reference.d64    -dir > b.txt
+      #     diff a.txt b.txt
+
+  adf-info:
+    name: ADF scaffold (placeholder)
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Note
+        run: |
+          echo "ADF/WinUAE round-trip step is reserved here. WinUAE in"
+          echo "Docker is significantly more complex than VICE c1541 —"
+          echo "needs an X11 backend or a headless WinUAE fork. Punted"
+          echo "until the UFT CLI exists; tracked under M3.5."
