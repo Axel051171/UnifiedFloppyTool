@@ -41,10 +41,10 @@
 /* Block field offsets (byte offsets into a 512-byte block) */
 #define OFF_TYPE               0x000   /* int32 primary type */
 #define OFF_HEADER_KEY         0x004   /* self-reference */
-#define OFF_HIGH_SEQ           0x008
-#define OFF_HASHTABLE_SIZE     0x00C
-#define OFF_DATA_BLK_COUNT     0x010   /* OFS file header */
-#define OFF_DATABLOCKS         0x018   /* 72 longs (reverse order) */
+#define OFF_HIGH_SEQ           0x008   /* file/T_LIST header: # data blocks valid */
+#define OFF_HASHTABLE_SIZE     0x00C   /* dir/root header: hash-table entries */
+#define OFF_FIRST_DATA         0x010   /* file header: cache of data_blocks[71] */
+#define OFF_DATABLOCKS         0x018   /* 72 longs (REVERSE order — slot 71 = first) */
 #define OFF_FILE_SIZE          0x144   /* 0x14C - 8 */
 #define OFF_BYTE_SIZE          0x144
 #define OFF_FILENAME_LEN       0x150
@@ -517,11 +517,37 @@ int uft_amiga_get_chain(const uft_amiga_ctx_t *ctx, uint32_t file_block,
     uint32_t cur_hdr = file_block;
     while (cur_hdr != 0 && (size_t)(cur_hdr + 1) * BLOCK_SIZE <= ctx->size) {
         const uint8_t *hb = ctx->data + cur_hdr * BLOCK_SIZE;
-        /* Data blocks list is at offset 24, 72 longs, stored in REVERSE. */
-        int count = (int)be32(hb + OFF_DATA_BLK_COUNT);
-        if (count < 0 || count > 72) count = 72;
-        for (int i = count - 1; i >= 0; i--) {
-            uint32_t blk = be32(hb + 24 + i * 4);
+
+        /* AmigaDOS file/T_LIST data-block table convention (per ADFlib):
+         *   72 longs at offset OFF_DATABLOCKS, stored in REVERSE order:
+         *     slot 71 holds the FIRST data block in the file
+         *     slot 70 holds the SECOND, ... etc
+         *     slot (72 - high_seq) holds the LAST
+         *     slots 0 .. (71 - high_seq) are unused (zero) for partial
+         *     files (high_seq < 72).
+         *   The number of valid pointers is `high_seq` at OFF_HIGH_SEQ.
+         *
+         * Earlier code read OFF_DATA_BLK_COUNT (0x010) as "count" and
+         * walked slots [count-1..0]. That had two bugs that cancelled
+         * each other for stock ADFs:
+         *   (1) 0x010 is `first_data` (a block-pointer cache), NOT high_seq
+         *       (which lives at 0x008). Stock-disk first_data is typically
+         *       a block number > 72, which the clamp `if > 72: count=72`
+         *       silently accepted.
+         *   (2) Walking [count-1..0] is the wrong direction.
+         *   Combined: clamp forced count=72, loop became [71..0] which
+         *   accidentally hit the upper-half real pointers + zero-skipped
+         *   the lower-half empties. Latently dependent on the cancellation;
+         *   any partial fix would have un-masked silent file truncation.
+         * Found by deep-diagnostician analysis after a forensic-class
+         * structured-reviewer pass on commit 7a8f7da's new walker (which
+         * had only the direction bug). Reference uft_amigados_extended.c
+         * for the same fixed pattern. */
+        uint32_t high_seq = be32(hb + OFF_HIGH_SEQ);
+        if (high_seq > 72) high_seq = 72;
+        for (uint32_t i = 0; i < high_seq; i++) {
+            uint32_t slot = 72u - 1u - i;          /* 71, 70, ..., 72-high_seq */
+            uint32_t blk = be32(hb + OFF_DATABLOCKS + slot * 4);
             if (blk == 0) continue;
             if (chain->count >= chain->capacity) {
                 size_t nc = chain->capacity * 2;
