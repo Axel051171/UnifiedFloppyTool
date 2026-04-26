@@ -1,5 +1,5 @@
 /* =====================================================================
- * GENERATED FILE — DO NOT EDIT BY HAND.
+ * GENERATED FILE â€” DO NOT EDIT BY HAND.
  * Source of truth: data/errors.tsv
  * Regenerate with: make generate  (or scripts/verify_errors_ssot.sh)
  * Any manual edits will be overwritten on the next generator run.

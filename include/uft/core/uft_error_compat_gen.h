@@ -1,5 +1,5 @@
 /* =====================================================================
- * GENERATED FILE — DO NOT EDIT BY HAND.
+ * GENERATED FILE â€” DO NOT EDIT BY HAND.
  * Source of truth: data/errors.tsv
  * Regenerate with: make generate  (or scripts/verify_errors_ssot.sh)
  * Any manual edits will be overwritten on the next generator run.
@@ -37,7 +37,7 @@ extern "C" {
 #endif
 
 /* ------------------------------------------------------------------------ */
-/* 1. UFT_ERROR_<NAME> — mixed-case canonical alias (auto-emitted from TSV) */
+/* 1. UFT_ERROR_<NAME> â€” mixed-case canonical alias (auto-emitted from TSV) */
 /* ------------------------------------------------------------------------ */
 #ifndef UFT_ERROR_SUCCESS
 #define UFT_ERROR_SUCCESS UFT_SUCCESS
@@ -212,7 +212,7 @@ extern "C" {
 #endif
 
 /* ------------------------------------------------------------------------ */
-/* 2. UFT_E_<NAME> — short-form (auto-emitted from canonical TSV)           */
+/* 2. UFT_E_<NAME> â€” short-form (auto-emitted from canonical TSV)           */
 /* ------------------------------------------------------------------------ */
 #ifndef UFT_E_INVALID_ARG
 #define UFT_E_INVALID_ARG UFT_ERR_INVALID_ARG

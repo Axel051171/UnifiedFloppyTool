@@ -1,5 +1,5 @@
 /* =====================================================================
- * GENERATED FILE — DO NOT EDIT BY HAND.
+ * GENERATED FILE â€” DO NOT EDIT BY HAND.
  * Source of truth: data/errors.tsv
  * Regenerate with: make generate  (or scripts/verify_errors_ssot.sh)
  * Any manual edits will be overwritten on the next generator run.
@@ -133,7 +133,7 @@ typedef enum {
 typedef uft_rc_t uft_error_t;
 #endif
 #else
-/* Enum already defined by another header — provide opaque int typedef. */
+/* Enum already defined by another header â€” provide opaque int typedef. */
 typedef int uft_rc_t;
 #ifndef UFT_ERROR_T_DEFINED
 #define UFT_ERROR_T_DEFINED
