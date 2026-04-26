@@ -519,20 +519,11 @@ static const int c64_sectors_per_track[40] = {
     17,17,17,17,17                                          /* 36-40 (extended) */
 };
 
-/* C64 GCR bitcell times per speed zone (ns) */
-static const double c64_bitcell_ns[4] = {
-    3250.0,  /* Zone 3: tracks 31-35, 17 sectors */
-    3500.0,  /* Zone 2: tracks 25-30, 18 sectors */
-    3750.0,  /* Zone 1: tracks 18-24, 19 sectors */
-    4000.0   /* Zone 0: tracks 1-17,  21 sectors */
-};
-
-static int c64_speed_zone(int track) {
-    if (track < 17) return 3;  /* zone 0 → longest bitcell */
-    if (track < 24) return 2;
-    if (track < 30) return 1;
-    return 0;
-}
+/* C64 speed zone + bitcell tables: see include/uft/uft_c64_gcr.h
+ * (uft_c64_speed_zone, uft_c64_track_bitrate, uft_c64_bytes_per_track).
+ * The previous duplicates here were dead code AND had inverted zone
+ * numbers + off-by-one boundaries vs. the canonical definition. Removed.
+ */
 
 static uint8_t c64_gcr_decode_byte(const uint8_t *bits, size_t pos, size_t bit_count) {
     /* Decode two 5-bit GCR groups → one byte */
