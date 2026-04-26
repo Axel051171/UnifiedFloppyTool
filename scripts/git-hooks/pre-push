@@ -26,15 +26,40 @@ python3 scripts/check_consistency.py
 echo "==> [3/3] CMake configure smoke …"
 TMP="$(mktemp -d -t uft-cmake-prepush-XXXXXX)"
 trap 'rm -rf "$TMP"' EXIT
-if ! cmake -B "$TMP" -DUFT_BUILD_TESTS=ON >"$TMP/configure.log" 2>&1; then
-    echo
-    echo "FAIL: cmake -B <tmp> -DUFT_BUILD_TESTS=ON failed."
-    echo "Last lines of configure log:"
-    tail -20 "$TMP/configure.log" | sed 's/^/    /'
-    echo
-    echo "Reproduce locally with:"
-    echo "    cmake -B build-tests -DUFT_BUILD_TESTS=ON"
-    exit 1
+
+# Pick a generator that matches available toolchains. CMake on Windows
+# defaults to "Visual Studio 17 2022" which fails on MinGW-only boxes
+# and on POSIX shells in general. Detect the dev environment.
+CMAKE_GEN_ARG=()
+if command -v ninja >/dev/null 2>&1; then
+    CMAKE_GEN_ARG=(-G Ninja)
+elif command -v mingw32-make >/dev/null 2>&1; then
+    CMAKE_GEN_ARG=(-G "MinGW Makefiles")
+fi  # else: let cmake pick its platform default (Unix Makefiles on POSIX)
+
+if cmake "${CMAKE_GEN_ARG[@]}" -B "$TMP" -DUFT_BUILD_TESTS=ON \
+        >"$TMP/configure.log" 2>&1; then
+    echo "==> all checks passed — push allowed"
+    exit 0
 fi
 
-echo "==> all checks passed — push allowed"
+# Configure failed. Distinguish "no compiler" (environment issue) from
+# real CMake errors (e.g. dangling target, parse error in CMakeLists).
+if grep -qE "No CMAKE_(C|CXX)_COMPILER could be found" "$TMP/configure.log"; then
+    echo
+    echo "WARN: CMake configure could not find a C/C++ compiler — skipping"
+    echo "      target-validation step. Install MinGW + Ninja or run from a"
+    echo "      VS Developer prompt to enable this last check locally."
+    echo "      CI gates the same thing, so this is non-blocking."
+    echo "==> checks 1+2 passed (3 skipped) — push allowed"
+    exit 0
+fi
+
+echo
+echo "FAIL: cmake -B <tmp> -DUFT_BUILD_TESTS=ON failed (not a compiler issue)."
+echo "Last lines of configure log:"
+tail -20 "$TMP/configure.log" | sed 's/^/    /'
+echo
+echo "Reproduce locally with:"
+echo "    cmake -B build-tests -DUFT_BUILD_TESTS=ON"
+exit 1
