@@ -1722,7 +1722,7 @@ SOURCES += \
     src/formats/atari/uft_pro_parser_v2.c \
     src/formats/atari/uft_stx_parser.c \
     src/formats/atari/uft_xfd_parser_v2.c \
-    src/formats/atari/xdf.c
+    src/formats/atari/uft_atari_xdf_legacy.c
 
 # BBC formats (4 files)
 SOURCES += \

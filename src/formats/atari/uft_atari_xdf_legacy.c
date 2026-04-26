@@ -1,6 +1,13 @@
 /**
- * @file xdf.c
- * @brief Atari XDF extended disk format
+ * @file uft_atari_xdf_legacy.c
+ * @brief Legacy Atari/X68000 XDF container stub.
+ *
+ * NOT the canonical XDF Adapter API (that lives in src/formats/xdf/,
+ * the universal container introduced in MF-006). This file pre-dates
+ * that work and only handles raw byte access to legacy Atari/X68000
+ * "XDF" disk dumps. The uft_ata_xdf_* prefix scopes it to the legacy
+ * Atari path; do not confuse with uft_xdf_* (universal adapter).
+ *
  * @version 3.8.0
  */
 #include "uft/floppy/uft_floppy_device.h"
