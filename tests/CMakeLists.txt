@@ -209,6 +209,9 @@ foreach(test_source ${TEST_SOURCES})
     elseif(${test_name} STREQUAL "test_diskcopy")
         # Include Disk Copy source directly (Apple format)
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/apple/uft_diskcopy.c)
+    elseif(${test_name} STREQUAL "test_adf_bam")
+        # Include ADF BAM source directly
+        target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/fs/uft_adf_bam.c)
     endif()
     
     if(TEST_LIBS)

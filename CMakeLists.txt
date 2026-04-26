@@ -125,6 +125,13 @@ set(UFT_RESOURCES resources/resources.qrc)
 # Target
 # ============================================================================
 
+# qmake is the production build per CLAUDE.md. CMake is used for the test
+# suite only. With UFT_BUILD_APP=OFF, CMake skips the Qt main-app target
+# entirely — avoids AUTOMOC / Qt-Widgets quirks that don't surface under
+# qmake's selective source list.
+option(UFT_BUILD_APP "Build the Qt main app (default OFF; qmake is canonical)" OFF)
+
+if(UFT_BUILD_APP)
 if(APPLE)
     set(MACOSX_BUNDLE_ICON_FILE app.icns)
     set(APP_ICON_MACOS "${CMAKE_SOURCE_DIR}/resources/icons/app.icns")
@@ -245,6 +252,8 @@ else()
             DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/uft
             OPTIONAL)
 endif()
+
+endif()  # UFT_BUILD_APP
 
 # ============================================================================
 # CPack
