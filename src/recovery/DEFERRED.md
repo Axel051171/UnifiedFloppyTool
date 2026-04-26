@@ -55,3 +55,25 @@ Together with the pre-existing `uft_recovery_wizard.c` and M2's
 `uft_salvage_fs.c`, that brings `src/recovery/` from 2 files up to 9.
 The 13 `uft_recovery_*.h` headers in the v4.x tree now have
 implementations for the majority of their surface.
+
+## Integrity-lint sweep — 2026-04-26 (TODO-A7)
+
+`bash .claude/skills/uft-recovery-integrity/scripts/lint_recovery.sh
+src/recovery/*.c` — **clean (11 file(s) scanned)**.
+
+The script checks the 5 invariants from the 2026-04-25 recovery-integrity
+audit:
+
+  - I1: linear interpolation of binary data
+  - I2: first-match CRC correction without uniqueness check
+  - I3: uses `passes[].data[]` but never reads `passes[].crc_ok`
+  - I4: `uint8_t` counter arrays that overflow at 256 inputs
+  - I5: write to `output[]` without paired `confidence_map[]` update
+
+All 11 .c files in `src/recovery/` (including `uft_recovery_wizard.c`
+and `uft_protection.c` per the v4.1.4 audit Finding 17) pass without
+warnings — no `INTEGRITY-OK` annotations needed.
+
+Re-run on every PR that touches this directory (a CI gate is a
+candidate follow-up; for now the pre-push hook covers SSOT/parity but
+not domain-specific recovery invariants).
