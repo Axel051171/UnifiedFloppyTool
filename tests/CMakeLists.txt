@@ -224,6 +224,10 @@ foreach(test_source ${TEST_SOURCES})
         # Include write-gate policy source directly
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/policy/uft_write_gate.c)
+    elseif(${test_name} STREQUAL "test_amiga_virus_db")
+        # Include Amiga virus signature DB source directly
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/fs/uft_amiga_virus_db.c)
     endif()
     
     if(TEST_LIBS)
