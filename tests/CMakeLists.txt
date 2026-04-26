@@ -212,6 +212,13 @@ foreach(test_source ${TEST_SOURCES})
     elseif(${test_name} STREQUAL "test_adf_bam")
         # Include ADF BAM source directly
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/fs/uft_adf_bam.c)
+    elseif(${test_name} STREQUAL "test_amiga_extract")
+        # Include AmigaDOS chain walker source directly
+        target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/fs/uft_amigados.c)
+    elseif(${test_name} STREQUAL "test_align_fuse_bridge")
+        # Include align-fuse bridge source directly
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/analysis/events/uft_align_fuse_bridge.c)
     endif()
     
     if(TEST_LIBS)

@@ -72,6 +72,7 @@ jobs:
           ldd build/UnifiedFloppyTool | grep -v "not found" || true
 
       - name: Build tests (CMake)
+        id: build_tests
         continue-on-error: true  # CMake build has known issues (Qt Charts, header compat)
         run: |
           cmake -B build-tests \
@@ -80,10 +81,11 @@ jobs:
           cmake --build build-tests --parallel $(nproc)
 
       - name: Run tests
-        # Only run if Build tests succeeded — otherwise ctest emits exit 8
-        # ("no tests were run") which produces a misleading second annotation
-        # on top of the real build failure.
-        if: success()
+        # Gate on the build's actual outcome, not its overall conclusion —
+        # continue-on-error: true above forces conclusion=success even on
+        # link errors. Without this, ctest reports exit 8 on top of the
+        # real build failure and produces a misleading second annotation.
+        if: steps.build_tests.outcome == 'success'
         continue-on-error: true
         run: |
           cd build-tests
