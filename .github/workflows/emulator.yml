@@ -123,29 +123,27 @@ jobs:
         run: |
           c1541 -attach tests/vectors/d64/empty_uft_test.d64 -dir > dir_output.txt 2>&1
           cat dir_output.txt
-          # The directory listing must contain the disk name we encoded.
-          # c1541 prints PETSCII-decoded names; "UFT-TEST" is pure ASCII so
-          # it passes through unchanged.
-          if grep -q 'UFT-TEST' dir_output.txt; then
+          # PETSCII-aware match: c1541 renders ASCII bytes 0x41-0x5A as
+          # lowercase a-z (because in the C64 unshifted character set
+          # 0x41-0x5A is the upper-case glyph, but in shifted/upper-lower
+          # mode it's lowercase). The fixture writes the ASCII bytes
+          # "UFT-TEST" (0x55 0x46 0x54 ...) which VICE displays as
+          # "uft-test". Match case-insensitive — both renderings prove
+          # the disk header round-tripped through VICE correctly.
+          if grep -qi 'uft-test' dir_output.txt; then
             echo "OK: VICE c1541 round-trip found the disk header"
           else
-            echo "FAIL: VICE c1541 did not show 'UFT-TEST' — fixture or"
-            echo "      VICE behaviour broke. Output above."
+            echo "FAIL: VICE c1541 did not show the disk header — fixture"
+            echo "      builder or VICE behaviour broke. Output above."
             exit 1
           fi
-
-      - name: c1541 validate (block count)
-        run: |
-          # An empty D64 should report 664 blocks free (683 total - 19
-          # reserved for track-18 BAM + directory).
-          c1541 -attach tests/vectors/d64/empty_uft_test.d64 -dir 2>&1 \
-            | tee dir_full.txt
-          if grep -q '664 blocks free' dir_full.txt; then
+          # Block count is also a strong assertion — empty 35-track D64
+          # has 664 free blocks (683 sectors - 19 reserved on track 18).
+          if grep -q '664 blocks free' dir_output.txt; then
             echo "OK: free-block count matches CBM DOS 2.6 spec"
           else
-            echo "INFO: free-block count differs from spec — c1541 may"
-            echo "      print the count differently; this is informational"
-            echo "      not a CI gate until UFT-CLI round-trip exists."
+            echo "FAIL: free-block count != 664 (got from output above)"
+            exit 1
           fi
 
       # Future steps (will be added when UFT CLI lands):
