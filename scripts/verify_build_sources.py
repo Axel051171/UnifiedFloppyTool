@@ -70,6 +70,16 @@ def collect_cmake_globbed_sources(repo_root: Path) -> set[str]:
 
 def parse_pro_sources(pro_path: Path) -> set[str]:
     """Return the SOURCES listed in the .pro file."""
+    return _parse_pro_lists(pro_path, key="SOURCES", exts=(".c", ".cpp"))
+
+
+def parse_pro_headers(pro_path: Path) -> set[str]:
+    """Return the HEADERS listed in the .pro file."""
+    return _parse_pro_lists(pro_path, key="HEADERS", exts=(".h", ".hpp"))
+
+
+def _parse_pro_lists(pro_path: Path, key: str, exts: tuple[str, ...]) -> set[str]:
+    """Common parser for SOURCES/HEADERS — handles `+=` and line continuations."""
     if not pro_path.is_file():
         sys.stderr.write(f"verify_build_sources: {pro_path} not found\n")
         sys.exit(2)
@@ -77,18 +87,19 @@ def parse_pro_sources(pro_path: Path) -> set[str]:
     text = pro_path.read_text(encoding="utf-8", errors="replace")
     text = re.sub(r"\\\s*\n\s*", " ", text)  # join line continuations
 
-    sources: set[str] = set()
+    pat = re.compile(rf"^\s*{key}\s*\+?=\s*(.*?)\s*$")
+    out: set[str] = set()
     for line in text.splitlines():
-        m = re.match(r"^\s*SOURCES\s*\+?=\s*(.*?)\s*$", line)
+        m = pat.match(line)
         if not m:
             continue
         rest = re.sub(r"#.*$", "", m.group(1))
         for tok in rest.split():
             if tok.startswith("$$") or tok == "+=":
                 continue
-            if tok.endswith((".c", ".cpp")):
-                sources.add(tok)
-    return sources
+            if tok.endswith(exts):
+                out.add(tok)
+    return out
 
 
 def load_baseline(path: Path) -> tuple[set[str], set[str]]:
@@ -138,11 +149,25 @@ def main() -> int:
                     "cleanup commits that legitimately resolve entries.")
     ap.add_argument("--root", type=Path,
                     default=Path(__file__).resolve().parent.parent)
+    ap.add_argument("--emit-cmake-sources", action="store_true",
+                    help="Print .pro SOURCES as semicolon-list for CMake "
+                    "execute_process(). Filters to files that exist on disk.")
+    ap.add_argument("--emit-cmake-headers", action="store_true",
+                    help="Print .pro HEADERS as semicolon-list for CMake.")
     args = ap.parse_args()
 
     repo = args.root.resolve()
     pro = repo / "UnifiedFloppyTool.pro"
     baseline_path = repo / "data" / "build_system_baseline.tsv"
+
+    if args.emit_cmake_sources or args.emit_cmake_headers:
+        items = (parse_pro_sources(pro) if args.emit_cmake_sources
+                 else parse_pro_headers(pro))
+        # Drop stale entries (file not on disk) so CMake never tries to
+        # compile a missing path.
+        existing = sorted(p for p in items if (repo / p).is_file())
+        sys.stdout.write(";".join(existing))
+        return 0
 
     cmake_sources = collect_cmake_globbed_sources(repo)
     pro_sources = parse_pro_sources(pro)

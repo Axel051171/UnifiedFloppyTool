@@ -68,29 +68,58 @@ endif()
 # Sources - collected via glob (mirrors .pro file)
 # ============================================================================
 
-file(GLOB_RECURSE UFT_SOURCES
-    "src/*.cpp"
-    "src/*.c"
+# Source list comes from UnifiedFloppyTool.pro (qmake) — single source of
+# truth. Avoids glob-recursive picking up orphan / experimental files that
+# qmake silently ignores but CMake would compile (multiple-definition land,
+# AUTOMOC redefinitions, missing-include cascades).
+#
+# Generated at configure time by scripts/verify_build_sources.py which is
+# the same parser the build-system parity check uses (MF-006).
+find_package(Python3 COMPONENTS Interpreter REQUIRED)
+
+execute_process(
+    COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/scripts/verify_build_sources.py
+            --emit-cmake-sources
+            --root ${CMAKE_SOURCE_DIR}
+    OUTPUT_VARIABLE UFT_SOURCES
+    RESULT_VARIABLE _src_rc
+    OUTPUT_STRIP_TRAILING_WHITESPACE
 )
-file(GLOB_RECURSE UFT_HEADERS
-    "include/*.h"
-    "src/*.h"
+if(NOT _src_rc EQUAL 0)
+    message(FATAL_ERROR "Failed to extract SOURCES from .pro (rc=${_src_rc})")
+endif()
+
+execute_process(
+    COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/scripts/verify_build_sources.py
+            --emit-cmake-headers
+            --root ${CMAKE_SOURCE_DIR}
+    OUTPUT_VARIABLE UFT_HEADERS
+    RESULT_VARIABLE _hdr_rc
+    OUTPUT_STRIP_TRAILING_WHITESPACE
 )
+if(NOT _hdr_rc EQUAL 0)
+    message(FATAL_ERROR "Failed to extract HEADERS from .pro (rc=${_hdr_rc})")
+endif()
+
+# Make absolute (verify_build_sources emits repo-relative paths).
+set(_abs_sources)
+foreach(_p ${UFT_SOURCES})
+    list(APPEND _abs_sources "${CMAKE_SOURCE_DIR}/${_p}")
+endforeach()
+set(UFT_SOURCES ${_abs_sources})
+unset(_abs_sources)
+
+set(_abs_headers)
+foreach(_p ${UFT_HEADERS})
+    list(APPEND _abs_headers "${CMAKE_SOURCE_DIR}/${_p}")
+endforeach()
+set(UFT_HEADERS ${_abs_headers})
+unset(_abs_headers)
+
 file(GLOB UFT_FORMS "forms/*.ui")
 set(UFT_RESOURCES resources/resources.qrc)
-
-# Remove test files from main build
-list(FILTER UFT_SOURCES EXCLUDE REGEX ".*/tests?/.*")
-list(FILTER UFT_SOURCES EXCLUDE REGEX ".*/test_.*")
-
-# Remove example files (not compiled, but AUTOMOC scans them)
-list(FILTER UFT_SOURCES EXCLUDE REGEX ".*_example\\.cpp$")
-
-# Remove dead code directories
-list(FILTER UFT_SOURCES EXCLUDE REGEX ".*/formats_v2/.*")
-
-# Remove duplicate main.cpp (use src/gui/main.cpp)
-list(FILTER UFT_SOURCES EXCLUDE REGEX "src/main\\.cpp$")
 
 # ============================================================================
 # Target
@@ -152,6 +181,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_SOURCE_DIR}/src/analysis
     ${CMAKE_SOURCE_DIR}/src/analysis/otdr
     ${CMAKE_SOURCE_DIR}/src/samdisk
+    ${CMAKE_SOURCE_DIR}/src/algorithms
     ${CMAKE_SOURCE_DIR}/src/algorithms/disk
     ${CMAKE_SOURCE_DIR}/src/algorithms/bitstream
     ${CMAKE_SOURCE_DIR}/src/hardware_providers
