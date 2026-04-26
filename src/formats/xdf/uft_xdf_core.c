@@ -16,6 +16,7 @@
  */
 
 #include "uft/xdf/uft_xdf_core.h"
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -105,7 +106,6 @@ static void init_crc32(void) {
     crc32_init = true;
 }
 
-__attribute__((unused))
 static uint32_t calc_crc32(const uint8_t *data, size_t len) {
     init_crc32();
     uint32_t crc = 0xFFFFFFFF;
@@ -676,10 +676,13 @@ int xdf_export(xdf_context_t *ctx, const char *path) {
                  "Cannot create file: %s", path);
         return -1;
     }
-    
-    /* Calculate CRC */
-    ctx->header.file_crc32 = 0;  /* TODO: Calculate */
-    
+
+    /* Two-pass CRC: write header with file_crc32 = 0, write all payload,
+     * close, then reopen and patch the field with the actual CRC32 over
+     * the full file (the header bytes are still computed with field = 0,
+     * which is the convention readers use for verification). */
+    ctx->header.file_crc32 = 0;
+
     /* Write header */
     fwrite(&ctx->header, 1, sizeof(xdf_header_t), f);
     
@@ -726,8 +729,52 @@ int xdf_export(xdf_context_t *ctx, const char *path) {
     if (ctx->sector_data && ctx->sector_data_size > 0) {
         fwrite(ctx->sector_data, 1, ctx->sector_data_size, f);
     }
-    
+
     fclose(f);
+
+    /* Pass 2 — patch file_crc32 in place. Re-open r+b, slurp the full
+     * file (with the field still 0), compute CRC32, seek to the field
+     * offset, write the value. Reader convention: file_crc32 == 0 is
+     * "legacy / unverified" (backward compat with files written before
+     * this code path landed); any non-zero value implies an integrity
+     * claim that readers SHOULD verify. */
+    {
+        FILE *rf = fopen(path, "rb+");
+        if (!rf) {
+            snprintf(ctx->last_error, sizeof(ctx->last_error),
+                     "CRC patch: cannot reopen %s", path);
+            return -1;
+        }
+        fseek(rf, 0, SEEK_END);
+        long total = ftell(rf);
+        fseek(rf, 0, SEEK_SET);
+        if (total <= 0) { fclose(rf); return -1; }
+
+        uint8_t *buf = (uint8_t *)malloc((size_t)total);
+        if (!buf) {
+            fclose(rf);
+            snprintf(ctx->last_error, sizeof(ctx->last_error),
+                     "CRC patch: out of memory (%ld bytes)", total);
+            return -1;
+        }
+        if (fread(buf, 1, (size_t)total, rf) != (size_t)total) {
+            free(buf); fclose(rf);
+            return -1;
+        }
+
+        uint32_t crc = calc_crc32(buf, (size_t)total);
+        free(buf);
+
+        ctx->header.file_crc32 = crc;
+        if (fseek(rf, (long)offsetof(xdf_header_t, file_crc32), SEEK_SET) != 0) {
+            fclose(rf); return -1;
+        }
+        if (fwrite(&crc, sizeof(uint32_t), 1, rf) != 1) {
+            fclose(rf); return -1;
+        }
+        fclose(rf);
+    }
+
     return 0;
 }
 
