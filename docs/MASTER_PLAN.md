@@ -226,7 +226,14 @@ Muss:
       not-implemented Error-String. 16 Tests grün. Header-Banner
       PLANNED → PARTIAL. Skeleton-Audit drops: 135 → 134, phantom
       decls 2659 → 2633. Multi-Session-libusb-Wiring offen.
-- [ ] M3.3 Applesauce HAL real statt stubbed
+- [~] M3.3 Applesauce HAL real statt stubbed — Commit df9c96e scaffold:
+      `src/hal/uft_applesauce.c` (+257 LOC) mit 13/20 echten Funktionen
+      (format_name 11 Formate, ticks_to_ns / ns_to_ticks / get_sample_clock
+      pure-math 8 MHz / 125 ns, lifecycle + Setter mit Input-Validation
+      inkl. revolutions 1..5, get_error). 7/20 honest Serial-Stubs.
+      17 Tests grün. Header-Banner PLANNED → PARTIAL. Skeleton-Audit
+      drops: 134 → 133, phantom-decls 2633 → 2613. Multi-Session-Serial-
+      Wiring (115200 8N1 Text-Protokoll) offen.
 - [ ] M3.4 UFI/Cowork-Backend (eigenes STM32H723-Firmware-Repo)
 - [~] M3.5 Emulator-CI-Pipeline (§6.1 aus `KNOWN_ISSUES.md`) — Scaffold
   in `.github/workflows/emulator.yml` (Commit 792713e): VICE x64 +
