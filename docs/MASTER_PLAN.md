@@ -218,7 +218,14 @@ Muss:
       40 MHz = 25 ns/Sample, nicht 40 ns), 167 track slots, 5 revs,
       Input-Validation aktiv, USB-VID/PID-Konstanten korrekt. 10 Tests
       grün. libusb-Integration folgt in Folge-Commit.
-- [ ] M3.2 XUM1541 HAL real statt stubbed
+- [~] M3.2 XUM1541 HAL real statt stubbed — Commit 10f170f scaffold:
+      `src/hal/uft_xum1541.c` (+359 LOC) mit 13/26 echten Funktionen
+      (drive_name, tracks_for_drive, sectors_for_track 4-zone für 1541
+      und IEEE-488 + fixed 40 für 1581, lifecycle + Setter mit Input-
+      Validation, get_error). 13/26 honest USB-Stubs return -1 +
+      not-implemented Error-String. 16 Tests grün. Header-Banner
+      PLANNED → PARTIAL. Skeleton-Audit drops: 135 → 134, phantom
+      decls 2659 → 2633. Multi-Session-libusb-Wiring offen.
 - [ ] M3.3 Applesauce HAL real statt stubbed
 - [ ] M3.4 UFI/Cowork-Backend (eigenes STM32H723-Firmware-Repo)
 - [~] M3.5 Emulator-CI-Pipeline (§6.1 aus `KNOWN_ISSUES.md`) — Scaffold
