@@ -136,11 +136,30 @@ endforeach()
 target_include_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_SOURCE_DIR}/include
     ${CMAKE_SOURCE_DIR}/include/uft
+    ${CMAKE_SOURCE_DIR}/include/uft/flux
+    ${CMAKE_SOURCE_DIR}/include/uft/hal
+    ${CMAKE_SOURCE_DIR}/include/uft/compat
+    ${CMAKE_SOURCE_DIR}/include/uft/formats
+    ${CMAKE_SOURCE_DIR}/include/uft/detect
+    ${CMAKE_SOURCE_DIR}/include/uft/analysis
+    ${CMAKE_SOURCE_DIR}/include/uft/forensic
+    ${CMAKE_SOURCE_DIR}/include/uft/protection
     ${CMAKE_SOURCE_DIR}/include/fatfs
     ${CMAKE_SOURCE_DIR}/include/fhis
     ${CMAKE_SOURCE_DIR}/include/tracks
     ${CMAKE_SOURCE_DIR}/src
     ${CMAKE_SOURCE_DIR}/src/gui
+    ${CMAKE_SOURCE_DIR}/src/analysis
+    ${CMAKE_SOURCE_DIR}/src/analysis/otdr
+    ${CMAKE_SOURCE_DIR}/src/samdisk
+    ${CMAKE_SOURCE_DIR}/src/algorithms/disk
+    ${CMAKE_SOURCE_DIR}/src/algorithms/bitstream
+    ${CMAKE_SOURCE_DIR}/src/hardware_providers
+    ${CMAKE_SOURCE_DIR}/src/widgets
+    ${CMAKE_SOURCE_DIR}/src/flux/fdc_bitstream
+    ${CMAKE_SOURCE_DIR}/src/hal
+    ${CMAKE_SOURCE_DIR}/src/protection
+    ${CMAKE_SOURCE_DIR}/src/core/unified
 )
 
 # ============================================================================
