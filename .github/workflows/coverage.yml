@@ -62,7 +62,7 @@ jobs:
           cd build
           # Only run tests that actually compiled (self-contained + core-linked)
           ctest --output-on-failure --timeout 120 \
-            --tests-regex "test_pll|test_recovery|test_roundtrip|test_writer_backend|test_woz_writer|test_platform" \
+            --tests-regex "test_pll|test_recovery|test_roundtrip|test_writer_backend|test_woz_writer|test_platform|test_scp_direct_hal|test_xum1541_hal|test_applesauce_hal" \
             || true
 
       - name: Generate coverage report

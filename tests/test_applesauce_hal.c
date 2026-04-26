@@ -14,6 +14,8 @@
 #include <math.h>
 #include <stdint.h>
 
+#include "uft/uft_error.h"
+
 #include "uft/hal/uft_applesauce.h"
 
 static int _pass = 0, _fail = 0, _last_fail = 0;
@@ -80,79 +82,80 @@ TEST(config_create_and_destroy) {
 
 TEST(set_format_validates) {
     uft_as_config_t *cfg = uft_as_config_create();
-    ASSERT(uft_as_set_format(cfg, UFT_AS_FMT_DOS33)  == 0);
-    ASSERT(uft_as_set_format(cfg, UFT_AS_FMT_RAW)    == 0);
-    ASSERT(uft_as_set_format(cfg, (uft_as_format_t)999) == -1);
-    ASSERT(uft_as_set_format(NULL, UFT_AS_FMT_DOS33) == -1);
+    ASSERT(uft_as_set_format(cfg, UFT_AS_FMT_DOS33)  == UFT_OK);
+    ASSERT(uft_as_set_format(cfg, UFT_AS_FMT_RAW)    == UFT_OK);
+    ASSERT(uft_as_set_format(cfg, (uft_as_format_t)999) == UFT_ERR_INVALID_ARG);
+    ASSERT(uft_as_set_format(NULL, UFT_AS_FMT_DOS33) == UFT_ERR_INVALID_ARG);
     uft_as_config_destroy(cfg);
 }
 
 TEST(set_drive_validates) {
     uft_as_config_t *cfg = uft_as_config_create();
-    ASSERT(uft_as_set_drive(cfg, UFT_AS_DRIVE_525) == 0);
-    ASSERT(uft_as_set_drive(cfg, UFT_AS_DRIVE_35)  == 0);
-    ASSERT(uft_as_set_drive(cfg, (uft_as_drive_t)42) == -1);
+    ASSERT(uft_as_set_drive(cfg, UFT_AS_DRIVE_525) == UFT_OK);
+    ASSERT(uft_as_set_drive(cfg, UFT_AS_DRIVE_35)  == UFT_OK);
+    ASSERT(uft_as_set_drive(cfg, (uft_as_drive_t)42) == UFT_ERR_INVALID_ARG);
     uft_as_config_destroy(cfg);
 }
 
 TEST(set_track_range_validates) {
     uft_as_config_t *cfg = uft_as_config_create();
-    ASSERT(uft_as_set_track_range(cfg, 0, 34) == 0);  /* DOS 3.3 */
-    ASSERT(uft_as_set_track_range(cfg, 0, 79) == 0);  /* 3.5"     */
-    ASSERT(uft_as_set_track_range(cfg, -1, 0) == -1); /* below 0  */
-    ASSERT(uft_as_set_track_range(cfg, 5, 4)  == -1); /* end<start */
-    ASSERT(uft_as_set_track_range(cfg, 0, 80) == -1); /* above 79 */
+    ASSERT(uft_as_set_track_range(cfg, 0, 34) == UFT_OK);  /* DOS 3.3 */
+    ASSERT(uft_as_set_track_range(cfg, 0, 79) == UFT_OK);  /* 3.5"     */
+    ASSERT(uft_as_set_track_range(cfg, -1, 0) == UFT_ERR_INVALID_ARG); /* below 0  */
+    ASSERT(uft_as_set_track_range(cfg, 5, 4)  == UFT_ERR_INVALID_ARG); /* end<start */
+    ASSERT(uft_as_set_track_range(cfg, 0, 80) == UFT_ERR_INVALID_ARG); /* above 79 */
     uft_as_config_destroy(cfg);
 }
 
 TEST(set_side_validates) {
     uft_as_config_t *cfg = uft_as_config_create();
-    ASSERT(uft_as_set_side(cfg, 0)  == 0);
-    ASSERT(uft_as_set_side(cfg, 1)  == 0);
-    ASSERT(uft_as_set_side(cfg, 2)  == -1);
-    ASSERT(uft_as_set_side(cfg, -1) == -1);
+    ASSERT(uft_as_set_side(cfg, 0)  == UFT_OK);
+    ASSERT(uft_as_set_side(cfg, 1)  == UFT_OK);
+    ASSERT(uft_as_set_side(cfg, 2)  == UFT_ERR_INVALID_ARG);
+    ASSERT(uft_as_set_side(cfg, -1) == UFT_ERR_INVALID_ARG);
     uft_as_config_destroy(cfg);
 }
 
 TEST(set_revolutions_validates) {
     uft_as_config_t *cfg = uft_as_config_create();
-    ASSERT(uft_as_set_revolutions(cfg, 1) == 0);
-    ASSERT(uft_as_set_revolutions(cfg, 5) == 0);  /* protocol max */
-    ASSERT(uft_as_set_revolutions(cfg, 0) == -1);
-    ASSERT(uft_as_set_revolutions(cfg, 6) == -1);
+    ASSERT(uft_as_set_revolutions(cfg, 1) == UFT_OK);
+    ASSERT(uft_as_set_revolutions(cfg, 5) == UFT_OK);  /* protocol max */
+    ASSERT(uft_as_set_revolutions(cfg, 0) == UFT_ERR_INVALID_ARG);
+    ASSERT(uft_as_set_revolutions(cfg, 6) == UFT_ERR_INVALID_ARG);
     uft_as_config_destroy(cfg);
 }
 
 /* ───────────────────────── Stubs return error ────────────────────── */
 
-TEST(open_returns_minus_one_with_error_msg) {
+TEST(open_returns_not_implemented_with_error_msg) {
     uft_as_config_t *cfg = uft_as_config_create();
-    ASSERT(uft_as_open(cfg, "/dev/ttyUSB0") == -1);
+    /* Valid args reach the stub body → NOT_IMPLEMENTED + serial msg. */
+    ASSERT(uft_as_open(cfg, "/dev/ttyUSB0") == UFT_ERR_NOT_IMPLEMENTED);
     ASSERT(strstr(uft_as_get_error(cfg), "serial") != NULL);
-    /* Bad inputs return -1 (not 0). */
-    ASSERT(uft_as_open(NULL, "/dev/ttyUSB0") == -1);
-    ASSERT(uft_as_open(cfg, NULL)            == -1);
+    /* Null inputs → INVALID_ARG. */
+    ASSERT(uft_as_open(NULL, "/dev/ttyUSB0") == UFT_ERR_INVALID_ARG);
+    ASSERT(uft_as_open(cfg, NULL)            == UFT_ERR_INVALID_ARG);
     uft_as_config_destroy(cfg);
 }
 
 TEST(detect_returns_zero_ports_safely) {
     char ports[4][64];
-    int n = uft_as_detect(ports, 4);
-    /* Stub: zero detected (no actual enumeration). NULL/zero size = -1. */
-    ASSERT(n == 0);
-    ASSERT(uft_as_detect(NULL, 4) == -1);
-    ASSERT(uft_as_detect(ports, 0) == -1);
+    /* Stub: enumerator runs, finds zero ports — UFT_OK with count=0
+     * is the honest "operation succeeded, nothing detected" answer. */
+    ASSERT(uft_as_detect(ports, 4)  == UFT_OK);
+    ASSERT(uft_as_detect(NULL, 4)   == UFT_ERR_INVALID_ARG);
+    ASSERT(uft_as_detect(ports, 0)  == UFT_ERR_INVALID_ARG);
 }
 
 TEST(read_track_validates_args_before_stub) {
     uft_as_config_t *cfg = uft_as_config_create();
     uint32_t *flux = NULL;
     size_t n = 0;
-    ASSERT(uft_as_read_track(cfg, -1, 0, &flux, &n) == -1);  /* track */
-    ASSERT(uft_as_read_track(cfg, 0, 2, &flux, &n)  == -1);  /* side  */
-    ASSERT(uft_as_read_track(cfg, 0, 0, NULL, &n)   == -1);  /* flux ptr */
-    /* Valid args still hit not-implemented. */
-    ASSERT(uft_as_read_track(cfg, 0, 0, &flux, &n) == -1);
+    ASSERT(uft_as_read_track(cfg, -1, 0, &flux, &n) == UFT_ERR_INVALID_ARG);
+    ASSERT(uft_as_read_track(cfg, 0, 2, &flux, &n)  == UFT_ERR_INVALID_ARG);
+    ASSERT(uft_as_read_track(cfg, 0, 0, NULL, &n)   == UFT_ERR_INVALID_ARG);
+    /* Valid args → NOT_IMPLEMENTED. */
+    ASSERT(uft_as_read_track(cfg, 0, 0, &flux, &n) == UFT_ERR_NOT_IMPLEMENTED);
     ASSERT(strstr(uft_as_get_error(cfg), "not implemented") != NULL);
     uft_as_config_destroy(cfg);
 }
@@ -160,10 +163,10 @@ TEST(read_track_validates_args_before_stub) {
 TEST(write_track_validates_args) {
     uft_as_config_t *cfg = uft_as_config_create();
     uint32_t flux[10] = {0};
-    ASSERT(uft_as_write_track(cfg, 0, 0, flux, 0)  == -1);  /* count==0 */
-    ASSERT(uft_as_write_track(cfg, -1, 0, flux, 5) == -1);
-    ASSERT(uft_as_write_track(cfg, 0, 2, flux, 5)  == -1);
-    ASSERT(uft_as_write_track(NULL, 0, 0, flux, 5) == -1);
+    ASSERT(uft_as_write_track(cfg, 0, 0, flux, 0)  == UFT_ERR_INVALID_ARG);  /* count==0 */
+    ASSERT(uft_as_write_track(cfg, -1, 0, flux, 5) == UFT_ERR_INVALID_ARG);
+    ASSERT(uft_as_write_track(cfg, 0, 2, flux, 5)  == UFT_ERR_INVALID_ARG);
+    ASSERT(uft_as_write_track(NULL, 0, 0, flux, 5) == UFT_ERR_INVALID_ARG);
     uft_as_config_destroy(cfg);
 }
 
@@ -186,7 +189,7 @@ int main(void) {
     RUN(set_track_range_validates);
     RUN(set_side_validates);
     RUN(set_revolutions_validates);
-    RUN(open_returns_minus_one_with_error_msg);
+    RUN(open_returns_not_implemented_with_error_msg);
     RUN(detect_returns_zero_ports_safely);
     RUN(read_track_validates_args_before_stub);
     RUN(write_track_validates_args);

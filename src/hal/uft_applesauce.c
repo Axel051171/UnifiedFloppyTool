@@ -122,14 +122,14 @@ void uft_as_config_destroy(uft_as_config_t *cfg) {
     free(cfg);
 }
 
-int uft_as_open(uft_as_config_t *cfg, const char *port) {
-    if (!cfg || !port) return -1;
+uft_error_t uft_as_open(uft_as_config_t *cfg, const char *port) {
+    if (!cfg || !port) return UFT_ERR_INVALID_ARG;
     /* M3.3 TODO: open serial port at 115200 8N1, send "info\n",
      * parse response for firmware version. */
     strncpy(cfg->port, port, sizeof(cfg->port) - 1);
     cfg->port[sizeof(cfg->port) - 1] = '\0';
     as_set_error(cfg, "uft_as_open: serial integration pending (M3.3)");
-    return -1;
+    return UFT_ERR_NOT_IMPLEMENTED;
 }
 
 void uft_as_close(uft_as_config_t *cfg) {
@@ -144,109 +144,109 @@ bool uft_as_is_connected(const uft_as_config_t *cfg) {
 
 /* ───────────────────────── Configuration ─────────────────────────── */
 
-int uft_as_set_format(uft_as_config_t *cfg, uft_as_format_t format) {
-    if (!cfg) return -1;
+uft_error_t uft_as_set_format(uft_as_config_t *cfg, uft_as_format_t format) {
+    if (!cfg) return UFT_ERR_INVALID_ARG;
     /* All enum values are accepted; "AUTO" lets the device decide. */
     if (format > UFT_AS_FMT_RAW) {
         as_set_error(cfg, "format out of enum range");
-        return -1;
+        return UFT_ERR_INVALID_ARG;
     }
     cfg->format = format;
-    return 0;
+    return UFT_OK;
 }
 
-int uft_as_set_drive(uft_as_config_t *cfg, uft_as_drive_t drive) {
-    if (!cfg) return -1;
+uft_error_t uft_as_set_drive(uft_as_config_t *cfg, uft_as_drive_t drive) {
+    if (!cfg) return UFT_ERR_INVALID_ARG;
     if (drive != UFT_AS_DRIVE_525 && drive != UFT_AS_DRIVE_35) {
         as_set_error(cfg, "drive must be 5.25\" or 3.5\"");
-        return -1;
+        return UFT_ERR_INVALID_ARG;
     }
     cfg->drive = drive;
-    return 0;
+    return UFT_OK;
 }
 
-int uft_as_set_track_range(uft_as_config_t *cfg, int start, int end) {
-    if (!cfg) return -1;
+uft_error_t uft_as_set_track_range(uft_as_config_t *cfg, int start, int end) {
+    if (!cfg) return UFT_ERR_INVALID_ARG;
     /* Apple II 5.25" goes 0..34 (35 tracks); 3.5" goes 0..79 (80 tracks).
      * Allow the wider range; per-drive validation happens at I/O time. */
     if (start < 0 || end < start || end > 79) {
         as_set_error(cfg, "track range invalid (0..79, start <= end)");
-        return -1;
+        return UFT_ERR_INVALID_ARG;
     }
     cfg->track_start = start;
     cfg->track_end   = end;
-    return 0;
+    return UFT_OK;
 }
 
-int uft_as_set_side(uft_as_config_t *cfg, int side) {
-    if (!cfg) return -1;
+uft_error_t uft_as_set_side(uft_as_config_t *cfg, int side) {
+    if (!cfg) return UFT_ERR_INVALID_ARG;
     if (side < 0 || side > 1) {
         as_set_error(cfg, "side must be 0 or 1");
-        return -1;
+        return UFT_ERR_INVALID_ARG;
     }
     cfg->side = side;
-    return 0;
+    return UFT_OK;
 }
 
-int uft_as_set_revolutions(uft_as_config_t *cfg, int revs) {
-    if (!cfg) return -1;
+uft_error_t uft_as_set_revolutions(uft_as_config_t *cfg, int revs) {
+    if (!cfg) return UFT_ERR_INVALID_ARG;
     /* Applesauce captures up to 5 revolutions per pass (matches the
      * "track 00 h0 capture 5 revolutions" max from the protocol spec). */
     if (revs < 1 || revs > 5) {
         as_set_error(cfg, "revolutions must be 1..5");
-        return -1;
+        return UFT_ERR_INVALID_ARG;
     }
     cfg->revolutions = revs;
-    return 0;
+    return UFT_OK;
 }
 
 /* ───────────────────────── Device info (stubs) ───────────────────── */
 
-int uft_as_detect(char ports[][64], int max_ports) {
-    if (!ports || max_ports <= 0) return -1;
+uft_error_t uft_as_detect(char ports[][64], int max_ports) {
+    if (!ports || max_ports <= 0) return UFT_ERR_INVALID_ARG;
     /* M3.3 TODO: enumerate serial ports, probe each with "info\n",
      * keep the ones that respond with the Applesauce signature. */
-    return 0;  /* zero ports detected — honest "no Applesauce found" */
+    return UFT_OK;  /* zero ports detected — honest "no Applesauce found" */
 }
 
-int uft_as_get_firmware_version(uft_as_config_t *cfg, char *version, size_t max_len) {
-    if (!cfg || !version || max_len == 0) return -1;
+uft_error_t uft_as_get_firmware_version(uft_as_config_t *cfg, char *version, size_t max_len) {
+    if (!cfg || !version || max_len == 0) return UFT_ERR_INVALID_ARG;
     /* M3.3 TODO: send "info\n", parse "Applesauce Firmware vX.Y.Z" reply. */
     version[0] = '\0';
     as_set_error(cfg, "uft_as_get_firmware_version: not implemented");
-    return -1;
+    return UFT_ERR_NOT_IMPLEMENTED;
 }
 
 /* ───────────────────────── Capture (stubs) ───────────────────────── */
 
-int uft_as_read_track(uft_as_config_t *cfg, int track, int side,
+uft_error_t uft_as_read_track(uft_as_config_t *cfg, int track, int side,
                        uint32_t **flux, size_t *count) {
-    if (!cfg || !flux || !count) return -1;
-    if (track < 0 || track > 79 || side < 0 || side > 1) return -1;
+    if (!cfg || !flux || !count) return UFT_ERR_INVALID_ARG;
+    if (track < 0 || track > 79 || side < 0 || side > 1) return UFT_ERR_INVALID_ARG;
     *flux = NULL;
     *count = 0;
     /* M3.3 TODO: send "track NN hN capture R revolutions\n",
      * parse hex-stream reply, malloc + return flux array. */
     as_set_error(cfg, "uft_as_read_track: not implemented");
-    return -1;
+    return UFT_ERR_NOT_IMPLEMENTED;
 }
 
-int uft_as_read_disk(uft_as_config_t *cfg, uft_as_callback_t callback, void *user) {
-    if (!cfg || !callback) return -1;
+uft_error_t uft_as_read_disk(uft_as_config_t *cfg, uft_as_callback_t callback, void *user) {
+    if (!cfg || !callback) return UFT_ERR_INVALID_ARG;
     (void)user;
     /* M3.3 TODO: iterate track range, call read_track per track,
      * invoke callback. */
     as_set_error(cfg, "uft_as_read_disk: not implemented");
-    return -1;
+    return UFT_ERR_NOT_IMPLEMENTED;
 }
 
-int uft_as_write_track(uft_as_config_t *cfg, int track, int side,
+uft_error_t uft_as_write_track(uft_as_config_t *cfg, int track, int side,
                         const uint32_t *flux, size_t count) {
-    if (!cfg || !flux) return -1;
-    if (track < 0 || track > 79 || side < 0 || side > 1 || count == 0) return -1;
+    if (!cfg || !flux) return UFT_ERR_INVALID_ARG;
+    if (track < 0 || track > 79 || side < 0 || side > 1 || count == 0) return UFT_ERR_INVALID_ARG;
     /* M3.3 TODO: encode flux + send "track NN hN write\n" + payload. */
     as_set_error(cfg, "uft_as_write_track: not implemented");
-    return -1;
+    return UFT_ERR_NOT_IMPLEMENTED;
 }
 
 /* ───────────────────────── Utility (real) ────────────────────────── */

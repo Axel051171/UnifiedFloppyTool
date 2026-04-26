@@ -6,18 +6,24 @@ Complete guide to setting up floppy disk controllers with UnifiedFloppyTool.
 
 ## Quick Compatibility Matrix
 
-| Controller | Read | Write | Flux | Price | Difficulty |
-|------------|:----:|:-----:|:----:|:-----:|:----------:|
-| **Greaseweazle F7** | ✅ | ✅ | ✅ | $30 | Easy |
-| **KryoFlux** | ✅ | ✅ | ✅ | $100 | Medium |
-| **SuperCard Pro** | ✅ | ✅ | ✅ | $100 | Medium |
-| **FluxEngine** | ✅ | ✅ | ✅ | $15 | Medium |
-| **Catweasel** | ✅ | ✅ | ✅ | Rare | Hard |
-| **XUM1541** | ✅ | ✅ | ❌ | $25 | Easy |
-| **ADF-Copy** | ✅ | ✅ | ⚠️ | DIY | Easy |
-| **FC5025** | ✅ | ❌ | ❌ | $50 | Easy |
-| **Applesauce** | ✅ | ✅ | ✅ | $80 | Easy |
-| **USB Floppy** | ✅ | ✅ | ❌ | $15 | Easy |
+| Controller | Read | Write | Flux | Backend | Price | Difficulty |
+|------------|:----:|:-----:|:----:|:-------:|:-----:|:----------:|
+| **Greaseweazle F7** | ✅ | ✅ | ✅ | native HAL | $30 | Easy |
+| **KryoFlux** | ✅ | ✅ | ✅ | DTC subprocess | $100 | Medium |
+| **SuperCard Pro** | ✅ | ✅ | ✅ | Qt + M3.1 partial HAL¹ | $100 | Medium |
+| **FluxEngine** | ✅ | ✅ | ✅ | fluxengine subprocess | $15 | Medium |
+| **Catweasel** | ✅ | ✅ | ✅ | (legacy / unmaintained) | Rare | Hard |
+| **XUM1541** | ✅ | ✅ | ❌ | Qt + M3.2 partial HAL¹ | $25 | Easy |
+| **ADF-Copy** | ✅ | ✅ | ⚠️ | (DIY adapter) | DIY | Easy |
+| **FC5025** | ✅ | ❌ | ❌ | fcimage subprocess | $50 | Easy |
+| **Applesauce** | ✅ | ✅ | ✅ | Qt + M3.3 partial HAL¹ | $80 | Easy |
+| **USB Floppy** | ✅ | ✅ | ❌ | Qt provider | $15 | Easy |
+
+¹ "Partial HAL" = pure-utility functions and lifecycle scaffold real,
+USB/serial wiring still pending (see `docs/MASTER_PLAN.md` §M3 — M3.1
+SCP-Direct libusb, M3.2 XUM1541 libusb, M3.3 Applesauce serial). Until
+the wiring lands, hardware access goes through the existing Qt
+provider (subprocess or QSerialPort), not the C HAL.
 
 ---
 

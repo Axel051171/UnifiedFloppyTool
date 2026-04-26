@@ -16,6 +16,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "uft/uft_error.h"
+
 #include "uft/hal/uft_xum1541.h"
 
 static int _pass = 0, _fail = 0, _last_fail = 0;
@@ -28,11 +30,11 @@ static int _pass = 0, _fail = 0, _last_fail = 0;
 /* ───────────────────────── Pure-utility lookups ──────────────────── */
 
 TEST(drive_name_known_drives) {
-    ASSERT(strcmp(uft_xum_drive_name(UFT_CBM_DRIVE_1541),    "Commodore 1541")    == 0);
+    ASSERT(strcmp(uft_xum_drive_name(UFT_CBM_DRIVE_1541),    "Commodore 1541") == 0);
     ASSERT(strcmp(uft_xum_drive_name(UFT_CBM_DRIVE_1541_II), "Commodore 1541-II") == 0);
-    ASSERT(strcmp(uft_xum_drive_name(UFT_CBM_DRIVE_1571),    "Commodore 1571")    == 0);
-    ASSERT(strcmp(uft_xum_drive_name(UFT_CBM_DRIVE_1581),    "Commodore 1581")    == 0);
-    ASSERT(strcmp(uft_xum_drive_name(UFT_CBM_DRIVE_AUTO),    "auto-detect")       == 0);
+    ASSERT(strcmp(uft_xum_drive_name(UFT_CBM_DRIVE_1571),    "Commodore 1571") == 0);
+    ASSERT(strcmp(uft_xum_drive_name(UFT_CBM_DRIVE_1581),    "Commodore 1581") == 0);
+    ASSERT(strcmp(uft_xum_drive_name(UFT_CBM_DRIVE_AUTO),    "auto-detect") == 0);
 }
 
 TEST(drive_name_unknown_returns_unknown) {
@@ -46,7 +48,7 @@ TEST(tracks_for_drive_canonical_values) {
     ASSERT(uft_xum_tracks_for_drive(UFT_CBM_DRIVE_1581)    == 80);
     ASSERT(uft_xum_tracks_for_drive(UFT_CBM_DRIVE_8050)    == 77);
     ASSERT(uft_xum_tracks_for_drive(UFT_CBM_DRIVE_8250)    == 77);
-    ASSERT(uft_xum_tracks_for_drive(UFT_CBM_DRIVE_AUTO)    == 0);
+    ASSERT(uft_xum_tracks_for_drive(UFT_CBM_DRIVE_AUTO) == 0);
 }
 
 TEST(sectors_for_track_1541_zones) {
@@ -65,7 +67,7 @@ TEST(sectors_for_track_1541_zones) {
     /* Extended tracks 36..42 stay zone 0 */
     ASSERT(uft_xum_sectors_for_track(UFT_CBM_DRIVE_1541, 40) == 17);
     /* Out of range */
-    ASSERT(uft_xum_sectors_for_track(UFT_CBM_DRIVE_1541, 0)  == 0);
+    ASSERT(uft_xum_sectors_for_track(UFT_CBM_DRIVE_1541, 0) == 0);
     ASSERT(uft_xum_sectors_for_track(UFT_CBM_DRIVE_1541, 43) == 0);
 }
 
@@ -74,7 +76,7 @@ TEST(sectors_for_track_1581_fixed) {
     ASSERT(uft_xum_sectors_for_track(UFT_CBM_DRIVE_1581, 1)  == 40);
     ASSERT(uft_xum_sectors_for_track(UFT_CBM_DRIVE_1581, 80) == 40);
     ASSERT(uft_xum_sectors_for_track(UFT_CBM_DRIVE_1581, 81) == 0);
-    ASSERT(uft_xum_sectors_for_track(UFT_CBM_DRIVE_1581, 0)  == 0);
+    ASSERT(uft_xum_sectors_for_track(UFT_CBM_DRIVE_1581, 0) == 0);
 }
 
 TEST(sectors_for_track_8050_zones) {
@@ -109,51 +111,53 @@ TEST(config_create_and_destroy) {
 TEST(set_device_validates_iec_range) {
     uft_xum_config_t *cfg = uft_xum_config_create();
     ASSERT(cfg != NULL);
-    ASSERT(uft_xum_set_device(cfg, 8)  == 0);   /* min IEC */
-    ASSERT(uft_xum_set_device(cfg, 15) == 0);   /* max IEC */
-    ASSERT(uft_xum_set_device(cfg, 7)  == -1);  /* below */
-    ASSERT(uft_xum_set_device(cfg, 16) == -1);  /* above */
-    ASSERT(uft_xum_set_device(NULL, 8) == -1);  /* NULL ctx */
+    ASSERT(uft_xum_set_device(cfg, 8)  == UFT_OK);   /* min IEC */
+    ASSERT(uft_xum_set_device(cfg, 15) == UFT_OK);   /* max IEC */
+    ASSERT(uft_xum_set_device(cfg, 7)  == UFT_ERR_INVALID_ARG);  /* below */
+    ASSERT(uft_xum_set_device(cfg, 16) == UFT_ERR_INVALID_ARG);  /* above */
+    ASSERT(uft_xum_set_device(NULL, 8) == UFT_ERR_INVALID_ARG);  /* NULL ctx */
     uft_xum_config_destroy(cfg);
 }
 
 TEST(set_track_range_validates) {
     uft_xum_config_t *cfg = uft_xum_config_create();
-    ASSERT(uft_xum_set_track_range(cfg, 1, 35)  == 0);
-    ASSERT(uft_xum_set_track_range(cfg, 1, 80)  == 0);
-    ASSERT(uft_xum_set_track_range(cfg, 0, 35)  == -1);  /* start < 1 */
-    ASSERT(uft_xum_set_track_range(cfg, 35, 1)  == -1);  /* end < start */
-    ASSERT(uft_xum_set_track_range(cfg, 1, 81)  == -1);  /* end > 80 */
+    ASSERT(uft_xum_set_track_range(cfg, 1, 35)  == UFT_OK);
+    ASSERT(uft_xum_set_track_range(cfg, 1, 80)  == UFT_OK);
+    ASSERT(uft_xum_set_track_range(cfg, 0, 35)  == UFT_ERR_INVALID_ARG);  /* start < 1 */
+    ASSERT(uft_xum_set_track_range(cfg, 35, 1)  == UFT_ERR_INVALID_ARG);  /* end < start */
+    ASSERT(uft_xum_set_track_range(cfg, 1, 81)  == UFT_ERR_INVALID_ARG);  /* end > 80 */
     uft_xum_config_destroy(cfg);
 }
 
 TEST(set_side_validates) {
     uft_xum_config_t *cfg = uft_xum_config_create();
-    ASSERT(uft_xum_set_side(cfg, 0) == 0);
-    ASSERT(uft_xum_set_side(cfg, 1) == 0);
-    ASSERT(uft_xum_set_side(cfg, 2) == -1);
-    ASSERT(uft_xum_set_side(cfg, -1) == -1);
+    ASSERT(uft_xum_set_side(cfg, 0) == UFT_OK);
+    ASSERT(uft_xum_set_side(cfg, 1) == UFT_OK);
+    ASSERT(uft_xum_set_side(cfg, 2) == UFT_ERR_INVALID_ARG);
+    ASSERT(uft_xum_set_side(cfg, -1) == UFT_ERR_INVALID_ARG);
     uft_xum_config_destroy(cfg);
 }
 
 TEST(set_retries_validates) {
     uft_xum_config_t *cfg = uft_xum_config_create();
-    ASSERT(uft_xum_set_retries(cfg, 0)   == 0);   /* zero retries OK */
-    ASSERT(uft_xum_set_retries(cfg, 100) == 0);
-    ASSERT(uft_xum_set_retries(cfg, -1)  == -1);
-    ASSERT(uft_xum_set_retries(cfg, 101) == -1);
+    ASSERT(uft_xum_set_retries(cfg, 0)   == UFT_OK);   /* zero retries OK */
+    ASSERT(uft_xum_set_retries(cfg, 100) == UFT_OK);
+    ASSERT(uft_xum_set_retries(cfg, -1)  == UFT_ERR_INVALID_ARG);
+    ASSERT(uft_xum_set_retries(cfg, 101) == UFT_ERR_INVALID_ARG);
     uft_xum_config_destroy(cfg);
 }
 
 /* ───────────────────────── USB stubs return error ────────────────── */
 
-TEST(open_returns_minus_one_with_error_msg) {
+TEST(open_returns_not_implemented_with_error_msg) {
     uft_xum_config_t *cfg = uft_xum_config_create();
-    ASSERT(uft_xum_open(cfg, 8) == -1);
-    /* error string set */
+    /* Valid args reach the stub body → NOT_IMPLEMENTED + error msg. */
+    ASSERT(uft_xum_open(cfg, 8) == UFT_ERR_NOT_IMPLEMENTED);
     const char *err = uft_xum_get_error(cfg);
     ASSERT(err != NULL);
     ASSERT(strstr(err, "libusb") != NULL);
+    /* Null ctx → INVALID_ARG (validation precedes stub return). */
+    ASSERT(uft_xum_open(NULL, 8) == UFT_ERR_INVALID_ARG);
     uft_xum_config_destroy(cfg);
 }
 
@@ -162,24 +166,25 @@ TEST(read_track_gcr_stub_rejects_invalid_args) {
     uint8_t *gcr = NULL;
     size_t size = 0;
     /* track < 1 */
-    ASSERT(uft_xum_read_track_gcr(cfg, 0, 0, &gcr, &size) == -1);
+    ASSERT(uft_xum_read_track_gcr(cfg, 0, 0, &gcr, &size) == UFT_ERR_INVALID_ARG);
     /* side > 1 */
-    ASSERT(uft_xum_read_track_gcr(cfg, 1, 2, &gcr, &size) == -1);
+    ASSERT(uft_xum_read_track_gcr(cfg, 1, 2, &gcr, &size) == UFT_ERR_INVALID_ARG);
     /* NULL ctx / out params */
-    ASSERT(uft_xum_read_track_gcr(NULL, 1, 0, &gcr, &size) == -1);
-    ASSERT(uft_xum_read_track_gcr(cfg, 1, 0, NULL, &size)  == -1);
-    ASSERT(uft_xum_read_track_gcr(cfg, 1, 0, &gcr, NULL)   == -1);
+    ASSERT(uft_xum_read_track_gcr(NULL, 1, 0, &gcr, &size) == UFT_ERR_INVALID_ARG);
+    ASSERT(uft_xum_read_track_gcr(cfg, 1, 0, NULL, &size)  == UFT_ERR_INVALID_ARG);
+    ASSERT(uft_xum_read_track_gcr(cfg, 1, 0, &gcr, NULL)   == UFT_ERR_INVALID_ARG);
+    /* Valid args → NOT_IMPLEMENTED. */
+    ASSERT(uft_xum_read_track_gcr(cfg, 1, 0, &gcr, &size)  == UFT_ERR_NOT_IMPLEMENTED);
     uft_xum_config_destroy(cfg);
 }
 
 TEST(iec_commands_validate_address_range) {
     uft_xum_config_t *cfg = uft_xum_config_create();
-    ASSERT(uft_xum_iec_listen(cfg, -1, 0) == -1);
-    ASSERT(uft_xum_iec_listen(cfg, 32, 0) == -1);
-    ASSERT(uft_xum_iec_talk(cfg, 8, 32)   == -1);
-    /* Even valid args still return -1 because USB layer is stubbed —
-     * but the error message must be "not implemented" not "out of range" */
-    ASSERT(uft_xum_iec_listen(cfg, 8, 0) == -1);
+    ASSERT(uft_xum_iec_listen(cfg, -1, 0) == UFT_ERR_INVALID_ARG);
+    ASSERT(uft_xum_iec_listen(cfg, 32, 0) == UFT_ERR_INVALID_ARG);
+    ASSERT(uft_xum_iec_talk(cfg, 8, 32)   == UFT_ERR_INVALID_ARG);
+    /* Valid args → NOT_IMPLEMENTED + "not implemented" message. */
+    ASSERT(uft_xum_iec_listen(cfg, 8, 0) == UFT_ERR_NOT_IMPLEMENTED);
     ASSERT(strstr(uft_xum_get_error(cfg), "not implemented") != NULL);
     uft_xum_config_destroy(cfg);
 }
@@ -204,7 +209,7 @@ int main(void) {
     RUN(set_track_range_validates);
     RUN(set_side_validates);
     RUN(set_retries_validates);
-    RUN(open_returns_minus_one_with_error_msg);
+    RUN(open_returns_not_implemented_with_error_msg);
     RUN(read_track_gcr_stub_rejects_invalid_args);
     RUN(iec_commands_validate_address_range);
     RUN(get_error_handles_null);

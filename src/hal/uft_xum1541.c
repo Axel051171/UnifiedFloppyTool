@@ -12,9 +12,13 @@
  *       - uft_xum_drive_name()        — enum → display string
  *       - uft_xum_tracks_for_drive()  — drive type → physical track count
  *       - uft_xum_sectors_for_track() — drive+track → CBM sector count
- *   (3) Honest NOT_IMPLEMENTED stubs for the 23 remaining functions
- *       (lifecycle, USB I/O, IEC bus). All return -1 with config error
- *       message set, so callers can introspect via uft_xum_get_error().
+ *   (3) Honest stubs for the 18 USB/IEC-touching functions. Return
+ *       UFT_ERR_NOT_IMPLEMENTED with config error message set; callers
+ *       introspect via uft_xum_get_error(). Input-validation paths
+ *       return UFT_ERR_INVALID_ARG. Status-returning sigs are uft_error_t
+ *       (matching SCP-Direct M3.1 + rest of UFT). Pure-data lookups
+ *       (tracks_for_drive, sectors_for_track) keep `int` return because
+ *       0 = "invalid track / unknown drive" sentinel value.
  *
  * Prinzip 1 honesty rules per .claude/skills/uft-hal-backend:
  *   - never UFT_OK from a stub
@@ -169,12 +173,12 @@ void uft_xum_config_destroy(uft_xum_config_t *cfg) {
     free(cfg);
 }
 
-int uft_xum_open(uft_xum_config_t *cfg, int device_num) {
-    if (!cfg) return -1;
+uft_error_t uft_xum_open(uft_xum_config_t *cfg, int device_num) {
+    if (!cfg) return UFT_ERR_INVALID_ARG;
     /* M3.2 TODO: libusb_init, enumerate devices by VID/PID, open. */
     cfg->device_num = device_num;
     xum_set_error(cfg, "uft_xum_open: libusb integration pending (M3.2)");
-    return -1;
+    return UFT_ERR_NOT_IMPLEMENTED;
 }
 
 void uft_xum_close(uft_xum_config_t *cfg) {
@@ -190,165 +194,165 @@ bool uft_xum_is_connected(const uft_xum_config_t *cfg) {
 
 /* ───────────────────────── Device info (stubs) ───────────────────── */
 
-int uft_xum_detect(int *device_count) {
+uft_error_t uft_xum_detect(int *device_count) {
     if (device_count) *device_count = 0;
     /* M3.2 TODO: libusb enumerate; count XUM1541 devices. */
-    return -1;
+    return UFT_ERR_INVALID_ARG;
 }
 
-int uft_xum_identify_drive(uft_xum_config_t *cfg, uft_cbm_drive_t *type) {
-    if (!cfg || !type) return -1;
+uft_error_t uft_xum_identify_drive(uft_xum_config_t *cfg, uft_cbm_drive_t *type) {
+    if (!cfg || !type) return UFT_ERR_INVALID_ARG;
     /* M3.2 TODO: send IEC "M-R" memory-read commands to probe drive ROM
      * signature, then map to UFT_CBM_DRIVE_* enum. */
     *type = UFT_CBM_DRIVE_AUTO;
     xum_set_error(cfg, "uft_xum_identify_drive: not implemented");
-    return -1;
+    return UFT_ERR_NOT_IMPLEMENTED;
 }
 
-int uft_xum_get_status(uft_xum_config_t *cfg, char *status, size_t max_len) {
-    if (!cfg || !status || max_len == 0) return -1;
+uft_error_t uft_xum_get_status(uft_xum_config_t *cfg, char *status, size_t max_len) {
+    if (!cfg || !status || max_len == 0) return UFT_ERR_INVALID_ARG;
     /* M3.2 TODO: read status channel (secondary 15) from drive. */
     status[0] = '\0';
     xum_set_error(cfg, "uft_xum_get_status: not implemented");
-    return -1;
+    return UFT_ERR_NOT_IMPLEMENTED;
 }
 
 /* ───────────────────────── Configuration ─────────────────────────── */
 
-int uft_xum_set_device(uft_xum_config_t *cfg, int device_num) {
-    if (!cfg) return -1;
+uft_error_t uft_xum_set_device(uft_xum_config_t *cfg, int device_num) {
+    if (!cfg) return UFT_ERR_INVALID_ARG;
     if (device_num < 8 || device_num > 15) {
         xum_set_error(cfg, "device_num out of IEC range (8..15)");
-        return -1;
+        return UFT_ERR_INVALID_ARG;
     }
     cfg->device_num = device_num;
-    return 0;
+    return UFT_OK;
 }
 
-int uft_xum_set_track_range(uft_xum_config_t *cfg, int start, int end) {
-    if (!cfg) return -1;
+uft_error_t uft_xum_set_track_range(uft_xum_config_t *cfg, int start, int end) {
+    if (!cfg) return UFT_ERR_INVALID_ARG;
     if (start < 1 || end < start || end > 80) {
         xum_set_error(cfg, "track range invalid (1..80, start <= end)");
-        return -1;
+        return UFT_ERR_INVALID_ARG;
     }
     cfg->track_start = start;
     cfg->track_end   = end;
-    return 0;
+    return UFT_OK;
 }
 
-int uft_xum_set_side(uft_xum_config_t *cfg, int side) {
-    if (!cfg) return -1;
+uft_error_t uft_xum_set_side(uft_xum_config_t *cfg, int side) {
+    if (!cfg) return UFT_ERR_INVALID_ARG;
     if (side < 0 || side > 1) {
         xum_set_error(cfg, "side must be 0 or 1");
-        return -1;
+        return UFT_ERR_INVALID_ARG;
     }
     cfg->side = side;
-    return 0;
+    return UFT_OK;
 }
 
-int uft_xum_set_retries(uft_xum_config_t *cfg, int count) {
-    if (!cfg) return -1;
+uft_error_t uft_xum_set_retries(uft_xum_config_t *cfg, int count) {
+    if (!cfg) return UFT_ERR_INVALID_ARG;
     if (count < 0 || count > 100) {
         xum_set_error(cfg, "retry count out of range (0..100)");
-        return -1;
+        return UFT_ERR_INVALID_ARG;
     }
     cfg->retries = count;
-    return 0;
+    return UFT_OK;
 }
 
 /* ───────────────────────── Capture (stubs) ───────────────────────── */
 
-int uft_xum_read_track_gcr(uft_xum_config_t *cfg, int track, int side,
+uft_error_t uft_xum_read_track_gcr(uft_xum_config_t *cfg, int track, int side,
                             uint8_t **gcr, size_t *size) {
-    if (!cfg || !gcr || !size) return -1;
-    if (track < 1 || side < 0 || side > 1) return -1;
+    if (!cfg || !gcr || !size) return UFT_ERR_INVALID_ARG;
+    if (track < 1 || side < 0 || side > 1) return UFT_ERR_INVALID_ARG;
     *gcr = NULL;
     *size = 0;
     /* M3.2 TODO: send U1: command to drive, read GCR via fastloader. */
     xum_set_error(cfg, "uft_xum_read_track_gcr: not implemented");
-    return -1;
+    return UFT_ERR_NOT_IMPLEMENTED;
 }
 
-int uft_xum_read_track(uft_xum_config_t *cfg, int track, int side,
+uft_error_t uft_xum_read_track(uft_xum_config_t *cfg, int track, int side,
                         uint8_t *sectors, int *sector_count,
                         uint8_t *errors) {
-    if (!cfg || !sectors || !sector_count || !errors) return -1;
-    if (track < 1 || side < 0 || side > 1) return -1;
+    if (!cfg || !sectors || !sector_count || !errors) return UFT_ERR_INVALID_ARG;
+    if (track < 1 || side < 0 || side > 1) return UFT_ERR_INVALID_ARG;
     *sector_count = 0;
     /* M3.2 TODO: per-sector U1 read + status check. */
     xum_set_error(cfg, "uft_xum_read_track: not implemented");
-    return -1;
+    return UFT_ERR_NOT_IMPLEMENTED;
 }
 
-int uft_xum_read_disk(uft_xum_config_t *cfg, uft_xum_callback_t callback,
+uft_error_t uft_xum_read_disk(uft_xum_config_t *cfg, uft_xum_callback_t callback,
                        void *user) {
-    if (!cfg || !callback) return -1;
+    if (!cfg || !callback) return UFT_ERR_INVALID_ARG;
     (void)user;
     /* M3.2 TODO: iterate all tracks, invoke callback per track. */
     xum_set_error(cfg, "uft_xum_read_disk: not implemented");
-    return -1;
+    return UFT_ERR_NOT_IMPLEMENTED;
 }
 
-int uft_xum_write_track(uft_xum_config_t *cfg, int track, int side,
+uft_error_t uft_xum_write_track(uft_xum_config_t *cfg, int track, int side,
                          const uint8_t *data, size_t size) {
-    if (!cfg || !data) return -1;
-    if (track < 1 || side < 0 || side > 1 || size == 0) return -1;
+    if (!cfg || !data) return UFT_ERR_INVALID_ARG;
+    if (track < 1 || side < 0 || side > 1 || size == 0) return UFT_ERR_INVALID_ARG;
     /* M3.2 TODO: write via U2 command. */
     xum_set_error(cfg, "uft_xum_write_track: not implemented");
-    return -1;
+    return UFT_ERR_NOT_IMPLEMENTED;
 }
 
 /* ───────────────────────── Low-level IEC (stubs) ─────────────────── */
 
-int uft_xum_iec_listen(uft_xum_config_t *cfg, int device, int secondary) {
-    if (!cfg) return -1;
+uft_error_t uft_xum_iec_listen(uft_xum_config_t *cfg, int device, int secondary) {
+    if (!cfg) return UFT_ERR_INVALID_ARG;
     if (device < 0 || device > 31 || secondary < 0 || secondary > 31) {
         xum_set_error(cfg, "IEC device/secondary out of range");
-        return -1;
+        return UFT_ERR_INVALID_ARG;
     }
     /* M3.2 TODO: bulk-out byte UFT_IEC_LISTEN | device, then secondary. */
     xum_set_error(cfg, "uft_xum_iec_listen: not implemented");
-    return -1;
+    return UFT_ERR_NOT_IMPLEMENTED;
 }
 
-int uft_xum_iec_talk(uft_xum_config_t *cfg, int device, int secondary) {
-    if (!cfg) return -1;
+uft_error_t uft_xum_iec_talk(uft_xum_config_t *cfg, int device, int secondary) {
+    if (!cfg) return UFT_ERR_INVALID_ARG;
     if (device < 0 || device > 31 || secondary < 0 || secondary > 31) {
         xum_set_error(cfg, "IEC device/secondary out of range");
-        return -1;
+        return UFT_ERR_INVALID_ARG;
     }
     /* M3.2 TODO: bulk-out byte UFT_IEC_TALK | device, then secondary. */
     xum_set_error(cfg, "uft_xum_iec_talk: not implemented");
-    return -1;
+    return UFT_ERR_NOT_IMPLEMENTED;
 }
 
-int uft_xum_iec_unlisten(uft_xum_config_t *cfg) {
-    if (!cfg) return -1;
+uft_error_t uft_xum_iec_unlisten(uft_xum_config_t *cfg) {
+    if (!cfg) return UFT_ERR_INVALID_ARG;
     /* M3.2 TODO: bulk-out byte UFT_IEC_UNLISTEN. */
     xum_set_error(cfg, "uft_xum_iec_unlisten: not implemented");
-    return -1;
+    return UFT_ERR_NOT_IMPLEMENTED;
 }
 
-int uft_xum_iec_untalk(uft_xum_config_t *cfg) {
-    if (!cfg) return -1;
+uft_error_t uft_xum_iec_untalk(uft_xum_config_t *cfg) {
+    if (!cfg) return UFT_ERR_INVALID_ARG;
     /* M3.2 TODO: bulk-out byte UFT_IEC_UNTALK. */
     xum_set_error(cfg, "uft_xum_iec_untalk: not implemented");
-    return -1;
+    return UFT_ERR_NOT_IMPLEMENTED;
 }
 
-int uft_xum_iec_write(uft_xum_config_t *cfg, const uint8_t *data, size_t len) {
-    if (!cfg || !data) return -1;
-    if (len == 0) return 0;  /* nothing to write — not an error */
+uft_error_t uft_xum_iec_write(uft_xum_config_t *cfg, const uint8_t *data, size_t len) {
+    if (!cfg || !data) return UFT_ERR_INVALID_ARG;
+    if (len == 0) return UFT_OK;  /* nothing to write — not an error */
     /* M3.2 TODO: bulk transfer. */
     xum_set_error(cfg, "uft_xum_iec_write: not implemented");
-    return -1;
+    return UFT_ERR_NOT_IMPLEMENTED;
 }
 
-int uft_xum_iec_read(uft_xum_config_t *cfg, uint8_t *data, size_t max_len) {
-    if (!cfg || !data || max_len == 0) return -1;
+uft_error_t uft_xum_iec_read(uft_xum_config_t *cfg, uint8_t *data, size_t max_len) {
+    if (!cfg || !data || max_len == 0) return UFT_ERR_INVALID_ARG;
     /* M3.2 TODO: bulk transfer. */
     xum_set_error(cfg, "uft_xum_iec_read: not implemented");
-    return -1;
+    return UFT_ERR_NOT_IMPLEMENTED;
 }
 
 /* ───────────────────────── Utility (real) ────────────────────────── */

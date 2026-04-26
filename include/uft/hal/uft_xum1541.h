@@ -20,9 +20,12 @@
  *     _is_connected, uft_xum_set_device / _track_range / _side / _retries,
  *     uft_xum_get_error, uft_xum_close (no-op safe), uft_xum_iec_write
  *     short-circuit on len==0.
- *   - 13 are HONEST STUBS: return -1 with a "not implemented" error
- *     string (uft_xum_get_error retrieves it). USB I/O + IEC bus +
- *     track read/write all wait for the libusb layer (M3.2 follow-up).
+ *   - 13 are HONEST STUBS: return UFT_ERR_NOT_IMPLEMENTED with a
+ *     descriptive error string in cfg->last_error (uft_xum_get_error
+ *     retrieves it). USB I/O + IEC bus + track read/write all wait
+ *     for the libusb layer (M3.2 follow-up). Status-returning sigs are
+ *     uft_error_t (matching SCP-Direct M3.1 + Applesauce M3.3 + rest
+ *     of UFT).
  *
  * 16 tests in tests/test_xum1541_hal.c verify the real functions and
  * the stub honesty contract. When libusb wiring lands, the stubs flip
@@ -39,6 +42,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
+
+#include "uft/uft_error.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -103,26 +108,26 @@ typedef int (*uft_xum_callback_t)(const uft_xum_track_t *track, void *user);
 uft_xum_config_t* uft_xum_config_create(void);
 void uft_xum_config_destroy(uft_xum_config_t *cfg);
 
-int uft_xum_open(uft_xum_config_t *cfg, int device_num);
-void uft_xum_close(uft_xum_config_t *cfg);
-bool uft_xum_is_connected(const uft_xum_config_t *cfg);
+uft_error_t uft_xum_open(uft_xum_config_t *cfg, int device_num);
+void        uft_xum_close(uft_xum_config_t *cfg);
+bool        uft_xum_is_connected(const uft_xum_config_t *cfg);
 
 /*============================================================================
  * DEVICE INFO
  *============================================================================*/
 
-int uft_xum_detect(int *device_count);
-int uft_xum_identify_drive(uft_xum_config_t *cfg, uft_cbm_drive_t *type);
-int uft_xum_get_status(uft_xum_config_t *cfg, char *status, size_t max_len);
+uft_error_t uft_xum_detect(int *device_count);
+uft_error_t uft_xum_identify_drive(uft_xum_config_t *cfg, uft_cbm_drive_t *type);
+uft_error_t uft_xum_get_status(uft_xum_config_t *cfg, char *status, size_t max_len);
 
 /*============================================================================
  * CONFIGURATION
  *============================================================================*/
 
-int uft_xum_set_device(uft_xum_config_t *cfg, int device_num);
-int uft_xum_set_track_range(uft_xum_config_t *cfg, int start, int end);
-int uft_xum_set_side(uft_xum_config_t *cfg, int side);
-int uft_xum_set_retries(uft_xum_config_t *cfg, int count);
+uft_error_t uft_xum_set_device(uft_xum_config_t *cfg, int device_num);
+uft_error_t uft_xum_set_track_range(uft_xum_config_t *cfg, int start, int end);
+uft_error_t uft_xum_set_side(uft_xum_config_t *cfg, int side);
+uft_error_t uft_xum_set_retries(uft_xum_config_t *cfg, int count);
 
 /*============================================================================
  * CAPTURE
@@ -131,38 +136,38 @@ int uft_xum_set_retries(uft_xum_config_t *cfg, int count);
 /**
  * @brief Read track (raw GCR)
  */
-int uft_xum_read_track_gcr(uft_xum_config_t *cfg, int track, int side,
-                            uint8_t **gcr, size_t *size);
+uft_error_t uft_xum_read_track_gcr(uft_xum_config_t *cfg, int track, int side,
+                                    uint8_t **gcr, size_t *size);
 
 /**
  * @brief Read track (decoded sectors)
  */
-int uft_xum_read_track(uft_xum_config_t *cfg, int track, int side,
-                        uint8_t *sectors, int *sector_count,
-                        uint8_t *errors);
+uft_error_t uft_xum_read_track(uft_xum_config_t *cfg, int track, int side,
+                                uint8_t *sectors, int *sector_count,
+                                uint8_t *errors);
 
 /**
  * @brief Read entire disk
  */
-int uft_xum_read_disk(uft_xum_config_t *cfg, uft_xum_callback_t callback,
-                       void *user);
+uft_error_t uft_xum_read_disk(uft_xum_config_t *cfg, uft_xum_callback_t callback,
+                               void *user);
 
 /**
  * @brief Write track
  */
-int uft_xum_write_track(uft_xum_config_t *cfg, int track, int side,
-                         const uint8_t *data, size_t size);
+uft_error_t uft_xum_write_track(uft_xum_config_t *cfg, int track, int side,
+                                 const uint8_t *data, size_t size);
 
 /*============================================================================
  * LOW-LEVEL IEC
  *============================================================================*/
 
-int uft_xum_iec_listen(uft_xum_config_t *cfg, int device, int secondary);
-int uft_xum_iec_talk(uft_xum_config_t *cfg, int device, int secondary);
-int uft_xum_iec_unlisten(uft_xum_config_t *cfg);
-int uft_xum_iec_untalk(uft_xum_config_t *cfg);
-int uft_xum_iec_write(uft_xum_config_t *cfg, const uint8_t *data, size_t len);
-int uft_xum_iec_read(uft_xum_config_t *cfg, uint8_t *data, size_t max_len);
+uft_error_t uft_xum_iec_listen(uft_xum_config_t *cfg, int device, int secondary);
+uft_error_t uft_xum_iec_talk(uft_xum_config_t *cfg, int device, int secondary);
+uft_error_t uft_xum_iec_unlisten(uft_xum_config_t *cfg);
+uft_error_t uft_xum_iec_untalk(uft_xum_config_t *cfg);
+uft_error_t uft_xum_iec_write(uft_xum_config_t *cfg, const uint8_t *data, size_t len);
+uft_error_t uft_xum_iec_read(uft_xum_config_t *cfg, uint8_t *data, size_t max_len);
 
 /*============================================================================
  * UTILITIES

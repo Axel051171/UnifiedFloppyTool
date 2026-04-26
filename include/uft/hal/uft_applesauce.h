@@ -19,9 +19,11 @@
  *     get_sample_clock (pure-math conversions), config_create / _destroy /
  *     _is_connected / _close (no-op safe), set_format / _drive /
  *     _track_range / _side / _revolutions (input-validating), get_error.
- *   - 7 are HONEST STUBS: return -1 with a "not implemented" error
- *     string. Serial-port I/O (115200 8N1, text protocol) and capture
- *     functions wait for the M3.3 follow-up.
+ *   - 7 are HONEST STUBS: return UFT_ERR_NOT_IMPLEMENTED with a
+ *     descriptive error string in cfg->last_error. Serial-port I/O
+ *     (115200 8N1, text protocol) and capture functions wait for the
+ *     M3.3 follow-up. Status-returning sigs are uft_error_t (matching
+ *     SCP-Direct M3.1 + XUM1541 M3.2 + rest of UFT).
  *
  * 17 tests in tests/test_applesauce_hal.c verify the real functions
  * and the stub honesty contract. When the serial layer lands, the
@@ -35,6 +37,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
+
+#include "uft/uft_error.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -94,7 +98,7 @@ typedef int (*uft_as_callback_t)(const uft_as_track_t *track, void *user);
 uft_as_config_t* uft_as_config_create(void);
 void uft_as_config_destroy(uft_as_config_t *cfg);
 
-int uft_as_open(uft_as_config_t *cfg, const char *port);
+uft_error_t uft_as_open(uft_as_config_t *cfg, const char *port);
 void uft_as_close(uft_as_config_t *cfg);
 bool uft_as_is_connected(const uft_as_config_t *cfg);
 
@@ -102,27 +106,27 @@ bool uft_as_is_connected(const uft_as_config_t *cfg);
  * CONFIGURATION
  *============================================================================*/
 
-int uft_as_set_format(uft_as_config_t *cfg, uft_as_format_t format);
-int uft_as_set_drive(uft_as_config_t *cfg, uft_as_drive_t drive);
-int uft_as_set_track_range(uft_as_config_t *cfg, int start, int end);
-int uft_as_set_side(uft_as_config_t *cfg, int side);
-int uft_as_set_revolutions(uft_as_config_t *cfg, int revs);
+uft_error_t uft_as_set_format(uft_as_config_t *cfg, uft_as_format_t format);
+uft_error_t uft_as_set_drive(uft_as_config_t *cfg, uft_as_drive_t drive);
+uft_error_t uft_as_set_track_range(uft_as_config_t *cfg, int start, int end);
+uft_error_t uft_as_set_side(uft_as_config_t *cfg, int side);
+uft_error_t uft_as_set_revolutions(uft_as_config_t *cfg, int revs);
 
 /*============================================================================
  * DEVICE INFO
  *============================================================================*/
 
-int uft_as_detect(char ports[][64], int max_ports);
-int uft_as_get_firmware_version(uft_as_config_t *cfg, char *version, size_t max_len);
+uft_error_t uft_as_detect(char ports[][64], int max_ports);
+uft_error_t uft_as_get_firmware_version(uft_as_config_t *cfg, char *version, size_t max_len);
 
 /*============================================================================
  * CAPTURE
  *============================================================================*/
 
-int uft_as_read_track(uft_as_config_t *cfg, int track, int side,
+uft_error_t uft_as_read_track(uft_as_config_t *cfg, int track, int side,
                        uint32_t **flux, size_t *count);
-int uft_as_read_disk(uft_as_config_t *cfg, uft_as_callback_t callback, void *user);
-int uft_as_write_track(uft_as_config_t *cfg, int track, int side,
+uft_error_t uft_as_read_disk(uft_as_config_t *cfg, uft_as_callback_t callback, void *user);
+uft_error_t uft_as_write_track(uft_as_config_t *cfg, int track, int side,
                         const uint32_t *flux, size_t count);
 
 /*============================================================================

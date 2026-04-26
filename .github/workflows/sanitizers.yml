@@ -65,7 +65,7 @@ jobs:
           # Only run tests that actually compiled (self-contained + core-linked)
           # "Not Run" tests fail ctest exit code — exclude known non-compiling tests
           ctest --output-on-failure --timeout 300 \
-            --tests-regex "test_pll|test_recovery|test_roundtrip|test_writer_backend|test_woz_writer|test_platform" \
+            --tests-regex "test_pll|test_recovery|test_roundtrip|test_writer_backend|test_woz_writer|test_platform|test_scp_direct_hal|test_xum1541_hal|test_applesauce_hal" \
             || true
         env:
           ASAN_OPTIONS: detect_leaks=1:abort_on_error=1:print_stacktrace=1
@@ -114,7 +114,7 @@ jobs:
         run: |
           cd build
           ctest --output-on-failure --timeout 300 \
-            --tests-regex "test_pll|test_recovery|test_roundtrip|test_writer_backend|test_woz_writer|test_platform" \
+            --tests-regex "test_pll|test_recovery|test_roundtrip|test_writer_backend|test_woz_writer|test_platform|test_scp_direct_hal|test_xum1541_hal|test_applesauce_hal" \
             || true
         env:
           UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
