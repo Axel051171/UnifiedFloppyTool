@@ -108,105 +108,60 @@ uft_error_t uftc_convert_td0_to_imd(const uint8_t* src_data, size_t src_size,
 
     uftc_report_progress(opts, 40, "Converting TD0 to IMD format");
 
-    /* TODO: uft_td0_to_imd() needs an IMD image struct.
-     * The function is declared in uft_td0.h. Once IMD writer
-     * is fully wired, uncomment and use directly:
-     *
-     *   uft_imd_image_t imd;
-     *   rc = uft_td0_to_imd(&td0_img, &imd);
-     *   uft_imd_write(dst_path, &imd);
-     *
-     * For now, fall back to raw extraction with IMD header synthesis.
-     */
+    /* Use the canonical converters from src/formats/uft_format_converters.c.
+     * uft_td0_to_imd() builds a uft_imd_image_t from the parsed TD0 (sector
+     * mode, geometry, per-sector data preserved), and uft_imd_write()
+     * serialises to the IMD on-disk layout. This replaces the previous
+     * inline fallback that synthesised an IMD by hand from raw bytes — the
+     * fallback lost compressed-fill semantics and used a hardcoded mode. */
+    uft_imd_image_t imd_img;
+    uft_imd_init(&imd_img);
 
-    /* Fallback: extract raw and write with IMD header */
-    uint8_t* raw_data = NULL;
-    size_t raw_size = 0;
-    rc = uft_td0_to_raw(&td0_img, &raw_data, &raw_size, 0xE5);
-    if (rc != 0 || !raw_data) {
+    rc = uft_td0_to_imd(&td0_img, &imd_img);
+    if (rc != 0) {
+        uft_imd_free(&imd_img);
         uft_td0_free(&td0_img);
         result->error = UFT_ERR_FORMAT;
+        snprintf(result->warnings[result->warning_count++],
+                 sizeof(result->warnings[0]),
+                 "TD0->IMD conversion failed (error %d)", rc);
         return UFT_ERR_FORMAT;
-    }
-
-    /* Build minimal IMD file: header + track records */
-    /* IMD header is ASCII text terminated by 0x1A */
-    char imd_header[256];
-    int hdr_len = snprintf(imd_header, sizeof(imd_header),
-                           "IMD 1.18: Converted from TD0 by UFT\x1a");
-
-    size_t imd_size = hdr_len + raw_size + (td0_img.num_tracks * 5);
-    uint8_t* imd_data = malloc(imd_size);
-    if (!imd_data) {
-        free(raw_data);
-        uft_td0_free(&td0_img);
-        result->error = UFT_ERR_MEMORY;
-        return UFT_ERR_MEMORY;
-    }
-
-    size_t pos = 0;
-    memcpy(imd_data + pos, imd_header, hdr_len);
-    pos += hdr_len;
-
-    /* Write track records */
-    size_t raw_offset = 0;
-    for (int t = 0; t < td0_img.num_tracks; t++) {
-        uft_td0_track_t* trk = &td0_img.tracks[t];
-        uint8_t mode = (td0_img.header.data_rate == UFT_TD0_RATE_500K)
-                       ? 3 /* 500K MFM */ : 5; /* 250K MFM */
-        int nsec = trk->nsectors;
-        int sec_size_code = (nsec > 0 && trk->sectors)
-                            ? trk->sectors[0].header.size : 2;
-        int sec_size = 128 << sec_size_code;
-
-        /* Track header: mode, cyl, head, nsectors, size_code */
-        imd_data[pos++] = mode;
-        imd_data[pos++] = trk->header.cylinder;
-        imd_data[pos++] = trk->header.side;
-        imd_data[pos++] = (uint8_t)nsec;
-        imd_data[pos++] = (uint8_t)sec_size_code;
-
-        /* Sector numbering map */
-        for (int s = 0; s < nsec; s++) {
-            if (s < nsec && trk->sectors) {
-                imd_data[pos++] = trk->sectors[s].header.sector;
-            } else {
-                imd_data[pos++] = (uint8_t)(s + 1);
-            }
-        }
-
-        /* Sector data records */
-        for (int s = 0; s < nsec; s++) {
-            if (trk->sectors && trk->sectors[s].data) {
-                imd_data[pos++] = 0x01; /* Normal data */
-                memcpy(imd_data + pos, trk->sectors[s].data, sec_size);
-                pos += sec_size;
-            } else {
-                imd_data[pos++] = 0x02; /* Compressed (fill) */
-                imd_data[pos++] = 0xE5;
-            }
-        }
-
-        raw_offset += nsec * sec_size;
-        result->tracks_converted++;
     }
 
     uftc_report_progress(opts, 80, "Writing IMD output");
 
-    uft_error_t err = uftc_write_output_file(dst_path, imd_data, pos);
-    result->bytes_written = (int)pos;
-    if (err == UFT_OK) {
-        result->success = true;
-    } else {
-        result->error = err;
+    rc = uft_imd_write(dst_path, &imd_img);
+    if (rc != 0) {
+        uft_imd_free(&imd_img);
+        uft_td0_free(&td0_img);
+        result->error = UFT_ERR_IO;
+        snprintf(result->warnings[result->warning_count++],
+                 sizeof(result->warnings[0]),
+                 "IMD write failed (error %d)", rc);
+        return UFT_ERR_IO;
     }
 
-    free(imd_data);
-    free(raw_data);
+    /* Track-count book-keeping for progress reporting (best-effort). */
+    result->tracks_converted = td0_img.num_tracks;
+
+    /* uft_imd_write() does not report bytes_written; query the output file
+     * to populate result->bytes_written so callers see the actual size. */
+    {
+        FILE *bf = fopen(dst_path, "rb");
+        if (bf) {
+            fseek(bf, 0, SEEK_END);
+            result->bytes_written = (int)ftell(bf);
+            fclose(bf);
+        }
+    }
+
+    result->success = true;
+
+    uft_imd_free(&imd_img);
     uft_td0_free(&td0_img);
 
     uftc_report_progress(opts, 100, "TD0->IMD complete");
-    return err;
+    return UFT_OK;
 }
 
 /**
