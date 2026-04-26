@@ -156,11 +156,14 @@ Muss:
         (Bootblock via T2, Root-Block + Bitmap-Block-Checksummen,
         Unknown-DOS-Type-Flag, **Directory-Walker mit Hash-Table-
         Traversierung + Cycle-Detection + File-Header-Checksum-
-        Validation**). Stubs `_repair_bitmap` + `_salvage` geben
-        ehrliches -1 zurück (nicht faken). 7 Tests grün, +117 LOC.
-        Offen: File-Data-Block-Chain-Walk (Extension-Blocks für
-        Files >72 Sektoren) + BAM↔used-blocks-Reconciliation —
-        gehört zum T7 DiskSalv-Port.
+        Validation**, **+ File-Data-Block-Chain + T_LIST-Extension-
+        Block-Walk + BAM-Reconciliation**). Stubs `_repair_bitmap`
+        + `_salvage` geben ehrliches -1 zurück (nicht faken). 7
+        Tests grün, +303 LOC (T3+T7-partial-2 zusammen).
+        Offen für T7-full: OFS-Data-Block-Header-Validation
+        (T_DATA=8 + eigene checksum), salvage-API für orphan-Blocks
+        (deleted-file-recovery), bm_extension für HD-Disks mit > 25
+        BAM-Blöcken.
   - [x] T5 BAMCOPY-Modus: `uft_adf_bam` API für BAM-aware Reads.
         Standalone Reader (root→bitmap-pages→per-block-bit) mit
         safe-default (used-on-doubt). 9 Tests grün. ADF-Plugin-
