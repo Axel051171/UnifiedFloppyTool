@@ -16,15 +16,22 @@ Compliance-Lücken: [`docs/KNOWN_ISSUES.md`](docs/KNOWN_ISSUES.md).
 
 ### 1. Disk-Imaging (Lesen/Schreiben)
 Unterstützt 6 Hardware-Controller (HAL teilweise wired — siehe pro Eintrag):
-- **Greaseweazle** (72MHz Flux-Capture, USB) — read+write+flux, production
-- **SuperCard Pro** (25MHz, USB) — HAL backend stubbed (M3.1 scaffold), CLI available
-- **KryoFlux** (24MHz, USB via DTC-Tool) — read via subprocess
+- **Greaseweazle** (72 MHz Flux-Capture, USB) — read+write+flux, production
+- **SuperCard Pro** (40 MHz / 25 ns sample, USB FT240-X 12 Mbps) —
+  HAL [~] M3.1 partial scaffold (caps + timing-constants real, USB I/O
+  pending libusb wiring); CLI available
+- **KryoFlux** (24 MHz, USB via DTC-Tool) — read via subprocess
 - **FC5025** (USB 5.25" Read-Only) — read via fcimage CLI
-- **XUM1541/ZoomFloppy** (IEC-Bus für Commodore-Laufwerke) — HAL stubbed (M3.2)
-- **Applesauce** (Apple-spezialisiert, Text-basiertes USB-Protokoll) — HAL stubbed (M3.3)
+- **XUM1541/ZoomFloppy** (IEC-Bus für Commodore-Laufwerke) — HAL [~] M3.2
+  partial (drive-tables + lifecycle real, USB I/O pending libusb wiring)
+- **Applesauce** (Apple-spezialisiert, 8 MHz / 125 ns, Text-Protokoll
+  über serielle USB-Verbindung) — HAL [~] M3.3 partial (utility + tick-
+  conversion + lifecycle real, serial I/O pending)
 
 (FluxEngine + UFI/USB-Floppy exist as Qt providers but not as HAL backends.
- M3 plan: SCP-Direct, XUM1541, Applesauce HALs sind WIP — siehe `docs/MASTER_PLAN.md` §M3.)
+ M3 plan: alle drei stubbed-HALs sind jetzt [~] partial scaffold mit
+ echten Pure-Utility-Funktionen + honest USB/Serial-Stubs; libusb-/Serial-
+ Wiring multi-session — siehe `docs/MASTER_PLAN.md` §M3.)
 
 ### 2. Format-Unterstützung (80 registered plugins, 138 format IDs)
 Liest/schreibt Disk-Images von praktisch jedem 8-Bit- und 16-Bit-Computer:
@@ -157,8 +164,11 @@ tests/                 — 77 C-Tests + 1 Qt-Test
   `src/algorithms/{core,data,fluxio,imageio,tracks}`, `src/loaders/`,
   `src/filesystems/`, `src/encoding/`, plus 250+ einzelne orphan-Header)
 - 138 Format-IDs, 80 Plugin-B Registrierungen, 44 Konvertierungspfade
-- 6 Hardware-Controller (3 davon stubbed: SCP-Direct M3.1, XUM1541 M3.2,
-  Applesauce M3.3 — siehe `docs/MASTER_PLAN.md` §M3)
+- 6 Hardware-Controller (3 davon [~] M3 partial scaffold: SCP-Direct M3.1,
+  XUM1541 M3.2, Applesauce M3.3 — Pure-Utility + Lifecycle real, USB-/
+  Serial-Wiring pending; siehe `docs/MASTER_PLAN.md` §M3)
+- HAL-Tests grün: Greaseweazle (production) + 10 SCP-Direct + 16 XUM1541
+  + 17 Applesauce = 43 Stub-Honesty-Asserts, 0 Failures
 - 55+ Kopierschutz-Schemes
 - 8 DeepRead-Module + 12 OTDR-Pipeline-Stufen
 - 9 SIMD-Dispatch-Punkte (SSE2/AVX2 Runtime)
