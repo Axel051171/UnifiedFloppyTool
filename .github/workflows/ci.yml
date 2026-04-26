@@ -27,9 +27,27 @@ permissions:
 jobs:
 
   # ══════════════════════════════════════════════════════════════════════════
+  # Consistency gate — fast pre-build check that mirrors the local pre-push
+  # hook (scripts/git-hooks/pre-push). Catches dangling #include refs,
+  # missing target_sources paths, and undefined TEST_LIBS targets BEFORE
+  # any compiler runs. Devs who installed the hook see the same failure
+  # locally; this gate catches everyone else.
+  # ══════════════════════════════════════════════════════════════════════════
+  consistency:
+    name: Consistency check
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v5
+      - name: SSOT parity (verify_build_sources.py)
+        run: python3 scripts/verify_build_sources.py
+      - name: Consistency (check_consistency.py)
+        run: python3 scripts/check_consistency.py
+
+  # ══════════════════════════════════════════════════════════════════════════
   # Matrix: C++17 (Qt 6.7.3) UND C++20 (Qt 6.10.1) — beide müssen grün sein
   # ══════════════════════════════════════════════════════════════════════════
   build-linux:
+    needs: consistency
     name: Linux (${{ matrix.qt_version }}, ${{ matrix.cxx_std }})
     runs-on: ubuntu-22.04
     strategy:
@@ -106,6 +124,7 @@ jobs:
   # macOS — ARM64, Qt 6.10.1
   # ══════════════════════════════════════════════════════════════════════════
   build-macos:
+    needs: consistency
     runs-on: macos-14
     steps:
       - uses: actions/checkout@v5
@@ -142,6 +161,7 @@ jobs:
   # Windows — MinGW, Qt 6.10.1
   # ══════════════════════════════════════════════════════════════════════════
   build-windows:
+    needs: consistency
     runs-on: windows-2022
     steps:
       - uses: actions/checkout@v5

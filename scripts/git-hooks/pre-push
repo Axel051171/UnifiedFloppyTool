@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# UFT pre-push hook — catches the bug class that produced the
+# 4-CI-annotation whack-a-mole session of 2026-04-26.
+#
+# Install: bash scripts/install-hooks.sh
+# Bypass:  git push --no-verify   (avoid; CI catches the same things)
+#
+# Runs three fast checks (~15 s total):
+#   1. Build-system parity (verify_build_sources.py — existing)
+#   2. Consistency check  (check_consistency.py — dangling #include,
+#      missing target_sources, undefined TEST_LIBS targets)
+#   3. CMake configure smoke (catches dangling lib targets at configure
+#      time, not link time, via CMAKE_LINK_LIBRARIES_ONLY_TARGETS=ON)
+
+set -e
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+cd "$REPO_ROOT"
+
+echo "==> [1/3] verify_build_sources.py …"
+python3 scripts/verify_build_sources.py >/dev/null
+
+echo "==> [2/3] check_consistency.py …"
+python3 scripts/check_consistency.py
+
+echo "==> [3/3] CMake configure smoke …"
+TMP="$(mktemp -d -t uft-cmake-prepush-XXXXXX)"
+trap 'rm -rf "$TMP"' EXIT
+if ! cmake -B "$TMP" -DUFT_BUILD_TESTS=ON >"$TMP/configure.log" 2>&1; then
+    echo
+    echo "FAIL: cmake -B <tmp> -DUFT_BUILD_TESTS=ON failed."
+    echo "Last lines of configure log:"
+    tail -20 "$TMP/configure.log" | sed 's/^/    /'
+    echo
+    echo "Reproduce locally with:"
+    echo "    cmake -B build-tests -DUFT_BUILD_TESTS=ON"
+    exit 1
+fi
+
+echo "==> all checks passed — push allowed"
