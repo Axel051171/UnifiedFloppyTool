@@ -9,6 +9,16 @@ enable_testing()
 # as -luft_ride, only failing during link with a confusing error.
 set(CMAKE_LINK_LIBRARIES_ONLY_TARGETS ON)
 
+# System libs (libm) need to be resolved as imported paths so the strict
+# ONLY_TARGETS check above accepts them.
+if(UNIX)
+    find_library(M_LIBRARY m)
+    if(NOT M_LIBRARY)
+        # On glibc, libm is part of libc — link-line just gets nothing.
+        set(M_LIBRARY "")
+    endif()
+endif()
+
 # Find all test source files
 file(GLOB TEST_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/test_*.c")
 
@@ -55,21 +65,28 @@ foreach(test_source ${TEST_SOURCES})
     if(${_sc_idx} GREATER -1)
         set(TEST_LIBS "")  # No UFT libs needed
         if(${test_name} STREQUAL "test_pll")
-            if(UNIX)
-                set(TEST_LIBS m)  # math library for pow(), fabs()
+            if(UNIX AND M_LIBRARY)
+                set(TEST_LIBS ${M_LIBRARY})  # math library for pow(), fabs()
             endif()
         endif()
     endif()
 
-    # Add test-specific dependencies
+    # Add test-specific dependencies (guarded — library subdirs may not
+    # be added to the root CMakeLists.txt, in which case the test still
+    # builds against TEST_LIBS-only and any uft_* symbols it really needs
+    # surface as honest link errors instead of "is not a target").
     if(${test_name} STREQUAL "test_ti99_formats")
-        list(APPEND TEST_LIBS uft_ti99)
+        if(TARGET uft_ti99)
+            list(APPEND TEST_LIBS uft_ti99)
+        endif()
     elseif(${test_name} STREQUAL "test_fat_extensions")
         if(TARGET uft_fs)
             list(APPEND TEST_LIBS uft_fs)
         endif()
     elseif(${test_name} STREQUAL "test_c64_protection")
-        list(APPEND TEST_LIBS uft_c64_protection)
+        if(TARGET uft_c64_protection)
+            list(APPEND TEST_LIBS uft_c64_protection)
+        endif()
     elseif(${test_name} STREQUAL "test_track_align")
         # Include Track Alignment source directly
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/protection/c64/uft_track_align.c)
@@ -91,8 +108,8 @@ foreach(test_source ${TEST_SOURCES})
     elseif(${test_name} STREQUAL "test_flux_analysis")
         # Include Flux Analysis source directly
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_analysis.c)
-        if(UNIX)
-            target_link_libraries(${test_name} PRIVATE m)
+        if(UNIX AND M_LIBRARY)
+            target_link_libraries(${test_name} PRIVATE ${M_LIBRARY})
         endif()
     elseif(${test_name} STREQUAL "test_c64_bam")
         # Include BAM Editor source directly
