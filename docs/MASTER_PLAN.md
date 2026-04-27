@@ -435,6 +435,38 @@ Detail-Dokument: `docs/XCOPY_ALGORITHM_MIGRATION.md`
 
 ---
 
+## Sprint-2 (post-v4.1.3, geschlossen 2026-04-27)
+
+Audit: `must-fix-hunter` lieferte 8 Findings (MF-101..MF-108), 4 ausgewählt
+für ein 6.5-Tage-Sprint. Verlauf:
+
+| Sprint-Item | Beschreibung | Status | Commit |
+|---|---|---|---|
+| MF-101 | `uft_types.h` schattete `UFT_VERSION_STRING="0.1.0-dev"` über `uft_version.h` "4.1.3" | ✓ CLOSED | `2886916` |
+| MF-104 | WOZ-Plugin behauptete `CAP_FLUX`+`CAP_WEAK_BITS` ohne Bridge | ✓ CLOSED | `f87858b` |
+| MF-102 | `uft_ipf_air.c` (859 LOC) hatte 0 externe Caller — opaque-handle API gebaut, IPF-Plugin gebrückt | ✓ CLOSED | `bd75221` |
+| **MF-106** | Inline-MFM-Decoder im Flux-Converter doppelt + kaputt; `flux_decode_mfm()` existiert kanonisch | **DEFERRED → Sprint-3** | — |
+
+**MF-106 Re-Scope-Entdeckung beim Implementieren:** Der eigentliche Blocker
+für SCP→IMG ist nicht der kaputte Inline-MFM, sondern die **SCP-API-Dualität**:
+
+- Stub-Path: `uft_scp_file_t` + `uft_scp_read()` + `uft_scp_get_track_flux()` —
+  Honest-Stubs in `src/core/uft_core_stubs.c:234,250` returnen `-1`
+- Real-Path: `uft_scp_ctx_t` + `uft_scp_open_memory()` + `uft_scp_read_track()`
+  in `src/flux/uft_scp_parser.c` mit anderem Type-Family
+
+Der Converter (`uft_format_convert_flux.c`) nutzt den Stub-Path und scheitert
+in Line 198 vor dem MFM-Code. Selbst mit perfektem `flux_decode_mfm()`-
+Wireup bleibt SCP→IMG dead. Korrekte Sprint-3-Bündelung: **MF-106-bundle =
+SCP-API-Unifizierung + Inline-MFM-Replacement** (geschätzt 5-6 Tage). Macht
+3 Conversion-Pfade gleichzeitig grün (SCP→IMG, SCP→ADF, SCP→D64).
+
+**Aufgeschoben mit Begründung:** MF-103, MF-105, MF-107, MF-108 — siehe
+must-fix-hunter-Report (2026-04-27). Kandidaten für Sprint-3-Auffüllung
+nach MF-106-bundle.
+
+---
+
 ## Verwandte Dokumente
 
 - `docs/DESIGN_PRINCIPLES.md` — die 7 Kernprinzipien (unverändert gültig)
