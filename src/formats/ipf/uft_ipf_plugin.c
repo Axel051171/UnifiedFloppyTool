@@ -3,17 +3,26 @@
  * @brief IPF (Interchangeable Preservation Format) Plugin-B
  *
  * IPF (CAPS/SPS) stores flux-level data with copy protection info.
- * This plugin wraps the existing uft_caps_is_ipf() + ipf parser.
+ * This plugin bridges the AIR-enhanced parser in uft_ipf_air.c (which
+ * parses block descriptors, gap elements, and SPS data elements) to the
+ * uft_disk_t / uft_track_t plugin API.
  *
- * read_track() returns IMGE-record metadata (track_bits, density, flags)
- * without fabricating a bitstream — SPS data-element fusion required for
- * full bitstream decode lives in src/formats/ipf/uft_ipf_air.c with
- * file-local types and is not yet bridged to the plugin (TODO-A1
- * follow-up). Forensic principle: no invented data, partial honesty over
- * silent stub.
+ * Coverage matrix:
+ *   - SPS-encoded IPFs (encoder_type=2): full geometry, IMGE metadata
+ *     and concatenated data-element payload bytes are surfaced via
+ *     read_track().
+ *   - CAPS-encoded IPFs (encoder_type=1): geometry + IMGE metadata
+ *     only — data-element layout for CAPS encoder is not yet decoded
+ *     in uft_ipf_air.c. read_track() returns metadata + raw_data=NULL.
+ *
+ * Honest forensic stance: no fabricated bitstream content. Where the
+ * payload cannot yet be reconstructed (CAPS path, or full track
+ * bitstream including gap-padding for SPS), the track structure
+ * reflects descriptor truth and leaves the absent fields NULL.
  */
 #include "uft/uft_format_common.h"
 #include "uft/profiles/uft_ipf_format.h"
+#include "uft/formats/ipf/uft_ipf_air.h"
 
 extern bool uft_caps_is_ipf(const uint8_t *data, size_t size);
 
@@ -21,8 +30,8 @@ extern bool uft_caps_is_ipf(const uint8_t *data, size_t size);
  * uft_ipf_air.c). Local copy because the constant is TU-private there. */
 #define IPF_PLUGIN_TF_FUZZY  0x01u
 
-/* Platform IDs — only AMIGA is needed for encoding selection; matches
- * caps_platform_t::CAPS_PLATFORM_AMIGA. */
+/* Platform IDs — only AMIGA is needed for encoding selection. Matches
+ * caps_platform_t::CAPS_PLATFORM_AMIGA in include/uft/formats/ipf/uft_ipf_caps.h. */
 #define IPF_PLUGIN_PLATFORM_AMIGA  1u
 
 static bool ipf_plugin_probe(const uint8_t *data, size_t size,
@@ -42,9 +51,10 @@ static bool ipf_plugin_probe(const uint8_t *data, size_t size,
 }
 
 typedef struct {
-    uint8_t        *data;
+    uint8_t        *data;     /* original file bytes (kept for future re-parse) */
     size_t          size;
-    uft_ipf_info_t  info;     /* Parsed INFO record + IMGE count */
+    ipf_air_disk_t *air;      /* parsed handle from ipf_air_parse() */
+    uint32_t        primary_platform;
 } ipf_data_t;
 
 static uft_error_t ipf_plugin_open(uft_disk_t *disk, const char *path, bool ro) {
@@ -57,16 +67,31 @@ static uft_error_t ipf_plugin_open(uft_disk_t *disk, const char *path, bool ro) 
     if (!p) { free(data); return UFT_ERR_MEMORY; }
     p->data = data; p->size = sz;
 
-    /* Parse INFO + count IMGE records to derive real geometry. Falls back
-     * to Amiga DD defaults only if the parser returns no IMGE records. */
-    if (!uft_ipf_parse(data, sz, &p->info)) {
+    p->air = ipf_air_alloc();
+    if (!p->air) {
         free(data); free(p);
+        return UFT_ERR_MEMORY;
+    }
+
+    ipf_air_status_t st = ipf_air_parse(data, sz, p->air);
+    if (st != IPF_AIR_OK) {
+        ipf_air_free(p->air);
+        free(p->air); free(data); free(p);
         return UFT_ERR_FORMAT_INVALID;
     }
 
+    int cyls = 0, sides = 0;
+    uint32_t platform = 0;
+    if (ipf_air_get_geometry(p->air, &cyls, &sides, &platform) != 0) {
+        ipf_air_free(p->air);
+        free(p->air); free(data); free(p);
+        return UFT_ERR_FORMAT_INVALID;
+    }
+    p->primary_platform = platform;
+
     disk->plugin_data = p;
-    disk->geometry.cylinders = (p->info.cylinders > 0) ? p->info.cylinders : 84;
-    disk->geometry.heads     = (p->info.sides     > 0) ? p->info.sides     : 2;
+    disk->geometry.cylinders = (cyls  > 0) ? cyls  : 84;
+    disk->geometry.heads     = (sides > 0) ? sides : 2;
     disk->geometry.sectors = 11;            /* Amiga DD typical; sector layer not derivable from IMGE alone */
     disk->geometry.sector_size = 512;
     disk->geometry.total_sectors =
@@ -78,77 +103,78 @@ static uft_error_t ipf_plugin_open(uft_disk_t *disk, const char *path, bool ro) 
 
 static void ipf_plugin_close(uft_disk_t *disk) {
     ipf_data_t *p = disk->plugin_data;
-    if (p) { free(p->data); free(p); disk->plugin_data = NULL; }
+    if (!p) return;
+    if (p->air) {
+        ipf_air_free(p->air);
+        free(p->air);
+    }
+    free(p->data);
+    free(p);
+    disk->plugin_data = NULL;
 }
 
 static uft_error_t ipf_plugin_read_track(uft_disk_t *disk, int cyl, int head,
                                           uft_track_t *track) {
     ipf_data_t *p = (ipf_data_t *)disk->plugin_data;
-    if (!p) return UFT_ERR_INVALID_STATE;
+    if (!p || !p->air) return UFT_ERR_INVALID_STATE;
     uft_track_init(track, cyl, head);
 
-    /* Walk the file linearly looking for an IMGE record matching (cyl, head).
-     * IMGE record layout (80 bytes after 12-byte block header), all big-endian:
-     *   +0  cylinder    +4  head        +8  density     +12 signal_type
-     *   +16 track_bytes +20 start_byte  +24 start_bit   +28 data_bits
-     *   +32 gap_bits    +36 track_bits  +40 block_count +44 encoder_process
-     *   +48 track_flags +52 data_key    +56..79 reserved */
-    size_t offset = 0;
-    bool found = false;
-    while (offset + UFT_IPF_BLOCK_HEADER_SIZE <= p->size) {
-        uint32_t type   = uft_ipf_read_be32(p->data + offset);
-        uint32_t length = uft_ipf_read_be32(p->data + offset + 4);
-        if (length < UFT_IPF_BLOCK_HEADER_SIZE || offset + length > p->size) break;
-
-        if (type == UFT_IPF_RECORD_IMGE &&
-            length >= UFT_IPF_BLOCK_HEADER_SIZE + 56)
-        {
-            const uint8_t *rec = p->data + offset + UFT_IPF_BLOCK_HEADER_SIZE;
-            uint32_t r_cyl  = uft_ipf_read_be32(rec + 0);
-            uint32_t r_head = uft_ipf_read_be32(rec + 4);
-            if ((int)r_cyl == cyl && (int)r_head == head) {
-                uint32_t density     = uft_ipf_read_be32(rec + 8);
-                uint32_t track_bits  = uft_ipf_read_be32(rec + 36);
-                uint32_t track_flags = uft_ipf_read_be32(rec + 48);
-
-                /* Encoding: Amiga images use AMIGA_MFM, others generic MFM.
-                 * IPF uses 2µs MFM cells universally — DD bitcell. */
-                track->encoding = (p->info.platforms == IPF_PLUGIN_PLATFORM_AMIGA)
-                    ? UFT_ENC_AMIGA_MFM
-                    : UFT_ENC_MFM;
-                track->bitrate              = 500000;   /* 500 kbps cell rate (250 kbps data) */
-                track->nominal_bit_rate_kbps = 250.0;
-                track->nominal_rpm           = 300.0;
-                track->avg_bit_cell_ns       = 2000.0;
-
-                /* Track size: descriptor-derived bit count. raw_data stays
-                 * NULL — payload extraction (SPS gap/data element fusion)
-                 * deferred to a later integration pass; do NOT fabricate. */
-                track->raw_bits = track_bits;
-
-                /* Status flags from IPF descriptor */
-                if (track_flags & IPF_PLUGIN_TF_FUZZY) {
-                    track->status |= (uint32_t)UFT_TRACK_FUZZY |
-                                     (uint32_t)UFT_TRACK_PROTECTED;
-                    track->copy_protected = true;
-                }
-                /* density >= 3 = Copylock/Speedlock variants per IPF spec */
-                if (density >= 3) {
-                    track->status |= (uint32_t)UFT_TRACK_PROTECTED;
-                    track->copy_protected = true;
-                }
-
-                found = true;
-                break;
-            }
-        }
-        offset += length;
-    }
-
-    if (!found) {
-        /* No IMGE descriptor for this (cyl, head) — track absent from image. */
+    if (!ipf_air_track_present(p->air, cyl, head)) {
         return UFT_ERR_MISSING_SECTOR;
     }
+
+    uint32_t track_bits = 0, density = 0, track_flags = 0;
+    bool has_fuzzy = false;
+    if (ipf_air_get_track_meta(p->air, cyl, head,
+                                &track_bits, &density, &track_flags, &has_fuzzy) != 0) {
+        return UFT_ERR_MISSING_SECTOR;
+    }
+
+    /* Encoding: Amiga images use AMIGA_MFM, others generic MFM. IPF uses
+     * 2µs MFM cells universally — DD bitcell. */
+    track->encoding = (p->primary_platform == IPF_PLUGIN_PLATFORM_AMIGA)
+        ? UFT_ENC_AMIGA_MFM
+        : UFT_ENC_MFM;
+    track->bitrate              = 500000;   /* 500 kbps cell rate (250 kbps data) */
+    track->nominal_bit_rate_kbps = 250.0;
+    track->nominal_rpm           = 300.0;
+    track->avg_bit_cell_ns       = 2000.0;
+    track->raw_bits = track_bits;
+
+    /* Status flags from IPF descriptor */
+    if ((track_flags & IPF_PLUGIN_TF_FUZZY) || has_fuzzy) {
+        track->status |= (uint32_t)UFT_TRACK_FUZZY |
+                         (uint32_t)UFT_TRACK_PROTECTED;
+        track->copy_protected = true;
+    }
+    /* density >= 3 = Copylock/Speedlock variants per IPF spec */
+    if (density >= 3) {
+        track->status |= (uint32_t)UFT_TRACK_PROTECTED;
+        track->copy_protected = true;
+    }
+
+    /* Pull concatenated data-element payload bytes from the AIR parser.
+     * For SPS-encoded files this gives the deterministic-decoded portion
+     * of the track (SYNC/DATA/RAW/IGAP byte sequences as recorded in the
+     * IPF DATA records). For CAPS-encoded files the accessor returns -2
+     * — we honor that by leaving raw_data NULL without claiming success
+     * was partial. */
+    uint8_t *payload = NULL;
+    uint32_t payload_bits = 0;
+    int rc = ipf_air_get_track_raw(p->air, cyl, head, &payload, &payload_bits);
+    if (rc == 0 && payload && payload_bits > 0) {
+        size_t bytes = ((size_t)payload_bits + 7) / 8;
+        track->raw_data    = payload;        /* ownership transfers; track_free will release */
+        track->raw_size    = bytes;
+        track->raw_len     = bytes;
+        track->raw_bits    = payload_bits;
+        track->raw_capacity = bytes;
+        track->owns_data   = true;
+    } else if (payload) {
+        free(payload);   /* defensive — should be NULL if rc != 0 */
+    }
+    /* rc == -2 (CAPS-encoder fallback): leave raw_data NULL; metadata only. */
+
     return UFT_OK;
 }
 
@@ -157,19 +183,18 @@ static uft_error_t ipf_plugin_read_track(uft_disk_t *disk, int cyl, int head,
  * write would also bypass the copy-protection signatures that IPF is
  * purpose-built to preserve. */
 
-/* Prinzip 7 Feature-Matrix — see docs/DESIGN_PRINCIPLES.md §7
- * Updated post-A1: reflect that read_track returns metadata only, payload
- * fusion is still deferred — partial honesty replaces previous overstated
- * SUPPORTED claims. */
+/* Prinzip 7 Feature-Matrix — see docs/DESIGN_PRINCIPLES.md §7 */
 static const uft_plugin_feature_t ipf_features[] = {
-    { "Standard MFM Tracks",           UFT_FEATURE_PARTIAL,
-      "IMGE metadata exposed (track_bits, density, flags); SPS data-element fusion deferred" },
+    { "Standard MFM Tracks (SPS)",     UFT_FEATURE_PARTIAL,
+      "SPS encoder: data-element payload concatenated; gap-padding not synthesized into bitstream" },
+    { "Standard MFM Tracks (CAPS)",    UFT_FEATURE_PARTIAL,
+      "CAPS encoder: metadata only; data-element decode for CAPS layout deferred" },
     { "Timing Tracks",                 UFT_FEATURE_PARTIAL,
-      "track_flags exposed; per-cell timing not extracted" },
-    { "Weak Bits",                     UFT_FEATURE_PARTIAL,
-      "Detection via FUZZY flag; exact bit positions not yet decoded" },
-    { "Data Cells",                    UFT_FEATURE_UNSUPPORTED,
-      "DATA-block element fusion not bridged to plugin" },
+      "track_flags + density exposed; per-cell timing not extracted" },
+    { "Weak Bits / Fuzzy",             UFT_FEATURE_PARTIAL,
+      "FUZZY-flagged tracks marked PROTECTED; exact bit positions not yet decoded" },
+    { "Data Cells",                    UFT_FEATURE_PARTIAL,
+      "SPS data-element bytes surfaced as raw_data; bitstream not gap-merged" },
     { "Multi-Revolution Samples",      UFT_FEATURE_UNSUPPORTED, NULL },
     { "SPS Protection Markers",        UFT_FEATURE_UNSUPPORTED, NULL },
     { "Write / encode",                UFT_FEATURE_UNSUPPORTED,

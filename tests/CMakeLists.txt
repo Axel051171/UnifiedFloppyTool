@@ -233,6 +233,11 @@ foreach(test_source ${TEST_SOURCES})
         # Include Amiga virus signature DB source directly
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/fs/uft_amiga_virus_db.c)
+    elseif(${test_name} STREQUAL "test_ipf_air_accessors")
+        # Include IPF AIR parser source directly (TUs-private types stay
+        # encapsulated; the test exercises the opaque-handle API).
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_air.c)
     endif()
     
     if(TEST_LIBS)

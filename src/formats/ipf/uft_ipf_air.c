@@ -25,6 +25,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "uft/formats/uft_air_crc32.h"
+#include "uft/formats/ipf/uft_ipf_air.h"  /* opaque-handle public API */
 
 /*============================================================================
  * IPF FORMAT CONSTANTS (from IPFStruct.cs)
@@ -244,8 +245,11 @@ typedef struct {
     uint32_t track_size;
 } ipf_ctex_t;
 
-/** Complete parsed IPF disk */
-typedef struct {
+/** Complete parsed IPF disk
+ *  The named tag `ipf_air_disk` matches the forward-declaration in
+ *  include/uft/formats/ipf/uft_ipf_air.h so that out-of-TU callers see
+ *  the type as opaque. */
+typedef struct ipf_air_disk {
     ipf_info_record_t info;
 
     ipf_track_t tracks[IPF_MAX_TRACKS][IPF_MAX_SIDES];
@@ -264,16 +268,8 @@ typedef struct {
     bool     crc_ok;
 } ipf_air_disk_t;
 
-/** Status codes */
-typedef enum {
-    IPF_AIR_OK = 0,
-    IPF_AIR_NOT_IPF,
-    IPF_AIR_BAD_CRC,
-    IPF_AIR_TRUNCATED,
-    IPF_AIR_BAD_RECORD,
-    IPF_AIR_KEY_MISMATCH,
-    IPF_AIR_FILE_ERROR
-} ipf_air_status_t;
+/* Status codes ipf_air_status_t are now declared in
+ * include/uft/formats/ipf/uft_ipf_air.h (single source). */
 
 /*============================================================================
  * BIG-ENDIAN READ HELPERS (IPF is Big-Endian)
@@ -784,6 +780,118 @@ void ipf_air_print_info(const ipf_air_disk_t* disk) {
             }
         }
     }
+}
+
+/*============================================================================
+ * OPAQUE-HANDLE ACCESSOR API (declared in uft/formats/ipf/uft_ipf_air.h)
+ *
+ * Used by uft_ipf_plugin.c and any future TUs that need IPF data without
+ * pulling in the file-local types above.
+ *============================================================================*/
+
+ipf_air_disk_t *ipf_air_alloc(void) {
+    return (ipf_air_disk_t *)calloc(1, sizeof(ipf_air_disk_t));
+}
+
+int ipf_air_get_geometry(const ipf_air_disk_t *disk,
+                          int *out_cylinders, int *out_sides,
+                          uint32_t *out_primary_platform) {
+    if (!disk || !disk->valid) return -1;
+
+    int cyls  = (int)disk->info.max_track - (int)disk->info.min_track + 1;
+    int sides = (int)disk->info.max_side  - (int)disk->info.min_side  + 1;
+    if (cyls  < 0) cyls  = 0;
+    if (sides < 0) sides = 0;
+
+    if (out_cylinders)        *out_cylinders        = cyls;
+    if (out_sides)            *out_sides            = sides;
+    if (out_primary_platform) *out_primary_platform = (uint32_t)disk->info.platforms[0];
+    return 0;
+}
+
+bool ipf_air_track_present(const ipf_air_disk_t *disk, int cyl, int head) {
+    if (!disk || !disk->valid) return false;
+    if (cyl  < 0 || cyl  >= IPF_MAX_TRACKS) return false;
+    if (head < 0 || head >= IPF_MAX_SIDES)  return false;
+    return disk->track_present[cyl][head];
+}
+
+int ipf_air_get_track_meta(const ipf_air_disk_t *disk, int cyl, int head,
+                            uint32_t *out_track_bits,
+                            uint32_t *out_density,
+                            uint32_t *out_track_flags,
+                            bool     *out_has_fuzzy) {
+    if (!ipf_air_track_present(disk, cyl, head)) return -1;
+    const ipf_track_t *trk = &disk->tracks[cyl][head];
+
+    if (out_track_bits)  *out_track_bits  = trk->track_bits;
+    if (out_density)     *out_density     = (uint32_t)trk->density;
+    if (out_track_flags) *out_track_flags = trk->track_flags;
+    if (out_has_fuzzy)   *out_has_fuzzy   = trk->has_fuzzy;
+    return 0;
+}
+
+int ipf_air_get_track_raw(const ipf_air_disk_t *disk, int cyl, int head,
+                           uint8_t **out_buf, uint32_t *out_bits) {
+    if (out_buf)  *out_buf  = NULL;
+    if (out_bits) *out_bits = 0;
+    if (!out_buf || !out_bits) return -1;
+    if (!ipf_air_track_present(disk, cyl, head)) return -1;
+
+    /* Data-element decoding only ran for SPS-encoded files. CAPS encoder
+     * uses a different block layout that this parser pass does not
+     * surface — return UFT_ERR_NOT_IMPLEMENTED-equivalent so callers can
+     * report deferred status honestly instead of silently producing
+     * empty output. */
+    if (disk->info.encoder_type != IPF_ENC_SPS) {
+        return -2;
+    }
+
+    const ipf_track_t *trk = &disk->tracks[cyl][head];
+
+    /* Pass 1: total byte count + total bit count across all blocks /
+     * data-elements. FUZZY elements have value=NULL (no bytes) but still
+     * contribute their data_bits — bit count > byte_count*8 is therefore
+     * legal and meaningful. */
+    size_t total_bytes = 0;
+    uint64_t total_bits = 0;
+    for (uint32_t b = 0; b < trk->actual_blocks; b++) {
+        const ipf_block_desc_t *bd = &trk->blocks[b];
+        for (uint32_t d = 0; d < bd->data_elem_count; d++) {
+            const ipf_data_elem_t *de = &bd->data_elems[d];
+            total_bits += de->data_bits;
+            if (de->value && de->value_size > 0) {
+                total_bytes += de->value_size;
+            }
+        }
+    }
+
+    if (total_bits == 0) {
+        /* SPS file but no data elements decoded for this track — track is
+         * present but unformatted / pure-gap. Honest empty result. */
+        return 0;
+    }
+
+    if (total_bytes > 0) {
+        uint8_t *buf = (uint8_t *)malloc(total_bytes);
+        if (!buf) return -1;
+        size_t off = 0;
+        for (uint32_t b = 0; b < trk->actual_blocks; b++) {
+            const ipf_block_desc_t *bd = &trk->blocks[b];
+            for (uint32_t d = 0; d < bd->data_elem_count; d++) {
+                const ipf_data_elem_t *de = &bd->data_elems[d];
+                if (de->value && de->value_size > 0) {
+                    memcpy(buf + off, de->value, de->value_size);
+                    off += de->value_size;
+                }
+            }
+        }
+        *out_buf = buf;
+    }
+    /* Cap the reported bit count at uint32_t range (track_bits never
+     * exceeds ~200K for floppy media). */
+    *out_bits = (total_bits > UINT32_MAX) ? UINT32_MAX : (uint32_t)total_bits;
+    return 0;
 }
 
 /*============================================================================
