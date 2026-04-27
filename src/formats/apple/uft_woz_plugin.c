@@ -74,7 +74,10 @@ static const uft_plugin_feature_t woz_features[] = {
     { "WOZ2 container",            UFT_FEATURE_SUPPORTED,   NULL },
     { "WOZ2.1 container",          UFT_FEATURE_SUPPORTED,   NULL },
     { "Quarter-track positions",   UFT_FEATURE_SUPPORTED,   NULL },
-    { "Weak bits (FLUX chunk)",    UFT_FEATURE_SUPPORTED,   NULL },
+    { "Weak bits (FLUX chunk)",    UFT_FEATURE_PARTIAL,
+      "FLUX chunk parsed (has_flux flag set, flux_tracks[] populated); "
+      "per-track flux transitions not yet surfaced via read_track — "
+      "woz_get_flux_track() exists but is currently unbridged" },
     { "INFO + META metadata",      UFT_FEATURE_PARTIAL,
       "read only; write not implemented" },
     { "Write / encode",            UFT_FEATURE_UNSUPPORTED, NULL },
@@ -83,7 +86,11 @@ static const uft_plugin_feature_t woz_features[] = {
 const uft_format_plugin_t uft_format_plugin_woz = {
     .name = "WOZ", .description = "Apple II WOZ (v1/v2/v2.1)",
     .extensions = "woz", .format = UFT_FORMAT_DSK,
-    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_FLUX | UFT_FORMAT_CAP_WEAK_BITS | UFT_FORMAT_CAP_VERIFY,
+    /* Capabilities reflect what read_track() actually surfaces — flux/weak
+     * are parsed in woz.c but not yet returned via the plugin API, so we do
+     * NOT advertise CAP_FLUX / CAP_WEAK_BITS here. Re-enable after the
+     * woz_get_flux_track() bridge lands. */
+    .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_VERIFY,
     .probe = woz_plugin_probe, .open = woz_plugin_open,
     .close = woz_plugin_close, .read_track = woz_plugin_read_track,
     .verify_track = uft_flux_verify_track,
