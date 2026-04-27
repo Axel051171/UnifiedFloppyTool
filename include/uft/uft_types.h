@@ -19,13 +19,12 @@ extern "C" {
 #endif
 
 // ============================================================================
-// Version
+// Version — single source of truth lives in uft_version.h (canonical
+// VERSION.txt at repo root). Re-exported here so TUs that include only
+// uft_types.h still see UFT_VERSION_*.
 // ============================================================================
 
-#define UFT_VERSION_MAJOR  0
-#define UFT_VERSION_MINOR  1
-#define UFT_VERSION_PATCH  0
-#define UFT_VERSION_STRING "0.1.0-dev"
+#include "uft_version.h"
 
 // ============================================================================
 // Basis-Typen
