@@ -33,6 +33,7 @@ class TabWorkflow;
 
 class DecodeJob;
 class FluxCaptureJob;
+class FluxWriteJob;
 class QThread;
 
 class WorkflowTab : public QWidget
@@ -110,6 +111,7 @@ private:
     QThread* m_workerThread;
     DecodeJob* m_decodeJob;
     FluxCaptureJob* m_captureJob;
+    FluxWriteJob* m_writeJob;
 
     // MF-110 — cached HAL handle from HardwareTab. Non-owning.
     void* m_gwDevice;

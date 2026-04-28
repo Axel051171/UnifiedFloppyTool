@@ -223,6 +223,7 @@ SOURCES += \
     src/xcopytab.cpp \
     src/decodejob.cpp \
     src/fluxcapturejob.cpp \
+    src/fluxwritejob.cpp \
     src/disk_image_validator.cpp \
     src/settingsmanager.cpp \
     src/gw_device_detector.cpp \
@@ -278,6 +279,7 @@ HEADERS += \
     src/xcopytab.h \
     src/decodejob.h \
     src/fluxcapturejob.h \
+    src/fluxwritejob.h \
     src/disk_image_validator.h \
     src/settingsmanager.h \
     src/gw_device_detector.h \

@@ -28,6 +28,7 @@
 #include "ui_tab_workflow.h"
 #include "decodejob.h"
 #include "fluxcapturejob.h"
+#include "fluxwritejob.h"
 #include "uft_flux_histogram_widget.h"
 #include <QTextEdit>
 #include <QFileDialog>
@@ -59,6 +60,7 @@ WorkflowTab::WorkflowTab(QWidget *parent)
     , m_workerThread(nullptr)
     , m_decodeJob(nullptr)
     , m_captureJob(nullptr)
+    , m_writeJob(nullptr)
     , m_gwDevice(nullptr)
     , m_hwCylinders(80)
     , m_hwSides(2)
@@ -559,20 +561,63 @@ void WorkflowTab::onStartAbortClicked()
             return;
         }
 
+        // MF-114: Source = File + Dest = Flux. Symmetric to MF-110.
+        // Drives an SCP image back to the disk via FluxWriteJob.
+        if (m_sourceMode == File && m_destMode == Flux) {
+            if (m_gwDevice == nullptr) {
+                delete m_workerThread; m_workerThread = nullptr;
+                QMessageBox::warning(this, tr("Hardware Not Connected"),
+                    tr("No flux device is connected. Open the Hardware tab and "
+                       "connect a Greaseweazle (or compatible controller) first."));
+                resetUI();
+                return;
+            }
+            m_writeJob = new FluxWriteJob();
+            m_writeJob->setDevice(m_gwDevice);
+            m_writeJob->setInputPath(m_sourceFile);
+            m_writeJob->setDriveUnit(0);
+            m_writeJob->setVerify(false);
+            m_writeJob->moveToThread(m_workerThread);
+
+            connect(m_workerThread, &QThread::started, m_writeJob, &FluxWriteJob::run);
+            connect(m_writeJob, &FluxWriteJob::progress, this, [this](int pct) {
+                emit progressChanged(pct);
+            });
+            connect(m_writeJob, &FluxWriteJob::finished, this, [this](const QString &result) {
+                QMessageBox::information(this, tr("Write Complete"), result);
+                emit operationFinished(true);
+                resetUI();
+            });
+            connect(m_writeJob, &FluxWriteJob::error, this, [this](const QString &err) {
+                QMessageBox::warning(this, tr("Write Error"), err);
+                emit operationFinished(false);
+                resetUI();
+            });
+            connect(m_writeJob, &FluxWriteJob::finished, m_workerThread, &QThread::quit);
+            connect(m_writeJob, &FluxWriteJob::error,    m_workerThread, &QThread::quit);
+            connect(m_writeJob, &FluxWriteJob::finished, m_writeJob, &QObject::deleteLater);
+            connect(m_writeJob, &FluxWriteJob::error,    m_writeJob, &QObject::deleteLater);
+            connect(m_workerThread, &QThread::finished, m_workerThread, &QObject::deleteLater);
+
+            m_workerThread->start();
+            return;
+        }
+
         if (m_sourceMode != File) {
-            // Source = Flux/USB but destination is not File. The flux
-            // pipelines for those combos are MF-114 territory — refuse
-            // explicitly rather than fabricate a fake worker.
+            // Source = Flux/USB but destination is not File. Disk-to-disk
+            // flux copy needs two open HAL handles plus a streaming
+            // pipeline that does not exist yet. Refuse explicitly rather
+            // than fabricate a half-implementation.
             delete m_workerThread; m_workerThread = nullptr;
             QMessageBox::warning(this, tr("Not Yet Implemented"),
-                tr("This source/destination combination is not wired yet "
-                   "(see MF-114). For now, capture flux to a file first, "
-                   "then run the conversion in a second pass."));
+                tr("Disk-to-disk flux copy needs two simultaneous HAL handles "
+                   "and is not wired yet. For now, capture flux to a file with "
+                   "Flux→File, then write it back with File→Flux."));
             resetUI();
             return;
         }
 
-        // Source = File: legacy DecodeJob path (unchanged).
+        // Source = File, Dest = File or USB: legacy DecodeJob path.
         m_decodeJob = new DecodeJob();
         m_decodeJob->setSourcePath(m_sourceFile);
         if (m_destMode == File) {
@@ -602,9 +647,10 @@ void WorkflowTab::onStartAbortClicked()
         m_workerThread->start();
 
     } else {
-        // Abort — both job types support requestCancel().
+        // Abort — all three job types support requestCancel().
         if (m_decodeJob)  m_decodeJob->requestCancel();
         if (m_captureJob) m_captureJob->requestCancel();
+        if (m_writeJob)   m_writeJob->requestCancel();
         emit operationFinished(false);
         resetUI();
     }
@@ -619,6 +665,7 @@ void WorkflowTab::resetUI()
     // next start cycle does not see stale objects.
     m_decodeJob  = nullptr;
     m_captureJob = nullptr;
+    m_writeJob   = nullptr;
 
     // Re-enable buttons
     ui->btnSourceFlux->setEnabled(true);
