@@ -477,23 +477,31 @@ void UftRecVerifyPage::initializePage()
         .arg(badBefore).arg(totalSectors));
 
     /*
-     * In a full implementation the recovery step would have updated the wizard
-     * state with real post-recovery counts. For the UI skeleton we show the
-     * recommendation text which describes estimated improvement.
+     * MF-115: This page used to display
+     *     int recovered = badBefore / 2;  // placeholder estimate
+     *     m_improvedLabel->setText(tr("%1 sectors recovered").arg(recovered));
+     * which was a hard violation of the project's core rule
+     * "Keine erfundenen Daten" — `recovered` was never measured, the
+     * recovery worker that would populate uft_recovery_wizard_t with real
+     * post-recovery counts is not wired yet, and yet the dialog showed the
+     * user a confident concrete count. That number could end up in a
+     * forensic report and mislead an archivist.
+     *
+     * Until the real recovery worker is wired, the post-recovery cells
+     * stay explicitly empty. The pre-recovery count above is real (it
+     * comes straight from uft_triage_analyze() via the wizard state),
+     * the recommendation text further down is real strategy guidance,
+     * and that is what the user gets — no fabricated success number.
+     *
+     * When a recovery worker eventually populates a `sectors_recovered`
+     * field on uft_recovery_wizard_t, replace the "—" strings here with
+     * `ws->sectors_recovered` etc. Tracked as the follow-up of MF-115.
      */
-    int recovered = badBefore / 2;  /* placeholder estimate */
-    int badAfter  = badBefore - recovered;
-
-    m_afterLabel->setText(tr("%1 bad sectors remaining").arg(badAfter));
-    m_improvedLabel->setText(tr("%1 sectors recovered").arg(recovered));
-
-    if (badAfter == 0) {
-        m_crcLabel->setText(tr("All CRCs passed"));
-        m_crcLabel->setStyleSheet("font-weight: bold; color: #2e7d32;");
-    } else {
-        m_crcLabel->setText(tr("%1 CRC errors remaining").arg(badAfter));
-        m_crcLabel->setStyleSheet("font-weight: bold; color: #e53935;");
-    }
+    const QString notMeasured = tr("— (not yet measured)");
+    m_afterLabel->setText(notMeasured);
+    m_improvedLabel->setText(notMeasured);
+    m_crcLabel->setText(tr("Run a recovery strategy to populate these counts."));
+    m_crcLabel->setStyleSheet("color: #555;");
 }
 
 /* ============================================================================
