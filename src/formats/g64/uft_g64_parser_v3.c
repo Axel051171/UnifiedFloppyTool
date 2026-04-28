@@ -1275,30 +1275,37 @@ static bool g64_validate_header(const uint8_t* data, size_t size, g64_disk_t* di
  * @brief Read track and speed tables
  */
 static bool g64_read_tables(const uint8_t* data, size_t size, g64_disk_t* disk) {
+    /* MF-119: spec stores exactly G64_MAX_TRACKS entries (84 × 4 bytes)
+     * starting at G64_TRACK_TABLE_OFFSET. The previous loops iterated
+     * `i <= G64_MAX_TRACKS` (85 times), so on a valid file the 85th
+     * read pulled garbage from the beginning of the speed table into
+     * track_offsets[84] — the array is sized [+1] so no overflow, but
+     * the value was a lie. Same off-by-one in the speed-zone loop. */
+
     /* Track offset table */
-    for (int i = 0; i <= G64_MAX_TRACKS; i++) {
+    for (int i = 0; i < G64_MAX_TRACKS; i++) {
         size_t off = G64_TRACK_TABLE_OFFSET + i * 4;
         if (off + 4 > size) break;
-        
-        disk->track_offsets[i] = 
-            data[off] | 
-            (data[off + 1] << 8) | 
-            ((uint32_t)data[off + 2] << 16) | 
+
+        disk->track_offsets[i] =
+            data[off] |
+            (data[off + 1] << 8) |
+            ((uint32_t)data[off + 2] << 16) |
             ((uint32_t)data[off + 3] << 24);
     }
-    
+
     /* Speed zone table */
-    for (int i = 0; i <= G64_MAX_TRACKS; i++) {
+    for (int i = 0; i < G64_MAX_TRACKS; i++) {
         size_t off = G64_SPEED_TABLE_OFFSET + i * 4;
         if (off + 4 > size) break;
-        
-        disk->speed_zones[i] = 
-            data[off] | 
-            (data[off + 1] << 8) | 
-            ((uint32_t)data[off + 2] << 16) | 
+
+        disk->speed_zones[i] =
+            data[off] |
+            (data[off + 1] << 8) |
+            ((uint32_t)data[off + 2] << 16) |
             ((uint32_t)data[off + 3] << 24);
     }
-    
+
     return true;
 }
 
