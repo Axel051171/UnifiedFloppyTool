@@ -32,6 +32,7 @@ class TabWorkflow;
 }
 
 class DecodeJob;
+class FluxCaptureJob;
 class QThread;
 
 class WorkflowTab : public QWidget
@@ -74,6 +75,11 @@ signals:
 public slots:
     void onDeviceInfoChanged(const QString& deviceName, const QString& firmware);
 
+    // MF-110 — MainWindow forwards the live HAL handle from HardwareTab
+    // every time the connection state flips. Pass nullptr when disconnected.
+    // FluxCaptureJob uses this to drive the same open Greaseweazle.
+    void setHardwareDevice(void *gwDevice, int cylinders, int sides);
+
 private slots:
     void onSourceModeChanged(int id);
     void onDestModeChanged(int id);
@@ -103,6 +109,12 @@ private:
     bool m_isPaused;
     QThread* m_workerThread;
     DecodeJob* m_decodeJob;
+    FluxCaptureJob* m_captureJob;
+
+    // MF-110 — cached HAL handle from HardwareTab. Non-owning.
+    void* m_gwDevice;
+    int m_hwCylinders;
+    int m_hwSides;
     
     // Device info from HardwareTab
     QString m_deviceName;

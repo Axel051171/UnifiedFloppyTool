@@ -37,6 +37,13 @@ public:
     bool isConnected() const { return m_connected; }
     QString currentController() const { return m_controllerType; }
     ControllerRole currentRole() const { return m_controllerRole; }
+
+    // MF-110 — exposed so WorkflowTab/FluxCaptureJob can drive the same
+    // open Greaseweazle handle. Returns nullptr when not connected.
+    // The pointer is owned by HardwareTab; do not free it from the caller.
+    void *gwDevice() const { return m_gwDevice; }
+    int detectedTracks() const { return m_detectedTracks; }
+    int detectedHeads() const { return m_detectedHeads; }
     
     // Device info getters
     QString getDeviceName() const;

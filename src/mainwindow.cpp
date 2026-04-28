@@ -117,6 +117,18 @@ void MainWindow::loadTabWidgets()
                 qDebug() << "HardwareTab connectionChanged signal received:" << connected;
                 setLEDStatus(connected ? LEDStatus::Connected : LEDStatus::Disconnected);
             }, Qt::QueuedConnection);
+
+    // MF-110 — forward the live HAL handle from HardwareTab to WorkflowTab
+    // so FluxCaptureJob can drive the same open Greaseweazle. When the
+    // hardware disconnects we push nullptr so WorkflowTab refuses to start
+    // a flux capture without a device.
+    connect(hardwareTab, &HardwareTab::connectionChanged,
+            workflowTab, [workflowTab, hardwareTab](bool connected) {
+                workflowTab->setHardwareDevice(
+                    connected ? hardwareTab->gwDevice() : nullptr,
+                    hardwareTab->detectedTracks(),
+                    hardwareTab->detectedHeads());
+            });
     
     // Tab 4: Settings - All settings as Sub-Tabs (Flux, Format, XCopy, Nibble, Forensic, Protection)
     FormatTab* formatTab = new FormatTab();
