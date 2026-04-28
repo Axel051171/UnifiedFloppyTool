@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdatomic.h>  /* MF-120: thread-safe init of fake_bit_buffer */
 
 /* ============================================================================
  * CRC32 Table (Gary S. Brown, 1986)
@@ -778,19 +779,46 @@ bool woz_has_sync_tracks(const woz_image_t *image)
  * MC3470 Fake Bit Simulation
  * ============================================================================ */
 
-/* Random bit buffer for fake bit generation */
+/* MF-120: fake_bit_pos was a plain file-static int, mutated on every
+ * call from get_fake_bit(). woz_read_nibble_mc3470() is part of the
+ * public WOZ-parse path, so a batch run that parses two WOZ images on
+ * separate worker threads raced on this counter — no UB on most
+ * platforms, but each thread saw a corrupted "fake bit" sequence,
+ * which destroys forensic determinism.
+ *
+ * `fake_bit_buffer` itself stays a normal static: it is read-only after
+ * one-time init, and the "did we init?" check is now atomic so the init
+ * never tears, never runs twice, never returns half-filled data. */
 static uint8_t fake_bit_buffer[32];
-static int fake_bit_pos = 0;
-static bool fake_bit_initialized = false;
+static _Atomic int fake_bit_init_state = 0;   /* 0 = pristine, 1 = initialised */
+static _Thread_local int fake_bit_pos = 0;    /* per-thread pseudo-random walker */
 
 static void init_fake_bits(void)
 {
-    if (!fake_bit_initialized) {
-        /* Fill with ~30% ones */
-        for (int i = 0; i < 32; i++) {
-            fake_bit_buffer[i] = (uint8_t)(((i * 37) % 256) < 77 ? 0xFF : 0x00);
-        }
-        fake_bit_initialized = true;
+    /* Already initialised? Single relaxed load — happy path is one
+     * cache-friendly atomic_load, no bus locking. */
+    if (atomic_load_explicit(&fake_bit_init_state, memory_order_acquire) == 1) {
+        return;
+    }
+    /* Pre-fill into a stack buffer first so a racing thread that loses
+     * the CAS never observes a half-written global. */
+    uint8_t tmp[32];
+    for (int i = 0; i < 32; i++) {
+        tmp[i] = (uint8_t)(((i * 37) % 256) < 77 ? 0xFF : 0x00);
+    }
+    int expected = 0;
+    if (atomic_compare_exchange_strong_explicit(
+            &fake_bit_init_state, &expected, 1,
+            memory_order_acq_rel, memory_order_acquire)) {
+        memcpy(fake_bit_buffer, tmp, sizeof(tmp));
+        atomic_store_explicit(&fake_bit_init_state, 1, memory_order_release);
+    }
+    /* If the CAS lost, the winner is filling the buffer — spin until
+     * they're done. The loop body is empty by design; this only runs
+     * during the very first calls in two threads, never on the hot
+     * path. */
+    while (atomic_load_explicit(&fake_bit_init_state, memory_order_acquire) != 1) {
+        /* yield? — keep portable, just spin */
     }
 }
 
