@@ -53,6 +53,8 @@ static int file_copy_all(const char *src_path, const char *dst_path) {
  * Track deep-copy helpers
  * ============================================================================ */
 
+static void track_cleanup_copy(uft_track_t *t);  /* fwd decl for MF-117 */
+
 static uft_error_t track_deep_copy(const uft_track_t *src, uft_track_t *dst) {
     memset(dst, 0, sizeof(*dst));
     dst->cylinder = src->cylinder;
@@ -66,7 +68,15 @@ static uft_error_t track_deep_copy(const uft_track_t *src, uft_track_t *dst) {
                                                : src->sectors[i].data_size;
         if (src->sectors[i].data && len > 0) {
             dst->sectors[i].data = malloc(len);
-            if (!dst->sectors[i].data) return UFT_ERROR_NO_MEMORY;
+            if (!dst->sectors[i].data) {
+                /* MF-117: free everything we already copied so the
+                 * caller's plain free(pw) does not leak sectors 0..i-1.
+                 * The bump of sector_count tells track_cleanup_copy how
+                 * many entries to walk. */
+                dst->sector_count = i;
+                track_cleanup_copy(dst);
+                return UFT_ERROR_NO_MEMORY;
+            }
             memcpy(dst->sectors[i].data, src->sectors[i].data, len);
             dst->sectors[i].data_len = len;
             dst->sectors[i].data_size = len;
