@@ -283,15 +283,33 @@ bool DecodeJob::verifySectors()
     }
     
     file.close();
-    
-    // Update result
-    m_result.goodSectors = goodCount > 0 ? goodCount : m_result.totalSectors;
-    m_result.badSectors = badCount;
-    m_result.hasErrors = (badCount > 0);
-    
+
+    // MF-118: previously this line read
+    //     m_result.goodSectors = goodCount > 0 ? goodCount : m_result.totalSectors;
+    // which silently turned "user cancelled before any sector was checked"
+    // into "verification claimed all sectors OK". That violated
+    // "Keine erfundenen Daten" — the result struct then went out via
+    // finished() and ended up in forensic reports.
+    //
+    // Honest behaviour: the flux branch above already set goodSectors =
+    // totalSectors with an explicit "we cannot verify individual sectors"
+    // intent; we leave that alone. The sector branch trusts whatever was
+    // actually counted; cancel makes verifySectors() return false so the
+    // job emits an error rather than a finished("X/Y good") signal.
+    if (!isFluxFormat) {
+        m_result.goodSectors = goodCount;
+        m_result.badSectors  = badCount;
+        m_result.hasErrors   = (badCount > 0);
+    }
+
     qDebug() << "Verify:" << m_result.goodSectors << "/" << m_result.totalSectors
              << "good," << m_result.badSectors << "bad";
-    
+
+    if (isCancelled()) {
+        emit error("Verification cancelled before completion — counts not finalised.");
+        return false;
+    }
+
     emit progress(80);
     return true;
 }
@@ -330,9 +348,27 @@ bool DecodeJob::convertImage()
     
     while (!srcFile.atEnd() && !isCancelled()) {
         buffer = srcFile.read(65536); // 64KB chunks
-        destFile.write(buffer);
+
+        // MF-122: previously the return value of write() was discarded,
+        // so a full disk or I/O error silently produced a truncated
+        // output file with no error signal. Treat any short write as a
+        // hard failure — partial output is still on disk so we delete
+        // it before bailing.
+        qint64 wrote = destFile.write(buffer);
+        if (wrote != buffer.size()) {
+            QString errMsg = QString("Write failed at offset %1 (%2 of %3 bytes): %4")
+                                 .arg(written)
+                                 .arg(wrote < 0 ? 0 : wrote)
+                                 .arg(buffer.size())
+                                 .arg(destFile.errorString());
+            srcFile.close();
+            destFile.close();
+            QFile::remove(m_destPath);
+            emit error(errMsg);
+            return false;
+        }
         written += buffer.size();
-        
+
         int pct = 85 + static_cast<int>((written * 10) / totalSize);
         emit progress(pct);
     }
