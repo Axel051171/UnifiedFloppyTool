@@ -91,6 +91,10 @@ static void scan_dropouts(const float *amp, size_t n,
                            const otdr9_config_t *cfg,
                            uint8_t *flags,
                            otdr9_region_t *regions, size_t *rcnt, size_t rmax) {
+    /* MF-121: the loop body uses `for (i = 0; i <= n; i++)` as a
+     * sentinel pattern. Guard against the pathological n == SIZE_MAX
+     * case where `i <= n` would never terminate. */
+    if (!amp || !flags || n == 0 || n == SIZE_MAX) return;
     float thr = cfg->dropout_threshold;
     size_t min_run = cfg->dropout_min_run;
     if (min_run < 1) min_run = 1;
@@ -133,6 +137,8 @@ static void scan_clipping(const float *amp, size_t n,
                            const otdr9_config_t *cfg,
                            uint8_t *flags,
                            otdr9_region_t *regions, size_t *rcnt, size_t rmax) {
+    /* MF-121 guard — see scan_dropouts. */
+    if (!amp || !flags || n == 0 || n == SIZE_MAX) return;
     float hi = cfg->clip_high;
     float lo = cfg->clip_low;
     size_t min_run = cfg->clip_min_run;
@@ -197,6 +203,8 @@ static void scan_stuck(const float *amp, size_t n,
                         const otdr9_config_t *cfg,
                         uint8_t *flags,
                         otdr9_region_t *regions, size_t *rcnt, size_t rmax) {
+    /* MF-121 guard — see scan_dropouts. */
+    if (!amp || !flags || n == 0 || n == SIZE_MAX) return;
     float max_delta = cfg->stuck_max_delta;
     size_t min_run = cfg->stuck_min_run;
     if (min_run < 2) min_run = 2;
@@ -243,6 +251,8 @@ static void scan_deadzone(const float *amp, size_t n,
                            const otdr9_config_t *cfg,
                            uint8_t *flags,
                            otdr9_region_t *regions, size_t *rcnt, size_t rmax) {
+    /* MF-121 guard — see scan_dropouts. */
+    if (!amp || !flags || n == 0 || n == SIZE_MAX) return;
     float snr_thr = cfg->deadzone_snr_db;
     size_t min_run = cfg->deadzone_min_run;
     size_t sig_win = (size_t)cfg->deadzone_sigma_win;
