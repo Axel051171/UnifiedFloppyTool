@@ -314,7 +314,10 @@ Davon:
   - 25  Real UFT action items, kategorisiert:
         * Format completion: ATX, XDF, ADF, IMD, SCP, JSON-serialize (12)
         * GUI features ohne Backend: explorertab, workflowtab, switch_panel,
-          filesystem_browser, flux_histogram_widget, UftMainController (8)
+          filesystem_browser, flux_histogram_widget (7)
+          [UftMainController + Application + UftMainWindow trio entfernt
+           als MF-113 — 2028 LOC dead architecture experiment, nie in
+           qmake/CMake gewired, durch FluxCaptureJob/MF-110 obsolet.]
         * Decode/Recovery refinement: otdr_event_calibration, multiread_voting,
           rpm_sync_variance (3)
         * Format-convert pipelines: SCP→D64, GCR→D64, TD0→IMD (3)
