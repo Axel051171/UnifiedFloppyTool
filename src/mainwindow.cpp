@@ -2,6 +2,7 @@
 #include "ui_mainwindow.h"
 #include "visualdisk.h"
 #include "disk_image_validator.h"
+#include "uft/uft_version.h"
 
 // Tab widget classes
 #include "workflowtab.h"
@@ -62,7 +63,8 @@ MainWindow::MainWindow(QWidget *parent)
     , m_darkMode(false)
 {
     ui->setupUi(this);
-    
+    setWindowTitle(QString("UnifiedFloppyTool v%1").arg(UFT_VERSION_STRING));
+
     loadTabWidgets();
     setupConnections();
     loadSettings();
@@ -395,12 +397,12 @@ void MainWindow::onHelp()
 void MainWindow::onAbout()
 {
     QMessageBox::about(this, tr("About UnifiedFloppyTool"),
-        tr("<h2>UnifiedFloppyTool v4.1.0</h2>"
+        tr("<h2>UnifiedFloppyTool v%1</h2>"
            "<p>Bei uns geht kein Bit verloren</p>"
            "<p>A comprehensive floppy disk preservation and analysis tool.</p>"
            "<p>Supports: Commodore, Amiga, Apple, Atari, PC, BBC Micro, and more.</p>"
            "<p><b>Author:</b> Axel Muhr</p>"
-           "<p><b>License:</b> GPL v3</p>"));
+           "<p><b>License:</b> GPL v3</p>").arg(UFT_VERSION_STRING));
 }
 
 void MainWindow::onKeyboardShortcuts()
