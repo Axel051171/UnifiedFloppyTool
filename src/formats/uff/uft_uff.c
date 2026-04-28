@@ -901,14 +901,28 @@ int uff_read_track(uff_file_t* uff, uint8_t cylinder, uint8_t head,
         /* Read flux data for each revolution */
         for (uint32_t r = 0; r < thdr.revolution_count; r++) {
             track->flux_counts[r] = track->revolutions[r].flux_count;
+
+            /* MF-126: flux_count is attacker-controlled. The header
+             * UFF_MAX_FLUX_PER_REV already declares the per-revolution
+             * limit (500k transitions, ~2 MB) — we just weren't
+             * checking it against the file-supplied value. A malicious
+             * header with 0x40000000 flux entries would otherwise drive
+             * a 4 GB allocation per revolution. Treat oversized counts
+             * as a hard parse error rather than silently truncating —
+             * a forensic image must not come out half-read. */
+            if (track->flux_counts[r] > UFF_MAX_FLUX_PER_REV) {
+                uff_free_track(track);
+                return UFF_ERR_FILE;
+            }
+
             track->flux_data[r] = malloc(track->flux_counts[r] * sizeof(uint32_t));
-            
+
             if (!track->flux_data[r]) {
                 uff_free_track(track);
                 return UFF_ERR_MEMORY;
             }
-            
-            if (fread(track->flux_data[r], sizeof(uint32_t), 
+
+            if (fread(track->flux_data[r], sizeof(uint32_t),
                      track->flux_counts[r], f) != track->flux_counts[r]) {
                 uff_free_track(track);
                 return UFF_ERR_FILE;

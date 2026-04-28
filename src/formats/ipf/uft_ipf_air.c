@@ -662,9 +662,14 @@ ipf_air_status_t ipf_air_parse(const uint8_t* data, size_t size,
         else if (strcmp(rec_type, "CTEX") == 0) {
             if (pos + 32 > size) { pos = start_pos + rec_len; continue; }
             uint32_t idx = disk->ctex_count;
-            disk->ctex = (ipf_ctex_t*)realloc(disk->ctex,
+            /* MF-125: classic realloc-into-original-pointer leak. If
+             * realloc returns NULL, disk->ctex was overwritten with NULL
+             * and the previous buffer is unreachable. Use a temp so we
+             * keep the old buffer alive on failure. */
+            ipf_ctex_t* tmp = (ipf_ctex_t*)realloc(disk->ctex,
                           (idx + 1) * sizeof(ipf_ctex_t));
-            if (disk->ctex) {
+            if (tmp) {
+                disk->ctex = tmp;
                 ipf_ctex_t* cx = &disk->ctex[idx];
                 cx->track      = ipf_be32(data + pos); pos += 4;
                 cx->side       = ipf_be32(data + pos); pos += 4;
@@ -674,6 +679,9 @@ ipf_air_status_t ipf_air_parse(const uint8_t* data, size_t size,
                 cx->track_size = ipf_be32(data + pos); pos += 4;
                 disk->ctex_count++;
             }
+            /* On realloc failure: previous buffer + count stay intact;
+             * we just skip this record. The parse continues honestly
+             * with what was already accumulated. */
             pos = start_pos + rec_len;
         }
 
