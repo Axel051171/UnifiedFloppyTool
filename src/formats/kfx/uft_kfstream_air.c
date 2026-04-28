@@ -554,6 +554,63 @@ static bool kf_find_hw_value(const kf_stream_t* stream,
 }
 
 /*============================================================================
+ * Locale-independent decimal parser (MF-124)
+ *
+ * KryoFlux HW-info strings always use a literal '.' as decimal separator
+ * (e.g. "24027428.5714285" for sck). atof() and strtod() honour the
+ * current C locale, so on systems running de_DE / fr_FR / es_ES etc.
+ * they treat '.' as a thousands separator and silently truncate the
+ * fractional part. The result is a wrong sample-clock value that
+ * propagates into RPM and timing calculations with no error path.
+ *
+ * setlocale(LC_NUMERIC, "C") is process-global and not thread-safe;
+ * uselocale() is POSIX-only. The portable, thread-safe answer is the
+ * tiny manual parser below — it only handles the [-]?d+(.d+)?(e[+-]?d+)?
+ * grammar that KryoFlux actually emits.
+ *============================================================================*/
+static double kf_atof_c(const char *s)
+{
+    if (!s) return 0.0;
+    while (*s == ' ' || *s == '\t') s++;
+    int sign = 1;
+    if (*s == '+') s++;
+    else if (*s == '-') { sign = -1; s++; }
+
+    double whole = 0.0;
+    while (*s >= '0' && *s <= '9') {
+        whole = whole * 10.0 + (double)(*s - '0');
+        s++;
+    }
+    double frac = 0.0;
+    double scale = 1.0;
+    if (*s == '.') {
+        s++;
+        while (*s >= '0' && *s <= '9') {
+            frac = frac * 10.0 + (double)(*s - '0');
+            scale *= 10.0;
+            s++;
+        }
+    }
+    double value = whole + frac / scale;
+
+    if (*s == 'e' || *s == 'E') {
+        s++;
+        int esign = 1;
+        if (*s == '+') s++;
+        else if (*s == '-') { esign = -1; s++; }
+        int exp = 0;
+        while (*s >= '0' && *s <= '9') {
+            exp = exp * 10 + (*s - '0');
+            s++;
+        }
+        double mul = 1.0;
+        for (int i = 0; i < exp; i++) mul *= 10.0;
+        value = (esign > 0) ? (value * mul) : (value / mul);
+    }
+    return sign * value;
+}
+
+/*============================================================================
  * PUBLIC API - readStream() equivalent
  *============================================================================*/
 
@@ -598,12 +655,12 @@ kf_status_t kf_stream_parse(const uint8_t* data, size_t size,
     /* Step 4: Update clocks from HW info (firmware 2.0+) */
     char val_buf[64];
     if (kf_find_hw_value(stream, "sck", val_buf, sizeof(val_buf))) {
-        stream->sck_value = atof(val_buf);
+        stream->sck_value = kf_atof_c(val_buf);   /* MF-124: locale-independent */
         /* Recompute stats with corrected clock */
         kf_fill_statistics(stream);
     }
     if (kf_find_hw_value(stream, "ick", val_buf, sizeof(val_buf))) {
-        stream->ick_value = atof(val_buf);
+        stream->ick_value = kf_atof_c(val_buf);   /* MF-124: locale-independent */
     }
 
     stream->valid = true;

@@ -162,10 +162,20 @@ int uft_mfi_read(const char *path, mfi_image_t *image) {
         
         uint32_t offset = read_le32((uint8_t*)&th.offset);
         uint32_t size = read_le32((uint8_t*)&th.size);
-        
+
+        /* MF-123: `size` is attacker-controlled. A typical MFI track
+         * holds 100k-500k flux entries × 4 bytes = ~0.5-2 MB. A
+         * malicious header with size=0xFFFFFFFF would request a 4 GB
+         * allocation that may succeed on 64-bit systems and exhaust
+         * memory. Cap at 16 MB — 4× the realistic worst case. */
+        const uint32_t MFI_MAX_TRACK_BYTES = 16u * 1024u * 1024u;
+        if (size > MFI_MAX_TRACK_BYTES) {
+            continue;
+        }
+
         if (size > 0 && offset > 0) {
             long save_pos = ftell(fp);
-            
+
             if (fseek(fp, offset, SEEK_SET) == 0) {
                 uint8_t *raw_data = malloc(size);
                 if (raw_data) {
