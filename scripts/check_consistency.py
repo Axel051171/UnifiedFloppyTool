@@ -248,13 +248,71 @@ def check_test_lib_targets(repo: Path) -> list[str]:
     return errors
 
 
+def check_version_ssot(repo: Path) -> list[str]:
+    """
+    MF-116: catch version-string drift across the SSOT family. The
+    canonical version lives in VERSION.txt; everything that ships a
+    version string to a user (uft_version.h, Flatpak metainfo, Win32 .rc)
+    must agree, otherwise we get the v4.1.0-vs-v4.1.3 title-bar bug
+    (MF-109) class of mismatch shipping to end users.
+
+    The goal isn't to derive every consumer at build time — that's a
+    bigger refactor. The goal is to fail-loud at pre-push when one of
+    them drifts.
+    """
+    errors: list[str] = []
+    canonical_path = repo / "VERSION.txt"
+    if not canonical_path.is_file():
+        return [f"VERSION.txt missing at {canonical_path}"]
+    canonical = canonical_path.read_text(encoding="utf-8").strip()
+    if not canonical:
+        return [f"VERSION.txt is empty at {canonical_path}"]
+
+    # uft_version.h — UFT_VERSION_STRING macro.
+    vh = repo / "include" / "uft" / "uft_version.h"
+    if vh.is_file():
+        m = re.search(r'UFT_VERSION_STRING\s+"([^"]+)"', vh.read_text(encoding="utf-8"))
+        if not m:
+            errors.append(f"{vh}: UFT_VERSION_STRING not found")
+        elif m.group(1) != canonical:
+            errors.append(
+                f"{vh}: UFT_VERSION_STRING={m.group(1)!r} drifted from VERSION.txt={canonical!r}"
+            )
+
+    # Flatpak metainfo — latest <release version="X">.
+    metainfo_glob = list((repo / "packaging" / "flatpak").glob("*.metainfo.xml"))
+    for mi in metainfo_glob:
+        text = mi.read_text(encoding="utf-8")
+        m = re.search(r'<release\s+version="([^"]+)"', text)
+        if m and m.group(1) != canonical:
+            errors.append(
+                f"{mi}: latest <release version={m.group(1)!r}> drifted from VERSION.txt={canonical!r}"
+            )
+
+    # Win32 .rc — VALUE "FileVersion" / "ProductVersion" must reference
+    # UFT_VERSION_STRING-derived macros, never a literal "X.Y.Z.0".
+    rc = repo / "resources" / "uft.rc"
+    if rc.is_file():
+        text = rc.read_text(encoding="utf-8", errors="replace")
+        for label in ("FileVersion", "ProductVersion"):
+            for m in re.finditer(
+                r'VALUE\s+"' + label + r'"\s*,\s*"([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)"',
+                text):
+                errors.append(
+                    f"{rc}: VALUE \"{label}\" hardcoded to {m.group(1)!r} — "
+                    "use UFT_RC_FILE_VERSION_STR macro from uft_version.h"
+                )
+
+    return errors
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--root", type=Path,
                     default=Path(__file__).resolve().parent.parent)
     ap.add_argument("--warn-only", action="store_true",
                     help="Print findings but exit 0 (non-blocking mode)")
-    ap.add_argument("--check", choices=["includes", "sources", "libs", "all"],
+    ap.add_argument("--check", choices=["includes", "sources", "libs", "version", "all"],
                     default="all")
     args = ap.parse_args()
 
@@ -270,6 +328,9 @@ def main() -> int:
     if args.check in ("libs", "all"):
         e = check_test_lib_targets(repo)
         all_errors.append(("undefined TEST_LIBS target", e))
+    if args.check in ("version", "all"):
+        e = check_version_ssot(repo)
+        all_errors.append(("version SSOT drift", e))
 
     total = sum(len(e) for _, e in all_errors)
     print(f"Consistency check ({len(all_errors)} categories, root={repo}):")
