@@ -1,13 +1,26 @@
 // UnifiedFloppyTool Windows Resource File
 // SPDX-License-Identifier: GPL-2.0-or-later
+//
+// Version fields are pulled from the SSOT in include/uft/uft_version.h.
+// Do NOT hardcode "4.1.x.0" here — that drifts (see MF-109/MF-111).
 
 #include <windows.h>
+#include "uft/uft_version.h"
+
+// Stringize helpers so we can compose "MAJOR.MINOR.PATCH.0" from the
+// integer macros without having to maintain a parallel string.
+#define UFT_RC_STR_(x) #x
+#define UFT_RC_STR(x)  UFT_RC_STR_(x)
+#define UFT_RC_FILE_VERSION_STR \
+    UFT_RC_STR(UFT_VERSION_MAJOR) "." \
+    UFT_RC_STR(UFT_VERSION_MINOR) "." \
+    UFT_RC_STR(UFT_VERSION_PATCH) ".0"
 
 IDI_ICON1 ICON "icons/app.ico"
 
 VS_VERSION_INFO VERSIONINFO
-FILEVERSION     4,1,0,0
-PRODUCTVERSION  4,1,0,0
+FILEVERSION     UFT_VERSION_MAJOR,UFT_VERSION_MINOR,UFT_VERSION_PATCH,0
+PRODUCTVERSION  UFT_VERSION_MAJOR,UFT_VERSION_MINOR,UFT_VERSION_PATCH,0
 FILEFLAGSMASK   VS_FFI_FILEFLAGSMASK
 FILEFLAGS       0
 FILEOS          VOS_NT_WINDOWS32
@@ -20,12 +33,12 @@ BEGIN
         BEGIN
             VALUE "CompanyName",      "Axel Kramer"
             VALUE "FileDescription",  "UnifiedFloppyTool - Forensic Floppy Preservation"
-            VALUE "FileVersion",      "4.1.0.0"
+            VALUE "FileVersion",      UFT_RC_FILE_VERSION_STR
             VALUE "InternalName",     "uft"
             VALUE "LegalCopyright",   "Copyright (C) 2024-2026 Axel Kramer. GPL-2.0"
             VALUE "OriginalFilename", "UnifiedFloppyTool.exe"
             VALUE "ProductName",      "UnifiedFloppyTool"
-            VALUE "ProductVersion",   "4.1.0.0"
+            VALUE "ProductVersion",   UFT_RC_FILE_VERSION_STR
         END
     END
     BLOCK "VarFileInfo"
