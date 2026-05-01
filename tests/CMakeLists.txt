@@ -238,6 +238,13 @@ foreach(test_source ${TEST_SOURCES})
         # encapsulated; the test exercises the opaque-handle API).
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_air.c)
+    elseif(${test_name} STREQUAL "test_gw_protocol")
+        # MF-135: GW protocol regression tests need uft_gw_strerror() +
+        # the inline tick conversion helpers from the full HAL impl.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/hal/uft_greaseweazle_full.c)
+        # No UFT lib dependencies — the test only touches HAL constants.
+        set(TEST_LIBS "")
     endif()
     
     if(TEST_LIBS)
