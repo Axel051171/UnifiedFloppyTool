@@ -197,6 +197,28 @@ jobs:
         run: |
           file build/release/UnifiedFloppyTool.exe
 
+      - name: Build tests (CMake)
+        # Same best-effort policy as the Linux job: partial CMake test
+        # builds are acceptable since qmake (above) is the canonical
+        # production build. The Windows build of test_gw_protocol
+        # (MF-135) is the one we actually want to keep green here -
+        # protocol regressions on the platform where the FB-bug
+        # appeared should fail the CI on that platform.
+        shell: bash
+        run: |
+          cmake -B build-tests -G "MinGW Makefiles" \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DUFT_BUILD_TESTS=ON || true
+          cmake --build build-tests --parallel $(nproc) 2>&1 || true
+
+      - name: Run tests
+        # ctest exit 8 ("no tests run") wrapped with `|| true` to match
+        # the Linux job's policy. Any test that linked and runs prints
+        # PASS/FAIL; anything that didn't link surfaces as "Not Run".
+        shell: bash
+        run: |
+          cd build-tests && ctest --output-on-failure --timeout 120 || true
+
       - name: Upload build logs on failure
         if: failure()
         uses: actions/upload-artifact@v4
