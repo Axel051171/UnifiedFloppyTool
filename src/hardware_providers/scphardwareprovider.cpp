@@ -194,17 +194,10 @@ void SCPHardwareProvider::autoDetectDevice()
         if (isCandidate) {
             /* Verify with protocol handshake: send SCPINFO, expect valid response */
             QSerialPort testPort;
-
-#ifdef Q_OS_WIN
-            /* Add Windows device prefix for reliable COM port access */
-            QString winPortName = portName;
-            if (!winPortName.startsWith("\\\\.\\")) {
-                winPortName = "\\\\.\\" + winPortName;
-            }
-            testPort.setPortName(winPortName);
-#else
+            /* MF-145: Qt's QSerialPort applies the Win32 \\.\
+             * device prefix internally on Windows; passing it
+             * manually causes DeviceNotFoundError on Qt 6.7+. */
             testPort.setPortName(portName);
-#endif
             testPort.setBaudRate(9600);
             testPort.setDataBits(QSerialPort::Data8);
             testPort.setParity(QSerialPort::NoParity);
@@ -292,16 +285,8 @@ void SCPHardwareProvider::autoDetectDevice()
         }
 
         QSerialPort testPort;
-
-#ifdef Q_OS_WIN
-        QString winPortName = portName;
-        if (!winPortName.startsWith("\\\\.\\")) {
-            winPortName = "\\\\.\\" + winPortName;
-        }
-        testPort.setPortName(winPortName);
-#else
+        /* MF-145: Qt handles Win32 \\.\ prefix internally. */
         testPort.setPortName(portName);
-#endif
         testPort.setBaudRate(9600);
         testPort.setDataBits(QSerialPort::Data8);
         testPort.setParity(QSerialPort::NoParity);
@@ -407,22 +392,16 @@ bool SCPHardwareProvider::connect()
 
     /* Windows COM port handling:
      * - Extract just "COMx" if path contains description (e.g., "COM4 - SuperCard Pro")
-     * - Add \\.\\ prefix for reliable access on Windows */
+     * - Extract bare COMx; Qt's QSerialPort handles the Win32
+     *   \\.\ prefix internally (MF-145). */
     QString portName = m_devicePath;
 
 #ifdef Q_OS_WIN
-    /* Extract COM port if it contains extra text */
     QRegularExpression comRegex("(COM\\d+)", QRegularExpression::CaseInsensitiveOption);
     QRegularExpressionMatch match = comRegex.match(portName);
     if (match.hasMatch()) {
         portName = match.captured(1).toUpper();
     }
-
-    /* Add Windows device prefix for reliable COM port access */
-    if (!portName.startsWith("\\\\.\\")) {
-        portName = "\\\\.\\" + portName;
-    }
-
     qDebug() << "Windows COM port:" << m_devicePath << "->" << portName;
 #endif
 

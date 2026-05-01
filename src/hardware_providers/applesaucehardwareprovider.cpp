@@ -211,16 +211,8 @@ void ApplesauceHardwareProvider::autoDetectDevice()
             /* Verify with Applesauce text protocol handshake:
              * Send "?\n", expect response containing "Applesauce" */
             QSerialPort testPort;
-
-#ifdef Q_OS_WIN
-            QString winPortName = portName;
-            if (!winPortName.startsWith("\\\\.\\")) {
-                winPortName = "\\\\.\\" + winPortName;
-            }
-            testPort.setPortName(winPortName);
-#else
+            /* MF-145: Qt handles Win32 \\.\ prefix internally. */
             testPort.setPortName(portName);
-#endif
             /* Applesauce uses USB CDC, baud rate is irrelevant but we set
              * a reasonable value for compatibility */
             testPort.setBaudRate(QSerialPort::Baud115200);
@@ -295,16 +287,8 @@ void ApplesauceHardwareProvider::autoDetectDevice()
         }
 
         QSerialPort testPort;
-
-#ifdef Q_OS_WIN
-        QString winPortName = portName;
-        if (!winPortName.startsWith("\\\\.\\")) {
-            winPortName = "\\\\.\\" + winPortName;
-        }
-        testPort.setPortName(winPortName);
-#else
+        /* MF-145: Qt handles Win32 \\.\ prefix internally. */
         testPort.setPortName(portName);
-#endif
         testPort.setBaudRate(QSerialPort::Baud115200);
         testPort.setDataBits(QSerialPort::Data8);
         testPort.setParity(QSerialPort::NoParity);
@@ -399,13 +383,12 @@ bool ApplesauceHardwareProvider::connect()
     QString portName = m_devicePath;
 
 #ifdef Q_OS_WIN
+    /* MF-145: extract bare COMx; Qt handles the Win32 device prefix
+     * internally — manual \\.\ prepend caused DeviceNotFoundError. */
     QRegularExpression comRegex("(COM\\d+)", QRegularExpression::CaseInsensitiveOption);
     QRegularExpressionMatch match = comRegex.match(portName);
     if (match.hasMatch()) {
         portName = match.captured(1).toUpper();
-    }
-    if (!portName.startsWith("\\\\.\\")) {
-        portName = "\\\\.\\" + portName;
     }
     qDebug() << "Windows COM port:" << m_devicePath << "->" << portName;
 #endif

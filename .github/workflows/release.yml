@@ -62,15 +62,20 @@ jobs:
         run: echo "version=$(cat VERSION.txt | tr -d '[:space:]')" >> $GITHUB_OUTPUT
 
       - name: Build (qmake)
-        # FIX-003: version string passed via env var, not YAML-escaped inline
-        env:
-          UFT_VERSION: ${{ steps.version.outputs.version }}
+        # MF-145: no inline DEFINES+=UFT_VERSION_STRING — qmake's
+        # top-level system() call now invokes
+        # scripts/generate_version_header.py which rewrites
+        # include/uft/uft_version.h directly from VERSION.txt
+        # (see UnifiedFloppyTool.pro top + MF-131). The header is
+        # the single source of truth, no command-line escape
+        # tricks needed; the previous \"${UFT_VERSION}\" form was
+        # fragile under MinGW-bash and was the suspected cause of
+        # the FB-user-report "title shows 4.1.0".
         run: |
           mkdir build && cd build
           qmake ../UnifiedFloppyTool.pro \
             CONFIG+=release \
-            CONFIG+=cxx20 \
-            "DEFINES+=UFT_VERSION_STRING=\\\"${UFT_VERSION}\\\""
+            CONFIG+=cxx20
           make -j$(nproc)
 
       - name: Package .tar.gz
@@ -157,16 +162,14 @@ jobs:
         run: echo "version=$(cat VERSION.txt | tr -d '[:space:]')" >> $GITHUB_OUTPUT
 
       - name: Build (qmake)
-        # FIX-003: env var instead of inline YAML escaping
-        # FIX-005: no QMAKE_APPLE_DEVICE_ARCHS — single arch (ARM64) clean build
-        env:
-          UFT_VERSION: ${{ steps.version.outputs.version }}
+        # MF-145: see Linux build comment above; same MF-131 header
+        # auto-regen path applies on macOS.
+        # FIX-005: no QMAKE_APPLE_DEVICE_ARCHS — single arch (ARM64) clean build.
         run: |
           mkdir build && cd build
           qmake ../UnifiedFloppyTool.pro \
             CONFIG+=release \
-            CONFIG+=cxx20 \
-            "DEFINES+=UFT_VERSION_STRING=\\\"${UFT_VERSION}\\\""
+            CONFIG+=cxx20
           make -j$(sysctl -n hw.ncpu)
 
       - name: Deploy Qt frameworks + create DMG
@@ -230,17 +233,20 @@ jobs:
         run: echo "version=$(cat VERSION.txt | tr -d '[:space:]')" >> $GITHUB_OUTPUT
 
       - name: Build (qmake + MinGW)
-        # FIX-002: no manual PATH export needed
-        # FIX-003: env var for version string
+        # MF-145: see Linux build comment above. The MinGW-bash
+        # quoting was the worst offender — escaping a quoted version
+        # string through three layers of bash + qmake never reliably
+        # produced UFT_VERSION_STRING="4.1.3"; instead it landed
+        # empty and the #ifndef-guarded fallback in the header took
+        # over. Auto-regen of the header at qmake time eliminates
+        # the entire class of failures.
+        # FIX-002: no manual PATH export needed (add-tools-to-path).
         shell: bash
-        env:
-          UFT_VERSION: ${{ steps.version.outputs.version }}
         run: |
           mkdir build && cd build
           qmake ../UnifiedFloppyTool.pro \
             CONFIG+=release \
-            CONFIG+=cxx20 \
-            "DEFINES+=UFT_VERSION_STRING=\\\"${UFT_VERSION}\\\""
+            CONFIG+=cxx20
           mingw32-make -j$(nproc)
 
       - name: Deploy Qt DLLs

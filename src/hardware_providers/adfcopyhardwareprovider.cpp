@@ -148,17 +148,8 @@ void ADFCopyHardwareProvider::autoDetectDevice()
 
         /* Verify with PING handshake */
         QSerialPort testPort;
-
-#ifdef Q_OS_WIN
-        /* Add Windows device prefix for reliable COM port access */
-        QString winPortName = portName;
-        if (!winPortName.startsWith("\\\\.\\")) {
-            winPortName = "\\\\.\\" + winPortName;
-        }
-        testPort.setPortName(winPortName);
-#else
+        /* MF-145: Qt handles Win32 \\.\ prefix internally. */
         testPort.setPortName(portName);
-#endif
         testPort.setBaudRate(ADFC_BAUD_RATE);
         testPort.setDataBits(QSerialPort::Data8);
         testPort.setParity(QSerialPort::NoParity);
@@ -216,16 +207,8 @@ void ADFCopyHardwareProvider::autoDetectDevice()
         }
 
         QSerialPort testPort;
-
-#ifdef Q_OS_WIN
-        QString winPortName = portName;
-        if (!winPortName.startsWith("\\\\.\\")) {
-            winPortName = "\\\\.\\" + winPortName;
-        }
-        testPort.setPortName(winPortName);
-#else
+        /* MF-145: Qt handles Win32 \\.\ prefix internally. */
         testPort.setPortName(portName);
-#endif
         testPort.setBaudRate(ADFC_BAUD_RATE);
         testPort.setDataBits(QSerialPort::Data8);
         testPort.setParity(QSerialPort::NoParity);
@@ -298,12 +281,8 @@ bool ADFCopyHardwareProvider::connect()
     if (match.hasMatch()) {
         portName = match.captured(1).toUpper();
     }
-
-    /* Add Windows device prefix for reliable COM port access */
-    if (!portName.startsWith("\\\\.\\")) {
-        portName = "\\\\.\\" + portName;
-    }
-
+    /* MF-145: Qt handles the Win32 \\.\ prefix internally; manual
+     * prepend caused DeviceNotFoundError on Qt 6.7+. */
     qDebug() << "Windows COM port:" << m_devicePath << "->" << portName;
 #endif
 

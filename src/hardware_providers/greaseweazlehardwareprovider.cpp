@@ -223,16 +223,12 @@ void GreaseweazleHardwareProvider::autoDetectDevice()
             /* Verify with protocol handshake */
             QSerialPort testPort;
             
-#ifdef Q_OS_WIN
-            /* Add Windows device prefix for reliable COM port access */
-            QString winPortName = portName;
-            if (!winPortName.startsWith("\\\\.\\")) {
-                winPortName = "\\\\.\\" + winPortName;
-            }
-            testPort.setPortName(winPortName);
-#else
+            /* MF-145: pass plain "COMx" — Qt's QSerialPort applies
+             * the Win32 \\.\ prefix internally on Windows; prepending
+             * it manually causes DeviceNotFoundError on Qt 6.7+ or
+             * silent broken handles on older Qt. See QSerialPort
+             * docs + qserialport_win.cpp::nativeOpen. */
             testPort.setPortName(portName);
-#endif
             testPort.setBaudRate(115200);
             testPort.setDataBits(QSerialPort::Data8);
             testPort.setParity(QSerialPort::NoParity);
@@ -305,23 +301,16 @@ void GreaseweazleHardwareProvider::autoDetectDevice()
         }
         
         QSerialPort testPort;
-        
-#ifdef Q_OS_WIN
-        /* Add Windows device prefix for reliable COM port access */
-        QString winPortName = portName;
-        if (!winPortName.startsWith("\\\\.\\")) {
-            winPortName = "\\\\.\\" + winPortName;
-        }
-        testPort.setPortName(winPortName);
-#else
+        /* MF-145: see comment at first occurrence — Qt handles the
+         * Windows \\.\ prefix internally; passing it manually breaks
+         * port resolution on Qt 6.7+. */
         testPort.setPortName(portName);
-#endif
         testPort.setBaudRate(115200);
         testPort.setDataBits(QSerialPort::Data8);
         testPort.setParity(QSerialPort::NoParity);
         testPort.setStopBits(QSerialPort::OneStop);
         testPort.setFlowControl(QSerialPort::NoFlowControl);
-        
+
         if (!testPort.open(QIODevice::ReadWrite)) {
             continue;
         }
@@ -396,21 +385,21 @@ bool GreaseweazleHardwareProvider::connect()
     QString portName = m_devicePath;
     
 #ifdef Q_OS_WIN
-    /* Extract COM port if it contains extra text */
+    /* Extract bare COMx if path contains description (e.g. "COM4 -
+     * Greaseweazle (USB)"). MF-145: do NOT prepend \\.\ — Qt's
+     * QSerialPort applies the Win32 device prefix internally on
+     * Windows. Passing "\\.\COM4" causes DeviceNotFoundError on
+     * Qt 6.7+ (qserialport_win.cpp::nativeOpen treats it as an
+     * already-resolved path). The bug surfaced as the FB user-report
+     * "hardware will not access the floppy drive". */
     QRegularExpression comRegex("(COM\\d+)", QRegularExpression::CaseInsensitiveOption);
     QRegularExpressionMatch match = comRegex.match(portName);
     if (match.hasMatch()) {
         portName = match.captured(1).toUpper();
     }
-    
-    /* Add Windows device prefix for reliable COM port access */
-    if (!portName.startsWith("\\\\.\\")) {
-        portName = "\\\\.\\" + portName;
-    }
-    
     qDebug() << "Windows COM port:" << m_devicePath << "->" << portName;
 #endif
-    
+
     m_serialPort->setPortName(portName);
     m_serialPort->setBaudRate(m_baudRate);
     m_serialPort->setDataBits(QSerialPort::Data8);
