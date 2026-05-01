@@ -245,6 +245,13 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/hal/uft_greaseweazle_full.c)
         # No UFT lib dependencies — the test only touches HAL constants.
         set(TEST_LIBS "")
+    elseif(${test_name} STREQUAL "test_mfm_sector_parser")
+        # MF-141 / AUD-002: standalone MFM sector parser. Test
+        # synthesizes its own bitstream + uses an inlined CRC, so the
+        # parser TU is the only production source needed.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c)
+        set(TEST_LIBS "")
     endif()
     
     if(TEST_LIBS)

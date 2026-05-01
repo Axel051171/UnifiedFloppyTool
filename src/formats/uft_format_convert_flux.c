@@ -15,6 +15,7 @@
  */
 
 #include "uft_format_convert_internal.h"
+#include "uft/flux/uft_mfm_sector_parser.h"
 
 // ============================================================================
 // Flux/Bitstream -> Sector Conversions (Decode Pipeline)
@@ -228,16 +229,12 @@ uft_error_t uftc_convert_scp_to_mfm_sectors(const uint8_t* src_data,
 
     uftc_report_progress(opts, 10, "Decoding MFM flux to sectors");
 
-    /*
-     * TODO: Full MFM sector decode pipeline.
-     *
-     * The framework here calls the PLL to extract bitstream from each
-     * SCP track, then would need an MFM sector parser to find IDAM/DAM
-     * markers and extract sector data. The MFM sector parser is not
-     * yet available as a standalone API in this codebase.
-     *
-     * For now: attempt flux->bitstream via PLL, mark sectors as needing
-     * MFM decode integration.
+    /* MF-141 / AUD-002 — uft_mfm_decode_track() is the canonical
+     * MFM IDAM/DAM parser. It returns sectors keyed by IBM CHRN
+     * (cylinder/head/sector/size) with explicit CRC-validity flags.
+     * The conversion pipeline below is responsible for placing them
+     * into the linear sector image at the correct LBA, and only
+     * accepting sectors whose data CRC validated.
      */
 
     for (int cyl = 0; cyl < cylinders; cyl++) {
@@ -272,90 +269,41 @@ uft_error_t uftc_convert_scp_to_mfm_sectors(const uint8_t* src_data,
                 uft_pll_process_flux_mfm(&pll, delta_sec, bitstream, &bit_pos);
             }
 
-            /* MFM sector extraction: find A1A1A1 sync + IDAM/DAM */
-            {
-                size_t bp = 0;
-                int found = 0;
-                while (bp + 256 < bit_pos && found < sectors) {
-                    /* Search for 3× 0xA1 MFM sync (0x4489) */
-                    bool sync_found = false;
-                    while (bp + 48 < bit_pos) {
-                        /* Check for MFM-encoded 0xA1 with missing clock:
-                         * bit pattern 0100010010001001 = 0x4489 */
-                        uint16_t w = 0;
-                        for (int b = 0; b < 16; b++) {
-                            size_t idx = (bp + b) / 8;
-                            size_t bit = 7 - ((bp + b) % 8);
-                            if (idx < buf_size && (bitstream[idx] >> bit) & 1)
-                                w |= (1 << (15 - b));
-                        }
-                        if (w == 0x4489) { sync_found = true; break; }
-                        bp += 2;  /* MFM: 2 bits per clock */
-                    }
-                    if (!sync_found) break;
-                    bp += 48;  /* Skip 3× sync (3×16 bits) */
+            /* Decode all sectors on this track. Pool size = max sectors
+             * per track × max sector size (1024). The parser places
+             * sector payloads back-to-back; we then map each to its
+             * LBA slot using CHRN.R from the IDAM. */
+            uint8_t track_pool[64 * 1024];
+            uft_mfm_sector_t track_sectors[64];
+            size_t n = uft_mfm_decode_track(bitstream, bit_pos,
+                                            track_pool, sizeof(track_pool),
+                                            track_sectors,
+                                            sizeof(track_sectors) / sizeof(track_sectors[0]),
+                                            NULL);
 
-                    /* Read address mark byte */
-                    if (bp + 16 > bit_pos) break;
-                    uint8_t mark = 0;
-                    for (int b = 0; b < 8; b++) {
-                        size_t pos2 = bp + b * 2 + 1;  /* Data bits at odd positions */
-                        size_t idx = pos2 / 8;
-                        size_t bit = 7 - (pos2 % 8);
-                        if (idx < buf_size && (bitstream[idx] >> bit) & 1)
-                            mark |= (1 << (7 - b));
-                    }
-                    bp += 16;
-
-                    if (mark == 0xFE) {
-                        /* IDAM: read C H R N (4 bytes MFM = 64 bits) */
-                        if (bp + 64 > bit_pos) break;
-                        uint8_t chrn[4];
-                        for (int i = 0; i < 4; i++) {
-                            chrn[i] = 0;
-                            for (int b = 0; b < 8; b++) {
-                                size_t pos2 = bp + i * 16 + b * 2 + 1;
-                                size_t idx = pos2 / 8;
-                                size_t bit = 7 - (pos2 % 8);
-                                if (idx < buf_size && (bitstream[idx] >> bit) & 1)
-                                    chrn[i] |= (1 << (7 - b));
-                            }
-                        }
-                        bp += 64 + 32;  /* Skip CHRN + CRC */
-
-                        /* Find DAM after gap */
-                        /* Skip ~22 bytes gap, search for next A1 sync */
-                        /* Then read sector_size bytes of data */
-                        /* (Simplified: accept next DAM within 1024 bits) */
-                    } else if (mark == 0xFB || mark == 0xF8) {
-                        /* DAM/Deleted DAM: read sector data */
-                        if (bp + sector_size * 16 > bit_pos) break;
-                        /* Decode MFM data bytes */
-                        uint8_t sec_data[1024];
-                        for (int i = 0; i < sector_size && i < 1024; i++) {
-                            sec_data[i] = 0;
-                            for (int b = 0; b < 8; b++) {
-                                size_t pos2 = bp + i * 16 + b * 2 + 1;
-                                size_t idx = pos2 / 8;
-                                size_t bit = 7 - (pos2 % 8);
-                                if (idx < buf_size && (bitstream[idx] >> bit) & 1)
-                                    sec_data[i] |= (1 << (7 - b));
-                            }
-                        }
-                        bp += sector_size * 16 + 32;  /* data + CRC */
-
-                        /* Write to output at correct LBA position */
-                        uint32_t lba = (uint32_t)(cyl * heads + head) * sectors;
-                        if (lba + found < total_sectors_count) {
-                            memcpy(output + (lba + found) * sector_size,
-                                   sec_data, sector_size);
-                            result->sectors_converted++;
-                            found++;
-                        }
-                    }
+            for (size_t i = 0; i < n; i++) {
+                const uft_mfm_sector_t *s = &track_sectors[i];
+                /* Forensic: only place sectors whose data CRC validated.
+                 * Bad-CRC sectors are counted as failed but never
+                 * silently overwrite good data. */
+                if (!s->dam_present || !s->data_crc_ok) {
+                    result->tracks_failed++;
+                    continue;
                 }
-                result->tracks_converted++;
+                /* Map by IBM sector ID (1-based). LBA per IBM
+                 * convention = (cyl * heads + head) * sectors_per_track
+                 *            + (R - 1). */
+                if (s->sector < 1 || s->sector > sectors) continue;
+                uint32_t lba = (uint32_t)(cyl * heads + head) * sectors
+                             + (uint32_t)(s->sector - 1);
+                if (lba >= total_sectors_count) continue;
+                size_t copy_len = s->data_len;
+                if (copy_len > (size_t)sector_size) copy_len = sector_size;
+                memcpy(output + lba * sector_size,
+                       track_pool + s->data_offset, copy_len);
+                result->sectors_converted++;
             }
+            result->tracks_converted++;
 
             free(bitstream);
         }

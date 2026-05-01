@@ -245,6 +245,7 @@ SOURCES += \
     src/gui/uft_sector_editor.cpp \
     src/flux/uft_scp_parser.c \
     src/flux/uft_flux_decoder.c \
+    src/flux/uft_mfm_sector_parser.c \
     src/fileops/uft_file_ops_extended.c \
     src/analysis/uft_sector_compare.c
 
@@ -298,7 +299,8 @@ HEADERS += \
     src/gui/uft_otdr_panel.h \
     src/gui/ProtectionAnalysisWidget.h \
     src/gui/uft_sector_editor.h \
-    include/uft/flux/uft_scp_parser.h
+    include/uft/flux/uft_scp_parser.h \
+    include/uft/flux/uft_mfm_sector_parser.h
 
 # FDC Bitstream Sources (third-party library by Yasunori Shimura)
 # VFO/PLL: The vfo_* files are EXPERIMENTAL VFO implementations from this library.
