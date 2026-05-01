@@ -245,9 +245,15 @@ SOURCES += \
     src/gui/uft_sector_editor.cpp \
     src/flux/uft_scp_parser.c \
     src/flux/uft_flux_decoder.c \
-    src/flux/uft_mfm_sector_parser.c \
     src/fileops/uft_file_ops_extended.c \
     src/analysis/uft_sector_compare.c
+
+# MF-141 / AUD-002: standalone MFM IDAM/DAM sector parser. Listed on
+# its own line so verify_build_sources.py sees it — the SOURCES block
+# above has an inline comment around line 242 that splits the parser's
+# logical-line view (qmake itself is unaffected, but the pre-push gate
+# joins continuations before stripping comments).
+SOURCES += src/flux/uft_mfm_sector_parser.c
 
 # Main GUI Headers (CRITICAL for MOC!)
 HEADERS += \
