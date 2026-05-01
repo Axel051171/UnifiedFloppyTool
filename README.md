@@ -4,7 +4,7 @@
 [![Build](https://github.com/Axel051171/UnifiedFloppyTool/actions/workflows/ci.yml/badge.svg)](https://github.com/Axel051171/UnifiedFloppyTool/actions)
 [![License: GPL-2.0](https://img.shields.io/badge/License-GPL%202.0-blue.svg)](LICENSE)
 
-**"Kein Bit verloren"** — Open-source forensic floppy disk preservation tool with 212+ format parsers and 11 hardware controllers.
+**"Kein Bit verloren"** — Open-source forensic floppy disk preservation tool. 138 disk-image format IDs (80 fully wired plugin parsers), 6 hardware controllers (Greaseweazle production-ready; SCP-Direct, XUM1541, Applesauce as M3 partial scaffolds — see [`docs/MASTER_PLAN.md`](docs/MASTER_PLAN.md)).
 
 ---
 
@@ -57,7 +57,10 @@ Complete audit and rewrite of all hardware controller protocols against official
 
 ## Features
 
-### 212+ Disk Image Formats
+### Disk-image format coverage
+
+138 format IDs registered, 80 of them backed by a full Plugin-B parser (read + probe).
+The remaining IDs are forwarders / aliases / detection-only entries.
 
 | Platform | Formats |
 |----------|---------|
@@ -74,19 +77,22 @@ Complete audit and rewrite of all hardware controller protocols against official
 
 ### Hardware Controllers
 
-| Controller | Read | Write | Flux | Notes |
-|------------|:----:|:-----:|:----:|-------|
-| Greaseweazle | Yes | Yes | Yes | Protocol v1.23, 72MHz capture |
-| SuperCard Pro | Yes | Yes | Yes | SDK v1.7, 25MHz capture |
-| KryoFlux | Yes | Limited | Yes | Via DTC tool, write conditional |
-| ADF-Copy | Yes | Yes | Yes | Amiga specialist (ADF + SCP flux) |
-| Applesauce | Yes | Yes | Yes | Text-based serial protocol |
-| XUM1541/ZoomFloppy | Yes | Yes | No | OpenCBM IEC bus (C64/1541) |
-| FluxEngine | Yes | Yes | Yes | Via libfluxengine |
-| FC5025 | Yes | No | No | CLI wrapper (read-only HW) |
-| Pauline | Yes | No | Yes | HTTP/SSH (DE10-nano FPGA), not in default build |
-| Catweasel | Yes | No | Yes | Minimal (stub provider) |
-| USB Floppy | Yes | Yes | No | UFI SCSI pass-through (Linux SG_IO + Windows) |
+Status legend: ✅ production · 🟡 partial scaffold (lifecycle + utilities real,
+USB/serial wiring pending — see `docs/MASTER_PLAN.md` §M3) · ⚙ subprocess
+wrapper · ➖ not implemented in this release.
+
+| Controller | Status | Read | Write | Flux | Notes |
+|------------|:------:|:----:|:-----:|:----:|-------|
+| Greaseweazle | ✅ | Yes | Yes | Yes | Protocol v1.23, 72 MHz capture |
+| KryoFlux | ⚙ | Yes | Limited | Yes | Via DTC subprocess (proprietary protocol) |
+| FC5025 | ⚙ | Yes | No | No | Via fcimage subprocess (read-only hardware) |
+| SuperCard Pro | 🟡 | — | — | — | M3.1 scaffold, libusb wiring pending |
+| XUM1541 / ZoomFloppy | 🟡 | — | — | — | M3.2 scaffold, libusb wiring pending |
+| Applesauce | 🟡 | — | — | — | M3.3 scaffold, serial wiring pending |
+
+FluxEngine, ADF-Copy, Pauline, Catweasel and direct USB-floppy access are
+**not** wired in v4.1.3 — older READMEs listed them as functional, that was
+incorrect (see MF-130/MF-132). Wiring is planned in the M3 milestone.
 
 ### Copy Protection Analysis
 
