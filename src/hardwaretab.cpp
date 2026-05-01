@@ -49,7 +49,10 @@ Q_LOGGING_CATEGORY(lcHwSerial, "uft.hw.serial", QtWarningMsg)
 #include <windows.h>
 #endif
 
-// HAL includes for real hardware connection
+// HAL includes for real hardware connection.
+// UFT_HAS_HAL is set by the build system (see UnifiedFloppyTool.pro).
+// All file-local #if blocks below test it directly — no second-name
+// alias HAS_HAL, which would only invite drift (MF-137).
 #ifdef UFT_HAS_HAL
 extern "C" {
 #include "uft/hal/uft_greaseweazle_full.h"
@@ -59,9 +62,6 @@ extern "C" {
 #include <QPushButton>
 #include <QApplication>
 #include "hardware_providers/unified_hal_bridge.h"
-#define HAS_HAL 1
-#else
-#define HAS_HAL 0
 #endif
 
 // ============================================================================
@@ -803,7 +803,7 @@ void HardwareTab::autoDetectDrive()
 {
     updateStatus(tr("Detecting drive..."));
     
-#if HAS_HAL
+#ifdef UFT_HAS_HAL
     if (m_gwDevice == nullptr) {
         updateStatus(tr("No device connected"));
         return;
@@ -1034,7 +1034,7 @@ void HardwareTab::onMotorOn()
 {
     if (!m_connected) return;
     
-#if HAS_HAL
+#ifdef UFT_HAS_HAL
     if (m_gwDevice != nullptr) {
         uft_gw_device_t* gw = static_cast<uft_gw_device_t*>(m_gwDevice);
         int ret = uft_gw_set_motor(gw, true);
@@ -1064,7 +1064,7 @@ void HardwareTab::onMotorOff()
 {
     if (!m_connected) return;
     
-#if HAS_HAL
+#ifdef UFT_HAS_HAL
     if (m_gwDevice != nullptr) {
         uft_gw_device_t* gw = static_cast<uft_gw_device_t*>(m_gwDevice);
         int ret = uft_gw_set_motor(gw, false);
@@ -1116,7 +1116,7 @@ void HardwareTab::onSeekTest()
     
     updateStatus(tr("Running seek test..."));
     
-#if HAS_HAL
+#ifdef UFT_HAS_HAL
     if (m_gwDevice == nullptr) {
         updateStatus(tr("No device"));
         return;
@@ -1161,7 +1161,7 @@ void HardwareTab::onReadTest()
     
     updateStatus(tr("Running read test..."));
     
-#if HAS_HAL
+#ifdef UFT_HAS_HAL
     if (m_gwDevice == nullptr) {
         updateStatus(tr("No device"));
         return;
@@ -1216,7 +1216,7 @@ void HardwareTab::onRPMTest()
     
     updateStatus(tr("Measuring RPM..."));
     
-#if HAS_HAL
+#ifdef UFT_HAS_HAL
     if (m_gwDevice == nullptr) {
         updateStatus(tr("No device"));
         return;
@@ -1269,7 +1269,7 @@ void HardwareTab::onCalibrate()
     
     updateStatus(tr("Calibrating drive..."));
     
-#if HAS_HAL
+#ifdef UFT_HAS_HAL
     if (m_gwDevice == nullptr) {
         updateStatus(tr("No device"));
         return;
