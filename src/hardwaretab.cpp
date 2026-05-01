@@ -589,7 +589,24 @@ void HardwareTab::onConnect()
     
     qDebug() << "Checking if controller is greaseweazle or fluxengine...";
     
-    if (controller == "greaseweazle" || controller == "fluxengine" || controller == "adfcopy") {
+    /* Only Greaseweazle has a fully wired C-HAL backend (uft_gw_*).
+     * FluxEngine and ADFcopy were previously routed through the same
+     * code path which silently called uft_gw_open() against unrelated
+     * hardware — succeeded if the user happened to also have a GW
+     * plugged in, or returned a confusing UFT_GW_ERR_PROTOCOL otherwise.
+     * Both must come back through their own HAL once wired. */
+    if (controller == "fluxengine" || controller == "adfcopy") {
+        QString backend = (controller == "fluxengine") ? "FluxEngine" : "ADFcopy";
+        QMessageBox::information(this, tr("Backend not yet wired"),
+            tr("The %1 backend is not yet implemented in this build.\n\n"
+               "Greaseweazle is the only currently supported flux controller. "
+               "%1 support is tracked in docs/MASTER_PLAN.md (M3 milestone).")
+            .arg(backend));
+        updateStatus(tr("%1 backend not yet wired").arg(backend));
+        return;
+    }
+
+    if (controller == "greaseweazle") {
         qDebug() << "YES - using HAL connection";
         printf(">>> Entering HAL connection code path\n");
         fflush(stdout);
@@ -648,7 +665,7 @@ void HardwareTab::onConnect()
         qWarning() << "HAL not available, using simulated connection";
         #endif
     } else {
-        qDebug() << "NO - controller is not greaseweazle/fluxengine, using simulated";
+        qDebug() << "NO - controller is not greaseweazle, using simulated";
     }
     
     // Fallback: Simulated connection for unsupported controllers

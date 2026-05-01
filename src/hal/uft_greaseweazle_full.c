@@ -525,6 +525,21 @@ int uft_gw_open(const char* port, uft_gw_device_t** device) {
     ret = uft_gw_get_info(dev, &dev->info);
     if (ret != UFT_GW_OK) { serial_close(dev); free(dev); return UFT_GW_ERR_NOT_FOUND; }
 
+    /* Reject bootloader / update-mode firmware. The Facebook bug report
+     * (https://github.com/Axel051171/UnifiedFloppyTool/issues, "GW won't
+     * access drive on Win10") was caused by a Greaseweazle that had
+     * entered bootloader mode after a failed firmware update. The
+     * bootloader answers GET_INFO but cannot drive the floppy: every
+     * subsequent SEEK / READ_FLUX returned UFT_GW_ERR_PROTOCOL with no
+     * indication of *why*. is_main_fw == 0 means "currently in update
+     * firmware"; the user must reflash with `gw update` (gw-tools) or
+     * power-cycle while holding ID 0 to drop back to the main firmware. */
+    if (dev->info.is_main_fw == 0) {
+        serial_close(dev);
+        free(dev);
+        return UFT_GW_ERR_BOOTLOADER;
+    }
+
     snprintf(dev->version_str, sizeof(dev->version_str), "%d.%d",
              dev->info.fw_major, dev->info.fw_minor);
     dev->delays.select_delay_us = 10;
@@ -1154,6 +1169,10 @@ const char* uft_gw_strerror(int err) {
         case UFT_GW_ERR_NOMEM:         return "Out of memory";
         case UFT_GW_ERR_NOT_CONNECTED: return "Device not connected";
         case UFT_GW_ERR_UNSUPPORTED:   return "Operation not supported";
+        case UFT_GW_ERR_BOOTLOADER:    return "Greaseweazle is in bootloader/"
+                                              "update mode — reflash firmware "
+                                              "or power-cycle while holding the "
+                                              "ID-0 button to enter main firmware";
         default:                       return "Unknown error";
     }
 }

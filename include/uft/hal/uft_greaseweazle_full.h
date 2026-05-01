@@ -614,6 +614,11 @@ size_t uft_gw_encode_flux_stream(const uint32_t* samples, uint32_t sample_count,
 #define UFT_GW_ERR_NOMEM            -12     /**< Out of memory */
 #define UFT_GW_ERR_NOT_CONNECTED    -13     /**< Device not connected */
 #define UFT_GW_ERR_UNSUPPORTED      -14     /**< Operation not supported */
+#define UFT_GW_ERR_BOOTLOADER       -15     /**< Device is in bootloader/update
+                                                 mode — main firmware not running.
+                                                 Disconnect, hold drive ID 0 button
+                                                 down, then re-plug to enter main
+                                                 firmware (see docs/HARDWARE.md). */
 
 /**
  * @brief Get error message for error code

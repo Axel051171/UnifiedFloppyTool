@@ -71,7 +71,14 @@ static uft_error_t gw_backend_open(const uft_hw_info_t *info,
     if (!info || !device) return UFT_ERROR_NULL_POINTER;
 
     uft_gw_device_t *gw = NULL;
-    if (uft_gw_open(info->usb_path, &gw) != 0) return UFT_ERROR_IO;
+    int gw_err = uft_gw_open(info->usb_path, &gw);
+    if (gw_err != 0) {
+        /* Distinguish bootloader-mode firmware from generic I/O failures so
+         * the upper-layer Qt provider can show the user a recovery hint
+         * instead of a useless "I/O error" toast (Facebook-bug class). */
+        if (gw_err == UFT_GW_ERR_BOOTLOADER) return UFT_ERROR_INVALID_STATE;
+        return UFT_ERROR_IO;
+    }
 
     uft_hw_device_t *dev = calloc(1, sizeof(uft_hw_device_t));
     if (!dev) {
