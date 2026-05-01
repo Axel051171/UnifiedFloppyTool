@@ -30,8 +30,14 @@ Complete audit and rewrite of all hardware controller protocols against official
 - **SuperCard Pro**: Binary SDK v1.7 protocol (was fabricated ASCII)
 - **Greaseweazle**: 16 protocol bugs fixed against `gw_protocol.h` v1.23
 - **KryoFlux**: DTC subprocess wrapper (proprietary USB protocol)
-- **FC5025**: SCSI-like CBW/CSW protocol framework (read-only hardware)
-- **Pauline**: HTTP/SSH architecture (DE10-nano FPGA)
+- **FluxEngine**: `fluxengine` CLI subprocess wrapper (older docs said
+  "via libfluxengine" — actual integration is process-level, not a
+  linked library)
+- **FC5025**: SCSI-like CBW/CSW protocol framework. Read-only by
+  hardware design — the FC5025 board itself has no write circuitry,
+  so this is a hardware property, not a UFT limitation.
+- **Pauline**: HTTP/SSH architecture (DE10-nano FPGA) — not built in
+  the default release; backend planned for the M3 milestone.
 
 ### Parser Hardening
 - ~610 silent error handling fixes (fseek + fread/fwrite)

@@ -27,35 +27,35 @@ void CatweaselHardwareProvider::setBaudRate(int baudRate)
 
 void CatweaselHardwareProvider::detectDrive()
 {
-    DetectedDriveInfo di;
-    di.type = QStringLiteral("Unknown");
-    di.tracks = 80;
-    di.heads = 2;
-    di.density = QStringLiteral("DD/HD");
-    di.rpm = QStringLiteral("300");
-    di.model = QStringLiteral("Catweasel detected drive");
-    
-    emit driveDetected(di);
-    emit statusMessage(tr("Catweasel: Drive detection requires driver"));
+    /* MF-144 / HW-C: Catweasel has no UFT-side driver implementation.
+     * The previous version emitted a synthetic driveDetected signal
+     * with hardcoded "80 tracks / DD-HD / 300 RPM / Catweasel detected
+     * drive" values regardless of whether any hardware was attached
+     * (UFT-AUD-003: "Fake — gefährlich"). That was a forensic-integrity
+     * lie: the UI flipped to "drive present" state without anyone
+     * having spoken to a single piece of hardware.
+     *
+     * Honest behavior: emit only a status message saying detection
+     * is not implemented. Do NOT emit driveDetected. The UI stays in
+     * its "no drive" state, the user gets actionable text, and no
+     * downstream code fires false-positive read attempts.
+     *
+     * If someone wires a real cwtool subprocess wrapper later
+     * (analogous to KryoFlux/DTC), the implementation goes here. */
+    emit statusMessage(tr("Catweasel: not implemented in this build. "
+                          "Catweasel MK3/MK4 needs a userspace driver "
+                          "(cwtool) which is not yet wired into UFT. "
+                          "Use Greaseweazle or KryoFlux for flux capture "
+                          "until then."));
 }
 
 void CatweaselHardwareProvider::autoDetectDevice()
 {
-    HardwareInfo info;
-    info.provider = displayName();
-    info.vendor = QStringLiteral("Individual Computers");
-    info.product = QStringLiteral("Catweasel MK3/MK4");
-    info.firmware = QStringLiteral("Unknown");
-    info.connection = QStringLiteral("PCI / Clockport");
-    info.toolchain = QStringList() << QStringLiteral("cw");
-    info.formats = QStringList() 
-        << QStringLiteral("Amiga")
-        << QStringLiteral("Atari ST")
-        << QStringLiteral("IBM PC")
-        << QStringLiteral("Raw flux");
-    info.notes = QStringLiteral("Legacy PCI floppy controller (discontinued)");
-    info.isReady = false;
-    
-    emit hardwareInfoUpdated(info);
-    emit statusMessage(tr("Catweasel: Requires Catweasel driver/library"));
+    /* MF-144 / HW-C: same honest-stub treatment as detectDrive().
+     * Previously emitted hardwareInfoUpdated with isReady=false but
+     * filled-in vendor / product / connection strings — those imply
+     * a probe ran. Now we only state the "not implemented" status
+     * and let HardwareInfo stay default-constructed. */
+    emit statusMessage(tr("Catweasel: autodetect not implemented "
+                          "(no cwtool wrapper in this build)."));
 }

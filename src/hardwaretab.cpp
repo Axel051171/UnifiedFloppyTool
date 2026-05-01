@@ -262,6 +262,12 @@ void HardwareTab::populateControllerList()
     ui->comboController->addItem(tr("KryoFlux"), "kryoflux");
     ui->comboController->addItem(tr("FluxEngine"), "fluxengine");
     ui->comboController->addItem(tr("ADF-Copy (Amiga)"), "adfcopy");
+    /* MF-144 / HW-B: expose the two providers that already had real
+     * I/O implementations (1311 LOC Applesauce, 1005 LOC FC5025) but
+     * weren't selectable in the UI. Both route through HardwareManager
+     * dispatch (text-match on display name) — verified MF-143. */
+    ui->comboController->addItem(tr("Applesauce"), "applesauce");
+    ui->comboController->addItem(tr("FC5025 (5.25\" read-only)"), "fc5025");
 
     // === Commodore Controllers (IEC/IEEE-488) ===
     ui->comboController->addItem(tr("── Commodore USB ──"), "separator_cbm_usb");
@@ -632,6 +638,32 @@ void HardwareTab::onConnect()
      * serial, USB-Floppy SG_IO/UFI). Each provider already implements
      * detectDrive() / connect() / readTrack() with real I/O — they
      * just had no UI dispatcher routing to them before. */
+    /* MF-144 / HW-A: the X1541 legacy parallel-port family
+     * (xa1541 / xap1541 / xm1541 / xe1541 / x1541) is listed in the
+     * controller combo but has NO matching HardwareProvider class.
+     * Without this guard the request falls through HardwareManager's
+     * if/elseif chain to the final `else` branch, which silently
+     * instantiates a GreaseweazleHardwareProvider against the
+     * parallel-port hardware. That's the same identity-confusion
+     * class the audit (UFT-AUD-003) flagged for Pauline — wrong
+     * driver against real hardware, undefined behavior, potential
+     * data corruption. Reject explicitly with an actionable error. */
+    if (controller == "xa1541" || controller == "xap1541" ||
+        controller == "xm1541" || controller == "xe1541" ||
+        controller == "x1541") {
+        QMessageBox::information(this, tr("Backend not yet wired"),
+            tr("The %1 backend (X1541 legacy parallel-port adapter) "
+               "is not yet implemented in this build.\n\n"
+               "These adapters require a parallel-port driver which "
+               "isn't part of UFT v4.1.x. Use a USB-based Commodore "
+               "controller (XUM1541 / ZoomFloppy) for now. "
+               "X1541 family support is tracked in docs/MASTER_PLAN.md "
+               "(M3 milestone).")
+            .arg(m_controllerType));
+        updateStatus(tr("%1 not yet wired").arg(m_controllerType));
+        return;
+    }
+
     if (controller != "greaseweazle") {
         m_hwManager->setHardwareType(m_controllerType);
         m_hwManager->setDevicePath(m_portName);
