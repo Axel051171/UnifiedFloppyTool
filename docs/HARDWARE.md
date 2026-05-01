@@ -96,6 +96,67 @@ gw update --file firmware-F7-v1.5.img
 | "Permission denied" (Linux) | Add user to `dialout` group |
 | "Drive not ready" | Check power, motor should spin |
 | "No index" | Check ribbon cable orientation |
+| **"Greaseweazle is in bootloader/update mode…"** | The board is sitting in its update firmware and cannot drive the floppy. See "Bootloader recovery" below. |
+| **Windows: device enumerates but UFT can't talk to it** | Almost always the wrong COM port, the Realtek serial driver hijacking the port, or a stale `gw_tools` instance still holding the handle. See "Windows-specific" below. |
+
+#### Bootloader recovery
+
+UFT 4.1.3+ explicitly rejects the Greaseweazle bootloader because it
+answers `GET_INFO` but cannot perform any disk operation (every
+subsequent command would return a confusing `Protocol error`). When
+`uft_gw_open()` returns `UFT_GW_ERR_BOOTLOADER` the device is alive
+but running the wrong firmware image.
+
+Two ways out:
+
+1. **Recommended — reflash main firmware.**
+   ```bash
+   gw update path/to/greaseweazle-vN.M-fNN.upd
+   ```
+   `gw update` is the upstream Python tool from
+   <https://github.com/keirf/greaseweazle>; the firmware `.upd` file
+   ships with each release. After the flash completes the device
+   reboots into the main firmware and UFT will detect it normally.
+
+2. **Quick — power-cycle while holding the ID-0 button.**
+   Disconnect USB, hold the small button labelled `0` (or `S1` on
+   older PCBs) on the board, plug USB back in, release the button
+   after ~2 s. The board boots into the main firmware. If you don't
+   see the white LED come on, the firmware image is corrupted; use
+   path 1.
+
+If you reach this state by mistake (e.g. an aborted firmware upload),
+neither the LED state nor the Windows Device Manager will tell you
+which firmware is running — UFT's error message is the only clear
+signal.
+
+#### Windows-specific notes
+
+- **Driver:** the Greaseweazle uses the in-box Microsoft "USB Serial
+  Device" (usbser.sys) driver. No vendor driver needed. If Device
+  Manager shows the device under "Other Devices" with a yellow
+  triangle, install the Microsoft `serial.inf` from
+  `%SystemRoot%\inf` (right-click → "Update driver" → "Browse my
+  computer" → point at that path).
+- **COM port collision:** Realtek "Bluetooth Serial Port" and many
+  Lenovo / HP utilities also enumerate as COMx ports. UFT lists
+  every COM device, not just GW boards. Pick the one that appeared
+  *after* you plugged the GW in (Windows assigns the highest free
+  number).
+- **Port stuck in "in use":** if a previous run of `gw_tools` or an
+  earlier UFT instance crashed, the COM port can be held by the
+  zombie process. Symptoms: UFT reports `UFT_GW_ERR_OPEN_FAILED`
+  with a `Win32 error 5` (Access Denied). Close the lingering
+  process via Task Manager, or simply replug the device.
+- **Power on USB hubs:** the GW F1 draws ~80 mA from USB; F7 draws
+  ~140 mA. Some unpowered hubs sag below the threshold under load
+  → device drops mid-read with `UFT_GW_ERR_TIMEOUT`. Use a powered
+  hub or a direct port.
+
+If after all of the above the device still won't read, capture a
+debug log: launch UFT from a terminal (`UnifiedFloppyTool.exe` from
+PowerShell, not via double-click) — every USB command and ACK is
+printed. Attach that log to a GitHub issue.
 
 ---
 
