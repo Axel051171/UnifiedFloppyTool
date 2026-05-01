@@ -35,7 +35,10 @@ Complete audit and rewrite of all hardware controller protocols against official
 
 ### Parser Hardening
 - ~610 silent error handling fixes (fseek + fread/fwrite)
-- Integer overflow guards in 9 critical parsers (SCP, IPF, A2R, STX, TD0, DMK, D88, IMD, WOZ)
+- Bounds / integer-overflow guards in 9 flux-format parsers
+  (SCP, IPF, A2R, STX, TD0, DMK, D88, IMD, WOZ — `grep -lE
+  '(SIZE_MAX|MAX_TRACK|UINT[0-9]+_MAX|chunk_size > size)'
+  src/formats/{scp,ipf,...}/ src/parsers/a2r/`)
 - Real SHA-256 (FIPS 180-4) replacing placeholder hash
 - Path traversal security fix (component-level walk)
 - Compiler hardening: `-fstack-protector-strong`, `-D_FORTIFY_SOURCE=2`
@@ -47,7 +50,11 @@ Complete audit and rewrite of all hardware controller protocols against official
 - Automated release packaging (.deb, .dmg, .tar.gz)
 
 ### Copy Protection
-- Unified cross-platform detection API (55+ schemes, 10 platforms)
+- Unified cross-platform detection API (122 unique `uft_*_detect_*`
+  entry points across 10 platforms — see `src/protection/` and
+  `src/protection/c64/`. The "55+ named schemes" headline counts
+  named schemes, not detector functions; both numbers verifiable
+  via `grep -rohE 'uft_[a-z_]+_detect[a-z_]*\(' src/protection/`)
 - Track Alignment Module (nibtools-compatible): V-MAX!, RapidLok, Pirate Slayer
 - NIB/NB2/NBZ format support
 

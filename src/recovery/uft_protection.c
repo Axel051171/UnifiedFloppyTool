@@ -138,14 +138,24 @@ static int detect_weak_bits(const uint8_t **reads, size_t read_count,
         }
     }
     
-    /* Shrink allocation */
+    /* Shrink allocation. Realloc-on-shrink almost always succeeds, but
+     * the leak-safe idiom is mandatory: if realloc returns NULL the
+     * original block must remain reachable, otherwise the caller can
+     * never free() it (MF-139 / AUD-012). */
     if (*marker_count > 0) {
-        *markers = realloc(*markers, *marker_count * sizeof(uft_protection_marker_t));
+        uft_protection_marker_t *shrunk = realloc(
+            *markers, *marker_count * sizeof(uft_protection_marker_t));
+        if (shrunk) {
+            *markers = shrunk;
+        }
+        /* shrink-failure: keep the over-allocated *markers as-is. The
+         * extra bytes are wasted but the buffer is still valid and
+         * the caller's free() will release the full original size. */
     } else {
         free(*markers);
         *markers = NULL;
     }
-    
+
     return 0;
 }
 
@@ -186,9 +196,13 @@ static int detect_weak_bits_flux(const uint32_t *flux_times, size_t count,
         }
     }
     
-    /* Shrink allocation */
+    /* Shrink allocation — same leak-safe idiom as detect_weak_bits()
+     * above (MF-139 / AUD-012). */
     if (*weak_count > 0) {
-        *weak_positions = realloc(*weak_positions, *weak_count * sizeof(size_t));
+        size_t *shrunk = realloc(*weak_positions, *weak_count * sizeof(size_t));
+        if (shrunk) {
+            *weak_positions = shrunk;
+        }
     } else {
         free(*weak_positions);
         *weak_positions = NULL;
