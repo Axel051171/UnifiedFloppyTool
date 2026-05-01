@@ -21,6 +21,10 @@
 
 namespace Ui { class TabHardware; }
 
+class HardwareManager;        /* see src/hardware_providers/hardwaremanager.h */
+struct DetectedDriveInfo;
+struct HardwareInfo;
+
 class HardwareTab : public QWidget
 {
     Q_OBJECT
@@ -157,6 +161,14 @@ private:
     QString m_firmwareVersion;
     int m_hwModel;              // Hardware model (e.g., F1=1, F7=7)
     void *m_gwDevice;           // HAL device handle (uft_gw_device_t*)
+
+    /* MF-143: Qt provider dispatcher restored. The C-HAL fast-path
+     * (uft_gw_open) is still used for Greaseweazle since that's the
+     * production-tested path; HardwareManager is the routing layer
+     * for every OTHER controller (FluxEngine subprocess, KryoFlux
+     * DTC subprocess, SCP serial, Applesauce serial, FC5025 USB,
+     * XUM1541 USB, ADF-Copy serial, USB-Floppy SG_IO). */
+    HardwareManager *m_hwManager;
     
     // Detected drive info
     QString m_detectedModel;

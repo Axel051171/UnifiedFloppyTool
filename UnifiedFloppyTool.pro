@@ -361,7 +361,18 @@ SOURCES += \
     src/analysis/events/otdr_event_core_v2.c \
     src/analysis/denoise/uft_denoise_bridge.c \
     src/analysis/denoise/phi_otdr_denoise_1d.c \
+    src/hardware_providers/hardwaremanager.cpp \
+    src/hardware_providers/mockhardwareprovider.cpp \
+    src/hardware_providers/greaseweazlehardwareprovider.cpp \
+    src/hardware_providers/fluxenginehardwareprovider.cpp \
+    src/hardware_providers/kryofluxhardwareprovider.cpp \
+    src/hardware_providers/scphardwareprovider.cpp \
+    src/hardware_providers/applesaucehardwareprovider.cpp \
+    src/hardware_providers/fc5025hardwareprovider.cpp \
+    src/hardware_providers/xum1541hardwareprovider.cpp \
+    src/hardware_providers/catweaselhardwareprovider.cpp \
     src/hardware_providers/adfcopyhardwareprovider.cpp \
+    src/hardware_providers/usbfloppyhardwareprovider.cpp \
     src/hardware_providers/unified_hal_bridge.cpp
 
 # USB Floppy UFI Backend (C)
@@ -386,8 +397,21 @@ HEADERS += \
     include/uft/analysis/uft_denoise_bridge.h \
     include/uft/analysis/phi_otdr_denoise_1d.h \
     src/hardware_providers/hardwareprovider.h \
+    src/hardware_providers/hardwaremanager.h \
+    src/hardware_providers/mockhardwareprovider.h \
+    src/hardware_providers/greaseweazlehardwareprovider.h \
+    src/hardware_providers/fluxenginehardwareprovider.h \
+    src/hardware_providers/kryofluxhardwareprovider.h \
+    src/hardware_providers/scphardwareprovider.h \
+    src/hardware_providers/applesaucehardwareprovider.h \
+    src/hardware_providers/fc5025hardwareprovider.h \
+    src/hardware_providers/xum1541hardwareprovider.h \
+    src/hardware_providers/catweaselhardwareprovider.h \
     src/hardware_providers/adfcopyhardwareprovider.h \
-    src/hardware_providers/unified_hal_bridge.h
+    src/hardware_providers/usbfloppyhardwareprovider.h \
+    src/hardware_providers/unified_hal_bridge.h \
+    src/hardware_providers/fc5025_usb.h \
+    src/hardware_providers/xum1541_usb.h
 
 # Widget Sources
 SOURCES += \
