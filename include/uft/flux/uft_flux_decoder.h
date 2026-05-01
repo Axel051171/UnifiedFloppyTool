@@ -1,8 +1,7 @@
 /**
  * @file uft_flux_decoder.h
  * @brief Universal Flux-to-Sector Decoder
- * @version 3.9.0
- * 
+ *
  * Decodes raw flux timing data into sector data for various encodings:
  * - MFM (Modified Frequency Modulation) - PC, Amiga, Atari ST
  * - FM (Frequency Modulation) - older 8" drives, Apple II

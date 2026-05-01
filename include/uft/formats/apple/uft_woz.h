@@ -1,8 +1,7 @@
 /**
  * @file uft_woz.h
  * @brief WOZ Disk Image Format Support (Apple II)
- * @version 4.1.5
- * 
+ *
  * WOZ is a bit-accurate disk image format for Apple II created by
  * John K. Morris for the Applesauce project. It can capture copy-protected
  * software including Spiradisc.

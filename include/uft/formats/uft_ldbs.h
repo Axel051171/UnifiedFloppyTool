@@ -1,7 +1,6 @@
 /**
  * @file uft_ldbs.h
  * @brief LDBS (LibDsk Block Store) format interface
- * @version 4.1.0
  */
 
 #ifndef UFT_LDBS_H

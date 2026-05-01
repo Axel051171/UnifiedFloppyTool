@@ -2,9 +2,6 @@
  * @file uft_blkid.h
  * @brief Filesystem and Partition Detection (libblkid-style)
  * 
- * @version 4.2.0
- * @date 2026-01-03
- * 
  * FEATURES:
  * - Magic byte detection for 100+ formats
  * - Superblock parsing

@@ -5,9 +5,6 @@
  * @file uft_mmap.h
  * @brief Memory-Mapped I/O for Large Disk Images
  * 
- * @version 4.1.0
- * @date 2026-01-03
- * 
  * FEATURES:
  * - Cross-platform memory mapping (mmap/MapViewOfFile)
  * - Automatic page alignment

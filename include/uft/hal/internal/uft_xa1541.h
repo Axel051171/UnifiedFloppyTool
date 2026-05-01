@@ -1,7 +1,6 @@
 /**
  * @file uft_xa1541.h
  * @brief XA1541/X1541 Series Legacy Parallel Port Adapter Interface
- * @version 4.1.1
  */
 
 /* ══════════════════════════════════════════════════════════════════════════ *

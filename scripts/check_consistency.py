@@ -303,6 +303,49 @@ def check_version_ssot(repo: Path) -> list[str]:
                     "use UFT_RC_FILE_VERSION_STR macro from uft_version.h"
                 )
 
+    # RELEASE_NOTES.md — top-level "# UnifiedFloppyTool vX.Y.Z Release Notes"
+    # headline must match VERSION.txt. Caught the v4.2.0-vs-v4.1.3 lie
+    # that shipped to all release-page visitors.
+    rn = repo / "RELEASE_NOTES.md"
+    if rn.is_file():
+        first = rn.read_text(encoding="utf-8", errors="replace").splitlines()[:5]
+        for ln in first:
+            m = re.search(r"^#\s+UnifiedFloppyTool\s+v([0-9]+\.[0-9]+\.[0-9]+)", ln)
+            if m and m.group(1) != canonical:
+                errors.append(
+                    f"{rn}: headline 'v{m.group(1)}' drifted from VERSION.txt={canonical!r}"
+                )
+                break
+
+    # Doxygen @version drift in public headers — only flag values that
+    # claim to be the project version (X.Y.Z matching the major). Module
+    # API versions like '1.0.0' / '2.0.0' are legitimate and stay.
+    canonical_major = canonical.split(".")[0]
+    inc_root = repo / "include" / "uft"
+    if inc_root.is_dir():
+        version_re = re.compile(r"^\s*\*\s*@version\s+(\S+)")
+        for hdr in inc_root.rglob("*.h"):
+            try:
+                head = hdr.read_text(encoding="utf-8", errors="replace").splitlines()[:30]
+            except OSError:
+                continue
+            for ln in head:
+                m = version_re.match(ln)
+                if not m:
+                    continue
+                ver = m.group(1)
+                # Only flag drift that claims to track the project version.
+                if not re.match(r"^[0-9]+\.[0-9]+\.[0-9]+$", ver):
+                    continue
+                if ver.split(".")[0] != canonical_major:
+                    continue
+                if ver != canonical:
+                    errors.append(
+                        f"{hdr}: @version {ver} drifted from VERSION.txt={canonical} "
+                        "(remove the line or sync it; see scripts/check_consistency.py)"
+                    )
+                break  # one finding per file is enough
+
     return errors
 
 

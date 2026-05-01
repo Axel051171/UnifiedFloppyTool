@@ -2,9 +2,6 @@
  * @file uft_crc_polys.h
  * @brief CRC Polynomial Database for Storage Devices
  * 
- * @version 4.2.0
- * @date 2026-01-03
- * 
  * COVERAGE:
  * - Floppy disk CRCs (IBM, Amiga, Commodore, Apple)
  * - Hard disk CRCs (OMTI, Seagate, Western Digital, Adaptec)

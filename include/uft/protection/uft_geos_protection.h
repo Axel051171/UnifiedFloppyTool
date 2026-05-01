@@ -1,7 +1,6 @@
 /**
  * @file uft_geos_protection.h
  * @brief GEOS Copy Protection Detection Interface
- * @version 4.1.1
  */
 
 #ifndef UFT_GEOS_PROTECTION_H

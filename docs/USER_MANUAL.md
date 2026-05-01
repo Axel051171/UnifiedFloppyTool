@@ -1,6 +1,6 @@
 # UnifiedFloppyTool User Manual
 
-**Version 4.1.0** | Last Updated: April 2026
+**Version 4.1.3** | Last Updated: April 2026
 
 ---
 
@@ -30,28 +30,31 @@
 
 ### Installation
 
+> Replace `<VER>` below with the release tag you downloaded
+> (latest stable: **4.1.3**).
+
 #### Windows
-1. Download `UnifiedFloppyTool-4.1.0-win64.zip`
+1. Download `UnifiedFloppyTool-<VER>-win64.zip`
 2. Extract to desired location
 3. Run `UnifiedFloppyTool.exe`
 
 #### Linux
 ```bash
 # Option 1: AppImage (recommended)
-chmod +x UnifiedFloppyTool-4.1.0-x86_64.AppImage
-./UnifiedFloppyTool-4.1.0-x86_64.AppImage
+chmod +x UnifiedFloppyTool-<VER>-x86_64.AppImage
+./UnifiedFloppyTool-<VER>-x86_64.AppImage
 
 # Option 2: Debian package
-sudo dpkg -i unifiedfloppytool_4.1.0_amd64.deb
+sudo dpkg -i unifiedfloppytool_<VER>_amd64.deb
 
 # Option 3: From tarball
-tar xzf UnifiedFloppyTool-4.1.0-linux-x64.tar.gz
-cd UnifiedFloppyTool-4.1.0-linux-x64
+tar xzf UnifiedFloppyTool-<VER>-linux-x64.tar.gz
+cd UnifiedFloppyTool-<VER>-linux-x64
 ./UnifiedFloppyTool.sh
 ```
 
 #### macOS
-1. Download `UnifiedFloppyTool-4.1.0-macos.dmg`
+1. Download `UnifiedFloppyTool-<VER>-macos.dmg`
 2. Drag to Applications folder
 3. First run: Right-click → Open (to bypass Gatekeeper)
 

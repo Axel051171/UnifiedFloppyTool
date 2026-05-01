@@ -1,8 +1,7 @@
 /**
  * @file uft_c64_protection.h
  * @brief C64/1541 Copy Protection Detection Module
- * @version 4.1.5
- * 
+ *
  * Comprehensive copy protection detection for Commodore 64 disk images.
  * Based on Super-Kit 1541 V2.0 documentation and extensive research.
  * 

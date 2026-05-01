@@ -1,7 +1,6 @@
 /**
  * @file uft_zoomtape.h
  * @brief ZoomTape - C2N/VIC-1530 Tape Device Interface
- * @version 4.1.1
  */
 
 /* ══════════════════════════════════════════════════════════════════════════ *

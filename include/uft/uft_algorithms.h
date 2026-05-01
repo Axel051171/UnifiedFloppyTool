@@ -2,9 +2,6 @@
  * @file uft_algorithms.h
  * @brief Specialized Algorithms for Disk Analysis
  * 
- * @version 4.2.0
- * @date 2026-01-03
- * 
  * ALGORITHMS:
  * - Rabin-Karp rolling hash for pattern matching in flux data
  * - Human68K FAT variant for Sharp X68000

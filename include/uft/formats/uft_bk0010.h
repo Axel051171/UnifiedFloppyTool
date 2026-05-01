@@ -1,8 +1,7 @@
 /**
  * @file uft_bk0010.h
  * @brief Elektronika BK-0010/0011 Disk Format Interface
- * @version 4.1.2
- * 
+ *
  * Soviet 16-bit PDP-11 compatible home computers (1985-1990s)
  * RT-11 compatible disk format
  */

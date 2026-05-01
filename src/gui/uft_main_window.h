@@ -1,7 +1,8 @@
 /**
  * @file uft_main_window.h
  * @brief UFT Main Window - Qt 6 GUI
- * @version 4.1.0
+ *
+ * Version: see UFT_VERSION_STRING in <uft/uft_version.h> (SSOT).
  */
 
 #ifndef UFT_MAIN_WINDOW_H

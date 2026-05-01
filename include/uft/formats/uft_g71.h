@@ -1,7 +1,6 @@
 /**
  * @file uft_g71.h
  * @brief G71 (GCR Track Image for 1571) Format Interface
- * @version 4.1.0
  */
 
 #ifndef UFT_G71_H

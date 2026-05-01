@@ -1,8 +1,7 @@
 /**
  * @file uft_abc800.h
  * @brief Luxor ABC 80/800 Disk Format Interface
- * @version 4.1.2
- * 
+ *
  * Swedish home/office computers (1978-1985)
  * Uses ABC-DOS and UFD-DOS filesystems
  */

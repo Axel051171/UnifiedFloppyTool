@@ -1,8 +1,7 @@
 /**
  * @file uft_rx50.h
  * @brief DEC RX50 Disk Format Interface
- * @version 4.1.2
- * 
+ *
  * DEC RX50 - 5.25" floppy for DEC Rainbow and Professional
  * 80 tracks, 10 sectors, 512 bytes/sector
  * SS: 400 KB, DS: 800 KB

@@ -2,9 +2,6 @@
  * @file uft_atari_dos.h
  * @brief Atari 8-bit DOS Filesystem Support
  * 
- * @version 4.2.0
- * @date 2026-01-03
- * 
  * SUPPORTED DOS VERSIONS:
  * - Atari DOS 1.0 (1979) - 707 sectors
  * - Atari DOS 2.0 (1980) - Single density

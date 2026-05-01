@@ -1,8 +1,7 @@
 /**
  * @file uft_fat_bootsector.h
  * @brief FAT Boot Sector Analysis Module
- * @version 4.1.6
- * 
+ *
  * Comprehensive FAT boot sector analysis for floppy disk images.
  * Based on OpenGate.at article and MS-DOS specifications.
  * 

@@ -1,7 +1,6 @@
 /**
  * @file uft_flex.h
  * @brief FLEX/UniFLEX Disk Format Interface
- * @version 4.1.2
  */
 
 #ifndef UFT_FLEX_H

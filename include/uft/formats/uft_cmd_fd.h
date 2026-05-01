@@ -1,8 +1,7 @@
 /**
  * @file uft_cmd_fd.h
  * @brief CMD FD2000/FD4000 Disk Image Format Interface
- * @version 4.1.0
- * 
+ *
  * D1M: 720KB DD disk (80 tracks, 2 sides, 9 sectors)
  * D2M: 1.44MB HD disk (80 tracks, 2 sides, 18 sectors)
  * D4M: 2.88MB ED disk (80 tracks, 2 sides, 36 sectors)

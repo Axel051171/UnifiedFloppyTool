@@ -5,9 +5,6 @@
  * @file uft_parallel.h
  * @brief Parallel Track Decoding Framework for UFT
  * 
- * @version 4.1.0
- * @date 2026-01-03
- * 
  * FEATURES:
  * - Thread pool for parallel track processing
  * - Lock-free work queue

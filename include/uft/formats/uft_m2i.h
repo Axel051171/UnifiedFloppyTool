@@ -1,7 +1,6 @@
 /**
  * @file uft_m2i.h
  * @brief M2I Tape Image Format Interface
- * @version 4.1.1
  */
 
 #ifndef UFT_M2I_H

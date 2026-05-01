@@ -5,9 +5,6 @@
  * @file uft_recovery.h
  * @brief Advanced Disk Recovery Algorithms
  * 
- * @version 4.2.0
- * @date 2026-01-03
- * 
  * ALGORITHMS:
  * - safecopy-style low-level recovery
  * - recoverdm bad sector handling
