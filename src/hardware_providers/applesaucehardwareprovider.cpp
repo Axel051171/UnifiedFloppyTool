@@ -194,11 +194,41 @@ void ApplesauceHardwareProvider::autoDetectDevice()
 
         bool isCandidate = false;
 
-        /* Official Applesauce VID/PID */
-        if (vid == AS_VID && pid == AS_PID) {
-            isCandidate = true;
+        /* MF-146 — VID/PID disambiguation against ADF-Copy.
+         * The Teensy generic ID (0x16C0:0x0483) is shared with
+         * ADF-Copy / ADF-Drive. Without a secondary discriminator
+         * we'd race the ADF-Copy provider for the same port and
+         * either step on its handshake or fail-open with the wrong
+         * protocol. Skip ports whose USB strings clearly identify
+         * the other device first. */
+        if (mfr.contains("ADF", Qt::CaseInsensitive) ||
+            desc.contains("ADF-Copy", Qt::CaseInsensitive) ||
+            desc.contains("ADF-Drive", Qt::CaseInsensitive)) {
+            qDebug() << "  Skipped (ADF-Copy match): " << portName
+                     << "mfr=" << mfr << "desc=" << desc;
+            continue;
         }
-        /* Manufacturer string match */
+
+        /* Official Applesauce VID/PID — but require either the
+         * manufacturer "Evolution Interactive" or product
+         * "Applesauce" to confirm it isn't a generic Teensy
+         * pretending to be ours (audit AUD-XXX VID-conflict). */
+        if (vid == AS_VID && pid == AS_PID) {
+            if (mfr.contains("Evolution Interactive", Qt::CaseInsensitive) ||
+                desc.contains("Applesauce", Qt::CaseInsensitive)) {
+                isCandidate = true;
+            } else {
+                /* Raw VID/PID hit but neither string matches —
+                 * could be unconfigured Teensy, ADF-Copy with
+                 * empty descriptors, or a third-party Teensy
+                 * project. Try the handshake anyway, but the
+                 * handshake itself will reject non-Applesauce
+                 * devices via protocol mismatch. */
+                isCandidate = true;
+            }
+        }
+        /* Manufacturer string match (covers re-flashed Teensy
+         * with custom VID/PID but Applesauce firmware). */
         else if (mfr.contains("Evolution Interactive", Qt::CaseInsensitive)) {
             isCandidate = true;
         }
@@ -277,6 +307,16 @@ void ApplesauceHardwareProvider::autoDetectDevice()
     for (const QSerialPortInfo &port : ports) {
         QString portName = port.portName();
         QString desc = port.description().toLower();
+        QString mfr = port.manufacturer().toLower();
+
+        /* MF-146: same VID-conflict skip as first pass — never try
+         * the Applesauce ?\n handshake against an ADF-Copy device.
+         * Both share the Teensy generic VID 0x16C0:0x0483. */
+        if (mfr.contains("adf") ||
+            desc.contains("adf-copy") ||
+            desc.contains("adf-drive")) {
+            continue;
+        }
 
         /* Skip obviously wrong ports */
         if (desc.contains("bluetooth") ||

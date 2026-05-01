@@ -1,5 +1,62 @@
 # Changelog
 
+## [Unreleased] (planned 4.1.4 hot-fix)
+
+### Fixed
+- **Windows COM-port-prefix bug across four QSerialPort-based hardware
+  providers** (MF-145 / FB user-report). Greaseweazle, SuperCard Pro,
+  Applesauce, and ADF-Copy each pre-applied the Win32 device-namespace
+  prefix `\\.\` before calling `QSerialPort::setPortName()`. Qt's
+  `QSerialPort` adds that prefix internally; the pre-application caused
+  `DeviceNotFoundError` on Qt 6.7+ or silently broken handles on older
+  Qt. Symptom matched the user report: "hardware will not access the
+  floppy drive" on Windows. The bug never surfaced for Greaseweazle on
+  the production code path (UI → C-HAL `uft_gw_open()` uses
+  `CreateFileA` directly, where the prefix is correct), but it did
+  affect SCP / Applesauce / ADF-Copy which route through the Qt
+  provider. **All four providers fixed in one patch — affected users
+  of any of these four controllers should test v4.1.4.**
+  USB-Floppy provider's `\\.\A:` and `\\.\B:` paths are intentionally
+  retained: that provider uses `DeviceIoControl` SCSI pass-through
+  where the prefix is the correct Win32 convention for direct
+  volume access.
+- **Applesauce ↔ ADF-Copy VID/PID disambiguation** (MF-146). Both
+  controllers ship with the generic PJRC Teensy USB ID
+  (VID `0x16C0` / PID `0x0483`). Previously, both providers' detect
+  paths candidate-matched any 0x16C0:0x0483 device, then attempted
+  their own protocol handshake — racing for the same port during
+  auto-detect. Each provider now skips ports whose USB
+  manufacturer / description string identifies the *other*
+  controller (`Evolution Interactive` / `Applesauce` for ADF-Copy
+  scan; `ADF-Copy` / `ADF-Drive` for Applesauce scan). Eliminates
+  the double-claim on systems where only one device is attached.
+- **Greaseweazle bootloader-mode detection** (MF-129). `uft_gw_open()`
+  now refuses bootloader-firmware boards with an actionable error
+  (`UFT_GW_ERR_BOOTLOADER`), surfaced in the UI as recovery hints
+  instead of a generic "I/O error".
+- **MFM IDAM/DAM standalone sector parser** (MF-141 / AUD-002).
+  SCP→ADF/IMG/D64 conversion path now decodes sectors via a
+  reusable API with explicit CRC validation and CHRN-keyed LBA
+  mapping. Previously the inline parser dropped sectors after IDAM,
+  ignored CRCs, and placed payloads in scan order instead of by
+  sector ID.
+
+### Internal
+- Restored 10 hardware Qt-provider classes that had been deleted in
+  MF-132 (FluxEngine, KryoFlux, SCP, Applesauce, FC5025, XUM1541,
+  Greaseweazle, ADF-Copy, USB-Floppy, Mock — 10 341 LOC of real
+  subprocess / serial / libusb implementations). They now route
+  through HardwareManager from `hardwaretab.cpp` (MF-143).
+- `uft_version.h` is regenerated from `VERSION.txt` at every qmake
+  parse / CMake configure (MF-131). Removes the `DEFINES+=
+  UFT_VERSION_STRING=\\\"...\\\"` quoting fragility from
+  `release.yml` (MF-145, eliminates the suspected v4.1.0-shows-on-
+  v4.1.3 cause).
+- `scripts/check_consistency.py --check version` extended to also
+  scan `RELEASE_NOTES.md` headline + Doxygen `@version` tags
+  (MF-128). Pre-push gate now blocks 5 distinct version-drift
+  classes.
+
 ## [4.1.3] - 2026-04-16
 
 ### Added

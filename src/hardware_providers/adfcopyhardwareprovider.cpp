@@ -131,6 +131,19 @@ void ADFCopyHardwareProvider::autoDetectDevice()
                  << "Desc:" << desc;
 
         bool isCandidate = false;
+        QString mfr = port.manufacturer();
+
+        /* MF-146 — VID/PID disambiguation against Applesauce.
+         * The Teensy generic ID (0x16C0:0x0483) is shared with
+         * Applesauce. Skip ports whose USB strings identify
+         * Applesauce first to avoid race-conditions during
+         * auto-detect when both providers scan in parallel. */
+        if (mfr.contains("Evolution Interactive", Qt::CaseInsensitive) ||
+            desc.contains("Applesauce", Qt::CaseInsensitive)) {
+            qDebug() << "  Skipped (Applesauce match): " << portName
+                     << "mfr=" << mfr << "desc=" << desc;
+            continue;
+        }
 
         /* PJRC Teensy VID 0x16C0 / PID 0x0483 */
         if (vid == ADFC_USB_VID && pid == ADFC_USB_PID) {
@@ -197,6 +210,14 @@ void ADFCopyHardwareProvider::autoDetectDevice()
     for (const QSerialPortInfo &port : ports) {
         QString portName = port.portName();
         QString desc = port.description().toLower();
+        QString mfr = port.manufacturer().toLower();
+
+        /* MF-146: same VID-conflict skip as first pass — never
+         * try the ADF-Copy PING handshake against an Applesauce. */
+        if (mfr.contains("evolution interactive") ||
+            desc.contains("applesauce")) {
+            continue;
+        }
 
         /* Skip obviously wrong ports */
         if (desc.contains("bluetooth") ||
