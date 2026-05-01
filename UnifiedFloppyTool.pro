@@ -9,6 +9,17 @@
 #
 #-------------------------------------------------
 
+# Regenerate include/uft/uft_version.h from VERSION.txt at qmake time.
+# Idempotent: only rewrites the file when it has drifted, so this never
+# triggers a rebuild storm. Mirrors the same call from CMakeLists.txt so
+# both build systems converge on identical version macros.
+#   - Windows path uses .py file association via $${PWD}.
+#   - On Linux/macOS python3 is required on PATH (already required for
+#     other scripts/*.py invocations elsewhere in this .pro).
+unix:!macx:system(python3 \"$$PWD/scripts/generate_version_header.py\")
+macx:system(python3 \"$$PWD/scripts/generate_version_header.py\")
+win32:system(python \"$$PWD/scripts/generate_version_header.py\")
+
 QT += core gui widgets
 
 # Try to use SerialPort if available

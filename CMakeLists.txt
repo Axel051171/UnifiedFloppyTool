@@ -23,6 +23,22 @@ cmake_minimum_required(VERSION 3.20)
 file(READ "${CMAKE_SOURCE_DIR}/VERSION.txt" UFT_VERSION_RAW)
 string(STRIP "${UFT_VERSION_RAW}" UFT_VERSION)
 
+# Regenerate include/uft/uft_version.h from VERSION.txt at configure time.
+# Idempotent — only rewrites the file when it has drifted from VERSION.txt,
+# so this never triggers a rebuild storm on clean checkouts. See
+# scripts/generate_version_header.py for full rationale.
+find_package(Python3 COMPONENTS Interpreter REQUIRED)
+execute_process(
+    COMMAND ${Python3_EXECUTABLE}
+            ${CMAKE_SOURCE_DIR}/scripts/generate_version_header.py
+    RESULT_VARIABLE _ver_rc
+)
+if(NOT _ver_rc EQUAL 0)
+    message(FATAL_ERROR
+        "generate_version_header.py failed (rc=${_ver_rc}); refusing to "
+        "configure with possibly-stale uft_version.h")
+endif()
+
 project(UnifiedFloppyTool
     VERSION ${UFT_VERSION}
     DESCRIPTION "Forensic Floppy Disk Preservation Tool"
@@ -74,8 +90,8 @@ endif()
 # AUTOMOC redefinitions, missing-include cascades).
 #
 # Generated at configure time by scripts/verify_build_sources.py which is
-# the same parser the build-system parity check uses (MF-006).
-find_package(Python3 COMPONENTS Interpreter REQUIRED)
+# the same parser the build-system parity check uses (MF-006). Python3
+# was already located above when generating uft_version.h.
 
 execute_process(
     COMMAND ${Python3_EXECUTABLE}
