@@ -2,6 +2,13 @@
  * @file uft_scp_direct.c
  * @brief SuperCard Pro direct-USB HAL backend (M3.1 scaffold).
  *
+ * SPEC_STATUS: VENDOR-DOCUMENTED — based on the SuperCard Pro SDK v1.7
+ *   reference release (cbmstuff.com, December 2015) AND cross-checked
+ *   against samdisk's scp.cpp port. Protocol bytes (CMD_READ_FLUX=0x04,
+ *   CMD_WRITE_FLUX=0x05, etc.) and the 40 MHz / 25 ns sample clock are
+ *   from the SDK; this file is a direct re-implementation, not a
+ *   reverse-engineered guess.
+ *
  * Scaffold commit: API surface is final; all I/O callbacks return
  * UFT_ERR_NOT_IMPLEMENTED honestly until the libusb layer is wired
  * in a follow-up commit. Capabilities are declared to match real SCP
@@ -107,6 +114,7 @@ uft_error_t uft_scp_direct_get_capabilities(
     out->can_read_flux      = true;
     out->can_write_flux     = true;
     out->can_read_sector    = false;
+    out->impl_complete      = false;  /* MF-148: M3.1 USB layer pending */
     out->max_revolutions    = UFT_SCP_MAX_REVOLUTIONS;
     out->flux_ns_per_sample = UFT_SCP_FLUX_NS_PER_SAMPLE;
     out->max_track_index    = UFT_SCP_MAX_TRACK_INDEX;

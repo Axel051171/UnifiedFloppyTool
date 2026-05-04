@@ -2,6 +2,14 @@
  * @file uft_applesauce.c
  * @brief Applesauce HAL backend (M3.3 partial scaffold).
  *
+ * SPEC_STATUS: REVERSE-ENGINEERED — based on Applesauce community
+ *   protocol notes (text-line "info\n" / "track NN hN capture R
+ *   revolutions\n"), 8 MHz sample-clock confirmed from device firmware
+ *   strings. No official Applesauce protocol SDK is published; the
+ *   text-protocol documentation here is the working reference UFT
+ *   uses. A2R / WOZ output formats are upstream specs and not part
+ *   of this reverse-engineering.
+ *
  * Per docs/MASTER_PLAN.md §M3.3: C HAL counterpart of the existing
  * 1311-LOC Qt provider (src/hardware_providers/applesaucehardwareprovider.cpp).
  * Real serial-protocol I/O (115200 8N1, text-based commands) is the
@@ -204,9 +212,24 @@ uft_error_t uft_as_set_revolutions(uft_as_config_t *cfg, int revs) {
 
 uft_error_t uft_as_detect(char ports[][64], int max_ports) {
     if (!ports || max_ports <= 0) return UFT_ERR_INVALID_ARG;
-    /* M3.3 TODO: enumerate serial ports, probe each with "info\n",
-     * keep the ones that respond with the Applesauce signature. */
-    return UFT_OK;  /* zero ports detected — honest "no Applesauce found" */
+    /*
+     * MF-148 (HW-06): previously returned UFT_OK with zero ports,
+     * pretending the enumerator had run and found nothing. That was a
+     * silent stub — it did NOT walk the serial-port list, so callers
+     * could not distinguish "no Applesauce attached" from "this build
+     * doesn't have detection wired". Violates rule H-2.
+     *
+     * 3-part error contract (per F-4):
+     *   What:  Applesauce serial-port enumeration not wired into this
+     *          build of the C HAL.
+     *   Why:   Serial integration (open + "info\n" probe + parse) is
+     *          the M3.3 multi-session continuation.
+     *   Fix:   if you need detection right now, the Qt provider path
+     *          (ApplesauceHardwareProvider::autoDetectDevice in
+     *          src/hardware_providers/) walks QSerialPortInfo and
+     *          probes each port; that path is wired today.
+     */
+    return UFT_ERR_NOT_IMPLEMENTED;
 }
 
 uft_error_t uft_as_get_firmware_version(uft_as_config_t *cfg, char *version, size_t max_len) {

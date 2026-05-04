@@ -132,11 +132,21 @@ uft_error_t uft_scp_direct_write_flux(uft_scp_direct_ctx_t *ctx,
  * Capability flags reported by this backend. Stable across scaffold
  * and final implementation — the hardware capability doesn't change,
  * only whether the software has caught up.
+ *
+ * GUI / dispatcher contract (rule H-1, MF-148):
+ *   - can_*           describe what the HARDWARE can do
+ *   - impl_complete   true once the runtime implementation is real
+ *
+ *   To enable an action in the UI, BOTH must be true. Until then the
+ *   action button stays disabled — the user sees the capability exists
+ *   but is greyed out, distinguishing "your device cannot do this" from
+ *   "this build cannot do this yet".
  */
 typedef struct {
     bool     can_read_flux;      /**< true — SCP captures flux natively */
     bool     can_write_flux;     /**< true — SCP can write back */
     bool     can_read_sector;    /**< false — no FDC mode */
+    bool     impl_complete;      /**< MF-148: false while M3.1 USB stubs are pending */
     uint32_t max_revolutions;    /**< UFT_SCP_MAX_REVOLUTIONS = 5 */
     uint32_t flux_ns_per_sample; /**< 25 (40 MHz / 25 ns per sample) */
     uint32_t max_track_index;    /**< UFT_SCP_MAX_TRACK_INDEX = 167 */

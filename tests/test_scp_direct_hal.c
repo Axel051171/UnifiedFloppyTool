@@ -87,6 +87,13 @@ TEST(capabilities_describe_real_hardware) {
     ASSERT(caps.can_read_flux == true);
     ASSERT(caps.can_write_flux == true);
     ASSERT(caps.can_read_sector == false);
+    /* MF-148 (HW-07): impl_complete is the GUI gate per H-1. While the
+     * M3.1 libusb wiring is pending, hardware-cap can be true but
+     * software-impl is honestly false. The unit-test asserts the
+     * scaffold-as-of-this-commit is NOT_IMPLEMENTED so the GUI keeps
+     * the action button disabled. Flip this assertion to TRUE in the
+     * commit that lands real read_flux/write_flux. */
+    ASSERT(caps.impl_complete == false);
     ASSERT(caps.max_revolutions == UFT_SCP_MAX_REVOLUTIONS);
     ASSERT(caps.flux_ns_per_sample == UFT_SCP_FLUX_NS_PER_SAMPLE);
     ASSERT(caps.max_track_index == UFT_SCP_MAX_TRACK_INDEX);

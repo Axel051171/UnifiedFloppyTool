@@ -138,11 +138,14 @@ TEST(open_returns_not_implemented_with_error_msg) {
     uft_as_config_destroy(cfg);
 }
 
-TEST(detect_returns_zero_ports_safely) {
+TEST(detect_is_honest_stub) {
     char ports[4][64];
-    /* Stub: enumerator runs, finds zero ports — UFT_OK with count=0
-     * is the honest "operation succeeded, nothing detected" answer. */
-    ASSERT(uft_as_detect(ports, 4)  == UFT_OK);
+    /* MF-148: the previous test claimed UFT_OK + zero-ports was an
+     * "honest" outcome, but the function never enumerated anything —
+     * that is a silent stub and violates rule H-2. The new contract
+     * separates "I have not been wired yet" (NOT_IMPLEMENTED) from
+     * "I ran and found nothing" (would be UFT_OK once real). */
+    ASSERT(uft_as_detect(ports, 4)  == UFT_ERR_NOT_IMPLEMENTED);
     ASSERT(uft_as_detect(NULL, 4)   == UFT_ERR_INVALID_ARG);
     ASSERT(uft_as_detect(ports, 0)  == UFT_ERR_INVALID_ARG);
 }
@@ -190,7 +193,7 @@ int main(void) {
     RUN(set_side_validates);
     RUN(set_revolutions_validates);
     RUN(open_returns_not_implemented_with_error_msg);
-    RUN(detect_returns_zero_ports_safely);
+    RUN(detect_is_honest_stub);
     RUN(read_track_validates_args_before_stub);
     RUN(write_track_validates_args);
     RUN(get_error_handles_null);

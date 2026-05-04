@@ -2,6 +2,12 @@
  * @file uft_xum1541.c
  * @brief XUM1541/ZoomFloppy HAL backend (M3.2 partial scaffold).
  *
+ * SPEC_STATUS: REVERSE-ENGINEERED — based on opencbm xum1541.c
+ *   (https://github.com/OpenCBM/OpenCBM, BSD-2),
+ *   IEC bus timing from Commodore 1541 service manual (Sams Photofact),
+ *   sector-zone tables from VIC-1541 + 8050 ROM listings.
+ *   NOT covered by an official ZoomFloppy SDK.
+ *
  * Per docs/MASTER_PLAN.md §M3.2: this is the C HAL counterpart of the
  * Qt-based src/hardware_providers/xum1541hardwareprovider.cpp. Real
  * USB I/O via libusb is the multi-session continuation; this commit
@@ -195,9 +201,23 @@ bool uft_xum_is_connected(const uft_xum_config_t *cfg) {
 /* ───────────────────────── Device info (stubs) ───────────────────── */
 
 uft_error_t uft_xum_detect(int *device_count) {
-    if (device_count) *device_count = 0;
-    /* M3.2 TODO: libusb enumerate; count XUM1541 devices. */
-    return UFT_ERR_INVALID_ARG;
+    if (!device_count) return UFT_ERR_INVALID_ARG;
+    *device_count = 0;
+    /*
+     * MF-148 (HW-05): previously returned UFT_ERR_INVALID_ARG even with
+     * a valid pointer, which made callers think their argument was
+     * wrong rather than the function being unimplemented.
+     *
+     * 3-part error contract (per F-4):
+     *   What:  XUM1541 USB enumeration not yet wired into this build.
+     *   Why:   libusb integration is the M3.2 multi-session continuation;
+     *          this scaffold only provides pure-utility lookups.
+     *   Fix:   if you need device detection right now, use the Qt
+     *          provider path (Xum1541HardwareProvider::autoDetectDevice
+     *          in src/hardware_providers/) which walks the USB list via
+     *          opencbm. The C HAL path will land with M3.2.
+     */
+    return UFT_ERR_NOT_IMPLEMENTED;
 }
 
 uft_error_t uft_xum_identify_drive(uft_xum_config_t *cfg, uft_cbm_drive_t *type) {
