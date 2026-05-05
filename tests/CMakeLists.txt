@@ -305,7 +305,7 @@ endforeach()
 # ═══════════════════════════════════════════════════════════════════════════════
 # Qt-based Tests (C++ / QtTest framework)
 # ═══════════════════════════════════════════════════════════════════════════════
-find_package(Qt6 COMPONENTS Core Test QUIET)
+find_package(Qt6 COMPONENTS Core Test Widgets QUIET)
 if(TARGET Qt6::Test)
     set(CMAKE_AUTOMOC ON)
 
@@ -328,19 +328,42 @@ if(TARGET Qt6::Test)
             Qt6::Core Qt6::Test
         )
 
-        # Link hardware_providers if available (needed by test_adfcopy_backend)
-        if(TARGET hardware_providers)
+        # Link hardware_providers if available (needed by test_adfcopy_backend
+        # and similar provider-touching tests). MF-155 (P1.3): test_wiring_runtime
+        # is self-contained — it carries an inline mock provider — and must NOT
+        # pull in hardware_providers; otherwise a transitive build failure in
+        # that lib would mask the wire_action verification.
+        if(TARGET hardware_providers AND NOT ${qt_test_name} STREQUAL "test_wiring_runtime")
             target_link_libraries(${qt_test_name} PRIVATE hardware_providers)
         endif()
-        if(TARGET Qt6::SerialPort)
+        if(TARGET Qt6::SerialPort AND NOT ${qt_test_name} STREQUAL "test_wiring_runtime")
             target_link_libraries(${qt_test_name} PRIVATE Qt6::SerialPort)
+        endif()
+        # MF-155 (P1.3): test_wiring_runtime exercises QPushButton + click,
+        # so it needs Qt6::Widgets. Link unconditionally if available — costs
+        # nothing for the few existing Qt-Test targets that ignore Widgets.
+        if(TARGET Qt6::Widgets)
+            target_link_libraries(${qt_test_name} PRIVATE Qt6::Widgets)
+        endif()
+
+        # CXX_STANDARD: most existing Qt-tests are C++17. test_wiring_runtime
+        # uses C++20 generic-lambda template-parameter syntax (`[]<class P>`),
+        # so it must explicitly opt in to C++20.
+        if(${qt_test_name} STREQUAL "test_wiring_runtime")
+            set_target_properties(${qt_test_name} PROPERTIES
+                CXX_STANDARD 20
+                CXX_STANDARD_REQUIRED ON
+                CXX_EXTENSIONS OFF
+                RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/tests
+            )
+        else()
+            set_target_properties(${qt_test_name} PROPERTIES
+                CXX_STANDARD 17
+                RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/tests
+            )
         endif()
 
         add_test(NAME ${qt_test_name} COMMAND ${qt_test_name})
-        set_target_properties(${qt_test_name} PROPERTIES
-            CXX_STANDARD 17
-            RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/tests
-        )
         message(STATUS "UFT Qt Test ENABLED: ${qt_test_name}")
     endforeach()
 else()

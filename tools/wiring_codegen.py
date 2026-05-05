@@ -313,15 +313,14 @@ HEADER = """\
 //
 // This file is the structural enforcement of rules H-3 / H-4 from the
 // UFT Master Coding Standards: a YAML entry referencing a capability no
-// provider implements will fail to compile at the wire_action<Cap> call.
+// provider implements will fail to compile at the wire_action<cap::X> call.
 
 #include "uft/gui/wiring_runtime.h"
-#include "uft/hal/concepts.h"
 
 namespace uft::gui::generated {{
 
 void wire_{tab_snake}(class {tab} *self) {{
-    using namespace uft::hal;
+    namespace cap = ::uft::gui::cap;
     auto *provider = {provider_source};
     if (!provider) {{
         return;
@@ -367,10 +366,12 @@ def emit(spec: dict[str, Any], ui_rel: str, yaml_rel: str) -> str:
         invoke = a["invoke"]
         parts.append(
             f"    // widget={widget}  requires={cap}  invoke={invoke}\n"
-            f"    wire_action<{cap}>(\n"
+            f"    wire_action<cap::{cap}>(\n"
             f"        self->ui->{widget},\n"
             f"        provider,\n"
-            f"        [provider]() {{ return provider->{invoke}; }}"
+            # Generic-lambda invoke factory: body type-checked lazily —
+            # see WHY INVOKE IS A GENERIC LAMBDA in wiring_runtime.h.
+            f"        []<class P>(P *p) {{ return p->{invoke}; }}"
         )
         on = a.get("on_outcome", {}) or {}
         if on:
@@ -378,7 +379,11 @@ def emit(spec: dict[str, Any], ui_rel: str, yaml_rel: str) -> str:
             for alt in sorted(on.keys()):
                 handler = on[alt]
                 parts.append(
-                    f"        /* on {alt}: */ [self](const auto &v) {{ {handler}; }},\n"
+                    # Concrete-typed handler: one alternative of the variant
+                    # by const-ref. std::visit enforces exhaustiveness — a
+                    # missing alternative fails to compile.
+                    f"        /* on {alt}: */ "
+                    f"[self](const ::uft::hal::{alt} &v) {{ {handler}; }},\n"
                 )
             # remove trailing ',\n' on the last handler line
             parts[-1] = parts[-1].rstrip(",\n") + "\n"

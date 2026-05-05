@@ -32,7 +32,7 @@ P0 headers must not be edited during P1.
 | P1.0  | `tools/wiring_codegen.py` skeleton (parse YAML, emit stub Cpp)             | P0         | ✅ MF-152 |
 | P1.1  | `GreaseweazleProviderV2` (mixin composition, `uft_gw_*` as backend)        | P0         | ✅ MF-154 |
 | P1.2  | `forms/tab_hardware.actions.yaml` (declarative wiring, GW-only at first)   | P0         | ⬜     |
-| P1.3  | `include/uft/gui/wiring_runtime.h` — `wire_action<Cap>()` template          | P0         | ⬜     |
+| P1.3  | `include/uft/gui/wiring_runtime.h` — `wire_action<Cap>()` template          | P0         | ✅ MF-155 |
 | P1.4  | Wire `HardwareTab` motor/seek/read/RPM/calibrate via codegen              | P1.1–1.3   | ⬜     |
 | P1.5  | Conformance test framework `tests/hal_conformance.cpp`                    | P0         | ⬜     |
 | P1.6  | Mock backends: `usb_loopback`, `subprocess_mock`, `serial_mock` (skeletons) | P0       | ⬜     |
