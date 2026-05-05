@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>SampleTab</class>
+ <widget class="QWidget" name="SampleTab">
+  <widget class="QPushButton" name="btnMotorOn"/>
+  <widget class="QPushButton" name="btnMotorOff"/>
+  <widget class="QPushButton" name="btnDetect"/>
+  <widget class="QPushButton" name="btnRPMTest"/>
+ </widget>
+</ui>

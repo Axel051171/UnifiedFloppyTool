@@ -29,7 +29,7 @@ P0 headers must not be edited during P1.
 
 | ID    | Task                                                                       | Depends on | Status |
 |-------|----------------------------------------------------------------------------|------------|--------|
-| P1.0  | `tools/wiring_codegen.py` skeleton (parse YAML, emit stub Cpp)             | P0         | ⬜     |
+| P1.0  | `tools/wiring_codegen.py` skeleton (parse YAML, emit stub Cpp)             | P0         | ✅ MF-152 |
 | P1.1  | `GreaseweazleProviderV2` (mixin composition, `uft_gw_*` as backend)        | P0         | ⬜     |
 | P1.2  | `forms/tab_hardware.actions.yaml` (declarative wiring, GW-only at first)   | P0         | ⬜     |
 | P1.3  | `include/uft/gui/wiring_runtime.h` — `wire_action<Cap>()` template          | P0         | ⬜     |
