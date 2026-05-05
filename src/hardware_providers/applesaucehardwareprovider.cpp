@@ -851,13 +851,13 @@ OperationResult ApplesauceHardwareProvider::writeTrack(const WriteParams &params
 #if AS_SERIAL_AVAILABLE
     if (!isConnected()) {
         result.error = tr("Not connected");
-        uft_set_track_error(result, result.error);  /* MF-149 H-9 */
+        uft_set_op_error(result, result.error);  /* MF-149 H-9 */
         return result;
     }
 
     if (data.isEmpty()) {
         result.error = tr("No flux data to write");
-        uft_set_track_error(result, result.error);  /* MF-149 H-9 */
+        uft_set_op_error(result, result.error);  /* MF-149 H-9 */
         return result;
     }
 
@@ -866,31 +866,31 @@ OperationResult ApplesauceHardwareProvider::writeTrack(const WriteParams &params
     if (isOn(wpResp)) {
         /* '+' means write-protected */
         result.error = tr("Disk is write-protected");
-        uft_set_track_error(result, result.error);  /* MF-149 H-9 */
+        uft_set_op_error(result, result.error);  /* MF-149 H-9 */
         return result;
     }
 
     if (!seekCylinder(params.cylinder)) {
         result.error = tr("Seek failed");
-        uft_set_track_error(result, result.error);  /* MF-149 H-9 */
+        uft_set_op_error(result, result.error);  /* MF-149 H-9 */
         return result;
     }
     if (!selectHead(params.head)) {
         result.error = tr("Head select failed");
-        uft_set_track_error(result, result.error);  /* MF-149 H-9 */
+        uft_set_op_error(result, result.error);  /* MF-149 H-9 */
         return result;
     }
 
     /* Ensure PSU and motor are on */
     if (!ensurePowerOn()) {
         result.error = tr("PSU power-on failed");
-        uft_set_track_error(result, result.error);  /* MF-149 H-9 */
+        uft_set_op_error(result, result.error);  /* MF-149 H-9 */
         return result;
     }
     if (!m_motorOn) {
         if (!setMotor(true)) {
             result.error = tr("Motor on failed");
-            uft_set_track_error(result, result.error);  /* MF-149 H-9 */
+            uft_set_op_error(result, result.error);  /* MF-149 H-9 */
             return result;
         }
     }
@@ -899,7 +899,7 @@ OperationResult ApplesauceHardwareProvider::writeTrack(const WriteParams &params
     if (dataSize > m_maxBufferSize) {
         result.error = tr("Flux data too large (%1 bytes, max %2)")
             .arg(dataSize).arg(m_maxBufferSize);
-        uft_set_track_error(result, result.error);  /* MF-149 H-9 */
+        uft_set_op_error(result, result.error);  /* MF-149 H-9 */
         return result;
     }
 
@@ -923,7 +923,7 @@ OperationResult ApplesauceHardwareProvider::writeTrack(const WriteParams &params
         if (!isOk(clearResp)) {
             if (retry < maxRetries) continue;
             result.error = tr("data:clear failed: %1").arg(clearResp);
-            uft_set_track_error(result, result.error);  /* MF-149 H-9 */
+            uft_set_op_error(result, result.error);  /* MF-149 H-9 */
             return result;
         }
 
@@ -934,7 +934,7 @@ OperationResult ApplesauceHardwareProvider::writeTrack(const WriteParams &params
         if (!isOk(uploadResp)) {
             if (retry < maxRetries) continue;
             result.error = tr("data upload failed: %1").arg(uploadResp);
-            uft_set_track_error(result, result.error);  /* MF-149 H-9 */
+            uft_set_op_error(result, result.error);  /* MF-149 H-9 */
             return result;
         }
 
@@ -944,7 +944,7 @@ OperationResult ApplesauceHardwareProvider::writeTrack(const WriteParams &params
         if (!isOk(writeResp)) {
             if (retry < maxRetries) continue;
             result.error = tr("disk:write failed: %1").arg(writeResp);
-            uft_set_track_error(result, result.error);  /* MF-149 H-9 */
+            uft_set_op_error(result, result.error);  /* MF-149 H-9 */
             return result;
         }
 
