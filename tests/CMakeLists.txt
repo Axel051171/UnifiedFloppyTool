@@ -28,7 +28,8 @@ file(GLOB TEST_SOURCES_CPP  "${CMAKE_CURRENT_SOURCE_DIR}/test_*.cpp")
 # Header-only C++ tests that join the main C-loop (no Qt linking).
 # Add new entries here when introducing a header-only foundation test.
 set(_HEADER_ONLY_CPP_TESTS
-    "${CMAKE_CURRENT_SOURCE_DIR}/test_hal_foundation.cpp")  # MF-150
+    "${CMAKE_CURRENT_SOURCE_DIR}/test_hal_foundation.cpp"   # MF-150
+    "${CMAKE_CURRENT_SOURCE_DIR}/test_greaseweazle_v2.cpp") # MF-154 P1.1
 
 set(TEST_SOURCES ${TEST_SOURCES_C} ${_HEADER_ONLY_CPP_TESTS})
 
@@ -72,7 +73,8 @@ foreach(test_source ${TEST_SOURCES})
     set(_SELF_CONTAINED_TESTS
         test_pll test_recovery test_roundtrip
         test_writer_backend test_woz_writer test_platform
-        test_hal_foundation)  # MF-150: type-driven HAL foundation, header-only
+        test_hal_foundation   # MF-150: type-driven HAL foundation, header-only
+        test_greaseweazle_v2) # MF-154 P1.1: GW V2 provider (provider .cpp linked below)
     list(FIND _SELF_CONTAINED_TESTS ${test_name} _sc_idx)
     if(${_sc_idx} GREATER -1)
         set(TEST_LIBS "")  # No UFT libs needed
@@ -249,6 +251,15 @@ foreach(test_source ${TEST_SOURCES})
         # encapsulated; the test exercises the opaque-handle API).
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_air.c)
+    elseif(${test_name} STREQUAL "test_greaseweazle_v2")
+        # MF-154 P1.1: GreaseweazleProviderV2 mixin composition test.
+        # Needs: V2 provider .cpp + GW C backend (for uft_gw_strerror etc.).
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/hardware_providers/greaseweazle_provider_v2.cpp
+            ${CMAKE_SOURCE_DIR}/src/hal/uft_greaseweazle_full.c)
+        target_include_directories(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src)
+        set(TEST_LIBS "")
     elseif(${test_name} STREQUAL "test_gw_protocol")
         # MF-135: GW protocol regression tests need uft_gw_strerror() +
         # the inline tick conversion helpers from the full HAL impl.
