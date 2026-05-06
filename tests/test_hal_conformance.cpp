@@ -92,6 +92,7 @@
 #include "hardware_providers/scp_provider_v2.h"          /* MF-161 P1.8 */
 #include "hardware_providers/kryoflux_provider_v2.h"     /* MF-162 P1.9 */
 #include "hardware_providers/fluxengine_provider_v2.h"   /* MF-163 P1.10 */
+#include "hardware_providers/fc5025_provider_v2.h"       /* MF-164 P1.11 */
 #include "mock_provider_v2.h"           /* MF-160 P1.7 */
 
 /* KryoFlux + FluxEngine conformance factories need SubprocessMock. */
@@ -195,6 +196,42 @@ struct factory<::uft::hal::FluxEngineProviderV2> {
         };
         return ::uft::hal::FluxEngineProviderV2(
             std::move(failing_runner), "fluxengine");
+    }
+};
+
+template<>
+struct factory<::uft::hal::FC5025ProviderV2> {
+    /* P1.11: a read runner that always returns exit_code=1 + error_message
+     * "FC5025 not available" exercises the FC5025 V2's error path on every
+     * capability. This is forensically truthful: in CI there is no FC5025
+     * device and no fcimage binary. All do_* methods return ProviderError,
+     * and we verify the F-4 3-part contract on the error-path side.
+     *
+     * When a real FC5025 is available (HIL environment), the factory can
+     * be switched to real runner lambdas and this SECTION will exercise
+     * the happy-path variants. For now, the error path covers the structural
+     * conformance surface. */
+    static ::uft::hal::FC5025ProviderV2 make() {
+        auto failing_read = [](const ::uft::hal::Fc5025ReadRequest&)
+            -> ::uft::hal::Fc5025RunResult {
+            return {
+                {},                       /* sector_bytes (empty) */
+                1,                        /* exit_code (failure) */
+                0,                        /* crc_error_count */
+                0,                        /* total_sectors */
+                "FC5025 not available"    /* error_message */
+            };
+        };
+        auto failing_detect = []() -> ::uft::hal::Fc5025DetectResult {
+            return {
+                false,                    /* found */
+                "",                       /* firmware */
+                "",                       /* drive_kind */
+                ""                        /* error_message — clean probe, device absent */
+            };
+        };
+        return ::uft::hal::FC5025ProviderV2(
+            std::move(failing_read), std::move(failing_detect));
     }
 };
 
@@ -610,7 +647,8 @@ int main()
     run_conformance<::uft::hal::SCPProviderV2>("SCPProviderV2");             /* MF-161 P1.8 */
     run_conformance<::uft::hal::KryoFluxProviderV2>("KryoFluxProviderV2");   /* MF-162 P1.9 */
     run_conformance<::uft::hal::FluxEngineProviderV2>("FluxEngineProviderV2"); /* MF-163 P1.10 */
-    /* P1.11+ will add: FC5025ProviderV2, XUM1541ProviderV2, ...            */
+    run_conformance<::uft::hal::FC5025ProviderV2>("FC5025ProviderV2");       /* MF-164 P1.11 */
+    /* P1.12+ will add: XUM1541ProviderV2, ApplesauceProviderV2, ...        */
 
     const auto &s = stats();
     std::printf("hal_conformance: %d sections run, %d failed\n",
