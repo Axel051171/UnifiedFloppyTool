@@ -89,8 +89,12 @@
  *  to the include path for this test.
  * ────────────────────────────────────────────────────────────────────── */
 #include "hardware_providers/greaseweazle_provider_v2.h"
-#include "hardware_providers/scp_provider_v2.h"  /* MF-161 P1.8 */
+#include "hardware_providers/scp_provider_v2.h"          /* MF-161 P1.8 */
+#include "hardware_providers/kryoflux_provider_v2.h"     /* MF-162 P1.9 */
 #include "mock_provider_v2.h"           /* MF-160 P1.7 */
+
+/* KryoFlux conformance factory needs SubprocessMock. */
+#include "mock_hardware/subprocess_mock.h"
 
 namespace uft::tests::conformance {
 
@@ -135,6 +139,34 @@ struct factory<::uft::hal::SCPProviderV2> {
      * constructing from uft_scp_direct_open(). */
     static ::uft::hal::SCPProviderV2 make() {
         return ::uft::hal::SCPProviderV2(nullptr);
+    }
+};
+
+template<>
+struct factory<::uft::hal::KryoFluxProviderV2> {
+    /* P1.9: a DTC runner that always returns exit_code=1 + stderr "DTC binary
+     * not found" exercises the KryoFlux V2's error path on every capability.
+     * This is forensically truthful: in CI there is no KryoFlux device and
+     * no DTC binary. All do_* methods return ProviderError, and we verify
+     * the F-4 3-part contract on the error-path side.
+     *
+     * When DTC integration is available (HIL environment), the factory
+     * can be switched to a real DtcRunner and this SECTION will exercise
+     * the happy-path variants. For now, the error path covers the structural
+     * conformance surface. */
+    static ::uft::hal::KryoFluxProviderV2 make() {
+        /* DtcRunner: always fails — simulates "DTC binary not found". */
+        auto failing_runner = [](const std::vector<std::string>&,
+                                 const std::string&)
+            -> ::uft::hal::DtcRunResult {
+            return {
+                "",                         /* stdout_text */
+                "DTC binary not found",     /* stderr_text */
+                1                           /* exit_code (failure) */
+            };
+        };
+        return ::uft::hal::KryoFluxProviderV2(
+            std::move(failing_runner), "dtc");
     }
 };
 
@@ -547,8 +579,9 @@ int main()
 
     run_conformance<::uft::hal::GreaseweazleProviderV2>("GreaseweazleProviderV2");
     run_conformance<::uft::tests::MockProviderV2>("MockProviderV2");  /* MF-160 P1.7 */
-    run_conformance<::uft::hal::SCPProviderV2>("SCPProviderV2");      /* MF-161 P1.8 */
-    /* P1.9+ will add: KryoFluxProviderV2, FluxEngineProviderV2, ...    */
+    run_conformance<::uft::hal::SCPProviderV2>("SCPProviderV2");           /* MF-161 P1.8 */
+    run_conformance<::uft::hal::KryoFluxProviderV2>("KryoFluxProviderV2"); /* MF-162 P1.9 */
+    /* P1.10+ will add: FluxEngineProviderV2, FC5025ProviderV2, ...        */
 
     const auto &s = stats();
     std::printf("hal_conformance: %d sections run, %d failed\n",

@@ -367,6 +367,7 @@ SOURCES += \
     src/hardware_providers/greaseweazlehardwareprovider.cpp \
     src/hardware_providers/greaseweazle_provider_v2.cpp \
     src/hardware_providers/scp_provider_v2.cpp \
+    src/hardware_providers/kryoflux_provider_v2.cpp \
     src/hardware_providers/fluxenginehardwareprovider.cpp \
     src/hardware_providers/kryofluxhardwareprovider.cpp \
     src/hardware_providers/scphardwareprovider.cpp \
@@ -412,6 +413,7 @@ HEADERS += \
     src/hardware_providers/greaseweazlehardwareprovider.h \
     src/hardware_providers/greaseweazle_provider_v2.h \
     src/hardware_providers/scp_provider_v2.h \
+    src/hardware_providers/kryoflux_provider_v2.h \
     src/hardware_providers/fluxenginehardwareprovider.h \
     src/hardware_providers/kryofluxhardwareprovider.h \
     src/hardware_providers/scphardwareprovider.h \

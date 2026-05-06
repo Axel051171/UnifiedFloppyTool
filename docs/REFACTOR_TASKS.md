@@ -38,7 +38,7 @@ P0 headers must not be edited during P1.
 | P1.6  | Mock backends: `usb_loopback`, `subprocess_mock`, `serial_mock` (skeletons) | P0       | ✅ MF-159 |
 | P1.7  | `MockProviderV2` — implements all concepts for conformance loop            | P1.5, P1.6 | ✅ MF-160 |
 | P1.8  | `SCPProviderV2` (Read+WriteRawFlux+Detect; no motor/seek)                 | P1.1, P1.6 | ✅ MF-161 |
-| P1.9  | `KryoFluxProviderV2` (ReadRawFlux+Detect via DTC subprocess; read-only)    | P1.6       | ⬜     |
+| P1.9  | `KryoFluxProviderV2` (ReadRawFlux+Detect via DTC subprocess; read-only)    | P1.6       | ✅ MF-162 |
 | P1.10 | `FluxEngineProviderV2` (Read+Write via fluxengine-CLI subprocess)         | P1.6       | ⬜     |
 | P1.11 | `FC5025ProviderV2` (read-only — only Read*+Detect mixins)                  | P1.6       | ⬜     |
 | P1.12 | `XUM1541ProviderV2` (Read+Write sector via opencbm)                        | P1.6       | ⬜     |
