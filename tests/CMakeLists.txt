@@ -30,7 +30,8 @@ file(GLOB TEST_SOURCES_CPP  "${CMAKE_CURRENT_SOURCE_DIR}/test_*.cpp")
 set(_HEADER_ONLY_CPP_TESTS
     "${CMAKE_CURRENT_SOURCE_DIR}/test_hal_foundation.cpp"     # MF-150
     "${CMAKE_CURRENT_SOURCE_DIR}/test_greaseweazle_v2.cpp"    # MF-154 P1.1
-    "${CMAKE_CURRENT_SOURCE_DIR}/test_hal_conformance.cpp")   # MF-158 P1.5
+    "${CMAKE_CURRENT_SOURCE_DIR}/test_hal_conformance.cpp"    # MF-158 P1.5
+    "${CMAKE_CURRENT_SOURCE_DIR}/test_mock_hardware.cpp")     # MF-159 P1.6
 
 set(TEST_SOURCES ${TEST_SOURCES_C} ${_HEADER_ONLY_CPP_TESTS})
 

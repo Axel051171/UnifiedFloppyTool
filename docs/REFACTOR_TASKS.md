@@ -35,7 +35,7 @@ P0 headers must not be edited during P1.
 | P1.3  | `include/uft/gui/wiring_runtime.h` — `wire_action<Cap>()` template          | P0         | ✅ MF-155 |
 | P1.4  | Wire `HardwareTab` motor/seek/read/RPM/calibrate via codegen              | P1.1–1.3   | ✅ MF-157 |
 | P1.5  | Conformance test framework `tests/hal_conformance.cpp`                    | P0         | ✅ MF-158 |
-| P1.6  | Mock backends: `usb_loopback`, `subprocess_mock`, `serial_mock` (skeletons) | P0       | ⬜     |
+| P1.6  | Mock backends: `usb_loopback`, `subprocess_mock`, `serial_mock` (skeletons) | P0       | ✅ MF-159 |
 | P1.7  | `MockProviderV2` — implements all concepts for conformance loop            | P1.5, P1.6 | ⬜     |
 | P1.8  | `SCPProviderV2` (Read+WriteRawFlux+Detect; no motor/seek)                 | P1.1, P1.6 | ⬜     |
 | P1.9  | `KryoFluxProviderV2` (ReadRawFlux+Detect via DTC subprocess; read-only)    | P1.6       | ⬜     |
