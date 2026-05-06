@@ -32,7 +32,8 @@ set(_HEADER_ONLY_CPP_TESTS
     "${CMAKE_CURRENT_SOURCE_DIR}/test_greaseweazle_v2.cpp"    # MF-154 P1.1
     "${CMAKE_CURRENT_SOURCE_DIR}/test_hal_conformance.cpp"    # MF-158 P1.5
     "${CMAKE_CURRENT_SOURCE_DIR}/test_mock_hardware.cpp"      # MF-159 P1.6
-    "${CMAKE_CURRENT_SOURCE_DIR}/test_mock_provider_v2.cpp")  # MF-160 P1.7
+    "${CMAKE_CURRENT_SOURCE_DIR}/test_mock_provider_v2.cpp"   # MF-160 P1.7
+    "${CMAKE_CURRENT_SOURCE_DIR}/test_scp_provider_v2.cpp")   # MF-161 P1.8
 
 set(TEST_SOURCES ${TEST_SOURCES_C} ${_HEADER_ONLY_CPP_TESTS})
 
@@ -263,13 +264,24 @@ foreach(test_source ${TEST_SOURCES})
         target_include_directories(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src)
         set(TEST_LIBS "")
+    elseif(${test_name} STREQUAL "test_scp_provider_v2")
+        # MF-161 P1.8: SCPProviderV2 mixin composition test.
+        # Needs: V2 provider .cpp + SCP direct C backend (M3.1 scaffold).
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/hardware_providers/scp_provider_v2.cpp
+            ${CMAKE_SOURCE_DIR}/src/hal/uft_scp_direct.c)
+        target_include_directories(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src)
+        set(TEST_LIBS "")
     elseif(${test_name} STREQUAL "test_hal_conformance")
-        # MF-158 P1.5 + MF-160 P1.7: HAL conformance harness — runs every
-        # concept's SECTION against every V2 provider in the typelist
-        # (GW with NULL handle + MockProviderV2 in default-healthy mode).
+        # MF-158 P1.5 + MF-160 P1.7 + MF-161 P1.8: HAL conformance harness
+        # — runs every concept's SECTION against every V2 provider in the
+        # typelist (GW null-handle + MockProviderV2 happy-path + SCP null-handle).
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/hardware_providers/greaseweazle_provider_v2.cpp
             ${CMAKE_SOURCE_DIR}/src/hal/uft_greaseweazle_full.c
+            ${CMAKE_SOURCE_DIR}/src/hardware_providers/scp_provider_v2.cpp
+            ${CMAKE_SOURCE_DIR}/src/hal/uft_scp_direct.c
             ${CMAKE_SOURCE_DIR}/tests/mock_provider_v2.cpp)
         target_include_directories(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src

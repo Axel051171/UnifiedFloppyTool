@@ -89,6 +89,7 @@
  *  to the include path for this test.
  * ────────────────────────────────────────────────────────────────────── */
 #include "hardware_providers/greaseweazle_provider_v2.h"
+#include "hardware_providers/scp_provider_v2.h"  /* MF-161 P1.8 */
 #include "mock_provider_v2.h"           /* MF-160 P1.7 */
 
 namespace uft::tests::conformance {
@@ -121,6 +122,19 @@ struct factory<::uft::hal::GreaseweazleProviderV2> {
      * it verifies the F-4 contract on every error-returning variant. */
     static ::uft::hal::GreaseweazleProviderV2 make() {
         return ::uft::hal::GreaseweazleProviderV2(nullptr);
+    }
+};
+
+template<>
+struct factory<::uft::hal::SCPProviderV2> {
+    /* P1.8: a NULL handle exercises the SCP V2's M3.1 scaffold error path on
+     * every capability. All do_* methods return ProviderError with the M3.1
+     * marker because the USB layer is not yet wired — this is forensically
+     * truthful and verifies the F-4 3-part contract on the error path.
+     * When the M3.1 libusb layer lands, this factory will switch to
+     * constructing from uft_scp_direct_open(). */
+    static ::uft::hal::SCPProviderV2 make() {
+        return ::uft::hal::SCPProviderV2(nullptr);
     }
 };
 
@@ -533,7 +547,8 @@ int main()
 
     run_conformance<::uft::hal::GreaseweazleProviderV2>("GreaseweazleProviderV2");
     run_conformance<::uft::tests::MockProviderV2>("MockProviderV2");  /* MF-160 P1.7 */
-    /* P1.8+ will add: SCPProviderV2, KryoFluxProviderV2, ...           */
+    run_conformance<::uft::hal::SCPProviderV2>("SCPProviderV2");      /* MF-161 P1.8 */
+    /* P1.9+ will add: KryoFluxProviderV2, FluxEngineProviderV2, ...    */
 
     const auto &s = stats();
     std::printf("hal_conformance: %d sections run, %d failed\n",
