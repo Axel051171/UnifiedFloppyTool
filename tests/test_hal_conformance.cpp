@@ -93,6 +93,7 @@
 #include "hardware_providers/kryoflux_provider_v2.h"     /* MF-162 P1.9 */
 #include "hardware_providers/fluxengine_provider_v2.h"   /* MF-163 P1.10 */
 #include "hardware_providers/fc5025_provider_v2.h"       /* MF-164 P1.11 */
+#include "hardware_providers/xum1541_provider_v2.h"    /* MF-165 P1.12 */
 #include "mock_provider_v2.h"           /* MF-160 P1.7 */
 
 /* KryoFlux + FluxEngine conformance factories need SubprocessMock. */
@@ -232,6 +233,44 @@ struct factory<::uft::hal::FC5025ProviderV2> {
         };
         return ::uft::hal::FC5025ProviderV2(
             std::move(failing_read), std::move(failing_detect));
+    }
+};
+
+template<>
+struct factory<::uft::hal::XUM1541ProviderV2> {
+    /* P1.12: a read runner that returns opencbm_unavailable=true exercises the
+     * XUM1541 V2's M3.2 scaffold error path on every read capability. A write
+     * runner that returns opencbm_unavailable=true exercises the write error
+     * path. A detect runner that returns found=false with no error_message
+     * exercises the DriveAbsent path (clean probe, device not present).
+     *
+     * This is forensically truthful: in CI there is no ZoomFloppy/XUM1541
+     * device and no OpenCBM installation. All do_* methods return ProviderError
+     * or DriveAbsent, and we verify the F-4 3-part contract and the DriveAbsent
+     * audit-trail invariant. */
+    static ::uft::hal::XUM1541ProviderV2 make() {
+        auto failing_read = [](const ::uft::hal::Xum1541ReadRequest&)
+            -> ::uft::hal::Xum1541ReadResult {
+            ::uft::hal::Xum1541ReadResult r;
+            r.opencbm_unavailable = true;
+            return r;
+        };
+        auto failing_write = [](const ::uft::hal::Xum1541WriteRequest&)
+            -> ::uft::hal::Xum1541WriteResult {
+            ::uft::hal::Xum1541WriteResult r;
+            r.opencbm_unavailable = true;
+            return r;
+        };
+        auto absent_detect = []() -> ::uft::hal::Xum1541DetectResult {
+            ::uft::hal::Xum1541DetectResult r;
+            r.found = false;
+            /* No error_message: this is a clean probe, device simply absent. */
+            return r;
+        };
+        return ::uft::hal::XUM1541ProviderV2(
+            std::move(failing_read),
+            std::move(failing_write),
+            std::move(absent_detect));
     }
 };
 
@@ -648,7 +687,8 @@ int main()
     run_conformance<::uft::hal::KryoFluxProviderV2>("KryoFluxProviderV2");   /* MF-162 P1.9 */
     run_conformance<::uft::hal::FluxEngineProviderV2>("FluxEngineProviderV2"); /* MF-163 P1.10 */
     run_conformance<::uft::hal::FC5025ProviderV2>("FC5025ProviderV2");       /* MF-164 P1.11 */
-    /* P1.12+ will add: XUM1541ProviderV2, ApplesauceProviderV2, ...        */
+    run_conformance<::uft::hal::XUM1541ProviderV2>("XUM1541ProviderV2");   /* MF-165 P1.12 */
+    /* P1.13+ will add: ApplesauceProviderV2, ADFCopyProviderV2, ...        */
 
     const auto &s = stats();
     std::printf("hal_conformance: %d sections run, %d failed\n",
