@@ -37,7 +37,8 @@ set(_HEADER_ONLY_CPP_TESTS
     "${CMAKE_CURRENT_SOURCE_DIR}/test_kryoflux_provider_v2.cpp"   # MF-162 P1.9
     "${CMAKE_CURRENT_SOURCE_DIR}/test_fluxengine_provider_v2.cpp"  # MF-163 P1.10
     "${CMAKE_CURRENT_SOURCE_DIR}/test_fc5025_provider_v2.cpp"      # MF-164 P1.11
-    "${CMAKE_CURRENT_SOURCE_DIR}/test_xum1541_provider_v2.cpp")  # MF-165 P1.12
+    "${CMAKE_CURRENT_SOURCE_DIR}/test_xum1541_provider_v2.cpp"        # MF-165 P1.12
+    "${CMAKE_CURRENT_SOURCE_DIR}/test_applesauce_provider_v2.cpp")  # MF-166 P1.13
 
 set(TEST_SOURCES ${TEST_SOURCES_C} ${_HEADER_ONLY_CPP_TESTS})
 
@@ -318,9 +319,20 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src
             ${CMAKE_SOURCE_DIR}/tests)
         set(TEST_LIBS "")
+    elseif(${test_name} STREQUAL "test_applesauce_provider_v2")
+        # MF-166 P1.13: ApplesauceProviderV2 mixin composition test.
+        # Needs: V2 provider .cpp; no C-HAL backend (Applesauce uses injectable
+        # runners over IApplesauceTransport). No Qt dependency — transport is
+        # abstracted away; tests inject scripted lambdas directly.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/hardware_providers/applesauce_provider_v2.cpp)
+        target_include_directories(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src
+            ${CMAKE_SOURCE_DIR}/tests)
+        set(TEST_LIBS "")
     elseif(${test_name} STREQUAL "test_hal_conformance")
         # MF-158 P1.5 + MF-160 P1.7 + MF-161 P1.8 + MF-162 P1.9 + MF-163 P1.10
-        # + MF-164 P1.11 + MF-165 P1.12:
+        # + MF-164 P1.11 + MF-165 P1.12 + MF-166 P1.13:
         # HAL conformance harness — runs every concept's SECTION against
         # every V2 provider in the typelist.
         target_sources(${test_name} PRIVATE
@@ -332,6 +344,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/hardware_providers/fluxengine_provider_v2.cpp
             ${CMAKE_SOURCE_DIR}/src/hardware_providers/fc5025_provider_v2.cpp
             ${CMAKE_SOURCE_DIR}/src/hardware_providers/xum1541_provider_v2.cpp
+            ${CMAKE_SOURCE_DIR}/src/hardware_providers/applesauce_provider_v2.cpp
             ${CMAKE_SOURCE_DIR}/tests/mock_provider_v2.cpp)
         target_include_directories(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src

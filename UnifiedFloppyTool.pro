@@ -371,6 +371,7 @@ SOURCES += \
     src/hardware_providers/fluxengine_provider_v2.cpp \
     src/hardware_providers/fc5025_provider_v2.cpp \
     src/hardware_providers/xum1541_provider_v2.cpp \
+    src/hardware_providers/applesauce_provider_v2.cpp \
     src/hardware_providers/fluxenginehardwareprovider.cpp \
     src/hardware_providers/kryofluxhardwareprovider.cpp \
     src/hardware_providers/scphardwareprovider.cpp \
@@ -420,6 +421,7 @@ HEADERS += \
     src/hardware_providers/fluxengine_provider_v2.h \
     src/hardware_providers/fc5025_provider_v2.h \
     src/hardware_providers/xum1541_provider_v2.h \
+    src/hardware_providers/applesauce_provider_v2.h \
     src/hardware_providers/fluxenginehardwareprovider.h \
     src/hardware_providers/kryofluxhardwareprovider.h \
     src/hardware_providers/scphardwareprovider.h \

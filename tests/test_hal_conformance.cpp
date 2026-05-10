@@ -93,7 +93,8 @@
 #include "hardware_providers/kryoflux_provider_v2.h"     /* MF-162 P1.9 */
 #include "hardware_providers/fluxengine_provider_v2.h"   /* MF-163 P1.10 */
 #include "hardware_providers/fc5025_provider_v2.h"       /* MF-164 P1.11 */
-#include "hardware_providers/xum1541_provider_v2.h"    /* MF-165 P1.12 */
+#include "hardware_providers/xum1541_provider_v2.h"      /* MF-165 P1.12 */
+#include "hardware_providers/applesauce_provider_v2.h"  /* MF-166 P1.13 */
 #include "mock_provider_v2.h"           /* MF-160 P1.7 */
 
 /* KryoFlux + FluxEngine conformance factories need SubprocessMock. */
@@ -271,6 +272,66 @@ struct factory<::uft::hal::XUM1541ProviderV2> {
             std::move(failing_read),
             std::move(failing_write),
             std::move(absent_detect));
+    }
+};
+
+template<>
+struct factory<::uft::hal::ApplesauceProviderV2> {
+    /* P1.13: all runners return transport_unavailable=true, mirroring
+     * the M3.3 scaffold state: the serial I/O layer is not yet wired.
+     * Every do_* method returns a ProviderError with the M3.3 marker.
+     * We verify the F-4 3-part contract on the error-path side.
+     *
+     * When the QSerialPort-backed IApplesauceTransport lands (post-M3.3),
+     * this factory will switch to real runners and this SECTION will
+     * exercise the happy-path variants. */
+    static ::uft::hal::ApplesauceProviderV2 make() {
+        auto unavail_read = [](const ::uft::hal::ApplesauceProviderV2::ReadRequest&)
+            -> ::uft::hal::ApplesauceReadResult {
+            ::uft::hal::ApplesauceReadResult r;
+            r.transport_unavailable = true;
+            return r;
+        };
+        auto unavail_write = [](const ::uft::hal::ApplesauceProviderV2::WriteRequest&)
+            -> ::uft::hal::ApplesauceWriteResult {
+            ::uft::hal::ApplesauceWriteResult r;
+            r.transport_unavailable = true;
+            return r;
+        };
+        auto unavail_motor = [](bool) -> ::uft::hal::ApplesauceMotorResult {
+            ::uft::hal::ApplesauceMotorResult r;
+            r.transport_unavailable = true;
+            return r;
+        };
+        auto unavail_seek = [](const ::uft::hal::ApplesauceProviderV2::SeekRequest&)
+            -> ::uft::hal::ApplesauceSeekResult {
+            ::uft::hal::ApplesauceSeekResult r;
+            r.transport_unavailable = true;
+            return r;
+        };
+        auto unavail_recal = []() -> ::uft::hal::ApplesauceSeekResult {
+            ::uft::hal::ApplesauceSeekResult r;
+            r.transport_unavailable = true;
+            return r;
+        };
+        auto unavail_rpm = []() -> ::uft::hal::ApplesauceRpmResult {
+            ::uft::hal::ApplesauceRpmResult r;
+            r.transport_unavailable = true;
+            return r;
+        };
+        auto unavail_detect = []() -> ::uft::hal::ApplesauceDetectResult {
+            ::uft::hal::ApplesauceDetectResult r;
+            r.transport_unavailable = true;
+            return r;
+        };
+        return ::uft::hal::ApplesauceProviderV2(
+            std::move(unavail_read),
+            std::move(unavail_write),
+            std::move(unavail_motor),
+            std::move(unavail_seek),
+            std::move(unavail_recal),
+            std::move(unavail_rpm),
+            std::move(unavail_detect));
     }
 };
 
@@ -687,8 +748,9 @@ int main()
     run_conformance<::uft::hal::KryoFluxProviderV2>("KryoFluxProviderV2");   /* MF-162 P1.9 */
     run_conformance<::uft::hal::FluxEngineProviderV2>("FluxEngineProviderV2"); /* MF-163 P1.10 */
     run_conformance<::uft::hal::FC5025ProviderV2>("FC5025ProviderV2");       /* MF-164 P1.11 */
-    run_conformance<::uft::hal::XUM1541ProviderV2>("XUM1541ProviderV2");   /* MF-165 P1.12 */
-    /* P1.13+ will add: ApplesauceProviderV2, ADFCopyProviderV2, ...        */
+    run_conformance<::uft::hal::XUM1541ProviderV2>("XUM1541ProviderV2");       /* MF-165 P1.12 */
+    run_conformance<::uft::hal::ApplesauceProviderV2>("ApplesauceProviderV2"); /* MF-166 P1.13 */
+    /* P1.14+ will add: ADFCopyProviderV2, USBFloppyProviderV2, ...          */
 
     const auto &s = stats();
     std::printf("hal_conformance: %d sections run, %d failed\n",

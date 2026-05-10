@@ -42,7 +42,7 @@ P0 headers must not be edited during P1.
 | P1.10 | `FluxEngineProviderV2` (Read+Write via fluxengine-CLI subprocess)         | P1.6       | ✅ MF-163 |
 | P1.11 | `FC5025ProviderV2` (read-only — only Read*+Detect mixins)                  | P1.6       | ✅ MF-164 |
 | P1.12 | `XUM1541ProviderV2` (Read+Write sector via opencbm)                        | P1.6       | ✅ MF-165 |
-| P1.13 | `ApplesauceProviderV2` (Read+Write flux via QSerialPort)                   | P1.6       | ⬜     |
+| P1.13 | `ApplesauceProviderV2` (Read+Write flux via QSerialPort)                   | P1.6       | ✅ MF-166 |
 | P1.14 | `ADFCopyProviderV2` (Read+Write flux via QSerialPort)                      | P1.6       | ⬜     |
 | P1.15 | `USBFloppyProviderV2` (Read+Write sector via UFI HAL)                      | P1.6       | ⬜     |
 | P1.16 | DTO migration: `if (r.success)` → `std::visit` in jobs + tabs              | P1.1–1.15  | ⬜     |
