@@ -157,7 +157,7 @@ aktiv abgearbeitet.
 
 ### M.-2 TrackData / OperationResult duplicate alias fields (MF-149, rule H-9)
 
-- **Status:** MITIGATED (deprecated 2026-05-04, removal planned for v5.0)
+- **Status:** MITIGATED (deprecated 2026-05-04, removal planned for v4.1.4)
 - **Datei:** `src/hardware_providers/hardwareprovider.h`
 - **Beschreibung:** Die DTOs `TrackData` und `OperationResult` enthielten
   je zwei Aliase für denselben Wert:
@@ -176,7 +176,7 @@ aktiv abgearbeitet.
   schreiben kanonisches Feld + Alias atomar; alle 30+ Schreib-Stellen
   in den 9 Hardware-Providern + `unified_hal_bridge.cpp` migriert. Reader
   in `fluxengine`/`kryoflux` von `.valid` auf `.success` umgestellt.
-- **v5.0 Plan:** `valid` und `errorMessage` ersatzlos entfernen, Helfer
+- **v4.1.4 Plan:** `valid` und `errorMessage` ersatzlos entfernen, Helfer
   reduzieren auf einfache Feld-Schreibung.
 - **Regression-Schutz:** Build mit `-Wdeprecated-declarations` ist clean
   ausserhalb der Header-internen False Positives.

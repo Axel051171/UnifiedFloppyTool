@@ -301,7 +301,7 @@ Tasks landen in `docs/REFACTOR_TASKS.md` als P3.1–P3.4 (siehe dort).
   Read+Write+Convert-Trio (~150), Wire-Protocol pro Firmware (3)
 - **Welle 3 (parallel zu P2):** Forensic (~15), Multi-Device (~10),
   GUI-Smoke (~14), Property/Fuzz (~20)
-- **Welle 4 (vor v5.0.0):** Test-Rig + Golden-Reference + erster
+- **Welle 4 (vor v4.1.4):** Test-Rig + Golden-Reference + erster
   vollständiger HIL-Lauf
 - **Welle 5 (continuous):** Quartalsweiser Corpus-Refresh bei jedem
   GW-Release, HIL-Pflichtlauf bei jedem UFT-Major

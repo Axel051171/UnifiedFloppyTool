@@ -36,7 +36,7 @@
 
 ## 🚀 release.yml - Release-Pipeline
 
-**Trigger**: Tags `v*` (z.B. `v4.1.0`, `v5.0.0-beta`)
+**Trigger**: Tags `v*` (z.B. `v4.1.0`, `v4.1.4-rc1`)
 
 **Ablauf**:
 1. Version aus Tag extrahieren

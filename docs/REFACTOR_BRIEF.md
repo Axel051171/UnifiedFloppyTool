@@ -248,13 +248,26 @@ sections automatically — no per-provider test boilerplate.
 | `ctest` count vs baseline (post-MF-149)                         | ≥ baseline + new conformance tests        |
 | `tests/HARDWARE_TRUTH_TESTS.md` boxes                           | all checked by Axel against real hardware |
 | `KNOWN_ISSUES.md` H-1 / H-2 / H-9 entries                       | removed (resolved)                        |
-| `git tag v5.0.0-rc1`                                            | set; +14 day pre-release window starts    |
+| `git tag v4.1.4-rc1`                                            | set; +14 day pre-release window starts    |
 
 After 14 days of community/own pre-release testing:
 - squash-merge `refactor/type-driven-hal` into `main`,
-- tag `v5.0.0`,
+- tag `v4.1.4`,
 - bump version-of-record in `VERSION.txt`,
 - delete branch.
+
+> **Version-bump rationale (decision 2026-05):** the refactor's
+> behavioral changes for end users are limited to (a) the Greaseweazle
+> workflow being structurally hardened (same UX, more honest backend),
+> (b) phantom-feature combo entries removed (X1541, MF-170), and
+> (c) non-GW controllers showing a clear "routing pending" message
+> instead of silently no-op'ing. UFT is an end-user application, not a
+> linked library — no external SemVer contract is in play. PATCH bump
+> `v4.1.3 → v4.1.4` reflects "incremental hardening of the v4.1 line"
+> truthfully and avoids the psychological overhead of a MAJOR bump
+> when no working user workflow is broken. The RELEASE_NOTES section
+> "Internal refactor (Type-Driven HAL)" makes the scope of internal
+> change explicit for anyone who cares to look.
 
 ---
 

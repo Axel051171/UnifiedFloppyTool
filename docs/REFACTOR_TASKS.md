@@ -60,14 +60,20 @@ P0 headers must not be edited during P1.
 
 | ID    | Task                                                                       | Status |
 |-------|----------------------------------------------------------------------------|--------|
-| P2.1  | `VERSION.txt` → `5.0.0-rc1` + RELEASE_NOTES + CHANGELOG                    | ⬜     |
+| P2.1  | `VERSION.txt` → `4.1.4-rc1` + RELEASE_NOTES + CHANGELOG                    | ⬜     |
 | P2.2  | KNOWN_ISSUES cleanup: H-1 / H-2 / H-9 entries removed                      | ⬜     |
-| P2.3  | Tag `v5.0.0-rc1`; 14-day pre-release window                                | ⬜     |
-| P2.4  | After 14 days clean: squash-merge to `main`, tag `v5.0.0`, delete branch   | ⬜     |
+| P2.3  | Tag `v4.1.4-rc1`; 14-day pre-release window                                | ⬜     |
+| P2.4  | After 14 days clean: squash-merge to `main`, tag `v4.1.4`, delete branch   | ⬜     |
+
+> **Version-bump call (2026-05):** PATCH `v4.1.3 → v4.1.4` not MAJOR
+> `v4.1.4`. UFT is an end-user app; no external SemVer contract is in
+> play. The refactor delivers structural / forensic improvements with
+> no working-user-workflow regression — see REFACTOR_BRIEF.md §9 for
+> the full rationale.
 
 ---
 
-## P3 — Tester-Strategie (parallel zu P1 möglich, Pflicht vor v5.0.0)
+## P3 — Tester-Strategie (parallel zu P1 möglich, Pflicht vor v4.1.4)
 
 Spec: [`docs/TESTER_STRATEGY.md`](TESTER_STRATEGY.md). Doppelziel
 "GW-kompatibel + beweisbar besser" über 7-Schichten-Testsystem. P3.1
@@ -78,7 +84,7 @@ ist die einzige Welle-1-Aufgabe ohne Abhängigkeit zu P1.
 | P3.1  | `gw_corpus/` Skeleton + `tools/uft_diff_test/` + 1 SCP-Fixture + DIV-001  | —          | ⬜     |
 | P3.2  | Differential-Conformance-Tests pro GW-Command (~50 Tests)                  | P3.1, P1   | ⬜     |
 | P3.3  | Improvement-Tests: forensic, multi_device, gui (~40 Tests)                 | P3.1, P1   | ⬜     |
-| P3.4  | HIL-Skript + Golden-Reference-Katalog + erster v5.0.0-rc1 HIL-Report      | P3.2, P3.3 | ⬜     |
+| P3.4  | HIL-Skript + Golden-Reference-Katalog + erster v4.1.4-rc1 HIL-Report      | P3.2, P3.3 | ⬜     |
 
 Neue Subagenten (landen mit P3.1):
 - `differential-test-author` (Sonnet) — pro GW-Command/Format

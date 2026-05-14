@@ -5,7 +5,7 @@ the type-driven HAL is correct. Whether the bytes coming off the wire
 match a real disk is a question only real hardware can answer.
 
 This document is the manual checklist Axel runs against physical
-hardware before promoting `v5.0.0-rc1` → `v5.0.0`. It is the *only*
+hardware before promoting `v4.1.4-rc1` → `v4.1.4`. It is the *only*
 thing in the refactor that cannot be automated.
 
 ---
@@ -40,7 +40,7 @@ sha256sum tests/baseline_artifacts/gw_known_disk.scp \
 
 ## Greaseweazle — mandatory verification
 
-**Pre-condition:** v5.0.0-rc1 build available, same physical disk in
+**Pre-condition:** v4.1.4-rc1 build available, same physical disk in
 the drive that produced the baseline.
 
 | Check                                                                          | Expected                                          | OK? |
@@ -153,8 +153,8 @@ Once all applicable rows are ☐ → ☑:
 Hardware Truth verification complete: 2026-MM-DD
 Verifier:  Axel Fuchs (MysticFoxDE)
 Result:    {ALL GREEN | partial — see notes}
-Tag:       v5.0.0
+Tag:       v4.1.4
 ```
 
-Append this block to `RELEASE_NOTES.md` under the v5.0.0 section. The
+Append this block to `RELEASE_NOTES.md` under the v4.1.4 section. The
 sign-off is the formal release gate — automation cannot replace it.
