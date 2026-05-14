@@ -28,6 +28,7 @@
 #include "ui_tab_workflow.h"
 #include "decodejob.h"
 #include "fluxcapturejob.h"
+#include "hardware_providers/greaseweazle_provider_v2.h"  // MF-200
 #include "fluxwritejob.h"
 #include "uft_flux_histogram_widget.h"
 #include <QTextEdit>
@@ -61,7 +62,7 @@ WorkflowTab::WorkflowTab(QWidget *parent)
     , m_decodeJob(nullptr)
     , m_captureJob(nullptr)
     , m_writeJob(nullptr)
-    , m_gwDevice(nullptr)
+    , m_gwProvider(nullptr)
     , m_hwCylinders(80)
     , m_hwSides(2)
 {
@@ -487,9 +488,9 @@ void WorkflowTab::onStartAbortClicked()
         }
 
         // MF-110 — when source is a flux device, refuse to start without
-        // a live HAL handle. MainWindow keeps m_gwDevice in sync via
+        // a live provider. MainWindow keeps m_gwProvider in sync via
         // setHardwareDevice() whenever HardwareTab connects/disconnects.
-        if (m_sourceMode == Flux && m_gwDevice == nullptr) {
+        if (m_sourceMode == Flux && m_gwProvider == nullptr) {
             QMessageBox::warning(this, tr("Hardware Not Connected"),
                 tr("No flux device is connected. Open the Hardware tab and "
                    "connect a Greaseweazle (or compatible controller) first."));
@@ -530,11 +531,14 @@ void WorkflowTab::onStartAbortClicked()
         // here rather than silently doing the wrong thing.
         if (m_sourceMode == Flux && m_destMode == File) {
             m_captureJob = new FluxCaptureJob();
-            m_captureJob->setDevice(m_gwDevice);
+            // MF-200 (P1.20): hand the job HardwareTab's non-owning V2
+            // provider. The drive unit is already bound on the provider
+            // (GreaseweazleProviderV2 ctor / set_drive_unit), so there is
+            // no separate setDriveUnit() on the job any more.
+            m_captureJob->setProvider(m_gwProvider);
             m_captureJob->setOutputPath(m_destFile);
             m_captureJob->setGeometry(m_hwCylinders, m_hwSides);
             m_captureJob->setRevolutions(2);
-            m_captureJob->setDriveUnit(0);
             m_captureJob->moveToThread(m_workerThread);
 
             connect(m_workerThread, &QThread::started, m_captureJob, &FluxCaptureJob::run);
@@ -564,7 +568,7 @@ void WorkflowTab::onStartAbortClicked()
         // MF-114: Source = File + Dest = Flux. Symmetric to MF-110.
         // Drives an SCP image back to the disk via FluxWriteJob.
         if (m_sourceMode == File && m_destMode == Flux) {
-            if (m_gwDevice == nullptr) {
+            if (m_gwProvider == nullptr) {
                 delete m_workerThread; m_workerThread = nullptr;
                 QMessageBox::warning(this, tr("Hardware Not Connected"),
                     tr("No flux device is connected. Open the Hardware tab and "
@@ -573,7 +577,11 @@ void WorkflowTab::onStartAbortClicked()
                 return;
             }
             m_writeJob = new FluxWriteJob();
-            m_writeJob->setDevice(m_gwDevice);
+            // MF-200: FluxWriteJob is not migrated yet (that is P1.21) —
+            // until then it keeps the raw_handle() escape hatch. The
+            // provider owns the handle; this is a non-owning view.
+            m_writeJob->setDevice(m_gwProvider ? m_gwProvider->raw_handle()
+                                               : nullptr);
             m_writeJob->setInputPath(m_sourceFile);
             m_writeJob->setDriveUnit(0);
             m_writeJob->setVerify(false);
@@ -680,9 +688,10 @@ void WorkflowTab::resetUI()
     emit hardwareModeChanged(m_sourceMode != File, m_destMode != File);
 }
 
-void WorkflowTab::setHardwareDevice(void *gwDevice, int cylinders, int sides)
+void WorkflowTab::setHardwareDevice(::uft::hal::GreaseweazleProviderV2 *provider,
+                                    int cylinders, int sides)
 {
-    m_gwDevice = gwDevice;
+    m_gwProvider = provider;   // non-owning — HardwareTab owns it
     if (cylinders > 0) m_hwCylinders = cylinders;
     if (sides > 0)     m_hwSides     = sides;
 }

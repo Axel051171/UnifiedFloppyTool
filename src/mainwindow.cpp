@@ -118,14 +118,16 @@ void MainWindow::loadTabWidgets()
                 setLEDStatus(connected ? LEDStatus::Connected : LEDStatus::Disconnected);
             }, Qt::QueuedConnection);
 
-    // MF-110 — forward the live HAL handle from HardwareTab to WorkflowTab
-    // so FluxCaptureJob can drive the same open Greaseweazle. When the
-    // hardware disconnects we push nullptr so WorkflowTab refuses to start
-    // a flux capture without a device.
+    // MF-110 / MF-200 — forward HardwareTab's V2 provider to WorkflowTab
+    // so FluxCaptureJob can drive the same open Greaseweazle through the
+    // type-driven outcome surface. currentProviderV2() returns a
+    // non-owning GreaseweazleProviderV2* (HardwareTab owns it); when the
+    // hardware disconnects we push nullptr so WorkflowTab refuses to
+    // start a flux capture without a device.
     connect(hardwareTab, &HardwareTab::connectionChanged,
             workflowTab, [workflowTab, hardwareTab](bool connected) {
                 workflowTab->setHardwareDevice(
-                    connected ? hardwareTab->gwDevice() : nullptr,
+                    connected ? hardwareTab->currentProviderV2() : nullptr,
                     hardwareTab->detectedTracks(),
                     hardwareTab->detectedHeads());
             });

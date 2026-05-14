@@ -23,6 +23,11 @@
 #include <atomic>
 #include <cstdint>
 
+/* MF-200 (P1.20): FluxCaptureJob now drives the V2 outcome surface via a
+ * non-owning GreaseweazleProviderV2 pointer instead of a raw
+ * uft_gw_device_t* — the provider is owned by HardwareTab. */
+namespace uft::hal { class GreaseweazleProviderV2; }
+
 class FluxCaptureJob : public QObject
 {
     Q_OBJECT
@@ -33,11 +38,12 @@ public:
 
     // Configuration — all setters must be called before run() unless the
     // default is acceptable. Setters are no-ops once run() has started.
-    void setDevice(void *gwDevice);              // uft_gw_device_t*
+    /** Non-owning. The provider is owned by HardwareTab; the drive unit
+     *  is already bound on the provider (ctor / set_drive_unit). */
+    void setProvider(::uft::hal::GreaseweazleProviderV2 *provider);
     void setOutputPath(const QString &path);
     void setGeometry(int cylinders, int sides);  // typical 80x2
     void setRevolutions(int revs);               // 1..5, clamped
-    void setDriveUnit(int unit);                 // 0 or 1
     void setScpDiskType(uint8_t type);           // SCP_TYPE_*
 
     void requestCancel();
@@ -53,12 +59,11 @@ signals:
     void finished(const QString &resultMsg);
 
 private:
-    void *m_gwDevice;
+    ::uft::hal::GreaseweazleProviderV2 *m_provider;  // non-owning (HardwareTab owns)
     QString m_outputPath;
     int m_cylinders;
     int m_sides;
     int m_revolutions;
-    int m_driveUnit;
     uint8_t m_scpDiskType;
     std::atomic<bool> m_cancel;
 };
