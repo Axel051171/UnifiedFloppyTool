@@ -51,7 +51,7 @@
 #define EXIT_SCP_ERROR     2
 #define EXIT_ENC_NOT_WIRED 3
 
-typedef enum { ENC_MFM, ENC_GCR_C64 } helper_enc_t;
+typedef enum { ENC_MFM, ENC_GCR_C64, ENC_GCR_APPLE } helper_enc_t;
 
 /* ── Commodore 1541 .d64 geometry ────────────────────────────────────
  * gw's `commodore.1541` diskdef is the 40-track .d64 (768 sectors,
@@ -76,6 +76,23 @@ static size_t d64_track_offset(int cyl)
         off += (size_t)d64_spt[t] * D64_SECSIZE;
     return off;
 }
+
+/* ── Apple II DOS 3.3 5.25" geometry ─────────────────────────────────
+ * gw's `apple2.appledos.140` is the 35-track, 16-sector, 256-byte .do
+ * image (143360 B). The engine's flux_decode_gcr_apple() returns the
+ * PHYSICAL sector number from the address field; the .do on-disk order
+ * is DOS 3.3 LOGICAL. The physical->logical de-interleave below is the
+ * standard DOS 3.3 soft-skew table — it is verified against gw's actual
+ * `.do` output by tests/differential/test_gw_parity.py (a wrong table
+ * fails the byte-exact differential, it is not taken on faith). */
+static const int apple_dos33_phys_to_log[16] = {
+    0x0, 0x7, 0xE, 0x6, 0xD, 0x5, 0xC, 0x4,
+    0xB, 0x3, 0xA, 0x2, 0x9, 0x1, 0x8, 0xF,
+};
+#define APPLE_TRACKS      35
+#define APPLE_SPT         16
+#define APPLE_SECSIZE     256
+#define APPLE_IMAGE_SIZE  143360  /* 35 * 16 * 256 */
 
 /* ── SCP track -> flux_raw_data_t ────────────────────────────────────
  * SCP flux_data is ns intervals (uft_scp_parser converts cells -> ns,
@@ -138,14 +155,16 @@ int main(int argc, char **argv)
     const uint32_t bitcell_ns = (argc == 9) ? (uint32_t)strtoul(argv[8], NULL, 10) : 0u;
 
     helper_enc_t enc;
-    if      (strcmp(encoding, "mfm")     == 0) enc = ENC_MFM;
-    else if (strcmp(encoding, "gcr_c64") == 0) enc = ENC_GCR_C64;
+    if      (strcmp(encoding, "mfm")       == 0) enc = ENC_MFM;
+    else if (strcmp(encoding, "gcr_c64")   == 0) enc = ENC_GCR_C64;
+    else if (strcmp(encoding, "gcr_apple") == 0) enc = ENC_GCR_APPLE;
     else {
-        /* gcr_apple / amiga: image-layout reconstruction not wired here
-         * yet (gcr_apple) or no real engine decoder (amiga routes to the
-         * IBM-MFM decoder). Honest gap, not a lie. */
+        /* amiga: no real engine decoder (FLUX_ENC_AMIGA routes to the
+         * IBM-MFM decoder, which cannot parse Amiga track structure).
+         * Honest gap, not a lie. */
         fprintf(stderr, "uft_flux_decode: encoding '%s' not wired "
-                "(mfm, gcr_c64 so far) — see file header\n", encoding);
+                "(mfm, gcr_c64, gcr_apple so far) — see file header\n",
+                encoding);
         return EXIT_ENC_NOT_WIRED;
     }
 
@@ -167,10 +186,14 @@ int main(int argc, char **argv)
     }
 
     /* Output image. mfm: sized generously, trimmed on write to the real
-     * extent. gcr_c64: fixed 40-track .d64. */
-    size_t image_size = (enc == ENC_GCR_C64)
-        ? (size_t)D64_IMAGE_SIZE
-        : (size_t)UFT_SCP_MAX_TRACKS * (size_t)heads * (size_t)spt * (size_t)secsize;
+     * extent. gcr_c64: fixed 40-track .d64. gcr_apple: fixed 35-track .do. */
+    size_t image_size;
+    switch (enc) {
+    case ENC_GCR_C64:   image_size = (size_t)D64_IMAGE_SIZE;   break;
+    case ENC_GCR_APPLE: image_size = (size_t)APPLE_IMAGE_SIZE; break;
+    default:            image_size = (size_t)UFT_SCP_MAX_TRACKS
+                            * (size_t)heads * (size_t)spt * (size_t)secsize;
+    }
     uint8_t *image = (uint8_t *)calloc(image_size, 1);
     if (!image) {
         fprintf(stderr, "uft_flux_decode: out of memory\n");
@@ -179,7 +202,12 @@ int main(int argc, char **argv)
     }
 
     int    placed_sectors = 0;
-    size_t highest_offset = (enc == ENC_GCR_C64) ? (size_t)D64_IMAGE_SIZE : 0;
+    /* GCR images have a fixed extent — the whole image is the output even
+     * if a track fails to decode (a hole reads as the calloc zero, and
+     * the differential then shows exactly which track diverged). */
+    size_t highest_offset = (enc == ENC_GCR_C64)   ? (size_t)D64_IMAGE_SIZE
+                          : (enc == ENC_GCR_APPLE) ? (size_t)APPLE_IMAGE_SIZE
+                          : 0;
 
     for (int t = 0; t < UFT_SCP_MAX_TRACKS; ++t) {
         flux_raw_data_t flux;
@@ -194,14 +222,20 @@ int main(int argc, char **argv)
         flux_decoded_track_init(&dt);
         flux_status_t st;
 
-        if (enc == ENC_MFM) {
-            opts.encoding   = FLUX_ENC_MFM;
-            opts.bitcell_ns = bitcell_ns;       /* 0 -> decoder DD default */
+        opts.bitcell_ns = bitcell_ns;           /* 0 -> per-decoder default */
+        switch (enc) {
+        case ENC_MFM:
+            opts.encoding = FLUX_ENC_MFM;
             st = flux_decode_mfm(&flux, &dt, &opts);
-        } else {
-            opts.encoding   = FLUX_ENC_GCR_C64;
-            opts.bitcell_ns = bitcell_ns;       /* 0 -> decoder C64 default */
+            break;
+        case ENC_GCR_C64:
+            opts.encoding = FLUX_ENC_GCR_C64;
             st = flux_decode_gcr_c64(&flux, &dt, &opts);
+            break;
+        default: /* ENC_GCR_APPLE */
+            opts.encoding = FLUX_ENC_GCR_APPLE;
+            st = flux_decode_gcr_apple(&flux, &dt, &opts);
+            break;
         }
 
         if (st == FLUX_OK) {
@@ -216,12 +250,19 @@ int main(int argc, char **argv)
                     off  = (((size_t)sec->cylinder * heads + sec->head)
                             * spt + (size_t)rel) * (size_t)secsize;
                     slot = (size_t)secsize;
-                } else { /* ENC_GCR_C64 */
+                } else if (enc == ENC_GCR_C64) {
                     if (sec->cylinder >= D64_TRACKS) continue;
                     if (sec->sector >= d64_spt[sec->cylinder]) continue;
                     off  = d64_track_offset((int)sec->cylinder)
                            + (size_t)sec->sector * D64_SECSIZE;
                     slot = D64_SECSIZE;
+                } else { /* ENC_GCR_APPLE */
+                    if (sec->cylinder >= APPLE_TRACKS) continue;
+                    if (sec->sector >= APPLE_SPT) continue;
+                    int log = apple_dos33_phys_to_log[sec->sector];
+                    off  = ((size_t)sec->cylinder * APPLE_SPT + (size_t)log)
+                           * APPLE_SECSIZE;
+                    slot = APPLE_SECSIZE;
                 }
 
                 if (off + slot > image_size) continue;

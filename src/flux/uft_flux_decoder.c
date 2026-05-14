@@ -851,6 +851,10 @@ static flux_status_t decode_apple_gcr_sector(const uint8_t *bits, size_t bit_cou
         int aux_idx = i % 86;
         int shift = (i / 86) * 2;
         lo2 = (decoded[aux_idx] >> shift) & 0x03;
+        /* Apple 6-and-2 stores each 2-bit group bit-REVERSED in the
+         * auxiliary buffer — bit0 and bit1 are exchanged. Undo it, or
+         * every data byte's low 2 bits come out swapped. */
+        lo2 = (uint8_t)(((lo2 & 1) << 1) | ((lo2 >> 1) & 1));
         /* High 6 bits are in decoded[86 + i] */
         sector->data[i] = (decoded[86 + i] << 2) | lo2;
     }

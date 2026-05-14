@@ -61,11 +61,23 @@ CORPUS_SPEC = [
 def synth_pattern(size: int) -> bytes:
     """Deterministic, platform-independent synthetic disk content.
 
-    A simple affine-over-index byte stream: varied enough that every
-    track carries distinct data (so a decoder bug surfaces), pure
-    function of the index, identical on every run and every host.
+    Pure function of the byte index, identical on every run and host.
+    Crucially it is NOT periodic: the earlier `(i*31+17) & 0xFF` had
+    period 256, so EVERY 256-byte block was byte-identical — the
+    differential then only proved per-sector decode correctness and
+    sector COUNT, never sector PLACEMENT (a transposition bug would
+    pass). Here each byte is an avalanche hash of its FULL index, so
+    every 256- and 512-byte block on every corpus disk is distinct: a
+    wrong sector mapping fails the byte-exact differential.
     """
-    return bytes(((i * 31 + 17) & 0xFF) for i in range(size))
+    out = bytearray(size)
+    for i in range(size):
+        h = (i * 2654435761) & 0xFFFFFFFF      # Knuth multiplicative
+        h ^= h >> 13
+        h = (h * 0x85EBCA6B) & 0xFFFFFFFF      # murmur3 finalizer mix
+        h ^= h >> 16
+        out[i] = h & 0xFF
+    return bytes(out)
 
 
 def sha256_file(path: Path) -> str:
