@@ -62,7 +62,7 @@ P0 headers must not be edited during P1.
 |-------|----------------------------------------------------------------------------|--------|
 | P2.1  | `VERSION.txt` → `4.1.4` + RELEASE_NOTES + CHANGELOG + flatpak metainfo    | ✅ MF-173 |
 | P2.2  | KNOWN_ISSUES cleanup: M.-2 (H-9) → CLOSED; H-1/H-2 noted as structural    | ✅ MF-174 |
-| P2.3  | Tag `v4.1.4-rc1`; 14-day pre-release window                                | ⬜     |
+| P2.3  | Tag `v4.1.4-rc1`; 14-day pre-release window                                | 🔄 tagged 2026-05-14 (5294563), window → 2026-05-28 |
 | P2.4  | After 14 days clean: squash-merge to `main`, tag `v4.1.4`, delete branch   | ⬜     |
 
 > **Version-bump call (2026-05):** PATCH `v4.1.3 → v4.1.4` not MAJOR
