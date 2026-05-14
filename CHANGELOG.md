@@ -55,11 +55,15 @@ but invisible to the working Greaseweazle workflow.
 - Greaseweazle workflow (read, write, detect, motor, seek, RPM,
   recalibrate): structurally hardened, behavior preserved.
 - 8 non-Greaseweazle controllers (SCP, KryoFlux, FluxEngine, FC5025,
-  XUM1541, Applesauce, ADFCopy, USBFloppy) now display a clear
-  "Controller routing pending" message on Connect instead of
-  silently no-op'ing. The V2 wrappers exist and conform; the
-  HardwareTab → V2 routing for non-GW is task P1.23 (queued for
-  v4.1.5).
+  XUM1541, Applesauce, ADFCopy, USBFloppy) are now routed through
+  their V2 providers (P1.23, MF-205/MF-206). On Connect each
+  constructs its V2 provider into the `ProviderV2Variant` and its
+  capability buttons are gated by the codegen `wire_action<cap::X>`.
+  The providers are constructed honest-stub (null transports) — every
+  operation returns a truthful `ProviderError` ("backend not wired /
+  M3.x pending") rather than a silent no-op or a fabricated success.
+  The production transports (libusb / QProcess / QSerialPort /
+  OpenCBM) are the M3.x follow-up (`docs/M3_HAL_PLAN.md`).
 - 5 X1541-family combo entries are gone (never had a working
   backend; selected workflows always errored).
 
@@ -89,14 +93,25 @@ but invisible to the working Greaseweazle workflow.
 - C++20 mandatory (was C++17).
 
 **Carry-overs for v4.1.5+ (documented in REFACTOR_TASKS.md):**
-- P1.20 — Migrate FluxCaptureJob to V2 outcome surface.
-- P1.21 — Migrate FluxWriteJob to V2 outcome surface.
-- P1.22 — Remove the `GreaseweazleProviderV2::raw_handle()` /
-  `HardwareTab::gwDevice()` legacy escape hatch.
-- P1.23 — Route the 8 non-Greaseweazle controllers through their
-  V2 providers (variant-dispatch in HardwareTab).
-- P3.1–P3.4 — Tester strategy (differential conformance against
-  Greaseweazle v1.23, improvement test suite, HIL infrastructure).
+
+The original carry-over list (P1.20–P1.23, P3.1–P3.4) is now **all
+done and shipped in this RC** — the RC was re-cut to cover MF-150 …
+MF-232 (see "External-Compat Audit + Tester Strategy" above): P1.20/21
+migrated the flux jobs to the V2 outcome surface (MF-199–MF-201),
+P1.22 removed the `raw_handle()`/`gwDevice()` escape hatch (MF-202),
+P1.23 routed all 9 providers through the `ProviderV2Variant`
+(MF-205/MF-206), and P3.1–P3.4 landed the full Tester Strategy.
+
+What genuinely remains for v4.1.5+:
+- **M3.x — HAL production transports.** The 8 non-GW V2 providers are
+  routed and GUI-reachable but constructed honest-stub; their
+  production transports (M3.1 SCP-Direct, M3.2 XUM1541, M3.3
+  Applesauce, …) are unwired. M3.1 additionally needs the SuperCard
+  Pro SDK v1.7 vendored before its protocol can be trusted (audit
+  SCP-D1-1). See `docs/M3_HAL_PLAN.md`.
+- **Loss-report / round-trip wiring** — the `.loss.json` writer and
+  round-trip registry exist but are not yet wired into all 44
+  conversion paths (`docs/KNOWN_ISSUES.md` §1.1/§1.2/§5.1).
 
 **Forensic-mission status:**
 - Rule F-3 (preserve divergent reads, never collapse) — enforced

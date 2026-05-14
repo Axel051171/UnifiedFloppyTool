@@ -266,8 +266,11 @@ After 14 days of community/own pre-release testing:
 > behavioral changes for end users are limited to (a) the Greaseweazle
 > workflow being structurally hardened (same UX, more honest backend),
 > (b) phantom-feature combo entries removed (X1541, MF-170), and
-> (c) non-GW controllers showing a clear "routing pending" message
-> instead of silently no-op'ing. UFT is an end-user application, not a
+> (c) non-GW controllers are routed to their V2 providers with
+> honest-stub backends (P1.23, MF-205/MF-206) — capability buttons gate
+> correctly and any action surfaces a diagnostic `ProviderError` until
+> the M3.x production transports land, instead of silently no-op'ing.
+> UFT is an end-user application, not a
 > linked library — no external SemVer contract is in play. PATCH bump
 > `v4.1.3 → v4.1.4` reflects "incremental hardening of the v4.1 line"
 > truthfully and avoids the psychological overhead of a MAJOR bump

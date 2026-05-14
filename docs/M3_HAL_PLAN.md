@@ -10,6 +10,50 @@ Tickets werden in den bestehenden TODO-Dokumenten weitergepflegt
 
 ---
 
+## Status-Update — 2026-05 (Reality-Check vor M3-Start)
+
+Vor dem ersten M3-Transport-Commit wurde der Ist-Zustand gegen das
+Hardware-Provider-Audit (`audit/`) und den lokalen Toolchain geprüft.
+Drei Befunde, die den Plan unten relativieren:
+
+1. **M3.1 SCP-Direct ist spec-blockiert.** Das Audit (`audit/scp/REPORT.md`,
+   Finding SCP-D1-1, *high*) stuft die 6 SCP-Command-Bytes als
+   `needs-source` ein — und vermutet sie sind **falsch**: das publizierte
+   SCP SDK v1.7 nutzt einen gerahmten Command-Set (`[cmd][len][payload]
+   [checksum]`) über FTDI-Serial, dessen Opcodes *nicht* im hier
+   angenommenen `0x02-0x05`-Bereich liegen, und auch das Transport-Modell
+   (USB-Bulk vs. FTDI-Serial) ist fraglich. Audit-Empfehlung wörtlich:
+   **SCP SDK v1.7 vendoren BEVOR der Wiring-Commit.** M3.1 darf nicht
+   gestartet werden, solange die Spec nicht vendored ist.
+
+2. **M3.2 XUM1541 ist anders geformt als unten beschrieben.** Der Plan
+   sagt „implementiere `src/hal/uft_xum1541.c` mit libusb". Aber der
+   *Live-Pfad* — `xum1541_provider_v2.cpp`, was die GUI nutzt —
+   delegiert an einen injizierten `Xum1541Runner`, der in Produktion die
+   **OpenCBM-Dynamic-Library** lädt. `uft_xum1541.c` (libusb) wird nur
+   vom Legacy-`uft_hal_unified.c` aufgerufen, *nicht* vom V2-Provider.
+   M3.2 braucht daher zuerst eine Architektur-Entscheidung (welcher
+   Pfad?) und dann die OpenCBM-Runner-Factory, nicht primär libusb-Code.
+   Immerhin: die Protokoll-Konstanten sind spec-sauber (Audit
+   `audit/xum1541/REPORT.md`: 82 PASS / 0 FAIL gegen OpenCBM).
+
+3. **M3.3 Applesauce — Command-Vokabular `needs-source`.** Das Audit
+   (`audit/applesauce/REPORT.md`, AS-D1-1) stuft die 18 Text-Command-
+   Tokens als unvendored ein (wiki.applesaucefdc.com, nicht
+   vendored). Milder als M3.1, aber der pure Text-Protokoll-Layer baut
+   auf unverifiziertem Vokabular.
+
+**Toolchain-Realität:** libusb-1.0, QtSerialPort und OpenCBM sind im
+lokalen Build-Environment *nicht* installiert — alle drei M3.x-Transporte
+sind Hardware- + Toolchain-gebundene Arbeit, nicht lokal verifizierbar.
+
+**Konsequenz für die Reihenfolge:** M3.1 (im Plan P0) ist faktisch
+*zuletzt* machbar (Spec-Blocker). M3.2 hat die sauberste Spec, braucht
+aber die Pfad-Entscheidung. Die Milestone-Beschreibungen unten bleiben
+als Ziel-Definition gültig, sind aber mit diesen Befunden zu lesen.
+
+---
+
 ## Startzustand (Ende M2)
 
 Aktiver HAL-Code (`src/hal/`):

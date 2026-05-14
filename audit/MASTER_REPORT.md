@@ -60,6 +60,23 @@ This is why no provider is graded FAIL.
 
 ### ARCH-1 — P1: 8 of 9 providers are GUI-unreachable
 
+> **✅ RESOLVED (P1.23 — MF-205/MF-206, 2026-05).** This finding and its
+> blast radius are closed. `HardwareTab` now holds a `ProviderV2Variant`
+> (`std::variant` over `monostate` + all 9 provider `unique_ptr`s);
+> `currentProviderV2()` returns that variant, `onConnect()` constructs
+> the matching V2 provider for every controller key, and `rewireV2()`
+> gates each one's capability buttons via the codegen `std::visit`. The
+> "Controller routing pending" messagebox is gone. All 9 providers are
+> GUI-reachable; `tests/test_provider_switch.cpp` proves switching is
+> clean. **Consequence for this report:** every per-provider **D3
+> "NOT routed" / D3-FAIL finding is superseded** — the 8 non-GW
+> providers are routed. What remains is the M3.x *production transport*
+> wiring (libusb / QProcess / QSerialPort / OpenCBM), tracked separately
+> in `docs/M3_HAL_PLAN.md` — the providers are constructed honest-stub
+> (null transports) so every operation returns a truthful `ProviderError`
+> until M3.x lands. The original finding text is kept below as the
+> point-in-time forensic record.
+
 `HardwareTab::currentProviderV2()` (`src/hardwaretab.cpp:249`) is
 hardcoded to return `::uft::hal::GreaseweazleProviderV2*`.
 `forms/tab_hardware.actions.yaml` lists only `greaseweazle_provider_v2.h`
@@ -211,10 +228,14 @@ real conformance gate.
 
 ### P1 — breaks under specific conditions / blocks the refactor
 
-- ⬜ **ARCH-1 / ARCH-4** — generalise `currentProviderV2()` to all 9
-  provider types, add a production construction site per provider,
-  extend `forms/tab_hardware.actions.yaml`. Until then 8 providers are
-  unreachable and untested end-to-end. → **REFACTOR_TASKS.md P1.23**.
+- ✅ **ARCH-1 / ARCH-4 — RESOLVED (P1.23, MF-205/MF-206).**
+  `currentProviderV2()` returns a `ProviderV2Variant` over all 9
+  provider types; `onConnect()` has a production construction site per
+  provider; the codegen `std::visit` gates every controller's
+  capability buttons. All 9 providers are GUI-reachable and
+  switch-tested (`tests/test_provider_switch.cpp`). What remains is the
+  M3.x production *transport* wiring — see `docs/M3_HAL_PLAN.md`, not
+  this finding.
 - 🔄 **ARCH-3** — the `void`-vs-`int` `uft_ufi_backend_init()` ABI
   mismatch is **✅ fixed (MF-186)**. The main finding — no UFI platform
   backend exists (`ufi_linux.c` etc.) — is still **⬜ open**, tracked as
