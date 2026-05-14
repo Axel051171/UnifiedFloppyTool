@@ -186,8 +186,10 @@ ProviderError GreaseweazleProviderV2::gw_err_to_provider_error(
  *  Rule F-3: uft_gw_read_track() returns a uft_gw_flux_data_t that
  *  carries sample_count flux timing samples and index_count index-to-index
  *  timestamps. ALL samples are converted to nanoseconds and stored in
- *  FluxCaptured::transitions_ns. The index timestamps are also converted
- *  and appended after the sample data — they are NOT discarded.
+ *  FluxCaptured::transitions_ns. The index timestamps are converted
+ *  ticks→ns and stored in FluxCaptured::index_times_ns — they are NOT
+ *  discarded (MF-194: this previously claimed "appended after the sample
+ *  data", which the code never did — they now have a real typed home).
  *
  *  The revolutions parameter from ReadFluxParams maps to
  *  uft_gw_read_track()'s revolutions argument exactly.
@@ -260,6 +262,21 @@ FluxOutcome GreaseweazleProviderV2::do_read_raw_flux(const ReadFluxParams& p)
              * uft_greaseweazle_full.h — no loss of information. */
             captured.transitions_ns.push_back(
                 uft_gw_ticks_to_ns(flux->samples[i], sample_freq));
+        }
+    }
+
+    /* Rule F-3: preserve the per-revolution index boundaries the
+     * firmware reported. uft_gw_flux_data_t::index_times[] holds
+     * index_count cumulative-tick timestamps; convert each to ns with
+     * the SAME scale already applied to the samples and store them in
+     * FluxCaptured::index_times_ns. Do NOT synthesise entries — if the
+     * firmware reported none, leave the vector empty (an honest
+     * "boundaries unknown", per the FluxCaptured contract). */
+    if (flux->index_times && flux->index_count > 0) {
+        captured.index_times_ns.reserve(flux->index_count);
+        for (uint8_t r = 0; r < flux->index_count; ++r) {
+            captured.index_times_ns.push_back(
+                uft_gw_ticks_to_ns(flux->index_times[r], sample_freq));
         }
     }
 

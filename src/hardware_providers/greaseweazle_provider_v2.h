@@ -22,7 +22,8 @@
  * This file introduces the V2 type in parallel.
  *
  * Rule F-3: multi-revolution / divergent-read data is preserved verbatim
- * in FluxCaptured::transitions_ns and the per-revolution index boundaries.
+ * in FluxCaptured::transitions_ns; the per-revolution index boundaries
+ * are preserved (ticks→ns) in FluxCaptured::index_times_ns (MF-194).
  *
  * Rule F-4: every ProviderError carries non-empty what/why/fix strings.
  * The ProviderError constructor throws std::logic_error on empty strings.

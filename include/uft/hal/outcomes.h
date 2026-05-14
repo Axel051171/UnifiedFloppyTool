@@ -184,6 +184,30 @@ struct FluxCaptured {
     /** Sample resolution in ns (e.g. 25 for SCP, 41.6 for KryoFlux). */
     double sample_ns;
     QualityFlag quality = QualityFlag::None;
+    /**
+     * Index-pulse positions, as cumulative nanoseconds from the start
+     * of the capture — one entry per index pulse the hardware observed.
+     * Same time-base as the running sum of `transitions_ns`.
+     *
+     * This is forensic data (rule F-3): it is the *measured* boundary
+     * between physical revolutions, not a derived count. A consumer
+     * slices `transitions_ns` into per-revolution streams by walking
+     * the cumulative interval sum up to each `index_times_ns[r]`; the
+     * duration of revolution r is
+     * `index_times_ns[r] - index_times_ns[r-1]` (with an implied 0
+     * before the first entry).
+     *
+     * EMPTY means the provider observed no index pulses (e.g. a
+     * subprocess backend that returns an undelimited byte container).
+     * Empty is NOT "one revolution" — a consumer must not fabricate a
+     * boundary it was not given. `revolutions` still carries the
+     * provider's count; treat (revolutions >= 1, index_times_ns empty)
+     * as "N revolutions, boundaries unknown" and handle it explicitly.
+     *
+     * INVARIANT when non-empty: strictly increasing; `.size()` should
+     * equal `revolutions` (one index pulse per revolution captured).
+     */
+    std::vector<std::uint32_t> index_times_ns;
 };
 
 struct FluxMarginal {

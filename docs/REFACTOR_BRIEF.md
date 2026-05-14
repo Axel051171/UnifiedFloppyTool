@@ -101,6 +101,12 @@ Variants live in `include/uft/hal/outcomes.h`:
 | `RpmOutcome`      | `RpmMeasured`, ...                                                          |
 | `DetectOutcome`   | `DriveDetected`, `DriveAbsent`, ...                                         |
 
+> **MF-194:** `FluxCaptured` carries `index_times_ns` —
+> `std::vector<std::uint32_t>` of per-revolution index-pulse boundaries
+> (cumulative ns). Empty = "provider observed no index pulses", not
+> "one revolution". Additive extension; design rationale in
+> `docs/proposals/FLUXCAPTURED_INDEX_BOUNDARIES.md`. Unblocks P1.20.
+
 `ProviderError` is the spec-violation/error variant carried by every
 outcome. Its constructor enforces three non-empty fields:
 `what`, `why`, `fix` (rule F-4 type-enforced).

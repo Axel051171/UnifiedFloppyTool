@@ -30,6 +30,7 @@
 #include <cassert>
 #include <iostream>
 #include <string>
+#include <type_traits>
 
 #include "uft/hal/concepts.h"
 #include "uft/hal/mixins.h"
@@ -187,6 +188,10 @@ public:
         fc.position = {p.cylinder, p.head};
         fc.revolutions = p.revolutions;
         fc.sample_ns = 25.0;
+        /* MF-194: per-revolution index boundaries. One cumulative-ns
+         * timestamp per revolution — exercises FluxCaptured::index_times_ns. */
+        for (int r = 1; r <= p.revolutions; ++r)
+            fc.index_times_ns.push_back(static_cast<std::uint32_t>(r) * 200000u);
         return fc;
     }
     DetectOutcome do_detect_drive() {
@@ -200,6 +205,13 @@ static_assert(DetectsDrive<ToyReader>);
 static_assert(ImagesFlux<ToyReader>);
 static_assert(!WritesAnything<ToyReader>);
 static_assert(!ControlsMotor<ToyReader>);
+
+/* MF-194: foundation contract — FluxCaptured carries per-revolution
+ * index boundaries as a cumulative-ns vector. */
+static_assert(std::is_same_v<decltype(FluxCaptured::index_times_ns),
+                             std::vector<std::uint32_t>>,
+    "FluxCaptured::index_times_ns must be std::vector<std::uint32_t> "
+    "(per-revolution index boundaries, cumulative ns)");
 
 }  // namespace foundation_test
 
@@ -215,6 +227,10 @@ static void smoke_mixin_runtime() {
             got_captured = true;
             assert(fc.revolutions == 2);
             assert(fc.sample_ns == 25.0);
+            /* MF-194: per-revolution index boundaries present + strictly
+             * increasing, one per revolution. */
+            assert(fc.index_times_ns.size() == 2);
+            assert(fc.index_times_ns[0] < fc.index_times_ns[1]);
         },
         [&](const FluxMarginal&)              {},
         [&](const FluxUnreadable&)            {},
