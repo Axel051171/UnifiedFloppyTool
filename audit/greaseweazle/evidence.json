@@ -1,0 +1,417 @@
+{
+  "provider": "greaseweazle",
+  "reference_provenance": {
+    "grade": "recalled",
+    "project": "keirf/greaseweazle",
+    "baseline": "v1.23 era protocol",
+    "files_recalled_from": [
+      "inc/cmd.h",
+      "src/greaseweazle/usb.py"
+    ],
+    "note": "well-known protocol constants; not vendored \u2014 see audit/README.md"
+  },
+  "uft_source": {
+    "header": "include\\uft\\hal\\uft_greaseweazle_full.h",
+    "hwtab": "src\\hardwaretab.cpp"
+  },
+  "counts": {
+    "PASS": 40,
+    "MISSING": 7,
+    "UNVERIFIED": 2
+  },
+  "sections": {
+    "usb_ids": [
+      {
+        "key": "UFT_GW_USB_PID",
+        "uft": 19817,
+        "ref": 19817,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 38
+      },
+      {
+        "key": "UFT_GW_USB_PID_F7",
+        "uft": 19817,
+        "ref": 19817,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 39
+      },
+      {
+        "key": "UFT_GW_USB_VID",
+        "uft": 4617,
+        "ref": 4617,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 37
+      }
+    ],
+    "cmd_opcodes": [
+      {
+        "key": "UFT_GW_CMD_DESELECT",
+        "uft": 13,
+        "ref": 13,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 79
+      },
+      {
+        "key": "UFT_GW_CMD_ERASE_FLUX",
+        "uft": 17,
+        "ref": 17,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 83
+      },
+      {
+        "key": "UFT_GW_CMD_GET_FLUX_STATUS",
+        "uft": 9,
+        "ref": 9,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 75
+      },
+      {
+        "key": "UFT_GW_CMD_GET_INDEX_TIMES",
+        "uft": 10,
+        "ref": 10,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 76
+      },
+      {
+        "key": "UFT_GW_CMD_GET_INFO",
+        "uft": 0,
+        "ref": 0,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 66
+      },
+      {
+        "key": "UFT_GW_CMD_GET_INFO_EXT",
+        "uft": 34,
+        "ref": null,
+        "verdict": "MISSING",
+        "detail": "no reference entry"
+      },
+      {
+        "key": "UFT_GW_CMD_GET_PARAMS",
+        "uft": 5,
+        "ref": 5,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 71
+      },
+      {
+        "key": "UFT_GW_CMD_GET_PIN",
+        "uft": 20,
+        "ref": 20,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 86
+      },
+      {
+        "key": "UFT_GW_CMD_HEAD",
+        "uft": 3,
+        "ref": 3,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 69
+      },
+      {
+        "key": "UFT_GW_CMD_MOTOR",
+        "uft": 6,
+        "ref": 6,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 72
+      },
+      {
+        "key": "UFT_GW_CMD_NO_CLICK_STEP",
+        "uft": 22,
+        "ref": 22,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 88
+      },
+      {
+        "key": "UFT_GW_CMD_READ_FLUX",
+        "uft": 7,
+        "ref": 7,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 73
+      },
+      {
+        "key": "UFT_GW_CMD_READ_MEM",
+        "uft": 32,
+        "ref": null,
+        "verdict": "MISSING",
+        "detail": "no reference entry"
+      },
+      {
+        "key": "UFT_GW_CMD_RESET",
+        "uft": 16,
+        "ref": 16,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 82
+      },
+      {
+        "key": "UFT_GW_CMD_SEEK",
+        "uft": 2,
+        "ref": 2,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 68
+      },
+      {
+        "key": "UFT_GW_CMD_SELECT",
+        "uft": 12,
+        "ref": 12,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 78
+      },
+      {
+        "key": "UFT_GW_CMD_SET_BUS_TYPE",
+        "uft": 14,
+        "ref": 14,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 80
+      },
+      {
+        "key": "UFT_GW_CMD_SET_PARAMS",
+        "uft": 4,
+        "ref": 4,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 70
+      },
+      {
+        "key": "UFT_GW_CMD_SET_PIN",
+        "uft": 15,
+        "ref": 15,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 81
+      },
+      {
+        "key": "UFT_GW_CMD_SINK_BYTES",
+        "uft": 19,
+        "ref": 19,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 85
+      },
+      {
+        "key": "UFT_GW_CMD_SOURCE_BYTES",
+        "uft": 18,
+        "ref": 18,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 84
+      },
+      {
+        "key": "UFT_GW_CMD_SWITCH_FW_MODE",
+        "uft": 11,
+        "ref": 11,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 77
+      },
+      {
+        "key": "UFT_GW_CMD_TEST_MODE",
+        "uft": 21,
+        "ref": 21,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 87
+      },
+      {
+        "key": "UFT_GW_CMD_UPDATE",
+        "uft": 1,
+        "ref": 1,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 67
+      },
+      {
+        "key": "UFT_GW_CMD_WRITE_FLUX",
+        "uft": 8,
+        "ref": 8,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 74
+      },
+      {
+        "key": "UFT_GW_CMD_WRITE_MEM",
+        "uft": 33,
+        "ref": null,
+        "verdict": "MISSING",
+        "detail": "no reference entry"
+      }
+    ],
+    "ack_codes": [
+      {
+        "key": "UFT_GW_ACK_BAD_COMMAND",
+        "uft": 1,
+        "ref": 1,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 104
+      },
+      {
+        "key": "UFT_GW_ACK_BAD_CYLINDER",
+        "uft": 11,
+        "ref": 11,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 114
+      },
+      {
+        "key": "UFT_GW_ACK_BAD_PIN",
+        "uft": 10,
+        "ref": 10,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 113
+      },
+      {
+        "key": "UFT_GW_ACK_BAD_UNIT",
+        "uft": 9,
+        "ref": 9,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 112
+      },
+      {
+        "key": "UFT_GW_ACK_FLUX_OVERFLOW",
+        "uft": 4,
+        "ref": 4,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 107
+      },
+      {
+        "key": "UFT_GW_ACK_FLUX_UNDERFLOW",
+        "uft": 5,
+        "ref": 5,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 108
+      },
+      {
+        "key": "UFT_GW_ACK_NO_BUS",
+        "uft": 8,
+        "ref": 8,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 111
+      },
+      {
+        "key": "UFT_GW_ACK_NO_INDEX",
+        "uft": 2,
+        "ref": 2,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 105
+      },
+      {
+        "key": "UFT_GW_ACK_NO_TRK0",
+        "uft": 3,
+        "ref": 3,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 106
+      },
+      {
+        "key": "UFT_GW_ACK_NO_UNIT",
+        "uft": 7,
+        "ref": 7,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 110
+      },
+      {
+        "key": "UFT_GW_ACK_OK",
+        "uft": 0,
+        "ref": 0,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 103
+      },
+      {
+        "key": "UFT_GW_ACK_OUT_OF_FLASH",
+        "uft": 13,
+        "ref": 13,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 116
+      },
+      {
+        "key": "UFT_GW_ACK_OUT_OF_SRAM",
+        "uft": 12,
+        "ref": 12,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 115
+      },
+      {
+        "key": "UFT_GW_ACK_WRPROT",
+        "uft": 6,
+        "ref": 6,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 109
+      }
+    ],
+    "timing": [
+      {
+        "key": "UFT_GW_MAX_CYLINDERS",
+        "uft": 85,
+        "ref": null,
+        "verdict": "MISSING",
+        "detail": "no reference entry"
+      },
+      {
+        "key": "UFT_GW_MAX_REVOLUTIONS",
+        "uft": 16,
+        "ref": null,
+        "verdict": "MISSING",
+        "detail": "no reference entry"
+      },
+      {
+        "key": "UFT_GW_MOTOR_SPINUP_MS",
+        "uft": 500,
+        "ref": null,
+        "verdict": "MISSING",
+        "detail": "no reference entry"
+      },
+      {
+        "key": "UFT_GW_SAMPLE_FREQ_F7_PLUS",
+        "uft": 84000000,
+        "ref": "device-reported (higher on F7 Plus)",
+        "verdict": "UNVERIFIED",
+        "detail": "device-reported \u2014 fallback constant, not a fixed protocol value",
+        "uft_line": 46
+      },
+      {
+        "key": "UFT_GW_SAMPLE_FREQ_HZ",
+        "uft": 72000000,
+        "ref": "device-reported (~72 MHz on F7)",
+        "verdict": "UNVERIFIED",
+        "detail": "device-reported \u2014 fallback constant, not a fixed protocol value",
+        "uft_line": 45
+      },
+      {
+        "key": "UFT_GW_SEEK_SETTLE_MS",
+        "uft": 15,
+        "ref": null,
+        "verdict": "MISSING",
+        "detail": "no reference entry"
+      }
+    ]
+  }
+}

@@ -1,0 +1,186 @@
+{
+  "provider": "fluxengine",
+  "integration": "CLI wrapper (fluxengine subprocess via injected runner)",
+  "reference_provenance": {
+    "grade": "recalled (cross-checked vs FE source via in-repo external audit)",
+    "project": "davidgiven/fluxengine (open source)",
+    "baseline": "post-2022 config-layer CLI (--tracks / --drive.revolutions / -c <profile>); confirmed in tests/external_audits/fluxengine/",
+    "files_recalled_from": [
+      "tests/external_audits/fluxengine/REPORT.md (in-repo audit, 2026-05-14)",
+      "tests/external_audits/fluxengine/mock_fluxengine.py (FE flag semantics)",
+      "FluxEngine src/fluxengine.cc + src/fe-*.cc (read BY the in-repo audit)"
+    ],
+    "note": "FE CLI contract is established and cross-checked against FE's own source \u2014 but per the in-repo audit's Stufe 5 and the MF-178 comment, NOT yet end-to-end-tested against a real fluxengine binary. recalled-grade, not vendored, not HIL-confirmed."
+  },
+  "uft_source": {
+    "cpp": "src\\hardware_providers\\fluxengine_provider_v2.cpp"
+  },
+  "counts": {
+    "PASS": 17,
+    "UNVERIFIED": 2
+  },
+  "sections": {
+    "read_argv": [
+      {
+        "key": "--drive.revolutions={N}",
+        "uft": "--drive.revolutions={N}",
+        "ref": "expected \u2014 revolution count (was: --revs)",
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 177
+      },
+      {
+        "key": "--tracks=cNhM",
+        "uft": "--tracks=cNhM",
+        "ref": "expected \u2014 track selector (was: -c N -h H)",
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 175
+      },
+      {
+        "key": "-c",
+        "uft": "-c",
+        "ref": "expected \u2014 loads profile BY NAME",
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 171
+      },
+      {
+        "key": "-o",
+        "uft": "-o",
+        "ref": "expected \u2014 output flux file flag",
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 178
+      },
+      {
+        "key": "-s",
+        "uft": "-s",
+        "ref": "expected \u2014 source drive spec flag",
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 173
+      },
+      {
+        "key": "drive:0",
+        "uft": "drive:0",
+        "ref": "expected \u2014 drive spec (value of -s)",
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 174
+      },
+      {
+        "key": "ibm",
+        "uft": "ibm",
+        "ref": "expected \u2014 profile name (value of -c)",
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 172
+      },
+      {
+        "key": "read",
+        "uft": "read",
+        "ref": "expected \u2014 subcommand",
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 170
+      }
+    ],
+    "write_argv": [
+      {
+        "key": "--tracks=cNhM",
+        "uft": "--tracks=cNhM",
+        "ref": "expected \u2014 track selector",
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 193
+      },
+      {
+        "key": "-c",
+        "uft": "-c",
+        "ref": "expected \u2014 loads profile BY NAME",
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 189
+      },
+      {
+        "key": "-d",
+        "uft": "-d",
+        "ref": "expected \u2014 destination drive spec flag",
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 191
+      },
+      {
+        "key": "-i",
+        "uft": "-i",
+        "ref": "expected \u2014 input flux file flag",
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 195
+      },
+      {
+        "key": "drive:0",
+        "uft": "drive:0",
+        "ref": "expected \u2014 drive spec (value of -d)",
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 192
+      },
+      {
+        "key": "ibm",
+        "uft": "ibm",
+        "ref": "expected \u2014 profile name (value of -c)",
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 190
+      },
+      {
+        "key": "write",
+        "uft": "write",
+        "ref": "expected \u2014 subcommand",
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 188
+      }
+    ],
+    "rpm_argv": [
+      {
+        "key": "rpm",
+        "uft": "rpm",
+        "ref": "expected \u2014 subcommand (exists in current FE)",
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 650
+      }
+    ],
+    "detect_argv": [
+      {
+        "key": "rpm",
+        "uft": "rpm",
+        "ref": "expected \u2014 detect reuses the rpm subcommand (V1 parity)",
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 698
+      }
+    ],
+    "timing": [
+      {
+        "key": "fe_sample_clock_mhz",
+        "uft": 8,
+        "ref": "needs-source \u2014 FluxEngine .flux tick rate not vendored; UFT assumes 8 MHz, FE has historically used 12 MHz (see FE-D1-2)",
+        "verdict": "UNVERIFIED",
+        "detail": "needs-source",
+        "uft_line": 470
+      },
+      {
+        "key": "fe_sample_ns",
+        "uft": 125,
+        "ref": "needs-source \u2014 depends on the unverified tick rate above",
+        "verdict": "UNVERIFIED",
+        "detail": "needs-source",
+        "uft_line": 470
+      }
+    ]
+  }
+}

@@ -1,0 +1,197 @@
+{
+  "provider": "fc5025",
+  "reference_provenance": {
+    "grade": "mixed",
+    "usb_ids": "recalled",
+    "cbw_opcodes": "needs-source",
+    "cli_argv": "needs-source",
+    "format_enum": "uft-internal",
+    "project": "Device Side Data Inc. \u2014 FC5025",
+    "files_recalled_from": [
+      "fc5025.h (DSD Linux source release)"
+    ],
+    "files_needed": [
+      "FC5025 Command Set Specification v1309 (CBW opcode table)",
+      "fcimage(1) man page or --help output (CLI argv grammar)"
+    ],
+    "note": "USB identity recalled; CBW/CLI layer not establishable \u2014 the UFT provider has no opcode/argv table, the dialogue is inside an un-constructed injected runner. See audit/README.md."
+  },
+  "uft_source": {
+    "header": "include\\uft\\hal\\uft_fc5025.h",
+    "provider_h": "src\\hardware_providers\\fc5025_provider_v2.h",
+    "provider_c": "src\\hardware_providers\\fc5025_provider_v2.cpp"
+  },
+  "counts": {
+    "PASS": 5,
+    "MISSING": 15
+  },
+  "sections": {
+    "usb_ids": [
+      {
+        "key": "UFT_FC5025_PID",
+        "uft": 1750,
+        "ref": 1750,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 44
+      },
+      {
+        "key": "UFT_FC5025_VID",
+        "uft": 5824,
+        "ref": 5824,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 43
+      }
+    ],
+    "format_enum": [
+      {
+        "key": "UFT_FC_FMT_APPLE_DOS32",
+        "uft": 1,
+        "ref": null,
+        "verdict": "MISSING",
+        "detail": "no reference entry",
+        "uft_line": 49
+      },
+      {
+        "key": "UFT_FC_FMT_APPLE_DOS33",
+        "uft": 2,
+        "ref": 2,
+        "verdict": "PASS",
+        "detail": "provider default disk_format=0x02 must point here",
+        "uft_line": 50
+      },
+      {
+        "key": "UFT_FC_FMT_APPLE_PRODOS",
+        "uft": 3,
+        "ref": null,
+        "verdict": "MISSING",
+        "detail": "no reference entry",
+        "uft_line": 51
+      },
+      {
+        "key": "UFT_FC_FMT_ATARI_FM",
+        "uft": 13,
+        "ref": null,
+        "verdict": "MISSING",
+        "detail": "no reference entry",
+        "uft_line": 61
+      },
+      {
+        "key": "UFT_FC_FMT_ATARI_MFM",
+        "uft": 14,
+        "ref": null,
+        "verdict": "MISSING",
+        "detail": "no reference entry",
+        "uft_line": 62
+      },
+      {
+        "key": "UFT_FC_FMT_AUTO",
+        "uft": 0,
+        "ref": 0,
+        "verdict": "PASS",
+        "detail": "must be 0 (zero-init default)",
+        "uft_line": 48
+      },
+      {
+        "key": "UFT_FC_FMT_IBM_FM",
+        "uft": 4,
+        "ref": null,
+        "verdict": "MISSING",
+        "detail": "no reference entry",
+        "uft_line": 52
+      },
+      {
+        "key": "UFT_FC_FMT_IBM_MFM",
+        "uft": 5,
+        "ref": null,
+        "verdict": "MISSING",
+        "detail": "no reference entry",
+        "uft_line": 53
+      },
+      {
+        "key": "UFT_FC_FMT_KAYPRO",
+        "uft": 9,
+        "ref": null,
+        "verdict": "MISSING",
+        "detail": "no reference entry",
+        "uft_line": 57
+      },
+      {
+        "key": "UFT_FC_FMT_NORTHSTAR",
+        "uft": 11,
+        "ref": null,
+        "verdict": "MISSING",
+        "detail": "no reference entry",
+        "uft_line": 59
+      },
+      {
+        "key": "UFT_FC_FMT_OSBORNE",
+        "uft": 10,
+        "ref": null,
+        "verdict": "MISSING",
+        "detail": "no reference entry",
+        "uft_line": 58
+      },
+      {
+        "key": "UFT_FC_FMT_RAW_FM",
+        "uft": 15,
+        "ref": null,
+        "verdict": "MISSING",
+        "detail": "no reference entry",
+        "uft_line": 63
+      },
+      {
+        "key": "UFT_FC_FMT_RAW_MFM",
+        "uft": 16,
+        "ref": null,
+        "verdict": "MISSING",
+        "detail": "no reference entry",
+        "uft_line": 64
+      },
+      {
+        "key": "UFT_FC_FMT_TI994A",
+        "uft": 12,
+        "ref": null,
+        "verdict": "MISSING",
+        "detail": "no reference entry",
+        "uft_line": 60
+      },
+      {
+        "key": "UFT_FC_FMT_TRS80_DSDD",
+        "uft": 8,
+        "ref": null,
+        "verdict": "MISSING",
+        "detail": "no reference entry",
+        "uft_line": 56
+      },
+      {
+        "key": "UFT_FC_FMT_TRS80_SSDD",
+        "uft": 7,
+        "ref": null,
+        "verdict": "MISSING",
+        "detail": "no reference entry",
+        "uft_line": 55
+      },
+      {
+        "key": "UFT_FC_FMT_TRS80_SSSD",
+        "uft": 6,
+        "ref": null,
+        "verdict": "MISSING",
+        "detail": "no reference entry",
+        "uft_line": 54
+      }
+    ],
+    "defaults": [
+      {
+        "key": "disk_format_default",
+        "uft": 2,
+        "ref": 2,
+        "verdict": "PASS",
+        "detail": "ctor default 0x02 must equal the ordinal of UFT_FC_FMT_APPLE_DOS33",
+        "uft_line": 125
+      }
+    ]
+  },
+  "note": "D1 protocol-opcode + CLI-argv layer is NOT in this diff: the FC5025 V2 provider exposes no CBW opcode table or fcimage argv table \u2014 the dialogue lives in an injected runner with no production construction site. That layer is UNVERIFIED/needs-source. See REPORT.md D1."
+}

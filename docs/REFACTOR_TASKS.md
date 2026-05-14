@@ -49,10 +49,21 @@ P0 headers must not be edited during P1.
 | P1.17 | Drop V1 base class + 10 V1 provider files                                  | P1.16      | ✅ MF-169 |
 | P1.18 | Internalize `uft_gw_*` — out of `hardwaretab.cpp`, only in GW provider     | P1.4, P1.17| ✅ MF-171 |
 | P1.19 | Remove X1541-family entries from controller combo                          | P1.4       | ✅ MF-170 |
-| P1.20 | Migrate `FluxCaptureJob` to V2 outcome surface (drop uft_gw_* direct path) | P1.18      | ⬜     |
+| P1.20 | Migrate `FluxCaptureJob` to V2 outcome surface (drop uft_gw_* direct path) | P1.18      | ⬜ — Audit GW-D2-1: GW V2 read-Pfad (`onFluxOutcome`) verwirft `FluxCaptured` heute in einen Status-String |
 | P1.21 | Migrate `FluxWriteJob`   to V2 outcome surface (drop uft_gw_* direct path) | P1.18      | ⬜     |
 | P1.22 | Remove `GreaseweazleProviderV2::raw_handle()` + `HardwareTab::gwDevice()`  | P1.20, P1.21 | ⬜    |
-| P1.23 | Route non-GW controllers through their V2 providers (variant dispatch)    | P1.17      | ⬜     |
+| P1.23 | Route non-GW controllers through their V2 providers (variant dispatch)    | P1.17, P1.24 | ⬜ — Audit ARCH-1/ARCH-4: 8/9 Provider GUI-unerreichbar, `currentProviderV2()` hart auf GW-Typ; alle 8 ohne Produktions-Konstruktionsstelle |
+| P1.24 | **P0-on-integration** — KryoFlux+FluxEngine: echter Flux-Decode statt undekodierte Backend-Container-Bytes in `FluxCaptured::transitions_ns` | P1.17 | ⬜ — Audit ARCH-2: `kryoflux_provider_v2.cpp:316-345`, `fluxengine_provider_v2.cpp:330-354`; MUSS vor/mit P1.23 landen, sonst bekommt der Decoder Müll-Timing |
+| P1.25 | USB-Floppy UFI-Backend implementieren (`ufi_linux.c` zuerst) + `uft_ufi_backend_init()` registriert es | P1.17 | ⬜ — Audit ARCH-3: kein `ufi_*.c` existiert, Backend-Init ist `return -1`-Stub. ABI-Mismatch `void`/`int` bereits gefixt (Audit-Klasse-A, MF-186) |
+
+> **Hardware-Provider-Audit (2026-05-14):** vollständiger forensischer
+> Audit aller 9 V2-Provider über 5 Dimensionen unter
+> [`audit/MASTER_REPORT.md`](../audit/MASTER_REPORT.md). Ergebnis: alle
+> 9 PARTIAL — die Typ-Schicht ist solide (kein Fake-Erfolg, ARCH-0), die
+> Integrations-Schicht unfertig (ARCH-1 → P1.23). P1.24/P1.25 sind neue
+> Audit-Findings. Klasse-A-Quick-Fixes (ARCH-3-ABI, ARCH-5, ARCH-6,
+> GW-D5-2) landeten als MF-186; VID/PID-Inkonsistenzen (ARCH-7) sind ein
+> offener Verifikations-Task.
 
 ---
 

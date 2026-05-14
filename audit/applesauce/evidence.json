@@ -1,0 +1,266 @@
+{
+  "provider": "applesauce",
+  "reference_provenance": {
+    "grade": "mixed",
+    "sample_clock": "recalled",
+    "response_chars": "recalled",
+    "serial_params": "recalled",
+    "buffers": "recalled",
+    "command_vocab": "needs-source",
+    "project": "Applesauce \u2014 Evolution Interactive / John Googin",
+    "files_recalled_from": [
+      "applesauce_provider_v2.h doc-comment (V1 implementation summary)",
+      "general Applesauce hardware documentation"
+    ],
+    "files_needed": [
+      "wiki.applesaucefdc.com protocol page snapshot (command-string grammar)"
+    ],
+    "note": "8 MHz clock + status chars + 115200-8N1 are well-known; the line-protocol command grammar is needs-source. Not vendored \u2014 see audit/README.md."
+  },
+  "uft_source": {
+    "provider_c": "src\\hardware_providers\\applesauce_provider_v2.cpp",
+    "provider_h": "src\\hardware_providers\\applesauce_provider_v2.h",
+    "hal_h": "include\\uft\\hal\\uft_applesauce.h"
+  },
+  "counts": {
+    "PASS": 10,
+    "UNVERIFIED": 18
+  },
+  "sections": {
+    "response_chars": [
+      {
+        "key": "RESP_ERROR",
+        "uft": 33,
+        "ref": 33,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 88
+      },
+      {
+        "key": "RESP_OK",
+        "uft": 46,
+        "ref": 46,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 87
+      },
+      {
+        "key": "RESP_ON",
+        "uft": 43,
+        "ref": 43,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 89
+      }
+    ],
+    "timing": [
+      {
+        "key": "AS_SAMPLE_CLOCK_HZ",
+        "uft": 8000000,
+        "ref": 8000000,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 91
+      },
+      {
+        "key": "AS_SAMPLE_NS_derived",
+        "uft": 125.0,
+        "ref": 125.0,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 91
+      },
+      {
+        "key": "UFT_AS_SAMPLE_CLOCK_hal",
+        "uft": 8000000,
+        "ref": 8000000,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 52
+      }
+    ],
+    "buffers": [
+      {
+        "key": "AS_BUFFER_PLUS",
+        "uft": 430080,
+        "ref": 430080,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 95
+      },
+      {
+        "key": "AS_BUFFER_STANDARD",
+        "uft": 163840,
+        "ref": 163840,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 94
+      }
+    ],
+    "serial_params": [
+      {
+        "key": "baud",
+        "uft": 115200,
+        "ref": 115200,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 222
+      },
+      {
+        "key": "framing_8N1_documented",
+        "uft": 1,
+        "ref": 1,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 222
+      }
+    ],
+    "command_vocab": [
+      {
+        "key": "?kind",
+        "uft": 1,
+        "ref": 1,
+        "verdict": "UNVERIFIED",
+        "detail": "command-string grammar is needs-source \u2014 token present in UFT, not byte-diffable",
+        "uft_line": 50
+      },
+      {
+        "key": "data:?max",
+        "uft": 1,
+        "ref": 1,
+        "verdict": "UNVERIFIED",
+        "detail": "command-string grammar is needs-source \u2014 token present in UFT, not byte-diffable",
+        "uft_line": 51
+      },
+      {
+        "key": "data:?size",
+        "uft": 1,
+        "ref": 1,
+        "verdict": "UNVERIFIED",
+        "detail": "command-string grammar is needs-source \u2014 token present in UFT, not byte-diffable",
+        "uft_line": 19
+      },
+      {
+        "key": "data:clear",
+        "uft": 1,
+        "ref": 1,
+        "verdict": "UNVERIFIED",
+        "detail": "command-string grammar is needs-source \u2014 token present in UFT, not byte-diffable",
+        "uft_line": 27
+      },
+      {
+        "key": "disk:?write",
+        "uft": 1,
+        "ref": 1,
+        "verdict": "UNVERIFIED",
+        "detail": "command-string grammar is needs-source \u2014 token present in UFT, not byte-diffable",
+        "uft_line": 26
+      },
+      {
+        "key": "disk:read",
+        "uft": 1,
+        "ref": 1,
+        "verdict": "UNVERIFIED",
+        "detail": "command-string grammar is needs-source \u2014 token present in UFT, not byte-diffable",
+        "uft_line": 18
+      },
+      {
+        "key": "disk:readx",
+        "uft": 1,
+        "ref": 1,
+        "verdict": "UNVERIFIED",
+        "detail": "command-string grammar is needs-source \u2014 token present in UFT, not byte-diffable",
+        "uft_line": 18
+      },
+      {
+        "key": "disk:write",
+        "uft": 1,
+        "ref": 1,
+        "verdict": "UNVERIFIED",
+        "detail": "command-string grammar is needs-source \u2014 token present in UFT, not byte-diffable",
+        "uft_line": 29
+      },
+      {
+        "key": "head:side",
+        "uft": 1,
+        "ref": 1,
+        "verdict": "UNVERIFIED",
+        "detail": "command-string grammar is needs-source \u2014 token present in UFT, not byte-diffable",
+        "uft_line": 39
+      },
+      {
+        "key": "head:track",
+        "uft": 1,
+        "ref": 1,
+        "verdict": "UNVERIFIED",
+        "detail": "command-string grammar is needs-source \u2014 token present in UFT, not byte-diffable",
+        "uft_line": 38
+      },
+      {
+        "key": "head:zero",
+        "uft": 1,
+        "ref": 1,
+        "verdict": "UNVERIFIED",
+        "detail": "command-string grammar is needs-source \u2014 token present in UFT, not byte-diffable",
+        "uft_line": 43
+      },
+      {
+        "key": "motor:off",
+        "uft": 1,
+        "ref": 1,
+        "verdict": "UNVERIFIED",
+        "detail": "command-string grammar is needs-source \u2014 token present in UFT, not byte-diffable",
+        "uft_line": 34
+      },
+      {
+        "key": "motor:on",
+        "uft": 1,
+        "ref": 1,
+        "verdict": "UNVERIFIED",
+        "detail": "command-string grammar is needs-source \u2014 token present in UFT, not byte-diffable",
+        "uft_line": 34
+      },
+      {
+        "key": "psu:?12v",
+        "uft": 1,
+        "ref": 1,
+        "verdict": "UNVERIFIED",
+        "detail": "command-string grammar is needs-source \u2014 token present in UFT, not byte-diffable",
+        "uft_line": 52
+      },
+      {
+        "key": "psu:?5v",
+        "uft": 1,
+        "ref": 1,
+        "verdict": "UNVERIFIED",
+        "detail": "command-string grammar is needs-source \u2014 token present in UFT, not byte-diffable",
+        "uft_line": 52
+      },
+      {
+        "key": "sync:?speed",
+        "uft": 1,
+        "ref": 1,
+        "verdict": "UNVERIFIED",
+        "detail": "command-string grammar is needs-source \u2014 token present in UFT, not byte-diffable",
+        "uft_line": 46
+      },
+      {
+        "key": "sync:off",
+        "uft": 1,
+        "ref": 1,
+        "verdict": "UNVERIFIED",
+        "detail": "command-string grammar is needs-source \u2014 token present in UFT, not byte-diffable",
+        "uft_line": 21
+      },
+      {
+        "key": "sync:on",
+        "uft": 1,
+        "ref": 1,
+        "verdict": "UNVERIFIED",
+        "detail": "command-string grammar is needs-source \u2014 token present in UFT, not byte-diffable",
+        "uft_line": 17
+      }
+    ]
+  },
+  "note": "command_vocab rows are UNVERIFIED \u2014 the Applesauce line-protocol command grammar is needs-source (wiki.applesaucefdc.com not vendored). The tokens UFT uses are internally consistent but not byte-diffed against an official grammar. See REPORT.md D1."
+}
