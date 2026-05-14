@@ -39,6 +39,7 @@
 #include "uft/hal/concepts.h"
 #include "uft/hal/uft_greaseweazle_full.h"
 
+#include <optional>
 #include <string>
 
 namespace uft::hal {
@@ -91,8 +92,18 @@ public:
      * The conformance harness + per-provider tests pass nullptr; their
      * usage is unchanged by the new ownership rule (close() with a
      * null handle is a no-op).
+     *
+     * MF-199 (P1.20): the optional `drive_unit` binds the Greaseweazle
+     * bus unit (0 = DS0, 1 = DS1). The provider issues
+     * uft_gw_select_drive() once, lazily, before the first bus
+     * operation. An out-of-range unit or a select failure surfaces as a
+     * ProviderError on the first do_* call — never silently ignored.
+     * The parameter is defaulted, so existing one-arg call sites (the
+     * conformance harness, per-provider tests passing nullptr) are
+     * unchanged.
      */
-    explicit GreaseweazleProviderV2(uft_gw_device_t* handle) noexcept;
+    explicit GreaseweazleProviderV2(uft_gw_device_t* handle,
+                                    int drive_unit = 0) noexcept;
 
     /**
      * @brief Open a Greaseweazle device on the given serial port.
@@ -111,6 +122,29 @@ public:
      *         HardwareDisconnected.
      */
     bool open(const char *port_path, std::string *err_out = nullptr);
+
+    /**
+     * @brief open() overload that also binds the bus drive unit (0 or 1).
+     *
+     * Equivalent to open(port_path, err_out) followed by
+     * set_drive_unit(drive_unit). MF-199 (P1.20).
+     */
+    bool open(const char *port_path, int drive_unit,
+              std::string *err_out = nullptr);
+
+    /**
+     * @brief Set the Greaseweazle bus unit (0 = DS0, 1 = DS1) for
+     *        subsequent operations.
+     *
+     * Records the unit and clears the lazy-select latch so the next bus
+     * operation re-asserts it via uft_gw_select_drive(). The range is
+     * validated lazily on the next do_* call (a typed ProviderError),
+     * never silently clamped. MF-199 (P1.20).
+     */
+    void set_drive_unit(int unit) noexcept;
+
+    /** Currently-configured bus unit (0 or 1). Default 0. */
+    int drive_unit() const noexcept { return m_drive_unit; }
 
     /** Close the device if open. No-op if not. Idempotent. */
     void close() noexcept;
@@ -161,12 +195,24 @@ private:
     uft_gw_device_t *m_handle = nullptr;     /**< Opaque GW device handle, OWNED. */
     std::string      m_firmware_version;     /**< Populated by open(). */
     int              m_hw_model = 0;         /**< Populated by open(). */
+    int              m_drive_unit = 0;       /**< Bus unit 0/1 (MF-199), ctor/setter. */
+    bool             m_drive_selected = false; /**< Lazy uft_gw_select_drive latch. */
 
     /** Translate a uft_gw_* error code to a ProviderError. */
     static ProviderError gw_err_to_provider_error(
         int gw_rc,
         const char* what,
         const char* why_prefix);
+
+    /**
+     * @brief Ensure uft_gw_select_drive() has run for m_drive_unit.
+     *
+     * Returns std::nullopt on success (or once already latched), or a
+     * populated ProviderError (out-of-range unit, or a select-drive
+     * C-API failure) that the caller converts into the right Outcome
+     * variant. Idempotent once latched. MF-199 (P1.20).
+     */
+    std::optional<ProviderError> ensure_drive_selected();
 };
 
 /* ── Static concept assertions (compile-time, in the header) ─────────── */

@@ -33,6 +33,7 @@
 #include <cstdio>
 #include <cstring>
 #include <string>
+#include <utility>
 
 namespace uft::hal {
 
@@ -40,10 +41,17 @@ namespace uft::hal {
  *  Construction / lifecycle  (MF-171 P1.18: provider owns the handle)
  * ──────────────────────────────────────────────────────────────────────── */
 
-GreaseweazleProviderV2::GreaseweazleProviderV2(uft_gw_device_t* handle) noexcept
+GreaseweazleProviderV2::GreaseweazleProviderV2(uft_gw_device_t* handle,
+                                               int drive_unit) noexcept
     : m_handle(handle)
+    , m_drive_unit(drive_unit)
 {
-    /* Try to populate cached info if the caller already opened the
+    /* MF-199 (P1.20): drive_unit is recorded, not asserted here — the
+     * handle may not be connected yet. uft_gw_select_drive() runs
+     * lazily on the first bus operation via ensure_drive_selected(),
+     * matching the existing uft_gw_is_connected() guard pattern.
+     *
+     * Try to populate cached info if the caller already opened the
      * device. Failure is non-fatal — getters just stay at default. */
     if (m_handle) {
         uft_gw_info_t info{};
@@ -101,6 +109,26 @@ bool GreaseweazleProviderV2::open(const char *port_path, std::string *err_out)
     return true;
 }
 
+bool GreaseweazleProviderV2::open(const char *port_path, int drive_unit,
+                                  std::string *err_out)
+{
+    /* MF-199 (P1.20): open() overload that also binds the bus unit.
+     * Bind the unit FIRST so that even if open() fails the provider
+     * remembers the requested unit for a subsequent retry. */
+    set_drive_unit(drive_unit);
+    return open(port_path, err_out);
+}
+
+void GreaseweazleProviderV2::set_drive_unit(int unit) noexcept
+{
+    /* Record the unit and clear the lazy-select latch so the next bus
+     * operation re-asserts it. Range is NOT clamped here — it is
+     * validated visibly in ensure_drive_selected() on the next do_*
+     * call (a typed ProviderError), per the forensic-visibility rule. */
+    m_drive_unit = unit;
+    m_drive_selected = false;
+}
+
 void GreaseweazleProviderV2::close() noexcept
 {
     if (m_handle) {
@@ -109,6 +137,37 @@ void GreaseweazleProviderV2::close() noexcept
     }
     m_firmware_version.clear();
     m_hw_model = 0;
+    /* Drive unit is configuration — keep it across close()/open(). The
+     * select latch, however, is per-connection: a fresh handle needs a
+     * fresh uft_gw_select_drive(). */
+    m_drive_selected = false;
+}
+
+std::optional<ProviderError> GreaseweazleProviderV2::ensure_drive_selected()
+{
+    if (m_drive_selected) {
+        return std::nullopt;
+    }
+    if (m_drive_unit != 0 && m_drive_unit != 1) {
+        return ProviderError{
+            UFT_ERR_INVALID_ARG,
+            "Greaseweazle drive unit out of range",
+            "Drive unit " + std::to_string(m_drive_unit) +
+                " is invalid; the Greaseweazle bus addresses unit 0 or 1 only.",
+            "Pass drive_unit 0 or 1 when constructing GreaseweazleProviderV2 "
+            "or via set_drive_unit()."
+        };
+    }
+    int rc = uft_gw_select_drive(m_handle,
+                                 static_cast<uint8_t>(m_drive_unit));
+    if (rc != UFT_GW_OK) {
+        return gw_err_to_provider_error(
+            rc,
+            "Greaseweazle drive-unit select failed",
+            "uft_gw_select_drive returned error");
+    }
+    m_drive_selected = true;
+    return std::nullopt;
 }
 
 /* ────────────────────────────────────────────────────────────────────────
@@ -203,6 +262,16 @@ FluxOutcome GreaseweazleProviderV2::do_read_raw_flux(const ReadFluxParams& p)
             "Device handle is null or device is not connected"
         };
     }
+
+    /* MF-199 (P1.20): lazily assert the bus drive unit. An out-of-range
+     * unit or a uft_gw_select_drive() failure surfaces as a typed
+     * ProviderError — an alternative of every Outcome variant — never a
+     * silent no-op. For drive_unit 0 (the default + only value used by
+     * callers today) on a healthy device this is exactly the
+     * uft_gw_select_drive(gw, 0) FluxCaptureJob already issued, so
+     * observable behaviour for current callers is unchanged. */
+    if (auto sel_err = ensure_drive_selected())
+        return std::move(*sel_err);
 
     const uint8_t cyl  = static_cast<uint8_t>(p.cylinder);
     const uint8_t head = static_cast<uint8_t>(p.head);
@@ -321,6 +390,16 @@ WriteOutcome GreaseweazleProviderV2::do_write_raw_flux(
         };
     }
 
+    /* MF-199 (P1.20): lazily assert the bus drive unit. An out-of-range
+     * unit or a uft_gw_select_drive() failure surfaces as a typed
+     * ProviderError — an alternative of every Outcome variant — never a
+     * silent no-op. For drive_unit 0 (the default + only value used by
+     * callers today) on a healthy device this is exactly the
+     * uft_gw_select_drive(gw, 0) FluxCaptureJob already issued, so
+     * observable behaviour for current callers is unchanged. */
+    if (auto sel_err = ensure_drive_selected())
+        return std::move(*sel_err);
+
     const uint8_t cyl  = static_cast<uint8_t>(w.cylinder);
     const uint8_t head = static_cast<uint8_t>(w.head);
 
@@ -408,6 +487,16 @@ MotorOutcome GreaseweazleProviderV2::do_set_motor(bool on)
         };
     }
 
+    /* MF-199 (P1.20): lazily assert the bus drive unit. An out-of-range
+     * unit or a uft_gw_select_drive() failure surfaces as a typed
+     * ProviderError — an alternative of every Outcome variant — never a
+     * silent no-op. For drive_unit 0 (the default + only value used by
+     * callers today) on a healthy device this is exactly the
+     * uft_gw_select_drive(gw, 0) FluxCaptureJob already issued, so
+     * observable behaviour for current callers is unchanged. */
+    if (auto sel_err = ensure_drive_selected())
+        return std::move(*sel_err);
+
     int rc = uft_gw_set_motor(m_handle, on);
     if (rc != UFT_GW_OK) {
         return gw_err_to_provider_error(
@@ -443,6 +532,16 @@ SeekOutcome GreaseweazleProviderV2::do_seek(int cylinder)
             "Device handle is null or device is not connected"
         };
     }
+
+    /* MF-199 (P1.20): lazily assert the bus drive unit. An out-of-range
+     * unit or a uft_gw_select_drive() failure surfaces as a typed
+     * ProviderError — an alternative of every Outcome variant — never a
+     * silent no-op. For drive_unit 0 (the default + only value used by
+     * callers today) on a healthy device this is exactly the
+     * uft_gw_select_drive(gw, 0) FluxCaptureJob already issued, so
+     * observable behaviour for current callers is unchanged. */
+    if (auto sel_err = ensure_drive_selected())
+        return std::move(*sel_err);
 
     if (cylinder < 0 || cylinder > UFT_GW_MAX_CYLINDERS) {
         return ProviderError{
@@ -502,6 +601,16 @@ SeekOutcome GreaseweazleProviderV2::do_recalibrate()
         };
     }
 
+    /* MF-199 (P1.20): lazily assert the bus drive unit. An out-of-range
+     * unit or a uft_gw_select_drive() failure surfaces as a typed
+     * ProviderError — an alternative of every Outcome variant — never a
+     * silent no-op. For drive_unit 0 (the default + only value used by
+     * callers today) on a healthy device this is exactly the
+     * uft_gw_select_drive(gw, 0) FluxCaptureJob already issued, so
+     * observable behaviour for current callers is unchanged. */
+    if (auto sel_err = ensure_drive_selected())
+        return std::move(*sel_err);
+
     int rc = uft_gw_recalibrate(m_handle);
 
     if (rc == UFT_GW_ERR_NO_TRK0) {
@@ -551,6 +660,16 @@ RpmOutcome GreaseweazleProviderV2::do_measure_rpm()
             "Device handle is null or device is not connected"
         };
     }
+
+    /* MF-199 (P1.20): lazily assert the bus drive unit. An out-of-range
+     * unit or a uft_gw_select_drive() failure surfaces as a typed
+     * ProviderError — an alternative of every Outcome variant — never a
+     * silent no-op. For drive_unit 0 (the default + only value used by
+     * callers today) on a healthy device this is exactly the
+     * uft_gw_select_drive(gw, 0) FluxCaptureJob already issued, so
+     * observable behaviour for current callers is unchanged. */
+    if (auto sel_err = ensure_drive_selected())
+        return std::move(*sel_err);
 
     /* Capture 3 index pulses — enough for 2 revolution intervals. */
     uft_gw_flux_data_t* flux = nullptr;
@@ -644,6 +763,16 @@ DetectOutcome GreaseweazleProviderV2::do_detect_drive()
             "Device handle is null or device is not connected"
         };
     }
+
+    /* MF-199 (P1.20): lazily assert the bus drive unit. An out-of-range
+     * unit or a uft_gw_select_drive() failure surfaces as a typed
+     * ProviderError — an alternative of every Outcome variant — never a
+     * silent no-op. For drive_unit 0 (the default + only value used by
+     * callers today) on a healthy device this is exactly the
+     * uft_gw_select_drive(gw, 0) FluxCaptureJob already issued, so
+     * observable behaviour for current callers is unchanged. */
+    if (auto sel_err = ensure_drive_selected())
+        return std::move(*sel_err);
 
     uft_gw_info_t info{};
     int rc = uft_gw_get_info(m_handle, &info);
