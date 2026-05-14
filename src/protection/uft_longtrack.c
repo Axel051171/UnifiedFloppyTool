@@ -676,11 +676,14 @@ int uft_longtrack_detect(const uint8_t *track_data,
  * Reporting
  *===========================================================================*/
 
+/* The defs table is packed 0-based (defs[0] == PROTEC) but the enum
+ * starts at UFT_LONGTRACK_UNKNOWN = 0, so enum value != array index
+ * (PROTEC is enum 1, defs[0]). Both helpers below search by the .type
+ * field instead of indexing — correct regardless of table order. The
+ * old `defs[type]` indexing named the wrong scheme for every type. */
 static const char* uft_longtrack_type_name_internal(uft_longtrack_type_t type) {
-    if (type < UFT_LONGTRACK_TYPE_COUNT) {
-        return uft_longtrack_defs[type].name;
-    }
-    return "Unknown";
+    const uft_longtrack_def_t *d = uft_longtrack_get_def_internal(type);
+    return d ? d->name : "Unknown";
 }
 
 const char* uft_longtrack_confidence_name(uft_longtrack_confidence_t conf) {
@@ -694,10 +697,23 @@ const char* uft_longtrack_confidence_name(uft_longtrack_confidence_t conf) {
 }
 
 static const uft_longtrack_def_t* uft_longtrack_get_def_internal(uft_longtrack_type_t type) {
-    if (type < UFT_LONGTRACK_TYPE_COUNT) {
-        return &uft_longtrack_defs[type];
+    for (int i = 0; i < UFT_LONGTRACK_TYPE_COUNT; i++) {
+        if (uft_longtrack_defs[i].type == type) {
+            return &uft_longtrack_defs[i];
+        }
     }
     return NULL;
+}
+
+/* Public accessors declared in uft_longtrack.h. These were declared but
+ * never defined — every caller outside this TU got an undefined-symbol
+ * link error. They delegate to the internal helpers used above. */
+const char* uft_longtrack_type_name(uft_longtrack_type_t type) {
+    return uft_longtrack_type_name_internal(type);
+}
+
+const uft_longtrack_def_t* uft_longtrack_get_def(uft_longtrack_type_t type) {
+    return uft_longtrack_get_def_internal(type);
 }
 
 size_t uft_longtrack_report(const uft_longtrack_result_t *result,

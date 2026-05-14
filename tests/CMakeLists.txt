@@ -502,6 +502,23 @@ foreach(test_source ${TEST_SOURCES})
         else()
             set(TEST_LIBS "")
         endif()
+    elseif(${test_name} STREQUAL "test_protection_detection")
+        # MF-227 / P3.3 #110b: copy-protection detection improvement test
+        # — synthesises tracks with known longtrack + Dungeon Master
+        # fuzzy-bit signatures and asserts UFT names the scheme. Links
+        # the longtrack + fuzzy-bit detectors; uft_fuzzy_bits.c pulls in
+        # the flux decoder for its ctx-based functions (not exercised by
+        # this test, but needed at link time). libm for the PLL/timing
+        # math.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/protection/uft_longtrack.c
+            ${CMAKE_SOURCE_DIR}/src/protection/uft_fuzzy_bits.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c)
+        if(UNIX)
+            set(TEST_LIBS ${M_LIBRARY})
+        else()
+            set(TEST_LIBS "")
+        endif()
     endif()
     
     if(TEST_LIBS)
