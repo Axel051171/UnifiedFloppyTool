@@ -63,17 +63,24 @@ the grade is `recalled`, not `vendored`, not HIL-confirmed.
   current consumer uses for timing math. If a future consumer trusts
   `sample_ns`, an 8-vs-12 MHz error would mis-scale every interval by
   ~1.5x. Needs a vendored FE `.flux` format spec to resolve.
-- **FE-D1-3** (low): the profile is hard-coded to `"ibm"` in both
-  `build_read_argv` and `build_write_argv` (`:172,190`). This is the V1
-  finding F2 ("profile hardcoded, ignores UI selection") — **MF-178
-  fixed the CLI *form* but not F2**: a non-IBM disk still gets the IBM
-  profile regardless of GUI selection. The MF-178 comment only claims
-  F1+F2 *form* correction; the profile is still literal.
+- **FE-D1-3** (low) — **RESOLVED (FE-F2, task #113).** The profile was
+  hard-coded `"ibm"` in `build_read_argv`/`build_write_argv`. It is now
+  the `m_profile` constructor parameter (default `"ibm"`); the argv
+  builders emit `m_profile`. It is a construction-time parameter, not a
+  per-call one, because the per-call records `ReadFluxParams` /
+  `WriteFluxParams` live in the protected foundation header
+  `concepts.h` — out of task scope. `extract_uft.py` now emits a
+  `{profile}` placeholder token; the diff stays PASS.
+- **FE-F6** (added by task #113): `query_version()` runs a dedicated
+  `fluxengine version` invocation so `do_detect_drive` reports a real
+  version instead of a placeholder. recalled-grade — the `version`
+  subcommand is not HIL-confirmed (see the VERIFICATION STATUS note in
+  the provider). `extract_ref.py` carries a `version_argv` section.
 
-**Status: PASS (with FE-D1-3 carried)** — the CLI *form* matches the
-corrected FluxEngine contract (17/17 argv rows, recalled-grade,
-cross-checked against FE source). The hard-coded `ibm` profile (FE-D1-3)
-and the unverified 8 MHz clock (FE-D1-2) are the open items.
+**Status: PASS** — the CLI *form* matches the corrected FluxEngine
+contract (18/18 argv rows incl. `{profile}` + `version`, recalled-grade,
+cross-checked against FE source). FE-D1-3 is resolved; the unverified
+8 MHz clock (FE-D1-2) is the one open D1 item.
 
 ---
 
@@ -280,10 +287,12 @@ false-positive on FE's "no disk" output (FE-D5-2).
   as flux) and must write `stdin_data` to a file for `fluxengine write -i`.
   Implement and check in the production runner so the audit can verify it;
   as written, both paths only work against the mock.
-- **FE-D1-3** — parametrise the profile: `build_read_argv`/`build_write_argv`
-  hard-code `"ibm"`. This is the V1 finding F2; MF-178 fixed the CLI
-  *form* but not the hard-coded profile. Thread the GUI-selected profile
-  through.
+- **FE-D1-3** — ✅ **RESOLVED (FE-F2, task #113)**: the profile is now the
+  `m_profile` ctor parameter (default `"ibm"`), no longer hard-coded in
+  the argv builders. Threading the *GUI-selected* profile the rest of the
+  way is gated behind FE-D3-1 (HardwareTab does not route to this
+  provider yet) — once routed, the construction site passes the chosen
+  profile.
 - **FE-D3-1** — route `FluxEngineProviderV2` through `HardwareTab` (P1.18).
 
 **P2:**

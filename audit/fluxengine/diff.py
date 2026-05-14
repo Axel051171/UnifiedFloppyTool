@@ -108,7 +108,8 @@ def main():
     ref = _run("extract_ref.py")
 
     sections = {}
-    for name in ("read_argv", "write_argv", "rpm_argv", "detect_argv"):
+    for name in ("read_argv", "write_argv", "rpm_argv",
+                 "version_argv", "detect_argv"):
         sections[name] = _cmp_argv_section(uft.get(name, {}), ref.get(name, {}))
     sections["timing"] = _cmp_timing(uft.get("timing", {}), ref.get("timing", {}))
 

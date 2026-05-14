@@ -398,6 +398,14 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/hal/uft_greaseweazle_full.c)
         # No UFT lib dependencies — the test only touches HAL constants.
         set(TEST_LIBS "")
+    elseif(${test_name} STREQUAL "test_gw_encoder")
+        # GW-F2 (task #113): byte-exact regression test for the GW flux
+        # encoder. Links the REAL uft_gw_encode_flux_stream() from the
+        # full HAL impl — same pattern as test_gw_protocol — so the test
+        # cannot drift from a copy. No UFT lib dependencies.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/hal/uft_greaseweazle_full.c)
+        set(TEST_LIBS "")
     elseif(${test_name} STREQUAL "test_mfm_sector_parser")
         # MF-141 / AUD-002: standalone MFM sector parser. Test
         # synthesizes its own bitstream + uses an inlined CRC, so the

@@ -1,0 +1,74 @@
+# ============================================================================
+# UnifiedFloppyTool — Audit conformance gate
+#
+# Runs the forensic hardware-provider audit (audit/, MF-187) as a CI lane:
+#   - every audit/<provider>/diff.py   — UFT-side constants vs the reference;
+#     exits non-zero on a FAIL row (a real wire-protocol divergence)
+#   - syntax-checks every audit/<provider>/test_*_vectors.c (native backends)
+#   - py_compile every audit/<provider>/mock_*.py (CLI-wrapper backends)
+#
+# Stdlib-Python + gcc only — no Qt, no external SDK. Fast.
+#
+# NOT yet wired here: the older tests/external_audits/{gw,fluxengine}/ scripts.
+# extract_uft_calls.py there parses the V1 fluxenginehardwareprovider.cpp,
+# deleted in P1.18 — those scripts need a V2 refresh before they can be a
+# gate (tracked follow-up, audit/MASTER_REPORT.md). test_gw_encoder.c, the
+# byte-exact GW encoder regression test, already runs in the main ctest
+# suite (tests/CMakeLists.txt) — it is not duplicated here.
+# ============================================================================
+
+name: Audit
+
+on:
+  push:
+    branches: [main, 'refactor/**']
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  provider-audits:
+    name: Hardware-provider audit
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Provider constants diff (audit/*/diff.py)
+        run: |
+          set -e
+          fail=0
+          for f in audit/*/diff.py; do
+            echo "==== $f ===="
+            python3 "$f" || fail=1
+          done
+          if [ "$fail" -ne 0 ]; then
+            echo "::error::one or more audit diff.py reported a FAIL row"
+            exit 1
+          fi
+
+      - name: Syntax-check native vector tests (audit/*/test_*_vectors.c)
+        run: |
+          set -e
+          for c in audit/*/test_*_vectors.c; do
+            echo "==== $c ===="
+            gcc -std=c11 -I include -fsyntax-only "$c"
+          done
+
+      - name: Byte-compile CLI-wrapper mocks (audit/*/mock_*.py)
+        run: |
+          set -e
+          for m in audit/*/mock_*.py; do
+            echo "==== $m ===="
+            python3 -m py_compile "$m"
+          done

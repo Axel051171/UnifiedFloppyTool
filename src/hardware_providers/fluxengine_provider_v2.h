@@ -188,7 +188,19 @@ public:
         const std::string&              /*stdin_data*/)>;
 
     /**
-     * @brief Construct from a FluxEngine runner and the binary path.
+     * @brief Minimum fluxengine version this provider's CLI syntax targets.
+     *
+     * The corrected invocation form (MF-178: `-c <profile>`,
+     * `--tracks=cNhM`, `--drive.revolutions=N`) is the post-2022 FluxEngine
+     * config-layer syntax. Older binaries used positional profiles and
+     * `--revs`. query_version() can be cross-checked against this so a
+     * stale fluxengine surfaces as a clear diagnostic rather than an
+     * opaque "unknown flag" failure (audit finding FE-F6).
+     */
+    static constexpr const char* FE_MIN_TESTED_VERSION = "0.20";
+
+    /**
+     * @brief Construct from a FluxEngine runner, binary path and profile.
      *
      * @param runner         Callable that launches fluxengine synchronously.
      *                       If null, every do_* method returns a ProviderError.
@@ -197,10 +209,21 @@ public:
      *                       (assumes it is on PATH).
      * @param max_cylinders  Maximum cylinder index the drive supports. Defaults
      *                       to 79 (standard 80-track 3.5"/5.25" floppy).
+     * @param profile        FluxEngine config/profile name passed as `-c <profile>`
+     *                       to read/write (e.g. "ibm", "amiga", "c64", "mac").
+     *                       Defaults to "ibm". Audit finding FE-F2: the profile
+     *                       was previously hard-coded to "ibm" in the argv
+     *                       builders, silently ignoring any caller/GUI choice.
+     *                       It is a construction-time parameter (not a per-call
+     *                       one) because the per-call parameter records
+     *                       ReadFluxParams / WriteFluxParams live in the
+     *                       protected foundation header concepts.h — adding a
+     *                       field there is out of this task's scope.
      */
     explicit FluxEngineProviderV2(FluxEngineRunner runner,
                                    std::string fe_binary = "fluxengine",
-                                   int max_cylinders = 79);
+                                   int max_cylinders = 79,
+                                   std::string profile = "ibm");
 
     /* Non-copyable (holds a std::function + state). */
     FluxEngineProviderV2(const FluxEngineProviderV2&)            = delete;
@@ -219,10 +242,30 @@ public:
     RpmOutcome    do_measure_rpm   ();
     DetectOutcome do_detect_drive  ();
 
+    /* ── Non-capability diagnostics ──────────────────────────────────── */
+
+    /**
+     * @brief Query the installed fluxengine's version string (FE-F6).
+     *
+     * Runs `fluxengine version` through the injected runner and parses the
+     * output. Returns the version string (e.g. "FluxEngine 0.NN") or an
+     * empty string when the runner is null, the command fails, or no
+     * version could be parsed. Version detection failing is NOT fatal —
+     * it is a diagnostic aid, never a hard gate, so a working fluxengine
+     * is never locked out by an unrecognised version banner.
+     *
+     * VERIFICATION STATUS: the `version` subcommand was chosen from the
+     * modern FluxEngine CLI surface; like build_read_argv() it has not
+     * been end-to-end-tested against a real binary. If a real-FE test
+     * shows a different version command, THIS is the function to fix.
+     */
+    std::string query_version();
+
 private:
     FluxEngineRunner m_runner;        /**< fluxengine subprocess runner (injected). */
     std::string      m_fe_binary;     /**< Path to the fluxengine executable. */
     int              m_max_cylinders; /**< Maximum supported cylinder index. */
+    std::string      m_profile;       /**< FluxEngine config/profile (-c arg). FE-F2. */
 
     /**
      * @brief Validate cylinder and head ranges. Returns a ProviderError
@@ -234,8 +277,9 @@ private:
     /**
      * @brief Build fluxengine read argv for a single-track raw-flux capture.
      *
-     * Produces: [fe_binary, read, ibm, -s, drive:0, -c, N, -h, H,
-     *            --revs=R, -o, output_path]
+     * Produces (post-MF-178 / FE-F1+F2 syntax):
+     *   [fe_binary, read, -c, <profile>, -s, drive:0,
+     *    --tracks=cNhM, --drive.revolutions=R, -o, output_path]
      */
     std::vector<std::string> build_read_argv(int cylinder, int head,
                                               int revolutions,
@@ -244,8 +288,9 @@ private:
     /**
      * @brief Build fluxengine write argv for a single-track raw-flux write.
      *
-     * Produces: [fe_binary, write, ibm, -d, drive:0, -c, N, -h, H,
-     *            -i, input_path]
+     * Produces (post-MF-178 / FE-F1+F2 syntax):
+     *   [fe_binary, write, -c, <profile>, -d, drive:0,
+     *    --tracks=cNhM, -i, input_path]
      */
     std::vector<std::string> build_write_argv(int cylinder, int head,
                                                const std::string& input_path) const;

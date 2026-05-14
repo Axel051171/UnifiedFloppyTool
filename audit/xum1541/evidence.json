@@ -18,7 +18,7 @@
     "PASS": 82,
     "MISSING": 3
   },
-  "gui_hint_crosscheck": "hardwaretab.cpp:453 labels VID:PID 0x16d0:0x0504 as 'ZoomFloppy/XUM1541' but that PID is the *XUM1541* PID in xum1541_usb.h (ZoomFloppy is 0x04b2). Mislabel \u2014 see REPORT.md XUM-D4-1.",
+  "gui_hint_crosscheck": null,
   "sections": {
     "usb_ids": [
       {

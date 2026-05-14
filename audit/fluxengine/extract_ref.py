@@ -76,7 +76,9 @@ PROVENANCE = {
 READ_ARGV = {
     "read":                  "expected — subcommand",
     "-c":                    "expected — loads profile BY NAME",
-    "ibm":                   "expected — profile name (value of -c)",
+    "{profile}":             "expected — profile name (value of -c); FE-F2 made "
+                             "it the m_profile ctor parameter (was hard-coded "
+                             "\"ibm\"), so a {profile} placeholder is emitted",
     "-s":                    "expected — source drive spec flag",
     "drive:0":               "expected — drive spec (value of -s)",
     "--tracks=cNhM":         "expected — track selector (was: -c N -h H)",
@@ -87,7 +89,8 @@ READ_ARGV = {
 WRITE_ARGV = {
     "write":         "expected — subcommand",
     "-c":            "expected — loads profile BY NAME",
-    "ibm":           "expected — profile name (value of -c)",
+    "{profile}":     "expected — profile name (value of -c); FE-F2 m_profile "
+                     "ctor parameter, emitted as a {profile} placeholder",
     "-d":            "expected — destination drive spec flag",
     "drive:0":       "expected — drive spec (value of -d)",
     "--tracks=cNhM": "expected — track selector",
@@ -97,6 +100,14 @@ WRITE_ARGV = {
 # `fluxengine rpm` — exists in FE; used for both measure-rpm and detect.
 RPM_ARGV = {
     "rpm": "expected — subcommand (exists in current FE)",
+}
+# `fluxengine version` — FE-F6: query_version() emits this dedicated
+# invocation so do_detect_drive reports a real version instead of a
+# placeholder. recalled-grade: the `version` subcommand was chosen from
+# the modern FE CLI surface; not HIL-confirmed (see the MF-178/FE-F6
+# VERIFICATION STATUS notes in fluxengine_provider_v2.{h,cpp}).
+VERSION_ARGV = {
+    "version": "expected — `fluxengine version` subcommand (FE-F6)",
 }
 DETECT_ARGV = {
     "rpm": "expected — detect reuses the rpm subcommand (V1 parity)",
@@ -128,6 +139,7 @@ def main():
         "read_argv": READ_ARGV,
         "write_argv": WRITE_ARGV,
         "rpm_argv": RPM_ARGV,
+        "version_argv": VERSION_ARGV,
         "detect_argv": DETECT_ARGV,
         "timing": TIMING,
     }, sys.stdout, indent=2)

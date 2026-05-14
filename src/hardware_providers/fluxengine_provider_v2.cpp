@@ -78,16 +78,21 @@ namespace uft::hal {
 
 FluxEngineProviderV2::FluxEngineProviderV2(FluxEngineRunner runner,
                                              std::string fe_binary,
-                                             int max_cylinders)
+                                             int max_cylinders,
+                                             std::string profile)
     : m_runner(std::move(runner))
     , m_fe_binary(std::move(fe_binary))
     , m_max_cylinders(max_cylinders)
+    , m_profile(std::move(profile))
 {
     if (m_fe_binary.empty()) {
         m_fe_binary = "fluxengine";
     }
     if (m_max_cylinders < 0) {
         m_max_cylinders = 79;
+    }
+    if (m_profile.empty()) {
+        m_profile = "ibm";   /* FE-F2: empty profile falls back to ibm. */
     }
 }
 
@@ -169,7 +174,7 @@ std::vector<std::string> FluxEngineProviderV2::build_read_argv(
     args.push_back(m_fe_binary);
     args.push_back("read");
     args.push_back("-c");
-    args.push_back("ibm");    /* profile loaded by name (was: positional) */
+    args.push_back(m_profile);  /* FE-F2: profile from ctor (was hard-coded "ibm") */
     args.push_back("-s");
     args.push_back("drive:0");
     args.push_back("--tracks=c" + std::to_string(cylinder)
@@ -187,7 +192,7 @@ std::vector<std::string> FluxEngineProviderV2::build_write_argv(
     args.push_back(m_fe_binary);
     args.push_back("write");
     args.push_back("-c");
-    args.push_back("ibm");    /* profile loaded by name (was: positional) */
+    args.push_back(m_profile);  /* FE-F2: profile from ctor (was hard-coded "ibm") */
     args.push_back("-d");
     args.push_back("drive:0");
     args.push_back("--tracks=c" + std::to_string(cylinder)
@@ -317,6 +322,32 @@ std::string FluxEngineProviderV2::parse_version_from_fe_output(
         if (!line.empty()) return line;
     }
     return {};
+}
+
+/* ────────────────────────────────────────────────────────────────────────
+ *  query_version  (FE-F6)
+ *
+ *  Runs `fluxengine version` through the injected runner and parses the
+ *  banner via parse_version_from_fe_output(). Non-fatal by design: returns
+ *  an empty string on a null runner, a non-zero exit, or an unparseable
+ *  banner — version detection is a diagnostic aid, never a hard gate, so a
+ *  working fluxengine is never locked out by an unrecognised version line.
+ *
+ *  See FE_MIN_TESTED_VERSION in the header for the version the corrected
+ *  MF-178 CLI syntax targets; a caller may compare the two and warn.
+ * ──────────────────────────────────────────────────────────────────────── */
+
+std::string FluxEngineProviderV2::query_version()
+{
+    if (!m_runner) {
+        return {};
+    }
+    const std::vector<std::string> argv = { m_fe_binary, "version" };
+    FluxEngineRunResult result = m_runner(argv, "");
+    if (result.exit_code != 0) {
+        return {};
+    }
+    return parse_version_from_fe_output(result.stdout_text + result.stderr_text);
 }
 
 /* ────────────────────────────────────────────────────────────────────────
@@ -726,11 +757,13 @@ DetectOutcome FluxEngineProviderV2::do_detect_drive()
         drive_kind = "3.5\" DD/HD";  /* Conservative default */
     }
 
-    /* Parse version from fluxengine --version output if present in combined,
-     * otherwise leave empty (fluxengine rpm does not print version). */
-    std::string version = parse_version_from_fe_output(combined);
+    /* FE-F6: query the real fluxengine version with a dedicated `version`
+     * invocation rather than scraping the `rpm` output (which never carries
+     * a version banner). Non-fatal — falls back to an honest "unavailable"
+     * string when the query yields nothing. */
+    std::string version = query_version();
     if (version.empty()) {
-        version = "FluxEngine (version from --version not available in rpm output)";
+        version = "FluxEngine (version unavailable)";
     }
 
     DriveDetected detected;
