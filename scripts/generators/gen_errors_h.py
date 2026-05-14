@@ -47,7 +47,7 @@ from pathlib import Path
 
 # Import helper from sibling module when invoked directly.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from gen_errors_common import HEADER_BANNER, parse  # noqa: E402
+from gen_errors_common import HEADER_BANNER, parse, utf8_stdout  # noqa: E402
 
 
 TEMPLATE_HEAD = """#ifndef UFT_ERROR_H
@@ -118,6 +118,7 @@ typedef int uft_error_t;
 
 
 def main(argv: list[str]) -> int:
+    utf8_stdout()  # deterministic UTF-8 output on every platform
     if len(argv) != 2:
         sys.stderr.write("usage: gen_errors_h.py <path-to-errors.tsv>\n")
         return 2

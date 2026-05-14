@@ -10,7 +10,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from gen_errors_common import HEADER_BANNER, parse  # noqa: E402
+from gen_errors_common import HEADER_BANNER, parse, utf8_stdout  # noqa: E402
 
 
 TEMPLATE_HEAD = """/**
@@ -78,6 +78,7 @@ def c_escape(s: str) -> str:
 
 
 def main(argv: list[str]) -> int:
+    utf8_stdout()  # deterministic UTF-8 output on every platform
     if len(argv) != 2:
         sys.stderr.write("usage: gen_errors_strings.py <path-to-errors.tsv>\n")
         return 2

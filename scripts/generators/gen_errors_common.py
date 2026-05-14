@@ -136,3 +136,32 @@ HEADER_BANNER = (
     " * Any manual edits will be overwritten on the next generator run.\n"
     " * ===================================================================== */\n"
 )
+
+
+def utf8_stdout() -> None:
+    """Force sys.stdout to UTF-8 (encoding only — newline mode untouched).
+
+    The error-SSOT generators emit a few non-ASCII characters (em-dashes
+    in the comment banners). When a generator's stdout is redirected to a
+    file — exactly what scripts/verify_errors_ssot.sh does — Python picks
+    the platform *locale* encoding for the text stream. On a non-UTF-8
+    Windows that is cp1252, which encodes `—` (U+2014) as a single 0x97
+    byte instead of the UTF-8 `E2 80 94` the committed headers carry, and
+    raises outright on a character cp1252 cannot map. Either way the SSOT
+    compliance check (verify_errors_ssot.sh) reports spurious drift.
+
+    ONLY the encoding is overridden. The newline mode is deliberately
+    left at its default (None → translate `\\n` to os.linesep on write):
+    the repo uses git autocrlf, so the working-copy headers carry CRLF on
+    Windows and LF on Linux, and the default translation already makes
+    regeneration match the working copy on each platform. Forcing a
+    fixed newline here would re-break the check the other way round.
+
+    Every generator calls this as the first line of main().
+    """
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+    except (AttributeError, ValueError):
+        # Pre-3.7 interpreter, or stdout replaced by a non-reconfigurable
+        # stream (e.g. under a test harness). Best-effort: leave it.
+        pass
