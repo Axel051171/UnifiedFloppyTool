@@ -1,11 +1,21 @@
 # Proposal: ADF-Copy ↔ Applesauce disambiguation (audit ARCH-7 sub-finding C)
 
-Status: DESIGN PROPOSAL — not applied. For human review + go-ahead.
+Status: **APPLIED (MF-213).** Tier 1 + `probe_teensy_serial()` +
+`tests/test_teensy_probe.cpp` + the onConnect wiring landed.
 
-Closes the design half of **task #121 / ARCH-7 sub-finding C**
-(`audit/ARCH-7_VID_PID.md`). Sub-findings A (XUM1541 PID label) and B
-(SCP header-vs-GUI) are tracked separately; A is already fixed (MF-190),
-B needs an `lsusb` readout.
+Closes **task #121 / ARCH-7 sub-finding C** (`audit/ARCH-7_VID_PID.md`).
+Sub-findings A (XUM1541 PID label, MF-190) and B (SCP header-vs-GUI,
+MF-212) are done.
+
+UPDATE after the `lsusb`/Device-Manager readout (§7 gap resolved):
+ADF-Copy **and** Applesauce both ship the *stock* Teensy string
+descriptors, so the Tier-1 string heuristic of §5 cannot distinguish
+them — the implemented Tier 1 emits only the explicit-ambiguity hint
+and the Tier-2 probe is mandatory, exactly the §7 "both stock" branch.
+The §5 sketch's `manufacturer().contains("Evolution")` rule was
+therefore NOT implemented — the real Applesauce does not report that
+string. Tier-2 wiring landed in `onConnect()` (P1.23 is complete); it
+warns on a probe/selection mismatch, never silently overrides.
 
 ---
 

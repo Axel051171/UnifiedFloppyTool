@@ -40,7 +40,8 @@ set(_HEADER_ONLY_CPP_TESTS
     "${CMAKE_CURRENT_SOURCE_DIR}/test_xum1541_provider_v2.cpp"        # MF-165 P1.12
     "${CMAKE_CURRENT_SOURCE_DIR}/test_applesauce_provider_v2.cpp"   # MF-166 P1.13
     "${CMAKE_CURRENT_SOURCE_DIR}/test_adfcopy_provider_v2.cpp"     # MF-167 P1.14
-    "${CMAKE_CURRENT_SOURCE_DIR}/test_usbfloppy_provider_v2.cpp") # MF-168 P1.15
+    "${CMAKE_CURRENT_SOURCE_DIR}/test_usbfloppy_provider_v2.cpp"   # MF-168 P1.15
+    "${CMAKE_CURRENT_SOURCE_DIR}/test_teensy_probe.cpp")          # MF-213 ARCH-7-C
 
 set(TEST_SOURCES ${TEST_SOURCES_C} ${_HEADER_ONLY_CPP_TESTS})
 
@@ -306,6 +307,14 @@ foreach(test_source ${TEST_SOURCES})
         # Synthetic SCP vectors; needs only the parser .c — no Qt.
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/flux/uft_scp_parser.c)
+        set(TEST_LIBS "")
+    elseif(${test_name} STREQUAL "test_teensy_probe")
+        # MF-213 ARCH-7-C: classify_teensy_probe() unit test — the pure
+        # ADF-Copy/Applesauce probe decision core. teensy_probe.h is
+        # header-inline + Qt-free (QString is only forward-declared), so
+        # no sources and no Qt — just src/ on the include path.
+        target_include_directories(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src)
         set(TEST_LIBS "")
     elseif(${test_name} STREQUAL "test_fluxengine_provider_v2")
         # MF-163 P1.10: FluxEngineProviderV2 mixin composition test.

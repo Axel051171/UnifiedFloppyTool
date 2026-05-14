@@ -72,34 +72,46 @@ value), and `hardwaretab.cpp`'s SCP port-hint `#include`s that header
 and references the macros — the VID/PID now lives in exactly one place,
 so the contradiction structurally cannot recur.
 
-## Sub-finding C — ADF-Copy / Applesauce share `0x16C0:0x0483` — **DESIGN DONE**
+## Sub-finding C — ADF-Copy / Applesauce share `0x16C0:0x0483` — **IMPLEMENTED (MF-213)**
 
 Not fixable by changing a number — both *are* stock-ID Teensy devices,
-genuinely indistinguishable at the VID/PID layer. **Design proposal:**
+genuinely indistinguishable at the VID/PID layer. Design proposal:
 [`docs/proposals/ARCH7C_TEENSY_ID_DISAMBIGUATION.md`](../docs/proposals/ARCH7C_TEENSY_ID_DISAMBIGUATION.md)
-— a two-tier scheme:
+(MF-198) — a two-tier scheme.
 
-- **Tier 1** — string-descriptor heuristic at enumeration
-  (`QSerialPortInfo::manufacturer()` / `description()`); the Applesauce
-  rule ("Evolution Interactive") is in-repo, the ADF-Copy rule is
-  `needs-source`. Ambiguity is surfaced explicitly, never guessed.
-- **Tier 2** — authoritative non-destructive protocol probe on Connect:
-  the two devices have distinct identify handshakes (ADF-Copy
-  `PING`=`0x00`→text line; Applesauce `?vers`→version), so a probe
-  disambiguates even with identical USB descriptors. Tier-2 wiring is
-  gated behind P1.23 (non-GW routing).
+**`needs-source` gap resolved** (Axel device readout): ADF-Copy **and**
+Applesauce both ship the **stock, unmodified Teensy string descriptors**.
+So the string-descriptor heuristic cannot tell them apart either — the
+proposal's optional Applesauce "Evolution Interactive" rule does not
+apply to the real device. **Tier 2 (the protocol probe) is mandatory**,
+exactly the §7 "both report stock strings" branch the proposal
+anticipated.
 
-KryoFlux's `0x0403:0x6001` (`hardwaretab.cpp:450`) is the same class
-(generic FTDI FT232 ID) — same probe-pattern answer, noted as a
-follow-up in the proposal.
+→ Applied (MF-213):
 
-**Question for Axel** (the one `needs-source` gap in the design): with
-an ADF-Copy and an Applesauce each attached —
-```
-Linux:   lsusb -v -d 16c0:0483 | grep -iE 'iManufacturer|iProduct|iSerial'
-```
-If the two report distinct strings, Tier 1 alone suffices; if both
-report stock Teensy strings, Tier 2 is mandatory.
+- **Tier 1** — `detectSerialPorts()` now has a `0x16C0:0x0483` branch
+  that emits the *explicit-ambiguity* hint
+  `"ADF-Copy or Applesauce (0x16C0:0x0483 — probe on Connect)"`. No
+  string rules (both stock) — honest ambiguity, never a guess.
+- **Tier 2** — `src/hardware_providers/teensy_probe.{h,cpp}`:
+  - `classify_teensy_probe()` — the pure, header-inline decision core.
+    Conservative: only "this device answered its OWN identify command
+    with plausible text" classifies; both-or-neither → `Unknown`,
+    never a coin-flip. Exhaustively unit-tested by
+    `tests/test_teensy_probe.cpp`.
+  - `probe_teensy_serial()` — the QSerialPort I/O wrapper: opens the
+    port, sends the two non-destructive identify queries (`?vers`,
+    `0x00`), classifies. Returns `Unknown` if the port cannot be
+    opened or the Qt build lacks QtSerialPort.
+  - **Wired** into `HardwareTab::onConnect()`: connecting ADF-Copy or
+    Applesauce runs the probe on the selected port and shows a warning
+    (never a silent override) if the probe contradicts the combo
+    selection.
+
+KryoFlux's `0x0403:0x6001` (generic FTDI FT232 ID) is the same class of
+problem — the same probe-pattern applies (its DTC subprocess can
+identify the device); noted as a follow-up in the proposal, out of
+ARCH-7-C scope.
 
 ## Status
 

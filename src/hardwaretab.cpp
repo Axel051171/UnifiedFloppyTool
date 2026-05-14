@@ -43,6 +43,9 @@
 #include "hardware_providers/adfcopy_provider_v2.h"
 #include "hardware_providers/usbfloppy_provider_v2.h"
 
+/* MF-213 (audit ARCH-7-C): ADF-Copy / Applesauce disambiguation probe. */
+#include "hardware_providers/teensy_probe.h"
+
 /* MF-210: hardwaretab.cpp now uses the capability concepts directly
  * (`if constexpr (::uft::hal::ControlsMotor<P>)` etc.) in the
  * std::visit-based provider helpers. */
@@ -560,8 +563,20 @@ void HardwareTab::detectSerialPorts()
              * single hint matches the single combo entry. The previous
              * code matched only 0x0504 and mislabelled it "ZoomFloppy". */
             controllerHint = "XUM1541 / ZoomFloppy";
+        } else if (vid == 0x16C0 && pid == 0x0483) {
+            /* ARCH-7-C (MF-213): 0x16C0:0x0483 is the stock, unmodified
+             * PJRC Teensy USB-Serial identity — claimed by BOTH ADF-Copy
+             * and Applesauce. Verified by device readout: both ship the
+             * *stock* Teensy string descriptors too, so the proposal's
+             * Tier-1 string-descriptor heuristic cannot tell them apart
+             * either. The honest hint is therefore explicit ambiguity —
+             * never a silent guess at one device. The authoritative
+             * answer is the Tier-2 protocol probe (probe_teensy_serial),
+             * run on Connect. */
+            controllerHint = "ADF-Copy or Applesauce "
+                             "(0x16C0:0x0483 — probe on Connect)";
         }
-        
+
         if (!controllerHint.isEmpty()) {
             displayName = QString("%1 - %2").arg(portName, controllerHint);
         } else if (!description.isEmpty()) {
@@ -763,6 +778,41 @@ void HardwareTab::onConnect()
                              .arg(controller),
                          /*isError=*/true);
             return;
+        }
+
+        /* ARCH-7-C (MF-213): ADF-Copy and Applesauce are both stock-ID
+         * Teensy devices (0x16C0:0x0483) and indistinguishable by USB
+         * descriptor. When the user connects one of the two, run the
+         * authoritative non-destructive protocol probe on the selected
+         * port and warn — never silently override — if it contradicts
+         * the combo selection. Sending ADF-Copy bytes to an Applesauce
+         * (or vice versa) is exactly the "stille Veränderung" the
+         * project forbids, so catching a mismatch up front is forensic
+         * hygiene. probe_teensy_serial() opens its own port, probes,
+         * closes; it returns Unknown if it cannot open the port or the
+         * Qt build lacks QtSerialPort — Unknown never triggers a
+         * warning (no guess in either direction). */
+        if (controller == "adfcopy" || controller == "applesauce") {
+            const ::uft::hal::TeensyDevice probed =
+                ::uft::hal::probe_teensy_serial(port);
+            const bool mismatch =
+                (controller == "adfcopy" &&
+                 probed == ::uft::hal::TeensyDevice::Applesauce) ||
+                (controller == "applesauce" &&
+                 probed == ::uft::hal::TeensyDevice::AdfCopy);
+            if (mismatch) {
+                const QString probedName =
+                    (probed == ::uft::hal::TeensyDevice::Applesauce)
+                        ? tr("Applesauce") : tr("ADF-Copy");
+                QMessageBox::warning(this, tr("Device mismatch"),
+                    tr("You selected %1, but the device on %2 answered "
+                       "the %3 identify handshake.\n\nADF-Copy and "
+                       "Applesauce share the stock Teensy USB ID and can "
+                       "only be told apart by this probe. Connecting "
+                       "anyway would send %1 commands to a %3 device — "
+                       "check the controller selection.")
+                        .arg(m_controllerType, port, probedName));
+            }
         }
 
         /* The V2 provider is constructed (honest-stub backend). Wire its
