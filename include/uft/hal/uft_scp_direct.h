@@ -30,9 +30,15 @@
 extern "C" {
 #endif
 
-/** SCP USB vendor IDs (from device descriptor). */
-#define UFT_SCP_USB_VID            0x16C0
-#define UFT_SCP_USB_PID            0x0753
+/* SCP USB vendor/product ID — single source of truth (audit ARCH-7-B,
+ * MF-212). Verified from the real device's USB descriptor
+ * (USB\VID_16D0&PID_0F8C). The pre-MF-212 value here was 0x16C0:0x0753,
+ * which contradicted the GUI port-hint in hardwaretab.cpp; the device
+ * readout confirmed the GUI hint was the correct one. The GUI hint now
+ * #includes this header and references these macros so the value lives
+ * in exactly one place. */
+#define UFT_SCP_USB_VID            0x16D0
+#define UFT_SCP_USB_PID            0x0F8C
 
 /** SCP USB Bulk endpoints (from interface descriptor). */
 #define UFT_SCP_BULK_IN_EP         0x81

@@ -48,6 +48,11 @@
  * std::visit-based provider helpers. */
 #include "uft/hal/concepts.h"
 
+/* MF-212 (audit ARCH-7-B): the SuperCard Pro USB VID/PID lives in
+ * exactly one place — uft_scp_direct.h — and the GUI port-hint below
+ * references those macros instead of re-typing the literals. */
+#include "uft/hal/uft_scp_direct.h"
+
 #include <type_traits>
 #include <variant>
 
@@ -537,7 +542,11 @@ void HardwareTab::detectSerialPorts()
         // Known VID/PID pairs
         if (vid == 0x1209 && pid == 0x4D69) {
             controllerHint = "Greaseweazle";
-        } else if (vid == 0x16D0 && pid == 0x0F8C) {
+        } else if (vid == UFT_SCP_USB_VID && pid == UFT_SCP_USB_PID) {
+            /* ARCH-7-B (MF-212): VID/PID single-sourced from
+             * uft_scp_direct.h. Verified 0x16D0:0x0F8C from the real
+             * device descriptor — the old header value 0x16C0:0x0753
+             * was the wrong one of the two contradicting sites. */
             controllerHint = "SuperCard Pro";
         } else if (vid == 0x0403 && pid == 0x6001) {
             controllerHint = "KryoFlux (FTDI)";

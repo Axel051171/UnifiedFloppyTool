@@ -56,23 +56,21 @@ to `xum1541_usb.h`.
 `0x0504`, `0x0503`) and labels the hint `"XUM1541 / ZoomFloppy"`,
 matching the single combo entry text.
 
-## Sub-finding B — SCP header vs GUI — **NEEDS HARDWARE / VENDOR DOC**
+## Sub-finding B — SCP header vs GUI — **RESOLVED (MF-212)**
 
-`uft_scp_direct.h:34-35` says `0x16C0:0x0753`; `hardwaretab.cpp:448-449`
-says `0x16D0:0x0F8C`. Different VID **and** different PID — at most one
-is right, possibly neither. Cannot be resolved by reading the repo.
+`uft_scp_direct.h:34-35` said `0x16C0:0x0753`; the GUI hint in
+`hardwaretab.cpp` said `0x16D0:0x0F8C`. Different VID **and** different
+PID — at most one could be right.
 
-**Question for Axel** (2-minute answer with the real device plugged in):
-```
-Linux:   lsusb | grep -i supercard      # or: lsusb -v on the SCP port
-Windows: Device Manager → SuperCard Pro → Properties → Details →
-         "Hardware Ids"  (shows USB\VID_xxxx&PID_xxxx)
-```
-The SuperCard Pro is an FTDI FT240X-based device — its USB identity
-depends on what the vendor programmed into the FT240X EEPROM, so neither
-the V-USB-style `0x16C0` nor `0x16D0` is obviously right. Once known,
-**both** sites get the verified value and a single-source `#define` in
-`uft_scp_direct.h` should drive the GUI hint too.
+**Verified** (Axel, real device): the descriptor reports
+`USB\VID_16D0&PID_0F8C`. So the **GUI hint was correct** and the
+**header was wrong**.
+
+→ Applied (MF-212): `uft_scp_direct.h` now defines
+`UFT_SCP_USB_VID 0x16D0` / `UFT_SCP_USB_PID 0x0F8C` (the verified
+value), and `hardwaretab.cpp`'s SCP port-hint `#include`s that header
+and references the macros — the VID/PID now lives in exactly one place,
+so the contradiction structurally cannot recur.
 
 ## Sub-finding C — ADF-Copy / Applesauce share `0x16C0:0x0483` — **DESIGN DONE**
 
@@ -108,11 +106,14 @@ report stock Teensy strings, Tier 2 is mandatory.
 | Sub-finding | Class | State |
 |-------------|-------|-------|
 | A — XUM1541 GUI hint | fixable-now | ✅ fixed (MF-190) |
-| B — SCP header vs GUI | needs-hardware | ⬜ open — blocked on Axel `lsusb` / vendor doc |
-| C — ADF-Copy/Applesauce shared ID + KryoFlux generic FTDI | needs-design | 🔄 **design done** (`docs/proposals/ARCH7C_TEENSY_ID_DISAMBIGUATION.md`, MF-198) — Tier 1 + probe function applicable now (needs a Qt build to verify); Tier 2 wiring after P1.23; ADF-Copy string rule needs `lsusb` |
+| B — SCP header vs GUI | was needs-hardware | ✅ resolved (MF-212) — verified `0x16D0:0x0F8C`, single-sourced in `uft_scp_direct.h` |
+| C — ADF-Copy/Applesauce shared ID + KryoFlux generic FTDI | needs-design | 🔄 design done (MF-198); Tier 1 + `probe_teensy_serial()` + test landed (MF-213). **Verified (Axel `lsusb`): both devices ship the *stock* Teensy descriptors** → Tier-1 string heuristic cannot distinguish them, the probe (Tier 2) is mandatory. Tier-2 *wiring into Connect* still pending the M3.x serial transports |
 
-Task #121 stays open for B and C-implementation. Neither may be "fixed"
-by guessing a value — that would violate "keine erfundenen Daten".
+Task #121: A + B done; C has the Tier-1 hint + the authoritative probe
+function + its test. The remaining open piece is wiring the probe into
+the connect path — that needs the ADF-Copy / Applesauce providers to
+have a real serial transport (M3.x), which they do not yet. No value
+was ever guessed — "keine erfundenen Daten".
 
 ## Reproduce
 
