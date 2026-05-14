@@ -74,41 +74,45 @@ the V-USB-style `0x16C0` nor `0x16D0` is obviously right. Once known,
 **both** sites get the verified value and a single-source `#define` in
 `uft_scp_direct.h` should drive the GUI hint too.
 
-## Sub-finding C — ADF-Copy / Applesauce share `0x16C0:0x0483` — **NEEDS DESIGN**
+## Sub-finding C — ADF-Copy / Applesauce share `0x16C0:0x0483` — **DESIGN DONE**
 
-Not fixable by changing a number — both *are* stock-ID Teensy devices.
-Discrimination has to happen one level up, on the USB **string
-descriptors** (manufacturer / product), which the error text already
-hints at ("manufacturer 'Evolution Interactive'",
-`applesauce_provider_v2.cpp:229`). That is a small detection *feature*,
-not a constant correction:
+Not fixable by changing a number — both *are* stock-ID Teensy devices,
+genuinely indistinguishable at the VID/PID layer. **Design proposal:**
+[`docs/proposals/ARCH7C_TEENSY_ID_DISAMBIGUATION.md`](../docs/proposals/ARCH7C_TEENSY_ID_DISAMBIGUATION.md)
+— a two-tier scheme:
 
-- when enumerating `0x16C0:0x0483`, read the iManufacturer / iProduct
-  strings and route to ADF-Copy vs Applesauce accordingly;
-- until then, a `0x16C0:0x0483` device is ambiguous and the GUI must
-  not silently pick one.
+- **Tier 1** — string-descriptor heuristic at enumeration
+  (`QSerialPortInfo::manufacturer()` / `description()`); the Applesauce
+  rule ("Evolution Interactive") is in-repo, the ADF-Copy rule is
+  `needs-source`. Ambiguity is surfaced explicitly, never guessed.
+- **Tier 2** — authoritative non-destructive protocol probe on Connect:
+  the two devices have distinct identify handshakes (ADF-Copy
+  `PING`=`0x00`→text line; Applesauce `?vers`→version), so a probe
+  disambiguates even with identical USB descriptors. Tier-2 wiring is
+  gated behind P1.23 (non-GW routing).
 
-Also note KryoFlux's `0x0403:0x6001` (`hardwaretab.cpp:450`) is the
-*generic* FTDI FT232 ID — the same class of "not actually unique"
-problem: any FT232 cable matches it. Same design answer (string
-descriptor) applies.
+KryoFlux's `0x0403:0x6001` (`hardwaretab.cpp:450`) is the same class
+(generic FTDI FT232 ID) — same probe-pattern answer, noted as a
+follow-up in the proposal.
 
-**Question for Axel:** when an Applesauce and an ADF-Copy are both
-plugged in, what do their iManufacturer / iProduct strings read?
+**Question for Axel** (the one `needs-source` gap in the design): with
+an ADF-Copy and an Applesauce each attached —
 ```
-Linux:   lsusb -v -d 16c0:0483 | grep -iE 'iManufacturer|iProduct'
+Linux:   lsusb -v -d 16c0:0483 | grep -iE 'iManufacturer|iProduct|iSerial'
 ```
+If the two report distinct strings, Tier 1 alone suffices; if both
+report stock Teensy strings, Tier 2 is mandatory.
 
 ## Status
 
 | Sub-finding | Class | State |
 |-------------|-------|-------|
-| A — XUM1541 GUI hint | fixable-now | ✅ fixed (this commit) |
+| A — XUM1541 GUI hint | fixable-now | ✅ fixed (MF-190) |
 | B — SCP header vs GUI | needs-hardware | ⬜ open — blocked on Axel `lsusb` / vendor doc |
-| C — ADF-Copy/Applesauce shared ID + KryoFlux generic FTDI | needs-design | ⬜ open — string-descriptor disambiguation feature |
+| C — ADF-Copy/Applesauce shared ID + KryoFlux generic FTDI | needs-design | 🔄 **design done** (`docs/proposals/ARCH7C_TEENSY_ID_DISAMBIGUATION.md`, MF-198) — Tier 1 + probe function applicable now (needs a Qt build to verify); Tier 2 wiring after P1.23; ADF-Copy string rule needs `lsusb` |
 
-Task #121 stays open for B and C. Neither may be "fixed" by guessing a
-value — that would violate "keine erfundenen Daten".
+Task #121 stays open for B and C-implementation. Neither may be "fixed"
+by guessing a value — that would violate "keine erfundenen Daten".
 
 ## Reproduce
 
