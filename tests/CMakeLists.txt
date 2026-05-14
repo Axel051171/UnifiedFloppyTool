@@ -449,6 +449,13 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c)
         set(TEST_LIBS "")
+    elseif(${test_name} STREQUAL "test_provenance_chain")
+        # MF-214 / P3.3 #110: forensic provenance chain-of-custody
+        # improvement test. uft_provenance.c is self-contained (it ships
+        # its own SHA-256), so the one TU is the only source needed.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/forensic/uft_provenance.c)
+        set(TEST_LIBS "")
     endif()
     
     if(TEST_LIBS)

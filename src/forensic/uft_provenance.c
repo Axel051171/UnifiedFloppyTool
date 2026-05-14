@@ -188,8 +188,16 @@ bool uft_prov_verify(const uft_provenance_chain_t *chain) {
     for (uint32_t i = 0; i < chain->count; i++) {
         const uft_prov_entry_t *e = &chain->entries[i];
         sha256_ctx_t c; sha256_init(&c);
-        if (i == 0) sha256_update(&c, chain->root_hash, UFT_PROV_HASH_SIZE);
-        else        sha256_update(&c, prev, UFT_PROV_HASH_SIZE);
+        /* MF-214: seed entry 0 with the zero `prev` block — NOT
+         * chain->root_hash. uft_prov_add() computes entry 0's chain_hash
+         * with root_hash still all-zero (it is calloc'd and only set to
+         * entries[0].chain_hash *after* the hash is computed). The old
+         * code here seeded entry 0 with the already-overwritten
+         * root_hash, so the recomputed hash never matched and
+         * uft_prov_verify() returned false for *every* non-empty chain —
+         * even an untampered one. `prev` is memset to zero above, which
+         * is exactly the seed add() used. */
+        sha256_update(&c, prev, UFT_PROV_HASH_SIZE);
         sha256_update(&c, &e->action,     sizeof(e->action));
         sha256_update(&c, &e->timestamp,  sizeof(e->timestamp));
         sha256_update(&c, e->input_hash,  UFT_PROV_HASH_SIZE);
