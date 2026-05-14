@@ -970,8 +970,22 @@ void HardwareTab::onDetectionModeChanged()
     
     if (m_autoDetect) {
         updateStatus(tr("Auto-Detect mode - drive settings will be detected automatically."));
-        if (m_connected) {
-            autoDetectDrive();
+        /* MF-177: the V1 `autoDetectDrive()` helper (direct uft_gw_*
+         * select_drive/set_motor/seek loop) was removed in P1.18. When
+         * the user switches to auto-detect mode while already connected,
+         * route the probe through the V2 provider's detect_drive() and
+         * dispatch the DetectOutcome through the same handler set the
+         * codegen-wired btnDetect uses (mirrors onConnect's auto-detect
+         * block). */
+        if (m_connected && m_gwProviderV2 && m_gwProviderV2->is_open()) {
+            auto outcome = m_gwProviderV2->detect_drive();
+            std::visit(::uft::hal::overloaded{
+                [this](const ::uft::hal::DriveDetected &v)            { onDetectOutcome(v); },
+                [this](const ::uft::hal::DriveAbsent &v)              { onDetectOutcome(v); },
+                [this](const ::uft::hal::CapabilityRequiresPolicy &v) { showPolicyRequired(v); },
+                [this](const ::uft::hal::HardwareDisconnected &v)     { showHardwareDisconnected(v); },
+                [this](const ::uft::hal::ProviderError &e)            { showProviderError(e); },
+            }, outcome);
         }
     } else {
         updateStatus(tr("Manual mode - configure drive settings manually."));
@@ -1077,6 +1091,12 @@ void HardwareTab::setDetectedInfo(const QString& model, const QString& firmware,
     ui->labelFirmware->setText(firmware);
     ui->labelIndex->setText(index);
 }
+
+/* MF-177: restored — the MF-171 (P1.18) zombie-slot deletion script's
+ * brace-balance logic mis-cut and ate this function's SIGNATURE line
+ * while leaving the body orphaned. `onAutoSpinDownChanged` is still
+ * connected in setupConnections() and must exist. */
+void HardwareTab::onAutoSpinDownChanged(bool enabled)
 {
     Q_UNUSED(enabled);
 }
@@ -1099,9 +1119,22 @@ void HardwareTab::onDoubleStepChanged(bool enabled) { Q_UNUSED(enabled); }
 void HardwareTab::onIgnoreIndexChanged(bool enabled) { Q_UNUSED(enabled); }
 void HardwareTab::onStepDelayChanged(int value) { Q_UNUSED(value); }
 void HardwareTab::onSettleTimeChanged(int value) { Q_UNUSED(value); }
+
+// ============================================================================
+// Device Info
+// ============================================================================
+
+/* MF-177: restored — the MF-171 (P1.18) zombie-slot deletion script
+ * mis-cut and ate this function's HEAD (signature + opening brace +
+ * the `if (!m_connected)` guard line), leaving the body orphaned.
+ * `getDeviceName()` is a public method used by the status bar and is
+ * declared in hardwaretab.h — it must exist. */
+QString HardwareTab::getDeviceName() const
+{
+    if (!m_connected) {
         return tr("Not connected");
     }
-    
+
     // Build device name based on controller type and model
     QString name;
     
