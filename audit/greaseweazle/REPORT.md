@@ -77,12 +77,16 @@ samples copied verbatim, no averaging/pruning (`:256–264`); empty result
    `hardwaretab.cpp:259 gwDevice()`), which calls `uft_gw_*` directly,
    bypassing the V2 outcome surface entirely.
 
-**Finding GW-D2-1** (medium): the V2 `ReadsRawFlux` GUI path is a
-**dead-end for data** — `onFluxOutcome` summarises into a status line.
-The functioning flux→image path still runs through the legacy
-`raw_handle()` escape hatch, which the V2 header itself marks "SCHEDULED
-FOR REMOVAL once P1.20/P1.21". Until P1.20/21 land, the type-driven read
-path produces a correct `FluxCaptured` that no V2 consumer persists.
+**Finding GW-D2-1** (medium) — 🔄 **root cause resolved (MF-193/194)**:
+the V2 `ReadsRawFlux` GUI path is a **dead-end for data** —
+`onFluxOutcome` summarises into a status line. The functioning
+flux→image path still runs through the legacy `raw_handle()` escape
+hatch. The *reason* the escape hatch existed — `FluxCaptured` could not
+express the per-revolution index boundaries `FluxCaptureJob` needs — is
+now fixed: `FluxCaptured.index_times_ns` was added (MF-194) and the GW
+provider populates it. **⬜ Remaining**: migrating `FluxCaptureJob` /
+`FluxWriteJob` onto the V2 surface and removing `raw_handle()` —
+REFACTOR_TASKS.md P1.20→P1.22.
 
 **Datastructure compatibility:** `FluxCaptured::transitions_ns` is
 `std::vector<uint32_t>` ns; the C HAL delivers `uint32_t` ticks +
@@ -166,7 +170,7 @@ Qt enumeration path.
 | ID | Issue | Severity | Code citation |
 |----|-------|----------|---------------|
 | GW-D5-1 | Simulated-connection fallback sets `m_firmwareVersion = "Simulated"` and marks the device connected when `UFT_HAS_HAL` is undefined. It **is** labelled `[SIMULATED]` in the status bar — not a silent fake — but a build without HAL presents a "connected" device with no hardware. | medium | `hardwaretab.cpp:709–729` |
-| GW-D5-2 | `printf("=== onConnect called ===")` + `fflush(stdout)` debug scaffolding left in the connect path. Noise, not a correctness issue. | low | `hardwaretab.cpp:575–578, 649` |
+| GW-D5-2 | ✅ **LANDED (MF-186)** — the `printf` + `fflush(stdout)` debug scaffolding and the now-unused `<cstdio>` include were removed from `onConnect()`. | low | `hardwaretab.cpp` (was `:575–578, 649`) |
 | GW-D5-3 | `raw_handle()` escape hatch exposes the owned `uft_gw_device_t*` so legacy `FluxCaptureJob`/`FluxWriteJob` can bypass the V2 outcome surface. Documented + tracked ("SCHEDULED FOR REMOVAL P1.20/P1.21"). | low (documented) | `greaseweazle_provider_v2.h:122–130` |
 | GW-D5-4 | `do_read_raw_flux` sample-frequency fallback chain ends at the `72 MHz` `#define`. If both `flux->sample_freq` and `uft_gw_get_sample_freq()` return 0 on an F7-Plus (84 MHz), ns timing is mis-scaled ~14%. Last-resort only; GW-F3 (task #112) made sample-freq dynamic, so both runtime queries normally succeed. | medium (degraded, not silent-fake) | `greaseweazle_provider_v2.cpp:234–245` |
 
@@ -207,7 +211,7 @@ GW-D5-1 and GW-D5-4 are medium and worth fixing.
   Upgrades D1 from `recalled` to `vendored`.
 
 **P3:**
-- **GW-D5-2** — remove the `printf` debug scaffolding from `onConnect()`.
+- ~~**GW-D5-2** — remove the `printf` debug scaffolding from `onConnect()`.~~ ✅ landed (MF-186).
 - **GW-D5-1** — gate the simulated-connection path behind an explicit
   developer flag, or remove it; a "connected" device with no hardware is
   a forensic foot-gun even when labelled.

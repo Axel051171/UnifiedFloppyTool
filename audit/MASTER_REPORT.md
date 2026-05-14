@@ -194,57 +194,79 @@ real conformance gate.
 
 ## Prioritised fix list
 
-### P0 — fix before / together with P1.18 routing
+> **Reconciled 2026-05-14** — status markers (✅ landed / 🔄 partial /
+> ⬜ open) added after the post-audit fix waves (MF-186, MF-188, MF-190,
+> MF-193/194/195). The findings themselves are unchanged; only their
+> resolution state is tracked here.
 
-- **ARCH-2** — KryoFlux + FluxEngine must **decode** their backend
+### P0 — fix before / together with P1.23 routing
+
+- ⬜ **ARCH-2** — KryoFlux + FluxEngine must **decode** their backend
   containers into real nanosecond transition intervals before populating
   `FluxCaptured::transitions_ns`, or change the outcome type to carry
-  an undecoded-container alternative. Routing these providers (P1.18)
+  an undecoded-container alternative. Routing these providers (P1.23)
   without this fix feeds the decoder fabricated timing. *Files:*
   `kryoflux_provider_v2.cpp:316-345`, `fluxengine_provider_v2.cpp:330-354`.
+  → tracked as **REFACTOR_TASKS.md P1.24**.
 
 ### P1 — breaks under specific conditions / blocks the refactor
 
-- **ARCH-1 / ARCH-4** — land P1.18: generalise `currentProviderV2()` to
-  all 9 provider types, add a production construction site per provider,
+- ⬜ **ARCH-1 / ARCH-4** — generalise `currentProviderV2()` to all 9
+  provider types, add a production construction site per provider,
   extend `forms/tab_hardware.actions.yaml`. Until then 8 providers are
-  unreachable and untested end-to-end.
-- **ARCH-3** — implement at least one UFI platform backend
-  (`ufi_linux.c` is the obvious first) and have `uft_ufi_backend_init()`
-  register it; fix the `void`-vs-`int` ABI mismatch (`ufi.h:58` vs
-  `uft_core_stubs.c:443`).
-- **ARCH-2 (compounding)** — give KryoFlux + FluxEngine a production
+  unreachable and untested end-to-end. → **REFACTOR_TASKS.md P1.23**.
+- 🔄 **ARCH-3** — the `void`-vs-`int` `uft_ufi_backend_init()` ABI
+  mismatch is **✅ fixed (MF-186)**. The main finding — no UFI platform
+  backend exists (`ufi_linux.c` etc.) — is still **⬜ open**, tracked as
+  **REFACTOR_TASKS.md P1.25**.
+- ⬜ **ARCH-2 (compounding)** — give KryoFlux + FluxEngine a production
   runner that reads the tool's *stream file*, not `stdout_text`.
-- **GW-D2-1** — route `FluxCaptured` from `HardwareTab::onFluxOutcome`
-  into the flux decoder, or land P1.20/P1.21 to remove the
-  `raw_handle()` escape hatch (today the GW V2 read path discards data).
+- 🔄 **GW-D2-1** — root cause **✅ resolved (MF-193/194)**: `FluxCaptured`
+  now carries `index_times_ns`, the GW provider populates it, the lying
+  F-3 docstring is fixed. **⬜ remaining**: the `FluxCaptureJob` consumer
+  migration off `raw_handle()` — tracked as **REFACTOR_TASKS.md P1.20**
+  (foundation gap cleared; `select_drive` API-shape + job migration left).
 
 ### P2 — correctness / honesty hardening
 
-- **ARCH-5** — no provider may emit a defaulted geometry/RPM that a
-  consumer cannot distinguish from a measurement. Either carry an
-  `is_measured` flag or report "unknown". FC5025's hardcoded 40/2/300
-  (`fc5025_provider_v2.cpp:359-361`) is the worst case.
-- **ARCH-7** — reconcile the SCP header-vs-GUI VID/PID disagreement;
-  correct the XUM1541/ZoomFloppy PID label; add Applesauce↔ADF-Copy
-  disambiguation (the MF-146 the brief assumed exists).
-- **ARCH-6** — update XUM1541/Applesauce C-HAL error strings to stop
-  pointing at deleted V1 files; either delete the dead V1
-  `include/uft/hardwareprovider.h` or document why it survives.
-- **SCP-D1-1** — verify the SCP USB command bytes against the vendor
+- ✅ **ARCH-5** — **landed (MF-186)**. `FC5025ProviderV2::do_detect_drive`
+  no longer fabricates 40/2/300 geometry; it reports `0` = "not
+  auto-detected" (the same sentinel GreaseweazleProviderV2 uses).
+- 🔄 **ARCH-7** — sub-finding **A** (XUM1541/ZoomFloppy PID label) is
+  **✅ fixed (MF-190)**; **B** (SCP header-vs-GUI VID/PID disagreement)
+  and **C** (Applesauce↔ADF-Copy share the stock Teensy `0x16C0:0x0483`
+  ID — needs string-descriptor disambiguation) are **⬜ open**, tracked
+  in `audit/ARCH-7_VID_PID.md` + task #121. The brief's assumed "MF-146
+  disambiguation" does not exist in the tree.
+- ✅ **ARCH-6** — **landed (MF-186)**. Dead `include/uft/hardwareprovider.h`
+  deleted; the XUM1541/Applesauce C-HAL 3-part "Fix:" hints no longer
+  point at V1 files deleted in P1.18.
+- ⬜ **SCP-D1-1** — verify the SCP USB command bytes against the vendor
   SCP SDK before the M3.1 libusb wiring lands; they currently cite
   `a8rawconv`, not the vendor reference.
 
 ### P3 — audit-quality + portability follow-ups
 
-- **ARCH-8** — vendor the official protocol sources (greaseweazle
+- ⬜ **ARCH-8** — vendor the official protocol sources (greaseweazle
   `cmd.h`, SCP SDK, OpenCBM, fluxengine/DTC CLI grammars) and upgrade
   every D1 reference from `recalled` to `vendored`. Then the per-provider
-  `diff.py` becomes a CI conformance gate.
-- **ARCH-9** — XUM1541 `.dylib` load path (macOS).
-- **GW-D1-1** — confirm whether `CMD_READ_MEM/WRITE_MEM/GET_INFO_EXT`
+  `diff.py` becomes a CI conformance gate. (`.github/workflows/audit.yml`
+  already runs all 9 `diff.py` — MF-191 — but on `recalled`-grade refs.)
+- ⬜ **ARCH-9** — XUM1541 `.dylib` load path (macOS). *(The GW half of
+  the original ARCH-9 was retracted as a false positive — MF-188.)*
+- ⬜ **GW-D1-1** — confirm whether `CMD_READ_MEM/WRITE_MEM/GET_INFO_EXT`
   (0x20-0x22) are a real GW protocol extension or a UFT invention.
 - Per-provider P3 items — see each `REPORT.md`.
+
+### Landed since the audit (fix waves)
+
+| Wave | Findings closed |
+|------|-----------------|
+| **MF-186** (Klasse A) | ARCH-3 ABI mismatch, ARCH-5, ARCH-6, GW-D5-2 |
+| **MF-188** | GW-D4-1 retracted (false positive — `cu.usbmodem` scan exists) |
+| **MF-190** | ARCH-7 sub-finding A (XUM1541/ZoomFloppy PID label) |
+| **MF-191** | `.github/workflows/audit.yml` — all 9 `diff.py` in CI |
+| **MF-193/194/195** | GW-D2-1 root cause: `FluxCaptured.index_times_ns` added, GW provider populates it, F-3 docstring fixed |
 
 ---
 
@@ -252,10 +274,10 @@ real conformance gate.
 
 | Finding | Existing task | Note |
 |---------|---------------|------|
-| ARCH-1, ARCH-4 | REFACTOR_TASKS.md **P1.18** | audit confirms scope: all 8 providers + construction sites |
-| GW-D2-1 | **P1.20 / P1.21** | `raw_handle()` escape-hatch removal |
-| ARCH-2 | *new* — no task yet | **P0-on-integration; should block P1.18 or ship with it** |
-| ARCH-3 | M3 HAL plan (UFI not a HAL backend) | `docs/M3_HAL_PLAN.md` — UFI backend is unscheduled |
+| ARCH-1, ARCH-4 | REFACTOR_TASKS.md **P1.23** | audit confirms scope: all 8 providers + construction sites |
+| GW-D2-1 | **P1.20 / P1.21** | root cause cleared (MF-194 — `FluxCaptured.index_times_ns`); `raw_handle()` removal is P1.20→P1.22 |
+| ARCH-2 | **P1.24** (added MF-187) | P0-on-integration — must land before/with P1.23 |
+| ARCH-3 | **P1.25** (added MF-187) | UFI backend; ABI sub-finding already fixed (MF-186) |
 | SCP/XUM/AS scaffolds | M3.1 / M3.2 / M3.3 | honest scaffolds — audit confirms no fake success |
 
 The audit's headline: **the type-driven HAL's *type layer* is sound

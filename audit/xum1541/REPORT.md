@@ -176,11 +176,12 @@ GUI port-hint will therefore label a real XUM1541 correctly but will
 which falls through to the generic description branch.
 
 **Findings:**
-- **XUM-D4-1** (medium): `hardwaretab.cpp:453` uses the XUM1541 PID
-  (`0x0504`) under a "ZoomFloppy/XUM1541" label. A genuine ZoomFloppy
-  (`0x16D0:0x04B2`, `xum1541_usb.h:37`) is not matched by that hint.
-  The `isKnownXum1541()` helper in `xum1541_usb.h:484-489` *does* know
-  all three VID/PIDs — the GUI hint just doesn't use it.
+- **XUM-D4-1** (medium) — ✅ **LANDED (MF-190)**: `hardwaretab.cpp` used
+  only the XUM1541 PID (`0x0504`) under a "ZoomFloppy/XUM1541" label, so a
+  genuine ZoomFloppy (`0x16D0:0x04B2`) got no hint. The port hint now
+  matches all three PIDs from `xum1541_usb.h` (`0x04B2`/`0x0504`/`0x0503`)
+  and is labelled "XUM1541 / ZoomFloppy". See `audit/ARCH-7_VID_PID.md`
+  sub-finding A.
 - **XUM-D4-2** (medium): `OpenCbmLibrary::load()` has no `.dylib` path
   for macOS (`xum1541_usb.h:365-368`). On macOS, OpenCBM cannot be
   loaded, so XUM1541 detection (and all I/O) silently fails. Cross-check:
@@ -248,10 +249,9 @@ provider returns honest `ProviderError`s, not fake success.)
   macOS.
 
 **P2:**
-- **XUM-D4-1** — make the `hardwaretab.cpp:453` port hint use
-  `xum1541::isKnownXum1541(vid, pid)` (it already knows all three
-  VID/PIDs) instead of a single hardcoded XUM1541 PID under a
-  "ZoomFloppy" label.
+- ~~**XUM-D4-1** — make the `hardwaretab.cpp` port hint match all three
+  XUM1541/ZoomFloppy VID/PIDs.~~ ✅ landed (MF-190) — the hint now
+  matches `0x04B2`/`0x0504`/`0x0503`, labelled "XUM1541 / ZoomFloppy".
 - **XUM-D5-2** — update the `uft_xum1541.c` stub error strings: they
   point callers at `Xum1541HardwareProvider` in `src/hardware_providers/`,
   which was deleted in P1.18. Point them at the V2 provider + runner

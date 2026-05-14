@@ -106,7 +106,7 @@ The FC5025 enumerates as a USB device (VID `0x16C0` / PID `0x06D6`). There is no
 |----|-------|----------|---------------|
 | FC-D5-1 | **Honest scaffold — no fake success.** Null runner -> `null_runner_error()` returns a 3-part `ProviderError` (`fc5025_provider_v2.cpp:93-107`, `247-249`, `317-319`). Never returns a `SectorRead` it did not receive. This is why the verdict is PARTIAL not FAIL. | positive | `:93-107, 247, 317` |
 | FC-D5-2 | F-3 divergent-reads second entry is an empty-vector padding sentinel, not a real second read (`:199`). Structurally satisfies `size() >= 2` but a voting consumer gets one real buffer + one empty. Honestly commented (`:195-198`). | medium | `:184-208` |
-| FC-D5-3 | `do_detect_drive` success path hardcodes geometry: `detected.tracks = 40`, `detected.heads = 2`, `detected.rpm_nominal = 300.0` (`:359-361`) regardless of what the runner found, unless it set `drive_kind`. An 8" drive (77 tracks, 360 RPM) would still be reported "40 tracks, 300 RPM". The comment at `:356-358` admits this. Fabricated geometry — borderline "keine erfundenen Daten". | medium | `:356-368` |
+| FC-D5-3 | ✅ **LANDED (MF-186)** — `do_detect_drive` no longer hardcodes 40/2/300 geometry. `Fc5025DetectResult` carries no geometry fields, so detect now reports `tracks=0`/`heads=0`/`rpm_nominal=0.0` = "not auto-detected" (the same sentinel `GreaseweazleProviderV2` uses); the user-selected `disk_format` determines geometry downstream. | medium | `:356-368` |
 | FC-D5-4 | `do_detect_drive` firmware fallback string "FC5025 (firmware version unknown — CLI mode or not queried)" (`:367`) goes into `DriveDetected::firmware`. Clearly labelled as unknown (not a fake version) so honest, but a report consumer displaying `firmware` verbatim shows prose where a version is expected. | low | `:364-368` |
 | FC-D5-5 | Header doc-comments describe protocol behaviour ("sends CMD_READ_FLEXIBLE CBW on bulk EP 0x01") that no code implements (`fc5025_provider_v2.cpp:16-18`, `.h:62-70`). Per Hard rule #4 a comment is not proof. | low (documentation) | `.h:59-70`, `.cpp:14-25` |
 
@@ -117,7 +117,7 @@ The FC5025 enumerates as a USB device (VID `0x16C0` / PID `0x06D6`). There is no
 - Null-runner construction is honest — never a fake success (FC-D5-1).
 - No stub facade returning `UFT_OK`/`SectorRead` from nothing.
 
-**Status: PASS with findings** — no critical (P0) integrity violation. FC-D5-3 (hardcoded geometry on detect) is the one worth fixing.
+**Status: PASS with findings** — no critical (P0) integrity violation. FC-D5-3 (hardcoded geometry on detect) is ✅ fixed (MF-186); the remaining findings are low-severity.
 
 ---
 
@@ -130,7 +130,7 @@ The FC5025 enumerates as a USB device (VID `0x16C0` / PID `0x06D6`). There is no
 - **FC-D1-1 / FC-D4-1** — implement a production `Fc5025Runner` / `Fc5025DetectRunner` (libusb CBW path or `fcimage` subprocess). Single biggest gap; until one exists D1's protocol layer is unauditable and D4 has no detection code.
 
 **P2:**
-- **FC-D5-3** — `do_detect_drive` must report runner-provided geometry or "unknown", never a hardcoded 40/2/300.
+- ~~**FC-D5-3** — `do_detect_drive` must report runner-provided geometry or "unknown", never a hardcoded 40/2/300.~~ ✅ landed (MF-186) — reports `0` = "not auto-detected".
 - **FC-D1-1 / FC-D1-2** — vendor the DSD "Command Set Specification v1309" and the `fcimage(1)` man page; add a CBW opcode table + a CLI-argv table so D1 becomes a real diff.
 
 **P3:**
