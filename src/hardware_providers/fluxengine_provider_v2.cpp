@@ -46,11 +46,22 @@
  *   the intended stream bytes and an empty readback — preserving both
  *   (rule F-3 for writes).
  *
+ * Read output format — SCP, not .flux (MF-209 / P1.24):
+ *   do_read_raw_flux asks fluxengine to write an *SCP* file (`-o ...scp`),
+ *   not its native `.flux` container. FluxEngine's `.flux` is a SQLite
+ *   database — decoding it would mean a new SQLite dependency, which the
+ *   project's minimalism rule forbids. SCP is an open, documented flux
+ *   container that faithfully preserves raw transition intervals + index
+ *   marks (no forensic loss), and UFT already ships a vetted SCP parser
+ *   (src/flux/uft_scp_parser.c). do_read_raw_flux decodes the SCP bytes
+ *   with that parser instead of guessing at the SQLite schema.
+ *
  * Mock/test mode protocol for raw bytes:
- *   In mock/test mode, the runner's stdout_text carries the raw .flux bytes.
- *   In production, the production DtcRunner reads the output file and returns
- *   its content as stdout_text. This convention is documented in the .h file
- *   under the DtcRunner design note.
+ *   In mock/test mode, the runner's stdout_text carries the raw SCP file
+ *   bytes. In production, the runner's QProcess wrapper reads the SCP
+ *   output file fluxengine wrote and returns its content as stdout_text.
+ *   This convention is documented in the .h file under the runner design
+ *   note.
  *
  * Backend honesty (no-fluxengine path):
  *   If the FluxEngineRunner is null or returns exit_code != 0, do_* methods
@@ -61,7 +72,11 @@
 
 #include "fluxengine_provider_v2.h"
 
+#include "uft/flux/uft_scp_parser.h"
+
 #include <algorithm>
+#include <cmath>
+#include <cstdint>
 #include <cstring>
 #include <iomanip>
 #include <regex>
@@ -363,7 +378,7 @@ std::string FluxEngineProviderV2::query_version()
  *  V1 equivalent: readRawFlux(cylinder, head, revolutions) in
  *  fluxenginehardwareprovider.cpp — calls readTrack() which runs:
  *    fluxengine read ibm -s drive:0 -c N -h H --revs=R -o tempfile
- *  then reads the .flux file contents.
+ *  then reads the output file contents.
  *
  *  V2 differences vs V1:
  *  - Uses injected FluxEngineRunner instead of hardcoded QProcess.
@@ -371,10 +386,18 @@ std::string FluxEngineProviderV2::query_version()
  *    the runner's QProcess wrapper must use a real temp directory; in tests
  *    the SubprocessMock carries the raw bytes in stdout_text.
  *
- *  Rule F-3: The raw flux bytes from the .flux output file are stored verbatim
- *  in FluxCaptured::transitions_ns (re-interpreted as uint32_t words,
- *  little-endian, with zero-padding to align). The sample_ns is set to the
- *  FluxEngine 8 MHz clock period (125 ns). No transformation.
+ *  MF-209 (P1.24): the output path ends in `.scp`, so fluxengine writes an
+ *  SCP container (not its native SQLite `.flux`). do_read_raw_flux decodes
+ *  the SCP bytes with the vetted uft_scp_parser into true ns transition
+ *  intervals + measured per-revolution index_times_ns. sample_ns comes
+ *  from the SCP file's own period (25 ns base) — this also resolves audit
+ *  FE-D1-2 (the old code hard-coded a 125 ns clock that was never
+ *  verified). Nothing is resampled or fabricated; a malformed SCP yields
+ *  FluxMarginal / ProviderError, never a FluxCaptured carrying garbage.
+ *
+ *  (Before MF-209 the provider stored undecoded container bytes verbatim
+ *  in transitions_ns — audit ARCH-2. MF-203 replaced that with an honest
+ *  ProviderError; MF-209 replaces that with the SCP-pivot real decode.)
  *
  *  Backend honesty: If the FluxEngineRunner is null or returns exit_code != 0,
  *  a ProviderError is returned with a clear what/why/fix.
@@ -428,9 +451,10 @@ FluxOutcome FluxEngineProviderV2::do_read_raw_flux(const ReadFluxParams& p)
     /* Build fluxengine invocation.
      * The output path is a synthetic token; in production the runner must
      * use a real temp file; in mock/test mode, the runner does not write
-     * any file. */
+     * any file. The `.scp` extension makes fluxengine emit an SCP
+     * container (MF-209 / P1.24) — see the SCP decode below. */
     const std::string output_path = "/tmp/uft_fe_" + std::to_string(cylinder)
-                                    + "_" + std::to_string(head) + ".flux";
+                                    + "_" + std::to_string(head) + ".scp";
 
     std::vector<std::string> argv = build_read_argv(cylinder, head,
                                                      revolutions, output_path);
@@ -441,10 +465,10 @@ FluxOutcome FluxEngineProviderV2::do_read_raw_flux(const ReadFluxParams& p)
         return fe_read_error(cylinder, head, result.stderr_text);
     }
 
-    /* In mock/test mode, stdout_text carries the raw stream bytes. In
-     * production, the runner's QProcess wrapper reads the .flux output file
-     * and returns the bytes as stdout_text. See the FluxEngineRunner design
-     * note in fluxengine_provider_v2.h. */
+    /* In mock/test mode, stdout_text carries the raw SCP file bytes. In
+     * production, the runner's QProcess wrapper reads the SCP output file
+     * fluxengine wrote and returns the bytes as stdout_text. See the
+     * FluxEngineRunner design note in fluxengine_provider_v2.h. */
     const std::string& raw_bytes = result.stdout_text;
 
     if (raw_bytes.empty()) {
@@ -458,39 +482,147 @@ FluxOutcome FluxEngineProviderV2::do_read_raw_flux(const ReadFluxParams& p)
         };
     }
 
-    /* MF-203 (P1.24 / audit ARCH-2): the FluxEngine .flux container is
-     * NOT yet decoded. The previous code re-interpreted these raw .flux
-     * bytes as little-endian uint32_t words and stored them in
-     * FluxCaptured::transitions_ns — a field whose contract is
-     * *nanosecond transition intervals*. That is fabricated timing data
-     * ("stille Veränderung"): a downstream consumer would read .flux
-     * container bytes as flux-ns and silently corrupt every interval.
-     * Compounding, per audit ARCH-2: `raw_bytes` here is stdout_text,
-     * which for real fluxengine is its LOG, not the .flux file at all.
-     *
-     * Until a real FluxEngine .flux decoder lands — which needs the
-     * vendored .flux format spec + HIL test vectors and a production
-     * runner that returns the actual .flux file content rather than the
-     * tool log — the forensically honest answer is a typed
-     * ProviderError, not a FluxCaptured carrying garbage. This matches
-     * the honest-scaffold pattern the audit confirmed for the SCP /
-     * XUM1541 / Applesauce providers. */
+    /* MF-209 (P1.24): decode the SCP container fluxengine wrote, using the
+     * vetted uft_scp_parser. SCP is requested instead of fluxengine's
+     * native `.flux` because `.flux` is a SQLite database — decoding it
+     * would need a new SQLite dependency (forbidden). SCP is an open flux
+     * container that preserves raw intervals + index marks losslessly. */
+    uft_scp_ctx_t* scp = uft_scp_create();
+    if (!scp) {
+        return ProviderError{
+            UFT_E_GENERIC,
+            "FluxEngine SCP decode failed: out of memory",
+            "uft_scp_create() could not allocate a parser context for the " +
+                std::to_string(raw_bytes.size()) + "-byte SCP container "
+                "fluxengine produced.",
+            "Retry the read; if it persists the host is out of memory."
+        };
+    }
+
+    int rc = uft_scp_open_memory(
+        scp,
+        reinterpret_cast<const std::uint8_t*>(raw_bytes.data()),
+        raw_bytes.size());
+    if (rc != UFT_SCP_OK) {
+        uft_scp_destroy(scp);
+        return ProviderError{
+            UFT_E_GENERIC,
+            "FluxEngine SCP decode failed: not a valid SCP container",
+            "fluxengine exited 0 but the " + std::to_string(raw_bytes.size()) +
+                " bytes it produced did not parse as SCP (parser code " +
+                std::to_string(rc) + "). The runner may have returned the "
+                "tool log instead of the SCP file content, or fluxengine "
+                "wrote an unexpected format.",
+            "Ensure the production FluxEngineRunner returns the SCP output "
+            "file's bytes (not stdout). Confirm the installed fluxengine "
+            "supports `-o <file>.scp` output."
+        };
+    }
+
+    /* SCP physical track index for a 2-sided disk: cylinder*2 + head.
+     * fluxengine's `--tracks=cChH` writes that single track at its
+     * physical index; if the writer placed it elsewhere and exactly one
+     * track is present, fall back to that one. */
+    int scp_track = cylinder * 2 + head;
+    if (!uft_scp_has_track(scp, scp_track)) {
+        int only = -1, present = 0;
+        for (int t = 0; t < UFT_SCP_MAX_TRACKS; ++t) {
+            if (uft_scp_has_track(scp, t)) { present++; only = t; }
+        }
+        if (present == 1) {
+            scp_track = only;
+        } else {
+            uft_scp_destroy(scp);
+            return FluxMarginal{
+                CHS{cylinder, head},
+                {},
+                "fluxengine produced an SCP container, but it holds no "
+                "track for cylinder " + std::to_string(cylinder) + " head " +
+                    std::to_string(head) + " (SCP track index " +
+                    std::to_string(cylinder * 2 + head) + "), and " +
+                    std::to_string(present) + " tracks total — cannot "
+                    "disambiguate which one to return."
+            };
+        }
+    }
+
+    /* uft_scp_open_memory parsed the header + offset table (and gave us
+     * track discovery via uft_scp_has_track above), but uft_scp_read_track
+     * is FILE*-only — the actual flux data is read with the memory
+     * companion uft_scp_read_track_memory (MF-209). */
+    uft_scp_track_data_t track;
+    std::memset(&track, 0, sizeof(track));
+    rc = uft_scp_read_track_memory(
+        reinterpret_cast<const std::uint8_t*>(raw_bytes.data()),
+        raw_bytes.size(), scp_track, &track);
+    const std::uint32_t period_ns = scp->period_ns ? scp->period_ns
+                                                   : UFT_SCP_BASE_PERIOD_NS;
+    uft_scp_destroy(scp);
+
+    if (rc != UFT_SCP_OK) {
+        return ProviderError{
+            UFT_E_GENERIC,
+            "FluxEngine SCP decode failed: track unreadable",
+            "The SCP container parsed, but reading track " +
+                std::to_string(scp_track) + " failed (parser code " +
+                std::to_string(rc) + ").",
+            "The SCP fluxengine wrote may be truncated or corrupt. Retry "
+            "the read."
+        };
+    }
+
+    /* Concatenate every revolution's flux into one transition stream.
+     * uft_scp_parser already converts each SCP cell to nanoseconds and
+     * folds the SCP overflow marker (0x0000) — those overflow slots are
+     * left as 0 placeholders and are NOT real transitions, so they are
+     * skipped here. After each revolution the running cumulative ns sum
+     * is recorded as a measured index pulse: FluxCaptured::index_times_ns
+     * must be on the same time-base as the transitions_ns running sum. */
+    std::vector<std::uint32_t> transitions_ns;
+    std::vector<std::uint32_t> index_times_ns;
+    std::uint64_t running = 0;
+    for (std::uint8_t r = 0; r < track.revolution_count &&
+                             r < UFT_SCP_MAX_REVOLUTIONS; ++r) {
+        const uft_scp_rev_data_t& rev = track.revolutions[r];
+        for (std::uint32_t i = 0; i < rev.flux_count; ++i) {
+            std::uint32_t ns = rev.flux_data ? rev.flux_data[i] : 0u;
+            if (ns == 0) continue;            /* SCP overflow placeholder */
+            transitions_ns.push_back(ns);
+            running += ns;
+        }
+        index_times_ns.push_back(static_cast<std::uint32_t>(running));
+    }
+    uft_scp_free_track(&track);
+
+    if (transitions_ns.empty()) {
+        return FluxMarginal{
+            CHS{cylinder, head},
+            {},
+            "fluxengine produced an SCP container for cylinder " +
+                std::to_string(cylinder) + " head " + std::to_string(head) +
+                ", but it held no decodable flux transitions."
+        };
+    }
+
+    /* Drop a non-increasing index tail (a truncated final revolution can
+     * leave two equal cumulative sums) so FluxCaptured's strictly-
+     * increasing index_times_ns invariant holds. */
+    while (index_times_ns.size() >= 2 &&
+           index_times_ns.back() <= index_times_ns[index_times_ns.size() - 2]) {
+        index_times_ns.pop_back();
+    }
+
     (void)revolutions;
-    return ProviderError{
-        UFT_E_GENERIC,
-        "FluxEngine .flux decoding not implemented",
-        "do_read_raw_flux received " + std::to_string(raw_bytes.size()) +
-            " bytes from the fluxengine runner, but the .flux container "
-            "decoder is not yet written — and per audit ARCH-2 the bytes "
-            "currently come from stdout_text (the tool log), not the "
-            ".flux file. Emitting a FluxCaptured here would mislabel "
-            "undecoded bytes as flux timing — a forensic-integrity "
-            "violation.",
-        "Implement the FluxEngine .flux decoder + a production runner "
-        "that returns the .flux file content (REFACTOR_TASKS.md P1.24). "
-        "It needs the vendored .flux format spec + HIL test vectors; it "
-        "must not be guessed."
-    };
+    FluxCaptured captured;
+    captured.position       = CHS{cylinder, head};
+    captured.transitions_ns = std::move(transitions_ns);
+    captured.revolutions    = !index_times_ns.empty()
+                                  ? static_cast<int>(index_times_ns.size())
+                                  : revolutions;
+    captured.sample_ns      = static_cast<double>(period_ns);
+    captured.quality        = QualityFlag::None;
+    captured.index_times_ns = std::move(index_times_ns);
+    return captured;
 }
 
 /* ────────────────────────────────────────────────────────────────────────
@@ -604,7 +736,7 @@ WriteOutcome FluxEngineProviderV2::do_write_raw_flux(const WriteFluxParams& p,
         /* Optional verify pass: re-read the track to confirm write.
          * Rule F-3: both intended and readback preserved in WriteVerifyFailed. */
         const std::string verify_path = "/tmp/uft_fe_vfy_" + std::to_string(cylinder)
-                                        + "_" + std::to_string(head) + ".flux";
+                                        + "_" + std::to_string(head) + ".scp";
         std::vector<std::string> read_argv = build_read_argv(cylinder, head,
                                                               1, verify_path);
 

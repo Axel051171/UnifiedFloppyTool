@@ -58,8 +58,10 @@
  */
 
 #include <cassert>
+#include <cstdint>
 #include <iostream>
 #include <string>
+#include <vector>
 
 /* The V2 provider header. CMake adds ${CMAKE_SOURCE_DIR}/src to the include
  * path for this test. */
@@ -304,26 +306,78 @@ static void smoke_measure_rpm_happy_path()
     mock.assert_consumed();
 }
 
-static void smoke_read_raw_flux_decoder_not_implemented()
+/* Build a minimal but valid SCP container: header + 168-entry offset
+ * table + one track (`scp_track`) with one revolution carrying the given
+ * BE16 flux cells. resolution=0 -> 25 ns period. MF-209 (P1.24): the
+ * FluxEngine provider asks fluxengine for `-o ...scp` output, so the
+ * runner's bytes ARE an SCP file — this is what do_read_raw_flux decodes. */
+static std::string build_synthetic_scp(int scp_track,
+                                       const std::vector<uint16_t>& flux_be,
+                                       uint32_t index_time_25ns)
+{
+    auto put_le32 = [](std::string& s, uint32_t v) {
+        s.push_back(static_cast<char>(v & 0xFF));
+        s.push_back(static_cast<char>((v >> 8) & 0xFF));
+        s.push_back(static_cast<char>((v >> 16) & 0xFF));
+        s.push_back(static_cast<char>((v >> 24) & 0xFF));
+    };
+
+    std::string s;
+    /* Header (16 bytes). */
+    s += "SCP";                                    /* signature          */
+    s.push_back(static_cast<char>(0x22));          /* version 2.2        */
+    s.push_back(static_cast<char>(0x00));          /* disk_type          */
+    s.push_back(static_cast<char>(0x01));          /* revolutions = 1    */
+    s.push_back(static_cast<char>(0x00));          /* start_track        */
+    s.push_back(static_cast<char>(scp_track));     /* end_track          */
+    s.push_back(static_cast<char>(0x00));          /* flags (no footer)  */
+    s.push_back(static_cast<char>(0x00));          /* bit_cell_width     */
+    s.push_back(static_cast<char>(0x00));          /* heads              */
+    s.push_back(static_cast<char>(0x00));          /* resolution -> 25ns */
+    put_le32(s, 0);                                /* checksum           */
+
+    /* Offset table: 168 LE32 entries, all 0 except scp_track. */
+    const uint32_t header_size = 16u;
+    const uint32_t table_size  = 168u * 4u;
+    const uint32_t track_off   = header_size + table_size;
+    std::string table(table_size, '\0');
+    for (int i = 0; i < 4; ++i)
+        table[scp_track * 4 + i] =
+            static_cast<char>((track_off >> (8 * i)) & 0xFF);
+    s += table;
+
+    /* Track data: "TRK" + track_number, one revolution entry, flux cells. */
+    s += "TRK";
+    s.push_back(static_cast<char>(scp_track));     /* track_number       */
+    const uint32_t track_length = static_cast<uint32_t>(flux_be.size());
+    const uint32_t data_offset  = 4u + 12u;        /* past TRK hdr + 1 rev */
+    put_le32(s, index_time_25ns);
+    put_le32(s, track_length);
+    put_le32(s, data_offset);
+    for (uint16_t f : flux_be) {                   /* BE16 flux cells    */
+        s.push_back(static_cast<char>((f >> 8) & 0xFF));
+        s.push_back(static_cast<char>(f & 0xFF));
+    }
+    return s;
+}
+
+static void smoke_read_raw_flux_decodes_scp()
 {
     SubprocessMock mock;
 
-    /* Queue a fluxengine read success reply carrying raw bytes.
-     * MF-203 (P1.24 / audit ARCH-2): the provider must NOT fabricate a
-     * FluxCaptured by re-interpreting these .flux-container bytes as
-     * little-endian uint32_t "ns intervals" — that was a
-     * forensic-integrity violation. Until a real .flux decoder lands,
-     * do_read_raw_flux runs fluxengine, sees the bytes, and returns an
-     * honest, F-4-compliant ProviderError instead. */
-    const std::string raw_flux = "\x01\x02\x03\x04\x05\x06\x07\x08";
+    /* MF-209 (P1.24): do_read_raw_flux asks fluxengine for `.scp` output
+     * (FluxEngine's native `.flux` is SQLite — a forbidden new
+     * dependency) and decodes it with the vetted uft_scp_parser. Queue a
+     * synthetic SCP file for SCP track 0 (cylinder 0, head 0): 4 BE16
+     * flux cells at the 25 ns SCP base period -> 2500/3750/5000/7500 ns. */
+    const std::string scp = build_synthetic_scp(
+        /*scp_track=*/0, /*flux_be=*/{ 100, 150, 200, 300 },
+        /*index_time_25ns=*/8000000u);
 
     mock.queue_run(SubprocessMock::ScriptedRun{
-        /* MF-178: corrected FluxEngine CLI — the revolutions flag is now
-         * `--drive.revolutions=N`; the pre-2022 `--revs=N` form was
-         * silently rejected by every FluxEngine release since the CLI
-         * refactor. See tests/external_audits/fluxengine/REPORT.md F1. */
+        /* MF-178: FluxEngine CLI revolutions flag is `--drive.revolutions=N`. */
         { "fluxengine", "read", "--drive.revolutions=2" },
-        raw_flux,   /* stdout_reply = raw flux bytes */
+        scp,        /* stdout_reply = raw SCP file bytes */
         "",
         0
     });
@@ -331,27 +385,42 @@ static void smoke_read_raw_flux_decoder_not_implemented()
     FluxEngineProviderV2 p(make_runner(mock), "fluxengine");
     auto outcome = p.read_raw_flux(ReadFluxParams{0, 0, 2, 0});
 
-    bool got_error = false;
+    bool got_captured = false;
     std::visit(overloaded{
-        [&](const FluxCaptured&) {
-            assert(false && "MF-203: undecoded .flux container bytes must "
-                            "NOT be mislabelled as a FluxCaptured (ARCH-2)");
+        [&](const FluxCaptured& fc) {
+            got_captured = true;
+            assert(fc.transitions_ns.size() == 4 &&
+                   "SCP with 4 flux cells must decode to 4 transitions");
+            /* 25 ns period, no overflow -> exact ns values. */
+            assert(fc.transitions_ns[0] == 2500 &&
+                   fc.transitions_ns[1] == 3750 &&
+                   fc.transitions_ns[2] == 5000 &&
+                   fc.transitions_ns[3] == 7500 &&
+                   "decoded ns intervals must match the SCP cells x 25ns");
+            /* One revolution -> one measured index pulse, placed at the
+             * cumulative transitions_ns sum (2500+3750+5000+7500). */
+            assert(fc.index_times_ns.size() == 1 &&
+                   fc.index_times_ns[0] == 18750 &&
+                   "index_times_ns must sit on the transitions_ns time-base");
+            assert(fc.revolutions == 1 && "revolutions == measured indices");
+            assert(fc.sample_ns == 25.0 &&
+                   "sample_ns must be the SCP 25 ns base period");
         },
-        [&](const FluxMarginal&)             {},
+        [&](const FluxMarginal&) {
+            assert(false && "a valid single-track SCP must decode to "
+                            "FluxCaptured, not FluxMarginal");
+        },
         [&](const FluxUnreadable&)           {},
         [&](const CapabilityRequiresPolicy&) {},
         [&](const HardwareDisconnected&)     {},
-        [&](const ProviderError& e) {
-            got_error = true;
-            /* F-4: every ProviderError carries non-empty what/why/fix. */
-            assert(!e.what.empty() && !e.why.empty() && !e.fix.empty()
-                   && "ProviderError must be F-4 compliant (what/why/fix)");
+        [&](const ProviderError&) {
+            assert(false && "MF-209: a valid SCP container must decode, not "
+                            "return a ProviderError");
         },
     }, outcome);
 
-    assert(got_error && "read_raw_flux on an undecoded .flux container must "
-                        "return an honest ProviderError, not a fabricated "
-                        "FluxCaptured");
+    assert(got_captured && "read_raw_flux on a valid SCP container must "
+                           "return a decoded FluxCaptured");
     mock.assert_consumed();
 }
 
@@ -831,7 +900,7 @@ int main()
     smoke_null_runner_returns_provider_error();
     smoke_detect_drive_happy_path();
     smoke_measure_rpm_happy_path();
-    smoke_read_raw_flux_decoder_not_implemented();
+    smoke_read_raw_flux_decodes_scp();
     smoke_write_raw_flux_no_verify();
     smoke_write_raw_flux_with_verify();
     smoke_detect_drive_failure();

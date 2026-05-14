@@ -300,12 +300,22 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/flux/uft_kryoflux_stream.c)
         set(TEST_LIBS "")
+    elseif(${test_name} STREQUAL "test_scp_read_memory")
+        # MF-209 P1.24: uft_scp_read_track_memory() unit test — the
+        # memory-buffer SCP decoder the FluxEngine SCP-pivot relies on.
+        # Synthetic SCP vectors; needs only the parser .c — no Qt.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_scp_parser.c)
+        set(TEST_LIBS "")
     elseif(${test_name} STREQUAL "test_fluxengine_provider_v2")
         # MF-163 P1.10: FluxEngineProviderV2 mixin composition test.
         # Needs: V2 provider .cpp; no C-HAL backend (FE uses fluxengine subprocess).
+        # MF-209 P1.24: + the SCP parser — do_read_raw_flux asks fluxengine
+        # for SCP output and decodes it via uft_scp_read_track_memory().
         # SubprocessMock is header-only; tests/ must be on the include path.
         target_sources(${test_name} PRIVATE
-            ${CMAKE_SOURCE_DIR}/src/hardware_providers/fluxengine_provider_v2.cpp)
+            ${CMAKE_SOURCE_DIR}/src/hardware_providers/fluxengine_provider_v2.cpp
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_scp_parser.c)
         target_include_directories(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src
             ${CMAKE_SOURCE_DIR}/tests)
