@@ -502,6 +502,16 @@ foreach(test_source ${TEST_SOURCES})
         else()
             set(TEST_LIBS "")
         endif()
+    elseif(${test_name} STREQUAL "test_format_extension")
+        # MF-228 / P3.3 #110c: format-extension improvement test —
+        # decodes a synthetic Amiga HDF/RDB image, a format entirely
+        # outside Greaseweazle's set. uft_hdf_parser.c is self-contained
+        # (its header lives next to it in src/formats/).
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/uft_hdf_parser.c)
+        target_include_directories(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats)
+        set(TEST_LIBS "")
     elseif(${test_name} STREQUAL "test_protection_detection")
         # MF-227 / P3.3 #110b: copy-protection detection improvement test
         # — synthesises tracks with known longtrack + Dungeon Master
