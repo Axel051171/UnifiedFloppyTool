@@ -633,25 +633,68 @@ void HardwareTab::onConnect()
      * has been deleted. */
 
     if (controller != "greaseweazle") {
-        /* MF-169 (P1.17): the V1 `HardwareManager` that used to dispatch
-         * non-Greaseweazle controllers was deleted with the V1 hierarchy.
-         * The V2 wrappers (`SCPProviderV2`, `KryoFluxProviderV2`,
-         * `FluxEngineProviderV2`, `FC5025ProviderV2`, `XUM1541ProviderV2`,
-         * `ApplesauceProviderV2`, `ADFCopyProviderV2`, `USBFloppyProviderV2`)
-         * all exist and pass the conformance harness with 65 sections.
-         * What is missing is the HardwareTab → V2 routing: today only
-         * Greaseweazle has a `currentProviderV2()` accessor that wires
-         * through to a real instance. P1.18 closes that loop. */
-        QMessageBox::information(this, tr("Controller routing pending"),
-            tr("The %1 backend has a fully conformance-tested V2 provider, "
-               "but HardwareTab does not yet route to it. This is task "
-               "P1.18 in docs/REFACTOR_TASKS.md — the GW V2 routing landed "
-               "first (P1.4), the rest will land in one batch once the "
-               "non-GW provider lifecycle (open/close) is generalized.\n\n"
-               "Use the Greaseweazle controller for now.")
-                .arg(m_controllerType));
-        updateStatus(tr("%1 routing pending (P1.18)").arg(m_controllerType),
-                     /*isError=*/true);
+        /* MF-206 (P1.23 commit 2): route the 8 non-GW controllers through
+         * their V2 providers. Each provider is constructed honest-stub —
+         * null runners / null handle — so it is GUI-reachable and its
+         * capability buttons are correctly gated by the codegen
+         * (wire_action<cap::X> per concrete type), while every do_*
+         * honestly returns a ProviderError ("backend not wired" /
+         * "M3.x pending") rather than a silent no-op or a fabricated
+         * capability. Real production transports (QProcess / QSerialPort
+         * / OpenCBM / libusb runner factories) are follow-up M3.x work —
+         * the providers themselves already return forensically-truthful
+         * errors when their runner is null, which is the honest-scaffold
+         * pattern the hardware-provider audit confirmed (ARCH-0). */
+        bool constructed = true;
+        if (controller == "scp") {
+            m_providerV2 = std::make_unique<::uft::hal::SCPProviderV2>(nullptr);
+        } else if (controller == "kryoflux") {
+            m_providerV2 = std::make_unique<::uft::hal::KryoFluxProviderV2>(nullptr);
+        } else if (controller == "fluxengine") {
+            m_providerV2 = std::make_unique<::uft::hal::FluxEngineProviderV2>(nullptr);
+        } else if (controller == "fc5025") {
+            m_providerV2 = std::make_unique<::uft::hal::FC5025ProviderV2>(
+                nullptr, nullptr);
+        } else if (controller == "xum1541") {
+            m_providerV2 = std::make_unique<::uft::hal::XUM1541ProviderV2>(
+                nullptr, nullptr, nullptr);
+        } else if (controller == "applesauce") {
+            m_providerV2 = std::make_unique<::uft::hal::ApplesauceProviderV2>(
+                nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
+        } else if (controller == "adfcopy") {
+            m_providerV2 = std::make_unique<::uft::hal::ADFCopyProviderV2>(
+                nullptr, nullptr, nullptr, nullptr, nullptr);
+        } else if (controller == "usb_floppy") {
+            m_providerV2 = std::make_unique<::uft::hal::USBFloppyProviderV2>(
+                nullptr, nullptr, nullptr);
+        } else {
+            constructed = false;
+        }
+
+        if (!constructed) {
+            updateStatus(tr("Unknown controller key '%1' — no V2 provider.")
+                             .arg(controller),
+                         /*isError=*/true);
+            return;
+        }
+
+        /* The V2 provider is constructed (honest-stub backend). Wire its
+         * capability buttons via the codegen std::visit and mark the tab
+         * connected. No open()/detect here — the provider has no
+         * production transport yet; the user sees correctly-gated
+         * buttons and any click surfaces the provider's honest
+         * ProviderError. */
+        rewireV2();
+        m_connected = true;
+        m_hwModel = 0;
+        m_firmwareVersion = QStringLiteral("V2 provider (backend scaffold)");
+        setConnectionState(true);
+        updateStatus(tr("%1 connected — V2 provider routed. The production "
+                        "transport for this controller is not wired yet; "
+                        "capability actions return a diagnostic error until "
+                        "the backend lands.").arg(m_controllerType));
+        emit connectionChanged(true);
+        emit deviceInfoChanged(m_controllerType, m_firmwareVersion);
         return;
     }
 
