@@ -449,8 +449,16 @@ void HardwareTab::detectSerialPorts()
             controllerHint = "SuperCard Pro";
         } else if (vid == 0x0403 && pid == 0x6001) {
             controllerHint = "KryoFlux (FTDI)";
-        } else if (vid == 0x16D0 && pid == 0x0504) {
-            controllerHint = "ZoomFloppy/XUM1541";
+        } else if (vid == 0x16D0 &&
+                   (pid == 0x04B2 || pid == 0x0504 || pid == 0x0503)) {
+            /* ARCH-7 (audit/ARCH-7_VID_PID.md sub-finding A): PIDs per
+             * the authoritative in-repo table in
+             * src/hardware_providers/xum1541_usb.h — ZoomFloppy 0x04B2,
+             * XUM1541 0x0504, DIY XUM1541 0x0503. All run xum1541
+             * firmware and speak the identical OpenCBM protocol, so a
+             * single hint matches the single combo entry. The previous
+             * code matched only 0x0504 and mislabelled it "ZoomFloppy". */
+            controllerHint = "XUM1541 / ZoomFloppy";
         }
         
         if (!controllerHint.isEmpty()) {
