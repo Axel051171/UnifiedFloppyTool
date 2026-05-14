@@ -456,6 +456,18 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/forensic/uft_provenance.c)
         set(TEST_LIBS "")
+    elseif(${test_name} STREQUAL "test_marginal_data_preserved")
+        # MF-215 / P3.3 #110: "Kein Bit verloren" improvement test —
+        # divergent multi-reads are preserved, never collapsed. The
+        # multiread pipeline TU is self-contained (links libm for the
+        # math it uses); no other UFT source needed.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/recovery/uft_multiread_pipeline.c)
+        if(UNIX)
+            set(TEST_LIBS ${M_LIBRARY})
+        else()
+            set(TEST_LIBS "")
+        endif()
     endif()
     
     if(TEST_LIBS)

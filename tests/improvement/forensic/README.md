@@ -4,17 +4,22 @@ Tests that prove UFT's forensic layer — the thing `gw` does not have at
 all. Every test here makes a `docs/DESIGN_PRINCIPLES.md` principle
 executable.
 
-Planned tests (TESTER_STRATEGY §3), each written by `improvement-test-author`
-once the behaviour is observable on a built `uft`:
+**Re-scope (2026-05-14):** UFT is GUI-only — there is no `uft` CLI (see
+`memory feedback_no_cli`). The original plan had these as Python
+CLI-driven tests under this directory; instead the forensic improvement
+tests are **core-library C tests** in `tests/test_*.c` (the
+`test_loss_report.c` pattern) — they link the engine and assert the
+observed behaviour of the public C API directly. This directory keeps
+the README/category marker; the actual tests live in `tests/`.
 
-| Test | DESIGN_PRINCIPLES property | gw fails because |
-|------|----------------------------|------------------|
-| `test_lossreport_emitted.py` | "Keine stille Veränderung" — every lossy step emits a `.loss.json` sidecar | gw silently drops timing/weak-bit data on flux→sector |
-| `test_audit_chain_integrity.py` | chain-of-custody — the hash chain over audit events verifies | gw keeps no audit log |
-| `test_marginal_data_preserved.py` | "Kein Bit verloren" — marginal/divergent reads survive to the output, never collapsed | gw majority-votes marginal reads away |
-| `test_destructive_op_consent.py` | destructive ops (erase/overwrite) refuse without explicit consent | gw erases on command, no gate |
-| `test_provenance_chain.py` | output records the tool, version and source that produced it | gw output is anonymous |
+| Test | DESIGN_PRINCIPLES property | Status |
+|------|----------------------------|--------|
+| `tests/test_loss_report.c` | "Keine stille Veränderung" — every lossy step emits a `.loss.json` sidecar | ✅ exists |
+| audit-chain integrity | chain-of-custody — a hash chain over processing events verifies + detects tampering | ✅ covered by `tests/test_provenance_chain.c` (MF-214). `uft_provenance.c` *is* the implemented event hash-chain. NOTE: the separate `uft_audit_trail.*` API is a 0%-implemented `UFT_SKELETON_PLANNED` header — no test possible until it is built. |
+| `tests/test_provenance_chain.c` | provenance — output records the tool/source + the chain detects post-hoc tampering | ✅ MF-214 (and it found + fixed a real bug: `uft_prov_verify()` never verified a non-empty chain) |
+| `tests/test_marginal_data_preserved.c` | "Kein Bit verloren" — divergent multi-reads are preserved (weak_mask / has_weak_bits), never collapsed; a failed-CRC read cannot outvote a verified one | ✅ MF-215 (required extracting `include/uft/recovery/uft_multiread_pipeline.h` — the implemented module had no public header) |
+| destructive-op consent | destructive ops (erase/overwrite/lossy convert) refuse without explicit consent | ⬜ open — `src/core/uft_preflight.c` + `include/uft/core/uft_preflight.h` are real; next forensic improvement test |
 
-Implementation hints live in the relevant `src/core/` modules
-(`uft_loss_report.c`, audit-chain code) — the test asserts *observed*
-CLI/file behaviour, never reaches into internals.
+Each test asserts *observed* behaviour of the public C API — never
+reaches into internals beyond the documented struct fields a tamper
+would touch.
