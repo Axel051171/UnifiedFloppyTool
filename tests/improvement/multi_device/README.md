@@ -1,19 +1,28 @@
 # improvement/multi_device/
 
 Tests that prove UFT drives hardware `gw` cannot — `gw` only ever talks
-to Greaseweazle.
+to a Greaseweazle, with a single fixed device model. UFT's Hardware tab
+holds a `ProviderV2Variant`: any of 9 unrelated V2 provider types, and
+the operator switches between them.
 
-Planned tests (TESTER_STRATEGY §3):
+**Form: C++ QtTest / core-library C tests, not pytest-qt.** Same
+reasoning as the `forensic/` and `gui/` categories — UFT is GUI-only
+with no Python bindings; the tests live in `tests/`.
 
-| Test | Proves | gw fails because |
-|------|--------|------------------|
-| `test_kryoflux_provider.py` | KryoFlux read path works through the V2 provider | gw has no KryoFlux support |
-| `test_scp_provider.py` | SuperCard Pro read/write through the V2 provider | gw has no SCP support |
-| `test_fluxengine_provider.py` | FluxEngine read/write through the V2 provider | gw has no FluxEngine support |
-| `test_provider_switch_consistency.py` | switching the active provider keeps capability reporting + outcomes consistent | gw has a single fixed device model |
+| Test | Proves | Status |
+|------|--------|--------|
+| KryoFlux V2 provider read path | the KryoFlux provider decodes flux correctly | ✅ covered by `tests/test_kryoflux_provider_v2.cpp` (+ `tests/test_kryoflux_stream.c`, MF-208) |
+| SCP V2 provider read/write | the SuperCard Pro provider's outcome surface | ✅ covered by `tests/test_scp_provider_v2.cpp` |
+| FluxEngine V2 provider read/write | the FluxEngine provider's SCP-pivot decode | ✅ covered by `tests/test_fluxengine_provider_v2.cpp` (+ `tests/test_scp_read_memory.c`, MF-209) |
+| `tests/test_provider_switch.cpp` | switching the active provider type keeps capability reporting consistent — no state bleed across connect/disconnect/reconnect, disconnect always returns to the no-capability baseline | ✅ MF-221 — C++ QtTest driving the real HardwareTab `ProviderV2Variant` |
 
-These exercise the post-refactor V2 providers
-(`src/hardware_providers/*_provider_v2.cpp`). Where real hardware is
-absent the tests use mock backends / recorded traces from
-`tests/gw_corpus/inputs/mock_hardware_traces/`; with no mock available
-the test skips and is noted for the HIL layer (P3.4).
+The first three planned tests were already delivered as the per-provider
+V2 conformance tests in the P1 refactor (MF-161/162/163, later extended
+by MF-208/209). The multi-device-specific gap — that *switching*
+between provider types stays consistent — is `test_provider_switch.cpp`.
+
+`uft_device_manager.h` is a `UFT_SKELETON_PLANNED` header (14/14
+functions unimplemented, no `device_manager.c`). The implemented
+multi-device model is the `ProviderV2Variant` in HardwareTab, which is
+what `test_provider_switch.cpp` exercises. A device-manager improvement
+test is not possible until that API is built.
