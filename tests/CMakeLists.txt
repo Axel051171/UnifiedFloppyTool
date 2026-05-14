@@ -384,13 +384,20 @@ foreach(test_source ${TEST_SOURCES})
         # + MF-168 P1.15:
         # HAL conformance harness — runs every concept's SECTION against
         # every V2 provider in the typelist.
+        # MF-210: kryoflux_provider_v2.cpp now links uft_kf_decode()
+        # (src/flux/uft_kryoflux_stream.c, MF-208) and
+        # fluxengine_provider_v2.cpp links the SCP parser
+        # (src/flux/uft_scp_parser.c, MF-209). The conformance harness
+        # compiles both provider .cpp files, so it needs both backends.
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/hardware_providers/greaseweazle_provider_v2.cpp
             ${CMAKE_SOURCE_DIR}/src/hal/uft_greaseweazle_full.c
             ${CMAKE_SOURCE_DIR}/src/hardware_providers/scp_provider_v2.cpp
             ${CMAKE_SOURCE_DIR}/src/hal/uft_scp_direct.c
             ${CMAKE_SOURCE_DIR}/src/hardware_providers/kryoflux_provider_v2.cpp
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_kryoflux_stream.c
             ${CMAKE_SOURCE_DIR}/src/hardware_providers/fluxengine_provider_v2.cpp
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_scp_parser.c
             ${CMAKE_SOURCE_DIR}/src/hardware_providers/fc5025_provider_v2.cpp
             ${CMAKE_SOURCE_DIR}/src/hardware_providers/xum1541_provider_v2.cpp
             ${CMAKE_SOURCE_DIR}/src/hardware_providers/applesauce_provider_v2.cpp

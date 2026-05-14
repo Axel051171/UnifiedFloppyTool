@@ -13,6 +13,13 @@
 // UFT Master Coding Standards: a YAML entry referencing a capability no
 // provider implements will fail to compile at the wire_action<cap::X> call.
 
+// MF-210: the emitted body uses std::visit / std::holds_alternative /
+// std::is_same_v / std::monostate directly (MF-205 made provider_source a
+// std::variant). Include <variant> + <type_traits> here rather than rely
+// on a transitive include from hardwaretab.h / wiring_runtime.h.
+#include <type_traits>
+#include <variant>
+
 #include "hardwaretab.h"
 #include "ui_tab_hardware.h"
 #include "hardware_providers/greaseweazle_provider_v2.h"

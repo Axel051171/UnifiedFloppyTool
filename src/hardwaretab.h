@@ -242,8 +242,34 @@ private:
     void updateDriveSettingsEnabled();
     void updateMotorControlsEnabled();
     void updateAdvancedEnabled();
-    void updateTestButtonsEnabled();
+    /* MF-210: `updateTestButtonsEnabled()` removed. The five test buttons
+     * (btnSeekTest / btnReadTest / btnRPMTest / btnCalibrate / btnDetect)
+     * are capability-bound — their enabled-state is owned solely by the
+     * codegen `wire_action<cap::X>` (single source of truth). The old
+     * helper unconditionally re-enabled them on `m_connected`, clobbering
+     * the type-driven gating for every non-GW provider. */
     void updateRoleButtonsEnabled();
+
+    /* ── MF-210: capability-aware provider helpers ──────────────────────
+     * The connected provider is one of 9 unrelated types in a std::variant;
+     * these wrap the std::visit + `if constexpr (cap::X<P>)` boilerplate so
+     * the connect/disconnect/detect paths stay capability-driven instead of
+     * hardcoded to the Greaseweazle alternative. */
+
+    /* True iff the currently-connected provider satisfies cap::ControlsMotor.
+     * Used by updateMotorControlsEnabled() to refine the motor buttons'
+     * running-state toggle WITHIN the codegen's capability grant. */
+    bool providerControlsMotor() const;
+
+    /* If a motor-capable provider is connected and the motor is running,
+     * issue set_motor(false). Outcome discarded — used only on teardown.
+     * Must run BEFORE the variant is cleared to monostate. */
+    void issueMotorOffIfRunning();
+
+    /* Run detect_drive() on whichever provider is connected (all 9 satisfy
+     * cap::DetectsDrive) and dispatch the DetectOutcome through the same
+     * handler set the codegen-wired btnDetect uses. No-op if disconnected. */
+    void runDetectProbe();
     
     // Status updates
     void updateStatus(const QString& status, bool isError = false);

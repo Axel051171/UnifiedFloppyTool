@@ -43,6 +43,12 @@
 #include "hardware_providers/adfcopy_provider_v2.h"
 #include "hardware_providers/usbfloppy_provider_v2.h"
 
+/* MF-210: hardwaretab.cpp now uses the capability concepts directly
+ * (`if constexpr (::uft::hal::ControlsMotor<P>)` etc.) in the
+ * std::visit-based provider helpers. */
+#include "uft/hal/concepts.h"
+
+#include <type_traits>
 #include <variant>
 
 #include <QMessageBox>
@@ -267,6 +273,82 @@ const ProviderV2Variant &HardwareTab::currentProviderV2() const noexcept
      * concrete provider type, so wire_action<cap::X>'s capability gating
      * stays structural per concrete type. */
     return m_providerV2;
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+ *  MF-210 — capability-aware provider helpers
+ *
+ *  The connected provider is one of 9 unrelated types held in
+ *  `m_providerV2` (a std::variant). These three helpers wrap the
+ *  `std::visit` + `if constexpr (::uft::hal::Capability<P>)` boilerplate
+ *  so the connect / disconnect / detect paths are capability-driven for
+ *  ALL providers, not hardcoded to the Greaseweazle alternative (the
+ *  bug class the P1.23 routing left behind).
+ * ════════════════════════════════════════════════════════════════════════ */
+
+bool HardwareTab::providerControlsMotor() const
+{
+    return std::visit([](const auto &held) -> bool {
+        using HeldT = std::decay_t<decltype(held)>;
+        if constexpr (std::is_same_v<HeldT, std::monostate>) {
+            return false;
+        } else {
+            using ProviderT = typename HeldT::element_type;
+            return ::uft::hal::ControlsMotor<ProviderT>;
+        }
+    }, m_providerV2);
+}
+
+void HardwareTab::issueMotorOffIfRunning()
+{
+    if (!m_motorRunning) {
+        return;
+    }
+    /* Issue set_motor(false) to whichever connected provider actually has
+     * ControlsMotor. The outcome is intentionally discarded — this only
+     * runs on teardown. MUST be called before the variant is cleared to
+     * std::monostate, otherwise the command is lost (the P1-2 bug). */
+    std::visit([](auto &held) {
+        using HeldT = std::decay_t<decltype(held)>;
+        if constexpr (!std::is_same_v<HeldT, std::monostate>) {
+            using ProviderT = typename HeldT::element_type;
+            if constexpr (::uft::hal::ControlsMotor<ProviderT>) {
+                if (held) {
+                    (void)held->set_motor(false);
+                }
+            }
+        }
+    }, m_providerV2);
+    m_motorRunning = false;
+}
+
+void HardwareTab::runDetectProbe()
+{
+    if (!m_connected) {
+        return;
+    }
+    /* detect_drive() on whichever provider is connected (all 9 satisfy
+     * cap::DetectsDrive), dispatched through the same handler set the
+     * codegen-wired btnDetect uses. */
+    std::visit([this](auto &held) {
+        using HeldT = std::decay_t<decltype(held)>;
+        if constexpr (!std::is_same_v<HeldT, std::monostate>) {
+            using ProviderT = typename HeldT::element_type;
+            if constexpr (::uft::hal::DetectsDrive<ProviderT>) {
+                if (!held) {
+                    return;
+                }
+                auto outcome = held->detect_drive();
+                std::visit(::uft::hal::overloaded{
+                    [this](const ::uft::hal::DriveDetected &v)            { onDetectOutcome(v); },
+                    [this](const ::uft::hal::DriveAbsent &v)              { onDetectOutcome(v); },
+                    [this](const ::uft::hal::CapabilityRequiresPolicy &v) { showPolicyRequired(v); },
+                    [this](const ::uft::hal::HardwareDisconnected &v)     { showHardwareDisconnected(v); },
+                    [this](const ::uft::hal::ProviderError &e)            { showProviderError(e); },
+                }, outcome);
+            }
+        }
+    }, m_providerV2);
 }
 
 /* MF-202 (P1.22): HardwareTab::gwDevice() removed. The legacy `void*`
@@ -609,22 +691,18 @@ void HardwareTab::onConnect()
     
     qDebug() << "Checking if controller is greaseweazle or fluxengine...";
     
-    /* MF-143: per-controller dispatch via HardwareManager.
+    /* Per-controller dispatch (current architecture — supersedes the
+     * MF-143 HardwareManager note that used to sit here).
      *
-     * Greaseweazle stays on the C-HAL fast-path (uft_gw_open) below
-     * because that's the production-tested code path, exercised by
-     * every successful capture since v4.0. The Qt
-     * GreaseweazleHardwareProvider class exists in parallel as a
-     * fallback wrapper; we don't switch to it for an active GW
-     * session to avoid a regression on the most-used path.
+     * Greaseweazle takes the V2-provider path with a real open() against
+     * the production-tested C-HAL (uft_gw_*, now internal behind
+     * GreaseweazleProviderV2::do_*).
      *
-     * Every OTHER controller routes through the HardwareManager,
-     * which has setHardwareType()-string dispatch into the matching
-     * concrete provider class (FluxEngine subprocess, KryoFlux DTC
-     * subprocess, SCP/Applesauce serial, FC5025/XUM1541 USB, ADF-Copy
-     * serial, USB-Floppy SG_IO/UFI). Each provider already implements
-     * detectDrive() / connect() / readTrack() with real I/O — they
-     * just had no UI dispatcher routing to them before. */
+     * MF-206 (P1.23): the other 8 controllers each construct their V2
+     * provider honest-stub (null runners / handle) — see the
+     * `controller != "greaseweazle"` branch below. All 9 land in
+     * `m_providerV2` and are GUI-reachable; their production transports
+     * (QProcess / QSerialPort / OpenCBM / libusb) are M3.x follow-up. */
     /* MF-170 (P1.19): the X1541 family (xa1541/xap1541/xm1541/xe1541/
      * x1541) was removed from `populateControllerList()` — the five
      * combo entries had no matching provider class and only ever
@@ -730,19 +808,11 @@ void HardwareTab::onConnect()
             setConnectionState(true);
 
             if (m_autoDetect) {
-                /* Drive auto-detect now goes through the V2 surface:
-                 * provider's detect_drive() returns a DetectOutcome
-                 * which we route through the existing onDetectOutcome /
-                 * showProviderError handler set (MF-157 P1.4). No more
-                 * direct uft_gw_select_drive / set_motor / seek loops. */
-                auto outcome = gwp->detect_drive();
-                std::visit(::uft::hal::overloaded{
-                    [this](const ::uft::hal::DriveDetected &v)            { onDetectOutcome(v); },
-                    [this](const ::uft::hal::DriveAbsent &v)              { onDetectOutcome(v); },
-                    [this](const ::uft::hal::CapabilityRequiresPolicy &v) { showPolicyRequired(v); },
-                    [this](const ::uft::hal::HardwareDisconnected &v)     { showHardwareDisconnected(v); },
-                    [this](const ::uft::hal::ProviderError &e)            { showProviderError(e); },
-                }, outcome);
+                /* MF-210: auto-detect after a successful connect routes
+                 * through runDetectProbe() — the same capability-driven
+                 * std::visit path onDetectionModeChanged() uses, so the
+                 * GW and the 8 other providers behave identically. */
+                runDetectProbe();
             }
 
             QString deviceName = getDeviceName();
@@ -777,6 +847,12 @@ void HardwareTab::onConnect()
     QTimer::singleShot(500, this, [this]() {
         m_connected = true;
         m_firmwareVersion = "Simulated";
+        /* MF-210 (P1-4): a simulated connection has NO V2 provider —
+         * m_providerV2 stays std::monostate. Run the codegen wiring so
+         * its Phase-2 guard disables every capability-bound button;
+         * without this the buttons keep whatever state the last
+         * rewireV2() left and can appear enabled-but-unwired. */
+        rewireV2();
         setConnectionState(true);
         /* MF-171 (P1.18): the old autoDetectDrive() helper that scanned
          * via uft_gw_* directly is gone. There is no V2 provider in
@@ -790,24 +866,15 @@ void HardwareTab::onConnect()
 
 void HardwareTab::onDisconnect()
 {
-    if (m_motorRunning) {
-        /* MF-171 (P1.18): the V2 provider, if present, will get
-         * `set_motor(false)` routed through wire_action on the next
-         * UI cycle. For a clean disconnect we issue it explicitly
-         * here so the motor doesn't keep spinning when the user is
-         * already mid-disconnect. The outcome is intentionally
-         * discarded — we are tearing the connection down anyway. */
-        /* MF-205 (P1.23): a clean motor-off only applies to a connected
-         * Greaseweazle — the other V2 providers either have no
-         * ControlsMotor capability or are not yet routed. get_if yields
-         * the GW alternative or nullptr. */
-        if (auto *gwp = std::get_if<
-                std::unique_ptr<::uft::hal::GreaseweazleProviderV2>>(&m_providerV2);
-            gwp && *gwp && (*gwp)->is_open()) {
-            (void)(*gwp)->set_motor(false);
-        }
-        m_motorRunning = false;
-    }
+    /* MF-210 (P1-1/P1-2): issue a clean motor-off to whichever connected
+     * provider actually satisfies cap::ControlsMotor — not just
+     * Greaseweazle (Applesauce and ADF-Copy have it too). This MUST run
+     * before the variant is cleared: the old code did the motor-off
+     * after `m_providerV2 = monostate` in showHardwareDisconnected()'s
+     * call path, sending the command to std::monostate where it was
+     * lost. issueMotorOffIfRunning() is a no-op when no motor is
+     * running and clears m_motorRunning itself. */
+    issueMotorOffIfRunning();
 
     /* MF-171 (P1.18) / MF-205 (P1.23): the connected V2 provider owns
      * its handle/transport — its destructor releases it. Assigning
@@ -955,13 +1022,18 @@ void HardwareTab::showHardwareDisconnected(const ::uft::hal::HardwareDisconnecte
     updateStatus(tr("Hardware disconnected (%1)")
                      .arg(QString::fromStdString(d.device_path)),
                  /*isError=*/true);
-    /* The provider is gone. Tear down the V2 provider + rewire so the UI
-     * matches reality, then run the rest of the disconnect for the
-     * legacy state (m_connected etc.). MF-205: monostate = disconnected. */
-    m_providerV2 = std::monostate{};
-    rewireV2();
+    /* MF-210 (P1-2): delegate the full teardown to onDisconnect() instead
+     * of clearing the variant here first. onDisconnect() now issues the
+     * capability-driven motor-off against the still-live provider BEFORE
+     * destroying it; the old code cleared the variant to std::monostate
+     * up here, so the subsequent onDisconnect() motor-off was lost. */
     if (m_connected) {
         onDisconnect();
+    } else {
+        /* Defensive: not flagged "connected" but a provider somehow
+         * lingers in the variant — clear it and re-gate the UI. */
+        m_providerV2 = std::monostate{};
+        rewireV2();
     }
 }
 void HardwareTab::showPolicyRequired(const ::uft::hal::CapabilityRequiresPolicy &p)
@@ -1040,25 +1112,14 @@ void HardwareTab::onDetectionModeChanged()
     
     if (m_autoDetect) {
         updateStatus(tr("Auto-Detect mode - drive settings will be detected automatically."));
-        /* MF-177: the V1 `autoDetectDrive()` helper (direct uft_gw_*
-         * select_drive/set_motor/seek loop) was removed in P1.18. When
-         * the user switches to auto-detect mode while already connected,
-         * route the probe through the V2 provider's detect_drive() and
-         * dispatch the DetectOutcome through the same handler set the
-         * codegen-wired btnDetect uses (mirrors onConnect's auto-detect
-         * block). */
-        auto *gwp = std::get_if<
-            std::unique_ptr<::uft::hal::GreaseweazleProviderV2>>(&m_providerV2);
-        if (m_connected && gwp && *gwp && (*gwp)->is_open()) {
-            auto outcome = (*gwp)->detect_drive();
-            std::visit(::uft::hal::overloaded{
-                [this](const ::uft::hal::DriveDetected &v)            { onDetectOutcome(v); },
-                [this](const ::uft::hal::DriveAbsent &v)              { onDetectOutcome(v); },
-                [this](const ::uft::hal::CapabilityRequiresPolicy &v) { showPolicyRequired(v); },
-                [this](const ::uft::hal::HardwareDisconnected &v)     { showHardwareDisconnected(v); },
-                [this](const ::uft::hal::ProviderError &e)            { showProviderError(e); },
-            }, outcome);
-        }
+        /* MF-177 / MF-210 (P1-3): when the user switches to auto-detect
+         * while already connected, probe the drive through
+         * runDetectProbe() — a capability-driven std::visit over ALL 9
+         * providers (every one satisfies cap::DetectsDrive). The old code
+         * was a Greaseweazle-only std::get_if + is_open() check, so the
+         * mode-switch probe was a silent no-op for the other 8
+         * controllers. runDetectProbe() is a no-op when disconnected. */
+        runDetectProbe();
     } else {
         updateStatus(tr("Manual mode - configure drive settings manually."));
     }
@@ -1089,8 +1150,15 @@ void HardwareTab::setConnectionState(bool connected)
     updateDriveSettingsEnabled();
     updateMotorControlsEnabled();
     updateAdvancedEnabled();
-    updateTestButtonsEnabled();
-    
+    /* MF-210 (P1-5): updateTestButtonsEnabled() is gone. The five test
+     * buttons (btnSeekTest/btnReadTest/btnRPMTest/btnCalibrate/btnDetect)
+     * are capability-bound — their enabled-state is owned solely by the
+     * codegen `wire_action<cap::X>` (run from rewireV2()). The old helper
+     * unconditionally re-enabled them on `m_connected`, which ran AFTER
+     * rewireV2() and clobbered the type-driven gating, leaving
+     * dead-but-enabled buttons for every provider with a partial
+     * capability set. The codegen is now the single source of truth. */
+
     ui->groupDetection->setEnabled(connected);
     ui->groupDrive->setEnabled(connected);
     ui->groupMotor->setEnabled(connected);
@@ -1116,27 +1184,37 @@ void HardwareTab::updateDriveSettingsEnabled()
 
 void HardwareTab::updateMotorControlsEnabled()
 {
-    ui->btnMotorOn->setEnabled(m_connected && !m_motorRunning);
-    ui->btnMotorOff->setEnabled(m_connected && m_motorRunning);
     ui->checkAutoSpinDown->setEnabled(m_connected);
+
+    /* MF-210 (P1-5): btnMotorOn / btnMotorOff are capability-bound. The
+     * codegen `wire_action<cap::ControlsMotor>` owns the *capability*
+     * gate (connect-or-disable per provider type); this function applies
+     * only the orthogonal *running-state* refinement, and ONLY for a
+     * provider that actually satisfies ControlsMotor. For a provider
+     * without it (e.g. SCP) both buttons stay disabled — matching what
+     * the codegen already did, instead of the old code unconditionally
+     * re-enabling them on `m_connected`.
+     *
+     * providerControlsMotor() derives the answer from the provider TYPE,
+     * so this is correct regardless of call order (it is also invoked
+     * from onMotorOutcome(), with no preceding rewireV2()). */
+    const bool hasMotor = m_connected && providerControlsMotor();
+    ui->btnMotorOn->setEnabled(hasMotor && !m_motorRunning);
+    ui->btnMotorOff->setEnabled(hasMotor && m_motorRunning);
 }
 
 void HardwareTab::updateAdvancedEnabled()
 {
     bool enabled = m_connected && !m_autoDetect;
-    
+
     ui->checkDoubleStep->setEnabled(enabled);
     ui->checkIgnoreIndex->setEnabled(enabled);
 }
 
-void HardwareTab::updateTestButtonsEnabled()
-{
-    ui->btnSeekTest->setEnabled(m_connected);
-    ui->btnReadTest->setEnabled(m_connected);
-    ui->btnRPMTest->setEnabled(m_connected);
-    ui->btnCalibrate->setEnabled(m_connected);
-    ui->btnDetect->setEnabled(m_connected);
-}
+/* MF-210 (P1-5): updateTestButtonsEnabled() removed — see the comment in
+ * setConnectionState(). The codegen `wire_action<cap::X>` is the single
+ * source of truth for btnSeekTest/btnReadTest/btnRPMTest/btnCalibrate/
+ * btnDetect; nothing else may setEnabled() on them. */
 
 // ============================================================================
 // Status Updates
