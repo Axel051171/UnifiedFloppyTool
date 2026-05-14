@@ -1,20 +1,32 @@
 # improvement/gui/
 
-Tests that prove UFT's GUI behaviour — `gw` is CLI-only.
+Tests that prove UFT's GUI behaviour — `gw` is CLI-only, with no GUI
+and no capability model.
 
-**Requires `pytest-qt`.** Tests in this directory carry
-`@pytest.mark.requires_qt` and are auto-skipped when pytest-qt is not
-installed (see `../conftest.py`). They run headless.
+**Form: C++ QtTest, not pytest-qt.** The original plan here was Python
+`pytest-qt` tests. That does not work: pytest-qt drives Qt apps written
+*in Python* (PyQt/PySide), and UFT's GUI is C++ Qt with no Python
+bindings — pytest-qt cannot reach `HardwareTab`/`MainWindow` at all.
+The GUI improvement tests are therefore C++ QtTest executables in
+`tests/test_*_gui.cpp` (same shape as `tests/test_wiring_runtime.cpp`),
+linked against `Qt6::Test` + `Qt6::Widgets`. This directory keeps the
+README/category marker; the tests live in `tests/`.
 
-Planned tests (TESTER_STRATEGY §3):
+| Test | Proves | Status |
+|------|--------|--------|
+| `tests/test_hardware_tab_gui.cpp` | the Hardware tab greys out exactly the capability actions a connected provider's TYPE does not satisfy, and enables exactly the ones it does — for all 9 V2 providers; plus the "no provider connected → every capability button disabled" affordance | ✅ MF-220 — drives the real `onConnect()` path; the expected button state is derived from the capability CONCEPT applied to the provider type, never a hard-coded table |
+| main-window smoke (builds + shows without crashing) | the GUI constructs cleanly | ⬜ open — candidate follow-up |
+| format-tab workflow walk-through | the conversion tab walks a path end-to-end | ⬜ open — candidate follow-up |
 
-| Test | Proves | gw fails because |
-|------|--------|------------------|
-| `test_main_window_smoke.py` | the main window builds and shows without crashing | gw has no GUI |
-| `test_hardware_tab_capability_disable.py` | the Hardware tab greys out actions a provider's capability set does not cover (the `wire_action<cap::X>` codegen, post-P1) | gw has no GUI and no capability model |
-| `test_format_tab_workflow.py` | the format-conversion tab walks a path end-to-end | gw has no GUI |
+`test_hardware_tab_gui.cpp` is the executable proof of the type-driven
+HAL refactor's GUI half: a provider whose type does not satisfy
+`WritesRawFlux` / `ControlsMotor` / ... has the matching button
+structurally disabled, because `wire_action<cap::X>` (codegen) gates on
+the concept. It also covers MF-205/MF-206 (variant routing of all 9
+providers through `HardwareTab`) and MF-210 (the
+`updateTestButtonsEnabled` / `updateMotorControlsEnabled` fixes that
+stopped clobbering the codegen gating).
 
-`test_hardware_tab_capability_disable.py` is the executable proof of the
-type-driven HAL refactor's GUI half: a read-only provider (FC5025,
-KryoFlux) must have its Write button structurally disabled because the
-provider type does not satisfy the write capability concept.
+Run headless: the test sets `QT_QPA_PLATFORM=offscreen` under ctest, so
+no display is needed — only the Qt runtime DLLs on PATH (same as every
+Qt-Test target in this repo).

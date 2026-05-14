@@ -544,6 +544,36 @@ if(TARGET Qt6::Test)
             Qt6::Core Qt6::Test
         )
 
+        # MF-220 (P3.3 #110): the HardwareTab GUI capability-gating test
+        # links HardwareTab + the codegen wiring + all 9 V2 providers +
+        # their C backends, and needs AUTOUIC for forms/tab_hardware.ui.
+        # Same provider source set as test_hal_conformance, plus
+        # hardwaretab.cpp / the generated wiring / teensy_probe.cpp.
+        if(${qt_test_name} STREQUAL "test_hardware_tab_gui")
+            set_target_properties(${qt_test_name} PROPERTIES AUTOUIC ON)
+            target_sources(${qt_test_name} PRIVATE
+                ${CMAKE_SOURCE_DIR}/src/hardwaretab.cpp
+                ${CMAKE_SOURCE_DIR}/forms/tab_hardware.ui
+                ${CMAKE_SOURCE_DIR}/generated/tab_hardware_wiring.gen.cpp
+                ${CMAKE_SOURCE_DIR}/src/hardware_providers/greaseweazle_provider_v2.cpp
+                ${CMAKE_SOURCE_DIR}/src/hal/uft_greaseweazle_full.c
+                ${CMAKE_SOURCE_DIR}/src/hardware_providers/scp_provider_v2.cpp
+                ${CMAKE_SOURCE_DIR}/src/hal/uft_scp_direct.c
+                ${CMAKE_SOURCE_DIR}/src/hardware_providers/kryoflux_provider_v2.cpp
+                ${CMAKE_SOURCE_DIR}/src/flux/uft_kryoflux_stream.c
+                ${CMAKE_SOURCE_DIR}/src/hardware_providers/fluxengine_provider_v2.cpp
+                ${CMAKE_SOURCE_DIR}/src/flux/uft_scp_parser.c
+                ${CMAKE_SOURCE_DIR}/src/hardware_providers/fc5025_provider_v2.cpp
+                ${CMAKE_SOURCE_DIR}/src/hardware_providers/xum1541_provider_v2.cpp
+                ${CMAKE_SOURCE_DIR}/src/hardware_providers/applesauce_provider_v2.cpp
+                ${CMAKE_SOURCE_DIR}/src/hardware_providers/adfcopy_provider_v2.cpp
+                ${CMAKE_SOURCE_DIR}/src/hardware_providers/usbfloppy_provider_v2.cpp
+                ${CMAKE_SOURCE_DIR}/src/hardware_providers/teensy_probe.cpp
+                ${CMAKE_SOURCE_DIR}/src/hal/ufi.c)
+            target_include_directories(${qt_test_name} PRIVATE
+                ${CMAKE_SOURCE_DIR}/src/hardware_providers)
+        endif()
+
         # MF-169 (P1.17): the V1 `hardware_providers` cmake target was
         # deleted with the V1 provider hierarchy. Qt-side tests now
         # link only against Qt6::Core+Test+Widgets+SerialPort. The V2
@@ -560,9 +590,11 @@ if(TARGET Qt6::Test)
         endif()
 
         # CXX_STANDARD: most existing Qt-tests are C++17. test_wiring_runtime
-        # uses C++20 generic-lambda template-parameter syntax (`[]<class P>`),
-        # so it must explicitly opt in to C++20.
-        if(${qt_test_name} STREQUAL "test_wiring_runtime")
+        # and test_hardware_tab_gui pull in the C++20 type-driven HAL
+        # (concepts, std::visit, generic-lambda template params), so they
+        # must explicitly opt in to C++20.
+        if(${qt_test_name} STREQUAL "test_wiring_runtime" OR
+           ${qt_test_name} STREQUAL "test_hardware_tab_gui")
             set_target_properties(${qt_test_name} PROPERTIES
                 CXX_STANDARD 20
                 CXX_STANDARD_REQUIRED ON
@@ -577,6 +609,14 @@ if(TARGET Qt6::Test)
         endif()
 
         add_test(NAME ${qt_test_name} COMMAND ${qt_test_name})
+        # MF-220: the HardwareTab GUI test constructs real Qt widgets —
+        # run it headless so ctest needs no display (the README's
+        # "run headless" promise). It still needs the Qt runtime DLLs
+        # on PATH, same as every other Qt-Test target here.
+        if(${qt_test_name} STREQUAL "test_hardware_tab_gui")
+            set_tests_properties(${qt_test_name} PROPERTIES
+                ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+        endif()
         message(STATUS "UFT Qt Test ENABLED: ${qt_test_name}")
     endforeach()
 else()
