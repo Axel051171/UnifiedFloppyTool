@@ -84,7 +84,7 @@ ist die einzige Welle-1-Aufgabe ohne Abhängigkeit zu P1.
 | P3.1  | `gw_corpus/` Skeleton + `tools/uft_diff_test/` + 1 SCP-Fixture + DIV-001  | —          | ✅ MF-182 |
 | P3.2  | Differential-Conformance-Tests pro GW-Command (~50 Tests)                  | P3.1, P1   | 🔄 MF-183: Harness-Body verdrahtet + klassifikations-getestet; ~50 Corpus-Tests brauchen echte `gw`-Installation (HIL) |
 | P3.3  | Improvement-Tests: forensic, multi_device, gui (~40 Tests)                 | P3.1, P1   | 🔄 MF-184: tests/improvement/ Scaffold (6 Kategorien + _support + conftest + skip-Disziplin); ~40 Tests brauchen gebautes uft + pytest-qt |
-| P3.4  | HIL-Skript + Golden-Reference-Katalog + erster v4.1.4-rc1 HIL-Report      | P3.2, P3.3 | ⬜     |
+| P3.4  | HIL-Skript + Golden-Reference-Katalog + erster v4.1.4-rc1 HIL-Report      | P3.2, P3.3 | 🔄 MF-185: tests/hil/ (run_hil.py + golden_reference.yaml + Scaffold-Tests), erster RC1-Report = NOT_RUN; echter HIL-Lauf braucht Rig + befüllten Katalog (Axel-Maschine) |
 
 Neue Subagenten (gelandet mit P3.1, MF-182):
 - `differential-test-author` (Sonnet) — pro GW-Command/Format

@@ -1,0 +1,64 @@
+# Golden-Reference disk catalog — Hardware-in-the-Loop (P3.4)
+#
+# This catalog describes the *physical* reference disks Axel keeps for
+# HIL verification. The disks themselves cannot live in git — only their
+# metadata and the SHA-256 of the baseline artefact each one produced on
+# `main` @ MF-149 (see tests/HARDWARE_TRUTH_TESTS.md "Pre-refactor
+# baseline").
+#
+# run_hil.py reads this file, drives the built `uft` binary against each
+# disk on the matching controller, and compares the result against the
+# recorded `baseline_sha256`. Entries with `status: template` are skipped
+# by the runner — they are documentation, not a claim that the disk
+# exists. Replace them with real entries (status: active) as the
+# Golden-Reference set is assembled.
+#
+# Forensic honesty: never invent a baseline_sha256. If the baseline was
+# not captured, leave it null and set status: pending — the runner will
+# report NOT_RUN for that disk, never a false PASS.
+
+catalog_version: 1
+
+# The frozen Greaseweazle version the corpus + baselines were taken
+# against. Must match tests/gw_corpus/outputs_gw/<ver>/.
+gw_reference_version: "1.23"
+
+# Each disk: a physical floppy with known, documented characteristics.
+disks:
+  - id: TEMPLATE-gw-ibm-360k
+    status: template            # template | pending | active
+    controller: greaseweazle    # greaseweazle | scp | kryoflux | fluxengine
+                                # | fc5025 | xum1541 | applesauce | adfcopy | usbfloppy
+    media: "5.25\" DD"
+    description: "IBM PC DOS 3.3 boot disk, 360 KB, 40 trk SS"
+    photo: photos/TEMPLATE-gw-ibm-360k.jpg   # relative to tests/hil/
+    # Baseline artefact captured on `main` @ MF-149. null until captured.
+    baseline_artifact: null     # e.g. tests/baseline_artifacts/gw_ibm360k.scp
+    baseline_sha256: null       # e.g. "a1b2c3..." — null = not captured yet
+    # Read parameters the runner passes to `uft read`.
+    read_args:
+      tracks: "0-39"
+      revs: 3
+      image_ext: scp
+    # Known forensic landmarks — documented so a HIL run can confirm
+    # they are still observed, not silently smoothed away.
+    known_marginal_tracks: []   # e.g. [39, 40]
+    known_protection: null      # e.g. "long-track on track 0"
+    # RPM baseline for `uft rpm` (±0.5 tolerance per HARDWARE_TRUTH_TESTS).
+    baseline_rpm: null          # e.g. 300.0
+
+  - id: TEMPLATE-xum1541-1541-d64
+    status: template
+    controller: xum1541
+    media: "5.25\" DD"
+    description: "Commodore 1541-formatted disk, known D64 content"
+    photo: photos/TEMPLATE-xum1541-1541-d64.jpg
+    baseline_artifact: null
+    baseline_sha256: null
+    read_args:
+      tracks: "1-35"
+      revs: 1
+      image_ext: d64
+    known_marginal_tracks: []
+    known_protection: null
+    baseline_rpm: null
