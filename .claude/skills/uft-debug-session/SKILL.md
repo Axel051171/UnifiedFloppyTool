@@ -215,6 +215,7 @@ them all "bad" — classify them as "skip" instead.
 
 ## Related
 
+- `.claude/skills/uft-cross-platform-build/` — for "build fails" reports (not this skill)
 - `.claude/skills/uft-flux-fixtures/` — generate synthetic repro inputs
 - `.claude/skills/uft-benchmark/` — for "it's slow" reports (not this skill)
 - `.claude/agents/structured-reviewer.md` — review the fix before merge

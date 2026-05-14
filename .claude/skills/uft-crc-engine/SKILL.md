@@ -167,9 +167,31 @@ CRC is pure integer. `float` in a CRC implementation is a sign of confusion.
 CRC-16 result is `uint16_t` always. Returning `int` risks sign-extension
 bugs.
 
+### Single-bit "correction" without uniqueness check
+
+Single-bit CRC correction works by flipping each bit and checking if
+the CRC matches expected. CRC-16 has 65 536 possible values; a 512-byte
+sector has 4 096 candidate flips → collision rate ≈6 % per sector.
+Accepting the FIRST match silently corrupts data.
+
+```c
+/* WRONG */
+data[i] ^= (1 << b);
+if (crc_matches) return 1;        /* might be a coincidence */
+
+/* RIGHT — find ALL hits, accept only when unique */
+int hits = 0;
+/* try every flip, count matches; return success only if hits == 1 */
+```
+
+The audit at commit 70e60fc found this exact bug at
+`src/recovery/uft_bitstream_recovery.c:101`. Same logic applies to
+double-bit correction. See `uft-recovery-integrity` SKILL.md, invariant I2.
+
 ## Related
 
 - `.claude/skills/uft-format-plugin/` — plugins use CRC via dispatcher
+- `.claude/skills/uft-recovery-integrity/` — when CRC is used for *correction* (uniqueness rule)
 - `docs/PERFORMANCE_REVIEW.md` #4 — CRC allocation bug
 - `src/crc/uft_crc_unified.c` — dispatcher
 - `tests/test_crc16.c` — vector pattern reference

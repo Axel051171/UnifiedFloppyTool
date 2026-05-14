@@ -194,5 +194,9 @@ in the provider.
 - `src/hardware_providers/greaseweazlehardwareprovider.cpp` — Qt wrapper reference
 - `.claude/agents/forensic-integrity.md` — reviews honesty violations
 - `.claude/skills/uft-stm32-portability/` — if this backend is UFI/firmware-adjacent
+- `.claude/skills/uft-coding-standards-compliance/` — when fixing
+  H-1 / H-2 / H-6 / H-9 / D-2 violations on existing backends
+- `memory/coding_standards.md` — Master Coding Standards v1.0; rules
+  H-* are the GUI↔HAL contract this backend must satisfy
 - `docs/HARDWARE.md` — existing backend notes
 - `docs/MASTER_PLAN.md` M3 — HAL stabilization scope
