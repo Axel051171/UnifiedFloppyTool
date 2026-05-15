@@ -68,7 +68,7 @@ SCP-Korpus voraussetzt und auf jeder CI-Umgebung ohne `gw` skippt.
 | **C64-GCR** (`flux_decode_gcr_c64`) | ⚠️ nur Differential (skip ohne gw) | ✅ `test_flux_gcr_c64_sync.c` + Differential |
 | **Apple-GCR** (`flux_decode_gcr_apple`) | ⚠️ nur Differential | ✅ `test_flux_gcr_apple_sync.c` + Differential |
 | **Amiga-MFM** (`flux_decode_amiga`) | ⚠️ nur Differential | ✅ `test_flux_amiga_sync.c` + Differential |
-| **FluxCaptured ns-Contract** | ❌ keine Assertion auf Wertebereich | ✅ `test_transitions_ns_contract.cpp` auf Mock |
+| **FluxCaptured ns-Contract** | ❌ keine Assertion auf Wertebereich | ✅ `test_transitions_ns_contract.c` (Pure-C + FFI) auf Mock |
 
 Die 4 aktiv-genutzten Encoding-Familien (`MFM`, `GCR_C64`, `GCR_APPLE`,
 `AMIGA`) haben jetzt 1:1 hardware-unabhängige C-Unit-Test-Symmetrie.
@@ -162,7 +162,7 @@ src/-Touch.
 
 **ARCH-2-Violatoren explizit ausgeklammert:**
 
-`test_transitions_ns_contract.cpp` läuft nur gegen MockProviderV2.
+`test_transitions_ns_contract.c` läuft nur gegen MockProviderV2.
 KryoFlux + FluxEngine packen aktuell undecoded Container-Bytes in
 `transitions_ns` (Audit-Befund ARCH-2 in
 [`audit/MASTER_REPORT.md`](../../audit/MASTER_REPORT.md)). Eine
@@ -209,7 +209,9 @@ $ python scripts/verify_build_sources.py
 NEW regressions A/B: 0/0  OK
 ```
 
-PR #26 (draft, DO NOT MERGE) wartet auf CI-Matrix-Result.
+CI-Matrix grün auf HEAD `11448d18` (PR #26, draft, DO NOT MERGE):
+Audit ✅ · Code Coverage ✅ · CI (Linux ×2, macOS, Windows) ✅ ·
+Sanitizer Checks (ASan + UBSan) ✅ · Emulator-CI (scaffold) ✅.
 
 ---
 
