@@ -108,13 +108,36 @@ that pretended these were just architectural polish):
   ID values still stands, but a post-refactor HIL pass on SCP +
   ADF-Copy + Applesauce is queued for v4.1.5. See
   `audit/ARCH-7_VID_PID.md`.
-- **Emulator-CI — not in this release.** The HIL runner
+- **§6.1 Emulator-CI — not in this release.** The HIL runner
   (`tests/hil/run_hil.py`) has a two-tier Golden-Reference catalog
   (CI-runnable software tier + hardware tier), but no emulator
   loop (Greaseweazle firmware simulator, virtual SCP/KryoFlux
-  device) runs in GitHub Actions yet. The hardware tier therefore
-  stays `NOT_RUN` in CI by design; only the software tier is
-  exercised. An emulator-CI pipeline is v4.1.5 scope.
+  device, WinUAE / VICE harnesses) runs in GitHub Actions yet. The
+  hardware tier therefore stays `NOT_RUN` in CI by design; only the
+  software tier is exercised. Emulator-CI is planned for v4.3 —
+  see `docs/M3_HAL_PLAN.md` §M3.5.
+- **ARCH-8 — official protocol sources not yet vendored.** GW
+  `cmd.h`, SCP SDK, OpenCBM and fluxengine / DTC are currently
+  declared `recalled` (working from memory + observed behaviour)
+  in the audit-compliance matrix. Promoting them to `vendored` is
+  what turns `audit.yml` into a real CI gate — until then the gate
+  is advisory. Vendoring is v4.1.5+ scope.
+- **§1.2 Loss-Report wiring incomplete.** The 44 `convert_*`
+  format-conversion paths still need ~10 lines of glue each to
+  propagate "data that did not survive" into the audit trail.
+  Lossy conversion (Flux → Sector drops timing + weak bits) is
+  *labelled* as lossy at the format-graph level, but per-conversion
+  loss reports are not yet emitted end-to-end. v4.1.5+ scope.
+- **Plugin-Compliance matrix sparsely populated.** Of 80 plugin
+  registrations: `spec_status` is populated for 15, `features` for
+  5, `compat_entries` for 1, `is_stub` flag for 0/287 stubs. The
+  data model is in place (MF-187 onward), filling it iteratively
+  is 4.2.x scope.
+- **ARCH-9 — XUM1541 macOS `.dylib` load path.** The libxum1541
+  shared-object lookup on macOS does not yet match the system's
+  Homebrew / `/usr/local/lib` conventions. Linux + Windows paths
+  work; macOS users currently need a manual `DYLD_LIBRARY_PATH`.
+  v4.1.5 scope.
 
 These are real gaps, not paperwork. v4.1.4 is shippable because the
 Greaseweazle workflow — the one path used in practice — is
