@@ -2,8 +2,10 @@
 
 **Release Date:** 2026-05 (`v4.1.4-rc1` pre-release tag first;
 14-day window; promote to `v4.1.4` final on success).
-**Branch:** `refactor/type-driven-hal` → squash-merge to `main` at
-v4.1.4 final.
+**Branch:** `main` already carries the type-driven HAL refactor
+(PR #24 squash-merged) and the 4 Phase-2 hardening commits
+(PR #26 merged 2026-05-15). The v4.1.4 tag goes on `main` HEAD —
+no further merge step required.
 **Version-string convention:** `VERSION.txt` carries the numeric
 `4.1.4`. The `-rc1` / `-rc2` suffix lives only in the git tag
 (`v4.1.4-rc1`, `v4.1.4`), per the project's existing release-notes
@@ -82,19 +84,43 @@ This is `v4.1.4-rc1`. 14-day window starts on tag. During the window:
 
 If nothing breaks in 14 days: squash-merge → `v4.1.4` final tag.
 
-## Known limitations / queued for v4.1.5
+## Known limitations of this release
 
-- `FluxCaptureJob` and `FluxWriteJob` still call `uft_gw_*` directly
-  through a non-owning handle accessor — they will be migrated to
-  the V2 outcome surface in P1.20 / P1.21.
-- The 8 non-Greaseweazle controllers' V2 routing in `HardwareTab`
-  is queued as P1.23 (a `std::variant<unique_ptr<*>>`-shaped
-  dispatch over all V2 provider types).
-- `GreaseweazleProviderV2::raw_handle()` legacy escape hatch will
-  be removed once P1.20 / P1.21 land (P1.22).
+What v4.1.4 honestly does **not** ship — flagged here so users and
+reviewers know what is intentionally absent, not silently broken
+(MF-235 / MF-240 follow-up to the original "queued for v4.1.5" block
+that pretended these were just architectural polish):
 
-These are queued architecture refinements, not user-visible
-regressions. The v4.1.4 release is shippable today as-is.
+- **M3.x production transports — not in this release.** Only
+  Greaseweazle has a real USB/serial transport wired through. The
+  other 8 controllers (SCP-Direct, KryoFlux, FluxEngine, FC5025,
+  XUM1541, Applesauce, ADFCopy, USBFloppy) have V2 wrappers that are
+  conformance-tested against the Mock surface but display
+  "Controller routing pending" on Connect. M3.1 (SCP USB), M3.2
+  (XUM1541 USB), M3.3 (Applesauce serial) and the remaining
+  transports are v4.1.5 scope — see `docs/MASTER_PLAN.md` §M3.
+- **ARCH-7 sub-B / sub-C field-validation follow-ups.** Sub-B
+  (SCP `0x16D0:0x0F8C`) and sub-C (ADF-Copy / Applesauce stock-Teensy
+  `0x16C0:0x0483` two-tier probe) are *implemented* in code
+  (MF-212 / MF-213) and unit-tested; they have **not yet** been
+  re-verified end-to-end on real hardware after the type-driven HAL
+  refactor. The single-device readout that produced the original
+  ID values still stands, but a post-refactor HIL pass on SCP +
+  ADF-Copy + Applesauce is queued for v4.1.5. See
+  `audit/ARCH-7_VID_PID.md`.
+- **Emulator-CI — not in this release.** The HIL runner
+  (`tests/hil/run_hil.py`) has a two-tier Golden-Reference catalog
+  (CI-runnable software tier + hardware tier), but no emulator
+  loop (Greaseweazle firmware simulator, virtual SCP/KryoFlux
+  device) runs in GitHub Actions yet. The hardware tier therefore
+  stays `NOT_RUN` in CI by design; only the software tier is
+  exercised. An emulator-CI pipeline is v4.1.5 scope.
+
+These are real gaps, not paperwork. v4.1.4 is shippable because the
+Greaseweazle workflow — the one path used in practice — is
+preserved + hardened, and the 8 non-GW controllers show an honest
+"pending" message instead of silently no-op'ing. Anyone relying on
+a non-GW transport should wait for v4.1.5.
 
 ---
 
