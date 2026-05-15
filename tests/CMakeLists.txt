@@ -22,7 +22,8 @@ endif()
 # Find all test source files. The C-loop below handles .c + a curated set
 # of header-only C++ tests (no Qt deps). The Qt-loop further down handles
 # all remaining .cpp tests (which need Qt6::Test / SerialPort / providers).
-file(GLOB TEST_SOURCES_C    "${CMAKE_CURRENT_SOURCE_DIR}/test_*.c")
+file(GLOB TEST_SOURCES_C    "${CMAKE_CURRENT_SOURCE_DIR}/test_*.c"
+                            "${CMAKE_CURRENT_SOURCE_DIR}/unit/test_*.c")
 file(GLOB TEST_SOURCES_CPP  "${CMAKE_CURRENT_SOURCE_DIR}/test_*.cpp")
 
 # Header-only C++ tests that join the main C-loop (no Qt linking).
@@ -43,7 +44,7 @@ set(_HEADER_ONLY_CPP_TESTS
     "${CMAKE_CURRENT_SOURCE_DIR}/test_usbfloppy_provider_v2.cpp"   # MF-168 P1.15
     "${CMAKE_CURRENT_SOURCE_DIR}/test_teensy_probe.cpp"           # MF-213 ARCH-7-C
     "${CMAKE_CURRENT_SOURCE_DIR}/test_concurrency.cpp"            # MF-226 P3.3 #110a
-    "${CMAKE_CURRENT_SOURCE_DIR}/test_transitions_ns_contract.cpp") # v4.1.5 audit Lücke #2 (ARCH-2)
+    "${CMAKE_CURRENT_SOURCE_DIR}/unit/test_transitions_ns_contract.cpp") # v4.1.5 audit Lücke #2 (ARCH-2) — .cpp because outcomes.h is C++
 
 set(TEST_SOURCES ${TEST_SOURCES_C} ${_HEADER_ONLY_CPP_TESTS})
 
@@ -513,7 +514,7 @@ foreach(test_source ${TEST_SOURCES})
         else()
             set(TEST_LIBS "")
         endif()
-    elseif(${test_name} STREQUAL "test_flux_gcr_c64")
+    elseif(${test_name} STREQUAL "test_flux_gcr_c64_sync")
         # v4.1.5 hardening / audit Lücke #1: hardware-independent C64
         # GCR decoder regression test. Same self-contained synthesis
         # pattern as test_flux_mfm_sync; only the flux decoder TU is
@@ -525,7 +526,7 @@ foreach(test_source ${TEST_SOURCES})
         else()
             set(TEST_LIBS "")
         endif()
-    elseif(${test_name} STREQUAL "test_flux_gcr_apple")
+    elseif(${test_name} STREQUAL "test_flux_gcr_apple_sync")
         # v4.1.5 hardening / audit Lücke #1: hardware-independent
         # Apple ][ 6-and-2 GCR decoder regression test.
         target_sources(${test_name} PRIVATE
@@ -535,7 +536,7 @@ foreach(test_source ${TEST_SOURCES})
         else()
             set(TEST_LIBS "")
         endif()
-    elseif(${test_name} STREQUAL "test_flux_amiga")
+    elseif(${test_name} STREQUAL "test_flux_amiga_sync")
         # v4.1.5 hardening / audit Lücke #1: hardware-independent Amiga
         # MFM decoder regression test (odd/even-split sector layout).
         target_sources(${test_name} PRIVATE

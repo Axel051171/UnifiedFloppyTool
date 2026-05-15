@@ -1,5 +1,5 @@
 /**
- * @file test_flux_amiga.c
+ * @file test_flux_amiga_sync.c
  * @brief Hardware-independent unit test for flux_decode_amiga.
  *
  * MOTIVATION (audit/test_coverage/COVERAGE_AUDIT.md Lücke #1): Amiga

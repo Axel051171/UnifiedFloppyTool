@@ -1,5 +1,5 @@
 /**
- * @file test_flux_gcr_apple.c
+ * @file test_flux_gcr_apple_sync.c
  * @brief Hardware-independent unit test for flux_decode_gcr_apple.
  *
  * MOTIVATION (audit/test_coverage/COVERAGE_AUDIT.md Lücke #1): Apple ][

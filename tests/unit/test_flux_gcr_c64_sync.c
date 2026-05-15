@@ -1,5 +1,5 @@
 /**
- * @file test_flux_gcr_c64.c
+ * @file test_flux_gcr_c64_sync.c
  * @brief Hardware-independent unit test for flux_decode_gcr_c64.
  *
  * MOTIVATION (audit/test_coverage/COVERAGE_AUDIT.md Lücke #1): UFT
