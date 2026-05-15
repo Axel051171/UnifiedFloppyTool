@@ -42,7 +42,8 @@ set(_HEADER_ONLY_CPP_TESTS
     "${CMAKE_CURRENT_SOURCE_DIR}/test_adfcopy_provider_v2.cpp"     # MF-167 P1.14
     "${CMAKE_CURRENT_SOURCE_DIR}/test_usbfloppy_provider_v2.cpp"   # MF-168 P1.15
     "${CMAKE_CURRENT_SOURCE_DIR}/test_teensy_probe.cpp"           # MF-213 ARCH-7-C
-    "${CMAKE_CURRENT_SOURCE_DIR}/test_concurrency.cpp")           # MF-226 P3.3 #110a
+    "${CMAKE_CURRENT_SOURCE_DIR}/test_concurrency.cpp"            # MF-226 P3.3 #110a
+    "${CMAKE_CURRENT_SOURCE_DIR}/test_transitions_ns_contract.cpp") # v4.1.5 audit Lücke #2 (ARCH-2)
 
 set(TEST_SOURCES ${TEST_SOURCES_C} ${_HEADER_ONLY_CPP_TESTS})
 
@@ -439,6 +440,16 @@ foreach(test_source ${TEST_SOURCES})
         target_include_directories(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/tests)
         set(TEST_LIBS "")
+    elseif(${test_name} STREQUAL "test_transitions_ns_contract")
+        # v4.1.5 hardening / audit Lücke #2 (ARCH-2): enforces the
+        # FluxCaptured::transitions_ns nanosecond-interval contract on
+        # MockProviderV2. Same self-contained shape as
+        # test_mock_provider_v2.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/tests/mock_provider_v2.cpp)
+        target_include_directories(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/tests)
+        set(TEST_LIBS "")
     elseif(${test_name} STREQUAL "test_gw_protocol")
         # MF-135: GW protocol regression tests need uft_gw_strerror() +
         # the inline tick conversion helpers from the full HAL impl.
@@ -495,6 +506,38 @@ foreach(test_source ${TEST_SOURCES})
         # A1-sync-run decode bug. Synthesises its own MFM track, so the
         # flux decoder TU is the only production source needed (libm
         # for the PLL math).
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c)
+        if(UNIX)
+            set(TEST_LIBS ${M_LIBRARY})
+        else()
+            set(TEST_LIBS "")
+        endif()
+    elseif(${test_name} STREQUAL "test_flux_gcr_c64")
+        # v4.1.5 hardening / audit Lücke #1: hardware-independent C64
+        # GCR decoder regression test. Same self-contained synthesis
+        # pattern as test_flux_mfm_sync; only the flux decoder TU is
+        # needed.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c)
+        if(UNIX)
+            set(TEST_LIBS ${M_LIBRARY})
+        else()
+            set(TEST_LIBS "")
+        endif()
+    elseif(${test_name} STREQUAL "test_flux_gcr_apple")
+        # v4.1.5 hardening / audit Lücke #1: hardware-independent
+        # Apple ][ 6-and-2 GCR decoder regression test.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c)
+        if(UNIX)
+            set(TEST_LIBS ${M_LIBRARY})
+        else()
+            set(TEST_LIBS "")
+        endif()
+    elseif(${test_name} STREQUAL "test_flux_amiga")
+        # v4.1.5 hardening / audit Lücke #1: hardware-independent Amiga
+        # MFM decoder regression test (odd/even-split sector layout).
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c)
         if(UNIX)
