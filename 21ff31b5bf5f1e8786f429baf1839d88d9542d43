@@ -1,0 +1,15 @@
+PR #26 merge clarification (MF-242)
+
+Title 'tests(hardening): ... (DO NOT MERGE)' was a misnomer — it meant
+'do not merge until CI green on the full matrix'. CI went green on
+HEAD 11448d18 (Linux GCC x2, macOS Clang, Windows MinGW, ASan, UBSan,
+Coverage, Audit, Emulator-CI) and the merge proceeded.
+
+Content was test-only (4 files under tests/unit/ + 1 FFI wrapper),
+zero src/ paths touched, zero include/uft/ paths touched — verifiable
+via 'git diff --stat 21ff31b^..21ff31b -- src/ include/uft/'.
+
+Verified post-hoc: see audit/test_coverage/COVERAGE_AUDIT.md Lücke #1
++ Lücke #2 and releases/v4.1.4/PR26_MERGE_RATIONALE.md. No revert
+needed; the merge is correct on the merits and the trail is now
+complete.
