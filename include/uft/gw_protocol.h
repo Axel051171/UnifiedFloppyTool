@@ -88,7 +88,28 @@
 #define BUS_NONE                0x00
 #define BUS_IBMPC               0x01
 #define BUS_SHUGART             0x02
-#define BUS_APPLE2              0x03
+/*
+ * BUS_APPLE2 (0x03) is intentionally NOT defined.
+ *
+ * The stock Greaseweazle firmware does not implement it:
+ *   - greaseweazle-firmware/inc/cdc_acm_protocol.h keeps it commented
+ *     out, "reserved for Adafruit_Floppy".
+ *   - greaseweazle-firmware/src/floppy.c rejects SetBusType(type) when
+ *     type > BUS_SHUGART via `goto bad_command` → ACK_BAD_COMMAND.
+ *
+ * Sending 0x03 to any current Greaseweazle device is therefore a hard
+ * wire-protocol error. This header is a faithful mirror of the protocol
+ * the firmware actually accepts, so the constant is omitted entirely.
+ * The typed HAL enum `uft_gw_bus_type_t` likewise stops at
+ * UFT_GW_BUS_SHUGART — the value is unreachable through the public API.
+ *
+ * Re-introduce ONLY once Adafruit_Floppy Apple-II support lands in the
+ * upstream Greaseweazle firmware (then gate it on the GET_INFO firmware
+ * version at runtime).
+ *
+ * Verified: UFT ↔ Greaseweazle compatibility audit, 2026-05-14
+ * (see tests/external_audits/gw/REPORT.md, finding F1).
+ */
 
 //=============================================================================
 // Firmware Modes

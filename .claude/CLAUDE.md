@@ -1,5 +1,38 @@
 # UnifiedFloppyTool — Agent-Suite Kontext
 
+## ⚠ AKTIVER REFACTOR: Type-Driven HAL (`refactor/type-driven-hal`)
+
+Branch: `refactor/type-driven-hal`
+Spec:   [`docs/REFACTOR_BRIEF.md`](../docs/REFACTOR_BRIEF.md)
+Tasks:  [`docs/REFACTOR_TASKS.md`](../docs/REFACTOR_TASKS.md)
+Truth:  [`tests/HARDWARE_TRUTH_TESTS.md`](../tests/HARDWARE_TRUTH_TESTS.md)
+Stand:  P0 Foundation gelandet (MF-150). Provider-Migration P1 läuft mehrere Sessions.
+
+### Pflichten beim Arbeiten auf diesem Branch
+
+1. **Lies zuerst** `docs/REFACTOR_BRIEF.md` (Architektur) und
+   `docs/REFACTOR_TASKS.md` (Sequenz). Bearbeite Tasks in Reihenfolge.
+2. **Vor jedem Commit:** `cmake --build` grün, `ctest` grün,
+   `scripts/check_consistency.py` 0/0/0/0,
+   `scripts/verify_build_sources.py` ohne neue Regressionen.
+3. **Geschützte Pfade — keine Änderung ohne Rückfrage:**
+   - `src/hal/uft_greaseweazle_full.c` (production-tested C-API)
+   - `tests/golden/` (Forensik-Wahrheit)
+   - `docs/DESIGN_PRINCIPLES.md` (Verfassung)
+   - `include/uft/hal/{outcomes,concepts,mixins}.h` (P0-Foundation —
+     editiert NICHT in P1; wenn der Refactor sie brechen würde, ist
+     Annahme falsch → STOPP)
+4. **STOP-Bedingungen** (siehe REFACTOR_TASKS.md §STOP):
+   - Test der vorher grün war failt → STOPP
+   - C-API-Symbol fehlt in Spec oder Code → STOPP
+   - >3 Build-Versuche fehlgeschlagen → Architektur-Annahme falsch → STOPP
+   - Commit würde >50 Dateien anfassen → STOPP
+   - Eine geschützte Datei (s.o.) müsste geändert werden → STOPP
+5. **Commit-Konvention:** Conventional Commits + MF-NNN. Body nennt
+   welche Tasks aus REFACTOR_TASKS.md erfüllt wurden.
+
+---
+
 ## Projekt
 
 Qt6 C/C++ Desktop-Applikation (~860 Quelldateien, ~17 Subsysteme).

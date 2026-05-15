@@ -313,10 +313,14 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          name: "UnifiedFloppyTool v${{ steps.version.outputs.version }}"
+          # Name + prerelease flag derive from the git tag, not VERSION.txt:
+          # VERSION.txt is numeric-only (4.1.4) and cannot carry an -rc/-beta
+          # suffix. A tag with a hyphen suffix (v4.1.4-rc1) is a pre-release;
+          # a clean vX.Y.Z tag is a full release.
+          name: "UnifiedFloppyTool ${{ github.ref_name }}"
           body_path: RELEASE_NOTES.md
           draft: false
-          prerelease: false
+          prerelease: ${{ contains(github.ref_name, '-') }}
           files: |
             release-artifacts/**/*.dmg
             release-artifacts/**/*.deb

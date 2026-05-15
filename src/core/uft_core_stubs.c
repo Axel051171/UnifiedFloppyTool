@@ -395,10 +395,11 @@ size_t uft_flux_to_bits_pll(
  * Misc stubs
  * ============================================================================ */
 
-const char* uft_longtrack_type_name(int type) {
-    (void)type;
-    return "Unknown";
-}
+/* uft_longtrack_type_name() — stub REMOVED (MF-231): the real
+ * implementation now lives in src/protection/uft_longtrack.c (MF-227),
+ * which also defines uft_longtrack_get_def(). Keeping the stub here
+ * caused a multiple-definition link error in the qmake build (the test
+ * build did not link this TU, so it slipped through). */
 
 /* LZHUF decompressor for DMS-Heavy / NBZ archives.
  *
@@ -426,23 +427,13 @@ int uft_lzhuf_decompress(const uint8_t *src, size_t src_size,
  * another §1.3 ABI mismatch against include/uft/forensic/uft_provenance.h. */
 
 /* ============================================================================
- * UFI Backend-Initialisierung — documented NOT_IMPLEMENTED
+ * UFI Backend-Initialisierung — moved to src/hal/ufi_backend.c
  *
- * UFI (USB Floppy Interface via SCSI-CDB) needs platform-specific
- * backend code that doesn't exist in the tree:
- *
- *   Linux:   SG_IO ioctl path     (src/hal/ufi_linux.c — absent)
- *   Windows: SCSI_PASS_THROUGH   (src/hal/ufi_win.c    — absent)
- *   macOS:   IOKit SCSITaskUserClient (src/hal/ufi_mac.c  — absent)
- *
- * Returning -1 lets callers see "no UFI backend" cleanly instead of
- * crashing on an uninitialized device. Implementation lands when the
- * platform-specific files arrive (HAL work package HW2).
+ * `uft_ufi_backend_init()` is no longer a stub: REFACTOR_TASKS.md P1.25
+ * (audit ARCH-3) implemented the Linux SG_IO backend (src/hal/ufi_linux.c)
+ * and the platform-dispatch entry point now lives in src/hal/ufi_backend.c.
+ * Windows/macOS still return -1 there until their backends land.
  * ============================================================================ */
-
-int uft_ufi_backend_init(void) {
-    return -1;   /* No platform backend registered. */
-}
 
 /* ============================================================================
  * CPU feature detection — real impl via __builtin_cpu_supports

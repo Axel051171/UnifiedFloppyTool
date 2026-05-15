@@ -132,7 +132,9 @@ def check_dangling_includes(repo: Path) -> list[str]:
 
 
 _CMAKE_PATH_RE = re.compile(
-    r'\$\{CMAKE_SOURCE_DIR\}/([A-Za-z0-9_./]+\.(?:c|cpp|h))'
+    r'\$\{CMAKE_SOURCE_DIR\}/([A-Za-z0-9_./]+\.(?:cpp|c|h))'
+    # Note: cpp before c to prevent .cpp being incorrectly matched as .c
+    # (alternation is ordered; the longer alternative must come first).
 )
 
 

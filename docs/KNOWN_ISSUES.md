@@ -157,10 +157,10 @@ aktiv abgearbeitet.
 
 ### M.-2 TrackData / OperationResult duplicate alias fields (MF-149, rule H-9)
 
-- **Status:** MITIGATED (deprecated 2026-05-04, removal planned for v5.0)
-- **Datei:** `src/hardware_providers/hardwareprovider.h`
-- **Beschreibung:** Die DTOs `TrackData` und `OperationResult` enthielten
-  je zwei Aliase für denselben Wert:
+- **Status:** CLOSED (resolved by MF-169 / P1.17, 2026-05)
+- **Datei:** `src/hardware_providers/hardwareprovider.h` *(deleted)*
+- **Beschreibung (historisch):** Die V1-DTOs `TrackData` und
+  `OperationResult` enthielten je zwei Aliase für denselben Wert:
   - `TrackData::valid` ↔ `TrackData::success` (bool)
   - `TrackData::errorMessage` ↔ `TrackData::error` (QString)
   - `OperationResult::errorMessage` ↔ `OperationResult::error` (QString)
@@ -169,17 +169,21 @@ aktiv abgearbeitet.
   `kryofluxhardwareprovider.cpp` schrieben einige Pfade nur den Alias
   (`errorMessage`) und liessen `error` leer — Reader, die das kanonische
   Feld lasen, sahen `""` und glaubten an ein erfolgreiches Ergebnis.
-- **Fix (v4.x Migrationsfenster):** Aliase mit `[[deprecated]]` markiert
-  (lokal pragma-suppressed innerhalb des Structs, damit nur User-Site-
-  Zugriffe die Warnung auslösen). Drei `inline`-Helfer in `hardwareprovider.h`
-  (`uft_set_track_success`, `uft_set_track_error`, `uft_set_op_error`)
-  schreiben kanonisches Feld + Alias atomar; alle 30+ Schreib-Stellen
-  in den 9 Hardware-Providern + `unified_hal_bridge.cpp` migriert. Reader
-  in `fluxengine`/`kryoflux` von `.valid` auf `.success` umgestellt.
-- **v5.0 Plan:** `valid` und `errorMessage` ersatzlos entfernen, Helfer
-  reduzieren auf einfache Feld-Schreibung.
-- **Regression-Schutz:** Build mit `-Wdeprecated-declarations` ist clean
-  ausserhalb der Header-internen False Positives.
+- **Resolution:** Der Type-Driven-HAL-Refactor (P1.x) ersetzte die
+  V1-DTOs vollständig durch die `std::variant`-Sum-Types in
+  `include/uft/hal/outcomes.h` (`SectorOutcome`, `FluxOutcome`, …).
+  `bool success` + `QString error` existiert nicht mehr — der
+  Forensik-Zustand IST der Variant-Alternative-Typ (`SectorRead` vs.
+  `SectorMarginal` vs. `ProviderError`), nicht ein Flag-Paar das
+  driften kann. MF-169 (P1.17) löschte `hardwareprovider.h` samt der
+  beiden DTOs und der drei `uft_set_*`-Helfer ersatzlos; die V1-
+  Provider die sie schrieben sind ebenfalls weg. Das Alias-Drift-
+  Problem ist strukturell nicht mehr ausdrückbar.
+- **Regression-Schutz:** `tests/test_hal_conformance.cpp` (65
+  Sektionen) verifiziert pro V2-Provider dass `ProviderError`
+  what/why/fix nie leer ist (Regel F-4, type-enforced via dem
+  werfenden Konstruktor) und dass `SectorMarginal::divergent_reads`
+  nie kollabiert wird (Regel F-3).
 
 ---
 
@@ -259,5 +263,15 @@ aktiv abgearbeitet.
 
 ---
 
-**Version:** 1.0
-**Stand:** 2026-04-18
+**Version:** 1.1
+**Stand:** 2026-05-14
+
+> **Änderungen v1.1 (P2.2 / MF-174):** M.-2 (rule H-9) auf CLOSED
+> gesetzt — der Type-Driven-HAL-Refactor (P1.x) hat die V1-DTOs samt
+> Alias-Drift strukturell eliminiert. Die Coding-Standards-Regeln H-1
+> ("keine freigeschaltete Action ohne Capability") und H-2 ("kein
+> `return false; Q_UNUSED(...)`-Default-Body") hatten nie eigene
+> KNOWN_ISSUES-Einträge — sie sind in der V2-Architektur strukturell
+> garantiert: H-1 über die Codegen-Phase-2-Disable-Logik, H-2 weil es
+> keine Basisklasse mit virtuellen Stubs mehr gibt (Capability =
+> Mixin-Komposition, nicht Methoden-Override).

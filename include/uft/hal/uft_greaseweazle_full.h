@@ -590,10 +590,18 @@ uint32_t uft_gw_decode_flux_index_times(const uint8_t* raw, size_t raw_len,
  * @param sample_count Number of samples
  * @param raw Output: encoded stream (caller allocates)
  * @param max_raw Maximum raw bytes
+ * @param sample_freq_hz Device sample frequency in Hz, from
+ *        `uft_gw_get_sample_freq()` / `uft_gw_info_t::sample_freq`.
+ *        Drives the NFA threshold / period and dummy-flux conversions.
+ *        Pass 0 to fall back to the F7 default (UFT_GW_SAMPLE_FREQ_HZ,
+ *        72 MHz) — but a real device should always pass its actual
+ *        frequency, otherwise an F7-Plus (84 MHz) gets NFA thresholds
+ *        off by a factor of 84/72.  (MF-179 / audit finding GW-F3)
  * @return Number of bytes encoded
  */
 size_t uft_gw_encode_flux_stream(const uint32_t* samples, uint32_t sample_count,
-                              uint8_t* raw, size_t max_raw);
+                              uint8_t* raw, size_t max_raw,
+                              uint32_t sample_freq_hz);
 
 /* ═══════════════════════════════════════════════════════════════════════════
  * ERROR CODES

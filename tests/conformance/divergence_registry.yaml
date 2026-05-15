@@ -1,0 +1,47 @@
+# Divergence Registry — documented, legitimate UFT ↔ Greaseweazle output
+# differences.
+#
+# Strategy: docs/TESTER_STRATEGY.md §2.4
+#
+# A differential test that finds the outputs differ is only allowed to
+# PASS (as DIVERGE_OK) if a matching entry exists here. No entry → the
+# test FAILs as DIVERGE_BAD, forcing a choice: fix the code, or write
+# the entry and justify the divergence. Each entry is both test spec
+# and documentation.
+#
+# Required fields per entry (enforced by uft_diff_test.registry):
+#   id       — "DIV-NNN", unique
+#   command  — GW command it applies to; "*" matches any command
+#   scope    — which part of the output differs
+#   summary  — one line
+#   reason   — why the divergence is intentional and acceptable
+#
+# Optional field:
+#   mask     — a Python regex applied per-line to BOTH outputs before
+#              byte-comparison. Lines matching the mask are dropped from
+#              both sides. If, after applying every applicable mask, the
+#              outputs are equal, the result is DIVERGE_OK (the divergence
+#              was fully accounted for). Entries without a `mask` document
+#              a divergence the harness cannot auto-neutralise (e.g. an
+#              extra sidecar file) — those are handled test-side.
+#
+# Status: SKELETON (P3.1, Welle 1). DIV-001 is the bootstrap entry.
+# DIV-002+ land with the per-command differential tests in P3.2.
+
+divergences:
+  - id: DIV-001
+    command: "*"
+    scope: "banner / version line on stdout"
+    summary: >-
+      UFT prints its own tool name and version banner, not Greaseweazle's.
+    reason: >-
+      `gw --version` and every `gw` command's banner identify the tool as
+      "Greaseweazle <ver>". UFT identifies itself as
+      "UnifiedFloppyTool <ver>". This is a required, intentional
+      divergence — UFT is a distinct tool, not a `gw` rebadge, and
+      forensic provenance (DESIGN_PRINCIPLES: chain-of-custody) demands
+      the output name the tool that actually produced it. Differential
+      tests must mask the banner line before byte-comparing the
+      substantive payload; this entry authorises that mask for every
+      command.
+    mask: '^(Greaseweazle|UnifiedFloppyTool|UFT)\b.*$'

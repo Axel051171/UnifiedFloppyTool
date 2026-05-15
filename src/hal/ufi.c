@@ -10,7 +10,11 @@
 #include <string.h>
 #include <stdio.h>
 
-struct uft_ufi_device { int dummy; };
+/* `struct uft_ufi_device` is left incomplete here on purpose: this
+ * translation unit only ever passes the handle pointer to/from the
+ * backend ops and never dereferences it. The concrete definition (with
+ * the fd / OS handle) is owned by the active backend — e.g.
+ * src/hal/ufi_linux.c defines `struct uft_ufi_device { int fd; };`. */
 
 static const uft_ufi_ops_t *g_ops = NULL;
 

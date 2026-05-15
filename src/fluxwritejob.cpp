@@ -9,17 +9,18 @@
 #include <QFileInfo>
 #include <QThread>
 
+#include <cstdint>
 #include <cstdlib>
 #include <cstring>
+#include <variant>
 #include <vector>
 
-#include "uft/hal/uft_greaseweazle_full.h"
+#include "hardware_providers/greaseweazle_provider_v2.h"
 #include "uft/flux/uft_scp_parser.h"
 
 FluxWriteJob::FluxWriteJob(QObject *parent)
     : QObject(parent)
-    , m_gwDevice(nullptr)
-    , m_driveUnit(0)
+    , m_provider(nullptr)
     , m_verify(false)
     , m_cancel(false)
 {
@@ -27,9 +28,11 @@ FluxWriteJob::FluxWriteJob(QObject *parent)
 
 FluxWriteJob::~FluxWriteJob() = default;
 
-void FluxWriteJob::setDevice(void *gwDevice)         { m_gwDevice = gwDevice; }
+void FluxWriteJob::setProvider(::uft::hal::GreaseweazleProviderV2 *provider)
+{
+    m_provider = provider;
+}
 void FluxWriteJob::setInputPath(const QString &p)    { m_inputPath = p; }
-void FluxWriteJob::setDriveUnit(int unit)            { m_driveUnit = unit; }
 void FluxWriteJob::setVerify(bool verify)            { m_verify = verify; }
 
 void FluxWriteJob::requestCancel()
@@ -46,7 +49,7 @@ void FluxWriteJob::run()
 {
     qDebug() << "FluxWriteJob::run() in thread" << QThread::currentThreadId();
 
-    if (m_gwDevice == nullptr) {
+    if (m_provider == nullptr) {
         emit error(tr("No hardware device — connect a Greaseweazle in the Hardware tab first."));
         return;
     }
@@ -70,8 +73,6 @@ void FluxWriteJob::run()
                       "Format Converter tab.").arg(srcInfo.suffix()));
         return;
     }
-
-    auto *gw = static_cast<uft_gw_device_t *>(m_gwDevice);
 
     /* Open the SCP via the real ctx-based parser. The legacy stub
      * uft_scp_read(uint8_t*, size_t, uft_scp_file_t*) returns -1 on
@@ -98,32 +99,35 @@ void FluxWriteJob::run()
         return;
     }
 
-    /* Hand the drive over to write mode. Motor on, drive selected,
-     * track 0 settled before the first seek. */
-    emit stageChanged(tr("Selecting drive…"));
-    if (uft_gw_select_drive(gw, (uint8_t)m_driveUnit) != 0) {
-        uft_scp_close(scp);
-        uft_scp_destroy(scp);
-        emit error(tr("Failed to select drive unit %1.").arg(m_driveUnit));
-        return;
-    }
-    if (uft_gw_set_motor(gw, true) != 0) {
-        uft_scp_close(scp);
-        uft_scp_destroy(scp);
-        emit error(tr("Failed to start drive motor."));
-        return;
+    /* MF-201 (P1.21): migrated to the V2 outcome surface — mirror of the
+     * MF-200 FluxCaptureJob migration.
+     *  - uft_gw_select_drive() is gone — GreaseweazleProviderV2 asserts
+     *    the bus unit lazily (MF-199).
+     *  - uft_gw_select_head() is gone — head is a field of WriteFluxParams.
+     *  - uft_gw_get_sample_freq() / ticks_per_ns are gone — FluxStream
+     *    carries transitions in nanoseconds and do_write_raw_flux does
+     *    the ns->tick conversion internally. */
+
+    emit stageChanged(tr("Starting drive motor…"));
+    {
+        bool motor_ok = false;
+        QString motor_err;
+        std::visit(::uft::hal::overloaded{
+            [&](const ::uft::hal::MotorRunning&)             { motor_ok = true; },
+            [&](const ::uft::hal::MotorStopped&)             { motor_ok = true; },
+            [&](const ::uft::hal::MotorStalled& s)           { motor_err = QString::fromStdString(s.reason); },
+            [&](const ::uft::hal::CapabilityRequiresPolicy& p){ motor_err = QString::fromStdString(p.explain); },
+            [&](const ::uft::hal::HardwareDisconnected& d)   { motor_err = tr("hardware disconnected (%1)").arg(QString::fromStdString(d.device_path)); },
+            [&](const ::uft::hal::ProviderError& e)          { motor_err = QString::fromStdString(e.what); },
+        }, m_provider->set_motor(true));
+        if (!motor_ok) {
+            uft_scp_close(scp);
+            uft_scp_destroy(scp);
+            emit error(tr("Failed to start drive motor: %1").arg(motor_err));
+            return;
+        }
     }
     QThread::msleep(500);
-
-    const uint32_t sample_freq = uft_gw_get_sample_freq(gw);
-    if (sample_freq == 0) {
-        uft_gw_set_motor(gw, false);
-        uft_scp_close(scp);
-        uft_scp_destroy(scp);
-        emit error(tr("Greaseweazle reported sample_freq=0 — refusing to write."));
-        return;
-    }
-    const double ticks_per_ns = (double)sample_freq / 1.0e9;
 
     emit stageChanged(tr("Writing %1 tracks…").arg(track_count_in_scp));
     emit progress(0);
@@ -161,55 +165,78 @@ void FluxWriteJob::run()
         const uft_scp_rev_data_t &rev = track_data.revolutions[0];
 
         /* SCP flux entries are nanosecond intervals between transitions,
-         * with `0` placeholders marking 16-bit overflow positions
-         * (parser already accumulates those into the next non-zero
-         * entry). The HAL expects ticks-between-transitions, so we
-         * convert and drop the zero slots. */
-        std::vector<uint32_t> ticks;
-        ticks.reserve(rev.flux_count);
+         * with `0` placeholders marking 16-bit overflow positions the
+         * parser already folded into the next non-zero entry.
+         * FluxStream::transitions_ns is itself in nanoseconds, so the
+         * intervals pass straight through — only the zero placeholders
+         * are dropped. The ns->tick conversion now lives in
+         * GreaseweazleProviderV2::do_write_raw_flux. */
+        ::uft::hal::FluxStream flux;
+        flux.transitions_ns.reserve(rev.flux_count);
         for (uint32_t i = 0; i < rev.flux_count; ++i) {
             uint32_t ns = rev.flux_data[i];
             if (ns == 0) continue;
-            uint32_t tk = (uint32_t)((double)ns * ticks_per_ns);
-            if (tk == 0) tk = 1;  /* HAL refuses zero-tick gaps */
-            ticks.push_back(tk);
+            flux.transitions_ns.push_back(ns);
         }
 
-        if (ticks.empty()) {
+        if (flux.transitions_ns.empty()) {
             ++tracks_skipped;
             uft_scp_free_track(&track_data);
-            qWarning() << "SCP track" << t << "produced no ticks after conversion — skipping";
+            qWarning() << "SCP track" << t
+                       << "produced no flux after dropping zero placeholders — skipping";
             continue;
         }
 
-        if (uft_gw_seek(gw, cyl) != 0) {
+        bool seek_ok = false;
+        QString seek_err;
+        std::visit(::uft::hal::overloaded{
+            [&](const ::uft::hal::SeekArrived&)               { seek_ok = true; },
+            [&](const ::uft::hal::SeekOvershot& o)            { seek_err = tr("overshot (requested %1, actual %2)").arg(o.requested).arg(o.actual); },
+            [&](const ::uft::hal::SeekTrack0Failed& tk)       { seek_err = QString::fromStdString(tk.reason); },
+            [&](const ::uft::hal::CapabilityRequiresPolicy& p){ seek_err = QString::fromStdString(p.explain); },
+            [&](const ::uft::hal::HardwareDisconnected& d)    { seek_err = tr("hardware disconnected (%1)").arg(QString::fromStdString(d.device_path)); },
+            [&](const ::uft::hal::ProviderError& e)           { seek_err = QString::fromStdString(e.what); },
+        }, m_provider->seek(cyl));
+        if (!seek_ok) {
             ++hard_errors;
             uft_scp_free_track(&track_data);
-            uft_gw_set_motor(gw, false);
+            (void)m_provider->set_motor(false);
             uft_scp_close(scp);
             uft_scp_destroy(scp);
-            emit error(tr("Seek to cylinder %1 failed — aborting write to avoid partial disk.").arg(cyl));
+            emit error(tr("Seek to cylinder %1 failed (%2) — aborting write to avoid partial disk.")
+                           .arg(cyl).arg(seek_err));
             return;
         }
-        uft_gw_select_head(gw, (uint8_t)side);
 
-        uft_gw_write_params_t params = {};
-        params.index_sync          = true;
-        params.erase_empty         = false;
-        params.verify              = false;
-        params.pre_erase_ticks     = 0;
-        params.terminate_at_index  = 1;  /* one revolution */
+        /* WriteFluxParams::verify defaults to true; honour the job's own
+         * m_verify (off by default, mirroring the V1 params.verify=false).
+         * When verify is on, do_write_raw_flux does a read-back pass and
+         * a mismatch surfaces here as WriteVerifyFailed. */
+        ::uft::hal::WriteFluxParams wp;
+        wp.cylinder = cyl;
+        wp.head     = side;
+        wp.verify   = m_verify;
 
-        int wrc = uft_gw_write_flux(gw, &params, ticks.data(), (uint32_t)ticks.size());
+        bool write_ok = false;
+        QString write_err;
+        std::visit(::uft::hal::overloaded{
+            [&](const ::uft::hal::WriteCompleted&)            { write_ok = true; },
+            [&](const ::uft::hal::WriteVerifyFailed&)         { write_err = tr("post-write verify mismatch"); },
+            [&](const ::uft::hal::WriteRefused& r)            { write_err = tr("write refused: %1").arg(QString::fromStdString(r.physical_reason)); },
+            [&](const ::uft::hal::CapabilityRequiresPolicy& p){ write_err = QString::fromStdString(p.explain); },
+            [&](const ::uft::hal::HardwareDisconnected& d)    { write_err = tr("hardware disconnected (%1)").arg(QString::fromStdString(d.device_path)); },
+            [&](const ::uft::hal::ProviderError& e)           { write_err = QString::fromStdString(e.what); },
+        }, m_provider->write_raw_flux(wp, flux));
+
         uft_scp_free_track(&track_data);
 
-        if (wrc != 0) {
+        if (!write_ok) {
             ++hard_errors;
-            uft_gw_set_motor(gw, false);
+            (void)m_provider->set_motor(false);
             uft_scp_close(scp);
             uft_scp_destroy(scp);
-            emit error(tr("Write failed at cyl=%1 side=%2 (rc=%3) — drive may have a partially written disk.")
-                           .arg(cyl).arg(side).arg(wrc));
+            emit error(tr("Write failed at cyl=%1 side=%2 (%3) — drive may have a partially written disk.")
+                           .arg(cyl).arg(side).arg(write_err));
             return;
         }
 
@@ -219,7 +246,8 @@ void FluxWriteJob::run()
         emit progress(pct);
     }
 
-    uft_gw_set_motor(gw, false);
+    /* Tearing down — the motor-stop outcome is intentionally discarded. */
+    (void)m_provider->set_motor(false);
     uft_scp_close(scp);
     uft_scp_destroy(scp);
 
@@ -228,17 +256,12 @@ void FluxWriteJob::run()
         return;
     }
 
-    if (m_verify) {
-        /* Real read-back verify is a separate concern that needs the
-         * capture path (FluxCaptureJob) plus a flux-level diff. Honest
-         * stub for now: surface that we did NOT verify rather than
-         * silently claim we did. */
-        emit stageChanged(tr("Skipping verify — feature not implemented yet."));
-    }
-
     emit progress(100);
     QString msg = tr("Wrote %1 tracks (skipped %2)")
                       .arg(tracks_written).arg(tracks_skipped);
+    if (m_verify) {
+        msg += tr(" — each track verified inline (read-back compare).");
+    }
     if (hard_errors) {
         msg += tr(" — %1 hard errors during write.").arg(hard_errors);
     }

@@ -1,0 +1,172 @@
+# UFT — Hardware Tab declarative action wiring
+#
+# Refactor branch: refactor/type-driven-hal
+# Spec:           docs/REFACTOR_BRIEF.md §6
+# Task:           docs/REFACTOR_TASKS.md  P1.2
+# Consumer:       tools/wiring_codegen.py  (P1.0)
+# Runtime:        include/uft/gui/wiring_runtime.h  (P1.3)
+#
+# This file is the single source of truth for which Hardware-tab buttons
+# trigger which capability operation on the bound V2 provider. It replaces
+# the 7 hand-rolled `connect(ui->btnX, &QPushButton::clicked, this, ...)`
+# calls in src/hardwaretab.cpp::setupConnections().
+#
+# Codegen rules enforced:
+#   H-3  every `widget:` MUST exist in forms/tab_hardware.ui
+#   H-4  every `requires:` MUST be in KNOWN_CAPABILITIES (mirror of
+#        include/uft/hal/concepts.h via tools/wiring_codegen.py)
+#   F-3  every `on_outcome:` map MUST cover every alternative of the
+#        matching variant — std::visit fails to compile if one is missed
+#   F-4  ProviderError handler must invoke a method that surfaces all
+#        three of what / why / fix (not collapse to one string)
+#
+# DESIGN DECISION (deliberate UX change, no pragmatic compromise)
+# ---------------------------------------------------------------
+# The legacy hand-wired slots `onSeekTest()` and `onReadTest()` performed
+# multi-step orchestrations (loop over many cylinders, motor on, seek,
+# motor off). Multi-step orchestration cannot be expressed as a single
+# `wire_action<Cap>` call because each call is one capability invocation
+# producing one outcome.
+#
+# Per the brief §6, the type-driven design says: one button = one
+# capability check. The new test semantics for those two buttons is
+# therefore "verify that ONE seek / ONE read works", which is what a
+# capability-presence test should be. The previous exhaustive scans were
+# diagnostic routines, not capability tests, and should move to a
+# dedicated Diagnostics tab if desired (not part of P1.2 scope).
+#
+# Hand-wired connections that REMAIN outside this YAML (lifecycle, not
+# capability-bound): btnRefreshPorts, btnConnect.
+#
+# HANDLER METHOD CONTRACT (implemented in P1.4)
+# ----------------------------------------------
+# The codegen emits handler bodies that call methods on `self` (the
+# HardwareTab pointer). P1.4 adds these methods to HardwareTab; they
+# must surface the variant content without losing forensic detail.
+#
+# - self->onMotorOutcome(const ::uft::hal::Motor*&)        — overloaded per alt
+# - self->onSeekOutcome(const ::uft::hal::Seek*&)
+# - self->onRpmOutcome(const ::uft::hal::Rpm*&)
+# - self->onDetectOutcome(const ::uft::hal::Drive*&)
+# - self->onFluxOutcome(const ::uft::hal::Flux*&)
+# - self->showProviderError(const ::uft::hal::ProviderError&)
+# - self->showHardwareDisconnected(const ::uft::hal::HardwareDisconnected&)
+# - self->showPolicyRequired(const ::uft::hal::CapabilityRequiresPolicy&)
+#
+# `provider_source` references `self->currentProviderV2()`, also added
+# in P1.4 — returns `GreaseweazleProviderV2*` or another V2 type. Until
+# P1.4 lands, this YAML is consumed by the codegen but its output is not
+# yet part of the build.
+
+tab: HardwareTab
+provider_source: self->currentProviderV2()
+
+# Headers the generated TU needs in addition to wiring_runtime.h:
+#   hardwaretab.h         — HardwareTab class + the ProviderV2Variant typedef
+#                           (declares ui-pointer + handler overloads + friend
+#                           declaration for the generated function)
+#   ui_tab_hardware.h     — uic-generated complete type for Ui::TabHardware
+#   *_provider_v2.h (x9)  — MF-205 (P1.23): the codegen std::visit's the
+#                           ProviderV2Variant; inside the visit lambda
+#                           wire_action<cap::X> instantiates against the
+#                           CONCRETE provider type, which must be complete.
+#                           All 9 V2 provider headers are therefore needed.
+extra_includes:
+  - hardwaretab.h
+  - ui_tab_hardware.h
+  - hardware_providers/greaseweazle_provider_v2.h
+  - hardware_providers/scp_provider_v2.h
+  - hardware_providers/kryoflux_provider_v2.h
+  - hardware_providers/fluxengine_provider_v2.h
+  - hardware_providers/fc5025_provider_v2.h
+  - hardware_providers/xum1541_provider_v2.h
+  - hardware_providers/applesauce_provider_v2.h
+  - hardware_providers/adfcopy_provider_v2.h
+  - hardware_providers/usbfloppy_provider_v2.h
+
+actions:
+
+  # ── Motor control ──────────────────────────────────────────────────
+  - widget: btnMotorOn
+    requires: ControlsMotor
+    invoke: set_motor(true)
+    on_outcome:
+      MotorRunning: self->onMotorOutcome(v)
+      MotorStopped: self->onMotorOutcome(v)
+      MotorStalled: self->onMotorOutcome(v)
+      CapabilityRequiresPolicy: self->showPolicyRequired(v)
+      HardwareDisconnected: self->showHardwareDisconnected(v)
+      ProviderError: self->showProviderError(v)
+
+  - widget: btnMotorOff
+    requires: ControlsMotor
+    invoke: set_motor(false)
+    on_outcome:
+      MotorRunning: self->onMotorOutcome(v)
+      MotorStopped: self->onMotorOutcome(v)
+      MotorStalled: self->onMotorOutcome(v)
+      CapabilityRequiresPolicy: self->showPolicyRequired(v)
+      HardwareDisconnected: self->showHardwareDisconnected(v)
+      ProviderError: self->showProviderError(v)
+
+  # ── Drive detection ────────────────────────────────────────────────
+  - widget: btnDetect
+    requires: DetectsDrive
+    invoke: detect_drive()
+    on_outcome:
+      DriveDetected: self->onDetectOutcome(v)
+      DriveAbsent: self->onDetectOutcome(v)
+      CapabilityRequiresPolicy: self->showPolicyRequired(v)
+      HardwareDisconnected: self->showHardwareDisconnected(v)
+      ProviderError: self->showProviderError(v)
+
+  # ── Seek (single test seek to cylinder 40) ─────────────────────────
+  # Previous loop-based exhaustive test moves to Diagnostics later.
+  - widget: btnSeekTest
+    requires: SeeksHead
+    invoke: seek(40)
+    on_outcome:
+      SeekArrived: self->onSeekOutcome(v)
+      SeekOvershot: self->onSeekOutcome(v)
+      SeekTrack0Failed: self->onSeekOutcome(v)
+      CapabilityRequiresPolicy: self->showPolicyRequired(v)
+      HardwareDisconnected: self->showHardwareDisconnected(v)
+      ProviderError: self->showProviderError(v)
+
+  # ── Calibrate (recalibrate to track 0) ─────────────────────────────
+  - widget: btnCalibrate
+    requires: Recalibrates
+    invoke: recalibrate()
+    on_outcome:
+      SeekArrived: self->onSeekOutcome(v)
+      SeekOvershot: self->onSeekOutcome(v)
+      SeekTrack0Failed: self->onSeekOutcome(v)
+      CapabilityRequiresPolicy: self->showPolicyRequired(v)
+      HardwareDisconnected: self->showHardwareDisconnected(v)
+      ProviderError: self->showProviderError(v)
+
+  # ── RPM measurement ────────────────────────────────────────────────
+  - widget: btnRPMTest
+    requires: MeasuresRPM
+    invoke: measure_rpm()
+    on_outcome:
+      RpmMeasured: self->onRpmOutcome(v)
+      CapabilityRequiresPolicy: self->showPolicyRequired(v)
+      HardwareDisconnected: self->showHardwareDisconnected(v)
+      ProviderError: self->showProviderError(v)
+
+  # ── Read raw flux (single test capture, cylinder 40, head 0, 2 revs) ─
+  # Previous "Read Test" orchestration (motor on → seek → read → motor off)
+  # was a self-test routine. This YAML reduces it to its capability core:
+  # "can the bound provider capture flux?". The orchestration of motor
+  # state lives on the provider (or the user separately presses MotorOn).
+  - widget: btnReadTest
+    requires: ReadsRawFlux
+    invoke: read_raw_flux(::uft::hal::ReadFluxParams{40, 0, 2, 0})
+    on_outcome:
+      FluxCaptured: self->onFluxOutcome(v)
+      FluxMarginal: self->onFluxOutcome(v)
+      FluxUnreadable: self->onFluxOutcome(v)
+      CapabilityRequiresPolicy: self->showPolicyRequired(v)
+      HardwareDisconnected: self->showHardwareDisconnected(v)
+      ProviderError: self->showProviderError(v)

@@ -118,14 +118,24 @@ void MainWindow::loadTabWidgets()
                 setLEDStatus(connected ? LEDStatus::Connected : LEDStatus::Disconnected);
             }, Qt::QueuedConnection);
 
-    // MF-110 — forward the live HAL handle from HardwareTab to WorkflowTab
-    // so FluxCaptureJob can drive the same open Greaseweazle. When the
-    // hardware disconnects we push nullptr so WorkflowTab refuses to start
-    // a flux capture without a device.
+    // MF-110 / MF-200 / MF-205 — forward HardwareTab's connected V2
+    // provider to WorkflowTab. FluxCaptureJob / FluxWriteJob are
+    // Greaseweazle-specific (the flux capture/write-to-file workflow is
+    // wired only for GW today), so we extract the GreaseweazleProviderV2
+    // alternative out of the ProviderV2Variant. If the connected
+    // controller is anything else — or disconnected — WorkflowTab gets
+    // nullptr and refuses to start a flux workflow without a GW.
     connect(hardwareTab, &HardwareTab::connectionChanged,
             workflowTab, [workflowTab, hardwareTab](bool connected) {
+                ::uft::hal::GreaseweazleProviderV2 *gwp = nullptr;
+                if (connected) {
+                    const ProviderV2Variant &pv = hardwareTab->currentProviderV2();
+                    if (auto *held = std::get_if<
+                            std::unique_ptr<::uft::hal::GreaseweazleProviderV2>>(&pv))
+                        gwp = held->get();
+                }
                 workflowTab->setHardwareDevice(
-                    connected ? hardwareTab->gwDevice() : nullptr,
+                    gwp,
                     hardwareTab->detectedTracks(),
                     hardwareTab->detectedHeads());
             });

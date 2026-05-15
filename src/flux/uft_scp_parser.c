@@ -419,15 +419,128 @@ int uft_scp_read_track(uft_scp_ctx_t* ctx, int track, uft_scp_track_data_t* data
 void uft_scp_free_track(uft_scp_track_data_t* data)
 {
     if (!data) return;
-    
+
     for (int r = 0; r < UFT_SCP_MAX_REVOLUTIONS; r++) {
         if (data->revolutions[r].flux_data) {
             free(data->revolutions[r].flux_data);
             data->revolutions[r].flux_data = NULL;
         }
     }
-    
+
     memset(data, 0, sizeof(*data));
+}
+
+/*
+ * uft_scp_read_track_memory — self-contained memory-buffer track decode.
+ *
+ * uft_scp_open_memory() parses the SCP header + offset table from a
+ * buffer, but uft_scp_read_track() is FILE*-only (it rejects a NULL
+ * ctx->file). This companion does the whole job from a memory buffer in
+ * one pass: header validation, offset-table lookup, track header,
+ * revolution entries, and the BE16 flux cells with the SCP overflow
+ * marker (0x0000) folded — the exact decode uft_scp_read_track() does,
+ * just bounds-checked against `size` instead of fread(). Every offset is
+ * validated before use: a malformed/truncated SCP returns an error code,
+ * never reads out of bounds, never fabricates a flux value.
+ *
+ * Added for P1.24 (MF-209): FluxEngineProviderV2 asks fluxengine for SCP
+ * output and decodes it from the runner's in-memory bytes — there is no
+ * file to hand to the FILE*-based path.
+ *
+ * `out->revolutions[r].flux_data` is allocated per revolution; the caller
+ * frees the result with uft_scp_free_track(). On any error nothing is
+ * left allocated.
+ */
+int uft_scp_read_track_memory(const uint8_t* data, size_t size,
+                              int track, uft_scp_track_data_t* out)
+{
+    if (!data || !out) return UFT_SCP_ERR_NULLPTR;
+    if (track < 0 || track >= UFT_SCP_MAX_TRACKS) return UFT_SCP_ERR_TRACK;
+
+    const size_t hdr_size   = sizeof(uft_scp_header_t);          /* 16 */
+    const size_t table_size = (size_t)UFT_SCP_MAX_TRACKS * 4u;
+    if (size < hdr_size + table_size) return UFT_SCP_ERR_READ;
+
+    /* Header: signature + resolution. Field offsets follow uft_scp_header_t
+     * (packed): revolutions at byte 5, resolution at byte 11 (byte 9 is
+     * bit_cell_width, byte 10 is heads). */
+    if (memcmp(data, UFT_SCP_SIGNATURE, 3) != 0) return UFT_SCP_ERR_SIGNATURE;
+    const uint8_t  revolutions = data[5];
+    const uint8_t  resolution  = data[11];
+    const uint32_t period_ns   = (uint32_t)UFT_SCP_BASE_PERIOD_NS *
+                                 (1u + resolution);
+
+    /* Offset-table entry for the requested track. */
+    const uint32_t track_off =
+        read_le32(data + hdr_size + (size_t)track * 4u);
+    if (track_off == 0) return UFT_SCP_ERR_TRACK;
+    /* Need room for at least the "TRK" header. */
+    if ((size_t)track_off + sizeof(uft_scp_track_header_t) > size)
+        return UFT_SCP_ERR_READ;
+
+    /* Track header. */
+    if (memcmp(data + track_off, UFT_SCP_TRACK_SIG, 3) != 0)
+        return UFT_SCP_ERR_SIGNATURE;
+
+    memset(out, 0, sizeof(*out));
+    out->track_number     = data[track_off + 3];
+    out->side             = out->track_number & 1u;
+    out->revolution_count = revolutions;
+    out->valid            = true;
+
+    /* Revolution entries follow the 4-byte track header. */
+    size_t rev_pos = (size_t)track_off + sizeof(uft_scp_track_header_t);
+    const int rev_n = (revolutions < UFT_SCP_MAX_REVOLUTIONS)
+                          ? revolutions : UFT_SCP_MAX_REVOLUTIONS;
+
+    for (int r = 0; r < rev_n; r++) {
+        if (rev_pos + 12u > size) {
+            uft_scp_free_track(out);
+            return UFT_SCP_ERR_READ;
+        }
+        const uint32_t index_time   = read_le32(data + rev_pos);
+        const uint32_t track_length = read_le32(data + rev_pos + 4);
+        const uint32_t data_offset  = read_le32(data + rev_pos + 8);
+        rev_pos += 12u;
+
+        out->revolutions[r].index_time_ns = index_time * period_ns;
+        out->revolutions[r].flux_count    = track_length;
+        out->revolutions[r].rpm =
+            uft_scp_calculate_rpm(out->revolutions[r].index_time_ns);
+
+        if (track_length == 0) continue;
+
+        /* Flux data is at track_off + data_offset, track_length BE16
+         * cells. Bounds-check the whole span before touching it. */
+        const size_t flux_pos = (size_t)track_off + data_offset;
+        if (flux_pos + (size_t)track_length * 2u > size) {
+            uft_scp_free_track(out);
+            return UFT_SCP_ERR_READ;
+        }
+
+        uint32_t* flux = malloc((size_t)track_length * sizeof(uint32_t));
+        if (!flux) {
+            uft_scp_free_track(out);
+            return UFT_SCP_ERR_MEMORY;
+        }
+        out->revolutions[r].flux_data = flux;
+
+        uint32_t overflow_acc = 0;
+        for (uint32_t i = 0; i < track_length; i++) {
+            uint16_t raw = read_be16(data + flux_pos + (size_t)i * 2u);
+            if (raw == 0) {
+                /* SCP overflow marker — accumulate, emit a 0 placeholder
+                 * (skipped by the caller, never a real transition). */
+                overflow_acc += 65536u;
+                flux[i] = 0;
+            } else {
+                flux[i] = (overflow_acc + raw) * period_ns;
+                overflow_acc = 0;
+            }
+        }
+    }
+
+    return UFT_SCP_OK;
 }
 
 /*============================================================================

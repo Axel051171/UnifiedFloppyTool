@@ -1,0 +1,144 @@
+{
+  "provider": "scp",
+  "integration": "native (libusb \u2014 src/hal/uft_scp_direct.c)",
+  "reference_provenance": {
+    "grade": "mixed: recalled (clock/geometry) + needs-source (USB cmd bytes)",
+    "project": "cbmstuff SuperCard Pro SDK v1.7 (Dec 2015)",
+    "baseline": "SCP SDK v1.7 + samdisk/a8rawconv scp.cpp ports",
+    "files_recalled_from": [
+      "SCP SDK v1.7 command header (NOT vendored)",
+      "samdisk/scp.cpp (in-repo cross-check, clock only)"
+    ],
+    "note": "USB command bytes are needs-source \u2014 see audit/README.md 'Reference provenance honesty'. The header's 0x02-0x05 opcodes do not match the published SCP SDK v1.7 command set; a vendored SDK header is required to confirm or refute them."
+  },
+  "uft_source": {
+    "header": "include\\uft\\hal\\uft_scp_direct.h",
+    "hwtab": "src\\hardwaretab.cpp"
+  },
+  "counts": {
+    "PASS": 5,
+    "UNVERIFIED": 9
+  },
+  "sections": {
+    "usb_ids": [
+      {
+        "key": "UFT_SCP_USB_PID",
+        "uft": 3980,
+        "ref": 3980,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 41
+      },
+      {
+        "key": "UFT_SCP_USB_VID",
+        "uft": 5840,
+        "ref": 5840,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 40
+      }
+    ],
+    "usb_endpoints": [
+      {
+        "key": "UFT_SCP_BULK_IN_EP",
+        "uft": 129,
+        "ref": "needs-source \u2014 SCP interface descriptor not vendored",
+        "verdict": "UNVERIFIED",
+        "detail": "needs-source \u2014 reference cannot be established without a vendored source",
+        "uft_line": 44
+      },
+      {
+        "key": "UFT_SCP_BULK_OUT_EP",
+        "uft": 1,
+        "ref": "needs-source \u2014 SCP interface descriptor not vendored",
+        "verdict": "UNVERIFIED",
+        "detail": "needs-source \u2014 reference cannot be established without a vendored source",
+        "uft_line": 45
+      }
+    ],
+    "cmd_opcodes": [
+      {
+        "key": "UFT_SCP_CMD_DESELECT_DRIVE",
+        "uft": 9,
+        "ref": "needs-source \u2014 SCP SDK v1.7 command header not vendored",
+        "verdict": "UNVERIFIED",
+        "detail": "needs-source \u2014 reference cannot be established without a vendored source",
+        "uft_line": 52
+      },
+      {
+        "key": "UFT_SCP_CMD_GET_INFO",
+        "uft": 64,
+        "ref": "needs-source \u2014 SCP SDK v1.7 command header not vendored",
+        "verdict": "UNVERIFIED",
+        "detail": "needs-source \u2014 reference cannot be established without a vendored source",
+        "uft_line": 53
+      },
+      {
+        "key": "UFT_SCP_CMD_READ_FLUX",
+        "uft": 4,
+        "ref": "needs-source \u2014 SCP SDK v1.7 command header not vendored",
+        "verdict": "UNVERIFIED",
+        "detail": "needs-source \u2014 reference cannot be established without a vendored source",
+        "uft_line": 48
+      },
+      {
+        "key": "UFT_SCP_CMD_SELECT_DRIVE",
+        "uft": 3,
+        "ref": "needs-source \u2014 SCP SDK v1.7 command header not vendored",
+        "verdict": "UNVERIFIED",
+        "detail": "needs-source \u2014 reference cannot be established without a vendored source",
+        "uft_line": 50
+      },
+      {
+        "key": "UFT_SCP_CMD_SET_CONTROL",
+        "uft": 2,
+        "ref": "needs-source \u2014 SCP SDK v1.7 command header not vendored",
+        "verdict": "UNVERIFIED",
+        "detail": "needs-source \u2014 reference cannot be established without a vendored source",
+        "uft_line": 51
+      },
+      {
+        "key": "UFT_SCP_CMD_WRITE_FLUX",
+        "uft": 5,
+        "ref": "needs-source \u2014 SCP SDK v1.7 command header not vendored",
+        "verdict": "UNVERIFIED",
+        "detail": "needs-source \u2014 reference cannot be established without a vendored source",
+        "uft_line": 49
+      }
+    ],
+    "timing": [
+      {
+        "key": "UFT_SCP_DEFAULT_REVOLUTIONS",
+        "uft": 3,
+        "ref": "UFT implementation choice (3) \u2014 not a fixed SCP protocol constant",
+        "verdict": "UNVERIFIED",
+        "detail": "impl-choice \u2014 reference cannot be established without a vendored source",
+        "uft_line": 77
+      },
+      {
+        "key": "UFT_SCP_FLUX_NS_PER_SAMPLE",
+        "uft": 25,
+        "ref": 25,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 73
+      },
+      {
+        "key": "UFT_SCP_MAX_REVOLUTIONS",
+        "uft": 5,
+        "ref": 5,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 76
+      },
+      {
+        "key": "UFT_SCP_MAX_TRACK_INDEX",
+        "uft": 167,
+        "ref": 167,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 56
+      }
+    ]
+  }
+}

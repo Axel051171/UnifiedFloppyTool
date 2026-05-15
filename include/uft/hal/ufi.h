@@ -53,9 +53,12 @@ typedef struct uft_ufi_ops {
                          uft_diag_t *diag);
 } uft_ufi_ops_t;
 
-/* Register/init backend (call once at startup) */
+/* Register/init backend (call once at startup).
+ * uft_ufi_backend_init() returns 0 when a platform backend was
+ * registered, -1 when none is available (no UFI support in this build).
+ * Callers must check the return — see src/core/uft_core_stubs.c. */
 void uft_ufi_set_backend(const uft_ufi_ops_t *ops);
-void uft_ufi_backend_init(void);
+int  uft_ufi_backend_init(void);
 
 /* ============================================================================
  * Disk geometry info

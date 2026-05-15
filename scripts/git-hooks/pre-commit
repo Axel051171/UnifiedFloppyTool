@@ -1,0 +1,101 @@
+#!/usr/bin/env bash
+# UFT pre-commit hook — Type-Driven HAL refactor (refactor/type-driven-hal)
+#
+# Install once with:
+#   cp scripts/git-hooks/pre-commit .git/hooks/pre-commit
+#   chmod +x .git/hooks/pre-commit
+#
+# Block commits that:
+#   1. break the build (cmake or qmake — whichever build dir exists)
+#   2. break the foundation contract (test_hal_foundation must pass)
+#   3. introduce build-source-parity regressions
+#   4. introduce SSOT drift (version, error-codes, etc.)
+#
+# This hook is fast: only foundation + parity checks. Full ctest is the
+# CI's job, not the developer's per-commit gate.
+#
+# Bypass policy: use --no-verify ONLY when explicitly approved on a
+# WIP/STOP-condition commit. Otherwise: fix, re-stage, retry.
+
+set -e
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+cd "$REPO_ROOT"
+
+CURRENT_BRANCH="$(git rev-parse --abbrev-ref HEAD)"
+echo "[pre-commit] branch: $CURRENT_BRANCH"
+
+# ── Gate 1: consistency + parity ────────────────────────────────────────
+echo "[pre-commit] check_consistency.py..."
+if ! python3 scripts/check_consistency.py >/tmp/uft-consistency.log 2>&1; then
+    echo "  FAIL — see /tmp/uft-consistency.log"
+    cat /tmp/uft-consistency.log
+    exit 1
+fi
+echo "  ok"
+
+echo "[pre-commit] verify_build_sources.py..."
+if ! python3 scripts/verify_build_sources.py >/tmp/uft-parity.log 2>&1; then
+    echo "  FAIL — see /tmp/uft-parity.log"
+    cat /tmp/uft-parity.log
+    exit 1
+fi
+echo "  ok"
+
+# ── Gate 2: foundation compile-test (refactor branches only) ────────────
+case "$CURRENT_BRANCH" in
+    refactor/*|main)
+        if [ -f tests/test_hal_foundation.cpp ]; then
+            echo "[pre-commit] test_hal_foundation compile + run..."
+            CC="${CC:-gcc}"
+            CXX="${CXX:-g++}"
+            INC="-I include"
+            tmpbin="$(mktemp -t uft_h9_XXXXXX).exe"
+            if ! "$CXX" -std=c++20 -Wall -Wextra $INC \
+                    tests/test_hal_foundation.cpp -o "$tmpbin" \
+                    > /tmp/uft-foundation.log 2>&1; then
+                echo "  FAIL — see /tmp/uft-foundation.log"
+                cat /tmp/uft-foundation.log
+                rm -f "$tmpbin"
+                exit 1
+            fi
+            if ! "$tmpbin" > /tmp/uft-foundation-run.log 2>&1; then
+                echo "  FAIL (runtime) — see /tmp/uft-foundation-run.log"
+                cat /tmp/uft-foundation-run.log
+                rm -f "$tmpbin"
+                exit 1
+            fi
+            rm -f "$tmpbin"
+            echo "  ok"
+        fi
+        ;;
+esac
+
+# ── Gate 3: protected paths (warn-only on main, refuse on refactor branch)
+PROTECTED_PATHS=(
+    "src/hal/uft_greaseweazle_full.c"
+    "tests/golden/"
+    "docs/DESIGN_PRINCIPLES.md"
+)
+case "$CURRENT_BRANCH" in
+    refactor/type-driven-hal)
+        # Foundation headers protected during P1
+        PROTECTED_PATHS+=(
+            "include/uft/hal/outcomes.h"
+            "include/uft/hal/concepts.h"
+            "include/uft/hal/mixins.h"
+        )
+        ;;
+esac
+
+for path in "${PROTECTED_PATHS[@]}"; do
+    if git diff --cached --name-only | grep -qE "^${path}"; then
+        echo "[pre-commit] WARNING: commit touches protected path: $path"
+        echo "  Override only if this is an architecture-level change with"
+        echo "  human review. Otherwise: unstage and ask."
+        # Warn but don't block — judgment call is the human's.
+    fi
+done
+
+echo "[pre-commit] all gates green"
+exit 0

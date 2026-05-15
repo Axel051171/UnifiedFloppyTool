@@ -202,6 +202,7 @@ iterative with explicit state stack on heap (or static).
 
 ## Related
 
+- `.claude/skills/uft-cross-platform-build/` — desktop CI matrix; this skill targets the embedded sibling
 - `.claude/skills/uft-benchmark/` — measure fast-path gains
 - `.claude/agents/abi-bomb-detector.md` — reviews binary layouts
 - `.claude/agents/algorithm-hotpath-optimizer.md` — asks "runs on firmware?"

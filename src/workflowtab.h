@@ -35,6 +35,9 @@ class DecodeJob;
 class FluxCaptureJob;
 class FluxWriteJob;
 class QThread;
+/* MF-200 (P1.20): WorkflowTab now holds a non-owning GreaseweazleProviderV2
+ * pointer (owned by HardwareTab) instead of a raw uft_gw_device_t* void*. */
+namespace uft::hal { class GreaseweazleProviderV2; }
 
 class WorkflowTab : public QWidget
 {
@@ -76,10 +79,13 @@ signals:
 public slots:
     void onDeviceInfoChanged(const QString& deviceName, const QString& firmware);
 
-    // MF-110 — MainWindow forwards the live HAL handle from HardwareTab
-    // every time the connection state flips. Pass nullptr when disconnected.
-    // FluxCaptureJob uses this to drive the same open Greaseweazle.
-    void setHardwareDevice(void *gwDevice, int cylinders, int sides);
+    // MF-110 / MF-200 / MF-201 — MainWindow forwards HardwareTab's
+    // non-owning GreaseweazleProviderV2* every time the connection state
+    // flips. Pass nullptr when disconnected. Both FluxCaptureJob (P1.20)
+    // and FluxWriteJob (P1.21) drive it via the V2 outcome surface; the
+    // raw_handle()/gwDevice() escape hatch was removed in P1.22 (MF-202).
+    void setHardwareDevice(::uft::hal::GreaseweazleProviderV2 *provider,
+                           int cylinders, int sides);
 
 private slots:
     void onSourceModeChanged(int id);
@@ -113,8 +119,9 @@ private:
     FluxCaptureJob* m_captureJob;
     FluxWriteJob* m_writeJob;
 
-    // MF-110 — cached HAL handle from HardwareTab. Non-owning.
-    void* m_gwDevice;
+    // MF-110 / MF-200 — cached GreaseweazleProviderV2 from HardwareTab.
+    // Non-owning: HardwareTab's m_gwProviderV2 owns the instance + handle.
+    ::uft::hal::GreaseweazleProviderV2* m_gwProvider;
     int m_hwCylinders;
     int m_hwSides;
     

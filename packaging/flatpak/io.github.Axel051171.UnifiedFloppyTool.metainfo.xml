@@ -88,6 +88,25 @@
   </screenshots>
 
   <releases>
+    <release version="4.1.4" date="2026-05">
+      <description>
+        <p>
+          Type-Driven HAL release. Internal hardware-abstraction refactor:
+          replaces the dual V1 provider hierarchy with 10 mixin-composed
+          V2 providers; capability concepts and Sum-Type outcomes
+          (SectorOutcome, FluxOutcome, ...) are now compile-time-checked
+          via a 65-section conformance harness. GUI action wiring moves
+          to codegen (forms/tab_hardware.actions.yaml). User-visible
+          impact is minimal — Greaseweazle workflow preserved + hardened;
+          X1541 phantom-feature combo entries removed; non-GW
+          controllers display an honest "routing pending" message
+          (queued for v4.1.5). Hot-fixes included: Windows COM-port
+          prefix bug (MF-145), Applesauce↔ADFCopy USB ID disambiguation
+          (MF-146), Greaseweazle bootloader detection (MF-129), MFM
+          IDAM/DAM standalone sector parser (MF-141).
+        </p>
+      </description>
+    </release>
     <release version="4.1.3" date="2026-04-18">
       <description>
         <p>

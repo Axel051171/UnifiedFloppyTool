@@ -46,8 +46,12 @@ project(UnifiedFloppyTool
     LANGUAGES C CXX
 )
 
-set(CMAKE_CXX_STANDARD 17)
+# Type-Driven HAL (refactor/type-driven-hal branch) requires C++20:
+# <concepts>, std::variant Sum-Types, if-constexpr conformance tests.
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+add_compile_definitions(UFT_CXX20)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTORCC ON)

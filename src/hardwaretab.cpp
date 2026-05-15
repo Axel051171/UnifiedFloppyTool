@@ -23,6 +23,42 @@
 #include "hardwaretab.h"
 #include "ui_tab_hardware.h"
 
+/* MF-157 (P1.4): the V2 provider must be COMPLETE in this TU because:
+ *   - HardwareTab's destructor (defined here) must instantiate
+ *     unique_ptr<GreaseweazleProviderV2>::~unique_ptr,
+ *   - onConnect() constructs an instance,
+ *   - the codegen-emitted wire_hardware_tab() function (which lives in
+ *     generated/tab_hardware_wiring.gen.cpp) calls do_*() through the
+ *     wire_action template. */
+/* MF-205 (P1.23): the ProviderV2Variant member holds a unique_ptr to
+ * any of the 9 V2 providers — the variant's destructor (run from
+ * ~HardwareTab in this TU) needs every alternative's complete type. */
+#include "hardware_providers/greaseweazle_provider_v2.h"
+#include "hardware_providers/scp_provider_v2.h"
+#include "hardware_providers/kryoflux_provider_v2.h"
+#include "hardware_providers/fluxengine_provider_v2.h"
+#include "hardware_providers/fc5025_provider_v2.h"
+#include "hardware_providers/xum1541_provider_v2.h"
+#include "hardware_providers/applesauce_provider_v2.h"
+#include "hardware_providers/adfcopy_provider_v2.h"
+#include "hardware_providers/usbfloppy_provider_v2.h"
+
+/* MF-213 (audit ARCH-7-C): ADF-Copy / Applesauce disambiguation probe. */
+#include "hardware_providers/teensy_probe.h"
+
+/* MF-210: hardwaretab.cpp now uses the capability concepts directly
+ * (`if constexpr (::uft::hal::ControlsMotor<P>)` etc.) in the
+ * std::visit-based provider helpers. */
+#include "uft/hal/concepts.h"
+
+/* MF-212 (audit ARCH-7-B): the SuperCard Pro USB VID/PID lives in
+ * exactly one place — uft_scp_direct.h — and the GUI port-hint below
+ * references those macros instead of re-typing the literals. */
+#include "uft/hal/uft_scp_direct.h"
+
+#include <type_traits>
+#include <variant>
+
 #include <QMessageBox>
 #include <QRandomGenerator>
 #include <QDebug>
@@ -39,7 +75,6 @@
 Q_LOGGING_CATEGORY(lcHwSerial, "uft.hw.serial", QtWarningMsg)
 #include <QFileInfo>
 #include <QStandardItemModel>
-#include <cstdio>  // For printf debugging
 
 #ifdef UFT_HAS_SERIALPORT
 #include <QSerialPortInfo>
@@ -49,28 +84,24 @@ Q_LOGGING_CATEGORY(lcHwSerial, "uft.hw.serial", QtWarningMsg)
 #include <windows.h>
 #endif
 
-// HAL includes for real hardware connection.
-// UFT_HAS_HAL is set by the build system (see UnifiedFloppyTool.pro).
-// All file-local #if blocks below test it directly — no second-name
-// alias HAS_HAL, which would only invite drift (MF-137).
-#ifdef UFT_HAS_HAL
-extern "C" {
-#include "uft/hal/uft_greaseweazle_full.h"
-}
-/* HAL-H7: Unified Capture — unified_hal_bridge.h pulls in Qt's
- * HardwareProvider (Q_OBJECT), so it lives OUTSIDE the extern "C" block. */
-#include <QPushButton>
-#include <QApplication>
-#include "hardware_providers/unified_hal_bridge.h"
-#endif
+/* MF-171 (P1.18): the V1 era pulled `uft/hal/uft_greaseweazle_full.h`
+ * here so HardwareTab could call `uft_gw_open/close/get_info/...`
+ * directly. After P1.18, every uft_gw_* call lives inside
+ * GreaseweazleProviderV2 (which the V2 header already includes
+ * transitively). The HardwareTab TU is now completely free of
+ * direct C-API references — the V2 provider is its only gateway. */
 
-/* MF-143: provider dispatcher (revived). HardwareManager owns one
- * provider at a time and routes setHardwareType() to the matching
- * concrete provider class. The previous code path bypassed this
- * (called uft_gw_open() directly) and the providers existed but
- * were never instantiated — that's what the audit flagged. */
-#include "hardware_providers/hardwaremanager.h"
-#include "hardware_providers/hardwareprovider.h"
+/* MF-169 (P1.17): the V1 hardware-provider hierarchy
+ * (`HardwareManager`, `HardwareProvider`, the 11 V1 provider classes,
+ * and `unified_hal_bridge`) was deleted in this commit. The single
+ * remaining hardware path is via the V2 mixin-composed providers
+ * (`*_provider_v2.{h,cpp}`). For Greaseweazle that path is wired
+ * end-to-end through `m_gwProviderV2` (MF-157 / P1.4); for the eight
+ * other controllers, the V2 wrappers exist but HardwareTab does not
+ * yet route to them — that is P1.18. Until then, selecting a
+ * non-Greaseweazle controller and pressing Connect surfaces a clear
+ * "no V2 routing wired" message rather than silently no-op'ing or
+ * mis-dispatching. */
 
 // ============================================================================
 // Construction / Destruction
@@ -88,8 +119,6 @@ HardwareTab::HardwareTab(QWidget *parent)
     , m_sourceIsHardware(true)
     , m_destIsHardware(true)
     , m_hwModel(0)
-    , m_gwDevice(nullptr)
-    , m_hwManager(nullptr)
     , m_detectedTracks(0)
     , m_detectedHeads(0)
     , m_detectedRPM(0)
@@ -99,36 +128,12 @@ HardwareTab::HardwareTab(QWidget *parent)
 {
     ui->setupUi(this);
 
-    /* MF-143: instantiate the HW dispatcher up-front so detect-drive
-     * and connect routes can reach the chosen provider. The default
-     * provider is Greaseweazle (matches the live UI default and the
-     * pre-MF-132 behavior). Signals are forwarded to UI handlers
-     * lower in this constructor via setupConnections(). */
-    m_hwManager = new HardwareManager(this);
-    connect(m_hwManager, &HardwareManager::statusMessage,
-            this, [this](const QString &msg) { updateStatus(msg); });
-    connect(m_hwManager, &HardwareManager::driveDetected,
-            this, [this](const DetectedDriveInfo &info) {
-                /* Forward driveDetected to the existing UI status path.
-                 * The full applyDetectedSettings call would require
-                 * pulling DetectedDriveInfo fields here; for now we
-                 * just surface the model + RPM in the status line. */
-                Q_UNUSED(info);
-                updateStatus(tr("Drive detected via provider"));
-            });
-    /* MF-147 (HW-01): operation lifecycle from worker thread.
-     * Provider I/O now runs on a worker QThread inside HardwareManager,
-     * so the UI no longer freezes during detect/auto-detect. We surface
-     * progress on the status line; finer-grained button-disable comes
-     * later when worker-driven read/write paths land. */
-    connect(m_hwManager, &HardwareManager::operationStarted,
-            this, [this](const QString &name) {
-                updateStatus(tr("Hardware: %1 in progress…").arg(name));
-            });
-    connect(m_hwManager, &HardwareManager::operationFinished,
-            this, [this](const QString &name) {
-                updateStatus(tr("Hardware: %1 done").arg(name));
-            });
+    /* MF-169 (P1.17): the V1 `HardwareManager` was deleted with the rest
+     * of the V1 hierarchy. The worker-thread routing that MF-147 added
+     * lived inside HardwareManager and will be reintroduced in P1.18
+     * around the V2 providers (currently only Greaseweazle's V2 is wired
+     * via `m_gwProviderV2`; the V2 providers themselves are plain C++
+     * classes — moving them onto a worker QThread is a P1.18 follow-up). */
 
     setupButtonGroups();
     setupConnections();
@@ -148,14 +153,11 @@ HardwareTab::HardwareTab(QWidget *parent)
 
 HardwareTab::~HardwareTab()
 {
-    // Close HAL device if still open
-    #ifdef UFT_HAS_HAL
-    if (m_gwDevice != nullptr) {
-        uft_gw_close(static_cast<uft_gw_device_t*>(m_gwDevice));
-        m_gwDevice = nullptr;
-    }
-    #endif
-    
+    /* MF-171 (P1.18): m_gwProviderV2's destructor handles uft_gw_close()
+     * via its own RAII lifecycle. HardwareTab no longer manages the
+     * C-handle directly. */
+
+
     if (m_motorTimer) {
         m_motorTimer->stop();
         delete m_motorTimer;
@@ -201,7 +203,11 @@ void HardwareTab::setupConnections()
             onConnect();
         }
     });
-    connect(ui->btnDetect, &QPushButton::clicked, this, &HardwareTab::onDetectDrive);
+    /* MF-157 (P1.4) + MF-171 (P1.18): btnDetect is wired through the
+     * codegen (forms/tab_hardware.actions.yaml +
+     * generated/tab_hardware_wiring.gen.cpp). The V1 `onDetectDrive()`
+     * slot that lived here was removed in P1.18 — it touched uft_gw_*
+     * directly and was unwired since P1.4. */
     connect(ui->comboController, QOverload<int>::of(&QComboBox::currentIndexChanged),
             this, &HardwareTab::onControllerChanged);
     
@@ -216,9 +222,9 @@ void HardwareTab::setupConnections()
                 onDetectionModeChanged();
             });
     
-    // Motor control
-    connect(ui->btnMotorOn, &QPushButton::clicked, this, &HardwareTab::onMotorOn);
-    connect(ui->btnMotorOff, &QPushButton::clicked, this, &HardwareTab::onMotorOff);
+    /* MF-157 (P1.4): btnMotorOn / btnMotorOff are now codegen-wired
+     * (ControlsMotor capability). Their V1 slots stay as legacy reachable
+     * methods until P1.18. */
     connect(ui->checkAutoSpinDown, &QCheckBox::toggled, this, &HardwareTab::onAutoSpinDownChanged);
     
     // Drive settings (for manual mode)
@@ -237,27 +243,128 @@ void HardwareTab::setupConnections()
     connect(ui->checkDoubleStep, &QCheckBox::toggled, this, &HardwareTab::onDoubleStepChanged);
     connect(ui->checkIgnoreIndex, &QCheckBox::toggled, this, &HardwareTab::onIgnoreIndexChanged);
     
-    // Test buttons
-    connect(ui->btnSeekTest, &QPushButton::clicked, this, &HardwareTab::onSeekTest);
-    connect(ui->btnReadTest, &QPushButton::clicked, this, &HardwareTab::onReadTest);
-    connect(ui->btnRPMTest, &QPushButton::clicked, this, &HardwareTab::onRPMTest);
-    connect(ui->btnCalibrate, &QPushButton::clicked, this, &HardwareTab::onCalibrate);
+    /* MF-157 (P1.4): btnSeekTest, btnReadTest, btnRPMTest, btnCalibrate
+     * are now codegen-wired (SeeksHead / ReadsRawFlux / MeasuresRPM /
+     * Recalibrates capabilities). V1 slots stay until P1.18. */
 
-    // HAL-H7: inject "Unified Capture" next to the existing test buttons.
-    // Added programmatically so no .ui XML edit is needed.
-    if (auto *parent = ui->btnReadTest->parentWidget()) {
-        if (auto *lay = parent->layout()) {
-            auto *btn = new QPushButton(tr("Unified Capture"), parent);
-            btn->setObjectName(QStringLiteral("btnUnifiedCapture"));
-            btn->setToolTip(tr(
-                "Capture disk via unified HAL dispatcher "
-                "(enumerate → open → uft_hw_read_tracks → close).\n"
-                "Greaseweazle backend is fully wired; others are stubs."));
-            lay->addWidget(btn);
-            connect(btn, &QPushButton::clicked, this, &HardwareTab::onUnifiedCapture);
-        }
-    }
+    /* MF-169 (P1.17): the "Unified Capture" button + its `onUnifiedCapture`
+     * slot were the V1-era entry point through `uft_hal_bridge` and the V1
+     * `HardwareManager`. Both are deleted. The codegen-wired btnReadTest
+     * + btnSeekTest + btnCalibrate + btnRPMTest now serve the same role
+     * via the type-driven path. */
+
+    /* MF-157 (P1.4): initial codegen wiring pass.
+     *
+     * No V2 provider is bound yet at construction time. The codegen-emitted
+     * `wire_hardware_tab(this)` will run Phase 1 (disconnect — currently no
+     * connections to remove) and Phase 2 (disable each capability button)
+     * because `currentProviderV2()` returns nullptr. The disable IS the
+     * "no controller selected yet" UI affordance. After onConnect() succeeds
+     * for Greaseweazle, rewireV2() runs again and Phase 3 takes over. */
+    rewireV2();
 }
+
+void HardwareTab::rewireV2()
+{
+    /* The codegen function is the single chokepoint for V2 wiring.
+     * Calling it is idempotent: Phase 1 strips any prior wiring before
+     * Phase 2/3 makes a fresh decision based on currentProviderV2(). */
+    ::uft::gui::generated::wire_hardware_tab(this);
+}
+
+const ProviderV2Variant &HardwareTab::currentProviderV2() const noexcept
+{
+    /* MF-205 (P1.23): returns the ProviderV2Variant by const reference —
+     * whichever of the 9 V2 providers is connected, or std::monostate
+     * when disconnected. The codegen-emitted wire_hardware_tab() does a
+     * std::visit over it; inside the visit lambda the held pointer is a
+     * concrete provider type, so wire_action<cap::X>'s capability gating
+     * stays structural per concrete type. */
+    return m_providerV2;
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+ *  MF-210 — capability-aware provider helpers
+ *
+ *  The connected provider is one of 9 unrelated types held in
+ *  `m_providerV2` (a std::variant). These three helpers wrap the
+ *  `std::visit` + `if constexpr (::uft::hal::Capability<P>)` boilerplate
+ *  so the connect / disconnect / detect paths are capability-driven for
+ *  ALL providers, not hardcoded to the Greaseweazle alternative (the
+ *  bug class the P1.23 routing left behind).
+ * ════════════════════════════════════════════════════════════════════════ */
+
+bool HardwareTab::providerControlsMotor() const
+{
+    return std::visit([](const auto &held) -> bool {
+        using HeldT = std::decay_t<decltype(held)>;
+        if constexpr (std::is_same_v<HeldT, std::monostate>) {
+            return false;
+        } else {
+            using ProviderT = typename HeldT::element_type;
+            return ::uft::hal::ControlsMotor<ProviderT>;
+        }
+    }, m_providerV2);
+}
+
+void HardwareTab::issueMotorOffIfRunning()
+{
+    if (!m_motorRunning) {
+        return;
+    }
+    /* Issue set_motor(false) to whichever connected provider actually has
+     * ControlsMotor. The outcome is intentionally discarded — this only
+     * runs on teardown. MUST be called before the variant is cleared to
+     * std::monostate, otherwise the command is lost (the P1-2 bug). */
+    std::visit([](auto &held) {
+        using HeldT = std::decay_t<decltype(held)>;
+        if constexpr (!std::is_same_v<HeldT, std::monostate>) {
+            using ProviderT = typename HeldT::element_type;
+            if constexpr (::uft::hal::ControlsMotor<ProviderT>) {
+                if (held) {
+                    (void)held->set_motor(false);
+                }
+            }
+        }
+    }, m_providerV2);
+    m_motorRunning = false;
+}
+
+void HardwareTab::runDetectProbe()
+{
+    if (!m_connected) {
+        return;
+    }
+    /* detect_drive() on whichever provider is connected (all 9 satisfy
+     * cap::DetectsDrive), dispatched through the same handler set the
+     * codegen-wired btnDetect uses. */
+    std::visit([this](auto &held) {
+        using HeldT = std::decay_t<decltype(held)>;
+        if constexpr (!std::is_same_v<HeldT, std::monostate>) {
+            using ProviderT = typename HeldT::element_type;
+            if constexpr (::uft::hal::DetectsDrive<ProviderT>) {
+                if (!held) {
+                    return;
+                }
+                auto outcome = held->detect_drive();
+                std::visit(::uft::hal::overloaded{
+                    [this](const ::uft::hal::DriveDetected &v)            { onDetectOutcome(v); },
+                    [this](const ::uft::hal::DriveAbsent &v)              { onDetectOutcome(v); },
+                    [this](const ::uft::hal::CapabilityRequiresPolicy &v) { showPolicyRequired(v); },
+                    [this](const ::uft::hal::HardwareDisconnected &v)     { showHardwareDisconnected(v); },
+                    [this](const ::uft::hal::ProviderError &e)            { showProviderError(e); },
+                }, outcome);
+            }
+        }
+    }, m_providerV2);
+}
+
+/* MF-202 (P1.22): HardwareTab::gwDevice() removed. The legacy `void*`
+ * C-handle escape hatch had a single purpose — feeding the raw
+ * uft_gw_device_t* to FluxCaptureJob / FluxWriteJob. Both were migrated
+ * to the V2 outcome surface (P1.20 / P1.21) and now take a non-owning
+ * GreaseweazleProviderV2* via currentProviderV2(). GreaseweazleProviderV2
+ * ::raw_handle() is removed in the same commit. */
 
 // ============================================================================
 // Controller List Management
@@ -284,17 +391,23 @@ void HardwareTab::populateControllerList()
 
     // === Commodore Controllers (IEC/IEEE-488) ===
     ui->comboController->addItem(tr("── Commodore USB ──"), "separator_cbm_usb");
-    ui->comboController->addItem(tr("ZoomFloppy"), "zoomfloppy");
-    ui->comboController->addItem(tr("XUM1541 / XUM1541-II"), "xum1541");
-    
-    // === Legacy Parallel Port (X1541 Series) ===
-    ui->comboController->addItem(tr("── Commodore LPT (Legacy) ──"), "separator_cbm_lpt");
-    ui->comboController->addItem(tr("XA1541 (Active Cable)"), "xa1541");
-    ui->comboController->addItem(tr("XAP1541 (Active + Parallel)"), "xap1541");
-    ui->comboController->addItem(tr("XM1541 (Multitask)"), "xm1541");
-    ui->comboController->addItem(tr("XE1541 (Extended)"), "xe1541");
-    ui->comboController->addItem(tr("X1541 (Original)"), "x1541");
-    
+    /* MF-180 (P1.19 follow-up): ZoomFloppy and XUM1541 are one hardware
+     * family — ZoomFloppy runs xum1541 firmware and speaks the identical
+     * OpenCBM protocol. There is exactly one V2 provider, XUM1541ProviderV2;
+     * the former separate "zoomfloppy" controller-key had no provider of
+     * its own. Merged into a single entry, analogous to the single
+     * "Greaseweazle (F1/F7)" entry that covers multiple GW models. */
+    ui->comboController->addItem(tr("XUM1541 / XUM1541-II / ZoomFloppy"), "xum1541");
+
+    /* MF-170 (P1.19): legacy parallel-port X1541 family (XA/XAP/XM/XE/
+     * X1541) removed from the controller combo. The five entries had
+     * NO matching HardwareProvider class — they were structurally
+     * phantom-features that surfaced a "Backend not yet wired"
+     * messagebox on Connect. Parallel-port adapters are unreachable
+     * on modern desktops anyway; the USB-based XUM1541 / ZoomFloppy
+     * above is the only supported Commodore bridge today, and its V2
+     * provider (P1.12) passes the 65-section conformance harness. */
+
     // USB Floppy - only for Destination mode
     if (m_controllerRole == RoleDestination) {
         ui->comboController->addItem(tr("── Standard USB ──"), "separator_usb");
@@ -432,14 +545,38 @@ void HardwareTab::detectSerialPorts()
         // Known VID/PID pairs
         if (vid == 0x1209 && pid == 0x4D69) {
             controllerHint = "Greaseweazle";
-        } else if (vid == 0x16D0 && pid == 0x0F8C) {
+        } else if (vid == UFT_SCP_USB_VID && pid == UFT_SCP_USB_PID) {
+            /* ARCH-7-B (MF-212): VID/PID single-sourced from
+             * uft_scp_direct.h. Verified 0x16D0:0x0F8C from the real
+             * device descriptor — the old header value 0x16C0:0x0753
+             * was the wrong one of the two contradicting sites. */
             controllerHint = "SuperCard Pro";
         } else if (vid == 0x0403 && pid == 0x6001) {
             controllerHint = "KryoFlux (FTDI)";
-        } else if (vid == 0x16D0 && pid == 0x0504) {
-            controllerHint = "ZoomFloppy/XUM1541";
+        } else if (vid == 0x16D0 &&
+                   (pid == 0x04B2 || pid == 0x0504 || pid == 0x0503)) {
+            /* ARCH-7 (audit/ARCH-7_VID_PID.md sub-finding A): PIDs per
+             * the authoritative in-repo table in
+             * src/hardware_providers/xum1541_usb.h — ZoomFloppy 0x04B2,
+             * XUM1541 0x0504, DIY XUM1541 0x0503. All run xum1541
+             * firmware and speak the identical OpenCBM protocol, so a
+             * single hint matches the single combo entry. The previous
+             * code matched only 0x0504 and mislabelled it "ZoomFloppy". */
+            controllerHint = "XUM1541 / ZoomFloppy";
+        } else if (vid == 0x16C0 && pid == 0x0483) {
+            /* ARCH-7-C (MF-213): 0x16C0:0x0483 is the stock, unmodified
+             * PJRC Teensy USB-Serial identity — claimed by BOTH ADF-Copy
+             * and Applesauce. Verified by device readout: both ship the
+             * *stock* Teensy string descriptors too, so the proposal's
+             * Tier-1 string-descriptor heuristic cannot tell them apart
+             * either. The honest hint is therefore explicit ambiguity —
+             * never a silent guess at one device. The authoritative
+             * answer is the Tier-2 protocol probe (probe_teensy_serial),
+             * run on Connect. */
+            controllerHint = "ADF-Copy or Applesauce "
+                             "(0x16C0:0x0483 — probe on Connect)";
         }
-        
+
         if (!controllerHint.isEmpty()) {
             displayName = QString("%1 - %2").arg(portName, controllerHint);
         } else if (!description.isEmpty()) {
@@ -505,62 +642,11 @@ void HardwareTab::detectSerialPorts()
     }
 }
 
-void HardwareTab::detectParallelPorts()
-{
-    ui->comboPort->clear();
-    
-#ifdef Q_OS_LINUX
-    // Check for /dev/parportX devices on Linux
-    QStringList parports;
-    for (int i = 0; i < 4; i++) {
-        QString devPath = QString("/dev/parport%1").arg(i);
-        QFileInfo fi(devPath);
-        if (fi.exists()) {
-            parports << devPath;
-        }
-    }
-    
-    // Also check for /dev/lp devices
-    for (int i = 0; i < 4; i++) {
-        QString devPath = QString("/dev/lp%1").arg(i);
-        QFileInfo fi(devPath);
-        if (fi.exists() && !parports.contains(QString("/dev/parport%1").arg(i))) {
-            parports << devPath;
-        }
-    }
-    
-    // Add standard LPT addresses
-    QStringList stdPorts = {"LPT1 (0x378)", "LPT2 (0x278)", "LPT3 (0x3BC)"};
-    QStringList stdAddrs = {"0x378", "0x278", "0x3BC"};
-    
-    if (parports.isEmpty()) {
-        // No /dev/parport found, show standard addresses
-        for (int i = 0; i < stdPorts.size(); i++) {
-            ui->comboPort->addItem(stdPorts[i], stdAddrs[i]);
-        }
-    } else {
-        for (const QString& port : parports) {
-            ui->comboPort->addItem(port, port);
-        }
-    }
-#endif
-
-#ifdef Q_OS_WIN
-    // Windows parallel ports
-    ui->comboPort->addItem(tr("LPT1"), "LPT1");
-    ui->comboPort->addItem(tr("LPT2"), "LPT2");
-    ui->comboPort->addItem(tr("LPT3"), "LPT3");
-#endif
-    
-    if (ui->comboPort->count() == 0) {
-        ui->comboPort->addItem(tr("(No parallel port - use USB adapter)"), "");
-        ui->btnConnect->setEnabled(false);
-        updateStatus(tr("No parallel port found. Consider using ZoomFloppy or XUM1541 USB adapter."));
-    } else {
-        ui->btnConnect->setEnabled(true);
-        updateStatus(tr("Legacy X1541 mode - select parallel port."));
-    }
-}
+/* MF-170 (P1.19): `detectParallelPorts()` was the port-enumeration
+ * path for the X1541 family. With those controllers removed from the
+ * combo it has no callers and is deleted. The Qt-side LPT discovery
+ * logic (~/dev/parport*, ~/dev/lp*, Windows LPT1..3) lived only here
+ * and disappears with the function. */
 
 void HardwareTab::onRefreshPorts()
 {
@@ -608,12 +694,6 @@ void HardwareTab::onConnect()
     QString port = ui->comboPort->currentData().toString();
     QString controller = ui->comboController->currentData().toString();
     
-    // Use both printf and qDebug to ensure output is visible
-    printf("=== onConnect called ===\n");
-    printf("Port: %s\n", port.toUtf8().constData());
-    printf("Controller: %s\n", controller.toUtf8().constData());
-    fflush(stdout);
-    
     qDebug() << "=== onConnect called ===";
     qDebug() << "Port:" << port;
     qDebug() << "Controller data:" << controller;
@@ -635,107 +715,165 @@ void HardwareTab::onConnect()
     
     qDebug() << "Checking if controller is greaseweazle or fluxengine...";
     
-    /* MF-143: per-controller dispatch via HardwareManager.
+    /* Per-controller dispatch (current architecture — supersedes the
+     * MF-143 HardwareManager note that used to sit here).
      *
-     * Greaseweazle stays on the C-HAL fast-path (uft_gw_open) below
-     * because that's the production-tested code path, exercised by
-     * every successful capture since v4.0. The Qt
-     * GreaseweazleHardwareProvider class exists in parallel as a
-     * fallback wrapper; we don't switch to it for an active GW
-     * session to avoid a regression on the most-used path.
+     * Greaseweazle takes the V2-provider path with a real open() against
+     * the production-tested C-HAL (uft_gw_*, now internal behind
+     * GreaseweazleProviderV2::do_*).
      *
-     * Every OTHER controller routes through the HardwareManager,
-     * which has setHardwareType()-string dispatch into the matching
-     * concrete provider class (FluxEngine subprocess, KryoFlux DTC
-     * subprocess, SCP/Applesauce serial, FC5025/XUM1541 USB, ADF-Copy
-     * serial, USB-Floppy SG_IO/UFI). Each provider already implements
-     * detectDrive() / connect() / readTrack() with real I/O — they
-     * just had no UI dispatcher routing to them before. */
-    /* MF-144 / HW-A: the X1541 legacy parallel-port family
-     * (xa1541 / xap1541 / xm1541 / xe1541 / x1541) is listed in the
-     * controller combo but has NO matching HardwareProvider class.
-     * Without this guard the request falls through HardwareManager's
-     * if/elseif chain to the final `else` branch, which silently
-     * instantiates a GreaseweazleHardwareProvider against the
-     * parallel-port hardware. That's the same identity-confusion
-     * class the audit (UFT-AUD-003) flagged for Pauline — wrong
-     * driver against real hardware, undefined behavior, potential
-     * data corruption. Reject explicitly with an actionable error. */
-    if (controller == "xa1541" || controller == "xap1541" ||
-        controller == "xm1541" || controller == "xe1541" ||
-        controller == "x1541") {
-        QMessageBox::information(this, tr("Backend not yet wired"),
-            tr("The %1 backend (X1541 legacy parallel-port adapter) "
-               "is not yet implemented in this build.\n\n"
-               "These adapters require a parallel-port driver which "
-               "isn't part of UFT v4.1.x. Use a USB-based Commodore "
-               "controller (XUM1541 / ZoomFloppy) for now. "
-               "X1541 family support is tracked in docs/MASTER_PLAN.md "
-               "(M3 milestone).")
-            .arg(m_controllerType));
-        updateStatus(tr("%1 not yet wired").arg(m_controllerType));
-        return;
-    }
+     * MF-206 (P1.23): the other 8 controllers each construct their V2
+     * provider honest-stub (null runners / handle) — see the
+     * `controller != "greaseweazle"` branch below. All 9 land in
+     * `m_providerV2` and are GUI-reachable; their production transports
+     * (QProcess / QSerialPort / OpenCBM / libusb) are M3.x follow-up. */
+    /* MF-170 (P1.19): the X1541 family (xa1541/xap1541/xm1541/xe1541/
+     * x1541) was removed from `populateControllerList()` — the five
+     * combo entries had no matching provider class and only ever
+     * surfaced a "not yet wired" messagebox. With the entries gone
+     * the previous MF-144/HW-A reject guard here is unreachable and
+     * has been deleted. */
 
     if (controller != "greaseweazle") {
-        m_hwManager->setHardwareType(m_controllerType);
-        m_hwManager->setDevicePath(m_portName);
-        m_hwManager->detectDrive();   /* Honest probe: provider returns
-                                       * its real status via signals
-                                       * (statusMessage / driveDetected
-                                       * already wired in ctor). */
-        /* Mark the connection as live from the manager's perspective.
-         * If the provider's detectDrive() failed it has already
-         * emitted statusMessage("X: not found / driver missing");
-         * we still flip the UI state so the user can disconnect or
-         * retry without restarting the app. */
+        /* MF-206 (P1.23 commit 2): route the 8 non-GW controllers through
+         * their V2 providers. Each provider is constructed honest-stub —
+         * null runners / null handle — so it is GUI-reachable and its
+         * capability buttons are correctly gated by the codegen
+         * (wire_action<cap::X> per concrete type), while every do_*
+         * honestly returns a ProviderError ("backend not wired" /
+         * "M3.x pending") rather than a silent no-op or a fabricated
+         * capability. Real production transports (QProcess / QSerialPort
+         * / OpenCBM / libusb runner factories) are follow-up M3.x work —
+         * the providers themselves already return forensically-truthful
+         * errors when their runner is null, which is the honest-scaffold
+         * pattern the hardware-provider audit confirmed (ARCH-0). */
+        bool constructed = true;
+        if (controller == "scp") {
+            m_providerV2 = std::make_unique<::uft::hal::SCPProviderV2>(nullptr);
+        } else if (controller == "kryoflux") {
+            m_providerV2 = std::make_unique<::uft::hal::KryoFluxProviderV2>(nullptr);
+        } else if (controller == "fluxengine") {
+            m_providerV2 = std::make_unique<::uft::hal::FluxEngineProviderV2>(nullptr);
+        } else if (controller == "fc5025") {
+            m_providerV2 = std::make_unique<::uft::hal::FC5025ProviderV2>(
+                nullptr, nullptr);
+        } else if (controller == "xum1541") {
+            m_providerV2 = std::make_unique<::uft::hal::XUM1541ProviderV2>(
+                nullptr, nullptr, nullptr);
+        } else if (controller == "applesauce") {
+            m_providerV2 = std::make_unique<::uft::hal::ApplesauceProviderV2>(
+                nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
+        } else if (controller == "adfcopy") {
+            m_providerV2 = std::make_unique<::uft::hal::ADFCopyProviderV2>(
+                nullptr, nullptr, nullptr, nullptr, nullptr);
+        } else if (controller == "usb_floppy") {
+            m_providerV2 = std::make_unique<::uft::hal::USBFloppyProviderV2>(
+                nullptr, nullptr, nullptr);
+        } else {
+            constructed = false;
+        }
+
+        if (!constructed) {
+            updateStatus(tr("Unknown controller key '%1' — no V2 provider.")
+                             .arg(controller),
+                         /*isError=*/true);
+            return;
+        }
+
+        /* ARCH-7-C (MF-213): ADF-Copy and Applesauce are both stock-ID
+         * Teensy devices (0x16C0:0x0483) and indistinguishable by USB
+         * descriptor. When the user connects one of the two, run the
+         * authoritative non-destructive protocol probe on the selected
+         * port and warn — never silently override — if it contradicts
+         * the combo selection. Sending ADF-Copy bytes to an Applesauce
+         * (or vice versa) is exactly the "stille Veränderung" the
+         * project forbids, so catching a mismatch up front is forensic
+         * hygiene. probe_teensy_serial() opens its own port, probes,
+         * closes; it returns Unknown if it cannot open the port or the
+         * Qt build lacks QtSerialPort — Unknown never triggers a
+         * warning (no guess in either direction). */
+        if (controller == "adfcopy" || controller == "applesauce") {
+            const ::uft::hal::TeensyDevice probed =
+                ::uft::hal::probe_teensy_serial(port);
+            const bool mismatch =
+                (controller == "adfcopy" &&
+                 probed == ::uft::hal::TeensyDevice::Applesauce) ||
+                (controller == "applesauce" &&
+                 probed == ::uft::hal::TeensyDevice::AdfCopy);
+            if (mismatch) {
+                const QString probedName =
+                    (probed == ::uft::hal::TeensyDevice::Applesauce)
+                        ? tr("Applesauce") : tr("ADF-Copy");
+                QMessageBox::warning(this, tr("Device mismatch"),
+                    tr("You selected %1, but the device on %2 answered "
+                       "the %3 identify handshake.\n\nADF-Copy and "
+                       "Applesauce share the stock Teensy USB ID and can "
+                       "only be told apart by this probe. Connecting "
+                       "anyway would send %1 commands to a %3 device — "
+                       "check the controller selection.")
+                        .arg(m_controllerType, port, probedName));
+            }
+        }
+
+        /* The V2 provider is constructed (honest-stub backend). Wire its
+         * capability buttons via the codegen std::visit and mark the tab
+         * connected. No open()/detect here — the provider has no
+         * production transport yet; the user sees correctly-gated
+         * buttons and any click surfaces the provider's honest
+         * ProviderError. */
+        rewireV2();
         m_connected = true;
+        m_hwModel = 0;
+        m_firmwareVersion = QStringLiteral("V2 provider (backend scaffold)");
         setConnectionState(true);
+        updateStatus(tr("%1 connected — V2 provider routed. The production "
+                        "transport for this controller is not wired yet; "
+                        "capability actions return a diagnostic error until "
+                        "the backend lands.").arg(m_controllerType));
         emit connectionChanged(true);
-        QString deviceName = getDeviceName();
-        emit deviceInfoChanged(deviceName, tr("(provider-managed)"));
+        emit deviceInfoChanged(m_controllerType, m_firmwareVersion);
         return;
     }
 
     if (controller == "greaseweazle") {
         qDebug() << "YES - using HAL connection";
-        printf(">>> Entering HAL connection code path\n");
-        fflush(stdout);
-        // Real HAL connection attempt
+        // Real HAL connection attempt — MF-171 (P1.18) via V2 provider lifecycle
         #ifdef UFT_HAS_HAL
-        printf(">>> UFT_HAS_HAL is defined\n");
-        fflush(stdout);
-        qDebug() << "HardwareTab: Attempting HAL connection to" << port;
-        
-        printf(">>> Calling uft_gw_open(%s)\n", port.toUtf8().constData());
-        fflush(stdout);
-        
-        uft_gw_device_t *gw = nullptr;
-        int ret = uft_gw_open(port.toLocal8Bit().constData(), &gw);
-        
-        qDebug() << "HardwareTab: uft_gw_open returned" << ret << "device=" << (void*)gw;
-        
-        if (ret == 0 && gw != nullptr) {
-            // Get device info
-            uft_gw_info_t info;
-            if (uft_gw_get_info(gw, &info) == 0) {
-                m_firmwareVersion = QString("v%1.%2").arg(info.fw_major).arg(info.fw_minor);
-                m_hwModel = info.hw_model;
-                qDebug() << "HardwareTab: Device info - FW:" << m_firmwareVersion << "Model:" << m_hwModel;
-            } else {
-                m_firmwareVersion = "Unknown";
-                qDebug() << "HardwareTab: Failed to get device info (but connection OK)";
-            }
-            
-            // Store handle for later use
-            m_gwDevice = gw;
+        qDebug() << "HardwareTab: Attempting GW V2 connection to" << port;
+
+        /* MF-205 (P1.23): construct the GW provider in a local
+         * unique_ptr, open() it, and only move it into m_providerV2 on
+         * success. `gwp` is a stable raw view — a unique_ptr move
+         * transfers ownership, not the pointed-to object — so it stays
+         * valid after the move into the variant. */
+        auto gwOwned = std::make_unique<::uft::hal::GreaseweazleProviderV2>();
+        ::uft::hal::GreaseweazleProviderV2 *gwp = gwOwned.get();
+        std::string err;
+        if (gwp->open(port.toLocal8Bit().constData(), &err)) {
+            /* Success: the variant takes ownership. */
+            m_providerV2 = std::move(gwOwned);
+
+            /* Pull cached firmware/model out of the V2 provider. */
+            m_firmwareVersion = QString::fromStdString(gwp->firmware_version());
+            if (m_firmwareVersion.isEmpty())
+                m_firmwareVersion = QStringLiteral("Unknown");
+            m_hwModel = gwp->hardware_model();
+
+            /* Re-run the codegen wiring so every capability-bound
+             * button connects through the type-driven pipeline. */
+            rewireV2();
+
             m_connected = true;
             setConnectionState(true);
-            
+
             if (m_autoDetect) {
-                autoDetectDrive();
+                /* MF-210: auto-detect after a successful connect routes
+                 * through runDetectProbe() — the same capability-driven
+                 * std::visit path onDetectionModeChanged() uses, so the
+                 * GW and the 8 other providers behave identically. */
+                runDetectProbe();
             }
-            
+
             QString deviceName = getDeviceName();
             updateStatus(tr("Connected to %1 (%2)")
                 .arg(deviceName)
@@ -743,14 +881,18 @@ void HardwareTab::onConnect()
             emit connectionChanged(true);
             emit deviceInfoChanged(deviceName, m_firmwareVersion);
             return;
-        } else {
-            qDebug() << "HardwareTab: Connection failed - ret=" << ret << "error=" << uft_gw_strerror(ret);
-            updateStatus(tr("Connection failed: %1").arg(uft_gw_strerror(ret)));
-            QMessageBox::warning(this, tr("Connection Error"),
-                tr("Failed to connect to %1 on %2.\n\nError: %3")
-                .arg(m_controllerType, m_portName, QString::fromUtf8(uft_gw_strerror(ret))));
-            return;
         }
+
+        /* open() failed — `gwOwned` still owns the (unopened) provider
+         * and destructs at end of scope; m_providerV2 stays
+         * std::monostate. Surface the error. */
+        const QString qerr = QString::fromStdString(err);
+        qDebug() << "HardwareTab: GW V2 open failed:" << qerr;
+        updateStatus(tr("Connection failed: %1").arg(qerr));
+        QMessageBox::warning(this, tr("Connection Error"),
+            tr("Failed to connect to %1 on %2.\n\nError: %3")
+                .arg(m_controllerType, m_portName, qerr));
+        return;
         #else
         // HAL not available - fall back to simulated connection
         qWarning() << "HAL not available, using simulated connection";
@@ -764,12 +906,18 @@ void HardwareTab::onConnect()
     QTimer::singleShot(500, this, [this]() {
         m_connected = true;
         m_firmwareVersion = "Simulated";
+        /* MF-210 (P1-4): a simulated connection has NO V2 provider —
+         * m_providerV2 stays std::monostate. Run the codegen wiring so
+         * its Phase-2 guard disables every capability-bound button;
+         * without this the buttons keep whatever state the last
+         * rewireV2() left and can appear enabled-but-unwired. */
+        rewireV2();
         setConnectionState(true);
-        
-        if (m_autoDetect) {
-            autoDetectDrive();
-        }
-        
+        /* MF-171 (P1.18): the old autoDetectDrive() helper that scanned
+         * via uft_gw_* directly is gone. There is no V2 provider in
+         * the simulated path (no hardware to query), so the drive
+         * fields stay at their UI defaults until the user manually
+         * configures them in Manual mode. */
         updateStatus(tr("Connected to %1 (%2) [SIMULATED]").arg(m_controllerType, m_firmwareVersion));
         emit connectionChanged(true);
     });
@@ -777,26 +925,182 @@ void HardwareTab::onConnect()
 
 void HardwareTab::onDisconnect()
 {
-    if (m_motorRunning) {
-        onMotorOff();
-    }
-    
-    // Close HAL device if open
-    #ifdef UFT_HAS_HAL
-    if (m_gwDevice != nullptr) {
-        uft_gw_close(static_cast<uft_gw_device_t*>(m_gwDevice));
-        m_gwDevice = nullptr;
-    }
-    #endif
-    
+    /* MF-210 (P1-1/P1-2): issue a clean motor-off to whichever connected
+     * provider actually satisfies cap::ControlsMotor — not just
+     * Greaseweazle (Applesauce and ADF-Copy have it too). This MUST run
+     * before the variant is cleared: the old code did the motor-off
+     * after `m_providerV2 = monostate` in showHardwareDisconnected()'s
+     * call path, sending the command to std::monostate where it was
+     * lost. issueMotorOffIfRunning() is a no-op when no motor is
+     * running and clears m_motorRunning itself. */
+    issueMotorOffIfRunning();
+
+    /* MF-171 (P1.18) / MF-205 (P1.23): the connected V2 provider owns
+     * its handle/transport — its destructor releases it. Assigning
+     * std::monostate destroys whichever alternative was active.
+     *
+     * Order:
+     *   1. m_providerV2 = monostate → destroys the V2 provider
+     *   2. rewireV2()               → Phase 1 disconnect, Phase 2 disable
+     *                                 (provider now monostate) */
+    m_providerV2 = std::monostate{};
+    rewireV2();
+
     m_connected = false;
     m_hwModel = 0;
     setConnectionState(false);
     clearDetectedInfo();
-    
+
     updateStatus(tr("Disconnected."));
     emit connectionChanged(false);
     emit deviceInfoChanged(QString(), QString());
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+ *  MF-157 (P1.4) — Type-Driven HAL handler overload set
+ *
+ *  Each handler corresponds to one alternative of one Sum-Type from
+ *  `include/uft/hal/outcomes.h`. They are invoked by std::visit dispatch
+ *  inside the codegen-emitted wire_hardware_tab() function — never
+ *  directly. Adding a new alternative to a Sum-Type requires adding a
+ *  matching overload here, otherwise the std::visit call inside
+ *  generated/tab_hardware_wiring.gen.cpp fails to compile. That is the
+ *  forensic guarantee turning "we should preserve every case" into a
+ *  build break.
+ *
+ *  Each handler must SURFACE the variant detail, not summarize. Rule F-3
+ *  (preserve forensic detail) and F-4 (3-part errors) are both upheld
+ *  here.
+ * ════════════════════════════════════════════════════════════════════════ */
+
+/* MotorOutcome */
+void HardwareTab::onMotorOutcome(const ::uft::hal::MotorRunning &v)
+{
+    m_motorRunning = true;
+    updateMotorControlsEnabled();
+    updateStatus(tr("Motor running (RPM=%1)").arg(v.measured_rpm, 0, 'f', 1));
+}
+void HardwareTab::onMotorOutcome(const ::uft::hal::MotorStopped &)
+{
+    m_motorRunning = false;
+    updateMotorControlsEnabled();
+    updateStatus(tr("Motor stopped"));
+}
+void HardwareTab::onMotorOutcome(const ::uft::hal::MotorStalled &v)
+{
+    m_motorRunning = false;
+    updateMotorControlsEnabled();
+    updateStatus(tr("Motor stalled: %1").arg(QString::fromStdString(v.reason)),
+                 /*isError=*/true);
+}
+
+/* SeekOutcome */
+void HardwareTab::onSeekOutcome(const ::uft::hal::SeekArrived &v)
+{
+    updateStatus(tr("Seek arrived at cylinder %1").arg(v.cylinder));
+}
+void HardwareTab::onSeekOutcome(const ::uft::hal::SeekOvershot &v)
+{
+    updateStatus(tr("Seek overshot: requested %1, actual %2")
+                     .arg(v.requested).arg(v.actual),
+                 /*isError=*/true);
+}
+void HardwareTab::onSeekOutcome(const ::uft::hal::SeekTrack0Failed &v)
+{
+    updateStatus(tr("Track-0 calibration failed: %1")
+                     .arg(QString::fromStdString(v.reason)),
+                 /*isError=*/true);
+}
+
+/* RpmOutcome */
+void HardwareTab::onRpmOutcome(const ::uft::hal::RpmMeasured &v)
+{
+    updateStatus(tr("RPM=%1 (jitter=%2%, %3 revs sampled)")
+                     .arg(v.rpm, 0, 'f', 2)
+                     .arg(v.jitter_pct, 0, 'f', 2)
+                     .arg(v.revolutions_sampled));
+}
+
+/* DetectOutcome */
+void HardwareTab::onDetectOutcome(const ::uft::hal::DriveDetected &v)
+{
+    m_detectedTracks = v.tracks;
+    m_detectedHeads = v.heads;
+    updateStatus(tr("Drive detected: %1 (%2 tracks, %3 heads, %4 RPM nominal)")
+                     .arg(QString::fromStdString(v.drive_kind))
+                     .arg(v.tracks).arg(v.heads)
+                     .arg(v.rpm_nominal, 0, 'f', 0));
+}
+void HardwareTab::onDetectOutcome(const ::uft::hal::DriveAbsent &v)
+{
+    updateStatus(tr("No drive detected (scanned for %1)")
+                     .arg(QString::fromStdString(v.scanned_for)),
+                 /*isError=*/true);
+}
+
+/* FluxOutcome */
+void HardwareTab::onFluxOutcome(const ::uft::hal::FluxCaptured &v)
+{
+    updateStatus(tr("Flux captured C%1/H%2: %3 transitions, %4 revolutions, %5 ns/sample")
+                     .arg(v.position.cylinder).arg(v.position.head)
+                     .arg(v.transitions_ns.size())
+                     .arg(v.revolutions)
+                     .arg(v.sample_ns, 0, 'f', 1));
+}
+void HardwareTab::onFluxOutcome(const ::uft::hal::FluxMarginal &v)
+{
+    /* F-3: do NOT collapse the marginal flux — preserve transition count
+     * and the anomaly note for the audit trail. */
+    updateStatus(tr("Flux MARGINAL at C%1/H%2: %3 transitions, anomaly: %4")
+                     .arg(v.position.cylinder).arg(v.position.head)
+                     .arg(v.transitions_ns.size())
+                     .arg(QString::fromStdString(v.anomaly_note)),
+                 /*isError=*/true);
+}
+void HardwareTab::onFluxOutcome(const ::uft::hal::FluxUnreadable &v)
+{
+    updateStatus(tr("Flux unreadable at C%1/H%2: %3")
+                     .arg(v.position.cylinder).arg(v.position.head)
+                     .arg(QString::fromStdString(v.physical_reason)),
+                 /*isError=*/true);
+}
+
+/* Cross-variant alternatives (every Outcome carries them) */
+void HardwareTab::showProviderError(const ::uft::hal::ProviderError &e)
+{
+    /* F-4: surface ALL three parts. The status bar gets `what`, the log
+     * (qWarning) gets all three. A future P1.5 pass can replace the log
+     * line with a proper 3-part dialog. */
+    updateStatus(tr("Error: %1").arg(QString::fromStdString(e.what)),
+                 /*isError=*/true);
+    qWarning("[HardwareTab] ProviderError\n  what: %s\n  why : %s\n  fix : %s",
+             e.what.c_str(), e.why.c_str(), e.fix.c_str());
+}
+void HardwareTab::showHardwareDisconnected(const ::uft::hal::HardwareDisconnected &d)
+{
+    updateStatus(tr("Hardware disconnected (%1)")
+                     .arg(QString::fromStdString(d.device_path)),
+                 /*isError=*/true);
+    /* MF-210 (P1-2): delegate the full teardown to onDisconnect() instead
+     * of clearing the variant here first. onDisconnect() now issues the
+     * capability-driven motor-off against the still-live provider BEFORE
+     * destroying it; the old code cleared the variant to std::monostate
+     * up here, so the subsequent onDisconnect() motor-off was lost. */
+    if (m_connected) {
+        onDisconnect();
+    } else {
+        /* Defensive: not flagged "connected" but a provider somehow
+         * lingers in the variant — clear it and re-gate the UI. */
+        m_providerV2 = std::monostate{};
+        rewireV2();
+    }
+}
+void HardwareTab::showPolicyRequired(const ::uft::hal::CapabilityRequiresPolicy &p)
+{
+    /* TODO P1.6/P1.7: open a proper consent dialog. For now we flag it
+     * loudly in the status bar so the operation is not silently dropped. */
+    updateStatus(tr("Policy gate: %1").arg(QString::fromStdString(p.explain)),
+                 /*isError=*/true);
 }
 
 void HardwareTab::onControllerChanged(int index)
@@ -817,24 +1121,20 @@ void HardwareTab::onControllerChanged(int index)
     // USB Floppy has different capabilities
     bool isUSB = (controller == "usb_floppy");
     
-    // Check if this is a Commodore controller
-    bool isCommodoreUSB = (controller == "zoomfloppy" || controller == "xum1541");
-    bool isCommodoreLPT = (controller == "xa1541" || controller == "xap1541" ||
-                          controller == "xm1541" || controller == "xe1541" ||
-                          controller == "x1541");
-    bool isCommodore = isCommodoreUSB || isCommodoreLPT;
+    /* Check if this is a Commodore controller.
+     * MF-170 (P1.19): the LPT-based X1541 family was removed from the
+     * combo; `isCommodoreLPT` would always be false and is therefore
+     * gone. `isCommodore == isCommodoreUSB` now. */
+    bool isCommodoreUSB = (controller == "xum1541");
+    bool isCommodore = isCommodoreUSB;
     bool isFlux = (controller == "greaseweazle" || controller == "scp" ||
                    controller == "kryoflux" || controller == "fluxengine");
-    
+
     // Disable flux-specific options for USB and Commodore
     ui->groupAdvanced->setEnabled(isFlux);
-    
+
     // Update port list based on controller type
-    if (isCommodoreLPT) {
-        // Show parallel ports for legacy X1541 cables
-        detectParallelPorts();
-        updateStatus(tr("Legacy LPT adapter selected - requires parallel port."));
-    } else if (isCommodoreUSB) {
+    if (isCommodoreUSB) {
         // Show USB devices for ZoomFloppy/XUM1541
         detectSerialPorts();
         updateStatus(tr("Commodore USB adapter selected - uses OpenCBM."));
@@ -871,151 +1171,18 @@ void HardwareTab::onDetectionModeChanged()
     
     if (m_autoDetect) {
         updateStatus(tr("Auto-Detect mode - drive settings will be detected automatically."));
-        if (m_connected) {
-            autoDetectDrive();
-        }
+        /* MF-177 / MF-210 (P1-3): when the user switches to auto-detect
+         * while already connected, probe the drive through
+         * runDetectProbe() — a capability-driven std::visit over ALL 9
+         * providers (every one satisfies cap::DetectsDrive). The old code
+         * was a Greaseweazle-only std::get_if + is_open() check, so the
+         * mode-switch probe was a silent no-op for the other 8
+         * controllers. runDetectProbe() is a no-op when disconnected. */
+        runDetectProbe();
     } else {
         updateStatus(tr("Manual mode - configure drive settings manually."));
     }
 }
-
-void HardwareTab::onDetectDrive()
-{
-    if (!m_connected) {
-        QMessageBox::warning(this, tr("Not Connected"),
-            tr("Please connect to a controller first."));
-        return;
-    }
-    
-    autoDetectDrive();
-}
-
-void HardwareTab::autoDetectDrive()
-{
-    updateStatus(tr("Detecting drive..."));
-    
-#ifdef UFT_HAS_HAL
-    if (m_gwDevice == nullptr) {
-        updateStatus(tr("No device connected"));
-        return;
-    }
-    
-    uft_gw_device_t* gw = static_cast<uft_gw_device_t*>(m_gwDevice);
-    
-    // Select drive unit 0
-    int ret = uft_gw_select_drive(gw, 0);
-    if (ret != 0) {
-        updateStatus(tr("Failed to select drive: %1").arg(ret));
-        return;
-    }
-    
-    // Turn on motor
-    ret = uft_gw_set_motor(gw, true);
-    if (ret != 0) {
-        updateStatus(tr("Failed to turn on motor: %1").arg(ret));
-        return;
-    }
-    
-    // Wait for spin-up
-    QThread::msleep(500);
-    
-    // Try to seek to track 0 to detect drive presence
-    ret = uft_gw_seek(gw, 0);
-    if (ret != 0) {
-        uft_gw_set_motor(gw, false);
-        updateStatus(tr("No drive detected (seek failed)"));
-        return;
-    }
-    
-    // Detect drive type by seeking to high tracks
-    QString driveType = "Unknown";
-    int maxTracks = 80;
-    
-    // Try track 80 (HD drives)
-    ret = uft_gw_seek(gw, 80);
-    if (ret == 0) {
-        // Try track 82 (some drives support more)
-        ret = uft_gw_seek(gw, 82);
-        if (ret == 0) {
-            maxTracks = 83;
-        } else {
-            maxTracks = 80;
-        }
-    } else {
-        // Might be a 40-track drive
-        ret = uft_gw_seek(gw, 40);
-        if (ret == 0) {
-            maxTracks = 40;
-            driveType = "5.25\" DD";
-        }
-    }
-    
-    // Detect density by checking write protect and disk presence
-    bool writeProtected = uft_gw_is_write_protected(gw);
-    
-    // Determine drive type based on tracks
-    if (maxTracks >= 80) {
-        driveType = "3.5\" HD";  // Most common
-    } else if (maxTracks == 40) {
-        driveType = "5.25\" DD";
-    }
-    
-    int heads = 2;  // Assume double-sided
-    QString density = (maxTracks >= 80) ? "HD" : "DD";
-    int rpm = 300;  // Standard, will be measured in RPM test
-    
-    // Return to track 0
-    uft_gw_seek(gw, 0);
-    
-    // Turn off motor
-    uft_gw_set_motor(gw, false);
-    
-    // Apply detected settings
-    applyDetectedSettings(driveType, maxTracks, heads, density, rpm);
-    setDetectedInfo(driveType, m_firmwareVersion, QString::number(rpm), 
-                    writeProtected ? tr("Yes") : tr("No"));
-    
-    updateStatus(tr("Drive detected: %1, %2 tracks, Write Protected: %3")
-                .arg(driveType).arg(maxTracks).arg(writeProtected ? "Yes" : "No"));
-#else
-    // No HAL - show warning
-    QMessageBox::warning(this, tr("HAL Not Available"),
-        tr("Hardware Abstraction Layer is not compiled in.\n"
-           "Drive detection is not available.\n\n"
-           "Please rebuild UFT with UFT_HAS_HAL=ON"));
-    updateStatus(tr("HAL not available - detection skipped"));
-#endif
-}
-
-void HardwareTab::applyDetectedSettings(const QString& driveType, int tracks,
-                                        int heads, const QString& density, int rpm)
-{
-    m_detectedModel = driveType;
-    m_detectedTracks = tracks;
-    m_detectedHeads = heads;
-    m_detectedDensity = density;
-    m_detectedRPM = rpm;
-    
-    // Update UI (in auto mode these are read-only)
-    int idx;
-    idx = ui->comboDriveType->findText(driveType, Qt::MatchContains);
-    if (idx >= 0) ui->comboDriveType->setCurrentIndex(idx);
-    
-    idx = ui->comboTracks->findText(QString::number(tracks));
-    if (idx >= 0) ui->comboTracks->setCurrentIndex(idx);
-    
-    idx = ui->comboHeads->findText(QString::number(heads));
-    if (idx >= 0) ui->comboHeads->setCurrentIndex(idx);
-    
-    idx = ui->comboDensity->findText(density, Qt::MatchContains);
-    if (idx >= 0) ui->comboDensity->setCurrentIndex(idx);
-    
-    idx = ui->comboRPM->findText(QString::number(rpm));
-    if (idx >= 0) ui->comboRPM->setCurrentIndex(idx);
-}
-
-// ============================================================================
-// UI State Management
 // ============================================================================
 
 void HardwareTab::setConnectionState(bool connected)
@@ -1042,8 +1209,15 @@ void HardwareTab::setConnectionState(bool connected)
     updateDriveSettingsEnabled();
     updateMotorControlsEnabled();
     updateAdvancedEnabled();
-    updateTestButtonsEnabled();
-    
+    /* MF-210 (P1-5): updateTestButtonsEnabled() is gone. The five test
+     * buttons (btnSeekTest/btnReadTest/btnRPMTest/btnCalibrate/btnDetect)
+     * are capability-bound — their enabled-state is owned solely by the
+     * codegen `wire_action<cap::X>` (run from rewireV2()). The old helper
+     * unconditionally re-enabled them on `m_connected`, which ran AFTER
+     * rewireV2() and clobbered the type-driven gating, leaving
+     * dead-but-enabled buttons for every provider with a partial
+     * capability set. The codegen is now the single source of truth. */
+
     ui->groupDetection->setEnabled(connected);
     ui->groupDrive->setEnabled(connected);
     ui->groupMotor->setEnabled(connected);
@@ -1069,27 +1243,37 @@ void HardwareTab::updateDriveSettingsEnabled()
 
 void HardwareTab::updateMotorControlsEnabled()
 {
-    ui->btnMotorOn->setEnabled(m_connected && !m_motorRunning);
-    ui->btnMotorOff->setEnabled(m_connected && m_motorRunning);
     ui->checkAutoSpinDown->setEnabled(m_connected);
+
+    /* MF-210 (P1-5): btnMotorOn / btnMotorOff are capability-bound. The
+     * codegen `wire_action<cap::ControlsMotor>` owns the *capability*
+     * gate (connect-or-disable per provider type); this function applies
+     * only the orthogonal *running-state* refinement, and ONLY for a
+     * provider that actually satisfies ControlsMotor. For a provider
+     * without it (e.g. SCP) both buttons stay disabled — matching what
+     * the codegen already did, instead of the old code unconditionally
+     * re-enabling them on `m_connected`.
+     *
+     * providerControlsMotor() derives the answer from the provider TYPE,
+     * so this is correct regardless of call order (it is also invoked
+     * from onMotorOutcome(), with no preceding rewireV2()). */
+    const bool hasMotor = m_connected && providerControlsMotor();
+    ui->btnMotorOn->setEnabled(hasMotor && !m_motorRunning);
+    ui->btnMotorOff->setEnabled(hasMotor && m_motorRunning);
 }
 
 void HardwareTab::updateAdvancedEnabled()
 {
     bool enabled = m_connected && !m_autoDetect;
-    
+
     ui->checkDoubleStep->setEnabled(enabled);
     ui->checkIgnoreIndex->setEnabled(enabled);
 }
 
-void HardwareTab::updateTestButtonsEnabled()
-{
-    ui->btnSeekTest->setEnabled(m_connected);
-    ui->btnReadTest->setEnabled(m_connected);
-    ui->btnRPMTest->setEnabled(m_connected);
-    ui->btnCalibrate->setEnabled(m_connected);
-    ui->btnDetect->setEnabled(m_connected);
-}
+/* MF-210 (P1-5): updateTestButtonsEnabled() removed — see the comment in
+ * setConnectionState(). The codegen `wire_action<cap::X>` is the single
+ * source of truth for btnSeekTest/btnReadTest/btnRPMTest/btnCalibrate/
+ * btnDetect; nothing else may setEnabled() on them. */
 
 // ============================================================================
 // Status Updates
@@ -1117,62 +1301,10 @@ void HardwareTab::setDetectedInfo(const QString& model, const QString& firmware,
     ui->labelIndex->setText(index);
 }
 
-// ============================================================================
-// Motor Control
-// ============================================================================
-
-void HardwareTab::onMotorOn()
-{
-    if (!m_connected) return;
-    
-#ifdef UFT_HAS_HAL
-    if (m_gwDevice != nullptr) {
-        uft_gw_device_t* gw = static_cast<uft_gw_device_t*>(m_gwDevice);
-        int ret = uft_gw_set_motor(gw, true);
-        if (ret != 0) {
-            updateStatus(tr("Failed to turn motor on: error %1").arg(ret));
-            return;
-        }
-    }
-#endif
-    
-    m_motorRunning = true;
-    updateMotorControlsEnabled();
-    updateStatus(tr("Motor ON"));
-    
-    // Auto spin-down timer
-    if (ui->checkAutoSpinDown->isChecked()) {
-        if (!m_motorTimer) {
-            m_motorTimer = new QTimer(this);
-            m_motorTimer->setSingleShot(true);
-            connect(m_motorTimer, &QTimer::timeout, this, &HardwareTab::onMotorOff);
-        }
-        m_motorTimer->start(10000);  // 10 seconds
-    }
-}
-
-void HardwareTab::onMotorOff()
-{
-    if (!m_connected) return;
-    
-#ifdef UFT_HAS_HAL
-    if (m_gwDevice != nullptr) {
-        uft_gw_device_t* gw = static_cast<uft_gw_device_t*>(m_gwDevice);
-        int ret = uft_gw_set_motor(gw, false);
-        if (ret != 0) {
-            updateStatus(tr("Failed to turn motor off: error %1").arg(ret));
-        }
-    }
-#endif
-    
-    m_motorRunning = false;
-    if (m_motorTimer) {
-        m_motorTimer->stop();
-    }
-    updateMotorControlsEnabled();
-    updateStatus(tr("Motor OFF"));
-}
-
+/* MF-177: restored — the MF-171 (P1.18) zombie-slot deletion script's
+ * brace-balance logic mis-cut and ate this function's SIGNATURE line
+ * while leaving the body orphaned. `onAutoSpinDownChanged` is still
+ * connected in setupConnections() and must exist. */
 void HardwareTab::onAutoSpinDownChanged(bool enabled)
 {
     Q_UNUSED(enabled);
@@ -1198,211 +1330,20 @@ void HardwareTab::onStepDelayChanged(int value) { Q_UNUSED(value); }
 void HardwareTab::onSettleTimeChanged(int value) { Q_UNUSED(value); }
 
 // ============================================================================
-// Test Functions
+// Device Info
 // ============================================================================
 
-void HardwareTab::onSeekTest()
-{
-    if (!m_connected) return;
-    
-    updateStatus(tr("Running seek test..."));
-    
-#ifdef UFT_HAS_HAL
-    if (m_gwDevice == nullptr) {
-        updateStatus(tr("No device"));
-        return;
-    }
-    
-    uft_gw_device_t* gw = static_cast<uft_gw_device_t*>(m_gwDevice);
-    
-    // Turn on motor
-    uft_gw_set_motor(gw, true);
-    QThread::msleep(300);
-    
-    int errors = 0;
-    int maxTrack = m_detectedTracks > 0 ? m_detectedTracks : 80;
-    
-    // Seek to each track
-    for (int track = 0; track <= maxTrack; track += 10) {
-        int ret = uft_gw_seek(gw, track);
-        if (ret != 0) {
-            errors++;
-            updateStatus(tr("Seek error at track %1").arg(track));
-        }
-        QThread::msleep(10);
-    }
-    
-    // Return to track 0
-    uft_gw_seek(gw, 0);
-    uft_gw_set_motor(gw, false);
-    
-    if (errors == 0) {
-        updateStatus(tr("Seek test complete - all tracks accessible."));
-    } else {
-        updateStatus(tr("Seek test complete - %1 errors.").arg(errors));
-    }
-#else
-    updateStatus(tr("Seek test requires HAL"));
-#endif
-}
-
-void HardwareTab::onReadTest()
-{
-    if (!m_connected) return;
-    
-    updateStatus(tr("Running read test..."));
-    
-#ifdef UFT_HAS_HAL
-    if (m_gwDevice == nullptr) {
-        updateStatus(tr("No device"));
-        return;
-    }
-    
-    uft_gw_device_t* gw = static_cast<uft_gw_device_t*>(m_gwDevice);
-    
-    // Select drive and turn on motor
-    uft_gw_select_drive(gw, 0);
-    uft_gw_set_motor(gw, true);
-    QThread::msleep(500);
-    
-    // Seek to track 0
-    int ret = uft_gw_seek(gw, 0);
-    if (ret != 0) {
-        uft_gw_set_motor(gw, false);
-        updateStatus(tr("Read test failed: cannot seek to track 0"));
-        return;
-    }
-    
-    // Select head 0
-    uft_gw_select_head(gw, 0);
-    
-    // Try to read flux data
-    uft_gw_read_params_t params = {};
-    params.revolutions = 1;
-    params.index_sync = true;
-    
-    uft_gw_flux_data_t *flux = nullptr;
-    ret = uft_gw_read_flux(gw, &params, &flux);
-    
-    uft_gw_set_motor(gw, false);
-    
-    if (ret == 0 && flux != nullptr && flux->sample_count > 0) {
-        updateStatus(tr("Read test complete - Track 0 readable (%1 samples, %2 index pulses)")
-                    .arg(flux->sample_count).arg(flux->index_count));
-        // Free flux data
-        if (flux->samples) free(flux->samples);
-        if (flux->index_times) free(flux->index_times);
-        free(flux);
-    } else {
-        updateStatus(tr("Read test failed: no data or error %1").arg(ret));
-    }
-#else
-    updateStatus(tr("Read test requires HAL"));
-#endif
-}
-
-void HardwareTab::onRPMTest()
-{
-    if (!m_connected) return;
-    
-    updateStatus(tr("Measuring RPM..."));
-    
-#ifdef UFT_HAS_HAL
-    if (m_gwDevice == nullptr) {
-        updateStatus(tr("No device"));
-        return;
-    }
-    
-    uft_gw_device_t* gw = static_cast<uft_gw_device_t*>(m_gwDevice);
-    
-    // Turn on motor
-    uft_gw_set_motor(gw, true);
-    QThread::msleep(1000);  // Wait for stable rotation
-    
-    // Read one revolution to measure index time
-    uft_gw_read_params_t params = {};
-    params.revolutions = 2;  // Need 2 to measure interval
-    params.index_sync = true;
-    
-    uft_gw_flux_data_t *flux = nullptr;
-    int ret = uft_gw_read_flux(gw, &params, &flux);
-    
-    uft_gw_set_motor(gw, false);
-    
-    if (ret == 0 && flux != nullptr && flux->index_count >= 2) {
-        // Calculate RPM from index times
-        uint32_t sample_freq = uft_gw_get_sample_freq(gw);
-        uint32_t interval_ticks = flux->index_times[1] - flux->index_times[0];
-        double interval_ms = (double)interval_ticks / sample_freq * 1000.0;
-        double rpm = 60000.0 / interval_ms;
-        
-        updateStatus(tr("RPM: %1 (interval: %2 ms)")
-                    .arg(rpm, 0, 'f', 1).arg(interval_ms, 0, 'f', 2));
-        
-        // Update detected RPM
-        m_detectedRPM = qRound(rpm);
-        
-        // Free flux data
-        if (flux->samples) free(flux->samples);
-        if (flux->index_times) free(flux->index_times);
-        free(flux);
-    } else {
-        updateStatus(tr("RPM measurement failed: insufficient index pulses"));
-    }
-#else
-    updateStatus(tr("RPM test requires HAL"));
-#endif
-}
-
-void HardwareTab::onCalibrate()
-{
-    if (!m_connected) return;
-    
-    updateStatus(tr("Calibrating drive..."));
-    
-#ifdef UFT_HAS_HAL
-    if (m_gwDevice == nullptr) {
-        updateStatus(tr("No device"));
-        return;
-    }
-    
-    uft_gw_device_t* gw = static_cast<uft_gw_device_t*>(m_gwDevice);
-    
-    // Turn on motor
-    uft_gw_set_motor(gw, true);
-    QThread::msleep(300);
-    
-    // Seek to track 0 (home position)
-    int ret = uft_gw_seek(gw, 0);
-    if (ret != 0) {
-        uft_gw_set_motor(gw, false);
-        updateStatus(tr("Calibration failed: cannot find track 0"));
-        return;
-    }
-    
-    // Move out and back to verify
-    uft_gw_seek(gw, 2);
-    QThread::msleep(50);
-    ret = uft_gw_seek(gw, 0);
-    
-    uft_gw_set_motor(gw, false);
-    
-    if (ret == 0) {
-        updateStatus(tr("Calibration complete - head at track 0"));
-    } else {
-        updateStatus(tr("Calibration error: track 0 sensor issue"));
-    }
-#else
-    updateStatus(tr("Calibration requires HAL"));
-#endif
-}
-
+/* MF-177: restored — the MF-171 (P1.18) zombie-slot deletion script
+ * mis-cut and ate this function's HEAD (signature + opening brace +
+ * the `if (!m_connected)` guard line), leaving the body orphaned.
+ * `getDeviceName()` is a public method used by the status bar and is
+ * declared in hardwaretab.h — it must exist. */
 QString HardwareTab::getDeviceName() const
 {
     if (!m_connected) {
         return tr("Not connected");
     }
-    
+
     // Build device name based on controller type and model
     QString name;
     
@@ -1428,79 +1369,3 @@ QString HardwareTab::getDeviceName() const
     return name;
 }
 
-// ============================================================================
-// HAL-H7: Unified Capture — drives uft_hw_read_tracks via the C-HAL
-// ============================================================================
-
-void HardwareTab::onUnifiedCapture()
-{
-    /* Figure out which backend type to target from the currently-selected
-     * controller. For this first user-visible end-to-end we only claim
-     * Greaseweazle actually works; other types run but the backend stubs
-     * will report "no device found". */
-    uft_hw_type_t hwType = UFT_HW_UNKNOWN;
-    if (m_controllerType.contains("Greaseweazle", Qt::CaseInsensitive))
-        hwType = UFT_HW_GREASEWEAZLE;
-    else if (m_controllerType.contains("SuperCard", Qt::CaseInsensitive))
-        hwType = UFT_HW_SUPERCARD_PRO;
-    else if (m_controllerType.contains("KryoFlux", Qt::CaseInsensitive))
-        hwType = UFT_HW_KRYOFLUX;
-    else if (m_controllerType.contains("FC5025", Qt::CaseInsensitive))
-        hwType = UFT_HW_FC5025;
-    else if (m_controllerType.contains("XUM", Qt::CaseInsensitive))
-        hwType = UFT_HW_XUM1541;
-
-    if (hwType == UFT_HW_UNKNOWN) {
-        QMessageBox::information(this, tr("Unified Capture"),
-            tr("No recognisable controller selected.\n"
-               "Pick Greaseweazle (fully wired) or another HAL backend."));
-        return;
-    }
-
-    /* The HAL opens its OWN device, independent of the Qt-side
-     * QSerialPort / m_gwDevice. If the Qt side is currently connected
-     * to the same physical port, the HAL-side open will fail — warn. */
-    if (m_connected && hwType == UFT_HW_GREASEWEAZLE) {
-        auto btn = QMessageBox::question(this, tr("Unified Capture"),
-            tr("Hardware is currently connected via the Qt provider.\n"
-               "The unified path must open the same port itself — continue "
-               "and disconnect first?"),
-            QMessageBox::Yes | QMessageBox::No);
-        if (btn != QMessageBox::Yes) return;
-        onDisconnect();
-    }
-
-    updateStatus(tr("Unified Capture running…"));
-    QApplication::setOverrideCursor(Qt::WaitCursor);
-
-    QString errMsg;
-    QVector<TrackData> tracks = uft_hal_bridge::readDiskByType(
-        hwType,
-        /*startCyl=*/0, /*endCyl=*/80,
-        /*heads=*/2, /*revolutions=*/0,
-        &errMsg);
-
-    QApplication::restoreOverrideCursor();
-
-    if (tracks.isEmpty()) {
-        updateStatus(tr("Unified Capture failed"), /*isError=*/true);
-        QMessageBox::warning(this, tr("Unified Capture"),
-            tr("Capture failed: %1").arg(
-                errMsg.isEmpty() ? tr("no device found") : errMsg));
-        return;
-    }
-
-    int good = 0, bad = 0;
-    qint64 bytes = 0;
-    for (const auto &t : tracks) {
-        if (t.success) ++good; else ++bad;
-        bytes += t.data.size();
-    }
-
-    updateStatus(tr("Unified Capture: %1 tracks (%2 OK, %3 failed)")
-                     .arg(tracks.size()).arg(good).arg(bad));
-    QMessageBox::information(this, tr("Unified Capture"),
-        tr("Captured %1 tracks via unified HAL dispatcher.\n\n"
-           "OK: %2   Failed: %3   Bytes: %4")
-            .arg(tracks.size()).arg(good).arg(bad).arg(bytes));
-}

@@ -1,0 +1,19 @@
+# Smoke fixture for tools/wiring_codegen.py
+tab: SampleTab
+provider_source: m_hwManager.current_provider()
+actions:
+  - widget: btnMotorOn
+    requires: ControlsMotor
+    invoke: set_motor(true)
+    on_outcome:
+      MotorRunning: statusbar.show("on")
+      MotorStalled: error_panel.show_three_part(v)
+  - widget: btnMotorOff
+    requires: ControlsMotor
+    invoke: set_motor(false)
+  - widget: btnDetect
+    requires: DetectsDrive
+    invoke: detect_drive()
+  - widget: btnRPMTest
+    requires: MeasuresRPM
+    invoke: measure_rpm()

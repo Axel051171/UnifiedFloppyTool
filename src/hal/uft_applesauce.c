@@ -10,8 +10,9 @@
  *   uses. A2R / WOZ output formats are upstream specs and not part
  *   of this reverse-engineering.
  *
- * Per docs/MASTER_PLAN.md §M3.3: C HAL counterpart of the existing
- * 1311-LOC Qt provider (src/hardware_providers/applesaucehardwareprovider.cpp).
+ * Per docs/MASTER_PLAN.md §M3.3: C HAL counterpart of the Qt-based V2
+ * provider src/hardware_providers/applesauce_provider_v2.cpp (the V1
+ * applesaucehardwareprovider.cpp was deleted in P1.18).
  * Real serial-protocol I/O (115200 8N1, text-based commands) is the
  * multi-session continuation; this commit lands:
  *
@@ -224,10 +225,12 @@ uft_error_t uft_as_detect(char ports[][64], int max_ports) {
      *          build of the C HAL.
      *   Why:   Serial integration (open + "info\n" probe + parse) is
      *          the M3.3 multi-session continuation.
-     *   Fix:   if you need detection right now, the Qt provider path
-     *          (ApplesauceHardwareProvider::autoDetectDevice in
-     *          src/hardware_providers/) walks QSerialPortInfo and
-     *          probes each port; that path is wired today.
+     *   Fix:   serial-port detection is not available in this build —
+     *          the M3.3 serial integration wires it. See
+     *          docs/MASTER_PLAN.md §M3.3. (The V1 Qt provider that
+     *          previously walked QSerialPortInfo was deleted in P1.18;
+     *          ApplesauceProviderV2 does not yet have a production
+     *          construction site either — audit finding ARCH-4.)
      */
     return UFT_ERR_NOT_IMPLEMENTED;
 }

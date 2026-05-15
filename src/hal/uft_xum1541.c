@@ -9,7 +9,8 @@
  *   NOT covered by an official ZoomFloppy SDK.
  *
  * Per docs/MASTER_PLAN.md §M3.2: this is the C HAL counterpart of the
- * Qt-based src/hardware_providers/xum1541hardwareprovider.cpp. Real
+ * Qt-based V2 provider src/hardware_providers/xum1541_provider_v2.cpp
+ * (the V1 xum1541hardwareprovider.cpp was deleted in P1.18). Real
  * USB I/O via libusb is the multi-session continuation; this commit
  * lands:
  *
@@ -212,10 +213,12 @@ uft_error_t uft_xum_detect(int *device_count) {
      *   What:  XUM1541 USB enumeration not yet wired into this build.
      *   Why:   libusb integration is the M3.2 multi-session continuation;
      *          this scaffold only provides pure-utility lookups.
-     *   Fix:   if you need device detection right now, use the Qt
-     *          provider path (Xum1541HardwareProvider::autoDetectDevice
-     *          in src/hardware_providers/) which walks the USB list via
-     *          opencbm. The C HAL path will land with M3.2.
+     *   Fix:   device detection is not available in this build on any
+     *          path — the M3.2 libusb integration wires it. See
+     *          docs/MASTER_PLAN.md §M3.2. (The V1 Qt provider that
+     *          previously did opencbm enumeration was deleted in P1.18;
+     *          XUM1541ProviderV2 does not yet have a production
+     *          construction site either — audit finding ARCH-4.)
      */
     return UFT_ERR_NOT_IMPLEMENTED;
 }

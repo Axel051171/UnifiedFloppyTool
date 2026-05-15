@@ -306,6 +306,25 @@ bool uft_scp_has_track(uft_scp_ctx_t* ctx, int track);
 int uft_scp_read_track(uft_scp_ctx_t* ctx, int track, uft_scp_track_data_t* data);
 
 /**
+ * @brief Read track data straight from an in-memory SCP buffer.
+ *
+ * Self-contained companion to uft_scp_open_memory(): uft_scp_read_track()
+ * is FILE*-only, so memory-buffer callers (e.g. a HAL provider decoding
+ * bytes a subprocess produced) use this. Validates the header, offset
+ * table, track header, revolution entries and flux span against `size`
+ * before any access — a malformed/truncated SCP returns an error, never
+ * reads out of bounds.
+ *
+ * @param data  SCP file bytes
+ * @param size  Length of @p data
+ * @param track Track number
+ * @param out   Output track data (caller frees via uft_scp_free_track)
+ * @return UFT_SCP_OK on success
+ */
+int uft_scp_read_track_memory(const uint8_t* data, size_t size,
+                              int track, uft_scp_track_data_t* out);
+
+/**
  * @brief Free track data
  * @param data Track data to free
  */

@@ -1,0 +1,127 @@
+{
+  "provider": "kryoflux",
+  "integration": "CLI wrapper (DTC subprocess via injected runner)",
+  "reference_provenance": {
+    "grade": "needs-source (DTC CLI) + recalled (24 MHz stream clock)",
+    "project": "Software Preservation Society \u2014 DTC (Disk Tool Console)",
+    "baseline": "DTC is closed-source; no vendored --help output, no DTC binary in the audit environment",
+    "files_recalled_from": [
+      "KryoFlux community wiki (DTC flags)",
+      "KryoFlux stream format docs (24 MHz clock)"
+    ],
+    "note": "The DTC command-line contract is needs-source \u2014 see audit/README.md. UFT's DTC argv cannot be verified arg-exact without a vendored dtc help text or a runnable DTC binary. mock_dtc.py emulates the flag SET UFT passes, not vendored DTC semantics."
+  },
+  "uft_source": {
+    "cpp": "src\\hardware_providers\\kryoflux_provider_v2.cpp"
+  },
+  "counts": {
+    "UNVERIFIED": 8,
+    "PASS": 4
+  },
+  "sections": {
+    "read_argv_flags": [
+      {
+        "key": "-b{N}",
+        "uft": "-b{N}",
+        "ref": "begin track (recalled; needs-source for exactness)",
+        "verdict": "UNVERIFIED",
+        "detail": "needs-source \u2014 DTC CLI contract not vendored / not runnable in this environment",
+        "uft_line": 91
+      },
+      {
+        "key": "-c2",
+        "uft": "-c2",
+        "ref": "command 2 = read-to-stream (recalled; needs-source for exactness)",
+        "verdict": "UNVERIFIED",
+        "detail": "needs-source \u2014 DTC CLI contract not vendored / not runnable in this environment",
+        "uft_line": 88
+      },
+      {
+        "key": "-d0",
+        "uft": "-d0",
+        "ref": "drive 0 (recalled; needs-source for exactness)",
+        "verdict": "UNVERIFIED",
+        "detail": "needs-source \u2014 DTC CLI contract not vendored / not runnable in this environment",
+        "uft_line": 89
+      },
+      {
+        "key": "-e{N}",
+        "uft": "-e{N}",
+        "ref": "end track (recalled; needs-source for exactness)",
+        "verdict": "UNVERIFIED",
+        "detail": "needs-source \u2014 DTC CLI contract not vendored / not runnable in this environment",
+        "uft_line": 92
+      },
+      {
+        "key": "-f{N}",
+        "uft": "-f{N}",
+        "ref": "output file-name prefix (recalled; needs-source for exactness)",
+        "verdict": "UNVERIFIED",
+        "detail": "needs-source \u2014 DTC CLI contract not vendored / not runnable in this environment",
+        "uft_line": 93
+      },
+      {
+        "key": "-i0",
+        "uft": "-i0",
+        "ref": "image type 0 / raw stream (recalled; needs-source for exactness)",
+        "verdict": "UNVERIFIED",
+        "detail": "needs-source \u2014 DTC CLI contract not vendored / not runnable in this environment",
+        "uft_line": 94
+      },
+      {
+        "key": "-s{N}",
+        "uft": "-s{N}",
+        "ref": "side/start-track select \u2014 SEMANTICS AMBIGUOUS across DTC versions (recalled; needs-source \u2014 see KF-D1-1)",
+        "verdict": "UNVERIFIED",
+        "detail": "needs-source \u2014 DTC CLI contract not vendored / not runnable in this environment",
+        "uft_line": 90
+      }
+    ],
+    "detect_argv_flags": [
+      {
+        "key": "-i0",
+        "uft": "-i0",
+        "ref": "UFT uses 'dtc -i0' as a bare probe \u2014 validity unverified (recalled; needs-source \u2014 see KF-D1-2)",
+        "verdict": "UNVERIFIED",
+        "detail": "needs-source \u2014 DTC CLI contract not vendored / not runnable in this environment",
+        "uft_line": 380
+      }
+    ],
+    "timing": [
+      {
+        "key": "kf_sample_clock_mhz",
+        "uft": 24,
+        "ref": 24,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 343
+      },
+      {
+        "key": "kf_sample_ns_expr",
+        "uft": "1000.0/24.0",
+        "ref": "1000.0/24.0",
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 343
+      }
+    ],
+    "geometry": [
+      {
+        "key": "max_cylinder",
+        "uft": 83,
+        "ref": 83,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 248
+      },
+      {
+        "key": "max_head",
+        "uft": 1,
+        "ref": 1,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 258
+      }
+    ]
+  }
+}

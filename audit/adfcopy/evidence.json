@@ -1,0 +1,148 @@
+{
+  "provider": "adfcopy",
+  "reference_provenance": {
+    "grade": "needs-source",
+    "project": "ADF-Copy / ADF-Drive (DIY open-source Teensy Amiga controller)",
+    "baseline": "UFT V1 adfcopyhardwareprovider.h \u2014 DELETED by MF-169/P1.17",
+    "spec_status": "CommunityConsensus (no official vendor spec exists)",
+    "note": "RESP_* + clock + geometry are recalled-grade; ADFC_CMD_* opcodes are needs-source (only survive as UFT comments, authoritative header deleted) \u2014 those rows are UNVERIFIED.",
+    "tiers": {
+      "responses": "recalled (ASCII status bytes \u2014 tautological)",
+      "timing": "recalled (Amiga 40 MHz / 25 ns standard)",
+      "geometry": "recalled (Amiga 80 cyl x 2 head, 300 RPM)",
+      "cmd_opcodes": "needs-source (header deleted; UNVERIFIED)",
+      "usb_ids": "recalled (generic PJRC Teensy ID, shared w/ Applesauce)"
+    }
+  },
+  "uft_source": {
+    "cpp": "src\\hardware_providers\\adfcopy_provider_v2.cpp",
+    "hdr": "src\\hardware_providers\\adfcopy_provider_v2.h"
+  },
+  "uft_note": "ADF-Copy has NO C-HAL; opcodes are comment/static_assert text only (adfcopyhardwareprovider.h deleted by MF-169). RESP_*, sample-clock and geometry are real constexpr in the .cpp.",
+  "counts": {
+    "PASS": 8,
+    "UNVERIFIED": 5
+  },
+  "sections": {
+    "responses": [
+      {
+        "key": "RESP_ERROR",
+        "uft": 69,
+        "ref": 69,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 75
+      },
+      {
+        "key": "RESP_NODISK",
+        "uft": 68,
+        "ref": 68,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 76
+      },
+      {
+        "key": "RESP_OK",
+        "uft": 79,
+        "ref": 79,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 74
+      }
+    ],
+    "timing": [
+      {
+        "key": "ADFC_SAMPLE_CLOCK_HZ",
+        "uft": 40000000.0,
+        "ref": 40000000.0,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 78
+      },
+      {
+        "key": "ADFC_SAMPLE_NS",
+        "uft": 25.0,
+        "ref": 25.0,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 79
+      }
+    ],
+    "geometry": [
+      {
+        "key": "ADFC_HEADS",
+        "uft": 2,
+        "ref": 2,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 83
+      },
+      {
+        "key": "ADFC_STD_CYLINDERS",
+        "uft": 80,
+        "ref": 80,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 82
+      }
+    ],
+    "cmd_opcodes": [
+      {
+        "key": "ADFC_CMD_GET_STATUS",
+        "uft": 11,
+        "ref": 11,
+        "verdict": "UNVERIFIED",
+        "detail": "needs-source \u2014 opcode value only in UFT comments (adfcopyhardwareprovider.h deleted); numeric matches recalled value but not independently checkable",
+        "uft_line": 35
+      },
+      {
+        "key": "ADFC_CMD_INIT",
+        "uft": 1,
+        "ref": 1,
+        "verdict": "UNVERIFIED",
+        "detail": "needs-source \u2014 opcode value only in UFT comments (adfcopyhardwareprovider.h deleted); numeric matches recalled value but not independently checkable",
+        "uft_line": 22
+      },
+      {
+        "key": "ADFC_CMD_PING",
+        "uft": 0,
+        "ref": 0,
+        "verdict": "UNVERIFIED",
+        "detail": "needs-source \u2014 opcode value only in UFT comments (adfcopyhardwareprovider.h deleted); numeric matches recalled value but not independently checkable",
+        "uft_line": 130
+      },
+      {
+        "key": "ADFC_CMD_READ_FLUX",
+        "uft": 6,
+        "ref": 6,
+        "verdict": "UNVERIFIED",
+        "detail": "needs-source \u2014 opcode value only in UFT comments (adfcopyhardwareprovider.h deleted); numeric matches recalled value but not independently checkable",
+        "uft_line": 16
+      },
+      {
+        "key": "ADFC_CMD_SEEK",
+        "uft": 2,
+        "ref": 2,
+        "verdict": "UNVERIFIED",
+        "detail": "needs-source \u2014 opcode value only in UFT comments (adfcopyhardwareprovider.h deleted); numeric matches recalled value but not independently checkable",
+        "uft_line": 27
+      }
+    ],
+    "usb_ids": [
+      {
+        "key": "ADFC_VID_PID",
+        "uft": [
+          5824,
+          1155
+        ],
+        "ref": [
+          5824,
+          1155
+        ],
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 124
+      }
+    ]
+  }
+}

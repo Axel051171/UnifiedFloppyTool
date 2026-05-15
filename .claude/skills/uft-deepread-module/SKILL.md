@@ -168,8 +168,21 @@ DeepRead runs on desktop AND potentially on UFI (for live preview). Run
 If your module requires another module to run first, document it AND
 enforce it in the registry. Don't rely on implicit ordering.
 
+### Fabricating bytes without marking them
+
+If your DeepRead module *produces* bytes that didn't come straight from
+the flux (gap-fill, interpolation, vote-derived "best guess"), every
+such byte must be flagged in `annotations` with reduced confidence and
+a `RECONSTRUCTED` marker. Never write fabricated bytes into the output
+stream while leaving the confidence at 1.0 — that is silent
+data fabrication, the worst failure mode for a forensic tool. The
+five integrity invariants for byte-level recovery are documented in
+`uft-recovery-integrity` SKILL.md — pipeline modules that emit bytes
+should follow the same rules.
+
 ## Related
 
+- `.claude/skills/uft-recovery-integrity/` — for any module emitting bytes (integrity invariants)
 - `.claude/skills/uft-stm32-portability/` — DeepRead is dual-target
 - `.claude/skills/uft-benchmark/` — measure pipeline impact
 - `.claude/skills/uft-flux-fixtures/` — test inputs

@@ -25,6 +25,11 @@
 #include <QString>
 #include <atomic>
 
+/* MF-201 (P1.21): FluxWriteJob now drives the V2 outcome surface via a
+ * non-owning GreaseweazleProviderV2 pointer instead of a raw
+ * uft_gw_device_t* — the provider is owned by HardwareTab. */
+namespace uft::hal { class GreaseweazleProviderV2; }
+
 class FluxWriteJob : public QObject
 {
     Q_OBJECT
@@ -33,9 +38,10 @@ public:
     explicit FluxWriteJob(QObject *parent = nullptr);
     ~FluxWriteJob() override;
 
-    void setDevice(void *gwDevice);             // uft_gw_device_t*
+    /** Non-owning. The provider is owned by HardwareTab; the drive unit
+     *  is already bound on the provider (ctor / set_drive_unit). */
+    void setProvider(::uft::hal::GreaseweazleProviderV2 *provider);
     void setInputPath(const QString &path);     // .scp source
-    void setDriveUnit(int unit);                // 0 or 1
     void setVerify(bool verify);                // post-write read+compare (off by default)
 
     void requestCancel();
@@ -51,9 +57,8 @@ signals:
     void finished(const QString &resultMsg);
 
 private:
-    void *m_gwDevice;
+    ::uft::hal::GreaseweazleProviderV2 *m_provider;  // non-owning (HardwareTab owns)
     QString m_inputPath;
-    int m_driveUnit;
     bool m_verify;
     std::atomic<bool> m_cancel;
 };

@@ -1,0 +1,4 @@
+# Placeholder — outputs_gw/v1.23/ holds Greaseweazle v1.23 reference
+# outputs (frozen *.bin + *.sha256), produced once per input, committed
+# so CI needs no `gw` install.
+# Empty in the P3.1 skeleton; populated in Welle 2 (P3.2).

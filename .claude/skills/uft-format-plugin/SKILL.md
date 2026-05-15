@@ -201,11 +201,29 @@ grep -c "uft_<n>_plugin\.c" UnifiedFloppyTool.pro
 If a plugin file named `uft_<n>_plugin.c` already exists in another
 directory, rename yours to `uft_<n>_<family>_plugin.c`.
 
+### Domain helpers redefined per-file
+
+When you need a "speed zone", "sectors per track", or other geometry
+helper, **search for an existing one before writing it**:
+
+```bash
+grep -rn "uft_<format>_speed_zone\|uft_<format>_sectors" \
+    include/ src/ --include="*.h" --include="*.c"
+```
+
+The audit at commit 70e60fc found `uft_c64_speed_zone` defined 5 times
+across the tree, each with subtly different semantics (one used `<` vs
+`<=`, one had no bounds check, one was an array with the same name as
+the function). New plugins must add helpers to ONE canonical header
+under `include/uft/<format>/uft_<format>_geometry.h`. If the helper
+already exists, link to it; don't fork.
+
 ## Related
 
 - `.claude/skills/uft-crc-engine/` — CRC families (if format uses CRC)
 - `.claude/skills/uft-flux-fixtures/` — synthesize test data
 - `.claude/skills/uft-filesystem/` — if format needs a filesystem layer
+- `.claude/skills/uft-cross-platform-build/` — run parity check before pushing (FIX-015)
 - `.claude/agents/structured-reviewer.md` — review the final plugin
 - `docs/DESIGN_PRINCIPLES.md` Principle 7 (honesty matrix)
 - `src/formats/d64/uft_d64_plugin.c` — canonical D-series reference

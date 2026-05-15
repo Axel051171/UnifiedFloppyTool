@@ -914,7 +914,12 @@ int uft_gw_write_flux(uft_gw_device_t* device, const uft_gw_write_params_t* para
     size_t max_enc = sample_count * 7 + 16;
     uint8_t* encoded = (uint8_t*)malloc(max_enc);
     if (!encoded) return UFT_GW_ERR_NOMEM;
-    size_t enc_len = uft_gw_encode_flux_stream(samples, sample_count, encoded, max_enc);
+    /* MF-179 (GW-F3): pass the device's real sample frequency so an
+     * F7-Plus (84 MHz) gets correct NFA thresholds. uft_gw_get_sample_freq()
+     * reads device->info.sample_freq; the encoder falls back to the F7
+     * default if that field is 0. `device` is non-NULL here (checked above). */
+    size_t enc_len = uft_gw_encode_flux_stream(samples, sample_count, encoded, max_enc,
+                                               uft_gw_get_sample_freq(device));
 
     int ret = UFT_GW_OK;
     for (int retry = 0; retry <= GW_WRITE_RETRIES; retry++) {
@@ -1106,11 +1111,19 @@ uint32_t uft_gw_decode_flux_index_times(const uint8_t* raw, size_t raw_len,
 }
 
 size_t uft_gw_encode_flux_stream(const uint32_t* samples, uint32_t sample_count,
-                              uint8_t* raw, size_t max_raw) {
+                              uint8_t* raw, size_t max_raw,
+                              uint32_t sample_freq_hz) {
     if (!samples || !raw || sample_count == 0 || max_raw < 16) return 0;
 
     size_t pos = 0;
-    uint32_t sf = UFT_GW_SAMPLE_FREQ_HZ;
+    /* MF-179 (audit finding GW-F3): the sample frequency is now caller-
+     * supplied. Previously this was hard-coded to UFT_GW_SAMPLE_FREQ_HZ
+     * (72 MHz, the F7 default) — on an F7-Plus (84 MHz) every NFA
+     * threshold / period and the dummy-flux value were off by 84/72.
+     * A 0 argument falls back to the F7 default; defensive against an
+     * uninitialised uft_gw_info_t::sample_freq, but a real device
+     * should always pass its actual frequency. */
+    uint32_t sf = sample_freq_hz ? sample_freq_hz : UFT_GW_SAMPLE_FREQ_HZ;
     uint32_t nfa_thresh = (uint32_t)((uint64_t)GW_NFA_THRESH_US * sf / 1000000);
     uint32_t nfa_period = (uint32_t)((uint64_t)GW_NFA_PERIOD_US_X100 * sf / 100000000);
     if (nfa_period == 0) nfa_period = 1;

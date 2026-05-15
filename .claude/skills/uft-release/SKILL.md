@@ -178,4 +178,5 @@ fails after tag push, you've already burned a version number.
 - `CHANGELOG.md` — running log of all releases
 - `.github/workflows/release.yml` — CI release pipeline
 - `docs/RELEASE_PROCESS.md` — longer-form documentation
+- `.claude/skills/uft-cross-platform-build/` — full matrix must be green before tagging
 - `.claude/skills/uft-stm32-portability/` — firmware check (part of gate)

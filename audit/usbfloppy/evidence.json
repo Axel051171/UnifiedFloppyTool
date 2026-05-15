@@ -1,0 +1,176 @@
+{
+  "provider": "usbfloppy",
+  "reference_provenance": {
+    "grade": "recalled",
+    "project": "USB-IF UFI Command Specification Rev. 1.0 (1998)",
+    "baseline": "Standard SCSI/MMC opcode subset used by UFI",
+    "spec_status": "VendorDocumented (publicly available USB-IF spec)",
+    "note": "UFI opcodes are standard SCSI opcodes; the spec is public but not vendored into the repo \u2014 recalled-grade. CDB lengths are fixed by SCSI CDB format. Geometry table is universal PC-floppy knowledge.",
+    "tiers": {
+      "opcodes": "recalled (standard SCSI opcodes, USB-IF UFI spec)",
+      "cdb_lengths": "recalled (fixed by SCSI CDB format)",
+      "geometry": "recalled (universal 3.5\" PC-floppy geometries)"
+    }
+  },
+  "uft_source": {
+    "ufi_h": "include\\uft\\hal\\ufi.h",
+    "ufi_c": "src\\hal\\ufi.c",
+    "provider_cpp": "src\\hardware_providers\\usbfloppy_provider_v2.cpp"
+  },
+  "uft_note": "USB-Floppy HAS a C-HAL (ufi.h opcode enum, ufi.c CDB builders). Opcodes are byte-exact verifiable. The platform backend (SG_IO / SCSI_PASS_THROUGH) is ABSENT \u2014 uft_ufi_backend_init() is a stub returning -1; g_ops stays NULL on every OS.",
+  "counts": {
+    "PASS": 18
+  },
+  "sections": {
+    "opcodes": [
+      {
+        "key": "UFT_UFI_FORMAT_UNIT",
+        "uft": 4,
+        "ref": 4,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 27
+      },
+      {
+        "key": "UFT_UFI_INQUIRY",
+        "uft": 18,
+        "ref": 18,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 28
+      },
+      {
+        "key": "UFT_UFI_MODE_SELECT_6",
+        "uft": 21,
+        "ref": 21,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 29
+      },
+      {
+        "key": "UFT_UFI_MODE_SENSE_6",
+        "uft": 26,
+        "ref": 26,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 30
+      },
+      {
+        "key": "UFT_UFI_READ_10",
+        "uft": 40,
+        "ref": 40,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 33
+      },
+      {
+        "key": "UFT_UFI_READ_CAPACITY",
+        "uft": 37,
+        "ref": 37,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 32
+      },
+      {
+        "key": "UFT_UFI_READ_FORMAT_CAP",
+        "uft": 35,
+        "ref": 35,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 36
+      },
+      {
+        "key": "UFT_UFI_REQUEST_SENSE",
+        "uft": 3,
+        "ref": 3,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 26
+      },
+      {
+        "key": "UFT_UFI_START_STOP",
+        "uft": 27,
+        "ref": 27,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 31
+      },
+      {
+        "key": "UFT_UFI_TEST_UNIT_READY",
+        "uft": 0,
+        "ref": 0,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 25
+      },
+      {
+        "key": "UFT_UFI_VERIFY_10",
+        "uft": 47,
+        "ref": 47,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 35
+      },
+      {
+        "key": "UFT_UFI_WRITE_10",
+        "uft": 42,
+        "ref": 42,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 34
+      }
+    ],
+    "cdb_lengths": [
+      {
+        "key": "INQUIRY_ALLOC_LEN",
+        "uft": 36,
+        "ref": 36,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 53
+      },
+      {
+        "key": "READ10_WRITE10_CDB_LEN",
+        "uft": 10,
+        "ref": 10,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 167
+      },
+      {
+        "key": "REQUEST_SENSE_ALLOC_LEN",
+        "uft": 18,
+        "ref": 18,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 81
+      }
+    ],
+    "geometry": [
+      {
+        "key": "SPT_FOR_1440_LBA",
+        "uft": 9,
+        "ref": 9,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 612
+      },
+      {
+        "key": "SPT_FOR_2880_LBA",
+        "uft": 18,
+        "ref": 18,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 610
+      },
+      {
+        "key": "SPT_FOR_5760_LBA",
+        "uft": 36,
+        "ref": 36,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 614
+      }
+    ]
+  }
+}

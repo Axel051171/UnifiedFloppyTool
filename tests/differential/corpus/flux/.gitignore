@@ -1,0 +1,14 @@
+# P3.2 differential corpus — derived flux streams.
+#
+# gen_corpus.py writes the gw-converted .scp files here. They are a
+# BUILD ARTIFACT, regenerated on demand from corpus/sources/*:
+#   - ~133 MB total for the 6-format corpus (not repo-suitable)
+#   - gw's .scp header carries a non-deterministic timestamp (no stable
+#     hash) — the flux *data* is deterministic, which is all the
+#     differential needs (it compares decoded sectors, not .scp bytes)
+#
+# The committed, deterministic, hash-manifested corpus is
+# corpus/sources/ + corpus/MANIFEST.sha256. Run gen_corpus.py to
+# (re)populate this directory.
+*
+!.gitignore

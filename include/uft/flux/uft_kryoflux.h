@@ -37,17 +37,25 @@ extern "C" {
  * Stream Block Types
  *===========================================================================*/
 
-/** Block type codes */
+/** Cell-stream byte opcodes — the authoritative KryoFlux stream
+ *  protocol (see src/flux/uft_kryoflux_stream.c for the decoder).
+ *
+ *  NOTE: a previous revision of this enum was mislabelled (it called
+ *  0x00-0x07 "Flux1" and 0x08/0x09/0x0A "Flux2/Flux3/Overflow"). The
+ *  enum was never referenced anywhere, so it has been corrected to the
+ *  real protocol rather than left as a latent hazard next to a correct
+ *  decoder. The decoder itself uses local constants and does not depend
+ *  on these names. */
 typedef enum {
-    UFT_UFT_KF_FLUX1_MIN    = 0x00,  /**< Flux1 range start */
-    UFT_UFT_KF_FLUX1_MAX    = 0x07,  /**< Flux1 range end */
-    UFT_UFT_KF_FLUX2        = 0x08,  /**< 2-byte flux value */
-    UFT_UFT_KF_FLUX3        = 0x09,  /**< 3-byte flux value */
-    UFT_UFT_KF_OVERFLOW     = 0x0A,  /**< Add 65536 to next flux */
-    UFT_UFT_KF_FLUX3_ALT    = 0x0B,  /**< Alternative flux3 */
-    UFT_UFT_KF_NOP1         = 0x0C,  /**< Skip 1 byte */
+    UFT_UFT_KF_FLUX2_MIN    = 0x00,  /**< 0x00-0x07: 2-byte flux value */
+    UFT_UFT_KF_FLUX2_MAX    = 0x07,
+    UFT_UFT_KF_NOP1         = 0x08,  /**< Skip 1 byte */
+    UFT_UFT_KF_NOP2         = 0x09,  /**< Skip 2 bytes */
+    UFT_UFT_KF_NOP3         = 0x0A,  /**< Skip 3 bytes */
+    UFT_UFT_KF_OVL16        = 0x0B,  /**< Add 0x10000 to next flux value */
+    UFT_UFT_KF_FLUX3        = 0x0C,  /**< 3-byte block: flux = b1<<8 | b2 */
     UFT_UFT_KF_OOB          = 0x0D,  /**< Out-of-band block */
-    UFT_UFT_KF_NOP3         = 0x0E,  /**< Skip 3 bytes */
+    UFT_UFT_KF_FLUX1_MIN    = 0x0E,  /**< 0x0E-0xFF: 1-byte flux value */
 } uft_uft_kf_block_type_t;
 
 /** OOB sub-types */

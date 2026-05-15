@@ -1,0 +1,716 @@
+{
+  "provider": "xum1541",
+  "reference_provenance": {
+    "grade": "recalled",
+    "project": "OpenCBM (xum1541 firmware) + Commodore IEC bus standard",
+    "files_recalled_from": [
+      "xum1541/xum1541.h",
+      "include/opencbm.h",
+      "Commodore 1541 User's Guide / Service Manual"
+    ],
+    "note": "well-known protocol constants; not vendored \u2014 see audit/README.md. UFT's xum1541_usb.h claims to mirror these."
+  },
+  "uft_source": {
+    "usb_h": "src\\hardware_providers\\xum1541_usb.h",
+    "hwtab": "src\\hardwaretab.cpp"
+  },
+  "counts": {
+    "PASS": 82,
+    "MISSING": 3
+  },
+  "gui_hint_crosscheck": null,
+  "sections": {
+    "usb_ids": [
+      {
+        "key": "USB_PID_XUM1541",
+        "uft": 1284,
+        "ref": 1284,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 41
+      },
+      {
+        "key": "USB_PID_XUM1541_ALT",
+        "uft": 1283,
+        "ref": 1283,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 44
+      },
+      {
+        "key": "USB_PID_ZOOMFLOPPY",
+        "uft": 1202,
+        "ref": 1202,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 37
+      },
+      {
+        "key": "USB_VID_XUM1541",
+        "uft": 5840,
+        "ref": 5840,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 40
+      },
+      {
+        "key": "USB_VID_ZOOMFLOPPY",
+        "uft": 5840,
+        "ref": 5840,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 36
+      }
+    ],
+    "endpoints": [
+      {
+        "key": "EP_BULK_IN",
+        "uft": 129,
+        "ref": 129,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 55
+      },
+      {
+        "key": "EP_BULK_OUT",
+        "uft": 2,
+        "ref": 2,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 56
+      }
+    ],
+    "fw_commands": [
+      {
+        "key": "XUM1541_CLEAR_EOI",
+        "uft": 11,
+        "ref": 11,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 86
+      },
+      {
+        "key": "XUM1541_CLOSE",
+        "uft": 8,
+        "ref": 8,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 83
+      },
+      {
+        "key": "XUM1541_CMD_MAX",
+        "uft": 32,
+        "ref": 32,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 109
+      },
+      {
+        "key": "XUM1541_ECHO",
+        "uft": 0,
+        "ref": 0,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 75
+      },
+      {
+        "key": "XUM1541_GET_EOI",
+        "uft": 10,
+        "ref": 10,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 85
+      },
+      {
+        "key": "XUM1541_IEC_POLL",
+        "uft": 14,
+        "ref": 14,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 89
+      },
+      {
+        "key": "XUM1541_IEC_SETRELEASE",
+        "uft": 16,
+        "ref": 16,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 91
+      },
+      {
+        "key": "XUM1541_IEC_WAIT",
+        "uft": 15,
+        "ref": 15,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 90
+      },
+      {
+        "key": "XUM1541_INFO_CAPS",
+        "uft": 0,
+        "ref": null,
+        "verdict": "MISSING",
+        "detail": "no reference entry",
+        "uft_line": 117
+      },
+      {
+        "key": "XUM1541_INFO_FW_VERSION",
+        "uft": 1,
+        "ref": null,
+        "verdict": "MISSING",
+        "detail": "no reference entry",
+        "uft_line": 118
+      },
+      {
+        "key": "XUM1541_INFO_PROTO_VERSION",
+        "uft": 2,
+        "ref": null,
+        "verdict": "MISSING",
+        "detail": "no reference entry",
+        "uft_line": 119
+      },
+      {
+        "key": "XUM1541_INIT",
+        "uft": 30,
+        "ref": 30,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 105
+      },
+      {
+        "key": "XUM1541_LISTEN",
+        "uft": 4,
+        "ref": 4,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 79
+      },
+      {
+        "key": "XUM1541_NIBTOOLS_READ",
+        "uft": 28,
+        "ref": 28,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 103
+      },
+      {
+        "key": "XUM1541_NIBTOOLS_WRITE",
+        "uft": 29,
+        "ref": 29,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 104
+      },
+      {
+        "key": "XUM1541_OPEN",
+        "uft": 7,
+        "ref": 7,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 82
+      },
+      {
+        "key": "XUM1541_PARBURST_READ",
+        "uft": 17,
+        "ref": 17,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 92
+      },
+      {
+        "key": "XUM1541_PARBURST_WRITE",
+        "uft": 18,
+        "ref": 18,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 93
+      },
+      {
+        "key": "XUM1541_PP_READ",
+        "uft": 12,
+        "ref": 12,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 87
+      },
+      {
+        "key": "XUM1541_PP_WRITE",
+        "uft": 13,
+        "ref": 13,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 88
+      },
+      {
+        "key": "XUM1541_READ",
+        "uft": 1,
+        "ref": 1,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 76
+      },
+      {
+        "key": "XUM1541_RESET",
+        "uft": 9,
+        "ref": 9,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 84
+      },
+      {
+        "key": "XUM1541_SHUTDOWN",
+        "uft": 31,
+        "ref": 31,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 106
+      },
+      {
+        "key": "XUM1541_SRQBURST_READ",
+        "uft": 19,
+        "ref": 19,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 94
+      },
+      {
+        "key": "XUM1541_SRQBURST_WRITE",
+        "uft": 20,
+        "ref": 20,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 95
+      },
+      {
+        "key": "XUM1541_TALK",
+        "uft": 3,
+        "ref": 3,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 78
+      },
+      {
+        "key": "XUM1541_TAP_GET_SENSE",
+        "uft": 25,
+        "ref": 25,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 100
+      },
+      {
+        "key": "XUM1541_TAP_MOTOR_OFF",
+        "uft": 22,
+        "ref": 22,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 97
+      },
+      {
+        "key": "XUM1541_TAP_MOTOR_ON",
+        "uft": 21,
+        "ref": 21,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 96
+      },
+      {
+        "key": "XUM1541_TAP_PREPARE_CAPTURE",
+        "uft": 23,
+        "ref": 23,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 98
+      },
+      {
+        "key": "XUM1541_TAP_PREPARE_WRITE",
+        "uft": 24,
+        "ref": 24,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 99
+      },
+      {
+        "key": "XUM1541_TAP_WAIT_FOR_PLAY_SENSE",
+        "uft": 27,
+        "ref": 27,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 102
+      },
+      {
+        "key": "XUM1541_TAP_WAIT_FOR_STOP_SENSE",
+        "uft": 26,
+        "ref": 26,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 101
+      },
+      {
+        "key": "XUM1541_UNLISTEN",
+        "uft": 6,
+        "ref": 6,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 81
+      },
+      {
+        "key": "XUM1541_UNTALK",
+        "uft": 5,
+        "ref": 5,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 80
+      },
+      {
+        "key": "XUM1541_WRITE",
+        "uft": 2,
+        "ref": 2,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 77
+      }
+    ],
+    "iec_commands": [
+      {
+        "key": "IEC_CLOSE",
+        "uft": 224,
+        "ref": 224,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 149
+      },
+      {
+        "key": "IEC_DATA",
+        "uft": 96,
+        "ref": 96,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 150
+      },
+      {
+        "key": "IEC_LINE_ATN",
+        "uft": 4,
+        "ref": 4,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 155
+      },
+      {
+        "key": "IEC_LINE_CLOCK",
+        "uft": 2,
+        "ref": 2,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 154
+      },
+      {
+        "key": "IEC_LINE_DATA",
+        "uft": 1,
+        "ref": 1,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 153
+      },
+      {
+        "key": "IEC_LINE_RESET",
+        "uft": 8,
+        "ref": 8,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 156
+      },
+      {
+        "key": "IEC_LINE_SRQ",
+        "uft": 16,
+        "ref": 16,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 157
+      },
+      {
+        "key": "IEC_LISTEN",
+        "uft": 32,
+        "ref": 32,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 142
+      },
+      {
+        "key": "IEC_OPEN",
+        "uft": 240,
+        "ref": 240,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 148
+      },
+      {
+        "key": "IEC_TALK",
+        "uft": 64,
+        "ref": 64,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 144
+      },
+      {
+        "key": "IEC_UNLISTEN",
+        "uft": 63,
+        "ref": 63,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 143
+      },
+      {
+        "key": "IEC_UNTALK",
+        "uft": 95,
+        "ref": 95,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 145
+      }
+    ],
+    "cbm_status": [
+      {
+        "key": "CBM_STATUS_DISK_FULL",
+        "uft": 72,
+        "ref": 72,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 190
+      },
+      {
+        "key": "CBM_STATUS_DISK_ID_MISMATCH",
+        "uft": 29,
+        "ref": 29,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 185
+      },
+      {
+        "key": "CBM_STATUS_DRIVE_NOT_READY",
+        "uft": 74,
+        "ref": 74,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 193
+      },
+      {
+        "key": "CBM_STATUS_FILES_SCRATCHED",
+        "uft": 1,
+        "ref": 1,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 176
+      },
+      {
+        "key": "CBM_STATUS_FILE_EXISTS",
+        "uft": 63,
+        "ref": 63,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 192
+      },
+      {
+        "key": "CBM_STATUS_FILE_NOT_FOUND",
+        "uft": 62,
+        "ref": 62,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 191
+      },
+      {
+        "key": "CBM_STATUS_OK",
+        "uft": 0,
+        "ref": 0,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 175
+      },
+      {
+        "key": "CBM_STATUS_OVERFLOW",
+        "uft": 51,
+        "ref": 51,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 189
+      },
+      {
+        "key": "CBM_STATUS_READ_ERROR_20",
+        "uft": 20,
+        "ref": 20,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 177
+      },
+      {
+        "key": "CBM_STATUS_READ_ERROR_21",
+        "uft": 21,
+        "ref": 21,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 178
+      },
+      {
+        "key": "CBM_STATUS_READ_ERROR_22",
+        "uft": 22,
+        "ref": 22,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 179
+      },
+      {
+        "key": "CBM_STATUS_READ_ERROR_23",
+        "uft": 23,
+        "ref": 23,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 180
+      },
+      {
+        "key": "CBM_STATUS_READ_ERROR_24",
+        "uft": 24,
+        "ref": 24,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 181
+      },
+      {
+        "key": "CBM_STATUS_READ_ERROR_25",
+        "uft": 25,
+        "ref": 25,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 182
+      },
+      {
+        "key": "CBM_STATUS_READ_ERROR_27",
+        "uft": 27,
+        "ref": 27,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 183
+      },
+      {
+        "key": "CBM_STATUS_RECORD_NOT_PRESENT",
+        "uft": 50,
+        "ref": 50,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 188
+      },
+      {
+        "key": "CBM_STATUS_SYNTAX_ERROR",
+        "uft": 30,
+        "ref": 30,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 186
+      },
+      {
+        "key": "CBM_STATUS_UNKNOWN_CMD",
+        "uft": 31,
+        "ref": 31,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 187
+      },
+      {
+        "key": "CBM_STATUS_WRITE_PROTECT",
+        "uft": 26,
+        "ref": 26,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 184
+      }
+    ],
+    "geometry": [
+      {
+        "key": "CBM_1541_DISK_SIZE",
+        "uft": 174848,
+        "ref": 174848,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 217
+      },
+      {
+        "key": "CBM_1541_DISK_SIZE_EXT",
+        "uft": 196608,
+        "ref": 196608,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 218
+      },
+      {
+        "key": "CBM_1541_SECTOR_SIZE",
+        "uft": 256,
+        "ref": 256,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 216
+      },
+      {
+        "key": "CBM_1541_TRACKS",
+        "uft": 35,
+        "ref": 35,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 214
+      },
+      {
+        "key": "CBM_1541_TRACKS_EXT",
+        "uft": 40,
+        "ref": 40,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 215
+      },
+      {
+        "key": "CBM_1571_DISK_SIZE",
+        "uft": 349696,
+        "ref": 349696,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 222
+      },
+      {
+        "key": "CBM_1571_TRACKS",
+        "uft": 35,
+        "ref": 35,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 221
+      },
+      {
+        "key": "CBM_1581_DISK_SIZE",
+        "uft": 819200,
+        "ref": 819200,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 228
+      },
+      {
+        "key": "CBM_1581_SECTORS_PER_TRACK",
+        "uft": 40,
+        "ref": 40,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 226
+      },
+      {
+        "key": "CBM_1581_SECTOR_SIZE",
+        "uft": 256,
+        "ref": 256,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 227
+      },
+      {
+        "key": "CBM_1581_TRACKS",
+        "uft": 80,
+        "ref": 80,
+        "verdict": "PASS",
+        "detail": "",
+        "uft_line": 225
+      }
+    ]
+  }
+}

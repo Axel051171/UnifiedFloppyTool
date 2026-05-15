@@ -1,0 +1,70 @@
+/* @@FILENAME@@ — recovery function scaffold
+ *
+ * CLASS: @@CLASS@@   (voting | crc-correction | gap-fill | cross-track | multi-rev)
+ *
+ * INTEGRITY CONTRACT:
+ *   I1: Bytes that didn't come from media are 0xFF + confidence 0 + RECONSTRUCTED flag.
+ *   I2: Probabilistic corrections check uniqueness across all candidates.
+ *   I3: passes[].crc_ok / .quality are honored — verified reads dominate.
+ *   I4: Counters use uint32_t (or size_t) to match input scale.
+ *   I5: confidence_map[] is updated for every output[] write.
+ *
+ * Read .claude/skills/uft-recovery-integrity/SKILL.md before modifying.
+ */
+
+#include "uft/recovery/uft_forensic_types.h"
+#include <stdint.h>
+#include <stdbool.h>
+#include <stdlib.h>
+#include <string.h>
+
+/**
+ * @@FN_NAME@@
+ *
+ * @param in        Input data and metadata (read-only).
+ * @param out       Output sector — caller owns data/confidence_map allocation.
+ * @return UFT_OK on success, UFT_ERROR_* on irrecoverable failure.
+ *
+ * Postconditions when returning UFT_OK:
+ *   - For every i in [0, out->data_size):
+ *       out->data[i] is set;
+ *       out->confidence_map[i] is set;
+ *       if confidence_map[i] < 255, out->flags has UFT_FS_FLAG_RECONSTRUCTED.
+ *   - out->source_pass[i] reflects which input pass produced byte i,
+ *     or 0xFF for synthesized bytes.
+ *   - out->quality reflects the worst-case byte confidence in the sector.
+ */
+uft_error_t @@FN_NAME@@(const uft_forensic_input_t *in,
+                       uft_forensic_sector_t *out)
+{
+    if (!in || !out || !out->data || !out->confidence_map) {
+        return UFT_ERROR_NULL_PARAM;
+    }
+
+    /* TODO: implement the recovery algorithm here.
+     *
+     * For every byte position i:
+     *   1. Decide a value (vote / correct / reconstruct).
+     *   2. ALWAYS set both out->data[i] AND out->confidence_map[i].
+     *   3. Set UFT_FS_FLAG_RECONSTRUCTED if any byte was synthesized.
+     *   4. Track source_pass[i] for traceability.
+     */
+
+    /* Update worst-case quality at the end. */
+    uint8_t worst = 255;
+    for (size_t i = 0; i < out->data_size; i++) {
+        if (out->confidence_map[i] < worst) worst = out->confidence_map[i];
+    }
+    out->quality = (float)worst / 255.0f;
+
+    return UFT_OK;
+}
+
+/* INTEGRITY-OK examples (allowed and required when applicable):
+ *
+ *   memset(buffer, 0, size);  // INTEGRITY-OK: zeroing alloc'd output before write
+ *   output[i] = 0;            // INTEGRITY-OK: spec-mandated zero (FAT directory pad)
+ *
+ * Annotation suppresses lint_recovery.sh warnings. Use sparingly and
+ * always include the reason.
+ */

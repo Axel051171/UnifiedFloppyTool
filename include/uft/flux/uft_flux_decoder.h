@@ -244,6 +244,19 @@ flux_status_t flux_decode_gcr_apple(const flux_raw_data_t *flux,
                                     flux_decoded_track_t *track,
                                     const flux_decoder_options_t *opts);
 
+/**
+ * @brief Decode Amiga (AmigaDOS trackdisk) MFM flux data
+ *
+ * Amiga MFM is whole-track MFM with a layout unrelated to IBM System-34:
+ * 11 sectors/track, each = 2x 0x4489 sync, an odd/even-split info long,
+ * a 16-byte sector label, header + data checksums, and a 512-byte
+ * odd/even-split data block. The IBM-MFM decoder (flux_decode_mfm)
+ * cannot parse it — there are no IDAM/DAM address marks.
+ */
+flux_status_t flux_decode_amiga(const flux_raw_data_t *flux,
+                                flux_decoded_track_t *track,
+                                const flux_decoder_options_t *opts);
+
 /* ============================================================================
  * Format-Specific Decoders
  * ============================================================================ */
