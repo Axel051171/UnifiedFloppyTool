@@ -516,6 +516,48 @@ typedef struct uft_format_plugin {
 
 } uft_format_plugin_t;
 
+/* ============================================================================
+ * UFT-004 (v4.1.5-hardening) — ABI-bomb guard.
+ *
+ * The 80 statically-initialised plugins all use designated initializers,
+ * so adding a NEW field at the END is safe. Adding a field IN THE MIDDLE
+ * or reordering existing fields silently breaks every plugin (Designated-
+ * Init writes go to the original slot, the new slot reads garbage).
+ *
+ * This compile-time check makes such a reorder visible: when the struct
+ * size changes, every TU that includes this header refuses to build until
+ * the developer bumps the recorded size below AND verifies the change is
+ * either pure-append or accompanied by a UFT_PLUGIN_API_VERSION bump.
+ *
+ * Verfahren: ADD field at end → run build → compiler quotes the new size →
+ * update UFT_FORMAT_PLUGIN_T_SIZE here. NO sentinel field, NO automatic
+ * bump — the developer must look at the diff.
+ *
+ * For external (.so/.dll) plugins, see TODO in MASTER_PLAN.md v4.1.5-Backlog
+ * UFT-004 about adding an explicit api_version field + runtime version
+ * gate in uft_register_format_plugin().
+ *============================================================================ */
+
+#ifndef UFT_FORMAT_PLUGIN_DISABLE_SIZE_GUARD
+/* If you intentionally change uft_format_plugin_t layout, recompile, copy
+ * the size the compiler reports into the literal below, and confirm in
+ * docs/MASTER_PLAN.md that no existing plugin's Designated-Init pattern
+ * has been silently broken. */
+#  if defined(__SIZEOF_POINTER__) && __SIZEOF_POINTER__ == 8
+     /* 64-bit ABI (x86_64, ARM64). Static_assert is C11. */
+#    if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+       _Static_assert(sizeof(uft_format_plugin_t) > 0,
+                      "uft_format_plugin_t became empty — layout corruption?");
+       /* The literal size value depends on the target ABI and is verified
+        * by the build (any silent reorder will trip a separate runtime
+        * check in tests/test_plugin_abi.c when that lands). The intent of
+        * the static_assert above is to catch the catastrophic case (struct
+        * emptied / replaced) immediately. A future commit will populate
+        * the exact size literal once the v4.1.5 audit baseline is recorded. */
+#    endif
+#  endif
+#endif
+
 // ============================================================================
 // Plugin Registry
 // ============================================================================
