@@ -438,6 +438,62 @@ Detail-Dokument: `docs/XCOPY_ALGORITHM_MIGRATION.md`
 
 ---
 
+## v4.1.5-hardening Audit (2026-05-24)
+
+Vollaudit via `orchestrator`-Fan-Out auf Branch `tests/v4.1.5-hardening`.
+Findings konsolidiert nach P0-P3 (Konflikt-Hierarchie: Forensik > Security >
+Correctness > Architecture > Performance).
+
+### In dieser Session geschlossen
+
+| ID | Severity | Thema | Commit/Stelle |
+|---|---|---|---|
+| UFT-002 | P0 | CMakeLists.txt header-comment "Version: 4.1.3" stale gg. VERSION.txt=4.1.4 | CMakeLists.txt:3 — Version-Zahl entfernt, Verweis auf VERSION.txt-SSOT |
+| UFT-006 | P1 | `.claude/CLAUDE.md` listete 6 Controller, Code hat 9 V2-Provider | .claude/CLAUDE.md §Wichtige Konstanten — auf 9 Provider + Status (1 production / 8 honest-stub) aktualisiert |
+| UFT-T01 | P1 | `<threads.h>` Include ohne `__has_include`-Guard → MinGW-Build-Bruch | include/uft/core/uft_safe_io.h:41 — Guard ergänzt |
+| UFT-T02 | P1 | 4 Tests (loss_report, roundtrip_matrix, preflight, salvage_fs) linkten Phantom-Symbole obwohl Sources existieren | tests/CMakeLists.txt — per-Test target_sources-Blöcke wie test_destructive_op_consent |
+| UFT-T03 | P2 | test_smoke (uft_merge_engine.c+uft_decode_score.c gelöscht in MF-011) und test_safe_io_alloc (uft_safe_io.c+uft_safe_alloc.c existierten nie) | tests/CMakeLists.txt EXCLUDED_TESTS — ehrlich markiert |
+
+**Test-Pass-Rate:** 26 % → 74 % (47 → 133 von 180 Tests passing).
+Konsistenz-Check 0/0/0/0, verify_build_sources keine neuen Regressions
+(5 baseline-entries resolved, optional `--rebuild-baseline` möglich).
+
+### v4.1.5-Backlog (offen)
+
+Findings für die folgenden Sessions / Tag-Gates:
+
+| ID | Severity | Thema | Effort | Quelle |
+|---|---|---|---|---|
+| UFT-001 | P0 | 8 von 9 V2-Provider sind honest-stub mit nullptr-Runnern. Nur Greaseweazle ist production-wired. Bereits in M3.1-M3.4 abgedeckt; v4.1.5-Tag braucht entweder Verzögerung oder explizite "Greaseweazle-only Release"-Erklärung. | L (6-10 Wochen Engineering) | hardwaretab.cpp:751-771 |
+| UFT-003 | P0 | HardwareTab setzt `m_connected = true` ohne `impl_complete` zu prüfen. User sieht "Connect: OK" für nicht-funktionale Controller. | M (~3h Qt + Test) | src/hardwaretab.cpp:818-829, Prinzip 4 |
+| UFT-004 | P1 | `uft_format_plugin_t` hat kein API-Version-Feld und kein `_Static_assert(sizeof…)` Guard. ABI-bomb-Risiko falls externe Plugins eingeführt werden. | M (~4h, 80 Plugins designated-init = sicher, aber Guard fehlt) | include/uft/uft_format_plugin.h:351-517 |
+| UFT-005 | P1 | `test_transitions_ns_contract.c` läuft nur gegen MockProviderV2; KryoFlux/FluxEngine-Fixtures fehlen. ARCH-2-Regression-Schutz unvollständig. | S (~2h) | tests/unit/test_transitions_ns_contract.c |
+| UFT-007 | P1 | ARCH-7 sub-B offen: SCP-Header-VID/PID `0x16C0/0x0753` vs. GUI-Hint `0x16D0/0x0F8C` widersprüchlich. Falsche VID kann an falsche Hardware connecten. | S (~1h Recherche + Patch, IF SDK vorhanden) | include/uft/hal/uft_scp_direct.h, hardwaretab.cpp:449 |
+| UFT-008 | P1 | HIL Hardware-Tier 14/15 NOT_RUN. Pro Controller eine Bench-Session nötig. Blockiert durch UFT-001. | S pro Controller (1-2h Bench-Time) | tests/hil/run_hil.py, audit/rc1_field_notes.md |
+| UFT-T04 | P2 | 117 Test-Executables bauen nicht — referenzieren Symbole aus den ~140k LOC die MF-011 gelöscht hat (otdr8/9/10/11/12, dms_*, uft_align_fuse_*, etc.). 1787 undefined references gemessen. Entweder Tests löschen oder Implementations rekonstruieren. | L (Bulk-Triage 1-2 Sessions) | tests/test_*.c, src/analysis/events/CMakeLists.txt (standalone-project pattern) |
+| UFT-T05 | P3 | `src/analysis/events/CMakeLists.txt` ist Standalone-CMake-Projekt mit `${CMAKE_SOURCE_DIR}/../../../include/uft/analysis` — broken-by-design wenn vom Root-CMake mit add_subdirectory inkludiert. | S (Pfade auf Top-Level CMAKE_SOURCE_DIR umstellen) | src/analysis/events/CMakeLists.txt:6 |
+
+### Was diese Session NICHT geprüft hat
+
+- Byte-genaue Decoder-Korrektheit auf echten SCP/HFE/KryoFlux-Samples
+- Memory-Safety mit ASan/UBSan/TSan-Runs (CI-Workflows existieren)
+- Vollständige differential-Suite gegen Greaseweazle CLI v1.23
+- audit_plugin_compliance.py-Lauf (80 Plugins × Prinzip 7 Status-Felder)
+- Plugin-für-Plugin Format-Korrektheit
+- Performance-Hotpath-Review (algorithm-hotpath-optimizer)
+- Forensic-integrity-Agent gegen jeden Konversions-Pfad einzeln
+
+### Recommended Sequence
+
+1. **Sofort:** UFT-003 (3h Qt-Arbeit) — verhindert dass User glaubt, ein nicht-funktionaler Controller sei verbunden. Prinzip-4-Bug.
+2. **Vor v4.1.5-Tag:** UFT-T04 Bulk-Triage entscheiden (löschen vs. rekonstruieren der ~140k-LOC-Tests)
+3. **Vor v4.1.5-Tag:** UFT-T05 events-CMakeLists Pfad-Fix
+4. **Bei v4.1.5-Tag:** UFT-001 Ehrlichkeits-Statement im README + RELEASE_NOTES — entweder "Greaseweazle-only" oder Tag verschieben
+5. **Multi-Session:** UFT-004, UFT-005, UFT-007 — pure Engineering-Arbeit
+6. **Bench-Session:** UFT-008 (sobald UFT-001 echte Hardware-Wiring liefert)
+
+---
+
 ## Sprint-2 (post-v4.1.3, geschlossen 2026-04-27)
 
 Audit: `must-fix-hunter` lieferte 8 Findings (MF-101..MF-108), 4 ausgewählt

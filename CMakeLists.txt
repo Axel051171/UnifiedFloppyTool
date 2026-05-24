@@ -1,6 +1,6 @@
 # ============================================================================
 # UnifiedFloppyTool - CMake Build System
-# Version: 4.1.3  (single source of truth: VERSION.txt; see project(... VERSION ...))
+# Version: see VERSION.txt (single source of truth; see project(... VERSION ...))
 # ============================================================================
 #
 # Build:

@@ -59,6 +59,12 @@ set(EXCLUDED_TESTS
     # "test_ti99_formats"   # Re-enabled: TIFILES/FIAD modules exist
     # "test_new_formats"    # Re-enabled: compiles standalone
     # "test_fat_extensions"  # Re-enabled: compiles standalone
+    "test_smoke"            # v4.1.5: uft_merge_engine.c + uft_decode_score.c
+                            #   removed in MF-011 cleanup; headers remain as
+                            #   skeleton-only. Re-enable when impls land.
+    "test_safe_io_alloc"    # v4.1.5: uft_safe_io.c + uft_safe_alloc.c never
+                            #   existed; uft_io_last_error extern declared
+                            #   in header but never defined. Pure phantom.
 )
 
 # Create test executables
@@ -582,6 +588,37 @@ foreach(test_source ${TEST_SOURCES})
         else()
             set(TEST_LIBS "")
         endif()
+    elseif(${test_name} STREQUAL "test_loss_report")
+        # v4.1.5-hardening: loss-report sidecar writer is a self-contained
+        # core TU (KNOWN_ISSUES §1.1). The test was registered but linked
+        # only against uft_core which doesn't include uft_loss_report.c
+        # (verified: src/core/CMakeLists.txt CORE_SOURCES list).
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/core/uft_loss_report.c)
+        set(TEST_LIBS "")
+    elseif(${test_name} STREQUAL "test_roundtrip_matrix")
+        # v4.1.5-hardening: round-trip matrix registry is a self-contained
+        # core TU (KNOWN_ISSUES §5.1). Same pattern as test_loss_report —
+        # source exists but isn't part of uft_core.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/core/uft_roundtrip.c)
+        set(TEST_LIBS "")
+    elseif(${test_name} STREQUAL "test_preflight")
+        # v4.1.5-hardening: preflight combines loss-report writer +
+        # round-trip status (KNOWN_ISSUES §1.2). All three core TUs are
+        # self-contained. Mirrors test_destructive_op_consent above.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/core/uft_preflight.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_roundtrip.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_loss_report.c)
+        set(TEST_LIBS "")
+    elseif(${test_name} STREQUAL "test_salvage_fs")
+        # v4.1.5-hardening: salvage-fs strategies API (T7 DiskSalv-scaffold,
+        # see docs/MASTER_PLAN.md §M2 Amiga-Block). Source is in
+        # src/recovery/ (not uft_core), so add it explicitly.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/recovery/uft_salvage_fs.c)
+        set(TEST_LIBS "")
     endif()
     
     if(TEST_LIBS)

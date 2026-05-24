@@ -146,9 +146,21 @@ weiterverarbeitet.
 
 ## Wichtige Konstanten
 
+**SSOT für die V2-Provider-Liste:** `src/hardwaretab.h:45-62` (`ProviderV2Variant`).
+Aktuell 9 Provider, nicht 6 (siehe MF-201/MF-207 Erweiterungen):
+
 ```cpp
-// Unterstützte Controller
-enum ControllerType { Greaseweazle, SuperCardPro, KryoFlux, FC5025, FluxEngine, Applesauce };
+// Unterstützte V2-Provider (siehe src/hardwaretab.h:45-62)
+//   1. GreaseweazleProviderV2 — production-wired
+//   2. SCPProviderV2           — honest-stub (M3.1 libusb pending)
+//   3. KryoFluxProviderV2      — honest-stub (M3 runner pending)
+//   4. FluxEngineProviderV2    — honest-stub
+//   5. FC5025ProviderV2        — honest-stub (read-only when wired)
+//   6. XUM1541ProviderV2       — honest-stub (M3.2 libusb pending)
+//   7. ApplesauceProviderV2    — honest-stub (M3.3 serial pending)
+//   8. ADFCopyProviderV2       — honest-stub
+//   9. USBFloppyProviderV2     — honest-stub (M3.4 UFI, ufi_linux.c only)
+// "honest-stub" = ProviderError("backend not wired"), nie silent no-op.
 
 // FC5025 kann keinen Flux lesen — nur Sektordaten
 bool can_read_flux = (type != FC5025);
