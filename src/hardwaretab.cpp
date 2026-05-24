@@ -52,6 +52,8 @@
 #ifdef UFT_HAS_QSERIALPORT
 #  include "hardware_providers/qserial_applesauce_transport.h"
 #  include "hardware_providers/applesauce_serial_runners.h"
+#  include "hardware_providers/qserial_adfcopy_transport.h"
+#  include "hardware_providers/adfcopy_serial_runners.h"
 #endif
 
 /* MF-210: hardwaretab.cpp now uses the capability concepts directly
@@ -808,8 +810,34 @@ void HardwareTab::onConnect()
                 nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
 #endif
         } else if (controller == "adfcopy") {
+#ifdef UFT_HAS_QSERIALPORT
+            /* MF-252 (v4.1.5-hardening): parallel to MF-250 Applesauce
+             * but with the ADFCopy binary protocol over QSerialPort. */
+            auto _ac_tx =
+                ::uft::hal::QSerialPortADFCopyTransport::open(port);
+            if (_ac_tx) {
+                ::uft::hal::ADFCopyTransportPtr shared(std::move(_ac_tx));
+                m_providerV2 =
+                    std::make_unique<::uft::hal::ADFCopyProviderV2>(
+                        ::uft::hal::make_adfcopy_read_runner(shared),
+                        ::uft::hal::make_adfcopy_motor_runner(shared),
+                        ::uft::hal::make_adfcopy_seek_runner(shared),
+                        ::uft::hal::make_adfcopy_recal_runner(shared),
+                        ::uft::hal::make_adfcopy_detect_runner(shared));
+            } else {
+                m_providerV2 =
+                    std::make_unique<::uft::hal::ADFCopyProviderV2>(
+                        nullptr, nullptr, nullptr, nullptr, nullptr);
+                updateStatus(tr("ADFCopy: cannot open %1 — falling back "
+                                "to preview stub. Reason: %2")
+                                .arg(port,
+                                     ::uft::hal::QSerialPortADFCopyTransport::lastOpenError()),
+                            /*isError=*/true);
+            }
+#else
             m_providerV2 = std::make_unique<::uft::hal::ADFCopyProviderV2>(
                 nullptr, nullptr, nullptr, nullptr, nullptr);
+#endif
         } else if (controller == "usb_floppy") {
             m_providerV2 = std::make_unique<::uft::hal::USBFloppyProviderV2>(
                 nullptr, nullptr, nullptr);
@@ -879,18 +907,13 @@ void HardwareTab::onConnect()
          * Anywhere else we stay on the orange honest-stub track. */
         bool _has_production_transport = false;
 #ifdef UFT_HAS_QSERIALPORT
-        if (controller == "applesauce") {
-            /* m_providerV2 holds an ApplesauceProviderV2 — the
-             * runner-bound branch created it with non-null runners.
-             * We can detect that indirectly via the firmware-string
-             * placeholder we set below: keep this minimal — if the
-             * branch above succeeded, we know transport is live.
-             *
-             * Cleaner detection would require exposing a "has runner"
-             * boolean on the provider; for now we recompute via the
-             * same condition (the open() result still lives in the
-             * provider's read_runner closure). Pragmatic compromise:
-             * trust the construction path. */
+        if (controller == "applesauce" || controller == "adfcopy") {
+            /* Both QSerialPort-runner-bound providers — see MF-250 +
+             * MF-252. m_providerV2 was just constructed with non-null
+             * runners (or null-fallback on open-failure with status
+             * message). Pragmatic detection: trust the construction
+             * path; a future revision can expose a runner-presence
+             * boolean on the provider. */
             _has_production_transport = true;
         }
 #endif

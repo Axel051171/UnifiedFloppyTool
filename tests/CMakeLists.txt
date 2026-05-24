@@ -43,7 +43,9 @@ set(_HEADER_ONLY_CPP_TESTS
     "${CMAKE_CURRENT_SOURCE_DIR}/test_adfcopy_provider_v2.cpp"     # MF-167 P1.14
     "${CMAKE_CURRENT_SOURCE_DIR}/test_usbfloppy_provider_v2.cpp"   # MF-168 P1.15
     "${CMAKE_CURRENT_SOURCE_DIR}/test_teensy_probe.cpp"           # MF-213 ARCH-7-C
-    "${CMAKE_CURRENT_SOURCE_DIR}/test_concurrency.cpp")           # MF-226 P3.3 #110a
+    "${CMAKE_CURRENT_SOURCE_DIR}/test_concurrency.cpp"            # MF-226 P3.3 #110a
+    "${CMAKE_CURRENT_SOURCE_DIR}/test_applesauce_runners_protocol.cpp" # MF-251
+    "${CMAKE_CURRENT_SOURCE_DIR}/test_adfcopy_runners_protocol.cpp")   # MF-252
 
 set(TEST_SOURCES ${TEST_SOURCES_C} ${_HEADER_ONLY_CPP_TESTS})
 
@@ -405,6 +407,33 @@ foreach(test_source ${TEST_SOURCES})
         # abstracted away; tests inject scripted lambdas directly.
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/hardware_providers/applesauce_provider_v2.cpp)
+        target_include_directories(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src
+            ${CMAKE_SOURCE_DIR}/tests)
+        set(TEST_LIBS "")
+    elseif(${test_name} STREQUAL "test_applesauce_runners_protocol")
+        # MF-251 (v4.1.5-hardening): scripted-mock protocol test for the
+        # 7 Applesauce runner-factories (applesauce_serial_runners.cpp).
+        # Pulls only the runner .cpp + the provider .cpp (for the Result
+        # types) — no Qt6::SerialPort dependency because the
+        # ScriptedApplesauceTransport is a direct IApplesauceTransport
+        # implementation, not a QSerialPort one. Validates protocol
+        # parsing standalone so a future hardware bench-test (M3
+        # §5) only needs to verify the QSerialPort I/O layer.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/hardware_providers/applesauce_serial_runners.cpp
+            ${CMAKE_SOURCE_DIR}/src/hardware_providers/applesauce_provider_v2.cpp)
+        target_include_directories(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src
+            ${CMAKE_SOURCE_DIR}/tests)
+        set(TEST_LIBS "")
+    elseif(${test_name} STREQUAL "test_adfcopy_runners_protocol")
+        # MF-252 (v4.1.5-hardening): mirror of MF-251 for ADFCopy
+        # (binary protocol over QSerialPort). Same standalone pattern —
+        # ScriptedADFCopyTransport implements IADFCopyTransport directly.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/hardware_providers/adfcopy_serial_runners.cpp
+            ${CMAKE_SOURCE_DIR}/src/hardware_providers/adfcopy_provider_v2.cpp)
         target_include_directories(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src
             ${CMAKE_SOURCE_DIR}/tests)
