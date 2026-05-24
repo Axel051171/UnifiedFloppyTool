@@ -44,13 +44,44 @@ extern "C" {
 #define UFT_SCP_BULK_IN_EP         0x81
 #define UFT_SCP_BULK_OUT_EP        0x01
 
-/** SCP USB command byte values. */
-#define UFT_SCP_CMD_READ_FLUX      0x04
-#define UFT_SCP_CMD_WRITE_FLUX     0x05
-#define UFT_SCP_CMD_SELECT_DRIVE   0x03
-#define UFT_SCP_CMD_SET_CONTROL    0x02
-#define UFT_SCP_CMD_DESELECT_DRIVE 0x09
-#define UFT_SCP_CMD_GET_INFO       0x40
+/* SCP USB command byte values.
+ *
+ * MF-254 (v4.1.5-hardening): the pre-MF-254 values here (0x04 / 0x05 /
+ * 0x03 / 0x02 / 0x09 / 0x40) were placeholder guesses that did NOT match
+ * the real SCP firmware protocol. Verified against simonowen/samdisk
+ * `include/SuperCardPro.h` (the de-facto open-source reference for the
+ * SCP SDK v1.7 protocol). The real opcodes are in the 0x80-0xD2 range
+ * and follow the [CMD, LEN, params..., CHECKSUM] packet framing
+ * documented in samdisk SuperCardPro.cpp. */
+#define UFT_SCP_CMD_SELA           0x80  /* select drive A */
+#define UFT_SCP_CMD_SELB           0x81  /* select drive B */
+#define UFT_SCP_CMD_DSELA          0x82  /* deselect drive A */
+#define UFT_SCP_CMD_DSELB          0x83  /* deselect drive B */
+#define UFT_SCP_CMD_MTRAON         0x84  /* motor A on */
+#define UFT_SCP_CMD_MTRBON         0x85  /* motor B on */
+#define UFT_SCP_CMD_MTRAOFF        0x86  /* motor A off */
+#define UFT_SCP_CMD_MTRBOFF        0x87  /* motor B off */
+#define UFT_SCP_CMD_SEEK0          0x88  /* seek to track 0 (recalibrate) */
+#define UFT_SCP_CMD_STEPTO         0x89  /* step to track N (param: 1 byte) */
+#define UFT_SCP_CMD_STEPIN         0x8A
+#define UFT_SCP_CMD_STEPOUT        0x8B
+#define UFT_SCP_CMD_SELDENS        0x8C
+#define UFT_SCP_CMD_SIDE           0x8D  /* select side (param: 1 byte: 0/1) */
+#define UFT_SCP_CMD_STATUS         0x8E  /* get drive status */
+#define UFT_SCP_CMD_GETPARAMS      0x90
+#define UFT_SCP_CMD_SETPARAMS      0x91
+#define UFT_SCP_CMD_READ_FLUX      0xA0  /* read flux (params: revs+flags) */
+#define UFT_SCP_CMD_WRITE_FLUX     0xA2  /* write flux + bulk payload */
+#define UFT_SCP_CMD_SCPINFO        0xD0  /* firmware/board info */
+
+/* Response status codes (pr_* in samdisk). */
+#define UFT_SCP_PR_OK              0x4F  /* successful packet completion */
+
+/* Checksum seed for the SendCmd packet framing
+ *   packet = [CMD, LEN, params..., CHECKSUM]
+ *   CHECKSUM = CMD + LEN + sum(params) + UFT_SCP_CHECKSUM_INIT
+ * Verified from samdisk SuperCardPro.h (CHECKSUM_INIT = 0x4A). */
+#define UFT_SCP_CHECKSUM_INIT      0x4A
 
 /** Maximum tracks supported by SCP hardware (0..167 = 84 × 2 sides). */
 #define UFT_SCP_MAX_TRACK_INDEX    167

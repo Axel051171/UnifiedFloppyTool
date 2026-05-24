@@ -79,9 +79,64 @@ else()
 endif()
 
 # Platform libraries
-if(UNIX AND NOT APPLE)
-    find_package(PkgConfig)
+# MF-254 (v4.1.5-hardening): libusb-1.0 lookup is now cross-platform.
+# On UNIX-not-APPLE pkg-config is the primary path; on Windows we fall
+# back to a manual probe (libusb dropped into the toolchain prefix —
+# see docs/M3_SCP_TRANSPORT.md).
+find_package(PkgConfig QUIET)
+if(PkgConfig_FOUND)
     pkg_check_modules(LIBUSB libusb-1.0)
+endif()
+if(NOT LIBUSB_FOUND)
+    # Fallback: manual probe (covers Windows + hosts without pkg-config).
+    # On Windows we also explicitly check the Qt MinGW prefix (matches
+    # the install location in docs/M3_SCP_TRANSPORT.md).
+    set(_UFT_LIBUSB_SEARCH_PATHS)
+    if(WIN32)
+        # Derive the Qt MinGW prefix from CMAKE_C_COMPILER if it's the
+        # Qt-shipped MinGW. Example compiler path:
+        #   C:/Qt/Tools/mingw1310_64/bin/gcc.exe
+        # → prefix C:/Qt/Tools/mingw1310_64
+        get_filename_component(_uft_cc_dir "${CMAKE_C_COMPILER}" DIRECTORY)
+        get_filename_component(_uft_cc_parent "${_uft_cc_dir}" DIRECTORY)
+        list(APPEND _UFT_LIBUSB_SEARCH_PATHS "${_uft_cc_parent}")
+        list(APPEND _UFT_LIBUSB_SEARCH_PATHS "C:/Qt/Tools/mingw1310_64")
+    endif()
+    find_path(_UFT_LIBUSB_INCLUDE_DIR libusb-1.0/libusb.h
+        PATHS ${_UFT_LIBUSB_SEARCH_PATHS}
+        PATH_SUFFIXES include)
+    find_library(_UFT_LIBUSB_LIB
+        NAMES usb-1.0 libusb-1.0
+        PATHS ${_UFT_LIBUSB_SEARCH_PATHS}
+        PATH_SUFFIXES lib)
+    if(_UFT_LIBUSB_INCLUDE_DIR AND _UFT_LIBUSB_LIB)
+        set(LIBUSB_FOUND TRUE)
+        set(LIBUSB_INCLUDE_DIRS "${_UFT_LIBUSB_INCLUDE_DIR}")
+        set(LIBUSB_LIBRARIES    "${_UFT_LIBUSB_LIB}")
+    endif()
+endif()
+if(LIBUSB_FOUND)
+    message(STATUS "UFT libusb-1.0: FOUND (SCP-Direct production transport ENABLED)")
+    add_compile_definitions(UFT_HAS_LIBUSB=1)
+    # Propagate include dirs globally so every test target that pulls
+    # uft_scp_direct.c via target_sources can resolve <libusb-1.0/libusb.h>.
+    include_directories(${LIBUSB_INCLUDE_DIRS})
+    # MF-254: on Windows the libusb-1.0.dll must be on PATH at test
+    # runtime. Locate the DLL so tests/CMakeLists.txt can add its
+    # directory to the test ENVIRONMENT.
+    if(WIN32)
+        get_filename_component(_uft_libusb_lib_dir "${LIBUSB_LIBRARIES}" DIRECTORY)
+        get_filename_component(_uft_libusb_prefix  "${_uft_libusb_lib_dir}" DIRECTORY)
+        find_file(UFT_LIBUSB_DLL
+            NAMES libusb-1.0.dll
+            PATHS "${_uft_libusb_prefix}/bin" "${_uft_libusb_lib_dir}")
+        if(UFT_LIBUSB_DLL)
+            get_filename_component(UFT_LIBUSB_DLL_DIR "${UFT_LIBUSB_DLL}" DIRECTORY)
+            message(STATUS "UFT libusb-1.0.dll: ${UFT_LIBUSB_DLL}")
+        endif()
+    endif()
+else()
+    message(STATUS "UFT libusb-1.0: NOT FOUND (SCP-Direct stays honest-stub)")
 endif()
 
 # ============================================================================
@@ -231,11 +286,9 @@ if(Qt6SerialPort_FOUND)
     target_link_libraries(${PROJECT_NAME} PRIVATE Qt6::SerialPort)
 endif()
 
-if(UNIX AND NOT APPLE)
-    if(LIBUSB_FOUND)
-        target_include_directories(${PROJECT_NAME} PRIVATE ${LIBUSB_INCLUDE_DIRS})
-        target_link_libraries(${PROJECT_NAME} PRIVATE ${LIBUSB_LIBRARIES})
-    endif()
+if(LIBUSB_FOUND)
+    target_include_directories(${PROJECT_NAME} PRIVATE ${LIBUSB_INCLUDE_DIRS})
+    target_link_libraries(${PROJECT_NAME} PRIVATE ${LIBUSB_LIBRARIES})
 endif()
 
 if(WIN32)

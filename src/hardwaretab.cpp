@@ -908,12 +908,21 @@ void HardwareTab::onConnect()
         bool _has_production_transport = false;
 #ifdef UFT_HAS_QSERIALPORT
         if (controller == "applesauce" || controller == "adfcopy") {
-            /* Both QSerialPort-runner-bound providers — see MF-250 +
-             * MF-252. m_providerV2 was just constructed with non-null
-             * runners (or null-fallback on open-failure with status
-             * message). Pragmatic detection: trust the construction
-             * path; a future revision can expose a runner-presence
-             * boolean on the provider. */
+            /* QSerialPort-runner-bound providers — MF-250 / MF-252. */
+            _has_production_transport = true;
+        }
+#endif
+#ifdef UFT_HAS_LIBUSB
+        if (controller == "scp") {
+            /* MF-254: libusb-based SCP-Direct. The C-API
+             * uft_scp_direct_open() now talks to real hardware via
+             * libusb; open/close/seek paths are wired. Full flux
+             * read/write payload parsing is still pending hardware
+             * bench verification (NOT_IMPLEMENTED returned from
+             * read_flux until then) — but the device-presence and
+             * device-control paths are real. Beta-tier styling
+             * reflects this: code path is live, end-to-end flux
+             * round-trip pending validation. */
             _has_production_transport = true;
         }
 #endif

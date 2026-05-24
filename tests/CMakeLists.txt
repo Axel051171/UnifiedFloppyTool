@@ -324,12 +324,16 @@ foreach(test_source ${TEST_SOURCES})
         set(TEST_LIBS "")
     elseif(${test_name} STREQUAL "test_scp_provider_v2")
         # MF-161 P1.8: SCPProviderV2 mixin composition test.
-        # Needs: V2 provider .cpp + SCP direct C backend (M3.1 scaffold).
+        # Needs: V2 provider .cpp + SCP direct C backend (now libusb-wired
+        # in MF-254 — link against libusb when found).
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/hardware_providers/scp_provider_v2.cpp
             ${CMAKE_SOURCE_DIR}/src/hal/uft_scp_direct.c)
         target_include_directories(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src)
+        if(LIBUSB_FOUND)
+            target_link_libraries(${test_name} PRIVATE ${LIBUSB_LIBRARIES})
+        endif()
         set(TEST_LIBS "")
     elseif(${test_name} STREQUAL "test_kryoflux_provider_v2")
         # MF-162 P1.9: KryoFluxProviderV2 mixin composition test.
@@ -494,6 +498,9 @@ foreach(test_source ${TEST_SOURCES})
         target_include_directories(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src
             ${CMAKE_SOURCE_DIR}/tests)
+        if(LIBUSB_FOUND)
+            target_link_libraries(${test_name} PRIVATE ${LIBUSB_LIBRARIES})
+        endif()
         set(TEST_LIBS "")
     elseif(${test_name} STREQUAL "test_mock_provider_v2")
         # MF-160 P1.7: per-variant exhaustive coverage for MockProviderV2.
@@ -759,7 +766,19 @@ foreach(test_source ${TEST_SOURCES})
     
     # Register as CTest
     add_test(NAME ${test_name} COMMAND ${test_name})
-    
+
+    # MF-254: tests that link uft_scp_direct.c need libusb-1.0.dll on
+    # PATH at runtime (Windows). Apply only when libusb was found AND
+    # the test target actually pulls the C backend. Cheaper to check
+    # the test name against a small set than to introspect link deps.
+    if(WIN32 AND DEFINED UFT_LIBUSB_DLL_DIR)
+        if(${test_name} STREQUAL "test_hal_conformance" OR
+           ${test_name} STREQUAL "test_scp_provider_v2")
+            set_tests_properties(${test_name} PROPERTIES
+                ENVIRONMENT "PATH=${UFT_LIBUSB_DLL_DIR};$ENV{PATH}")
+        endif()
+    endif()
+
     # Header-only C++ foundation tests (MF-150) need C++20.
     list(FIND _HEADER_ONLY_CPP_TESTS ${test_source} _ho_idx)
     if(${_ho_idx} GREATER -1)
@@ -850,6 +869,11 @@ if(TARGET Qt6::Test)
         if(TARGET Qt6::SerialPort AND NOT ${qt_test_name} STREQUAL "test_wiring_runtime")
             target_link_libraries(${qt_test_name} PRIVATE Qt6::SerialPort)
         endif()
+        # MF-254: HardwareTab tests pull uft_scp_direct.c — link
+        # libusb when available so the SCP libusb path resolves.
+        if(LIBUSB_FOUND)
+            target_link_libraries(${qt_test_name} PRIVATE ${LIBUSB_LIBRARIES})
+        endif()
         # MF-155 (P1.3): test_wiring_runtime exercises QPushButton + click,
         # so it needs Qt6::Widgets. Link unconditionally if available — costs
         # nothing for the few existing Qt-Test targets that ignore Widgets.
@@ -888,8 +912,16 @@ if(TARGET Qt6::Test)
         if(WIN32)
             get_target_property(_qt_core_loc Qt6::Core LOCATION)
             get_filename_component(_qt_bin_dir "${_qt_core_loc}" DIRECTORY)
+            # MF-254: build the PATH value with escaped semicolons.
+            # CMake interprets the ENVIRONMENT property as a list with
+            # ';' separating env-var assignments, so the internal ';'
+            # in a Windows PATH value MUST be escaped as '\;'.
+            set(_uft_test_path "${_qt_bin_dir}")
+            if(DEFINED UFT_LIBUSB_DLL_DIR)
+                set(_uft_test_path "${_qt_bin_dir}\\;${UFT_LIBUSB_DLL_DIR}")
+            endif()
             set_tests_properties(${qt_test_name} PROPERTIES
-                ENVIRONMENT "QT_QPA_PLATFORM=offscreen;PATH=${_qt_bin_dir};$ENV{PATH}")
+                ENVIRONMENT "QT_QPA_PLATFORM=offscreen;PATH=${_uft_test_path}")
         elseif(${qt_test_name} STREQUAL "test_hardware_tab_gui" OR
                ${qt_test_name} STREQUAL "test_provider_switch")
             set_tests_properties(${qt_test_name} PROPERTIES
