@@ -234,3 +234,4 @@ A	src/usb/uft_usb_qt_bridge.cpp
 A	src/widgets/fateditorwidget.cpp
 A	src/widgets/uft_input_validator.cpp
 A	src/hardware_providers/qserial_applesauce_transport.cpp
+A	src/hardware_providers/applesauce_serial_runners.cpp

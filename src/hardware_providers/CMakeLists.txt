@@ -16,7 +16,9 @@ file(GLOB HWPROVIDER_HEADERS *.h)
 find_package(Qt6 COMPONENTS SerialPort QUIET)
 if(NOT TARGET Qt6::SerialPort)
     list(FILTER HWPROVIDER_SOURCES EXCLUDE REGEX "qserial_[a-z]+_transport\\.cpp$")
+    list(FILTER HWPROVIDER_SOURCES EXCLUDE REGEX "applesauce_serial_runners\\.cpp$")
     list(FILTER HWPROVIDER_HEADERS EXCLUDE REGEX "qserial_[a-z]+_transport\\.h$")
+    list(FILTER HWPROVIDER_HEADERS EXCLUDE REGEX "applesauce_serial_runners\\.h$")
     message(STATUS "UFT hardware_providers: Qt6::SerialPort NOT FOUND — "
                    "QSerialPort transports disabled (providers stay honest-stub)")
 else()
@@ -28,6 +30,14 @@ add_library(hardware_providers STATIC
     ${HWPROVIDER_SOURCES}
     ${HWPROVIDER_HEADERS}
 )
+
+# MF-250: propagate UFT_HAS_QSERIALPORT to consumers so HardwareTab
+# (and any other Qt-linked layer) can compile-guard the production
+# transport construction. INTERFACE so it propagates to anything that
+# target_link_libraries(... hardware_providers).
+if(TARGET Qt6::SerialPort)
+    target_compile_definitions(hardware_providers PUBLIC UFT_HAS_QSERIALPORT=1)
+endif()
 
 target_include_directories(hardware_providers PUBLIC 
     ${CMAKE_CURRENT_SOURCE_DIR}
