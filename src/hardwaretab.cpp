@@ -779,8 +779,15 @@ void HardwareTab::onConnect()
             m_providerV2 = std::make_unique<::uft::hal::FluxEngineProviderV2>(
                 ::uft::hal::make_fluxengine_qprocess_runner());
         } else if (controller == "fc5025") {
+            /* MF-257: real QProcess runners launching the Device Side
+             * Data `fcimage` CLI. Read-runner builds an fcimage argv
+             * (`-f <format> -t/-T <cyl> [-s 1] [-r retries] <tmp>`),
+             * reads the resulting image back, returns bytes. Detect-
+             * runner probes for fcimage on PATH. The user must have
+             * fcimage installed and the FC5025 USB driver active. */
             m_providerV2 = std::make_unique<::uft::hal::FC5025ProviderV2>(
-                nullptr, nullptr);
+                ::uft::hal::make_fc5025_read_qprocess_runner(),
+                ::uft::hal::make_fc5025_detect_qprocess_runner());
         } else if (controller == "xum1541") {
             m_providerV2 = std::make_unique<::uft::hal::XUM1541ProviderV2>(
                 nullptr, nullptr, nullptr);
@@ -920,11 +927,12 @@ void HardwareTab::onConnect()
          * Qt6::SerialPort is available AND port-open succeeded above.
          * Anywhere else we stay on the orange honest-stub track. */
         bool _has_production_transport = false;
-        /* MF-256: KryoFlux and FluxEngine now have real QProcess
-         * runners. Treat them as Beta — the CLI subprocess may or
-         * may not be installed; if not, the provider's first call
-         * returns a clear ProviderError. */
-        if (controller == "kryoflux" || controller == "fluxengine") {
+        /* MF-256/MF-257: KryoFlux, FluxEngine, and FC5025 now have
+         * real QProcess runners. Treat as Beta — the CLI subprocess
+         * may or may not be installed; if not, the provider's first
+         * call returns a clear ProviderError. */
+        if (controller == "kryoflux" || controller == "fluxengine" ||
+            controller == "fc5025") {
             _has_production_transport = true;
         }
 #ifdef UFT_HAS_QSERIALPORT

@@ -24,6 +24,7 @@
 
 #include "fluxengine_provider_v2.h"
 #include "kryoflux_provider_v2.h"
+#include "fc5025_provider_v2.h"
 
 #include <QString>
 #include <string>
@@ -57,5 +58,22 @@ make_fluxengine_qprocess_runner(SubprocessRunnerConfig cfg = {});
  *  process. Same capture semantics as FluxEngine. */
 KryoFluxProviderV2::DtcRunner
 make_kryoflux_qprocess_runner(SubprocessRunnerConfig cfg = {});
+
+/* ─── FC5025 runners ──────────────────────────────────────────────── */
+
+/** Build an Fc5025DetectRunner that probes the system for the
+ *  `fcimage` CLI tool (FC5025 doesn't have a libusb path in UFT;
+ *  the canonical access is through Device Side Data's fcimage).
+ *  Success when `fcimage --version` (or just `fcimage`) exits 0
+ *  and emits a recognisable banner. */
+FC5025ProviderV2::Fc5025DetectRunner
+make_fc5025_detect_qprocess_runner(SubprocessRunnerConfig cfg = {});
+
+/** Build an Fc5025Runner that launches `fcimage` to capture a track
+ *  range covering the requested cylinder. Writes to a temp file,
+ *  reads it back into sector_bytes. The per-call disk_format byte
+ *  is mapped to fcimage's `-f` argument via an internal table. */
+FC5025ProviderV2::Fc5025Runner
+make_fc5025_read_qprocess_runner(SubprocessRunnerConfig cfg = {});
 
 } // namespace uft::hal
