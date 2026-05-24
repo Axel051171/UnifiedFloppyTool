@@ -61,6 +61,11 @@
  * unconditionally includable — no compile-define guard needed. */
 #include "hardware_providers/qprocess_subprocess_runner.h"
 
+/* MF-258: UFI-C-HAL-backed runners for USB Floppy (SG_IO on Linux,
+ * pending on Windows/macOS — the runner surfaces backend_unavailable
+ * cleanly on those platforms). */
+#include "hardware_providers/ufi_runners.h"
+
 /* MF-210: hardwaretab.cpp now uses the capability concepts directly
  * (`if constexpr (::uft::hal::ControlsMotor<P>)` etc.) in the
  * std::visit-based provider helpers. */
@@ -860,8 +865,18 @@ void HardwareTab::onConnect()
                 nullptr, nullptr, nullptr, nullptr, nullptr);
 #endif
         } else if (controller == "usb_floppy") {
+            /* MF-258: real UFI-C-HAL-backed runners. On Linux these
+             * exercise the SG_IO ioctl backend (src/hal/ufi_linux.c).
+             * On Windows/macOS the C-HAL's backend_init returns -1 and
+             * each runner surfaces backend_unavailable cleanly. The
+             * provider then returns a ProviderError that names the
+             * exact platform-availability state. The user's selected
+             * `port` is the OS device path (e.g. /dev/sg0). */
             m_providerV2 = std::make_unique<::uft::hal::USBFloppyProviderV2>(
-                nullptr, nullptr, nullptr);
+                ::uft::hal::make_usbfloppy_read_runner(),
+                ::uft::hal::make_usbfloppy_write_runner(),
+                ::uft::hal::make_usbfloppy_detect_runner(port.toStdString()),
+                port.toStdString());
         } else {
             constructed = false;
         }
@@ -927,12 +942,13 @@ void HardwareTab::onConnect()
          * Qt6::SerialPort is available AND port-open succeeded above.
          * Anywhere else we stay on the orange honest-stub track. */
         bool _has_production_transport = false;
-        /* MF-256/MF-257: KryoFlux, FluxEngine, and FC5025 now have
-         * real QProcess runners. Treat as Beta — the CLI subprocess
-         * may or may not be installed; if not, the provider's first
-         * call returns a clear ProviderError. */
+        /* MF-256/MF-257: KryoFlux, FluxEngine, FC5025 → QProcess
+         * subprocess runners. MF-258: USB-Floppy → UFI-C-HAL runners.
+         * All four count as Beta — the runtime path is live; whether
+         * the platform/CLI tool/UFI backend is available is a runtime
+         * concern surfaced via ProviderError. */
         if (controller == "kryoflux" || controller == "fluxengine" ||
-            controller == "fc5025") {
+            controller == "fc5025"   || controller == "usb_floppy") {
             _has_production_transport = true;
         }
 #ifdef UFT_HAS_QSERIALPORT

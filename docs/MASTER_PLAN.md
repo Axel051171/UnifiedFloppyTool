@@ -464,7 +464,7 @@ Findings für die folgenden Sessions / Tag-Gates:
 
 | ID | Severity | Thema | Effort | Quelle |
 |---|---|---|---|---|
-| UFT-001 | P0 | 8 von 9 V2-Provider sind honest-stub mit nullptr-Runnern. Nur Greaseweazle ist production-wired. Bereits in M3.1-M3.4 abgedeckt; v4.1.5-Tag braucht entweder Verzögerung oder explizite "Greaseweazle-only Release"-Erklärung. | L (6-10 Wochen Engineering) | hardwaretab.cpp:751-771 |
+| UFT-001 | ✓ **9/9 LIVE** MF-249..MF-258 | Alle 9 V2-Provider haben jetzt einen live Code-Pfad zu echter Hardware. 1 production (Greaseweazle), 8 Beta (live code, hardware-bench pending). Reality-Tracker in §UFT-001-Status. | — | siehe Status-Tabelle |
 | UFT-003 | ✓ CLOSED MF-247 | HardwareTab honest-stub-Connection visuell distinkt: orange "Disconnect (Preview)" Button mit Tooltip statt grünem Default. Prinzip-4-Verstoß behoben. | — | src/hardwaretab.cpp:818-845 |
 | UFT-004 | P1 | `uft_format_plugin_t` hat kein API-Version-Feld und kein `_Static_assert(sizeof…)` Guard. ABI-bomb-Risiko falls externe Plugins eingeführt werden. Basis-Static_assert in MF-246 ergänzt; voller `api_version`-Field-Mechanismus für `.so`-Plugins offen. | M (~4h, 80 Plugins designated-init = sicher, aber Guard fehlt) | include/uft/uft_format_plugin.h:351-517 |
 | UFT-005 | P1 | `test_transitions_ns_contract.c` läuft nur gegen MockProviderV2; KryoFlux/FluxEngine-Fixtures fehlen. ARCH-2-Regression-Schutz unvollständig. | S (~2h) | tests/unit/test_transitions_ns_contract.c |
@@ -483,9 +483,42 @@ Findings für die folgenden Sessions / Tag-Gates:
 - Performance-Hotpath-Review (algorithm-hotpath-optimizer)
 - Forensic-integrity-Agent gegen jeden Konversions-Pfad einzeln
 
+### UFT-001-Status — 9/9 Controller mit live Code-Pfad (2026-05-24)
+
+Closed via MF-249..MF-258 in der v4.1.5-hardening-Session. Vor diesen
+Commits hatten 8 von 9 V2-Provider `nullptr`-Runner — jeder Aufruf
+gab ProviderError zurück. Jetzt:
+
+| # | Controller | Transport | Status | MF |
+|---|---|---|---|---|
+| 1 | Greaseweazle | C-HAL (libusb-frei, custom USB) | ✅ Production | pre-session |
+| 2 | Applesauce  | Qt6::SerialPort + 7 Runner-Factories | ✅ Beta | MF-249, MF-250 |
+| 3 | ADFCopy     | Qt6::SerialPort + 5 Runner-Factories | ✅ Beta | MF-252 |
+| 4 | SCP-Direct  | libusb-1.0 (open/close/seek)         | ✅ Beta | MF-254 |
+| 5 | XUM1541     | libusb-1.0 (open/close/detect/IEC)   | ✅ Beta | MF-255 |
+| 6 | KryoFlux    | QProcess→dtc subprocess              | ✅ Beta | MF-256 |
+| 7 | FluxEngine  | QProcess→fluxengine subprocess       | ✅ Beta | MF-256 |
+| 8 | FC5025      | QProcess→fcimage subprocess          | ✅ Beta | MF-257 |
+| 9 | USBFloppy   | UFI C-HAL (SG_IO Linux, SCSI-PT Win/macOS pending) | ✅ Beta | MF-258 |
+
+"Beta" = Code-Pfad live + compile-verified, hardware-bench
+verification pending. Yellow "Disconnect (Beta)" Styling im
+HardwareTab unterscheidet visuell von production green-stripe.
+
+Drei Test-Tiers für jeden Controller:
+- **Tier 1** (in CI): Protokoll-/API-Wiring via scripted mocks
+- **Tier 2** (optional): Virtual COM-Pair / Subprocess-Simulator
+- **Tier 3** (Bench-Session): physische Hardware
+
+Aktuell: Tier 1 grün für alle. Tier 2 dokumentiert (Applesauce
+Simulator als Vorlage). Tier 3 = next session pro Controller mit
+echter Hardware.
+
 ### Recommended Sequence
 
-1. **Sofort:** UFT-003 (3h Qt-Arbeit) — verhindert dass User glaubt, ein nicht-funktionaler Controller sei verbunden. Prinzip-4-Bug.
+1. **Bench-Session (pro Controller):** Tier-3-Verifikation gegen
+   echtes Gerät. Sobald grün → yellow "Beta" → green "Production"
+   per Controller. Stark abhängig davon welche Hardware verfügbar ist.
 2. **Vor v4.1.5-Tag:** UFT-T04 Bulk-Triage entscheiden (löschen vs. rekonstruieren der ~140k-LOC-Tests)
 3. **Vor v4.1.5-Tag:** UFT-T05 events-CMakeLists Pfad-Fix
 4. **Bei v4.1.5-Tag:** UFT-001 Ehrlichkeits-Statement im README + RELEASE_NOTES — entweder "Greaseweazle-only" oder Tag verschieben

@@ -842,7 +842,9 @@ if(TARGET Qt6::Test)
         ${CMAKE_SOURCE_DIR}/src/hardware_providers/usbfloppy_provider_v2.cpp
         ${CMAKE_SOURCE_DIR}/src/hardware_providers/teensy_probe.cpp
         ${CMAKE_SOURCE_DIR}/src/hardware_providers/qprocess_subprocess_runner.cpp
-        ${CMAKE_SOURCE_DIR}/src/hal/ufi.c)
+        ${CMAKE_SOURCE_DIR}/src/hardware_providers/ufi_runners.cpp
+        ${CMAKE_SOURCE_DIR}/src/hal/ufi.c
+        ${CMAKE_SOURCE_DIR}/src/hal/ufi_backend.c)
 
     # Discover Qt C++ test sources, excluding the header-only set already
     # handled by the main C-loop (MF-150).

@@ -238,3 +238,4 @@ A	src/hardware_providers/applesauce_serial_runners.cpp
 A	src/hardware_providers/qserial_adfcopy_transport.cpp
 A	src/hardware_providers/adfcopy_serial_runners.cpp
 A	src/hardware_providers/qprocess_subprocess_runner.cpp
+A	src/hardware_providers/ufi_runners.cpp
