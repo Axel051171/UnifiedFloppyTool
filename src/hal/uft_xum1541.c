@@ -43,17 +43,25 @@
 #include <string.h>
 #include <stdio.h>
 
+#ifdef UFT_HAS_LIBUSB
+#  include <libusb-1.0/libusb.h>
+#endif
+
 /* ───────────────────────── Opaque context ────────────────────────────
  *
- * Layout intentionally minimal — real impl will hold libusb_device_handle*,
- * device descriptors, IEC-bus state, current track, retry policy, error
- * buffer. For now we just track "is_open" + last-error string so the
- * stubs can return useful diagnostics.
+ * Holds libusb handle + USB lifecycle state when UFT_HAS_LIBUSB is
+ * defined; otherwise only the pure-utility fields so the build still
+ * succeeds without libusb installed.
  * ──────────────────────────────────────────────────────────────────── */
 
 #define UFT_XUM_ERROR_BUF 256
 
 struct uft_xum_config_s {
+#ifdef UFT_HAS_LIBUSB
+    libusb_context        *libusb_ctx;
+    libusb_device_handle  *dev;
+    bool                   interface_claimed;
+#endif
     bool             is_open;
     int              device_num;
     int              track_start;
@@ -173,24 +181,167 @@ uft_xum_config_t *uft_xum_config_create(void) {
 
 void uft_xum_config_destroy(uft_xum_config_t *cfg) {
     if (!cfg) return;
-    /* Real impl: if is_open, also close the USB handle. */
     if (cfg->is_open) {
-        /* M3.2 TODO: libusb_release_interface + libusb_close */
+        uft_xum_close(cfg);
     }
     free(cfg);
 }
 
+/* ───────────────────────── libusb helpers ──────────────────────────── */
+
+#ifdef UFT_HAS_LIBUSB
+/** Internal: send a bulk-OUT payload. Returns number of bytes written
+ *  or negative on error. */
+static int xum_bulk_out(uft_xum_config_t *cfg,
+                        const uint8_t *data, int len, int timeout_ms)
+{
+    int transferred = 0;
+    int rc = libusb_bulk_transfer(cfg->dev,
+                                  UFT_XUM1541_BULK_OUT_EP,
+                                  (unsigned char *)data,
+                                  len,
+                                  &transferred,
+                                  timeout_ms);
+    if (rc != 0) return -rc;
+    return transferred;
+}
+
+/** Internal: receive a bulk-IN payload. */
+static int xum_bulk_in(uft_xum_config_t *cfg,
+                       uint8_t *buf, int len, int timeout_ms)
+{
+    int transferred = 0;
+    int rc = libusb_bulk_transfer(cfg->dev,
+                                  UFT_XUM1541_BULK_IN_EP,
+                                  buf,
+                                  len,
+                                  &transferred,
+                                  timeout_ms);
+    if (rc != 0) return -rc;
+    return transferred;
+}
+
+/** Send a 4-byte IEC-prefix bulk-OUT with the operation opcode + 3
+ *  byte payload (device, secondary, length). Reads the 1-byte status
+ *  response. Returns UFT_OK on STATUS_READY. */
+static uft_error_t xum_iec_command(uft_xum_config_t *cfg,
+                                    uint8_t opcode,
+                                    uint8_t arg1,
+                                    uint8_t arg2)
+{
+    uint8_t cmd[4] = { opcode, arg1, arg2, 0 };
+    int n = xum_bulk_out(cfg, cmd, sizeof(cmd), UFT_XUM1541_CTRL_TIMEOUT_MS);
+    if (n != (int)sizeof(cmd)) {
+        xum_set_error(cfg, "xum_iec_command: bulk OUT failed");
+        return UFT_ERR_IO;
+    }
+    uint8_t status = 0;
+    n = xum_bulk_in(cfg, &status, 1, UFT_XUM1541_CTRL_TIMEOUT_MS);
+    if (n != 1) {
+        xum_set_error(cfg, "xum_iec_command: bulk IN status failed");
+        return UFT_ERR_IO;
+    }
+    if (status == UFT_XUM1541_STATUS_ERROR) {
+        xum_set_error(cfg, "xum_iec_command: device returned STATUS_ERROR");
+        return UFT_ERR_IO;
+    }
+    /* BUSY is treated as transient — caller may retry. We map it to
+     * a distinct error so the runner can decide. */
+    if (status == UFT_XUM1541_STATUS_BUSY) {
+        xum_set_error(cfg, "xum_iec_command: device BUSY");
+        return UFT_ERR_IO;
+    }
+    return UFT_OK;
+}
+#endif /* UFT_HAS_LIBUSB */
+
 uft_error_t uft_xum_open(uft_xum_config_t *cfg, int device_num) {
     if (!cfg) return UFT_ERR_INVALID_ARG;
-    /* M3.2 TODO: libusb_init, enumerate devices by VID/PID, open. */
+#ifdef UFT_HAS_LIBUSB
+    if (cfg->is_open) return UFT_OK;  /* idempotent */
+
+    int rc = libusb_init(&cfg->libusb_ctx);
+    if (rc != 0) {
+        xum_set_error(cfg, "libusb_init failed");
+        return UFT_ERR_IO;
+    }
+
+    cfg->dev = libusb_open_device_with_vid_pid(cfg->libusb_ctx,
+                                                UFT_XUM1541_USB_VID,
+                                                UFT_XUM1541_USB_PID);
+    if (!cfg->dev) {
+        libusb_exit(cfg->libusb_ctx);
+        cfg->libusb_ctx = NULL;
+        xum_set_error(cfg,
+            "no XUM1541/ZoomFloppy device found (VID 0x16D0 PID 0x0504)");
+        return UFT_ERR_IO;
+    }
+
+    (void)libusb_set_auto_detach_kernel_driver(cfg->dev, 1);
+
+    rc = libusb_claim_interface(cfg->dev, 0);
+    if (rc != 0) {
+        libusb_close(cfg->dev);
+        libusb_exit(cfg->libusb_ctx);
+        cfg->dev = NULL;
+        cfg->libusb_ctx = NULL;
+        xum_set_error(cfg, "libusb_claim_interface(0) failed");
+        return UFT_ERR_IO;
+    }
+    cfg->interface_claimed = true;
+
+    /* INIT control transfer — reads back 8 bytes of device info. */
+    uint8_t info[8];
+    rc = libusb_control_transfer(cfg->dev,
+        /* bmRequestType: device-in, vendor, device */
+        0xC0,
+        /* bRequest */ UFT_XUM1541_CTRL_INIT,
+        /* wValue */   0,
+        /* wIndex */   0,
+        info, sizeof(info),
+        UFT_XUM1541_CTRL_TIMEOUT_MS);
+    if (rc < 0) {
+        (void)libusb_release_interface(cfg->dev, 0);
+        libusb_close(cfg->dev);
+        libusb_exit(cfg->libusb_ctx);
+        cfg->dev = NULL;
+        cfg->libusb_ctx = NULL;
+        cfg->interface_claimed = false;
+        xum_set_error(cfg, "XUM1541_INIT control transfer failed");
+        return UFT_ERR_IO;
+    }
+
     cfg->device_num = device_num;
-    xum_set_error(cfg, "uft_xum_open: libusb integration pending (M3.2)");
+    cfg->is_open = true;
+    return UFT_OK;
+#else
+    cfg->device_num = device_num;
+    xum_set_error(cfg, "uft_xum_open: built without libusb (UFT_HAS_LIBUSB)");
     return UFT_ERR_NOT_IMPLEMENTED;
+#endif
 }
 
 void uft_xum_close(uft_xum_config_t *cfg) {
     if (!cfg) return;
-    /* M3.2 TODO: USB release. */
+#ifdef UFT_HAS_LIBUSB
+    if (cfg->dev) {
+        /* SHUTDOWN control transfer signals graceful close to firmware. */
+        uint8_t dummy = 0;
+        (void)libusb_control_transfer(cfg->dev, 0xC0,
+            UFT_XUM1541_CTRL_SHUTDOWN, 0, 0,
+            &dummy, sizeof(dummy), UFT_XUM1541_CTRL_TIMEOUT_MS);
+        if (cfg->interface_claimed) {
+            (void)libusb_release_interface(cfg->dev, 0);
+        }
+        libusb_close(cfg->dev);
+        cfg->dev = NULL;
+    }
+    if (cfg->libusb_ctx) {
+        libusb_exit(cfg->libusb_ctx);
+        cfg->libusb_ctx = NULL;
+    }
+    cfg->interface_claimed = false;
+#endif
     cfg->is_open = false;
 }
 
@@ -199,28 +350,33 @@ bool uft_xum_is_connected(const uft_xum_config_t *cfg) {
     return cfg->is_open;
 }
 
-/* ───────────────────────── Device info (stubs) ───────────────────── */
+/* ───────────────────────── Device info ───────────────────────────── */
 
 uft_error_t uft_xum_detect(int *device_count) {
     if (!device_count) return UFT_ERR_INVALID_ARG;
     *device_count = 0;
-    /*
-     * MF-148 (HW-05): previously returned UFT_ERR_INVALID_ARG even with
-     * a valid pointer, which made callers think their argument was
-     * wrong rather than the function being unimplemented.
-     *
-     * 3-part error contract (per F-4):
-     *   What:  XUM1541 USB enumeration not yet wired into this build.
-     *   Why:   libusb integration is the M3.2 multi-session continuation;
-     *          this scaffold only provides pure-utility lookups.
-     *   Fix:   device detection is not available in this build on any
-     *          path — the M3.2 libusb integration wires it. See
-     *          docs/MASTER_PLAN.md §M3.2. (The V1 Qt provider that
-     *          previously did opencbm enumeration was deleted in P1.18;
-     *          XUM1541ProviderV2 does not yet have a production
-     *          construction site either — audit finding ARCH-4.)
-     */
+#ifdef UFT_HAS_LIBUSB
+    libusb_context *ctx = NULL;
+    if (libusb_init(&ctx) != 0) return UFT_ERR_IO;
+    libusb_device **list = NULL;
+    ssize_t n = libusb_get_device_list(ctx, &list);
+    int count = 0;
+    for (ssize_t i = 0; i < n; i++) {
+        struct libusb_device_descriptor desc;
+        if (libusb_get_device_descriptor(list[i], &desc) == 0) {
+            if (desc.idVendor  == UFT_XUM1541_USB_VID &&
+                desc.idProduct == UFT_XUM1541_USB_PID) {
+                count++;
+            }
+        }
+    }
+    libusb_free_device_list(list, 1);
+    libusb_exit(ctx);
+    *device_count = count;
+    return UFT_OK;
+#else
     return UFT_ERR_NOT_IMPLEMENTED;
+#endif
 }
 
 uft_error_t uft_xum_identify_drive(uft_xum_config_t *cfg, uft_cbm_drive_t *type) {
@@ -333,9 +489,17 @@ uft_error_t uft_xum_iec_listen(uft_xum_config_t *cfg, int device, int secondary)
         xum_set_error(cfg, "IEC device/secondary out of range");
         return UFT_ERR_INVALID_ARG;
     }
-    /* M3.2 TODO: bulk-out byte UFT_IEC_LISTEN | device, then secondary. */
-    xum_set_error(cfg, "uft_xum_iec_listen: not implemented");
+#ifdef UFT_HAS_LIBUSB
+    if (!cfg->is_open || !cfg->dev) {
+        xum_set_error(cfg, "uft_xum_iec_listen: device not open");
+        return UFT_ERR_IO;
+    }
+    return xum_iec_command(cfg, UFT_XUM1541_BULK_LISTEN,
+                            (uint8_t)device, (uint8_t)secondary);
+#else
+    xum_set_error(cfg, "uft_xum_iec_listen: built without libusb");
     return UFT_ERR_NOT_IMPLEMENTED;
+#endif
 }
 
 uft_error_t uft_xum_iec_talk(uft_xum_config_t *cfg, int device, int secondary) {
@@ -344,38 +508,120 @@ uft_error_t uft_xum_iec_talk(uft_xum_config_t *cfg, int device, int secondary) {
         xum_set_error(cfg, "IEC device/secondary out of range");
         return UFT_ERR_INVALID_ARG;
     }
-    /* M3.2 TODO: bulk-out byte UFT_IEC_TALK | device, then secondary. */
-    xum_set_error(cfg, "uft_xum_iec_talk: not implemented");
+#ifdef UFT_HAS_LIBUSB
+    if (!cfg->is_open || !cfg->dev) {
+        xum_set_error(cfg, "uft_xum_iec_talk: device not open");
+        return UFT_ERR_IO;
+    }
+    return xum_iec_command(cfg, UFT_XUM1541_BULK_TALK,
+                            (uint8_t)device, (uint8_t)secondary);
+#else
+    xum_set_error(cfg, "uft_xum_iec_talk: built without libusb");
     return UFT_ERR_NOT_IMPLEMENTED;
+#endif
 }
 
 uft_error_t uft_xum_iec_unlisten(uft_xum_config_t *cfg) {
     if (!cfg) return UFT_ERR_INVALID_ARG;
-    /* M3.2 TODO: bulk-out byte UFT_IEC_UNLISTEN. */
-    xum_set_error(cfg, "uft_xum_iec_unlisten: not implemented");
+#ifdef UFT_HAS_LIBUSB
+    if (!cfg->is_open || !cfg->dev) {
+        xum_set_error(cfg, "uft_xum_iec_unlisten: device not open");
+        return UFT_ERR_IO;
+    }
+    return xum_iec_command(cfg, UFT_XUM1541_BULK_UNLISTEN, 0, 0);
+#else
+    xum_set_error(cfg, "uft_xum_iec_unlisten: built without libusb");
     return UFT_ERR_NOT_IMPLEMENTED;
+#endif
 }
 
 uft_error_t uft_xum_iec_untalk(uft_xum_config_t *cfg) {
     if (!cfg) return UFT_ERR_INVALID_ARG;
-    /* M3.2 TODO: bulk-out byte UFT_IEC_UNTALK. */
-    xum_set_error(cfg, "uft_xum_iec_untalk: not implemented");
+#ifdef UFT_HAS_LIBUSB
+    if (!cfg->is_open || !cfg->dev) {
+        xum_set_error(cfg, "uft_xum_iec_untalk: device not open");
+        return UFT_ERR_IO;
+    }
+    return xum_iec_command(cfg, UFT_XUM1541_BULK_UNTALK, 0, 0);
+#else
+    xum_set_error(cfg, "uft_xum_iec_untalk: built without libusb");
     return UFT_ERR_NOT_IMPLEMENTED;
+#endif
 }
 
 uft_error_t uft_xum_iec_write(uft_xum_config_t *cfg, const uint8_t *data, size_t len) {
     if (!cfg || !data) return UFT_ERR_INVALID_ARG;
-    if (len == 0) return UFT_OK;  /* nothing to write — not an error */
-    /* M3.2 TODO: bulk transfer. */
-    xum_set_error(cfg, "uft_xum_iec_write: not implemented");
+    if (len == 0) return UFT_OK;
+    if (len > UFT_XUM1541_MAX_XFER_SIZE - 4) return UFT_ERR_BUFFER_TOO_SMALL;
+#ifdef UFT_HAS_LIBUSB
+    if (!cfg->is_open || !cfg->dev) {
+        xum_set_error(cfg, "uft_xum_iec_write: device not open");
+        return UFT_ERR_IO;
+    }
+    /* XUM1541 bulk-OUT write: 4-byte header [opcode, lo, hi, 0] + payload. */
+    uint8_t header[4] = {
+        UFT_XUM1541_BULK_WRITE_DATA,
+        (uint8_t)(len & 0xFF),
+        (uint8_t)((len >> 8) & 0xFF),
+        0
+    };
+    int n = xum_bulk_out(cfg, header, sizeof(header),
+                         UFT_XUM1541_CTRL_TIMEOUT_MS);
+    if (n != (int)sizeof(header)) {
+        xum_set_error(cfg, "uft_xum_iec_write: header transfer failed");
+        return UFT_ERR_IO;
+    }
+    n = xum_bulk_out(cfg, data, (int)len, UFT_XUM1541_CTRL_TIMEOUT_MS);
+    if (n != (int)len) {
+        xum_set_error(cfg, "uft_xum_iec_write: payload transfer short");
+        return UFT_ERR_IO;
+    }
+    uint8_t status = 0;
+    n = xum_bulk_in(cfg, &status, 1, UFT_XUM1541_CTRL_TIMEOUT_MS);
+    if (n != 1 || status == UFT_XUM1541_STATUS_ERROR) {
+        xum_set_error(cfg, "uft_xum_iec_write: device returned error");
+        return UFT_ERR_IO;
+    }
+    return UFT_OK;
+#else
+    xum_set_error(cfg, "uft_xum_iec_write: built without libusb");
     return UFT_ERR_NOT_IMPLEMENTED;
+#endif
 }
 
 uft_error_t uft_xum_iec_read(uft_xum_config_t *cfg, uint8_t *data, size_t max_len) {
     if (!cfg || !data || max_len == 0) return UFT_ERR_INVALID_ARG;
-    /* M3.2 TODO: bulk transfer. */
-    xum_set_error(cfg, "uft_xum_iec_read: not implemented");
+    if (max_len > UFT_XUM1541_MAX_XFER_SIZE) max_len = UFT_XUM1541_MAX_XFER_SIZE;
+#ifdef UFT_HAS_LIBUSB
+    if (!cfg->is_open || !cfg->dev) {
+        xum_set_error(cfg, "uft_xum_iec_read: device not open");
+        return UFT_ERR_IO;
+    }
+    /* Tell the device we want READ_DATA up to max_len bytes. */
+    uint8_t header[4] = {
+        UFT_XUM1541_BULK_READ_DATA,
+        (uint8_t)(max_len & 0xFF),
+        (uint8_t)((max_len >> 8) & 0xFF),
+        0
+    };
+    int n = xum_bulk_out(cfg, header, sizeof(header),
+                         UFT_XUM1541_CTRL_TIMEOUT_MS);
+    if (n != (int)sizeof(header)) {
+        xum_set_error(cfg, "uft_xum_iec_read: header transfer failed");
+        return UFT_ERR_IO;
+    }
+    n = xum_bulk_in(cfg, data, (int)max_len, UFT_XUM1541_CTRL_TIMEOUT_MS);
+    if (n < 0) {
+        xum_set_error(cfg, "uft_xum_iec_read: bulk IN failed");
+        return UFT_ERR_IO;
+    }
+    /* n bytes received; caller assumes data is partial-filled when
+     * fewer bytes were available — XUM1541 ends the transfer on IEC EOI. */
+    return UFT_OK;
+#else
+    xum_set_error(cfg, "uft_xum_iec_read: built without libusb");
     return UFT_ERR_NOT_IMPLEMENTED;
+#endif
 }
 
 /* ───────────────────────── Utility (real) ────────────────────────── */

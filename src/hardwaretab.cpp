@@ -914,15 +914,16 @@ void HardwareTab::onConnect()
 #endif
 #ifdef UFT_HAS_LIBUSB
         if (controller == "scp") {
-            /* MF-254: libusb-based SCP-Direct. The C-API
-             * uft_scp_direct_open() now talks to real hardware via
-             * libusb; open/close/seek paths are wired. Full flux
-             * read/write payload parsing is still pending hardware
-             * bench verification (NOT_IMPLEMENTED returned from
-             * read_flux until then) — but the device-presence and
-             * device-control paths are real. Beta-tier styling
-             * reflects this: code path is live, end-to-end flux
-             * round-trip pending validation. */
+            /* MF-254: libusb-based SCP-Direct. open/close/seek wired;
+             * flux payload parsing pending bench verification. */
+            _has_production_transport = true;
+        }
+        if (controller == "xum1541") {
+            /* MF-255: libusb-based XUM1541/ZoomFloppy. open/close/
+             * detect/iec_* (LISTEN/TALK/UNLISTEN/UNTALK/READ/WRITE)
+             * fully wired via OpenCBM-documented USB protocol.
+             * Track-level GCR read and full disk-read sequence are
+             * higher-level features pending bench verification. */
             _has_production_transport = true;
         }
 #endif

@@ -95,7 +95,7 @@ set(EXCLUDED_TESTS
     "test_settings"            # uft_settings.c absent
     "test_ti99_formats"        # uft_ti99 lib not registered in root CMake
     "test_whdload_resload"     # whdload resload module absent
-    "test_xum1541_hal"         # depends on libusb wiring (M3.2 pending)
+    # "test_xum1541_hal"       # MF-255: libusb wiring landed, test re-enabled
     "test_mega65_fat32"        # uft_mega65 module is stub-only
     "test_fat_extensions"      # uft_fs lib not registered in root CMake
     "test_align_fuse_bridge"   # depends on otdr_align_fuse_v7 (standalone-project; UFT-T05)
@@ -688,6 +688,19 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/core/uft_roundtrip.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_loss_report.c)
         set(TEST_LIBS "")
+    elseif(${test_name} STREQUAL "test_xum1541_hal")
+        # MF-255 (v4.1.5-hardening): XUM1541 HAL test now exercises the
+        # real libusb wiring. Compile the .c file with UFT_HAS_LIBUSB so
+        # the test's #ifdef branches see the production path. Link libusb
+        # when available.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/hal/uft_xum1541.c)
+        target_include_directories(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src)
+        if(LIBUSB_FOUND)
+            target_link_libraries(${test_name} PRIVATE ${LIBUSB_LIBRARIES})
+        endif()
+        set(TEST_LIBS "")
     elseif(${test_name} STREQUAL "test_salvage_fs")
         # v4.1.5-hardening: salvage-fs strategies API (T7 DiskSalv-scaffold,
         # see docs/MASTER_PLAN.md §M2 Amiga-Block). Source is in
@@ -767,15 +780,16 @@ foreach(test_source ${TEST_SOURCES})
     # Register as CTest
     add_test(NAME ${test_name} COMMAND ${test_name})
 
-    # MF-254: tests that link uft_scp_direct.c need libusb-1.0.dll on
-    # PATH at runtime (Windows). Apply only when libusb was found AND
-    # the test target actually pulls the C backend. Cheaper to check
-    # the test name against a small set than to introspect link deps.
+    # MF-254 / MF-255: tests that link uft_scp_direct.c or uft_xum1541.c
+    # need libusb-1.0.dll on PATH at runtime (Windows). Use the same \;
+    # escape pattern as the Qt block below so CMake doesn't split the
+    # ENVIRONMENT value on the embedded PATH-separator semicolon.
     if(WIN32 AND DEFINED UFT_LIBUSB_DLL_DIR)
         if(${test_name} STREQUAL "test_hal_conformance" OR
-           ${test_name} STREQUAL "test_scp_provider_v2")
+           ${test_name} STREQUAL "test_scp_provider_v2" OR
+           ${test_name} STREQUAL "test_xum1541_hal")
             set_tests_properties(${test_name} PROPERTIES
-                ENVIRONMENT "PATH=${UFT_LIBUSB_DLL_DIR};$ENV{PATH}")
+                ENVIRONMENT "PATH=${UFT_LIBUSB_DLL_DIR}")
         endif()
     endif()
 

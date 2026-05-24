@@ -66,7 +66,7 @@ typedef enum {
     UFT_CBM_DRIVE_8250,     /**< 77 tracks, dual drive, DS */
 } uft_cbm_drive_t;
 
-/** IEC bus commands */
+/** IEC bus commands (Commodore serial bus, 8-bit opcodes). */
 typedef enum {
     UFT_IEC_LISTEN      = 0x20,
     UFT_IEC_UNLISTEN    = 0x3F,
@@ -76,6 +76,50 @@ typedef enum {
     UFT_IEC_CLOSE       = 0xE0,
     UFT_IEC_DATA        = 0x60,
 } uft_iec_cmd_t;
+
+/* MF-255 (v4.1.5-hardening): XUM1541 / ZoomFloppy USB protocol.
+ * VID/PID + endpoint + command codes verified against OpenCBM xum1541
+ * firmware source (github.com/OpenCBM/OpenCBM xum1541_types.h). */
+#define UFT_XUM1541_USB_VID           0x16D0
+#define UFT_XUM1541_USB_PID           0x0504
+#define UFT_XUM1541_BULK_IN_EP        0x83  /* bEndpointAddress 3 + IN bit */
+#define UFT_XUM1541_BULK_OUT_EP       0x04  /* bEndpointAddress 4 + OUT bit */
+#define UFT_XUM1541_MAX_XFER_SIZE     32768
+#define UFT_XUM1541_CTRL_TIMEOUT_MS   1500
+
+/* Control-transfer (bRequest) opcodes — sent via libusb_control_transfer. */
+#define UFT_XUM1541_CTRL_ECHO              0
+#define UFT_XUM1541_CTRL_INIT              1
+#define UFT_XUM1541_CTRL_RESET             2
+#define UFT_XUM1541_CTRL_SHUTDOWN          3
+#define UFT_XUM1541_CTRL_ENTER_BOOTLOADER  4
+#define UFT_XUM1541_CTRL_TAP_BREAK         5
+#define UFT_XUM1541_CTRL_GITREV            6
+#define UFT_XUM1541_CTRL_GCCVER            7
+#define UFT_XUM1541_CTRL_LIBCVER           8
+
+/* IOCTL sub-commands (base 16, used as bRequest = 16+sub via control xfer). */
+#define UFT_XUM1541_IOCTL_GET_EOI         23
+#define UFT_XUM1541_IOCTL_CLEAR_EOI       24
+#define UFT_XUM1541_IOCTL_IEC_POLL        27
+#define UFT_XUM1541_IOCTL_IEC_WAIT        28
+#define UFT_XUM1541_IOCTL_IEC_SETRELEASE  29
+
+/* Bulk-transfer prefix opcodes — first byte of the bulk OUT payload
+ * tells the XUM1541 firmware what to do with the rest. */
+#define UFT_XUM1541_BULK_WRITE_DATA  0
+#define UFT_XUM1541_BULK_TALK        1
+#define UFT_XUM1541_BULK_LISTEN      2
+#define UFT_XUM1541_BULK_UNLISTEN    3
+#define UFT_XUM1541_BULK_UNTALK      4
+#define UFT_XUM1541_BULK_READ_DATA   7
+#define UFT_XUM1541_BULK_OPEN_FILE   8
+#define UFT_XUM1541_BULK_CLOSE_FILE  9
+
+/* XUM1541 status response values returned by bulk IN after a bulk OUT. */
+#define UFT_XUM1541_STATUS_BUSY   1
+#define UFT_XUM1541_STATUS_READY  2
+#define UFT_XUM1541_STATUS_ERROR  3
 
 /*============================================================================
  * TYPES
