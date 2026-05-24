@@ -56,6 +56,11 @@
 #  include "hardware_providers/adfcopy_serial_runners.h"
 #endif
 
+/* MF-256: QProcess-based subprocess runners for FluxEngine + KryoFlux.
+ * Qt6::Core (always linked) provides QProcess so this header is
+ * unconditionally includable — no compile-define guard needed. */
+#include "hardware_providers/qprocess_subprocess_runner.h"
+
 /* MF-210: hardwaretab.cpp now uses the capability concepts directly
  * (`if constexpr (::uft::hal::ControlsMotor<P>)` etc.) in the
  * std::visit-based provider helpers. */
@@ -761,9 +766,18 @@ void HardwareTab::onConnect()
         if (controller == "scp") {
             m_providerV2 = std::make_unique<::uft::hal::SCPProviderV2>(nullptr);
         } else if (controller == "kryoflux") {
-            m_providerV2 = std::make_unique<::uft::hal::KryoFluxProviderV2>(nullptr);
+            /* MF-256: real QProcess runner that launches the KryoFlux
+             * `dtc` CLI. The user must have dtc on PATH (Windows: the
+             * KryoFlux installer adds it). Every read/detect now
+             * shells out to a real process. */
+            m_providerV2 = std::make_unique<::uft::hal::KryoFluxProviderV2>(
+                ::uft::hal::make_kryoflux_qprocess_runner());
         } else if (controller == "fluxengine") {
-            m_providerV2 = std::make_unique<::uft::hal::FluxEngineProviderV2>(nullptr);
+            /* MF-256: real QProcess runner that launches the
+             * `fluxengine` CLI (github.com/davidgiven/fluxengine). The
+             * user must have fluxengine on PATH. */
+            m_providerV2 = std::make_unique<::uft::hal::FluxEngineProviderV2>(
+                ::uft::hal::make_fluxengine_qprocess_runner());
         } else if (controller == "fc5025") {
             m_providerV2 = std::make_unique<::uft::hal::FC5025ProviderV2>(
                 nullptr, nullptr);
@@ -906,6 +920,13 @@ void HardwareTab::onConnect()
          * Qt6::SerialPort is available AND port-open succeeded above.
          * Anywhere else we stay on the orange honest-stub track. */
         bool _has_production_transport = false;
+        /* MF-256: KryoFlux and FluxEngine now have real QProcess
+         * runners. Treat them as Beta — the CLI subprocess may or
+         * may not be installed; if not, the provider's first call
+         * returns a clear ProviderError. */
+        if (controller == "kryoflux" || controller == "fluxengine") {
+            _has_production_transport = true;
+        }
 #ifdef UFT_HAS_QSERIALPORT
         if (controller == "applesauce" || controller == "adfcopy") {
             /* QSerialPort-runner-bound providers — MF-250 / MF-252. */
