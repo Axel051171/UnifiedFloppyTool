@@ -820,16 +820,32 @@ void HardwareTab::onConnect()
          * connected. No open()/detect here — the provider has no
          * production transport yet; the user sees correctly-gated
          * buttons and any click surfaces the provider's honest
-         * ProviderError. */
+         * ProviderError.
+         *
+         * UFT-003 (v4.1.5-hardening): explicitly distinguish honest-stub
+         * connection from a production-wired one. Without this, the user
+         * sees a green-stripe "Disconnect" button identical to a real
+         * Greaseweazle connection, even though Read/Write will fail with
+         * NOT_IMPLEMENTED. Mark the button orange + "Preview" text so
+         * the gap is visible at a glance (Prinzip 4: no dangerous
+         * defaults). */
         rewireV2();
         m_connected = true;
         m_hwModel = 0;
         m_firmwareVersion = QStringLiteral("V2 provider (backend scaffold)");
         setConnectionState(true);
-        updateStatus(tr("%1 connected — V2 provider routed. The production "
-                        "transport for this controller is not wired yet; "
-                        "capability actions return a diagnostic error until "
-                        "the backend lands.").arg(m_controllerType));
+        ui->btnConnect->setText(tr("Disconnect (Preview)"));
+        ui->btnConnect->setStyleSheet("background-color: #ffaa55;");
+        ui->btnConnect->setToolTip(
+            tr("Honest-stub connection — the production transport for "
+               "this controller is not wired yet. Read/Write actions "
+               "will return UFT_ERR_NOT_IMPLEMENTED. See "
+               "docs/MASTER_PLAN.md §M3."));
+        updateStatus(tr("%1 connected — V2 provider routed (PREVIEW). "
+                        "The production transport for this controller "
+                        "is not wired yet; capability actions return a "
+                        "diagnostic error until the backend lands.")
+                        .arg(m_controllerType));
         emit connectionChanged(true);
         emit deviceInfoChanged(m_controllerType, m_firmwareVersion);
         return;
