@@ -332,7 +332,7 @@ foreach(test_source ${TEST_SOURCES})
         target_include_directories(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src)
         if(LIBUSB_FOUND)
-            target_link_libraries(${test_name} PRIVATE ${LIBUSB_LIBRARIES})
+            target_link_libraries(${test_name} PRIVATE uft::libusb)
         endif()
         set(TEST_LIBS "")
     elseif(${test_name} STREQUAL "test_kryoflux_provider_v2")
@@ -499,7 +499,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src
             ${CMAKE_SOURCE_DIR}/tests)
         if(LIBUSB_FOUND)
-            target_link_libraries(${test_name} PRIVATE ${LIBUSB_LIBRARIES})
+            target_link_libraries(${test_name} PRIVATE uft::libusb)
         endif()
         set(TEST_LIBS "")
     elseif(${test_name} STREQUAL "test_mock_provider_v2")
@@ -698,7 +698,7 @@ foreach(test_source ${TEST_SOURCES})
         target_include_directories(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src)
         if(LIBUSB_FOUND)
-            target_link_libraries(${test_name} PRIVATE ${LIBUSB_LIBRARIES})
+            target_link_libraries(${test_name} PRIVATE uft::libusb)
         endif()
         set(TEST_LIBS "")
     elseif(${test_name} STREQUAL "test_salvage_fs")
@@ -889,7 +889,7 @@ if(TARGET Qt6::Test)
         # MF-254: HardwareTab tests pull uft_scp_direct.c — link
         # libusb when available so the SCP libusb path resolves.
         if(LIBUSB_FOUND)
-            target_link_libraries(${qt_test_name} PRIVATE ${LIBUSB_LIBRARIES})
+            target_link_libraries(${qt_test_name} PRIVATE uft::libusb)
         endif()
         # MF-155 (P1.3): test_wiring_runtime exercises QPushButton + click,
         # so it needs Qt6::Widgets. Link unconditionally if available — costs

@@ -121,6 +121,18 @@ if(LIBUSB_FOUND)
     # Propagate include dirs globally so every test target that pulls
     # uft_scp_direct.c via target_sources can resolve <libusb-1.0/libusb.h>.
     include_directories(${LIBUSB_INCLUDE_DIRS})
+    # CMake sanitizer CI runs with LINK_LIBRARIES_ONLY_TARGETS enabled
+    # — raw library names like "usb-1.0" from pkg-config are rejected.
+    # Wrap as an IMPORTED target so every consumer can link via
+    # `uft::libusb` regardless of how the library was discovered.
+    if(NOT TARGET uft::libusb)
+        add_library(uft::libusb INTERFACE IMPORTED)
+        target_include_directories(uft::libusb INTERFACE ${LIBUSB_INCLUDE_DIRS})
+        target_link_libraries(uft::libusb INTERFACE ${LIBUSB_LIBRARIES})
+        if(LIBUSB_LIBRARY_DIRS)
+            target_link_directories(uft::libusb INTERFACE ${LIBUSB_LIBRARY_DIRS})
+        endif()
+    endif()
     # MF-254: on Windows the libusb-1.0.dll must be on PATH at test
     # runtime. Locate the DLL so tests/CMakeLists.txt can add its
     # directory to the test ENVIRONMENT.
