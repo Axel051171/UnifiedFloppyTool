@@ -377,6 +377,7 @@ const uft_format_plugin_t uft_format_plugin_nanowasp = {
     .read_track = nanowasp_read_track,
     .write_track = nanowasp_write_track,
     .verify_track = uft_generic_verify_track,
+    .spec_status = UFT_SPEC_REVERSE_ENGINEERED,  /* V415-PLAN PLUGIN.spec_status (MF-262) */
 };
 
 UFT_REGISTER_FORMAT_PLUGIN(nanowasp)

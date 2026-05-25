@@ -243,5 +243,6 @@ const uft_format_plugin_t uft_format_plugin_udi = {
     .read_track = udi_read_track,
     .write_track = udi_write_track,
     .verify_track = uft_flux_verify_track,
+    .spec_status = UFT_SPEC_REVERSE_ENGINEERED,  /* V415-PLAN PLUGIN.spec_status (MF-262) */
 };
 UFT_REGISTER_FORMAT_PLUGIN(udi)

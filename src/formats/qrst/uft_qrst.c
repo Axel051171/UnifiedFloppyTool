@@ -577,6 +577,7 @@ const uft_format_plugin_t uft_format_plugin_qrst = {
     .read_track = qrst_read_track,
     .write_track = qrst_write_track,
     .verify_track = uft_generic_verify_track,
+    .spec_status = UFT_SPEC_REVERSE_ENGINEERED,  /* V415-PLAN PLUGIN.spec_status (MF-262) */
 };
 
 UFT_REGISTER_FORMAT_PLUGIN(qrst)

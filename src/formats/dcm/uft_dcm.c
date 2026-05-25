@@ -354,6 +354,7 @@ const uft_format_plugin_t uft_format_plugin_dcm = {
     .read_track   = dcm_read_track,
     .write_track  = dcm_write_track,
     .verify_track = uft_generic_verify_track,
+    .spec_status = UFT_SPEC_REVERSE_ENGINEERED,  /* V415-PLAN PLUGIN.spec_status (MF-262) */
 };
 
 UFT_REGISTER_FORMAT_PLUGIN(dcm)

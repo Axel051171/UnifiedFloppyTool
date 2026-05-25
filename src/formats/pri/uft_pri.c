@@ -267,6 +267,7 @@ const uft_format_plugin_t uft_format_plugin_pri = {
     .read_track   = pri_read_track,
     .write_track  = pri_write_track,
     .verify_track = uft_flux_verify_track,
+    .spec_status = UFT_SPEC_OFFICIAL_PARTIAL,  /* V415-PLAN PLUGIN.spec_status (MF-262) */
 };
 
 UFT_REGISTER_FORMAT_PLUGIN(pri)

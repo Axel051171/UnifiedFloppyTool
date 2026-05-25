@@ -76,5 +76,6 @@ const uft_format_plugin_t uft_format_plugin_po = {
     .probe = po_probe, .open = po_open, .close = po_close,
     .read_track = po_read_track, .write_track = po_write_track,
     .verify_track = uft_generic_verify_track,
+    .spec_status = UFT_SPEC_DERIVED,  /* V415-PLAN PLUGIN.spec_status (MF-262) */
 };
 UFT_REGISTER_FORMAT_PLUGIN(po)

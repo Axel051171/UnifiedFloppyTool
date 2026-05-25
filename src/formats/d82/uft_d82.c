@@ -97,5 +97,6 @@ const uft_format_plugin_t uft_format_plugin_d82 = {
     .probe = d82_probe, .open = d82_open, .close = d82_close,
     .read_track = d82_read_track, .write_track = d82_write_track,
     .verify_track = uft_generic_verify_track,
+    .spec_status = UFT_SPEC_DERIVED,  /* V415-PLAN PLUGIN.spec_status (MF-262) */
 };
 UFT_REGISTER_FORMAT_PLUGIN(d82)

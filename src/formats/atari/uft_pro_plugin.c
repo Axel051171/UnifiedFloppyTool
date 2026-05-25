@@ -144,5 +144,6 @@ const uft_format_plugin_t uft_format_plugin_pro = {
     .close = pro_close, .read_track = pro_read_track,
     .write_track = pro_write_track,
     .verify_track = uft_weak_bit_verify_track,
+    .spec_status = UFT_SPEC_DERIVED,  /* V415-PLAN PLUGIN.spec_status (MF-262) */
 };
 UFT_REGISTER_FORMAT_PLUGIN(pro)

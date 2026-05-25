@@ -163,5 +163,6 @@ const uft_format_plugin_t uft_format_plugin_d67 = {
     .probe = d67_probe, .open = d67_open, .close = d67_close,
     .read_track = d67_read_track, .write_track = d67_write_track,
     .verify_track = uft_generic_verify_track,
+    .spec_status = UFT_SPEC_DERIVED,  /* V415-PLAN PLUGIN.spec_status (MF-262) */
 };
 UFT_REGISTER_FORMAT_PLUGIN(d67)

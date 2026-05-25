@@ -288,6 +288,7 @@ const uft_format_plugin_t uft_format_plugin_dc42 = {
     .read_track   = dc42_read_track,
     .write_track  = dc42_write_track,
     .verify_track = uft_generic_verify_track,
+    .spec_status = UFT_SPEC_OFFICIAL_FULL,  /* V415-PLAN PLUGIN.spec_status (MF-262) */
 };
 
 UFT_REGISTER_FORMAT_PLUGIN(dc42)

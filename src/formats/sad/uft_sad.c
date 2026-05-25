@@ -88,5 +88,6 @@ const uft_format_plugin_t uft_format_plugin_sad = {
     .probe = sad_probe, .open = sad_open, .close = sad_close,
     .read_track = sad_read_track, .write_track = sad_write_track,
     .verify_track = uft_generic_verify_track,
+    .spec_status = UFT_SPEC_REVERSE_ENGINEERED,  /* V415-PLAN PLUGIN.spec_status (MF-262) */
 };
 UFT_REGISTER_FORMAT_PLUGIN(sad)

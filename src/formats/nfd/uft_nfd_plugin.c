@@ -261,5 +261,6 @@ const uft_format_plugin_t uft_format_plugin_nfd = {
     .read_track = nfd_read_track,
     .write_track = nfd_write_track,
     .verify_track = uft_generic_verify_track,
+    .spec_status = UFT_SPEC_OFFICIAL_PARTIAL,  /* V415-PLAN PLUGIN.spec_status (MF-262) */
 };
 UFT_REGISTER_FORMAT_PLUGIN(nfd)

@@ -147,5 +147,6 @@ const uft_format_plugin_t uft_format_plugin_jv1 = {
     .probe = jv1_probe, .open = jv1_open, .close = jv1_close,
     .read_track = jv1_read_track, .write_track = jv1_write_track,
     .verify_track = uft_generic_verify_track,
+    .spec_status = UFT_SPEC_DERIVED,  /* V415-PLAN PLUGIN.spec_status (MF-262) */
 };
 UFT_REGISTER_FORMAT_PLUGIN(jv1)

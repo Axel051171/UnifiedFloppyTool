@@ -162,5 +162,6 @@ const uft_format_plugin_t uft_format_plugin_msa = {
     .close = msa_plugin_close, .read_track = msa_plugin_read_track,
     .write_track = msa_plugin_write_track,
     .verify_track = uft_generic_verify_track,
+    .spec_status = UFT_SPEC_OFFICIAL_FULL,  /* V415-PLAN PLUGIN.spec_status (MF-262) */
 };
 UFT_REGISTER_FORMAT_PLUGIN(msa)

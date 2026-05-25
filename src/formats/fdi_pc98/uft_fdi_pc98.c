@@ -241,5 +241,6 @@ const uft_format_plugin_t uft_format_plugin_fdi_pc98 = {
     .read_track = fdi_pc98_read_track,
     .write_track = fdi_pc98_write_track,
     .verify_track = uft_generic_verify_track,
+    .spec_status = UFT_SPEC_OFFICIAL_PARTIAL,  /* V415-PLAN PLUGIN.spec_status (MF-262) */
 };
 UFT_REGISTER_FORMAT_PLUGIN(fdi_pc98)

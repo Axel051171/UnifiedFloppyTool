@@ -85,5 +85,6 @@ const uft_format_plugin_t uft_format_plugin_adf_arc = {
     .probe = adf_arc_probe, .open = adf_arc_open, .close = adf_arc_close,
     .read_track = adf_arc_read_track, .write_track = adf_arc_write_track,
     .verify_track = uft_generic_verify_track,
+    .spec_status = UFT_SPEC_REVERSE_ENGINEERED,  /* V415-PLAN PLUGIN.spec_status (MF-262) */
 };
 UFT_REGISTER_FORMAT_PLUGIN(adf_arc)

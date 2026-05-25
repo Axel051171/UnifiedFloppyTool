@@ -82,5 +82,6 @@ const uft_format_plugin_t uft_format_plugin_v9t9 = {
     .probe = v9t9_probe, .open = v9t9_open, .close = v9t9_close,
     .read_track = v9t9_read_track, .write_track = v9t9_write_track,
     .verify_track = uft_generic_verify_track,
+    .spec_status = UFT_SPEC_REVERSE_ENGINEERED,  /* V415-PLAN PLUGIN.spec_status (MF-262) */
 };
 UFT_REGISTER_FORMAT_PLUGIN(v9t9)

@@ -458,5 +458,6 @@ const uft_format_plugin_t uft_format_plugin_g71 = {
     .probe = g71_probe, .open = g71_plugin_open,
     .close = g71_plugin_close, .read_track = g71_plugin_read_track,
     .verify_track = uft_generic_verify_track,
+    .spec_status = UFT_SPEC_REVERSE_ENGINEERED,  /* V415-PLAN PLUGIN.spec_status (MF-262) */
 };
 UFT_REGISTER_FORMAT_PLUGIN(g71)

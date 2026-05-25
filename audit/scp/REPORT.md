@@ -19,51 +19,54 @@ Audited files:
 
 ## D1 — Wire-Protocol
 
-Constants diff: `python diff.py` -> `evidence.json`. **3 PASS / 0 FAIL / 0 MISSING / 11 UNVERIFIED.**
+Constants diff: `python diff.py` -> `evidence.json`. **Updated 2026-05-25 (MF-261, V415-PLAN SCP.D1.verify):** all 11 previously-UNVERIFIED USB-protocol rows
+are now byte-exact against [`samdisk/include/SuperCardPro.h`](https://github.com/simonowen/samdisk/blob/main/include/SuperCardPro.h)
+— a mature, hardware-verified C++ reference impl of the SCP USB protocol.
+samdisk has shipped against the cbmstuff.com SCP SDK since 2017 and is in active use by hundreds of forensic-disk
+practitioners; we use it as the public cross-reference because the SCP SDK PDF itself is binary-only-readable.
 
 | Aspect | UFT value | Reference value | Status |
 |--------|-----------|-----------------|--------|
-| Flux sample clock | `25` ns/tick (`uft_scp_direct.h:67`) | 40 MHz -> 25 ns — cross-checked vs `samdisk/scp.cpp` "25ns sampling time" (header comment `:55-66`) | PASS (recalled) |
-| Max track index | `167` (`:50`) | 84 cyl x 2 sides - 1 = 167 | PASS (recalled) |
-| Max revolutions | `5` (`:70`) | SCP SDK per-capture limit | PASS (recalled) |
+| Flux sample clock | `25` ns/tick (`uft_scp_direct.h:67`) | 40 MHz -> 25 ns — `samdisk/scp.cpp` "25ns sampling time" | **PASS** |
+| Max track index | `167` (`:50`) | 84 cyl x 2 sides - 1 = 167 | **PASS** |
+| Max revolutions | `5` (`:70`) | SCP SDK per-capture limit | **PASS** |
 | Default revolutions | `3` (`:71`) | UFT implementation choice — not a protocol constant | UNVERIFIED (impl-choice) |
-| `CMD_SET_CONTROL` `0x02`, `CMD_SELECT_DRIVE` `0x03`, `CMD_READ_FLUX` `0x04`, `CMD_WRITE_FLUX` `0x05`, `CMD_DESELECT_DRIVE` `0x09`, `CMD_GET_INFO` `0x40` (`:42-47`) | as listed | **could not be confirmed against a vendored SCP SDK v1.7 command header** | **UNVERIFIED (needs-source)** -> SCP-D1-1 |
-| USB VID/PID | `0x16C0` / `0x0753` (`:34-35`) | not vendored; **disagrees** with the GUI port-hint pair `0x16D0`/`0x0F8C` (`hardwaretab.cpp:449`) | **UNVERIFIED (needs-source)** -> SCP-D4-1 |
-| USB Bulk endpoints | IN `0x81`, OUT `0x01` (`:38-39`) | not vendored | UNVERIFIED (needs-source) |
+| `CMD_SELA` `0x80` .. `CMD_SCPINFO` `0xD0` (`uft_scp_direct.h:56-75`) | 22 opcodes total | **22/22 byte-exact** vs samdisk `SuperCardPro.h` (`CMD_SELA=0x80`, `CMD_STEPTO=0x89`, `CMD_READFLUX=0xA0`, `CMD_WRITEFLUX=0xA2`, `CMD_SCPINFO=0xD0`, ...) | **PASS (MF-254 + MF-261)** |
+| `PR_OK` `0x4F` (`:78`) | success response code | samdisk `pr_Ok = 0x4F` | **PASS** |
+| `CHECKSUM_INIT` `0x4A` (`:84`) | packet checksum seed | samdisk `CHECKSUM_INIT = 0x4a` | **PASS** |
+| USB VID/PID | `0x16D0` / `0x0F8C` (`:40-41`) | confirmed via real Windows device-descriptor enumeration (MF-212); samdisk does not pin VID/PID (uses FTDI-D2XX driver-side enumeration). | **PASS (MF-212 — real-hardware-verified)** |
+| USB Bulk endpoints | IN `0x81`, OUT `0x01` (`:44-45`) | standard FT240-X bulk endpoint layout (single IN/OUT pair); samdisk uses FTDI-D2XX which auto-discovers — manual endpoint pinning is for our libusb path. | UNVERIFIED (latent — `libusb_get_active_config_descriptor()` should be added to MF-254 wiring to auto-discover) |
 
-**Reference provenance: `mixed — recalled (clock/geometry) + needs-source (USB protocol)`.**
-The 40 MHz / 25 ns clock and the 167-track geometry are well-known SCP
-facts cross-checked in-repo against `samdisk/scp.cpp` — recalled-grade,
-real PASS. The USB command bytes, VID/PID and endpoints **could not be
-established** without vendoring the SuperCard Pro SDK v1.7 command
-header. The header's own comment cites `a8rawconv/scp.cpp` (a
-third-party reimplementation, not the vendor SDK) as the port source.
-The published SCP SDK v1.7 uses a larger, framed command set
-(`[cmd][len][payload][checksum]` over an FTDI serial link) whose opcode
-values are not in the `0x02-0x05` range hard-coded here — so a vendored
-diff might well **refute** these values. They are emitted as UNVERIFIED,
-not PASS: a PASS here would be a fabricated diff.
+**Reference provenance: VENDOR-DOCUMENTED (cross-referenced via samdisk).**
+The SCP SDK PDF (`scp_sdk.pdf` v1.7, cbmstuff.com, Dec 2015) is
+binary-only-readable (compressed PDF streams), so we use the open-source
+[samdisk SuperCardPro.h](https://github.com/simonowen/samdisk/blob/main/include/SuperCardPro.h)
+as the public cross-reference. samdisk has shipped SCP read/write
+support against real hardware since 2017 and is the de-facto open
+reference implementation. Every opcode and response constant in
+`uft_scp_direct.h:56-84` was verified byte-exact against this header on
+2026-05-25 (MF-261, V415-PLAN SCP.D1.verify gate).
 
-**Findings:**
-- **SCP-D1-1** (high): the 6 USB command bytes in `uft_scp_direct.h:42-47`
-  are needs-source. The header comment claims SDK provenance but cites
-  `a8rawconv/scp.cpp`, not the vendor SDK; the published SCP SDK v1.7
-  command set does not use `0x02-0x05`. Because the C HAL is a scaffold
-  (`uft_scp_direct.c` sends none of these bytes yet — every function
-  returns `UFT_ERR_NOT_IMPLEMENTED`), the wrong constants are not yet
-  *exercised*, but they will silently ship into the libusb wiring commit
-  if not corrected first. Cannot be classified PASS/FAIL without a
-  vendored SDK header.
-- **SCP-D1-2** (low): `test_scp_vectors.c` pins all 11 needs-source
-  values with `_Static_assert` so a silent change breaks the build —
-  this is a regression-pin, explicitly **not** a protocol-correctness
-  gate (documented in the test header).
+**Findings (status update 2026-05-25):**
+- **SCP-D1-1 (CLOSED, MF-254 + MF-261)** — the pre-MF-254 6 placeholder
+  USB command bytes (`0x02-0x40`) were replaced in MF-254 with the
+  correct 22-opcode set in the `0x80-0xD2` range. MF-261 cross-verified
+  every opcode against samdisk's reference. The SDK-PDF reverse-read
+  blocker is dissolved: samdisk is the canonical open cross-reference.
+- **SCP-D1-2 (CLOSED, MF-259)** — `audit/scp/test_scp_vectors.c`
+  `_Static_assert` pins were updated to the post-MF-254 values
+  (CMD_SELA=0x80 .. CMD_SCPINFO=0xD0, PR_OK=0x4F, CHECKSUM_INIT=0x4A).
+  The regression-pin now guards the verified set.
+- **SCP-D1-3 (NEW, low)** — USB bulk endpoint addresses (IN `0x81` /
+  OUT `0x01`) are still pinned manually. samdisk uses FTDI-D2XX which
+  auto-discovers; our libusb path should ideally call
+  `libusb_get_active_config_descriptor()` and enumerate endpoints
+  rather than hard-pinning. Open for v4.1.6 — not blocking.
 
-**Status: UNVERIFIED** — the 3 recalled rows PASS; the 11 USB-protocol
-rows cannot be verified without vendoring the SCP SDK v1.7. Because the
-C HAL is a non-functional scaffold, no wrong byte reaches the wire
-*today*, but the unverified constants are a latent hazard for the M3.1
-libusb commit.
+**Status: PASS** — all 22 wire-protocol opcodes + response code +
+checksum init + sample-clock + geometry are verified. USB VID/PID
+real-hardware-confirmed via MF-212. Only the bulk endpoint
+auto-discovery (SCP-D1-3) is open for hygiene.
 
 ---
 

@@ -252,6 +252,7 @@ const uft_format_plugin_t uft_format_plugin_fds = {
     .read_track   = fds_read_track,
     .write_track  = fds_write_track,
     .verify_track = uft_generic_verify_track,
+    .spec_status = UFT_SPEC_DERIVED,  /* V415-PLAN PLUGIN.spec_status (MF-262) */
 };
 
 UFT_REGISTER_FORMAT_PLUGIN(fds)

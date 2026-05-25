@@ -81,5 +81,6 @@ const uft_format_plugin_t uft_format_plugin_xdm86 = {
     .probe = xdm86_probe, .open = xdm86_open, .close = xdm86_close,
     .read_track = xdm86_read_track, .write_track = xdm86_write_track,
     .verify_track = uft_generic_verify_track,
+    .spec_status = UFT_SPEC_DERIVED,  /* V415-PLAN PLUGIN.spec_status (MF-262) */
 };
 UFT_REGISTER_FORMAT_PLUGIN(xdm86)

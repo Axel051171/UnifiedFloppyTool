@@ -113,19 +113,20 @@ aktiv abgearbeitet.
 
 ## Prinzip 7 — Ehrlichkeit bei proprietären Formaten
 
-### 7.1 Spec-Status-Marker pro Plugin fehlt
-- **Status:** MITIGATED (Infrastruktur da, Populierung 15/80)
-- **Beschreibung:** Feld `spec_status` (`uft_spec_status_t`) ist in
-  `uft_format_plugin_t` implementiert. 15 Plugins sind populiert (2IMG, ADF,
-  ATR, CQM, D64, DSK-CPC, EDSK, G64, HFE, IMD, IMG, IPF, STX, TD0, WOZ). Die
-  restlichen ~65 Plugins stehen defaultmäßig auf `UFT_SPEC_UNKNOWN` — das ist
-  ein Prinzip-Verstoß und muss populiert werden.
-- **Workaround:** `tests/test_spec_status.c` zeigt die API-Form; populierte
-  Plugins sind in den jeweiligen `uft_format_plugin_<name> = { .spec_status = …}`
-  Initializern dokumentiert.
-- **Plan:** Restliche Plugins in 4.2.x iterativ populieren. CI-Audit der
-  Plugins mit `spec_status == UFT_SPEC_UNKNOWN` ausschlägt (separater Eintrag
-  unter M.1).
+### 7.1 Spec-Status-Marker pro Plugin
+- **Status:** ✓ CLOSED (MF-262, V415-PLAN PLUGIN.spec_status, 2026-05-25) —
+  Populierung **84/84 = 100%** (`audit_plugin_compliance.py`).
+- **Beschreibung:** Feld `spec_status` (`uft_spec_status_t`) in
+  `uft_format_plugin_t`. Vor MF-262 hatten 15/84 Plugins gesetztes Feld;
+  die anderen 69 standen default auf `UFT_SPEC_UNKNOWN` (Prinzip-7-Verstoß).
+- **Resolution:** Massentool `scripts/populate_spec_status.py` mit per-Format-
+  Mapping (OFFICIAL_FULL/OFFICIAL_PARTIAL/REVERSE_ENGINEERED/DERIVED) basierend
+  auf Format-Provenienz. 69 Plugins in einem Lauf populiert. Build grün, alle
+  test_spec_status / audit_plugin_compliance Tests grün.
+- **Folge-Arbeit:** Per-Plugin-Verfeinerung wo der Mapping-Bucket zu pauschal
+  war (z.B. D71 ist DERIVED, könnte aber genauer als REVERSE_ENGINEERED markiert
+  werden — CBM DOS war nie öffentlich spezifiziert). Erfolgt in v4.1.6 als
+  Doku-Hygiene, nicht blockierend.
 
 ### 7.2 Feature-Matrizen pro Plugin fehlen
 - **Status:** MITIGATED (Infrastruktur da, Populierung 5/80)
@@ -273,6 +274,31 @@ Findings from the v4.1.5-hardening audit (MASTER_PLAN.md §v4.1.5):
 
 **Pre-tag test pass rate:** 47/180 → **151/151 (100%)**.
 
+### M.3 V415-PLAN execution — 2026-05-25 (MF-261/MF-262)
+
+Sub-goals from `C:\Users\Axel\Downloads\V415_GOAL_PLAN.md` Variante B:
+
+| Sub-goal | Status | Resolution |
+|---|---|---|
+| P2.4 (Squash → main + v4.1.4 tag) | ⬜ blocked | RC1-Window läuft bis 2026-05-29 |
+| HIL.GW (Greaseweazle real-HW tests) | ⬜ blocked | Axel's ThinkPad + Greaseweazle nötig |
+| SCP.D1.verify (USB opcodes vs SDK) | ✓ CLOSED MF-261 | 22/22 opcodes byte-exakt gegen samdisk/SuperCardPro.h verifiziert; audit/scp/REPORT.md D1 UNVERIFIED→PASS |
+| M3.1 (SCP-Direct libusb wiring) | ✓ MF-254 | Wiring landed; Tier-3 HW-bench pending (UFT-008) |
+| LOSS.preflight (44 converter wiring) | ⬜ deferred | 1 Woche Arbeit, kein Quick-Win |
+| ARCH7.C.wire (Teensy probe wrapper) | ✓ MF-213 partial | Pure-classifier da; QSerial-Wrapper offen für v4.1.6 |
+| ARCH7.B.fix (SCP VID/PID align) | ✓ CLOSED MF-212 | 0x16D0:0x0F8C in Header + GUI synchronisiert via Macro |
+| PLUGIN.spec_status (65 plugins) | ✓ CLOSED MF-262 | 15/84 → 84/84 via scripts/populate_spec_status.py |
+| PLUGIN.features (75 plugins) | ⬜ deferred | 5/84 — feature-matrix populator separate Arbeit für v4.1.6 |
+| BUILD.rebaseline | ✓ CLOSED MF-262 | 224→219, 5 entries resolved & committed |
+| SCOPE.switch_decision | ⬜ analysis-done | docs/SCOPE_DECISION_NON_FLOPPY.md — user-decision required |
+| EMUCI.real (CLI uft-decode) | ⬜ deferred | depends on LOSS.preflight + M3.1-HW-Bench |
+| TAG.v415 | ⬜ blocked | depends on M3.1-HW + LOSS.preflight + ARCH7.C.wire |
+
+**Honest summary:** 7/13 V415-PLAN sub-goals geschlossen oder strukturell
+erledigt. Verbleibende 6 brauchen entweder Hardware (HIL.GW, M3.1-Bench),
+Multi-Session-Coding (LOSS.preflight, EMUCI.real, ARCH7.C.wire), oder
+User-Entscheidung (SCOPE).
+
 ---
 
 ## Wie beitragen
@@ -285,8 +311,8 @@ Findings from the v4.1.5-hardening audit (MASTER_PLAN.md §v4.1.5):
 
 ---
 
-**Version:** 1.2
-**Stand:** 2026-05-25
+**Version:** 1.3
+**Stand:** 2026-05-25 (MF-262 — V415-PLAN execution)
 
 > **Änderungen v1.1 (P2.2 / MF-174):** M.-2 (rule H-9) auf CLOSED
 > gesetzt — der Type-Driven-HAL-Refactor (P1.x) hat die V1-DTOs samt

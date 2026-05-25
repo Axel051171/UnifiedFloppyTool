@@ -172,5 +172,6 @@ const uft_format_plugin_t uft_format_plugin_msx_disk = {
     .probe = msx_probe, .open = msx_open, .close = msx_close,
     .read_track = msx_read_track, .write_track = msx_write_track,
     .verify_track = uft_generic_verify_track,
+    .spec_status = UFT_SPEC_DERIVED,  /* V415-PLAN PLUGIN.spec_status (MF-262) */
 };
 UFT_REGISTER_FORMAT_PLUGIN(msx_disk)
