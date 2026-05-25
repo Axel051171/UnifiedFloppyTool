@@ -253,6 +253,28 @@ aktiv abgearbeitet.
 
 ---
 
+### M.2 v4.1.5-hardening — Closed in this release
+
+Findings from the v4.1.5-hardening audit (MASTER_PLAN.md §v4.1.5):
+
+| ID | Severity | Resolution | Commit |
+|---|---|---|---|
+| UFT-001 | P0 | 9/9 V2-Provider have live code path (1 Production + 8 Beta) | MF-249..MF-258 |
+| UFT-002 | P0 | CMakeLists.txt version-comment stale → removed, refers to VERSION.txt SSOT | v4.1.5 pre-tag |
+| UFT-003 | P1 | HardwareTab honest-stub provider styled distinctly (orange "Preview") | MF-247 |
+| UFT-004 | P1 | `uft_format_plugin_t` got `api_version` field + runtime gate + sizeof-pin (216 B) | MF-260 |
+| UFT-005 | P1 | `test_transitions_ns_contract` extended with KryoFlux + FluxEngine FFI shields | MF-260 |
+| UFT-006 | P1 | `.claude/CLAUDE.md` updated 6 → 9 V2-provider list | v4.1.5 pre-tag |
+| UFT-007 | P1 | VID/PID confirmed as SSOT in `uft_scp_direct.h` (orchestrator finding was stale) | MF-212 |
+| UFT-T01 | P1 | `<threads.h>` got `__has_include` guard for MinGW | v4.1.5 pre-tag |
+| UFT-T02 | P1 | 4 tests with phantom-symbol link errors fixed via per-test `target_sources` | v4.1.5 pre-tag |
+| UFT-T04 | P2 | Reduced excluded tests 43 → 38 (re-enabled test_scp_direct_hal, test_applesauce_hal, test_fnmatch_shim, test_whdload_resload + new test_plugin_abi); remaining 38 tests reference impls deleted in MF-011 and stay excluded until restoration. | MF-260 |
+| UFT-T05 | P3 | `src/analysis/events/CMakeLists.txt` already uses `CMAKE_CURRENT_SOURCE_DIR` (path bug structurally fixed); subdir not yet wired into root CMake — deliberate scope cap. | v4.1.5 pre-tag |
+
+**Pre-tag test pass rate:** 47/180 → **151/151 (100%)**.
+
+---
+
 ## Wie beitragen
 
 - **Neues Issue melden:** GitHub Issue mit Label `principle-violation`.
@@ -263,8 +285,8 @@ aktiv abgearbeitet.
 
 ---
 
-**Version:** 1.1
-**Stand:** 2026-05-14
+**Version:** 1.2
+**Stand:** 2026-05-25
 
 > **Änderungen v1.1 (P2.2 / MF-174):** M.-2 (rule H-9) auf CLOSED
 > gesetzt — der Type-Driven-HAL-Refactor (P1.x) hat die V1-DTOs samt

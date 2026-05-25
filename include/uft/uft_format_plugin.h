@@ -514,7 +514,36 @@ typedef struct uft_format_plugin {
     const uft_plugin_compat_entry_t* compat_entries;
     size_t              compat_count;
 
+    // === UFT-004 (v4.1.5) — ABI version gate ===
+    /**
+     * @brief Plugin-API-Version. Plugins MÜSSEN dies auf
+     *        `UFT_PLUGIN_API_VERSION` setzen.
+     *
+     * Default 0 (legacy) wird vom Registrar als "pre-v4.1.5 plugin" akzeptiert,
+     * aber Stderr-Warnung. Plugins gegen ältere Header-Versionen, die diesen
+     * Wert nicht setzen, laufen weiter — keine Hard-Break. Bei v5.0 wird
+     * api_version != UFT_PLUGIN_API_VERSION ein UFT_ERROR_PLUGIN_LOAD.
+     *
+     * MUST stay at the END of the struct — adding anything after this
+     * silently breaks every plugin's designated initializer.
+     */
+    uint32_t            api_version;
+
 } uft_format_plugin_t;
+
+/**
+ * @brief Aktuelle Plugin-API-Version.
+ *
+ * Bumpen wenn:
+ *   - Felder umsortiert werden (designated-init bricht silent)
+ *   - Felder in der Mitte gelöscht werden
+ *   - Funktions-Pointer-Signaturen geändert werden
+ *
+ * Nicht bumpen wenn:
+ *   - Felder am ENDE angehängt werden (Default 0, kompatibel)
+ *   - Pure Doku-Änderungen
+ */
+#define UFT_PLUGIN_API_VERSION 1u
 
 /* ============================================================================
  * UFT-004 (v4.1.5-hardening) — ABI-bomb guard.
@@ -546,14 +575,14 @@ typedef struct uft_format_plugin {
 #  if defined(__SIZEOF_POINTER__) && __SIZEOF_POINTER__ == 8
      /* 64-bit ABI (x86_64, ARM64). Static_assert is C11. */
 #    if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
-       _Static_assert(sizeof(uft_format_plugin_t) > 0,
-                      "uft_format_plugin_t became empty — layout corruption?");
-       /* The literal size value depends on the target ABI and is verified
-        * by the build (any silent reorder will trip a separate runtime
-        * check in tests/test_plugin_abi.c when that lands). The intent of
-        * the static_assert above is to catch the catastrophic case (struct
-        * emptied / replaced) immediately. A future commit will populate
-        * the exact size literal once the v4.1.5 audit baseline is recorded. */
+       /* Pinned 2026-05-25 against MinGW-w64 g++ 13.1.0 on Windows x86_64.
+        * tests/test_plugin_abi.c reports `sizeof(uft_format_plugin_t) = 216`
+        * after the UFT-004 api_version field was appended. If this trips
+        * on a new platform, run the test, copy the reported size here,
+        * and document the platform delta in MASTER_PLAN v4.1.5-Backlog. */
+       _Static_assert(sizeof(uft_format_plugin_t) == 216,
+                      "uft_format_plugin_t layout changed — update the pin "
+                      "in this header AND tests/test_plugin_abi.c.");
 #    endif
 #  endif
 #endif

@@ -84,7 +84,7 @@ Alle bisher aufgedeckten Findings in einer priorisierten Liste:
 | **MF-007** | **P1** | **Plugin-Test-Coverage 11.8 %** | **offen** |
 | MF-008 | P2 | docs / KNOWN_ISSUES stellenweise stale | offen |
 | MF-009 | P3 | TODO/FIXME-Marker (Census 2026-04-25) | scoped (siehe §MF-009-Census) |
-| MF-010 | P2 | 318 nicht-kanonische Includes | offen |
+| MF-010 | P2 | Non-kanonische Includes — Census 2026-05-25: 81 unqualifizierte `uft_*.h`-Includes (Sibling-Pattern, technisch OK durch -I-Pfade) + ~140 SAMdisk-imported Header (third-party). Echte Cleanup-Kandidaten: 81 Sibling-Includes → `uft/...`-Pfad. Multi-Session-Arbeit, P2. | scoped |
 | **MF-011** | **P0** | **175 Skeleton-Header, 3355 Phantom-Funktionen** | **offen** |
 | **MF-012** | **P0** | **XCopy-Tab Phantom-Feature** (GUI ohne Backend) | **offen** |
 
@@ -466,12 +466,12 @@ Findings für die folgenden Sessions / Tag-Gates:
 |---|---|---|---|---|
 | UFT-001 | ✓ **9/9 LIVE** MF-249..MF-258 | Alle 9 V2-Provider haben jetzt einen live Code-Pfad zu echter Hardware. 1 production (Greaseweazle), 8 Beta (live code, hardware-bench pending). Reality-Tracker in §UFT-001-Status. | — | siehe Status-Tabelle |
 | UFT-003 | ✓ CLOSED MF-247 | HardwareTab honest-stub-Connection visuell distinkt: orange "Disconnect (Preview)" Button mit Tooltip statt grünem Default. Prinzip-4-Verstoß behoben. | — | src/hardwaretab.cpp:818-845 |
-| UFT-004 | P1 | `uft_format_plugin_t` hat kein API-Version-Feld und kein `_Static_assert(sizeof…)` Guard. ABI-bomb-Risiko falls externe Plugins eingeführt werden. Basis-Static_assert in MF-246 ergänzt; voller `api_version`-Field-Mechanismus für `.so`-Plugins offen. | M (~4h, 80 Plugins designated-init = sicher, aber Guard fehlt) | include/uft/uft_format_plugin.h:351-517 |
-| UFT-005 | P1 | `test_transitions_ns_contract.c` läuft nur gegen MockProviderV2; KryoFlux/FluxEngine-Fixtures fehlen. ARCH-2-Regression-Schutz unvollständig. | S (~2h) | tests/unit/test_transitions_ns_contract.c |
+| UFT-004 | ✓ CLOSED MF-260 | `uft_format_plugin_t` bekam `api_version`-Field + `UFT_PLUGIN_API_VERSION` Macro + Runtime-Gate (`uft_register_format_plugin` lehnt `api_version > host` ab, warnt bei `== 0` als Legacy). Static_assert pinnt jetzt `sizeof == 216` (MinGW-w64 x86_64). Test `tests/test_plugin_abi.c` mit 8 Assertions: api_version-Macro, struct-size-floor, field-offset-bound, registrar-reject-null/unnamed/future, accept-current/legacy. | — | include/uft/uft_format_plugin.h:516-580, src/core/uft_format_plugin.c:30-65, tests/test_plugin_abi.c |
+| UFT-005 | ✓ CLOSED MF-260 | `test_transitions_ns_contract` extended via `transitions_ns_kryoflux_contract_probe()` + `transitions_ns_fluxengine_contract_probe()` in FFI. Beide injizieren einen "binary not found" Runner und assertieren dass beide Provider mit honest non-Captured outcome antworten (kein fabriziertes FluxCaptured mit Container-Bytes). ARCH-2-Regression-Shield aktiv. | — | tests/unit/transitions_ns_ffi.cpp, tests/unit/test_transitions_ns_contract.c |
 | UFT-007 | ✓ CLOSED MF-212 | ARCH-7 sub-B Status verifiziert: VID/PID jetzt SSOT in `uft_scp_direct.h:40-41` (`0x16D0:0x0F8C`), `hardwaretab.cpp:548` liest exakt das Macro. Orchestrator-Finding war stale. | — | include/uft/hal/uft_scp_direct.h:40-41 |
 | UFT-008 | P1 | HIL Hardware-Tier 14/15 NOT_RUN. Pro Controller eine Bench-Session nötig. Blockiert durch UFT-001. | S pro Controller (1-2h Bench-Time) | tests/hil/run_hil.py, audit/rc1_field_notes.md |
-| UFT-T04 | P2 | 117 Test-Executables bauen nicht — referenzieren Symbole aus den ~140k LOC die MF-011 gelöscht hat (otdr8/9/10/11/12, dms_*, uft_align_fuse_*, etc.). 1787 undefined references gemessen. Entweder Tests löschen oder Implementations rekonstruieren. | L (Bulk-Triage 1-2 Sessions) | tests/test_*.c, src/analysis/events/CMakeLists.txt (standalone-project pattern) |
-| UFT-T05 | P3 | `src/analysis/events/CMakeLists.txt` ist Standalone-CMake-Projekt mit `${CMAKE_SOURCE_DIR}/../../../include/uft/analysis` — broken-by-design wenn vom Root-CMake mit add_subdirectory inkludiert. | S (Pfade auf Top-Level CMAKE_SOURCE_DIR umstellen) | src/analysis/events/CMakeLists.txt:6 |
+| UFT-T04 | ✓ REDUCED MF-260 | Bulk-Triage Schritt 1: 4 stale Exclusions re-enabled (test_scp_direct_hal nach MF-254 libusb-Wiring, test_applesauce_hal Pure-Utility, test_fnmatch_shim, test_whdload_resload) + new test_plugin_abi. 146 → 151 tests passing. **Verbleibende 38 Exclusions** sind echte MF-011-Phantome (impl gelöscht) und dokumentiert per-Eintrag in `tests/CMakeLists.txt`. Vollständige Restoration ist Multi-Session-Arbeit (out-of-scope für v4.1.5-tag). | M (38 verbleibend, restoration multi-session) | tests/CMakeLists.txt:53-110 |
+| UFT-T05 | ✓ CLOSED v4.1.5 pre-tag | Datei `src/analysis/events/CMakeLists.txt:13` nutzt bereits `CMAKE_CURRENT_SOURCE_DIR` für Include-Pfad — `add_subdirectory()`-sicher. Subdir noch nicht ins Root-CMake verkabelt (separate Entscheidung, Out-of-Scope für T05). | — | src/analysis/events/CMakeLists.txt:13 |
 
 ### Was diese Session NICHT geprüft hat
 

@@ -71,13 +71,14 @@ set(EXCLUDED_TESTS
     # (otdr8-12, dms_*, uft_align_fuse_*, etc.). Mass-exclusion is honest:
     # the build is now clean and the gap is documented in MASTER_PLAN.md.
     "test_amigados_validate"   # uft_amiga_validate_ext impl deleted
-    "test_applesauce_hal"      # depends on libusb wiring (M3.3 pending)
+    # "test_applesauce_hal"    # v4.1.5: Applesauce HAL uses serial (not libusb);
+                              #   uft_applesauce.c has 13/20 real funcs; re-enabled
     "test_confidence_v10"      # otdr_event_core_v10 impl absent (events/CMakeLists is standalone-project)
     "test_crc16"               # uft_crc16 separate impl missing
     "test_decode_score"        # uft_decode_score.c removed in MF-011
     "test_event_v8"            # otdr_event_core_v8 impl absent
     "test_export_v12"          # otdr_event_core_v12 impl absent
-    "test_fnmatch_shim"        # uft_fnmatch.c not in uft_core
+    # "test_fnmatch_shim"      # v4.1.5: uft_fnmatch.c re-included via target_sources
     "test_format_verify_common" # format_verify common shim absent
     "test_integrity_v9"        # otdr_event_core_v9 impl absent
     "test_libdsk_formats"      # libdsk-style format glue absent
@@ -90,11 +91,11 @@ set(EXCLUDED_TESTS
     "test_pipeline_v11"        # otdr_event_core_v11 impl absent
     "test_pll_unified"         # uft_pll_unified.c absent (skeleton header)
     "test_process"             # uft_process.c absent
-    "test_scp_direct_hal"      # depends on libusb wiring (M3.1 pending)
+    # "test_scp_direct_hal"    # v4.1.5: libusb wiring landed (MF-254); re-enabled
     "test_sector_parser"       # uft_sector_parser.c absent
     "test_settings"            # uft_settings.c absent
     "test_ti99_formats"        # uft_ti99 lib not registered in root CMake
-    "test_whdload_resload"     # whdload resload module absent
+    # "test_whdload_resload"   # v4.1.5: src/whdload/whdload_resload_api.c re-included
     # "test_xum1541_hal"       # MF-255: libusb wiring landed, test re-enabled
     "test_mega65_fat32"        # uft_mega65 module is stub-only
     "test_fat_extensions"      # uft_fs lib not registered in root CMake
@@ -525,7 +526,9 @@ foreach(test_source ${TEST_SOURCES})
     elseif(${test_name} STREQUAL "test_transitions_ns_contract")
         # v4.1.5 hardening / audit Lücke #2 (ARCH-2): enforces the
         # FluxCaptured::transitions_ns nanosecond-interval contract on
-        # MockProviderV2.
+        # MockProviderV2 plus UFT-005 contract shields for KryoFlux +
+        # FluxEngine providers (binary-not-found path must yield an
+        # honest non-Captured outcome, never fabricated flux).
         #
         # Pure-C test (.c) per stop-hook spec. FluxCaptured is a C++
         # sum-type variant — pure C cannot parse outcomes.h directly.
@@ -537,11 +540,16 @@ foreach(test_source ${TEST_SOURCES})
         # link time without depending on the C-test compilation mode.
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/tests/mock_provider_v2.cpp
-            ${CMAKE_SOURCE_DIR}/tests/unit/transitions_ns_ffi.cpp)
+            ${CMAKE_SOURCE_DIR}/tests/unit/transitions_ns_ffi.cpp
+            ${CMAKE_SOURCE_DIR}/src/hardware_providers/kryoflux_provider_v2.cpp
+            ${CMAKE_SOURCE_DIR}/src/hardware_providers/fluxengine_provider_v2.cpp
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_kryoflux_stream.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_scp_parser.c)
         target_include_directories(${test_name} PRIVATE
-            ${CMAKE_SOURCE_DIR}/tests)
+            ${CMAKE_SOURCE_DIR}/tests
+            ${CMAKE_SOURCE_DIR}/src)
         set_target_properties(${test_name} PROPERTIES LINKER_LANGUAGE CXX)
-        set(TEST_LIBS "")
+        set(TEST_LIBS uft_core uft_crc)
     elseif(${test_name} STREQUAL "test_gw_protocol")
         # MF-135: GW protocol regression tests need uft_gw_strerror() +
         # the inline tick conversion helpers from the full HAL impl.
@@ -701,6 +709,40 @@ foreach(test_source ${TEST_SOURCES})
             target_link_libraries(${test_name} PRIVATE uft::libusb)
         endif()
         set(TEST_LIBS "")
+    elseif(${test_name} STREQUAL "test_scp_direct_hal")
+        # v4.1.5-hardening: SCP-Direct HAL test exercises libusb wiring
+        # (MF-254). Same pattern as test_xum1541_hal: link uft_scp_direct.c
+        # + libusb when available.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/hal/uft_scp_direct.c)
+        target_include_directories(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src)
+        if(LIBUSB_FOUND)
+            target_link_libraries(${test_name} PRIVATE uft::libusb)
+        endif()
+        set(TEST_LIBS "")
+    elseif(${test_name} STREQUAL "test_applesauce_hal")
+        # v4.1.5-hardening: Applesauce HAL test — pure-utility +
+        # lifecycle + setter validation. Serial-touching stubs return
+        # honest -1 (no QSerialPort wiring needed in the C HAL layer;
+        # that lives in src/hardware_providers/qserial_applesauce_*).
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/hal/uft_applesauce.c)
+        target_include_directories(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src)
+        set(TEST_LIBS "")
+    elseif(${test_name} STREQUAL "test_fnmatch_shim")
+        # v4.1.5-hardening: portable fnmatch (Windows fallback). Source
+        # lives in src/compat/, not in uft_core.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/compat/uft_fnmatch.c)
+        set(TEST_LIBS "")
+    elseif(${test_name} STREQUAL "test_whdload_resload")
+        # v4.1.5-hardening: WHDLoad resload_* API catalog (restored
+        # from v3.7.0). Source in src/whdload/, not uft_core.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/whdload/whdload_resload_api.c)
+        set(TEST_LIBS "")
     elseif(${test_name} STREQUAL "test_salvage_fs")
         # v4.1.5-hardening: salvage-fs strategies API (T7 DiskSalv-scaffold,
         # see docs/MASTER_PLAN.md §M2 Amiga-Block). Source is in
@@ -787,7 +829,8 @@ foreach(test_source ${TEST_SOURCES})
     if(WIN32 AND DEFINED UFT_LIBUSB_DLL_DIR)
         if(${test_name} STREQUAL "test_hal_conformance" OR
            ${test_name} STREQUAL "test_scp_provider_v2" OR
-           ${test_name} STREQUAL "test_xum1541_hal")
+           ${test_name} STREQUAL "test_xum1541_hal" OR
+           ${test_name} STREQUAL "test_scp_direct_hal")
             set_tests_properties(${test_name} PROPERTIES
                 ENVIRONMENT "PATH=${UFT_LIBUSB_DLL_DIR}")
         endif()
