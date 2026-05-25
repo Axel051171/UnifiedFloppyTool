@@ -119,7 +119,7 @@ const uft_format_plugin_t uft_format_plugin_scl = {
     .close = scl_close, .read_track = scl_read_track,
     .write_track = scl_write_track,
     .verify_track = uft_generic_verify_track,
-    .spec_status = UFT_SPEC_OFFICIAL_FULL,  /* V415-PLAN PLUGIN.spec_status (MF-262) */,
+    .spec_status = UFT_SPEC_OFFICIAL_FULL,  /* V415-PLAN PLUGIN.spec_status (MF-262) */
     .features = uft_format_plugin_scl_features,  /* V415-PLAN PLUGIN.features (MF-263) */
     .feature_count = sizeof(uft_format_plugin_scl_features) / sizeof(uft_format_plugin_scl_features[0]),
 };

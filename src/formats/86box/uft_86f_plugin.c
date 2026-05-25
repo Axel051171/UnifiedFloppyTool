@@ -175,7 +175,7 @@ const uft_format_plugin_t uft_format_plugin_86f = {
     .close = f86_close, .read_track = f86_read_track,
     .write_track = f86_write_track,
     .verify_track = uft_generic_verify_track,
-    .spec_status = UFT_SPEC_REVERSE_ENGINEERED,  /* V415-PLAN PLUGIN.spec_status (MF-262) */,
+    .spec_status = UFT_SPEC_REVERSE_ENGINEERED,  /* V415-PLAN PLUGIN.spec_status (MF-262) */
     .features = uft_format_plugin_86f_features,  /* V415-PLAN PLUGIN.features (MF-263) */
     .feature_count = sizeof(uft_format_plugin_86f_features) / sizeof(uft_format_plugin_86f_features[0]),
 };

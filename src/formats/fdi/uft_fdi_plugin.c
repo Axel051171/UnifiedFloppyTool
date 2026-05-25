@@ -185,7 +185,7 @@ const uft_format_plugin_t uft_format_plugin_fdi = {
     .close = fdi_plugin_close, .read_track = fdi_plugin_read_track,
     .write_track = fdi_plugin_write_track,
     .verify_track = uft_generic_verify_track,
-    .spec_status = UFT_SPEC_OFFICIAL_PARTIAL,  /* V415-PLAN PLUGIN.spec_status (MF-262) */,
+    .spec_status = UFT_SPEC_OFFICIAL_PARTIAL,  /* V415-PLAN PLUGIN.spec_status (MF-262) */
     .features = uft_format_plugin_fdi_features,  /* V415-PLAN PLUGIN.features (MF-263) */
     .feature_count = sizeof(uft_format_plugin_fdi_features) / sizeof(uft_format_plugin_fdi_features[0]),
 };

@@ -327,7 +327,7 @@ const uft_format_plugin_t uft_format_plugin_atx = {
     .probe = atx_plugin_probe, .open = atx_open,
     .close = atx_close, .read_track = atx_read_track,
     .verify_track = uft_weak_bit_verify_track,
-    .spec_status = UFT_SPEC_REVERSE_ENGINEERED,  /* V415-PLAN PLUGIN.spec_status (MF-262) */,
+    .spec_status = UFT_SPEC_REVERSE_ENGINEERED,  /* V415-PLAN PLUGIN.spec_status (MF-262) */
     .features = uft_format_plugin_atx_features,  /* V415-PLAN PLUGIN.features (MF-263) */
     .feature_count = sizeof(uft_format_plugin_atx_features) / sizeof(uft_format_plugin_atx_features[0]),
 };

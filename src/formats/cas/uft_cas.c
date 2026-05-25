@@ -215,7 +215,7 @@ const uft_format_plugin_t uft_format_plugin_cas = {
     .close        = cas_close,
     .read_track   = cas_read_track,
     .verify_track = uft_generic_verify_track,
-    .spec_status = UFT_SPEC_DERIVED,  /* V415-PLAN PLUGIN.spec_status (MF-262) */,
+    .spec_status = UFT_SPEC_DERIVED,  /* V415-PLAN PLUGIN.spec_status (MF-262) */
     .features = uft_format_plugin_cas_features,  /* V415-PLAN PLUGIN.features (MF-263) */
     .feature_count = sizeof(uft_format_plugin_cas_features) / sizeof(uft_format_plugin_cas_features[0]),
 };

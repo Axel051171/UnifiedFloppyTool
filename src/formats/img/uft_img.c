@@ -507,7 +507,7 @@ const uft_format_plugin_t uft_format_plugin_img = {
     .init = NULL,
     .shutdown = NULL,
     .private_data = NULL,
-    .spec_status = UFT_SPEC_DERIVED,  /* Raw sector dump; no formal spec but universal de-facto PC standard */,
+    .spec_status = UFT_SPEC_DERIVED,  /* Raw sector dump; no formal spec but universal de-facto PC standard */
     .features = uft_format_plugin_img_features,  /* V415-PLAN PLUGIN.features (MF-263) */
     .feature_count = sizeof(uft_format_plugin_img_features) / sizeof(uft_format_plugin_img_features[0]),
 };

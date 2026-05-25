@@ -91,7 +91,7 @@ const uft_format_plugin_t uft_format_plugin_xdm86 = {
     .probe = xdm86_probe, .open = xdm86_open, .close = xdm86_close,
     .read_track = xdm86_read_track, .write_track = xdm86_write_track,
     .verify_track = uft_generic_verify_track,
-    .spec_status = UFT_SPEC_DERIVED,  /* V415-PLAN PLUGIN.spec_status (MF-262) */,
+    .spec_status = UFT_SPEC_DERIVED,  /* V415-PLAN PLUGIN.spec_status (MF-262) */
     .features = uft_format_plugin_xdm86_features,  /* V415-PLAN PLUGIN.features (MF-263) */
     .feature_count = sizeof(uft_format_plugin_xdm86_features) / sizeof(uft_format_plugin_xdm86_features[0]),
 };

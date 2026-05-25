@@ -196,7 +196,7 @@ const uft_format_plugin_t uft_format_plugin_edsk = {
     .close        = edsk_close,
     .read_track   = edsk_read_track,
     .verify_track = uft_generic_verify_track,
-    .spec_status  = UFT_SPEC_OFFICIAL_FULL,  /* CPCWiki publishes the full EDSK v3 specification */,
+    .spec_status  = UFT_SPEC_OFFICIAL_FULL,  /* CPCWiki publishes the full EDSK v3 specification */
     .features = uft_format_plugin_edsk_features,  /* V415-PLAN PLUGIN.features (MF-263) */
     .feature_count = sizeof(uft_format_plugin_edsk_features) / sizeof(uft_format_plugin_edsk_features[0]),
 };

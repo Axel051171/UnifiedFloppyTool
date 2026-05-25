@@ -274,7 +274,7 @@ const uft_format_plugin_t uft_format_plugin_imd = {
     .close = imd_plugin_close, .read_track = imd_plugin_read_track,
     .write_track = imd_plugin_write_track,
     .verify_track = uft_generic_verify_track,
-    .spec_status = UFT_SPEC_OFFICIAL_FULL,  /* Dave Dunfield published IMD.TXT with full format details */,
+    .spec_status = UFT_SPEC_OFFICIAL_FULL,  /* Dave Dunfield published IMD.TXT with full format details */
     .features = uft_format_plugin_imd_features,  /* V415-PLAN PLUGIN.features (MF-263) */
     .feature_count = sizeof(uft_format_plugin_imd_features) / sizeof(uft_format_plugin_imd_features[0]),
 };

@@ -99,9 +99,20 @@ def patch_file(path: Path, dry_run: bool = False) -> bool:
     arr = render_features_array(plugin_name, caps)
 
     # Build the .features insertion — appended at end of plugin literal.
+    # Strip trailing whitespace; if the body ends with a `/* ... */`
+    # comment, the comma we need to add belongs BEFORE the comment, not
+    # after it (a stray comma after a comment is a syntax error in
+    # designated init). So strip the trailing comment first, check
+    # whether THAT body needs a comma, then re-attach the comment.
     body_stripped = body.rstrip()
+    trailing_comment = ""
+    cm = re.search(r"(\s*/\*[^*]*\*/\s*)$", body_stripped)
+    if cm:
+        trailing_comment = cm.group(1)
+        body_stripped = body_stripped[: cm.start()].rstrip()
     if not body_stripped.endswith(","):
         body_stripped += ","
+    body_stripped += trailing_comment
     feat_insertion = (
         f"\n{indent}.features = {plugin_name}_features,"
         f"  /* V415-PLAN PLUGIN.features (MF-263) */"

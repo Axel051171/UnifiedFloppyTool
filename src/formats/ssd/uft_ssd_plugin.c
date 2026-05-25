@@ -159,7 +159,7 @@ const uft_format_plugin_t uft_format_plugin_ssd = {
     .probe = uft_ssd_plugin_probe, .open = ssd_open, .close = ssd_close,
     .read_track = ssd_read_track, .write_track = ssd_write_track,
     .verify_track = uft_generic_verify_track,
-    .spec_status = UFT_SPEC_DERIVED,  /* V415-PLAN PLUGIN.spec_status (MF-262) */,
+    .spec_status = UFT_SPEC_DERIVED,  /* V415-PLAN PLUGIN.spec_status (MF-262) */
     .features = uft_format_plugin_ssd_features,  /* V415-PLAN PLUGIN.features (MF-263) */
     .feature_count = sizeof(uft_format_plugin_ssd_features) / sizeof(uft_format_plugin_ssd_features[0]),
 };

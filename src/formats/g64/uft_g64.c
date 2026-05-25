@@ -886,7 +886,7 @@ const uft_format_plugin_t uft_format_plugin_g64 = {
     .init = NULL,
     .shutdown = NULL,
     .private_data = NULL,
-    .spec_status = UFT_SPEC_DERIVED,  /* VICE documented the container; underlying GCR is official Commodore */,
+    .spec_status = UFT_SPEC_DERIVED,  /* VICE documented the container; underlying GCR is official Commodore */
     .features = uft_format_plugin_g64_features,  /* V415-PLAN PLUGIN.features (MF-263) */
     .feature_count = sizeof(uft_format_plugin_g64_features) / sizeof(uft_format_plugin_g64_features[0]),
 };

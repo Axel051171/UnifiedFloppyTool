@@ -147,7 +147,7 @@ const uft_format_plugin_t uft_format_plugin_2img = {
     .probe = img2_probe, .open = img2_open, .close = img2_close,
     .read_track = img2_read_track, .write_track = img2_write_track,
     .verify_track = uft_generic_verify_track,
-    .spec_status = UFT_SPEC_OFFICIAL_FULL,  /* 2IMG v1 header spec public since Apple IIgs Sweet16 days */,
+    .spec_status = UFT_SPEC_OFFICIAL_FULL,  /* 2IMG v1 header spec public since Apple IIgs Sweet16 days */
     .features = uft_format_plugin_2img_features,  /* V415-PLAN PLUGIN.features (MF-263) */
     .feature_count = sizeof(uft_format_plugin_2img_features) / sizeof(uft_format_plugin_2img_features[0]),
 };

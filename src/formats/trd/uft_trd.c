@@ -113,7 +113,7 @@ const uft_format_plugin_t uft_format_plugin_trd = {
     .probe = trd_probe, .open = trd_open, .close = trd_close,
     .read_track = trd_read_track, .write_track = trd_write_track,
     .verify_track = uft_generic_verify_track,
-    .spec_status = UFT_SPEC_DERIVED,  /* V415-PLAN PLUGIN.spec_status (MF-262) */,
+    .spec_status = UFT_SPEC_DERIVED,  /* V415-PLAN PLUGIN.spec_status (MF-262) */
     .features = uft_format_plugin_trd_features,  /* V415-PLAN PLUGIN.features (MF-263) */
     .feature_count = sizeof(uft_format_plugin_trd_features) / sizeof(uft_format_plugin_trd_features[0]),
 };

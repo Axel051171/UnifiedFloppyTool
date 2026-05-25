@@ -277,7 +277,7 @@ const uft_format_plugin_t uft_format_plugin_pri = {
     .read_track   = pri_read_track,
     .write_track  = pri_write_track,
     .verify_track = uft_flux_verify_track,
-    .spec_status = UFT_SPEC_OFFICIAL_PARTIAL,  /* V415-PLAN PLUGIN.spec_status (MF-262) */,
+    .spec_status = UFT_SPEC_OFFICIAL_PARTIAL,  /* V415-PLAN PLUGIN.spec_status (MF-262) */
     .features = uft_format_plugin_pri_features,  /* V415-PLAN PLUGIN.features (MF-263) */
     .feature_count = sizeof(uft_format_plugin_pri_features) / sizeof(uft_format_plugin_pri_features[0]),
 };

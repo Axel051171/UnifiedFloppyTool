@@ -143,7 +143,7 @@ const uft_format_plugin_t uft_format_plugin_d64 = {
     .close = d64_plugin_close, .read_track = d64_plugin_read_track,
     .write_track = d64_plugin_write_track,
     .verify_track = uft_generic_verify_track,
-    .spec_status = UFT_SPEC_DERIVED,  /* 1541 DOS well-known but never formally specced; de-facto via VICE */,
+    .spec_status = UFT_SPEC_DERIVED,  /* 1541 DOS well-known but never formally specced; de-facto via VICE */
     .features = uft_format_plugin_d64_features,  /* V415-PLAN PLUGIN.features (MF-263) */
     .feature_count = sizeof(uft_format_plugin_d64_features) / sizeof(uft_format_plugin_d64_features[0]),
 };

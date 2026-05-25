@@ -455,7 +455,7 @@ const uft_format_plugin_t uft_format_plugin_scp = {
     .init = NULL,
     .shutdown = NULL,
     .private_data = NULL,
-    .spec_status = UFT_SPEC_OFFICIAL_FULL,  /* V415-PLAN PLUGIN.spec_status (MF-262) */,
+    .spec_status = UFT_SPEC_OFFICIAL_FULL,  /* V415-PLAN PLUGIN.spec_status (MF-262) */
     .features = uft_format_plugin_scp_features,  /* V415-PLAN PLUGIN.features (MF-263) */
     .feature_count = sizeof(uft_format_plugin_scp_features) / sizeof(uft_format_plugin_scp_features[0]),
 };

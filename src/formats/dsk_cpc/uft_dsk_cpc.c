@@ -214,7 +214,7 @@ const uft_format_plugin_t uft_format_plugin_dsk_cpc = {
     .read_track = dsk_read_track,
     .write_track = dsk_write_track,
     .verify_track = uft_generic_verify_track,
-    .spec_status = UFT_SPEC_OFFICIAL_FULL,  /* CPCWiki publishes the standard DSK specification */,
+    .spec_status = UFT_SPEC_OFFICIAL_FULL,  /* CPCWiki publishes the standard DSK specification */
     .features = uft_format_plugin_dsk_cpc_features,  /* V415-PLAN PLUGIN.features (MF-263) */
     .feature_count = sizeof(uft_format_plugin_dsk_cpc_features) / sizeof(uft_format_plugin_dsk_cpc_features[0]),
 };
