@@ -451,52 +451,43 @@ uft_error_t uft_convert_file(const char* src_path,
                  sizeof(result->warnings[0]), "%s", path->warning);
     }
 
-    /* V415-PLAN LOSS.preflight (MF-263) — single chokepoint for all 44
-     * conversion paths. Prinzip 1 §1.2 + Prinzip 4: never lose data
-     * silently, never write a destructive op without explicit consent.
-     * The roundtrip-matrix lookup classifies the (src,dst) pair into
-     * LOSSLESS / LOSSY_DOCUMENTED / IMPOSSIBLE / UNTESTED. Decision:
+    /* V415-PLAN LOSS.preflight (MF-263 Phase 1 + MF-268 Phase 2) —
+     * single chokepoint for all 44 conversion paths. Prinzip 1 §1.2 +
+     * Prinzip 4: never lose data silently, never write a destructive op
+     * without explicit consent. The roundtrip-matrix classifies the
+     * (src,dst) pair into LOSSLESS / LOSSY_DOCUMENTED / IMPOSSIBLE /
+     * UNTESTED. Decision (Phase 1, MF-263):
      *   - LOSSLESS         → run silently
      *   - LOSSY_DOCUMENTED → run only if accept_data_loss=true
      *                         (sidecar .loss.json emitted after success)
      *   - IMPOSSIBLE/UNTESTED → ABORT with diagnostic
-     * accept_data_loss defaults to false ⇒ GUI/CLI must obtain explicit
-     * user consent before the convert is even attempted. */
-    {
-        uft_preflight_plan_t plan;
-        uft_preflight_opts_t preopts = {
-            .accept_data_loss = (options && options->preserve_errors) ? false : false,
-            .emit_sidecar     = true,
-            .dry_run          = false,
-            .source_format_name = uft_format_get_name(src_format),
-            .target_format_name = uft_format_get_name(dst_format),
-            .uft_version        = UFT_VERSION_STRING,
-        };
-        uft_preflight_check((uft_format_id_t)src_format,
-                            (uft_format_id_t)dst_format,
-                            src_path, dst_path, &preopts, &plan);
-        if (plan.decision == UFT_PREFLIGHT_ABORT_IMPOSSIBLE ||
-            plan.decision == UFT_PREFLIGHT_ABORT_UNTESTED ||
-            plan.decision == UFT_PREFLIGHT_ABORT_NEED_CONSENT) {
-            free(src_data);
-            result->error = UFT_ERR_NOT_SUPPORTED;
-            if (result->warning_count <
-                sizeof(result->warnings) / sizeof(result->warnings[0])) {
-                snprintf(result->warnings[result->warning_count++],
-                         sizeof(result->warnings[0]),
-                         "Preflight ABORT: %s",
-                         plan.abort_reason ? plan.abort_reason
-                                           : uft_preflight_decision_string(plan.decision));
-            }
-            return UFT_ERR_NOT_SUPPORTED;
+     * Phase 2 (MF-268): aggregated loss-entry emit, see below. */
+    uft_preflight_plan_t plan = {0};
+    uft_preflight_opts_t preopts = {
+        .accept_data_loss = (options && options->preserve_errors) ? true : false,
+        .emit_sidecar     = true,
+        .dry_run          = false,
+        .source_format_name = uft_format_get_name(src_format),
+        .target_format_name = uft_format_get_name(dst_format),
+        .uft_version        = UFT_VERSION_STRING,
+    };
+    uft_preflight_check((uft_format_id_t)src_format,
+                        (uft_format_id_t)dst_format,
+                        src_path, dst_path, &preopts, &plan);
+    if (plan.decision == UFT_PREFLIGHT_ABORT_IMPOSSIBLE ||
+        plan.decision == UFT_PREFLIGHT_ABORT_UNTESTED ||
+        plan.decision == UFT_PREFLIGHT_ABORT_NEED_CONSENT) {
+        free(src_data);
+        result->error = UFT_ERR_NOT_SUPPORTED;
+        if (result->warning_count <
+            sizeof(result->warnings) / sizeof(result->warnings[0])) {
+            snprintf(result->warnings[result->warning_count++],
+                     sizeof(result->warnings[0]),
+                     "Preflight ABORT: %s",
+                     plan.abort_reason ? plan.abort_reason
+                                       : uft_preflight_decision_string(plan.decision));
         }
-        /* On LOSSY_DOCUMENTED + consent, plan.writes_sidecar is true;
-         * once the converter has the loss list, call
-         * uft_preflight_emit_sidecar(&plan, losses, count). The
-         * existing converters don't yet emit per-loss entries — that's
-         * a per-converter follow-up (V415-PLAN §LOSS.preflight phase 2,
-         * for v4.1.6). Phase 1 (this commit) protects the entry-point
-         * with the decision gate, which is what Prinzip 1+4 demand. */
+        return UFT_ERR_NOT_SUPPORTED;
     }
 
     /* Get format classes */
@@ -548,6 +539,51 @@ uft_error_t uft_convert_file(const char* src_path,
 
         err = dispatch_conversion(src_format, dst_format, src_data, src_size,
                                    dst_path, &ext_opts, result);
+    }
+
+    /* V415-PLAN LOSS.preflight Phase 2 (MF-268): on a successful
+     * LOSSY_DOCUMENTED conversion, write the .loss.json sidecar.
+     * Loss-entries are derived heuristically from src→dst format
+     * classes — converters that need per-track precision (e.g.
+     * counting exact weak-bit positions) will refine this list in
+     * v4.1.6 by passing a richer convert_result_t back. */
+    if (result->success && plan.writes_sidecar) {
+        uft_loss_entry_t entries[8];
+        size_t n_entries = 0;
+        uft_format_class_t src_cls = uft_format_get_class(src_format);
+        uft_format_class_t dst_cls = uft_format_get_class(dst_format);
+
+        if (src_cls == UFT_FCLASS_FLUX && dst_cls == UFT_FCLASS_SECTOR) {
+            entries[n_entries++] = (uft_loss_entry_t){
+                UFT_LOSS_FLUX_TIMING, 0,
+                "Flux-level inter-bit timing collapsed to sector bytes."
+            };
+            entries[n_entries++] = (uft_loss_entry_t){
+                UFT_LOSS_WEAK_BITS, 0,
+                "Weak/fuzzy bits coerced to a single resolved value."
+            };
+            entries[n_entries++] = (uft_loss_entry_t){
+                UFT_LOSS_INDEX_PULSES, 0,
+                "Index-pulse positions discarded by sector-image target."
+            };
+            entries[n_entries++] = (uft_loss_entry_t){
+                UFT_LOSS_MULTI_REVOLUTION, 0,
+                "Multi-revolution capture collapsed to one logical layout."
+            };
+        }
+        if (src_cls == UFT_FCLASS_FLUX && dst_cls == UFT_FCLASS_BITSTREAM) {
+            entries[n_entries++] = (uft_loss_entry_t){
+                UFT_LOSS_FLUX_TIMING, 0,
+                "Sub-bit timing/jitter quantised to a bitstream cell."
+            };
+        }
+        if (path && path->warning && n_entries <
+            sizeof(entries) / sizeof(entries[0])) {
+            entries[n_entries++] = (uft_loss_entry_t){
+                UFT_LOSS_OTHER, 0, path->warning
+            };
+        }
+        uft_preflight_emit_sidecar(&plan, entries, n_entries);
     }
 
     free(src_data);
