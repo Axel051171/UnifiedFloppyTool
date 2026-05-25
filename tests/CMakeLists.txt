@@ -721,6 +721,38 @@ foreach(test_source ${TEST_SOURCES})
             target_link_libraries(${test_name} PRIVATE uft::libusb)
         endif()
         set(TEST_LIBS "")
+    elseif(${test_name} STREQUAL "test_scp_direct_usb_mock")
+        # MF-270 — Tier-2.5 USB-mock integration test. Compile
+        # uft_scp_direct.c (via a wrapper TU that has the mock header
+        # in scope) against the scripted libusb shim. No real libusb
+        # link, no real USB. Other tests linking uft_scp_direct.c are
+        # unaffected because the wrapper is per-target.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/tests/usb_mock/scp_direct_mocked.c
+            ${CMAKE_SOURCE_DIR}/tests/usb_mock/libusb_mock.c)
+        target_include_directories(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src
+            ${CMAKE_SOURCE_DIR}/tests
+            ${CMAKE_SOURCE_DIR}/tests/usb_mock)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_HAS_LIBUSB=1
+            UFT_USB_MOCK=1)
+        set(TEST_LIBS "")
+    elseif(${test_name} STREQUAL "test_xum1541_usb_mock")
+        # MF-270 — same pattern as test_scp_direct_usb_mock for XUM1541.
+        # XUM1541 additionally uses libusb_control_transfer (INIT +
+        # SHUTDOWN), which the mock implements.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/tests/usb_mock/xum1541_mocked.c
+            ${CMAKE_SOURCE_DIR}/tests/usb_mock/libusb_mock.c)
+        target_include_directories(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src
+            ${CMAKE_SOURCE_DIR}/tests
+            ${CMAKE_SOURCE_DIR}/tests/usb_mock)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_HAS_LIBUSB=1
+            UFT_USB_MOCK=1)
+        set(TEST_LIBS "")
     elseif(${test_name} STREQUAL "test_applesauce_hal")
         # v4.1.5-hardening: Applesauce HAL test — pure-utility +
         # lifecycle + setter validation. Serial-touching stubs return

@@ -134,6 +134,62 @@ def check_fluxengine_read() -> Check:
                      f".flux = {out.stat().st_size} bytes (from ibm_dd.scp fixture)")
 
 
+def check_usb_mock_test(test_exe_name: str, controller: str) -> Check:
+    """Run a compiled USB-mock-based C-HAL integration test (MF-270).
+
+    These tests live alongside the rest of ctest but the sim runner
+    additionally invokes them so the Tier-2.5 report shows libusb-
+    direct controllers (SCP-Direct, XUM1541) alongside the QProcess
+    ones (KryoFlux, FluxEngine, FC5025)."""
+    # Locate the test binary — common build-dir layouts.
+    candidates = [
+        REPO_ROOT / "build" / "tests" / (test_exe_name + ".exe"),
+        REPO_ROOT / "build" / "tests" / test_exe_name,
+        REPO_ROOT / "build_mingw" / "tests" / (test_exe_name + ".exe"),
+        REPO_ROOT / "build_mingw" / "tests" / test_exe_name,
+    ]
+    exe = next((c for c in candidates if c.exists()), None)
+    if exe is None:
+        return Check(controller, f"{test_exe_name} (USB-mock C-HAL)",
+                     "NOT_RUN",
+                     "test binary not built — run cmake --build first")
+    res = subprocess.run([str(exe)], capture_output=True, text=True)
+    if res.returncode == 0:
+        # Parse last "Results: N passed, M failed" line.
+        passed = "?"
+        for line in res.stdout.splitlines():
+            if "Results:" in line and "passed" in line:
+                passed = line.strip()
+                break
+        return Check(controller, f"{test_exe_name} (USB-mock C-HAL)",
+                     "SIMULATED",
+                     f"binary OK — {passed}")
+    return Check(controller, f"{test_exe_name} (USB-mock C-HAL)", "FAIL",
+                 f"exit {res.returncode}: {res.stdout[-200:]!r}")
+
+
+def check_scp_direct_usb_mock() -> Check:
+    return check_usb_mock_test("test_scp_direct_usb_mock", "scp-direct")
+
+
+def check_xum1541_usb_mock() -> Check:
+    return check_usb_mock_test("test_xum1541_usb_mock", "xum1541")
+
+
+def check_greaseweazle_sim_compile() -> Check:
+    """Greaseweazle has no libusb path (USB-CDC serial). Tier-2.5 for GW
+    is the Python protocol sim — at minimum we validate it compiles."""
+    res = subprocess.run([sys.executable, "-m", "py_compile",
+                          str(REPO_ROOT / "tools" / "greaseweazle_sim.py")],
+                         capture_output=True, text=True)
+    if res.returncode == 0:
+        return Check("greaseweazle", "protocol sim compiles",
+                     "SIMULATED",
+                     "tools/greaseweazle_sim.py byte-compiled clean")
+    return Check("greaseweazle", "protocol sim compiles", "FAIL",
+                 res.stderr[:200])
+
+
 def check_fc5025_read() -> Check:
     """FC5025: read msdos360 → sector dump file."""
     with tempfile.TemporaryDirectory() as td:
@@ -179,13 +235,17 @@ def check_fluxengine_write() -> Check:
 
 
 CHECKS = [
-    ("kryoflux",   check_kryoflux_info),
-    ("kryoflux",   check_kryoflux_read),
-    ("fluxengine", check_fluxengine_version),
-    ("fluxengine", check_fluxengine_rpm),
-    ("fluxengine", check_fluxengine_read),
-    ("fluxengine", check_fluxengine_write),
-    ("fc5025",     check_fc5025_read),
+    ("kryoflux",    check_kryoflux_info),
+    ("kryoflux",    check_kryoflux_read),
+    ("fluxengine",  check_fluxengine_version),
+    ("fluxengine",  check_fluxengine_rpm),
+    ("fluxengine",  check_fluxengine_read),
+    ("fluxengine",  check_fluxengine_write),
+    ("fc5025",      check_fc5025_read),
+    # MF-270: libusb-direct C-HAL tests via the USB-mock framework.
+    ("scp-direct",  check_scp_direct_usb_mock),
+    ("xum1541",     check_xum1541_usb_mock),
+    ("greaseweazle", check_greaseweazle_sim_compile),
 ]
 
 

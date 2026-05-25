@@ -80,7 +80,8 @@ jobs:
           # NOT_RUN is acceptable, FAIL means a simulator-output regression.
           # See tools/hw_simulators/README.md.
           set -e
-          for s in tools/hw_simulators/sim_*.py tools/adfcopy_sim.py tools/applesauce_sim.py; do
+          for s in tools/hw_simulators/sim_*.py tools/adfcopy_sim.py \
+                   tools/applesauce_sim.py tools/greaseweazle_sim.py; do
             echo "==== $s ===="
             python3 -m py_compile "$s"
           done
