@@ -132,6 +132,16 @@ static uft_error_t atr_write_track(uft_disk_t *disk, int cyl, int head,
     return UFT_OK;
 }
 
+static const uft_plugin_feature_t uft_format_plugin_atr_features[] = {
+    { "Read", UFT_FEATURE_SUPPORTED, NULL },
+    { "Write", UFT_FEATURE_SUPPORTED, NULL },
+    { "Create", UFT_FEATURE_UNSUPPORTED, NULL },
+    { "Flux", UFT_FEATURE_UNSUPPORTED, NULL },
+    { "Timing", UFT_FEATURE_UNSUPPORTED, NULL },
+    { "Weak Bits", UFT_FEATURE_UNSUPPORTED, NULL },
+    { "MultiRev", UFT_FEATURE_UNSUPPORTED, NULL },
+};
+
 const uft_format_plugin_t uft_format_plugin_atr = {
     .name = "ATR",
     .description = "Atari 8-bit Disk Image",
@@ -145,7 +155,9 @@ const uft_format_plugin_t uft_format_plugin_atr = {
     .read_track = atr_read_track,
     .write_track = atr_write_track,
     .verify_track = uft_generic_verify_track,
-    .spec_status = UFT_SPEC_OFFICIAL_FULL,  /* SIO2PC/APE docs, Atari 810 hw reference fully describe ATR */
+    .spec_status = UFT_SPEC_OFFICIAL_FULL,  /* SIO2PC/APE docs, Atari 810 hw reference fully describe ATR */,
+    .features = uft_format_plugin_atr_features,  /* V415-PLAN PLUGIN.features (MF-263) */
+    .feature_count = sizeof(uft_format_plugin_atr_features) / sizeof(uft_format_plugin_atr_features[0]),
 };
 
 UFT_REGISTER_FORMAT_PLUGIN(atr)

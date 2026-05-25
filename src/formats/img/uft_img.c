@@ -475,6 +475,16 @@ static uft_error_t img_read_metadata(uft_disk_t* disk, const char* key,
 // Plugin Definition
 // ============================================================================
 
+static const uft_plugin_feature_t uft_format_plugin_img_features[] = {
+    { "Read", UFT_FEATURE_SUPPORTED, NULL },
+    { "Write", UFT_FEATURE_SUPPORTED, NULL },
+    { "Create", UFT_FEATURE_SUPPORTED, NULL },
+    { "Flux", UFT_FEATURE_UNSUPPORTED, NULL },
+    { "Timing", UFT_FEATURE_UNSUPPORTED, NULL },
+    { "Weak Bits", UFT_FEATURE_UNSUPPORTED, NULL },
+    { "MultiRev", UFT_FEATURE_UNSUPPORTED, NULL },
+};
+
 const uft_format_plugin_t uft_format_plugin_img = {
     .name = "IMG",
     .description = "Generic PC Disk Image",
@@ -497,5 +507,7 @@ const uft_format_plugin_t uft_format_plugin_img = {
     .init = NULL,
     .shutdown = NULL,
     .private_data = NULL,
-    .spec_status = UFT_SPEC_DERIVED,  /* Raw sector dump; no formal spec but universal de-facto PC standard */
+    .spec_status = UFT_SPEC_DERIVED,  /* Raw sector dump; no formal spec but universal de-facto PC standard */,
+    .features = uft_format_plugin_img_features,  /* V415-PLAN PLUGIN.features (MF-263) */
+    .feature_count = sizeof(uft_format_plugin_img_features) / sizeof(uft_format_plugin_img_features[0]),
 };

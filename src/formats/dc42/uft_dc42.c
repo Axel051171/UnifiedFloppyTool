@@ -275,6 +275,16 @@ static uft_error_t dc42_write_track(uft_disk_t *disk, int cyl, int head,
  * Plugin registration
  * ============================================================================ */
 
+static const uft_plugin_feature_t uft_format_plugin_dc42_features[] = {
+    { "Read", UFT_FEATURE_SUPPORTED, NULL },
+    { "Write", UFT_FEATURE_SUPPORTED, NULL },
+    { "Create", UFT_FEATURE_UNSUPPORTED, NULL },
+    { "Flux", UFT_FEATURE_UNSUPPORTED, NULL },
+    { "Timing", UFT_FEATURE_UNSUPPORTED, NULL },
+    { "Weak Bits", UFT_FEATURE_UNSUPPORTED, NULL },
+    { "MultiRev", UFT_FEATURE_UNSUPPORTED, NULL },
+};
+
 const uft_format_plugin_t uft_format_plugin_dc42 = {
     .name         = "DC42",
     .description  = "Apple DiskCopy 4.2",
@@ -288,7 +298,9 @@ const uft_format_plugin_t uft_format_plugin_dc42 = {
     .read_track   = dc42_read_track,
     .write_track  = dc42_write_track,
     .verify_track = uft_generic_verify_track,
-    .spec_status = UFT_SPEC_OFFICIAL_FULL,  /* V415-PLAN PLUGIN.spec_status (MF-262) */
+    .spec_status = UFT_SPEC_OFFICIAL_FULL,  /* V415-PLAN PLUGIN.spec_status (MF-262) */,
+    .features = uft_format_plugin_dc42_features,  /* V415-PLAN PLUGIN.features (MF-263) */
+    .feature_count = sizeof(uft_format_plugin_dc42_features) / sizeof(uft_format_plugin_dc42_features[0]),
 };
 
 UFT_REGISTER_FORMAT_PLUGIN(dc42)

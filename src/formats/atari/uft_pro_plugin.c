@@ -136,6 +136,16 @@ static uft_error_t pro_write_track(uft_disk_t *disk, int cyl, int head,
     return UFT_OK;
 }
 
+static const uft_plugin_feature_t uft_format_plugin_pro_features[] = {
+    { "Read", UFT_FEATURE_SUPPORTED, NULL },
+    { "Write", UFT_FEATURE_SUPPORTED, NULL },
+    { "Create", UFT_FEATURE_UNSUPPORTED, NULL },
+    { "Flux", UFT_FEATURE_UNSUPPORTED, NULL },
+    { "Timing", UFT_FEATURE_UNSUPPORTED, NULL },
+    { "Weak Bits", UFT_FEATURE_SUPPORTED, NULL },
+    { "MultiRev", UFT_FEATURE_UNSUPPORTED, NULL },
+};
+
 const uft_format_plugin_t uft_format_plugin_pro = {
     .name = "PRO", .description = "Atari 8-bit Protected (APE Pro)",
     .extensions = "pro;atx", .format = UFT_FORMAT_DSK,
@@ -144,6 +154,8 @@ const uft_format_plugin_t uft_format_plugin_pro = {
     .close = pro_close, .read_track = pro_read_track,
     .write_track = pro_write_track,
     .verify_track = uft_weak_bit_verify_track,
-    .spec_status = UFT_SPEC_DERIVED,  /* V415-PLAN PLUGIN.spec_status (MF-262) */
+    .spec_status = UFT_SPEC_DERIVED,  /* V415-PLAN PLUGIN.spec_status (MF-262) */,
+    .features = uft_format_plugin_pro_features,  /* V415-PLAN PLUGIN.features (MF-263) */
+    .feature_count = sizeof(uft_format_plugin_pro_features) / sizeof(uft_format_plugin_pro_features[0]),
 };
 UFT_REGISTER_FORMAT_PLUGIN(pro)

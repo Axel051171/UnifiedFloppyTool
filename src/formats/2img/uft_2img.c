@@ -130,6 +130,16 @@ static uft_error_t img2_write_track(uft_disk_t *d, int cyl, int head,
     return UFT_OK;
 }
 
+static const uft_plugin_feature_t uft_format_plugin_2img_features[] = {
+    { "Read", UFT_FEATURE_SUPPORTED, NULL },
+    { "Write", UFT_FEATURE_SUPPORTED, NULL },
+    { "Create", UFT_FEATURE_UNSUPPORTED, NULL },
+    { "Flux", UFT_FEATURE_UNSUPPORTED, NULL },
+    { "Timing", UFT_FEATURE_UNSUPPORTED, NULL },
+    { "Weak Bits", UFT_FEATURE_UNSUPPORTED, NULL },
+    { "MultiRev", UFT_FEATURE_UNSUPPORTED, NULL },
+};
+
 const uft_format_plugin_t uft_format_plugin_2img = {
     .name = "2IMG", .description = "Apple II Universal Disk Image",
     .extensions = "2img;2mg", .format = UFT_FORMAT_DSK,
@@ -137,6 +147,8 @@ const uft_format_plugin_t uft_format_plugin_2img = {
     .probe = img2_probe, .open = img2_open, .close = img2_close,
     .read_track = img2_read_track, .write_track = img2_write_track,
     .verify_track = uft_generic_verify_track,
-    .spec_status = UFT_SPEC_OFFICIAL_FULL,  /* 2IMG v1 header spec public since Apple IIgs Sweet16 days */
+    .spec_status = UFT_SPEC_OFFICIAL_FULL,  /* 2IMG v1 header spec public since Apple IIgs Sweet16 days */,
+    .features = uft_format_plugin_2img_features,  /* V415-PLAN PLUGIN.features (MF-263) */
+    .feature_count = sizeof(uft_format_plugin_2img_features) / sizeof(uft_format_plugin_2img_features[0]),
 };
 UFT_REGISTER_FORMAT_PLUGIN(2img)

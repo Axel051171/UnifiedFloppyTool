@@ -96,6 +96,16 @@ static uft_error_t trd_write_track(uft_disk_t* disk, int cyl, int head,
     return UFT_OK;
 }
 
+static const uft_plugin_feature_t uft_format_plugin_trd_features[] = {
+    { "Read", UFT_FEATURE_SUPPORTED, NULL },
+    { "Write", UFT_FEATURE_SUPPORTED, NULL },
+    { "Create", UFT_FEATURE_UNSUPPORTED, NULL },
+    { "Flux", UFT_FEATURE_UNSUPPORTED, NULL },
+    { "Timing", UFT_FEATURE_UNSUPPORTED, NULL },
+    { "Weak Bits", UFT_FEATURE_UNSUPPORTED, NULL },
+    { "MultiRev", UFT_FEATURE_UNSUPPORTED, NULL },
+};
+
 const uft_format_plugin_t uft_format_plugin_trd = {
     .name = "TRD", .description = "TR-DOS Spectrum", .extensions = "trd",
     .format = UFT_FORMAT_DSK,
@@ -103,6 +113,8 @@ const uft_format_plugin_t uft_format_plugin_trd = {
     .probe = trd_probe, .open = trd_open, .close = trd_close,
     .read_track = trd_read_track, .write_track = trd_write_track,
     .verify_track = uft_generic_verify_track,
-    .spec_status = UFT_SPEC_DERIVED,  /* V415-PLAN PLUGIN.spec_status (MF-262) */
+    .spec_status = UFT_SPEC_DERIVED,  /* V415-PLAN PLUGIN.spec_status (MF-262) */,
+    .features = uft_format_plugin_trd_features,  /* V415-PLAN PLUGIN.features (MF-263) */
+    .feature_count = sizeof(uft_format_plugin_trd_features) / sizeof(uft_format_plugin_trd_features[0]),
 };
 UFT_REGISTER_FORMAT_PLUGIN(trd)

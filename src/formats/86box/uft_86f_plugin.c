@@ -157,6 +157,16 @@ static uft_error_t f86_write_track(uft_disk_t *disk, int cyl, int head,
     return UFT_OK;
 }
 
+static const uft_plugin_feature_t uft_format_plugin_86f_features[] = {
+    { "Read", UFT_FEATURE_SUPPORTED, NULL },
+    { "Write", UFT_FEATURE_SUPPORTED, NULL },
+    { "Create", UFT_FEATURE_UNSUPPORTED, NULL },
+    { "Flux", UFT_FEATURE_SUPPORTED, NULL },
+    { "Timing", UFT_FEATURE_UNSUPPORTED, NULL },
+    { "Weak Bits", UFT_FEATURE_UNSUPPORTED, NULL },
+    { "MultiRev", UFT_FEATURE_UNSUPPORTED, NULL },
+};
+
 const uft_format_plugin_t uft_format_plugin_86f = {
     .name = "86F", .description = "86Box/PCem Floppy Image",
     .extensions = "86f", .format = UFT_FORMAT_DSK,
@@ -165,6 +175,8 @@ const uft_format_plugin_t uft_format_plugin_86f = {
     .close = f86_close, .read_track = f86_read_track,
     .write_track = f86_write_track,
     .verify_track = uft_generic_verify_track,
-    .spec_status = UFT_SPEC_REVERSE_ENGINEERED,  /* V415-PLAN PLUGIN.spec_status (MF-262) */
+    .spec_status = UFT_SPEC_REVERSE_ENGINEERED,  /* V415-PLAN PLUGIN.spec_status (MF-262) */,
+    .features = uft_format_plugin_86f_features,  /* V415-PLAN PLUGIN.features (MF-263) */
+    .feature_count = sizeof(uft_format_plugin_86f_features) / sizeof(uft_format_plugin_86f_features[0]),
 };
 UFT_REGISTER_FORMAT_PLUGIN(86f)

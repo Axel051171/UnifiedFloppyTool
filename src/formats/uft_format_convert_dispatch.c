@@ -8,6 +8,8 @@
  */
 
 #include "uft_format_convert_internal.h"
+#include "uft/core/uft_preflight.h"    /* V415-PLAN LOSS.preflight (MF-263) */
+#include "uft/core/uft_loss_report.h"
 
 // ============================================================================
 // API Implementation
@@ -447,6 +449,54 @@ uft_error_t uft_convert_file(const char* src_path,
     if (path->warning) {
         snprintf(result->warnings[result->warning_count++],
                  sizeof(result->warnings[0]), "%s", path->warning);
+    }
+
+    /* V415-PLAN LOSS.preflight (MF-263) — single chokepoint for all 44
+     * conversion paths. Prinzip 1 §1.2 + Prinzip 4: never lose data
+     * silently, never write a destructive op without explicit consent.
+     * The roundtrip-matrix lookup classifies the (src,dst) pair into
+     * LOSSLESS / LOSSY_DOCUMENTED / IMPOSSIBLE / UNTESTED. Decision:
+     *   - LOSSLESS         → run silently
+     *   - LOSSY_DOCUMENTED → run only if accept_data_loss=true
+     *                         (sidecar .loss.json emitted after success)
+     *   - IMPOSSIBLE/UNTESTED → ABORT with diagnostic
+     * accept_data_loss defaults to false ⇒ GUI/CLI must obtain explicit
+     * user consent before the convert is even attempted. */
+    {
+        uft_preflight_plan_t plan;
+        uft_preflight_opts_t preopts = {
+            .accept_data_loss = (options && options->preserve_errors) ? false : false,
+            .emit_sidecar     = true,
+            .dry_run          = false,
+            .source_format_name = uft_format_get_name(src_format),
+            .target_format_name = uft_format_get_name(dst_format),
+            .uft_version        = UFT_VERSION_STRING,
+        };
+        uft_preflight_check((uft_format_id_t)src_format,
+                            (uft_format_id_t)dst_format,
+                            src_path, dst_path, &preopts, &plan);
+        if (plan.decision == UFT_PREFLIGHT_ABORT_IMPOSSIBLE ||
+            plan.decision == UFT_PREFLIGHT_ABORT_UNTESTED ||
+            plan.decision == UFT_PREFLIGHT_ABORT_NEED_CONSENT) {
+            free(src_data);
+            result->error = UFT_ERR_NOT_SUPPORTED;
+            if (result->warning_count <
+                sizeof(result->warnings) / sizeof(result->warnings[0])) {
+                snprintf(result->warnings[result->warning_count++],
+                         sizeof(result->warnings[0]),
+                         "Preflight ABORT: %s",
+                         plan.abort_reason ? plan.abort_reason
+                                           : uft_preflight_decision_string(plan.decision));
+            }
+            return UFT_ERR_NOT_SUPPORTED;
+        }
+        /* On LOSSY_DOCUMENTED + consent, plan.writes_sidecar is true;
+         * once the converter has the loss list, call
+         * uft_preflight_emit_sidecar(&plan, losses, count). The
+         * existing converters don't yet emit per-loss entries — that's
+         * a per-converter follow-up (V415-PLAN §LOSS.preflight phase 2,
+         * for v4.1.6). Phase 1 (this commit) protects the entry-point
+         * with the decision gate, which is what Prinzip 1+4 demand. */
     }
 
     /* Get format classes */

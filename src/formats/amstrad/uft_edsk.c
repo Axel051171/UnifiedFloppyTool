@@ -174,6 +174,16 @@ static uft_error_t edsk_read_track(uft_disk_t *disk, int cyl, int head,
  * Plugin registration
  * ============================================================================ */
 
+static const uft_plugin_feature_t uft_format_plugin_edsk_features[] = {
+    { "Read", UFT_FEATURE_SUPPORTED, NULL },
+    { "Write", UFT_FEATURE_UNSUPPORTED, NULL },
+    { "Create", UFT_FEATURE_UNSUPPORTED, NULL },
+    { "Flux", UFT_FEATURE_UNSUPPORTED, NULL },
+    { "Timing", UFT_FEATURE_UNSUPPORTED, NULL },
+    { "Weak Bits", UFT_FEATURE_UNSUPPORTED, NULL },
+    { "MultiRev", UFT_FEATURE_UNSUPPORTED, NULL },
+};
+
 const uft_format_plugin_t uft_format_plugin_edsk = {
     .name         = "EDSK",
     .description  = "Extended DSK (Amstrad CPC/ZX Spectrum)",
@@ -186,7 +196,9 @@ const uft_format_plugin_t uft_format_plugin_edsk = {
     .close        = edsk_close,
     .read_track   = edsk_read_track,
     .verify_track = uft_generic_verify_track,
-    .spec_status  = UFT_SPEC_OFFICIAL_FULL,  /* CPCWiki publishes the full EDSK v3 specification */
+    .spec_status  = UFT_SPEC_OFFICIAL_FULL,  /* CPCWiki publishes the full EDSK v3 specification */,
+    .features = uft_format_plugin_edsk_features,  /* V415-PLAN PLUGIN.features (MF-263) */
+    .feature_count = sizeof(uft_format_plugin_edsk_features) / sizeof(uft_format_plugin_edsk_features[0]),
 };
 
 UFT_REGISTER_FORMAT_PLUGIN(edsk)

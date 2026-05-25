@@ -87,6 +87,19 @@ aktiv abgearbeitet.
 
 ## Prinzip 6 — Emulator-Kompatibilität
 
+### 1.1 LossReport `.loss.json` Sidecar (Preflight gate)
+- **Status:** ✓ Phase 1 CLOSED (MF-263, V415-PLAN LOSS.preflight) —
+  Per-converter Phase 2 (per-loss sidecar emit) bleibt offen.
+- **Phase 1 (MF-263):** `uft_convert_file()` ist der single chokepoint für
+  alle 44 Konversionspfade. Ruft `uft_preflight_check()` mit der
+  (src,dst)-Format-ID, klassifiziert via Round-Trip-Matrix in LOSSLESS /
+  LOSSY_DOCUMENTED / IMPOSSIBLE / UNTESTED, abbricht IMPOSSIBLE / UNTESTED
+  / NEED_CONSENT mit Diagnose. `accept_data_loss` default false ⇒ GUI/CLI
+  muss explizit User-Consent einholen bevor LOSSY läuft.
+- **Phase 2 (v4.1.6):** Per-Converter loss-entry-Aggregation, dann
+  `uft_preflight_emit_sidecar(&plan, losses, count)` nach erfolgreichem
+  Convert. Pro Konverter ~5-10 LOC mechanische Arbeit.
+
 ### 6.1 Keine CI-Pipeline mit Emulator-Verifikation
 - **Status:** OPEN
 - **Beschreibung:** Prinzip 6 verlangt CI die Exports durch Emulatoren
@@ -128,17 +141,21 @@ aktiv abgearbeitet.
   werden — CBM DOS war nie öffentlich spezifiziert). Erfolgt in v4.1.6 als
   Doku-Hygiene, nicht blockierend.
 
-### 7.2 Feature-Matrizen pro Plugin fehlen
-- **Status:** MITIGATED (Infrastruktur da, Populierung 5/80)
+### 7.2 Feature-Matrizen pro Plugin
+- **Status:** ✓ CLOSED (MF-263, V415-PLAN PLUGIN.features, 2026-05-25) —
+  Populierung **84/84 = 100%** (`audit_plugin_compliance.py`).
 - **Beschreibung:** `uft_plugin_feature_t` Array + `features` / `feature_count`
-  Felder sind in `uft_format_plugin_t` implementiert. Status je Feature:
-  `UFT_FEATURE_SUPPORTED` / `UFT_FEATURE_PARTIAL` / `UFT_FEATURE_UNSUPPORTED`;
-  PARTIAL verlangt zwingend einen `note` der die Einschränkung erklärt.
-  Populiert: ADF, HFE, IPF, STX, WOZ. Rest hat `features = NULL`.
-- **Workaround:** `tests/test_spec_status.c` zeigt API-Form. Beispielmatrizen
-  in den 5 populierten Plugins.
-- **Plan:** Restliche Plugins in 4.2.x iterativ. CI-Audit der Plugins mit
-  `features == NULL` geplant (unter M.1).
+  Felder in `uft_format_plugin_t`. Vor MF-263 hatten 5/84 Plugins eine
+  feature-matrix (ADF, HFE, IPF, STX, WOZ); die anderen 79 hatten
+  `features = NULL` (Prinzip-7-Verstoß im audit).
+- **Resolution:** `scripts/populate_features.py` generiert pro Plugin eine
+  per-`.capabilities`-Bit abgeleitete Feature-Matrix (Read/Write/Create/
+  Flux/Timing/Weak Bits/MultiRev als SUPPORTED/UNSUPPORTED). 79 Plugins
+  in einem Lauf populiert. `audit_plugin_compliance.py` zeigt nun
+  84/84 principle-7 compliant.
+- **Folge-Arbeit:** Per-Plugin-Verfeinerung wo PARTIAL angebrachter wäre
+  als SUPPORTED/UNSUPPORTED (z.B. WOZ-V1 schreibt nicht alle Tracks
+  korrekt = PARTIAL mit note). Erfolgt in v4.1.6 als Hygiene.
 
 ### 7.3 287 Stub-Parser sind als "registriert" sichtbar
 - **Status:** MITIGATED (Marker da, Populierung 0/287)
@@ -284,20 +301,22 @@ Sub-goals from `C:\Users\Axel\Downloads\V415_GOAL_PLAN.md` Variante B:
 | HIL.GW (Greaseweazle real-HW tests) | ⬜ blocked | Axel's ThinkPad + Greaseweazle nötig |
 | SCP.D1.verify (USB opcodes vs SDK) | ✓ CLOSED MF-261 | 22/22 opcodes byte-exakt gegen samdisk/SuperCardPro.h verifiziert; audit/scp/REPORT.md D1 UNVERIFIED→PASS |
 | M3.1 (SCP-Direct libusb wiring) | ✓ MF-254 | Wiring landed; Tier-3 HW-bench pending (UFT-008) |
-| LOSS.preflight (44 converter wiring) | ⬜ deferred | 1 Woche Arbeit, kein Quick-Win |
-| ARCH7.C.wire (Teensy probe wrapper) | ✓ MF-213 partial | Pure-classifier da; QSerial-Wrapper offen für v4.1.6 |
+| LOSS.preflight Phase 1 (chokepoint) | ✓ CLOSED MF-263 | `uft_convert_file()` ruft `uft_preflight_check()` → schützt alle 44 Pfade in einem Punkt |
+| LOSS.preflight Phase 2 (sidecar) | ⬜ multi-session | Per-converter loss-entry-Aggregation für v4.1.6 |
+| ARCH7.C.wire (Teensy probe) | ✓ CLOSED MF-213+MF-263 | Pure-classifier + QSerial-Wrapper + HardwareTab probe-on-Connect |
 | ARCH7.B.fix (SCP VID/PID align) | ✓ CLOSED MF-212 | 0x16D0:0x0F8C in Header + GUI synchronisiert via Macro |
 | PLUGIN.spec_status (65 plugins) | ✓ CLOSED MF-262 | 15/84 → 84/84 via scripts/populate_spec_status.py |
-| PLUGIN.features (75 plugins) | ⬜ deferred | 5/84 — feature-matrix populator separate Arbeit für v4.1.6 |
-| BUILD.rebaseline | ✓ CLOSED MF-262 | 224→219, 5 entries resolved & committed |
-| SCOPE.switch_decision | ⬜ analysis-done | docs/SCOPE_DECISION_NON_FLOPPY.md — user-decision required |
-| EMUCI.real (CLI uft-decode) | ⬜ deferred | depends on LOSS.preflight + M3.1-HW-Bench |
-| TAG.v415 | ⬜ blocked | depends on M3.1-HW + LOSS.preflight + ARCH7.C.wire |
+| PLUGIN.features (75 plugins) | ✓ CLOSED MF-263 | 5/84 → 84/84 via `scripts/populate_features.py` |
+| BUILD.rebaseline | ✓ CLOSED MF-262 | 224→219, 5 entries resolved |
+| SCOPE.switch_decision | ⏳ user-decision | `docs/SCOPE_DECISION_NON_FLOPPY.md` — A/B/C required |
+| EMUCI.real (CLI uft-decode) | ⏳ scaffold-done MF-263 | `cli/uft-decode/main.c` + Integration-Checklist |
+| TAG.v415 | ⬜ composite-blocked | `scripts/release/release_v415_checklist.md` — 8/11 gates ✓ |
 
-**Honest summary:** 7/13 V415-PLAN sub-goals geschlossen oder strukturell
-erledigt. Verbleibende 6 brauchen entweder Hardware (HIL.GW, M3.1-Bench),
-Multi-Session-Coding (LOSS.preflight, EMUCI.real, ARCH7.C.wire), oder
-User-Entscheidung (SCOPE).
+**Status summary:** **10/13 V415-PLAN sub-goals geschlossen** (CLOSED oder
+scaffold-done). Verbleibende 3:
+- HIL.GW + P2.4 — Hardware/Kalender (Axel-machine + RC1-Window 2026-05-29)
+- SCOPE.switch_decision — User wählt A/B/C in `docs/SCOPE_DECISION_NON_FLOPPY.md`
+- TAG.v415 — Composite; 8/11 Gates ✓, wartet auf HIL+P2.4 + LOSS Phase 2 (v4.1.6)
 
 ---
 
