@@ -308,7 +308,7 @@ Sub-goals from `C:\Users\Axel\Downloads\V415_GOAL_PLAN.md` Variante B:
 | PLUGIN.spec_status (65 plugins) | ✓ CLOSED MF-262 | 15/84 → 84/84 via scripts/populate_spec_status.py |
 | PLUGIN.features (75 plugins) | ✓ CLOSED MF-263 | 5/84 → 84/84 via `scripts/populate_features.py` |
 | BUILD.rebaseline | ✓ CLOSED MF-262 | 224→219, 5 entries resolved |
-| SCOPE.switch_decision | ⏳ user-decision | `docs/SCOPE_DECISION_NON_FLOPPY.md` — A/B/C required |
+| SCOPE.switch_decision | ✓ RESOLVED 2026-05-25 → C (Delete) | User-bestätigt: Option C = delete `src/switch/` + `src/cart7/` + GUI-Tab. Ausführung POST v4.1.5-tag (MF-271), NICHT im RC1-Window. `src/whdload/` bleibt. Pre-delete `archive/pre-mf271` Tag als Backup. |
 | EMUCI.real (CLI uft-decode) | ⏳ scaffold-done MF-263 | `cli/uft-decode/main.c` + Integration-Checklist |
 | TAG.v415 | ⬜ composite-blocked | `scripts/release/release_v415_checklist.md` — 8/11 gates ✓ |
 

@@ -1,4 +1,34 @@
-# SCOPE.switch_decision — Non-Floppy Code Decision Required
+# SCOPE.switch_decision — RESOLVED 2026-05-25 → Option C (Delete)
+
+**Decision:** **Option C — Delete** `src/switch/` + `src/cart7/` +
+`src/gui/uft_switch_panel.{h,cpp}` + Tests. `src/whdload/` bleibt
+(Amiga-Floppy-relevant). User-bestätigt 2026-05-25.
+
+**Begründung:** seit v4.1.0 Release wurden Switch + cart7 ausschließlich
+von cleanup-passes berührt (`MF-011 Welle 7` + die initiale Import).
+Kein einziger Feature-Commit. Keine Bug-Reports. Keine User-Iteration.
+Die `mbedtls`-Maintenance läuft als toter Aufwand mit (~10 MB / 150 Files
+/ ~38 .pro-Zeilen Off-Scope-Last).
+
+**Ausführungs-Timing:** **POST v4.1.5-tag**, nicht im RC1-Window
+(2026-05-29). Ein 10 MB / 150-Files Cleanup-PR in den letzten 4 Tagen
+des Windows ist exakt die Art von Last-Minute-Big-Change die das
+Window verhindern soll. Implementation als MF-271 nach v4.1.5-tag,
+geschätzt 2h:
+- qmake .pro: ~38 Zeilen entfernen
+- CMake: kein Eintrag (Switch ist nicht in tests/CMakeLists)
+- Delete tree: `src/switch/`, `src/cart7/`, `src/gui/uft_switch_panel.*`,
+  `tests/test_switch.c`, `tests/test_provider_switch.cpp`
+- Doku: CLAUDE.md erwähnt Switch nicht → keine Änderung nötig
+
+**Backup-Strategie:** Pre-delete `git tag archive/pre-mf271-switch-removal`
+auf dem letzten Commit der die Subsysteme enthält. Falls jemand jemals
+wieder Switch-Cartridge-Support braucht, ist der Code via Tag-Auschecken
+erreichbar.
+
+---
+
+# SCOPE.switch_decision — Original Analysis (Historical)
 
 **Stand:** 2026-05-25 (V415-PLAN MF-262)
 **Trigger:** V415_GOAL_PLAN.md §SCOPE.switch_decision
