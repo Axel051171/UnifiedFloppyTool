@@ -33,8 +33,17 @@ extern "C" {
  * Headern. Die Round-Trip-Matrix ist entkoppelt: sie akzeptiert jede
  * der kompatiblen uint32_t-Werte. Aufrufer übergibt z.B.
  * `(uft_format_id_t)UFT_FORMAT_SCP`.
+ *
+ * MF-265 (V415 fix): if `uft_format_registry.h` was already included
+ * in this TU, it provides `typedef enum uft_format_id_t`. The
+ * UFT_FORMAT_ID_T_DEFINED guard is shared so the two definitions never
+ * conflict in the same TU. Both are uint32-width on every supported
+ * ABI; explicit casts between them are no-ops.
  */
+#ifndef UFT_FORMAT_ID_T_DEFINED
+#define UFT_FORMAT_ID_T_DEFINED
 typedef uint32_t uft_format_id_t;
+#endif
 
 /**
  * @brief Round-Trip-Status eines Format-Paars
