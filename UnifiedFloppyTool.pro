@@ -1112,7 +1112,10 @@ SOURCES += \
     src/analysis/denoise/phi_otdr_denoise_1d.c \
     src/formats/uft_format_registry.c \
     src/formats/uft_v3_bridge.c \
-    src/core/uft_format_plugin.c
+    src/core/uft_format_plugin.c \
+    src/core/uft_preflight.c \
+    src/core/uft_loss_report.c \
+    src/core/uft_roundtrip.c
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Track Analysis
