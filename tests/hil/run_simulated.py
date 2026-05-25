@@ -156,13 +156,16 @@ def check_fc5025_read() -> Check:
 
 
 def check_fluxengine_write() -> Check:
-    """fluxengine write: consume an input .flux and report success."""
+    """fluxengine write: consume an input .flux and report success.
+
+    Self-contained: writes a small dummy flux file into a tmpdir
+    instead of borrowing the gitignored differential corpus. CI fresh
+    checkout has no corpus, but always has tempdir."""
     with tempfile.TemporaryDirectory() as td:
-        # Borrow one of the corpus SCP files as a stand-in input.
-        src = CORPUS / "ibm_dd.scp"
-        if not src.exists():
-            return Check("fluxengine", "write 1-track flux file",
-                         "NOT_RUN", "ibm_dd.scp fixture not present")
+        src = Path(td) / "dummy.flux"
+        # 16 KB of zero bytes — fluxengine "write" simulator only checks
+        # input-exists + size > 0 (doesn't parse the flux content).
+        src.write_bytes(b"\x00" * 16384)
         res = run_with_sim_path([
             sys.executable, str(SIM_DIR / "sim_fluxengine.py"),
             "write", "-c", "ibm.720", "--tracks=c0h0", "-i", str(src),
@@ -170,7 +173,7 @@ def check_fluxengine_write() -> Check:
         if res.returncode == 0 and "write OK" in res.stdout:
             return Check("fluxengine", "write 1-track flux file",
                          "SIMULATED",
-                         f"consumed {src.stat().st_size} bytes from fixture")
+                         f"consumed {src.stat().st_size} bytes (synthetic)")
         return Check("fluxengine", "write 1-track flux file", "FAIL",
                      f"exit {res.returncode}: {res.stdout[:80]!r}")
 

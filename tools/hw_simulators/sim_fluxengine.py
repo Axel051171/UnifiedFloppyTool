@@ -59,6 +59,28 @@ def parse_tracks_spec(spec: str):
     return lo, hi, head
 
 
+def synthetic_scp_header() -> bytes:
+    """
+    Return a minimal-but-valid SCP file header so V2-provider tests can
+    parse it even when the gitignored differential corpus has not been
+    generated (CI fresh-checkout path).
+
+    SCP header is documented in
+    https://www.cbmstuff.com/downloads/scp/scp_image_specs.txt — 16
+    bytes magic+flags + track-table. We emit just enough for the parser
+    to accept the file and report "no usable tracks".
+    """
+    # "SCP" magic + version 0x01 + disk_type=0x00 + revolutions=2 +
+    # start_track=0 + end_track=0 + flags=0x00 + bitcell=0 + heads=1 +
+    # res=0 + checksum (4 bytes).
+    hdr = b"SCP" + bytes([0x01, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00])
+    hdr = hdr.ljust(12, b"\x00") + bytes([0x00, 0x00, 0x00, 0x00])
+    # Track-offset table: 168 × uint32 LE = 672 bytes (all zero = "no
+    # track data" — parser sees empty disk).
+    track_table = b"\x00" * 672
+    return hdr + track_table
+
+
 def slice_scp_track(fixture: Path, cyl: int, head: int) -> bytes:
     """
     Return a small slice of the fixture for the requested (cyl, head).
@@ -69,9 +91,13 @@ def slice_scp_track(fixture: Path, cyl: int, head: int) -> bytes:
     SCP header and either succeed-decode or fall through to
     FluxMarginal. The track itself is shared, since we don't have
     per-track decomposition of the corpus here.
+
+    If the fixture is absent (e.g. CI fresh checkout — the corpus is
+    gitignored / build-artifact), fall back to a synthetic SCP header
+    so the V2 provider's parser still sees a valid file.
     """
     if not fixture.exists():
-        return b""
+        return synthetic_scp_header()
     return fixture.read_bytes()[: 64 * 1024]
 
 
