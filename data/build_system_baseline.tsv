@@ -43,9 +43,6 @@ A	src/analysis/uft_anomaly_detect.c
 A	src/analysis/uft_ml_protection.c
 A	src/analysis/uft_sector_compare.c
 A	src/core/uft_error_strings.c
-A	src/core/uft_loss_report.c
-A	src/core/uft_preflight.c
-A	src/core/uft_roundtrip.c
 A	src/detect/mfm/cpm_fs.c
 A	src/detect/mfm/mfm_detect.c
 A	src/detect/mfm/uft_mfm_detect_bridge.c
