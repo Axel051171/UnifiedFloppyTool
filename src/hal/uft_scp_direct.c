@@ -343,12 +343,7 @@ uft_error_t uft_scp_direct_read_flux(uft_scp_direct_ctx_t *ctx,
      * [offset_be32, length_be32] dumps `length` bytes of flux RAM
      * starting at `offset`. Iterate per samdisk's reference loop. */
     uint32_t flux_offset = 0;
-    size_t emitted = 0;
-    uint32_t accum_ticks = 0;  /* persists across revolution boundary
-                                * to match samdisk semantics: any
-                                * trailing 0x0000 markers at the end
-                                * of rev N feed into rev N+1's first
-                                * non-zero. */
+    size_t   emitted = 0;
 
     /* Working buffer for one revolution's flux samples. Sized for
      * the worst case — a 300 RPM track at 25 ns/tick can hold up to
@@ -395,7 +390,15 @@ uft_error_t uft_scp_direct_read_flux(uft_scp_direct_ctx_t *ctx,
         /* Decode 16-bit big-endian samples → uint32_t ns.
          * Per samdisk: 0x0000 marker adds 0x10000 to running tick
          * accumulator (cell overflow); non-zero emits
-         * (accum + value) * NS_PER_TICK and resets accumulator. */
+         * (accum + value) * NS_PER_TICK and resets accumulator.
+         *
+         * Accumulator is reset PER REVOLUTION — each capture starts
+         * fresh after its index pulse (ff_Index), so trailing 0x0000
+         * markers at the end of rev N are physical gaps, NOT data
+         * that continues into rev N+1. This matches samdisk exactly
+         * (`uint32_t total_time = 0;` inside the per-rev loop). */
+        uint32_t accum_ticks = 0;
+
         for (uint32_t k = 0; k < flux_count; k++) {
             uint16_t sample = scp_read_be16(&flux_data[k * 2]);
             if (sample == 0) {
@@ -403,10 +406,11 @@ uft_error_t uft_scp_direct_read_flux(uft_scp_direct_ctx_t *ctx,
             } else {
                 accum_ticks += sample;
                 if (emitted >= out_capacity) {
-                    /* Honest buffer-too-small: report exact count
-                     * required would need a full pre-pass; we instead
-                     * report the count consumed so far + a sentinel.
-                     * Callers must retry with a larger buffer. */
+                    /* Honest buffer-too-small: report the count
+                     * consumed so far. A full pre-pass for exact
+                     * required size would need a second iteration;
+                     * callers should retry with a larger buffer
+                     * (2× the partial count is usually safe). */
                     *out_count = emitted;
                     free(flux_data);
                     return UFT_ERR_BUFFER_TOO_SMALL;
@@ -416,12 +420,14 @@ uft_error_t uft_scp_direct_read_flux(uft_scp_direct_ctx_t *ctx,
                 accum_ticks = 0;
             }
         }
+
+        /* Trailing accumulator (no terminating non-zero in this rev)
+         * is DROPPED here — those ticks are physical gap between the
+         * last transition and the next index pulse, not transition
+         * data we can attribute to a specific edge. Never fabricate
+         * a final sample. Matches samdisk. */
     }
 
-    /* Discard any trailing overflow accumulator that didn't terminate
-     * in a non-zero sample (incomplete trailing transition). This is
-     * the samdisk behaviour — those ticks are lost data, NOT
-     * fabricated as a final sample. */
     free(flux_data);
     *out_count = emitted;
     return UFT_OK;

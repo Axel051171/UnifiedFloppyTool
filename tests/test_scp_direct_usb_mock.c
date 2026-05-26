@@ -388,6 +388,94 @@ TEST(read_flux_rejects_single_revolution) {
     ASSERT(usb_mock_remaining_exchanges() == 0);
 }
 
+/* ─────────────────────────────────────────────────────────────────────
+ *  Test 9 — accumulator is reset PER REVOLUTION (regression-guard).
+ *
+ *  Rev 0 ends with an unterminated 0x0000 (overflow marker without a
+ *  subsequent non-zero). Rev 1 starts with 0x0010.
+ *
+ *  Correct (samdisk-equivalent) behaviour:
+ *    - Rev 0: 0x0010 emits, then 0x0000 accumulates 0x10000, end-of-rev
+ *      drops the accumulator. → 1 emit: 0x10 * 25 = 400 ns.
+ *    - Rev 1 starts fresh accum=0: 0x0010 emits 0x10 * 25 = 400 ns.
+ *    Total: 2 emits, both = 400 ns.
+ *
+ *  Buggy "persist across boundary" behaviour would emit:
+ *    - Rev 0: 0x10*25=400
+ *    - Rev 1: (0x10000+0x10)*25=1638800  ← WRONG
+ *  This test catches that regression.
+ * ───────────────────────────────────────────────────────────────────── */
+TEST(read_flux_resets_accumulator_per_revolution) {
+    usb_mock_reset();
+    usb_mock_queue_open(0x16D0, 0x0F8C, 1);
+
+    uint8_t pkt[16];
+    size_t  n;
+
+    /* SIDE 0 */
+    uint8_t side_param = 0;
+    n = build_scp_packet(pkt, 0x8D, &side_param, 1);
+    usb_mock_queue_bulk_out(0x01, pkt, n, 0);
+    uint8_t side_ack[2] = { 0x8D, 0x4F };
+    usb_mock_queue_bulk_in(0x81, side_ack, 2, 0);
+
+    /* READ_FLUX [revs=2, ff_Index] */
+    uint8_t rf_params[2] = { 2, 0x01 };
+    n = build_scp_packet(pkt, 0xA0, rf_params, 2);
+    usb_mock_queue_bulk_out(0x01, pkt, n, 0);
+    uint8_t rf_ack[2] = { 0xA0, 0x4F };
+    usb_mock_queue_bulk_in(0x81, rf_ack, 2, 0);
+
+    /* GET_FLUX_INFO: rev 0 count=2, rev 1 count=1. */
+    n = build_scp_packet(pkt, 0xA1, NULL, 0);
+    usb_mock_queue_bulk_out(0x01, pkt, n, 0);
+    uint8_t gfi_ack[2] = { 0xA1, 0x4F };
+    usb_mock_queue_bulk_in(0x81, gfi_ack, 2, 0);
+
+    uint8_t rev_index[40] = {0};
+    rev_index[4 + 3]      = 0x02;    /* rev 0 count = 2 */
+    rev_index[8 + 4 + 3]  = 0x01;    /* rev 1 count = 1 */
+    usb_mock_queue_bulk_in(0x81, rev_index, sizeof(rev_index), 0);
+
+    /* SENDRAM_USB rev 0: 4 bytes (2 samples) */
+    uint8_t sendram0[8] = { 0,0,0,0,  0,0,0,4 };
+    n = build_scp_packet(pkt, 0xA9, sendram0, 8);
+    usb_mock_queue_bulk_out(0x01, pkt, n, 0);
+    uint8_t s0_ack[2] = { 0xA9, 0x4F };
+    usb_mock_queue_bulk_in(0x81, s0_ack, 2, 0);
+    /* Rev 0 samples: 0x0010, 0x0000   ← trailing overflow, no terminator */
+    uint8_t flux0[4] = { 0x00,0x10, 0x00,0x00 };
+    usb_mock_queue_bulk_in(0x81, flux0, sizeof(flux0), 0);
+
+    /* SENDRAM_USB rev 1: 2 bytes (1 sample), offset=4 */
+    uint8_t sendram1[8] = { 0,0,0,4,  0,0,0,2 };
+    n = build_scp_packet(pkt, 0xA9, sendram1, 8);
+    usb_mock_queue_bulk_out(0x01, pkt, n, 0);
+    uint8_t s1_ack[2] = { 0xA9, 0x4F };
+    usb_mock_queue_bulk_in(0x81, s1_ack, 2, 0);
+    /* Rev 1 sample: 0x0010 (a CLEAN 0x10 — NOT (0x10000+0x10) which is
+     * what a buggy persist-across-boundary would produce). */
+    uint8_t flux1[2] = { 0x00,0x10 };
+    usb_mock_queue_bulk_in(0x81, flux1, sizeof(flux1), 0);
+
+    usb_mock_queue_close();
+
+    uft_scp_direct_ctx_t *ctx = NULL;
+    ASSERT(uft_scp_direct_open(&ctx) == UFT_OK);
+
+    uint32_t out_flux[8] = {0};
+    size_t   out_count = 999;
+    uft_error_t err = uft_scp_direct_read_flux(
+        ctx, 0, 2, out_flux, 8, &out_count);
+    ASSERT(err == UFT_OK);
+    ASSERT(out_count == 2);
+    ASSERT(out_flux[0] == 0x10u * 25u);   /* Rev 0: 400 ns */
+    ASSERT(out_flux[1] == 0x10u * 25u);   /* Rev 1: 400 ns — NOT 1638800 */
+
+    uft_scp_direct_close(ctx);
+    ASSERT(usb_mock_remaining_exchanges() == 0);
+}
+
 int main(void)
 {
     printf("=== SCP-Direct USB-Mock Integration Tests (MF-270 + MF-276) ===\n");
@@ -399,6 +487,7 @@ int main(void)
     RUN(read_flux_two_revs_happy_path);
     RUN(read_flux_handles_overflow_accumulation);
     RUN(read_flux_rejects_single_revolution);
+    RUN(read_flux_resets_accumulator_per_revolution);
     printf("\nResults: %d passed, %d failed\n", _pass, _fail);
     printf("Total bulk transfers: %zu\n", usb_mock_total_transfers());
     return _fail ? 1 : 0;
