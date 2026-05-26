@@ -17,6 +17,8 @@ aktiv abgearbeitet.
 
 ### 1.1 `.loss.json` Sidecar-Format noch nicht implementiert
 - **Status:** MITIGATED (Writer implementiert, Integration pending)
+- **Demo-Impact:** keiner — Sidecar wird für LOSSY_DOCUMENTED Konvertierungen
+  emittiert (Phase 2 / MF-268). Demo-Schritt 4 zeigt es als Feature, nicht als Bug.
 - **Beschreibung:** Schema `uft-loss-report-v1` + Writer-API
   (`include/uft/core/uft_loss_report.h`, `src/core/uft_loss_report.c`) sind
   da. 11 Verlust-Kategorien (WEAK_BITS, FLUX_TIMING, INDEX_PULSES,
@@ -30,6 +32,8 @@ aktiv abgearbeitet.
 
 ### 1.2 Nicht alle Konvertierungen haben Pre-Conversion-Report
 - **Status:** MITIGATED (Helper da, Wiring in Konvertierer ausstehend)
+- **Demo-Impact:** keiner — `uft_convert_file()` ist seit MF-263 der
+  single chokepoint für alle 44 Pfade. Demo zeigt das als Sicherheits-Feature.
 - **Beschreibung:** Preflight-Helper implementiert
   (`include/uft/core/uft_preflight.h`, `src/core/uft_preflight.c`). Kombiniert
   §1.1 Sidecar-Writer + §5.1 Round-Trip-Matrix zu einer einheitlichen
@@ -54,6 +58,8 @@ aktiv abgearbeitet.
 
 ### 5.1 Round-Trip-Matrix unvollständig getestet
 - **Status:** MITIGATED (Registry + API + 13 Paare, Rest UNTESTED)
+- **Demo-Impact:** Workaround — Demo nutzt eines der 13 verifizierten
+  Paare (Empfehlung: SCP→D64 oder SCP→IMG). Andere Paare bleiben außen vor.
 - **Beschreibung:** Registry implementiert (`include/uft/core/uft_roundtrip.h`,
   `src/core/uft_roundtrip.c`). Status pro Paar: `UFT_RT_LOSSLESS` /
   `UFT_RT_LOSSY_DOCUMENTED` / `UFT_RT_IMPOSSIBLE` / `UFT_RT_UNTESTED`.
@@ -68,6 +74,8 @@ aktiv abgearbeitet.
 
 ### 5.2 Keine Sichtbarkeit des Round-Trip-Status in der GUI
 - **Status:** MITIGATED (Converter-Wizard angeschlossen, weitere GUI-Flächen ausstehend)
+- **Demo-Impact:** keiner — Wizard ist die Demo-Fläche. Andere GUI-Flächen
+  werden im Demo-Skript nicht angefasst.
 - **Beschreibung:** `UftTargetPage::updateConversionWarning()` konsultiert
   jetzt `uft_roundtrip_status()` / `uft_roundtrip_note()` sobald Quell- UND
   Ziel-Format beide in der Roundtrip-Matrix hinterlegt sind
@@ -90,6 +98,8 @@ aktiv abgearbeitet.
 ### 1.1 LossReport `.loss.json` Sidecar (Preflight gate)
 - **Status:** ✓ Phase 1 CLOSED (MF-263, V415-PLAN LOSS.preflight) —
   Per-converter Phase 2 (per-loss sidecar emit) bleibt offen.
+- **Demo-Impact:** keiner — Phase 2 (category-level) ist live; per-track exakte
+  Counts (v4.1.6) sind nicht im Demo-Scope.
 - **Phase 1 (MF-263):** `uft_convert_file()` ist der single chokepoint für
   alle 44 Konversionspfade. Ruft `uft_preflight_check()` mit der
   (src,dst)-Format-ID, klassifiziert via Round-Trip-Matrix in LOSSLESS /
@@ -102,6 +112,7 @@ aktiv abgearbeitet.
 
 ### 6.1 Keine CI-Pipeline mit Emulator-Verifikation
 - **Status:** OPEN
+- **Demo-Impact:** keiner — Emulator-CI ist Backend-Hygiene, im Demo nicht sichtbar.
 - **Beschreibung:** Prinzip 6 verlangt CI die Exports durch Emulatoren
   schickt. Aktuell ist das für kein Format automatisiert. Manuelle Tests
   existieren ad-hoc.
@@ -110,6 +121,8 @@ aktiv abgearbeitet.
 
 ### 6.2 Kompatibilitäts-Matrizen pro Format fehlen größtenteils
 - **Status:** MITIGATED (Infrastruktur da, Populierung 1/80)
+- **Demo-Impact:** keiner — Demo nutzt ADF (das populierte Plugin als Exemplar).
+  Andere Formate zeigen leere Compat-Matrix, sind aber sonst funktional.
 - **Beschreibung:** `uft_plugin_compat_entry_t` Array + `compat_entries` /
   `compat_count` Felder sind in `uft_format_plugin_t`. Status pro
   Konsumer: `UFT_EMU_COMPATIBLE` / `UFT_EMU_INCOMPATIBLE` / `UFT_EMU_PARTIAL`
@@ -159,6 +172,9 @@ aktiv abgearbeitet.
 
 ### 7.3 287 Stub-Parser sind als "registriert" sichtbar
 - **Status:** MITIGATED (Marker da, Populierung 0/287)
+- **Demo-Impact:** Workaround — Demo zeigt nur die ~12 verifizierten Formate
+  (D64/G64/ADF/IMG/IMA/DMK/WOZ v1/v2/2.1/SCP/HFE/KryoFlux RAW). Stubs werden
+  nicht aufgelistet (`uft formats --real-only` für CLI).
 - **Beschreibung:** Feld `is_stub` ist in `uft_format_plugin_t` implementiert.
   Default `false` — das heisst: ein Stub MUSS aktiv `is_stub = true` setzen
   um ehrlich zu sein. CLI-Filter `uft formats --real-only` nutzt diesen Flag.
@@ -226,6 +242,8 @@ aktiv abgearbeitet.
 ### M.0 Planned APIs (MF-011 DOCUMENT-Welle)
 
 - **Status:** MARKED, nicht implementiert (2026-04-24)
+- **Demo-Impact:** keiner — `PLANNED FEATURE`-Banner schützen Consumer.
+  Demo nutzt keine dieser Header-Funktionen.
 - **Beschreibung:** 98 Skeleton-Header in `include/uft/` deklarieren zusammen
   **1 952 öffentliche `uft_*`-Funktionen ohne Implementation**. Jeder dieser
   Header trägt jetzt einen `/* PLANNED FEATURE — <scope> */`-Banner, so dass
@@ -243,6 +261,8 @@ aktiv abgearbeitet.
 
 ### M.1 Nicht alle Prinzipien haben automatisierte Tests
 - **Status:** MITIGATED (Kern-Audit live, weitere Checks ausstehend)
+- **Demo-Impact:** keiner — Test-Coverage ist intern. Demo zeigt Audit-Ergebnis
+  (`audit/MASTER_REPORT.md`) als Status, nicht den Coverage-Stand der Tests.
 - **Beschreibung:** Meta-Prinzip A verlangt für jede Zusage einen CI-Test.
   Stand heute:
 

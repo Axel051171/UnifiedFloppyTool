@@ -152,6 +152,22 @@ These are intentionally deferred to v4.1.6 (with reasoning):
   silently now need to set `accept_data_loss=true` in
   `uft_convert_options_t` (`preserve_errors` field maps to this).
 
+## Hardware Compatibility
+
+Detailed per-controller capability matrix (Tier-3 / Tier-2.5 / mock-only /
+scaffold) lives in [`docs/CAPABILITIES.md`](docs/CAPABILITIES.md).
+
+**Status quick-glance:**
+- **1 production:** Greaseweazle (Tier-3 PASS, read+write)
+- **3 read-real via subprocess wrapper:** KryoFlux (DTC), FluxEngine (CLI), FC5025 (fcimage)
+- **3 libusb-wired, mock-only:** SCP-Direct, XUM1541, Applesauce (byte-protocol validated)
+- **1 USB-CDC-wired with sim:** ADF-Copy
+- **1 Linux-only:** USB-Floppy (SG_IO; Win/Mac backends are v4.1.6)
+
+Any provider not in Tier-3 PASS reports `not_implemented` for unwired calls
+— **never a silent no-op.** GUI shows orange "Preview" badge instead of
+the green Production badge.
+
 ## Verified on (CI green)
 
 - Local: MinGW-w64 g++ 13.1.0, Qt 6.10.1
