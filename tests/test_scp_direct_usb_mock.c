@@ -176,14 +176,229 @@ TEST(seek_fails_on_bulk_out_timeout) {
     ASSERT(usb_mock_remaining_exchanges() == 0);
 }
 
+/* ─────────────────────────────────────────────────────────────────────
+ *  Test 6 — read_flux 2-revolution happy path: full samdisk wire dance.
+ *
+ *  Steps (5 USB exchanges after open):
+ *    1. CMD_SIDE      [0x8D,1, side=0,        cksum]  + [0x8D, PR_OK]
+ *    2. CMD_READ_FLUX [0xA0,2, revs=2,ff=0x01,cksum]  + [0xA0, PR_OK]
+ *    3. CMD_GET_FLUX_INFO [0xA1,0, cksum]    + [0xA1, PR_OK]
+ *       + 40-byte rev_index (rev 0 count=4, rev 1 count=2, rest 0)
+ *    4. CMD_SENDRAM_USB rev 0 [offset=0,len=8] + 8 bytes flux data
+ *    5. CMD_SENDRAM_USB rev 1 [offset=8,len=4] + 4 bytes flux data
+ *
+ *  Expected: 6 transitions, each = sample_BE * 25 ns.
+ *    rev 0 samples (16-bit BE): 0x0010, 0x0020, 0x0030, 0x0040
+ *      → ns: 16*25=400, 32*25=800, 48*25=1200, 64*25=1600
+ *    rev 1 samples (16-bit BE): 0x0050, 0x0060
+ *      → ns: 80*25=2000, 96*25=2400
+ * ───────────────────────────────────────────────────────────────────── */
+TEST(read_flux_two_revs_happy_path) {
+    usb_mock_reset();
+    usb_mock_queue_open(0x16D0, 0x0F8C, 1);
+
+    uint8_t pkt[16];
+    size_t  n;
+
+    /* (1) CMD_SIDE param=0 */
+    uint8_t side_param = 0;
+    n = build_scp_packet(pkt, 0x8D, &side_param, 1);
+    usb_mock_queue_bulk_out(0x01, pkt, n, 0);
+    uint8_t side_ack[2] = { 0x8D, 0x4F };
+    usb_mock_queue_bulk_in(0x81, side_ack, 2, 0);
+
+    /* (2) CMD_READ_FLUX [revs=2, ff_Index=0x01] */
+    uint8_t rf_params[2] = { 2, 0x01 };
+    n = build_scp_packet(pkt, 0xA0, rf_params, 2);
+    usb_mock_queue_bulk_out(0x01, pkt, n, 0);
+    uint8_t rf_ack[2] = { 0xA0, 0x4F };
+    usb_mock_queue_bulk_in(0x81, rf_ack, 2, 0);
+
+    /* (3) CMD_GET_FLUX_INFO (no params) + 40-byte rev_index payload. */
+    n = build_scp_packet(pkt, 0xA1, NULL, 0);
+    usb_mock_queue_bulk_out(0x01, pkt, n, 0);
+    uint8_t gfi_ack[2] = { 0xA1, 0x4F };
+    usb_mock_queue_bulk_in(0x81, gfi_ack, 2, 0);
+
+    /* rev_index: 5 pairs of [index_time_be32, flux_count_be32].
+     * We zero everything then set count[0]=4, count[1]=2. */
+    uint8_t rev_index[40] = {0};
+    /* rev 0 count at offset 4 (4 bytes BE): 0x00,0x00,0x00,0x04 */
+    rev_index[4*1 + 3] = 0x04;
+    /* rev 1 count at offset 12 (4 bytes BE): 0x00,0x00,0x00,0x02 */
+    rev_index[8 + 4 + 3] = 0x02;
+    usb_mock_queue_bulk_in(0x81, rev_index, sizeof(rev_index), 0);
+
+    /* (4) CMD_SENDRAM_USB rev 0: [offset=0, length=8] + 8 bytes flux. */
+    uint8_t sendram0[8] = {
+        0x00,0x00,0x00,0x00,   /* offset = 0 (BE) */
+        0x00,0x00,0x00,0x08    /* length = 8 (BE) */
+    };
+    n = build_scp_packet(pkt, 0xA9, sendram0, 8);
+    usb_mock_queue_bulk_out(0x01, pkt, n, 0);
+    uint8_t s0_ack[2] = { 0xA9, 0x4F };
+    usb_mock_queue_bulk_in(0x81, s0_ack, 2, 0);
+    /* Flux samples for rev 0 (16-bit BE): 0x0010, 0x0020, 0x0030, 0x0040 */
+    uint8_t flux0[8] = { 0x00,0x10, 0x00,0x20, 0x00,0x30, 0x00,0x40 };
+    usb_mock_queue_bulk_in(0x81, flux0, sizeof(flux0), 0);
+
+    /* (5) CMD_SENDRAM_USB rev 1: [offset=8, length=4] + 4 bytes flux. */
+    uint8_t sendram1[8] = {
+        0x00,0x00,0x00,0x08,   /* offset = 8 */
+        0x00,0x00,0x00,0x04    /* length = 4 */
+    };
+    n = build_scp_packet(pkt, 0xA9, sendram1, 8);
+    usb_mock_queue_bulk_out(0x01, pkt, n, 0);
+    uint8_t s1_ack[2] = { 0xA9, 0x4F };
+    usb_mock_queue_bulk_in(0x81, s1_ack, 2, 0);
+    /* Flux samples for rev 1 (16-bit BE): 0x0050, 0x0060 */
+    uint8_t flux1[4] = { 0x00,0x50, 0x00,0x60 };
+    usb_mock_queue_bulk_in(0x81, flux1, sizeof(flux1), 0);
+
+    usb_mock_queue_close();
+
+    /* Drive the C-HAL */
+    uft_scp_direct_ctx_t *ctx = NULL;
+    ASSERT(uft_scp_direct_open(&ctx) == UFT_OK);
+
+    uint32_t out_flux[16] = {0};
+    size_t   out_count = 999;
+    uft_error_t err = uft_scp_direct_read_flux(
+        ctx, /*side=*/0, /*revs=*/2,
+        out_flux, /*capacity=*/16, &out_count);
+
+    ASSERT(err == UFT_OK);
+    ASSERT(out_count == 6);
+
+    /* Decoded ns values: sample * 25 */
+    ASSERT(out_flux[0] == 0x10 * 25);   /* 400 */
+    ASSERT(out_flux[1] == 0x20 * 25);   /* 800 */
+    ASSERT(out_flux[2] == 0x30 * 25);   /* 1200 */
+    ASSERT(out_flux[3] == 0x40 * 25);   /* 1600 */
+    ASSERT(out_flux[4] == 0x50 * 25);   /* 2000 */
+    ASSERT(out_flux[5] == 0x60 * 25);   /* 2400 */
+
+    uft_scp_direct_close(ctx);
+    ASSERT(usb_mock_remaining_exchanges() == 0);
+}
+
+/* ─────────────────────────────────────────────────────────────────────
+ *  Test 7 — read_flux handles 0x0000 overflow markers correctly.
+ *
+ *  Per samdisk SuperCardPro.cpp ReadFlux():
+ *    0x0000 marker → accumulator += 0x10000 (cell overflow)
+ *    non-zero      → emit (accumulator + sample) * 25 ns; reset accum
+ *
+ *  Sample stream (rev 0): 0x0000, 0x0010, 0x0000, 0x0000, 0x0020
+ *  Expected transitions: 2 (after each non-zero)
+ *    1st emit: (0x10000 + 0x0010) * 25 = 65552 * 25 = 1638800 ns
+ *    2nd emit: (0x10000 + 0x10000 + 0x0020) * 25 = 131104 * 25 = 3277600 ns
+ *  Trailing accumulator (no non-zero terminator) is dropped — never
+ *  fabricated as a final sample. Forensic.
+ * ───────────────────────────────────────────────────────────────────── */
+TEST(read_flux_handles_overflow_accumulation) {
+    usb_mock_reset();
+    usb_mock_queue_open(0x16D0, 0x0F8C, 1);
+
+    uint8_t pkt[16];
+    size_t  n;
+
+    /* SIDE 0 */
+    uint8_t side_param = 0;
+    n = build_scp_packet(pkt, 0x8D, &side_param, 1);
+    usb_mock_queue_bulk_out(0x01, pkt, n, 0);
+    uint8_t side_ack[2] = { 0x8D, 0x4F };
+    usb_mock_queue_bulk_in(0x81, side_ack, 2, 0);
+
+    /* READ_FLUX [revs=2, ff_Index=0x01] — min revs=2 */
+    uint8_t rf_params[2] = { 2, 0x01 };
+    n = build_scp_packet(pkt, 0xA0, rf_params, 2);
+    usb_mock_queue_bulk_out(0x01, pkt, n, 0);
+    uint8_t rf_ack[2] = { 0xA0, 0x4F };
+    usb_mock_queue_bulk_in(0x81, rf_ack, 2, 0);
+
+    /* GET_FLUX_INFO: rev 0 has 5 samples, rev 1 has 0. */
+    n = build_scp_packet(pkt, 0xA1, NULL, 0);
+    usb_mock_queue_bulk_out(0x01, pkt, n, 0);
+    uint8_t gfi_ack[2] = { 0xA1, 0x4F };
+    usb_mock_queue_bulk_in(0x81, gfi_ack, 2, 0);
+
+    uint8_t rev_index[40] = {0};
+    rev_index[4 + 3] = 0x05;    /* rev 0 count = 5 */
+    /* rev 1 count = 0 → loop skips, no SENDRAM_USB for rev 1 */
+    usb_mock_queue_bulk_in(0x81, rev_index, sizeof(rev_index), 0);
+
+    /* SENDRAM_USB rev 0: offset=0 length=10 (5 samples × 2 bytes) */
+    uint8_t sendram0[8] = {
+        0x00,0x00,0x00,0x00,
+        0x00,0x00,0x00,0x0A
+    };
+    n = build_scp_packet(pkt, 0xA9, sendram0, 8);
+    usb_mock_queue_bulk_out(0x01, pkt, n, 0);
+    uint8_t s0_ack[2] = { 0xA9, 0x4F };
+    usb_mock_queue_bulk_in(0x81, s0_ack, 2, 0);
+    /* Flux samples (BE16): 0000, 0010, 0000, 0000, 0020 */
+    uint8_t flux0[10] = {
+        0x00,0x00, 0x00,0x10, 0x00,0x00, 0x00,0x00, 0x00,0x20
+    };
+    usb_mock_queue_bulk_in(0x81, flux0, sizeof(flux0), 0);
+
+    usb_mock_queue_close();
+
+    uft_scp_direct_ctx_t *ctx = NULL;
+    ASSERT(uft_scp_direct_open(&ctx) == UFT_OK);
+
+    uint32_t out_flux[16] = {0};
+    size_t   out_count = 999;
+    uft_error_t err = uft_scp_direct_read_flux(
+        ctx, 0, 2, out_flux, 16, &out_count);
+
+    ASSERT(err == UFT_OK);
+    ASSERT(out_count == 2);
+    ASSERT(out_flux[0] == (0x10000u + 0x0010u) * 25u);    /* 1638800 */
+    ASSERT(out_flux[1] == (0x20000u + 0x0020u) * 25u);    /* 3277600 */
+
+    uft_scp_direct_close(ctx);
+    ASSERT(usb_mock_remaining_exchanges() == 0);
+}
+
+/* ─────────────────────────────────────────────────────────────────────
+ *  Test 8 — single revolution requested → INVALID_ARG (samdisk-clamp
+ *  semantics rejected at HAL boundary; honest, no silent coercion).
+ * ───────────────────────────────────────────────────────────────────── */
+TEST(read_flux_rejects_single_revolution) {
+    usb_mock_reset();
+    usb_mock_queue_open(0x16D0, 0x0F8C, 1);
+    usb_mock_queue_close();
+
+    uft_scp_direct_ctx_t *ctx = NULL;
+    ASSERT(uft_scp_direct_open(&ctx) == UFT_OK);
+
+    uint32_t out_flux[8] = {0};
+    size_t   out_count = 999;
+    /* revs=1 < UFT_SCP_MIN_REVOLUTIONS (2). */
+    uft_error_t err = uft_scp_direct_read_flux(
+        ctx, 0, 1, out_flux, 8, &out_count);
+    ASSERT(err == UFT_ERR_INVALID_ARG);
+    /* Critical: out_count must NOT have been modified to a plausible
+     * number that a caller might mistake for a real sample count. */
+    ASSERT(out_count == 999);
+
+    uft_scp_direct_close(ctx);
+    ASSERT(usb_mock_remaining_exchanges() == 0);
+}
+
 int main(void)
 {
-    printf("=== SCP-Direct USB-Mock Integration Tests (MF-270) ===\n");
+    printf("=== SCP-Direct USB-Mock Integration Tests (MF-270 + MF-276) ===\n");
     RUN(open_close_happy_path);
     RUN(open_fails_no_device);
     RUN(seek_emits_stepto_packet);
     RUN(seek_fails_when_device_reports_bad_status);
     RUN(seek_fails_on_bulk_out_timeout);
+    RUN(read_flux_two_revs_happy_path);
+    RUN(read_flux_handles_overflow_accumulation);
+    RUN(read_flux_rejects_single_revolution);
     printf("\nResults: %d passed, %d failed\n", _pass, _fail);
     printf("Total bulk transfers: %zu\n", usb_mock_total_transfers());
     return _fail ? 1 : 0;
