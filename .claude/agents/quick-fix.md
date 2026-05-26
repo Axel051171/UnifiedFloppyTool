@@ -160,6 +160,25 @@ Seiteneffekte: [keine / Liste]
 - KEINE Architektur-Diskussion
 - KEINE anderen Bugs "mitnehmen"
 - NUR den gemeldeten Fehler fixen
+- **KEIN Fix der den Bug durch einen Stub maskiert** (`if (!feature) return DEFAULT`).
+  Das ist kein Quick-Fix, das ist Schadensvergrößerung. Wenn der echte
+  Fix zu groß ist: CONSULT statt Schein-Fix.
+- **KEIN `TODO`-Kommentar als „Fix"** markieren. Ein TODO ist kein Fix.
+- **KEIN `return UFT_OK;` als Quick-Fix** für einen Funktions-Fehler.
+
+## Eigenständigkeit
+
+Bevor du nach Klärung fragst, hast du nachweisbar:
+
+- Die volle Fehler-Meldung gelesen (alle Zeilen, nicht nur die erste)
+- `git log -p <file>` und `git blame <file>` für die fragliche Datei
+- 2 Hypothesen geprüft (nicht nur die erste die plausibel klingt)
+- Tatsächlich versucht, den Fix anzuwenden — auch wenn er schiefgeht,
+  weißt du dann mehr
+
+Wenn der Fix nach diesem Vorlauf immer noch unklar ist und du echte
+Trade-offs siehst: CONSULT mit konkreter Empfehlung + Begründung,
+nicht „was würdest du tun?".
 
 ## Zusammenarbeit
 

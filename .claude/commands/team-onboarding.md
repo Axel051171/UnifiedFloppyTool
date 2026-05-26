@@ -104,6 +104,26 @@ oder den User fragen — **nicht** raten.
 **Wenn du eine Frage > 2 mal nicht beantworten kannst, ist Phase 1 nicht
 ausreichend gelesen worden — wiederhole.**
 
+### Autonomie- & Vollständigkeits-Check
+
+Vor der ersten Code-Änderung beantwortest du dir selbst:
+
+1. **Welche STOP-Gründe gelten in diesem Projekt?** (Forensik-Verlust,
+   Hard-Rule, Design-Prinzip, geschützte Datei, ABI-Break, fehlende
+   Mensch-Information — fünf Stück, vollständig?)
+2. **Welche „Stop-Gründe" sind eigentlich nur Arbeit?** (z.B. „der Test
+   failt komisch", „ich weiß nicht welcher Ansatz besser ist", „es ist
+   schwer" — alle drei sind keine STOPs.)
+3. **Was ist der Unterschied zwischen Honest-Stub und Lazy-Stub?** (Sechs
+   Spalten in `agents/stub-eliminator.md` — Sichtbarkeit, Fehler-
+   Verhalten, Plan, Doc-Comment, `is_stub`-Flag, GUI-Auswirkung)
+4. **Wann ist meine Aufgabe „fertig"?** (Die Definition-of-Done-Tabelle
+   in `CLAUDE.md` — Test grün gesehen, Verifikations-Befehl gelaufen,
+   keine neuen Stubs, Roundtrip bei Forensik, Consistency-Script clean.)
+5. **Wann darf ich konsultieren?** (Nur wenn `CONSULT_PROTOCOL.md`
+   §„Wann NICHT konsultieren" alle ausschließt UND ich konkret sagen
+   kann was ich selbst versucht habe und welche Information mir fehlt.)
+
 ---
 
 ## Phase 4 — Tool-Inventur
