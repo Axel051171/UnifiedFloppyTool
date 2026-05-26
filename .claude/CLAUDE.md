@@ -45,15 +45,19 @@ ein Prinzip verletzt würde. Bekannte Lücken: [`docs/KNOWN_ISSUES.md`](../docs/
 
 ---
 
-## Agenten-Übersicht (13 Agenten)
+## Agenten-Übersicht (21 Agenten)
 
-29 Agenten wurden reduziert auf 13 aktiv genutzte. Die entfernten Agenten
-waren in 3 Monaten nicht aufgerufen oder von den neueren Must-Fix-Prävention-
-Agenten abgedeckt (siehe git-history für Details). Wenn ein seltener Einzelfall
-doch einen Spezialisten braucht, aus git zurückholen.
+29 Agenten wurden auf eine schlanke Kern-Suite (13) reduziert; mit dem
+Type-Driven-HAL-Refactor sind 8 spezialisierte Refactor-Agenten dazu-
+gekommen (Test-Autoren, DTO/Provider-Migratoren, Type-Architekt,
+Wiring-Codegen, PoC-Builder). Insgesamt aktuell 21. Die früher entfernten
+Agenten waren in 3 Monaten nicht aufgerufen oder von den neueren
+Must-Fix-Prävention-Agenten abgedeckt — bei Bedarf aus git zurückholen.
 
-Stand der Modelle: `claude-opus-4-7` / `claude-sonnet-4-6` (aktuelle
-Flaggschiffe).
+Stand der Modelle: `claude-opus-4-7` / `claude-sonnet-4-6` / `claude-haiku-4-5`
+(aktuelle Flaggschiffe + Haiku für mechanische Substitutionen).
+
+### Kern-Suite (13)
 
 | Agent | Modell | Zweck |
 |---|---|---|
@@ -70,6 +74,19 @@ Flaggschiffe).
 | `preflight-check` | Sonnet 4.6 | Vor git push: CI-Fehlerpattern lokal simulieren |
 | `github-expert` | Sonnet 4.6 | GitHub Actions, Releases, Repository-Features |
 | `quick-fix` | Sonnet 4.6 | EIN Problem → EIN Fix sofort |
+
+### Refactor-Suite (8, spezifisch für `refactor/type-driven-hal`)
+
+| Agent | Modell | Zweck |
+|---|---|---|
+| `type-system-architect` | Opus 4.7 | C++20 Concepts / Sum-Type Outcomes / Capability Mixins designen (P0-Foundation) |
+| `wiring-codegen-author` | Opus 4.7 | `tools/wiring_codegen.py` — YAML+UI → generierter Wiring-C++ (Rule H-3/H-4) |
+| `proof-of-concept-builder` | Opus 4.7 | Architektur-Hypothesen mit minimalem disposable PoC validieren (proto/) |
+| `provider-migrator` | Sonnet 4.6 | V1 Hardware-Provider → V2 Mixin-Komposition (ein Provider pro Invocation) |
+| `conformance-test-writer` | Sonnet 4.6 | `tests/hal_conformance.cpp` — TEMPLATE_TEST_CASE pro Provider × Concept |
+| `differential-test-author` | Sonnet 4.6 | gw-vs-uft Differential-Conformance-Tests (P3.2) |
+| `improvement-test-author` | Sonnet 4.6 | UFT-only-Capability-Tests vs. gw (P3.3) — `tests/improvement/<category>/` |
+| `dto-migrator` | Haiku 4.5 | `OperationResult`/`TrackData` → `std::variant *Outcome` (mechanische Substitution) |
 
 ---
 
@@ -95,7 +112,7 @@ Siehe `.claude/CONSULT_PROTOCOL.md` für Details. Kurzfassung:
    REASON / SEVERITY`. Haupt-Session oder `orchestrator` parst und routet.
    Funktioniert ohne Änderung an den Agent-Tools, vollständig beobachtbar.
 
-2. **Direkter Agent-Spawn (sparsam):** Nur 4 von 13 Agenten haben
+2. **Direkter Agent-Spawn (sparsam):** Nur 4 von 21 Agenten haben
    `Agent`-Tool in der Frontmatter:
    - `orchestrator` — Master-Router, darf beliebig spawnen
    - `deep-diagnostician` — gezielte Teilfragen
@@ -173,7 +190,6 @@ bool can_write = (type != KryoFlux);
 ```
 ---
 
-```markdown
 ## AI-Zusammenarbeit
 
 Dieses Projekt hat verbindliche Arbeits-Prinzipien für alle KI-Assistenten
@@ -216,7 +232,6 @@ Dieses Projekt hat verbindliche Arbeits-Prinzipien für alle KI-Assistenten
 - [ ] Was habe ich NICHT geprüft?
 
 Agent-Graph und Delegation-Matrix: siehe `docs/AI_COLLABORATION.md` Abschnitt 4.
-```
 
 ---
 

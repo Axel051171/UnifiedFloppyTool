@@ -76,7 +76,7 @@ ist Opus, aber sein Zweck ist Routing — zählt als „an Mensch zurückgeben")
 
 ## Direkter Agent-Call (tool-level)
 
-Zwei Agenten haben `Agent` in ihrer Tool-Liste und dürfen direkt sub-spawnen:
+Vier Agenten haben `Agent` in ihrer Tool-Liste und dürfen direkt sub-spawnen:
 
 - **`orchestrator`** — Master-Router. Darf jeden beliebigen Spezialisten
   spawnen. Haupt-Nutzer des CONSULT-Protokolls als Empfänger.

@@ -1,8 +1,8 @@
 # UFT Skills
 
-19 Skills für die Arbeit an UFT mit Claude Code (oder anderen LLMs, via
-`uft-llm-prompt-engineering`). Jeder Skill kapselt einen wiederkehrenden
-Workflow als Trigger + Templates + Verifikation.
+20 UFT-Skills + 1 HTB-Skill für die Arbeit an UFT mit Claude Code (oder
+anderen LLMs, via `uft-llm-prompt-engineering`). Jeder Skill kapselt
+einen wiederkehrenden Workflow als Trigger + Templates + Verifikation.
 
 Authoring-Konventionen: `docs/SKILL_AUTHORING_GUIDE.md`.
 
@@ -19,6 +19,7 @@ Authoring-Konventionen: `docs/SKILL_AUTHORING_GUIDE.md`.
 | `uft-deepread-module` | Neues DeepRead/OTDR-Pipeline-Modul |
 | `uft-filesystem` | Filesystem-Layer (FAT, ProDOS, AmigaDOS, …) |
 | `uft-protection-scheme` | Kopierschutz-Detektor / Klassifizierer |
+| `uft-coding-standards-compliance` | Master-Coding-Standards-Lücken schließen (H-1/H-2/H-9, F-2/F-4, D-2, SPEC_STATUS, capability manifest) |
 
 ### Build / Test / Performance
 
@@ -51,6 +52,12 @@ Authoring-Konventionen: `docs/SKILL_AUTHORING_GUIDE.md`.
 | Skill | Wann |
 |-------|------|
 | `uft-llm-prompt-engineering` | LLM auf UFT-Aufgabe briefen (Templates für 6 Aufgabentypen) |
+
+### Nicht-UFT (separat verwaltet)
+
+| Skill | Wann |
+|-------|------|
+| `htb-mentor` | HackTheBox/CTF-Tutoring — sokratisches Lernen statt Lösungen, getrennter Kontext, nicht für UFT-Tasks |
 
 ## Welcher Skill für welche Aufgabe?
 
@@ -92,7 +99,7 @@ cp -r skills/docs/* .claude/docs/   # falls noch nicht vorhanden
 
 ```bash
 # Skill-Anzahl
-ls .claude/skills/uft-*/SKILL.md | wc -l   # erwartet: 19
+ls .claude/skills/uft-*/SKILL.md | wc -l   # erwartet: 20
 
 # Keine TODO-Marker
 grep -l "TODO" .claude/skills/uft-*/SKILL.md   # erwartet: leer

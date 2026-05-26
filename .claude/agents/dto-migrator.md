@@ -1,7 +1,7 @@
 ---
 name: dto-migrator
 description: Mechanically migrates DTO consumers from `OperationResult` / `TrackData` (bool success + QString error) to std::variant `*Outcome` types with std::visit dispatch. Pure substitution work, compiler-driven. Use during P1.16 (post-provider-migration) when each `if (r.success)` site in jobs / tabs / panels needs to become a visit. Operates on ONE call-site per change to keep diffs reviewable.
-model: claude-haiku-4-5-20251001
+model: claude-haiku-4-5
 tools: Read, Glob, Grep, Edit, Write, Bash
 ---
 
