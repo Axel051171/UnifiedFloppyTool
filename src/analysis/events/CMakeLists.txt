@@ -3,7 +3,14 @@ project(uft_events C)
 
 set(CMAKE_C_STANDARD 99)
 
-include_directories(${CMAKE_SOURCE_DIR}/../../../include/uft/analysis)
+# UFT-T05 (v4.1.5-hardening): when this CMakeLists is run STANDALONE,
+# CMAKE_SOURCE_DIR points to this directory and ../../../include/uft/analysis
+# resolves correctly. When included from the root CMakeLists via
+# add_subdirectory(), CMAKE_SOURCE_DIR is the project root and the same
+# relative climb would walk three levels ABOVE the root — broken. Use
+# CMAKE_CURRENT_SOURCE_DIR (always this directory) for the relative path
+# so both invocation modes work.
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../../../include/uft/analysis)
 
 # ── Libraries ──────────────────────────────────────────────
 add_library(otdr_event_core_v2 STATIC otdr_event_core_v2.c)

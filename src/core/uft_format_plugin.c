@@ -30,7 +30,36 @@ static size_t g_format_plugin_count = 0;
 uft_error_t uft_register_format_plugin(const uft_format_plugin_t* plugin) {
     if (!plugin) return UFT_ERROR_NULL_POINTER;
     if (!plugin->name) return UFT_ERROR_INVALID_ARG;
-    
+
+    /* UFT-004 (v4.1.5-hardening) ABI gate.
+     * api_version == 0 ⇒ legacy plugin (pre-v4.1.5), accepted with stderr
+     *                    warning so the gap is visible in the build log.
+     * api_version > UFT_PLUGIN_API_VERSION ⇒ plugin compiled against a newer
+     *                    header than the running host. Reject — silent
+     *                    layout drift is exactly the bomb we want to avoid.
+     */
+    if (plugin->api_version > UFT_PLUGIN_API_VERSION) {
+        fprintf(stderr,
+                "[UFT] reject plugin '%s': api_version=%u > host=%u (rebuild plugin against current headers)\n",
+                plugin->name, plugin->api_version, UFT_PLUGIN_API_VERSION);
+        return UFT_ERROR_PLUGIN_LOAD;
+    }
+    if (plugin->api_version == 0u) {
+        /* One-shot warning — 80 plugins registering at startup would
+         * otherwise spam stderr with the same message 80 times. The
+         * actual migration trigger is the v5.0 reject; this is just
+         * a developer reminder. */
+        static int s_legacy_warned = 0;
+        if (!s_legacy_warned) {
+            s_legacy_warned = 1;
+            fprintf(stderr,
+                    "[UFT] note: one or more plugins have api_version=0 "
+                    "(legacy). First seen: '%s'. Plugins must set "
+                    ".api_version = UFT_PLUGIN_API_VERSION before v5.0.\n",
+                    plugin->name);
+        }
+    }
+
     // Duplikate prüfen
     for (size_t i = 0; i < g_format_plugin_count; i++) {
         if (g_format_plugins[i]->format == plugin->format) {

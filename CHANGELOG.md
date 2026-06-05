@@ -1,5 +1,135 @@
 # Changelog
 
+## [4.1.5] - 2026-06-05
+
+### Added
+- **M3.1 SCP-Direct read-flux full implementation** (MF-276): byte-for-byte
+  port of samdisk `SuperCardPro::ReadFlux()` reference. CMD_READ_FLUX +
+  CMD_GET_FLUX_INFO + per-revolution CMD_SENDRAM_USB; 16-bit big-endian
+  samples decoded with 0x0000-overflow accumulator (resets per
+  revolution per index-pulse semantics). 9-test mock-coverage including
+  per-rev-reset regression-guard. `write_flux` remains intentionally
+  blocked until real-HW bench verification (forensic safety).
+- **Tier-2.5 hardware simulator system** (MF-267 + MF-270): 10/10
+  SIMULATED coverage. KryoFlux/FluxEngine/FC5025 via Python fake-binary
+  scripts; SCP-Direct + XUM1541 via novel libusb-mock framework
+  (`tests/usb_mock/`, pre-defines `LIBUSB_H` guard); Greaseweazle via
+  USB-CDC serial protocol simulator. SIMULATED is never reported as
+  PASS — real hardware (Tier 3) remains the only PASS authority.
+- **LOSS.preflight Phase 1 + 2** (MF-263 + MF-268): all 44 conversion
+  paths gated through `uft_preflight_check()` at the
+  `uft_convert_file()` chokepoint. `LOSSY_DOCUMENTED` paths emit a
+  category-level `.loss.json` sidecar after successful convert.
+  `LOSSY_DOCUMENTED` requires explicit `accept_data_loss=true`.
+- **22/22 SCP USB opcodes byte-verified** (MF-261): cross-referenced
+  against `samdisk/SuperCardPro.h`. Plus 4 new opcodes for read-flux
+  payload (`CMD_GET_FLUX_INFO=0xA1`, `CMD_SENDRAM_USB=0xA9`, flag bits).
+- **Plugin Prinzip-7 compliance 84/84** (MF-262 + MF-263): every plugin
+  has populated `spec_status` (was 15/84) and `features` (was 5/84) via
+  `scripts/populate_spec_status.py` + `scripts/populate_features.py`.
+- **`uft_format_plugin_t` ABI gate** (MF-260): new `api_version` field
+  + `_Static_assert(sizeof == 216)` + registrar reject for future-ABI
+  plugins. Opt-in: legacy plugins with `api_version=0` accepted with
+  one-shot stderr warning. Mandatory in v5.0.
+- **ARCH-7-C Teensy-probe wrapper** (MF-213 + MF-263): probe-on-Connect
+  with mismatch warning for ADFCopy ↔ Applesauce (both Teensy
+  0x16C0:0x0483) — prevents disk-corrupting cross-wire.
+- **Demo-ready docs bundle** (MF-273 + MF-274): `docs/SHOWCASE.md`,
+  `docs/CAPABILITIES.md`, `docs/demo/QUICK_DEMO.md`,
+  `docs/release/v4.1.5_github_release_body.md`,
+  `docs/demo/TESTER_REPORTS.md` template.
+- **Phase B/D release-operations infrastructure** (MF-275):
+  `scripts/release/p2_4_squash_to_main.sh`,
+  `scripts/release/release_v415_checklist.md` — both files were on disk
+  but silently gitignored by an over-broad `release/` rule (qmake
+  artifact pattern). Negation rules `!docs/release/` + `!scripts/release/`
+  rescue them into the repo.
+- **9/9 V2 providers live code path** (MF-249..MF-258): no silent
+  no-op when user clicks "Connect" on a non-Greaseweazle controller.
+- **`.claude` hygiene-pass v2 + v3**: agent-count sync (21 = 13 + 8
+  refactor), EOL normalization, model-string alias normalization,
+  htb-mentor flatten. v3 adds constitutional section
+  "Eigenständigkeit, Eigenverantwortung, Vollständigkeit" overriding
+  all other rules: no new stubs in newly-written code (sole exception:
+  honest-stub for unwired hardware providers); 7-anti-pattern table;
+  Definition-of-Done per code-type; scope-rule (>150 LOC → STOP);
+  Hard-Rule #6 STOP-Gründe enumerated; CONSULT-Protocol autonomy
+  boundary; stub-eliminator dual-role (reactive + proactive
+  diff-review); quick-fix anti-stub-as-fix; team-onboarding
+  knowledge-check.
+
+### Fixed
+- **SCP read_flux accumulator reset per revolution** (MF-276 follow-up):
+  initial implementation persisted overflow accumulator across
+  revolution boundaries; reference samdisk impl resets per revolution
+  because each capture starts fresh after its index pulse. Regression-
+  guard test locks in the correct semantic.
+- **MFM/AmigaMFM/Apple/C64-GCR decoder shields** (MF-260 / UFT-005):
+  `test_transitions_ns_contract` extended with KryoFlux + FluxEngine
+  contract-shield FFI.
+- **stray-comma after trailing comment in 79 plugin literals**
+  (MF-264).
+- **`UFT_FORMAT_ID_T_DEFINED` guard** in `roundtrip.h` +
+  `format_validate.h` (MF-265).
+- **qmake .pro wiring**: preflight/loss_report/roundtrip sources,
+  libusb IMPORTED target, audit-vector pins (MF-259 + MF-266).
+- **HardwareTab honest-stub visual** (MF-247 / UFT-003): orange
+  "Disconnect (Beta)" Button distinct from green production GW.
+- **CMakeLists.txt version comment stale** (MF-247 / UFT-002): removed
+  numeric; refers to VERSION.txt SSOT.
+- **`<threads.h>` MinGW build** (UFT-T01): `__has_include` guard.
+- **4 tests phantom-symbol link errors** (UFT-T02): per-test
+  `target_sources` wired correctly.
+- **build-system baseline drift** (MF-262 + MF-272): rebaseline
+  224 → 219 → 216.
+
+### Changed
+- **Test pass-rate 47/180 → 153/153** (100%). Stale exclusions
+  reviewed; new test executables: `test_plugin_abi`,
+  `test_scp_direct_usb_mock` (9 tests), `test_xum1541_usb_mock` (3 tests).
+- **Excluded tests reduced 43 → 38** (UFT-T04): re-enabled
+  `test_scp_direct_hal`, `test_applesauce_hal`, `test_fnmatch_shim`,
+  `test_whdload_resload`. Remaining 38 reference MF-011-deleted impls,
+  documented per-line.
+- **`.claude/CLAUDE.md` Agent-Liste** (UFT-006): 6 → 9 V2-providers
+  reflected.
+- **CHANGES file naming**: `.claude/CHANGES_v2.md` → `.claude/CHANGES.md`
+  with v3 delta appended (single audit trail).
+
+### Documentation
+- **SCOPE decision**: `src/switch/` + `src/cart7/` + Switch GUI tab
+  deletion deferred to MF-271 post-tag (per Axel 2026-05-25). Backup
+  tag `archive/pre-mf271-switch-removal` planned before delete.
+- **KNOWN_ISSUES.md Demo-Impact annotation**: 10 open issues annotated
+  with `Demo-Impact: keiner | Workaround | vermeiden` field.
+- **hermes-agent PoC park** (post-v4.1.5-tag):
+  `.claude/goals/v4.1.6-hermes-agent-poc.md` documents the GO/NO-GO
+  evaluation plan. Bootstrap done under `proto/hermes-eval/` (skeleton +
+  prompts + rubric + benchmark templates); actual benchmark runs are
+  v4.1.6+.
+
+### Hardware verification status
+- Greaseweazle production code (`src/hal/uft_greaseweazle_full.c`):
+  **zero lines changed** since v4.1.4-rc1 hardware verification
+  (2026-05-15). HIL.GW formal bench session deferred to post-tag —
+  substantively identical output expected to v4.1.4-rc1.
+- UFT-008 SCP-Direct Tier-3 verify: explicitly v4.1.6 (needs real SCP
+  hardware bench session). `impl_complete` flag stays `false` in
+  `uft_scp_direct_get_capabilities()` until then.
+
+### Known Limitations (deferred to v4.1.6)
+- M3.2 XUM1541 real-HW Tier-3 (libusb wired, opencbm needed for bench)
+- M3.3 Applesauce `?disk` read state-machine completion
+- UFI Windows + macOS backends (DeviceIoControl + IOKit)
+- ARCH-9 XUM1541 macOS `.dylib` loader
+- 5-and-3 Apple GCR (DOS 3.2 13-sector)
+- FM-decoder completion (`flux_decode_fm`)
+- Per-track exact loss counts (current Phase 2 is category-level)
+- `uft-decode` CLI build wiring (scaffold ships; CMake/qmake enable
+  v4.1.6)
+- USBFloppy SG_IO mock
+- MF-271 Switch/cart7 delete (decision done, execution post-tag)
+
 ## [4.1.4-rc1] - 2026-05 (pre-release)
 
 ### Internal Refactor — Type-Driven HAL (MF-150 … MF-172)

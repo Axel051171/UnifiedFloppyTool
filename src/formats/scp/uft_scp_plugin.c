@@ -422,6 +422,16 @@ static uft_error_t scp_read_track(uft_disk_t* disk, int cylinder, int head,
 // Plugin Definition
 // ============================================================================
 
+static const uft_plugin_feature_t uft_format_plugin_scp_features[] = {
+    { "Read", UFT_FEATURE_SUPPORTED, NULL },
+    { "Write", UFT_FEATURE_UNSUPPORTED, NULL },
+    { "Create", UFT_FEATURE_UNSUPPORTED, NULL },
+    { "Flux", UFT_FEATURE_SUPPORTED, NULL },
+    { "Timing", UFT_FEATURE_SUPPORTED, NULL },
+    { "Weak Bits", UFT_FEATURE_UNSUPPORTED, NULL },
+    { "MultiRev", UFT_FEATURE_SUPPORTED, NULL },
+};
+
 const uft_format_plugin_t uft_format_plugin_scp = {
     .name = "SCP",
     .description = "SuperCard Pro flux image",
@@ -444,5 +454,8 @@ const uft_format_plugin_t uft_format_plugin_scp = {
     
     .init = NULL,
     .shutdown = NULL,
-    .private_data = NULL
+    .private_data = NULL,
+    .spec_status = UFT_SPEC_OFFICIAL_FULL,  /* V415-PLAN PLUGIN.spec_status (MF-262) */
+    .features = uft_format_plugin_scp_features,  /* V415-PLAN PLUGIN.features (MF-263) */
+    .feature_count = sizeof(uft_format_plugin_scp_features) / sizeof(uft_format_plugin_scp_features[0]),
 };

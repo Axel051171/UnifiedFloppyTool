@@ -853,6 +853,16 @@ static uft_error_t g64_read_metadata(uft_disk_t* disk, const char* key,
 // Plugin Definition
 // ============================================================================
 
+static const uft_plugin_feature_t uft_format_plugin_g64_features[] = {
+    { "Read", UFT_FEATURE_SUPPORTED, NULL },
+    { "Write", UFT_FEATURE_SUPPORTED, NULL },
+    { "Create", UFT_FEATURE_SUPPORTED, NULL },
+    { "Flux", UFT_FEATURE_UNSUPPORTED, NULL },
+    { "Timing", UFT_FEATURE_SUPPORTED, NULL },
+    { "Weak Bits", UFT_FEATURE_UNSUPPORTED, NULL },
+    { "MultiRev", UFT_FEATURE_UNSUPPORTED, NULL },
+};
+
 const uft_format_plugin_t uft_format_plugin_g64 = {
     .name = "G64",
     .description = "Commodore 64 GCR Raw Image",
@@ -877,4 +887,6 @@ const uft_format_plugin_t uft_format_plugin_g64 = {
     .shutdown = NULL,
     .private_data = NULL,
     .spec_status = UFT_SPEC_DERIVED,  /* VICE documented the container; underlying GCR is official Commodore */
+    .features = uft_format_plugin_g64_features,  /* V415-PLAN PLUGIN.features (MF-263) */
+    .feature_count = sizeof(uft_format_plugin_g64_features) / sizeof(uft_format_plugin_g64_features[0]),
 };

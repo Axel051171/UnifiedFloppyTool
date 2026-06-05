@@ -76,7 +76,7 @@ ist Opus, aber sein Zweck ist Routing — zählt als „an Mensch zurückgeben")
 
 ## Direkter Agent-Call (tool-level)
 
-Zwei Agenten haben `Agent` in ihrer Tool-Liste und dürfen direkt sub-spawnen:
+Vier Agenten haben `Agent` in ihrer Tool-Liste und dürfen direkt sub-spawnen:
 
 - **`orchestrator`** — Master-Router. Darf jeden beliebigen Spezialisten
   spawnen. Haupt-Nutzer des CONSULT-Protokolls als Empfänger.
@@ -117,6 +117,48 @@ verwenden CONSULT-Blocks; das Routing übernimmt der Empfänger.
   human` zurück. Der Empfänger legt den Prompt vor den User, spawnt nicht.
 - **Kein Status-Log** — CONSULT bedeutet „ich brauche eine konkrete Antwort",
   nicht „zur Information".
+
+---
+
+## Wann NICHT konsultieren (Autonomie-Grenze)
+
+CONSULT ist für echte Sub-Scope-Fragen, nicht für Selbstvergewisserung
+oder Arbeitsabgabe. Die folgenden Patterns sind explizit verboten — sie
+verraten alle, dass der Agent versucht, eine eigene Entscheidung gegen
+einen anderen abzustützen statt sie zu treffen:
+
+| Verbotenes Pattern | Was statt dessen |
+|---|---|
+| `CONSULT: human · QUESTION: Ist das OK?` | Entscheidung treffen, im Output begründen, weitermachen |
+| `CONSULT: human · QUESTION: Welcher von zwei Ansätzen?` ohne Trade-off-Analyse | Erst Analyse machen, dann **mit konkreter Empfehlung** konsultieren |
+| `CONSULT: orchestrator · QUESTION: Was würdest du tun?` | Du selbst — der orchestrator routet, er denkt nicht für dich |
+| `CONSULT: <X> · QUESTION: Kannst du mal schauen ob…?` | Du schaust selbst; CONSULT nur wenn du `<X>`s Werkzeuge brauchst |
+| `CONSULT: human · QUESTION: Soll ich weitermachen?` | Wenn keine Hard-Rule oder Design-Prinzip blockiert: ja, weitermachen |
+| CONSULT als Übergabe „mein Teil ist fertig" | Aufgabe selbst zu Ende führen ODER ehrlich offen melden |
+
+### Pflicht-Felder für ein legitimes CONSULT
+
+Zusätzlich zu `TO`, `QUESTION`, `CONTEXT`, `REASON`: der `REASON` muss
+**konkret** enthalten:
+
+- Was du selbst schon versucht hast (`grep`/`Read`/`git log`/Test-Run)
+- Welche Hypothesen du verworfen hast und warum
+- Welche **konkrete Information** dir noch fehlt (kein „mehr Kontext")
+- Warum genau **dieser** Empfänger die Information hat (Werkzeug-Zugriff,
+  Architektur-Wissen, Datei-Kompetenz)
+
+Ein gutes CONSULT klingt: „Ich habe X und Y geprüft, Z verworfen weil…,
+brauche jetzt von `abi-bomb-detector`: ist Layout-Änderung A→B in
+`uft_format_plugin_t` ABI-safe für Plugins kompiliert mit gcc 14?"
+
+Ein schlechtes CONSULT klingt: „Kannst du mal schauen ob das so passt?"
+— das ist Arbeit zurückgeben, nicht Wissen holen.
+
+### Konsequenz
+
+Der Empfänger (Haupt-Session oder `orchestrator`) lehnt CONSULTs ab, die
+diese Kriterien nicht erfüllen, mit Hinweis auf diese Sektion. Der
+fragende Agent macht weiter mit der eigenen besten Entscheidung.
 
 ---
 

@@ -147,16 +147,37 @@ TEST(set_retries_validates) {
     uft_xum_config_destroy(cfg);
 }
 
-/* ───────────────────────── USB stubs return error ────────────────── */
+/* ───────────────────────── USB error paths ─────────────────────────
+ *
+ * MF-255 (v4.1.5-hardening): build with UFT_HAS_LIBUSB defined now
+ * uses real libusb. Without a connected device, open() returns
+ * UFT_ERR_IO (libusb_open_device_with_vid_pid returns NULL). Without
+ * libusb (stub build), it still returns UFT_ERR_NOT_IMPLEMENTED.
+ * The test accepts either path so the same source covers both builds.
+ * ─────────────────────────────────────────────────────────────────── */
 
-TEST(open_returns_not_implemented_with_error_msg) {
+TEST(open_without_device_returns_io_or_not_implemented) {
     uft_xum_config_t *cfg = uft_xum_config_create();
-    /* Valid args reach the stub body → NOT_IMPLEMENTED + error msg. */
-    ASSERT(uft_xum_open(cfg, 8) == UFT_ERR_NOT_IMPLEMENTED);
+    const uft_error_t rc = uft_xum_open(cfg, 8);
+#ifdef UFT_HAS_LIBUSB
+    /* Live libusb path — with no device plugged in we expect IO.
+     * If a real XUM1541 is connected the open() may succeed; that's
+     * also valid behaviour, but treat it as test-environment-specific
+     * and skip the strict assert in that branch. */
+    ASSERT(rc == UFT_ERR_IO || rc == UFT_OK);
+    if (rc == UFT_ERR_IO) {
+        const char *err = uft_xum_get_error(cfg);
+        ASSERT(err != NULL);
+    }
+    /* If open succeeded against real hardware, close cleanly. */
+    if (rc == UFT_OK) uft_xum_close(cfg);
+#else
+    ASSERT(rc == UFT_ERR_NOT_IMPLEMENTED);
     const char *err = uft_xum_get_error(cfg);
     ASSERT(err != NULL);
     ASSERT(strstr(err, "libusb") != NULL);
-    /* Null ctx → INVALID_ARG (validation precedes stub return). */
+#endif
+    /* Null ctx → INVALID_ARG (validation precedes everything). */
     ASSERT(uft_xum_open(NULL, 8) == UFT_ERR_INVALID_ARG);
     uft_xum_config_destroy(cfg);
 }
@@ -173,7 +194,7 @@ TEST(read_track_gcr_stub_rejects_invalid_args) {
     ASSERT(uft_xum_read_track_gcr(NULL, 1, 0, &gcr, &size) == UFT_ERR_INVALID_ARG);
     ASSERT(uft_xum_read_track_gcr(cfg, 1, 0, NULL, &size)  == UFT_ERR_INVALID_ARG);
     ASSERT(uft_xum_read_track_gcr(cfg, 1, 0, &gcr, NULL)   == UFT_ERR_INVALID_ARG);
-    /* Valid args → NOT_IMPLEMENTED. */
+    /* read_track_gcr remains higher-level / pending bench: NOT_IMPLEMENTED. */
     ASSERT(uft_xum_read_track_gcr(cfg, 1, 0, &gcr, &size)  == UFT_ERR_NOT_IMPLEMENTED);
     uft_xum_config_destroy(cfg);
 }
@@ -183,10 +204,32 @@ TEST(iec_commands_validate_address_range) {
     ASSERT(uft_xum_iec_listen(cfg, -1, 0) == UFT_ERR_INVALID_ARG);
     ASSERT(uft_xum_iec_listen(cfg, 32, 0) == UFT_ERR_INVALID_ARG);
     ASSERT(uft_xum_iec_talk(cfg, 8, 32)   == UFT_ERR_INVALID_ARG);
-    /* Valid args → NOT_IMPLEMENTED + "not implemented" message. */
-    ASSERT(uft_xum_iec_listen(cfg, 8, 0) == UFT_ERR_NOT_IMPLEMENTED);
-    ASSERT(strstr(uft_xum_get_error(cfg), "not implemented") != NULL);
+    /* Valid-arg IEC calls without an open device:
+     *   - stub build (no libusb)  → NOT_IMPLEMENTED + "libusb" message
+     *   - libusb build, device not open → IO + "not open" message */
+    const uft_error_t rc = uft_xum_iec_listen(cfg, 8, 0);
+#ifdef UFT_HAS_LIBUSB
+    ASSERT(rc == UFT_ERR_IO);
+    ASSERT(strstr(uft_xum_get_error(cfg), "not open") != NULL);
+#else
+    ASSERT(rc == UFT_ERR_NOT_IMPLEMENTED);
+#endif
     uft_xum_config_destroy(cfg);
+}
+
+TEST(detect_returns_count_or_not_implemented) {
+    /* MF-255: detect() now does real libusb enumeration. With no
+     * XUM1541 attached, returns UFT_OK with count=0. Without libusb,
+     * NOT_IMPLEMENTED. */
+    int count = -1;
+    const uft_error_t rc = uft_xum_detect(&count);
+#ifdef UFT_HAS_LIBUSB
+    ASSERT(rc == UFT_OK || rc == UFT_ERR_IO);  /* IO if libusb_init fails */
+    if (rc == UFT_OK) ASSERT(count >= 0);
+#else
+    ASSERT(rc == UFT_ERR_NOT_IMPLEMENTED);
+#endif
+    ASSERT(uft_xum_detect(NULL) == UFT_ERR_INVALID_ARG);
 }
 
 TEST(get_error_handles_null) {
@@ -209,9 +252,10 @@ int main(void) {
     RUN(set_track_range_validates);
     RUN(set_side_validates);
     RUN(set_retries_validates);
-    RUN(open_returns_not_implemented_with_error_msg);
+    RUN(open_without_device_returns_io_or_not_implemented);
     RUN(read_track_gcr_stub_rejects_invalid_args);
     RUN(iec_commands_validate_address_range);
+    RUN(detect_returns_count_or_not_implemented);
     RUN(get_error_handles_null);
     printf("Results: %d passed, %d failed\n", _pass, _fail);
     return _fail ? 1 : 0;

@@ -74,6 +74,16 @@ static uft_error_t xdm86_write_track(uft_disk_t *d, int cyl, int head,
     return UFT_OK;
 }
 
+static const uft_plugin_feature_t uft_format_plugin_xdm86_features[] = {
+    { "Read", UFT_FEATURE_SUPPORTED, NULL },
+    { "Write", UFT_FEATURE_SUPPORTED, NULL },
+    { "Create", UFT_FEATURE_UNSUPPORTED, NULL },
+    { "Flux", UFT_FEATURE_UNSUPPORTED, NULL },
+    { "Timing", UFT_FEATURE_UNSUPPORTED, NULL },
+    { "Weak Bits", UFT_FEATURE_UNSUPPORTED, NULL },
+    { "MultiRev", UFT_FEATURE_UNSUPPORTED, NULL },
+};
+
 const uft_format_plugin_t uft_format_plugin_xdm86 = {
     .name = "XDM86", .description = "TI-99/4A Disk Manager",
     .extensions = "dsk;v9t9", .format = UFT_FORMAT_DSK,
@@ -81,5 +91,8 @@ const uft_format_plugin_t uft_format_plugin_xdm86 = {
     .probe = xdm86_probe, .open = xdm86_open, .close = xdm86_close,
     .read_track = xdm86_read_track, .write_track = xdm86_write_track,
     .verify_track = uft_generic_verify_track,
+    .spec_status = UFT_SPEC_DERIVED,  /* V415-PLAN PLUGIN.spec_status (MF-262) */
+    .features = uft_format_plugin_xdm86_features,  /* V415-PLAN PLUGIN.features (MF-263) */
+    .feature_count = sizeof(uft_format_plugin_xdm86_features) / sizeof(uft_format_plugin_xdm86_features[0]),
 };
 UFT_REGISTER_FORMAT_PLUGIN(xdm86)

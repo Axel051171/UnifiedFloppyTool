@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# POSIX wrapper for sim_dtc.py — placed first on PATH so QProcess hits it.
+exec python3 "$(dirname "$0")/sim_dtc.py" "$@"

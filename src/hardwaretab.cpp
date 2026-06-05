@@ -46,6 +46,26 @@
 /* MF-213 (audit ARCH-7-C): ADF-Copy / Applesauce disambiguation probe. */
 #include "hardware_providers/teensy_probe.h"
 
+/* MF-250 (v4.1.5-hardening): QSerialPort-backed Applesauce production
+ * transport. Guarded via UFT_HAS_QSERIALPORT (defined by CMake when
+ * Qt6::SerialPort is found) so a build without it still compiles. */
+#ifdef UFT_HAS_QSERIALPORT
+#  include "hardware_providers/qserial_applesauce_transport.h"
+#  include "hardware_providers/applesauce_serial_runners.h"
+#  include "hardware_providers/qserial_adfcopy_transport.h"
+#  include "hardware_providers/adfcopy_serial_runners.h"
+#endif
+
+/* MF-256: QProcess-based subprocess runners for FluxEngine + KryoFlux.
+ * Qt6::Core (always linked) provides QProcess so this header is
+ * unconditionally includable — no compile-define guard needed. */
+#include "hardware_providers/qprocess_subprocess_runner.h"
+
+/* MF-258: UFI-C-HAL-backed runners for USB Floppy (SG_IO on Linux,
+ * pending on Windows/macOS — the runner surfaces backend_unavailable
+ * cleanly on those platforms). */
+#include "hardware_providers/ufi_runners.h"
+
 /* MF-210: hardwaretab.cpp now uses the capability concepts directly
  * (`if constexpr (::uft::hal::ControlsMotor<P>)` etc.) in the
  * std::visit-based provider helpers. */
@@ -751,24 +771,112 @@ void HardwareTab::onConnect()
         if (controller == "scp") {
             m_providerV2 = std::make_unique<::uft::hal::SCPProviderV2>(nullptr);
         } else if (controller == "kryoflux") {
-            m_providerV2 = std::make_unique<::uft::hal::KryoFluxProviderV2>(nullptr);
+            /* MF-256: real QProcess runner that launches the KryoFlux
+             * `dtc` CLI. The user must have dtc on PATH (Windows: the
+             * KryoFlux installer adds it). Every read/detect now
+             * shells out to a real process. */
+            m_providerV2 = std::make_unique<::uft::hal::KryoFluxProviderV2>(
+                ::uft::hal::make_kryoflux_qprocess_runner());
         } else if (controller == "fluxengine") {
-            m_providerV2 = std::make_unique<::uft::hal::FluxEngineProviderV2>(nullptr);
+            /* MF-256: real QProcess runner that launches the
+             * `fluxengine` CLI (github.com/davidgiven/fluxengine). The
+             * user must have fluxengine on PATH. */
+            m_providerV2 = std::make_unique<::uft::hal::FluxEngineProviderV2>(
+                ::uft::hal::make_fluxengine_qprocess_runner());
         } else if (controller == "fc5025") {
+            /* MF-257: real QProcess runners launching the Device Side
+             * Data `fcimage` CLI. Read-runner builds an fcimage argv
+             * (`-f <format> -t/-T <cyl> [-s 1] [-r retries] <tmp>`),
+             * reads the resulting image back, returns bytes. Detect-
+             * runner probes for fcimage on PATH. The user must have
+             * fcimage installed and the FC5025 USB driver active. */
             m_providerV2 = std::make_unique<::uft::hal::FC5025ProviderV2>(
-                nullptr, nullptr);
+                ::uft::hal::make_fc5025_read_qprocess_runner(),
+                ::uft::hal::make_fc5025_detect_qprocess_runner());
         } else if (controller == "xum1541") {
             m_providerV2 = std::make_unique<::uft::hal::XUM1541ProviderV2>(
                 nullptr, nullptr, nullptr);
         } else if (controller == "applesauce") {
+#ifdef UFT_HAS_QSERIALPORT
+            /* MF-250 (v4.1.5-hardening): if Qt6::SerialPort is built in,
+             * try to open the user-selected port and build a real
+             * runner-bound provider. On open failure fall back to the
+             * honest-stub nullptr-runner path so the user still gets a
+             * GUI-routed provider (with the orange "Preview" styling)
+             * and a clear error message in the status bar — never a
+             * silent connect to nothing. */
+            auto _as_tx =
+                ::uft::hal::QSerialPortApplesauceTransport::open(port);
+            if (_as_tx) {
+                ::uft::hal::ApplesauceTransportPtr shared(std::move(_as_tx));
+                m_providerV2 =
+                    std::make_unique<::uft::hal::ApplesauceProviderV2>(
+                        ::uft::hal::make_applesauce_read_runner(shared),
+                        ::uft::hal::make_applesauce_write_runner(shared),
+                        ::uft::hal::make_applesauce_motor_runner(shared),
+                        ::uft::hal::make_applesauce_seek_runner(shared),
+                        ::uft::hal::make_applesauce_recal_runner(shared),
+                        ::uft::hal::make_applesauce_rpm_runner(shared),
+                        ::uft::hal::make_applesauce_detect_runner(shared));
+            } else {
+                /* Open failed — keep the honest-stub provider so the
+                 * GUI still reflects the user's controller choice. */
+                m_providerV2 =
+                    std::make_unique<::uft::hal::ApplesauceProviderV2>(
+                        nullptr, nullptr, nullptr, nullptr, nullptr,
+                        nullptr, nullptr);
+                updateStatus(tr("Applesauce: cannot open %1 — falling "
+                                "back to preview stub. Reason: %2")
+                                .arg(port,
+                                     ::uft::hal::QSerialPortApplesauceTransport::lastOpenError()),
+                            /*isError=*/true);
+            }
+#else
             m_providerV2 = std::make_unique<::uft::hal::ApplesauceProviderV2>(
                 nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
+#endif
         } else if (controller == "adfcopy") {
+#ifdef UFT_HAS_QSERIALPORT
+            /* MF-252 (v4.1.5-hardening): parallel to MF-250 Applesauce
+             * but with the ADFCopy binary protocol over QSerialPort. */
+            auto _ac_tx =
+                ::uft::hal::QSerialPortADFCopyTransport::open(port);
+            if (_ac_tx) {
+                ::uft::hal::ADFCopyTransportPtr shared(std::move(_ac_tx));
+                m_providerV2 =
+                    std::make_unique<::uft::hal::ADFCopyProviderV2>(
+                        ::uft::hal::make_adfcopy_read_runner(shared),
+                        ::uft::hal::make_adfcopy_motor_runner(shared),
+                        ::uft::hal::make_adfcopy_seek_runner(shared),
+                        ::uft::hal::make_adfcopy_recal_runner(shared),
+                        ::uft::hal::make_adfcopy_detect_runner(shared));
+            } else {
+                m_providerV2 =
+                    std::make_unique<::uft::hal::ADFCopyProviderV2>(
+                        nullptr, nullptr, nullptr, nullptr, nullptr);
+                updateStatus(tr("ADFCopy: cannot open %1 — falling back "
+                                "to preview stub. Reason: %2")
+                                .arg(port,
+                                     ::uft::hal::QSerialPortADFCopyTransport::lastOpenError()),
+                            /*isError=*/true);
+            }
+#else
             m_providerV2 = std::make_unique<::uft::hal::ADFCopyProviderV2>(
                 nullptr, nullptr, nullptr, nullptr, nullptr);
+#endif
         } else if (controller == "usb_floppy") {
+            /* MF-258: real UFI-C-HAL-backed runners. On Linux these
+             * exercise the SG_IO ioctl backend (src/hal/ufi_linux.c).
+             * On Windows/macOS the C-HAL's backend_init returns -1 and
+             * each runner surfaces backend_unavailable cleanly. The
+             * provider then returns a ProviderError that names the
+             * exact platform-availability state. The user's selected
+             * `port` is the OS device path (e.g. /dev/sg0). */
             m_providerV2 = std::make_unique<::uft::hal::USBFloppyProviderV2>(
-                nullptr, nullptr, nullptr);
+                ::uft::hal::make_usbfloppy_read_runner(),
+                ::uft::hal::make_usbfloppy_write_runner(),
+                ::uft::hal::make_usbfloppy_detect_runner(port.toStdString()),
+                port.toStdString());
         } else {
             constructed = false;
         }
@@ -820,16 +928,90 @@ void HardwareTab::onConnect()
          * connected. No open()/detect here — the provider has no
          * production transport yet; the user sees correctly-gated
          * buttons and any click surfaces the provider's honest
-         * ProviderError. */
+         * ProviderError.
+         *
+         * UFT-003 (v4.1.5-hardening): explicitly distinguish honest-stub
+         * connection from a production-wired one. Without this, the user
+         * sees a green-stripe "Disconnect" button identical to a real
+         * Greaseweazle connection, even though Read/Write will fail with
+         * NOT_IMPLEMENTED. Mark the button orange + "Preview" text so
+         * the gap is visible at a glance (Prinzip 4: no dangerous
+         * defaults). */
+        /* MF-250: detect whether this provider has a runner-bound
+         * production transport. Currently true for Applesauce when
+         * Qt6::SerialPort is available AND port-open succeeded above.
+         * Anywhere else we stay on the orange honest-stub track. */
+        bool _has_production_transport = false;
+        /* MF-256/MF-257: KryoFlux, FluxEngine, FC5025 → QProcess
+         * subprocess runners. MF-258: USB-Floppy → UFI-C-HAL runners.
+         * All four count as Beta — the runtime path is live; whether
+         * the platform/CLI tool/UFI backend is available is a runtime
+         * concern surfaced via ProviderError. */
+        if (controller == "kryoflux" || controller == "fluxengine" ||
+            controller == "fc5025"   || controller == "usb_floppy") {
+            _has_production_transport = true;
+        }
+#ifdef UFT_HAS_QSERIALPORT
+        if (controller == "applesauce" || controller == "adfcopy") {
+            /* QSerialPort-runner-bound providers — MF-250 / MF-252. */
+            _has_production_transport = true;
+        }
+#endif
+#ifdef UFT_HAS_LIBUSB
+        if (controller == "scp") {
+            /* MF-254: libusb-based SCP-Direct. open/close/seek wired;
+             * flux payload parsing pending bench verification. */
+            _has_production_transport = true;
+        }
+        if (controller == "xum1541") {
+            /* MF-255: libusb-based XUM1541/ZoomFloppy. open/close/
+             * detect/iec_* (LISTEN/TALK/UNLISTEN/UNTALK/READ/WRITE)
+             * fully wired via OpenCBM-documented USB protocol.
+             * Track-level GCR read and full disk-read sequence are
+             * higher-level features pending bench verification. */
+            _has_production_transport = true;
+        }
+#endif
+
         rewireV2();
         m_connected = true;
         m_hwModel = 0;
-        m_firmwareVersion = QStringLiteral("V2 provider (backend scaffold)");
+        if (_has_production_transport) {
+            m_firmwareVersion = QStringLiteral("V2 provider (QSerialPort, bench-unverified)");
+        } else {
+            m_firmwareVersion = QStringLiteral("V2 provider (backend scaffold)");
+        }
         setConnectionState(true);
-        updateStatus(tr("%1 connected — V2 provider routed. The production "
-                        "transport for this controller is not wired yet; "
-                        "capability actions return a diagnostic error until "
-                        "the backend lands.").arg(m_controllerType));
+        if (_has_production_transport) {
+            /* Yellow, not orange: transport real but no hardware bench
+             * verification yet (docs/M3_APPLESAUCE_TRANSPORT.md §5). */
+            ui->btnConnect->setText(tr("Disconnect (Beta)"));
+            ui->btnConnect->setStyleSheet("background-color: #ffd966;");
+            ui->btnConnect->setToolTip(
+                tr("Production transport connected — but this code path "
+                   "has not yet been verified against real hardware. "
+                   "Operations may work but should be cross-checked "
+                   "against a known-good capture. See "
+                   "docs/M3_APPLESAUCE_TRANSPORT.md §5."));
+            updateStatus(tr("%1 connected — V2 provider routed via "
+                            "QSerialPort (BETA, bench-unverified). "
+                            "Capability actions will exercise real "
+                            "hardware; verify results.")
+                            .arg(m_controllerType));
+        } else {
+            ui->btnConnect->setText(tr("Disconnect (Preview)"));
+            ui->btnConnect->setStyleSheet("background-color: #ffaa55;");
+            ui->btnConnect->setToolTip(
+                tr("Honest-stub connection — the production transport "
+                   "for this controller is not wired yet. Read/Write "
+                   "actions will return UFT_ERR_NOT_IMPLEMENTED. See "
+                   "docs/MASTER_PLAN.md §M3."));
+            updateStatus(tr("%1 connected — V2 provider routed (PREVIEW). "
+                            "The production transport for this controller "
+                            "is not wired yet; capability actions return a "
+                            "diagnostic error until the backend lands.")
+                            .arg(m_controllerType));
+        }
         emit connectionChanged(true);
         emit deviceInfoChanged(m_controllerType, m_firmwareVersion);
         return;

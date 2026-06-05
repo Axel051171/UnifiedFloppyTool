@@ -1,0 +1,27 @@
+# Upstream hermes-agent clone — NICHT committen.
+# Klonen lokal via: `git clone https://github.com/NousResearch/hermes-agent.git upstream`
+upstream/
+
+# Python venv (kann lokal überall liegen, common patterns)
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Environment-Variablen mit echten API-Keys — NIE committen
+.env
+.env.local
+.env.*.local
+
+# Cache-Verzeichnisse die ein typisches LLM-Eval-Setup anlegt
+.cache/
+.hermes_cache/
+
+# Roh-Logs der Benchmark-Läufe (können > 100 MB werden)
+results/raw_logs/
+results/*.jsonl
+
+# Erlaubt: .env.example (Template ohne Keys), README, prompts/, results/RESULTS.md
+!.env.example
+!README.md

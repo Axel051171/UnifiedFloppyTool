@@ -18,8 +18,13 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-/* Forward declaration - actual definition in uft_format_registry.h */
+/* MF-265 (V415 fix): same UFT_FORMAT_ID_T_DEFINED guard as
+ * uft_format_registry.h and uft_roundtrip.h — multiple TUs include
+ * combinations of these, gcc 13 rejects the duplicate typedef. */
+#ifndef UFT_FORMAT_ID_T_DEFINED
+#define UFT_FORMAT_ID_T_DEFINED
 typedef uint32_t uft_format_id_t;
+#endif
 
 #ifdef __cplusplus
 extern "C" {

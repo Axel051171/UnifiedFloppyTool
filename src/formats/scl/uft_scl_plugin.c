@@ -101,6 +101,16 @@ static uft_error_t scl_write_track(uft_disk_t *disk, int cyl, int head,
     return UFT_OK;
 }
 
+static const uft_plugin_feature_t uft_format_plugin_scl_features[] = {
+    { "Read", UFT_FEATURE_SUPPORTED, NULL },
+    { "Write", UFT_FEATURE_SUPPORTED, NULL },
+    { "Create", UFT_FEATURE_UNSUPPORTED, NULL },
+    { "Flux", UFT_FEATURE_UNSUPPORTED, NULL },
+    { "Timing", UFT_FEATURE_UNSUPPORTED, NULL },
+    { "Weak Bits", UFT_FEATURE_UNSUPPORTED, NULL },
+    { "MultiRev", UFT_FEATURE_UNSUPPORTED, NULL },
+};
+
 const uft_format_plugin_t uft_format_plugin_scl = {
     .name = "SCL", .description = "ZX Spectrum SCL Container",
     .extensions = "scl", .format = UFT_FORMAT_DSK,
@@ -109,5 +119,8 @@ const uft_format_plugin_t uft_format_plugin_scl = {
     .close = scl_close, .read_track = scl_read_track,
     .write_track = scl_write_track,
     .verify_track = uft_generic_verify_track,
+    .spec_status = UFT_SPEC_OFFICIAL_FULL,  /* V415-PLAN PLUGIN.spec_status (MF-262) */
+    .features = uft_format_plugin_scl_features,  /* V415-PLAN PLUGIN.features (MF-263) */
+    .feature_count = sizeof(uft_format_plugin_scl_features) / sizeof(uft_format_plugin_scl_features[0]),
 };
 UFT_REGISTER_FORMAT_PLUGIN(scl)

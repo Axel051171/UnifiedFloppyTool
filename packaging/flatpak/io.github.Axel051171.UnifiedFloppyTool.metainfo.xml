@@ -88,6 +88,20 @@
   </screenshots>
 
   <releases>
+    <release version="4.1.5" date="2026-06-05">
+      <description>
+        <p>
+          Hardware-hardening release. M3.1 SCP-Direct read-flux fully
+          implemented (samdisk-reference port; mock-validated). Tier-2.5
+          hardware simulator system: 10/10 SIMULATED coverage without
+          owning a single floppy controller. LOSS.preflight gated to
+          all 44 conversion paths. Plugin Prinzip-7 compliance 84/84.
+          uft_format_plugin_t ABI gate enforced. Greaseweazle workflow
+          unchanged (byte-identical to v4.1.4-rc1). See RELEASE_NOTES.md
+          for the full delta.
+        </p>
+      </description>
+    </release>
     <release version="4.1.4" date="2026-05">
       <description>
         <p>

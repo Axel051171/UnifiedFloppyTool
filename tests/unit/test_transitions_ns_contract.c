@@ -72,6 +72,9 @@ extern int  transitions_ns_capture_mock_intervals(uint32_t **out_intervals,
                                                   double   *out_sample_ns);
 extern int  transitions_ns_check_index_increasing(void);
 extern void transitions_ns_free(uint32_t *p);
+/* UFT-005 (v4.1.5): KryoFlux + FluxEngine contract shields. */
+extern int  transitions_ns_kryoflux_contract_probe(void);
+extern int  transitions_ns_fluxengine_contract_probe(void);
 
 /* ─── C-2 plausibility bound ──────────────────────────────────────
  *
@@ -142,23 +145,40 @@ static void index_times_ns_strictly_increasing_when_present(void)
     UFT_CHECK(kind != 2);
 }
 
-/* ─── KryoFlux + FluxEngine are deliberately NOT exercised here ───
+/* ─── UFT-005 (v4.1.5): KryoFlux + FluxEngine contract shields ────
  *
- * audit/MASTER_REPORT.md ARCH-2 documents both providers as currently
- * packing undecoded backend container bytes into `transitions_ns`
- * (src/hardware_providers/kryoflux_provider_v2.cpp:316-345,
- *  src/hardware_providers/fluxengine_provider_v2.cpp:330-354).
- * Adding them to this test would fail under C-2 — but Phase 2 of the
- * v4.1.5 hardening (audit/test_coverage/COVERAGE_AUDIT.md) is test-
- * addition only; the fix lives in REFACTOR_TASKS.md P1.24 and lands
- * in v4.1.5. When ARCH-2 is fixed, add the same FluxCaptured
- * invariant scan to KryoFlux + FluxEngine via parallel FFI helpers. */
+ * The FFI probes inject a runner that simulates "binary not found"
+ * (exit_code = -1). Both providers MUST then return a non-Captured
+ * outcome (ProviderError / DeviceError). If either fabricates a
+ * FluxCaptured with garbage transitions_ns despite the runner failing,
+ * that is exactly the ARCH-2 silent-data-fabrication bug — caught
+ * here as a contract violation (return code 2).
+ *
+ * Pass paths:
+ *   0 = honest non-Captured (current expected state, Prinzip 1 ✓)
+ *   1 = FluxCaptured with C-1/C-2-compliant intervals (future post-P1.24)
+ * Fail path:
+ *   2 = FluxCaptured with garbage container bytes (ARCH-2 regression).
+ */
+static void kryoflux_contract_shield(void)
+{
+    int rc = transitions_ns_kryoflux_contract_probe();
+    UFT_CHECK(rc == 0 || rc == 1);
+}
+
+static void fluxengine_contract_shield(void)
+{
+    int rc = transitions_ns_fluxengine_contract_probe();
+    UFT_CHECK(rc == 0 || rc == 1);
+}
 
 int main(void)
 {
     printf("=== transitions_ns contract test (audit Lücke #2) ===\n");
     mock_captured_intervals_in_nanosecond_range();
     index_times_ns_strictly_increasing_when_present();
+    kryoflux_contract_shield();
+    fluxengine_contract_shield();
     if (g_errors == 0) {
         printf("=== OK ===\n");
         return 0;

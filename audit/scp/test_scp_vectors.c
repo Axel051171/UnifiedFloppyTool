@@ -38,21 +38,41 @@ _Static_assert(UFT_SCP_DEFAULT_REVOLUTIONS >= 1
             && UFT_SCP_DEFAULT_REVOLUTIONS <= UFT_SCP_MAX_REVOLUTIONS,
     "default revolution count must be within [1, MAX_REVOLUTIONS]");
 
-/* ── USB command bytes (needs-source — regression-pin ONLY) ─────────── */
-/* These values are NOT confirmed against a vendored SCP SDK header.
- * They are pinned so a silent change breaks the build (SCP-D1-1). */
-_Static_assert(UFT_SCP_CMD_SET_CONTROL    == 0x02,
-    "SCP CMD_SET_CONTROL pinned at 0x02 (UNVERIFIED — needs vendored SDK)");
-_Static_assert(UFT_SCP_CMD_SELECT_DRIVE   == 0x03,
-    "SCP CMD_SELECT_DRIVE pinned at 0x03 (UNVERIFIED — needs vendored SDK)");
-_Static_assert(UFT_SCP_CMD_READ_FLUX      == 0x04,
-    "SCP CMD_READ_FLUX pinned at 0x04 (UNVERIFIED — needs vendored SDK)");
-_Static_assert(UFT_SCP_CMD_WRITE_FLUX     == 0x05,
-    "SCP CMD_WRITE_FLUX pinned at 0x05 (UNVERIFIED — needs vendored SDK)");
-_Static_assert(UFT_SCP_CMD_DESELECT_DRIVE == 0x09,
-    "SCP CMD_DESELECT_DRIVE pinned at 0x09 (UNVERIFIED — needs vendored SDK)");
-_Static_assert(UFT_SCP_CMD_GET_INFO       == 0x40,
-    "SCP CMD_GET_INFO pinned at 0x40 (UNVERIFIED — needs vendored SDK)");
+/* ── USB command bytes ─────────────────────────────────────────────── */
+/* MF-254 (v4.1.5-hardening): the pre-MF-254 pins (0x02..0x40) were
+ * placeholder guesses that did NOT match the real SCP firmware
+ * protocol. Verified against simonowen/samdisk include/SuperCardPro.h
+ * — opcodes live in the 0x80-0xD2 range with packet framing
+ * [CMD, LEN, params..., CHECKSUM] (checksum = CMD+LEN+sum+0x4A) and
+ * response [CMD_ECHO, STATUS] with pr_Ok = 0x4F.
+ *
+ * These pins now track the VERIFIED values and catch silent drift. */
+_Static_assert(UFT_SCP_CMD_SELA       == 0x80,
+    "SCP CMD_SELA pinned at 0x80 (VERIFIED — samdisk SuperCardPro.h)");
+_Static_assert(UFT_SCP_CMD_DSELA      == 0x82,
+    "SCP CMD_DSELA pinned at 0x82 (VERIFIED — samdisk SuperCardPro.h)");
+_Static_assert(UFT_SCP_CMD_MTRAON     == 0x84,
+    "SCP CMD_MTRAON pinned at 0x84 (VERIFIED — samdisk SuperCardPro.h)");
+_Static_assert(UFT_SCP_CMD_MTRAOFF    == 0x86,
+    "SCP CMD_MTRAOFF pinned at 0x86 (VERIFIED — samdisk SuperCardPro.h)");
+_Static_assert(UFT_SCP_CMD_SEEK0      == 0x88,
+    "SCP CMD_SEEK0 pinned at 0x88 (VERIFIED — samdisk SuperCardPro.h)");
+_Static_assert(UFT_SCP_CMD_STEPTO     == 0x89,
+    "SCP CMD_STEPTO pinned at 0x89 (VERIFIED — samdisk SuperCardPro.h)");
+_Static_assert(UFT_SCP_CMD_SIDE       == 0x8D,
+    "SCP CMD_SIDE pinned at 0x8D (VERIFIED — samdisk SuperCardPro.h)");
+_Static_assert(UFT_SCP_CMD_STATUS     == 0x8E,
+    "SCP CMD_STATUS pinned at 0x8E (VERIFIED — samdisk SuperCardPro.h)");
+_Static_assert(UFT_SCP_CMD_READ_FLUX  == 0xA0,
+    "SCP CMD_READ_FLUX pinned at 0xA0 (VERIFIED — samdisk SuperCardPro.h)");
+_Static_assert(UFT_SCP_CMD_WRITE_FLUX == 0xA2,
+    "SCP CMD_WRITE_FLUX pinned at 0xA2 (VERIFIED — samdisk SuperCardPro.h)");
+_Static_assert(UFT_SCP_CMD_SCPINFO    == 0xD0,
+    "SCP CMD_SCPINFO pinned at 0xD0 (VERIFIED — samdisk SuperCardPro.h)");
+_Static_assert(UFT_SCP_PR_OK          == 0x4F,
+    "SCP pr_Ok response pinned at 0x4F (VERIFIED — samdisk SuperCardPro.h)");
+_Static_assert(UFT_SCP_CHECKSUM_INIT  == 0x4A,
+    "SCP CHECKSUM_INIT pinned at 0x4A (VERIFIED — samdisk SuperCardPro.h)");
 
 /* ── USB identity + endpoints ──────────────────────────────────────── */
 /* SCP-D4-1 RESOLVED (audit ARCH-7-B / MF-212): the header VID/PID once

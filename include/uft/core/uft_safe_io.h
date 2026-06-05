@@ -37,8 +37,15 @@ extern "C" {
  * Error Reporting
  *===========================================================================*/
 
-/** Last I/O error message (thread-local where supported) */
-#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L && !defined(__STDC_NO_THREADS__)
+/** Last I/O error message (thread-local where supported)
+ *
+ * MinGW 13.x defines __STDC_VERSION__ ≥ 201112L without shipping
+ * <threads.h>, so the bare __STDC_NO_THREADS__ guard isn't enough.
+ * Use __has_include where the compiler supports it; on toolchains
+ * without __has_include we conservatively skip the C11 path.
+ */
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L && !defined(__STDC_NO_THREADS__) \
+    && (defined(__has_include) && __has_include(<threads.h>))
     #include <threads.h>
     #include <stdlib.h>
     extern _Thread_local char uft_io_last_error[256];

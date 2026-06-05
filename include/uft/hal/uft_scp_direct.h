@@ -44,13 +44,52 @@ extern "C" {
 #define UFT_SCP_BULK_IN_EP         0x81
 #define UFT_SCP_BULK_OUT_EP        0x01
 
-/** SCP USB command byte values. */
-#define UFT_SCP_CMD_READ_FLUX      0x04
-#define UFT_SCP_CMD_WRITE_FLUX     0x05
-#define UFT_SCP_CMD_SELECT_DRIVE   0x03
-#define UFT_SCP_CMD_SET_CONTROL    0x02
-#define UFT_SCP_CMD_DESELECT_DRIVE 0x09
-#define UFT_SCP_CMD_GET_INFO       0x40
+/* SCP USB command byte values.
+ *
+ * MF-254 (v4.1.5-hardening): the pre-MF-254 values here (0x04 / 0x05 /
+ * 0x03 / 0x02 / 0x09 / 0x40) were placeholder guesses that did NOT match
+ * the real SCP firmware protocol. Verified against simonowen/samdisk
+ * `include/SuperCardPro.h` (the de-facto open-source reference for the
+ * SCP SDK v1.7 protocol). The real opcodes are in the 0x80-0xD2 range
+ * and follow the [CMD, LEN, params..., CHECKSUM] packet framing
+ * documented in samdisk SuperCardPro.cpp. */
+#define UFT_SCP_CMD_SELA           0x80  /* select drive A */
+#define UFT_SCP_CMD_SELB           0x81  /* select drive B */
+#define UFT_SCP_CMD_DSELA          0x82  /* deselect drive A */
+#define UFT_SCP_CMD_DSELB          0x83  /* deselect drive B */
+#define UFT_SCP_CMD_MTRAON         0x84  /* motor A on */
+#define UFT_SCP_CMD_MTRBON         0x85  /* motor B on */
+#define UFT_SCP_CMD_MTRAOFF        0x86  /* motor A off */
+#define UFT_SCP_CMD_MTRBOFF        0x87  /* motor B off */
+#define UFT_SCP_CMD_SEEK0          0x88  /* seek to track 0 (recalibrate) */
+#define UFT_SCP_CMD_STEPTO         0x89  /* step to track N (param: 1 byte) */
+#define UFT_SCP_CMD_STEPIN         0x8A
+#define UFT_SCP_CMD_STEPOUT        0x8B
+#define UFT_SCP_CMD_SELDENS        0x8C
+#define UFT_SCP_CMD_SIDE           0x8D  /* select side (param: 1 byte: 0/1) */
+#define UFT_SCP_CMD_STATUS         0x8E  /* get drive status */
+#define UFT_SCP_CMD_GETPARAMS      0x90
+#define UFT_SCP_CMD_SETPARAMS      0x91
+#define UFT_SCP_CMD_READ_FLUX      0xA0  /* read flux (params: revs+flags) */
+#define UFT_SCP_CMD_GET_FLUX_INFO  0xA1  /* fetch rev_index table (40 B) */
+#define UFT_SCP_CMD_WRITE_FLUX     0xA2  /* write flux + bulk payload */
+#define UFT_SCP_CMD_SENDRAM_USB    0xA9  /* dump firmware RAM via USB bulk-in */
+#define UFT_SCP_CMD_SCPINFO        0xD0  /* firmware/board info */
+
+/* CMD_READ_FLUX flag bits (samdisk SuperCardPro.h ff_Index et al). */
+#define UFT_SCP_FF_INDEX           0x01  /* wait on index pulse before read */
+#define UFT_SCP_FF_BITCELLSIZE     0x02  /* 8-bit vs 16-bit cell size */
+#define UFT_SCP_FF_WIPE            0x04  /* wipe track before write */
+#define UFT_SCP_FF_RPM360          0x08  /* 360 RPM vs 300 RPM drive */
+
+/* Response status codes (pr_* in samdisk). */
+#define UFT_SCP_PR_OK              0x4F  /* successful packet completion */
+
+/* Checksum seed for the SendCmd packet framing
+ *   packet = [CMD, LEN, params..., CHECKSUM]
+ *   CHECKSUM = CMD + LEN + sum(params) + UFT_SCP_CHECKSUM_INIT
+ * Verified from samdisk SuperCardPro.h (CHECKSUM_INIT = 0x4A). */
+#define UFT_SCP_CHECKSUM_INIT      0x4A
 
 /** Maximum tracks supported by SCP hardware (0..167 = 84 × 2 sides). */
 #define UFT_SCP_MAX_TRACK_INDEX    167
@@ -72,7 +111,11 @@ extern "C" {
  */
 #define UFT_SCP_FLUX_NS_PER_SAMPLE 25
 
-/** Per-capture limits. */
+/** Per-capture limits. SCP firmware requires >= 2 revolutions per read
+ *  (samdisk SuperCardPro.cpp clamps `revs = max(2, min(revs, MAX_FLUX_REVS))`).
+ *  UFT enforces this strictly at the HAL boundary — single-rev reads
+ *  are rejected with UFT_ERR_INVALID_ARG rather than silently coerced. */
+#define UFT_SCP_MIN_REVOLUTIONS    2
 #define UFT_SCP_MAX_REVOLUTIONS    5
 #define UFT_SCP_DEFAULT_REVOLUTIONS 3
 
@@ -110,13 +153,25 @@ uft_error_t uft_scp_direct_seek(uft_scp_direct_ctx_t *ctx,
  *
  * @param ctx           open context
  * @param side          0 or 1 (upper head selection)
- * @param revolutions   how many revolutions to capture (1..5)
+ * @param revolutions   how many revolutions to capture (2..5;
+ *                      single-rev rejected with UFT_ERR_INVALID_ARG)
  * @param out_flux      caller-allocated array of transition intervals
- *                      in 40ns units (SCP native resolution)
- * @param out_capacity  capacity of out_flux
+ *                      in NANOSECONDS (each tick is 25 ns at the SCP
+ *                      40 MHz sample clock)
+ * @param out_capacity  capacity of out_flux (in samples)
  * @param out_count     filled with number of transitions captured
  *
- * @return UFT_OK on success, UFT_ERR_NOT_IMPLEMENTED until M3.1 lands.
+ * @return UFT_OK on success,
+ *         UFT_ERR_INVALID_ARG on bad parameters,
+ *         UFT_ERR_BUFFER_TOO_SMALL if capture exceeds out_capacity
+ *         (out_count is then set to required minimum),
+ *         UFT_ERR_IO on USB/protocol error.
+ *
+ * Implementation note: follows the samdisk SuperCardPro.cpp
+ * ReadFlux() reference (CMD_READ_FLUX → CMD_GET_FLUX_INFO →
+ * per-revolution CMD_SENDRAM_USB). 16-bit big-endian samples; 0x0000
+ * marker accumulates an additional 0x10000 ticks. Mock-validated
+ * but not yet bench-verified against real hardware.
  */
 uft_error_t uft_scp_direct_read_flux(uft_scp_direct_ctx_t *ctx,
                                       int side,

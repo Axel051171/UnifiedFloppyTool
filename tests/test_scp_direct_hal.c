@@ -29,10 +29,14 @@ TEST(open_rejects_null_out_param) {
     ASSERT(uft_scp_direct_open(NULL) == UFT_ERR_INVALID_ARG);
 }
 
-TEST(open_returns_not_implemented_stub) {
+TEST(open_without_hardware) {
+    /* v4.1.5 (MF-254): libusb wiring landed. Without SCP hardware present,
+     * uft_scp_direct_open() returns an honest error (UFT_ERR_IO or
+     * UFT_ERR_NOT_IMPLEMENTED depending on libusb-availability) — never
+     * UFT_OK and never a half-allocated ctx. */
     uft_scp_direct_ctx_t *ctx = NULL;
     uft_error_t err = uft_scp_direct_open(&ctx);
-    ASSERT(err == UFT_ERR_NOT_IMPLEMENTED);
+    ASSERT(err != UFT_OK);                /* honest failure */
     ASSERT(ctx == NULL);                  /* no half-allocated ctx */
 }
 
@@ -87,12 +91,10 @@ TEST(capabilities_describe_real_hardware) {
     ASSERT(caps.can_read_flux == true);
     ASSERT(caps.can_write_flux == true);
     ASSERT(caps.can_read_sector == false);
-    /* MF-148 (HW-07): impl_complete is the GUI gate per H-1. While the
-     * M3.1 libusb wiring is pending, hardware-cap can be true but
-     * software-impl is honestly false. The unit-test asserts the
-     * scaffold-as-of-this-commit is NOT_IMPLEMENTED so the GUI keeps
-     * the action button disabled. Flip this assertion to TRUE in the
-     * commit that lands real read_flux/write_flux. */
+    /* MF-148 (HW-07): impl_complete is the GUI gate per H-1. MF-254
+     * landed the libusb wiring (open/close/seek) — but read_flux and
+     * write_flux are still bench-pending. So impl_complete stays false
+     * until UFT-008 Tier-3 hardware verification promotes Beta→Production. */
     ASSERT(caps.impl_complete == false);
     ASSERT(caps.max_revolutions == UFT_SCP_MAX_REVOLUTIONS);
     ASSERT(caps.flux_ns_per_sample == UFT_SCP_FLUX_NS_PER_SAMPLE);
@@ -104,10 +106,12 @@ TEST(capabilities_rejects_null) {
 }
 
 TEST(constants_match_scp_hardware_spec) {
-    /* Regression guards for well-known SCP constants. If any of these
-     * changes, something is off — the values come from SCP documentation. */
-    ASSERT(UFT_SCP_USB_VID == 0x16C0);
-    ASSERT(UFT_SCP_USB_PID == 0x0753);
+    /* Regression guards for well-known SCP constants. Values verified
+     * against samdisk reference + windows VID/PID enumeration (MF-212):
+     *   USB VID/PID = 0x16D0:0x0F8C (Jim Drew, SCP Direct).
+     * The earlier 0x16C0:0x0753 was incorrect — see header comment. */
+    ASSERT(UFT_SCP_USB_VID == 0x16D0);
+    ASSERT(UFT_SCP_USB_PID == 0x0F8C);
     /* SCP samples at 40 MHz = 25 ns per sample. The earlier value 40
      * was a unit-confusion bug (MHz misread as ns) — see header
      * comment for the cross-references. */
@@ -119,7 +123,7 @@ TEST(constants_match_scp_hardware_spec) {
 int main(void) {
     printf("=== SCP-Direct HAL scaffold tests ===\n");
     RUN(open_rejects_null_out_param);
-    RUN(open_returns_not_implemented_stub);
+    RUN(open_without_hardware);
     RUN(close_null_is_safe);
     RUN(seek_validates_args_before_stubbing);
     RUN(seek_ctx_null_rejected);

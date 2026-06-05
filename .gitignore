@@ -76,6 +76,10 @@ Makefile.Release
 mocinclude.opt
 debug/
 release/
+# release/ above is the qmake build-artifact dir — explicit re-includes
+# for docs + scripts subdirs that share the basename:
+!docs/release/
+!scripts/release/
 
 # Audit scratch data (inventory is tool-generated)
 .audit/called.txt

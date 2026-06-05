@@ -1,0 +1,12 @@
+# Sub-Agent-Worktrees (entstehen automatisch, immer ephemer)
+worktrees/
+
+# User-/Host-spezifische Permissions — nicht committen.
+# Standard-Permissions gehören in settings.json (committed).
+settings.local.json
+
+# OS- und Editor-Müll
+.DS_Store
+Thumbs.db
+*.swp
+*~

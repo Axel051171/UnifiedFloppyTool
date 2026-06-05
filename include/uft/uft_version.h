@@ -19,14 +19,14 @@
 #define UFT_VERSION_MINOR 1
 #endif
 #ifndef UFT_VERSION_PATCH
-#define UFT_VERSION_PATCH 4
+#define UFT_VERSION_PATCH 5
 #endif
 
 #ifndef UFT_VERSION_STRING
-#define UFT_VERSION_STRING "4.1.4"
+#define UFT_VERSION_STRING "4.1.5"
 #endif
 #ifndef UFT_VERSION_FULL
-#define UFT_VERSION_FULL "UnifiedFloppyTool v4.1.4"
+#define UFT_VERSION_FULL "UnifiedFloppyTool v4.1.5"
 #endif
 
 #ifndef UFT_BUILD_DATE

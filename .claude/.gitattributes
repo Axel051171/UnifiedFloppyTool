@@ -1,0 +1,15 @@
+# Enforce LF line endings für alle Text-Files unter .claude/
+# Verhindert das CRLF/LF-Mischen das in der v1-Version 7 Agent-Files
+# zwischen den Plattformen drift hatte.
+
+*.md       text eol=lf
+*.json     text eol=lf
+*.sh       text eol=lf
+*.py       text eol=lf
+*.yaml     text eol=lf
+*.yml      text eol=lf
+*.tmpl     text eol=lf
+*.c        text eol=lf
+*.h        text eol=lf
+*.cpp      text eol=lf
+*.hpp      text eol=lf

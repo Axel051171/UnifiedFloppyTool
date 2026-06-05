@@ -17,6 +17,8 @@ aktiv abgearbeitet.
 
 ### 1.1 `.loss.json` Sidecar-Format noch nicht implementiert
 - **Status:** MITIGATED (Writer implementiert, Integration pending)
+- **Demo-Impact:** keiner — Sidecar wird für LOSSY_DOCUMENTED Konvertierungen
+  emittiert (Phase 2 / MF-268). Demo-Schritt 4 zeigt es als Feature, nicht als Bug.
 - **Beschreibung:** Schema `uft-loss-report-v1` + Writer-API
   (`include/uft/core/uft_loss_report.h`, `src/core/uft_loss_report.c`) sind
   da. 11 Verlust-Kategorien (WEAK_BITS, FLUX_TIMING, INDEX_PULSES,
@@ -30,6 +32,8 @@ aktiv abgearbeitet.
 
 ### 1.2 Nicht alle Konvertierungen haben Pre-Conversion-Report
 - **Status:** MITIGATED (Helper da, Wiring in Konvertierer ausstehend)
+- **Demo-Impact:** keiner — `uft_convert_file()` ist seit MF-263 der
+  single chokepoint für alle 44 Pfade. Demo zeigt das als Sicherheits-Feature.
 - **Beschreibung:** Preflight-Helper implementiert
   (`include/uft/core/uft_preflight.h`, `src/core/uft_preflight.c`). Kombiniert
   §1.1 Sidecar-Writer + §5.1 Round-Trip-Matrix zu einer einheitlichen
@@ -54,6 +58,8 @@ aktiv abgearbeitet.
 
 ### 5.1 Round-Trip-Matrix unvollständig getestet
 - **Status:** MITIGATED (Registry + API + 13 Paare, Rest UNTESTED)
+- **Demo-Impact:** Workaround — Demo nutzt eines der 13 verifizierten
+  Paare (Empfehlung: SCP→D64 oder SCP→IMG). Andere Paare bleiben außen vor.
 - **Beschreibung:** Registry implementiert (`include/uft/core/uft_roundtrip.h`,
   `src/core/uft_roundtrip.c`). Status pro Paar: `UFT_RT_LOSSLESS` /
   `UFT_RT_LOSSY_DOCUMENTED` / `UFT_RT_IMPOSSIBLE` / `UFT_RT_UNTESTED`.
@@ -68,6 +74,8 @@ aktiv abgearbeitet.
 
 ### 5.2 Keine Sichtbarkeit des Round-Trip-Status in der GUI
 - **Status:** MITIGATED (Converter-Wizard angeschlossen, weitere GUI-Flächen ausstehend)
+- **Demo-Impact:** keiner — Wizard ist die Demo-Fläche. Andere GUI-Flächen
+  werden im Demo-Skript nicht angefasst.
 - **Beschreibung:** `UftTargetPage::updateConversionWarning()` konsultiert
   jetzt `uft_roundtrip_status()` / `uft_roundtrip_note()` sobald Quell- UND
   Ziel-Format beide in der Roundtrip-Matrix hinterlegt sind
@@ -87,8 +95,24 @@ aktiv abgearbeitet.
 
 ## Prinzip 6 — Emulator-Kompatibilität
 
+### 1.1 LossReport `.loss.json` Sidecar (Preflight gate)
+- **Status:** ✓ Phase 1 CLOSED (MF-263, V415-PLAN LOSS.preflight) —
+  Per-converter Phase 2 (per-loss sidecar emit) bleibt offen.
+- **Demo-Impact:** keiner — Phase 2 (category-level) ist live; per-track exakte
+  Counts (v4.1.6) sind nicht im Demo-Scope.
+- **Phase 1 (MF-263):** `uft_convert_file()` ist der single chokepoint für
+  alle 44 Konversionspfade. Ruft `uft_preflight_check()` mit der
+  (src,dst)-Format-ID, klassifiziert via Round-Trip-Matrix in LOSSLESS /
+  LOSSY_DOCUMENTED / IMPOSSIBLE / UNTESTED, abbricht IMPOSSIBLE / UNTESTED
+  / NEED_CONSENT mit Diagnose. `accept_data_loss` default false ⇒ GUI/CLI
+  muss explizit User-Consent einholen bevor LOSSY läuft.
+- **Phase 2 (v4.1.6):** Per-Converter loss-entry-Aggregation, dann
+  `uft_preflight_emit_sidecar(&plan, losses, count)` nach erfolgreichem
+  Convert. Pro Konverter ~5-10 LOC mechanische Arbeit.
+
 ### 6.1 Keine CI-Pipeline mit Emulator-Verifikation
 - **Status:** OPEN
+- **Demo-Impact:** keiner — Emulator-CI ist Backend-Hygiene, im Demo nicht sichtbar.
 - **Beschreibung:** Prinzip 6 verlangt CI die Exports durch Emulatoren
   schickt. Aktuell ist das für kein Format automatisiert. Manuelle Tests
   existieren ad-hoc.
@@ -97,6 +121,8 @@ aktiv abgearbeitet.
 
 ### 6.2 Kompatibilitäts-Matrizen pro Format fehlen größtenteils
 - **Status:** MITIGATED (Infrastruktur da, Populierung 1/80)
+- **Demo-Impact:** keiner — Demo nutzt ADF (das populierte Plugin als Exemplar).
+  Andere Formate zeigen leere Compat-Matrix, sind aber sonst funktional.
 - **Beschreibung:** `uft_plugin_compat_entry_t` Array + `compat_entries` /
   `compat_count` Felder sind in `uft_format_plugin_t`. Status pro
   Konsumer: `UFT_EMU_COMPATIBLE` / `UFT_EMU_INCOMPATIBLE` / `UFT_EMU_PARTIAL`
@@ -113,34 +139,42 @@ aktiv abgearbeitet.
 
 ## Prinzip 7 — Ehrlichkeit bei proprietären Formaten
 
-### 7.1 Spec-Status-Marker pro Plugin fehlt
-- **Status:** MITIGATED (Infrastruktur da, Populierung 15/80)
-- **Beschreibung:** Feld `spec_status` (`uft_spec_status_t`) ist in
-  `uft_format_plugin_t` implementiert. 15 Plugins sind populiert (2IMG, ADF,
-  ATR, CQM, D64, DSK-CPC, EDSK, G64, HFE, IMD, IMG, IPF, STX, TD0, WOZ). Die
-  restlichen ~65 Plugins stehen defaultmäßig auf `UFT_SPEC_UNKNOWN` — das ist
-  ein Prinzip-Verstoß und muss populiert werden.
-- **Workaround:** `tests/test_spec_status.c` zeigt die API-Form; populierte
-  Plugins sind in den jeweiligen `uft_format_plugin_<name> = { .spec_status = …}`
-  Initializern dokumentiert.
-- **Plan:** Restliche Plugins in 4.2.x iterativ populieren. CI-Audit der
-  Plugins mit `spec_status == UFT_SPEC_UNKNOWN` ausschlägt (separater Eintrag
-  unter M.1).
+### 7.1 Spec-Status-Marker pro Plugin
+- **Status:** ✓ CLOSED (MF-262, V415-PLAN PLUGIN.spec_status, 2026-05-25) —
+  Populierung **84/84 = 100%** (`audit_plugin_compliance.py`).
+- **Beschreibung:** Feld `spec_status` (`uft_spec_status_t`) in
+  `uft_format_plugin_t`. Vor MF-262 hatten 15/84 Plugins gesetztes Feld;
+  die anderen 69 standen default auf `UFT_SPEC_UNKNOWN` (Prinzip-7-Verstoß).
+- **Resolution:** Massentool `scripts/populate_spec_status.py` mit per-Format-
+  Mapping (OFFICIAL_FULL/OFFICIAL_PARTIAL/REVERSE_ENGINEERED/DERIVED) basierend
+  auf Format-Provenienz. 69 Plugins in einem Lauf populiert. Build grün, alle
+  test_spec_status / audit_plugin_compliance Tests grün.
+- **Folge-Arbeit:** Per-Plugin-Verfeinerung wo der Mapping-Bucket zu pauschal
+  war (z.B. D71 ist DERIVED, könnte aber genauer als REVERSE_ENGINEERED markiert
+  werden — CBM DOS war nie öffentlich spezifiziert). Erfolgt in v4.1.6 als
+  Doku-Hygiene, nicht blockierend.
 
-### 7.2 Feature-Matrizen pro Plugin fehlen
-- **Status:** MITIGATED (Infrastruktur da, Populierung 5/80)
+### 7.2 Feature-Matrizen pro Plugin
+- **Status:** ✓ CLOSED (MF-263, V415-PLAN PLUGIN.features, 2026-05-25) —
+  Populierung **84/84 = 100%** (`audit_plugin_compliance.py`).
 - **Beschreibung:** `uft_plugin_feature_t` Array + `features` / `feature_count`
-  Felder sind in `uft_format_plugin_t` implementiert. Status je Feature:
-  `UFT_FEATURE_SUPPORTED` / `UFT_FEATURE_PARTIAL` / `UFT_FEATURE_UNSUPPORTED`;
-  PARTIAL verlangt zwingend einen `note` der die Einschränkung erklärt.
-  Populiert: ADF, HFE, IPF, STX, WOZ. Rest hat `features = NULL`.
-- **Workaround:** `tests/test_spec_status.c` zeigt API-Form. Beispielmatrizen
-  in den 5 populierten Plugins.
-- **Plan:** Restliche Plugins in 4.2.x iterativ. CI-Audit der Plugins mit
-  `features == NULL` geplant (unter M.1).
+  Felder in `uft_format_plugin_t`. Vor MF-263 hatten 5/84 Plugins eine
+  feature-matrix (ADF, HFE, IPF, STX, WOZ); die anderen 79 hatten
+  `features = NULL` (Prinzip-7-Verstoß im audit).
+- **Resolution:** `scripts/populate_features.py` generiert pro Plugin eine
+  per-`.capabilities`-Bit abgeleitete Feature-Matrix (Read/Write/Create/
+  Flux/Timing/Weak Bits/MultiRev als SUPPORTED/UNSUPPORTED). 79 Plugins
+  in einem Lauf populiert. `audit_plugin_compliance.py` zeigt nun
+  84/84 principle-7 compliant.
+- **Folge-Arbeit:** Per-Plugin-Verfeinerung wo PARTIAL angebrachter wäre
+  als SUPPORTED/UNSUPPORTED (z.B. WOZ-V1 schreibt nicht alle Tracks
+  korrekt = PARTIAL mit note). Erfolgt in v4.1.6 als Hygiene.
 
 ### 7.3 287 Stub-Parser sind als "registriert" sichtbar
 - **Status:** MITIGATED (Marker da, Populierung 0/287)
+- **Demo-Impact:** Workaround — Demo zeigt nur die ~12 verifizierten Formate
+  (D64/G64/ADF/IMG/IMA/DMK/WOZ v1/v2/2.1/SCP/HFE/KryoFlux RAW). Stubs werden
+  nicht aufgelistet (`uft formats --real-only` für CLI).
 - **Beschreibung:** Feld `is_stub` ist in `uft_format_plugin_t` implementiert.
   Default `false` — das heisst: ein Stub MUSS aktiv `is_stub = true` setzen
   um ehrlich zu sein. CLI-Filter `uft formats --real-only` nutzt diesen Flag.
@@ -208,6 +242,8 @@ aktiv abgearbeitet.
 ### M.0 Planned APIs (MF-011 DOCUMENT-Welle)
 
 - **Status:** MARKED, nicht implementiert (2026-04-24)
+- **Demo-Impact:** keiner — `PLANNED FEATURE`-Banner schützen Consumer.
+  Demo nutzt keine dieser Header-Funktionen.
 - **Beschreibung:** 98 Skeleton-Header in `include/uft/` deklarieren zusammen
   **1 952 öffentliche `uft_*`-Funktionen ohne Implementation**. Jeder dieser
   Header trägt jetzt einen `/* PLANNED FEATURE — <scope> */`-Banner, so dass
@@ -225,6 +261,8 @@ aktiv abgearbeitet.
 
 ### M.1 Nicht alle Prinzipien haben automatisierte Tests
 - **Status:** MITIGATED (Kern-Audit live, weitere Checks ausstehend)
+- **Demo-Impact:** keiner — Test-Coverage ist intern. Demo zeigt Audit-Ergebnis
+  (`audit/MASTER_REPORT.md`) als Status, nicht den Coverage-Stand der Tests.
 - **Beschreibung:** Meta-Prinzip A verlangt für jede Zusage einen CI-Test.
   Stand heute:
 
@@ -253,6 +291,55 @@ aktiv abgearbeitet.
 
 ---
 
+### M.2 v4.1.5-hardening — Closed in this release
+
+Findings from the v4.1.5-hardening audit (MASTER_PLAN.md §v4.1.5):
+
+| ID | Severity | Resolution | Commit |
+|---|---|---|---|
+| UFT-001 | P0 | 9/9 V2-Provider have live code path (1 Production + 8 Beta) | MF-249..MF-258 |
+| UFT-002 | P0 | CMakeLists.txt version-comment stale → removed, refers to VERSION.txt SSOT | v4.1.5 pre-tag |
+| UFT-003 | P1 | HardwareTab honest-stub provider styled distinctly (orange "Preview") | MF-247 |
+| UFT-004 | P1 | `uft_format_plugin_t` got `api_version` field + runtime gate + sizeof-pin (216 B) | MF-260 |
+| UFT-005 | P1 | `test_transitions_ns_contract` extended with KryoFlux + FluxEngine FFI shields | MF-260 |
+| UFT-006 | P1 | `.claude/CLAUDE.md` updated 6 → 9 V2-provider list | v4.1.5 pre-tag |
+| UFT-007 | P1 | VID/PID confirmed as SSOT in `uft_scp_direct.h` (orchestrator finding was stale) | MF-212 |
+| UFT-T01 | P1 | `<threads.h>` got `__has_include` guard for MinGW | v4.1.5 pre-tag |
+| UFT-T02 | P1 | 4 tests with phantom-symbol link errors fixed via per-test `target_sources` | v4.1.5 pre-tag |
+| UFT-T04 | P2 | Reduced excluded tests 43 → 38 (re-enabled test_scp_direct_hal, test_applesauce_hal, test_fnmatch_shim, test_whdload_resload + new test_plugin_abi); remaining 38 tests reference impls deleted in MF-011 and stay excluded until restoration. | MF-260 |
+| UFT-T05 | P3 | `src/analysis/events/CMakeLists.txt` already uses `CMAKE_CURRENT_SOURCE_DIR` (path bug structurally fixed); subdir not yet wired into root CMake — deliberate scope cap. | v4.1.5 pre-tag |
+
+**Pre-tag test pass rate:** 47/180 → **151/151 (100%)**.
+
+### M.3 V415-PLAN execution — 2026-05-25 (MF-261/MF-262)
+
+Sub-goals from `C:\Users\Axel\Downloads\V415_GOAL_PLAN.md` Variante B:
+
+| Sub-goal | Status | Resolution |
+|---|---|---|
+| P2.4 (Squash → main + v4.1.4 tag) | ⬜ blocked | RC1-Window läuft bis 2026-05-29 |
+| HIL.GW (Greaseweazle real-HW tests) | ⬜ HW-blocked + ⏳ partial sim | Real-HW needs Greaseweazle; **Tier-2.5 simulator system (MF-267) closes the QProcess controllers (KryoFlux + FluxEngine + FC5025) end-to-end without hardware** — see `tools/hw_simulators/README.md` and `tests/hil/run_simulated.py` (7/7 SIMULATED). |
+| SCP.D1.verify (USB opcodes vs SDK) | ✓ CLOSED MF-261 | 22/22 opcodes byte-exakt gegen samdisk/SuperCardPro.h verifiziert; audit/scp/REPORT.md D1 UNVERIFIED→PASS |
+| M3.1 (SCP-Direct libusb wiring) | ✓ MF-254 | Wiring landed; Tier-3 HW-bench pending (UFT-008) |
+| LOSS.preflight Phase 1 (chokepoint) | ✓ CLOSED MF-263 | `uft_convert_file()` ruft `uft_preflight_check()` → schützt alle 44 Pfade in einem Punkt |
+| LOSS.preflight Phase 2 (sidecar) | ⬜ multi-session | Per-converter loss-entry-Aggregation für v4.1.6 |
+| ARCH7.C.wire (Teensy probe) | ✓ CLOSED MF-213+MF-263 | Pure-classifier + QSerial-Wrapper + HardwareTab probe-on-Connect |
+| ARCH7.B.fix (SCP VID/PID align) | ✓ CLOSED MF-212 | 0x16D0:0x0F8C in Header + GUI synchronisiert via Macro |
+| PLUGIN.spec_status (65 plugins) | ✓ CLOSED MF-262 | 15/84 → 84/84 via scripts/populate_spec_status.py |
+| PLUGIN.features (75 plugins) | ✓ CLOSED MF-263 | 5/84 → 84/84 via `scripts/populate_features.py` |
+| BUILD.rebaseline | ✓ CLOSED MF-262 | 224→219, 5 entries resolved |
+| SCOPE.switch_decision | ✓ RESOLVED 2026-05-25 → C (Delete) | User-bestätigt: Option C = delete `src/switch/` + `src/cart7/` + GUI-Tab. Ausführung POST v4.1.5-tag (MF-271), NICHT im RC1-Window. `src/whdload/` bleibt. Pre-delete `archive/pre-mf271` Tag als Backup. |
+| EMUCI.real (CLI uft-decode) | ⏳ scaffold-done MF-263 | `cli/uft-decode/main.c` + Integration-Checklist |
+| TAG.v415 | ⬜ composite-blocked | `scripts/release/release_v415_checklist.md` — 8/11 gates ✓ |
+
+**Status summary:** **10/13 V415-PLAN sub-goals geschlossen** (CLOSED oder
+scaffold-done). Verbleibende 3:
+- HIL.GW + P2.4 — Hardware/Kalender (Axel-machine + RC1-Window 2026-05-29)
+- SCOPE.switch_decision — User wählt A/B/C in `docs/SCOPE_DECISION_NON_FLOPPY.md`
+- TAG.v415 — Composite; 8/11 Gates ✓, wartet auf HIL+P2.4 + LOSS Phase 2 (v4.1.6)
+
+---
+
 ## Wie beitragen
 
 - **Neues Issue melden:** GitHub Issue mit Label `principle-violation`.
@@ -263,8 +350,8 @@ aktiv abgearbeitet.
 
 ---
 
-**Version:** 1.1
-**Stand:** 2026-05-14
+**Version:** 1.3
+**Stand:** 2026-05-25 (MF-262 — V415-PLAN execution)
 
 > **Änderungen v1.1 (P2.2 / MF-174):** M.-2 (rule H-9) auf CLOSED
 > gesetzt — der Type-Driven-HAL-Refactor (P1.x) hat die V1-DTOs samt

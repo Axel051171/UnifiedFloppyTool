@@ -514,7 +514,78 @@ typedef struct uft_format_plugin {
     const uft_plugin_compat_entry_t* compat_entries;
     size_t              compat_count;
 
+    // === UFT-004 (v4.1.5) — ABI version gate ===
+    /**
+     * @brief Plugin-API-Version. Plugins MÜSSEN dies auf
+     *        `UFT_PLUGIN_API_VERSION` setzen.
+     *
+     * Default 0 (legacy) wird vom Registrar als "pre-v4.1.5 plugin" akzeptiert,
+     * aber Stderr-Warnung. Plugins gegen ältere Header-Versionen, die diesen
+     * Wert nicht setzen, laufen weiter — keine Hard-Break. Bei v5.0 wird
+     * api_version != UFT_PLUGIN_API_VERSION ein UFT_ERROR_PLUGIN_LOAD.
+     *
+     * MUST stay at the END of the struct — adding anything after this
+     * silently breaks every plugin's designated initializer.
+     */
+    uint32_t            api_version;
+
 } uft_format_plugin_t;
+
+/**
+ * @brief Aktuelle Plugin-API-Version.
+ *
+ * Bumpen wenn:
+ *   - Felder umsortiert werden (designated-init bricht silent)
+ *   - Felder in der Mitte gelöscht werden
+ *   - Funktions-Pointer-Signaturen geändert werden
+ *
+ * Nicht bumpen wenn:
+ *   - Felder am ENDE angehängt werden (Default 0, kompatibel)
+ *   - Pure Doku-Änderungen
+ */
+#define UFT_PLUGIN_API_VERSION 1u
+
+/* ============================================================================
+ * UFT-004 (v4.1.5-hardening) — ABI-bomb guard.
+ *
+ * The 80 statically-initialised plugins all use designated initializers,
+ * so adding a NEW field at the END is safe. Adding a field IN THE MIDDLE
+ * or reordering existing fields silently breaks every plugin (Designated-
+ * Init writes go to the original slot, the new slot reads garbage).
+ *
+ * This compile-time check makes such a reorder visible: when the struct
+ * size changes, every TU that includes this header refuses to build until
+ * the developer bumps the recorded size below AND verifies the change is
+ * either pure-append or accompanied by a UFT_PLUGIN_API_VERSION bump.
+ *
+ * Verfahren: ADD field at end → run build → compiler quotes the new size →
+ * update UFT_FORMAT_PLUGIN_T_SIZE here. NO sentinel field, NO automatic
+ * bump — the developer must look at the diff.
+ *
+ * For external (.so/.dll) plugins, see TODO in MASTER_PLAN.md v4.1.5-Backlog
+ * UFT-004 about adding an explicit api_version field + runtime version
+ * gate in uft_register_format_plugin().
+ *============================================================================ */
+
+#ifndef UFT_FORMAT_PLUGIN_DISABLE_SIZE_GUARD
+/* If you intentionally change uft_format_plugin_t layout, recompile, copy
+ * the size the compiler reports into the literal below, and confirm in
+ * docs/MASTER_PLAN.md that no existing plugin's Designated-Init pattern
+ * has been silently broken. */
+#  if defined(__SIZEOF_POINTER__) && __SIZEOF_POINTER__ == 8
+     /* 64-bit ABI (x86_64, ARM64). Static_assert is C11. */
+#    if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+       /* Pinned 2026-05-25 against MinGW-w64 g++ 13.1.0 on Windows x86_64.
+        * tests/test_plugin_abi.c reports `sizeof(uft_format_plugin_t) = 216`
+        * after the UFT-004 api_version field was appended. If this trips
+        * on a new platform, run the test, copy the reported size here,
+        * and document the platform delta in MASTER_PLAN v4.1.5-Backlog. */
+       _Static_assert(sizeof(uft_format_plugin_t) == 216,
+                      "uft_format_plugin_t layout changed — update the pin "
+                      "in this header AND tests/test_plugin_abi.c.");
+#    endif
+#  endif
+#endif
 
 // ============================================================================
 // Plugin Registry

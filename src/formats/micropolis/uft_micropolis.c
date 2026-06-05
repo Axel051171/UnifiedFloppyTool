@@ -122,6 +122,16 @@ static uft_error_t mpls_write_track(uft_disk_t *disk, int cyl, int head,
 }
 
 /* ---- plugin descriptor ---- */
+static const uft_plugin_feature_t uft_format_plugin_micropolis_features[] = {
+    { "Read", UFT_FEATURE_SUPPORTED, NULL },
+    { "Write", UFT_FEATURE_SUPPORTED, NULL },
+    { "Create", UFT_FEATURE_UNSUPPORTED, NULL },
+    { "Flux", UFT_FEATURE_UNSUPPORTED, NULL },
+    { "Timing", UFT_FEATURE_UNSUPPORTED, NULL },
+    { "Weak Bits", UFT_FEATURE_UNSUPPORTED, NULL },
+    { "MultiRev", UFT_FEATURE_UNSUPPORTED, NULL },
+};
+
 const uft_format_plugin_t uft_format_plugin_micropolis = {
     .name = "Micropolis",
     .description = "Micropolis MetaFloppy (hard-sectored)",
@@ -134,5 +144,8 @@ const uft_format_plugin_t uft_format_plugin_micropolis = {
     .read_track  = mpls_read_track,
     .write_track = mpls_write_track,
     .verify_track = uft_generic_verify_track,
+    .spec_status = UFT_SPEC_REVERSE_ENGINEERED,  /* V415-PLAN PLUGIN.spec_status (MF-262) */
+    .features = uft_format_plugin_micropolis_features,  /* V415-PLAN PLUGIN.features (MF-263) */
+    .feature_count = sizeof(uft_format_plugin_micropolis_features) / sizeof(uft_format_plugin_micropolis_features[0]),
 };
 UFT_REGISTER_FORMAT_PLUGIN(micropolis)

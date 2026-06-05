@@ -24,11 +24,15 @@
 #include "mock_provider_v2.h"
 #include "uft/hal/concepts.h"
 #include "uft/hal/outcomes.h"
+#include "../../src/hardware_providers/kryoflux_provider_v2.h"
+#include "../../src/hardware_providers/fluxengine_provider_v2.h"
 
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
 #include <variant>
+#include <string>
+#include <vector>
 
 using namespace ::uft::hal;
 using ::uft::tests::MockProviderV2;
@@ -95,5 +99,61 @@ int transitions_ns_check_index_increasing(void)
 }
 
 void transitions_ns_free(std::uint32_t *p) { std::free(p); }
+
+/* ─── UFT-005 (v4.1.5): KryoFlux + FluxEngine contract probes ─────────
+ *
+ * Inject a runner that simulates "binary not found / launch failed" by
+ * returning exit_code = -1. Both providers must respond with an honest
+ * non-Captured outcome (ProviderError / DeviceError / TransportUnavailable)
+ * — NEVER with a fabricated FluxCaptured holding garbage transitions_ns.
+ *
+ * Returns:
+ *   0 = honest non-Captured outcome (test passes — Prinzip 1 upheld)
+ *   1 = FluxCaptured returned with C-1/C-2-compliant intervals
+ *       (also a pass — provider has real data)
+ *   2 = FluxCaptured returned with intervals violating C-1 or C-2
+ *       (CONTRACT VIOLATION — ARCH-2 regression)
+ */
+int transitions_ns_kryoflux_contract_probe(void)
+{
+    auto failing_runner =
+        [](const std::vector<std::string>& /*argv*/,
+           const std::string& /*stdin_data*/)
+        -> ::uft::hal::DtcRunResult {
+        return { /*stdout=*/"", /*stderr=*/"dtc: command not found",
+                 /*exit_code=*/-1 };
+    };
+    ::uft::hal::KryoFluxProviderV2 p(failing_runner, "dtc");
+    FluxOutcome o = p.read_raw_flux(ReadFluxParams{0, 0, 2, 0});
+    if (!std::holds_alternative<FluxCaptured>(o)) return 0;  /* honest fail */
+
+    const auto &f = std::get<FluxCaptured>(o);
+    for (uint32_t t : f.transitions_ns) {
+        if (t == 0u) return 2;
+        if (t > 10000000u) return 2;
+    }
+    return 1;
+}
+
+int transitions_ns_fluxengine_contract_probe(void)
+{
+    auto failing_runner =
+        [](const std::vector<std::string>& /*argv*/,
+           const std::string& /*stdin_data*/)
+        -> ::uft::hal::FluxEngineRunResult {
+        return { /*stdout=*/"", /*stderr=*/"fluxengine: command not found",
+                 /*exit_code=*/-1 };
+    };
+    ::uft::hal::FluxEngineProviderV2 p(failing_runner, "fluxengine");
+    FluxOutcome o = p.read_raw_flux(ReadFluxParams{0, 0, 2, 0});
+    if (!std::holds_alternative<FluxCaptured>(o)) return 0;  /* honest fail */
+
+    const auto &f = std::get<FluxCaptured>(o);
+    for (uint32_t t : f.transitions_ns) {
+        if (t == 0u) return 2;
+        if (t > 10000000u) return 2;
+    }
+    return 1;
+}
 
 } /* extern "C" */

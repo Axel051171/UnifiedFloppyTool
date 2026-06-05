@@ -72,3 +72,21 @@ jobs:
             echo "==== $m ===="
             python3 -m py_compile "$m"
           done
+
+      - name: Tier-2.5 hardware simulator gate (tests/hil/run_simulated.py)
+        run: |
+          # MF-268: byte-compile the simulator scripts + run the Tier-2.5
+          # gate. The gate exits 1 on any FAIL — SIMULATED is acceptable,
+          # NOT_RUN is acceptable, FAIL means a simulator-output regression.
+          # See tools/hw_simulators/README.md.
+          set -e
+          for s in tools/hw_simulators/sim_*.py tools/adfcopy_sim.py \
+                   tools/applesauce_sim.py tools/greaseweazle_sim.py; do
+            echo "==== $s ===="
+            python3 -m py_compile "$s"
+          done
+          PYTHONIOENCODING=utf-8 python3 tests/hil/run_simulated.py \
+            --out hil_simulated_ci.md
+          echo "::group::Tier-2.5 simulation report"
+          cat hil_simulated_ci.md
+          echo "::endgroup::"

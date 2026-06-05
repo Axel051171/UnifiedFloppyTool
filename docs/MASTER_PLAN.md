@@ -84,7 +84,7 @@ Alle bisher aufgedeckten Findings in einer priorisierten Liste:
 | **MF-007** | **P1** | **Plugin-Test-Coverage 11.8 %** | **offen** |
 | MF-008 | P2 | docs / KNOWN_ISSUES stellenweise stale | offen |
 | MF-009 | P3 | TODO/FIXME-Marker (Census 2026-04-25) | scoped (siehe §MF-009-Census) |
-| MF-010 | P2 | 318 nicht-kanonische Includes | offen |
+| MF-010 | P2 | Non-kanonische Includes — Census 2026-05-25: 81 unqualifizierte `uft_*.h`-Includes (Sibling-Pattern, technisch OK durch -I-Pfade) + ~140 SAMdisk-imported Header (third-party). Echte Cleanup-Kandidaten: 81 Sibling-Includes → `uft/...`-Pfad. Multi-Session-Arbeit, P2. | scoped |
 | **MF-011** | **P0** | **175 Skeleton-Header, 3355 Phantom-Funktionen** | **offen** |
 | **MF-012** | **P0** | **XCopy-Tab Phantom-Feature** (GUI ohne Backend) | **offen** |
 
@@ -435,6 +435,95 @@ Decoder-/Sync-/Track-Layout-Algorithmen fokussiert (Engine-Ebene). Zusammen bild
 sie den M2 Amiga-Block.
 
 Detail-Dokument: `docs/XCOPY_ALGORITHM_MIGRATION.md`
+
+---
+
+## v4.1.5-hardening Audit (2026-05-24)
+
+Vollaudit via `orchestrator`-Fan-Out auf Branch `tests/v4.1.5-hardening`.
+Findings konsolidiert nach P0-P3 (Konflikt-Hierarchie: Forensik > Security >
+Correctness > Architecture > Performance).
+
+### In dieser Session geschlossen
+
+| ID | Severity | Thema | Commit/Stelle |
+|---|---|---|---|
+| UFT-002 | P0 | CMakeLists.txt header-comment "Version: 4.1.3" stale gg. VERSION.txt=4.1.4 | CMakeLists.txt:3 — Version-Zahl entfernt, Verweis auf VERSION.txt-SSOT |
+| UFT-006 | P1 | `.claude/CLAUDE.md` listete 6 Controller, Code hat 9 V2-Provider | .claude/CLAUDE.md §Wichtige Konstanten — auf 9 Provider + Status (1 production / 8 honest-stub) aktualisiert |
+| UFT-T01 | P1 | `<threads.h>` Include ohne `__has_include`-Guard → MinGW-Build-Bruch | include/uft/core/uft_safe_io.h:41 — Guard ergänzt |
+| UFT-T02 | P1 | 4 Tests (loss_report, roundtrip_matrix, preflight, salvage_fs) linkten Phantom-Symbole obwohl Sources existieren | tests/CMakeLists.txt — per-Test target_sources-Blöcke wie test_destructive_op_consent |
+| UFT-T03 | P2 | test_smoke (uft_merge_engine.c+uft_decode_score.c gelöscht in MF-011) und test_safe_io_alloc (uft_safe_io.c+uft_safe_alloc.c existierten nie) | tests/CMakeLists.txt EXCLUDED_TESTS — ehrlich markiert |
+
+**Test-Pass-Rate:** 26 % → 74 % (47 → 133 von 180 Tests passing).
+Konsistenz-Check 0/0/0/0, verify_build_sources keine neuen Regressions
+(5 baseline-entries resolved, optional `--rebuild-baseline` möglich).
+
+### v4.1.5-Backlog (offen)
+
+Findings für die folgenden Sessions / Tag-Gates:
+
+| ID | Severity | Thema | Effort | Quelle |
+|---|---|---|---|---|
+| UFT-001 | ✓ **9/9 LIVE** MF-249..MF-258 | Alle 9 V2-Provider haben jetzt einen live Code-Pfad zu echter Hardware. 1 production (Greaseweazle), 8 Beta (live code, hardware-bench pending). Reality-Tracker in §UFT-001-Status. | — | siehe Status-Tabelle |
+| UFT-003 | ✓ CLOSED MF-247 | HardwareTab honest-stub-Connection visuell distinkt: orange "Disconnect (Preview)" Button mit Tooltip statt grünem Default. Prinzip-4-Verstoß behoben. | — | src/hardwaretab.cpp:818-845 |
+| UFT-004 | ✓ CLOSED MF-260 | `uft_format_plugin_t` bekam `api_version`-Field + `UFT_PLUGIN_API_VERSION` Macro + Runtime-Gate (`uft_register_format_plugin` lehnt `api_version > host` ab, warnt bei `== 0` als Legacy). Static_assert pinnt jetzt `sizeof == 216` (MinGW-w64 x86_64). Test `tests/test_plugin_abi.c` mit 8 Assertions: api_version-Macro, struct-size-floor, field-offset-bound, registrar-reject-null/unnamed/future, accept-current/legacy. | — | include/uft/uft_format_plugin.h:516-580, src/core/uft_format_plugin.c:30-65, tests/test_plugin_abi.c |
+| UFT-005 | ✓ CLOSED MF-260 | `test_transitions_ns_contract` extended via `transitions_ns_kryoflux_contract_probe()` + `transitions_ns_fluxengine_contract_probe()` in FFI. Beide injizieren einen "binary not found" Runner und assertieren dass beide Provider mit honest non-Captured outcome antworten (kein fabriziertes FluxCaptured mit Container-Bytes). ARCH-2-Regression-Shield aktiv. | — | tests/unit/transitions_ns_ffi.cpp, tests/unit/test_transitions_ns_contract.c |
+| UFT-007 | ✓ CLOSED MF-212 | ARCH-7 sub-B Status verifiziert: VID/PID jetzt SSOT in `uft_scp_direct.h:40-41` (`0x16D0:0x0F8C`), `hardwaretab.cpp:548` liest exakt das Macro. Orchestrator-Finding war stale. | — | include/uft/hal/uft_scp_direct.h:40-41 |
+| UFT-008 | P1 | HIL Hardware-Tier 14/15 NOT_RUN. Pro Controller eine Bench-Session nötig. Blockiert durch UFT-001. | S pro Controller (1-2h Bench-Time) | tests/hil/run_hil.py, audit/rc1_field_notes.md |
+| UFT-T04 | ✓ REDUCED MF-260 | Bulk-Triage Schritt 1: 4 stale Exclusions re-enabled (test_scp_direct_hal nach MF-254 libusb-Wiring, test_applesauce_hal Pure-Utility, test_fnmatch_shim, test_whdload_resload) + new test_plugin_abi. 146 → 151 tests passing. **Verbleibende 38 Exclusions** sind echte MF-011-Phantome (impl gelöscht) und dokumentiert per-Eintrag in `tests/CMakeLists.txt`. Vollständige Restoration ist Multi-Session-Arbeit (out-of-scope für v4.1.5-tag). | M (38 verbleibend, restoration multi-session) | tests/CMakeLists.txt:53-110 |
+| UFT-T05 | ✓ CLOSED v4.1.5 pre-tag | Datei `src/analysis/events/CMakeLists.txt:13` nutzt bereits `CMAKE_CURRENT_SOURCE_DIR` für Include-Pfad — `add_subdirectory()`-sicher. Subdir noch nicht ins Root-CMake verkabelt (separate Entscheidung, Out-of-Scope für T05). | — | src/analysis/events/CMakeLists.txt:13 |
+
+### Was diese Session NICHT geprüft hat
+
+- Byte-genaue Decoder-Korrektheit auf echten SCP/HFE/KryoFlux-Samples
+- Memory-Safety mit ASan/UBSan/TSan-Runs (CI-Workflows existieren)
+- Vollständige differential-Suite gegen Greaseweazle CLI v1.23
+- audit_plugin_compliance.py-Lauf (80 Plugins × Prinzip 7 Status-Felder)
+- Plugin-für-Plugin Format-Korrektheit
+- Performance-Hotpath-Review (algorithm-hotpath-optimizer)
+- Forensic-integrity-Agent gegen jeden Konversions-Pfad einzeln
+
+### UFT-001-Status — 9/9 Controller mit live Code-Pfad (2026-05-24)
+
+Closed via MF-249..MF-258 in der v4.1.5-hardening-Session. Vor diesen
+Commits hatten 8 von 9 V2-Provider `nullptr`-Runner — jeder Aufruf
+gab ProviderError zurück. Jetzt:
+
+| # | Controller | Transport | Status | MF |
+|---|---|---|---|---|
+| 1 | Greaseweazle | C-HAL (libusb-frei, custom USB) | ✅ Production | pre-session |
+| 2 | Applesauce  | Qt6::SerialPort + 7 Runner-Factories | ✅ Beta | MF-249, MF-250 |
+| 3 | ADFCopy     | Qt6::SerialPort + 5 Runner-Factories | ✅ Beta | MF-252 |
+| 4 | SCP-Direct  | libusb-1.0 (open/close/seek)         | ✅ Beta | MF-254 |
+| 5 | XUM1541     | libusb-1.0 (open/close/detect/IEC)   | ✅ Beta | MF-255 |
+| 6 | KryoFlux    | QProcess→dtc subprocess              | ✅ Beta | MF-256 |
+| 7 | FluxEngine  | QProcess→fluxengine subprocess       | ✅ Beta | MF-256 |
+| 8 | FC5025      | QProcess→fcimage subprocess          | ✅ Beta | MF-257 |
+| 9 | USBFloppy   | UFI C-HAL (SG_IO Linux, SCSI-PT Win/macOS pending) | ✅ Beta | MF-258 |
+
+"Beta" = Code-Pfad live + compile-verified, hardware-bench
+verification pending. Yellow "Disconnect (Beta)" Styling im
+HardwareTab unterscheidet visuell von production green-stripe.
+
+Drei Test-Tiers für jeden Controller:
+- **Tier 1** (in CI): Protokoll-/API-Wiring via scripted mocks
+- **Tier 2** (optional): Virtual COM-Pair / Subprocess-Simulator
+- **Tier 3** (Bench-Session): physische Hardware
+
+Aktuell: Tier 1 grün für alle. Tier 2 dokumentiert (Applesauce
+Simulator als Vorlage). Tier 3 = next session pro Controller mit
+echter Hardware.
+
+### Recommended Sequence
+
+1. **Bench-Session (pro Controller):** Tier-3-Verifikation gegen
+   echtes Gerät. Sobald grün → yellow "Beta" → green "Production"
+   per Controller. Stark abhängig davon welche Hardware verfügbar ist.
+2. **Vor v4.1.5-Tag:** UFT-T04 Bulk-Triage entscheiden (löschen vs. rekonstruieren der ~140k-LOC-Tests)
+3. **Vor v4.1.5-Tag:** UFT-T05 events-CMakeLists Pfad-Fix
+4. **Bei v4.1.5-Tag:** UFT-001 Ehrlichkeits-Statement im README + RELEASE_NOTES — entweder "Greaseweazle-only" oder Tag verschieben
+5. **Multi-Session:** UFT-004, UFT-005, UFT-007 — pure Engineering-Arbeit
+6. **Bench-Session:** UFT-008 (sobald UFT-001 echte Hardware-Wiring liefert)
 
 ---
 

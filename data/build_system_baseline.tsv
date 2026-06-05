@@ -43,9 +43,6 @@ A	src/analysis/uft_anomaly_detect.c
 A	src/analysis/uft_ml_protection.c
 A	src/analysis/uft_sector_compare.c
 A	src/core/uft_error_strings.c
-A	src/core/uft_loss_report.c
-A	src/core/uft_preflight.c
-A	src/core/uft_roundtrip.c
 A	src/detect/mfm/cpm_fs.c
 A	src/detect/mfm/mfm_detect.c
 A	src/detect/mfm/uft_mfm_detect_bridge.c
@@ -61,16 +58,12 @@ A	src/gui/AnalyzerToolbar.cpp
 A	src/gui/DDParamsWidget.cpp
 A	src/gui/ProtectionAnalysisWidget.cpp
 A	src/gui/RecoveryParamsWidget.cpp
-A	src/gui/UftApplication.cpp
 A	src/gui/UftFormatDetectionModel.cpp
 A	src/gui/UftFormatDetectionWidget.cpp
-A	src/gui/UftMainController.cpp
-A	src/gui/UftMainWindow.cpp
 A	src/gui/UftMergeStrategyWidget.cpp
 A	src/gui/UftParameterModel.cpp
 A	src/gui/UftTrackVisualization.cpp
 A	src/gui/UftWidgetBinder.cpp
-A	src/gui/main.cpp
 A	src/gui/sessionmanager.cpp
 A	src/gui/uft_batch_wizard.cpp
 A	src/gui/uft_disk_compare_view.cpp
@@ -85,7 +78,6 @@ A	src/gui/uft_format_panel.cpp
 A	src/gui/uft_gw2dmk_panel.cpp
 A	src/gui/uft_hardware_panel.cpp
 A	src/gui/uft_hex_file_panel.cpp
-A	src/gui/uft_main_window.cpp
 A	src/gui/uft_mig_panel.cpp
 A	src/gui/uft_nibble_recovery_panel.cpp
 A	src/gui/uft_otdr_panel.cpp

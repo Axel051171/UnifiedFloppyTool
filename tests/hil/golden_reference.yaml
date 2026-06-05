@@ -59,6 +59,39 @@ software_reference:
     - { id: amiga_dd,   gw_format: amiga.amigados,      encoding: amiga }
 
 # ─────────────────────────────────────────────────────────────────────
+# Tier 1.5 — SIMULATED HARDWARE (V415-PLAN MF-267, no real device)
+#
+# When the hardware tier (below) is `status: template` because no
+# physical disks are catalogued yet, tools/hw_simulators/ provides
+# Python fake-binary stand-ins for the QProcess-based controllers
+# (KryoFlux DTC, FluxEngine, FC5025 fcimage). They consume the
+# software-reference corpus above and emit the exact byte-format each
+# real binary produces.
+#
+# Run with: python tests/hil/run_simulated.py --out releases/<ver>/hil_sim.md
+# Results carry status `SIMULATED` — strictly between NOT_RUN (no info)
+# and PASS (real-hardware-verified). Tier 1.5 catches argv / IO-glue
+# bugs but does NOT cover timing, USB stack, signal integrity, or
+# VID/PID disambiguation. See tools/hw_simulators/README.md.
+# ─────────────────────────────────────────────────────────────────────
+simulated_hardware:
+  driver: tests/hil/run_simulated.py
+  simulator_dir: tools/hw_simulators
+  doc: tools/hw_simulators/README.md
+  status: active        # the simulator system is wired and CI-runnable
+  controllers_covered:
+    - kryoflux
+    - fluxengine
+    - fc5025
+  controllers_not_covered:
+    - greaseweazle    # C-HAL with custom USB protocol, no subprocess seam
+    - scp             # libusb-direct; needs USB-mock framework (v4.1.6)
+    - xum1541         # libusb-direct; same
+    - applesauce      # serial-direct; covered by tools/applesauce_sim.py
+    - adfcopy         # serial-direct; same pattern, simulator NYI
+    - usbfloppy       # UFI SG_IO C-HAL; SG_IO mock needed
+
+# ─────────────────────────────────────────────────────────────────────
 # Tier 2 — HARDWARE golden reference (Axel's rig, manual, per release)
 #
 # One template entry per HAL controller, so the catalog STRUCTURE is
