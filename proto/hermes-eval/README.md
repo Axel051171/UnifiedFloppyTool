@@ -50,17 +50,46 @@ Editiere `proto/hermes-eval/.env` (aus `.env.example` kopieren). NIE
 echte Keys committen — `.env` ist in `.gitignore`.
 
 Empfohlene Endpoints für den Spike (Reihenfolge der Präferenz):
-- **OpenRouter** mit z.B. `anthropic/claude-3.5-sonnet` für fairen
-  Apples-to-Apples Vergleich gegen Claude Code
+- **OpenRouter** mit z.B. `anthropic/claude-sonnet-4.6` für fairen
+  Apples-to-Apples Vergleich gegen Claude Code (selbes Modell)
 - **Nous Portal** (Native, falls hermes-agent-optimiert)
 - Lokales Modell falls verfügbar (mistral, qwen) — disqualifiziert vom
   GO-Vergleich aber gut zum Sanity-Check ob hermes überhaupt läuft
 
 ### 4. Smoke-Test
 
-Bevor Benchmarks: einfacher Hallo-Welt-Lauf von hermes-agent gegen den
-gewählten Endpoint. Wenn das schon scheitert → STOP-Bedingung "Setup
-braucht > 1 Tag" tritt ein.
+Bevor Benchmarks: einfacher Hallo-Welt-Lauf:
+
+```bash
+hermes -z "Sag 'Hallo' und sonst nichts." \
+  --provider openrouter \
+  --model anthropic/claude-sonnet-4.6
+```
+
+Erwartet: einzelne Antwort, keine Banner. Wenn das schon scheitert →
+STOP-Bedingung "Setup braucht > 1 Tag" tritt ein.
+
+## Konkrete hermes-CLI-Pattern für die Benchmarks
+
+Aus `hermes-agent.nousresearch.com/docs/reference/cli-commands`:
+
+| Flag | Zweck | Beispiel |
+|---|---|---|
+| `-z` | One-shot non-interactive (kein Banner, kein Spinner) | `hermes -z "prompt"` |
+| `chat -q` | Single-Query mit weiteren Flag-Optionen | `hermes chat -q "prompt"` |
+| `-m / --model` | Modell-Wahl | `--model anthropic/claude-sonnet-4.6` |
+| `--provider` | LLM-Provider | `--provider openrouter` |
+| `-t / --toolsets` | Tool-Sets (csv) | `--toolsets web,terminal,skills` |
+| `-s / --skills` | Skills laden (repeat oder csv) | `-s code_audit,format_scaffold` |
+| `--max-turns N` | Tool-Iteration-Limit | `--max-turns 20` |
+| `< file` | Stdin als Input (wenn nicht TTY) | `hermes -z "audit this" < diff.patch` |
+
+**Wichtig: kein per-invocation timeout-flag.** Timeouts erzwingen wir via
+`timeout 300 hermes -z ...`.
+
+**Wichtig: keine per-invocation token-cost-Ausgabe.** Cost muss per
+`hermes insights` post-run abgefragt und zur Run-Sequence zugeordnet
+werden. Wrapper-Skript dazu in Session #3.
 
 ## Benchmark-Tasks
 
