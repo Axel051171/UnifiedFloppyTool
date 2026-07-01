@@ -37,7 +37,7 @@ jobs:
     name: Hardware-provider audit
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - name: Set up Python
         uses: actions/setup-python@v5
