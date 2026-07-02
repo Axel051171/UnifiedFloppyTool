@@ -71,7 +71,7 @@ typedef struct uft_preflight_opts {
     bool        dry_run;           ///< nur planen, auch emit_sidecar unterdrücken
     const char *source_format_name;///< z.B. "SCP" (für Report)
     const char *target_format_name;///< z.B. "IMG" (für Report)
-    const char *uft_version;       ///< z.B. "4.1.0" (Producer-Stempel)
+    const char *uft_version;       ///< Producer-Stempel — caller passt UFT_VERSION_STRING (z.B. "4.1.5")
 } uft_preflight_opts_t;
 
 /**

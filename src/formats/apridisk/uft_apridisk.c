@@ -9,6 +9,7 @@
 
 #include "uft/formats/uft_apridisk.h"
 #include "uft/uft_format_common.h"
+#include "uft/uft_version.h"   /* UFT_VERSION_FULL — UFT-A06 follow-up */
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -416,7 +417,10 @@ void uft_apridisk_write_options_init(apridisk_write_options_t *opts) {
     memset(opts, 0, sizeof(*opts));
     opts->use_rle = true;
     opts->comment = NULL;
-    opts->creator = "UFT v3.9.0";
+    /* UFT-A06 follow-up: creator stamp was previously hardcoded to a
+     * stale v3.x string (wrong since v4.x). APRIDISK files written by
+     * UFT now carry the live tool version from UFT_VERSION_FULL. */
+    opts->creator = UFT_VERSION_FULL;
 }
 
 uft_error_t uft_apridisk_write(const uft_disk_image_t *disk,

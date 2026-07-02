@@ -348,6 +348,78 @@ def check_version_ssot(repo: Path) -> list[str]:
                     )
                 break  # one finding per file is enough
 
+    # UFT-A11 (follow-up to UFT-A06): scan src/ + include/ for hardcoded
+    # tool-version literals like "UFT 4.1" or "UnifiedFloppyTool v4.1.x".
+    # The A06 finding (forensic provenance chain stamping "UFT 4.1" in
+    # v4.1.5 binaries) slipped past this checker because we only audited
+    # the meta-files above, not the source. SSOT rule: any version stamp
+    # must come from UFT_VERSION_STRING / UFT_VERSION_FULL, never a
+    # literal.
+    #
+    # Pattern matches:
+    #   "UFT 4.1"             "UFT v4.1.5"
+    #   "UnifiedFloppyTool v4.1.5"
+    # Carve-outs:
+    #   - include/uft/uft_version.h is the SSOT definition itself
+    #   - vendored code under src/switch/, src/mbedtls/, src/samdisk/,
+    #     src/formats/uff/ is not under our SSOT contract
+    #   - comments are allowed (a `* "UFT 4.1.0"` in a docstring is fine)
+    tool_version_re = re.compile(
+        r'"(?:UFT\s+v?\d+\.\d+(?:\.\d+)?|UnifiedFloppyTool\s+v\d+\.\d+(?:\.\d+)?)"'
+    )
+    canon_dirs = [repo / "src", repo / "include"]
+    vendored_prefixes = (
+        "src/switch/", "src/mbedtls/", "src/samdisk/", "src/formats/uff/",
+    )
+    skip_files = {
+        (repo / "include" / "uft" / "uft_version.h").resolve(),
+    }
+    for root in canon_dirs:
+        if not root.is_dir():
+            continue
+        for path in list(root.rglob("*.c")) + list(root.rglob("*.cpp")) \
+                  + list(root.rglob("*.h")) + list(root.rglob("*.hpp")):
+            try:
+                rel = path.resolve().relative_to(repo).as_posix()
+            except ValueError:
+                continue
+            if path.resolve() in skip_files:
+                continue
+            if any(rel.startswith(p) for p in vendored_prefixes):
+                continue
+            try:
+                text = path.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            in_block_comment = False
+            for ln_no, line in enumerate(text.splitlines(), 1):
+                code = line
+                # Strip continuation of a /* ... */ block comment.
+                if in_block_comment:
+                    end = code.find("*/")
+                    if end < 0:
+                        continue
+                    code = code[end + 2:]
+                    in_block_comment = False
+                # Strip same-line block comments and detect block-start
+                # without a close.
+                code = re.sub(r"/\*.*?\*/", "", code)
+                if "/*" in code:
+                    code = code[:code.index("/*")]
+                    in_block_comment = True
+                # Strip // line comments.
+                code = code.split("//", 1)[0]
+                stripped = code.lstrip()
+                if stripped.startswith("*"):
+                    continue
+                m = tool_version_re.search(code)
+                if not m:
+                    continue
+                errors.append(
+                    f"{rel}:{ln_no}: hardcoded tool-version literal {m.group(0)} — "
+                    "use UFT_VERSION_STRING or UFT_VERSION_FULL from uft_version.h"
+                )
+
     return errors
 
 

@@ -30,7 +30,7 @@ typedef struct {
     uint8_t           input_hash[UFT_PROV_HASH_SIZE];   /* SHA-256 of input */
     uint8_t           output_hash[UFT_PROV_HASH_SIZE];  /* SHA-256 of output */
     uint8_t           chain_hash[UFT_PROV_HASH_SIZE];   /* SHA-256(prev_chain + this_entry) */
-    char              tool_version[32];                   /* "UFT 4.1.0" */
+    char              tool_version[32];                   /* e.g. "UnifiedFloppyTool v4.1.5" — sourced from UFT_VERSION_FULL */
     char              description[128];                   /* Human-readable */
     char              operator_id[64];                    /* Who performed this */
     char              controller[32];                     /* "Greaseweazle v4.2" */

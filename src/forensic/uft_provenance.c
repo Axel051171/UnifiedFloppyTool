@@ -21,6 +21,7 @@
  */
 
 #include "uft/forensic/uft_provenance.h"
+#include "uft/uft_version.h"   /* UFT_VERSION_FULL — UFT-A06 */
 
 #include <stdint.h>
 #include <stdio.h>
@@ -157,7 +158,13 @@ int uft_prov_add(uft_provenance_chain_t *chain,
 
     if (description) strncpy(e->description, description, sizeof(e->description)-1);
     if (operator_id) strncpy(e->operator_id, operator_id, sizeof(e->operator_id)-1);
-    strncpy(e->tool_version, "UFT 4.1", sizeof(e->tool_version)-1);
+    /* UFT-A06: SSOT for the tool-version stamp. Was hardcoded
+     * "UFT 4.1" (already wrong by v4.1.1); now sourced from
+     * UFT_VERSION_FULL ("UnifiedFloppyTool v4.1.5" at v4.1.5).
+     * tool_version is char[32] — UFT_VERSION_FULL is 24 bytes so the
+     * strncpy fits with a NUL terminator. */
+    strncpy(e->tool_version, UFT_VERSION_FULL, sizeof(e->tool_version)-1);
+    e->tool_version[sizeof(e->tool_version)-1] = '\0';
 
     /* Chain hash = SHA256(prev_chain_hash || entry_fields) */
     sha256_ctx_t c; sha256_init(&c);
