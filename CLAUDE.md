@@ -18,8 +18,8 @@ Compliance-Lücken: [`docs/KNOWN_ISSUES.md`](docs/KNOWN_ISSUES.md).
 Unterstützt 6 Hardware-Controller (HAL teilweise wired — siehe pro Eintrag):
 - **Greaseweazle** (72 MHz Flux-Capture, USB) — read+write+flux, production
 - **SuperCard Pro** (40 MHz / 25 ns sample, USB FT240-X 12 Mbps) —
-  HAL [~] M3.1 partial scaffold (caps + timing-constants real, USB I/O
-  pending libusb wiring); CLI available
+  HAL [~] M3.1 libusb wiring LANDED (MF-254); Tier-3 HW-bench pending
+  (UFT-008); CLI available
 - **KryoFlux** (24 MHz, USB via DTC-Tool) — read via subprocess
 - **FC5025** (USB 5.25" Read-Only) — read via fcimage CLI
 - **XUM1541/ZoomFloppy** (IEC-Bus für Commodore-Laufwerke) — HAL [~] M3.2
@@ -33,7 +33,7 @@ Unterstützt 6 Hardware-Controller (HAL teilweise wired — siehe pro Eintrag):
  echten Pure-Utility-Funktionen + honest USB/Serial-Stubs; libusb-/Serial-
  Wiring multi-session — siehe `docs/MASTER_PLAN.md` §M3.)
 
-### 2. Format-Unterstützung (80 registered plugins, 138 format IDs)
+### 2. Format-Unterstützung (84 registered plugins, 138 format IDs)
 Liest/schreibt Disk-Images von praktisch jedem 8-Bit- und 16-Bit-Computer:
 - **Commodore:** D64, D71, D81, G64, T64, CRT, PRG, P00
 - **Apple:** DO, PO, WOZ (v1/v2/2.1), A2R, MOOF, 2MG, NIB, DC42
@@ -115,7 +115,10 @@ Erkennt und dokumentiert historische Kopierschutz-Verfahren:
 ## Build-System
 
 - **Primär:** qmake (`.pro`-Datei), ~756 Source-Dateien (post MF-011-Cleanup)
-- **Tests:** CMake (`tests/CMakeLists.txt`), 77 Tests (6 excluded wg. fehlender Module)
+- **Tests:** CMake (`tests/CMakeLists.txt`), 151/151 grün; GLOB-discovered
+  von 192 `test_*.c`/`*.cpp` Quelldateien, 39 in `EXCLUDED_TESTS` (fehlende
+  Module / WIP-Subsysteme). Counts via
+  `python scripts/check_consistency.py` validierbar.
 - **CI:** GitHub Actions — Linux (GCC), macOS (Clang), Windows (MinGW)
 - **Sanitizer:** ASan + UBSan Workflows
 - **Coverage:** lcov + Codecov
@@ -144,7 +147,7 @@ src/
   algorithms/          — God-Mode Decoder, Viterbi, Encoding
   core/                — Kernmodule (Multirev, MFM, Error)
   decoder/             — PLL, Sync, Multi-Rev Fusion
-  formats/             — ~80 Format-Plugins (138 IDs registriert) (nach System sortiert)
+  formats/             — 84 Format-Plugins (138 IDs registriert) (nach System sortiert)
   fs/                  — Dateisystem-Implementierungen
   flux/                — KryoFlux, Flux Loader
   gui/                 — Qt6 Widgets (OTDR Panel, Sector Editor, etc.)
@@ -163,10 +166,12 @@ tests/                 — 77 C-Tests + 1 Qt-Test
   Cleanup (785 dead-code Files / ~140k LOC entfernt, davon `src/fluxengine/`,
   `src/algorithms/{core,data,fluxio,imageio,tracks}`, `src/loaders/`,
   `src/filesystems/`, `src/encoding/`, plus 250+ einzelne orphan-Header)
-- 138 Format-IDs, 80 Plugin-B Registrierungen, 44 Konvertierungspfade
-- 6 Hardware-Controller (3 davon [~] M3 partial scaffold: SCP-Direct M3.1,
-  XUM1541 M3.2, Applesauce M3.3 — Pure-Utility + Lifecycle real, USB-/
-  Serial-Wiring pending; siehe `docs/MASTER_PLAN.md` §M3)
+- 138 Format-IDs, 84 Plugin-B Registrierungen, 45 Konvertierungspfade,
+  13 Roundtrip-Matrix-Einträge (SSOT in `src/core/uft_roundtrip.c`)
+- 6 Hardware-Controller — SCP-Direct M3.1 libusb wiring LANDED (MF-254,
+  HW-bench UFT-008 pending); XUM1541 M3.2 + Applesauce M3.3 weiterhin
+  [~] partial scaffold (Pure-Utility + Lifecycle real, USB-/Serial-
+  Wiring pending; siehe `docs/MASTER_PLAN.md` §M3)
 - HAL-Tests grün: Greaseweazle (production) + 10 SCP-Direct + 16 XUM1541
   + 17 Applesauce = 43 Stub-Honesty-Asserts, 0 Failures
 - 55+ Kopierschutz-Schemes
@@ -175,4 +180,4 @@ tests/                 — 77 C-Tests + 1 Qt-Test
 - ~610 Error-Handling-Fixes (fseek + I/O)
 - Thread-Safety: 3 Subsysteme mit Mutex
 - Compiler-Hardening: stack-protector, FORTIFY_SOURCE, ASLR
-- 25 Agent-Definitionen
+- 22 Agent-Definitionen (`.claude/agents/`, alle auf claude-fable-5)

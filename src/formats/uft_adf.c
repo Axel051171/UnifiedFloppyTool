@@ -896,7 +896,9 @@ int uft_adf_lookup(uft_adf_volume_t *vol, const char *path,
 int uft_adf_add_file(uft_adf_volume_t *vol, const char *src_path,
                      const char *dst_path) {
     (void)vol; (void)src_path; (void)dst_path;
-    /* TODO: implement full file injection into ADF filesystem */
+    /* TODO(docs/KNOWN_ISSUES.md §7.4): full file injection into ADF
+     * filesystem — needs bitmap alloc + dir-hash insertion + checksum
+     * upkeep. Tracked target: v4.2. Honest-stub: returns -1. */
     return -1;
 }
 
@@ -906,7 +908,8 @@ int uft_adf_add_file(uft_adf_volume_t *vol, const char *src_path,
 
 int uft_adf_delete(uft_adf_volume_t *vol, const char *path) {
     (void)vol; (void)path;
-    /* TODO: implement file/directory deletion from ADF filesystem */
+    /* TODO(docs/KNOWN_ISSUES.md §7.4): file/directory deletion from ADF
+     * filesystem — same v4.2 patch as add_file above. Honest-stub. */
     return -1;
 }
 

@@ -13,27 +13,89 @@ aktiv abgearbeitet.
 
 ---
 
+## Audit 2026-06-10 — Closing Note (16 Findings)
+
+Vollständiger 6-Spezialisten-Audit (must-fix-hunter, consistency-auditor,
+forensic-integrity, abi-bomb-detector, stub-eliminator, single-source-
+enforcer) auf Basis der Fable-5-Agent-Suite. Verifiziert via
+`check_consistency.py` 0/0/0/0, `verify_build_sources.py` 0 Regressionen,
+`audit_plugin_compliance.py` 84/84.
+
+| ID | Severity | Status | Auflösung |
+|---|---|---|---|
+| **A01** | P0 | ✓ DONE | Shared `uftc_preflight_gate()` Helper; beide Entry-Points durchlaufen ihn (§1.1) |
+| **A02** | P0 | ✓ DONE | KryoFlux→D64 ehrlicher `UFT_ERR_NOT_IMPLEMENTED` statt empty-image fabrication |
+| **A03** | P0 | ✓ DONE (Helper + Field) | `UftFormatConverterWizard::promptLossyConsent()` + `accept_data_loss`-Feld. Wizard-Mockup→Worker-Wiring ist separates Follow-up |
+| **A04** | P1 | ✓ DONE | Bounded `uftc_add_warning()` Helper; 60 unbounded snprintf-Sites mechanisch migriert |
+| **A05** | P1 | ✓ DONE | `accept_data_loss` als eigenes Feld an `uft_convert_options_t` + `_ext_t` angehängt |
+| **A06** | P1 | ✓ DONE | `uft_provenance.c` + `apridisk.c` Tool-Version-Stamp aus `UFT_VERSION_FULL` |
+| **A07** | P1 | ✓ DONE | PLL-Standalone-Impl in `src/core/uft_pll.c` (neu); Duplikat-Struct aus `uft_core_stubs.c` entfernt |
+| **A08** | P1 | ✓ DONE | Sektor→Sektor Raw-Byte-Copy mit `success=true` → `UFT_ERR_NOT_IMPLEMENTED`; IMG↔IMA via Same-Format-Pfad |
+| **A09** | P2 | ✓ DONE | Root `CLAUDE.md`: 6 Metriken-Drifts korrigiert (plugins 80→84, paths 44→45, agents 25→22, tests, SCP-HAL-Status, dir-listing) |
+| **A10** | P2 | ✓ DONE | `.claude/CLAUDE.md` Refactor-Banner: AKTIVER → ABGESCHLOSSEN mit MF-150/169/174/176 |
+| **A11** | P2 | ✓ DONE | `check_consistency.py`: Pattern-Scan für hartkodierte Versions-Literale in `src/`+`include/`; Negativ-Test verifiziert |
+| **A12** | P2 | ✓ DONE | KNOWN_ISSUES.md Doppel-§1.1 konsolidiert; Duplikat unter Prinzip 6 entfernt |
+| **A13** | P2 | OFFEN | Commit-Strategie für die uncommitteten Bundles (Audit-Folge selbst) |
+| **A14** | P2 | ✓ DONE | Pre-Commit-Hook Foundation-Gate toolchain-tolerant (`scripts/git-hooks/pre-commit`) |
+| **A15** | P3 | ✓ VERIFIED | Stub-Inventar in dokumentiertem Zustand (KNOWN_ISSUES §7.3, M.0); keine Code-Änderung nötig |
+| **A16** | P3 | ✓ DONE | ADF Write-Side TODOs (`add_file`, `delete`) → neuer KNOWN_ISSUES §7.4 Eintrag + Source-TODOs verlinken zurück |
+
+**Nicht-Ziel:** Diese Tabelle wird nicht wieder aktualisiert; sie ist
+historische Audit-Spur. Neue Findings landen in den thematischen
+Abschnitten unten. Audit-Nachfolger entstehen ggf. mit eigener Closing-
+Note (z.B. „Audit 2026-09-XX").
+
+**Während des Audits entstandene Follow-ups:**
+- Wizard-Progress-Page-Simulation → realer Worker-Wiring (UI-Job,
+  blockiert A03 Endnutzung in der GUI)
+- Batch-Wizard `uft_convert_options_ext_t` → `_t` Type-Confusion
+  (pre-existing, in `src/gui/uft_batch_wizard.cpp:1064-1081` als
+  Kommentar markiert)
+- v4.2 ADF Write-Side echtes Implementieren (§7.2)
+- Phase 2 Per-Converter loss-entry-Aggregation (§1.1)
+
+---
+
 ## Prinzip 1 — Niemals stille Datenverluste
 
-### 1.1 `.loss.json` Sidecar-Format noch nicht implementiert
-- **Status:** MITIGATED (Writer implementiert, Integration pending)
-- **Demo-Impact:** keiner — Sidecar wird für LOSSY_DOCUMENTED Konvertierungen
-  emittiert (Phase 2 / MF-268). Demo-Schritt 4 zeigt es als Feature, nicht als Bug.
-- **Beschreibung:** Schema `uft-loss-report-v1` + Writer-API
-  (`include/uft/core/uft_loss_report.h`, `src/core/uft_loss_report.c`) sind
-  da. 11 Verlust-Kategorien (WEAK_BITS, FLUX_TIMING, INDEX_PULSES,
-  SYNC_PATTERNS, MULTI_REVOLUTION, CUSTOM_METADATA, COPY_PROTECTION,
-  LONG_TRACKS, HALF_TRACKS, WRITE_SPLICE, OTHER). Schreibt JSON neben
-  Ziel-Datei als `<target>.loss.json`. Noch NICHT an die 44 Konvertierungs-
-  pfade angeschlossen — das passiert unter §1.2.
-- **Workaround:** CLI kann `uft_loss_report_write()` direkt nutzen.
-- **Plan:** §1.2 (Pre-Conversion-Report) wickelt alle `convert_*`-Pfade ein
-  und ruft den Writer auf.
+### 1.1 LossReport `.loss.json` Sidecar (Preflight gate)
+- **Status:** ✓ Phase 1 CLOSED (MF-263 + UFT-A01 follow-up,
+  V415-PLAN LOSS.preflight) — Per-converter Phase 2 (per-loss sidecar
+  emit) bleibt offen.
+- **Demo-Impact:** keiner — Phase 2 (category-level) ist live; per-track
+  exakte Counts (v4.1.6) sind nicht im Demo-Scope.
+- **Phase 1 (MF-263 + UFT-A01):** der gemeinsame Helper
+  `uftc_preflight_gate()` in `src/formats/uft_format_convert_dispatch.c`
+  ist der single chokepoint für alle 45 Konversionspfade — wird sowohl
+  von `uft_convert_file()` als auch von `uft_convert_memory()` gerufen.
+  Ruft `uft_preflight_check()` mit der (src,dst)-Format-ID, klassifiziert
+  via Round-Trip-Matrix in LOSSLESS / LOSSY_DOCUMENTED / IMPOSSIBLE /
+  UNTESTED, abbricht IMPOSSIBLE / UNTESTED / NEED_CONSENT mit Diagnose.
+  `accept_data_loss` default false ⇒ GUI/CLI muss explizit User-Consent
+  einholen bevor LOSSY läuft.
+  Memory-Mode (`uft_convert_memory()`) durchläuft denselben Gate, kann
+  aber kein `.loss.json` Sidecar emittieren (kein on-disk dst_path) —
+  das Gate selbst gilt trotzdem.
+- **Sidecar-Schema:** `uft-loss-report-v1` (`include/uft/core/uft_loss_report.h`,
+  `src/core/uft_loss_report.c`), 11 Verlust-Kategorien (WEAK_BITS, FLUX_TIMING,
+  INDEX_PULSES, SYNC_PATTERNS, MULTI_REVOLUTION, CUSTOM_METADATA,
+  COPY_PROTECTION, LONG_TRACKS, HALF_TRACKS, WRITE_SPLICE, OTHER). JSON
+  als `<target>.loss.json` neben Ziel-Datei.
+- **UFT-A01 follow-up (2026-06-10):** vor diesem Commit umging
+  `uft_convert_memory()` den Gate komplett (Audit-Findung A01). Helper
+  herausgezogen, beide Entry-Points darauf umgestellt; „single chokepoint"-
+  Garantie ist jetzt strukturell statt nur als Kommentar.
+- **Phase 2 (v4.1.6):** Per-Converter loss-entry-Aggregation, dann
+  `uft_preflight_emit_sidecar(&plan, losses, count)` nach erfolgreichem
+  Convert. Pro Konverter ~5-10 LOC mechanische Arbeit.
 
 ### 1.2 Nicht alle Konvertierungen haben Pre-Conversion-Report
 - **Status:** MITIGATED (Helper da, Wiring in Konvertierer ausstehend)
-- **Demo-Impact:** keiner — `uft_convert_file()` ist seit MF-263 der
-  single chokepoint für alle 44 Pfade. Demo zeigt das als Sicherheits-Feature.
+- **Demo-Impact:** keiner — der gemeinsame Helper `uftc_preflight_gate()`
+  in `uft_format_convert_dispatch.c` ist seit MF-263 + UFT-A01 der
+  single chokepoint für alle 45 Pfade; beide Entry-Points
+  (`uft_convert_file()`, `uft_convert_memory()`) durchlaufen ihn. Demo
+  zeigt das als Sicherheits-Feature.
 - **Beschreibung:** Preflight-Helper implementiert
   (`include/uft/core/uft_preflight.h`, `src/core/uft_preflight.c`). Kombiniert
   §1.1 Sidecar-Writer + §5.1 Round-Trip-Matrix zu einer einheitlichen
@@ -95,20 +157,11 @@ aktiv abgearbeitet.
 
 ## Prinzip 6 — Emulator-Kompatibilität
 
-### 1.1 LossReport `.loss.json` Sidecar (Preflight gate)
-- **Status:** ✓ Phase 1 CLOSED (MF-263, V415-PLAN LOSS.preflight) —
-  Per-converter Phase 2 (per-loss sidecar emit) bleibt offen.
-- **Demo-Impact:** keiner — Phase 2 (category-level) ist live; per-track exakte
-  Counts (v4.1.6) sind nicht im Demo-Scope.
-- **Phase 1 (MF-263):** `uft_convert_file()` ist der single chokepoint für
-  alle 44 Konversionspfade. Ruft `uft_preflight_check()` mit der
-  (src,dst)-Format-ID, klassifiziert via Round-Trip-Matrix in LOSSLESS /
-  LOSSY_DOCUMENTED / IMPOSSIBLE / UNTESTED, abbricht IMPOSSIBLE / UNTESTED
-  / NEED_CONSENT mit Diagnose. `accept_data_loss` default false ⇒ GUI/CLI
-  muss explizit User-Consent einholen bevor LOSSY läuft.
-- **Phase 2 (v4.1.6):** Per-Converter loss-entry-Aggregation, dann
-  `uft_preflight_emit_sidecar(&plan, losses, count)` nach erfolgreichem
-  Convert. Pro Konverter ~5-10 LOC mechanische Arbeit.
+<!-- UFT-A12 fix (2026-06-10): the misplaced "1.1 LossReport" entry that
+     used to live here was a content-duplicate of §1.1 under Prinzip 1,
+     not an Emulator-Kompatibilität item. Consolidated into the canonical
+     §1.1 above; this section now contains only §6.x items. -->
+
 
 ### 6.1 Keine CI-Pipeline mit Emulator-Verifikation
 - **Status:** OPEN
@@ -181,9 +234,26 @@ aktiv abgearbeitet.
   Die eigentliche Populierung der 287 Stub-Plugins ist noch ausstehend.
 - **Workaround:** Bis jeder Stub das Feld setzt, zählt ein Plugin ohne echten
   Parser als Prinzip-Verstoß unter CI-Audit (siehe §M.1).
-- **Plan:** Stubs in `memory/project_stub_conversion.md` werden pro Tier
-  abgearbeitet. Jedes Stub-Plugin bekommt entweder echte Implementierung
-  ODER `is_stub = true` (stub-eliminator-Agent).
+- **Plan:** Siehe `docs/STUB_ELIMINATION_PLAN.md` — Phase 2 löst diesen
+  §7.3 mechanisch (Sweep auf `is_stub=true`), Phase 4 ersetzt Tier 1/2/3
+  Stubs durch echte Parser. Jedes Plugin bekommt am Ende entweder echte
+  Implementierung ODER `is_stub = true` (stub-eliminator-Agent).
+
+### 7.4 ADF Write-Side honest-stubs (`add_file`, `delete`)
+- **Status:** OPEN (honest-stub, return -1)
+- **Demo-Impact:** keiner — Read-Side voll funktional, Write-Side wird
+  in der GUI nicht angeboten.
+- **Beschreibung:** `uft_adf_add_file()` (`src/formats/uft_adf.c:897-901`)
+  und `uft_adf_delete()` (`src/formats/uft_adf.c:907-911`) sind
+  honest-stubs die `-1` zurückgeben. Ein dritter abgeleiteter Stub
+  (Bitmap-Alloc / Directory-Hash / Checksum-Upkeep, ab Zeile 1013)
+  fällt auf dieselben zwei zurück und gibt ebenfalls -1.
+- **Hinweis:** TODOs in-source verweisen darauf zurück, sind aber bislang
+  nirgendwo getrackt — eingetragen via UFT-A16 Audit-Follow-up.
+- **Plan:** v4.2 — AmigaDOS bitmap alloc + directory hash insertion +
+  block-checksum upkeep als ein zusammenhängender Patch
+  (~300-500 LOC). Bis dahin: dokumentiert hier statt als „lazy stub".
+  Übergreifend gesteuert via `docs/STUB_ELIMINATION_PLAN.md` Phase 5.
 
 ---
 
