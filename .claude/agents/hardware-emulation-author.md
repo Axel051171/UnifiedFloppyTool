@@ -12,7 +12,7 @@ description: >
   bugs, when a new edge-case class needs regression coverage, or when
   preparing for a real-HW bench session and you want to maximize what the
   bench catches that the sim could not.
-model: claude-opus-4-7
+model: claude-fable-5
 tools: Read, Glob, Grep, Edit, Write, Bash
 ---
 

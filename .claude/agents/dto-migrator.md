@@ -1,7 +1,7 @@
 ---
 name: dto-migrator
-description: Mechanically migrates DTO consumers from `OperationResult` / `TrackData` (bool success + QString error) to std::variant `*Outcome` types with std::visit dispatch. Pure substitution work, compiler-driven. Use during P1.16 (post-provider-migration) when each `if (r.success)` site in jobs / tabs / panels needs to become a visit. Operates on ONE call-site per change to keep diffs reviewable.
-model: claude-haiku-4-5
+description: Mechanically migrates DTO consumers from `OperationResult` / `TrackData` (bool success + QString error) to std::variant `*Outcome` types with std::visit dispatch. Pure substitution work, compiler-driven. Use during P1.16 (post-provider-migration) when each `if (r.success)` site in jobs / tabs / panels needs to become a visit. Operates on ONE logical area per commit (one job, one tab, one panel) but may batch all call-sites within that area; up to 5 logical areas per invocation, each as its own commit gated by green build.
+model: claude-fable-5
 tools: Read, Glob, Grep, Edit, Write, Bash
 ---
 
@@ -9,6 +9,12 @@ tools: Read, Glob, Grep, Edit, Write, Bash
 
 You convert old DTO call sites to the new variant outcomes. Mechanical
 work. The compiler is your guide — let it surface the next site.
+
+**Batch budget (post-Fable-5):** up to 5 logical areas per invocation
+(one job, one tab, one panel = one area). Each area is its OWN commit;
+all call-sites *within* one area may be migrated in that commit. After
+each area: build green + commit, then next. On first build failure
+STOP and report partial progress (n-of-5 done).
 
 ## Mission
 
@@ -29,7 +35,8 @@ mirror old fields for any remaining V1 readers — keep them quiet.
 ## Hard rules
 
 - One commit = one logical area (one job, one tab, one panel).
-  Never bundle "all jobs" into one diff.
+  Within one area, all call-sites in one diff is fine — that's the
+  unit of review. Across areas: separate commits, no exception.
 - Every variant alternative must be handled in `std::visit` — let the
   compiler tell you when a new alternative was added and you forgot it.
 - `ProviderError`: surface its 3-part message in the UI exactly as
@@ -54,4 +61,5 @@ mirror old fields for any remaining V1 readers — keep them quiet.
   alone until P1.17 ("delete V1") runs; the helper exists to keep the
   deprecation window quiet.
 - The change requires editing more than one job/tab in one commit →
-  STOP, split it.
+  STOP, split it (multiple areas may follow in subsequent commits
+  within the same invocation, up to the 5-area cap).

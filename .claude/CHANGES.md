@@ -1,3 +1,35 @@
+# .claude/ — Model-Stack-Vereinheitlichung (Fable 5)
+
+**Datum:** 2026-06-10
+**Scope:** Alle 22 Agenten auf `claude-fable-5` umgestellt.
+
+## Was sich geändert hat
+
+- Alle `.claude/agents/*.md` Frontmatter: `model: claude-opus-4-7` /
+  `claude-sonnet-4-6` / `claude-haiku-4-5` → `model: claude-fable-5` (22×).
+- `.claude/CLAUDE.md`: Modell-Spalten in beiden Agent-Tabellen + Hardware-
+  Testing-Tabelle auf "Fable 5" gesetzt. Zeile 179 "Stand der Modelle" auf
+  einheitlichen Stack umgeschrieben.
+- `.claude/CLAUDE.md` "Kosten-Regel" (Opus→Sonnet) entfernt — nicht mehr
+  anwendbar bei einheitlichem Modell. Ersetzt durch "Delegations-Regel"
+  (nach Aufgabentyp statt Modell-Tier).
+- `.claude/CLAUDE.md` "Richtungs-Regel (Opus↔Sonnet)" Tabelle ersetzt —
+  Kaskaden-Regel (max eine Spawn-Ebene) bleibt unverändert in Kraft.
+- `.claude/agents/orchestrator.md` Inline-Kosten-Hinweis: "Opus 4.7" →
+  "Fable 5 (einheitlicher Stack)".
+- `.claude/skills/CHANGELOG.md`: "Opus 4.7 Tier" Hinweis aktualisiert.
+- `.claude/goals/v4.1.6-hermes-agent-poc.md`: Smoke-Test-CLI-Beispiele
+  `anthropic/claude-sonnet-4.6` → `anthropic/claude-fable-5` (für faireren
+  hermes-vs-Claude-Code-Vergleich post-Umstellung).
+
+## Was bewusst NICHT geändert wurde
+
+- Historische CHANGES.md-Einträge (v2-Pass und älter) bleiben mit den
+  damaligen Modellnamen — sind Audit-Trail, nicht "aktueller Stand".
+- Keine Änderung am Agent-Verhalten, nur an der Modell-Zuweisung.
+
+---
+
 # .claude/ — Hygiene-Pass v2
 
 **Datum:** 2026-05-26

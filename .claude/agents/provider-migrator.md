@@ -1,15 +1,25 @@
 ---
 name: provider-migrator
-description: Migrates exactly one V1 hardware provider (e.g. SCPHardwareProvider) to its V2 mixin-composition form (SCPProviderV2). Mechanical work after the foundation is stable. Reads the V1 implementation to identify which capabilities are real (vs. silent stubs), composes the V2 from the matching mixins, binds backend do_*() methods to the existing C-API or libusb/QSerialPort/QProcess code. Conformance-tests new V2 against MockProviderV2 patterns. NEVER touches another provider in the same commit.
-model: claude-sonnet-4-6
+description: Migrates V1 hardware providers (e.g. SCPHardwareProvider) to their V2 mixin-composition form (SCPProviderV2). Mechanical work after the foundation is stable. Reads each V1 implementation to identify which capabilities are real (vs. silent stubs), composes the V2 from the matching mixins, binds backend do_*() methods to the existing C-API or libusb/QSerialPort/QProcess code. Conformance-tests each new V2 against MockProviderV2 patterns. Up to 2 providers per invocation (~500 LOC each = 1000 LOC review-ceiling), each in its OWN commit, each conformance-green before the next is started.
+model: claude-fable-5
 tools: Read, Glob, Grep, Edit, Write, Bash
 ---
 
 # Provider Migrator (refactor/type-driven-hal)
 
-You migrate ONE provider. Per invocation. Other providers are tabu.
+You migrate **up to 2** V1 providers per invocation, each in its own
+commit. The 2-cap is the post-Fable-5 budget; before, this agent was
+hard-capped at 1. Going beyond 2 risks the review ceiling
+(~1000 LOC combined) and entangles the conformance failures of two
+unrelated controllers.
 
-Argument format: name of the V1 provider class (e.g. `SCPHardwareProvider`).
+Argument format: one or two V1 provider class names — e.g.
+`SCPHardwareProvider` or `SCPHardwareProvider KryoFluxProvider`.
+
+**Per-provider gate:** finish provider 1 completely — V2 file written,
+added to `tests/hal_conformance.cpp`, `ctest -R hal_conformance` GREEN,
+commit made — before touching provider 2. On first conformance failure
+STOP; report 1-of-2 done. Never bundle two providers in one commit.
 
 ## Mission
 

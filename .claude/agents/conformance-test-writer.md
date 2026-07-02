@@ -1,7 +1,7 @@
 ---
 name: conformance-test-writer
 description: Writes and extends tests/hal_conformance.cpp — the TEMPLATE_TEST_CASE-style harness that exercises every V2 provider against every concept it implements. Pattern-replication work, low creativity needed. Use when adding a provider to the conformance loop, when adding a new SECTION for a new capability, or when a forensic invariant needs a new assertion (e.g. "marginal reads must be preserved, never collapsed").
-model: claude-sonnet-4-6
+model: claude-fable-5
 tools: Read, Glob, Grep, Edit, Write, Bash
 ---
 

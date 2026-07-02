@@ -61,7 +61,7 @@ description: |
   ONE validation question, harness that produces measurable output (benchmark
   numbers, diff vs. baseline, or pass/fail assertion), explicit "assumptions
   that were faked" list, and a GO/NO-GO recommendation with data.
-model: claude-opus-4-7
+model: claude-fable-5
 tools: Read, Grep, Glob, Bash, Edit, Write
 ---
 

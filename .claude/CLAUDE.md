@@ -1,35 +1,34 @@
 # UnifiedFloppyTool — Agent-Suite Kontext
 
-## ⚠ AKTIVER REFACTOR: Type-Driven HAL (`refactor/type-driven-hal`)
+## Type-Driven HAL Refactor — ABGESCHLOSSEN (auf `main` gemerged)
 
-Branch: `refactor/type-driven-hal`
-Spec:   [`docs/REFACTOR_BRIEF.md`](../docs/REFACTOR_BRIEF.md)
-Tasks:  [`docs/REFACTOR_TASKS.md`](../docs/REFACTOR_TASKS.md)
-Truth:  [`tests/HARDWARE_TRUTH_TESTS.md`](../tests/HARDWARE_TRUTH_TESTS.md)
-Stand:  P0 Foundation gelandet (MF-150). Provider-Migration P1 läuft mehrere Sessions.
+Branch:  `refactor/type-driven-hal` — gemerged, geschlossen.
+Spec:    [`docs/REFACTOR_BRIEF.md`](../docs/REFACTOR_BRIEF.md) (historisch)
+Tasks:   [`docs/REFACTOR_TASKS.md`](../docs/REFACTOR_TASKS.md) (historisch)
+Truth:   [`tests/HARDWARE_TRUTH_TESTS.md`](../tests/HARDWARE_TRUTH_TESTS.md)
+Stand:   P0 Foundation MF-150, P1.17 V1-Hierarchie weg MF-169,
+         P2.2 V1-DTOs weg MF-174, Merge in main MF-176. Alles erledigt.
 
-### Pflichten beim Arbeiten auf diesem Branch
+### Daueraufgaben (gelten auf `main`)
 
-1. **Lies zuerst** `docs/REFACTOR_BRIEF.md` (Architektur) und
-   `docs/REFACTOR_TASKS.md` (Sequenz). Bearbeite Tasks in Reihenfolge.
-2. **Vor jedem Commit:** `cmake --build` grün, `ctest` grün,
+1. **Vor jedem Commit:** `cmake --build` grün, `ctest` grün,
    `scripts/check_consistency.py` 0/0/0/0,
    `scripts/verify_build_sources.py` ohne neue Regressionen.
-3. **Geschützte Pfade — keine Änderung ohne Rückfrage:**
+2. **Geschützte Pfade — keine Änderung ohne Rückfrage:**
    - `src/hal/uft_greaseweazle_full.c` (production-tested C-API)
    - `tests/golden/` (Forensik-Wahrheit)
    - `docs/DESIGN_PRINCIPLES.md` (Verfassung)
-   - `include/uft/hal/{outcomes,concepts,mixins}.h` (P0-Foundation —
-     editiert NICHT in P1; wenn der Refactor sie brechen würde, ist
-     Annahme falsch → STOPP)
-4. **STOP-Bedingungen** (siehe REFACTOR_TASKS.md §STOP):
+   - `include/uft/hal/{outcomes,concepts,mixins}.h` (P0-Foundation;
+     Annahme: jede Änderung daran ist Type-System-Architect-Arbeit,
+     nicht Provider-/DTO-Arbeit)
+3. **STOP-Bedingungen** (bleiben gültig — siehe REFACTOR_TASKS.md §STOP):
    - Test der vorher grün war failt → STOPP
    - C-API-Symbol fehlt in Spec oder Code → STOPP
-   - >3 Build-Versuche fehlgeschlagen → Architektur-Annahme falsch → STOPP
+   - >3 Build-Versuche fehlgeschlagen → Annahme falsch → STOPP
    - Commit würde >50 Dateien anfassen → STOPP
    - Eine geschützte Datei (s.o.) müsste geändert werden → STOPP
-5. **Commit-Konvention:** Conventional Commits + MF-NNN. Body nennt
-   welche Tasks aus REFACTOR_TASKS.md erfüllt wurden.
+4. **Commit-Konvention:** Conventional Commits + MF-NNN. Body nennt
+   welche Tasks erfüllt wurden.
 
 ---
 
@@ -176,56 +175,62 @@ post-refactor scope). Insgesamt aktuell 22. Die früher entfernten Agenten
 waren in 3 Monaten nicht aufgerufen oder von den neueren Must-Fix-
 Prävention-Agenten abgedeckt — bei Bedarf aus git zurückholen.
 
-Stand der Modelle: `claude-opus-4-7` / `claude-sonnet-4-6` / `claude-haiku-4-5`
-(aktuelle Flaggschiffe + Haiku für mechanische Substitutionen).
+Stand der Modelle: alle 22 Agenten laufen auf `claude-fable-5`
+(einheitlicher Stack, ersetzt die frühere Opus 4.7 / Sonnet 4.6 / Haiku 4.5
+Tier-Verteilung).
 
 ### Kern-Suite (13)
 
 | Agent | Modell | Zweck |
 |---|---|---|
-| `orchestrator` | Opus 4.7 | Master-Koordinator wenn externer Fan-Out nötig |
-| `forensic-integrity` | Opus 4.7 | Datenverlust-Detektion vor großen Änderungen |
-| `deep-diagnostician` | Opus 4.7 | "Was ist kaputt und warum" ohne klaren Fix |
-| `abi-bomb-detector` | Opus 4.7 | Public-API-Layouts auf ABI-Bruch ohne Compiler-Warnung prüfen |
-| `single-source-enforcer` | Opus 4.7 | Single-Source-of-Truth pro Fakt durchsetzen |
-| `algorithm-hotpath-optimizer` | Opus 4.7 | Algorithmus-/Performance-Review von Decoder-/PLL-/CRC-Hotpaths (advisory, Read-only) |
-| `structured-reviewer` | Opus 4.7 | Allgemeiner strukturierter Review/Audit (enforced AI_COLLABORATION.md, advisory, Read-only) |
-| `must-fix-hunter` | Sonnet 4.6 | Proaktive Widersprüche-Jagd (Pattern-Scan, Sonnet reicht) |
-| `consistency-auditor` | Sonnet 4.6 | Vor Commit/Push: Widersprüche blockieren |
-| `stub-eliminator` | Sonnet 4.6 | Pro Stub: IMPLEMENT / DELEGATE / DOCUMENT / DELETE |
-| `preflight-check` | Sonnet 4.6 | Vor git push: CI-Fehlerpattern lokal simulieren |
-| `github-expert` | Sonnet 4.6 | GitHub Actions, Releases, Repository-Features |
-| `quick-fix` | Sonnet 4.6 | EIN Problem → EIN Fix sofort |
+| `orchestrator` | Fable 5 | Master-Koordinator wenn externer Fan-Out nötig |
+| `forensic-integrity` | Fable 5 | Datenverlust-Detektion vor großen Änderungen |
+| `deep-diagnostician` | Fable 5 | "Was ist kaputt und warum" ohne klaren Fix |
+| `abi-bomb-detector` | Fable 5 | Public-API-Layouts auf ABI-Bruch ohne Compiler-Warnung prüfen |
+| `single-source-enforcer` | Fable 5 | Single-Source-of-Truth pro Fakt durchsetzen |
+| `algorithm-hotpath-optimizer` | Fable 5 | Algorithmus-/Performance-Review von Decoder-/PLL-/CRC-Hotpaths (advisory, Read-only) |
+| `structured-reviewer` | Fable 5 | Allgemeiner strukturierter Review/Audit (enforced AI_COLLABORATION.md, advisory, Read-only) |
+| `must-fix-hunter` | Fable 5 | Proaktive Widersprüche-Jagd (Pattern-Scan) |
+| `consistency-auditor` | Fable 5 | Vor Commit/Push: Widersprüche blockieren |
+| `stub-eliminator` | Fable 5 | Pro Stub: IMPLEMENT / DELEGATE / DOCUMENT / DELETE |
+| `preflight-check` | Fable 5 | Vor git push: CI-Fehlerpattern lokal simulieren |
+| `github-expert` | Fable 5 | GitHub Actions, Releases, Repository-Features |
+| `quick-fix` | Fable 5 | EIN Problem → EIN Fix sofort |
 
 ### Refactor-Suite (8, spezifisch für `refactor/type-driven-hal`)
 
 | Agent | Modell | Zweck |
 |---|---|---|
-| `type-system-architect` | Opus 4.7 | C++20 Concepts / Sum-Type Outcomes / Capability Mixins designen (P0-Foundation) |
-| `wiring-codegen-author` | Opus 4.7 | `tools/wiring_codegen.py` — YAML+UI → generierter Wiring-C++ (Rule H-3/H-4) |
-| `proof-of-concept-builder` | Opus 4.7 | Architektur-Hypothesen mit minimalem disposable PoC validieren (proto/) |
-| `provider-migrator` | Sonnet 4.6 | V1 Hardware-Provider → V2 Mixin-Komposition (ein Provider pro Invocation) |
-| `conformance-test-writer` | Sonnet 4.6 | `tests/hal_conformance.cpp` — TEMPLATE_TEST_CASE pro Provider × Concept |
-| `differential-test-author` | Sonnet 4.6 | gw-vs-uft Differential-Conformance-Tests (P3.2) |
-| `improvement-test-author` | Sonnet 4.6 | UFT-only-Capability-Tests vs. gw (P3.3) — `tests/improvement/<category>/` |
-| `dto-migrator` | Haiku 4.5 | `OperationResult`/`TrackData` → `std::variant *Outcome` (mechanische Substitution) |
+| `type-system-architect` | Fable 5 | C++20 Concepts / Sum-Type Outcomes / Capability Mixins designen (P0-Foundation) |
+| `wiring-codegen-author` | Fable 5 | `tools/wiring_codegen.py` — YAML+UI → generierter Wiring-C++ (Rule H-3/H-4) |
+| `proof-of-concept-builder` | Fable 5 | Architektur-Hypothesen mit minimalem disposable PoC validieren (proto/) |
+| `provider-migrator` | Fable 5 | V1 Hardware-Provider → V2 Mixin-Komposition (ein Provider pro Invocation) |
+| `conformance-test-writer` | Fable 5 | `tests/hal_conformance.cpp` — TEMPLATE_TEST_CASE pro Provider × Concept |
+| `differential-test-author` | Fable 5 | gw-vs-uft Differential-Conformance-Tests (P3.2) |
+| `improvement-test-author` | Fable 5 | UFT-only-Capability-Tests vs. gw (P3.3) — `tests/improvement/<category>/` |
+| `dto-migrator` | Fable 5 | `OperationResult`/`TrackData` → `std::variant *Outcome` (mechanische Substitution) |
 
 ### Hardware-Testing-Suite (1, post-v4.1.5)
 
 | Agent | Modell | Zweck |
 |---|---|---|
-| `hardware-emulation-author` | Opus 4.7 | Firmware-realistische Emulatoren pro Controller (Wire + State-Machine + Flux-Generator + Edge-Cases) — reduziert Bench-Session-Bedarf, ersetzt sie NICHT. Output unter `tests/emulators/<controller>/` + `tests/flux_gen/<controller>/`. Forensisch ehrlich via `DIVERGENCES.md` + `coverage_matrix.md`. Ein Controller pro Invocation. |
+| `hardware-emulation-author` | Fable 5 | Firmware-realistische Emulatoren pro Controller (Wire + State-Machine + Flux-Generator + Edge-Cases) — reduziert Bench-Session-Bedarf, ersetzt sie NICHT. Output unter `tests/emulators/<controller>/` + `tests/flux_gen/<controller>/`. Forensisch ehrlich via `DIVERGENCES.md` + `coverage_matrix.md`. Ein Controller pro Invocation. |
 
 ---
 
-## Kosten-Regel (wichtig)
+## Delegations-Regel
 
-**Opus → Sonnet für Sub-Tasks.** Opus-Agenten rufen bei Bedarf Sonnet-Agenten auf,
-nicht andere Opus-Agenten.
+Seit der Umstellung auf einen einheitlichen `claude-fable-5`-Stack entfällt
+das frühere Opus/Sonnet/Haiku-Tier-Modell. Delegation jetzt **nach Aufgaben-
+Typ**, nicht nach Modell-Klasse:
 
-Faustformel:
-- Analyse + Strategie = Opus
-- Implementation + Routinearbeit = Sonnet
+- Analyse + Strategie → der zuständige Spezialist (z.B. `forensic-integrity`,
+  `deep-diagnostician`, `algorithm-hotpath-optimizer`)
+- Implementation + Routinearbeit → der zuständige Worker (z.B.
+  `provider-migrator`, `dto-migrator`, `quick-fix`)
+
+Faustformel: nimm den Agenten dessen Description am genauesten passt; spawne
+keinen zweiten Agenten wenn der erste die Aufgabe abdecken kann.
 
 ---
 
@@ -252,14 +257,15 @@ Siehe `.claude/CONSULT_PROTOCOL.md` für Details. Kurzfassung:
 selbst weiter spawnen; er gibt CONSULT-Blöcke zurück die der Router
 weiterverarbeitet.
 
-**Richtungs-Regel (Opus↔Sonnet):**
+**Richtungs-Regel (post-Fable-5):**
 
-| von → zu | erlaubt |
-|---|---|
-| Sonnet → Sonnet | ja |
-| Sonnet → Opus | ja (Architektur-Frage nach oben) |
-| Opus → Sonnet | ja (Standard-Delegation) |
-| Opus → Opus | nein (außer über `orchestrator`) |
+Mit einheitlichem Modell-Stack gibt es kein Tier-basiertes Verbot mehr.
+Stattdessen gilt:
+
+- Jeder Agent darf jeden anderen via CONSULT-Block konsultieren.
+- Direkter Spawn nur durch die 4 Router-Agenten (`orchestrator`,
+  `deep-diagnostician`, `must-fix-hunter`, `preflight-check`).
+- Kaskaden-Regel (max eine Spawn-Ebene) bleibt unverändert in Kraft.
 
 ---
 

@@ -7,7 +7,7 @@ description: >
   Versions-Prefixe in Plugin-Interfaces, Typ-Duplikate (gleicher Name, verschiedene
   Layouts). Baseline-Vergleich vor jedem Release. Use when: vor Release-Tag, bei API-Änderungen,
   wenn Plugin-Architektur betroffen ist, periodisch als Nightly-Check.
-model: claude-opus-4-7
+model: claude-fable-5
 tools: Read, Glob, Grep, Bash, Edit, Write
 ---
 
@@ -147,6 +147,42 @@ Alle 10 Kategorien gegen die letzte Stable-Baseline.
 
 ---
 
+## Adversarial Self-Verify (vor jedem Output verpflichtend)
+
+Post-Fable-5 addition: bevor du den ABI-Report ausgibst, gehst du jeden
+Befund einmal adversarial durch — Ziel: ihn aktiv zu widerlegen. ABI-
+Bomben sind teuer wenn sie übersehen werden, aber falsche Alarme sind
+fast genauso teuer (blockieren Release-Tag, verschwenden Maintainer-
+Zeit). Token-Kosten: ~30-40 % mehr pro Run.
+
+Pro Befund vier Fragen, jede mit REFUTED oder SURVIVED + 1 Satz Grund:
+
+1. **Public-API-Check.** Liegt der Typ in `include/uft/` oder ist er
+   `static`/anonymous/innerhalb von `src/`? Nur Header die installiert
+   und von Plugins ge-`#include`d werden sind ABI-Oberfläche. Internal
+   structs umzuordnen ist kein ABI-Bruch.
+2. **Versions-Check.** Hat der Typ bereits ein `version`/`size`-Feld
+   und einen Loader-Side-Check? Wenn ja: Erweiterung am Ende +
+   Version-Bump ist legitim, kein Bruch.
+3. **Baseline-Reality-Check.** Habe ich die zitierte Baseline-Datei
+   tatsächlich gelesen (`.abi-baseline/v<X.Y.Z>/layout.txt`), oder
+   extrapoliere ich aus Erinnerung? Wenn keine Baseline existiert →
+   das ist Setup-Schuld, nicht Bombe; demote auf "Baseline missing".
+4. **Compile-Detect-Check.** Würde der Compiler beim Plugin-Build
+   warnen (z.B. via `_Static_assert(sizeof(...))`)? Wenn ja → das ist
+   eine erkennbare Bombe, nicht eine stille. Severity sinkt eine Stufe.
+
+Behandlung:
+- 4× SURVIVED → Befund bleibt mit voller Severity.
+- 1-2× REFUTED → Severity sinkt um eine Stufe (KRITISCH→HOCH→MITTEL),
+  Refutation als "Caveat:" unter dem Befund.
+- 3-4× REFUTED → DROPPED, Eintrag landet in "Erwogen & verworfen" mit
+  Begründung.
+
+Niemals überspringen. Ein falscher KRITISCH blockiert einen Release-Tag
+unnötig; ein übersehener echter Bruch korrumpiert externe Plugins still.
+Beide Kosten sind real — der Self-Verify-Pass balanciert sie.
+
 ## Output-Format
 
 ```
@@ -155,9 +191,11 @@ Alle 10 Kategorien gegen die letzte Stable-Baseline.
   <Detail-Zeilen, 2-4>
   Risiko: <ein-Satz>
   Fix:    <konkret, mit Agent-Delegation wenn nicht selbst>
+  Self-verify: 4-tuple (Public/Version/Baseline/Compile-Detect)
 ```
 
 Gruppiere am Ende nach Severity. KRITISCH = Release-Blocker.
+"Erwogen & verworfen" steht NACH der Severity-Gruppierung.
 
 ---
 

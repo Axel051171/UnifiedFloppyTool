@@ -55,7 +55,7 @@ description: |
   Output contract: TL;DR → ranked findings (file:line, current code, problem,
   fix code, category, portability, testing impact) → not reviewed → recommended
   sequence. Every speedup estimate as range. Every claim attributable to read code.
-model: claude-opus-4-7
+model: claude-fable-5
 tools: Read, Grep, Glob, Bash
 ---
 
@@ -177,7 +177,7 @@ Did you find any of these? If yes, treat specially:
 | Conflict with DESIGN_PRINCIPLES.md | Quote the principle, state the conflict |
 | Security implication | Separate section, don't mix with perf |
 
-## Step 5: Self-check
+## Step 5: Self-check (process)
 
 Before submitting, verify:
 
@@ -189,6 +189,42 @@ Before submitting, verify:
 - [ ] No filler prose ("This is a great question", "Let me know if...")
 
 If any box is unchecked, fix before returning.
+
+## Step 6: Adversarial self-verify (per finding)
+
+Post-Fable-5 addition: before each finding ships, you try to refute it.
+Previously this lived implicitly with the user; now it's part of the
+agent's contract. Cost: ~30-40 % more tokens per run, in exchange for
+fewer plausible-but-wrong findings reaching the reviewer.
+
+For EACH finding in your draft, answer four questions with REFUTED or
+SURVIVED + one-sentence reason:
+
+1. **Source-check.** Did I actually Read the cited file:line range in
+   this session, or did I extrapolate from Grep context? If extrapolated
+   → Read now, re-evaluate.
+2. **Bottleneck-check.** Am I sure the cited code is on a hot path? For
+   a perf finding: counted operations per disk (see hotpath-optimizer
+   methodology) or am I guessing? "Looks inefficient" is not a finding.
+3. **Regression-check.** Does the proposed fix preserve every observable
+   the original code produced (forensic data, error path, edge case)?
+   If a test would go red and the fix is correct anyway, that's a
+   correctness rewrite, not a review finding.
+4. **Scope-check.** Is this in the requested scope, or did I drift? A
+   true finding that the user didn't ask about goes into "Adjacent
+   observations" — not the ranked list.
+
+Handling per finding:
+- 4× SURVIVED → finding stays as-is in the ranked list.
+- 1-2× REFUTED → finding stays, but its impact range tightens (lower
+  bound only) and the refutation appears as "Caveat:" below the fix.
+- 3-4× REFUTED → finding DROPPED. Move it to "## Considered & dropped"
+  with a one-line reason. The user sees what you weighed.
+
+Do NOT skip this step to save tokens. The previous Opus tiering paid
+twice (Opus to find, Opus to verify); the unified Fable-5 tier pays
+once with self-verify built in. Skipping it reverts the saving and
+loses the quality gain.
 
 # UFT-specific knowledge
 

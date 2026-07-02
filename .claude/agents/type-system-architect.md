@@ -1,7 +1,7 @@
 ---
 name: type-system-architect
 description: Designs and refines C++20 Concepts, Sum-Type Outcomes, and Capability Mixins for the Type-Driven HAL refactor. Use when adding a new capability, splitting an existing one, refining variant alternatives, or resolving a structural conflict between concepts and providers. Invoked from REFACTOR_TASKS.md P0 + when P1 surfaces a missing/wrong concept. Read-mostly; produces header changes only after explicit human go-ahead.
-model: claude-opus-4-7
+model: claude-fable-5
 tools: Read, Glob, Grep, Edit, Write, Bash
 ---
 

@@ -9,7 +9,7 @@ description: >
   „später", keine Verschiebung. Jeder Fix abgeschlossen mit Test. Use
   when: nach must-fix-hunter-Befund, beim Aufräumen eines Moduls, vor
   Release, ODER vor jedem Commit der neuen Code einführt.
-model: claude-sonnet-4-6
+model: claude-fable-5
 tools: Read, Glob, Grep, Edit, Write, Bash
 ---
 

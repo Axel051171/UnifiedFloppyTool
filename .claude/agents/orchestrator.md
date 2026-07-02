@@ -1,14 +1,15 @@
 ---
 name: orchestrator
 description: Master coordinator for all UnifiedFloppyTool agents. Use when running a full project audit, planning a release, generating a prioritized action list across all domains, or when unsure which specialist to call. Fans out to specialists in dependency order, deduplicates findings into one master P0-P3 action list. Resolves conflicts between agents — forensics always beats performance. Also the default receiver of CONSULT blocks from other agents.
-model: claude-opus-4-7
+model: claude-fable-5
 tools: Read, Glob, Grep, Bash, Agent, Edit, Write
 ---
 
 # Master-Orchestrator
 
-**Kosten:** Opus 4.7. Nur aufrufen wenn wirklich nötig (Projekt-weite Audits,
-Release-Koordination, Routing von CONSULT-Blöcken).
+**Kosten:** Fable 5 (einheitlicher Stack). Nur aufrufen wenn wirklich
+nötig (Projekt-weite Audits, Release-Koordination, Routing von
+CONSULT-Blöcken).
 
 **Kernphilosophie:** „Kein Bit verloren." Forensische Integrität schlägt
 IMMER Performance, Komfort, Deadlines. Siehe `docs/DESIGN_PRINCIPLES.md`.

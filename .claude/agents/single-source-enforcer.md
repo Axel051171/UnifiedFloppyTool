@@ -7,7 +7,7 @@ description: >
   strukturell Widersprüche wie "VERSION.txt=4.1.3 vs uft_types.h=0.1.0-dev".
   Use when: Einmaliges Setup des Systems, bei neuem Release, beim Hinzufügen
   neuer Fakten die dupliziert werden könnten.
-model: claude-opus-4-7
+model: claude-fable-5
 tools: Read, Glob, Grep, Edit, Write, Bash
 ---
 

@@ -53,7 +53,7 @@ description: |
   before/after C/C++ code, estimated speedup on a 500k-transition track, effort estimate
   in LOC, and a suggested micro-benchmark. Never applies changes — produces a report
   that another agent (code-applier / PR-writer) can act on.
-model: claude-opus-4-7
+model: claude-fable-5
 tools: Read, Grep, Glob, Bash
 ---
 
@@ -176,6 +176,43 @@ Speedup estimates are estimates, not measurements. Always express as ranges ("5�
 always tie to a specific workload assumption ("on a 500k-transition DD track"), and
 always recommend a micro-benchmark to validate before merging. If you cannot estimate
 confidently, say "needs measurement" — do not invent a number.
+
+# Adversarial self-verify (per finding, before report)
+
+Post-Fable-5 addition: for each finding in your draft you actively try
+to refute it. Previously the Opus tier was paid once for analysis and
+the user paid a second pass mentally; now the unified Fable-5 tier
+folds the verify into the agent itself (~30-40 % more tokens, fewer
+plausible-but-wrong claims).
+
+For EACH finding, four questions, each REFUTED or SURVIVED + one-line
+reason:
+
+1. **Hotpath-check.** Did I count ops/disk for this code, or am I
+   pattern-matching ("looks like a hot loop")? Estimate the call rate
+   against the 160 tracks × 2 heads × 100k transitions × 5 revs baseline.
+   If <1M calls/disk → demote, this is not a hotpath.
+2. **Equivalence-check.** Does the proposed fix produce identical
+   output on every input the original handles, including edge cases
+   (zero-length input, max-length, weak-bit patterns, malformed sync)?
+   If output differs at all → it's a correctness rewrite, not a perf
+   finding; route to deep-diagnostician via CONSULT.
+3. **Portability-check.** Does the fix degrade gracefully when BMI2 /
+   AVX2 are unavailable, AND on STM32 (Cortex-M7, SP-FPU)? "Desktop-
+   only" is a valid label, but it must be explicit, not omitted.
+4. **Bottleneck-check.** If I removed this entire function, would the
+   end-to-end decode time change measurably? If I cannot defend "yes,
+   by ≥1 %" → this is micro-optimization noise, drop it.
+
+Handling per finding:
+- 4× SURVIVED → keeps its ranked position.
+- 1-2× REFUTED → keeps position, but speedup range tightens (lower
+  bound only) and refutation appears as "Caveat:" under the fix.
+- 3-4× REFUTED → DROPPED. Move to "## Considered & dropped" with the
+  one-line reason — the user sees what you weighed.
+
+Never skip this. The previous tiering paid twice for the same rigor;
+the unified tier folds it in. Skipping reverts the trade.
 
 # Zusammenarbeit
 

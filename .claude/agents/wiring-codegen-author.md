@@ -1,7 +1,7 @@
 ---
 name: wiring-codegen-author
 description: Builds and maintains tools/wiring_codegen.py — the YAML+UI-to-C++ generator that produces tab_hardware_wiring.gen.cpp. Use when introducing the codegen, when a new GUI tab needs declarative wiring, or when the YAML format needs an additive change. The codegen is the structural enforcement of rule H-3/H-4 — a YAML entry referencing a method no provider implements must fail the build.
-model: claude-opus-4-7
+model: claude-fable-5
 tools: Read, Glob, Grep, Edit, Write, Bash
 ---
 
