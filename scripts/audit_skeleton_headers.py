@@ -31,6 +31,70 @@ import sys
 from pathlib import Path
 
 
+def _strip_comments_strings(text: str) -> str:
+    """Blank out comments and string/char literals, preserving offsets."""
+    out = []
+    i, n = 0, len(text)
+    while i < n:
+        two = text[i:i + 2]
+        if two == "/*":
+            j = text.find("*/", i + 2)
+            j = n if j < 0 else j + 2
+            out.append(re.sub(r"[^\n]", " ", text[i:j]))
+            i = j
+        elif two == "//":
+            j = text.find("\n", i)
+            j = n if j < 0 else j
+            out.append(" " * (j - i))
+            i = j
+        elif text[i] in "\"'":
+            q = text[i]
+            j = i + 1
+            while j < n and text[j] != q:
+                j += 2 if text[j] == "\\" else 1
+            j = min(j + 1, n)
+            out.append(q + " " * (j - i - 2) + (q if j - i >= 2 else ""))
+            i = j
+        else:
+            out.append(text[i])
+            i += 1
+    return "".join(out)
+
+
+def _find_definitions(text: str) -> set[str]:
+    """
+    Find `uft_foo(...) {` definitions with a paren-walker instead of a
+    single DOTALL regex. The old regex consumed text across definitions
+    (finditer resumes after each match span), silently skipping real
+    definitions that followed a long non-';' stretch — found the hard
+    way when 4 implemented functions were reported as phantoms (MF-298).
+    """
+    defined: set[str] = set()
+    clean = _strip_comments_strings(text)
+    for m in re.finditer(r"\b(uft_\w+)\s*\(", clean):
+        # walk to the matching close paren (fn-ptr params may nest)
+        depth, j = 1, m.end()
+        n = len(clean)
+        while j < n and depth:
+            c = clean[j]
+            if c == "(":
+                depth += 1
+            elif c == ")":
+                depth -= 1
+            elif c == ";":
+                break  # a ';' inside parens at depth>=1 → not a def head
+            j += 1
+        if depth:
+            continue
+        # next non-space char must open the body
+        k = j
+        while k < n and clean[k] in " \t\r\n":
+            k += 1
+        if k < n and clean[k] == "{":
+            defined.add(m.group(1))
+    return defined
+
+
 def collect_implementations(root: Path) -> set[str]:
     defined: set[str] = set()
 
@@ -40,9 +104,7 @@ def collect_implementations(root: Path) -> set[str]:
                 text = c.read_text(encoding="utf-8", errors="replace")
             except OSError:
                 continue
-            # Match: <ret-type-tokens> uft_foo(...args...) {
-            for m in re.finditer(r"\b(uft_\w+)\s*\([^;]*?\)\s*\{", text, re.DOTALL):
-                defined.add(m.group(1))
+            defined |= _find_definitions(text)
 
     # static inline defs + function-style macros in ANY header
     for h in (root / "include").rglob("*.h"):

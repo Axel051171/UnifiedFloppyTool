@@ -4,9 +4,9 @@
 # docs/STUB_ELIMINATION_PLAN.md.
 generated: 2026-07-02
 census:
-  unimplemented_decls: 312
-  zero_caller_decls: 100
-  with_caller_decls: 212
+  unimplemented_decls: 317
+  zero_caller_decls: 102
+  with_caller_decls: 215
   note: >-
     A caller-count > 0 for an UNIMPLEMENTED function means the
     referencing code itself cannot link — it is dead/unbuilt, or
@@ -27,15 +27,15 @@ c2_headers:
     zero_caller: 22
     with_caller: 0
     proposal: DELETE-candidate (all decls unreferenced)
+  - header: include/uft/uft_fat_editor.h
+    missing: 20
+    zero_caller: 0
+    with_caller: 20
+    proposal: DOCUMENT/IMPLEMENT (all decls referenced)
   - header: include/uft/uft_pll_unified.h
     missing: 18
     zero_caller: 0
     with_caller: 18
-    proposal: DOCUMENT/IMPLEMENT (all decls referenced)
-  - header: include/uft/uft_fat_editor.h
-    missing: 16
-    zero_caller: 0
-    with_caller: 16
     proposal: DOCUMENT/IMPLEMENT (all decls referenced)
   - header: include/uft/uft_settings.h
     missing: 15
@@ -127,6 +127,11 @@ c2_headers:
     zero_caller: 0
     with_caller: 3
     proposal: DOCUMENT/IMPLEMENT (all decls referenced)
+  - header: include/uft/c64/uft_cbm_disk.h
+    missing: 3
+    zero_caller: 0
+    with_caller: 3
+    proposal: DOCUMENT/IMPLEMENT (all decls referenced)
   - header: include/uft/decoder/uft_pll.h
     missing: 3
     zero_caller: 0
@@ -202,17 +207,12 @@ c2_headers:
     zero_caller: 1
     with_caller: 0
     proposal: DELETE-candidate (all decls unreferenced)
-  - header: include/uft/uft_format_parsers.h
+  - header: include/uft/uft_file_ops.h
     missing: 1
-    zero_caller: 0
-    with_caller: 1
-    proposal: DOCUMENT/IMPLEMENT (all decls referenced)
+    zero_caller: 1
+    with_caller: 0
+    proposal: DELETE-candidate (all decls unreferenced)
   - header: include/uft/uft_tool_adapter.h
-    missing: 1
-    zero_caller: 0
-    with_caller: 1
-    proposal: DOCUMENT/IMPLEMENT (all decls referenced)
-  - header: include/uft/c64/uft_cbm_disk.h
     missing: 1
     zero_caller: 0
     with_caller: 1
@@ -232,27 +232,22 @@ c2_headers:
     zero_caller: 0
     with_caller: 1
     proposal: DOCUMENT/IMPLEMENT (all decls referenced)
-  - header: include/uft/flux/uft_scp_parser.h
-    missing: 1
-    zero_caller: 0
-    with_caller: 1
-    proposal: DOCUMENT/IMPLEMENT (all decls referenced)
   - header: include/uft/formats/uft_format_params.h
     missing: 1
     zero_caller: 1
     with_caller: 0
     proposal: DELETE-candidate (all decls unreferenced)
-  - header: include/uft/fs/uft_amigados_extended.h
+  - header: include/uft/fs/uft_amigados.h
+    missing: 1
+    zero_caller: 1
+    with_caller: 0
+    proposal: DELETE-candidate (all decls unreferenced)
+  - header: include/uft/fs/uft_fat12.h
     missing: 1
     zero_caller: 0
     with_caller: 1
     proposal: DOCUMENT/IMPLEMENT (all decls referenced)
   - header: include/uft/hal/uft_fc5025.h
-    missing: 1
-    zero_caller: 0
-    with_caller: 1
-    proposal: DOCUMENT/IMPLEMENT (all decls referenced)
-  - header: include/uft/protection/uft_protection_unified.h
     missing: 1
     zero_caller: 0
     with_caller: 1

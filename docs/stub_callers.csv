@@ -1,5 +1,7 @@
 header,function,callers_src,callers_tests
 include/uft/c64/uft_cbm_disk.h,uft_cbm_disk_free,4,0
+include/uft/c64/uft_cbm_disk.h,uft_cbm_disk_load_file,2,0
+include/uft/c64/uft_cbm_disk.h,uft_cbm_read_directory,2,0
 include/uft/core/uft_crc_v2.h,uft_crc16_calc,0,0
 include/uft/core/uft_crc_v2.h,uft_crc32_calc,0,0
 include/uft/core/uft_encoding.h,uft_encoding_category,0,0
@@ -18,7 +20,6 @@ include/uft/flux/pll/uft_pll_pi.h,uft_pll_reset_stats,0,1
 include/uft/flux/uft_pll_params.h,uft_pll_preset_name,0,1
 include/uft/flux/uft_pll_pi.h,uft_pll_get_stats,0,3
 include/uft/flux/uft_pll_pi.h,uft_pll_reset_stats,0,1
-include/uft/flux/uft_scp_parser.h,uft_scp_read_track_memory,2,14
 include/uft/formats/uft_cpm_defs.h,uft_cpm_find_by_geometry,0,1
 include/uft/formats/uft_cpm_defs.h,uft_cpm_find_format,0,4
 include/uft/formats/uft_cpm_defs.h,uft_cpm_get_all_formats,0,1
@@ -28,10 +29,11 @@ include/uft/formats/uft_simh.h,uft_simh_get_geometry,0,1
 include/uft/formats/uft_simh.h,uft_simh_read_options_init,0,1
 include/uft/formats/uft_ydsk.h,uft_ydsk_probe,0,1
 include/uft/formats/uft_ydsk.h,uft_ydsk_validate_header,0,2
-include/uft/fs/uft_amigados_extended.h,uft_amiga_find_pattern,1,0
+include/uft/fs/uft_amigados.h,uft_amiga_format,0,0
 include/uft/fs/uft_atari_dos.h,uft_atari_detect,0,1
 include/uft/fs/uft_atari_dos.h,uft_atari_format,0,1
 include/uft/fs/uft_atari_dos.h,uft_atari_get_geometry,0,1
+include/uft/fs/uft_fat12.h,uft_fat_repair,1,0
 include/uft/fs/uft_fat32.h,uft_fat32_count_clusters,0,1
 include/uft/fs/uft_fat32.h,uft_fat32_detect,0,1
 include/uft/fs/uft_fat32.h,uft_fat32_format_opts_init,0,1
@@ -121,7 +123,6 @@ include/uft/params/uft_canonical_params.h,uft_params_set_bool,2,6
 include/uft/params/uft_canonical_params.h,uft_params_set_int,7,9
 include/uft/params/uft_canonical_params.h,uft_params_to_cli,0,1
 include/uft/params/uft_canonical_params.h,uft_params_to_json,0,2
-include/uft/protection/uft_protection_unified.h,uft_protection_unified_report,1,0
 include/uft/ride/uft_dos_recognition.h,uft_fat_probe,0,2
 include/uft/uft_adf.h,uft_adf_extract_all,1,0
 include/uft/uft_apd_format.h,uft_acorn_protection_name,0,4
@@ -167,12 +168,17 @@ include/uft/uft_fat_editor.h,uft_fat_get_cluster_status,2,0
 include/uft/uft_fat_editor.h,uft_fat_get_stats,2,1
 include/uft/uft_fat_editor.h,uft_fat_get_type,0,1
 include/uft/uft_fat_editor.h,uft_fat_get_volume_label,1,0
+include/uft/uft_fat_editor.h,uft_fat_mark_bad,1,0
+include/uft/uft_fat_editor.h,uft_fat_mark_free,1,0
 include/uft/uft_fat_editor.h,uft_fat_name_to_string,0,2
 include/uft/uft_fat_editor.h,uft_fat_probe,0,2
 include/uft/uft_fat_editor.h,uft_fat_read_root,1,0
+include/uft/uft_fat_editor.h,uft_fat_repair,1,0
+include/uft/uft_fat_editor.h,uft_fat_set_cluster,1,0
 include/uft/uft_fat_editor.h,uft_fat_set_oem_name,1,0
 include/uft/uft_fat_editor.h,uft_fat_set_volume_label,1,0
 include/uft/uft_fat_editor.h,uft_fat_type_name,1,4
+include/uft/uft_file_ops.h,uft_list_files,0,0
 include/uft/uft_forensic_report.h,uft_audit_trail_destroy,0,0
 include/uft/uft_forensic_report.h,uft_compute_hash,0,0
 include/uft/uft_forensic_report.h,uft_hash_chain_destroy,0,0
@@ -188,7 +194,6 @@ include/uft/uft_forensic_report.h,uft_report_set_metadata,0,0
 include/uft/uft_forensic_report.h,uft_report_set_result,0,0
 include/uft/uft_format_autodetect.h,uft_detect_format_buffer,1,0
 include/uft/uft_format_autodetect.h,uft_detect_format_file,1,0
-include/uft/uft_format_parsers.h,uft_lzhuf_decompress,3,0
 include/uft/uft_format_verify.h,uft_verify_a2r,0,4
 include/uft/uft_format_verify.h,uft_verify_d71_buffer,0,1
 include/uft/uft_format_verify.h,uft_verify_d81_buffer,0,1
