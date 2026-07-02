@@ -99,8 +99,6 @@ static inline bool uft_failed(uft_rc_t rc)  { return rc != UFT_SUCCESS; }
 /* ------------------------------------------------------------------------ */
 void uft_error_set_context(const char* file, int line,
                            const char* function, const char* message);
-const uft_error_context_t* uft_error_get_context(void);
-void uft_error_clear_context(void);
 
 /* ------------------------------------------------------------------------ */
 /* Helper macros                                                            */

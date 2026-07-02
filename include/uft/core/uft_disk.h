@@ -200,13 +200,9 @@ typedef struct uft_disk_unified {
  * the unified-disk subsystem gets implemented, use a distinct name
  * (e.g. uft_disk_unified_create). */
 void uft_disk_free(uft_disk_unified_t *disk);
-uft_disk_unified_t* uft_disk_clone(const uft_disk_unified_t *src);
 
-/* Track Management */
-int uft_disk_add_track(uft_disk_unified_t *disk, uft_track_base_t *track);
 uft_track_base_t* uft_disk_get_track(uft_disk_unified_t *disk, 
                                       uint8_t cyl, uint8_t head);
-int uft_disk_remove_track(uft_disk_unified_t *disk, uint8_t cyl, uint8_t head);
 
 /* Sector Access */
 uft_sector_unified_t* uft_disk_get_sector(uft_disk_unified_t *disk,
@@ -219,20 +215,12 @@ int uft_disk_read_sector(uft_disk_unified_t *disk,
 /* Metadata */
 int uft_disk_set_meta(uft_disk_unified_t *disk, 
                       const char *key, const char *value);
-const char* uft_disk_get_meta(uft_disk_unified_t *disk, const char *key);
 
-/* Statistics */
-void uft_disk_update_stats(uft_disk_unified_t *disk);
-float uft_disk_calc_quality(const uft_disk_unified_t *disk);
 
 /* Info */
 int uft_disk_get_info(const uft_disk_unified_t *disk, 
                       char *buffer, size_t size);
-const char* uft_disk_type_name(uft_disk_type_t type);
-const char* uft_disk_flags_str(uint16_t flags);
 
-/* I/O Helpers */
-int uft_disk_alloc_raw(uft_disk_unified_t *disk, size_t size);
 int uft_disk_set_geometry(uft_disk_unified_t *disk,
                           uint8_t cyls, uint8_t heads, 
                           uint8_t spt, uint16_t sector_size);

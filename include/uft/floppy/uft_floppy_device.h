@@ -94,20 +94,7 @@ typedef struct FloppyDevice {
  * that gets registered through the format registry or linked directly.
  * ============================================================================ */
 
-/**
- * @brief Open a disk image file
- * @param dev Device structure to fill in
- * @param path Path to disk image file
- * @return 0 on success, error code on failure
- */
-int uft_floppy_open(FloppyDevice *dev, const char *path);
 
-/**
- * @brief Close disk image and free resources
- * @param dev Device structure
- * @return 0 on success
- */
-int uft_floppy_close(FloppyDevice *dev);
 
 /**
  * @brief Read a sector from the disk image
@@ -133,12 +120,6 @@ int uft_floppy_read_sector(FloppyDevice *dev, uint32_t track, uint32_t head,
 int uft_floppy_write_sector(FloppyDevice *dev, uint32_t track, uint32_t head,
                               uint32_t sector, const uint8_t *buf);
 
-/**
- * @brief Analyze copy protection schemes
- * @param dev Device structure
- * @return 0 on success, or error code
- */
-int uft_floppy_analyze_protection(FloppyDevice *dev);
 
 #ifdef __cplusplus
 }

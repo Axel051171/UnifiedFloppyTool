@@ -171,25 +171,13 @@ typedef struct uft_encoding_info {
  * Function Prototypes
  *===========================================================================*/
 
-/**
- * @brief Get encoding info
- */
-const uft_encoding_info_t* uft_encoding_get_info(uft_disk_encoding_t enc);
 
-/**
- * @brief Get encoding name
- */
-const char* uft_disk_encoding_name(uft_disk_encoding_t enc);
 
 /**
  * @brief Get encoding category
  */
 uft_encoding_category_t uft_encoding_category(uft_disk_encoding_t enc);
 
-/**
- * @brief Get category name
- */
-const char* uft_encoding_category_name(uft_encoding_category_t cat);
 
 /**
  * @brief Check if encoding is FM-based
@@ -212,39 +200,15 @@ static inline bool uft_encoding_is_gcr(uft_disk_encoding_t enc) {
     return uft_encoding_category(enc) == UFT_ENCCAT_GCR;
 }
 
-/**
- * @brief Get nominal bitcell time for encoding
- */
-uint32_t uft_encoding_bitcell_ns(uft_disk_encoding_t enc);
 
-/**
- * @brief Get data rate for encoding
- */
-uint32_t uft_encoding_data_rate(uft_disk_encoding_t enc);
 
 /*===========================================================================
  * Legacy Conversion Functions
  *===========================================================================*/
 
-/**
- * @brief Convert from legacy uft_encoding_t
- */
-uft_disk_encoding_t uft_encoding_from_decoder(int legacy_enc);
 
-/**
- * @brief Convert to legacy uft_encoding_t
- */
-int uft_encoding_to_decoder(uft_disk_encoding_t enc);
 
-/**
- * @brief Convert from legacy uft_ir_encoding_t
- */
-uft_disk_encoding_t uft_encoding_from_ir(int ir_enc);
 
-/**
- * @brief Convert to legacy uft_ir_encoding_t
- */
-int uft_encoding_to_ir(uft_disk_encoding_t enc);
 
 /**
  * @brief Detect encoding from bitstream pattern

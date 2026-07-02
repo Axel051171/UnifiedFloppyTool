@@ -261,15 +261,7 @@ const char* uft_fat_type_name(uft_fat_type_t type);
  */
 int uft_fat_get_stats(uft_fat_t *fat, uft_fat_stats_t *stats);
 
-/**
- * @brief Get boot sector (FAT12/16)
- */
-const uft_fat16_boot_t* uft_fat_get_boot16(uft_fat_t *fat);
 
-/**
- * @brief Get boot sector (FAT32)
- */
-const uft_fat32_boot_t* uft_fat_get_boot32(uft_fat_t *fat);
 
 /**
  * @brief Get volume label
@@ -378,10 +370,6 @@ int uft_fat_read_file(uft_fat_t *fat, const char *path,
 int uft_fat_write_file(uft_fat_t *fat, const char *path,
                         const uint8_t *data, size_t size);
 
-/**
- * @brief Delete file
- */
-int uft_fat_delete_file(uft_fat_t *fat, const char *path);
 
 /**
  * @brief Recover deleted file
@@ -403,15 +391,7 @@ int uft_fat_set_oem_name(uft_fat_t *fat, const char *oem_name);
  */
 int uft_fat_set_volume_label(uft_fat_t *fat, const char *label);
 
-/**
- * @brief Set volume ID
- */
-int uft_fat_set_volume_id(uft_fat_t *fat, uint32_t volume_id);
 
-/**
- * @brief Fix boot sector for compatibility
- */
-int uft_fat_fix_boot_sector(uft_fat_t *fat);
 
 /*===========================================================================
  * REPAIR/ANALYSIS
@@ -429,10 +409,6 @@ int uft_fat_find_lost_clusters(uft_fat_t *fat,
 int uft_fat_find_cross_links(uft_fat_t *fat,
                               uint32_t *clusters, int max_clusters);
 
-/**
- * @brief Validate FAT consistency
- */
-int uft_fat_validate(uft_fat_t *fat, char *report, size_t report_size);
 
 /**
  * @brief Repair FAT issues
@@ -440,15 +416,7 @@ int uft_fat_validate(uft_fat_t *fat, char *report, size_t report_size);
 int uft_fat_repair(uft_fat_t *fat, bool fix_cross_links, 
                     bool recover_lost);
 
-/**
- * @brief Compare FAT copies
- */
-int uft_fat_compare_copies(uft_fat_t *fat, int *differences);
 
-/**
- * @brief Sync FAT copies
- */
-int uft_fat_sync_copies(uft_fat_t *fat);
 
 /*===========================================================================
  * VISUALIZATION
@@ -466,15 +434,7 @@ int uft_fat_get_cluster_map(uft_fat_t *fat,
                              uft_cluster_status_t *map,
                              int max_clusters);
 
-/**
- * @brief Print FAT summary
- */
-void uft_fat_print_summary(uft_fat_t *fat);
 
-/**
- * @brief Print cluster chain
- */
-void uft_fat_print_chain(uft_fat_t *fat, uint32_t start_cluster);
 
 /*===========================================================================
  * UTILITIES

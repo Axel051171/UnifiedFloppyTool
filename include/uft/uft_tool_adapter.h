@@ -163,22 +163,12 @@ typedef struct uft_tool_adapter {
 // Registry API
 // ============================================================================
 
-uft_error_t uft_tool_registry_init(void);
-void uft_tool_registry_shutdown(void);
 
-uft_error_t uft_tool_register(const uft_tool_adapter_t* tool);
 
 const uft_tool_adapter_t* uft_tool_find(const char* name);
-const uft_tool_adapter_t* uft_tool_find_for_operation(uft_tool_cap_t caps);
-const uft_tool_adapter_t* uft_tool_find_for_format(uft_format_t format);
 
-size_t uft_tool_list(const uft_tool_adapter_t** tools, size_t max_count);
-size_t uft_tool_list_available(const uft_tool_adapter_t** tools, size_t max_count);
 
-uft_error_t uft_tool_set_preferred(const char* name);
-uft_error_t uft_tool_get_context(const uft_tool_adapter_t* tool, void** context);
 
-void uft_tool_print_status(void);
 
 // ============================================================================
 // Convenience Functions

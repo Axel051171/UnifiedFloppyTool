@@ -768,11 +768,6 @@ int uft_dsk_to_woz2(const uint8_t *dsk, uft_sector_format_t format,
 int uft_woz_to_dsk(const uft_woz_file_t *woz, uft_sector_format_t format,
                    uint8_t *output);
 
-/**
- * @brief Free WOZ file structure
- * @param woz WOZ structure to free
- */
-void uft_woz_free(uft_woz_file_t *woz);
 
 #ifdef __cplusplus
 }

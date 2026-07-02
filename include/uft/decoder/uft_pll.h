@@ -76,7 +76,6 @@ void uft_pll_config_default(uft_pll_config_t* config, int encoding);
 /* Lifecycle */
 uft_pll_t* uft_pll_create(const uft_pll_config_t* config);
 void uft_pll_destroy(uft_pll_t* pll);
-void uft_pll_reset(uft_pll_t* pll);
 
 /* Processing - signatures match implementation */
 int uft_pll_process(uft_pll_t* pll, uint32_t flux_time_ns,
@@ -85,13 +84,7 @@ int uft_pll_process(uft_pll_t* pll, uint32_t flux_time_ns,
 int uft_pll_decode(uft_pll_t* pll, const uint32_t* flux,
                    size_t flux_count, uint8_t* bits, size_t max_bits);
 
-/* State query */
-void uft_pll_get_state(const uft_pll_t* pll, uft_pll_state_t* state);
-bool uft_pll_is_locked(const uft_pll_t* pll);
-double uft_pll_get_ber(const uft_pll_t* pll);
 
-/* Utilities */
-double uft_pll_encoding_frequency(int encoding);
 
 #ifdef __cplusplus
 }

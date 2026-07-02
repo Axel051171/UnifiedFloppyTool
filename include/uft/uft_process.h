@@ -180,17 +180,6 @@ bool uft_tool_exists(const char *tool);
  */
 int uft_tool_find(const char *tool, char *path, size_t path_size);
 
-/**
- * @brief Get tool version string
- * 
- * Tries common version flags: --version, -v, -V
- * 
- * @param tool Tool name
- * @param version Output buffer
- * @param version_size Size of version buffer
- * @return 0 on success, <0 on error
- */
-int uft_tool_version(const char *tool, char *version, size_t version_size);
 
 /*===========================================================================
  * TOOL REGISTRY
@@ -263,25 +252,9 @@ uft_async_process_t* uft_process_start_async(
     uft_process_callback_t callback,
     void *user_data);
 
-/**
- * @brief Check if async process is running
- */
-bool uft_process_is_running(uft_async_process_t *proc);
 
-/**
- * @brief Wait for async process to complete
- */
-int uft_process_wait(uft_async_process_t *proc, int timeout_ms);
 
-/**
- * @brief Kill async process
- */
-int uft_process_kill(uft_async_process_t *proc);
 
-/**
- * @brief Free async process handle
- */
-void uft_process_free(uft_async_process_t *proc);
 
 #ifdef __cplusplus
 }

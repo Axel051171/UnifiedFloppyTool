@@ -438,13 +438,6 @@ bool uft_adf_is_bootable(uft_adf_volume_t *vol);
 int uft_adf_install_bootblock(uft_adf_volume_t *vol,
                               const void *bootcode, size_t size);
 
-/**
- * @brief Extract boot block
- * @param vol Volume handle
- * @param bootcode Output buffer (1012 bytes)
- * @return Boot code size, or 0 if no boot code
- */
-size_t uft_adf_get_bootblock(uft_adf_volume_t *vol, void *bootcode);
 
 /*============================================================================
  * Low-Level Operations

@@ -93,15 +93,6 @@ typedef struct {
  * XDF API Functions
  * ============================================================================ */
 
-/**
- * @brief Get XDF track layout for given track
- * 
- * @param track Track number (0-79)
- * @param head  Head number (0-1)
- * @param layout Output layout structure
- * @return 0 on success, -1 on error
- */
-int uft_xdf_get_track_layout(int track, int head, uft_xdf_track_layout_t *layout);
 
 /**
  * @brief Get number of sectors on XDF track
@@ -111,36 +102,9 @@ int uft_xdf_get_track_layout(int track, int head, uft_xdf_track_layout_t *layout
  */
 int uft_xdf_sectors_for_track(int track);
 
-/**
- * @brief Get sector size by index on XDF track
- * 
- * @param track Track number
- * @param sector_index Sector index (0-based)
- * @return Sector size in bytes, 0 on error
- */
-int uft_xdf_sector_size(int track, int sector_index);
 
-/**
- * @brief Calculate total XDF disk size
- * @return Size in bytes (~1.86MB)
- */
-size_t uft_xdf_disk_size(void);
 
-/**
- * @brief Detect if file is likely XDF format
- * 
- * @param data File data
- * @param size File size
- * @return Confidence 0-100
- */
-int uft_xdf_detect(const uint8_t *data, size_t size);
 
-/**
- * @brief Check if size matches known XDF variants
- * @param size File size
- * @return true if likely XDF
- */
-bool uft_xdf_detect_by_size(size_t size);
 
 /**
  * @brief Get recommended XCopy mode for XDF

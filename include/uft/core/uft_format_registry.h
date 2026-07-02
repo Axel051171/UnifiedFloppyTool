@@ -251,40 +251,16 @@ typedef struct uft_format_detect_result {
  * Registry Functions
  *===========================================================================*/
 
-/**
- * @brief Get format info by ID
- */
-const uft_format_info_t* uft_format_get_info(uft_format_id_t id);
 
-/**
- * @brief Get format info by name
- */
-const uft_format_info_t* uft_format_get_by_name(const char *name);
 
-/**
- * @brief Get format info by extension
- */
-const uft_format_info_t* uft_format_get_by_ext(const char *ext);
 
 /**
  * @brief Get format name
  */
 const char* uft_format_name(uft_format_id_t id);
 
-/**
- * @brief Get format description
- */
-const char* uft_format_desc(uft_format_id_t id);
 
-/**
- * @brief Get format extensions
- */
-const char* uft_format_extensions(uft_format_id_t id);
 
-/**
- * @brief Check format capability
- */
-bool uft_format_has_cap(uft_format_id_t id, uint32_t cap);
 
 /**
  * @brief Get all formats in category
@@ -315,10 +291,6 @@ int uft_format_detect_buffer(const uint8_t *data, size_t size,
                              const char *ext,
                              uft_format_detect_result_t *result);
 
-/**
- * @brief Detect format from extension only
- */
-uft_format_id_t uft_format_detect_ext(const char *ext);
 
 /**
  * @brief Probe format (detailed detection)
@@ -357,15 +329,7 @@ static inline bool uft_format_can_write(uft_format_id_t id) {
     return uft_format_has_cap(id, UFT_FCAP_WRITE);
 }
 
-/**
- * @brief Get registered format count
- */
-size_t uft_format_count(void);
 
-/**
- * @brief Iterate all formats
- */
-const uft_format_info_t* uft_format_iterate(size_t index);
 
 #ifdef __cplusplus
 }

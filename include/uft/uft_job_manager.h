@@ -88,8 +88,6 @@ typedef struct uft_write_job_params {
 // Lifecycle
 // ============================================================================
 
-uft_job_manager_t* uft_job_manager_create(int max_workers);
-void uft_job_manager_destroy(uft_job_manager_t* mgr);
 
 // ============================================================================
 // Job Submission
@@ -111,8 +109,6 @@ uft_error_t uft_job_submit_write(uft_job_manager_t* mgr,
 // Job Control
 // ============================================================================
 
-uft_error_t uft_job_cancel(uft_job_manager_t* mgr, uint32_t job_id);
-void uft_job_cancel_all(uft_job_manager_t* mgr);
 
 // ============================================================================
 // Job Query
@@ -122,8 +118,6 @@ uft_error_t uft_job_get_status(uft_job_manager_t* mgr,
                                 uint32_t job_id,
                                 uft_job_status_t* status);
 
-bool uft_job_is_running(uft_job_manager_t* mgr, uint32_t job_id);
-int uft_job_get_active_count(uft_job_manager_t* mgr);
 
 #ifdef __cplusplus
 }

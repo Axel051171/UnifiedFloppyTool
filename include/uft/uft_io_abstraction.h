@@ -332,10 +332,7 @@ uft_error_t uft_io_copy(uft_io_source_t* source,
 
 void uft_track_init(uft_track_t* track, int cylinder, int head);
 void uft_track_free(uft_track_t* track);
-uft_error_t uft_track_clone(const uft_track_t* src, uft_track_t* dst);
 
-void uft_io_source_close(uft_io_source_t* source);
-void uft_io_sink_close(uft_io_sink_t* sink);
 
 #ifdef __cplusplus
 }

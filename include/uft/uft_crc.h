@@ -46,50 +46,18 @@ typedef struct {
     double confidence;                      /**< Correction confidence 0.0-1.0 */
 } uft_crc_result_t;
 
-/**
- * @brief Get CRC type name
- */
-const char* uft_crc_type_name(uft_crc_type_t type);
 
-/**
- * @brief Calculate CRC for data
- */
-uint32_t uft_crc_calculate(uft_crc_type_t type, const uint8_t* data, size_t length);
 
-/**
- * @brief Verify CRC matches expected value
- */
-bool uft_crc_verify(uft_crc_type_t type, const uint8_t* data, size_t length, uint32_t expected);
 
 /**
  * @brief Attempt to correct CRC errors
  */
 int uft_crc_correct(uft_crc_type_t type, uint8_t* data, size_t length, int max_errors, uft_crc_result_t* result);
 
-/**
- * @brief Calculate CRC syndrome (for error detection)
- */
-uint32_t uft_crc_syndrome(uft_crc_type_t type, const uint8_t* data, size_t length);
 
-/**
- * @brief CRC-16/CCITT ("false") used by many floppy formats (IBM PC, AmigaDOS).
- */
-uint16_t uft_crc16_ccitt_false(const void *data, size_t len);
 
-/**
- * @brief CRC-16/IBM (ARC) sometimes used in non-floppy contexts.
- */
-uint16_t uft_crc16_ibm_arc(const void *data, size_t len);
 
-/**
- * @brief CRC-32 calculation
- */
-uint32_t uft_crc32(const void *data, size_t len);
 
-/**
- * @brief Simple checksum
- */
-uint16_t uft_checksum(const void *data, size_t len);
 
 #ifdef __cplusplus
 }

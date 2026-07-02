@@ -54,26 +54,14 @@ typedef enum {
     UFT_CBM_TOOL_DRIVE_CODE
 } uft_cbm_tool_type_t;
 
-/* Scan payload for ASCII hits. */
-int uft_cbm_drive_scan_payload(const uint8_t *payload, size_t payload_len, uft_scan_result_t *out);
 
-/* Classify tool type based on scan result */
-uft_cbm_tool_type_t uft_cbm_classify_tool(const uft_scan_result_t *result);
 
-/* Check if payload contains specific DOS command */
-int uft_cbm_has_dos_command(const uint8_t *payload, size_t len, const char *cmd);
 
-/* Identify tool and return name */
-int uft_cbm_identify_tool(const uint8_t *payload, size_t len, char *name_out, size_t name_cap);
 
-/* Extract ASCII strings from payload */
-int uft_cbm_extract_strings(const uint8_t *payload, size_t len, char **strings_out, size_t max_strings);
 
 /* Get name for tool type */
 const char *uft_cbm_tool_type_name(uft_cbm_tool_type_t type);
 
-/* Scan PRG file (skips 2-byte load address header) */
-int uft_cbm_drive_scan_prg(const uint8_t *prg, size_t prg_len, uft_scan_result_t *out);
 
 #ifdef __cplusplus
 }

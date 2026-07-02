@@ -228,20 +228,7 @@ typedef struct uft_cbm_disk_analysis {
  * Disk Loading
  * ============================================================================ */
 
-/**
- * @brief Detect disk format from file size
- */
-uft_cbm_disk_format_t uft_cbm_detect_format(size_t file_size);
 
-/**
- * @brief Load disk image from memory
- * 
- * @param data      Disk image data
- * @param size      Data size
- * @param disk      Output disk structure
- * @return          0 on success, negative on error
- */
-int uft_cbm_disk_load(const uint8_t *data, size_t size, uft_cbm_disk_t *disk);
 
 /**
  * @brief Load disk image from file
@@ -273,10 +260,6 @@ const uft_cbm_dir_entry_t *uft_cbm_get_entry(const uft_cbm_disk_t *disk, size_t 
 int uft_cbm_find_file(const uft_cbm_disk_t *disk, const char *name, 
                       uft_cbm_dir_entry_t *entry);
 
-/**
- * @brief Format directory listing as text
- */
-size_t uft_cbm_format_directory(const uft_cbm_disk_t *disk, char *out, size_t out_cap);
 
 /* ============================================================================
  * File Extraction
@@ -320,10 +303,6 @@ int uft_cbm_extract_all_prg(const uft_cbm_disk_t *disk,
  * BAM Operations
  * ============================================================================ */
 
-/**
- * @brief Read BAM from disk
- */
-int uft_cbm_read_bam(uft_cbm_disk_t *disk);
 
 /**
  * @brief Check if sector is allocated
@@ -331,10 +310,6 @@ int uft_cbm_read_bam(uft_cbm_disk_t *disk);
 int uft_cbm_is_sector_allocated(const uft_cbm_disk_t *disk, 
                                  uint8_t track, uint8_t sector);
 
-/**
- * @brief Validate BAM against actual usage
- */
-int uft_cbm_validate_bam(const uft_cbm_disk_t *disk);
 
 /* ============================================================================
  * Sector Access
@@ -353,29 +328,13 @@ int uft_cbm_sector_offset(uft_cbm_disk_format_t format,
                           uint8_t track, uint8_t sector,
                           uint32_t *offset);
 
-/**
- * @brief Get sectors per track for format
- */
-uint8_t uft_cbm_sectors_per_track(uft_cbm_disk_format_t format, uint8_t track);
 
 /* ============================================================================
  * Analysis
  * ============================================================================ */
 
-/**
- * @brief Analyze disk for tools/protection
- */
-int uft_cbm_analyze_disk(uft_cbm_disk_t *disk, uft_cbm_disk_analysis_t *analysis);
 
-/**
- * @brief Scan disk for fastloaders/copy tools
- */
-int uft_cbm_scan_for_tools(const uft_cbm_disk_t *disk, uft_scan_result_t *result);
 
-/**
- * @brief Check for copy protection indicators
- */
-int uft_cbm_check_protection(const uft_cbm_disk_t *disk);
 
 /* ============================================================================
  * Utility Functions
@@ -397,10 +356,6 @@ const char *uft_cbm_file_type_name(uft_cbm_file_type_t type);
 void uft_cbm_petscii_to_ascii(const uint8_t *petscii, size_t len, 
                                char *ascii, size_t ascii_cap);
 
-/**
- * @brief Calculate disk checksum
- */
-uint32_t uft_cbm_disk_checksum(const uft_cbm_disk_t *disk);
 
 #ifdef __cplusplus
 }

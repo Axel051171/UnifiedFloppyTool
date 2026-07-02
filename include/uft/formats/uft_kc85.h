@@ -10,7 +10,4 @@ typedef struct {
 } uft_kc85_image_t;
 
 int uft_kc85_probe(const uint8_t *data, size_t size);
-int uft_kc85_read(const char *path, uft_kc85_image_t **image);
-void uft_kc85_free(uft_kc85_image_t *image);
-int uft_kc85_get_info(uft_kc85_image_t *img, char *buf, size_t size);
 #endif

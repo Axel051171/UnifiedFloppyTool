@@ -193,10 +193,6 @@ void uft_alloc_reset_stats(void);
  */
 void uft_alloc_set_tracking(bool enable);
 
-/**
- * @brief Print allocation statistics
- */
-void uft_alloc_print_stats(void);
 
 #ifdef __cplusplus
 }

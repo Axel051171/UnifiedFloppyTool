@@ -188,11 +188,6 @@ typedef struct {
  * Initialization
  *===========================================================================*/
 
-/**
- * @brief Initialize confidence config with defaults
- * @param config Configuration to initialize
- */
-void uft_conf_config_default(uft_confidence_config_t *config);
 
 /**
  * @brief Initialize sector confidence structure
@@ -278,13 +273,6 @@ void uft_conf_calculate_full(uft_sector_confidence_t *conf,
                              float sync_quality, bool crc_valid,
                              uint8_t revolutions, uint8_t agreements);
 
-/**
- * @brief Classify quality level from combined confidence
- * @param confidence Combined confidence (0-1)
- * @param config Configuration with thresholds
- * @return Quality level (0-5)
- */
-uint8_t uft_conf_classify(float confidence, const uft_confidence_config_t *config);
 
 /**
  * @brief Get quality description

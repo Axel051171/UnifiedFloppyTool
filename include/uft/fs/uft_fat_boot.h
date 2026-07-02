@@ -179,16 +179,6 @@ int uft_boot_apply_custom(void *boot, const uint8_t *code, size_t code_size,
 int uft_boot_apply_from_file(void *boot, const char *filename,
                              uft_fat_type_t fat_type);
 
-/**
- * @brief Set custom boot message
- * @param boot Boot sector (modified)
- * @param message Message to display (null-terminated)
- * @param fat_type FAT type
- * @return 0 on success
- * 
- * @note Creates minimal boot code that displays message
- */
-int uft_boot_set_message(void *boot, const char *message, uft_fat_type_t fat_type);
 
 /*===========================================================================
  * API - Boot Sector Validation
@@ -202,13 +192,6 @@ int uft_boot_set_message(void *boot, const char *message, uft_fat_type_t fat_typ
  */
 bool uft_boot_is_bootable(const void *boot, uft_fat_type_t fat_type);
 
-/**
- * @brief Identify boot code type
- * @param boot Boot sector
- * @param fat_type FAT type
- * @return Detected template type
- */
-uft_boot_template_t uft_boot_identify(const void *boot, uft_fat_type_t fat_type);
 
 /**
  * @brief Extract boot code to buffer
@@ -240,13 +223,6 @@ int uft_boot_set_oem(void *boot, const char *oem_name);
  */
 void uft_boot_get_oem(const void *boot, char *oem_name);
 
-/**
- * @brief Set OEM name based on template
- * @param boot Boot sector (modified)
- * @param type Template type
- * @return 0 on success
- */
-int uft_boot_set_oem_for_template(void *boot, uft_boot_template_t type);
 
 /*===========================================================================
  * API - System File Installation

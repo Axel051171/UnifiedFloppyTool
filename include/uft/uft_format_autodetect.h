@@ -181,15 +181,7 @@ void uft_detect_result_init(uft_detect_result_t *result);
  */
 void uft_detect_result_free(uft_detect_result_t *result);
 
-/**
- * @brief Get confidence level string
- */
-const char* uft_detect_confidence_str(int score);
 
-/**
- * @brief Get all supported magic entries
- */
-const uft_magic_entry_t* uft_get_magic_entries(size_t *count);
 
 /**
  * @brief Check if format is flux-based
@@ -201,10 +193,6 @@ bool uft_format_is_flux(uft_format_t format);
  */
 bool uft_format_is_sector(uft_format_t format);
 
-/**
- * @brief Get expected file size for format (0 if variable)
- */
-size_t uft_format_expected_size(uft_format_t format);
 
 #ifdef __cplusplus
 }

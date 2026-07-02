@@ -126,14 +126,6 @@ typedef struct {
 // Detection Functions
 // ============================================================================
 
-/**
- * @brief Erkennt Format aus Datei
- * 
- * @param path Dateipfad
- * @param result [out] Erkennungsergebnis
- * @return true wenn Format erkannt
- */
-bool uft_detect_file(const char* path, uft_detect_result_t* result);
 
 /**
  * @brief Erkennt Format aus Speicher
@@ -231,9 +223,6 @@ typedef enum {
     ADF_FS_FFS_DC,              ///< FFS Dir Cache
 } uft_adf_filesystem_t;
 
-uft_adf_variant_t uft_adf_detect_variant(size_t file_size);
-uft_adf_filesystem_t uft_adf_detect_filesystem(const uint8_t* data, size_t size);
-const char* uft_adf_filesystem_name(uft_adf_filesystem_t fs);
 
 // ============================================================================
 // IMG/ST Specific Detection

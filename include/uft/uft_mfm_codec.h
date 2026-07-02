@@ -123,10 +123,6 @@ typedef struct {
  */
 uft_mfm_codec_t* uft_mfm_codec_create(void);
 
-/**
- * @brief Create codec with specific options
- */
-uft_mfm_codec_t* uft_mfm_codec_create_ex(const uft_codec_options_t *opts);
 
 /**
  * @brief Destroy codec
@@ -139,10 +135,6 @@ void uft_mfm_codec_destroy(uft_mfm_codec_t *codec);
 int uft_mfm_codec_set_options(uft_mfm_codec_t *codec,
                                const uft_codec_options_t *opts);
 
-/**
- * @brief Get default options
- */
-void uft_mfm_codec_default_options(uft_codec_options_t *opts);
 
 /*===========================================================================
  * MFM ENCODING
@@ -216,10 +208,6 @@ uint16_t uft_fm_encode_byte(uint8_t data);
 int uft_fm_encode(const uint8_t *data, size_t data_len,
                   uint8_t *fm, size_t fm_size);
 
-/**
- * @brief Encode FM sync/address mark
- */
-uint16_t uft_fm_encode_mark(uint8_t mark);
 
 /*===========================================================================
  * MFM DECODING
@@ -258,15 +246,6 @@ int uft_mfm_decode_track(uft_mfm_codec_t *codec,
                           const uint8_t *mfm, size_t mfm_bits,
                           uft_track_data_t *track);
 
-/**
- * @brief Find sync pattern in MFM stream
- * 
- * @param mfm MFM bitstream
- * @param mfm_bits Total bits
- * @param start_bit Starting position
- * @return Bit offset of sync, or -1 if not found
- */
-int uft_mfm_find_sync(const uint8_t *mfm, size_t mfm_bits, int start_bit);
 
 /**
  * @brief Find address mark after sync
@@ -310,20 +289,8 @@ int uft_fm_decode_track(uft_mfm_codec_t *codec,
  */
 uint16_t uft_disk_crc(const uint8_t *data, size_t len);
 
-/**
- * @brief Initialize CRC context
- */
-uint16_t uft_disk_crc_init(void);
 
-/**
- * @brief Update CRC with byte
- */
-uint16_t uft_disk_crc_update(uint16_t crc, uint8_t byte);
 
-/**
- * @brief Finalize CRC
- */
-uint16_t uft_disk_crc_final(uint16_t crc);
 
 /*===========================================================================
  * FLUX CONVERSION
@@ -381,10 +348,6 @@ int uft_amiga_mfm_decode_track(const uint8_t *mfm, size_t mfm_bits,
                                 int *track, int *head,
                                 uint8_t *data, size_t data_size);
 
-/**
- * @brief Calculate Amiga checksum
- */
-uint32_t uft_amiga_checksum(const uint32_t *data, int longs);
 
 /*===========================================================================
  * UTILITIES
@@ -405,10 +368,6 @@ int uft_sector_code_from_size(int size);
  */
 void uft_track_data_free(uft_track_data_t *track);
 
-/**
- * @brief Print track info
- */
-void uft_track_data_print(const uft_track_data_t *track);
 
 /**
  * @brief Get encoding name

@@ -323,81 +323,41 @@ uint64_t uft_crc_update(const uft_crc_config_t *config,
                         uint64_t crc,
                         const uint8_t *data, size_t length);
 
-/**
- * @brief Finalize CRC calculation
- */
-uint64_t uft_crc_finalize(const uft_crc_config_t *config, uint64_t crc);
 
 /* ═══════════════════════════════════════════════════════════════════════════════
  * Convenience Functions - Floppy
  * ═══════════════════════════════════════════════════════════════════════════════ */
 
-/** IBM MFM CRC-16 */
-uint16_t uft_crc_ibm_mfm(const uint8_t *data, size_t length);
 
-/** IBM FM CRC-16 */
-uint16_t uft_crc_ibm_fm(const uint8_t *data, size_t length);
 
-/** Amiga MFM checksum */
-uint32_t uft_crc_amiga_mfm(const uint8_t *data, size_t length);
 
-/** Commodore GCR checksum (XOR) */
-uint8_t uft_crc_commodore_gcr(const uint8_t *data, size_t length);
 
-/** Apple GCR checksum */
-uint8_t uft_crc_apple_gcr(const uint8_t *data, size_t length);
 
 /* ═══════════════════════════════════════════════════════════════════════════════
  * Convenience Functions - Hard Disk
  * ═══════════════════════════════════════════════════════════════════════════════ */
 
-/** OMTI controller CRC */
-uint32_t uft_crc_omti(const uint8_t *data, size_t length);
 
-/** Seagate ST-506 CRC */
-uint16_t uft_crc_seagate_st506(const uint8_t *data, size_t length);
 
-/** Western Digital WD1003 CRC */
-uint16_t uft_crc_wd1003(const uint8_t *data, size_t length);
 
-/** Adaptec RLL CRC */
-uint32_t uft_crc_adaptec(const uint8_t *data, size_t length);
 
 /* ═══════════════════════════════════════════════════════════════════════════════
  * Convenience Functions - Standard
  * ═══════════════════════════════════════════════════════════════════════════════ */
 
-/** CRC-8 */
-uint8_t uft_crc8(const uint8_t *data, size_t length);
 
-/** CRC-16 IBM */
-uint16_t uft_crc16(const uint8_t *data, size_t length);
 
 /** CRC-16 CCITT */
 uint16_t uft_crc16_ccitt(const uint8_t *data, size_t length);
 
-/** CRC-16 XMODEM */
-uint16_t uft_crc16_xmodem(const uint8_t *data, size_t length);
 
-/** CRC-32 (use uft_crc32_poly to avoid conflict with uft_crc.h) */
-uint32_t uft_crc32_poly(const uint8_t *data, size_t length);
 
-/** CRC-32C (Castagnoli) */
-uint32_t uft_crc32c(const uint8_t *data, size_t length);
 
-/** CRC-64 ECMA */
-uint64_t uft_crc64(const uint8_t *data, size_t length);
 
 /* ═══════════════════════════════════════════════════════════════════════════════
  * Table Generation
  * ═══════════════════════════════════════════════════════════════════════════════ */
 
-/**
- * @brief Generate CRC lookup table
- * @param config CRC configuration
- * @param table Output table (256 entries of appropriate width)
- */
-void uft_crc_generate_table(const uft_crc_config_t *config, void *table);
 
 /**
  * @brief Get precomputed CRC table

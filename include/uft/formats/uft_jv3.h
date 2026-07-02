@@ -145,15 +145,7 @@ typedef struct {
  */
 bool uft_jv3_detect(const uint8_t *data, size_t size);
 
-/**
- * @brief Open JV3 file
- */
-int uft_jv3_open(uft_jv3_ctx_t *ctx, const uint8_t *data, size_t size);
 
-/**
- * @brief Close context
- */
-void uft_jv3_close(uft_jv3_ctx_t *ctx);
 
 /**
  * @brief Get sector info by index
@@ -192,10 +184,6 @@ int uft_jv3_get_track_sectors(const uft_jv3_ctx_t *ctx,
  */
 uft_jv3_writer_t *uft_jv3_writer_create(size_t initial_capacity);
 
-/**
- * @brief Destroy JV3 writer
- */
-void uft_jv3_writer_destroy(uft_jv3_writer_t *writer);
 
 /**
  * @brief Add sector to JV3 file
@@ -231,20 +219,8 @@ int uft_dmk_to_jv3(const uint8_t *dmk_data, size_t dmk_size,
  * Function Prototypes - Utilities
  *===========================================================================*/
 
-/**
- * @brief Get sector size from size code
- */
-uint16_t uft_jv3_size_from_code(uint8_t code);
 
-/**
- * @brief Get size code from sector size
- */
-uint8_t uft_jv3_code_from_size(uint16_t size);
 
-/**
- * @brief Generate JSON report
- */
-int uft_jv3_report_json(const uft_jv3_ctx_t *ctx, char *buffer, size_t size);
 
 #ifdef __cplusplus
 }

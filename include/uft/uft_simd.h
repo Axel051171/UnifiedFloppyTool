@@ -120,26 +120,13 @@ typedef enum {
 /** @brief Alias for compatibility */
 typedef uft_cpu_features_t uft_cpu_feature_t;
 
-/**
- * @brief Detect CPU features (call once at startup)
- * @return CPU information structure
- */
-uft_cpu_info_t uft_cpu_detect(void);
 
 /**
  * @brief Check if specific feature is available
  */
 bool uft_cpu_has_feature(uft_cpu_features_t feature);
 
-/**
- * @brief Get detected CPU info (cached)
- */
-const uft_cpu_info_t* uft_cpu_get_info(void);
 
-/**
- * @brief Print CPU information to stdout
- */
-void uft_cpu_print_info(void);
 
 /* =============================================================================
  * SIMD-OPTIMIZED FUNCTIONS - MFM DECODING
@@ -186,10 +173,6 @@ size_t uft_mfm_find_sync_avx512(
     size_t max_positions
 );
 
-/**
- * @brief CRC-16-CCITT using AVX-512 (with prefetch)
- */
-uint16_t uft_crc16_ccitt_avx512(const uint8_t *data, size_t length);
 
 /* =============================================================================
  * SIMD-OPTIMIZED FUNCTIONS - GCR DECODING
@@ -203,37 +186,14 @@ uint16_t uft_crc16_ccitt_avx512(const uint8_t *data, size_t length);
  * SIMD-OPTIMIZED FUNCTIONS - BIT MANIPULATION
  * ============================================================================= */
 
-/**
- * @brief Count set bits in array (POPCNT-optimized)
- */
-size_t uft_popcount_array(const uint8_t *data, size_t length);
 
-/**
- * @brief Find first set bit (BSF/TZCNT)
- */
-int uft_find_first_set_bit(uint64_t value);
 
-/**
- * @brief Byte-swap array (BSWAP)
- */
-void uft_byteswap_array(uint8_t *data, size_t length);
 
 /* =============================================================================
  * BENCHMARKING
  * ============================================================================= */
 
-/**
- * @brief Benchmark all MFM implementations
- * @param flux_data Test data
- * @param count Number of transitions
- * @param iterations Benchmark iterations
- */
-void uft_benchmark_mfm(const uint64_t *flux_data, size_t count, int iterations);
 
-/**
- * @brief Benchmark all GCR implementations
- */
-void uft_benchmark_gcr(const uint64_t *flux_data, size_t count, int iterations);
 
 /* =============================================================================
  * INTERNAL HELPERS (used by implementations)

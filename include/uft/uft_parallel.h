@@ -218,32 +218,10 @@ typedef struct {
  * Thread Pool API
  * ═══════════════════════════════════════════════════════════════════════════════ */
 
-/**
- * @brief Initialize parallel processing subsystem
- * @param config Configuration (NULL for defaults)
- * @return UFT_PARALLEL_OK on success
- */
-int uft_parallel_init(const uft_parallel_config_t *config);
 
-/**
- * @brief Shutdown parallel processing subsystem
- */
-void uft_parallel_shutdown(void);
 
-/**
- * @brief Check if parallel system is initialized
- */
-bool uft_parallel_is_initialized(void);
 
-/**
- * @brief Get number of active worker threads
- */
-int uft_parallel_get_thread_count(void);
 
-/**
- * @brief Get number of available CPU cores
- */
-int uft_parallel_get_cpu_count(void);
 
 /* ═══════════════════════════════════════════════════════════════════════════════
  * Decode API
@@ -290,51 +268,21 @@ int uft_parallel_decode_image(
  * Control API
  * ═══════════════════════════════════════════════════════════════════════════════ */
 
-/**
- * @brief Request cancellation of ongoing operations
- */
-void uft_parallel_cancel(void);
 
-/**
- * @brief Check if cancellation was requested
- */
-bool uft_parallel_is_cancelled(void);
 
-/**
- * @brief Clear cancellation flag
- */
-void uft_parallel_clear_cancel(void);
 
-/**
- * @brief Wait for all pending operations to complete
- * @param timeout_ms Timeout in milliseconds (0 = infinite)
- * @return true if completed, false if timeout
- */
-bool uft_parallel_wait(int timeout_ms);
 
-/**
- * @brief Get current queue depth
- */
-int uft_parallel_get_queue_depth(void);
 
 /* ═══════════════════════════════════════════════════════════════════════════════
  * Result Management
  * ═══════════════════════════════════════════════════════════════════════════════ */
 
-/**
- * @brief Free track result resources
- */
-void uft_track_result_free(uft_track_result_t *result);
 
 /**
  * @brief Free batch result resources
  */
 void uft_batch_result_free(uft_batch_result_t *result);
 
-/**
- * @brief Allocate batch result for given track count
- */
-int uft_batch_result_alloc(uft_batch_result_t *result, size_t track_count);
 
 /* ═══════════════════════════════════════════════════════════════════════════════
  * Statistics
@@ -356,15 +304,7 @@ typedef struct {
     int current_active_threads;   /**< Currently active threads */
 } uft_parallel_stats_t;
 
-/**
- * @brief Get thread pool statistics
- */
-void uft_parallel_get_stats(uft_parallel_stats_t *stats);
 
-/**
- * @brief Reset statistics counters
- */
-void uft_parallel_reset_stats(void);
 
 #ifdef __cplusplus
 }

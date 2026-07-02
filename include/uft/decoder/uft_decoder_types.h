@@ -257,25 +257,13 @@ static inline void uft_preanalysis_result_free(uft_preanalysis_result_t* r) {
     (void)r; /* No dynamic allocations */
 }
 
-/**
- * @brief Free PLL decode result
- */
-void uft_pll_decode_result_free(uft_pll_decode_result_t* r);
 
 /**
  * @brief Free fusion result
  */
 void uft_fusion_result_free(uft_fusion_result_t* r);
 
-/**
- * @brief Free sector decode result
- */
-void uft_sector_decode_result_free(uft_sector_decode_result_t* r);
 
-/**
- * @brief Free track decode result
- */
-void uft_track_decode_result_free(uft_track_decode_result_t* r);
 
 #ifdef __cplusplus
 }

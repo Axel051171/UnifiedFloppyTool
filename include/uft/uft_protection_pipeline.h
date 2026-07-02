@@ -249,10 +249,6 @@ typedef struct uft_protection_pipeline uft_protection_pipeline_t;
 uft_protection_pipeline_t* uft_protection_pipeline_create(
     const uft_protection_options_t *options);
 
-/**
- * @brief Destroy pipeline
- */
-void uft_protection_pipeline_destroy(uft_protection_pipeline_t *pipe);
 
 /**
  * @brief Analyze disk image for protection
@@ -304,15 +300,7 @@ uft_error_t uft_protection_convert(
     uft_format_t target_format,
     uft_protection_map_t **target_map_out);
 
-/**
- * @brief Free protection map
- */
-void uft_protection_map_free(uft_protection_map_t *map);
 
-/**
- * @brief Free track protection data
- */
-void uft_track_protection_free(uft_track_protection_t *track);
 
 /**
  * @brief Generate protection analysis report
@@ -322,15 +310,7 @@ uft_error_t uft_protection_generate_report(
     char *buffer,
     size_t buffer_size);
 
-/**
- * @brief Get artifact type name
- */
-const char* uft_artifact_name(uft_artifact_flags_t type);
 
-/**
- * @brief Check if format supports protection preservation
- */
-bool uft_format_supports_protection(uft_format_t format, uft_artifact_flags_t artifact);
 
 /* ═══════════════════════════════════════════════════════════════════════════════
  * Weak Bit Helpers
@@ -354,10 +334,6 @@ void uft_weak_bits_randomize(
     const uint8_t *weak_mask,
     size_t size);
 
-/**
- * @brief Count weak bits in mask
- */
-int uft_weak_bits_count(const uint8_t *mask, size_t size);
 
 /* ═══════════════════════════════════════════════════════════════════════════════
  * Platform-Specific Protection Schemes

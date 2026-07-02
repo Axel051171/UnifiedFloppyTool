@@ -132,45 +132,21 @@ void uft_log_init(void);
  */
 void uft_log_shutdown(void);
 
-/**
- * @brief Set logging configuration
- */
-void uft_log_set_config(const uft_log_config_t *config);
 
 /**
  * @brief Get current configuration
  */
 const uft_log_config_t* uft_log_get_config(void);
 
-/**
- * @brief Set category mask (like DTC -l parameter)
- */
-void uft_log_set_mask(uint32_t mask);
 
-/**
- * @brief Get current category mask
- */
-uint32_t uft_log_get_mask(void);
 
 /**
  * @brief Set minimum log level
  */
 void uft_log_set_level(uft_log_level_t level);
 
-/**
- * @brief Enable/disable specific category
- */
-void uft_log_enable_category(uft_log_mask_t category, bool enable);
 
-/**
- * @brief Check if category is enabled
- */
-bool uft_log_is_enabled(uft_log_mask_t category);
 
-/**
- * @brief Set log file path
- */
-void uft_log_set_file(const char *path);
 
 /**
  * @brief Set custom callback
@@ -234,20 +210,8 @@ void uft_log_v(uft_log_mask_t category, uft_log_level_t level,
 size_t uft_log_get_recent(uft_log_entry_t *entries, size_t max_entries,
                           uint32_t category_filter);
 
-/**
- * @brief Clear log buffer
- */
-void uft_log_clear_buffer(void);
 
-/**
- * @brief Export log to JSON file
- */
-int uft_log_export_json(const char *path);
 
-/**
- * @brief Export log to HTML file
- */
-int uft_log_export_html(const char *path);
 
 /* ============================================================================
  * Statistics
@@ -263,34 +227,14 @@ typedef struct {
     uint64_t by_category[8];  /**< Count per category */
 } uft_log_stats_t;
 
-/**
- * @brief Get log statistics
- */
-void uft_log_get_stats(uft_log_stats_t *stats);
 
 /* ============================================================================
  * Utility Functions
  * ============================================================================ */
 
-/**
- * @brief Get category name
- */
-const char* uft_log_category_name(uft_log_mask_t category);
 
-/**
- * @brief Get level name
- */
-const char* uft_log_level_name(uft_log_level_t level);
 
-/**
- * @brief Parse mask from string (e.g., "62" or "read,format,write")
- */
-uint32_t uft_log_parse_mask(const char *str);
 
-/**
- * @brief Format mask as string
- */
-const char* uft_log_mask_to_string(uint32_t mask, char *buffer, size_t size);
 
 #ifdef __cplusplus
 }

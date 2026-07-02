@@ -208,38 +208,11 @@ typedef struct {
  * DMK API Functions
  *============================================================================*/
 
-/**
- * @brief Initialize DMK image structure
- */
-int uft_dmk_init(uft_dmk_image_t* img);
 
-/**
- * @brief Free DMK image resources
- */
-void uft_dmk_free(uft_dmk_image_t* img);
 
-/**
- * @brief Detect if data is DMK format
- * @param data Data buffer
- * @param size Data size
- * @return true if appears to be DMK
- */
-bool uft_dmk_detect(const uint8_t* data, size_t size);
 
-/**
- * @brief Read DMK image from file
- */
-int uft_dmk_read(const char* filename, uft_dmk_image_t* img);
 
-/**
- * @brief Read DMK image from memory
- */
-int uft_dmk_read_mem(const uint8_t* data, size_t size, uft_dmk_image_t* img);
 
-/**
- * @brief Write DMK image to file
- */
-int uft_dmk_write(const char* filename, const uft_dmk_image_t* img);
 
 /**
  * @brief Get track by cylinder and head
@@ -247,19 +220,7 @@ int uft_dmk_write(const char* filename, const uft_dmk_image_t* img);
 uft_dmk_track_t* uft_dmk_get_track(uft_dmk_image_t* img,
                                     uint8_t cylinder, uint8_t head);
 
-/**
- * @brief Parse IDAMs from raw track data
- * @param track Track to parse
- * @return Number of IDAMs found
- */
-int uft_dmk_parse_idams(uft_dmk_track_t* track);
 
-/**
- * @brief Extract sectors from track
- * @param track Track to process
- * @return Number of sectors found
- */
-int uft_dmk_extract_sectors(uft_dmk_track_t* track);
 
 /**
  * @brief Read sector data
@@ -272,10 +233,6 @@ int uft_dmk_extract_sectors(uft_dmk_track_t* track);
 int uft_dmk_read_sector(const uft_dmk_track_t* track, uint8_t sector_num,
                         uint8_t* buffer, size_t size);
 
-/**
- * @brief Convert DMK to IMD format
- */
-int uft_dmk_to_imd(const uft_dmk_image_t* dmk, struct uft_imd_image_t* imd);
 
 /**
  * @brief Convert DMK to raw binary
@@ -302,10 +259,6 @@ uint16_t uft_dmk_crc16(const uint8_t* data, size_t length, uint16_t crc);
  */
 #define UFT_DMK_CRC_A1A1A1  0xCDB4
 
-/**
- * @brief Print DMK image information
- */
-void uft_dmk_print_info(const uft_dmk_image_t* img, bool verbose);
 
 /*============================================================================
  * DMK Track Data Utilities
@@ -322,13 +275,6 @@ void uft_dmk_print_info(const uft_dmk_image_t* img, bool verbose);
 int uft_dmk_find_mark(const uft_dmk_track_t* track, uint16_t start,
                       uint8_t mark, bool fm);
 
-/**
- * @brief Check if offset contains valid MFM sync pattern
- * @param track Track data
- * @param offset Offset to check
- * @return true if 3x A1 sync found
- */
-bool uft_dmk_is_mfm_sync(const uft_dmk_track_t* track, uint16_t offset);
 
 #ifdef __cplusplus
 }

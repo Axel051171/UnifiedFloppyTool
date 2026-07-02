@@ -393,21 +393,7 @@ typedef enum {
  */
 uft_bbc_ctx_t *uft_bbc_create(void);
 
-/**
- * @brief Destroy filesystem context
- * @param ctx Context to destroy
- */
-void uft_bbc_destroy(uft_bbc_ctx_t *ctx);
 
-/**
- * @brief Open disk image
- * @param ctx Context
- * @param data Image data
- * @param size Image size
- * @param copy If true, copy data; if false, reference it
- * @return UFT_BBC_OK or error code
- */
-int uft_bbc_open(uft_bbc_ctx_t *ctx, const uint8_t *data, size_t size, bool copy);
 
 /**
  * @brief Open disk image with explicit format
@@ -424,20 +410,7 @@ int uft_bbc_open_with_format(uft_bbc_ctx_t *ctx, const uint8_t *data, size_t siz
                              bool is_adfs, uft_dfs_variant_t variant,
                              uft_dfs_geometry_t geometry, bool copy);
 
-/**
- * @brief Close disk image (keeps context)
- * @param ctx Context
- */
-void uft_bbc_close(uft_bbc_ctx_t *ctx);
 
-/**
- * @brief Save modified image
- * @param ctx Context
- * @param buffer Output buffer
- * @param buffer_size Buffer size
- * @return Bytes written or negative error
- */
-int uft_bbc_save(uft_bbc_ctx_t *ctx, uint8_t *buffer, size_t buffer_size);
 
 /*===========================================================================
  * Detection API
@@ -452,19 +425,7 @@ int uft_bbc_save(uft_bbc_ctx_t *ctx, uint8_t *buffer, size_t buffer_size);
  */
 int uft_bbc_detect(const uint8_t *data, size_t size, uft_bbc_detect_t *result);
 
-/**
- * @brief Get geometry from size
- * @param size Image size
- * @return Geometry enum or -1 if unknown
- */
-int uft_bbc_geometry_from_size(size_t size);
 
-/**
- * @brief Get size for geometry
- * @param geometry Geometry enum
- * @return Size in bytes
- */
-size_t uft_bbc_size_for_geometry(uft_dfs_geometry_t geometry);
 
 /*===========================================================================
  * Sector I/O API
@@ -494,79 +455,17 @@ int uft_bbc_read_sector(uft_bbc_ctx_t *ctx, int track, int side, int sector,
 int uft_bbc_write_sector(uft_bbc_ctx_t *ctx, int track, int side, int sector,
                          const uint8_t *data);
 
-/**
- * @brief Get sector offset in image
- * @param ctx Context
- * @param track Track number
- * @param side Side (0 or 1)
- * @param sector Sector number
- * @return Offset or -1 if invalid
- */
-int uft_bbc_sector_offset(const uft_bbc_ctx_t *ctx, int track, int side, int sector);
 
 /*===========================================================================
  * Catalog API (DFS)
  *===========================================================================*/
 
-/**
- * @brief Read catalog from disk
- * @param ctx Context
- * @param side Side (0 or 1)
- * @return UFT_BBC_OK or error code
- */
-int uft_bbc_read_catalog(uft_bbc_ctx_t *ctx, int side);
 
-/**
- * @brief Write catalog to disk
- * @param ctx Context
- * @param side Side (0 or 1)
- * @return UFT_BBC_OK or error code
- */
-int uft_bbc_write_catalog(uft_bbc_ctx_t *ctx, int side);
 
-/**
- * @brief Get disk title
- * @param ctx Context
- * @param side Side (0 or 1)
- * @param title Output buffer (at least 13 bytes)
- * @return UFT_BBC_OK or error code
- */
-int uft_bbc_get_title(uft_bbc_ctx_t *ctx, int side, char *title);
 
-/**
- * @brief Set disk title
- * @param ctx Context
- * @param side Side (0 or 1)
- * @param title New title (up to 12 chars)
- * @return UFT_BBC_OK or error code
- */
-int uft_bbc_set_title(uft_bbc_ctx_t *ctx, int side, const char *title);
 
-/**
- * @brief Get boot option
- * @param ctx Context
- * @param side Side (0 or 1)
- * @return Boot option enum
- */
-uft_dfs_boot_t uft_bbc_get_boot_option(uft_bbc_ctx_t *ctx, int side);
 
-/**
- * @brief Set boot option
- * @param ctx Context
- * @param side Side (0 or 1)
- * @param boot Boot option
- * @return UFT_BBC_OK or error code
- */
-int uft_bbc_set_boot_option(uft_bbc_ctx_t *ctx, int side, uft_dfs_boot_t boot);
 
-/**
- * @brief Get free space
- * @param ctx Context
- * @param side Side (0 or 1)
- * @param free_sectors Output: free sectors
- * @return Free bytes
- */
-uint32_t uft_bbc_get_free_space(uft_bbc_ctx_t *ctx, int side, int *free_sectors);
 
 /*===========================================================================
  * Directory API
@@ -583,11 +482,6 @@ uint32_t uft_bbc_get_free_space(uft_bbc_ctx_t *ctx, int side, int *free_sectors)
 int uft_bbc_read_directory(uft_bbc_ctx_t *ctx, int side, const char *directory,
                            uft_bbc_dir_t *dir);
 
-/**
- * @brief Free directory listing
- * @param dir Directory to free
- */
-void uft_bbc_free_directory(uft_bbc_dir_t *dir);
 
 /**
  * @brief Find file by name
@@ -666,14 +560,6 @@ int uft_bbc_inject_from_file(uft_bbc_ctx_t *ctx, int side, const char *filename,
                              uint32_t load_addr, uint32_t exec_addr,
                              const char *path);
 
-/**
- * @brief Delete file
- * @param ctx Context
- * @param side Side (0 or 1)
- * @param filename Filename to delete
- * @return UFT_BBC_OK or error code
- */
-int uft_bbc_delete_file(uft_bbc_ctx_t *ctx, int side, const char *filename);
 
 /**
  * @brief Rename file
@@ -732,71 +618,20 @@ int uft_bbc_create_dfs_image(uint8_t *buffer, uft_dfs_geometry_t geometry,
 int uft_bbc_create_adfs_image(uint8_t *buffer, uft_adfs_format_t format,
                               const char *title);
 
-/**
- * @brief Format existing context
- * @param ctx Context
- * @param title New title (optional)
- * @param boot_option Boot option (DFS)
- * @return UFT_BBC_OK or error code
- */
-int uft_bbc_format(uft_bbc_ctx_t *ctx, const char *title, uft_dfs_boot_t boot_option);
 
 /*===========================================================================
  * Validation API
  *===========================================================================*/
 
-/**
- * @brief Validate disk image
- * @param ctx Context
- * @param report Output buffer for report (optional)
- * @param report_size Report buffer size
- * @return UFT_BBC_OK if valid, error code if issues found
- */
-int uft_bbc_validate(uft_bbc_ctx_t *ctx, char *report, size_t report_size);
 
-/**
- * @brief Check for overlapping files
- * @param ctx Context
- * @param side Side (0 or 1)
- * @return Number of overlapping file pairs, 0 if none
- */
-int uft_bbc_check_overlaps(uft_bbc_ctx_t *ctx, int side);
 
-/**
- * @brief Compact disk (defragment)
- * @param ctx Context
- * @param side Side (0 or 1)
- * @return UFT_BBC_OK or error code
- */
-int uft_bbc_compact(uft_bbc_ctx_t *ctx, int side);
 
 /*===========================================================================
  * Utility API
  *===========================================================================*/
 
-/**
- * @brief Parse BBC filename
- * @param input Input string (e.g., "$.PROGRAM" or "A.FILE")
- * @param directory Output directory letter
- * @param filename Output filename (7 chars + null)
- * @return UFT_BBC_OK or UFT_BBC_ERR_NAME
- */
-int uft_bbc_parse_filename(const char *input, char *directory, char *filename);
 
-/**
- * @brief Format filename for display
- * @param directory Directory letter
- * @param filename Filename
- * @param buffer Output buffer (at least 10 bytes)
- */
-void uft_bbc_format_filename(char directory, const char *filename, char *buffer);
 
-/**
- * @brief Validate filename
- * @param filename Filename to validate
- * @return true if valid
- */
-bool uft_bbc_validate_filename(const char *filename);
 
 /**
  * @brief Get boot option name
@@ -837,20 +672,7 @@ const char *uft_bbc_error_string(int error);
  * Print/Export API
  *===========================================================================*/
 
-/**
- * @brief Print directory listing
- * @param ctx Context
- * @param side Side (0 or 1)
- * @param output Output file (stdout if NULL)
- */
-void uft_bbc_print_directory(uft_bbc_ctx_t *ctx, int side, FILE *output);
 
-/**
- * @brief Print disk info
- * @param ctx Context
- * @param output Output file (stdout if NULL)
- */
-void uft_bbc_print_info(uft_bbc_ctx_t *ctx, FILE *output);
 
 /**
  * @brief Export directory as JSON
@@ -863,14 +685,6 @@ void uft_bbc_print_info(uft_bbc_ctx_t *ctx, FILE *output);
 int uft_bbc_directory_to_json(uft_bbc_ctx_t *ctx, int side, char *buffer,
                               size_t buffer_size);
 
-/**
- * @brief Export disk info as JSON
- * @param ctx Context
- * @param buffer Output buffer
- * @param buffer_size Buffer size
- * @return Bytes written or negative error
- */
-int uft_bbc_info_to_json(uft_bbc_ctx_t *ctx, char *buffer, size_t buffer_size);
 
 /*===========================================================================
  * BBC CRC-16

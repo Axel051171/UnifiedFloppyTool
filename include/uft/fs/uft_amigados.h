@@ -381,12 +381,6 @@ int uft_amiga_read_block(const uft_amiga_ctx_t *ctx, uint32_t block_num,
 int uft_amiga_write_block(uft_amiga_ctx_t *ctx, uint32_t block_num,
                           const uint8_t *buffer);
 
-/**
- * @brief Calculate block checksum
- * @param block Block data (512 bytes)
- * @return Checksum value (should be 0 for valid block)
- */
-uint32_t uft_amiga_block_checksum(const uint8_t *block);
 
 /**
  * @brief Update block checksum
@@ -626,29 +620,8 @@ int uft_amiga_set_comment(uft_amiga_ctx_t *ctx, const char *path,
 int uft_amiga_get_bitmap_info(const uft_amiga_ctx_t *ctx,
                               uft_amiga_bitmap_info_t *info);
 
-/**
- * @brief Check if block is free
- * @param ctx Context
- * @param block_num Block number
- * @return true if free
- */
-bool uft_amiga_is_block_free(const uft_amiga_ctx_t *ctx, uint32_t block_num);
 
-/**
- * @brief Allocate a free block
- * @param ctx Context
- * @param preferred Preferred block number (0 for any)
- * @return Block number or 0 on failure
- */
-uint32_t uft_amiga_alloc_block(uft_amiga_ctx_t *ctx, uint32_t preferred);
 
-/**
- * @brief Free a block
- * @param ctx Context
- * @param block_num Block to free
- * @return 0 on success
- */
-int uft_amiga_free_block(uft_amiga_ctx_t *ctx, uint32_t block_num);
 
 /**
  * @brief Allocate contiguous blocks
@@ -664,41 +637,10 @@ size_t uft_amiga_alloc_blocks(uft_amiga_ctx_t *ctx, size_t count,
  * Validation Functions
  *===========================================================================*/
 
-/**
- * @brief Validate filesystem
- * @param ctx Context
- * @param report Output validation report
- * @return 0 on success (valid), negative on invalid
- */
-int uft_amiga_validate(const uft_amiga_ctx_t *ctx, uft_amiga_validation_t *report);
 
-/**
- * @brief Free validation report
- * @param report Report to free
- */
-void uft_amiga_free_validation(uft_amiga_validation_t *report);
 
-/**
- * @brief Fix bitmap inconsistencies
- * @param ctx Context
- * @return Number of fixes made
- */
-int uft_amiga_fix_bitmap(uft_amiga_ctx_t *ctx);
 
-/**
- * @brief Rebuild bitmap from scratch
- * @param ctx Context
- * @return 0 on success
- */
-int uft_amiga_rebuild_bitmap(uft_amiga_ctx_t *ctx);
 
-/**
- * @brief Check block chain integrity
- * @param ctx Context
- * @param header_block File/dir header block
- * @return 0 if valid, negative on error
- */
-int uft_amiga_check_chain(const uft_amiga_ctx_t *ctx, uint32_t header_block);
 
 /*===========================================================================
  * Formatting Functions
@@ -729,14 +671,6 @@ int uft_amiga_create_adf(const char *filename, bool is_hd,
  * Utility Functions
  *===========================================================================*/
 
-/**
- * @brief Convert Amiga timestamp to Unix time
- * @param days Days since 1978-01-01
- * @param mins Minutes of day
- * @param ticks Ticks (1/50 second)
- * @return Unix timestamp
- */
-time_t uft_amiga_to_unix_time(uint32_t days, uint32_t mins, uint32_t ticks);
 
 /**
  * @brief Convert Unix time to Amiga timestamp
@@ -748,40 +682,10 @@ time_t uft_amiga_to_unix_time(uint32_t days, uint32_t mins, uint32_t ticks);
 void uft_amiga_from_unix_time(time_t unix_time, uint32_t *days,
                               uint32_t *mins, uint32_t *ticks);
 
-/**
- * @brief Get protection string (e.g., "----rwed")
- * @param protection Protection bits
- * @param buffer Output buffer (9 bytes min)
- */
-void uft_amiga_protection_str(uint32_t protection, char *buffer);
 
-/**
- * @brief Parse protection string to bits
- * @param str Protection string
- * @return Protection bits
- */
-uint32_t uft_amiga_parse_protection(const char *str);
 
-/**
- * @brief Print directory listing
- * @param dir Directory structure
- */
-void uft_amiga_print_dir(const uft_amiga_dir_t *dir);
 
-/**
- * @brief Generate filesystem report as JSON
- * @param ctx Context
- * @param buffer Output buffer
- * @param size Buffer size
- * @return 0 on success
- */
-int uft_amiga_report_json(const uft_amiga_ctx_t *ctx, char *buffer, size_t size);
 
-/**
- * @brief Get default options
- * @return Default options structure
- */
-uft_amiga_options_t uft_amiga_default_options(void);
 
 /*===========================================================================
  * Bootblock Functions
@@ -807,26 +711,8 @@ int uft_amiga_read_bootblock(const uft_amiga_ctx_t *ctx,
 int uft_amiga_write_bootblock(uft_amiga_ctx_t *ctx,
                               const uint8_t *block0, const uint8_t *block1);
 
-/**
- * @brief Calculate bootblock checksum
- * @param boot Bootblock data (1024 bytes)
- * @return Checksum
- */
-uint32_t uft_amiga_bootblock_checksum(const uint8_t *boot);
 
-/**
- * @brief Make bootblock bootable
- * @param ctx Context
- * @return 0 on success
- */
-int uft_amiga_make_bootable(uft_amiga_ctx_t *ctx);
 
-/**
- * @brief Check if bootable
- * @param ctx Context
- * @return true if bootable
- */
-bool uft_amiga_is_bootable(const uft_amiga_ctx_t *ctx);
 
 #ifdef __cplusplus
 }

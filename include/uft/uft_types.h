@@ -513,20 +513,8 @@ static inline uft_write_options_t uft_default_write_options(void) {
     };
 }
 
-/**
- * @brief Geometrie für Preset holen
- */
-uft_geometry_t uft_geometry_for_preset(uft_geometry_preset_t preset);
 
-/**
- * @brief Format-Info holen
- */
-const uft_format_info_t* uft_format_get_info(uft_format_t format);
 
-/**
- * @brief Format aus Extension erraten
- */
-uft_format_t uft_format_from_extension(const char* extension);
 
 #ifdef __cplusplus
 }

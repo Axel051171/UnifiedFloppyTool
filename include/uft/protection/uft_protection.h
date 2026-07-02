@@ -258,19 +258,7 @@ size_t uft_analyze_track_sectors(
  * Protection Scheme Detection
  * ============================================================================ */
 
-/**
- * @brief Create a new protection report
- * 
- * @return Allocated report, or NULL on failure
- */
-uft_protection_report_t* uft_protection_report_create(void);
 
-/**
- * @brief Free a protection report
- * 
- * @param report Report to free
- */
-void uft_protection_report_free(uft_protection_report_t *report);
 
 /**
  * @brief Add a hit to the report
@@ -339,26 +327,11 @@ typedef struct {
 extern const uft_protection_signature_t uft_protection_signatures[];
 extern const size_t uft_protection_signature_count;
 
-/**
- * @brief Get protection type name
- * 
- * @param type Protection type
- * @return Human-readable name
- */
-const char* uft_protection_type_name(uft_protection_type_t type);
 
 /* ============================================================================
  * Utility Functions
  * ============================================================================ */
 
-/**
- * @brief Calculate track length for a given format
- * 
- * @param data_rate     Data rate in kbps (250, 300, 500, 1000)
- * @param rpm           Rotation speed (300 or 360)
- * @return Track length in bytes
- */
-size_t uft_calc_track_length(uint32_t data_rate, uint32_t rpm);
 
 /**
  * @brief Check if track length is unusual

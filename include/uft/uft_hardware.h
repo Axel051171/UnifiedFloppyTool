@@ -385,15 +385,7 @@ typedef enum {
 // API Functions
 // ============================================================================
 
-/**
- * @brief Hardware-Subsystem initialisieren
- */
-uft_error_t uft_hw_init(void);
 
-/**
- * @brief Hardware-Subsystem herunterfahren
- */
-void uft_hw_shutdown(void);
 
 /**
  * @brief Backend registrieren
@@ -463,23 +455,10 @@ uft_error_t uft_hw_open(const uft_hw_info_t* info, uft_hw_device_t** device);
  */
 void uft_hw_close(uft_hw_device_t* device);
 
-/**
- * @brief Device-Info abfragen
- */
-uft_error_t uft_hw_get_info(uft_hw_device_t* device, uft_hw_info_t* info);
 
-/**
- * @brief Drive-Status abfragen
- */
-uft_error_t uft_hw_get_status(uft_hw_device_t* device, uft_drive_status_t* status);
 
 // === Motor/Seek ===
 
-uft_error_t uft_hw_motor_on(uft_hw_device_t* device);
-uft_error_t uft_hw_motor_off(uft_hw_device_t* device);
-uft_error_t uft_hw_seek(uft_hw_device_t* device, uint8_t track);
-uft_error_t uft_hw_select_head(uft_hw_device_t* device, uint8_t head);
-uft_error_t uft_hw_recalibrate(uft_hw_device_t* device);
 
 // === Track I/O ===
 
@@ -556,81 +535,26 @@ uft_error_t uft_hw_write_disk(uft_hw_device_t* device,
 // Utility Functions
 // ============================================================================
 
-/**
- * @brief Hardware-Typ zu String
- */
-const char* uft_hw_type_name(uft_hw_type_t type);
 
 /**
  * @brief Drive-Typ zu String
  */
 const char* uft_drive_type_name(uft_drive_type_t type);
 
-/**
- * @brief Prüft ob Hardware Flux-Level Zugriff unterstützt
- */
-bool uft_hw_supports_flux(uft_hw_type_t type);
 
-/**
- * @brief Empfohlenes Output-Format für Hardware
- */
-uft_format_t uft_hw_recommended_format(uft_hw_type_t type, uft_drive_type_t drive);
 
 // ============================================================================
 // Backend Manager API
 // ============================================================================
 
-/**
- * @brief Hardware Manager initialisieren
- */
-uft_error_t uft_hw_manager_init(void);
 
-/**
- * @brief Hardware Manager herunterfahren
- */
-void uft_hw_manager_shutdown(void);
 
-/**
- * @brief Backend registrieren
- */
-uft_error_t uft_hw_manager_register(const uft_hw_backend_t* backend);
 
-/**
- * @brief Backend aktivieren/deaktivieren
- * 
- * @param type Hardware-Typ (z.B. UFT_HW_XUM1541 für Nibtools)
- * @param enabled true = aktivieren, false = deaktivieren
- * @return UFT_OK bei Erfolg
- * 
- * BEISPIEL - Nibtools ausschalten:
- *   uft_hw_backend_set_enabled(UFT_HW_XUM1541, false);
- */
-uft_error_t uft_hw_backend_set_enabled(uft_hw_type_t type, bool enabled);
 
-/**
- * @brief Prüft ob Backend aktiviert ist
- */
-bool uft_hw_backend_is_enabled(uft_hw_type_t type);
 
-/**
- * @brief Alle Backends deaktivieren
- */
-void uft_hw_backend_disable_all(void);
 
-/**
- * @brief Alle Backends aktivieren
- */
-void uft_hw_backend_enable_all(void);
 
-/**
- * @brief Backend-Priorität setzen
- */
-uft_error_t uft_hw_backend_set_priority(uft_hw_type_t type, int priority);
 
-/**
- * @brief Liste aller registrierten Backends
- */
-size_t uft_hw_backend_list(uft_hw_type_t* types, bool* enabled, size_t max_count);
 
 /**
  * @brief Geräte auflisten (nur aktivierte Backends)
@@ -642,46 +566,13 @@ uft_error_t uft_hw_manager_enumerate(uft_hw_info_t* devices, size_t max_devices,
 // Convenience Functions
 // ============================================================================
 
-/**
- */
-void uft_hw_use_GCR_tools_only(void);
 
-/**
- * @brief Nur Flux-Hardware aktivieren
- */
-void uft_hw_use_flux_only(void);
 
-/**
- * @brief Alle Standard-Backends aktivieren
- */
-void uft_hw_use_all(void);
 
-/**
- * @brief Nibtools ein/ausschalten
- * 
- * BEISPIEL:
- */
-void uft_hw_GCR_tools_enable(bool enable);
 
-/**
- * @brief Konfiguration speichern
- */
-uft_error_t uft_hw_config_save(const char* path);
 
-/**
- * @brief Konfiguration laden
- */
-uft_error_t uft_hw_config_load(const char* path);
 
-/**
- * @brief Builtin-Backends registrieren
- */
-uft_error_t uft_hw_register_builtin_backends(void);
 
-/**
- * @brief Backend-Status ausgeben (Debug)
- */
-void uft_hw_print_backends(void);
 
 #ifdef __cplusplus
 }

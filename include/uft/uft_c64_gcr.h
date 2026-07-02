@@ -210,53 +210,14 @@ typedef struct {
  * GCR Encoding/Decoding Functions
  *============================================================================*/
 
-/**
- * @brief Encode 4 bytes to 5 GCR bytes
- *
- * @param input 4 input bytes
- * @param output 5 output GCR bytes
- */
-void uft_c64_gcr_encode_4to5(const uint8_t input[4], uint8_t output[5]);
 
-/**
- * @brief Decode 5 GCR bytes to 4 bytes
- *
- * @param input 5 GCR bytes
- * @param output 4 output bytes
- * @return true if all GCR codes were valid
- */
-bool uft_c64_gcr_decode_5to4(const uint8_t input[5], uint8_t output[4]);
 
-/**
- * @brief Encode byte buffer to GCR
- *
- * @param data Input bytes
- * @param len Input length (must be multiple of 4)
- * @param gcr Output GCR buffer (len * 5/4 bytes)
- */
-void uft_c64_gcr_encode(const uint8_t *data, size_t len, uint8_t *gcr);
 
-/**
- * @brief Decode GCR buffer to bytes
- *
- * @param gcr GCR input
- * @param len GCR length (must be multiple of 5)
- * @param data Output buffer (len * 4/5 bytes)
- * @return true if all valid
- */
-bool uft_c64_gcr_decode(const uint8_t *gcr, size_t len, uint8_t *data);
 
 /*============================================================================
  * Sector Operations
  *============================================================================*/
 
-/**
- * @brief Calculate XOR checksum
- * @param data Data buffer
- * @param len Data length
- * @return XOR of all bytes
- */
-uint8_t uft_c64_xor_checksum(const uint8_t *data, size_t len);
 
 /**
  * @brief Encode sector header to GCR
@@ -269,13 +230,6 @@ uint8_t uft_c64_xor_checksum(const uint8_t *data, size_t len);
 void uft_c64_encode_header(int track, int sector, uint16_t disk_id,
                            uint8_t gcr[10]);
 
-/**
- * @brief Encode data block to GCR
- *
- * @param data 256 bytes of sector data
- * @param gcr Output: 325 GCR bytes
- */
-void uft_c64_encode_data(const uint8_t data[256], uint8_t gcr[325]);
 
 /**
  * @brief Decode sector header from GCR
@@ -289,14 +243,6 @@ void uft_c64_encode_data(const uint8_t data[256], uint8_t gcr[325]);
 bool uft_c64_decode_header(const uint8_t gcr[10],
                            int *track, int *sector, uint16_t *disk_id);
 
-/**
- * @brief Decode data block from GCR
- *
- * @param gcr 325 GCR bytes
- * @param data Output: 256 bytes
- * @return true if checksum valid
- */
-bool uft_c64_decode_data(const uint8_t gcr[325], uint8_t data[256]);
 
 /*============================================================================
  * Bitstream Processing
@@ -374,13 +320,6 @@ void uft_c64_parser_add_sample(uft_c64_parser_t *parser,
 /** D64 file size (40 tracks, with error info) */
 #define UFT_D64_SIZE_40_ERR     197376
 
-/**
- * @brief Get sector offset in D64 file
- * @param track Track number (1-35 or 1-40)
- * @param sector Sector number
- * @return Byte offset in D64 file
- */
-uint32_t uft_d64_sector_offset(int track, int sector);
 
 /**
  * @brief Read sector from D64 data

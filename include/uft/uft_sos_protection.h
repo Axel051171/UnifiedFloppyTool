@@ -170,24 +170,8 @@ void uft_sos_destroy(uft_sos_t *sos);
  */
 int uft_sos_detect_track(const uint8_t *mfm_data, size_t mfm_size);
 
-/**
- * @brief Check if flux stream contains SOS disk
- * 
- * @param flux Flux transitions (nanoseconds)
- * @param flux_count Number of transitions
- * @return Detection score (0-100)
- */
-int uft_sos_detect_flux(const uint32_t *flux, size_t flux_count);
 
-/**
- * @brief Check if IPF file contains SOS disk
- */
-bool uft_sos_detect_ipf(const char *ipf_path);
 
-/**
- * @brief Check if KryoFlux RAW file contains SOS disk
- */
-bool uft_sos_detect_kf_raw(const char *raw_path);
 
 /*===========================================================================
  * TRACK DECODING
@@ -232,52 +216,15 @@ void uft_sos_track_free(uft_sos_track_t *track);
  * DISK OPERATIONS
  *===========================================================================*/
 
-/**
- * @brief Open SOS disk from KryoFlux RAW files
- * 
- * @param sos Context
- * @param base_path Path to track00.0.raw (or directory)
- * @return 0 on success
- */
-int uft_sos_open_kf_raw(uft_sos_t *sos, const char *base_path);
 
-/**
- * @brief Open SOS disk from IPF file
- * 
- * @param sos Context
- * @param ipf_path Path to IPF file
- * @return 0 on success
- */
-int uft_sos_open_ipf(uft_sos_t *sos, const char *ipf_path);
 
-/**
- * @brief Open SOS disk from SCP file
- */
-int uft_sos_open_scp(uft_sos_t *sos, const char *scp_path);
 
-/**
- * @brief Close disk
- */
-void uft_sos_close(uft_sos_t *sos);
 
-/**
- * @brief Get disk info
- */
-int uft_sos_get_disk_info(uft_sos_t *sos, uft_sos_disk_info_t *info);
 
 /*===========================================================================
  * DATA EXTRACTION
  *===========================================================================*/
 
-/**
- * @brief Read all track data from disk
- * 
- * @param sos Context
- * @param data Output buffer (NULL to query size)
- * @param max_size Buffer size
- * @return Bytes read, or required size if data is NULL
- */
-int uft_sos_read_all_tracks(uft_sos_t *sos, uint8_t *data, size_t max_size);
 
 /**
  * @brief Read specific track
@@ -285,17 +232,6 @@ int uft_sos_read_all_tracks(uft_sos_t *sos, uint8_t *data, size_t max_size);
 int uft_sos_read_track(uft_sos_t *sos, int track, int head,
                         uint8_t *data, size_t max_size);
 
-/**
- * @brief Extract files from SOS disk
- * 
- * Some SOS disks have a file table that can be parsed.
- * 
- * @param sos Context
- * @param files Output: array of file entries
- * @param max_files Maximum files to return
- * @return Number of files found
- */
-int uft_sos_list_files(uft_sos_t *sos, uft_sos_file_t *files, int max_files);
 
 /**
  * @brief Extract single file by name
@@ -303,47 +239,18 @@ int uft_sos_list_files(uft_sos_t *sos, uft_sos_file_t *files, int max_files);
 int uft_sos_extract_file(uft_sos_t *sos, const char *name,
                           uint8_t *data, size_t max_size);
 
-/**
- * @brief Extract all files to directory
- */
-int uft_sos_extract_all(uft_sos_t *sos, const char *output_dir);
 
 /*===========================================================================
  * CONVERSION
  *===========================================================================*/
 
-/**
- * @brief Convert SOS disk to standard ADF
- * 
- * @param sos Context (must be opened)
- * @param adf_path Output ADF path
- * @return 0 on success
- */
-int uft_sos_to_adf(uft_sos_t *sos, const char *adf_path);
 
-/**
- * @brief Convert KryoFlux RAW to extracted files
- */
-int uft_sos_kf_to_files(const char *raw_path, const char *output_dir);
 
-/**
- * @brief Convert IPF to extracted files
- */
-int uft_sos_ipf_to_files(const char *ipf_path, const char *output_dir);
 
 /*===========================================================================
  * LOW-LEVEL MFM OPERATIONS
  *===========================================================================*/
 
-/**
- * @brief Find SOS sync pattern in MFM stream
- * 
- * @param mfm MFM data
- * @param mfm_bits Number of bits
- * @param start_bit Starting position
- * @return Bit offset, or -1 if not found
- */
-int uft_sos_find_sync(const uint8_t *mfm, size_t mfm_bits, int start_bit);
 
 /**
  * @brief Decode SOS MFM data
@@ -382,10 +289,6 @@ typedef enum {
     UFT_SOS_GAME_SENSIBLE_GOLF
 } uft_sos_game_t;
 
-/**
- * @brief Detect which game the disk contains
- */
-uft_sos_game_t uft_sos_detect_game(uft_sos_t *sos);
 
 /**
  * @brief Get game name string
@@ -396,15 +299,7 @@ const char* uft_sos_game_name(uft_sos_game_t game);
  * UTILITIES
  *===========================================================================*/
 
-/**
- * @brief Print track info
- */
-void uft_sos_print_track_info(const uft_sos_track_t *track);
 
-/**
- * @brief Print disk info
- */
-void uft_sos_print_disk_info(uft_sos_t *sos);
 
 #ifdef __cplusplus
 }

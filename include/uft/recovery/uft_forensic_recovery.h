@@ -21,8 +21,6 @@ extern "C" {
 typedef struct uft_recovery_ctx uft_recovery_ctx_t;
 typedef struct uft_recovery_result uft_recovery_result_t;
 
-int uft_recovery_init(uft_recovery_ctx_t **ctx);
-void uft_recovery_free(uft_recovery_ctx_t *ctx);
 
 #ifdef __cplusplus
 }

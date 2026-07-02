@@ -98,13 +98,6 @@ uft_msa_error_t uft_msa_parse_header(const uint8_t *src, size_t src_len,
  */
 uft_msa_error_t uft_msa_validate_header(const uft_msa_header_t *header);
 
-/**
- * Calculate raw (uncompressed) disk size from header
- *
- * @param header    Parsed header
- * @return          Size in bytes, or 0 on error
- */
-uint32_t uft_msa_calc_raw_size(const uft_msa_header_t *header);
 
 /**
  * Decompress MSA image to raw sector data

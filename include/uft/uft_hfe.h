@@ -186,28 +186,8 @@ uft_hfe_image_t *uft_hfe_open(const char *path);
 uft_hfe_image_t *uft_hfe_create(int tracks, int sides,
                                 int bitrate, uft_hfe_interface_t interface);
 
-/**
- * @brief Save HFE to file
- * @param img Image handle
- * @param path Output path
- * @param version HFE version (1 or 3)
- * @return 0 on success
- */
-int uft_hfe_save(const uft_hfe_image_t *img, const char *path, int version);
 
-/**
- * @brief Close HFE image
- * @param img Image handle
- */
-void uft_hfe_close(uft_hfe_image_t *img);
 
-/**
- * @brief Read header from file
- * @param file File handle
- * @param header Output header
- * @return 0 on success, -1 on error
- */
-int uft_hfe_read_header(FILE *file, uft_hfe_header_t *header);
 
 /*============================================================================
  * Track Operations

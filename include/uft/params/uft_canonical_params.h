@@ -258,29 +258,13 @@ typedef struct {
  * API Functions
  * ============================================================================ */
 
-/** Initialisiere Parameter mit Defaults */
-uft_canonical_params_t uft_params_init(void);
 
-/** Erstelle Parameter für ein spezifisches Format */
-uft_canonical_params_t uft_params_for_format(uft_format_e format);
 
-/** Lade Preset nach Name */
-int uft_params_from_preset(const char *preset_name, uft_canonical_params_t *params);
 
-/** Berechne Cell-Time aus Datarate */
-uint64_t uft_params_compute_cell_time(uint32_t datarate_bps, uft_encoding_e enc);
 
-/** Berechne Datarate aus Cell-Time */
-uint32_t uft_params_compute_datarate(uint64_t cell_time_ns, uft_encoding_e enc);
 
-/** Berechne abgeleitete Werte neu */
-void uft_params_recompute(uft_canonical_params_t *params);
 
-/** Validiere Parameter */
-int uft_params_validate(uft_canonical_params_t *params);
 
-/** Prüfe ob Parameter valide sind */
-bool uft_params_is_valid(const uft_canonical_params_t *params);
 
 /** Hole Fehlermeldungen */
 int uft_params_get_errors(const uft_canonical_params_t *params,
@@ -336,26 +320,14 @@ int uft_params_from_json(const char *json, uft_canonical_params_t *params);
  * Preset API
  * ============================================================================ */
 
-/** Anzahl verfügbarer Presets */
-int uft_preset_count(void);
 
-/** Liste alle Preset-Namen */
-int uft_preset_list(const char **names, int max_count);
 
-/** Liste Presets einer Kategorie */
-int uft_preset_list_by_category(const char *category, const char **names, int max_count);
 
-/** Liste alle Kategorien */
-int uft_preset_get_categories(const char **categories, int max_count);
 
 /** Hole Preset-Beschreibung */
 const char *uft_preset_get_description(const char *name);
 
-/** Wende Preset an */
-int uft_preset_apply(const char *name, uft_canonical_params_t *params);
 
-/** Hole erwartete Dateigröße für Preset */
-uint32_t uft_preset_get_expected_size(const char *name);
 
 #ifdef __cplusplus
 }

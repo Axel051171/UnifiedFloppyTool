@@ -165,13 +165,6 @@ int uft_badblock_list_add(uft_badblock_list_t *list, uint64_t location,
 int uft_badblock_list_add_entry(uft_badblock_list_t *list,
                                 const uft_badblock_entry_t *entry);
 
-/**
- * @brief Remove entry from list
- * @param list Target list
- * @param index Entry index
- * @return 0 on success
- */
-int uft_badblock_list_remove(uft_badblock_list_t *list, size_t index);
 
 /**
  * @brief Sort list by location
@@ -364,19 +357,7 @@ const char *uft_badblock_unit_str(uft_badblock_unit_t unit);
  */
 const char *uft_badblock_source_str(uft_badblock_source_t source);
 
-/**
- * @brief Print bad block list summary
- * @param list Bad block list
- * @param fp Output stream
- */
-void uft_badblock_print_summary(const uft_badblock_list_t *list, FILE *fp);
 
-/**
- * @brief Print bad block statistics
- * @param stats Statistics
- * @param fp Output stream
- */
-void uft_badblock_print_stats(const uft_badblock_stats_t *stats, FILE *fp);
 
 #ifdef __cplusplus
 }

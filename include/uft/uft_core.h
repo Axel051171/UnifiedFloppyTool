@@ -33,15 +33,6 @@ extern "C" {
  */
 uft_disk_t* uft_disk_open(const char* path, bool read_only);
 
-/**
- * @brief Disk-Image mit Format-Hinweis öffnen
- * 
- * @param path Pfad zur Datei
- * @param format Format (UFT_FORMAT_UNKNOWN für Auto-Detect)
- * @param read_only Nur-Lesen Modus
- * @return Disk-Handle oder NULL bei Fehler
- */
-uft_disk_t* uft_disk_open_format(const char* path, uft_format_t format, bool read_only);
 
 /* uft_disk_create(path, format, geometry) — REMOVED (MF-294): this
  * 3-arg prototype never had a matching implementation. The only
@@ -59,35 +50,15 @@ uft_disk_t* uft_disk_open_format(const char* path, uft_format_t format, bool rea
  */
 void uft_disk_close(uft_disk_t* disk);
 
-/**
- * @brief Disk-Format holen
- */
-uft_format_t uft_disk_get_format(const uft_disk_t* disk);
 
 /**
  * @brief Disk-Geometrie holen
  */
 uft_error_t uft_disk_get_geometry(const uft_disk_t* disk, uft_geometry_t* geometry);
 
-/**
- * @brief Disk-Pfad holen
- */
-const char* uft_disk_get_path(const uft_disk_t* disk);
 
-/**
- * @brief Ist Disk modifiziert?
- */
-bool uft_disk_is_modified(const uft_disk_t* disk);
 
-/**
- * @brief Disk speichern (wenn modifiziert)
- */
-uft_error_t uft_disk_save(uft_disk_t* disk);
 
-/**
- * @brief Disk unter neuem Namen/Format speichern
- */
-uft_error_t uft_disk_save_as(uft_disk_t* disk, const char* path, uft_format_t format);
 
 // ============================================================================
 // Track API
@@ -121,10 +92,6 @@ uft_error_t uft_track_write(uft_disk_t* disk, const uft_track_t* track,
  */
 void uft_track_free(uft_track_t* track);
 
-/**
- * @brief Track-Position holen
- */
-void uft_track_get_position(const uft_track_t* track, int* cylinder, int* head);
 
 /**
  * @brief Anzahl Sektoren im Track
@@ -154,10 +121,6 @@ const uft_sector_t* uft_track_find_sector(const uft_track_t* track, int sector);
  */
 uint32_t uft_track_get_status(const uft_track_t* track);
 
-/**
- * @brief Track-Metriken holen
- */
-uft_error_t uft_track_get_metrics(const uft_track_t* track, uft_track_metrics_t* metrics);
 
 /**
  * @brief Hat Track Flux-Daten?
@@ -209,16 +172,6 @@ int uft_sector_read(uft_disk_t* disk, int cylinder, int head, int sector,
 uft_error_t uft_sector_write(uft_disk_t* disk, int cylinder, int head, int sector,
                               const uint8_t* data, size_t data_size);
 
-/**
- * @brief Block lesen (LBA-Adressierung)
- * 
- * @param disk Disk-Handle
- * @param lba Logical Block Address
- * @param buffer Zielpuffer
- * @param buffer_size Puffergröße
- * @return Gelesene Bytes oder Fehler
- */
-int uft_block_read(uft_disk_t* disk, uint32_t lba, uint8_t* buffer, size_t buffer_size);
 
 /**
  * @brief Block schreiben (LBA-Adressierung)
@@ -252,10 +205,6 @@ void uft_lba_to_chs(const uft_geometry_t* geo, uint32_t lba,
 uft_error_t uft_convert(uft_disk_t* src, const char* dst_path,
                          const uft_convert_options_t* options);
 
-/**
- * @brief Kann Format A nach B konvertiert werden?
- */
-bool uft_can_convert(uft_format_t from, uft_format_t to);
 
 // ============================================================================
 // Analyse API
@@ -304,71 +253,22 @@ uft_error_t uft_analyze(uft_disk_t* disk, uft_analysis_t* analysis,
  */
 uft_format_t uft_detect_format(const char* path, int* confidence);
 
-/**
- * @brief Encoding auto-detecten aus Flux-Daten
- * 
- * @param flux Flux-Transitions
- * @param count Anzahl Transitions
- * @return Erkannte Kodierung
- */
-uft_encoding_t uft_detect_encoding(const uint32_t* flux, size_t count);
 
 // ============================================================================
 // Utility
 // ============================================================================
 
-/**
- * @brief UFT initialisieren
- * 
- * Muss vor allen anderen Aufrufen erfolgen.
- * Lädt Plugins, initialisiert Subsysteme.
- */
-uft_error_t uft_init(void);
 
-/**
- * @brief UFT beenden
- * 
- * Gibt alle Ressourcen frei.
- */
-void uft_shutdown(void);
 
-/**
- * @brief Version holen
- */
-const char* uft_version(void);
 
-/**
- * @brief Log-Handler setzen
- */
-void uft_set_log_handler(uft_log_fn handler, void* user);
 
-/**
- * @brief Standard-Lese-Optionen holen (modifizierbar)
- */
-uft_read_options_t* uft_get_default_read_options(void);
 
-/**
- * @brief Standard-Schreib-Optionen holen (modifizierbar)
- */
-uft_write_options_t* uft_get_default_write_options(void);
 
 // ============================================================================
 // Format Registry
 // ============================================================================
 
-/**
- * @brief Alle registrierten Formate auflisten
- * 
- * @param formats Array für Format-Infos
- * @param max Maximale Anzahl
- * @return Anzahl der Formate
- */
-size_t uft_list_formats(const uft_format_info_t** formats, size_t max);
 
-/**
- * @brief Format für Extension finden
- */
-uft_format_t uft_format_for_extension(const char* ext);
 
 // ============================================================================
 // Convenience Macros

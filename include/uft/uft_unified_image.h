@@ -178,49 +178,31 @@ typedef struct uft_unified_image {
 // API: Lifecycle
 // ============================================================================
 
-uft_unified_image_t*    uft_image_create(void);
-void                    uft_image_destroy(uft_unified_image_t* img);
-uft_error_t             uft_image_open(uft_unified_image_t* img, const char* path);
-uft_error_t             uft_image_save(uft_unified_image_t* img, const char* path, uft_format_t format);
 
 // ============================================================================
 // API: Layer Management
 // ============================================================================
 
-bool        uft_image_has_layer(const uft_unified_image_t* img, uft_layer_t layer);
-uft_error_t uft_image_ensure_layer(uft_unified_image_t* img, uft_layer_t layer);
-void        uft_image_drop_layer(uft_unified_image_t* img, uft_layer_t layer);
 
 // ============================================================================
 // API: Track Access
 // ============================================================================
 
-uft_unified_track_t* uft_image_get_track(uft_unified_image_t* img, int cyl, int head);
-uft_error_t uft_image_get_flux_track(uft_unified_image_t* img, int cyl, int head, uft_flux_track_data_t** flux);
-uft_error_t uft_image_get_sector_track(uft_unified_image_t* img, int cyl, int head, uft_track_t** sectors);
 
 // ============================================================================
 // API: Conversion
 // ============================================================================
 
-uft_error_t uft_image_convert(const uft_unified_image_t* src, uft_format_t target_format, uft_unified_image_t* dst);
-bool uft_image_can_convert(const uft_unified_image_t* src, uft_format_t target_format, char* loss_info, size_t loss_info_size);
 
 // ============================================================================
 // API: Flux Track Helpers
 // ============================================================================
 
-uft_flux_track_data_t* uft_flux_track_create(int cyl, int head);
-void                   uft_flux_track_destroy(uft_flux_track_data_t* track);
-uft_error_t            uft_flux_track_add_revolution(uft_flux_track_data_t* track, const uint32_t* samples, size_t count, uint32_t sample_rate_hz);
-uft_error_t            uft_flux_track_normalize(uft_flux_track_data_t* track, uint32_t target_rate_hz);
 
 // ============================================================================
 // API: Migration from Legacy
 // ============================================================================
 
-uft_error_t uft_image_from_disk(uft_unified_image_t* img, const struct uft_disk* disk);
-uft_error_t uft_image_to_disk(const uft_unified_image_t* img, struct uft_disk* disk);
 
 #ifdef __cplusplus
 }

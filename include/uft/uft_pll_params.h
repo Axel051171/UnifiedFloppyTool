@@ -160,10 +160,6 @@ typedef struct {
  */
 void uft_pll_init(uft_pll_state_t *state, const uft_pll_params_t *params);
 
-/**
- * @brief Reset PLL to centre frequency
- */
-void uft_pll_reset(uft_pll_state_t *state, const uft_pll_params_t *params);
 
 /**
  * @brief Process next flux transition
@@ -171,10 +167,6 @@ void uft_pll_reset(uft_pll_state_t *state, const uft_pll_params_t *params);
  */
 int uft_pll_process_flux(uft_pll_state_t *state, const uft_pll_params_t *params, int flux_ns);
 
-/**
- * @brief Check if sync was lost
- */
-bool uft_pll_sync_lost(uft_pll_state_t *state);
 
 #ifdef __cplusplus
 }

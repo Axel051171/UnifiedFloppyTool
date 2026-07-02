@@ -401,20 +401,8 @@ int uft_atari_dir_get(const uft_atari_disk_t *disk, int index,
  */
 int uft_atari_dir_find(const uft_atari_disk_t *disk, const char *name);
 
-/**
- * @brief Delete file
- */
-int uft_atari_dir_delete(uft_atari_disk_t *disk, int index);
 
-/**
- * @brief Rename file
- */
-int uft_atari_dir_rename(uft_atari_disk_t *disk, int index, const char *newname);
 
-/**
- * @brief Lock/unlock file
- */
-int uft_atari_dir_lock(uft_atari_disk_t *disk, int index, bool locked);
 
 /* ═══════════════════════════════════════════════════════════════════════════════
  * API Functions - File Operations
@@ -432,20 +420,8 @@ int uft_atari_file_open(uft_atari_disk_t *disk, const char *name,
 int uft_atari_file_create(uft_atari_disk_t *disk, const char *name,
                           uft_atari_file_t *file);
 
-/**
- * @brief Read from file
- */
-int uft_atari_file_read(uft_atari_file_t *file, uint8_t *buffer, size_t size);
 
-/**
- * @brief Write to file
- */
-int uft_atari_file_write(uft_atari_file_t *file, const uint8_t *data, size_t size);
 
-/**
- * @brief Close file
- */
-void uft_atari_file_close(uft_atari_file_t *file);
 
 /**
  * @brief Extract file to host filesystem
@@ -468,15 +444,7 @@ int uft_atari_file_add(uft_atari_disk_t *disk, const char *src_path,
  */
 void uft_atari_disk_info(const uft_atari_disk_t *disk, char *buffer, size_t size);
 
-/**
- * @brief Validate disk structure
- */
-int uft_atari_disk_validate(const uft_atari_disk_t *disk);
 
-/**
- * @brief Repair common disk issues
- */
-int uft_atari_disk_repair(uft_atari_disk_t *disk);
 
 /**
  * @brief Calculate file size from sector chain

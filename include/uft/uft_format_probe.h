@@ -180,8 +180,6 @@ uft_error_t uft_probe_handle_unknown(const uft_probe_result_t* result,
 // Registration
 // ============================================================================
 
-uft_error_t uft_probe_register(const uft_probe_handler_t* handler);
-const uft_probe_handler_t* uft_probe_get_handler(uft_format_t format);
 
 #ifdef __cplusplus
 }

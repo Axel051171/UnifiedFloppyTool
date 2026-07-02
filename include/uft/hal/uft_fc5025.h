@@ -95,30 +95,18 @@ typedef int (*uft_fc_callback_t)(const uft_fc_track_t *track, void *user);
  * LIFECYCLE
  *============================================================================*/
 
-uft_fc_config_t* uft_fc_config_create(void);
-void uft_fc_config_destroy(uft_fc_config_t *cfg);
 
 int uft_fc_open(uft_fc_config_t *cfg);
-void uft_fc_close(uft_fc_config_t *cfg);
-bool uft_fc_is_connected(const uft_fc_config_t *cfg);
 
 /*============================================================================
  * CONFIGURATION
  *============================================================================*/
 
-int uft_fc_set_format(uft_fc_config_t *cfg, uft_fc_format_t format);
-int uft_fc_set_drive(uft_fc_config_t *cfg, uft_fc_drive_t drive);
-int uft_fc_set_track_range(uft_fc_config_t *cfg, int start, int end);
-int uft_fc_set_side(uft_fc_config_t *cfg, int side);
-int uft_fc_set_retries(uft_fc_config_t *cfg, int count);
-int uft_fc_set_double_step(uft_fc_config_t *cfg, bool enable);
 
 /*============================================================================
  * DEVICE INFO
  *============================================================================*/
 
-int uft_fc_detect(int *device_count);
-int uft_fc_get_firmware_version(uft_fc_config_t *cfg, int *version);
 
 /*============================================================================
  * CAPTURE
@@ -126,17 +114,11 @@ int uft_fc_get_firmware_version(uft_fc_config_t *cfg, int *version);
 
 int uft_fc_read_track(uft_fc_config_t *cfg, int track, int side,
                        uint8_t **data, size_t *size);
-int uft_fc_read_disk(uft_fc_config_t *cfg, uft_fc_callback_t callback, void *user);
 
 /*============================================================================
  * UTILITIES
  *============================================================================*/
 
-const char* uft_fc_get_error(const uft_fc_config_t *cfg);
-const char* uft_fc_format_name(uft_fc_format_t format);
-const char* uft_fc_drive_name(uft_fc_drive_t drive);
-int uft_fc_tracks_for_format(uft_fc_format_t format);
-int uft_fc_sectors_for_format(uft_fc_format_t format);
 
 #ifdef __cplusplus
 }

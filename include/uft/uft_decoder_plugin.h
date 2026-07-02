@@ -273,20 +273,8 @@ typedef struct uft_decoder_plugin {
 // Plugin Registry
 // ============================================================================
 
-/**
- * @brief Decoder-Plugin registrieren
- */
-uft_error_t uft_register_decoder_plugin(const uft_decoder_plugin_t* plugin);
 
-/**
- * @brief Decoder-Plugin deregistrieren
- */
-uft_error_t uft_unregister_decoder_plugin(uft_encoding_t encoding);
 
-/**
- * @brief Plugin für Encoding holen
- */
-const uft_decoder_plugin_t* uft_get_decoder_plugin(uft_encoding_t encoding);
 
 /**
  * @brief Bestes Plugin für Flux-Daten finden
@@ -294,10 +282,6 @@ const uft_decoder_plugin_t* uft_get_decoder_plugin(uft_encoding_t encoding);
 const uft_decoder_plugin_t* uft_find_decoder_plugin_for_flux(
     const uint32_t* flux, size_t count);
 
-/**
- * @brief Alle Plugins auflisten
- */
-size_t uft_list_decoder_plugins(const uft_decoder_plugin_t** plugins, size_t max);
 
 // ============================================================================
 // High-Level Decode/Encode
@@ -342,10 +326,6 @@ extern const uft_decoder_plugin_t uft_decoder_plugin_gcr_apple;
 // Alle Built-in Decoder registrieren
 // ============================================================================
 
-/**
- * @brief Alle eingebauten Decoder-Plugins registrieren
- */
-uft_error_t uft_register_builtin_decoder_plugins(void);
 
 // ============================================================================
 // PLL Utilities
@@ -379,10 +359,6 @@ void uft_pll_init(uft_pll_t* pll, double nominal_period_ns, double adjust_pct);
  */
 bool uft_pll_process(uft_pll_t* pll, uint32_t delta, uint8_t* bits, int* bit_count);
 
-/**
- * @brief PLL resetten
- */
-void uft_pll_reset(uft_pll_t* pll);
 
 // ============================================================================
 // CRC Utilities
@@ -398,22 +374,8 @@ void uft_pll_reset(uft_pll_t* pll);
  */
 uint16_t uft_crc16_ccitt(const uint8_t* data, size_t len, uint16_t init);
 
-/**
- * @brief CRC für MFM Address Mark
- * 
- * Inkludiert das $A1A1A1 Sync.
- */
-uint16_t uft_crc16_mfm_idam(const uint8_t* id, size_t len);
 
-/**
- * @brief GCR Checksum berechnen (C64)
- */
-uint8_t uft_checksum_gcr_cbm(const uint8_t* data, size_t len);
 
-/**
- * @brief Amiga Checksum berechnen
- */
-uint32_t uft_checksum_amiga(const uint32_t* data, size_t count);
 
 #ifdef __cplusplus
 }

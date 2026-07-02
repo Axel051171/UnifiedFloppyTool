@@ -192,10 +192,6 @@ typedef struct {
  * Function Prototypes
  *===========================================================================*/
 
-/**
- * @brief Initialize detection config
- */
-void uft_atarist_config_init(uft_atarist_detect_config_t *config);
 
 /**
  * @brief Allocate protection result

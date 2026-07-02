@@ -212,15 +212,7 @@ typedef struct {
  */
 void uft_pll_init(uft_pll_state_t* pll);
 
-/**
- * @brief Reset PLL state (keep configuration)
- */
-void uft_pll_reset(uft_pll_state_t* pll);
 
-/**
- * @brief Soft reset (partial reset for new track)
- */
-void uft_pll_soft_reset(uft_pll_state_t* pll);
 
 /**
  * @brief Configure PLL for specific bitrate
@@ -231,10 +223,6 @@ void uft_pll_soft_reset(uft_pll_state_t* pll);
 void uft_pll_configure(uft_pll_state_t* pll, uint32_t bitrate_kbps, 
                        uint32_t tick_freq);
 
-/**
- * @brief Set encoding type
- */
-void uft_pll_set_encoding(uft_pll_state_t* pll, uft_encoding_t encoding);
 
 /*============================================================================
  * Histogram and Peak Detection
@@ -249,13 +237,6 @@ void uft_pll_set_encoding(uft_pll_state_t* pll, uft_encoding_t encoding);
 void uft_pll_compute_histogram(const uint32_t* pulses, size_t count,
                                 uint32_t* histogram);
 
-/**
- * @brief Detect peaks in histogram
- * @param pll PLL state (will store detected peaks)
- * @param histogram Input histogram
- * @return Number of peaks detected
- */
-int uft_pll_detect_peaks(uft_pll_state_t* pll, const uint32_t* histogram);
 
 /**
  * @brief Auto-detect encoding from histogram
@@ -356,16 +337,6 @@ int uft_pll_fuse_revolutions(const uft_decoded_track_t* revs, size_t num_revs,
  * Jitter Filtering
  *============================================================================*/
 
-/**
- * @brief Apply jitter filter to flux stream
- * 
- * Smooths out timing variations while preserving signal.
- * 
- * @param pulses Input/output pulse array
- * @param count Number of pulses
- * @param window Filter window size
- */
-void uft_pll_jitter_filter(uint32_t* pulses, size_t count, size_t window);
 
 /*============================================================================
  * Utility Functions
@@ -403,15 +374,7 @@ static inline uint32_t uft_kbps_to_bitcell(uint32_t kbps)
     return 1000000 / kbps;
 }
 
-/**
- * @brief Print PLL statistics
- */
-void uft_pll_print_stats(const uft_pll_state_t* pll);
 
-/**
- * @brief Free decoded track resources
- */
-void uft_decoded_track_free(uft_decoded_track_t* track);
 
 #ifdef __cplusplus
 }

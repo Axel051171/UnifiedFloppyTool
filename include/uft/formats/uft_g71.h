@@ -29,10 +29,6 @@ int uft_g71_read(const char *path, uft_disk_image_t **out);
  */
 int uft_g71_write(const char *path, const uft_disk_image_t *disk);
 
-/**
- * @brief Create blank G71 image
- */
-int uft_g71_create_blank(uft_disk_image_t **out);
 
 /**
  * @brief Get G71 file info

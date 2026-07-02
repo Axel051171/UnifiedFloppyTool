@@ -160,21 +160,7 @@ typedef struct uft_hal_device uft_hal_device_t;
  */
 typedef void (*uft_hal_discover_cb)(void* user_data, const uft_hal_info_t* info);
 
-/**
- * @brief Discover all connected controllers
- * @param callback Called for each discovered device
- * @param user_data User context passed to callback
- * @return Number of devices found
- */
-int uft_hal_discover(uft_hal_discover_cb callback, void* user_data);
 
-/**
- * @brief Get list of available controllers
- * @param infos Output array
- * @param max_count Maximum entries
- * @return Number of controllers found
- */
-int uft_hal_list(uft_hal_info_t* infos, int max_count);
 
 /* ═══════════════════════════════════════════════════════════════════════════
  * API: DEVICE CONNECTION
@@ -190,12 +176,6 @@ int uft_hal_list(uft_hal_info_t* infos, int max_count);
 int uft_hal_open(uft_hal_controller_t type, const char* port,
                  uft_hal_device_t** device);
 
-/**
- * @brief Open first available controller
- * @param device Output: device handle
- * @return 0 on success, error code on failure
- */
-int uft_hal_open_first(uft_hal_device_t** device);
 
 /**
  * @brief Close device connection
@@ -203,47 +183,14 @@ int uft_hal_open_first(uft_hal_device_t** device);
  */
 void uft_hal_close(uft_hal_device_t* device);
 
-/**
- * @brief Get device information
- * @param device Device handle
- * @param info Output: device info
- * @return 0 on success, error code on failure
- */
-int uft_hal_get_info(uft_hal_device_t* device, uft_hal_info_t* info);
 
 /* ═══════════════════════════════════════════════════════════════════════════
  * API: DRIVE CONTROL
  * ═══════════════════════════════════════════════════════════════════════════ */
 
-/**
- * @brief Select drive unit
- * @param device Device handle
- * @param unit Drive unit (0 or 1)
- * @return 0 on success, error code on failure
- */
-int uft_hal_select_drive(uft_hal_device_t* device, uint8_t unit);
 
-/**
- * @brief Set drive profile
- * @param device Device handle
- * @param profile Drive profile
- * @return 0 on success, error code on failure
- */
-int uft_hal_set_profile(uft_hal_device_t* device, uft_hal_drive_profile_t profile);
 
-/**
- * @brief Recalibrate drive (seek to track 0)
- * @param device Device handle
- * @return 0 on success, error code on failure
- */
-int uft_hal_recalibrate(uft_hal_device_t* device);
 
-/**
- * @brief Check if disk is write protected
- * @param device Device handle
- * @return true if write protected
- */
-bool uft_hal_is_write_protected(uft_hal_device_t* device);
 
 /* ═══════════════════════════════════════════════════════════════════════════
  * API: READING - UFT-IR OUTPUT
@@ -278,13 +225,6 @@ int uft_hal_read_disk(uft_hal_device_t* device, const uft_hal_read_params_t* par
  * API: WRITING - UFT-IR INPUT
  * ═══════════════════════════════════════════════════════════════════════════ */
 
-/**
- * @brief Write single track from UFT-IR format
- * @param device Device handle
- * @param track UFT-IR track data
- * @return 0 on success, error code on failure
- */
-int uft_hal_write_track(uft_hal_device_t* device, const uft_ir_track_t* track);
 
 /**
  * @brief Write entire disk from UFT-IR format
@@ -311,30 +251,8 @@ int uft_hal_write_disk(uft_hal_device_t* device, const uft_ir_disk_t* disk,
  */
 int uft_hal_seek(uft_hal_device_t* device, uint8_t cylinder);
 
-/**
- * @brief Select head
- * @param device Device handle
- * @param head Head number (0 or 1)
- * @return 0 on success, error code on failure
- */
-int uft_hal_select_head(uft_hal_device_t* device, uint8_t head);
 
-/**
- * @brief Control motor
- * @param device Device handle
- * @param on true to turn on
- * @return 0 on success, error code on failure
- */
-int uft_hal_set_motor(uft_hal_device_t* device, bool on);
 
-/**
- * @brief Erase track
- * @param device Device handle
- * @param cylinder Cylinder number
- * @param head Head number
- * @return 0 on success, error code on failure
- */
-int uft_hal_erase_track(uft_hal_device_t* device, uint8_t cylinder, uint8_t head);
 
 /* ═══════════════════════════════════════════════════════════════════════════
  * API: UTILITIES
@@ -363,12 +281,6 @@ void uft_hal_get_default_write_params(uft_hal_drive_profile_t profile,
  */
 const char* uft_hal_controller_name(uft_hal_controller_t type);
 
-/**
- * @brief Get drive profile name
- * @param profile Drive profile
- * @return Static name string
- */
-const char* uft_hal_profile_name(uft_hal_drive_profile_t profile);
 
 /* ═══════════════════════════════════════════════════════════════════════════
  * ERROR CODES
@@ -389,12 +301,6 @@ const char* uft_hal_profile_name(uft_hal_drive_profile_t profile);
 #define UFT_HAL_ERR_UNSUPPORTED     -12
 #define UFT_HAL_ERR_CANCELLED       -13
 
-/**
- * @brief Get error message
- * @param err Error code
- * @return Static error message string
- */
-const char* uft_hal_strerror(int err);
 
 #ifdef __cplusplus
 }

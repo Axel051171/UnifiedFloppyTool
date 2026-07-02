@@ -775,11 +775,6 @@ static inline double uft_estimate_rpm(const double *index_times, size_t count)
  */
 uft_pll_result_t *uft_pll_result_alloc(size_t estimated_bits, uint32_t flags);
 
-/**
- * @brief Free PLL result structure
- * @param result Result to free
- */
-void uft_pll_result_free(uft_pll_result_t *result);
 
 /**
  * @brief Allocate flux revolution structure
@@ -788,11 +783,6 @@ void uft_pll_result_free(uft_pll_result_t *result);
  */
 uft_flux_revolution_t *uft_flux_revolution_alloc(size_t delta_count);
 
-/**
- * @brief Free flux revolution structure
- * @param rev Revolution to free
- */
-void uft_flux_revolution_free(uft_flux_revolution_t *rev);
 
 /*============================================================================
  * High-Level Decode Functions

@@ -604,12 +604,6 @@ int uft_prot_analyze_track(
     uft_prot_track_t* track_result
 );
 
-/**
- * @brief Detect platform from disk characteristics
- * @param result Protection analysis result
- * @return Detected platform (UFT_PLATFORM_UNKNOWN if unsure)
- */
-uft_platform_t uft_prot_detect_platform(const uft_prot_result_t* result);
 
 /*============================================================================
  * PUBLIC API - C64 Protection Suite (S-001)
@@ -901,12 +895,6 @@ int uft_prot_export_markdown(
  */
 void uft_prot_print_summary(const uft_prot_result_t* result);
 
-/**
- * @brief Check if protection scheme is preservable with current tools
- * @param scheme Protection scheme
- * @return true if preservable
- */
-bool uft_prot_is_preservable(uft_protection_scheme_t scheme);
 
 /**
  * @brief Get preservation recommendations for a scheme

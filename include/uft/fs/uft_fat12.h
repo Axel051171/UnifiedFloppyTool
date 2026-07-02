@@ -932,14 +932,6 @@ int uft_fat_set_time(uft_fat_ctx_t *ctx, const char *path, time_t mtime);
  * API - LFN Support
  *===========================================================================*/
 
-/**
- * @brief Generate short filename from long name
- * @param lfn Long filename
- * @param sfn Output short name (8+3 format)
- * @param sfn_display Output display form (8.3 format, 13 bytes)
- * @return 0 on success
- */
-int uft_fat_lfn_to_sfn(const char *lfn, char sfn[11], char sfn_display[13]);
 
 /**
  * @brief Generate unique short filename
@@ -952,41 +944,14 @@ int uft_fat_lfn_to_sfn(const char *lfn, char sfn[11], char sfn_display[13]);
 int uft_fat_generate_sfn(const uft_fat_ctx_t *ctx, uint32_t dir_cluster,
                          const char *lfn, char sfn[11]);
 
-/**
- * @brief Calculate LFN checksum
- * @param sfn Short filename (11 bytes)
- * @return Checksum byte
- */
-uint8_t uft_fat_lfn_checksum(const char sfn[11]);
 
-/**
- * @brief Check if name requires LFN
- * @param name Filename
- * @return true if LFN needed
- */
-bool uft_fat_needs_lfn(const char *name);
 
 /*===========================================================================
  * API - Validation and Repair
  *===========================================================================*/
 
-/**
- * @brief Initialize validation structure
- */
-void uft_fat_validation_init(uft_fat_validation_t *val);
 
-/**
- * @brief Free validation structure
- */
-void uft_fat_validation_free(uft_fat_validation_t *val);
 
-/**
- * @brief Validate filesystem
- * @param ctx Context
- * @param val Output validation result
- * @return 0 on success (check val->valid for result)
- */
-int uft_fat_validate(const uft_fat_ctx_t *ctx, uft_fat_validation_t *val);
 
 /**
  * @brief Repair filesystem issues
@@ -996,26 +961,8 @@ int uft_fat_validate(const uft_fat_ctx_t *ctx, uft_fat_validation_t *val);
  */
 int uft_fat_repair(uft_fat_ctx_t *ctx, const uft_fat_validation_t *val);
 
-/**
- * @brief Rebuild FAT from directory tree
- * @param ctx Context
- * @return 0 on success
- */
-int uft_fat_rebuild_fat(uft_fat_ctx_t *ctx);
 
-/**
- * @brief Compare FAT copies
- * @param ctx Context
- * @return 0 if identical, >0 if differences found
- */
-int uft_fat_compare_fats(const uft_fat_ctx_t *ctx);
 
-/**
- * @brief Sync FAT copies (copy FAT1 to FAT2)
- * @param ctx Context
- * @return 0 on success
- */
-int uft_fat_sync_fats(uft_fat_ctx_t *ctx);
 
 /**
  * @brief Recover deleted files
@@ -1057,21 +1004,7 @@ typedef struct {
     bool bootable;                       /**< Include boot code */
 } uft_fat_format_opts_t;
 
-/**
- * @brief Format new FAT image
- * @param ctx Context
- * @param opts Format options
- * @return 0 on success
- */
-int uft_fat_format(uft_fat_ctx_t *ctx, const uft_fat_format_opts_t *opts);
 
-/**
- * @brief Create new FAT image file
- * @param filename Output filename
- * @param opts Format options
- * @return 0 on success
- */
-int uft_fat_create_image(const char *filename, const uft_fat_format_opts_t *opts);
 
 /*===========================================================================
  * API - Utilities
@@ -1110,29 +1043,8 @@ char *uft_fat_attr_to_string(uint8_t attr, char *buffer);
  */
 const char *uft_fat_strerror(int error);
 
-/**
- * @brief Generate JSON report
- * @param ctx Context
- * @param buffer Output buffer
- * @param size Buffer size
- * @return Bytes written
- */
-size_t uft_fat_to_json(const uft_fat_ctx_t *ctx, char *buffer, size_t size);
 
-/**
- * @brief Print directory listing
- * @param ctx Context
- * @param cluster Directory cluster (0 for root)
- * @param fp Output file (NULL for stdout)
- */
-void uft_fat_print_dir(const uft_fat_ctx_t *ctx, uint32_t cluster, FILE *fp);
 
-/**
- * @brief Print directory tree
- * @param ctx Context
- * @param fp Output file (NULL for stdout)
- */
-void uft_fat_print_tree(const uft_fat_ctx_t *ctx, FILE *fp);
 
 #ifdef __cplusplus
 }

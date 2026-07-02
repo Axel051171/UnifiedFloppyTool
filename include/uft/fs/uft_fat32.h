@@ -203,13 +203,6 @@ bool uft_fat32_validate(const uft_fat32_bootsect_t *boot);
  * FAT32 API - Formatting
  *===========================================================================*/
 
-/**
- * @brief Calculate optimal FAT32 parameters
- * @param size Volume size in bytes
- * @param opts Output options (pre-filled with defaults)
- * @return 0 on success, error code otherwise
- */
-int uft_fat32_calc_params(uint64_t size, uft_fat32_format_opts_t *opts);
 
 /**
  * @brief Format image as FAT32
@@ -250,13 +243,6 @@ int uft_fat32_read_fsinfo(const uint8_t *data, const uft_fat32_bootsect_t *boot,
 int uft_fat32_write_fsinfo(uint8_t *data, const uft_fat32_bootsect_t *boot,
                            const uft_fat32_fsinfo_t *info);
 
-/**
- * @brief Update FSInfo from FAT scan
- * @param data Image data (modified)
- * @param boot Boot sector
- * @return 0 on success
- */
-int uft_fat32_update_fsinfo(uint8_t *data, const uft_fat32_bootsect_t *boot);
 
 /*===========================================================================
  * FAT32 API - FAT Operations
@@ -308,20 +294,7 @@ static inline bool uft_fat32_is_bad(uint32_t value) {
  * FAT32 API - Cluster Operations
  *===========================================================================*/
 
-/**
- * @brief Get data region offset
- * @param boot Boot sector
- * @return Byte offset of data region
- */
-uint64_t uft_fat32_data_offset(const uft_fat32_bootsect_t *boot);
 
-/**
- * @brief Get cluster offset
- * @param boot Boot sector
- * @param cluster Cluster number
- * @return Byte offset of cluster
- */
-uint64_t uft_fat32_cluster_offset(const uft_fat32_bootsect_t *boot, uint32_t cluster);
 
 /**
  * @brief Get cluster size in bytes
@@ -360,27 +333,8 @@ uint32_t uft_fat32_free_chain(uint8_t *data, const uft_fat32_bootsect_t *boot,
  * FAT32 API - Backup Boot Sector
  *===========================================================================*/
 
-/**
- * @brief Copy boot sector to backup location
- * @param data Image data (modified)
- * @param boot Boot sector
- * @return 0 on success
- */
-int uft_fat32_write_backup_boot(uint8_t *data, const uft_fat32_bootsect_t *boot);
 
-/**
- * @brief Restore boot sector from backup
- * @param data Image data (modified)
- * @return 0 on success
- */
-int uft_fat32_restore_from_backup(uint8_t *data);
 
-/**
- * @brief Compare boot sector with backup
- * @param data Image data
- * @return true if identical
- */
-bool uft_fat32_compare_backup(const uint8_t *data);
 
 /*===========================================================================
  * FAT32 API - Conversion
@@ -393,12 +347,6 @@ bool uft_fat32_compare_backup(const uint8_t *data);
  */
 uft_fat_type_t uft_fat_type_for_size(uint64_t size);
 
-/**
- * @brief Get recommended cluster size for FAT32
- * @param size Volume size in bytes
- * @return Recommended sectors per cluster
- */
-uint8_t uft_fat32_recommended_spc(uint64_t size);
 
 #ifdef __cplusplus
 }

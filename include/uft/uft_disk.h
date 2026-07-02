@@ -60,20 +60,8 @@ void uft_disk_free(uft_disk_t *disk);
  */
 uft_error_t uft_disk_get_geometry(const uft_disk_t *disk, uft_geometry_t *geom);
 
-/**
- * @brief Set writer backend
- */
-void uft_disk_set_writer(uft_disk_t *disk, uft_writer_backend_t *backend);
 
-/**
- * @brief Get writer backend
- */
-uft_writer_backend_t* uft_disk_get_writer(uft_disk_t *disk);
 
-/**
- * @brief Save disk to file
- */
-uft_error_t uft_disk_save(uft_disk_t *disk, const char *path);
 
 #ifdef __cplusplus
 }

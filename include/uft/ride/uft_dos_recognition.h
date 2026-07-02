@@ -233,19 +233,7 @@ typedef struct uft_dos_interface {
  * DOS RECOGNITION FUNCTIONS
  *============================================================================*/
 
-/**
- * @brief Register a DOS handler
- * @param dos DOS interface to register
- * @return true on success
- */
-bool uft_dos_register(const uft_dos_interface_t *dos);
 
-/**
- * @brief Unregister a DOS handler
- * @param type DOS type to unregister
- * @return true on success
- */
-bool uft_dos_unregister(uft_dos_type_t type);
 
 /**
  * @brief Recognize DOS from boot sector
@@ -258,20 +246,7 @@ bool uft_dos_unregister(uft_dos_type_t type);
 int uft_dos_recognize(const uint8_t *boot_sector, size_t size,
                       uft_dos_recognition_t *results, int max_results);
 
-/**
- * @brief Get best matching DOS type
- * @param boot_sector Boot sector data
- * @param size Boot sector size
- * @return Best matching DOS type (UFT_DOS_UNKNOWN if none)
- */
-uft_dos_type_t uft_dos_best_match(const uint8_t *boot_sector, size_t size);
 
-/**
- * @brief Set custom recognition order
- * @param order Array of DOS types in priority order
- * @param count Number of entries
- */
-void uft_dos_set_recognition_order(const uft_dos_type_t *order, size_t count);
 
 /**
  * @brief Get DOS interface for type
@@ -356,12 +331,6 @@ typedef struct {
  */
 int uft_fat_probe(const uint8_t *boot, size_t size);
 
-/**
- * @brief Determine FAT type from boot sector
- * @param boot Parsed boot sector
- * @return FAT12, FAT16, FAT32, or UNKNOWN
- */
-uft_dos_type_t uft_fat_determine_type(const uft_fat_boot_t *boot);
 
 /*============================================================================
  * TR-DOS SUPPORT (ZX SPECTRUM)
@@ -424,13 +393,6 @@ typedef struct {
 } uft_trdos_entry_t;
 #pragma pack(pop)
 
-/**
- * @brief Probe TR-DOS filesystem
- * @param sector9 Sector 9 data (boot sector)
- * @param size Sector size
- * @return Confidence score (0-100)
- */
-int uft_trdos_probe(const uint8_t *sector9, size_t size);
 
 /*============================================================================
  * +3DOS SUPPORT (ZX SPECTRUM +3)
@@ -456,13 +418,6 @@ typedef struct {
 } uft_plus3_spec_t;
 #pragma pack(pop)
 
-/**
- * @brief Probe +3DOS filesystem
- * @param boot Boot sector data
- * @param size Sector size
- * @return Confidence score (0-100)
- */
-int uft_plus3_probe(const uint8_t *boot, size_t size);
 
 /*============================================================================
  * AMSDOS SUPPORT (AMSTRAD CPC)
@@ -492,13 +447,6 @@ typedef struct {
 } uft_amsdos_header_t;
 #pragma pack(pop)
 
-/**
- * @brief Probe AMSDOS filesystem
- * @param boot Boot sector data
- * @param size Sector size
- * @return Confidence score (0-100)
- */
-int uft_amsdos_probe(const uint8_t *boot, size_t size);
 
 /*============================================================================
  * CP/M SUPPORT
@@ -536,13 +484,6 @@ typedef struct {
     uint16_t    off;                /**< Track offset */
 } uft_cpm_dpb_t;
 
-/**
- * @brief Probe CP/M filesystem
- * @param dir Directory data
- * @param size Data size
- * @return Confidence score (0-100)
- */
-int uft_cpm_probe(const uint8_t *dir, size_t size);
 
 /*============================================================================
  * DIRECTORY MANAGEMENT
@@ -555,42 +496,14 @@ int uft_cpm_probe(const uint8_t *dir, size_t size);
  */
 uft_directory_t *uft_directory_create(size_t capacity);
 
-/**
- * @brief Free directory structure
- * @param dir Directory to free
- */
-void uft_directory_free(uft_directory_t *dir);
 
-/**
- * @brief Add entry to directory
- * @param dir Directory
- * @param entry Entry to add (copied)
- * @return true on success
- */
-bool uft_directory_add(uft_directory_t *dir, const uft_dir_entry_t *entry);
 
-/**
- * @brief Sort directory entries
- * @param dir Directory
- * @param by_name true to sort by name, false by position
- */
-void uft_directory_sort(uft_directory_t *dir, bool by_name);
 
 /*============================================================================
  * INITIALIZATION
  *============================================================================*/
 
-/**
- * @brief Initialize DOS recognition system
- * 
- * Registers all built-in DOS handlers.
- */
-void uft_dos_init(void);
 
-/**
- * @brief Shutdown DOS recognition system
- */
-void uft_dos_shutdown(void);
 
 /*============================================================================
  * SIMPLIFIED DOS DETECTION API

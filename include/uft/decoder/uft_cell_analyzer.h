@@ -186,10 +186,6 @@ typedef struct {
  * API Functions
  * ============================================================================ */
 
-/**
- * @brief Initialize cell options with defaults
- */
-void uft_cell_options_init(uft_cell_options_t *options);
 
 /**
  * @brief Initialize cell options for specific encoding
@@ -309,25 +305,9 @@ uft_error_t uft_cell_find_sync(
     size_t *found_count
 );
 
-/**
- * @brief Calculate cell quality metrics
- */
-void uft_cell_calc_quality(uft_cell_result_t *result);
 
-/**
- * @brief Free cell analysis result
- */
-void uft_cell_result_free(uft_cell_result_t *result);
 
-/**
- * @brief Free cell band result
- */
-void uft_cell_band_free(uft_cell_band_result_t *result);
 
-/**
- * @brief Free histogram
- */
-void uft_cell_histogram_free(uft_cell_histogram_t *histogram);
 
 /**
  * @brief Export cell analysis to JSON
@@ -381,10 +361,6 @@ int uft_pll_step(
     uint8_t *output_bit
 );
 
-/**
- * @brief Reset PLL to initial state
- */
-void uft_pll_reset(uft_pll_state_t *pll);
 
 #ifdef __cplusplus
 }

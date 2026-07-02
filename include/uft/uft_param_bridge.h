@@ -236,15 +236,7 @@ char *uft_params_to_cli(const uft_params_t *params);
  */
 char *uft_params_to_cli_diff(const uft_params_t *params);
 
-/**
- * @brief CLI-Hilfe ausgeben
- */
-void uft_params_print_help(void);
 
-/**
- * @brief CLI-Hilfe für Kategorie
- */
-void uft_params_print_help_category(uft_param_category_t category);
 
 /* ═══════════════════════════════════════════════════════════════════════════════
  * API Functions - JSON Serialization
@@ -270,10 +262,6 @@ uft_params_t *uft_params_load_json(const char *path);
  */
 char *uft_params_to_json(const uft_params_t *params, bool pretty);
 
-/**
- * @brief Parameter in JSON-Datei speichern
- */
-uft_error_t uft_params_save_json(const uft_params_t *params, const char *path);
 
 /**
  * @brief Nur geänderte Parameter zu JSON
@@ -294,20 +282,12 @@ bool uft_params_get_bool(const uft_params_t *params, const char *name);
  */
 int uft_params_get_int(const uft_params_t *params, const char *name);
 
-/**
- * @brief Float-Parameter abrufen
- */
-float uft_params_get_float(const uft_params_t *params, const char *name);
 
 /**
  * @brief String-Parameter abrufen
  */
 const char *uft_params_get_string(const uft_params_t *params, const char *name);
 
-/**
- * @brief Enum-Parameter abrufen (als Index)
- */
-int uft_params_get_enum(const uft_params_t *params, const char *name);
 
 /**
  * @brief Enum-Parameter als String
@@ -334,10 +314,6 @@ uft_error_t uft_params_set_float(uft_params_t *params, const char *name, float v
  */
 uft_error_t uft_params_set_string(uft_params_t *params, const char *name, const char *value);
 
-/**
- * @brief Parameter setzen (Enum by index)
- */
-uft_error_t uft_params_set_enum(uft_params_t *params, const char *name, int index);
 
 /**
  * @brief Parameter setzen (Enum by string)
@@ -399,13 +375,6 @@ uft_error_t uft_params_save_preset(
  * API Functions - Validation
  * ═══════════════════════════════════════════════════════════════════════════════ */
 
-/**
- * @brief Parameter validieren
- * @param params Parameter-Set
- * @param errors Output: Fehlermeldungen (NULL-terminiert)
- * @return Anzahl Fehler (0 = valid)
- */
-int uft_params_validate(const uft_params_t *params, char ***errors);
 
 /**
  * @brief Einzelnen Parameter validieren
@@ -475,7 +444,6 @@ uft_param_diff_t *uft_params_diff(
     int *count
 );
 
-void uft_params_diff_free(uft_param_diff_t *diff, int count);
 
 /**
  * @brief Parameter-Sets zusammenführen
@@ -534,15 +502,7 @@ const char *uft_param_category_string(uft_param_category_t category);
  */
 const char *uft_param_type_string(uft_param_type_t type);
 
-/**
- * @brief Parameter-Set ausgeben
- */
-void uft_params_print(const uft_params_t *params);
 
-/**
- * @brief Parameter-Set als Tabelle ausgeben
- */
-void uft_params_print_table(const uft_params_t *params);
 
 #ifdef __cplusplus
 }

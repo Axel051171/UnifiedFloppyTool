@@ -167,10 +167,6 @@ typedef struct {
     uint32_t errors;            /**< Number of errors */
 } uft_flux_result_t;
 
-/**
- * @brief Create flux decoder
- */
-uft_flux_decoder_t* uft_flux_decoder_create(const uft_flux_config_t *config);
 
 /**
  * @brief Decode flux stream
@@ -189,15 +185,7 @@ uft_error_t uft_flux_decode_multi_rev(uft_flux_decoder_t *decoder,
                                       size_t rev_count,
                                       uft_flux_result_t *result);
 
-/**
- * @brief Free flux decoder
- */
-void uft_flux_decoder_free(uft_flux_decoder_t *decoder);
 
-/**
- * @brief Free flux result
- */
-void uft_flux_result_free(uft_flux_result_t *result);
 
 /* ============================================================================
  * Bitstream Decoder Interface
@@ -258,15 +246,7 @@ uft_error_t uft_bitstream_decode(uft_bitstream_decoder_t *decoder,
                                  size_t bit_count,
                                  uft_bitstream_result_t *result);
 
-/**
- * @brief Free bitstream decoder
- */
-void uft_bitstream_decoder_free(uft_bitstream_decoder_t *decoder);
 
-/**
- * @brief Free bitstream result
- */
-void uft_bitstream_result_free(uft_bitstream_result_t *result);
 
 /* ============================================================================
  * Track Decoder Interface
@@ -301,20 +281,8 @@ typedef struct uft_track_driver {
                           uint8_t **track_data, size_t *len);
 } uft_track_driver_t;
 
-/**
- * @brief Register track decoder driver
- */
-uft_error_t uft_track_driver_register(const uft_track_driver_t *driver);
 
-/**
- * @brief Get driver by name
- */
-const uft_track_driver_t* uft_track_driver_get(const char *name);
 
-/**
- * @brief Get all registered drivers
- */
-size_t uft_track_driver_list(const uft_track_driver_t ***drivers);
 
 /**
  * @brief Auto-detect and decode track
@@ -429,43 +397,19 @@ typedef struct {
     char error_message[256];
 } uft_pipeline_t;
 
-/**
- * @brief Create pipeline
- */
-uft_pipeline_t* uft_pipeline_create(void);
 
 /**
  * @brief Run full pipeline
  */
 uft_error_t uft_pipeline_run(uft_pipeline_t *pipeline);
 
-/**
- * @brief Free pipeline
- */
-void uft_pipeline_free(uft_pipeline_t *pipeline);
 
 /* ============================================================================
  * Initialization
  * ============================================================================ */
 
-/**
- * @brief Initialize integration layer
- * 
- * Registers all built-in drivers:
- * - 27 track decoder drivers
- * - 11 filesystem drivers
- */
-uft_error_t uft_integration_init(void);
 
-/**
- * @brief Cleanup integration layer
- */
-void uft_integration_cleanup(void);
 
-/**
- * @brief Get integration version
- */
-const char* uft_integration_version(void);
 
 #ifdef __cplusplus
 }

@@ -354,13 +354,6 @@ int uft_fat12_init(uft_fat12_t* fs, uint8_t* data, size_t size, bool copy);
  */
 void uft_fat12_free(uft_fat12_t* fs);
 
-/**
- * @brief Create new FAT12 filesystem
- * @param fs Filesystem handle
- * @param format Format definition
- * @return 0 on success
- */
-int uft_fat12_format(uft_fat12_t* fs, const uft_fat12_format_t* format);
 
 /**
  * @brief Detect format from disk image
@@ -371,38 +364,9 @@ int uft_fat12_format(uft_fat12_t* fs, const uft_fat12_format_t* format);
 const uft_fat12_format_t* uft_fat12_detect_format(const uint8_t* data, 
                                                    size_t size);
 
-/**
- * @brief Read FAT entry
- * @param fs Filesystem
- * @param cluster Cluster number
- * @return FAT entry value or -1 on error
- */
-int uft_fat12_read_fat(uft_fat12_t* fs, uint16_t cluster);
 
-/**
- * @brief Write FAT entry
- * @param fs Filesystem
- * @param cluster Cluster number
- * @param value Value to write
- * @return 0 on success
- */
-int uft_fat12_write_fat(uft_fat12_t* fs, uint16_t cluster, uint16_t value);
 
-/**
- * @brief Find free cluster
- * @param fs Filesystem
- * @return Cluster number or 0 if full
- */
-uint16_t uft_fat12_find_free_cluster(uft_fat12_t* fs);
 
-/**
- * @brief Read cluster data
- * @param fs Filesystem
- * @param cluster Cluster number
- * @param buffer Output buffer
- * @return Bytes read or -1 on error
- */
-int uft_fat12_read_cluster(uft_fat12_t* fs, uint16_t cluster, uint8_t* buffer);
 
 /**
  * @brief Write cluster data
@@ -462,48 +426,16 @@ int uft_fat12_delete(uft_fat12_t* fs, const char* path);
 uft_fat12_file_t* uft_fat12_fopen(uft_fat12_t* fs, const char* path, 
                                    const char* mode);
 
-/**
- * @brief Close file
- */
-void uft_fat12_fclose(uft_fat12_file_t* file);
 
-/**
- * @brief Read from file
- * @param buffer Output buffer
- * @param size Bytes to read
- * @param file File handle
- * @return Bytes read
- */
-size_t uft_fat12_fread(void* buffer, size_t size, uft_fat12_file_t* file);
 
-/**
- * @brief Write to file
- */
-size_t uft_fat12_fwrite(const void* buffer, size_t size, uft_fat12_file_t* file);
 
-/**
- * @brief Seek in file
- */
-int uft_fat12_fseek(uft_fat12_file_t* file, long offset, int whence);
 
-/**
- * @brief Get file position
- */
-long uft_fat12_ftell(uft_fat12_file_t* file);
 
 /*============================================================================
  * Utility Functions
  *============================================================================*/
 
-/**
- * @brief Convert 8.3 filename to string
- */
-void uft_fat12_name_to_str(const uft_fat12_dirent_t* entry, char* buffer);
 
-/**
- * @brief Convert string to 8.3 filename
- */
-int uft_fat12_str_to_name(const char* str, char* name, char* ext);
 
 /**
  * @brief Get filesystem statistics
@@ -511,10 +443,6 @@ int uft_fat12_str_to_name(const char* str, char* name, char* ext);
 void uft_fat12_get_stats(uft_fat12_t* fs, uint32_t* total_clusters,
                          uint32_t* free_clusters, uint32_t* bad_clusters);
 
-/**
- * @brief Print filesystem information
- */
-void uft_fat12_print_info(uft_fat12_t* fs, bool verbose);
 
 #ifdef __cplusplus
 }

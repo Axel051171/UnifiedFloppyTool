@@ -233,7 +233,6 @@ const char* uft_protection_preset_name(uft_protection_preset_id_t preset);
 bool uft_protection_params_validate(uft_protection_params_t* params);
 char* uft_protection_params_to_json(const uft_protection_params_t* params);
 void uft_protection_result_init(uft_protection_result_t* result);
-const char* uft_protection_type_name(uft_protection_type_t type);
 
 #ifdef __cplusplus
 }

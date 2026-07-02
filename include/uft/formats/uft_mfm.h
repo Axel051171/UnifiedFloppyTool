@@ -78,15 +78,7 @@ typedef struct uft_mfm_context uft_mfm_context_t;
  * LIFECYCLE
  *===========================================================================*/
 
-/**
- * @brief Probe file for MFM format
- */
-bool uft_mfm_probe(const char *path);
 
-/**
- * @brief Open MFM file for reading
- */
-uft_mfm_context_t* uft_mfm_open(const char *path);
 
 /**
  * @brief Create new MFM file
@@ -104,20 +96,8 @@ void uft_mfm_close(uft_mfm_context_t *ctx);
  * INFORMATION
  *===========================================================================*/
 
-/**
- * @brief Get file header
- */
-const uft_mfm_header_t* uft_mfm_get_header(uft_mfm_context_t *ctx);
 
-/**
- * @brief Get number of tracks
- */
-int uft_mfm_get_num_tracks(uft_mfm_context_t *ctx);
 
-/**
- * @brief Get number of sides
- */
-int uft_mfm_get_num_sides(uft_mfm_context_t *ctx);
 
 /**
  * @brief Get track descriptor
@@ -182,20 +162,8 @@ int uft_flux_to_mfm(const uint32_t *flux_ns, size_t flux_count,
  * CONVERSION
  *===========================================================================*/
 
-/**
- * @brief Convert MFM to HFE format
- */
-int uft_mfm_to_hfe(const char *mfm_path, const char *hfe_path);
 
-/**
- * @brief Convert HFE to MFM format
- */
-int uft_hfe_to_mfm(const char *hfe_path, const char *mfm_path);
 
-/**
- * @brief Convert MFM to SCP format
- */
-int uft_mfm_to_scp(const char *mfm_path, const char *scp_path);
 
 #ifdef __cplusplus
 }

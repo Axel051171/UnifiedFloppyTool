@@ -91,17 +91,6 @@ static inline uint16_t uft_crc16_update_small(uint16_t crc, uint8_t byte) {
  */
 uint16_t uft_crc16_calc(const uint8_t *data, size_t len, uint16_t init);
 
-/**
- * @brief CRC-16 with MFM sync bytes pre-loaded
- * 
- * For IBM MFM sectors, the CRC includes the sync pattern (A1 A1 A1)
- * already in the initial value.
- * 
- * @param data   Sector data (starting with address mark)
- * @param len    Length in bytes
- * @return       CRC-16 including sync pattern
- */
-uint16_t uft_crc16_mfm_sync(const uint8_t *data, size_t len);
 
 /**
  * @brief Verify CRC-16 (returns true if valid)
@@ -138,10 +127,6 @@ static inline uint32_t uft_crc32_update(uint32_t crc, uint8_t byte) {
  */
 uint32_t uft_crc32_calc(const uint8_t *data, size_t len);
 
-/**
- * @brief Calculate CRC-32 with custom initial value
- */
-uint32_t uft_crc32_calc_init(const uint8_t *data, size_t len, uint32_t init);
 
 /**
  * @brief Verify CRC-32
@@ -189,48 +174,15 @@ static inline uint8_t uft_apple_checksum(uint8_t volume, uint8_t track,
     return volume ^ track ^ sector;
 }
 
-/**
- * @brief Amiga sector checksum (XOR of 32-bit words, big-endian)
- */
-uint32_t uft_amiga_sector_checksum(const uint8_t *data, size_t len);
 
-/**
- * @brief Amiga bootblock checksum
- * 
- * Special algorithm: 32-bit sum with carry propagation
- * 
- * @param bootblock  1024 bytes of boot block data
- * @return           Computed checksum
- */
-uint32_t uft_amiga_bootblock_checksum(const uint8_t *bootblock);
 
-/**
- * @brief Verify Amiga bootblock checksum
- * 
- * Checksum is stored at offset 4 in the bootblock.
- */
-bool uft_amiga_bootblock_verify(const uint8_t *bootblock);
 
-/**
- * @brief Fix Amiga bootblock checksum
- * 
- * Calculates correct checksum and writes it to offset 4.
- */
-void uft_amiga_bootblock_fix(uint8_t *bootblock);
 
 /*===========================================================================
  * Fletcher & Adler Checksums
  *===========================================================================*/
 
-/**
- * @brief Fletcher-16 checksum
- */
-uint16_t uft_fletcher16(const uint8_t *data, size_t len);
 
-/**
- * @brief Adler-32 checksum
- */
-uint32_t uft_adler32(const uint8_t *data, size_t len);
 
 /*===========================================================================
  * CRC Error Correction

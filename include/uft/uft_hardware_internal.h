@@ -45,27 +45,10 @@ struct uft_hw_device {
 // Backend Registration (intern)
 // ============================================================================
 
-/**
- */
-uft_error_t uft_hw_register_greaseweazle(void);
 
-/**
- */
-uft_error_t uft_hw_register_opencbm(void);
 
-/**
- * @brief Registriert das FC5025 Backend
- */
-uft_error_t uft_hw_register_fc5025(void);
 
-/**
- */
-uft_error_t uft_hw_register_kryoflux(void);
 
-/**
- * @brief Registriert das SuperCard Pro Backend
- */
-uft_error_t uft_hw_register_supercard(void);
 
 #ifdef __cplusplus
 }

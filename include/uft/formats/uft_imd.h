@@ -418,12 +418,6 @@ int uft_imd_get_gap_lengths(uft_imd_mode_t mode, uint8_t sector_size,
                             uint8_t nsectors, uint8_t* gap_write,
                             uint8_t* gap_format);
 
-/**
- * @brief Validate IMD image
- * @param img Image to validate
- * @return UFT_ERR_OK if valid
- */
-int uft_imd_validate(const uft_imd_image_t* img);
 
 /**
  * @brief Print IMD image information

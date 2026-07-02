@@ -289,13 +289,6 @@ static inline size_t uft_fat12_encode(const uint16_t *entries, size_t entry_coun
  * BPB Parsing
  *============================================================================*/
 
-/**
- * @brief Parse BPB from boot sector
- * @param boot_sector Boot sector data (512 bytes minimum)
- * @param bpb Output parsed BPB
- * @return true if valid
- */
-bool uft_bpb_parse(const uint8_t *boot_sector, uft_bpb_t *bpb);
 
 /**
  * @brief Validate media descriptor
@@ -412,22 +405,7 @@ static inline bool uft_fat12_is_allocated(uint16_t value, uint16_t max_cluster)
 size_t uft_fat12_get_chain(const uft_fat12_t *fat, uint16_t start_cluster,
                            uint16_t *chain, size_t max_length);
 
-/**
- * @brief Allocate cluster chain
- * @param fat FAT table
- * @param count Number of clusters needed
- * @param chain Output allocated clusters
- * @return Clusters allocated (may be less than requested)
- */
-size_t uft_fat12_alloc_chain(uft_fat12_t *fat, size_t count, uint16_t *chain);
 
-/**
- * @brief Free cluster chain
- * @param fat FAT table
- * @param start_cluster Starting cluster
- * @return Clusters freed
- */
-size_t uft_fat12_free_chain(uft_fat12_t *fat, uint16_t start_cluster);
 
 /*============================================================================
  * Directory Operations
@@ -503,23 +481,8 @@ static inline bool uft_fat_is_lfn(const uft_dir_entry_t *entry)
  * Filesystem Operations
  *============================================================================*/
 
-/**
- * @brief Initialize FAT12 filesystem from image data
- */
-int uft_fat12_fs_init(uft_fat12_fs_t *fs, uint8_t *image_data, size_t image_size);
 
-/**
- * @brief Get free space in bytes
- */
-uint32_t uft_fat12_fs_free_space(const uft_fat12_fs_t *fs);
 
-/**
- * @brief Find file in root directory
- * @param fs Filesystem context
- * @param filename 8.3 filename (uppercase)
- * @return Directory entry index, or -1 if not found
- */
-int uft_fat12_fs_find_file(const uft_fat12_fs_t *fs, const char *filename);
 
 /**
  * @brief Read file data
@@ -533,10 +496,6 @@ size_t uft_fat12_fs_read_file(const uft_fat12_fs_t *fs,
                               const uft_dir_entry_t *entry,
                               uint8_t *buffer, size_t buffer_size);
 
-/**
- * @brief Cleanup filesystem context
- */
-void uft_fat12_fs_free(uft_fat12_fs_t *fs);
 
 #ifdef __cplusplus
 }

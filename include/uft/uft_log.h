@@ -191,31 +191,9 @@ void uft_log_msgv(
  * STRUCTURED LOGGING
  *===========================================================================*/
 
-/**
- * @brief Log key-value pair
- */
-void uft_log_kv(uft_log_level_t level, const char *key, const char *value);
-void uft_log_kv_int(uft_log_level_t level, const char *key, int value);
-void uft_log_kv_float(uft_log_level_t level, const char *key, double value);
-void uft_log_kv_bool(uft_log_level_t level, const char *key, bool value);
 
-/**
- * @brief Start structured log entry
- */
-void uft_log_begin(uft_log_level_t level, const char *event);
 
-/**
- * @brief Add field to current entry
- */
-void uft_log_field_str(const char *key, const char *value);
-void uft_log_field_int(const char *key, int value);
-void uft_log_field_float(const char *key, double value);
-void uft_log_field_bool(const char *key, bool value);
 
-/**
- * @brief End and emit structured log entry
- */
-void uft_log_end(void);
 
 /*===========================================================================
  * PERFORMANCE LOGGING
@@ -226,53 +204,21 @@ void uft_log_end(void);
  */
 typedef struct uft_log_timer uft_log_timer_t;
 
-/**
- * @brief Start performance timer
- */
-uft_log_timer_t* uft_log_timer_start(const char *operation);
 
-/**
- * @brief Stop timer and log duration
- */
-void uft_log_timer_stop(uft_log_timer_t *timer);
 
-/**
- * @brief Log performance metric
- */
-void uft_log_metric(const char *name, double value, const char *unit);
 
 /*===========================================================================
  * PROGRESS LOGGING
  *===========================================================================*/
 
-/**
- * @brief Log progress update
- */
-void uft_log_progress(const char *operation, int current, int total);
 
 /*===========================================================================
  * UTILITIES
  *===========================================================================*/
 
-/**
- * @brief Get level name
- */
-const char* uft_log_level_name(uft_log_level_t level);
 
-/**
- * @brief Parse level from string
- */
-uft_log_level_t uft_log_level_parse(const char *str);
 
-/**
- * @brief Flush log buffers
- */
-void uft_log_flush(void);
 
-/**
- * @brief Rotate log file
- */
-int uft_log_rotate(void);
 
 #ifdef __cplusplus
 }

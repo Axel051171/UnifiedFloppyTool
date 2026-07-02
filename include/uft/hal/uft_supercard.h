@@ -185,33 +185,11 @@ typedef int (*uft_scp_callback_t)(const uft_scp_track_t *track, void *user);
  * API
  *============================================================================*/
 
-uft_scp_config_t* uft_scp_config_create(void);
-void uft_scp_config_destroy(uft_scp_config_t *cfg);
 int uft_scp_open(uft_scp_config_t *cfg, const char *port);
 void uft_scp_close(uft_scp_config_t *cfg);
-bool uft_scp_is_connected(const uft_scp_config_t *cfg);
 
-int uft_scp_get_info(uft_scp_config_t *cfg, int *hw_ver, int *fw_ver);
-int uft_scp_ram_test(uft_scp_config_t *cfg);
-int uft_scp_detect(char ports[][64], int max_ports);
 
-int uft_scp_set_track_range(uft_scp_config_t *cfg, int start, int end);
-int uft_scp_set_side(uft_scp_config_t *cfg, int side);
-int uft_scp_set_revolutions(uft_scp_config_t *cfg, int revs);
-int uft_scp_set_drive_type(uft_scp_config_t *cfg, uft_scp_drive_t type);
-int uft_scp_set_retries(uft_scp_config_t *cfg, int count);
-int uft_scp_set_verify(uft_scp_config_t *cfg, bool enable);
 
-int uft_scp_select_drive(uft_scp_config_t *cfg, int drive);
-int uft_scp_deselect_drive(uft_scp_config_t *cfg, int drive);
-int uft_scp_motor(uft_scp_config_t *cfg, int drive, bool on);
-int uft_scp_seek(uft_scp_config_t *cfg, int track);
-int uft_scp_seek0(uft_scp_config_t *cfg);
-int uft_scp_select_side(uft_scp_config_t *cfg, int side);
-int uft_scp_select_density(uft_scp_config_t *cfg, int density);
-uint16_t uft_scp_get_drive_status(uft_scp_config_t *cfg);
-int uft_scp_get_params(uft_scp_config_t *cfg, uft_scp_params_t *params);
-int uft_scp_set_params(uft_scp_config_t *cfg, const uft_scp_params_t *params);
 
 int uft_scp_read_track(uft_scp_config_t *cfg, int track, int side,
                         uint16_t **flux, size_t *count,
@@ -229,8 +207,6 @@ int uft_scp_loadram_usb(uft_scp_config_t *cfg, uint32_t offset,
 
 double uft_scp_ticks_to_ns(uint32_t ticks);
 uint32_t uft_scp_ns_to_ticks(double ns);
-const char* uft_scp_get_error(const uft_scp_config_t *cfg);
-const char* uft_scp_response_string(uft_scp_response_t code);
 
 #ifdef __cplusplus
 }

@@ -185,13 +185,6 @@ void uft_pll_config_default(uft_pll_config_t *config,
                             uft_encoding_t encoding,
                             uint32_t data_rate);
 
-/**
- * @brief Set aggressive parameters for problematic disks
- * @param[out] config Configuration to modify
- * 
- * Use for wobbly drives, warped disks, or marginal media.
- */
-void uft_pll_config_aggressive(uft_pll_config_t *config);
 
 /**
  * @brief Initialize PLL
@@ -201,11 +194,6 @@ void uft_pll_config_aggressive(uft_pll_config_t *config);
  */
 int uft_pll_init(uft_pll_t *pll, const uft_pll_config_t *config);
 
-/**
- * @brief Reset PLL state (keep configuration)
- * @param pll PLL state
- */
-void uft_pll_reset(uft_pll_t *pll);
 
 /* ============================================================================
  * Processing
@@ -260,19 +248,7 @@ int uft_pll_process_batch(uft_pll_t *pll,
  * Sync Detection
  * ============================================================================ */
 
-/**
- * @brief Check if PLL is locked
- * @param pll PLL state
- * @return true if locked
- */
-bool uft_pll_is_locked(const uft_pll_t *pll);
 
-/**
- * @brief Get current sync quality (0.0 - 1.0)
- * @param pll PLL state
- * @return Quality metric (1.0 = perfect)
- */
-double uft_pll_sync_quality(const uft_pll_t *pll);
 
 /**
  * @brief Force sync acquisition from known preamble
@@ -295,19 +271,7 @@ int uft_pll_force_sync(uft_pll_t *pll,
 #define UFT_MARK_DDAM   0xF8    /**< Deleted Data Address Mark */
 #define UFT_MARK_IAM    0xFC    /**< Index Address Mark */
 
-/**
- * @brief Check for sync mark (A1 with clock violation)
- * @param byte Byte with clock info
- * @return true if this is a sync mark
- */
-bool uft_pll_is_sync_mark(const uft_pll_byte_t *byte);
 
-/**
- * @brief Check for address mark
- * @param byte Byte value
- * @return Address mark type or 0 if not a mark
- */
-int uft_pll_address_mark_type(uint8_t byte);
 
 /* ============================================================================
  * Statistics
@@ -346,13 +310,6 @@ void uft_pll_reset_stats(uft_pll_t *pll);
  * Utility
  * ============================================================================ */
 
-/**
- * @brief Calculate nominal bit period for data rate
- * @param data_rate Data rate in bps
- * @param encoding Encoding type
- * @return Period in nanoseconds
- */
-double uft_pll_nominal_period(uint32_t data_rate, uft_encoding_t encoding);
 
 /**
  * @brief Get encoding name

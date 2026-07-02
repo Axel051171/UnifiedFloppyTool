@@ -329,18 +329,6 @@ typedef struct {
  * CRC32 Function
  *============================================================================*/
 
-/**
- * @brief Calculate Applesauce CRC32
- * 
- * Standard CRC32 with polynomial 0xEDB88320, initial value 0.
- * Used for file integrity in WOZ, MOOF, and A2R formats.
- *
- * @param data Data buffer
- * @param len Data length
- * @param crc_init Initial CRC value (typically 0)
- * @return CRC32 value
- */
-uint32_t uft_uft_as_crc32(const uint8_t *data, size_t len, uint32_t crc_init);
 
 /*============================================================================
  * 255-Run Encoding (A2R/MOOF Flux)
@@ -392,11 +380,6 @@ uft_woz_image_t *uft_woz_open(const char *path);
  */
 uft_woz_image_t *uft_woz_open_mem(const uint8_t *data, size_t len);
 
-/**
- * @brief Close WOZ image
- * @param woz Image handle
- */
-void uft_woz_close(uft_woz_image_t *woz);
 
 /**
  * @brief Get track bitstream for quarter-track
@@ -476,11 +459,6 @@ bool uft_moof_get_track(const uft_moof_image_t *moof, uint8_t trk_index,
  */
 uft_a2r_image_t *uft_a2r_open(const char *path);
 
-/**
- * @brief Close A2R image
- * @param a2r Image handle
- */
-void uft_a2r_close(uft_a2r_image_t *a2r);
 
 /**
  * @brief Get raw captures for track location
@@ -517,31 +495,8 @@ void uft_a2r_deltas_to_ns(const uint32_t *deltas, uint32_t count,
  * Conversion Functions
  *============================================================================*/
 
-/**
- * @brief Convert WOZ to raw sector image (DSK/DO/PO)
- * @param woz WOZ image
- * @param path Output path
- * @param format Output format (0=DSK, 1=DO, 2=PO)
- * @return 0 on success
- */
-int uft_woz_to_sector(const uft_woz_image_t *woz, const char *path, int format);
 
-/**
- * @brief Convert MOOF to raw sector image
- * @param moof MOOF image
- * @param path Output path
- * @return 0 on success
- */
-int uft_moof_to_raw(const uft_moof_image_t *moof, const char *path);
 
-/**
- * @brief Convert A2R to WOZ (bitstream synthesis)
- * @param a2r A2R image
- * @param path Output WOZ path
- * @param use_solved Use solved tracks if available
- * @return 0 on success
- */
-int uft_a2r_to_woz(const uft_a2r_image_t *a2r, const char *path, bool use_solved);
 
 /*============================================================================
  * Bit Timing Constants

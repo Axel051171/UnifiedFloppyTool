@@ -321,10 +321,6 @@ int64_t uft_cart7_nes_read_chr(uft_cart7_device_t *device,
                                void *buffer,
                                size_t length);
 
-/**
- * Detect NES mapper
- */
-int uft_cart7_nes_detect_mapper(uft_cart7_device_t *device);
 
 /**
  * Create iNES file from cartridge
@@ -338,10 +334,6 @@ uft_cart7_error_t uft_cart7_nes_create_ines(uft_cart7_device_t *device,
  * SNES SPECIFIC
  *============================================================================*/
 
-/**
- * Detect SNES ROM type (LoROM/HiROM/etc.)
- */
-int uft_cart7_snes_detect_type(uft_cart7_device_t *device);
 
 /**
  * Create SFC file from cartridge
@@ -355,15 +347,7 @@ uft_cart7_error_t uft_cart7_snes_create_sfc(uft_cart7_device_t *device,
  * N64 SPECIFIC
  *============================================================================*/
 
-/**
- * Detect N64 save type
- */
-int uft_cart7_n64_detect_save(uft_cart7_device_t *device);
 
-/**
- * Get N64 CIC type
- */
-int uft_cart7_n64_get_cic(uft_cart7_device_t *device);
 
 /**
  * Create Z64 file from cartridge (big-endian)
@@ -377,10 +361,6 @@ uft_cart7_error_t uft_cart7_n64_create_z64(uft_cart7_device_t *device,
  * MEGA DRIVE SPECIFIC
  *============================================================================*/
 
-/**
- * Verify Mega Drive checksum
- */
-bool uft_cart7_md_verify_checksum(uft_cart7_device_t *device);
 
 /**
  * Create BIN file from cartridge
@@ -394,10 +374,6 @@ uft_cart7_error_t uft_cart7_md_create_bin(uft_cart7_device_t *device,
  * GBA SPECIFIC
  *============================================================================*/
 
-/**
- * Detect GBA save type
- */
-int uft_cart7_gba_detect_save(uft_cart7_device_t *device);
 
 /**
  * Read GBA GPIO (RTC, Solar sensor, etc.)
@@ -418,10 +394,6 @@ uft_cart7_error_t uft_cart7_gba_create_gba(uft_cart7_device_t *device,
  * GB/GBC SPECIFIC
  *============================================================================*/
 
-/**
- * Detect GB MBC type
- */
-int uft_cart7_gb_detect_mbc(uft_cart7_device_t *device);
 
 /**
  * Read GB RTC (MBC3)

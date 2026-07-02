@@ -291,13 +291,6 @@ int uft_fdi_read_mem(const uint8_t* data, size_t size, uft_fdi_image_t* img);
  */
 int uft_fdi_write(const char* filename, const uft_fdi_image_t* img);
 
-/**
- * @brief Create new formatted disk image
- * @param img Image structure
- * @param type_index Index into uft_fdi_disk_types
- * @return 0 on success
- */
-int uft_fdi_format(uft_fdi_image_t* img, int type_index);
 
 /**
  * @brief Read sector from image

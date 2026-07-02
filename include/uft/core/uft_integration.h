@@ -71,10 +71,6 @@ typedef struct {
     
 } uft_module_caps_t;
 
-/**
- * @brief Get module capabilities
- */
-const uft_module_caps_t* uft_module_get_caps(uft_module_t module);
 
 /* ============================================================================
  * Legacy Type Conversion (for backward compatibility)
@@ -168,10 +164,6 @@ typedef struct {
     
 } uft_integration_ctx_t;
 
-/**
- * @brief Initialize integration context
- */
-void uft_integration_init(uft_integration_ctx_t *ctx);
 
 /* ============================================================================
  * Parser → Other Modules
@@ -284,10 +276,6 @@ typedef struct uft_writer uft_writer_t;
 uft_error_t uft_writer_queue_track(uft_writer_t *writer,
                                    const uft_track_t *track);
 
-/**
- * @brief Write queued tracks
- */
-uft_error_t uft_writer_flush(uft_writer_t *writer);
 
 /* ============================================================================
  * Protection Analysis Integration
@@ -348,10 +336,6 @@ typedef struct {
     
 } uft_pipeline_ctx_t;
 
-/**
- * @brief Initialize pipeline
- */
-uft_error_t uft_pipeline_init(uft_pipeline_ctx_t *ctx);
 
 /**
  * @brief Run pipeline stage
@@ -359,15 +343,7 @@ uft_error_t uft_pipeline_init(uft_pipeline_ctx_t *ctx);
 uft_error_t uft_pipeline_run_stage(uft_pipeline_ctx_t *ctx,
                                    uft_pipeline_stage_t stage);
 
-/**
- * @brief Run full pipeline
- */
-uft_error_t uft_pipeline_run_full(uft_pipeline_ctx_t *ctx);
 
-/**
- * @brief Get pipeline status string
- */
-const char* uft_pipeline_stage_name(uft_pipeline_stage_t stage);
 
 #ifdef __cplusplus
 }

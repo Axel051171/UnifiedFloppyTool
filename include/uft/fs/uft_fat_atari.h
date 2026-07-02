@@ -179,26 +179,8 @@ UFT_PACK_END
  */
 uint32_t uft_atari_generate_serial(void);
 
-/**
- * @brief Generate Atari serial from timestamp
- * @param timestamp Unix timestamp
- * @return 24-bit serial number
- */
-uint32_t uft_atari_serial_from_time(uint32_t timestamp);
 
-/**
- * @brief Check if serial number is Atari-style
- * @param serial Serial number
- * @return true if Atari format
- */
-bool uft_atari_is_atari_serial(uint32_t serial);
 
-/**
- * @brief Set serial number in Atari boot sector
- * @param boot Boot sector (modified)
- * @param serial 24-bit serial number
- */
-void uft_atari_set_serial(uft_atari_bootsect_t *boot, uint32_t serial);
 
 /**
  * @brief Get serial number from Atari boot sector
@@ -211,12 +193,6 @@ uint32_t uft_atari_get_serial(const uft_atari_bootsect_t *boot);
  * API - Boot Sector Checksum
  *===========================================================================*/
 
-/**
- * @brief Calculate Atari boot sector checksum
- * @param boot Boot sector (256 words)
- * @return Calculated checksum
- */
-uint16_t uft_atari_calc_checksum(const uft_atari_bootsect_t *boot);
 
 /**
  * @brief Make boot sector bootable (set correct checksum)
@@ -312,30 +288,11 @@ int uft_atari_format_custom(uint8_t *data, size_t size,
  */
 uint16_t uft_atari_calc_sector_size(uint64_t total_size);
 
-/**
- * @brief Convert PC FAT to Atari format
- * @param data Image data (modified)
- * @param size Image size
- * @return 0 on success
- * 
- * Updates boot sector to Atari conventions:
- * - Sets Atari serial number
- * - Ensures 2 sectors per cluster
- * - Removes PC-specific boot code
- */
-int uft_atari_convert_from_pc(uint8_t *data, size_t size);
 
 /*===========================================================================
  * API - AHDI Partitions
  *===========================================================================*/
 
-/**
- * @brief Check for AHDI partition table
- * @param data Disk image data
- * @param size Image size
- * @return true if AHDI partitioned
- */
-bool uft_ahdi_detect(const uint8_t *data, size_t size);
 
 /**
  * @brief Get AHDI partition table
@@ -344,12 +301,6 @@ bool uft_ahdi_detect(const uint8_t *data, size_t size);
  */
 const uft_ahdi_root_t *uft_ahdi_get_root(const uint8_t *data);
 
-/**
- * @brief Count AHDI partitions
- * @param root AHDI root sector
- * @return Number of valid partitions
- */
-int uft_ahdi_count_partitions(const uft_ahdi_root_t *root);
 
 /**
  * @brief Get partition info

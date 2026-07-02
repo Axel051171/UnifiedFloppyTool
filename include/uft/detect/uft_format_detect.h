@@ -178,31 +178,14 @@ int uft_detect_format(const uint8_t *data, size_t len,
  */
 const char* uft_format_name(uft_format_t format);
 
-/**
- * @brief Get format file extensions
- */
-const char* uft_format_extensions(uft_format_t format);
 
 /**
  * @brief Check if format is a flux/raw format
  */
 bool uft_format_is_flux(uft_format_t format);
 
-/**
- * @brief Check if format is a container format
- */
-bool uft_format_is_container(uft_format_t format);
 
-/**
- * @brief Get all registered detectors
- */
-const uft_format_detector_t* uft_get_detectors(size_t *count);
 
-/**
- * @brief Register a custom detector (for plugins)
- * @return 0 on success, -1 if registry full
- */
-int uft_register_detector(const uft_format_detector_t *detector);
 
 /*============================================================================
  * CONFIDENCE LEVELS

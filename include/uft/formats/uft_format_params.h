@@ -260,20 +260,8 @@ typedef struct {
  * Function Prototypes
  * ============================================================================ */
 
-/**
- * @brief Get format definition by ID
- */
-const uft_format_def_t* uft_format_get_def(uft_format_id_t id);
 
-/**
- * @brief Get format definition by name
- */
-const uft_format_def_t* uft_format_get_by_name(const char* name);
 
-/**
- * @brief Get format definition by extension
- */
-const uft_format_def_t* uft_format_get_by_extension(const char* ext);
 
 /**
  * @brief Detect format from file content
@@ -297,15 +285,7 @@ const char* uft_format_category_name(uft_format_category_t cat);
  */
 uft_format_params_t uft_format_params_default(uft_format_id_t format);
 
-/**
- * @brief Validate format parameters
- */
-bool uft_format_params_validate(uft_format_params_t* params);
 
-/**
- * @brief Convert format params to JSON
- */
-char* uft_format_params_to_json(const uft_format_params_t* params);
 
 /* ============================================================================
  * Quick Access Macros

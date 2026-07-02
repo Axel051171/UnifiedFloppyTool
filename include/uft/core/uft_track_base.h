@@ -214,31 +214,10 @@ typedef struct uft_track_base {
  * Function Prototypes
  *===========================================================================*/
 
-uft_track_base_t* uft_track_base_create(uint8_t cylinder, uint8_t head);
-void uft_track_base_free(uft_track_base_t *track);
-uft_track_base_t* uft_track_base_clone(const uft_track_base_t *src);
-void uft_track_base_reset(uft_track_base_t *track);
 
-int uft_track_base_alloc_sectors(uft_track_base_t *track, size_t count);
-int uft_track_base_add_sector(uft_track_base_t *track, const uft_sector_base_t *sector);
-uft_sector_base_t* uft_track_base_find_sector(uft_track_base_t *track, uint8_t sector_id);
-void uft_track_base_sort_sectors(uft_track_base_t *track);
 
-int uft_track_base_alloc_bitstream(uft_track_base_t *track, size_t bits);
-int uft_track_base_alloc_flux(uft_track_base_t *track, size_t count);
-int uft_track_base_alloc_weak_mask(uft_track_base_t *track);
-int uft_track_base_add_revolution(uft_track_base_t *track, uft_revolution_base_t *rev);
 
-uft_track_quality_t uft_track_base_calc_quality(const uft_track_base_t *track);
-void uft_track_base_update_stats(uft_track_base_t *track);
-bool uft_track_base_has_errors(const uft_track_base_t *track);
-int uft_track_base_error_summary(const uft_track_base_t *track, char *buffer, size_t size);
 
-const char* uft_track_encoding_name(uft_track_encoding_t enc);
-const char* uft_track_quality_name(uft_track_quality_t qual);
-int uft_track_flags_describe(uint16_t flags, char *buffer, size_t size);
-uft_track_encoding_t uft_track_encoding_from_legacy(int legacy_enc);
-int uft_track_encoding_to_legacy(uft_track_encoding_t enc);
 
 #ifdef __cplusplus
 }

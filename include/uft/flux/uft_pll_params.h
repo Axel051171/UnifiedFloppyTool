@@ -232,53 +232,18 @@ typedef enum {
  * Function Prototypes
  * ============================================================================ */
 
-/**
- * @brief Get default parameters
- */
-uft_pll_params_t uft_pll_params_default(void);
 
-/**
- * @brief Get preset by ID
- */
-uft_pll_params_t uft_pll_params_preset(uft_pll_preset_id_t preset);
 
 /**
  * @brief Get preset name
  */
 const char* uft_pll_preset_name(uft_pll_preset_id_t preset);
 
-/**
- * @brief Validate parameters
- * @return true if valid, false if errors (check error_msg)
- */
-bool uft_pll_params_validate(uft_pll_params_t* params);
 
-/**
- * @brief Convert parameters to JSON string
- * @return Allocated string (caller must free) or NULL on error
- */
-char* uft_pll_params_to_json(const uft_pll_params_t* params);
 
-/**
- * @brief Parse parameters from JSON
- * @return UFT_OK or error code
- */
-int uft_pll_params_from_json(const char* json, uft_pll_params_t* params);
 
-/**
- * @brief Copy parameters
- */
-void uft_pll_params_copy(uft_pll_params_t* dst, const uft_pll_params_t* src);
 
-/**
- * @brief Convert to core PLL config (for uft_pll_pi)
- */
-uft_pll_config_t uft_pll_params_to_config(const uft_pll_params_t* params);
 
-/**
- * @brief Create params from core config
- */
-uft_pll_params_t uft_pll_params_from_config(const uft_pll_config_t* config);
 
 /**
  * @brief Adjust params for specific platform

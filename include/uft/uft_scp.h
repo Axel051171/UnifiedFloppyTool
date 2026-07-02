@@ -96,8 +96,6 @@ int uft_scp_open(uft_scp_image_t *img, const char *path);
 /* Close file handle. */
 void uft_scp_close(uft_scp_image_t *img);
 
-/* Read track info for offsets table entry 'track_index' (0..167). */
-int uft_scp_get_track_info(uft_scp_image_t *img, uint8_t track_index, uft_scp_track_info_t *out);
 
 /* Read per-revolution descriptors for a given track entry. Caller provides array revs[num_revs]. */
 int uft_scp_read_track_revs(uft_scp_image_t *img, uint8_t track_index,

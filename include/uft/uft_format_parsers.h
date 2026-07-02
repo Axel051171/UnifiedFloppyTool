@@ -385,15 +385,7 @@ typedef enum {
  */
 uft_format_type_t uft_format_detect(const uint8_t *data, size_t size);
 
-/**
- * @brief Detect format from file extension
- */
-uft_format_type_t uft_format_detect_extension(const char *filename);
 
-/**
- * @brief Get format capabilities
- */
-uint32_t uft_format_get_caps(uft_format_type_t format);
 
 /**
  * @brief Get format name string

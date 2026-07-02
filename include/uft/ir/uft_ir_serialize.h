@@ -244,23 +244,8 @@ typedef struct {
  * Configuration
  *===========================================================================*/
 
-/**
- * @brief Initialize serialization config with defaults
- * @param config Configuration to initialize
- */
-void uft_ir_config_default(uft_ir_serialize_config_t *config);
 
-/**
- * @brief Set config for full forensic preservation
- * @param config Configuration to initialize
- */
-void uft_ir_config_forensic(uft_ir_serialize_config_t *config);
 
-/**
- * @brief Set config for compact storage
- * @param config Configuration to initialize
- */
-void uft_ir_config_compact(uft_ir_serialize_config_t *config);
 
 /*===========================================================================
  * Binary Serialization (Writer)
@@ -275,12 +260,6 @@ void uft_ir_config_compact(uft_ir_serialize_config_t *config);
 uft_ir_writer_t *uft_ir_writer_create(const char *path,
                                        const uft_ir_serialize_config_t *config);
 
-/**
- * @brief Close writer and finalize file
- * @param writer Writer context (freed after call)
- * @return 0 on success
- */
-int uft_ir_writer_close(uft_ir_writer_t *writer);
 
 /**
  * @brief Write disk metadata block
@@ -359,11 +338,6 @@ int uft_ir_write_flux(uft_ir_writer_t *writer,
  */
 uft_ir_reader_t *uft_ir_reader_open(const char *path);
 
-/**
- * @brief Close reader
- * @param reader Reader context (freed after call)
- */
-void uft_ir_reader_close(uft_ir_reader_t *reader);
 
 /**
  * @brief Get file header
@@ -372,21 +346,7 @@ void uft_ir_reader_close(uft_ir_reader_t *reader);
  */
 const uft_ir_header_t *uft_ir_get_header(const uft_ir_reader_t *reader);
 
-/**
- * @brief Get track count
- * @param reader Reader context
- * @return Number of tracks
- */
-uint32_t uft_ir_get_track_count(const uft_ir_reader_t *reader);
 
-/**
- * @brief Check if track exists
- * @param reader Reader context
- * @param track Track number
- * @param side Side
- * @return true if track exists
- */
-bool uft_ir_has_track(const uft_ir_reader_t *reader, uint16_t track, uint8_t side);
 
 /**
  * @brief Read track bitstream
@@ -433,11 +393,6 @@ typedef struct {
     int indent_spaces;          /**< Indent spaces (if pretty) */
 } uft_ir_json_config_t;
 
-/**
- * @brief Initialize JSON config with defaults
- * @param config Configuration to initialize
- */
-void uft_ir_json_config_default(uft_ir_json_config_t *config);
 
 /**
  * @brief Export UFIR to JSON file
@@ -478,13 +433,6 @@ size_t uft_ir_metadata_to_json(uft_ir_reader_t *reader,
  * Utility Functions
  *===========================================================================*/
 
-/**
- * @brief Calculate CRC32 for data
- * @param data Data buffer
- * @param size Data size
- * @return CRC32 value
- */
-uint32_t uft_ir_crc32(const uint8_t *data, size_t size);
 
 /**
  * @brief Get last error message
@@ -495,12 +443,6 @@ uint32_t uft_ir_crc32(const uint8_t *data, size_t size);
 const char *uft_ir_get_error(const uft_ir_writer_t *writer,
                              const uft_ir_reader_t *reader);
 
-/**
- * @brief Verify UFIR file integrity
- * @param path File path
- * @return 0 if valid, error code otherwise
- */
-int uft_ir_verify(const char *path);
 
 /**
  * @brief Get format version string

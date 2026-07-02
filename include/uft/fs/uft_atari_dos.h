@@ -345,11 +345,6 @@ typedef enum {
  */
 uft_atari_ctx_t *uft_atari_create(void);
 
-/**
- * @brief Destroy Atari DOS context
- * @param ctx Context to destroy
- */
-void uft_atari_destroy(uft_atari_ctx_t *ctx);
 
 /**
  * @brief Open Atari disk image
@@ -379,19 +374,7 @@ uft_atari_error_t uft_atari_open_as(uft_atari_ctx_t *ctx,
                                     uft_atari_density_t density,
                                     uft_atari_dos_type_t dos_type);
 
-/**
- * @brief Close image (keeps context for reuse)
- * @param ctx Context
- */
-void uft_atari_close(uft_atari_ctx_t *ctx);
 
-/**
- * @brief Save modified image to file
- * @param ctx Context
- * @param path Output file path
- * @return Error code
- */
-uft_atari_error_t uft_atari_save(uft_atari_ctx_t *ctx, const char *path);
 
 /**
  * @brief Get image data for external saving
@@ -419,13 +402,6 @@ uft_atari_error_t uft_atari_detect(const uint8_t *data,
                                    size_t size,
                                    uft_atari_detect_t *result);
 
-/**
- * @brief Check if data is an Atari disk image
- * @param data Image data
- * @param size Data size
- * @return true if Atari format detected
- */
-bool uft_atari_is_atari_image(const uint8_t *data, size_t size);
 
 /**
  * @brief Get geometry for density type
@@ -473,35 +449,9 @@ uft_atari_error_t uft_atari_write_sector(uft_atari_ctx_t *ctx,
  */
 uft_atari_error_t uft_atari_read_vtoc(uft_atari_ctx_t *ctx);
 
-/**
- * @brief Write VTOC back to disk
- * @param ctx Context
- * @return Error code
- */
-uft_atari_error_t uft_atari_write_vtoc(uft_atari_ctx_t *ctx);
 
-/**
- * @brief Check if sector is allocated
- * @param ctx Context
- * @param sector Sector number
- * @return true if allocated, false if free
- */
-bool uft_atari_is_sector_allocated(const uft_atari_ctx_t *ctx, uint16_t sector);
 
-/**
- * @brief Allocate a free sector
- * @param ctx Context
- * @return Sector number, or 0 if disk full
- */
-uint16_t uft_atari_allocate_sector(uft_atari_ctx_t *ctx);
 
-/**
- * @brief Free a sector
- * @param ctx Context
- * @param sector Sector number to free
- * @return Error code
- */
-uft_atari_error_t uft_atari_free_sector(uft_atari_ctx_t *ctx, uint16_t sector);
 
 /**
  * @brief Get free space info
@@ -602,13 +552,6 @@ uft_atari_error_t uft_atari_inject_from_file(uft_atari_ctx_t *ctx,
                                              const char *input_path,
                                              const char *filename);
 
-/**
- * @brief Delete file from Atari image
- * @param ctx Context
- * @param filename Filename to delete
- * @return Error code
- */
-uft_atari_error_t uft_atari_delete(uft_atari_ctx_t *ctx, const char *filename);
 
 /**
  * @brief Rename file in Atari image
@@ -682,12 +625,6 @@ typedef struct {
 uft_atari_error_t uft_atari_validate(uft_atari_ctx_t *ctx,
                                      uft_atari_val_result_t *result);
 
-/**
- * @brief Rebuild VTOC from directory and file chains
- * @param ctx Context
- * @return Error code
- */
-uft_atari_error_t uft_atari_rebuild_vtoc(uft_atari_ctx_t *ctx);
 
 /**
  * @brief List deleted files (potentially recoverable)
@@ -738,12 +675,6 @@ void uft_atari_format_filename(const char *filename,
                                const char *extension,
                                char *buffer);
 
-/**
- * @brief Validate Atari filename
- * @param filename Filename to validate
- * @return true if valid
- */
-bool uft_atari_valid_filename(const char *filename);
 
 /**
  * @brief Get DOS type name
@@ -766,19 +697,7 @@ const char *uft_atari_density_name(uft_atari_density_t density);
  */
 const char *uft_atari_error_string(uft_atari_error_t error);
 
-/**
- * @brief Print directory listing to stdout
- * @param ctx Context
- * @param output Output file (NULL for stdout)
- */
-void uft_atari_print_directory(uft_atari_ctx_t *ctx, FILE *output);
 
-/**
- * @brief Print disk info
- * @param ctx Context
- * @param output Output file (NULL for stdout)
- */
-void uft_atari_print_info(uft_atari_ctx_t *ctx, FILE *output);
 
 /**
  * @brief Export directory to JSON
@@ -812,13 +731,6 @@ UFT_PACK_END
 
 #define UFT_ATARI_ATR_MAGIC     0x0296
 
-/**
- * @brief Check if data is ATR format (has header)
- * @param data Image data
- * @param size Data size
- * @return true if ATR format
- */
-bool uft_atari_is_atr(const uint8_t *data, size_t size);
 
 /**
  * @brief Parse ATR header

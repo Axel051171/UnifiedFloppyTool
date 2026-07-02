@@ -93,8 +93,6 @@ typedef void (*uft_device_callback_t)(void* user_data,
 // Lifecycle
 // ============================================================================
 
-uft_device_manager_t* uft_device_manager_create(void);
-void uft_device_manager_destroy(uft_device_manager_t* mgr);
 
 // ============================================================================
 // Observer Pattern (GUI registriert sich hier)
@@ -112,23 +110,16 @@ uft_error_t uft_device_manager_remove_observer(uft_device_manager_t* mgr,
 // Scanning
 // ============================================================================
 
-uft_error_t uft_device_manager_scan(uft_device_manager_t* mgr);
-uft_error_t uft_device_manager_start_auto_scan(uft_device_manager_t* mgr);
-void uft_device_manager_stop_auto_scan(uft_device_manager_t* mgr);
 
 // ============================================================================
 // Selection
 // ============================================================================
 
-uft_error_t uft_device_manager_select(uft_device_manager_t* mgr, int index);
-int uft_device_manager_get_selected(const uft_device_manager_t* mgr);
 
 // ============================================================================
 // Query (alle Queries liefern abstrakte Info)
 // ============================================================================
 
-size_t uft_device_manager_get_count(const uft_device_manager_t* mgr);
-const uft_device_info_t* uft_device_manager_get_device(const uft_device_manager_t* mgr, int index);
 uft_error_t uft_device_manager_get_all(const uft_device_manager_t* mgr,
                                         uft_device_info_t* devices,
                                         size_t max_devices,
@@ -138,8 +129,6 @@ uft_error_t uft_device_manager_get_all(const uft_device_manager_t* mgr,
 // Status
 // ============================================================================
 
-bool uft_device_manager_is_busy(const uft_device_manager_t* mgr);
-const char* uft_device_manager_get_status_string(const uft_device_manager_t* mgr);
 
 #ifdef __cplusplus
 }

@@ -255,10 +255,6 @@ typedef enum {
 // API Functions
 // ============================================================================
 
-/**
- * @brief Get default parameters for a format preset
- */
-uft_format_params_t uft_format_get_preset(uft_format_preset_t preset);
 
 /**
  * @brief Calculate sector size from size code
@@ -327,10 +323,6 @@ static inline uint32_t uft_datarate_bps(uft_datarate_t rate) {
  */
 const char* uft_encoding_name(uft_encoding_t encoding);
 
-/**
- * @brief Get FDC type name string
- */
-const char* uft_fdc_name(uft_fdc_type_t fdc);
 
 #ifdef __cplusplus
 }

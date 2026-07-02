@@ -68,31 +68,9 @@ typedef struct uft_context uft_context_t;
  * SECTION 2: INITIALIZATION
  * ============================================================================ */
 
-/**
- * @brief Initialize UFT library
- * @return UFT_OK on success
- * 
- * Must be called before any other UFT functions.
- * Thread-safe, can be called multiple times.
- */
-uft_error_t uft_init(void);
 
-/**
- * @brief Cleanup UFT library
- * 
- * Call when done with UFT. Frees global resources.
- */
-void uft_cleanup(void);
 
-/**
- * @brief Get UFT version string
- */
-const char* uft_version(void);
 
-/**
- * @brief Get UFT API version
- */
-uint32_t uft_api_version(void);
 
 /* ============================================================================
  * SECTION 3: FORMAT DETECTION & INFO
@@ -116,10 +94,6 @@ uft_error_t uft_detect_format_mem(const uint8_t *data, size_t size,
                                   uft_format_id_t *out_format,
                                   uint8_t *out_confidence);
 
-/**
- * @brief Get format name string
- */
-const char* uft_get_format_name(uft_format_id_t format);
 
 /**
  * @brief Get format capabilities
@@ -144,13 +118,6 @@ typedef struct {
 uft_error_t uft_get_format_info(uft_format_id_t format,
                                 uft_format_info_t *out_info);
 
-/**
- * @brief List all supported formats
- * @param formats Output array
- * @param max_formats Array size
- * @return Number of formats written
- */
-int uft_list_formats(uft_format_id_t *formats, size_t max_formats);
 
 /* ============================================================================
  * SECTION 4: DISK IMAGE I/O
@@ -166,10 +133,6 @@ typedef struct {
     uint8_t max_retries;       /**< Retry count for hardware */
 } uft_read_options_t;
 
-/**
- * @brief Initialize read options with defaults
- */
-void uft_read_options_init(uft_read_options_t *opts);
 
 /**
  * @brief Read disk image from file
@@ -199,10 +162,6 @@ typedef struct {
     bool compress;             /**< Use compression if available */
 } uft_write_options_t;
 
-/**
- * @brief Initialize write options with defaults
- */
-void uft_write_options_init(uft_write_options_t *opts);
 
 /**
  * @brief Write disk image to file
@@ -378,10 +337,6 @@ typedef struct {
     uint8_t min_confidence;    /**< Minimum confidence threshold */
 } uft_copy_options_t;
 
-/**
- * @brief Initialize copy options
- */
-void uft_copy_options_init(uft_copy_options_t *opts);
 
 /**
  * @brief Copy disk with protection awareness
@@ -406,10 +361,6 @@ typedef struct {
     
 } uft_recovery_options_t;
 
-/**
- * @brief Initialize recovery options
- */
-void uft_recovery_options_init(uft_recovery_options_t *opts);
 
 /**
  * @brief Attempt to recover damaged disk
@@ -441,15 +392,7 @@ typedef void (*uft_error_fn)(uft_error_t error,
                              const char *message,
                              void *user_data);
 
-/**
- * @brief Set global progress callback
- */
-void uft_set_progress_callback(uft_progress_fn callback, void *user_data);
 
-/**
- * @brief Set global error callback
- */
-void uft_set_error_callback(uft_error_fn callback, void *user_data);
 
 /* ============================================================================
  * SECTION 10: MEMORY MANAGEMENT
@@ -461,17 +404,7 @@ void uft_set_error_callback(uft_error_fn callback, void *user_data);
  */
 void uft_disk_free(uft_disk_image_t *disk);
 
-/**
- * @brief Duplicate disk image
- * @param disk Source disk
- * @return New disk (caller must free) or NULL
- */
-uft_disk_image_t* uft_disk_dup(const uft_disk_image_t *disk);
 
-/**
- * @brief Get memory usage
- */
-size_t uft_get_memory_usage(const uft_disk_image_t *disk);
 
 #ifdef __cplusplus
 }

@@ -95,10 +95,6 @@ int uft_extract_file(const char *image_path, const char *filename,
 int uft_inject_file(const char *image_path, const char *filename,
                     const char *input_path, uft_file_type_t type);
 
-/**
- * @brief Print directory listing
- */
-void uft_print_directory(const uft_directory_t *dir);
 
 /* ============================================================================
  * Format-Specific APIs

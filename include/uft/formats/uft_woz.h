@@ -319,25 +319,13 @@ uft_error_t uft_woz_write_mem(const uft_disk_image_t *disk,
                               size_t *out_size,
                               const woz_write_options_t *opts);
 
-/**
- * @brief Initialize write options
- */
-void uft_woz_write_options_init(woz_write_options_t *opts);
 
 /**
  * @brief Detect WOZ version
  */
 int uft_woz_detect_version(const uint8_t *data, size_t size);
 
-/**
- * @brief Validate WOZ header
- */
-bool uft_woz_validate_header(const woz_header_t *header);
 
-/**
- * @brief Calculate WOZ CRC
- */
-uint32_t uft_woz_calculate_crc(const uint8_t *data, size_t size);
 
 /* ============================================================================
  * Track Operations

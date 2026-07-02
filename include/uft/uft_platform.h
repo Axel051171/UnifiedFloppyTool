@@ -312,98 +312,34 @@ static inline int uft_clock_gettime(int clk, struct timespec *ts) {
     #define UFT_PATH_MAX 4096
 #endif
 
-/**
- * @brief Normalize path separators
- */
-void uft_path_normalize(char *path);
 
-/**
- * @brief Join path components
- */
-int uft_path_join(char *dest, size_t dest_size, const char *base, const char *rel);
 
-/**
- * @brief Get file extension
- */
-const char* uft_path_extension(const char *path);
 
-/**
- * @brief Get base name (filename without directory)
- */
-const char* uft_path_basename(const char *path);
 
-/**
- * @brief Get directory part
- */
-int uft_path_dirname(const char *path, char *dir, size_t dir_size);
 
 /* ═══════════════════════════════════════════════════════════════════════════════
  * File System
  * ═══════════════════════════════════════════════════════════════════════════════ */
 
-/**
- * @brief Check if file exists
- */
-bool uft_file_exists(const char *path);
 
-/**
- * @brief Check if directory exists
- */
-bool uft_dir_exists(const char *path);
 
 /**
  * @brief Get file size
  */
 int64_t uft_file_size(const char *path);
 
-/**
- * @brief Create directory (with parents)
- */
-int uft_mkdir_p(const char *path);
 
-/**
- * @brief Get user home directory
- */
-int uft_get_home_dir(char *path, size_t path_size);
 
-/**
- * @brief Get application data directory
- */
-int uft_get_app_data_dir(char *path, size_t path_size, const char *app_name);
 
-/**
- * @brief Get temp directory
- */
-int uft_get_temp_dir(char *path, size_t path_size);
 
 /* ═══════════════════════════════════════════════════════════════════════════════
  * High Resolution Timing
  * ═══════════════════════════════════════════════════════════════════════════════ */
 
-/**
- * @brief High-resolution timestamp (nanoseconds)
- */
-uint64_t uft_time_ns(void);
 
-/**
- * @brief High-resolution timestamp (microseconds)
- */
-uint64_t uft_time_us(void);
 
-/**
- * @brief High-resolution timestamp (milliseconds)
- */
-uint64_t uft_time_ms(void);
 
-/**
- * @brief Sleep for specified milliseconds
- */
-void uft_sleep_ms(uint32_t ms);
 
-/**
- * @brief Sleep for specified microseconds
- */
-void uft_sleep_us(uint32_t us);
 
 /* ═══════════════════════════════════════════════════════════════════════════════
  * Serial Port
@@ -435,45 +371,13 @@ typedef struct {
     .timeout_ms = 1000 \
 }
 
-/**
- * @brief Open serial port
- */
-uft_serial_t* uft_serial_open(const char *port, const uft_serial_config_t *config);
 
-/**
- * @brief Close serial port
- */
-void uft_serial_close(uft_serial_t *serial);
 
-/**
- * @brief Read from serial port
- */
-int uft_serial_read(uft_serial_t *serial, void *buffer, size_t size);
 
-/**
- * @brief Write to serial port
- */
-int uft_serial_write(uft_serial_t *serial, const void *buffer, size_t size);
 
-/**
- * @brief Flush serial port buffers
- */
-int uft_serial_flush(uft_serial_t *serial);
 
-/**
- * @brief Set serial timeout
- */
-int uft_serial_set_timeout(uft_serial_t *serial, uint32_t timeout_ms);
 
-/**
- * @brief Enumerate available serial ports
- */
-int uft_serial_enumerate(char **ports, int max_ports);
 
-/**
- * @brief Free enumerated ports list
- */
-void uft_serial_free_list(char **ports, int count);
 
 /* ═══════════════════════════════════════════════════════════════════════════════
  * Thread Primitives
@@ -484,30 +388,10 @@ void uft_serial_free_list(char **ports, int count);
  */
 typedef struct uft_mutex uft_mutex_t;
 
-/**
- * @brief Create mutex
- */
-uft_mutex_t* uft_mutex_create(void);
 
-/**
- * @brief Destroy mutex
- */
-void uft_mutex_destroy(uft_mutex_t *mutex);
 
-/**
- * @brief Lock mutex
- */
-void uft_mutex_lock(uft_mutex_t *mutex);
 
-/**
- * @brief Try lock mutex (non-blocking)
- */
-bool uft_mutex_trylock(uft_mutex_t *mutex);
 
-/**
- * @brief Unlock mutex
- */
-void uft_mutex_unlock(uft_mutex_t *mutex);
 
 /* ═══════════════════════════════════════════════════════════════════════════════
  * Platform Info
@@ -527,15 +411,7 @@ typedef struct {
     bool is_little_endian;
 } uft_platform_info_t;
 
-/**
- * @brief Get platform information
- */
-void uft_platform_get_info(uft_platform_info_t *info);
 
-/**
- * @brief Print platform info to stdout
- */
-void uft_platform_print_info(void);
 
 #ifdef __cplusplus
 }

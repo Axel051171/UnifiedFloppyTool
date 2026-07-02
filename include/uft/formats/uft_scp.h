@@ -194,25 +194,9 @@ typedef struct {
  * SCP Functions
  * ============================================================================ */
 
-/**
- * @brief Initialize SCP image
- */
-void uft_scp_image_init(scp_image_t *image);
 
-/**
- * @brief Free SCP image resources
- */
-void uft_scp_image_free(scp_image_t *image);
 
-/**
- * @brief Initialize read options
- */
-void uft_scp_read_options_init(scp_read_options_t *opts);
 
-/**
- * @brief Initialize write options
- */
-void uft_scp_write_options_init(scp_write_options_t *opts);
 
 /**
  * @brief Read SCP file
@@ -260,10 +244,6 @@ bool uft_scp_probe(const uint8_t *data, size_t size, int *confidence);
 const char* uft_scp_disk_type_name(uint8_t disk_type);
 #endif /* UFT_SCP_DISK_TYPE_NAME_DECLARED */
 
-/**
- * @brief Get track from SCP image
- */
-scp_track_data_t* uft_scp_get_track(scp_image_t *image, uint8_t track_num);
 
 #ifdef __cplusplus
 }

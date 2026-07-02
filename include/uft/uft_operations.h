@@ -43,7 +43,6 @@ extern "C" {
 #define UFT_OPS_API_VERSION_MAJOR   1
 #define UFT_OPS_API_VERSION_MINOR   0
 
-bool uft_ops_api_compatible(uint32_t client_version);
 
 // ============================================================================
 // Simple Operations (Auto-select tools)
@@ -63,10 +62,6 @@ uft_error_t uft_write_disk(int device_id,
                             const uft_tool_write_params_t* params,
                             const uft_unified_image_t* input);
 
-/**
- * @brief Open image file (auto-detect format)
- */
-uft_error_t uft_open_image(const char* path, uft_unified_image_t* output);
 
 /**
  * @brief Save image file
@@ -95,15 +90,12 @@ typedef struct uft_device_info {
     bool        connected;
 } uft_device_info_t;
 
-uft_error_t uft_scan_devices(uft_device_info_t* devices, size_t max_devices, size_t* actual_count);
-uft_error_t uft_select_device(int device_index);
 
 // ============================================================================
 // Format Detection
 // ============================================================================
 
 uft_error_t uft_detect_format(const char* path, uft_format_t* format, int* confidence);
-uft_error_t uft_detect_format_from_data(const uint8_t* data, size_t size, uft_format_t* format, int* confidence);
 
 #ifdef __cplusplus
 }

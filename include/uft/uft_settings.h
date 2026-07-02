@@ -102,15 +102,7 @@ int uft_settings_init(void);
  */
 void uft_settings_shutdown(void);
 
-/**
- * @brief Load settings from JSON file
- */
-int uft_settings_load(const char *path);
 
-/**
- * @brief Save settings to JSON file
- */
-int uft_settings_save(const char *path);
 
 /**
  * @brief Reset to defaults

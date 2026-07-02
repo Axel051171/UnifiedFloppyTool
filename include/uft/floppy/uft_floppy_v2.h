@@ -90,11 +90,6 @@ typedef struct {
  */
 uft_disk_t *uft_disk_create(void);
 
-/**
- * Destroy a disk handle and free resources
- * @param disk Disk handle
- */
-void uft_disk_destroy(uft_disk_t *disk);
 
 /**
  * Open a disk image from memory
@@ -110,37 +105,9 @@ void uft_disk_destroy(uft_disk_t *disk);
  */
 /* int uft_disk_open(uft_disk_t *disk, const uint8_t *data, size_t size); */
 
-/**
- * Open a disk image from file
- * @param disk Disk handle
- * @param filename Path to image file
- * @return 0 on success, -1 on error
- */
-int uft_disk_open_file(uft_disk_t *disk, const char *filename);
 
-/**
- * Save disk image to file
- * @param disk Disk handle
- * @param filename Path to output file
- * @return 0 on success, -1 on error
- */
-int uft_disk_save(uft_disk_t *disk, const char *filename);
 
-/**
- * Create a blank disk image
- * @param disk Disk handle
- * @param geometry Disk geometry
- * @return 0 on success, -1 on error
- */
-int uft_disk_create_blank(uft_disk_t *disk, const uft_disk_geometry_t *geometry);
 
-/**
- * Format disk (fill with pattern)
- * @param disk Disk handle
- * @param fill_byte Fill pattern
- * @return 0 on success, -1 on error
- */
-int uft_disk_format(uft_disk_t *disk, uint8_t fill_byte);
 
 /*===========================================================================
  * Geometry
@@ -202,25 +169,13 @@ int uft_disk_read_track(uft_disk_t *disk, int track, int side,
  * Utility Functions
  *===========================================================================*/
 
-/**
- * Get disk format
- */
-uft_disk_format_t uft_disk_get_format(uft_disk_t *disk);
 
 /**
  * Get format name string
  */
 const char *uft_disk_format_name(uft_disk_format_t format);
 
-/**
- * Check if disk has been modified
- */
-bool uft_disk_is_modified(uft_disk_t *disk);
 
-/**
- * Get disk image size
- */
-size_t uft_disk_get_size(uft_disk_t *disk);
 
 /**
  * Get raw disk data pointer
@@ -232,10 +187,6 @@ const uint8_t *uft_disk_get_data(uft_disk_t *disk);
  */
 const char *uft_disk_get_error(uft_disk_t *disk);
 
-/**
- * Generate JSON info report
- */
-int uft_disk_info_json(uft_disk_t *disk, char *buffer, size_t size);
 
 /*===========================================================================
  * Standard Geometries

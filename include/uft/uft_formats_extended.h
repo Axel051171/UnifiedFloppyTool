@@ -84,10 +84,6 @@ typedef struct ipf_track_info {
 }  ipf_track_info_t;
 
 uft_error_t uft_ipf_probe(const void* data, size_t size, int* confidence);
-uft_error_t uft_ipf_open(const char* path, void** handle);
-void uft_ipf_close(void* handle);
-uft_error_t uft_ipf_read_track(void* handle, int cyl, int head, void* buf, size_t* size);
-uft_error_t uft_ipf_get_info(void* handle, int* cyls, int* heads, int* sectors);
 
 // ============================================================================
 // STX Format (Pasti)
@@ -116,9 +112,6 @@ typedef struct stx_track_header {
 }  stx_track_header_t;
 
 uft_error_t uft_stx_probe(const void* data, size_t size, int* confidence);
-uft_error_t uft_stx_open(const char* path, void** handle);
-void uft_stx_close(void* handle);
-uft_error_t uft_stx_read_track(void* handle, int cyl, int head, void* buf, size_t* size);
 
 // ============================================================================
 // TD0 Format (Teledisk)
@@ -148,9 +141,6 @@ typedef struct td0_track_header {
 }  td0_track_header_t;
 
 uft_error_t uft_td0_probe(const void* data, size_t size, int* confidence);
-uft_error_t uft_td0_open(const char* path, void** handle);
-void uft_td0_close(void* handle);
-uft_error_t uft_td0_read_track(void* handle, int cyl, int head, void* buf, size_t* size);
 uft_error_t uft_td0_decompress(const uint8_t* src, size_t src_size, 
                                 uint8_t* dst, size_t* dst_size);
 
@@ -180,9 +170,6 @@ typedef struct imd_sector_header {
 #define IMD_SECTOR_DEL_ERR_COMPR 8
 
 uft_error_t uft_imd_probe(const void* data, size_t size, int* confidence);
-uft_error_t uft_imd_open(const char* path, void** handle);
-void uft_imd_close(void* handle);
-uft_error_t uft_imd_read_track(void* handle, int cyl, int head, void* buf, size_t* size);
 
 // ============================================================================
 // WOZ Format (Apple II Flux)
@@ -210,9 +197,6 @@ typedef struct woz_info_chunk {
 }  woz_info_chunk_t;
 
 uft_error_t uft_woz_probe(const void* data, size_t size, int* confidence);
-uft_error_t uft_woz_open(const char* path, void** handle);
-void uft_woz_close(void* handle);
-uft_error_t uft_woz_read_track(void* handle, int track, void* buf, size_t* size);
 
 // ============================================================================
 // A2R Format (Applesauce)
@@ -227,8 +211,6 @@ typedef struct a2r_header {
 }  a2r_header_t;
 
 uft_error_t uft_a2r_probe(const void* data, size_t size, int* confidence);
-uft_error_t uft_a2r_open(const char* path, void** handle);
-void uft_a2r_close(void* handle);
 
 // ============================================================================
 // NIB Format (Apple II Nibble)
@@ -238,9 +220,6 @@ void uft_a2r_close(void* handle);
 #define NIB_DISK_SIZE   (NIB_TRACK_SIZE * 35)
 
 uft_error_t uft_nib_probe(const void* data, size_t size, int* confidence);
-uft_error_t uft_nib_open(const char* path, void** handle);
-void uft_nib_close(void* handle);
-uft_error_t uft_nib_read_track(void* handle, int track, void* buf, size_t* size);
 
 // ============================================================================
 // FDI Format (Formatted Disk Image)
@@ -259,8 +238,6 @@ typedef struct fdi_header {
 }  fdi_header_t;
 
 uft_error_t uft_fdi_probe(const void* data, size_t size, int* confidence);
-uft_error_t uft_fdi_open(const char* path, void** handle);
-void uft_fdi_close(void* handle);
 
 // ============================================================================
 // Format Registry

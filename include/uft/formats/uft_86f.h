@@ -135,10 +135,6 @@ typedef struct uft_86f_context uft_86f_t;
  */
 bool uft_86f_probe(const char *path);
 
-/**
- * @brief Open 86F file
- */
-uft_86f_t* uft_86f_open(const char *path);
 
 /**
  * @brief Create new 86F file
@@ -146,34 +142,14 @@ uft_86f_t* uft_86f_open(const char *path);
 uft_86f_t* uft_86f_create(const char *path, int tracks, int sides,
                            int encoding, int rpm);
 
-/**
- * @brief Close 86F file
- */
-void uft_86f_close(uft_86f_t *ctx);
 
 /*===========================================================================
  * INFORMATION
  *===========================================================================*/
 
-/**
- * @brief Get file header
- */
-const uft_86f_header_t* uft_86f_get_header(uft_86f_t *ctx);
 
-/**
- * @brief Get number of tracks
- */
-int uft_86f_get_tracks(uft_86f_t *ctx);
 
-/**
- * @brief Get number of sides
- */
-int uft_86f_get_sides(uft_86f_t *ctx);
 
-/**
- * @brief Check if writable
- */
-bool uft_86f_is_writable(uft_86f_t *ctx);
 
 /*===========================================================================
  * TRACK OPERATIONS
@@ -209,10 +185,6 @@ int uft_86f_read_surface(uft_86f_t *ctx, int track, int side,
  * SECTOR OPERATIONS
  *===========================================================================*/
 
-/**
- * @brief Get number of sectors on track
- */
-int uft_86f_get_sector_count(uft_86f_t *ctx, int track, int side);
 
 /**
  * @brief Get sector info
@@ -236,20 +208,8 @@ int uft_86f_write_sector(uft_86f_t *ctx, int track, int side, int sector,
  * CONVERSION
  *===========================================================================*/
 
-/**
- * @brief Convert 86F to IMG
- */
-int uft_86f_to_img(const char *f86_path, const char *img_path);
 
-/**
- * @brief Convert IMG to 86F
- */
-int uft_img_to_86f(const char *img_path, const char *f86_path);
 
-/**
- * @brief Convert 86F to raw flux
- */
-int uft_86f_to_flux(const char *f86_path, uint32_t **flux, size_t *count);
 
 #ifdef __cplusplus
 }

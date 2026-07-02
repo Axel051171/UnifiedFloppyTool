@@ -171,38 +171,10 @@ void uft_apd_destroy(uft_apd_t *apd);
  * FILE OPERATIONS
  *===========================================================================*/
 
-/**
- * @brief Open APD file for reading
- * 
- * @param apd Context
- * @param path Path to .apd file
- * @return 0 on success
- */
-int uft_apd_open(uft_apd_t *apd, const char *path);
 
-/**
- * @brief Create new APD file
- * 
- * @param apd Context
- * @param path Output path
- * @return 0 on success
- */
-int uft_apd_create_file(uft_apd_t *apd, const char *path);
 
-/**
- * @brief Save APD to file
- */
-int uft_apd_save(uft_apd_t *apd, const char *path);
 
-/**
- * @brief Close APD file
- */
-void uft_apd_close(uft_apd_t *apd);
 
-/**
- * @brief Get disk info
- */
-int uft_apd_get_info(uft_apd_t *apd, uft_apd_info_t *info);
 
 /*===========================================================================
  * DETECTION
@@ -217,38 +189,13 @@ int uft_apd_get_info(uft_apd_t *apd, uft_apd_info_t *info);
  */
 int uft_apd_detect(const uint8_t *data, size_t size);
 
-/**
- * @brief Check if file is APD by path
- */
-bool uft_apd_detect_file(const char *path);
 
-/**
- * @brief Detect ADFS format from APD
- */
-int uft_apd_detect_format(uft_apd_t *apd);
 
 /*===========================================================================
  * TRACK OPERATIONS
  *===========================================================================*/
 
-/**
- * @brief Read track from APD
- * 
- * @param apd Context
- * @param track_num Track number (0-159)
- * @param track Output: track data
- * @return 0 on success
- */
-int uft_apd_read_track(uft_apd_t *apd, int track_num, uft_apd_track_t *track);
 
-/**
- * @brief Write track to APD
- * 
- * @param apd Context
- * @param track Track data to write
- * @return 0 on success
- */
-int uft_apd_write_track(uft_apd_t *apd, const uft_apd_track_t *track);
 
 /**
  * @brief Free track data
@@ -306,64 +253,17 @@ int uft_apd_read_logical_sector(uft_apd_t *apd, uint32_t lba,
  * CONVERSION
  *===========================================================================*/
 
-/**
- * @brief Convert APD to Acorn ADF (sector image)
- * 
- * @param apd Source APD context
- * @param adf_path Output ADF path
- * @return 0 on success
- */
-int uft_apd_to_adf(uft_apd_t *apd, const char *adf_path);
 
-/**
- * @brief Convert Acorn ADF to APD
- * 
- * @param adf_path Source ADF path
- * @param apd_path Output APD path
- * @return 0 on success
- */
-int uft_adf_to_apd(const char *adf_path, const char *apd_path);
 
-/**
- * @brief Convert KryoFlux RAW to APD
- * 
- * @param kf_dir Directory with track00.0.raw files
- * @param apd_path Output APD path
- * @param scan_fm Also scan for FM sectors
- * @return 0 on success
- */
-int uft_kryoflux_to_apd(const char *kf_dir, const char *apd_path, bool scan_fm);
 
-/**
- * @brief Convert SCP to APD
- */
-int uft_scp_to_apd(const char *scp_path, const char *apd_path);
 
 /*===========================================================================
  * FM/MFM DECODING (ACORN SPECIFIC)
  *===========================================================================*/
 
-/**
- * @brief Find FM sync in bitstream
- * 
- * Acorn uses different sync patterns than IBM/Amiga
- */
-int uft_apd_find_fm_sync(const uint8_t *data, size_t bits, int start);
 
-/**
- * @brief Find MFM sync in bitstream
- */
-int uft_apd_find_mfm_sync(const uint8_t *data, size_t bits, int start);
 
-/**
- * @brief Decode FM byte from bitstream
- */
-int uft_apd_decode_fm_byte(const uint8_t *data, int bit_offset);
 
-/**
- * @brief Decode MFM byte from bitstream
- */
-int uft_apd_decode_mfm_byte(const uint8_t *data, int bit_offset);
 
 /**
  * @brief Encode data as FM bitstream
@@ -397,10 +297,6 @@ typedef enum {
     UFT_ACORN_PROT_QD_TRACK         /**< Quad density track */
 } uft_acorn_protection_t;
 
-/**
- * @brief Detect protection type
- */
-uft_acorn_protection_t uft_apd_detect_protection(uft_apd_t *apd);
 
 /**
  * @brief Get protection name
@@ -437,15 +333,7 @@ static inline int uft_apd_head(int track_num) {
     return track_num % 2;
 }
 
-/**
- * @brief Print APD info
- */
-void uft_apd_print_info(uft_apd_t *apd);
 
-/**
- * @brief Print track info
- */
-void uft_apd_print_track(const uft_apd_track_t *track);
 
 #ifdef __cplusplus
 }

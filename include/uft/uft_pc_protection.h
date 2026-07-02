@@ -313,29 +313,8 @@ int uft_pcprot_detect_tages(const uint8_t *data, size_t size, char *version);
  * Disc Analysis
  * ═══════════════════════════════════════════════════════════════════════════════ */
 
-/**
- * @brief Analyze disc for protection marks
- * @param path Path to disc image
- * @param result Result structure to populate
- * @return UFT_OK on success
- */
-uft_error_t uft_pcprot_analyze_disc(const char *path, uft_pcprot_result_t *result);
 
-/**
- * @brief Check for bad/twin sectors
- * @param path Path to disc image
- * @param bad_count Output: number of bad sectors
- * @param twin_count Output: number of twin sectors
- * @return UFT_OK on success
- */
-uft_error_t uft_pcprot_check_sectors(const char *path, int *bad_count, int *twin_count);
 
-/**
- * @brief Check for subcode protection
- * @param path Path to disc image (must include subcode)
- * @return true if subcode protection detected
- */
-bool uft_pcprot_check_subcode(const char *path);
 
 /* ═══════════════════════════════════════════════════════════════════════════════
  * Signature Database Management
@@ -362,19 +341,7 @@ const uft_pcprot_sig_t *uft_pcprot_sig_get(int index);
  */
 int *uft_pcprot_sig_find(uft_pcprot_type_t type, int *count);
 
-/**
- * @brief Load external signature database
- * @param path Path to signature file
- * @return Number of signatures loaded (-1 on error)
- */
-int uft_pcprot_sig_load(const char *path);
 
-/**
- * @brief Save signature database
- * @param path Output path
- * @return UFT_OK on success
- */
-uft_error_t uft_pcprot_sig_save(const char *path);
 
 /* ═══════════════════════════════════════════════════════════════════════════════
  * Result Analysis
@@ -408,12 +375,6 @@ const char *uft_pcprot_vendor(uft_pcprot_type_t type);
  */
 bool uft_pcprot_can_preserve(uft_pcprot_type_t type);
 
-/**
- * @brief Get recommended image format
- * @param type Protection type
- * @return Recommended format for preservation
- */
-uft_format_t uft_pcprot_recommended_format(uft_pcprot_type_t type);
 
 /* ═══════════════════════════════════════════════════════════════════════════════
  * Output Functions

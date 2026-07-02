@@ -238,15 +238,7 @@ int uft_image_db_init(void);
  */
 void uft_image_db_shutdown(void);
 
-/**
- * @brief Load database from file
- */
-int uft_image_db_load(const char *path);
 
-/**
- * @brief Save database to file
- */
-int uft_image_db_save(const char *path);
 
 /**
  * @brief Get database entry count
@@ -262,15 +254,7 @@ size_t uft_image_db_count(void);
  */
 const uft_image_entry_t* uft_image_db_find_by_crc(uint32_t crc32);
 
-/**
- * @brief Find image by boot sector CRC
- */
-const uft_image_entry_t* uft_image_db_find_by_boot_crc(uint32_t boot_crc);
 
-/**
- * @brief Find image by MD5 hash
- */
-const uft_image_entry_t* uft_image_db_find_by_md5(const uint8_t md5[16]);
 
 /**
  * @brief Find image by name (partial match)
@@ -301,10 +285,6 @@ int uft_image_db_find_by_platform(uft_image_platform_t platform,
 int uft_image_db_identify(const uint8_t *data, size_t size,
                           uft_match_result_t *result);
 
-/**
- * @brief Identify image from file
- */
-int uft_image_db_identify_file(const char *path, uft_match_result_t *result);
 
 /**
  * @brief Get multiple possible matches
@@ -322,20 +302,12 @@ int uft_image_db_identify_multi(const uint8_t *data, size_t size,
 int uft_image_db_parse_boot(const uint8_t *boot_sector,
                             uft_boot_signature_t *sig);
 
-/**
- * @brief Check if boot sector was modified by Windows
- */
-bool uft_image_db_is_windows_modified(const uint8_t *boot_sector);
 
 /**
  * @brief Get OEM name info
  */
 const uft_oem_entry_t* uft_image_db_lookup_oem(const char *oem_name);
 
-/**
- * @brief Suggest correct OEM name
- */
-const char* uft_image_db_suggest_oem(const uint8_t *boot_sector);
 
 /*===========================================================================
  * DATABASE MODIFICATION
@@ -346,15 +318,7 @@ const char* uft_image_db_suggest_oem(const uint8_t *boot_sector);
  */
 int uft_image_db_add(const uft_image_entry_t *entry);
 
-/**
- * @brief Remove entry from database
- */
-int uft_image_db_remove(uint32_t id);
 
-/**
- * @brief Update entry
- */
-int uft_image_db_update(uint32_t id, const uft_image_entry_t *entry);
 
 /**
  * @brief Create entry from image data
@@ -372,10 +336,6 @@ int uft_image_db_create_entry(const uint8_t *data, size_t size,
  */
 uint32_t uft_image_db_crc32(const uint8_t *data, size_t size);
 
-/**
- * @brief Calculate MD5
- */
-void uft_image_db_md5(const uint8_t *data, size_t size, uint8_t md5[16]);
 
 /**
  * @brief Get category name
@@ -392,10 +352,6 @@ const char* uft_image_db_platform_name(uft_image_platform_t plat);
  */
 const char* uft_image_db_protection_name(uft_image_protection_t prot);
 
-/**
- * @brief Print database statistics
- */
-void uft_image_db_print_stats(void);
 
 #ifdef __cplusplus
 }

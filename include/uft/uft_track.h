@@ -200,22 +200,12 @@ void uft_track_init(uft_track_t *track, int cylinder, int head);
 #define UFT_TRACK_INIT_DECLARED
 #endif
 
-/**
- * @brief Clone a track (deep copy)
- */
-uft_track_t* uft_track_clone(const uft_track_t *src);
 
-/**
- * @brief Clear internal data without freeing track
- */
-void uft_track_clear(uft_track_t *track);
 
 /* ═══════════════════════════════════════════════════════════════════════════
  * Layer Management
  * ═══════════════════════════════════════════════════════════════════════════ */
 
-int uft_track_add_layer(uft_track_t *track, uft_layer_flags_t layer, size_t capacity);
-void uft_track_remove_layer(uft_track_t *track, uft_layer_flags_t layer);
 
 static inline bool uft_track_has_layer(const uft_track_t *track, uft_layer_flags_t layer) {
     return track && (track->available_layers & layer);
@@ -225,10 +215,6 @@ static inline bool uft_track_has_layer(const uft_track_t *track, uft_layer_flags
  * Bitstream Operations
  * ═══════════════════════════════════════════════════════════════════════════ */
 
-int uft_track_set_bits(uft_track_t *track, const uint8_t *bits, size_t bit_count);
-int uft_track_get_bits(const uft_track_t *track, uint8_t *bits, size_t *bit_count);
-int uft_track_set_timing(uft_track_t *track, const uint16_t *timing, size_t count);
-int uft_track_set_weak_mask(uft_track_t *track, const uint8_t *mask, size_t byte_count);
 
 /* ═══════════════════════════════════════════════════════════════════════════
  * Sector Operations
@@ -236,7 +222,6 @@ int uft_track_set_weak_mask(uft_track_t *track, const uint8_t *mask, size_t byte
 
 uft_error_t uft_track_add_sector(uft_track_t *track, const uft_sector_t *sector);
 const uft_sector_t* uft_track_get_sector(const uft_track_t *track, int record);
-const uft_sector_t* uft_track_get_sectors(const uft_track_t *track, size_t *count);
 
 /* ═══════════════════════════════════════════════════════════════════════════
  * Flux Operations
@@ -247,15 +232,11 @@ const uft_sector_t* uft_track_get_sectors(const uft_track_t *track, size_t *coun
 int uft_track_set_flux(uft_track_t *track, const uint32_t *samples,
                        size_t count, double sample_rate_mhz);
 #endif
-int uft_track_add_revolution(uft_track_t *track, const uint32_t *samples, size_t count);
 
 /* ═══════════════════════════════════════════════════════════════════════════
  * Validation
  * ═══════════════════════════════════════════════════════════════════════════ */
 
-int uft_track_compare(const uft_track_t *a, const uft_track_t *b);
-int uft_track_validate(const uft_track_t *track);
-const char* uft_track_status_str(const uft_track_t *track, char *buf, size_t buf_size);
 
 /* ═══════════════════════════════════════════════════════════════════════════
  * Convenience Macros

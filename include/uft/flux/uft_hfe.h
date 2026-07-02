@@ -204,21 +204,7 @@ static inline bool uft_hfe_check_signature(const uint8_t *data) {
     return memcmp(data, UFT_HFE_SIGNATURE, UFT_HFE_SIGNATURE_LEN) == 0;
 }
 
-/**
- * @brief Initialize HFE context from header
- * @param hfe Context to initialize
- * @param header Raw header data (512 bytes)
- * @return 0 on success, -1 on error
- */
-int uft_hfe_init(uft_hfe_t *hfe, const uint8_t *header);
 
-/**
- * @brief Read track LUT from file
- * @param hfe Initialized context
- * @param data LUT data (512 bytes minimum)
- * @return 0 on success, -1 on error
- */
-int uft_hfe_read_lut(uft_hfe_t *hfe, const uint8_t *data);
 
 /**
  * @brief Get track data offset and length

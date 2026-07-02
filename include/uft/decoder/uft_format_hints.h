@@ -214,21 +214,7 @@ typedef struct {
  * Predefined Format Hints
  * ============================================================================ */
 
-/**
- * @brief Get predefined hint for format ID
- * 
- * @param format_id   Format identifier
- * @return Pointer to static hint structure, or NULL if unknown
- */
-const uft_format_hint_t* uft_format_get_hint(uft_format_id_t format_id);
 
-/**
- * @brief Get hint by name
- * 
- * @param name   Format name (e.g., "D64", "ADF", "MFM_HD")
- * @return Pointer to hint, or NULL if not found
- */
-const uft_format_hint_t* uft_format_get_hint_by_name(const char *name);
 
 /**
  * @brief Get all available hints
@@ -277,10 +263,6 @@ uint8_t uft_decode_context_get_sectors(
     const uft_decode_context_t *ctx
 );
 
-/**
- * @brief Reset decode statistics
- */
-void uft_decode_context_reset_stats(uft_decode_context_t *ctx);
 
 /* ============================================================================
  * Format Detection
@@ -417,20 +399,8 @@ const char* uft_encoding_name(uft_encoding_type_t encoding);
  */
 const char* uft_format_name(uft_format_id_t format_id);
 
-/**
- * @brief Create custom hint
- */
-uft_format_hint_t* uft_format_hint_create(void);
 
-/**
- * @brief Free custom hint
- */
-void uft_format_hint_free(uft_format_hint_t *hint);
 
-/**
- * @brief Copy hint
- */
-uft_format_hint_t* uft_format_hint_copy(const uft_format_hint_t *hint);
 
 /**
  * @brief Export hint to JSON

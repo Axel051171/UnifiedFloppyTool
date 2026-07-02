@@ -300,10 +300,6 @@ uft_track_verify_t *uft_verify_track_ex(
     const uft_verify_options_t *options
 );
 
-/**
- * @brief Track-Result freigeben
- */
-void uft_track_verify_free(uft_track_verify_t *result);
 
 /* ═══════════════════════════════════════════════════════════════════════════════
  * API Functions - Sector-Level Verification
@@ -321,10 +317,6 @@ uft_sector_verify_t *uft_verify_sector(
     size_t size
 );
 
-/**
- * @brief Sektor-Result freigeben
- */
-void uft_sector_verify_free(uft_sector_verify_t *result);
 
 /* ═══════════════════════════════════════════════════════════════════════════════
  * API Functions - Disk-Level Verification
@@ -456,10 +448,6 @@ uft_verify_status_t uft_verify_apple_track(
  * API Functions - Reporting
  * ═══════════════════════════════════════════════════════════════════════════════ */
 
-/**
- * @brief Verify-Result als Text ausgeben
- */
-void uft_verify_result_print(const uft_verify_result_t *result);
 
 /**
  * @brief Verify-Result als JSON
@@ -525,10 +513,6 @@ typedef struct {
 /** Write-verify callback */
 typedef void (*uft_wv_callback_t)(int cyl, int head, uft_verify_status_t status, void *user);
 
-/** API */
-uft_wv_context_t* uft_wv_create(void *disk, const uft_wv_options_t *options);
-void uft_wv_destroy(uft_wv_context_t *ctx);
-void uft_wv_set_callback(uft_wv_context_t *ctx, uft_wv_callback_t cb, void *user);
 
 #ifdef __cplusplus
 }

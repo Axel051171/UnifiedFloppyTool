@@ -174,14 +174,8 @@ typedef struct uft_sector_unified {
  * Function Prototypes
  *===========================================================================*/
 
-/* Lifecycle */
-uft_sector_unified_t* uft_sector_create(void);
 void uft_sector_free(uft_sector_unified_t *sector);
-uft_sector_unified_t* uft_sector_clone(const uft_sector_unified_t *src);
-void uft_sector_reset(uft_sector_unified_t *sector);
 
-/* Data Management */
-int uft_sector_alloc_data(uft_sector_unified_t *sector, size_t size);
 int uft_sector_set_data(uft_sector_unified_t *sector, 
                         const uint8_t *data, size_t size);
 int uft_sector_add_version(uft_sector_unified_t *sector,
@@ -190,7 +184,6 @@ int uft_sector_add_version(uft_sector_unified_t *sector,
 /* Address */
 void uft_sector_set_addr(uft_sector_unified_t *sector,
                          uint8_t cyl, uint8_t head, uint8_t sec, uint8_t size_code);
-uint16_t uft_sector_get_size(const uft_sector_unified_t *sector);
 
 /* Status Checks */
 static inline bool uft_sector_is_valid(const uft_sector_unified_t *s) {
@@ -209,9 +202,6 @@ static inline bool uft_sector_is_protected(const uft_sector_unified_t *s) {
     return s && (s->flags & UFT_SF_PROTECTED);
 }
 
-/* Quality */
-float uft_sector_calc_confidence(const uft_sector_unified_t *sector);
-void uft_sector_select_best_version(uft_sector_unified_t *sector);
 
 /* Comparison */
 bool uft_sector_data_equals(const uft_sector_unified_t *a,
@@ -222,7 +212,6 @@ int uft_sector_compare_addr(const uft_sector_unified_t *a,
 /* Debug */
 int uft_sector_dump(const uft_sector_unified_t *sector, 
                     char *buffer, size_t size);
-const char* uft_sector_flags_str(uint16_t flags);
 
 /*===========================================================================
  * Legacy Conversion

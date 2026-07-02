@@ -241,10 +241,6 @@ void uft_pll_context_reset(uft_pll_context_t *ctx);
  */
 const uft_pll_config_t* uft_pll_get_config(const uft_pll_context_t *ctx);
 
-/**
- * @brief Update config
- */
-int uft_pll_set_config(uft_pll_context_t *ctx, const uft_pll_config_t *config);
 
 /**
  * @brief Apply preset
@@ -290,10 +286,6 @@ int uft_pll_decode_flux(
     uint8_t *bits_out,
     size_t bits_capacity);
 
-/**
- * @brief Process index pulse
- */
-void uft_pll_index(uft_pll_context_t *ctx);
 
 /*===========================================================================
  * QUALITY

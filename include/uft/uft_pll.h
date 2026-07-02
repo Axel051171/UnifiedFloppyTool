@@ -100,9 +100,6 @@ int            uft_pll_process_flux(uft_pll_ctx_t* ctx,
                                     uint32_t flux_ns,
                                     uint8_t* bits_out,
                                     int* bit_count_out);
-void           uft_pll_reset(uft_pll_ctx_t* ctx);
-double         uft_pll_get_cell_size_ns(const uft_pll_ctx_t* ctx);
-bool           uft_pll_is_locked(const uft_pll_ctx_t* ctx);
 
 #ifdef __cplusplus
 }

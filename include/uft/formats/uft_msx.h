@@ -314,8 +314,6 @@ int uft_msx_report_to_markdown(const uft_msx_report_t* report, char* md_out, siz
  *============================================================================*/
 
 uint16_t uft_msx_fat_get_entry(uft_msx_ctx_t* ctx, uint16_t cluster);
-uft_msx_rc_t uft_msx_fat_set_entry(uft_msx_ctx_t* ctx, uint16_t cluster, uint16_t value);
-uint16_t uft_msx_fat_find_free(uft_msx_ctx_t* ctx);
 uint32_t uft_msx_fat_count_free(uft_msx_ctx_t* ctx);
 
 /*============================================================================

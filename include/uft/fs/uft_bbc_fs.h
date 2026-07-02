@@ -249,15 +249,7 @@ int uft_bbc_detect(const uint8_t *data, size_t size,
  */
 const char *uft_bbc_format_name(uft_bbc_format_t format);
 
-/**
- * @brief Check if format is DFS variant
- */
-bool uft_bbc_is_dfs(uft_bbc_format_t format);
 
-/**
- * @brief Check if format is ADFS variant
- */
-bool uft_bbc_is_adfs(uft_bbc_format_t format);
 
 /*===========================================================================
  * API Functions - DFS
@@ -321,10 +313,6 @@ int uft_dfs_add_file(uint8_t *data, size_t size,
                       uft_dfs_file_t *file,
                       const uint8_t *file_data);
 
-/**
- * @brief Set DFS boot option
- */
-int uft_dfs_set_boot(uint8_t *data, size_t size, uft_dfs_boot_t option);
 
 /**
  * @brief Validate DFS image
@@ -434,27 +422,9 @@ int uft_bbc_to_adf(const uint8_t *data, size_t size,
  * Utility Functions
  *===========================================================================*/
 
-/**
- * @brief Decode BBC load/exec address
- * Handles the top 2 bits stored in catalog byte
- */
-uint32_t uft_bbc_decode_addr(uint16_t base, uint8_t extra);
 
-/**
- * @brief Encode BBC load/exec address
- */
-void uft_bbc_encode_addr(uint32_t addr, uint16_t *base, uint8_t *extra);
 
-/**
- * @brief Convert BBC string to ASCII
- * BBC strings have bit 7 set on last character
- */
-void uft_bbc_string_decode(const uint8_t *src, char *dst, size_t max_len);
 
-/**
- * @brief Encode ASCII to BBC string format
- */
-void uft_bbc_string_encode(const char *src, uint8_t *dst, size_t max_len);
 
 #ifdef __cplusplus
 }

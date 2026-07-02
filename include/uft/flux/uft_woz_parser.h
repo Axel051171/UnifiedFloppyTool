@@ -267,87 +267,16 @@ typedef struct {
  * API Functions
  *============================================================================*/
 
-/**
- * @brief Create WOZ parser context
- * @return Context or NULL
- */
-uft_woz_ctx_t* uft_woz_create(void);
 
-/**
- * @brief Destroy parser context
- * @param ctx Context
- */
-void uft_woz_destroy(uft_woz_ctx_t* ctx);
 
-/**
- * @brief Open WOZ file
- * @param ctx Context
- * @param filename Path to WOZ file
- * @return UFT_WOZ_OK on success
- */
-int uft_woz_open(uft_woz_ctx_t* ctx, const char* filename);
 
-/**
- * @brief Open from memory
- * @param ctx Context
- * @param data WOZ file data
- * @param size Data size
- * @return UFT_WOZ_OK on success
- */
-int uft_woz_open_memory(uft_woz_ctx_t* ctx, const uint8_t* data, size_t size);
 
-/**
- * @brief Close WOZ file
- * @param ctx Context
- */
-void uft_woz_close(uft_woz_ctx_t* ctx);
 
-/**
- * @brief Get track count
- * @param ctx Context
- * @return Number of tracks
- */
-int uft_woz_get_track_count(uft_woz_ctx_t* ctx);
 
-/**
- * @brief Check if track exists
- * @param ctx Context
- * @param quarter_track Quarter track number (0-159)
- * @return true if track exists
- */
-bool uft_woz_has_track(uft_woz_ctx_t* ctx, int quarter_track);
 
-/**
- * @brief Read track data
- * @param ctx Context
- * @param quarter_track Quarter track number (0-159)
- * @param track Output track data
- * @return UFT_WOZ_OK on success
- */
-int uft_woz_read_track(uft_woz_ctx_t* ctx, int quarter_track, uft_woz_track_t* track);
 
-/**
- * @brief Read flux data (v3 only)
- * @param ctx Context
- * @param quarter_track Quarter track number
- * @param track Output track data with flux
- * @return UFT_WOZ_OK on success
- */
-int uft_woz_read_flux(uft_woz_ctx_t* ctx, int quarter_track, uft_woz_track_t* track);
 
-/**
- * @brief Free track data
- * @param track Track to free
- */
-void uft_woz_free_track(uft_woz_track_t* track);
 
-/**
- * @brief Get metadata value
- * @param ctx Context
- * @param key Metadata key
- * @return Value or NULL
- */
-const char* uft_woz_get_metadata(uft_woz_ctx_t* ctx, const char* key);
 
 /**
  * @brief Get disk type name
@@ -356,27 +285,8 @@ const char* uft_woz_get_metadata(uft_woz_ctx_t* ctx, const char* key);
  */
 const char* uft_woz_disk_type_name(uint8_t disk_type);
 
-/**
- * @brief Get compatible hardware names
- * @param flags Hardware flags
- * @param buffer Output buffer
- * @param size Buffer size
- */
-void uft_woz_hw_names(uint16_t flags, char* buffer, size_t size);
 
-/**
- * @brief Calculate bit timing in nanoseconds
- * @param bit_timing Optimal bit timing value
- * @return Timing in nanoseconds
- */
-uint32_t uft_woz_bit_timing_ns(uint8_t bit_timing);
 
-/**
- * @brief Verify CRC32
- * @param ctx Context
- * @return true if CRC valid
- */
-bool uft_woz_verify_crc(uft_woz_ctx_t* ctx);
 
 /**
  * @brief Decode nibbles from bitstream

@@ -127,11 +127,8 @@ uft_error_t uft_validate_g64(const uint8_t* data, size_t size,
 // Checksum Functions
 // ============================================================================
 
-uint32_t uft_crc32(const uint8_t* data, size_t size);
 uint16_t uft_crc16_ccitt(const uint8_t* data, size_t size);
 uint8_t uft_checksum_xor(const uint8_t* data, size_t size);
-uint32_t uft_checksum_amiga(const uint8_t* data, size_t size);
-uint8_t uft_checksum_gcr(const uint8_t* data, size_t size);
 
 #ifdef __cplusplus
 }
@@ -167,18 +164,5 @@ bool uft_validate_format_encoding(
     size_t msg_size
 );
 
-/**
- * @brief Get valid encodings for a format
- * @param format Format ID
- * @param encodings Output array (must hold at least 8 entries)
- * @return Number of valid encodings
- */
-int uft_get_valid_encodings(uft_format_id_t format, uft_encoding_t* encodings);
 
-/**
- * @brief Get default encoding for a format
- * @param format Format ID
- * @return Default encoding or UFT_ENC_UNKNOWN
- */
-uft_encoding_t uft_get_default_encoding(uft_format_id_t format);
 

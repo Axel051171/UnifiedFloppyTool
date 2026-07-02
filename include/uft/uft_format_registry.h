@@ -199,39 +199,15 @@ int uft_format_registry_init(void);
  */
 void uft_format_registry_shutdown(void);
 
-/**
- * @brief Register a format driver
- */
-int uft_format_register(const uft_format_driver_t *driver);
 
-/**
- * @brief Unregister a format driver
- */
-int uft_format_unregister(const char *id);
 
-/**
- * @brief Get number of registered formats
- */
-int uft_format_count(void);
 
 /*===========================================================================
  * FORMAT LOOKUP
  *===========================================================================*/
 
-/**
- * @brief Get format driver by ID
- */
-const uft_format_driver_t* uft_format_get(const char *id);
 
-/**
- * @brief Get format driver by extension
- */
-const uft_format_driver_t* uft_format_get_by_extension(const char *ext);
 
-/**
- * @brief Get format driver by index
- */
-const uft_format_driver_t* uft_format_get_by_index(int index);
 
 /**
  * @brief Get all formats for a category
@@ -280,15 +256,7 @@ const uft_format_driver_t* uft_format_detect_best(const uint8_t *data,
                                                    size_t size,
                                                    const char *filename);
 
-/**
- * @brief Get detection level from score
- */
-uft_detect_level_t uft_format_score_to_level(int score);
 
-/**
- * @brief Get detection level name
- */
-const char* uft_format_level_name(uft_detect_level_t level);
 
 /*===========================================================================
  * FORMAT OPERATIONS
@@ -331,26 +299,12 @@ const char* uft_format_platform_name(uft_format_platform_t plat);
 bool uft_format_has_capability(const uft_format_driver_t *driver,
                                 uft_format_caps_t cap);
 
-/**
- * @brief Print format info
- */
-void uft_format_print_info(const uft_format_driver_t *driver);
 
-/**
- * @brief Print all registered formats
- */
-void uft_format_print_all(void);
 
 /*===========================================================================
  * BUILT-IN FORMAT REGISTRATION
  *===========================================================================*/
 
-/**
- * @brief Register all built-in formats
- * 
- * Call after uft_format_registry_init()
- */
-int uft_format_register_builtins(void);
 
 #ifdef __cplusplus
 }

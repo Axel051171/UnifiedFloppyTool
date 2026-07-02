@@ -439,11 +439,6 @@ typedef enum {
  */
 uft_cpm_ctx_t *uft_cpm_create(void);
 
-/**
- * @brief Destroy a CP/M filesystem context
- * @param ctx Context to destroy
- */
-void uft_cpm_destroy(uft_cpm_ctx_t *ctx);
 
 /**
  * @brief Open a CP/M disk image
@@ -483,20 +478,7 @@ uft_cpm_err_t uft_cpm_open_dpb(uft_cpm_ctx_t *ctx,
                                 const uint8_t *data, size_t size,
                                 const uft_cpm_dpb_t *dpb, bool copy);
 
-/**
- * @brief Close the image (flushes changes)
- * @param ctx Context
- * @return Error code
- */
-uft_cpm_err_t uft_cpm_close(uft_cpm_ctx_t *ctx);
 
-/**
- * @brief Save image to file
- * @param ctx Context
- * @param filename Output filename
- * @return Error code
- */
-uft_cpm_err_t uft_cpm_save(uft_cpm_ctx_t *ctx, const char *filename);
 
 /*===========================================================================
  * Detection Functions
@@ -512,20 +494,7 @@ uft_cpm_err_t uft_cpm_save(uft_cpm_ctx_t *ctx, const char *filename);
 bool uft_cpm_detect(const uint8_t *data, size_t size,
                     uft_cpm_detect_t *result);
 
-/**
- * @brief Try to detect format from image size
- * @param size Image size
- * @return Best-match format
- */
-uft_cpm_format_t uft_cpm_detect_format_by_size(size_t size);
 
-/**
- * @brief Get DPB for known format
- * @param format Format type
- * @param dpb Output DPB
- * @return true if format known
- */
-bool uft_cpm_get_dpb(uft_cpm_format_t format, uft_cpm_dpb_t *dpb);
 
 /**
  * @brief Get format name string
@@ -631,11 +600,6 @@ uft_cpm_err_t uft_cpm_write_block(uft_cpm_ctx_t *ctx,
 uft_cpm_err_t uft_cpm_read_dir(const uft_cpm_ctx_t *ctx,
                                 uft_cpm_dir_t *dir, int user);
 
-/**
- * @brief Free directory listing
- * @param dir Directory to free
- */
-void uft_cpm_free_dir(uft_cpm_dir_t *dir);
 
 /**
  * @brief Find file in directory
@@ -779,52 +743,15 @@ uft_cpm_err_t uft_cpm_get_attrib(const uft_cpm_ctx_t *ctx,
  * Block Allocation
  *===========================================================================*/
 
-/**
- * @brief Check if block is allocated
- * @param ctx Context
- * @param block Block number
- * @return true if allocated
- */
-bool uft_cpm_block_used(const uft_cpm_ctx_t *ctx, uint16_t block);
 
-/**
- * @brief Allocate a free block
- * @param ctx Context
- * @return Block number or 0xFFFF if full
- */
-uint16_t uft_cpm_alloc_block(uft_cpm_ctx_t *ctx);
 
-/**
- * @brief Free a block
- * @param ctx Context
- * @param block Block number
- */
-void uft_cpm_free_block(uft_cpm_ctx_t *ctx, uint16_t block);
 
-/**
- * @brief Get free block count
- * @param ctx Context
- * @return Number of free blocks
- */
-uint16_t uft_cpm_free_blocks(const uft_cpm_ctx_t *ctx);
 
-/**
- * @brief Get free bytes
- * @param ctx Context
- * @return Free space in bytes
- */
-uint32_t uft_cpm_free_bytes(const uft_cpm_ctx_t *ctx);
 
 /*===========================================================================
  * Directory Entry Operations
  *===========================================================================*/
 
-/**
- * @brief Find free directory entry
- * @param ctx Context
- * @return Entry index or -1 if full
- */
-int16_t uft_cpm_find_free_entry(uft_cpm_ctx_t *ctx);
 
 /**
  * @brief Allocate directory entry
@@ -880,37 +807,9 @@ uft_cpm_err_t uft_cpm_format(uft_cpm_ctx_t *ctx);
  * Utilities
  *===========================================================================*/
 
-/**
- * @brief Parse CP/M filename
- * @param input Full filename (NAME.EXT)
- * @param name Output name (8 chars, space-padded)
- * @param ext Output extension (3 chars, space-padded)
- * @return true if valid
- */
-bool uft_cpm_parse_filename(const char *input, char *name, char *ext);
 
-/**
- * @brief Format CP/M filename for display
- * @param entry Directory entry
- * @param buffer Output buffer (at least 16 bytes)
- */
-void uft_cpm_format_filename(const uft_cpm_dir_entry_t *entry, char *buffer);
 
-/**
- * @brief Validate filename
- * @param name Filename to validate
- * @return true if valid CP/M filename
- */
-bool uft_cpm_valid_filename(const char *name);
 
-/**
- * @brief Convert CP/M date to Unix time
- * @param cpm_date Days since 1/1/1978
- * @param hour Hour (BCD)
- * @param minute Minute (BCD)
- * @return Unix timestamp
- */
-time_t uft_cpm_to_unix_time(uint16_t cpm_date, uint8_t hour, uint8_t minute);
 
 /**
  * @brief Convert Unix time to CP/M date
@@ -922,18 +821,7 @@ time_t uft_cpm_to_unix_time(uint16_t cpm_date, uint8_t hour, uint8_t minute);
 void uft_cpm_from_unix_time(time_t unix_time, uint16_t *cpm_date,
                              uint8_t *hour, uint8_t *minute);
 
-/**
- * @brief Print directory listing
- * @param ctx Context
- * @param user User number filter (-1 for all)
- */
-void uft_cpm_print_dir(const uft_cpm_ctx_t *ctx, int user);
 
-/**
- * @brief Print disk info
- * @param ctx Context
- */
-void uft_cpm_print_info(const uft_cpm_ctx_t *ctx);
 
 /**
  * @brief Export directory as JSON
@@ -991,18 +879,7 @@ uft_cpm_err_t uft_cpm_recover_deleted(uft_cpm_ctx_t *ctx,
 int uft_cpm_validate(uft_cpm_ctx_t *ctx, bool fix,
                      char *report, size_t report_size);
 
-/**
- * @brief Check for cross-linked files
- * @param ctx Context
- * @return Number of cross-links found
- */
-int uft_cpm_check_crosslinks(const uft_cpm_ctx_t *ctx);
 
-/**
- * @brief Rebuild block allocation map
- * @param ctx Context
- */
-void uft_cpm_rebuild_allocation(uft_cpm_ctx_t *ctx);
 
 #ifdef __cplusplus
 }
