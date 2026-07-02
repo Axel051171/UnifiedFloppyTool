@@ -43,21 +43,44 @@ Ein lazy-stub im neu geschriebenen Code ist ein **Bug**, kein TODO.
 
 ## Phasen-Plan
 
-### Phase 1 — Triage & Inventarisierung (v4.1.6, ~1 Woche)
+### Phase 1 — Triage & Inventarisierung — ✓ ABGESCHLOSSEN (MF-291, 2026-07-02)
 
-**Ziel:** Jeden der 1832 Items in IMPLEMENT / DELEGATE / DOCUMENT / DELETE
+**Ziel:** Jedes Item in IMPLEMENT / DELEGATE / DOCUMENT / DELETE
 einsortieren — verbindlich. Ohne diese Sortierung läuft jede Folge-Phase ins
 Blaue.
 
-| Aufgabe | Tool | Akzeptanz |
-|---|---|---|
-| **C1**: 287 Format-Plugins → `is_stub=true` setzen mechanisch | Script `scripts/populate_is_stub.py` (analog zu `populate_features.py`) | `grep -c "\.is_stub\s*=\s*true" src/formats/**/*.c` → 287 |
-| **C2/C3**: Header-Usage-Scanner — pro deklarierter Funktion „hat Caller?" | Neuer Script `scripts/scan_skeleton_callers.py` (Output: CSV `header,fn,callers`) | CSV existiert, 1473 Zeilen, Caller-Count pro Eintrag |
-| **C5**: Residual in `uft_core_stubs.c` — pro Fn: echte Impl irgendwo? | Manuelle Triage à la A07 | Pro Fn: Entscheidung dokumentiert (RELOCATE / DELETE / DOCUMENT) |
-| **C8**: 39 unbewertete Stub-Marker | `stub-eliminator` agent invocation pro Datei | Pro Datei: eine der 4 Aktionen + Begründung im Audit-Log |
+**Gate-Artefakte (geliefert):**
+- `docs/stub_inventory.yaml` — die verbindliche Triage-Tabelle (generiert,
+  nicht hand-editieren; via `python scripts/scan_skeleton_callers.py --yaml`)
+- `docs/stub_callers.csv` — per-Deklaration Caller-Counts (3109 Zeilen)
+- `scripts/scan_skeleton_callers.py` — der Scanner (reproduzierbar)
 
-**Gate für Phase 2:** vollständige Triage-Tabelle als YAML in
-`docs/stub_inventory.yaml`. Jede Folgearbeit zitiert diese Datei.
+**Ergebnis:**
+
+| Metrik | Wert |
+|---|---|
+| Unimplementierte `uft_*`-Deklarationen (ALLE Header, nicht nur ≥10/80 %) | **3109** |
+| davon NULL Referenzen in src/+tests/ → DELETE-Kandidat | **2897 (93 %)** |
+| davon mit Referenzen → Kaskaden-Analyse Phase 2 | 212 |
+| Header komplett referenzlos → DELETE-Kandidat ganz | **170** |
+| Header SPLIT (referenzlose Decls löschen, Rest behalten) | 33 |
+| Header voll referenziert → DOCUMENT/IMPLEMENT | 8 |
+| C1 v3-Parser: DELETE-ready / REVIEW | 7 / 4 |
+| C5 core-stub-Fns: DELETE-Kandidat / DOCUMENT / A07-Duplikate | 5 / 17 / **0** |
+| C8 Stub-Marker-Dateien: honest / unmarkiert (Phase-2-Triage) | 7 / 21 |
+
+Der 50 %-DOCUMENT-Deckel aus der Risiko-Tabelle ist deutlich eingehalten —
+DELETE dominiert mit 93 %. Wichtige Interpretation: ein Caller-Count > 0
+bei einer UNIMPLEMENTIERTEN Funktion heißt, der referenzierende Code kann
+selbst nicht linken (tot/unbuilt) oder ein Test erwartet eine geplante
+API — beides Phase-2-Kaskaden-Arbeit.
+
+**Bewusste Abweichung vom ursprünglichen Task-Zuschnitt:** Das geplante
+`populate_is_stub.py` (287 Plugins mechanisch flaggen) entfiel mit der
+Zensus-Korrektur — die 84 registrierten Plugins sind mehrheitlich real;
+per-Plugin `is_stub`-Triage wandert als manuelle Review-Aufgabe in
+Phase 2 (Signalquelle: Plugin-Test-Existenz + read_track-Body-Analyse,
+kein blinder Sweep).
 
 ### Phase 2 — Mechanische Aufräumung (v4.1.6, ~1-2 Wochen)
 
