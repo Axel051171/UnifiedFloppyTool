@@ -708,7 +708,6 @@ SOURCES += \
     src/analysis/events/otdr_event_core_v2.c \
     src/analysis/denoise/uft_denoise_bridge.c \
     src/analysis/denoise/phi_otdr_denoise_1d.c \
-    src/formats/imd/uft_imd_parser_v3.c \
     src/formats/imd/uft_imd_plugin.c \
     src/formats/fdi/uft_fdi_plugin.c
 
@@ -730,7 +729,6 @@ SOURCES += \
     src/analysis/events/otdr_event_core_v2.c \
     src/analysis/denoise/uft_denoise_bridge.c \
     src/analysis/denoise/phi_otdr_denoise_1d.c \
-    src/formats/dsk/uft_dsk_parser_v3.c \
     src/formats/dsk_generic/uft_dsk_generic.c \
     src/formats/st/uft_st.c \
     src/formats/d77/uft_d77.c \
@@ -795,10 +793,7 @@ SOURCES += \
     src/diag/uft_disc_diagnostics.c \
     src/display/uft_display_track.c \
     src/compat/uft_fnmatch.c \
-    src/formats/c128/uft_c128_parser_v3.c \
     src/formats/imd/uft_imd_adapter.c \
-    src/formats/p64/uft_p64_parser_v3.c \
-    src/formats/pet/uft_pet_parser_v3.c \
     src/formats/scp/uft_scp_plugin.c \
     src/formats/xdf/uft_xdf_adapter.c \
     src/formats/xdf/uft_xdf_api.c \
@@ -806,7 +801,6 @@ SOURCES += \
     src/formats/xdf/uft_xdf_core.c \
     src/formats/zx/uft_zxbasic.c \
     src/formats/zx/uft_zxscreen.c \
-    src/formats/zx81/uft_zx81_parser_v3.c \
     src/policy/uft_write_gate.c \
     src/recovery/uft_bitstream_recovery.c \
     src/recovery/uft_cross_track.c \
@@ -872,7 +866,6 @@ SOURCES += \
     src/analysis/events/otdr_event_core_v2.c \
     src/analysis/denoise/uft_denoise_bridge.c \
     src/analysis/denoise/phi_otdr_denoise_1d.c \
-    src/formats/stx/uft_stx_parser_v3.c \
     src/formats/stx/uft_stx_air.c
 
 # ═══════════════════════════════════════════════════════════════════════════════

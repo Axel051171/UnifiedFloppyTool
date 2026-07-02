@@ -43,16 +43,14 @@ uft_disk_t* uft_disk_open(const char* path, bool read_only);
  */
 uft_disk_t* uft_disk_open_format(const char* path, uft_format_t format, bool read_only);
 
-/**
- * @brief Neues Disk-Image erstellen
- * 
- * @param path Pfad für neue Datei
- * @param format Ziel-Format
- * @param geometry Disk-Geometrie
- * @return Disk-Handle oder NULL bei Fehler
- */
-uft_disk_t* uft_disk_create(const char* path, uft_format_t format,
-                             const uft_geometry_t* geometry);
+/* uft_disk_create(path, format, geometry) — REMOVED (MF-294): this
+ * 3-arg prototype never had a matching implementation. The only
+ * definition (src/core/uft_core_stubs.c) is the 0-arg allocator whose
+ * canonical declaration lives in include/uft/floppy/uft_floppy_v2.h.
+ * A caller compiled against THIS prototype would have silently bound
+ * to the 0-arg symbol with its arguments ignored — an ABI bomb
+ * (signature mismatch, no compiler warning across TUs). Zero callers
+ * existed; prototype deleted instead of faking an implementation. */
 
 /**
  * @brief Disk-Image schließen

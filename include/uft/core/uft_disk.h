@@ -192,7 +192,13 @@ typedef struct uft_disk_unified {
  *===========================================================================*/
 
 /* Lifecycle */
-uft_disk_unified_t* uft_disk_create(void);
+/* uft_disk_create — REMOVED here (MF-294): the name is taken by the
+ * uft_disk_t allocator (canonical decl in floppy/uft_floppy_v2.h,
+ * definition in src/core/uft_core_stubs.c). Declaring it here with
+ * uft_disk_unified_t* return type made any future caller silently
+ * bind to the WRONG-TYPED symbol — signature-mismatch ABI bomb. When
+ * the unified-disk subsystem gets implemented, use a distinct name
+ * (e.g. uft_disk_unified_create). */
 void uft_disk_free(uft_disk_unified_t *disk);
 uft_disk_unified_t* uft_disk_clone(const uft_disk_unified_t *src);
 

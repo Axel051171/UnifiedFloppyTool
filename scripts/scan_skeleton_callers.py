@@ -117,6 +117,31 @@ def scan_c1_v3_parsers(root: Path, src_refs: Counter, test_refs: Counter):
     return out
 
 
+def _count_header_callsites(root: Path, fn: str) -> int:
+    """
+    Blind-spot fix (MF-294): a function with zero .c/.cpp references can
+    still be load-bearing via static-inline bodies or macros in HEADERS
+    (found the hard way: uft_cpu_has_feature is called from a
+    static-inline in uft_simd.h, uft_track_get_sector[_count] from the
+    foreach macro in uft_core.h). Count header occurrences that are NOT
+    prototypes: a line matching `... fn(...);` with no assignment/call
+    context is a decl and does not count.
+    """
+    n = 0
+    proto = re.compile(
+        r"^\s*[\w\*\s]+?\b" + re.escape(fn) + r"\s*\([^)]*\)\s*;\s*$")
+    callish = re.compile(r"\b" + re.escape(fn) + r"\s*\(")
+    for base in (root / "include", root / "src"):
+        for h in base.rglob("*.h"):
+            rel = h.relative_to(root).as_posix()
+            if any(rel.startswith(p) for p in VENDORED_PREFIXES):
+                continue
+            for line in _strip_comments(_read(h)).splitlines():
+                if callish.search(line) and not proto.match(line):
+                    n += 1
+    return n
+
+
 def scan_c5_core_stubs(root: Path, src_refs: Counter, test_refs: Counter):
     stub_file = root / "src" / "core" / "uft_core_stubs.c"
     text = _read(stub_file)
@@ -137,13 +162,15 @@ def scan_c5_core_stubs(root: Path, src_refs: Counter, test_refs: Counter):
                 continue
             dup += len(pat.findall(_strip_comments(_read(c))))
         refs = src_refs.get(fn, 0) + test_refs.get(fn, 0)
+        hdr = _count_header_callsites(root, fn)
         if dup > 0:
             proposal = "A07-CLASS: duplicate definition elsewhere — RELOCATE/DELETE"
-        elif refs <= 1:  # 1 == the definition itself
-            proposal = "DELETE candidate (no callers)"
+        elif refs <= 1 and hdr == 0:  # 1 == the definition itself
+            proposal = "DELETE candidate (no callers, incl. header call-sites)"
         else:
-            proposal = "DOCUMENT (real linker stub with callers) or IMPLEMENT"
+            proposal = "DOCUMENT (real implementation with callers) or IMPLEMENT"
         out.append({"function": fn, "callers": max(0, refs - 1),
+                    "header_callsites": hdr,
                     "duplicate_defs": dup, "proposal": proposal})
     return out
 
@@ -263,6 +290,7 @@ def main() -> int:
             lines += [
                 f"  - function: {e['function']}",
                 f"    callers: {e['callers']}",
+                f"    header_callsites: {e['header_callsites']}",
                 f"    duplicate_defs: {e['duplicate_defs']}",
                 f"    proposal: {e['proposal']}",
             ]

@@ -101,7 +101,12 @@ void uft_detect_result_free(uft_detect_result_t *result)
  * Disk Open / Close / Get-Geometry — real plugin delegation
  * ============================================================================ */
 
-void* uft_disk_create(void) {
+/* Signature aligned to the canonical declaration in
+ * include/uft/floppy/uft_floppy_v2.h (MF-294). Was `void*` — together
+ * with two mismatched prototypes elsewhere (3-arg in uft_core.h,
+ * uft_disk_unified_t* in core/uft_disk.h, both removed) that was a
+ * three-way signature bomb on one symbol. */
+uft_disk_t* uft_disk_create(void) {
     uft_disk_t *disk = calloc(1, sizeof(uft_disk_t));
     if (!disk) return NULL;
     disk->read_only = true;

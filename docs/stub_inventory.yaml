@@ -777,135 +777,129 @@ c1_pattern_a_parsers:
     loc: 544
     external_refs: 4
     proposal: REVIEW (has external refs)
-  - file: src/formats/c128/uft_c128_parser_v3.c
-    loc: 54
-    external_refs: 0
-    proposal: DELETE
   - file: src/formats/d64/uft_d64_parser_v3.c
     loc: 1681
     external_refs: 8
     proposal: REVIEW (has external refs)
-  - file: src/formats/dsk/uft_dsk_parser_v3.c
-    loc: 251
-    external_refs: 0
-    proposal: DELETE
   - file: src/formats/g64/uft_g64_parser_v3.c
     loc: 1927
     external_refs: 4
     proposal: REVIEW (has external refs)
-  - file: src/formats/imd/uft_imd_parser_v3.c
-    loc: 476
-    external_refs: 0
-    proposal: DELETE
-  - file: src/formats/p64/uft_p64_parser_v3.c
-    loc: 54
-    external_refs: 0
-    proposal: DELETE
-  - file: src/formats/pet/uft_pet_parser_v3.c
-    loc: 51
-    external_refs: 0
-    proposal: DELETE
   - file: src/formats/scp/uft_scp_parser_v3.c
     loc: 1765
     external_refs: 2
     proposal: REVIEW (has external refs)
-  - file: src/formats/stx/uft_stx_parser_v3.c
-    loc: 168
-    external_refs: 0
-    proposal: DELETE
-  - file: src/formats/zx81/uft_zx81_parser_v3.c
-    loc: 54
-    external_refs: 0
-    proposal: DELETE
 c5_core_stub_functions:
   - function: uft_c64_parser_add_bit
     callers: 1
+    header_callsites: 1
     duplicate_defs: 0
-    proposal: DOCUMENT (real linker stub with callers) or IMPLEMENT
+    proposal: DOCUMENT (real implementation with callers) or IMPLEMENT
   - function: uft_c64_parser_init
     callers: 1
+    header_callsites: 0
     duplicate_defs: 0
-    proposal: DOCUMENT (real linker stub with callers) or IMPLEMENT
+    proposal: DOCUMENT (real implementation with callers) or IMPLEMENT
   - function: uft_cpu_has_feature
     callers: 0
+    header_callsites: 1
     duplicate_defs: 0
-    proposal: DELETE candidate (no callers)
+    proposal: DOCUMENT (real implementation with callers) or IMPLEMENT
   - function: uft_detect_result_free
     callers: 2
+    header_callsites: 0
     duplicate_defs: 0
-    proposal: DOCUMENT (real linker stub with callers) or IMPLEMENT
+    proposal: DOCUMENT (real implementation with callers) or IMPLEMENT
   - function: uft_detect_result_init
     callers: 2
+    header_callsites: 0
     duplicate_defs: 0
-    proposal: DOCUMENT (real linker stub with callers) or IMPLEMENT
+    proposal: DOCUMENT (real implementation with callers) or IMPLEMENT
   - function: uft_disk_close
     callers: 11
+    header_callsites: 0
     duplicate_defs: 0
-    proposal: DOCUMENT (real linker stub with callers) or IMPLEMENT
+    proposal: DOCUMENT (real implementation with callers) or IMPLEMENT
   - function: uft_disk_create
     callers: 0
+    header_callsites: 0
     duplicate_defs: 0
-    proposal: DELETE candidate (no callers)
+    proposal: DELETE candidate (no callers, incl. header call-sites)
   - function: uft_disk_get_geometry
     callers: 2
+    header_callsites: 0
     duplicate_defs: 0
-    proposal: DOCUMENT (real linker stub with callers) or IMPLEMENT
+    proposal: DOCUMENT (real implementation with callers) or IMPLEMENT
   - function: uft_disk_open
     callers: 10
+    header_callsites: 0
     duplicate_defs: 0
-    proposal: DOCUMENT (real linker stub with callers) or IMPLEMENT
+    proposal: DOCUMENT (real implementation with callers) or IMPLEMENT
   - function: uft_inject_file
     callers: 5
+    header_callsites: 1
     duplicate_defs: 0
-    proposal: DOCUMENT (real linker stub with callers) or IMPLEMENT
+    proposal: DOCUMENT (real implementation with callers) or IMPLEMENT
   - function: uft_kfx_free
     callers: 13
+    header_callsites: 0
     duplicate_defs: 0
-    proposal: DOCUMENT (real linker stub with callers) or IMPLEMENT
+    proposal: DOCUMENT (real implementation with callers) or IMPLEMENT
   - function: uft_kfx_read_stream
     callers: 5
+    header_callsites: 0
     duplicate_defs: 0
-    proposal: DOCUMENT (real linker stub with callers) or IMPLEMENT
+    proposal: DOCUMENT (real implementation with callers) or IMPLEMENT
   - function: uft_lzhuf_decompress
     callers: 2
+    header_callsites: 1
     duplicate_defs: 0
-    proposal: DOCUMENT (real linker stub with callers) or IMPLEMENT
+    proposal: DOCUMENT (real implementation with callers) or IMPLEMENT
   - function: uft_scp_free
     callers: 11
+    header_callsites: 0
     duplicate_defs: 0
-    proposal: DOCUMENT (real linker stub with callers) or IMPLEMENT
+    proposal: DOCUMENT (real implementation with callers) or IMPLEMENT
   - function: uft_scp_get_track_flux
     callers: 9
+    header_callsites: 1
     duplicate_defs: 0
-    proposal: DOCUMENT (real linker stub with callers) or IMPLEMENT
+    proposal: DOCUMENT (real implementation with callers) or IMPLEMENT
   - function: uft_scp_read
     callers: 6
+    header_callsites: 1
     duplicate_defs: 0
-    proposal: DOCUMENT (real linker stub with callers) or IMPLEMENT
+    proposal: DOCUMENT (real implementation with callers) or IMPLEMENT
   - function: uft_track_find_sector
     callers: 1
+    header_callsites: 0
     duplicate_defs: 0
-    proposal: DOCUMENT (real linker stub with callers) or IMPLEMENT
+    proposal: DOCUMENT (real implementation with callers) or IMPLEMENT
   - function: uft_track_get_flux
     callers: 2
+    header_callsites: 1
     duplicate_defs: 0
-    proposal: DOCUMENT (real linker stub with callers) or IMPLEMENT
+    proposal: DOCUMENT (real implementation with callers) or IMPLEMENT
   - function: uft_track_get_sector
     callers: 0
+    header_callsites: 1
     duplicate_defs: 0
-    proposal: DELETE candidate (no callers)
+    proposal: DOCUMENT (real implementation with callers) or IMPLEMENT
   - function: uft_track_get_sector_count
     callers: 0
+    header_callsites: 1
     duplicate_defs: 0
-    proposal: DELETE candidate (no callers)
+    proposal: DOCUMENT (real implementation with callers) or IMPLEMENT
   - function: uft_track_get_status
     callers: 0
+    header_callsites: 0
     duplicate_defs: 0
-    proposal: DELETE candidate (no callers)
+    proposal: DELETE candidate (no callers, incl. header call-sites)
   - function: uft_track_has_flux
     callers: 2
+    header_callsites: 0
     duplicate_defs: 0
-    proposal: DOCUMENT (real linker stub with callers) or IMPLEMENT
+    proposal: DOCUMENT (real implementation with callers) or IMPLEMENT
 c8_stub_marker_files:
   - file: src/core/uft_decoder_plugin_stub.c
     classification: UNMARKED — triage
