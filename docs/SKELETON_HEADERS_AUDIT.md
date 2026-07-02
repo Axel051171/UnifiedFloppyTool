@@ -1,6 +1,6 @@
 # Skeleton-Headers Audit
 
-**Stand:** 2026-07-02 (auto-regeneriert MF-289; Tabellen unten sind live)
+**Stand:** 2026-07-02 (auto-regeneriert MF-293 nach DELETE-Welle 1; Tabellen live)
 **Methodik:** Automatischer Scan aller `include/uft/**/*.h` auf das Verhältnis
 deklarierter zu implementierter `uft_*`-Funktionen.
 **Scan-Skript:** hier im Dokument reproduzierbar (siehe §Methodik).
@@ -9,7 +9,7 @@ deklarierter zu implementierter `uft_*`-Funktionen.
 
 ## Kernbefund
 
-**Stand 2026-07-02 (live audit):** 133 Skelett-Header, 2613 nicht
+**Stand 2026-07-02 (live audit):** 75 Skelett-Header, 1435 nicht
 implementierte Funktions-Deklarationen.
 
 **Ursprünglich (2026-04-23):** 175 Skelett-Header, 3 355 nicht
@@ -287,35 +287,35 @@ als konkreter Anwendungsfall).
 | decls | missing | pct | path |
 |------:|--------:|----:|------|
 | 51 | 50 | 98% | `include/uft/fs/uft_cpm_fs.h` |
-| 47 | 47 | 100% | `include/uft/fs/uft_trsdos.h` |
 | 43 | 43 | 100% | `include/uft/fs/uft_bbc_dfs.h` |
 | 42 | 38 | 90% | `include/uft/fs/uft_atari_dos.h` |
-| 37 | 37 | 100% | `include/uft/uft_hardware_mock.h` |
-| 36 | 36 | 100% | `include/uft/core/uft_json_export.h` |
-| 36 | 36 | 100% | `include/uft/fs/uft_ti99_fs.h` |
 | 43 | 36 | 83% | `include/uft/uft_hardware.h` |
-| 34 | 34 | 100% | `include/uft/fs/uft_apple_dos.h` |
 | 34 | 34 | 100% | `include/uft/ml/uft_ml_training_gen.h` |
 | 32 | 32 | 100% | `include/uft/uft_apd_format.h` |
-| 31 | 31 | 100% | `include/uft/uft_forensic_imaging.h` |
 | 32 | 31 | 96% | `include/uft/uft_platform.h` |
 | 36 | 31 | 86% | `include/uft/uft_mfm_codec.h` |
-| 30 | 30 | 100% | `include/uft/uft_algorithms.h` |
 | 30 | 30 | 100% | `include/uft/uft_sos_protection.h` |
-| 30 | 30 | 100% | `include/uft/batch/uft_batch.h` |
 | 32 | 30 | 93% | `include/uft/uft_public_api.h` |
 | 28 | 28 | 100% | `include/uft/uft_param_bridge.h` |
 | 33 | 28 | 84% | `include/uft/hal/uft_supercard.h` |
 | 27 | 27 | 100% | `include/uft/uft_image_db.h` |
-| 27 | 27 | 100% | `include/uft/uft_multirev.h` |
-| 27 | 27 | 100% | `include/uft/uft_multi_decoder.h` |
-| 27 | 27 | 100% | `include/uft/ocr/uft_ocr.h` |
-| 27 | 27 | 100% | `include/uft/hal/internal/uft_nibtools.h` |
-| 26 | 26 | 100% | `include/uft/uft_bit_confidence.h` |
-| 26 | 26 | 100% | `include/uft/uft_config_manager.h` |
-| 26 | 26 | 100% | `include/uft/uft_session.h` |
 | 26 | 26 | 100% | `include/uft/uft_vfs.h` |
-| 24 | 24 | 100% | `include/uft/uft_blkid.h` |
+| 24 | 24 | 100% | `include/uft/formats/uft_pce.h` |
+| 24 | 24 | 100% | `include/uft/params/uft_canonical_params.h` |
+| 24 | 24 | 100% | `include/uft/ride/uft_dos_recognition.h` |
+| 23 | 23 | 100% | `include/uft/fs/uft_fat_badblock.h` |
+| 24 | 23 | 95% | `include/uft/uft_crc_polys.h` |
+| 22 | 22 | 100% | `include/uft/uft_audit_trail.h` |
+| 22 | 22 | 100% | `include/uft/ml/uft_ml_decoder.h` |
+| 23 | 22 | 95% | `include/uft/core/uft_integration.h` |
+| 21 | 21 | 100% | `include/uft/core/uft_track_base.h` |
+| 20 | 20 | 100% | `include/uft/uft_pll_unified.h` |
+| 20 | 20 | 100% | `include/uft/hal/uft_fc5025.h` |
+| 22 | 20 | 90% | `include/uft/fs/uft_bbc_fs.h` |
+| 20 | 19 | 95% | `include/uft/ir/uft_ir_serialize.h` |
+| 23 | 19 | 82% | `include/uft/formats/uft_fat12.h` |
+| 23 | 19 | 82% | `include/uft/hal/uft_hal_v3.h` |
+| 18 | 18 | 100% | `include/uft/uft_unified_image.h` |
 
 ## Methodik (reproduzierbar)
 
@@ -427,73 +427,41 @@ Nicht die 175 Header von oben nach unten, sondern nach Wirkung:
 
 ---
 
-## Anhang A — vollständige Liste der 133 Skeleton-Header (live)
+## Anhang A — vollständige Liste der 75 Skeleton-Header (live)
 
 | decls | missing | pct | path |
 |------:|--------:|----:|------|
 | 51 | 50 | 98% | `include/uft/fs/uft_cpm_fs.h` |
-| 47 | 47 | 100% | `include/uft/fs/uft_trsdos.h` |
 | 43 | 43 | 100% | `include/uft/fs/uft_bbc_dfs.h` |
 | 42 | 38 | 90% | `include/uft/fs/uft_atari_dos.h` |
-| 37 | 37 | 100% | `include/uft/uft_hardware_mock.h` |
-| 36 | 36 | 100% | `include/uft/core/uft_json_export.h` |
-| 36 | 36 | 100% | `include/uft/fs/uft_ti99_fs.h` |
 | 43 | 36 | 83% | `include/uft/uft_hardware.h` |
-| 34 | 34 | 100% | `include/uft/fs/uft_apple_dos.h` |
 | 34 | 34 | 100% | `include/uft/ml/uft_ml_training_gen.h` |
 | 32 | 32 | 100% | `include/uft/uft_apd_format.h` |
-| 31 | 31 | 100% | `include/uft/uft_forensic_imaging.h` |
 | 32 | 31 | 96% | `include/uft/uft_platform.h` |
 | 36 | 31 | 86% | `include/uft/uft_mfm_codec.h` |
-| 30 | 30 | 100% | `include/uft/uft_algorithms.h` |
 | 30 | 30 | 100% | `include/uft/uft_sos_protection.h` |
-| 30 | 30 | 100% | `include/uft/batch/uft_batch.h` |
 | 32 | 30 | 93% | `include/uft/uft_public_api.h` |
 | 28 | 28 | 100% | `include/uft/uft_param_bridge.h` |
 | 33 | 28 | 84% | `include/uft/hal/uft_supercard.h` |
 | 27 | 27 | 100% | `include/uft/uft_image_db.h` |
-| 27 | 27 | 100% | `include/uft/uft_multirev.h` |
-| 27 | 27 | 100% | `include/uft/uft_multi_decoder.h` |
-| 27 | 27 | 100% | `include/uft/ocr/uft_ocr.h` |
-| 27 | 27 | 100% | `include/uft/hal/internal/uft_nibtools.h` |
-| 26 | 26 | 100% | `include/uft/uft_bit_confidence.h` |
-| 26 | 26 | 100% | `include/uft/uft_config_manager.h` |
-| 26 | 26 | 100% | `include/uft/uft_session.h` |
 | 26 | 26 | 100% | `include/uft/uft_vfs.h` |
-| 24 | 24 | 100% | `include/uft/uft_blkid.h` |
-| 24 | 24 | 100% | `include/uft/uft_error_chain.h` |
-| 24 | 24 | 100% | `include/uft/uft_writer_verify.h` |
-| 24 | 24 | 100% | `include/uft/uft_write_transaction.h` |
 | 24 | 24 | 100% | `include/uft/formats/uft_pce.h` |
-| 24 | 24 | 100% | `include/uft/fs/uft_fbasic_fs.h` |
 | 24 | 24 | 100% | `include/uft/params/uft_canonical_params.h` |
 | 24 | 24 | 100% | `include/uft/ride/uft_dos_recognition.h` |
-| 23 | 23 | 100% | `include/uft/uft_multi_decode.h` |
-| 23 | 23 | 100% | `include/uft/uft_recovery_advanced.h` |
 | 23 | 23 | 100% | `include/uft/fs/uft_fat_badblock.h` |
 | 24 | 23 | 95% | `include/uft/uft_crc_polys.h` |
 | 22 | 22 | 100% | `include/uft/uft_audit_trail.h` |
-| 22 | 22 | 100% | `include/uft/uft_gui_params_extended.h` |
 | 22 | 22 | 100% | `include/uft/ml/uft_ml_decoder.h` |
 | 23 | 22 | 95% | `include/uft/core/uft_integration.h` |
 | 21 | 21 | 100% | `include/uft/core/uft_track_base.h` |
-| 21 | 21 | 100% | `include/uft/hal/internal/uft_pauline.h` |
 | 20 | 20 | 100% | `include/uft/uft_pll_unified.h` |
 | 20 | 20 | 100% | `include/uft/hal/uft_fc5025.h` |
-| 20 | 20 | 100% | `include/uft/web/uft_web_viewer.h` |
 | 22 | 20 | 90% | `include/uft/fs/uft_bbc_fs.h` |
-| 19 | 19 | 100% | `include/uft/uft_flux_statistics.h` |
-| 19 | 19 | 100% | `include/uft/flux/uft_fluxstat.h` |
-| 19 | 19 | 100% | `include/uft/hal/internal/uft_linux_fdc.h` |
 | 20 | 19 | 95% | `include/uft/ir/uft_ir_serialize.h` |
 | 23 | 19 | 82% | `include/uft/formats/uft_fat12.h` |
 | 23 | 19 | 82% | `include/uft/hal/uft_hal_v3.h` |
-| 18 | 18 | 100% | `include/uft/uft_bitstream_preserve.h` |
-| 18 | 18 | 100% | `include/uft/uft_mmap.h` |
 | 18 | 18 | 100% | `include/uft/uft_unified_image.h` |
-| 18 | 18 | 100% | `include/uft/uft_writer_backend.h` |
 | 18 | 18 | 100% | `include/uft/fs/uft_fat_atari.h` |
-| 18 | 18 | 100% | `include/uft/hal/internal/uft_zoomtape.h` |
 | 19 | 18 | 94% | `include/uft/core/uft_sector.h` |
 | 19 | 18 | 94% | `include/uft/formats/uft_86f.h` |
 | 20 | 18 | 90% | `include/uft/fs/uft_fat32.h` |
@@ -501,67 +469,41 @@ Nicht die 175 Header von oben nach unten, sondern nach Wirkung:
 | 21 | 18 | 85% | `include/uft/decoder/uft_format_hints.h` |
 | 22 | 18 | 81% | `include/uft/uft_integration.h` |
 | 22 | 18 | 81% | `include/uft/core/uft_logging_v2.h` |
-| 17 | 17 | 100% | `include/uft/uft_gui_bridge.h` |
 | 17 | 17 | 100% | `include/uft/uft_settings.h` |
-| 17 | 17 | 100% | `include/uft/hal/internal/uft_xa1541.h` |
 | 18 | 17 | 94% | `include/uft/uft_parallel.h` |
 | 18 | 17 | 94% | `include/uft/uft_protection_pipeline.h` |
-| 16 | 16 | 100% | `include/uft/uft_capability.h` |
-| 16 | 16 | 100% | `include/uft/uft_gui_params.h` |
-| 16 | 16 | 100% | `include/uft/decoder/uft_forensic_flux_decoder.h` |
-| 16 | 16 | 100% | `include/uft/recovery/uft_recovery.h` |
 | 17 | 16 | 94% | `include/uft/uft_write_verify.h` |
-| 15 | 15 | 100% | `include/uft/uft_memory.h` |
 | 15 | 15 | 100% | `include/uft/uft_process.h` |
-| 15 | 15 | 100% | `include/uft/uft_write_preview.h` |
 | 15 | 15 | 100% | `include/uft/core/uft_crc_unified.h` |
-| 15 | 15 | 100% | `include/uft/core/uft_histogram.h` |
-| 15 | 15 | 100% | `include/uft/formats/uft_tc.h` |
-| 15 | 15 | 100% | `include/uft/track/uft_track_layout.h` |
 | 16 | 15 | 93% | `include/uft/uft_dmk.h` |
 | 16 | 15 | 93% | `include/uft/decoder/uft_cell_analyzer.h` |
 | 16 | 15 | 93% | `include/uft/flux/uft_flux_pll_v20.h` |
 | 16 | 15 | 93% | `include/uft/flux/uft_woz_parser.h` |
 | 16 | 15 | 93% | `include/uft/formats/uft_dmk.h` |
 | 17 | 15 | 88% | `include/uft/core/uft_disk.h` |
-| 14 | 14 | 100% | `include/uft/uft_crc_cache.h` |
 | 14 | 14 | 100% | `include/uft/uft_device_manager.h` |
 | 14 | 14 | 100% | `include/uft/uft_operation_result.h` |
-| 14 | 14 | 100% | `include/uft/uft_usb.h` |
-| 14 | 14 | 100% | `include/uft/core/uft_limits.h` |
-| 14 | 14 | 100% | `include/uft/decoder/uft_gcr.h` |
 | 15 | 14 | 93% | `include/uft/uft_applesauce.h` |
 | 15 | 14 | 93% | `include/uft/flux/uft_pll_pi.h` |
 | 15 | 14 | 93% | `include/uft/flux/pll/uft_pll_pi.h` |
 | 16 | 14 | 87% | `include/uft/core/uft_format_registry.h` |
 | 13 | 13 | 100% | `include/uft/uft_forensic_report.h` |
-| 13 | 13 | 100% | `include/uft/formats/uft_dfi.h` |
-| 13 | 13 | 100% | `include/uft/ir/uft_ir_timing.h` |
 | 14 | 13 | 92% | `include/uft/floppy/uft_floppy_v2.h` |
 | 15 | 13 | 86% | `include/uft/decoder/uft_sector_confidence.h` |
 | 16 | 13 | 81% | `include/uft/uft_format_detect.h` |
-| 12 | 12 | 100% | `include/uft/flux/uft_pattern_generator.h` |
-| 12 | 12 | 100% | `include/uft/flux/uft_sector_overlay.h` |
 | 12 | 12 | 100% | `include/uft/fs/uft_fat_boot.h` |
 | 12 | 12 | 100% | `include/uft/hardware/uft_write_precomp.h` |
 | 13 | 12 | 92% | `include/uft/uft_simd.h` |
 | 14 | 12 | 85% | `include/uft/uft_c64_gcr.h` |
 | 15 | 12 | 80% | `include/uft/uft_decoder_plugin.h` |
 | 15 | 12 | 80% | `include/uft/formats/uft_jv3.h` |
-| 11 | 11 | 100% | `include/uft/uft_apple_gcr.h` |
-| 11 | 11 | 100% | `include/uft/uft_cache.h` |
-| 11 | 11 | 100% | `include/uft/uft_test_framework.h` |
 | 11 | 11 | 100% | `include/uft/uft_tool_adapter.h` |
 | 11 | 11 | 100% | `include/uft/core/uft_encoding.h` |
-| 11 | 11 | 100% | `include/uft/flux/uft_libflux_pll_enhanced.h` |
 | 11 | 11 | 100% | `include/uft/flux/uft_pll_params.h` |
 | 12 | 11 | 91% | `include/uft/core/uft_crc_v2.h` |
 | 12 | 11 | 91% | `include/uft/formats/uft_woz.h` |
 | 10 | 10 | 100% | `include/uft/uft_format_verify.h` |
-| 10 | 10 | 100% | `include/uft/crc/uft_crc_extended.h` |
 | 10 | 10 | 100% | `include/uft/decoder/uft_pll.h` |
-| 10 | 10 | 100% | `include/uft/flux/uft_flux_instability.h` |
-| 10 | 10 | 100% | `include/uft/formats/uft_x68k.h` |
 | 11 | 9 | 81% | `include/uft/uft_io_abstraction.h` |
 | 10 | 8 | 80% | `include/uft/uft_operations.h` |
 

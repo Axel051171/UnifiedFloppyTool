@@ -91,7 +91,7 @@ nötig.
 | Aufgabe | Erwartete Wirkung | Status |
 |---|---|---|
 | **Lazy-Stub Detector im pre-commit** | künftige lazy-stubs strukturell verhindert | **✓ DONE (MF-292)** — `check_consistency.py` Kategorie 5 `lazy-stub patterns`: (a) `return UFT_OK;`-only Bodies (mit `(void)`-Cast-Normalisierung, `INTENTIONAL-NOOP`-Marker-Carve-out), (b) untracked `TODO implement` ohne Tracking-Token. Baum kalibriert auf 0/0 (5 Alt-Treffer bereinigt), Negativ-Test beide Patterns verifiziert. Läuft automatisch im Pre-Commit-Hook. |
-| Header-Decls ohne Caller → DELETE | 2897 Decls / 170 ganze Header laut `stub_inventory.yaml` | offen — wellenweise, jeder Batch mit grünem Build |
+| Header-Decls ohne Caller → DELETE | 2897 Decls / 170 ganze Header laut `stub_inventory.yaml` | **Welle 1 ✓ (MF-293):** 59 pure-Phantom-Header gelöscht (Kriterien: ALLE Decls unimplementiert + null `#include`-Referenzen + null Caller). Skeleton-Audit 133→75 Header, 2613→1435 Decls (−45 %). 4 Roadmap-Header bewusst behalten (audit_trail, forensic_report, ml_decoder, ml_training_gen — Skill-getrackte Planned APIs). Verbleibend: 82 SPLIT-Header (haben implementierte Decls), 25 Kaskaden-Header (noch includiert), 212 referenzierte Decls. |
 | `uft_core_stubs.c` Residuals | 5 caller-lose DELETE-Kandidaten laut Inventory | offen |
 | 7 DELETE-ready v3-Parser | C1 → 4 | offen |
 | Plugin `is_stub`-Triage (manuell, siehe Phase-1-Abweichung) | Audit-Transparenz | offen |
