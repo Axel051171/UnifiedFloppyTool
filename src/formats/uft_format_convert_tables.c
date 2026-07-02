@@ -386,3 +386,56 @@ void uftc_report_progress(const uft_convert_options_ext_t* opts,
 bool uftc_is_cancelled(const uft_convert_options_ext_t* opts) {
     return opts && opts->cancel && *opts->cancel;
 }
+
+// ============================================================================
+// Helper: Bounded warning append (UFT-A04)
+// ============================================================================
+
+#include <stdarg.h>
+
+/*
+ * UFT-A04: append a warning to result->warnings[] with a hard bounds
+ * check. Pre-A04 the codebase had ~25 sites that did
+ *   snprintf(result->warnings[result->warning_count++], ...)
+ * without checking warning_count against the array capacity (8 slots).
+ * A converter that emits 9+ warnings stack-smashed callers that
+ * allocated uft_convert_result_t on the stack (e.g. the GUI wizard).
+ *
+ * Semantics:
+ *   - The first `cap` calls write a normal warning into the next slot
+ *     and increment warning_count to up to `cap`.
+ *   - From call `cap + 1` onward, warning_count keeps incrementing so
+ *     the caller can compute how many were dropped, but no further
+ *     writes happen except: the LAST slot is overwritten with a
+ *     "(+N warning(s) suppressed — capacity X exceeded)" marker so the
+ *     user sees that overflow happened. The 8th warning's original
+ *     content is sacrificed for that visibility — forensic priority:
+ *     never hide that information was lost.
+ *   - NULL result is a no-op (safe for tests / synthetic callers).
+ */
+void uftc_add_warning(uft_convert_result_t* result, const char* fmt, ...) {
+    if (!result || !fmt) return;
+    const int cap = (int)(sizeof(result->warnings) / sizeof(result->warnings[0]));
+    const size_t slot_size = sizeof(result->warnings[0]);
+
+    if (result->warning_count < 0) result->warning_count = 0;
+
+    va_list ap;
+    va_start(ap, fmt);
+
+    if (result->warning_count < cap) {
+        /* Capacity available — normal append. */
+        vsnprintf(result->warnings[result->warning_count], slot_size, fmt, ap);
+        result->warning_count++;
+    } else {
+        /* Overflow: don't write the new warning's content, but record
+         * that suppression is happening by rewriting the last slot. */
+        result->warning_count++;
+        int suppressed = result->warning_count - cap;
+        snprintf(result->warnings[cap - 1], slot_size,
+                 "(+%d warning%s suppressed — capacity %d exceeded)",
+                 suppressed, suppressed == 1 ? "" : "s", cap);
+    }
+
+    va_end(ap);
+}

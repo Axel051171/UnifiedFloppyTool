@@ -36,8 +36,7 @@ uft_error_t uftc_convert_hfe_to_scp(const uint8_t* src_data, size_t src_size,
     const hfe_header_t* hdr = (const hfe_header_t*)src_data;
     if (!hfe_is_valid_header(hdr)) {
         result->error = UFT_ERR_FORMAT;
-        snprintf(result->warnings[result->warning_count++],
-                 sizeof(result->warnings[0]),
+        uftc_add_warning(result,
                  "Invalid HFE header");
         return UFT_ERR_FORMAT;
     }
@@ -161,8 +160,7 @@ uft_error_t uftc_convert_g64_to_scp(const uint8_t* src_data, size_t src_size,
     int rc = g64_load_buffer(src_data, src_size, &g64);
     if (rc != 0 || !g64) {
         result->error = UFT_ERR_FORMAT;
-        snprintf(result->warnings[result->warning_count++],
-                 sizeof(result->warnings[0]),
+        uftc_add_warning(result,
                  "G64 parse failed (error %d)", rc);
         return UFT_ERR_FORMAT;
     }
@@ -285,8 +283,7 @@ uft_error_t uftc_convert_g64_to_hfe(const uint8_t* src_data, size_t src_size,
     int rc = g64_load_buffer(src_data, src_size, &g64);
     if (rc != 0 || !g64) {
         result->error = UFT_ERR_FORMAT;
-        snprintf(result->warnings[result->warning_count++],
-                 sizeof(result->warnings[0]),
+        uftc_add_warning(result,
                  "G64 parse failed (error %d)", rc);
         return UFT_ERR_FORMAT;
     }
@@ -387,8 +384,7 @@ uft_error_t uftc_convert_g64_to_hfe(const uint8_t* src_data, size_t src_size,
         result->error = err;
     }
 
-    snprintf(result->warnings[result->warning_count++],
-             sizeof(result->warnings[0]),
+    uftc_add_warning(result,
              "G64->HFE: %d tracks wrapped in HFE container (C64 DD mode)",
              result->tracks_converted);
 
@@ -422,8 +418,7 @@ uft_error_t uftc_convert_hfe_to_g64(const uint8_t* src_data, size_t src_size,
     const hfe_header_t* hdr = (const hfe_header_t*)src_data;
     if (!hfe_is_valid_header(hdr)) {
         result->error = UFT_ERR_FORMAT;
-        snprintf(result->warnings[result->warning_count++],
-                 sizeof(result->warnings[0]),
+        uftc_add_warning(result,
                  "Invalid HFE header");
         return UFT_ERR_FORMAT;
     }
@@ -434,8 +429,7 @@ uft_error_t uftc_convert_hfe_to_g64(const uint8_t* src_data, size_t src_size,
     /* Warn if this doesn't look like a C64 disk */
     if (hdr->uft_floppy_interface != HFE_IF_C64_DD &&
         hdr->uft_floppy_interface != (uint8_t)HFE_IF_GENERIC_SHUGART) {
-        snprintf(result->warnings[result->warning_count++],
-                 sizeof(result->warnings[0]),
+        uftc_add_warning(result,
                  "HFE interface type 0x%02X is not C64; "
                  "G64 output may not be valid CBM GCR",
                  hdr->uft_floppy_interface);
@@ -519,8 +513,7 @@ uft_error_t uftc_convert_hfe_to_g64(const uint8_t* src_data, size_t src_size,
         result->error = UFT_ERR_IO;
     }
 
-    snprintf(result->warnings[result->warning_count++],
-             sizeof(result->warnings[0]),
+    uftc_add_warning(result,
              "HFE->G64: %d tracks extracted to G64 container",
              result->tracks_converted);
 
@@ -578,8 +571,7 @@ uft_error_t uftc_convert_sectors_to_hfe(const uint8_t* src_data,
 
     size_t expected_size = (size_t)cylinders * heads * sectors * sector_size;
     if (src_size < expected_size) {
-        snprintf(result->warnings[result->warning_count++],
-                 sizeof(result->warnings[0]),
+        uftc_add_warning(result,
                  "Source size %zu < expected %zu, padding with zeros",
                  src_size, expected_size);
     }

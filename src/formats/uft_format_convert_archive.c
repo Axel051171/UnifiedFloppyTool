@@ -34,8 +34,7 @@ uft_error_t uftc_convert_td0_to_img(const uint8_t* src_data, size_t src_size,
     if (rc != 0) {
         uft_td0_free(&td0_img);
         result->error = UFT_ERR_FORMAT;
-        snprintf(result->warnings[result->warning_count++],
-                 sizeof(result->warnings[0]),
+        uftc_add_warning(result,
                  "TD0 parse failed (error %d)", rc);
         return UFT_ERR_FORMAT;
     }
@@ -49,8 +48,7 @@ uft_error_t uftc_convert_td0_to_img(const uint8_t* src_data, size_t src_size,
     if (rc != 0 || !raw_data) {
         uft_td0_free(&td0_img);
         result->error = UFT_ERR_FORMAT;
-        snprintf(result->warnings[result->warning_count++],
-                 sizeof(result->warnings[0]),
+        uftc_add_warning(result,
                  "TD0 sector extraction failed (error %d)", rc);
         return UFT_ERR_FORMAT;
     }
@@ -70,8 +68,7 @@ uft_error_t uftc_convert_td0_to_img(const uint8_t* src_data, size_t src_size,
     result->bytes_written = (int)raw_size;
     result->tracks_converted = td0_img.num_tracks;
 
-    snprintf(result->warnings[result->warning_count++],
-             sizeof(result->warnings[0]),
+    uftc_add_warning(result,
              "Decompressed %d tracks (%s compression), %zu bytes output",
              td0_img.num_tracks,
              td0_img.advanced_compression ? "LZSS" : "none",
@@ -100,8 +97,7 @@ uft_error_t uftc_convert_td0_to_imd(const uint8_t* src_data, size_t src_size,
     if (rc != 0) {
         uft_td0_free(&td0_img);
         result->error = UFT_ERR_FORMAT;
-        snprintf(result->warnings[result->warning_count++],
-                 sizeof(result->warnings[0]),
+        uftc_add_warning(result,
                  "TD0 parse failed (error %d)", rc);
         return UFT_ERR_FORMAT;
     }
@@ -122,8 +118,7 @@ uft_error_t uftc_convert_td0_to_imd(const uint8_t* src_data, size_t src_size,
         uft_imd_free(&imd_img);
         uft_td0_free(&td0_img);
         result->error = UFT_ERR_FORMAT;
-        snprintf(result->warnings[result->warning_count++],
-                 sizeof(result->warnings[0]),
+        uftc_add_warning(result,
                  "TD0->IMD conversion failed (error %d)", rc);
         return UFT_ERR_FORMAT;
     }
@@ -135,8 +130,7 @@ uft_error_t uftc_convert_td0_to_imd(const uint8_t* src_data, size_t src_size,
         uft_imd_free(&imd_img);
         uft_td0_free(&td0_img);
         result->error = UFT_ERR_IO;
-        snprintf(result->warnings[result->warning_count++],
-                 sizeof(result->warnings[0]),
+        uftc_add_warning(result,
                  "IMD write failed (error %d)", rc);
         return UFT_ERR_IO;
     }
@@ -202,14 +196,12 @@ uft_error_t uftc_convert_nbz_to_d64(const uint8_t* src_data, size_t src_size,
             src_size == 196608 || src_size == 197376) {
             memcpy(decompressed, src_data, src_size);
             decomp_size = (int)src_size;
-            snprintf(result->warnings[result->warning_count++],
-                     sizeof(result->warnings[0]),
+            uftc_add_warning(result,
                      "NBZ decompression failed, source appears to be raw D64");
         } else {
             free(decompressed);
             result->error = UFT_ERR_FORMAT;
-            snprintf(result->warnings[result->warning_count++],
-                     sizeof(result->warnings[0]),
+            uftc_add_warning(result,
                      "NBZ decompression failed (%d bytes input)", (int)src_size);
             return UFT_ERR_FORMAT;
         }
@@ -218,8 +210,7 @@ uft_error_t uftc_convert_nbz_to_d64(const uint8_t* src_data, size_t src_size,
     /* Validate that output looks like a D64 */
     if (decomp_size != 174848 && decomp_size != 175531 &&
         decomp_size != 196608 && decomp_size != 197376) {
-        snprintf(result->warnings[result->warning_count++],
-                 sizeof(result->warnings[0]),
+        uftc_add_warning(result,
                  "Decompressed size %d does not match standard D64 sizes",
                  decomp_size);
     }
@@ -264,8 +255,7 @@ uft_error_t uftc_convert_nbz_to_g64(const uint8_t* src_data, size_t src_size,
     if (decomp_size <= 0) {
         free(decompressed);
         result->error = UFT_ERR_FORMAT;
-        snprintf(result->warnings[result->warning_count++],
-                 sizeof(result->warnings[0]),
+        uftc_add_warning(result,
                  "NBZ decompression failed for G64 output");
         return UFT_ERR_FORMAT;
     }
@@ -295,8 +285,7 @@ uft_error_t uftc_convert_nbz_to_g64(const uint8_t* src_data, size_t src_size,
 
     if (rc != 0 || !d64) {
         result->error = UFT_ERR_FORMAT;
-        snprintf(result->warnings[result->warning_count++],
-                 sizeof(result->warnings[0]),
+        uftc_add_warning(result,
                  "NBZ decompressed data is not valid D64 or G64");
         return UFT_ERR_FORMAT;
     }
@@ -310,8 +299,7 @@ uft_error_t uftc_convert_nbz_to_g64(const uint8_t* src_data, size_t src_size,
 
     if (rc != 0 || !g64) {
         result->error = UFT_ERR_FORMAT;
-        snprintf(result->warnings[result->warning_count++],
-                 sizeof(result->warnings[0]),
+        uftc_add_warning(result,
                  "D64 to G64 conversion failed: %s", conv_result.description);
         return UFT_ERR_FORMAT;
     }

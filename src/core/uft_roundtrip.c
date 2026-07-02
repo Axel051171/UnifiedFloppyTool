@@ -60,6 +60,17 @@ static const uft_roundtrip_entry_t g_matrix[] = {
     { UFT_FORMAT_STX, UFT_FORMAT_ST, UFT_RT_LOSSY_DOCUMENTED,
       "STX weak/long/fuzzy sectors collapsed to standard MFM" },
 
+    /* Sector ↔ Sector note (UFT-A08):
+     * No sector-sector pair is currently LOSSLESS in the public
+     * conversion API. The public enum collapses IMG and IMA to a
+     * single UFT_FORMAT_IMG value (see uft_types.h:128, "Generic
+     * IMG/IMA") so a user-level IMG↔IMA conversion is detected as
+     * same-format and handled by the direct-copy early-return — it
+     * never reaches the matrix. Any other sector→sector pair (D64→IMG,
+     * ATR→DSK, ...) needs a real converter and must be added here as
+     * LOSSLESS with proof, or stay UNTESTED so dispatch.c refuses via
+     * the shared preflight gate (UFT-A01). */
+
 };
 
 #define UFT_MATRIX_COUNT (sizeof(g_matrix) / sizeof(g_matrix[0]))

@@ -30,8 +30,7 @@ uft_error_t uftc_convert_g64_to_d64(const uint8_t* src_data, size_t src_size,
     int rc = g64_load_buffer(src_data, src_size, &g64);
     if (rc != 0 || !g64) {
         result->error = UFT_ERR_FORMAT;
-        snprintf(result->warnings[result->warning_count++],
-                 sizeof(result->warnings[0]),
+        uftc_add_warning(result,
                  "G64 parse failed (error %d)", rc);
         return UFT_ERR_FORMAT;
     }
@@ -48,8 +47,7 @@ uft_error_t uftc_convert_g64_to_d64(const uint8_t* src_data, size_t src_size,
 
     if (rc != 0 || !d64) {
         result->error = UFT_ERR_FORMAT;
-        snprintf(result->warnings[result->warning_count++],
-                 sizeof(result->warnings[0]),
+        uftc_add_warning(result,
                  "G64->D64 decode failed: %s", conv_result.description);
         return UFT_ERR_FORMAT;
     }
@@ -89,8 +87,7 @@ uft_error_t uftc_convert_d64_to_g64(const uint8_t* src_data, size_t src_size,
     int rc = d64_load_buffer(src_data, src_size, &d64);
     if (rc != 0 || !d64) {
         result->error = UFT_ERR_FORMAT;
-        snprintf(result->warnings[result->warning_count++],
-                 sizeof(result->warnings[0]),
+        uftc_add_warning(result,
                  "D64 parse failed (error %d)", rc);
         return UFT_ERR_FORMAT;
     }
@@ -107,8 +104,7 @@ uft_error_t uftc_convert_d64_to_g64(const uint8_t* src_data, size_t src_size,
 
     if (rc != 0 || !g64) {
         result->error = UFT_ERR_FORMAT;
-        snprintf(result->warnings[result->warning_count++],
-                 sizeof(result->warnings[0]),
+        uftc_add_warning(result,
                  "D64->G64 encode failed: %s", conv_result.description);
         return UFT_ERR_FORMAT;
     }
@@ -152,8 +148,7 @@ uft_error_t uftc_convert_imd_to_img(const uint8_t* src_data, size_t src_size,
     if (rc != 0) {
         uft_imd_free(&imd);
         result->error = UFT_ERR_FORMAT;
-        snprintf(result->warnings[result->warning_count++],
-                 sizeof(result->warnings[0]),
+        uftc_add_warning(result,
                  "IMD parse failed (error %d)", rc);
         return UFT_ERR_FORMAT;
     }
@@ -166,8 +161,7 @@ uft_error_t uftc_convert_imd_to_img(const uint8_t* src_data, size_t src_size,
     if (rc != 0 || !raw_data) {
         uft_imd_free(&imd);
         result->error = UFT_ERR_FORMAT;
-        snprintf(result->warnings[result->warning_count++],
-                 sizeof(result->warnings[0]),
+        uftc_add_warning(result,
                  "IMD sector extraction failed (error %d)", rc);
         return UFT_ERR_FORMAT;
     }
@@ -187,14 +181,12 @@ uft_error_t uftc_convert_imd_to_img(const uint8_t* src_data, size_t src_size,
     result->tracks_converted = imd.num_tracks;
 
     /* Report statistics */
-    snprintf(result->warnings[result->warning_count++],
-             sizeof(result->warnings[0]),
+    uftc_add_warning(result,
              "Extracted %d tracks (%d cyls x %d heads), %zu bytes output",
              imd.num_tracks, imd.num_cylinders, imd.num_heads, raw_size);
 
     if (imd.bad_sectors > 0 || imd.unavail_sectors > 0) {
-        snprintf(result->warnings[result->warning_count++],
-                 sizeof(result->warnings[0]),
+        uftc_add_warning(result,
                  "Warning: %u bad sectors, %u unavailable sectors",
                  imd.bad_sectors, imd.unavail_sectors);
     }
@@ -343,8 +335,7 @@ uft_error_t uftc_convert_img_to_imd(const uint8_t* src_data, size_t src_size,
         result->error = err;
     }
 
-    snprintf(result->warnings[result->warning_count++],
-             sizeof(result->warnings[0]),
+    uftc_add_warning(result,
              "Created IMD: %d cyls x %d heads x %d secs (%s), %zu bytes",
              cylinders, heads, sectors,
              uft_imd_mode_name((uft_imd_mode_t)mode), pos);

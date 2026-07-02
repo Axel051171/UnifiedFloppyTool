@@ -37,8 +37,7 @@ uft_error_t uftc_convert_scp_to_d64(const uint8_t* src_data, size_t src_size,
     int rc = uft_scp_read(src_data, src_size, &scp);
     if (rc != 0) {
         result->error = UFT_ERR_FORMAT;
-        snprintf(result->warnings[result->warning_count++],
-                 sizeof(result->warnings[0]),
+        uftc_add_warning(result,
                  "SCP parse failed (error %d)", rc);
         return UFT_ERR_FORMAT;
     }
@@ -149,8 +148,7 @@ uft_error_t uftc_convert_scp_to_d64(const uint8_t* src_data, size_t src_size,
 
                 /* Log which sectors were forensic-filled */
                 if (result->warning_count < 8) {
-                    snprintf(result->warnings[result->warning_count++],
-                             sizeof(result->warnings[0]),
+                    uftc_add_warning(result,
                              "Track %d sector %d: GCR decode failed, "
                              "filled with 0x%02X",
                              track, s, UFT_FORENSIC_FILL_BYTE);
@@ -198,8 +196,7 @@ uft_error_t uftc_convert_scp_to_mfm_sectors(const uint8_t* src_data,
     int rc = uft_scp_read(src_data, src_size, &scp);
     if (rc != 0) {
         result->error = UFT_ERR_FORMAT;
-        snprintf(result->warnings[result->warning_count++],
-                 sizeof(result->warnings[0]),
+        uftc_add_warning(result,
                  "SCP parse failed (error %d)", rc);
         return UFT_ERR_FORMAT;
     }
@@ -373,71 +370,49 @@ uft_error_t uftc_convert_kryoflux_to_d64(const uint8_t* src_data,
     int rc = uft_kfx_read_stream(src_data, src_size, &stream);
     if (rc != 0) {
         result->error = UFT_ERR_FORMAT;
-        snprintf(result->warnings[result->warning_count++],
-                 sizeof(result->warnings[0]),
+        uftc_add_warning(result,
                  "Kryoflux stream parse failed (error %d)", rc);
         return UFT_ERR_FORMAT;
     }
 
     /*
-     * NOTE: Kryoflux stores one track per file. A full disk conversion
-     * requires reading all track files. This single-buffer implementation
-     * can only process one track's worth of data.
+     * UFT-A02: Honest NOT_IMPLEMENTED instead of fabricated empty D64.
      *
-     * For a full disk conversion, the caller should provide the directory
-     * path and this function should iterate over track files.
-     * For now, we process whatever single track is in the buffer.
+     * Background: prior code path here decoded flux into a bitstream and
+     * then issued the comment "TODO: Extract sectors from GCR bitstream"
+     * before saving an EMPTY d64_create(35) with result->success=true.
+     * That violated DESIGN_PRINCIPLE 4 ("Keine erfundenen Daten"): an
+     * empty disk image is not a successful conversion of a real KryoFlux
+     * capture.
+     *
+     * Until real GCR sector extraction (C64 1541 GCR encoding, ID/data
+     * marks, sync detection, byte-extraction with checksum verify) is
+     * implemented here, this entry point returns UFT_ERR_NOT_IMPLEMENTED
+     * with a 3-part diagnostic (what / why / fix). The roundtrip-matrix
+     * entry for KFX->D64 stays UNTESTED so uft_convert_file/-memory
+     * abort earlier via the shared preflight gate; this function is the
+     * defense-in-depth in case a caller bypasses the table.
+     *
+     * Stream parse above already validated the input — a malformed
+     * KryoFlux file returns FORMAT, not NOT_IMPLEMENTED.
      */
-
-    d64_image_t* d64 = d64_create(35);
-    if (!d64) {
-        uft_kfx_free(&stream);
-        result->error = UFT_ERR_MEMORY;
-        return UFT_ERR_MEMORY;
-    }
-
-    uftc_report_progress(opts, 20, "Decoding Kryoflux flux data");
-
-    if (stream.flux_count > 0 && stream.flux_deltas) {
-        /* PLL decode */
-        uft_pll_t pll;
-        uft_pll_init(&pll, 307692.0, UFT_ENCODING_GCR); /* Zone 0 bitrate */
-
-        size_t max_bits = stream.flux_count * 4;
-        size_t buf_size = (max_bits + 7) / 8;
-        uint8_t* bitstream = calloc(1, buf_size);
-
-        if (bitstream) {
-            size_t bit_pos = 0;
-            for (size_t f = 0; f < stream.flux_count && bit_pos < max_bits - 16; f++) {
-                uft_pll_process_flux_mfm(&pll, stream.flux_deltas[f],
-                                          bitstream, &bit_pos);
-            }
-
-            /* TODO: Extract sectors from GCR bitstream (same as SCP->D64) */
-            result->tracks_converted = 1;
-            snprintf(result->warnings[result->warning_count++],
-                     sizeof(result->warnings[0]),
-                     "Single-track Kryoflux decode; full disk requires "
-                     "directory iteration over track files");
-
-            free(bitstream);
-        }
-    }
-
-    uftc_report_progress(opts, 80, "Writing D64 output");
-
-    rc = d64_save(dst_path, d64, false);
-    if (rc == 0) {
-        result->success = true;
-    } else {
-        result->error = UFT_ERR_IO;
-    }
-
-    d64_free(d64);
+    (void)dst_path;
     uft_kfx_free(&stream);
-    uftc_report_progress(opts, 100, "Kryoflux->D64 complete");
-    return result->success ? UFT_OK : result->error;
+    result->error = UFT_ERR_NOT_IMPLEMENTED;
+    if (result->warning_count + 3 <=
+        sizeof(result->warnings) / sizeof(result->warnings[0])) {
+        uftc_add_warning(result,
+                 "WHAT: KryoFlux->D64 not implemented "
+                 "(GCR sector extraction missing).");
+        uftc_add_warning(result,
+                 "WHY: prior code wrote empty D64 with success=true "
+                 "(DESIGN_PRINCIPLE 4 violation, UFT-A02).");
+        uftc_add_warning(result,
+                 "FIX: capture with Greaseweazle for now, or wait for "
+                 "v4.1.6 GCR sector extractor.");
+    }
+    uftc_report_progress(opts, 100, "KryoFlux->D64 not implemented");
+    return UFT_ERR_NOT_IMPLEMENTED;
 }
 
 // ============================================================================
@@ -466,8 +441,7 @@ uft_error_t uftc_convert_kryoflux_to_adf(const uint8_t* src_data,
     int rc = uft_kfx_read_stream(src_data, src_size, &stream);
     if (rc != 0) {
         result->error = UFT_ERR_FORMAT;
-        snprintf(result->warnings[result->warning_count++],
-                 sizeof(result->warnings[0]),
+        uftc_add_warning(result,
                  "Kryoflux stream parse failed (error %d)", rc);
         return UFT_ERR_FORMAT;
     }
@@ -603,13 +577,11 @@ uft_error_t uftc_convert_kryoflux_to_adf(const uint8_t* src_data,
             result->tracks_converted = (found_sectors > 0) ? 1 : 0;
 
             if (found_sectors == 0) {
-                snprintf(result->warnings[result->warning_count++],
-                         sizeof(result->warnings[0]),
+                uftc_add_warning(result,
                          "No MFM sectors extracted from Kryoflux stream "
                          "(single-track buffer; full disk needs directory iteration)");
             } else {
-                snprintf(result->warnings[result->warning_count++],
-                         sizeof(result->warnings[0]),
+                uftc_add_warning(result,
                          "Extracted %d sectors from single Kryoflux track; "
                          "full disk conversion requires all track files",
                          found_sectors);
@@ -618,8 +590,7 @@ uft_error_t uftc_convert_kryoflux_to_adf(const uint8_t* src_data,
             free(bitstream);
         }
     } else {
-        snprintf(result->warnings[result->warning_count++],
-                 sizeof(result->warnings[0]),
+        uftc_add_warning(result,
                  "No flux data in Kryoflux stream");
     }
 
@@ -665,8 +636,7 @@ uft_error_t uftc_convert_hfe_to_sectors(const uint8_t* src_data,
     const hfe_header_t* hdr = (const hfe_header_t*)src_data;
     if (!hfe_is_valid_header(hdr)) {
         result->error = UFT_ERR_FORMAT;
-        snprintf(result->warnings[result->warning_count++],
-                 sizeof(result->warnings[0]),
+        uftc_add_warning(result,
                  "Invalid HFE header");
         return UFT_ERR_FORMAT;
     }
@@ -859,8 +829,7 @@ uft_error_t uftc_convert_scp_to_hfe(const uint8_t* src_data, size_t src_size,
     int rc = uft_scp_read(src_data, src_size, &scp);
     if (rc != 0) {
         result->error = UFT_ERR_FORMAT;
-        snprintf(result->warnings[result->warning_count++],
-                 sizeof(result->warnings[0]),
+        uftc_add_warning(result,
                  "SCP parse failed (error %d)", rc);
         return UFT_ERR_FORMAT;
     }
@@ -1024,8 +993,7 @@ uft_error_t uftc_convert_scp_to_g64(const uint8_t* src_data, size_t src_size,
     int rc = uft_scp_read(src_data, src_size, &scp);
     if (rc != 0) {
         result->error = UFT_ERR_FORMAT;
-        snprintf(result->warnings[result->warning_count++],
-                 sizeof(result->warnings[0]),
+        uftc_add_warning(result,
                  "SCP parse failed (error %d)", rc);
         return UFT_ERR_FORMAT;
     }
@@ -1143,8 +1111,7 @@ uft_error_t uftc_convert_kryoflux_to_scp(const uint8_t* src_data,
     int rc = uft_kfx_read_stream(src_data, src_size, &stream);
     if (rc != 0) {
         result->error = UFT_ERR_FORMAT;
-        snprintf(result->warnings[result->warning_count++],
-                 sizeof(result->warnings[0]),
+        uftc_add_warning(result,
                  "Kryoflux stream parse failed (error %d)", rc);
         return UFT_ERR_FORMAT;
     }
@@ -1152,8 +1119,7 @@ uft_error_t uftc_convert_kryoflux_to_scp(const uint8_t* src_data,
     if (stream.flux_count == 0 || !stream.flux_deltas) {
         uft_kfx_free(&stream);
         result->error = UFT_ERR_FORMAT;
-        snprintf(result->warnings[result->warning_count++],
-                 sizeof(result->warnings[0]),
+        uftc_add_warning(result,
                  "No flux data in Kryoflux stream");
         return UFT_ERR_FORMAT;
     }
@@ -1209,8 +1175,7 @@ uft_error_t uftc_convert_kryoflux_to_scp(const uint8_t* src_data,
     }
 
     result->tracks_converted = 1;
-    snprintf(result->warnings[result->warning_count++],
-             sizeof(result->warnings[0]),
+    uftc_add_warning(result,
              "Single Kryoflux track converted to SCP (%zu flux transitions); "
              "full disk requires all track files",
              stream.flux_count);
@@ -1252,8 +1217,7 @@ uft_error_t uftc_convert_kryoflux_to_hfe(const uint8_t* src_data,
     int rc = uft_kfx_read_stream(src_data, src_size, &stream);
     if (rc != 0) {
         result->error = UFT_ERR_FORMAT;
-        snprintf(result->warnings[result->warning_count++],
-                 sizeof(result->warnings[0]),
+        uftc_add_warning(result,
                  "Kryoflux stream parse failed (error %d)", rc);
         return UFT_ERR_FORMAT;
     }
@@ -1261,8 +1225,7 @@ uft_error_t uftc_convert_kryoflux_to_hfe(const uint8_t* src_data,
     if (stream.flux_count == 0 || !stream.flux_deltas) {
         uft_kfx_free(&stream);
         result->error = UFT_ERR_FORMAT;
-        snprintf(result->warnings[result->warning_count++],
-                 sizeof(result->warnings[0]),
+        uftc_add_warning(result,
                  "No flux data in Kryoflux stream");
         return UFT_ERR_FORMAT;
     }
@@ -1362,8 +1325,7 @@ uft_error_t uftc_convert_kryoflux_to_hfe(const uint8_t* src_data,
                           (uint16_t)track_len_aligned, track_dest);
 
     result->tracks_converted = 1;
-    snprintf(result->warnings[result->warning_count++],
-             sizeof(result->warnings[0]),
+    uftc_add_warning(result,
              "Single Kryoflux track converted to HFE (%zu bits decoded); "
              "full disk requires all track files",
              bit_pos);

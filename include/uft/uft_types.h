@@ -461,7 +461,7 @@ typedef struct uft_convert_options {
     uft_format_t    target_format;
     uft_encoding_t  target_encoding;
     uft_geometry_t  target_geometry;  ///< (0 = auto)
-    bool            preserve_errors;  ///< Fehler erhalten
+    bool            preserve_errors;  ///< Fehler-Flags im Output erhalten (z.B. BAD_CRC-Markierung)
     bool            preserve_timing;  ///< Timing erhalten
     bool            normalize;        ///< Normalisieren
     bool            verify_after;     ///< Verify after convert
@@ -474,6 +474,13 @@ typedef struct uft_convert_options {
     uint32_t        decode_retries;            ///< Decode retry count
     uft_progress_fn progress;
     void*           progress_user;
+    /* UFT-A05 (appended for ABI safety — DESIGNATED-INIT compatible):
+     * Explicit consent for LOSSY_DOCUMENTED conversions. Before A05 the
+     * dispatcher (mis-)used `preserve_errors` for this purpose, conflating
+     * two distinct concepts (carry error-flags forward vs. agree to lose
+     * forensic information). Caller MUST set this true to run a LOSSY
+     * path; otherwise the preflight gate aborts NEED_CONSENT. */
+    bool            accept_data_loss;
 } uft_convert_options_t;
 
 // ============================================================================

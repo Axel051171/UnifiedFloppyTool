@@ -113,23 +113,28 @@ typedef struct uft_conversion_path {
 typedef struct uft_convert_options_ext {
     // General
     bool                verify_after;
-    bool                preserve_errors;
+    bool                preserve_errors;       // Carry error-flags forward in output
     bool                preserve_weak_bits;
-    
+
     // Flux synthesis (Sector → Flux)
     double              synthetic_cell_time_us;
     double              synthetic_jitter_percent;
     int                 synthetic_revolutions;
-    
+
     // Sector extraction (Flux → Sector)
     int                 decode_retries;
     bool                use_multiple_revs;
     bool                interpolate_errors;
-    
+
     // Progress
     void (*progress_cb)(int percent, const char* stage, void* user);
     void* progress_user;
     volatile bool* cancel;
+
+    /* UFT-A05 (appended for ABI safety): explicit consent for
+     * LOSSY_DOCUMENTED paths. See uft_convert_options_t in uft_types.h
+     * for rationale. */
+    bool                accept_data_loss;
 } uft_convert_options_ext_t;
 
 // ============================================================================

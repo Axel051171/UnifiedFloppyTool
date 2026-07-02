@@ -64,6 +64,16 @@ void uftc_report_progress(const uft_convert_options_ext_t* opts,
                            int percent, const char* stage);
 bool uftc_is_cancelled(const uft_convert_options_ext_t* opts);
 
+/* UFT-A04: bounded printf-style warning append. Use this instead of
+ * `snprintf(result->warnings[result->warning_count++], ...)` to avoid
+ * the OOB-write that happens when warning_count reaches the array
+ * capacity. See implementation in uft_format_convert_tables.c. */
+void uftc_add_warning(uft_convert_result_t* result, const char* fmt, ...)
+#ifdef __GNUC__
+    __attribute__((format(printf, 2, 3)))
+#endif
+    ;
+
 /* ========================================================================== */
 /* Archive converters (defined in uft_format_convert_archive.c)               */
 /* ========================================================================== */

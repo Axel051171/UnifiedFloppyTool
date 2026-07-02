@@ -113,8 +113,12 @@ int main(int argc, char **argv)
 
     uft_convert_options_t opts;
     memset(&opts, 0, sizeof(opts));
-    opts.verify_after      = verify_after ? true : false;
-    opts.preserve_errors   = accept_data_loss ? true : false;
+    opts.verify_after       = verify_after ? true : false;
+    /* UFT-A05: map the CLI --accept-data-loss flag to its OWN option
+     * field. preserve_errors is now strictly about carrying error-flags
+     * forward in the output, not about consent. */
+    opts.accept_data_loss   = accept_data_loss ? true : false;
+    opts.preserve_errors    = true;   /* carry error-flags forward by default in CLI */
     opts.preserve_weak_bits = true;
 
     uft_convert_result_t result;

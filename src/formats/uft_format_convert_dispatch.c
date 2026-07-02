@@ -86,6 +86,10 @@ uft_convert_options_t uft_convert_default_options(void) {
         .decode_retries = 5,
         .use_multiple_revs = true,
         .interpolate_errors = true,
+        /* UFT-A05: accept_data_loss intentionally LEFT UNSET (= false via
+         * designated-init zero default). Forensic policy: a default-options
+         * caller may NOT silently consent to loss; LOSSY paths require an
+         * explicit caller-side override. */
     };
 }
 
@@ -363,12 +367,65 @@ static uft_error_t dispatch_conversion(uft_format_t src_format,
 
     /* Fallback: unsupported conversion */
     result->error = UFT_ERR_NOT_SUPPORTED;
-    snprintf(result->warnings[result->warning_count++],
-             sizeof(result->warnings[0]),
+    uftc_add_warning(result,
              "Conversion %s->%s: dispatch not yet implemented",
              uft_format_get_name(src_format),
              uft_format_get_name(dst_format));
     return UFT_ERR_NOT_SUPPORTED;
+}
+
+// ============================================================================
+// Preflight Gate — shared chokepoint for file + memory entry points
+// ============================================================================
+
+/* V415-PLAN LOSS.preflight (MF-263 / UFT-A01) — single gate for both
+ * uft_convert_file() AND uft_convert_memory(). Before UFT-A01 the gate
+ * lived inline only in uft_convert_file, so the documented "single
+ * chokepoint for all conversion paths" guarantee was not actually
+ * single. This helper restores it.
+ *
+ * Memory mode (src_path == NULL && dst_path == NULL) cannot emit a
+ * .loss.json sidecar (no on-disk target), but the GATE still applies:
+ * a LOSSY_DOCUMENTED path without accept_data_loss is aborted, exactly
+ * as in file mode.
+ *
+ * The caller decides whether to call uft_preflight_emit_sidecar() based
+ * on (result->success && out_plan->writes_sidecar && dst_path != NULL).
+ */
+static uft_error_t uftc_preflight_gate(uft_format_t src_format,
+                                       uft_format_t dst_format,
+                                       const char *src_path,
+                                       const char *dst_path,
+                                       bool accept_data_loss,
+                                       uft_convert_result_t *result,
+                                       uft_preflight_plan_t *out_plan) {
+    memset(out_plan, 0, sizeof(*out_plan));
+    uft_preflight_opts_t preopts = {
+        .accept_data_loss   = accept_data_loss,
+        .emit_sidecar       = (dst_path != NULL),
+        .dry_run            = false,
+        .source_format_name = uft_format_get_name(src_format),
+        .target_format_name = uft_format_get_name(dst_format),
+        .uft_version        = UFT_VERSION_STRING,
+    };
+    uft_preflight_check((uft_format_id_t)src_format,
+                        (uft_format_id_t)dst_format,
+                        src_path, dst_path, &preopts, out_plan);
+    if (out_plan->decision == UFT_PREFLIGHT_ABORT_IMPOSSIBLE ||
+        out_plan->decision == UFT_PREFLIGHT_ABORT_UNTESTED ||
+        out_plan->decision == UFT_PREFLIGHT_ABORT_NEED_CONSENT) {
+        result->error = UFT_ERR_NOT_SUPPORTED;
+        if (result->warning_count <
+            sizeof(result->warnings) / sizeof(result->warnings[0])) {
+            uftc_add_warning(result,
+                     "Preflight ABORT: %s",
+                     out_plan->abort_reason
+                         ? out_plan->abort_reason
+                         : uft_preflight_decision_string(out_plan->decision));
+        }
+        return UFT_ERR_NOT_SUPPORTED;
+    }
+    return UFT_OK;
 }
 
 // ============================================================================
@@ -447,46 +504,22 @@ uft_error_t uft_convert_file(const char* src_path,
 
     /* Add quality warning */
     if (path->warning) {
-        snprintf(result->warnings[result->warning_count++],
-                 sizeof(result->warnings[0]), "%s", path->warning);
+        uftc_add_warning(result, "%s", path->warning);
     }
 
-    /* V415-PLAN LOSS.preflight (MF-263 Phase 1 + MF-268 Phase 2) —
-     * single chokepoint for all 44 conversion paths. Prinzip 1 §1.2 +
-     * Prinzip 4: never lose data silently, never write a destructive op
-     * without explicit consent. The roundtrip-matrix classifies the
-     * (src,dst) pair into LOSSLESS / LOSSY_DOCUMENTED / IMPOSSIBLE /
-     * UNTESTED. Decision (Phase 1, MF-263):
-     *   - LOSSLESS         → run silently
-     *   - LOSSY_DOCUMENTED → run only if accept_data_loss=true
-     *                         (sidecar .loss.json emitted after success)
-     *   - IMPOSSIBLE/UNTESTED → ABORT with diagnostic
-     * Phase 2 (MF-268): aggregated loss-entry emit, see below. */
+    /* V415-PLAN LOSS.preflight (MF-263 Phase 1 + MF-268 Phase 2 +
+     * UFT-A01) — shared chokepoint via uftc_preflight_gate(). See helper
+     * docstring; sidecar emission still happens below for file mode. */
     uft_preflight_plan_t plan = {0};
-    uft_preflight_opts_t preopts = {
-        .accept_data_loss = (options && options->preserve_errors) ? true : false,
-        .emit_sidecar     = true,
-        .dry_run          = false,
-        .source_format_name = uft_format_get_name(src_format),
-        .target_format_name = uft_format_get_name(dst_format),
-        .uft_version        = UFT_VERSION_STRING,
-    };
-    uft_preflight_check((uft_format_id_t)src_format,
-                        (uft_format_id_t)dst_format,
-                        src_path, dst_path, &preopts, &plan);
-    if (plan.decision == UFT_PREFLIGHT_ABORT_IMPOSSIBLE ||
-        plan.decision == UFT_PREFLIGHT_ABORT_UNTESTED ||
-        plan.decision == UFT_PREFLIGHT_ABORT_NEED_CONSENT) {
+    /* UFT-A05: read accept_data_loss from its OWN field. Before A05 this
+     * was sourced from preserve_errors, conflating two semantics. The
+     * field default (zero-initialized struct) is false → LOSSY paths
+     * require explicit caller consent. */
+    bool accept_data_loss = (options && options->accept_data_loss) ? true : false;
+    if (uftc_preflight_gate(src_format, dst_format,
+                            src_path, dst_path, accept_data_loss,
+                            result, &plan) != UFT_OK) {
         free(src_data);
-        result->error = UFT_ERR_NOT_SUPPORTED;
-        if (result->warning_count <
-            sizeof(result->warnings) / sizeof(result->warnings[0])) {
-            snprintf(result->warnings[result->warning_count++],
-                     sizeof(result->warnings[0]),
-                     "Preflight ABORT: %s",
-                     plan.abort_reason ? plan.abort_reason
-                                       : uft_preflight_decision_string(plan.decision));
-        }
         return UFT_ERR_NOT_SUPPORTED;
     }
 
@@ -509,18 +542,33 @@ uft_error_t uft_convert_file(const char* src_path,
                dst_class == UFT_FCLASS_SECTOR &&
                !((src_format == UFT_FORMAT_IMD && dst_format == UFT_FORMAT_IMG) ||
                  (src_format == UFT_FORMAT_IMG && dst_format == UFT_FORMAT_IMD))) {
-        /* Sector -> Sector: raw copy with format awareness
-         * (except IMD<->IMG which need actual format conversion) */
-        err = uftc_write_output_file(dst_path, src_data, src_size);
-        if (err == UFT_OK) {
-            result->success = true;
-            result->bytes_written = (int)src_size;
-            snprintf(result->warnings[result->warning_count++],
-                     sizeof(result->warnings[0]),
-                     "Raw sector copy - format headers may need adjustment");
-        } else {
-            result->error = err;
+        /* UFT-A08: prior code raw-copied EVERY sector→sector pair here
+         * (D64→IMG, ATR→DSK, ...) with success=true and only a "format
+         * headers may need adjustment" warning. That violated
+         * DESIGN_PRINCIPLE 7 (Ehrlichkeit): a D64 with a .img extension
+         * is not a successful IMG conversion. With the shared preflight
+         * gate (UFT-A01) these UNTESTED pairs are already aborted
+         * upstream; this NOT_IMPLEMENTED path is defense-in-depth in
+         * case the matrix is extended without a real converter. */
+        free(src_data);
+        result->error = UFT_ERR_NOT_IMPLEMENTED;
+        if (result->warning_count + 3 <=
+            sizeof(result->warnings) / sizeof(result->warnings[0])) {
+            uftc_add_warning(result,
+                     "WHAT: %s->%s sector-conversion not implemented "
+                     "(no format-specific converter).",
+                     uft_format_get_name(src_format),
+                     uft_format_get_name(dst_format));
+            uftc_add_warning(result,
+                     "WHY: prior code raw-copied bytes with success=true "
+                     "(DESIGN_PRINCIPLE 7 violation, UFT-A08).");
+            uftc_add_warning(result,
+                     "FIX: add a real %s->%s converter, or pick an IMG/IMA "
+                     "pair if both are raw DOS dumps.",
+                     uft_format_get_name(src_format),
+                     uft_format_get_name(dst_format));
         }
+        return UFT_ERR_NOT_IMPLEMENTED;
     } else {
         /* Build extended options from basic options for dispatch */
         uft_convert_options_ext_t ext_opts;
@@ -535,6 +583,7 @@ uft_error_t uft_convert_file(const char* src_path,
             ext_opts.decode_retries = options->decode_retries;
             ext_opts.use_multiple_revs = options->use_multiple_revs;
             ext_opts.interpolate_errors = options->interpolate_errors;
+            ext_opts.accept_data_loss = options->accept_data_loss;   /* UFT-A05 */
         }
 
         err = dispatch_conversion(src_format, dst_format, src_data, src_size,
@@ -613,8 +662,7 @@ uft_error_t uft_convert_memory(const uint8_t* src_data, size_t src_size,
                                                               dst_format);
     if (!path) {
         result->error = UFT_ERR_NOT_SUPPORTED;
-        snprintf(result->warnings[result->warning_count++],
-                 sizeof(result->warnings[0]),
+        uftc_add_warning(result,
                  "No conversion path from %s to %s",
                  uft_format_get_name(src_format),
                  uft_format_get_name(dst_format));
@@ -622,8 +670,22 @@ uft_error_t uft_convert_memory(const uint8_t* src_data, size_t src_size,
     }
 
     if (path->warning) {
-        snprintf(result->warnings[result->warning_count++],
-                 sizeof(result->warnings[0]), "%s", path->warning);
+        uftc_add_warning(result, "%s", path->warning);
+    }
+
+    /* UFT-A01: shared preflight chokepoint. Memory mode cannot emit a
+     * .loss.json sidecar (no on-disk target), but the GATE still
+     * applies — a LOSSY_DOCUMENTED path without accept_data_loss is
+     * aborted just like in file mode. Before UFT-A01 this entry point
+     * bypassed preflight entirely, violating the documented
+     * "single chokepoint" guarantee. */
+    uft_preflight_plan_t plan = {0};
+    /* UFT-A05: same field separation as in uft_convert_file. */
+    bool accept_data_loss = (options && options->accept_data_loss) ? true : false;
+    if (uftc_preflight_gate(src_format, dst_format,
+                            NULL, NULL, accept_data_loss,
+                            result, &plan) != UFT_OK) {
+        return UFT_ERR_NOT_SUPPORTED;
     }
 
     /* Same format: direct copy */
@@ -640,23 +702,38 @@ uft_error_t uft_convert_memory(const uint8_t* src_data, size_t src_size,
         return UFT_OK;
     }
 
-    /* Sector -> Sector: direct copy */
     uft_format_class_t src_class = uft_format_get_class(src_format);
     uft_format_class_t dst_class = uft_format_get_class(dst_format);
 
+    /* UFT-A08: all sector→sector pairs (other than IMD↔IMG which has
+     * a real converter further below) used to raw-copy bytes with
+     * success=true. With UFT-A01 active these UNTESTED pairs are
+     * already gated upstream; this NOT_IMPLEMENTED path is
+     * defense-in-depth. IMG↔IMA is NOT a special case here because the
+     * public uft_format_t enum collapses both extensions to a single
+     * UFT_FORMAT_IMG value (uft_types.h:128) — at this layer it would
+     * hit the same-format direct-copy path above, never this branch. */
     if (src_class == UFT_FCLASS_SECTOR && dst_class == UFT_FCLASS_SECTOR &&
         !((src_format == UFT_FORMAT_IMD && dst_format == UFT_FORMAT_IMG) ||
           (src_format == UFT_FORMAT_IMG && dst_format == UFT_FORMAT_IMD))) {
-        *dst_data = malloc(src_size);
-        if (!*dst_data) {
-            result->error = UFT_ERR_MEMORY;
-            return UFT_ERR_MEMORY;
+        result->error = UFT_ERR_NOT_IMPLEMENTED;
+        if (result->warning_count + 3 <=
+            sizeof(result->warnings) / sizeof(result->warnings[0])) {
+            uftc_add_warning(result,
+                     "WHAT: %s->%s sector-conversion not implemented "
+                     "(no format-specific converter).",
+                     uft_format_get_name(src_format),
+                     uft_format_get_name(dst_format));
+            uftc_add_warning(result,
+                     "WHY: prior code raw-copied bytes with success=true "
+                     "(DESIGN_PRINCIPLE 7 violation, UFT-A08).");
+            uftc_add_warning(result,
+                     "FIX: add a real %s->%s converter, or pick an IMG/IMA "
+                     "pair if both are raw DOS dumps.",
+                     uft_format_get_name(src_format),
+                     uft_format_get_name(dst_format));
         }
-        memcpy(*dst_data, src_data, src_size);
-        *dst_size = src_size;
-        result->success = true;
-        result->bytes_written = (int)src_size;
-        return UFT_OK;
+        return UFT_ERR_NOT_IMPLEMENTED;
     }
 
     /*
