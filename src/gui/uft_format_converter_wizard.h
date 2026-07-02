@@ -67,6 +67,13 @@ struct UftConversionOptions {
     /* Verification */
     bool verify_after_convert;
     bool generate_report;
+
+    /* UFT-A03 + UFT-A05: explicit consent for LOSSY_DOCUMENTED paths.
+     * Set true ONLY after the consent dialog (see
+     * UftFormatConverterWizard::promptLossyConsent) confirmed the user
+     * understands the loss list. Default false — without this flag the
+     * preflight gate aborts NEED_CONSENT for any LOSSY pair. */
+    bool accept_data_loss = false;
 };
 
 /*===========================================================================
@@ -310,6 +317,22 @@ public:
     
     void setSourceFile(const QString &path);
     UftConversionOptions getOptions() const;
+
+    /**
+     * @brief Show the LOSSY-conversion consent dialog (UFT-A03).
+     *
+     * Looks up (src,dst) in the round-trip matrix; if the pair is
+     * UFT_RT_LOSSY_DOCUMENTED, shows a modal QMessageBox with the loss
+     * list and Yes/No buttons. Returns true if the user accepted, false
+     * otherwise. For LOSSLESS pairs returns true without prompting. For
+     * IMPOSSIBLE/UNTESTED returns false (no point asking — preflight
+     * will abort anyway).
+     *
+     * Lives on the wizard class so it can be reused from any caller
+     * (single-file wizard, batch wizard, future API surfaces).
+     */
+    static bool promptLossyConsent(int src_format, int dst_format,
+                                    QWidget *parent);
 
 signals:
     void conversionComplete(const QString &outputPath);

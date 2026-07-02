@@ -1138,6 +1138,66 @@ void UftFormatConverterWizard::onConversionFinished(bool success)
     }
 }
 
+/*---------------------------------------------------------------------------
+ * UFT-A03: LOSSY-conversion consent dialog.
+ *
+ * Replaces the prior silent-fail behaviour where the wizard hardcoded
+ * accept_data_loss=false and the user got "NOT_SUPPORTED" for every
+ * LOSSY pair without explanation.
+ *
+ * Lookup: uft_roundtrip_status() over (src,dst). The note from
+ * uft_roundtrip_note() is the human-readable summary of what is lost
+ * (e.g. "weak-bits, flux-timing, index-pulses discarded" for SCP→IMG).
+ * The dialog is forensic-honest: it names what is lost, requires an
+ * affirmative click, and defaults to "No" so accidental Enter-press
+ * cancels the conversion.
+ *---------------------------------------------------------------------------*/
+bool UftFormatConverterWizard::promptLossyConsent(int src_format, int dst_format,
+                                                    QWidget *parent)
+{
+    uft_roundtrip_status_t st =
+        uft_roundtrip_status((uft_format_id_t)src_format,
+                              (uft_format_id_t)dst_format);
+
+    /* LOSSLESS — no prompt needed. */
+    if (st == UFT_RT_LOSSLESS) {
+        return true;
+    }
+
+    /* IMPOSSIBLE / UNTESTED — no use asking; preflight gate aborts the
+     * call anyway. Return false so the caller can short-circuit with a
+     * proper error. */
+    if (st != UFT_RT_LOSSY_DOCUMENTED) {
+        return false;
+    }
+
+    const char *note = uft_roundtrip_note((uft_format_id_t)src_format,
+                                            (uft_format_id_t)dst_format);
+    QString lossSummary = (note && *note)
+        ? QString::fromUtf8(note)
+        : tr("This conversion is documented as lossy in the round-trip matrix.");
+
+    QString srcName = QString::fromUtf8(uft_format_get_name((uft_format_t)src_format));
+    QString dstName = QString::fromUtf8(uft_format_get_name((uft_format_t)dst_format));
+
+    QMessageBox box(parent);
+    box.setIcon(QMessageBox::Warning);
+    box.setWindowTitle(tr("Lossy conversion — confirm"));
+    box.setText(tr("Converting <b>%1</b> → <b>%2</b> is documented as lossy.")
+                  .arg(srcName, dstName));
+    box.setInformativeText(
+        tr("What will be discarded:\n  • %1\n\n"
+           "UFT will write a .loss.json sidecar next to the output that "
+           "records this loss for the audit trail. Continue?")
+          .arg(lossSummary));
+    box.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+    box.setDefaultButton(QMessageBox::No);   /* forensic-safe default */
+    box.button(QMessageBox::Yes)->setText(tr("Yes, accept data loss"));
+    box.button(QMessageBox::No)->setText(tr("Cancel"));
+
+    return box.exec() == QMessageBox::Yes;
+}
+
 /*===========================================================================
  * UftConversionWorker
  *===========================================================================*/
@@ -1215,6 +1275,12 @@ void UftConversionWorker::process()
     memset(&opts, 0, sizeof(opts));
     opts.verify_after       = m_options.verify_after_convert;
     opts.preserve_errors    = false;
+    /* UFT-A03 + UFT-A05: caller of setOptions() is responsible for
+     * obtaining consent BEFORE setting accept_data_loss=true. The
+     * consent helper lives at
+     *   UftFormatConverterWizard::promptLossyConsent(src, dst, parent)
+     * and is called from the UI before this worker is started. */
+    opts.accept_data_loss   = m_options.accept_data_loss;
     opts.preserve_weak_bits = m_options.preserve_weak_bits;
     opts.decode_retries     = m_options.max_retries > 0 ? m_options.max_retries : 3;
     opts.use_multiple_revs  = m_options.multi_revolution;
@@ -1279,6 +1345,18 @@ void UftConversionWorker::process()
         emit complete(true, summary);
     } else {
         QString errMsg = tr("Conversion failed");
+        /* UFT-A03: surface the preflight ABORT reason if the warning
+         * channel carries one. Before A03 the user saw a generic
+         * "NOT_SUPPORTED" with no hint that a consent dialog or
+         * matrix-extension was the actual remedy. */
+        for (int i = 0; i < result.warning_count && i < 8; i++) {
+            QString w = QString::fromUtf8(result.warnings[i]);
+            if (w.startsWith(QLatin1String("Preflight ABORT:")) ||
+                w.startsWith(QLatin1String("WHAT:"))) {
+                errMsg = w;
+                break;
+            }
+        }
         if (result.tracks_failed > 0) {
             errMsg += tr(": %1 of %2 tracks failed")
                 .arg(result.tracks_failed)

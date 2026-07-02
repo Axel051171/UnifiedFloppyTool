@@ -1060,13 +1060,26 @@ void UftBatchWorker::processConvert()
     else if (dstExt == "st") dstFormat = UFT_FORMAT_ST;
     else if (dstExt == "dmk") dstFormat = UFT_FORMAT_DMK;
 
-    /* Set up conversion options */
+    /* Set up conversion options.
+     *
+     * NOTE (separate from A03): `opts` is typed uft_convert_options_ext_t
+     * but passed to uft_convert_file() which expects uft_convert_options_t.
+     * These structs have different layouts — this is a pre-existing
+     * type-confusion bug independent of A03. Tracked as a follow-up;
+     * A03 only fixes the consent flow inside this options shape. */
     uft_convert_options_ext_t opts;
     memset(&opts, 0, sizeof(opts));
     opts.verify_after = m_job.options.value("verify", true).toBool();
     opts.preserve_weak_bits = m_job.options.value("preserveWeak", false).toBool();
     opts.decode_retries = m_job.options.value("retries", 3).toInt();
     opts.cancel = &m_cancelled;
+    /* UFT-A03 + UFT-A05: per-job consent for LOSSY paths. The batch wizard
+     * UI is expected to set "acceptDataLoss" on each job via
+     * UftFormatConverterWizard::promptLossyConsent() before the worker
+     * runs (a single batch-wide prompt at queue-start is recommended
+     * UX — see follow-up). Default false → preflight aborts LOSSY pairs
+     * with a clear NEED_CONSENT message instead of silently failing. */
+    opts.accept_data_loss = m_job.options.value("acceptDataLoss", false).toBool();
 
     uft_convert_result_t result;
     memset(&result, 0, sizeof(result));
