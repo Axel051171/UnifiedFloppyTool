@@ -918,6 +918,22 @@ set_target_properties(test_scp_emulator PROPERTIES
 add_test(NAME test_scp_emulator COMMAND test_scp_emulator)
 message(STATUS "UFT Test ENABLED: test_scp_emulator (firmware-realistic SCP sim)")
 
+# Greaseweazle firmware-realistic emulator (second invocation of the
+# hardware-emulation-author agent — calibrated against the only PRODUCTION-
+# tested UFT HAL at src/hal/uft_greaseweazle_full.c).
+add_executable(test_greaseweazle_emulator
+    ${CMAKE_SOURCE_DIR}/tests/emulators/greaseweazle/test_greaseweazle_emulator.c
+    ${CMAKE_SOURCE_DIR}/tests/emulators/greaseweazle/firmware_state_machine.c
+    ${CMAKE_SOURCE_DIR}/tests/flux_gen/greaseweazle/flux_gen.c)
+target_include_directories(test_greaseweazle_emulator PRIVATE
+    ${CMAKE_SOURCE_DIR}/include
+    ${CMAKE_SOURCE_DIR}/include/uft)
+set_target_properties(test_greaseweazle_emulator PROPERTIES
+    C_STANDARD 11
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/tests)
+add_test(NAME test_greaseweazle_emulator COMMAND test_greaseweazle_emulator)
+message(STATUS "UFT Test ENABLED: test_greaseweazle_emulator (firmware-realistic GW sim)")
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # Qt-based Tests (C++ / QtTest framework)
 # ═══════════════════════════════════════════════════════════════════════════════
