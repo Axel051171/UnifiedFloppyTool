@@ -934,6 +934,35 @@ set_target_properties(test_greaseweazle_emulator PROPERTIES
 add_test(NAME test_greaseweazle_emulator COMMAND test_greaseweazle_emulator)
 message(STATUS "UFT Test ENABLED: test_greaseweazle_emulator (firmware-realistic GW sim)")
 
+# XUM1541/ZoomFloppy firmware-realistic emulator (third invocation of the
+# hardware-emulation-author agent). Links src/hal/uft_xum1541.c so the GCR
+# generator's Commodore zone tables are cross-checked against the HAL SSOT
+# uft_xum_sectors_for_track(). Only pure-utility HAL functions are called;
+# libusb is linked solely because the root CMakeLists compiles the HAL with
+# UFT_HAS_LIBUSB globally when libusb is found (no USB I/O at test runtime).
+add_executable(test_xum1541_emulator
+    ${CMAKE_SOURCE_DIR}/tests/emulators/xum1541/test_xum1541_emulator.c
+    ${CMAKE_SOURCE_DIR}/tests/emulators/xum1541/firmware_state_machine.c
+    ${CMAKE_SOURCE_DIR}/tests/flux_gen/xum1541/flux_gen.c
+    ${CMAKE_SOURCE_DIR}/src/hal/uft_xum1541.c)
+target_include_directories(test_xum1541_emulator PRIVATE
+    ${CMAKE_SOURCE_DIR}/include
+    ${CMAKE_SOURCE_DIR}/include/uft)
+if(LIBUSB_FOUND)
+    target_link_libraries(test_xum1541_emulator PRIVATE uft::libusb)
+endif()
+set_target_properties(test_xum1541_emulator PROPERTIES
+    C_STANDARD 11
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/tests)
+add_test(NAME test_xum1541_emulator COMMAND test_xum1541_emulator)
+if(WIN32 AND DEFINED UFT_LIBUSB_DLL_DIR)
+    # Same PATH-escape pattern as the MF-254/MF-255 HAL tests: the linked
+    # libusb-1.0.dll must be findable at runtime on Windows.
+    set_tests_properties(test_xum1541_emulator PROPERTIES
+        ENVIRONMENT "PATH=${UFT_LIBUSB_DLL_DIR}")
+endif()
+message(STATUS "UFT Test ENABLED: test_xum1541_emulator (firmware-realistic XUM1541 sim)")
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # Qt-based Tests (C++ / QtTest framework)
 # ═══════════════════════════════════════════════════════════════════════════════
