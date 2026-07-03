@@ -103,12 +103,15 @@ jobs:
           cmake --build build-tests --parallel $(nproc) 2>&1 || true
 
       - name: Run tests
-        # ctest reports exit 8 ("no tests run") if every test failed to
-        # link. Wrap with `|| true` to match the build step — anything
-        # that DID build runs and prints output, anything that didn't
-        # produces an honest CTest "Not Run" line.
+        # `--no-tests=ignore` (CMake >= 3.20, our floor) makes "no tests
+        # were found" exit 0 — so a fully-failed test build stays green,
+        # matching the partial-build tolerance of the build step above.
+        # But we DROP `|| true`: a test that DID build and then FAILS its
+        # assertions now returns non-zero and reddens CI. Without this the
+        # 151 unit tests + 439 emulator assertions were ungated (a real
+        # regression could go red while CI stayed green).
         run: |
-          cd build-tests && ctest --output-on-failure --timeout 120 || true
+          cd build-tests && ctest --output-on-failure --timeout 120 --no-tests=ignore
 
       - name: Upload build logs on failure
         if: failure()
@@ -212,12 +215,12 @@ jobs:
           cmake --build build-tests --parallel $(nproc) 2>&1 || true
 
       - name: Run tests
-        # ctest exit 8 ("no tests run") wrapped with `|| true` to match
-        # the Linux job's policy. Any test that linked and runs prints
-        # PASS/FAIL; anything that didn't link surfaces as "Not Run".
+        # Same policy as the Linux job: `--no-tests=ignore` tolerates a
+        # fully-failed test build (exit 0), but a built test that FAILS its
+        # assertions returns non-zero and reddens CI. No blanket `|| true`.
         shell: bash
         run: |
-          cd build-tests && ctest --output-on-failure --timeout 120 || true
+          cd build-tests && ctest --output-on-failure --timeout 120 --no-tests=ignore
 
       - name: Upload build logs on failure
         if: failure()
