@@ -1063,6 +1063,28 @@ set_target_properties(test_fc5025_emulator PROPERTIES
 add_test(NAME test_fc5025_emulator COMMAND test_fc5025_emulator)
 message(STATUS "UFT Test ENABLED: test_fc5025_emulator (firmware-realistic FC5025 sim)")
 
+# ADFCopy firmware-realistic emulator (eighth invocation of the
+# hardware-emulation-author agent). ADFCopy is a Teensy-based (PJRC
+# VID:PID 0x16C0:0x0483) USB-CDC serial controller for Amiga 3.5" drives.
+# Unlike Applesauce's ASCII protocol it uses BINARY framing (1-byte cmd +
+# payload, 'O'/'E'/'D' responses, status bitmask, CMD_READ_FLUX 3-byte
+# header + flux). The generator emits Amiga-MFM flux at 40 MHz / 25 ns.
+# Self-contained; no libm (MF-305).
+add_executable(test_adfcopy_emulator
+    ${CMAKE_SOURCE_DIR}/tests/emulators/adfcopy/test_adfcopy_emulator.c
+    ${CMAKE_SOURCE_DIR}/tests/emulators/adfcopy/firmware_state_machine.c
+    ${CMAKE_SOURCE_DIR}/tests/flux_gen/adfcopy/flux_gen.c)
+target_include_directories(test_adfcopy_emulator PRIVATE
+    ${CMAKE_SOURCE_DIR}/include
+    ${CMAKE_SOURCE_DIR}/include/uft
+    ${CMAKE_SOURCE_DIR}/tests/emulators/adfcopy
+    ${CMAKE_SOURCE_DIR}/tests/flux_gen/adfcopy)
+set_target_properties(test_adfcopy_emulator PROPERTIES
+    C_STANDARD 11
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/tests)
+add_test(NAME test_adfcopy_emulator COMMAND test_adfcopy_emulator)
+message(STATUS "UFT Test ENABLED: test_adfcopy_emulator (firmware-realistic ADFCopy sim)")
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # Qt-based Tests (C++ / QtTest framework)
 # ═══════════════════════════════════════════════════════════════════════════════

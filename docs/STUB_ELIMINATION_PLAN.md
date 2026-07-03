@@ -132,7 +132,7 @@ Divergenzen (FE-1 Exit-Codes, FE-2 SCP-Byte-Capture, FE-3 CLI-Flag-
 Dialekt) sind das Bench-Gate. **FC5025 ✓ (MF-307, 7/9):** Sektor-Domäne
 (read-only USB CBW/CSW, VendorDocumented v1309-Spec) — forensischer Kern
 Rule F-3 (CRC-Sektor behält ≥2 divergente Reads, Status nie still
-gelöscht); 39 Assertions grün. Offen: ADFCopy (8/9), USBFloppy (9/9).
+gelöscht); 39 Assertions grün. **ADFCopy ✓ (MF-308, 8/9):** Teensy-Binär-Serial-Protokoll (INIT/SEEK/READ_FLUX/GET_STATUS, 'O'/'E'/'D' + Status-Bitmaske) + Amiga-MFM-Flux-Gen (40 MHz/25 ns), read-only; 48 Assertions grün. Offen: USBFloppy (9/9 — letzter).
 Frühere Zeilenfassung: FluxEngine (6/9), FC5025
 (7/9), ADFCopy (8/9), USBFloppy (9/9).
 
