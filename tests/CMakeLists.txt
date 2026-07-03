@@ -1041,6 +1041,28 @@ set_target_properties(test_fluxengine_emulator PROPERTIES
 add_test(NAME test_fluxengine_emulator COMMAND test_fluxengine_emulator)
 message(STATUS "UFT Test ENABLED: test_fluxengine_emulator (firmware-realistic FluxEngine sim)")
 
+# FC5025 firmware-realistic emulator (seventh invocation of the
+# hardware-emulation-author agent). FC5025 is a SECTOR-only, read-only USB
+# device (Device Side Data, VID:PID 0x16C0:0x06D6) — CBW/CSW protocol per
+# the v1309 command-set spec. The generator produces decoded sector data
+# with per-sector CRC status; the forensic core is Rule F-3 (a CRC-error
+# sector preserves >= 2 divergent re-reads, never collapsed). Self-
+# contained (no HAL/parser link needed); no libm (MF-305).
+add_executable(test_fc5025_emulator
+    ${CMAKE_SOURCE_DIR}/tests/emulators/fc5025/test_fc5025_emulator.c
+    ${CMAKE_SOURCE_DIR}/tests/emulators/fc5025/firmware_state_machine.c
+    ${CMAKE_SOURCE_DIR}/tests/flux_gen/fc5025/flux_gen.c)
+target_include_directories(test_fc5025_emulator PRIVATE
+    ${CMAKE_SOURCE_DIR}/include
+    ${CMAKE_SOURCE_DIR}/include/uft
+    ${CMAKE_SOURCE_DIR}/tests/emulators/fc5025
+    ${CMAKE_SOURCE_DIR}/tests/flux_gen/fc5025)
+set_target_properties(test_fc5025_emulator PROPERTIES
+    C_STANDARD 11
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/tests)
+add_test(NAME test_fc5025_emulator COMMAND test_fc5025_emulator)
+message(STATUS "UFT Test ENABLED: test_fc5025_emulator (firmware-realistic FC5025 sim)")
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # Qt-based Tests (C++ / QtTest framework)
 # ═══════════════════════════════════════════════════════════════════════════════
