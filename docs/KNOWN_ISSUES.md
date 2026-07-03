@@ -448,6 +448,47 @@ scaffold-done). Verbleibende 3:
   „production". Emulator-Anpassung an die verifizierte Wahrheit:
   siehe `tests/emulators/xum1541/DIVERGENCES.md` (MF-301 Folge-Lauf).
 
+### CI-1 — CI-Test-Lauf durch `|| true` maskiert (entdeckt 2026-07-03, MF-311/MF-312)
+
+**Severity: HIGH.** Der „Run tests"-Schritt in `.github/workflows/ci.yml`
+(Linux + macOS + Windows) wrappt `ctest` in `|| true`. Ein Versuch, das
+Gate zu härten (MF-311: `--no-tests=ignore` **ohne** `|| true`), hat
+aufgedeckt, dass die CI-**Umgebung** einen Großteil der Tests zur
+Laufzeit failt, während dieselbe Suite lokal 100 % grün ist:
+
+| Umgebung | ctest-Ergebnis mit echtem Gate | lokal (MinGW) |
+|---|---|---|
+| Linux 6.7.3 / 6.10.1 | ~95 / 162 FAILED (40 % pass) | — |
+| Windows 2022 | ~133 / 162 FAILED (18 % pass), `test_roundtrip`: „fopen write failed" | — |
+| lokal Win/MinGW | — | **163 / 163 PASS** |
+
+Die failenden Tests sind nicht eine Klasse (GUI/Qt), sondern praktisch
+die **gesamte Suite in Reihenfolge** (`test_2mg_plugin`, `test_3ds`,
+`test_a2r_plugin`, …). Symptome: „no Qt platform plugin could be
+initialized" (Linux, headless — jeder Test linkt via globalem
+`CMAKE_AUTOMOC` Qt), Datei-Schreib-Fehler / Working-Dir-Rechte (Windows).
+
+**Root cause: Umgebung, nicht die Tests.** `|| true` maskiert das seit
+dem Schreiben des Workflows — die CI hat den Test-Lauf **nie** wirklich
+grün gehabt, nur den Build.
+
+**Konsequenz:** Alle 151 Unit-Tests + 439 Emulator-Assertions sind auf
+CI effektiv **ungated**. Eine echte Regression würde `|| true` schlucken.
+
+**Warum noch offen (Scope):** Das Gate zu härten ist erst sicher, wenn
+die CI-Umgebung grün ist. Das ist eine eigene, mehrschrittige Aufgabe,
+die CI-Iteration braucht (headless-Qt `QT_QPA_PLATFORM=offscreen`,
+Windows-Working-Dir-Fix, ggf. Qt-Runtime-Pfad) und **lokal nicht
+reproduzierbar** ist (lokal 163/163). `|| true` bleibt bis dahin bewusst
+drin (mit Verweis auf diesen Eintrag im Workflow-Kommentar), um `main`
+nicht dauerhaft rot auf einem vorbestehenden Umgebungs-Defekt zu halten.
+
+**Nächster Schritt:** eigener CI-Env-Fix-Task —
+(1) `QT_QPA_PLATFORM: offscreen` + nötige Qt-Runtime-Env im Test-Step,
+(2) Windows-Working-Dir/Temp-Schreibrechte für `test_roundtrip` & Co
+(`add_test(... WORKING_DIRECTORY ...)` oder Temp-Pfad in den Tests),
+(3) danach `|| true` entfernen und pro Plattform grün verifizieren.
+
 ---
 
 ## Wie beitragen
