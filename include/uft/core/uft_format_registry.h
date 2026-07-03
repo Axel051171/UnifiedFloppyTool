@@ -282,6 +282,19 @@ const char* uft_format_name(uft_format_id_t id);
 const char* uft_format_category_name(uft_format_category_t cat);
 
 /**
+ * @brief Query whether a format id carries a capability bit.
+ *
+ * Declaration restored in MF-304: it was wrongly deleted by the MF-296
+ * phantom-decl sweep, whose line-based prototype detector misread the
+ * `return uft_format_has_cap(...);` call sites below as prototypes and
+ * so failed to count them as header call-sites. Local gcc only warns on
+ * the resulting implicit declaration; macOS clang errors (CI break).
+ * The three static-inline wrappers below are the public capability API
+ * and depend on this symbol.
+ */
+bool uft_format_has_cap(uft_format_id_t id, uint32_t cap);
+
+/**
  * @brief Check if format is sector-based
  */
 static inline bool uft_format_is_sector(uft_format_id_t id) {

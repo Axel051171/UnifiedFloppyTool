@@ -131,13 +131,32 @@ def _count_header_callsites(root: Path, fn: str) -> int:
     proto = re.compile(
         r"^\s*[\w\*\s]+?\b" + re.escape(fn) + r"\s*\([^)]*\)\s*;\s*$")
     callish = re.compile(r"\b" + re.escape(fn) + r"\s*\(")
+    # MF-304: a bare-prototype line and a single-line CALL like
+    # `return fn(...);` share the same shape, so the proto regex alone
+    # false-matches the call (its `[\w\*\s]+?` swallows the `return`
+    # keyword) — that is exactly how uft_format_has_cap's only call sites
+    # were misread as prototypes and the decl wrongly deleted. A real
+    # prototype never begins with a statement keyword and never contains
+    # an assignment before the call.
+    stmt_kw = re.compile(r"^\s*(return|if|while|for|switch|do|else)\b")
+
+    def _is_prototype(line: str) -> bool:
+        if not proto.match(line):
+            return False
+        if stmt_kw.match(line):
+            return False
+        prefix = line.split(fn, 1)[0]
+        if "=" in prefix or "(" in prefix:
+            return False
+        return True
+
     for base in (root / "include", root / "src"):
         for h in base.rglob("*.h"):
             rel = h.relative_to(root).as_posix()
             if any(rel.startswith(p) for p in VENDORED_PREFIXES):
                 continue
             for line in _strip_comments(_read(h)).splitlines():
-                if callish.search(line) and not proto.match(line):
+                if callish.search(line) and not _is_prototype(line):
                     n += 1
     return n
 
