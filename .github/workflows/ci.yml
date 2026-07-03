@@ -106,19 +106,16 @@ jobs:
           cmake --build build-tests --parallel $(nproc) -- -k 2>&1 || true
 
       - name: Run tests
-        # NOTE: `|| true` is intentionally retained — see KNOWN_ISSUES CI-1.
-        # Attempting to gate on test failures (MF-311) revealed that the CI
-        # test ENVIRONMENT fails ~95/162 tests on Linux and ~133/162 on
-        # Windows at runtime, while the identical suite is 100% green
-        # locally (163/163). Root cause is environmental (headless Qt
-        # platform init + Windows working-dir writability), not the tests.
-        # The gate can only be hardened AFTER the CI env is made green —
-        # tracked as KNOWN_ISSUES CI-1. Until then `|| true` keeps main
-        # from being permanently red on a pre-existing env defect.
-        # `--no-tests=ignore` retained (harmless): tolerate a fully-failed
-        # test build without relying solely on `|| true`.
+        # GATED (KNOWN_ISSUES CI-1 resolved): no more `|| true`. A test that
+        # builds and then FAILS now reddens CI. The env defects that had
+        # been masked — Linux uft_ufi_linux_ops link + headless-Qt offscreen,
+        # Windows libusb mock + /tmp path — are fixed; all three test jobs
+        # verified 163/163 green before this gate was armed.
+        # `--no-tests=ignore` (CMake >= 3.20) still tolerates a fully-failed
+        # test build (exit 0) so a build breakage surfaces in the build step,
+        # not as a confusing "no tests" ctest error.
         run: |
-          cd build-tests && ctest --output-on-failure --timeout 120 --no-tests=ignore || true
+          cd build-tests && ctest --output-on-failure --timeout 120 --no-tests=ignore
 
       - name: Upload build logs on failure
         if: failure()
@@ -224,12 +221,12 @@ jobs:
           cmake --build build-tests --parallel $(nproc) -- -k 2>&1 || true
 
       - name: Run tests
-        # `|| true` retained — see KNOWN_ISSUES CI-1 (same env defect as the
-        # Linux job: suite is 100% green locally but ~133/162 fail on the
-        # Windows runner at runtime, file-write/working-dir related).
+        # GATED (KNOWN_ISSUES CI-1 resolved): no `|| true`. The Windows env
+        # defects (libusb mock header + /tmp temp path) are fixed; this job
+        # verified 163/163 green before the gate was armed.
         shell: bash
         run: |
-          cd build-tests && ctest --output-on-failure --timeout 120 --no-tests=ignore || true
+          cd build-tests && ctest --output-on-failure --timeout 120 --no-tests=ignore
 
       - name: Upload build logs on failure
         if: failure()

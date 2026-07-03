@@ -448,9 +448,24 @@ scaffold-done). Verbleibende 3:
   „production". Emulator-Anpassung an die verifizierte Wahrheit:
   siehe `tests/emulators/xum1541/DIVERGENCES.md` (MF-301 Folge-Lauf).
 
-### CI-1 — CI-Test-Lauf durch `|| true` maskiert (entdeckt 2026-07-03, MF-311/MF-312)
+### CI-1 — CI-Test-Lauf durch `|| true` maskiert → ✓ RESOLVED (2026-07-04)
 
-**Severity: HIGH.** Der „Run tests"-Schritt in `.github/workflows/ci.yml`
+> **✓ RESOLVED.** Das Gate ist scharf: `|| true` ist aus beiden „Run
+> tests"-Schritten entfernt, alle drei Test-Jobs (Linux 6.7.3, Linux
+> 6.10.1, Windows) melden **163/163 grün** und ein failender Test rötet
+> jetzt CI. Vorgehen (Commits MF-311..): (1) `-- -k` keep-going im Build,
+> damit ein Breaker nicht ~150 Tests als „Not Run" mitreißt; das zeigte,
+> dass real nur **7** Tests failten, nicht die halbe Suite. (2) 4 Build-
+> Breaker gefixt: Linux `uft_ufi_linux_ops` (ufi_linux.c zur Test-Surface),
+> Windows libusb (self-contained Mock-Stub `tests/usb_mock/libusb-1.0/
+> libusb.h`). (3) 3 Runtime-Bugs gefixt: fnmatch NULL-Segfault auf POSIX
+> (Header-Guard + `<stddef.h>`), test_roundtrip `/tmp`-Hardcode →
+> TMPDIR/TMP/TEMP, test_wiring_runtime headless-Qt → offscreen. (4) `||
+> true` entfernt, pro Plattform 163/163 verifiziert. Die ursprüngliche
+> Fehldiagnose (headless-Qt/working-dir für ~95 Tests) war falsch: die
+> Masse war „Not Run" durch den Build-Abbruch, nicht Runtime.
+
+**Severity: HIGH (historisch — jetzt behoben).** Der „Run tests"-Schritt in `.github/workflows/ci.yml`
 (Linux + macOS + Windows) wrappt `ctest` in `|| true`. Ein Versuch, das
 Gate zu härten (MF-311: `--no-tests=ignore` **ohne** `|| true`), hat
 aufgedeckt, dass die CI-**Umgebung** einen Großteil der Tests zur
