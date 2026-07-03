@@ -124,7 +124,13 @@ Greaseweazle ✓, XUM1541 ✓ (MF-290/301), Applesauce ✓ (MF-302),
 den PRODUKTIVEN Parser `uft_kf_decode()` — Defekt-Klassen mappen auf die
 exakten `uft_kf_status_t`-Codes (MISSING_END/DEV_INDEX/DEV_BUFFER/
 MISSING_DATA). Zwei HIGH-Divergenzen (K-1 DTC-Exit-Code-Vokabular, K-2
-RAW-Byte-Capture) sind das Bench-Gate. Offen: FluxEngine (6/9), FC5025
+RAW-Byte-Capture) sind das Bench-Gate. **FluxEngine ✓ (MF-306, 6/9):**
+CLI-Subprocess-Modell + minimaler SCP-Generator, dekodiert durch den
+PRODUKTIVEN Parser `uft_scp_read_track_memory()` — Defekte mappen auf
+`UFT_SCP_ERR_SIGNATURE/TRACK/READ`; 35 Assertions grün. Drei HIGH-
+Divergenzen (FE-1 Exit-Codes, FE-2 SCP-Byte-Capture, FE-3 CLI-Flag-
+Dialekt) sind das Bench-Gate. Offen: FC5025 (7/9), ADFCopy (8/9),
+USBFloppy (9/9). Frühere Zeilenfassung: FluxEngine (6/9), FC5025
 (7/9), ADFCopy (8/9), USBFloppy (9/9).
 
 **Gate für Phase 4:** Alle drei HAL-Tests grün auf dem Emulator + signed-off

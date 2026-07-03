@@ -1017,6 +1017,30 @@ set_target_properties(test_kryoflux_emulator PROPERTIES
 add_test(NAME test_kryoflux_emulator COMMAND test_kryoflux_emulator)
 message(STATUS "UFT Test ENABLED: test_kryoflux_emulator (firmware-realistic KryoFlux sim)")
 
+# FluxEngine firmware-realistic emulator (sixth invocation of the
+# hardware-emulation-author agent). FluxEngine has no C HAL — the C++
+# provider runs the `fluxengine` CLI, which on read writes an SCP file
+# that UFT decodes with its own SCP parser. So this emulator models the
+# fluxengine CLI + device and its flux generator emits a minimal REAL
+# SCP file decoded by the PRODUCTION parser uft_scp_read_track_memory()
+# (src/flux/uft_scp_parser.c) — every defect class asserts the exact
+# uft_scp error code. No libm link (the test avoids fabs; MF-305).
+add_executable(test_fluxengine_emulator
+    ${CMAKE_SOURCE_DIR}/tests/emulators/fluxengine/test_fluxengine_emulator.c
+    ${CMAKE_SOURCE_DIR}/tests/emulators/fluxengine/firmware_state_machine.c
+    ${CMAKE_SOURCE_DIR}/tests/flux_gen/fluxengine/flux_gen.c
+    ${CMAKE_SOURCE_DIR}/src/flux/uft_scp_parser.c)
+target_include_directories(test_fluxengine_emulator PRIVATE
+    ${CMAKE_SOURCE_DIR}/include
+    ${CMAKE_SOURCE_DIR}/include/uft
+    ${CMAKE_SOURCE_DIR}/tests/emulators/fluxengine
+    ${CMAKE_SOURCE_DIR}/tests/flux_gen/fluxengine)
+set_target_properties(test_fluxengine_emulator PROPERTIES
+    C_STANDARD 11
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/tests)
+add_test(NAME test_fluxengine_emulator COMMAND test_fluxengine_emulator)
+message(STATUS "UFT Test ENABLED: test_fluxengine_emulator (firmware-realistic FluxEngine sim)")
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # Qt-based Tests (C++ / QtTest framework)
 # ═══════════════════════════════════════════════════════════════════════════════
