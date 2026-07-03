@@ -414,27 +414,39 @@ scaffold-done). Verbleibende 3:
 
 ### M.4 XUM1541 HAL-vs-OpenCBM Protokoll-Deltas (Emulator-Probe 2026-07-02)
 
-- **Status:** OPEN — blockiert M3.2 libusb-Wiring-Fortsetzung
-- **Quelle:** XUM1541-Emulator-Probe-Run (hardware-emulation-author 3/9),
-  Details in `tests/emulators/xum1541/DIVERGENCES.md` X-DELTA-1/2
-- **Befund 1 (HIGH):** `src/hal/uft_xum1541.c:239` (`xum_iec_command`) und
-  `:580` (`uft_xum_iec_write`) lesen 1-Byte Bulk-IN-Status; die
-  OpenCBM-Referenz liest 3 Bytes (`XUM_STATUSBUF_SIZE = 3`:
-  `[status, val_lo, val_hi]`). Mit realer Firmware → vermutlich
-  `LIBUSB_ERROR_OVERFLOW`, IEC-Pfad bricht beim ersten Silizium-Kontakt.
-- **Befund 2 (HIGH):** WRITE/READ-Bulk-Header: HAL sendet
-  `[opcode, len_lo, len_hi, 0]`, OpenCBM `[opcode, mode, len_lo, len_hi]`
-  (Mode-Byte wählt serial/parallel-nibbler). Eine der beiden Seiten ist
-  falsch — OpenCBM-Re-Audit nötig BEVOR M3.2-Wiring weitergeht.
-- **Befund 3 (MEDIUM):** `include/uft/hal/uft_xum1541.h:101`
-  IOCTL-Kommentar mehrdeutig (bRequest-Basis vs. Bulk-Command) — bei
-  M3.2 abgleichen.
-- **Befund 4 (LOW):** `uft_xum_iec_read` hat keinen Out-Parameter für
-  tatsächlich empfangene Bytes — EOI-verkürzte Transfers nicht von
-  vollen unterscheidbar (forensisch relevant sobald wired).
-- **Plan:** M3.2-Wiring-Session beginnt mit OpenCBM-Quell-Audit dieser
-  4 Punkte; der Emulator modelliert bewusst die OpenCBM-dokumentierte
-  Seite — keine Seite gilt als verifiziert bis zur Bench-Session.
+- **Status:** ✓ RESOLVED IN CODE (MF-301, OpenCBM-Quell-Audit) —
+  Tier-3 HW-Bench-Verifikation weiterhin ausstehend (wired-but-unbenched)
+- **Audit-Quelle:** OpenCBM master, verbatim gelesen:
+  `xum1541/xum1541_types.h`, `opencbm/lib/plugin/xum1541/xum1541.c`,
+  `opencbm/lib/plugin/xum1541/archlib.c`
+- **Verdikt 1 (Status-Read):** OpenCBM hat recht — `XUM_STATUSBUF_SIZE=3`,
+  `[status, val_lo, val_hi]` LE. HAL-Fix: `xum_wait_status()` liest 3
+  Bytes, BUSY-Loop wie der OpenCBM-Host, Extended-Value wird genutzt
+  (WRITE: tatsächliche Byte-Anzahl → Short-Write ist jetzt ehrlicher
+  Fehler).
+- **Verdikt 2 (Header-Layout):** OpenCBM hat recht —
+  `[opcode, proto|flags, size_lo, size_hi]`. Protokoll-Byte: obere
+  Nibble Protokoll (`XUM1541_CBM=(1<<4)` …), untere Nibble Flags
+  (`WRITE_TALK=1`, `WRITE_ATN=2`). HAL-Header + Impl umgestellt.
+- **Verdikt 3 (NEU, HIGH — vom Audit entdeckt):** Die gesamte
+  UFT-Bulk-Opcode-Tabelle war **fiktional** (WRITE_DATA=0, TALK=1,
+  LISTEN=2, …, OPEN=8, CLOSE=9). Real existieren nur READ=8 und
+  WRITE=9 — unser OPEN/CLOSE kollidierte mit den echten READ/WRITE!
+  IEC-Adressierung ist KEINE eigene Opcode-Familie, sondern WRITE mit
+  ATN-Flag und den rohen IEC-ATN-Bytes als Payload (LISTEN=0x20|dev,
+  TALK=0x40|dev, Secondary=0x60|sec, UNLISTEN=0x3F, UNTALK=0x5F).
+  HAL komplett auf diese Semantik umgeschrieben.
+- **Verdikt 4 (IOCTL-Transport):** Bulk-Commands `[cmd, arg1, arg2, 0]`
+  + 3-Byte-Status, NICHT Control-Transfer. Header-Kommentar korrigiert;
+  IOCTL-Konstanten 23-31 verifiziert (waren korrekt). Neu:
+  `uft_xum_iec_poll()` (IOCTL 27) als erster echter IOCTL-Wrapper.
+- **Verdikt 5 (EOI-Länge):** `uft_xum_iec_read()` hat jetzt den
+  `bytes_read`-Out-Parameter — EOI-verkürzte Transfers sind vom
+  vollen Read unterscheidbar (forensische Längen-Erhaltung).
+- **Restrisiko:** Alles gegen OpenCBM-QUELLE verifiziert, nicht gegen
+  Silizium. Tier-3-Bench (UFT-008-Pattern) bleibt Gate für
+  „production". Emulator-Anpassung an die verifizierte Wahrheit:
+  siehe `tests/emulators/xum1541/DIVERGENCES.md` (MF-301 Folge-Lauf).
 
 ---
 

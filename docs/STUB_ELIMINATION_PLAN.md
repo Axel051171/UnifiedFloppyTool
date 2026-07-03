@@ -113,7 +113,7 @@ Ende ein zusammenhängender Commit pro Controller.
 
 | Controller | Aufwand | Tool/Agent | HW-Bench |
 |---|---|---|---|
-| M3.2 XUM1541 libusb wiring | ~1 Woche Code + 3 Tage Test | `provider-migrator` + `hardware-emulation-author` (Tier-2.5 zuerst) | UFT-008-Pattern |
+| M3.2 XUM1541 libusb wiring | ~1 Woche Code + 3 Tage Test | `provider-migrator` + `hardware-emulation-author` (Tier-2.5 zuerst). **Protokoll-Schicht ✓ (MF-301):** OpenCBM-Quell-Audit hat alle M.4-Deltas entschieden (3-Byte-Status, `[opcode,proto,lo,hi]`-Header, fiktive Opcode-Tabelle ersetzt durch READ=8/WRITE=9 + ATN-Payload-Adressierung, IOCTL=Bulk). HAL umgeschrieben, kompiliert strict-clean auf libusb- und Stub-Pfad; `iec_read` mit `bytes_read`-Out-Param, `iec_poll` neu. | UFT-008-Pattern (weiterhin Gate) |
 | M3.3 Applesauce serial wiring | ~1 Woche | dito | UFT-009 (neu) |
 | M3.4 USBFloppy (UFI) | ~2 Wochen (komplexer SCSI-CDB-Layer) | dito | UFT-010 (neu) |
 

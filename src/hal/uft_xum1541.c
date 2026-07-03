@@ -221,13 +221,45 @@ static int xum_bulk_in(uft_xum_config_t *cfg,
     return transferred;
 }
 
-/** Send a 4-byte IEC-prefix bulk-OUT with the operation opcode + 3
- *  byte payload (device, secondary, length). Reads the 1-byte status
- *  response. Returns UFT_OK on STATUS_READY. */
+/** Read the 3-byte XUM1541 status from bulk IN, looping while the
+ *  firmware reports BUSY (async commands). Layout per OpenCBM
+ *  xum1541_types.h: buf[0]=status, buf[1..2]=LE extended value.
+ *  MF-301: the pre-audit code read only 1 byte — real firmware sends
+ *  XUM_STATUSBUF_SIZE(3); a 1-byte request would fail with overflow. */
+static uft_error_t xum_wait_status(uft_xum_config_t *cfg, uint16_t *val_out)
+{
+    for (int attempt = 0; attempt < 200; attempt++) {   /* ~bounded busy-wait */
+        uint8_t buf[UFT_XUM1541_STATUSBUF_SIZE] = {0};
+        int n = xum_bulk_in(cfg, buf, sizeof(buf), UFT_XUM1541_CTRL_TIMEOUT_MS);
+        if (n != (int)sizeof(buf)) {
+            xum_set_error(cfg, "xum_wait_status: bulk IN status failed");
+            return UFT_ERR_IO;
+        }
+        switch (UFT_XUM1541_GET_STATUS(buf)) {
+            case UFT_XUM1541_STATUS_BUSY:
+                continue;                    /* async op still running */
+            case UFT_XUM1541_STATUS_READY:
+                if (val_out) *val_out = UFT_XUM1541_GET_STATUS_VAL(buf);
+                return UFT_OK;
+            case UFT_XUM1541_STATUS_ERROR:
+            default:
+                xum_set_error(cfg, "xum_wait_status: device returned STATUS_ERROR");
+                return UFT_ERR_IO;
+        }
+    }
+    xum_set_error(cfg, "xum_wait_status: device stuck BUSY");
+    return UFT_ERR_TIMEOUT;
+}
+
+/** Send a 4-byte ioctl-style bulk command [cmd, arg1, arg2, 0] and wait
+ *  for the 3-byte status; the extended value lands in *val_out. OpenCBM
+ *  sends ioctls (XUM1541_IOCTL+n) as BULK commands, not control
+ *  transfers (MF-301 re-audit). */
 static uft_error_t xum_iec_command(uft_xum_config_t *cfg,
                                     uint8_t opcode,
                                     uint8_t arg1,
-                                    uint8_t arg2)
+                                    uint8_t arg2,
+                                    uint16_t *val_out)
 {
     uint8_t cmd[4] = { opcode, arg1, arg2, 0 };
     int n = xum_bulk_out(cfg, cmd, sizeof(cmd), UFT_XUM1541_CTRL_TIMEOUT_MS);
@@ -235,22 +267,40 @@ static uft_error_t xum_iec_command(uft_xum_config_t *cfg,
         xum_set_error(cfg, "xum_iec_command: bulk OUT failed");
         return UFT_ERR_IO;
     }
-    uint8_t status = 0;
-    n = xum_bulk_in(cfg, &status, 1, UFT_XUM1541_CTRL_TIMEOUT_MS);
-    if (n != 1) {
-        xum_set_error(cfg, "xum_iec_command: bulk IN status failed");
+    return xum_wait_status(cfg, val_out);
+}
+
+/** CBM-protocol WRITE: header [XUM1541_BULK_WRITE, proto, len_lo,
+ *  len_hi] + payload, then 3-byte status whose extended value is the
+ *  byte count actually transferred on the IEC bus. This is ALSO how
+ *  IEC addressing works — talk/listen/untalk/unlisten are a WRITE with
+ *  the ATN flag and the raw ATN bytes as payload (OpenCBM archlib.c),
+ *  NOT separate opcodes (the pre-MF-301 opcode table was fictional). */
+static uft_error_t xum_cbm_write(uft_xum_config_t *cfg, uint8_t proto,
+                                  const uint8_t *data, size_t len,
+                                  uint16_t *written_out)
+{
+    uint8_t header[4] = {
+        UFT_XUM1541_BULK_WRITE,
+        proto,
+        (uint8_t)(len & 0xFF),
+        (uint8_t)((len >> 8) & 0xFF)
+    };
+    int n = xum_bulk_out(cfg, header, sizeof(header),
+                         UFT_XUM1541_CTRL_TIMEOUT_MS);
+    if (n != (int)sizeof(header)) {
+        xum_set_error(cfg, "xum_cbm_write: header transfer failed");
         return UFT_ERR_IO;
     }
-    if (status == UFT_XUM1541_STATUS_ERROR) {
-        xum_set_error(cfg, "xum_iec_command: device returned STATUS_ERROR");
+    n = xum_bulk_out(cfg, data, (int)len, UFT_XUM1541_CTRL_TIMEOUT_MS);
+    if (n != (int)len) {
+        xum_set_error(cfg, "xum_cbm_write: payload transfer short");
         return UFT_ERR_IO;
     }
-    /* BUSY is treated as transient — caller may retry. We map it to
-     * a distinct error so the runner can decide. */
-    if (status == UFT_XUM1541_STATUS_BUSY) {
-        xum_set_error(cfg, "xum_iec_command: device BUSY");
-        return UFT_ERR_IO;
-    }
+    uint16_t written = 0;
+    uft_error_t err = xum_wait_status(cfg, &written);
+    if (err != UFT_OK) return err;
+    if (written_out) *written_out = written;
     return UFT_OK;
 }
 #endif /* UFT_HAS_LIBUSB */
@@ -494,8 +544,15 @@ uft_error_t uft_xum_iec_listen(uft_xum_config_t *cfg, int device, int secondary)
         xum_set_error(cfg, "uft_xum_iec_listen: device not open");
         return UFT_ERR_IO;
     }
-    return xum_iec_command(cfg, UFT_XUM1541_BULK_LISTEN,
-                            (uint8_t)device, (uint8_t)secondary);
+    /* MF-301: LISTEN = CBM-WRITE with ATN flag; payload = raw IEC ATN
+     * bytes (0x20|device, 0x60|secondary), per OpenCBM archlib.c. */
+    {
+        uint8_t atn[2] = { (uint8_t)(0x20 | device),
+                           (uint8_t)(0x60 | secondary) };
+        return xum_cbm_write(cfg,
+                             UFT_XUM1541_PROTO_CBM | UFT_XUM1541_FLAG_WRITE_ATN,
+                             atn, sizeof(atn), NULL);
+    }
 #else
     xum_set_error(cfg, "uft_xum_iec_listen: built without libusb");
     return UFT_ERR_NOT_IMPLEMENTED;
@@ -513,8 +570,17 @@ uft_error_t uft_xum_iec_talk(uft_xum_config_t *cfg, int device, int secondary) {
         xum_set_error(cfg, "uft_xum_iec_talk: device not open");
         return UFT_ERR_IO;
     }
-    return xum_iec_command(cfg, UFT_XUM1541_BULK_TALK,
-                            (uint8_t)device, (uint8_t)secondary);
+    /* MF-301: TALK = CBM-WRITE with ATN+TALK flags; payload = raw IEC
+     * ATN bytes (0x40|device, 0x60|secondary). */
+    {
+        uint8_t atn[2] = { (uint8_t)(0x40 | device),
+                           (uint8_t)(0x60 | secondary) };
+        return xum_cbm_write(cfg,
+                             UFT_XUM1541_PROTO_CBM
+                                 | UFT_XUM1541_FLAG_WRITE_ATN
+                                 | UFT_XUM1541_FLAG_WRITE_TALK,
+                             atn, sizeof(atn), NULL);
+    }
 #else
     xum_set_error(cfg, "uft_xum_iec_talk: built without libusb");
     return UFT_ERR_NOT_IMPLEMENTED;
@@ -528,7 +594,13 @@ uft_error_t uft_xum_iec_unlisten(uft_xum_config_t *cfg) {
         xum_set_error(cfg, "uft_xum_iec_unlisten: device not open");
         return UFT_ERR_IO;
     }
-    return xum_iec_command(cfg, UFT_XUM1541_BULK_UNLISTEN, 0, 0);
+    /* MF-301: UNLISTEN = ATN byte 0x3F via CBM-WRITE+ATN. */
+    {
+        uint8_t atn = 0x3F;
+        return xum_cbm_write(cfg,
+                             UFT_XUM1541_PROTO_CBM | UFT_XUM1541_FLAG_WRITE_ATN,
+                             &atn, 1, NULL);
+    }
 #else
     xum_set_error(cfg, "uft_xum_iec_unlisten: built without libusb");
     return UFT_ERR_NOT_IMPLEMENTED;
@@ -542,7 +614,13 @@ uft_error_t uft_xum_iec_untalk(uft_xum_config_t *cfg) {
         xum_set_error(cfg, "uft_xum_iec_untalk: device not open");
         return UFT_ERR_IO;
     }
-    return xum_iec_command(cfg, UFT_XUM1541_BULK_UNTALK, 0, 0);
+    /* MF-301: UNTALK = ATN byte 0x5F via CBM-WRITE+ATN. */
+    {
+        uint8_t atn = 0x5F;
+        return xum_cbm_write(cfg,
+                             UFT_XUM1541_PROTO_CBM | UFT_XUM1541_FLAG_WRITE_ATN,
+                             &atn, 1, NULL);
+    }
 #else
     xum_set_error(cfg, "uft_xum_iec_untalk: built without libusb");
     return UFT_ERR_NOT_IMPLEMENTED;
@@ -558,51 +636,44 @@ uft_error_t uft_xum_iec_write(uft_xum_config_t *cfg, const uint8_t *data, size_t
         xum_set_error(cfg, "uft_xum_iec_write: device not open");
         return UFT_ERR_IO;
     }
-    /* XUM1541 bulk-OUT write: 4-byte header [opcode, lo, hi, 0] + payload. */
-    uint8_t header[4] = {
-        UFT_XUM1541_BULK_WRITE_DATA,
-        (uint8_t)(len & 0xFF),
-        (uint8_t)((len >> 8) & 0xFF),
-        0
-    };
-    int n = xum_bulk_out(cfg, header, sizeof(header),
-                         UFT_XUM1541_CTRL_TIMEOUT_MS);
-    if (n != (int)sizeof(header)) {
-        xum_set_error(cfg, "uft_xum_iec_write: header transfer failed");
-        return UFT_ERR_IO;
+    /* MF-301: plain CBM data write — header [WRITE, PROTO_CBM, lo, hi]
+     * + payload + 3-byte status. The status extended value is the byte
+     * count actually delivered on the IEC bus; a short count is an
+     * honest partial-write error, never silently accepted. */
+    {
+        uint16_t written = 0;
+        uft_error_t err = xum_cbm_write(cfg, UFT_XUM1541_PROTO_CBM,
+                                        data, len, &written);
+        if (err != UFT_OK) return err;
+        if (written != len) {
+            xum_set_error(cfg, "uft_xum_iec_write: short IEC write");
+            return UFT_ERR_IO;
+        }
+        return UFT_OK;
     }
-    n = xum_bulk_out(cfg, data, (int)len, UFT_XUM1541_CTRL_TIMEOUT_MS);
-    if (n != (int)len) {
-        xum_set_error(cfg, "uft_xum_iec_write: payload transfer short");
-        return UFT_ERR_IO;
-    }
-    uint8_t status = 0;
-    n = xum_bulk_in(cfg, &status, 1, UFT_XUM1541_CTRL_TIMEOUT_MS);
-    if (n != 1 || status == UFT_XUM1541_STATUS_ERROR) {
-        xum_set_error(cfg, "uft_xum_iec_write: device returned error");
-        return UFT_ERR_IO;
-    }
-    return UFT_OK;
 #else
     xum_set_error(cfg, "uft_xum_iec_write: built without libusb");
     return UFT_ERR_NOT_IMPLEMENTED;
 #endif
 }
 
-uft_error_t uft_xum_iec_read(uft_xum_config_t *cfg, uint8_t *data, size_t max_len) {
-    if (!cfg || !data || max_len == 0) return UFT_ERR_INVALID_ARG;
+uft_error_t uft_xum_iec_read(uft_xum_config_t *cfg, uint8_t *data,
+                              size_t max_len, size_t *bytes_read) {
+    if (!cfg || !data || max_len == 0 || !bytes_read) return UFT_ERR_INVALID_ARG;
+    *bytes_read = 0;
     if (max_len > UFT_XUM1541_MAX_XFER_SIZE) max_len = UFT_XUM1541_MAX_XFER_SIZE;
 #ifdef UFT_HAS_LIBUSB
     if (!cfg->is_open || !cfg->dev) {
         xum_set_error(cfg, "uft_xum_iec_read: device not open");
         return UFT_ERR_IO;
     }
-    /* Tell the device we want READ_DATA up to max_len bytes. */
+    /* MF-301: header [READ, PROTO_CBM, len_lo, len_hi], then the data
+     * phase directly (no status phase on reads, per OpenCBM host lib). */
     uint8_t header[4] = {
-        UFT_XUM1541_BULK_READ_DATA,
+        UFT_XUM1541_BULK_READ,
+        UFT_XUM1541_PROTO_CBM,
         (uint8_t)(max_len & 0xFF),
-        (uint8_t)((max_len >> 8) & 0xFF),
-        0
+        (uint8_t)((max_len >> 8) & 0xFF)
     };
     int n = xum_bulk_out(cfg, header, sizeof(header),
                          UFT_XUM1541_CTRL_TIMEOUT_MS);
@@ -615,11 +686,35 @@ uft_error_t uft_xum_iec_read(uft_xum_config_t *cfg, uint8_t *data, size_t max_le
         xum_set_error(cfg, "uft_xum_iec_read: bulk IN failed");
         return UFT_ERR_IO;
     }
-    /* n bytes received; caller assumes data is partial-filled when
-     * fewer bytes were available — XUM1541 ends the transfer on IEC EOI. */
+    /* Short reads are legitimate (IEC EOI ends the transfer early) —
+     * the caller gets the exact count instead of guessing (MF-301,
+     * forensic length preservation). */
+    *bytes_read = (size_t)n;
     return UFT_OK;
 #else
     xum_set_error(cfg, "uft_xum_iec_read: built without libusb");
+    return UFT_ERR_NOT_IMPLEMENTED;
+#endif
+}
+
+uft_error_t uft_xum_iec_poll(uft_xum_config_t *cfg, uint8_t *lines_out) {
+    if (!cfg || !lines_out) return UFT_ERR_INVALID_ARG;
+    *lines_out = 0;
+#ifdef UFT_HAS_LIBUSB
+    if (!cfg->is_open || !cfg->dev) {
+        xum_set_error(cfg, "uft_xum_iec_poll: device not open");
+        return UFT_ERR_IO;
+    }
+    /* MF-301: IEC_POLL ioctl (27) as bulk command; the line states come
+     * back in the 3-byte status extended value (low byte). */
+    uint16_t val = 0;
+    uft_error_t err = xum_iec_command(cfg, UFT_XUM1541_IOCTL_IEC_POLL,
+                                      0, 0, &val);
+    if (err != UFT_OK) return err;
+    *lines_out = (uint8_t)(val & 0xFF);
+    return UFT_OK;
+#else
+    xum_set_error(cfg, "uft_xum_iec_poll: built without libusb");
     return UFT_ERR_NOT_IMPLEMENTED;
 #endif
 }

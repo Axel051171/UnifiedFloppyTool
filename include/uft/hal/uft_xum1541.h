@@ -98,28 +98,57 @@ typedef enum {
 #define UFT_XUM1541_CTRL_GCCVER            7
 #define UFT_XUM1541_CTRL_LIBCVER           8
 
-/* IOCTL sub-commands (base 16, used as bRequest = 16+sub via control xfer). */
+/* IOCTL commands (MF-301 OpenCBM re-audit): sent as 4-byte BULK-OUT
+ * commands [cmd, arg1, arg2, 0] — NOT as control transfers. The device
+ * answers with a 3-byte status on bulk IN. Values are XUM1541_IOCTL(16)+n
+ * and were re-verified verbatim against OpenCBM xum1541_types.h. */
 #define UFT_XUM1541_IOCTL_GET_EOI         23
 #define UFT_XUM1541_IOCTL_CLEAR_EOI       24
+#define UFT_XUM1541_IOCTL_PP_READ         25
+#define UFT_XUM1541_IOCTL_PP_WRITE        26
 #define UFT_XUM1541_IOCTL_IEC_POLL        27
 #define UFT_XUM1541_IOCTL_IEC_WAIT        28
 #define UFT_XUM1541_IOCTL_IEC_SETRELEASE  29
+#define UFT_XUM1541_IOCTL_PARBURST_READ   30
+#define UFT_XUM1541_IOCTL_PARBURST_WRITE  31
 
-/* Bulk-transfer prefix opcodes — first byte of the bulk OUT payload
- * tells the XUM1541 firmware what to do with the rest. */
-#define UFT_XUM1541_BULK_WRITE_DATA  0
-#define UFT_XUM1541_BULK_TALK        1
-#define UFT_XUM1541_BULK_LISTEN      2
-#define UFT_XUM1541_BULK_UNLISTEN    3
-#define UFT_XUM1541_BULK_UNTALK      4
-#define UFT_XUM1541_BULK_READ_DATA   7
-#define UFT_XUM1541_BULK_OPEN_FILE   8
-#define UFT_XUM1541_BULK_CLOSE_FILE  9
+/* Bulk data commands (MF-301): the ONLY non-ioctl bulk opcodes the real
+ * firmware knows are READ(8) and WRITE(9). The previous UFT constant
+ * table (WRITE_DATA=0, TALK=1, LISTEN=2, UNLISTEN=3, UNTALK=4,
+ * READ_DATA=7, OPEN=8, CLOSE=9) was FICTIONAL — worse, OPEN/CLOSE
+ * collided with the real READ/WRITE numbers, so an 'open file' against
+ * real silicon would have triggered a bus READ. IEC addressing
+ * (talk/listen/untalk/unlisten) is NOT separate opcodes: it is a WRITE
+ * with the ATN protocol flag and the raw IEC ATN bytes as payload —
+ * exactly how OpenCBM's archlib.c does it. */
+#define UFT_XUM1541_BULK_READ        8
+#define UFT_XUM1541_BULK_WRITE       9
 
-/* XUM1541 status response values returned by bulk IN after a bulk OUT. */
+/* Bulk command header layout (4 bytes, verified against OpenCBM host
+ * plugin xum1541.c): [opcode, proto|flags, size_lo, size_hi]. */
+
+/* Protocol selector — upper nibble of header byte 1. */
+#define UFT_XUM1541_PROTO_CBM        (1 << 4)  /* standard CBM serial  */
+#define UFT_XUM1541_PROTO_S1         (2 << 4)
+#define UFT_XUM1541_PROTO_S2         (3 << 4)
+#define UFT_XUM1541_PROTO_PP         (4 << 4)
+#define UFT_XUM1541_PROTO_P2         (5 << 4)
+#define UFT_XUM1541_PROTO_NIB        (6 << 4)  /* burst nibbler        */
+
+/* CBM-protocol flags — lower nibble of header byte 1. */
+#define UFT_XUM1541_FLAG_WRITE_TALK  (1 << 0)
+#define UFT_XUM1541_FLAG_WRITE_ATN   (1 << 1)
+
+/* XUM1541 status response: 3 bytes on bulk IN (MF-301; was wrongly read
+ * as 1 byte pre-audit): buf[0] = status code, buf[1..2] = little-endian
+ * extended value (e.g. actual byte count for WRITE). */
+#define UFT_XUM1541_STATUSBUF_SIZE  3
 #define UFT_XUM1541_STATUS_BUSY   1
 #define UFT_XUM1541_STATUS_READY  2
 #define UFT_XUM1541_STATUS_ERROR  3
+#define UFT_XUM1541_GET_STATUS(buf)     ((buf)[0])
+#define UFT_XUM1541_GET_STATUS_VAL(buf) \
+    ((uint16_t)(((uint16_t)(buf)[2] << 8) | (buf)[1]))
 
 /*============================================================================
  * TYPES
@@ -211,7 +240,24 @@ uft_error_t uft_xum_iec_talk(uft_xum_config_t *cfg, int device, int secondary);
 uft_error_t uft_xum_iec_unlisten(uft_xum_config_t *cfg);
 uft_error_t uft_xum_iec_untalk(uft_xum_config_t *cfg);
 uft_error_t uft_xum_iec_write(uft_xum_config_t *cfg, const uint8_t *data, size_t len);
-uft_error_t uft_xum_iec_read(uft_xum_config_t *cfg, uint8_t *data, size_t max_len);
+
+/**
+ * @brief Read IEC data (CBM serial) into @p data.
+ *
+ * @param bytes_read  Out: actual bytes received. MANDATORY (MF-301) —
+ *        the XUM1541 legitimately ends transfers early on IEC EOI, and
+ *        a caller that cannot distinguish a full from an EOI-shortened
+ *        read loses forensically relevant length information.
+ */
+uft_error_t uft_xum_iec_read(uft_xum_config_t *cfg, uint8_t *data,
+                              size_t max_len, size_t *bytes_read);
+
+/**
+ * @brief Poll the IEC bus line states (IOCTL 27, MF-301).
+ * @param lines_out  Out: line bitmask (DATA/CLK/ATN/RESET per OpenCBM
+ *                   iec_poll semantics), from the status extended value.
+ */
+uft_error_t uft_xum_iec_poll(uft_xum_config_t *cfg, uint8_t *lines_out);
 
 /*============================================================================
  * UTILITIES

@@ -1,9 +1,11 @@
 # XUM1541 Emulator — Coverage Matrix
 
 Quantified per-behaviour coverage of the real XUM1541/ZoomFloppy
-firmware (OpenCBM reference; SPEC_STATUS: REVERSE-ENGINEERED — no
-official SDK). "Covered" means this emulator can produce or react to
-the behaviour in a test.
+firmware. SPEC_STATUS: SOURCE-VERIFIED (MF-301) — the wire protocol was
+line-verified against OpenCBM master (xum1541/xum1541_types.h,
+opencbm/lib/plugin/xum1541/xum1541.c, archlib.c); no official ZoomFloppy
+SDK exists. "Covered" means this emulator can produce or react to the
+behaviour in a test.
 
 Status legend:
 - **YES** — fully modelled, tests exist
@@ -26,26 +28,45 @@ Status legend:
 
 **Total: 9/9 control requests exercised (7 modelled, 2 honest-refused).**
 
-## Wire protocol — bulk commands
+## Wire protocol — bulk data commands (MF-301-verified: READ/WRITE only)
 
-| Opcode | Value | Covered | Test / Reason |
+| Behaviour | Covered | Test / Reason |
+|---|---|---|
+| `WRITE(9)` header `[9, proto\|flags, size_lo, size_hi]` | YES | all group-B tests build this exact header |
+| `WRITE` status = 3 bytes, extended value = IEC byte count | YES | `listen_then_data_write_reports_byte_count`, `atn_listen_sets_listening_and_secondary` |
+| `READ(8)` header `[8, proto, size_lo, size_hi]` | YES | `talk_then_read_drains_stream_no_status_phase`, `e2e_*` |
+| `READ` has NO status phase; short read = IEC EOI | YES | `e2e_short_read_reports_partial_len_and_eoi` |
+| ATN addressing: listen = `{0x20\|dev, 0x60\|sec}` via CBM\|ATN write | YES | `atn_listen_sets_listening_and_secondary` |
+| ATN addressing: talk = `{0x40\|dev, 0x60\|sec}` via CBM\|ATN\|TALK | YES | `atn_talk_sets_talking_and_secondary` |
+| ATN: unlisten `{0x3F}` / untalk `{0x5F}` | YES | `atn_unlisten_returns_to_ready`, `atn_untalk_returns_to_ready`, `atn_unlisten_untalk_idle_is_legal_noop` |
+| Device 31 unencodable (0x20\|31 == UNLISTEN) | YES | `atn_byte_0x3F_is_unlisten_not_device_31` |
+| OPEN/CLOSE as ATN payload bytes (0xF0/0xE0\|sec) | PARTIAL | `open_close_atn_bytes_clocked_through`; drive-side semantics out of scope (X-D2) |
+| Talk turnaround flag (`FLAG_WRITE_TALK`) enforced | PARTIAL | `talk_atn_without_talk_flag_is_sticky_bad_protocol`; real HW hangs instead of erroring (X-D12) |
+| Protocol S1/S2/PP/P2/NIB | PARTIAL (refusal only) | `unmodelled_real_protos_refused_transiently` (X-D13) |
+| Unknown protocol nibble rejected | YES | `unknown_proto_nibble_rejected_sticky` |
+| Unknown opcode rejected (incl. all pre-MF-301 fictional opcodes) | YES | `unknown_opcode_rejected_sticky` (X-DELTA-3) |
+| FIFO overrun (announced len > buffer) | YES | `write_length_overrun_is_sticky_error` |
+| Announced-vs-delivered length mismatch | YES | `write_payload_length_mismatch_is_sticky_error` |
+| Payload without command header | YES | `write_payload_without_command_is_sticky_error` |
+
+## Wire protocol — IOCTLs (4-byte bulk `[cmd, arg1, arg2, 0]`, result in status value)
+
+| IOCTL | Value | Covered | Test / Reason |
 |---|---|---|---|
-| `BULK_WRITE_DATA` | 0 | PARTIAL | `listen_then_write_payload_ok`, `write_payload_without_listen_refused`, `write_length_overrun_is_sticky_error`, `write_payload_length_mismatch_is_sticky_error`; status-phase timing simplified (X-D4); header layout under X-DELTA-2 |
-| `BULK_TALK` | 1 | YES | `talk_then_read_payload_drains_stream`, `listen_wrong_device_number_is_transient_error` |
-| `BULK_LISTEN` | 2 | YES | `listen_then_write_payload_ok`, `listen_to_absent_device_is_transient_error`, `listen_while_talking_is_sticky_role_conflict` |
-| `BULK_UNLISTEN` | 3 | YES | `unlisten_returns_to_ready`, `unlisten_when_idle_is_legal_noop` |
-| `BULK_UNTALK` | 4 | YES | `untalk_returns_to_ready` |
-| `BULK_READ_DATA` | 7 | PARTIAL | `talk_then_read_payload_drains_stream`, `read_payload_without_talk_refused`, `e2e_*`; same X-D4/X-DELTA-2 caveats |
-| `BULK_OPEN_FILE` | 8 | PARTIAL (refusal only) | `open_close_file_refused_honestly` (X-D11) |
-| `BULK_CLOSE_FILE` | 9 | PARTIAL (refusal only) | `open_close_file_refused_honestly` |
-| `IOCTL_GET_EOI` | 23 | YES | `get_eoi_clear_eoi_roundtrip` |
-| `IOCTL_CLEAR_EOI` | 24 | YES | `get_eoi_clear_eoi_roundtrip` |
-| `IOCTL_IEC_POLL` | 27 | YES | `iec_poll_reports_line_mask` |
-| `IOCTL_IEC_WAIT` | 28 | PARTIAL | `iec_wait_ready_on_match_busy_otherwise`; no time model (X-D7) |
-| `IOCTL_IEC_SETRELEASE` | 29 | YES | `iec_setrelease_updates_lines` |
-| Status phase (3-byte buf) | — | YES | `status_buf_serialization_is_3_bytes_le`; HAL delta flagged (X-DELTA-1) |
+| `GET_EOI` | 23 | YES | `get_eoi_clear_eoi_roundtrip` |
+| `CLEAR_EOI` | 24 | YES | `get_eoi_clear_eoi_roundtrip` |
+| `PP_READ` | 25 | YES | `pp_write_read_roundtrip` |
+| `PP_WRITE` | 26 | YES | `pp_write_read_roundtrip` |
+| `IEC_POLL` | 27 | YES | `iec_poll_returns_line_mask_in_status_value` (result round-tripped through HAL `UFT_XUM1541_GET_STATUS_VAL`) |
+| `IEC_WAIT` | 28 | PARTIAL | `iec_wait_ready_on_match_busy_otherwise`; no time model (X-D7) |
+| `IEC_SETRELEASE` | 29 | YES | `iec_setrelease_updates_lines` |
+| `PARBURST_READ` | 30 | PARTIAL (refusal only) | `parburst_refused_honestly` (X-D13) |
+| `PARBURST_WRITE` | 31 | PARTIAL (refusal only) | `parburst_refused_honestly` |
+| Status phase (3-byte buf, LE value) | — | YES | `status_buf_serialization_is_3_bytes_le` (X-DELTA-1 RESOLVED) |
 
-**Total: 13/13 documented opcodes exercised (9 modelled, 2 partial-with-caveat, 2 honest-refused) = 100% of the UFT-header opcode set.**
+**Total: 2/2 real bulk data opcodes + 9/9 IOCTLs exercised = 100% of the
+MF-301-verified opcode set. CBM protocol fully modelled; 5 real transfer
+protocols + 2 PARBURST ioctls honest-refused (X-D13).**
 
 ## Firmware state-machine coverage
 
@@ -59,15 +80,15 @@ Status legend:
 | INIT recovers from sticky ERROR | YES |
 | CTRL_RESET recovers + clears bus role + lines | YES |
 | SHUTDOWN terminal state | YES |
-| LISTEN/TALK address validation (0..30) | YES |
-| Absent-device timeout is transient (non-wedging) | YES |
-| Strict role-conflict detection | YES (stricter than real, X-D5) |
-| WRITE only while LISTENING / READ only while TALKING | YES |
-| FIFO overrun (announced len > buffer) | YES |
-| Announced-vs-delivered length mismatch | YES |
+| ATN-payload-driven LISTENING/TALKING transitions | YES |
+| Secondary address captured from 0x60\|sec ATN byte | YES |
+| Absent-device timeout is transient (non-wedging) + partial byte count | YES |
+| Strict role-conflict detection (per ATN byte) | YES (stricter than real, X-D5) |
+| Data WRITE only while LISTENING / READ only while TALKING | YES (error phase simplified, X-D4) |
+| WRITE status extended value = IEC byte count | YES |
 | EOI on stream exhaustion + GET_EOI/CLEAR_EOI | PARTIAL (boolean model, X-D3) |
 | Bootloader-entry refusal | YES |
-| Deferred status phase for write errors | NO (X-D4) |
+| Deferred status phase for data-write errors | NO (X-D4) |
 | IEC bit-cell timing / ATN windows | NO (X-D3) |
 | Drive-internal DOS (job queue, error channel, M-R/M-E) | NO (X-D2 — out of scope) |
 | Concurrent command while BUSY | PARTIAL (IEC_WAIT returns BUSY; no async engine) |
@@ -104,15 +125,17 @@ Status legend:
 
 | Layer | Quantified |
 |---|---|
-| Wire protocol (control + bulk + status) | 100% of UFT-header opcodes exercised |
+| Wire protocol (control + bulk + ioctl + status) | 100% of the MF-301-verified opcode set exercised |
 | Firmware state machine | ~85% (in-scope behaviours) |
 | GCR generation | ~75% |
 | Drive-internal DOS | 0% (out of scope, documented) |
 | **Aggregate vs real-HW behaviour** | **~80%** |
 
-Grounding note: unlike Greaseweazle (production HAL = ground truth),
-the XUM1541 numbers rest on the OpenCBM source reference plus the
-MF-255-audited UFT header. Two unresolved HAL-vs-reference deltas
-(DIVERGENCES.md X-DELTA-1, X-DELTA-2) cap honest confidence until the
-M3.2 bench session answers them. Real HW still catches the remaining
-~20% (IEC timing margins, drive DOS choreography, INIT payload layout).
+Grounding note: post-MF-301 the protocol layer rests on a line-verified
+OpenCBM source audit (X-DELTA-1/2/3 RESOLVED) — comparable grounding to
+SCP's vendored-reference numbers, still below Greaseweazle's
+production-HAL ground truth. Remaining honest caps: INIT payload layout
+unverified on silicon (X-D9), 5 transfer protocols + PARBURST refused
+(X-D13), drive DOS out of scope (X-D2). Real HW still catches the
+remaining ~20% (IEC timing margins, drive DOS choreography, INIT
+payload layout).

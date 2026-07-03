@@ -3,34 +3,40 @@
  * @brief Firmware-realistic state machine for the XUM1541/ZoomFloppy.
  *
  * The XUM1541 is an AVR-based USB <-> Commodore-IEC bridge, not a flux
- * sampler. Its firmware exposes:
+ * sampler. Its firmware exposes (MF-301 OpenCBM-verified wire protocol):
  *   - USB control transfers: ECHO/INIT/RESET/SHUTDOWN/ENTER_BOOTLOADER/
  *     TAP_BREAK/GITREV/GCCVER/LIBCVER (bRequest values in
- *     include/uft/hal/uft_xum1541.h — the in-repo SSOT, MF-255)
- *   - Bulk commands: 4-byte OUT header [opcode, arg1, arg2, arg3]
- *     (WRITE_DATA/TALK/LISTEN/UNLISTEN/UNTALK/READ_DATA/OPEN/CLOSE +
- *     the IOCTL range GET_EOI/CLEAR_EOI/IEC_POLL/IEC_WAIT/SETRELEASE)
- *   - Status phase: 3-byte bulk IN [status, val_lo, val_hi]
- *     (XUM_STATUSBUF_SIZE = 3 in OpenCBM xum1541_types.h; NOTE the
- *      UFT HAL currently reads only 1 status byte — see DIVERGENCES.md
- *      X-DELTA-1, flagged for M3.2 wiring verification)
+ *     include/uft/hal/uft_xum1541.h — the in-repo SSOT)
+ *   - Bulk data commands: ONLY READ(8) and WRITE(9), 4-byte OUT header
+ *     [opcode, proto|flags, size_lo, size_hi]. Upper nibble of byte 1 =
+ *     protocol (CBM/S1/S2/PP/P2/NIB), lower nibble = flags
+ *     (XUM_WRITE_TALK, XUM_WRITE_ATN). IEC addressing (talk/listen/
+ *     untalk/unlisten) is NOT separate opcodes: it is a WRITE with the
+ *     ATN flag and the raw IEC ATN bytes as payload (OpenCBM archlib.c).
+ *   - IOCTLs (GET_EOI..PARBURST_WRITE = 23..31): 4-byte bulk commands
+ *     [cmd, arg1, arg2, 0]; result in the status extended value.
+ *   - Status phase: 3-byte bulk IN [status, val_lo, val_hi]. WRITE
+ *     reports the IEC byte count in the extended value. READ has NO
+ *     status phase — the data phase follows directly; a short read
+ *     signals IEC EOI.
  *
- * SPEC_STATUS: REVERSE-ENGINEERED — modelled on the OpenCBM xum1541
- * firmware + host library (github.com/OpenCBM/OpenCBM, BSD-2) and the
- * UFT header constants (MF-255-audited). There is no official
- * ZoomFloppy SDK. Every place where OpenCBM and the UFT HAL disagree
- * is documented in DIVERGENCES.md, never silently resolved.
+ * SPEC_STATUS: SOURCE-VERIFIED (MF-301) — modelled on the OpenCBM
+ * xum1541 firmware + host library (github.com/OpenCBM/OpenCBM, BSD-2:
+ * xum1541/xum1541_types.h, opencbm/lib/plugin/xum1541/xum1541.c,
+ * archlib.c). There is no official ZoomFloppy SDK. The pre-MF-301
+ * emulator modelled a FICTIONAL opcode table (separate TALK/LISTEN/
+ * OPEN/CLOSE bulk opcodes) — see DIVERGENCES.md X-DELTA-3.
  *
  * Forensic invariant: this emulator NEVER produces GCR/track bytes
  * itself. Drive payloads come from the synthetic GCR generator
  * (tests/flux_gen/xum1541/flux_gen.c), loaded via
  * xum_fw_load_talk_stream().
  *
- * Write path: bulk WRITE_DATA payloads are ACCEPTED and counted (the
- * IEC LISTEN direction also carries harmless drive commands, e.g.
- * "I0"), but nothing is ever persisted or echoed back as disk content
- * — there is no emulated medium to corrupt. ENTER_BOOTLOADER is ALWAYS
- * refused (a wrong bootloader entry can brick real hardware).
+ * Write path: bulk WRITE payloads are ACCEPTED and counted (the IEC
+ * LISTEN direction also carries harmless drive commands, e.g. "I0"),
+ * but nothing is ever persisted or echoed back as disk content — there
+ * is no emulated medium to corrupt. ENTER_BOOTLOADER is ALWAYS refused
+ * (a wrong bootloader entry can brick real hardware).
  */
 #ifndef UFT_TESTS_XUM_FIRMWARE_STATE_MACHINE_H
 #define UFT_TESTS_XUM_FIRMWARE_STATE_MACHINE_H
@@ -39,7 +45,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "uft/hal/uft_xum1541.h"   /* opcode/status constants — in-repo SSOT */
+#include "uft/hal/uft_xum1541.h"   /* opcode/proto/status constants — SSOT */
 
 #ifdef __cplusplus
 extern "C" {
@@ -50,8 +56,8 @@ typedef enum {
     XUM_FW_STATE_DISCONNECTED = 0, /* not enumerated on USB */
     XUM_FW_STATE_CONNECTED    = 1, /* enumerated; CTRL_INIT not yet done */
     XUM_FW_STATE_READY        = 2, /* INIT done; IEC bus idle */
-    XUM_FW_STATE_LISTENING    = 3, /* drive addressed as listener */
-    XUM_FW_STATE_TALKING      = 4, /* drive addressed as talker */
+    XUM_FW_STATE_LISTENING    = 3, /* drive addressed as listener (ATN) */
+    XUM_FW_STATE_TALKING      = 4, /* drive addressed as talker (ATN) */
     XUM_FW_STATE_SHUTDOWN     = 5, /* CTRL_SHUTDOWN received */
     XUM_FW_STATE_ERROR        = 6, /* sticky protocol violation */
 } xum_fw_state_t;
@@ -60,15 +66,17 @@ typedef enum {
 typedef enum {
     XUM_FW_ERR_NONE                = 0,
     XUM_FW_ERR_NOT_INITIALIZED     = 1,  /* bulk cmd before CTRL_INIT */
-    XUM_FW_ERR_BAD_OPCODE          = 2,
-    XUM_FW_ERR_BAD_DEVICE          = 3,  /* IEC device > 30 (transient) */
-    XUM_FW_ERR_DEVICE_NOT_PRESENT  = 4,  /* IEC timeout (transient) */
-    XUM_FW_ERR_BUS_ROLE_CONFLICT   = 5,  /* LISTEN while TALKING etc. */
-    XUM_FW_ERR_NO_LISTENER         = 6,  /* WRITE_DATA without LISTEN */
-    XUM_FW_ERR_NO_TALKER           = 7,  /* READ_DATA without TALK */
+    XUM_FW_ERR_BAD_OPCODE          = 2,  /* opcode not READ/WRITE/ioctl */
+    XUM_FW_ERR_BAD_PROTOCOL        = 3,  /* unknown proto nibble / missing
+                                            TALK flag on a talk-ATN */
+    XUM_FW_ERR_DEVICE_NOT_PRESENT  = 4,  /* IEC ATN timeout (transient) */
+    XUM_FW_ERR_BUS_ROLE_CONFLICT   = 5,  /* listen-ATN while TALKING etc. */
+    XUM_FW_ERR_NO_LISTENER         = 6,  /* data WRITE without listener */
+    XUM_FW_ERR_NO_TALKER           = 7,  /* READ without talker */
     XUM_FW_ERR_SHUTDOWN            = 8,
     XUM_FW_ERR_OVERRUN             = 9,  /* transfer > firmware buffer */
-    XUM_FW_ERR_NOT_MODELLED        = 10, /* honest refusal (OPEN/CLOSE) */
+    XUM_FW_ERR_NOT_MODELLED        = 10, /* honest refusal (S1..NIB, tape,
+                                            parburst) */
 } xum_fw_err_reason_t;
 
 /* ─── Wire constants not in the UFT HAL header ──────────────────────
@@ -121,13 +129,15 @@ typedef struct {
     bool    drive_present;
     uint8_t drive_device_num;   /* IEC primary address, usually 8 */
     uint8_t iec_lines;          /* XUM_FW_IEC_* mask */
+    uint8_t pp_port;            /* parallel-port latch (PP_READ/PP_WRITE) */
 
     /* IEC session state. */
-    uint8_t current_secondary;
+    uint8_t current_secondary;  /* last 0x60|sec ATN byte seen */
     bool    eoi_flag;
 
-    /* Pending bulk data phase (set by WRITE_DATA / READ_DATA cmd). */
+    /* Pending bulk data phase (set by a WRITE / READ command). */
     uint16_t pending_write_len;
+    uint8_t  pending_write_flags;  /* lower-nibble flags of the WRITE */
     bool     write_pending;
     uint16_t pending_read_len;
     bool     read_pending;
@@ -165,8 +175,8 @@ void xum_fw_set_version_strings(xum_fw_t *fw, const char *gitrev,
                                 const char *gccver, const char *libcver);
 
 /** Load the drive->host payload (from the synthetic GCR generator)
- *  that TALK + READ_DATA will drain. Borrowed pointer — caller keeps
- *  it alive for the duration of the read sequence. */
+ *  that a talk-ATN + READ sequence will drain. Borrowed pointer —
+ *  caller keeps it alive for the duration of the read sequence. */
 void xum_fw_load_talk_stream(xum_fw_t *fw, const uint8_t *bytes, size_t len);
 
 /* ─── Control transfers (wire layer 1) ──────────────────────────────
@@ -176,22 +186,39 @@ int xum_fw_ctrl(xum_fw_t *fw, uint8_t bRequest, uint16_t wValue,
                 uint8_t *out, size_t out_cap);
 
 /* ─── Bulk commands (wire layer 2) ──────────────────────────────────
- * cmd is the exact 4-byte bulk-OUT header the HAL sends.
- * Returns the status code (UFT_XUM1541_STATUS_*) or XUM_FW_NO_STATUS
- * when the command has a data phase before its status phase
- * (WRITE_DATA / READ_DATA) or the device cannot answer. The 16-bit
- * extended status value lands in fw->last_status_val. */
+ * cmd is the exact 4-byte bulk-OUT header the HAL sends:
+ *   WRITE(9): [9, proto|flags, size_lo, size_hi] — payload follows,
+ *             then a 3-byte status whose extended value = IEC byte
+ *             count. Returns XUM_FW_NO_STATUS (payload phase next) or
+ *             an immediate error status.
+ *   READ(8):  [8, proto, size_lo, size_hi] — data phase follows, NO
+ *             status phase on the real wire. Returns XUM_FW_NO_STATUS
+ *             or an immediate sim-side error status (a real device
+ *             would hang the bus instead — see DIVERGENCES.md X-D4).
+ *   IOCTL(23..31): [cmd, arg1, arg2, 0] — returns the status code
+ *             directly; result value in fw->last_status_val.
+ * Unknown opcodes and unknown protocol nibbles are refused with a
+ * sticky error — never fake success. */
 uint8_t xum_fw_bulk_command(xum_fw_t *fw, const uint8_t cmd[4]);
 
-/** Data phase after WRITE_DATA: host streams `len` payload bytes.
- *  Returns the deferred status (READY with value = len on success). */
+/** Data phase after a WRITE command: host streams `len` payload bytes.
+ *  Returns the deferred status. For an ATN write (FLAG_WRITE_ATN) the
+ *  payload bytes are parsed as raw IEC ATN commands and drive the
+ *  LISTENING/TALKING state transitions:
+ *    0x20|dev -> listen, 0x40|dev -> talk (requires FLAG_WRITE_TALK),
+ *    0x3F -> unlisten, 0x5F -> untalk, 0x60|sec -> secondary address.
+ *  On success: READY with extended value = bytes transferred on the
+ *  IEC bus; on a mid-payload failure: ERROR with extended value =
+ *  bytes transferred before the failing ATN byte. */
 uint8_t xum_fw_bulk_write_payload(xum_fw_t *fw,
                                   const uint8_t *data, uint16_t len);
 
-/** Data phase after READ_DATA: firmware streams up to the requested
- *  length from the loaded talk stream. Writes delivered count to
- *  *out_len; sets the EOI flag when the drive ends transmission.
- *  Returns READY, or ERROR if no READ_DATA command is pending. */
+/** Data phase after a READ command: firmware streams up to the
+ *  requested length from the loaded talk stream. Writes delivered
+ *  count to *out_len; sets the EOI flag when the drive ends
+ *  transmission (short read = EOI, exactly as on the real wire; there
+ *  is NO status phase after a read). The uint8_t return is a SIM-side
+ *  result code (READY/ERROR), not wire bytes. */
 uint8_t xum_fw_bulk_read_payload(xum_fw_t *fw, uint8_t *out,
                                  uint16_t out_cap, uint16_t *out_len);
 

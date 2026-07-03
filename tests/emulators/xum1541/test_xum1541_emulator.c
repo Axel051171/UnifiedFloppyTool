@@ -8,21 +8,30 @@
  * sequence; THIS suite verifies firmware sequencing semantics and
  * the synthetic GCR payloads a 1541-class drive would deliver.
  *
- * 45 tests in 5 groups:
- *   A. Control transfers + identity      (1-10)
- *   B. IEC bus state machine             (11-22)
- *   C. IOCTLs, EOI + status wire format  (23-28)
- *   D. GCR generator determinism/defects (29-43)
- *   E. End-to-end TALK/READ pipeline     (44-45)
+ * Wire model (MF-301 OpenCBM-verified): the only bulk data opcodes are
+ * READ(8) and WRITE(9) with header [opcode, proto|flags, size_lo,
+ * size_hi]; IEC addressing = WRITE with FLAG_WRITE_ATN + raw ATN bytes
+ * as payload; WRITE status = 3 bytes with the IEC byte count in the
+ * extended value; READ has no status phase (short read = EOI); IOCTLs
+ * 23..31 as [cmd, arg1, arg2, 0].
  *
- * The suite links src/hal/uft_xum1541.c (compiled WITHOUT libusb) so
- * the generator's Commodore zone tables are cross-checked against the
- * HAL SSOT uft_xum_sectors_for_track() — no duplicated truth.
+ * 56 tests in 5 groups:
+ *   A. Control transfers + identity          (1-10)
+ *   B. Bulk wire format + IEC ATN addressing (11-32)
+ *   C. IOCTLs, EOI + status wire format      (33-39)
+ *   D. GCR generator determinism/defects     (40-54)
+ *   E. End-to-end TALK/READ pipeline         (55-56)
+ *
+ * The suite links src/hal/uft_xum1541.c (compiled WITHOUT USB I/O at
+ * runtime) so the generator's Commodore zone tables are cross-checked
+ * against the HAL SSOT uft_xum_sectors_for_track() — no duplicated
+ * truth.
  *
  * Forensic invariants asserted across the suite:
  *   - CTRL_ENTER_BOOTLOADER is ALWAYS refused (bricking guard)
  *   - sequencing violations produce STATUS_ERROR + sticky state,
- *     never a silent no-op
+ *     never a silent no-op; unknown opcodes and unknown protocol
+ *     nibbles are rejected, never faked
  *   - same RNG seed produces byte-identical GCR output (CI-stable)
  *   - every generated track fits its density-zone byte budget
  *     (medium-safety: an overlong track written back would destroy
@@ -46,11 +55,76 @@ static int _pass = 0, _fail = 0, _last_fail = 0;
                         _last_fail = _fail; } while (0)
 #define ASSERT(c)  do { if (!(c)) { printf("FAIL @ %d: %s\n", __LINE__, #c); _fail++; return; } } while (0)
 
-/* Helpers */
-static uint8_t bulk4(xum_fw_t *fw, uint8_t op, uint8_t a1, uint8_t a2)
+/* ─── Wire helpers ──────────────────────────────────────────────────── */
+
+/** Send a raw 4-byte bulk command header. */
+static uint8_t bulk4(xum_fw_t *fw, uint8_t op, uint8_t b1,
+                     uint8_t b2, uint8_t b3)
 {
-    uint8_t cmd[4] = { op, a1, a2, 0 };
+    uint8_t cmd[4] = { op, b1, b2, b3 };
     return xum_fw_bulk_command(fw, cmd);
+}
+
+/** Send [WRITE, proto|flags, len_lo, len_hi]. */
+static uint8_t cmd_write(xum_fw_t *fw, uint8_t proto_flags, uint16_t len)
+{
+    return bulk4(fw, UFT_XUM1541_BULK_WRITE, proto_flags,
+                 (uint8_t)(len & 0xFF), (uint8_t)(len >> 8));
+}
+
+/** Send [READ, proto, len_lo, len_hi]. */
+static uint8_t cmd_read(xum_fw_t *fw, uint8_t proto, uint16_t len)
+{
+    return bulk4(fw, UFT_XUM1541_BULK_READ, proto,
+                 (uint8_t)(len & 0xFF), (uint8_t)(len >> 8));
+}
+
+/** Full ATN write: WRITE cmd with CBM|ATN|extra_flags + ATN payload.
+ *  Returns the final status (command-phase error or payload status). */
+static uint8_t atn_write(xum_fw_t *fw, uint8_t extra_flags,
+                         const uint8_t *atn, uint16_t n)
+{
+    uint8_t st = cmd_write(fw, (uint8_t)(UFT_XUM1541_PROTO_CBM
+                                         | UFT_XUM1541_FLAG_WRITE_ATN
+                                         | extra_flags), n);
+    if (st != XUM_FW_NO_STATUS) return st;   /* command-phase error */
+    return xum_fw_bulk_write_payload(fw, atn, n);
+}
+
+/** IEC listen(dev,sec) exactly as OpenCBM archlib.c encodes it. */
+static uint8_t iec_listen(xum_fw_t *fw, uint8_t dev, uint8_t sec)
+{
+    uint8_t atn[2] = { (uint8_t)(UFT_IEC_LISTEN | dev),
+                       (uint8_t)(UFT_IEC_DATA | sec) };
+    return atn_write(fw, 0, atn, 2);
+}
+
+/** IEC talk(dev,sec): ATN bytes + FLAG_WRITE_TALK for the turnaround. */
+static uint8_t iec_talk(xum_fw_t *fw, uint8_t dev, uint8_t sec)
+{
+    uint8_t atn[2] = { (uint8_t)(UFT_IEC_TALK | dev),
+                       (uint8_t)(UFT_IEC_DATA | sec) };
+    return atn_write(fw, UFT_XUM1541_FLAG_WRITE_TALK, atn, 2);
+}
+
+static uint8_t iec_unlisten(xum_fw_t *fw)
+{
+    uint8_t atn = UFT_IEC_UNLISTEN;
+    return atn_write(fw, 0, &atn, 1);
+}
+
+static uint8_t iec_untalk(xum_fw_t *fw)
+{
+    uint8_t atn = UFT_IEC_UNTALK;
+    return atn_write(fw, 0, &atn, 1);
+}
+
+/** Plain CBM data write (cmd + payload), as uft_xum_iec_write does. */
+static uint8_t data_write(xum_fw_t *fw, const uint8_t *data, uint16_t len)
+{
+    uint8_t st = cmd_write(fw, UFT_XUM1541_PROTO_CBM, len);
+    if (st != XUM_FW_NO_STATUS) return st;
+    return xum_fw_bulk_write_payload(fw, data, len);
 }
 
 static void setup_ready(xum_fw_t *fw)
@@ -130,12 +204,12 @@ TEST(echo_legal_before_init) {
 TEST(bulk_command_before_init_enters_sticky_error) {
     xum_fw_t fw;
     xum_fw_power_on_defaults(&fw);   /* CONNECTED — INIT missing */
-    ASSERT(bulk4(&fw, UFT_XUM1541_BULK_LISTEN, 8, 15)
+    ASSERT(cmd_write(&fw, UFT_XUM1541_PROTO_CBM | UFT_XUM1541_FLAG_WRITE_ATN, 2)
            == UFT_XUM1541_STATUS_ERROR);
     ASSERT(fw.state == XUM_FW_STATE_ERROR);
     ASSERT(fw.sticky_error == XUM_FW_ERR_NOT_INITIALIZED);
     /* Sticky: further bulk commands keep failing... */
-    ASSERT(bulk4(&fw, UFT_XUM1541_BULK_UNLISTEN, 0, 0)
+    ASSERT(bulk4(&fw, UFT_XUM1541_IOCTL_IEC_POLL, 0, 0, 0)
            == UFT_XUM1541_STATUS_ERROR);
     /* ...until INIT recovers. */
     uint8_t info[8];
@@ -153,8 +227,7 @@ TEST(enter_bootloader_always_refused) {
     ASSERT(fw.bootloader_refusals == 1);
     /* Firmware must remain fully usable afterwards. */
     ASSERT(fw.state == XUM_FW_STATE_READY);
-    ASSERT(bulk4(&fw, UFT_XUM1541_BULK_LISTEN, 8, 15)
-           == UFT_XUM1541_STATUS_READY);
+    ASSERT(iec_listen(&fw, 8, 15) == UFT_XUM1541_STATUS_READY);
 }
 
 TEST(shutdown_blocks_further_commands) {
@@ -167,17 +240,15 @@ TEST(shutdown_blocks_further_commands) {
     uint8_t info[8];
     ASSERT(xum_fw_ctrl(&fw, UFT_XUM1541_CTRL_INIT, 0, info, 8)
            == XUM_FW_CTRL_REFUSED);
-    ASSERT(bulk4(&fw, UFT_XUM1541_BULK_UNLISTEN, 0, 0) == XUM_FW_NO_STATUS);
+    ASSERT(cmd_write(&fw, UFT_XUM1541_PROTO_CBM, 4) == XUM_FW_NO_STATUS);
 }
 
 TEST(ctrl_reset_clears_sticky_error_and_bus_role) {
     xum_fw_t fw;
     setup_ready(&fw);
-    ASSERT(bulk4(&fw, UFT_XUM1541_BULK_TALK, 8, 15)
-           == UFT_XUM1541_STATUS_READY);
-    /* Force a sticky violation: LISTEN while TALKING. */
-    ASSERT(bulk4(&fw, UFT_XUM1541_BULK_LISTEN, 8, 15)
-           == UFT_XUM1541_STATUS_ERROR);
+    ASSERT(iec_talk(&fw, 8, 15) == UFT_XUM1541_STATUS_READY);
+    /* Force a sticky violation: listen-ATN while TALKING. */
+    ASSERT(iec_listen(&fw, 8, 15) == UFT_XUM1541_STATUS_ERROR);
     ASSERT(fw.state == XUM_FW_STATE_ERROR);
     /* CTRL_RESET recovers to READY with idle bus. */
     ASSERT(xum_fw_ctrl(&fw, UFT_XUM1541_CTRL_RESET, 0, NULL, 0) == 0);
@@ -200,43 +271,98 @@ TEST(version_strings_answered) {
 }
 
 /* ─────────────────────────────────────────────────────────────────────
- *  B. IEC bus state machine
+ *  B. Bulk wire format + IEC ATN addressing
  * ───────────────────────────────────────────────────────────────────── */
 
-TEST(listen_then_write_payload_ok) {
+TEST(atn_listen_sets_listening_and_secondary) {
     xum_fw_t fw;
     setup_ready(&fw);
-    ASSERT(bulk4(&fw, UFT_XUM1541_BULK_LISTEN, 8, 15)
-           == UFT_XUM1541_STATUS_READY);
+    ASSERT(iec_listen(&fw, 8, 15) == UFT_XUM1541_STATUS_READY);
     ASSERT(fw.state == XUM_FW_STATE_LISTENING);
-    /* WRITE_DATA cmd: [op, len_lo, len_hi, 0] — no status until the
-     * payload phase (real wire order: cmd -> payload -> status). */
+    ASSERT(fw.current_secondary == 15);
+    /* WRITE status extended value = ATN bytes clocked (2). */
+    ASSERT(fw.last_status_val == 2);
+}
+
+TEST(atn_talk_sets_talking_and_secondary) {
+    xum_fw_t fw;
+    setup_ready(&fw);
+    ASSERT(iec_talk(&fw, 8, 2) == UFT_XUM1541_STATUS_READY);
+    ASSERT(fw.state == XUM_FW_STATE_TALKING);
+    ASSERT(fw.current_secondary == 2);
+    ASSERT(fw.last_status_val == 2);
+}
+
+TEST(atn_unlisten_returns_to_ready) {
+    xum_fw_t fw;
+    setup_ready(&fw);
+    ASSERT(iec_listen(&fw, 8, 15) == UFT_XUM1541_STATUS_READY);
+    ASSERT(iec_unlisten(&fw) == UFT_XUM1541_STATUS_READY);
+    ASSERT(fw.state == XUM_FW_STATE_READY);
+    ASSERT(fw.last_status_val == 1);   /* one ATN byte clocked */
+}
+
+TEST(atn_untalk_returns_to_ready) {
+    xum_fw_t fw;
+    setup_ready(&fw);
+    ASSERT(iec_talk(&fw, 8, 15) == UFT_XUM1541_STATUS_READY);
+    ASSERT(iec_untalk(&fw) == UFT_XUM1541_STATUS_READY);
+    ASSERT(fw.state == XUM_FW_STATE_READY);
+}
+
+TEST(atn_unlisten_untalk_idle_is_legal_noop) {
+    xum_fw_t fw;
+    setup_ready(&fw);
+    ASSERT(iec_unlisten(&fw) == UFT_XUM1541_STATUS_READY);
+    ASSERT(iec_untalk(&fw)   == UFT_XUM1541_STATUS_READY);
+    ASSERT(fw.state == XUM_FW_STATE_READY);
+}
+
+TEST(atn_byte_0x3F_is_unlisten_not_device_31) {
+    /* 0x20 | 31 == 0x3F == UNLISTEN: device 31 is unencodable on the
+     * IEC wire by design. The pre-MF-301 fictional opcode table let a
+     * "device 31" through as an argument byte — the real wire cannot. */
+    xum_fw_t fw;
+    setup_ready(&fw);
+    ASSERT((UFT_IEC_LISTEN | 31) == UFT_IEC_UNLISTEN);
+    ASSERT((UFT_IEC_TALK   | 31) == UFT_IEC_UNTALK);
+    uint8_t atn = (uint8_t)(UFT_IEC_LISTEN | 31);
+    ASSERT(atn_write(&fw, 0, &atn, 1) == UFT_XUM1541_STATUS_READY);
+    /* Parsed as UNLISTEN: bus stays idle, no device addressed. */
+    ASSERT(fw.state == XUM_FW_STATE_READY);
+    ASSERT(fw.last_error == XUM_FW_ERR_NONE);
+}
+
+TEST(listen_then_data_write_reports_byte_count) {
+    xum_fw_t fw;
+    setup_ready(&fw);
+    ASSERT(iec_listen(&fw, 8, 15) == UFT_XUM1541_STATUS_READY);
+    /* Plain CBM data write: cmd -> payload -> status; the status
+     * extended value = bytes actually transferred on the IEC bus. */
     const uint8_t payload[4] = { 'I', '0', 0x0D, 0x00 };
-    ASSERT(bulk4(&fw, UFT_XUM1541_BULK_WRITE_DATA, 4, 0) == XUM_FW_NO_STATUS);
-    ASSERT(xum_fw_bulk_write_payload(&fw, payload, 4)
-           == UFT_XUM1541_STATUS_READY);
+    ASSERT(data_write(&fw, payload, 4) == UFT_XUM1541_STATUS_READY);
     ASSERT(fw.last_status_val == 4);
     ASSERT(fw.listen_bytes_accepted == 4);
 }
 
-TEST(write_payload_without_listen_refused) {
+TEST(data_write_without_listener_refused) {
     xum_fw_t fw;
     setup_ready(&fw);
-    ASSERT(bulk4(&fw, UFT_XUM1541_BULK_WRITE_DATA, 4, 0)
+    ASSERT(cmd_write(&fw, UFT_XUM1541_PROTO_CBM, 4)
            == UFT_XUM1541_STATUS_ERROR);
     ASSERT(fw.state == XUM_FW_STATE_ERROR);
     ASSERT(fw.sticky_error == XUM_FW_ERR_NO_LISTENER);
 }
 
-TEST(talk_then_read_payload_drains_stream) {
+TEST(talk_then_read_drains_stream_no_status_phase) {
     xum_fw_t fw;
     setup_ready(&fw);
     const uint8_t stream[6] = { 1, 2, 3, 4, 5, 6 };
     xum_fw_load_talk_stream(&fw, stream, sizeof(stream));
-    ASSERT(bulk4(&fw, UFT_XUM1541_BULK_TALK, 8, 15)
-           == UFT_XUM1541_STATUS_READY);
+    ASSERT(iec_talk(&fw, 8, 15) == UFT_XUM1541_STATUS_READY);
     ASSERT(fw.state == XUM_FW_STATE_TALKING);
-    ASSERT(bulk4(&fw, UFT_XUM1541_BULK_READ_DATA, 6, 0) == XUM_FW_NO_STATUS);
+    /* READ: data phase follows the command directly. */
+    ASSERT(cmd_read(&fw, UFT_XUM1541_PROTO_CBM, 6) == XUM_FW_NO_STATUS);
     uint8_t out[8] = {0};
     uint16_t got = 0;
     ASSERT(xum_fw_bulk_read_payload(&fw, out, sizeof(out), &got)
@@ -246,42 +372,32 @@ TEST(talk_then_read_payload_drains_stream) {
     ASSERT(fw.eoi_flag == true);   /* stream exhausted => EOI */
 }
 
-TEST(read_payload_without_talk_refused) {
+TEST(read_without_talker_refused) {
     xum_fw_t fw;
     setup_ready(&fw);
-    ASSERT(bulk4(&fw, UFT_XUM1541_BULK_READ_DATA, 16, 0)
+    ASSERT(cmd_read(&fw, UFT_XUM1541_PROTO_CBM, 16)
            == UFT_XUM1541_STATUS_ERROR);
     ASSERT(fw.state == XUM_FW_STATE_ERROR);
     ASSERT(fw.sticky_error == XUM_FW_ERR_NO_TALKER);
 }
 
-TEST(unlisten_returns_to_ready) {
-    xum_fw_t fw;
-    setup_ready(&fw);
-    ASSERT(bulk4(&fw, UFT_XUM1541_BULK_LISTEN, 8, 15)
-           == UFT_XUM1541_STATUS_READY);
-    ASSERT(bulk4(&fw, UFT_XUM1541_BULK_UNLISTEN, 0, 0)
-           == UFT_XUM1541_STATUS_READY);
-    ASSERT(fw.state == XUM_FW_STATE_READY);
-}
-
-TEST(untalk_returns_to_ready) {
-    xum_fw_t fw;
-    setup_ready(&fw);
-    ASSERT(bulk4(&fw, UFT_XUM1541_BULK_TALK, 8, 15)
-           == UFT_XUM1541_STATUS_READY);
-    ASSERT(bulk4(&fw, UFT_XUM1541_BULK_UNTALK, 0, 0)
-           == UFT_XUM1541_STATUS_READY);
-    ASSERT(fw.state == XUM_FW_STATE_READY);
-}
-
 TEST(listen_while_talking_is_sticky_role_conflict) {
     xum_fw_t fw;
     setup_ready(&fw);
-    ASSERT(bulk4(&fw, UFT_XUM1541_BULK_TALK, 8, 15)
-           == UFT_XUM1541_STATUS_READY);
-    ASSERT(bulk4(&fw, UFT_XUM1541_BULK_LISTEN, 8, 15)
-           == UFT_XUM1541_STATUS_ERROR);
+    ASSERT(iec_talk(&fw, 8, 15) == UFT_XUM1541_STATUS_READY);
+    ASSERT(iec_listen(&fw, 8, 15) == UFT_XUM1541_STATUS_ERROR);
+    ASSERT(fw.state == XUM_FW_STATE_ERROR);
+    ASSERT(fw.sticky_error == XUM_FW_ERR_BUS_ROLE_CONFLICT);
+    /* Extended value = ATN bytes clocked before the failing byte (0:
+     * the very first byte was the conflicting listen address). */
+    ASSERT(fw.last_status_val == 0);
+}
+
+TEST(talk_while_listening_is_sticky_role_conflict) {
+    xum_fw_t fw;
+    setup_ready(&fw);
+    ASSERT(iec_listen(&fw, 8, 15) == UFT_XUM1541_STATUS_READY);
+    ASSERT(iec_talk(&fw, 8, 15) == UFT_XUM1541_STATUS_ERROR);
     ASSERT(fw.state == XUM_FW_STATE_ERROR);
     ASSERT(fw.sticky_error == XUM_FW_ERR_BUS_ROLE_CONFLICT);
 }
@@ -290,48 +406,114 @@ TEST(listen_to_absent_device_is_transient_error) {
     xum_fw_t fw;
     setup_ready(&fw);
     xum_fw_set_drive_present(&fw, false);
-    ASSERT(bulk4(&fw, UFT_XUM1541_BULK_LISTEN, 8, 15)
-           == UFT_XUM1541_STATUS_ERROR);
+    ASSERT(iec_listen(&fw, 8, 15) == UFT_XUM1541_STATUS_ERROR);
     ASSERT(fw.last_error == XUM_FW_ERR_DEVICE_NOT_PRESENT);
+    /* Extended value = bytes clocked before the timeout (0 here). */
+    ASSERT(fw.last_status_val == 0);
     /* Transient — the adapter itself stays usable (real IEC timeout
      * does not wedge the bridge). */
     ASSERT(fw.state == XUM_FW_STATE_READY);
     xum_fw_set_drive_present(&fw, true);
-    ASSERT(bulk4(&fw, UFT_XUM1541_BULK_LISTEN, 8, 15)
-           == UFT_XUM1541_STATUS_READY);
+    ASSERT(iec_listen(&fw, 8, 15) == UFT_XUM1541_STATUS_READY);
 }
 
-TEST(listen_wrong_device_number_is_transient_error) {
+TEST(talk_to_wrong_device_number_is_transient_error) {
     xum_fw_t fw;
     setup_ready(&fw);   /* drive is at 8 */
-    ASSERT(bulk4(&fw, UFT_XUM1541_BULK_TALK, 9, 15)
-           == UFT_XUM1541_STATUS_ERROR);
+    ASSERT(iec_talk(&fw, 9, 15) == UFT_XUM1541_STATUS_ERROR);
     ASSERT(fw.last_error == XUM_FW_ERR_DEVICE_NOT_PRESENT);
     ASSERT(fw.state == XUM_FW_STATE_READY);
-    /* Device number > 30: illegal IEC primary address. */
-    ASSERT(bulk4(&fw, UFT_XUM1541_BULK_TALK, 31, 15)
+    /* Adapter recovers without INIT/RESET. */
+    ASSERT(iec_talk(&fw, 8, 15) == UFT_XUM1541_STATUS_READY);
+}
+
+TEST(talk_atn_without_talk_flag_is_sticky_bad_protocol) {
+    /* A talk-address ATN byte without FLAG_WRITE_TALK means the
+     * firmware skips the bus turnaround — on real HW the bus wedges.
+     * The sim fails loudly instead (DIVERGENCES.md X-D12), catching a
+     * HAL that forgets the flag. */
+    xum_fw_t fw;
+    setup_ready(&fw);
+    uint8_t atn[2] = { (uint8_t)(UFT_IEC_TALK | 8),
+                       (uint8_t)(UFT_IEC_DATA | 15) };
+    ASSERT(atn_write(&fw, /*extra_flags=*/0, atn, 2)
            == UFT_XUM1541_STATUS_ERROR);
-    ASSERT(fw.last_error == XUM_FW_ERR_BAD_DEVICE);
+    ASSERT(fw.state == XUM_FW_STATE_ERROR);
+    ASSERT(fw.sticky_error == XUM_FW_ERR_BAD_PROTOCOL);
+}
+
+TEST(open_close_atn_bytes_clocked_through) {
+    /* OPEN (0xF0|sec) / CLOSE (0xE0|sec) are drive-side commands the
+     * firmware clocks verbatim; there are NO open/close bulk opcodes
+     * (the pre-MF-301 table invented them). Drive-side file semantics
+     * are not modelled (X-D2) — the bytes still count as transferred. */
+    xum_fw_t fw;
+    setup_ready(&fw);
+    /* OPEN sequence: ATN(listen 8, open ch2), then the filename as a
+     * plain data write AFTER ATN release, then ATN(close ch2, unlisten). */
+    uint8_t atn_open[2] = { (uint8_t)(UFT_IEC_LISTEN | 8),
+                            (uint8_t)(UFT_IEC_OPEN | 2) };
+    ASSERT(atn_write(&fw, 0, atn_open, 2) == UFT_XUM1541_STATUS_READY);
+    ASSERT(fw.last_status_val == 2);
+    ASSERT(fw.state == XUM_FW_STATE_LISTENING);
+    const uint8_t fname[1] = { 0x24 };   /* '$' — directory */
+    ASSERT(data_write(&fw, fname, 1) == UFT_XUM1541_STATUS_READY);
+    uint8_t atn_close[2] = { (uint8_t)(UFT_IEC_CLOSE | 2),
+                             UFT_IEC_UNLISTEN };
+    ASSERT(atn_write(&fw, 0, atn_close, 2) == UFT_XUM1541_STATUS_READY);
     ASSERT(fw.state == XUM_FW_STATE_READY);
 }
 
-TEST(unlisten_when_idle_is_legal_noop) {
+TEST(unknown_opcode_rejected_sticky) {
+    /* Every pre-MF-301 fictional opcode (WRITE_DATA=0, TALK=1,
+     * LISTEN=2, UNLISTEN=3, UNTALK=4, READ_DATA=7) must be rejected —
+     * the real firmware knows only READ(8)/WRITE(9)/ioctls(16+). */
+    const uint8_t fictional[] = { 0, 1, 2, 3, 4, 7 };
+    for (size_t i = 0; i < sizeof(fictional); i++) {
+        xum_fw_t fw;
+        setup_ready(&fw);
+        ASSERT(bulk4(&fw, fictional[i], 8, 15, 0)
+               == UFT_XUM1541_STATUS_ERROR);
+        ASSERT(fw.state == XUM_FW_STATE_ERROR);
+        ASSERT(fw.sticky_error == XUM_FW_ERR_BAD_OPCODE);
+    }
+}
+
+TEST(unknown_proto_nibble_rejected_sticky) {
+    /* Proto nibble 0 (no protocol) and 7+ (beyond NIB) do not exist. */
     xum_fw_t fw;
     setup_ready(&fw);
-    ASSERT(bulk4(&fw, UFT_XUM1541_BULK_UNLISTEN, 0, 0)
-           == UFT_XUM1541_STATUS_READY);
-    ASSERT(bulk4(&fw, UFT_XUM1541_BULK_UNTALK, 0, 0)
-           == UFT_XUM1541_STATUS_READY);
-    ASSERT(fw.state == XUM_FW_STATE_READY);
+    ASSERT(cmd_write(&fw, 0x00, 2) == UFT_XUM1541_STATUS_ERROR);
+    ASSERT(fw.sticky_error == XUM_FW_ERR_BAD_PROTOCOL);
+    setup_ready(&fw);
+    ASSERT(cmd_read(&fw, (uint8_t)(7 << 4), 2) == UFT_XUM1541_STATUS_ERROR);
+    ASSERT(fw.state == XUM_FW_STATE_ERROR);
+    ASSERT(fw.sticky_error == XUM_FW_ERR_BAD_PROTOCOL);
+}
+
+TEST(unmodelled_real_protos_refused_transiently) {
+    /* S1/S2/PP/P2/NIB are REAL firmware protocols this sim does not
+     * model (X-D13): honest transient refusal, never fake success,
+     * never a wedge. */
+    const uint8_t protos[] = { UFT_XUM1541_PROTO_S1, UFT_XUM1541_PROTO_S2,
+                               UFT_XUM1541_PROTO_PP, UFT_XUM1541_PROTO_P2,
+                               UFT_XUM1541_PROTO_NIB };
+    xum_fw_t fw;
+    setup_ready(&fw);
+    for (size_t i = 0; i < sizeof(protos); i++) {
+        ASSERT(cmd_write(&fw, protos[i], 2) == UFT_XUM1541_STATUS_ERROR);
+        ASSERT(fw.last_error == XUM_FW_ERR_NOT_MODELLED);
+        ASSERT(fw.state == XUM_FW_STATE_READY);   /* not sticky */
+    }
 }
 
 TEST(write_length_overrun_is_sticky_error) {
     xum_fw_t fw;
     setup_ready(&fw);
-    ASSERT(bulk4(&fw, UFT_XUM1541_BULK_LISTEN, 8, 15)
-           == UFT_XUM1541_STATUS_READY);
-    /* Announce 0x7FFF > MAX_XFER_SIZE - 4: firmware buffer overrun. */
-    ASSERT(bulk4(&fw, UFT_XUM1541_BULK_WRITE_DATA, 0xFF, 0x7F)
+    ASSERT(iec_listen(&fw, 8, 15) == UFT_XUM1541_STATUS_READY);
+    /* Announce 0x8004 (32772) > MAX_XFER_SIZE: firmware buffer overrun. */
+    ASSERT(cmd_write(&fw, UFT_XUM1541_PROTO_CBM,
+                     (uint16_t)(UFT_XUM1541_MAX_XFER_SIZE + 4))
            == UFT_XUM1541_STATUS_ERROR);
     ASSERT(fw.state == XUM_FW_STATE_ERROR);
     ASSERT(fw.sticky_error == XUM_FW_ERR_OVERRUN);
@@ -340,14 +522,25 @@ TEST(write_length_overrun_is_sticky_error) {
 TEST(write_payload_length_mismatch_is_sticky_error) {
     xum_fw_t fw;
     setup_ready(&fw);
-    ASSERT(bulk4(&fw, UFT_XUM1541_BULK_LISTEN, 8, 15)
-           == UFT_XUM1541_STATUS_READY);
-    ASSERT(bulk4(&fw, UFT_XUM1541_BULK_WRITE_DATA, 8, 0) == XUM_FW_NO_STATUS);
+    ASSERT(iec_listen(&fw, 8, 15) == UFT_XUM1541_STATUS_READY);
+    ASSERT(cmd_write(&fw, UFT_XUM1541_PROTO_CBM, 8) == XUM_FW_NO_STATUS);
     const uint8_t payload[4] = {0};
     /* Announced 8, delivered 4 — FIFO accounting broken. */
     ASSERT(xum_fw_bulk_write_payload(&fw, payload, 4)
            == UFT_XUM1541_STATUS_ERROR);
     ASSERT(fw.sticky_error == XUM_FW_ERR_OVERRUN);
+}
+
+TEST(write_payload_without_command_is_sticky_error) {
+    /* A payload with no preceding WRITE header would be misparsed as a
+     * command by the real firmware — the sim fails loudly. */
+    xum_fw_t fw;
+    setup_ready(&fw);
+    const uint8_t payload[2] = { 0x28, 0x6F };
+    ASSERT(xum_fw_bulk_write_payload(&fw, payload, 2)
+           == UFT_XUM1541_STATUS_ERROR);
+    ASSERT(fw.state == XUM_FW_STATE_ERROR);
+    ASSERT(fw.sticky_error == XUM_FW_ERR_BAD_PROTOCOL);
 }
 
 /* ─────────────────────────────────────────────────────────────────────
@@ -357,35 +550,42 @@ TEST(write_payload_length_mismatch_is_sticky_error) {
 TEST(get_eoi_clear_eoi_roundtrip) {
     xum_fw_t fw;
     setup_ready(&fw);
-    ASSERT(bulk4(&fw, UFT_XUM1541_IOCTL_GET_EOI, 0, 0)
+    ASSERT(bulk4(&fw, UFT_XUM1541_IOCTL_GET_EOI, 0, 0, 0)
            == UFT_XUM1541_STATUS_READY);
     ASSERT(fw.last_status_val == 0);   /* no EOI yet */
     /* Drain a stream to completion -> EOI set. */
     const uint8_t stream[2] = { 0xAA, 0xBB };
     xum_fw_load_talk_stream(&fw, stream, 2);
-    ASSERT(bulk4(&fw, UFT_XUM1541_BULK_TALK, 8, 15)
-           == UFT_XUM1541_STATUS_READY);
-    ASSERT(bulk4(&fw, UFT_XUM1541_BULK_READ_DATA, 2, 0) == XUM_FW_NO_STATUS);
+    ASSERT(iec_talk(&fw, 8, 15) == UFT_XUM1541_STATUS_READY);
+    ASSERT(cmd_read(&fw, UFT_XUM1541_PROTO_CBM, 2) == XUM_FW_NO_STATUS);
     uint8_t out[4]; uint16_t got = 0;
     ASSERT(xum_fw_bulk_read_payload(&fw, out, 4, &got)
            == UFT_XUM1541_STATUS_READY);
-    ASSERT(bulk4(&fw, UFT_XUM1541_IOCTL_GET_EOI, 0, 0)
+    ASSERT(bulk4(&fw, UFT_XUM1541_IOCTL_GET_EOI, 0, 0, 0)
            == UFT_XUM1541_STATUS_READY);
     ASSERT(fw.last_status_val == 1);
-    ASSERT(bulk4(&fw, UFT_XUM1541_IOCTL_CLEAR_EOI, 0, 0)
+    ASSERT(bulk4(&fw, UFT_XUM1541_IOCTL_CLEAR_EOI, 0, 0, 0)
            == UFT_XUM1541_STATUS_READY);
-    ASSERT(bulk4(&fw, UFT_XUM1541_IOCTL_GET_EOI, 0, 0)
+    ASSERT(bulk4(&fw, UFT_XUM1541_IOCTL_GET_EOI, 0, 0, 0)
            == UFT_XUM1541_STATUS_READY);
     ASSERT(fw.last_status_val == 0);
 }
 
-TEST(iec_poll_reports_line_mask) {
+TEST(iec_poll_returns_line_mask_in_status_value) {
+    /* IOCTL result travels in the status extended value — exactly what
+     * uft_xum_iec_poll() extracts via UFT_XUM1541_GET_STATUS_VAL. */
     xum_fw_t fw;
     setup_ready(&fw);
     xum_fw_set_iec_lines(&fw, XUM_FW_IEC_CLOCK | XUM_FW_IEC_DATA);
-    ASSERT(bulk4(&fw, UFT_XUM1541_IOCTL_IEC_POLL, 0, 0)
+    ASSERT(bulk4(&fw, UFT_XUM1541_IOCTL_IEC_POLL, 0, 0, 0)
            == UFT_XUM1541_STATUS_READY);
     ASSERT(fw.last_status_val == (XUM_FW_IEC_CLOCK | XUM_FW_IEC_DATA));
+    /* Serialized wire form round-trips through the HAL's accessors. */
+    uint8_t buf[UFT_XUM1541_STATUSBUF_SIZE];
+    xum_fw_status_serialize(UFT_XUM1541_STATUS_READY, fw.last_status_val, buf);
+    ASSERT(UFT_XUM1541_GET_STATUS(buf) == UFT_XUM1541_STATUS_READY);
+    ASSERT(UFT_XUM1541_GET_STATUS_VAL(buf)
+           == (XUM_FW_IEC_CLOCK | XUM_FW_IEC_DATA));
 }
 
 TEST(iec_wait_ready_on_match_busy_otherwise) {
@@ -393,13 +593,13 @@ TEST(iec_wait_ready_on_match_busy_otherwise) {
     setup_ready(&fw);
     xum_fw_set_iec_lines(&fw, XUM_FW_IEC_CLOCK);
     /* Wait for CLOCK set: already true -> READY. */
-    ASSERT(bulk4(&fw, UFT_XUM1541_IOCTL_IEC_WAIT, XUM_FW_IEC_CLOCK, 1)
+    ASSERT(bulk4(&fw, UFT_XUM1541_IOCTL_IEC_WAIT, XUM_FW_IEC_CLOCK, 1, 0)
            == UFT_XUM1541_STATUS_READY);
     /* Wait for DATA set: not true -> BUSY (sim has no time model). */
-    ASSERT(bulk4(&fw, UFT_XUM1541_IOCTL_IEC_WAIT, XUM_FW_IEC_DATA, 1)
+    ASSERT(bulk4(&fw, UFT_XUM1541_IOCTL_IEC_WAIT, XUM_FW_IEC_DATA, 1, 0)
            == UFT_XUM1541_STATUS_BUSY);
     /* Wait for DATA released: true -> READY. */
-    ASSERT(bulk4(&fw, UFT_XUM1541_IOCTL_IEC_WAIT, XUM_FW_IEC_DATA, 0)
+    ASSERT(bulk4(&fw, UFT_XUM1541_IOCTL_IEC_WAIT, XUM_FW_IEC_DATA, 0, 0)
            == UFT_XUM1541_STATUS_READY);
 }
 
@@ -407,36 +607,57 @@ TEST(iec_setrelease_updates_lines) {
     xum_fw_t fw;
     setup_ready(&fw);
     ASSERT(bulk4(&fw, UFT_XUM1541_IOCTL_IEC_SETRELEASE,
-                 XUM_FW_IEC_ATN | XUM_FW_IEC_CLOCK, 0)
+                 XUM_FW_IEC_ATN | XUM_FW_IEC_CLOCK, 0, 0)
            == UFT_XUM1541_STATUS_READY);
     ASSERT(fw.iec_lines == (XUM_FW_IEC_ATN | XUM_FW_IEC_CLOCK));
     ASSERT(bulk4(&fw, UFT_XUM1541_IOCTL_IEC_SETRELEASE,
-                 0, XUM_FW_IEC_ATN)
+                 0, XUM_FW_IEC_ATN, 0)
            == UFT_XUM1541_STATUS_READY);
     ASSERT(fw.iec_lines == XUM_FW_IEC_CLOCK);
 }
 
+TEST(pp_write_read_roundtrip) {
+    /* Parallel-port latch: PP_WRITE sets, PP_READ returns the value in
+     * the status extended value. */
+    xum_fw_t fw;
+    setup_ready(&fw);
+    ASSERT(bulk4(&fw, UFT_XUM1541_IOCTL_PP_READ, 0, 0, 0)
+           == UFT_XUM1541_STATUS_READY);
+    ASSERT(fw.last_status_val == 0);
+    ASSERT(bulk4(&fw, UFT_XUM1541_IOCTL_PP_WRITE, 0x5A, 0, 0)
+           == UFT_XUM1541_STATUS_READY);
+    ASSERT(bulk4(&fw, UFT_XUM1541_IOCTL_PP_READ, 0, 0, 0)
+           == UFT_XUM1541_STATUS_READY);
+    ASSERT(fw.last_status_val == 0x5A);
+}
+
+TEST(parburst_refused_honestly) {
+    /* PARBURST_READ/WRITE (30/31) need a drive-side nibbler routine —
+     * honest transient refusal, adapter stays usable (X-D13). */
+    xum_fw_t fw;
+    setup_ready(&fw);
+    ASSERT(bulk4(&fw, UFT_XUM1541_IOCTL_PARBURST_READ, 0, 0, 0)
+           == UFT_XUM1541_STATUS_ERROR);
+    ASSERT(fw.last_error == XUM_FW_ERR_NOT_MODELLED);
+    ASSERT(fw.state == XUM_FW_STATE_READY);
+    ASSERT(bulk4(&fw, UFT_XUM1541_IOCTL_PARBURST_WRITE, 0, 0, 0)
+           == UFT_XUM1541_STATUS_ERROR);
+    ASSERT(fw.last_error == XUM_FW_ERR_NOT_MODELLED);
+    ASSERT(fw.state == XUM_FW_STATE_READY);
+}
+
 TEST(status_buf_serialization_is_3_bytes_le) {
-    /* OpenCBM XUM_STATUSBUF_SIZE = 3: [code, val_lo, val_hi]. The UFT
-     * HAL currently reads only 1 status byte — see DIVERGENCES.md
-     * X-DELTA-1. This test pins the firmware-side wire format. */
-    uint8_t buf[3] = {0};
+    /* OpenCBM XUM_STATUSBUF_SIZE = 3: [code, val_lo, val_hi]. The HAL
+     * reads exactly this via xum_wait_status() since MF-301
+     * (X-DELTA-1 RESOLVED). This test pins the wire format on the
+     * firmware side; the HAL macros must agree. */
+    uint8_t buf[UFT_XUM1541_STATUSBUF_SIZE] = {0};
     xum_fw_status_serialize(UFT_XUM1541_STATUS_READY, 0x1234, buf);
     ASSERT(buf[0] == UFT_XUM1541_STATUS_READY);
     ASSERT(buf[1] == 0x34);
     ASSERT(buf[2] == 0x12);
-}
-
-TEST(open_close_file_refused_honestly) {
-    xum_fw_t fw;
-    setup_ready(&fw);
-    ASSERT(bulk4(&fw, UFT_XUM1541_BULK_OPEN_FILE, 8, 2)
-           == UFT_XUM1541_STATUS_ERROR);
-    ASSERT(fw.last_error == XUM_FW_ERR_NOT_MODELLED);
-    ASSERT(fw.state == XUM_FW_STATE_READY);   /* honest refusal, not wedge */
-    ASSERT(bulk4(&fw, UFT_XUM1541_BULK_CLOSE_FILE, 8, 2)
-           == UFT_XUM1541_STATUS_ERROR);
-    ASSERT(fw.last_error == XUM_FW_ERR_NOT_MODELLED);
+    ASSERT(UFT_XUM1541_GET_STATUS(buf) == UFT_XUM1541_STATUS_READY);
+    ASSERT(UFT_XUM1541_GET_STATUS_VAL(buf) == 0x1234);
 }
 
 /* ─────────────────────────────────────────────────────────────────────
@@ -673,8 +894,7 @@ TEST(e2e_gcr_track_via_talk_read_pipeline) {
     xum_fw_t fw;
     setup_ready(&fw);
     xum_fw_load_talk_stream(&fw, t.bytes, t.len);
-    ASSERT(bulk4(&fw, UFT_XUM1541_BULK_TALK, 8, 15)
-           == UFT_XUM1541_STATUS_READY);
+    ASSERT(iec_talk(&fw, 8, 15) == UFT_XUM1541_STATUS_READY);
 
     /* Drain in 1024-byte chunks, as a nibbler host loop would. */
     uint8_t *drained = (uint8_t *)malloc(t.len);
@@ -683,8 +903,7 @@ TEST(e2e_gcr_track_via_talk_read_pipeline) {
     while (pos < t.len) {
         uint16_t chunk = (uint16_t)((t.len - pos > 1024) ? 1024
                                                          : (t.len - pos));
-        ASSERT(bulk4(&fw, UFT_XUM1541_BULK_READ_DATA,
-                     (uint8_t)(chunk & 0xFF), (uint8_t)(chunk >> 8))
+        ASSERT(cmd_read(&fw, UFT_XUM1541_PROTO_CBM, chunk)
                == XUM_FW_NO_STATUS);
         uint16_t got = 0;
         ASSERT(xum_fw_bulk_read_payload(&fw, drained + pos, chunk, &got)
@@ -701,8 +920,7 @@ TEST(e2e_gcr_track_via_talk_read_pipeline) {
 
     free(drained);
     uft_xum_gcr_free(&t);
-    ASSERT(bulk4(&fw, UFT_XUM1541_BULK_UNTALK, 0, 0)
-           == UFT_XUM1541_STATUS_READY);
+    ASSERT(iec_untalk(&fw) == UFT_XUM1541_STATUS_READY);
     ASSERT(fw.state == XUM_FW_STATE_READY);
 }
 
@@ -711,17 +929,16 @@ TEST(e2e_short_read_reports_partial_len_and_eoi) {
     xum_fw_t fw;
     setup_ready(&fw);
     xum_fw_load_talk_stream(&fw, stream, sizeof(stream));
-    ASSERT(bulk4(&fw, UFT_XUM1541_BULK_TALK, 8, 15)
-           == UFT_XUM1541_STATUS_READY);
+    ASSERT(iec_talk(&fw, 8, 15) == UFT_XUM1541_STATUS_READY);
     /* Request 64, only 10 available: short read + EOI, like a real
-     * drive ending its transmission early. */
-    ASSERT(bulk4(&fw, UFT_XUM1541_BULK_READ_DATA, 64, 0) == XUM_FW_NO_STATUS);
+     * drive ending its transmission early. This is exactly the case
+     * uft_xum_iec_read's bytes_read out-param (MF-301) preserves. */
+    ASSERT(cmd_read(&fw, UFT_XUM1541_PROTO_CBM, 64) == XUM_FW_NO_STATUS);
     uint8_t out[64] = {0};
     uint16_t got = 0;
     ASSERT(xum_fw_bulk_read_payload(&fw, out, sizeof(out), &got)
            == UFT_XUM1541_STATUS_READY);
     ASSERT(got == 10);
-    ASSERT(fw.last_status_val == 10);
     ASSERT(memcmp(out, stream, 10) == 0);
     ASSERT(fw.eoi_flag == true);
 }
@@ -743,27 +960,38 @@ int main(void)
     RUN(ctrl_reset_clears_sticky_error_and_bus_role);
     RUN(version_strings_answered);
 
-    printf("\n-- B. IEC bus state machine --\n");
-    RUN(listen_then_write_payload_ok);
-    RUN(write_payload_without_listen_refused);
-    RUN(talk_then_read_payload_drains_stream);
-    RUN(read_payload_without_talk_refused);
-    RUN(unlisten_returns_to_ready);
-    RUN(untalk_returns_to_ready);
+    printf("\n-- B. Bulk wire format + IEC ATN addressing --\n");
+    RUN(atn_listen_sets_listening_and_secondary);
+    RUN(atn_talk_sets_talking_and_secondary);
+    RUN(atn_unlisten_returns_to_ready);
+    RUN(atn_untalk_returns_to_ready);
+    RUN(atn_unlisten_untalk_idle_is_legal_noop);
+    RUN(atn_byte_0x3F_is_unlisten_not_device_31);
+    RUN(listen_then_data_write_reports_byte_count);
+    RUN(data_write_without_listener_refused);
+    RUN(talk_then_read_drains_stream_no_status_phase);
+    RUN(read_without_talker_refused);
     RUN(listen_while_talking_is_sticky_role_conflict);
+    RUN(talk_while_listening_is_sticky_role_conflict);
     RUN(listen_to_absent_device_is_transient_error);
-    RUN(listen_wrong_device_number_is_transient_error);
-    RUN(unlisten_when_idle_is_legal_noop);
+    RUN(talk_to_wrong_device_number_is_transient_error);
+    RUN(talk_atn_without_talk_flag_is_sticky_bad_protocol);
+    RUN(open_close_atn_bytes_clocked_through);
+    RUN(unknown_opcode_rejected_sticky);
+    RUN(unknown_proto_nibble_rejected_sticky);
+    RUN(unmodelled_real_protos_refused_transiently);
     RUN(write_length_overrun_is_sticky_error);
     RUN(write_payload_length_mismatch_is_sticky_error);
+    RUN(write_payload_without_command_is_sticky_error);
 
     printf("\n-- C. IOCTLs, EOI + status wire format --\n");
     RUN(get_eoi_clear_eoi_roundtrip);
-    RUN(iec_poll_reports_line_mask);
+    RUN(iec_poll_returns_line_mask_in_status_value);
     RUN(iec_wait_ready_on_match_busy_otherwise);
     RUN(iec_setrelease_updates_lines);
+    RUN(pp_write_read_roundtrip);
+    RUN(parburst_refused_honestly);
     RUN(status_buf_serialization_is_3_bytes_le);
-    RUN(open_close_file_refused_honestly);
 
     printf("\n-- D. GCR generator: determinism + defects --\n");
     RUN(gcr_encode_decode_roundtrip_all_byte_values);
