@@ -1144,7 +1144,14 @@ if(TARGET Qt6::Test)
         ${CMAKE_SOURCE_DIR}/src/hardware_providers/qprocess_subprocess_runner.cpp
         ${CMAKE_SOURCE_DIR}/src/hardware_providers/ufi_runners.cpp
         ${CMAKE_SOURCE_DIR}/src/hal/ufi.c
-        ${CMAKE_SOURCE_DIR}/src/hal/ufi_backend.c)
+        ${CMAKE_SOURCE_DIR}/src/hal/ufi_backend.c
+        # CI-1: ufi_backend.c references uft_ufi_linux_ops() under
+        # `#if __linux__`; that symbol lives in ufi_linux.c. Without it the
+        # Linux link fails (undefined reference) and both HardwareTab tests
+        # became ctest "Not Run". ufi_linux.c is wholly `#ifdef __linux__`,
+        # so on Windows/macOS it compiles to an empty object — safe to add
+        # unconditionally.
+        ${CMAKE_SOURCE_DIR}/src/hal/ufi_linux.c)
 
     # Discover Qt C++ test sources, excluding the header-only set already
     # handled by the main C-loop (MF-150).
