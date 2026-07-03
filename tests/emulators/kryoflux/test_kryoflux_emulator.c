@@ -26,7 +26,13 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <math.h>
+
+/* Two-sided float compare — avoids a libm (fabs) dependency so the test
+ * links cleanly under CI's LINK_LIBRARIES_ONLY_TARGETS (MF-305). */
+static int approx(double a, double b, double eps) {
+    double d = a - b;
+    return d < eps && d > -eps;
+}
 
 static int g_pass = 0, g_fail = 0;
 #define ASSERT(cond) do { \
@@ -256,7 +262,7 @@ static void group_f(void) {
     printf("\n-- F. Defect classes → parser status + HAL SSOT --\n");
 
     TEST("hal_ssot_sample_clock_agrees");
-    ASSERT(fabs(uft_kf_get_sample_clock() - UFT_KF_GEN_SAMPLE_HZ) < 1.0);
+    ASSERT(approx(uft_kf_get_sample_clock(), UFT_KF_GEN_SAMPLE_HZ, 1.0));
     DONE();
 
     TEST("missing_end_maps_to_MISSING_END");

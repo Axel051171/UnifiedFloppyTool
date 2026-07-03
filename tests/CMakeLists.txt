@@ -981,9 +981,9 @@ target_include_directories(test_applesauce_emulator PRIVATE
     ${CMAKE_SOURCE_DIR}/include/uft
     ${CMAKE_SOURCE_DIR}/tests/emulators/applesauce
     ${CMAKE_SOURCE_DIR}/tests/flux_gen/applesauce)
-if(NOT MSVC)
-    target_link_libraries(test_applesauce_emulator PRIVATE m)
-endif()
+# No libm link: the test avoids fabs() (see approx() in the source) so it
+# builds under CI's LINK_LIBRARIES_ONLY_TARGETS, which rejects the bare
+# "m" name (MF-305).
 set_target_properties(test_applesauce_emulator PROPERTIES
     C_STANDARD 11
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/tests)
@@ -1010,9 +1010,7 @@ target_include_directories(test_kryoflux_emulator PRIVATE
     ${CMAKE_SOURCE_DIR}/include/uft
     ${CMAKE_SOURCE_DIR}/tests/emulators/kryoflux
     ${CMAKE_SOURCE_DIR}/tests/flux_gen/kryoflux)
-if(NOT MSVC)
-    target_link_libraries(test_kryoflux_emulator PRIVATE m)
-endif()
+# No libm link (see the applesauce block above; MF-305).
 set_target_properties(test_kryoflux_emulator PROPERTIES
     C_STANDARD 11
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/tests)

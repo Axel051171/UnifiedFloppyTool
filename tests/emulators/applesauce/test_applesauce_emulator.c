@@ -23,7 +23,13 @@
 
 #include <stdio.h>
 #include <string.h>
-#include <math.h>
+
+/* Two-sided float compare — avoids a libm (fabs) dependency so the test
+ * links cleanly under CI's LINK_LIBRARIES_ONLY_TARGETS (MF-305). */
+static int approx(double a, double b, double eps) {
+    double d = a - b;
+    return d < eps && d > -eps;
+}
 
 static int g_pass = 0, g_fail = 0;
 
@@ -324,7 +330,7 @@ static void group_f(void) {
     /* The generator's 8 MHz assumption must equal the HAL's. */
     ASSERT((uint32_t)uft_as_get_sample_clock() == UFT_AS_FLUX_GEN_SAMPLE_HZ);
     /* 8 ticks @ 125 ns = 1000 ns. */
-    ASSERT(fabs(uft_as_ticks_to_ns(8) - 1000.0) < 1e-6);
+    ASSERT(approx(uft_as_ticks_to_ns(8), 1000.0, 1e-6));
     ASSERT(uft_as_ns_to_ticks(1000.0) == 8);
     DONE();
 
