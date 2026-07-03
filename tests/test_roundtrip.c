@@ -70,9 +70,19 @@ static uint32_t calc_checksum(const uint8_t *data, size_t size) {
 
 /**
  * @brief Create temp file path
+ *
+ * Portable temp dir: `/tmp` is POSIX-only and does NOT exist on the native
+ * Windows CI runner, so the hardcoded "/tmp/..." made every fopen("wb")
+ * fail there (KNOWN_ISSUES CI-1). Honour TMPDIR/TMP/TEMP (Windows sets
+ * TMP/TEMP; POSIX often sets TMPDIR) and fall back to the current
+ * directory, which ctest runs in and which is writable on every platform.
  */
 static void get_temp_path(char *path, size_t size, const char *ext) {
-    snprintf(path, size, "/tmp/uft_test_%d.%s", rand() % 100000, ext);
+    const char *dir = getenv("TMPDIR");
+    if (!dir || !dir[0]) dir = getenv("TMP");
+    if (!dir || !dir[0]) dir = getenv("TEMP");
+    if (!dir || !dir[0]) dir = ".";
+    snprintf(path, size, "%s/uft_test_%d.%s", dir, rand() % 100000, ext);
 }
 
 /**

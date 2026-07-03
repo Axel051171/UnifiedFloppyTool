@@ -44,7 +44,18 @@ int uft_fnmatch_impl(const char *pattern, const char *name, int flags);
 
 #else  /* POSIX path */
 
-#  define uft_fnmatch(pat, name, flags) fnmatch((pat), (name), (flags))
+/* Wrap the system fnmatch() so NULL inputs return FNM_NOMATCH instead of
+ * dereferencing NULL. glibc fnmatch() has no NULL guard and SEGFAULTs on
+ * uft_fnmatch(NULL, ...) — the Windows shim (uft_fnmatch_impl) already
+ * null-checks, so without this the "portable" shim behaves inconsistently
+ * across platforms (KNOWN_ISSUES CI-1: test_fnmatch_shim SEGFAULT on
+ * Linux, green on Windows). Mirroring the guard makes NULL safe on every
+ * platform. FNM_NOMATCH comes from <fnmatch.h> here. */
+static inline int uft_fnmatch(const char *pat, const char *name, int flags)
+{
+    if (pat == NULL || name == NULL) return FNM_NOMATCH;
+    return fnmatch(pat, name, flags);
+}
 
 #endif
 

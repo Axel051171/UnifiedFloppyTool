@@ -1247,7 +1247,13 @@ if(TARGET Qt6::Test)
             set_tests_properties(${qt_test_name} PROPERTIES
                 ENVIRONMENT "QT_QPA_PLATFORM=offscreen;PATH=${_uft_test_path}")
         elseif(${qt_test_name} STREQUAL "test_hardware_tab_gui" OR
-               ${qt_test_name} STREQUAL "test_provider_switch")
+               ${qt_test_name} STREQUAL "test_provider_switch" OR
+               ${qt_test_name} STREQUAL "test_wiring_runtime")
+            # CI-1: test_wiring_runtime constructs QPushButton, so on a
+            # headless Linux runner it must also run offscreen — otherwise
+            # Qt tries the xcb plugin, fails to init, and abort()s
+            # ("Subprocess aborted"). Windows already gets offscreen via
+            # the WIN32 branch above.
             set_tests_properties(${qt_test_name} PROPERTIES
                 ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
         endif()
