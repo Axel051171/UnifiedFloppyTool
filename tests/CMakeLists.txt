@@ -963,6 +963,33 @@ if(WIN32 AND DEFINED UFT_LIBUSB_DLL_DIR)
 endif()
 message(STATUS "UFT Test ENABLED: test_xum1541_emulator (firmware-realistic XUM1541 sim)")
 
+# Applesauce firmware-realistic emulator (fourth invocation of the
+# hardware-emulation-author agent). Models the ASCII line protocol over
+# USB-CDC serial + an Apple-domain GCR flux generator. Links
+# src/hal/uft_applesauce.c so the generator's 8 MHz tick assumption and
+# the emulator are cross-checked against the HAL SSOT
+# (uft_as_get_sample_clock / uft_as_ticks_to_ns / uft_as_format_name).
+# The Applesauce HAL is serial-only (no libusb); -lm covers fabs() in
+# the SSOT tick assertions. Only pure-utility HAL functions are called.
+add_executable(test_applesauce_emulator
+    ${CMAKE_SOURCE_DIR}/tests/emulators/applesauce/test_applesauce_emulator.c
+    ${CMAKE_SOURCE_DIR}/tests/emulators/applesauce/firmware_state_machine.c
+    ${CMAKE_SOURCE_DIR}/tests/flux_gen/applesauce/flux_gen.c
+    ${CMAKE_SOURCE_DIR}/src/hal/uft_applesauce.c)
+target_include_directories(test_applesauce_emulator PRIVATE
+    ${CMAKE_SOURCE_DIR}/include
+    ${CMAKE_SOURCE_DIR}/include/uft
+    ${CMAKE_SOURCE_DIR}/tests/emulators/applesauce
+    ${CMAKE_SOURCE_DIR}/tests/flux_gen/applesauce)
+if(NOT MSVC)
+    target_link_libraries(test_applesauce_emulator PRIVATE m)
+endif()
+set_target_properties(test_applesauce_emulator PROPERTIES
+    C_STANDARD 11
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/tests)
+add_test(NAME test_applesauce_emulator COMMAND test_applesauce_emulator)
+message(STATUS "UFT Test ENABLED: test_applesauce_emulator (firmware-realistic Applesauce sim)")
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # Qt-based Tests (C++ / QtTest framework)
 # ═══════════════════════════════════════════════════════════════════════════════

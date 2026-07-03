@@ -114,7 +114,7 @@ Ende ein zusammenhängender Commit pro Controller.
 | Controller | Aufwand | Tool/Agent | HW-Bench |
 |---|---|---|---|
 | M3.2 XUM1541 libusb wiring | ~1 Woche Code + 3 Tage Test | `provider-migrator` + `hardware-emulation-author` (Tier-2.5 zuerst). **Protokoll-Schicht ✓ (MF-301):** OpenCBM-Quell-Audit hat alle M.4-Deltas entschieden (3-Byte-Status, `[opcode,proto,lo,hi]`-Header, fiktive Opcode-Tabelle ersetzt durch READ=8/WRITE=9 + ATN-Payload-Adressierung, IOCTL=Bulk). HAL umgeschrieben, kompiliert strict-clean auf libusb- und Stub-Pfad; `iec_read` mit `bytes_read`-Out-Param, `iec_poll` neu. | UFT-008-Pattern (weiterhin Gate) |
-| M3.3 Applesauce serial wiring | ~1 Woche | dito | UFT-009 (neu) |
+| M3.3 Applesauce serial wiring | ~1 Woche | dito. **Emulator ✓ (MF-302, 4/9):** 3-Schichten-Modell (ASCII-Serial-Protokoll + Apple-GCR-Flux-Gen), 111 Assertions grün, HAL-SSOT-Cross-Check (8 MHz). Zwei HIGH-Divergenzen offen (D-1 Command-Vokabular runner-vs-transport-doc, D-2 Binary-Framing) — Bench-Gate für „production". | UFT-009 (neu) |
 | M3.4 USBFloppy (UFI) | ~2 Wochen (komplexer SCSI-CDB-Layer) | dito | UFT-010 (neu) |
 
 **Gate für Phase 4:** Alle drei HAL-Tests grün auf dem Emulator + signed-off
