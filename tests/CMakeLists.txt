@@ -205,6 +205,9 @@ foreach(test_source ${TEST_SOURCES})
     elseif(${test_name} STREQUAL "test_tap")
         # Include TAP source directly
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/c64/uft_tap.c)
+    elseif(${test_name} STREQUAL "test_st_plugin")
+        # Real end-to-end test: link the Atari ST module directly (MF-312)
+        target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/atari/st.c)
     elseif(${test_name} STREQUAL "test_d71_d81")
         # Include D71/D81 source directly
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/c64/uft_d71_d81.c)
