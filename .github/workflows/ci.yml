@@ -100,7 +100,10 @@ jobs:
           cmake -B build-tests \
             -DCMAKE_BUILD_TYPE=Release \
             -DUFT_BUILD_TESTS=ON || true
-          cmake --build build-tests --parallel $(nproc) 2>&1 || true
+          # keep-going (`-- -k`): one unbuildable test target must not abort
+          # the whole parallel build and leave ~150 others as ctest "Not Run"
+          # (KNOWN_ISSUES CI-1). Independent test executables still build.
+          cmake --build build-tests --parallel $(nproc) -- -k 2>&1 || true
 
       - name: Run tests
         # NOTE: `|| true` is intentionally retained — see KNOWN_ISSUES CI-1.
@@ -216,7 +219,9 @@ jobs:
           cmake -B build-tests -G "MinGW Makefiles" \
             -DCMAKE_BUILD_TYPE=Release \
             -DUFT_BUILD_TESTS=ON || true
-          cmake --build build-tests --parallel $(nproc) 2>&1 || true
+          # keep-going (`-- -k`): see Linux job — one unbuildable target must
+          # not abort the whole build (KNOWN_ISSUES CI-1).
+          cmake --build build-tests --parallel $(nproc) -- -k 2>&1 || true
 
       - name: Run tests
         # `|| true` retained — see KNOWN_ISSUES CI-1 (same env defect as the
