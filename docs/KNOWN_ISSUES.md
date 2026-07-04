@@ -646,6 +646,29 @@ preserve or honestly drop META/WRIT — and be gated by a read→write→read
 **byte-identity** test (which correctly rejects the naïve approach). This
 is why it is a feature, not a one-function add.
 
+### FMT-5 — uft_sector_t CRC-status alias mismatch (found 2026-07-04, NOT yet fixed)
+
+**Severity: MEDIUM.** Same bug class as the data_len fix (FMT-4 / MF-321):
+`uft_sector_t` exposes the "CRC ok" state under **three** names — `crc_ok`
+plus the legacy aliases `crc_valid` and `data_crc_ok`. `uft_format_add_sector()`
+(the shared helper every read_track uses) sets only `id.crc_ok` + `status`,
+leaving the top-level `crc_ok` / `crc_valid` / `data_crc_ok` at 0. Consumers
+that check the aliases (`crc_valid`: ~12 sites incl. sap/moof; `data_crc_ok`:
+uft_format_convert_flux.c) therefore see **good sectors as CRC-failed**.
+
+Symmetrically, ~9 reader error paths set only `.crc_ok = false` on a bad
+sector (d77, d88, dsk_cpc, imd, jv3, nfd, nib, stx, td0) without the aliases.
+
+**Why not fixed yet:** a first attempt (set all three in add_sector + a
+batch edit of the error sites) was reverted — the error sites use
+**brace-less `if`s** (`if (err) x.crc_ok = false;`), so a naive line-insert
+of the two alias assignments made them run unconditionally. The safe fix is
+a single-statement helper, e.g. `static inline void uft_sector_set_crc(
+uft_sector_t*, bool)` in `uft_types.h`, used in add_sector (`true`) and at
+each error site (`false`) — one statement, safe under brace-less ifs — plus
+a plugin-read test asserting `crc_valid`/`data_crc_ok` on a good sector.
+Deferred to do it carefully rather than ship a half-consistent state.
+
 ---
 
 ## Wie beitragen
