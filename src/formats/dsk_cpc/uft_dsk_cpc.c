@@ -172,12 +172,19 @@ static uft_error_t dsk_write_track(uft_disk_t* disk, int cyl, int head,
         if (fseek(pdata->file, (long)data_pos, SEEK_SET) != 0) return UFT_ERROR_IO;
 
         if ((size_t)s < track->sector_count) {
-            const uint8_t *data = track->sectors[s].data;
+            const uint8_t *src = track->sectors[s].data;
+            size_t src_len = track->sectors[s].data_len;
+            const uint8_t *data = src;
             uint8_t *pad = NULL;
-            if (!data || track->sectors[s].data_len == 0) {
+            /* Never fwrite more than the sector buffer holds: if the sector is
+             * absent or shorter than this slot's size (possible for EXTENDED
+             * DSK with variable sector sizes), pad to actual_size with 0xE5
+             * instead of reading past track->sectors[s].data (buffer over-read). */
+            if (!src || src_len < (size_t)actual_size) {
                 pad = malloc(actual_size);
                 if (!pad) return UFT_ERROR_NO_MEMORY;
                 memset(pad, 0xE5, actual_size);
+                if (src && src_len > 0) memcpy(pad, src, src_len);
                 data = pad;
             }
             if (fwrite(data, 1, actual_size, pdata->file) != actual_size) {
