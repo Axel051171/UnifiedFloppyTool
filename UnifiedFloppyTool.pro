@@ -1870,9 +1870,6 @@ SOURCES += \
     src/formats/misc/adf.c \
     src/formats/misc/adz.c \
     src/formats/misc/cqm.c \
-    src/formats/misc/d1m.c \
-    src/formats/misc/d2m.c \
-    src/formats/misc/d4m.c \
     src/formats/misc/dcp_dcu.c \
     src/formats/misc/dhd.c \
     src/formats/misc/dmf_msx.c \

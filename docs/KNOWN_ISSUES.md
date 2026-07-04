@@ -565,6 +565,36 @@ untouched); the registry catalog dropped from 163 to 162 rows. Local suite
 Not fixed-in-place (a wrong impl of a real HD format would only cement the
 fabrication); a genuine `.d90`/`.d60` reader is tracked as a future format.
 
+### FMT-3 — CMD FD (.d1m/.d2m/.d4m): three conflicting impls, all wrong sizes (2026-07-04, MF-316 partial)
+
+**Severity: HIGH (Prinzip 1 + „Keine erfundenen Daten").** The CMD FD-2000/
+FD-4000 formats are real (VICE + OpenCBM libcbmimage support them), but UFT
+carried **three parallel implementations, none with the correct geometry**:
+
+| Impl | .d1m size it accepts | reality |
+|---|---|---|
+| `src/formats/misc/d1m.c` (+d2m/d4m) | multiples of 533248 ("8050 Mega Image") | **REMOVED** (MF-316) — dead, never dispatched, absurd |
+| `src/formats/c64/uft_cmd.c` | `D1M_SIZE` = 204800 (D2M 207360, D4M 414720) | wrong; `test_cmd.c` enshrines these |
+| `src/formats/cmd_fd/uft_cmd_fd.c` | 737280 (treats it as a 720K **PC floppy**, 512 B sectors) | wrong geometry + wrong sector size |
+
+**Verified correct native sizes** (VICE test images / OpenCBM, 256-byte
+blocks): `.d1m` = **829440 B** (3008×256 data), `.d2m` = **1658880 B**
+(6336×256), `.d4m` = **3317760 B** (12736×256). The native format is a
+256-byte-block LBA image with a CMD partition/DNP-like directory structure
+(spec: unusedino.de/ec64/technical/formats/d2m-dnp.html), NOT a
+CHS PC floppy and NOT stacked 8050 images. A real `.d1m` (829440 B) is
+rejected by all three UFT impls.
+
+**Done (MF-316):** removed the dead `misc/d1m|d2m|d4m.c` 8050-mega
+fabrication (impl + headers + `.pro`).
+**Open (needs careful, verified reimplementation — not a hasty constant
+swap):** consolidate to ONE correct CMD FD reader at the native sizes
+above; reconcile `c64/uft_cmd.c` vs `cmd_fd/uft_cmd_fd.c` (pick one, delete
+the other); fix `test_cmd.c` (it currently asserts the wrong 204800-class
+sizes); verify registry descriptions ("...720KB/1.44MB/2.88MB" reflect the
+wrong PC-floppy assumption). Exact byte sizes are load-bearing — do this
+against the d2m-dnp spec, not from memory.
+
 ---
 
 ## Wie beitragen
