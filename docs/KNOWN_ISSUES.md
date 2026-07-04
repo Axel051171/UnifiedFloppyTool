@@ -531,6 +531,40 @@ im Umlauf ist, den das Gate absichtlich matcht (unwahrscheinlich — 690
 ist die dokumentierte Standardgröße). Nicht unilateral geändert:
 forensische Correctness-Entscheidung, siehe DESIGN_PRINCIPLES Prinzip 1.
 
+### FMT-2 — D90/D91 phantom formats removed, D90 catalog corrected (2026-07-04, MF-315)
+
+**Severity: HIGH (Prinzip „Keine erfundenen Daten").** Two Commodore
+format modules were fabricated and/or mis-implemented on every layer,
+found during the Package #2 format audit and web-verified against VICE:
+
+- **D91 (`.d91`) — fabricated, removed.** No such Commodore disk image
+  format exists. The D9060 hard drive uses `.d60`, the D9090 uses `.d90`;
+  `.d91` is invented. The impl (`d91.c`) was a copy of the d67 2040-floppy
+  reader (35 tracks, 256 B) with the same 670-block size bug, its header
+  claimed 154 tracks, and the registry row called it "CMD D9090 HD" — four
+  mutually contradictory identities. Deleted impl + header + registry row +
+  `.pro` ref.
+
+- **D90 (`.d90`) — real format, wrong impl removed, catalog corrected.**
+  `.d90` IS real: the **Commodore D9090 hard disk** (918 tracks × 32
+  sectors × 256, ~7.5 MB flat block dump; VICE-supported). But `d90.c` was
+  another mislabeled 35-track floppy reader (called itself "4040/2031",
+  gate 174848 = 683 blocks, yet its spt table summed to 690 — internally
+  inconsistent too) and was never dispatched (dead code). The registry
+  called it "CMD D9060 HD" — wrong twice (it is **Commodore**, not CMD, and
+  `.d90` = D9090, not D9060). Removed the broken floppy impl + header + a
+  `.pro` ref; **corrected the registry catalog row** to the real identity
+  ("Commodore D9090 HD (918x32, block dump)"). The extension is still
+  recognised; a correct HD block-dump reader is a future task (verified
+  geometry above — implement like a flat-LBA sector reader, not a floppy
+  zone table).
+
+No format-ID enum entry existed for either (the "138 IDs" SSOT is
+untouched); the registry catalog dropped from 163 to 162 rows. Local suite
+166/166 after removal; registry_v2.c compiles without the deleted headers.
+Not fixed-in-place (a wrong impl of a real HD format would only cement the
+fabrication); a genuine `.d90`/`.d60` reader is tracked as a future format.
+
 ---
 
 ## Wie beitragen

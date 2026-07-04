@@ -20,8 +20,6 @@
 #include "uft/formats/d80.h"
 #include "uft/formats/d81.h"
 #include "uft/formats/d82.h"
-#include "uft/formats/d90.h"
-#include "uft/formats/d91.h"
 #include "uft/formats/x64.h"
 #include "uft/formats/x71.h"
 #include "uft/formats/x81.h"
@@ -242,8 +240,7 @@ static const format_info_t g_format_info[] = {
     {"D1M", "d1m", "CMD FD2000 DD 720KB", "Commodore", 2},
     {"D2M", "d2m", "CMD FD2000 HD 1.44MB", "Commodore", 2},
     {"D4M", "d4m", "CMD FD4000 ED 2.88MB", "Commodore", 2},
-    {"D90", "d90", "CMD D9060 HD", "Commodore", 2},
-    {"D91", "d91", "CMD D9090 HD", "Commodore", 2},
+    {"D90", "d90", "Commodore D9090 HD (918x32, block dump)", "Commodore", 2},
     {"X64", "x64", "Extended D64", "Commodore", 2},
     {"X71", "x71", "Extended D71", "Commodore", 2},
     {"X81", "x81", "Extended D81", "Commodore", 2},

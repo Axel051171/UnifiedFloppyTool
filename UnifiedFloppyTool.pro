@@ -1671,8 +1671,6 @@ SOURCES += \
     src/formats/commodore/d80.c \
     src/formats/commodore/d81.c \
     src/formats/commodore/d82.c \
-    src/formats/commodore/d90.c \
-    src/formats/commodore/d91.c \
     src/formats/commodore/dnp.c \
     src/formats/commodore/dnp2.c \
     src/formats/commodore/g64.c \
