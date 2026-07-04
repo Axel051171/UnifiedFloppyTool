@@ -220,6 +220,11 @@ foreach(test_source ${TEST_SOURCES})
     elseif(${test_name} STREQUAL "test_woz_roundtrip")
         # WOZ2 writer read->write byte-identity test (MF-317)
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/apple/uft_woz.c)
+    elseif(${test_name} STREQUAL "test_scp_writer_roundtrip")
+        # SCP writer write->read flux round-trip; caught the Track-Length bug (MF-318)
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/scp/uft_scp_writer.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_scp_parser.c)
     elseif(${test_name} STREQUAL "test_d71_d81")
         # Include D71/D81 source directly
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/c64/uft_d71_d81.c)

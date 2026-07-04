@@ -201,11 +201,8 @@ int scp_writer_save(scp_writer_t *w, const char *path) {
     
     w->checksum = 0;
     
-    /* Calculate file layout */
-    size_t header_size = sizeof(scp_header_t);
-    size_t offset_table_size = SCP_MAX_TRACKS * sizeof(uint32_t);
-    size_t data_offset = header_size + offset_table_size;
-    
+    /* Track data offsets are recorded live via ftell() below. */
+
     /* Initialize track offsets to 0 */
     memset(w->track_offsets, 0, sizeof(w->track_offsets));
     
@@ -240,17 +237,23 @@ int scp_writer_save(scp_writer_t *w, const char *path) {
             
             /* Convert duration to ticks (40MHz = 25ns per tick) */
             uint32_t duration_ticks = rev->duration_ns / SCP_TICK_NS;
-            uint32_t data_length = rev->flux_count * 2;  /* 16-bit values */
-            
+            /* SCP Track Data Header "Track Length" is the number of flux
+             * bitcells (16-bit entries), NOT the byte length. The reader
+             * reads exactly `length` entries * 2 bytes; writing bytes here
+             * made it read twice as much and hit EOF (uft_scp_read_track ->
+             * UFT_SCP_ERR_READ). The on-disk data is still flux_count*2 bytes,
+             * used only for the offset arithmetic below. */
+            uint32_t data_bytes = rev->flux_count * 2;
+
             scp_revolution_t rev_hdr = {
                 .duration = duration_ticks,
-                .length = data_length,
+                .length = (uint32_t)rev->flux_count,   /* bitcell count, per spec */
                 .offset = (uint32_t)flux_offset
             };
             fwrite(&rev_hdr, sizeof(rev_hdr), 1, w->file);
             update_checksum(w, &rev_hdr, sizeof(rev_hdr));
-            
-            flux_offset += data_length;
+
+            flux_offset += data_bytes;
         }
         
         /* Write flux data */
