@@ -698,6 +698,20 @@ rewrite the header. `test_dc42_checksum_roundtrip` builds a DC42 with a wrong
 checksum over the final data fork and asserts the header now matches. Full
 suite 172/172.
 
+### FMT-7 — Probe robustness audit: all format probes bounds-check input ✓ (2026-07-05)
+
+**Result: clean (no fix needed).** A static audit of every `*_probe()`
+function under `src/formats/` (the format-detection entry points, called on
+untrusted/possibly-truncated file data) confirmed that **all** of them guard
+on `size` / `file_size` before the first byte access (`memcmp(data,…)`,
+`data[N]`, `read_le16(data)` …) — e.g. `if (!data || size < HEADER_SIZE)
+return false;` or `if (size != IMAGE_SIZE) return 0;`. So a truncated or
+malformed file cannot make a probe read past the buffer (no crash / info
+leak at the detection stage). 0 unguarded probes across the ~84 registered
+plugins. This is the read-path counterpart to the write-path memory-safety
+fix MF-325 (DSK over-read). Recorded so the property is not silently
+regressed; a new plugin's probe must keep its size guard.
+
 ---
 
 ## Wie beitragen
