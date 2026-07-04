@@ -766,6 +766,14 @@ copy-protection / disk-error awareness per class. See
   actual bytes so the lossy-export sidecar reports real weak-bit / multi-rev
   counts instead of a generic count=0 placeholder — and stays silent about
   weak bits when there are none (`test_protection_probe`, 4/4).
+- **Disk-error marking, IMD** (MF-329): `test_imd_error_marks` proves the IMD
+  plugin reads per-sector deleted-address-mark (dtype 3/4) and data-CRC-error
+  (dtype 5/6) status, represents them on `uft_sector_t` (deleted / crc_ok +
+  aliases), and preserves them through read→write→read (the in-place writer
+  keeps the dtype byte). Documented limit: the writer preserves the existing
+  dtype, it does not re-encode a caller-flipped status into a new dtype.
+- **Variant research** (`docs/FORMAT-VARIANTS.md`): per-family documented
+  sub-versions cross-checked with the code; prioritised gap list produced.
 
 **Open (next steps, concrete):**
 - Extend the content probe to the other flux sources (KryoFlux stream, IPF,
@@ -777,7 +785,19 @@ copy-protection / disk-error awareness per class. See
   only written to the `.loss.json` sidecar).
 - Per-format disk-error marking audit (read/preserve/write CRC-error,
   deleted-address-mark, bad-sector-flag) — error-aware set already flagged in
-  the classification table.
+  the classification table. IMD done (MF-329); next: EDSK uPD765 status,
+  STX fuzzy-mask, ATX.
+- **D64 error-map drop (real gap, found 2026-07-05):** the D64 *plugin*
+  (`src/formats/d64/uft_d64_plugin.c`) `read_track` reads only the 256-byte
+  sector data and never the trailing error-info block (683/768 bytes), and
+  `write_track` never emits it — so a D64-with-errormap round-tripped through
+  the plugin **loses the 1541 controller error codes silently**. (The
+  standalone analysis parser `uft_d64_parser_v2.c` DOES read `error_bytes`;
+  the plugin path does not.) Fix is container-level, not per-track: the error
+  map is a whole-file trailer that a per-track `write_track` cannot place —
+  needs an open-time load of the map + a close/flush that rewrites the trailer,
+  or a whole-image save path. Effort L; not started (reported, not
+  half-implemented).
 - `FORMAT-VARIANTS.md`: per-family web research of sub-versions not yet
   read/written (WOZ1 vs 2, HFE v1/v3, A2R v2/v3, D88 revisions, …).
 - Byte-exact read correctness vs. real copy-protected disks is NOT verifiable
