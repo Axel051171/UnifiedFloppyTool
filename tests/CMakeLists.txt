@@ -237,6 +237,10 @@ foreach(test_source ${TEST_SOURCES})
     elseif(${test_name} STREQUAL "test_dc42_checksum_roundtrip")
         # DC42 write must keep the data checksum valid; caught stale-checksum bug (MF-324)
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/dc42/uft_dc42.c)
+    elseif(${test_name} STREQUAL "test_hdf_rdb_bounds")
+        # RDB parser heap-overflow guard (tiny SummedLongs) — MF-326
+        target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/uft_hdf_parser.c)
+        target_include_directories(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats)
     elseif(${test_name} STREQUAL "test_d71_d81")
         # Include D71/D81 source directly
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/c64/uft_d71_d81.c)

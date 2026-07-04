@@ -72,10 +72,14 @@ int uft_hdf_parse_rdb(const uint8_t *data, size_t len, uft_rdb_info_t *rdb) {
         return -1;
     }
     
-    /* Verify checksum */
+    /* Verify checksum. `size` (SummedLongs) is attacker-controlled: it must
+     * be at least 3 longs (12 bytes) or the temp[8..11] checksum-field zeroing
+     * below writes past a too-small malloc(size*4) — a heap buffer overflow on
+     * a malformed RDB (valid magic + size 0/1/2). Upper bound keeps it within
+     * the buffer. */
     uint32_t size = read_be32(data + 4);
-    if (size > len / 4) return -1;
-    
+    if (size < 3 || size > len / 4) return -1;
+
     uint32_t stored_checksum = read_be32(data + 8);
     uint8_t *temp = malloc(size * 4);
     if (!temp) return -1;

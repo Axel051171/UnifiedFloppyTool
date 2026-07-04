@@ -712,6 +712,25 @@ plugins. This is the read-path counterpart to the write-path memory-safety
 fix MF-325 (DSK over-read). Recorded so the property is not silently
 regressed; a new plugin's probe must keep its size guard.
 
+### FMT-8 — RDB parser heap buffer overflow on tiny SummedLongs → ✓ RESOLVED (2026-07-05, MF-326)
+
+**Severity: HIGH (memory safety, attacker-triggerable).** `uft_hdf_parse_rdb`
+(Amiga RigidDiskBlock, in `src/formats/uft_hdf_parser.c`) reads the file-
+controlled `size` (SummedLongs) field, does `malloc(size*4)`, then zeroes the
+checksum field at `temp[8..11]`. For `size < 3` that write lands past the
+allocation — a heap buffer overflow reachable from a malformed HDF/HDMA image
+with a valid "RDSK" magic and `size` 0/1/2. (The other fixed-offset reads are
+already covered by the `len < 256` guard at entry.)
+
+**Fix (MF-326):** `if (size < 3 || size > len/4) return -1;` — reject a
+SummedLongs too small to hold the checksum field before allocating/writing.
+`test_hdf_rdb_bounds` feeds size 0/1/2 (must be rejected), a valid 64, and an
+oversized/short buffer. Confirmed pre-fix ran the overflowing path (rc=0),
+post-fix rejects it (rc=-1); full suite 173/173.
+
+Found by the read-path memory-safety sweep (FMT-7 probes clean; this is a
+deeper parse over-write) — scanning `malloc(file_derived * N)` sites.
+
 ---
 
 ## Wie beitragen
