@@ -712,6 +712,19 @@ plugins. This is the read-path counterpart to the write-path memory-safety
 fix MF-325 (DSK over-read). Recorded so the property is not silently
 regressed; a new plugin's probe must keep its size guard.
 
+**Full read-path memory-safety sweep (2026-07-05), result:** four systematic
+scans across `src/formats/` — (1) probe input bounds (this entry, clean);
+(2) reader chunk-offset/length validation (e.g. WOZ `if (pos+chunk_size >
+size) break;` — clean); (3) `malloc(file_derived * N)` + fixed-offset writes
+(found + fixed the RDB heap overflow, FMT-8; apridisk/atari_sparta/msx
+verified bounded + NULL-checked); (4) `fread(fixed_stack_buf, 1,
+file_derived_len, …)` stack-overflow class (16 sites, all verified safe: read
+length is a `sizeof(struct)` that fits the buffer, a compile-time constant, an
+explicit clamp to `sizeof(buf)`, or a sector size from a static geometry table
+/ hard-coded value ≤ the buffer). Net across the format layer: 2 real
+memory-safety bugs fixed (FMT-8 heap overflow, MF-325 DSK write over-read),
+everything else verified clean.
+
 ### FMT-8 — RDB parser heap buffer overflow on tiny SummedLongs → ✓ RESOLVED (2026-07-05, MF-326)
 
 **Severity: HIGH (memory safety, attacker-triggerable).** `uft_hdf_parse_rdb`
