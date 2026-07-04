@@ -595,6 +595,39 @@ sizes); verify registry descriptions ("...720KB/1.44MB/2.88MB" reflect the
 wrong PC-floppy assumption). Exact byte sizes are load-bearing — do this
 against the d2m-dnp spec, not from memory.
 
+### FMT-4 — Format version × read × write coverage (audit 2026-07-04)
+
+Verified audit of the **live** plugin architecture (the registered
+`uft_*_plugin.c` set; the dead FloppyDevice duplicates are ignored). "Should
+write?" reflects preservation value — capture/proprietary formats are
+legitimately read-only.
+
+| Format | Read versions | Write | Should write? | Verdict |
+|---|---|---|---|---|
+| **WOZ** | v1, v2 (2.1 = v2 sig) | ✗ "write not implemented" | **yes** (Apple II preservation std; Applesauce writes it) | **GAP** |
+| **SCP** | yes | ✗ (`write_track = NULL`) | **yes** (Greaseweazle/SuperCard Pro produce it) | **GAP** |
+| **MOOF** | info_version ≥ 1 | ✗ (no write path) | **yes** (Apple II flux) | **GAP** |
+| **HFE** | v1 + v3 (`HXCPICFE`/`HXCHFEV3`) | **v1 only** (writer emits `HXCPICFE`) | v3 (variable bitrate) nice-to-have | partial |
+| A2R | v2 (`A2R2`) + v3 (`A2R3`) | ✗ | no — raw capture format | OK |
+| IPF | partial (CAPS payload not decoded) | ✗ | no — proprietary CAPS/SPS, read-only | OK (read is partial) |
+| ADF | v2 + v3 parsers | ✓ | — | OK |
+| D88 | v1 + v2 | ✓ | — | OK |
+| IMD / DSK+EDSK / DC42 / 2MG / TD0 / DMK | container versions | ✓ | — | OK |
+
+**Real write gaps (flux formats, read-only in the live plugins):** WOZ,
+SCP, MOOF. Plus HFE writes only v1. Sector/container formats read+write
+fine.
+
+**Deliberately NOT rushed:** a flux-format writer that emits subtly wrong
+timing/bit-cells silently corrupts a forensic image — worse than no writer
+(violates „Keine erfundenen Daten"). Each writer is a proper, spec-exact,
+round-trip-tested feature: WOZ2 (INFO/TMAP/TRKS chunks + CRC32, spec
+applesaucefdc.com), SCP (flux-timing header + track table), MOOF
+(WOZ-derived), HFE v3 (extend the existing v1 writer with the variable-
+bitrate track block). Priority order by preservation value: WOZ > SCP >
+MOOF > HFE-v3. Note format code is split across `src/formats/` AND
+`src/parsers/` (e.g. A2R).
+
 ---
 
 ## Wie beitragen
