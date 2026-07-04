@@ -746,6 +746,54 @@ deeper parse over-write) — scanning `malloc(file_derived * N)` sites.
 
 ---
 
+### FMT-9 — Phase-4 copy-protection / disk-error coverage (in progress, 2026-07-05)
+
+Goal: classify all formats into 3 representation classes and stage
+copy-protection / disk-error awareness per class. See
+[`FORMAT-CLASSIFICATION.md`](FORMAT-CLASSIFICATION.md).
+
+**Landed:**
+- **Classification** (MF-classify, `docs/FORMAT-CLASSIFICATION.md`): all 161
+  registered format IDs mapped to Klasse 1/2/3 from the SSOT `data_layer`
+  field, both axes (representation class + orthogonal disk-error marking).
+  Scope refinements: HFEv3 is Klasse 2 (bitstream + partial timing), not 1;
+  TAP is a tape-pulse format at the edge of Klasse 2; EDD kept in Klasse 1.
+- **Klasse-1 flux pass-through** (MF-327): SCP multi-revolution weak-bit
+  round-trip guard (`test_scp_weakbit_multirev`) — write→read preserves every
+  revolution verbatim within one 25ns tick, weak windows stay mutually
+  distinct (no majority-vote/collapse). Tolerance band documented.
+- **Klasse-3 content warning** (MF-328): `uft_protection_probe_scp` scans the
+  actual bytes so the lossy-export sidecar reports real weak-bit / multi-rev
+  counts instead of a generic count=0 placeholder — and stays silent about
+  weak bits when there are none (`test_protection_probe`, 4/4).
+
+**Open (next steps, concrete):**
+- Extend the content probe to the other flux sources (KryoFlux stream, IPF,
+  A2R) and to bitstream sources (G64/HFE weak-marker snapshot) — each keeps
+  the class-based fallback until its probe lands.
+- Klasse-2 snapshot: represent weak-bit regions where the spec allows
+  (G64 speed-zones, HFE variable bitrate); document limits in code + docs.
+- Surface the content-probe result in the GUI converter warning (currently
+  only written to the `.loss.json` sidecar).
+- Per-format disk-error marking audit (read/preserve/write CRC-error,
+  deleted-address-mark, bad-sector-flag) — error-aware set already flagged in
+  the classification table.
+- `FORMAT-VARIANTS.md`: per-family web research of sub-versions not yet
+  read/written (WOZ1 vs 2, HFE v1/v3, A2R v2/v3, D88 revisions, …).
+- Byte-exact read correctness vs. real copy-protected disks is NOT verifiable
+  without a ground-truth corpus — remains an explicit open point, not
+  silently marked done.
+
+**Tooling note (verify_build_sources parser):** a `SOURCES += \` block whose
+first continuation line is a `#`-comment hides the ENTIRE block from
+`scripts/verify_build_sources.py` (it joins continuations, then strips from
+the first `#` to EOL). qmake compiles those sources fine; the verifier can't
+see them (they sit in the accepted baseline). New sources must go in their own
+`SOURCES +=` statement without a leading comment line, or they will be flagged
+as a new A-divergence (as `uft_protection_probe.c` was until relocated).
+
+---
+
 ## Wie beitragen
 
 - **Neues Issue melden:** GitHub Issue mit Label `principle-violation`.
