@@ -191,6 +191,20 @@ typedef struct {
 uft_moof_error_t uft_moof_open(const char *path, uft_moof_disk_t *disk);
 
 /**
+ * @brief Serialize a MOOF disk (INFO + TMAP + TRKS) to a .moof file.
+ *
+ * Reconstructs the WOZ-derived block layout (TRK table then per-track
+ * bitstreams at their absolute start_block). META/FLUX/unknown chunks are
+ * not carried through (the reader parses, not retains, them); the flux data
+ * (TMAP + per-track bitstream + bit_count) round-trips.
+ *
+ * @param disk      Source disk (from uft_moof_open)
+ * @param path      Output path
+ * @return UFT_MOOF_OK on success, negative error code on failure
+ */
+uft_moof_error_t uft_moof_save(const uft_moof_disk_t *disk, const char *path);
+
+/**
  * @brief Close and free resources associated with a MOOF disk
  * @param disk      Disk context to clean up
  */

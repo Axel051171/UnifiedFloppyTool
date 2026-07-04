@@ -225,6 +225,9 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/formats/scp/uft_scp_writer.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_scp_parser.c)
+    elseif(${test_name} STREQUAL "test_moof_roundtrip")
+        # MOOF writer save->read semantic round-trip (MF-319)
+        target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/apple/uft_moof_parser.c)
     elseif(${test_name} STREQUAL "test_d71_d81")
         # Include D71/D81 source directly
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/c64/uft_d71_d81.c)

@@ -606,7 +606,7 @@ legitimately read-only.
 |---|---|---|---|---|
 | **WOZ** | v1, v2 (2.1 = v2 sig) | **✓ module-level** (`woz_save` / `woz_save_to_memory`, MF-317, round-trip byte-identity tested) — plugin `.write` wiring + META/WRIT passthrough pending | **yes** (Apple II preservation std) | **partially closed** |
 | **SCP** | yes | **✓ (writer existed, now FIXED + tested)** — `scp_writer_*` wrote "Track Length" in bytes not bitcell-count → every written SCP was unreadable (reader hit EOF); fixed MF-318, `test_scp_writer_roundtrip`. Plugin `.write_track` wiring still pending. | **yes** (Greaseweazle/SuperCard Pro) | **fixed at module level** |
-| **MOOF** | info_version ≥ 1 | ✗ (no write path) | **yes** (Apple II flux) | **GAP** |
+| **MOOF** | info_version ≥ 1 | **✓ `uft_moof_save` (MF-319, save→read round-trip tested)** — plugin wiring + META/FLUX passthrough pending | **yes** (Apple II flux) | **closed at module level** |
 | **HFE** | v1 + v3 (`HXCPICFE`/`HXCHFEV3`) | **v1 only** (writer emits `HXCPICFE`) | v3 (variable bitrate) nice-to-have | partial |
 | A2R | v2 (`A2R2`) + v3 (`A2R3`) | ✗ | no — raw capture format | OK |
 | IPF | partial (CAPS payload not decoded) | ✗ | no — proprietary CAPS/SPS, read-only | OK (read is partial) |

@@ -405,6 +405,89 @@ uft_moof_error_t uft_moof_open(const char *path, uft_moof_disk_t *disk)
     return UFT_MOOF_OK;
 }
 
+static void write_le16(uint8_t *p, uint16_t v) { p[0] = (uint8_t)v; p[1] = (uint8_t)(v >> 8); }
+static void write_le32(uint8_t *p, uint32_t v)
+{
+    p[0] = (uint8_t)v; p[1] = (uint8_t)(v >> 8);
+    p[2] = (uint8_t)(v >> 16); p[3] = (uint8_t)(v >> 24);
+}
+
+/**
+ * @brief Serialize a MOOF disk (INFO + TMAP + TRKS) to a file.
+ *
+ * MOOF is WOZ-derived (3.5" Apple flux): header(12) + INFO(8+60) +
+ * TMAP(8+160) + TRKS. The 160×8 TRK table ends at byte 1536 = block 3,
+ * where each valid track's absolute start_block places its bitstream — so
+ * the block layout is reconstructed exactly. INFO is written as 60 bytes
+ * (uft_moof_info_t is 56 + 4-byte zero tail; the reader keeps only the 56
+ * it models). META / FLUX / unknown chunks are not carried through (the
+ * reader parses, not retains, them) — the flux data (TMAP + per-track
+ * bitstreams + bit_count) round-trips, which the writer's test verifies.
+ */
+uft_moof_error_t uft_moof_save(const uft_moof_disk_t *disk, const char *path)
+{
+    if (!disk || !path) return UFT_MOOF_ERR_NULL;
+
+    /* File spans up to the highest block any valid track occupies; the TRK
+     * table alone reaches block 3 (byte 1536). */
+    uint32_t max_block = 3;
+    for (int t = 0; t < UFT_MOOF_MAX_TRACKS; t++) {
+        if (disk->tracks[t].valid && disk->tracks[t].block_count > 0) {
+            uint32_t end = (uint32_t)disk->tracks[t].start_block + disk->tracks[t].block_count;
+            if (end > max_block) max_block = end;
+        }
+    }
+    size_t total = (size_t)max_block * UFT_MOOF_BLOCK_SIZE;
+    if (total < 1536) total = 1536;
+
+    uint8_t *buf = (uint8_t *)calloc(1, total);
+    if (!buf) return UFT_MOOF_ERR_MEMORY;
+
+    /* Header: "MOOF" + FF 0A 0D 0A + CRC placeholder. */
+    memcpy(buf, UFT_MOOF_MAGIC_STR, 4);
+    buf[4] = UFT_MOOF_SUFFIX_0; buf[5] = UFT_MOOF_SUFFIX_1;
+    buf[6] = UFT_MOOF_SUFFIX_2; buf[7] = UFT_MOOF_SUFFIX_3;
+
+    size_t p = UFT_MOOF_HEADER_SIZE;  /* 12 */
+    /* INFO chunk (60 bytes; struct is 56, tail stays zero). */
+    write_le32(buf + p, UFT_MOOF_CHUNK_INFO); write_le32(buf + p + 4, 60); p += 8;
+    memcpy(buf + p, &disk->info, sizeof(uft_moof_info_t));                 p += 60;
+    /* TMAP chunk. */
+    write_le32(buf + p, UFT_MOOF_CHUNK_TMAP);
+    write_le32(buf + p + 4, UFT_MOOF_TMAP_ENTRIES);                        p += 8;
+    memcpy(buf + p, disk->tmap, UFT_MOOF_TMAP_ENTRIES);                    p += UFT_MOOF_TMAP_ENTRIES;
+    /* TRKS chunk: encompasses the table + all BITS to EOF. */
+    write_le32(buf + p, UFT_MOOF_CHUNK_TRKS);
+    write_le32(buf + p + 4, (uint32_t)(total - (p + 8)));                  p += 8;  /* p == 256 */
+    for (int t = 0; t < UFT_MOOF_MAX_TRACKS; t++) {
+        if (disk->tracks[t].valid && disk->tracks[t].block_count > 0) {
+            write_le16(buf + p + (size_t)t * 8,     disk->tracks[t].start_block);
+            write_le16(buf + p + (size_t)t * 8 + 2, disk->tracks[t].block_count);
+            write_le32(buf + p + (size_t)t * 8 + 4, disk->tracks[t].bit_count);
+        }
+    }
+    /* Place each track's bitstream at its absolute start_block. */
+    for (int t = 0; t < UFT_MOOF_MAX_TRACKS; t++) {
+        const uft_moof_track_t *trk = &disk->tracks[t];
+        if (trk->valid && trk->bitstream && trk->block_count > 0) {
+            size_t off = (size_t)trk->start_block * UFT_MOOF_BLOCK_SIZE;
+            if (off >= 1536 && off + trk->bitstream_size <= total) {
+                memcpy(buf + off, trk->bitstream, trk->bitstream_size);
+            }
+        }
+    }
+
+    /* CRC32 over everything after the 12-byte header. */
+    write_le32(buf + 8, moof_crc32(buf + UFT_MOOF_HEADER_SIZE, total - UFT_MOOF_HEADER_SIZE));
+
+    FILE *f = fopen(path, "wb");
+    if (!f) { free(buf); return UFT_MOOF_ERR_OPEN; }
+    size_t written = fwrite(buf, 1, total, f);
+    fclose(f);
+    free(buf);
+    return (written == total) ? UFT_MOOF_OK : UFT_MOOF_ERR_READ;
+}
+
 void uft_moof_close(uft_moof_disk_t *disk)
 {
     if (!disk) return;
