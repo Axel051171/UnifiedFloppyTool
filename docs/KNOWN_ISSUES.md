@@ -612,7 +612,8 @@ legitimately read-only.
 | IPF | partial (CAPS payload not decoded) | ✗ | no — proprietary CAPS/SPS, read-only | OK (read is partial) |
 | ADF | v2 + v3 parsers | ✓ | — | OK |
 | D88 | v1 + v2 | ✓ | — | OK |
-| IMD / DSK+EDSK / DC42 / 2MG / TD0 / DMK | container versions | ✓ | — | OK |
+| **IMD** | container versions | **✓ — bug FIXED MF-320** | — | write was a silent no-op (guarded on unset `.data_len` instead of `.data_size`); fixed + `test_imd_write_roundtrip` |
+| DSK+EDSK / DC42 / 2MG / TD0 / DMK | container versions | ✓ (not yet round-trip-tested) | — | OK |
 
 **Real write gaps (flux formats):** WOZ, SCP, MOOF — **all now closed at
 module level with round-trip tests** (MF-317/318/319; the SCP work also

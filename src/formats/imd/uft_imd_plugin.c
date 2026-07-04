@@ -240,7 +240,16 @@ static uft_error_t imd_plugin_write_track(uft_disk_t *disk, int cyl, int head,
                     for (size_t ts = 0; ts < track->sector_count; ts++) {
                         if (track->sectors[ts].id.sector == (uint8_t)(sec_map[s] + 1)) {
                             const uint8_t *data = track->sectors[ts].data;
-                            if (data && track->sectors[ts].data_len >= ss) {
+                            /* uft_sector_t carries two length fields: data_len
+                             * (modern) and data_size (legacy). uft_format_add_
+                             * sector() — which read_track uses — populates only
+                             * data_size, so gating solely on data_len made every
+                             * write a silent no-op for read-produced tracks.
+                             * Use whichever is set. */
+                            size_t avail = track->sectors[ts].data_len
+                                         ? track->sectors[ts].data_len
+                                         : track->sectors[ts].data_size;
+                            if (data && avail >= ss) {
                                 memcpy(p->data + pos, data, ss);
                             }
                             break;
