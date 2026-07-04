@@ -88,6 +88,7 @@ static inline uft_error_t uft_format_add_sector(
     sector.id.crc_ok = true;
     
     // Daten kopieren
+    if (size == 0 || size > UFT_MAX_SECTOR_SIZE) return UFT_ERROR_INVALID_ARG;
     sector.data = malloc(size);
     if (!sector.data) return UFT_ERROR_NO_MEMORY;
     
