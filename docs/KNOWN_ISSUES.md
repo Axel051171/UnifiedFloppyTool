@@ -628,6 +628,21 @@ bitrate track block). Priority order by preservation value: WOZ > SCP >
 MOOF > HFE-v3. Note format code is split across `src/formats/` AND
 `src/parsers/` (e.g. A2R).
 
+**Concrete WOZ2-writer constraint (analysed 2026-07-04, must guide the
+implementation).** WOZ2 is **512-byte-block-offset addressed**: each TRK
+table entry holds an *absolute* file `starting_block`, and the BITS data
+begins at block 3 (byte 1536). A naïve serializer that just concatenates
+header(12) + INFO(8+60) + TMAP(8+160) + TRKS places the TRKS/BITS at byte
+248, while the unchanged `starting_block` values still point at block 3 →
+**structurally corrupt image**. The reader (`src/formats/apple/uft_woz.c`,
+`woz_load_from_memory` → `woz_image_t`) preserves `info`(60) + `tmap`(160)
++ raw `track_data`, but NOT META/WRIT/FLUX/unknown chunks and NOT the
+absolute block geometry. So a correct writer must (a) rebuild the WOZ2
+block layout so BITS land on their referenced blocks, and (b) either
+preserve or honestly drop META/WRIT — and be gated by a read→write→read
+**byte-identity** test (which correctly rejects the naïve approach). This
+is why it is a feature, not a one-function add.
+
 ---
 
 ## Wie beitragen
