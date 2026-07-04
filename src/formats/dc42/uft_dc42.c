@@ -234,6 +234,42 @@ static uft_error_t dc42_read_track(uft_disk_t *disk, int cyl, int head,
  * write_track
  * ============================================================================ */
 
+/* Apple DiskCopy 4.2 data checksum: for each big-endian 16-bit word, add it
+ * to a 32-bit accumulator (ignoring overflow) then rotate the accumulator
+ * right by one bit. Verified against the DiscFerret / Mini vMac references. */
+static uint32_t dc42_data_checksum(const uint8_t *data, size_t len)
+{
+    uint32_t sum = 0;
+    for (size_t i = 0; i + 1 < len; i += 2) {
+        uint16_t w = (uint16_t)(((uint16_t)data[i] << 8) | data[i + 1]);
+        sum += w;
+        sum = (sum >> 1) | (sum << 31);   /* rotate right 1 (32-bit) */
+    }
+    return sum;
+}
+
+/* Recompute the whole-data-fork checksum and update the header at 0x48.
+ * write_track modifies sector data, so leaving the stored checksum stale
+ * produces a DC42 image that spec-conformant tools (real DiskCopy, emulators)
+ * flag as corrupt — silent corruption of the image's integrity metadata. */
+static void dc42_update_data_checksum(dc42_data_t *pdata)
+{
+    if (!pdata || !pdata->file || pdata->data_size == 0) return;
+    uint8_t *buf = (uint8_t *)malloc(pdata->data_size);
+    if (!buf) return;
+    fflush(pdata->file);
+    if (fseek(pdata->file, DC42_HEADER_SIZE, SEEK_SET) == 0 &&
+        fread(buf, 1, pdata->data_size, pdata->file) == pdata->data_size) {
+        uint32_t ck = dc42_data_checksum(buf, pdata->data_size);
+        uint8_t be[4] = { (uint8_t)(ck >> 24), (uint8_t)(ck >> 16),
+                          (uint8_t)(ck >> 8),  (uint8_t)ck };
+        if (fseek(pdata->file, 0x48, SEEK_SET) == 0)
+            fwrite(be, 1, 4, pdata->file);
+        fflush(pdata->file);
+    }
+    free(buf);
+}
+
 static uft_error_t dc42_write_track(uft_disk_t *disk, int cyl, int head,
                                      const uft_track_t *track)
 {
@@ -268,6 +304,8 @@ static uft_error_t dc42_write_track(uft_disk_t *disk, int cyl, int head,
         if (fwrite(data, 1, DC42_SECTOR_SIZE, pdata->file) != DC42_SECTOR_SIZE)
             return UFT_ERROR_IO;
     }
+    /* Keep the DC42 data checksum in sync with the modified data. */
+    dc42_update_data_checksum(pdata);
     return UFT_OK;
 }
 

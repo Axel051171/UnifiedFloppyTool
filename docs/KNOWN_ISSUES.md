@@ -679,6 +679,25 @@ each error site (`false`) — one statement, safe under brace-less ifs — plus
 a plugin-read test asserting `crc_valid`/`data_crc_ok` on a good sector.
 Deferred to do it carefully rather than ship a half-consistent state.
 
+### FMT-6 — DC42 write left the data checksum stale → ✓ RESOLVED (2026-07-04, MF-324)
+
+**Severity: HIGH (Prinzip: keine stille Veränderung).** `dc42_write_track`
+(DiskCopy 4.2) wrote modified sector data but never recomputed the image's
+**data checksum** (BE32 at header offset 0x48, a checksum over the whole data
+fork). A written DC42 therefore carried a checksum that no longer matched its
+data — spec-conformant consumers (real DiskCopy, Mac emulators) flag such an
+image as **corrupt**. UFT's own DC42 reader does not validate the checksum, so
+the corruption was silent within the tool.
+
+**Fix (MF-324):** added `dc42_data_checksum()` (the DiskCopy algorithm — add
+each big-endian 16-bit word to a 32-bit accumulator, then rotate right 1;
+web-verified vs DiscFerret / Mini vMac) and `dc42_update_data_checksum()`,
+called at the end of `write_track` to recompute over the whole data fork and
+rewrite the header. `test_dc42_checksum_roundtrip` builds a DC42 with a wrong
+(zero) checksum, modifies a sector, writes, then independently recomputes the
+checksum over the final data fork and asserts the header now matches. Full
+suite 172/172.
+
 ---
 
 ## Wie beitragen
