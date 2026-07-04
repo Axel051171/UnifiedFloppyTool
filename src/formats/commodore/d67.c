@@ -49,7 +49,15 @@ int uft_cbm_d67_open(FloppyDevice *dev, const char *path){
     if (fseek(fp,0,SEEK_END) != 0) { fclose(fp); free(ctx); return UFT_EIO; }
     long szl=ftell(fp);
     if (fseek(fp,0,SEEK_SET) != 0) { fclose(fp); free(ctx); return UFT_EIO; }
-    if(szl!=670*256){ fclose(fp); free(ctx); return UFT_EINVAL; }
+    /* Expected size = sum(spt)*256. The 2040/DOS1 layout (tracks 18-24 have
+     * 20 sectors, one more than the 1541) totals 690 blocks = 176640 bytes
+     * (VICE reference). The previous `670*256` gate used the FREE-block
+     * count (670 blocks free after format), not the image size, and so
+     * rejected every valid .d67 — FMT-1, KNOWN_ISSUES. Derive from the spt
+     * table (SSOT) so the gate can never drift from the geometry again. */
+    uint32_t total=0;
+    for(int i=0;i<35;i++) total += spt[i];
+    if(szl != (long)(total*256u)){ fclose(fp); free(ctx); return UFT_EINVAL; }
 
     dev->tracks=35;
     dev->heads=1;

@@ -504,9 +504,16 @@ nicht dauerhaft rot auf einem vorbestehenden Umgebungs-Defekt zu halten.
 (`add_test(... WORKING_DIRECTORY ...)` oder Temp-Pfad in den Tests),
 (3) danach `|| true` entfernen und pro Plattform grün verifizieren.
 
-### FMT-1 — D67 (CBM 2040) size gate rejects valid images (entdeckt 2026-07-04)
+### FMT-1 — D67 (CBM 2040) size gate rejects valid images → ✓ RESOLVED (2026-07-04, MF-314)
 
-**Severity: HIGH (Prinzip 1 — „kein Bit verloren").** `src/formats/
+> **✓ RESOLVED.** `d67.c` leitet die erwartete Bildgröße jetzt aus der
+> eigenen spt-Tabelle ab (`sum(spt)*256` = 690 Blöcke = 176640 B, VICE-
+> Referenz bestätigt), wie `d80.c`/`d82.c` es schon taten. Kein Magic-
+> Literal mehr. `test_d67_plugin` deckt es ab: akzeptiert das gültige
+> 690-Block-Image, weist das alte 670-Block-Größe ausdrücklich ab und
+> liest den letzten Track (der unter dem 670-Gate `UFT_EBOUNDS` war).
+
+**Severity: HIGH (Prinzip 1 — „kein Bit verloren") — behoben.** `src/formats/
 commodore/d67.c` gate-t die Bildgröße auf `szl != 670*256` (171520 B) und
 gibt sonst `UFT_EINVAL`. Die eigene Per-Track-Sektor-Tabelle im selben
 File summiert aber zu **690** Sektoren (17×21 + 7×20 + 6×18 + 5×17 = 690).
