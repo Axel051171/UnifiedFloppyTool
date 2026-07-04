@@ -1,0 +1,73 @@
+/**
+ * @file uft_protection_probe.c
+ * @brief Implementation of the content-based protection-anomaly scan.
+ *
+ * See include/uft/analysis/uft_protection_probe.h for the contract and the
+ * forensic rationale. This unit only READS; it never mutates the source and
+ * never fabricates data — an image with no anomalies reports zeros.
+ */
+
+#include "uft/analysis/uft_protection_probe.h"
+#include "uft/flux/uft_scp_parser.h"
+
+#include <string.h>
+
+/* Divergence beyond this (ns) at a matching transition index counts as weak.
+ * 75ns = 3x the 25ns SCP tick — three quantisation steps, far above rounding
+ * noise, so identical revolutions of stable data never trip it while a
+ * genuine fuzzy/weak region does. */
+#define UFT_WEAK_TOLERANCE_NS 75u
+
+/* A track is weak if any revolution disagrees with revolution 0 — either a
+ * differing transition count (bits appear/vanish) or a matching-index timing
+ * divergence beyond the tolerance. */
+static bool track_is_weak(const uft_scp_track_data_t *t) {
+    if (t->revolution_count < 2) return false;
+    const uft_scp_rev_data_t *r0 = &t->revolutions[0];
+    for (uint8_t r = 1; r < t->revolution_count; r++) {
+        const uft_scp_rev_data_t *rr = &t->revolutions[r];
+        if (rr->flux_count != r0->flux_count) return true;
+        if (!r0->flux_data || !rr->flux_data) continue;
+        for (uint32_t i = 0; i < r0->flux_count; i++) {
+            uint32_t a = r0->flux_data[i], b = rr->flux_data[i];
+            uint32_t d = (a > b) ? (a - b) : (b - a);
+            if (d > UFT_WEAK_TOLERANCE_NS) return true;
+        }
+    }
+    return false;
+}
+
+uft_error_t uft_protection_probe_scp(const uint8_t *data, size_t size,
+                                     uft_protection_summary_t *out) {
+    if (!data || !out) return UFT_ERR_NULL_POINTER;
+    memset(out, 0, sizeof(*out));
+
+    bool any_track = false;
+    for (int trk = 0; trk < UFT_SCP_MAX_TRACKS; trk++) {
+        uft_scp_track_data_t td;
+        memset(&td, 0, sizeof(td));
+        if (uft_scp_read_track_memory(data, size, trk, &td) != UFT_SCP_OK)
+            continue;                       /* absent/invalid track — skip */
+        if (td.revolution_count == 0) {
+            uft_scp_free_track(&td);
+            continue;
+        }
+
+        any_track = true;
+        out->track_count++;
+        if (td.revolution_count > out->max_revolutions)
+            out->max_revolutions = td.revolution_count;
+        if (td.revolution_count > 1)
+            out->has_multi_revolution = true;
+        for (uint8_t r = 0; r < td.revolution_count; r++)
+            out->total_flux_transitions += td.revolutions[r].flux_count;
+        if (track_is_weak(&td))
+            out->weak_track_count++;
+
+        uft_scp_free_track(&td);
+    }
+
+    out->has_weak_regions = (out->weak_track_count > 0);
+    if (!any_track) return UFT_ERR_CORRUPTED;   /* no readable track at all */
+    return UFT_OK;
+}

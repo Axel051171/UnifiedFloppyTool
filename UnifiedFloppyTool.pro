@@ -911,7 +911,14 @@ SOURCES += \
     src/analysis/uft_anomaly_detect.c \
     src/analysis/uft_ml_protection.c
 
+# Content-based protection-anomaly probe (MF-328) — kept in its own SOURCES
+# statement so the build-source verifier can see it (the block above starts
+# with a commented continuation line that hides its members from the parser).
+SOURCES += \
+    src/analysis/uft_protection_probe.c
+
 HEADERS += \
+    include/uft/analysis/uft_protection_probe.h \
     include/uft/encoding/uft_otdr_encoding_boost.h \
     include/uft/recovery/uft_otdr_adaptive_decode.h \
     include/uft/analysis/uft_deepread_splice.h \

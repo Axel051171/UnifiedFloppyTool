@@ -10,6 +10,7 @@
 #include "uft_format_convert_internal.h"
 #include "uft/core/uft_preflight.h"    /* V415-PLAN LOSS.preflight (MF-263) */
 #include "uft/core/uft_loss_report.h"
+#include "uft/analysis/uft_protection_probe.h"  /* content-based loss (MF-328) */
 
 // ============================================================================
 // API Implementation
@@ -602,27 +603,47 @@ uft_error_t uft_convert_file(const char* src_path,
         uft_format_class_t src_cls = uft_format_get_class(src_format);
         uft_format_class_t dst_cls = uft_format_get_class(dst_format);
 
+        /* Content-based refinement (MF-328): for an SCP source, scan the
+         * actual bytes so the sidecar reports the protection artifacts THIS
+         * image really carries, with real counts — instead of the generic
+         * count=0 placeholders that fire even for an unprotected disk. Other
+         * flux formats fall back to the class-based list until their probe
+         * lands, so nothing regresses. */
+        uft_protection_summary_t psum = {0};
+        bool have_scan = (src_format == UFT_FORMAT_SCP) &&
+            (uft_protection_probe_scp(src_data, src_size, &psum) == UFT_OK);
+
         if (src_cls == UFT_FCLASS_FLUX && dst_cls == UFT_FCLASS_SECTOR) {
             entries[n_entries++] = (uft_loss_entry_t){
-                UFT_LOSS_FLUX_TIMING, 0,
+                UFT_LOSS_FLUX_TIMING, have_scan ? psum.track_count : 0,
                 "Flux-level inter-bit timing collapsed to sector bytes."
-            };
-            entries[n_entries++] = (uft_loss_entry_t){
-                UFT_LOSS_WEAK_BITS, 0,
-                "Weak/fuzzy bits coerced to a single resolved value."
             };
             entries[n_entries++] = (uft_loss_entry_t){
                 UFT_LOSS_INDEX_PULSES, 0,
                 "Index-pulse positions discarded by sector-image target."
             };
-            entries[n_entries++] = (uft_loss_entry_t){
-                UFT_LOSS_MULTI_REVOLUTION, 0,
-                "Multi-revolution capture collapsed to one logical layout."
-            };
+            /* WEAK_BITS / MULTI_REVOLUTION: only claim them when a scan
+             * actually found them — an unprotected single-revolution disk
+             * must not receive a false weak-bit warning ("Keine erfundenen
+             * Daten"). Without a scan, keep the conservative always-on entry
+             * so a real loss is never silently hidden either. */
+            if (!have_scan || psum.has_weak_regions) {
+                entries[n_entries++] = (uft_loss_entry_t){
+                    UFT_LOSS_WEAK_BITS, have_scan ? psum.weak_track_count : 0,
+                    "Weak/fuzzy bits coerced to a single resolved value."
+                };
+            }
+            if (!have_scan || psum.has_multi_revolution) {
+                entries[n_entries++] = (uft_loss_entry_t){
+                    UFT_LOSS_MULTI_REVOLUTION,
+                    have_scan ? psum.max_revolutions : 0,
+                    "Multi-revolution capture collapsed to one logical layout."
+                };
+            }
         }
         if (src_cls == UFT_FCLASS_FLUX && dst_cls == UFT_FCLASS_BITSTREAM) {
             entries[n_entries++] = (uft_loss_entry_t){
-                UFT_LOSS_FLUX_TIMING, 0,
+                UFT_LOSS_FLUX_TIMING, have_scan ? psum.track_count : 0,
                 "Sub-bit timing/jitter quantised to a bitstream cell."
             };
         }
