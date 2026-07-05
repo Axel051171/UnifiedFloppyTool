@@ -842,6 +842,22 @@ copy-protection / disk-error awareness per class. See
   (CRC error? deleted?) cannot be verified — mapping it would be fabrication.
   Deferred pending format identification; likely related to the FMT-1..4
   copy-paste-fabrication cluster. Reported, not guessed.
+- **NFD R0 reader structurally wrong vs spec (2026-07-05, do NOT blind-fix):**
+  verified against the authoritative pc98.org/project/doc/nfdr0.html. The real
+  NFD R0 sector-ID table at 0x120 holds **163×26 = 4238 per-SECTOR entries**,
+  each 16 bytes: C@+0 H@+1 R@+2 N@+3 MFM@+4 DDAM@+5 Status@+6 ST0@+7 ST1@+8
+  ST2@+9 PDA@+10 reserved@+11..15; the sector DATA follows sequentially from
+  dwHeadSize (@0x110) — there is no per-entry data offset. The registered
+  `src/formats/nfd/uft_nfd_plugin.c` instead models it as **164 per-TRACK index
+  entries** and reads cyl@+1, head@+2, nsec@+3, ddam@+6, status@+7, st1@+9,
+  st2@+10, and an invented data_off (LE32)@+12. So the entry count, the
+  per-track-vs-per-sector model, the data location, AND the disk-error offsets
+  (DDAM is +5 not +6, Status +6 not +7, ST1 +8 not +9, ST2 +9 not +10) are all
+  wrong. Fixing only the mark offsets is incoherent — the whole reader model is
+  wrong. This needs a full rewrite to the per-sector table + sequential data,
+  and byte-exact correctness needs a real NFD corpus, so it is NOT attempted
+  blind (FMT-1..4 fabrication cluster). NFD R1 (dwTrackHead arrays) uses the
+  same wrong index model and is likely affected too. Reported, not guessed.
 - **Disk-error marking, D88** (MF-336): read+represent+preserve. Fourth real
   bug of the audit — the plugin read the sector status from offset +0D (a
   reserved/RPM byte) instead of the DDAM flag at +07 and the FDC status at +08
