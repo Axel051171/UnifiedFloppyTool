@@ -25,7 +25,12 @@ static long d64_offset(int track, int sector) {
     return off + sector * 256;
 }
 
-typedef struct { FILE *file; int max_track; } d64_pd_t;
+typedef struct {
+    FILE *file;
+    int  max_track;
+    bool has_errors;   /* trailing 1541 error-info block present (.d64 +errors) */
+    long err_offset;   /* byte offset of the error block = total sector bytes */
+} d64_pd_t;
 
 static bool d64_plugin_probe(const uint8_t *data, size_t size,
                               size_t file_size, int *confidence) {
@@ -69,6 +74,13 @@ static uft_error_t d64_plugin_open(uft_disk_t *disk, const char *path, bool ro) 
     uint32_t total = 0;
     for (int t = 1; t <= p->max_track; t++) total += d64_spt[t];
     disk->geometry.total_sectors = total;
+
+    /* A .d64 with a trailing error-info block has one error byte per sector
+     * appended after the sector data (175531 = 35trk+683, 197376 = 40trk+768).
+     * Detect it so read_track can surface the 1541 controller error codes on
+     * the sectors instead of silently dropping them. */
+    p->err_offset = (long)total * 256;
+    p->has_errors = (sz >= p->err_offset + (long)total);
     return UFT_OK;
 }
 
@@ -95,6 +107,21 @@ static uft_error_t d64_plugin_read_track(uft_disk_t *disk, int cyl, int head,
         if (fread(buf, 1, 256, p->file) != 256) continue;
         uft_format_add_sector(track, (uint8_t)s, buf, 256,
                               (uint8_t)cyl, (uint8_t)head);
+
+        /* Surface the 1541 error code for this sector (represent, don't drop).
+         * Code 0x01 = "00, OK"; anything else (02=header not found, 04=data
+         * not found, 05=data checksum error, ...) is a read error → mark the
+         * sector CRC-bad so consumers see the original media defect. */
+        if (p->has_errors && track->sector_count > 0) {
+            long ei = p->err_offset + (off / 256);
+            uint8_t code = 0x01;
+            if (fseek(p->file, ei, SEEK_SET) == 0 &&
+                fread(&code, 1, 1, p->file) == 1 &&
+                code != 0x00 && code != 0x01) {
+                uft_sector_set_crc(&track->sectors[track->sector_count - 1],
+                                   false);
+            }
+        }
     }
     return UFT_OK;
 }

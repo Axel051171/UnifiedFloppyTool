@@ -818,17 +818,17 @@ copy-protection / disk-error awareness per class. See
   deleted-address-mark, bad-sector-flag) — error-aware set already flagged in
   the classification table. IMD done (MF-329); next: EDSK uPD765 status,
   STX fuzzy-mask, ATX.
-- **D64 error-map drop (real gap, found 2026-07-05):** the D64 *plugin*
-  (`src/formats/d64/uft_d64_plugin.c`) `read_track` reads only the 256-byte
-  sector data and never the trailing error-info block (683/768 bytes), and
-  `write_track` never emits it — so a D64-with-errormap round-tripped through
-  the plugin **loses the 1541 controller error codes silently**. (The
-  standalone analysis parser `uft_d64_parser_v2.c` DOES read `error_bytes`;
-  the plugin path does not.) Fix is container-level, not per-track: the error
-  map is a whole-file trailer that a per-track `write_track` cannot place —
-  needs an open-time load of the map + a close/flush that rewrites the trailer,
-  or a whole-image save path. Effort L; not started (reported, not
-  half-implemented).
+- **D64 error-map (found 2026-07-05; read half RESOLVED MF-333, write half
+  open):** the D64 *plugin* (`src/formats/d64/uft_d64_plugin.c`) used to read
+  only the 256-byte sector data and drop the trailing error-info block
+  (683/768 bytes) on both read and write, silently losing the 1541 controller
+  error codes. **Read + represent now fixed (MF-333):** `open` detects the
+  error block from the file size, `read_track` reads each sector's error code
+  and marks the sector CRC-bad for any non-OK code (0x02+), so consumers see
+  the original media defects (`test_d64_errormap`, 2/2). **Write-preserve still
+  open:** the error map is a whole-file trailer that a per-track `write_track`
+  cannot place — needs an open-time load + a close/flush that rewrites the
+  trailer, or a whole-image save path. Effort L (reported, not half-baked).
 - `FORMAT-VARIANTS.md`: per-family web research of sub-versions not yet
   read/written (WOZ1 vs 2, HFE v1/v3, A2R v2/v3, D88 revisions, …).
 - Byte-exact read correctness vs. real copy-protected disks is NOT verifiable
