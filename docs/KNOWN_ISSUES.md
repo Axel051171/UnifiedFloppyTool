@@ -877,15 +877,19 @@ copy-protection / disk-error awareness per class. See
   the D64 zones). Next step: add an optional per-track sector-count/size vector to
   the geometry model — public-struct change, ABI-relevant, so additive (new field,
   not layout change) + abi-bomb-detector review. Effort L.
-- **Header-CRC vs data-CRC separation** (new dimension, found 2026-07-05):
-  `uft_sector_t` has only `crc_ok` (+ aliases `crc_valid`/`data_crc_ok`) = DATA
-  CRC. It cannot represent an ID-field (address-mark) CRC error separately from a
-  data CRC error, though several formats distinguish them: D88 (0xA0 ID CRC vs 0xB0
-  data CRC), STX (`STX_SF_ID_CRC_ERROR` 0x02 vs `STX_SF_CRC_ERROR` 0x08), NFD
-  (ST1 vs ST2), EDSK (ST1/ST2). MF-336's D88 fix currently collapses 0xA0+0xB0 into
-  crc_ok=false. Next step: add `id_crc_ok` to uft_sector_t (additive) + map the
-  ID-field codes to it in D88/STX/EDSK/NFD readers, keep data CRC in crc_ok. Effort
-  M; additive field, no ABI break.
+- **Header-CRC vs data-CRC separation** (new dimension, MF-338, mostly DONE):
+  added an ABI-additive `id_crc_ok` field to uft_sector_t + `uft_sector_set_id_crc`
+  helper; `uft_format_add_sector` defaults it true. Wired:
+  - **D88 DONE** — 0xA0 -> id_crc_ok false, 0xB0 -> crc_ok false (was collapsed).
+  - **EDSK DONE** — uPD765 ST2 DD -> data crc, ST1 DE alone -> ID crc.
+  Both tested (`test_d88_error_marks`, `test_edsk_error_marks`, 4 sectors each).
+  - **STX = structural limit (not a gap):** the WD1772 read-sector status has a
+    single CRC-Error bit (0x08 = data-field CRC); an ID-field CRC failure surfaces
+    as Record-Not-Found (0x10), which has several causes, so it cannot be mapped to
+    id_crc_ok without over-interpreting. Data CRC (0x08) is already mapped.
+    Documented, not fabricated.
+  - **NFD deferred** — reader is structurally wrong (see NFD finding); the ST1/ST2
+    separation lands with the full NFD rewrite (corpus-blocked).
 - Extend the content probe to the remaining flux sources (IPF, A2R) and to
   bitstream sources (G64/HFE weak-marker snapshot) — each keeps the class-based
   fallback until its probe lands. SCP (MF-328) + KryoFlux (MF-331) done.
