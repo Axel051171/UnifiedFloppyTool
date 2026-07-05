@@ -93,7 +93,12 @@ static uft_error_t d88_read_track(uft_disk_t* disk, int cyl, int head, uft_track
         if (track->sector_count > 0) {
             uint8_t ddam = sec_hdr[7];
             uint8_t st   = sec_hdr[8];
-            if (st == 0xA0 || st == 0xB0)
+            /* 0xA0 = ID-field (address-mark) CRC error, 0xB0 = data-field CRC
+             * error — kept separate (header vs data fault, different
+             * protection relevance) instead of collapsing both into crc_ok. */
+            if (st == 0xA0)
+                uft_sector_set_id_crc(&track->sectors[track->sector_count - 1], false);
+            if (st == 0xB0)
                 uft_sector_set_crc(&track->sectors[track->sector_count - 1], false);
             if (ddam == 0x10)
                 track->sectors[track->sector_count - 1].deleted = true;

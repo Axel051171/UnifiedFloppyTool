@@ -362,6 +362,14 @@ typedef struct uft_sector {
     /* data_size already exists at line 301 as uint16_t */
     int              good_sectors;    ///< Track-level stat (compat, unused in sector)
     int              bad_sectors;     ///< Track-level stat (compat, unused in sector)
+
+    /* Header/ID-field CRC, kept SEPARATE from the data CRC (crc_ok above).
+     * An ID-field (address-mark) CRC error means the sector's C/H/R/N header
+     * failed its checksum — a different fault than a data-field CRC error, and
+     * differently protection-relevant. Formats that distinguish them set this
+     * (D88 0xA0 vs 0xB0, STX/EDSK/NFD ST1 vs ST2). Default true = no ID error.
+     * Added at struct end (ABI-additive; existing field offsets unchanged). */
+    bool             id_crc_ok;       ///< ID-field (address-mark) CRC valid
 } uft_sector_t;
 
 /**
@@ -378,6 +386,20 @@ static inline void uft_sector_set_crc(uft_sector_t *s, bool ok) {
     s->crc_ok = ok;
     s->crc_valid = ok;
     s->data_crc_ok = ok;
+}
+
+/**
+ * @brief Set a sector's ID-field (address-mark) CRC-OK state.
+ *
+ * Independent of uft_sector_set_crc(), which sets the DATA CRC. Use this for an
+ * ID-field CRC error (the C/H/R/N header failed its checksum) so it is not
+ * conflated with a data-field CRC error. Single statement — safe in a
+ * brace-less `if`. Default (unset) is false, so a reader that cares about ID
+ * CRC must set it true for good sectors; uft_format_add_sector() does that.
+ */
+static inline void uft_sector_set_id_crc(uft_sector_t *s, bool ok) {
+    if (!s) return;
+    s->id_crc_ok = ok;
 }
 #endif /* UFT_SECTOR_T_DEFINED */
 

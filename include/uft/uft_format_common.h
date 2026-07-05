@@ -100,6 +100,7 @@ static inline uft_error_t uft_format_add_sector(
     sector.data_size = size;
     sector.status = UFT_SECTOR_OK;
     uft_sector_set_crc(&sector, true);   /* good sector — FMT-5, all 3 fields */
+    uft_sector_set_id_crc(&sector, true);/* default: ID-field CRC ok (no header error) */
 
     uft_error_t err = uft_track_add_sector(track, &sector);
     if (err != UFT_OK) {

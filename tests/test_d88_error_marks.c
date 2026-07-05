@@ -38,7 +38,7 @@ static int _pass = 0, _fail = 0, _last_fail = 0;
 
 #define D88_HDR 0x2B0u
 #define SS 256u
-#define NSEC 3
+#define NSEC 4
 
 static void get_temp_path(char *path, size_t size) {
     const char *dir = getenv("TMPDIR");
@@ -69,10 +69,10 @@ static int build_d88(const char *path) {
     put_le32(buf + 0x1C, total);                     /* disk size */
     put_le32(buf + 0x20, D88_HDR);                   /* track[0] offset */
 
-    const uint8_t rnum[NSEC] = { 1, 2, 3 };
-    const uint8_t ddam[NSEC] = { 0x00, 0x10 /*deleted*/, 0x00 };
-    const uint8_t fdc[NSEC]  = { 0x00, 0x00, 0xB0 /*data CRC error*/ };
-    const uint8_t tag[NSEC]  = { 0xA1, 0xB2, 0xC3 };
+    const uint8_t rnum[NSEC] = { 1, 2, 3, 4 };
+    const uint8_t ddam[NSEC] = { 0x00, 0x10 /*deleted*/, 0x00, 0x00 };
+    const uint8_t fdc[NSEC]  = { 0x00, 0x00, 0xB0 /*data CRC*/, 0xA0 /*ID CRC*/ };
+    const uint8_t tag[NSEC]  = { 0xA1, 0xB2, 0xC3, 0xD4 };
 
     uint8_t *t = buf + D88_HDR;
     for (int s = 0; s < NSEC; s++) {
@@ -110,14 +110,25 @@ static void assert_marks(uft_track_t *tr) {
     ASSERT(tr->sector_count == NSEC);
     const uft_sector_t *n = find_by_tag(tr, 0xA1);
     const uft_sector_t *d = find_by_tag(tr, 0xB2);
-    const uft_sector_t *e = find_by_tag(tr, 0xC3);
-    ASSERT(n && d && e);
+    const uft_sector_t *e = find_by_tag(tr, 0xC3);   /* data CRC (0xB0) */
+    const uft_sector_t *i = find_by_tag(tr, 0xD4);   /* ID CRC   (0xA0) */
+    ASSERT(n && d && e && i);
+    /* normal */
     ASSERT(n->crc_ok == true);
+    ASSERT(n->id_crc_ok == true);
     ASSERT(n->deleted == false);
+    /* deleted */
     ASSERT(d->deleted == true);           /* DDAM +07 (was read from +0D) */
+    ASSERT(d->crc_ok == true);
+    ASSERT(d->id_crc_ok == true);
+    /* data CRC error: data crc bad, ID crc still ok (separated, not collapsed) */
     ASSERT(e->crc_ok == false);           /* FDC status +08 = 0xB0 */
     ASSERT(e->crc_valid == false);
     ASSERT(e->data_crc_ok == false);
+    ASSERT(e->id_crc_ok == true);
+    /* ID-field CRC error: ID crc bad, DATA crc still ok (header vs data) */
+    ASSERT(i->id_crc_ok == false);        /* FDC status +08 = 0xA0 */
+    ASSERT(i->crc_ok == true);
 }
 
 TEST(read_surfaces_error_marks) {
