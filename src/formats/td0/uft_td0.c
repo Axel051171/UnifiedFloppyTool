@@ -86,7 +86,12 @@ static uft_error_t td0_open(uft_disk_t* disk, const char* path, bool read_only) 
                 uint8_t len_buf[2];
                 if (fread(len_buf, 1, 2, f) != 2) { break; }
                 uint16_t len = uft_read_le16(len_buf);
-                if (fseek(f, len - 1, SEEK_CUR) != 0) {
+                /* The data record after the length word is exactly `len` bytes
+                 * (byte 0 = encoding method, rest = encoded data) — read_track
+                 * consumes `len` bytes here, so the geometry scan must skip the
+                 * same `len`. The previous `len - 1` drifted one byte per data
+                 * sector and mis-scanned the geometry of any multi-sector TD0. */
+                if (fseek(f, len, SEEK_CUR) != 0) {
                     free(pdata);
                     fclose(f);
                     return UFT_ERR_FILE_READ;
