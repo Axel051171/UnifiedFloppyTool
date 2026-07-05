@@ -267,6 +267,18 @@ foreach(test_source ${TEST_SOURCES})
     elseif(${test_name} STREQUAL "test_st_write_roundtrip")
         # Phase-6 round-trip: Atari ST write_track -> read_track (MF-341)
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/st/uft_st.c)
+    elseif(${test_name} STREQUAL "test_d71_write_roundtrip")
+        # Phase-6 round-trip: Commodore D71 write_track -> read_track (MF-342)
+        target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/d71/uft_d71.c)
+    elseif(${test_name} STREQUAL "test_d81_write_roundtrip")
+        # Phase-6 round-trip: Commodore D81 write_track -> read_track (MF-342)
+        target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/d81/uft_d81.c)
+    elseif(${test_name} STREQUAL "test_img_write_roundtrip")
+        # Phase-6 round-trip: IBM PC IMG write_track -> read_track (MF-342)
+        # img read_metadata pulls uft_meta_free (uft_metadata.c) via core stubs
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/img/uft_img.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_metadata.c)
     elseif(${test_name} STREQUAL "test_td0_error_marks")
         # TD0 per-sector CRC/deleted flags + open-scan off-by-one (Phase-4 WP5, MF-334)
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/td0/uft_td0.c)

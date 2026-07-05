@@ -316,6 +316,11 @@ static uft_error_t img_read_track(uft_disk_t* disk, int cylinder, int head,
         }
         
         sector.data_size = IMG_SECTOR_SIZE;
+        sector.data_len  = IMG_SECTOR_SIZE;  /* mirror to the modern field so
+                                              * consumers that check data_len
+                                              * (post-MF-321 standard) see the
+                                              * data — else a cross-format write
+                                              * reads it as empty (no-op). */
         sector.status = UFT_SECTOR_OK;
         
         uft_error_t err = uft_track_add_sector(track, &sector);
@@ -364,7 +369,9 @@ static uft_error_t img_write_track(uft_disk_t* disk, int cylinder, int head,
     for (int s = 1; s <= disk->geometry.sectors; s++) {
         const uft_sector_t* sector = uft_track_find_sector(track, s);
         
-        if (sector && sector->data && sector->data_size >= IMG_SECTOR_SIZE) {
+        if (sector && sector->data &&
+            (sector->data_len >= IMG_SECTOR_SIZE ||
+             sector->data_size >= IMG_SECTOR_SIZE)) {
             if (fwrite(sector->data, IMG_SECTOR_SIZE, 1, pdata->file) != 1) {
                 return UFT_ERROR_FILE_WRITE;
             }
