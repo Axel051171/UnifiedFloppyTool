@@ -34,12 +34,14 @@ extern "C" {
  * of 0 means the scan found none of that artifact in this image.
  */
 typedef struct uft_protection_summary {
-    uint32_t track_count;             ///< tracks carrying flux
-    uint32_t max_revolutions;         ///< highest revolution count over all tracks
-    uint32_t weak_track_count;        ///< tracks with cross-revolution instability
+    uint32_t track_count;             ///< tracks carrying flux (robust)
+    uint32_t max_revolutions;         ///< highest revolution count over all tracks (robust)
+    uint32_t weak_track_count;        ///< tracks with cross-revolution divergence — COARSE,
+                                      ///< over-reports on real disks (motor jitter), never
+                                      ///< under-reports; NOT a precise weak-bit count
     uint64_t total_flux_transitions;  ///< sum of transitions (timing a sector target drops)
-    bool     has_multi_revolution;    ///< any track with >1 revolution
-    bool     has_weak_regions;        ///< weak_track_count > 0
+    bool     has_multi_revolution;    ///< any track with >1 revolution (robust)
+    bool     has_weak_regions;        ///< weak_track_count > 0 (coarse over-report, safe direction)
 } uft_protection_summary_t;
 
 /**

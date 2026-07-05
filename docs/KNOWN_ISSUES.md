@@ -765,7 +765,18 @@ copy-protection / disk-error awareness per class. See
 - **Klasse-3 content warning** (MF-328): `uft_protection_probe_scp` scans the
   actual bytes so the lossy-export sidecar reports real weak-bit / multi-rev
   counts instead of a generic count=0 placeholder — and stays silent about
-  weak bits when there are none (`test_protection_probe`, 4/4).
+  weak bits when there are none (`test_protection_probe`, 5/5).
+  **Precision limit (reported honestly):** the weak-track heuristic compares
+  revolutions positionally, so on real disks it OVER-reports (motor-speed
+  jitter changes the transition count between revolutions) — it flags most
+  real multi-revolution captures, not only genuinely weak ones. This is the
+  SAFE direction: it never marks a weak capture as clean, so the export
+  warning is never wrongly suppressed (dispatch drops the WEAK_BITS entry only
+  when weak_track_count == 0). It is NOT a precise weak-bit count; sub-track
+  precision needs bit-cell decode + inter-revolution alignment (DeepRead
+  multi-rev fusion). Validated on aligned synthetic flux; real-disk precision
+  requires a ground-truth corpus. The over-report contract is pinned by
+  `jitter_overreports_weak_safely`.
 - **Disk-error marking, IMD** (MF-329): `test_imd_error_marks` proves the IMD
   plugin reads per-sector deleted-address-mark (dtype 3/4) and data-CRC-error
   (dtype 5/6) status, represents them on `uft_sector_t` (deleted / crc_ok +

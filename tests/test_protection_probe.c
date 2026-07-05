@@ -141,6 +141,33 @@ TEST(stable_multirev_not_weak) {
     free(bytes);
 }
 
+/* Motor jitter makes real revolutions differ in transition count. The probe
+   deliberately OVER-reports (flags this weak) rather than risk hiding a real
+   weak-bit loss — this pins that safe-direction contract so a future change
+   can't silently turn it into under-reporting. */
+TEST(jitter_overreports_weak_safely) {
+    const uint32_t r0[] = { 4000,4000,6000,4000,8000,4000 };       /* 6 */
+    const uint32_t r1[] = { 4000,4000,6000,4000,8000,4000,4000 };  /* 7 (one more) */
+    uint32_t d0=0; for (size_t i=0;i<6;i++) d0+=r0[i];
+    uint32_t d1=0; for (size_t i=0;i<7;i++) d1+=r1[i];
+
+    scp_writer_t *w = scp_writer_create(0x00, 2);
+    ASSERT(w != NULL);
+    ASSERT(scp_writer_add_track(w, 0, 0, r0, 6, d0, 0) == 0);
+    ASSERT(scp_writer_add_track(w, 0, 0, r1, 7, d1, 1) == 0);
+
+    uint8_t *bytes = NULL;
+    size_t size = save_and_slurp(w, &bytes);
+    scp_writer_free(w);
+    ASSERT(size > 0 && bytes != NULL);
+
+    uft_protection_summary_t s;
+    ASSERT(uft_protection_probe_scp(bytes, size, &s) == UFT_OK);
+    ASSERT(s.has_multi_revolution == true);
+    ASSERT(s.has_weak_regions == true);            /* over-report, safe direction */
+    free(bytes);
+}
+
 TEST(rejects_bad_args) {
     uft_protection_summary_t s;
     uint8_t dummy[4] = {0};
@@ -157,6 +184,7 @@ int main(void) {
     RUN(unprotected_reports_no_anomaly);
     RUN(weakbit_multirev_reports_anomaly);
     RUN(stable_multirev_not_weak);
+    RUN(jitter_overreports_weak_safely);
     RUN(rejects_bad_args);
     printf("\nResults: %d passed, %d failed\n", _pass, _fail);
     return _fail == 0 ? 0 : 1;

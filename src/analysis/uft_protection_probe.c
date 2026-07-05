@@ -20,7 +20,22 @@
 
 /* A track is weak if any revolution disagrees with revolution 0 — either a
  * differing transition count (bits appear/vanish) or a matching-index timing
- * divergence beyond the tolerance. */
+ * divergence beyond the tolerance.
+ *
+ * PRECISION LIMIT (important, honest): this compares revolutions POSITIONALLY
+ * (flux index i of rev0 vs rev r). On real hardware, motor-speed jitter makes
+ * revolutions drift so their transition counts differ by ~0.5% and the same
+ * index maps to a physically different spot — so this heuristic OVER-reports:
+ * it flags most real multi-revolution captures, not only genuinely weak ones.
+ * That is deliberately the safe direction — it never marks a weak capture as
+ * clean, so the export warning is never suppressed for a disk that could carry
+ * weak bits (see the dispatch logic in uft_format_convert_dispatch.c: the
+ * WEAK_BITS entry is dropped ONLY when this returns weak_track_count == 0).
+ * It is NOT a precise weak-bit count. Sub-track weak-region precision needs
+ * bit-cell decoding + inter-revolution alignment (the DeepRead multi-rev
+ * fusion path), which is out of this lightweight probe's scope. Validated on
+ * aligned synthetic flux only; real-disk precision requires a ground-truth
+ * corpus (KNOWN_ISSUES FMT-9). */
 static bool track_is_weak(const uft_scp_track_data_t *t) {
     if (t->revolution_count < 2) return false;
     const uft_scp_rev_data_t *r0 = &t->revolutions[0];
