@@ -804,6 +804,15 @@ copy-protection / disk-error awareness per class. See
   `read_track` consumes `len`, drifting one byte per data sector and
   mis-scanning multi-sector geometry. Fixed open to match the authoritative
   decoder. WP5 now covers IMD + EDSK + D64(read) + TD0(read).
+- **Disk-error marking, STX** (MF-335): read+represent half (STX is read-only).
+  Web-verified against the Pasti spec that the sector descriptor holds R at
+  0x0A and the FDC status at 0x0E — the plugin read sec_id from 0x08 (ID track)
+  and the FDC status from 0x0C (ID CRC), so sector IDs collapsed and CRC-error
+  detection read the wrong byte; the deleted mark was never surfaced. Fixed the
+  offsets and mapped FDC bit3->CRC error, bit5->deleted. `test_stx_error_marks`
+  2/2. WP5 now covers IMD + EDSK + D64(read) + TD0(read) + STX(read).
+  **Three real bugs surfaced by writing the disk-error tests** (D64 drop MF-333,
+  TD0 off-by-one MF-334, STX offsets MF-335) — building the test IS the audit.
 
 **Open (next steps, concrete):**
 - Extend the content probe to the remaining flux sources (IPF, A2R) and to
