@@ -83,14 +83,19 @@ static uft_error_t d88_read_track(uft_disk_t* disk, int cyl, int head, uft_track
         if (!buf) break;
         if (fread(buf, 1, dsize, p->file) != dsize) { free(buf); break; }
         uft_format_add_sector(track, sec_hdr[2] - 1, buf, dsize, cyl, head);
-        /* D88 sector status byte: sec_hdr[13]
-         * 0x00=normal, 0x10=deleted, 0xA0=ID CRC error,
-         * 0xB0=data CRC error, 0xE0=no address mark, 0xF0=no data */
+        /* D88 sector header (pc98.org spec / MAME d88_dsk):
+         *   +07 DDAM flag  (0x00 normal, 0x10 deleted-data mark)
+         *   +08 FDC status (0x00 normal, 0xA0 ID CRC error, 0xB0 data CRC
+         *                   error, 0xE0 no address mark, 0xF0 no data)
+         *   +09..0D reserved (NP2Kai: seek time @+09, RPM @+0D)
+         * The previous code read the status from +0D (a reserved/RPM byte),
+         * so deleted and CRC errors were taken from the wrong offset. */
         if (track->sector_count > 0) {
-            uint8_t st = sec_hdr[13];
+            uint8_t ddam = sec_hdr[7];
+            uint8_t st   = sec_hdr[8];
             if (st == 0xA0 || st == 0xB0)
                 uft_sector_set_crc(&track->sectors[track->sector_count - 1], false);
-            if (st == 0x10)
+            if (ddam == 0x10)
                 track->sectors[track->sector_count - 1].deleted = true;
         }
         free(buf);
