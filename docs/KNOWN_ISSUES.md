@@ -813,6 +813,22 @@ copy-protection / disk-error awareness per class. See
   2/2. WP5 now covers IMD + EDSK + D64(read) + TD0(read) + STX(read).
   **Three real bugs surfaced by writing the disk-error tests** (D64 drop MF-333,
   TD0 off-by-one MF-334, STX offsets MF-335) — building the test IS the audit.
+- **Disk-error audit, ATX + DMK (2026-07-05):**
+  - **ATX** (`src/formats/atx/uft_atx.c`): already complete + spec-correct —
+    sector header sh[0]=number, sh[1]=FDC status, sh[2:3]=position, sh[4:7]=data
+    offset (verified against the VAPI/a8rawconv layout), FDC bit3→CRC error,
+    bit5→deleted, plus weak-bit masks and data_mark (0xF8/0xFB). No bug; no
+    change. (Test deferred — the chunked track structure is heavier to
+    synthesise than the descriptor formats and the code is verified correct.)
+  - **DMK** (`src/formats/dmk/uft_dmk.c`): the deleted-address-mark (DAM 0xF8)
+    is mapped to `.deleted` correctly. DMK has NO explicit CRC-error flag — it
+    stores the raw track bytes including the ID/data CRC words, so a CRC error
+    can only be *computed* (MFM/FM CRC over the exact address-mark→data range).
+    That is a structural enhancement (not a format-provided flag) with real
+    byte-range/verification risk, so it's deferred, not faked. Deleted: done.
+  Error-aware WP5 status: IMD, EDSK (r+w preserve) · D64, TD0, STX (r, fixed) ·
+  ATX (verified complete) · DMK (deleted done, CRC-compute deferred).
+  Not yet audited: D88, FDI, NFD.
 
 **Open (next steps, concrete):**
 - Extend the content probe to the remaining flux sources (IPF, A2R) and to
