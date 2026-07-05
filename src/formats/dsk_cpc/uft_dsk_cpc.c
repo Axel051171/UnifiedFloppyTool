@@ -119,8 +119,13 @@ static uft_error_t dsk_read_track(uft_disk_t* disk, int cyl, int head, uft_track
          * ST2 bit 6 (0x40) = Control Mark (deleted data) */
         if (track->sector_count > 0) {
             uint8_t st1 = sec_info[4], st2 = sec_info[5];
-            if ((st1 & 0x20) || (st2 & 0x20))
+            /* uPD765: ST2 bit5 (DD) = CRC error in the DATA field; ST1 bit5
+             * (DE) = CRC error detected — if DD is not also set, the error is
+             * in the ID/address field. Separate the two faults. */
+            if (st2 & 0x20)
                 uft_sector_set_crc(&track->sectors[track->sector_count - 1], false);
+            else if (st1 & 0x20)
+                uft_sector_set_id_crc(&track->sectors[track->sector_count - 1], false);
             if (st2 & 0x40)
                 track->sectors[track->sector_count - 1].deleted = true;
         }

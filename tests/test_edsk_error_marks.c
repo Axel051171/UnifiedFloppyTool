@@ -61,7 +61,7 @@ static int build_edsk(const char *path) {
     memcpy(header, "EXTENDED CPC DSK File\r\nDisk-Info\r\n", 34);
     header[0x30] = 1;          /* 1 track */
     header[0x31] = 1;          /* 1 side */
-    header[0x34] = 4;          /* track 0 size = 4*256 = 1024 (info + 3 sectors) */
+    header[0x34] = 5;          /* track 0 size = 5*256 = 1280 (info + 4 sectors) */
 
     uint8_t tinfo[256];
     memset(tinfo, 0, sizeof(tinfo));
@@ -69,22 +69,27 @@ static int build_edsk(const char *path) {
     tinfo[0x10] = 0;           /* track number */
     tinfo[0x11] = 0;           /* side */
     tinfo[0x14] = 1;           /* sector size code 1 -> 256 bytes */
-    tinfo[0x15] = 3;           /* 3 sectors */
+    tinfo[0x15] = 4;           /* 4 sectors */
     tinfo[0x17] = 0xE5;        /* filler */
-    /* sector info list: C,H,R,N,ST1,ST2,size_lo,size_hi (8 bytes each) */
+    /* sector info list: C,H,R,N,ST1,ST2,size_lo,size_hi (8 bytes each).
+     * uPD765: ST2 bit5 (0x20) = data-field CRC; ST1 bit5 (0x20) without ST2
+     * bit5 = ID-field CRC; ST2 bit6 (0x40) = deleted. */
     uint8_t *si;
-    si = &tinfo[0x18 + 0*8];   /* normal   */
+    si = &tinfo[0x18 + 0*8];   /* normal          */
     si[0]=0;si[1]=0;si[2]=0xC1;si[3]=1;si[4]=0x00;si[5]=0x00;si[6]=0x00;si[7]=0x01;
-    si = &tinfo[0x18 + 1*8];   /* deleted  */
+    si = &tinfo[0x18 + 1*8];   /* deleted         */
     si[0]=0;si[1]=0;si[2]=0xC2;si[3]=1;si[4]=0x00;si[5]=0x40;si[6]=0x00;si[7]=0x01;
-    si = &tinfo[0x18 + 2*8];   /* crc err  */
+    si = &tinfo[0x18 + 2*8];   /* data CRC error  */
     si[0]=0;si[1]=0;si[2]=0xC3;si[3]=1;si[4]=0x20;si[5]=0x20;si[6]=0x00;si[7]=0x01;
+    si = &tinfo[0x18 + 3*8];   /* ID-field CRC    */
+    si[0]=0;si[1]=0;si[2]=0xC4;si[3]=1;si[4]=0x20;si[5]=0x00;si[6]=0x00;si[7]=0x01;
 
-    uint8_t sec[3][256];
+    uint8_t sec[4][256];
     memset(sec, 0x10, sizeof(sec));
-    sec[0][0] = 0xA1;          /* normal tag  */
-    sec[1][0] = 0xB2;          /* deleted tag */
-    sec[2][0] = 0xC3;          /* crc-err tag */
+    sec[0][0] = 0xA1;          /* normal tag   */
+    sec[1][0] = 0xB2;          /* deleted tag  */
+    sec[2][0] = 0xC3;          /* data-crc tag */
+    sec[3][0] = 0xD4;          /* id-crc tag   */
 
     FILE *f = fopen(path, "wb");
     if (!f) return 0;
@@ -92,7 +97,8 @@ static int build_edsk(const char *path) {
              fwrite(tinfo, 1, 256, f) == 256 &&
              fwrite(sec[0], 1, 256, f) == 256 &&
              fwrite(sec[1], 1, 256, f) == 256 &&
-             fwrite(sec[2], 1, 256, f) == 256;
+             fwrite(sec[2], 1, 256, f) == 256 &&
+             fwrite(sec[3], 1, 256, f) == 256;
     fclose(f);
     return ok;
 }
@@ -105,17 +111,27 @@ static const uft_sector_t *find_by_tag(const uft_track_t *t, uint8_t tag) {
 }
 
 static void assert_marks(uft_track_t *t) {
-    ASSERT(t->sector_count == 3);
+    ASSERT(t->sector_count == 4);
     const uft_sector_t *n = find_by_tag(t, 0xA1);
     const uft_sector_t *d = find_by_tag(t, 0xB2);
-    const uft_sector_t *e = find_by_tag(t, 0xC3);
-    ASSERT(n && d && e);
+    const uft_sector_t *e = find_by_tag(t, 0xC3);   /* data CRC */
+    const uft_sector_t *i = find_by_tag(t, 0xD4);   /* ID CRC   */
+    ASSERT(n && d && e && i);
+    /* normal */
     ASSERT(n->crc_ok == true);
+    ASSERT(n->id_crc_ok == true);
     ASSERT(n->deleted == false);
+    /* deleted */
     ASSERT(d->deleted == true);
+    ASSERT(d->crc_ok == true);
+    /* data-field CRC error: data bad, ID ok (separated) */
     ASSERT(e->crc_ok == false);
     ASSERT(e->crc_valid == false);
     ASSERT(e->data_crc_ok == false);
+    ASSERT(e->id_crc_ok == true);
+    /* ID-field CRC error: ID bad, data ok */
+    ASSERT(i->id_crc_ok == false);
+    ASSERT(i->crc_ok == true);
 }
 
 TEST(read_surfaces_error_marks) {
