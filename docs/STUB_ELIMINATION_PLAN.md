@@ -233,3 +233,41 @@ Tier-Auswahl nach User-Demand.
 - `tests/HARDWARE_TRUTH_TESTS.md` — UFT-008/009/010 Gates für Phase 3
 - `scripts/check_consistency.py` — wird in Phase 2 um lazy-stub-Pattern erweitert
 - `audit_plugin_compliance.py` — Tier-Fortschritt-Messung in Phase 4
+
+---
+
+## Re-Verifikation 2026-07-05 (Bug-Fix-Goal Phase 0)
+
+Frischer Lauf beider Audit-Skripte gegen den aktuellen Repo-Stand, Diff gegen
+die 2026-07-03-Zahlen:
+
+| Metrik | 2026-07-03 | 2026-07-05 | Diff |
+|---|---|---|---|
+| Unimplementierte `uft_*`-Decls | 303 | **303** | 0 |
+| davon 0 Referenzen (DELETE) | 100 | **100** | 0 |
+| davon mit Referenzen (Kaskade) | 203 | **203** | 0 |
+| C1 Pattern-A v3-Parser | 4 | **4** | 0 |
+| C5 core-stub-Fns | 22 | **22** | 0 |
+| C8 Stub-Marker-Dateien (unmarkiert) | 28 (21) | **28 (21)** | 0 |
+| Registrierte Plugins (compliance) | 80 | **84** | +4 |
+| Plugin Prinzip-7-compliant | — | **84/84 (100%)** | — |
+
+**Bestätigter Kern-Befund (deckt sich mit MF-298-Kaskaden-Analyse):** von den
+303 unimplementierten Decls ist **keine eine Funktionslücke im gebauten Binary**.
+Der Build ist grün — das beweist mathematisch, dass kein gebauter `.c`/`.cpp`
+ein undefiniertes `uft_*`-Symbol linkt. Verifiziert via CSV
+(`scan_skeleton_callers.py --csv`): nur **18/303** Decls haben nominell einen
+`callers_src > 0`, und diese Caller liegen durchweg in **NICHT-gebauten**
+Dateien (z.B. `uft_params_get_int` nur in `src/gui/UftParameterModel.cpp`, nicht
+in der `.pro`; `uft_batch_wizard.cpp` ebenfalls nicht gebaut). Die restlichen
+285 sind test-only (excluded Skeleton-Tests wie `test_pll_unified`).
+
+**Konsequenz für das Bug-Fix-Goal:** Die Phase-1-Prämisse „203 echte
+Funktionslücken implementieren" beruht auf src+test-Summen; nach `callers_src`
+gefiltert gibt es **keine implementier-pflichtige Produktionslücke**. Die korrekte
+Disposition bleibt die bereits etablierte (MF-291..300): test-getrackte
+Planned-APIs behalten, Dead-GUI-Phantome (fateditorwidget, batch_wizard,
+UftParameterModel) sind Maintainer-Scope (Löschen-vs-Verdrahten), 4 Roadmap-
+Header bewusst behalten. Zusätzlicher Fund: **3 parallele Skeleton-PLL-Header**
+(`uft_pll.h`, `decoder/uft_pll.h`, `uft_pll_unified.h`) deklarieren dieselbe
+nie-implementierte API — Konsolidierungs-Kandidat (Phase 5), kein Implement-Ziel.
