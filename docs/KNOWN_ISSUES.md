@@ -826,9 +826,19 @@ copy-protection / disk-error awareness per class. See
     can only be *computed* (MFM/FM CRC over the exact address-mark→data range).
     That is a structural enhancement (not a format-provided flag) with real
     byte-range/verification risk, so it's deferred, not faked. Deleted: done.
-  Error-aware WP5 status: IMD, EDSK (r+w preserve) · D64, TD0, STX (r, fixed) ·
-  ATX (verified complete) · DMK (deleted done, CRC-compute deferred).
-  Not yet audited: D88, FDI, NFD.
+  Error-aware WP5 status: IMD, EDSK, D88 (r+w preserve) · D64, TD0, STX
+  (r, fixed) · ATX (verified complete) · DMK (deleted done, CRC-compute
+  deferred). Not yet audited: FDI, NFD.
+- **Disk-error marking, D88** (MF-336): read+represent+preserve. Fourth real
+  bug of the audit — the plugin read the sector status from offset +0D (a
+  reserved/RPM byte) instead of the DDAM flag at +07 and the FDC status at +08
+  (verified vs pc98.org / MAME d88_dsk). Fixed; `test_d88_error_marks` 2/2.
+- **Pattern (4 bugs, systemic):** the disk-error audit found four real bugs —
+  D64 error-block dropped (MF-333), TD0 open-scan off-by-one (MF-334), and
+  **two wrong sector-header status offsets** (STX MF-335, D88 MF-336). The
+  format layer's descriptor/offset parsers need spec-offset web-verification
+  before being trusted (consistent with FMT-1..4 fabrication findings). Test
+  construction is the audit that surfaces them.
 
 **Open (next steps, concrete):**
 - Extend the content probe to the remaining flux sources (IPF, A2R) and to
