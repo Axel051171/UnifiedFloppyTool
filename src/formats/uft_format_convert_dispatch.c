@@ -610,8 +610,15 @@ uft_error_t uft_convert_file(const char* src_path,
          * flux formats fall back to the class-based list until their probe
          * lands, so nothing regresses. */
         uft_protection_summary_t psum = {0};
-        bool have_scan = (src_format == UFT_FORMAT_SCP) &&
-            (uft_protection_probe_scp(src_data, src_size, &psum) == UFT_OK);
+        bool have_scan = false;
+        if (src_format == UFT_FORMAT_SCP)
+            have_scan = (uft_protection_probe_scp(src_data, src_size, &psum) == UFT_OK);
+        else if (src_format == UFT_FORMAT_KRYOFLUX)
+            have_scan = (uft_protection_probe_kryoflux(src_data, src_size, &psum) == UFT_OK);
+        /* Suppress the WEAK_BITS entry only when a scan RELIABLY found no weak
+         * bits (SCP). A raw KryoFlux stream can't reliably rule them out, so
+         * weak_detection_reliable is false and the conservative warning stays. */
+        bool weak_suppressible = have_scan && psum.weak_detection_reliable;
 
         if (src_cls == UFT_FCLASS_FLUX && dst_cls == UFT_FCLASS_SECTOR) {
             entries[n_entries++] = (uft_loss_entry_t){
@@ -627,7 +634,7 @@ uft_error_t uft_convert_file(const char* src_path,
              * must not receive a false weak-bit warning ("Keine erfundenen
              * Daten"). Without a scan, keep the conservative always-on entry
              * so a real loss is never silently hidden either. */
-            if (!have_scan || psum.has_weak_regions) {
+            if (!weak_suppressible || psum.has_weak_regions) {
                 entries[n_entries++] = (uft_loss_entry_t){
                     UFT_LOSS_WEAK_BITS, have_scan ? psum.weak_track_count : 0,
                     "Weak/fuzzy bits coerced to a single resolved value."

@@ -42,6 +42,10 @@ typedef struct uft_protection_summary {
     uint64_t total_flux_transitions;  ///< sum of transitions (timing a sector target drops)
     bool     has_multi_revolution;    ///< any track with >1 revolution (robust)
     bool     has_weak_regions;        ///< weak_track_count > 0 (coarse over-report, safe direction)
+    bool     weak_detection_reliable; ///< true only if weak_track_count is meaningful for
+                                      ///< suppression. false for raw index-delimited streams
+                                      ///< (KryoFlux) where revs aren't aligned — the caller
+                                      ///< must NOT suppress a weak-bit warning on false.
 } uft_protection_summary_t;
 
 /**
@@ -63,6 +67,24 @@ typedef struct uft_protection_summary {
  */
 uft_error_t uft_protection_probe_scp(const uint8_t *data, size_t size,
                                      uft_protection_summary_t *out);
+
+/**
+ * @brief Scan an in-memory KryoFlux stream for protection-relevant anomalies.
+ *
+ * KryoFlux stores one track as a raw flux stream delimited by index pulses
+ * (not pre-split aligned revolutions like SCP). This probe reports the ROBUST
+ * signals only — track present, revolution count (index pulses - 1), flux
+ * timing present, transition total. It sets `weak_detection_reliable = false`:
+ * reliably detecting weak bits from an unaligned raw stream needs bit-cell
+ * decode + inter-revolution alignment (DeepRead), so the caller must keep the
+ * conservative weak-bit warning rather than suppress it. Bounds-safe via the
+ * KryoFlux stream decoder; a malformed stream returns an error.
+ *
+ * @return UFT_OK on success, UFT_ERR_NULL_POINTER on bad args,
+ *         UFT_ERR_CORRUPTED if the stream cannot be decoded.
+ */
+uft_error_t uft_protection_probe_kryoflux(const uint8_t *data, size_t size,
+                                          uft_protection_summary_t *out);
 
 #ifdef __cplusplus
 }

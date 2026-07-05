@@ -9,6 +9,7 @@
 
 #include "uft/analysis/uft_protection_probe.h"
 #include "uft/flux/uft_scp_parser.h"
+#include "uft/flux/uft_kryoflux.h"
 
 #include <string.h>
 
@@ -83,6 +84,43 @@ uft_error_t uft_protection_probe_scp(const uint8_t *data, size_t size,
     }
 
     out->has_weak_regions = (out->weak_track_count > 0);
+    out->weak_detection_reliable = true;   /* SCP revs are pre-split + aligned */
     if (!any_track) return UFT_ERR_CORRUPTED;   /* no readable track at all */
+    return UFT_OK;
+}
+
+uft_error_t uft_protection_probe_kryoflux(const uint8_t *data, size_t size,
+                                          uft_protection_summary_t *out) {
+    if (!data || !out) return UFT_ERR_NULL_POINTER;
+    memset(out, 0, sizeof(*out));
+
+    uft_kf_stream_t stream;
+    if (uft_kf_init(&stream) != UFT_UFT_KF_STATUS_OK)
+        return UFT_ERR_CORRUPTED;
+    /* A stream missing its StreamEnd block (UFT_UFT_KF_STATUS_MISSING_END)
+     * still decoded valid flux — accept anything that yielded transitions,
+     * reject only when nothing decoded. */
+    (void)uft_kf_decode(&stream, data, size);
+    if (stream.flux_count == 0) {
+        uft_kf_free(&stream);
+        return UFT_ERR_CORRUPTED;
+    }
+
+    /* One stream = one track. Robust signals only. */
+    out->track_count = 1;
+    out->total_flux_transitions = stream.flux_count;
+    /* N index pulses delimit N-1 complete revolutions; clamp to >=1 since the
+     * captured flux is at least one (possibly partial) revolution. */
+    uint32_t revs = (stream.index_count > 1) ? (stream.index_count - 1) : 1;
+    out->max_revolutions = revs;
+    out->has_multi_revolution = (revs > 1);
+
+    /* Weak detection from a raw unaligned stream is NOT reliable here — leave
+     * weak_track_count 0 and mark it unreliable so the caller keeps the
+     * conservative weak-bit warning instead of suppressing it. */
+    out->has_weak_regions = false;
+    out->weak_detection_reliable = false;
+
+    uft_kf_free(&stream);
     return UFT_OK;
 }

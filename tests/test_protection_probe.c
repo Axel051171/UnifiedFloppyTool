@@ -179,6 +179,55 @@ TEST(rejects_bad_args) {
     ASSERT(uft_protection_probe_scp(junk, sizeof(junk), &s) == UFT_ERR_CORRUPTED);
 }
 
+/* One OOB Index block: 0x0D 0x02 <size LE16=12> + 12 payload bytes. Only the
+   block count matters to the probe (index_count), not the payload values. */
+#define KF_INDEX_BLOCK \
+    0x0D, 0x02, 0x0C, 0x00, \
+    0,0,0,0, 0,0,0,0, 0,0,0,0
+
+TEST(kryoflux_reports_robust_signals) {
+    /* 7 single-byte flux values (0x0E..0xFF) + 3 index pulses = 2 full revs.
+       No StreamEnd -> MISSING_END, but flux is valid and accepted. */
+    static const uint8_t stream[] = {
+        0x40, 0x50,
+        KF_INDEX_BLOCK,
+        0x60, 0x70,
+        KF_INDEX_BLOCK,
+        0x40, 0x50,
+        KF_INDEX_BLOCK,
+        0x60,
+    };
+    uft_protection_summary_t s;
+    ASSERT(uft_protection_probe_kryoflux(stream, sizeof(stream), &s) == UFT_OK);
+    ASSERT(s.track_count == 1);
+    ASSERT(s.total_flux_transitions == 7);
+    ASSERT(s.max_revolutions == 2);          /* 3 index pulses - 1 */
+    ASSERT(s.has_multi_revolution == true);
+    /* raw stream: weak detection is NOT reliable -> caller keeps the warning */
+    ASSERT(s.weak_detection_reliable == false);
+    ASSERT(s.has_weak_regions == false);
+}
+
+TEST(kryoflux_single_rev_no_multirev) {
+    static const uint8_t stream[] = { 0x40, 0x50, 0x60 };   /* flux, no index */
+    uft_protection_summary_t s;
+    ASSERT(uft_protection_probe_kryoflux(stream, sizeof(stream), &s) == UFT_OK);
+    ASSERT(s.track_count == 1);
+    ASSERT(s.total_flux_transitions == 3);
+    ASSERT(s.max_revolutions == 1);
+    ASSERT(s.has_multi_revolution == false);
+    ASSERT(s.weak_detection_reliable == false);
+}
+
+TEST(kryoflux_rejects_bad_args) {
+    uft_protection_summary_t s;
+    uint8_t dummy[4] = {0};
+    ASSERT(uft_protection_probe_kryoflux(NULL, 4, &s) == UFT_ERR_NULL_POINTER);
+    ASSERT(uft_protection_probe_kryoflux(dummy, 4, NULL) == UFT_ERR_NULL_POINTER);
+    /* empty buffer -> no flux decoded -> corrupted, not a crash */
+    ASSERT(uft_protection_probe_kryoflux((const uint8_t *)"", 0, &s) == UFT_ERR_CORRUPTED);
+}
+
 int main(void) {
     printf("=== protection-anomaly content probe (Klasse-3 detection) ===\n");
     RUN(unprotected_reports_no_anomaly);
@@ -186,6 +235,9 @@ int main(void) {
     RUN(stable_multirev_not_weak);
     RUN(jitter_overreports_weak_safely);
     RUN(rejects_bad_args);
+    RUN(kryoflux_reports_robust_signals);
+    RUN(kryoflux_single_rev_no_multirev);
+    RUN(kryoflux_rejects_bad_args);
     printf("\nResults: %d passed, %d failed\n", _pass, _fail);
     return _fail == 0 ? 0 : 1;
 }

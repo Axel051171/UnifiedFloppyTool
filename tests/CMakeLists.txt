@@ -231,11 +231,12 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/formats/scp/uft_scp_writer.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_scp_parser.c)
     elseif(${test_name} STREQUAL "test_protection_probe")
-        # Klasse-3 detection: content-based protection-anomaly scan (MF-328)
+        # Klasse-3 detection: content-based protection-anomaly scan (MF-328/331)
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/analysis/uft_protection_probe.c
             ${CMAKE_SOURCE_DIR}/src/formats/scp/uft_scp_writer.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_scp_parser.c)
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_scp_parser.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_kryoflux_stream.c)
     elseif(${test_name} STREQUAL "test_moof_roundtrip")
         # MOOF writer save->read semantic round-trip (MF-319)
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/apple/uft_moof_parser.c)
