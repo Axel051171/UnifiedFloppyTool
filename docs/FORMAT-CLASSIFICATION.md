@@ -284,3 +284,25 @@ Vereinfachung**, kein Read-Bug.
 (per-Track-Sektor-Count + per-Track-Größe) in `uft_geometry_t`. Public-Struct-
 Änderung → ABI-relevant, viele Consumer. Bis dahin bleibt `geometry.sectors` das
 Maximum-Summary; per-Track-Wahrheit liegt in den Plugin-Tabellen.
+
+---
+
+## Phase-0 — Geometrie-Typ pro Format (skaliert auf alle 161 IDs)
+
+Familien-basierte Heuristik (Phase-0), verifiziert am D64-Zoned-Beispiel (`test_d64_geometry_zones`). Verteilung: **Uniform 108 · Per-Track-variabel 32 · Zoned-GCR 9 · Flux-N/A 12**.
+
+> **Scope-Korrektur (2026-07-05, sofort gemeldet):** Apple-II-5.25"-Formate (DO/PO/NIB/D13/2MG/Agat) sind **Uniform** (16 Sektoren DOS 3.3, 13 bei D13), NICHT Zoned — nur CBM-GCR und Mac-3.5"-GCR haben echte Speed-Zonen. D1M/D2M/D4M (CMD FD, MFM) und D90 (HD) sind ebenfalls nicht GCR-zoned.
+
+**Zoned-GCR (9)** — variable Sektoren pro Speed-Zone, konstante Sektorgröße; Read via Zonen-Tabelle (CBM 21/19/18/17, Mac 3.5", Victor):
+  D64, D67, D71, D80, D82, DC42, G64, G71, Victor9K
+
+**Per-Track-variabel (32)** — per-Track-Deskriptoren (Sektorzahl/-größe variiert pro Track); Read via per-Track-Header:
+  86F, ATX, Aeslanier, Brother, CQM, D77, D88, DCP, DIM, DMK, DTI, EDSK, FDI, FDX, HDM, HFE, IMD, JV3, MFM, NBZ, NFD, NIB, P64, PRI, PRO, SAP, STT, STX, TAP, TAP, TD0, UDI
+
+**Flux-N/A (12)** — Roh-Flux, keine Sektor-Geometrie bis zum Decode:
+  A2R, CFI, CWTool, DFI, EDD, GWRAW, IPF, KFRAW, MFI, PFI, SCP, WOZ
+
+**Uniform (108)** — konstante Sektorzahl + -größe; `uft_geometry_t` ist hier exakt. Umfasst IMG/ADF/ATR/DO/PO/NIB (Apple-II 5.25")/CP-M-Familie u.a.
+
+_Grundlage für Phase 4: Format-Varianten unterscheiden sich oft in der Geometrie (D64 35↔40 Track, ADF DD↔HD, D88 2D↔2DD↔2HD) — diese Typ-Spalte ist die technische Basis der Varianten-Recherche._
+
