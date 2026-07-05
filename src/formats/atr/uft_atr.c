@@ -55,7 +55,11 @@ static uft_error_t atr_open(uft_disk_t* disk, const char* path, bool read_only) 
     uint32_t paragraphs = uft_read_le16(&header[2]) | ((uint32_t)header[6] << 16);
     uint32_t disk_bytes = paragraphs * 16;
     pdata->sector_size = uft_read_le16(&header[4]);
-    if (pdata->sector_size != 128 && pdata->sector_size != 256) pdata->sector_size = 128;
+    /* 128 (SD/ED), 256 (DD), and 512 (SpartaDOS X / Altirra/AspeQt large ATR).
+     * The first 3 boot sectors stay 128 B regardless (handled in read/offset).
+     * Anything else is treated as 128 B. */
+    if (pdata->sector_size != 128 && pdata->sector_size != 256 &&
+        pdata->sector_size != 512) pdata->sector_size = 128;
     
     if (disk_bytes <= ATR_BOOT_SECTORS * ATR_BOOT_SECTOR_SIZE) {
         pdata->total_sectors = disk_bytes / ATR_BOOT_SECTOR_SIZE;
