@@ -828,7 +828,20 @@ copy-protection / disk-error awareness per class. See
     byte-range/verification risk, so it's deferred, not faked. Deleted: done.
   Error-aware WP5 status: IMD, EDSK, D88 (r+w preserve) · D64, TD0, STX
   (r, fixed) · ATX (verified complete) · DMK (deleted done, CRC-compute
-  deferred). Not yet audited: FDI, NFD.
+  deferred). Not yet audited: NFD.
+- **FDI disk-error — format-identity finding (2026-07-05, do NOT fabricate):**
+  two real FDI formats exist — Anex86 PC-98 FDI (signature "Formatted Disk
+  Image file", raw C/H/S dump, no per-sector marks — correctly handled by
+  `src/formats/fdi_pc98/uft_fdi_pc98.c` as a structural-limit Klasse-3 format)
+  and Joguin FDI v2.0 (disk2fdi, oldskool.org FDISPEC.pdf, a completely
+  different header). The registered generic `src/formats/fdi/uft_fdi_plugin.c`
+  uses a 3-byte ASCII "FDI" magic with a custom 14-byte header and a per-sector
+  `C+H+R+N+flags` layout that matches NEITHER real spec. Its read_track reads
+  the per-sector `flags` byte and discards it (`(void)flags`). Because the
+  format cannot be identified against a published spec, the `flags` semantics
+  (CRC error? deleted?) cannot be verified — mapping it would be fabrication.
+  Deferred pending format identification; likely related to the FMT-1..4
+  copy-paste-fabrication cluster. Reported, not guessed.
 - **Disk-error marking, D88** (MF-336): read+represent+preserve. Fourth real
   bug of the audit — the plugin read the sector status from offset +0D (a
   reserved/RPM byte) instead of the DDAM flag at +07 and the FDC status at +08
