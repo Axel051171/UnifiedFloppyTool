@@ -70,14 +70,18 @@ Dokument anpassen, nicht die Behauptung wegerklären.
 
 ## Format-Plugins
 
-**Status:** 80 Plugin-Registrierungen, 138 Format-IDs (1 Plugin kann mehrere
-IDs registrieren, z.B. WOZ v1/v2/2.1).
+**Status (Phase-0-Re-Verifikation 2026-07-05):** **84 Plugin-Structs**, 161
+Format-IDs im Katalog (1 Plugin kann mehrere IDs bedienen, z.B. WOZ v1/v2/2.1;
+einige IDs laufen über dedizierte Handler ohne Plugin-Struct, z.B. QDOS).
+Code-abgeleitet via `scripts/gen_format_list.py`.
 
 | Metric | Wert | Quelle |
 |---|---|---|
-| Plugin-Registrierungen | 80 | `audit_plugin_compliance.py` |
-| Format-IDs gesamt | 138 | `uft_format_registry.c` |
-| `spec_status` populiert | **80/80 (100%)** | MF-262 |
+| Plugin-Structs (`uft_format_plugin_t`) | 84 | `scripts/gen_format_list.py` / `audit_plugin_compliance.py` |
+| davon auto-registriert (Makro) | 80 | `UFT_REGISTER_FORMAT_PLUGIN` |
+| davon manuell registriert | 4 | g64, hfe, img, scp |
+| Format-IDs im Katalog | 161 | `uft_format_registry_v2.c` |
+| `spec_status` populiert | **84/84 (100%)** | MF-262 / audit |
 | `features`-Matrix populiert | **80/80 (100%)** | MF-263 |
 | Round-Trip getestet | 6/138 | `tests/conformance/` (IBM-DD, IBM-HD, AtariST, C64-GCR, Apple2-GCR, Amiga) |
 | Differential vs `gw 1.23` | 6/6 byte-exakt | `tests/gw_corpus/` |

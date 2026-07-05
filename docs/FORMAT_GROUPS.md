@@ -1,6 +1,24 @@
 # UnifiedFloppyTool — Format-Gruppen
 
-Alle 130 registrierten Plugins kategorisiert nach Plattform/Typ.
+> **Bestandsaufnahme repariert 2026-07-05 (Format-Erweiterung Goal, Phase 0).**
+> Die frühere Kopfzahl „130 registrierte Plugins" war veraltet und
+> inkonsistent mit `docs/CAPABILITIES.md` (80) und dem Code. **Autoritative,
+> code-abgeleitete Zahlen** (via `scripts/gen_format_list.py`, Registry-
+> Introspektion — nicht mehr handgepflegt):
+>
+> - **84 registrierte Format-Plugins** (`uft_format_plugin_t`-Structs): 80 via
+>   `UFT_REGISTER_FORMAT_PLUGIN`-Makro + 4 manuell (g64, hfe, img, scp).
+> - **161 Format-IDs** im Registry-Katalog (`uft_format_registry_v2.c`) — mehr
+>   als Plugins, weil ein Plugin mehrere IDs bedienen kann und einige IDs über
+>   dedizierte Handler laufen (kein Plugin-Struct).
+> - **Sinclair QL / QDOS** ist eine solche ID (`uft_format_registry_v2.c:500`,
+>   Handler `src/formats/ql/qdos.c` mit eigener `qdos_*`-API, data_layer 2 =
+>   Sektor-Image) — sie fehlte in der alten Gruppierung unten und wird hier
+>   nachgetragen. Die kuratierte Gruppen-Tabelle unten ist historisch und kann
+>   von der generierten Liste abweichen; maßgeblich ist der Generator.
+
+Alle registrierten Plugins kategorisiert nach Plattform/Typ (historische
+Kuration, siehe Generator-Hinweis oben).
 
 ## Gruppen-Übersicht
 
@@ -22,7 +40,9 @@ Alle 130 registrierten Plugins kategorisiert nach Plattform/Typ.
 | `TAPE` | 1 | Tape-Formate |
 | `OTHER` | 49 | Nischen + nicht-klassifizierte DSK-Varianten |
 
-**Gesamt:** 130 Plugins
+**Gesamt (kuratierte Gruppierung, historisch):** siehe Generator-Hinweis oben —
+maßgeblich sind **84 Plugin-Structs / 161 Katalog-IDs** aus
+`scripts/gen_format_list.py`. Die Gruppen-Zahlen hier sind nicht neu gezählt.
 
 ---
 
