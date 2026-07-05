@@ -797,6 +797,13 @@ copy-protection / disk-error awareness per class. See
   them on uft_sector_t, and preserves them through read->write->read (the
   writer overwrites only sector data, leaving the Track-Info block untouched).
   Same documented limit as IMD. WP5 now covers IMD + EDSK.
+- **Disk-error marking, TD0** (MF-334): `test_td0_error_marks` covers the
+  read+represent half (TD0 is read-only) — per-sector flag byte bit0 = CRC
+  error, bit2 = deleted. While testing, found + fixed a real off-by-one:
+  `td0_open`'s geometry scan skipped `len-1` bytes of each data record while
+  `read_track` consumes `len`, drifting one byte per data sector and
+  mis-scanning multi-sector geometry. Fixed open to match the authoritative
+  decoder. WP5 now covers IMD + EDSK + D64(read) + TD0(read).
 
 **Open (next steps, concrete):**
 - Extend the content probe to the remaining flux sources (IPF, A2R) and to
