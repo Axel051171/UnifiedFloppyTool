@@ -781,6 +781,14 @@ copy-protection / disk-error awareness per class. See
   the class-based fallback until its probe lands.
 - Klasse-2 snapshot: represent weak-bit regions where the spec allows
   (G64 speed-zones, HFE variable bitrate); document limits in code + docs.
+  **HFE v3 weak-bit opcode decode — blocked on two autonomy limits:** the
+  public HxC HFE reference lists opcodes 0xF0 NOP / 0xF1 index / 0xF2 bitrate /
+  0xF3 skip / 0xF4 align but leaves the exact *weak-bit* opcode encoding
+  under-specified ("remains under-specified in this reference material"), and
+  byte-exact decode correctness cannot be verified without a ground-truth v3
+  weak-bit test file. Implementing a detector on a guessed opcode would violate
+  "Keine erfundenen Daten" — deferred until the Rev.3.1 PDF opcode table is
+  extracted AND a reference image exists. Not fabricated.
 - Surface the content-probe result in the GUI converter warning (currently
   only written to the `.loss.json` sidecar).
 - Per-format disk-error marking audit (read/preserve/write CRC-error,
