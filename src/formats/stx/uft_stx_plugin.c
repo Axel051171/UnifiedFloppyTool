@@ -107,12 +107,20 @@ static uft_error_t stx_read_track(uft_disk_t *disk, int cyl, int head,
         size_t desc = sec_desc_off + (size_t)s * 16;
         if (desc + 16 > p->file_size) break;
 
+        /* Pasti sector descriptor (Jean Louis-Guerin spec):
+         *   0x00 data offset, 0x04 header pos, 0x06 read time,
+         *   0x08 ID track (C), 0x09 ID head (H), 0x0A ID sector (R),
+         *   0x0B ID size (N), 0x0C-0x0D ID CRC, 0x0E FDC status, 0x0F flags.
+         * The sector NUMBER is R at 0x0A and the FDC status is at 0x0E — the
+         * previous code read sec_id from 0x08 (track C) and the FDC status
+         * from 0x0C (ID CRC low byte), so both the reported IDs and the
+         * CRC-error detection were wrong. */
         uint32_t data_offset = uft_read_le32(p->file_data + desc);
         uint16_t bit_pos = uft_read_le16(p->file_data + desc + 4);
         uint16_t read_time = uft_read_le16(p->file_data + desc + 6);
-        uint8_t  sec_id = p->file_data[desc + 8];
-        uint8_t  sec_n = p->file_data[desc + 11];
-        uint8_t  fdcr = p->file_data[desc + 12];
+        uint8_t  sec_id = p->file_data[desc + 0x0A];   /* R: sector number */
+        uint8_t  sec_n = p->file_data[desc + 0x0B];    /* N: size code */
+        uint8_t  fdcr = p->file_data[desc + 0x0E];     /* FDC status register */
         (void)bit_pos; (void)read_time;
 
         uint16_t sec_size = (sec_n < 4) ? (128 << sec_n) : 512;
@@ -123,9 +131,15 @@ static uft_error_t stx_read_track(uft_disk_t *disk, int cyl, int head,
                               p->file_data + abs_data, sec_size,
                               (uint8_t)cyl, (uint8_t)head);
 
-        /* Mark CRC errors from FDC status */
-        if ((fdcr & 0x08) && track->sector_count > 0)
-            uft_sector_set_crc(&track->sectors[track->sector_count - 1], false);
+        /* WD1772 FDC status marks STX carries per sector: bit3 (0x08) = data
+         * CRC error, bit5 (0x20) = deleted data-address mark. Surface both
+         * (read + represent) instead of silently dropping the deleted mark. */
+        if (track->sector_count > 0) {
+            if (fdcr & 0x08)
+                uft_sector_set_crc(&track->sectors[track->sector_count - 1], false);
+            if (fdcr & 0x20)
+                track->sectors[track->sector_count - 1].deleted = true;
+        }
     }
     return UFT_OK;
 }
