@@ -222,3 +222,33 @@ Kopierschutz nicht abbilden. Diese sind „error-aware Klasse 3".
 | **TZX** | .tzx | Spectrum | keine (strukturelle Grenze) | keine |
 | **UEF** | .uef | BBC | keine (strukturelle Grenze) | keine |
 | **XEX** | .xex | Atari | keine (strukturelle Grenze) | keine |
+
+---
+
+## Disk-Fehler-Audit — verifizierter Ist-Zustand (2026-07-05)
+
+Die generische Spalte „Disk-Fehler-Marking" oben leitet sich aus der Formatklasse
+ab. Der tatsächliche **Code-Audit** (jedes error-aware Format gegen die publizierte
+Spec verifiziert, mit Test) ergab folgenden konkreten Stand — maßgeblich ist diese
+Tabelle, Details in [`KNOWN_ISSUES.md`](KNOWN_ISSUES.md) FMT-9:
+
+| Format | Fehler-Marks | Audit-Ergebnis | Test |
+|---|---|---|---|
+| **IMD** | CRC, Deleted | read+represent+**preserve-on-write** | `test_imd_error_marks` |
+| **EDSK** | uPD765 ST1/ST2 (CRC, Deleted) | read+represent+**preserve** | `test_edsk_error_marks` |
+| **D88** | DDAM, FDC-Status | read+represent+**preserve** — **Offset-Bug gefixt** (+0D→+07/+08) | `test_d88_error_marks` |
+| **D64** | Errormap (1541-Codes) | read+represent — **Drop-Bug gefixt** (Trailer wurde verworfen); Write-Erhalt offen (L) | `test_d64_errormap` |
+| **TD0** | CRC, Deleted (dtype) | read+represent (read-only) — **Scan-Off-by-one gefixt** | `test_td0_error_marks` |
+| **STX** | FDC-Status (CRC, Deleted) | read+represent (read-only) — **Descriptor-Offset-Bug gefixt** (+08/+0C→+0A/+0E) | `test_stx_error_marks` |
+| **ATX** | FDC-Status + Weak-Bits | auditiert **spec-korrekt**, kein Bug | (verifiziert) |
+| **DMK** | Deleted (DAM 0xF8) | Deleted read+represent; CRC = kein explizites Flag → Berechnung nötig (deferred) | — |
+| **FDI (generisch)** | `flags`-Byte unklar | **Fabrikations-Verdacht** — Format matcht keine reale Spec, Flag-Semantik unverifizierbar; nicht gemappt | — |
+| **FDI (Anex86)** | keine | roher C/H/S-Dump = strukturelle Grenze (korrekt) | — |
+| **NFD R0/R1** | DDAM, Status, ST0-2 | **Reader strukturell falsch** vs. pc98.org-Spec (per-Track statt per-Sektor, erfundene Offsets) → L-Rewrite + Korpus nötig; nicht blind gefixt | — |
+
+**Audit-Bilanz:** 4 echte forensische Bugs gefunden+gefixt (D64/TD0/STX/D88, alle
+spec-web-verifiziert + getestet), 2 tiefere Fabrikations-Struktur-Defekte gefunden
++ ehrlich dokumentiert (FDI/NFD — bewusst **nicht** blind gefixt, da Byte-Exaktheit
+ein Ground-Truth-Korpus braucht). Muster: **Test-Bau = Audit**; Offset/Descriptor-
+Reader müssen gegen die publizierte Spec verifiziert werden (deckt sich mit den
+FMT-1..4-Fabrikations-Funden).
