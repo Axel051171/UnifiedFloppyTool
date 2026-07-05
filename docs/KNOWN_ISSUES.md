@@ -785,11 +785,17 @@ copy-protection / disk-error awareness per class. See
   dtype, it does not re-encode a caller-flipped status into a new dtype.
 - **Variant research** (`docs/FORMAT-VARIANTS.md`): per-family documented
   sub-versions cross-checked with the code; prioritised gap list produced.
+- **KryoFlux content probe** (MF-331): `uft_protection_probe_kryoflux` reports
+  the robust signals (track / revolution count / flux-timing / transitions)
+  for KryoFlux→sector exports. It sets `weak_detection_reliable = false` (a raw
+  index-delimited stream isn't aligned), and the dispatch only suppresses the
+  WEAK_BITS warning when a scan reliably ruled weak bits out — so KryoFlux
+  keeps the conservative warning, never hiding a possible loss.
 
 **Open (next steps, concrete):**
-- Extend the content probe to the other flux sources (KryoFlux stream, IPF,
-  A2R) and to bitstream sources (G64/HFE weak-marker snapshot) — each keeps
-  the class-based fallback until its probe lands.
+- Extend the content probe to the remaining flux sources (IPF, A2R) and to
+  bitstream sources (G64/HFE weak-marker snapshot) — each keeps the class-based
+  fallback until its probe lands. SCP (MF-328) + KryoFlux (MF-331) done.
 - Klasse-2 snapshot: represent weak-bit regions where the spec allows
   (G64 speed-zones, HFE variable bitrate); document limits in code + docs.
   **HFE v3 weak-bit opcode decode — blocked on two autonomy limits:** the
