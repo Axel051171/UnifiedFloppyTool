@@ -922,6 +922,13 @@ copy-protection / disk-error awareness per class. See
   trailer, or a whole-image save path. Effort L (reported, not half-baked).
 - `FORMAT-VARIANTS.md`: per-family web research of sub-versions not yet
   read/written (WOZ1 vs 2, HFE v1/v3, A2R v2/v3, D88 revisions, …).
+- **ATR 512-byte sectors (SpartaDOS X)** — found 2026-07-05: `uft_atr.c:58`
+  clamps any `sector_size != 128 && != 256` to 128, so a 512-B-sector ATR
+  (SpartaDOS X, Altirra/AspeQt) is misread. Next step: accept 512 in the
+  sector-size check, keep the "first 3 sectors always 128 B" rule. Effort S.
+- **D64 42-track variant** — found 2026-07-05: `uft_d64_plugin.c:38` size-probe
+  accepts only the 4 standard sizes; a 42-track D64 (~205312 B, rare, no BAM for
+  tracks 41/42) is rejected. Low priority (rare + BAM-less). Effort S.
 - Byte-exact read correctness vs. real copy-protected disks is NOT verifiable
   without a ground-truth corpus — remains an explicit open point, not
   silently marked done.

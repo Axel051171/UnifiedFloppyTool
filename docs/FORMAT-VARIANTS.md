@@ -156,3 +156,38 @@ einem Ground-Truth-Testimage-Korpus byte-exakt verifizieren. Ohne diesen
 Korpus bleibt die Read-Korrektheit dieser Protection-Pfade ein offener Punkt
 (siehe `docs/KNOWN_ISSUES.md` FMT-9) — nicht stillschweigend als erledigt
 markiert.
+
+---
+
+## Geometrie-differenzierte Varianten (Phase-0-Grundlage)
+
+Viele Varianten unterscheiden sich primär in der **Geometrie** (Track-Zahl,
+Dichte, Sektorgröße) — die Phase-0-Geometrie-Typen (siehe
+`FORMAT-CLASSIFICATION.md`) sind hier die technische Basis.
+
+### Atari — ATR (Klasse 3, Uniform)
+
+| Variante | Geometrie | Spezifikation | UFT-Status | Aufwand |
+|---|---|---|---|---|
+| SD (Single, 90K) | 720×128 B | [AtariMax DiskImageFAQ](https://www.atarimax.com/ape/docs/DiskImageFAQ/) | R+W (`sector_size==128`) | — |
+| ED (Enhanced, 130K) | 1040×128 B | [archiveteam ATR](http://fileformats.archiveteam.org/wiki/ATR) | R+W (Größe via paragraphs) | — |
+| DD (Double, 180K) | 720×256 B (erste 3 Sekt. 128 B) | [ATR FAQ](https://www.atarimax.com/ape/docs/DiskImageFAQ/) | R+W (`sector_size==256`) | — |
+| **SpartaDOS-X 512 B** | 512-B-Sektoren | [ATR FAQ](https://www.atarimax.com/ape/docs/DiskImageFAQ/) | **R falsch** — `uft_atr.c:58` klemmt `sector_size!=128&&!=256` auf 128 → 512-B-ATR wird fehlgelesen | S |
+
+> **Lücke (FMT-9):** ATR mit 512-B-Sektoren (SpartaDOS X, Altirra/AspeQt) wird
+> auf 128 B geklemmt statt gelesen. Fix: 512 in der sector_size-Prüfung zulassen
+> + „erste 3 Sektoren immer 128 B"-Regel beibehalten. Aufwand S.
+
+### Commodore — D64 (Klasse 3 Sektor, Zoned-GCR)
+
+| Variante | Geometrie | Größe | UFT-Status |
+|---|---|---|---|
+| 35-Track (Standard-CBM-DOS) | 683 Sekt. | 174848 / 175531 (+err) | R+W ✓ |
+| 40-Track (Speeder-DOS) | 768 Sekt. | 196608 / 197376 (+err) | R+W ✓ |
+| **42-Track (Maximum)** | 802 Sekt. | ~205312 | **nicht** — Probe akzeptiert nur die 4 Standardgrößen (`uft_d64_plugin.c:38`) | 
+
+> **Lücke (FMT-9):** 42-Track-D64 (selten, kein BAM für Track 41/42, viele reale
+> Laufwerke lesen sie nicht) wird von der Größen-Probe abgelehnt. Niedrige
+> Priorität — 42-Track ist selten und BAM-los. Aufwand S wenn gewünscht.
+> SPEED-DOS/DOLPHIN-DOS speichern Extra-BAM ($C0-$D3 / $AC-$BF) — reine
+> BAM-Erweiterung, Sektor-Layout unverändert, vom Sektor-Reader transparent.
