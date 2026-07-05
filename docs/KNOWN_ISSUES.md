@@ -791,6 +791,12 @@ copy-protection / disk-error awareness per class. See
   index-delimited stream isn't aligned), and the dispatch only suppresses the
   WEAK_BITS warning when a scan reliably ruled weak bits out — so KryoFlux
   keeps the conservative warning, never hiding a possible loss.
+- **Disk-error marking, EDSK** (MF-332): `test_edsk_error_marks` proves the
+  Amstrad/Spectrum DSK plugin reads the uPD765 ST1/ST2 result bytes per sector
+  (ST1/ST2 bit5 = data CRC error, ST2 bit6 = deleted/control mark), represents
+  them on uft_sector_t, and preserves them through read->write->read (the
+  writer overwrites only sector data, leaving the Track-Info block untouched).
+  Same documented limit as IMD. WP5 now covers IMD + EDSK.
 
 **Open (next steps, concrete):**
 - Extend the content probe to the remaining flux sources (IPF, A2R) and to
