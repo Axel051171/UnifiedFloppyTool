@@ -252,3 +252,35 @@ spec-web-verifiziert + getestet), 2 tiefere Fabrikations-Struktur-Defekte gefund
 ein Ground-Truth-Korpus braucht). Muster: **Test-Bau = Audit**; Offset/Descriptor-
 Reader müssen gegen die publizierte Spec verifiziert werden (deckt sich mit den
 FMT-1..4-Fabrikations-Funden).
+
+---
+
+## Phase-0 — Geometrie-Scan (Voraussetzungsfeld)
+
+Protection-/Fehler-Klassifizierung ist nur zuverlässig, wenn die Geometrie
+(Tracks, Sides, Sektoren/Track, Sektorgröße) korrekt erkannt wird — ein falscher
+Sektor-Count korrumpiert jede nachgelagerte Mark. Der Audit ergab **drei
+Geometrie-Typen**:
+
+| Typ | Sektoren/Track | Sektorgröße | Beispiele | `uft_geometry_t.sectors` |
+|---|---|---|---|---|
+| **Uniform** | konstant | konstant | IMG, ADF, ATR, DO/PO, DC42 | exakt |
+| **Zoned (GCR)** | variabel pro Zone | konstant | D64/D71 (21/19/18/17), G64/G71 (Speed-Zones), D81 | = **Maximum** (Summary) |
+| **Per-Track variabel** | variabel pro Track | ggf. variabel | IMD, EDSK, TD0, D88, CQM | = **Maximum** (Summary) |
+
+**Struktur-Grenze (getrackt, FMT-9):** `uft_geometry_t` (`include/uft/uft_types.h`)
+ist **uniform** — ein einzelnes `sectors` + `sector_size`. Für Zoned- und
+Per-Track-variable-Formate meldet es das **Maximum** als Summary, kann das echte
+per-Track-Layout aber nicht ausdrücken.
+
+**Wichtig — die READS sind trotzdem korrekt:** zoned/variable Plugins lesen die
+echte per-Track-Sektorzahl aus ihren internen Tabellen (D64 `d64_spt[]`, IMD/EDSK
+per-Track-Header, G64 Speed-Zone-Map), nicht aus `geometry.sectors`. Verifiziert:
+`test_d64_geometry_zones` beweist D64 liest 21/19/18/17 pro Zone (Total 683) trotz
+uniform `geometry.sectors = 21`. Die uniforme Struct ist also eine **Summary-
+Vereinfachung**, kein Read-Bug.
+
+**Offen (FMT-9, L-Aufwand + ABI):** ein zoned/non-uniform Geometrie-Typ
+(per-Track-Sektor-Count + per-Track-Größe) in `uft_geometry_t`. Public-Struct-
+Änderung → ABI-relevant, viele Consumer. Bis dahin bleibt `geometry.sectors` das
+Maximum-Summary; per-Track-Wahrheit liegt in den Plugin-Tabellen.
