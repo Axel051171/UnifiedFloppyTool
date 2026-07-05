@@ -22,6 +22,33 @@ Filesystem/Layout), L = groß (Flux/variable-Speed, neues Subsystem).
   `{"RolandD20","d20",...}` (`rolandd20.h`). Die S-Serie-Sampler unten sind
   davon getrennt.
 
+## KERN-SCOPE-BEFUND (Phase-2/3, 2026-07-05) — Größen-Kollisionen
+
+Die Größen-Verifikation ergab, dass fast alle Sampler-„Formate" **Standard-
+Disk-Geometrien wiederverwenden** und sich nur im (out-of-scope) Dateisystem
+unterscheiden:
+
+| Format | Native Größe | Kollidiert größengleich mit |
+|---|---|---|
+| Akai S900/S950 | 819.200 (800K DD) | D81, Korg DSS-1 |
+| Korg DSS-1 | 819.200 | D81, Akai |
+| Roland S-50 | 737.280 (720K) | Atari ST 720K, IMG-720K |
+| NeXT 2.88M | 2.949.120 | Atari ST ED (`ST_SIZE_DS_ED`) |
+
+**Konsequenz:** Auf Basis-Niveau (Disk-Geometrie) sind das keine neuen Formate.
+Ohne dokumentiertes Magic sind sie inhaltlich nicht vom bestehenden Format
+unterscheidbar; ein neues Geometrie-Plugin würde die Auto-Erkennung brechen
+oder nichts hinzufügen (= „Formatanzahl nachbauen", vom Ziel abgelehnt). Der
+reale Mehrwert wäre der **proprietäre Dateisystem-Layer** — laut Ziel
+ausgeklammert.
+
+**Ausnahme mit echtem Nutzwert (implementiert):** Korg DSS-1 hat eine
+**strukturell distinkte Geometrie** (5×1024 pro Track/Seite vs. D81 40×256) bei
+gleicher Gesamtgröße. Ein D81-Reader liest ein Korg-Image als CBM-Sektoren falsch;
+das neue Korg-Plugin liest es korrekt. Kollision ehrlich behandelt: Probe-
+Confidence 40 < D81 (80) → Auto-Detect bleibt D81, Korg via `.dss`/manuell.
+**Implementiert + getestet (MF-347)** — siehe unten.
+
 ## Verifizierte echte Lücken
 
 | Format | Quelle | Klasse | Geometrie | Aufwand | Praxisrelevanz |

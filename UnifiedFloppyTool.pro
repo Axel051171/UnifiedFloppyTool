@@ -1084,6 +1084,7 @@ SOURCES += \
     src/formats/d80/uft_d80.c \
     src/formats/d81/uft_d81.c \
     src/formats/d82/uft_d82.c \
+    src/formats/korg/uft_korg_dss1.c \
     src/formats/g71/uft_g71.c \
     src/formats/atr/uft_atr.c \
     src/formats/dmk/uft_dmk.c \
