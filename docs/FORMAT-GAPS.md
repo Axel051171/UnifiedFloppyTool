@@ -62,6 +62,24 @@ Confidence 40 < D81 (80) → Auto-Detect bleibt D81, Korg via `.dss`/manuell.
 | **NeXT 2.88M Floppy** | [Wikipedia Floppy](https://en.wikipedia.org/wiki/Floppy_disk) | Sektor | 3.5" DSED 2.88 MB (80×2×36×512 = 2.949.120), perpendicular MFM | **S** (Standard-2.88M-Geometrie) | **Niedrig** — NeXT-Floppys sind Standard-2.88M-Images, bereits als IMG/generische Geometrie lesbar; nur der NeXT-UFS-Dateisystem-Layer wäre neu |
 | **ABB IRB2000 / IRB-Serie** | keine öffentliche Spec gefunden | ? | ? | ? (spec-blockiert) | Nische — Industrie/CNC; **keine byte-genaue Spec öffentlich auffindbar** → nicht implementierbar ohne Reverse-Engineering + Ground-Truth-Disks |
 
+## Phase-3 Dispositionen (Freigabe „alle", Stand 2026-07-05)
+
+| Format | Disposition | Grund |
+|---|---|---|
+| **Korg DSS-1** | ✅ **implementiert + getestet** (MF-347) | Geometrie 5×1024 verifiziert + strukturell distinkt von D81 → realer Nutzwert |
+| **Akai S900/S950** | ⛔ nicht implementiert (blockiert) | DD 819.200 kann 5×1024 **oder** 10×512 sein, HD 1.638.400 — exakte Sektoren/Track **nicht** öffentlich verifizierbar. Auf Inferenz zu bauen wäre Fabrikation. Braucht FlashFloppy-Disk-Def (`interface=akai-s950`) oder Referenz-Image |
+| **Roland S-50/S-550** | ⛔ nicht implementiert | 737.280 = Standard-720K (9×512), keine verifiziert-distinkte Geometrie → kein Disk-Level-Neuwert (bereits als ST/IMG lesbar); Wert läge im FS (out-of-scope) |
+| **NeXT 2.88M** | ⛔ nicht implementiert | 2.949.120 = identische Geometrie zu Atari ST ED (36×512) → kein Neuwert; nur NeXT-UFS-FS wäre neu (out-of-scope) |
+| **Apple Lisa Twiggy** | ⛔ nicht implementiert (aufwands-blockiert) | Einzige größen-eindeutige (871.424), aber **Flux-Klasse-1**: variable-Speed GCR + zoned per-Track-Sektoren; die Zonen-Verteilung ist nicht verifiziert (Fabrikations-Risiko) und Timing-Erhalt braucht das Flux-Subsystem (L). Braucht Twiggy-Flux-Referenz-Image |
+| **ABB IRB2000/IRB** | ⛔ nicht implementiert (spec-blockiert) | Keine öffentliche Byte-Spec auffindbar; ohne Reverse-Engineering + Ground-Truth-Disks nicht seriös |
+
+**Ehrliches Ergebnis:** von den freigegebenen Kandidaten war **1 sauber
+verifizierbar** und wurde implementiert (Korg). Die übrigen sind entweder
+geometrie-kollidierend ohne Disk-Level-Neuwert (Roland/NeXT — Wert im FS,
+out-of-scope), geometrie-unverifizierbar (Akai — Fabrikations-Risiko) oder
+aufwands-/spec-blockiert (Twiggy Flux, ABB Spec). Das ist gemäß Ziel ein
+zulässiges Ergebnis, dokumentiert statt erfunden.
+
 ## Klassifizierungs-Hinweise (Basis-Niveau, wie im Ziel gefordert)
 
 - Die Sampler-Formate (Akai/Korg/Roland-S) sind **Sektor-Image (Klasse 3)** —
