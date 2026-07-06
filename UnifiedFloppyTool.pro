@@ -1086,6 +1086,7 @@ SOURCES += \
     src/formats/d82/uft_d82.c \
     src/formats/korg/uft_korg_dss1.c \
     src/formats/akai/uft_akai_s900.c \
+    src/formats/lisa/uft_lisa_twiggy.c \
     src/formats/g71/uft_g71.c \
     src/formats/atr/uft_atr.c \
     src/formats/dmk/uft_dmk.c \
