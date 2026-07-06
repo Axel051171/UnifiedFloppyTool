@@ -927,9 +927,12 @@ copy-protection / disk-error awareness per class. See
   size generically with the boot-sector 128-B exception). `test_atr_512` builds
   a 3×128 + 5×512 ATR and asserts sector_size 512, 8 sectors, correct data
   offset. 1/1.
-- **D64 42-track variant** — found 2026-07-05: `uft_d64_plugin.c:38` size-probe
-  accepts only the 4 standard sizes; a 42-track D64 (~205312 B, rare, no BAM for
-  tracks 41/42) is rejected. Low priority (rare + BAM-less). Effort S.
+- **D64 42-track variant** — ✓ RESOLVED (MF-350): the D64 plugin now accepts the
+  extended 41/42-track sizes (200960/201745 and 205312/206114, VICE/Schepers-
+  verified) additively — d64_spt extended to 42 (tracks 41/42 = 17 sectors),
+  probe + open size-thresholds, D64_MAX_TRACK=42. `test_d64_42track` (4/4)
+  covers probe, 42-track geometry (802 sectors), extended-track round-trip, and
+  35-track no-regression; all 8 existing D64 tests still green.
 - Byte-exact read correctness vs. real copy-protected disks is NOT verifiable
   without a ground-truth corpus — remains an explicit open point, not
   silently marked done.

@@ -14,13 +14,16 @@ static const uint8_t d64_spt[] = {
     21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21, /* 1-17 */
     19,19,19,19,19,19,19,                                 /* 18-24 */
     18,18,18,18,18,18,                                     /* 25-30 */
-    17,17,17,17,17,17,17,17,17,17                          /* 31-40 */
+    17,17,17,17,17,17,17,17,17,17,                        /* 31-40 */
+    17,17                                                 /* 41-42 (non-standard) */
 };
+
+#define D64_MAX_TRACK 42
 
 /* Byte offset for track T (1-based), sector S (0-based) */
 static long d64_offset(int track, int sector) {
     long off = 0;
-    for (int t = 1; t < track && t <= 40; t++)
+    for (int t = 1; t < track && t <= D64_MAX_TRACK; t++)
         off += d64_spt[t] * 256;
     return off + sector * 256;
 }
@@ -34,9 +37,13 @@ typedef struct {
 
 static bool d64_plugin_probe(const uint8_t *data, size_t size,
                               size_t file_size, int *confidence) {
-    /* D64 sizes: 174848 (35trk), 175531 (35+err), 196608 (40trk), 197376 (40+err) */
+    /* D64 sizes: 35trk 174848/175531(+err), 40trk 196608/197376(+err),
+     * plus the non-standard extended variants (VICE/Schepers):
+     * 41trk 200960/201745(+err), 42trk 205312/206114(+err). */
     if (file_size != 174848 && file_size != 175531 &&
-        file_size != 196608 && file_size != 197376)
+        file_size != 196608 && file_size != 197376 &&
+        file_size != 200960 && file_size != 201745 &&
+        file_size != 205312 && file_size != 206114)
         return false;
     *confidence = 75;
 
@@ -62,7 +69,12 @@ static uft_error_t d64_plugin_open(uft_disk_t *disk, const char *path, bool ro) 
     d64_pd_t *p = calloc(1, sizeof(d64_pd_t));
     if (!p) { fclose(f); return UFT_ERROR_NO_MEMORY; }
     p->file = f;
-    p->max_track = (sz >= 196608) ? 40 : 35;
+    /* Track count from size: extended 41/42-track variants supported additively.
+     * The +error sizes stay below the next track threshold, so >= works. */
+    if      (sz >= 205312) p->max_track = 42;
+    else if (sz >= 200960) p->max_track = 41;
+    else if (sz >= 196608) p->max_track = 40;
+    else                   p->max_track = 35;
 
     disk->plugin_data = p;
     disk->geometry.cylinders = p->max_track;
