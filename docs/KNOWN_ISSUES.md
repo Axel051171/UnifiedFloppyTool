@@ -927,8 +927,9 @@ copy-protection / disk-error awareness per class. See
   size generically with the boot-sector 128-B exception). `test_atr_512` builds
   a 3×128 + 5×512 ATR and asserts sector_size 512, 8 sectors, correct data
   offset. 1/1.
-- **SCP extension-footer read/write — spec-compliance suspect (found 2026-07-05,
-  liability-mode: NOT implemented on a broken base):** the cbmstuff SCP spec puts
+- **SCP extension-footer read/write — ✓ RESOLVED (MF-351):** the reader was
+  spec-broken (found 2026-07-05); now fixed + emit added.
+  Previously: the cbmstuff SCP spec puts
   a 4-byte "FPCS" signature as the FINAL bytes of the file; the codebase struct
   `uft_scp_footer_t` (52 B, 13×uint32, no FPCS field) and reader
   (`scp_parse_extension_footer`, reads the last 52 bytes) don't model that and

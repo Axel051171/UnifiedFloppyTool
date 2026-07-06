@@ -225,6 +225,11 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/formats/scp/uft_scp_writer.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_scp_parser.c)
+    elseif(${test_name} STREQUAL "test_scp_footer_roundtrip")
+        # SCP extension-footer write/read round-trip + reader spec fix (MF-351)
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/scp/uft_scp_writer.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_scp_parser.c)
     elseif(${test_name} STREQUAL "test_scp_weakbit_multirev")
         # SCP Klasse-1 forensic guard: multi-rev weak-bit pass-through (MF-327)
         target_sources(${test_name} PRIVATE

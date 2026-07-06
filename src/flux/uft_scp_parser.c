@@ -74,30 +74,45 @@ static void scp_parse_extension_footer(uft_scp_ctx_t* ctx)
 {
     if (!ctx || !ctx->file) return;
 
-    /* The 52-byte footer sits at end of file (13 x uint32_t). */
-    const size_t footer_size = 52;
+    /* SCP spec (cbmstuff): the extension footer is 48 bytes at the very end of
+     * the file, and its LAST 4 bytes are the ASCII signature "FPCS". Layout:
+     *   0x00 6 x uint32 LE string offsets (mfg/model/serial/creator/app/comments)
+     *   0x18 int64 LE creation timestamp  (seconds since 1970-01-01 UTC)
+     *   0x20 int64 LE modification timestamp
+     *   0x28 app version byte (Version<<4|Subversion)
+     *   0x29 SCP hardware version byte  0x2A firmware version byte
+     *   0x2B format revision byte
+     *   0x2C "FPCS"
+     * (The previous code read 52 bytes as 13 uint32 with no FPCS check and
+     * 4-byte timestamps — that mis-parsed every real footer. MF-351.) */
+    const size_t footer_size = 48;
     if (ctx->file_size < footer_size) return;
 
     long footer_pos = (long)(ctx->file_size - footer_size);
     if (fseek(ctx->file, footer_pos, SEEK_SET) != 0) return;
 
-    uint8_t raw[52];
+    uint8_t raw[48];
     if (fread(raw, 1, footer_size, ctx->file) != footer_size) return;
 
-    /* Parse all 13 little-endian uint32 fields */
-    ctx->footer.drive_mfg_offset      = read_le32(&raw[0]);
-    ctx->footer.drive_model_offset    = read_le32(&raw[4]);
-    ctx->footer.drive_serial_offset   = read_le32(&raw[8]);
-    ctx->footer.creator_offset        = read_le32(&raw[12]);
-    ctx->footer.app_name_offset       = read_le32(&raw[16]);
-    ctx->footer.app_version_offset    = read_le32(&raw[20]);
-    ctx->footer.comments_offset       = read_le32(&raw[24]);
-    ctx->footer.creation_timestamp    = read_le32(&raw[28]);
-    ctx->footer.modification_timestamp= read_le32(&raw[32]);
-    ctx->footer.app_version_bcd       = read_le32(&raw[36]);
-    ctx->footer.hw_version_bcd        = read_le32(&raw[40]);
-    ctx->footer.fw_version_bcd        = read_le32(&raw[44]);
-    ctx->footer.format_revision       = read_le32(&raw[48]);
+    /* Validate the "FPCS" signature before trusting the footer. */
+    if (raw[0x2C] != 'F' || raw[0x2D] != 'P' ||
+        raw[0x2E] != 'C' || raw[0x2F] != 'S') return;
+
+    ctx->footer.drive_mfg_offset       = read_le32(&raw[0x00]);
+    ctx->footer.drive_model_offset     = read_le32(&raw[0x04]);
+    ctx->footer.drive_serial_offset    = read_le32(&raw[0x08]);
+    ctx->footer.creator_offset         = read_le32(&raw[0x0C]);
+    ctx->footer.app_name_offset        = read_le32(&raw[0x10]);
+    ctx->footer.comments_offset        = read_le32(&raw[0x14]);
+    ctx->footer.app_version_offset     = 0;   /* spec: none (version is a byte) */
+    /* Keep the existing uint32 timestamp fields = low 32 bits of the int64
+     * (valid until year 2106; the spec value is little-endian so byte 0 aligns). */
+    ctx->footer.creation_timestamp     = read_le32(&raw[0x18]);
+    ctx->footer.modification_timestamp = read_le32(&raw[0x20]);
+    ctx->footer.app_version_bcd        = raw[0x28];
+    ctx->footer.hw_version_bcd          = raw[0x29];
+    ctx->footer.fw_version_bcd          = raw[0x2A];
+    ctx->footer.format_revision         = raw[0x2B];
 
     /* Resolve string offsets into the parsed extension footer */
     scp_extension_footer_t* ext = &ctx->ext_footer;
@@ -119,11 +134,12 @@ static void scp_parse_extension_footer(uft_scp_ctx_t* ctx)
                            ctx->footer.app_name_offset,
                            ext->application, sizeof(ext->application));
     scp_read_footer_string(ctx->file, ctx->file_size,
-                           ctx->footer.app_version_offset,
-                           ext->app_version, sizeof(ext->app_version));
-    scp_read_footer_string(ctx->file, ctx->file_size,
                            ctx->footer.comments_offset,
                            ext->comments, sizeof(ext->comments));
+    /* app version is a byte (Version<<4|Subversion), not a string offset. */
+    snprintf(ext->app_version, sizeof(ext->app_version), "%u.%u",
+             (unsigned)((ctx->footer.app_version_bcd >> 4) & 0x0F),
+             (unsigned)(ctx->footer.app_version_bcd & 0x0F));
 
     ext->created_timestamp  = ctx->footer.creation_timestamp;
     ext->modified_timestamp = ctx->footer.modification_timestamp;

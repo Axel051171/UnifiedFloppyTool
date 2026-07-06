@@ -281,9 +281,39 @@ int scp_writer_save(scp_writer_t *w, const char *path) {
         }
     }
     
+    /* Extension footer (SCP spec, MF-351): append provenance strings and a
+     * 48-byte footer whose last 4 bytes are the "FPCS" signature, then set the
+     * FOOTER flag. Deterministic (timestamps 0) so identical input yields an
+     * identical file — forensic reproducibility. String offsets are absolute
+     * file positions, matching the reader's resolution. */
+    {
+        long strings_pos = ftell(w->file);
+        if (strings_pos < 0) { fclose(w->file); w->file = NULL; return -1; }
+        static const char creator[] = "UnifiedFloppyTool";
+        static const char appname[] = "UFT";
+        uint32_t creator_off = (uint32_t)strings_pos;
+        fwrite(creator, 1, sizeof(creator), w->file);       /* incl. terminating NUL */
+        uint32_t app_off = (uint32_t)ftell(w->file);
+        fwrite(appname, 1, sizeof(appname), w->file);
+
+        uint8_t footer[48];
+        memset(footer, 0, sizeof(footer));
+        footer[0x0C] = (uint8_t)creator_off;  footer[0x0D] = (uint8_t)(creator_off >> 8);
+        footer[0x0E] = (uint8_t)(creator_off >> 16); footer[0x0F] = (uint8_t)(creator_off >> 24);
+        footer[0x10] = (uint8_t)app_off;      footer[0x11] = (uint8_t)(app_off >> 8);
+        footer[0x12] = (uint8_t)(app_off >> 16);     footer[0x13] = (uint8_t)(app_off >> 24);
+        footer[0x28] = 0x10;   /* app version 1.0 (Version<<4|Subversion) */
+        footer[0x2B] = 0x16;   /* format revision (current SCP) */
+        footer[0x2C] = 'F'; footer[0x2D] = 'P'; footer[0x2E] = 'C'; footer[0x2F] = 'S';
+        if (fwrite(footer, 1, sizeof(footer), w->file) != sizeof(footer)) {
+            fclose(w->file); w->file = NULL; return -1;
+        }
+        w->header.flags |= SCP_FLAG_FOOTER;
+    }
+
     /* Update header with checksum */
     w->header.checksum = w->checksum;
-    
+
     /* Rewrite header and offset table */
     if (fseek(w->file, 0, SEEK_SET) != 0) {
         fclose(w->file);
