@@ -110,6 +110,16 @@ Disk-Fehler-Achse; wird gelesen und beim Write erhalten. ✓
 > Disks (mehr als Standard-ADF). Fehlt aktuell — sinnvoller Kandidat, weil es
 > Amiga-Protection abbildet, die das Standard-ADF strukturell verliert.
 > Aufwand M; Priorität nach HFE-v3-Weakbits.
+>
+> **Haftungsmodus-Recherche 2026-07-05 (durchgearbeitet, nicht implementiert):**
+> Der byte-genaue „UAE-1ADF"-Track-Deskriptor-Aufbau (Header-Magic + per-Track
+> type/length-Felder) ist über 3 Quellen (Wikipedia, vAmiga-FileFormats-Doc,
+> gezielte UAE-1ADF-Suche) NICHT byte-genau beschaffbar; die kanonische Spec
+> `lclevy.free.fr/adflib/adf_info.html` war per WebFetch nicht erreichbar. Ohne
+> verifizierten byte-Aufbau wäre eine Implementierung geraten (= Fehler). Nächster
+> Schritt: `adf_info.html` (Extended-ADF-Abschnitt) ODER WinUAE-Source
+> (`disk.c`/`zfile.c`, ext-adf read/write) als Byte-Referenz beschaffen, dann
+> Read + synthetischer Round-Trip-Test. Bis dahin dokumentiert-offen, nicht geraten.
 
 ## IBM PC — IMD / TD0 (Klasse 3 error-aware)
 
