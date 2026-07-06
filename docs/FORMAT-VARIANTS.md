@@ -47,13 +47,23 @@ verifizieren dass der Reader das nutzt (sonst Seiten-Vertauschung): Prüf-S.
 | HFE v1 (`HXCPICFE`, reiner Bitstream) | [hxc2001 HFE-file-format](https://hxc2001.com/floppy_drive_emulator/HFE-file-format.html) | R+W (`uft_hfe.c`) | — |
 | HFE v2 (4-Byte-Opcodes, variable Bitrate, 2012) | [Rev.3.1 PDF](https://hxc2001.com/download/floppy_drive_emulator/HxC_Floppy_Emulator_HFE_file_format.pdf) | R als v1 (Opcodes nicht interpretiert) | Opcode-Decode: M |
 | HFE v3.0 (`HXCHFEV3`, Opcode-Redesign, 2017) | [Rev.3.1 PDF](https://hxc2001.com/download/floppy_drive_emulator/HxC_Floppy_Emulator_HFE_file_format.pdf) | R (`HFE_SIGNATURE_V3`, variable Bitrate) | — |
-| HFE v3.1 (**Weakbits-Opcodes**, 2019) | [Rev.3.1 PDF](https://hxc2001.com/download/floppy_drive_emulator/HxC_Floppy_Emulator_HFE_file_format.pdf) | **R: Weak-Opcodes NICHT dekodiert** (`uft_hfe.c:789` „HFE does not carry weak-bit flags") | Weak-Opcode-Decode: **M** |
+| HFE v3.1 (**Weakbits-Opcodes**, 2019) | [Rev.3.1 PDF](https://hxc2001.com/download/floppy_drive_emulator/HxC_Floppy_Emulator_HFE_file_format.pdf) + [HxC `hfev3_loader.c`](https://github.com/jfdelnero/HxCFloppyEmulator) | **R: Weak-Opcodes DETEKTIERT** (`uft_hfe_v3_count_weak_opcodes`, RAND 0xF4 → `read_metadata("weak_regions")`); voller per-Bit-weak_mask offen | Weak-Opcode-**Decode**: **M** |
 
-> **Klasse-2-Lücke (direkt relevant fürs Snapshot-Arbeitspaket):** HFE v3.1
-> kann Weak/Fuzzy-Bits als Opcodes speichern — genau die „Snapshot wo die Spec
-> es vorsieht"-Fähigkeit. UFT liest den v3-Bitstream, ignoriert aber die
-> Weak-Opcodes. Das ist die konkrete nächste Klasse-2-Implementierung.
-> Gleiches gilt für die v2-Opcodes (variable Bitrate).
+> **Klasse-2-Lücke — TEILWEISE GESCHLOSSEN (MF-354):** HFE v3.1 speichert
+> Weak/Fuzzy-Bits als RAND-Opcode (0xF4). Der Opcode-Satz war in der HxC-PDF
+> unter-spezifiziert; aufgelöst aus der **HxC-Quelle** (`hfev3_loader.c`):
+> NOP 0xF0 / SETINDEX 0xF1 / SETBITRATE 0xF2 (2B) / SKIPBITS 0xF3 (2B) /
+> RAND 0xF4 (Weak-Region). UFT **detektiert** die Weak-Regionen jetzt
+> verifiziert (`uft_hfe_v3_count_weak_opcodes`, Unit-Test `test_hfe_v3_weak`
+> 8/8) und meldet die Zahl via `read_metadata("weak_regions")`.
+> **Offen (bewusst, Haftungsmodus):** der volle Opcode→Bitstream-Decode mit
+> per-Bit-`weak_mask`. Grund: der v3-`raw_data` trägt den Opcode-Stream
+> undecodiert; eine `weak_mask` mit unsicherer Bit-Ausrichtung wäre „erfundene
+> Daten". Zudem stellt der HxC-Autor klar, dass **HFE nur eine Annäherung**
+> an den Originaldisk-Inhalt speichert (nicht bit-exakt) — die Feature-Matrix
+> führt Weak-Bits deshalb als `PARTIAL`, nicht `SUPPORTED`. Voller Decode
+> braucht eine Referenz-HFE-v3 zur byte-genauen Verifikation.
+> Für die v2-Opcodes (variable Bitrate) gilt die Lücke unverändert.
 
 ## SuperCard Pro — SCP (Klasse 1, Flux)
 
@@ -163,19 +173,21 @@ Ground-Truth-Korpus verifizierbar → offener Punkt.
 
 ## Zusammenfassung der gefundenen Lücken (priorisiert)
 
-| # | Lücke | Klasse-Bezug | Aufwand |
-|---|---|---|---|
-| 1 | **HFE v3.1 Weak-Bit-Opcodes nicht dekodiert** | Klasse-2 Snapshot | M |
-| 2 | HFE v2 Opcodes (variable Bitrate) nicht interpretiert | Klasse-2 | M |
-| 3 | Extended-ADF (MFM-Protection) fehlt | Klasse-2/3-Grenze | M |
-| 4 | WOZ WRIT-Chunk / INFO-2.1-Emit beim Write | Klasse-1 W | S–M |
-| 5 | SCP-Footer-Emit beim Write (Metadaten) | Klasse-1 W | S |
-| 6 | ADZ (gzip-ADF) kein direkter Reader | Klasse-3 Komfort | S |
+| # | Lücke | Klasse-Bezug | Aufwand | Status |
+|---|---|---|---|---|
+| 1 | HFE v3.1 Weak-Bit-Opcodes: **Detektion** dekodiert; voller weak_mask offen | Klasse-2 Snapshot | M | **TEIL (MF-354)** |
+| 2 | HFE v2 Opcodes (variable Bitrate) nicht interpretiert | Klasse-2 | M | offen |
+| 3 | Extended-ADF (MFM-Protection) fehlt | Klasse-2/3-Grenze | M | **ERLEDIGT (MF-352)** |
+| 4 | WOZ WRIT-Chunk / INFO-2.1-Emit beim Write | Klasse-1 W | S–M | offen |
+| 5 | SCP-Footer-Emit beim Write (Metadaten) | Klasse-1 W | S | **ERLEDIGT (MF-351)** |
+| 6 | ADZ (gzip-ADF) kein direkter Reader | Klasse-3 Komfort | S | offen (zlib-Dep) |
 
-Lücke #1 ist der logische nächste Klasse-2-Implementierungsschritt: HFE v3
-kann Weak-Bits laut Spec speichern, UFT liest den Bitstream aber ohne die
-Weak-Opcodes. Alle Lücken sind additiv (kein Format wird falsch gelesen —
-sie erweitern die Abdeckung).
+Lücke #1 ist jetzt teilweise geschlossen: die HFE-v3-Weak-Opcodes werden
+**detektiert** (RAND 0xF4, verifiziert gegen HxC-Quelle), der volle
+Opcode→Bitstream-Decode mit per-Bit-`weak_mask` bleibt bewusst offen
+(Haftungsmodus — keine weak_mask mit unsicherer Bit-Ausrichtung, HFE ist
+laut HxC ohnehin nur eine Annäherung). Alle Lücken sind additiv (kein Format
+wird falsch gelesen — sie erweitern die Abdeckung).
 
 ## Nicht byte-verifizierbar ohne Korpus (explizit offen)
 

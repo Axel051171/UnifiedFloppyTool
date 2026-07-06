@@ -895,14 +895,19 @@ copy-protection / disk-error awareness per class. See
   fallback until its probe lands. SCP (MF-328) + KryoFlux (MF-331) done.
 - Klasse-2 snapshot: represent weak-bit regions where the spec allows
   (G64 speed-zones, HFE variable bitrate); document limits in code + docs.
-  **HFE v3 weak-bit opcode decode — blocked on two autonomy limits:** the
-  public HxC HFE reference lists opcodes 0xF0 NOP / 0xF1 index / 0xF2 bitrate /
-  0xF3 skip / 0xF4 align but leaves the exact *weak-bit* opcode encoding
-  under-specified ("remains under-specified in this reference material"), and
-  byte-exact decode correctness cannot be verified without a ground-truth v3
-  weak-bit test file. Implementing a detector on a guessed opcode would violate
-  "Keine erfundenen Daten" — deferred until the Rev.3.1 PDF opcode table is
-  extracted AND a reference image exists. Not fabricated.
+  **HFE v3 weak-bit opcode — DETECTION resolved (MF-354), full decode still
+  open:** the opcode set was under-specified in the HxC PDF but is fully
+  determined by the HxC *source* (`hfev3_loader.c`): 0xF0 NOP / 0xF1 SETINDEX /
+  0xF2 SETBITRATE (2B) / 0xF3 SKIPBITS (2B) / 0xF4 **RAND = weak/fuzzy-bit
+  region** (1B), all in the bit-reversed logical domain. UFT now **detects** the
+  weak regions (`uft_hfe_v3_count_weak_opcodes`, unit-test `test_hfe_v3_weak`
+  8/8) and reports the count via `read_metadata("weak_regions")`; the feature
+  matrix lists weak-bits as `PARTIAL`. **Still open (deliberate):** the full
+  opcode→bitstream decode with a per-bit `weak_mask`. The v3 `raw_data` still
+  carries the opcode stream undecoded; a `weak_mask` with uncertain bit
+  alignment would violate "Keine erfundenen Daten", and the HxC author states
+  HFE only *approximates* the disk (not bit-exact). Byte-exact full decode needs
+  a ground-truth v3 reference image. Not fabricated.
 - Surface the content-probe result in the GUI converter warning (currently
   only written to the `.loss.json` sidecar).
 - Per-format disk-error marking audit (read/preserve/write CRC-error,

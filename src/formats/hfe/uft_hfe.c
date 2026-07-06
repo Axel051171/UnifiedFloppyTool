@@ -112,6 +112,7 @@ typedef struct {
     hfe_track_entry_t* track_lut;       // Track-LUT
     bool            is_v3;              // HFEv3?
     size_t          file_size;
+    size_t          last_weak_regions;  // RAND opcodes in the most-recent v3 track (MF-354)
 } hfe_data_t;
 
 // ============================================================================
@@ -160,6 +161,39 @@ static uint8_t bit_reverse(uint8_t b) {
     b = (b & 0xCC) >> 2 | (b & 0x33) << 2;
     b = (b & 0xAA) >> 1 | (b & 0x55) << 1;
     return b;
+}
+
+/* HFE v3 track opcodes (top nibble 0xF), verified against the HxC
+ * HFEv3 loader (jfdelnero/HxCFloppyEmulator .../hfev3_loader.c). Values are in
+ * the bit-reversed (logical) domain, which is what bit_reverse() produces. */
+#define HFEV3_OPCODE_MASK   0xF0
+#define HFEV3_NOP           0xF0   /* 1 byte  */
+#define HFEV3_SETINDEX      0xF1   /* 1 byte  */
+#define HFEV3_SETBITRATE    0xF2   /* 2 bytes (opcode + rate divisor) */
+#define HFEV3_SKIPBITS      0xF3   /* 2 bytes (opcode + bit-skip count) */
+#define HFEV3_RAND          0xF4   /* 1 byte  — RAND = weak/fuzzy-bit region */
+
+/* Count the RAND (weak-bit) opcodes in a bit-reversed HFE v3 track stream.
+ * Walks the opcode stream exactly like the HxC loader so a 0xF4 that is only a
+ * 2-byte opcode's PARAMETER is not miscounted, and literal data bytes (never
+ * 0xFx in a valid HFE v3) are skipped as single bytes. NON-static so it can be
+ * unit-tested directly without synthesising a full HFE file (MF-354).
+ *
+ * NOTE: HFE only APPROXIMATES the original disk (per the HxC author) — a
+ * detected weak region is indicative, not a forensically exact reproduction. */
+size_t uft_hfe_v3_count_weak_opcodes(const uint8_t *stream, size_t len) {
+    size_t weak = 0;
+    for (size_t i = 0; i < len; ) {
+        uint8_t b = stream[i];
+        if ((b & HFEV3_OPCODE_MASK) == HFEV3_OPCODE_MASK) {
+            if (b == HFEV3_RAND) { weak++; i += 1; }
+            else if (b == HFEV3_SETBITRATE || b == HFEV3_SKIPBITS) { i += 2; }
+            else { i += 1; }   /* NOP / SETINDEX / unknown 0xFx */
+        } else {
+            i += 1;            /* literal data byte */
+        }
+    }
+    return weak;
 }
 
 /**
@@ -589,6 +623,17 @@ static uft_error_t hfe_read_track(uft_disk_t* disk, int cylinder, int head,
     track->raw_data = raw_data;
     track->raw_size = raw_size;
     track->encoding = hfe_to_uft_encoding(pdata->header.track_encoding);
+
+    /* HFE v3 weak/fuzzy-bit RAND opcodes (MF-354). The stored raw_data still
+     * carries the v3 opcode stream (a full opcode→bitstream decode is a
+     * documented follow-up), so we detect — never fabricate — the weak regions
+     * and surface the count via read_metadata("weak_regions"). HFE only
+     * APPROXIMATES the original disk (per the HxC author): a detected weak
+     * region is indicative, not a forensically exact reproduction. We do NOT
+     * synthesise a per-bit weak_mask here — a mask with uncertain bit alignment
+     * would violate "keine erfundenen Daten". */
+    pdata->last_weak_regions =
+        pdata->is_v3 ? uft_hfe_v3_count_weak_opcodes(raw_data, raw_size) : 0;
     
     // Track-Metriken
     uint16_t rpm = read_le16((const uint8_t*)&pdata->header.uft_floppy_rpm);
@@ -722,6 +767,13 @@ static uft_error_t hfe_read_metadata(uft_disk_t* disk, const char* key,
         snprintf(value, max_len, "%s", pdata->is_v3 ? "HFEv3" : "HFEv1");
         return UFT_OK;
     }
+
+    /* Weak/fuzzy-bit RAND opcodes (0xF4) in the most-recently-read v3 track.
+     * Non-v3 files report 0. Query after read_track. (MF-354) */
+    if (strcmp(key, "weak_regions") == 0) {
+        snprintf(value, max_len, "%zu", pdata->last_weak_regions);
+        return UFT_OK;
+    }
     
     if (strcmp(key, "bitrate") == 0) {
         uint16_t bitrate = read_le16((const uint8_t*)&pdata->header.bitrate);
@@ -785,8 +837,11 @@ static const uft_plugin_feature_t hfe_features[] = {
     { "HFE v3 (STM32 bootloader)", UFT_FEATURE_SUPPORTED,   NULL },
     { "Per-track bitrate",         UFT_FEATURE_SUPPORTED,   NULL },
     { "Write / encode",            UFT_FEATURE_SUPPORTED,   NULL },
-    { "Weak-bit annotation",       UFT_FEATURE_UNSUPPORTED,
-      "HFE does not carry weak-bit flags" },
+    { "Weak-bit annotation",       UFT_FEATURE_PARTIAL,
+      "HFE v1/v2 carry no weak-bit flags. HFE v3 encodes weak/fuzzy bits as "
+      "RAND opcodes (0xF4): detected and counted (read_metadata \"weak_regions\"). "
+      "HFE only approximates the disk (per HxC), so this is indicative, not "
+      "bit-exact; a full per-bit weak_mask reconstruction is a documented follow-up." },
 };
 
 const uft_format_plugin_t uft_format_plugin_hfe = {
