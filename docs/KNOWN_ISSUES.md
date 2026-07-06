@@ -927,6 +927,18 @@ copy-protection / disk-error awareness per class. See
   size generically with the boot-sector 128-B exception). `test_atr_512` builds
   a 3×128 + 5×512 ATR and asserts sector_size 512, 8 sectors, correct data
   offset. 1/1.
+- **SCP extension-footer read/write — spec-compliance suspect (found 2026-07-05,
+  liability-mode: NOT implemented on a broken base):** the cbmstuff SCP spec puts
+  a 4-byte "FPCS" signature as the FINAL bytes of the file; the codebase struct
+  `uft_scp_footer_t` (52 B, 13×uint32, no FPCS field) and reader
+  (`scp_parse_extension_footer`, reads the last 52 bytes) don't model that and
+  likely use the wrong timestamp field sizes (spec: 8-byte timestamps). So the
+  footer READER is probably already spec-incompatible, and footer-EMIT must not
+  be built on it. Next step: verify the footer layout byte-for-byte against the
+  spec + a real SCP-with-footer reference, correct the reader, THEN add emit.
+  Deferred (needs a reference SCP), not guessed. (ADZ/gzip-ADF likewise deferred:
+  zlib is not reliably linked here — imz uses a stored-only fallback — so ADZ
+  would need a new zlib build dependency, a separate decision.)
 - **D64 42-track variant** — ✓ RESOLVED (MF-350): the D64 plugin now accepts the
   extended 41/42-track sizes (200960/201745 and 205312/206114, VICE/Schepers-
   verified) additively — d64_spt extended to 42 (tracks 41/42 = 17 sectors),

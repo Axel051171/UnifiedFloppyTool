@@ -60,7 +60,20 @@ verifizieren dass der Reader das nutzt (sonst Seiten-Vertauschung): Prüf-S.
 | Variante | Spezifikation | UFT-Status | Aufwand |
 |---|---|---|---|
 | SCP Basis (Version-Byte @0x03, bis 5 Revolutionen) | [scp_image_specs v2.5](https://www.cbmstuff.com/downloads/scp/scp_image_specs.txt) | R + W (Multi-Rev-Weak-Bit Round-Trip MF-327) | — |
-| Footer-Extension (FLAG bit5, Laufwerks-/Creator-Metadaten) | [v2.5 spec](https://www.cbmstuff.com/downloads/scp/scp_image_specs.txt) | R (`scp_extension_footer_t`), W emittiert keinen Footer | Footer-Emit: S |
+| Footer-Extension (FLAG bit5, Laufwerks-/Creator-Metadaten) | [v2.5 spec](https://www.cbmstuff.com/downloads/scp/scp_image_specs.txt) | R (`scp_extension_footer_t`) **spec-verdächtig**, W emittiert keinen Footer | Footer-Struct erst gegen Spec+Referenz verifizieren, dann Emit |
+
+> **Haftungsmodus-Befund (2026-07-05, NICHT blind implementiert):** Die SCP-Spec
+> platziert eine **„FPCS"-Signatur als letzte 4 Bytes** der Datei; die
+> Codebase-Struct `uft_scp_footer_t` (52 B, 13×uint32, **kein FPCS-Feld**) und der
+> Reader (`scp_parse_extension_footer`, liest die letzten 52 B) modellieren das
+> nicht und nutzen vermutlich falsche Timestamp-Feldgrößen (Spec: 8-Byte-
+> Timestamps vs. hier uint32). Der Footer-**Reader ist damit vermutlich bereits
+> spec-inkompatibel**. Ein Footer-**Emit** darauf zu bauen wäre entweder
+> selbst-inkonsistent oder bräuchte zuerst eine Footer-Struct-Korrektur im
+> Flux-Reader + ein reales SCP-mit-Footer-Referenzfile. Beides ist ohne
+> Ground-Truth riskant → Footer-Emit **verschoben**, Befund gemeldet statt
+> geraten. Nächster Schritt: Footer-Layout gegen cbmstuff-Spec + Referenz-SCP
+> byte-genau verifizieren, Reader korrigieren, DANN Emit.
 | v2.3 Flag bit7 (3rd-party-Flux-Creator-Kennung) | [v2.5 spec](https://www.cbmstuff.com/downloads/scp/scp_image_specs.txt) | Flags gelesen, bit7 nicht ausgewertet | S (nur Metadaten) |
 
 ## SPS — IPF (Klasse 1, Flux/CTR)
