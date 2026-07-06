@@ -104,14 +104,20 @@ Disk-Fehler-Achse; wird gelesen und beim Write erhalten. ✓
 |---|---|---|---|
 | ADF Standard DD (901.120 B) / HD (1.802.240 B) | [archiveteam ADF](http://fileformats.archiveteam.org/wiki/ADF_(Amiga)) | R+W (`uft_adf*`) | — |
 | ADZ (gzip-komprimiertes ADF) | [Wikipedia ADF](https://en.wikipedia.org/wiki/Amiga_Disk_File) | Nicht direkt (externe Dekompression nötig) | gzip-Wrapper: S |
-| **Extended ADF** (MFM-Info für Kopierschutz) | [archiveteam ADF](http://fileformats.archiveteam.org/wiki/ADF_(Amiga)) | **Nicht als eigene Variante** | R+W Extended: M |
+| **Extended ADF** (UAE-1ADF, MFM für Kopierschutz) | [archiveteam ADF](http://fileformats.archiveteam.org/wiki/ADF_(Amiga)) + WinUAE `disk.cpp` | ✅ **R implementiert** (MF-352, `uft_adf_ext.c`) | Write (re-MFM-encode): M |
 
 > **Scope-Hinweis:** Extended-ADF speichert rohe MFM für kopiergeschützte
 > Disks (mehr als Standard-ADF). Fehlt aktuell — sinnvoller Kandidat, weil es
 > Amiga-Protection abbildet, die das Standard-ADF strukturell verliert.
 > Aufwand M; Priorität nach HFE-v3-Weakbits.
 >
-> **Haftungsmodus-Recherche 2026-07-05 (durchgearbeitet, nicht implementiert):**
+> **✅ RESOLVED (MF-352):** Byte-Struktur aus WinUAE-Source (`disk.cpp`
+> `read_header_ext2`) via `gh` extrahiert: `"UAE-1ADF"` + BE `W reserved` +
+> `W num_tracks` + pro Track 12 B `{W reserved, B rev-1, B type, L24 len,
+> L24 bitlen}`, dann Track-Daten. type 0=AmigaDOS→Sektoren, type 1=raw-MFM→
+> in `raw_data` **verlustfrei erhalten** (kein Bit verloren). `test_adf_ext_plugin`
+> 3/3. MFM→Sektor-Decode der type-1-Tracks = dokumentierter Follow-up.
+> ~~Vorher blockiert:~~
 > Der byte-genaue „UAE-1ADF"-Track-Deskriptor-Aufbau (Header-Magic + per-Track
 > type/length-Felder) ist über 3 Quellen (Wikipedia, vAmiga-FileFormats-Doc,
 > gezielte UAE-1ADF-Suche) NICHT byte-genau beschaffbar; die kanonische Spec
