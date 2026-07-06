@@ -8,6 +8,20 @@
 #define DMK_HDR 16
 #define DMK_IDAM_SIZE 128
 
+/* WD177x FDC CRC = CRC-CCITT-FALSE (poly 0x1021, init 0xFFFF, no reflection,
+ * no final XOR). Verified against the standard check value CRC("123456789")
+ * == 0x29B1. Kept as a small self-contained helper so the plugin stays free of
+ * link deps (canonical: uft_crc16_ccitt in uft_crc_polys.h). MF-353. */
+static uint16_t dmk_crc16(const uint8_t *d, size_t n) {
+    uint16_t c = 0xFFFF;
+    for (size_t i = 0; i < n; i++) {
+        c ^= (uint16_t)d[i] << 8;
+        for (int j = 0; j < 8; j++)
+            c = (c & 0x8000) ? (uint16_t)((c << 1) ^ 0x1021) : (uint16_t)(c << 1);
+    }
+    return c;
+}
+
 typedef struct { FILE* file; uint8_t tracks; uint16_t track_len; bool ss; } dmk_data_t;
 
 bool dmk_probe(const uint8_t* data, size_t size, size_t file_size, int* confidence) {
@@ -70,13 +84,43 @@ static uft_error_t dmk_read_track(uft_disk_t* disk, int cyl, int head, uft_track
         
         uint8_t sec_id = idam[3], sz = idam[4] & 3;
         uint16_t sec_sz = 128 << sz;
-        
+
+        /* ID-field CRC (WD177x): CRC covers the address mark + C/H/R/N and, in
+         * MFM, the three 0xA1 sync bytes that precede the 0xFE. Detect MFM from
+         * the actual preceding bytes (FM has no A1). Stored CRC is the two bytes
+         * after N, big-endian (FDC writes MSB first). MF-353. */
+        bool id_mfm = (idam_off >= 3 && idam[-1] == 0xA1 &&
+                       idam[-2] == 0xA1 && idam[-3] == 0xA1);
+        uint16_t id_crc_calc = dmk_crc16(id_mfm ? idam - 3 : idam,
+                                         id_mfm ? 8 : 5);
+        uint16_t id_crc_stored = (uint16_t)(((uint16_t)idam[5] << 8) | idam[6]);
+        bool id_crc_ok = (id_crc_calc == id_crc_stored);
+
         // Find DAM (0xFB=normal, 0xF8=deleted)
         for (int j = 7; j < 60 && idam_off + j < p->track_len - sec_sz; j++) {
             if (idam[j] == 0xFB || idam[j] == 0xF8) {
                 uft_format_add_sector(track, sec_id - 1, &idam[j + 1], sec_sz, cyl, head);
-                if (idam[j] == 0xF8 && track->sector_count > 0)
-                    track->sectors[track->sector_count - 1].deleted = true;
+                if (track->sector_count > 0) {
+                    uft_sector_t *last = &track->sectors[track->sector_count - 1];
+                    if (idam[j] == 0xF8) last->deleted = true;
+                    /* ID-field CRC error is a header fault, kept separate from
+                     * the data CRC (MF-338 id_crc_ok). */
+                    if (!id_crc_ok) uft_sector_set_id_crc(last, false);
+                    /* Data-field CRC: [A1 A1 A1] DAM + data, CRC stored as the
+                     * two big-endian bytes after the data. */
+                    const uint8_t *dam = &idam[j];
+                    bool d_mfm = (idam_off + j >= 3 && dam[-1] == 0xA1 &&
+                                  dam[-2] == 0xA1 && dam[-3] == 0xA1);
+                    size_t crc_pos = (size_t)DMK_IDAM_SIZE + idam_off + j + 1 + sec_sz;
+                    if (crc_pos + 2 <= (size_t)p->track_len) {
+                        uint16_t d_crc_calc = dmk_crc16(d_mfm ? dam - 3 : dam,
+                                                        (d_mfm ? 3u : 0u) + 1u + sec_sz);
+                        uint16_t d_crc_stored = (uint16_t)(((uint16_t)dam[1 + sec_sz] << 8) |
+                                                            dam[2 + sec_sz]);
+                        if (d_crc_calc != d_crc_stored)
+                            uft_sector_set_crc(last, false);
+                    }
+                }
                 break;
             }
         }
