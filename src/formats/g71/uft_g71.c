@@ -422,46 +422,96 @@ bool g71_probe(const uint8_t *data, size_t size, size_t file_size, int *confiden
  * Plugin-B Interface (for format registry)
  * ============================================================================ */
 
+/* In-memory G71 image: the whole file plus its size, so per-track reads can
+ * bounds-check the offset table (MF-355). */
+typedef struct { uint8_t *data; size_t size; } g71_plugin_data_t;
+
 static uft_error_t g71_plugin_open(uft_disk_t *disk, const char *path, bool ro) {
     (void)ro;
     size_t file_size = 0;
     uint8_t *data = uft_read_file(path, &file_size);
     if (!data) return UFT_ERR_FILE_OPEN;
-    /* G71 = 2× D64 (70 tracks × ~7928 bytes GCR) */
-    disk->plugin_data = data;
-    disk->geometry.cylinders = 70;
-    disk->geometry.heads = 1;
+    /* Validate the container up front so bad files fail open, not read. */
+    if (file_size < G71_TRACK_DATA ||
+        (memcmp(data, G71_SIGNATURE, G71_SIGNATURE_LEN) != 0 &&
+         memcmp(data, "GCR-1541", 8) != 0)) {
+        free(data);
+        return UFT_ERR_FORMAT;
+    }
+    g71_plugin_data_t *pd = calloc(1, sizeof(*pd));
+    if (!pd) { free(data); return UFT_ERR_MEMORY; }
+    pd->data = data;
+    pd->size = file_size;
+    disk->plugin_data = pd;
+    /* 1571 = double-sided; the offset table holds 168 half-track slots (42
+     * whole tracks/side). Empty tracks read back as UNFORMATTED. The prior
+     * 70×1 geometry was wrong for a double-sided GCR image. */
+    disk->geometry.cylinders = G71_TRACKS_PER_SIDE;
+    disk->geometry.heads = 2;
     disk->geometry.sectors = 21;
     disk->geometry.sector_size = 256;
-    disk->geometry.total_sectors = 70 * 21;
+    disk->geometry.total_sectors = G71_TRACKS_PER_SIDE * 2 * 21;
     return UFT_OK;
 }
 
 static void g71_plugin_close(uft_disk_t *disk) {
-    free(disk->plugin_data);
+    g71_plugin_data_t *pd = disk->plugin_data;
+    if (pd) { free(pd->data); free(pd); }
     disk->plugin_data = NULL;
 }
 
 static uft_error_t g71_plugin_read_track(uft_disk_t *disk, int cyl, int head,
                                           uft_track_t *track) {
-    (void)head;
-    (void)cyl;
-    (void)track;
-    if (!disk->plugin_data) return UFT_ERR_INVALID_STATE;
-    /* WHAT: per-track G71 read not implemented (1571 GCR sector decode
-     *       missing at plugin level).
-     * WHY:  the prior body returned UFT_OK with an EMPTY track — a
-     *       fabricated success (DESIGN_PRINCIPLE 4 violation, found by
-     *       the MF-300 plugin is_stub triage). File-level loading via
-     *       uft_g71_read() is real; only this per-track path is not.
-     * FIX:  use file-level open, or wait for the plugin-level GCR
-     *       sector extractor (STUB_ELIMINATION_PLAN Phase 4). */
-    return UFT_ERR_NOT_IMPLEMENTED;
+    if (!track) return UFT_ERROR_NULL_POINTER;
+    g71_plugin_data_t *pd = disk ? disk->plugin_data : NULL;
+    if (!pd || !pd->data) return UFT_ERR_INVALID_STATE;
+    if (head < 0 || head > 1 || cyl < 0 || cyl >= G71_TRACKS_PER_SIDE)
+        return UFT_ERR_OUT_OF_RANGE;
+
+    uft_track_init(track, cyl, head);
+
+    /* Offset-table layout mirrors the proven file-level reader (uft_g71_read):
+     * 168 half-track LE32 offsets at G71_OFFSET_TABLE; a whole track lives at
+     * the even slot (side*42 + cyl)*2. Every access is bounds-checked against
+     * the in-memory file size. */
+    int half_track = (head * G71_TRACKS_PER_SIDE + cyl) * 2;
+    if (half_track >= G71_HALF_TRACKS) {
+        track->status = UFT_TRACK_UNFORMATTED;
+        return UFT_OK;
+    }
+    size_t ote = (size_t)G71_OFFSET_TABLE + (size_t)half_track * 4;
+    if (ote + 4 > pd->size) return UFT_ERR_IO;
+    uint32_t offset = read_le32(&pd->data[ote]);
+    if (offset == 0) {                     /* unformatted / absent track */
+        track->status = UFT_TRACK_UNFORMATTED;
+        return UFT_OK;
+    }
+    if ((size_t)offset + 2 > pd->size) return UFT_ERR_IO;
+    uint16_t track_size = read_le16(&pd->data[offset]);
+    if (track_size == 0 || track_size > G71_MAX_TRACK_SIZE ||
+        (size_t)offset + 2 + track_size > pd->size) {
+        track->status = UFT_TRACK_UNFORMATTED;
+        return UFT_OK;
+    }
+
+    uint8_t *gcr = malloc(track_size);
+    if (!gcr) return UFT_ERR_MEMORY;
+    memcpy(gcr, &pd->data[offset + 2], track_size);
+
+    /* Preserve the raw GCR bitstream verbatim (kein Bit verloren). GCR 5-to-4
+     * sector decode is a shared-pipeline concern that the file-level reader
+     * defers likewise — not fabricated here at the plugin level. */
+    track->raw_data = gcr;
+    track->raw_size = track_size;
+    track->encoding = UFT_ENC_GCR_CBM;
+    track->status = UFT_TRACK_OK;
+    return UFT_OK;
 }
 
 static const uft_plugin_feature_t uft_format_plugin_g71_features[] = {
     { "Read", UFT_FEATURE_PARTIAL,
-      "File-level load real; per-track GCR sector decode pending" },
+      "Per-track raw GCR bitstream read (verbatim, MF-355); GCR 5-to-4 sector "
+      "decode pending (shared pipeline)" },
     { "Write", UFT_FEATURE_UNSUPPORTED, NULL },
     { "Create", UFT_FEATURE_UNSUPPORTED, NULL },
     { "Flux", UFT_FEATURE_SUPPORTED, NULL },
