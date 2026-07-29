@@ -998,6 +998,36 @@ Porting an unverified codec would risk silent corruption, which the forensic
 mandate forbids. Unblock: obtain a real compressed SaveDskF (`SAVEDSKF /C`
 output or an OS/2 fixpak `.dsk`), port `dskdcmps.h`, verify byte-exact.
 
+### FMT-11 — NFD r0 (T98-Next PC-98) reader fabricated → RESOLVED (2026-07-06, MF-358)
+
+**Severity: HIGH (forensic-integrity).** The NFD r0 reader modelled a wrong
+structure end-to-end and would mis-read every real file:
+
+- It read a **164 per-TRACK** entry table with a per-entry **data offset at
+  +12**. The real r0 layout is a fixed **163×26 per-SECTOR** table of 16-byte
+  entries at 0x120, and there is **no offset field** — sector data is stored
+  contiguously from `dwHeadSize` (@0x110) in the order the valid (C≠0xFF) entries
+  appear. Bytes 11-15 of an entry are padding, not an offset.
+- Consequently the field offsets were all wrong: it read N (sector-size) as a
+  per-track sector count, flMFM as the size code, byStatus as DDAM, and ST1/ST2
+  from +9/+10 instead of +8/+9.
+
+Authoritative layout verified from pc98.org/project/doc/nfdr0.html and a working
+reference decoder (tomari/d88split `nfd2mhlt.pl`).
+
+**Fixed (MF-358):** correct header parse (dwHeadSize/byHead), full 163×26 table
+walk, sequential data-offset accumulation from dwHeadSize, correct entry fields
+(C/H/R/N/flMFM/flDDAM/byStatus/ST0/ST1/ST2/byPDA), DDAM→deleted, ST1/ST2 bit5→
+CRC-bad, real record number R preserved as the sector id, and in-place write that
+actually persists to disk (the prior write only touched an in-memory buffer — a
+silent no-op). Test `test_nfd_r0` 4/4 (geometry + per-(C,H) recovery, DDAM/CRC
+flags, write persistence, r1 refusal).
+
+**Deliberately scoped:** the **r1** variant has a completely different layout (a
+164-entry track-pointer table at offset 0, then per-track headers). It now
+returns an explicit `NOT_SUPPORTED` instead of being silently mis-read as r0.
+r1 is its own implementation task (reference: `nfd2mhlt.pl` read_trkinfo_nfdr1).
+
 ---
 
 ## Wie beitragen
