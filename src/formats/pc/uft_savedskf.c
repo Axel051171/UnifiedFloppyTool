@@ -25,53 +25,26 @@ static uint16_t read_le16(const uint8_t *p) {
     return (uint16_t)p[0] | ((uint16_t)p[1] << 8);
 }
 
-/* ============================================================================
- * RLE Decompression
- * ============================================================================ */
-
-/**
- * SaveDskF RLE format:
- * - If byte != 0x00: literal byte
- * - If byte == 0x00: escape sequence:
- *   - Next byte = count
- *   - If count == 0: end of data
- *   - Next byte = value to repeat 'count' times
- */
-int uft_savedskf_decompress_rle(const uint8_t *src, size_t src_len,
-                                uint8_t *dst, size_t dst_len,
-                                size_t *out_len)
-{
-    if (!src || !dst) return UFT_E_INVALID_ARG;
-
-    size_t si = 0;  /* source index */
-    size_t di = 0;  /* destination index */
-
-    while (si < src_len && di < dst_len) {
-        uint8_t byte = src[si++];
-
-        if (byte != UFT_SAVEDSKF_RLE_ESCAPE) {
-            /* Literal byte */
-            dst[di++] = byte;
-        } else {
-            /* Escape sequence */
-            if (si >= src_len) break;
-            uint8_t count = src[si++];
-
-            if (count == 0) break;  /* End of data marker */
-
-            if (si >= src_len) break;
-            uint8_t value = src[si++];
-
-            /* Repeat value 'count' times */
-            for (uint8_t r = 0; r < count && di < dst_len; r++) {
-                dst[di++] = value;
-            }
-        }
-    }
-
-    if (out_len) *out_len = di;
-    return 0;
+/* SaveDskF stores its signature big-endian; geometry fields are little-endian. */
+static uint16_t read_be16(const uint8_t *p) {
+    return ((uint16_t)p[0] << 8) | (uint16_t)p[1];
 }
+
+/* Classify the big-endian signature. Returns true + sets *comp / *old for a
+ * known signature, false otherwise. */
+static bool savedskf_classify(uint16_t sig, uint8_t *comp, bool *old) {
+    switch (sig) {
+        case UFT_SAVEDSKF_MAGIC_OLD: *comp = UFT_SAVEDSKF_COMP_NONE; *old = true;  return true;
+        case UFT_SAVEDSKF_MAGIC_NEW: *comp = UFT_SAVEDSKF_COMP_NONE; *old = false; return true;
+        case UFT_SAVEDSKF_MAGIC_LZW: *comp = UFT_SAVEDSKF_COMP_LZW;  *old = false; return true;
+        default: return false;
+    }
+}
+
+/* NOTE: the prior 1.0.0 reader carried a SaveDskF "RLE" decompressor. Real
+ * SaveDskF has no RLE mode — its only compression is IBM-LZW (magic 0xAA5A).
+ * The RLE path was part of the same fabricated spec and has been removed
+ * (MF-356). Compressed images are handled by the LZW branch in the reader. */
 
 /* ============================================================================
  * API Implementation
@@ -94,27 +67,24 @@ bool uft_savedskf_probe(const uint8_t *data, size_t size, int *confidence)
 {
     if (!data || size < UFT_SAVEDSKF_HEADER_SIZE) return false;
 
-    uint16_t magic = read_le16(data);
-    if (magic != UFT_SAVEDSKF_MAGIC) return false;
+    uint8_t comp; bool old;
+    if (!savedskf_classify(read_be16(data), &comp, &old)) return false;
 
-    /* Additional validation: check geometry values */
-    uint16_t sec_size = read_le16(&data[2]);
-    uint16_t spt = read_le16(&data[4]);
-    uint16_t heads = read_le16(&data[6]);
-    uint16_t cyls = read_le16(&data[8]);
-    uint8_t  comp = data[10];
+    /* Geometry lives at authoritative little-endian offsets (deark layout). */
+    uint16_t sec_size = read_le16(&data[UFT_SAVEDSKF_OFF_SECSIZE]);
+    uint16_t cyls     = read_le16(&data[UFT_SAVEDSKF_OFF_CYLINDERS]);
+    uint16_t heads    = read_le16(&data[UFT_SAVEDSKF_OFF_HEADS]);
+    uint16_t spt      = read_le16(&data[UFT_SAVEDSKF_OFF_SPT]);
 
-    /* Sanity checks */
     if (sec_size != 128 && sec_size != 256 && sec_size != 512 &&
         sec_size != 1024 && sec_size != 2048 && sec_size != 4096) {
         return false;
     }
     if (spt == 0 || spt > UFT_SAVEDSKF_MAX_SECTORS) return false;
     if (heads == 0 || heads > UFT_SAVEDSKF_MAX_HEADS) return false;
-    if (cyls == 0 || cyls > UFT_SAVEDSKF_MAX_CYLINDERS) return false;
-    if (comp > 2) return false;
+    if (cyls < 20 || cyls > UFT_SAVEDSKF_MAX_CYLINDERS) return false;
 
-    if (confidence) *confidence = 90;
+    if (confidence) *confidence = 95;   /* BE signature is highly specific */
     return true;
 }
 
@@ -122,8 +92,7 @@ const char *uft_savedskf_compression_name(uint8_t method)
 {
     switch (method) {
         case UFT_SAVEDSKF_COMP_NONE: return "None";
-        case UFT_SAVEDSKF_COMP_RLE:  return "RLE";
-        case UFT_SAVEDSKF_COMP_LZSS: return "LZSS";
+        case UFT_SAVEDSKF_COMP_LZW:  return "IBM-LZW";
         default: return "Unknown";
     }
 }
@@ -161,22 +130,25 @@ int uft_savedskf_read(const char *path, uft_savedskf_image_t *image,
         return UFT_E_FILE_READ;
     }
 
-    /* Verify magic */
-    uint16_t magic = read_le16(hdr_buf);
-    if (magic != UFT_SAVEDSKF_MAGIC) {
+    /* Verify big-endian signature and classify (old/new/compressed). */
+    uint16_t magic = read_be16(hdr_buf);
+    uint8_t  comp;  bool old_fmt;
+    if (!savedskf_classify(magic, &comp, &old_fmt)) {
         fclose(fp);
         return UFT_E_MAGIC;
     }
 
-    /* Parse header */
+    /* Parse header at authoritative offsets (deark loaddskf_read_header). */
     image->header.magic = magic;
-    image->header.sector_size = read_le16(&hdr_buf[2]);
-    image->header.sectors_per_track = read_le16(&hdr_buf[4]);
-    image->header.heads = read_le16(&hdr_buf[6]);
-    image->header.cylinders = read_le16(&hdr_buf[8]);
-    image->header.compression = hdr_buf[10];
+    image->header.sector_size       = read_le16(&hdr_buf[UFT_SAVEDSKF_OFF_SECSIZE]);
+    image->header.cylinders         = read_le16(&hdr_buf[UFT_SAVEDSKF_OFF_CYLINDERS]);
+    image->header.heads             = read_le16(&hdr_buf[UFT_SAVEDSKF_OFF_HEADS]);
+    image->header.sectors_per_track = read_le16(&hdr_buf[UFT_SAVEDSKF_OFF_SPT]);
+    image->header.num_sectors_in_image = read_le16(&hdr_buf[UFT_SAVEDSKF_OFF_NUMSECS]);
+    image->header.header_size       = read_le16(&hdr_buf[UFT_SAVEDSKF_OFF_HDRSIZE]);
+    image->header.compression       = comp;
 
-    /* Validate geometry */
+    /* Validate geometry (deark sanity ranges). */
     if (image->header.sector_size == 0 ||
         image->header.sectors_per_track == 0 ||
         image->header.heads == 0 ||
@@ -184,7 +156,6 @@ int uft_savedskf_read(const char *path, uft_savedskf_image_t *image,
         fclose(fp);
         return UFT_E_FORMAT_INVALID;
     }
-
     if (image->header.heads > UFT_SAVEDSKF_MAX_HEADS ||
         image->header.cylinders > UFT_SAVEDSKF_MAX_CYLINDERS ||
         image->header.sectors_per_track > UFT_SAVEDSKF_MAX_SECTORS) {
@@ -192,78 +163,53 @@ int uft_savedskf_read(const char *path, uft_savedskf_image_t *image,
         return UFT_E_FORMAT_INVALID;
     }
 
-    /* Calculate disk size */
+    /* Sector data offset: old fmt is fixed at 0x200; new fmt uses the
+     * header_size field (0 => 512). */
+    size_t data_off = old_fmt ? UFT_SAVEDSKF_OLD_DATA_OFF
+                              : (image->header.header_size ? image->header.header_size : 512);
+
+    /* Full-geometry image size. */
     image->total_sectors = (uint32_t)image->header.cylinders *
                            image->header.heads *
                            image->header.sectors_per_track;
     image->disk_size = image->total_sectors * image->header.sector_size;
-
-    /* Protect against unreasonable sizes (max 16 MB for floppies) */
-    if (image->disk_size > 16 * 1024 * 1024) {
+    if (image->disk_size == 0 || image->disk_size > 16 * 1024 * 1024) {
         fclose(fp);
         return UFT_E_FILE_TOO_LARGE;
     }
 
-    /* Allocate sector data buffer */
-    image->sector_data = malloc(image->disk_size);
+    /* calloc: sectors not physically stored (SaveDskF omits unused sectors)
+     * are reconstructed as empty — the format's defined meaning, not
+     * fabricated data. */
+    image->sector_data = calloc(1, image->disk_size);
     if (!image->sector_data) {
         fclose(fp);
         return UFT_E_MEMORY;
     }
 
-    /* Read and decompress data */
-    size_t compressed_size = (size_t)(file_size - UFT_SAVEDSKF_HEADER_SIZE);
     int rc = 0;
+    if (comp == UFT_SAVEDSKF_COMP_LZW) {
+        /* IBM-LZW ("ibmlzw", dskdcmps): faithful port pending a ground-truth
+         * compressed reference file for byte-exact verification. Porting a
+         * ~200-line LZW codec unverified would risk silent corruption, which
+         * the forensic mandate forbids. See docs/KNOWN_ISSUES.md. */
+        rc = UFT_E_NOT_IMPLEMENTED;
+    } else {
+        /* Uncompressed: num_sectors_in_image sectors are stored contiguously at
+         * data_off; copy them into the zero-filled full-geometry buffer. */
+        size_t stored = (size_t)image->header.num_sectors_in_image *
+                        image->header.sector_size;
+        if (stored == 0 || stored > image->disk_size) stored = image->disk_size;
+        size_t avail = (size_t)file_size > data_off ? (size_t)file_size - data_off : 0;
+        if (stored > avail) stored = avail;
 
-    switch (image->header.compression) {
-        case UFT_SAVEDSKF_COMP_NONE: {
-            /* Uncompressed: read directly */
-            size_t to_read = image->disk_size;
-            if (to_read > compressed_size) to_read = compressed_size;
-
-            if (fread(image->sector_data, 1, to_read, fp) != to_read) {
+        if (stored > 0) {
+            if (fseek(fp, (long)data_off, SEEK_SET) != 0 ||
+                fread(image->sector_data, 1, stored, fp) != stored) {
                 rc = UFT_E_FILE_READ;
             }
-            image->sector_data_size = to_read;
-            break;
         }
-
-        case UFT_SAVEDSKF_COMP_RLE: {
-            /* RLE compressed: read compressed data, then decompress */
-            uint8_t *comp_data = malloc(compressed_size);
-            if (!comp_data) {
-                rc = UFT_E_MEMORY;
-                break;
-            }
-
-            if (fread(comp_data, 1, compressed_size, fp) != compressed_size) {
-                free(comp_data);
-                rc = UFT_E_FILE_READ;
-                break;
-            }
-
-            size_t decompressed_len = 0;
-            rc = uft_savedskf_decompress_rle(comp_data, compressed_size,
-                                             image->sector_data,
-                                             image->disk_size,
-                                             &decompressed_len);
-            free(comp_data);
-
-            if (rc == 0) {
-                image->sector_data_size = decompressed_len;
-            }
-            break;
-        }
-
-        case UFT_SAVEDSKF_COMP_LZSS: {
-            /* LZSS compression: not yet implemented */
-            rc = UFT_E_NOT_IMPLEMENTED;
-            break;
-        }
-
-        default:
-            rc = UFT_E_FORMAT_UNSUPPORTED;
-            break;
+        image->sector_data_size = image->disk_size;
     }
 
     fclose(fp);
@@ -285,7 +231,7 @@ int uft_savedskf_read(const char *path, uft_savedskf_image_t *image,
         result->sectors_per_track = image->header.sectors_per_track;
         result->sector_size = image->header.sector_size;
         result->compression = image->header.compression;
-        result->compressed_size = compressed_size;
+        result->compressed_size = (size_t)file_size;
         result->uncompressed_size = image->sector_data_size;
     }
 

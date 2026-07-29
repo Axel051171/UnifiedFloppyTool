@@ -963,6 +963,41 @@ see them (they sit in the accepted baseline). New sources must go in their own
 `SOURCES +=` statement without a leading comment line, or they will be flagged
 as a new A-divergence (as `uft_protection_probe.c` was until relocated).
 
+### FMT-10 — IBM SaveDskF reader fabricated against wrong spec → uncompressed RESOLVED, LZW pending (2026-07-06, MF-356)
+
+**Severity: HIGH (forensic-integrity).** Same class as FMT-2/FMT-3: the
+SaveDskF/LoadDskF module (`src/formats/pc/uft_savedskf.c`, standalone API, not
+in the plugin registry) was written against a spec that does not exist. Every
+identifying field was wrong, so it would never read a real SaveDskF file:
+
+- **Magic:** used `0x5A4B` ("KZ", little-endian). The real signature is a
+  **big-endian** u16 at +0: `0xAA58` (old, uncompressed), `0xAA59` (new,
+  uncompressed), `0xAA5A` (new, compressed). `0x5A4B` matches nothing.
+- **Header geometry:** read sector-size/spt/heads/cyls at offsets 2/4/6/8. The
+  real (FAT-BPB-style) header has bytes/sector @4, cylinders @24, heads @26,
+  sectors/track @28, sectors-in-image @34, header-size @38.
+- **Compression:** enum `{NONE, RLE, LZSS}`. Real SaveDskF has **no RLE and no
+  LZSS**; its only compression is **IBM-LZW** (the OS/2 PACK scheme, `dskdcmps`
+  modname `"ibmlzw"`). The fabricated RLE decompressor was removed.
+
+Authoritative layout verified from Deark (`jsummers/deark` `modules/fat.c`
+`de_run_loaddskf` + `loaddskf_read_header`) and the public-domain
+`foreign/dskdcmps.h` LZW decompressor; archiveteam/justsolve corroborates the
+magic bytes.
+
+**Fixed (MF-356):** correct BE-magic classification, correct header offsets,
+uncompressed extraction (old fmt data @0x200, new fmt @header-size; unused
+sectors zero-filled = the format's defined "used sectors only" meaning, not
+fabricated data). Test `test_savedskf_read` 5/5 (old + new fmt exact recovery,
+empty-sector reconstruction, LZW deferral, bad-magic rejection).
+
+**Deliberately open:** the IBM-LZW path (`0xAA5A`) returns `NOT_IMPLEMENTED`.
+A faithful ~200-line `dskdcmps` LZW port needs a ground-truth compressed
+reference file for byte-exact verification — none is in Deark's public repo.
+Porting an unverified codec would risk silent corruption, which the forensic
+mandate forbids. Unblock: obtain a real compressed SaveDskF (`SAVEDSKF /C`
+output or an OS/2 fixpak `.dsk`), port `dskdcmps.h`, verify byte-exact.
+
 ---
 
 ## Wie beitragen
