@@ -279,10 +279,18 @@ int woz_load_from_memory(const uint8_t *data, size_t size, woz_image_t **image)
                             }
                         }
                         
-                        /* Copy all track data from file */
+                        /* Copy the BITS region: from block 3 (byte 1536) to the
+                         * END OF THE TRKS CHUNK — NOT end-of-file. The previous
+                         * `size - 1536` read to EOF and silently swallowed any
+                         * trailing chunk (WRIT/META/FLUX) into track_data,
+                         * over-sizing it and duplicating those bytes on re-emit
+                         * (MF-357). starting_block references are absolute file
+                         * blocks, so track_data still begins at block 3. */
                         size_t track_data_start = 1536;  /* Block 3 */
-                        if (track_data_start < size) {
-                            img->track_data_size = size - track_data_start;
+                        size_t trks_end = pos + chunk_size;  /* end of this chunk */
+                        if (trks_end > size) trks_end = size;  /* clamp (defensive) */
+                        if (track_data_start < trks_end) {
+                            img->track_data_size = trks_end - track_data_start;
                             img->track_data = malloc(img->track_data_size);
                             if (img->track_data) {
                                 memcpy(img->track_data, data + track_data_start, img->track_data_size);
@@ -309,8 +317,19 @@ int woz_load_from_memory(const uint8_t *data, size_t size, woz_image_t **image)
                 break;
                 
             case WOZ_CHUNK_WRIT:
-                /* Write hints: optimal bit timing for writing back to disk */
+                /* WRIT (WOZ 2.1): write-back instructions. Preserve the payload
+                 * verbatim so the writer can re-emit it losslessly — the chunk
+                 * references tracks logically (track number + bit indices), not
+                 * by file offset, so it survives re-serialisation unchanged
+                 * (Applesauce WOZ2 reference). We do NOT interpret it. */
                 img->has_write_hints = true;
+                if (chunk_size > 0 && chunk_size <= 16u * 1024u * 1024u) {
+                    img->writ_raw = malloc(chunk_size);
+                    if (img->writ_raw) {
+                        memcpy(img->writ_raw, data + pos, chunk_size);
+                        img->writ_raw_size = chunk_size;
+                    }
+                }
                 break;
         }
         
@@ -501,12 +520,18 @@ static void write_u32_le(uint8_t *p, uint32_t v)
  * the BITS data. So the preserved `track_data` (which begins with that table)
  * round-trips byte-identically without any block-offset fix-up.
  *
- * Honest limitation (documented, NOT silent corruption): META / WRIT / FLUX
- * and any unknown chunks are not carried through — the reader does not retain
- * them. The emitted file is a valid WOZ with the flux data intact; metadata
- * passthrough requires the reader to preserve raw chunks first (KNOWN_ISSUES
- * FMT-4). Callers needing bit-identical whole-file fidelity for META-bearing
- * images must copy the source bytes instead.
+ * WRIT (WOZ 2.1) is carried through verbatim (MF-357): the reader preserves its
+ * raw payload and it is re-emitted after TRKS. WRIT references tracks logically
+ * (never by file offset), so verbatim re-emit is valid; its embedded BITS
+ * checksums describe the ORIGINAL track data — honest passthrough, not
+ * regenerated, so an unmodified round-trip stays consistent.
+ *
+ * Honest limitation (documented, NOT silent corruption): META / FLUX and any
+ * unknown chunks are still not carried through — the reader does not retain
+ * their raw bytes. The emitted file is a valid WOZ with the flux data intact;
+ * full metadata passthrough requires the reader to preserve those raw chunks
+ * too (KNOWN_ISSUES FMT-4). Callers needing bit-identical whole-file fidelity
+ * for META-bearing images must copy the source bytes instead.
  */
 int woz_save_to_memory(const woz_image_t *image, uint8_t **out_data, size_t *out_size)
 {
@@ -529,7 +554,13 @@ int woz_save_to_memory(const woz_image_t *image, uint8_t **out_data, size_t *out
     size_t trks_payload = is_v2 ? ((size_t)WOZ_MAX_TRACKS * 8u + image->track_data_size)
                                 : image->track_data_size;
 
-    size_t total = 12u + (8u + 60u) + (8u + (size_t)WOZ_TMAP_SIZE) + (8u + trks_payload);
+    /* WRIT (WOZ 2.1) re-emitted verbatim after TRKS when the reader preserved
+     * it. WRIT is a v2+ chunk, so gate on is_v2. */
+    size_t writ_payload = (is_v2 && image->writ_raw && image->writ_raw_size > 0)
+                              ? image->writ_raw_size : 0;
+
+    size_t total = 12u + (8u + 60u) + (8u + (size_t)WOZ_TMAP_SIZE) + (8u + trks_payload)
+                 + (writ_payload ? (8u + writ_payload) : 0u);
     uint8_t *buf = calloc(1, total);
     if (!buf) {
         return WOZ_ERR_OUT_OF_MEMORY;
@@ -558,6 +589,13 @@ int woz_save_to_memory(const woz_image_t *image, uint8_t **out_data, size_t *out
         }
     }
     memcpy(buf + p, image->track_data, image->track_data_size);              p += image->track_data_size;
+
+    /* WRIT chunk (verbatim), if preserved. */
+    if (writ_payload) {
+        write_u32_le(buf + p, WOZ_CHUNK_WRIT);
+        write_u32_le(buf + p + 4, (uint32_t)writ_payload);                    p += 8;
+        memcpy(buf + p, image->writ_raw, writ_payload);                       p += writ_payload;
+    }
 
     /* CRC32 over everything after the 12-byte header, stored at offset 8. */
     uint32_t crc = woz_crc32(0, buf + 12, total - 12);
@@ -604,6 +642,7 @@ void woz_free(woz_image_t *image)
 
     free(image->track_data);
     free(image->write_hints);
+    free(image->writ_raw);
     free(image);
 }
 

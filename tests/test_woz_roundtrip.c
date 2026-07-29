@@ -77,6 +77,26 @@ static size_t build_woz2(uint8_t *buf) {
     return WOZ_TOTAL;
 }
 
+/* WOZ2 with a trailing WRIT chunk (WOZ 2.1). Same canonical body as build_woz2,
+ * then an 8-byte chunk header + WRIT_PAYLOAD bytes, then CRC over all of it. The
+ * writer emits WRIT right after TRKS, so this must also round-trip byte-exact. */
+#define WRIT_PAYLOAD  24u
+#define WOZ_TOTAL_W   (WOZ_TOTAL + 8u + WRIT_PAYLOAD)
+
+static size_t build_woz2_with_writ(uint8_t *buf) {
+    /* Reuse the canonical builder for the body (it CRCs over WOZ_TOTAL-12; we
+     * overwrite the CRC after appending WRIT). */
+    build_woz2(buf);
+    size_t p = WOZ_TOTAL;
+    buf[p] = 'W'; buf[p+1] = 'R'; buf[p+2] = 'I'; buf[p+3] = 'T';
+    put_u32(buf + p + 4, WRIT_PAYLOAD); p += 8;
+    /* deterministic, opaque payload (verbatim passthrough — content unread) */
+    for (uint32_t i = 0; i < WRIT_PAYLOAD; i++) buf[p + i] = (uint8_t)(0xA0 + i);
+    p += WRIT_PAYLOAD;
+    put_u32(buf + 8, woz_crc32(0, buf + 12, WOZ_TOTAL_W - 12));
+    return WOZ_TOTAL_W;
+}
+
 /* ── A. round-trip is byte-identical ───────────────────────────────── */
 
 TEST(read_write_byte_identical) {
@@ -134,11 +154,55 @@ TEST(save_rejects_null_and_empty) {
     ASSERT(woz_save_to_memory(&empty, &out, &out_size) != WOZ_OK);
 }
 
+/* ── D. WRIT chunk is preserved verbatim (MF-357) ──────────────────── */
+
+TEST(writ_chunk_byte_identical) {
+    uint8_t original[WOZ_TOTAL_W];
+    size_t n = build_woz2_with_writ(original);
+    ASSERT(n == WOZ_TOTAL_W);
+
+    woz_image_t *img = NULL;
+    ASSERT(woz_load_from_memory(original, n, &img) == WOZ_OK);
+    ASSERT(img->has_write_hints == true);
+    ASSERT(img->writ_raw_size == WRIT_PAYLOAD);
+    ASSERT(img->writ_raw != NULL);
+
+    uint8_t *out = NULL; size_t out_size = 0;
+    ASSERT(woz_save_to_memory(img, &out, &out_size) == WOZ_OK);
+    ASSERT(out_size == WOZ_TOTAL_W);               /* WRIT re-emitted, not dropped */
+    ASSERT(memcmp(out, original, WOZ_TOTAL_W) == 0);
+
+    free(out);
+    woz_free(img);
+}
+
+TEST(writ_survives_reload) {
+    uint8_t original[WOZ_TOTAL_W];
+    build_woz2_with_writ(original);
+
+    woz_image_t *img1 = NULL;
+    ASSERT(woz_load_from_memory(original, WOZ_TOTAL_W, &img1) == WOZ_OK);
+    uint8_t *out = NULL; size_t out_size = 0;
+    ASSERT(woz_save_to_memory(img1, &out, &out_size) == WOZ_OK);
+
+    woz_image_t *img2 = NULL;
+    ASSERT(woz_load_from_memory(out, out_size, &img2) == WOZ_OK);
+    ASSERT(img2->crc_valid == true);                    /* CRC covers WRIT */
+    ASSERT(img2->writ_raw_size == img1->writ_raw_size);
+    ASSERT(memcmp(img2->writ_raw, img1->writ_raw, img1->writ_raw_size) == 0);
+
+    free(out);
+    woz_free(img1);
+    woz_free(img2);
+}
+
 int main(void) {
     printf("=== WOZ2 writer round-trip tests ===\n");
     RUN(read_write_byte_identical);
     RUN(written_image_reloads_valid);
     RUN(save_rejects_null_and_empty);
+    RUN(writ_chunk_byte_identical);
+    RUN(writ_survives_reload);
     printf("\nResults: %d passed, %d failed\n", _pass, _fail);
     return _fail == 0 ? 0 : 1;
 }

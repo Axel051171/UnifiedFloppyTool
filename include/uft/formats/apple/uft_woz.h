@@ -254,9 +254,11 @@ typedef struct {
     bool     has_metadata;
     
     /* WRIT chunk */
-    woz_wtrk_t *write_hints;    /* Array of write hints */
+    woz_wtrk_t *write_hints;    /* Array of write hints (semantic, unused) */
     int      write_hint_count;
     bool     has_write_hints;
+    uint8_t *writ_raw;          /* Raw WRIT chunk payload, preserved verbatim */
+    uint32_t writ_raw_size;     /* WRIT payload length (0 if none) */
     
     /* Calculated values */
     int      total_tracks;      /* Number of unique tracks */

@@ -178,7 +178,7 @@ Ground-Truth-Korpus verifizierbar → offener Punkt.
 | 1 | HFE v3.1 Weak-Bit-Opcodes: **Detektion** dekodiert; voller weak_mask offen | Klasse-2 Snapshot | M | **TEIL (MF-354)** |
 | 2 | HFE v2 Opcodes (variable Bitrate) nicht interpretiert | Klasse-2 | M | offen |
 | 3 | Extended-ADF (MFM-Protection) fehlt | Klasse-2/3-Grenze | M | **ERLEDIGT (MF-352)** |
-| 4 | WOZ WRIT-Chunk / INFO-2.1-Emit beim Write | Klasse-1 W | S–M | offen |
+| 4 | WOZ WRIT-Chunk verbatim-Emit beim Write (+ track_data-Over-Read-Fix) | Klasse-1 W | S–M | **ERLEDIGT (MF-357)** |
 | 5 | SCP-Footer-Emit beim Write (Metadaten) | Klasse-1 W | S | **ERLEDIGT (MF-351)** |
 | 6 | ADZ (gzip-ADF) kein direkter Reader | Klasse-3 Komfort | S | offen (zlib-Dep) |
 
@@ -188,6 +188,16 @@ Opcode→Bitstream-Decode mit per-Bit-`weak_mask` bleibt bewusst offen
 (Haftungsmodus — keine weak_mask mit unsicherer Bit-Ausrichtung, HFE ist
 laut HxC ohnehin nur eine Annäherung). Alle Lücken sind additiv (kein Format
 wird falsch gelesen — sie erweitern die Abdeckung).
+
+Lücke #4 (MF-357): der WOZ-Writer trägt den **WRIT-Chunk jetzt verbatim** durch
+(Reader erhält die Roh-Bytes, Writer re-emittiert sie nach TRKS). WRIT
+referenziert Tracks logisch (nie per Datei-Offset, verifiziert gegen die
+Applesauce-WOZ2-Referenz) → verbatim-Re-Emit ist gültig; die eingebetteten
+BITS-Checksums beschreiben die Originaldaten (ehrlicher Passthrough, nicht neu
+erzeugt). Dabei ein **latenter Reader-Bug** mitgefixt: der v2-TRKS-Reader las
+`track_data` bis EOF statt bis zur TRKS-Chunk-Grenze und verschluckte so JEDEN
+nachfolgenden Chunk (WRIT/META/FLUX). META/FLUX-verbatim-Passthrough bleibt
+offen (Reader erhält deren Roh-Bytes noch nicht).
 
 ## Nicht byte-verifizierbar ohne Korpus (explizit offen)
 
