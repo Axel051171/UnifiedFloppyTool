@@ -28,9 +28,13 @@
  * Sector data begins at dwHeadSize and is stored contiguously in the order the
  * valid (C!=0xFF) entries appear in the table — there is no per-sector offset.
  *
- * The r1 variant has a different layout (a 164-entry track-pointer table at
- * offset 0, then per-track headers); it is not handled here and returns an
- * explicit NOT_IMPLEMENTED rather than being mis-read as r0.
+ * The r1 variant (MF-360) shares the 0x120 header but replaces the fixed table
+ * with a 164-entry LE32 track-pointer table at 0x120; each non-zero pointer
+ * addresses an NFD_TRACK_ID1 (wSector, wDiag) + wSector 16-byte sector entries +
+ * wDiag 16-byte diagnostic entries. r1 sector data is still sequential from
+ * dwHeadSize but interleaved with per-sector retry copies (byRetry) and
+ * per-track diagnostic blocks; see nfd_parse_r1(). Both r0 and r1 are handled;
+ * an unknown revision is refused (NOT_SUPPORTED) rather than mis-parsed.
  */
 #include "uft/uft_format_common.h"
 
@@ -43,6 +47,8 @@
 #define NFD_R0_SECTORS  26
 #define NFD_R0_ENTRY    16
 #define NFD_R0_MAX_SECS (NFD_R0_TRACKS * NFD_R0_SECTORS)  /* 4238 */
+#define NFD_R1_TRACKS   164   /* r1 track-pointer table entries (LE32 each) */
+#define NFD_MAX_SECS    NFD_R0_MAX_SECS  /* upper bound for the parsed sector array */
 
 /* One parsed, valid r0 sector, with its computed sequential data offset. */
 typedef struct {
@@ -89,41 +95,13 @@ static bool nfd_probe(const uint8_t *data, size_t size, size_t file_size,
     return true;
 }
 
-static uft_error_t nfd_open(uft_disk_t *disk, const char *path, bool ro)
+/* r0: fixed 163×26 per-sector table at 0x120; valid entries (C!=0xFF) get a
+ * sequential data offset accumulated from dwHeadSize in table order. */
+static int nfd_parse_r0(const uint8_t *data, size_t file_size, uint32_t head_size,
+                        nfd_sec_t *secs, uint8_t *max_c, uint8_t *max_h)
 {
-    (void)ro;
-    size_t file_size = 0;
-    uint8_t *data = uft_read_file(path, &file_size);
-    if (!data || file_size < NFD_HEADER_SIZE) {
-        free(data);
-        return UFT_ERROR_FILE_OPEN;
-    }
-    if (memcmp(data, NFD_SIG_BASE, 11) != 0 || data[11] != '.' || data[12] != 'R') {
-        free(data);
-        return UFT_ERROR_FORMAT_INVALID;
-    }
-    if (data[13] != '0') {
-        /* r1 (or unknown revision) has a different layout — refuse rather than
-         * silently mis-read it as r0. */
-        free(data);
-        return UFT_ERROR_NOT_SUPPORTED;
-    }
-
-    uint32_t head_size = uft_read_le32(data + NFD_OFF_HEADSZ);
-    if (head_size < NFD_HEADER_SIZE || head_size > file_size) {
-        free(data);
-        return UFT_ERROR_FORMAT_INVALID;
-    }
-    uint8_t nhead = data[NFD_OFF_NHEAD];
-
-    nfd_sec_t *secs = calloc(NFD_R0_MAX_SECS, sizeof(nfd_sec_t));
-    if (!secs) { free(data); return UFT_ERROR_NO_MEMORY; }
-
-    /* Walk the 163×26 table; valid entries (C!=0xFF) get a sequential data
-     * offset accumulated from dwHeadSize in table order. */
-    int    count   = 0;
+    int count = 0;
     size_t run_off = 0;
-    uint8_t max_c = 0, max_h = 0;
     for (int slot = 0; slot < NFD_R0_MAX_SECS; slot++) {
         size_t eoff = NFD_TABLE_OFF + (size_t)slot * NFD_R0_ENTRY;
         if (eoff + NFD_R0_ENTRY > file_size) break;
@@ -145,9 +123,103 @@ static uft_error_t nfd_open(uft_disk_t *disk, const char *path, bool ro)
         s->size   = nfd_sec_size(s->n);
         s->data_off = (size_t)head_size + run_off;
         run_off += s->size;
-        if (s->c > max_c) max_c = s->c;
-        if (s->h > max_h) max_h = s->h;
+        if (s->c > *max_c) *max_c = s->c;
+        if (s->h > *max_h) *max_h = s->h;
     }
+    return count;
+}
+
+/* r1: a 164-entry LE32 track-pointer table at 0x120. Each non-zero pointer
+ * addresses an NFD_TRACK_ID1 (wSector@0, wDiag@2, both LE16) followed by
+ * wSector 16-byte sector entries and wDiag 16-byte diagnostic entries. Sector
+ * DATA is sequential from dwHeadSize in pointer-table order; after each sector's
+ * primary block come byRetry(@+10) extra copies, and after all sectors come the
+ * diagnostic blocks ((1+byRetry@+9) × dwDataLen@+10). Layout verified against
+ * pc98.org/project/doc/nfdr1.html + tomari/d88split read_trkinfo_nfdr1. */
+static int nfd_parse_r1(const uint8_t *data, size_t file_size, uint32_t head_size,
+                        nfd_sec_t *secs, uint8_t *max_c, uint8_t *max_h)
+{
+    int count = 0;
+    size_t cursor = head_size;
+    for (int trk = 0; trk < NFD_R1_TRACKS; trk++) {
+        size_t poff = NFD_TABLE_OFF + (size_t)trk * 4;
+        if (poff + 4 > file_size) break;
+        uint32_t ptr = uft_read_le32(data + poff);
+        if (ptr == 0) continue;                          /* absent track */
+        if ((size_t)ptr + 16 > file_size) continue;      /* bad pointer */
+
+        uint16_t wsector = uft_read_le16(data + ptr);
+        uint16_t wdiag   = uft_read_le16(data + ptr + 2);
+
+        for (int i = 0; i < wsector; i++) {
+            size_t eoff = (size_t)ptr + 16 + (size_t)i * 16;
+            if (eoff + 16 > file_size || count >= NFD_MAX_SECS) break;
+            nfd_sec_t *s = &secs[count++];
+            s->c      = data[eoff + 0];
+            s->h      = data[eoff + 1];
+            s->r      = data[eoff + 2];
+            s->n      = data[eoff + 3];
+            s->mfm    = data[eoff + 4];
+            s->ddam   = data[eoff + 5];
+            s->status = data[eoff + 6];
+            s->st0    = data[eoff + 7];
+            s->st1    = data[eoff + 8];
+            s->st2    = data[eoff + 9];
+            uint8_t retry = data[eoff + 10];
+            s->pda    = data[eoff + 11];
+            s->size   = nfd_sec_size(s->n);
+            s->data_off = cursor;
+            cursor += s->size;                        /* primary sector data */
+            cursor += (size_t)retry * s->size;        /* retry copies */
+            if (s->c > *max_c) *max_c = s->c;
+            if (s->h > *max_h) *max_h = s->h;
+        }
+        size_t doff = (size_t)ptr + 16 + (size_t)wsector * 16;
+        for (int d = 0; d < wdiag; d++) {
+            size_t eoff = doff + (size_t)d * 16;
+            if (eoff + 16 > file_size) break;
+            uint8_t dretry = data[eoff + 9];
+            uint32_t dlen  = uft_read_le32(data + eoff + 10);
+            cursor += (size_t)(1 + dretry) * dlen;    /* diagnostic data blocks */
+        }
+    }
+    return count;
+}
+
+static uft_error_t nfd_open(uft_disk_t *disk, const char *path, bool ro)
+{
+    (void)ro;
+    size_t file_size = 0;
+    uint8_t *data = uft_read_file(path, &file_size);
+    if (!data || file_size < NFD_HEADER_SIZE) {
+        free(data);
+        return UFT_ERROR_FILE_OPEN;
+    }
+    if (memcmp(data, NFD_SIG_BASE, 11) != 0 || data[11] != '.' || data[12] != 'R') {
+        free(data);
+        return UFT_ERROR_FORMAT_INVALID;
+    }
+    bool is_r1 = (data[13] == '1');
+    if (data[13] != '0' && !is_r1) {
+        /* unknown revision — refuse rather than mis-parse. */
+        free(data);
+        return UFT_ERROR_NOT_SUPPORTED;
+    }
+
+    uint32_t head_size = uft_read_le32(data + NFD_OFF_HEADSZ);
+    if (head_size < NFD_HEADER_SIZE || head_size > file_size) {
+        free(data);
+        return UFT_ERROR_FORMAT_INVALID;
+    }
+    uint8_t nhead = data[NFD_OFF_NHEAD];
+
+    nfd_sec_t *secs = calloc(NFD_MAX_SECS, sizeof(nfd_sec_t));
+    if (!secs) { free(data); return UFT_ERROR_NO_MEMORY; }
+
+    uint8_t max_c = 0, max_h = 0;
+    int count = is_r1
+        ? nfd_parse_r1(data, file_size, head_size, secs, &max_c, &max_h)
+        : nfd_parse_r0(data, file_size, head_size, secs, &max_c, &max_h);
 
     /* sectors-per-track = max count of entries sharing one (C,H). */
     int max_spt = 0;

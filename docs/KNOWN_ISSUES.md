@@ -1023,10 +1023,21 @@ actually persists to disk (the prior write only touched an in-memory buffer — 
 silent no-op). Test `test_nfd_r0` 4/4 (geometry + per-(C,H) recovery, DDAM/CRC
 flags, write persistence, r1 refusal).
 
-**Deliberately scoped:** the **r1** variant has a completely different layout (a
-164-entry track-pointer table at offset 0, then per-track headers). It now
-returns an explicit `NOT_SUPPORTED` instead of being silently mis-read as r0.
-r1 is its own implementation task (reference: `nfd2mhlt.pl` read_trkinfo_nfdr1).
+**r1 (MF-360): now implemented.** The r1 variant shares the 0x120 header but
+replaces the fixed table with a 164-entry LE32 track-pointer table at 0x120;
+each non-zero pointer addresses an NFD_TRACK_ID1 (wSector, wDiag) + wSector
+16-byte sector entries + wDiag 16-byte diagnostic entries. r1 sector data is
+sequential from dwHeadSize but interleaved with per-sector retry copies
+(byRetry@+10) and per-track diagnostic blocks ((1+byRetry@+9) × dwDataLen@+10),
+which the parser skips to locate later sectors. Layout verified against
+pc98.org/project/doc/nfdr1.html and tomari/d88split read_trkinfo_nfdr1, then
+proven with a synthetic image whose data section interleaves a retry copy and a
+diagnostic block (`test_nfd_r0::r1_recovery_with_retry_and_diag`). An unknown
+revision (not '0'/'1') is still refused. NOTE: no real r1 corpus was available;
+the reference perl decoder is itself marked experimental, so the retry/diagnostic
+skip accounting is verified only against the (cross-checked) spec, not a
+ground-truth file — a real r1 image should be run through it before relying on
+r1 for forensic work.
 
 ### FMT-12 — FDI reader: right header, fabricated track/sector model → RESOLVED (2026-07-06, MF-359)
 
