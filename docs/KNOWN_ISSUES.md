@@ -1028,6 +1028,34 @@ flags, write persistence, r1 refusal).
 returns an explicit `NOT_SUPPORTED` instead of being silently mis-read as r0.
 r1 is its own implementation task (reference: `nfd2mhlt.pl` read_trkinfo_nfdr1).
 
+### FMT-12 — FDI reader: right header, fabricated track/sector model → RESOLVED (2026-07-06, MF-359)
+
+**Severity: HIGH (forensic-integrity).** The registered `fdi` plugin is the **ZX
+Spectrum FDI** ("Full Disk Image", Alex Makeev) — not Anex86 PC-98 .fdi (that is
+the separate, correct `fdi_pc98` plugin; the two are disjoint by content since
+PC-98 FDI has no "FDI" magic). Its 14-byte header was correct, but the
+track/sector model was invented: it read a flat table of 4-byte track offsets
+and then 5-byte inline sector descriptors immediately followed by the sector
+data.
+
+The real Spectrum FDI stores **variable-length track headers** beginning at
+`14 + extra-length` and walked sequentially: `FDI_TRACK` = track-data offset
+(LE32, rel. to the data offset) + 2 reserved + sector count; then that many
+`FDI_SECTOR` = C, H, R, N, flags, sector-data offset (LE16). Sector **data** is
+held separately at `data_off + track_off + sector_off`, size `128<<(N&3)`. The
+prior model mislocated every sector.
+
+Authoritative layout verified against SAMdisk's `ReadFDI`
+(`src/samdisk/fdi.cpp`) and the World-of-Spectrum format reference.
+
+**Fixed (MF-359):** correct header-relative track-header walk, per-sector data
+offsets, flags decoding (bit7 → deleted, bit6 → no-data, bit(N&3) → data-CRC-OK),
+R preserved as the sector id, geometry from the actual per-track sector counts,
+and an in-place write that persists to disk (the prior write was an in-memory
+no-op). Test `test_fdi_spectrum` 3/3 (geometry + offset-based recovery,
+deleted/CRC flags, write persistence). The probe-only `test_fdi_plugin` stays
+green.
+
 ---
 
 ## Wie beitragen
