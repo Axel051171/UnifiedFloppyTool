@@ -252,7 +252,13 @@ typedef struct {
     /* META chunk */
     woz_metadata_t metadata;
     bool     has_metadata;
-    
+    uint8_t *meta_raw;          /* Raw META chunk payload, preserved verbatim */
+    uint32_t meta_raw_size;     /* META payload length (0 if none) */
+
+    /* FLUX chunk (WOZ 2.1) raw payload, preserved verbatim */
+    uint8_t *flux_raw;
+    uint32_t flux_raw_size;
+
     /* WRIT chunk */
     woz_wtrk_t *write_hints;    /* Array of write hints (semantic, unused) */
     int      write_hint_count;

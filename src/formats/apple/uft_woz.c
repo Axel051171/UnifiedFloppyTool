@@ -305,14 +305,35 @@ int woz_load_from_memory(const uint8_t *data, size_t size, woz_image_t **image)
                 if (chunk_size > 0) {
                     parse_metadata((const char *)(data + pos), chunk_size, &img->metadata);
                     img->has_metadata = true;
+                    /* Preserve the raw META payload verbatim for lossless
+                     * re-emit — parse_metadata only extracts known keys, so
+                     * re-serialising from the struct would drop unknown keys and
+                     * the exact byte form (MF-361). */
+                    if (chunk_size <= 16u * 1024u * 1024u) {
+                        img->meta_raw = malloc(chunk_size);
+                        if (img->meta_raw) {
+                            memcpy(img->meta_raw, data + pos, chunk_size);
+                            img->meta_raw_size = chunk_size;
+                        }
+                    }
                 }
                 break;
-                
+
             case WOZ_CHUNK_FLUX:
                 if (chunk_size >= WOZ_TMAP_SIZE) {
                     memcpy(img->flux_map, data + pos, WOZ_TMAP_SIZE);
                     img->has_flux = true;
                     img->flux_track_count = 0;
+                    /* Preserve the raw FLUX chunk (the quarter-track flux map;
+                     * the flux DATA itself lives in TRKS and is carried by
+                     * track_data) for verbatim re-emit (MF-361). */
+                    if (chunk_size <= 16u * 1024u * 1024u) {
+                        img->flux_raw = malloc(chunk_size);
+                        if (img->flux_raw) {
+                            memcpy(img->flux_raw, data + pos, chunk_size);
+                            img->flux_raw_size = chunk_size;
+                        }
+                    }
                 }
                 break;
                 
@@ -526,12 +547,17 @@ static void write_u32_le(uint8_t *p, uint32_t v)
  * checksums describe the ORIGINAL track data — honest passthrough, not
  * regenerated, so an unmodified round-trip stays consistent.
  *
- * Honest limitation (documented, NOT silent corruption): META / FLUX and any
- * unknown chunks are still not carried through — the reader does not retain
- * their raw bytes. The emitted file is a valid WOZ with the flux data intact;
- * full metadata passthrough requires the reader to preserve those raw chunks
- * too (KNOWN_ISSUES FMT-4). Callers needing bit-identical whole-file fidelity
- * for META-bearing images must copy the source bytes instead.
+ * FLUX and META (WOZ 2.1) are likewise carried through verbatim (MF-361): the
+ * reader preserves their raw payloads and they are re-emitted (FLUX after TRKS,
+ * META last). META is re-emitted byte-for-byte rather than re-serialised from
+ * the parsed struct, so unknown metadata keys survive. Emit order is INFO, TMAP,
+ * TRKS, FLUX, WRIT, META; a file whose chunks were in that order round-trips
+ * byte-identically.
+ *
+ * Honest limitation (documented, NOT silent corruption): any OTHER unknown chunk
+ * type is still not carried through — only INFO/TMAP/TRKS/FLUX/WRIT/META are
+ * retained. Emit order may differ from an unusual source ordering, so whole-file
+ * byte-identity holds only for the canonical order above.
  */
 int woz_save_to_memory(const woz_image_t *image, uint8_t **out_data, size_t *out_size)
 {
@@ -554,13 +580,19 @@ int woz_save_to_memory(const woz_image_t *image, uint8_t **out_data, size_t *out
     size_t trks_payload = is_v2 ? ((size_t)WOZ_MAX_TRACKS * 8u + image->track_data_size)
                                 : image->track_data_size;
 
-    /* WRIT (WOZ 2.1) re-emitted verbatim after TRKS when the reader preserved
-     * it. WRIT is a v2+ chunk, so gate on is_v2. */
+    /* FLUX / WRIT / META (WOZ 2.1) re-emitted verbatim when the reader preserved
+     * them. FLUX and WRIT are v2+ chunks, so gate those on is_v2. */
+    size_t flux_payload = (is_v2 && image->flux_raw && image->flux_raw_size > 0)
+                              ? image->flux_raw_size : 0;
     size_t writ_payload = (is_v2 && image->writ_raw && image->writ_raw_size > 0)
                               ? image->writ_raw_size : 0;
+    size_t meta_payload = (image->meta_raw && image->meta_raw_size > 0)
+                              ? image->meta_raw_size : 0;
 
     size_t total = 12u + (8u + 60u) + (8u + (size_t)WOZ_TMAP_SIZE) + (8u + trks_payload)
-                 + (writ_payload ? (8u + writ_payload) : 0u);
+                 + (flux_payload ? (8u + flux_payload) : 0u)
+                 + (writ_payload ? (8u + writ_payload) : 0u)
+                 + (meta_payload ? (8u + meta_payload) : 0u);
     uint8_t *buf = calloc(1, total);
     if (!buf) {
         return WOZ_ERR_OUT_OF_MEMORY;
@@ -590,11 +622,23 @@ int woz_save_to_memory(const woz_image_t *image, uint8_t **out_data, size_t *out
     }
     memcpy(buf + p, image->track_data, image->track_data_size);              p += image->track_data_size;
 
+    /* FLUX chunk (verbatim), if preserved. Emitted before WRIT/META. */
+    if (flux_payload) {
+        write_u32_le(buf + p, WOZ_CHUNK_FLUX);
+        write_u32_le(buf + p + 4, (uint32_t)flux_payload);                    p += 8;
+        memcpy(buf + p, image->flux_raw, flux_payload);                       p += flux_payload;
+    }
     /* WRIT chunk (verbatim), if preserved. */
     if (writ_payload) {
         write_u32_le(buf + p, WOZ_CHUNK_WRIT);
         write_u32_le(buf + p + 4, (uint32_t)writ_payload);                    p += 8;
         memcpy(buf + p, image->writ_raw, writ_payload);                       p += writ_payload;
+    }
+    /* META chunk (verbatim), if preserved. Emitted last. */
+    if (meta_payload) {
+        write_u32_le(buf + p, WOZ_CHUNK_META);
+        write_u32_le(buf + p + 4, (uint32_t)meta_payload);                    p += 8;
+        memcpy(buf + p, image->meta_raw, meta_payload);                       p += meta_payload;
     }
 
     /* CRC32 over everything after the 12-byte header, stored at offset 8. */
@@ -643,6 +687,8 @@ void woz_free(woz_image_t *image)
     free(image->track_data);
     free(image->write_hints);
     free(image->writ_raw);
+    free(image->meta_raw);
+    free(image->flux_raw);
     free(image);
 }
 

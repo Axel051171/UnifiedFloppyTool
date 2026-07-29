@@ -97,6 +97,29 @@ static size_t build_woz2_with_writ(uint8_t *buf) {
     return WOZ_TOTAL_W;
 }
 
+/* WOZ2 with FLUX + WRIT + META trailing chunks (WOZ 2.1), in the writer's
+ * canonical emit order (TRKS, FLUX, WRIT, META), so it must round-trip
+ * byte-exact after all three are preserved verbatim (MF-361). */
+#define FLUX_LEN    160u                 /* == WOZ_TMAP_SIZE */
+#define META_LEN    32u
+#define WOZ_TOTAL_A (WOZ_TOTAL + 8u + FLUX_LEN + 8u + WRIT_PAYLOAD + 8u + META_LEN)
+
+static size_t build_woz2_with_all(uint8_t *buf) {
+    build_woz2(buf);
+    size_t p = WOZ_TOTAL;
+    buf[p]='F'; buf[p+1]='L'; buf[p+2]='U'; buf[p+3]='X'; put_u32(buf+p+4, FLUX_LEN); p += 8;
+    for (uint32_t i = 0; i < FLUX_LEN; i++) buf[p+i] = 0xFF;   /* empty flux map */
+    p += FLUX_LEN;
+    buf[p]='W'; buf[p+1]='R'; buf[p+2]='I'; buf[p+3]='T'; put_u32(buf+p+4, WRIT_PAYLOAD); p += 8;
+    for (uint32_t i = 0; i < WRIT_PAYLOAD; i++) buf[p+i] = (uint8_t)(0xA0 + i);
+    p += WRIT_PAYLOAD;
+    buf[p]='M'; buf[p+1]='E'; buf[p+2]='T'; buf[p+3]='A'; put_u32(buf+p+4, META_LEN); p += 8;
+    for (uint32_t i = 0; i < META_LEN; i++) buf[p+i] = (uint8_t)(0x41 + (i % 26));
+    p += META_LEN;
+    put_u32(buf + 8, woz_crc32(0, buf + 12, WOZ_TOTAL_A - 12));
+    return WOZ_TOTAL_A;
+}
+
 /* ── A. round-trip is byte-identical ───────────────────────────────── */
 
 TEST(read_write_byte_identical) {
@@ -196,6 +219,52 @@ TEST(writ_survives_reload) {
     woz_free(img2);
 }
 
+/* ── E. FLUX + WRIT + META all preserved verbatim (MF-361) ─────────── */
+
+TEST(flux_writ_meta_byte_identical) {
+    uint8_t original[WOZ_TOTAL_A];
+    size_t n = build_woz2_with_all(original);
+    ASSERT(n == WOZ_TOTAL_A);
+
+    woz_image_t *img = NULL;
+    ASSERT(woz_load_from_memory(original, n, &img) == WOZ_OK);
+    ASSERT(img->has_flux && img->flux_raw_size == FLUX_LEN);
+    ASSERT(img->has_write_hints && img->writ_raw_size == WRIT_PAYLOAD);
+    ASSERT(img->has_metadata && img->meta_raw_size == META_LEN);
+
+    uint8_t *out = NULL; size_t out_size = 0;
+    ASSERT(woz_save_to_memory(img, &out, &out_size) == WOZ_OK);
+    ASSERT(out_size == WOZ_TOTAL_A);            /* all three re-emitted */
+    ASSERT(memcmp(out, original, WOZ_TOTAL_A) == 0);
+
+    free(out);
+    woz_free(img);
+}
+
+TEST(flux_meta_survive_reload) {
+    uint8_t original[WOZ_TOTAL_A];
+    build_woz2_with_all(original);
+
+    woz_image_t *img1 = NULL;
+    ASSERT(woz_load_from_memory(original, WOZ_TOTAL_A, &img1) == WOZ_OK);
+    uint8_t *out = NULL; size_t out_size = 0;
+    ASSERT(woz_save_to_memory(img1, &out, &out_size) == WOZ_OK);
+
+    woz_image_t *img2 = NULL;
+    ASSERT(woz_load_from_memory(out, out_size, &img2) == WOZ_OK);
+    ASSERT(img2->crc_valid == true);
+    ASSERT(img2->flux_raw_size == img1->flux_raw_size);
+    ASSERT(memcmp(img2->flux_raw, img1->flux_raw, img1->flux_raw_size) == 0);
+    ASSERT(img2->meta_raw_size == img1->meta_raw_size);
+    ASSERT(memcmp(img2->meta_raw, img1->meta_raw, img1->meta_raw_size) == 0);
+    /* track_data must NOT have swallowed the trailing chunks (MF-357 fix) */
+    ASSERT(img2->track_data_size == img1->track_data_size);
+
+    free(out);
+    woz_free(img1);
+    woz_free(img2);
+}
+
 int main(void) {
     printf("=== WOZ2 writer round-trip tests ===\n");
     RUN(read_write_byte_identical);
@@ -203,6 +272,8 @@ int main(void) {
     RUN(save_rejects_null_and_empty);
     RUN(writ_chunk_byte_identical);
     RUN(writ_survives_reload);
+    RUN(flux_writ_meta_byte_identical);
+    RUN(flux_meta_survive_reload);
     printf("\nResults: %d passed, %d failed\n", _pass, _fail);
     return _fail == 0 ? 0 : 1;
 }

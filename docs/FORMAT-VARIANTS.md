@@ -196,8 +196,15 @@ Applesauce-WOZ2-Referenz) → verbatim-Re-Emit ist gültig; die eingebetteten
 BITS-Checksums beschreiben die Originaldaten (ehrlicher Passthrough, nicht neu
 erzeugt). Dabei ein **latenter Reader-Bug** mitgefixt: der v2-TRKS-Reader las
 `track_data` bis EOF statt bis zur TRKS-Chunk-Grenze und verschluckte so JEDEN
-nachfolgenden Chunk (WRIT/META/FLUX). META/FLUX-verbatim-Passthrough bleibt
-offen (Reader erhält deren Roh-Bytes noch nicht).
+nachfolgenden Chunk (WRIT/META/FLUX).
+
+**META + FLUX jetzt AUCH verbatim durchgereicht (MF-361):** Reader erhält deren
+Roh-Bytes, Writer re-emittiert in kanonischer Reihenfolge INFO/TMAP/TRKS/FLUX/
+WRIT/META. META wird byte-genau re-emittiert (nicht aus dem geparsten Struct
+re-serialisiert) → unbekannte Metadaten-Keys überleben. Damit ist die WOZ-2.1-
+Chunk-Erhaltung vollständig für INFO/TMAP/TRKS/FLUX/WRIT/META; nur wirklich
+unbekannte Chunk-Typen werden noch verworfen. Whole-File-Byte-Identität gilt für
+die kanonische Reihenfolge (`test_woz_roundtrip` flux_writ_meta_byte_identical).
 
 ## Nicht byte-verifizierbar ohne Korpus (explizit offen)
 
