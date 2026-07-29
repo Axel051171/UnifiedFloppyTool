@@ -22,8 +22,16 @@
 #include <stdint.h>
 #include <stddef.h>
 
-/* Non-static symbol from src/formats/hfe/uft_hfe.c */
+#include <stdbool.h>
+#include <stdlib.h>
+
+/* Non-static symbols from src/formats/hfe/uft_hfe.c */
 extern size_t uft_hfe_v3_count_weak_opcodes(const uint8_t *stream, size_t len);
+extern size_t hfe_v3_decode(const uint8_t *in, size_t in_len,
+                            uint8_t **out_bits, bool **out_weak,
+                            size_t *rand_count);
+
+static int getbit(const uint8_t *b, size_t i) { return (b[i >> 3] >> (7 - (i & 7))) & 1; }
 
 static int _pass = 0, _fail = 0, _last_fail = 0;
 #define RUN(name)  do { printf("  [TEST] %-30s ... ", #name); test_##name(); \
@@ -86,8 +94,47 @@ TEST(trailing_two_byte_opcode_no_overrun) {
     ASSERT(uft_hfe_v3_count_weak_opcodes(s, sizeof(s)) == 0);
 }
 
+/* ── Full decode: opcode stream -> bitstream + per-bit weak_mask (MF-362) ── */
+
+TEST(decode_bits_and_weak_mask) {
+    /* data 0xB4 | RAND | NOP | SKIPBITS 3 | data 0x2D(skip3) | SETBITRATE | data 0x5A */
+    const uint8_t in[] = { 0xB4, RAND, NOP, SKIPBITS, 0x03, 0x2D, SETBITRATE, 0x10, 0x5A };
+    uint8_t *bits = NULL; bool *weak = NULL; size_t rc = 0;
+    size_t n = hfe_v3_decode(in, sizeof(in), &bits, &weak, &rc);
+
+    /* 8 (data) + 8 (RAND) + 5 (0x2D bits[3..7]) + 8 (data) = 29 bits, 1 RAND */
+    ASSERT(n == 29);
+    ASSERT(rc == 1);
+    ASSERT(bits && weak);
+
+    /* 0xB4 = 1011 0100, weak-free */
+    ASSERT(getbit(bits,0)==1 && getbit(bits,2)==1 && getbit(bits,3)==1 && getbit(bits,4)==0);
+    for (int i = 0; i < 8; i++) ASSERT(weak[i] == false);
+    /* RAND region: 8 weak bits, value placeholder 0 */
+    for (int i = 8; i < 16; i++) { ASSERT(weak[i] == true); ASSERT(getbit(bits,i) == 0); }
+    /* 0x2D = 0010 1101, bits [3..7] = 0,1,1,0,1 emitted at 16..20, weak-free */
+    ASSERT(getbit(bits,16)==0 && getbit(bits,17)==1 && getbit(bits,18)==1 &&
+           getbit(bits,19)==0 && getbit(bits,20)==1);
+    for (int i = 16; i < 21; i++) ASSERT(weak[i] == false);
+    /* 0x5A = 0101 1010 emitted at 21..28, weak-free */
+    ASSERT(getbit(bits,21)==0 && getbit(bits,22)==1 && getbit(bits,28)==0);
+    for (int i = 21; i < 29; i++) ASSERT(weak[i] == false);
+
+    free(bits); free(weak);
+}
+
+TEST(decode_data_only_no_weak) {
+    const uint8_t in[] = { 0x4E, 0xA1, 0x00, 0x55 };
+    uint8_t *bits = NULL; bool *weak = NULL; size_t rc = 0;
+    size_t n = hfe_v3_decode(in, sizeof(in), &bits, &weak, &rc);
+    ASSERT(n == 32 && rc == 0);
+    for (int i = 0; i < 32; i++) ASSERT(weak[i] == false);
+    ASSERT(bits[0]==0x4E && bits[1]==0xA1 && bits[2]==0x00 && bits[3]==0x55);
+    free(bits); free(weak);
+}
+
 int main(void) {
-    printf("=== HFE v3 weak-bit RAND opcode detection (MF-354) ===\n");
+    printf("=== HFE v3 weak-bit RAND opcode detection + decode (MF-354/362) ===\n");
     RUN(data_only_has_no_weak);
     RUN(single_rand_counts_one);
     RUN(multiple_rand);
@@ -96,6 +143,8 @@ int main(void) {
     RUN(mixed_opcodes);
     RUN(empty_stream);
     RUN(trailing_two_byte_opcode_no_overrun);
+    RUN(decode_bits_and_weak_mask);
+    RUN(decode_data_only_no_weak);
     printf("\nResults: %d passed, %d failed\n", _pass, _fail);
     return _fail == 0 ? 0 : 1;
 }

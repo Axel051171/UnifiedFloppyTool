@@ -175,19 +175,23 @@ Ground-Truth-Korpus verifizierbar → offener Punkt.
 
 | # | Lücke | Klasse-Bezug | Aufwand | Status |
 |---|---|---|---|---|
-| 1 | HFE v3.1 Weak-Bit-Opcodes: **Detektion** dekodiert; voller weak_mask offen | Klasse-2 Snapshot | M | **TEIL (MF-354)** |
+| 1 | HFE v3.1 Weak-Bit-Opcodes: voller Decode → Bitstream + per-Bit-weak_mask | Klasse-2 Snapshot | M | **ERLEDIGT (MF-354/362)** |
 | 2 | HFE v2 Opcodes (variable Bitrate) nicht interpretiert | Klasse-2 | M | offen |
 | 3 | Extended-ADF (MFM-Protection) fehlt | Klasse-2/3-Grenze | M | **ERLEDIGT (MF-352)** |
 | 4 | WOZ WRIT-Chunk verbatim-Emit beim Write (+ track_data-Over-Read-Fix) | Klasse-1 W | S–M | **ERLEDIGT (MF-357)** |
 | 5 | SCP-Footer-Emit beim Write (Metadaten) | Klasse-1 W | S | **ERLEDIGT (MF-351)** |
 | 6 | ADZ (gzip-ADF) kein direkter Reader | Klasse-3 Komfort | S | offen (zlib-Dep) |
 
-Lücke #1 ist jetzt teilweise geschlossen: die HFE-v3-Weak-Opcodes werden
-**detektiert** (RAND 0xF4, verifiziert gegen HxC-Quelle), der volle
-Opcode→Bitstream-Decode mit per-Bit-`weak_mask` bleibt bewusst offen
-(Haftungsmodus — keine weak_mask mit unsicherer Bit-Ausrichtung, HFE ist
-laut HxC ohnehin nur eine Annäherung). Alle Lücken sind additiv (kein Format
-wird falsch gelesen — sie erweitern die Abdeckung).
+Lücke #1 ist geschlossen: MF-354 lieferte die Detektion, MF-362 den vollen
+Decode — der v3-Read dekodiert den Opcode-Stream jetzt in den sauberen Bitstream
++ eine per-Bit-`track->weak_mask` (RAND-Regionen), verifiziert gegen den
+HxC-`hfev3_loader.c`-Decode-Loop + Unit-Test (`test_hfe_v3_weak`
+decode_bits_and_weak_mask). **Haftungsmodus:** die RAND-Bit-WERTE sind ein
+deterministischer 0-Platzhalter (NIE `rand()`/erfundene Daten) — die weak_mask
+ist die autoritative „diese Bits sind unbestimmt"-Aussage. v3-Write-Back ist
+bewusst `NOT_SUPPORTED` (der Decode ist verlustbehaftet — NOP/SETINDEX verworfen,
+RAND→Platzhalter — ohne dedizierten v3-Encoder nicht verlustfrei rekonstruierbar).
+Bleibt `PARTIAL`, weil HFE laut HxC nur eine Annäherung an die Disk ist.
 
 Lücke #4 (MF-357): der WOZ-Writer trägt den **WRIT-Chunk jetzt verbatim** durch
 (Reader erhält die Roh-Bytes, Writer re-emittiert sie nach TRKS). WRIT

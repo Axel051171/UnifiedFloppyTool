@@ -196,6 +196,77 @@ size_t uft_hfe_v3_count_weak_opcodes(const uint8_t *stream, size_t len) {
     return weak;
 }
 
+/* Decode a bit-reversed HFE v3 track (opcode stream) into a clean output
+ * bitstream + a per-bit weak mask (MF-362). Faithfully follows the HxC
+ * hfev3_loader.c decode loop: opcodes (top nibble 0xF) are consumed and emit no
+ * data bits except RAND (0xF4), which emits (8 - next_data_bitskip) weak bits;
+ * SKIPBITS (0xF3) sets the low-3-bit skip applied to the NEXT data byte;
+ * SETBITRATE (0xF2) is 2 bytes; NOP/SETINDEX are 1 byte. A literal data byte
+ * emits its bits [skip..7] MSB-first.
+ *
+ * Forensic honesty: HxC fills RAND regions with rand()&0x54 (a fresh value each
+ * read). We do NOT — the output BIT VALUES in a RAND region are a deterministic
+ * 0 placeholder and the weak_mask (1 there) is the authoritative "these bits are
+ * indeterminate" signal. No random/fabricated data is stored. HFE only
+ * approximates the disk (per HxC), so the weak regions are indicative.
+ *
+ * *out_bits (packed MSB-first) and *out_weak (one bool per output bit) are
+ * malloc'd for the caller (freed via uft_track_free). Returns the output BIT
+ * count; 0 on empty input or allocation failure (out params left NULL).
+ * *rand_count, if non-NULL, receives the RAND-opcode count. */
+size_t hfe_v3_decode(const uint8_t *in, size_t in_len,
+                     uint8_t **out_bits, bool **out_weak,
+                     size_t *rand_count) {
+    if (out_bits) *out_bits = NULL;
+    if (out_weak) *out_weak = NULL;
+    if (rand_count) *rand_count = 0;
+    if (!in || in_len == 0 || !out_bits || !out_weak) return 0;
+
+    size_t max_bits = in_len * 8;
+    uint8_t *bits = calloc((max_bits + 7) / 8, 1);
+    bool    *weak = calloc(max_bits, sizeof(bool));
+    if (!bits || !weak) { free(bits); free(weak); return 0; }
+
+    size_t   out   = 0;   /* output bit offset */
+    unsigned skip  = 0;   /* next_data_bitskip (0..7) */
+    size_t   rands = 0;
+
+    for (size_t l = 0; l < in_len; ) {
+        uint8_t b = in[l];
+        if ((b & HFEV3_OPCODE_MASK) == HFEV3_OPCODE_MASK) {
+            switch (b) {
+                case HFEV3_SETBITRATE: l += 2; break;
+                case HFEV3_SKIPBITS:
+                    skip = (l + 1 < in_len) ? (in[l + 1] & 0x7u) : 0;
+                    l += 2; break;
+                case HFEV3_RAND:
+                    for (unsigned bit = skip; bit < 8; bit++) {
+                        weak[out] = true;   /* value stays 0 (placeholder) */
+                        out++;
+                    }
+                    rands++;
+                    skip = 0;
+                    l += 1; break;
+                default:                    /* NOP / SETINDEX / unknown 0xFx */
+                    l += 1; break;
+            }
+        } else {
+            for (unsigned bit = skip; bit < 8; bit++) {
+                if (b & (0x80u >> bit))
+                    bits[out >> 3] |= (uint8_t)(0x80u >> (out & 7));
+                out++;
+            }
+            skip = 0;
+            l += 1;
+        }
+    }
+
+    if (rand_count) *rand_count = rands;
+    *out_bits = bits;
+    *out_weak = weak;
+    return out;
+}
+
 /**
  * @brief De-Interleave Track-Daten
  * 
@@ -619,22 +690,44 @@ static uft_error_t hfe_read_track(uft_disk_t* disk, int cylinder, int head,
         raw_data[i] = bit_reverse(raw_data[i]);
     }
     
-    // Raw-Daten im Track speichern
-    track->raw_data = raw_data;
-    track->raw_size = raw_size;
     track->encoding = hfe_to_uft_encoding(pdata->header.track_encoding);
 
-    /* HFE v3 weak/fuzzy-bit RAND opcodes (MF-354). The stored raw_data still
-     * carries the v3 opcode stream (a full opcode→bitstream decode is a
-     * documented follow-up), so we detect — never fabricate — the weak regions
-     * and surface the count via read_metadata("weak_regions"). HFE only
-     * APPROXIMATES the original disk (per the HxC author): a detected weak
-     * region is indicative, not a forensically exact reproduction. We do NOT
-     * synthesise a per-bit weak_mask here — a mask with uncertain bit alignment
-     * would violate "keine erfundenen Daten". */
-    pdata->last_weak_regions =
-        pdata->is_v3 ? uft_hfe_v3_count_weak_opcodes(raw_data, raw_size) : 0;
-    
+    if (pdata->is_v3) {
+        /* HFE v3: the bit-reversed bytes are an OPCODE stream, not a clean
+         * bitstream. Decode it (MF-362) into the output bitstream + a per-bit
+         * weak_mask (RAND regions). This replaces the opcode-laden raw_data with
+         * the actual MFM/FM bits. HFE only approximates the disk (per HxC), so
+         * the weak regions are indicative; the RAND bit VALUES are a
+         * deterministic placeholder, never fabricated randoms (see hfe_v3_decode). */
+        uint8_t *dbits = NULL; bool *dweak = NULL; size_t rands = 0;
+        size_t nbits = hfe_v3_decode(raw_data, raw_size, &dbits, &dweak, &rands);
+        if (nbits > 0 && dbits) {
+            free(raw_data);                 /* opcode stream no longer needed */
+            track->raw_data     = dbits;
+            track->raw_size     = (nbits + 7) / 8;
+            track->raw_len      = track->raw_size;
+            track->raw_bits     = nbits;
+            track->raw_capacity = (nbits + 7) / 8;
+            track->weak_mask    = dweak;    /* per-bit; freed by uft_track_free */
+            pdata->last_weak_regions = rands;
+        } else {
+            /* Decode failed (OOM/empty): fall back to the raw bytes, no mask. */
+            free(dbits); free(dweak);
+            track->raw_data = raw_data;
+            track->raw_size = raw_size;
+            track->raw_len  = raw_size;
+            track->raw_bits = raw_size * 8;
+            pdata->last_weak_regions = 0;
+        }
+    } else {
+        /* v1/v2: the bit-reversed bytes ARE the bitstream. */
+        track->raw_data = raw_data;
+        track->raw_size = raw_size;
+        track->raw_len  = raw_size;
+        track->raw_bits = raw_size * 8;
+        pdata->last_weak_regions = 0;
+    }
+
     // Track-Metriken
     uint16_t rpm = read_le16((const uint8_t*)&pdata->header.uft_floppy_rpm);
     track->metrics.rpm = (rpm > 0) ? rpm : 300.0;
@@ -661,7 +754,15 @@ static uft_error_t hfe_write_track(uft_disk_t* disk, int cylinder, int head,
     
     hfe_data_t* pdata = disk->plugin_data;
     if (!pdata || !pdata->file) return UFT_ERROR_FILE_WRITE;
-    
+
+    /* v3 write-back is not lossless: read decodes the opcode stream into a clean
+     * bitstream + weak_mask (MF-362), and that decode drops NOP/SETINDEX/
+     * SETBITRATE and replaces RAND bits with a placeholder — so track->raw_data
+     * is no longer the on-disk opcode stream and cannot be re-serialised
+     * faithfully without a dedicated v3 encoder. Refuse rather than write a
+     * corrupt/degraded v3 track. v1/v2 write is unaffected. */
+    if (pdata->is_v3) return UFT_ERROR_NOT_SUPPORTED;
+
     if (cylinder < 0 || cylinder >= pdata->header.number_of_tracks) {
         return UFT_ERROR_OUT_OF_RANGE;
     }
@@ -839,9 +940,11 @@ static const uft_plugin_feature_t hfe_features[] = {
     { "Write / encode",            UFT_FEATURE_SUPPORTED,   NULL },
     { "Weak-bit annotation",       UFT_FEATURE_PARTIAL,
       "HFE v1/v2 carry no weak-bit flags. HFE v3 encodes weak/fuzzy bits as "
-      "RAND opcodes (0xF4): detected and counted (read_metadata \"weak_regions\"). "
-      "HFE only approximates the disk (per HxC), so this is indicative, not "
-      "bit-exact; a full per-bit weak_mask reconstruction is a documented follow-up." },
+      "RAND opcodes (0xF4): the v3 read now decodes the opcode stream into the "
+      "clean bitstream and a per-bit track->weak_mask (MF-362), and reports the "
+      "count via read_metadata(\"weak_regions\"). PARTIAL because HFE only "
+      "approximates the disk (per HxC) so weak regions are indicative, and v3 "
+      "write-back is not supported (the decode is lossy)." },
 };
 
 const uft_format_plugin_t uft_format_plugin_hfe = {
