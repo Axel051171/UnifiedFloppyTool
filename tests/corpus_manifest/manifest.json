@@ -36,6 +36,15 @@
       "tool": "atrcopy 10.1 template dos2sd.atr (pristine, byte-identical to the pip package artifact)",
       "source": "atrcopy templates/dos2sd.atr: 'Atari 8-bit DOS 2 single density (90K), empty VTOC' \u2014 filesystem structure only, no copyrighted DOS files",
       "test": "test_corpus_atr"
+    },
+    {
+      "file": "tests/corpus/zxart_spectrofon01.fdi",
+      "sha256": "0aea0504dbcceb0b99cd2836ef149d36a39f2bae36ecf19ddcacfea6b4a27e93",
+      "format": "fdi",
+      "origin": "real",
+      "tool": "historical (Spectrofon diskmag #01, 1994, TR-DOS 83-cyl DS)",
+      "source": "zxart.ee release id 428381 (https://zxart.ee/releasefile/id:428381/SP1_O.zip), file SP1_O.fdi \u2014 freely distributed disk magazine; local-only (tests/corpus/ gitignored), re-acquire from the URL and verify this hash",
+      "test": "test_corpus_fdi"
     }
   ]
 }

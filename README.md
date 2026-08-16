@@ -147,9 +147,11 @@ verification).
 **Honest verification status** (script-generated, see
 [`docs/VERIFICATION_TIERS.md`](docs/VERIFICATION_TIERS.md) for the
 per-format table and [`docs/VERIFICATION_PLAN.md`](docs/VERIFICATION_PLAN.md)
-for the tier definitions): **T1=0, T1b=3, T2=14, T3=71** of 88.
+for the tier definitions): **T1=1, T1b=3, T2=13, T3=71** of 88.
 
-- **T1** (real reference image): none yet
+- **T1** (real reference image): FDI — a real 1994 TR-DOS disk magazine
+  (83-cylinder, partially formatted last track; image local-only for
+  copyright hygiene, sha256 + provenance in `tests/corpus_manifest/`)
 - **T1b** (image produced by a canonical third-party tool, read by UFT):
   D64 (VICE c1541), ADF (amitools xdftool), ATR (atrcopy template)
 - **T2** (synthetic round-trip + spec verified against an authoritative

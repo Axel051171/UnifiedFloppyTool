@@ -106,17 +106,24 @@ bestätigt; ein echtes Fremd-Tool-Image ist dort der härteste Test).
     zum pip-Artefakt = beweisbare Provenienz); `test_corpus_atr` verifiziert
     ATR-Header, DOS-2-VTOC (02 C3 02 C3), 720×128-Geometrie.
 
-  **Ehrlich offen (2/5) — kein kanonisches Erzeuger-Tool existiert:**
-  - **FDI (ZX Spectrum):** SAMdisk liest nur (`ReadFDI`, kein Writer); der
-    HxC-FDI-Loader hat `(WRITEDISKFILE) 0` = read-only. Beschaffungsweg:
-    rechtefreies Homebrew-/PD-FDI aus der TR-DOS-Szene (origin=real, lokal
-    in `tests/corpus/`, Hash ins Manifest) ODER ein FDI-schreibfähiges
-    Emulator-Tool (UKV/Real Spectrum) in einer Session mit Nutzer-Hilfe.
-  - **NFD (PC-98):** HxC hat gar keinen NFD-Loader; kanonischer Erzeuger ist
-    T98-Next selbst (GUI-Emulator). Beschaffungsweg: T98-Next eine Disk
-    erzeugen lassen (Nutzer-Session) oder rechtefreies PD-NFD-Image.
+  **FDI auf T1 gehoben (MF-367, 4/5):** reales FDI beschafft — **Spectrofon
+  #01** (1994er TR-DOS-Diskmagazin, zur freien Verteilung gemacht; via
+  zxart.ee-Archiv, Release 428381). Lokal in `tests/corpus/` (gitignored),
+  SHA-256 + Bezugs-URL im Manifest; `test_corpus_fdi` **skippt** bei
+  fehlendem Image (exit 77, ctest SKIP_RETURN_CODE) und verifiziert lokal:
+  83-Zylinder-Geometrie (nicht-standard!), TR-DOS-Struktur (16×256,
+  Volume-Sektor R=9 Typ 0x16/Sig 0x10, per-Sektor-Offsets), CRC-Flags, und
+  die **teil-formatierte letzte Spur (13/15 Sektoren)** — eine
+  Realwelt-Irregularität, die kein synthetischer Test erzeugt. Alle
+  Assert-Bytes vorab unabhängig (python, Spec-Parse) gepinnt.
 
-  Das **Moratorium bleibt in Kraft**, bis auch FDI + NFD-r0 auf T1/T1b sind.
+  **Ehrlich offen (1/5): NFD.** Recherche abgeschlossen — es existiert
+  KEIN zugängliches Werkzeug, das NFD schreibt: greaseweazle (read-only),
+  NP2kai + np21/w (newdisk erzeugt nur D88), DOSBox-X/MAME/fluxengine/
+  ds6_util (alle read-only), HxC (kein NFD-Loader). Einziger Erzeuger ist
+  der GUI-Emulator **T98-Next** selbst. Beschaffungswege: (a) Nutzer-Session
+  mit T98-Next (Blank-NFD erzeugen), (b) rechtefreies PD-NFD, falls eines
+  auftaucht. Das **Moratorium bleibt in Kraft**, bis NFD-r0 auf T1/T1b ist.
 - **Phase 3 (ERLEDIGT mit MF-366, bis auf Verhältnis-Bestätigung):**
   - **README Stufe 2:** Tier-Zusammenfassung (T1/T1b/T2/T3) eingebettet und
     per neuem Drift-Gate gegen die berechneten Werte geprüft (negativ

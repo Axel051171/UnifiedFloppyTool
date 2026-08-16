@@ -332,6 +332,11 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/atr/uft_atr.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+    elseif(${test_name} STREQUAL "test_corpus_fdi")
+        # T1 real corpus: ZX Spectrum FDI (Spectrofon #01 diskmag, local-only) (MF-367)
+        target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/fdi/uft_fdi_plugin.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_RESTRICTED_DIR="${CMAKE_SOURCE_DIR}/tests/corpus")
     elseif(${test_name} STREQUAL "test_akai_s900_plugin")
         # Phase-3 new format: Akai S900/S950 sampler (DD 5x1024 / HD 10x1024) (MF-348)
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/akai/uft_akai_s900.c)
@@ -1005,6 +1010,12 @@ foreach(test_source ${TEST_SOURCES})
     
     # Register as CTest
     add_test(NAME ${test_name} COMMAND ${test_name})
+
+    # Restricted-corpus tests (image is local-only, gitignored): exit code 77
+    # means "corpus image absent, skipped" — not a failure (MF-367).
+    if(${test_name} STREQUAL "test_corpus_fdi")
+        set_tests_properties(${test_name} PROPERTIES SKIP_RETURN_CODE 77)
+    endif()
 
     # MF-254 / MF-255: tests that link uft_scp_direct.c or uft_xum1541.c
     # need libusb-1.0.dll on PATH at runtime (Windows). Use the same \;
