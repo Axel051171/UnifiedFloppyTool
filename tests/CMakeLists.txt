@@ -373,6 +373,28 @@ foreach(test_source ${TEST_SOURCES})
     elseif(${test_name} STREQUAL "test_fdi_spectrum")
         # ZX Spectrum FDI reader/writer rewrite (MF-359)
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/fdi/uft_fdi_plugin.c)
+    elseif(${test_name} STREQUAL "test_corpus_d71")
+        # T1b cross-tool corpus: D71 by VICE c1541 (MF-376)
+        target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/d71/uft_d71.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+    elseif(${test_name} STREQUAL "test_corpus_d81")
+        # T1b cross-tool corpus: D81 by VICE c1541 (MF-376)
+        target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/d81/uft_d81.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+    elseif(${test_name} STREQUAL "test_corpus_hfe")
+        # T1b cross-tool corpus: HFE by greaseweazle (MF-376)
+        target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/hfe/uft_hfe.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+    elseif(${test_name} STREQUAL "test_corpus_scp")
+        # T1b cross-tool corpus: SCP flux by greaseweazle (MF-376, local-only image)
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/scp/uft_scp_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_decoder_plugin_stub.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_RESTRICTED_DIR="${CMAKE_SOURCE_DIR}/tests/corpus")
     elseif(${test_name} STREQUAL "test_corpus_d64")
         # T1b cross-tool corpus: D64 by VICE c1541 (MF-365)
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/d64/uft_d64_plugin.c)
@@ -1067,7 +1089,8 @@ foreach(test_source ${TEST_SOURCES})
 
     # Restricted-corpus tests (image is local-only, gitignored): exit code 77
     # means "corpus image absent, skipped" — not a failure (MF-367).
-    if(${test_name} STREQUAL "test_corpus_fdi")
+    if(${test_name} STREQUAL "test_corpus_fdi" OR
+       ${test_name} STREQUAL "test_corpus_scp")
         set_tests_properties(${test_name} PROPERTIES SKIP_RETURN_CODE 77)
     endif()
 

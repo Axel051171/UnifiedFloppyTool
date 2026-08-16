@@ -45,6 +45,42 @@
       "tool": "historical (Spectrofon diskmag #01, 1994, TR-DOS 83-cyl DS)",
       "source": "zxart.ee release id 428381 (https://zxart.ee/releasefile/id:428381/SP1_O.zip), file SP1_O.fdi \u2014 freely distributed disk magazine; local-only (tests/corpus/ gitignored), re-acquire from the URL and verify this hash",
       "test": "test_corpus_fdi"
+    },
+    {
+      "file": "tests/corpus_free/vice_c1541_70trk.d71",
+      "sha256": "064178c9a3b1fd4acb06179e958c692a64a2ec7e7913bfa8936a2e37828e4df6",
+      "format": "d71",
+      "origin": "cross-tool",
+      "tool": "VICE 3.10 c1541 (release 3.10.0, GTK3VICE-3.10-win64)",
+      "source": "c1541 -format \"uftcorpus,42\" d71 <img> -write marker.txt \"uft marker\"; marker.txt is original UFT text (rights-free)",
+      "test": "test_corpus_d71"
+    },
+    {
+      "file": "tests/corpus_free/vice_c1541_80trk.d81",
+      "sha256": "6d85447e993d00df475ecf9636ae8c40c69ad24921f56d8797c646b35dee6a27",
+      "format": "d81",
+      "origin": "cross-tool",
+      "tool": "VICE 3.10 c1541 (release 3.10.0, GTK3VICE-3.10-win64)",
+      "source": "c1541 -format \"uftcorpus,42\" d81 <img> -write marker.txt \"uft marker\"; marker.txt is original UFT text (rights-free)",
+      "test": "test_corpus_d81"
+    },
+    {
+      "file": "tests/corpus_free/gw_amigados.hfe",
+      "sha256": "c53778db65683e7403cf09a8ea2a7d90aaf4b3754c04bb18d1f0ba751b352862",
+      "format": "hfe",
+      "origin": "cross-tool",
+      "tool": "greaseweazle 1.23 (keirf/greaseweazle release v1.23, win64)",
+      "source": "gw convert --format=amiga.amigados tests/corpus_free/xdftool_dd_ofs.adf out.hfe \u2014 canonical MFM encoding of the rights-free xdftool ADF",
+      "test": "test_corpus_hfe"
+    },
+    {
+      "file": "tests/corpus/gw_amigados.scp",
+      "sha256": "ca47237ac220eee0533941d2e1763fea3fe455d9e1aa6f852015aae617216e40",
+      "format": "scp",
+      "origin": "cross-tool",
+      "tool": "greaseweazle 1.23 (keirf/greaseweazle release v1.23, win64)",
+      "source": "gw convert --format=amiga.amigados tests/corpus_free/xdftool_dd_ofs.adf out.scp \u2014 32 MB flux, LOCAL-ONLY (tests/corpus/ gitignored) but fully reproducible from the tracked ADF with this exact command",
+      "test": "test_corpus_scp"
     }
   ]
 }
