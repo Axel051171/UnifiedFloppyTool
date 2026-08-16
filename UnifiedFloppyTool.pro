@@ -442,7 +442,6 @@ HEADERS += \
     src/hardware_providers/applesauce_provider_v2.h \
     src/hardware_providers/adfcopy_provider_v2.h \
     src/hardware_providers/usbfloppy_provider_v2.h \
-    src/hardware_providers/xum1541_usb.h \
     src/hardware_providers/teensy_probe.h \
     src/hardware_providers/qprocess_subprocess_runner.h \
     src/hardware_providers/ufi_runners.h
@@ -1554,7 +1553,6 @@ HEADERS += \
     include/uft/hal/uft_hal.h \
     include/uft/hal/internal/uft_hal_unified.h \
     include/uft/hal/internal/uft_hal_profiles.h \
-    include/uft/hal/uft_hal_v3.h \
     include/uft/hal/internal/uft_hal_v2.h \
     include/uft/hal/uft_drive.h \
     include/uft/hal/uft_kryoflux.h \
