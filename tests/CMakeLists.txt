@@ -51,6 +51,14 @@ set(TEST_SOURCES ${TEST_SOURCES_C} ${_HEADER_ONLY_CPP_TESTS})
 
 # Exclude tests with missing dependencies (TODO: implement these modules)
 set(EXCLUDED_TESTS
+    "test_cpm_fs"              # API drift: test + cpm_fs.c written against the
+                               # include/uft/detect/ header family, but a second
+                               # analysis/ header twin shadows it in the include
+                               # path (cpm_dpb_t lacks bsh there). Untangle the
+                               # header twins first (MF-374 finding).
+    "test_mfm_bridge"          # API drift: test expects uft_mfm_detect_info_t /
+                               # UFT_MFMD_* wrapper API that exists in NO header;
+                               # bridge impl exposes mfm_detect_info_t instead.
     # "test_libdsk_formats" # Re-enabled: apridisk, nanowasp, qrst, cfi now in registry
     "test_track_writer"     # src/hardware/uft_track_writer.c removed in cleanup
     "test_flux_analysis"    # src/flux/uft_flux_analysis.c removed in cleanup
@@ -67,38 +75,21 @@ set(EXCLUDED_TESTS
     # v4.1.5 UFT-T04 bulk-triage — tests for code removed in MF-011 cleanup
     # (otdr8-12, dms_*, uft_align_fuse_*, etc.). Mass-exclusion is honest:
     # the build is now clean and the gap is documented in MASTER_PLAN.md.
-    "test_amigados_validate"   # uft_amiga_validate_ext impl deleted
     # "test_applesauce_hal"    # v4.1.5: Applesauce HAL uses serial (not libusb);
                               #   uft_applesauce.c has 13/20 real funcs; re-enabled
-    "test_confidence_v10"      # otdr_event_core_v10 impl absent (events/CMakeLists is standalone-project)
-    "test_crc16"               # uft_crc16 separate impl missing
     "test_decode_score"        # uft_decode_score.c removed in MF-011
-    "test_event_v8"            # otdr_event_core_v8 impl absent
-    "test_export_v12"          # otdr_event_core_v12 impl absent
     # "test_fnmatch_shim"      # v4.1.5: uft_fnmatch.c re-included via target_sources
     "test_format_verify_common" # format_verify common shim absent
-    "test_integrity_v9"        # otdr_event_core_v9 impl absent
     "test_libdsk_formats"      # libdsk-style format glue absent
     "test_merge_engine"        # uft_merge_engine.c removed in MF-011
-    "test_mfm_bridge"          # uft_mfm_bridge.c absent (skeleton header)
-    "test_otdr_bridge"         # uft_otdr_bridge.c needs full OTDR chain
-    "test_pipeline_v11"        # otdr_event_core_v11 impl absent
     "test_process"             # uft_process.c absent
     # "test_scp_direct_hal"    # v4.1.5: libusb wiring landed (MF-254); re-enabled
     "test_sector_parser"       # uft_sector_parser.c absent
-    "test_ti99_formats"        # uft_ti99 lib not registered in root CMake
     # "test_whdload_resload"   # v4.1.5: src/whdload/whdload_resload_api.c re-included
     # "test_xum1541_hal"       # MF-255: libusb wiring landed, test re-enabled
     "test_fat_extensions"      # uft_fs lib not registered in root CMake
-    "test_align_fuse_bridge"   # depends on otdr_align_fuse_v7 (standalone-project; UFT-T05)
-    "test_cpm_fs"              # uft_cpm_fs needs uft_fs (not in root CMake)
-    "test_denoise_bridge"      # depends on otdr_event_core_v* chain
-    "test_event_bridge"        # depends on otdr_event_core_v2 (standalone-project; UFT-T05)
     "test_format_verify"       # needs uft_format_verify symbols outside uft_core
     "test_mfm_detect"          # uft_mfm_detect chain needs full mfm subsystem
-    "test_tdfc_plus"           # needs full TDFC impl (tdfc_default_config, tdfc_analyze, ...)
-    "test_write_gate"          # needs uft_sha256 + uft_snapshot dependencies
-    "test_xdf_api"             # needs full XDF subsystem (xdf_create, xdf_phase_*, ...)
 )
 
 # Create test executables
@@ -304,6 +295,93 @@ foreach(test_source ${TEST_SOURCES})
         # Re-enabled in MF-372: was excluded with the WRONG reason ("uft_mega65
         # stub-only") — it actually tests the real 589-line uft_fat32_mbr.c.
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/fat32/uft_fat32_mbr.c)
+    elseif(${test_name} STREQUAL "test_amigados_validate")
+        # Reactivated in MF-374 (exclusion reason no longer holds)
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/fs/uft_amigados_extended.c
+            ${CMAKE_SOURCE_DIR}/src/fs/uft_bootblock_scanner.c
+            ${CMAKE_SOURCE_DIR}/src/fs/uft_amiga_virus_db.c)
+    elseif(${test_name} STREQUAL "test_confidence_v10")
+        # Reactivated in MF-374 (exclusion reason no longer holds)
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/analysis/events/uft_confidence_bridge.c            ${CMAKE_SOURCE_DIR}/src/analysis/events/otdr_event_core_v10.c
+)
+        target_include_directories(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/include/uft/analysis)
+    elseif(${test_name} STREQUAL "test_crc16")
+        # Reactivated in MF-374 (exclusion reason no longer holds)
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/whdload/whd_crc16.c)
+    elseif(${test_name} STREQUAL "test_event_v8")
+        # Reactivated in MF-374 (exclusion reason no longer holds)
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/analysis/events/uft_event_v8_bridge.c            ${CMAKE_SOURCE_DIR}/src/analysis/events/otdr_event_core_v8.c
+)
+        target_include_directories(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/include/uft/analysis)
+    elseif(${test_name} STREQUAL "test_export_v12")
+        # Reactivated in MF-374 (exclusion reason no longer holds)
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/analysis/events/uft_export_bridge.c            ${CMAKE_SOURCE_DIR}/src/analysis/events/otdr_event_core_v12.c
+            ${CMAKE_SOURCE_DIR}/src/analysis/events/otdr_event_core_v9.c
+            ${CMAKE_SOURCE_DIR}/src/analysis/events/otdr_event_core_v10.c
+            ${CMAKE_SOURCE_DIR}/src/analysis/events/otdr_event_core_v11.c
+)
+        target_include_directories(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/include/uft/analysis)
+    elseif(${test_name} STREQUAL "test_integrity_v9")
+        # Reactivated in MF-374 (exclusion reason no longer holds)
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/analysis/events/uft_integrity_bridge.c            ${CMAKE_SOURCE_DIR}/src/analysis/events/otdr_event_core_v9.c
+)
+        target_include_directories(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/include/uft/analysis)
+    elseif(${test_name} STREQUAL "test_mfm_bridge")
+        # Reactivated in MF-374 (exclusion reason no longer holds)
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/detect/mfm/uft_mfm_detect_bridge.c)
+        target_include_directories(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/include/uft/detect)
+    elseif(${test_name} STREQUAL "test_otdr_bridge")
+        # Reactivated in MF-374 (exclusion reason no longer holds)
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/analysis/otdr/uft_otdr_bridge.c
+            ${CMAKE_SOURCE_DIR}/src/analysis/otdr/floppy_otdr.c)
+    elseif(${test_name} STREQUAL "test_pipeline_v11")
+        # Reactivated in MF-374 (exclusion reason no longer holds)
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/analysis/events/uft_pipeline_bridge.c            ${CMAKE_SOURCE_DIR}/src/analysis/events/otdr_event_core_v11.c
+            ${CMAKE_SOURCE_DIR}/src/analysis/events/otdr_event_core_v9.c
+            ${CMAKE_SOURCE_DIR}/src/analysis/events/otdr_event_core_v10.c
+)
+        target_include_directories(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/include/uft/analysis)
+    elseif(${test_name} STREQUAL "test_ti99_formats")
+        # Reactivated in MF-374 (exclusion reason no longer holds)
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/ti99/uft_fiad.c
+            ${CMAKE_SOURCE_DIR}/src/formats/ti99/uft_tifiles.c)
+    elseif(${test_name} STREQUAL "test_cpm_fs")
+        # Reactivated in MF-374 (exclusion reason no longer holds)
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/detect/mfm/cpm_fs.c
+            ${CMAKE_SOURCE_DIR}/src/formats/cpm/uft_cpm_diskdef.c)
+        target_include_directories(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/include/uft/detect)
+    elseif(${test_name} STREQUAL "test_denoise_bridge")
+        # Reactivated in MF-374 (exclusion reason no longer holds)
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/analysis/denoise/uft_denoise_bridge.c            ${CMAKE_SOURCE_DIR}/src/analysis/denoise/phi_otdr_denoise_1d.c
+)
+        target_include_directories(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/include/uft/analysis)
+    elseif(${test_name} STREQUAL "test_event_bridge")
+        # Reactivated in MF-374 (exclusion reason no longer holds)
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/analysis/events/otdr_event_core_v2.c
+            ${CMAKE_SOURCE_DIR}/src/analysis/events/uft_event_bridge.c)
+        target_include_directories(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/include/uft/analysis)
     elseif(${test_name} STREQUAL "test_savedskf_read")
         # IBM SaveDskF uncompressed reader rewrite (MF-356)
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/pc/uft_savedskf.c)
@@ -448,16 +526,23 @@ foreach(test_source ${TEST_SOURCES})
     elseif(${test_name} STREQUAL "test_align_fuse_bridge")
         # Include align-fuse bridge source directly
         target_sources(${test_name} PRIVATE
-            ${CMAKE_SOURCE_DIR}/src/analysis/events/uft_align_fuse_bridge.c)
+            ${CMAKE_SOURCE_DIR}/src/analysis/events/uft_align_fuse_bridge.c            ${CMAKE_SOURCE_DIR}/src/analysis/events/otdr_align_fuse_v7.c
+)
+        target_include_directories(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/include/uft/analysis)
     elseif(${test_name} STREQUAL "test_write_gate")
         # Include write-gate policy + snapshot sources
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/policy/uft_write_gate.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_snapshot.c)
+            ${CMAKE_SOURCE_DIR}/src/core/uft_snapshot.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_sha256.c)
     elseif(${test_name} STREQUAL "test_xdf_api")
         # Include XDF API source directly
         target_sources(${test_name} PRIVATE
-            ${CMAKE_SOURCE_DIR}/src/formats/xdf/uft_xdf_api.c)
+            ${CMAKE_SOURCE_DIR}/src/formats/xdf/uft_xdf_api.c
+            ${CMAKE_SOURCE_DIR}/src/formats/xdf/uft_xdf_core.c
+            ${CMAKE_SOURCE_DIR}/src/formats/xdf/uft_xdf_api_impl.c
+            ${CMAKE_SOURCE_DIR}/src/compat/uft_fnmatch.c)
     elseif(${test_name} STREQUAL "test_amiga_virus_db")
         # Include Amiga virus signature DB source directly
         target_sources(${test_name} PRIVATE
@@ -947,16 +1032,6 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/fs/uft_bootblock_scanner.c
             ${CMAKE_SOURCE_DIR}/src/fs/uft_amiga_virus_db.c)
         set(TEST_LIBS "")
-    elseif(${test_name} STREQUAL "test_write_gate")
-        # v4.1.5-hardening: write-gate policy (Prinzip 4 destructive-op consent).
-        target_sources(${test_name} PRIVATE
-            ${CMAKE_SOURCE_DIR}/src/policy/uft_write_gate.c)
-        set(TEST_LIBS "")
-    elseif(${test_name} STREQUAL "test_xdf_api")
-        # v4.1.5-hardening: XDF (eXtended Density Format) API.
-        target_sources(${test_name} PRIVATE
-            ${CMAKE_SOURCE_DIR}/src/formats/xdf/uft_xdf_api.c)
-        set(TEST_LIBS "")
     elseif(${test_name} STREQUAL "test_disk_quickscan")
         # v4.1.5-hardening: CHECKDISK pre-capture scan (M2 T6).
         target_sources(${test_name} PRIVATE
@@ -990,7 +1065,8 @@ foreach(test_source ${TEST_SOURCES})
         # v4.1.5-hardening: TDFC+ OTDR module. tdfc.h lives in
         # include/uft/analysis/ but the .c uses unqualified `#include "tdfc.h"`.
         target_sources(${test_name} PRIVATE
-            ${CMAKE_SOURCE_DIR}/src/analysis/otdr/tdfc_plus.c)
+            ${CMAKE_SOURCE_DIR}/src/analysis/otdr/tdfc_plus.c
+            ${CMAKE_SOURCE_DIR}/src/analysis/otdr/tdfc.c)
         target_include_directories(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/include/uft/analysis)
         if(UNIX AND M_LIBRARY)

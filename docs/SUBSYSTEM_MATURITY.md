@@ -17,12 +17,12 @@ Legende: ✅ real verifiziert · 🟡 synthetisch/Spec-verifiziert · 🔴 ungep
 | **HAL: XUM1541 / Applesauce / FluxEngine / ADFCopy / USBFloppy** | honest-stubs / partial | ⬜ Utility+Lifecycle real, I/O nicht verdrahtet (M3.x) | Stub-Honesty-Asserts grün |
 | **HW-Emulatoren (Tier-2.5)** | 9/9 Controller | 🟡 firmware-realistische Emulatoren, synthetisch; ersetzen keinen Bench | `tests/emulators/` |
 | **DeepRead** (8 Module) | Adaptive Decode, Weighted Voting, Splice/Aging/Correlation/Fingerprint/LLR | 🔴 **0 Tests im aktiven Suite-Lauf**; nie gegen reale beschädigte Disk | ctest-Census 2026-08-16 |
-| **OTDR-Pipeline** (12 Stufen) | Signal-Analyse, Confidence | 🔴 `test_otdr_bridge` existiert, ist aber **EXCLUDED**; nie real | ctest-Census |
+| **OTDR-Pipeline** (12 Stufen) | Signal-Analyse, Confidence | 🟡 seit MF-374: 8 aktive Tests (otdr_bridge, Event-Kette v8-v12, denoise, align_fuse, tdfc_plus) — synthetisch; nie gegen reale Captures | MF-374 Reaktivierung |
 | **ML: Protection-Classifier** | Cosine-Similarity, V-MAX/RapidLok/… Referenz-Vektoren | 🔴 0 Tests; Referenz-Vektoren nie gegen echte geschützte Disks validiert | ctest-Census |
 | **ML: Decoder/Training-Gen** | Header-API | ⬜ UFT_SKELETON_PLANNED — bewusst unimplementiert | `uft_ml_decoder.h` |
 | **Kopierschutz-Erkennung** (55+ Schemes) | Heuristik-Detektoren + Titel-DB | 🟡 5 aktive Tests (synthetische Signaturen); 🔴 **kein Scheme je gegen eine echte geschützte Original-Disk** | test_protection_* |
 | **Recovery-Pipeline** | Multiread-Voting, Adaptive, CRC-Korrektur | 🟡 1 aktiver Test (`test_recovery`, synthetisch) | ctest-Census |
-| **Filesystems** | AmigaDOS, FAT12/16, CBM DOS, Apple, CP/M, … | 🟡 FAT: 2 aktive Tests; 🔴 AmigaDOS-Test excluded; übrige FS ungeprüft | ctest-Census |
+| **Filesystems** | AmigaDOS, FAT12/16, CBM DOS, Apple, CP/M, … | 🟡 FAT: 3 aktive Tests (inkl. FAT32/MBR seit MF-373); AmigaDOS-Validate + TI-99 seit MF-374 aktiv; CP/M-Test excluded (Header-Zwillinge, MF-374-Befund); übrige FS ungeprüft | ctest-Census + MF-373/374 |
 | **Format-Konverter** | 45 Pfade | 🟡 13 Roundtrip-Matrix-Einträge (SSOT `uft_roundtrip.c`); übrige 32 Pfade 🔴 | `src/core/uft_roundtrip.c` |
 | **Audit-Trail / Forensik-Report** | 40+ Event-Typen, 6 Export-Formate, Hash-Chain | 🔴 kein aktiver Test des Audit-Trail-Subsystems | ctest-Census |
 | **Flux-Decoder/PLL-Kern** | MFM/FM/GCR, PLL, Sync | 🟡 PLL/MFM-Tests aktiv (synthetisch); nie gegen reale Flux-Captures | test_pll*, test_mfm* |
