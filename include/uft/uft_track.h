@@ -76,21 +76,16 @@ typedef enum uft_layer_flags {
 } uft_layer_flags_t;
 
 /* ═══════════════════════════════════════════════════════════════════════════
- * Track Status Flags - use defines for compatibility
+ * Track Status Flags
+ *
+ * Canonical: enum uft_track_status in uft/uft_types.h (included above).
+ * A former compat #define block here carried DIFFERENT values (UNFORMATTED
+ * was 1<<0 vs the canonical 1<<2) and — because #ifndef cannot see enum
+ * constants — silently shadowed the enum in every TU that included this
+ * header, so setters and readers could disagree on what a status value
+ * means. Removed in MF-371 (AUD-3); all names now resolve to the enum.
+ * Do NOT reintroduce value-carrying macros for these names.
  * ═══════════════════════════════════════════════════════════════════════════ */
-
-#ifndef UFT_TRACK_OK
-#define UFT_TRACK_OK            0
-#define UFT_TRACK_UNFORMATTED   (1 << 0)
-#define UFT_TRACK_CRC_ERRORS    (1 << 1)
-#define UFT_TRACK_MISSING_DATA  (1 << 2)
-#define UFT_TRACK_PROTECTED     (1 << 3)
-#define UFT_TRACK_WEAK_BITS     (1 << 4)
-#define UFT_TRACK_LONG          (1 << 5)
-#define UFT_TRACK_SHORT         (1 << 6)
-#define UFT_TRACK_HALF          (1 << 7)
-#define UFT_TRACK_QUARTER       (1 << 8)
-#endif
 
 /* ═══════════════════════════════════════════════════════════════════════════
  * Quality Metrics

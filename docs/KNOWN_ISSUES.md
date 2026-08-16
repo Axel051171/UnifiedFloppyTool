@@ -1099,13 +1099,22 @@ SSOT-verifizierte Fehlertext-Tabelle. In `.pro` aufnehmen, **sobald der erste
 echte Aufrufer entsteht** (z. B. GUI-Fehlermeldungen auf `uft_strerror`
 umstellen — das wäre die eigentliche Verbesserung).
 
-### AUD-3 — Enum-Duplikat-Drift cross-TU (Correctness)
-Empirisch in MF-355 gefunden: `UFT_TRACK_UNFORMATTED` ist doppelt definiert
-mit **verschiedenen Werten** (`uft_types.h` = `1<<2`, `uft_track.h` = `1<<0`);
-`UFT_ENC_GCR_CBM`(=3) vs. `UFT_ENC_GCR_C64`(=9) lösen je nach Include-Pfad
-verschieden auf. Tests mussten deshalb auf Roh-Bytes statt Enum-Numerik
-ausweichen. Konsolidierung = Single-Source pro Konstante; vorsichtig (ABI/
-Verhalten), eigener MF mit Aufruf-Site-Analyse.
+### AUD-3 — Enum-Duplikat-Drift cross-TU (Correctness) → Track-Status GELÖST (MF-371), GCR-Encoding offen
+**Track-Status (gelöst):** `uft_track.h` trug einen Kompat-`#define`-Block mit
+**anderen Werten** als die kanonische enum in `uft_types.h` (UNFORMATTED
+`1<<0` vs. `1<<2`; Wert 1 hieß je nach TU „unformatiert" oder „READ_ERROR").
+Da `#ifndef` enum-Konstanten nicht sieht, überschattete der Block die enum in
+jeder TU, die den Header zog — Setter und Leser konnten denselben Wert
+verschieden deuten. Aufruf-Site-Analyse: 4 Setter, 1 Leser (nur `== OK`,
+kollisionsfrei), Makro-only-Namen (CRC_ERRORS/MISSING_DATA/LONG/SHORT/HALF/
+QUARTER) 0 Nutzer. Fix: Block ersatzlos entfernt — alle Namen lösen zur enum
+auf; der zuvor unmögliche `status == UFT_TRACK_UNFORMATTED`-Assert in
+`test_g71_read` ist reaktiviert und grün. Verifiziert: qmake-Vollbuild +
+ctest 209/209.
+**GCR-Encoding (offen):** `UFT_ENC_GCR_CBM`(=3, uft_types) vs.
+`UFT_ENC_GCR_C64`(=9, core/uft_track_base) sind zwei GETRENNTE Enums für
+dasselbe Konzept mit vielen Nutzern — Vereinheitlichung ist eine eigene
+API-Aufgabe (Aufruf-Site-Migration), nicht nebenbei lösbar.
 
 ### AUD-4 — 60+ unpushed Commits = CI-Blindflug (Process)
 Die gesamte Sanierungs-Serie (MF-352…369) existiert nur lokal; CI hat seit

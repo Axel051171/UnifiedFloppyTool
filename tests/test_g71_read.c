@@ -130,9 +130,11 @@ TEST(empty_track_unformatted) {
     ASSERT(build_g71(path, a, b));
     uft_disk_t disk; ASSERT(open_disk(path, &disk));
     uft_track_t t; memset(&t, 0, sizeof(t));
-    /* Empty track: read succeeds but yields no raw data (offset 0 in table).
-     * raw_data==NULL is the robust, enum-independent signal. */
+    /* Empty track: read succeeds, no raw data (offset 0 in table). The
+     * UFT_TRACK_UNFORMATTED assert works again since MF-371 removed the
+     * value-shadowing compat macros in uft_track.h (former cross-TU drift). */
     ASSERT(uft_format_plugin_g71.read_track(&disk, 5, 0, &t) == UFT_OK);
+    ASSERT(t.status == UFT_TRACK_UNFORMATTED);
     ASSERT(t.raw_data == NULL);
     ASSERT(t.raw_size == 0);
     uft_format_plugin_g71.close(&disk);
