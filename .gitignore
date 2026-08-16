@@ -99,3 +99,7 @@ __pycache__/
 *.pyc
 /tests/vectors/
 /welle*.txt
+
+# Real/cross-tool reference corpus: images stay local (copyright), only
+# tests/corpus_manifest/ (sha256 + provenance) is tracked (MF-364)
+/tests/corpus/

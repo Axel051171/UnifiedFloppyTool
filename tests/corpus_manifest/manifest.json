@@ -1,0 +1,13 @@
+{
+  "_doc": "Manifest of the real/cross-tool reference corpus (docs/VERIFICATION_PLAN.md, Phase 2). The image FILES live in tests/corpus/ which is gitignored (copyright); this manifest (sha256 + provenance) is the in-repo truth so third parties can re-acquire and verify the corpus. Entries with origin='real' rate a format T1, origin='cross-tool' rate T1b — in both cases only if the named ctest test exists and consumes the image. Consumed by scripts/gen_verification_tiers.py.",
+  "_entry_schema": {
+    "file": "relative path under tests/corpus/",
+    "sha256": "hex digest of the image file",
+    "format": "plugin symbol from gen_format_list.py (e.g. 'atr', 'd64')",
+    "origin": "'real' (hardware dump / original file) or 'cross-tool' (produced by a canonical third-party tool)",
+    "tool": "producing tool + version for cross-tool entries (e.g. 'VICE 3.8 c1541')",
+    "source": "provenance: where/how the image was obtained or generated (reproducible for cross-tool)",
+    "test": "ctest test name that opens this image through the UFT plugin"
+  },
+  "images": []
+}

@@ -521,7 +521,7 @@ def main() -> int:
                     help="Print findings but exit 0 (non-blocking mode)")
     ap.add_argument("--check",
                     choices=["includes", "sources", "libs", "version",
-                             "stubs", "all"],
+                             "stubs", "freeze", "all"],
                     default="all")
     args = ap.parse_args()
 
@@ -543,6 +543,14 @@ def main() -> int:
     if args.check in ("stubs", "all"):
         e = check_lazy_stubs(repo)
         all_errors.append(("lazy-stub patterns", e))
+    if args.check in ("freeze", "all"):
+        # Inventory SSOT + format-layer freeze rule (MF-363/364).
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        import update_inventory as _inv
+        all_errors.append(("inventory drift", _inv.check_inventory(repo)))
+        all_errors.append(("format-layer freeze", _inv.check_freeze(repo)))
+        all_errors.append(("verification tiers stale",
+                           _inv.check_tiers_fresh(repo)))
 
     total = sum(len(e) for _, e in all_errors)
     print(f"Consistency check ({len(all_errors)} categories, root={repo}):")

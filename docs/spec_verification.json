@@ -1,0 +1,72 @@
+{
+  "_doc": "Per-plugin declaration that the on-disk byte layout was verified against an AUTHORITATIVE external reference (spec document or reference implementation). Consumed by scripts/gen_verification_tiers.py: a plugin with a synthetic test AND an entry here rates T2; without an entry, a synthetic test alone rates T3 (green tests against invented specs are exactly the fabrication trap, see docs/VERIFICATION_PLAN.md). Only add an entry with concrete evidence (MF-NNN commit that did the cross-check). Keys are plugin symbols from gen_format_list.py.",
+  "adf_ext": {
+    "spec_source": "WinUAE disk.cpp read_header_ext2 (UAE-1ADF)",
+    "evidence": "MF-352"
+  },
+  "akai_s900": {
+    "spec_source": "akaiutil (kmi9000) geometry: DD 5x1024/819200, HD 10x1024/1638400",
+    "evidence": "MF-348"
+  },
+  "d64": {
+    "spec_source": "VICE D64 sizes incl. error-block trailer + 40/42-track variants",
+    "evidence": "MF-333, MF-350"
+  },
+  "d67": {
+    "spec_source": "VICE/Schepers D67 690-block geometry (176640 bytes)",
+    "evidence": "MF-314"
+  },
+  "d88": {
+    "spec_source": "pc98.org D88 + MAME d88_dsk (DDAM @+07, FDC status @+08)",
+    "evidence": "MF-336"
+  },
+  "dc42": {
+    "spec_source": "DiscFerret/Mini-vMac DC42 checksum (BE16 word add, ROR32 1)",
+    "evidence": "MF-324"
+  },
+  "dmk": {
+    "spec_source": "David Keil DMK spec (openMSX DMK-Format-Details) + WD177x CRC-CCITT pinned to check value 0x29B1",
+    "evidence": "MF-353"
+  },
+  "dsk_cpc": {
+    "spec_source": "EDSK uPD765 ST1/ST2 status-bit semantics (bit5 CRC, ST2 bit6 deleted); MF-332 verified the dsk_cpc implementation (the separate 'edsk' plugin in amstrad/ remains untested)",
+    "evidence": "MF-332"
+  },
+  "fdi": {
+    "spec_source": "SAMdisk ReadFDI (src/samdisk/fdi.cpp, in-tree) + WoS format FAQ",
+    "evidence": "MF-359"
+  },
+  "hfe": {
+    "spec_source": "HxC hfev3_loader.c opcode semantics (v3 decode + RAND weak bits); HxC HFE docs (v1)",
+    "evidence": "MF-354, MF-362"
+  },
+  "korg_dss1": {
+    "spec_source": "chickensys Korg DSS-1 geometry (80x2x5x1024)",
+    "evidence": "MF-347"
+  },
+  "lisa_twiggy": {
+    "spec_source": "bitsavers Lisa Twiggy ZCAV zone table (46 tracks/side, 22..15 spt)",
+    "evidence": "MF-349"
+  },
+  "nfd": {
+    "spec_source": "pc98.org nfdr0/nfdr1 + tomari/d88split nfd2mhlt.pl (r1 skip accounting spec-only, no real r1 corpus yet)",
+    "evidence": "MF-358, MF-360"
+  },
+  "savedskf": {
+    "nonplugin": true,
+    "spec_source": "Deark modules/fat.c de_run_loaddskf + foreign/dskdcmps.h (uncompressed path only; LZW deferred). Standalone API (src/formats/pc/uft_savedskf.c), not in the plugin registry",
+    "evidence": "MF-356"
+  },
+  "scp": {
+    "spec_source": "cbmstuff SCP image spec (48-byte FPCS footer, bitcell track length)",
+    "evidence": "MF-318, MF-351"
+  },
+  "stx": {
+    "spec_source": "Pasti STX descriptor spec (atari.8bitchip.info/STXdesc)",
+    "evidence": "MF-335"
+  },
+  "woz": {
+    "spec_source": "Applesauce WOZ reference v1/v2/2.1 (chunk layout, CRC32, WRIT logical refs)",
+    "evidence": "MF-317, MF-357, MF-361"
+  }
+}

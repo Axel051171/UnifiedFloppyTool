@@ -75,11 +75,23 @@ bestätigt; ein echtes Fremd-Tool-Image ist dort der härteste Test).
   Stufe 1 („80 fully wired" / „production-ready" raus, Zahlen korrigiert,
   „kein Bench-Pass" explizit), `tests/vectors`-Fiktion gestrichen,
   Einfrier-Regel in CLAUDE.md verankert.
-- **Phase 1 — Werkzeug:** (1) Label-Skript T1/T1b/T2/T3 pro Plugin →
-  generierte Tabelle; (2) `update_inventory.py` + CI-Gate gegen Zahlen-Drift;
-  (3) `check_consistency.py`-Gate: neue Plugin-Registrierung ⇒ FAIL ohne
-  Hebungs-Nachweis. Ohne dieses Werkzeug ist die Einfrier-Regel eine
-  Absichtserklärung.
+- **Phase 1 — Werkzeug (ERLEDIGT mit MF-364):**
+  (1) `scripts/gen_verification_tiers.py` → generiert
+  [`VERIFICATION_TIERS.md`](VERIFICATION_TIERS.md) aus Registry +
+  Test-Verdrahtung (tests/CMakeLists + Symbol-Referenzen + Directory-Credit) +
+  [`spec_verification.json`](spec_verification.json) +
+  `tests/corpus_manifest/manifest.json`. Erst-Stand: **T1=0, T1b=0, T2=15,
+  T3=73** — die ehrliche Formatliste.
+  (2) `scripts/update_inventory.py`: Plugin-Zahlen-Claims in
+  README/CLAUDE.md gegen Code geprüft, Stale-Pattern-Blacklist.
+  (3) Freeze-Gate: `scripts/format_freeze_baseline.json` (88 Symbole) —
+  neue Registrierung ohne Whitelist-Eintrag ⇒ FAIL. Alle drei als
+  Kategorien 6-8 in `check_consistency.py` (läuft in pre-commit + CI);
+  Tier-Tabelle hat Lockfile-Semantik (stale ⇒ FAIL ⇒ `--write`).
+  Befund nebenbei: die MF-332-EDSK-Verifikation gilt dem `dsk_cpc`-Plugin;
+  das separate `edsk`-Plugin (amstrad/) ist ungetestet (T3). Der
+  d67-Test testet `commodore/d67.c`, nicht das registrierte Plugin
+  `d67/uft_d67.c` (T3) — zwei ehrliche Doppel-Implementierungs-Funde.
 - **Phase 2 — Korpus + Hebungen:** Korpus-Struktur; cross-tool-Images für die
   5 Formate; Tests dagegen → T1b. Erfüllt das Moratorium.
 - **Phase 3 — danach:** Tote-Deklarationen-Löschwelle
