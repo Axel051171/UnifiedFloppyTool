@@ -29,6 +29,19 @@ Stand:   P0 Foundation MF-150, P1.17 V1-Hierarchie weg MF-169,
    - Eine geschützte Datei (s.o.) müsste geändert werden → STOPP
 4. **Commit-Konvention:** Conventional Commits + MF-NNN. Body nennt
    welche Tasks erfüllt wurden.
+5. **EINFRIER-REGEL (MF-363, beschlossen 2026-08-16 — überstimmt jedes
+   Goal):** Kein neuer ungeprüfter Code im Format- oder Decoder-Layer,
+   egal unter welchem Namen (neues Format-Plugin, neue Format-Variante,
+   neuer Decoder, neue Registrierung). Hintergrund: 5 Parser wurden gegen
+   erfundene Specs gebaut (FMT-2/3/10/11/12) — Ursache war Code-Produktion
+   schneller als Verifikation. Es gilt ein **Moratorium**, bis (a) das
+   Verifikations-Label-Skript (T1/T1b/T2/T3 pro Format) läuft und (b) die
+   ersten 5 Formate (ATR, D64, ADF, FDI, NFD-r0) auf T1/T1b gehoben sind.
+   Danach gilt 1:2 — ein neues Format kostet zwei Hebungen. Erlaubt bleiben:
+   Bugfixes an Bestehendem, Verifikations-/Test-/Korpus-Arbeit,
+   Spec-Korrekturen gegen autoritative Quellen. Ein Goal wie „implementiere
+   alle offenen Formate" ist unter dieser Regel als „hebe bestehende Formate
+   auf T1/T1b" zu lesen.
 
 ---
 
@@ -286,7 +299,10 @@ Stattdessen gilt:
 ~/uft/
   src/           Qt6 C++ Quellcode
   tests/
-    vectors/     synthetische Flux-Vektoren (test-master)
+    corpus/      reales Referenz-Korpus (gitignored; SHA-256-Manifeste im
+                 Repo). HINWEIS: tests/vectors/ und tests/golden/ waren als
+                 Ground-Truth dokumentiert, sind aber LEER (nur Framework-
+                 Code) — Korpus-Aufbau ist Phase 2 des Sanierungsplans (MF-363)
   docs/
   .claude/
     CLAUDE.md    ← diese Datei

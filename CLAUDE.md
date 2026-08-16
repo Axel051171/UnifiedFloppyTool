@@ -33,7 +33,12 @@ Unterstützt 6 Hardware-Controller (HAL teilweise wired — siehe pro Eintrag):
  echten Pure-Utility-Funktionen + honest USB/Serial-Stubs; libusb-/Serial-
  Wiring multi-session — siehe `docs/MASTER_PLAN.md` §M3.)
 
-### 2. Format-Unterstützung (84 registered plugins, 138 format IDs)
+### 2. Format-Unterstützung (88 registered plugins, 138 format IDs)
+
+> **EINFRIER-REGEL (MF-363):** Kein neuer ungeprüfter Code im Format-/
+> Decoder-Layer. Moratorium bis Label-Skript (T1/T1b/T2/T3) läuft und
+> ATR/D64/ADF/FDI/NFD-r0 auf T1/T1b gehoben sind; danach 1:2 (ein neues
+> Format = zwei Hebungen). Details: `.claude/CLAUDE.md` Daueraufgabe 5.
 Liest/schreibt Disk-Images von praktisch jedem 8-Bit- und 16-Bit-Computer:
 - **Commodore:** D64, D71, D81, G64, T64, CRT, PRG, P00
 - **Apple:** DO, PO, WOZ (v1/v2/2.1), A2R, MOOF, 2MG, NIB, DC42
@@ -115,10 +120,11 @@ Erkennt und dokumentiert historische Kopierschutz-Verfahren:
 ## Build-System
 
 - **Primär:** qmake (`.pro`-Datei), ~756 Source-Dateien (post MF-011-Cleanup)
-- **Tests:** CMake (`tests/CMakeLists.txt`), 151/151 grün; GLOB-discovered
-  von 192 `test_*.c`/`*.cpp` Quelldateien, 39 in `EXCLUDED_TESTS` (fehlende
-  Module / WIP-Subsysteme). Counts via
-  `python scripts/check_consistency.py` validierbar.
+- **Tests:** CMake (`tests/CMakeLists.txt`), 205/205 grün (Stand 2026-08-16);
+  GLOB-discovered von 228+ `test_*.c`/`*.cpp` Quelldateien, 39 in
+  `EXCLUDED_TESTS` (fehlende Module / WIP-Subsysteme). Zahlen driften —
+  bis `update_inventory.py` (Phase 1, MF-363) existiert, gilt: `ctest -N`
+  im Build-Verzeichnis ist die einzige Wahrheit, nicht diese Datei.
 - **CI:** GitHub Actions — Linux (GCC), macOS (Clang), Windows (MinGW)
 - **Sanitizer:** ASan + UBSan Workflows
 - **Coverage:** lcov + Codecov
@@ -166,7 +172,8 @@ tests/                 — 77 C-Tests + 1 Qt-Test
   Cleanup (785 dead-code Files / ~140k LOC entfernt, davon `src/fluxengine/`,
   `src/algorithms/{core,data,fluxio,imageio,tracks}`, `src/loaders/`,
   `src/filesystems/`, `src/encoding/`, plus 250+ einzelne orphan-Header)
-- 138 Format-IDs, 84 Plugin-B Registrierungen, 45 Konvertierungspfade,
+- 138 Format-IDs, 88 Plugin-B Registrierungen (84 auto + 4 manuell; SSOT:
+  `scripts/gen_format_list.py`), 45 Konvertierungspfade,
   13 Roundtrip-Matrix-Einträge (SSOT in `src/core/uft_roundtrip.c`)
 - 6 Hardware-Controller — SCP-Direct M3.1 libusb wiring LANDED (MF-254,
   HW-bench UFT-008 pending); XUM1541 M3.2 + Applesauce M3.3 weiterhin

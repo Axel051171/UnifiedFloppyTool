@@ -9,11 +9,18 @@ Open-source forensic floppy disk preservation tool. Qt6 C/C++ desktop
 application targeted at archives, museums, retrocomputing enthusiasts,
 digital forensics, and copy-protection research.
 
-138 disk-image format IDs (80 fully wired plugin parsers, 100% Prinzip-7
-compliance), 9 hardware controllers via a type-driven HAL (Greaseweazle
-production-ready; SCP-Direct M3.1 mock-validated; KryoFlux / FluxEngine
-/ FC5025 via subprocess wrappers; XUM1541 / Applesauce / ADF-Copy /
-USB-Floppy as honest scaffolds — see [`docs/CAPABILITIES.md`](docs/CAPABILITIES.md)).
+138 disk-image format IDs, 88 registered plugin parsers. **Verification
+honesty:** most parsers are currently validated only against synthetic
+round-trip tests and/or specs verified against authoritative reference
+implementations — **not yet against a real-disk reference corpus** (a
+per-format verification-tier table is in progress; see
+[`docs/KNOWN_ISSUES.md`](docs/KNOWN_ISSUES.md)). 9 hardware controllers
+via a type-driven HAL (Greaseweazle fully wired, **hardware bench pass
+pending** — deferred to v4.1.6; SCP-Direct M3.1 mock-validated; KryoFlux
+/ FluxEngine / FC5025 via subprocess wrappers; XUM1541 / Applesauce /
+ADF-Copy / USB-Floppy as honest scaffolds — see
+[`docs/CAPABILITIES.md`](docs/CAPABILITIES.md)). No controller has a
+documented real-hardware bench pass in this release.
 
 ---
 
@@ -84,6 +91,9 @@ conversions:
 Before v4.1.5 only 5 plugins had a hand-curated `features` array and 15
 had a non-UNKNOWN `spec_status`. Now **every** plugin has both
 populated. Validated by `audit_plugin_compliance.py` in CI.
+**Note:** this audit checks *metadata completeness* (`spec_status` +
+`features` fields), not functional correctness — it does not exercise
+open/read against reference data.
 
 ### ABI gate for plugin format
 
@@ -129,9 +139,16 @@ hardware (v4.1.6 scope). `impl_complete` flag stays `false` in
 
 ### Disk-image format coverage
 
-138 format IDs registered, 80 of them backed by a full Plugin-B parser
+138 format IDs registered, 88 of them backed by a Plugin-B parser
 (read + probe). Every plugin has populated `spec_status` and `features`
-metadata (Prinzip 7).
+metadata (Prinzip 7 — metadata completeness, not functional
+verification). **Honest status:** no format is currently verified
+against a real-disk reference corpus; verification today ranges from
+synthetic round-trip tests plus spec cross-checks against authoritative
+reference implementations (SAMdisk, Deark, WinUAE, VICE, HxC) down to
+untested. A script-generated per-format verification-tier table
+(T1 real-corpus / T1b cross-tool / T2 synthetic+spec / T3 unverified)
+is the current top priority.
 
 | Platform | Formats |
 |----------|---------|
