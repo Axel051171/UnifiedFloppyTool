@@ -51,6 +51,10 @@ set(TEST_SOURCES ${TEST_SOURCES_C} ${_HEADER_ONLY_CPP_TESTS})
 
 # Exclude tests with missing dependencies (TODO: implement these modules)
 set(EXCLUDED_TESTS
+    "test_mfm_detect"          # API drift (MF-375 attempt): test expects
+                               # fat_bpb_t/mfm_error_t/MFM_OK which no header
+                               # variant declares — same detect/analysis header-twin
+                               # untangling task as test_cpm_fs/test_mfm_bridge.
     "test_cpm_fs"              # API drift: test + cpm_fs.c written against the
                                # include/uft/detect/ header family, but a second
                                # analysis/ header twin shadows it in the include
@@ -60,16 +64,10 @@ set(EXCLUDED_TESTS
                                # UFT_MFMD_* wrapper API that exists in NO header;
                                # bridge impl exposes mfm_detect_info_t instead.
     # "test_libdsk_formats" # Re-enabled: apridisk, nanowasp, qrst, cfi now in registry
-    "test_track_writer"     # src/hardware/uft_track_writer.c removed in cleanup
-    "test_flux_analysis"    # src/flux/uft_flux_analysis.c removed in cleanup
-    "test_c64_bam"          # src/formats/c64/uft_c64_bam.c removed in cleanup
-    "test_write_verify_pipeline"  # src/core/uft_write_verify_pipeline.c removed in cleanup
     # "test_ti99_formats"   # Re-enabled: TIFILES/FIAD modules exist
     # "test_fat_extensions"  # Re-enabled: compiles standalone
-    "test_smoke"            # v4.1.5: uft_merge_engine.c + uft_decode_score.c
                             #   removed in MF-011 cleanup; headers remain as
                             #   skeleton-only. Re-enable when impls land.
-    "test_safe_io_alloc"    # v4.1.5: uft_safe_io.c + uft_safe_alloc.c never
                             #   existed; uft_io_last_error extern declared
                             #   in header but never defined. Pure phantom.
     # v4.1.5 UFT-T04 bulk-triage — tests for code removed in MF-011 cleanup
@@ -77,19 +75,12 @@ set(EXCLUDED_TESTS
     # the build is now clean and the gap is documented in MASTER_PLAN.md.
     # "test_applesauce_hal"    # v4.1.5: Applesauce HAL uses serial (not libusb);
                               #   uft_applesauce.c has 13/20 real funcs; re-enabled
-    "test_decode_score"        # uft_decode_score.c removed in MF-011
     # "test_fnmatch_shim"      # v4.1.5: uft_fnmatch.c re-included via target_sources
-    "test_format_verify_common" # format_verify common shim absent
     "test_libdsk_formats"      # libdsk-style format glue absent
-    "test_merge_engine"        # uft_merge_engine.c removed in MF-011
-    "test_process"             # uft_process.c absent
     # "test_scp_direct_hal"    # v4.1.5: libusb wiring landed (MF-254); re-enabled
-    "test_sector_parser"       # uft_sector_parser.c absent
     # "test_whdload_resload"   # v4.1.5: src/whdload/whdload_resload_api.c re-included
     # "test_xum1541_hal"       # MF-255: libusb wiring landed, test re-enabled
     "test_fat_extensions"      # uft_fs lib not registered in root CMake
-    "test_format_verify"       # needs uft_format_verify symbols outside uft_core
-    "test_mfm_detect"          # uft_mfm_detect chain needs full mfm subsystem
 )
 
 # Create test executables
@@ -153,21 +144,12 @@ foreach(test_source ${TEST_SOURCES})
     elseif(${test_name} STREQUAL "test_d64_g64")
         # Include D64/G64 conversion source directly
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/c64/uft_d64_g64.c)
-    elseif(${test_name} STREQUAL "test_track_writer")
-        # Include Track Writer source directly
-        target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/hardware/uft_track_writer.c)
+
     elseif(${test_name} STREQUAL "test_c64_protection_ext")
         # Include Extended Protection source directly
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/protection/c64/uft_c64_protection_ext.c)
-    elseif(${test_name} STREQUAL "test_flux_analysis")
-        # Include Flux Analysis source directly
-        target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_analysis.c)
-        if(UNIX AND M_LIBRARY)
-            target_link_libraries(${test_name} PRIVATE ${M_LIBRARY})
-        endif()
-    elseif(${test_name} STREQUAL "test_c64_bam")
-        # Include BAM Editor source directly
-        target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/c64/uft_c64_bam.c)
+
+
     elseif(${test_name} STREQUAL "test_bam_editor")
         # Include BAM Editor source directly
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/c64/uft_bam_editor.c)

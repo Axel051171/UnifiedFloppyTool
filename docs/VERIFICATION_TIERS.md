@@ -43,7 +43,7 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 | `atx` | **T3** | — | — | — | — |
 | `cas` | **T3** | — | — | — | — |
 | `cfi` | **T3** | — | — | — | — |
-| `cpm` | **T3** | — | — | — | — |
+| `cpm` | **T3** | `test_cpm_fs` | — | — | — |
 | `cqm` | **T3** | — | — | — | — |
 | `d13` | **T3** | — | — | — | — |
 | `d67` | **T3** | — | VICE/Schepers D67 690-block geometry (176640 bytes) | MF-314 | — |
