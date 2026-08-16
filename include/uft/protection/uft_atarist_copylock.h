@@ -498,6 +498,37 @@ static inline const char* uft_copylock_serial_usage_str(int usage) {
     return buf;
 }
 
+/*===========================================================================
+ * Public API (implemented in src/protection/uft_atarist_copylock.c)
+ *===========================================================================*/
+
+/** Decode a Series 1 (1988) encrypted code block. */
+int uft_copylock88_decode_block(const uint8_t *src, uint8_t *dst,
+                                size_t len, size_t start_offset);
+
+/** Decode a Series 2 (1989) encrypted code block. */
+int uft_copylock89_decode_block(const uint8_t *src, uint8_t *dst,
+                                size_t len, uint32_t magic32,
+                                size_t start_offset);
+
+/** Encode an instruction for Series 2 (for patching). */
+void uft_copylock89_encode_instr(uint8_t *buf, uint32_t magic32,
+                                 uint32_t instr);
+
+/**
+ * @brief Full CopyLock detection with detailed analysis
+ * @return 0 = detected (result filled), 1 = not CopyLock, -1 = bad args
+ */
+int uft_copylock_st_analyze(const uint8_t *data, size_t data_len,
+                            uft_copylock_st_result_t *result);
+
+/** Human-readable series name. */
+const char* uft_copylock_series_name(uft_copylock_series_t series);
+
+/** Print a detection result to a FILE stream. */
+void uft_copylock_st_print_result(FILE *out,
+                                  const uft_copylock_st_result_t *result);
+
 #ifdef __cplusplus
 }
 #endif

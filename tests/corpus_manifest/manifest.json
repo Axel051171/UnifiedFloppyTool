@@ -81,6 +81,42 @@
       "tool": "greaseweazle 1.23 (keirf/greaseweazle release v1.23, win64)",
       "source": "gw convert --format=amiga.amigados tests/corpus_free/xdftool_dd_ofs.adf out.scp \u2014 32 MB flux, LOCAL-ONLY (tests/corpus/ gitignored) but fully reproducible from the tracked ADF with this exact command",
       "test": "test_corpus_scp"
+    },
+    {
+      "file": "tests/corpus/dec0de_RAINBISL.BIN",
+      "sha256": "1b6298e97980528f7677e2d0e716ddbd5b0827c48ac5d4949dca7e01a440e936",
+      "format": "protection:copylock_st",
+      "origin": "real",
+      "tool": "historical (Rainbow Islands, Ocean 1989, Rob Northen CopyLock Series 2 variant A loader)",
+      "source": "github.com/orionfuzion/dec0de commit 54d7efd967540b3ce37cdb7fe33c1547ff1f4b69, samples/ROBN89/RAINBISL.BIN (documented in samples/README.txt); game code copyrighted -> LOCAL-ONLY; pinned ground truth: init1 @28, trampoline @2214, magic32 0x6B1D1929",
+      "test": "test_corpus_protection_copylock"
+    },
+    {
+      "file": "tests/corpus/dec0de_WARLOCK.BIN",
+      "sha256": "ea283b5f23ec8d77b96b2d93963cae76aa1ef78f0db44672e0cd8d434751038a",
+      "format": "protection:copylock_st",
+      "origin": "real",
+      "tool": "historical (Warlock, 1989, Rob Northen CopyLock Series 2 variant B loader)",
+      "source": "github.com/orionfuzion/dec0de commit 54d7efd967540b3ce37cdb7fe33c1547ff1f4b69, samples/ROBN89/WARLOCK.BIN; LOCAL-ONLY; pinned ground truth: init2 hit, trampoline @1960, magic32 0x0",
+      "test": "test_corpus_protection_copylock"
+    },
+    {
+      "file": "tests/corpus/dec0de_RICKD.BIN",
+      "sha256": "e73b4e7cdc13614f5115241b3a4298fc50e1ef438741cef43871944d07c260e8",
+      "format": "protection:copylock_st",
+      "origin": "real",
+      "tool": "historical (Rick Dangerous, Core Design/Firebird 1989, Rob Northen CopyLock Series 1 1988 loader)",
+      "source": "github.com/orionfuzion/dec0de commit 54d7efd967540b3ce37cdb7fe33c1547ff1f4b69, samples/ROBN88/RICKD.BIN; LOCAL-ONLY; pinned NEGATIVE: Series-1 keydisk pattern absent in cleartext (TVD-encrypted) -> detector cannot fire (docs/KNOWN_ISSUES.md PROT-1)",
+      "test": "test_corpus_protection_copylock"
+    },
+    {
+      "file": "tests/corpus/dec0de_README.txt",
+      "sha256": "5bd100c80a3feccc6da2459aafed6cbe81fb89d7490c71060fb56730292403c7",
+      "format": "protection:copylock_st",
+      "origin": "real",
+      "tool": "dec0de samples/README.txt (per-file provenance of the protected samples)",
+      "source": "github.com/orionfuzion/dec0de commit 54d7efd967540b3ce37cdb7fe33c1547ff1f4b69, samples/README.txt; kept alongside the samples as the provenance record",
+      "test": ""
     }
   ]
 }

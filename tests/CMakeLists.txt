@@ -415,6 +415,12 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/fdi/uft_fdi_plugin.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_RESTRICTED_DIR="${CMAKE_SOURCE_DIR}/tests/corpus")
+    elseif(${test_name} STREQUAL "test_corpus_protection_copylock")
+        # Real-corpus protection: CopyLock ST vs dec0de game samples, local-only (MF-377)
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/protection/uft_atarist_copylock.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_RESTRICTED_DIR="${CMAKE_SOURCE_DIR}/tests/corpus")
     elseif(${test_name} STREQUAL "test_akai_s900_plugin")
         # Phase-3 new format: Akai S900/S950 sampler (DD 5x1024 / HD 10x1024) (MF-348)
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/akai/uft_akai_s900.c)
@@ -1090,7 +1096,8 @@ foreach(test_source ${TEST_SOURCES})
     # Restricted-corpus tests (image is local-only, gitignored): exit code 77
     # means "corpus image absent, skipped" — not a failure (MF-367).
     if(${test_name} STREQUAL "test_corpus_fdi" OR
-       ${test_name} STREQUAL "test_corpus_scp")
+       ${test_name} STREQUAL "test_corpus_scp" OR
+       ${test_name} STREQUAL "test_corpus_protection_copylock")
         set_tests_properties(${test_name} PROPERTIES SKIP_RETURN_CODE 77)
     endif()
 

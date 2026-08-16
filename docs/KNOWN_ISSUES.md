@@ -1134,6 +1134,59 @@ scheitern (qmakes Depend-Scan fand die stalen mocs). Entfernt; Prävention-
 Kandidat: `preflight-check` warnt künftig, wenn `<repo>/release|debug`
 existiert.
 
+### PROT-1 — CopyLock ST: Series-2 verifiziert, Series-1 feuert auf realen Daten nie (2026-08-16, MF-377)
+
+**Kontext:** Erster Kopierschutz-Test gegen **echten** geschützten Code
+(`test_corpus_protection_copylock`, Korpus: dec0de-Samples, lokal-only,
+Provenienz im Manifest). Vorher galt laut `docs/SUBSYSTEM_MATURITY.md`:
+„kein Scheme je gegen eine echte geschützte Original-Disk".
+
+**Ergebnis (Correctness, unabhängig in Python gepinnt vor jedem UFT-Lauf):**
+
+| Detektor-Pfad | Reale Samples | Befund |
+|---|---|---|
+| Series 2 (1989), init1/init2 + Trampolin | 14/14 dec0de-Samples | ✅ erkannt; `magic32` + `start_off` exakt reproduziert (Rainbow Islands 0x6B1D1929 @2214, Warlock 0x0 @1960) |
+| Series 1 (1988), BRA.S + Keydisk-Pattern | 0/16 dec0de-Samples | ❌ **nie erkannt** |
+
+**Ursache Series 1:** `uft_copylock_st_detect()` verlangt zusätzlich zum
+BRA.S-Prefix das Keydisk-Pattern `50F9 0000 043E` (`ST $43E.L`) im **Klartext**.
+In realen Series-1-Loadern liegt dieses Pattern innerhalb der TVD-verschlüsselten
+Region — der Scan über alle 16 realen Series-1-Samples fand 0 Treffer für
+Keydisk und 0 für das Serial-Pattern `2140 001C`, während der BRA.S-Prefix
+überall vorhanden ist (6–1497 Treffer, also allein wertlos als Signal).
+Der Detektor kann Series 1 auf Rohdaten strukturell nicht erkennen.
+
+**Korrekter Fix (nicht in MF-377 enthalten, Scope-Regel):** Series-1-Erkennung
+muss wie dec0de zuerst `uft_copylock88_decode_block()` über die Kandidaten-Region
+laufen lassen und **danach** auf Keydisk/Serial prüfen. Das ist echte
+Entschlüsselungs-Logik, kein Pattern-Tweak.
+
+**Zwischenstand:** `test_corpus_protection_copylock` pinnt den Ist-Zustand
+ehrlich als **Negativ-Assert** (`uft_copylock_st_analyze(...) == 1` für Rick
+Dangerous). Der Test wird rot, sobald jemand Series 1 repariert — dann ist der
+Assert umzudrehen, nicht der Test zu löschen.
+
+### PROT-2 — C64-Scheme-Erkennung ist headless, Pipeline-Test testet nur Mocks (2026-08-16, MF-377)
+
+Zwei Befunde aus derselben Untersuchung, beide **Architecture**, kein Fix in MF-377:
+
+1. **`ufm_c64_prot_analyze()` hat keinen Aufrufer und keinen Datenlieferanten.**
+   Die Funktion erwartet pro Spur ein vollständiges `ufm_c64_track_metrics_t`
+   (bitcell_count, sync_count, bad_gcr_count, duplicate_ids, track_length_ratio,
+   weak_region_bits, illegal_gcr_events, max_sync_run_bits). Im gesamten Baum
+   existiert **keine** Funktion, die diese Metriken aus Flux/GCR befüllt; der
+   einzige historische Aufrufer war das mit MF-369 gelöschte
+   `ProtectionAnalysisWidget`, das `m_trackMetrics` nur **anzeigte**. Die
+   C64-Schemes (V-MAX!, RapidLok, Vorpal, …) sind damit nicht erreichbar —
+   unabhängig davon, wie gut die Klassifikation selbst ist.
+   *Nächster Schritt:* Metrik-Extraktor `flux/GCR → ufm_c64_track_metrics_t`
+   schreiben (eigene Aufgabe, >150 Zeilen, deshalb hier nicht mitgemacht).
+
+2. **`test_protection_pipeline` prüft ausschließlich `mock_detect_weak_bits()`.**
+   Der Test beweist die Pipeline-Verdrahtung, nicht einen einzigen echten
+   Detektor. Er ist als Verdrahtungstest gültig, darf aber nicht als
+   Scheme-Verifikation gezählt werden.
+
 ### AUD-7 — Rest-Einträge (klein)
 - `test_mega65` ist der letzte EXCLUDED_TESTS-Eintrag (Header stub-only) —
   implementieren oder Test löschen.
@@ -1143,7 +1196,11 @@ existiert.
 
 ---
 
-## Wie beitragen
+## Protection-Real-Korpus 2026-08-16 (MF-377) — Befunde
+
+Erster Lauf eines Protection-Detektors gegen echte geschützte Originale
+(dec0de-Samples, `tests/corpus_manifest/manifest.json`). Ergebnis: Series-2-
+Erkennung real bestätigt (14
 
 - **Neues Issue melden:** GitHub Issue mit Label `principle-violation`.
 - **Eintrag abarbeiten:** PR die den Fix plus den entsprechenden CI-Test
