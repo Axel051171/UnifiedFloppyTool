@@ -146,15 +146,10 @@ foreach(test_source ${TEST_SOURCES})
     # be added to the root CMakeLists.txt, in which case the test still
     # builds against TEST_LIBS-only and any uft_* symbols it really needs
     # surface as honest link errors instead of "is not a target").
-    if(${test_name} STREQUAL "test_ti99_formats")
-        if(TARGET uft_ti99)
-            list(APPEND TEST_LIBS uft_ti99)
-        endif()
-    elseif(${test_name} STREQUAL "test_fat_extensions")
-        if(TARGET uft_fs)
-            list(APPEND TEST_LIBS uft_fs)
-        endif()
-    elseif(${test_name} STREQUAL "test_c64_protection")
+    # (dead uft_ti99/uft_fs guards removed in MF-369 wave 2: their defining
+    #  CMakeLists were never add_subdirectory'd, so the targets never existed
+    #  at configure time — the tests always built TEST_LIBS-only.)
+    if(${test_name} STREQUAL "test_c64_protection")
         if(TARGET uft_c64_protection)
             list(APPEND TEST_LIBS uft_c64_protection)
         endif()
