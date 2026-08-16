@@ -162,6 +162,31 @@ bestätigt; ein echtes Fremd-Tool-Image ist dort der härteste Test).
     Körper.
   - **Offen:** Verhältnis-Bestätigung bei Moratorium-Ende (Q2, Default 1:2).
 
+## Korpus-Ausweitung über den Format-Layer hinaus (MF-377/378)
+
+Die Tier-Systematik gilt formal für Format-Plugins; das Prinzip „gegen reale
+Daten oder gar nicht" gilt für **jede** Schicht, die Aussagen über eine
+Diskette macht. Erste Anwendung außerhalb des Format-Layers: die
+Kopierschutz-Erkennung.
+
+- **Korpus:** 34 reale Atari-ST-Loader aus dem dec0de-Projekt
+  (Commit-gepinnt, Ground Truth Datei→Schutzsystem aus `samples/README.txt`).
+  Spielecode ist urheberrechtlich geschützt → lokal-only in `tests/corpus/`,
+  sha256 + Bezugsweg im Manifest (Provenienzregel MF-368 gilt unverändert).
+- **Befund CopyLock ST:** Series 2 auf 14/14 realen Loadern erkannt, `magic32`
+  und Offset exakt reproduziert — und zwar von **zwei** unabhängigen
+  Implementierungen. Series 1 auf 0/16 erkannt, strukturell blind
+  (`KNOWN_ISSUES.md` PROT-1).
+- **Befund `uft_dec0de_detect()`:** 0/34 korrekt, 3 Fehl-Labels, Signaturen
+  nachweislich erfunden (PROT-3). Damit ist belegt, dass die Fabrikation nicht
+  auf den Format-Layer beschränkt war. Für den Umgang gilt dieselbe Regel wie
+  bei FMT-2/3: erst belegen, dann entfernen — nicht stillschweigend
+  weiterbetreiben.
+- **Konsequenz für die Einfrier-Regel:** unverändert in Kraft. Diese Arbeit
+  ist Verifikations-/Korpus-Arbeit plus ein Bugfix an Bestehendem (PROT-4),
+  also ausdrücklich erlaubt; es wurde kein neuer Detektor und kein neues
+  Format registriert.
+
 ## Hardware-Politik (unverändert + präzisiert)
 
 Scaffolds bleiben (honest-stubs behaupten nichts); keine In-House-Benches
