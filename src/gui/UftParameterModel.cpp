@@ -434,7 +434,10 @@ void UftParameterModel::syncToBackend()
 {
     QMutexLocker locker(&m_mutex);
     /* Sync Qt model values to C backend struct */
-    /* Note: Full implementation requires uft_param_bridge.h linking */
+    /* Note: the former uft_param_bridge.h was phantom API (100% unimplemented)
+     * and was removed in the MF-366 dead-declaration wave; a real backend
+     * bridge would need to be designed first (UFT_HAS_PARAM_BRIDGE is never
+     * defined). */
     
 #ifdef UFT_HAS_PARAM_BRIDGE
     if (!m_backendParams) return;

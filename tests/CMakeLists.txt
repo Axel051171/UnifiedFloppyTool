@@ -59,7 +59,6 @@ set(EXCLUDED_TESTS
     "test_c64_bam"          # src/formats/c64/uft_c64_bam.c removed in cleanup
     "test_write_verify_pipeline"  # src/core/uft_write_verify_pipeline.c removed in cleanup
     # "test_ti99_formats"   # Re-enabled: TIFILES/FIAD modules exist
-    # "test_new_formats"    # Re-enabled: compiles standalone
     # "test_fat_extensions"  # Re-enabled: compiles standalone
     "test_smoke"            # v4.1.5: uft_merge_engine.c + uft_decode_score.c
                             #   removed in MF-011 cleanup; headers remain as
@@ -84,16 +83,11 @@ set(EXCLUDED_TESTS
     "test_libdsk_formats"      # libdsk-style format glue absent
     "test_merge_engine"        # uft_merge_engine.c removed in MF-011
     "test_mfm_bridge"          # uft_mfm_bridge.c absent (skeleton header)
-    "test_new_formats"         # depends on subsystem that was deleted
-    "test_operation_result"    # OperationResult v1 API removed in V2 migration (MF-160)
     "test_otdr_bridge"         # uft_otdr_bridge.c needs full OTDR chain
-    "test_param_bridge"        # uft_param_bridge.c absent
     "test_pipeline_v11"        # otdr_event_core_v11 impl absent
-    "test_pll_unified"         # uft_pll_unified.c absent (skeleton header)
     "test_process"             # uft_process.c absent
     # "test_scp_direct_hal"    # v4.1.5: libusb wiring landed (MF-254); re-enabled
     "test_sector_parser"       # uft_sector_parser.c absent
-    "test_settings"            # uft_settings.c absent
     "test_ti99_formats"        # uft_ti99 lib not registered in root CMake
     # "test_whdload_resload"   # v4.1.5: src/whdload/whdload_resload_api.c re-included
     # "test_xum1541_hal"       # MF-255: libusb wiring landed, test re-enabled

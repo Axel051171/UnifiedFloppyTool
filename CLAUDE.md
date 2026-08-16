@@ -82,6 +82,13 @@ Erkennt und dokumentiert historische Kopierschutz-Verfahren:
 - Atari ST: CopyLock, Macrodos, dec0de
 
 ### 6. Forensischer Report & Audit Trail
+
+> **Ehrlichkeits-Hinweis (MF-366):** Die frühere Audit-Trail-/Forensic-
+> Report-C-API (`uft_audit_trail.h`, `uft_forensic_report.h`) war
+> Phantom-API (100 % unimplementiert, keine Aufrufer) und wurde entfernt.
+> Real existieren GUI-Panels + Provenance (`src/forensic/uft_provenance.c`);
+> der volle Audit-Trail unten ist **Zielbild**, nicht Ist-Stand — siehe
+> [`docs/SUBSYSTEM_MATURITY.md`](docs/SUBSYSTEM_MATURITY.md).
 - Hash-Verifizierung (MD5, SHA1, SHA256, SHA512 parallel)
 - Hash-Chain für Integritätsnachweis
 - Vollständiger Audit Trail (40+ Event-Typen, Timestamps, CHS-Kontext)

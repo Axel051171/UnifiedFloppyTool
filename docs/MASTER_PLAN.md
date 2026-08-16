@@ -10,12 +10,19 @@ nicht mit einem frischen Scan.
 
 ## Die ehrliche Bestandsaufnahme
 
-**UFT als Codebase (Zahlen verifiziert 2026-07-02):**
+**UFT als Codebase (Zahlen aktualisiert 2026-08-16, MF-366):**
 - ~756 Quelldateien, ~644 Header (nach MF-011 19-Wellen-Cleanup)
-- **133 Skeleton-Header** (≥10 Deklarationen, ≥80 % nicht implementiert),
-  **2 613** nicht implementierte `uft_*`-Deklarationen — live nachprüfbar
-  via `python scripts/audit_skeleton_headers.py`
-- 84 Format-Plugin-Registrierungen (138 Format-IDs), 41 % mit realen Tests
+- **Skeleton-Header: 0** (≥10 Deklarationen, ≥80 % nicht implementiert),
+  **0** nicht implementierte `uft_*`-Deklarationen über der Skeleton-Schwelle —
+  die letzten 9 Phantom-Header (162 Deklarationen, darunter die nie
+  implementierte Audit-Trail-/Forensic-Report-C-API) wurden in der
+  MF-366-Welle gelöscht; live nachprüfbar via
+  `python scripts/audit_skeleton_headers.py`. Historischer Stand 2026-07-02
+  war 133 Header / 2 613 Deklarationen.
+- 88 Format-Plugin-Registrierungen (138 Format-IDs); Verifikations-Stand
+  skript-generiert in `docs/VERIFICATION_TIERS.md` (T1=0, T1b=3, T2=14,
+  T3=71 — die frühere „41 % mit realen Tests"-Angabe war hand-gepflegt und
+  zählte synthetische Tests mit)
 - 45 Konvertierungspfade, 13 Roundtrip-Matrix-Einträge
 - Noch 11 Alt-Dateien im Pattern-A-Stil (`*_parser_v3.c`) — Rest der
   ehemals „287 Stubs" wurde in MF-011 gelöscht oder nach Pattern B migriert

@@ -73,6 +73,28 @@ def check_inventory(repo: Path) -> list[str]:
         for pattern, desc in STALE_PATTERNS:
             if re.search(pattern, text):
                 errors.append(f"{fname}: {desc}")
+
+    # README tier summary must match the computed tiers (drift gate).
+    readme = repo / "README.md"
+    if readme.exists():
+        m = re.search(r"T1=(\d+), T1b=(\d+), T2=(\d+), T3=(\d+)",
+                      readme.read_text(encoding="utf-8", errors="replace"))
+        if m:
+            try:
+                from gen_verification_tiers import compute_tiers
+                counts: dict[str, int] = {}
+                for r in compute_tiers(repo):
+                    counts[r["tier"]] = counts.get(r["tier"], 0) + 1
+                claimed = tuple(int(g) for g in m.groups())
+                actual = tuple(counts.get(t, 0) for t in ("T1", "T1b", "T2", "T3"))
+                if claimed != actual:
+                    errors.append(
+                        f"README.md: tier summary claims T1={claimed[0]}, "
+                        f"T1b={claimed[1]}, T2={claimed[2]}, T3={claimed[3]} "
+                        f"but computed tiers are T1={actual[0]}, "
+                        f"T1b={actual[1]}, T2={actual[2]}, T3={actual[3]}")
+            except ImportError:
+                pass
     return errors
 
 

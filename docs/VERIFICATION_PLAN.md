@@ -117,12 +117,28 @@ bestätigt; ein echtes Fremd-Tool-Image ist dort der härteste Test).
     erzeugen lassen (Nutzer-Session) oder rechtefreies PD-NFD-Image.
 
   Das **Moratorium bleibt in Kraft**, bis auch FDI + NFD-r0 auf T1/T1b sind.
-- **Phase 3 — danach:** Tote-Deklarationen-Löschwelle
-  (`audit_skeleton_headers.py`, MF-011-Muster; Regel: keine neue Deklaration
-  ohne Körper), Reifegrad-Tabelle **aller** Subsysteme (DeepRead/OTDR/ML/
-  Protection — „erkennt V-MAX!" ohne Test gegen echte Disk gehört gelabelt),
-  Bench-Protokoll-Doku pro Controller (einzige Route zu Controller Nr. 2),
-  README Stufe 2 (generierte T-Tabelle), Verhältnis-Bestätigung.
+- **Phase 3 (ERLEDIGT mit MF-366, bis auf Verhältnis-Bestätigung):**
+  - **README Stufe 2:** Tier-Zusammenfassung (T1/T1b/T2/T3) eingebettet und
+    per neuem Drift-Gate gegen die berechneten Werte geprüft (negativ
+    getestet).
+  - **Reifegrad-Tabelle aller Subsysteme:**
+    [`SUBSYSTEM_MATURITY.md`](SUBSYSTEM_MATURITY.md) — Kernbefunde: DeepRead
+    0 aktive Tests, OTDR-Test excluded, ML-Classifier nie gegen echte Disk,
+    kein Protection-Scheme je gegen eine echte geschützte Original-Disk,
+    Audit-Trail-API war Phantom.
+  - **Bench-Protokolle:** [`BENCH_PROTOCOL.md`](BENCH_PROTOCOL.md) — pro
+    bench-fähigem Controller (GW/SCP/KryoFlux/FC5025) konkrete Schritte +
+    GO-Kriterium + Meldeformat; Scaffold-Controller explizit „noch nicht
+    bench-fähig".
+  - **Tote-Deklarationen-Welle:** die letzten 9 Skeleton-Header (162
+    Phantom-Deklarationen) + ihre 5 toten (excluded) Test-Dateien gelöscht —
+    darunter die nie implementierte Audit-Trail-/Forensic-Report-C-API
+    (`uft_audit_trail.h`/`uft_forensic_report.h`; real existieren GUI +
+    Provenance, CLAUDE.md §6 trägt jetzt einen Ehrlichkeits-Hinweis) und die
+    UFT_SKELETON_PLANNED-ML-Header. Zensus danach: **0 Skeleton-Header, 0
+    Phantom-Deklarationen**. Regel bleibt: keine neue Deklaration ohne
+    Körper.
+  - **Offen:** Verhältnis-Bestätigung bei Moratorium-Ende (Q2, Default 1:2).
 
 ## Hardware-Politik (unverändert + präzisiert)
 

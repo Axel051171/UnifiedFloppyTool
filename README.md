@@ -142,13 +142,24 @@ hardware (v4.1.6 scope). `impl_complete` flag stays `false` in
 138 format IDs registered, 88 of them backed by a Plugin-B parser
 (read + probe). Every plugin has populated `spec_status` and `features`
 metadata (Prinzip 7 — metadata completeness, not functional
-verification). **Honest status:** no format is currently verified
-against a real-disk reference corpus; verification today ranges from
-synthetic round-trip tests plus spec cross-checks against authoritative
-reference implementations (SAMdisk, Deark, WinUAE, VICE, HxC) down to
-untested. A script-generated per-format verification-tier table
-(T1 real-corpus / T1b cross-tool / T2 synthetic+spec / T3 unverified)
-is the current top priority.
+verification).
+
+**Honest verification status** (script-generated, see
+[`docs/VERIFICATION_TIERS.md`](docs/VERIFICATION_TIERS.md) for the
+per-format table and [`docs/VERIFICATION_PLAN.md`](docs/VERIFICATION_PLAN.md)
+for the tier definitions): **T1=0, T1b=3, T2=14, T3=71** of 88.
+
+- **T1** (real reference image): none yet
+- **T1b** (image produced by a canonical third-party tool, read by UFT):
+  D64 (VICE c1541), ADF (amitools xdftool), ATR (atrcopy template)
+- **T2** (synthetic round-trip + spec verified against an authoritative
+  reference implementation): 15 formats
+- **T3** (unverified — no test, or a synthetic test without external spec
+  verification): the remaining majority
+
+A freeze rule is in force: no new format/decoder code until existing
+formats are lifted (enforced by CI gate, see
+[`docs/VERIFICATION_PLAN.md`](docs/VERIFICATION_PLAN.md)).
 
 | Platform | Formats |
 |----------|---------|
