@@ -121,6 +121,17 @@ def compute_tiers(repo: Path) -> list[dict]:
     manifest = _load_json(repo / "tests" / "corpus_manifest" / "manifest.json")
     corpus_by_fmt: dict[str, list[dict]] = {}
     for entry in manifest.get("images", []):
+        # Provenance rule (VERIFICATION_PLAN.md): an entry without documented
+        # provenance earns NO tier credit. cross-tool needs producer tool AND
+        # a reproducible source/licence statement; real needs an archival
+        # source. A bare "found it somewhere" file is not ground truth.
+        tool = (entry.get("tool") or "").strip()
+        source = (entry.get("source") or "").strip()
+        if not tool or not source:
+            print(f"WARN: corpus entry '{entry.get('file','?')}' lacks "
+                  f"provenance (tool/source) — ignored for tier credit",
+                  file=sys.stderr)
+            continue
         corpus_by_fmt.setdefault(entry.get("format", ""), []).append(entry)
 
     # Directory credit: a test that target_sources a MODULE file of a format

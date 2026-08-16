@@ -40,6 +40,21 @@ Wichtig: Die 205 grünen Tests sind fast alle synthetisch. Synthetische Tests
 beweisen Selbstkonsistenz, nicht Realwelt-Korrektheit — die fabrizierten
 Parser hatten grüne synthetische Logik gegen erfundene Specs.
 
+**Provenienz-Regel (verbindlich, 2026-08-16):** Provenienz ist konstitutiv
+für T1/T1b, nicht dekorativ. Ohne sie ist „Parser falsch" von „Datei
+beschädigt / von exotischem Tool erzeugt" nicht unterscheidbar — exakt die
+Unentscheidbarkeit, die die Fabrikationen ermöglichte. Konkret:
+
+- **T1b (cross-tool)** verlangt im Manifest: Erzeuger-Tool **und** Version
+  **und** reproduzierbaren Erzeugungsweg/Lizenz. Fehlt eines, zählt der
+  Eintrag nicht (Gate erzwingt das).
+- **T1 (real)** verlangt: dokumentierte archivalische Herkunft (Quelle/URL +
+  SHA-256) **plus** unabhängigen Spec-Pin — die Assert-Bytes werden VOR dem
+  UFT-Lauf per unabhängigem Parse (python, gegen die publizierte Spec)
+  gepinnt, weil der historische Erzeuger unbekannt ist.
+- Ein Netz-Fund ohne diese Angaben ist **kein** T1/T1b — bestenfalls
+  T2-Material. „Irgendwo lag ein Image" ist keine Ground Truth.
+
 ## Einfrier-Regel
 
 **Kein neuer ungeprüfter Code im Format- oder Decoder-Layer, egal unter
