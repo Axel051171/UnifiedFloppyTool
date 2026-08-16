@@ -1069,6 +1069,66 @@ green.
 
 ---
 
+## Voll-Audit 2026-08-16 (MF-369) — Befunde jenseits der Löschwellen
+
+Drei Lösch-Wellen sind erledigt (206 Dateien: 55 tote Sources, 90 verwaiste
+Header, 61 tote CMakeLists; Abnahme je Welle: qmake-Vollbuild + ctest 209/209
++ 9 Gates). Die folgenden Befunde sind **Verbesserungs-Kandidaten**, keine
+Löschungen — jeweils mit Klasse und konkretem nächsten Schritt.
+
+### AUD-1 — Switch/hactool-Feature ist fachfremd und unverifiziert (Architecture)
+`CONFIG+=switch_support` baut einen Nintendo-Switch-Cartridge-Dumper
+(`src/switch/` + vendored hactool + vendored mbedtls) in das forensische
+*Floppy*-Tool ein. Scope-fremd; ob das Feature überhaupt linkt (mbedtls-
+Library-Sources im .pro-Block?) wurde nie verifiziert — kein Test, kein
+CI-Lauf mit dem Flag. Nächster Schritt: extrahieren in eigenes Repo ODER
+bewusst behalten und dokumentieren (Entscheidung Axel); bis dahin nicht
+bewerben.
+
+### AUD-2 — `uft_error_strings.c` wird generiert + verifiziert, aber nie kompiliert (Architecture)
+`scripts/generators/gen_errors_strings.py` erzeugt die Datei aus
+`data/errors.tsv`, `ssot_errors_compliance` prüft Generator-Output ==
+eingecheckte Datei — aber kein Build kompiliert sie. Entweder in `.pro`
+verdrahten (dann nutzt der Fehlerpfad die generierten Strings) oder den
+Zweck im Header der Datei dokumentieren. (Welle 1 hätte sie fast gelöscht —
+nur der SSOT-Test hat sie gerettet; Skript-Referenzen sind seitdem Teil der
+Lösch-Beweispipeline.)
+
+### AUD-3 — Enum-Duplikat-Drift cross-TU (Correctness)
+Empirisch in MF-355 gefunden: `UFT_TRACK_UNFORMATTED` ist doppelt definiert
+mit **verschiedenen Werten** (`uft_types.h` = `1<<2`, `uft_track.h` = `1<<0`);
+`UFT_ENC_GCR_CBM`(=3) vs. `UFT_ENC_GCR_C64`(=9) lösen je nach Include-Pfad
+verschieden auf. Tests mussten deshalb auf Roh-Bytes statt Enum-Numerik
+ausweichen. Konsolidierung = Single-Source pro Konstante; vorsichtig (ABI/
+Verhalten), eigener MF mit Aufruf-Site-Analyse.
+
+### AUD-4 — 60+ unpushed Commits = CI-Blindflug (Process)
+Die gesamte Sanierungs-Serie (MF-352…369) existiert nur lokal; CI hat seit
+Wochen keinen dieser Stände gebaut (macOS/Windows-Pfade, Qt-Versionen).
+Nächster Schritt: pushen — als **ein** Push (ein Matrix-Lauf statt 60;
+macOS zählt 10× Minuten, siehe Skill `github-actions-sparen`).
+
+### AUD-5 — `verify_build_sources.py` sieht konditionale .pro-Blöcke nicht (Tooling)
+Der Parser führt Dateien aus `switch_support {}`-Blöcken als „absent from
+.pro", obwohl qmake sie konditional baut — die Baseline nennt sie A-Einträge.
+Dokumentierte Limitation; bei Bedarf Parser um Scope-Tracking erweitern.
+
+### AUD-6 — In-Source-Build-Artefakte vergiften Shadow-Builds (Tooling)
+`<repo>/release/` + `debug/` (von einem historischen In-Source-Build,
+gitignored) ließen **jeden** Shadow-qmake-Build mit `fatal: xcopytab.moc`
+scheitern (qmakes Depend-Scan fand die stalen mocs). Entfernt; Prävention-
+Kandidat: `preflight-check` warnt künftig, wenn `<repo>/release|debug`
+existiert.
+
+### AUD-7 — Rest-Einträge (klein)
+- `test_mega65` ist der letzte EXCLUDED_TESTS-Eintrag (Header stub-only) —
+  implementieren oder Test löschen.
+- Vendored-Bäume (`src/samdisk/`, `src/switch/hactool/` inkl. mbedtls) haben
+  kein Herkunfts-/Versions-Manifest — je eine `VENDORED.md` mit Upstream +
+  Commit/Version wäre billig und beendet „woher stammt das?"-Fragen.
+
+---
+
 ## Wie beitragen
 
 - **Neues Issue melden:** GitHub Issue mit Label `principle-violation`.
