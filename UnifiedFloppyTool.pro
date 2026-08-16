@@ -442,6 +442,7 @@ HEADERS += \
     src/hardware_providers/applesauce_provider_v2.h \
     src/hardware_providers/adfcopy_provider_v2.h \
     src/hardware_providers/usbfloppy_provider_v2.h \
+    src/hardware_providers/xum1541_usb.h \
     src/hardware_providers/teensy_probe.h \
     src/hardware_providers/qprocess_subprocess_runner.h \
     src/hardware_providers/ufi_runners.h
@@ -1451,7 +1452,6 @@ SOURCES += \
     src/formats/logical/uft_logical.c \
     src/formats/posix/uft_posix.c
 
-# SOURCES += src/formats/mega65/uft_mega65_d81.c  # deleted (35 compile errors)
 
 # v4.0 GUI Panels (DMK Analyzer, GW-to-DMK, Flux Histogram)
 # ===============================================================================
