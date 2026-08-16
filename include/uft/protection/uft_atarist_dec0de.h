@@ -362,9 +362,13 @@ static inline ssize_t uft_robn89_find_start(
     uint16_t w16;
     size_t i, j;
 
-    for (i = 0; (ssize_t)i <= (ssize_t)(size - 20); i += 2) {
+    /* Start at 4, not 0: the magic derivation below reads the PREVIOUS
+     * instruction at buf[j-4], so i==0 would read 4 bytes in front of the
+     * buffer. Real Series-2 trampolines sit deep inside the loader
+     * (verified: 1960 / 2214 in the MF-377 corpus), so nothing is lost. */
+    for (i = 4; (ssize_t)i <= (ssize_t)(size - 20); i += 2) {
         j = i;
-        
+
         /* XOR with expected lea instruction to get magic */
         w32 = uft_read32_be(buf + j);
         w32 ^= 0x4DFA0010;  /* lea pc+$12,a6 */

@@ -24,6 +24,7 @@
  */
 
 #include "uft/protection/uft_atarist_copylock.h"
+#include "uft/protection/uft_atarist_dec0de.h"
 
 #include <stdio.h>
 #include <stdint.h>
@@ -101,6 +102,32 @@ TEST(rick_dangerous_series1_undetectable) {
     free(d);
 }
 
+/* The header-only dec0de port (uft_atarist_dec0de.h) carries a SECOND,
+ * independent implementation of the Series-2 trampoline search. Verify it
+ * against the same pinned ground truth — two implementations agreeing on real
+ * data is stronger evidence than either alone. (The .c file in that module,
+ * uft_dec0de_detect(), is fabricated and gets 0/34 real samples right; see
+ * docs/KNOWN_ISSUES.md PROT-3. This test deliberately exercises the header
+ * primitive, not that function.) */
+TEST(header_port_finds_same_trampolines) {
+    size_t len = 0;
+    uint32_t magic = 0;
+    ssize_t prog_off = -1;
+
+    uint8_t *d = load_corpus("dec0de_RAINBISL.BIN", &len);
+    ASSERT(d != NULL);
+    ASSERT(uft_robn89_find_start(d, len, &magic, &prog_off) == 2214);
+    ASSERT(magic == 0x6B1D1929u);
+    free(d);
+
+    d = load_corpus("dec0de_WARLOCK.BIN", &len);
+    ASSERT(d != NULL);
+    magic = 0xFFFFFFFFu;
+    ASSERT(uft_robn89_find_start(d, len, &magic, &prog_off) == 1960);
+    ASSERT(magic == 0x0u);
+    free(d);
+}
+
 int main(void) {
     size_t len = 0;
     uint8_t *probe = load_corpus("dec0de_RAINBISL.BIN", &len);
@@ -115,6 +142,7 @@ int main(void) {
     RUN(rainbow_islands_series2_variant_a);
     RUN(warlock_series2_variant_b);
     RUN(rick_dangerous_series1_undetectable);
+    RUN(header_port_finds_same_trampolines);
     printf("\nResults: %d passed, %d failed\n", _pass, _fail);
     return _fail == 0 ? 0 : 1;
 }

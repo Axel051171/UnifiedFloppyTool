@@ -1187,6 +1187,65 @@ Zwei Befunde aus derselben Untersuchung, beide **Architecture**, kein Fix in MF-
    Detektor. Er ist als Verdrahtungstest gültig, darf aber nicht als
    Scheme-Verifikation gezählt werden.
 
+### PROT-3 — `uft_dec0de_detect()` ist fabriziert: 0 von 34 realen Samples korrekt (2026-08-16, MF-378)
+
+**Correctness / Forensik-Integrität.** Derselbe reale Korpus wie PROT-1, nur
+gegen den zweiten ST-Detektor gehalten: `src/protection/uft_atarist_dec0de.c`.
+Ground Truth = die Zuordnung Datei→Schutzsystem aus `samples/README.txt` des
+dec0de-Projekts (34 Samples, 10 verschiedene Schutzsysteme).
+
+**Ergebnis: 0 richtige Erkennungen, 3 falsche Labels.**
+
+| Ground Truth | Samples | `uft_dec0de_detect()` sagt |
+|---|---|---|
+| Rob Northen 1988 | 15 | 15× „keine Protection" |
+| Rob Northen 1989 | 13 | 13× „keine Protection" |
+| Rob Northen 1989 | 2 (BIGNOSE, SWORDROS) | **„Rob Northen Copylock (1988)"** — falsche Serie |
+| Illegal Anti-bitos | 5 | 5× „keine Protection" |
+| NTM/Cameo Toxic Packer | 1 (TOX100) | **„Rob Northen Copylock (1988)", Konfidenz 0.9** |
+| CID / Cooper / Lock-o-matic / Zippy / R.AL / Sly | 9 | kein Detektor vorhanden (Namen stehen nur in der Enum-Tabelle) |
+
+**Warum es nicht funktionieren kann — die Patterns sind erfunden:**
+- `ROBN88_PATTERN` = `4E75 41FA` (RTS + LEA). Vier Byte generischer
+  68000-Code, keine Signatur. Trifft in 3 von 43 beliebigen Dateien —
+  darunter der Toxic-Packer-Sample, der deshalb als CopyLock gemeldet wird.
+- `TOXIC_PATTERN` verlangt den ASCII-String `TOXIC` hinter einem `BRA.W`.
+  **`TOX100.PRG` enthält den String `TOXIC` an keiner Stelle.** Die Signatur
+  wurde nicht aus der Datei abgeleitet, sondern aus dem Namen des Packers.
+- `ROBN89_PATTERN` (NOP NOP LEA) und `ANTIBITOS_PATTERN` treffen keines der
+  jeweils zugehörigen realen Samples.
+- Die Prüfreihenfolge setzt das generischste Pattern an den Anfang, also
+  gewinnt der falsche Treffer strukturell gegen jeden späteren richtigen.
+
+**Status:** Die Funktion hat **null Aufrufer** im gesamten Baum und ihr
+Ergebnis-Typ ist lokal in der `.c` definiert, also von außen gar nicht
+verwendbar — bisher konnte niemand ein falsches Label sehen. Genau derselbe
+Fabrikations-Mechanismus wie FMT-2/3/10/11/12, nur in der Protection-Schicht.
+
+**Nächster Schritt (eigene Aufgabe, nicht in MF-378):** `uft_dec0de_detect()`
+ersatzlos entfernen. Der Header `uft_atarist_dec0de.h` enthält daneben einen
+**echten** dec0de-Port (siehe unten) — die Fabrikation steckt ausschließlich in
+der `.c`. Löschung berührt `UnifiedFloppyTool.pro:3285`, verlangt also die
+6-stufige Lösch-Beweispipeline inkl. qmake-Vollbuild-Abnahme.
+
+### PROT-4 — Header-Port des Series-2-Finders: OOB-Read gefixt + gegen reale Daten verifiziert (2026-08-16, MF-378) → ✓ RESOLVED
+
+Im Gegensatz zur fabrizierten `.c` ist `uft_robn89_find_start()` in
+`include/uft/protection/uft_atarist_dec0de.h` der **echte** Algorithmus
+(Trampolin-Suche `lea/move.l/add.l` mit XOR-Key-Kette). Zwei Punkte:
+
+1. **Bug (Memory-Safety):** Die Schleife startete bei `i = 0`, leitet das
+   Magic aber aus der *vorherigen* Instruktion `buf[j-4]` ab — bei `i == 0`
+   also ein Lesezugriff 4 Byte **vor** dem Puffer. Latent, weil die Funktion
+   bisher nirgends aufgerufen wurde; ASan hätte sie beim ersten echten Aufruf
+   zerlegt. Gefixt: Schleifenstart `i = 4` (reale Trampoline liegen bei 1960
+   bzw. 2214, es geht nichts verloren).
+2. **Verifikation:** `test_corpus_protection_copylock` ruft den Header-Primitiv
+   jetzt zusätzlich auf und prüft ihn gegen dieselbe gepinnte Ground Truth wie
+   `uft_copylock_st_analyze()`. Beide unabhängigen Implementierungen liefern
+   auf realen Loadern identisch Trampolin-Offset **und** `magic32`
+   (2214/0x6B1D1929, 1960/0x0).
+
 ### AUD-7 — Rest-Einträge (klein)
 - `test_mega65` ist der letzte EXCLUDED_TESTS-Eintrag (Header stub-only) —
   implementieren oder Test löschen.
