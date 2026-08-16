@@ -298,9 +298,20 @@ static void test_export_wrappers(void) {
     }
     uft_otdr_analyze(&ctx);
 
-    ASSERT_EQ(uft_otdr_export_report(&ctx, "/tmp/bridge_report.txt"), 0, "report");
-    ASSERT_EQ(uft_otdr_export_heatmap(&ctx, "/tmp/bridge_heat.pgm"), 0, "heatmap");
-    ASSERT_EQ(uft_otdr_export_track_csv(&ctx, 0, 0, "/tmp/bridge_t0.csv"), 0, "csv");
+    /* portable temp dir — hardcoded /tmp does not exist on Windows CI
+     * (the known local-green vs CI-green trap; found by the MF-374 push) */
+    const char *td = getenv("TMPDIR");
+    if (!td || !td[0]) td = getenv("TMP");
+    if (!td || !td[0]) td = getenv("TEMP");
+    if (!td || !td[0]) td = ".";
+    char p1[512], p2[512], p3[512];
+    snprintf(p1, sizeof(p1), "%s/bridge_report.txt", td);
+    snprintf(p2, sizeof(p2), "%s/bridge_heat.pgm", td);
+    snprintf(p3, sizeof(p3), "%s/bridge_t0.csv", td);
+    ASSERT_EQ(uft_otdr_export_report(&ctx, p1), 0, "report");
+    ASSERT_EQ(uft_otdr_export_heatmap(&ctx, p2), 0, "heatmap");
+    ASSERT_EQ(uft_otdr_export_track_csv(&ctx, 0, 0, p3), 0, "csv");
+    remove(p1); remove(p2); remove(p3);
 
     uft_otdr_free(&ctx);
     PASS();
