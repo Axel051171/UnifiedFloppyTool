@@ -9,18 +9,20 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 | Stufe | Formate |
 |---|---|
 | T1 | 0 |
-| T1b | 0 |
-| T2 | 15 |
-| T3 | 73 |
+| T1b | 3 |
+| T2 | 14 |
+| T3 | 71 |
 | **gesamt** | **88** |
 
 ## Pro Format
 
 | Plugin | Stufe | Tests | Spec-Quelle | Evidenz | Korpus-Images |
 |---|---|---|---|---|---|
+| `adf` | **T1b** | `test_adf_write_roundtrip`, `test_corpus_adf` | — | — | 1 |
+| `atr` | **T1b** | `test_atr_512`, `test_atr_write_roundtrip`, `test_corpus_atr` | — | — | 1 |
+| `d64` | **T1b** | `test_corpus_d64`, `test_d64_42track`, `test_d64_errormap`, `test_d64_geometry_zones`, `test_d64_write_roundtrip` | VICE D64 sizes incl. error-block trailer + 40/42-track variants | MF-333, MF-350 | 1 |
 | `adf_ext` | **T2** | `test_adf_ext_plugin` | WinUAE disk.cpp read_header_ext2 (UAE-1ADF) | MF-352 | — |
 | `akai_s900` | **T2** | `test_akai_s900_plugin` | akaiutil (kmi9000) geometry: DD 5x1024/819200, HD 10x1024/1638400 | MF-348 | — |
-| `d64` | **T2** | `test_d64_42track`, `test_d64_errormap`, `test_d64_geometry_zones`, `test_d64_write_roundtrip` | VICE D64 sizes incl. error-block trailer + 40/42-track variants | MF-333, MF-350 | — |
 | `d88` | **T2** | `test_d88_error_marks` | pc98.org D88 + MAME d88_dsk (DDAM @+07, FDC status @+08) | MF-336 | — |
 | `dc42` | **T2** | `test_dc42_checksum_roundtrip` | DiscFerret/Mini-vMac DC42 checksum (BE16 word add, ROR32 1) | MF-324 | — |
 | `dmk` | **T2** | `test_dmk_crc` | David Keil DMK spec (openMSX DMK-Format-Details) + WD177x CRC-CCITT pinned to check value 0x29B1 | MF-353 | — |
@@ -35,11 +37,9 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 | `woz` | **T2** | `test_diskcopy`, `test_moof_roundtrip`, `test_woz_roundtrip` | Applesauce WOZ reference v1/v2/2.1 (chunk layout, CRC32, WRIT logical refs) | MF-317, MF-357, MF-361 | — |
 | `2img` | **T3** | — | — | — | — |
 | `86f` | **T3** | — | — | — | — |
-| `adf` | **T3** | `test_adf_write_roundtrip` | — | — | — |
 | `adf_arc` | **T3** | — | — | — | — |
 | `adl` | **T3** | — | — | — | — |
 | `apridisk` | **T3** | — | — | — | — |
-| `atr` | **T3** | `test_atr_512`, `test_atr_write_roundtrip` | — | — | — |
 | `atx` | **T3** | — | — | — | — |
 | `cas` | **T3** | — | — | — | — |
 | `cfi` | **T3** | — | — | — | — |

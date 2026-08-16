@@ -104,6 +104,35 @@ def check_freeze(repo: Path) -> list[str]:
     return errors
 
 
+def check_corpus_manifest(repo: Path) -> list[str]:
+    """Integrity of the reference corpus: every manifest entry's file must
+    match its recorded sha256. Tracked files (tests/corpus_free/) must exist;
+    gitignored local-corpus files (tests/corpus/) are skipped when absent."""
+    import hashlib
+    errors: list[str] = []
+    mf = repo / "tests" / "corpus_manifest" / "manifest.json"
+    if not mf.exists():
+        return []
+    try:
+        manifest = json.loads(mf.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as e:
+        return [f"corpus manifest: invalid JSON: {e}"]
+    for entry in manifest.get("images", []):
+        rel = entry.get("file", "")
+        f = repo / rel
+        if not f.exists():
+            if rel.startswith("tests/corpus_free/"):
+                errors.append(f"corpus: tracked image missing: {rel}")
+            continue                      # local-only corpus, absent is fine
+        digest = hashlib.sha256(f.read_bytes()).hexdigest()
+        if digest != entry.get("sha256"):
+            errors.append(
+                f"corpus: sha256 mismatch for {rel} — file was modified or "
+                f"manifest is stale (expected {entry.get('sha256','')[:16]}…, "
+                f"got {digest[:16]}…)")
+    return errors
+
+
 def check_tiers_fresh(repo: Path) -> list[str]:
     try:
         from gen_verification_tiers import compute_tiers, render_md, GENERATED_DOC
@@ -140,6 +169,7 @@ def main() -> int:
     errors = []
     for label, fn in (("inventory drift", check_inventory),
                       ("format-layer freeze", check_freeze),
+                      ("corpus integrity", check_corpus_manifest),
                       ("verification tiers stale", check_tiers_fresh)):
         for e in fn(repo):
             errors.append(f"[{label}] {e}")

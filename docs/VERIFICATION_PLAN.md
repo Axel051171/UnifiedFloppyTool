@@ -92,8 +92,31 @@ bestätigt; ein echtes Fremd-Tool-Image ist dort der härteste Test).
   das separate `edsk`-Plugin (amstrad/) ist ungetestet (T3). Der
   d67-Test testet `commodore/d67.c`, nicht das registrierte Plugin
   `d67/uft_d67.c` (T3) — zwei ehrliche Doppel-Implementierungs-Funde.
-- **Phase 2 — Korpus + Hebungen:** Korpus-Struktur; cross-tool-Images für die
-  5 Formate; Tests dagegen → T1b. Erfüllt das Moratorium.
+- **Phase 2 — Korpus + Hebungen (TEIL-ERLEDIGT mit MF-365, 3/5):**
+  `tests/corpus_free/` (tracked, rechtefrei) + Manifest-Einträge mit SHA-256 +
+  Provenienz; Korpus-Integritäts-Gate (Kategorie 9 in check_consistency:
+  Hash-Mismatch ⇒ FAIL, negativ getestet). Gehoben auf **T1b**:
+  - **D64** — VICE 3.10 `c1541` erzeugt (format + Datei geschrieben);
+    `test_corpus_d64` verifiziert BAM-Signatur, PETSCII-Directory-Eintrag,
+    21/19-Sektor-Zonen.
+  - **ADF** — amitools `xdftool` erzeugt (OFS, Volume + Datei);
+    `test_corpus_adf` verifiziert `DOS\0`-Bootblock, Rootblock-Typ,
+    BCPL-Volume-Name, 80×2×11×512.
+  - **ATR** — atrcopy-10.1-Template `dos2sd.atr` (pristine, byte-identisch
+    zum pip-Artefakt = beweisbare Provenienz); `test_corpus_atr` verifiziert
+    ATR-Header, DOS-2-VTOC (02 C3 02 C3), 720×128-Geometrie.
+
+  **Ehrlich offen (2/5) — kein kanonisches Erzeuger-Tool existiert:**
+  - **FDI (ZX Spectrum):** SAMdisk liest nur (`ReadFDI`, kein Writer); der
+    HxC-FDI-Loader hat `(WRITEDISKFILE) 0` = read-only. Beschaffungsweg:
+    rechtefreies Homebrew-/PD-FDI aus der TR-DOS-Szene (origin=real, lokal
+    in `tests/corpus/`, Hash ins Manifest) ODER ein FDI-schreibfähiges
+    Emulator-Tool (UKV/Real Spectrum) in einer Session mit Nutzer-Hilfe.
+  - **NFD (PC-98):** HxC hat gar keinen NFD-Loader; kanonischer Erzeuger ist
+    T98-Next selbst (GUI-Emulator). Beschaffungsweg: T98-Next eine Disk
+    erzeugen lassen (Nutzer-Session) oder rechtefreies PD-NFD-Image.
+
+  Das **Moratorium bleibt in Kraft**, bis auch FDI + NFD-r0 auf T1/T1b sind.
 - **Phase 3 — danach:** Tote-Deklarationen-Löschwelle
   (`audit_skeleton_headers.py`, MF-011-Muster; Regel: keine neue Deklaration
   ohne Körper), Reifegrad-Tabelle **aller** Subsysteme (DeepRead/OTDR/ML/

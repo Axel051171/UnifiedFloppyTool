@@ -549,6 +549,8 @@ def main() -> int:
         import update_inventory as _inv
         all_errors.append(("inventory drift", _inv.check_inventory(repo)))
         all_errors.append(("format-layer freeze", _inv.check_freeze(repo)))
+        all_errors.append(("corpus integrity",
+                           _inv.check_corpus_manifest(repo)))
         all_errors.append(("verification tiers stale",
                            _inv.check_tiers_fresh(repo)))
 

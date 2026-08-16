@@ -1,5 +1,5 @@
 {
-  "_doc": "Manifest of the real/cross-tool reference corpus (docs/VERIFICATION_PLAN.md, Phase 2). The image FILES live in tests/corpus/ which is gitignored (copyright); this manifest (sha256 + provenance) is the in-repo truth so third parties can re-acquire and verify the corpus. Entries with origin='real' rate a format T1, origin='cross-tool' rate T1b — in both cases only if the named ctest test exists and consumes the image. Consumed by scripts/gen_verification_tiers.py.",
+  "_doc": "Manifest of the real/cross-tool reference corpus (docs/VERIFICATION_PLAN.md, Phase 2). The image FILES live in tests/corpus/ (gitignored, copyright-restricted) or tests/corpus_free/ (tracked, rights-free self-created content); this manifest (sha256 + provenance) is the in-repo truth so third parties can re-acquire and verify the corpus. Entries with origin='real' rate a format T1, origin='cross-tool' rate T1b \u2014 in both cases only if the named ctest test exists and consumes the image. Consumed by scripts/gen_verification_tiers.py.",
   "_entry_schema": {
     "file": "relative path under tests/corpus/",
     "sha256": "hex digest of the image file",
@@ -9,5 +9,33 @@
     "source": "provenance: where/how the image was obtained or generated (reproducible for cross-tool)",
     "test": "ctest test name that opens this image through the UFT plugin"
   },
-  "images": []
+  "images": [
+    {
+      "file": "tests/corpus_free/vice_c1541_35trk.d64",
+      "sha256": "36d5fcf7c6d7fab599e32e41642855468411802d3a40a149764b77b3c28fc784",
+      "format": "d64",
+      "origin": "cross-tool",
+      "tool": "VICE 3.10 c1541 (VICE-Team/svn-mirror release 3.10.0, GTK3VICE-3.10-win64)",
+      "source": "c1541 -format \"uftcorpus,42\" d64 <img> -write marker.txt \"uft marker\"; marker.txt is original UFT text (rights-free)",
+      "test": "test_corpus_d64"
+    },
+    {
+      "file": "tests/corpus_free/xdftool_dd_ofs.adf",
+      "sha256": "9af68fcc86bcb76bd32cecca2c8b53ccc60042cb9b82a796639b02512db875e0",
+      "format": "adf",
+      "origin": "cross-tool",
+      "tool": "amitools xdftool (pip amitools, 2026-08)",
+      "source": "xdftool <img> create + format \"UFTCORPUS\" ofs + write marker.txt; marker.txt is original UFT text (rights-free)",
+      "test": "test_corpus_adf"
+    },
+    {
+      "file": "tests/corpus_free/atrcopy_dos2sd.atr",
+      "sha256": "52a51bc954c1a235ec638832e40c1d6a5cc4b6d3c27c57111697941abc0627dd",
+      "format": "atr",
+      "origin": "cross-tool",
+      "tool": "atrcopy 10.1 template dos2sd.atr (pristine, byte-identical to the pip package artifact)",
+      "source": "atrcopy templates/dos2sd.atr: 'Atari 8-bit DOS 2 single density (90K), empty VTOC' \u2014 filesystem structure only, no copyrighted DOS files",
+      "test": "test_corpus_atr"
+    }
+  ]
 }
