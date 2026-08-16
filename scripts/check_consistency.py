@@ -543,6 +543,17 @@ def main() -> int:
     if args.check in ("stubs", "all"):
         e = check_lazy_stubs(repo)
         all_errors.append(("lazy-stub patterns", e))
+    if args.check in ("stubs", "all"):
+        # AUD-6 (MF-369): stale IN-SOURCE build artifacts poison every shadow
+        # qmake build's depend scan (fatal: xcopytab.moc — qmake picks up old
+        # mocs/ui headers from <repo>/release|debug). CI never sees them;
+        # local shadow builds do. Fail fast with the fix.
+        e = []
+        for d in ("release", "debug"):
+            if (repo / d).is_dir():
+                e.append(f"stale in-source build dir '{d}/' exists — poisons "
+                         f"shadow qmake builds; fix: rm -rf {d}")
+        all_errors.append(("in-source build artifacts", e))
     if args.check in ("freeze", "all"):
         # Inventory SSOT + format-layer freeze rule (MF-363/364).
         sys.path.insert(0, str(Path(__file__).resolve().parent))

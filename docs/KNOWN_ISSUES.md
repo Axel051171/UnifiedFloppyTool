@@ -1088,11 +1088,16 @@ bewerben.
 ### AUD-2 — `uft_error_strings.c` wird generiert + verifiziert, aber nie kompiliert (Architecture)
 `scripts/generators/gen_errors_strings.py` erzeugt die Datei aus
 `data/errors.tsv`, `ssot_errors_compliance` prüft Generator-Output ==
-eingecheckte Datei — aber kein Build kompiliert sie. Entweder in `.pro`
-verdrahten (dann nutzt der Fehlerpfad die generierten Strings) oder den
-Zweck im Header der Datei dokumentieren. (Welle 1 hätte sie fast gelöscht —
-nur der SSOT-Test hat sie gerettet; Skript-Referenzen sind seitdem Teil der
-Lösch-Beweispipeline.)
+eingecheckte Datei — aber kein Build kompiliert sie. (Welle 1 hätte sie fast
+gelöscht — nur der SSOT-Test hat sie gerettet; Skript-Referenzen sind seitdem
+Teil der Lösch-Beweispipeline.)
+**Disposition (analysiert, MF-369):** Die API (`uft_strerror` + Aliase) ist in
+`uft_error_ext.h` deklariert, konfliktfrei (einzige Definition) und hat
+**null Aufrufer** im gesamten Baum. Verdrahten ohne Aufrufer wäre
+Phantom-Aktivierung — die Datei bleibt bewusst unkompiliert als generierte,
+SSOT-verifizierte Fehlertext-Tabelle. In `.pro` aufnehmen, **sobald der erste
+echte Aufrufer entsteht** (z. B. GUI-Fehlermeldungen auf `uft_strerror`
+umstellen — das wäre die eigentliche Verbesserung).
 
 ### AUD-3 — Enum-Duplikat-Drift cross-TU (Correctness)
 Empirisch in MF-355 gefunden: `UFT_TRACK_UNFORMATTED` ist doppelt definiert
