@@ -51,8 +51,6 @@ set(TEST_SOURCES ${TEST_SOURCES_C} ${_HEADER_ONLY_CPP_TESTS})
 
 # Exclude tests with missing dependencies (TODO: implement these modules)
 set(EXCLUDED_TESTS
-    "test_mega65"           # Needs uft_mega65 module (header is stub-only)
-    # "test_mega65_fat32"   # Re-enabled: compiles standalone
     # "test_libdsk_formats" # Re-enabled: apridisk, nanowasp, qrst, cfi now in registry
     "test_track_writer"     # src/hardware/uft_track_writer.c removed in cleanup
     "test_flux_analysis"    # src/flux/uft_flux_analysis.c removed in cleanup
@@ -91,7 +89,6 @@ set(EXCLUDED_TESTS
     "test_ti99_formats"        # uft_ti99 lib not registered in root CMake
     # "test_whdload_resload"   # v4.1.5: src/whdload/whdload_resload_api.c re-included
     # "test_xum1541_hal"       # MF-255: libusb wiring landed, test re-enabled
-    "test_mega65_fat32"        # uft_mega65 module is stub-only
     "test_fat_extensions"      # uft_fs lib not registered in root CMake
     "test_align_fuse_bridge"   # depends on otdr_align_fuse_v7 (standalone-project; UFT-T05)
     "test_cpm_fs"              # uft_cpm_fs needs uft_fs (not in root CMake)
@@ -303,6 +300,10 @@ foreach(test_source ${TEST_SOURCES})
     elseif(${test_name} STREQUAL "test_g71_read")
         # G71 1571 GCR per-track raw read (MF-355)
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/g71/uft_g71.c)
+    elseif(${test_name} STREQUAL "test_mega65_fat32")
+        # Re-enabled in MF-372: was excluded with the WRONG reason ("uft_mega65
+        # stub-only") — it actually tests the real 589-line uft_fat32_mbr.c.
+        target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/fat32/uft_fat32_mbr.c)
     elseif(${test_name} STREQUAL "test_savedskf_read")
         # IBM SaveDskF uncompressed reader rewrite (MF-356)
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/pc/uft_savedskf.c)

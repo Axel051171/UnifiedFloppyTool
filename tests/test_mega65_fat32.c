@@ -266,73 +266,10 @@ TEST(format_size_string)
     ASSERT_STR_EQ(buffer, "2.00 GB");
 }
 
-/*============================================================================*
- * D81 TESTS (from MEGA65 integration)
- *============================================================================*/
-
-/* External declarations for D81 functions */
-extern void uft_petscii_to_ascii(const uint8_t *petscii, char *ascii, size_t len);
-extern void uft_ascii_to_petscii(const char *ascii, uint8_t *petscii, size_t len);
-extern const char *uft_d81_file_type_str(uint8_t type);
-extern uint32_t uft_d81_sector_offset(uint8_t track, uint8_t sector);
-extern int uft_d81_probe(const uint8_t *data, size_t size);
-
-TEST(petscii_conversion)
-{
-    uint8_t petscii[16];
-    char ascii[17] = {0};
-    
-    /* ASCII to PETSCII */
-    uft_ascii_to_petscii("HELLO", petscii, 16);
-    ASSERT_EQ(petscii[0], 0xC8);  /* H shifted */
-    
-    /* PETSCII to ASCII */
-    uint8_t test_petscii[] = { 0x48, 0x45, 0x4C, 0x4C, 0x4F, 0xA0 };
-    uft_petscii_to_ascii(test_petscii, ascii, 16);
-    ASSERT_STR_EQ(ascii, "hello");
-}
-
-TEST(d81_file_types)
-{
-    ASSERT_STR_EQ(uft_d81_file_type_str(0x00), "DEL");
-    ASSERT_STR_EQ(uft_d81_file_type_str(0x01), "SEQ");
-    ASSERT_STR_EQ(uft_d81_file_type_str(0x02), "PRG");
-    ASSERT_STR_EQ(uft_d81_file_type_str(0x03), "USR");
-    ASSERT_STR_EQ(uft_d81_file_type_str(0x04), "REL");
-    ASSERT_STR_EQ(uft_d81_file_type_str(0x82), "PRG");  /* With closed flag */
-}
-
-TEST(d81_sector_offset)
-{
-    /* Track 1, Sector 0 */
-    ASSERT_EQ(uft_d81_sector_offset(1, 0), 0);
-    
-    /* Track 1, Sector 1 */
-    ASSERT_EQ(uft_d81_sector_offset(1, 1), 256);
-    
-    /* Track 2, Sector 0 */
-    ASSERT_EQ(uft_d81_sector_offset(2, 0), 40 * 256);
-    
-    /* Track 40 (directory), Sector 0 */
-    ASSERT_EQ(uft_d81_sector_offset(40, 0), 39 * 40 * 256);
-    
-    /* Invalid track */
-    ASSERT_EQ(uft_d81_sector_offset(0, 0), 0xFFFFFFFF);
-    ASSERT_EQ(uft_d81_sector_offset(81, 0), 0xFFFFFFFF);
-    
-    /* Invalid sector */
-    ASSERT_EQ(uft_d81_sector_offset(1, 40), 0xFFFFFFFF);
-}
-
-TEST(d81_probe_size)
-{
-    uint8_t data[819200];
-    
-    /* Wrong size should fail */
-    ASSERT_FALSE(uft_d81_probe(data, 819199));
-    ASSERT_FALSE(uft_d81_probe(data, 819201));
-    ASSERT_FALSE(uft_d81_probe(data, 0));
-}
+/* D81/PETSCII tests removed in MF-373: they declared and called functions
+ * (uft_petscii_to_ascii, uft_d81_sector_offset, uft_d81_probe, ...) that
+ * exist NOWHERE in the tree — phantom remnants of the deleted mega65
+ * module. The FAT32/MBR tests below exercise the real uft_fat32_mbr.c. */
 
 /*============================================================================*
  * MAIN
@@ -342,7 +279,7 @@ int main(void)
 {
     printf("\n");
     printf("═══════════════════════════════════════════════════════════════════\n");
-    printf("  MEGA65 / FAT32 / MBR Integration Tests\n");
+    printf("  FAT32 / MBR Tests (uft_fat32_mbr.c)\n");
     printf("═══════════════════════════════════════════════════════════════════\n\n");
     
     printf("Partition Type Names:\n");
@@ -365,11 +302,6 @@ int main(void)
     printf("\nSize Formatting:\n");
     RUN_TEST(format_size_string);
     
-    printf("\nD81 Format Tests:\n");
-    RUN_TEST(petscii_conversion);
-    RUN_TEST(d81_file_types);
-    RUN_TEST(d81_sector_offset);
-    RUN_TEST(d81_probe_size);
     
     printf("\n═══════════════════════════════════════════════════════════════════\n");
     printf("  Results: %d passed, %d failed (of %d)\n", 
