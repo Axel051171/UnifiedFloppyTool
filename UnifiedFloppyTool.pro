@@ -3282,7 +3282,6 @@ SOURCES += \
 # Atari ST Protection (5 files)
 SOURCES += \
     src/protection/uft_atarist_copylock.c \
-    src/protection/uft_atarist_dec0de.c \
     src/protection/uft_atarist_macrodos.c \
     src/protection/uft_atarist_protection.c \
     src/protection/uft_atari8_protection.c

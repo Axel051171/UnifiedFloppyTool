@@ -110,6 +110,24 @@
       "test": "test_corpus_protection_copylock"
     },
     {
+      "file": "tests/corpus/dec0de_XENON2.BIN",
+      "sha256": "4d99e42a16033db18a317b9dfad17764791559b5825cc104fae986ab188b14b2",
+      "format": "protection:copylock_st",
+      "origin": "real",
+      "tool": "historical (Xenon 2 Megablast, Image Works 1989, Rob Northen CopyLock Series 1 1988 loader)",
+      "source": "github.com/orionfuzion/dec0de commit 54d7efd967540b3ce37cdb7fe33c1547ff1f4b69, samples/ROBN88/XENON2.BIN; LOCAL-ONLY; pinned ground truth: keydisk (st $43e.l) decoded @918, serial (move.l d0,$1c(a0)) @598",
+      "test": "test_corpus_protection_copylock"
+    },
+    {
+      "file": "tests/corpus/dec0de_COSMIC.BIN",
+      "sha256": "8f85d30a4732d87394dc6a9d680c7c93dc99b6fbc07f303ff28d33cce3462e73",
+      "format": "protection:copylock_st",
+      "origin": "real",
+      "tool": "historical (Cosmic Pirate, Palace 1989, Rob Northen CopyLock Series 1 1988 loader)",
+      "source": "github.com/orionfuzion/dec0de commit 54d7efd967540b3ce37cdb7fe33c1547ff1f4b69, samples/ROBN88/COSMIC.BIN; LOCAL-ONLY; pinned ground truth: keydisk decoded @534, serial @510",
+      "test": "test_corpus_protection_copylock"
+    },
+    {
       "file": "tests/corpus/dec0de_README.txt",
       "sha256": "5bd100c80a3feccc6da2459aafed6cbe81fb89d7490c71060fb56730292403c7",
       "format": "protection:copylock_st",

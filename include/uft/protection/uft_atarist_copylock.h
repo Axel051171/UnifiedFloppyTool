@@ -102,12 +102,11 @@ static inline uint32_t uft_copylock88_decode_instr(const uint8_t *buf) {
     return w32 ^ key32;
 }
 
-/**
- * @brief Series 1 detection pattern: BRA.S instruction
- * Pattern: 0x60 0x?? (BRA.S offset)
- */
-static const uint8_t uft_copylock88_bra_pattern[] = { 0x60, 0x72 };
-static const uint8_t uft_copylock88_bra_mask[]    = { 0xFF, 0x00 };
+/* NOTE: a `BRA.S` prefix pattern (0x60 0x??) used to sit here as a Series-1
+ * "signature". It was removed in MF-379 after measurement: two bytes of
+ * generic 68000 code that matched 6..1497 times in EVERY real sample, i.e.
+ * pure noise that gated the one real test. Do not reintroduce byte patterns
+ * without checking them against tests/corpus first. */
 
 /**
  * @brief Series 1 keydisk pattern: ST $43E.L
@@ -287,6 +286,68 @@ static inline int32_t uft_copylock_find_pattern(
 }
 
 /**
+ * @brief Search a Series-1 code pattern THROUGH the TVD encryption
+ *
+ * Series-1 protection code is TVD-encrypted, so the instruction bytes never
+ * appear literally in the file — a raw byte search finds nothing (measured:
+ * 0 of 16 real loaders, see docs/KNOWN_ISSUES.md PROT-1). The reference
+ * implementation (dec0de, get_pattern_offset_robn88) matches like this:
+ *
+ *   - step through the buffer in 2-byte increments,
+ *   - decode ONE 32-bit instruction at the candidate offset,
+ *   - compare the pattern's first two 16-bit words against that decoded
+ *     value (a first word of 0x0000 acts as a wildcard),
+ *   - compare any FURTHER pattern words against the RAW buffer — they belong
+ *     to the next chain element and are not decoded here.
+ *
+ * Reuses the existing byte patterns so there is only one definition of each
+ * signature: bytes 0..3 are matched decoded, bytes 4.. are matched raw.
+ *
+ * @param data      Program/protection code
+ * @param data_len  Length of data
+ * @param start     First offset to test (clamped to >= 4: the key is taken
+ *                  from the preceding instruction at data[off-4])
+ * @param pattern   Big-endian byte pattern, at least 4 bytes
+ * @param plen      Pattern length in bytes
+ * @return Offset of the match, or -1
+ */
+static inline int32_t uft_copylock88_find_pattern_decoded(
+    const uint8_t *data, size_t data_len, size_t start,
+    const uint8_t *pattern, size_t plen)
+{
+    if (!data || !pattern || plen < 4 || data_len < plen + 4) {
+        return -1;
+    }
+
+    uint16_t w0 = (uint16_t)(((uint16_t)pattern[0] << 8) | pattern[1]);
+    uint16_t w1 = (uint16_t)(((uint16_t)pattern[2] << 8) | pattern[3]);
+
+    for (size_t off = (start < 4) ? 4 : start;
+         off + plen <= data_len; off += 2) {
+
+        uint32_t decoded = uft_copylock88_decode_instr(data + off);
+
+        if (w0 && w0 != (uint16_t)(decoded >> 16)) {
+            continue;
+        }
+        if (w1 != (uint16_t)(decoded & 0xFFFFu)) {
+            continue;
+        }
+
+        size_t i = 4;
+        for (; i < plen; i++) {
+            if (pattern[i] != data[off + i]) {
+                break;
+            }
+        }
+        if (i == plen) {
+            return (int32_t)off;
+        }
+    }
+    return -1;
+}
+
+/**
  * @brief Detect Series 2 magic value from trampoline pattern
  * 
  * @param data Data buffer (protection code)
@@ -432,43 +493,48 @@ static inline bool uft_copylock_st_detect(
         return true;
     }
     
-    /* Try Series 1 (1988) */
-    off = uft_copylock_find_pattern(data, data_len,
-                                     uft_copylock88_bra_pattern,
-                                     uft_copylock88_bra_mask,
-                                     sizeof(uft_copylock88_bra_pattern), 0);
-    if (off >= 0) {
-        /* Verify with keydisk pattern */
-        int32_t keydisk_off = uft_copylock_find_pattern(
-            data, data_len,
-            uft_copylock88_keydisk_pattern, NULL,
-            sizeof(uft_copylock88_keydisk_pattern), (size_t)off);
-        
-        if (keydisk_off >= 0) {
-            result->detected = true;
-            result->series = UFT_COPYLOCK_SERIES_1_1988;
-            result->variant = UFT_COPYLOCK_VARIANT_A;
-            result->keydisk_off = keydisk_off;
-            result->type = UFT_COPYLOCK_TYPE_INTERNAL;
-            
-            /* Find serial pattern */
-            result->serial_off = uft_copylock_find_pattern(
-                data, data_len,
-                uft_copylock88_serial_pattern, NULL,
-                sizeof(uft_copylock88_serial_pattern), (size_t)off);
-            
-            if (result->serial_off >= 0) {
-                result->serial_usage = UFT_SERIAL_USAGE_RETURN | 
-                                       UFT_SERIAL_USAGE_SAVE_MEM;
-                result->serial_dst_addr = 0x24;  /* Usually saved at $24 */
-            }
-            
-            snprintf(result->name, sizeof(result->name),
-                     "Copylock Protection System series 1 (1988) by Rob Northen");
-            return true;
+    /* Series 1 (1988).
+     *
+     * The keydisk instruction `st $43e.l` is the discriminating signature, but
+     * it sits inside the TVD-encrypted region — so it must be matched THROUGH
+     * the decryption (uft_copylock88_find_pattern_decoded), not as raw bytes.
+     *
+     * The former BRA.S prefix check was dropped on purpose: `60 ??` is two
+     * bytes of generic 68000 and matched 6..1497 times in every real sample,
+     * so it added no evidence while gating the real test. Measured against the
+     * MF-379 corpus: 6 of 16 real Series-1 loaders detected (all raw
+     * protection extracts; the GEMDOS .PRG cases need the full dec0de
+     * unpacking pipeline first), with 0 false positives across 13 Series-2
+     * and 15 other-protection samples. */
+    int32_t keydisk_off = uft_copylock88_find_pattern_decoded(
+        data, data_len, 0,
+        uft_copylock88_keydisk_pattern,
+        sizeof(uft_copylock88_keydisk_pattern));
+
+    if (keydisk_off >= 0) {
+        result->detected = true;
+        result->series = UFT_COPYLOCK_SERIES_1_1988;
+        result->variant = UFT_COPYLOCK_VARIANT_A;
+        result->keydisk_off = keydisk_off;
+        result->type = UFT_COPYLOCK_TYPE_INTERNAL;
+
+        /* Serial handling lives in the same encrypted region */
+        result->serial_off = uft_copylock88_find_pattern_decoded(
+            data, data_len, 0,
+            uft_copylock88_serial_pattern,
+            sizeof(uft_copylock88_serial_pattern));
+
+        if (result->serial_off >= 0) {
+            result->serial_usage = UFT_SERIAL_USAGE_RETURN |
+                                   UFT_SERIAL_USAGE_SAVE_MEM;
+            result->serial_dst_addr = 0x24;  /* Usually saved at $24 */
         }
+
+        snprintf(result->name, sizeof(result->name),
+                 "Copylock Protection System series 1 (1988) by Rob Northen");
+        return true;
     }
-    
+
     return false;
 }
 

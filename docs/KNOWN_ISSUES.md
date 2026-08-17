@@ -1146,7 +1146,7 @@ Provenienz im Manifest). Vorher galt laut `docs/SUBSYSTEM_MATURITY.md`:
 | Detektor-Pfad | Reale Samples | Befund |
 |---|---|---|
 | Series 2 (1989), init1/init2 + Trampolin | 14/14 dec0de-Samples | ✅ erkannt; `magic32` + `start_off` exakt reproduziert (Rainbow Islands 0x6B1D1929 @2214, Warlock 0x0 @1960) |
-| Series 1 (1988), BRA.S + Keydisk-Pattern | 0/16 dec0de-Samples | ❌ **nie erkannt** |
+| Series 1 (1988), BRA.S + Keydisk-Pattern | 0/16 dec0de-Samples | ❌ **nie erkannt** (Stand MF-377; mit MF-379 auf 6/16 gehoben, s.u.) |
 
 **Ursache Series 1:** `uft_copylock_st_detect()` verlangt zusätzlich zum
 BRA.S-Prefix das Keydisk-Pattern `50F9 0000 043E` (`ST $43E.L`) im **Klartext**.
@@ -1156,15 +1156,37 @@ Keydisk und 0 für das Serial-Pattern `2140 001C`, während der BRA.S-Prefix
 überall vorhanden ist (6–1497 Treffer, also allein wertlos als Signal).
 Der Detektor kann Series 1 auf Rohdaten strukturell nicht erkennen.
 
-**Korrekter Fix (nicht in MF-377 enthalten, Scope-Regel):** Series-1-Erkennung
-muss wie dec0de zuerst `uft_copylock88_decode_block()` über die Kandidaten-Region
-laufen lassen und **danach** auf Keydisk/Serial prüfen. Das ist echte
-Entschlüsselungs-Logik, kein Pattern-Tweak.
+**Ursachen-Korrektur + Teil-Fix (MF-379).** Die obige Diagnose war richtig im
+Ergebnis, aber ungenau im Mechanismus. Der Abgleich mit der Referenz-
+Implementierung (dec0de `get_pattern_offset_robn88`, autoritative Quelle) zeigt:
+das Muster wird **nicht** über einen vorab entschlüsselten Block gesucht,
+sondern *durch* die Verschlüsselung hindurch —
 
-**Zwischenstand:** `test_corpus_protection_copylock` pinnt den Ist-Zustand
-ehrlich als **Negativ-Assert** (`uft_copylock_st_analyze(...) == 1` für Rick
-Dangerous). Der Test wird rot, sobald jemand Series 1 repariert — dann ist der
-Assert umzudrehen, nicht der Test zu löschen.
+- Schrittweite **2 Byte** (nicht 4),
+- an jedem Offset wird **genau ein** 32-Bit-Wort entschlüsselt,
+- dessen High-/Low-Wort gegen die ersten beiden Musterworte geprüft
+  (erstes Wort `0x0000` wirkt als Wildcard),
+- **weitere** Musterworte werden gegen den **rohen** Puffer verglichen, weil
+  sie zum nächsten Kettenglied gehören.
+
+Zwei eigene Hypothesen (Kette über rohe bzw. über entschlüsselte Vorgänger,
+jeweils volle Blockentschlüsselung) ergaben 0/15 — erst die Referenz-Semantik
+traf. Umgesetzt als `uft_copylock88_find_pattern_decoded()`; der wertlose
+BRA.S-Vorfilter wurde entfernt.
+
+**Messergebnis nach dem Fix:** **6 von 16** realen Series-1-Loadern erkannt,
+bei **0 Falsch-Positiven** über 13 Series-2- und 15 Fremdschutz-Samples.
+Alle Treffer sind rohe Protection-Extrakte (`.BIN`); alle 6 GEMDOS-`.PRG`
+scheitern weiterhin, weil dort die Protection erst nach Entpacken/Relokation
+im Text-Segment liegt — dec0de hat dafür eine komplette Programm-Pipeline
+(`prog_t`, Anker auf `patterns[4]`), UFT nicht.
+
+**PROT-1 bleibt offen** für: (a) die `.PRG`-Fälle (brauchen die Pipeline),
+(b) Series-1-Varianten ohne `st $43e.l` — Rick Dangerous ist so ein Fall und
+bleibt im Test als **ehrlicher Negativ-Assert** stehen, jetzt mit korrekter
+Begründung (Variante ohne Keydisk-Signatur, nicht „Pattern verschlüsselt").
+Verifiziert in `test_corpus_protection_copylock`: Xenon 2 (keydisk @918,
+serial @598) und Cosmic Pirate (@534/@510), Offsets vorab per Python gepinnt.
 
 ### PROT-2 — C64-Scheme-Erkennung ist headless, Pipeline-Test testet nur Mocks (2026-08-16, MF-377)
 
@@ -1187,7 +1209,7 @@ Zwei Befunde aus derselben Untersuchung, beide **Architecture**, kein Fix in MF-
    Detektor. Er ist als Verdrahtungstest gültig, darf aber nicht als
    Scheme-Verifikation gezählt werden.
 
-### PROT-3 — `uft_dec0de_detect()` ist fabriziert: 0 von 34 realen Samples korrekt (2026-08-16, MF-378)
+### PROT-3 — `uft_dec0de_detect()` ist fabriziert: 0 von 34 realen Samples korrekt (2026-08-16, MF-378) → ✓ RESOLVED (MF-379, entfernt)
 
 **Correctness / Forensik-Integrität.** Derselbe reale Korpus wie PROT-1, nur
 gegen den zweiten ST-Detektor gehalten: `src/protection/uft_atarist_dec0de.c`.
@@ -1222,11 +1244,18 @@ Ergebnis-Typ ist lokal in der `.c` definiert, also von außen gar nicht
 verwendbar — bisher konnte niemand ein falsches Label sehen. Genau derselbe
 Fabrikations-Mechanismus wie FMT-2/3/10/11/12, nur in der Protection-Schicht.
 
-**Nächster Schritt (eigene Aufgabe, nicht in MF-378):** `uft_dec0de_detect()`
-ersatzlos entfernen. Der Header `uft_atarist_dec0de.h` enthält daneben einen
-**echten** dec0de-Port (siehe unten) — die Fabrikation steckt ausschließlich in
-der `.c`. Löschung berührt `UnifiedFloppyTool.pro:3285`, verlangt also die
-6-stufige Lösch-Beweispipeline inkl. qmake-Vollbuild-Abnahme.
+**Erledigt (MF-379): `src/protection/uft_atarist_dec0de.c` gelöscht.**
+Lösch-Beweispipeline vollständig durchlaufen: keine der fünf dort definierten
+Funktionen war in **irgendeinem** Header deklariert (also aus keiner anderen
+Übersetzungseinheit erreichbar), 0 Referenzen im gesamten Baum, 0 CMake- und
+0 Skript-Referenzen, eine aktive `.pro`-Zeile (3285) entfernt, qmake-Vollbuild
+abgenommen. Mitgelöscht wurden zwei *korrekte* GEMDOS-Funktionen — sie sind
+Duplikate der bereits im Header vorhandenen `uft_gemdos_is_valid()` /
+`uft_gemdos_get_size()`. Einziger inhaltlicher Unterschied war die zusätzliche
+Akzeptanz von Magic `0x601B`; von den 25 realen `.PRG` im Korpus trägt das
+keine einzige, der Unterschied ist also durch nichts Belegtes gedeckt.
+Der Header `uft_atarist_dec0de.h` bleibt — dort steckt der **echte** Port
+(PROT-4), der im Korpus-Test läuft.
 
 ### PROT-4 — Header-Port des Series-2-Finders: OOB-Read gefixt + gegen reale Daten verifiziert (2026-08-16, MF-378) → ✓ RESOLVED
 

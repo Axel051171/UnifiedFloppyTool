@@ -89,10 +89,42 @@ TEST(warlock_series2_variant_b) {
     free(d);
 }
 
+/* MF-379: Series-1 detection now matches THROUGH the TVD encryption, so the
+ * keydisk instruction is found where a raw byte search saw nothing. Offsets
+ * pinned by independent python inspection before the C code was touched. */
+TEST(xenon2_series1_detected) {
+    size_t len = 0;
+    uint8_t *d = load_corpus("dec0de_XENON2.BIN", &len);
+    ASSERT(d != NULL && len == 1724);
+    uft_copylock_st_result_t r;
+    ASSERT(uft_copylock_st_analyze(d, len, &r) == 0);
+    ASSERT(r.detected);
+    ASSERT(r.series == UFT_COPYLOCK_SERIES_1_1988);
+    ASSERT(r.type == UFT_COPYLOCK_TYPE_INTERNAL);
+    ASSERT(r.keydisk_off == 918);          /* pinned: st $43e.l, decoded */
+    ASSERT(r.serial_off == 598);           /* pinned: move.l d0,$1c(a0)  */
+    free(d);
+}
+
+TEST(cosmic_pirate_series1_detected) {
+    size_t len = 0;
+    uint8_t *d = load_corpus("dec0de_COSMIC.BIN", &len);
+    ASSERT(d != NULL && len == 1070);
+    uft_copylock_st_result_t r;
+    ASSERT(uft_copylock_st_analyze(d, len, &r) == 0);
+    ASSERT(r.detected);
+    ASSERT(r.series == UFT_COPYLOCK_SERIES_1_1988);
+    ASSERT(r.keydisk_off == 534);
+    ASSERT(r.serial_off == 510);
+    free(d);
+}
+
 TEST(rick_dangerous_series1_undetectable) {
-    /* Pins CURRENT behavior, not desired behavior: Series-1 keydisk/serial
-     * patterns only exist after TVD decryption, so detection on the raw
-     * protected code returns "not CopyLock". Documented as PROT-1. */
+    /* Honest negative, still valid after the MF-379 fix: even matching
+     * through the TVD decryption finds no keydisk instruction here. Rick
+     * Dangerous uses a Series-1 variant that does not carry the `st $43e.l`
+     * signature (dec0de knows 5 variants a-e). Not every Series-1 loader is
+     * reachable by this one pattern — PROT-1 stays open for the rest. */
     size_t len = 0;
     uint8_t *d = load_corpus("dec0de_RICKD.BIN", &len);
     ASSERT(d != NULL && len == 4096);
@@ -105,10 +137,10 @@ TEST(rick_dangerous_series1_undetectable) {
 /* The header-only dec0de port (uft_atarist_dec0de.h) carries a SECOND,
  * independent implementation of the Series-2 trampoline search. Verify it
  * against the same pinned ground truth — two implementations agreeing on real
- * data is stronger evidence than either alone. (The .c file in that module,
- * uft_dec0de_detect(), is fabricated and gets 0/34 real samples right; see
- * docs/KNOWN_ISSUES.md PROT-3. This test deliberately exercises the header
- * primitive, not that function.) */
+ * data is stronger evidence than either alone. (That module's .c file held a
+ * fabricated detector, uft_dec0de_detect(), which got 0 of 34 real samples
+ * right; it was deleted in MF-379 — see docs/KNOWN_ISSUES.md PROT-3. Only the
+ * header primitives survived, and this is one of them.) */
 TEST(header_port_finds_same_trampolines) {
     size_t len = 0;
     uint32_t magic = 0;
@@ -141,6 +173,8 @@ int main(void) {
     printf("=== Real-corpus protection: Rob Northen CopyLock ST (MF-377) ===\n");
     RUN(rainbow_islands_series2_variant_a);
     RUN(warlock_series2_variant_b);
+    RUN(xenon2_series1_detected);
+    RUN(cosmic_pirate_series1_detected);
     RUN(rick_dangerous_series1_undetectable);
     RUN(header_port_finds_same_trampolines);
     printf("\nResults: %d passed, %d failed\n", _pass, _fail);
