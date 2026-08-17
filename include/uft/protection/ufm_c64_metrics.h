@@ -59,13 +59,20 @@ int ufm_c64_zone_for_track(int track);
  *   - `sector_count` (GCR block id 0x08 = header), `duplicate_ids`
  *   - `bad_gcr_count` (5-bit groups outside the 16-code GCR alphabet)
  *   - `has_half_track` / `is_half_track` / `track_x2`, `has_meaningful_data`
+ *   - `has_custom_sync`: the track carries sync marks but none of them
+ *     introduces a standard 1541 header block, and it is not a killer track.
+ *     This is the condition the reference tool (nibtools) calls a "track
+ *     w/non-standard headers"; killer tracks (sync end to end, nibtools
+ *     BM_FF_TRACK) are deliberately excluded, since nibtools keeps the two
+ *     apart as well. A normally formatted track always yields 17..21 headers
+ *     and therefore never sets this.
  *
- * NOT set by this function, on purpose: `has_custom_sync`, `density_deviation`,
- * `jitter_rms`, `weak_region_*`, `revolutions`, `bitlen_*`. Those need either
- * multi-revolution flux (not available from a single G64 track image) or a
- * definition this project cannot yet ground in an authoritative source — and
- * inventing one is exactly the failure mode documented in KNOWN_ISSUES PROT-3.
- * They stay zero/false so a caller cannot mistake a guess for a measurement.
+ * NOT set by this function, on purpose: `density_deviation`, `jitter_rms`,
+ * `weak_region_*`, `revolutions`, `bitlen_*`. Those need multi-revolution flux
+ * (not available from a single G64 track image) or a definition this project
+ * cannot ground in an authoritative source — and inventing one is exactly the
+ * failure mode documented in KNOWN_ISSUES PROT-3. They stay zero/false so a
+ * caller cannot mistake a guess for a measurement.
  *
  * @param gcr        Raw GCR bitstream, MSB first
  * @param gcr_len    Length of @p gcr in bytes

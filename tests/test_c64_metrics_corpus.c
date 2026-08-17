@@ -27,6 +27,7 @@
 
 #include "uft/protection/ufm_c64_metrics.h"
 #include "uft/protection/ufm_c64_scheme_detect.h"
+#include "uft/protection/ufm_cbm_protection_methods.h"
 #include "uft/uft_format_plugin.h"
 #include "uft/uft_types.h"
 #include "uft/uft_track.h"
@@ -229,6 +230,104 @@ TEST(duplicate_header_ids_are_counted) {
     uft_format_plugin_g64.close(&disk);
 }
 
+/* has_custom_sync (MF-382). Definition grounded in nibtools
+ * (rittwage/nibtools @0abdc11): sync present, but no standard 1541 header
+ * block behind any of them — nibtools' "track w/non-standard headers". Killer
+ * tracks (BM_FF_TRACK) are a separate category there and here. */
+TEST(standard_tracks_never_report_custom_sync) {
+    uft_disk_t disk; memset(&disk, 0, sizeof(disk)); disk.read_only = true;
+    ASSERT(uft_format_plugin_g64.open(&disk, img_path(), true) == UFT_OK);
+
+    for (int cyl = 0; cyl < 35; cyl++) {
+        uft_track_t t; memset(&t, 0, sizeof(t));
+        ASSERT(uft_format_plugin_g64.read_track(&disk, cyl, 0, &t) == UFT_OK);
+        ufm_c64_track_metrics_t m;
+        ASSERT(ufm_c64_metrics_from_gcr(t.raw_data, t.raw_size, cyl * 2,
+                                        UFM_C64_SPEED_ZONE_AUTO, &m));
+        ASSERT(!m.has_custom_sync);        /* 21..17 headers => standard */
+        free(t.raw_data);
+        for (size_t i = 0; i < t.sector_count; i++) free(t.sectors[i].data);
+        free(t.sectors);
+    }
+    uft_format_plugin_g64.close(&disk);
+}
+
+TEST(headerless_real_gcr_reports_custom_sync) {
+    /* Real GCR, not synthetic: bytes [26,326) of corpus track 1 hold one sync
+     * plus the following DATA block (id 0x07) and no header block (id 0x08).
+     * Pinned by python before the C path was written: sync_count 1,
+     * max_sync_run 24 bits, 0 headers, 0 illegal codes. */
+    uft_disk_t disk; memset(&disk, 0, sizeof(disk)); disk.read_only = true;
+    ASSERT(uft_format_plugin_g64.open(&disk, img_path(), true) == UFT_OK);
+    uft_track_t t; memset(&t, 0, sizeof(t));
+    ASSERT(uft_format_plugin_g64.read_track(&disk, 0, 0, &t) == UFT_OK);
+    ASSERT(t.raw_data != NULL && t.raw_size > 326);
+
+    ufm_c64_track_metrics_t m;
+    ASSERT(ufm_c64_metrics_from_gcr(t.raw_data + 26, 300, 0, 3, &m));
+    ASSERT(m.sync_count == 1);
+    ASSERT(m.max_sync_run_bits == 24);
+    ASSERT(m.sector_count == 0);           /* no standard header */
+    ASSERT(m.bad_gcr_count == 0);
+    ASSERT(m.has_custom_sync);             /* <- the condition under test */
+
+    free(t.raw_data);
+    for (size_t i = 0; i < t.sector_count; i++) free(t.sectors[i].data);
+    free(t.sectors);
+    uft_format_plugin_g64.close(&disk);
+}
+
+TEST(killer_track_is_not_reported_as_custom_sync) {
+    /* All-$FF track = nibtools BM_FF_TRACK. It has sync and no headers, but is
+     * its own category; folding it into has_custom_sync would make every
+     * killer track look like V-MAX! to the classifier. */
+    uint8_t buf[512];
+    memset(buf, 0xFF, sizeof(buf));
+    ufm_c64_track_metrics_t m;
+    ASSERT(ufm_c64_metrics_from_gcr(buf, sizeof(buf), 0, 3, &m));
+    ASSERT(m.sync_count == 1);
+    ASSERT(m.max_sync_run_bits == sizeof(buf) * 8);
+    ASSERT(m.sector_count == 0);
+    ASSERT(!m.has_custom_sync);
+}
+
+/* Pins a DEFECT, not desired behaviour (docs/KNOWN_ISSUES.md PROT-5).
+ *
+ * Activating has_custom_sync also activates ufm_cbm_check_vmax(), and under
+ * the grounded definition that check is degenerate: has_custom_sync implies
+ * sector_count == 0, so its "sector_count is non-standard" half is always
+ * true and it reduces to ufm_cbm_check_custom_sync(). It therefore attaches
+ * the specific name "V-MAX!" at 85% confidence to any header-less track,
+ * without a single V-MAX-specific piece of evidence.
+ *
+ * The claim is left in place rather than silently rewritten — inventing a
+ * tighter V-MAX rule without a real V-MAX disk would repeat PROT-3. This test
+ * makes the defect visible and turns any future fix into a deliberate act. */
+TEST(vmax_check_is_degenerate_documented_defect) {
+    ufm_c64_track_metrics_t m;
+    memset(&m, 0, sizeof(m));
+    m.track = 20;
+    m.has_custom_sync = true;
+    m.sector_count = 0;
+    m.track_length_ratio = 1.0f;
+
+    ASSERT(ufm_cbm_check_custom_sync(&m));
+    /* identical outcome — no discriminating power whatsoever */
+    ASSERT(ufm_cbm_check_vmax(&m) == ufm_cbm_check_custom_sync(&m));
+
+    ufm_c64_prot_hit_t hits[16];
+    ufm_c64_prot_report_t report;
+    ASSERT(ufm_c64_prot_analyze(&m, 1, hits, 16, &report));
+
+    bool saw_custom = false, saw_vmax = false;
+    for (uint32_t i = 0; i < report.hits_written; i++) {
+        if (hits[i].type == UFM_PROT_CUSTOM_SYNC) saw_custom = true;
+        if (hits[i].type == UFM_PROT_VMAX) saw_vmax = true;
+    }
+    ASSERT(saw_custom);
+    ASSERT(saw_vmax);   /* <- unsupported claim, see PROT-5 */
+}
+
 int main(void) {
     printf("=== C64 GCR metrics vs real VICE G64 (MF-381, PROT-2) ===\n");
     RUN(zone_tables_match_1541_geometry);
@@ -238,6 +337,10 @@ int main(void) {
     RUN(rejects_invalid_arguments);
     RUN(illegal_gcr_is_counted);
     RUN(duplicate_header_ids_are_counted);
+    RUN(standard_tracks_never_report_custom_sync);
+    RUN(headerless_real_gcr_reports_custom_sync);
+    RUN(killer_track_is_not_reported_as_custom_sync);
+    RUN(vmax_check_is_degenerate_documented_defect);
     printf("\nResults: %d passed, %d failed\n", _pass, _fail);
     return _fail == 0 ? 0 : 1;
 }

@@ -1248,16 +1248,61 @@ Zwei Befunde aus derselben Untersuchung, beide **Architecture**:
    Sie bleiben null/false, damit ein Aufrufer keine Schätzung für eine
    Messung hält — dieselbe Regel, deren Verletzung PROT-3 war.
 
-   **Restlücken (offen):**
-   - **V-MAX! und RapidLok bleiben unerreichbar**, weil beide
-     `has_custom_sync` verlangen. Erst eine belegbare Definition von
-     „custom sync" (autoritative Quelle, z. B. nibtools/C64-Preservation),
-     dann implementieren — nicht umgekehrt.
+   **`has_custom_sync` nachgeliefert (MF-382), belegt statt geschätzt.**
+   Quelle: nibtools (`rittwage/nibtools` @`0abdc11`), das kanonische
+   C64-Preservation-Werkzeug. Dort trennt `check_sync_flags()` zwei Zustände
+   (`BM_NO_SYNC` = gar keine Sync-Marke, `BM_FF_TRACK` = Killer-Track, fast
+   die ganze Spur Sync), und `find_track_cycle_headers()` fällt auf
+   `find_track_cycle_syncs()` zurück für den dritten Fall: „track
+   w/non-standard headers". Genau dieser dritte Fall ist die Definition:
+
+   > `has_custom_sync` = Sync-Marken vorhanden, aber **keine** davon leitet
+   > einen Standard-1541-Header ein — und die Spur ist **kein** Killer-Track.
+
+   Killer-Tracks bleiben bewusst ausgeschlossen, weil nibtools sie ebenfalls
+   getrennt führt und weil sonst jeder Killer-Track stromabwärts wie V-MAX!
+   aussähe. Die 3-Byte-Toleranz für Killer stammt aus nibtools
+   (`syncs >= length - 3`). Verifiziert: auf allen 35 Spuren des realen G64
+   **nicht** gesetzt; gesetzt dagegen auf einem realen headerlosen
+   GCR-Ausschnitt (Bytes [26,326) von Spur 1: ein Sync, ein Datenblock 0x07,
+   kein Header) — beide Fälle vorab per Python gepinnt.
+
+   **Restlücke (offen):**
    - **Positivkontrolle fehlt.** Verifiziert ist bisher nur, dass die
      Metriken auf einer echten *ungeschützten* Disk stimmen und keine
      Fehlalarme erzeugen. Ob die Schemes auf einer echten *geschützten*
      Disk anschlagen, ist ungeprüft; dafür braucht es ein reales
      geschütztes G64 mit dokumentierter Herkunft (MF-368-Regel).
+   - RapidLok hängt an `has_half_track` (vorhanden) **und** Spur ≥ 36; ein
+     35-Spur-Korpus kann das nicht auslösen. Ebenfalls Sache der
+     Positivkontrolle.
+
+### PROT-5 — `ufm_cbm_check_vmax()` ist unter der belegten Sync-Definition degeneriert (2026-08-18, MF-382)
+
+**Correctness / Forensik-Integrität.** Aufgefallen beim Aktivieren von
+`has_custom_sync`: die V-MAX-Prüfung lautet
+
+```c
+return m->has_custom_sync && m->sector_count != 21 && ... != 17;
+```
+
+Da `has_custom_sync` per Definition `sector_count == 0` impliziert, ist die
+zweite Hälfte **immer** wahr. Die Funktion ist damit logisch identisch mit
+`ufm_cbm_check_custom_sync()` — sie unterscheidet nichts, hängt aber den
+konkreten Namen **„V-MAX!" mit 85 % Konfidenz** an jede headerlose Spur, ohne
+ein einziges V-MAX-spezifisches Indiz. Das ist eine Behauptung ohne Beleg,
+also genau das, was `docs/DESIGN_PRINCIPLES.md` untersagt.
+
+**Bewusst nicht stillschweigend „repariert":** eine engere V-MAX-Regel zu
+erfinden, ohne je eine echte V-MAX-Disk gesehen zu haben, wäre die
+Wiederholung von PROT-3. Stattdessen ist der Ist-Zustand in
+`test_c64_metrics_corpus` als Defekt **festgenagelt**
+(`vmax_check_is_degenerate_documented_defect`), damit er sichtbar bleibt und
+jede spätere Änderung eine bewusste Entscheidung ist.
+
+**Nächster Schritt:** reales V-MAX-geschütztes G64 mit dokumentierter Herkunft
+beschaffen, daraus eine V-MAX-spezifische Signatur ableiten, dann die Prüfung
+darauf stützen. Bis dahin ist das Label „V-MAX!" als unbelegt zu behandeln.
 
 2. **`test_protection_pipeline` prüft ausschließlich `mock_detect_weak_bits()`.**
    Unverändert gültig: Der Test beweist die Pipeline-Verdrahtung, nicht einen

@@ -35,6 +35,10 @@ static const uint32_t UFM_GCR_LEGAL =
 static const uint32_t UFM_ZONE_BYTES[4] = { 6250, 6667, 7143, 7692 };
 
 #define UFM_SYNC_MIN_BITS   10   /* 1541 hardware sync: >= 10 one-bits */
+/* nibtools tolerates a 3-byte glitch when calling a track "all sync"
+ * (`syncs >= length - 3`), because mastering hardware produces one; 3 bytes
+ * = 24 bits is that same tolerance expressed in this function's bit domain. */
+#define UFM_KILLER_SLACK_BITS 24
 #define UFM_BLOCK_ID_HEADER 0x08
 #define UFM_BLOCK_ID_DATA   0x07
 #define UFM_MAX_HEADER_IDS  64   /* generous: standard max is 21 per track */
@@ -173,6 +177,23 @@ bool ufm_c64_metrics_from_gcr(const uint8_t *gcr, size_t gcr_len,
     out->illegal_gcr_events = out->bad_gcr_count;
     out->has_meaningful_data = (out->sync_count > 0);
     out->has_half_track = out->is_half_track && out->has_meaningful_data;
+
+    /* Killer track, per nibtools check_sync_flags(): a track that is sync
+     * almost end to end (there, `syncs >= length - 3` over $FF bytes). Kept
+     * separate from has_custom_sync because nibtools also keeps BM_FF_TRACK
+     * and "non-standard headers" apart — and because folding them together
+     * would make every killer track look like V-MAX! downstream. */
+    const bool killer = (max_run + UFM_KILLER_SLACK_BITS >= (uint32_t)nbits);
+
+    /* Custom sync: the track carries sync marks, but none of them introduces a
+     * standard 1541 header block. That is the condition nibtools describes as
+     * a "track w/non-standard headers" (find_track_cycle_headers falls through
+     * to find_track_cycle_syncs for exactly this case). A normally formatted
+     * track always yields 17..21 headers, so this cannot fire on one — the
+     * corpus test proves that across all 35 tracks. */
+    out->has_custom_sync = (out->sync_count > 0) &&
+                           (out->sector_count == 0) &&
+                           !killer;
 
     return true;
 }
