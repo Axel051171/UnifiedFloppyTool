@@ -1267,15 +1267,51 @@ Zwei Befunde aus derselben Untersuchung, beide **Architecture**:
    GCR-Ausschnitt (Bytes [26,326) von Spur 1: ein Sync, ein Datenblock 0x07,
    kein Header) — beide Fälle vorab per Python gepinnt.
 
-   **Restlücke (offen):**
-   - **Positivkontrolle fehlt.** Verifiziert ist bisher nur, dass die
-     Metriken auf einer echten *ungeschützten* Disk stimmen und keine
-     Fehlalarme erzeugen. Ob die Schemes auf einer echten *geschützten*
-     Disk anschlagen, ist ungeprüft; dafür braucht es ein reales
-     geschütztes G64 mit dokumentierter Herkunft (MF-368-Regel).
-   - RapidLok hängt an `has_half_track` (vorhanden) **und** Spur ≥ 36; ein
-     35-Spur-Korpus kann das nicht auslösen. Ebenfalls Sache der
-     Positivkontrolle.
+   **Positivkontrolle nachgeliefert (MF-383) → Punkt 1 vollständig.**
+   Ein Clean-Disk-Test allein beweist nichts: ein Detektor, der *immer*
+   „sauber" meldet, besteht ihn ebenfalls. Deshalb zwei reale Dumps aus der
+   *C64 Preservation Project 10th Anniversary Collection* (von Pete Rittwage
+   ausdrücklich als „no strings attached"-Download freigegeben; Spielecode
+   urheberrechtlich geschützt → lokal-only, sha256 + exakter Pfad im Manifest):
+
+   | Disk | Rolle | Befund |
+   |---|---|---|
+   | Bounty Bob Strikes Back [Big Five, 1985] | **positiv** | 71 belegte Slots, davon **35 echte Halbspuren**; Ganzspuren 1–10, 13–16 und 37 tragen Sync **ohne** Standard-Header; Spur 1 zusätzlich kurz (6250 statt 7692 Byte, Ratio 0,813) |
+   | Alien Syndrome [Sega, 1987] | **negativ** | echte Produktionsdisk, 40 Spuren, durchgehend Standard-Header, **0 Auffälligkeiten** |
+
+   Ergebnis: `has_custom_sync` feuert auf der geschützten Disk **genau** auf
+   den 15 vorab gepinnten Ganzspuren und auf keiner weiteren, auf der echten
+   kommerziellen Disk auf **keiner**. Der Klassifikator liefert dort 15
+   `CUSTOM_SYNC`-Hits, hier 0 Hits / `UFM_PROT_NONE`. Damit ist die
+   Diskriminierung an echten Daten belegt, nicht nur die Abwesenheit von
+   Fehlalarmen. Nebeneffekt: `g64` steigt von T1b auf **T1** (erstes Format
+   mit realem Original **und** Cross-Tool-Beleg).
+
+   Was die Positivkontrolle **nicht** zeigt: dass die *Scheme-Namen* stimmen
+   (siehe PROT-5) — und RapidLok bleibt unauslösbar, aber aus einem anderen
+   Grund als gedacht (siehe PROT-6).
+
+### PROT-6 — G64-Plugin liefert keine Halbspuren; Halbspur-Schutz ist unsichtbar (2026-08-18, MF-383)
+
+**Correctness / Forensik-Integrität.** `g64_read_track()` ruft
+`track_to_g64_index(g64_track, false)` — der `half_track`-Parameter ist fest
+`false` verdrahtet. Das Plugin adressiert also ausschließlich Ganzspuren,
+obwohl das G64-Format 84 Halbspur-Slots führt und die Datei sie enthält.
+
+Am realen Beispiel messbar: Bounty Bob hat **35 echte Halbspuren** im Dump.
+Über die Plugin-API sind sie sämtlich unerreichbar — die Daten liegen in der
+Datei, die Pipeline sieht sie nie. Das verstößt gegen „Kein Bit verloren":
+das Plugin verschweigt vorhandene Spuren, ohne das zu melden.
+
+Folgen: (a) die gesamte Klasse der Halbspur-Kopierschutzverfahren ist über den
+regulären Weg nicht detektierbar; (b) `ufm_cbm_check_rapidlok()`
+(`has_half_track && track >= 36`) kann **nie** feuern, obwohl der Extraktor
+`has_half_track` korrekt setzt, sobald man ihm eine Halbspur gibt.
+
+*Nächster Schritt:* `read_track` um Halbspur-Zugriff erweitern — entweder über
+eine explizite API (`read_half_track`) oder indem `cylinder` als Halbspur-Index
+interpretiert wird. Das ist eine Plugin-/API-Frage mit Auswirkung auf alle
+Aufrufer und deshalb bewusst nicht in MF-383 mitgemacht.
 
 ### PROT-5 — `ufm_cbm_check_vmax()` ist unter der belegten Sync-Definition degeneriert (2026-08-18, MF-382)
 
@@ -1299,6 +1335,16 @@ Wiederholung von PROT-3. Stattdessen ist der Ist-Zustand in
 `test_c64_metrics_corpus` als Defekt **festgenagelt**
 (`vmax_check_is_degenerate_documented_defect`), damit er sichtbar bleibt und
 jede spätere Änderung eine bewusste Entscheidung ist.
+
+**An realen Daten bestätigt (MF-383).** Auf der realen Bounty-Bob-Disk (15
+Ganzspuren mit Custom-Sync) nimmt der Klassifikator den Zweig
+`custom_syncs > 5` und meldet als Hauptschema **„V-MAX!"** — hergeleitet
+ausschließlich aus generischer Struktur, ohne ein einziges V-MAX-spezifisches
+Indiz irgendwo im Codepfad. Der Ist-Zustand ist in
+`test_c64_protection_real_corpus` festgenagelt
+(`vmax_label_on_this_disk_is_unsupported_PROT5`); der Assert dokumentiert, was
+das Werkzeug *behauptet*, und ist ausdrücklich **keine** Aussage darüber,
+welches Verfahren diese Disk tatsächlich verwendet.
 
 **Nächster Schritt:** reales V-MAX-geschütztes G64 mit dokumentierter Herkunft
 beschaffen, daraus eine V-MAX-spezifische Signatur ableiten, dann die Prüfung

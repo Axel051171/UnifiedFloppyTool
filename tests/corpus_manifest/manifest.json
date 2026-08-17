@@ -92,6 +92,24 @@
       "test": "test_c64_metrics_corpus"
     },
     {
+      "file": "tests/corpus/c64pp_bountybob.g64",
+      "sha256": "949f481745dbcd8690a82a4128f04b34521f362e907e9beb9471301362cecc00",
+      "format": "g64",
+      "origin": "real",
+      "tool": "historical (Bounty Bob Strikes Back, Big Five Software 1985, v1.2 original disk)",
+      "source": "archive.org item C64_Preservation_Project_10th_Anniversary_Collection, file C64_Preservation_Project_10th_Anniversary_Collection_G64.zip, inner path c64pp-g64-zip/b/bounty_bob_strikes_back[big_five_1985](v1_2).zip; collection released by Pete Rittwage for \"no strings attached\" download, game code copyrighted -> LOCAL-ONLY. PROTECTED: 71 populated slots, 35 true half-tracks, whole tracks 1-10/13-16/37 carry sync without standard 1541 headers; track 1 is short (6250 vs 7692 nominal)",
+      "test": "test_c64_protection_real_corpus"
+    },
+    {
+      "file": "tests/corpus/c64pp_aliensyndrome.g64",
+      "sha256": "4d00d04b34238f81afcc3aa7c4aafc555c814bc632f95b41713d3b06f7420536",
+      "format": "g64",
+      "origin": "real",
+      "tool": "historical (Alien Syndrome, Sega 1987, PAL original disk)",
+      "source": "same collection, inner path c64pp-g64-zip/a/alien_syndrome[sega_1987](pal)(!).zip; LOCAL-ONLY. NEGATIVE control: a genuine production disk, 40 tracks, every one carrying standard 1541 headers and no anomaly",
+      "test": "test_c64_protection_real_corpus"
+    },
+    {
       "file": "tests/corpus/dec0de_RAINBISL.BIN",
       "sha256": "1b6298e97980528f7677e2d0e716ddbd5b0827c48ac5d4949dca7e01a440e936",
       "format": "protection:copylock_st",

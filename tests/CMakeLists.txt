@@ -423,6 +423,14 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/formats/g64/uft_g64.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+    elseif(${test_name} STREQUAL "test_c64_protection_real_corpus")
+        # Positive control: real protected C64 disks, local-only images (MF-383)
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/protection/ufm_c64_metrics.c
+            ${CMAKE_SOURCE_DIR}/src/protection/ufm_c64_scheme_detect.c
+            ${CMAKE_SOURCE_DIR}/src/formats/g64/uft_g64.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_RESTRICTED_DIR="${CMAKE_SOURCE_DIR}/tests/corpus")
     elseif(${test_name} STREQUAL "test_corpus_protection_copylock")
         # Real-corpus protection: CopyLock ST vs dec0de game samples, local-only (MF-377)
         target_sources(${test_name} PRIVATE
@@ -1105,7 +1113,8 @@ foreach(test_source ${TEST_SOURCES})
     # means "corpus image absent, skipped" — not a failure (MF-367).
     if(${test_name} STREQUAL "test_corpus_fdi" OR
        ${test_name} STREQUAL "test_corpus_scp" OR
-       ${test_name} STREQUAL "test_corpus_protection_copylock")
+       ${test_name} STREQUAL "test_corpus_protection_copylock" OR
+       ${test_name} STREQUAL "test_c64_protection_real_corpus")
         set_tests_properties(${test_name} PROPERTIES SKIP_RETURN_CODE 77)
     endif()
 
