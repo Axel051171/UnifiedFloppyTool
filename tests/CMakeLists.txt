@@ -415,6 +415,14 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/fdi/uft_fdi_plugin.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_RESTRICTED_DIR="${CMAKE_SOURCE_DIR}/tests/corpus")
+    elseif(${test_name} STREQUAL "test_c64_metrics_corpus")
+        # C64 GCR metrics vs a real VICE-produced G64 (MF-381, closes PROT-2)
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/protection/ufm_c64_metrics.c
+            ${CMAKE_SOURCE_DIR}/src/protection/ufm_c64_scheme_detect.c
+            ${CMAKE_SOURCE_DIR}/src/formats/g64/uft_g64.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_corpus_protection_copylock")
         # Real-corpus protection: CopyLock ST vs dec0de game samples, local-only (MF-377)
         target_sources(${test_name} PRIVATE

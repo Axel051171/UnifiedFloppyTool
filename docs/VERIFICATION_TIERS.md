@@ -9,9 +9,9 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 | Stufe | Formate |
 |---|---|
 | T1 | 1 |
-| T1b | 7 |
+| T1b | 8 |
 | T2 | 11 |
-| T3 | 69 |
+| T3 | 68 |
 | **gesamt** | **88** |
 
 ## Pro Format
@@ -24,6 +24,7 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 | `d64` | **T1b** | `test_corpus_d64`, `test_d64_42track`, `test_d64_errormap`, `test_d64_geometry_zones`, `test_d64_write_roundtrip` | VICE D64 sizes incl. error-block trailer + 40/42-track variants | MF-333, MF-350 | 1 |
 | `d71` | **T1b** | `test_corpus_d71`, `test_d71_write_roundtrip` | — | — | 1 |
 | `d81` | **T1b** | `test_corpus_d81`, `test_d81_write_roundtrip` | — | — | 1 |
+| `g64` | **T1b** | `test_c64_metrics_corpus` | — | — | 1 |
 | `hfe` | **T1b** | `test_corpus_hfe`, `test_hfe_v3_weak` | HxC hfev3_loader.c opcode semantics (v3 decode + RAND weak bits); HxC HFE docs (v1) | MF-354, MF-362 | 1 |
 | `scp` | **T1b** | `test_corpus_scp`, `test_protection_probe`, `test_scp_footer_roundtrip`, `test_scp_weakbit_multirev`, `test_scp_writer_roundtrip` | cbmstuff SCP image spec (48-byte FPCS footer, bitcell track length) | MF-318, MF-351 | 1 |
 | `adf_ext` | **T2** | `test_adf_ext_plugin` | WinUAE disk.cpp read_header_ext2 (UAE-1ADF) | MF-352 | — |
@@ -61,7 +62,6 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 | `edsk` | **T3** | — | — | — | — |
 | `fdi_pc98` | **T3** | — | — | — | — |
 | `fds` | **T3** | — | — | — | — |
-| `g64` | **T3** | — | — | — | — |
 | `g71` | **T3** | `test_g71_read` | — | — | — |
 | `hardsector` | **T3** | — | — | — | — |
 | `imd` | **T3** | `test_imd_error_marks`, `test_imd_write_roundtrip` | — | — | — |

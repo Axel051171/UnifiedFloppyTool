@@ -83,6 +83,15 @@
       "test": "test_corpus_scp"
     },
     {
+      "file": "tests/corpus_free/vice_c1541_35trk.g64",
+      "sha256": "eb82960f9677244cb630d98484fe8611f927923e090934c7b98043570b21efdd",
+      "format": "g64",
+      "origin": "cross-tool",
+      "tool": "VICE 3.10 c1541 (release 3.10.0, GTK3VICE-3.10-win64)",
+      "source": "c1541 -format \"uftg64,42\" g64 <img> -write marker.txt \"marker\"; marker.txt is original UFT text (rights-free). Real 1541 GCR bitstreams: 35 tracks, speed zones 3/2/1/0, 21/19/18/17 sectors, no half-tracks",
+      "test": "test_c64_metrics_corpus"
+    },
+    {
       "file": "tests/corpus/dec0de_RAINBISL.BIN",
       "sha256": "1b6298e97980528f7677e2d0e716ddbd5b0827c48ac5d4949dca7e01a440e936",
       "format": "protection:copylock_st",

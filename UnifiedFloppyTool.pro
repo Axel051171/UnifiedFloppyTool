@@ -1965,6 +1965,7 @@ SOURCES += \
     src/analysis/denoise/uft_denoise_bridge.c \
     src/analysis/denoise/phi_otdr_denoise_1d.c \
     src/formats/amiga/uft_amiga_protection.c \
+    src/protection/ufm_c64_metrics.c \
     src/protection/ufm_c64_scheme_detect.c \
     src/protection/uft_protection_unified.c \
     src/protection/uft_c64_missing_schemes.c \
@@ -3315,6 +3316,7 @@ SOURCES += \
 
 # Protection Headers (31 files)
 HEADERS += \
+    include/uft/protection/ufm_c64_metrics.h \
     include/uft/protection/ufm_c64_protection_taxonomy.h \
     include/uft/protection/ufm_c64_scheme_detect.h \
     include/uft/protection/ufm_cbm_protection_methods.h \

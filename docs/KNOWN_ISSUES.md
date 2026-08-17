@@ -1213,26 +1213,56 @@ Variante a mit Prolog @420 erkannt — der Assert wurde umgedreht, wie im Test
 angekündigt. Der Fall trägt tatsächlich **keine** Keydisk-Instruktion; das ist
 kein Erkennungsproblem, sondern eine Eigenschaft dieses Loaders.
 
-### PROT-2 — C64-Scheme-Erkennung ist headless, Pipeline-Test testet nur Mocks (2026-08-16, MF-377)
+### PROT-2 — C64-Scheme-Erkennung ist headless, Pipeline-Test testet nur Mocks (2026-08-16, MF-377) → ✓ Datenlieferant vorhanden (MF-381), Restlücken benannt
 
-Zwei Befunde aus derselben Untersuchung, beide **Architecture**, kein Fix in MF-377:
+Zwei Befunde aus derselben Untersuchung, beide **Architecture**:
 
-1. **`ufm_c64_prot_analyze()` hat keinen Aufrufer und keinen Datenlieferanten.**
-   Die Funktion erwartet pro Spur ein vollständiges `ufm_c64_track_metrics_t`
-   (bitcell_count, sync_count, bad_gcr_count, duplicate_ids, track_length_ratio,
-   weak_region_bits, illegal_gcr_events, max_sync_run_bits). Im gesamten Baum
-   existiert **keine** Funktion, die diese Metriken aus Flux/GCR befüllt; der
-   einzige historische Aufrufer war das mit MF-369 gelöschte
-   `ProtectionAnalysisWidget`, das `m_trackMetrics` nur **anzeigte**. Die
-   C64-Schemes (V-MAX!, RapidLok, Vorpal, …) sind damit nicht erreichbar —
-   unabhängig davon, wie gut die Klassifikation selbst ist.
-   *Nächster Schritt:* Metrik-Extraktor `flux/GCR → ufm_c64_track_metrics_t`
-   schreiben (eigene Aufgabe, >150 Zeilen, deshalb hier nicht mitgemacht).
+1. **`ufm_c64_prot_analyze()` hatte keinen Datenlieferanten → gelöst (MF-381).**
+   Die Funktion erwartet pro Spur ein `ufm_c64_track_metrics_t`; im gesamten
+   Baum existierte **keine** Funktion, die diese Metriken erzeugt (der einzige
+   historische Aufrufer war das mit MF-369 gelöschte
+   `ProtectionAnalysisWidget`, das `m_trackMetrics` nur **anzeigte**). Damit
+   waren alle C64-Schemes unerreichbar, unabhängig von der Klassifikation.
+
+   Neu: `ufm_c64_metrics_from_gcr()`
+   (`src/protection/ufm_c64_metrics.c`) leitet die Metriken direkt aus einem
+   rohen GCR-Bitstrom ab, wie ihn das G64-Plugin in `uft_track_t::raw_data`
+   liefert. Damit läuft die Kette erstmals durchgehend:
+   **G64-Plugin → GCR → Metriken → `ufm_c64_prot_analyze()`.**
+
+   Verifiziert gegen ein **reales** VICE-3.10-c1541-G64
+   (`tests/corpus_free/vice_c1541_35trk.g64`, rechtefrei, getrackt;
+   nebenbei hebt das `g64` auf **T1b**). Ground Truth vorab per Python
+   gepinnt, dann in C bestätigt: über alle 35 Spuren 21/19/18/17 Sektoren,
+   `sync_count` = 2× Sektorzahl, längster Sync-Run 41 Bit, 0 illegale
+   GCR-Codes, 0 Duplikat-IDs, Längenverhältnis 1,000. Die Zonen-Nennwerte
+   (7692/7143/6667/6250 Byte) sind an dem belegt, was VICE tatsächlich
+   schreibt, nicht angenommen. Negativkontrolle: auf der unprotected Disk
+   meldet `ufm_c64_prot_analyze()` 0 Hits / `UFM_PROT_NONE`.
+
+   **Bewusst NICHT gesetzt** (statt geraten): `has_custom_sync`,
+   `density_deviation`, `jitter_rms`, `weak_region_*`, `revolutions`,
+   `bitlen_*`. Die brauchen entweder Multi-Revolution-Flux (aus einem
+   einzelnen G64-Track-Image nicht ableitbar) oder eine Definition, die
+   dieses Projekt noch nicht gegen eine autoritative Quelle belegen kann.
+   Sie bleiben null/false, damit ein Aufrufer keine Schätzung für eine
+   Messung hält — dieselbe Regel, deren Verletzung PROT-3 war.
+
+   **Restlücken (offen):**
+   - **V-MAX! und RapidLok bleiben unerreichbar**, weil beide
+     `has_custom_sync` verlangen. Erst eine belegbare Definition von
+     „custom sync" (autoritative Quelle, z. B. nibtools/C64-Preservation),
+     dann implementieren — nicht umgekehrt.
+   - **Positivkontrolle fehlt.** Verifiziert ist bisher nur, dass die
+     Metriken auf einer echten *ungeschützten* Disk stimmen und keine
+     Fehlalarme erzeugen. Ob die Schemes auf einer echten *geschützten*
+     Disk anschlagen, ist ungeprüft; dafür braucht es ein reales
+     geschütztes G64 mit dokumentierter Herkunft (MF-368-Regel).
 
 2. **`test_protection_pipeline` prüft ausschließlich `mock_detect_weak_bits()`.**
-   Der Test beweist die Pipeline-Verdrahtung, nicht einen einzigen echten
-   Detektor. Er ist als Verdrahtungstest gültig, darf aber nicht als
-   Scheme-Verifikation gezählt werden.
+   Unverändert gültig: Der Test beweist die Pipeline-Verdrahtung, nicht einen
+   einzigen echten Detektor. Er darf nicht als Scheme-Verifikation gezählt
+   werden. Die echte Verdrahtung deckt jetzt `test_c64_metrics_corpus` ab.
 
 ### PROT-3 — `uft_dec0de_detect()` ist fabriziert: 0 von 34 realen Samples korrekt (2026-08-16, MF-378) → ✓ RESOLVED (MF-379, entfernt)
 
