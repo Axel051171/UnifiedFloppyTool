@@ -108,6 +108,93 @@ static inline uint32_t uft_copylock88_decode_instr(const uint8_t *buf) {
  * pure noise that gated the one real test. Do not reintroduce byte patterns
  * without checking them against tests/corpus first. */
 
+/*---------------------------------------------------------------------------
+ * Series-1 protection prologs (CLEARTEXT)
+ *
+ * The discriminating Series-1 signature is not any single instruction inside
+ * the encrypted body but the *unencrypted* prolog that installs the TVD
+ * (Trace Vector Decoding) exception handler. That handler IS the decryption
+ * routine — `not.l d0 / swap d0 / eor.l d0,(a0)` is the ~SWAP32-XOR scheme in
+ * 68000 code — so every Series-1 loader must carry it in the clear.
+ *
+ * Byte sequences taken from the reference implementation (dec0de,
+ * PATTERN_TVD1_ROBN88 / PATTERN_TVD2_ROBN88, commit 54d7efd9). The two
+ * wildcard bytes are the PC-relative `lea` displacement, which differs per
+ * title. Measured on the MF-380 corpus: TVD1 or TVD2 matches 16 of 16 real
+ * Series-1 loaders — .PRG and .BIN alike — with 0 false positives across 13
+ * Series-2 and 15 other-protection samples.
+ *---------------------------------------------------------------------------*/
+
+/** TVD handler variant 1 (dec0de variants a, b, c, e) — 44 bytes */
+static const uint8_t uft_copylock88_tvd1_pattern[] = {
+    0x02, 0x7C, 0xF8, 0xFF,             /* andi.w #$f8ff,sr        */
+    0x48, 0xE7, 0x80, 0xC0,             /* movem.l d0/a0-a1,-(a7)  */
+    0x43, 0xFA, 0x00, 0x00,             /* lea pc+2+d16,a1  (d16 = wildcard) */
+    0x20, 0x51,                         /* movea.l (a1),a0         */
+    0x20, 0xA9, 0x00, 0x04,             /* move.l 4(a1),(a0)       */
+    0x20, 0x6F, 0x00, 0x0E,             /* movea.l $e(a7),a0       */
+    0x22, 0x88,                         /* move.l a0,(a1)          */
+    0x23, 0x50, 0x00, 0x04,             /* move.l (a0),4(a1)       */
+    0x20, 0x28, 0xFF, 0xFC,             /* move.l -4(a0),d0        */
+    0x46, 0x80,                         /* not.l d0                */
+    0x48, 0x40,                         /* swap d0                 */
+    0xB1, 0x90,                         /* eor.l d0,(a0)           */
+    0x4C, 0xDF, 0x03, 0x01,             /* movem.l (a7)+,d0/a0-a1  */
+    0x4E, 0x73                          /* rte                     */
+};
+
+/** TVD handler variant 2 (dec0de variant d) — 50 bytes */
+static const uint8_t uft_copylock88_tvd2_pattern[] = {
+    0x02, 0x7C, 0xF8, 0xFF,
+    0x48, 0xE7, 0x80, 0xC0,
+    0x43, 0xFA, 0x00, 0x00,             /* lea displacement = wildcard */
+    0x20, 0x51,
+    0x20, 0x28, 0xFF, 0xFC,
+    0x90, 0x83,                         /* sub.l d3,d0             */
+    0x46, 0x80, 0x48, 0x40, 0xB1, 0x90,
+    0x20, 0x6F, 0x00, 0x0E,
+    0x20, 0x28, 0xFF, 0xFC,
+    0x90, 0x83,
+    0x46, 0x80, 0x48, 0x40, 0xB1, 0x90,
+    0x22, 0x88,
+    0x4C, 0xDF, 0x03, 0x01,
+    0x4E, 0x73
+};
+
+/** Shared mask for both TVD patterns: bytes 10/11 are the `lea` displacement.
+ *  Long enough for the larger (TVD2) pattern; shorter matches read a prefix. */
+static const uint8_t uft_copylock88_tvd_mask[] = {
+    0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+    0x00, 0x00,                         /* wildcard displacement */
+    0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+    0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+    0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+    0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF
+};
+
+/** Supervisor-switch prolog via ILLEGAL (dec0de variant a) — 22 bytes */
+static const uint8_t uft_copylock88_supill_pattern[] = {
+    0x48, 0x7A, 0x00, 0x0E, 0x2F, 0x3C, 0x00, 0x05, 0x00, 0x04,
+    0x4E, 0x4D, 0x50, 0x8F, 0x4A, 0xFC,
+    0x23, 0xC0, 0x00, 0x00, 0x00, 0x10
+};
+
+/** Supervisor-switch prolog, privileged variant 1 (dec0de variants c, d) */
+static const uint8_t uft_copylock88_suppriv1_pattern[] = {
+    0x48, 0x7A, 0x00, 0x14, 0x2F, 0x3C, 0x00, 0x05, 0x00, 0x08,
+    0x4E, 0x4D, 0x50, 0x8F, 0x40, 0xC1, 0x00, 0x7C, 0x20, 0x00,
+    0x5D, 0x8F, 0x5C, 0x8F,
+    0x23, 0xC0, 0x00, 0x00, 0x00, 0x20
+};
+
+/** Supervisor-switch prolog, privileged variant 2 (dec0de variant b) */
+static const uint8_t uft_copylock88_suppriv2_pattern[] = {
+    0x48, 0x7A, 0x00, 0x12, 0x2F, 0x3C, 0x00, 0x05, 0x00, 0x08,
+    0x4E, 0x4D, 0x50, 0x8F, 0x00, 0x7C, 0x20, 0x00,
+    0x5D, 0x8F, 0x5C, 0x8F,
+    0x23, 0xC0, 0x00, 0x00, 0x00, 0x20
+};
+
 /**
  * @brief Series 1 keydisk pattern: ST $43E.L
  * Pattern: 0x50F9 0x0000 0x043E
@@ -348,6 +435,67 @@ static inline int32_t uft_copylock88_find_pattern_decoded(
 }
 
 /**
+ * @brief Locate the Series-1 protection prolog and derive its variant
+ *
+ * Variant assignment follows the reference implementation's pattern chains
+ * (dec0de prot_robn88a..e), each of which pairs one supervisor-switch prolog
+ * with one TVD handler:
+ *
+ *   a: switchsupill  + tvd1      c: switchsuppriv1 + tvd1
+ *   b: switchsuppriv2 + tvd1     d: switchsuppriv1 + tvd2
+ *   e: (no switch prolog)        + tvd1
+ *
+ * Independent confirmation that this mapping is right rather than guessed:
+ * dec0de names variant d's TVD constant PROT_TVD_FSHARK_ROBN88, and Flying
+ * Shark is the one corpus sample that carries tvd2.
+ *
+ * @param data        Program / protection code
+ * @param data_len    Length of data
+ * @param[out] variant Derived variant (untouched when nothing matches)
+ * @param[out] off     Offset of the matched TVD handler
+ * @return true when a Series-1 prolog was found
+ */
+static inline bool uft_copylock88_find_prolog(
+    const uint8_t *data, size_t data_len,
+    uft_copylock_variant_t *variant, int32_t *off)
+{
+    int32_t tvd2 = uft_copylock_find_pattern(
+        data, data_len, uft_copylock88_tvd2_pattern,
+        uft_copylock88_tvd_mask, sizeof(uft_copylock88_tvd2_pattern), 0);
+    int32_t tvd1 = uft_copylock_find_pattern(
+        data, data_len, uft_copylock88_tvd1_pattern,
+        uft_copylock88_tvd_mask, sizeof(uft_copylock88_tvd1_pattern), 0);
+
+    if (tvd2 < 0 && tvd1 < 0) {
+        return false;
+    }
+
+    if (tvd2 >= 0) {
+        if (variant) *variant = UFT_COPYLOCK_VARIANT_D;
+        if (off) *off = tvd2;
+        return true;
+    }
+
+    if (uft_copylock_find_pattern(data, data_len,
+            uft_copylock88_supill_pattern, NULL,
+            sizeof(uft_copylock88_supill_pattern), 0) >= 0) {
+        if (variant) *variant = UFT_COPYLOCK_VARIANT_A;
+    } else if (uft_copylock_find_pattern(data, data_len,
+            uft_copylock88_suppriv2_pattern, NULL,
+            sizeof(uft_copylock88_suppriv2_pattern), 0) >= 0) {
+        if (variant) *variant = UFT_COPYLOCK_VARIANT_B;
+    } else if (uft_copylock_find_pattern(data, data_len,
+            uft_copylock88_suppriv1_pattern, NULL,
+            sizeof(uft_copylock88_suppriv1_pattern), 0) >= 0) {
+        if (variant) *variant = UFT_COPYLOCK_VARIANT_C;
+    } else {
+        if (variant) *variant = UFT_COPYLOCK_VARIANT_E;
+    }
+    if (off) *off = tvd1;
+    return true;
+}
+
+/**
  * @brief Detect Series 2 magic value from trampoline pattern
  * 
  * @param data Data buffer (protection code)
@@ -495,28 +643,39 @@ static inline bool uft_copylock_st_detect(
     
     /* Series 1 (1988).
      *
-     * The keydisk instruction `st $43e.l` is the discriminating signature, but
-     * it sits inside the TVD-encrypted region — so it must be matched THROUGH
-     * the decryption (uft_copylock88_find_pattern_decoded), not as raw bytes.
+     * Identification runs on the CLEARTEXT prolog that installs the TVD
+     * handler, not on anything inside the encrypted body. Rationale and the
+     * variant mapping are documented at uft_copylock88_find_prolog().
      *
-     * The former BRA.S prefix check was dropped on purpose: `60 ??` is two
-     * bytes of generic 68000 and matched 6..1497 times in every real sample,
-     * so it added no evidence while gating the real test. Measured against the
-     * MF-379 corpus: 6 of 16 real Series-1 loaders detected (all raw
-     * protection extracts; the GEMDOS .PRG cases need the full dec0de
-     * unpacking pipeline first), with 0 false positives across 13 Series-2
-     * and 15 other-protection samples. */
-    int32_t keydisk_off = uft_copylock88_find_pattern_decoded(
-        data, data_len, 0,
-        uft_copylock88_keydisk_pattern,
-        sizeof(uft_copylock88_keydisk_pattern));
+     * History of this branch, because both earlier attempts looked reasonable
+     * and were wrong (docs/KNOWN_ISSUES.md PROT-1):
+     *   - Original: raw byte search for the keydisk instruction — 0 of 16,
+     *     the instruction is encrypted in the file.
+     *   - MF-379: match the keydisk THROUGH the decryption — 6 of 16, but
+     *     blind to every GEMDOS .PRG and to non-keydisk variants.
+     *   - MF-380 (this): match the unencrypted TVD prolog — 16 of 16, .PRG
+     *     and .BIN alike, still 0 false positives over 28 foreign samples.
+     * A dropped `BRA.S` prefilter from the original version is gone for good;
+     * it matched 6..1497 times per sample and only gated the real test. */
+    uft_copylock_variant_t s1_variant = UFT_COPYLOCK_VARIANT_UNKNOWN;
+    int32_t prolog_off = -1;
 
-    if (keydisk_off >= 0) {
+    if (uft_copylock88_find_prolog(data, data_len, &s1_variant, &prolog_off)) {
         result->detected = true;
         result->series = UFT_COPYLOCK_SERIES_1_1988;
-        result->variant = UFT_COPYLOCK_VARIANT_A;
-        result->keydisk_off = keydisk_off;
-        result->type = UFT_COPYLOCK_TYPE_INTERNAL;
+        result->variant = s1_variant;
+        result->start_off = prolog_off;
+
+        /* The keydisk instruction exists only in the "internal" type and lives
+         * inside the encrypted body, so it is matched through the decryption.
+         * Its absence does not disprove Series 1 — the prolog already did. */
+        result->keydisk_off = uft_copylock88_find_pattern_decoded(
+            data, data_len, 0,
+            uft_copylock88_keydisk_pattern,
+            sizeof(uft_copylock88_keydisk_pattern));
+        if (result->keydisk_off >= 0) {
+            result->type = UFT_COPYLOCK_TYPE_INTERNAL;
+        }
 
         /* Serial handling lives in the same encrypted region */
         result->serial_off = uft_copylock88_find_pattern_decoded(

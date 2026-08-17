@@ -1,24 +1,28 @@
 /**
  * @file test_corpus_protection_copylock.c
- * @brief First protection-scheme test against REAL protected code (MF-377).
+ * @brief Protection-scheme tests against REAL protected code (MF-377/379/380).
  *
- * Corpus: three loader/program extracts from real 1988/89 Atari ST releases,
+ * Corpus: loader/program extracts from real 1988/89 Atari ST releases,
  * preserved in the dec0de project (github.com/orionfuzion/dec0de, commit
  * 54d7efd9, samples/ROBN88 + ROBN89, documented per-file in samples/README.txt).
  * Game code is copyrighted -> LOCAL-ONLY in tests/corpus/ (gitignored);
  * sha256 + reproducible download command in tests/corpus_manifest/manifest.json.
  *
  * Ground truth pinned by independent python inspection BEFORE any UFT run:
- *   dec0de_RAINBISL.BIN (Rainbow Islands, Series 2 variant A):
+ *   dec0de_RAINBISL.BIN (Rainbow Islands, Series 2 variant a):
  *     init1 pattern @28, trampoline @2214, magic32 = 0x6B1D1929
- *   dec0de_WARLOCK.BIN  (Warlock, Series 2 variant B):
+ *   dec0de_WARLOCK.BIN  (Warlock, Series 2 variant b):
  *     init2 pattern hit, trampoline @1960, magic32 = 0x0
- *   dec0de_RICKD.BIN    (Rick Dangerous, Series 1 1988):
- *     BRA.S prefix present, but keydisk pattern 50F9 0000 043E absent in
- *     cleartext (lives inside the TVD-encrypted region) -> current Series-1
- *     detection CANNOT fire on real data. Pinned as negative; the independent
- *     scan found the same for ALL 16 real Series-1 samples in dec0de
- *     (see docs/KNOWN_ISSUES.md PROT-1).
+ *   dec0de_XENON2.BIN   (Xenon 2, Series 1 variant e):
+ *     TVD prolog @362, keydisk (decoded) @918, serial @598
+ *   dec0de_COSMIC.BIN   (Cosmic Pirate, Series 1 variant e):
+ *     TVD prolog @356, keydisk @534, serial @510
+ *   dec0de_RICKD.BIN    (Rick Dangerous, Series 1 variant a):
+ *     TVD prolog @420, NO keydisk instruction at all
+ *
+ * Coverage of the underlying detector over the full dec0de sample set:
+ * Series 1 16/16, Series 2 14/14, with 0 false positives across the 15
+ * non-CopyLock protections. See docs/KNOWN_ISSUES.md PROT-1.
  *
  * SKIPS (exit 77) when the local corpus files are absent (e.g. CI).
  */
@@ -101,6 +105,8 @@ TEST(xenon2_series1_detected) {
     ASSERT(r.detected);
     ASSERT(r.series == UFT_COPYLOCK_SERIES_1_1988);
     ASSERT(r.type == UFT_COPYLOCK_TYPE_INTERNAL);
+    ASSERT(r.variant == UFT_COPYLOCK_VARIANT_E);   /* tvd1, no switch prolog */
+    ASSERT(r.start_off == 362);            /* pinned TVD prolog          */
     ASSERT(r.keydisk_off == 918);          /* pinned: st $43e.l, decoded */
     ASSERT(r.serial_off == 598);           /* pinned: move.l d0,$1c(a0)  */
     free(d);
@@ -114,23 +120,30 @@ TEST(cosmic_pirate_series1_detected) {
     ASSERT(uft_copylock_st_analyze(d, len, &r) == 0);
     ASSERT(r.detected);
     ASSERT(r.series == UFT_COPYLOCK_SERIES_1_1988);
+    ASSERT(r.variant == UFT_COPYLOCK_VARIANT_E);
+    ASSERT(r.start_off == 356);
     ASSERT(r.keydisk_off == 534);
     ASSERT(r.serial_off == 510);
     free(d);
 }
 
-TEST(rick_dangerous_series1_undetectable) {
-    /* Honest negative, still valid after the MF-379 fix: even matching
-     * through the TVD decryption finds no keydisk instruction here. Rick
-     * Dangerous uses a Series-1 variant that does not carry the `st $43e.l`
-     * signature (dec0de knows 5 variants a-e). Not every Series-1 loader is
-     * reachable by this one pattern — PROT-1 stays open for the rest. */
+/* MF-380: this case was an honest NEGATIVE in MF-377/379 — Rick Dangerous
+ * carries no keydisk instruction, so neither a raw nor a decrypted search for
+ * it could fire. Detection now runs on the cleartext TVD prolog, which every
+ * Series-1 loader must carry, so the assert flipped from "not detected" to
+ * "detected, variant a". That is the intended lifecycle of a pinned negative:
+ * it goes red when someone fixes the gap, and then it gets turned around. */
+TEST(rick_dangerous_series1_detected_via_prolog) {
     size_t len = 0;
     uint8_t *d = load_corpus("dec0de_RICKD.BIN", &len);
     ASSERT(d != NULL && len == 4096);
     uft_copylock_st_result_t r;
-    ASSERT(uft_copylock_st_analyze(d, len, &r) == 1);   /* "not CopyLock" */
-    ASSERT(!r.detected);
+    ASSERT(uft_copylock_st_analyze(d, len, &r) == 0);
+    ASSERT(r.detected);
+    ASSERT(r.series == UFT_COPYLOCK_SERIES_1_1988);
+    ASSERT(r.variant == UFT_COPYLOCK_VARIANT_A);   /* switchsupill + tvd1 */
+    ASSERT(r.start_off == 420);                    /* pinned TVD prolog */
+    ASSERT(r.keydisk_off < 0);                     /* genuinely absent here */
     free(d);
 }
 
@@ -175,7 +188,7 @@ int main(void) {
     RUN(warlock_series2_variant_b);
     RUN(xenon2_series1_detected);
     RUN(cosmic_pirate_series1_detected);
-    RUN(rick_dangerous_series1_undetectable);
+    RUN(rick_dangerous_series1_detected_via_prolog);
     RUN(header_port_finds_same_trampolines);
     printf("\nResults: %d passed, %d failed\n", _pass, _fail);
     return _fail == 0 ? 0 : 1;

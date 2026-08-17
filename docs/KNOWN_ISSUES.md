@@ -1134,7 +1134,7 @@ scheitern (qmakes Depend-Scan fand die stalen mocs). Entfernt; Prävention-
 Kandidat: `preflight-check` warnt künftig, wenn `<repo>/release|debug`
 existiert.
 
-### PROT-1 — CopyLock ST: Series-2 verifiziert, Series-1 feuert auf realen Daten nie (2026-08-16, MF-377)
+### PROT-1 — CopyLock ST: Series-2 verifiziert, Series-1 feuert auf realen Daten nie (2026-08-16, MF-377) → ✓ RESOLVED (MF-380: 16/16)
 
 **Kontext:** Erster Kopierschutz-Test gegen **echten** geschützten Code
 (`test_corpus_protection_copylock`, Korpus: dec0de-Samples, lokal-only,
@@ -1146,7 +1146,7 @@ Provenienz im Manifest). Vorher galt laut `docs/SUBSYSTEM_MATURITY.md`:
 | Detektor-Pfad | Reale Samples | Befund |
 |---|---|---|
 | Series 2 (1989), init1/init2 + Trampolin | 14/14 dec0de-Samples | ✅ erkannt; `magic32` + `start_off` exakt reproduziert (Rainbow Islands 0x6B1D1929 @2214, Warlock 0x0 @1960) |
-| Series 1 (1988), BRA.S + Keydisk-Pattern | 0/16 dec0de-Samples | ❌ **nie erkannt** (Stand MF-377; mit MF-379 auf 6/16 gehoben, s.u.) |
+| Series 1 (1988), BRA.S + Keydisk-Pattern | 0/16 dec0de-Samples | ❌ **nie erkannt** (Stand MF-377; MF-379 → 6/16, MF-380 → 16/16, s.u.) |
 
 **Ursache Series 1:** `uft_copylock_st_detect()` verlangt zusätzlich zum
 BRA.S-Prefix das Keydisk-Pattern `50F9 0000 043E` (`ST $43E.L`) im **Klartext**.
@@ -1181,12 +1181,37 @@ scheitern weiterhin, weil dort die Protection erst nach Entpacken/Relokation
 im Text-Segment liegt — dec0de hat dafür eine komplette Programm-Pipeline
 (`prog_t`, Anker auf `patterns[4]`), UFT nicht.
 
-**PROT-1 bleibt offen** für: (a) die `.PRG`-Fälle (brauchen die Pipeline),
-(b) Series-1-Varianten ohne `st $43e.l` — Rick Dangerous ist so ein Fall und
-bleibt im Test als **ehrlicher Negativ-Assert** stehen, jetzt mit korrekter
-Begründung (Variante ohne Keydisk-Signatur, nicht „Pattern verschlüsselt").
-Verifiziert in `test_corpus_protection_copylock`: Xenon 2 (keydisk @918,
-serial @598) und Cosmic Pirate (@534/@510), Offsets vorab per Python gepinnt.
+**Vollständig gelöst (MF-380) → ✓ RESOLVED.** Die verbleibende Lücke war kein
+Pipeline-Problem, sondern erneut die falsche Signatur. Die Referenz erkennt
+Series 1 gar nicht am verschlüsselten Körper, sondern am **unverschlüsselten
+Prolog**, der den TVD-Exception-Handler installiert — und dieser Handler *ist*
+die Entschlüsselungsroutine (`not.l d0 / swap d0 / eor.l d0,(a0)` ist genau das
+~SWAP32-XOR-Schema in 68000-Code). Jeder Series-1-Loader muss ihn im Klartext
+mitbringen, unabhängig davon, ob er als `.PRG` oder als Rohextrakt vorliegt.
+
+Umgesetzt als `uft_copylock88_find_prolog()` mit den beiden TVD-Handler-Mustern
+(dec0de `PATTERN_TVD1/TVD2_ROBN88`, zwei Wildcard-Bytes für die `lea`-Distanz).
+Die Varianten a–e werden aus der Kombination Supervisor-Switch-Prolog × TVD-
+Handler abgeleitet, exakt nach den Musterketten `prot_robn88a..e`. Dass die
+Ableitung stimmt und nicht geraten ist, bestätigt die Referenz selbst: sie nennt
+die TVD-Konstante der Variante d `PROT_TVD_FSHARK_ROBN88`, und Flying Shark ist
+das einzige Sample im Korpus, das `tvd2` trägt.
+
+**Endstand, gemessen mit der kompilierten UFT-Implementierung über alle 45
+dec0de-Samples:**
+
+| | erkannt | Falsch-Positive |
+|---|---|---|
+| Series 1 (1988) | **16/16** (Varianten a,b,c,d,e alle vertreten) | — |
+| Series 2 (1989) | **14/14** | — |
+| 15 Fremdschutzsysteme (Anti-bitos, Cooper, Zippy, CID, R.AL, Sly, Toxic) | — | **0** |
+
+Der Weg dahin in drei Stufen, jede durch Messung widerlegt statt durch Meinung:
+Roh-Bytesuche 0/16 → Suche durch die Entschlüsselung 6/16 → Prolog 16/16.
+Rick Dangerous, in MF-377/379 noch ehrlicher Negativ-Assert, ist jetzt als
+Variante a mit Prolog @420 erkannt — der Assert wurde umgedreht, wie im Test
+angekündigt. Der Fall trägt tatsächlich **keine** Keydisk-Instruktion; das ist
+kein Erkennungsproblem, sondern eine Eigenschaft dieses Loaders.
 
 ### PROT-2 — C64-Scheme-Erkennung ist headless, Pipeline-Test testet nur Mocks (2026-08-16, MF-377)
 
