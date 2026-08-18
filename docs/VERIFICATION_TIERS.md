@@ -43,11 +43,11 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 | `adf_arc` | **T3** | — | — | — | — |
 | `adl` | **T3** | — | — | — | — |
 | `apridisk` | **T3** | — | — | — | — |
-| `atx` | **T3** | — | — | — | — |
+| `atx` | **T3** | `test_plugin_probe_real` | — | — | — |
 | `cas` | **T3** | — | — | — | — |
 | `cfi` | **T3** | — | — | — | — |
 | `cpm` | **T3** | `test_cpm_fs` | — | — | — |
-| `cqm` | **T3** | — | — | — | — |
+| `cqm` | **T3** | `test_plugin_probe_real` | — | — | — |
 | `d13` | **T3** | — | — | — | — |
 | `d67` | **T3** | — | VICE/Schepers D67 690-block geometry (176640 bytes) | MF-314 | — |
 | `d77` | **T3** | — | — | — | — |
@@ -67,7 +67,7 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 | `imd` | **T3** | `test_imd_error_marks`, `test_imd_write_roundtrip`, `test_plugin_probe_real` | — | — | — |
 | `img` | **T3** | `test_img_write_roundtrip` | — | — | — |
 | `ipf` | **T3** | `test_ipf_air_accessors` | — | — | — |
-| `jv1` | **T3** | — | — | — | — |
+| `jv1` | **T3** | `test_plugin_probe_real` | — | — | — |
 | `jv3` | **T3** | — | — | — | — |
 | `jvc` | **T3** | — | — | — | — |
 | `kfx` | **T3** | — | — | — | — |
@@ -105,4 +105,4 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 | `vdk` | **T3** | — | — | — | — |
 | `victor9k` | **T3** | — | — | — | — |
 | `xdm86` | **T3** | — | — | — | — |
-| `xfd` | **T3** | — | — | — | — |
+| `xfd` | **T3** | `test_plugin_probe_real` | — | — | — |

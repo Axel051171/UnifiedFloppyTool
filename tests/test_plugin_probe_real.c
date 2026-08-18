@@ -35,6 +35,10 @@ extern const uft_format_plugin_t uft_format_plugin_atr;
 extern const uft_format_plugin_t uft_format_plugin_d88;
 extern const uft_format_plugin_t uft_format_plugin_dc42;
 extern const uft_format_plugin_t uft_format_plugin_imd;
+extern const uft_format_plugin_t uft_format_plugin_atx;
+extern const uft_format_plugin_t uft_format_plugin_cqm;
+extern const uft_format_plugin_t uft_format_plugin_jv1;
+extern const uft_format_plugin_t uft_format_plugin_xfd;
 
 static int _pass = 0, _fail = 0, _last_fail = 0;
 #define RUN(name)  do { printf("  [TEST] %-40s ... ", #name); test_##name(); \
@@ -278,6 +282,103 @@ TEST(imd_requires_its_ascii_signature) {
     ASSERT(!probe_sized(&uft_format_plugin_imd, hdr, 3, 3, &conf));
 }
 
+/*---------------------------------------------------------------------------
+ * Wave 3 (MF-387) — atx, cqm, jv1, xfd
+ * These four had NO test touching production code at all before this wave.
+ *   atx  LE32 signature 0x58385441 "AT8X", header 48   (uft_atx.c:32,33)
+ *   cqm  'C','Q',0x14                                   (uft_cqm.c)
+ *   jv1  size-only: multiple of 10*256, <=40 tracks 1 head,
+ *        <=80 and even 2 heads                          (uft_jv1.c:22,23)
+ *   xfd  four canonical sizes, plus a permissive fallback
+ *                                                       (uft_xfd.c)
+ *--------------------------------------------------------------------------*/
+
+TEST(atx_signature_is_byte_order_correct) {
+    uint8_t hdr[64];
+    int conf = -1;
+
+    /* 0x58385441 read as LE32 means the bytes are 'A','T','8','X'. */
+    memset(hdr, 0, sizeof(hdr));
+    memcpy(hdr, "AT8X", 4);
+    ASSERT(probe_sized(&uft_format_plugin_atx, hdr, sizeof(hdr), sizeof(hdr), &conf));
+    ASSERT(conf >= 95);
+
+    /* The reversed spelling must NOT pass. A byte-order slip in exactly this
+     * signature once made the ATX plugin return no sector data at all. */
+    memset(hdr, 0, sizeof(hdr));
+    memcpy(hdr, "X8TA", 4);
+    ASSERT(!probe_sized(&uft_format_plugin_atx, hdr, sizeof(hdr), sizeof(hdr), &conf));
+
+    /* below the 48-byte file header the probe refuses regardless */
+    memcpy(hdr, "AT8X", 4);
+    ASSERT(!probe_sized(&uft_format_plugin_atx, hdr, 16, 16, &conf));
+}
+
+TEST(cqm_requires_its_three_byte_marker) {
+    uint8_t hdr[32];
+    int conf = -1;
+
+    memset(hdr, 0, sizeof(hdr));
+    hdr[0] = 'C'; hdr[1] = 'Q'; hdr[2] = 0x14;
+    ASSERT(probe_sized(&uft_format_plugin_cqm, hdr, sizeof(hdr), sizeof(hdr), &conf));
+
+    /* the third byte is part of the marker, "CQ" alone is not enough */
+    hdr[2] = 0x00;
+    ASSERT(!probe_sized(&uft_format_plugin_cqm, hdr, sizeof(hdr), sizeof(hdr), &conf));
+
+    hdr[2] = 0x14;
+    ASSERT(!probe_sized(&uft_format_plugin_cqm, hdr, 2, 2, &conf));
+}
+
+TEST(jv1_accepts_only_whole_track_multiples) {
+    uint8_t hdr[32];
+    memset(hdr, 0, sizeof(hdr));
+    int conf = -1;
+    const size_t TRACK = 10u * 256u;         /* 10 sectors x 256 bytes */
+
+    ASSERT(probe_sized(&uft_format_plugin_jv1, hdr, sizeof(hdr), TRACK, &conf));
+    ASSERT(probe_sized(&uft_format_plugin_jv1, hdr, sizeof(hdr), 35 * TRACK, &conf));
+    ASSERT(probe_sized(&uft_format_plugin_jv1, hdr, sizeof(hdr), 80 * TRACK, &conf));
+
+    /* not a whole number of tracks */
+    ASSERT(!probe_sized(&uft_format_plugin_jv1, hdr, sizeof(hdr), TRACK + 1, &conf));
+    ASSERT(!probe_sized(&uft_format_plugin_jv1, hdr, sizeof(hdr), 0, &conf));
+    /* 41..79 tracks are only valid when even (two heads) */
+    ASSERT(!probe_sized(&uft_format_plugin_jv1, hdr, sizeof(hdr), 41 * TRACK, &conf));
+    /* beyond 80 tracks there is no JV1 geometry */
+    ASSERT(!probe_sized(&uft_format_plugin_jv1, hdr, sizeof(hdr), 82 * TRACK, &conf));
+
+    /* size-only detection, so the plugin says so with a low confidence */
+    ASSERT(probe_sized(&uft_format_plugin_jv1, hdr, sizeof(hdr), 35 * TRACK, &conf));
+    ASSERT(conf < 50);
+}
+
+TEST(xfd_is_deliberately_permissive_outside_its_canonical_sizes) {
+    /* Pins CURRENT behaviour. The canonical Atari sizes score high, but the
+     * fallback accepts ANY file that is a multiple of 128 or 256 and not
+     * larger than 266240 — with confidence 25. That is very broad for a
+     * format without a magic number; it only stays harmless because format
+     * selection compares confidences. Worth knowing, hence pinned. */
+    uint8_t hdr[64];
+    memset(hdr, 0, sizeof(hdr));
+    int conf = -1;
+
+    /* canonical single density, with a plausible Atari boot sector */
+    hdr[0] = 0x00; hdr[3] = 0x07;
+    ASSERT(probe_sized(&uft_format_plugin_xfd, hdr, sizeof(hdr), 92160, &conf));
+    ASSERT(conf >= 80);
+
+    /* an arbitrary 512-byte file is still claimed, but weakly */
+    memset(hdr, 0xEE, sizeof(hdr));
+    ASSERT(probe_sized(&uft_format_plugin_xfd, hdr, sizeof(hdr), 512, &conf));
+    ASSERT(conf <= 30);
+
+    /* odd sizes and oversized files are rejected outright */
+    ASSERT(!probe_sized(&uft_format_plugin_xfd, hdr, sizeof(hdr), 513, &conf));
+    ASSERT(!probe_sized(&uft_format_plugin_xfd, hdr, sizeof(hdr), 1024 * 1024, &conf));
+    ASSERT(!probe_sized(&uft_format_plugin_xfd, hdr, sizeof(hdr), 0, &conf));
+}
+
 int main(void) {
     printf("=== Real plugin probes, wave 1 (MF-385) ===\n");
     RUN(d64_accepts_all_eight_production_sizes);
@@ -292,6 +393,10 @@ int main(void) {
     RUN(d88_checks_media_byte_and_declared_size);
     RUN(dc42_requires_big_endian_magic_at_offset_82);
     RUN(imd_requires_its_ascii_signature);
+    RUN(atx_signature_is_byte_order_correct);
+    RUN(cqm_requires_its_three_byte_marker);
+    RUN(jv1_accepts_only_whole_track_multiples);
+    RUN(xfd_is_deliberately_permissive_outside_its_canonical_sizes);
     printf("\nResults: %d passed, %d failed\n", _pass, _fail);
     return _fail == 0 ? 0 : 1;
 }
