@@ -1,5 +1,26 @@
 # XCopy / DiskSalv / XVS Integration — TODO-Liste
 
+> ## Statusabgleich 2026-08-18 (MF-421)
+>
+> Dieses Dokument ist vom **2026-04-24** und beschreibt den Plan, nicht den
+> Stand. Abgeglichen gegen `docs/MASTER_PLAN.md` §M2 und den Baum:
+>
+> | | Stand |
+> |---|---|
+> | T1 Virus-Signatur-SSOT | ✓ erledigt — Schema + 48 Einträge; die Byte-Pattern selbst stehen weiterhin auf PENDING (brauchen xvs.library-Extraktion) |
+> | T2 `uft_bootblock_scanner.c` | ✓ erledigt, 15 Tests |
+> | T3 `uft_amigados_extended.c` | **teilweise** — Validation, Directory-Walker, BAM-Abgleich stehen; offen bleiben OFS-Data-Block-Header-Validierung, Salvage-API für Orphan-Blocks, `bm_extension` für HD |
+> | T4 XCopy-Panel ehrlich markieren | ✓ erledigt über **MF-012** (Start-Button deaktiviert + Tooltip) |
+> | T5 BAMCOPY | ✓ erledigt, 9 Tests; ADF-Plugin-Integration als M3-Item offen |
+> | T6 CHECKDISK | ✓ erledigt, 12 Tests; HAL-Sweep-Integration in M3 offen |
+> | T7 DiskSalv | ✓ als ehrliches Scaffold erledigt, 7 Tests (`files_extracted` bleibt 0) |
+> | T8 Panel-Cleanup | ✓ erledigt — **aber** die genannte Datei `src/gui/uft_xcopy_panel.cpp` existiert nicht mehr, sie wurde in MF-369 mit 100 anderen toten Dateien entfernt. Die XCopy-Oberfläche liegt heute als Unter-Tab in `src/formattab.cpp`. |
+>
+> **Offen ist damit nur der T3-Rest.** Alles andere ist erledigt oder in M3
+> weitergeführt. Wer hier weiterarbeitet, sollte den MASTER_PLAN als Quelle
+> nehmen — dieses Dokument wird nicht nachgeführt.
+
+
 **Stand:** 2026-04-23
 **Kontext:** Analyse des Amiga-Utility-Ordners `C:\Users\Axel\Github\xcopy`
 (XCopy Pro, DiskSalv 4, FixDisk, xvs.library). UFT hat bereits umfangreiche

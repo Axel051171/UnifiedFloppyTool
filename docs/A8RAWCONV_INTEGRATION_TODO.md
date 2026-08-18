@@ -1,5 +1,25 @@
 # a8rawconv Integration — TODO-Liste
 
+> ## Statusabgleich 2026-08-18 (MF-421)
+>
+> Vom **2026-04-24**, Plan und nicht Stand. Abgeglichen gegen
+> `docs/MASTER_PLAN.md` §M2 und den Baum:
+>
+> | | Stand |
+> |---|---|
+> | TA1 `uft_write_precomp` | ✓ erledigt, 13 Tests |
+> | TA2 Interleave-Calculator | ✓ erledigt, 11 Tests |
+> | TA3 ATX-Plugin | ✓ erledigt — dabei ein Byte-Order-Fehler gefunden, wegen dem ATX **nie** Sektordaten geliefert hatte |
+> | TA4 SCP-Direct-HAL | ✓ Code steht (`src/hal/uft_scp_direct.c`, libusb, MF-254). **Nicht** gegen Hardware geprüft — UFT-008, HIL-Tier NOT_RUN |
+> | TA5 FM/MFM-Parser-Review | **offen** — kein Beleg, dass er stattgefunden hat |
+> | TA6 Skelette aus `.claude/worktrees/` | **gegenstandslos** — das Verzeichnis existiert nicht mehr |
+>
+> **Offen ist damit nur TA5** (P3), plus die Hardware-Verifikation von TA4, die
+> extern delegiert ist. Der MASTER_PLAN führt den Atari-Block noch als
+> unerledigt, weil sein Elternpunkt nie abgehakt wurde — die Kinder TA1–TA3
+> sind es.
+
+
 **Stand:** 2026-04-23
 **Quelle:** `github.com/Axel051171/a8rawconv-0.95` (Fork von
 Avery Lee's `a8rawconv`, 9194 LOC C++11)

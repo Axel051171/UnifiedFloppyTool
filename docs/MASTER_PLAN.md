@@ -212,11 +212,16 @@ Muss:
         (Prinzip 1). RECOVER_BY_COPY → bit-exakte Kopie + loss.json.
         FILE_BY_FILE → header-candidate-walk + chain-validation
         (files_extracted bleibt 0 = honest scaffold). 7 Tests grün.
-  - [x] T8 XCopy-Panel Legacy-Cleanup: `src/gui/uft_xcopy_panel.cpp`
+  - [x] T8 XCopy-Panel Legacy-Cleanup — die damals genannte Datei
+        `src/gui/uft_xcopy_panel.cpp` existiert nicht mehr, sie wurde in
+        MF-369 mit 100 weiteren toten Dateien entfernt; die Oberfläche
+        liegt heute als Unter-Tab in `src/formattab.cpp` (Hinweis MF-421)
         — Start-Button `setEnabled(false)` + Tooltip (analog MF-012),
         source==destination safety-check in `startCopy()` für
         späteren Backend-Merge, Status-Label ehrlich gemacht.
-- [ ] **Atari-Block** (`A8RAWCONV_INTEGRATION_TODO.md`):
+- [~] **Atari-Block** (`A8RAWCONV_INTEGRATION_TODO.md`) — TA1–TA3 erledigt,
+      TA4 Code steht ohne HW-Prüfung, TA5 offen (P3), TA6 gegenstandslos
+      (Statusabgleich MF-421 im TODO-Dokument):
   - [x] TA1 `uft_write_precomp.c` (portiert aus `compensation.cpp`,
         Mac-800K Peak-Shift-Compensation, 13 Tests grün)
   - [x] TA2 `uft_interleave.c` (Sektor-Interleave-Calculator, 11 Tests grün)
