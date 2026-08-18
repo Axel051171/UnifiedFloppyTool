@@ -31,28 +31,27 @@ typedef enum {
 #endif /* UFT_CRC_TYPE_T_DEFINED */
 #endif /* UFT_CRC_TYPE_DEFINED */
 
-/**
- * @brief Maximum error positions for CRC correction
+/*
+ * REMOVED in MF-397: `int uft_crc_correct(uft_crc_type_t, uint8_t*, size_t,
+ * int, uft_crc_result_t*)` together with UFT_CRC_MAX_ERRORS and
+ * uft_crc_result_t, which existed only to serve it.
+ *
+ * No such function was ever defined. The only definition in the tree is
+ *   bool uft_crc_correct(uint8_t *data, size_t size, int crc_type,
+ *                        uft_crc_correction_t *result)
+ * in src/algorithms/advanced/uft_god_mode_api.c:288, declared correctly in
+ * include/uft/uft_god_mode.h:216 — a DIFFERENT signature under the SAME
+ * symbol name.
+ *
+ * In C that is silent: a translation unit including this header could call
+ * the five-argument form, link against the four-argument definition and pass
+ * arguments in the wrong registers, with no compiler and no linker
+ * diagnostic. Nothing called it yet, so this was a loaded gun rather than a
+ * live defect — see docs/KNOWN_ISSUES.md ABI-1.
+ *
+ * uft_crc_type_t below stays: include/uft/uft_crc_polys.h uses it.
+ * Do not reintroduce a declaration here without a matching definition.
  */
-#define UFT_CRC_MAX_ERRORS 8
-
-/**
- * @brief CRC correction result
- */
-typedef struct {
-    bool corrected;                         /**< True if CRC corrected successfully */
-    int error_count;                        /**< Number of errors found */
-    int error_positions[UFT_CRC_MAX_ERRORS]; /**< Bit positions of errors */
-    double confidence;                      /**< Correction confidence 0.0-1.0 */
-} uft_crc_result_t;
-
-
-
-
-/**
- * @brief Attempt to correct CRC errors
- */
-int uft_crc_correct(uft_crc_type_t type, uint8_t* data, size_t length, int max_errors, uft_crc_result_t* result);
 
 
 

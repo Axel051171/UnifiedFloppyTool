@@ -1305,6 +1305,39 @@ Zwei Befunde aus derselben Untersuchung, beide **Architecture**:
    (siehe PROT-5) — und RapidLok bleibt unauslösbar, aber aus einem anderen
    Grund als gedacht (siehe PROT-6).
 
+### ABI-1 — `uft_crc_correct` war in zwei Headern mit unvereinbaren Signaturen deklariert (2026-08-18, MF-397) → ✓ RESOLVED
+
+**Correctness / ABI.** Gefunden beim Umbau von `test_recovery` auf echten Code.
+Derselbe Symbolname war zweimal öffentlich deklariert:
+
+| Header | Signatur | Definition vorhanden? |
+|---|---|---|
+| `include/uft/uft_god_mode.h:216` | `bool uft_crc_correct(uint8_t*, size_t, int, uft_crc_correction_t*)` | **ja** (`uft_god_mode_api.c:288`) |
+| `include/uft/uft_crc.h:55` | `int uft_crc_correct(uft_crc_type_t, uint8_t*, size_t, int, uft_crc_result_t*)` | **nein** |
+
+In C ist das lautlos. Eine Übersetzungseinheit, die `uft_crc.h` einbindet und
+die Fünf-Parameter-Form aufruft, linkt gegen die Vier-Parameter-Definition und
+übergibt die Argumente in den falschen Registern — **ohne Compiler- und ohne
+Linker-Diagnose**. Nur wenn jemand beide Header zusammen einbindet, fällt der
+Widerspruch auf; das tut derzeit niemand.
+
+**Warum es noch nicht geknallt hat:** genau eine Datei bindet `uft_crc.h` ein
+(`src/formats/misc/pc_img.c`) und ruft die Funktion nicht auf. Geladene Waffe,
+kein abgefeuerter Schuss.
+
+**Fix:** Die Phantom-Deklaration entfernt, zusammen mit `uft_crc_result_t` und
+`UFT_CRC_MAX_ERRORS`, die ausschließlich ihr dienten (repo-weit auf weitere
+Nutzer geprüft: keine). `uft_crc_type_t` bleibt — `uft_crc_polys.h` nutzt ihn.
+An der Stelle steht jetzt ein Kommentar, der die Rekonstruktion verbietet.
+
+**Randbefund (Hygiene, kein Korrektheitsproblem):** `crc16_ccitt` existiert
+**viermal** im Baum — einmal öffentlich (`uft_crc_correction_v2.c:24`) und
+dreimal `static` (`uft_god_mode_api.c:277`, `uft_disk_quickscan.c:68`,
+`uft_mfm_encoder.c:104` als Update-Variante). Alle geprüften Fassungen sind
+algorithmisch identisch (CCITT-FALSE, init 0xFFFF, Polynom 0x1021), es ist also
+Redundanz und keine Divergenz — anders als bei FMT-14. Zusammenführen lohnt,
+eilt aber nicht.
+
 ### FMT-14 — Zwei Sync-Definitionen im Baum, sie weichen genau auf geschützten Disks ab (2026-08-18, MF-395)
 
 **Correctness.** Gefunden beim Umbau von `test_d64_writer` auf echten Code:

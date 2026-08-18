@@ -415,6 +415,11 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/fdi/uft_fdi_plugin.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_RESTRICTED_DIR="${CMAKE_SOURCE_DIR}/tests/corpus")
+    elseif(${test_name} STREQUAL "test_recovery")
+        # MF-397: real CRC-16 + single-bit correction instead of local copies
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/algorithms/advanced/uft_crc_correction_v2.c
+            ${CMAKE_SOURCE_DIR}/src/algorithms/advanced/uft_god_mode_api.c)
     elseif(${test_name} STREQUAL "test_fatfs")
         # MF-396: real FAT detection instead of a local copy
         target_sources(${test_name} PRIVATE
