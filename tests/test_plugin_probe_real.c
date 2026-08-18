@@ -47,6 +47,10 @@ extern const uft_format_plugin_t uft_format_plugin_do;
 extern const uft_format_plugin_t uft_format_plugin_po;
 extern const uft_format_plugin_t uft_format_plugin_img;
 extern const uft_format_plugin_t uft_format_plugin_td0;
+extern const uft_format_plugin_t uft_format_plugin_fdi;
+extern const uft_format_plugin_t uft_format_plugin_ipf;
+extern const uft_format_plugin_t uft_format_plugin_scp;
+extern const uft_format_plugin_t uft_format_plugin_stx;
 
 static int _pass = 0, _fail = 0, _last_fail = 0;
 #define RUN(name)  do { printf("  [TEST] %-40s ... ", #name); test_##name(); \
@@ -570,6 +574,92 @@ TEST(td0_accepts_the_real_teledisk_signatures) {
     ASSERT(!probe_sized(&uft_format_plugin_td0, hdr, 1, 1, &conf));
 }
 
+/*---------------------------------------------------------------------------
+ * Wave 6 (MF-390) — fdi, ipf, scp, stx
+ *   fdi  "FDI" + >= 14 bytes; confidence depends on plausible geometry
+ *                                                (uft_fdi_plugin.c:27,28)
+ *   ipf  "CAPS" at offset 0, >= 12 bytes         (uft_ipf_plugin.c)
+ *   scp  "SCP" + a full 16-byte header           (uft_scp_plugin.c)
+ *   stx  "RSY\0" + >= 16 bytes                   (uft_stx_plugin.c)
+ *--------------------------------------------------------------------------*/
+
+TEST(fdi_grades_confidence_by_geometry_plausibility) {
+    uint8_t hdr[64];
+    int weak = -1, strong = -1;
+
+    /* signature present but geometry zeroed -> lower confidence */
+    memset(hdr, 0, sizeof(hdr));
+    memcpy(hdr, "FDI", 3);
+    ASSERT(probe_sized(&uft_format_plugin_fdi, hdr, sizeof(hdr), sizeof(hdr), &weak));
+
+    /* plausible geometry (80 cylinders, 2 heads) -> higher confidence */
+    hdr[4] = 80; hdr[5] = 0;        /* LE16 cylinders */
+    hdr[6] = 2;  hdr[7] = 0;        /* LE16 heads     */
+    ASSERT(probe_sized(&uft_format_plugin_fdi, hdr, sizeof(hdr), sizeof(hdr), &strong));
+    ASSERT(strong > weak);
+
+    /* an absurd cylinder count falls back to the lower grade, but the file is
+     * still an FDI — the plugin does not reject it outright */
+    hdr[4] = 0xFF; hdr[5] = 0x00;   /* 255 cylinders */
+    int absurd = -1;
+    ASSERT(probe_sized(&uft_format_plugin_fdi, hdr, sizeof(hdr), sizeof(hdr), &absurd));
+    ASSERT(absurd < strong);
+
+    memcpy(hdr, "FDI", 3);
+    ASSERT(!probe_sized(&uft_format_plugin_fdi, hdr, 8, 8, &weak));
+}
+
+TEST(ipf_requires_the_caps_magic) {
+    uint8_t hdr[64];
+    int conf = -1;
+
+    memset(hdr, 0, sizeof(hdr));
+    memcpy(hdr, "CAPS", 4);
+    ASSERT(probe_sized(&uft_format_plugin_ipf, hdr, sizeof(hdr), sizeof(hdr), &conf));
+    ASSERT(conf >= 90);
+
+    memset(hdr, 0, sizeof(hdr));
+    memcpy(hdr, "CAPT", 4);
+    ASSERT(!probe_sized(&uft_format_plugin_ipf, hdr, sizeof(hdr), sizeof(hdr), &conf));
+
+    memcpy(hdr, "CAPS", 4);
+    ASSERT(!probe_sized(&uft_format_plugin_ipf, hdr, 8, 8, &conf));
+}
+
+TEST(scp_requires_magic_and_a_full_header) {
+    uint8_t hdr[64];
+    int conf = -1;
+
+    memset(hdr, 0, sizeof(hdr));
+    memcpy(hdr, "SCP", 3);
+    ASSERT(probe_sized(&uft_format_plugin_scp, hdr, sizeof(hdr), sizeof(hdr), &conf));
+    ASSERT(conf > 0);
+
+    /* the 16-byte header must be present in full */
+    ASSERT(!probe_sized(&uft_format_plugin_scp, hdr, 8, 8, &conf));
+
+    memset(hdr, 0, sizeof(hdr));
+    memcpy(hdr, "SCQ", 3);
+    ASSERT(!probe_sized(&uft_format_plugin_scp, hdr, sizeof(hdr), sizeof(hdr), &conf));
+}
+
+TEST(stx_requires_the_pasti_magic_including_its_nul) {
+    uint8_t hdr[64];
+    int conf = -1;
+
+    /* Pasti signature is "RSY" followed by a NUL byte — the NUL is part of it */
+    memset(hdr, 0, sizeof(hdr));
+    hdr[0] = 'R'; hdr[1] = 'S'; hdr[2] = 'Y'; hdr[3] = 0x00;
+    ASSERT(probe_sized(&uft_format_plugin_stx, hdr, sizeof(hdr), sizeof(hdr), &conf));
+    ASSERT(conf >= 95);
+
+    hdr[3] = '!';
+    ASSERT(!probe_sized(&uft_format_plugin_stx, hdr, sizeof(hdr), sizeof(hdr), &conf));
+
+    hdr[3] = 0x00;
+    ASSERT(!probe_sized(&uft_format_plugin_stx, hdr, 8, 8, &conf));
+}
+
 int main(void) {
     printf("=== Real plugin probes, wave 1 (MF-385) ===\n");
     RUN(d64_accepts_all_eight_production_sizes);
@@ -596,6 +686,10 @@ int main(void) {
     RUN(img_accepts_the_nine_known_pc_geometries);
     RUN(img_confidence_rises_with_a_fat12_boot_sector);
     RUN(td0_accepts_the_real_teledisk_signatures);
+    RUN(fdi_grades_confidence_by_geometry_plausibility);
+    RUN(ipf_requires_the_caps_magic);
+    RUN(scp_requires_magic_and_a_full_header);
+    RUN(stx_requires_the_pasti_magic_including_its_nul);
     printf("\nResults: %d passed, %d failed\n", _pass, _fail);
     return _fail == 0 ? 0 : 1;
 }

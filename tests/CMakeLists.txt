@@ -450,7 +450,14 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/formats/img/uft_img.c
             ${CMAKE_SOURCE_DIR}/src/formats/td0/uft_td0.c
             # img read_metadata pulls uft_meta_free (uft_metadata.c) via core stubs
-            ${CMAKE_SOURCE_DIR}/src/core/uft_metadata.c)
+            ${CMAKE_SOURCE_DIR}/src/core/uft_metadata.c
+            ${CMAKE_SOURCE_DIR}/src/formats/fdi/uft_fdi_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_caps_ipf.c
+            ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_air.c
+            ${CMAKE_SOURCE_DIR}/src/formats/scp/uft_scp_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/formats/stx/uft_stx_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_decoder_plugin_stub.c)
     elseif(${test_name} STREQUAL "test_protection_honest_failure")
         # MF-384: pins that unimplemented detectors fail instead of inventing
         target_sources(${test_name} PRIVATE

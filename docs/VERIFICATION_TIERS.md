@@ -18,7 +18,7 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 
 | Plugin | Stufe | Tests | Spec-Quelle | Evidenz | Korpus-Images |
 |---|---|---|---|---|---|
-| `fdi` | **T1** | `test_corpus_fdi`, `test_fdi_spectrum` | SAMdisk ReadFDI (src/samdisk/fdi.cpp, in-tree) + WoS format FAQ | MF-359 | 1 |
+| `fdi` | **T1** | `test_corpus_fdi`, `test_fdi_spectrum`, `test_plugin_probe_real` | SAMdisk ReadFDI (src/samdisk/fdi.cpp, in-tree) + WoS format FAQ | MF-359 | 1 |
 | `g64` | **T1** | `test_c64_metrics_corpus`, `test_c64_protection_real_corpus`, `test_plugin_probe_real` | — | — | 3 |
 | `adf` | **T1b** | `test_adf_write_roundtrip`, `test_corpus_adf` | — | — | 1 |
 | `atr` | **T1b** | `test_atr_512`, `test_atr_write_roundtrip`, `test_corpus_atr`, `test_plugin_probe_real` | — | — | 1 |
@@ -26,7 +26,7 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 | `d71` | **T1b** | `test_corpus_d71`, `test_d71_write_roundtrip`, `test_plugin_probe_real` | — | — | 1 |
 | `d81` | **T1b** | `test_corpus_d81`, `test_d81_write_roundtrip`, `test_plugin_probe_real` | — | — | 1 |
 | `hfe` | **T1b** | `test_corpus_hfe`, `test_hfe_v3_weak`, `test_plugin_probe_real` | HxC hfev3_loader.c opcode semantics (v3 decode + RAND weak bits); HxC HFE docs (v1) | MF-354, MF-362 | 1 |
-| `scp` | **T1b** | `test_corpus_scp`, `test_protection_probe`, `test_scp_footer_roundtrip`, `test_scp_weakbit_multirev`, `test_scp_writer_roundtrip` | cbmstuff SCP image spec (48-byte FPCS footer, bitcell track length) | MF-318, MF-351 | 1 |
+| `scp` | **T1b** | `test_corpus_scp`, `test_plugin_probe_real`, `test_protection_probe`, `test_scp_footer_roundtrip`, `test_scp_weakbit_multirev`, `test_scp_writer_roundtrip` | cbmstuff SCP image spec (48-byte FPCS footer, bitcell track length) | MF-318, MF-351 | 1 |
 | `adf_ext` | **T2** | `test_adf_ext_plugin` | WinUAE disk.cpp read_header_ext2 (UAE-1ADF) | MF-352 | — |
 | `akai_s900` | **T2** | `test_akai_s900_plugin` | akaiutil (kmi9000) geometry: DD 5x1024/819200, HD 10x1024/1638400 | MF-348 | — |
 | `d88` | **T2** | `test_d88_error_marks`, `test_plugin_probe_real` | pc98.org D88 + MAME d88_dsk (DDAM @+07, FDC status @+08) | MF-336 | — |
@@ -36,7 +36,7 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 | `korg_dss1` | **T2** | `test_korg_dss1_plugin` | chickensys Korg DSS-1 geometry (80x2x5x1024) | MF-347 | — |
 | `lisa_twiggy` | **T2** | `test_lisa_twiggy_plugin` | bitsavers Lisa Twiggy ZCAV zone table (46 tracks/side, 22..15 spt) | MF-349 | — |
 | `nfd` | **T2** | `test_nfd_r0` | pc98.org nfdr0/nfdr1 + tomari/d88split nfd2mhlt.pl (r1 skip accounting spec-only, no real r1 corpus yet) | MF-358, MF-360 | — |
-| `stx` | **T2** | `test_stx_error_marks` | Pasti STX descriptor spec (atari.8bitchip.info/STXdesc) | MF-335 | — |
+| `stx` | **T2** | `test_plugin_probe_real`, `test_stx_error_marks` | Pasti STX descriptor spec (atari.8bitchip.info/STXdesc) | MF-335 | — |
 | `woz` | **T2** | `test_diskcopy`, `test_moof_roundtrip`, `test_plugin_probe_real`, `test_woz_roundtrip` | Applesauce WOZ reference v1/v2/2.1 (chunk layout, CRC32, WRIT logical refs) | MF-317, MF-357, MF-361 | — |
 | `2img` | **T3** | — | — | — | — |
 | `86f` | **T3** | — | — | — | — |
@@ -66,7 +66,7 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 | `hardsector` | **T3** | — | — | — | — |
 | `imd` | **T3** | `test_imd_error_marks`, `test_imd_write_roundtrip`, `test_plugin_probe_real` | — | — | — |
 | `img` | **T3** | `test_img_write_roundtrip`, `test_plugin_probe_real` | — | — | — |
-| `ipf` | **T3** | `test_ipf_air_accessors` | — | — | — |
+| `ipf` | **T3** | `test_ipf_air_accessors`, `test_plugin_probe_real` | — | — | — |
 | `jv1` | **T3** | `test_plugin_probe_real` | — | — | — |
 | `jv3` | **T3** | — | — | — | — |
 | `jvc` | **T3** | — | — | — | — |
