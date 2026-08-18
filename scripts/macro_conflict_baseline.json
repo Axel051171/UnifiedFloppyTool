@@ -32,10 +32,7 @@
     "UFT_RESTRICT",
     "UFT_TD0_SIGNATURE_NORMAL",
     "UFT_THREAD_LOCAL",
-    "UFT_VERIFY_OPTIONS_DEFAULT",
-    "UFT_WOZ1_MAGIC",
-    "UFT_WOZ2_MAGIC",
-    "WOZ_MAGIC"
+    "UFT_VERIFY_OPTIONS_DEFAULT"
   ],
   "categories": {
     "DIR_ENTRY_SIZE": "name-too-generic",
@@ -63,9 +60,14 @@
     "UFT_RESTRICT": "platform-boilerplate",
     "UFT_TD0_SIGNATURE_NORMAL": "magic-type-split",
     "UFT_THREAD_LOCAL": "platform-boilerplate",
-    "UFT_VERIFY_OPTIONS_DEFAULT": "format-constant",
-    "UFT_WOZ1_MAGIC": "magic-type-split",
-    "UFT_WOZ2_MAGIC": "magic-type-split",
-    "WOZ_MAGIC": "magic-type-split"
+    "UFT_VERIFY_OPTIONS_DEFAULT": "format-constant"
+  },
+  "_resolved": {
+    "MF-422": [
+      "UFT_WOZ1_MAGIC",
+      "UFT_WOZ2_MAGIC",
+      "WOZ_MAGIC"
+    ],
+    "_note": "Aufgeloest durch das Entfernen der Phantom-Header in MF-422 — include/uft/formats/uft_woz.h und include/uft/uft_applesauce.h trugen die konkurrierenden String-Definitionen. Damit ist die magic-type-split-Gruppe von 5 auf 2 geschrumpft."
   }
 }

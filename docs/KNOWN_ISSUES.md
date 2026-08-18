@@ -1498,11 +1498,50 @@ Falsches sagt, ist so schädlich wie ein fehlender.
 - Die MF-011-Zeile im MASTER_PLAN steht wieder auf **teilweise** statt CLOSED,
   mit dem Grund daneben.
 
-*Nächster Schritt, nach Nutzen:* die 12 veralteten Banner entfernen (mechanisch,
-risikolos, macht die verbleibenden 22 glaubwürdig), dann pro echtem Skelett die
-MF-011-Triage anwenden — IMPLEMENT / DELETE. Den Audit auf unpräfixierte
-Prototypen zu erweitern wäre möglich, würde aber die Zahlenreihe seit April
-brechen; sinnvoller ist ein zweiter, getrennt ausgewiesener Zähler.
+**Abgearbeitet (MF-421/MF-422).** Zuerst die veralteten Banner entfernt (10 von
+den 12 Kandidaten; zwei blieben, weil ihr Banner Implementierungs*tiefe*
+beschreibt, nicht fehlende Definitionen). Dann die MF-011-Triage auf die
+verbliebenen 21 echten Skelette:
+
+| | |
+|---|---|
+| Prototypen ohne Definition **und ohne Aufrufer** | 77 |
+| Prototypen ohne Definition **mit** Aufrufern | 37 |
+| Header davon **komplett unreferenziert** | **10** |
+
+Die 10 unreferenzierten sind Phantom-Zwillinge lebender Subsysteme und wurden
+gelöscht — **2784 Zeilen**:
+
+`decoder/uft_pll.h`, `flux/uft_pll_pi.h`, `flux/pll/uft_pll_pi.h`,
+`formats/uft_woz.h`, `fs/uft_atari_dos.h`, `hal/uft_fc5025.h`,
+`uft_applesauce.h`, `uft_format_verify.h`, `uft_process.h`,
+`uft_tool_adapter.h`
+
+Jeder Einzelfall vorher geprüft: WOZ existiert **fünffach** im Include-Baum, das
+echte Plugin nimmt `formats/apple/uft_woz.h`; FC5025 läuft ausschließlich über
+`hardware_providers/fc5025_provider_v2.h` (ein `src/hal/uft_fc5025.c` gibt es
+nicht); `uft_atari_dos.c` bindet den Root-Header ein, nicht den unter `fs/`.
+
+**Nebeneffekt, den der Wächter aus MF-419 sofort meldete:** das Entfernen löste
+**drei** der 29 Makro-Konflikte auf — `UFT_WOZ1_MAGIC`, `UFT_WOZ2_MAGIC`,
+`WOZ_MAGIC`, allesamt aus der gefährlichen `magic-type-split`-Gruppe, die damit
+von 5 auf 2 schrumpft. Die konkurrierenden String-Definitionen standen in genau
+den gelöschten Phantomen. Baseline 29 → 26.
+
+**Ein wichtiger Fehler auf dem Weg dahin, dokumentiert damit er nicht wiederkehrt:**
+die erste Fassung der Triage übersah `static inline`-Definitionen in Headern und
+meldete deshalb `uft_pll_init()` als fehlend — eine Funktion, die in
+`uft_flux_pll.h:317` definiert ist und im Konvertierungspfad viermal aufgerufen
+wird. Hätte ich danach gelöscht, wäre der Build zerbrochen. Wer diese Analyse
+wiederholt, muss Header **mitscannen**.
+
+*Verbleibend:* 11 Skelett-Header, die referenziert werden und deshalb
+Einzelfallprüfung brauchen. Der größte zusammenhängende Block ist die
+FAT-Erweiterungsfamilie (`fs/uft_fat_atari.h`, `_boot.h`, `_badblock.h`,
+`uft_fat32.h`, `fs/uft_bbc_dfs.h`) — ein in sich geschlossenes, nicht
+implementiertes Subsystem, dessen einziger Aufrufer der ausgeschlossene Test
+`test_fat_extensions` ist. Das ist eine Entscheidung IMPLEMENT gegen DELETE für
+das ganze Subsystem, keine Einzelprototypen-Frage.
 
 ### ARCH-2 — `UFT_SCP_SIGNATURE` existiert viermal, einmal mit anderem Typ (2026-08-18, MF-418)
 
