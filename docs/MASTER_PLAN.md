@@ -664,7 +664,7 @@ keinem Meilenstein geführt.
 Aufgabe: zwei Header-Familien (`include/uft/detect/` gegen `analysis/`)
 beschatten einander im Include-Pfad. Eine Entwirrung, drei Tests zurück.
 
-### S3-4 — Doku-Governance (P2)
+### S3-4 — Doku-Governance (P2) → ✓ ERLEDIGT (MF-410)
 
 `GOVERNED_DOCS` in `scripts/update_inventory.py` umfasst nur `README.md`,
 `CLAUDE.md`, `.claude/CLAUDE.md`. **`MASTER_PLAN.md` und `KNOWN_ISSUES.md`
@@ -672,6 +672,29 @@ prüft nichts** — genau deshalb konnte dieser Plan drei erledigte P0/P1 als
 offen führen, eine Struct-Größe von 216 nennen (real 224 seit MF-404) und
 38 Test-Exclusions statt 5. Die Sync-Arbeit in MF-409 behebt die Symptome,
 nicht die Ursache.
+
+**Behoben (MF-410).** `docs/MASTER_PLAN.md` steht jetzt in `GOVERNED_DOCS`, und
+`update_inventory.py` hat einen neuen Mechanismus `DERIVED_CLAIMS`: pro Eintrag
+ein Satz im Dokument, eine maschinenlesbare Quelle, Abgleich bei jedem Commit.
+
+| geprüfter Satz | Quelle der Wahrheit |
+|---|---|
+| „Static_assert pinnt `sizeof == N`" | `_Static_assert` in `uft_format_plugin.h` |
+| „noch N Exclusions" | aktive Einträge in `EXCLUDED_TESTS`, `tests/CMakeLists.txt` |
+
+Gegenprobe gemacht: mit den alten Werten (216 bzw. 38) meldet
+`check_consistency.py` beide Abweichungen namentlich und schlägt fehl; mit den
+korrekten Werten läuft es durch.
+
+Bewusst **nicht** getan: `docs/KNOWN_ISSUES.md` in `GOVERNED_DOCS` aufnehmen.
+Es führt Historie (etwa die Pre-Tag-Bestehensquote von v4.1.5, die damals
+korrekt notiert wurde und heute genau deshalb wie eine veraltete Zahl aussieht),
+und ein pauschaler
+Stale-Pattern-Lauf würde korrekte historische Einträge als Fehler melden.
+`DERIVED_CLAIMS` prüft deshalb auch keine Zahlen im Allgemeinen, sondern je
+genau einen Satz — eine historische Zeile daneben bleibt unberührt. Ein Eintrag,
+dessen Satz verschwindet, meldet das ebenfalls, damit die Prüfung nicht still
+wirkungslos wird.
 
 ### Aufgeschoben aus Sprint-2, unverändert
 

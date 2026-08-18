@@ -48,7 +48,66 @@ STALE_PATTERNS = [
     (r"\bfully wired plugin parsers\b",
      "'fully wired' capability overclaim (removed in MF-363)"),
 ]
-GOVERNED_DOCS = ["README.md", "CLAUDE.md", ".claude/CLAUDE.md"]
+GOVERNED_DOCS = ["README.md", "CLAUDE.md", ".claude/CLAUDE.md",
+                 "docs/MASTER_PLAN.md"]
+
+# ── Derived claims (MF-410) ────────────────────────────────────────────────
+#
+# MASTER_PLAN.md drifted for months because nothing checked it: it carried a
+# pinned struct size of 216 (real: 224 since MF-404) and "38 remaining test
+# exclusions" (real: 5), and listed three finished P0/P1 items as open.
+#
+# docs/KNOWN_ISSUES.md is deliberately NOT in GOVERNED_DOCS: it records
+# history ("pre-tag pass rate 151/151"), and a stale-pattern sweep would flag
+# those correct historical entries as errors.
+#
+# The checks below therefore do not scan for numbers in general. Each one
+# targets ONE sentence whose value has a machine-readable source of truth, in
+# the same shape as PLUGIN_COUNT_CLAIMS above. A historical line elsewhere in
+# the file is untouched.
+
+
+def _pinned_plugin_struct_size(repo: Path):
+    """Authoritative: the _Static_assert in the plugin header."""
+    f = repo / "include/uft/uft_format_plugin.h"
+    if not f.exists():
+        return None
+    m = re.search(r"sizeof\(uft_format_plugin_t\)\s*==\s*(\d+)",
+                  f.read_text(encoding="utf-8", errors="replace"))
+    return int(m.group(1)) if m else None
+
+
+def _excluded_test_count(repo: Path):
+    """Authoritative: active entries in tests/CMakeLists.txt EXCLUDED_TESTS.
+
+    Commented-out entries (re-enabled tests are kept as documentation) do not
+    count; that is exactly the distinction the stale "38" missed."""
+    f = repo / "tests/CMakeLists.txt"
+    if not f.exists():
+        return None
+    text = f.read_text(encoding="utf-8", errors="replace")
+    m = re.search(r"set\(EXCLUDED_TESTS(.*?)^\)", text, re.S | re.M)
+    if not m:
+        return None
+    count = 0
+    for line in m.group(1).splitlines():
+        stripped = line.strip()
+        if stripped.startswith("#"):
+            continue
+        code = stripped.split("#", 1)[0]
+        count += len(re.findall(r'"test_[A-Za-z0-9_]+"', code))
+    return count
+
+
+# (file, regex with one numeric group, source callable, description)
+DERIVED_CLAIMS = [
+    ("docs/MASTER_PLAN.md", r"Static_assert pinnt `sizeof == (\d+)`",
+     _pinned_plugin_struct_size,
+     "MASTER_PLAN UFT-004: pinned sizeof(uft_format_plugin_t)"),
+    ("docs/MASTER_PLAN.md", r"noch (\d+) Exclusions",
+     _excluded_test_count,
+     "MASTER_PLAN UFT-T04: active EXCLUDED_TESTS entries"),
+]
 
 
 def check_inventory(repo: Path) -> list[str]:
@@ -73,6 +132,27 @@ def check_inventory(repo: Path) -> list[str]:
         for pattern, desc in STALE_PATTERNS:
             if re.search(pattern, text):
                 errors.append(f"{fname}: {desc}")
+
+    # Derived claims: one sentence each, checked against its source (MF-410).
+    for fname, pattern, source, desc in DERIVED_CLAIMS:
+        f = repo / fname
+        if not f.exists():
+            continue
+        truth = source(repo)
+        if truth is None:
+            errors.append(f"{fname}: {desc} — source of truth unreadable")
+            continue
+        text = f.read_text(encoding="utf-8", errors="replace")
+        found = re.findall(pattern, text)
+        if not found:
+            errors.append(
+                f"{fname}: {desc} — the checked sentence is gone; either "
+                f"restore it or drop the entry from DERIVED_CLAIMS")
+            continue
+        for claimed in found:
+            if int(claimed) != truth:
+                errors.append(
+                    f"{fname}: {desc} claims {claimed}, source says {truth}")
 
     # README tier summary must match the computed tiers (drift gate).
     readme = repo / "README.md"
