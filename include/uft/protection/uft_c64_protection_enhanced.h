@@ -241,6 +241,9 @@ int uft_c64_detect_fat_track(const uint32_t *flux_data, size_t flux_count,
 
 /**
  * @brief Scan disk for all fat tracks
+ *
+ * NOT IMPLEMENTED (see PROT-7): returns -1. Never reports "no fat tracks"
+ * without having looked — use uft_c64_detect_fat_track() per track.
  */
 int uft_c64_scan_fat_tracks(const void *disk_image,
                             uft_fat_track_result_t *results,
@@ -335,6 +338,10 @@ typedef struct {
 
 /**
  * @brief Full C64 disk protection scan
+ *
+ * NOT IMPLEMENTED (see PROT-7): returns -1 rather than a fabricated
+ * "no protection" verdict. Working path: ufm_c64_metrics_from_gcr() per
+ * track, then ufm_c64_prot_analyze().
  */
 int uft_c64_scan_all_protection(const void *disk_image,
                                 uft_c64_protection_scan_t *result);

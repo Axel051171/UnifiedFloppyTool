@@ -519,12 +519,15 @@ int uft_c64_scan_fat_tracks(const void *disk_image,
                             size_t max_results, size_t *found)
 {
     if (!disk_image || !results || !found) return -1;
-    
-    /* This would scan all tracks in the disk image */
-    /* Placeholder implementation */
+
+    /* NOT IMPLEMENTED — fails instead of reporting "no fat tracks".
+     * Previously ignored `disk_image` and returned success with *found = 0,
+     * i.e. a fabricated negative finding (docs/KNOWN_ISSUES.md PROT-7).
+     * The per-track detector uft_c64_detect_fat_track() above is real; only
+     * the whole-disk sweep on top of it is missing. */
+    (void)max_results;
     *found = 0;
-    
-    return 0;
+    return -1;
 }
 
 /*===========================================================================
@@ -645,22 +648,24 @@ int uft_c64_scan_all_protection(const void *disk_image,
                                 uft_c64_protection_scan_t *result)
 {
     if (!disk_image || !result) return -1;
-    
+
+    /* NOT IMPLEMENTED — fails instead of reporting a clean disk.
+     *
+     * This function used to ignore `disk_image` entirely and return success
+     * with has_protection=false / "None" / confidence 0.0. A caller asking
+     * "is this disk protected?" received a confident NO that no measurement
+     * ever supported, and uft_c64_protection_report_json() would have
+     * exported that fabrication as a forensic report.
+     *
+     * DESIGN_PRINCIPLES: "Keine erfundenen Daten." A missing implementation
+     * must fail loudly; it must never answer the question it cannot answer.
+     *
+     * The working path today is per-track: feed a GCR track image to
+     * ufm_c64_metrics_from_gcr() (src/protection/ufm_c64_metrics.c) and pass
+     * the resulting metrics to ufm_c64_prot_analyze(). Whole-disk iteration
+     * on top of that is unwritten — see docs/KNOWN_ISSUES.md PROT-7. */
     memset(result, 0, sizeof(*result));
-    
-    /* This would iterate through all tracks and run all detectors */
-    /* Placeholder - actual implementation would:
-       1. Read each track from disk image
-       2. Run V-MAX!, RapidLok, Vorpal detection
-       3. Check for fat tracks
-       4. Analyze GCR timing
-       5. Compile results */
-    
-    result->has_protection = false;
-    strncpy(result->primary_protection, "None", 31);
-    result->overall_confidence = 0.0f;
-    
-    return 0;
+    return -1;
 }
 
 int uft_c64_protection_report_json(const uft_c64_protection_scan_t *scan,

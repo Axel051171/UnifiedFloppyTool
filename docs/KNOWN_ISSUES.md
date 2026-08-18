@@ -1217,12 +1217,26 @@ kein Erkennungsproblem, sondern eine Eigenschaft dieses Loaders.
 
 Zwei Befunde aus derselben Untersuchung, beide **Architecture**:
 
-1. **`ufm_c64_prot_analyze()` hatte keinen Datenlieferanten → gelöst (MF-381).**
-   Die Funktion erwartet pro Spur ein `ufm_c64_track_metrics_t`; im gesamten
-   Baum existierte **keine** Funktion, die diese Metriken erzeugt (der einzige
-   historische Aufrufer war das mit MF-369 gelöschte
-   `ProtectionAnalysisWidget`, das `m_trackMetrics` nur **anzeigte**). Damit
-   waren alle C64-Schemes unerreichbar, unabhängig von der Klassifikation.
+1. **`ufm_c64_prot_analyze()` bekam unbrauchbare Metriken → Kern gelöst (MF-381).**
+
+   > **KORREKTUR (MF-384).** Die ursprüngliche Fassung dieses Eintrags war in
+   > zwei Punkten falsch, und beide gehen auf ungeprüfte Annahmen von mir
+   > zurück: `ProtectionAnalysisWidget` wurde **nicht** mit MF-369 gelöscht —
+   > es existiert, wird gebaut (`UnifiedFloppyTool.pro:249`) und **ruft**
+   > `ufm_c64_prot_analyze()` auf (`ProtectionAnalysisWidget.cpp:195`). Es
+   > „zeigt die Metriken nur an" ist ebenfalls falsch: es besitzt **zwei**
+   > eigene Extraktoren, einen für SCP-Flux und einen für G64.
+   >
+   > Der Befund „C64-Schemes unerreichbar" stimmt trotzdem — aber aus einem
+   > anderen Grund: die GUI-Extraktoren füllen `is_half_track`, `bitlen_*`,
+   > `weak_region_*` und `illegal_gcr_events`, während der Klassifikator
+   > `has_half_track`, `track_length_ratio`, `has_custom_sync`,
+   > `sector_count`, `duplicate_ids` und `bad_gcr_count` liest. Die beiden
+   > Seiten reden über dieselbe Struktur aneinander vorbei, deshalb feuert
+   > kein einziger Check. Gleiches Ergebnis, andere Ursache.
+
+   Damit war jeder C64-Scheme unerreichbar, unabhängig von der Qualität der
+   Klassifikation.
 
    Neu: `ufm_c64_metrics_from_gcr()`
    (`src/protection/ufm_c64_metrics.c`) leitet die Metriken direkt aus einem
@@ -1291,6 +1305,46 @@ Zwei Befunde aus derselben Untersuchung, beide **Architecture**:
    (siehe PROT-5) — und RapidLok bleibt unauslösbar, aber aus einem anderen
    Grund als gedacht (siehe PROT-6).
 
+### PROT-7 — Fünf Funktionen erfanden forensische Befunde → ✓ RESOLVED (2026-08-18, MF-384)
+
+**Correctness / Forensik-Integrität.** Ein systematischer Scan der Schutz- und
+Kernschicht fand Funktionen, die **Erfolg meldeten, ohne ihre Eingabe je
+anzusehen**. Jede lieferte damit einen erfundenen Negativbefund:
+
+| Funktion | Behauptete |
+|---|---|
+| `uft_c64_scan_all_protection()` | „keine Protection", Konfidenz 0.0 — direkt neben einem JSON-Report-Export |
+| `uft_c64_scan_fat_tracks()` | „keine Fat Tracks" (`*found = 0`) |
+| `uft_rapidlok_scan_disk()` | „kein RapidLok" — Bildpfad nie geöffnet |
+| `uft_ir_detect_weak_bits()` | „keine Weak Bits" für jede Spur |
+| `uft_protection_detect_pirateslayer()` | „nicht erkannt", alle drei Eingaben weggecastet |
+| `uft_speedlock_write()` | erzeugte eine **erfundene** Spur: 16 KB `0x4E` plus 11 Sektoren mit Sync `0xA1` — dem IBM-Address-Mark — in einer als Amiga dokumentierten Routine (Amiga-Sync ist `0x4489`) |
+
+Anders als der mit MF-379 gelöschte `uft_dec0de_detect` waren fünf davon in
+**öffentlichen Headern** deklariert, also von jedem Aufrufer erreichbar. Keine
+hatte aktuell Aufrufer — geladen, aber nicht abgefeuert.
+
+**Fix (MF-384):** alle sechs melden jetzt Fehlschlag statt erfundenen Erfolg,
+mit Begründung an Implementierung und Deklaration. `uft_speedlock_write()`
+lässt den Ausgabepuffer unangetastet — Schutzverfahren werden dokumentiert,
+nicht neu gemastert (read-only by design). Festgenagelt in
+`tests/test_protection_honest_failure.c`; die Asserts sind so geschrieben,
+dass eine **echte** Implementierung den Test rot macht — das ist dann das
+Signal, den Assert durch einen Verhaltenstest zu ersetzen.
+
+Der Test fand beim ersten Lauf sofort einen sechsten Pfad, den ich übersehen
+hatte: `uft_ir_detect_weak_bits(NULL)` gab ebenfalls Erfolg zurück, ebenso der
+Fall „weniger als zwei Umdrehungen" — letzterer ist eine echte Messgrenze und
+meldet jetzt Fehlschlag statt „nichts gefunden".
+
+**Warum das Gate sie durchließ:** `check_lazy_stubs()` verlangt, dass der Rumpf
+**exakt** `return UFT_OK;` ist, matcht nur `uft_*`-Namen und überspringt jede
+Funktion mit geschweiften Klammern. Diese Klasse — „füllt die Ausgabe mit
+Nullen und meldet Erfolg" — liegt vollständig außerhalb. Zwei Versuche, daraus
+eine automatische Regel zu bauen, sind gescheitert (ein Fehlalarm bei
+korrektem Code, dann 411 Treffer). Ein belastbares Gate dafür ist offene
+Werkzeugarbeit, kein Einzeiler.
+
 ### PROT-6 — G64-Plugin liefert keine Halbspuren; Halbspur-Schutz ist unsichtbar (2026-08-18, MF-383)
 
 **Correctness / Forensik-Integrität.** `g64_read_track()` ruft
@@ -1312,6 +1366,31 @@ regulären Weg nicht detektierbar; (b) `ufm_cbm_check_rapidlok()`
 eine explizite API (`read_half_track`) oder indem `cylinder` als Halbspur-Index
 interpretiert wird. Das ist eine Plugin-/API-Frage mit Auswirkung auf alle
 Aufrufer und deshalb bewusst nicht in MF-383 mitgemacht.
+
+**Nachtrag (MF-384):** Es gibt im Baum bereits einen G64-Leser, der Halbspuren
+kann — `g64_get_track()` (`src/formats/commodore/g64.c`), von
+`ProtectionAnalysisWidget` über einen Halbspur-Index angesprochen. Die Lücke
+ist also nicht „UFT kann keine Halbspuren lesen", sondern **zwei G64-Leser mit
+ungleichem Können**, von denen der Plugin-Pfad der schwächere ist. Das ist
+zugleich ein Single-Source-Problem und sollte zusammen mit PROT-8 gelöst
+werden.
+
+### PROT-8 — Zwei konkurrierende C64-Metrik-Extraktoren, der getestete wird nicht benutzt (2026-08-18, MF-384)
+
+**Architecture.** Seit MF-381 existiert `ufm_c64_metrics_from_gcr()`: in C,
+gegen reale Disks verifiziert, füllt genau die Felder, die
+`ufm_c64_prot_analyze()` liest. Unabhängig davon rechnet
+`ProtectionAnalysisWidget` seine Metriken weiterhin selbst — byteweise statt
+bitweise, in C++, ohne einen einzigen Test (`src/gui/` hat keine Testabdeckung),
+und in die falschen Strukturfelder (siehe Korrektur unter PROT-2).
+
+Damit hat das Projekt zwei Implementierungen desselben Fakts, von denen die
+getestete nicht benutzt wird und die benutzte nicht funktioniert.
+
+*Nächster Schritt:* Das Widget auf `ufm_c64_metrics_from_gcr()` umstellen und
+die eigene Rechnung löschen. Das macht den C64-Schutzpfad erstmals durchgehend
+nutzbar, entfernt untestbaren Duplikat-Code und löst nebenbei PROT-6, weil der
+GUI-Leser Halbspuren bereits adressieren kann.
 
 ### PROT-5 — `ufm_cbm_check_vmax()` ist unter der belegten Sync-Definition degeneriert (2026-08-18, MF-382)
 

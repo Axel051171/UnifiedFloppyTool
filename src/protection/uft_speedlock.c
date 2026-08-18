@@ -381,45 +381,24 @@ int uft_speedlock_write(const uft_speedlock_recon_params_t *params,
                          uint32_t *output_bits,
                          uint16_t *timing_out) {
     if (!params || !output || !output_bits) return -1;
-    
-    /* This would require full Amiga track encoding */
-    /* For now, generate basic structure */
-    
-    uint32_t bit_pos = 0;
-    uint32_t byte_pos = 0;
-    
-    memset(output, 0x4E, 16384); /* Fill with gap pattern */
-    
-    /* Generate 11 sectors with standard Amiga format */
-    for (int sector = 0; sector < 11; sector++) {
-        /* Sector header */
-        output[byte_pos++] = 0x00;
-        output[byte_pos++] = 0x00;
-        output[byte_pos++] = 0xA1;
-        output[byte_pos++] = 0xA1;
-        bit_pos += 32;
-        
-        /* Sector data placeholder */
-        memcpy(&output[byte_pos], params->sector_data[sector], 512);
-        byte_pos += 512;
-        bit_pos += 4096;
-        
-        /* Gap */
-        for (int i = 0; i < 40; i++) {
-            output[byte_pos++] = 0x4E;
-            bit_pos += 8;
-        }
-    }
-    
-    *output_bits = bit_pos;
-    
-    /* Generate timing if requested */
-    if (timing_out) {
-        uft_speedlock_generate_timing(&params->params, bit_pos,
-                                       timing_out, bit_pos);
-    }
-    
-    return 0;
+
+    /* NOT IMPLEMENTED — refuses instead of emitting a fabricated track.
+     *
+     * The previous body did not encode anything: it filled 16 KB with 0x4E and
+     * hand-assembled 11 "sectors" whose sync bytes were 0xA1 — the IBM/MFM
+     * address mark — in a routine documented as Amiga (Amiga sync is 0x4489).
+     * It then reported success, so a caller would have written invented bytes
+     * to a disk or image believing they were a reconstructed Speedlock track.
+     *
+     * Two principles forbid that: "Keine erfundenen Daten", and the protection
+     * subsystem is read-only by design (docs/DESIGN_PRINCIPLES.md) — UFT
+     * documents protections, it does not re-master them.
+     *
+     * See docs/KNOWN_ISSUES.md PROT-7. */
+    (void)output;
+    (void)timing_out;
+    *output_bits = 0;
+    return -1;
 }
 
 /*===========================================================================

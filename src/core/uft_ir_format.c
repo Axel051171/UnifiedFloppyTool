@@ -706,20 +706,29 @@ uft_ir_encoding_t uft_ir_detect_encoding(const uft_ir_revolution_t* rev,
 }
 
 int uft_ir_detect_weak_bits(uft_ir_track_t* track) {
-    if (!track || track->revolution_count < 2) {
-        return 0;
+    if (!track) {
+        return -1;
+    }
+    if (track->revolution_count < 2) {
+        /* Weak bits are defined by disagreement BETWEEN revolutions, so with
+         * fewer than two there is nothing to compare. That is a genuine limit,
+         * not a result: report it as a failure rather than as "none found". */
+        track->weak_region_count = 0;
+        return -1;
     }
     
-    /* Need at least 2 revolutions to detect weak bits */
-    /* Compare bit positions across revolutions */
-    
-    /* For now, placeholder - real implementation would:
-     * 1. Decode each revolution to bits
-     * 2. Compare bit-by-bit across revolutions
-     * 3. Mark positions with variations as weak */
-    
+    /* NOT IMPLEMENTED — fails instead of reporting "no weak bits".
+     *
+     * Previously set weak_region_count = 0 and returned success without ever
+     * comparing the revolutions, i.e. it asserted the ABSENCE of weak bits for
+     * every track it was handed. Weak bits are a primary forensic signal (copy
+     * protection, media degradation); a fabricated "none" is worse than no
+     * answer at all. DESIGN_PRINCIPLES: "Keine erfundenen Daten."
+     *
+     * A real implementation decodes each revolution to bits, compares them
+     * position-wise and marks the diverging positions. See KNOWN_ISSUES PROT-7. */
     track->weak_region_count = 0;
-    return 0;
+    return -1;
 }
 
 uint8_t uft_ir_calc_quality(uft_ir_track_t* track) {

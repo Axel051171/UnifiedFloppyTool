@@ -222,14 +222,16 @@ int uft_rapidlok_scan_disk(uft_rapidlok_scanner_t *scanner,
                            const char *image_path,
                            uft_c64_protection_result_t *result) {
     if (!scanner || !image_path || !result) return -1;
-    
-    /* Would read disk image and scan all tracks */
-    /* For now, placeholder */
-    
+
+    /* NOT IMPLEMENTED — fails instead of reporting "no RapidLok".
+     * Previously never opened `image_path`, zeroed the result and returned
+     * success: a fabricated negative finding for every disk handed to it.
+     * See docs/KNOWN_ISSUES.md PROT-7. The per-track detectors above are
+     * real; only the whole-image sweep is missing. */
     memset(result, 0, sizeof(*result));
     result->confidence = 0.0;
-    
-    return 0;
+
+    return -1;
 }
 
 const char* uft_c64_protection_name(uft_c64_protection_t type) {

@@ -423,6 +423,13 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/formats/g64/uft_g64.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+    elseif(${test_name} STREQUAL "test_protection_honest_failure")
+        # MF-384: pins that unimplemented detectors fail instead of inventing
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/protection/uft_c64_protection_enhanced.c
+            ${CMAKE_SOURCE_DIR}/src/protection/uft_protection_extended.c
+            ${CMAKE_SOURCE_DIR}/src/protection/uft_speedlock.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_ir_format.c)
     elseif(${test_name} STREQUAL "test_c64_protection_real_corpus")
         # Positive control: real protected C64 disks, local-only images (MF-383)
         target_sources(${test_name} PRIVATE

@@ -518,13 +518,18 @@ int uft_protection_detect_pirateslayer(
     (void)track_data;
     (void)track_size;
     (void)track_num;
-    
+
+    /* NOT IMPLEMENTED — returns an error, not "not detected".
+     *
+     * This function never inspected its inputs, yet returned 0, which in this
+     * file means "scheme not present" (the sibling detectors return 1 on a
+     * hit). Every caller was therefore told PirateSlayer is absent, on every
+     * track, without a single measurement. PirateSlayer needs inter-revolution
+     * timing analysis, which this signature does not even receive.
+     *
+     * See docs/KNOWN_ISSUES.md PROT-7. */
     memset(result, 0, sizeof(*result));
-    
-    /* PirateSlayer detection requires timing analysis */
-    /* Basic implementation just checks for suspicious patterns */
-    
-    return 0;
+    return -1;
 }
 
 /* ============================================================================
