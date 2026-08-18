@@ -1480,11 +1480,55 @@ als **einzige** Ausnahme belassen und ist in
 eingetragen — der neue Kollisions-Wächter meldet also weiterhin 0, ohne die
 Ausnahme zu verschweigen.
 
-*Nächster Schritt:* entscheiden, ob compat in den großen Header aufgeht oder
-umgekehrt, die doppelten Makros auf eine Stelle ziehen, dann den Guard
-auftrennen und den Ausnahme-Eintrag entfernen. Vorher prüfen, was
-`uft_greaseweazle_full.c` (geschützter Pfad) aus dem großen Header tatsächlich
-braucht — die Datei läuft seit jeher ohne ihn.
+**Zusammenführung versucht und wieder zurückgenommen (MF-416).** Der
+naheliegende Weg — Guard auftrennen, die doppelten Makros idempotent machen —
+wurde gebaut und **bricht den Build**: 187 von 197 Tests fallen aus.
+
+Ursache, gemessen statt vermutet: `compat/uft_platform.h` ist keine reine
+Definitionssammlung, sondern enthält **invasive POSIX-Shims für Windows**, die
+Standardnamen umdefinieren:
+
+```c
+#define close   _close
+#define read    _read
+#define write   _write
+#define access  _access
+#define unlink  _unlink
+#define mkdir(path, mode) _mkdir(path)
+```
+
+Solange der Header nur von zwei Dateien direkt eingebunden wird, ist das
+beherrschbar. Macht man ihn über `uft/uft_platform.h` baumweit sichtbar, trifft
+`mkdir(path, mode)` auf jeden echten zweiargumentigen POSIX-Aufruf —
+`error: macro "mkdir" requires 2 arguments, but only 1 given` und
+`'mkdir' redeclared as different kind of symbol`.
+
+**Die Überschneidung selbst ist klein:** von 46 bzw. 60 Makros teilen sich die
+beiden Header genau **sechs** — `CLOCK_MONOTONIC`, `UFT_BIG_ENDIAN`,
+`UFT_PACKED`, `uft_bswap16/32/64`. Compat hat über 40 Makros, die der große
+Header nicht kennt (POSIX-Konstanten, `UFT_PATH_SEP`, `UFT_THREAD_LOCAL`,
+`UFT_INLINE`). Genau diese Schicht kommt heute bei keinem Nutzer des großen
+Headers an.
+
+**Ein latenter Unterschied ist dabei aufgefallen, nicht behoben:**
+`UFT_BIG_ENDIAN` ist im großen Header *definiert-oder-abwesend*, in compat
+*0-oder-1*. `#ifdef UFT_BIG_ENDIAN` antwortet also je nach gesehenem Header
+entgegengesetzt. Geprüft: **kein einziges `#ifdef` darauf im Baum**, nur eine
+Wert-Abfrage `#if UFT_BIG_ENDIAN` innerhalb von compat selbst. Damit ist es
+latent, nicht aktiv — in neuem Code trotzdem `#if` statt `#ifdef` benutzen.
+
+*Nächster Schritt, jetzt konkret:* compat in **zwei** Dateien trennen —
+gefahrlose Plattform-/Compiler-Erkennung und Endianness auf der einen Seite,
+die namensumdefinierenden POSIX-Shims auf der anderen. Nur der erste Teil darf
+baumweit sichtbar werden; die Shims bleiben Opt-in für die Dateien, die sie
+brauchen (`uft_imd.c`, `uft_greaseweazle_full.c` — Letzterer ist geschützter
+Pfad, Änderungen dort erst nach Rückfrage). Erst danach lässt sich der Guard
+auftrennen und der Ausnahme-Eintrag in `GUARD_COLLISION_ALLOWED` entfernen.
+
+*Warum nicht in dieser Sitzung:* die Aufteilung berührt jede Datei, die
+POSIX-Namen unter Windows benutzt, und ist ohne Windows-**und**-Linux-Bau nicht
+verantwortbar zu verifizieren. Der Versuch ist dokumentiert, damit der nächste
+Anlauf nicht bei null anfängt.
 
 **Getrennt davon, ebenfalls offen:** vier Makros sind unabhängig von diesem
 Paar doppelt definiert und erzeugen seit jeher Build-Warnungen —
