@@ -38,6 +38,7 @@
 #include "hardware_providers/kryoflux_provider_v2.h"
 #include "hardware_providers/fluxengine_provider_v2.h"
 #include "hardware_providers/fc5025_provider_v2.h"
+#include "uft/hal/uft_controller_transport.h"
 #include "hardware_providers/xum1541_provider_v2.h"
 #include "hardware_providers/applesauce_provider_v2.h"
 #include "hardware_providers/adfcopy_provider_v2.h"
@@ -545,6 +546,28 @@ void HardwareTab::setWorkflowModes(bool sourceIsHardware, bool destIsHardware)
 void HardwareTab::detectSerialPorts()
 {
     ui->comboPort->clear();
+
+    /* Issue #34 / MF-412: five of the nine controllers never read the port
+     * field — libusb devices are found by VID/PID, CLI-driven ones are
+     * addressed by the external tool. Listing COM ports for them is not just
+     * useless, it is misleading: the reporter's FC5025 sits behind a
+     * libusb-win32 driver, so either no port existed (Connect disabled) or an
+     * unrelated COM1 was shown and the status line claimed the tool was
+     * talking to it.
+     *
+     * An unclassified or empty key keeps the old behaviour: this runs once
+     * from the constructor BEFORE populateControllerList(), and startup must
+     * not be changed by this fix. */
+    const QString _ctrlKey = ui->comboController->currentData().toString();
+    if (const char *why =
+            uft_controller_no_port_reason(_ctrlKey.toUtf8().constData())) {
+        ui->comboPort->addItem(tr("(not applicable - %1)")
+                                   .arg(QString::fromUtf8(why)), "");
+        ui->comboPort->setEnabled(false);
+        ui->btnConnect->setEnabled(true);
+        return;
+    }
+    ui->comboPort->setEnabled(true);
     
 #ifdef UFT_HAS_SERIALPORT
     qCDebug(lcHwSerial) << "Using QSerialPortInfo for port detection";
@@ -719,16 +742,31 @@ void HardwareTab::onConnect()
     qDebug() << "Controller data:" << controller;
     qDebug() << "Controller text:" << ui->comboController->currentText();
     
-    if (port.isEmpty()) {
+    /* Issue #34 / MF-412: only demand a port from the controllers whose
+     * connect path actually reads one. The FC5025 is driven through the
+     * `fcimage` CLI and never sees this field; requiring it turned a working
+     * setup into "Please select a valid port." Classification and its
+     * evidence: include/uft/hal/uft_controller_transport.h. */
+    const bool needsPort =
+        uft_controller_needs_port(controller.toUtf8().constData());
+
+    if (needsPort && port.isEmpty()) {
         QMessageBox::warning(this, tr("Connection Error"),
             tr("Please select a valid port."));
         return;
     }
-    
+
     m_portName = port;
     m_controllerType = ui->comboController->currentText();
-    
-    updateStatus(tr("Connecting to %1 on %2...").arg(m_controllerType, m_portName));
+
+    /* Do not claim a port in the status line when none is used — that
+     * sentence was the visible half of the bug. */
+    if (needsPort) {
+        updateStatus(tr("Connecting to %1 on %2...")
+                         .arg(m_controllerType, m_portName));
+    } else {
+        updateStatus(tr("Connecting to %1...").arg(m_controllerType));
+    }
     
     // Use real HAL connection for Greaseweazle
     // Note: This runs in main thread - consider moving to worker for non-blocking

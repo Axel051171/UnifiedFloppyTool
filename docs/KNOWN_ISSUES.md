@@ -1338,6 +1338,61 @@ algorithmisch identisch (CCITT-FALSE, init 0xFFFF, Polynom 0x1021), es ist also
 Redundanz und keine Divergenz — anders als bei FMT-14. Zusammenführen lohnt,
 eilt aber nicht.
 
+### GUI-1 — Port-Pflicht für Controller, die keinen Port benutzen (Issue #34, MF-412) → ✓ RESOLVED
+
+**Correctness / Prinzip 4 (keine irreführenden Vorgaben).** Aus einem realen
+Nutzerbericht (GitHub #34, 2026-08-11): ein FC5025 ließ sich nicht verbinden.
+Das Gerät hängt unter Windows korrekt am `libusb-win32`-Treiber und erscheint
+nie als COM-Port; UFT verlangte trotzdem einen.
+
+`HardwareTab::onConnect()` prüfte **unbedingt**:
+
+```c
+if (port.isEmpty()) { warn("Please select a valid port."); return; }
+```
+
+Fünf der neun Controller lesen das Portfeld überhaupt nicht. Belegt Aufrufstelle
+für Aufrufstelle in `src/hardwaretab.cpp`:
+
+| Controller | liest den Port? | wie adressiert |
+|---|---|---|
+| greaseweazle | ja — `gwp->open(port)` | USB-CDC, erscheint als COM |
+| applesauce, adfcopy | ja — `QSerialPort…::open(port)` | seriell |
+| usb_floppy | ja — als Gerätepfad | UFI |
+| scp, xum1541 | **nein** | libusb, über VID/PID gefunden |
+| kryoflux, fluxengine, **fc5025** | **nein** | externes CLI-Werkzeug |
+
+Zwei sichtbare Folgen: ohne COM-Port stand „(No ports found)" in der Liste und
+der Connect-Knopf war **abgeschaltet**; mit einem fremden COM1 meldete die
+Statuszeile „Connecting to FC5025 on COM1" — eine Aussage über etwas, das
+dieser Pfad nie anfasst.
+
+**Behoben (MF-412).** Die Entscheidung liegt jetzt in
+`include/uft/hal/uft_controller_transport.h` — reines C, ohne Qt, damit
+prüfbar; `src/gui/` hat keine Testabdeckung, und genau daran ist PROT-8
+jahrelang unbemerkt geblieben. `tests/test_controller_transport.c` hält sieben
+Fälle fest, darunter der gemeldete und die Gegenrichtung: die drei seriellen
+Controller **müssen** weiterhin einen Port verlangen. Ein zehnter Controller,
+der der Tabelle nicht hinzugefügt wird, lässt den Test scheitern statt still in
+UNKNOWN zu fallen.
+
+Im Widget: `onConnect()` verlangt den Port nur noch, wo er gelesen wird; die
+Statuszeile nennt keinen Port mehr, wenn keiner benutzt wird; die Portliste
+zeigt für die betroffenen Controller einen erklärenden, deaktivierten Eintrag
+statt fremder COM-Ports, und der Connect-Knopf bleibt bedienbar. Ein leerer
+oder unbekannter Controller-Schlüssel behält bewusst das alte Verhalten —
+`detectSerialPorts()` läuft einmal aus dem Konstruktor **vor**
+`populateControllerList()`, und der Start darf sich nicht ändern.
+
+*Nicht Teil dieses Fehlers:* nach dem Verbinden braucht der FC5025-Pfad weiterhin
+`fcimage` auf dem PATH. Fehlt es, meldet der Provider das ausdrücklich
+(`fc5025_provider_v2.cpp:332`) und nennt beide Wege — das war schon vorher
+ehrlich und bleibt es.
+
+*Verifikation:* 197/197 ctest grün; `src/hardwaretab.cpp` gegen Qt 6.10.2 mit
+`uic`-generiertem UI-Header syntaxgeprüft (rc=0). Ein manueller GUI-Smoke-Test
+war nicht möglich — kein Gerät und keine Anzeige in dieser Umgebung.
+
 ### ARCH-1 — Zwei `uft_platform.h`, die einander nie sehen (2026-08-18, MF-411)
 
 **Architecture.** Gefunden beim Auflösen der Include-Guard-Kollisionen.
