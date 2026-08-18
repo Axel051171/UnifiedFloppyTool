@@ -460,26 +460,34 @@ static uft_error_t g64_create(uft_disk_t* disk, const char* path,
 // Read Track
 // ============================================================================
 
-static uft_error_t g64_read_track(uft_disk_t* disk, int cylinder, int head,
-                                   uft_track_t* track) {
+/**
+ * @brief Liest einen G64-Slot anhand seines Index (MF-404)
+ *
+ * Gemeinsamer Rumpf von g64_read_track() und g64_read_half_track(). Der
+ * Slot-Index adressiert die Datei so, wie sie aufgebaut ist: zwei Slots je
+ * Zylinder, gerade = ganze Spur, ungerade = Halbspur. Vorher gab es nur den
+ * Weg ueber `cylinder`, der ungerade Indizes gar nicht erreichen konnte —
+ * auf einer geschuetzten Disk blieben so 35 vorhandene Spuren unsichtbar
+ * (KNOWN_ISSUES PROT-6).
+ */
+static uft_error_t g64_read_slot(uft_disk_t* disk, int g64_index, int head,
+                                 uft_track_t* track) {
     if (!disk || !track) return UFT_ERROR_NULL_POINTER;
-    
+
     g64_data_t* pdata = disk->plugin_data;
     if (!pdata || !pdata->file) return UFT_ERROR_FILE_READ;
-    
+
     // G64 ist single-sided
     if (head != 0) return UFT_ERROR_OUT_OF_RANGE;
-    
-    // G64 Track-Index (cylinder ist 0-basiert, G64 tracks sind 1-basiert)
-    int g64_track = cylinder + 1;
-    int g64_index = track_to_g64_index(g64_track, false);
-    
+
     if (g64_index < 0 || g64_index >= pdata->num_tracks) {
         return UFT_ERROR_OUT_OF_RANGE;
     }
-    
-    // Track initialisieren
-    uft_track_init(track, cylinder, head);
+
+    // Track initialisieren. Der Zylinder ist die ganze Spur, auf der bzw.
+    // nach der dieser Slot liegt; is_half_track unterscheidet die beiden.
+    uft_track_init(track, g64_index / 2, head);
+    track->is_half_track = (g64_index % 2) != 0;
     
     // Offset prüfen
     uint32_t offset = pdata->track_offsets[g64_index];
@@ -648,6 +656,28 @@ static uft_error_t g64_read_track(uft_disk_t* disk, int cylinder, int head,
     track->status = UFT_TRACK_OK;
     
     return UFT_OK;
+}
+
+/**
+ * @brief Track lesen (ganze Spur) — unveraendertes Verhalten
+ */
+static uft_error_t g64_read_track(uft_disk_t* disk, int cylinder, int head,
+                                   uft_track_t* track) {
+    // cylinder ist 0-basiert, G64-Spuren 1-basiert: Spur = cylinder + 1,
+    // Slot = (Spur - 1) * 2 = cylinder * 2.
+    return g64_read_slot(disk, track_to_g64_index(cylinder + 1, false),
+                         head, track);
+}
+
+/**
+ * @brief Halbspur lesen (MF-404, PROT-6)
+ *
+ * Nimmt den Slot-Index direkt entgegen und erreicht damit auch die ungeraden
+ * Slots. Gerade Indizes liefern dasselbe wie g64_read_track(index / 2).
+ */
+static uft_error_t g64_read_half_track(uft_disk_t* disk, int halftrack_index,
+                                        int head, uft_track_t* track) {
+    return g64_read_slot(disk, halftrack_index, head, track);
 }
 
 // ============================================================================
@@ -878,6 +908,7 @@ const uft_format_plugin_t uft_format_plugin_g64 = {
     .create = g64_create,
     .flush = NULL,
     .read_track = g64_read_track,
+    .read_half_track = g64_read_half_track,
     .write_track = g64_write_track,
     .detect_geometry = NULL,
     .read_metadata = g64_read_metadata,

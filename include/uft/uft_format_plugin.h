@@ -514,6 +514,36 @@ typedef struct uft_format_plugin {
     const uft_plugin_compat_entry_t* compat_entries;
     size_t              compat_count;
 
+    // === Optionale Erweiterung (MF-404) — Halbspur-Zugriff ===
+    /**
+     * @brief Eine Halbspur lesen (optional, NULL wenn das Format keine kennt)
+     *
+     * `read_track()` adressiert über `cylinder` ausschließlich ganze Spuren.
+     * Formate, die zwischen den Zylindern liegende Spuren führen — G64 hält
+     * 84 Slots, zwei je Zylinder —, konnten deren Daten über die Plugin-API
+     * gar nicht herausgeben: sie lagen in der Datei, die Pipeline sah sie nie.
+     * Das verstößt gegen „Kein Bit verloren" (KNOWN_ISSUES PROT-6).
+     *
+     * @param disk            Disk-Handle
+     * @param halftrack_index Slot-Index, 0-basiert, **zwei Slots je Zylinder**:
+     *                        0 = Spur 1.0, 1 = Spur 1.5, 2 = Spur 2.0, …
+     *                        Gerade Indizes liefern dasselbe wie
+     *                        `read_track(cylinder = index / 2)`.
+     *                        Nicht zu verwechseln mit der `track_x2`-Konvention
+     *                        in ufm_c64_metrics.h, die bei Spur 1 mit 2 beginnt.
+     * @param head            Seite
+     * @param track [out]     Track-Struktur; `is_half_track` wird gesetzt
+     * @return UFT_OK, UFT_ERROR_OUT_OF_RANGE bei ungültigem Index
+     *
+     * `NULL` heißt „dieses Plugin bietet keinen Halbspur-Zugriff an" — es ist
+     * ausdrücklich **keine** Zusicherung, dass das Format keine Halbspuren
+     * kennt. Formate mit Halb-/Viertelspuren (WOZ, A2R) sind noch nicht
+     * geprüft; siehe KNOWN_ISSUES PROT-6. Ein Aufrufer, der Vollständigkeit
+     * braucht, muss auf `NULL` prüfen und den Fall melden, nicht annehmen.
+     */
+    uft_error_t (*read_half_track)(uft_disk_t* disk, int halftrack_index,
+                                    int head, uft_track_t* track);
+
     // === UFT-004 (v4.1.5) — ABI version gate ===
     /**
      * @brief Plugin-API-Version. Plugins MÜSSEN dies auf
@@ -524,8 +554,17 @@ typedef struct uft_format_plugin {
      * Wert nicht setzen, laufen weiter — keine Hard-Break. Bei v5.0 wird
      * api_version != UFT_PLUGIN_API_VERSION ein UFT_ERROR_PLUGIN_LOAD.
      *
-     * MUST stay at the END of the struct — adding anything after this
-     * silently breaks every plugin's designated initializer.
+     * Kept as the LAST field by convention, so the version gate is easy to
+     * find and any append lands in front of it.
+     *
+     * Korrektur (MF-404): die frühere Fassung dieses Kommentars behauptete,
+     * ein Feld hinter `api_version` breche „silently every plugin's
+     * designated initializer". Das stimmt nicht und widersprach direkt der
+     * Prozedur im Größen-Guard unten („ADD field at end"). Designated
+     * Initializer binden per NAME, nicht per Position; ein nicht genanntes
+     * Feld wird nullinitialisiert. Was tatsächlich bricht, ist positionelle
+     * Initialisierung (im Baum nirgends benutzt) und die ABI extern
+     * vorkompilierter Plugins — dafür ist der Größen-Guard da.
      */
     uint32_t            api_version;
 
@@ -575,12 +614,16 @@ typedef struct uft_format_plugin {
 #  if defined(__SIZEOF_POINTER__) && __SIZEOF_POINTER__ == 8
      /* 64-bit ABI (x86_64, ARM64). Static_assert is C11. */
 #    if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
-       /* Pinned 2026-05-25 against MinGW-w64 g++ 13.1.0 on Windows x86_64.
-        * tests/test_plugin_abi.c reports `sizeof(uft_format_plugin_t) = 216`
-        * after the UFT-004 api_version field was appended. If this trips
-        * on a new platform, run the test, copy the reported size here,
-        * and document the platform delta in MASTER_PLAN v4.1.5-Backlog. */
-       _Static_assert(sizeof(uft_format_plugin_t) == 216,
+       /* Pinned 2026-05-25 against MinGW-w64 g++ 13.1.0 on Windows x86_64,
+        * repinned 2026-08-18 (MF-404): 216 -> 224 after the optional
+        * read_half_track pointer was added directly before api_version.
+        * Measured, not estimated. Pure insertion of one pointer, no
+        * reordering; all plugins use designated initializers, so the field
+        * zero-initialises in the 87 plugins that do not set it. If this trips
+        * on a new platform, run tests/test_plugin_abi.c, copy the reported
+        * size here, and document the platform delta in MASTER_PLAN
+        * v4.1.5-Backlog. */
+       _Static_assert(sizeof(uft_format_plugin_t) == 224,
                       "uft_format_plugin_t layout changed — update the pin "
                       "in this header AND tests/test_plugin_abi.c.");
 #    endif

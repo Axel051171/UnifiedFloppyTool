@@ -547,7 +547,10 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/protection/ufm_c64_scheme_detect.c
             ${CMAKE_SOURCE_DIR}/src/formats/g64/uft_g64.c)
         target_compile_definitions(${test_name} PRIVATE
-            UFT_CORPUS_RESTRICTED_DIR="${CMAKE_SOURCE_DIR}/tests/corpus")
+            UFT_CORPUS_RESTRICTED_DIR="${CMAKE_SOURCE_DIR}/tests/corpus"
+            # MF-404: the half-track test needs the rights-free VICE G64 as
+            # its negative control (a disk that has none).
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_corpus_protection_copylock")
         # Real-corpus protection: CopyLock ST vs dec0de game samples, local-only (MF-377)
         target_sources(${test_name} PRIVATE

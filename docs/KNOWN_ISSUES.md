@@ -1487,7 +1487,7 @@ eine automatische Regel zu bauen, sind gescheitert (ein Fehlalarm bei
 korrektem Code, dann 411 Treffer). Ein belastbares Gate dafür ist offene
 Werkzeugarbeit, kein Einzeiler.
 
-### PROT-6 — G64-Plugin liefert keine Halbspuren; Halbspur-Schutz ist unsichtbar (2026-08-18, MF-383)
+### PROT-6 — G64-Plugin liefert keine Halbspuren; Halbspur-Schutz ist unsichtbar (2026-08-18, MF-383) → ✓ RESOLVED (MF-404)
 
 **Correctness / Forensik-Integrität.** `g64_read_track()` ruft
 `track_to_g64_index(g64_track, false)` — der `half_track`-Parameter ist fest
@@ -1510,12 +1510,53 @@ interpretiert wird. Das ist eine Plugin-/API-Frage mit Auswirkung auf alle
 Aufrufer und deshalb bewusst nicht in MF-383 mitgemacht.
 
 **Nachtrag (MF-384):** Es gibt im Baum bereits einen G64-Leser, der Halbspuren
-kann — `g64_get_track()` (`src/formats/commodore/g64.c`), von
-`ProtectionAnalysisWidget` über einen Halbspur-Index angesprochen. Die Lücke
-ist also nicht „UFT kann keine Halbspuren lesen", sondern **zwei G64-Leser mit
-ungleichem Können**, von denen der Plugin-Pfad der schwächere ist. Das ist
-zugleich ein Single-Source-Problem und sollte zusammen mit PROT-8 gelöst
-werden.
+kann — `g64_get_track()` (`src/formats/c64/uft_d64_g64.c:684`), benutzt vom
+Konvertierungspfad und von `ProtectionAnalysisWidget`. Die Lücke war also nicht
+„UFT kann keine Halbspuren lesen", sondern **zwei G64-Leser mit ungleichem
+Können**, von denen ausgerechnet der Plugin-Pfad — der reguläre Weg — der
+schwächere war.
+
+**Behoben (MF-404).** Das Plugin-Interface hat einen optionalen Einstiegspunkt
+bekommen:
+
+```c
+uft_error_t (*read_half_track)(uft_disk_t*, int halftrack_index,
+                               int head, uft_track_t*);
+```
+
+`halftrack_index` adressiert die Datei so, wie sie aufgebaut ist: zwei Slots je
+Zylinder, gerade = ganze Spur, ungerade = Halbspur. Im G64-Plugin teilen sich
+`read_track()` und `read_half_track()` jetzt **einen** Rumpf
+(`g64_read_slot()`) — der alte Weg rechnete `cylinder * 2` und konnte ungerade
+Slots konstruktionsbedingt nie erreichen.
+
+Die beiden Alternativen aus dem ursprünglichen Eintrag wurden verworfen:
+`cylinder` als Halbspur-Index umzudeuten hätte die Bedeutung für jeden
+bestehenden Aufrufer verschoben (Zylinder 17 hätte Spur 9.5 statt Spur 18
+geliefert). Der additive Einstiegspunkt lässt die 87 anderen Plugins unberührt.
+
+ABI: das Feld liegt direkt **vor** `api_version`, das laut Konvention letztes
+Feld bleibt. Der Größen-Guard hat wie vorgesehen ausgelöst; die Pin-Größe ist
+von 216 auf **224** gemessen (nicht geschätzt) nachgezogen. Alle Plugins nutzen
+Designated Initializer, das Feld nullinitialisiert sich also in den 87, die es
+nicht setzen. Nebenbei korrigiert: der Kommentar an `api_version` behauptete,
+ein Feld dahinter breche „silently every plugin's designated initializer" — das
+widersprach direkt der Prozedur im Guard darunter („ADD field at end") und
+stimmt nicht, da Designated Initializer per Name binden.
+
+Verifiziert am realen Korpus (`test_c64_protection_real_corpus`):
+- Bounty Bob: **35 Halbspuren**, 36 Ganzspuren, 71 belegte Slots — exakt die im
+  Korpus-Manifest hinterlegten Zahlen, jetzt erstmals über die Plugin-API
+  erreichbar
+- VICE-formatierte Disk (rechtefrei, Negativkontrolle): 0 Halbspuren,
+  35 Ganzspuren — `read_half_track()` erfindet nichts
+- gerade Slots liefern byteidentisch dasselbe wie `read_track()`, damit die
+  beiden Einstiegspunkte nicht auseinanderdriften
+
+**Offen:** `NULL` bei den übrigen 87 Plugins heißt „bietet keinen
+Halbspur-Zugriff an", **nicht** „das Format hat keine". Formate mit Halb- oder
+Viertelspuren — allen voran **WOZ und A2R** (Apple II nutzt Viertelspuren) —
+sind noch nicht geprüft. Das ist derselbe Befundtyp, nur an anderer Stelle.
 
 ### PROT-9 — Weak-Bit-Positionen wurden jenseits Byte 8191 falsch gemeldet (2026-08-18, MF-400) — BEHOBEN
 

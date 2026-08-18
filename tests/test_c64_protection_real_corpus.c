@@ -53,6 +53,39 @@ static int _pass = 0, _fail = 0, _last_fail = 0;
 #define TEST(name) static void test_##name(void)
 #define ASSERT(c)  do { if (!(c)) { printf("FAIL @ %d: %s\n", __LINE__, #c); _fail++; return; } } while (0)
 
+static const char *free_img(const char *name) {
+    static char p[512];
+    snprintf(p, sizeof(p), "%s/%s", UFT_CORPUS_DIR, name);
+    return p;
+}
+
+/** Count populated G64 slots via read_half_track(), split by parity (MF-404).
+ *  Returns -1 if the image cannot be opened. */
+static int count_slots(const char *path, int *whole_out, int *half_out) {
+    uft_disk_t disk; memset(&disk, 0, sizeof(disk)); disk.read_only = true;
+    if (uft_format_plugin_g64.open(&disk, path, true) != UFT_OK) return -1;
+    if (!uft_format_plugin_g64.read_half_track) {
+        uft_format_plugin_g64.close(&disk);
+        return -1;
+    }
+
+    int whole = 0, half = 0;
+    for (int slot = 0; slot < 84; slot++) {
+        uft_track_t t; memset(&t, 0, sizeof(t));
+        if (uft_format_plugin_g64.read_half_track(&disk, slot, 0, &t) != UFT_OK)
+            continue;
+        if (t.raw_data && t.raw_size > 0) {
+            if (slot % 2) half++; else whole++;
+        }
+        free(t.raw_data);
+        for (size_t i = 0; i < t.sector_count; i++) free(t.sectors[i].data);
+        free(t.sectors);
+    }
+    uft_format_plugin_g64.close(&disk);
+    *whole_out = whole; *half_out = half;
+    return whole + half;
+}
+
 static const char *img(const char *name) {
     static char p[512];
     snprintf(p, sizeof(p), "%s/%s", UFT_CORPUS_RESTRICTED_DIR, name);
@@ -182,6 +215,54 @@ TEST(real_commercial_disk_without_protection_stays_silent) {
     ASSERT(report.primary_scheme == UFM_PROT_NONE);
 }
 
+TEST(half_tracks_are_reachable_through_the_plugin_PROT6) {
+    /* PROT-6: read_track() addresses whole cylinders only, so the odd G64
+     * slots were unreachable through the plugin API — on this disk 35 tracks
+     * that are present in the file were never seen by the pipeline. The
+     * corpus manifest pins the expected shape: 71 populated slots, 35 of them
+     * true half-tracks. */
+    int whole = -1, half = -1;
+    int total = count_slots(img("c64pp_bountybob.g64"), &whole, &half);
+    ASSERT(total > 0);
+    ASSERT(half == 35);
+    ASSERT(total == 71);
+    ASSERT(whole == 36);
+}
+
+TEST(a_disk_without_half_tracks_reports_none) {
+    /* Negative control, rights-free: a plain VICE-formatted 35-track disk.
+     * If read_half_track() invented data, this would not stay at zero. */
+    int whole = -1, half = -1;
+    int total = count_slots(free_img("vice_c1541_35trk.g64"), &whole, &half);
+    ASSERT(total > 0);
+    ASSERT(half == 0);
+    ASSERT(whole == 35);
+}
+
+TEST(even_slots_agree_with_read_track) {
+    /* The two entry points must not drift apart: an even slot is the same
+     * data as the corresponding whole track, and is not flagged half. */
+    uft_disk_t disk; memset(&disk, 0, sizeof(disk)); disk.read_only = true;
+    ASSERT(uft_format_plugin_g64.open(&disk, free_img("vice_c1541_35trk.g64"),
+                                      true) == UFT_OK);
+    for (int cyl = 0; cyl < 35; cyl++) {
+        uft_track_t a, b;
+        memset(&a, 0, sizeof(a)); memset(&b, 0, sizeof(b));
+        ASSERT(uft_format_plugin_g64.read_track(&disk, cyl, 0, &a) == UFT_OK);
+        ASSERT(uft_format_plugin_g64.read_half_track(&disk, cyl * 2, 0, &b) == UFT_OK);
+        ASSERT(a.raw_size == b.raw_size);
+        if (a.raw_size > 0)
+            ASSERT(memcmp(a.raw_data, b.raw_data, a.raw_size) == 0);
+        ASSERT(!a.is_half_track);
+        ASSERT(!b.is_half_track);
+        free(a.raw_data); free(b.raw_data);
+        for (size_t i = 0; i < a.sector_count; i++) free(a.sectors[i].data);
+        for (size_t i = 0; i < b.sector_count; i++) free(b.sectors[i].data);
+        free(a.sectors); free(b.sectors);
+    }
+    uft_format_plugin_g64.close(&disk);
+}
+
 int main(void) {
     FILE *f = fopen(img("c64pp_bountybob.g64"), "rb");
     if (!f) {
@@ -197,6 +278,9 @@ int main(void) {
     RUN(protected_disk_produces_protection_hits);
     RUN(real_protected_disk_is_described_not_named_PROT5);
     RUN(real_commercial_disk_without_protection_stays_silent);
+    RUN(half_tracks_are_reachable_through_the_plugin_PROT6);
+    RUN(a_disk_without_half_tracks_reports_none);
+    RUN(even_slots_agree_with_read_track);
     printf("\nResults: %d passed, %d failed\n", _pass, _fail);
     return _fail == 0 ? 0 : 1;
 }
