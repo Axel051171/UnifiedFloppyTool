@@ -1903,10 +1903,40 @@ müssen. C folgt A (Bitstream-Layer, indexiert Bits), D folgt B (Sektor-Ebene).
 - **Die HFE-Maske bleibt.** Sie enthält reale Messwerte aus einem getesteten
   Dekoder; sie zu streichen wäre Datenverlust.
 
-*Offen als Folgearbeit (keine offenen Fragen mehr, nur Arbeit):* `a2r_fuse_captures()`
-braucht einen Aufrufer, und die per-Bit-HFE-Maske einen Konsumenten — naheliegend
-derselbe Pfad, der Weak-Bits beim Schreiben reproduziert. Vorher keinen sechsten
-Weg anlegen.
+**Nachtrag (MF-417) — die beiden „fehlenden Konsumenten" sind keine Lücken.**
+Die Formulierung oben („braucht einen Aufrufer", „braucht einen Konsumenten")
+unterstellte Versäumnisse. Beim Nachsehen erwies sich beides als *richtige
+Abwesenheit*:
+
+**Die per-Bit-HFE-Maske.** Der einzige Pfad, der sie benutzen würde, ist das
+v3-Zurückschreiben — und `hfe_write_track()` **verweigert es ausdrücklich**:
+
+```c
+/* v3 write-back is not lossless: read decodes the opcode stream into a clean
+ * bitstream + weak_mask (MF-362), and that decode drops NOP/SETINDEX/
+ * SETBITRATE and replaces RAND bits with a placeholder … Refuse rather than
+ * write a corrupt/degraded v3 track. v1/v2 write is unaffected. */
+if (pdata->is_v3) return UFT_ERROR_NOT_SUPPORTED;
+```
+
+Das ist „keine stille Veränderung" mustergültig umgesetzt. Die Maske wird
+erfasst und mitgeführt, weil sie forensisch zählt; sie hat keinen Konsumenten,
+weil der einzig denkbare bewusst nicht existiert, solange es keinen echten
+v3-Encoder gibt. Ein Konsument wäre hier nicht die Behebung einer Lücke,
+sondern ihre Verletzung.
+
+**`a2r_fuse_captures()`.** Der A2R-Parser hält **alle** Captures einer Spur
+(`captures[]` + `capture_count`) und gibt am Ende alle frei — er fusioniert
+nicht. Auch das ist die forensisch richtige Wahl: Fusion verdichtet mehrere
+unabhängige Lesungen zu einer und wirft damit genau die Evidenz weg, wegen der
+A2R mehrere speichert. Diese Funktion in den Lesepfad zu hängen wäre ein
+**Defekt**, keine Verdrahtung. Ihr Platz ist eine ausdrücklich angeforderte
+Analyse, die es noch nicht gibt.
+
+Damit bleibt von PROT-12 nur, was MF-408 bereits erledigt hat: die
+Granularitäten sind benannt, und die Entscheidung „behalten" ist für beide
+begründet. Es ist **keine Folgearbeit offen** — was fehlt, ist ein
+Analyse-Einstiegspunkt für A2R-Fusion, und der ist ein Feature, kein Mangel.
 
 
 
