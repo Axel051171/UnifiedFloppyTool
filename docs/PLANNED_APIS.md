@@ -1,11 +1,50 @@
 # Planned APIs (MF-011 DOCUMENT+IMPLEMENT-Wellen)
 
 **Stand:** M1-Wellen-Snapshot (2026-04-25: 151 headers · 2939 decls).
-**Live-Zahlen (2026-07-02): 133 headers · 2613 decls** — die Differenz
-stammt aus den M3.2/M3.3 Partial-Implementierungen (XUM1541, Applesauce).
-Aktuelle Zählung jederzeit via `python scripts/audit_skeleton_headers.py`;
-die Bucket-Tabellen unten sind der eingefrorene M1-Stand.
+Die Bucket-Tabellen unten sind dieser **eingefrorene** M1-Stand und werden
+bewusst nicht nachgeführt.
+
+**Live-Stand 2026-08-18 (MF-421).** Im Baum tragen noch **24** Header einen
+Banner, nicht mehr 133. Davon haben **22** tatsächlich Prototypen ohne
+Definition; die zwei HAL-Header (`hal/uft_applesauce.h`, `hal/uft_xum1541.h`)
+beschreiben Implementierungs**tiefe** — ihre Funktionen existieren als
+honest stubs — und sind damit zutreffend.
+
+> **Vorsicht bei `scripts/audit_skeleton_headers.py`.** Es zählt ausschließlich
+> `uft_*`-präfixierte Prototypen und meldet deshalb 0, obwohl etwa
+> `include/uft/formats/uft_woz.h` 15 unpräfixierte Funktionen
+> (`woz_metadata_init`, `woz_read_track`, …) ohne Definition führt. Die Null
+> ist keine Aussage über den ganzen Baum — siehe KNOWN_ISSUES **ARCH-3**.
+
 Steuerung des Abbaus: `docs/STUB_ELIMINATION_PLAN.md`.
+
+## Erledigt — Banner entfernt (MF-421, 2026-08-18)
+
+Diese zehn Header trugen einen Banner, der nachweislich Falsches sagte: er nannte
+fehlende Definitionen, die es nicht mehr gab. `include/uft/core/uft_disk.h` etwa
+kündigte „17 public functions; 15 are NOT implemented" an und enthält heute
+**eine** Deklaration, und die ist definiert. Ein Banner, der Falsches behauptet,
+ist so schädlich wie ein fehlender — deshalb entfernt, nicht aktualisiert.
+
+| Header | Banner behauptete | tatsächlich |
+|---|---|---|
+| `core/uft_disk.h` | 17 decls, 15 fehlend | 1 decl, 0 fehlend |
+| `core/uft_integration.h` | 23 decls, 22 fehlend | 1 decl, 0 fehlend |
+| `core/uft_sector.h` | 19 decls, 18 fehlend | 1 decl, 0 fehlend |
+| `core/uft_track_base.h` | 21 decls, 21 fehlend | **0 decls** |
+| `formats/uft_86f.h` | 19 decls, 18 fehlend | 1 decl, 0 fehlend |
+| `formats/uft_fat12.h` | 23 decls, 19 fehlend | 4 decls, 0 fehlend |
+| `uft_hardware.h` | 43 decls, 36 fehlend | 7 decls, 0 fehlend |
+| `uft_integration.h` | 22 decls, 18 fehlend | 4 decls, 0 fehlend |
+| `uft_simd.h` | 13 decls, 12 fehlend | 1 decl, 0 fehlend |
+| `uft_unified_image.h` | 18 decls, 18 fehlend | **0 decls** |
+
+Geprüft mit dem Klammer-Walker aus `audit_skeleton_headers.py` (ein bloßes
+`name(` trifft auch **Aufrufe**; die Fehlerrichtung wäre gewesen, einen
+wahrheitsgemäßen Banner zu löschen). Zwei weitere Kandidaten wurden nach
+Prüfung **behalten**: `hal/uft_applesauce.h` und `hal/uft_xum1541.h` haben zwar
+für jeden Prototyp eine Definition, ihr Banner spricht aber von honest stubs —
+eine Aussage über Tiefe, nicht über Existenz.
 
 Every header listed below declares public `uft_*` functions that are promised by the API surface but have no implementation in `src/`. DOCUMENT-bucket files have a `/* PLANNED FEATURE */` banner (zero impls); IMPLEMENT-bucket files have a `/* PARTIALLY IMPLEMENTED */` banner (some impls, some stubs). Consumers are warned before adding new call sites. Implementation belongs to M2/M3 depending on subsystem.
 
