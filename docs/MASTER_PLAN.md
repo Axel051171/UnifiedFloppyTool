@@ -507,7 +507,7 @@ Findings für die folgenden Sessions / Tag-Gates:
 | UFT-005 | ✓ CLOSED MF-260 | `test_transitions_ns_contract` extended via `transitions_ns_kryoflux_contract_probe()` + `transitions_ns_fluxengine_contract_probe()` in FFI. Beide injizieren einen "binary not found" Runner und assertieren dass beide Provider mit honest non-Captured outcome antworten (kein fabriziertes FluxCaptured mit Container-Bytes). ARCH-2-Regression-Shield aktiv. | — | tests/unit/transitions_ns_ffi.cpp, tests/unit/test_transitions_ns_contract.c |
 | UFT-007 | ✓ CLOSED MF-212 | ARCH-7 sub-B Status verifiziert: VID/PID jetzt SSOT in `uft_scp_direct.h:40-41` (`0x16D0:0x0F8C`), `hardwaretab.cpp:548` liest exakt das Macro. Orchestrator-Finding war stale. | — | include/uft/hal/uft_scp_direct.h:40-41 |
 | UFT-008 | P1 · **COMMUNITY-DELEGATED** | HIL Hardware-Tier 14/15 NOT_RUN. Pro Controller eine Bench-Session nötig — **kein projekt-eigenes Gerät, nicht in-house durchführbar** (siehe M3-Banner). Bench an Fremd-Tester mit Hardware delegiert; Protokoll steht bereit. Nicht als offene In-house-Aufgabe geführt. | S pro Controller (1-2h Bench-Time, extern) | tests/hil/run_hil.py, tests/HARDWARE_TRUTH_TESTS.md, audit/rc1_field_notes.md |
-| UFT-T04 | ✓ REDUCED MF-260 | Bulk-Triage Schritt 1: 4 stale Exclusions re-enabled (test_scp_direct_hal nach MF-254 libusb-Wiring, test_applesauce_hal Pure-Utility, test_fnmatch_shim, test_whdload_resload) + new test_plugin_abi. 146 → 151 tests passing. **Stand 2026-08-18 (MF-409): noch 5 Exclusions**, nicht 38 — `test_mfm_detect`, `test_cpm_fs`, `test_mfm_bridge` (alle drei dieselbe Header-Twin-Entwirrung), `test_libdsk_formats`, `test_fat_extensions`. Suite steht bei 193 laufenden Tests (nicht 151). | S (5 verbleibend) | tests/CMakeLists.txt:53-110 |
+| UFT-T04 | ✓ REDUCED MF-260 | Bulk-Triage Schritt 1: 4 stale Exclusions re-enabled (test_scp_direct_hal nach MF-254 libusb-Wiring, test_applesauce_hal Pure-Utility, test_fnmatch_shim, test_whdload_resload) + new test_plugin_abi. 146 → 151 tests passing. **Stand 2026-08-18 (MF-409): noch 2 Exclusions**, nicht 38 — `test_mfm_detect`, `test_cpm_fs`, `test_mfm_bridge` (alle drei dieselbe Header-Twin-Entwirrung), `test_libdsk_formats`, `test_fat_extensions`. Suite steht bei 193 laufenden Tests (nicht 151). | S (5 verbleibend) | tests/CMakeLists.txt:53-110 |
 | UFT-T05 | ✓ CLOSED v4.1.5 pre-tag | Datei `src/analysis/events/CMakeLists.txt:13` nutzt bereits `CMAKE_CURRENT_SOURCE_DIR` für Include-Pfad — `add_subdirectory()`-sicher. Subdir noch nicht ins Root-CMake verkabelt (separate Entscheidung, Out-of-Scope für T05). | — | src/analysis/events/CMakeLists.txt:13 |
 
 ### Was diese Session NICHT geprüft hat
@@ -657,12 +657,39 @@ matrix. Prinzip 6 verlangt sie; `compat_entries == NULL` heißt „nichts
 explizit getestet". Das ist die größte verbliebene Prinzip-Lücke und in
 keinem Meilenstein geführt.
 
-### S3-3 — Verbleibende Test-Exclusions (P2, klein)
+### S3-3 — Verbleibende Test-Exclusions (P2, klein) → ✓ ERLEDIGT (MF-411)
 
 5 statt der im v4.1.5-Backlog genannten 38. Drei davon
-(`test_mfm_detect`, `test_cpm_fs`, `test_mfm_bridge`) sind **dieselbe**
-Aufgabe: zwei Header-Familien (`include/uft/detect/` gegen `analysis/`)
-beschatten einander im Include-Pfad. Eine Entwirrung, drei Tests zurück.
+(`test_mfm_detect`, `test_cpm_fs`, `test_mfm_bridge`) waren **dieselbe**
+Aufgabe — und der notierte Grund war falsch.
+
+**Behoben (MF-411).** Die Ausschluss-Kommentare sagten, die Tests erwarteten
+Typen, die es „in KEINEM Header" gebe (`uft_mfm_detect_info_t`, `UFT_MFMD_*`,
+`mfm_error_t`, `MFM_OK`, `fat_bpb_t`, `cpm_dpb_t.bsh`). Es gibt sie alle — in
+`include/uft/detect/`. Die Tests inkludierten **Phantom-Zwillinge** unter
+`include/uft/analysis/`: gleichnamige Header mit 34–56 Zeilen gegenüber
+186–756 Zeilen der echten, die eine Handvoll Typen und eine Funktion
+(`mfm_detect_encoding()`) deklarierten, für die es **keine Implementierung**
+gibt. Die CMake-Blöcke zeigten längst auf `detect/`; nur die `#include`-Zeilen
+griffen über den Basis-Include-Pfad weiter die Phantome.
+
+Warum das durch `audit_skeleton_headers.py` fiel: dessen Schwelle ist
+„≥ 10 Deklarationen". Diese drei Header liegen darunter — kleine Phantome sind
+unsichtbar für den Skelett-Audit.
+
+Umgesetzt: Includes auf `uft/detect/` umgestellt, die drei Phantom-Header
+gelöscht (sie hatten repo-weit keinen anderen Konsumenten), fehlende
+Abhängigkeiten (`mfm_detect.c`, `cpm_fs.c`) in den Bridge-Test aufgenommen.
+Suite **193 → 196**, alle grün. Verbleibende Exclusions: **2**
+(`test_libdsk_formats`, `test_fat_extensions`), beide mit benanntem
+fehlendem Baustein.
+
+*Beifund, nicht behoben:* `include/uft/analysis/uft_mfm_detect_bridge.h` und
+`include/uft/detect/uft_mfm_detect_bridge.h` teilten denselben Include-Guard
+`UFT_MFM_DETECT_BRIDGE_H` — wer zuerst inkludiert wurde, gewann, der andere
+wurde still übersprungen. Mit dem Löschen des Zwillings ist die Kollision weg;
+ob es weitere gleichnamige Header-Paare mit identischem Guard gibt, ist nicht
+geprüft.
 
 ### S3-4 — Doku-Governance (P2) → ✓ ERLEDIGT (MF-410)
 

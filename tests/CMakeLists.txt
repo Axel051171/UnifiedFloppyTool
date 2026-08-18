@@ -51,37 +51,25 @@ set(TEST_SOURCES ${TEST_SOURCES_C} ${_HEADER_ONLY_CPP_TESTS})
 
 # Exclude tests with missing dependencies (TODO: implement these modules)
 set(EXCLUDED_TESTS
-    "test_mfm_detect"          # API drift (MF-375 attempt): test expects
-                               # fat_bpb_t/mfm_error_t/MFM_OK which no header
-                               # variant declares — same detect/analysis header-twin
-                               # untangling task as test_cpm_fs/test_mfm_bridge.
-    "test_cpm_fs"              # API drift: test + cpm_fs.c written against the
-                               # include/uft/detect/ header family, but a second
-                               # analysis/ header twin shadows it in the include
-                               # path (cpm_dpb_t lacks bsh there). Untangle the
-                               # header twins first (MF-374 finding).
-    "test_mfm_bridge"          # API drift: test expects uft_mfm_detect_info_t /
-                               # UFT_MFMD_* wrapper API that exists in NO header;
-                               # bridge impl exposes mfm_detect_info_t instead.
-    # "test_libdsk_formats" # Re-enabled: apridisk, nanowasp, qrst, cfi now in registry
-    # "test_ti99_formats"   # Re-enabled: TIFILES/FIAD modules exist
-    # "test_fat_extensions"  # Re-enabled: compiles standalone
-                            #   removed in MF-011 cleanup; headers remain as
-                            #   skeleton-only. Re-enable when impls land.
-                            #   existed; uft_io_last_error extern declared
-                            #   in header but never defined. Pure phantom.
-    # v4.1.5 UFT-T04 bulk-triage — tests for code removed in MF-011 cleanup
-    # (otdr8-12, dms_*, uft_align_fuse_*, etc.). Mass-exclusion is honest:
-    # the build is now clean and the gap is documented in MASTER_PLAN.md.
-    # "test_applesauce_hal"    # v4.1.5: Applesauce HAL uses serial (not libusb);
-                              #   uft_applesauce.c has 13/20 real funcs; re-enabled
-    # "test_fnmatch_shim"      # v4.1.5: uft_fnmatch.c re-included via target_sources
+    # Only genuinely blocked tests belong here. Each entry names WHAT is
+    # missing, so the list stays auditable — scripts/update_inventory.py
+    # checks the count against docs/MASTER_PLAN.md (MF-410).
     "test_libdsk_formats"      # libdsk-style format glue absent
-    # "test_scp_direct_hal"    # v4.1.5: libusb wiring landed (MF-254); re-enabled
-    # "test_whdload_resload"   # v4.1.5: src/whdload/whdload_resload_api.c re-included
-    # "test_xum1541_hal"       # MF-255: libusb wiring landed, test re-enabled
     "test_fat_extensions"      # uft_fs lib not registered in root CMake
 )
+
+# Previously excluded, now running again — kept as a record of what the
+# reasons were, because several of them turned out to be wrong rather than
+# merely stale:
+#   test_scp_direct_hal, test_xum1541_hal  MF-254/255 libusb wiring landed
+#   test_applesauce_hal                    pure-utility part is real
+#   test_fnmatch_shim, test_whdload_resload sources re-included
+#   test_libdsk_formats(dup), test_ti99_formats
+#   test_mfm_detect, test_cpm_fs, test_mfm_bridge   MF-411 — these three were
+#       excluded for "API drift: the expected types exist in NO header". They
+#       do exist, in include/uft/detect/; the tests were including phantom
+#       twins under include/uft/analysis/ that declared an unimplemented API.
+#       The twins are deleted, the includes point at the real headers.
 
 # Create test executables
 foreach(test_source ${TEST_SOURCES})
@@ -318,10 +306,19 @@ foreach(test_source ${TEST_SOURCES})
 )
         target_include_directories(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/include/uft/analysis)
-    elseif(${test_name} STREQUAL "test_mfm_bridge")
-        # Reactivated in MF-374 (exclusion reason no longer holds)
+    elseif(${test_name} STREQUAL "test_mfm_detect")
+        # MF-411: re-enabled — the test now includes uft/detect/, not the
+        # phantom uft/analysis/ twin.
         target_sources(${test_name} PRIVATE
-            ${CMAKE_SOURCE_DIR}/src/detect/mfm/uft_mfm_detect_bridge.c)
+            ${CMAKE_SOURCE_DIR}/src/detect/mfm/mfm_detect.c)
+        target_include_directories(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/include/uft/detect)
+    elseif(${test_name} STREQUAL "test_mfm_bridge")
+        # MF-411: the bridge calls into both detectors, so both TUs are needed.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/detect/mfm/uft_mfm_detect_bridge.c
+            ${CMAKE_SOURCE_DIR}/src/detect/mfm/mfm_detect.c
+            ${CMAKE_SOURCE_DIR}/src/detect/mfm/cpm_fs.c)
         target_include_directories(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/include/uft/detect)
     elseif(${test_name} STREQUAL "test_otdr_bridge")
