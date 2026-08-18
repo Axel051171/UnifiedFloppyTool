@@ -96,15 +96,22 @@ Alle bisher aufgedeckten Findings in einer priorisierten Liste:
 | MF-004 | P1 | `_parser_v3.c` Proliferation (146 deleted, 5 kept) | ✓ CLOSED |
 | MF-005 | P2 | 656 tote Deklarationen | ⊂ MF-011 (Untermenge) |
 | MF-006 | P0 | qmake/CMake Divergenz | ✓ CLOSED (baseline+guard) |
-| **MF-007** | **P1** | **Plugin-Test-Coverage 11.8 %** | **offen** |
+| MF-007 | P1 | Plugin-Test-Coverage 11.8 % | ✓ CLOSED — `audit_plugin_compliance.py` (2026-08-18): 88/88 Plugins Prinzip-7-konform, 0 Stubs |
 | MF-008 | P2 | docs / KNOWN_ISSUES stellenweise stale | offen |
 | MF-009 | P3 | TODO/FIXME-Marker (Census 2026-04-25) | scoped (siehe §MF-009-Census) |
 | MF-010 | P2 | Non-kanonische Includes — Census 2026-05-25: 81 unqualifizierte `uft_*.h`-Includes (Sibling-Pattern, technisch OK durch -I-Pfade) + ~140 SAMdisk-imported Header (third-party). Echte Cleanup-Kandidaten: 81 Sibling-Includes → `uft/...`-Pfad. Multi-Session-Arbeit, P2. | scoped |
-| **MF-011** | **P0** | **175 Skeleton-Header, 3355 Phantom-Funktionen** | **offen** |
-| **MF-012** | **P0** | **XCopy-Tab Phantom-Feature** (GUI ohne Backend) | **offen** |
+| MF-011 | P0 | 175 Skeleton-Header, 3355 Phantom-Funktionen | ✓ CLOSED — `audit_skeleton_headers.py` (2026-08-18): **0** Skelette, 0 unimplementierte Deklarationen |
+| MF-012 | P0 | XCopy-Tab Phantom-Feature (GUI ohne Backend) | ✓ CLOSED in M1 (Start-Button disabled + Tooltip) |
 
-**Zwei P0 verbleibend: MF-011 und MF-012.** Das sind die strukturellen
-Phantome.
+**Kein P0 mehr offen** (Stand 2026-08-18, MF-409). MF-011 und MF-012 waren in
+der Tabelle noch als offen geführt, während die M1-Sektion darunter beide als
+erledigt abhakte — der Widerspruch ist gegen die Audit-Skripte aufgelöst:
+`audit_skeleton_headers.py` meldet 0 Skelette, `audit_plugin_compliance.py`
+88/88 konforme Plugins.
+
+**Offen ist jetzt anderes** — siehe §Sprint-3 unten. Der größte Einzelposten
+ist MF-106 (SCP-API-Unifizierung), an dem vier Konvertierungspfade und der
+GUI-Schutzpfad hängen.
 
 ---
 
@@ -143,7 +150,8 @@ Muss:
   - Beifund: ATX-Probe-Bug entdeckt UND behoben in derselben Session
     (Byte-Order-Mismatch in `ATX_SIGNATURE`). Fix via 0x41543858→0x58385441,
     Regression-Test mit 8 Assertions. KNOWN_ISSUES.md §M.-1 als CLOSED markiert.
-- [ ] Tag v4.1.4 mit allen P0/P1-Fixes aus dieser Session
+- [x] Tag v4.1.4 — überholt: `v4.1.4-rc1` und **`v4.1.5`** sind getaggt,
+      VERSION.txt steht auf 4.1.5. M1 ist damit vollständig abgeschlossen.
 
 Abschluss-Kriterium: `audit_skeleton_headers.py` zeigt <50 Skelette
 (Reduktion 70 %), `audit_plugin_compliance.py` zeigt >40 % Coverage.
@@ -495,11 +503,11 @@ Findings für die folgenden Sessions / Tag-Gates:
 |---|---|---|---|---|
 | UFT-001 | ✓ **9/9 LIVE** MF-249..MF-258 | Alle 9 V2-Provider haben jetzt einen live Code-Pfad zu echter Hardware. 1 production (Greaseweazle), 8 Beta (live code, hardware-bench pending). Reality-Tracker in §UFT-001-Status. | — | siehe Status-Tabelle |
 | UFT-003 | ✓ CLOSED MF-247 | HardwareTab honest-stub-Connection visuell distinkt: orange "Disconnect (Preview)" Button mit Tooltip statt grünem Default. Prinzip-4-Verstoß behoben. | — | src/hardwaretab.cpp:818-845 |
-| UFT-004 | ✓ CLOSED MF-260 | `uft_format_plugin_t` bekam `api_version`-Field + `UFT_PLUGIN_API_VERSION` Macro + Runtime-Gate (`uft_register_format_plugin` lehnt `api_version > host` ab, warnt bei `== 0` als Legacy). Static_assert pinnt jetzt `sizeof == 216` (MinGW-w64 x86_64). Test `tests/test_plugin_abi.c` mit 8 Assertions: api_version-Macro, struct-size-floor, field-offset-bound, registrar-reject-null/unnamed/future, accept-current/legacy. | — | include/uft/uft_format_plugin.h:516-580, src/core/uft_format_plugin.c:30-65, tests/test_plugin_abi.c |
+| UFT-004 | ✓ CLOSED MF-260 | `uft_format_plugin_t` bekam `api_version`-Field + `UFT_PLUGIN_API_VERSION` Macro + Runtime-Gate (`uft_register_format_plugin` lehnt `api_version > host` ab, warnt bei `== 0` als Legacy). Static_assert pinnt `sizeof == 224` (MinGW-w64 x86_64; war 216, nachgezogen in **MF-404**, als `read_half_track` direkt vor `api_version` eingefügt wurde — reine Anfügung, kein Reorder, alle Plugins nutzen Designated Initializer). Die Prozedur im Header verlangt ausdrücklich, den Wert *auch hier* zu bestätigen; MF-404 hatte das versäumt, nachgeholt in MF-409. Test `tests/test_plugin_abi.c` mit 8 Assertions: api_version-Macro, struct-size-floor, field-offset-bound, registrar-reject-null/unnamed/future, accept-current/legacy. | — | include/uft/uft_format_plugin.h:516-580, src/core/uft_format_plugin.c:30-65, tests/test_plugin_abi.c |
 | UFT-005 | ✓ CLOSED MF-260 | `test_transitions_ns_contract` extended via `transitions_ns_kryoflux_contract_probe()` + `transitions_ns_fluxengine_contract_probe()` in FFI. Beide injizieren einen "binary not found" Runner und assertieren dass beide Provider mit honest non-Captured outcome antworten (kein fabriziertes FluxCaptured mit Container-Bytes). ARCH-2-Regression-Shield aktiv. | — | tests/unit/transitions_ns_ffi.cpp, tests/unit/test_transitions_ns_contract.c |
 | UFT-007 | ✓ CLOSED MF-212 | ARCH-7 sub-B Status verifiziert: VID/PID jetzt SSOT in `uft_scp_direct.h:40-41` (`0x16D0:0x0F8C`), `hardwaretab.cpp:548` liest exakt das Macro. Orchestrator-Finding war stale. | — | include/uft/hal/uft_scp_direct.h:40-41 |
 | UFT-008 | P1 · **COMMUNITY-DELEGATED** | HIL Hardware-Tier 14/15 NOT_RUN. Pro Controller eine Bench-Session nötig — **kein projekt-eigenes Gerät, nicht in-house durchführbar** (siehe M3-Banner). Bench an Fremd-Tester mit Hardware delegiert; Protokoll steht bereit. Nicht als offene In-house-Aufgabe geführt. | S pro Controller (1-2h Bench-Time, extern) | tests/hil/run_hil.py, tests/HARDWARE_TRUTH_TESTS.md, audit/rc1_field_notes.md |
-| UFT-T04 | ✓ REDUCED MF-260 | Bulk-Triage Schritt 1: 4 stale Exclusions re-enabled (test_scp_direct_hal nach MF-254 libusb-Wiring, test_applesauce_hal Pure-Utility, test_fnmatch_shim, test_whdload_resload) + new test_plugin_abi. 146 → 151 tests passing. **Verbleibende 38 Exclusions** sind echte MF-011-Phantome (impl gelöscht) und dokumentiert per-Eintrag in `tests/CMakeLists.txt`. Vollständige Restoration ist Multi-Session-Arbeit (out-of-scope für v4.1.5-tag). | M (38 verbleibend, restoration multi-session) | tests/CMakeLists.txt:53-110 |
+| UFT-T04 | ✓ REDUCED MF-260 | Bulk-Triage Schritt 1: 4 stale Exclusions re-enabled (test_scp_direct_hal nach MF-254 libusb-Wiring, test_applesauce_hal Pure-Utility, test_fnmatch_shim, test_whdload_resload) + new test_plugin_abi. 146 → 151 tests passing. **Stand 2026-08-18 (MF-409): noch 5 Exclusions**, nicht 38 — `test_mfm_detect`, `test_cpm_fs`, `test_mfm_bridge` (alle drei dieselbe Header-Twin-Entwirrung), `test_libdsk_formats`, `test_fat_extensions`. Suite steht bei 193 laufenden Tests (nicht 151). | S (5 verbleibend) | tests/CMakeLists.txt:53-110 |
 | UFT-T05 | ✓ CLOSED v4.1.5 pre-tag | Datei `src/analysis/events/CMakeLists.txt:13` nutzt bereits `CMAKE_CURRENT_SOURCE_DIR` für Include-Pfad — `add_subdirectory()`-sicher. Subdir noch nicht ins Root-CMake verkabelt (separate Entscheidung, Out-of-Scope für T05). | — | src/analysis/events/CMakeLists.txt:13 |
 
 ### Was diese Session NICHT geprüft hat
@@ -594,6 +602,80 @@ SCP-API-Unifizierung + Inline-MFM-Replacement** (geschätzt 5-6 Tage). Macht
 **Aufgeschoben mit Begründung:** MF-103, MF-105, MF-107, MF-108 — siehe
 must-fix-hunter-Report (2026-04-27). Kandidaten für Sprint-3-Auffüllung
 nach MF-106-bundle.
+
+---
+
+## Sprint-3 (offen — angelegt MF-409, 2026-08-18)
+
+Sprint-2 verschob MF-106 „→ Sprint-3", aber **dieser Abschnitt existierte
+nicht**. Die Aufgabe lag damit seit April 2026 in einem Meilenstein, den es
+nicht gab. Hier ist er, mit dem verifizierten Ist-Stand.
+
+### S3-1 — MF-106-bundle: SCP-API-Unifizierung (P1, ~5-6 Tage)
+
+Der einzige große Posten. UFT hat **zwei SCP-Lesepfade**:
+
+- **Stub-Pfad** — `uft_scp_file_t` + `uft_scp_read()` + `uft_scp_get_track_flux()`
+  (`uft_format_parsers.h`), Honest-Stubs in `src/core/uft_core_stubs.c:234,255`,
+  liefern unbedingt `-1`
+- **Realer Pfad** — `uft_scp_ctx_t` + `uft_scp_open_memory()` +
+  `uft_scp_read_track()` in `src/flux/uft_scp_parser.c`; das SCP-Plugin ist
+  **T1b-verifiziert** (7 Tests, Cross-Tool-Korpus `gw_amigados.scp`)
+
+Alles, was den Stub-Pfad benutzt, ist tot. Konsumenten, verifiziert 2026-08-18:
+
+| Konsument | Wirkung |
+|---|---|
+| `uftc_convert_scp_to_d64` | nicht funktional |
+| `uftc_convert_scp_to_mfm_sectors` | nicht funktional (Blocker für SCP→IMG) |
+| `uftc_convert_scp_to_hfe` | nicht funktional |
+| `uftc_convert_scp_to_g64` | nicht funktional |
+| `ProtectionAnalysisWidget` (SCP-Zweig) | liefert nie Schutz-Treffer → KNOWN_ISSUES **PROT-11** |
+
+Der GUI-Schutzpfad ist ein **fünfter** Konsument, den die 5-6-Tage-Schätzung
+von 2026-04 noch nicht enthielt. `CLAUDE.md` führt die vier Konvertierungen
+als Feature.
+
+**Bereits erledigt und aus der Unbekannten-Liste raus (MF-407):** die
+C64-Hälfte der Kette ist belegt — `flux_decode_gcr_c64()` liefert mit
+`keep_raw_bits` genau den GCR-Bitstrom, den `ufm_c64_metrics_from_gcr()`
+konsumiert, inklusive des headerlosen Falls
+(`tests/unit/test_flux_gcr_c64_sync.c`). Offen bleibt der Leser-Umbau.
+
+**Korpus-Vorbedingung:** ein C64-Flux-Abbild mit dokumentierter Herkunft fehlt
+(vorhanden nur `gw_amigados.scp`, Amiga MFM). `gw convert
+--format=commodore.1541` aus dem rechtefreien `vice_c1541_35trk.d64` ergäbe
+einen T1b-Eintrag; greaseweazle ist lokal nicht installiert und nicht über
+PyPI beziehbar. Ohne dieses Abbild bleibt auch nach dem Umbau nur eine
+synthetische Verifikation.
+
+### S3-2 — Prinzip-6-Lücke: Kompatibilitätsmatrix 1/88 (P2)
+
+`audit_plugin_compliance.py` (2026-08-18): 88/88 Plugins haben `spec_status`
+und Feature-Matrix, aber nur **1 von 88** hat eine Emulator-Kompatibilitäts-
+matrix. Prinzip 6 verlangt sie; `compat_entries == NULL` heißt „nichts
+explizit getestet". Das ist die größte verbliebene Prinzip-Lücke und in
+keinem Meilenstein geführt.
+
+### S3-3 — Verbleibende Test-Exclusions (P2, klein)
+
+5 statt der im v4.1.5-Backlog genannten 38. Drei davon
+(`test_mfm_detect`, `test_cpm_fs`, `test_mfm_bridge`) sind **dieselbe**
+Aufgabe: zwei Header-Familien (`include/uft/detect/` gegen `analysis/`)
+beschatten einander im Include-Pfad. Eine Entwirrung, drei Tests zurück.
+
+### S3-4 — Doku-Governance (P2)
+
+`GOVERNED_DOCS` in `scripts/update_inventory.py` umfasst nur `README.md`,
+`CLAUDE.md`, `.claude/CLAUDE.md`. **`MASTER_PLAN.md` und `KNOWN_ISSUES.md`
+prüft nichts** — genau deshalb konnte dieser Plan drei erledigte P0/P1 als
+offen führen, eine Struct-Größe von 216 nennen (real 224 seit MF-404) und
+38 Test-Exclusions statt 5. Die Sync-Arbeit in MF-409 behebt die Symptome,
+nicht die Ursache.
+
+### Aufgeschoben aus Sprint-2, unverändert
+
+MF-103, MF-105, MF-107, MF-108 — Kandidaten für die Auffüllung nach S3-1.
 
 ---
 
