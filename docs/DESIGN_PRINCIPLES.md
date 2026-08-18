@@ -274,18 +274,31 @@ WinUAE, nicht in FS-UAE. Eine andere läuft in VICE, aber nicht im echten C64.
 
 **Was das konkret heißt:**
 
-Für jedes Export-Format pflegt UFT eine Kompatibilitäts-Matrix:
+Für jedes Export-Format pflegt UFT eine Kompatibilitäts-Matrix. Schematisch —
+die Platzhalter sind **keine** Beispieldaten, sondern Leerstellen:
 
 ```
-Format: ADF (Amiga Disk File)
+Format: <Export-Format>
 Geprüfte Konsumer:
-  WinUAE 5.3:        kompatibel (CI-getestet)
-  WinUAE 4.x:        kompatibel (CI-getestet)
-  FS-UAE 3.1:        kompatibel (CI-getestet)
-  FS-UAE <3.0:       inkompatibel (Timing-Track wird nicht erkannt)
-  Amiga Explorer:    kompatibel (manuell getestet 2026-03)
-  Echte Hardware:    Rückschreibung getestet für 85% der Testfälle
+  <Konsument + Version>:  kompatibel    (CI-Job <name>)
+  <Konsument + Version>:  inkompatibel  (<beobachtete Ursache>, <Datum>)
+  <Konsument + Version>:  teilweise     (<Einschränkung>, <Datum>)
+  <Konsument + Version>:  UNGEPRÜFT     (kein Test führt Ausgabe dorthin)
 ```
+
+> **Nicht abschreiben.** Dieser Block ist eine Form, kein Inhalt. Genau das ist
+> hier schon einmal schiefgegangen: die frühere Fassung nannte konkrete
+> Versionen und Ergebnisse — unter anderem „85 % der Testfälle" auf echter
+> Hardware —, und diese Zeilen wurden 1:1 als Produktionsdaten in
+> `src/formats/adf/uft_adf_plugin.c` übernommen, wo sie jahrelang als einzige
+> „geprüfte" Matrix des Projekts standen, ohne dass je etwas gemessen worden
+> wäre (KNOWN_ISSUES **PRINC-1**, behoben in MF-414).
+>
+> Ein Beispiel, das echt aussieht, wird irgendwann für echt genommen. Deshalb
+> stehen hier Platzhalter. Der Default für eine Zeile ohne Messung ist
+> `UNGEPRÜFT` (`UFT_EMU_UNTESTED`) — das ist kein Makel, sondern die
+> zutreffende Aussage. `scripts/check_consistency.py` weist jedes andere Urteil
+> zurück, das keinen Beleg benennt.
 
 Der `compatibility-import-export`-Agent hält diese Matrizen für alle
 Export-Formate aktuell.
