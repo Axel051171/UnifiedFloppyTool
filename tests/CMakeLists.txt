@@ -545,7 +545,9 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/protection/ufm_c64_metrics.c
             ${CMAKE_SOURCE_DIR}/src/protection/ufm_c64_scheme_detect.c
-            ${CMAKE_SOURCE_DIR}/src/formats/g64/uft_g64.c)
+            ${CMAKE_SOURCE_DIR}/src/formats/g64/uft_g64.c
+            # MF-405: the GUI's own G64 reader, so its data path is testable
+            ${CMAKE_SOURCE_DIR}/src/formats/c64/uft_d64_g64.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_RESTRICTED_DIR="${CMAKE_SOURCE_DIR}/tests/corpus"
             # MF-404: the half-track test needs the rights-free VICE G64 as

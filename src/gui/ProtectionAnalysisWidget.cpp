@@ -12,6 +12,7 @@
 extern "C" {
 #include "uft/uft_format_parsers.h"
 #include "uft/formats/c64/uft_d64_g64.h"
+#include "uft/protection/ufm_c64_metrics.h"
 }
 
 ProtectionAnalysisWidget::ProtectionAnalysisWidget(QWidget *parent)
@@ -331,19 +332,39 @@ void ProtectionAnalysisWidget::updateDetailView(int track)
     details += QString("=== TRACK %1 ===\n\n").arg(track);
     
     // Find metrics for this track
-    int track_x2 = track * 2;
+    /* MF-405: match on `track`, which the extractor derives, instead of on
+     * the raw slot index. The two G64 readers in the tree number their
+     * slots differently (g64_get_track: index 2 = track 1; the plugin and
+     * ufm_c64_metrics_from_gcr: index 0 = track 1), so comparing against a
+     * locally recomputed `track * 2` silently depended on which reader had
+     * filled the list. `track` and `is_half_track` say it unambiguously. */
     for (const auto &metrics : m_trackMetrics) {
-        if (metrics.track_x2 == track_x2 || metrics.track_x2 == track_x2 + 1) {
+        if ((int)metrics.track == track) {
             details += QString("Track position: %1%2\n")
-                .arg(metrics.track_x2 / 2)
-                .arg(metrics.track_x2 % 2 ? ".5" : "");
-            details += QString("Revolutions captured: %1\n").arg(metrics.revolutions);
-            details += QString("Bit length: %1 - %2 bits\n")
-                .arg(metrics.bitlen_min).arg(metrics.bitlen_max);
-            details += QString("Weak region: %1 bits (max run: %2)\n")
-                .arg(metrics.weak_region_bits).arg(metrics.weak_region_max_run);
-            details += QString("Illegal GCR events: %1\n").arg(metrics.illegal_gcr_events);
-            details += QString("Max sync run: %1 bits\n").arg(metrics.max_sync_run_bits);
+                .arg(metrics.track)
+                .arg(metrics.is_half_track ? ".5" : "");
+            details += QString("Sectors (standard headers): %1\n").arg(metrics.sector_count);
+            details += QString("Duplicate sector IDs: %1\n").arg(metrics.duplicate_ids);
+            details += QString("Sync marks: %1 (longest run %2 bits)\n")
+                .arg(metrics.sync_count).arg(metrics.max_sync_run_bits);
+            details += QString("Custom sync: %1\n").arg(metrics.has_custom_sync ? "Yes" : "No");
+            details += QString("Bad GCR groups: %1\n").arg(metrics.bad_gcr_count);
+            details += QString("Track length: %1 of nominal\n")
+                .arg(metrics.track_length_ratio, 0, 'f', 3);
+            /* Deliberately NOT shown for a G64 source: revolutions, bit-length
+             * range and weak-bit regions need multi-revolution flux, which a
+             * single G64 track image does not carry. Printing the zeros would
+             * read as "measured 0" instead of "not measurable here". */
+            if (metrics.revolutions > 1) {
+                details += QString("Revolutions captured: %1\n").arg(metrics.revolutions);
+                details += QString("Bit length: %1 - %2 bits\n")
+                    .arg(metrics.bitlen_min).arg(metrics.bitlen_max);
+                details += QString("Weak region: %1 bits (max run: %2)\n")
+                    .arg(metrics.weak_region_bits).arg(metrics.weak_region_max_run);
+            } else {
+                details += QString("Timing / weak bits: not measurable from a "
+                                   "single-revolution source\n");
+            }
             details += QString("Is half-track: %1\n").arg(metrics.is_half_track ? "Yes" : "No");
             details += QString("Has meaningful data: %1\n").arg(metrics.has_meaningful_data ? "Yes" : "No");
             details += "\n";
@@ -405,8 +426,21 @@ void ProtectionAnalysisWidget::loadFluxData(const uint8_t *data, size_t len)
 
             ufm_c64_track_metrics_t metrics = {};
             metrics.track_x2 = t;
+            /* MF-405: `track` / `is_half_track` are what the detail view and
+             * the heatmap key on now, so derive them here too. Pure index
+             * arithmetic on the SCP track number (0-based, even = whole
+             * track) -- no measurement is being claimed. */
+            metrics.track = (uint8_t)(t / 2 + 1);
+            metrics.is_half_track = ((t % 2) != 0);
             metrics.revolutions = scp.header.revolutions;
             metrics.has_meaningful_data = (count > 100);
+
+            /* KNOWN LIMITATION (KNOWN_ISSUES PROT-11): the fields below are
+             * flux statistics, and ufm_c64_prot_analyze() reads none of them.
+             * An SCP-loaded disk therefore still yields zero protection hits.
+             * Fixing that needs a flux -> GCR -> ufm_c64_metrics_from_gcr()
+             * path, which does not exist yet; inventing a second, untested
+             * metric derivation here is exactly what PROT-8 was about. */
 
             /* Compute timing histogram for this track */
             double minDelta = 1e9, maxDelta = 0;
@@ -467,7 +501,7 @@ void ProtectionAnalysisWidget::loadFluxData(const uint8_t *data, size_t len)
     /* Resize heatmap if needed */
     int maxTrack = 0;
     for (const auto &m : m_trackMetrics) {
-        int t = m.track_x2 / 2;
+        int t = (int)m.track;
         if (t > maxTrack) maxTrack = t;
     }
     if (maxTrack >= m_heatmapTable->rowCount()) {
@@ -517,64 +551,37 @@ void ProtectionAnalysisWidget::loadG64(const char *path)
         ret = g64_get_track(g64, halftrack, &trackData, &trackLen, &speed);
         if (ret != 0 || !trackData || trackLen == 0) continue;
 
+        /* MF-405 (PROT-8): the per-track metrics come from the shipped,
+         * corpus-verified extractor instead of being recomputed here.
+         *
+         * The previous code in this spot filled track_x2, revolutions,
+         * is_half_track, bitlen_*, weak_region_*, illegal_gcr_events and
+         * max_sync_run_bits -- and ufm_c64_prot_analyze() reads NONE of those.
+         * It reads track, has_half_track, track_length_ratio, has_custom_sync,
+         * sector_count, bad_gcr_count and duplicate_ids, every one of which
+         * stayed zero. Measured on the real Bounty Bob disk: 71 tracks in,
+         * 0 hits out, "no protection" -- on a disk with 35 half-tracks and 15
+         * header-less tracks. With the shipped extractor the same 71 tracks
+         * yield 80 hits at 85 % confidence.
+         *
+         * It also counted sync byte-wise (runs of 0xFF x 8) rather than as
+         * >= 10 one-bits at any bit position, and treated byte values 0x00-0x03
+         * as "illegal GCR", which is not how a 5-bit code works. */
+        /* Index conventions differ between the two APIs and must be converted,
+         * not passed through:
+         *   g64_get_track()            index 2 = track 1.0  (track x 2)
+         *   ufm_c64_metrics_from_gcr() index 0 = track 1.0  (0-based slot)
+         * Passing `halftrack` straight through shifts every track by one and
+         * lands exactly on the three speed-zone boundaries (17->18, 24->25,
+         * 30->31), where the nominal capacity changes. Measured: that produced
+         * three spurious "long track" hits on BOTH clean reference disks. With
+         * the conversion, the clean disks report zero hits through this reader,
+         * matching the plugin reader exactly. */
         ufm_c64_track_metrics_t metrics = {};
-        metrics.track_x2 = halftrack;
-        metrics.revolutions = 1;
-        metrics.is_half_track = ((halftrack % 2) != 0);
-        metrics.has_meaningful_data = (trackLen > 10);
-
-        /* Analyze GCR data for this track */
-
-        /* Track length analysis: standard C64 tracks are ~6250 bytes */
-        int trackNumber = halftrack / 2;
-        size_t expectedLen = d64_track_capacity(trackNumber);
-        bool isLongTrack = (trackLen > expectedLen + expectedLen / 10);
-        bool isShortTrack = (expectedLen > 0 && trackLen < expectedLen - expectedLen / 10);
-
-        metrics.bitlen_min = (uint32_t)trackLen;
-        metrics.bitlen_max = (uint32_t)trackLen;
-
-        /* Scan for illegal GCR patterns (bytes containing $00 nibbles) */
-        int illegalGcr = 0;
-        int maxSyncRun = 0;
-        int currentSyncRun = 0;
-        int weakRegion = 0;
-        int maxWeakRun = 0;
-        int currentWeakRun = 0;
-
-        for (size_t i = 0; i < trackLen; i++) {
-            uint8_t b = trackData[i];
-
-            /* Check for sync bytes (0xFF) */
-            if (b == 0xFF) {
-                currentSyncRun++;
-                if (currentSyncRun > maxSyncRun) maxSyncRun = currentSyncRun;
-            } else {
-                currentSyncRun = 0;
-            }
-
-            /* Check for illegal GCR: in valid GCR, no nibble should be
-               one of the "illegal" 4-bit patterns (0, 1, 2, 3) when decoded.
-               Quick heuristic: bytes 0x00-0x03 are definitely illegal GCR. */
-            if (b <= 0x03) {
-                illegalGcr++;
-            }
-
-            /* Weak bit detection: regions of 0x00 or erratic patterns */
-            if (b == 0x00) {
-                currentWeakRun++;
-                weakRegion++;
-            } else {
-                if (currentWeakRun > maxWeakRun) maxWeakRun = currentWeakRun;
-                currentWeakRun = 0;
-            }
+        if (!ufm_c64_metrics_from_gcr(trackData, trackLen, halftrack - 2,
+                                      UFM_C64_SPEED_ZONE_AUTO, &metrics)) {
+            continue;
         }
-        if (currentWeakRun > maxWeakRun) maxWeakRun = currentWeakRun;
-
-        metrics.illegal_gcr_events = illegalGcr;
-        metrics.max_sync_run_bits = maxSyncRun * 8; /* bytes to bits */
-        metrics.weak_region_bits = weakRegion * 8;
-        metrics.weak_region_max_run = maxWeakRun * 8;
 
         m_trackMetrics.append(metrics);
     }
@@ -584,7 +591,7 @@ void ProtectionAnalysisWidget::loadG64(const char *path)
     /* Resize heatmap if needed */
     int maxTrack = 0;
     for (const auto &m : m_trackMetrics) {
-        int t = m.track_x2 / 2;
+        int t = (int)m.track;
         if (t > maxTrack) maxTrack = t;
     }
     if (maxTrack >= m_heatmapTable->rowCount()) {

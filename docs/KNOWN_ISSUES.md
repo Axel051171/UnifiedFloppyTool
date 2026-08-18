@@ -1600,7 +1600,7 @@ Implementierung, die niemand benutzt.
 verdrahten) oder ob die Weak-Bit-Erkennung dort eigenständig bleibt (dann eine
 der beiden entfernen). Vorher keine dritte Implementierung anlegen.
 
-### PROT-8 — Zwei konkurrierende C64-Metrik-Extraktoren, der getestete wird nicht benutzt (2026-08-18, MF-384)
+### PROT-8 — Zwei konkurrierende C64-Metrik-Extraktoren, der getestete wird nicht benutzt (2026-08-18, MF-384) → ✓ RESOLVED (MF-405)
 
 **Architecture.** Seit MF-381 existiert `ufm_c64_metrics_from_gcr()`: in C,
 gegen reale Disks verifiziert, füllt genau die Felder, die
@@ -1612,10 +1612,74 @@ und in die falschen Strukturfelder (siehe Korrektur unter PROT-2).
 Damit hat das Projekt zwei Implementierungen desselben Fakts, von denen die
 getestete nicht benutzt wird und die benutzte nicht funktioniert.
 
-*Nächster Schritt:* Das Widget auf `ufm_c64_metrics_from_gcr()` umstellen und
-die eigene Rechnung löschen. Das macht den C64-Schutzpfad erstmals durchgehend
-nutzbar, entfernt untestbaren Duplikat-Code und löst nebenbei PROT-6, weil der
-GUI-Leser Halbspuren bereits adressieren kann.
+**Behoben (MF-405).** Das Widget rechnet nicht mehr selbst; der G64-Pfad ruft
+`ufm_c64_metrics_from_gcr()`.
+
+**Die Auswirkung war vollständig, nicht graduell.** Am realen Korpus gemessen,
+bevor irgendetwas geändert wurde:
+
+| Bounty Bob (geschützt) | Spuren | Treffer | Schema | Konfidenz |
+|---|---|---|---|---|
+| Widget-Rechnung (Ist) | 71 | **0** | None | 0 |
+| `ufm_c64_metrics_from_gcr()` | 71 | 76 | Half Track | 85 |
+
+Die GUI meldete „kein Schutz" auf einer Disk mit 35 Halbspuren und 15
+headerlosen Spuren — und zwar **immer**, für jede Disk. Der Grund ist kein
+Rundungsfehler: die beiden Feldmengen überschneiden sich in **keinem einzigen
+Feld**. Das Widget füllte `track_x2`, `revolutions`, `is_half_track`,
+`bitlen_*`, `weak_region_*`, `illegal_gcr_events`, `max_sync_run_bits`;
+`ufm_c64_prot_analyze()` liest `track`, `has_half_track`,
+`track_length_ratio`, `has_custom_sync`, `sector_count`, `bad_gcr_count`,
+`duplicate_ids`. Der Klassifikator bekam in jedem gelesenen Feld eine Null.
+
+Nebenbei entfernt: byteweise Sync-Zählung (Läufe von `0xFF` × 8 statt ≥ 10
+Eins-Bits an beliebiger Bitposition, vgl. FMT-14) und die Heuristik
+„Bytewerte 0x00–0x03 sind ungültiges GCR", die die Struktur eines 5-Bit-Codes
+verfehlt.
+
+**Beim Umbau gefunden: eine Index-Konventions-Kollision.** Die beiden G64-Leser
+im Baum nummerieren verschieden — `g64_get_track()` als Spur × 2 (Index 2 =
+Spur 1), `ufm_c64_metrics_from_gcr()` als 0-basierten Slot (Index 0 = Spur 1).
+Den Index unkonvertiert durchzureichen verschiebt jede Spur um eins und trifft
+exakt die drei Geschwindigkeitszonen-Grenzen (17→18, 24→25, 30→31), wo sich die
+Sollkapazität ändert. Messbar: drei erfundene „Long Track"-Treffer auf **beiden**
+sauberen Referenzdisks. Mit der Umrechnung liefern beide Leser dort
+übereinstimmend null Treffer — das ist die Kreuzprobe, die die Konvention
+belegt. Die Detailanzeige und die Heatmap schlüsseln jetzt über `track` /
+`is_half_track` statt über den rohen Slot-Index, damit sie nicht davon abhängen,
+welcher Leser die Liste gefüllt hat.
+
+**Erstmals sichtbar:** 13 der 35 Halbspuren tragen Custom-Sync. Diese Daten
+konnte vorher **kein** Pfad sehen — das Plugin konnte Halbspuren nicht
+adressieren (PROT-6), und die Widget-Rechnung setzte `has_custom_sync`
+überhaupt nie.
+
+`src/gui/` hat keine Testabdeckung, deshalb ist der Datenpfad des Widgets
+(`g64_load` → `g64_get_track` → Metriken → Klassifikation) jetzt ohne Qt in
+`test_c64_protection_real_corpus` nachgebaut: die 15 Ganzspuren mit Custom-Sync
+decken sich exakt mit der Menge, die der Plugin-Pfad pinnt, und beide sauberen
+Disks bleiben still.
+
+### PROT-11 — Der SCP-Pfad des Widgets hat denselben Defekt, ungelöst (2026-08-18, MF-405)
+
+**Correctness.** `ProtectionAnalysisWidget::loadFlux()` füllt für SCP-Quellen
+weiterhin nur Flux-Statistiken (`bitlen_*`, `weak_region_*`, `revolutions`) —
+also genau die Felder, die `ufm_c64_prot_analyze()` **nicht** liest. Eine über
+SCP geladene Disk liefert deshalb nach wie vor null Schutz-Treffer, aus demselben
+Grund wie PROT-8 vor der Korrektur.
+
+Der G64-Fall ließ sich beheben, weil es mit `ufm_c64_metrics_from_gcr()` einen
+verifizierten Extraktor für GCR-Bytes gibt. Für Flux gibt es keinen: es fehlt ein
+Pfad Flux → GCR → Metriken. Eine zweite, ungetestete Metrik-Herleitung an dieser
+Stelle zu erfinden wäre genau das, was PROT-8 ausgemacht hat, und fällt zudem
+unter die EINFRIER-REGEL.
+
+*Nächster Schritt:* prüfen, ob der bestehende Flux-Dekodierpfad (PLL → GCR-Bits)
+für SCP-C64-Spuren nutzbar ist und `ufm_c64_metrics_from_gcr()` damit gespeist
+werden kann. Bis dahin ist der SCP-Zweig der Schutz-Analyse als nicht funktional
+zu behandeln; der Code sagt das jetzt an Ort und Stelle.
+
+
 
 ### PROT-5 — `ufm_cbm_check_vmax()` ist unter der belegten Sync-Definition degeneriert (2026-08-18, MF-382) → ✓ RESOLVED (MF-402, Behauptung entfernt)
 

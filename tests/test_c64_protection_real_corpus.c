@@ -27,6 +27,7 @@
  * SKIPS (exit 77) when the local images are absent (e.g. CI).
  */
 
+#include "uft/formats/c64/uft_d64_g64.h"
 #include "uft/protection/ufm_c64_metrics.h"
 #include "uft/protection/ufm_c64_scheme_detect.h"
 #include "uft/uft_format_plugin.h"
@@ -112,6 +113,41 @@ static int collect(const char *file, ufm_c64_track_metrics_t *out, int max_track
         free(t.sectors);
     }
     uft_format_plugin_g64.close(&disk);
+    return n;
+}
+
+
+/* ── The GUI's data path (MF-405, PROT-8) ────────────────────────────────
+ * ProtectionAnalysisWidget does not use the format plugin. It reads G64 via
+ * g64_load()/g64_get_track() and then classifies. This helper is that path,
+ * minus Qt, so it can be tested: src/gui/ has no test coverage at all.
+ *
+ * Note the index conversion. g64_get_track() numbers slots as track x 2
+ * (index 2 = track 1), ufm_c64_metrics_from_gcr() as a 0-based slot
+ * (index 0 = track 1). Passing the index through unconverted shifts every
+ * track by one and lands on the speed-zone boundaries, which is measurable:
+ * it invents three "long track" hits on a disk that has none. */
+static int gui_path_analyze(const char *path, ufm_c64_prot_report_t *report,
+                            ufm_c64_track_metrics_t *m_out, int max_tracks)
+{
+    g64_image_t *g = NULL;
+    if (g64_load(path, &g) != 0 || !g) return -1;
+
+    int n = 0;
+    for (int ht = 2; ht <= g->num_tracks * 2 && ht < G64_MAX_TRACKS; ht++) {
+        if (n >= max_tracks) break;
+        const uint8_t *d = NULL; size_t len = 0; uint8_t speed = 0;
+        if (g64_get_track(g, ht, &d, &len, &speed) != 0 || !d || len == 0)
+            continue;
+        if (ufm_c64_metrics_from_gcr(d, len, ht - 2, UFM_C64_SPEED_ZONE_AUTO,
+                                     &m_out[n]))
+            n++;
+    }
+    g64_free(g);
+    if (n <= 0) return -1;
+
+    static ufm_c64_prot_hit_t hits[256];
+    if (!ufm_c64_prot_analyze(m_out, n, hits, 256, report)) return -1;
     return n;
 }
 
@@ -263,6 +299,73 @@ TEST(even_slots_agree_with_read_track) {
     uft_format_plugin_g64.close(&disk);
 }
 
+TEST(gui_path_populates_the_fields_the_classifier_reads_PROT8) {
+    /* The defect PROT-8 named: the widget filled track_x2, revolutions,
+     * bitlen_*, weak_region_*, illegal_gcr_events and max_sync_run_bits, while
+     * ufm_c64_prot_analyze() reads track, has_half_track, track_length_ratio,
+     * has_custom_sync, sector_count, bad_gcr_count and duplicate_ids. The two
+     * sets do not overlap at all, so the classifier saw zeros. Measured on
+     * this disk before the fix: 71 tracks in, 0 hits out. */
+    static ufm_c64_track_metrics_t m[128];
+    memset(m, 0, sizeof(m));
+    ufm_c64_prot_report_t report;
+    int n = gui_path_analyze(img("c64pp_bountybob.g64"), &report, m, 128);
+    ASSERT(n == 71);
+
+    int with_track = 0, with_ratio = 0, with_half = 0;
+    int sync_whole = 0, sync_half = 0;
+    for (int i = 0; i < n; i++) {
+        if (m[i].track > 0)                  with_track++;
+        if (m[i].track_length_ratio > 0.0f)  with_ratio++;
+        if (m[i].has_half_track)             with_half++;
+        if (m[i].has_custom_sync) {
+            if (m[i].is_half_track) sync_half++; else sync_whole++;
+        }
+    }
+    ASSERT(with_track == n);        /* every entry identifies its track */
+    ASSERT(with_ratio == n);        /* every entry has a measured length */
+    ASSERT(with_half == 35);        /* the 35 half-tracks from the manifest */
+
+    /* The 15 whole tracks are the same set the plugin path pins, so the two
+     * readers agree where they overlap. The 13 half-tracks carrying custom
+     * sync are data that NEITHER path could see before PROT-6 and PROT-8: the
+     * plugin could not address half-tracks, and the widget's own metrics never
+     * set has_custom_sync at all. */
+    ASSERT(sync_whole == 15);
+    ASSERT(sync_half == 13);
+}
+
+TEST(gui_path_finds_the_protection_PROT8) {
+    static ufm_c64_track_metrics_t m[128];
+    memset(m, 0, sizeof(m));
+    ufm_c64_prot_report_t report;
+    ASSERT(gui_path_analyze(img("c64pp_bountybob.g64"), &report, m, 128) > 0);
+
+    ASSERT(report.hits_written > 0);
+    ASSERT(report.primary_scheme == UFM_PROT_HALF_TRACK);
+    ASSERT(report.confidence_0_100 == 85);
+    /* MF-402 still holds through this path: the primary scheme names the
+     * dominant structure (half-tracks), not a product. */
+    ASSERT(report.primary_scheme != UFM_PROT_VMAX);
+    ASSERT(report.primary_scheme != UFM_PROT_RAPIDLOK);
+}
+
+TEST(gui_path_and_plugin_path_agree_on_clean_disks_PROT8) {
+    /* Both G64 readers, same disks, same answer: silence. This is what caught
+     * the index-convention mismatch — unconverted, this reader reported three
+     * "long track" hits on each of these two clean disks. */
+    static ufm_c64_track_metrics_t m[128];
+    ufm_c64_prot_report_t report;
+
+    memset(m, 0, sizeof(m));
+    ASSERT(gui_path_analyze(img("c64pp_aliensyndrome.g64"), &report, m, 128) == 40);
+    ASSERT(report.hits_written == 0);
+
+    memset(m, 0, sizeof(m));
+    ASSERT(gui_path_analyze(free_img("vice_c1541_35trk.g64"), &report, m, 128) == 35);
+    ASSERT(report.hits_written == 0);
+}
+
 int main(void) {
     FILE *f = fopen(img("c64pp_bountybob.g64"), "rb");
     if (!f) {
@@ -281,6 +384,9 @@ int main(void) {
     RUN(half_tracks_are_reachable_through_the_plugin_PROT6);
     RUN(a_disk_without_half_tracks_reports_none);
     RUN(even_slots_agree_with_read_track);
+    RUN(gui_path_populates_the_fields_the_classifier_reads_PROT8);
+    RUN(gui_path_finds_the_protection_PROT8);
+    RUN(gui_path_and_plugin_path_agree_on_clean_disks_PROT8);
     printf("\nResults: %d passed, %d failed\n", _pass, _fail);
     return _fail == 0 ? 0 : 1;
 }
