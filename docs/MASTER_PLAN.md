@@ -649,13 +649,28 @@ einen T1b-Eintrag; greaseweazle ist lokal nicht installiert und nicht über
 PyPI beziehbar. Ohne dieses Abbild bleibt auch nach dem Umbau nur eine
 synthetische Verifikation.
 
-### S3-2 — Prinzip-6-Lücke: Kompatibilitätsmatrix 1/88 (P2)
+### S3-2 — Prinzip-6-Lücke: Kompatibilitätsmatrix 1/88 (P2) → neu bewertet (MF-414)
 
-`audit_plugin_compliance.py` (2026-08-18): 88/88 Plugins haben `spec_status`
-und Feature-Matrix, aber nur **1 von 88** hat eine Emulator-Kompatibilitäts-
-matrix. Prinzip 6 verlangt sie; `compat_entries == NULL` heißt „nichts
-explizit getestet". Das ist die größte verbliebene Prinzip-Lücke und in
-keinem Meilenstein geführt.
+Ursprüngliche Fassung: „88/88 Plugins haben `spec_status` und Feature-Matrix,
+aber nur 1 von 88 hat eine Emulator-Kompatibilitätsmatrix — die größte
+verbliebene Prinzip-Lücke."
+
+**Beim Angehen zeigte sich, dass die Zählrichtung falsch war (MF-414).** Die
+87 fehlenden Matrizen sind ein ehrliches Nichts. Die **eine vorhandene** war
+das Problem: sie stammte wörtlich aus dem Illustrationsbeispiel in
+`DESIGN_PRINCIPLES.md` §6 und behauptete sechs nie gemessene Ergebnisse,
+darunter „85 % der Testdisketten" auf Hardware, die das Projekt nicht besitzt.
+Details: KNOWN_ISSUES **PRINC-1**.
+
+Behoben und mit einer neuen Gate-Kategorie („unbacked compat claims")
+abgesichert. **Die 87 bleiben bewusst leer** — sie mit UNTESTED-Zeilen zu
+füllen hübe die Audit-Zahl auf 88/88, ohne eine Information hinzuzufügen.
+
+*Verbleibend als echte Arbeit:* Belege beschaffen, nicht Tabellen füllen. Der
+naheliegende erste Schritt ist ein CI-Job, der eine UFT-geschriebene Datei an
+ein freies Zielwerkzeug gibt (VICE `c1541` für D64/G64, `xdftool` für ADF) und
+das Ergebnis prüft — dann tragen diese Zeilen `ci_tested = true` und die Matrix
+sagt etwas.
 
 ### S3-3 — Verbleibende Test-Exclusions (P2, klein) → ✓ ERLEDIGT (MF-411)
 

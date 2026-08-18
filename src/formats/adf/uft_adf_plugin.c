@@ -102,15 +102,39 @@ static const uft_plugin_feature_t adf_features[] = {
 };
 
 /* Prinzip 6 Kompatibilitätsmatrix — see docs/DESIGN_PRINCIPLES.md §6 */
+/* Consumers that matter for ADF export, and what we actually know about them.
+ *
+ * MF-414: every entry here used to claim a verified result — WinUAE 5.3/4.x and
+ * FS-UAE 3.1 "COMPATIBLE", FS-UAE <3.0 "INCOMPATIBLE" with a technical reason,
+ * Amiga Explorer "COMPATIBLE, tested 2026-03", real hardware "PARTIAL, 85% of
+ * test disks round-trip cleanly".
+ *
+ * None of it was ever measured. The table was copied verbatim out of the
+ * ILLUSTRATIVE example in docs/DESIGN_PRINCIPLES.md section 6 (lines 282-287)
+ * when the API was introduced; the commit says so itself ("1:1 aus dem
+ * DESIGN_PRINCIPLES.md §6 Beispiel"). The copy even contradicts its source on
+ * the one checkable field: the example marks three rows "CI-getestet", the code
+ * shipped them with ci_tested = false. No CI job feeds ADF output to an
+ * emulator, and the project owns no Amiga hardware (UFT-008, HIL tier NOT_RUN),
+ * so the 85 % figure cannot have an origin.
+ *
+ * The consumer names are kept, because knowing WHICH targets matter is real
+ * information. The verdicts are not: they are UNTESTED, which is what
+ * uft_emu_compat_t has that value for. This turns a set of claims into a
+ * to-do list. See KNOWN_ISSUES PRINC-1. */
 static const uft_plugin_compat_entry_t adf_compat[] = {
-    { "WinUAE 5.3",      UFT_EMU_COMPATIBLE,   NULL, NULL, false },
-    { "WinUAE 4.x",      UFT_EMU_COMPATIBLE,   NULL, NULL, false },
-    { "FS-UAE 3.1",      UFT_EMU_COMPATIBLE,   NULL, NULL, false },
-    { "FS-UAE <3.0",     UFT_EMU_INCOMPATIBLE,
-      "older FS-UAE versions reject timing track annotations", NULL, false },
-    { "Amiga Explorer",  UFT_EMU_COMPATIBLE,   NULL, "2026-03", false },
-    { "real Amiga hw",   UFT_EMU_PARTIAL,
-      "85% of test disks round-trip cleanly", NULL, false },
+    { "WinUAE 5.3",      UFT_EMU_UNTESTED,
+      "no test feeds UFT-written ADF to WinUAE", NULL, false },
+    { "WinUAE 4.x",      UFT_EMU_UNTESTED,
+      "no test feeds UFT-written ADF to WinUAE", NULL, false },
+    { "FS-UAE 3.1",      UFT_EMU_UNTESTED,
+      "no test feeds UFT-written ADF to FS-UAE", NULL, false },
+    { "FS-UAE <3.0",     UFT_EMU_UNTESTED,
+      "the timing-track incompatibility was asserted, never observed", NULL, false },
+    { "Amiga Explorer",  UFT_EMU_UNTESTED,
+      "the 2026-03 test date had no run behind it", NULL, false },
+    { "real Amiga hw",   UFT_EMU_UNTESTED,
+      "no Amiga drive available; see UFT-008 (HIL bench delegated)", NULL, false },
 };
 
 const uft_format_plugin_t uft_format_plugin_adf = {

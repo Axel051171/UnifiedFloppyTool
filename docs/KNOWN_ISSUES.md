@@ -1393,6 +1393,61 @@ ehrlich und bleibt es.
 `uic`-generiertem UI-Header syntaxgeprüft (rc=0). Ein manueller GUI-Smoke-Test
 war nicht möglich — kein Gerät und keine Anzeige in dieser Umgebung.
 
+### PRINC-1 — Die einzige Kompatibilitätsmatrix war aus dem Doku-Beispiel kopiert (2026-08-18, MF-414) → ✓ RESOLVED
+
+**Correctness / Prinzip 6.** Aufgefallen beim Angehen von Sprint-3 S3-2
+(„Kompatibilitätsmatrix nur 1 von 88 Plugins"). Das Problem war nicht die
+fehlende Matrix bei 87 Plugins — das ist ein ehrliches Nichts. Das Problem war
+die **eine, die es gab**.
+
+`uft_adf_plugin.c` führte sechs Einträge mit konkreten Urteilen:
+
+| Konsument | Urteil | Zusatz |
+|---|---|---|
+| WinUAE 5.3 / 4.x, FS-UAE 3.1 | `COMPATIBLE` | — |
+| FS-UAE <3.0 | `INCOMPATIBLE` | „rejects timing track annotations" |
+| Amiga Explorer | `COMPATIBLE` | Testdatum 2026-03 |
+| real Amiga hw | `PARTIAL` | **„85% of test disks round-trip cleanly"** |
+
+**Nichts davon wurde je gemessen.** Die Tabelle ist wörtlich aus dem
+*Illustrationsbeispiel* in `docs/DESIGN_PRINCIPLES.md` §6 (Zeilen 282–287)
+übernommen worden; der Einführungs-Commit sagt es selbst: „ADF exemplarisch
+populiert … **1:1 aus dem DESIGN_PRINCIPLES.md §6 Beispiel**". Die Kopie
+widerspricht ihrer Vorlage sogar im einzigen prüfbaren Feld — das Beispiel
+markiert drei Zeilen „CI-getestet", der Code lieferte sie mit
+`ci_tested = false` aus. Es gibt keinen CI-Job, der ADF-Ausgabe an einen
+Emulator gibt, und das Projekt besitzt keine Amiga-Hardware (UFT-008, HIL-Tier
+NOT_RUN) — die 85 % können keinen Ursprung haben.
+
+Das ist dieselbe Klasse wie PROT-3 und FMT-2/3/10/11/12, nur eine Ebene höher:
+nicht ein Parser gegen eine erfundene Spec, sondern eine *Illustration*, die zur
+*Behauptung* befördert und im Binary ausgeliefert wurde. Und das Audit zählte
+sie als das eine vorbildliche Plugin.
+
+**Behoben (MF-414).** Alle sechs Einträge stehen auf `UFT_EMU_UNTESTED`, jeder
+mit der Notiz, warum. Die Konsumentennamen bleiben: *welche* Ziele für ADF
+zählen, ist echte Information — die Urteile waren es nicht. Aus einer Sammlung
+von Behauptungen wird damit eine Aufgabenliste.
+
+**Wächter ergänzt.** `audit_plugin_compliance.py` konnte nur Vorhandensein
+prüfen (`compat_entries != NULL`) und hätte kopierten Beispieltext nie von
+Messwerten unterschieden. `check_consistency.py` hat jetzt die Kategorie
+„unbacked compat claims": jedes Urteil außer `UNTESTED` muss einen Beleg
+**benennen** — `ci_tested = true` oder ein `test_date`; `PARTIAL` und
+`INCOMPATIBLE` zusätzlich eine Notiz. Gegenprobe mit der Originaltabelle
+gemacht: vier Verstöße namentlich gemeldet.
+
+*Grenze der Prüfung, ausdrücklich:* sie stellt fest, ob ein Beleg genannt ist,
+nicht ob er stimmt. „Amiga Explorer" mit erfundenem Datum 2026-03 wäre
+durchgegangen. Eine mechanische Prüfung kann Ehrlichkeit nicht ersetzen, nur
+die stillschweigende Variante ausschließen.
+
+*Nicht getan und warum:* die übrigen 87 Plugins **nicht** mit
+UNTESTED-Matrizen befüllt. Das würde die Audit-Zahl von 1/88 auf 88/88 heben,
+ohne eine einzige Information hinzuzufügen — `compat_entries == NULL` und eine
+Liste aus lauter UNTESTED sagen dasselbe. Eine Matrix gehört dorthin, wo jemand
+etwas geprüft hat oder wo die relevanten Ziele nicht offensichtlich sind.
+
 ### ARCH-1 — Zwei `uft_platform.h`, die einander nie sehen (2026-08-18, MF-411)
 
 **Architecture.** Gefunden beim Auflösen der Include-Guard-Kollisionen.

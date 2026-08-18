@@ -566,6 +566,8 @@ def main() -> int:
                            _inv.check_tiers_fresh(repo)))
         all_errors.append(("include guard collisions",
                            _inv.check_include_guards(repo)))
+        all_errors.append(("unbacked compat claims",
+                           _inv.check_compat_claims(repo)))
 
     total = sum(len(e) for _, e in all_errors)
     print(f"Consistency check ({len(all_errors)} categories, root={repo}):")

@@ -230,6 +230,55 @@ def check_include_guards(repo: Path) -> list[str]:
     return errors
 
 
+def check_compat_claims(repo: Path) -> list[str]:
+    """A compatibility verdict must carry its evidence (MF-414).
+
+    Principle 6 lets a plugin declare, per target consumer, whether its export
+    is accepted. The one populated matrix in the tree turned out to be the
+    illustrative example from docs/DESIGN_PRINCIPLES.md copied verbatim into
+    shipping code — six confident verdicts, including "85% of test disks
+    round-trip cleanly" for hardware the project does not own.
+
+    Presence alone therefore proves nothing, and that is all
+    audit_plugin_compliance.py could check. This rule is what distinguishes a
+    measurement from a sentence: any verdict other than UNTESTED must name
+    either a CI job (ci_tested = true) or a date when someone ran it
+    (test_date). UNTESTED needs no evidence — it IS the absence of evidence."""
+    errors: list[str] = []
+    # One brace-initialised entry:
+    #   { "consumer", UFT_EMU_*, note-or-NULL, date-or-NULL, ci_tested }
+    # The note may be split over several adjacent string literals.
+    STR = r'"[^"]*"(?:\s*"[^"]*")*'
+    entry = re.compile(
+        r'\{\s*(?P<consumer>' + STR + r')\s*,\s*'
+        r'(?P<status>UFT_EMU_[A-Z]+)\s*,\s*'
+        r'(?P<note>NULL|' + STR + r')\s*,\s*'
+        r'(?P<date>NULL|' + STR + r')\s*,\s*'
+        r'(?P<ci>true|false)\s*\}', re.S)
+
+    for src in sorted((repo / "src").rglob("*.c")):
+        text = src.read_text(encoding="utf-8", errors="replace")
+        if "uft_plugin_compat_entry_t" not in text:
+            continue
+        rel = str(src.relative_to(repo)).replace("\\", "/")
+        for m in entry.finditer(text):
+            status = m.group("status")
+            if status == "UFT_EMU_UNTESTED":
+                continue
+            if status == "UFT_EMU_COMPATIBLE" and m.group("note") == "NULL":
+                pass  # a note is optional for a plain COMPATIBLE
+            if status in ("UFT_EMU_PARTIAL", "UFT_EMU_INCOMPATIBLE") and                     m.group("note") == "NULL":
+                errors.append(
+                    f"{rel}: {m.group('consumer')} is {status} without a note "
+                    f"explaining the limitation")
+            if m.group("ci") != "true" and m.group("date") == "NULL":
+                errors.append(
+                    f"{rel}: {m.group('consumer')} claims {status} with no "
+                    f"evidence — set ci_tested=true or record a test_date, "
+                    f"or say UFT_EMU_UNTESTED")
+    return errors
+
+
 def check_freeze(repo: Path) -> list[str]:
     errors: list[str] = []
     bl_path = repo / BASELINE
