@@ -17,8 +17,8 @@
  * Reference: SCP File Format Documentation v2.4
  */
 
-#ifndef UFT_SCP_H
-#define UFT_SCP_H
+#ifndef UFT_FORMATS_UFT_SCP_H
+#define UFT_FORMATS_UFT_SCP_H
 
 #include "uft/core/uft_unified_types.h"
 
@@ -230,4 +230,4 @@ const char* uft_scp_disk_type_name(uint8_t disk_type);
 }
 #endif
 
-#endif /* UFT_SCP_H */
+#endif /* UFT_FORMATS_UFT_SCP_H */

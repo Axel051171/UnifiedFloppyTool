@@ -684,12 +684,27 @@ Suite **193 → 196**, alle grün. Verbleibende Exclusions: **2**
 (`test_libdsk_formats`, `test_fat_extensions`), beide mit benanntem
 fehlendem Baustein.
 
-*Beifund, nicht behoben:* `include/uft/analysis/uft_mfm_detect_bridge.h` und
-`include/uft/detect/uft_mfm_detect_bridge.h` teilten denselben Include-Guard
-`UFT_MFM_DETECT_BRIDGE_H` — wer zuerst inkludiert wurde, gewann, der andere
-wurde still übersprungen. Mit dem Löschen des Zwillings ist die Kollision weg;
-ob es weitere gleichnamige Header-Paare mit identischem Guard gibt, ist nicht
-geprüft.
+**Beifund, verfolgt und weitgehend behoben.** Die beiden
+`uft_mfm_detect_bridge.h` teilten denselben Include-Guard — wer zuerst
+inkludiert wurde, gewann, der andere wurde still übersprungen. Die Frage „gibt
+es weitere?" wurde nachgemessen: **23 weitere gleichnamige Header-Paare** mit
+identischem Guard, teils dreifach (`uft_woz.h`, `uft_fat12.h`, `uft_bbc_dfs.h`).
+
+Vor dem Eingriff gemessen, ob akut oder latent: keine einzige Datei bindet zwei
+Varianten **direkt** ein, und kein Code fragt einen dieser Guards ab. Die
+Umbenennung auf pfadabgeleitete Guards (25 Header) war damit risikofrei und
+rein vorbeugend — aus stillem Falschverhalten wird im Kollisionsfall ein
+sichtbarer Compilerfehler.
+
+Ein Fall blieb bewusst offen: `uft_platform.h`. Dort brachte das Auftrennen
+sofort 9 doppelt definierte Makros zutage, weil der große Header den compat-
+Header einbindet, ihn durch den geteilten Guard aber nie wirksam werden ließ.
+Das ist eine eigene Entflechtung → **KNOWN_ISSUES ARCH-1**; der Guard bleibt
+vorerst geteilt und ist als einzige Ausnahme im Wächter eingetragen.
+
+**Wächter ergänzt:** `check_consistency.py` hat eine neue Kategorie
+„include guard collisions". Gegenprobe gemacht — mit einem wiederhergestellten
+`UFT_WOZ_H` meldet sie den Fall namentlich, sonst 0.
 
 ### S3-4 — Doku-Governance (P2) → ✓ ERLEDIGT (MF-410)
 

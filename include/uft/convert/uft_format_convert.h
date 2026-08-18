@@ -14,8 +14,8 @@
  * SPDX-License-Identifier: MIT
  */
 
-#ifndef UFT_FORMAT_CONVERT_H
-#define UFT_FORMAT_CONVERT_H
+#ifndef UFT_CONVERT_UFT_FORMAT_CONVERT_H
+#define UFT_CONVERT_UFT_FORMAT_CONVERT_H
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -394,4 +394,4 @@ static inline int uft_conv_list_paths(void) {
 }
 #endif
 
-#endif /* UFT_FORMAT_CONVERT_H */
+#endif /* UFT_CONVERT_UFT_FORMAT_CONVERT_H */

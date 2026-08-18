@@ -32,8 +32,8 @@
  * ══════════════════════════════════════════════════════════════════════════ */
 
 
-#ifndef UFT_WOZ_H
-#define UFT_WOZ_H
+#ifndef UFT_FORMATS_UFT_WOZ_H
+#define UFT_FORMATS_UFT_WOZ_H
 
 #include "uft/core/uft_unified_types.h"
 
@@ -372,4 +372,4 @@ uft_error_t woz_bits_to_flux(const uint8_t *bits, size_t bit_count,
 }
 #endif
 
-#endif /* UFT_WOZ_H */
+#endif /* UFT_FORMATS_UFT_WOZ_H */

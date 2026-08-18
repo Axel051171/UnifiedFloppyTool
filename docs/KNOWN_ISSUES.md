@@ -1338,6 +1338,52 @@ algorithmisch identisch (CCITT-FALSE, init 0xFFFF, Polynom 0x1021), es ist also
 Redundanz und keine Divergenz — anders als bei FMT-14. Zusammenführen lohnt,
 eilt aber nicht.
 
+### ARCH-1 — Zwei `uft_platform.h`, die einander nie sehen (2026-08-18, MF-411)
+
+**Architecture.** Gefunden beim Auflösen der Include-Guard-Kollisionen.
+
+`include/uft/uft_platform.h` (420 Zeilen) setzt seinen Guard `UFT_PLATFORM_H`
+und inkludiert **danach** `uft/compat/uft_platform.h` (277 Zeilen) — mit dem
+Kommentar „Include compatibility layer first for POSIX functions on Windows".
+Der compat-Header trägt jedoch **denselben** Guard. Der Effekt:
+
+- Wer `uft/uft_platform.h` einbindet, bekommt die Kompatibilitätsschicht
+  **nie** — sie wird bei jedem Mal übersprungen. Der Kommentar beschreibt eine
+  Absicht, die nie wirksam war.
+- Umgekehrt binden `src/formats/legacy/uft_imd.c` und
+  `src/hal/uft_greaseweazle_full.c` compat direkt als **erste** Zeile ein und
+  sehen deshalb den großen Header **nie**. Diese beiden Dateien übersetzen also
+  gegen eine andere Plattform-Definition als der gesamte Rest des Baums.
+
+Beim probeweisen Auftrennen der Guards traten sofort **9 doppelt definierte
+Makros** zutage (`UFT_PACKED`, `UFT_PACKED_END`, `uft_bswap16/32/64` u. a.).
+Sie sind semantisch gleich (compiler-bedingt MSVC gegen GCC), das Verhalten
+ändert sich also nicht — aber die Duplikation ist real und wurde bisher
+ausschließlich durch die Guard-Kollision verdeckt.
+
+**Bewusst nicht in MF-411 mitgemacht.** Die Entflechtung zweier
+Plattform-Header ist eine eigene Aufgabe; sie im Zuge einer
+Guard-Umbenennung nebenbei zu erledigen hieße, 9 Makro-Definitionen unter
+Zeitdruck zu verschieben. Der Guard von `compat/uft_platform.h` wurde daher
+als **einzige** Ausnahme belassen und ist in
+`scripts/update_inventory.py::GUARD_COLLISION_ALLOWED` mit Begründung
+eingetragen — der neue Kollisions-Wächter meldet also weiterhin 0, ohne die
+Ausnahme zu verschweigen.
+
+*Nächster Schritt:* entscheiden, ob compat in den großen Header aufgeht oder
+umgekehrt, die doppelten Makros auf eine Stelle ziehen, dann den Guard
+auftrennen und den Ausnahme-Eintrag entfernen. Vorher prüfen, was
+`uft_greaseweazle_full.c` (geschützter Pfad) aus dem großen Header tatsächlich
+braucht — die Datei läuft seit jeher ohne ihn.
+
+**Getrennt davon, ebenfalls offen:** vier Makros sind unabhängig von diesem
+Paar doppelt definiert und erzeugen seit jeher Build-Warnungen —
+`UFT_COMPILER_VERSION` (`uft_compiler.h` gegen `uft_platform.h`),
+`UFT_PREFETCH` (`uft_compiler.h` gegen `uft_config.h`) und `UFT_ENCODING_FM`
+/ `UFT_ENCODING_MFM` **dreifach** (`uft_flux_pll.h`, `uft_god_mode.h`,
+`uft_types.h`). Nicht von MF-411 verursacht, hier nur festgehalten, weil sie
+beim Vermessen auffielen.
+
 ### FMT-14 — Drei Sync-Definitionen im Baum, sie weichen genau auf geschützten Disks ab (2026-08-18, MF-395) → ✓ RESOLVED (MF-401, benannt)
 
 **Correctness.** Gefunden beim Umbau von `test_d64_writer` auf echten Code:

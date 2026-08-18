@@ -11,8 +11,8 @@
  * @date 2026-01-16
  */
 
-#ifndef UFT_NIB_FORMAT_H
-#define UFT_NIB_FORMAT_H
+#ifndef UFT_FORMATS_C64_UFT_NIB_FORMAT_H
+#define UFT_FORMATS_C64_UFT_NIB_FORMAT_H
 
 #include <stdint.h>
 #include <stddef.h>
@@ -445,4 +445,4 @@ size_t nib_generate_report(const nib_analysis_t *analysis, char *buffer, size_t 
 }
 #endif
 
-#endif /* UFT_NIB_FORMAT_H */
+#endif /* UFT_FORMATS_C64_UFT_NIB_FORMAT_H */

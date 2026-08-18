@@ -16,8 +16,8 @@
  * @date 2026-01-05
  */
 
-#ifndef UFT_CORE_H
-#define UFT_CORE_H
+#ifndef UFT_CORE_UFT_CORE_H
+#define UFT_CORE_UFT_CORE_H
 
 /* Core unified types */
 #include "uft/uft_error.h" /* P2-ARCH-006: Unified error codes */
@@ -65,4 +65,4 @@ static inline void uft_core_cleanup(void) {
 }
 #endif
 
-#endif /* UFT_CORE_H */
+#endif /* UFT_CORE_UFT_CORE_H */

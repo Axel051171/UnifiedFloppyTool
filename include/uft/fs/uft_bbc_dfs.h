@@ -33,8 +33,8 @@
  * ══════════════════════════════════════════════════════════════════════════ */
 
 
-#ifndef UFT_BBC_DFS_H
-#define UFT_BBC_DFS_H
+#ifndef UFT_FS_UFT_BBC_DFS_H
+#define UFT_FS_UFT_BBC_DFS_H
 
 #include <stdint.h>
 #include <stddef.h>
@@ -578,4 +578,4 @@ static inline void uft_bbc_write24le(uint8_t *p, uint32_t value)
 }
 #endif
 
-#endif /* UFT_BBC_DFS_H */
+#endif /* UFT_FS_UFT_BBC_DFS_H */

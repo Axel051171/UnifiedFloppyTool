@@ -13,8 +13,8 @@
  * - SSD/DSD disc images
  */
 
-#ifndef UFT_BBC_DFS_H
-#define UFT_BBC_DFS_H
+#ifndef UFT_FORMATS_UFT_BBC_DFS_H
+#define UFT_FORMATS_UFT_BBC_DFS_H
 
 #include <stdint.h>
 #include <stddef.h>
@@ -416,4 +416,4 @@ static inline bool uft_dfs_is_valid(const uint8_t *data, size_t size)
 }
 #endif
 
-#endif /* UFT_BBC_DFS_H */
+#endif /* UFT_FORMATS_UFT_BBC_DFS_H */

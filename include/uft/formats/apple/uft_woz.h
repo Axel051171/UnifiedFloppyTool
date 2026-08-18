@@ -26,8 +26,8 @@
  * - https://applesaucefdc.com/woz/reference1/
  */
 
-#ifndef UFT_WOZ_H
-#define UFT_WOZ_H
+#ifndef UFT_FORMATS_APPLE_UFT_WOZ_H
+#define UFT_FORMATS_APPLE_UFT_WOZ_H
 
 #pragma pack(push, 1)
 
@@ -498,4 +498,4 @@ uint8_t woz_read_nibble_mc3470(const uint8_t *bit_stream, uint32_t bit_count,
 
 #pragma pack(pop)
 
-#endif /* UFT_WOZ_H */
+#endif /* UFT_FORMATS_APPLE_UFT_WOZ_H */

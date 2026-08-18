@@ -9,8 +9,8 @@
  * Reference: msa-to-zip (Scala), Hatari emulator
  */
 
-#ifndef UFT_MSA_H
-#define UFT_MSA_H
+#ifndef UFT_FORMATS_UFT_MSA_H
+#define UFT_FORMATS_UFT_MSA_H
 
 #include <stdint.h>
 #include <stddef.h>
@@ -152,4 +152,4 @@ const char *uft_msa_strerror(uft_msa_error_t err);
 #ifdef __cplusplus
 }
 #endif
-#endif /* UFT_MSA_H */
+#endif /* UFT_FORMATS_UFT_MSA_H */

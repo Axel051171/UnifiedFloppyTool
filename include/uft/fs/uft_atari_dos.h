@@ -35,8 +35,8 @@
  * ══════════════════════════════════════════════════════════════════════════ */
 
 
-#ifndef UFT_ATARI_DOS_H
-#define UFT_ATARI_DOS_H
+#ifndef UFT_FS_UFT_ATARI_DOS_H
+#define UFT_FS_UFT_ATARI_DOS_H
 
 #include <stdint.h>
 #include <stddef.h>
@@ -548,4 +548,4 @@ UFT_PACK_END
 }
 #endif
 
-#endif /* UFT_ATARI_DOS_H */
+#endif /* UFT_FS_UFT_ATARI_DOS_H */

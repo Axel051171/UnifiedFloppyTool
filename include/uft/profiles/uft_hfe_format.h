@@ -3,8 +3,8 @@
  * @brief HxC Floppy Emulator HFE Format - Complete Implementation
  */
 
-#ifndef UFT_HFE_FORMAT_H
-#define UFT_HFE_FORMAT_H
+#ifndef UFT_PROFILES_UFT_HFE_FORMAT_H
+#define UFT_PROFILES_UFT_HFE_FORMAT_H
 
 #include <stdint.h>
 #include <stddef.h>
@@ -168,4 +168,4 @@ static inline double uft_hfe_probe(const uint8_t *data, size_t size) {
 }
 #endif
 
-#endif /* UFT_HFE_FORMAT_H */
+#endif /* UFT_PROFILES_UFT_HFE_FORMAT_H */

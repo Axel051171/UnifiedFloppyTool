@@ -25,8 +25,8 @@
  * ══════════════════════════════════════════════════════════════════════════ */
 
 
-#ifndef UFT_FORMAT_REGISTRY_H
-#define UFT_FORMAT_REGISTRY_H
+#ifndef UFT_CORE_UFT_FORMAT_REGISTRY_H
+#define UFT_CORE_UFT_FORMAT_REGISTRY_H
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -321,4 +321,4 @@ static inline bool uft_format_can_write(uft_format_id_t id) {
 }
 #endif
 
-#endif /* UFT_FORMAT_REGISTRY_H */
+#endif /* UFT_CORE_UFT_FORMAT_REGISTRY_H */

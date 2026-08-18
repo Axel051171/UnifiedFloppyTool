@@ -564,6 +564,8 @@ def main() -> int:
                            _inv.check_corpus_manifest(repo)))
         all_errors.append(("verification tiers stale",
                            _inv.check_tiers_fresh(repo)))
+        all_errors.append(("include guard collisions",
+                           _inv.check_include_guards(repo)))
 
     total = sum(len(e) for _, e in all_errors)
     print(f"Consistency check ({len(all_errors)} categories, root={repo}):")

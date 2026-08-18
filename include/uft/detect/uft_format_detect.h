@@ -17,8 +17,8 @@
  * @date 2025-01-11
  */
 
-#ifndef UFT_FORMAT_DETECT_H
-#define UFT_FORMAT_DETECT_H
+#ifndef UFT_DETECT_UFT_FORMAT_DETECT_H
+#define UFT_DETECT_UFT_FORMAT_DETECT_H
 
 #include <stdint.h>
 #include <stddef.h>
@@ -201,4 +201,4 @@ bool uft_format_is_flux(uft_format_t format);
 }
 #endif
 
-#endif /* UFT_FORMAT_DETECT_H */
+#endif /* UFT_DETECT_UFT_FORMAT_DETECT_H */

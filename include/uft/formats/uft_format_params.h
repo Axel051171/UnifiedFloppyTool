@@ -21,8 +21,8 @@
  * - Flux (SCP, KF, HFE, A2R)
  */
 
-#ifndef UFT_FORMAT_PARAMS_H
-#define UFT_FORMAT_PARAMS_H
+#ifndef UFT_FORMATS_UFT_FORMAT_PARAMS_H
+#define UFT_FORMATS_UFT_FORMAT_PARAMS_H
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -316,4 +316,4 @@ uft_format_params_t uft_format_params_default(uft_format_id_t format);
 }
 #endif
 
-#endif /* UFT_FORMAT_PARAMS_H */
+#endif /* UFT_FORMATS_UFT_FORMAT_PARAMS_H */

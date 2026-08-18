@@ -26,8 +26,8 @@
  * ══════════════════════════════════════════════════════════════════════════ */
 
 
-#ifndef UFT_INTEGRATION_H
-#define UFT_INTEGRATION_H
+#ifndef UFT_CORE_UFT_INTEGRATION_H
+#define UFT_CORE_UFT_INTEGRATION_H
 
 #include "uft/core/uft_unified_types.h"
 
@@ -257,4 +257,4 @@ typedef struct {
 }
 #endif
 
-#endif /* UFT_INTEGRATION_H */
+#endif /* UFT_CORE_UFT_INTEGRATION_H */

@@ -31,8 +31,8 @@
  * ══════════════════════════════════════════════════════════════════════════ */
 
 
-#ifndef UFT_FAT12_H
-#define UFT_FAT12_H
+#ifndef UFT_FORMATS_UFT_FAT12_H
+#define UFT_FORMATS_UFT_FAT12_H
 
 #include <stdint.h>
 #include <stddef.h>
@@ -400,4 +400,4 @@ int uft_fat12_delete(uft_fat12_t* fs, const char* path);
 }
 #endif
 
-#endif /* UFT_FAT12_H */
+#endif /* UFT_FORMATS_UFT_FAT12_H */

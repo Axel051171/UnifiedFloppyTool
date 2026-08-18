@@ -23,8 +23,8 @@
  * ══════════════════════════════════════════════════════════════════════════ */
 
 
-#ifndef UFT_PLL_PI_H
-#define UFT_PLL_PI_H
+#ifndef UFT_FLUX_PLL_UFT_PLL_PI_H
+#define UFT_FLUX_PLL_UFT_PLL_PI_H
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -261,4 +261,4 @@ const char *uft_pll_encoding_name(uft_encoding_t encoding);
 }
 #endif
 
-#endif /* UFT_PLL_PI_H */
+#endif /* UFT_FLUX_PLL_UFT_PLL_PI_H */

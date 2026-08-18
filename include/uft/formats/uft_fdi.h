@@ -9,8 +9,8 @@
  * @copyright UFT Project
  */
 
-#ifndef UFT_FDI_H
-#define UFT_FDI_H
+#ifndef UFT_FORMATS_UFT_FDI_H
+#define UFT_FORMATS_UFT_FDI_H
 
 #include <stdint.h>
 #include <stddef.h>
@@ -385,4 +385,4 @@ int uft_fdi_string_to_name(const char* name, uft_fdi_dir_entry_t* entry);
 }
 #endif
 
-#endif /* UFT_FDI_H */
+#endif /* UFT_FORMATS_UFT_FDI_H */

@@ -17,8 +17,8 @@
  * For forensic disk imaging and preservation.
  */
 
-#ifndef UFT_PROTECTION_H
-#define UFT_PROTECTION_H
+#ifndef UFT_PROTECTION_UFT_PROTECTION_H
+#define UFT_PROTECTION_UFT_PROTECTION_H
 
 #include <stdint.h>
 #include <stddef.h>
@@ -408,4 +408,4 @@ static inline uint32_t uft_lfsr_prev(uint32_t state) {
     return state;
 }
 
-#endif /* UFT_PROTECTION_H */
+#endif /* UFT_PROTECTION_UFT_PROTECTION_H */

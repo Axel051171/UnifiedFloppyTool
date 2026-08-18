@@ -8,8 +8,8 @@
  * @date 2026-01-05
  */
 
-#ifndef UFT_SAFE_IO_H
-#define UFT_SAFE_IO_H
+#ifndef UFT_CORE_UFT_SAFE_IO_H
+#define UFT_CORE_UFT_SAFE_IO_H
 
 #include <stdio.h>
 #include <stdint.h>
@@ -432,4 +432,4 @@ static inline bool uft_write_file(const char *path, const void *data, size_t siz
 }
 #endif
 
-#endif /* UFT_SAFE_IO_H */
+#endif /* UFT_CORE_UFT_SAFE_IO_H */

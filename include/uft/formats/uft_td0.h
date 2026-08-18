@@ -11,8 +11,8 @@
  * @copyright UFT Project - Based on reverse-engineering by various authors et al.
  */
 
-#ifndef UFT_TD0_H
-#define UFT_TD0_H
+#ifndef UFT_FORMATS_UFT_TD0_H
+#define UFT_FORMATS_UFT_TD0_H
 
 #include <stdint.h>
 #include <stddef.h>
@@ -409,4 +409,4 @@ void uft_td0_print_info(const uft_td0_image_t* img, bool verbose);
 }
 #endif
 
-#endif /* UFT_TD0_H */
+#endif /* UFT_FORMATS_UFT_TD0_H */

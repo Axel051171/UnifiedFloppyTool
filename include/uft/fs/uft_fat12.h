@@ -31,8 +31,8 @@
  * @note Part of UnifiedFloppyTool preservation suite
  */
 
-#ifndef UFT_FAT12_H
-#define UFT_FAT12_H
+#ifndef UFT_FS_UFT_FAT12_H
+#define UFT_FS_UFT_FAT12_H
 
 #include <stdint.h>
 #include <stddef.h>
@@ -1016,4 +1016,4 @@ const char *uft_fat_strerror(int error);
 }
 #endif
 
-#endif /* UFT_FAT12_H */
+#endif /* UFT_FS_UFT_FAT12_H */

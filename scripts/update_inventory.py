@@ -178,6 +178,58 @@ def check_inventory(repo: Path) -> list[str]:
     return errors
 
 
+# Same-named headers that are ALLOWED to keep a shared include guard, with the
+# reason. Everything else is a defect: the second header is silently skipped,
+# and which one a translation unit gets depends on include order.
+GUARD_COLLISION_ALLOWED = {
+    # include/uft/uft_platform.h defines UFT_PLATFORM_H and only THEN includes
+    # uft/compat/uft_platform.h, so the compat layer is skipped every time the
+    # outer header is used, and the two .c files that include compat directly
+    # never see the outer one. Renaming the guard makes both active and
+    # surfaces ~9 duplicate macro definitions — a real duplication that needs
+    # its own untangling (KNOWN_ISSUES ARCH-1), not a hurried rename.
+    "uft_platform.h": "duplicate platform headers, see KNOWN_ISSUES ARCH-1",
+}
+
+
+def check_include_guards(repo: Path) -> list[str]:
+    """Same-named headers must not share an include guard (MF-411).
+
+    Three tests sat excluded for months because they included phantom twins of
+    real headers; the twin pair also shared a guard, so whichever came first
+    silently won. This makes a new occurrence fail at commit time."""
+    import collections
+    inc = repo / "include"
+    if not inc.is_dir():
+        return []
+    by_name: dict[str, list[Path]] = collections.defaultdict(list)
+    for p in inc.rglob("*.h"):
+        by_name[p.name].append(p)
+
+    errors: list[str] = []
+    for name, paths in sorted(by_name.items()):
+        if len(paths) < 2:
+            continue
+        guards: dict[str, list[Path]] = collections.defaultdict(list)
+        for p in paths:
+            m = re.search(r"#ifndef\s+(\w+)",
+                          p.read_text(encoding="utf-8", errors="replace"))
+            if m:
+                guards[m.group(1)].append(p)
+        for guard, ps in guards.items():
+            if len(ps) < 2:
+                continue
+            if name in GUARD_COLLISION_ALLOWED:
+                continue
+            rel = ", ".join(str(x.relative_to(repo)).replace("\\", "/")
+                            for x in ps)
+            errors.append(
+                f"include guard {guard} is shared by same-named headers "
+                f"({rel}) — the second is silently skipped; give the nested "
+                f"one a path-derived guard")
+    return errors
+
+
 def check_freeze(repo: Path) -> list[str]:
     errors: list[str] = []
     bl_path = repo / BASELINE

@@ -7,8 +7,8 @@
  * Format specification:
  */
 
-#ifndef UFT_HFE_H
-#define UFT_HFE_H
+#ifndef UFT_FLUX_UFT_HFE_H
+#define UFT_FLUX_UFT_HFE_H
 
 #include <stdint.h>
 #include <stddef.h>
@@ -214,4 +214,4 @@ static inline bool uft_hfe_check_signature(const uint8_t *data) {
 }
 #endif
 
-#endif /* UFT_HFE_H */
+#endif /* UFT_FLUX_UFT_HFE_H */

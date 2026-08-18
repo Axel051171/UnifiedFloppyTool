@@ -20,8 +20,8 @@
  * SPDX-License-Identifier: MIT
  */
 
-#ifndef UFT_SCP_FORMAT_H
-#define UFT_SCP_FORMAT_H
+#ifndef UFT_PROFILES_UFT_SCP_FORMAT_H
+#define UFT_PROFILES_UFT_SCP_FORMAT_H
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -626,4 +626,4 @@ static inline uint32_t uft_scp_rotation_ticks(uint32_t rpm, uint8_t resolution) 
 }
 #endif
 
-#endif /* UFT_SCP_FORMAT_H */
+#endif /* UFT_PROFILES_UFT_SCP_FORMAT_H */

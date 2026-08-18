@@ -25,8 +25,8 @@
  * ══════════════════════════════════════════════════════════════════════════ */
 
 
-#ifndef UFT_DISK_H
-#define UFT_DISK_H
+#ifndef UFT_CORE_UFT_DISK_H
+#define UFT_CORE_UFT_DISK_H
 
 #include "uft_track_base.h"
 #include "uft_sector.h"
@@ -211,4 +211,4 @@ void uft_disk_free(uft_disk_unified_t *disk);
 }
 #endif
 
-#endif /* UFT_DISK_H */
+#endif /* UFT_CORE_UFT_DISK_H */
