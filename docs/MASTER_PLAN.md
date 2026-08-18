@@ -636,6 +636,34 @@ Der GUI-Schutzpfad ist ein **fünfter** Konsument, den die 5-6-Tage-Schätzung
 von 2026-04 noch nicht enthielt. `CLAUDE.md` führt die vier Konvertierungen
 als Feature.
 
+**Teilweise behoben (MF-418).** Statt die beiden API-Familien zu vereinheitlichen
+— das bleibt MF-106 — sind `uft_scp_read()` und `uft_scp_get_track_flux()` jetzt
+**dünne Adapter über den ausgelieferten Parser** (`src/flux/uft_scp_parser.c`,
+T1b gegen `tests/corpus/gw_amigados.scp`). Keine zweite SCP-Implementierung; der
+Stub-Pfad reicht nur noch durch. Die fünf toten Konsumenten sind damit
+grundsätzlich wieder erreichbar, ohne dass einer angefasst wurde.
+
+Dabei fiel ein Einheiten-Widerspruch auf, der nie sichtbar werden konnte,
+solange die Funktion `-1` lieferte: `uft_format_convert_flux.c` rechnete
+`deltas[f] * 25e-9` („SCP ticks to seconds"), das Widget summierte dieselben
+Werte als **Nanosekunden** — Faktor 25×(1+resolution) auseinander. Entschieden
+hat es der ausgelieferte Parser, nicht ich: er rechnet
+`flux[i] = (overflow_acc + raw) * period_ns` mit
+`period_ns = 25 * (1 + resolution)`, liefert also Nanosekunden. Der Adapter
+reicht das unverändert weiter; die vier Stellen im Konvertierungspfad sind auf
+`1e-9` korrigiert.
+
+Verifiziert an der realen 32-MB-Aufnahme (`test_scp_legacy_adapter`, 5 Fälle):
+der Adapter reproduziert die Parser-Werte **exakt**, und die Summe einer
+Umdrehung liegt bei ~200 ms — was rohe Ticks um Faktor 25 verfehlt hätten.
+Nebenbei aufgedeckt: KNOWN_ISSUES **ARCH-2** (`UFT_SCP_SIGNATURE` viermal
+definiert, einmal als Integer — der erste Lauf stürzte deshalb ab).
+
+*Weiterhin offen:* die eigentliche API-Vereinheitlichung, und ob die vier
+Konvertierungspfade jetzt **korrekte** Ausgabe erzeugen. Der Adapter macht sie
+erreichbar; dass sie das Richtige tun, ist damit nicht gezeigt — dafür fehlt
+weiterhin ein C64-Flux-Abbild mit dokumentierter Herkunft.
+
 **Bereits erledigt und aus der Unbekannten-Liste raus (MF-407):** die
 C64-Hälfte der Kette ist belegt — `flux_decode_gcr_c64()` liefert mit
 `keep_raw_bits` genau den GCR-Bitstrom, den `ufm_c64_metrics_from_gcr()`

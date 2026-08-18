@@ -13,6 +13,7 @@
 #include "uft/uft_format_autodetect.h"
 #include "uft/uft_file_ops.h"                /* uft_file_type_t */
 #include "uft/uft_format_parsers.h"      /* uft_scp_file_t, uft_kfx_stream_t */
+#include "uft/flux/uft_scp_parser.h"  /* MF-418: real SCP parser behind the adapters */
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -237,9 +238,54 @@ int uft_inject_file(const char *image_path, const char *filename,
  * ============================================================================ */
 
 int uft_scp_read(const uint8_t *data, size_t size, uft_scp_file_t *scp) {
-    (void)data; (void)size;
-    if (scp) memset(scp, 0, sizeof(*scp));
-    return -1;   /* HONEST: caller should fall back, not proceed */
+    /* MF-418: see the note above uft_scp_get_track_flux(). Header + offset
+     * table are read here; the flux itself is decoded per track on demand by
+     * the shipped parser, so a 32 MB capture is not expanded up front. */
+    const size_t hdr_size   = sizeof(uft_scp_header_t);
+    const size_t table_size = (size_t)UFT_SCP_MAX_TRACKS * 4u;
+
+    if (!data || !scp)                return -1;
+    if (size < hdr_size + table_size) return -1;
+
+    /* The literal is spelled out on purpose. `UFT_SCP_SIGNATURE` exists FOUR
+     * times in the tree with two different TYPES:
+     *   uft_format_parsers.h:115      0x504353   <- integer, and this header
+     *                                               is included first here
+     *   flux/uft_scp_parser.h:26      "SCP"      (behind #ifndef, so it loses)
+     *   profiles/uft_scp_format.h:39  "SCP"
+     *   uft_scp_format.h:36           "SCP"
+     * Using the macro made memcmp() dereference address 0x504353 and crash.
+     * Which definition a translation unit gets depends on include order, so
+     * the name is unusable until the four are reconciled — KNOWN_ISSUES
+     * ARCH-2. */
+    if (memcmp(data, "SCP", 3) != 0)  return -1;
+
+    memset(scp, 0, sizeof(*scp));
+    memcpy(&scp->header, data, hdr_size);
+
+    scp->track_offsets = (uint32_t *)calloc(UFT_SCP_MAX_TRACKS, sizeof(uint32_t));
+    if (!scp->track_offsets) return -1;
+
+    size_t populated = 0;
+    for (size_t i = 0; i < UFT_SCP_MAX_TRACKS; i++) {
+        const uint8_t *e = data + hdr_size + i * 4u;
+        uint32_t off = (uint32_t)e[0] | ((uint32_t)e[1] << 8) |
+                       ((uint32_t)e[2] << 16) | ((uint32_t)e[3] << 24);
+        scp->track_offsets[i] = off;
+        if (off != 0) populated++;
+    }
+    scp->track_count = populated;
+
+    /* uft_scp_free() frees this buffer, so the copy is owned here. */
+    scp->data = (uint8_t *)malloc(size);
+    if (!scp->data) {
+        free(scp->track_offsets);
+        scp->track_offsets = NULL;
+        return -1;
+    }
+    memcpy(scp->data, data, size);
+    scp->data_size = size;
+    return 0;
 }
 
 void uft_scp_free(uft_scp_file_t *scp) {
@@ -252,10 +298,51 @@ void uft_scp_free(uft_scp_file_t *scp) {
     scp->data_size = 0;
 }
 
+/* MF-418 (Sprint-3 S3-1, part of MF-106): these two were honest stubs that
+ * returned -1 unconditionally. Five call sites depended on them and were
+ * therefore dead: uftc_convert_scp_to_{d64,mfm_sectors,hfe,g64} — all four
+ * advertised as features in CLAUDE.md — and the SCP branch of
+ * ProtectionAnalysisWidget (KNOWN_ISSUES PROT-11).
+ *
+ * They are now thin adapters over the SHIPPED parser in
+ * src/flux/uft_scp_parser.c, which is T1b-verified against the cross-tool
+ * corpus image tests/corpus/gw_amigados.scp. No parsing logic is duplicated
+ * here; this only bridges the older uft_scp_file_t shape to uft_scp_ctx_t.
+ *
+ * UNIT OF out_deltas: NANOSECONDS. This was not documented anywhere and the
+ * two call sites assumed OPPOSITE things — uft_format_convert_flux.c:104
+ * multiplied by 25e-9 with the comment "SCP ticks to seconds", while
+ * ProtectionAnalysisWidget summed the values as ns. Since the function always
+ * failed, neither assumption was ever exercised. The shipped parser settles
+ * it: uft_scp_parser.c computes `flux[i] = (overflow_acc + raw) * period_ns`
+ * with `period_ns = 25 * (1 + resolution)`, i.e. it already applies the
+ * resolution multiplier and yields nanoseconds. The adapter passes that
+ * through unchanged, and the convert path was corrected to match. */
 int uft_scp_get_track_flux(const uft_scp_file_t *scp, int track, int revolution,
                             double *out_deltas, size_t max_deltas) {
-    (void)scp; (void)track; (void)revolution; (void)out_deltas; (void)max_deltas;
-    return -1;
+    if (!scp || !scp->data || !out_deltas || max_deltas == 0) return -1;
+    if (track < 0 || track >= UFT_SCP_MAX_TRACKS)             return -1;
+    if (revolution < 0 || revolution >= UFT_SCP_MAX_REVOLUTIONS) return -1;
+
+    uft_scp_track_data_t td;
+    memset(&td, 0, sizeof(td));
+    if (uft_scp_read_track_memory(scp->data, scp->data_size, track, &td)
+            != UFT_SCP_OK) {
+        return -1;
+    }
+    if (revolution >= (int)td.revolution_count ||
+        !td.revolutions[revolution].flux_data) {
+        uft_scp_free_track(&td);
+        return -1;
+    }
+
+    size_t n = td.revolutions[revolution].flux_count;
+    if (n > max_deltas) n = max_deltas;   /* caller's buffer bounds the result */
+    for (size_t i = 0; i < n; i++) {
+        out_deltas[i] = (double)td.revolutions[revolution].flux_data[i];
+    }
+    uft_scp_free_track(&td);
+    return (int)n;
 }
 
 /* ============================================================================

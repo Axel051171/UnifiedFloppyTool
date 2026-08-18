@@ -533,6 +533,15 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/protection/uft_protection_extended.c
             ${CMAKE_SOURCE_DIR}/src/protection/uft_speedlock.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_ir_format.c)
+    elseif(${test_name} STREQUAL "test_scp_legacy_adapter")
+        # MF-418: legacy uft_scp_* adapters over the shipped parser, checked
+        # against the local-only cross-tool SCP capture.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/core/uft_core_stubs.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_metadata.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_scp_parser.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_RESTRICTED_DIR="${CMAKE_SOURCE_DIR}/tests/corpus")
     elseif(${test_name} STREQUAL "test_c64_protection_real_corpus")
         # Positive control: real protected C64 disks, local-only images (MF-383)
         target_sources(${test_name} PRIVATE
@@ -1231,7 +1240,8 @@ foreach(test_source ${TEST_SOURCES})
     if(${test_name} STREQUAL "test_corpus_fdi" OR
        ${test_name} STREQUAL "test_corpus_scp" OR
        ${test_name} STREQUAL "test_corpus_protection_copylock" OR
-       ${test_name} STREQUAL "test_c64_protection_real_corpus")
+       ${test_name} STREQUAL "test_c64_protection_real_corpus" OR
+       ${test_name} STREQUAL "test_scp_legacy_adapter")
         set_tests_properties(${test_name} PROPERTIES SKIP_RETURN_CODE 77)
     endif()
 

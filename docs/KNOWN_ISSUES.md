@@ -1448,6 +1448,51 @@ ohne eine einzige Information hinzuzufügen — `compat_entries == NULL` und ein
 Liste aus lauter UNTESTED sagen dasselbe. Eine Matrix gehört dorthin, wo jemand
 etwas geprüft hat oder wo die relevanten Ziele nicht offensichtlich sind.
 
+### ARCH-2 — `UFT_SCP_SIGNATURE` existiert viermal, einmal mit anderem Typ (2026-08-18, MF-418)
+
+**Correctness.** Beim Verdrahten der SCP-Adapter (S3-1) stürzte der erste Lauf
+in `memcmp` ab. Ursache:
+
+| Ort | Definition |
+|---|---|
+| `include/uft/uft_format_parsers.h:115` | **`0x504353`** — ein Integer |
+| `include/uft/flux/uft_scp_parser.h:26` | `"SCP"` (hinter `#ifndef`, verliert also) |
+| `include/uft/profiles/uft_scp_format.h:39` | `"SCP"` |
+| `include/uft/uft_scp_format.h:36` | `"SCP"` |
+
+`uft_core_stubs.c` bindet `uft_format_parsers.h` zuerst ein, `memcmp` bekam
+also die **Adresse** `0x504353` und griff ins Leere. Welche Definition eine
+Übersetzungseinheit sieht, hängt allein von der Include-Reihenfolge ab; zwei
+der vier stehen ungeschützt, zwei hinter `#ifndef`.
+
+Dieselbe Krankheit wie FMT-14 (drei Sync-Definitionen), PROT-12 (vier
+`weak_mask`-Granularitäten), MF-411 (24 geteilte Include-Guards) und ARCH-1
+(zwei `uft_platform.h`) — hier aber mit **unterschiedlichem Typ**, was sie von
+einer stillen Fehlfunktion zu einem Absturz macht. Insofern der harmloseste der
+fünf Fälle: er wurde sofort sichtbar.
+
+*Umgangen (MF-418):* der Adapter schreibt `memcmp(data, "SCP", 3)` aus, mit der
+Liste aller vier Fundstellen daneben. Der Name bleibt unbenutzbar, bis die vier
+zusammengeführt sind.
+
+**Größere Messung dazu, nicht behoben:** eine Zählung über alle Header ergab
+**93 Makros mit mehr als einem Wert**. Ein Teil ist harmlos (`880` gegen
+`880u`, Groß-/Kleinschreibung in Hex-Escapes, `O_BINARY` als `0` gegen
+`_O_BINARY` je Plattform). Ein Teil ist es nicht:
+
+```
+DIR_ENTRY_SIZE      16      gegen 32
+TAP_BLOCK_HEADER    0x00    gegen 0x01
+TAP_BLOCK_DATA      0x02    gegen 0xFF
+UFT_86F_FLAG_HOLE   0x0002  gegen 0x0004
+```
+
+*Bewusst kein Wächter dafür angelegt.* Bei 93 Treffern ist das Verhältnis von
+Signal zu Rauschen unbekannt, und eine Kategorie, die sofort 93 Verstöße
+meldet, wird abgeschaltet statt abgearbeitet. Nächster Schritt ist Triage in
+zwei Töpfe — plattform-/schreibweisenbedingt gegen echten Widerspruch —, und
+erst für den zweiten ein Gate mit Baseline.
+
 ### ARCH-1 — Zwei `uft_platform.h`, die einander nie sehen (2026-08-18, MF-411)
 
 **Architecture.** Gefunden beim Auflösen der Include-Guard-Kollisionen.

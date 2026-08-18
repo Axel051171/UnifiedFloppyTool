@@ -100,7 +100,14 @@ uft_error_t uftc_convert_scp_to_d64(const uint8_t* src_data, size_t src_size,
         /* Run PLL to extract bitstream */
         size_t bit_pos = 0;
         for (int f = 0; f < flux_count && bit_pos < max_bits - 16; f++) {
-            double delta_sec = deltas[f] * 25e-9; /* SCP ticks to seconds */
+            double delta_sec = deltas[f] * 1e-9;  /* MF-418: uft_scp_get_track_flux()
+                                                 * yields NANOSECONDS, with the
+                                                 * SCP resolution multiplier already
+                                                 * applied by the shipped parser. The
+                                                 * previous 25e-9 assumed raw ticks and
+                                                 * was off by 25*(1+resolution). Never
+                                                 * observed because the accessor was a
+                                                 * stub returning -1. */
             uft_pll_process_flux_mfm(&pll, delta_sec, bitstream, &bit_pos);
         }
 
@@ -262,7 +269,8 @@ uft_error_t uftc_convert_scp_to_mfm_sectors(const uint8_t* src_data,
 
             size_t bit_pos = 0;
             for (int f = 0; f < flux_count && bit_pos < max_bits - 16; f++) {
-                double delta_sec = deltas[f] * 25e-9;
+                /* MF-418: nanoseconds, see note at the first conversion above. */
+                double delta_sec = deltas[f] * 1e-9;
                 uft_pll_process_flux_mfm(&pll, delta_sec, bitstream, &bit_pos);
             }
 
@@ -930,7 +938,14 @@ uft_error_t uftc_convert_scp_to_hfe(const uint8_t* src_data, size_t src_size,
 
             size_t bit_pos = 0;
             for (int f = 0; f < flux_count && bit_pos < max_bits - 16; f++) {
-                double delta_sec = deltas[f] * 25e-9; /* SCP ticks to seconds */
+                double delta_sec = deltas[f] * 1e-9;  /* MF-418: uft_scp_get_track_flux()
+                                                 * yields NANOSECONDS, with the
+                                                 * SCP resolution multiplier already
+                                                 * applied by the shipped parser. The
+                                                 * previous 25e-9 assumed raw ticks and
+                                                 * was off by 25*(1+resolution). Never
+                                                 * observed because the accessor was a
+                                                 * stub returning -1. */
                 uft_pll_process_flux_mfm(&pll, delta_sec, raw_bitstream, &bit_pos);
             }
 
@@ -1052,7 +1067,14 @@ uft_error_t uftc_convert_scp_to_g64(const uint8_t* src_data, size_t src_size,
         /* Run PLL to extract GCR bitstream */
         size_t bit_pos = 0;
         for (int f = 0; f < flux_count && bit_pos < max_bits - 16; f++) {
-            double delta_sec = deltas[f] * 25e-9; /* SCP ticks to seconds */
+            double delta_sec = deltas[f] * 1e-9;  /* MF-418: uft_scp_get_track_flux()
+                                                 * yields NANOSECONDS, with the
+                                                 * SCP resolution multiplier already
+                                                 * applied by the shipped parser. The
+                                                 * previous 25e-9 assumed raw ticks and
+                                                 * was off by 25*(1+resolution). Never
+                                                 * observed because the accessor was a
+                                                 * stub returning -1. */
             uft_pll_process_flux_mfm(&pll, delta_sec, bitstream, &bit_pos);
         }
 
