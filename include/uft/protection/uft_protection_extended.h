@@ -210,36 +210,14 @@ int uft_protection_analyze_disk(
     uft_protection_analysis_t *analysis
 );
 
-/**
- * @brief Detect weak bits in track
- *
- * Compares two revolutions of the same track; every bit that differs is
- * reported as a candidate weak bit. Positions are bit indices counted MSB
- * first, i.e. bit 7 of byte @p n is position `n * 8`, matching the order in
- * which the bits were read off the disk.
- *
- * @param track_data_rev1   First revolution data
- * @param track_data_rev2   Second revolution data
- * @param track_size        Size of track data
- * @param weak_positions    Output array, receives the first @p max_positions
- *                          positions
- * @param max_positions     Capacity of @p weak_positions
- * @return Total number of differing bits. A value greater than
- *         @p max_positions means the output array holds only a prefix — the
- *         caller can detect the truncation instead of mistaking a capped list
- *         for a complete one.
- *
- * @note @p weak_positions is uint32_t, not uint16_t: a uint16_t can only
- *       address bits up to byte 8191, while real raw tracks are larger
- *       (Amiga DD ~12798 bytes, PC HD ~12500). See KNOWN_ISSUES PROT-9.
+/*
+ * REMOVED in MF-406: uft_protection_detect_weak_bits(). It had no caller and
+ * no consumer for its representation (a list of bit positions); UFT already
+ * carries five other weak-bit producers in three other representations. See
+ * KNOWN_ISSUES PROT-10 for the full landscape and the reasoning, and PROT-9
+ * for the two forensic defects that were found and fixed in it first.
+ * Do not reintroduce it without a caller.
  */
-size_t uft_protection_detect_weak_bits(
-    const uint8_t *track_data_rev1,
-    const uint8_t *track_data_rev2,
-    size_t track_size,
-    uint32_t *weak_positions,
-    size_t max_positions
-);
 
 /* ============================================================================
  * Teque Protection

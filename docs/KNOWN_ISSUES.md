@@ -1584,7 +1584,7 @@ begrenzt. Regressionsschutz: `tests/test_protection_pipeline.c`. Der
 Signaturwechsel im öffentlichen Header war unkritisch — die Funktion hatte
 repo-weit keinen Aufrufer (siehe PROT-10).
 
-### PROT-10 — `uft_protection_detect_weak_bits()` hat keinen Aufrufer (2026-08-18, MF-400)
+### PROT-10 — `uft_protection_detect_weak_bits()` hat keinen Aufrufer (2026-08-18, MF-400) → ✓ RESOLVED (MF-406, entfernt)
 
 **Architecture.** Die Funktion ist implementiert, seit MF-400 getestet und
 korrekt, wird aber von keiner Stelle im Repository aufgerufen — weder aus der
@@ -1596,9 +1596,72 @@ Damit ist die Weak-Bit-Erfassung als Bibliotheks-API vorhanden, im Produkt aber
 nicht wirksam. Das ist dieselbe Klasse wie PROT-8: eine getestete
 Implementierung, die niemand benutzt.
 
-*Nächster Schritt:* entscheiden, ob der Multiread-Pfad sie aufruft (dann
-verdrahten) oder ob die Weak-Bit-Erkennung dort eigenständig bleibt (dann eine
-der beiden entfernen). Vorher keine dritte Implementierung anlegen.
+**Die Bestandsaufnahme ergab nicht zwei, sondern sechs.** Vor der Entscheidung
+wurde der ganze Baum durchgesehen — UFT hat sechs Weak-Bit-Produzenten in vier
+verschiedenen Darstellungen:
+
+| Produzent | Eingabe | Darstellung | Zustand |
+|---|---|---|---|
+| `multiread_vote_buffer()` | N Byte-Durchgänge | **byteweise** Maske (0/1) | verdrahtet, von `uft_format_verify.c` gelesen |
+| ATX (`uft_atx.c`, `uft_atx_parser_v2.c`) | Format-Metadaten | **byteweise** Maske (0xFF) | verdrahtet, gelesen |
+| HFE (`uft_hfe.c:711`) | Bitstream-Dekode | `uft_track_t.weak_mask`, **per Bit** | erzeugt, **nur freigegeben — nie gelesen** |
+| `uft_scp_multirev` | N Flux-Umdrehungen | **Flux-Zellen**-Indizes | verdrahtet, modulintern |
+| `a2r_fuse_captures()` | N Captures | **bit-gepackte** Maske | **keine Aufrufer** |
+| `uft_protection_detect_weak_bits()` | genau 2 Lesungen | **Bitpositions-Liste** | **keine Aufrufer** |
+
+Der Multiread-Pfad füllte `weak_mask` also durchaus — nur über seinen eigenen,
+mächtigeren Mechanismus (N Durchgänge statt zwei). Die ursprüngliche Annahme
+„das Feld wird nicht gefüllt" war falsch.
+
+**Entschieden: entfernt (MF-406).** Die Funktion war korrekt und getestet — MF-400
+hat zwei echte Defekte darin behoben —, aber **nichts im Baum konsumiert ihre
+Darstellung**. Einen Aufrufer zu ergänzen hätte bedeutet, einen Konsumenten für
+eine Repräsentation zu erfinden, nach der niemand fragt; genau das ist der
+Mechanismus, der PROT-3 und FMT-2/3/10/11/12 erzeugt hat. Ihre Fähigkeit —
+Weak-Bits aus zwei Lesungen dekodierter Spurbytes — ist zudem ein
+Zwei-Umdrehungs-Sonderfall der N-Durchgangs-Abstimmung, die der Multiread-Pfad
+bereits leistet und bereits herausgibt.
+
+Verworfen wurde die Alternative „behalten und dokumentieren": sie hätte den
+Befund nicht aufgelöst, sondern einen sechsten Weg konserviert, aus dem ein
+künftiger Aufrufer blind den schwächsten hätte greifen können.
+
+Das Wissen aus MF-400 überlebt den Code in PROT-9: Positionen dürfen nicht in
+ein `uint16_t` (reale Rohspuren gehen über Byte 8191 hinaus), und ein volles
+Ausgabearray muss als abgeschnitten gemeldet werden statt still gekappt.
+`tests/test_protection_pipeline.c` entfällt mit der Funktion (Suite 194 → 193).
+
+### PROT-12 — Zwei weitere Weak-Bit-Produzenten ohne Konsument, plus drei Bedeutungen von `weak_mask` (2026-08-18, MF-406)
+
+**Architecture.** Aus derselben Bestandsaufnahme, nicht mit MF-406 behoben:
+
+1. **`a2r_fuse_captures()`** (`src/parsers/a2r/uft_a2r_parser.c:935`) hat
+   repo-weit keinen Aufrufer — und erzeugt eine **bit-gepackte** Maske
+   (`weak_mask[i/8] |= 1 << (i%8)`), während der einzige Maskenkonsument im
+   Baum, `uft_format_verify.c`, **byteweise** liest. Dessen Kommentar hält
+   ausdrücklich fest, dass eine frühere per-Bit-Lesart dort ein Fehler war.
+   Solange die Funktion niemand aufruft, ist das latent; ein Aufrufer, der die
+   Maske an einen unified sector weiterreicht, würde die falschen Bytes
+   überspringen.
+
+2. **HFE setzt `uft_track_t.weak_mask` per Bit** (`uft_hfe.c:711`), und dieses
+   Feld wird im ganzen Baum ausschließlich **freigegeben**, nie gelesen. Die
+   Information, welche Bits einer HFE-Spur schwach sind, wird also erfasst und
+   dann verworfen — grenzwertig zu „Kein Bit verloren", auch wenn nichts
+   Falsches behauptet wird.
+
+Damit trägt der Name `weak_mask` im Baum drei Bedeutungen: byteweise
+(`uft_sector_unified_t`, gelesen), per Bit (`uft_track_t`, ungelesen) und
+bit-gepackt (A2R, ohne Aufrufer). Das ist derselbe Befundtyp wie FMT-14, nur auf
+einem Feldnamen statt auf einer Funktion.
+
+*Nächster Schritt:* die drei Bedeutungen benennen und im jeweiligen Header
+festschreiben (wie bei FMT-14 geschehen), dann pro ungenutztem Produzenten
+entscheiden — HFE-Maske an einen Konsumenten hängen oder das Feld streichen;
+`a2r_fuse_captures()` entweder verdrahten (dann Semantik angleichen) oder
+entfernen. Vorher keinen siebten Weg anlegen.
+
+
 
 ### PROT-8 — Zwei konkurrierende C64-Metrik-Extraktoren, der getestete wird nicht benutzt (2026-08-18, MF-384) → ✓ RESOLVED (MF-405)
 

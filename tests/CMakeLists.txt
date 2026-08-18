@@ -415,10 +415,6 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/fdi/uft_fdi_plugin.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_RESTRICTED_DIR="${CMAKE_SOURCE_DIR}/tests/corpus")
-    elseif(${test_name} STREQUAL "test_protection_pipeline")
-        # MF-400: real weak-bit detector instead of a local mock
-        target_sources(${test_name} PRIVATE
-            ${CMAKE_SOURCE_DIR}/src/protection/uft_protection_extended.c)
     elseif(${test_name} STREQUAL "test_external_integration")
         # MF-399: real KryoFlux stream decoder instead of local constants
         target_sources(${test_name} PRIVATE

@@ -536,50 +536,28 @@ int uft_protection_detect_pirateslayer(
  * Weak Bit Detection
  * ============================================================================ */
 
-size_t uft_protection_detect_weak_bits(
-    const uint8_t *track_data_rev1,
-    const uint8_t *track_data_rev2,
-    size_t track_size,
-    uint32_t *weak_positions,
-    size_t max_positions
-) {
-    if (!track_data_rev1 || !track_data_rev2 || !weak_positions) {
-        return 0;
-    }
-
-    /* MF-400: two forensic-integrity defects were fixed here.
-     *
-     * 1. Positions were stored as uint16_t, which can address bits only up to
-     *    byte 8191. Raw tracks are routinely larger (Amiga DD ~12798 bytes,
-     *    PC HD ~12500), so a weak bit past that point was not lost, it was
-     *    reported at (position mod 65536) — a bit near the track start that
-     *    was never weak. Verified: byte 8192 came back as position 0.
-     *
-     * 2. The scan stopped once the caller's array was full and returned the
-     *    capacity, so 128 weak bits with room for 8 reported "8". The caller
-     *    could not distinguish a complete list from a truncated one. The
-     *    count is now always the true total; only the stored prefix is
-     *    bounded by max_positions. */
-    size_t found = 0;
-
-    for (size_t i = 0; i < track_size; i++) {
-        uint8_t diff = track_data_rev1[i] ^ track_data_rev2[i];
-
-        if (diff != 0) {
-            /* Found bit difference - potential weak bit */
-            for (int bit = 7; bit >= 0; bit--) {
-                if (diff & (1 << bit)) {
-                    if (found < max_positions) {
-                        weak_positions[found] = (uint32_t)(i * 8u + (size_t)(7 - bit));
-                    }
-                    found++;
-                }
-            }
-        }
-    }
-
-    return found;
-}
+/* MF-406: uft_protection_detect_weak_bits() removed — see KNOWN_ISSUES PROT-10.
+ *
+ * The function was correct and tested (MF-400 fixed two real defects in it),
+ * but nothing in the tree consumed its output shape. UFT has six weak-bit
+ * producers and three different representations:
+ *
+ *   byte-wise mask   multiread_vote_buffer(), ATX  -> read by uft_format_verify
+ *   per-bit mask     HFE (uft_track_t.weak_mask)   -> produced, never read
+ *   bit-packed mask  a2r_fuse_captures()           -> no callers
+ *   flux-cell index  uft_scp_multirev              -> internal, wired
+ *   bit-position list  THIS FUNCTION               -> no callers
+ *
+ * Adding a caller would have meant inventing a consumer for a representation
+ * nothing asks for. Its capability — weak bits from two reads of decoded track
+ * bytes — is a two-revolution special case of the N-pass voting the multiread
+ * pipeline already performs and already exposes. When a bit-granular consumer
+ * genuinely appears, it should be built on the N-pass data, not on a pair.
+ *
+ * The two defects MF-400 found are recorded under PROT-9 so the knowledge
+ * survives the code: positions must not be stored in a uint16_t (real raw
+ * tracks exceed byte 8191), and a full output buffer must be reported as
+ * truncated rather than capped silently. */
 
 /* ============================================================================
  * Disk Analysis
