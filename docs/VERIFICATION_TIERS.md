@@ -37,7 +37,7 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 | `lisa_twiggy` | **T2** | `test_lisa_twiggy_plugin` | bitsavers Lisa Twiggy ZCAV zone table (46 tracks/side, 22..15 spt) | MF-349 | — |
 | `nfd` | **T2** | `test_nfd_r0` | pc98.org nfdr0/nfdr1 + tomari/d88split nfd2mhlt.pl (r1 skip accounting spec-only, no real r1 corpus yet) | MF-358, MF-360 | — |
 | `stx` | **T2** | `test_format_probe_fuzz`, `test_plugin_probe_real`, `test_stx_error_marks` | Pasti STX descriptor spec (atari.8bitchip.info/STXdesc) | MF-335 | — |
-| `woz` | **T2** | `test_diskcopy`, `test_format_probe_fuzz`, `test_moof_roundtrip`, `test_plugin_probe_real`, `test_woz_roundtrip` | Applesauce WOZ reference v1/v2/2.1 (chunk layout, CRC32, WRIT logical refs) | MF-317, MF-357, MF-361 | — |
+| `woz` | **T2** | `test_diskcopy`, `test_format_probe_fuzz`, `test_moof_roundtrip`, `test_plugin_probe_real`, `test_woz_roundtrip`, `test_woz_writer` | Applesauce WOZ reference v1/v2/2.1 (chunk layout, CRC32, WRIT logical refs) | MF-317, MF-357, MF-361 | — |
 | `2img` | **T3** | `test_format_probe_fuzz`, `test_plugin_probe_real` | — | — | — |
 | `86f` | **T3** | — | — | — | — |
 | `adf_arc` | **T3** | — | — | — | — |
