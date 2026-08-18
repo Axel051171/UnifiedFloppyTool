@@ -279,6 +279,107 @@ def check_compat_claims(repo: Path) -> list[str]:
     return errors
 
 
+MACRO_BASELINE = "scripts/macro_conflict_baseline.json"
+
+_MACRO_DEF = re.compile(
+    r"^[ \t]*#[ \t]*define[ \t]+([A-Za-z_][A-Za-z0-9_]{2,})[ \t]+(\S.*?)[ \t]*$", re.M)
+
+
+def _macro_value(raw: str):
+    """Canonical form of a macro body, or None if it is not a plain literal.
+
+    880 and 880u are the same number; 0x1A and 0x1a the same byte; 16 and 0x10
+    the same value. Those differences are spelling, not disagreement."""
+    v = re.split(r"/\*|//", raw)[0].strip()
+    if not v:
+        return None
+    if v.startswith('"') and v.endswith('"'):
+        body = re.sub(r"\\x([0-9A-Fa-f]{2})",
+                      lambda m: "\\x" + m.group(1).lower(), v[1:-1])
+        return ("str", body)
+    n = re.sub(r"[uUlL]+$", "", v.strip("()").strip())
+    try:
+        if n.lower().startswith("0x"):
+            return ("num", int(n, 16))
+        if re.fullmatch(r"-?\d+", n):
+            return ("num", int(n, 10))
+    except ValueError:
+        pass
+    return ("expr", v)
+
+
+def _conflicting_macros(repo: Path) -> dict[str, list[str]]:
+    """Macro names whose value differs BETWEEN headers (KNOWN_ISSUES ARCH-2).
+
+    Deliberately narrow, so the result stays worth reading:
+      - definitions inside one file are collapsed (they are #if/#else branches
+        of the same decision, only one is ever live)
+      - a name is only reported if the set of values differs across files
+      - names where every definition but one sits behind #ifndef are skipped:
+        first include wins and the outcome is stable
+    """
+    import collections
+    per_file: dict[str, dict[str, set]] = collections.defaultdict(dict)
+    guarded: dict[str, list[bool]] = collections.defaultdict(list)
+
+    for p in sorted((repo / "include").rglob("*.h")):
+        text = p.read_text(encoding="utf-8", errors="replace")
+        lines = text.splitlines()
+        rel = str(p.relative_to(repo)).replace("\\", "/")
+        for m in _MACRO_DEF.finditer(text):
+            name, raw = m.group(1), m.group(2)
+            if raw.lstrip().startswith("(") and re.match(
+                    r"^\([A-Za-z_][A-Za-z0-9_]*\s*[,)]", raw.lstrip()):
+                continue                      # function-like macro
+            val = _macro_value(raw)
+            if val is None:
+                continue
+            per_file[name].setdefault(rel, set()).add(val)
+            ln = text[: m.start()].count("\n") + 1
+            g = any(re.match(r"\s*#\s*ifndef\s+" + re.escape(name) + r"\b",
+                             lines[k]) for k in range(max(0, ln - 4), ln - 1))
+            guarded[name].append(g)
+
+    out: dict[str, list[str]] = {}
+    for name, files in per_file.items():
+        if len(files) < 2:
+            continue
+        value_sets = {frozenset(v) for v in files.values()}
+        if len(value_sets) < 2:
+            continue                          # every file agrees
+        if guarded[name].count(False) <= 1:
+            continue                          # #ifndef chain, first wins
+        out[name] = sorted(files)
+    return out
+
+
+def check_macro_conflicts(repo: Path) -> list[str]:
+    """Fail on a NEW macro that two headers define differently (MF-419).
+
+    93 raw findings were triaged once (KNOWN_ISSUES ARCH-2); the survivors are
+    recorded in the baseline so this gate reports only what is new. A category
+    that fires 93 times on day one gets switched off instead of worked off.
+    """
+    current = _conflicting_macros(repo)
+    bl_path = repo / MACRO_BASELINE
+    if not bl_path.exists():
+        return [f"{MACRO_BASELINE} missing — run "
+                f"update_inventory.py --write-macro-baseline"]
+    known = set(json.loads(bl_path.read_text(encoding="utf-8")).get("accepted", []))
+
+    errors = []
+    for name in sorted(set(current) - known):
+        where = ", ".join(current[name])
+        errors.append(
+            f"macro {name} is defined with different values in {where} — "
+            f"reconcile them, or add the name to {MACRO_BASELINE} with a reason")
+    for name in sorted(known - set(current)):
+        errors.append(
+            f"macro {name} no longer conflicts — remove it from "
+            f"{MACRO_BASELINE} so the baseline keeps meaning something")
+    return errors
+
+
 def check_freeze(repo: Path) -> list[str]:
     errors: list[str] = []
     bl_path = repo / BASELINE

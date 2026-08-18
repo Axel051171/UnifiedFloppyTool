@@ -1487,11 +1487,37 @@ TAP_BLOCK_DATA      0x02    gegen 0xFF
 UFT_86F_FLAG_HOLE   0x0002  gegen 0x0004
 ```
 
-*Bewusst kein Wächter dafür angelegt.* Bei 93 Treffern ist das Verhältnis von
-Signal zu Rauschen unbekannt, und eine Kategorie, die sofort 93 Verstöße
-meldet, wird abgeschaltet statt abgearbeitet. Nächster Schritt ist Triage in
-zwei Töpfe — plattform-/schreibweisenbedingt gegen echten Widerspruch —, und
-erst für den zweiten ein Gate mit Baseline.
+**Triage durchgeführt (MF-419).** Von den 93 Rohtreffern bleiben nach
+Normalisierung **29** echte Fälle. Weggefallen sind: gleicher Wert anders
+geschrieben (`880`/`880u`, Hex-Groß-/Kleinschreibung, `16`/`0x10`),
+Definitionen in sich ausschließenden `#if`-Zweigen derselben Datei, und
+`#ifndef`-Ketten, bei denen der erste Include gewinnt und alle denselben Wert
+tragen.
+
+**Gemessen: keine Übersetzungseinheit sieht zwei Varianten desselben Makros.**
+Geprüft über `gcc -H` auf 32 Kandidatenquellen. Alle 29 sind damit **latent,
+nicht aktiv** — dieselbe Lage wie bei den Include-Guards vor MF-411.
+
+Die 29 in vier Gruppen:
+
+| Gruppe | Anzahl | Charakter |
+|---|---|---|
+| `platform-boilerplate` | 12 | `UFT_API`, `UFT_INLINE`, `UFT_PACKED*`, `UFT_RESTRICT`, `UFT_ARCH_NAME` … fünffach parallel in `uft_compiler.h`, `uft_config.h`, `uft_platform.h`, `uft_common.h`, `uft_packed.h`, `compat/`. Werte stimmen je Plattform — der Defekt sind fünf parallele Header, nicht die Werte. Ausnahme `UFT_PACKED`: Attribut gegen Pragma ist ein echter Nutzungsunterschied (ARCH-1). |
+| `format-constant` | 9 | Gleiches Format, widersprüchliche Werte: 86F-Flags (**komplett verschiedene Belegung**), IMD dreifach (`MAX_SECTORS` 64/255/256, `MAX_TRACKS` 160/255, `HEAD_MASK` 0x01/0x0F), `UFT_MAX_SECTOR_SIZE` 8192/16384. Höchstens eine kann stimmen; 86F und IMD sind **T3**, also ohne Quelle kein Sieger. |
+| **`magic-type-split`** | **5** | **Die gefährliche Gruppe.** `uft_format_parsers.h` definiert Format-Signaturen als **Integer**, alle anderen Header dieselben Namen als **String**: `UFT_SCP_SIGNATURE` `0x504353` gegen `"SCP"`, `UFT_TD0_SIGNATURE_NORMAL` `0x4454` gegen `"TD"`, `UFT_IPF_SIGNATURE` `0x53504143` gegen `"CAPS"`, `UFT_WOZ1_MAGIC`/`WOZ_MAGIC` analog. Genau das ließ MF-418 in `memcmp` abstürzen. Bei `WOZ_MAGIC` sind es nicht einmal dieselben Bytes: `0x0A0D0AFF` ist die Folge **nach** der Signatur. |
+| `name-too-generic` | 3 | Zwei **verschiedene** Formate unter demselben Namen: `DIR_ENTRY_SIZE` 16 (Atari DOS) gegen 32 (C64 BAM), `TAP_BLOCK_HEADER`/`_DATA` (C64-TAP gegen Sinclair-TAP — zwei unterschiedliche „TAP"-Formate). Kein Wert ist falsch, die Namen sind es. Beheben durch Präfix. |
+
+**Wächter mit Baseline angelegt.** `check_consistency.py` hat die Kategorie
+„macro value conflicts"; `scripts/macro_conflict_baseline.json` führt die 29
+mit Kategorie und Begründung. Ein **neuer** Name schlägt fehl, und ein
+Baseline-Eintrag, der nicht mehr kollidiert, ebenfalls — sonst verrottet die
+Liste still. Alle drei Richtungen gegengeprobt.
+
+*Nicht behoben, bewusst:* die 29 selbst. Das ist ein Durchgang durch den
+Format-Layer, der eigene Aufmerksamkeit braucht; die Reihenfolge nach Nutzen
+ist `magic-type-split` (absturzfähig) → `name-too-generic` (mechanisch,
+risikolos) → `format-constant` (braucht Quellen) → `platform-boilerplate`
+(hängt an ARCH-1).
 
 ### ARCH-1 — Zwei `uft_platform.h`, die einander nie sehen (2026-08-18, MF-411)
 

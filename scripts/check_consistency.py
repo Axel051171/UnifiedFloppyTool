@@ -568,6 +568,8 @@ def main() -> int:
                            _inv.check_include_guards(repo)))
         all_errors.append(("unbacked compat claims",
                            _inv.check_compat_claims(repo)))
+        all_errors.append(("macro value conflicts",
+                           _inv.check_macro_conflicts(repo)))
 
     total = sum(len(e) for _, e in all_errors)
     print(f"Consistency check ({len(all_errors)} categories, root={repo}):")
