@@ -1513,9 +1513,21 @@ Die 10 unreferenzierten sind Phantom-Zwillinge lebender Subsysteme und wurden
 gelöscht — **2784 Zeilen**:
 
 `decoder/uft_pll.h`, `flux/uft_pll_pi.h`, `flux/pll/uft_pll_pi.h`,
-`formats/uft_woz.h`, `fs/uft_atari_dos.h`, `hal/uft_fc5025.h`,
-`uft_applesauce.h`, `uft_format_verify.h`, `uft_process.h`,
-`uft_tool_adapter.h`
+`formats/uft_woz.h`, `fs/uft_atari_dos.h`, `uft_applesauce.h`,
+`uft_format_verify.h`, `uft_process.h`, `uft_tool_adapter.h`
+
+**Ein zehnter wurde zurückgeholt: `hal/uft_fc5025.h`.** Meine
+Erreichbarkeitsprüfung deckte `src/`, `include/` und `tests/` ab — **nicht
+`audit/`**. Der CI-Audit-Workflow schlug fehl, weil
+`audit/fc5025/extract_uft.py:28` genau diese Datei liest, um UFTs USB-IDs und
+das Format-Enum gegen die Referenz zu stellen. Sie ist kein Phantom, sondern
+ein Konstanten-Header mit einem toten Prototyp obendrauf. Wieder eingesetzt,
+alle neun `audit/*/diff.py` laufen wieder durch.
+
+*Lehre für die nächste Runde:* Konsumenten eines Headers sind nicht nur
+`#include`-Zeilen. Die Audit-Werkzeugkette liest Header als **Daten**. Eine
+Erreichbarkeitsprüfung, die nur den Übersetzungsgraphen ansieht, übersieht
+das.
 
 Jeder Einzelfall vorher geprüft: WOZ existiert **fünffach** im Include-Baum, das
 echte Plugin nimmt `formats/apple/uft_woz.h`; FC5025 läuft ausschließlich über
