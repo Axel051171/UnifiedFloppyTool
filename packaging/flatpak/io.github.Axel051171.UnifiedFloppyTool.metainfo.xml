@@ -80,12 +80,16 @@
 
   <content_rating type="oars-1.1" />
 
-  <screenshots>
-    <screenshot type="default">
-      <caption>Main window showing the OTDR-based flux analysis panel</caption>
-      <image>https://raw.githubusercontent.com/Axel051171/UnifiedFloppyTool/main/packaging/flatpak/screenshots/main-window.png</image>
-    </screenshot>
-  </screenshots>
+  <!-- No <screenshots> block on purpose.
+       It used to point at packaging/flatpak/screenshots/main-window.png,
+       a file that has never existed in this repository (issue #19,
+       2026-04-18: "I'll add a real screenshot in a follow-up"). A URL that
+       404s is worse than an absent block: appstreamcli flags it and any
+       software centre shows a broken entry.
+       Flathub requires at least one screenshot, so this MUST be filled in
+       before any submission — with an actual capture of the running
+       application, taken on a machine that can run the GUI. Add the file
+       under packaging/flatpak/screenshots/ and restore the block. -->
 
   <releases>
     <release version="4.1.5" date="2026-06-05">

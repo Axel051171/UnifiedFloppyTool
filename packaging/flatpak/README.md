@@ -18,13 +18,32 @@ to match the canonical GitHub URL.
 | File | Purpose |
 |------|---------|
 | `io.github.Axel051171.UnifiedFloppyTool.metainfo.xml` | AppStream metadata |
-| `screenshots/`                                         | Reserved for release screenshots linked from metainfo |
+| `screenshots/`                                         | Release screenshots linked from metainfo — **does not exist yet, see below** |
 
 Validate the metainfo locally with:
 
 ```
 appstreamcli validate io.github.Axel051171.UnifiedFloppyTool.metainfo.xml
 ```
+
+## Blocking item before any Flathub submission: a screenshot
+
+The metainfo carries **no `<screenshots>` block**. It previously linked
+`screenshots/main-window.png`, which has never existed in this repository —
+a 404 that `appstreamcli` flags and that renders as a broken entry in
+software centres. The dead link was removed rather than left in place
+(MF-413).
+
+Flathub requires at least one screenshot, so this is a hard blocker for
+submission. It needs an actual capture of the running application from a
+machine that can start the GUI; it cannot be produced from CI or from a
+headless checkout. Steps:
+
+1. Run the GUI, capture the main window (PNG, no scaling artefacts).
+2. Save it as `packaging/flatpak/screenshots/main-window.png`.
+3. Restore the `<screenshots>` block — the previous wording is preserved in
+   the XML comment where the block used to be.
+4. Re-run `appstreamcli validate`.
 
 ## Related files outside this directory
 
