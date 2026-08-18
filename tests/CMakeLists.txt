@@ -423,6 +423,43 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/formats/g64/uft_g64.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+    elseif(${test_name} STREQUAL "test_format_probe_fuzz")
+        # MF-392: adversarial input for every linked probe; runs under the
+        # ASan/UBSan CI jobs. Same plugin set as test_plugin_probe_real.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/d64/uft_d64_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/formats/d71/uft_d71.c
+            ${CMAKE_SOURCE_DIR}/src/formats/d81/uft_d81.c
+            ${CMAKE_SOURCE_DIR}/src/formats/g64/uft_g64.c
+            ${CMAKE_SOURCE_DIR}/src/formats/hfe/uft_hfe.c
+            ${CMAKE_SOURCE_DIR}/src/formats/atr/uft_atr.c
+            ${CMAKE_SOURCE_DIR}/src/formats/d88/uft_d88.c
+            ${CMAKE_SOURCE_DIR}/src/formats/dc42/uft_dc42.c
+            ${CMAKE_SOURCE_DIR}/src/formats/imd/uft_imd_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/formats/atx/uft_atx.c
+            ${CMAKE_SOURCE_DIR}/src/formats/cqm/uft_cqm.c
+            ${CMAKE_SOURCE_DIR}/src/formats/jv1/uft_jv1.c
+            ${CMAKE_SOURCE_DIR}/src/formats/xfd/uft_xfd.c
+            ${CMAKE_SOURCE_DIR}/src/formats/amstrad/uft_edsk.c
+            ${CMAKE_SOURCE_DIR}/src/formats/amstrad/uft_edsk_parser.c
+            ${CMAKE_SOURCE_DIR}/src/formats/msa/uft_msa_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/formats/nib/uft_nib.c
+            ${CMAKE_SOURCE_DIR}/src/formats/apple/uft_woz_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/formats/apple/uft_woz.c
+            ${CMAKE_SOURCE_DIR}/src/formats/do/uft_do.c
+            ${CMAKE_SOURCE_DIR}/src/formats/po/uft_po.c
+            ${CMAKE_SOURCE_DIR}/src/formats/img/uft_img.c
+            ${CMAKE_SOURCE_DIR}/src/formats/td0/uft_td0.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_metadata.c
+            ${CMAKE_SOURCE_DIR}/src/formats/fdi/uft_fdi_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_caps_ipf.c
+            ${CMAKE_SOURCE_DIR}/src/formats/ipf/uft_ipf_air.c
+            ${CMAKE_SOURCE_DIR}/src/formats/scp/uft_scp_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/formats/stx/uft_stx_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/formats/2img/uft_2img.c
+            ${CMAKE_SOURCE_DIR}/src/formats/dsk_cpc/uft_dsk_cpc.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_decoder_plugin_stub.c)
     elseif(${test_name} STREQUAL "test_plugin_probe_real")
         # MF-385: probes the SHIPPED plugins instead of a copy in the test
         target_sources(${test_name} PRIVATE
