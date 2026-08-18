@@ -1,451 +1,227 @@
 /**
  * @file test_external_integration.c
- * @brief Tests for integrated external tools (OpenDTC, cbmconvert, CAPS)
- * 
- * Tests integration of:
- * - OpenDTC: KryoFlux stream protocol
- * - cbmconvert: Commodore D64/T64 formats  
- * - capsimage: IPF/CAPS format handling
- * 
- * @version 3.8.0
- * @date 2026-01-14
+ * @brief KryoFlux stream decoding, against the SHIPPED decoder (MF-399).
+ *
+ * This file used to define its own stream constants and its own RPM formula and
+ * assert against those. The real decoder in src/flux/uft_kryoflux_stream.c —
+ * which had no test of its own — was never called.
+ *
+ * That matters more here than in most places: the KryoFlux stream is a raw
+ * capture format, so a decoding error does not produce an error message, it
+ * produces plausible-looking flux with wrong timings. Everything downstream
+ * (PLL, sector decode, protection analysis) then works confidently on wrong
+ * numbers.
+ *
+ * The stream grammar is taken from the decoder itself
+ * (src/flux/uft_kryoflux_stream.c:46-53):
+ *   0x00..0x07  Flux2   two bytes, value = (op << 8) | next
+ *   0x08/09/0A  Nop1/2/3  skipped, but they do advance the stream position
+ *   0x0B        Ovl16   adds 0x10000 to the NEXT flux value
+ *   0x0C        Flux3   three bytes, value in bytes 1..2
+ *   0x0D        OOB     type + LE16 size + payload; does NOT advance the
+ *                       stream position, which is what index positions refer to
+ *   0x0E..0xFF  Flux1   one byte, value = op
  */
 
+#include "uft/flux/uft_kryoflux.h"
+
 #include <stdio.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdint.h>
-#include <stdbool.h>
 
-/* Test framework */
-static int g_tests_run = 0;
-static int g_tests_passed = 0;
+/* A KryoFlux capture ends with an EOF OOB (0x0D 0x0D, size sentinel 0x0D0D).
+ * The decoder deliberately reports MISSING_END when it is absent — see the
+ * dedicated test below — so every "this must succeed" case appends it. */
+#define KF_EOF_BLOCK  0x0D, 0x0D, 0x0D, 0x0D
 
-#define TEST_BEGIN(name) \
-    do { \
-        g_tests_run++; \
-        printf("  [%02d] %-50s ", g_tests_run, name); \
-        fflush(stdout); \
-    } while(0)
+static int _pass = 0, _fail = 0, _last_fail = 0;
+#define RUN(name)  do { printf("  [TEST] %-44s ... ", #name); test_##name(); \
+                        if (_last_fail == _fail) { printf("OK\n"); _pass++; } \
+                        _last_fail = _fail; } while (0)
+#define TEST(name) static void test_##name(void)
+#define ASSERT(c)  do { if (!(c)) { printf("FAIL @ %d: %s\n", __LINE__, #c); _fail++; return; } } while (0)
 
-#define TEST_PASS() do { g_tests_passed++; printf("\033[32m[PASS]\033[0m\n"); } while(0)
-#define TEST_FAIL(msg) do { printf("\033[31m[FAIL]\033[0m %s\n", msg); } while(0)
+TEST(single_byte_flux_cells_are_decoded_in_order) {
+    uft_kf_stream_t s;
+    ASSERT(uft_kf_init(&s) == UFT_UFT_KF_STATUS_OK);
 
-/* ═══════════════════════════════════════════════════════════════════════════════
- * KryoFlux Stream Tests (OpenDTC)
- * ═══════════════════════════════════════════════════════════════════════════════ */
+    /* Three Flux1 cells; 0x0E is the lowest value that is a flux cell. */
+    const uint8_t data[] = { 0x0E, 0x40, 0xFF, KF_EOF_BLOCK };
+    ASSERT(uft_kf_decode(&s, data, sizeof(data)) == UFT_UFT_KF_STATUS_OK);
+    ASSERT(s.flux_count == 3);
+    ASSERT(s.flux_values[0] == 0x0E);
+    ASSERT(s.flux_values[1] == 0x40);
+    ASSERT(s.flux_values[2] == 0xFF);
 
-/* Stream protocol constants */
-#define STREAM_OOB          0x0D
-#define OOB_INDEX           0x02
-#define KRYOFLUX_SCK        (48054857.0 / 2.0)
-
-static void test_kf_stream_constants(void)
-{
-    TEST_BEGIN("KryoFlux: Stream protocol constants");
-    
-    /* Verify clock frequencies */
-    double mck = (18432000.0 * 73.0) / 14.0 / 2.0;
-    double sck = mck / 2.0;
-    double ick = mck / 16.0;
-    
-    /* MCK should be ~48.054857 MHz */
-    bool mck_ok = (mck > 48000000 && mck < 49000000);
-    
-    /* SCK should be ~24 MHz */
-    bool sck_ok = (sck > 23000000 && sck < 25000000);
-    
-    /* ICK should be ~3 MHz */
-    bool ick_ok = (ick > 2900000 && ick < 3100000);
-    
-    if (mck_ok && sck_ok && ick_ok) {
-        TEST_PASS();
-    } else {
-        TEST_FAIL("Clock frequency mismatch");
-    }
+    uft_kf_free(&s);
 }
 
-static void test_kf_sample_to_time(void)
-{
-    TEST_BEGIN("KryoFlux: Sample to time conversion");
-    
-    /* 24 million samples = 1 second */
-    uint32_t sample = 24000000;
-    double time_s = (double)sample / KRYOFLUX_SCK;
-    
-    /* Should be approximately 1 second */
-    bool ok = (time_s > 0.99 && time_s < 1.01);
-    
-    if (ok) {
-        TEST_PASS();
-    } else {
-        char msg[64];
-        snprintf(msg, sizeof(msg), "Expected ~1.0s, got %f", time_s);
-        TEST_FAIL(msg);
-    }
+TEST(flux2_and_flux3_encode_the_same_value) {
+    uft_kf_stream_t s;
+    ASSERT(uft_kf_init(&s) == UFT_UFT_KF_STATUS_OK);
+
+    /* 0x0312 written as Flux2 (op 0x03 + 0x12) and as Flux3 (0x0C 0x03 0x12) */
+    const uint8_t data[] = { 0x03, 0x12,  0x0C, 0x03, 0x12, KF_EOF_BLOCK };
+    ASSERT(uft_kf_decode(&s, data, sizeof(data)) == UFT_UFT_KF_STATUS_OK);
+    ASSERT(s.flux_count == 2);
+    ASSERT(s.flux_values[0] == 0x0312);
+    ASSERT(s.flux_values[1] == 0x0312);
+    ASSERT(s.flux_values[0] == s.flux_values[1]);
+
+    uft_kf_free(&s);
 }
 
-static void test_kf_rpm_calculation(void)
-{
-    TEST_BEGIN("KryoFlux: RPM calculation");
-    
-    /* ICK = ~3 MHz, 300 RPM = 200ms per revolution */
-    /* index_time = ICK * 0.2 = ~600000 */
-    double ick = (48054857.0 / 16.0);
-    uint32_t index_time = (uint32_t)(ick * 0.2);  /* 200ms */
-    
-    double rpm = (ick * 60.0) / (double)index_time;
-    
-    /* Should be approximately 300 RPM */
-    bool ok = (rpm > 295 && rpm < 305);
-    
-    if (ok) {
-        TEST_PASS();
-    } else {
-        char msg[64];
-        snprintf(msg, sizeof(msg), "Expected ~300 RPM, got %.1f", rpm);
-        TEST_FAIL(msg);
-    }
+TEST(overflow_marker_extends_the_following_cell) {
+    uft_kf_stream_t s;
+    ASSERT(uft_kf_init(&s) == UFT_UFT_KF_STATUS_OK);
+
+    /* Ovl16 twice, then a Flux1 of 0x20 -> 0x20000 + 0x20.
+     * Long gaps between transitions are exactly what unformatted or damaged
+     * areas look like, so dropping the overflow would silently shorten them. */
+    const uint8_t data[] = { 0x0B, 0x0B, 0x20, KF_EOF_BLOCK };
+    ASSERT(uft_kf_decode(&s, data, sizeof(data)) == UFT_UFT_KF_STATUS_OK);
+    ASSERT(s.flux_count == 1);
+    ASSERT(s.flux_values[0] == 0x20000u + 0x20u);
+
+    uft_kf_free(&s);
 }
 
-static void test_kf_oob_marker(void)
-{
-    TEST_BEGIN("KryoFlux: OOB marker detection");
-    
-    uint8_t stream[] = {
-        0x50, 0x60,           /* Regular samples */
-        0x0D,                 /* OOB marker */
-        0x02,                 /* OOB type: Index */
-        0x0C, 0x00,           /* Size: 12 */
-        /* Index data (12 bytes) */
-        0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00,
-        0x70, 0x80            /* More samples */
-    };
-    
-    /* Find OOB marker */
-    bool found = false;
-    for (size_t i = 0; i < sizeof(stream); i++) {
-        if (stream[i] == STREAM_OOB) {
-            if (i + 1 < sizeof(stream) && stream[i + 1] == OOB_INDEX) {
-                found = true;
-                break;
-            }
-        }
-    }
-    
-    if (found) {
-        TEST_PASS();
-    } else {
-        TEST_FAIL("OOB marker not detected");
-    }
+TEST(overflow_applies_only_to_the_next_cell) {
+    uft_kf_stream_t s;
+    ASSERT(uft_kf_init(&s) == UFT_UFT_KF_STATUS_OK);
+
+    const uint8_t data[] = { 0x0B, 0x20, 0x20, KF_EOF_BLOCK };
+    ASSERT(uft_kf_decode(&s, data, sizeof(data)) == UFT_UFT_KF_STATUS_OK);
+    ASSERT(s.flux_count == 2);
+    ASSERT(s.flux_values[0] == 0x10000u + 0x20u);
+    ASSERT(s.flux_values[1] == 0x20u);          /* not carried over */
+
+    uft_kf_free(&s);
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════════
- * Commodore Format Tests (cbmconvert)
- * ═══════════════════════════════════════════════════════════════════════════════ */
+TEST(nop_bytes_are_skipped_without_producing_flux) {
+    uft_kf_stream_t s;
+    ASSERT(uft_kf_init(&s) == UFT_UFT_KF_STATUS_OK);
 
-/* D64 constants */
-#define D64_SIZE            174848
-#define D64_40_SIZE         196608
-#define D71_SIZE            349696
-#define D81_SIZE            819200
-#define SECTOR_SIZE         256
+    /* Nop1, Nop2(+1 byte), Nop3(+2 bytes), then one real cell. */
+    const uint8_t data[] = { 0x08, 0x09, 0xAA, 0x0A, 0xBB, 0xCC, 0x30, KF_EOF_BLOCK };
+    ASSERT(uft_kf_decode(&s, data, sizeof(data)) == UFT_UFT_KF_STATUS_OK);
+    ASSERT(s.flux_count == 1);
+    ASSERT(s.flux_values[0] == 0x30);
 
-static const int d64_sectors_per_track[] = {
-    21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21,
-    19, 19, 19, 19, 19, 19, 19,
-    18, 18, 18, 18, 18, 18,
-    17, 17, 17, 17, 17,
-    17, 17, 17, 17, 17
-};
-
-static void test_cbm_d64_size_detection(void)
-{
-    TEST_BEGIN("CBM: D64 size detection");
-    
-    bool d64_ok = (D64_SIZE == 174848);
-    bool d64_40_ok = (D64_40_SIZE == 196608);
-    bool d71_ok = (D71_SIZE == 349696);
-    bool d81_ok = (D81_SIZE == 819200);
-    
-    if (d64_ok && d64_40_ok && d71_ok && d81_ok) {
-        TEST_PASS();
-    } else {
-        TEST_FAIL("Size constant mismatch");
-    }
+    uft_kf_free(&s);
 }
 
-static void test_cbm_sector_offset(void)
-{
-    TEST_BEGIN("CBM: D64 sector offset calculation");
-    
-    /* Calculate offset for track 18, sector 0 (BAM) */
-    long offset = 0;
-    for (int t = 1; t < 18; t++) {
-        offset += d64_sectors_per_track[t - 1] * SECTOR_SIZE;
-    }
-    
-    /* Track 18 should start at sector 357 * 256 = 91392 */
-    /* Actually: tracks 1-17 = 17*21 = 357 sectors */
-    long expected = 357 * SECTOR_SIZE;
-    
-    if (offset == expected) {
-        TEST_PASS();
-    } else {
-        char msg[64];
-        snprintf(msg, sizeof(msg), "Expected %ld, got %ld", expected, offset);
-        TEST_FAIL(msg);
-    }
+TEST(index_oob_blocks_are_recorded) {
+    uft_kf_stream_t s;
+    ASSERT(uft_kf_init(&s) == UFT_UFT_KF_STATUS_OK);
+
+    /* One flux cell, then an INDEX OOB with a 12-byte payload. */
+    uint8_t data[3 + 4 + 12 + 4];
+    size_t n = 0;
+    data[n++] = 0x30;                       /* Flux1 */
+    data[n++] = 0x0D;                       /* OOB   */
+    data[n++] = 0x02;                       /* type: INDEX */
+    data[n++] = 12; data[n++] = 0;          /* LE16 size */
+    memset(&data[n], 0, 12);
+    data[n + 0] = 0x01;                     /* stream_pos     = 1 */
+    data[n + 4] = 0x10;                     /* sample_counter     */
+    data[n + 8] = 0x02;                     /* index_counter      */
+    n += 12;
+    data[n++] = 0x0D; data[n++] = 0x0D; data[n++] = 0x0D; data[n++] = 0x0D;
+
+    ASSERT(uft_kf_decode(&s, data, n) == UFT_UFT_KF_STATUS_OK);
+    ASSERT(s.flux_count == 1);
+    ASSERT(s.index_count == 1);
+
+    uft_kf_free(&s);
 }
 
-static void test_cbm_petscii_to_ascii(void)
-{
-    TEST_BEGIN("CBM: PETSCII to ASCII conversion");
-    
-    /* Test lowercase letters (0x41-0x5A -> lowercase) */
-    uint8_t petscii_a = 0x41;  /* Should become 'a' */
-    uint8_t ascii_a = (petscii_a >= 0x41 && petscii_a <= 0x5A) 
-                      ? petscii_a + 0x20 : petscii_a;
-    
-    /* Test shifted space */
-    uint8_t shifted_space = 0xA0;
-    uint8_t ascii_space = (shifted_space == 0xA0) ? ' ' : shifted_space;
-    
-    if (ascii_a == 'a' && ascii_space == ' ') {
-        TEST_PASS();
-    } else {
-        TEST_FAIL("PETSCII conversion failed");
-    }
+TEST(a_truncated_cell_is_reported_not_silently_dropped) {
+    uft_kf_stream_t s;
+    ASSERT(uft_kf_init(&s) == UFT_UFT_KF_STATUS_OK);
+
+    /* Flux2 opcode with its second byte missing: the capture is incomplete and
+     * the decoder must say so rather than return a short flux list as if it
+     * were the whole track. */
+    const uint8_t trunc2[] = { 0x30, 0x03 };
+    ASSERT(uft_kf_decode(&s, trunc2, sizeof(trunc2)) != UFT_UFT_KF_STATUS_OK);
+
+    /* Same for a Flux3 block cut short. */
+    const uint8_t trunc3[] = { 0x30, 0x0C, 0x03 };
+    ASSERT(uft_kf_decode(&s, trunc3, sizeof(trunc3)) != UFT_UFT_KF_STATUS_OK);
+
+    /* and for an OOB header that does not fit */
+    const uint8_t truncoob[] = { 0x30, 0x0D, 0x02 };
+    ASSERT(uft_kf_decode(&s, truncoob, sizeof(truncoob)) != UFT_UFT_KF_STATUS_OK);
+
+    uft_kf_free(&s);
 }
 
-static void test_cbm_t64_magic(void)
-{
-    TEST_BEGIN("CBM: T64 magic detection");
-    
-    const char *magic1 = "C64 tape image file";
-    const char *magic2 = "C64S tape image file";
-    
-    /* Test first magic variant */
-    uint8_t header[64] = {0};
-    memcpy(header, magic1, strlen(magic1));
-    
-    bool is_t64 = (memcmp(header, magic1, strlen(magic1)) == 0 ||
-                   memcmp(header, magic2, strlen(magic2)) == 0);
-    
-    if (is_t64) {
-        TEST_PASS();
-    } else {
-        TEST_FAIL("T64 magic not detected");
-    }
+TEST(flux_to_time_conversion_uses_the_sample_clock) {
+    uft_kf_stream_t s;
+    ASSERT(uft_kf_init(&s) == UFT_UFT_KF_STATUS_OK);
+    ASSERT(s.sample_clock > 0.0);
+
+    /* The conversion is flux * 1e6 / sample_clock microseconds; check the
+     * relationship rather than a magic number, and that ns is 1000x us. */
+    double us = uft_kf_flux_to_us(&s, 1000);
+    double ns = uft_kf_flux_to_ns(&s, 1000);
+    ASSERT(us > 0.0);
+    ASSERT(ns > 999.0 * us && ns < 1001.0 * us);
+
+    /* twice the flux must be twice the time */
+    double us2 = uft_kf_flux_to_us(&s, 2000);
+    ASSERT(us2 > 1.99 * us && us2 < 2.01 * us);
+
+    uft_kf_free(&s);
 }
 
-static void test_cbm_file_types(void)
-{
-    TEST_BEGIN("CBM: File type strings");
-    
-    const char *types[] = {"DEL", "SEQ", "PRG", "USR", "REL", "CBM", "DIR"};
-    
-    bool all_ok = true;
-    for (int i = 0; i < 7; i++) {
-        if (strlen(types[i]) != 3) {
-            all_ok = false;
-            break;
-        }
-    }
-    
-    if (all_ok) {
-        TEST_PASS();
-    } else {
-        TEST_FAIL("File type string error");
-    }
+TEST(decoder_rejects_degenerate_arguments) {
+    uft_kf_stream_t s;
+    ASSERT(uft_kf_init(&s) == UFT_UFT_KF_STATUS_OK);
+
+    ASSERT(uft_kf_decode(&s, NULL, 16) != UFT_UFT_KF_STATUS_OK);
+    ASSERT(uft_kf_decode(NULL, (const uint8_t *)"\x30", 1) != UFT_UFT_KF_STATUS_OK);
+
+    /* an empty stream carries no EOF block either, so it is reported as
+     * MISSING_END rather than as a clean empty capture */
+    ASSERT(uft_kf_decode(&s, (const uint8_t *)"", 0) == UFT_UFT_KF_STATUS_MISSING_END);
+    ASSERT(s.flux_count == 0);
+
+    uft_kf_free(&s);
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════════
- * IPF/CAPS Format Tests (capsimage)
- * ═══════════════════════════════════════════════════════════════════════════════ */
+TEST(a_capture_without_stream_end_is_flagged_but_kept) {
+    /* Exemplary behaviour worth pinning: a stream that simply stops is
+     * suspicious (truncated container), so the decoder reports MISSING_END —
+     * but it KEEPS the flux it already decoded instead of discarding it or
+     * padding it. Nothing is fabricated, and the caller can treat the data as
+     * marginal. */
+    uft_kf_stream_t s;
+    ASSERT(uft_kf_init(&s) == UFT_UFT_KF_STATUS_OK);
 
-/* IPF block types */
-#define IPF_BLOCK_CAPS      1
-#define IPF_BLOCK_INFO      2
-#define IPF_BLOCK_IMGE      3
-#define IPF_BLOCK_DATA      4
-#define IPF_BLOCK_END       10
+    const uint8_t no_end[] = { 0x0E, 0x40, 0xFF };
+    ASSERT(uft_kf_decode(&s, no_end, sizeof(no_end)) == UFT_UFT_KF_STATUS_MISSING_END);
+    ASSERT(s.flux_count == 3);                 /* flux preserved */
+    ASSERT(s.flux_values[2] == 0xFF);
 
-static uint32_t read32_be(const uint8_t *p)
-{
-    return ((uint32_t)p[0] << 24) | ((uint32_t)p[1] << 16) |
-           ((uint32_t)p[2] << 8) | p[3];
+    uft_kf_free(&s);
 }
 
-static void test_ipf_block_header(void)
-{
-    TEST_BEGIN("IPF: Block header parsing");
-    
-    /* Create a CAPS block header */
-    uint8_t header[12] = {
-        0x00, 0x00, 0x00, 0x01,  /* Type: CAPS (1) */
-        0x00, 0x00, 0x00, 0x20,  /* Length: 32 */
-        0x12, 0x34, 0x56, 0x78   /* CRC */
-    };
-    
-    uint32_t type = read32_be(header);
-    uint32_t length = read32_be(header + 4);
-    uint32_t crc = read32_be(header + 8);
-    
-    bool ok = (type == IPF_BLOCK_CAPS && 
-               length == 32 && 
-               crc == 0x12345678);
-    
-    if (ok) {
-        TEST_PASS();
-    } else {
-        TEST_FAIL("Block header parsing error");
-    }
-}
-
-static void test_ipf_magic_detection(void)
-{
-    TEST_BEGIN("IPF: Magic byte detection");
-    
-    /* Valid IPF starts with CAPS block type (1) in big-endian */
-    uint8_t valid_ipf[12] = {
-        0x00, 0x00, 0x00, 0x01,  /* CAPS block type */
-        0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00
-    };
-    
-    uint8_t invalid[12] = {
-        0x00, 0x00, 0x00, 0x00,  /* Invalid type */
-        0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00
-    };
-    
-    bool valid_detected = (read32_be(valid_ipf) == IPF_BLOCK_CAPS);
-    bool invalid_rejected = (read32_be(invalid) != IPF_BLOCK_CAPS);
-    
-    if (valid_detected && invalid_rejected) {
-        TEST_PASS();
-    } else {
-        TEST_FAIL("Magic detection failed");
-    }
-}
-
-static void test_ipf_platform_ids(void)
-{
-    TEST_BEGIN("IPF: Platform ID constants");
-    
-    /* Verify platform IDs */
-    bool amiga_ok = (1 == 1);    /* PLATFORM_AMIGA */
-    bool atari_ok = (2 == 2);    /* PLATFORM_ATARI_ST */
-    bool c64_ok = (6 == 6);      /* PLATFORM_C64 */
-    bool apple2_ok = (10 == 10); /* PLATFORM_APPLE2 */
-    
-    if (amiga_ok && atari_ok && c64_ok && apple2_ok) {
-        TEST_PASS();
-    } else {
-        TEST_FAIL("Platform ID mismatch");
-    }
-}
-
-static void test_ipf_crc32(void)
-{
-    TEST_BEGIN("IPF: CRC-32 calculation");
-    
-    /* IPF uses polynomial 0x04C11DB7 (big-endian) */
-    static uint32_t crc32_table[256];
-    static bool table_init = false;
-    
-    if (!table_init) {
-        for (int i = 0; i < 256; i++) {
-            uint32_t crc = (uint32_t)i << 24;
-            for (int j = 0; j < 8; j++) {
-                if (crc & 0x80000000) {
-                    crc = (crc << 1) ^ 0x04C11DB7;
-                } else {
-                    crc <<= 1;
-                }
-            }
-            crc32_table[i] = crc;
-        }
-        table_init = true;
-    }
-    
-    /* Calculate CRC of test data */
-    uint8_t data[] = {0x00, 0x01, 0x02, 0x03};
-    uint32_t crc = 0xFFFFFFFF;
-    for (int i = 0; i < 4; i++) {
-        crc = (crc << 8) ^ crc32_table[(crc >> 24) ^ data[i]];
-    }
-    
-    /* Just verify CRC is non-zero and consistent */
-    bool ok = (crc != 0 && crc != 0xFFFFFFFF);
-    
-    if (ok) {
-        TEST_PASS();
-    } else {
-        TEST_FAIL("CRC calculation error");
-    }
-}
-
-static void test_ipf_encoding_types(void)
-{
-    TEST_BEGIN("IPF: Encoding type constants");
-    
-    /* Verify encoding types */
-    int enc_mfm = 1;
-    int enc_gcr = 2;
-    int enc_fm = 3;
-    int enc_raw = 4;
-    
-    bool ok = (enc_mfm == 1 && enc_gcr == 2 && enc_fm == 3 && enc_raw == 4);
-    
-    if (ok) {
-        TEST_PASS();
-    } else {
-        TEST_FAIL("Encoding type mismatch");
-    }
-}
-
-/* ═══════════════════════════════════════════════════════════════════════════════
- * Main
- * ═══════════════════════════════════════════════════════════════════════════════ */
-
-int main(void)
-{
-    printf("\n");
-    printf("═══════════════════════════════════════════════════════════════════\n");
-    printf("  UFT External Integration Tests\n");
-    printf("  (OpenDTC + cbmconvert + CAPS)\n");
-    printf("═══════════════════════════════════════════════════════════════════\n\n");
-    
-    printf("KryoFlux Stream (OpenDTC):\n");
-    test_kf_stream_constants();
-    test_kf_sample_to_time();
-    test_kf_rpm_calculation();
-    test_kf_oob_marker();
-    
-    printf("\nCommodore Formats (cbmconvert):\n");
-    test_cbm_d64_size_detection();
-    test_cbm_sector_offset();
-    test_cbm_petscii_to_ascii();
-    test_cbm_t64_magic();
-    test_cbm_file_types();
-    
-    printf("\nIPF/CAPS Format (capsimage):\n");
-    test_ipf_block_header();
-    test_ipf_magic_detection();
-    test_ipf_platform_ids();
-    test_ipf_crc32();
-    test_ipf_encoding_types();
-    
-    printf("\n═══════════════════════════════════════════════════════════════════\n");
-    printf("  Results: %d passed, %d failed (of %d)\n",
-           g_tests_passed,
-           g_tests_run - g_tests_passed,
-           g_tests_run);
-    printf("═══════════════════════════════════════════════════════════════════\n\n");
-    
-    return (g_tests_passed == g_tests_run) ? 0 : 1;
+int main(void) {
+    printf("=== KryoFlux stream decoder, real code (MF-399) ===\n");
+    RUN(single_byte_flux_cells_are_decoded_in_order);
+    RUN(a_capture_without_stream_end_is_flagged_but_kept);
+    RUN(flux2_and_flux3_encode_the_same_value);
+    RUN(overflow_marker_extends_the_following_cell);
+    RUN(overflow_applies_only_to_the_next_cell);
+    RUN(nop_bytes_are_skipped_without_producing_flux);
+    RUN(index_oob_blocks_are_recorded);
+    RUN(a_truncated_cell_is_reported_not_silently_dropped);
+    RUN(flux_to_time_conversion_uses_the_sample_clock);
+    RUN(decoder_rejects_degenerate_arguments);
+    printf("\nResults: %d passed, %d failed\n", _pass, _fail);
+    return _fail == 0 ? 0 : 1;
 }
