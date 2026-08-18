@@ -1,260 +1,147 @@
 /**
  * @file test_platform.c
- * @brief Cross-Platform Abstraction Tests
- * 
- * P2-005: Cross-Platform Support
+ * @brief Byte-order and platform facts, tested against the SHIPPED helpers.
+ *
+ * This file used to reimplement read_le16/read_be32/write_le32 and friends
+ * locally and assert against those copies. It therefore could not have caught
+ * the TD0 byte-order bug (FMT-13, MF-389), where a constant was swapped
+ * relative to what uft_read_le16() actually returns — the very function this
+ * test claimed to cover.
+ *
+ * It now exercises include/uft/uft_endian.h directly: all twelve read/write
+ * helpers, with known byte vectors, round trips, and an explicit cross-check
+ * that LE and BE readers disagree on asymmetric input. That last one is the
+ * property whose absence let FMT-13 through.
+ *
+ * The old RUN macro printed "OK" and counted a pass unconditionally, so a
+ * failing case still looked green in the log (only the exit code was right).
+ * Fixed here as well.
  */
 
+#include "uft/uft_endian.h"
+
 #include <stdio.h>
-#include <string.h>
 #include <stdint.h>
-#include <stdbool.h>
+#include <stddef.h>
+#include <string.h>
 
-static int _pass = 0, _fail = 0;
+static int _pass = 0, _fail = 0, _last_fail = 0;
+#define RUN(name)  do { printf("  [TEST] %-34s ... ", #name); test_##name(); \
+                        if (_last_fail == _fail) { printf("OK\n"); _pass++; } \
+                        _last_fail = _fail; } while (0)
 #define TEST(name) static void test_##name(void)
-#define RUN(name) do { printf("  [TEST] %s... ", #name); test_##name(); printf("OK\n"); _pass++; } while(0)
-#define ASSERT(c) do { if(!(c)) { printf("FAIL @ %d\n", __LINE__); _fail++; return; } } while(0)
+#define ASSERT(c)  do { if (!(c)) { printf("FAIL @ %d: %s\n", __LINE__, #c); _fail++; return; } } while (0)
 
-/* Platform detection macros */
-#if defined(_WIN32) || defined(_WIN64)
-    #define TEST_PLATFORM_WINDOWS 1
-    #define TEST_PLATFORM_NAME "Windows"
-#elif defined(__APPLE__)
-    #define TEST_PLATFORM_MACOS 1
-    #define TEST_PLATFORM_NAME "macOS"
-#elif defined(__linux__)
-    #define TEST_PLATFORM_LINUX 1
-    #define TEST_PLATFORM_NAME "Linux"
-#else
-    #define TEST_PLATFORM_UNKNOWN 1
-    #define TEST_PLATFORM_NAME "Unknown"
-#endif
+/* One asymmetric vector reused everywhere: every byte differs, so a swapped
+ * reader cannot accidentally produce the right answer. */
+static const uint8_t VEC[8] = { 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88 };
 
-/* Endianness detection */
-static bool is_little_endian(void) {
-    uint16_t x = 1;
-    return *((uint8_t*)&x) == 1;
+TEST(read_le_helpers_match_known_vectors) {
+    ASSERT(uft_read_le16(VEC) == 0x2211u);
+    ASSERT(uft_read_le32(VEC) == 0x44332211u);
+    ASSERT(uft_read_le64(VEC) == 0x8877665544332211ull);
 }
 
-/* Byte swap */
-static uint16_t bswap16(uint16_t x) {
-    return (x >> 8) | (x << 8);
+TEST(read_be_helpers_match_known_vectors) {
+    ASSERT(uft_read_be16(VEC) == 0x1122u);
+    ASSERT(uft_read_be32(VEC) == 0x11223344u);
+    ASSERT(uft_read_be64(VEC) == 0x1122334455667788ull);
 }
 
-static uint32_t bswap32(uint32_t x) {
-    return ((x >> 24) & 0xFF) | ((x >> 8) & 0xFF00) |
-           ((x << 8) & 0xFF0000) | ((x << 24) & 0xFF000000);
+TEST(le_and_be_readers_disagree_on_asymmetric_input) {
+    /* The missing property behind FMT-13: a byte-swapped constant compared
+     * against the wrong reader looks plausible until something checks that the
+     * two readers are genuinely different functions. */
+    ASSERT(uft_read_le16(VEC) != uft_read_be16(VEC));
+    ASSERT(uft_read_le32(VEC) != uft_read_be32(VEC));
+    ASSERT(uft_read_le64(VEC) != uft_read_be64(VEC));
+
+    /* and they are exact byte reversals of one another */
+    ASSERT(uft_read_le16(VEC) == (uint16_t)((uft_read_be16(VEC) >> 8) |
+                                            (uft_read_be16(VEC) << 8)));
 }
 
-/* Unaligned read/write */
-static uint16_t read_le16(const void *p) {
-    const uint8_t *b = (const uint8_t*)p;
-    return (uint16_t)b[0] | ((uint16_t)b[1] << 8);
+TEST(le_write_then_read_round_trips) {
+    uint8_t buf[8];
+    memset(buf, 0, sizeof(buf));
+
+    uft_write_le16(buf, 0xBEEFu);
+    ASSERT(uft_read_le16(buf) == 0xBEEFu);
+    ASSERT(buf[0] == 0xEF && buf[1] == 0xBE);      /* low byte first */
+
+    uft_write_le32(buf, 0xDEADBEEFu);
+    ASSERT(uft_read_le32(buf) == 0xDEADBEEFu);
+    ASSERT(buf[0] == 0xEF && buf[3] == 0xDE);
+
+    uft_write_le64(buf, 0x0123456789ABCDEFull);
+    ASSERT(uft_read_le64(buf) == 0x0123456789ABCDEFull);
+    ASSERT(buf[0] == 0xEF && buf[7] == 0x01);
 }
 
-static uint32_t read_le32(const void *p) {
-    const uint8_t *b = (const uint8_t*)p;
-    return (uint32_t)b[0] | ((uint32_t)b[1] << 8) |
-           ((uint32_t)b[2] << 16) | ((uint32_t)b[3] << 24);
+TEST(be_write_then_read_round_trips) {
+    uint8_t buf[8];
+    memset(buf, 0, sizeof(buf));
+
+    uft_write_be16(buf, 0xBEEFu);
+    ASSERT(uft_read_be16(buf) == 0xBEEFu);
+    ASSERT(buf[0] == 0xBE && buf[1] == 0xEF);      /* high byte first */
+
+    uft_write_be32(buf, 0xDEADBEEFu);
+    ASSERT(uft_read_be32(buf) == 0xDEADBEEFu);
+    ASSERT(buf[0] == 0xDE && buf[3] == 0xEF);
+
+    uft_write_be64(buf, 0x0123456789ABCDEFull);
+    ASSERT(uft_read_be64(buf) == 0x0123456789ABCDEFull);
+    ASSERT(buf[0] == 0x01 && buf[7] == 0xEF);
 }
 
-static uint16_t read_be16(const void *p) {
-    const uint8_t *b = (const uint8_t*)p;
-    return ((uint16_t)b[0] << 8) | (uint16_t)b[1];
+TEST(writers_touch_exactly_their_own_width) {
+    /* A writer that runs past its width would silently corrupt neighbouring
+     * header fields — the kind of damage a forensic tool must never do. */
+    uint8_t buf[8];
+
+    memset(buf, 0xCC, sizeof(buf));
+    uft_write_le16(buf, 0x0000u);
+    ASSERT(buf[2] == 0xCC && buf[7] == 0xCC);
+
+    memset(buf, 0xCC, sizeof(buf));
+    uft_write_be32(buf, 0x00000000u);
+    ASSERT(buf[4] == 0xCC && buf[7] == 0xCC);
 }
 
-static uint32_t read_be32(const void *p) {
-    const uint8_t *b = (const uint8_t*)p;
-    return ((uint32_t)b[0] << 24) | ((uint32_t)b[1] << 16) |
-           ((uint32_t)b[2] << 8) | (uint32_t)b[3];
+TEST(helpers_work_on_unaligned_addresses) {
+    /* Disk headers are packed; readers are routinely handed odd offsets. */
+    uint8_t buf[16];
+    memset(buf, 0, sizeof(buf));
+    memcpy(buf + 1, VEC, sizeof(VEC));
+
+    ASSERT(uft_read_le16(buf + 1) == 0x2211u);
+    ASSERT(uft_read_be32(buf + 1) == 0x11223344u);
+
+    uft_write_le32(buf + 3, 0xCAFEBABEu);
+    ASSERT(uft_read_le32(buf + 3) == 0xCAFEBABEu);
 }
 
-static void write_le16(void *p, uint16_t v) {
-    uint8_t *b = (uint8_t*)p;
-    b[0] = v & 0xFF;
-    b[1] = (v >> 8) & 0xFF;
-}
-
-static void write_le32(void *p, uint32_t v) {
-    uint8_t *b = (uint8_t*)p;
-    b[0] = v & 0xFF;
-    b[1] = (v >> 8) & 0xFF;
-    b[2] = (v >> 16) & 0xFF;
-    b[3] = (v >> 24) & 0xFF;
-}
-
-/* ═══════════════════════════════════════════════════════════════════════════════
- * Tests
- * ═══════════════════════════════════════════════════════════════════════════════ */
-
-TEST(platform_detection) {
-    /* At least one platform must be detected */
-#if defined(TEST_PLATFORM_WINDOWS) || defined(TEST_PLATFORM_MACOS) || defined(TEST_PLATFORM_LINUX)
-    ASSERT(1);
-#else
-    ASSERT(0);
-#endif
-    
-    ASSERT(strlen(TEST_PLATFORM_NAME) > 0);
-}
-
-TEST(endianness_detection) {
-    bool le = is_little_endian();
-    /* Most modern systems are little-endian */
-    ASSERT(le == true || le == false);  /* Valid result */
-    
-    /* Verify with known value */
-    uint32_t test = 0x01020304;
-    uint8_t *bytes = (uint8_t*)&test;
-    if (le) {
-        ASSERT(bytes[0] == 0x04);
-        ASSERT(bytes[3] == 0x01);
-    } else {
-        ASSERT(bytes[0] == 0x01);
-        ASSERT(bytes[3] == 0x04);
-    }
-}
-
-TEST(bswap16) {
-    ASSERT(bswap16(0x0102) == 0x0201);
-    ASSERT(bswap16(0x1234) == 0x3412);
-    ASSERT(bswap16(0xAABB) == 0xBBAA);
-    ASSERT(bswap16(0x0000) == 0x0000);
-    ASSERT(bswap16(0xFFFF) == 0xFFFF);
-}
-
-TEST(bswap32) {
-    ASSERT(bswap32(0x01020304) == 0x04030201);
-    ASSERT(bswap32(0x12345678) == 0x78563412);
-    ASSERT(bswap32(0xAABBCCDD) == 0xDDCCBBAA);
-    ASSERT(bswap32(0x00000000) == 0x00000000);
-    ASSERT(bswap32(0xFFFFFFFF) == 0xFFFFFFFF);
-}
-
-TEST(read_le16_aligned) {
-    uint8_t data[] = {0x34, 0x12};
-    uint16_t val = read_le16(data);
-    ASSERT(val == 0x1234);
-}
-
-TEST(read_le16_unaligned) {
-    uint8_t data[] = {0x00, 0x34, 0x12, 0x00};
-    uint16_t val = read_le16(data + 1);
-    ASSERT(val == 0x1234);
-}
-
-TEST(read_le32_aligned) {
-    uint8_t data[] = {0x78, 0x56, 0x34, 0x12};
-    uint32_t val = read_le32(data);
-    ASSERT(val == 0x12345678);
-}
-
-TEST(read_le32_unaligned) {
-    uint8_t data[] = {0x00, 0x78, 0x56, 0x34, 0x12, 0x00};
-    uint32_t val = read_le32(data + 1);
-    ASSERT(val == 0x12345678);
-}
-
-TEST(read_be16) {
-    uint8_t data[] = {0x12, 0x34};
-    uint16_t val = read_be16(data);
-    ASSERT(val == 0x1234);
-}
-
-TEST(read_be32) {
-    uint8_t data[] = {0x12, 0x34, 0x56, 0x78};
-    uint32_t val = read_be32(data);
-    ASSERT(val == 0x12345678);
-}
-
-TEST(write_le16) {
-    uint8_t data[2] = {0, 0};
-    write_le16(data, 0x1234);
-    ASSERT(data[0] == 0x34);
-    ASSERT(data[1] == 0x12);
-}
-
-TEST(write_le32) {
-    uint8_t data[4] = {0, 0, 0, 0};
-    write_le32(data, 0x12345678);
-    ASSERT(data[0] == 0x78);
-    ASSERT(data[1] == 0x56);
-    ASSERT(data[2] == 0x34);
-    ASSERT(data[3] == 0x12);
-}
-
-TEST(path_separator) {
-#ifdef TEST_PLATFORM_WINDOWS
-    char sep = '\\';
-#else
-    char sep = '/';
-#endif
-    ASSERT(sep == '\\' || sep == '/');
-}
-
-TEST(sizeof_types) {
+TEST(fixed_width_types_have_the_promised_sizes) {
+    /* The on-disk structures depend on these; a surprise here would invalidate
+     * every offset in every parser. */
     ASSERT(sizeof(uint8_t) == 1);
     ASSERT(sizeof(uint16_t) == 2);
     ASSERT(sizeof(uint32_t) == 4);
     ASSERT(sizeof(uint64_t) == 8);
-    ASSERT(sizeof(int8_t) == 1);
-    ASSERT(sizeof(int16_t) == 2);
-    ASSERT(sizeof(int32_t) == 4);
-    ASSERT(sizeof(int64_t) == 8);
-}
-
-TEST(pointer_size) {
-    size_t ptr_size = sizeof(void*);
-    ASSERT(ptr_size == 4 || ptr_size == 8);
-}
-
-TEST(roundtrip_le16) {
-    for (uint32_t i = 0; i < 65536; i += 1000) {
-        uint8_t buf[2];
-        write_le16(buf, (uint16_t)i);
-        uint16_t result = read_le16(buf);
-        ASSERT(result == (uint16_t)i);
-    }
-}
-
-TEST(roundtrip_le32) {
-    uint32_t test_values[] = {0, 1, 255, 256, 65535, 65536, 
-                              0x12345678, 0xDEADBEEF, 0xFFFFFFFF};
-    for (size_t i = 0; i < sizeof(test_values)/sizeof(test_values[0]); i++) {
-        uint8_t buf[4];
-        write_le32(buf, test_values[i]);
-        uint32_t result = read_le32(buf);
-        ASSERT(result == test_values[i]);
-    }
+    ASSERT(sizeof(size_t) >= 4);
 }
 
 int main(void) {
-    printf("═══════════════════════════════════════════════════════════════\n");
-    printf("  Cross-Platform Tests (P2-005)\n");
-    printf("  Platform: %s\n", TEST_PLATFORM_NAME);
-    printf("═══════════════════════════════════════════════════════════════\n\n");
-    
-    RUN(platform_detection);
-    RUN(endianness_detection);
-    RUN(bswap16);
-    RUN(bswap32);
-    RUN(read_le16_aligned);
-    RUN(read_le16_unaligned);
-    RUN(read_le32_aligned);
-    RUN(read_le32_unaligned);
-    RUN(read_be16);
-    RUN(read_be32);
-    RUN(write_le16);
-    RUN(write_le32);
-    RUN(path_separator);
-    RUN(sizeof_types);
-    RUN(pointer_size);
-    RUN(roundtrip_le16);
-    RUN(roundtrip_le32);
-    
-    printf("\n═══════════════════════════════════════════════════════════════\n");
-    printf("  Results: %d passed, %d failed\n", _pass, _fail);
-    printf("═══════════════════════════════════════════════════════════════\n");
-    
-    return _fail > 0 ? 1 : 0;
+    printf("=== Byte order via the shipped helpers (MF-394) ===\n");
+    RUN(read_le_helpers_match_known_vectors);
+    RUN(read_be_helpers_match_known_vectors);
+    RUN(le_and_be_readers_disagree_on_asymmetric_input);
+    RUN(le_write_then_read_round_trips);
+    RUN(be_write_then_read_round_trips);
+    RUN(writers_touch_exactly_their_own_width);
+    RUN(helpers_work_on_unaligned_addresses);
+    RUN(fixed_width_types_have_the_promised_sizes);
+    printf("\nResults: %d passed, %d failed\n", _pass, _fail);
+    return _fail == 0 ? 0 : 1;
 }
