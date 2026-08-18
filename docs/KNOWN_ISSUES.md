@@ -1723,7 +1723,7 @@ adressieren (PROT-6), und die Widget-Rechnung setzte `has_custom_sync`
 decken sich exakt mit der Menge, die der Plugin-Pfad pinnt, und beide sauberen
 Disks bleiben still.
 
-### PROT-11 — Der SCP-Pfad des Widgets hat denselben Defekt, ungelöst (2026-08-18, MF-405)
+### PROT-11 — Der SCP-Pfad des Widgets liefert nie Schutz-Treffer (2026-08-18, MF-405) → Ursache korrigiert (MF-407), Fix gehört zu MF-106
 
 **Correctness.** `ProtectionAnalysisWidget::loadFlux()` füllt für SCP-Quellen
 weiterhin nur Flux-Statistiken (`bitlen_*`, `weak_region_*`, `revolutions`) —
@@ -1731,16 +1731,71 @@ also genau die Felder, die `ufm_c64_prot_analyze()` **nicht** liest. Eine über
 SCP geladene Disk liefert deshalb nach wie vor null Schutz-Treffer, aus demselben
 Grund wie PROT-8 vor der Korrektur.
 
-Der G64-Fall ließ sich beheben, weil es mit `ufm_c64_metrics_from_gcr()` einen
-verifizierten Extraktor für GCR-Bytes gibt. Für Flux gibt es keinen: es fehlt ein
-Pfad Flux → GCR → Metriken. Eine zweite, ungetestete Metrik-Herleitung an dieser
-Stelle zu erfinden wäre genau das, was PROT-8 ausgemacht hat, und fällt zudem
-unter die EINFRIER-REGEL.
+**Ursache korrigiert (MF-407) — die obige Diagnose war in zwei Punkten falsch.**
 
-*Nächster Schritt:* prüfen, ob der bestehende Flux-Dekodierpfad (PLL → GCR-Bits)
-für SCP-C64-Spuren nutzbar ist und `ufm_c64_metrics_from_gcr()` damit gespeist
-werden kann. Bis dahin ist der SCP-Zweig der Schutz-Analyse als nicht funktional
-zu behandeln; der Code sagt das jetzt an Ort und Stelle.
+**1. Der Flux → GCR → Metriken-Pfad fehlt nicht, er existiert.**
+`flux_decode_gcr_c64()` (`src/flux/uft_flux_decoder.c:671`) liefert mit
+`opts.keep_raw_bits = true` genau den rohen GCR-Bitstrom, den
+`ufm_c64_metrics_from_gcr()` konsumiert. Die Kette ist jetzt belegt statt
+vermutet — `tests/unit/test_flux_gcr_c64_sync.c` führt sie in beiden Richtungen
+vor:
+
+- normale Spur → 2 Sektoren erkannt, `has_custom_sync == false`
+- **headerlose Spur** (Sync vorhanden, kein einziger 0x08-Header — genau das,
+  wonach die Schutzanalyse sucht) → `sync_count == 4`, `sector_count == 0`,
+  **`has_custom_sync == true`**
+
+Dabei festgehaltener Vertrag: `flux_decode_gcr_c64()` gibt `FLUX_ERR_NO_SYNC`
+zurück, wenn sie keinen dekodierbaren Sektor findet — also gerade auf einer
+geschützten Spur. Der Bitstrom ist dennoch vollständig und gültig; er wird vor
+dem Return angehängt. Ein Aufrufer für Schutzanalyse muss `raw_bits`
+**unabhängig vom Statuscode** verwenden. Der Test nagelt das fest.
+
+Reichweite dieser Aussage, ausdrücklich: die Flux-Zeiten im Test sind
+**synthetisch** und exakt am Bitzell-Raster erzeugt. Das belegt die Kette und
+die Symbol-Dekodierung, **nicht**, dass ein reales SCP-Capture mit Jitter,
+Drehzahlschwankung und Weak-Bits korrekt dekodiert. Dafür fehlt ein
+C64-Flux-Abbild mit dokumentierter Herkunft im Korpus — vorhanden ist nur
+`gw_amigados.scp` (Amiga MFM). Greaseweazle ist lokal nicht installiert und
+nicht über PyPI beziehbar, das Abbild konnte deshalb nicht selbst erzeugt
+werden.
+
+**2. Das Widget bekommt gar keine Flux-Daten — es liest über einen Stub.**
+`uft_scp_read()` und `uft_scp_get_track_flux()` (`uft_format_parsers.h`) sind
+Honest-Stubs in `src/core/uft_core_stubs.c:234,255`, die unbedingt `-1` liefern.
+Der SCP-Zweig erzeugt also nicht falsche Metriken, sondern **überhaupt keine**:
+jede Spur fällt durch `count <= 0` heraus, `m_trackMetrics` bleibt leer.
+
+Daneben existiert der **echte** SCP-Leser (`uft_scp_ctx_t`,
+`uft_scp_open_memory()`, `src/flux/uft_scp_parser.c`), und das SCP-Plugin ist
+**T1b-verifiziert** (7 Tests, Cross-Tool-Korpus `gw_amigados.scp`, cbmstuff-Spec).
+
+Das ist die **dritte** Instanz desselben Musters, nach PROT-6 (Plugin-Pfad
+schwächer als der zweite G64-Leser) und PROT-8 (Widget rechnet selbst statt den
+verifizierten Extraktor zu rufen): *der reguläre Weg greift die schwächere von
+zwei vorhandenen Implementierungen.*
+
+**Der Fix gehört zu MF-106, nicht hierher.** `docs/MASTER_PLAN.md` beschreibt
+die Ursache bereits als „SCP-API-Dualität" und bündelt sie als
+**MF-106-bundle = SCP-API-Unifizierung + Inline-MFM-Replacement** (geschätzt
+5–6 Tage), womit SCP→IMG, SCP→ADF und SCP→D64 gemeinsam grün werden. Der
+GUI-Schutzpfad ist ein **fünfter** Konsument desselben toten Stubs, den die
+Schätzung noch nicht enthält — dazu die vier Konvertierungen
+`uftc_convert_scp_to_{d64,mfm_sectors,hfe,g64}`, die alle über
+`uft_scp_read()` einsteigen und deshalb sämtlich nicht funktionieren, obwohl
+`CLAUDE.md` sie als Feature führt.
+
+Den GUI-Zweig einzeln auf den echten Leser umzuhängen wurde **verworfen**: es
+würde MF-106 aufspalten und ließe sich für C64 mangels Korpus ohnehin nicht
+verifizieren.
+
+*Nächster Schritt (unverändert MF-106, jetzt kleiner):* die SCP-API
+vereinheitlichen. Die C64-Hälfte der Kette ist mit MF-407 belegt und damit aus
+der Unbekannten-Liste raus; offen bleibt der Leser-Umbau. Parallel dazu ein
+C64-SCP mit dokumentierter Herkunft ins Korpus holen (`gw convert
+--format=commodore.1541` aus dem rechtefreien `vice_c1541_35trk.d64` ergäbe
+einen T1b-Eintrag), sonst bleibt auch nach dem Umbau nur eine synthetische
+Verifikation.
 
 
 

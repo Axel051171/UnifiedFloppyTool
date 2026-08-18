@@ -1001,7 +1001,9 @@ foreach(test_source ${TEST_SOURCES})
         # pattern as test_flux_mfm_sync; only the flux decoder TU is
         # needed.
         target_sources(${test_name} PRIVATE
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c)
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
+            # MF-407 (PROT-11): the flux -> GCR -> metrics chain
+            ${CMAKE_SOURCE_DIR}/src/protection/ufm_c64_metrics.c)
         if(UNIX)
             set(TEST_LIBS ${M_LIBRARY})
         else()

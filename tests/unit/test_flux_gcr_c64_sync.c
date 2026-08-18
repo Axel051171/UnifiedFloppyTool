@@ -34,6 +34,7 @@
  * tricks, and >35-track territory are out of scope.
  */
 #include "uft/flux/uft_flux_decoder.h"
+#include "uft/protection/ufm_c64_metrics.h"
 
 #include <stdint.h>
 #include <stdio.h>
@@ -225,9 +226,132 @@ TEST(decodes_two_c64_gcr_sectors) {
     free(v.b);
 }
 
+
+/* ── PROT-11: the flux -> GCR-bitstream -> metrics chain ─────────────
+ *
+ * The protection classifier consumes a raw GCR bitstream via
+ * ufm_c64_metrics_from_gcr(). For a G64 source that bitstream is simply the
+ * file content. For an SCP (flux) source it has to be recovered first, and
+ * until now nothing established that the two ends fit together — which is why
+ * the GUI's SCP branch reported "no protection" for every disk
+ * (docs/KNOWN_ISSUES.md PROT-11).
+ *
+ * flux_decode_gcr_c64() already produces the bitstream when
+ * opts.keep_raw_bits is set. These two cases pin that it is the bitstream the
+ * metric extractor expects.
+ *
+ * SCOPE, stated plainly: the flux timing here is SYNTHESISED at an exact
+ * bitcell period, so this establishes the chain and the symbol-level decode.
+ * It does NOT establish that a real SCP capture — with jitter, speed variation
+ * and weak bits — decodes correctly. That needs a C64 flux image of documented
+ * provenance in the corpus; none exists yet. */
+
+static size_t decode_to_gcr(const bitvec_t *v, uint8_t **gcr_out,
+                            flux_decoded_track_t *dt, flux_status_t *st_out)
+{
+    uint32_t *tr = NULL;
+    flux_raw_data_t flux = cells_to_flux(v, &tr);
+
+    flux_decoder_options_t opts;
+    flux_decoder_options_init(&opts);
+    opts.encoding      = FLUX_ENC_GCR_C64;
+    opts.bitcell_ns    = BITCELL_NS;
+    opts.use_pll       = false;      /* see the note in the sector test */
+    opts.keep_raw_bits = true;       /* <- this is what makes the chain work */
+
+    flux_decoded_track_init(dt);
+    flux_status_t st = flux_decode_gcr_c64(&flux, dt, &opts);
+    if (st_out) *st_out = st;
+
+    free(tr);
+    *gcr_out = dt->raw_bits;
+    return (dt->raw_bit_count + 7) / 8;
+}
+
+TEST(flux_to_gcr_metrics_agrees_on_a_normal_track) {
+    uint8_t s1[256], s5[256];
+    for (int i = 0; i < 256; ++i) {
+        s1[i] = (uint8_t)((i * 17 + 3) ^ (i >> 3));
+        s5[i] = (uint8_t)((i *  7 + 41) ^ (i >> 2));
+    }
+
+    bitvec_t v = {0};
+    bv_push_gap(&v, 200);
+    emit_sector(&v, 18, 1, s1);
+    emit_sector(&v, 18, 5, s5);
+    bv_push_gap(&v, 100);
+
+    uint8_t *gcr = NULL;
+    flux_decoded_track_t dt;
+    flux_status_t st = FLUX_OK;
+    size_t gcr_len = decode_to_gcr(&v, &gcr, &dt, &st);
+
+    ASSERT(st == FLUX_OK);
+    ASSERT(gcr != NULL && gcr_len > 0);
+
+    ufm_c64_track_metrics_t m;
+    memset(&m, 0, sizeof(m));
+    /* Explicit zone: the synthetic track is far shorter than a real one, so
+     * deriving the nominal capacity from the track number would only make
+     * track_length_ratio meaningless. Sync and header structure are what is
+     * under test here. */
+    ASSERT(ufm_c64_metrics_from_gcr(gcr, gcr_len, 34, 3, &m));
+
+    ASSERT(m.sector_count == 2);        /* both headers found in the bitstream */
+    ASSERT(m.sync_count >= 4);          /* header + data sync per sector */
+    ASSERT(!m.has_custom_sync);         /* standard headers => not custom */
+
+    flux_decoded_track_free(&dt);
+    free(v.b);
+}
+
+TEST(flux_to_gcr_metrics_sees_a_headerless_track_PROT11) {
+    /* The case protection analysis exists for: the track carries sync marks
+     * and GCR data, but no standard 1541 header block anywhere. On the real
+     * Bounty Bob disk 15 whole tracks look like this. */
+    bitvec_t v = {0};
+    bv_push_gap(&v, 200);
+    for (int blk = 0; blk < 4; ++blk) {
+        bv_push_sync(&v);
+        for (int i = 0; i < 64; ++i)
+            bv_push_gcr_byte(&v, (uint8_t)(0x5A + blk * 7 + i));  /* never 0x08 */
+        bv_push_gap(&v, 80);
+    }
+    bv_push_gap(&v, 100);
+
+    uint8_t *gcr = NULL;
+    flux_decoded_track_t dt;
+    flux_status_t st = FLUX_OK;
+    size_t gcr_len = decode_to_gcr(&v, &gcr, &dt, &st);
+
+    /* CONTRACT NOTE: flux_decode_gcr_c64() returns FLUX_ERR_NO_SYNC when it
+     * finds no decodable sector, which is exactly what a protected track looks
+     * like. The raw bitstream is nevertheless complete and valid — it is
+     * attached before that return. A caller doing protection analysis must
+     * therefore use raw_bits regardless of the status code, and this assert
+     * pins that the bits really are there. */
+    ASSERT(st != FLUX_OK);
+    ASSERT(dt.sector_count == 0);
+    ASSERT(gcr != NULL && gcr_len > 0);
+
+    ufm_c64_track_metrics_t m;
+    memset(&m, 0, sizeof(m));
+    ASSERT(ufm_c64_metrics_from_gcr(gcr, gcr_len, 34, 3, &m));
+
+    ASSERT(m.sync_count == 4);          /* the four sync runs we emitted */
+    ASSERT(m.sector_count == 0);        /* no standard header anywhere */
+    ASSERT(m.has_custom_sync);          /* <- the finding the GUI never made */
+    ASSERT(m.has_meaningful_data);
+
+    flux_decoded_track_free(&dt);
+    free(v.b);
+}
+
 int main(void) {
     printf("=== C64 GCR decoder unit test (audit Lücke #1) ===\n");
     RUN(decodes_two_c64_gcr_sectors);
+    RUN(flux_to_gcr_metrics_agrees_on_a_normal_track);
+    RUN(flux_to_gcr_metrics_sees_a_headerless_track_PROT11);
     printf("=== %d passed, %d failed ===\n", _pass, _fail);
     return _fail == 0 ? 0 : 1;
 }
