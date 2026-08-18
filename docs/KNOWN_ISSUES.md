@@ -1448,6 +1448,62 @@ ohne eine einzige Information hinzuzufügen — `compat_entries == NULL` und ein
 Liste aus lauter UNTESTED sagen dasselbe. Eine Matrix gehört dorthin, wo jemand
 etwas geprüft hat oder wo die relevanten Ziele nicht offensichtlich sind.
 
+### ARCH-3 — Der Skelett-Audit sieht nur `uft_*`; 22 Banner-Header sind wirklich unfertig (2026-08-18, MF-420)
+
+**Correctness / Prozess.** Beim Durchsehen der offenen TODO-Listen aufgefallen —
+und es korrigiert eine Aussage, die **ich selbst** am selben Tag in den
+MASTER_PLAN geschrieben hatte.
+
+`scripts/audit_skeleton_headers.py` meldete:
+
+```
+Skeleton headers (>= 10 decls, >= 80% missing): 0
+Total unimplemented declarations: 0
+```
+
+Ich habe das in MF-409 als Beleg genommen, MF-011 („175 Skeleton-Header, 3355
+Phantom-Funktionen") sei geschlossen. Das Skript zählt jedoch laut seinem
+eigenen Kopfkommentar **ausschließlich `uft_*`-präfixierte Prototypen**. Die
+Null gilt für diese Teilmenge; die Ausgabezeile sagte das nicht, und ich habe
+sie als Aussage über alle Header gelesen.
+
+**Gegenprobe.** Ein Durchlauf über die 34 Header, die noch einen
+Skeleton-Banner tragen:
+
+| | Anzahl |
+|---|---|
+| Banner-Header gesamt | 34 |
+| davon **ohne** fehlende Definition — Banner veraltet | **12** |
+| davon mit tatsächlich fehlenden Definitionen | **22** |
+
+Die größte Lücke ist `include/uft/formats/uft_woz.h`: **15 von 15**
+Prototypen ohne Definition — `woz_metadata_init`, `woz_metadata_parse`,
+`woz_read_track`, `uft_woz_detect_version` und weitere. Einzeln nachgeprüft:
+keine davon existiert in `src/`. Sämtlich **ohne** `uft_`-Präfix und damit für
+den Audit unsichtbar. Weitere echte Lücken: `fs/uft_fat_boot.h` (12/12),
+`fs/uft_fat_atari.h` (12/12), `uft_process.h` (9/9),
+`uft_format_verify.h` (9/9), `fs/uft_fat_badblock.h` (9/9).
+
+Die andere Richtung ist ebenfalls ein Befund: **12 Banner beschreiben erledigte
+Arbeit**. `uft_platform.h` etwa trägt „declares 32 public functions; 27 are NOT
+implemented" — heute ist es genau **einer** (`uft_file_size`), der Rest sind 12
+im Header selbst definierte `static inline`. Ein Banner, der nachweislich
+Falsches sagt, ist so schädlich wie ein fehlender.
+
+**Umgesetzt (MF-420):**
+- Die Ausgabe des Audits nennt jetzt ihren Geltungsbereich („uft_*-prefixed
+  decls only") und weist ausdrücklich darauf hin, dass unpräfixierte Prototypen
+  außerhalb liegen. Kein Verhaltenswechsel — es ist eine Ehrlichkeitskorrektur
+  an der Stelle, an der die Fehlinterpretation entstand.
+- Die MF-011-Zeile im MASTER_PLAN steht wieder auf **teilweise** statt CLOSED,
+  mit dem Grund daneben.
+
+*Nächster Schritt, nach Nutzen:* die 12 veralteten Banner entfernen (mechanisch,
+risikolos, macht die verbleibenden 22 glaubwürdig), dann pro echtem Skelett die
+MF-011-Triage anwenden — IMPLEMENT / DELETE. Den Audit auf unpräfixierte
+Prototypen zu erweitern wäre möglich, würde aber die Zahlenreihe seit April
+brechen; sinnvoller ist ein zweiter, getrennt ausgewiesener Zähler.
+
 ### ARCH-2 — `UFT_SCP_SIGNATURE` existiert viermal, einmal mit anderem Typ (2026-08-18, MF-418)
 
 **Correctness.** Beim Verdrahten der SCP-Adapter (S3-1) stürzte der erste Lauf

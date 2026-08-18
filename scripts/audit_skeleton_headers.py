@@ -188,11 +188,19 @@ def main() -> int:
         return 0
 
     total_missing = sum(m for _, m, _, _ in skel)
+    # MF-420: the scope belongs in the output, not only in the file header.
+    # This audit counts `uft_*`-prefixed prototypes ONLY. A zero here was read
+    # as "no skeletons left anywhere" and written into MASTER_PLAN as evidence
+    # that MF-011 was closed — while include/uft/formats/uft_woz.h still
+    # declares 15 unprefixed functions (woz_metadata_init, woz_read_track, …)
+    # that nothing defines. See KNOWN_ISSUES ARCH-3.
     print(
-        f"Skeleton headers (>= {args.min_decls} decls, "
+        f"Skeleton headers, uft_*-prefixed decls only "
+        f"(>= {args.min_decls} decls, "
         f">= {int(args.min_ratio * 100)}% missing): {len(skel)}"
     )
-    print(f"Total unimplemented declarations: {total_missing}")
+    print(f"Unimplemented uft_*-prefixed declarations: {total_missing}")
+    print("NOTE: unprefixed prototypes (woz_*, cpm_*, …) are OUT OF SCOPE here.")
     print()
     print(f"{'decls':>5} {'miss':>5} {'pct':>5}  path")
     for d, m, r, f in skel[:40]:

@@ -100,14 +100,24 @@ Alle bisher aufgedeckten Findings in einer priorisierten Liste:
 | MF-008 | P2 | docs / KNOWN_ISSUES stellenweise stale | offen |
 | MF-009 | P3 | TODO/FIXME-Marker (Census 2026-04-25) | scoped (siehe §MF-009-Census) |
 | MF-010 | P2 | Non-kanonische Includes — Census 2026-05-25: 81 unqualifizierte `uft_*.h`-Includes (Sibling-Pattern, technisch OK durch -I-Pfade) + ~140 SAMdisk-imported Header (third-party). Echte Cleanup-Kandidaten: 81 Sibling-Includes → `uft/...`-Pfad. Multi-Session-Arbeit, P2. | scoped |
-| MF-011 | P0 | 175 Skeleton-Header, 3355 Phantom-Funktionen | ✓ CLOSED — `audit_skeleton_headers.py` (2026-08-18): **0** Skelette, 0 unimplementierte Deklarationen |
+| MF-011 | P0 | 175 Skeleton-Header, 3355 Phantom-Funktionen | **teilweise** — `audit_skeleton_headers.py` meldet 0, zählt aber **nur `uft_*`-präfixierte** Prototypen. Ein breiterer Durchlauf findet 22 Banner-Header mit tatsächlich fehlenden Definitionen (KNOWN_ISSUES ARCH-3). Korrigiert in MF-420. |
 | MF-012 | P0 | XCopy-Tab Phantom-Feature (GUI ohne Backend) | ✓ CLOSED in M1 (Start-Button disabled + Tooltip) |
 
-**Kein P0 mehr offen** (Stand 2026-08-18, MF-409). MF-011 und MF-012 waren in
-der Tabelle noch als offen geführt, während die M1-Sektion darunter beide als
-erledigt abhakte — der Widerspruch ist gegen die Audit-Skripte aufgelöst:
-`audit_skeleton_headers.py` meldet 0 Skelette, `audit_plugin_compliance.py`
-88/88 konforme Plugins.
+**MF-012 ist zu, MF-011 nur teilweise** (Stand 2026-08-18, korrigiert in
+MF-420). Beide waren in der Tabelle als offen geführt, während die M1-Sektion
+darunter beide abhakte. Für MF-012 löst sich der Widerspruch sauber auf.
+
+Für MF-011 **nicht**: ich hatte in MF-409 „`audit_skeleton_headers.py` meldet 0
+Skelette" als Beleg genommen. Das Skript zählt jedoch ausschließlich
+`uft_*`-präfixierte Prototypen — die Null gilt für diese Teilmenge und wurde von
+mir als Aussage über alle Header gelesen. Ein breiterer Durchlauf über die 34
+Header mit Skeleton-Banner findet **22 mit tatsächlich fehlenden Definitionen**,
+darunter `include/uft/formats/uft_woz.h` mit 15 von 15 (`woz_metadata_init`,
+`woz_read_track`, …, sämtlich ohne Präfix und damit für das Audit unsichtbar).
+Details und die Gegenrichtung — 12 Banner beschreiben erledigte Arbeit —
+in KNOWN_ISSUES **ARCH-3**.
+
+`audit_plugin_compliance.py` mit 88/88 konformen Plugins bleibt unberührt.
 
 **Offen ist jetzt anderes** — siehe §Sprint-3 unten. Der größte Einzelposten
 ist MF-106 (SCP-API-Unifizierung), an dem vier Konvertierungspfade und der
