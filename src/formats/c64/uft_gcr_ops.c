@@ -195,7 +195,9 @@ int gcr_find_sync(const uint8_t *gcr, size_t size, size_t start)
     if (!gcr || size == 0) return -1;
     
     for (size_t i = start; i < size - 1; i++) {
-        /* Sync is 0xFF with MSB set in next byte */
+        /* Sync is 0xFF with MSB set in next byte = 9 one-bits on a byte
+         * boundary. Byte-aligned by construction; the 1541 itself needs 10
+         * one-bits at any bit offset (uft_gcr_ops.h, definition B). */
         if (gcr[i] == GCR_SYNC_BYTE && (gcr[i+1] & 0x80)) {
             return (int)i;
         }
@@ -220,9 +222,14 @@ size_t gcr_find_sync_end(const uint8_t *gcr, size_t size, size_t sync_start)
 }
 
 /**
- * @brief Count syncs in track
+ * @brief Count BYTE-ALIGNED sync marks in a track
+ *
+ * Definition (A) in uft_gcr_ops.h: a 0xFF byte followed by a byte with its MSB
+ * set, i.e. 9 one-bits starting on a byte boundary. This is deliberately NOT
+ * the 1541 hardware condition (>= 10 one-bits at any bit position) — see
+ * KNOWN_ISSUES FMT-14 for the measured divergence on protected media.
  */
-int gcr_count_syncs(const uint8_t *gcr, size_t size)
+int gcr_count_syncs_bytealigned(const uint8_t *gcr, size_t size)
 {
     if (!gcr || size == 0) return 0;
     

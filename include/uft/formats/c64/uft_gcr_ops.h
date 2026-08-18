@@ -110,11 +110,41 @@ size_t gcr_decode(const uint8_t *gcr, size_t gcr_size, uint8_t *plain, size_t *e
 size_t gcr_check_errors(const uint8_t *gcr, size_t size);
 
 /* ============================================================================
- * Sync Operations
- * ============================================================================ */
+ * Sync Operations — BYTE-ALIGNED definition
+ * ============================================================================
+ *
+ * UFT knows two different definitions of "a sync mark", and they do not always
+ * agree. Which one is correct depends on what the caller is asking, so both are
+ * kept — but they are named, and the choice must be deliberate. See
+ * docs/KNOWN_ISSUES.md FMT-14.
+ *
+ *   (A) BYTE-ALIGNED — this file. A sync is a 0xFF byte whose successor has its
+ *       MSB set: 9 consecutive one-bits, starting on a byte boundary.
+ *
+ *   (B) HARDWARE — ufm_c64_metrics_from_gcr() in
+ *       include/uft/protection/ufm_c64_metrics.h. A sync is any run of >= 10
+ *       one-bits at any bit position, which is what the 1541's shift-register
+ *       comparator actually does. GCR is a 5-bit code, so sync runs need not
+ *       land on byte boundaries.
+ *
+ * Use (A) when looking for byte-aligned GCR structures — that is what the
+ * header/data block decoders in this module do, and it is why their positions
+ * are byte indices at all. Use (B) when characterising a track as a medium,
+ * e.g. for copy-protection analysis.
+ *
+ * Measured on real disks: on well-formed media the two agree exactly (a
+ * VICE-formatted 35-track disk gives 1366 either way, a commercial unprotected
+ * 40-track disk gives 1536). They diverge on protected media by up to +-4 per
+ * track, in both directions — (A) misses unaligned runs, (B) discards 9-bit
+ * runs that (A) counts. The divergence is pinned in tests/test_d64_writer.c.
+ */
 
 /**
- * @brief Find sync mark
+ * @brief Find a byte-aligned sync mark
+ *
+ * Definition (A) above. Returning a byte index is not an implementation detail
+ * but the contract: this function cannot express a sync that starts mid-byte.
+ *
  * @param gcr GCR data
  * @param size Data size
  * @param start Start position
@@ -123,7 +153,7 @@ size_t gcr_check_errors(const uint8_t *gcr, size_t size);
 int gcr_find_sync(const uint8_t *gcr, size_t size, size_t start);
 
 /**
- * @brief Find end of sync mark
+ * @brief Find end of a byte-aligned sync mark
  * @param gcr GCR data
  * @param size Data size
  * @param sync_start Start of sync
@@ -132,12 +162,17 @@ int gcr_find_sync(const uint8_t *gcr, size_t size, size_t start);
 size_t gcr_find_sync_end(const uint8_t *gcr, size_t size, size_t sync_start);
 
 /**
- * @brief Count syncs in track
+ * @brief Count byte-aligned sync marks in a track
+ *
+ * Definition (A) above — NOT the 1541 hardware condition. For that, read
+ * `sync_count` from ufm_c64_metrics_from_gcr(). Renamed from `gcr_count_syncs`
+ * in MF-401 so that neither counter can be picked by accident.
+ *
  * @param gcr GCR track data
  * @param size Track size
- * @return Number of syncs found
+ * @return Number of byte-aligned syncs found
  */
-int gcr_count_syncs(const uint8_t *gcr, size_t size);
+int gcr_count_syncs_bytealigned(const uint8_t *gcr, size_t size);
 
 /**
  * @brief Get longest sync length

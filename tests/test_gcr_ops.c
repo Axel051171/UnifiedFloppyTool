@@ -237,12 +237,12 @@ TEST(gcr_find_sync_end)
     ASSERT_EQ(end, 30);
 }
 
-TEST(gcr_count_syncs)
+TEST(gcr_count_syncs_bytealigned)
 {
     uint8_t buffer[200];
     create_test_track(buffer, sizeof(buffer));
     
-    int count = gcr_count_syncs(buffer, sizeof(buffer));
+    int count = gcr_count_syncs_bytealigned(buffer, sizeof(buffer));
     /* Should find the syncs we added */
     ASSERT(count >= 1);
 }
@@ -546,7 +546,7 @@ int main(int argc, char *argv[])
     printf("\nSync Operations:\n");
     RUN_TEST(gcr_find_sync);
     RUN_TEST(gcr_find_sync_end);
-    RUN_TEST(gcr_count_syncs);
+    RUN_TEST(gcr_count_syncs_bytealigned);
     RUN_TEST(gcr_longest_sync);
     RUN_TEST(gcr_kill_partial_syncs);
     

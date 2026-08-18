@@ -1338,7 +1338,7 @@ algorithmisch identisch (CCITT-FALSE, init 0xFFFF, Polynom 0x1021), es ist also
 Redundanz und keine Divergenz — anders als bei FMT-14. Zusammenführen lohnt,
 eilt aber nicht.
 
-### FMT-14 — Zwei Sync-Definitionen im Baum, sie weichen genau auf geschützten Disks ab (2026-08-18, MF-395)
+### FMT-14 — Drei Sync-Definitionen im Baum, sie weichen genau auf geschützten Disks ab (2026-08-18, MF-395) → ✓ RESOLVED (MF-401, benannt)
 
 **Correctness.** Gefunden beim Umbau von `test_d64_writer` auf echten Code:
 UFT zählt Sync-Marken an zwei Stellen, mit **unterschiedlicher Definition**.
@@ -1372,11 +1372,36 @@ für Werkzeuge, die byte-ausgerichtete Strukturen suchen, kann die andere
 angemessen sein. Was nicht angeht, ist dass beide unbenannt nebeneinander
 existieren und je nach Aufrufer ein anderes Ergebnis liefern.
 
-*Nächster Schritt:* Entscheiden, welche Definition wo gilt, sie im Header
-benennen (z. B. `gcr_count_syncs_bytealigned()` vs. `_hardware()`), und die
-Aufrufer bewusst zuordnen. Bis dahin ist der Unterschied in
-`tests/test_d64_writer.c` festgenagelt — inklusive eines Falls, der die
-9-gegen-10-Bit-Schwelle direkt zeigt.
+**Aufgelöst (MF-401) — durch Benennung, nicht durch Vereinheitlichung.** Die
+Untersuchung der Aufrufer zeigte, dass beide Definitionen an ihrem jeweiligen
+Ort korrekt sind und eine Vereinheitlichung deshalb falsch gewesen wäre:
+
+`gcr_find_sync()` wird 13× **innerhalb** von `uft_gcr_ops.c` von den
+Header-/Datenblock-Dekodierern benutzt. Die suchen byte-ausgerichtete
+GCR-Strukturen; dass die Funktion einen Byte-Index zurückgibt, ist kein
+Implementierungsdetail, sondern ihr Vertrag — sie *kann* keine mitten im Byte
+beginnende Sync ausdrücken. Der Bit-Zähler charakterisiert dagegen die Spur als
+Medium, was der Kopierschutz-Pfad braucht.
+
+Beim Aufräumen kam eine **dritte**, bis dahin unbemerkte Definition zutage:
+`uft_xum_gcr_count_syncs()` (`tests/flux_gen/xum1541/flux_gen.c`) zählt Läufe
+von ≥ 2 ganzen `0xFF`-Bytes, also ≥ 16 Eins-Bits. Sie ist dort richtig, weil sie
+ausschließlich auf Spuren angewandt wird, die dieselbe Datei erzeugt hat — auf
+einem realen Capture würde sie jede unausgerichtete oder kurze Sync übersehen.
+
+Umgesetzt:
+- `gcr_count_syncs()` → **`gcr_count_syncs_bytealigned()`** (kein
+  Produktions-Aufrufer, nur 3 Teststellen; kein ABI-Baseline-Eintrag)
+- Alle drei Definitionen (A) byte-ausgerichtet / (B) 1541-Hardware /
+  (C) generator-lokal sind im jeweiligen Header bzw. am Code benannt und
+  verweisen gegenseitig aufeinander, mit den gemessenen Zahlen
+- `ufm_c64_metrics.h` sagt jetzt ausdrücklich, dass `sync_count` **nicht**
+  dasselbe ist wie der byte-ausgerichtete Zähler
+
+Der Unterschied bleibt in `tests/test_d64_writer.c` festgenagelt — inklusive
+eines Falls, der die 9-gegen-10-Bit-Schwelle direkt zeigt. Verhalten unverändert;
+was sich ändert, ist dass kein Aufrufer mehr versehentlich den falschen Zähler
+greifen kann.
 
 ### FMT-13 — TD0-Plugin erkannte unkomprimierte Teledisk-Images nie (2026-08-18, MF-389) → ✓ RESOLVED
 

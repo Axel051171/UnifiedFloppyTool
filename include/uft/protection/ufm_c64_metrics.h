@@ -54,8 +54,12 @@ int ufm_c64_zone_for_track(int track);
  *
  * Derived directly and only from the bitstream:
  *   - `bitcell_count`, `track_length_ratio` (actual/nominal for the zone)
- *   - `sync_count`, `max_sync_run_bits` (sync = >= 10 consecutive 1-bits,
- *     the 1541 hardware sync condition)
+ *   - `sync_count`, `max_sync_run_bits` (sync = >= 10 consecutive 1-bits at any
+ *     bit position, the 1541 hardware sync condition — definition (B) in
+ *     include/uft/formats/c64/uft_gcr_ops.h). This is NOT the same count as
+ *     gcr_count_syncs_bytealigned(), which requires byte alignment and only 9
+ *     one-bits; the two agree on well-formed disks and diverge by up to +-4 per
+ *     track on protected ones. See KNOWN_ISSUES FMT-14.
  *   - `sector_count` (GCR block id 0x08 = header), `duplicate_ids`
  *   - `bad_gcr_count` (5-bit groups outside the 16-code GCR alphabet)
  *   - `has_half_track` / `is_half_track` / `track_x2`, `has_meaningful_data`

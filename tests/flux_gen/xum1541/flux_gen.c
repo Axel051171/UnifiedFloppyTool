@@ -302,6 +302,17 @@ void uft_xum_gcr_free(uft_xum_gcr_track_t *track)
 
 /* ─── Analysis helpers ──────────────────────────────────────────────── */
 
+/* GENERATOR-LOCAL sync definition — definition (C), see KNOWN_ISSUES FMT-14.
+ *
+ * A sync here is a run of >= 2 whole 0xFF bytes, i.e. >= 16 one-bits on a byte
+ * boundary. That is stricter than either production definition:
+ *   (A) gcr_count_syncs_bytealigned()  — 9 one-bits, byte-aligned
+ *   (B) ufm_c64_metrics_from_gcr()     — 10 one-bits, any bit position (1541 HW)
+ *
+ * It is correct HERE and only here: this counter is applied to tracks that this
+ * same file generated, whose sync marks are whole 0xFF bytes by construction.
+ * It must not be used to characterise real media — on a real capture it would
+ * silently miss every unaligned or short sync run. */
 size_t uft_xum_gcr_count_syncs(const uint8_t *bytes, size_t len)
 {
     if (!bytes) return 0;

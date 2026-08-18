@@ -106,7 +106,7 @@ TEST(sync_counters_agree_on_a_real_formatted_disk) {
         ASSERT(uft_format_plugin_g64.read_track(&disk, cyl, 0, &t) == UFT_OK);
         ASSERT(t.raw_data != NULL);
 
-        int byte_syncs = gcr_count_syncs(t.raw_data, t.raw_size);
+        int byte_syncs = gcr_count_syncs_bytealigned(t.raw_data, t.raw_size);
         ufm_c64_track_metrics_t m;
         ASSERT(ufm_c64_metrics_from_gcr(t.raw_data, t.raw_size, cyl * 2,
                                         UFM_C64_SPEED_ZONE_AUTO, &m));
@@ -138,7 +138,7 @@ TEST(the_two_sync_definitions_differ_by_construction) {
     buf[0] = 0xFF;          /* eight ones ... */
     buf[1] = 0x80;          /* ... plus one more, then zeros: nine in total */
 
-    ASSERT(gcr_count_syncs(buf, sizeof(buf)) == 1);
+    ASSERT(gcr_count_syncs_bytealigned(buf, sizeof(buf)) == 1);
 
     ufm_c64_track_metrics_t m;
     ASSERT(ufm_c64_metrics_from_gcr(buf, sizeof(buf), 0, 3, &m));
