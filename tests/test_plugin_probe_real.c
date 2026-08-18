@@ -53,6 +53,7 @@ extern const uft_format_plugin_t uft_format_plugin_scp;
 extern const uft_format_plugin_t uft_format_plugin_stx;
 extern const uft_format_plugin_t uft_format_plugin_2img;
 extern const uft_format_plugin_t uft_format_plugin_dsk_cpc;
+extern const uft_format_plugin_t uft_format_plugin_adf;
 
 static int _pass = 0, _fail = 0, _last_fail = 0;
 #define RUN(name)  do { printf("  [TEST] %-40s ... ", #name); test_##name(); \
@@ -717,6 +718,33 @@ TEST(dsk_cpc_and_edsk_both_claim_extended_dsk_files) {
     ASSERT(!probe_sized(&uft_format_plugin_edsk, hdr, sizeof(hdr), sizeof(hdr), &edsk_conf));
 }
 
+/*---------------------------------------------------------------------------
+ * Wave 8 (MF-398) — adf, absorbed from the former test_adf_plugin.c
+ *   adf  size 901120 (DD) or 1802240 (HD); "DOS" bootblock raises confidence
+ *                                                (uft_adf_plugin.c:11,12)
+ *--------------------------------------------------------------------------*/
+
+TEST(adf_accepts_dd_and_hd_and_grades_the_bootblock) {
+    uint8_t hdr[64];
+    int plain = -1, dos = -1;
+
+    memset(hdr, 0, sizeof(hdr));
+    ASSERT(probe_sized(&uft_format_plugin_adf, hdr, sizeof(hdr), 901120, &plain));
+    ASSERT(probe_sized(&uft_format_plugin_adf, hdr, sizeof(hdr), 1802240, &plain));
+
+    /* an AmigaDOS bootblock starts with "DOS" and must raise the confidence */
+    memcpy(hdr, "DOS", 3);
+    ASSERT(probe_sized(&uft_format_plugin_adf, hdr, sizeof(hdr), 901120, &dos));
+    ASSERT(dos > plain);
+
+    /* neighbouring sizes are not ADF */
+    memset(hdr, 0, sizeof(hdr));
+    ASSERT(!probe_sized(&uft_format_plugin_adf, hdr, sizeof(hdr), 901119, &plain));
+    ASSERT(!probe_sized(&uft_format_plugin_adf, hdr, sizeof(hdr), 1802241, &plain));
+    /* and a D64 must not be claimed by ADF */
+    ASSERT(!probe_sized(&uft_format_plugin_adf, hdr, sizeof(hdr), 174848, &plain));
+}
+
 int main(void) {
     printf("=== Real plugin probes, wave 1 (MF-385) ===\n");
     RUN(d64_accepts_all_eight_production_sizes);
@@ -749,6 +777,7 @@ int main(void) {
     RUN(stx_requires_the_pasti_magic_including_its_nul);
     RUN(img2_requires_its_four_byte_magic);
     RUN(dsk_cpc_and_edsk_both_claim_extended_dsk_files);
+    RUN(adf_accepts_dd_and_hd_and_grades_the_bootblock);
     printf("\nResults: %d passed, %d failed\n", _pass, _fail);
     return _fail == 0 ? 0 : 1;
 }

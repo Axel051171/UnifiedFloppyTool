@@ -64,6 +64,7 @@ extern const uft_format_plugin_t uft_format_plugin_scp;
 extern const uft_format_plugin_t uft_format_plugin_stx;
 extern const uft_format_plugin_t uft_format_plugin_2img;
 extern const uft_format_plugin_t uft_format_plugin_dsk_cpc;
+extern const uft_format_plugin_t uft_format_plugin_adf;
 
 static const uft_format_plugin_t *const PLUGINS[] = {
     &uft_format_plugin_d64,  &uft_format_plugin_d71,  &uft_format_plugin_d81,
@@ -75,6 +76,7 @@ static const uft_format_plugin_t *const PLUGINS[] = {
     &uft_format_plugin_po,   &uft_format_plugin_img,  &uft_format_plugin_td0,
     &uft_format_plugin_fdi,  &uft_format_plugin_ipf,  &uft_format_plugin_scp,
     &uft_format_plugin_stx,  &uft_format_plugin_2img, &uft_format_plugin_dsk_cpc,
+    &uft_format_plugin_adf,
 };
 #define PLUGIN_COUNT (sizeof(PLUGINS) / sizeof(PLUGINS[0]))
 

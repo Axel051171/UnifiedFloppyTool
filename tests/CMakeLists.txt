@@ -485,6 +485,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/formats/stx/uft_stx_plugin.c
             ${CMAKE_SOURCE_DIR}/src/formats/2img/uft_2img.c
             ${CMAKE_SOURCE_DIR}/src/formats/dsk_cpc/uft_dsk_cpc.c
+            ${CMAKE_SOURCE_DIR}/src/formats/adf/uft_adf_plugin.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_decoder_plugin_stub.c)
     elseif(${test_name} STREQUAL "test_plugin_probe_real")
         # MF-385: probes the SHIPPED plugins instead of a copy in the test
@@ -522,6 +523,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/formats/stx/uft_stx_plugin.c
             ${CMAKE_SOURCE_DIR}/src/formats/2img/uft_2img.c
             ${CMAKE_SOURCE_DIR}/src/formats/dsk_cpc/uft_dsk_cpc.c
+            ${CMAKE_SOURCE_DIR}/src/formats/adf/uft_adf_plugin.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_decoder_plugin_stub.c)
     elseif(${test_name} STREQUAL "test_protection_honest_failure")
         # MF-384: pins that unimplemented detectors fail instead of inventing
