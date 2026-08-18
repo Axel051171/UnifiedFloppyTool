@@ -423,6 +423,14 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/formats/g64/uft_g64.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+    elseif(${test_name} STREQUAL "test_plugin_probe_real")
+        # MF-385: probes the SHIPPED plugins instead of a copy in the test
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/d64/uft_d64_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/formats/d71/uft_d71.c
+            ${CMAKE_SOURCE_DIR}/src/formats/d81/uft_d81.c
+            ${CMAKE_SOURCE_DIR}/src/formats/g64/uft_g64.c
+            ${CMAKE_SOURCE_DIR}/src/formats/hfe/uft_hfe.c)
     elseif(${test_name} STREQUAL "test_protection_honest_failure")
         # MF-384: pins that unimplemented detectors fail instead of inventing
         target_sources(${test_name} PRIVATE

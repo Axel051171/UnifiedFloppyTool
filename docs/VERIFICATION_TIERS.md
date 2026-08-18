@@ -19,13 +19,13 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 | Plugin | Stufe | Tests | Spec-Quelle | Evidenz | Korpus-Images |
 |---|---|---|---|---|---|
 | `fdi` | **T1** | `test_corpus_fdi`, `test_fdi_spectrum` | SAMdisk ReadFDI (src/samdisk/fdi.cpp, in-tree) + WoS format FAQ | MF-359 | 1 |
-| `g64` | **T1** | `test_c64_metrics_corpus`, `test_c64_protection_real_corpus` | — | — | 3 |
+| `g64` | **T1** | `test_c64_metrics_corpus`, `test_c64_protection_real_corpus`, `test_plugin_probe_real` | — | — | 3 |
 | `adf` | **T1b** | `test_adf_write_roundtrip`, `test_corpus_adf` | — | — | 1 |
 | `atr` | **T1b** | `test_atr_512`, `test_atr_write_roundtrip`, `test_corpus_atr` | — | — | 1 |
-| `d64` | **T1b** | `test_corpus_d64`, `test_d64_42track`, `test_d64_errormap`, `test_d64_geometry_zones`, `test_d64_write_roundtrip` | VICE D64 sizes incl. error-block trailer + 40/42-track variants | MF-333, MF-350 | 1 |
-| `d71` | **T1b** | `test_corpus_d71`, `test_d71_write_roundtrip` | — | — | 1 |
-| `d81` | **T1b** | `test_corpus_d81`, `test_d81_write_roundtrip` | — | — | 1 |
-| `hfe` | **T1b** | `test_corpus_hfe`, `test_hfe_v3_weak` | HxC hfev3_loader.c opcode semantics (v3 decode + RAND weak bits); HxC HFE docs (v1) | MF-354, MF-362 | 1 |
+| `d64` | **T1b** | `test_corpus_d64`, `test_d64_42track`, `test_d64_errormap`, `test_d64_geometry_zones`, `test_d64_write_roundtrip`, `test_plugin_probe_real` | VICE D64 sizes incl. error-block trailer + 40/42-track variants | MF-333, MF-350 | 1 |
+| `d71` | **T1b** | `test_corpus_d71`, `test_d71_write_roundtrip`, `test_plugin_probe_real` | — | — | 1 |
+| `d81` | **T1b** | `test_corpus_d81`, `test_d81_write_roundtrip`, `test_plugin_probe_real` | — | — | 1 |
+| `hfe` | **T1b** | `test_corpus_hfe`, `test_hfe_v3_weak`, `test_plugin_probe_real` | HxC hfev3_loader.c opcode semantics (v3 decode + RAND weak bits); HxC HFE docs (v1) | MF-354, MF-362 | 1 |
 | `scp` | **T1b** | `test_corpus_scp`, `test_protection_probe`, `test_scp_footer_roundtrip`, `test_scp_weakbit_multirev`, `test_scp_writer_roundtrip` | cbmstuff SCP image spec (48-byte FPCS footer, bitcell track length) | MF-318, MF-351 | 1 |
 | `adf_ext` | **T2** | `test_adf_ext_plugin` | WinUAE disk.cpp read_header_ext2 (UAE-1ADF) | MF-352 | — |
 | `akai_s900` | **T2** | `test_akai_s900_plugin` | akaiutil (kmi9000) geometry: DD 5x1024/819200, HD 10x1024/1638400 | MF-348 | — |
