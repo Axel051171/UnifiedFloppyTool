@@ -120,7 +120,11 @@ typedef struct uft_sector_data_version {
     uint8_t  revolution;        /**< Which revolution this came from */
     
     float    confidence;        /**< Read confidence (0.0-1.0) */
-    uint8_t *weak_mask;         /**< Weak bit mask (NULL if none) */
+    /* Granularity (D) of four — see KNOWN_ISSUES PROT-12. This is a sector
+     * data version, so the mask follows the PER-BYTE convention of
+     * struct uft_sector.weak_mask: weak_mask[i] != 0 means byte i is weak.
+     * Currently UNPOPULATED — no code fills a uft_sector_data_version_t. */
+    uint8_t *weak_mask;         /**< 1 = weak, per BYTE; NULL if none */
 } uft_sector_data_version_t;
 
 /*===========================================================================

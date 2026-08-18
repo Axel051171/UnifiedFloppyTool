@@ -355,10 +355,21 @@ a2r_error_t a2r_get_raw_timings(const a2r_capture_t *capture,
  * @param captures Array of captures
  * @param count Number of captures
  * @param fused Output fused capture
- * @param weak_mask Output weak bit mask (caller allocates)
- * @param mask_size Size of weak mask buffer
+ * @param weak_mask Output weak bit mask, BIT-PACKED: bit n of the fused
+ *                  stream is `weak_mask[n / 8] & (1 << (n % 8))`. This is
+ *                  granularity (E) of four in the tree and the only PACKED
+ *                  one — see KNOWN_ISSUES PROT-12. Do not hand this buffer to
+ *                  a consumer that expects the per-byte
+ *                  struct uft_sector.weak_mask convention (uft_format_verify.c
+ *                  is one); it would skip the wrong bytes. Caller allocates.
+ * @param mask_size Size of the weak mask buffer IN BYTES
  * @return A2R_OK on success
  */
+/* NOTE (MF-408): this function has no caller anywhere in the tree. Unlike
+ * uft_protection_detect_weak_bits() — removed in MF-406 for the same reason —
+ * it is kept, because A2R multi-capture fusion exists nowhere else: removing
+ * it would delete a capability rather than a duplicate. It needs a caller, and
+ * that caller must convert the packing above to whatever it feeds. */
 a2r_error_t a2r_fuse_captures(const a2r_capture_t *captures,
                               uint8_t count,
                               a2r_capture_t *fused,

@@ -336,7 +336,19 @@ typedef struct uft_sector {
 
     /* Quality metrics */
     uint8_t*         confidence_map;  ///< Per-byte confidence 0-255 (optional)
-    uint8_t*         weak_mask;       ///< Per-byte weak bit flags (optional)
+    /**
+     * @brief Weak-bit flags, ONE ENTRY PER BYTE of the sector (MF-408)
+     *
+     * Granularity (B) of four — see KNOWN_ISSUES PROT-12.
+     *   weak_mask[i] == 0  -> byte i is solid, compare it
+     *   weak_mask[i] != 0  -> byte i is weak, skip it
+     *
+     * Written by: ATX (0xFF per weak byte), the multiread pipeline (1 per
+     * non-unanimous byte). Read by: uft_format_verify.c, which skips flagged
+     * bytes. The semantics are pinned by tests/test_marginal_data_preserved.c;
+     * a per-bit reading was tried here once and was a defect.
+     */
+    uint8_t*         weak_mask;
     float            confidence;      ///< Sector confidence 0.0-1.0
     int              read_count;      ///< Number of read attempts
     uint8_t          retry_count;     ///< Number of retries used

@@ -1631,7 +1631,7 @@ ein `uint16_t` (reale Rohspuren gehen über Byte 8191 hinaus), und ein volles
 Ausgabearray muss als abgeschnitten gemeldet werden statt still gekappt.
 `tests/test_protection_pipeline.c` entfällt mit der Funktion (Suite 194 → 193).
 
-### PROT-12 — Zwei weitere Weak-Bit-Produzenten ohne Konsument, plus drei Bedeutungen von `weak_mask` (2026-08-18, MF-406)
+### PROT-12 — Weak-Bit-Produzenten ohne Konsument, plus vier Granularitäten von `weak_mask` (2026-08-18, MF-406) → ✓ RESOLVED (MF-408, benannt und entschieden)
 
 **Architecture.** Aus derselben Bestandsaufnahme, nicht mit MF-406 behoben:
 
@@ -1655,11 +1655,58 @@ Damit trägt der Name `weak_mask` im Baum drei Bedeutungen: byteweise
 bit-gepackt (A2R, ohne Aufrufer). Das ist derselbe Befundtyp wie FMT-14, nur auf
 einem Feldnamen statt auf einer Funktion.
 
-*Nächster Schritt:* die drei Bedeutungen benennen und im jeweiligen Header
-festschreiben (wie bei FMT-14 geschehen), dann pro ungenutztem Produzenten
-entscheiden — HFE-Maske an einen Konsumenten hängen oder das Feld streichen;
-`a2r_fuse_captures()` entweder verdrahten (dann Semantik angleichen) oder
-entfernen. Vorher keinen siebten Weg anlegen.
+**Bestandsaufnahme (MF-408) — drei Korrekturen an der Fassung oben.**
+
+Die genaue Durchsicht ergab **fünf** `weak_mask`-Deklarationen in **vier**
+Granularitäten, nicht drei Bedeutungen:
+
+| # | Ort | Typ | Granularität | Zustand |
+|---|---|---|---|---|
+| A | `struct uft_track` (`uft_format_plugin.h`) | `bool *` | **pro Bit**, nicht gepackt | von HFE geschrieben, **kein Produktions-Leser** |
+| B | `struct uft_sector` (`uft_types.h`) | `uint8_t *` | **pro Byte** | ATX + Multiread schreiben, `uft_format_verify.c` liest |
+| C | `uft_bitstream_layer_t` (`uft_track.h`) | `uint8_t *` | war **unbenannt** | Layer von keinem Code befüllt |
+| D | `uft_sector_data_version_t` (`core/uft_sector.h`) | `uint8_t *` | war **unbenannt** | von keinem Code befüllt |
+| E | `a2r_fuse_captures()`-Parameter | `uint8_t *` | **bit-gepackt** | keine Aufrufer, Packung war undokumentiert |
+
+**Korrektur 1 — das Kollisionsrisiko war geringer als oben behauptet.** A und B
+liegen in *verschiedenen* Strukturen mit *verschiedenen Typen* (`bool *` gegen
+`uint8_t *`). Der Compiler unterscheidet sie also; eine Verwechslung hätte nicht
+still passieren können. Bestehen bleibt das Risiko bei E, weil dort ein
+`uint8_t *` mit gepackter Bedeutung an einen Konsumenten gehen könnte, der die
+Byte-Bedeutung erwartet.
+
+**Korrektur 2 — die Byte-Semantik ist bereits regressionsgesichert.**
+`tests/test_marginal_data_preserved.c` nagelt sie fest
+(`weak_mask[2] == 1` für das abweichende Byte, Nachbarn 0). Das war beim
+Schreiben von PROT-12 nicht bekannt.
+
+**Korrektur 3 — die HFE-Maske wird nicht „verworfen".** Sie wird am öffentlichen
+Track-Struct mitgeführt und ist am Produzenten getestet
+(`tests/test_hfe_v3_weak.c`); es fehlt nur ein Konsument. „Erfasst und
+weitergereicht, aber niemand handelt darauf" ist die richtige Beschreibung.
+
+**Umgesetzt: alle fünf Stellen benannt** (FMT-14-Behandlung). Jede Deklaration
+nennt jetzt Typ, Granularität, wer schreibt, wer liest und wo die Semantik
+durch einen Test festgehalten ist. C und D bekamen die Granularität
+*festgeschrieben*, obwohl sie unbefüllt sind — eine unbenannte Granularität auf
+einem leeren Feld ist genau das, was ein späterer Implementierer hätte raten
+müssen. C folgt A (Bitstream-Layer, indexiert Bits), D folgt B (Sektor-Ebene).
+
+**Entschieden pro ungenutztem Produzenten:**
+
+- **`a2r_fuse_captures()` bleibt.** Bewusst anders als bei PROT-10, wo
+  `uft_protection_detect_weak_bits()` entfernt wurde: dort war die Fähigkeit
+  anderswo abgedeckt, hier nicht — A2R-Multi-Capture-Fusion gibt es im Baum
+  kein zweites Mal. Sie zu entfernen hieße eine Fähigkeit zu löschen statt eines
+  Duplikats. Die Packung ist jetzt im Header exakt beschrieben, mit
+  ausdrücklicher Warnung, den Puffer nicht an einen Byte-Konsumenten zu geben.
+- **Die HFE-Maske bleibt.** Sie enthält reale Messwerte aus einem getesteten
+  Dekoder; sie zu streichen wäre Datenverlust.
+
+*Offen als Folgearbeit (keine offenen Fragen mehr, nur Arbeit):* `a2r_fuse_captures()`
+braucht einen Aufrufer, und die per-Bit-HFE-Maske einen Konsumenten — naheliegend
+derselbe Pfad, der Weak-Bits beim Schreiben reproduziert. Vorher keinen sechsten
+Weg anlegen.
 
 
 

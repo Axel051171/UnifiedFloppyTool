@@ -138,8 +138,17 @@ typedef struct uft_bitstream_layer {
     uint16_t*   timing;             /**< NULL if not available */
     size_t      timing_count;
     
-    /* Optional weak-bit mask */
-    uint8_t*    weak_mask;          /**< 1 = weak, NULL if none */
+    /* Optional weak-bit mask.
+     *
+     * Granularity (C) of four — see KNOWN_ISSUES PROT-12. This layer is
+     * currently UNPOPULATED: no code in the tree fills a
+     * uft_bitstream_layer_t. When it is implemented, the mask indexes `bits`
+     * and must therefore follow the PER-BIT convention of
+     * struct uft_track.weak_mask (one entry per bit, not bit-packed), NOT the
+     * per-byte convention of struct uft_sector.weak_mask. Written down now
+     * because an unstated granularity on an empty field is what a future
+     * implementer would have had to guess. */
+    uint8_t*    weak_mask;          /**< 1 = weak (per BIT), NULL if none */
     
     /* Index positions (bit offsets) */
     size_t*     index_positions;

@@ -316,7 +316,20 @@ struct uft_track {
 
     /* ═══ Quality Maps ═══ */
     uint8_t*            confidence;             ///< Per-bit confidence
-    bool*               weak_mask;              ///< Per-bit weak flags
+    /**
+     * @brief Weak-bit flags, ONE ENTRY PER BIT of the bitstream (MF-408)
+     *
+     * Granularity (A) of four in the tree — see KNOWN_ISSUES PROT-12. NOT
+     * bit-packed: `weak_mask[n]` is the flag for bit n, so the array is
+     * `raw_bits` entries long, not `raw_bits / 8`. The `bool*` type is what
+     * distinguishes it from the per-BYTE `uint8_t*` masks on sectors.
+     *
+     * Written by: the HFE v3 decoder (src/formats/hfe/uft_hfe.c:711, from
+     * hfe_v3_decode(); the producer is covered by tests/test_hfe_v3_weak.c).
+     * Read by: nothing in production yet. The information is captured and
+     * carried, but no consumer acts on it — see PROT-12.
+     */
+    bool*               weak_mask;
 
     /* ═══ Timing ═══ */
     uint32_t            track_time_ns;          ///< Total track time
