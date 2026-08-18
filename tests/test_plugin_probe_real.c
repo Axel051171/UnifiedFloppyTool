@@ -39,6 +39,10 @@ extern const uft_format_plugin_t uft_format_plugin_atx;
 extern const uft_format_plugin_t uft_format_plugin_cqm;
 extern const uft_format_plugin_t uft_format_plugin_jv1;
 extern const uft_format_plugin_t uft_format_plugin_xfd;
+extern const uft_format_plugin_t uft_format_plugin_edsk;
+extern const uft_format_plugin_t uft_format_plugin_msa;
+extern const uft_format_plugin_t uft_format_plugin_nib;
+extern const uft_format_plugin_t uft_format_plugin_woz;
 
 static int _pass = 0, _fail = 0, _last_fail = 0;
 #define RUN(name)  do { printf("  [TEST] %-40s ... ", #name); test_##name(); \
@@ -379,6 +383,98 @@ TEST(xfd_is_deliberately_permissive_outside_its_canonical_sizes) {
     ASSERT(!probe_sized(&uft_format_plugin_xfd, hdr, sizeof(hdr), 0, &conf));
 }
 
+/*---------------------------------------------------------------------------
+ * Wave 4 (MF-388) — edsk, msa, nib, woz
+ *   edsk  "EXTENDED CPC DSK" (95) or "MV - CPC" (90), >= 34 bytes
+ *   msa   BE16 magic 0x0E0F, >= 10 bytes            (uft_msa_plugin.c:14)
+ *   nib   exact size 232960, confidence rises with Apple GCR content
+ *                                                    (uft_nib.c:10)
+ *   woz   LE32 'WOZ1' 0x315A4F57 or 'WOZ2' 0x325A4F57 (uft_woz.h:47,48)
+ *--------------------------------------------------------------------------*/
+
+TEST(edsk_accepts_both_amstrad_headers) {
+    uint8_t hdr[64];
+    int conf = -1;
+
+    memset(hdr, 0, sizeof(hdr));
+    memcpy(hdr, "EXTENDED CPC DSK", 16);
+    ASSERT(probe_sized(&uft_format_plugin_edsk, hdr, sizeof(hdr), sizeof(hdr), &conf));
+    ASSERT(conf >= 95);
+
+    /* the plain (non-extended) CPC header is accepted with lower confidence */
+    memset(hdr, 0, sizeof(hdr));
+    memcpy(hdr, "MV - CPC", 8);
+    int plain = -1;
+    ASSERT(probe_sized(&uft_format_plugin_edsk, hdr, sizeof(hdr), sizeof(hdr), &plain));
+    ASSERT(plain < conf);
+
+    memset(hdr, 0, sizeof(hdr));
+    memcpy(hdr, "EXTENDED CPC DSC", 16);      /* one letter off */
+    ASSERT(!probe_sized(&uft_format_plugin_edsk, hdr, sizeof(hdr), sizeof(hdr), &conf));
+}
+
+TEST(msa_magic_is_big_endian) {
+    uint8_t hdr[32];
+    int conf = -1;
+
+    memset(hdr, 0, sizeof(hdr));
+    hdr[0] = 0x0E; hdr[1] = 0x0F;             /* BE 0x0E0F */
+    ASSERT(probe_sized(&uft_format_plugin_msa, hdr, sizeof(hdr), sizeof(hdr), &conf));
+    ASSERT(conf >= 95);
+
+    hdr[0] = 0x0F; hdr[1] = 0x0E;             /* swapped */
+    ASSERT(!probe_sized(&uft_format_plugin_msa, hdr, sizeof(hdr), sizeof(hdr), &conf));
+
+    hdr[0] = 0x0E; hdr[1] = 0x0F;
+    ASSERT(!probe_sized(&uft_format_plugin_msa, hdr, 4, 4, &conf));
+}
+
+TEST(nib_requires_exact_size_and_grades_gcr_content) {
+    const size_t NIB = 232960;
+    uint8_t *img = calloc(1, NIB);
+    ASSERT(img != NULL);
+    int empty_conf = -1, gcr_conf = -1;
+
+    /* size alone is enough to claim the format */
+    ASSERT(probe_sized(&uft_format_plugin_nib, img, NIB, NIB, &empty_conf));
+    ASSERT(empty_conf > 0);
+
+    /* a track that actually looks like Apple II GCR scores higher: sync runs
+     * of 0xFF plus D5 AA 96 address prologues */
+    memset(img, 0xFF, 4000);
+    for (int i = 0; i < 20; i++) {
+        size_t off = 4000 + (size_t)i * 100;
+        img[off] = 0xD5; img[off + 1] = 0xAA; img[off + 2] = 0x96;
+    }
+    ASSERT(probe_sized(&uft_format_plugin_nib, img, NIB, NIB, &gcr_conf));
+    ASSERT(gcr_conf > empty_conf);
+
+    /* one byte short is not a NIB */
+    ASSERT(!probe_sized(&uft_format_plugin_nib, img, NIB, NIB - 1, &empty_conf));
+
+    free(img);
+}
+
+TEST(woz_accepts_v1_and_v2_signatures) {
+    uint8_t hdr[32];
+    int conf = -1;
+
+    memset(hdr, 0, sizeof(hdr));
+    memcpy(hdr, "WOZ1", 4);
+    ASSERT(probe_sized(&uft_format_plugin_woz, hdr, sizeof(hdr), sizeof(hdr), &conf));
+    ASSERT(conf >= 95);
+
+    memcpy(hdr, "WOZ2", 4);
+    ASSERT(probe_sized(&uft_format_plugin_woz, hdr, sizeof(hdr), sizeof(hdr), &conf));
+
+    /* WOZ3 does not exist and must not be accepted preemptively */
+    memcpy(hdr, "WOZ3", 4);
+    ASSERT(!probe_sized(&uft_format_plugin_woz, hdr, sizeof(hdr), sizeof(hdr), &conf));
+
+    memcpy(hdr, "WOZ2", 4);
+    ASSERT(!probe_sized(&uft_format_plugin_woz, hdr, 4, 4, &conf));
+}
+
 int main(void) {
     printf("=== Real plugin probes, wave 1 (MF-385) ===\n");
     RUN(d64_accepts_all_eight_production_sizes);
@@ -397,6 +493,10 @@ int main(void) {
     RUN(cqm_requires_its_three_byte_marker);
     RUN(jv1_accepts_only_whole_track_multiples);
     RUN(xfd_is_deliberately_permissive_outside_its_canonical_sizes);
+    RUN(edsk_accepts_both_amstrad_headers);
+    RUN(msa_magic_is_big_endian);
+    RUN(nib_requires_exact_size_and_grades_gcr_content);
+    RUN(woz_accepts_v1_and_v2_signatures);
     printf("\nResults: %d passed, %d failed\n", _pass, _fail);
     return _fail == 0 ? 0 : 1;
 }

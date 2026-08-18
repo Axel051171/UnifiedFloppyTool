@@ -37,7 +37,7 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 | `lisa_twiggy` | **T2** | `test_lisa_twiggy_plugin` | bitsavers Lisa Twiggy ZCAV zone table (46 tracks/side, 22..15 spt) | MF-349 | — |
 | `nfd` | **T2** | `test_nfd_r0` | pc98.org nfdr0/nfdr1 + tomari/d88split nfd2mhlt.pl (r1 skip accounting spec-only, no real r1 corpus yet) | MF-358, MF-360 | — |
 | `stx` | **T2** | `test_stx_error_marks` | Pasti STX descriptor spec (atari.8bitchip.info/STXdesc) | MF-335 | — |
-| `woz` | **T2** | `test_diskcopy`, `test_moof_roundtrip`, `test_woz_roundtrip` | Applesauce WOZ reference v1/v2/2.1 (chunk layout, CRC32, WRIT logical refs) | MF-317, MF-357, MF-361 | — |
+| `woz` | **T2** | `test_diskcopy`, `test_moof_roundtrip`, `test_plugin_probe_real`, `test_woz_roundtrip` | Applesauce WOZ reference v1/v2/2.1 (chunk layout, CRC32, WRIT logical refs) | MF-317, MF-357, MF-361 | — |
 | `2img` | **T3** | — | — | — | — |
 | `86f` | **T3** | — | — | — | — |
 | `adf_arc` | **T3** | — | — | — | — |
@@ -59,7 +59,7 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 | `dms` | **T3** | `test_uft_dms` | — | — | — |
 | `do` | **T3** | `test_do_write_roundtrip` | — | — | — |
 | `edk` | **T3** | — | — | — | — |
-| `edsk` | **T3** | — | — | — | — |
+| `edsk` | **T3** | `test_plugin_probe_real` | — | — | — |
 | `fdi_pc98` | **T3** | — | — | — | — |
 | `fds` | **T3** | — | — | — | — |
 | `g71` | **T3** | `test_g71_read` | — | — | — |
@@ -75,11 +75,11 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 | `mfi` | **T3** | — | — | — | — |
 | `mgt` | **T3** | — | — | — | — |
 | `micropolis` | **T3** | — | — | — | — |
-| `msa` | **T3** | `test_msa` | — | — | — |
+| `msa` | **T3** | `test_msa`, `test_plugin_probe_real` | — | — | — |
 | `msx_disk` | **T3** | — | — | — | — |
 | `myz80` | **T3** | — | — | — | — |
 | `nanowasp` | **T3** | — | — | — | — |
-| `nib` | **T3** | — | — | — | — |
+| `nib` | **T3** | `test_plugin_probe_real` | — | — | — |
 | `northstar` | **T3** | — | — | — | — |
 | `opus` | **T3** | — | — | — | — |
 | `pdp` | **T3** | — | — | — | — |

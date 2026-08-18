@@ -438,7 +438,13 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/formats/atx/uft_atx.c
             ${CMAKE_SOURCE_DIR}/src/formats/cqm/uft_cqm.c
             ${CMAKE_SOURCE_DIR}/src/formats/jv1/uft_jv1.c
-            ${CMAKE_SOURCE_DIR}/src/formats/xfd/uft_xfd.c)
+            ${CMAKE_SOURCE_DIR}/src/formats/xfd/uft_xfd.c
+            ${CMAKE_SOURCE_DIR}/src/formats/amstrad/uft_edsk.c
+            ${CMAKE_SOURCE_DIR}/src/formats/amstrad/uft_edsk_parser.c
+            ${CMAKE_SOURCE_DIR}/src/formats/msa/uft_msa_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/formats/nib/uft_nib.c
+            ${CMAKE_SOURCE_DIR}/src/formats/apple/uft_woz_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/formats/apple/uft_woz.c)
     elseif(${test_name} STREQUAL "test_protection_honest_failure")
         # MF-384: pins that unimplemented detectors fail instead of inventing
         target_sources(${test_name} PRIVATE
