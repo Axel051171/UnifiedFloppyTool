@@ -1305,6 +1305,46 @@ Zwei Befunde aus derselben Untersuchung, beide **Architecture**:
    (siehe PROT-5) — und RapidLok bleibt unauslösbar, aber aus einem anderen
    Grund als gedacht (siehe PROT-6).
 
+### FMT-14 — Zwei Sync-Definitionen im Baum, sie weichen genau auf geschützten Disks ab (2026-08-18, MF-395)
+
+**Correctness.** Gefunden beim Umbau von `test_d64_writer` auf echten Code:
+UFT zählt Sync-Marken an zwei Stellen, mit **unterschiedlicher Definition**.
+
+| Ort | Bedingung | entspricht |
+|---|---|---|
+| `gcr_find_sync()` (`src/formats/c64/uft_gcr_ops.c:193`) | Byte `0xFF`, gefolgt von einem Byte mit gesetztem MSB | **9** Eins-Bits, **byte-ausgerichtet** |
+| `ufm_c64_metrics_from_gcr()` (`src/protection/ufm_c64_metrics.c`) | ≥ 10 aufeinanderfolgende Eins-Bits an beliebiger Position | **10** Eins-Bits, **bitweise** |
+
+Die zweite entspricht der 1541-Hardwarebedingung (der Schieberegister-Vergleich
+kennt keine Byte-Grenzen). GCR ist ein **5-Bit**-Code, Sync-Marken liegen daher
+nicht zwangsläufig byte-ausgerichtet.
+
+**Gemessen an realen Disks** (Werkzeug: beide Zähler über dieselben G64-Spuren):
+
+| Disk | Byte-Zähler | Bit-Zähler | Abweichung |
+|---|---|---|---|
+| VICE-formatiert, 35 Spuren | 1366 | 1366 | **0** |
+| Alien Syndrome (kommerziell, unprotected), 40 Spuren | 1536 | 1536 | **0** |
+| Bounty Bob (**geschützt**), 71 Slots | — | — | **auf 15+ Spuren, bis ±4** |
+
+Auf wohlgeformten Disks sind die beiden also austauschbar. Sie laufen genau
+dort auseinander, wo das Werkzeug seinen Zweck hat: auf kopiergeschützten
+Medien. Beide Richtungen kommen vor — der Byte-Zähler übersieht nicht
+ausgerichtete Sync-Läufe (bis +4 Spurdifferenz), der Bit-Zähler verwirft
+9-Bit-Läufe, die der Byte-Zähler mitzählt (−1).
+
+**Nicht „einfach vereinheitlichen":** welche Definition richtig ist, hängt vom
+Zweck ab. Für die Nachbildung des 1541-Verhaltens ist die bitweise korrekt;
+für Werkzeuge, die byte-ausgerichtete Strukturen suchen, kann die andere
+angemessen sein. Was nicht angeht, ist dass beide unbenannt nebeneinander
+existieren und je nach Aufrufer ein anderes Ergebnis liefern.
+
+*Nächster Schritt:* Entscheiden, welche Definition wo gilt, sie im Header
+benennen (z. B. `gcr_count_syncs_bytealigned()` vs. `_hardware()`), und die
+Aufrufer bewusst zuordnen. Bis dahin ist der Unterschied in
+`tests/test_d64_writer.c` festgenagelt — inklusive eines Falls, der die
+9-gegen-10-Bit-Schwelle direkt zeigt.
+
 ### FMT-13 — TD0-Plugin erkannte unkomprimierte Teledisk-Images nie (2026-08-18, MF-389) → ✓ RESOLVED
 
 **Correctness.** Gefunden beim Ersetzen der Replica-Tests durch echte

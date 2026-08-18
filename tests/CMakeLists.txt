@@ -415,6 +415,15 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/fdi/uft_fdi_plugin.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_RESTRICTED_DIR="${CMAKE_SOURCE_DIR}/tests/corpus")
+    elseif(${test_name} STREQUAL "test_d64_writer")
+        # MF-395: real GCR ops + cross-check of the two sync counters
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/c64/uft_gcr_ops.c
+            ${CMAKE_SOURCE_DIR}/src/protection/ufm_c64_metrics.c
+            ${CMAKE_SOURCE_DIR}/src/formats/g64/uft_g64.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_metadata.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_c64_metrics_corpus")
         # C64 GCR metrics vs a real VICE-produced G64 (MF-381, closes PROT-2)
         target_sources(${test_name} PRIVATE
