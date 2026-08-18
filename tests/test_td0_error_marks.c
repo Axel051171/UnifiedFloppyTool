@@ -70,7 +70,11 @@ static void put_sector(FILE *f, uint8_t sec_num, uint8_t flags, uint8_t tag) {
 static int build_td0(const char *path) {
     FILE *f = fopen(path, "wb");
     if (!f) return 0;
-    uint8_t header[12] = { 0x44, 0x54, 0, 0, 0x00 /*version<0x10 => no comment*/,
+    /* Signature 'T','D' = normal/RLE Teledisk. This fixture used to write
+     * {0x44,0x54} ("DT"), matching the byte-swapped magic constant the plugin
+     * carried until MF-389 — the test was green because both sides shared the
+     * same mistake. See docs/KNOWN_ISSUES.md FMT-13. */
+    uint8_t header[12] = { 0x54, 0x44, 0, 0, 0x00 /*version<0x10 => no comment*/,
                            0, 0, 0, 0, 1 /*sides*/, 0, 0 };
     fwrite(header, 1, 12, f);
     uint8_t trk_hdr[4] = { 3 /*num_sec*/, 0 /*cyl*/, 0 /*head*/, 0 /*crc*/ };

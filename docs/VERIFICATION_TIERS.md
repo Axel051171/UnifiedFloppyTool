@@ -57,7 +57,7 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 | `dim` | **T3** | — | — | — | — |
 | `dim_atari` | **T3** | — | — | — | — |
 | `dms` | **T3** | `test_uft_dms` | — | — | — |
-| `do` | **T3** | `test_do_write_roundtrip` | — | — | — |
+| `do` | **T3** | `test_do_write_roundtrip`, `test_plugin_probe_real` | — | — | — |
 | `edk` | **T3** | — | — | — | — |
 | `edsk` | **T3** | `test_plugin_probe_real` | — | — | — |
 | `fdi_pc98` | **T3** | — | — | — | — |
@@ -65,7 +65,7 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 | `g71` | **T3** | `test_g71_read` | — | — | — |
 | `hardsector` | **T3** | — | — | — | — |
 | `imd` | **T3** | `test_imd_error_marks`, `test_imd_write_roundtrip`, `test_plugin_probe_real` | — | — | — |
-| `img` | **T3** | `test_img_write_roundtrip` | — | — | — |
+| `img` | **T3** | `test_img_write_roundtrip`, `test_plugin_probe_real` | — | — | — |
 | `ipf` | **T3** | `test_ipf_air_accessors` | — | — | — |
 | `jv1` | **T3** | `test_plugin_probe_real` | — | — | — |
 | `jv3` | **T3** | — | — | — | — |
@@ -83,7 +83,7 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 | `northstar` | **T3** | — | — | — | — |
 | `opus` | **T3** | — | — | — | — |
 | `pdp` | **T3** | — | — | — | — |
-| `po` | **T3** | `test_po_write_roundtrip` | — | — | — |
+| `po` | **T3** | `test_plugin_probe_real`, `test_po_write_roundtrip` | — | — | — |
 | `posix` | **T3** | — | — | — | — |
 | `pri` | **T3** | — | — | — | — |
 | `pro` | **T3** | `test_atari`, `test_floppy_formats`, `test_st_plugin` | — | — | — |
@@ -98,7 +98,7 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 | `syn` | **T3** | — | — | — | — |
 | `t1k` | **T3** | — | — | — | — |
 | `tan` | **T3** | — | — | — | — |
-| `td0` | **T3** | `test_td0_error_marks` | — | — | — |
+| `td0` | **T3** | `test_plugin_probe_real`, `test_td0_error_marks` | — | — | — |
 | `trd` | **T3** | — | — | — | — |
 | `udi` | **T3** | — | — | — | — |
 | `v9t9` | **T3** | — | — | — | — |

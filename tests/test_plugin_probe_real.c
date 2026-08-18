@@ -43,6 +43,10 @@ extern const uft_format_plugin_t uft_format_plugin_edsk;
 extern const uft_format_plugin_t uft_format_plugin_msa;
 extern const uft_format_plugin_t uft_format_plugin_nib;
 extern const uft_format_plugin_t uft_format_plugin_woz;
+extern const uft_format_plugin_t uft_format_plugin_do;
+extern const uft_format_plugin_t uft_format_plugin_po;
+extern const uft_format_plugin_t uft_format_plugin_img;
+extern const uft_format_plugin_t uft_format_plugin_td0;
 
 static int _pass = 0, _fail = 0, _last_fail = 0;
 #define RUN(name)  do { printf("  [TEST] %-40s ... ", #name); test_##name(); \
@@ -475,6 +479,97 @@ TEST(woz_accepts_v1_and_v2_signatures) {
     ASSERT(!probe_sized(&uft_format_plugin_woz, hdr, 4, 4, &conf));
 }
 
+/*---------------------------------------------------------------------------
+ * Wave 5 (MF-389) — do, po, img, td0
+ *   do/po  size-only, BOTH exactly 143360        (uft_do.c:10, uft_po.c:10)
+ *   img    table of nine PC geometries + FAT12 boot-sector bonus
+ *                                                (uft_img.c known_geometries)
+ *   td0    LE16 magic 'TD' 0x5444 or 'td' 0x6474 (uft_td0.c:8,9)
+ *--------------------------------------------------------------------------*/
+
+TEST(do_and_po_are_ambiguous_by_design) {
+    /* Both Apple formats are 143360 bytes and neither probe looks at content,
+     * so BOTH claim the same file and only the confidence separates them.
+     * A replica test cannot notice this — it never sees the other plugin. */
+    uint8_t hdr[64];
+    memset(hdr, 0, sizeof(hdr));
+    int do_conf = -1, po_conf = -1;
+
+    ASSERT(probe_sized(&uft_format_plugin_do, hdr, sizeof(hdr), 143360, &do_conf));
+    ASSERT(probe_sized(&uft_format_plugin_po, hdr, sizeof(hdr), 143360, &po_conf));
+
+    /* Both accept. Both report modest confidence, and DO ranks above PO —
+     * that ordering is the only thing distinguishing them today. */
+    ASSERT(do_conf > 0 && po_conf > 0);
+    ASSERT(do_conf > po_conf);
+    ASSERT(do_conf < 80 && po_conf < 80);
+
+    ASSERT(!probe_sized(&uft_format_plugin_do, hdr, sizeof(hdr), 143359, &do_conf));
+    ASSERT(!probe_sized(&uft_format_plugin_po, hdr, sizeof(hdr), 143361, &po_conf));
+}
+
+TEST(img_accepts_the_nine_known_pc_geometries) {
+    static const size_t sizes[] = {
+        163840, 184320, 327680, 368640, 737280,
+        1228800, 1474560, 1720320, 2949120
+    };
+    uint8_t hdr[64];
+    memset(hdr, 0, sizeof(hdr));
+
+    for (size_t i = 0; i < sizeof(sizes) / sizeof(sizes[0]); i++) {
+        int conf = -1;
+        ASSERT(probe_sized(&uft_format_plugin_img, hdr, sizeof(hdr), sizes[i], &conf));
+        ASSERT(conf > 0);
+    }
+}
+
+TEST(img_confidence_rises_with_a_fat12_boot_sector) {
+    /* Size alone yields the base confidence; a plausible FAT12 boot sector
+     * must raise it. Needs a full 512-byte sector, not just a size argument. */
+    uint8_t sec[512];
+    memset(sec, 0, sizeof(sec));
+    int plain = -1;
+    ASSERT(probe_sized(&uft_format_plugin_img, sec, sizeof(sec), 1474560, &plain));
+
+    sec[0] = 0xEB; sec[1] = 0x3C; sec[2] = 0x90;      /* JMP short + NOP */
+    memcpy(sec + 3, "MSDOS5.0", 8);
+    sec[510] = 0x55; sec[511] = 0xAA;                 /* boot signature */
+    int booted = -1;
+    ASSERT(probe_sized(&uft_format_plugin_img, sec, sizeof(sec), 1474560, &booted));
+    ASSERT(booted >= plain);
+}
+
+TEST(td0_accepts_the_real_teledisk_signatures) {
+    /* REGRESSION GUARD for the byte-order bug this test found (FMT-13):
+     * the plugin's normal-magic constant was byte-swapped, so uncompressed
+     * TD0 images — the common case — were never recognised. The old replica
+     * test asserted the SAME wrong constant and even explained it in a
+     * comment, which is why it stayed green for as long as it existed. */
+    uint8_t hdr[32];
+    int conf = -1;
+
+    /* normal / RLE: file starts with the ASCII bytes 'T','D' */
+    memset(hdr, 0, sizeof(hdr));
+    hdr[0] = 'T'; hdr[1] = 'D';
+    ASSERT(probe_sized(&uft_format_plugin_td0, hdr, sizeof(hdr), sizeof(hdr), &conf));
+    ASSERT(conf >= 95);
+
+    /* advanced / Huffman: 't','d' */
+    hdr[0] = 't'; hdr[1] = 'd';
+    ASSERT(probe_sized(&uft_format_plugin_td0, hdr, sizeof(hdr), sizeof(hdr), &conf));
+
+    /* "DT" is the byte-swapped spelling and must NOT be accepted */
+    hdr[0] = 'D'; hdr[1] = 'T';
+    ASSERT(!probe_sized(&uft_format_plugin_td0, hdr, sizeof(hdr), sizeof(hdr), &conf));
+
+    /* mixed case is not a TD0 either */
+    hdr[0] = 'T'; hdr[1] = 'd';
+    ASSERT(!probe_sized(&uft_format_plugin_td0, hdr, sizeof(hdr), sizeof(hdr), &conf));
+
+    hdr[0] = 'T'; hdr[1] = 'D';
+    ASSERT(!probe_sized(&uft_format_plugin_td0, hdr, 1, 1, &conf));
+}
+
 int main(void) {
     printf("=== Real plugin probes, wave 1 (MF-385) ===\n");
     RUN(d64_accepts_all_eight_production_sizes);
@@ -497,6 +592,10 @@ int main(void) {
     RUN(msa_magic_is_big_endian);
     RUN(nib_requires_exact_size_and_grades_gcr_content);
     RUN(woz_accepts_v1_and_v2_signatures);
+    RUN(do_and_po_are_ambiguous_by_design);
+    RUN(img_accepts_the_nine_known_pc_geometries);
+    RUN(img_confidence_rises_with_a_fat12_boot_sector);
+    RUN(td0_accepts_the_real_teledisk_signatures);
     printf("\nResults: %d passed, %d failed\n", _pass, _fail);
     return _fail == 0 ? 0 : 1;
 }

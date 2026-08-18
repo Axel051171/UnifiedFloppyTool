@@ -1305,6 +1305,50 @@ Zwei Befunde aus derselben Untersuchung, beide **Architecture**:
    (siehe PROT-5) — und RapidLok bleibt unauslösbar, aber aus einem anderen
    Grund als gedacht (siehe PROT-6).
 
+### FMT-13 — TD0-Plugin erkannte unkomprimierte Teledisk-Images nie (2026-08-18, MF-389) → ✓ RESOLVED
+
+**Correctness.** Gefunden beim Ersetzen der Replica-Tests durch echte
+Plugin-Aufrufe — und ein Musterbeispiel dafür, warum diese Testklasse gefährlich
+ist.
+
+`src/formats/td0/uft_td0.c:8` definierte `TD0_MAGIC_NORMAL 0x5444`. Gelesen wird
+mit `uft_read_le16()` (`p[0] | p[1] << 8`), also passt diese Konstante auf eine
+Datei, die mit den Bytes **`D`,`T`** beginnt. Echte Teledisk-Images beginnen mit
+`T`,`D` (normal/RLE) bzw. `t`,`d` (advanced/Huffman) — `LE16` davon ist `0x4454`
+bzw. `0x6474`. Der Advanced-Wert war korrekt, der Normal-Wert vertauscht.
+
+**Folge:** Das registrierte TD0-Plugin lehnte **unkomprimierte** TD0-Images —
+den häufigsten Fall — in `probe` *und* `open` ab. Erkannt wurden nur
+Huffman-komprimierte Dateien.
+
+**Belegkette, drei unabhängige Quellen:**
+1. `src/samdisk/td0.cpp:10,180` — die im Repo mitgelieferte kanonische
+   SAMdisk-Implementierung vergleicht die Signatur als **Byte-String** `"TD"`
+   bzw. `"td"` per `memcmp`, ganz ohne Endianness.
+2. `src/formats/td0/uft_td0_parser_v2.c:37` — der **zweite** TD0-Leser im
+   selben Repo hatte `0x4454`, also korrekt; sein Testvektor `{0x54,0x44}`
+   (Zeile 859) ebenfalls.
+3. `include/uft/uft_formats_extended.h:120` — dort steht `TD0_MAGIC_NORMAL "TD"`
+   als String, ebenfalls korrekt.
+
+Zwei von drei Definitionen im Baum waren richtig; ausgerechnet die
+ausgelieferte war falsch.
+
+**Warum es niemand bemerkte:** `tests/test_td0_plugin.c` war ein Replica-Test.
+Er übernahm dieselbe falsche Konstante, **erklärte den Fehler sogar im
+Kommentar** („0x5444 = on-disk bytes {'D','T'}") und baute seine Testdatei aus
+genau dieser Konstante — er stimmte also zwangsläufig immer mit sich selbst
+überein. Ein Test, der die Fehlannahme mitkopiert, kann sie nie widerlegen.
+
+**Fix:** Konstante auf `0x4454` korrigiert, mit Herleitung im Code.
+Regressionsschutz in `tests/test_plugin_probe_real.c`
+(`td0_accepts_the_real_teledisk_signatures`): „TD" und „td" müssen akzeptiert,
+die vertauschte Schreibweise „DT" muss abgelehnt werden.
+
+**Nicht geprüft:** ob der Rest des TD0-Lesepfads (Header-Felder, RLE-Dekodierung)
+gegen ein reales Teledisk-Image stimmt. Dafür fehlt ein TD0 im Korpus; das
+Format bleibt T3.
+
 ### PROT-7 — Fünf Funktionen erfanden forensische Befunde → ✓ RESOLVED (2026-08-18, MF-384)
 
 **Correctness / Forensik-Integrität.** Ein systematischer Scan der Schutz- und

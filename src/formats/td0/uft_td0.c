@@ -5,7 +5,18 @@
 
 #include "uft/uft_format_common.h"
 
-#define TD0_MAGIC_NORMAL    0x5444
+/* Teledisk signature, read with uft_read_le16() (p[0] | p[1] << 8):
+ *   normal / RLE      on-disk bytes 'T','D'  ->  0x4454
+ *   advanced / Huffman on-disk bytes 't','d' ->  0x6474
+ *
+ * This constant used to be 0x5444, which is the byte-swapped value and
+ * therefore matches a file starting with "DT" — a thing that does not exist.
+ * Uncompressed TD0 images were consequently never recognised by this plugin.
+ * Authority: src/samdisk/td0.cpp:10 compares the signature as the byte string
+ * "TD" via memcmp (no endianness involved); the repo's own second TD0 reader
+ * (src/formats/td0/uft_td0_parser_v2.c:37) and include/uft/uft_formats_extended.h:120
+ * both already had it right. See docs/KNOWN_ISSUES.md FMT-13 (MF-389). */
+#define TD0_MAGIC_NORMAL    0x4454
 #define TD0_MAGIC_ADVANCED  0x6474
 #define TD0_HEADER_SIZE     12
 
