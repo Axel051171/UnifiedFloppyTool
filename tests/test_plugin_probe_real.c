@@ -51,6 +51,8 @@ extern const uft_format_plugin_t uft_format_plugin_fdi;
 extern const uft_format_plugin_t uft_format_plugin_ipf;
 extern const uft_format_plugin_t uft_format_plugin_scp;
 extern const uft_format_plugin_t uft_format_plugin_stx;
+extern const uft_format_plugin_t uft_format_plugin_2img;
+extern const uft_format_plugin_t uft_format_plugin_dsk_cpc;
 
 static int _pass = 0, _fail = 0, _last_fail = 0;
 #define RUN(name)  do { printf("  [TEST] %-40s ... ", #name); test_##name(); \
@@ -660,6 +662,61 @@ TEST(stx_requires_the_pasti_magic_including_its_nul) {
     ASSERT(!probe_sized(&uft_format_plugin_stx, hdr, 8, 8, &conf));
 }
 
+/*---------------------------------------------------------------------------
+ * Wave 7 (MF-391) — 2img, dsk_cpc
+ * The last two replicas whose format actually has a registered plugin. Note
+ * the symbol names differ from the old test file names: test_2mg_plugin.c and
+ * test_dsk_plugin.c named formats that exist in the registry as `2img` and
+ * `dsk_cpc`.
+ *   2img     LE32 magic "2IMG" 0x474D4932, header 64  (uft_2img.c:28,29)
+ *   dsk_cpc  "EXTENDED" or "MV - CPC", >= 8 bytes      (uft_dsk_cpc.c)
+ *--------------------------------------------------------------------------*/
+
+TEST(img2_requires_its_four_byte_magic) {
+    uint8_t hdr[128];
+    int conf = -1;
+
+    memset(hdr, 0, sizeof(hdr));
+    memcpy(hdr, "2IMG", 4);
+    ASSERT(probe_sized(&uft_format_plugin_2img, hdr, sizeof(hdr), sizeof(hdr), &conf));
+    ASSERT(conf >= 95);
+
+    memcpy(hdr, "GMI2", 4);                  /* reversed */
+    ASSERT(!probe_sized(&uft_format_plugin_2img, hdr, sizeof(hdr), sizeof(hdr), &conf));
+
+    /* the 64-byte header must be present */
+    memcpy(hdr, "2IMG", 4);
+    ASSERT(!probe_sized(&uft_format_plugin_2img, hdr, 32, 32, &conf));
+}
+
+TEST(dsk_cpc_and_edsk_both_claim_extended_dsk_files) {
+    /* Cross-plugin overlap, pinned because it is easy to break by accident:
+     * dsk_cpc matches on the first 8 bytes "EXTENDED", while edsk requires the
+     * full 16-byte "EXTENDED CPC DSK". Any extended Amstrad image is therefore
+     * claimed by BOTH plugins, and both report the same high confidence — so
+     * the winner depends on registry order, not on evidence. */
+    uint8_t hdr[64];
+    int dsk_conf = -1, edsk_conf = -1;
+
+    memset(hdr, 0, sizeof(hdr));
+    memcpy(hdr, "EXTENDED CPC DSK", 16);
+    ASSERT(probe_sized(&uft_format_plugin_dsk_cpc, hdr, sizeof(hdr), sizeof(hdr), &dsk_conf));
+    ASSERT(probe_sized(&uft_format_plugin_edsk, hdr, sizeof(hdr), sizeof(hdr), &edsk_conf));
+    ASSERT(dsk_conf == edsk_conf);
+
+    /* the plain CPC header is claimed by both as well */
+    memset(hdr, 0, sizeof(hdr));
+    memcpy(hdr, "MV - CPC", 8);
+    ASSERT(probe_sized(&uft_format_plugin_dsk_cpc, hdr, sizeof(hdr), sizeof(hdr), &dsk_conf));
+    ASSERT(probe_sized(&uft_format_plugin_edsk, hdr, sizeof(hdr), sizeof(hdr), &edsk_conf));
+
+    /* neither accepts something that only looks similar */
+    memset(hdr, 0, sizeof(hdr));
+    memcpy(hdr, "EXTENDEX", 8);
+    ASSERT(!probe_sized(&uft_format_plugin_dsk_cpc, hdr, sizeof(hdr), sizeof(hdr), &dsk_conf));
+    ASSERT(!probe_sized(&uft_format_plugin_edsk, hdr, sizeof(hdr), sizeof(hdr), &edsk_conf));
+}
+
 int main(void) {
     printf("=== Real plugin probes, wave 1 (MF-385) ===\n");
     RUN(d64_accepts_all_eight_production_sizes);
@@ -690,6 +747,8 @@ int main(void) {
     RUN(ipf_requires_the_caps_magic);
     RUN(scp_requires_magic_and_a_full_header);
     RUN(stx_requires_the_pasti_magic_including_its_nul);
+    RUN(img2_requires_its_four_byte_magic);
+    RUN(dsk_cpc_and_edsk_both_claim_extended_dsk_files);
     printf("\nResults: %d passed, %d failed\n", _pass, _fail);
     return _fail == 0 ? 0 : 1;
 }

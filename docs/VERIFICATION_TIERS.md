@@ -32,13 +32,13 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 | `d88` | **T2** | `test_d88_error_marks`, `test_plugin_probe_real` | pc98.org D88 + MAME d88_dsk (DDAM @+07, FDC status @+08) | MF-336 | — |
 | `dc42` | **T2** | `test_dc42_checksum_roundtrip`, `test_plugin_probe_real` | DiscFerret/Mini-vMac DC42 checksum (BE16 word add, ROR32 1) | MF-324 | — |
 | `dmk` | **T2** | `test_dmk_crc` | David Keil DMK spec (openMSX DMK-Format-Details) + WD177x CRC-CCITT pinned to check value 0x29B1 | MF-353 | — |
-| `dsk_cpc` | **T2** | `test_edsk_error_marks` | EDSK uPD765 ST1/ST2 status-bit semantics (bit5 CRC, ST2 bit6 deleted); MF-332 verified the dsk_cpc implementation (the separate 'edsk' plugin in amstrad/ remains untested) | MF-332 | — |
+| `dsk_cpc` | **T2** | `test_edsk_error_marks`, `test_plugin_probe_real` | EDSK uPD765 ST1/ST2 status-bit semantics (bit5 CRC, ST2 bit6 deleted); MF-332 verified the dsk_cpc implementation (the separate 'edsk' plugin in amstrad/ remains untested) | MF-332 | — |
 | `korg_dss1` | **T2** | `test_korg_dss1_plugin` | chickensys Korg DSS-1 geometry (80x2x5x1024) | MF-347 | — |
 | `lisa_twiggy` | **T2** | `test_lisa_twiggy_plugin` | bitsavers Lisa Twiggy ZCAV zone table (46 tracks/side, 22..15 spt) | MF-349 | — |
 | `nfd` | **T2** | `test_nfd_r0` | pc98.org nfdr0/nfdr1 + tomari/d88split nfd2mhlt.pl (r1 skip accounting spec-only, no real r1 corpus yet) | MF-358, MF-360 | — |
 | `stx` | **T2** | `test_plugin_probe_real`, `test_stx_error_marks` | Pasti STX descriptor spec (atari.8bitchip.info/STXdesc) | MF-335 | — |
 | `woz` | **T2** | `test_diskcopy`, `test_moof_roundtrip`, `test_plugin_probe_real`, `test_woz_roundtrip` | Applesauce WOZ reference v1/v2/2.1 (chunk layout, CRC32, WRIT logical refs) | MF-317, MF-357, MF-361 | — |
-| `2img` | **T3** | — | — | — | — |
+| `2img` | **T3** | `test_plugin_probe_real` | — | — | — |
 | `86f` | **T3** | — | — | — | — |
 | `adf_arc` | **T3** | — | — | — | — |
 | `adl` | **T3** | — | — | — | — |
