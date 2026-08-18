@@ -1576,7 +1576,7 @@ die eigene Rechnung löschen. Das macht den C64-Schutzpfad erstmals durchgehend
 nutzbar, entfernt untestbaren Duplikat-Code und löst nebenbei PROT-6, weil der
 GUI-Leser Halbspuren bereits adressieren kann.
 
-### PROT-5 — `ufm_cbm_check_vmax()` ist unter der belegten Sync-Definition degeneriert (2026-08-18, MF-382)
+### PROT-5 — `ufm_cbm_check_vmax()` ist unter der belegten Sync-Definition degeneriert (2026-08-18, MF-382) → ✓ RESOLVED (MF-402, Behauptung entfernt)
 
 **Correctness / Forensik-Integrität.** Aufgefallen beim Aktivieren von
 `has_custom_sync`: die V-MAX-Prüfung lautet
@@ -1609,9 +1609,51 @@ Indiz irgendwo im Codepfad. Der Ist-Zustand ist in
 das Werkzeug *behauptet*, und ist ausdrücklich **keine** Aussage darüber,
 welches Verfahren diese Disk tatsächlich verwendet.
 
-**Nächster Schritt:** reales V-MAX-geschütztes G64 mit dokumentierter Herkunft
-beschaffen, daraus eine V-MAX-spezifische Signatur ableiten, dann die Prüfung
-darauf stützen. Bis dahin ist das Label „V-MAX!" als unbelegt zu behandeln.
+**Aufgelöst (MF-402) — die unbelegte Behauptung entfernt, keine neue erfunden.**
+Der Kern des Befunds war nie „uns fehlt eine V-MAX-Regel", sondern „das Werkzeug
+behauptet etwas, das es nicht geprüft hat". Eine falsche Behauptung zu
+*entfernen* braucht keine neue Evidenz — nur eine *positive* V-MAX-Aussage
+täte das. Beides wurde getrennt:
+
+Der Klassifikator `ufm_c64_scheme_detect.c` **misst Struktur und benannte daraus
+Produkte**. Die Taxonomie trennt beides bereits sauber: `VMAX`, `RAPIDLOK`,
+`COPYLOCK`, … sind Produktnamen, `CUSTOM_SYNC`, `HALF_TRACK`, `LONG_TRACK`,
+`BAD_GCR`, `DUPLICATE_ID` sind Messungen. Dieser Pfad vergibt jetzt nur noch
+Letztere.
+
+- `ufm_cbm_check_vmax()` **gelöscht** — tautologisch, ohne jede
+  Unterscheidungskraft; der Treffer war ein Duplikat des CUSTOM_SYNC-Treffers
+  mit erfundenem Namen und einer Beschreibung, die eine nie erfolgte
+  Sektorzahl-Prüfung behauptete.
+- `ufm_cbm_check_rapidlok()` → **`ufm_cbm_has_half_track_beyond_35()`**. Die
+  Bedingung (`has_half_track && track >= 36`) ist eine sinnvolle *strukturelle*
+  Beobachtung, trägt aber keine RapidLok-Identifikation. Sie fließt jetzt in die
+  Beschreibung des ohnehin erzeugten HALF_TRACK-Treffers ein — eine Beobachtung,
+  ein Treffer, statt zwei.
+- Primärschema: `custom_syncs > 3 && half_tracks > 0` → `HALF_TRACK`,
+  `custom_syncs > 5` → `CUSTOM_SYNC` statt RapidLok bzw. V-MAX.
+
+**Wichtig für PROT-8:** der RapidLok-Zweig war bisher nur deshalb harmlos, weil
+`has_half_track` über den Plugin-Pfad nie gesetzt wurde (PROT-6). Sobald PROT-8
+den GUI-Pfad an den echten Extraktor hängt, hätte er gefeuert — die Korrektur
+musste also *vor* PROT-8 kommen, sonst hätte dessen Fix eine neue Falschaussage
+eingeführt.
+
+**Offen bleibt die positive Aussage.** Ein V-MAX-spezifischer Detektor existiert
+im Baum: `c64_detect_vmax_version()`
+(`src/protection/c64/c64_protection_analysis.c`) sieht sich den Loader auf
+Track 20 auf die Marker `$49`/`$5A`/`$EE` an. Er ist bewusst **nicht** an diesen
+Pfad verdrahtet — das wäre eine Integration, die ohne reale V-MAX-Disk nicht
+validierbar ist, und Raten hat PROT-3 erzeugt. Der nächste Schritt bleibt: reales
+V-MAX-geschütztes G64 mit dokumentierter Herkunft beschaffen, `c64_detect_vmax_version()`
+dagegen halten (er ist selbst unverifiziert, Tier 3), erst dann verdrahten.
+
+Regressionsschutz: `structural_analysis_emits_no_product_names` und
+`half_track_beyond_35_is_reported_structurally` (`test_c64_metrics_corpus`)
+sowie `real_protected_disk_is_described_not_named_PROT5` auf der realen
+Bounty-Bob-Disk. Die beiden Tests, die den Defekt festnagelten, sind zu
+Regressionswächtern umgebaut — genau die „bewusste Entscheidung", für die sie
+angelegt wurden.
 
 2. **`test_protection_pipeline` prüft ausschließlich `mock_detect_weak_bits()`.**
    Unverändert gültig: Der Test beweist die Pipeline-Verdrahtung, nicht einen

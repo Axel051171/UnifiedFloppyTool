@@ -134,13 +134,15 @@ TEST(protected_disk_produces_protection_hits) {
     ASSERT(custom == 15);                   /* one per pinned track */
 }
 
-TEST(vmax_label_on_this_disk_is_unsupported_PROT5) {
-    /* Pins the DEFECT on real data (docs/KNOWN_ISSUES.md PROT-5): with 15
-     * custom-sync tracks the classifier takes the `custom_syncs > 5` branch and
-     * names the scheme "V-MAX!" — derived purely from generic structure, with
-     * no V-MAX-specific evidence anywhere in the code path. The assertion
-     * documents what the tool currently claims; it is not a statement about
-     * what protection this disk actually uses. */
+TEST(real_protected_disk_is_described_not_named_PROT5) {
+    /* Regression guard on real data for the PROT-5 fix (MF-402). With 15
+     * custom-sync tracks the classifier used to take the `custom_syncs > 5`
+     * branch and name the scheme "V-MAX!", derived purely from generic
+     * structure with no V-MAX-specific evidence in the code path.
+     *
+     * It must now report the structure it measured. This says nothing about
+     * which protection this disk actually uses — establishing that needs a
+     * V-MAX-specific detector run against a disk of documented provenance. */
     ufm_c64_track_metrics_t m[42];
     memset(m, 0, sizeof(m));
     int n = collect("c64pp_bountybob.g64", m, 42);
@@ -149,7 +151,13 @@ TEST(vmax_label_on_this_disk_is_unsupported_PROT5) {
     ufm_c64_prot_hit_t hits[128];
     ufm_c64_prot_report_t report;
     ASSERT(ufm_c64_prot_analyze(m, n, hits, 128, &report));
-    ASSERT(report.primary_scheme == UFM_PROT_VMAX);   /* <- unsupported */
+
+    ASSERT(report.primary_scheme == UFM_PROT_CUSTOM_SYNC);
+    ASSERT(report.hits_written > 0);
+    for (uint32_t i = 0; i < report.hits_written; i++) {
+        ASSERT(hits[i].type != UFM_PROT_VMAX);
+        ASSERT(hits[i].type != UFM_PROT_RAPIDLOK);
+    }
 }
 
 TEST(real_commercial_disk_without_protection_stays_silent) {
@@ -187,7 +195,7 @@ int main(void) {
     RUN(protected_disk_flags_exactly_the_pinned_tracks);
     RUN(protected_disk_track1_is_short_and_headerless);
     RUN(protected_disk_produces_protection_hits);
-    RUN(vmax_label_on_this_disk_is_unsupported_PROT5);
+    RUN(real_protected_disk_is_described_not_named_PROT5);
     RUN(real_commercial_disk_without_protection_stays_silent);
     printf("\nResults: %d passed, %d failed\n", _pass, _fail);
     return _fail == 0 ? 0 : 1;

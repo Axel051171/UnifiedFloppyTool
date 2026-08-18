@@ -291,19 +291,16 @@ TEST(killer_track_is_not_reported_as_custom_sync) {
     ASSERT(!m.has_custom_sync);
 }
 
-/* Pins a DEFECT, not desired behaviour (docs/KNOWN_ISSUES.md PROT-5).
+/* Regression guard for the FIX of PROT-5 (MF-402).
  *
- * Activating has_custom_sync also activates ufm_cbm_check_vmax(), and under
- * the grounded definition that check is degenerate: has_custom_sync implies
- * sector_count == 0, so its "sector_count is non-standard" half is always
- * true and it reduces to ufm_cbm_check_custom_sync(). It therefore attaches
- * the specific name "V-MAX!" at 85% confidence to any header-less track,
- * without a single V-MAX-specific piece of evidence.
+ * This test used to pin the defect: a header-less track made the classifier
+ * emit "V-MAX!" at 85 % confidence, because ufm_cbm_check_vmax() reduced to
+ * ufm_cbm_check_custom_sync() — has_custom_sync implies sector_count == 0, so
+ * its "sector count is non-standard" half was tautologically true.
  *
- * The claim is left in place rather than silently rewritten — inventing a
- * tighter V-MAX rule without a real V-MAX disk would repeat PROT-3. This test
- * makes the defect visible and turns any future fix into a deliberate act. */
-TEST(vmax_check_is_degenerate_documented_defect) {
+ * The check is gone. What must hold now is the principle behind the fix: this
+ * module reports the structure it measured, and never a product name. */
+TEST(structural_analysis_emits_no_product_names) {
     ufm_c64_track_metrics_t m;
     memset(&m, 0, sizeof(m));
     m.track = 20;
@@ -312,20 +309,49 @@ TEST(vmax_check_is_degenerate_documented_defect) {
     m.track_length_ratio = 1.0f;
 
     ASSERT(ufm_cbm_check_custom_sync(&m));
-    /* identical outcome — no discriminating power whatsoever */
-    ASSERT(ufm_cbm_check_vmax(&m) == ufm_cbm_check_custom_sync(&m));
 
     ufm_c64_prot_hit_t hits[16];
     ufm_c64_prot_report_t report;
     ASSERT(ufm_c64_prot_analyze(&m, 1, hits, 16, &report));
 
-    bool saw_custom = false, saw_vmax = false;
+    bool saw_custom = false;
     for (uint32_t i = 0; i < report.hits_written; i++) {
         if (hits[i].type == UFM_PROT_CUSTOM_SYNC) saw_custom = true;
-        if (hits[i].type == UFM_PROT_VMAX) saw_vmax = true;
+        /* No named scheme may be derived from generic structure. */
+        ASSERT(hits[i].type != UFM_PROT_VMAX);
+        ASSERT(hits[i].type != UFM_PROT_RAPIDLOK);
+        ASSERT(hits[i].type != UFM_PROT_COPYLOCK);
+        ASSERT(hits[i].type != UFM_PROT_SPEEDLOCK);
+        ASSERT(hits[i].type != UFM_PROT_VORPAL);
     }
     ASSERT(saw_custom);
-    ASSERT(saw_vmax);   /* <- unsupported claim, see PROT-5 */
+    /* A single custom-sync track is not enough to call the dominant structure
+     * (the chain needs > 5), so the honest answer is UNKNOWN — a hit was found
+     * but nothing characterises the disk yet. It used to be "V-MAX!". */
+    ASSERT(report.primary_scheme == UFM_PROT_UNKNOWN);
+}
+
+/* A half-track beyond track 35 is a sharper structural fact, but still not an
+ * identification. It used to produce a second hit labelled "RapidLok". */
+TEST(half_track_beyond_35_is_reported_structurally) {
+    ufm_c64_track_metrics_t m;
+    memset(&m, 0, sizeof(m));
+    m.track = 38;
+    m.has_half_track = true;
+    m.track_length_ratio = 1.0f;
+
+    ASSERT(ufm_cbm_has_half_track_beyond_35(&m));
+
+    ufm_c64_prot_hit_t hits[16];
+    ufm_c64_prot_report_t report;
+    ASSERT(ufm_c64_prot_analyze(&m, 1, hits, 16, &report));
+
+    int half_hits = 0;
+    for (uint32_t i = 0; i < report.hits_written; i++) {
+        if (hits[i].type == UFM_PROT_HALF_TRACK) half_hits++;
+        ASSERT(hits[i].type != UFM_PROT_RAPIDLOK);
+    }
+    ASSERT(half_hits == 1);   /* one observation, one hit */
 }
 
 int main(void) {
@@ -340,7 +366,8 @@ int main(void) {
     RUN(standard_tracks_never_report_custom_sync);
     RUN(headerless_real_gcr_reports_custom_sync);
     RUN(killer_track_is_not_reported_as_custom_sync);
-    RUN(vmax_check_is_degenerate_documented_defect);
+    RUN(structural_analysis_emits_no_product_names);
+    RUN(half_track_beyond_35_is_reported_structurally);
     printf("\nResults: %d passed, %d failed\n", _pass, _fail);
     return _fail == 0 ? 0 : 1;
 }

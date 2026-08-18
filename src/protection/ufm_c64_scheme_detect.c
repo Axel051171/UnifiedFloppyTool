@@ -42,17 +42,29 @@ const char *ufm_c64_prot_type_name(ufm_c64_prot_type_t type)
  * Method Checks
  * ═══════════════════════════════════════════════════════════════════════════ */
 
-bool ufm_cbm_check_vmax(const ufm_c64_track_metrics_t *m)
-{
-    /* V-MAX! uses custom sync patterns and non-standard sector counts */
-    return m->has_custom_sync && m->sector_count != 21 &&
-           m->sector_count != 19 && m->sector_count != 18 &&
-           m->sector_count != 17;
-}
+/* MF-402: ufm_cbm_check_vmax() removed — see KNOWN_ISSUES PROT-5.
+ *
+ * It read:
+ *     has_custom_sync && sector_count != 21 && != 19 && != 18 && != 17
+ * but has_custom_sync implies sector_count == 0 by definition, so every
+ * comparison was tautologically true. The predicate was therefore identical to
+ * ufm_cbm_check_custom_sync() — it discriminated nothing, yet attached the
+ * product name "V-MAX!" at 85 % confidence to any headerless track, with a
+ * description that claimed a sector-count check had happened.
+ *
+ * A V-MAX claim needs V-MAX-specific evidence. That path exists elsewhere:
+ * c64_detect_vmax_version() (src/protection/c64/c64_protection_analysis.c)
+ * inspects the track-20 loader for the $49 / $5A / $EE markers. The two are
+ * deliberately NOT wired together here: doing so is an integration that no
+ * real V-MAX disk has yet been available to validate, and guessing is what
+ * produced PROT-3. This module reports what it measured. */
 
-bool ufm_cbm_check_rapidlok(const ufm_c64_track_metrics_t *m)
+bool ufm_cbm_has_half_track_beyond_35(const ufm_c64_track_metrics_t *m)
 {
-    /* RapidLok uses half-tracks and custom sync on track 36+ */
+    /* A half-track outside the standard 35-track area. This is a structural
+     * observation, not the identification of a scheme — several protections
+     * place data there. Formerly ufm_cbm_check_rapidlok(), whose name asserted
+     * a RapidLok identification that the condition cannot support. */
     return m->has_half_track && m->track >= 36;
 }
 
@@ -114,11 +126,16 @@ bool ufm_c64_prot_analyze(const ufm_c64_track_metrics_t *metrics,
                     m->track, 80, "Track exceeds standard length");
         }
 
-        /* Half-track detection */
+        /* Half-track detection. One hit per track; the description
+         * distinguishes the standard area from beyond track 35, which is a
+         * sharper structural fact but still not a named scheme. */
         if (ufm_cbm_check_half_track(m)) {
             half_tracks++;
             add_hit(hits_out, max_hits, &hit_count, UFM_PROT_HALF_TRACK,
-                    m->track, 85, "Data on half-track position");
+                    m->track, 85,
+                    ufm_cbm_has_half_track_beyond_35(m)
+                        ? "Data on half-track beyond the standard 35-track area"
+                        : "Data on half-track position");
         }
 
         /* Custom sync */
@@ -151,26 +168,23 @@ bool ufm_c64_prot_analyze(const ufm_c64_track_metrics_t *metrics,
                     m->track, dup_conf, "Duplicate sector header IDs");
         }
 
-        /* V-MAX! */
-        if (ufm_cbm_check_vmax(m)) {
-            add_hit(hits_out, max_hits, &hit_count, UFM_PROT_VMAX,
-                    m->track, 85, "V-MAX! signature: custom sync + non-standard sectors");
-        }
-
-        /* RapidLok */
-        if (ufm_cbm_check_rapidlok(m)) {
-            add_hit(hits_out, max_hits, &hit_count, UFM_PROT_RAPIDLOK,
-                    m->track, 80, "RapidLok signature: half-track >= 36");
-        }
+        /* No product-name hits are emitted here (MF-402). The two that used
+         * to be — "V-MAX!" and "RapidLok" — were both derived from structural
+         * facts this loop has already reported, and neither condition contains
+         * a single scheme-specific indicator. */
     }
 
     report->hits_written = (uint32_t)hit_count;
 
     /* Classify primary scheme */
+    /* The primary scheme names the dominant STRUCTURE, never a product. The
+     * previous chain mapped `custom_syncs > 3 && half_tracks > 0` to RapidLok
+     * and `custom_syncs > 5` to V-MAX, i.e. it turned two counters into a
+     * vendor name with nothing scheme-specific behind it. */
     if (custom_syncs > 3 && half_tracks > 0)
-        report->primary_scheme = UFM_PROT_RAPIDLOK;
+        report->primary_scheme = UFM_PROT_HALF_TRACK;
     else if (custom_syncs > 5)
-        report->primary_scheme = UFM_PROT_VMAX;
+        report->primary_scheme = UFM_PROT_CUSTOM_SYNC;
     else if (long_tracks > 3)
         report->primary_scheme = UFM_PROT_LONG_TRACK;
     else if (dup_id_tracks > 0)
