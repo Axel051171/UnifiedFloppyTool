@@ -540,28 +540,44 @@ size_t uft_protection_detect_weak_bits(
     const uint8_t *track_data_rev1,
     const uint8_t *track_data_rev2,
     size_t track_size,
-    uint16_t *weak_positions,
+    uint32_t *weak_positions,
     size_t max_positions
 ) {
     if (!track_data_rev1 || !track_data_rev2 || !weak_positions) {
         return 0;
     }
-    
+
+    /* MF-400: two forensic-integrity defects were fixed here.
+     *
+     * 1. Positions were stored as uint16_t, which can address bits only up to
+     *    byte 8191. Raw tracks are routinely larger (Amiga DD ~12798 bytes,
+     *    PC HD ~12500), so a weak bit past that point was not lost, it was
+     *    reported at (position mod 65536) — a bit near the track start that
+     *    was never weak. Verified: byte 8192 came back as position 0.
+     *
+     * 2. The scan stopped once the caller's array was full and returned the
+     *    capacity, so 128 weak bits with room for 8 reported "8". The caller
+     *    could not distinguish a complete list from a truncated one. The
+     *    count is now always the true total; only the stored prefix is
+     *    bounded by max_positions. */
     size_t found = 0;
-    
-    for (size_t i = 0; i < track_size && found < max_positions; i++) {
+
+    for (size_t i = 0; i < track_size; i++) {
         uint8_t diff = track_data_rev1[i] ^ track_data_rev2[i];
-        
+
         if (diff != 0) {
             /* Found bit difference - potential weak bit */
-            for (int bit = 7; bit >= 0 && found < max_positions; bit--) {
+            for (int bit = 7; bit >= 0; bit--) {
                 if (diff & (1 << bit)) {
-                    weak_positions[found++] = (uint16_t)(i * 8 + (7 - bit));
+                    if (found < max_positions) {
+                        weak_positions[found] = (uint32_t)(i * 8u + (size_t)(7 - bit));
+                    }
+                    found++;
                 }
             }
         }
     }
-    
+
     return found;
 }
 

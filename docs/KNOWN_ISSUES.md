@@ -1492,6 +1492,48 @@ ungleichem Können**, von denen der Plugin-Pfad der schwächere ist. Das ist
 zugleich ein Single-Source-Problem und sollte zusammen mit PROT-8 gelöst
 werden.
 
+### PROT-9 — Weak-Bit-Positionen wurden jenseits Byte 8191 falsch gemeldet (2026-08-18, MF-400) — BEHOBEN
+
+**Correctness / Forensik-Integrität.** `uft_protection_detect_weak_bits()`
+schrieb die Bitposition in ein `uint16_t`. Damit sind nur Positionen bis 65535
+darstellbar, also Bits bis Byte 8191. Reale Rohspuren sind größer — Amiga DD
+~12798 Bytes, PC HD ~12500 —, sodass jedes Weak-Bit in der zweiten Spurhälfte
+mit `(Position mod 65536)` gemeldet wurde.
+
+Das ist kein Datenverlust, sondern eine Falschangabe: empirisch reproduziert
+lieferte ein Weak-Bit bei Byte 8192 die Position 0 und eines bei Byte 8600 die
+Position 3271 — beides Bits nahe dem Spuranfang, die nie schwach waren. Ein
+Writer, der diese Liste zum Reproduzieren des Schutzes benutzt, hätte die
+falschen Bits randomisiert.
+
+Zweiter Defekt derselben Funktion: die Suche brach ab, sobald das Zielarray
+voll war, und gab dessen Kapazität zurück. 128 Weak-Bits mit Platz für 8
+meldeten „8". Der Aufrufer konnte eine vollständige Liste nicht von einer
+abgeschnittenen unterscheiden — genau die stille Kürzung, die
+`DESIGN_PRINCIPLES.md` untersagt.
+
+*Behoben:* Positionen sind jetzt `uint32_t`; der Rückgabewert ist immer die
+wahre Gesamtzahl, nur der gespeicherte Präfix ist durch `max_positions`
+begrenzt. Regressionsschutz: `tests/test_protection_pipeline.c`. Der
+Signaturwechsel im öffentlichen Header war unkritisch — die Funktion hatte
+repo-weit keinen Aufrufer (siehe PROT-10).
+
+### PROT-10 — `uft_protection_detect_weak_bits()` hat keinen Aufrufer (2026-08-18, MF-400)
+
+**Architecture.** Die Funktion ist implementiert, seit MF-400 getestet und
+korrekt, wird aber von keiner Stelle im Repository aufgerufen — weder aus der
+Recovery-Pipeline noch aus der GUI noch aus einem Format-Plugin. Der
+Multiread-Pfad (`include/uft/recovery/uft_multiread_pipeline.h:99`) führt ein
+eigenes `weak_mask`-Feld, füllt es aber nicht über diese Funktion.
+
+Damit ist die Weak-Bit-Erfassung als Bibliotheks-API vorhanden, im Produkt aber
+nicht wirksam. Das ist dieselbe Klasse wie PROT-8: eine getestete
+Implementierung, die niemand benutzt.
+
+*Nächster Schritt:* entscheiden, ob der Multiread-Pfad sie aufruft (dann
+verdrahten) oder ob die Weak-Bit-Erkennung dort eigenständig bleibt (dann eine
+der beiden entfernen). Vorher keine dritte Implementierung anlegen.
+
 ### PROT-8 — Zwei konkurrierende C64-Metrik-Extraktoren, der getestete wird nicht benutzt (2026-08-18, MF-384)
 
 **Architecture.** Seit MF-381 existiert `ufm_c64_metrics_from_gcr()`: in C,
