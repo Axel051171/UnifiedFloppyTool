@@ -430,7 +430,11 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/formats/d71/uft_d71.c
             ${CMAKE_SOURCE_DIR}/src/formats/d81/uft_d81.c
             ${CMAKE_SOURCE_DIR}/src/formats/g64/uft_g64.c
-            ${CMAKE_SOURCE_DIR}/src/formats/hfe/uft_hfe.c)
+            ${CMAKE_SOURCE_DIR}/src/formats/hfe/uft_hfe.c
+            ${CMAKE_SOURCE_DIR}/src/formats/atr/uft_atr.c
+            ${CMAKE_SOURCE_DIR}/src/formats/d88/uft_d88.c
+            ${CMAKE_SOURCE_DIR}/src/formats/dc42/uft_dc42.c
+            ${CMAKE_SOURCE_DIR}/src/formats/imd/uft_imd_plugin.c)
     elseif(${test_name} STREQUAL "test_protection_honest_failure")
         # MF-384: pins that unimplemented detectors fail instead of inventing
         target_sources(${test_name} PRIVATE

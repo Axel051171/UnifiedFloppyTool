@@ -21,7 +21,7 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 | `fdi` | **T1** | `test_corpus_fdi`, `test_fdi_spectrum` | SAMdisk ReadFDI (src/samdisk/fdi.cpp, in-tree) + WoS format FAQ | MF-359 | 1 |
 | `g64` | **T1** | `test_c64_metrics_corpus`, `test_c64_protection_real_corpus`, `test_plugin_probe_real` | — | — | 3 |
 | `adf` | **T1b** | `test_adf_write_roundtrip`, `test_corpus_adf` | — | — | 1 |
-| `atr` | **T1b** | `test_atr_512`, `test_atr_write_roundtrip`, `test_corpus_atr` | — | — | 1 |
+| `atr` | **T1b** | `test_atr_512`, `test_atr_write_roundtrip`, `test_corpus_atr`, `test_plugin_probe_real` | — | — | 1 |
 | `d64` | **T1b** | `test_corpus_d64`, `test_d64_42track`, `test_d64_errormap`, `test_d64_geometry_zones`, `test_d64_write_roundtrip`, `test_plugin_probe_real` | VICE D64 sizes incl. error-block trailer + 40/42-track variants | MF-333, MF-350 | 1 |
 | `d71` | **T1b** | `test_corpus_d71`, `test_d71_write_roundtrip`, `test_plugin_probe_real` | — | — | 1 |
 | `d81` | **T1b** | `test_corpus_d81`, `test_d81_write_roundtrip`, `test_plugin_probe_real` | — | — | 1 |
@@ -29,8 +29,8 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 | `scp` | **T1b** | `test_corpus_scp`, `test_protection_probe`, `test_scp_footer_roundtrip`, `test_scp_weakbit_multirev`, `test_scp_writer_roundtrip` | cbmstuff SCP image spec (48-byte FPCS footer, bitcell track length) | MF-318, MF-351 | 1 |
 | `adf_ext` | **T2** | `test_adf_ext_plugin` | WinUAE disk.cpp read_header_ext2 (UAE-1ADF) | MF-352 | — |
 | `akai_s900` | **T2** | `test_akai_s900_plugin` | akaiutil (kmi9000) geometry: DD 5x1024/819200, HD 10x1024/1638400 | MF-348 | — |
-| `d88` | **T2** | `test_d88_error_marks` | pc98.org D88 + MAME d88_dsk (DDAM @+07, FDC status @+08) | MF-336 | — |
-| `dc42` | **T2** | `test_dc42_checksum_roundtrip` | DiscFerret/Mini-vMac DC42 checksum (BE16 word add, ROR32 1) | MF-324 | — |
+| `d88` | **T2** | `test_d88_error_marks`, `test_plugin_probe_real` | pc98.org D88 + MAME d88_dsk (DDAM @+07, FDC status @+08) | MF-336 | — |
+| `dc42` | **T2** | `test_dc42_checksum_roundtrip`, `test_plugin_probe_real` | DiscFerret/Mini-vMac DC42 checksum (BE16 word add, ROR32 1) | MF-324 | — |
 | `dmk` | **T2** | `test_dmk_crc` | David Keil DMK spec (openMSX DMK-Format-Details) + WD177x CRC-CCITT pinned to check value 0x29B1 | MF-353 | — |
 | `dsk_cpc` | **T2** | `test_edsk_error_marks` | EDSK uPD765 ST1/ST2 status-bit semantics (bit5 CRC, ST2 bit6 deleted); MF-332 verified the dsk_cpc implementation (the separate 'edsk' plugin in amstrad/ remains untested) | MF-332 | — |
 | `korg_dss1` | **T2** | `test_korg_dss1_plugin` | chickensys Korg DSS-1 geometry (80x2x5x1024) | MF-347 | — |
@@ -64,7 +64,7 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 | `fds` | **T3** | — | — | — | — |
 | `g71` | **T3** | `test_g71_read` | — | — | — |
 | `hardsector` | **T3** | — | — | — | — |
-| `imd` | **T3** | `test_imd_error_marks`, `test_imd_write_roundtrip` | — | — | — |
+| `imd` | **T3** | `test_imd_error_marks`, `test_imd_write_roundtrip`, `test_plugin_probe_real` | — | — | — |
 | `img` | **T3** | `test_img_write_roundtrip` | — | — | — |
 | `ipf` | **T3** | `test_ipf_air_accessors` | — | — | — |
 | `jv1` | **T3** | — | — | — | — |

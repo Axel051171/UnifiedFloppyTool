@@ -31,6 +31,10 @@ extern const uft_format_plugin_t uft_format_plugin_d71;
 extern const uft_format_plugin_t uft_format_plugin_d81;
 extern const uft_format_plugin_t uft_format_plugin_g64;
 extern const uft_format_plugin_t uft_format_plugin_hfe;
+extern const uft_format_plugin_t uft_format_plugin_atr;
+extern const uft_format_plugin_t uft_format_plugin_d88;
+extern const uft_format_plugin_t uft_format_plugin_dc42;
+extern const uft_format_plugin_t uft_format_plugin_imd;
 
 static int _pass = 0, _fail = 0, _last_fail = 0;
 #define RUN(name)  do { printf("  [TEST] %-40s ... ", #name); test_##name(); \
@@ -177,6 +181,103 @@ TEST(plugins_do_not_claim_each_others_headers) {
                         sizeof(hfe_hdr), &conf));
 }
 
+/*---------------------------------------------------------------------------
+ * Wave 2 (MF-386) — atr, d88, dc42, imd
+ * Constants again read from the plugin sources:
+ *   atr   LE16 magic 0x0296, header 16 bytes        (uft_atr.c:8,9)
+ *   d88   header 0x2B0, media byte at 0x1B in {0x00,0x10,0x20},
+ *         declared size at 0x1C must fit the file  (uft_d88.c:8,13)
+ *   dc42  BE16 magic 0x0100 at offset 82, header 84,
+ *         name length <= 63, data size != 0        (uft_dc42.c:31,32,34)
+ *   imd   ASCII signature "IMD "                    (uft_imd_plugin.c:14)
+ *--------------------------------------------------------------------------*/
+
+TEST(atr_requires_its_little_endian_magic) {
+    uint8_t hdr[32];
+    int conf = -1;
+
+    memset(hdr, 0, sizeof(hdr));
+    hdr[0] = 0x96; hdr[1] = 0x02;            /* LE 0x0296 */
+    ASSERT(probe_sized(&uft_format_plugin_atr, hdr, sizeof(hdr), sizeof(hdr), &conf));
+    ASSERT(conf >= 95);
+
+    /* byte-swapped magic must NOT be accepted — a real byte-order regression
+     * of exactly this kind was found in the ATX probe (MASTER_PLAN M1). */
+    memset(hdr, 0, sizeof(hdr));
+    hdr[0] = 0x02; hdr[1] = 0x96;
+    ASSERT(!probe_sized(&uft_format_plugin_atr, hdr, sizeof(hdr), sizeof(hdr), &conf));
+
+    /* header shorter than 16 bytes is rejected regardless of magic */
+    memset(hdr, 0, sizeof(hdr));
+    hdr[0] = 0x96; hdr[1] = 0x02;
+    ASSERT(!probe_sized(&uft_format_plugin_atr, hdr, 8, 8, &conf));
+}
+
+TEST(d88_checks_media_byte_and_declared_size) {
+    const size_t N = 0x400;
+    uint8_t *hdr = calloc(1, N);
+    ASSERT(hdr != NULL);
+    int conf = -1;
+
+    /* declared size 0x300 fits into a claimed file size of 0x400 */
+    hdr[0x1B] = 0x00;                        /* media: 2D */
+    hdr[0x1C] = 0x00; hdr[0x1D] = 0x03;      /* LE32 0x00000300 */
+    ASSERT(probe_sized(&uft_format_plugin_d88, hdr, N, N, &conf));
+
+    /* an unknown media byte is not a D88 */
+    hdr[0x1B] = 0x77;
+    ASSERT(!probe_sized(&uft_format_plugin_d88, hdr, N, N, &conf));
+
+    /* a declared size larger than the file is not a D88 either */
+    hdr[0x1B] = 0x20;
+    hdr[0x1C] = 0x00; hdr[0x1D] = 0x00; hdr[0x1E] = 0x10;  /* 0x00100000 */
+    ASSERT(!probe_sized(&uft_format_plugin_d88, hdr, N, N, &conf));
+
+    free(hdr);
+}
+
+TEST(dc42_requires_big_endian_magic_at_offset_82) {
+    uint8_t hdr[128];
+    int conf = -1;
+
+    memset(hdr, 0, sizeof(hdr));
+    hdr[82] = 0x01; hdr[83] = 0x00;          /* BE 0x0100 */
+    hdr[0]  = 10;                            /* sane name length */
+    hdr[0x43] = 0x10;                        /* non-zero BE32 data size */
+    ASSERT(probe_sized(&uft_format_plugin_dc42, hdr, sizeof(hdr), sizeof(hdr), &conf));
+
+    /* swapped magic must be rejected */
+    hdr[82] = 0x00; hdr[83] = 0x01;
+    ASSERT(!probe_sized(&uft_format_plugin_dc42, hdr, sizeof(hdr), sizeof(hdr), &conf));
+
+    /* implausible name length is rejected even with correct magic */
+    hdr[82] = 0x01; hdr[83] = 0x00;
+    hdr[0] = 200;
+    ASSERT(!probe_sized(&uft_format_plugin_dc42, hdr, sizeof(hdr), sizeof(hdr), &conf));
+
+    /* zero data size is rejected */
+    hdr[0] = 10;
+    hdr[0x43] = 0x00;
+    ASSERT(!probe_sized(&uft_format_plugin_dc42, hdr, sizeof(hdr), sizeof(hdr), &conf));
+}
+
+TEST(imd_requires_its_ascii_signature) {
+    uint8_t hdr[32];
+    int conf = -1;
+
+    memset(hdr, 0, sizeof(hdr));
+    memcpy(hdr, "IMD ", 4);
+    ASSERT(probe_sized(&uft_format_plugin_imd, hdr, sizeof(hdr), sizeof(hdr), &conf));
+    ASSERT(conf >= 95);
+
+    /* the trailing space is part of the signature */
+    memcpy(hdr, "IMD1", 4);
+    ASSERT(!probe_sized(&uft_format_plugin_imd, hdr, sizeof(hdr), sizeof(hdr), &conf));
+
+    memcpy(hdr, "IMD ", 4);
+    ASSERT(!probe_sized(&uft_format_plugin_imd, hdr, 3, 3, &conf));
+}
+
 int main(void) {
     printf("=== Real plugin probes, wave 1 (MF-385) ===\n");
     RUN(d64_accepts_all_eight_production_sizes);
@@ -187,6 +288,10 @@ int main(void) {
     RUN(g64_requires_its_signature);
     RUN(hfe_accepts_v1_and_v3_signatures);
     RUN(plugins_do_not_claim_each_others_headers);
+    RUN(atr_requires_its_little_endian_magic);
+    RUN(d88_checks_media_byte_and_declared_size);
+    RUN(dc42_requires_big_endian_magic_at_offset_82);
+    RUN(imd_requires_its_ascii_signature);
     printf("\nResults: %d passed, %d failed\n", _pass, _fail);
     return _fail == 0 ? 0 : 1;
 }
