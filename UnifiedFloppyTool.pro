@@ -88,13 +88,6 @@ win32-g++:QMAKE_CXXFLAGS += -Wall -Wextra \
 win32 {
     LIBS += -lshlwapi -lshell32 -ladvapi32 -lws2_32 -lsetupapi
     DEFINES += _CRT_SECURE_NO_WARNINGS
-    # POSIX shims for hactool (getopt.h, strings.h) — only with switch_support
-    switch_support {
-        INCLUDEPATH += $$PWD/src/switch/hactool/compat
-        # getopt.c was removed in an earlier cleanup; the header-only
-        # pieces under compat/ (getopt.h, strings.h) are sufficient for
-        # MinGW via inline definitions.
-    }
 }
 
 # MSVC specific - POSIX string functions not available
@@ -1559,97 +1552,29 @@ HEADERS += \
     include/uft/uft_ir_format.h
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# Switch/MIG Dumper Module (Nintendo Switch Cartridge Support)
-# Optional — enable with: qmake CONFIG+=switch_support
+# Switch/MIG Dumper Module — REMOVED (MF-271)
+#
+# Decision of 2026-05-25, docs/SCOPE_DECISION_NON_FLOPPY.md Option C, scheduled
+# for after the v4.1.5 tag and executed here. 788 files / 10 MB, of which
+# vendored hactool + mbedtls: an off-scope feature that no CI job ever built,
+# whose third-party provenance named ISC and Apache-2.0 without carrying the
+# ISC text or a pinned upstream commit.
+#
+# The code is reachable via the tag archive/pre-mf271-switch-removal. Bringing
+# it back needs the pinned commit, the licence text, and a CI job that builds
+# the flag.
 # ═══════════════════════════════════════════════════════════════════════════════
-
-switch_support {
-    DEFINES += UFT_HAS_SWITCH
-    message("Switch/MIG Dumper Module ENABLED")
-
-    INCLUDEPATH += \
-        $$PWD/src/switch \
-        $$PWD/src/switch/hactool \
-        $$PWD/src/switch/hactool/mbedtls/include
-
-    SOURCES += \
-        src/switch/uft_mig_dumper.c \
-        src/switch/uft_xci_parser_stubs.c \
-        src/gui/uft_switch_panel.cpp
-
-    HEADERS += \
-        src/switch/uft_switch_types.h \
-        src/switch/uft_mig_dumper.h \
-        src/switch/uft_xci_parser.h \
-        src/gui/uft_switch_panel.h
-
-    # hactool sources (ISC License - third party)
-    SOURCES += \
-        src/switch/hactool/xci.c \
-        src/switch/hactool/nca.c \
-        src/switch/hactool/pfs0.c \
-        src/switch/hactool/hfs0.c \
-        src/switch/hactool/romfs.c \
-        src/switch/hactool/nca0_romfs.c \
-        src/switch/hactool/save.c \
-        src/switch/hactool/npdm.c \
-        src/switch/hactool/kip.c \
-        src/switch/hactool/nso.c \
-        src/switch/hactool/nax0.c \
-        src/switch/hactool/packages.c \
-        src/switch/hactool/pki.c \
-        src/switch/hactool/extkeys.c \
-        src/switch/hactool/hactool_aes.c \
-        src/switch/hactool/sha.c \
-        src/switch/hactool/hactool_rsa.c \
-        src/switch/hactool/utils.c \
-        src/switch/hactool/filepath.c \
-        src/switch/hactool/lz4.c \
-        src/switch/hactool/bktr.c \
-        src/switch/hactool/ConvertUTF.c \
-        src/switch/hactool/cJSON.c
-
-    # mbedtls (Apache 2.0 License - vendor copy, see src/switch/hactool/mbedtls/VENDOR.md)
-    # Note: hactool wrappers renamed to hactool_aes.c/hactool_rsa.c to avoid collision
-    MBEDTLS_PATH = $$PWD/src/switch/hactool/mbedtls/library
-    MBEDTLS_SOURCES = $$files($$MBEDTLS_PATH/*.c)
-    SOURCES += $$MBEDTLS_SOURCES
-} else {
-    message("Switch/MIG Dumper Module DISABLED (use CONFIG+=switch_support to enable)")
-}
 
 # NOTE: Warning suppressions already set globally (lines 59-67, 413)
 # -Wno-unused-parameter, -Wno-sign-compare are still required (860+ source files)
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# Cart7/Cart8 Multi-System Cartridge Reader (NES, SNES, N64, MD, GBA, GB, 3DS)
-# Optional — enable with: qmake CONFIG+=cart7_support
+# Cart7/Cart8 Cartridge Reader — REMOVED (MF-271)
+#
+# Same decision as the Switch module above: docs/SCOPE_DECISION_NON_FLOPPY.md
+# Option C, 2026-05-25. NES/SNES/N64/MD/GBA/GB/3DS cartridges are not floppy
+# disks. Reachable via the tag archive/pre-mf271-switch-removal.
 # ═══════════════════════════════════════════════════════════════════════════════
-
-cart7_support {
-    DEFINES += UFT_HAS_CART7
-    message("Cart7/Cart8 Cartridge Reader Module ENABLED")
-
-    INCLUDEPATH += \
-        $$PWD/src/cart7 \
-        $$PWD/include/uft/cart7
-
-    SOURCES += \
-        src/cart7/uft_cart7.c \
-        src/cart7/uft_cart7_3ds.c \
-        src/cart7/uft_cart7_hal.c \
-        src/gui/uft_cart7_panel.cpp
-
-    HEADERS += \
-        include/uft/cart7/cart7_protocol.h \
-        include/uft/cart7/cart7_3ds_protocol.h \
-        include/uft/cart7/uft_cart7.h \
-        include/uft/cart7/uft_cart7_3ds.h \
-        src/cart7/uft_cart7_hal.h \
-        src/gui/uft_cart7_panel.h
-} else {
-    message("Cart7/Cart8 Cartridge Reader Module DISABLED (use CONFIG+=cart7_support to enable)")
-}
 
 # ============================================================================
 # Legacy FloppyDevice Format Modules

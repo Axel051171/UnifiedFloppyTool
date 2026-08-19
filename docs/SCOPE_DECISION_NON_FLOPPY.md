@@ -1,3 +1,40 @@
+# SCOPE.switch_decision — AUSGEFÜHRT 2026-08-19 (MF-271)
+
+Die Entscheidung unten stand seit 2026-05-25 und war für „nach dem
+v4.1.5-Tag" terminiert. Ausgeführt am 2026-08-19.
+
+**Entfernt:** `src/switch/` (788 Dateien, 10 MB, darin vendored hactool +
+mbedtls), `src/cart7/`, `include/uft/cart7/`,
+`src/gui/uft_switch_panel.{h,cpp}`, `src/gui/uft_cart7_panel.{h,cpp}`,
+92 Zeilen aus der `.pro` (switch_support-Block, win32-POSIX-Shims,
+cart7_support-Block).
+
+**Backup:** Tag `archive/pre-mf271-switch-removal`, gepusht.
+
+**Was den Ausschlag gab, über die Ursprungsbegründung hinaus:** die
+Herkunft war *benannt*, aber nicht *belegt*. `src/switch/hactool/VENDORED.md`
+nannte Upstream und Lizenzen (hactool ISC, mbedtls Apache-2.0), doch im Baum
+lag kein ISC-Lizenztext, kein gepinnter Upstream-Commit („exakter Stand
+unbekannt"), und keine CI-Job baute je `CONFIG+=switch_support`. Für ein
+Projekt, das forensische Nachvollziehbarkeit beansprucht, ist eine
+Lizenzangabe ohne Beleg dieselbe Kategorie wie ein Parser gegen eine
+erfundene Spezifikation — nur auf der Rechteebene. Ein eigenes Repository
+hätte die Frage verschoben, nicht beantwortet.
+
+**Korrektur an der Liste unten:** die beiden dort genannten Tests gehören
+**nicht** dazu und bleiben im Baum.
+
+| Datei | was sie wirklich testet |
+|---|---|
+| `tests/test_switch.c` | das **Format-Plugin** Switch XCI/NSP (`src/formats/nintendo/uft_switch.c`) — ein Disk-Image-Parser aus den 88, kein Cartridge-Dumper |
+| `tests/test_provider_switch.cpp` | das **Umschalten zwischen Hardware-Providern** (`ProviderV2Variant`, MF-221) — HAL-Abdeckung, nichts mit Nintendo zu tun |
+
+Beide waren beim ersten Durchgang mitgelöscht und sind zurückgeholt; die
+Suite steht wieder bei 201/201. Die Liste unten hatte auf dem Wort „switch"
+zusammengefasst, was nur den Namen teilt.
+
+---
+
 # SCOPE.switch_decision — RESOLVED 2026-05-25 → Option C (Delete)
 
 **Decision:** **Option C — Delete** `src/switch/` + `src/cart7/` +
