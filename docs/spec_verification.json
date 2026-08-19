@@ -40,6 +40,10 @@
     "spec_source": "HxC hfev3_loader.c opcode semantics (v3 decode + RAND weak bits); HxC HFE docs (v1)",
     "evidence": "MF-354, MF-362"
   },
+  "imd": {
+    "spec_source": "MAME src/lib/formats/imd_dsk.cpp (sector numbering map unconditional: \"offs += 5 + sector_num\"; cylinder map if header[2] & 0x80; head map if & 0x40) cross-checked against hharte/libimd src/libimd.h (IMD_HFLAG_CMAP_PRES 0x80, IMD_HFLAG_HMAP_PRES 0x40, LIBIMD_MAX_SECTORS_PER_TRACK 256)",
+    "evidence": "MF-430"
+  },
   "korg_dss1": {
     "spec_source": "chickensys Korg DSS-1 geometry (80x2x5x1024)",
     "evidence": "MF-347"

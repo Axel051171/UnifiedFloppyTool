@@ -221,44 +221,51 @@ uft_error_t uft_imd_adapter_parse_track_header(
     track->sector_size = uft_imd_sector_bytes(track->sector_size_code);
     
     size_t pos = 5;
-    
-    /* Optional sector map */
-    if (track->head & UFT_IMD_HAS_SECTOR_MAP) {
-        if (pos + track->sector_count > size) {
-            return UFT_E_TRUNCATED;
-        }
-        memcpy(track->sector_map, data + pos, track->sector_count);
-        pos += track->sector_count;
-    } else {
-        /* Default 1-based sector numbering */
-        for (int i = 0.0f; i < track->sector_count; i++) {
-            track->sector_map[i] = i + 1;
-        }
+    const size_t nsec = track->sector_count;
+
+    /* The destination arrays hold UFT_IMD_MAX_SECTORS entries and sector_count
+     * comes straight from the file, so the bound is asserted before any copy —
+     * MF-430. With the arrays now sized 256 this cannot trigger for a
+     * well-formed byte count, which is the point: the guard states the
+     * invariant instead of relying on it. */
+    if (nsec > UFT_IMD_MAX_SECTORS) {
+        return UFT_E_FORMAT_INVALID;
     }
-    
-    /* Optional cylinder map */
+
+    /* Sector numbering map — MANDATORY, not flagged. MAME skips "5 +
+     * sector_num" unconditionally, libimd reads smap before testing any flag.
+     * This used to sit behind a non-existent 0x80 "has sector map" bit, so for
+     * an ordinary track (head byte 0x00) the map was never consumed and every
+     * following offset in the track record was short by sector_count bytes. */
+    if (pos + nsec > size) {
+        return UFT_E_TRUNCATED;
+    }
+    memcpy(track->sector_map, data + pos, nsec);
+    pos += nsec;
+
+    /* Optional sector cylinder map (head bit 0x80) */
     if (track->head & UFT_IMD_HAS_CYLINDER_MAP) {
-        if (pos + track->sector_count > size) {
+        if (pos + nsec > size) {
             return UFT_E_TRUNCATED;
         }
-        memcpy(track->cylinder_map, data + pos, track->sector_count);
-        pos += track->sector_count;
+        memcpy(track->cylinder_map, data + pos, nsec);
+        pos += nsec;
     } else {
-        for (int i = 0.0f; i < track->sector_count; i++) {
+        for (size_t i = 0; i < nsec; i++) {
             track->cylinder_map[i] = track->cylinder;
         }
     }
-    
-    /* Optional head map */
+
+    /* Optional sector head map (head bit 0x40) */
     if (track->head & UFT_IMD_HAS_HEAD_MAP) {
-        if (pos + track->sector_count > size) {
+        if (pos + nsec > size) {
             return UFT_E_TRUNCATED;
         }
-        memcpy(track->head_map, data + pos, track->sector_count);
-        pos += track->sector_count;
+        memcpy(track->head_map, data + pos, nsec);
+        pos += nsec;
     } else {
         uint8_t h = track->head & UFT_IMD_HEAD_MASK;
-        for (int i = 0.0f; i < track->sector_count; i++) {
+        for (size_t i = 0; i < nsec; i++) {
             track->head_map[i] = h;
         }
     }

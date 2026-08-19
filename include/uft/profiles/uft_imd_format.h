@@ -143,8 +143,10 @@ typedef enum {
  * Bit 7 (0x80) = Sector head map present
  */
 #define UFT_IMD_HEAD_MASK           0x0F    /**< Head number mask */
-#define UFT_IMD_HEAD_CYL_MAP        0x40    /**< Sector cylinder map present */
-#define UFT_IMD_HEAD_HEAD_MAP       0x80    /**< Sector head map present */
+/* MF-430: waren vertauscht. MAME imd_dsk.cpp und hharte/libimd stimmen
+ * ueberein: 0x80 = Zylinder-Map, 0x40 = Kopf-Map. */
+#define UFT_IMD_HEAD_CYL_MAP        0x80    /**< Sector cylinder map present */
+#define UFT_IMD_HEAD_HEAD_MAP       0x40    /**< Sector head map present */
 
 /* ═══════════════════════════════════════════════════════════════════════════
  * IMD Structures

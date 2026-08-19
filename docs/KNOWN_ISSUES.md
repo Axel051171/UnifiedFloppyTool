@@ -1448,6 +1448,62 @@ ohne eine einzige Information hinzuzufügen — `compat_entries == NULL` und ein
 Liste aus lauter UNTESTED sagen dasselbe. Eine Matrix gehört dorthin, wo jemand
 etwas geprüft hat oder wo die relevanten Ziele nicht offensichtlich sind.
 
+### FMT-15 — Der IMD-Adapter las das Spurformat falsch und lief dabei über den Puffer (2026-08-19, MF-430) → ✓ BEHOBEN
+
+**Correctness + Memory-Safety.** Gefunden beim Abarbeiten der ARCH-2-Gruppe
+`format-constant`: `UFT_IMD_HEAD_MASK` stand mit 0x01 und 0x0F im Baum, was
+zur Frage führte, was das Kopf-Byte eines IMD-Spurkopfes eigentlich bedeutet.
+
+Zwei unabhängige Implementierungen sagen dasselbe:
+
+| Quelle | Aussage |
+|---|---|
+| MAME `src/lib/formats/imd_dsk.cpp` | `offs += 5 + sector_num` — die Sektor-Nummernkarte wird **bedingungslos** übersprungen; danach `if(header[2] & 0x80)` Zylinderkarte, `if(header[2] & 0x40)` Kopfkarte |
+| hharte/libimd `src/libimd.h` + `.c` | `IMD_HFLAG_CMAP_PRES 0x80`, `IMD_HFLAG_HMAP_PRES 0x40`; `smap` wird gelesen, **bevor** ein Flag geprüft wird |
+
+`include/uft/formats/uft_imd_adapter.h` hatte es dreifach falsch:
+
+```c
+#define UFT_IMD_HAS_SECTOR_MAP  0x80   /* Sector numbering map follows */
+#define UFT_IMD_HAS_CYLINDER_MAP 0x40  /* Cylinder map follows */
+#define UFT_IMD_HAS_HEAD_MAP    0x20   /* Head map follows */
+```
+
+0x80 ist die *Zylinder*karte, 0x40 die *Kopf*karte, und ein 0x20-Flag gibt es
+nicht — die Nummernkarte ist **Pflicht**, kein Optionsfeld. Für eine gewöhnliche
+Spur (Kopf-Byte 0x00) wurde sie deshalb nie verbraucht, und jeder folgende
+Offset im Spursatz war um `sector_count` Bytes zu klein.
+
+Dazu ein **dateigesteuerter Pufferüberlauf**: `sector_count` ist ein Byte aus
+der Datei, also bis 255; die Zielarrays fassten 64 Einträge, und vor dem
+`memcpy` wurde nur die *Quell*grenze geprüft, nie die Zielgrenze. Drei
+`memcpy` pro Spur, bis zu 191 Bytes über das Ende.
+
+**Reichweite — und warum das kein P0 ist:** der registrierte Plugin-Pfad
+(`src/formats/imd/uft_imd_plugin.c`) macht es richtig; er liest die
+Nummernkarte bedingungslos und testet 0x80/0x40. Der Adapter hat **null
+Aufrufer** außerhalb seiner selbst, wird aber mitkompiliert. Es war also
+totliegender Code mit einem falschen Parser darin, nicht der Lesepfad des
+Werkzeugs. Behoben statt gelöscht: ein falscher Parser ist schlimmer als
+keiner, und „unreferenziert = löschbar" ist genau die Annahme, die MF-423
+widerlegt hat.
+
+**Beweis, dass der Test vorher rot war:** `test_imd_track_record` gegen den
+alten Adapter endet nicht mit einem Fehlschlag, sondern mit **Exit 139
+(SIGSEGV)** — die 255-Sektoren-Vektorprobe schreibt über den Rand, bevor
+irgendeine Ausgabe erscheint. Nach dem Fix 5/5 grün.
+
+*Offen geblieben:* `include/uft/profiles/uft_imd_format.h` hatte die beiden
+Flags **vertauscht** (0x40 Zylinder, 0x80 Kopf) — korrigiert, aber dieser
+Header hat null Includer, und die ganze `profiles/`-Kette hängt an einem
+`uft_format_registry.h`, das ebenfalls niemand einbindet. Ob die Kette weg
+kann, gehört zu ARCH-4, nicht hierher. `UFT_IMD_MAX_TRACKS` (160/255) und
+`UFT_IMD_MAX_COMMENT` (4096/8192) bleiben unterschiedlich: das sind
+Implementierungsgrenzen, keine Formateigenschaften — IMD nennt weder eine
+Spur- noch eine Kommentarobergrenze.
+
+`imd` steht damit in `docs/spec_verification.json` und rückt auf **T2**.
+
 ### ARCH-4 — Header-Duplikate: 15 aufgelöst, 7 brauchen echte Zusammenführung (2026-08-18, MF-424/425)
 
 **Architecture.** Umsetzung von „eine Wahrheit, ein Ort" auf der Header-Ebene —

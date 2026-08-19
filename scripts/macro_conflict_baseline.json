@@ -12,7 +12,6 @@
     "UFT_CACHE_LINE_SIZE",
     "UFT_ENCODING_FM",
     "UFT_ENCODING_MFM",
-    "UFT_IMD_HEAD_MASK",
     "UFT_IMD_MAX_COMMENT",
     "UFT_IMD_MAX_SECTORS",
     "UFT_IMD_MAX_TRACKS",
@@ -33,7 +32,6 @@
     "UFT_CACHE_LINE_SIZE": "platform-boilerplate",
     "UFT_ENCODING_FM": "format-constant",
     "UFT_ENCODING_MFM": "format-constant",
-    "UFT_IMD_HEAD_MASK": "format-constant",
     "UFT_IMD_MAX_COMMENT": "format-constant",
     "UFT_IMD_MAX_SECTORS": "format-constant",
     "UFT_IMD_MAX_TRACKS": "format-constant",
@@ -70,6 +68,10 @@
       "TAP_BLOCK_DATA",
       "TAP_BLOCK_HEADER"
     ],
-    "_note_MF-429": "Aufgeloest in MF-429 durch Praefigierung — die Gruppe name-too-generic ist damit leer. Kein Wert war falsch, die Namen waren es: DIR_ENTRY_SIZE hiess 16 (Atari DOS), 32 (C64-BAM) und 24 (FLEX); TAP_BLOCK_* bezeichnete zwei verschiedene Formate namens \"TAP\" (C64-Pulsband 0x01/0x02 gegen Sinclair-Bandbloecke 0x00/0xFF). Neue Namen: ATARI_DOS_DIR_ENTRY_SIZE, C64_DIR_ENTRY_SIZE, FLEX_DIR_ENTRY_SIZE, C64_TAP_BLOCK_*, ZX_TAP_BLOCK_*. Vier Aufrufstellen angepasst, ctest 200/200."
+    "_note_MF-429": "Aufgeloest in MF-429 durch Praefigierung — die Gruppe name-too-generic ist damit leer. Kein Wert war falsch, die Namen waren es: DIR_ENTRY_SIZE hiess 16 (Atari DOS), 32 (C64-BAM) und 24 (FLEX); TAP_BLOCK_* bezeichnete zwei verschiedene Formate namens \"TAP\" (C64-Pulsband 0x01/0x02 gegen Sinclair-Bandbloecke 0x00/0xFF). Neue Namen: ATARI_DOS_DIR_ENTRY_SIZE, C64_DIR_ENTRY_SIZE, FLEX_DIR_ENTRY_SIZE, C64_TAP_BLOCK_*, ZX_TAP_BLOCK_*. Vier Aufrufstellen angepasst, ctest 200/200.",
+    "MF-430": [
+      "UFT_IMD_HEAD_MASK"
+    ],
+    "_note_MF-430": "Aufgeloest in MF-430 gegen zwei unabhaengige Implementierungen (MAME imd_dsk.cpp, hharte/libimd): nur 0x80 und 0x40 sind Flagbits, die Kopfnummer steht in den unteren Bits. Alle drei UFT-Kopien tragen jetzt 0x0F — die engere der beiden Lesarten (MAME 0x3F, libimd 0x0F), fuer jede reale Kopfnummer identisch. Die verbleibenden UFT_IMD_MAX_* sind Implementierungsgrenzen, keine Formateigenschaften; MAX_SECTORS wurde im Adapter von 64 auf 256 gehoben, weil die Sektorzahl ein Byte ist und der alte Wert einen dateigesteuerten Pufferueberlauf ermoeglichte."
   }
 }

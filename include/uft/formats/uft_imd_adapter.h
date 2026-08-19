@@ -35,7 +35,13 @@ extern "C" {
 #define UFT_IMD_SIGNATURE_LEN   4
 #define UFT_IMD_HEADER_END      0x1A   /* ASCII EOF terminates header */
 #define UFT_IMD_MAX_TRACKS      160    /* Max cylinders × 2 sides */
-#define UFT_IMD_MAX_SECTORS     64     /* Max sectors per track */
+/* The on-disk sector count is ONE byte, so a track can legally declare up to
+ * 255 sectors. The old bound of 64 was not a format property but a guess, and
+ * uft_imd_adapter_parse_track_header() copied sector_count bytes into arrays
+ * of that size without checking the destination — a file-controlled overflow
+ * of up to 191 bytes, three times per track (MF-430). Sized like the reference
+ * implementation (hharte/libimd LIBIMD_MAX_SECTORS_PER_TRACK 256). */
+#define UFT_IMD_MAX_SECTORS     256    /* one-byte count: 0..255 fit */
 #define UFT_IMD_MAX_COMMENT     4096   /* Max comment length */
 
 /* Format ID for adapter registration */
@@ -53,10 +59,24 @@ extern "C" {
 /**
  * IMD Track Header Flags (in Head byte)
  */
-#define UFT_IMD_HEAD_MASK       0x01   /* Head number (0 or 1) */
-#define UFT_IMD_HAS_SECTOR_MAP  0x80   /* Sector numbering map follows */
-#define UFT_IMD_HAS_CYLINDER_MAP 0x40  /* Cylinder map follows */
-#define UFT_IMD_HAS_HEAD_MAP    0x20   /* Head map follows */
+/* Corrected in MF-430 against two independent implementations that agree:
+ *   MAME src/lib/formats/imd_dsk.cpp — "offs += 5 + sector_num" (sector map
+ *     unconditional), "if(header[2] & 0x80)" cylinder map,
+ *     "if(header[2] & 0x40)" head map
+ *   hharte/libimd src/libimd.h — IMD_HFLAG_CMAP_PRES 0x80,
+ *     IMD_HFLAG_HMAP_PRES 0x40, IMD_HFLAG_HEAD_MASK 0x0F
+ *
+ * What stood here was wrong three ways: 0x80 was labelled "sector map",
+ * 0x40 "cylinder map", and 0x20 "head map" was invented — IMD has no third
+ * map flag. The sector numbering map is MANDATORY, not flagged.
+ *
+ * Head mask: the two sources disagree on how wide the head field is (libimd
+ * 0x0F, MAME 0x3F); they agree that 0x80 and 0x40 are the only flag bits.
+ * 0x0F is the narrower reading and gives the same answer as 0x3F for every
+ * head value a real file carries (0 or 1), so it is the safe intersection. */
+#define UFT_IMD_HEAD_MASK        0x0F  /* Head number, low nibble */
+#define UFT_IMD_HAS_CYLINDER_MAP 0x80  /* Sector cylinder map follows */
+#define UFT_IMD_HAS_HEAD_MAP     0x40  /* Sector head map follows */
 
 /**
  * IMD Track structure

@@ -402,6 +402,11 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/adf/uft_adf_plugin.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+    elseif(${test_name} STREQUAL "test_imd_track_record")
+        # IMD track-record layout regression vectors (MF-430)
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/imd/uft_imd_adapter.c
+            ${CMAKE_SOURCE_DIR}/src/formats/xdf/uft_xdf_adapter.c)
     elseif(${test_name} STREQUAL "test_corpus_cbm_vice")
         # T1b cross-tool corpus: D67/D80/D82/G71 from VICE c1541 (MF-427)
         target_sources(${test_name} PRIVATE

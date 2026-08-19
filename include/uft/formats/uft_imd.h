@@ -42,7 +42,10 @@ extern "C" {
  *============================================================================*/
 
 /** Head value mask (actual head number) */
-#define UFT_IMD_HEAD_MASK       0x01
+/* MF-430: war 0x01. Nur 0x80/0x40 sind Flagbits (MAME, libimd); die
+ * Kopfnummer steht in den unteren Bits. 0x0F ist die engere der beiden
+ * Lesarten und fuer jede reale Kopfnummer (0 oder 1) identisch. */
+#define UFT_IMD_HEAD_MASK       0x0F
 
 /** Sector Cylinder Map present flag */
 #define UFT_IMD_HEAD_CYLMAP     0x80

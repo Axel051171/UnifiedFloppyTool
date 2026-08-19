@@ -10,8 +10,8 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 |---|---|
 | T1 | 2 |
 | T1b | 12 |
-| T2 | 11 |
-| T3 | 63 |
+| T2 | 12 |
+| T3 | 62 |
 | **gesamt** | **88** |
 
 ## Pro Format
@@ -38,6 +38,7 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 | `dc42` | **T2** | `test_dc42_checksum_roundtrip`, `test_format_probe_fuzz`, `test_plugin_probe_real` | DiscFerret/Mini-vMac DC42 checksum (BE16 word add, ROR32 1) | MF-324 | — |
 | `dmk` | **T2** | `test_dmk_crc` | David Keil DMK spec (openMSX DMK-Format-Details) + WD177x CRC-CCITT pinned to check value 0x29B1 | MF-353 | — |
 | `dsk_cpc` | **T2** | `test_edsk_error_marks`, `test_format_probe_fuzz`, `test_plugin_probe_real` | EDSK uPD765 ST1/ST2 status-bit semantics (bit5 CRC, ST2 bit6 deleted); MF-332 verified the dsk_cpc implementation (the separate 'edsk' plugin in amstrad/ remains untested) | MF-332 | — |
+| `imd` | **T2** | `test_format_probe_fuzz`, `test_imd_error_marks`, `test_imd_track_record`, `test_imd_write_roundtrip`, `test_plugin_probe_real` | MAME src/lib/formats/imd_dsk.cpp (sector numbering map unconditional: "offs += 5 + sector_num"; cylinder map if header[2] & 0x80; head map if & 0x40) cross-checked against hharte/libimd src/libimd.h (IMD_HFLAG_CMAP_PRES 0x80, IMD_HFLAG_HMAP_PRES 0x40, LIBIMD_MAX_SECTORS_PER_TRACK 256) | MF-430 | — |
 | `korg_dss1` | **T2** | `test_korg_dss1_plugin` | chickensys Korg DSS-1 geometry (80x2x5x1024) | MF-347 | — |
 | `lisa_twiggy` | **T2** | `test_lisa_twiggy_plugin` | bitsavers Lisa Twiggy ZCAV zone table (46 tracks/side, 22..15 spt) | MF-349 | — |
 | `nfd` | **T2** | `test_nfd_r0` | pc98.org nfdr0/nfdr1 + tomari/d88split nfd2mhlt.pl (r1 skip accounting spec-only, no real r1 corpus yet) | MF-358, MF-360 | — |
@@ -65,7 +66,6 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 | `fdi_pc98` | **T3** | — | — | — | — |
 | `fds` | **T3** | — | — | — | — |
 | `hardsector` | **T3** | — | — | — | — |
-| `imd` | **T3** | `test_format_probe_fuzz`, `test_imd_error_marks`, `test_imd_write_roundtrip`, `test_plugin_probe_real` | — | — | — |
 | `img` | **T3** | `test_format_probe_fuzz`, `test_img_write_roundtrip`, `test_plugin_probe_real` | — | — | — |
 | `ipf` | **T3** | `test_format_probe_fuzz`, `test_ipf_air_accessors`, `test_plugin_probe_real` | — | — | — |
 | `jv1` | **T3** | `test_format_probe_fuzz`, `test_plugin_probe_real` | — | — | — |
