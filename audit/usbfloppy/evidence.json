@@ -127,7 +127,7 @@
         "ref": 36,
         "verdict": "PASS",
         "detail": "",
-        "uft_line": 53
+        "uft_line": 57
       },
       {
         "key": "READ10_WRITE10_CDB_LEN",
@@ -135,7 +135,7 @@
         "ref": 10,
         "verdict": "PASS",
         "detail": "",
-        "uft_line": 167
+        "uft_line": 171
       },
       {
         "key": "REQUEST_SENSE_ALLOC_LEN",
@@ -143,7 +143,7 @@
         "ref": 18,
         "verdict": "PASS",
         "detail": "",
-        "uft_line": 81
+        "uft_line": 85
       }
     ],
     "geometry": [

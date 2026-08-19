@@ -1448,6 +1448,41 @@ ohne eine einzige Information hinzuzufügen — `compat_entries == NULL` und ein
 Liste aus lauter UNTESTED sagen dasselbe. Eine Matrix gehört dorthin, wo jemand
 etwas geprüft hat oder wo die relevanten Ziele nicht offensichtlich sind.
 
+### ARCH-4 — Header-Duplikate: 15 aufgelöst, 7 brauchen echte Zusammenführung (2026-08-18, MF-424/425)
+
+**Architecture.** Umsetzung von „eine Wahrheit, ein Ort" auf der Header-Ebene —
+der strukturellen Wurzel von FMT-14, PROT-12, ARCH-1 und ARCH-2.
+
+**Bestandsaufnahme:** 520 Header, davon **30 mit mehrfach vergebenem
+Dateinamen**. Sechs davon waren bereits korrekte Weiterleitungen
+(`/* Forward-include: canonical header is … */`) — das Muster existierte im
+Projekt also schon und musste nur konsequent angewandt werden.
+
+**Umgesetzt (MF-424/425): 15 Inhaltsduplikate zu Shims**, zusammen **4156
+Zeilen** doppelter Deklarationen. Kein Aufrufer betroffen: die
+nicht-kanonischen Kopien hatten null Includes, und der Pfad bleibt gültig für
+alles, was ich übersehen haben könnte. Vor jedem Eingriff geprüft, dass kein
+Werkzeug die Datei als **Daten** liest — die Lehre aus MF-423.
+
+**Verbleibend, mit Grund:**
+
+| Fall | Warum kein Shim |
+|---|---|
+| `uft_platform.h` | ARCH-1 — die Zusammenführung bricht gemessen 187 Tests, weil `compat/` `mkdir`/`close`/`read` als Makros umdefiniert |
+| `uft_disk.h` | **Zwei verschiedene Konzepte** unter einem Namen: „Disk Handle Definition" (54 Z.) gegen „Unified Disk Structure" (173 Z.). Beide ungenutzt. Zusammenlegen wäre falsch, hier fehlt eine Umbenennung |
+| `uft_core.h`, `uft_crc.h`, `uft_endian.h`, `uft_fat12.h`, `uft_format_detect.h`, `uft_imd.h`, `uft_kryoflux.h` | **beide Kopien haben Konsumenten** und abweichenden Inhalt. Ein Shim würde stillschweigend ändern, welche Deklarationen ein Aufrufer sieht |
+
+Für die letzte Gruppe ist das Rezept: Deklarationen in den kanonischen Header
+vereinigen (auf Konflikte prüfen), die Konsumenten der anderen Kopie umhängen,
+**dann** shimmen. Das ist Arbeit pro Fall, keine mechanische Umstellung —
+`uft_fat12.h` existiert dreifach mit 303/410/862 Zeilen.
+
+**Nebenbefund, festgehalten:** `uft_fdi.h` meint „FAT Disk Image"; UFT hat
+daneben ein **unverwandtes** FDI-Format-Plugin (`src/formats/fdi/`) für den
+ZX-Spectrum-Container mit eigenem Korpus-Eintrag. Zwei verschiedene Dinge unter
+derselben Abkürzung — steht jetzt im Shim-Kommentar, damit sie niemand
+zusammenzieht.
+
 ### ARCH-3 — Der Skelett-Audit sieht nur `uft_*`; 22 Banner-Header sind wirklich unfertig (2026-08-18, MF-420)
 
 **Correctness / Prozess.** Beim Durchsehen der offenen TODO-Listen aufgefallen —

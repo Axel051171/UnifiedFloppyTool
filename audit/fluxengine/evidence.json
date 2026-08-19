@@ -17,7 +17,7 @@
   },
   "counts": {
     "PASS": 18,
-    "UNVERIFIED": 2
+    "MISSING": 2
   },
   "sections": {
     "read_argv": [
@@ -27,7 +27,7 @@
         "ref": "expected \u2014 revolution count (was: --revs)",
         "verdict": "PASS",
         "detail": "",
-        "uft_line": 182
+        "uft_line": 197
       },
       {
         "key": "--tracks=cNhM",
@@ -35,7 +35,7 @@
         "ref": "expected \u2014 track selector (was: -c N -h H)",
         "verdict": "PASS",
         "detail": "",
-        "uft_line": 180
+        "uft_line": 195
       },
       {
         "key": "-c",
@@ -43,7 +43,7 @@
         "ref": "expected \u2014 loads profile BY NAME",
         "verdict": "PASS",
         "detail": "",
-        "uft_line": 176
+        "uft_line": 191
       },
       {
         "key": "-o",
@@ -51,7 +51,7 @@
         "ref": "expected \u2014 output flux file flag",
         "verdict": "PASS",
         "detail": "",
-        "uft_line": 183
+        "uft_line": 198
       },
       {
         "key": "-s",
@@ -59,7 +59,7 @@
         "ref": "expected \u2014 source drive spec flag",
         "verdict": "PASS",
         "detail": "",
-        "uft_line": 178
+        "uft_line": 193
       },
       {
         "key": "drive:0",
@@ -67,7 +67,7 @@
         "ref": "expected \u2014 drive spec (value of -s)",
         "verdict": "PASS",
         "detail": "",
-        "uft_line": 179
+        "uft_line": 194
       },
       {
         "key": "read",
@@ -75,7 +75,7 @@
         "ref": "expected \u2014 subcommand",
         "verdict": "PASS",
         "detail": "",
-        "uft_line": 175
+        "uft_line": 190
       },
       {
         "key": "{profile}",
@@ -83,7 +83,7 @@
         "ref": "expected \u2014 profile name (value of -c); FE-F2 made it the m_profile ctor parameter (was hard-coded \"ibm\"), so a {profile} placeholder is emitted",
         "verdict": "PASS",
         "detail": "",
-        "uft_line": 177
+        "uft_line": 192
       }
     ],
     "write_argv": [
@@ -93,7 +93,7 @@
         "ref": "expected \u2014 track selector",
         "verdict": "PASS",
         "detail": "",
-        "uft_line": 198
+        "uft_line": 213
       },
       {
         "key": "-c",
@@ -101,7 +101,7 @@
         "ref": "expected \u2014 loads profile BY NAME",
         "verdict": "PASS",
         "detail": "",
-        "uft_line": 194
+        "uft_line": 209
       },
       {
         "key": "-d",
@@ -109,7 +109,7 @@
         "ref": "expected \u2014 destination drive spec flag",
         "verdict": "PASS",
         "detail": "",
-        "uft_line": 196
+        "uft_line": 211
       },
       {
         "key": "-i",
@@ -117,7 +117,7 @@
         "ref": "expected \u2014 input flux file flag",
         "verdict": "PASS",
         "detail": "",
-        "uft_line": 200
+        "uft_line": 215
       },
       {
         "key": "drive:0",
@@ -125,7 +125,7 @@
         "ref": "expected \u2014 drive spec (value of -d)",
         "verdict": "PASS",
         "detail": "",
-        "uft_line": 197
+        "uft_line": 212
       },
       {
         "key": "write",
@@ -133,7 +133,7 @@
         "ref": "expected \u2014 subcommand",
         "verdict": "PASS",
         "detail": "",
-        "uft_line": 193
+        "uft_line": 208
       },
       {
         "key": "{profile}",
@@ -141,7 +141,7 @@
         "ref": "expected \u2014 profile name (value of -c); FE-F2 m_profile ctor parameter, emitted as a {profile} placeholder",
         "verdict": "PASS",
         "detail": "",
-        "uft_line": 195
+        "uft_line": 210
       }
     ],
     "rpm_argv": [
@@ -151,7 +151,7 @@
         "ref": "expected \u2014 subcommand (exists in current FE)",
         "verdict": "PASS",
         "detail": "",
-        "uft_line": 681
+        "uft_line": 801
       }
     ],
     "version_argv": [
@@ -161,7 +161,7 @@
         "ref": "expected \u2014 `fluxengine version` subcommand (FE-F6)",
         "verdict": "PASS",
         "detail": "",
-        "uft_line": 345
+        "uft_line": 360
       }
     ],
     "detect_argv": [
@@ -171,25 +171,29 @@
         "ref": "expected \u2014 detect reuses the rpm subcommand (V1 parity)",
         "verdict": "PASS",
         "detail": "",
-        "uft_line": 729
+        "uft_line": 849
       }
     ],
     "timing": [
       {
         "key": "fe_sample_clock_mhz",
-        "uft": 8,
-        "ref": "needs-source \u2014 FluxEngine .flux tick rate not vendored; UFT assumes 8 MHz, FE has historically used 12 MHz (see FE-D1-2)",
-        "verdict": "UNVERIFIED",
-        "detail": "needs-source",
-        "uft_line": 501
+        "uft": null,
+        "ref": {
+          "ref": "needs-source \u2014 FluxEngine .flux tick rate not vendored; UFT assumes 8 MHz, FE has historically used 12 MHz (see FE-D1-2)",
+          "kind": "needs-source"
+        },
+        "verdict": "MISSING",
+        "detail": "absent in UFT source"
       },
       {
         "key": "fe_sample_ns",
-        "uft": 125,
-        "ref": "needs-source \u2014 depends on the unverified tick rate above",
-        "verdict": "UNVERIFIED",
-        "detail": "needs-source",
-        "uft_line": 501
+        "uft": null,
+        "ref": {
+          "ref": "needs-source \u2014 depends on the unverified tick rate above",
+          "kind": "needs-source"
+        },
+        "verdict": "MISSING",
+        "detail": "absent in UFT source"
       }
     ]
   }

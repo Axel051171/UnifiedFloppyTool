@@ -17,7 +17,8 @@
   },
   "counts": {
     "PASS": 5,
-    "UNVERIFIED": 9
+    "UNVERIFIED": 5,
+    "MISSING": 4
   },
   "sections": {
     "usb_ids": [
@@ -59,51 +60,59 @@
     "cmd_opcodes": [
       {
         "key": "UFT_SCP_CMD_DESELECT_DRIVE",
-        "uft": 9,
-        "ref": "needs-source \u2014 SCP SDK v1.7 command header not vendored",
-        "verdict": "UNVERIFIED",
-        "detail": "needs-source \u2014 reference cannot be established without a vendored source",
-        "uft_line": 52
+        "uft": null,
+        "ref": {
+          "ref": "needs-source \u2014 SCP SDK v1.7 command header not vendored",
+          "kind": "needs-source"
+        },
+        "verdict": "MISSING",
+        "detail": "absent in UFT source"
       },
       {
         "key": "UFT_SCP_CMD_GET_INFO",
-        "uft": 64,
-        "ref": "needs-source \u2014 SCP SDK v1.7 command header not vendored",
-        "verdict": "UNVERIFIED",
-        "detail": "needs-source \u2014 reference cannot be established without a vendored source",
-        "uft_line": 53
+        "uft": null,
+        "ref": {
+          "ref": "needs-source \u2014 SCP SDK v1.7 command header not vendored",
+          "kind": "needs-source"
+        },
+        "verdict": "MISSING",
+        "detail": "absent in UFT source"
       },
       {
         "key": "UFT_SCP_CMD_READ_FLUX",
-        "uft": 4,
+        "uft": 160,
         "ref": "needs-source \u2014 SCP SDK v1.7 command header not vendored",
         "verdict": "UNVERIFIED",
         "detail": "needs-source \u2014 reference cannot be established without a vendored source",
-        "uft_line": 48
+        "uft_line": 73
       },
       {
         "key": "UFT_SCP_CMD_SELECT_DRIVE",
-        "uft": 3,
-        "ref": "needs-source \u2014 SCP SDK v1.7 command header not vendored",
-        "verdict": "UNVERIFIED",
-        "detail": "needs-source \u2014 reference cannot be established without a vendored source",
-        "uft_line": 50
+        "uft": null,
+        "ref": {
+          "ref": "needs-source \u2014 SCP SDK v1.7 command header not vendored",
+          "kind": "needs-source"
+        },
+        "verdict": "MISSING",
+        "detail": "absent in UFT source"
       },
       {
         "key": "UFT_SCP_CMD_SET_CONTROL",
-        "uft": 2,
-        "ref": "needs-source \u2014 SCP SDK v1.7 command header not vendored",
-        "verdict": "UNVERIFIED",
-        "detail": "needs-source \u2014 reference cannot be established without a vendored source",
-        "uft_line": 51
+        "uft": null,
+        "ref": {
+          "ref": "needs-source \u2014 SCP SDK v1.7 command header not vendored",
+          "kind": "needs-source"
+        },
+        "verdict": "MISSING",
+        "detail": "absent in UFT source"
       },
       {
         "key": "UFT_SCP_CMD_WRITE_FLUX",
-        "uft": 5,
+        "uft": 162,
         "ref": "needs-source \u2014 SCP SDK v1.7 command header not vendored",
         "verdict": "UNVERIFIED",
         "detail": "needs-source \u2014 reference cannot be established without a vendored source",
-        "uft_line": 49
+        "uft_line": 75
       }
     ],
     "timing": [
@@ -113,7 +122,7 @@
         "ref": "UFT implementation choice (3) \u2014 not a fixed SCP protocol constant",
         "verdict": "UNVERIFIED",
         "detail": "impl-choice \u2014 reference cannot be established without a vendored source",
-        "uft_line": 77
+        "uft_line": 120
       },
       {
         "key": "UFT_SCP_FLUX_NS_PER_SAMPLE",
@@ -121,7 +130,7 @@
         "ref": 25,
         "verdict": "PASS",
         "detail": "",
-        "uft_line": 73
+        "uft_line": 112
       },
       {
         "key": "UFT_SCP_MAX_REVOLUTIONS",
@@ -129,7 +138,7 @@
         "ref": 5,
         "verdict": "PASS",
         "detail": "",
-        "uft_line": 76
+        "uft_line": 119
       },
       {
         "key": "UFT_SCP_MAX_TRACK_INDEX",
@@ -137,7 +146,7 @@
         "ref": 167,
         "verdict": "PASS",
         "detail": "",
-        "uft_line": 56
+        "uft_line": 95
       }
     ]
   }

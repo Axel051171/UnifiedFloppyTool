@@ -16,7 +16,8 @@
   },
   "counts": {
     "UNVERIFIED": 8,
-    "PASS": 4
+    "MISSING": 2,
+    "PASS": 2
   },
   "sections": {
     "read_argv_flags": [
@@ -26,7 +27,7 @@
         "ref": "begin track (recalled; needs-source for exactness)",
         "verdict": "UNVERIFIED",
         "detail": "needs-source \u2014 DTC CLI contract not vendored / not runnable in this environment",
-        "uft_line": 91
+        "uft_line": 99
       },
       {
         "key": "-c2",
@@ -34,7 +35,7 @@
         "ref": "command 2 = read-to-stream (recalled; needs-source for exactness)",
         "verdict": "UNVERIFIED",
         "detail": "needs-source \u2014 DTC CLI contract not vendored / not runnable in this environment",
-        "uft_line": 88
+        "uft_line": 96
       },
       {
         "key": "-d0",
@@ -42,7 +43,7 @@
         "ref": "drive 0 (recalled; needs-source for exactness)",
         "verdict": "UNVERIFIED",
         "detail": "needs-source \u2014 DTC CLI contract not vendored / not runnable in this environment",
-        "uft_line": 89
+        "uft_line": 97
       },
       {
         "key": "-e{N}",
@@ -50,7 +51,7 @@
         "ref": "end track (recalled; needs-source for exactness)",
         "verdict": "UNVERIFIED",
         "detail": "needs-source \u2014 DTC CLI contract not vendored / not runnable in this environment",
-        "uft_line": 92
+        "uft_line": 100
       },
       {
         "key": "-f{N}",
@@ -58,7 +59,7 @@
         "ref": "output file-name prefix (recalled; needs-source for exactness)",
         "verdict": "UNVERIFIED",
         "detail": "needs-source \u2014 DTC CLI contract not vendored / not runnable in this environment",
-        "uft_line": 93
+        "uft_line": 101
       },
       {
         "key": "-i0",
@@ -66,7 +67,7 @@
         "ref": "image type 0 / raw stream (recalled; needs-source for exactness)",
         "verdict": "UNVERIFIED",
         "detail": "needs-source \u2014 DTC CLI contract not vendored / not runnable in this environment",
-        "uft_line": 94
+        "uft_line": 102
       },
       {
         "key": "-s{N}",
@@ -74,7 +75,7 @@
         "ref": "side/start-track select \u2014 SEMANTICS AMBIGUOUS across DTC versions (recalled; needs-source \u2014 see KF-D1-1)",
         "verdict": "UNVERIFIED",
         "detail": "needs-source \u2014 DTC CLI contract not vendored / not runnable in this environment",
-        "uft_line": 90
+        "uft_line": 98
       }
     ],
     "detect_argv_flags": [
@@ -84,25 +85,23 @@
         "ref": "UFT uses 'dtc -i0' as a bare probe \u2014 validity unverified (recalled; needs-source \u2014 see KF-D1-2)",
         "verdict": "UNVERIFIED",
         "detail": "needs-source \u2014 DTC CLI contract not vendored / not runnable in this environment",
-        "uft_line": 380
+        "uft_line": 468
       }
     ],
     "timing": [
       {
         "key": "kf_sample_clock_mhz",
-        "uft": 24,
+        "uft": null,
         "ref": 24,
-        "verdict": "PASS",
-        "detail": "",
-        "uft_line": 343
+        "verdict": "MISSING",
+        "detail": "flag expected by reference but not emitted by UFT"
       },
       {
         "key": "kf_sample_ns_expr",
-        "uft": "1000.0/24.0",
+        "uft": null,
         "ref": "1000.0/24.0",
-        "verdict": "PASS",
-        "detail": "",
-        "uft_line": 343
+        "verdict": "MISSING",
+        "detail": "flag expected by reference but not emitted by UFT"
       }
     ],
     "geometry": [
@@ -112,7 +111,7 @@
         "ref": 83,
         "verdict": "PASS",
         "detail": "",
-        "uft_line": 248
+        "uft_line": 256
       },
       {
         "key": "max_head",
@@ -120,7 +119,7 @@
         "ref": 1,
         "verdict": "PASS",
         "detail": "",
-        "uft_line": 258
+        "uft_line": 266
       }
     ]
   }
