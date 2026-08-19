@@ -10,7 +10,6 @@
     "DIR_ENTRY_SIZE",
     "TAP_BLOCK_DATA",
     "TAP_BLOCK_HEADER",
-    "UFT_86F_FLAG_HOLE",
     "UFT_ARCH_NAME",
     "UFT_BIG_ENDIAN",
     "UFT_CACHE_LINE_SIZE",
@@ -38,7 +37,6 @@
     "DIR_ENTRY_SIZE": "name-too-generic",
     "TAP_BLOCK_DATA": "name-too-generic",
     "TAP_BLOCK_HEADER": "name-too-generic",
-    "UFT_86F_FLAG_HOLE": "format-constant",
     "UFT_ARCH_NAME": "platform-boilerplate",
     "UFT_BIG_ENDIAN": "platform-boilerplate",
     "UFT_CACHE_LINE_SIZE": "platform-boilerplate",
@@ -68,6 +66,10 @@
       "UFT_WOZ2_MAGIC",
       "WOZ_MAGIC"
     ],
-    "_note": "Aufgeloest durch das Entfernen der Phantom-Header in MF-422 — include/uft/formats/uft_woz.h und include/uft/uft_applesauce.h trugen die konkurrierenden String-Definitionen. Damit ist die magic-type-split-Gruppe von 5 auf 2 geschrumpft."
+    "_note": "Aufgeloest durch das Entfernen der Phantom-Header in MF-422 — include/uft/formats/uft_woz.h und include/uft/uft_applesauce.h trugen die konkurrierenden String-Definitionen. Damit ist die magic-type-split-Gruppe von 5 auf 2 geschrumpft.",
+    "MF-424": [
+      "UFT_86F_FLAG_HOLE"
+    ],
+    "_note_MF-424": "Aufgeloest durch die Shim-Umstellung in MF-424. ACHTUNG bei UFT_86F_FLAG_HOLE: der kanonische Header formats/pc/uft_86f.h definiert die UFT_86F_FLAG_* gar nicht, es blieb also die profiles-Variante (0x0002) uebrig — kanonisch per Wegfall, NICHT per Beleg. 86F ist T3; welche Flag-Belegung stimmt, ist weiterhin offen (ARCH-2). Kein Code benutzt die Konstanten."
   }
 }
