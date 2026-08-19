@@ -1699,6 +1699,82 @@ existiert, fällt durch — und das ist genau die Kombination, die keine Warnung
 erzeugt und trotzdem zwei Werte hat. Die Lücke ist bekannt und nicht
 geschlossen; sie zu schließen heißt, Enum-Bezeichner mitzuindizieren.
 
+#### `magic-type-split` ist abgeräumt (2026-08-19, MF-428)
+
+Die Gruppe von zwei verbliebenen Namen (`UFT_IPF_SIGNATURE`,
+`UFT_TD0_SIGNATURE_NORMAL`, dazu `UFT_SCP_SIGNATURE` außerhalb der Liste) ist
+erledigt. Der Befund beim Nachzählen: **die Integer-Zwillinge in
+`uft_format_parsers.h` hatten null Nutzer.** Jede reale Verwendung im Baum ist
+`memcmp`/`memcpy` gegen den String:
+
+| Name | Nutzer | Form |
+|---|---|---|
+| `UFT_SCP_SIGNATURE` | `src/flux/uft_scp_parser.c` (3×) | `memcmp(…, "SCP", 3)` |
+| `UFT_TD0_SIGNATURE_NORMAL` | `profiles/uft_td0_format.h` (3×) | `memcmp`/`memcpy` |
+| `UFT_IPF_SIGNATURE` | keine | — |
+
+Die Integer-Definitionen sind gelöscht, an ihrer Stelle steht der Grund plus
+der Verweis auf den kanonischen Header. `UFT_IPF_CHUNK_CAPS` behält die
+numerische Form — dort ist ein 32-Bit-Tag auch das Richtige.
+
+Damit ist die Umgehung aus MF-418 zurückgebaut: `uft_core_stubs.c` benutzt
+wieder `UFT_SCP_SIGNATURE` statt des ausgeschriebenen `"SCP"`.
+
+#### Zwei Kollisionen waren **live**, nicht latent (2026-08-19, MF-428)
+
+Beim Bauen fielen zwei Redefinitions-Warnungen auf, die es nach der Triage
+nicht geben dürfte:
+
+```
+uft_compiler.h:61: warning: "UFT_COMPILER_VERSION" redefined
+uft_config.h:118:  warning: "UFT_PREFETCH" redefined
+```
+
+Beide sind der ARCH-1-Familie zuzurechnen (parallele Plattform-Header), beide
+hatten **null funktionale Nutzer**, beide sind behoben: `uft_compiler.h` ist
+jetzt alleiniger Eigentümer der Compiler-Identität (mit der besseren Formel
+inklusive Patchlevel, die vorher in `uft_platform.h` stand) und der
+Prefetch-Makros; `uft_platform.h` bindet ihn ein, `uft_config.h` definiert
+nichts Eigenes mehr.
+
+Zwei Lehren daraus, beide unbequem:
+
+1. Die Aussage „keine Übersetzungseinheit sieht zwei Varianten" galt für die
+   29 gemessenen Namen — `UFT_PREFETCH` war nie darunter, weil der Zähler
+   **funktionsartige Makros bewusst überspringt**. Genau dort saß eine
+   Live-Kollision. Zweite bekannte Lücke des Wächters, neben Makro-gegen-Enum.
+2. Der Compiler meldete beide seit jeher bei jedem Build. Es hat niemand
+   hingesehen. Ein Zähler in einem Skript ersetzt nicht das Lesen der
+   Build-Ausgabe.
+
+#### Offen und belegt: `UFT_ENCODING_MFM` hat zwei Werte (MF-428)
+
+Nach demselben Muster, aber **nicht** behoben, weil die Auflösung eine
+Entscheidung über die God-Mode-/PLL-Schnittstelle verlangt:
+
+| Header | `UFT_ENCODING_MFM` | `UFT_ENCODING_FM` |
+|---|---|---|
+| `uft_god_mode.h:276` | **0** | 1 |
+| `uft_types.h:252` (Alias auf `UFT_ENC_MFM`) | **3** | 1 |
+
+`FM` stimmt zufällig überein, `MFM` nicht — und die 0 kollidiert zusätzlich mit
+`UFT_ENC_UNKNOWN`. Gemessen, welchen Wert die Aufrufer tatsächlich sehen:
+
+- `src/formats/uft_format_convert_flux.c` → 3, gibt ihn an
+  `uft_pll_init(…, uft_encoding_t)` weiter. In sich stimmig.
+- `src/core/uft_advanced_mode.c` → 2 für `UFT_ENCODING_GCR_C64`, gibt ihn an
+  `uft_kalman_config_init()`, das in `uft_god_mode_api.c` mit derselben
+  Nummerierung übersetzt wird. Ebenfalls stimmig.
+
+**Gesucht und nicht gefunden:** eine Stelle, an der ein Wert die Grenze
+überquert — also ein Plugin, das `track->encoding = UFT_ENCODING_MFM` (3)
+schreibt und von God-Mode-Code (0/1/2/3) gelesen wird. Solange es die nicht
+gibt, ist das keine falsche Ausgabe, sondern eine gestellte Falle. Wer sie
+entschärft, muss zuerst festlegen, welche Nummerierung die God-Mode-API
+eigentlich meint — `uft_pll_init` existiert nämlich in **zwei** Signaturen
+(`uft_decoder_plugin.h:335` mit `adjust_pct`, `uft_flux_pll.h:317` mit
+`uft_encoding_t`), was denselben Aufruf je nach Include-Satz anders bedeutet.
+
 ### ARCH-1 — Zwei `uft_platform.h`, die einander nie sehen (2026-08-18, MF-411)
 
 **Architecture.** Gefunden beim Auflösen der Include-Guard-Kollisionen.

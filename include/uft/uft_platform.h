@@ -77,25 +77,12 @@ extern "C" {
  * Compiler Detection
  * ═══════════════════════════════════════════════════════════════════════════════ */
 
-#ifndef UFT_COMPILER_VERSION
-#if defined(_MSC_VER)
-    #define UFT_COMPILER_MSVC 1
-    #define UFT_COMPILER_NAME "MSVC"
-    #define UFT_COMPILER_VERSION _MSC_VER
-#elif defined(__clang__)
-    #define UFT_COMPILER_CLANG 1
-    #define UFT_COMPILER_NAME "Clang"
-    #define UFT_COMPILER_VERSION (__clang_major__ * 10000 + __clang_minor__ * 100 + __clang_patchlevel__)
-#elif defined(__GNUC__)
-    #define UFT_COMPILER_GCC 1
-    #define UFT_COMPILER_NAME "GCC"
-    #define UFT_COMPILER_VERSION (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)
-#else
-    #define UFT_COMPILER_UNKNOWN 1
-    #define UFT_COMPILER_NAME "Unknown"
-    #define UFT_COMPILER_VERSION 0
-#endif
-#endif /* UFT_COMPILER_VERSION */
+/* Compiler identity lives in uft_compiler.h — one owner, one value (MF-428).
+ * The block that used to stand here defined UFT_COMPILER_VERSION with the
+ * patchlevel while uft_compiler.h defined it without; the #ifndef guard here
+ * only decided who lost, it did not make the two agree. The patchlevel form
+ * moved over there, so nothing is lost by including it. */
+#include "uft/uft_compiler.h"
 
 /* ═══════════════════════════════════════════════════════════════════════════════
  * Architecture Detection

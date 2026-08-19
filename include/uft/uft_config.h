@@ -115,8 +115,11 @@
     #define UFT_HOT                 __attribute__((hot))
     #define UFT_COLD                __attribute__((cold))
     #define UFT_RESTRICT            __restrict__
-    #define UFT_PREFETCH(addr)      __builtin_prefetch(addr)
-    #define UFT_PREFETCH_W(addr)    __builtin_prefetch(addr, 1)
+    /* UFT_PREFETCH / UFT_PREFETCH_W used to be defined in all three branches
+     * here as well. uft_compiler.h — included at the bottom of this file —
+     * defines UFT_PREFETCH too, with a different replacement list, so gcc
+     * warned on every build. Owner is uft_compiler.h (MF-428); the write
+     * variant is called UFT_PREFETCH_WRITE there. No caller used either. */
     
     /* Branch hint for switch statements */
     #define UFT_ASSUME(cond)        do { if (!(cond)) __builtin_unreachable(); } while(0)
@@ -143,8 +146,6 @@
     #define UFT_HOT                 
     #define UFT_COLD                
     #define UFT_RESTRICT            __restrict
-    #define UFT_PREFETCH(addr)      _mm_prefetch((const char*)(addr), _MM_HINT_T0)
-    #define UFT_PREFETCH_W(addr)    _mm_prefetch((const char*)(addr), _MM_HINT_T0)
     #define UFT_ASSUME(cond)        __assume(cond)
     
 #else
@@ -168,8 +169,6 @@
     #define UFT_HOT                 
     #define UFT_COLD                
     #define UFT_RESTRICT            
-    #define UFT_PREFETCH(addr)      ((void)0)
-    #define UFT_PREFETCH_W(addr)    ((void)0)
     #define UFT_ASSUME(cond)        ((void)0)
 #endif
 

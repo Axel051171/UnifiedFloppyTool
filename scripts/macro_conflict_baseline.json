@@ -13,7 +13,6 @@
     "UFT_ARCH_NAME",
     "UFT_BIG_ENDIAN",
     "UFT_CACHE_LINE_SIZE",
-    "UFT_COMPILER_VERSION",
     "UFT_ENCODING_FM",
     "UFT_ENCODING_MFM",
     "UFT_IMD_HEAD_MASK",
@@ -21,7 +20,6 @@
     "UFT_IMD_MAX_SECTORS",
     "UFT_IMD_MAX_TRACKS",
     "UFT_INLINE",
-    "UFT_IPF_SIGNATURE",
     "UFT_MAX_SECTOR_SIZE",
     "UFT_PACKED",
     "UFT_PACKED_ATTR",
@@ -29,7 +27,6 @@
     "UFT_PACKED_END",
     "UFT_PACKED_STRUCT",
     "UFT_RESTRICT",
-    "UFT_TD0_SIGNATURE_NORMAL",
     "UFT_THREAD_LOCAL",
     "UFT_VERIFY_OPTIONS_DEFAULT"
   ],
@@ -40,7 +37,6 @@
     "UFT_ARCH_NAME": "platform-boilerplate",
     "UFT_BIG_ENDIAN": "platform-boilerplate",
     "UFT_CACHE_LINE_SIZE": "platform-boilerplate",
-    "UFT_COMPILER_VERSION": "platform-boilerplate",
     "UFT_ENCODING_FM": "format-constant",
     "UFT_ENCODING_MFM": "format-constant",
     "UFT_IMD_HEAD_MASK": "format-constant",
@@ -48,7 +44,6 @@
     "UFT_IMD_MAX_SECTORS": "format-constant",
     "UFT_IMD_MAX_TRACKS": "format-constant",
     "UFT_INLINE": "platform-boilerplate",
-    "UFT_IPF_SIGNATURE": "magic-type-split",
     "UFT_MAX_SECTOR_SIZE": "format-constant",
     "UFT_PACKED": "platform-boilerplate",
     "UFT_PACKED_ATTR": "platform-boilerplate",
@@ -56,7 +51,6 @@
     "UFT_PACKED_END": "platform-boilerplate",
     "UFT_PACKED_STRUCT": "platform-boilerplate",
     "UFT_RESTRICT": "platform-boilerplate",
-    "UFT_TD0_SIGNATURE_NORMAL": "magic-type-split",
     "UFT_THREAD_LOCAL": "platform-boilerplate",
     "UFT_VERIFY_OPTIONS_DEFAULT": "format-constant"
   },
@@ -70,6 +64,12 @@
     "MF-424": [
       "UFT_86F_FLAG_HOLE"
     ],
-    "_note_MF-424": "Aufgeloest durch die Shim-Umstellung in MF-424. ACHTUNG bei UFT_86F_FLAG_HOLE: der kanonische Header formats/pc/uft_86f.h definiert die UFT_86F_FLAG_* gar nicht, es blieb also die profiles-Variante (0x0002) uebrig — kanonisch per Wegfall, NICHT per Beleg. 86F ist T3; welche Flag-Belegung stimmt, ist weiterhin offen (ARCH-2). Kein Code benutzt die Konstanten."
+    "_note_MF-424": "Aufgeloest durch die Shim-Umstellung in MF-424. ACHTUNG bei UFT_86F_FLAG_HOLE: der kanonische Header formats/pc/uft_86f.h definiert die UFT_86F_FLAG_* gar nicht, es blieb also die profiles-Variante (0x0002) uebrig — kanonisch per Wegfall, NICHT per Beleg. 86F ist T3; welche Flag-Belegung stimmt, ist weiterhin offen (ARCH-2). Kein Code benutzt die Konstanten.",
+    "MF-428": [
+      "UFT_COMPILER_VERSION",
+      "UFT_IPF_SIGNATURE",
+      "UFT_TD0_SIGNATURE_NORMAL"
+    ],
+    "_note_MF-428": "Aufgeloest in MF-428. UFT_IPF_SIGNATURE und UFT_TD0_SIGNATURE_NORMAL: die Integer-Zwillinge in uft_format_parsers.h hatten null Nutzer, jede reale Verwendung ist memcmp gegen den String — Integer geloescht, String bleibt kanonisch. Damit ist magic-type-split leer. UFT_COMPILER_VERSION: war keine latente, sondern eine LIVE-Kollision (gcc warnte bei jedem Build); uft_compiler.h ist jetzt alleiniger Eigentuemer, uft_platform.h bindet ihn ein. Gleicher Zug fuer UFT_PREFETCH, das der Zaehler als funktionsartiges Makro nie gesehen hat."
   }
 }

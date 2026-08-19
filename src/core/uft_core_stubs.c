@@ -247,18 +247,11 @@ int uft_scp_read(const uint8_t *data, size_t size, uft_scp_file_t *scp) {
     if (!data || !scp)                return -1;
     if (size < hdr_size + table_size) return -1;
 
-    /* The literal is spelled out on purpose. `UFT_SCP_SIGNATURE` exists FOUR
-     * times in the tree with two different TYPES:
-     *   uft_format_parsers.h:115      0x504353   <- integer, and this header
-     *                                               is included first here
-     *   flux/uft_scp_parser.h:26      "SCP"      (behind #ifndef, so it loses)
-     *   profiles/uft_scp_format.h:39  "SCP"
-     *   uft_scp_format.h:36           "SCP"
-     * Using the macro made memcmp() dereference address 0x504353 and crash.
-     * Which definition a translation unit gets depends on include order, so
-     * the name is unusable until the four are reconciled — KNOWN_ISSUES
-     * ARCH-2. */
-    if (memcmp(data, "SCP", 3) != 0)  return -1;
+    /* MF-428: the macro is usable again. It used to be an integer (0x504353)
+     * in uft_format_parsers.h and the string "SCP" everywhere else, so
+     * memcmp() dereferenced address 0x504353 depending on include order. The
+     * numeric twin is gone; every remaining definition is "SCP". */
+    if (memcmp(data, UFT_SCP_SIGNATURE, 3) != 0)  return -1;
 
     memset(scp, 0, sizeof(*scp));
     memcpy(&scp->header, data, hdr_size);

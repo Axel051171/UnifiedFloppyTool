@@ -50,17 +50,26 @@ extern "C" {
  * COMPILER DETECTION
  * ============================================================================= */
 
+/* This header owns the compiler identity. uft_platform.h used to define the
+ * same names with a slightly different formula (patchlevel included), which
+ * made gcc warn "UFT_COMPILER_VERSION redefined" on every build — a live
+ * two-value macro, not a latent one. The patchlevel form is the better of the
+ * two and is the one kept here (MF-428). */
 #if defined(_MSC_VER)
     #define UFT_COMPILER_MSVC    1
+    #define UFT_COMPILER_NAME    "MSVC"
     #define UFT_COMPILER_VERSION _MSC_VER
 #elif defined(__clang__)
     #define UFT_COMPILER_CLANG   1
-    #define UFT_COMPILER_VERSION (__clang_major__ * 10000 + __clang_minor__ * 100)
+    #define UFT_COMPILER_NAME    "Clang"
+    #define UFT_COMPILER_VERSION (__clang_major__ * 10000 + __clang_minor__ * 100 + __clang_patchlevel__)
 #elif defined(__GNUC__)
     #define UFT_COMPILER_GCC     1
-    #define UFT_COMPILER_VERSION (__GNUC__ * 10000 + __GNUC_MINOR__ * 100)
+    #define UFT_COMPILER_NAME    "GCC"
+    #define UFT_COMPILER_VERSION (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)
 #else
     #define UFT_COMPILER_UNKNOWN 1
+    #define UFT_COMPILER_NAME    "Unknown"
     #define UFT_COMPILER_VERSION 0
 #endif
 

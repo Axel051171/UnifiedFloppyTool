@@ -110,10 +110,17 @@ typedef enum {
  * SCP (SuperCardPro) Format
  *============================================================================*/
 
-/** SCP signature "SCP" */
-#ifndef UFT_SCP_SIGNATURE
-#define UFT_SCP_SIGNATURE           0x504353
-#endif
+/* UFT_SCP_SIGNATURE is deliberately NOT defined here.
+ *
+ * It used to be 0x504353 — an integer — while every other header spelled it
+ * "SCP" and every caller passed it to memcmp(). Whichever definition a
+ * translation unit saw first won, so including this header early turned
+ * memcmp(data, UFT_SCP_SIGNATURE, 3) into a dereference of address 0x504353.
+ * That is the crash MF-418 worked around by writing the literal out.
+ *
+ * Canonical: include/uft/uft_scp_format.h and include/uft/flux/uft_scp_parser.h
+ * (both "SCP", both #ifndef-guarded, same value). Do not add a numeric twin;
+ * if a numeric form is ever needed, give it its own name (…_LE32). */
 
 /** SCP base capture resolution (25 ns) */
 #define UFT_SCP_BASE_RESOLUTION     25
@@ -211,11 +218,11 @@ typedef struct {
  * Teledisk (TD0) Format
  *============================================================================*/
 
-/** Teledisk signature (normal) */
-#define UFT_TD0_SIGNATURE_NORMAL    0x4454  /* "TD" */
-
-/** Teledisk signature (compressed) */
-#define UFT_TD0_SIGNATURE_COMPRESSED 0x6474  /* "td" */
+/* UFT_TD0_SIGNATURE_NORMAL / _COMPRESSED are deliberately NOT defined here —
+ * same reason as UFT_SCP_SIGNATURE above. They were 0x4454 / 0x6474 here and
+ * "TD" / "td" in include/uft/profiles/uft_td0_format.h, whose three callers
+ * all use memcmp/memcpy. Canonical is the profile header; the names there are
+ * UFT_TD0_SIGNATURE_NORMAL and UFT_TD0_SIGNATURE_ADVANCED. */
 
 /** TD0 sector flags */
 #define UFT_TD0_SECTOR_CRC_ERROR    0x02
@@ -261,8 +268,11 @@ static inline uint16_t uft_td0_crc16(const uint8_t *data, size_t length, uint16_
  * IPF (SPS/CAPS) Format
  *============================================================================*/
 
-/** IPF signature "CAPS" */
-#define UFT_IPF_SIGNATURE           0x53504143
+/* UFT_IPF_SIGNATURE is deliberately NOT defined here — same reason as
+ * UFT_SCP_SIGNATURE above. Canonical is "CAPS" in
+ * include/uft/profiles/uft_ipf_format.h. The numeric form survives with a
+ * distinct name as UFT_IPF_CHUNK_CAPS in the enum below, which is where a
+ * 32-bit chunk tag actually belongs. */
 
 /** IPF chunk types */
 typedef enum {
