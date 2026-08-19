@@ -1661,6 +1661,44 @@ ist `magic-type-split` (absturzfähig) → `name-too-generic` (mechanisch,
 risikolos) → `format-constant` (braucht Quellen) → `platform-boilerplate`
 (hängt an ARCH-1).
 
+#### Nachtrag (2026-08-19, MF-427): der erste Fall, der **aktiv** falsch war
+
+Die Aussage oben — „keine Übersetzungseinheit sieht zwei Varianten desselben
+Makros" — galt für Makro-gegen-Makro. Sie deckt einen Fall nicht ab, den die
+Zählung gar nicht sehen konnte: **Makro gegen Enum-Konstante.**
+
+`include/uft/uft_track.h` definierte die Encoding-Konstanten selbst, hinter
+
+```c
+/* Define local constants only if uft_types.h not included */
+#ifndef UFT_ENC_UNKNOWN
+```
+
+`UFT_ENC_UNKNOWN` ist in `uft_types.h` aber ein **Enum-Wert**, kein Makro. Der
+Präprozessor sieht ihn nie, der Zweig war also **immer** aktiv — obwohl
+`uft_track.h` `uft_types.h` zwei Zeilen weiter oben bereits einbindet. Die
+Zahlen widersprachen sich:
+
+| Übersetzungseinheit | `UFT_ENC_GCR_CBM` |
+|---|---|
+| nur `uft_types.h` (alle Format-Plugins) | **9** |
+| zusätzlich `uft_track.h` (43 Tests, GUI-Konsumenten) | **3** |
+
+Ein Plugin schrieb 9 in `track->encoding`, jeder Vergleich auf der anderen
+Seite prüfte gegen 3 und traf nie. Kein Absturz, kein Compiler-Wort — der
+Vergleich war schlicht immer falsch.
+
+Gefunden nicht durch Lesen, sondern weil `test_corpus_cbm_vice` einen echten
+G71-Track einlas und dessen Encoding nicht benennen konnte. Der Makro-Block ist
+ersatzlos entfernt (MF-427); an seiner Stelle steht der Grund, damit ihn
+niemand „zur Sicherheit" wieder einsetzt. Suite danach 200/200.
+
+**Folge für den Wächter:** `check_macro_conflicts()` vergleicht `#define` gegen
+`#define`. Ein Name, der einmal als Makro und einmal als Enum-Konstante
+existiert, fällt durch — und das ist genau die Kombination, die keine Warnung
+erzeugt und trotzdem zwei Werte hat. Die Lücke ist bekannt und nicht
+geschlossen; sie zu schließen heißt, Enum-Bezeichner mitzuindizieren.
+
 ### ARCH-1 — Zwei `uft_platform.h`, die einander nie sehen (2026-08-18, MF-411)
 
 **Architecture.** Gefunden beim Auflösen der Include-Guard-Kollisionen.

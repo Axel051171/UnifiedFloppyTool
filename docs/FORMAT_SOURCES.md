@@ -111,9 +111,19 @@ T1b-Gewinn im ganzen Dokument.
 
 ## Konkreter nächster Schritt
 
-1. `pip install atrcopy` ist bereits geschehen (Korpus-Eintrag existiert).
-   **`xfd` daraus ableiten** — ATR ohne 16-Byte-Kopf, gegen das vorhandene
-   ATR prüfen. Ein Eintrag, ein Test, ein Tier-Aufstieg.
+1. ~~`xfd` aus dem vorhandenen ATR ableiten.~~ **Erledigt (MF-426).**
+   `tests/corpus_free/atrcopy_dos2sd.xfd`, `test_corpus_xfd`. Der Test prüft
+   die Ableitung selbst (ATR-Kopf feldweise) und vergleicht dann beide
+   Container Sektor für Sektor.
+1b. ~~VICE `c1541` für die vier offenen CBM-Container.~~ **Erledigt (MF-427):**
+   `d67`, `d80`, `d82`, `g71` → T1b, `test_corpus_cbm_vice`. Erzeugt mit
+   `c1541 -format "uftcorpus,42" <typ> <img> -write marker.txt` aus
+   SDLVICE-3.10-win64-r46215. Ertrag über den Tier-Aufstieg hinaus: die realen
+   Bilder haben zwei Fehler aufgedeckt, die kein synthetischer Test finden
+   konnte — eine falsche BAM-Konstante in `d80_probe`/`d82_probe` (0x33000
+   statt 0x44E00, dazu die D64-Verlinkung 39/1 statt 38/0) und den
+   Encoding-Konstanten-Konflikt in `uft_track.h` (KNOWN_ISSUES ARCH-2,
+   Nachtrag). **Das ist das eigentliche Argument für Korpusarbeit.**
 2. **libdsk bauen**, mit `dskform` je einen leeren Datenträger in `apridisk`,
    `cfi`, `myz80`, `nanowasp`, `qrst`, `imd` erzeugen, Marker-Datei
    hineinschreiben, in `tests/corpus_free/` ablegen (rechtefrei, weil selbst

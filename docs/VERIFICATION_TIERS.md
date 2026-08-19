@@ -9,9 +9,9 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 | Stufe | Formate |
 |---|---|
 | T1 | 2 |
-| T1b | 8 |
+| T1b | 12 |
 | T2 | 11 |
-| T3 | 67 |
+| T3 | 63 |
 | **gesamt** | **88** |
 
 ## Pro Format
@@ -23,8 +23,12 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 | `adf` | **T1b** | `test_adf_write_roundtrip`, `test_corpus_adf`, `test_format_probe_fuzz`, `test_plugin_probe_real` | — | — | 1 |
 | `atr` | **T1b** | `test_atr_512`, `test_atr_write_roundtrip`, `test_corpus_atr`, `test_corpus_xfd`, `test_format_probe_fuzz`, `test_plugin_probe_real` | — | — | 1 |
 | `d64` | **T1b** | `test_corpus_d64`, `test_d64_42track`, `test_d64_errormap`, `test_d64_geometry_zones`, `test_d64_write_roundtrip`, `test_format_probe_fuzz`, `test_plugin_probe_real` | VICE D64 sizes incl. error-block trailer + 40/42-track variants | MF-333, MF-350 | 1 |
+| `d67` | **T1b** | `test_corpus_cbm_vice` | VICE/Schepers D67 690-block geometry (176640 bytes) | MF-314 | 1 |
 | `d71` | **T1b** | `test_corpus_d71`, `test_d71_write_roundtrip`, `test_format_probe_fuzz`, `test_plugin_probe_real` | — | — | 1 |
+| `d80` | **T1b** | `test_corpus_cbm_vice`, `test_d80_write_roundtrip` | — | — | 1 |
 | `d81` | **T1b** | `test_corpus_d81`, `test_d81_write_roundtrip`, `test_format_probe_fuzz`, `test_plugin_probe_real` | — | — | 1 |
+| `d82` | **T1b** | `test_corpus_cbm_vice`, `test_d82_write_roundtrip` | — | — | 1 |
+| `g71` | **T1b** | `test_corpus_cbm_vice`, `test_g71_read` | — | — | 1 |
 | `hfe` | **T1b** | `test_corpus_hfe`, `test_format_probe_fuzz`, `test_hfe_v3_weak`, `test_plugin_probe_real` | HxC hfev3_loader.c opcode semantics (v3 decode + RAND weak bits); HxC HFE docs (v1) | MF-354, MF-362 | 1 |
 | `scp` | **T1b** | `test_corpus_scp`, `test_format_probe_fuzz`, `test_plugin_probe_real`, `test_protection_probe`, `test_scp_footer_roundtrip`, `test_scp_weakbit_multirev`, `test_scp_writer_roundtrip` | cbmstuff SCP image spec (48-byte FPCS footer, bitcell track length) | MF-318, MF-351 | 1 |
 | `xfd` | **T1b** | `test_corpus_xfd`, `test_format_probe_fuzz`, `test_plugin_probe_real` | — | — | 1 |
@@ -50,10 +54,7 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 | `cpm` | **T3** | `test_cpm_fs` | — | — | — |
 | `cqm` | **T3** | `test_format_probe_fuzz`, `test_plugin_probe_real` | — | — | — |
 | `d13` | **T3** | — | — | — | — |
-| `d67` | **T3** | — | VICE/Schepers D67 690-block geometry (176640 bytes) | MF-314 | — |
 | `d77` | **T3** | — | — | — | — |
-| `d80` | **T3** | `test_d80_write_roundtrip` | — | — | — |
-| `d82` | **T3** | `test_d82_write_roundtrip` | — | — | — |
 | `dcm` | **T3** | — | — | — | — |
 | `dim` | **T3** | — | — | — | — |
 | `dim_atari` | **T3** | — | — | — | — |
@@ -63,7 +64,6 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 | `edsk` | **T3** | `test_format_probe_fuzz`, `test_plugin_probe_real` | — | — | — |
 | `fdi_pc98` | **T3** | — | — | — | — |
 | `fds` | **T3** | — | — | — | — |
-| `g71` | **T3** | `test_g71_read` | — | — | — |
 | `hardsector` | **T3** | — | — | — | — |
 | `imd` | **T3** | `test_format_probe_fuzz`, `test_imd_error_marks`, `test_imd_write_roundtrip`, `test_plugin_probe_real` | — | — | — |
 | `img` | **T3** | `test_format_probe_fuzz`, `test_img_write_roundtrip`, `test_plugin_probe_real` | — | — | — |

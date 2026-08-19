@@ -402,6 +402,15 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/adf/uft_adf_plugin.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+    elseif(${test_name} STREQUAL "test_corpus_cbm_vice")
+        # T1b cross-tool corpus: D67/D80/D82/G71 from VICE c1541 (MF-427)
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/d67/uft_d67.c
+            ${CMAKE_SOURCE_DIR}/src/formats/d80/uft_d80.c
+            ${CMAKE_SOURCE_DIR}/src/formats/d82/uft_d82.c
+            ${CMAKE_SOURCE_DIR}/src/formats/g71/uft_g71.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_corpus_xfd")
         # T1b cross-tool corpus: XFD derived from the atrcopy ATR (MF-426).
         # Both readers are linked so the two containers can be compared.

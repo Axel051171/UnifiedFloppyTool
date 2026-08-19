@@ -6,6 +6,8 @@
 
 #define D80_TRACKS 77
 #define D80_SIZE   533248
+/* Track 39 sector 0 = 38 tracks x 29 sectors x 256 bytes. */
+#define D80_HEADER_OFF 0x44E00
 static const uint8_t d80_spt[77] = {
     29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,
     29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,
@@ -28,8 +30,22 @@ static void d80_init_off(void) {
 bool d80_probe(const uint8_t* data, size_t size, size_t file_size, int* confidence) {
     if (file_size != D80_SIZE) return false;
     *confidence = 75;
-    /* BAM at track 39 sector 0 — D80 link to 39/1 */
-    if (size >= 0x33002 && data[0x33000] == 39 && data[0x33001] == 1)
+    /* Header block at track 39 sector 0. Byte 2 is the CBM DOS version
+     * character — 'C' for DOS 2.7 (8050/8250), against 'A' for 2.6 (1541/2040)
+     * and 'D' for 3.0 (1581). Verified byte for byte against
+     * tests/corpus_free/vice_c1541_8050.d80 (test_corpus_cbm_vice).
+     *
+     * The previous check read 0x33000 and expected a link to 39/1. Both were
+     * wrong: 0x33000 is 816 sectors in, i.e. mid-track-29, and on a real image
+     * it is empty; the header block's link points at the first BAM block
+     * (38/0), the 39/1 pairing is the D64 convention transplanted here.
+     *
+     * Reachability, stated plainly: uft_probe_file_format() hands probes only
+     * the first 4096 bytes, so this branch fires only for callers that pass
+     * the whole image. In the registry path D80 is identified by size alone
+     * and stays at 75. */
+    if (size >= D80_HEADER_OFF + 3 &&
+        data[D80_HEADER_OFF] == 38 && data[D80_HEADER_OFF + 2] == 'C')
         *confidence = 90;
     return true;
 }

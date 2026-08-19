@@ -7,6 +7,8 @@
 #define D82_TRACKS 77
 #define D82_SIZE   1066496
 #define D82_SIDE_SECTORS 2083
+/* Track 39 sector 0 = 38 tracks x 29 sectors x 256 bytes (side 0). */
+#define D82_HEADER_OFF 0x44E00
 static const uint8_t d82_spt[77] = {
     29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,
     29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,29,
@@ -29,8 +31,17 @@ static void d82_init_off(void) {
 bool d82_probe(const uint8_t* data, size_t size, size_t file_size, int* confidence) {
     if (file_size != D82_SIZE) return false;
     *confidence = 75;
-    /* D82 = dual-sided D80. BAM at same track structure */
-    if (size >= 0x33002 && data[0x33000] == 39 && data[0x33001] == 1)
+    /* D82 = double-sided D80: same header block at track 39 sector 0, same
+     * CBM DOS 2.7 version character 'C'. Verified against
+     * tests/corpus_free/vice_c1541_8250.d82 (test_corpus_cbm_vice); the two
+     * formats are told apart by file size, not by this block.
+     *
+     * Same correction as in uft_d80.c: the old constant 0x33000 pointed into
+     * empty space and the expected 39/1 link was a D64 transplant. Same
+     * reachability caveat too — the registry passes 4096 bytes, so in that
+     * path D82 stays at 75. */
+    if (size >= D82_HEADER_OFF + 3 &&
+        data[D82_HEADER_OFF] == 38 && data[D82_HEADER_OFF + 2] == 'C')
         *confidence = 88;
     return true;
 }

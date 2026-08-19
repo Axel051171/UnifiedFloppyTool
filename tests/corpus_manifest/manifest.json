@@ -171,6 +171,42 @@
       "tool": "dec0de samples/README.txt (per-file provenance of the protected samples)",
       "source": "github.com/orionfuzion/dec0de commit 54d7efd967540b3ce37cdb7fe33c1547ff1f4b69, samples/README.txt; kept alongside the samples as the provenance record",
       "test": ""
+    },
+    {
+      "file": "tests/corpus_free/vice_c1541_2040.d67",
+      "sha256": "0977ba76cb2be242d7f7f7b623d7637eb564d1dbd9a619a2adb9eaad340ec243",
+      "format": "d67",
+      "origin": "cross-tool",
+      "tool": "VICE 3.10 c1541 (SDLVICE-3.10-win64-r46215)",
+      "source": "c1541 -format \"uftcorpus,42\" d67 <img> -write marker.txt \"marker\"; marker.txt is original UFT text (rights-free). Commodore 2040/4040, 690 sectors, zone table 21/20/18/17.",
+      "test": "test_corpus_cbm_vice"
+    },
+    {
+      "file": "tests/corpus_free/vice_c1541_8050.d80",
+      "sha256": "8afe6cbd8b150cf8008b575e952f9b01eae657721b518425f319b94c390abcd3",
+      "format": "d80",
+      "origin": "cross-tool",
+      "tool": "VICE 3.10 c1541 (SDLVICE-3.10-win64-r46215)",
+      "source": "c1541 -format \"uftcorpus,42\" d80 <img> -write marker.txt \"marker\"; marker.txt is original UFT text (rights-free). Commodore 8050, 2083 sectors, zone table 29/27/25/23.",
+      "test": "test_corpus_cbm_vice"
+    },
+    {
+      "file": "tests/corpus_free/vice_c1541_8250.d82",
+      "sha256": "5d9a8d0a841b170ff4ba233dcd17049151af0f82b02c87552addd401438af1c5",
+      "format": "d82",
+      "origin": "cross-tool",
+      "tool": "VICE 3.10 c1541 (SDLVICE-3.10-win64-r46215)",
+      "source": "c1541 -format \"uftcorpus,42\" d82 <img> -write marker.txt \"marker\"; marker.txt is original UFT text (rights-free). Commodore 8250, double-sided 8050, 4166 sectors.",
+      "test": "test_corpus_cbm_vice"
+    },
+    {
+      "file": "tests/corpus_free/vice_c1541_1571.g71",
+      "sha256": "6c2fe63f8d31f92b5dd2e462b74a06c252a86a4edbe08dcd1b87a7ca611a8def",
+      "format": "g71",
+      "origin": "cross-tool",
+      "tool": "VICE 3.10 c1541 (SDLVICE-3.10-win64-r46215)",
+      "source": "c1541 -format \"uftcorpus,42\" g71 <img> -write marker.txt \"marker\"; marker.txt is original UFT text (rights-free). 1571 GCR, 168 half-track slots.",
+      "test": "test_corpus_cbm_vice"
     }
   ]
 }

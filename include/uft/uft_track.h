@@ -44,18 +44,20 @@ extern "C" {
  * Values: 0=Unknown, 1=FM, 2=MFM, etc.
  * ═══════════════════════════════════════════════════════════════════════════ */
 
-/* Define local constants only if uft_types.h not included */
-#ifndef UFT_ENC_UNKNOWN
-#define UFT_ENC_UNKNOWN   0
-#define UFT_ENC_FM        1
-#define UFT_ENC_MFM       2
-#define UFT_ENC_GCR_CBM   3
-#define UFT_ENC_GCR_APPLE 4
-#define UFT_ENC_GCR_VICTOR 5
-#define UFT_ENC_AMIGA     6
-#define UFT_ENC_RAW       7
-#define UFT_ENC_COUNT     8
-#endif
+/* The encoding constants come from uft_types.h, included above — there is no
+ * fallback here on purpose.
+ *
+ * There used to be one, guarded by `#ifndef UFT_ENC_UNKNOWN`. That guard could
+ * never fire: in uft_types.h UFT_ENC_UNKNOWN is an enum constant, not a macro,
+ * so the preprocessor never sees it and the fallback was always defined. Its
+ * numbers disagreed with the enum — UFT_ENC_GCR_CBM was 3 here and 9 there —
+ * so the same name meant two different things depending on which headers a
+ * translation unit pulled in. Plugins (uft_types.h only) wrote 9; anything that
+ * also included this header compared against 3 and never matched.
+ *
+ * Found by test_corpus_cbm_vice (MF-427) when a G71 track read back with an
+ * encoding that could not be named. Do not reintroduce a local copy: if a
+ * constant is missing, add it to uft_types.h. */
 
 /* Use uint32_t for encoding field to avoid type conflicts */
 typedef uint32_t uft_track_encoding_t;
