@@ -203,8 +203,13 @@ UFT_ERROR_FORMAT_NOT_SUPPORTED	_UFTEC_UNSUP(-6)	compat_h	NOT_SUPPORTED
 # === UFT_IO_ERR_* / UFT_IR_ERR_* subsystem aliases (compat_h + codes_h) ==
 UFT_IO_ERR_READ	_UFTEC_IO(-100)	compat_h	IO
 UFT_IO_ERR_WRITE	_UFTEC_IO(-100)	compat_h	IO
-UFT_IO_ERR_EOF	_UFTEC_IO(-100)	compat_h	EOF
-# CHANGED: was IO; EOF now canonical (code -14), more specific.
+# REMOVED MF-431: UFT_IO_ERR_EOF is an ENUM constant in uft_safe_io.h
+# (uft_io_error_t, value 5). The generated `#ifndef UFT_IO_ERR_EOF` guard
+# cannot see an enum constant, so the alias always won and
+# uft_safe_io.h:419 `return UFT_IO_ERR_EOF;` returned -14 from a function
+# declared to return uft_io_error_t. Two different error spaces, one name.
+# The alias had zero users. UFT_IO_ERR_READ/_WRITE stay: uft_safe_io.h
+# spells those UFT_IO_ERR_READ_FAILED/_WRITE_FAILED, no collision.
 UFT_IR_ERR_READ	_UFTEC_IO(-100)	compat_h	IO
 
 # === UFT_E<short> posix-ish aliases (compat_h) ===========================

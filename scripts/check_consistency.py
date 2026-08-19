@@ -570,6 +570,13 @@ def main() -> int:
                            _inv.check_compat_claims(repo)))
         all_errors.append(("macro value conflicts",
                            _inv.check_macro_conflicts(repo)))
+        # A name that is an enum constant here and a macro there. The
+        # preprocessor cannot see enum constants, so #ifndef guards around such
+        # a name never fire and the macro wins silently — MF-427 cost 43
+        # translation units a comparison that could never match.
+        import enum_macro_conflicts as _enum_macro
+        all_errors.append(("enum vs macro conflicts",
+                           _enum_macro.check(repo)))
 
     total = sum(len(e) for _, e in all_errors)
     print(f"Consistency check ({len(all_errors)} categories, root={repo}):")

@@ -64,7 +64,15 @@ extern "C" {
     #define UFT_PLATFORM_FREEBSD 1
     #define UFT_PLATFORM_NAME "FreeBSD"
 #else
-    #define UFT_PLATFORM_UNKNOWN 1
+    /* MF-431: no UFT_PLATFORM_UNKNOWN flag here. The name is already an enum
+     * constant in uft_protection.h / uft_integration.h / protection/
+     * uft_protection_classify.h, where it means "the DISK's target platform is
+     * unknown" and is 0 — while this one meant "the HOST OS is not one we
+     * recognise" and was 1. Nothing ever tested the OS flag (grep: zero
+     * `defined(UFT_PLATFORM_UNKNOWN)`), but on an unrecognised build host it
+     * would have silently turned every `= UFT_PLATFORM_UNKNOWN` in the
+     * protection layer into ordinal 1. UFT_PLATFORM_NAME carries the same
+     * information for the only purpose it had. */
     #define UFT_PLATFORM_NAME "Unknown"
 #endif
 

@@ -273,10 +273,20 @@ void uft_calculate_metrics(const uint8_t* track_data, size_t track_len,
  * ENCODING CONSTANTS
  * ═══════════════════════════════════════════════════════════════════════════════ */
 
-#define UFT_ENCODING_MFM        0   /**< MFM (IBM PC, Amiga) */
-#define UFT_ENCODING_FM         1   /**< FM (single density) */
-#define UFT_ENCODING_GCR_C64    2   /**< GCR Commodore */
-#define UFT_ENCODING_GCR_APPLE  3   /**< GCR Apple II */
+/* MF-431: praefigiert. Diese vier Zahlen sind der Parameter-Raum der
+ * God-Mode-API (uft_kalman_config_init / uft_viterbi_config_init), NICHT die
+ * Encoding-Nummerierung des Formatlayers. Unter den alten Namen kollidierten
+ * UFT_ENCODING_MFM und _FM mit den Aliassen in uft_types.h — mit anderen
+ * Werten (MFM 0 hier, 3 dort), und 0 ist dort UFT_ENC_UNKNOWN.
+ *
+ * Selbstkonsistent war das nur, solange Argument und Vergleich aus derselben
+ * Uebersetzungseinheit stammten. Sobald ein gespeichertes track->encoding
+ * (Formatlayer-Nummerierung) auf diesen switch trifft, waehlt 3 den
+ * GCR-Apple-Zweig statt MFM. */
+#define UFT_GODMODE_ENC_MFM        0   /**< MFM (IBM PC, Amiga) */
+#define UFT_GODMODE_ENC_FM         1   /**< FM (single density) */
+#define UFT_GODMODE_ENC_GCR_C64    2   /**< GCR Commodore */
+#define UFT_GODMODE_ENC_GCR_APPLE  3   /**< GCR Apple II */
 
 #ifdef __cplusplus
 }

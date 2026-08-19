@@ -284,6 +284,15 @@ MACRO_BASELINE = "scripts/macro_conflict_baseline.json"
 _MACRO_DEF = re.compile(
     r"^[ \t]*#[ \t]*define[ \t]+([A-Za-z_][A-Za-z0-9_]{2,})[ \t]+(\S.*?)[ \t]*$", re.M)
 
+# Function-like macros: `#define NAME(a, b) body`, no space before the paren.
+# _MACRO_DEF cannot match these (it demands whitespace after the name), and
+# _conflicting_macros used to skip them outright. UFT_PREFETCH sat in that
+# blind spot with two different bodies while gcc warned about it on every
+# single build (MF-431).
+_MACRO_FN_DEF = re.compile(
+    r"^[ \t]*#[ \t]*define[ \t]+([A-Za-z_][A-Za-z0-9_]{2,})\(([^)\n]*)\)[ \t]*"
+    r"(.*?)[ \t]*$", re.M)
+
 
 def _macro_value(raw: str):
     """Canonical form of a macro body, or None if it is not a plain literal.
@@ -308,6 +317,24 @@ def _macro_value(raw: str):
     return ("expr", v)
 
 
+def _macro_fn_value(params: str, body: str):
+    """Canonical form of a function-like macro body.
+
+    Parameter NAMES are not part of the meaning: `#define F(x) ((x)+1)` and
+    `#define F(a) ((a)+1)` are the same macro. They are rewritten to positional
+    markers so only a real difference in the body counts. Arity is part of the
+    signature and is kept."""
+    names = [p.strip() for p in params.split(",") if p.strip()]
+    b = re.split(r"/\*|//", body)[0].strip()
+    if not b:
+        return None
+    for i, nm in enumerate(names):
+        if re.fullmatch(r"[A-Za-z_]\w*", nm):
+            b = re.sub(r"\b" + re.escape(nm) + r"\b", f"${i}", b)
+    b = re.sub(r"\s+", " ", b)
+    return ("fn", len(names), b)
+
+
 def _conflicting_macros(repo: Path) -> dict[str, list[str]]:
     """Macro names whose value differs BETWEEN headers (KNOWN_ISSUES ARCH-2).
 
@@ -317,10 +344,25 @@ def _conflicting_macros(repo: Path) -> dict[str, list[str]]:
       - a name is only reported if the set of values differs across files
       - names where every definition but one sits behind #ifndef are skipped:
         first include wins and the outcome is stable
+
+    Function-like macros ARE included since MF-431. They used to be skipped as
+    presumed-equivalent noise, and UFT_PREFETCH lived in that gap with two
+    different bodies while the compiler warned about it on every build. Bodies
+    are compared with parameter names normalised away, so a rename is not a
+    finding but a different body is.
     """
     import collections
     per_file: dict[str, dict[str, set]] = collections.defaultdict(dict)
     guarded: dict[str, list[bool]] = collections.defaultdict(list)
+
+    def record(name: str, val, text: str, start: int, lines, rel: str) -> None:
+        if val is None:
+            return
+        per_file[name].setdefault(rel, set()).add(val)
+        ln = text[:start].count("\n") + 1
+        g = any(re.match(r"\s*#\s*ifndef\s+" + re.escape(name) + r"\b",
+                         lines[k]) for k in range(max(0, ln - 4), ln - 1))
+        guarded[name].append(g)
 
     for p in sorted((repo / "include").rglob("*.h")):
         text = p.read_text(encoding="utf-8", errors="replace")
@@ -330,15 +372,11 @@ def _conflicting_macros(repo: Path) -> dict[str, list[str]]:
             name, raw = m.group(1), m.group(2)
             if raw.lstrip().startswith("(") and re.match(
                     r"^\([A-Za-z_][A-Za-z0-9_]*\s*[,)]", raw.lstrip()):
-                continue                      # function-like macro
-            val = _macro_value(raw)
-            if val is None:
-                continue
-            per_file[name].setdefault(rel, set()).add(val)
-            ln = text[: m.start()].count("\n") + 1
-            g = any(re.match(r"\s*#\s*ifndef\s+" + re.escape(name) + r"\b",
-                             lines[k]) for k in range(max(0, ln - 4), ln - 1))
-            guarded[name].append(g)
+                continue          # `#define N (x)` — handled by _MACRO_FN_DEF
+            record(name, _macro_value(raw), text, m.start(), lines, rel)
+        for m in _MACRO_FN_DEF.finditer(text):
+            record(m.group(1), _macro_fn_value(m.group(2), m.group(3)),
+                   text, m.start(), lines, rel)
 
     out: dict[str, list[str]] = {}
     for name, files in per_file.items():

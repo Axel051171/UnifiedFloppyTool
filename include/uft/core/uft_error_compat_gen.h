@@ -683,9 +683,6 @@ extern "C" {
 #ifndef UFT_IO_ERR_WRITE
 #define UFT_IO_ERR_WRITE UFT_ERR_IO
 #endif
-#ifndef UFT_IO_ERR_EOF
-#define UFT_IO_ERR_EOF UFT_ERR_EOF
-#endif
 
 /* --- UFT_IR_* --- */
 #ifndef UFT_IR_ERR_READ

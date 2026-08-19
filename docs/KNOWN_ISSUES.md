@@ -1448,6 +1448,126 @@ ohne eine einzige Information hinzuzufügen — `compat_entries == NULL` und ein
 Liste aus lauter UNTESTED sagen dasselbe. Eine Matrix gehört dorthin, wo jemand
 etwas geprüft hat oder wo die relevanten Ziele nicht offensichtlich sind.
 
+### ARCH-5 — Namen, die Enum-Konstante *und* Makro sind: die Klasse hinter MF-427 (2026-08-19, MF-431) → ✓ LIVE-FÄLLE BEHOBEN, Wächter steht
+
+**Correctness, systemisch.** MF-427 war kein Einzelfall, sondern eine Form.
+Die Frage danach lautete nicht „ist er behoben", sondern „wie viele weitere
+Konstanten haben dasselbe Muster" — und die ließ sich beantworten, weil der
+Mechanismus mechanisch suchbar ist: jedes `#ifndef`/`#ifdef`, dessen Symbol in
+einem `enum` steht. Der Präprozessor sieht Enum-Konstanten nicht, also greift
+so ein Guard nie, und das Makro gewinnt lautlos.
+
+**Gemessen** (`scripts/enum_macro_conflicts.py`): 1843 Dateien, 6163
+Enum-Konstanten, 10682 Makros, 4695 Guards. Davon **33 Guards auf einem
+Enum-Symbol** und **51 Namen, die als Enum und als Makro mit verschiedenen
+Werten existieren**.
+
+Entscheidend ist nicht die Existenz, sondern ob eine Übersetzungseinheit beide
+Seiten erreicht. Die Include-Hüllen aller 980 TUs, gegen den Stand **vor**
+MF-427 gegengeprüft, damit das Werkzeug erst den bekannten Fall findet, bevor
+ich seinen Zahlen glaube:
+
+| | vor MF-427 | nach MF-427/428 | jetzt |
+|---|---|---|---|
+| LIVE | **9** | 5 | **0** |
+| LATENT | 47 | 46 | 46 |
+
+Die neun Live-Fälle vor MF-427 schlossen `UFT_ENC_GCR_CBM` mit **49**
+Übersetzungseinheiten ein — das ist der Fund, der zufällig über einen
+G71-Track auffiel.
+
+**Die fünf, die nach MF-427 noch standen, und was sie waren:**
+
+1. **`UFT_ENCODING_FM` / `_MFM` / `_RAW`** (6 TUs) — genau der Fall, den die
+   Rückfrage vorhergesagt hat. `uft_flux_pll.h` deklarierte den Encoding-Enum
+   lokal und schrieb zwölf Zeilen darunter
+
+   ```c
+   #ifndef UFT_ENCODING_FM
+   #define UFT_ENCODING_FM   UFT_ENC_FM
+   #endif
+   ```
+
+   — geprüft gegen die Enum-Konstante **in derselben Datei**. Der Guard konnte
+   nicht greifen, das Makro überschattete sofort den Enum, den es gerade
+   eingeführt hatte (Enum FM = 0, Makro `UFT_ENC_FM` = 1). Dazu
+   `uft_god_mode.h` mit denselben Namen und einer dritten Nummerierung
+   (MFM = 0, was in `uft_types.h` `UFT_ENC_UNKNOWN` ist).
+
+   *Warum es trotzdem nichts kaputt machte:* `uft_pll_init()` ist `static
+   inline`, Argument und Vergleich (`encoding == UFT_ENCODING_MFM`) werden in
+   derselben Übersetzungseinheit expandiert, und alle sechs Aufrufstellen
+   übergeben das Makro als Literal statt eines gespeicherten Werts. Selbst-
+   konsistent — bis das erste `track->encoding` aus dem Formatlayer in diesen
+   Vergleich läuft. Genau die Grenze, die latent existiert und beim nächsten
+   `#include` scharf wird.
+
+   *Behoben:* `uft_flux_pll.h` bindet `uft_types.h` ein und deklariert nichts
+   Eigenes mehr; die God-Mode-Konstanten heißen `UFT_GODMODE_ENC_*` und sagen
+   damit, dass sie der Parameterraum **einer API** sind und nicht die
+   Encoding-Nummerierung des Formatlayers.
+
+2. **`UFT_PLATFORM_UNKNOWN`** (3 TUs) — zwei Begriffe unter einem Namen: im
+   Schutzlayer „die Zielplattform der **Diskette** ist unbekannt" (Enum, 0),
+   in `uft_platform.h` „das **Build-Host-OS** ist keines der bekannten"
+   (Makro, 1). Das Makro entsteht nur im `#else`-Zweig, also auf keiner
+   Plattform, auf der wir bauen — auf einem unbekannten Host hätte jedes
+   `= UFT_PLATFORM_UNKNOWN` im Schutzlayer still die Ordinalzahl 1 bedeutet.
+   Das OS-Flag hatte **null Nutzer** (`grep`: kein einziges
+   `defined(UFT_PLATFORM_UNKNOWN)`) und ist entfernt; `UFT_PLATFORM_NAME`
+   trägt dieselbe Information.
+
+3. **`UFT_IO_ERR_EOF`** (1 TU) — `uft_safe_io.h` deklariert es als Wert 5 des
+   kleinen `uft_io_error_t`, die generierte Alias-Tabelle bildete denselben
+   Namen auf den globalen Fehlercode −14 ab. Der `#ifndef` im Generat konnte
+   den Enum nicht sehen, also gab `uft_safe_io.h:419` `return UFT_IO_ERR_EOF;`
+   aus einer Funktion mit Rückgabetyp `uft_io_error_t` die −14 zurück. Zwei
+   Fehlerräume, ein Name, null Nutzer. Zeile aus
+   `data/errors_legacy_aliases.tsv` entfernt und neu generiert
+   (`verify_errors_ssot: OK`).
+
+**Wächter.** `scripts/enum_macro_conflicts.py`, verdrahtet als 14. Kategorie in
+`check_consistency.py`. Ein **LIVE**-Fall ist nicht baselinebar und schlägt
+immer fehl — dort entscheidet die Include-Reihenfolge über die Bedeutung eines
+Namens, das ist nie „akzeptiert". Die 46 latenten stehen in
+`scripts/enum_macro_baseline.json`; ein neuer Name schlägt fehl, ein
+aufgelöster ebenfalls.
+
+**Was der Wächter nicht kann, ausdrücklich:** Include-Hüllen folgen jedem
+`#include`, auch in nicht genommenen `#if`-Zweigen. Das überschätzt, wer was
+sieht — die sichere Richtung, denn es kann einen Live-Fall nicht verstecken.
+Und Werte werden nur aufgelöst, soweit reines C es ohne Compiler zulässt;
+alles andere zählt als unaufgelöst und wird nicht gemeldet, weil eine
+Schätzung hier schlimmer wäre als eine Lücke.
+
+**Die 46 latenten, kurz:** 25 stammen aus `uft_error_compat_gen.h` gegen den
+Enum in `src/core/uft_error_codes.h` — einer **zweiten** Datei dieses Namens
+neben `include/uft/core/uft_error_codes.h`, also ARCH-4-Material. Weitere sind
+`FMT_*` (zwei Format-ID-Nummerierungen), `HFE_IF_*`, `UFT_IMD_SECTOR_*`. Alle
+sind heute unerreichbar füreinander; keiner ist damit richtig.
+
+### ARCH-2 Nachtrag — der Zähler übersah funktionsartige Makros (2026-08-19, MF-431)
+
+`check_macro_conflicts()` verglich `#define` gegen `#define`, überging aber
+alles mit Parameterliste als vermutetes Rauschen. In genau dieser Lücke saß
+`UFT_PREFETCH` mit zwei verschiedenen Rümpfen, **und der Compiler meldete es
+bei jedem Build**. Ein Prüfwerkzeug, das grün meldet, während der Compiler rot
+schreibt, ist dieselbe Krankheit wie alles andere in dieser Reihe.
+
+Der Zähler sieht jetzt beide Formen. Rümpfe werden mit normalisierten
+Parameternamen verglichen — `#define F(x) ((x)+1)` und `#define F(a) ((a)+1)`
+sind dasselbe Makro, eine Umbenennung ist kein Befund. Zwei neue Treffer:
+
+- `UFT_ALIGNED` — fünffach parallel in `uft_common.h`, `uft_compiler.h`,
+  `uft_config.h`, `uft_platform.h`, `uft_simd.h`. `platform-boilerplate`,
+  hängt an ARCH-1, in die Baseline aufgenommen.
+- `UFT_SECTOR_SIZE` — `(128U << (id)->size_code)` in
+  `core/uft_unified_types.h` gegen schlichte `512` in
+  `formats/uft_fat32_mbr.h`. Ein Akzessor und eine Konstante unter einem
+  Namen; kein TU sieht beide, aber der erste, der es täte, bekäme entweder
+  einen Syntaxfehler oder still die 512. Direkt umbenannt zu
+  `FAT32_SECTOR_SIZE` (13 Stellen) statt aufgenommen.
+
 ### FMT-15 — Der IMD-Adapter las das Spurformat falsch und lief dabei über den Puffer (2026-08-19, MF-430) → ✓ BEHOBEN
 
 **Correctness + Memory-Safety.** Gefunden beim Abarbeiten der ARCH-2-Gruppe

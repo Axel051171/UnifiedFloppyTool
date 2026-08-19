@@ -137,16 +137,16 @@ void uft_kalman_config_init(uft_kalman_config_t* config, int encoding) {
     if (!config) return;
     
     switch (encoding) {
-        case UFT_ENCODING_GCR_C64:
+        case UFT_GODMODE_ENC_GCR_C64:
             config->nominal_period = 3250.0;  /* ~3.25µs for C64 GCR */
             break;
-        case UFT_ENCODING_GCR_APPLE:
+        case UFT_GODMODE_ENC_GCR_APPLE:
             config->nominal_period = 4000.0;  /* 4µs for Apple GCR */
             break;
-        case UFT_ENCODING_FM:
+        case UFT_GODMODE_ENC_FM:
             config->nominal_period = 4000.0;  /* 4µs for FM */
             break;
-        case UFT_ENCODING_MFM:
+        case UFT_GODMODE_ENC_MFM:
         default:
             config->nominal_period = 2000.0;  /* 2µs for MFM DD */
             break;

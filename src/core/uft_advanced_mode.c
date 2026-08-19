@@ -383,7 +383,7 @@ uft_error_t uft_advanced_read_track(uft_advanced_handle_t* handle,
             /* Use Kalman PLL for timing recovery */
             uft_kalman_config_t kcfg;
             uft_kalman_state_t kstate;
-            uft_kalman_config_init(&kcfg, UFT_ENCODING_GCR_C64);
+            uft_kalman_config_init(&kcfg, UFT_GODMODE_ENC_GCR_C64);
             uft_kalman_init(&kstate, &kcfg);
             /* ... process flux data through Kalman ... */
         }

@@ -29,6 +29,8 @@
 #include <stdlib.h>
 #include <math.h>
 
+#include "uft/uft_types.h"   /* uft_encoding_t + UFT_ENCODING_* aliases */
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -89,29 +91,25 @@ typedef enum {
 /**
  * @brief Data encoding types
  */
-#ifndef UFT_ENCODING_DEFINED
-#define UFT_ENCODING_DEFINED
-#ifndef UFT_ENCODING_T_DEFINED
-#define UFT_ENCODING_T_DEFINED
-typedef enum {
-    UFT_ENCODING_FM    = 0,   /**< FM (Single Density) */
-    UFT_ENCODING_MFM   = 1,   /**< MFM (Double Density) */
-    UFT_ENCODING_GCR   = 2,   /**< GCR (Apple/Commodore) */
-    UFT_ENCODING_RAW   = 3    /**< Raw bitstream */
-} uft_encoding_t;
-#endif /* UFT_ENCODING_T_DEFINED */
-#endif /* UFT_ENCODING_DEFINED */
-
-/* Ensure legacy names are available even when uft_types.h defines UFT_ENC_* */
-#ifndef UFT_ENCODING_FM
-#define UFT_ENCODING_FM   UFT_ENC_FM
-#endif
-#ifndef UFT_ENCODING_MFM
-#define UFT_ENCODING_MFM  UFT_ENC_MFM
-#endif
-#ifndef UFT_ENCODING_GCR
-#define UFT_ENCODING_GCR  UFT_ENC_GCR_C64
-#endif
+/* uft_encoding_t and the UFT_ENCODING_* legacy aliases come from uft_types.h,
+ * included above. Nothing is declared locally here on purpose (MF-431).
+ *
+ * What stood here was a local copy of the enum followed by
+ *
+ *     #ifndef UFT_ENCODING_FM
+ *     #define UFT_ENCODING_FM   UFT_ENC_FM
+ *     #endif
+ *
+ * checked against the enum constant declared twelve lines above it. Enum
+ * constants are invisible to the preprocessor, so the guard never fired and
+ * the macro always shadowed the enum it had just introduced — with a different
+ * number (FM 0 in the enum, UFT_ENC_FM = 1 through the macro). Same mechanism
+ * as MF-427 in uft_track.h, in a single file this time.
+ *
+ * uft_pll_init() below compares `encoding == UFT_ENCODING_MFM`. That stayed
+ * self-consistent only because it is static inline: argument and comparison
+ * are expanded in the same translation unit. A stored track->encoding crossing
+ * into it would not have been. */
 
 /**
  * @brief Data rate enum

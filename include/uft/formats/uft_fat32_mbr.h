@@ -30,7 +30,13 @@ extern "C" {
  * CONSTANTS
  *============================================================================*/
 
-#define UFT_SECTOR_SIZE         512
+/* MF-431: was UFT_SECTOR_SIZE. core/uft_unified_types.h:126 defines that
+ * name as a function-like accessor, `(128U << (id)->size_code)`. Two
+ * unrelated things under one name: a constant here, an expression there.
+ * No translation unit reaches both today, so this never broke — but the
+ * one that includes both would either fail to compile or silently take
+ * 512 where a per-sector size was meant. */
+#define FAT32_SECTOR_SIZE       512
 #define UFT_MAX_PARTITIONS      4
 
 /* FAT32 constants */

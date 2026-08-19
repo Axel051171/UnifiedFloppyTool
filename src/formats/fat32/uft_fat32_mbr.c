@@ -20,7 +20,7 @@
  *============================================================================*/
 
 /* Sector buffer for operations */
-static uint8_t sector_buffer[UFT_SECTOR_SIZE];
+static uint8_t sector_buffer[FAT32_SECTOR_SIZE];
 
 /**
  * @brief Read 16-bit little-endian value
@@ -185,7 +185,7 @@ int uft_mbr_read_partitions(const uft_disk_io_t *io,
             p->bootable = (entry[0] == 0x80) ? 1 : 0;
             p->start_lba = read_le32(entry + 8);
             p->size_sectors = read_le32(entry + 12);
-            p->size_bytes = (uint64_t)p->size_sectors * UFT_SECTOR_SIZE;
+            p->size_bytes = (uint64_t)p->size_sectors * FAT32_SECTOR_SIZE;
             
             strncpy(p->type_name, uft_partition_type_name(type), sizeof(p->type_name) - 1);
             p->type_name[sizeof(p->type_name) - 1] = '\0';
@@ -206,7 +206,7 @@ int uft_mbr_write_partitions(const uft_disk_io_t *io,
     }
     
     /* Clear buffer and set signature */
-    memset(sector_buffer, 0, UFT_SECTOR_SIZE);
+    memset(sector_buffer, 0, FAT32_SECTOR_SIZE);
     write_le16(sector_buffer + 510, UFT_MBR_SIGNATURE);
     
     /* Copy partition entries */
@@ -396,7 +396,7 @@ int uft_fat32_format(const uft_disk_io_t *io,
     data_sectors = params->partition_size - UFT_FAT32_RESERVED_SECTORS;
     cluster_count = data_sectors / spc;
     fat_size = (cluster_count + 2) * 4;  /* 4 bytes per FAT entry */
-    fat_size = (fat_size + UFT_SECTOR_SIZE - 1) / UFT_SECTOR_SIZE;  /* Round up */
+    fat_size = (fat_size + FAT32_SECTOR_SIZE - 1) / FAT32_SECTOR_SIZE;  /* Round up */
     
     /* Verify sufficient space */
     if (fat_size * 2 + UFT_FAT32_RESERVED_SECTORS >= params->partition_size) {
@@ -404,7 +404,7 @@ int uft_fat32_format(const uft_disk_io_t *io,
     }
     
     /* Create boot sector */
-    memset(sector_buffer, 0, UFT_SECTOR_SIZE);
+    memset(sector_buffer, 0, FAT32_SECTOR_SIZE);
     boot = (uft_fat32_boot_sector_t *)sector_buffer;
     
     /* Jump instruction */
@@ -420,7 +420,7 @@ int uft_fat32_format(const uft_disk_io_t *io,
     }
     
     /* BIOS Parameter Block */
-    boot->bytes_per_sector = UFT_SECTOR_SIZE;
+    boot->bytes_per_sector = FAT32_SECTOR_SIZE;
     boot->sectors_per_cluster = spc;
     boot->reserved_sectors = UFT_FAT32_RESERVED_SECTORS;
     boot->num_fats = UFT_FAT32_NUM_FATS;
@@ -466,7 +466,7 @@ int uft_fat32_format(const uft_disk_io_t *io,
     }
     
     /* Create FSInfo sector */
-    memset(sector_buffer, 0, UFT_SECTOR_SIZE);
+    memset(sector_buffer, 0, FAT32_SECTOR_SIZE);
     fsinfo = (uft_fat32_fsinfo_t *)sector_buffer;
     
     fsinfo->lead_signature = 0x41615252;
@@ -486,7 +486,7 @@ int uft_fat32_format(const uft_disk_io_t *io,
     }
     
     /* Clear remaining reserved sectors */
-    memset(sector_buffer, 0, UFT_SECTOR_SIZE);
+    memset(sector_buffer, 0, FAT32_SECTOR_SIZE);
     for (uint32_t i = 2; i < UFT_FAT32_RESERVED_SECTORS; i++) {
         if (i == 6 || i == 7) continue;  /* Skip backup sectors */
         if (io->write(params->partition_start + i, sector_buffer, io->user_data) != 0) {
@@ -496,7 +496,7 @@ int uft_fat32_format(const uft_disk_io_t *io,
     
     /* Initialize FATs */
     /* First FAT sector has special entries */
-    memset(sector_buffer, 0, UFT_SECTOR_SIZE);
+    memset(sector_buffer, 0, FAT32_SECTOR_SIZE);
     sector_buffer[0] = 0xF8;  /* Media type */
     sector_buffer[1] = 0xFF;
     sector_buffer[2] = 0xFF;
@@ -521,7 +521,7 @@ int uft_fat32_format(const uft_disk_io_t *io,
     }
     
     /* Clear rest of FATs */
-    memset(sector_buffer, 0, UFT_SECTOR_SIZE);
+    memset(sector_buffer, 0, FAT32_SECTOR_SIZE);
     uint32_t total_fat_sectors = fat_size * 2;
     
     for (uint32_t i = 1; i < fat_size; i++) {
@@ -548,7 +548,7 @@ int uft_fat32_format(const uft_disk_io_t *io,
     
     /* Create volume label entry in root directory */
     uft_fat32_dir_entry_t *entry = (uft_fat32_dir_entry_t *)sector_buffer;
-    memset(sector_buffer, 0, UFT_SECTOR_SIZE);
+    memset(sector_buffer, 0, FAT32_SECTOR_SIZE);
     
     memset(entry->name, ' ', 11);
     memcpy(entry->name, params->volume_label, 
@@ -573,7 +573,7 @@ int uft_fat32_format(const uft_disk_io_t *io,
 
 void uft_format_size_string(uint64_t sectors, char *buffer, size_t buffer_size)
 {
-    uint64_t bytes = sectors * UFT_SECTOR_SIZE;
+    uint64_t bytes = sectors * FAT32_SECTOR_SIZE;
     
     if (bytes >= (1ULL << 40)) {
         snprintf(buffer, buffer_size, "%.2f TB", (double)bytes / (1ULL << 40));

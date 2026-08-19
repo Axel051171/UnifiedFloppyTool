@@ -7,11 +7,10 @@
     "format-constant": "Same format, contradictory values across headers. At most one can be right. 86F and IMD are both tier T3, so the winner cannot be picked without an authoritative source -- do not guess."
   },
   "accepted": [
+    "UFT_ALIGNED",
     "UFT_ARCH_NAME",
     "UFT_BIG_ENDIAN",
     "UFT_CACHE_LINE_SIZE",
-    "UFT_ENCODING_FM",
-    "UFT_ENCODING_MFM",
     "UFT_IMD_MAX_COMMENT",
     "UFT_IMD_MAX_SECTORS",
     "UFT_IMD_MAX_TRACKS",
@@ -30,8 +29,6 @@
     "UFT_ARCH_NAME": "platform-boilerplate",
     "UFT_BIG_ENDIAN": "platform-boilerplate",
     "UFT_CACHE_LINE_SIZE": "platform-boilerplate",
-    "UFT_ENCODING_FM": "format-constant",
-    "UFT_ENCODING_MFM": "format-constant",
     "UFT_IMD_MAX_COMMENT": "format-constant",
     "UFT_IMD_MAX_SECTORS": "format-constant",
     "UFT_IMD_MAX_TRACKS": "format-constant",
@@ -44,7 +41,8 @@
     "UFT_PACKED_STRUCT": "platform-boilerplate",
     "UFT_RESTRICT": "platform-boilerplate",
     "UFT_THREAD_LOCAL": "platform-boilerplate",
-    "UFT_VERIFY_OPTIONS_DEFAULT": "format-constant"
+    "UFT_VERIFY_OPTIONS_DEFAULT": "format-constant",
+    "UFT_ALIGNED": "platform-boilerplate"
   },
   "_resolved": {
     "MF-422": [
@@ -72,6 +70,11 @@
     "MF-430": [
       "UFT_IMD_HEAD_MASK"
     ],
-    "_note_MF-430": "Aufgeloest in MF-430 gegen zwei unabhaengige Implementierungen (MAME imd_dsk.cpp, hharte/libimd): nur 0x80 und 0x40 sind Flagbits, die Kopfnummer steht in den unteren Bits. Alle drei UFT-Kopien tragen jetzt 0x0F — die engere der beiden Lesarten (MAME 0x3F, libimd 0x0F), fuer jede reale Kopfnummer identisch. Die verbleibenden UFT_IMD_MAX_* sind Implementierungsgrenzen, keine Formateigenschaften; MAX_SECTORS wurde im Adapter von 64 auf 256 gehoben, weil die Sektorzahl ein Byte ist und der alte Wert einen dateigesteuerten Pufferueberlauf ermoeglichte."
+    "_note_MF-430": "Aufgeloest in MF-430 gegen zwei unabhaengige Implementierungen (MAME imd_dsk.cpp, hharte/libimd): nur 0x80 und 0x40 sind Flagbits, die Kopfnummer steht in den unteren Bits. Alle drei UFT-Kopien tragen jetzt 0x0F — die engere der beiden Lesarten (MAME 0x3F, libimd 0x0F), fuer jede reale Kopfnummer identisch. Die verbleibenden UFT_IMD_MAX_* sind Implementierungsgrenzen, keine Formateigenschaften; MAX_SECTORS wurde im Adapter von 64 auf 256 gehoben, weil die Sektorzahl ein Byte ist und der alte Wert einen dateigesteuerten Pufferueberlauf ermoeglichte.",
+    "MF-431": [
+      "UFT_ENCODING_FM",
+      "UFT_ENCODING_MFM"
+    ],
+    "_note_MF-431": "Aufgeloest in MF-431: uft_flux_pll.h deklarierte die Encoding-Konstanten lokal und schattete sie zwoelf Zeilen spaeter per #ifndef gegen den eigenen Enum ab (Guard blind fuer Enum-Werte), uft_god_mode.h trug dieselben Namen mit eigener Nummerierung. flux_pll bindet jetzt uft_types.h ein, god_mode heisst UFT_GODMODE_ENC_*. NEU in der Liste: UFT_ALIGNED — der Zaehler sieht seit MF-431 auch funktionsartige Makros, und UFT_ALIGNED steht fuenffach parallel (platform-boilerplate, haengt an ARCH-1). UFT_SECTOR_SIZE fiel im selben Durchgang auf und wurde direkt umbenannt (FAT32_SECTOR_SIZE) statt aufgenommen."
   }
 }
