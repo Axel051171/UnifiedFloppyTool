@@ -126,7 +126,9 @@ Erkennt und dokumentiert historische Kopierschutz-Verfahren:
 
 ## Build-System
 
-- **Primär:** qmake (`.pro`-Datei), ~756 Source-Dateien (post MF-011-Cleanup)
+- **Primär:** qmake (`.pro`-Datei), ~697 Source-Dateien / ~516 Header
+  (Stand 2026-08-19 nach MF-271; zaehlen mit
+  `find src -name '*.c' -o -name '*.cpp' | wc -l`)
 - **Tests:** CMake (`tests/CMakeLists.txt`), 205/205 grün (Stand 2026-08-16);
   GLOB-discovered von 228+ `test_*.c`/`*.cpp` Quelldateien, 39 in
   `EXCLUDED_TESTS` (fehlende Module / WIP-Subsysteme). Zahlen driften —
@@ -175,7 +177,8 @@ tests/                 — 77 C-Tests + 1 Qt-Test
 
 ## Schlüssel-Metriken
 
-- ~756 Source-Dateien, ~644 Header — Stand 2026-04-25 nach MF-011 19-Welle
+- ~697 Source-Dateien, ~516 Header — Stand 2026-08-19 nach MF-271
+  (src/switch/ + src/cart7/ entfernt, 801 Dateien); davor MF-011 19-Welle
   Cleanup (785 dead-code Files / ~140k LOC entfernt, davon `src/fluxengine/`,
   `src/algorithms/{core,data,fluxio,imageio,tracks}`, `src/loaders/`,
   `src/filesystems/`, `src/encoding/`, plus 250+ einzelne orphan-Header)
