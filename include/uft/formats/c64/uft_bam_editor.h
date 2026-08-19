@@ -51,7 +51,7 @@ extern "C" {
 #define BAM_TOTAL_BLOCKS_40     768         /**< Total blocks (40 tracks) */
 
 /** Directory entry size */
-#define DIR_ENTRY_SIZE          32          /**< Bytes per directory entry */
+#define C64_DIR_ENTRY_SIZE      32          /**< Bytes per directory entry (MF-429: war DIR_ENTRY_SIZE) */
 #define DIR_ENTRIES_PER_SECTOR  8           /**< Directory entries per sector */
 #define DIR_MAX_ENTRIES         144         /**< Maximum directory entries */
 

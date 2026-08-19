@@ -1747,6 +1747,25 @@ Zwei Lehren daraus, beide unbequem:
    hingesehen. Ein Zähler in einem Skript ersetzt nicht das Lesen der
    Build-Ausgabe.
 
+#### `name-too-generic` ist abgeräumt (2026-08-19, MF-429)
+
+Die zweite Gruppe, mechanisch wie angekündigt. Kein Wert war falsch, die Namen
+waren es:
+
+| Name | Werte | neue Namen |
+|---|---|---|
+| `DIR_ENTRY_SIZE` | 16 (Atari DOS) · 32 (C64-BAM) · 24 (FLEX) | `ATARI_DOS_DIR_ENTRY_SIZE`, `C64_DIR_ENTRY_SIZE`, `FLEX_DIR_ENTRY_SIZE` |
+| `TAP_BLOCK_HEADER` / `_DATA` | 0x01/0x02 (C64-TAP) · 0x00/0xFF (Sinclair-TAP) | `C64_TAP_BLOCK_*`, `ZX_TAP_BLOCK_*` |
+
+Beide „TAP" sind verschiedene Formate mit demselben Kürzel, deshalb hat auch
+keines den generischen Namen behalten — sonst hätte die nächste Kollision nur
+einen anderen Aufhänger. Vier Aufrufstellen angepasst, ctest 200/200.
+
+**Stand der vier ARCH-2-Gruppen:** `magic-type-split` leer (MF-428),
+`name-too-generic` leer (MF-429), `format-constant` offen (braucht Quellen —
+86F und IMD sind T3, ohne Beleg gibt es keinen Sieger), `platform-boilerplate`
+offen (hängt an ARCH-1). Baseline von 29 über 25 auf **19**.
+
 #### Offen und belegt: `UFT_ENCODING_MFM` hat zwei Werte (MF-428)
 
 Nach demselben Muster, aber **nicht** behoben, weil die Auflösung eine

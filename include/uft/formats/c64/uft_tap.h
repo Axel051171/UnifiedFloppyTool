@@ -64,8 +64,11 @@ extern "C" {
 #define TAP_OVERFLOW_MARKER     0x00    /**< Overflow marker (v1+) */
 
 /** Block types */
-#define TAP_BLOCK_HEADER        0x01    /**< File header block */
-#define TAP_BLOCK_DATA          0x02    /**< Data block */
+/* MF-429: praefigiert. "TAP" bezeichnet zwei verschiedene Formate — C64-TAP
+ * (Pulslaengen) und Sinclair-TAP (Bandbloecke); die Werte widersprachen sich
+ * (0x01/0x02 gegen 0x00/0xFF). Kein Wert war falsch, die Namen waren es. */
+#define C64_TAP_BLOCK_HEADER    0x01    /**< File header block */
+#define C64_TAP_BLOCK_DATA      0x02    /**< Data block */
 
 /* ============================================================================
  * Data Structures

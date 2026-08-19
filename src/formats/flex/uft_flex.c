@@ -31,7 +31,7 @@
 #define SIR_MAX_TRACK           0x26
 #define SIR_MAX_SECTOR          0x27
 
-#define DIR_ENTRY_SIZE          24
+#define FLEX_DIR_ENTRY_SIZE     24      /* MF-429: war DIR_ENTRY_SIZE */
 
 /* Standard geometries */
 static const struct {
@@ -175,7 +175,7 @@ int uft_flex_read_directory(uft_flex_image_t *image, uft_flex_dir_entry_t *entri
         int next_track = sec[0], next_sector = sec[1];
         
         for (int i = 0; i < 10 && *count < max_entries; i++) {
-            const uint8_t *e = sec + 16 + (i * DIR_ENTRY_SIZE);
+            const uint8_t *e = sec + 16 + (i * FLEX_DIR_ENTRY_SIZE);
             if (e[0] == 0x00 || e[0] == 0xFF || e[0] == 0xE5) continue;
             
             uft_flex_dir_entry_t *de = &entries[*count];

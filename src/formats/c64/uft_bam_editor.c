@@ -391,7 +391,7 @@ static dir_entry_t *get_dir_entry(const bam_editor_t *editor, int index)
     int offset = bam_sector_offset(DIR_TRACK, dir_sector);
     if (offset < 0) return NULL;
     
-    return (dir_entry_t *)(editor->d64_data + offset + entry_in_sector * DIR_ENTRY_SIZE);
+    return (dir_entry_t *)(editor->d64_data + offset + entry_in_sector * C64_DIR_ENTRY_SIZE);
 }
 
 /**

@@ -7,9 +7,6 @@
     "format-constant": "Same format, contradictory values across headers. At most one can be right. 86F and IMD are both tier T3, so the winner cannot be picked without an authoritative source -- do not guess."
   },
   "accepted": [
-    "DIR_ENTRY_SIZE",
-    "TAP_BLOCK_DATA",
-    "TAP_BLOCK_HEADER",
     "UFT_ARCH_NAME",
     "UFT_BIG_ENDIAN",
     "UFT_CACHE_LINE_SIZE",
@@ -31,9 +28,6 @@
     "UFT_VERIFY_OPTIONS_DEFAULT"
   ],
   "categories": {
-    "DIR_ENTRY_SIZE": "name-too-generic",
-    "TAP_BLOCK_DATA": "name-too-generic",
-    "TAP_BLOCK_HEADER": "name-too-generic",
     "UFT_ARCH_NAME": "platform-boilerplate",
     "UFT_BIG_ENDIAN": "platform-boilerplate",
     "UFT_CACHE_LINE_SIZE": "platform-boilerplate",
@@ -70,6 +64,12 @@
       "UFT_IPF_SIGNATURE",
       "UFT_TD0_SIGNATURE_NORMAL"
     ],
-    "_note_MF-428": "Aufgeloest in MF-428. UFT_IPF_SIGNATURE und UFT_TD0_SIGNATURE_NORMAL: die Integer-Zwillinge in uft_format_parsers.h hatten null Nutzer, jede reale Verwendung ist memcmp gegen den String — Integer geloescht, String bleibt kanonisch. Damit ist magic-type-split leer. UFT_COMPILER_VERSION: war keine latente, sondern eine LIVE-Kollision (gcc warnte bei jedem Build); uft_compiler.h ist jetzt alleiniger Eigentuemer, uft_platform.h bindet ihn ein. Gleicher Zug fuer UFT_PREFETCH, das der Zaehler als funktionsartiges Makro nie gesehen hat."
+    "_note_MF-428": "Aufgeloest in MF-428. UFT_IPF_SIGNATURE und UFT_TD0_SIGNATURE_NORMAL: die Integer-Zwillinge in uft_format_parsers.h hatten null Nutzer, jede reale Verwendung ist memcmp gegen den String — Integer geloescht, String bleibt kanonisch. Damit ist magic-type-split leer. UFT_COMPILER_VERSION: war keine latente, sondern eine LIVE-Kollision (gcc warnte bei jedem Build); uft_compiler.h ist jetzt alleiniger Eigentuemer, uft_platform.h bindet ihn ein. Gleicher Zug fuer UFT_PREFETCH, das der Zaehler als funktionsartiges Makro nie gesehen hat.",
+    "MF-429": [
+      "DIR_ENTRY_SIZE",
+      "TAP_BLOCK_DATA",
+      "TAP_BLOCK_HEADER"
+    ],
+    "_note_MF-429": "Aufgeloest in MF-429 durch Praefigierung — die Gruppe name-too-generic ist damit leer. Kein Wert war falsch, die Namen waren es: DIR_ENTRY_SIZE hiess 16 (Atari DOS), 32 (C64-BAM) und 24 (FLEX); TAP_BLOCK_* bezeichnete zwei verschiedene Formate namens \"TAP\" (C64-Pulsband 0x01/0x02 gegen Sinclair-Bandbloecke 0x00/0xFF). Neue Namen: ATARI_DOS_DIR_ENTRY_SIZE, C64_DIR_ENTRY_SIZE, FLEX_DIR_ENTRY_SIZE, C64_TAP_BLOCK_*, ZX_TAP_BLOCK_*. Vier Aufrufstellen angepasst, ctest 200/200."
   }
 }

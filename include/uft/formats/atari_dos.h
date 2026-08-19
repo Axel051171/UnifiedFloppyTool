@@ -87,7 +87,9 @@ extern "C" {
 #define DIR_SECTOR_COUNT            8
 #define DIR_SECTOR_END              368     /* $170 */
 #define DIR_ENTRIES_PER_SECTOR      8
-#define DIR_ENTRY_SIZE              16
+#define ATARI_DOS_DIR_ENTRY_SIZE    16      /* MF-429: war DIR_ENTRY_SIZE,
+                                             * kollidierte mit C64 (32) und
+                                             * FLEX (24) */
 #define MAX_FILES                   64      /* 8 Sektoren * 8 Einträge */
 
 /* Datei-Namenslängen */

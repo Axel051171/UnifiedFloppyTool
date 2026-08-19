@@ -49,7 +49,7 @@ spec_format_t spec_detect_format(const uint8_t *data, size_t size)
     if (size >= 21) {
         /* TAP: first block should be header (19 bytes + flag) */
         uint16_t block_len = data[0] | (data[1] << 8);
-        if (block_len == 19 && data[2] == TAP_BLOCK_HEADER) {
+        if (block_len == 19 && data[2] == ZX_TAP_BLOCK_HEADER) {
             return SPEC_FORMAT_TAP;
         }
     }

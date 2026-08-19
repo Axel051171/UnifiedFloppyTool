@@ -372,7 +372,7 @@ atari_error_t dos2_read_directory(atari_disk_t *disk)
         if (err != ATARI_OK) return err;
 
         for (int ent = 0; ent < DIR_ENTRIES_PER_SECTOR; ent++) {
-            uint8_t *raw = &buf[ent * DIR_ENTRY_SIZE];
+            uint8_t *raw = &buf[ent * ATARI_DOS_DIR_ENTRY_SIZE];
             uint8_t idx = sec * DIR_ENTRIES_PER_SECTOR + ent;
 
             atari_dir_entry_t *entry = &disk->directory[idx];
@@ -426,7 +426,7 @@ atari_error_t dos2_write_directory(atari_disk_t *disk)
         for (int ent = 0; ent < DIR_ENTRIES_PER_SECTOR; ent++) {
             uint8_t idx = sec * DIR_ENTRIES_PER_SECTOR + ent;
             atari_dir_entry_t *entry = &disk->directory[idx];
-            uint8_t *raw = &buf[ent * DIR_ENTRY_SIZE];
+            uint8_t *raw = &buf[ent * ATARI_DOS_DIR_ENTRY_SIZE];
 
             raw[0] = entry->status;
             write_le16(&raw[1], entry->sector_count);

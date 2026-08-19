@@ -34,8 +34,9 @@ extern "C" {
 #define TZX_MAGIC_SIZE      8
 
 /** TAP block types */
-#define TAP_BLOCK_HEADER    0x00
-#define TAP_BLOCK_DATA      0xFF
+/* MF-429: praefigiert, siehe uft/formats/c64/uft_tap.h */
+#define ZX_TAP_BLOCK_HEADER 0x00
+#define ZX_TAP_BLOCK_DATA   0xFF
 
 /** Z80 snapshot versions */
 typedef enum {
