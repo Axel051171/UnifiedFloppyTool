@@ -402,6 +402,14 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/adf/uft_adf_plugin.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+    elseif(${test_name} STREQUAL "test_corpus_xfd")
+        # T1b cross-tool corpus: XFD derived from the atrcopy ATR (MF-426).
+        # Both readers are linked so the two containers can be compared.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/xfd/uft_xfd.c
+            ${CMAKE_SOURCE_DIR}/src/formats/atr/uft_atr.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_corpus_atr")
         # T1b cross-tool corpus: ATR from the atrcopy project (MF-365)
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/atr/uft_atr.c)

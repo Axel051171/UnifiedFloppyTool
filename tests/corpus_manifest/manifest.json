@@ -1,5 +1,5 @@
 {
-  "_doc": "Manifest of the real/cross-tool reference corpus (docs/VERIFICATION_PLAN.md, Phase 2). The image FILES live in tests/corpus/ (gitignored, copyright-restricted) or tests/corpus_free/ (tracked, rights-free self-created content); this manifest (sha256 + provenance) is the in-repo truth so third parties can re-acquire and verify the corpus. Entries with origin='real' rate a format T1, origin='cross-tool' rate T1b \u2014 in both cases only if the named ctest test exists and consumes the image. Consumed by scripts/gen_verification_tiers.py.",
+  "_doc": "Manifest of the real/cross-tool reference corpus (docs/VERIFICATION_PLAN.md, Phase 2). The image FILES live in tests/corpus/ (gitignored, copyright-restricted) or tests/corpus_free/ (tracked, rights-free self-created content); this manifest (sha256 + provenance) is the in-repo truth so third parties can re-acquire and verify the corpus. Entries with origin='real' rate a format T1, origin='cross-tool' rate T1b — in both cases only if the named ctest test exists and consumes the image. Consumed by scripts/gen_verification_tiers.py.",
   "_entry_schema": {
     "file": "relative path under tests/corpus/",
     "sha256": "hex digest of the image file",
@@ -34,8 +34,17 @@
       "format": "atr",
       "origin": "cross-tool",
       "tool": "atrcopy 10.1 template dos2sd.atr (pristine, byte-identical to the pip package artifact)",
-      "source": "atrcopy templates/dos2sd.atr: 'Atari 8-bit DOS 2 single density (90K), empty VTOC' \u2014 filesystem structure only, no copyrighted DOS files",
+      "source": "atrcopy templates/dos2sd.atr: 'Atari 8-bit DOS 2 single density (90K), empty VTOC' — filesystem structure only, no copyrighted DOS files",
       "test": "test_corpus_atr"
+    },
+    {
+      "file": "tests/corpus_free/atrcopy_dos2sd.xfd",
+      "sha256": "f1774e48b17696e9e8f15b2a92834ed24588dc8e5a422f862025f634b265cf9a",
+      "format": "xfd",
+      "origin": "cross-tool",
+      "tool": "atrcopy 10.1 template dos2sd.atr, header stripped (MF-426)",
+      "source": "XFD is ATR without its 16-byte header (Atari 8-bit FAQ doc-27). Reproduce: tail -c +17 tests/corpus_free/atrcopy_dos2sd.atr > atrcopy_dos2sd.xfd. The stripped header is decoded and checked in the test, so the derivation is not taken on faith.",
+      "test": "test_corpus_xfd"
     },
     {
       "file": "tests/corpus/zxart_spectrofon01.fdi",
@@ -43,7 +52,7 @@
       "format": "fdi",
       "origin": "real",
       "tool": "historical (Spectrofon diskmag #01, 1994, TR-DOS 83-cyl DS)",
-      "source": "zxart.ee release id 428381 (https://zxart.ee/releasefile/id:428381/SP1_O.zip), file SP1_O.fdi \u2014 freely distributed disk magazine; local-only (tests/corpus/ gitignored), re-acquire from the URL and verify this hash",
+      "source": "zxart.ee release id 428381 (https://zxart.ee/releasefile/id:428381/SP1_O.zip), file SP1_O.fdi — freely distributed disk magazine; local-only (tests/corpus/ gitignored), re-acquire from the URL and verify this hash",
       "test": "test_corpus_fdi"
     },
     {
@@ -70,7 +79,7 @@
       "format": "hfe",
       "origin": "cross-tool",
       "tool": "greaseweazle 1.23 (keirf/greaseweazle release v1.23, win64)",
-      "source": "gw convert --format=amiga.amigados tests/corpus_free/xdftool_dd_ofs.adf out.hfe \u2014 canonical MFM encoding of the rights-free xdftool ADF",
+      "source": "gw convert --format=amiga.amigados tests/corpus_free/xdftool_dd_ofs.adf out.hfe — canonical MFM encoding of the rights-free xdftool ADF",
       "test": "test_corpus_hfe"
     },
     {
@@ -79,7 +88,7 @@
       "format": "scp",
       "origin": "cross-tool",
       "tool": "greaseweazle 1.23 (keirf/greaseweazle release v1.23, win64)",
-      "source": "gw convert --format=amiga.amigados tests/corpus_free/xdftool_dd_ofs.adf out.scp \u2014 32 MB flux, LOCAL-ONLY (tests/corpus/ gitignored) but fully reproducible from the tracked ADF with this exact command",
+      "source": "gw convert --format=amiga.amigados tests/corpus_free/xdftool_dd_ofs.adf out.scp — 32 MB flux, LOCAL-ONLY (tests/corpus/ gitignored) but fully reproducible from the tracked ADF with this exact command",
       "test": "test_corpus_scp"
     },
     {
