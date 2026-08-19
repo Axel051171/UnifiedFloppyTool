@@ -34,6 +34,10 @@ jobs:
   # locally; this gate catches everyone else.
   # ══════════════════════════════════════════════════════════════════════════
   consistency:
+    # MF-432: without this GitHub's default is 360 min. On 2026-08-19
+    # five Linux jobs hung in the Qt/apt download and would have burned
+    # six hours each. A hang now dies here instead.
+    timeout-minutes: 10
     name: Consistency check
     runs-on: ubuntu-22.04
     steps:
@@ -47,6 +51,10 @@ jobs:
   # Matrix: C++17 (Qt 6.7.3) UND C++20 (Qt 6.10.1) — beide müssen grün sein
   # ══════════════════════════════════════════════════════════════════════════
   build-linux:
+    # MF-432: without this GitHub's default is 360 min. On 2026-08-19
+    # five Linux jobs hung in the Qt/apt download and would have burned
+    # six hours each. A hang now dies here instead.
+    timeout-minutes: 45
     needs: consistency
     name: Linux (${{ matrix.qt_version }}, ${{ matrix.cxx_std }})
     runs-on: ubuntu-22.04
@@ -131,6 +139,10 @@ jobs:
   # macOS — ARM64, Qt 6.10.1
   # ══════════════════════════════════════════════════════════════════════════
   build-macos:
+    # MF-432: without this GitHub's default is 360 min. On 2026-08-19
+    # five Linux jobs hung in the Qt/apt download and would have burned
+    # six hours each. A hang now dies here instead.
+    timeout-minutes: 45
     needs: consistency
     runs-on: macos-14
     steps:
@@ -168,6 +180,10 @@ jobs:
   # Windows — MinGW, Qt 6.10.1
   # ══════════════════════════════════════════════════════════════════════════
   build-windows:
+    # MF-432: without this GitHub's default is 360 min. On 2026-08-19
+    # five Linux jobs hung in the Qt/apt download and would have burned
+    # six hours each. A hang now dies here instead.
+    timeout-minutes: 60
     needs: consistency
     runs-on: windows-2022
     steps:

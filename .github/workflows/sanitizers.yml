@@ -29,6 +29,10 @@ env:
 jobs:
 
   asan:
+    # MF-432: without this GitHub's default is 360 min. On 2026-08-19
+    # five Linux jobs hung in the Qt/apt download and would have burned
+    # six hours each. A hang now dies here instead.
+    timeout-minutes: 60
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v7
@@ -81,6 +85,10 @@ jobs:
           retention-days: 7
 
   ubsan:
+    # MF-432: without this GitHub's default is 360 min. On 2026-08-19
+    # five Linux jobs hung in the Qt/apt download and would have burned
+    # six hours each. A hang now dies here instead.
+    timeout-minutes: 60
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v7

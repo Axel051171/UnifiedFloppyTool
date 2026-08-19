@@ -35,6 +35,10 @@ jobs:
   # Linux (.deb + .tar.gz)
   # ══════════════════════════════════════════════════════════════════════════
   build-linux:
+    # MF-432: without this GitHub's default is 360 min. On 2026-08-19
+    # five Linux jobs hung in the Qt/apt download and would have burned
+    # six hours each. A hang now dies here instead.
+    timeout-minutes: 45
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v7
@@ -142,6 +146,10 @@ jobs:
   # macOS (.dmg + .tar.gz) — ARM64 native (macos-14)
   # ══════════════════════════════════════════════════════════════════════════
   build-macos:
+    # MF-432: without this GitHub's default is 360 min. On 2026-08-19
+    # five Linux jobs hung in the Qt/apt download and would have burned
+    # six hours each. A hang now dies here instead.
+    timeout-minutes: 45
     runs-on: macos-14
     steps:
       - uses: actions/checkout@v7
@@ -202,6 +210,10 @@ jobs:
   # Windows (.tar.gz)
   # ══════════════════════════════════════════════════════════════════════════
   build-windows:
+    # MF-432: without this GitHub's default is 360 min. On 2026-08-19
+    # five Linux jobs hung in the Qt/apt download and would have burned
+    # six hours each. A hang now dies here instead.
+    timeout-minutes: 60
     runs-on: windows-2022
     steps:
       - uses: actions/checkout@v7
@@ -285,6 +297,10 @@ jobs:
   # Create GitHub Release
   # ══════════════════════════════════════════════════════════════════════════
   create-release:
+    # MF-432: without this GitHub's default is 360 min. On 2026-08-19
+    # five Linux jobs hung in the Qt/apt download and would have burned
+    # six hours each. A hang now dies here instead.
+    timeout-minutes: 20
     needs: [build-linux, build-macos, build-windows]
     runs-on: ubuntu-latest
     steps:

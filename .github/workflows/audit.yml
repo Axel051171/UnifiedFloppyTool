@@ -34,6 +34,10 @@ permissions:
 
 jobs:
   provider-audits:
+    # MF-432: without this GitHub's default is 360 min. On 2026-08-19
+    # five Linux jobs hung in the Qt/apt download and would have burned
+    # six hours each. A hang now dies here instead.
+    timeout-minutes: 20
     name: Hardware-provider audit
     runs-on: ubuntu-22.04
     steps:
