@@ -15,6 +15,11 @@
  */
 
 #include "uft_format_convert_internal.h"
+#include "uft/uft_format_plugin.h"
+#include "uft/uft_track.h"
+#include "uft/flux/uft_flux_decoder.h"
+
+extern const uft_format_plugin_t uft_format_plugin_hfe;
 #include "uft/flux/uft_mfm_sector_parser.h"
 
 // ============================================================================
@@ -628,8 +633,105 @@ uft_error_t uftc_convert_kryoflux_to_adf(const uint8_t* src_data,
  * Pipeline: HFE parse -> de-interleave -> MFM sync search -> sector extract
  * Extracts sector data by searching for MFM sync (0x4489) and IDAM/DAM marks.
  */
+/* HFE -> ADF through uft_format_plugin_hfe and the AmigaDOS decoder (MF-437).
+ *
+ * The plugin already de-interleaves the two sides and bit-reverses the LSB-first
+ * HFE bytes — exactly what the IBM path below open-codes — and hands back a
+ * clean MSB-first bitstream. An HFE stores recovered cells, not flux, so
+ * flux_decode_amiga_bits() consumes it directly with no PLL in between. */
+static uft_error_t uftc_convert_hfe_to_adf_via_plugin(
+    const char* src_path, const char* dst_path,
+    const uft_convert_options_ext_t* opts, uft_convert_result_t* result)
+{
+    enum { ADF_CYLS = 80, ADF_HEADS = 2, ADF_SPT = 11, ADF_SECSZ = 512 };
+    const size_t adf_size = (size_t)ADF_CYLS * ADF_HEADS * ADF_SPT * ADF_SECSZ;
+
+    uftc_report_progress(opts, 10, "Opening HFE via format plugin");
+
+    uft_disk_t disk;
+    memset(&disk, 0, sizeof(disk));
+    disk.read_only = true;
+    if (uft_format_plugin_hfe.open(&disk, src_path, true) != UFT_OK) {
+        result->error = UFT_ERR_FORMAT;
+        uftc_add_warning(result, "HFE open failed via plugin");
+        return UFT_ERR_FORMAT;
+    }
+
+    int cyls  = disk.geometry.cylinders > 0 ? disk.geometry.cylinders : ADF_CYLS;
+    int heads = disk.geometry.heads     > 0 ? disk.geometry.heads     : ADF_HEADS;
+    if (cyls > ADF_CYLS)  cyls = ADF_CYLS;
+    if (heads > ADF_HEADS) heads = ADF_HEADS;
+
+    uint8_t* output = calloc(1, adf_size);
+    if (!output) {
+        uft_format_plugin_hfe.close(&disk);
+        result->error = UFT_ERR_MEMORY;
+        return UFT_ERR_MEMORY;
+    }
+
+    flux_decoder_options_t dopts;
+    flux_decoder_options_init(&dopts);
+
+    uftc_report_progress(opts, 20, "Decoding AmigaDOS sectors from HFE");
+
+    for (int cyl = 0; cyl < cyls; cyl++) {
+        if (uftc_is_cancelled(opts)) break;
+        for (int hd = 0; hd < heads; hd++) {
+            uft_track_t t;
+            memset(&t, 0, sizeof(t));
+            if (uft_format_plugin_hfe.read_track(&disk, cyl, hd, &t) != UFT_OK ||
+                !t.raw_data || t.raw_size == 0) {
+                uft_track_release(&t);
+                result->tracks_failed++;
+                continue;
+            }
+
+            flux_decoded_track_t dt;
+            memset(&dt, 0, sizeof(dt));
+            flux_decode_amiga_bits(t.raw_data, t.raw_size * 8, &dt, &dopts);
+
+            int placed = 0;
+            for (int s = 0; s < dt.sector_count; s++) {
+                flux_decoded_sector_t* sec = &dt.sectors[s];
+                if (!sec->data || sec->data_size != ADF_SECSZ) continue;
+                if (sec->sector >= ADF_SPT) continue;
+                if (!sec->data_crc_ok) { result->sectors_failed++; continue; }
+                size_t off = (((size_t)cyl * ADF_HEADS + (size_t)hd) * ADF_SPT
+                              + sec->sector) * ADF_SECSZ;
+                if (off + ADF_SECSZ > adf_size) continue;
+                memcpy(output + off, sec->data, ADF_SECSZ);
+                placed++;
+            }
+            result->sectors_converted += placed;
+            /* Only a track that yielded sectors counts as converted — the old
+             * path incremented this unconditionally. */
+            if (placed > 0) result->tracks_converted++;
+            else            result->tracks_failed++;
+
+            flux_decoded_track_free(&dt);
+            uft_track_release(&t);
+        }
+        uftc_report_progress(opts, 20 + (cyl * 70 / (cyls ? cyls : 1)),
+                             "Decoding AmigaDOS sectors from HFE");
+    }
+    uft_format_plugin_hfe.close(&disk);
+
+    uftc_report_progress(opts, 95, "Writing output");
+    uft_error_t err = uftc_write_output_file(dst_path, output, adf_size);
+    if (err == UFT_OK) {
+        result->success = true;
+        result->bytes_written = (int)adf_size;
+    } else {
+        result->error = err;
+    }
+    free(output);
+    uftc_report_progress(opts, 100, "HFE->ADF complete");
+    return err;
+}
+
 uft_error_t uftc_convert_hfe_to_sectors(const uint8_t* src_data,
                                           size_t src_size,
+                                          const char* src_path,
                                           const char* dst_path,
                                           uft_format_t dst_format,
                                           const uft_convert_options_ext_t* opts,
@@ -672,6 +774,22 @@ uft_error_t uftc_convert_hfe_to_sectors(const uint8_t* src_data,
     if (!output) {
         result->error = UFT_ERR_MEMORY;
         return UFT_ERR_MEMORY;
+    }
+
+    /* MF-437: an Amiga target is decoded by the AmigaDOS decoder, not by the
+     * IBM System-34 loop below.
+     *
+     * That loop needs three consecutive 0x4489 sync words, an IDAM 0xFE and a
+     * DAM 0xFB. AmigaDOS has two syncs per sector and neither mark, so on an
+     * Amiga disk it fired exactly zero times — while tracks_converted++ ran
+     * unconditionally per head and success was set as soon as the file was
+     * written. The result was an 880 KB file of zeros reported as 160
+     * converted tracks. test_convert_hfe_adf pins that measurement and pins
+     * the correct decode against the source ADF, byte for byte. */
+    if (dst_format == UFT_FORMAT_ADF && src_path) {
+        free(output);
+        return uftc_convert_hfe_to_adf_via_plugin(src_path, dst_path, opts,
+                                                   result);
     }
 
     uftc_report_progress(opts, 20, "Extracting MFM sectors from HFE");

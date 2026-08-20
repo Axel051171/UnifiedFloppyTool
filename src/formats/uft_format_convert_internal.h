@@ -128,6 +128,7 @@ uft_error_t uftc_convert_kryoflux_to_adf(const uint8_t* src_data,
 
 uft_error_t uftc_convert_hfe_to_sectors(const uint8_t* src_data,
                                           size_t src_size,
+                                          const char* src_path,
                                           const char* dst_path,
                                           uft_format_t dst_format,
                                           const uft_convert_options_ext_t* opts,

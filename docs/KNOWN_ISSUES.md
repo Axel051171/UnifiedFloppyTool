@@ -1667,6 +1667,65 @@ verbietet. Der alte Blob-Pfad hatte das richtig gemacht, indem er auf Inhalt
 prüfte; der Plugin-Pfad tut das jetzt auch. Ein eigener Testfall nagelt die
 Unterscheidung fest, damit sie nicht ein drittes Mal jemanden erwischt.
 
+#### Dritte Naht: HFE → ADF — hier war der Konverter nicht doppelt, sondern falsch (2026-08-20, MF-437) → ✓ BEHOBEN
+
+**Correctness, Fabrikationsklasse.** Die ersten beiden Nähte fanden
+Duplikate. Diese fand etwas anderes.
+
+`uftc_convert_hfe_to_sectors()` setzte für `dst_format == UFT_FORMAT_ADF`
+lediglich `sectors = 11` und dekodierte dann weiter mit **IBM-System-34-
+Struktur**: drei aufeinanderfolgende `0x4489`-Syncs, IDAM `0xFE` mit C/H/R/N,
+DAM `0xFB` vor den Daten. AmigaDOS hat davon nichts — zwei Syncs je Sektor,
+danach ein odd/even-getrenntes Info-Langwort, OS-Label, Kopf- und
+Datenprüfsumme, 512 Byte. Kein IDAM, kein DAM, **nie drei Syncs am Stück**.
+
+Gemessen an `tests/corpus_free/gw_amigados.hfe`, Spur 0 Seite 0:
+
+| | |
+|---|---|
+| `0x4489`-Syncs | **22** = 11 Sektoren × 2, die AmigaDOS-Signatur |
+| längster Sync-Lauf | **1** — die Schleife verlangt ≥ 3 |
+| IDAM (`0xFE`) | **0** |
+| DAM (`0xFB`) | **0** |
+| Bytes nach dem 1. Sync | `44 89 55 2A AA A5` — zweiter Sync, dann odd/even-Info |
+
+Die Extraktionsschleife konnte also **kein einziges Mal auslösen** — geprüft
+über alle 160 Spurseiten, nicht nur über eine. Der Ausgabepuffer ist
+`calloc`'d, `result->tracks_converted++` lief **unbedingt** je Kopf, und
+`result->success = true`, sobald die Datei geschrieben war.
+
+**Ergebnis: eine 880-KB-Datei aus Nullen, gemeldet als 160 konvertierte
+Spuren.** Das ist keine fehlgeschlagene Konvertierung, das ist eine
+erfundene — genau das, was Prinzip 1 verbietet.
+
+*Nicht end-to-end nachgestellt:* ein direkter Aufruf von
+`uftc_convert_hfe_to_sectors()` scheiterte an der Link-Fläche des
+Konverter-Clusters (dieselbe Ursache wie Punkt 2 unten). Der Beweis steht
+über die Messung am echten Abbild plus den Code: die Bedingung `sync_count
+>= 3` ist auf keiner der 160 Spurseiten erfüllbar.
+
+**Der richtige Dekoder war die ganze Zeit da.** `decode_amiga_sector()` in
+`src/flux/uft_flux_decoder.c` behandelt das Odd/Even-Schema korrekt, mit
+einem sorgfältigen Kommentar darüber, dass hier **kein** Clock-Strip-Schritt
+angewendet werden darf. Der Konverter kannte ihn nicht — er hatte seinen
+eigenen.
+
+*Behoben:* die Bitstrom-Hälfte ist als `flux_decode_amiga_bits()`
+herausfaktorisiert — faktorisiert, nicht kopiert, es bleibt genau ein
+AmigaDOS-Sektordekoder. Ein HFE speichert *rückgewonnene Zellen*, keinen
+Flux, also braucht dieser Weg keine PLL. Gelesen wird über
+`uft_format_plugin_hfe`, das De-Interleave und Bit-Reverse ohnehin schon
+macht — beides hatte der Konverter danebenstehend nachgebaut.
+
+**Beleg:** `gw_amigados.hfe` ist greaseweazles MFM-Kodierung von
+`xdftool_dd_ofs.adf` (beide getrackt, T1b). Der korrigierte Weg liefert
+**alle 1760 Sektoren, null Prüfsummenfehler, 0 abweichende Bytes von
+901 120** — die Ausgangs-ADF, Byte für Byte.
+
+Nebenbei ehrlich gemacht: `tracks_converted` zählt jetzt nur noch Spuren, die
+tatsächlich Sektoren geliefert haben, und `sectors_converted` wird auf diesem
+Pfad überhaupt erst gesetzt.
+
 **Offen, mit Grund:**
 
 1. **Plugins können nicht aus dem Speicher öffnen.** `uft_format_plugin_t`

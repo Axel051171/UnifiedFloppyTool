@@ -409,6 +409,13 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/formats/cbm/uft_cbm_geometry.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+    elseif(${test_name} STREQUAL "test_convert_hfe_adf")
+        # MF-437: Amiga HFE decoded as Amiga, byte-identical to the source ADF
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/hfe/uft_hfe.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_convert_via_plugin")
         # MF-433: converter seam — blob loader vs plugin, byte-identical
         target_sources(${test_name} PRIVATE

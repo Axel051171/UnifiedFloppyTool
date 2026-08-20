@@ -253,6 +253,20 @@ flux_status_t flux_decode_gcr_apple(const flux_raw_data_t *flux,
  * odd/even-split data block. The IBM-MFM decoder (flux_decode_mfm)
  * cannot parse it — there are no IDAM/DAM address marks.
  */
+/**
+ * @brief Decode AmigaDOS sectors from an already-recovered BITSTREAM.
+ *
+ * The bitstream-level half of flux_decode_amiga(), split out in MF-437 so
+ * callers that already hold recovered cells — an HFE container stores cells,
+ * not flux — can decode without synthesising flux and running a PLL over it.
+ *
+ * The buffer belongs to the caller: this never frees it and never stores it
+ * in track->raw_bits.
+ */
+flux_status_t flux_decode_amiga_bits(const uint8_t *bits, size_t bit_count,
+                                     flux_decoded_track_t *track,
+                                     const flux_decoder_options_t *opts);
+
 flux_status_t flux_decode_amiga(const flux_raw_data_t *flux,
                                 flux_decoded_track_t *track,
                                 const flux_decoder_options_t *opts);

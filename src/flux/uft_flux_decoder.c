@@ -1087,6 +1087,63 @@ static flux_status_t decode_amiga_sector(const uint8_t *bits, size_t bit_count,
     return FLUX_OK;
 }
 
+/* Decode AmigaDOS sectors out of an already-recovered BITSTREAM (MF-437).
+ *
+ * Split out of flux_decode_amiga() so callers that already hold a bitstream
+ * do not have to go through flux capture and a PLL to reach it. An HFE image
+ * IS a bitstream — the container stores recovered cells, not flux — so the
+ * conversion path has no business synthesising flux just to decode it.
+ *
+ * Factored, not copied: flux_decode_amiga() calls straight into this after
+ * flux_to_bitstream(), so there remains exactly one AmigaDOS sector decoder.
+ */
+flux_status_t flux_decode_amiga_bits(const uint8_t *bits, size_t bit_count,
+                                     flux_decoded_track_t *track,
+                                     const flux_decoder_options_t *opts)
+{
+    if (!bits || !track) return FLUX_ERR_INVALID;
+
+    flux_decoder_options_t default_opts;
+    if (!opts) {
+        flux_decoder_options_init(&default_opts);
+        opts = &default_opts;
+    }
+
+    track->track_length_bits = (uint32_t)bit_count;
+    track->detected_encoding = FLUX_ENC_AMIGA;
+
+    size_t pos = 0;
+    while (pos < bit_count && track->sector_count < FLUX_MAX_SECTORS) {
+        int sync_pos = flux_find_sync(bits, bit_count, MFM_SYNC_PATTERN, pos);
+        if (sync_pos < 0) break;
+
+        flux_decoded_sector_t *sector = &track->sectors[track->sector_count];
+        memset(sector, 0, sizeof(*sector));
+
+        size_t sector_end = 0;
+        flux_status_t status = decode_amiga_sector(bits, bit_count,
+                                                   (size_t)sync_pos,
+                                                   sector, &sector_end);
+        if (status == FLUX_OK) {
+            track->sector_count++;
+            track->good_sectors++;
+            if (!sector->id_crc_ok)   track->bad_id_crc++;
+            if (!sector->data_crc_ok) track->bad_data_crc++;
+            pos = (sector_end > (size_t)sync_pos + 16)
+                      ? sector_end : (size_t)sync_pos + 16;
+        } else {
+            if (status == FLUX_ERR_NO_DATA) track->missing_data++;
+            pos = (size_t)sync_pos + 16;
+        }
+    }
+
+    /* Ownership: the bitstream belongs to the CALLER. This function never
+     * frees it and never stores it in track->raw_bits — flux_decode_amiga()
+     * owns the buffer it allocated and decides that, and a caller passing a
+     * plugin's raw_data must not have it freed under them. */
+    return (track->sector_count > 0) ? FLUX_OK : FLUX_ERR_NO_SYNC;
+}
+
 flux_status_t flux_decode_amiga(const flux_raw_data_t *flux,
                                 flux_decoded_track_t *track,
                                 const flux_decoder_options_t *opts) {
@@ -1115,42 +1172,16 @@ flux_status_t flux_decode_amiga(const flux_raw_data_t *flux,
                                              bitcell_ns, &pll);
     if (status != FLUX_OK) { free(bits); return status; }
 
-    track->track_length_bits = (uint32_t)bit_count;
-    track->detected_encoding = FLUX_ENC_AMIGA;
+    flux_status_t rc = flux_decode_amiga_bits(bits, bit_count, track, opts);
     track->avg_bitrate = 1e9 / pll.period;
 
-    size_t pos = 0;
-    while (pos < bit_count && track->sector_count < FLUX_MAX_SECTORS) {
-        int sync_pos = flux_find_sync(bits, bit_count, MFM_SYNC_PATTERN, pos);
-        if (sync_pos < 0) break;
-
-        flux_decoded_sector_t *sector = &track->sectors[track->sector_count];
-        memset(sector, 0, sizeof(*sector));
-
-        size_t sector_end = 0;
-        status = decode_amiga_sector(bits, bit_count, (size_t)sync_pos,
-                                     sector, &sector_end);
-        if (status == FLUX_OK) {
-            track->sector_count++;
-            track->good_sectors++;
-            if (!sector->id_crc_ok)   track->bad_id_crc++;
-            if (!sector->data_crc_ok) track->bad_data_crc++;
-            pos = (sector_end > (size_t)sync_pos + 16)
-                      ? sector_end : (size_t)sync_pos + 16;
-        } else {
-            if (status == FLUX_ERR_NO_DATA) track->missing_data++;
-            pos = (size_t)sync_pos + 16;
-        }
-    }
-
     if (opts->keep_raw_bits) {
-        track->raw_bits = bits;
+        track->raw_bits = bits;              /* handed over to the track */
         track->raw_bit_count = bit_count;
     } else {
         free(bits);
     }
-
-    return (track->sector_count > 0) ? FLUX_OK : FLUX_ERR_NO_SYNC;
+    return rc;
 }
 
 flux_status_t flux_decode_track(const flux_raw_data_t *flux,
