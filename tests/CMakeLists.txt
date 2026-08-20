@@ -409,6 +409,14 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/formats/cbm/uft_cbm_geometry.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+    elseif(${test_name} STREQUAL "test_scp_readers_agree")
+        # MF-439: the five SCP readers must return the same flux
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/scp/uft_scp_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_decoder_plugin_stub.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_scp_parser.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_RESTRICTED_DIR="${CMAKE_SOURCE_DIR}/tests/corpus")
     elseif(${test_name} STREQUAL "test_convert_scp_adf")
         # MF-438: Amiga flux decoded as Amiga; SKIPS (77) without the 32 MB SCP
         target_sources(${test_name} PRIVATE
@@ -1296,6 +1304,7 @@ foreach(test_source ${TEST_SOURCES})
     if(${test_name} STREQUAL "test_corpus_fdi" OR
        ${test_name} STREQUAL "test_corpus_scp" OR
        ${test_name} STREQUAL "test_convert_scp_adf" OR
+       ${test_name} STREQUAL "test_scp_readers_agree" OR
        ${test_name} STREQUAL "test_corpus_protection_copylock" OR
        ${test_name} STREQUAL "test_c64_protection_real_corpus" OR
        ${test_name} STREQUAL "test_scp_legacy_adapter")

@@ -1786,6 +1786,49 @@ das gitignored ist — CI kann ihn nicht fahren, lokal ist er reproduzierbar.
 handgeschrieben in `tests/differential/uft_flux_decode.c` (mit erklärendem
 Kommentar). Sie hat jetzt eine Stelle: `flux_raw_from_ns_intervals()`.
 
+#### Die halbe-Umdrehung-Klasse zu Ende geprüft: einer von fünf (2026-08-20, MF-439) → ✓ GESCHLOSSEN
+
+Nach MF-438 stand die Frage, wie viele der **fünf** SCP-Leser denselben Fehler
+machen. Alle fünf gelesen:
+
+| Leser | Deutung von `length` | |
+|---|---|---|
+| `src/flux/uft_scp_parser.c:376,518` | Flusswerte (beide Pfade) | ✓ |
+| `src/formats/scp/uft_scp_multirev.c:670` | Flusswerte | ✓ |
+| `src/formats/scp/uft_scp_parser_v3.c:1205` | `length * 2` Bytes | ✓ |
+| `src/formats/scp/uft_scp_reader_v2.c:806` | `length * 2` Bytes | ✓ |
+| `src/formats/scp/uft_scp_plugin.c:116` | `length / 2` | ✗ (MF-438) |
+
+Einer von fünf. Aber Lesen ist kein Beweis, und fünf Leser eines Formats sind
+eine stehende Einladung an den nächsten, abzudriften. `test_scp_readers_agree`
+macht aus dem Lesen eine Behauptung:
+
+1. **Plugin und Parser liefern identischen Flux** — nicht „beide plausibel",
+   sondern Wert für Wert gleich, über sechs Spuren quer über die Diskette
+   (0, 1, 40, 79, 158, 159). Zwei Leser, die beide bei der halben Umdrehung
+   abschneiden, würden ein Plausibilitätskriterium bestehen; Gleichheit nicht.
+2. **Der Anker, den kein Leser fälschen kann:** die Summe der Intervalle muss
+   der Umdrehungsdauer entsprechen, die die Spur selbst mitbringt. Pro Spur
+   geprüft, nicht einmal — eine längenabhängige Kürzung würde sonst auf der
+   kürzesten Spur durchrutschen.
+3. **Datei- gegen Speicherpfad** in `uft_scp_parser.c`: zwei unabhängige
+   Implementierungen desselben Lesevorgangs, eine Antwort.
+
+**Gegenprobe gemacht.** Gegen den Stand vor MF-438 schlägt der Test fehl, mit
+genau der Diagnose, die man sich wünscht:
+
+```
+plugin_and_parser_return_identical_flux   FAIL: pt.flux_count == rev->flux_count
+the_flux_spans_a_whole_revolution         track 0: flux spans 100.05 ms of 200.00 ms (50 %)
+```
+
+*Nebenbefund, nicht behoben:* `uft_scp_parser_v3.c` und `uft_scp_reader_v2.c`
+enthalten je einen Selbsttest-Block hinter `#ifdef SCP_V3_TEST` bzw.
+`#ifdef SCP_READER_TEST` — zusammen **238 Zeilen mit `main()` und `assert()`**,
+die **kein Build je definiert** (geprüft über `.pro`, CMake und die
+Workflows). Assertions, die nie laufen, sind keine Tests; sie sehen nur so
+aus. Gehört zur Aufräumfrage der fünf Leser, nicht hierher.
+
 **Offen, mit Grund:**
 
 1. **Plugins können nicht aus dem Speicher öffnen.** `uft_format_plugin_t`
