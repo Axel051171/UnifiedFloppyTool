@@ -8,24 +8,18 @@
  * Optional 683-byte error info block at end.
  */
 #include "uft/uft_format_common.h"
+#include "uft/formats/cbm/uft_cbm_geometry.h"
 
-static const uint8_t d64_spt[] = {
-    0,
-    21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21, /* 1-17 */
-    19,19,19,19,19,19,19,                                 /* 18-24 */
-    18,18,18,18,18,18,                                     /* 25-30 */
-    17,17,17,17,17,17,17,17,17,17,                        /* 31-40 */
-    17,17                                                 /* 41-42 (non-standard) */
-};
-
+/* MF-434: the zone table lived here as d64_spt[43]. It is a property of the
+ * 1541, not of the D64 container, and the tree carried 24 copies of it. */
 #define D64_MAX_TRACK 42
+#define d64_spt(t)  uft_cbm_sectors_per_track(UFT_CBM_1541, (t))
 
 /* Byte offset for track T (1-based), sector S (0-based) */
 static long d64_offset(int track, int sector) {
-    long off = 0;
-    for (int t = 1; t < track && t <= D64_MAX_TRACK; t++)
-        off += d64_spt[t] * 256;
-    return off + sector * 256;
+    long off = uft_cbm_block_offset(UFT_CBM_1541, track);
+    if (off < 0) return -1;
+    return off * 256 + sector * 256;
 }
 
 typedef struct {
@@ -84,7 +78,7 @@ static uft_error_t d64_plugin_open(uft_disk_t *disk, const char *path, bool ro) 
 
     /* Count total sectors */
     uint32_t total = 0;
-    for (int t = 1; t <= p->max_track; t++) total += d64_spt[t];
+    for (int t = 1; t <= p->max_track; t++) total += d64_spt(t);
     disk->geometry.total_sectors = total;
 
     /* A .d64 with a trailing error-info block has one error byte per sector
@@ -110,7 +104,7 @@ static uft_error_t d64_plugin_read_track(uft_disk_t *disk, int cyl, int head,
 
     int d64_track = cyl + 1;
     if (d64_track < 1 || d64_track > p->max_track) return UFT_OK;
-    int nsectors = d64_spt[d64_track];
+    int nsectors = d64_spt(d64_track);
 
     uint8_t buf[256];
     for (int s = 0; s < nsectors; s++) {
@@ -146,7 +140,7 @@ static uft_error_t d64_plugin_write_track(uft_disk_t *disk, int cyl, int head,
 
     int d64_track = cyl + 1;
     if (d64_track < 1 || d64_track > p->max_track) return UFT_OK;
-    int nsectors = d64_spt[d64_track];
+    int nsectors = d64_spt(d64_track);
 
     for (size_t s = 0; s < track->sector_count && (int)s < nsectors; s++) {
         long off = d64_offset(d64_track, (int)s);

@@ -1448,6 +1448,65 @@ ohne eine einzige Information hinzuzufügen — `compat_entries == NULL` und ein
 Liste aus lauter UNTESTED sagen dasselbe. Eine Matrix gehört dorthin, wo jemand
 etwas geprüft hat oder wo die relevanten Ziele nicht offensichtlich sind.
 
+### ARCH-7 — 24 Kopien der CBM-Zonentabelle in drei Indexkonventionen (2026-08-20, MF-434) → ◐ SSOT STEHT, 22 Migrationen offen
+
+**Architecture.** Sektoren pro Spur, Geschwindigkeitszone, Gap und Kapazität
+sind Eigenschaften eines **Laufwerks**, nicht eines Dateiformats. Ein 1541 legt
+21 Sektoren auf Spur 1, egal ob das Ergebnis als D64, G64 oder NIB gespeichert
+wird.
+
+Gemessen über den ganzen Baum: **24 Kopien** dieser Tabelle in 23 Dateien, in
+**drei unverträglichen Indexkonventionen**:
+
+| Form | Vorkommen |
+|---|---|
+| 1-basiert, führende 0, 43 Einträge (Spuren 1-42) | 8 |
+| 1-basiert, führende 0, 41 Einträge (Spuren 1-40) | 6 |
+| **0-basiert**, 40 Einträge | 3 |
+| D71-Varianten mit 70, 71, 35, 36 Einträgen | 5 |
+| D67 (20 statt 19 in Zone 2) und Lisa Twiggy | 2 |
+
+**Wichtig und ausdrücklich: die Werte stimmten überall überein.** Das ist kein
+Fehler, der behoben wird, sondern ein Fakt, der ein Zuhause bekommt, bevor die
+nächste Off-by-one daraus entsteht, dass jemand eine 0-basierte Tabelle
+1-basiert liest. Die beiden echten Abweichungen sind korrekt: D67 mit 20
+Sektoren in Zone 2 (das *ist* der Unterschied zwischen 2040 und 1541, 690
+gegen 683 Blöcke) und Lisa Twiggy als völlig anderes Laufwerk.
+
+**Umgesetzt:** `include/uft/formats/cbm/uft_cbm_geometry.h` beschreibt vier
+Familien (1541, 2040, 1571, 1581) als Zonengrenzen statt als Arrays — die
+Zonen sind der eigentliche Fakt, die Arrays waren immer nur derselbe Fakt 35-,
+40-, 42- oder 70-mal ausgeschrieben. Spurnummern sind durchgehend **1-basiert**
+wie in jedem Laufwerkshandbuch, und es gibt bewusst **kein Array zum
+Indizieren**: einen Akzessor kann man nicht mit der falschen Konvention lesen.
+
+`test_cbm_geometry` hält die neuen Akzessoren gegen wörtliche Kopien aller drei
+Konventionen **und** gegen die Referenzabbilder: die Blockarithmetik trifft die
+Dateigrößen von `vice_c1541_35trk.d64`, `_2040.d67`, `_70trk.d71` und
+`_80trk.d81` exakt. Das bindet die Zahlen an Datenträger, die c1541 erzeugt
+hat, nicht an das, was UFT ohnehin schon glaubte.
+
+Migriert sind die drei Dateien auf der ARCH-6-Naht: der GCR-Encoder
+(`uft_d64_g64.c`, fünf Tabellen), das D64-Plugin und das D67-Plugin.
+`test_convert_via_plugin` belegt, dass die G64-Ausgabe dabei **bitidentisch**
+bleibt — die SSOT reproduziert die alten Tabellen also nicht nur im Test,
+sondern produktiv.
+
+**Zwei Ehrlichkeiten:**
+
+1. Der **2040-Gap ist unbekannt** und wird als 0 gemeldet, nicht geraten. Eine
+   Zone-2-Spur mit 20 Sektoren hat weniger Platz je Sektor als eine mit 19, der
+   1541-Wert von 19 kann also nicht einfach übernommen werden, und eine
+   belastbare Quelle habe ich nicht gefunden.
+2. Der **1581 meldet −1 für die Geschwindigkeitszone**, nicht 0. Er ist MFM;
+   GCR-Zonen gibt es dort nicht, und 0 läse sich als „Zone 0".
+
+**Offen: 22 weitere Kopien.** Bewusst nicht in einem Zug migriert — mehrere
+davon stehen in genau den überzähligen Lesern, die ARCH-6 löschen will
+(`d64_parser_v2`, `d64_parser_v3`, `commodore/d64.c`, `d64_file`, …). Erst die
+Leser zusammenführen, dann übernehmen die Überlebenden die Geometrie. Andersherum
+wäre es Arbeit an Code, der verschwinden soll.
+
 ### ARCH-6 — Zwei parallele Formatlayer: der Konverter kennt die Plugin-Registry nicht (2026-08-20, MF-433) → ◐ ERSTE NAHT GESCHLAGEN
 
 **Architecture.** Gemessen, nicht vermutet:

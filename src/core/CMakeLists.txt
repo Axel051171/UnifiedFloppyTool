@@ -18,6 +18,9 @@ set(CORE_SOURCES
     uft_ir_format.c
     uft_smart_open.c
     uft_unified_types.c
+    ../formats/cbm/uft_cbm_geometry.c  # MF-434: the CBM drive geometries,
+                                       # used by every CBM plugin and the
+                                       # GCR encoder
     uft_write_precomp.c        # TA1 M2: Mac-800K peak-shift compensation
 )
 

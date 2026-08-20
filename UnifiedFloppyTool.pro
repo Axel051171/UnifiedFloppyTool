@@ -2012,6 +2012,7 @@ SOURCES += \
     src/analysis/events/otdr_event_core_v2.c \
     src/analysis/denoise/uft_denoise_bridge.c \
     src/analysis/denoise/phi_otdr_denoise_1d.c \
+    src/formats/cbm/uft_cbm_geometry.c \
     src/formats/cbm/uft_cbm_formats.c
 
 # CFI (1 files)

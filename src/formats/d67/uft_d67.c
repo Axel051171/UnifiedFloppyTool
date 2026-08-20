@@ -15,30 +15,24 @@
  * Reference: VICE emulator, Commodore 2040/4040 technical docs
  */
 #include "uft/uft_format_common.h"
+#include "uft/formats/cbm/uft_cbm_geometry.h"
 
 #define D67_FILE_SIZE   176640
 #define D67_TRACKS      35
 #define D67_TOTAL_SEC   690
 #define D67_SS          256
 
-/* SPT table: index by (track-1), track range 1..35 */
-static int d67_spt(int track_1based)
-{
-    if (track_1based <=  0) return 0;
-    if (track_1based <= 17) return 21;
-    if (track_1based <= 24) return 20;
-    if (track_1based <= 30) return 18;
-    if (track_1based <= 35) return 17;
-    return 0;
-}
+/* MF-434: the zone boundaries lived here as an if-chain. Same fact as the D64
+ * table one directory over, differing only in zone 2 — which is exactly what
+ * makes a 2040 disk a 2040 disk, and exactly the kind of near-copy that drifts
+ * apart. Both now come from the same place. */
+#define d67_spt(t)  uft_cbm_sectors_per_track(UFT_CBM_2040, (t))
 
 /* Compute file offset for track (1-based) sector 0 */
 static long d67_track_offset(int track_1based)
 {
-    long off = 0;
-    for (int t = 1; t < track_1based; t++)
-        off += d67_spt(t) * D67_SS;
-    return off;
+    long blocks = uft_cbm_block_offset(UFT_CBM_2040, track_1based);
+    return blocks < 0 ? -1 : blocks * D67_SS;
 }
 
 typedef struct { FILE *file; } d67_pd_t;

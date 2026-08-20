@@ -11,46 +11,48 @@
 #include "uft/formats/c64/uft_d64_g64.h"
 #include "uft/uft_format_plugin.h"   /* MF-433: read sectors through a plugin */
 #include "uft/uft_track.h"
+#include "uft/formats/cbm/uft_cbm_geometry.h"  /* MF-434: one geometry */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 
 /* ============================================================================
  * Static Data
  * ============================================================================ */
 
-/** Sectors per track for 1541 (track 1-42) */
-static const int sector_map[43] = {
-    0,
-    21, 21, 21, 21, 21, 21, 21, 21, 21, 21,  /*  1 - 10 */
-    21, 21, 21, 21, 21, 21, 21, 19, 19, 19,  /* 11 - 20 */
-    19, 19, 19, 19, 18, 18, 18, 18, 18, 18,  /* 21 - 30 */
-    17, 17, 17, 17, 17, 17, 17, 17, 17, 17,  /* 31 - 40 */
-    17, 17                                    /* 41 - 42 */
-};
+/* MF-434: sector_map, speed_map, gap_map and capacity_map used to be spelled
+ * out here. They are drive facts, not encoder facts, and the tree carried 24
+ * copies of the first one in three incompatible indexing conventions. They now
+ * come from uft/formats/cbm/uft_cbm_geometry.h.
+ *
+ * The arrays are rebuilt once at first use rather than the call sites being
+ * rewritten: this file indexes them in a dozen places and the point of the
+ * change is to remove a duplicated fact, not to churn working code.
+ * test_convert_via_plugin pins that the G64 output stays byte-identical. */
 
-/** Speed zone per track */
-static const int speed_map[43] = {
-    0,
-    3, 3, 3, 3, 3, 3, 3, 3, 3, 3,  /*  1 - 10 */
-    3, 3, 3, 3, 3, 3, 3, 2, 2, 2,  /* 11 - 20 */
-    2, 2, 2, 2, 1, 1, 1, 1, 1, 1,  /* 21 - 30 */
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  /* 31 - 40 */
-    0, 0                           /* 41 - 42 */
-};
+static int sector_map[43];
+static int speed_map[43];
+static int gap_map[43];
+static size_t capacity_map_storage[4];
+#define capacity_map capacity_map_storage
 
-/** Default inter-sector gap length */
-static const int gap_map[43] = {
-    0,
-    9, 9, 9, 9, 9, 9, 9, 9, 9, 9,   /*  1 - 10 */
-    9, 9, 9, 9, 9, 9, 9, 19, 19, 19, /* 11 - 20 */
-    19, 19, 19, 19, 13, 13, 13, 13, 13, 13, /* 21 - 30 */
-    10, 10, 10, 10, 10, 10, 10, 10, 10, 10, /* 31 - 40 */
-    10, 10                          /* 41 - 42 */
-};
-
-/** Track capacity at each density */
-static const size_t capacity_map[4] = { 6250, 6666, 7142, 7692 };
+static void cbm_tables_init(void)
+{
+    static bool done = false;
+    if (done) return;
+    for (int t = 1; t <= 42; t++) {
+        sector_map[t] = uft_cbm_sectors_per_track(UFT_CBM_1541, t);
+        speed_map[t]  = uft_cbm_speed_zone(UFT_CBM_1541, t);
+        gap_map[t]    = uft_cbm_gap_length(UFT_CBM_1541, t);
+    }
+    for (int z = 0; z < 4; z++) {
+        /* One representative track per zone: 31=0, 25=1, 18=2, 1=3. */
+        static const int probe[4] = { 31, 25, 18, 1 };
+        capacity_map_storage[z] = uft_cbm_track_capacity(UFT_CBM_1541, probe[z]);
+    }
+    done = true;
+}
 
 /** Cumulative block count before each track */
 static const int block_offset[43] = {
@@ -403,6 +405,7 @@ d64_image_t *d64_create(int num_tracks)
 int d64_get_sector(const d64_image_t *image, int track, int sector,
                    uint8_t *data, d64_error_t *error)
 {
+    cbm_tables_init();
     if (!image || !data) return -1;
     if (track < 1 || track > image->num_tracks) return -2;
     if (sector < 0 || sector >= sector_map[track]) return -3;
@@ -425,6 +428,7 @@ int d64_get_sector(const d64_image_t *image, int track, int sector,
 int d64_set_sector(d64_image_t *image, int track, int sector,
                    const uint8_t *data, d64_error_t error)
 {
+    cbm_tables_init();
     if (!image || !data) return -1;
     if (track < 1 || track > image->num_tracks) return -2;
     if (sector < 0 || sector >= sector_map[track]) return -3;
@@ -446,6 +450,7 @@ int d64_set_sector(d64_image_t *image, int track, int sector,
  */
 int d64_sectors_on_track(int track)
 {
+    cbm_tables_init();
     if (track < 1 || track > 42) return 0;
     return sector_map[track];
 }
@@ -455,6 +460,7 @@ int d64_sectors_on_track(int track)
  */
 int d64_block_offset(int track, int sector)
 {
+    cbm_tables_init();
     if (track < 1 || track > 42) return -1;
     if (sector < 0 || sector >= sector_map[track]) return -1;
     return block_offset[track] + sector;
@@ -729,6 +735,7 @@ size_t sector_to_gcr(const uint8_t *sector_data, uint8_t *gcr_output,
                      int track, int sector, const uint8_t *disk_id,
                      d64_error_t error)
 {
+    cbm_tables_init();
     if (!sector_data || !gcr_output || !disk_id) return 0;
     
     uint8_t *out = gcr_output;
@@ -894,6 +901,7 @@ size_t build_gcr_track(const uint8_t **sectors, int num_sectors,
                        uint8_t *gcr_output, int track, const uint8_t *disk_id,
                        uint8_t gap_fill)
 {
+    cbm_tables_init();
     if (!sectors || !gcr_output || !disk_id || num_sectors <= 0) return 0;
     
     uint8_t *out = gcr_output;
@@ -942,6 +950,7 @@ void convert_get_defaults(convert_options_t *options)
 int d64_to_g64(const d64_image_t *d64, g64_image_t **g64,
                const convert_options_t *options, convert_result_t *result)
 {
+    cbm_tables_init();
     if (!d64 || !g64) return -1;
     
     convert_options_t opts;
@@ -1046,6 +1055,7 @@ int uft_cbm_g64_encode_via_plugin(const struct uft_format_plugin *plugin,
                                   g64_image_t **out,
                                   convert_result_t *result)
 {
+    cbm_tables_init();
     if (!plugin || !plugin->read_track || !disk || !out) return -1;
 
     convert_options_t opts;
@@ -1128,6 +1138,7 @@ int uft_cbm_g64_encode_via_plugin(const struct uft_format_plugin *plugin,
 int g64_to_d64(const g64_image_t *g64, d64_image_t **d64,
                const convert_options_t *options, convert_result_t *result)
 {
+    cbm_tables_init();
     if (!g64 || !d64) return -1;
     
     convert_options_t opts;
@@ -1284,6 +1295,7 @@ int g64_to_d64(const g64_image_t *g64, d64_image_t **d64,
  */
 int d64_speed_zone(int track)
 {
+    cbm_tables_init();
     if (track < 1 || track > 42) return 0;
     return speed_map[track];
 }
@@ -1293,6 +1305,7 @@ int d64_speed_zone(int track)
  */
 int d64_gap_length(int track)
 {
+    cbm_tables_init();
     if (track < 1 || track > 42) return 0;
     return gap_map[track];
 }
@@ -1302,6 +1315,7 @@ int d64_gap_length(int track)
  */
 size_t d64_track_capacity(int track)
 {
+    cbm_tables_init();
     if (track < 1 || track > 42) return 0;
     return capacity_map[speed_map[track]];
 }

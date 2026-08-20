@@ -131,7 +131,8 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/c64/uft_gcr_ops.c)
     elseif(${test_name} STREQUAL "test_d64_g64")
         # Include D64/G64 conversion source directly
-        target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/c64/uft_d64_g64.c)
+        target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/c64/uft_d64_g64.c
+            ${CMAKE_SOURCE_DIR}/src/formats/cbm/uft_cbm_geometry.c)
 
     elseif(${test_name} STREQUAL "test_c64_protection_ext")
         # Include Extended Protection source directly
@@ -402,6 +403,12 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/adf/uft_adf_plugin.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+    elseif(${test_name} STREQUAL "test_cbm_geometry")
+        # MF-434: one CBM geometry against the 24 tables it replaces
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/cbm/uft_cbm_geometry.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_convert_via_plugin")
         # MF-433: converter seam — blob loader vs plugin, byte-identical
         target_sources(${test_name} PRIVATE
@@ -580,7 +587,8 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/protection/ufm_c64_scheme_detect.c
             ${CMAKE_SOURCE_DIR}/src/formats/g64/uft_g64.c
             # MF-405: the GUI's own G64 reader, so its data path is testable
-            ${CMAKE_SOURCE_DIR}/src/formats/c64/uft_d64_g64.c)
+            ${CMAKE_SOURCE_DIR}/src/formats/c64/uft_d64_g64.c
+            ${CMAKE_SOURCE_DIR}/src/formats/cbm/uft_cbm_geometry.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_RESTRICTED_DIR="${CMAKE_SOURCE_DIR}/tests/corpus"
             # MF-404: the half-track test needs the rights-free VICE G64 as
