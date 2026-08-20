@@ -191,9 +191,10 @@ uft_error_t uftc_convert_sectors_to_hfe(const uint8_t* src_data,
 /* ========================================================================== */
 
 uft_error_t uftc_convert_g64_to_d64(const uint8_t* src_data, size_t src_size,
-                                      const char* dst_path,
-                                      const uft_convert_options_ext_t* opts,
-                                      uft_convert_result_t* result);
+                                     const char* src_path,
+                                     const char* dst_path,
+                                     const uft_convert_options_ext_t* opts,
+                                     uft_convert_result_t* result);
 
 uft_error_t uftc_convert_d64_to_g64(const uint8_t* src_data, size_t src_size,
                                      const char* src_path,

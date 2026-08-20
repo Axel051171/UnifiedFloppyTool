@@ -1633,6 +1633,40 @@ fallen. Solche Abbilder konvertieren jetzt vollständig. Es gibt kein
 41/42-Spur-Referenzabbild im Korpus — dieser Pfad ist begründet, nicht
 getestet.
 
+#### Zweite Naht: G64 → D64, die Dekodierrichtung (2026-08-20, MF-436)
+
+Dieselbe Umstellung rückwärts, mit einem Unterschied im Vorgehen: die
+Spur-Extraktion aus `g64_to_d64()` wurde **herausfaktorisiert**
+(`gcr_track_to_sectors()`), nicht kopiert. Beide Wege benutzen jetzt denselben
+GCR-Dekoder — eine zweite Kopie wäre genau die Krankheit, deretwegen dieser
+Umbau stattfindet.
+
+Belegt durch `test_convert_via_plugin`:
+
+- Blob- und Plugin-Pfad liefern **bitidentische** Sektordaten für
+  `vice_c1541_35trk.g64` (683 Blöcke verglichen, Disk-ID `42` aus der
+  GCR-BAM-Spur auf beiden Wegen),
+- und der **vollständige Roundtrip D64 → G64 → D64 gibt die Ausgangsdiskette
+  zurück**: 683 Sektoren, 0 Prüfsummenfehler, **0 abweichende Bytes** von
+  174 848. Das ist die stärkere Aussage als jede Hälfte für sich — Enkodieren
+  und Zurücklesen prüft Sektorköpfe, Prüfsummen, Syncmarken, Gap-Behandlung
+  und die Zonentabelle in einem Durchgang. „Kein Bit verloren" als Assertion.
+
+**Fund dabei: `geometry.cylinders` bedeutet nicht überall dasselbe.**
+
+| Container | `geometry.cylinders` | bedeutet |
+|---|---|---|
+| D64 (feste Belegung) | 35 | die **Ausdehnung** — Größe *ist* Inhalt |
+| G64 (Kapazitätskopf) | 42 | die **adressierbare Reichweite** |
+
+Das Referenz-G64 deklariert 84 Slots, belegt sind 35. Der erste Entwurf des
+Plugin-Dekoders vertraute `cylinders` und erzeugte daraus ein 40-Spur-D64 aus
+einer 35-Spur-Diskette — **85 Blöcke Füllmaterial, ausgegeben als
+wiederhergestellte Sektoren**. Genau die erfundenen Daten, die Prinzip 1
+verbietet. Der alte Blob-Pfad hatte das richtig gemacht, indem er auf Inhalt
+prüfte; der Plugin-Pfad tut das jetzt auch. Ein eigener Testfall nagelt die
+Unterscheidung fest, damit sie nicht ein drittes Mal jemanden erwischt.
+
 **Offen, mit Grund:**
 
 1. **Plugins können nicht aus dem Speicher öffnen.** `uft_format_plugin_t`

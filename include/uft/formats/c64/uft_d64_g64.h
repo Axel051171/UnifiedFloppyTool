@@ -504,6 +504,27 @@ int uft_cbm_g64_encode_via_plugin(const struct uft_format_plugin *plugin,
                                   g64_image_t **out,
                                   convert_result_t *result);
 
+/**
+ * @brief Decode a CBM GCR bitstream to sectors, reading through a plugin.
+ *
+ * The mirror of uft_cbm_g64_encode_via_plugin(): same GCR decoder as
+ * g64_to_d64(), but the raw track data comes from `plugin->read_track()`
+ * (uft_track_t::raw_data). Together the two close the D64 -> G64 -> D64
+ * roundtrip entirely over the plugin interface.
+ *
+ * @param plugin  Format plugin providing read_track with raw GCR
+ * @param disk    Disk opened by that plugin
+ * @param options Conversion options, NULL for defaults
+ * @param out     Receives the D64 image, caller frees with d64_free()
+ * @param result  Optional statistics
+ * @return 0 on success, negative on error
+ */
+int uft_cbm_d64_decode_via_plugin(const struct uft_format_plugin *plugin,
+                                  struct uft_disk *disk,
+                                  const convert_options_t *options,
+                                  d64_image_t **out,
+                                  convert_result_t *result);
+
 #ifdef __cplusplus
 }
 #endif

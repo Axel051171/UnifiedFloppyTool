@@ -13,6 +13,7 @@
 #include "uft/uft_format_plugin.h"   /* MF-433: read via the plugin */
 
 extern const uft_format_plugin_t uft_format_plugin_d64;
+extern const uft_format_plugin_t uft_format_plugin_g64;
 
 // ============================================================================
 // Bitstream -> Sector (decode)
@@ -24,29 +25,54 @@ extern const uft_format_plugin_t uft_format_plugin_d64;
  * Uses the g64_to_d64() converter from uft_d64_g64.h.
  */
 uft_error_t uftc_convert_g64_to_d64(const uint8_t* src_data, size_t src_size,
+                                      const char* src_path,
                                       const char* dst_path,
                                       const uft_convert_options_ext_t* opts,
                                       uft_convert_result_t* result) {
-    uftc_report_progress(opts, 10, "Loading G64 image");
-
-    g64_image_t* g64 = NULL;
-    int rc = g64_load_buffer(src_data, src_size, &g64);
-    if (rc != 0 || !g64) {
-        result->error = UFT_ERR_FORMAT;
-        uftc_add_warning(result,
-                 "G64 parse failed (error %d)", rc);
-        return UFT_ERR_FORMAT;
-    }
-
-    uftc_report_progress(opts, 30, "Converting G64 GCR to D64 sectors");
-
-    d64_image_t* d64 = NULL;
     convert_options_t conv_opts;
     convert_get_defaults(&conv_opts);
     convert_result_t conv_result;
+    memset(&conv_result, 0, sizeof(conv_result));
+    d64_image_t* d64 = NULL;
+    int rc;
 
-    rc = g64_to_d64(g64, &d64, &conv_opts, &conv_result);
-    g64_free(g64);
+    if (src_path) {
+        /* MF-436: read the raw GCR through uft_format_plugin_g64. Same
+         * decoder as the blob path — gcr_track_to_sectors() — so the output
+         * is byte-identical; test_convert_via_plugin pins that against the
+         * c1541 reference image, and pins the full D64->G64->D64 roundtrip
+         * on top. */
+        uftc_report_progress(opts, 10, "Opening G64 via format plugin");
+
+        uft_disk_t disk;
+        memset(&disk, 0, sizeof(disk));
+        disk.read_only = true;
+        if (uft_format_plugin_g64.open(&disk, src_path, true) != UFT_OK) {
+            result->error = UFT_ERR_FORMAT;
+            uftc_add_warning(result, "G64 open failed via plugin");
+            return UFT_ERR_FORMAT;
+        }
+
+        uftc_report_progress(opts, 30, "Converting G64 GCR to D64 sectors");
+        rc = uft_cbm_d64_decode_via_plugin(&uft_format_plugin_g64, &disk,
+                                            &conv_opts, &d64, &conv_result);
+        uft_format_plugin_g64.close(&disk);
+    } else {
+        uftc_report_progress(opts, 10, "Loading G64 image");
+
+        g64_image_t* g64 = NULL;
+        rc = g64_load_buffer(src_data, src_size, &g64);
+        if (rc != 0 || !g64) {
+            result->error = UFT_ERR_FORMAT;
+            uftc_add_warning(result,
+                     "G64 parse failed (error %d)", rc);
+            return UFT_ERR_FORMAT;
+        }
+
+        uftc_report_progress(opts, 30, "Converting G64 GCR to D64 sectors");
+        rc = g64_to_d64(g64, &d64, &conv_opts, &conv_result);
+        g64_free(g64);
+    }
 
     if (rc != 0 || !d64) {
         result->error = UFT_ERR_FORMAT;

@@ -415,6 +415,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/formats/c64/uft_d64_g64.c
             ${CMAKE_SOURCE_DIR}/src/formats/d64/uft_d64_plugin.c
             ${CMAKE_SOURCE_DIR}/src/formats/d67/uft_d67.c
+            ${CMAKE_SOURCE_DIR}/src/formats/g64/uft_g64.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_unified_types.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")

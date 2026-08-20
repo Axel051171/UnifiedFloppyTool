@@ -1132,6 +1132,206 @@ int uft_cbm_g64_encode_via_plugin(const struct uft_format_plugin *plugin,
     return 0;
 }
 
+/* One track of GCR to sectors, written into `img` (MF-436).
+ *
+ * Factored out of g64_to_d64() so the plugin-sourced path can use the SAME
+ * decoder rather than a second copy of it — copying it would be the exact
+ * disease this refactor exists to remove (ARCH-6).
+ *
+ * @param errors_found incremented per checksum failure; may be NULL
+ * @return number of sectors decoded from this track
+ */
+static int gcr_track_to_sectors(d64_image_t *img, int track,
+                                const uint8_t *gcr_data, size_t gcr_len,
+                                int *errors_found)
+{
+    cbm_tables_init();
+    if (!img || !gcr_data || gcr_len < 350) return 0;
+
+    uint8_t sector_data[256];
+    int num_sectors = sector_map[track];
+    size_t pos = 0;
+    int sectors_found = 0;
+
+    
+    while (pos < gcr_len - 350 && sectors_found < num_sectors) {
+        /* Find sync */
+        while (pos < gcr_len && gcr_data[pos] != 0xFF) pos++;
+        if (pos >= gcr_len) break;
+        while (pos < gcr_len && gcr_data[pos] == 0xFF) pos++;
+        if (pos >= gcr_len - 10) break;
+        
+        /* Try to decode header */
+        uint8_t header[8];
+        decode_5_to_4(gcr_data + pos, header);
+        decode_5_to_4(gcr_data + pos + 5, header + 4);
+        
+        if (header[0] == 0x08) {
+            int h_sector = header[2];
+            int h_track = header[3];
+            
+            pos += 10;
+            
+            /* Skip to data */
+            while (pos < gcr_len && gcr_data[pos] != 0xFF) pos++;
+            while (pos < gcr_len && gcr_data[pos] == 0xFF) pos++;
+            
+            if (pos < gcr_len - 325) {
+                /* Decode data */
+                uint8_t data_block[260];
+                for (int i = 0; i < 260 && pos < gcr_len; i += 4) {
+                    decode_5_to_4(gcr_data + pos, data_block + i);
+                    pos += 5;
+                }
+                
+                if (data_block[0] == 0x07 && h_track == track && 
+                    h_sector >= 0 && h_sector < num_sectors) {
+                    
+                    memcpy(sector_data, data_block + 1, 256);
+                    
+                    /* Verify checksum */
+                    uint8_t checksum = 0;
+                    for (int i = 0; i < 256; i++) {
+                        checksum ^= sector_data[i];
+                    }
+                    
+                    d64_error_t error = D64_ERR_OK;
+                    if (checksum != data_block[257]) {
+                        error = D64_ERR_CHECKSUM;
+                        errors_found++;
+                    }
+                    
+                    d64_set_sector(img, track, h_sector, sector_data, error);
+                    sectors_found++;
+                }
+            }
+        } else {
+            pos++;
+        }
+    }
+
+    return sectors_found;
+}
+
+
+/* ============================================================================
+ * Plugin-sourced decoding (MF-436)
+ * ============================================================================ */
+
+int uft_cbm_d64_decode_via_plugin(const struct uft_format_plugin *plugin,
+                                  struct uft_disk *disk,
+                                  const convert_options_t *options,
+                                  d64_image_t **out,
+                                  convert_result_t *result)
+{
+    cbm_tables_init();
+    if (!plugin || !plugin->read_track || !disk || !out) return -1;
+
+    convert_options_t opts;
+    if (options) {
+        opts = *options;
+    } else {
+        convert_get_defaults(&opts);
+    }
+
+    /* How many tracks the source actually CARRIES — which is not what
+     * geometry.cylinders reports for a G64.
+     *
+     * MF-436: a G64 header declares a slot count (84 in the reference image,
+     * i.e. 42 addressable tracks) while only 35 slots hold data. The plugin
+     * derives cylinders from that capacity, so trusting it here produced a
+     * 40-track D64 from a 35-track disk — 85 blocks of padding presented as
+     * recovered data. The blob path got this right by probing for content,
+     * and so does this: tracks 36..40 are read, and the answer comes from
+     * whether anything is there.
+     *
+     * The general lesson, worth stating because it will recur: for a
+     * fixed-layout container like D64, geometry.cylinders IS the extent; for
+     * a container with a capacity header like G64, it is the addressable
+     * range. A decoder must ask the content. */
+    if (disk->geometry.cylinders <= 0) return -3;
+    int num_tracks = 35;
+    for (int probe = 36; probe <= 40; probe++) {
+        if (probe > disk->geometry.cylinders) break;
+        uft_track_t pt;
+        memset(&pt, 0, sizeof(pt));
+        if (plugin->read_track(disk, probe - 1, 0, &pt) == UFT_OK &&
+            pt.raw_data && pt.raw_size > 0) {
+            num_tracks = 40;
+            uft_track_release(&pt);
+            break;
+        }
+        uft_track_release(&pt);
+    }
+
+    d64_image_t *img = d64_create(num_tracks);
+    if (!img) return -2;
+
+    if (opts.generate_errors) {
+        img->errors = calloc((size_t)img->num_blocks, 1);
+        if (img->errors) {
+            memset(img->errors, D64_ERR_OK, (size_t)img->num_blocks);
+            img->has_errors = true;
+        }
+    }
+
+    int tracks_converted = 0;
+    int sectors_converted = 0;
+    int errors_found = 0;
+
+    for (int track = 1; track <= num_tracks; track++) {
+        uft_track_t t;
+        memset(&t, 0, sizeof(t));
+        if (plugin->read_track(disk, track - 1, 0, &t) != UFT_OK) {
+            uft_track_release(&t);
+            continue;
+        }
+        if (t.raw_data && t.raw_size > 0) {
+            /* Same decoder the blob path uses — not a second copy of it. */
+            int found = gcr_track_to_sectors(img, track, t.raw_data,
+                                              t.raw_size, &errors_found);
+            sectors_converted += found;
+            if (found > 0) tracks_converted++;
+
+            /* Disk ID from the BAM track, read through the same plugin. */
+            if (track == D64_BAM_TRACK) {
+                uint8_t bam[256];
+                int tn = 0, sn = 0;
+                uint8_t id[2];
+                if (gcr_to_sector(t.raw_data, t.raw_size, bam, &tn, &sn,
+                                  id, NULL) == 0 &&
+                    tn == D64_BAM_TRACK && sn == D64_BAM_SECTOR) {
+                    img->disk_id[0] = bam[D64_BAM_ID_OFFSET];
+                    img->disk_id[1] = bam[D64_BAM_ID_OFFSET + 1];
+                    memcpy(img->disk_name, bam + D64_BAM_NAME_OFFSET, 16);
+                    img->disk_name[16] = '\0';
+                    for (int i = 15; i >= 0; i--) {
+                        if ((uint8_t)img->disk_name[i] == 0xA0)
+                            img->disk_name[i] = '\0';
+                        else
+                            break;
+                    }
+                }
+            }
+        }
+        uft_track_release(&t);
+    }
+
+    *out = img;
+
+    if (result) {
+        result->success = true;
+        result->tracks_converted = tracks_converted;
+        result->sectors_converted = sectors_converted;
+        result->errors_found = errors_found;
+        snprintf(result->description, sizeof(result->description),
+                 "Converted %d tracks, %d sectors, %d errors",
+                 tracks_converted, sectors_converted, errors_found);
+    }
+
+    return 0;
+}
+
 /**
  * @brief Convert G64 to D64
  */
@@ -1181,74 +1381,11 @@ int g64_to_d64(const g64_image_t *g64, d64_image_t **d64,
             continue;
         }
         
-        const uint8_t *gcr_data = g64->track_data[halftrack];
-        size_t gcr_len = g64->tracks[halftrack].length;
-        
-        /* Extract sectors from GCR track */
-        uint8_t sector_data[256];
-        int num_sectors = sector_map[track];
-        
-        /* Simple sector extraction - find each sector */
-        size_t pos = 0;
-        int sectors_found = 0;
-        
-        while (pos < gcr_len - 350 && sectors_found < num_sectors) {
-            /* Find sync */
-            while (pos < gcr_len && gcr_data[pos] != 0xFF) pos++;
-            if (pos >= gcr_len) break;
-            while (pos < gcr_len && gcr_data[pos] == 0xFF) pos++;
-            if (pos >= gcr_len - 10) break;
-            
-            /* Try to decode header */
-            uint8_t header[8];
-            decode_5_to_4(gcr_data + pos, header);
-            decode_5_to_4(gcr_data + pos + 5, header + 4);
-            
-            if (header[0] == 0x08) {
-                int h_sector = header[2];
-                int h_track = header[3];
-                
-                pos += 10;
-                
-                /* Skip to data */
-                while (pos < gcr_len && gcr_data[pos] != 0xFF) pos++;
-                while (pos < gcr_len && gcr_data[pos] == 0xFF) pos++;
-                
-                if (pos < gcr_len - 325) {
-                    /* Decode data */
-                    uint8_t data_block[260];
-                    for (int i = 0; i < 260 && pos < gcr_len; i += 4) {
-                        decode_5_to_4(gcr_data + pos, data_block + i);
-                        pos += 5;
-                    }
-                    
-                    if (data_block[0] == 0x07 && h_track == track && 
-                        h_sector >= 0 && h_sector < num_sectors) {
-                        
-                        memcpy(sector_data, data_block + 1, 256);
-                        
-                        /* Verify checksum */
-                        uint8_t checksum = 0;
-                        for (int i = 0; i < 256; i++) {
-                            checksum ^= sector_data[i];
-                        }
-                        
-                        d64_error_t error = D64_ERR_OK;
-                        if (checksum != data_block[257]) {
-                            error = D64_ERR_CHECKSUM;
-                            errors_found++;
-                        }
-                        
-                        d64_set_sector(img, track, h_sector, sector_data, error);
-                        sectors_found++;
-                        sectors_converted++;
-                    }
-                }
-            } else {
-                pos++;
-            }
-        }
-        
+        int sectors_found = gcr_track_to_sectors(
+            img, track, g64->track_data[halftrack],
+            g64->tracks[halftrack].length, &errors_found);
+        sectors_converted += sectors_found;
+
         if (sectors_found > 0) {
             tracks_converted++;
         }

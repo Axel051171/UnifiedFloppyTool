@@ -160,7 +160,8 @@ static uft_error_t dispatch_conversion(uft_format_t src_format,
 
     /* ===== Bitstream -> Sector (decode) ===== */
     if (src_format == UFT_FORMAT_G64 && dst_format == UFT_FORMAT_D64) {
-        return uftc_convert_g64_to_d64(src_data, src_size, dst_path, opts, result);
+        return uftc_convert_g64_to_d64(src_data, src_size, src_path, dst_path,
+                                        opts, result);
     }
     if (src_format == UFT_FORMAT_HFE &&
         (dst_format == UFT_FORMAT_IMG || dst_format == UFT_FORMAT_ADF)) {

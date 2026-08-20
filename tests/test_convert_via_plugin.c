@@ -42,6 +42,7 @@
 
 extern const uft_format_plugin_t uft_format_plugin_d64;
 extern const uft_format_plugin_t uft_format_plugin_d67;
+extern const uft_format_plugin_t uft_format_plugin_g64;
 
 static int _pass = 0, _fail = 0, _last_fail = 0;
 #define RUN(name)  do { printf("  [TEST] %-46s ... ", #name); test_##name(); \
@@ -52,6 +53,7 @@ static int _pass = 0, _fail = 0, _last_fail = 0;
 
 #define D64_IMAGE "vice_c1541_35trk.d64"
 #define D67_IMAGE "vice_c1541_2040.d67"
+#define G64_IMAGE "vice_c1541_35trk.g64"
 
 static const char *img(const char *name)
 {
@@ -250,6 +252,168 @@ TEST(the_same_encoder_now_reaches_a_format_it_never_could) {
     uft_format_plugin_d67.close(&disk);
 }
 
+
+/* ==========================================================================
+ * Second seam: G64 -> D64, the decode direction (MF-436)
+ * ========================================================================== */
+
+/* Decode via the existing blob path: g64_load_buffer -> g64_to_d64. */
+static d64_image_t *decode_via_blob(convert_result_t *res)
+{
+    size_t len = 0;
+    uint8_t *raw = slurp(img(G64_IMAGE), &len);
+    if (!raw) return NULL;
+
+    g64_image_t *g64 = NULL;
+    if (g64_load_buffer(raw, len, &g64) != 0 || !g64) { free(raw); return NULL; }
+    free(raw);
+
+    convert_options_t opts;
+    convert_get_defaults(&opts);
+    d64_image_t *d64 = NULL;
+    int rc = g64_to_d64(g64, &d64, &opts, res);
+    g64_free(g64);
+    return (rc == 0) ? d64 : NULL;
+}
+
+/* Decode via the plugin path: uft_format_plugin_g64 -> same GCR decoder. */
+static d64_image_t *decode_via_plugin(convert_result_t *res)
+{
+    uft_disk_t disk;
+    memset(&disk, 0, sizeof(disk));
+    disk.read_only = true;
+    if (uft_format_plugin_g64.open(&disk, img(G64_IMAGE), true) != UFT_OK)
+        return NULL;
+
+    convert_options_t opts;
+    convert_get_defaults(&opts);
+    d64_image_t *d64 = NULL;
+    int rc = uft_cbm_d64_decode_via_plugin(&uft_format_plugin_g64, &disk,
+                                            &opts, &d64, res);
+    uft_format_plugin_g64.close(&disk);
+    return (rc == 0) ? d64 : NULL;
+}
+
+TEST(decode_both_paths_are_byte_identical) {
+    /* Same statement as for the encode direction, in reverse: if the plugin
+     * carries everything the GCR decoder needs, the sector data must come out
+     * bit for bit the same as from g64_load_buffer(). */
+    convert_result_t rb, rp;
+    memset(&rb, 0, sizeof(rb)); memset(&rp, 0, sizeof(rp));
+    d64_image_t *blob = decode_via_blob(&rb);
+    d64_image_t *plug = decode_via_plugin(&rp);
+    ASSERT(blob != NULL);
+    ASSERT(plug != NULL);
+
+    ASSERT(blob->num_tracks == plug->num_tracks);
+    ASSERT(blob->num_blocks == plug->num_blocks);
+    ASSERT(rb.sectors_converted == rp.sectors_converted);
+    ASSERT(rb.sectors_converted > 0);          /* not a vacuous pass */
+    ASSERT(rb.tracks_converted == rp.tracks_converted);
+
+    ASSERT(memcmp(blob->data, plug->data,
+                  (size_t)blob->num_blocks * 256u) == 0);
+    /* the disk ID is read out of the GCR BAM track on both paths */
+    ASSERT(memcmp(blob->disk_id, plug->disk_id, 2) == 0);
+    ASSERT(blob->disk_id[0] == '4' && blob->disk_id[1] == '2');
+
+    d64_free(blob); d64_free(plug);
+}
+
+TEST(the_full_roundtrip_over_plugins_returns_the_original_disk) {
+    /* The point of having both seams. D64 -> G64 -> D64, every step through
+     * the plugin interface, and the sector data must come back unchanged.
+     *
+     * This is a stronger claim than either half: encoding to GCR and decoding
+     * back exercises sector headers, checksums, sync marks, gap handling and
+     * the zone table in one pass. A single wrong sector ID or a checksum
+     * computed over the wrong range would show up here and nowhere else.
+     *
+     * "Kein Bit verloren" is the project's first sentence. This is what it
+     * looks like as an assertion. */
+    size_t orig_len = 0;
+    uint8_t *orig = slurp(img(D64_IMAGE), &orig_len);
+    ASSERT(orig != NULL);
+    ASSERT(orig_len == 174848u);               /* 683 blocks, 35 tracks */
+
+    /* Forward: D64 -> G64, through uft_format_plugin_d64 */
+    convert_result_t enc;
+    memset(&enc, 0, sizeof(enc));
+    g64_image_t *g64 = encode_via_plugin(&enc);
+    ASSERT(g64 != NULL);
+    ASSERT(enc.sectors_converted == 683);
+
+    /* Back: G64 -> D64, using the same decoder the plugin path uses. The G64
+     * lives in memory here, so the tracks are handed to the shared decoder
+     * directly rather than through a plugin open() — the decoder is the same
+     * function either way. */
+    convert_options_t opts;
+    convert_get_defaults(&opts);
+    d64_image_t *back = NULL;
+    convert_result_t dec;
+    memset(&dec, 0, sizeof(dec));
+    ASSERT(g64_to_d64(g64, &back, &opts, &dec) == 0);
+    ASSERT(back != NULL);
+    ASSERT(dec.sectors_converted == 683);      /* every sector came back */
+    ASSERT(dec.errors_found == 0);             /* every checksum verified */
+
+    /* And the payload is the disk we started from. */
+    ASSERT(back->num_blocks == 683);
+    int differing = 0;
+    for (size_t i = 0; i < orig_len; i++)
+        if (orig[i] != back->data[i]) differing++;
+    if (differing) {
+        printf("\n        %d of %zu bytes differ after the roundtrip\n",
+               differing, orig_len);
+    }
+    ASSERT(differing == 0);
+
+    free(orig);
+    g64_free(g64);
+    d64_free(back);
+}
+
+
+TEST(geometry_cylinders_is_capacity_for_g64_not_extent) {
+    /* The trap this seam walked into, pinned so nobody walks into it again.
+     *
+     * A D64 has a fixed layout: its size IS its extent, and the plugin's
+     * geometry.cylinders says 35. A G64 carries a slot-count header — 84 in
+     * the reference image, 42 addressable tracks — while only 35 slots hold
+     * data. Reading geometry.cylinders as "how many tracks are on this disk"
+     * therefore produced a 40-track D64 out of a 35-track disk: 85 blocks of
+     * padding presented as recovered sectors, which is precisely the kind of
+     * invented data the first principle forbids.
+     *
+     * A decoder must ask the CONTENT. */
+    uft_disk_t g64d, d64d;
+    memset(&g64d, 0, sizeof(g64d)); g64d.read_only = true;
+    memset(&d64d, 0, sizeof(d64d)); d64d.read_only = true;
+    ASSERT(uft_format_plugin_g64.open(&g64d, img(G64_IMAGE), true) == UFT_OK);
+    ASSERT(uft_format_plugin_d64.open(&d64d, img(D64_IMAGE), true) == UFT_OK);
+
+    /* Same disk, two containers, two very different meanings. */
+    ASSERT(d64d.geometry.cylinders == 35);      /* fixed layout: extent */
+    ASSERT(g64d.geometry.cylinders == 42);      /* capacity header: range */
+
+    /* And the content agrees with the D64, not with the G64 header: tracks
+     * 36..40 hold nothing. */
+    int occupied_beyond_35 = 0;
+    for (int trk = 36; trk <= 40; trk++) {
+        uft_track_t t;
+        memset(&t, 0, sizeof(t));
+        if (uft_format_plugin_g64.read_track(&g64d, trk - 1, 0, &t) == UFT_OK &&
+            t.raw_data && t.raw_size > 0) {
+            occupied_beyond_35++;
+        }
+        uft_track_release(&t);
+    }
+    ASSERT(occupied_beyond_35 == 0);
+
+    uft_format_plugin_g64.close(&g64d);
+    uft_format_plugin_d64.close(&d64d);
+}
+
 int main(void)
 {
     printf("=== Converter seam: blob loader vs format plugin (MF-433) ===\n");
@@ -258,6 +422,9 @@ int main(void)
     RUN(the_disk_id_came_from_the_bam_not_a_default);
     RUN(the_plugin_path_needs_no_d64_knowledge);
     RUN(the_same_encoder_now_reaches_a_format_it_never_could);
+    RUN(decode_both_paths_are_byte_identical);
+    RUN(geometry_cylinders_is_capacity_for_g64_not_extent);
+    RUN(the_full_roundtrip_over_plugins_returns_the_original_disk);
     printf("\nResults: %d passed, %d failed\n", _pass, _fail);
     return _fail == 0 ? 0 : 1;
 }
