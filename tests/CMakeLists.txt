@@ -409,6 +409,15 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/formats/cbm/uft_cbm_geometry.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+    elseif(${test_name} STREQUAL "test_convert_scp_adf")
+        # MF-438: Amiga flux decoded as Amiga; SKIPS (77) without the 32 MB SCP
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/scp/uft_scp_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_decoder_plugin_stub.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free"
+            UFT_CORPUS_RESTRICTED_DIR="${CMAKE_SOURCE_DIR}/tests/corpus")
     elseif(${test_name} STREQUAL "test_convert_hfe_adf")
         # MF-437: Amiga HFE decoded as Amiga, byte-identical to the source ADF
         target_sources(${test_name} PRIVATE
@@ -1286,6 +1295,7 @@ foreach(test_source ${TEST_SOURCES})
     # means "corpus image absent, skipped" — not a failure (MF-367).
     if(${test_name} STREQUAL "test_corpus_fdi" OR
        ${test_name} STREQUAL "test_corpus_scp" OR
+       ${test_name} STREQUAL "test_convert_scp_adf" OR
        ${test_name} STREQUAL "test_corpus_protection_copylock" OR
        ${test_name} STREQUAL "test_c64_protection_real_corpus" OR
        ${test_name} STREQUAL "test_scp_legacy_adapter")

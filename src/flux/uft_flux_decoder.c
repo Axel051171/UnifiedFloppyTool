@@ -154,6 +154,58 @@ uint8_t flux_fm_decode_byte(uint16_t fm_word) {
  * PLL-based Flux to Bitstream Conversion
  * ============================================================================ */
 
+/* Two representations of "flux" meet here, and they are not the same thing
+ * (MF-438).
+ *
+ * Every SCP-family reader in the tree produces ns INTERVALS — the time since
+ * the previous transition — because that is how the SCP container stores them.
+ * flux_raw_data_t::transitions holds cumulative TIMES: flux_to_bitstream()
+ * computes `delta = time - prev_time`. Handing intervals straight over yields
+ * a stream of nonsense that decodes to nothing, which is precisely how it
+ * presents: no sectors, no error.
+ *
+ * The conversion was previously hand-written at each call site
+ * (tests/differential/uft_flux_decode.c has it, with a comment explaining the
+ * trap). One fact, one place.
+ *
+ * Zero intervals are SCP overflow placeholders, not transitions, and are
+ * skipped — dropping them is what makes the cumulative sum correct.
+ *
+ * The caller owns out->transitions and releases it with flux_raw_free().
+ */
+flux_status_t flux_raw_from_ns_intervals(const uint32_t *intervals,
+                                         size_t count,
+                                         flux_raw_data_t *out)
+{
+    if (!intervals || !out || count == 0) return FLUX_ERR_INVALID;
+
+    uint32_t *trans = (uint32_t *)malloc(count * sizeof(uint32_t));
+    if (!trans) return FLUX_ERR_OVERFLOW;
+
+    size_t n = 0;
+    uint64_t cum = 0;
+    for (size_t i = 0; i < count; i++) {
+        if (intervals[i] == 0) continue;      /* overflow placeholder */
+        cum += intervals[i];
+        trans[n++] = (uint32_t)cum;
+    }
+    if (n == 0) { free(trans); return FLUX_ERR_NO_DATA; }
+
+    memset(out, 0, sizeof(*out));
+    out->transitions      = trans;
+    out->transition_count = n;
+    out->sample_rate      = 1000000000u;      /* 1 GHz: one tick is one ns */
+    return FLUX_OK;
+}
+
+void flux_raw_free(flux_raw_data_t *raw)
+{
+    if (!raw) return;
+    free(raw->transitions);
+    raw->transitions = NULL;
+    raw->transition_count = 0;
+}
+
 flux_status_t flux_to_bitstream(const flux_raw_data_t *flux,
                                 uint8_t *bits, size_t *bit_count,
                                 double bitcell_ns, flux_pll_t *pll) {

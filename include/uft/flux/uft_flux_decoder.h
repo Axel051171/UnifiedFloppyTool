@@ -263,6 +263,22 @@ flux_status_t flux_decode_gcr_apple(const flux_raw_data_t *flux,
  * The buffer belongs to the caller: this never frees it and never stores it
  * in track->raw_bits.
  */
+/**
+ * @brief Build flux_raw_data_t from ns INTERVALS (what SCP readers produce).
+ *
+ * flux_raw_data_t::transitions holds cumulative TIMES; SCP-family readers
+ * hand out intervals. Passing intervals directly decodes to nothing, silently
+ * (MF-438). Zero entries are SCP overflow placeholders and are skipped.
+ *
+ * Caller owns out->transitions — release with flux_raw_free().
+ */
+flux_status_t flux_raw_from_ns_intervals(const uint32_t *intervals,
+                                         size_t count,
+                                         flux_raw_data_t *out);
+
+/** @brief Release a flux_raw_data_t built by flux_raw_from_ns_intervals(). */
+void flux_raw_free(flux_raw_data_t *raw);
+
 flux_status_t flux_decode_amiga_bits(const uint8_t *bits, size_t bit_count,
                                      flux_decoded_track_t *track,
                                      const flux_decoder_options_t *opts);

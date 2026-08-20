@@ -20,6 +20,7 @@
 #include "uft/flux/uft_flux_decoder.h"
 
 extern const uft_format_plugin_t uft_format_plugin_hfe;
+extern const uft_format_plugin_t uft_format_plugin_scp;
 #include "uft/flux/uft_mfm_sector_parser.h"
 
 // ============================================================================
@@ -196,12 +197,129 @@ uft_error_t uftc_convert_scp_to_d64(const uint8_t* src_data, size_t src_size,
  * Pipeline: SCP parse -> flux deltas -> MFM PLL -> sector extract -> write
  * Used for both ADF (Amiga) and IMG (PC) output.
  */
+/* SCP -> ADF through uft_format_plugin_scp and the AmigaDOS decoder (MF-438).
+ *
+ * The IBM path below runs uft_mfm_decode_track(), its own comment calling it
+ * "the canonical MFM IDAM/DAM parser". AmigaDOS has no IDAM and no DAM, so on
+ * an Amiga disk it returns nothing and the calloc'd output stays zero — the
+ * same defect MF-437 fixed one layer up, in HFE->ADF.
+ *
+ * Reading through the plugin also avoids a sixth private SCP reader: the
+ * plugin parses the header, selects a revolution and converts ticks to
+ * nanoseconds. */
+static uft_error_t uftc_convert_scp_to_adf_via_plugin(
+    const char* src_path, const char* dst_path,
+    const uft_convert_options_ext_t* opts, uft_convert_result_t* result)
+{
+    enum { ADF_CYLS = 80, ADF_HEADS = 2, ADF_SPT = 11, ADF_SECSZ = 512 };
+    const size_t adf_size = (size_t)ADF_CYLS * ADF_HEADS * ADF_SPT * ADF_SECSZ;
+
+    uftc_report_progress(opts, 5, "Opening SCP via format plugin");
+
+    uft_disk_t disk;
+    memset(&disk, 0, sizeof(disk));
+    disk.read_only = true;
+    if (uft_format_plugin_scp.open(&disk, src_path, true) != UFT_OK) {
+        result->error = UFT_ERR_FORMAT;
+        uftc_add_warning(result, "SCP open failed via plugin");
+        return UFT_ERR_FORMAT;
+    }
+
+    int cyls  = disk.geometry.cylinders > 0 ? disk.geometry.cylinders : ADF_CYLS;
+    int heads = disk.geometry.heads     > 0 ? disk.geometry.heads     : ADF_HEADS;
+    if (cyls  > ADF_CYLS)  cyls  = ADF_CYLS;
+    if (heads > ADF_HEADS) heads = ADF_HEADS;
+
+    uint8_t* output = calloc(1, adf_size);
+    if (!output) {
+        uft_format_plugin_scp.close(&disk);
+        result->error = UFT_ERR_MEMORY;
+        return UFT_ERR_MEMORY;
+    }
+
+    flux_decoder_options_t dopts;
+    flux_decoder_options_init(&dopts);
+
+    uftc_report_progress(opts, 10, "Decoding AmigaDOS sectors from flux");
+
+    for (int cyl = 0; cyl < cyls; cyl++) {
+        if (uftc_is_cancelled(opts)) break;
+        for (int hd = 0; hd < heads; hd++) {
+            uft_track_t t;
+            memset(&t, 0, sizeof(t));
+            if (uft_format_plugin_scp.read_track(&disk, cyl, hd, &t) != UFT_OK ||
+                !t.flux || t.flux_count == 0) {
+                uft_track_release(&t);
+                result->tracks_failed++;
+                continue;
+            }
+
+            /* ns intervals -> cumulative transition times (MF-438). */
+            flux_raw_data_t raw;
+            if (flux_raw_from_ns_intervals(t.flux, t.flux_count, &raw) != FLUX_OK) {
+                uft_track_release(&t);
+                result->tracks_failed++;
+                continue;
+            }
+
+            flux_decoded_track_t dt;
+            memset(&dt, 0, sizeof(dt));
+            flux_decode_amiga(&raw, &dt, &dopts);
+
+            int placed = 0;
+            for (int s = 0; s < dt.sector_count; s++) {
+                flux_decoded_sector_t* sec = &dt.sectors[s];
+                if (!sec->data || sec->data_size != ADF_SECSZ) continue;
+                if (sec->sector >= ADF_SPT) continue;
+                /* Forensic: a sector whose checksum did not validate never
+                 * overwrites good data, and is counted, not hidden. */
+                if (!sec->data_crc_ok) { result->sectors_failed++; continue; }
+                size_t off = (((size_t)cyl * ADF_HEADS + (size_t)hd) * ADF_SPT
+                              + sec->sector) * ADF_SECSZ;
+                if (off + ADF_SECSZ > adf_size) continue;
+                memcpy(output + off, sec->data, ADF_SECSZ);
+                placed++;
+            }
+            result->sectors_converted += placed;
+            if (placed > 0) result->tracks_converted++;
+            else            result->tracks_failed++;
+
+            flux_decoded_track_free(&dt);
+            flux_raw_free(&raw);
+            uft_track_release(&t);
+        }
+        uftc_report_progress(opts, 10 + (cyl * 80 / (cyls ? cyls : 1)),
+                             "Decoding AmigaDOS sectors from flux");
+    }
+    uft_format_plugin_scp.close(&disk);
+
+    uftc_report_progress(opts, 95, "Writing output");
+    uft_error_t err = uftc_write_output_file(dst_path, output, adf_size);
+    if (err == UFT_OK) {
+        result->success = true;
+        result->bytes_written = (int)adf_size;
+    } else {
+        result->error = err;
+    }
+    free(output);
+    uftc_report_progress(opts, 100, "SCP->ADF complete");
+    return err;
+}
+
 uft_error_t uftc_convert_scp_to_mfm_sectors(const uint8_t* src_data,
                                               size_t src_size,
+                                              const char* src_path,
                                               const char* dst_path,
                                               uft_format_t dst_format,
                                               const uft_convert_options_ext_t* opts,
                                               uft_convert_result_t* result) {
+    /* MF-438: an Amiga target goes to the AmigaDOS decoder. The IBM path
+     * below cannot read it — see the note on the helper above. */
+    if (dst_format == UFT_FORMAT_ADF && src_path) {
+        return uftc_convert_scp_to_adf_via_plugin(src_path, dst_path, opts,
+                                                   result);
+    }
+
     uftc_report_progress(opts, 5, "Parsing SCP file");
 
     uft_scp_file_t scp;

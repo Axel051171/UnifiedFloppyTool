@@ -1726,6 +1726,66 @@ Nebenbei ehrlich gemacht: `tracks_converted` zählt jetzt nur noch Spuren, die
 tatsächlich Sektoren geliefert haben, und `sectors_converted` wird auf diesem
 Pfad überhaupt erst gesetzt.
 
+#### Vierte Naht: SCP → ADF — und ein SCP-Plugin, das die halbe Umdrehung lieferte (2026-08-20, MF-438)
+
+Diese Naht schließt die Kette: das Korpus-SCP ist greaseweazles **Flux**-Aufnahme
+derselben `xdftool_dd_ofs.adf`, aus der auch das HFE stammt. Flux, Zellen und
+Sektoren — drei Darstellungen einer Diskette, gegeneinander prüfbar.
+
+**Derselbe Amiga-als-IBM-Defekt wie MF-437, eine Ebene tiefer.**
+`uftc_convert_scp_to_mfm_sectors()` legt eine PLL über den Flux und reicht den
+Bitstrom an `uft_mfm_decode_track()` — laut eigenem Kommentar „the canonical
+MFM IDAM/DAM parser". Auch für ADF. Belegt: derselbe Track liefert dem
+IBM-Dekoder **0** Sektoren und dem Amiga-Dekoder **11**.
+
+Eine Zeile daneben sagt die Verwirrung laut:
+
+```c
+double data_rate = (dst_format == UFT_FORMAT_ADF) ? 500000.0 : 500000.0;
+```
+
+Ein Ternär mit identischen Zweigen.
+
+**Der schwerere Fund: das SCP-Plugin gab jede Spur als halbe Umdrehung zurück.**
+
+`scp_read_revolution_flux()` behandelte das `length`-Feld des
+Revolution-Eintrags als Byte-Zahl und leitete `length / 2` Flusswerte daraus
+ab. `length` zählt **16-Bit-Flusswerte**. Gemessen an
+`tests/corpus/gw_amigados.scp`, Spur 0:
+
+| | vorher | nachher |
+|---|---|---|
+| Flusswerte | 25 263 | **50 526** |
+| Summe der Intervalle | 100,05 ms | **200,00 ms** |
+| eigene Dauerangabe der Spur | 200,00 ms bei 300 rpm | unveraendert |
+| dekodierte AmigaDOS-Sektoren | 5 von 11 | **11 von 11** |
+
+Die Dateistruktur bestätigt es unabhängig: rev0-Daten beginnen bei `0x1C`,
+rev1 bei `0x18AD8` — rev0 umfasst also 101 052 Bytes = 50 526 × 2.
+
+Das ist die gefährlichste Sorte Fehler in diesem Werkzeug: **still**. Es kam
+kein Fehler, keine Warnung, es kamen Sektoren — nur eben die Hälfte. Wer eine
+Diskette mit 5 von 11 lesbaren Sektoren sichert, hält eine beschädigte
+Diskette in der Hand, nicht einen Lesefehler im Werkzeug.
+
+`src/flux/uft_scp_parser.c:376` hatte es die ganze Zeit richtig
+(`flux_count = rev_info.track_length`). Wieder zwei Leser, einer korrekt, und
+welcher läuft, hängt am Aufrufweg.
+
+**Beleg nach der Korrektur:** alle 1760 Sektoren, null Prüfsummenfehler,
+**0 abweichende Bytes von 901 120** — die Ausgangs-ADF, Byte für Byte, aus
+echtem Flux mit echter Laufwerks-Jitter durch eine echte PLL.
+
+`test_convert_scp_adf` nagelt die Vollständigkeit ohne externe Referenz fest:
+die Summe der Intervalle muss der Umdrehungsdauer entsprechen, die die Spur
+selbst mitbringt. Der Test **überspringt** (Exit 77) ohne das 32-MB-Abbild,
+das gitignored ist — CI kann ihn nicht fahren, lokal ist er reproduzierbar.
+
+**Drittes Auftreten der Semantik-Falle:** `uft_track_t::flux` sind ns-**Intervalle**,
+`flux_raw_data_t::transitions` sind kumulative **Zeiten**. Die Umrechnung stand
+handgeschrieben in `tests/differential/uft_flux_decode.c` (mit erklärendem
+Kommentar). Sie hat jetzt eine Stelle: `flux_raw_from_ns_intervals()`.
+
 **Offen, mit Grund:**
 
 1. **Plugins können nicht aus dem Speicher öffnen.** `uft_format_plugin_t`

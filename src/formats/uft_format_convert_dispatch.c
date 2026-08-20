@@ -146,8 +146,9 @@ static uft_error_t dispatch_conversion(uft_format_t src_format,
     }
     if (src_format == UFT_FORMAT_SCP &&
         (dst_format == UFT_FORMAT_ADF || dst_format == UFT_FORMAT_IMG)) {
-        return uftc_convert_scp_to_mfm_sectors(src_data, src_size, dst_path,
-                                                dst_format, opts, result);
+        return uftc_convert_scp_to_mfm_sectors(src_data, src_size, src_path,
+                                                dst_path, dst_format, opts,
+                                                result);
     }
     if (src_format == UFT_FORMAT_KRYOFLUX && dst_format == UFT_FORMAT_D64) {
         return uftc_convert_kryoflux_to_d64(src_data, src_size, dst_path,

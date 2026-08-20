@@ -112,12 +112,26 @@ static uft_error_t scp_read_revolution_flux(scp_data_t* scp, uint32_t offset,
         return UFT_ERROR_FILE_SEEK;
     }
     
-    // Flux-Daten sind 16-bit Big-Endian
-    size_t num_words = length / 2;
-    uint16_t* raw = malloc(length);
+    /* MF-438: `length` in an SCP revolution entry counts 16-bit FLUX VALUES,
+     * not bytes. This read `length` bytes and derived `length / 2` values, so
+     * every SCP track came back as exactly HALF a revolution — silently: you
+     * still get sectors, just not all of them.
+     *
+     * Measured on tests/corpus/gw_amigados.scp before the fix: the returned
+     * intervals summed to 100.05 ms while the same track's own duration field
+     * says 200.00 ms at 300 rpm, and only 5 of 11 AmigaDOS sectors decoded.
+     * The file layout confirms it independently — rev0 data starts at 0x1C and
+     * rev1 at 0x18AD8, so rev0 spans 101 052 bytes = 50 526 x 2.
+     *
+     * src/flux/uft_scp_parser.c:376 had it right all along
+     * (flux_count = rev_info.track_length). Two readers, one correct, and
+     * which one runs depends on the call path — see KNOWN_ISSUES ARCH-6. */
+    size_t num_words = length;
+    size_t raw_bytes = num_words * sizeof(uint16_t);
+    uint16_t* raw = malloc(raw_bytes);
     if (!raw) return UFT_ERROR_NO_MEMORY;
-    
-    if (fread(raw, 1, length, scp->file) != length) {
+
+    if (fread(raw, 1, raw_bytes, scp->file) != raw_bytes) {
         free(raw);
         return UFT_ERROR_FILE_READ;
     }
