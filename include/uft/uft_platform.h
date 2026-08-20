@@ -275,23 +275,43 @@ static inline void uft_write_be32(void *p, uint32_t v) {
  * POSIX Timer Compatibility (Windows fallback)
  * ═══════════════════════════════════════════════════════════════════════════════ */
 
-#if defined(UFT_PLATFORM_WINDOWS) && defined(_WIN32)
-#ifndef CLOCK_MONOTONIC
-#define CLOCK_MONOTONIC 1
-#include <time.h>
-/* Windows: use time() as simple monotonic clock fallback. */
-static inline int uft_clock_gettime(int clk, struct timespec *ts) {
-    (void)clk;
-    /* GetTickCount64 would give ms since boot but pulls in windows.h.
-     * time() is good enough for current diagnostics use. */
-    time_t t = time(NULL);
-    ts->tv_sec = t;
-    ts->tv_nsec = 0;
-    return 0;
-}
-#define clock_gettime uft_clock_gettime
-#endif /* CLOCK_MONOTONIC */
-#endif /* UFT_PLATFORM_WINDOWS */
+/* MF-435. What stood here was:
+ *
+ *     #ifndef CLOCK_MONOTONIC
+ *     #define CLOCK_MONOTONIC 1
+ *     #include <time.h>
+ *     static inline int uft_clock_gettime(int clk, struct timespec *ts) {
+ *         time_t t = time(NULL);
+ *         ts->tv_sec = t;
+ *         ts->tv_nsec = 0;          // one-SECOND resolution
+ *         return 0;
+ *     }
+ *     #define clock_gettime uft_clock_gettime
+ *     #endif
+ *
+ * Three things were wrong with it.
+ *
+ * It replaced a function that WORKS. MinGW-w64 ships a real clock_gettime
+ * with 100 ns granularity — measured, not assumed. The shim was installed
+ * anyway.
+ *
+ * Whether it was installed depended on INCLUDE ORDER. The guard tested
+ * CLOCK_MONOTONIC, which <time.h> defines; a translation unit that included
+ * <time.h> first kept the real clock, one that reached this header first got
+ * the shim. Two files in the tree, two different clocks.
+ *
+ * And the replacement reported whole seconds. Every elapsed-time measurement
+ * shorter than a second came out as exactly 0. src/core/uft_capture.c times
+ * disk captures with it and fills uft_capture_result_t::elapsed_seconds — so
+ * that field has been quantised to whole seconds on Windows. It is also why
+ * this project had no benchmarks: timing inside UFT silently did not work.
+ *
+ * A clock that reports zero elapsed time is the timing equivalent of invented
+ * data, which the first principle forbids. Nothing is substituted here now:
+ * every toolchain this project builds with — GCC, Clang, MinGW-w64 — provides
+ * clock_gettime. A toolchain that does not will fail to link, loudly, which is
+ * the correct outcome and far better than a silent one-second clock.
+ */
 
 /* ═══════════════════════════════════════════════════════════════════════════════
  * Path Handling

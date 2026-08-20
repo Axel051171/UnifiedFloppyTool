@@ -1752,6 +1752,30 @@ else()
     message(STATUS "UFT SSOT Check SKIPPED: build_system_parity (Python3 not found)")
 endif()
 
+# ════════════════════════════════════════════════════════════════════════════
+# Micro-benchmarks (MF-435) — OFF by default.
+#
+# Deliberately NOT registered with add_test(): a benchmark measures, it does
+# not assert, and a number that moves with the machine has no business
+# reddening CI. See tests/benchmarks/README.md for the baseline and for why
+# neither decode hotpath is worth optimising.
+# ════════════════════════════════════════════════════════════════════════════
+option(UFT_ENABLE_BENCHMARKS "Build the micro-benchmarks (not run by ctest)" OFF)
+
+if(UFT_ENABLE_BENCHMARKS)
+    add_executable(bench_decode_hotpath
+        ${CMAKE_CURRENT_SOURCE_DIR}/benchmarks/bench_decode_hotpath.c
+        ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c)
+    target_include_directories(bench_decode_hotpath PRIVATE
+        ${CMAKE_SOURCE_DIR}/include)
+    # -O3 regardless of build type: a baseline from a debug build is noise.
+    target_compile_options(bench_decode_hotpath PRIVATE -O3)
+    target_compile_definitions(bench_decode_hotpath PRIVATE NDEBUG)
+    set_target_properties(bench_decode_hotpath PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/benchmarks)
+    message(STATUS "UFT Benchmarks ENABLED: bench_decode_hotpath")
+endif()
+
 message(STATUS "════════════════════════════════════════════════════")
 message(STATUS "UFT Tests: Run 'ctest' after build to execute")
 message(STATUS "════════════════════════════════════════════════════")

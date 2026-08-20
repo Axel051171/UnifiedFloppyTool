@@ -1448,6 +1448,79 @@ ohne eine einzige Information hinzuzufügen — `compat_entries == NULL` und ein
 Liste aus lauter UNTESTED sagen dasselbe. Eine Matrix gehört dorthin, wo jemand
 etwas geprüft hat oder wo die relevanten Ziele nicht offensichtlich sind.
 
+### PERF-1 — Zeitmessung in UFT funktionierte still nicht; die Decoder-Hotpaths sind nicht der Engpass (2026-08-20, MF-435) → ✓ BEHOBEN + BASELINE
+
+**Correctness + Messung.** Der Baum hatte keinen einzigen Benchmark, nur eine
+`uft-benchmark`-Skill, die nie benutzt wurde. Der Grund dafür stellte sich als
+strukturell heraus, nicht als Nachlässigkeit.
+
+`include/uft/uft_platform.h` trug:
+
+```c
+#ifndef CLOCK_MONOTONIC
+#define CLOCK_MONOTONIC 1
+#include <time.h>
+static inline int uft_clock_gettime(int clk, struct timespec *ts) {
+    time_t t = time(NULL);
+    ts->tv_sec = t;
+    ts->tv_nsec = 0;          /* Ein-SEKUNDEN-Auflösung */
+    return 0;
+}
+#define clock_gettime uft_clock_gettime
+#endif
+```
+
+Drei Fehler in einem Block:
+
+1. **Er ersetzte eine Funktion, die funktioniert.** MinGW-w64 liefert ein
+   echtes `clock_gettime` mit 100 ns Granularität — gemessen, nicht vermutet.
+2. **Ob er greift, hing an der Include-Reihenfolge.** Der Guard prüft
+   `CLOCK_MONOTONIC`, das `<time.h>` definiert. Wer `<time.h>` zuerst
+   einband, behielt die echte Uhr; wer über einen UFT-Header kam, bekam den
+   Shim. Zwei Dateien im Baum, zwei verschiedene Uhren.
+3. **Der Ersatz meldete ganze Sekunden.** Jede Messung unter einer Sekunde
+   las sich als exakt 0.
+
+Betroffen war `src/core/uft_capture.c::now_seconds()`, das
+`uft_capture_result_t::elapsed_seconds` füllt — dieses Feld war unter Windows
+auf ganze Sekunden gerastert. (`uft_fat32_mbr.c` erreicht `uft_platform.h`
+nicht und war nicht betroffen.)
+
+Eine Uhr, die 0 vergangene Zeit meldet, ist das zeitliche Gegenstück zu
+erfundenen Daten. Ersatzlos entfernt: jede Toolchain, mit der dieses Projekt
+baut, hat `clock_gettime`. Eine, die es nicht hat, bricht jetzt laut beim
+Linken statt still zu lügen.
+
+*Pikant:* `include/uft/compat/uft_platform.h` enthält seit jeher eine
+**korrekte** QPC-basierte Implementierung mit hoher Auflösung. Wegen der
+geteilten Include-Guards aus ARCH-1 ist sie nie erreichbar. Die gute Version
+war tot, die kaputte war live.
+
+**Baseline (`tests/benchmarks/bench_decode_hotpath`).** GCC 13.1.0 MinGW-w64,
+x86-64, `-O3 -DNDEBUG`, Netzbetrieb, Median aus 11 Messungen nach 3 Warmups,
+drei unabhängige Läufe:
+
+| | Median | Durchsatz |
+|---|---|---|
+| `uft_pll_process_flux_mfm` | 1,320–1,380 ms | 72,5–75,7 M Übergänge/s |
+| `flux_find_sync` (Vollscan) | 0,317–0,330 ms | 1514–1578 M Bits/s |
+
+**Ergebnis: beide sind nicht optimierungswürdig.** Hochgerechnet auf eine
+DD-Diskette (80 Zylinder × 2 Köpfe × 3 Umdrehungen = 480 Umdrehungen) sind das
+zusammen rund **1,2 s CPU** gegen **~96 s reine Drehzeit** plus Spurwechsel.
+Die Decode-Arithmetik ist in der Größenordnung von **einem Prozent** der
+Wanduhr eines echten Einlesevorgangs.
+
+Genau dafür misst man vorher. Beide Funktionen *sehen* nach Kandidaten aus —
+die PLL rechnet `double` pro Übergang, `flux_find_sync` läuft Bit für Bit und
+lädt dasselbe Byte achtmal. Beide umzuschreiben wäre verlockend gewesen und
+hätte unter einer Sekunde je Diskette gebracht, bei Risiko in Code, wo ein
+falsches Bit ein falsches Archiv ist.
+
+**Nicht gemessen:** Ende-zu-Ende-Konvertierung, Datei-I/O, die
+OTDR/DeepRead-Pipeline (12 Stufen), die GUI. Wenn etwas real langsam ist,
+liegt es dort — und gehört gemessen, bevor es angefasst wird.
+
 ### ARCH-7 — 24 Kopien der CBM-Zonentabelle in drei Indexkonventionen (2026-08-20, MF-434) → ◐ SSOT STEHT, 22 Migrationen offen
 
 **Architecture.** Sektoren pro Spur, Geschwindigkeitszone, Gap und Kapazität
