@@ -47,7 +47,7 @@ Stand:   P0 Foundation MF-150, P1.17 V1-Hierarchie weg MF-169,
 
 ## Projekt
 
-Qt6 C/C++ Desktop-Applikation (~697 Quelldateien, ~17 Subsysteme;
+Qt6 C/C++ Desktop-Applikation (~696 Quelldateien, ~17 Subsysteme;
 Stand 2026-08-19 nach MF-271).
 **Kernprinzip:** „Kein Bit verloren. Keine stille Veränderung. Keine erfundenen Daten."
 Forensische Integrität schlägt immer Performance, Komfort und Deadlines.

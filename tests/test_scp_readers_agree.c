@@ -1,6 +1,6 @@
 /**
  * @file test_scp_readers_agree.c
- * @brief The tree has five SCP readers. Make them prove they agree (MF-439).
+ * @brief The SCP readers must prove they agree (MF-439, MF-440).
  *
  * MF-438 found that `uft_scp_plugin.c` read the revolution entry's `length`
  * field as a byte count and derived `length / 2` flux values from it, so every
@@ -16,9 +16,14 @@
  *     src/formats/scp/uft_scp_reader_v2.c:806  length * 2 bytes       correct
  *     src/formats/scp/uft_scp_plugin.c:116     length / 2             WRONG
  *
- * One of five. But reading is not proof, and five readers of one format is a
- * standing invitation for the next one to drift. This turns the reading into
- * an assertion: two independent readers, the same file, the same track — and
+ * One of five. MF-440 then removed two of them — uft_scp_multirev.c and
+ * uft_scp_reader_v2.c had no callers at all, 1850 lines between them — so
+ * three remain: the canonical parser, the v3 parser reached through
+ * uft_v3_bridge for protection detection, and the plugin.
+ *
+ * Reading is not proof, and three readers of one format is still a standing
+ * invitation for the next one to drift. This turns the reading into an
+ * assertion: two independent readers, the same file, the same track — and
  * every flux interval identical.
  *
  * The check is deliberately not "both return something plausible". Two

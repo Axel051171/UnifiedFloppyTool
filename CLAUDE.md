@@ -126,7 +126,7 @@ Erkennt und dokumentiert historische Kopierschutz-Verfahren:
 
 ## Build-System
 
-- **Primär:** qmake (`.pro`-Datei), ~697 Source-Dateien / ~516 Header
+- **Primär:** qmake (`.pro`-Datei), ~696 Source-Dateien / ~516 Header
   (Stand 2026-08-19 nach MF-271; zaehlen mit
   `find src -name '*.c' -o -name '*.cpp' | wc -l`)
 - **Tests:** CMake (`tests/CMakeLists.txt`), 205/205 grün (Stand 2026-08-16);
@@ -177,7 +177,7 @@ tests/                 — 77 C-Tests + 1 Qt-Test
 
 ## Schlüssel-Metriken
 
-- ~697 Source-Dateien, ~516 Header — Stand 2026-08-19 nach MF-271
+- ~696 Source-Dateien, ~516 Header — Stand 2026-08-20 nach MF-440
   (src/switch/ + src/cart7/ entfernt, 801 Dateien); davor MF-011 19-Welle
   Cleanup (785 dead-code Files / ~140k LOC entfernt, davon `src/fluxengine/`,
   `src/algorithms/{core,data,fluxio,imageio,tracks}`, `src/loaders/`,

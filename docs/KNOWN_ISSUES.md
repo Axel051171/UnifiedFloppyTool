@@ -1829,6 +1829,45 @@ die **kein Build je definiert** (geprüft über `.pro`, CMake und die
 Workflows). Assertions, die nie laufen, sind keine Tests; sie sehen nur so
 aus. Gehört zur Aufräumfrage der fünf Leser, nicht hierher.
 
+#### Von fünf SCP-Lesern auf drei (2026-08-20, MF-440)
+
+Nachdem `test_scp_readers_agree` bewiesen hatte, dass die Leser dasselbe
+liefern, war die Zusammenführung risikoarm — das war der Sinn der Reihenfolge.
+Die Konsumenten-Messung ergab dann etwas Einfacheres als erwartet: **zwei der
+fünf hatten überhaupt keine Aufrufer.**
+
+| Leser | Zeilen | Befund |
+|---|---|---|
+| `src/flux/uft_scp_parser.c` | 675 | kanonisch — 15 Konsumentendateien, GUI, HAL-Provider, Tests, ein Python-Werkzeug |
+| `src/formats/scp/uft_scp_parser_v3.c` | 1765 | lebt: `uft_v3_bridge.c` → `uft_smart_open.c` / `uft_advanced_mode.c`, Kopierschutz-Erkennung |
+| `src/formats/scp/uft_scp_plugin.c` | 478 | lebt über die Plugin-Registry |
+| `src/formats/scp/uft_scp_multirev.c` | 859 | **null Aufrufer** → entfernt |
+| `src/formats/scp/uft_scp_reader_v2.c` | 991 | **null Aufrufer** → entfernt |
+
+**Warum die erste Messung falsch war.** Ein naiver Symbolabgleich meldete für
+`uft_scp_reader_v2.c` Aufrufer in `uft_scp_plugin.c` und `uft_hal_unified.c`.
+Beide definieren aber **eigene statische** `scp_open()`/`scp_close()` mit
+völlig anderen Signaturen; ebenso ist `scp_disk_type_name` in
+`uft_scp_parser_v3.c` dessen eigene statische Funktion. Drei Fehltreffer, alle
+aus derselben Ursache: generische Namen in einem Baum mit fünf Implementierungen
+eines Formats. Genau die „Symbol-Rausch"-Stufe der Löschbeweispipeline aus
+MF-369 — ohne sie hätte ich hier nichts gelöscht und die falsche Begründung
+notiert.
+
+**Beweispipeline vollständig durchlaufen:** keine Header (also kein
+`#include`-Konsument möglich), unbedingt in der `.pro` gelistet, keine
+Skript-/Werkzeug-Referenz, keine Selbstregistrierung per Makro oder
+Konstruktor, alle Symboltreffer als Kollisionen widerlegt, Abnahme-Build grün.
+
+**1850 Zeilen entfernt.** Rückholbar über den Tag
+`archive/pre-mf440-scp-readers`.
+
+*Nicht gelöscht und warum:* `uft_scp_parser_v3.c` sieht mit 1765 Zeilen nach
+dem größten Brocken aus, hängt aber an der Kopierschutz-Erkennung, die
+`uft_smart_open.c` beim automatischen Formaterkennen aufruft. Das ist ein
+lebender Pfad; ihn zusammenzuführen ist eigene Arbeit, kein Aufräumen
+nebenbei.
+
 **Offen, mit Grund:**
 
 1. **Plugins können nicht aus dem Speicher öffnen.** `uft_format_plugin_t`

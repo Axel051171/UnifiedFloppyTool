@@ -1337,8 +1337,6 @@ SOURCES += \
     src/formats/nib/uft_nib_parser_v2.c \
     src/formats/sap/uft_sap_parser_v2.c \
     src/formats/scl/uft_scl_parser_v2.c \
-    src/formats/scp/uft_scp_multirev.c \
-    src/formats/scp/uft_scp_reader_v2.c \
     src/formats/scp/uft_scp_writer.c \
     src/formats/ssd/uft_ssd_parser_v2.c \
     src/formats/tap/uft_tap_parser_v2.c \
