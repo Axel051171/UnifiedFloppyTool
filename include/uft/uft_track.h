@@ -182,15 +182,48 @@ typedef struct uft_sector_layer {
  * ═══════════════════════════════════════════════════════════════════════════ */
 
 /**
- * @brief Allocate a new track with specified layers
- * @param layers Bitmask of uft_layer_flags_t
- * @param bit_count Initial bit capacity
- * @return New track or NULL
+ * @brief Allocate a heap track with room for sectors and raw bits.
+ *
+ * @param max_sectors  Sector capacity to preallocate
+ * @param max_raw_bits Raw-data capacity in bits, 0 for none
+ * @return New track (owns_data = true) or NULL. Release with uft_track_free().
+ *
+ * MF-433: this used to be declared here as
+ * `uft_track_alloc(uint32_t layers, size_t bit_count)` — a signature that
+ * never existed. The one definition, uft_unified_types.c:224, takes a sector
+ * count, and all fourteen callers pass one. The wrong declaration survived
+ * because no translation unit both included this header and called the
+ * function; the first one to do so failed to compile, which is how it was
+ * found. Same shape as the enum-vs-macro class (ARCH-5), one level up: one
+ * fact, three headers, one of them wrong.
  */
-uft_track_t* uft_track_alloc(uint32_t layers, size_t bit_count);
+uft_track_t* uft_track_alloc(size_t max_sectors, size_t max_raw_bits);
 
 /**
  * @brief Free track and all internal data
+ */
+/**
+ * @brief Release everything a track OWNS, leaving the struct itself alone.
+ *
+ * Use this for tracks that live on the stack or inside another object — which
+ * is nearly all of them, because plugin->read_track() fills a caller-provided
+ * uft_track_t. After the call the struct is zeroed where it mattered and can
+ * be released again or refilled.
+ *
+ * MF-433: uft_track_free() ends in free(track). Twenty-two of its twenty-nine
+ * call sites passed a stack address, eighteen of them in the generic
+ * verify_track helper that plugins wire up — free() on a stack pointer, the
+ * heap corruption only hidden because owns_data was false and the interesting
+ * part of the function was skipped. Two roundtrip tests carry comments
+ * explaining the trap instead of a fix. This is the fix.
+ */
+void uft_track_release(uft_track_t *track);
+
+/**
+ * @brief Release the track AND free the struct.
+ *
+ * Only for tracks obtained from uft_track_alloc() or otherwise heap-allocated.
+ * For a stack track use uft_track_release().
  */
 void uft_track_free(uft_track_t *track);
 

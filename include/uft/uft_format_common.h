@@ -98,6 +98,12 @@ static inline uft_error_t uft_format_add_sector(
      * read-produced tracks (see MF-320 / IMD). Keep them in lock-step. */
     sector.data_len = size;
     sector.data_size = size;
+
+    /* The sector data below is a COPY this track now owns. Without this the
+     * track stayed owns_data=false and uft_track_release() freed nothing, so
+     * every plugin read leaked its sectors and callers had to free by hand —
+     * which 52 files duly did (MF-433). */
+    track->owns_data = true;
     sector.status = UFT_SECTOR_OK;
     uft_sector_set_crc(&sector, true);   /* good sector — FMT-5, all 3 fields */
     uft_sector_set_id_crc(&sector, true);/* default: ID-field CRC ok (no header error) */

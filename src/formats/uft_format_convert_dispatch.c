@@ -104,10 +104,17 @@ uft_convert_options_t uft_convert_default_options(void) {
  * Routes to the appropriate converter function based on the
  * (src_format, dst_format) pair.
  */
+/* MF-433: src_path is threaded through so a converter can read its source via
+ * the FORMAT PLUGIN instead of a private loader. Plugins open by path only —
+ * uft_format_plugin_t has no open-from-memory — so uft_convert_memory(), which
+ * genuinely has no path, passes NULL and those converters keep the blob path.
+ * Closing that hole properly means an additive open_memory() behind the
+ * existing api_version gate; noted in KNOWN_ISSUES ARCH-6. */
 static uft_error_t dispatch_conversion(uft_format_t src_format,
                                         uft_format_t dst_format,
                                         const uint8_t* src_data,
                                         size_t src_size,
+                                        const char* src_path,
                                         const char* dst_path,
                                         const uft_convert_options_ext_t* opts,
                                         uft_convert_result_t* result) {
@@ -163,7 +170,8 @@ static uft_error_t dispatch_conversion(uft_format_t src_format,
 
     /* ===== Sector -> Bitstream (synthetic) ===== */
     if (src_format == UFT_FORMAT_D64 && dst_format == UFT_FORMAT_G64) {
-        return uftc_convert_d64_to_g64(src_data, src_size, dst_path, opts, result);
+        return uftc_convert_d64_to_g64(src_data, src_size, src_path, dst_path,
+                                        opts, result);
     }
     if ((src_format == UFT_FORMAT_ADF || src_format == UFT_FORMAT_IMG) &&
         dst_format == UFT_FORMAT_HFE) {
@@ -588,7 +596,7 @@ uft_error_t uft_convert_file(const char* src_path,
         }
 
         err = dispatch_conversion(src_format, dst_format, src_data, src_size,
-                                   dst_path, &ext_opts, result);
+                                   src_path, dst_path, &ext_opts, result);
     }
 
     /* V415-PLAN LOSS.preflight Phase 2 (MF-268): on a successful
@@ -880,8 +888,9 @@ uft_error_t uft_convert_memory(const uint8_t* src_data, size_t src_size,
              (void*)src_data);
 #endif
 
+    /* No source path exists here: the caller handed over bytes. */
     uft_error_t err = dispatch_conversion(src_format, dst_format,
-                                           src_data, src_size, tmp_path,
+                                           src_data, src_size, NULL, tmp_path,
                                            options, result);
     if (err == UFT_OK && result->success) {
         /* Read back the temp file */

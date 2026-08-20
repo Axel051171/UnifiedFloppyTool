@@ -22,8 +22,8 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 | `g64` | **T1** | `test_c64_metrics_corpus`, `test_c64_protection_real_corpus`, `test_d64_writer`, `test_format_probe_fuzz`, `test_plugin_probe_real` | — | — | 3 |
 | `adf` | **T1b** | `test_adf_write_roundtrip`, `test_corpus_adf`, `test_format_probe_fuzz`, `test_plugin_probe_real` | — | — | 1 |
 | `atr` | **T1b** | `test_atr_512`, `test_atr_write_roundtrip`, `test_corpus_atr`, `test_corpus_xfd`, `test_format_probe_fuzz`, `test_plugin_probe_real` | — | — | 1 |
-| `d64` | **T1b** | `test_corpus_d64`, `test_d64_42track`, `test_d64_errormap`, `test_d64_geometry_zones`, `test_d64_write_roundtrip`, `test_format_probe_fuzz`, `test_plugin_probe_real` | VICE D64 sizes incl. error-block trailer + 40/42-track variants | MF-333, MF-350 | 1 |
-| `d67` | **T1b** | `test_corpus_cbm_vice` | VICE/Schepers D67 690-block geometry (176640 bytes) | MF-314 | 1 |
+| `d64` | **T1b** | `test_convert_via_plugin`, `test_corpus_d64`, `test_d64_42track`, `test_d64_errormap`, `test_d64_geometry_zones`, `test_d64_write_roundtrip`, `test_format_probe_fuzz`, `test_plugin_probe_real` | VICE D64 sizes incl. error-block trailer + 40/42-track variants | MF-333, MF-350 | 1 |
+| `d67` | **T1b** | `test_convert_via_plugin`, `test_corpus_cbm_vice` | VICE/Schepers D67 690-block geometry (176640 bytes) | MF-314 | 1 |
 | `d71` | **T1b** | `test_corpus_d71`, `test_d71_write_roundtrip`, `test_format_probe_fuzz`, `test_plugin_probe_real` | — | — | 1 |
 | `d80` | **T1b** | `test_corpus_cbm_vice`, `test_d80_write_roundtrip` | — | — | 1 |
 | `d81` | **T1b** | `test_corpus_d81`, `test_d81_write_roundtrip`, `test_format_probe_fuzz`, `test_plugin_probe_real` | — | — | 1 |

@@ -462,6 +462,48 @@ size_t d64_track_capacity(int track);
  */
 const char *d64_error_name(d64_error_t error);
 
+/* ============================================================================
+ * Plugin-sourced encoding (MF-433)
+ * ============================================================================ */
+
+/* These must be declared at FILE scope. A struct tag that first appears inside
+ * a prototype's parameter list has prototype scope and is a distinct type, so
+ * the definition in uft_d64_g64.c would not match this declaration even though
+ * gcc prints both signatures identically. */
+struct uft_format_plugin;
+struct uft_disk;
+
+/**
+ * @brief Encode a CBM sector disk to G64, reading through a format plugin.
+ *
+ * Same GCR encoder as d64_to_g64(), but the sectors come from
+ * `plugin->read_track()` instead of a D64-shaped memory blob. That is the
+ * whole point: the encoder stops being a D64 function and becomes a CBM
+ * function. Anything that presents 256-byte CBM sectors through the plugin
+ * interface can be encoded — D64, D67, and D71 side 0 all do.
+ *
+ * Why this exists: the converter currently talks to its own per-format loaders
+ * and never touches the plugin registry, so 88 plugins buy nothing in a
+ * conversion and every format needs a hand-written pair function. See
+ * docs/KNOWN_ISSUES.md ARCH-6.
+ *
+ * The disk ID is taken from the BAM (track 18 sector 0, offset 0xA2) via the
+ * same plugin, so the caller needs no D64 knowledge.
+ *
+ * @param plugin  Format plugin providing read_track (must be non-NULL)
+ * @param disk    Disk opened by that plugin; geometry.cylinders decides the
+ *                track count
+ * @param options Conversion options, NULL for defaults
+ * @param out     Receives the G64 image, caller frees with g64_free()
+ * @param result  Optional statistics
+ * @return 0 on success, negative on error
+ */
+int uft_cbm_g64_encode_via_plugin(const struct uft_format_plugin *plugin,
+                                  struct uft_disk *disk,
+                                  const convert_options_t *options,
+                                  g64_image_t **out,
+                                  convert_result_t *result);
+
 #ifdef __cplusplus
 }
 #endif

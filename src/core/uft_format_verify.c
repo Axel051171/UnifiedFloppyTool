@@ -12,6 +12,7 @@
  */
 #include "uft/uft_format_common.h"
 #include "uft/uft_format_plugin.h"
+#include "uft/uft_track.h"   /* uft_track_release (MF-433) */
 #include <string.h>
 
 uft_error_t uft_generic_verify_track(uft_disk_t *disk, int cyl, int head,
@@ -27,12 +28,12 @@ uft_error_t uft_generic_verify_track(uft_disk_t *disk, int cyl, int head,
 
     uft_error_t err = plugin->read_track(disk, cyl, head, &actual);
     if (err != UFT_OK) {
-        uft_track_free(&actual);
+        uft_track_release(&actual);
         return err;
     }
 
     if (actual.sector_count != reference->sector_count) {
-        uft_track_free(&actual);
+        uft_track_release(&actual);
         return UFT_ERROR_VERIFY_FAILED;
     }
 
@@ -44,18 +45,18 @@ uft_error_t uft_generic_verify_track(uft_disk_t *disk, int cyl, int head,
         size_t alen = a->data_len ? a->data_len : a->data_size;
         size_t rlen = r->data_len ? r->data_len : r->data_size;
         if (alen != rlen || !a->data || !r->data) {
-            uft_track_free(&actual);
+            uft_track_release(&actual);
             return UFT_ERROR_VERIFY_FAILED;
         }
 
         /* Byte-genauer Vergleich */
         if (memcmp(a->data, r->data, rlen) != 0) {
-            uft_track_free(&actual);
+            uft_track_release(&actual);
             return UFT_ERROR_VERIFY_FAILED;
         }
     }
 
-    uft_track_free(&actual);
+    uft_track_release(&actual);
     return UFT_OK;
 }
 
@@ -78,10 +79,10 @@ uft_error_t uft_weak_bit_verify_track(uft_disk_t *disk, int cyl, int head,
     memset(&actual, 0, sizeof(actual));
 
     uft_error_t err = plugin->read_track(disk, cyl, head, &actual);
-    if (err != UFT_OK) { uft_track_free(&actual); return err; }
+    if (err != UFT_OK) { uft_track_release(&actual); return err; }
 
     if (actual.sector_count != reference->sector_count) {
-        uft_track_free(&actual);
+        uft_track_release(&actual);
         return UFT_ERROR_VERIFY_FAILED;
     }
 
@@ -92,7 +93,7 @@ uft_error_t uft_weak_bit_verify_track(uft_disk_t *disk, int cyl, int head,
         size_t alen = a->data_len ? a->data_len : a->data_size;
         size_t rlen = r->data_len ? r->data_len : r->data_size;
         if (alen != rlen || !a->data || !r->data) {
-            uft_track_free(&actual);
+            uft_track_release(&actual);
             return UFT_ERROR_VERIFY_FAILED;
         }
 
@@ -120,7 +121,7 @@ uft_error_t uft_weak_bit_verify_track(uft_disk_t *disk, int cyl, int head,
             for (size_t b = 0; b < rlen; b++) {
                 if (a->weak_mask[b] == 0) {
                     if (a->data[b] != r->data[b]) {
-                        uft_track_free(&actual);
+                        uft_track_release(&actual);
                         return UFT_ERROR_VERIFY_FAILED;
                     }
                 }
@@ -128,13 +129,13 @@ uft_error_t uft_weak_bit_verify_track(uft_disk_t *disk, int cyl, int head,
         } else {
             /* Kein Weak-Sektor: normaler Vergleich */
             if (memcmp(a->data, r->data, rlen) != 0) {
-                uft_track_free(&actual);
+                uft_track_release(&actual);
                 return UFT_ERROR_VERIFY_FAILED;
             }
         }
     }
 
-    uft_track_free(&actual);
+    uft_track_release(&actual);
     return UFT_OK;
 }
 
@@ -156,23 +157,23 @@ uft_error_t uft_flux_verify_track(uft_disk_t *disk, int cyl, int head,
     memset(&actual, 0, sizeof(actual));
 
     uft_error_t err = plugin->read_track(disk, cyl, head, &actual);
-    if (err != UFT_OK) { uft_track_free(&actual); return err; }
+    if (err != UFT_OK) { uft_track_release(&actual); return err; }
 
     /* Primär: raw_data vergleichen wenn vorhanden */
     if (actual.raw_data && reference->raw_data) {
         size_t aln = actual.raw_bits ? (actual.raw_bits + 7) / 8 : actual.raw_size;
         size_t rln = reference->raw_bits ? (reference->raw_bits + 7) / 8 : reference->raw_size;
         if (aln != rln || memcmp(actual.raw_data, reference->raw_data, rln) != 0) {
-            uft_track_free(&actual);
+            uft_track_release(&actual);
             return UFT_ERROR_VERIFY_FAILED;
         }
-        uft_track_free(&actual);
+        uft_track_release(&actual);
         return UFT_OK;
     }
 
     /* Fallback: Sektor-Vergleich mit Weak-Bit-Toleranz */
     if (actual.sector_count != reference->sector_count) {
-        uft_track_free(&actual);
+        uft_track_release(&actual);
         return UFT_ERROR_VERIFY_FAILED;
     }
     for (size_t s = 0; s < reference->sector_count; s++) {
@@ -181,15 +182,15 @@ uft_error_t uft_flux_verify_track(uft_disk_t *disk, int cyl, int head,
         size_t alen = a->data_len ? a->data_len : a->data_size;
         size_t rlen = r->data_len ? r->data_len : r->data_size;
         if (alen != rlen || !a->data || !r->data) {
-            uft_track_free(&actual);
+            uft_track_release(&actual);
             return UFT_ERROR_VERIFY_FAILED;
         }
         if (a->weak) continue;  /* Flux: weak-sectors gelten immer als OK */
         if (memcmp(a->data, r->data, rlen) != 0) {
-            uft_track_free(&actual);
+            uft_track_release(&actual);
             return UFT_ERROR_VERIFY_FAILED;
         }
     }
-    uft_track_free(&actual);
+    uft_track_release(&actual);
     return UFT_OK;
 }

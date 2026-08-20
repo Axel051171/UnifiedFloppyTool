@@ -10,6 +10,9 @@
  */
 
 #include "uft_format_convert_internal.h"
+#include "uft/uft_format_plugin.h"   /* MF-433: read via the plugin */
+
+extern const uft_format_plugin_t uft_format_plugin_d64;
 
 // ============================================================================
 // Bitstream -> Sector (decode)
@@ -75,32 +78,62 @@ uft_error_t uftc_convert_g64_to_d64(const uint8_t* src_data, size_t src_size,
 /**
  * @brief D64 -> G64: Encode sectors to synthetic GCR bitstream
  *
- * Uses the d64_to_g64() converter from uft_d64_g64.h.
+ * Reads the source through uft_format_plugin_d64 when a path is available
+ * (MF-433), falling back to the private d64_load_buffer() blob path when only
+ * bytes are on hand — uft_convert_memory() is the caller without a path.
+ *
+ * The two produce byte-identical G64 output; test_convert_via_plugin pins that
+ * against the c1541 reference image, which is why the switch is safe to make.
+ *
+ * One deliberate behaviour change: the plugin recognises 41- and 42-track
+ * images, the blob loader caps at 40 and silently drops the rest. Such an
+ * image now converts in full. No 41/42-track reference image exists in the
+ * corpus, so that path is reasoned, not tested.
  */
 uft_error_t uftc_convert_d64_to_g64(const uint8_t* src_data, size_t src_size,
+                                      const char* src_path,
                                       const char* dst_path,
                                       const uft_convert_options_ext_t* opts,
                                       uft_convert_result_t* result) {
-    uftc_report_progress(opts, 10, "Loading D64 image");
-
-    d64_image_t* d64 = NULL;
-    int rc = d64_load_buffer(src_data, src_size, &d64);
-    if (rc != 0 || !d64) {
-        result->error = UFT_ERR_FORMAT;
-        uftc_add_warning(result,
-                 "D64 parse failed (error %d)", rc);
-        return UFT_ERR_FORMAT;
-    }
-
-    uftc_report_progress(opts, 30, "Encoding D64 sectors to GCR");
-
-    g64_image_t* g64 = NULL;
     convert_options_t conv_opts;
     convert_get_defaults(&conv_opts);
     convert_result_t conv_result;
+    memset(&conv_result, 0, sizeof(conv_result));
+    g64_image_t* g64 = NULL;
+    int rc;
 
-    rc = d64_to_g64(d64, &g64, &conv_opts, &conv_result);
-    d64_free(d64);
+    if (src_path) {
+        uftc_report_progress(opts, 10, "Opening D64 via format plugin");
+
+        uft_disk_t disk;
+        memset(&disk, 0, sizeof(disk));
+        disk.read_only = true;
+        if (uft_format_plugin_d64.open(&disk, src_path, true) != UFT_OK) {
+            result->error = UFT_ERR_FORMAT;
+            uftc_add_warning(result, "D64 open failed via plugin");
+            return UFT_ERR_FORMAT;
+        }
+
+        uftc_report_progress(opts, 30, "Encoding D64 sectors to GCR");
+        rc = uft_cbm_g64_encode_via_plugin(&uft_format_plugin_d64, &disk,
+                                            &conv_opts, &g64, &conv_result);
+        uft_format_plugin_d64.close(&disk);
+    } else {
+        uftc_report_progress(opts, 10, "Loading D64 image");
+
+        d64_image_t* d64 = NULL;
+        rc = d64_load_buffer(src_data, src_size, &d64);
+        if (rc != 0 || !d64) {
+            result->error = UFT_ERR_FORMAT;
+            uftc_add_warning(result,
+                     "D64 parse failed (error %d)", rc);
+            return UFT_ERR_FORMAT;
+        }
+
+        uftc_report_progress(opts, 30, "Encoding D64 sectors to GCR");
+        rc = d64_to_g64(d64, &g64, &conv_opts, &conv_result);
+        d64_free(d64);
+    }
 
     if (rc != 0 || !g64) {
         result->error = UFT_ERR_FORMAT;

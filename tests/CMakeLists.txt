@@ -402,6 +402,15 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/adf/uft_adf_plugin.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+    elseif(${test_name} STREQUAL "test_convert_via_plugin")
+        # MF-433: converter seam — blob loader vs plugin, byte-identical
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/c64/uft_d64_g64.c
+            ${CMAKE_SOURCE_DIR}/src/formats/d64/uft_d64_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/formats/d67/uft_d67.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_unified_types.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_imd_track_record")
         # IMD track-record layout regression vectors (MF-430)
         target_sources(${test_name} PRIVATE

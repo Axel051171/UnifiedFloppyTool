@@ -9,6 +9,8 @@
  */
 
 #include "uft/formats/c64/uft_d64_g64.h"
+#include "uft/uft_format_plugin.h"   /* MF-433: read sectors through a plugin */
+#include "uft/uft_track.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -1000,6 +1002,123 @@ int d64_to_g64(const d64_image_t *d64, g64_image_t **g64,
                  "Converted %d tracks, %d sectors", tracks_converted, sectors_converted);
     }
     
+    return 0;
+}
+
+/* ============================================================================
+ * Plugin-sourced encoding (MF-433)
+ * ============================================================================ */
+
+/** Pull the two disk-ID bytes out of the BAM, reading through the plugin.
+ *
+ * Track 18 sector 0, offset 0xA2. Returns false and leaves *out untouched if
+ * the BAM cannot be read, so the caller can fall back rather than encode a
+ * whole disk against an invented ID — the ID is part of every sector header
+ * checksum, so guessing it would corrupt the entire output silently. */
+static bool plugin_read_disk_id(const uft_format_plugin_t *plugin,
+                                uft_disk_t *disk, uint8_t out[2])
+{
+    uft_track_t bam;
+    memset(&bam, 0, sizeof(bam));
+    if (plugin->read_track(disk, D64_BAM_TRACK - 1, 0, &bam) != UFT_OK) {
+        uft_track_release(&bam);
+        return false;
+    }
+    bool found = false;
+    for (size_t i = 0; i < bam.sector_count; i++) {
+        /* uft_format_add_sector() stores the sector number 1-based in the ID,
+         * so BAM sector 0 appears as id.sector == 1. */
+        if (bam.sectors[i].id.sector != D64_BAM_SECTOR + 1) continue;
+        if (!bam.sectors[i].data) break;
+        if (bam.sectors[i].data_len < D64_BAM_ID_OFFSET + 2u) break;
+        out[0] = bam.sectors[i].data[D64_BAM_ID_OFFSET];
+        out[1] = bam.sectors[i].data[D64_BAM_ID_OFFSET + 1];
+        found = true;
+        break;
+    }
+    uft_track_release(&bam);
+    return found;
+}
+
+int uft_cbm_g64_encode_via_plugin(const struct uft_format_plugin *plugin,
+                                  struct uft_disk *disk,
+                                  const convert_options_t *options,
+                                  g64_image_t **out,
+                                  convert_result_t *result)
+{
+    if (!plugin || !plugin->read_track || !disk || !out) return -1;
+
+    convert_options_t opts;
+    if (options) {
+        opts = *options;
+    } else {
+        convert_get_defaults(&opts);
+    }
+
+    int disk_tracks = disk->geometry.cylinders;
+    if (disk_tracks <= 0 || disk_tracks > 42) return -3;
+    int num_tracks = opts.extended_tracks ? 42 : disk_tracks;
+
+    /* Same default as d64_load_buffer() when the BAM is unreadable. */
+    uint8_t disk_id[2] = { '0', '0' };
+    plugin_read_disk_id(plugin, disk, disk_id);
+
+    g64_image_t *img = g64_create(num_tracks, opts.include_halftracks);
+    if (!img) return -2;
+
+    int tracks_converted = 0;
+    int sectors_converted = 0;
+
+    for (int track = 1; track <= num_tracks; track++) {
+        int halftrack = track * 2;
+
+        const uint8_t *sector_ptrs[21] = {0};
+        uint8_t sector_data[21][256];
+        int num_sectors = 0;
+
+        if (track <= disk_tracks) {
+            uft_track_t t;
+            memset(&t, 0, sizeof(t));
+            if (plugin->read_track(disk, track - 1, 0, &t) == UFT_OK) {
+                for (size_t i = 0; i < t.sector_count; i++) {
+                    int s = (int)t.sectors[i].id.sector - 1;   /* ID is 1-based */
+                    if (s < 0 || s >= 21) continue;
+                    if (!t.sectors[i].data || t.sectors[i].data_len != 256) continue;
+                    memcpy(sector_data[s], t.sectors[i].data, 256);
+                    sector_ptrs[s] = sector_data[s];
+                    if (s + 1 > num_sectors) num_sectors = s + 1;
+                    sectors_converted++;
+                }
+            }
+            uft_track_release(&t);
+        }
+
+        /* num_sectors is the highest sector ID present, not the zone count.
+         * That is equivalent here: build_gcr_track() skips absent entries and
+         * pads every track to its zone capacity regardless, so a missing
+         * sector changes which bytes are written, never how many. */
+        uint8_t gcr_track[8192];
+        size_t gcr_len = build_gcr_track(sector_ptrs, num_sectors, gcr_track,
+                                          track, disk_id, opts.gap_fill);
+
+        if (gcr_len > 0) {
+            g64_set_track(img, halftrack, gcr_track, gcr_len, speed_map[track]);
+            tracks_converted++;
+        }
+    }
+
+    *out = img;
+
+    if (result) {
+        result->success = true;
+        result->tracks_converted = tracks_converted;
+        result->sectors_converted = sectors_converted;
+        result->errors_found = 0;
+        snprintf(result->description, sizeof(result->description),
+                 "Converted %d tracks, %d sectors", tracks_converted,
+                 sectors_converted);
+    }
+
     return 0;
 }
 

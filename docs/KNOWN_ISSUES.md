@@ -1448,6 +1448,107 @@ ohne eine einzige Information hinzuzufügen — `compat_entries == NULL` und ein
 Liste aus lauter UNTESTED sagen dasselbe. Eine Matrix gehört dorthin, wo jemand
 etwas geprüft hat oder wo die relevanten Ziele nicht offensichtlich sind.
 
+### ARCH-6 — Zwei parallele Formatlayer: der Konverter kennt die Plugin-Registry nicht (2026-08-20, MF-433) → ◐ ERSTE NAHT GESCHLAGEN
+
+**Architecture.** Gemessen, nicht vermutet:
+
+```
+grep "uft_get_format_plugin|->read_track" src/formats/uft_format_convert*.c
+→ nichts
+```
+
+`dispatch_conversion()` (`src/formats/uft_format_convert_dispatch.c:107`) ist
+eine handgeschriebene Paar-Kette — `if (src == X && dst == Y) return
+convert_x_to_y(...)` — und jede dieser Funktionen benutzt einen **eigenen**
+Lader (`d64_load_buffer`), nicht `uft_format_plugin_d64`. Es gibt also zwei
+Formatlayer nebeneinander: 88 Plugins für Probe und GUI, rund zwanzig
+handverdrahtete Paare für die Konvertierung, ohne gemeinsamen Code.
+
+Was das kostet, in Zahlen:
+
+| | |
+|---|---|
+| D64-Leser im Build | **6** + Plugin |
+| SCP-Leser | **5+** |
+| IMD-Leser | 3 — einer las das Spurformat falsch (FMT-15) |
+| 1541-Zonentabelle hartkodiert in | **8 Dateien** |
+| Tests, die `uft_convert_file()` aufrufen | **0** |
+
+Und es erklärt Ältereres: warum ein in einem Leser behobener Fehler in den
+anderen fünf stehen bleibt, und warum ein T1b-Tier wenig aussagt — das Tier
+zertifiziert den **Plugin**-Pfad, die Konvertierung läuft über einen anderen
+Leser.
+
+**Erste Naht (MF-433).** `uft_cbm_g64_encode_via_plugin()` benutzt denselben
+GCR-Encoder wie `d64_to_g64()`, bezieht seine Sektoren aber aus
+`plugin->read_track()`. Belegt durch `test_convert_via_plugin`:
+
+- beide Wege liefern **bitidentisches** G64 für `vice_c1541_35trk.d64`
+  (35 Spuren, 683 Sektoren, jede Spur byteweise verglichen),
+- die Disk-ID kommt nachweislich aus der BAM und nicht aus dem Default —
+  sie geht in jede Sektorkopf-Prüfsumme ein, ein falscher Wert verdirbt das
+  ganze Abbild strukturell unauffällig,
+- **D67 geht durch denselben Encoder**, obwohl es nie eine Paar-Funktion
+  dafür gab: 35 Spuren, alle **690** Sektoren, inklusive der Zonen mit 20
+  statt 19 Sektoren, die D67 gerade von D64 unterscheiden.
+
+`uftc_convert_d64_to_g64()` läuft jetzt produktiv über den Plugin-Pfad, wenn
+ein Quellpfad vorliegt.
+
+**Verhaltensänderung, ausdrücklich:** der Plugin-Pfad erkennt 41- und
+42-Spur-Abbilder, der Blob-Lader deckelt bei 40 und lässt den Rest still
+fallen. Solche Abbilder konvertieren jetzt vollständig. Es gibt kein
+41/42-Spur-Referenzabbild im Korpus — dieser Pfad ist begründet, nicht
+getestet.
+
+**Offen, mit Grund:**
+
+1. **Plugins können nicht aus dem Speicher öffnen.** `uft_format_plugin_t`
+   hat nur `open(disk, path, ro)`. `uft_convert_memory()` hat keinen Pfad und
+   bleibt deshalb auf dem Blob-Lader. Sauber wird das erst mit einem
+   additiven `open_memory()` hinter dem vorhandenen `api_version`-Gate.
+2. **`uft_convert_file()` hat keinen einzigen Test.** Die öffentliche
+   Konvertier-API mit 45 dokumentierten Pfaden ist end-to-end ungeprüft; die
+   Link-Fläche dafür ist heute der ganze Konverter-Cluster. Sie schrumpft mit
+   jedem Paar, das auf die Plugins wandert — deshalb erst die Naht, dann der
+   Test.
+3. Die übrigen ~19 Paar-Funktionen und die fünf überzähligen D64-Leser. Vor
+   dem Löschen die Beweispipeline aus MF-369, nicht Augenmaß.
+
+#### Zwei Speicherfehler, die die Naht ans Licht gebracht hat (MF-433)
+
+Beide fielen an, weil der neue Pfad `uft_track_free()` benutzte — also das
+tat, was die API nahelegt.
+
+**`uft_track_free()` gibt die Struktur selbst frei.** Die Funktion endet mit
+`free(track)`. **22 von 29 Aufrufstellen übergaben eine Stack-Adresse**, davon
+**18 in `src/core/uft_format_verify.c`** — dem generischen `verify_track`,
+das Plugins in ihrer Struct verdrahten. `free()` auf einen Stack-Zeiger; im
+Test sofort als `0xC0000374` (Heap-Korruption) sichtbar.
+
+Dass es bisher nicht knallte, liegt an einem zweiten Defekt: `uft_track_init()`
+nullt alles, also ist `owns_data` **false**, und der interessante Teil von
+`uft_track_free()` wurde übersprungen — jede Plugin-Spur leckte ihre Sektoren.
+Genau deshalb geben 52 Dateien die Innereien von Hand frei; zwei
+Roundtrip-Tests tragen sogar Kommentare, die die Falle erklären statt sie zu
+beheben.
+
+*Behoben:* `uft_track_release()` gibt den Inhalt frei und lässt die Struktur
+stehen, `uft_track_free()` ist beides plus `free(track)` und gilt nur noch für
+Heap-Spuren. `uft_format_add_sector()` setzt `owns_data`, damit eine Spur
+besitzt, was sie kopiert hat. 21 Stack-Aufrufstellen umgestellt. Die drei
+Heap-Stellen benutzen `uft_track_alloc()` und bleiben korrekt.
+
+**`uft_track_alloc()` war mit einer Signatur deklariert, die es nie gab.**
+`uft_track.h` sagte `(uint32_t layers, size_t bit_count)`, die einzige
+Definition (`uft_unified_types.c:224`) nimmt `(size_t max_sectors, size_t
+max_raw_bits)`, und alle vierzehn Aufrufer übergeben eine Sektorzahl. Wer
+`uft_track.h` einband und die Funktion aufrief, hätte Layer-Flags an eine
+Sektorkapazität übergeben. Die falsche Deklaration überlebte, weil keine
+Übersetzungseinheit beides tat — die erste, die es tat, brach den Build, und
+so wurde sie gefunden. Dieselbe Form wie ARCH-5, eine Ebene höher: ein Fakt,
+drei Header, einer davon falsch.
+
 ### ARCH-5 — Namen, die Enum-Konstante *und* Makro sind: die Klasse hinter MF-427 (2026-08-19, MF-431) → ✓ LIVE-FÄLLE BEHOBEN, Wächter steht
 
 **Correctness, systemisch.** MF-427 war kein Einzelfall, sondern eine Form.

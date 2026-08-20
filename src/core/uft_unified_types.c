@@ -250,9 +250,9 @@ uft_track_t* uft_track_alloc(size_t max_sectors, size_t max_raw_bits) {
     return track;
 }
 
-void uft_track_free(uft_track_t *track) {
+void uft_track_release(uft_track_t *track) {
     if (!track) return;
-    
+
     if (track->owns_data) {
         for (size_t i = 0; i < track->sector_count; i++) {
             free(track->sectors[i].data);
@@ -273,7 +273,26 @@ void uft_track_free(uft_track_t *track) {
             free(track->revisions);
         }
     }
-    
+
+    /* Leave the struct usable: a released track must be safe to release again
+     * and safe to re-fill. Callers that own it on the stack rely on that. */
+    track->sectors = NULL;
+    track->sector_count = 0;
+    track->sector_capacity = 0;
+    track->raw_data = NULL;
+    track->raw_size = 0;
+    track->raw_capacity = 0;
+    track->flux_times = NULL;
+    track->confidence = NULL;
+    track->weak_mask = NULL;
+    track->revisions = NULL;
+    track->revision_count = 0;
+    track->owns_data = false;
+}
+
+void uft_track_free(uft_track_t *track) {
+    if (!track) return;
+    uft_track_release(track);
     free(track);
 }
 
