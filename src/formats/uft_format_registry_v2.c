@@ -14,7 +14,10 @@
 // ============================================================================
 // Format Includes - Commodore
 // ============================================================================
-#include "uft/formats/d64.h"
+/* MF-441: uft/formats/d64.h entfernt — es deklarierte nur D64_SECTOR_SIZE
+ * und D64_MAX_TRACKS, beide auch in formats/c64/uft_d64_g64.h, und diese
+ * Datei benutzte keine davon. Seine Implementierung (commodore/d64.c)
+ * hatte null Aufrufer und ist mit entfernt. */
 #include "uft/formats/d67.h"
 #include "uft/formats/d71.h"
 #include "uft/formats/d80.h"

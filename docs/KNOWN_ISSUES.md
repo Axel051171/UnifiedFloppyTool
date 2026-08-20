@@ -1868,6 +1868,50 @@ dem größten Brocken aus, hängt aber an der Kopierschutz-Erkennung, die
 lebender Pfad; ihn zusammenzuführen ist eigene Arbeit, kein Aufräumen
 nebenbei.
 
+#### Von sechs D64-Lesern auf fünf, davon drei mit klarer Rolle (2026-08-20, MF-441)
+
+Dieselbe Methode wie MF-440, bessere Beweislage: das D64-Korpusabbild ist
+getrackt, also könnte ein Übereinstimmungstest hier in CI laufen.
+
+| Leser | Zeilen | Befund |
+|---|---|---|
+| `src/formats/c64/uft_d64_g64.c` | 1470 | kanonisch für Konvertierung — 14 Konsumenten, 27/30 Funktionen benutzt |
+| `src/formats/d64/uft_d64_parser_v3.c` | 1682 | lebt über `v3_bridge` (Schutzerkennung) |
+| `src/formats/c64/uft_d64_file.c` | 849 | Dateisystem-Ebene, nicht Container — GUI-Explorer + Tests |
+| `src/formats/uft_d64_writer.c` | 435 | **3 von 18** Funktionen benutzt |
+| `src/formats/d64/uft_d64_plugin.c` | 184 | lebt über die Plugin-Registry |
+| `src/formats/commodore/d64.c` | 264 | **null Aufrufer** → entfernt |
+| `src/formats/commodore/uft_d64_view.c` | 197 | **null Aufrufer** → entfernt |
+| `src/formats/d64/uft_d64_parser_v2.c` | 788 | **alles `static`**, `main()` hinter nie definiertem `#ifdef` → entfernt |
+
+**Der interessanteste Fall ist `uft_d64_parser_v2.c`.** 788 Zeilen, 21
+Funktionen — *alle* `static`, dazu ein `main()` hinter `#ifdef
+D64_PARSER_TEST`, das kein Build je definiert. Die Übersetzungseinheit trägt
+also **nichts** zur Binärdatei bei: kein linkbares Symbol, keine Registrierung,
+kein Konstruktor. Sie wurde bei jedem Build kompiliert und wieder weggeworfen.
+
+**Eine Falle unterwegs.** `include/uft/formats/d64.h` wurde von
+`src/formats/uft_format_registry_v2.c` eingebunden — auf den ersten Blick ein
+lebender Konsument der Registry-Tabelle, also genau die Sorte Referenz, die
+kein Aufrufsite ist (MF-423). Nachgesehen: der Header deklariert **nur**
+`D64_SECTOR_SIZE` und `D64_MAX_TRACKS`, beide auch in
+`formats/c64/uft_d64_g64.h`, und `registry_v2.c` benutzt keine von beiden.
+Der Registry-Eintrag ist ein reiner String (`{"D64", "d64", …}`), keine
+Funktionszeiger. Include und Header entfernt.
+
+Ebenso geprüft und widerlegt: alle fünf `uft_cbm_d64_*`-Funktionen aus
+`commodore/d64.c` haben null Referenzen im ganzen Baum — die einzigen Treffer
+auf das Präfix sind `uft_cbm_d64_decode_via_plugin` aus MF-436, ein anderer
+Name.
+
+**1249 Zeilen entfernt.** Rückholbar über `archive/pre-mf441-d64-readers`.
+
+*Offen:* `uft_d64_writer.c` benutzt 3 von 18 exportierten Funktionen. Eine
+teil-tote Datei ist kein Löschkandidat, aber die 15 ungenutzten gehören
+angesehen. Und `uft_d64_parser_v3.c` hängt wie sein SCP-Gegenstück an der
+Schutzerkennung von `uft_smart_open.c` — derselbe lebende Pfad, dieselbe
+eigene Aufgabe.
+
 **Offen, mit Grund:**
 
 1. **Plugins können nicht aus dem Speicher öffnen.** `uft_format_plugin_t`

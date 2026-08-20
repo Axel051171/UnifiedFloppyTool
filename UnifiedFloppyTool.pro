@@ -1314,7 +1314,6 @@ SOURCES += \
     src/analysis/events/otdr_event_core_v2.c \
     src/analysis/denoise/uft_denoise_bridge.c \
     src/analysis/denoise/phi_otdr_denoise_1d.c \
-    src/formats/d64/uft_d64_parser_v2.c \
     src/formats/d64/uft_d64_parser_v3.c \
     src/formats/d71/uft_d71_parser_v2.c \
     src/formats/d81/uft_d81_parser_v2.c \
@@ -1597,7 +1596,6 @@ SOURCES += \
     src/analysis/denoise/uft_denoise_bridge.c \
     src/analysis/denoise/phi_otdr_denoise_1d.c \
     src/formats/commodore/crt.c \
-    src/formats/commodore/d64.c \
     src/formats/commodore/d67.c \
     src/formats/commodore/d71.c \
     src/formats/commodore/d80.c \
@@ -1609,7 +1607,6 @@ SOURCES += \
     src/formats/commodore/p00.c \
     src/formats/commodore/prg.c \
     src/formats/commodore/t64.c \
-    src/formats/commodore/uft_d64_view.c \
     src/formats/commodore/uft_m2i.c \
     src/formats/commodore/x64.c \
     src/formats/commodore/x71.c \
