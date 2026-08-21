@@ -607,6 +607,12 @@ def main() -> int:
         # balance.
         import packing_gate as _packing
         all_errors.append(("struct packing", _packing.check(repo)))
+        # Zwei uft_platform.h mit demselben Guard: der grosse Header bekam
+        # die compat-Schicht nie, zwei .c-Dateien sahen den grossen nie. Seit
+        # MF-455 getrennt — die POSIX-Shims bleiben Opt-in, und Endianness
+        # wird mit #if statt #ifdef gefragt (der Wert ist immer 0 oder 1).
+        import platform_header_gate as _plathdr
+        all_errors.append(("platform header split", _plathdr.check(repo)))
 
     total = sum(len(e) for _, e in all_errors)
     print(f"Consistency check ({len(all_errors)} categories, root={repo}):")

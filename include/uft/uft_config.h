@@ -76,18 +76,16 @@
  * ENDIANNESS DETECTION
  *============================================================================*/
 
-#if defined(__BYTE_ORDER__) && defined(__ORDER_LITTLE_ENDIAN__)
-    #if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
-        #define UFT_LITTLE_ENDIAN   1
-    #else
-        #define UFT_BIG_ENDIAN      1
-    #endif
-#elif defined(_WIN32) || defined(UFT_ARCH_X64) || defined(UFT_ARCH_X86)
-    #define UFT_LITTLE_ENDIAN   1
-#else
-    /* Default assumption - can be overridden */
-    #define UFT_LITTLE_ENDIAN   1
-#endif
+/* MF-455: die dritte Fassung derselben Erkennung stand hier.
+ *
+ * Sie setzte je nach Zweig UFT_LITTLE_ENDIAN oder UFT_BIG_ENDIAN auf 1 und den
+ * jeweils anderen Namen gar nicht — dieselbe "definiert oder abwesend"-Semantik
+ * wie in uft_platform.h, gegenlaeufig zu compat, das 0 oder 1 setzte. Der
+ * letzte Zweig riet ausserdem ("Default assumption - can be overridden"), statt
+ * es zu wissen.
+ *
+ * Jetzt eine Definition, immer 0 oder 1. */
+#include "uft/compat/uft_platform_base.h"
 
 /*============================================================================
  * COMPILER DETECTION & ATTRIBUTES

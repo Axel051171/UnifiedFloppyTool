@@ -3559,7 +3559,12 @@ beschrieben stehen.
 
 ---
 
-### ARCH-1 — Zwei `uft_platform.h`, die einander nie sehen (2026-08-18, MF-411)
+### ARCH-1 — Zwei `uft_platform.h`, die einander nie sehen (2026-08-18, MF-411) → ✓ BEHOBEN (MF-455), 19. Gate steht
+
+> **Gelöst durch Trennen statt Zusammenführen.** Die Zusammenführung war zweimal
+> versucht worden und brach beide Male den Build (MF-416: 187 von 197 Tests).
+> Auflösung, Wächter und die dabei gefundene scharfe Falle stehen unten am Ende
+> dieses Eintrags.
 
 **Architecture.** Gefunden beim Auflösen der Include-Guard-Kollisionen.
 
@@ -3636,10 +3641,86 @@ brauchen (`uft_imd.c`, `uft_greaseweazle_full.c` — Letzterer ist geschützter
 Pfad, Änderungen dort erst nach Rückfrage). Erst danach lässt sich der Guard
 auftrennen und der Ausnahme-Eintrag in `GUARD_COLLISION_ALLOWED` entfernen.
 
-*Warum nicht in dieser Sitzung:* die Aufteilung berührt jede Datei, die
-POSIX-Namen unter Windows benutzt, und ist ohne Windows-**und**-Linux-Bau nicht
-verantwortbar zu verifizieren. Der Versuch ist dokumentiert, damit der nächste
-Anlauf nicht bei null anfängt.
+---
+
+## Auflösung (2026-08-21, MF-455)
+
+**Genau so gemacht — und der geschützte Pfad blieb unberührt.**
+
+`src/hal/uft_greaseweazle_full.c` und `src/formats/legacy/uft_imd.c` binden
+`uft/compat/uft_platform.h` als erste Zeile ein. Vor dem Schnitt geprüft
+(`gcc -MM`): **keine der beiden zieht `uft/uft_platform.h` transitiv**. Der
+compat-Header behält daher seinen vollen Inhalt für sie; nur sein Guard heißt
+jetzt `UFT_COMPAT_PLATFORM_H`. Damit ändert sich für beide Dateien nichts, und
+die geschützte Datei musste nicht angefasst werden.
+
+| Datei | Inhalt | Sichtbarkeit |
+|---|---|---|
+| `include/uft/compat/uft_platform_base.h` *(neu)* | Plattform-/Compiler-Erkennung, Endianness, `uft_bswap*`, `uft_htole*`, `UFT_PATH_SEP`, `UFT_THREAD_LOCAL`, `UFT_INLINE`, POSIX-Konstanten, `ssize_t` | **baumweit**, über `uft/uft_platform.h` |
+| `include/uft/compat/uft_platform.h` | `open`/`close`/`read`/`write`/`lseek`/`stat`/`fstat`/`fileno`/`access`/`unlink`/`mkdir`, `usleep`/`sleep`, `strcasecmp`, Shims `memmem`/`clock_gettime`/`gettimeofday` | **Opt-in**, zwei Dateien |
+
+**Die ~40 Makros kommen jetzt zum ersten Mal an.** Der Kommentar „Include
+compatibility layer first for POSIX functions on Windows" beschrieb seit jeher
+eine Absicht, die die Guard-Kollision zunichtemachte.
+
+### Die latente Falle war nicht latent — sie wurde durch den Schnitt scharf
+
+Der Eintrag oben hielt fest, `UFT_BIG_ENDIAN` sei „definiert-oder-abwesend"
+gegen „0-oder-1" und das sei latent, weil es im Baum kein `#ifdef` darauf gebe.
+Das stimmte für `UFT_BIG_ENDIAN`. Für **`UFT_LITTLE_ENDIAN`** nicht:
+
+```c
+/* include/uft/uft_platform.h, vor MF-455 */
+#ifdef UFT_LITTLE_ENDIAN
+    #define uft_le16(x) (x)
+    ...
+#else
+    #define uft_le16(x) uft_bswap16(x)
+```
+
+Der Name war bis dahin **nur auf Little-Endian überhaupt definiert** — die
+Abfrage war also zufällig richtig. Sobald die Basis ihn immer setzt (als
+`(!UFT_BIG_ENDIAN)`), ist `#ifdef` immer wahr und `uft_le16()` auf einer
+Big-Endian-Maschine die Identität, also **falsch**. `scripts/platform_header_gate.py`
+hat die Stelle beim ersten Lauf gemeldet, bevor sie ausgeliefert wurde.
+
+Es gab außerdem eine **dritte** Endianness-Erkennung in `include/uft/uft_config.h`,
+mit derselben „definiert-oder-abwesend"-Semantik und einem ratenden letzten
+Zweig (`/* Default assumption - can be overridden */`). Auch sie liest jetzt aus
+der Basis. Ergebnis: eine Definition, immer 0 oder 1.
+
+### Zwei weitere Doppelungen dabei aufgelöst
+
+- **`uft_bswap16/32/64`** stand in beiden Headern, im großen nach
+  `UFT_COMPILER_GCC`/`MSVC` unterschieden, in compat nach `_WIN32`. **MinGW ist
+  beides** — die beiden hätten sich gegenseitig überschrieben, sobald die
+  Guard-Kollision fällt. Die Basis unterscheidet nach Compiler, was die
+  richtige Regel ist (`_byteswap_ushort` ist eine MSVC-Intrinsic). Nebenbei
+  hatte der Fallback im großen Header einen Fehler: `uft_bswap64` rief
+  `uft_bswap32(x)` mit dem vollen `uint64_t` auf, ohne Cast — die oberen 32 Bit
+  gingen in die Maskenrechnung ein.
+- **`clock_gettime`**: der Shim hing an `#ifndef CLOCK_MONOTONIC`. Seit die
+  Basis die Konstante selbst setzt, braucht es ein eigenes Merkmal
+  (`UFT_COMPAT_NEEDS_CLOCK_GETTIME`) — sonst kollidiert der `static`-Shim mit
+  MinGWs eigener Deklaration in `<time.h>`.
+
+### Wächter (19. Gate, `scripts/platform_header_gate.py`)
+
+- **A:** `uft/compat/uft_platform.h` darf nur aus `.c`/`.cpp` und nur aus den
+  zwei gelisteten Dateien kommen — nie aus einem Header, weil sich die Shims
+  darüber unkontrolliert verbreiten. Wer sie wirklich braucht, trägt sich ein
+  und begründet es; wer aus der Liste verschwindet, fliegt auch aus ihr raus.
+- **B:** kein `#ifdef`/`defined()` auf `UFT_BIG_ENDIAN`/`UFT_LITTLE_ENDIAN`.
+
+Beide Regeln verifiziert: `#if` zurück auf `#ifdef` gedreht → gemeldet;
+compat-Include in eine dritte Datei gesetzt → gemeldet.
+
+`GUARD_COLLISION_ALLOWED` in `scripts/update_inventory.py` ist **leer**; die
+Makro-Konflikt-Baseline schrumpft von 12 auf 11 (`UFT_BIG_ENDIAN` erledigt).
+
+**Offen bleibt:** verifiziert ist der MinGW-Bau (211/211 Tests). Der Schnitt
+berührt jede Datei, die POSIX-Namen unter Windows benutzt; Linux und macOS
+prüft die CI.
 
 **Getrennt davon, ebenfalls offen:** vier Makros sind unabhängig von diesem
 Paar doppelt definiert und erzeugen seit jeher Build-Warnungen —

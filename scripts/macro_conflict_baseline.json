@@ -9,7 +9,6 @@
   "accepted": [
     "UFT_ALIGNED",
     "UFT_ARCH_NAME",
-    "UFT_BIG_ENDIAN",
     "UFT_CACHE_LINE_SIZE",
     "UFT_IMD_MAX_COMMENT",
     "UFT_IMD_MAX_SECTORS",

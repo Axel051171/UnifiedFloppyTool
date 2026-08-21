@@ -181,15 +181,20 @@ def check_inventory(repo: Path) -> list[str]:
 # Same-named headers that are ALLOWED to keep a shared include guard, with the
 # reason. Everything else is a defect: the second header is silently skipped,
 # and which one a translation unit gets depends on include order.
-GUARD_COLLISION_ALLOWED = {
-    # include/uft/uft_platform.h defines UFT_PLATFORM_H and only THEN includes
-    # uft/compat/uft_platform.h, so the compat layer is skipped every time the
-    # outer header is used, and the two .c files that include compat directly
-    # never see the outer one. Renaming the guard makes both active and
-    # surfaces ~9 duplicate macro definitions — a real duplication that needs
-    # its own untangling (KNOWN_ISSUES ARCH-1), not a hurried rename.
-    "uft_platform.h": "duplicate platform headers, see KNOWN_ISSUES ARCH-1",
-}
+# MF-455: leer.
+#
+# Der einzige Eintrag war uft_platform.h — include/uft/uft_platform.h und
+# include/uft/compat/uft_platform.h trugen beide UFT_PLATFORM_H, weshalb der
+# grosse Header die compat-Schicht nie bekam und die zwei .c-Dateien, die
+# compat direkt einbinden, den grossen nie sahen. Die Ausnahme stand hier, weil
+# ein blosses Umbenennen des Guards ~9 doppelte Makros freigelegt und den Build
+# gebrochen haette (MF-416: 187 von 197 Tests).
+#
+# Aufgeloest durch Trennen statt Umbenennen: uft/compat/uft_platform_base.h
+# traegt die gefahrlose Haelfte und ist baumweit sichtbar,
+# uft/compat/uft_platform.h behaelt die namensumdefinierenden POSIX-Shims und
+# einen eigenen Guard UFT_COMPAT_PLATFORM_H. Siehe KNOWN_ISSUES ARCH-1.
+GUARD_COLLISION_ALLOWED = {}
 
 
 def check_include_guards(repo: Path) -> list[str]:

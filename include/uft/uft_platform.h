@@ -34,7 +34,20 @@
 #define UFT_PLATFORM_H
 
 /* Include compatibility layer first for POSIX functions on Windows */
-#include "uft/compat/uft_platform.h"
+/* MF-455: die BASIS, nicht die Shims.
+ *
+ * Hier stand `#include "uft/compat/uft_platform.h"` mit dem Kommentar „Include
+ * compatibility layer first for POSIX functions on Windows" — und bewirkte
+ * nichts, weil compat denselben Guard UFT_PLATFORM_H trug wie diese Datei und
+ * deshalb bei jedem Mal uebersprungen wurde. Die Absicht war nie wirksam.
+ *
+ * Jetzt kommt uft_platform_base.h: Plattform-/Compiler-Erkennung, Endianness,
+ * UFT_PATH_SEP, UFT_THREAD_LOCAL, UFT_INLINE, POSIX-Konstanten — rund 40 Makros,
+ * die bisher bei keinem Nutzer dieses Headers ankamen.
+ *
+ * Die POSIX-Shims (close/read/mkdir/...) bleiben in compat und damit Opt-in.
+ * Sie baumweit sichtbar zu machen brach 2026-08-18 (MF-416) 187 von 197 Tests. */
+#include "uft/compat/uft_platform_base.h"
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -122,37 +135,33 @@ extern "C" {
  * Endianness
  * ═══════════════════════════════════════════════════════════════════════════════ */
 
-#if defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
-    #define UFT_BIG_ENDIAN 1
-#else
-    #define UFT_LITTLE_ENDIAN 1
-#endif
+/* MF-455: UFT_BIG_ENDIAN und UFT_LITTLE_ENDIAN kommen aus
+ * uft/compat/uft_platform_base.h und sind dort IMMER 0 oder 1.
+ *
+ * Hier stand `#define UFT_BIG_ENDIAN 1` auf Big-Endian und sonst
+ * `#define UFT_LITTLE_ENDIAN 1` — der Name UFT_BIG_ENDIAN war auf Little-Endian
+ * also gar nicht definiert, waehrend compat ihn dort auf 0 setzte.
+ * `#ifdef UFT_BIG_ENDIAN` antwortete damit je nach gesehenem Header
+ * entgegengesetzt. Latent, weil es im Baum kein `#ifdef` darauf gibt; jetzt
+ * gegenstandslos, weil es nur noch eine Definition gibt. */
 
-/* Byte swap macros */
-#ifdef UFT_COMPILER_GCC
-    #define uft_bswap16(x) __builtin_bswap16(x)
-    #define uft_bswap32(x) __builtin_bswap32(x)
-    #define uft_bswap64(x) __builtin_bswap64(x)
-#elif defined(UFT_COMPILER_MSVC)
-    #include <stdlib.h>
-    #define uft_bswap16(x) _byteswap_ushort(x)
-    #define uft_bswap32(x) _byteswap_ulong(x)
-    #define uft_bswap64(x) _byteswap_uint64(x)
-#else
-    static inline uint16_t uft_bswap16(uint16_t x) {
-        return (x >> 8) | (x << 8);
-    }
-    static inline uint32_t uft_bswap32(uint32_t x) {
-        return ((x >> 24) & 0xFF) | ((x >> 8) & 0xFF00) |
-               ((x << 8) & 0xFF0000) | ((x << 24) & 0xFF000000);
-    }
-    static inline uint64_t uft_bswap64(uint64_t x) {
-        return ((uint64_t)uft_bswap32(x) << 32) | uft_bswap32(x >> 32);
-    }
-#endif
+/* uft_bswap16/32/64 kommen aus uft/compat/uft_platform_base.h (MF-455).
+ *
+ * Hier stand eine zweite Fassung, nach UFT_COMPILER_GCC/MSVC unterschieden.
+ * Der Fallback dort hatte ausserdem einen Fehler: uft_bswap64 rief
+ * uft_bswap32(x) mit dem vollen uint64_t auf, ohne Cast auf uint32_t — die
+ * oberen 32 Bit gingen in die Maskenrechnung ein. Die Basisfassung castet. */
 
-/* Little-endian read/write */
-#ifdef UFT_LITTLE_ENDIAN
+/* Little-endian read/write.
+ *
+ * MF-455: `#if`, nicht `#ifdef`.
+ *
+ * Hier stand `#ifdef UFT_LITTLE_ENDIAN`, und der Name war bis MF-455 nur auf
+ * Little-Endian ueberhaupt definiert — die Abfrage war also zufaellig richtig.
+ * Seit die Basis ihn IMMER setzt (0 oder 1), waere `#ifdef` immer wahr und
+ * uft_le16() auf einer Big-Endian-Maschine die Identitaet, also falsch.
+ * scripts/platform_header_gate.py hat genau diese Stelle gefunden. */
+#if UFT_LITTLE_ENDIAN
     #define uft_le16(x) (x)
     #define uft_le32(x) (x)
     #define uft_le64(x) (x)
