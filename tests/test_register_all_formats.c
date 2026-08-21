@@ -108,18 +108,29 @@ TEST(calling_it_twice_changes_nothing) {
     ASSERT(uft_registered_format_plugin_count() == EXPECTED_PLUGINS);
 }
 
-TEST(the_container_id_is_hopeless_and_the_name_is_not) {
-    /* The reason MF-444/445 exist, measured on the full set instead of on four
-     * plugins: the overwhelming majority of the registry answers to one id. */
-    size_t dsk = uft_count_format_plugins_for(UFT_FORMAT_DSK);
-    ASSERT(dsk > 120);
-    ASSERT(dsk < EXPECTED_PLUGINS);
+TEST(the_container_id_identifies_a_plugin_where_it_can) {
+    /* This test measured the damage before MF-450: 131 of 137 plugins answered
+     * to UFT_FORMAT_DSK, so the id could identify almost nothing. 30 of them
+     * declared DSK although uft_format_t already had a value for their exact
+     * name — the enum was never the problem, the declarations were.
+     *
+     * After: 37 distinct ids, 36 of which belong to exactly one plugin. */
+    ASSERT(uft_get_format_plugin_by_name("D64")->format == UFT_FORMAT_D64);
+    ASSERT(uft_get_format_plugin_by_name("D81")->format == UFT_FORMAT_D81);
+    ASSERT(uft_get_format_plugin_by_name("ADF")->format == UFT_FORMAT_ADF);
+    ASSERT(uft_count_format_plugins_for(UFT_FORMAT_D64) == 1);
+    ASSERT(uft_count_format_plugins_for(UFT_FORMAT_ADF) == 1);
 
-    /* and every one of them still has its own identity */
-    ASSERT(uft_get_format_plugin_by_name("D64") !=
-           uft_get_format_plugin_by_name("D81"));
-    ASSERT(uft_get_format_plugin_by_name("D64")->format ==
-           uft_get_format_plugin_by_name("D81")->format);
+    /* 101 remain on DSK, and correctly so: 49 DSK_PLUGIN() variants plus the
+     * plugins whose names the enum has no value for (D67, KorgDSS1, ...).
+     * A generic sector container is what UFT_FORMAT_DSK is meant to say. */
+    size_t dsk = uft_count_format_plugins_for(UFT_FORMAT_DSK);
+    ASSERT(dsk == 101);
+    ASSERT(uft_get_format_plugin_by_name("D67")->format == UFT_FORMAT_DSK);
+
+    /* which is why the name stays the identity, ambiguous id or not */
+    ASSERT(uft_get_format_plugin_by_name("DSK_FM7") !=
+           uft_get_format_plugin_by_name("DSK_MSX"));
 }
 
 TEST(no_two_plugins_share_a_name) {
@@ -420,7 +431,7 @@ int main(void)
     RUN(the_formats_that_were_in_no_group_are_there);
     RUN(the_macro_generated_variants_are_there_too);
     RUN(calling_it_twice_changes_nothing);
-    RUN(the_container_id_is_hopeless_and_the_name_is_not);
+    RUN(the_container_id_identifies_a_plugin_where_it_can);
     RUN(no_two_plugins_share_a_name);
     RUN(after_registration_the_analyzer_branch_is_reachable);
     RUN(every_reference_image_is_won_by_its_own_plugin);

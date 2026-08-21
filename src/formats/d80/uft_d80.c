@@ -115,7 +115,7 @@ static const uft_plugin_feature_t uft_format_plugin_d80_features[] = {
 
 const uft_format_plugin_t uft_format_plugin_d80 = {
     .name = "D80", .description = "Commodore 8050", .extensions = "d80",
-    .format = UFT_FORMAT_DSK,
+    .format = UFT_FORMAT_D80,
     .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE | UFT_FORMAT_CAP_VERIFY,
     .probe = d80_probe, .open = d80_open, .close = d80_close,
     .read_track = d80_read_track, .write_track = d80_write_track,

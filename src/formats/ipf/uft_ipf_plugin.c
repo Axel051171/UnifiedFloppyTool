@@ -203,7 +203,7 @@ static const uft_plugin_feature_t ipf_features[] = {
 
 const uft_format_plugin_t uft_format_plugin_ipf = {
     .name = "IPF", .description = "CAPS/SPS Preservation Format",
-    .extensions = "ipf;ct;ctr", .format = UFT_FORMAT_DSK,
+    .extensions = "ipf;ct;ctr", .format = UFT_FORMAT_IPF,
     .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_FLUX | UFT_FORMAT_CAP_VERIFY,
     .probe = ipf_plugin_probe, .open = ipf_plugin_open,
     .close = ipf_plugin_close, .read_track = ipf_plugin_read_track,

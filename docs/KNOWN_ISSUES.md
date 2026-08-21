@@ -1762,7 +1762,7 @@ Der Name ist bewusst nicht `uft_probe_result_t` — den führt bereits
 
 ---
 
-### ARCH-14 — `uft_probe_format()` liefert eine Container-ID, und sein Mehrdeutigkeits-Feld ist ein Phantom (2026-08-21, MF-448) → ⚠ OFFEN
+### ARCH-14 — `uft_probe_format()` liefert eine Container-ID, und sein Mehrdeutigkeits-Feld ist ein Phantom (2026-08-21, MF-448) → ✓ BEHOBEN (MF-450), Wurzel war eine andere als vermutet
 
 Gefunden über eine Namenskollision. `include/uft/uft_format_probe.h` definiert
 seit jeher ein `uft_probe_result_t` mit genau dem Feld, das ARCH-13 gebraucht
@@ -1796,10 +1796,84 @@ Include; ein expliziter `#include "uft/uft_format_probe.h"` kollidiert dort mit
 `UFT_FCLASS_*`/`UFT_CLASS_*` aus einem anderen Header — ein eigener
 Header-Konflikt, der mit ARCH-1 zusammenhängt.
 
-**Nächster Schritt:** `uft_probe_format()` auf `uft_probe_ranking_t` umstellen
-oder ganz durch `uft_probe_buffer_ranked()` ersetzen und den Dispatcher
-plugin-basiert entscheiden lassen. Eigene Aufgabe: sie ändert, wie
-Konvertierungspfade ausgewählt werden.
+**Behoben in MF-450 — aber die Wurzel lag woanders, als ARCH-10 und ARCH-14
+beide angenommen hatten.**
+
+Beide Einträge sagten sinngemäß: „`uft_format_t` benennt eine Container-Klasse,
+kein Format." Das war falsch. Das Enum hat **55 Werte**, darunter
+`UFT_FORMAT_D64`, `UFT_FORMAT_ADF`, `UFT_FORMAT_ATR`, `UFT_FORMAT_IMD` — und
+**30 Plugins deklarierten trotzdem `UFT_FORMAT_DSK`, obwohl das Enum ihren
+exakten Namen führt.** Nicht das Enum war das Problem, sondern die
+Deklarationen.
+
+| | vorher | nachher |
+|---|---|---|
+| verschiedene `.format`-Werte | 7 | **37** |
+| IDs, die genau ein Plugin meinen | 6 | **36** |
+| Plugins auf `UFT_FORMAT_DSK` | 131 | 101 |
+
+Die verbleibenden 101 sind korrekt: 49 `DSK_PLUGIN()`-Varianten plus Plugins,
+deren Namen das Enum keinen Wert gibt (D67, KorgDSS1, …). Für die *ist*
+„generischer Sektorcontainer" die richtige Aussage.
+
+**Was das konkret repariert hat.** `uft_convert_file()` wählt seinen
+Konvertierungspfad über `uft_convert_get_path(src_format, dst_format)`, und die
+Tabelle ist auf echte Formate verschlüsselt — `D64→G64`, `SCP→HFE`, `ADF→SCP`.
+Eine Quelle, die als `UFT_FORMAT_DSK` erkannt wurde, traf **keinen** dieser
+Einträge. Die Antwort auf nahezu jede Dateikonvertierung war „No conversion
+path from … to …".
+
+Und der gefährlichere Zweig:
+
+```c
+if (src_format == dst_format) {
+    /* Same format: direct copy */
+    err = uftc_write_output_file(dst_path, src_data, src_size);
+    result->success = true;
+```
+
+Mit allem auf einer ID war das einen schlecht gewählten Zielwert davon entfernt,
+eine D81 unverändert in eine `.d64` zu schreiben und Erfolg zu melden.
+
+**Das Phantom-Feld.** `uft_probe_result_t` führt seit jeher
+`alternative_count`, `alternatives[4]`, `alt_confidence[4]` und `warnings[256]`
+— die einzige Implementierung setzte genau `result->format` und `memset`te den
+Rest. Permanent 0 liest sich nicht als „nicht ausgefüllt", sondern als „geprüft,
+nichts anderes passte". Jetzt gefüllt aus `uft_probe_buffer_ranked()`; dafür
+merkt sich das Ranking bis zu vier Gleichplatzierte (`tied_with[]`), während
+`tied` die wahre Anzahl bleibt.
+
+**Und der Dispatcher lehnt Mehrdeutigkeit ab.** Konvertieren heißt, den Decoder
+des Gewinners über die Bytes laufen zu lassen; wenn ein anderes Plugin sie
+genauso stark beansprucht hat, war die Wahl Registrierungsreihenfolge, und das
+Ergebnis wäre eine aus einer Vermutung abgeleitete Datei, gemeldet als
+Konvertierung.
+
+**Fünf vorher grüne Zusicherungen mussten geändert werden** — alle in
+`test_plugin_identity.c`, `test_smart_open_quality.c` und
+`test_register_all_formats.c`, und alle hielten den kaputten Zustand fest
+(„4 Plugins auf `UFT_FORMAT_DSK`", „`dsk > 120`", „`uft_get_format_plugin` liefert
+für eine D81 das D64-Plugin"). Der Mehrdeutigkeits-Fall lebt jetzt dort weiter,
+wo er echt ist: `DSK_FM7` und `DSK_MSX` teilen sich `UFT_FORMAT_DSK` zu Recht.
+
+**Gate E** in `scripts/plugin_registry_gate.py`: ein Plugin, dessen `.name` einem
+`UFT_FORMAT_<NAME>` entspricht, muss diesen Wert deklarieren. Verifiziert — mit
+`.format = UFT_FORMAT_DSK` im D64-Plugin meldet es die Stelle.
+
+**Nachweis:** `tests/test_convert_file_detection.c`, der erste Test für
+`uft_convert_file()` überhaupt. Prüft, dass die Quelle als `UFT_FORMAT_D64`
+erkannt wird, dass `D64→G64`, `D64→SCP` und `ADF→SCP` in der Pfadtabelle wieder
+auffindbar sind, dass D64 und D81 nicht mehr dasselbe Format sind, dass
+`alternative_count` bei einer eindeutigen Datei 0 und bei der fünffach
+beanspruchten XFD größer 0 ist, und dass eine mehrdeutige Quelle abgelehnt wird,
+ohne eine Datei zu schreiben. Mit dem alten `.format = UFT_FORMAT_DSK` fallen
+zwei der fünf Tests (verifiziert).
+
+**Offen bleibt:** `uft_probe_format()` sieht `uft_probe_result_t` in
+`uft_format_convert_dispatch.c` weiterhin nur über einen transitiven Include; ein
+expliziter `#include "uft/uft_format_probe.h"` kollidiert dort mit
+`UFT_FCLASS_*`/`UFT_CLASS_*` aus einem anderen Header. Das gehört zu ARCH-1
+(Header-Aufteilung).
 
 ---
 
@@ -2100,6 +2174,13 @@ geöffnete Plugin") war falsch — der Struct trug nur `format`. Ein Kommentar i
 `src/core/uft_format_verify.c:22` sagte es sogar: *„Lookup plugin via registry
 (disk->plugin nicht im Struct)"*. Jemand hatte das Problem gesehen und
 umschifft.
+
+> **Nachtrag MF-450:** die Begründung unten („das Enum benennt eine
+> Container-Klasse") war falsch. `uft_format_t` hat 55 Werte, darunter
+> `UFT_FORMAT_D64` — 30 Plugins deklarierten `UFT_FORMAT_DSK`, obwohl das Enum
+> ihren exakten Namen führte. Der Fix hier (Diskette merkt sich ihr Plugin)
+> bleibt richtig und nötig, weil 101 Plugins die Container-ID zu Recht teilen;
+> aber die Mehrdeutigkeit war zu 30/131 hausgemacht. Siehe ARCH-14.
 
 Der Fix ist die Diagnose ernst genommen: **die Diskette merkt sich ihr Plugin.**
 `struct uft_disk` bekommt `const struct uft_format_plugin *plugin`

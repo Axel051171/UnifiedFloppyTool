@@ -36,6 +36,12 @@ extern const uft_format_plugin_t uft_format_plugin_d64;
 extern const uft_format_plugin_t uft_format_plugin_d67;
 extern const uft_format_plugin_t uft_format_plugin_d81;
 extern const uft_format_plugin_t uft_format_plugin_xfd;
+/* MF-450: two of the 49 DSK_PLUGIN() variants. They share UFT_FORMAT_DSK
+ * legitimately - generic sector images with no dedicated enum value - so
+ * they are what keeps the ambiguity cases in this file real now that D64,
+ * D81 and XFD have ids of their own. */
+extern const uft_format_plugin_t uft_format_plugin_dsk_fm7;
+extern const uft_format_plugin_t uft_format_plugin_dsk_msx;
 
 static int _pass = 0, _fail = 0, _last_fail = 0;
 #define RUN(name)  do { printf("  [TEST] %-50s ... ", #name); test_##name(); \
@@ -52,12 +58,18 @@ static const char *img(const char *name)
 }
 
 TEST(the_disk_knows_which_plugin_opened_it) {
-    /* Registration order is the trap: D64 is first, so a lookup keyed on
-     * UFT_FORMAT_DSK answers D64 for every sector image ever opened. */
+    /* Registration order used to be the trap: D64 first, so a lookup keyed on
+     * UFT_FORMAT_DSK answered D64 for every sector image ever opened. MF-450
+     * removed the cause — D64, D81 and XFD each declare their own uft_format_t
+     * now — so the two answers agree here, and the agreement is the assertion.
+     * The disagreement case moved to two_plugins_may_share_a_container_id,
+     * where sharing an id is legitimate. */
     ASSERT(uft_register_format_plugin(&uft_format_plugin_d64) == UFT_OK);
     ASSERT(uft_register_format_plugin(&uft_format_plugin_d67) == UFT_OK);
     ASSERT(uft_register_format_plugin(&uft_format_plugin_d81) == UFT_OK);
     ASSERT(uft_register_format_plugin(&uft_format_plugin_xfd) == UFT_OK);
+    ASSERT(uft_register_format_plugin(&uft_format_plugin_dsk_fm7) == UFT_OK);
+    ASSERT(uft_register_format_plugin(&uft_format_plugin_dsk_msx) == UFT_OK);
 
     uft_disk_t *disk = uft_disk_open(img("vice_c1541_80trk.d81"), true);
     ASSERT(disk != NULL);
@@ -65,14 +77,32 @@ TEST(the_disk_knows_which_plugin_opened_it) {
     /* what the disk reports */
     ASSERT(uft_disk_plugin(disk) == &uft_format_plugin_d81);
 
-    /* what the id-keyed lookup reports for the very same disk — the bug,
-     * written as a comparison. If these two are ever the same object again,
-     * either the registration order changed or the field was dropped. */
-    ASSERT(uft_get_format_plugin(disk->format) == &uft_format_plugin_d64);
-    ASSERT(uft_disk_plugin(disk) != uft_get_format_plugin(disk->format));
+    /* and the id-keyed lookup, which now has an id that means D81 */
+    ASSERT(disk->format == UFT_FORMAT_D81);
+    ASSERT(uft_get_format_plugin(disk->format) == &uft_format_plugin_d81);
+    ASSERT(uft_count_format_plugins_for(UFT_FORMAT_D81) == 1);
 
     /* close() must be the D81 one: it frees what D81's open() allocated */
     uft_disk_close(disk);
+}
+
+TEST(two_plugins_may_share_a_container_id) {
+    /* DSK_FM7 and DSK_MSX are two of the 49 DSK_PLUGIN() variants: generic
+     * sector images with no enum value of their own, both UFT_FORMAT_DSK.
+     * That is correct, not a defect — and it is why uft_get_format_plugin()
+     * can never be the way to identify a plugin. D67 shares it for the same
+     * reason: the enum has no UFT_FORMAT_D67. */
+    ASSERT(uft_format_plugin_dsk_fm7.format == UFT_FORMAT_DSK);
+    ASSERT(uft_format_plugin_dsk_msx.format == UFT_FORMAT_DSK);
+    ASSERT(uft_format_plugin_d67.format == UFT_FORMAT_DSK);
+    ASSERT(uft_count_format_plugins_for(UFT_FORMAT_DSK) == 3);
+
+    /* first match, and which of the three it is depends on registration
+     * order — exactly why nothing may depend on it */
+    ASSERT(uft_get_format_plugin(UFT_FORMAT_DSK) == &uft_format_plugin_d67);
+
+    /* the name always answers */
+    ASSERT(uft_get_format_plugin_by_name("DSK_MSX") == &uft_format_plugin_dsk_msx);
 }
 
 TEST(a_hand_built_disk_gets_no_guess) {
@@ -83,12 +113,16 @@ TEST(a_hand_built_disk_gets_no_guess) {
     memset(&d, 0, sizeof(d));
     d.format = UFT_FORMAT_DSK;
 
-    ASSERT(uft_count_format_plugins_for(UFT_FORMAT_DSK) == 4);
-    ASSERT(uft_disk_plugin(&d) == NULL);
+    ASSERT(uft_count_format_plugins_for(UFT_FORMAT_DSK) == 3);
+    ASSERT(uft_disk_plugin(&d) == NULL);     /* three carry it: no guess */
 
-    /* An id only one plugin carries is not ambiguous and does resolve. None of
-     * the four registered here is such a case, so this checks the other side:
-     * an id no plugin carries is NULL too, not a fallback to something else. */
+    /* An id exactly one plugin carries is not ambiguous and does resolve —
+     * possible since MF-450, when 30 plugins stopped declaring DSK for a
+     * format the enum already had a value for. */
+    d.format = UFT_FORMAT_D81;
+    ASSERT(uft_disk_plugin(&d) == &uft_format_plugin_d81);
+
+    /* an id no registered plugin carries stays NULL, not a fallback */
     d.format = UFT_FORMAT_SCP;
     ASSERT(uft_disk_plugin(&d) == NULL);
 }
@@ -100,13 +134,17 @@ TEST(an_ambiguous_target_is_refused_not_guessed) {
 
     /* no hint, ambiguous id -> refused, and the count says why */
     ASSERT(uft_resolve_format_plugin(UFT_FORMAT_DSK, NULL, &candidates) == NULL);
-    ASSERT(candidates == 4);
+    ASSERT(candidates == 3);
 
-    /* the caller named the output: that is intent, and it decides */
-    ASSERT(uft_resolve_format_plugin(UFT_FORMAT_DSK, "out.d81", NULL)
+    /* an unambiguous id needs no hint at all (MF-450) */
+    ASSERT(uft_resolve_format_plugin(UFT_FORMAT_D81, NULL, &candidates)
            == &uft_format_plugin_d81);
-    ASSERT(uft_resolve_format_plugin(UFT_FORMAT_DSK, "out.xfd", NULL)
-           == &uft_format_plugin_xfd);
+    ASSERT(candidates == 1);
+
+    /* the caller named the output: that is intent, and it decides among the
+     * three that do share the container id */
+    ASSERT(uft_resolve_format_plugin(UFT_FORMAT_DSK, "out.d67", NULL)
+           == &uft_format_plugin_d67);
 
     /* an extension none of them claims stays unresolved */
     ASSERT(uft_resolve_format_plugin(UFT_FORMAT_DSK, "out.wibble", NULL) == NULL);
@@ -138,6 +176,11 @@ TEST(convert_by_name_needs_nothing_resolved) {
     ASSERT(uft_disk_convert_check(UFT_FORMAT_DSK, UFT_FORMAT_DSK, &mode, &lossy)
            == UFT_ERROR_NOT_SUPPORTED);
 
+    /* but it can for two ids that each mean one plugin — what MF-450 bought:
+     * 36 of the 37 ids now identify exactly one plugin */
+    ASSERT(uft_disk_convert_check(UFT_FORMAT_D64, UFT_FORMAT_D81, &mode, &lossy)
+           == UFT_OK);
+
     /* the name path can */
     ASSERT(uft_disk_convert_check_by_name("D64", "D81", &mode, &lossy) == UFT_OK);
     ASSERT(mode == UFT_CONVERT_SECTOR);
@@ -151,6 +194,7 @@ int main(void)
 {
     printf("=== plugin identity: the disk knows its own (MF-445) ===\n");
     RUN(the_disk_knows_which_plugin_opened_it);
+    RUN(two_plugins_may_share_a_container_id);
     RUN(a_hand_built_disk_gets_no_guess);
     RUN(an_ambiguous_target_is_refused_not_guessed);
     RUN(the_extension_matcher_does_not_use_strtok);

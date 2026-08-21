@@ -297,8 +297,12 @@ size_t uft_probe_buffer_ranked(const uint8_t *data, size_t size,
                 r.winner = p;
                 r.confidence = conf;
                 r.tied = 1;
+                r.tied_listed = 1;
+                r.tied_with[0] = p;
             } else if (conf == r.confidence && r.winner) {
                 r.tied++;                       /* as good as the winner */
+                if (r.tied_listed < sizeof(r.tied_with) / sizeof(r.tied_with[0]))
+                    r.tied_with[r.tied_listed++] = p;
             } else if (conf > r.runner_up_confidence) {
                 r.runner_up = p;
                 r.runner_up_confidence = conf;

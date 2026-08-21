@@ -226,7 +226,7 @@ static const uft_plugin_feature_t uft_format_plugin_dmk_features[] = {
 
 const uft_format_plugin_t uft_format_plugin_dmk = {
     .name = "DMK", .description = "TRS-80 David Keil", .extensions = "dmk",
-    .format = UFT_FORMAT_DSK, .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE | UFT_FORMAT_CAP_VERIFY,
+    .format = UFT_FORMAT_DMK, .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE | UFT_FORMAT_CAP_VERIFY,
     .probe = dmk_probe, .open = dmk_open, .close = dmk_close, .read_track = dmk_read_track,
     .write_track = dmk_write_track,
     .verify_track = uft_generic_verify_track,

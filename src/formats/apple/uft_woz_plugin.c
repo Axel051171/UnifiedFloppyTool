@@ -85,7 +85,7 @@ static const uft_plugin_feature_t woz_features[] = {
 
 const uft_format_plugin_t uft_format_plugin_woz = {
     .name = "WOZ", .description = "Apple II WOZ (v1/v2/v2.1)",
-    .extensions = "woz", .format = UFT_FORMAT_DSK,
+    .extensions = "woz", .format = UFT_FORMAT_WOZ,
     /* Capabilities reflect what read_track() actually surfaces — flux/weak
      * are parsed in woz.c but not yet returned via the plugin API, so we do
      * NOT advertise CAP_FLUX / CAP_WEAK_BITS here. Re-enable after the

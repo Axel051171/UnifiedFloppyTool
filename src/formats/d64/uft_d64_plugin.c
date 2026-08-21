@@ -170,7 +170,7 @@ static const uft_plugin_feature_t uft_format_plugin_d64_features[] = {
 
 const uft_format_plugin_t uft_format_plugin_d64 = {
     .name = "D64", .description = "Commodore 1541 D64",
-    .extensions = "d64", .format = UFT_FORMAT_DSK,
+    .extensions = "d64", .format = UFT_FORMAT_D64,
     .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE | UFT_FORMAT_CAP_VERIFY,
     .probe = d64_plugin_probe, .open = d64_plugin_open,
     .close = d64_plugin_close, .read_track = d64_plugin_read_track,

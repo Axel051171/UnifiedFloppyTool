@@ -522,7 +522,7 @@ static const uft_plugin_feature_t uft_format_plugin_g71_features[] = {
 
 const uft_format_plugin_t uft_format_plugin_g71 = {
     .name = "G71", .description = "Commodore 1571 GCR",
-    .extensions = "g71", .format = UFT_FORMAT_DSK,
+    .extensions = "g71", .format = UFT_FORMAT_G71,
     .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_FLUX | UFT_FORMAT_CAP_VERIFY,
     .probe = g71_probe, .open = g71_plugin_open,
     .close = g71_plugin_close, .read_track = g71_plugin_read_track,

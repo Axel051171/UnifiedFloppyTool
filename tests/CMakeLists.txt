@@ -409,6 +409,33 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/formats/cbm/uft_cbm_geometry.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+    elseif(${test_name} STREQUAL "test_convert_file_detection")
+        # MF-450: uft_convert_file() had no test at all. Needs the whole format
+        # layer, same recipe as test_register_all_formats.
+        file(GLOB_RECURSE CFD_FORMAT_SOURCES
+             ${CMAKE_SOURCE_DIR}/src/formats/*.c)
+        target_sources(${test_name} PRIVATE ${CFD_FORMAT_SOURCES}
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c
+            ${CMAKE_SOURCE_DIR}/src/compat/uft_fnmatch.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_preflight.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_decoder_plugin_stub.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_metadata.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_loss_report.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_mfm_encoder.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_probe_format_impl.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_roundtrip.c
+            ${CMAKE_SOURCE_DIR}/src/analysis/uft_protection_probe.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_kryoflux_stream.c)
+        target_include_directories(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/include/uft/formats
+            ${CMAKE_SOURCE_DIR}/include/uft/formats/cbm
+            ${CMAKE_SOURCE_DIR}/include/uft/formats/c64
+            ${CMAKE_SOURCE_DIR}/include/uft/flux
+            ${CMAKE_SOURCE_DIR}/include/uft/fs)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_register_all_formats")
         # MF-446: the only test that links the entire format layer, because it
         # is the only one that can answer "does uft_register_all_formats()
@@ -447,6 +474,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/formats/d67/uft_d67.c
             ${CMAKE_SOURCE_DIR}/src/formats/d81/uft_d81.c
             ${CMAKE_SOURCE_DIR}/src/formats/xfd/uft_xfd.c
+            ${CMAKE_SOURCE_DIR}/src/formats/dsk_generic/uft_dsk_generic.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_disk_convert.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_disk_stream.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c

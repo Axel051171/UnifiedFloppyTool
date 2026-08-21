@@ -81,7 +81,7 @@ static const uft_plugin_feature_t uft_format_plugin_po_features[] = {
 
 const uft_format_plugin_t uft_format_plugin_po = {
     .name = "PO", .description = "Apple II ProDOS Order",
-    .extensions = "po;dsk", .format = UFT_FORMAT_DSK,
+    .extensions = "po;dsk", .format = UFT_FORMAT_PO,
     .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE | UFT_FORMAT_CAP_VERIFY,
     .probe = po_probe, .open = po_open, .close = po_close,
     .read_track = po_read_track, .write_track = po_write_track,

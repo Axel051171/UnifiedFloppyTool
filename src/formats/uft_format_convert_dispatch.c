@@ -487,11 +487,13 @@ uft_error_t uft_convert_file(const char* src_path,
 
     /* Detect source format.
      *
-     * MF-448: note what this call returns:
-     * uft_probe_format() answers with plugin->format, and 131 of 137 plugins
-     * carry UFT_FORMAT_DSK — so `src_format` below identifies a container
-     * class, not a format, and `probe.alternatives[]` is never filled by
-     * anyone. Tracked as ARCH-14. */
+     * MF-450: this used to be decorative. uft_probe_format() returned
+     * plugin->format, and 131 of 137 plugins declared UFT_FORMAT_DSK, so
+     * `src_format` named a container class and the path table below — keyed on
+     * SCP->HFE, D64->G64 and the like — matched almost nothing. Worse, if a
+     * caller asked for UFT_FORMAT_DSK as the target, `src_format == dst_format`
+     * held for any sector image and the branch further down copied the file
+     * verbatim and reported a successful conversion. */
     uft_probe_result_t probe;
     uft_format_t src_format = uft_probe_format(src_data, src_size,
                                                 src_path, &probe);
@@ -501,6 +503,20 @@ uft_error_t uft_convert_file(const char* src_path,
         result->error = UFT_ERR_FORMAT_INVALID;
         snprintf(result->warnings[0], sizeof(result->warnings[0]),
                  "Could not detect source format");
+        result->warning_count = 1;
+        return UFT_ERR_FORMAT_INVALID;
+    }
+
+    /* An ambiguous source is not a source. Converting means running the winner's
+     * decoder over the bytes; if another plugin claimed them just as strongly,
+     * the choice was registration order, and the output would be a file derived
+     * from a guess and reported as a conversion. Refuse and say who else
+     * claimed it — the caller can name the format explicitly. */
+    if (probe.alternative_count > 0) {
+        free(src_data);
+        result->error = UFT_ERR_FORMAT_INVALID;
+        snprintf(result->warnings[0], sizeof(result->warnings[0]),
+                 "Source format is ambiguous: %s", probe.warnings);
         result->warning_count = 1;
         return UFT_ERR_FORMAT_INVALID;
     }

@@ -139,7 +139,7 @@ static const uft_plugin_compat_entry_t adf_compat[] = {
 
 const uft_format_plugin_t uft_format_plugin_adf = {
     .name = "ADF", .description = "Amiga Disk File",
-    .extensions = "adf", .format = UFT_FORMAT_DSK,
+    .extensions = "adf", .format = UFT_FORMAT_ADF,
     .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE | UFT_FORMAT_CAP_VERIFY,
     .probe = adf_plugin_probe, .open = adf_open,
     .close = adf_close, .read_track = adf_read_track,

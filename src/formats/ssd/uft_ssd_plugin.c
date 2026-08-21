@@ -154,7 +154,7 @@ static const uft_plugin_feature_t uft_format_plugin_ssd_features[] = {
 
 const uft_format_plugin_t uft_format_plugin_ssd = {
     .name = "SSD", .description = "BBC Micro SSD/DSD",
-    .extensions = "ssd;dsd", .format = UFT_FORMAT_DSK,
+    .extensions = "ssd;dsd", .format = UFT_FORMAT_SSD,
     .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE | UFT_FORMAT_CAP_VERIFY,
     .probe = uft_ssd_plugin_probe, .open = ssd_open, .close = ssd_close,
     .read_track = ssd_read_track, .write_track = ssd_write_track,

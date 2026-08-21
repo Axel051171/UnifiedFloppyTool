@@ -160,7 +160,7 @@ static const uft_plugin_feature_t stx_features[] = {
 
 const uft_format_plugin_t uft_format_plugin_stx = {
     .name = "STX", .description = "Atari ST Pasti (Protected)",
-    .extensions = "stx", .format = UFT_FORMAT_DSK,
+    .extensions = "stx", .format = UFT_FORMAT_STX,
     .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_TIMING | UFT_FORMAT_CAP_VERIFY,
     .probe = stx_plugin_probe, .open = stx_open,
     .close = stx_close, .read_track = stx_read_track,

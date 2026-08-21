@@ -33,6 +33,12 @@ Four checks, each one a thing that was actually wrong:
      uft_get_format_plugin_by_name().
   D. every defined plugin is listed in a g_*_plugins[] group, or
      uft_register_all_formats() cannot reach it at all
+  E. a plugin whose .name matches a UFT_FORMAT_<NAME> value declares that
+     value. 30 plugins declared UFT_FORMAT_DSK while uft_format_t already
+     had UFT_FORMAT_D64, UFT_FORMAT_ADF, UFT_FORMAT_ATR and 27 more — the
+     enum was never the problem, the declarations were (MF-450). The cost
+     was that uft_convert_file() looked its conversion path up under a
+     container class and found nothing.
 """
 from __future__ import annotations
 
@@ -62,6 +68,9 @@ _MACRO_DEF = re.compile(
 _GROUP_TABLE = re.compile(
     r"static const uft_format_plugin_t\*\s+g_\w+_plugins\[\]\s*=\s*\{(.*?)\};", re.S)
 _GROUP_REF = re.compile(r"&(uft_format_plugin_\w+)")
+_FORMAT_FIELD = re.compile(r"\.format\s*=\s*(UFT_FORMAT_\w+)")
+_ENUM_BLOCK = re.compile(r"typedef enum uft_format \{(.*?)\} uft_format_t;", re.S)
+_ENUM_NAME = re.compile(r"UFT_FORMAT_(\w+)")
 
 _BLOCK = re.compile(r"/\*.*?\*/", re.S)
 _LINE = re.compile(r"//[^\n]*")
@@ -88,6 +97,7 @@ def sources(repo: Path):
 def scan(repo: Path):
     plugins: dict[str, list[str]] = {}       # .name -> defining file(s)
     symbols: dict[str, str] = {}             # uft_format_plugin_x -> file
+    declared: dict[str, tuple[str, str]] = {}  # .name -> (.format, file)
     lookups: list[tuple[str, int]] = []
 
     for p in sources(repo):
@@ -100,8 +110,11 @@ def scan(repo: Path):
 
         for m in _PLUGIN_DEF.finditer(clean):
             nm = _NAME.search(m.group(2))
+            fm = _FORMAT_FIELD.search(m.group(2))
             plugins.setdefault(nm.group(1) if nm else "<unnamed>", []).append(rel)
             symbols[m.group(1)] = rel
+            if nm and fm:
+                declared[nm.group(1)] = (fm.group(1), rel)
 
         for m in _MACRO_DEF.finditer(clean):
             plugins.setdefault(m.group(2), []).append(rel)
@@ -132,11 +145,19 @@ def scan(repo: Path):
     for m in _GROUP_TABLE.finditer(strip_comments(reg)):
         listed |= set(_GROUP_REF.findall(m.group(1)))
 
-    return plugins, lookups, max_plugins, symbols, listed
+    enum_values: set[str] = set()
+    types = (repo / "include/uft/uft_types.h").read_text(
+        encoding="utf-8", errors="replace")
+    eb = _ENUM_BLOCK.search(types)
+    if eb:
+        enum_values = {m.group(1).upper() for m in _ENUM_NAME.finditer(eb.group(1))}
+
+    return plugins, lookups, max_plugins, symbols, listed, declared, enum_values
 
 
 def check(repo: Path) -> list[str]:
-    plugins, lookups, max_plugins, symbols, listed = scan(repo)
+    (plugins, lookups, max_plugins, symbols, listed,
+     declared, enum_values) = scan(repo)
     errors: list[str] = []
 
     total = sum(len(v) for v in plugins.values())
@@ -168,6 +189,17 @@ def check(repo: Path) -> list[str]:
         errors.append(
             f"the registry lists {sym} but nothing in src/ defines it")
 
+    # E. the enum already knows this format's name
+    for name, (fmt, rel) in sorted(declared.items()):
+        want = "UFT_FORMAT_" + name.upper()
+        if name.upper() in enum_values and fmt != want:
+            errors.append(
+                f"{rel}: plugin '{name}' declares .format = {fmt} but "
+                f"uft_format_t has {want}. A container id where a format id "
+                f"exists is how uft_convert_file() ended up looking its "
+                f"conversion path up under UFT_FORMAT_DSK and finding none "
+                f"(MF-450)")
+
     bl = repo / BASELINE
     known = set()
     if bl.exists():
@@ -194,7 +226,8 @@ def check(repo: Path) -> list[str]:
 
 def main() -> int:
     repo = Path(__file__).resolve().parent.parent
-    plugins, lookups, max_plugins, symbols, listed = scan(repo)
+    (plugins, lookups, max_plugins, symbols, listed,
+     declared, enum_values) = scan(repo)
 
     if "--write-baseline" in sys.argv:
         payload = {

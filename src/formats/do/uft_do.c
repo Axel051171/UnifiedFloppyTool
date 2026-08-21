@@ -83,7 +83,7 @@ static const uft_plugin_feature_t uft_format_plugin_do_features[] = {
 
 const uft_format_plugin_t uft_format_plugin_do = {
     .name = "DO", .description = "Apple II DOS 3.3",
-    .extensions = "do;dsk", .format = UFT_FORMAT_DSK,
+    .extensions = "do;dsk", .format = UFT_FORMAT_DO,
     .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE | UFT_FORMAT_CAP_VERIFY,
     .probe = do_probe, .open = do_open, .close = do_close,
     .read_track = do_read_track, .write_track = do_write_track,

@@ -102,7 +102,7 @@ static const uft_plugin_feature_t uft_format_plugin_xfd_features[] = {
 
 const uft_format_plugin_t uft_format_plugin_xfd = {
     .name = "XFD", .description = "Atari 8-bit Raw Disk",
-    .extensions = "xfd", .format = UFT_FORMAT_DSK,
+    .extensions = "xfd", .format = UFT_FORMAT_XFD,
     .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE | UFT_FORMAT_CAP_VERIFY,
     .probe = uft_xfd_plugin_probe, .open = xfd_open, .close = xfd_close,
     .read_track = xfd_read_track, .write_track = xfd_write_track,

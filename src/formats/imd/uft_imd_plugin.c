@@ -268,7 +268,7 @@ static const uft_plugin_feature_t uft_format_plugin_imd_features[] = {
 
 const uft_format_plugin_t uft_format_plugin_imd = {
     .name = "IMD", .description = "ImageDisk",
-    .extensions = "imd", .format = UFT_FORMAT_DSK,
+    .extensions = "imd", .format = UFT_FORMAT_IMD,
     .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE | UFT_FORMAT_CAP_VERIFY,
     .probe = imd_plugin_probe, .open = imd_plugin_open,
     .close = imd_plugin_close, .read_track = imd_plugin_read_track,

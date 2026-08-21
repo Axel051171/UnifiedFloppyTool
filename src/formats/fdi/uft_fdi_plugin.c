@@ -245,7 +245,7 @@ static const uft_plugin_feature_t uft_format_plugin_fdi_features[] = {
 
 const uft_format_plugin_t uft_format_plugin_fdi = {
     .name = "FDI", .description = "ZX Spectrum Full Disk Image",
-    .extensions = "fdi", .format = UFT_FORMAT_DSK,
+    .extensions = "fdi", .format = UFT_FORMAT_FDI,
     .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE | UFT_FORMAT_CAP_VERIFY,
     .probe = fdi_plugin_probe, .open = fdi_plugin_open,
     .close = fdi_plugin_close, .read_track = fdi_plugin_read_track,

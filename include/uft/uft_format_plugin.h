@@ -857,6 +857,15 @@ typedef struct uft_probe_ranking {
     const uft_format_plugin_t* runner_up;   /**< Bestes Plugin UNTERHALB confidence, oder NULL */
     int    runner_up_confidence;
     size_t claimants;                       /**< Wie viele Plugins die Daten überhaupt beanspruchen */
+
+    /** Die Gleichplatzierten, inklusive Gewinner, so viele wie hineinpassen.
+     *
+     * MF-450: `tied` allein sagt WIE VIELE, nicht WELCHE. Ein Aufrufer, der die
+     * Mehrdeutigkeit meldet, muss sie benennen können. Gedeckelt und ohne
+     * Allokation; `tied` bleibt die wahre Anzahl, auch wenn sie größer ist als
+     * dieses Feld fasst. */
+    const uft_format_plugin_t* tied_with[4];
+    size_t tied_listed;                     /**< Belegte Einträge in tied_with[] */
 } uft_probe_ranking_t;
 
 /**

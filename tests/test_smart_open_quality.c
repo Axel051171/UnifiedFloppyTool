@@ -88,11 +88,15 @@ TEST(registering_twice_is_not_an_error) {
     ASSERT(uft_register_format_plugin(&uft_format_plugin_d64) != UFT_OK);
     ASSERT(uft_registered_format_plugin_count() == 4);
 
-    /* All four declare .format = UFT_FORMAT_DSK, and before MF-444 the registry
-     * rejected a second plugin carrying an id it already held — which is why 81
-     * of 88 plugins could never register. Four on one container id is the
-     * normal case, not a collision. */
-    ASSERT(uft_count_format_plugins_for(UFT_FORMAT_DSK) == 4);
+    /* Before MF-444 the registry rejected a second plugin carrying an id it
+     * already held, which is why most plugins could never register. Sharing a
+     * container id is the normal case, not a collision — D67 has no
+     * uft_format_t of its own and sits on UFT_FORMAT_DSK, while D64, D81 and
+     * XFD got theirs back in MF-450. */
+    ASSERT(uft_count_format_plugins_for(UFT_FORMAT_DSK) == 1);   /* D67 */
+    ASSERT(uft_count_format_plugins_for(UFT_FORMAT_D64) == 1);
+    ASSERT(uft_count_format_plugins_for(UFT_FORMAT_D81) == 1);
+    ASSERT(uft_count_format_plugins_for(UFT_FORMAT_XFD) == 1);
     ASSERT(uft_get_format_plugin_by_name("D81") == &uft_format_plugin_d81);
     ASSERT(uft_get_format_plugin_by_name("XFD") == &uft_format_plugin_xfd);
 }

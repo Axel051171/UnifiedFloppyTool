@@ -108,7 +108,7 @@ static const uft_plugin_feature_t uft_format_plugin_trd_features[] = {
 
 const uft_format_plugin_t uft_format_plugin_trd = {
     .name = "TRD", .description = "TR-DOS Spectrum", .extensions = "trd",
-    .format = UFT_FORMAT_DSK,
+    .format = UFT_FORMAT_TRD,
     .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE | UFT_FORMAT_CAP_VERIFY,
     .probe = trd_probe, .open = trd_open, .close = trd_close,
     .read_track = trd_read_track, .write_track = trd_write_track,

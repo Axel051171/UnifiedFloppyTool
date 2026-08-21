@@ -152,7 +152,7 @@ static const uft_plugin_feature_t uft_format_plugin_jv1_features[] = {
 
 const uft_format_plugin_t uft_format_plugin_jv1 = {
     .name = "JV1", .description = "TRS-80 JV1 (Jeff Vavasour)",
-    .extensions = "jv1;dsk", .format = UFT_FORMAT_DSK,
+    .extensions = "jv1;dsk", .format = UFT_FORMAT_JV1,
     .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE | UFT_FORMAT_CAP_VERIFY,
     .probe = jv1_probe, .open = jv1_open, .close = jv1_close,
     .read_track = jv1_read_track, .write_track = jv1_write_track,

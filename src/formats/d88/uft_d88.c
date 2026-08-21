@@ -217,7 +217,7 @@ static const uft_plugin_feature_t uft_format_plugin_d88_features[] = {
 
 const uft_format_plugin_t uft_format_plugin_d88 = {
     .name = "D88", .description = "PC-88/PC-98", .extensions = "d88;88d;d98",
-    .format = UFT_FORMAT_DSK, .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE | UFT_FORMAT_CAP_VERIFY,
+    .format = UFT_FORMAT_D88, .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE | UFT_FORMAT_CAP_VERIFY,
     .probe = d88_probe, .open = d88_open, .close = d88_close,
     .read_track = d88_read_track, .write_track = d88_write_track,
     .verify_track = uft_generic_verify_track,

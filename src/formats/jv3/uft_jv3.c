@@ -280,7 +280,7 @@ static const uft_plugin_feature_t uft_format_plugin_jv3_features[] = {
 
 const uft_format_plugin_t uft_format_plugin_jv3 = {
     .name = "JV3", .description = "TRS-80 JV3 (with sector directory)",
-    .extensions = "jv3;dsk", .format = UFT_FORMAT_DSK,
+    .extensions = "jv3;dsk", .format = UFT_FORMAT_JV3,
     .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_WRITE | UFT_FORMAT_CAP_VERIFY,
     .probe = jv3_probe, .open = jv3_open, .close = jv3_close,
     .read_track = jv3_read_track, .write_track = jv3_write_track,
