@@ -214,6 +214,12 @@ foreach(test_source ${TEST_SOURCES})
     elseif(${test_name} STREQUAL "test_atr_512")
         # ATR 512-byte-sector (SpartaDOS X) read, not clamped to 128 (MF-340)
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/atr/uft_atr.c)
+    elseif(${test_name} STREQUAL "test_cqm_layout")
+        # CopyQM header offsets + RLE polarity vs. the published layout (MF-461)
+        # The plugin reports integrity findings through UFT_WARN, hence uft_log.c
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/cqm/uft_cqm.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
     elseif(${test_name} STREQUAL "test_adf_write_roundtrip")
         # Phase-6 round-trip: ADF write_track -> read_track (MF-341)
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/adf/uft_adf_plugin.c)
@@ -641,6 +647,8 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/formats/2img/uft_2img.c
             ${CMAKE_SOURCE_DIR}/src/formats/dsk_cpc/uft_dsk_cpc.c
             ${CMAKE_SOURCE_DIR}/src/formats/adf/uft_adf_plugin.c
+            # cqm reports header-checksum / data-CRC findings via UFT_WARN (MF-461)
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_decoder_plugin_stub.c)
     elseif(${test_name} STREQUAL "test_plugin_probe_real")
         # MF-385: probes the SHIPPED plugins instead of a copy in the test
@@ -679,6 +687,8 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/formats/2img/uft_2img.c
             ${CMAKE_SOURCE_DIR}/src/formats/dsk_cpc/uft_dsk_cpc.c
             ${CMAKE_SOURCE_DIR}/src/formats/adf/uft_adf_plugin.c
+            # cqm reports header-checksum / data-CRC findings via UFT_WARN (MF-461)
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_decoder_plugin_stub.c)
     elseif(${test_name} STREQUAL "test_protection_honest_failure")
         # MF-384: pins that unimplemented detectors fail instead of inventing

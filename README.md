@@ -147,7 +147,7 @@ verification).
 **Honest verification status** (script-generated, see
 [`docs/VERIFICATION_TIERS.md`](docs/VERIFICATION_TIERS.md) for the
 per-format table and [`docs/VERIFICATION_PLAN.md`](docs/VERIFICATION_PLAN.md)
-for the tier definitions): **T1=2, T1b=12, T2=14, T3=60** of 88.
+for the tier definitions): **T1=2, T1b=12, T2=15, T3=59** of 88.
 
 - **T1** (real reference image): FDI — a real 1994 TR-DOS disk magazine
   (83-cylinder, partially formatted last track; image local-only for

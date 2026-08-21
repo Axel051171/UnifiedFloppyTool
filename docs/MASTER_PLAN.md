@@ -20,9 +20,11 @@ nicht mit einem frischen Scan.
   `python scripts/audit_skeleton_headers.py`. Historischer Stand 2026-07-02
   war 133 Header / 2 613 Deklarationen.
 - 88 Format-Plugin-Registrierungen (138 Format-IDs); Verifikations-Stand
-  skript-generiert in `docs/VERIFICATION_TIERS.md` (T1=0, T1b=3, T2=14,
-  T3=71 — die frühere „41 % mit realen Tests"-Angabe war hand-gepflegt und
-  zählte synthetische Tests mit)
+  skript-generiert in `docs/VERIFICATION_TIERS.md` — **dort nachsehen, nicht
+  hier**: die Zahlen wandern mit jeder Hebung, und `check_consistency.py`
+  hält nur die generierte Datei aktuell, nicht diese Aufzählung. (Die frühere
+  „41 % mit realen Tests"-Angabe war hand-gepflegt und zählte synthetische
+  Tests mit.)
 - 45 Konvertierungspfade, 13 Roundtrip-Matrix-Einträge
 - Noch 11 Alt-Dateien im Pattern-A-Stil (`*_parser_v3.c`) — Rest der
   ehemals „287 Stubs" wurde in MF-011 gelöscht oder nach Pattern B migriert

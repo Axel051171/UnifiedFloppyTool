@@ -3652,6 +3652,128 @@ beschrieben stehen.
 
 ---
 
+### FMT-20 — CQM: der Leser las ein Layout, das es nicht gibt (2026-08-22, MF-461) → ✓ BEHOBEN
+
+Dritter Schritt des T3-Abbaus, und der erste, bei dem die Prüfung nicht eine
+Beschreibung korrigiert hat, sondern den Leser.
+
+**Was verglichen wurde.** Zwei unabhängige Quellen, die sich in jedem
+benutzten Feld einig sind:
+
+1. „CopyQM Format (*.cqm) — Disk image layout", RPN, 2023-03-31,
+   `https://rio.early8bitz.de/cqm/cqm-format.pdf` — abgeleitet aus den
+   LibDsk-Treibern `drvqm.c` / `crctable.c`
+2. SAMdisk 4.0, `src/samdisk/cqm.cpp:10-41` (MIT, Referenz-Orakel, wird nicht
+   gebaut — siehe `src/samdisk/README.md`)
+
+Die Primärquelle sagt zusätzlich, dass der Block 0x03..0x1B **der BPB einer
+DOS-Diskette** ist. Das ist eine dritte, strukturelle Bestätigung: Feldfolge
+und -breiten dort sind exakt der DOS-3.31-BPB.
+
+**Was unser Leser stattdessen las.** Kein Feld traf.
+
+| Feld | belegt | `uft_cqm.c` vorher | was dort wirklich steht |
+|---|---|---|---|
+| Sektorgröße | 0x03,0x04 LE16, **Byteanzahl** | `hdr[3]`, als Code `128<<n` | Low-Byte derselben Zahl |
+| Sektoren/Spur | **0x10,0x11** | `hdr[8]` | Anzahl FAT-Kopien |
+| Köpfe | **0x12,0x13** | `hdr[9]` | Verzeichniseinträge (low) |
+| Zylinder | **0x5A** (`u-cyl`) | `hdr[15]` | Sektoren/FAT (high) |
+| Kommentarlänge | **0x6F,0x70** | `hdr[16,17]` | Sektoren/Spur |
+| Datenbeginn | **133 + Kommentarlänge** | 18 + Kommentarlänge | — |
+| RLE-Vorzeichen | positiv = Literalfolge | positiv = Wiederholung | invertiert |
+
+Dazu fehlten: die Kopfprüfsumme (Summe über alle 133 Byte ≡ 0 mod 256, laut
+Spec verbindlich), der Daten-CRC, die Sektorbasis (0x71) und das Füllbyte nach
+Blind-Modus (0x58).
+
+Ein DOS-konformer CQM-Kopf hat an 0x08 die Zwei (zwei FAT-Kopien) und an 0x0F
+die Null. Der alte Leser hat daraus „2 Sektoren pro Spur, 0 Zylinder" gemacht
+und eine leere Diskette geliefert — **still**, ohne Fehler. Er kann nie ein
+echtes CopyQM-Abbild gelesen haben.
+
+Das ist dieselbe Klasse wie FMT-1/2/3: ein Parser gegen eine erfundene Spec,
+gebaut weil Code schneller entsteht als Prüfung. Genau der Grund für die
+EINFRIER-REGEL (MF-363).
+
+**Rot-Probe.** `tests/test_cqm_layout.c` baut ein Abbild bytegenau nach Spec
+(beide RLE-Zweige, Kommentar, korrekter Daten-CRC) und prüft Geometrie,
+Sektor-Offsets, Sektornummerierung und beide Integritätspfade. Gegen die alte
+Fassung fallen **alle fünf** Fälle um:
+
+```
+  [TEST] probe_grades_full_header_above_bare_marker ... FAIL @ 173
+  [TEST] geometry_comes_from_the_documented_offsets  ... FAIL @ 204
+  [TEST] sector_data_lands_at_the_right_offset       ... FAIL @ 232
+  [TEST] broken_header_checksum_is_refused           ... FAIL @ 271
+  [TEST] broken_data_crc_still_yields_the_data       ... FAIL @ 293
+  === 0 passed, 5 failed ===
+```
+
+**Zwei Integritätsfelder, zwei bewusst verschiedene Antworten.**
+
+- *Kopfprüfsumme falsch* → `UFT_ERR_CRC`, Abbruch. Stimmt sie nicht, ist jedes
+  Geometriefeld darunter geraten; eine Diskette daraus zu erfinden wäre
+  schlimmer als nichts zu liefern.
+- *Daten-CRC falsch* → Warnung, Bytes werden unverändert geliefert. Der CRC
+  deckt das ganze Abbild ab, ein Fehler lässt sich keinem Sektor zuordnen —
+  und ein beschädigtes Abbild zurückzuweisen, das größtenteils lesbar ist,
+  widerspricht dem Zweck des Werkzeugs.
+
+Der CRC ist übrigens kein normaler CRC-32: CopyQM indiziert eine 1024-Byte-
+Tabelle mit einem 8-Bit-Register, weshalb nur die unteren sechs Bit jedes
+Bytes in die Tabelle gehen (`& 0x3f`). Beide Quellen beschreiben denselben
+Quirk. Der Test rechnet ihn unabhängig nach — ein Test, der seine Erwartung
+vom geprüften Code holt, beweist nichts.
+
+**Ehrlich zur Grenze:** verifiziert ist das Layout, nicht das Verhalten an
+einem echten CopyQM-Abbild. Es liegt keines im Korpus. Deshalb T2, nicht T1.
+
+| Stufe | vorher | nachher |
+|---|---:|---:|
+| T2 | 14 | **15** |
+| T3 | 60 | **59** |
+
+---
+
+### ARCH-19 — `src/formats/misc/`: 19 von 21 Dateien haben keinen Aufrufer (2026-08-22, MF-461) → ⚠ OFFEN
+
+Beim CQM-Vergleich aufgefallen: es gibt eine **zweite** CQM-Implementierung,
+`src/formats/misc/cqm.c`. Sie wird gebaut, registriert kein Plugin und wird von
+niemandem aufgerufen. Ihre eigenen Kommentare geben zu, dass die Offsets
+geraten sind:
+
+```c
+/* bytesPerSector at 0x18? sectorsPerTrack at 0x1A? heads at 0x1C?
+   totalSectors at 0x10/0x13?
+   If not plausible, fail. */
+```
+
+Gegen die jetzt belegte Spec: alle vier falsch. Die Funktion heißt
+`bpb_guess()` — das ist wenigstens ehrlich benannt.
+
+Gemessen über die ganze Schicht (öffentliche Symbole je Datei gegen alle
+Aufrufer in `src/`, `include/`, `tests/`):
+
+| | |
+|---|---|
+| Dateien in `src/formats/misc/` | 21 |
+| davon mit **null** externen Aufrufern | **19** |
+| tatsächlich benutzt | `polyglot_boot.c`, `udi.c` |
+
+Die 19 tragen je fünf bis sieben `uft_msc_*`-Funktionen über eine eigene
+`FloppyDevice`-API — eine dritte Format-Schicht neben den Plugins und neben
+`uft_xdf_api_impl.c` (ARCH-18). Ihr Header `include/uft/formats/cqm.h` ist ein
+leerer Stub mit dem Kommentar „Stub header for format module"; er wird von
+`uft_format_registry_v2.c` eingebunden, ohne dass daraus etwas benutzt würde.
+
+**Nicht in MF-461 gelöscht.** 19 Dateien zu entfernen ist ein eigener Schritt
+mit der vollständigen MF-369-Beweispipeline (`.pro`-Eintrag, Symbolreferenzen,
+Skript-Referenzen, qmake-Vollbuild-Abnahme) — im selben Commit wie eine
+Format-Korrektur wäre das zweierlei Arbeit unter einem Beweis. Gehört zu
+ARCH-6, mit ARCH-18 zusammen.
+
+---
+
 ### FMT-19 — T3-Abbau begonnen: TD0 und MSA gegen SAMdisk verifiziert (2026-08-22, MF-460) → ◐ 2 von 62 gehoben
 
 Erster Durchgang am eigentlichen Rückstand: **62 der 88 Formate waren T3**, also

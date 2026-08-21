@@ -10,8 +10,8 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 |---|---|
 | T1 | 2 |
 | T1b | 12 |
-| T2 | 14 |
-| T3 | 60 |
+| T2 | 15 |
+| T3 | 59 |
 | **gesamt** | **88** |
 
 ## Pro Format
@@ -34,6 +34,7 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 | `xfd` | **T1b** | `test_corpus_xfd`, `test_format_probe_fuzz`, `test_plugin_identity`, `test_plugin_probe_real`, `test_smart_open_quality` | — | — | 1 |
 | `adf_ext` | **T2** | `test_adf_ext_plugin` | WinUAE disk.cpp read_header_ext2 (UAE-1ADF) | MF-352 | — |
 | `akai_s900` | **T2** | `test_akai_s900_plugin` | akaiutil (kmi9000) geometry: DD 5x1024/819200, HD 10x1024/1638400 | MF-348 | — |
+| `cqm` | **T2** | `test_cqm_layout`, `test_format_probe_fuzz`, `test_plugin_probe_real` | Primaer: "CopyQM Format (*.cqm) — Disk image layout", RPN, 2023-03-31, https://rio.early8bitz.de/cqm/cqm-format.pdf (abgeleitet aus LibDsk drvqm.c/crctable.c). Gegengelesen: SAMdisk 4.0 (MIT), src/samdisk/cqm.cpp:10-41 CQM_HEADER + :60-79 CRC + :129-146 RLE. | MF-461 — 133-Byte-Kopf Feld fuer Feld verglichen; beide Quellen stimmen ueberall ueberein, und die Primaerquelle sagt ausdruecklich, dass der Block 0x03..0x1B der BPB einer DOS-Diskette ist (was die Feldfolge dort unabhaengig bestaetigt). Der bisherige Leser las ein Layout, das in KEINER der beiden Quellen vorkommt und auch kein BPB ist: Sektorgroesse als 128<<n-Code aus dem Einzelbyte 0x03 statt als LE16-Byteanzahl aus 0x03,0x04; Sektoren/Spur aus 0x08 (das ist die FAT-Kopienzahl) statt aus 0x10,0x11; Koepfe aus 0x09 (Verzeichniseintraege) statt aus 0x12,0x13; Zylinder aus 0x0F (High-Byte von Sektoren/FAT) statt aus 0x5A; Kommentarlaenge aus 0x10,0x11 statt aus 0x6F,0x70; Datenbeginn bei Offset 18 statt bei 133+Kommentarlaenge. Dazu war die RLE-Polaritaet invertiert (positive Zahl = Wiederholung statt Literalfolge). Kopfpruefsumme (Summe ueber alle 133 Byte == 0 mod 256), Daten-CRC (CRC-32 reflektiert mit CopyQMs 6-Bit-Tabellenquirk &0x3f), Sektorbasis 0x71 und Fuellbyte nach Blind-Modus 0x58 fehlten ganz. Alles ersetzt und mit tests/test_cqm_layout.c gegen ein bytegenau nach Spec gebautes Abbild abgesichert; Rot-Probe: alle fuenf Faelle fallen auf der alten Fassung um. | — |
 | `d88` | **T2** | `test_d88_error_marks`, `test_format_probe_fuzz`, `test_plugin_probe_real` | pc98.org D88 + MAME d88_dsk (DDAM @+07, FDC status @+08) | MF-336 | — |
 | `dc42` | **T2** | `test_dc42_checksum_roundtrip`, `test_format_probe_fuzz`, `test_plugin_probe_real` | DiscFerret/Mini-vMac DC42 checksum (BE16 word add, ROR32 1) | MF-324 | — |
 | `dmk` | **T2** | `test_dmk_crc` | David Keil DMK spec (openMSX DMK-Format-Details) + WD177x CRC-CCITT pinned to check value 0x29B1 | MF-353 | — |
@@ -55,7 +56,6 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 | `cas` | **T3** | — | — | — | — |
 | `cfi` | **T3** | — | — | — | — |
 | `cpm` | **T3** | `test_cpm_fs` | — | — | — |
-| `cqm` | **T3** | `test_format_probe_fuzz`, `test_plugin_probe_real` | — | — | — |
 | `d13` | **T3** | — | — | — | — |
 | `d77` | **T3** | — | — | — | — |
 | `dcm` | **T3** | — | — | — | — |
