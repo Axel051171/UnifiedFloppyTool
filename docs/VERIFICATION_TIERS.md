@@ -10,8 +10,8 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 |---|---|
 | T1 | 2 |
 | T1b | 12 |
-| T2 | 12 |
-| T3 | 62 |
+| T2 | 14 |
+| T3 | 60 |
 | **gesamt** | **88** |
 
 ## Pro Format
@@ -41,8 +41,10 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 | `imd` | **T2** | `test_format_probe_fuzz`, `test_imd_error_marks`, `test_imd_track_record`, `test_imd_write_roundtrip`, `test_plugin_probe_real` | MAME src/lib/formats/imd_dsk.cpp (sector numbering map unconditional: "offs += 5 + sector_num"; cylinder map if header[2] & 0x80; head map if & 0x40) cross-checked against hharte/libimd src/libimd.h (IMD_HFLAG_CMAP_PRES 0x80, IMD_HFLAG_HMAP_PRES 0x40, LIBIMD_MAX_SECTORS_PER_TRACK 256) | MF-430 | — |
 | `korg_dss1` | **T2** | `test_korg_dss1_plugin` | chickensys Korg DSS-1 geometry (80x2x5x1024) | MF-347 | — |
 | `lisa_twiggy` | **T2** | `test_lisa_twiggy_plugin` | bitsavers Lisa Twiggy ZCAV zone table (46 tracks/side, 22..15 spt) | MF-349 | — |
+| `msa` | **T2** | `test_format_probe_fuzz`, `test_msa`, `test_plugin_probe_real` | SAMdisk 4.0 (MIT), src/samdisk/msa.cpp:9-16 MSA_HEADER + :38-44 Plausibilitaet | MF-460 — 10-Byte-Kopf Feld fuer Feld verglichen, alle big-endian: Magic 0x0E0F, Sektoren/Spur, Seiten MINUS EINS, Startspur, Endspur. Der +1-Aufschlag bei den Seiten stand nicht in unserer Beschreibung, wird vom Code aber richtig gerechnet (wie samdisk/msa.cpp:44). Die Probe pruefte nur das Magic und meldete 95; sie prueft jetzt zusaetzlich, was msa_plugin_open() ohnehin verlangt, plus SAMdisks Nullbyte-Pruefung der oberen Feldbytes. | — |
 | `nfd` | **T2** | `test_nfd_r0` | pc98.org nfdr0/nfdr1 + tomari/d88split nfd2mhlt.pl (r1 skip accounting spec-only, no real r1 corpus yet) | MF-358, MF-360 | — |
 | `stx` | **T2** | `test_format_probe_fuzz`, `test_plugin_probe_real`, `test_stx_error_marks` | Pasti STX descriptor spec (atari.8bitchip.info/STXdesc) | MF-335 | — |
+| `td0` | **T2** | `test_format_probe_fuzz`, `test_plugin_probe_real`, `test_td0_error_marks` | SAMdisk 4.0 (MIT), src/samdisk/td0.cpp:14-25 TD0_HEADER + :28/:208 Kommentar-Flag | MF-460 — 12-Byte-Kopf Feld fuer Feld verglichen: Signatur, Volume-Sequenz, Check-Signatur, Version, Quelldichte, Laufwerkstyp, Spurdichte, DOS-Modus, Seiten, CRC. Position und Breite stimmen ueberall ueberein. Eine Abweichung gefunden und behoben: Byte 7 war als "Stepping type (0=SS, 1=DS, 2=EDS)" beschrieben, ist aber die Spurdichte mit Bit 7 als Kommentar-Flag — was unser eigener Code in uft_td0_lzss.c:469 bereits so auswertet. Falsch war die Beschreibung, nicht das Verhalten. | — |
 | `woz` | **T2** | `test_diskcopy`, `test_format_probe_fuzz`, `test_moof_roundtrip`, `test_plugin_probe_real`, `test_woz_roundtrip`, `test_woz_writer` | Applesauce WOZ reference v1/v2/2.1 (chunk layout, CRC32, WRIT logical refs) | MF-317, MF-357, MF-361 | — |
 | `2img` | **T3** | `test_format_probe_fuzz`, `test_plugin_probe_real` | — | — | — |
 | `86f` | **T3** | — | — | — | — |
@@ -76,7 +78,6 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 | `mfi` | **T3** | — | — | — | — |
 | `mgt` | **T3** | — | — | — | — |
 | `micropolis` | **T3** | — | — | — | — |
-| `msa` | **T3** | `test_format_probe_fuzz`, `test_msa`, `test_plugin_probe_real` | — | — | — |
 | `msx_disk` | **T3** | — | — | — | — |
 | `myz80` | **T3** | — | — | — | — |
 | `nanowasp` | **T3** | — | — | — | — |
@@ -99,7 +100,6 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 | `syn` | **T3** | — | — | — | — |
 | `t1k` | **T3** | — | — | — | — |
 | `tan` | **T3** | — | — | — | — |
-| `td0` | **T3** | `test_format_probe_fuzz`, `test_plugin_probe_real`, `test_td0_error_marks` | — | — | — |
 | `trd` | **T3** | — | — | — | — |
 | `udi` | **T3** | — | — | — | — |
 | `v9t9` | **T3** | — | — | — | — |

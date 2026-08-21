@@ -450,20 +450,45 @@ TEST(edsk_accepts_both_amstrad_headers) {
     ASSERT(!probe_sized(&uft_format_plugin_edsk, hdr, sizeof(hdr), sizeof(hdr), &conf));
 }
 
-TEST(msa_magic_is_big_endian) {
+TEST(msa_magic_and_header_plausibility) {
+    /* MF-460 hat die Fixture geaendert, und die Aenderung ist der Befund.
+     *
+     * Vorher war es ein Nullpuffer mit gesetztem Magic — also ein Kopf mit
+     * `sectors per track = 0`, den msa_plugin_open() unmittelbar darunter
+     * selbst mit UFT_ERROR_FORMAT_INVALID ablehnt. Der Test verlangte also,
+     * dass die Probe etwas akzeptiert, was der Leser verweigert. Dieselbe
+     * Form wie die D88-Fixture in MF-447.
+     *
+     * Die Felder sind big-endian und gegen SAMdisk geprueft
+     * (src/samdisk/msa.cpp:9-16): 2-3 Sektoren, 4-5 Seiten MINUS EINS,
+     * 6-7 Startspur, 8-9 Endspur. */
     uint8_t hdr[32];
     int conf = -1;
 
     memset(hdr, 0, sizeof(hdr));
     hdr[0] = 0x0E; hdr[1] = 0x0F;             /* BE 0x0E0F */
+    hdr[3] = 9;                               /* 9 Sektoren pro Spur */
+    hdr[5] = 1;                               /* 1 => zwei Seiten */
+    hdr[7] = 0;                               /* Startspur 0 */
+    hdr[9] = 79;                              /* Endspur 79 */
     ASSERT(probe_sized(&uft_format_plugin_msa, hdr, sizeof(hdr), sizeof(hdr), &conf));
-    ASSERT(conf >= 95);
+    ASSERT(conf >= 95);                       /* MSBs null + plausible Endspur */
 
-    hdr[0] = 0x0F; hdr[1] = 0x0E;             /* swapped */
+    hdr[0] = 0x0F; hdr[1] = 0x0E;             /* vertauscht */
     ASSERT(!probe_sized(&uft_format_plugin_msa, hdr, sizeof(hdr), sizeof(hdr), &conf));
-
     hdr[0] = 0x0E; hdr[1] = 0x0F;
+
+    /* zu kurz fuer den 10-Byte-Kopf */
     ASSERT(!probe_sized(&uft_format_plugin_msa, hdr, 4, 4, &conf));
+
+    /* null Sektoren pro Spur: der Leser koennte damit nichts anfangen */
+    uint8_t bad = hdr[3]; hdr[3] = 0;
+    ASSERT(!probe_sized(&uft_format_plugin_msa, hdr, sizeof(hdr), sizeof(hdr), &conf));
+    hdr[3] = bad;
+
+    /* Endspur vor Startspur */
+    hdr[7] = 40; hdr[9] = 10;
+    ASSERT(!probe_sized(&uft_format_plugin_msa, hdr, sizeof(hdr), sizeof(hdr), &conf));
 }
 
 TEST(nib_requires_exact_size_and_grades_gcr_content) {
@@ -790,7 +815,7 @@ int main(void) {
     RUN(jv1_accepts_only_whole_track_multiples);
     RUN(xfd_is_deliberately_permissive_outside_its_canonical_sizes);
     RUN(edsk_accepts_both_amstrad_headers);
-    RUN(msa_magic_is_big_endian);
+    RUN(msa_magic_and_header_plausibility);
     RUN(nib_requires_exact_size_and_grades_gcr_content);
     RUN(woz_accepts_v1_and_v2_signatures);
     RUN(do_and_po_are_ambiguous_by_design);

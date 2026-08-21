@@ -142,7 +142,24 @@ typedef struct {
     uint8_t  version;       /**< Teledisk version (BCD) */
     uint8_t  data_rate;     /**< Source data rate */
     uint8_t  drive_type;    /**< Source drive type */
-    uint8_t  stepping;      /**< Stepping type (0=SS, 1=DS, 2=EDS) */
+    /* MF-460: Byte 7 ist die SPURDICHTE, nicht die Seitenzahl.
+     *
+     * Der Kommentar hier lautete "Stepping type (0=SS, 1=DS, 2=EDS)" — also
+     * einseitig/zweiseitig. Das kann nicht stimmen: Byte 9 (`sides`) traegt
+     * die Seitenzahl bereits. SAMdisk (MIT, src/samdisk/td0.cpp:22) liest es
+     * als
+     *
+     *   0 = source matches media density
+     *   1 = double density in quad drive
+     *   2 = quad density in double drive
+     *
+     * und Bit 7 als "Kommentarblock vorhanden" (td0.cpp:28 und :208,
+     * `th.bTrackDensity & 0x80`). Unser eigener Code tut genau das schon —
+     * src/formats/td0/uft_td0_lzss.c:469 prueft `header.stepping & 0x80`.
+     * Falsch war also nur die Beschreibung, nicht das Verhalten. Der Feldname
+     * bleibt, weil er in mehreren Dateien steht; die Bedeutung steht jetzt
+     * daneben. */
+    uint8_t  stepping;      /**< Track density; Bit 7 = Kommentarblock folgt */
     uint8_t  dos_mode;      /**< DOS allocation mode */
     uint8_t  sides;         /**< Number of sides */
     uint16_t crc;           /**< Header CRC-16 */

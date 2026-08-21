@@ -72,5 +72,13 @@
   "woz": {
     "spec_source": "Applesauce WOZ reference v1/v2/2.1 (chunk layout, CRC32, WRIT logical refs)",
     "evidence": "MF-317, MF-357, MF-361"
+  },
+  "td0": {
+    "spec_source": "SAMdisk 4.0 (MIT), src/samdisk/td0.cpp:14-25 TD0_HEADER + :28/:208 Kommentar-Flag",
+    "evidence": "MF-460 — 12-Byte-Kopf Feld fuer Feld verglichen: Signatur, Volume-Sequenz, Check-Signatur, Version, Quelldichte, Laufwerkstyp, Spurdichte, DOS-Modus, Seiten, CRC. Position und Breite stimmen ueberall ueberein. Eine Abweichung gefunden und behoben: Byte 7 war als \"Stepping type (0=SS, 1=DS, 2=EDS)\" beschrieben, ist aber die Spurdichte mit Bit 7 als Kommentar-Flag — was unser eigener Code in uft_td0_lzss.c:469 bereits so auswertet. Falsch war die Beschreibung, nicht das Verhalten."
+  },
+  "msa": {
+    "spec_source": "SAMdisk 4.0 (MIT), src/samdisk/msa.cpp:9-16 MSA_HEADER + :38-44 Plausibilitaet",
+    "evidence": "MF-460 — 10-Byte-Kopf Feld fuer Feld verglichen, alle big-endian: Magic 0x0E0F, Sektoren/Spur, Seiten MINUS EINS, Startspur, Endspur. Der +1-Aufschlag bei den Seiten stand nicht in unserer Beschreibung, wird vom Code aber richtig gerechnet (wie samdisk/msa.cpp:44). Die Probe pruefte nur das Magic und meldete 95; sie prueft jetzt zusaetzlich, was msa_plugin_open() ohnehin verlangt, plus SAMdisks Nullbyte-Pruefung der oberen Feldbytes."
   }
 }

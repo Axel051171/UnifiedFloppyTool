@@ -73,7 +73,12 @@ typedef struct {
     uint8_t  version;         /* Version number */
     uint8_t  data_rate;       /* Data rate (250/300/500 kbps) */
     uint8_t  drive_type;      /* Drive type */
-    uint8_t  stepping;        /* Track stepping (1 or 2) */
+    /* MF-460: dritte Lesart desselben Bytes im Baum. Hier hiess es
+     * "Track stepping (1 or 2)", im Haupt-Header "Stepping type (0=SS...)",
+     * und SAMdisk (src/samdisk/td0.cpp:22, MIT) liest Spurdichte mit Bit 7
+     * als Kommentar-Flag. Letzteres deckt sich mit unserem eigenen Code in
+     * uft_td0_lzss.c:469 (`header.stepping & 0x80`). */
+    uint8_t  stepping;        /* Track density; Bit 7 = Kommentarblock folgt */
     uint8_t  dos_alloc;       /* DOS allocation flag */
     uint8_t  sides;           /* Number of sides (1 or 2) */
     uint16_t crc;             /* Header CRC */
@@ -762,7 +767,10 @@ void td0_print_info(td0_context_t *ctx) {
     printf("  Type: %s\n", td0_drive_type_name(ctx->header.drive_type));
     printf("  Data Rate: %s\n", td0_data_rate_name(ctx->header.data_rate));
     printf("  Encoding: %s\n", td0_encoding_name(ctx->header.data_rate));
-    printf("  Stepping: %d:1\n", ctx->header.stepping);
+    /* MF-460: war `"  Stepping: %d:1"` — bei gesetztem Bit 7 haette das
+     * "Stepping: 129:1" gedruckt. Bit 7 bedeutet "Kommentarblock folgt". */
+    printf("  Track density: %d%s\n", ctx->header.stepping & 0x7F,
+           (ctx->header.stepping & 0x80) ? " (+ comment block)" : "");
     printf("  Sides: %d\n", ctx->sides);
     printf("\n");
     

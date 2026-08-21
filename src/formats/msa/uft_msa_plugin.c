@@ -9,8 +9,20 @@
 /* From uft_msa.c */
 extern int uft_msa_probe(const uint8_t *data, size_t len);
 
-/* MSA header: bytes 0-1 = 0x0E0F magic, 2-3 = spt, 4-5 = sides,
- * 6-7 = start_track, 8-9 = end_track */
+/* MSA header, 10 Byte, alle Felder big-endian (MF-460).
+ *
+ * Feld fuer Feld gegen SAMdisk geprueft (MIT, src/samdisk/msa.cpp:9-16):
+ *
+ *   0-1  0x0E 0x0F  Magic
+ *   2-3  Sektoren pro Spur
+ *   4-5  Seiten MINUS EINS      <- SAMdisk: "MSB/LSB of sides-1"
+ *   6-7  Startspur (0-basiert)
+ *   8-9  Endspur   (0-basiert)
+ *
+ * Das "minus eins" stand hier nicht. Der Code darunter rechnet es richtig
+ * (`+ 1`, wie samdisk/msa.cpp:44 `dh.abSides[1] + 1`) — es fehlte nur in der
+ * Beschreibung, und eine Beschreibung, die eine Off-by-one verschweigt, ist
+ * die Vorlage fuer die naechste. */
 #define MSA_MAGIC 0x0E0F
 
 typedef struct {
@@ -45,8 +57,33 @@ static bool msa_plugin_probe(const uint8_t *data, size_t size,
     (void)file_size;
     if (size < 10) return false;
     uint16_t magic = ((uint16_t)data[0] << 8) | data[1];
-    if (magic == MSA_MAGIC) { *confidence = 95; return true; }
-    return false;
+    if (magic != MSA_MAGIC) return false;
+
+    /* MF-460: bis hier war Schluss — Magic getroffen, Konfidenz 95, fertig.
+     * Zwei Bytes sind duenn, seit die Registry wirklich alle Plugins fragt
+     * (MF-447), und dieselbe Klasse wie d88_probe(), das jede Datei im Korpus
+     * mit 90 beanspruchte.
+     *
+     * Geprueft wird jetzt, was msa_plugin_open() unmittelbar darunter ohnehin
+     * verlangt, plus die Nullbyte-Pruefung, die SAMdisk vornimmt
+     * (src/samdisk/msa.cpp:38-40): die oberen Bytes aller vier Felder sind
+     * bei jeder realen MSA null, weil kein Atari-Laufwerk 256 Sektoren, 256
+     * Seiten oder 256 Spuren hat. */
+    uint16_t spt   = ((uint16_t)data[2] << 8) | data[3];
+    uint16_t sides = (uint16_t)((((uint16_t)data[4] << 8) | data[5]) + 1);
+    uint16_t start = ((uint16_t)data[6] << 8) | data[7];
+    uint16_t end   = ((uint16_t)data[8] << 8) | data[9];
+
+    if (spt == 0 || spt > 18) return false;
+    if (sides == 0 || sides > 2) return false;
+    if (end < start) return false;
+
+    int conf = 70;
+    if (!data[2] && !data[4] && !data[6] && !data[8]) conf += 20;  /* MSBs null */
+    if (end < 90) conf += 5;                     /* keine Atari-Diskette hat mehr */
+
+    *confidence = conf;
+    return true;
 }
 
 static uft_error_t msa_plugin_open(uft_disk_t *disk, const char *path, bool ro) {

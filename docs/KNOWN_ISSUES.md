@@ -3652,6 +3652,91 @@ beschrieben stehen.
 
 ---
 
+### FMT-19 — T3-Abbau begonnen: TD0 und MSA gegen SAMdisk verifiziert (2026-08-22, MF-460) → ◐ 2 von 62 gehoben
+
+Erster Durchgang am eigentlichen Rückstand: **62 der 88 Formate waren T3**, also
+unverifiziert. Der Hebel ist `docs/spec_verification.json` — ein Format mit Test
+steigt auf T2, sobald ein **belegter** Spec-Bezug dokumentiert ist.
+
+**Warum das kein Massengeschäft ist.** 16 der 62 haben bereits Tests und
+bräuchten nur den Spec-Eintrag. Sie alle in einem Zug einzutragen wäre in
+zwanzig Minuten erledigt — und wäre genau das, wogegen die EINFRIER-REGEL
+(MF-363) geschrieben wurde: fünf Parser existierten gegen *erfundene* Specs,
+weil Code schneller entstand als Prüfung. Ein Spec-Eintrag zählt nur, wenn das
+Byte-Layout tatsächlich verglichen wurde.
+
+Verglichen wurde gegen **SAMdisk 4.0** (MIT, `src/samdisk/`, siehe
+`src/samdisk/README.md`) — eine unabhängig geschriebene, funktionierende
+Implementierung derselben Formate.
+
+#### TD0 — 12-Byte-Kopf, ein Fehler gefunden
+
+Feld für Feld gegen `src/samdisk/td0.cpp:14-25`: Signatur, Volume-Sequenz,
+Check-Signatur, Version, Quelldichte, Laufwerkstyp, Spurdichte, DOS-Modus,
+Seiten, CRC. **Position und Breite stimmen überall.**
+
+Eine Abweichung: **Byte 7** war bei uns beschrieben als
+
+```c
+uint8_t stepping;   /**< Stepping type (0=SS, 1=DS, 2=EDS) */
+```
+
+Das kann nicht stimmen — Byte 9 (`sides`) trägt die Seitenzahl bereits. SAMdisk
+liest es als Spurdichte, mit **Bit 7 als „Kommentarblock folgt"**
+(`td0.cpp:28` und `:208`, `th.bTrackDensity & 0x80`).
+
+Und unser eigener Code tut genau das schon: `uft_td0_lzss.c:469` prüft
+`header.stepping & 0x80`. **Falsch war die Beschreibung, nicht das Verhalten** —
+aber eine falsche Beschreibung ist die Vorlage für den nächsten, der danach
+implementiert.
+
+Dazu eine **dritte** Lesart desselben Bytes: `uft_td0_parser_v2.c:76` nannte es
+„Track stepping (1 or 2)" und druckte `"Stepping: %d:1"` — bei gesetztem Bit 7
+also `"Stepping: 129:1"`. Beides korrigiert.
+
+#### MSA — 10-Byte-Kopf, eine verschwiegene Off-by-one und eine zu weiche Probe
+
+Gegen `src/samdisk/msa.cpp:9-16`, alle Felder big-endian: Magic `0x0E0F`,
+Sektoren/Spur, **Seiten minus eins**, Startspur, Endspur.
+
+Das „minus eins" stand in unserer Beschreibung nicht. Der Code rechnet es
+richtig (`+ 1`, wie `msa.cpp:44`) — aber eine Beschreibung, die eine Off-by-one
+verschweigt, ist die Vorlage für die nächste.
+
+Die **Probe** prüfte nur das Magic und meldete Konfidenz 95. Zwei Bytes sind
+dünn, seit die Registry wirklich alle Plugins fragt (MF-447) — dieselbe Klasse
+wie `d88_probe()`, das jede Datei im Korpus mit 90 beanspruchte. Sie prüft
+jetzt zusätzlich, was `msa_plugin_open()` unmittelbar darunter ohnehin verlangt,
+plus SAMdisks Nullbyte-Prüfung der oberen Feldbytes (`msa.cpp:38-40`).
+
+**Ein vorher grüner Test wurde geändert:**
+`test_plugin_probe_real.c::msa_magic_is_big_endian` prüfte einen Nullpuffer mit
+gesetztem Magic — also einen Kopf mit `sectors per track = 0`, den
+`msa_plugin_open()` selbst ablehnt. Der Test verlangte, dass die Probe
+akzeptiert, was der Leser verweigert; dieselbe Form wie die D88-Fixture in
+MF-447. Fixture ist jetzt ein Kopf, dem der Leser folgen kann, und der Test
+heißt `msa_magic_and_header_plausibility`.
+
+#### Stand
+
+| Stufe | vorher | nachher |
+|---|---:|---:|
+| T1 | 2 | 2 |
+| T1b | 12 | 12 |
+| T2 | 12 | **14** |
+| T3 | 62 | **60** |
+
+**Ehrlich zum Tempo:** zwei Formate pro Durchgang, mit echtem Feldvergleich und
+je einem gefundenen Fehler. Das ist der Preis dafür, dass ein T2 etwas bedeutet.
+14 der 16 Formate mit Test warten noch; für 15 davon hat SAMdisk einen Handler
+(`cpm`, `cqm`, `do`, `ipf`, `st`, `edsk`, …), für die Amiga-Seite ist
+`keirf/disk-utilities` das Gegenstück (siehe `docs/XCOPY_COMPARISON.md`).
+
+Die übrigen **46 T3-Formate haben nicht einmal einen Test** — dort ist der
+Engpass Referenzmaterial, nicht Spec-Arbeit.
+
+---
+
 ### AUD-5 — Der Build-Paritäts-Prüfer verschluckte 30 Dateien, CMake baute die Anwendung daraus (2026-08-22, MF-458) → ✓ BEHOBEN, Baseline 160 → 0
 
 Angegangen als „Baseline aufräumen". Herausgekommen ist ein echter Fehler im
