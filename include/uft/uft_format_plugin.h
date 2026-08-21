@@ -756,10 +756,9 @@ const uft_format_plugin_t* uft_probe_file_format(const char *path);
  */
 const uft_format_plugin_t* uft_find_format_plugin_by_extension(const char* ext);
 
-/**
- * @brief Bestes Plugin für Datei finden (probe)
- */
-const uft_format_plugin_t* uft_find_format_plugin_for_file(const char* path);
+/* uft_find_format_plugin_for_file() wurde in MF-449 entfernt: dritte Kopie der
+ * Probe-Schleife, eigener 4096-Puffer, Extension-Rückfall, kein Aufrufer.
+ * Ersatz: uft_probe_file_format() bzw. uft_probe_file_ranked(). */
 
 /**
  * @brief Alle Plugins auflisten
@@ -816,6 +815,31 @@ const uft_format_plugin_t* uft_disk_plugin(const uft_disk_t* disk);
  * Größe nicht unterscheidbar. Das Problem ist nicht, dass die Probe unsicher
  * ist — sondern dass ihr Ergebnis wie Sicherheit aussieht.
  */
+
+/**
+ * @brief Wie viele Bytes einem Probe vorgelegt werden (MF-449, ARCH-15)
+ *
+ * Eine Zahl, von jedem Einstiegspunkt benutzt. Vorher las
+ * uft_probe_file_format() 4096 Bytes und uft_smart_open() bis zu 65536 — und
+ * lieferte für dieselbe Datei ein anderes Format:
+ *
+ *     atrcopy_dos2sd.xfd,  4096 Bytes → XFD = 40 (fünffach gleichauf)
+ *     atrcopy_dos2sd.xfd, 65536 Bytes → JV3 = 70 (allein)
+ *
+ * Die Identifikation war damit eine Eigenschaft der Puffergröße, die der
+ * Aufrufer zufällig gewählt hatte, nicht der Datei.
+ *
+ * 65536 ist nicht gegriffen: das größte Probe im Baum ist jv3_probe() mit
+ * JV3_HEADER_SIZE = 8960 Bytes, und mit 4096 konnte es überhaupt nie
+ * anschlagen — JV3 war durch uft_probe_file_format() (und damit durch
+ * uft_disk_open()) grundsätzlich nicht erkennbar. 65536 deckt das siebenfach
+ * ab. `scripts/probe_buffer_gate.py` prüft, dass kein Probe mehr verlangt.
+ *
+ * Ein Probe bekommt zusätzlich immer die echte Dateigröße: `size` sagt „so
+ * viel darfst du ansehen", `file_size` sagt „so groß ist die Datei". Wer aus
+ * `size` eine Aussage über die Datei ableitet, hat einen Fehler.
+ */
+#define UFT_PROBE_BUFFER_SIZE 65536u
 
 /** Rangfolge einer Format-Probe.
  *

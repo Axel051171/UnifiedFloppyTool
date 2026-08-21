@@ -48,29 +48,75 @@ typedef struct {
     uint8_t             max_head;
 } jv3_data_t;
 
+/* MF-449: the previous body counted evidence that could not fail.
+ *
+ * It looked at 100 directory entries and counted one "valid" whenever
+ *
+ *     trk < 80 && (flags & 0x03) < 4
+ *
+ * The second half is vacuous — a two-bit field is always below 4 — so the test
+ * reduced to "the byte at stride 3 is below 80", true for roughly a third of
+ * arbitrary data. Five hits out of a hundred is then a near certainty for any
+ * input, and the answer was confidence 70.
+ *
+ * It stayed invisible because uft_probe_file_format() reads 4096 bytes and this
+ * probe needs JV3_HEADER_SIZE (8960) before it does anything: through that
+ * entry point JV3 could never match at all. uft_smart_open() reads 65536, and
+ * there the same Atari XFD image that XFD claims at 40 was taken by JV3 at 70
+ * (ARCH-15). Unifying the buffer size without fixing this would have made the
+ * false positive the normal case.
+ *
+ * The rewrite walks the directory the way jv3_open() walks it — to the
+ * 0xFF 0xFF terminator, accumulating jv3_sizes[flags & 3] — and requires what
+ * that reader requires: the accumulated data must fit inside the file. A
+ * directory of noise does not add up to the file it sits in. */
 bool jv3_probe(const uint8_t *data, size_t size, size_t file_size,
                int *confidence)
 {
-    (void)data;
-    if (size < JV3_HEADER_SIZE || file_size < JV3_HEADER_SIZE + 256)
+    if (!data || size < JV3_HEADER_SIZE || file_size < JV3_HEADER_SIZE + 256)
         return false;
 
-    /* Check directory: at least some valid entries */
-    int valid = 0;
-    for (int i = 0; i < 100 && i < (int)(size / 3); i++) {
+    size_t total = 0;
+    int used = 0;
+    bool terminated = false;
+
+    for (int i = 0; i < JV3_DIR_ENTRIES; i++) {
         uint8_t trk = data[i * 3];
-        uint8_t flags = data[i * 3 + 2];
-        if (trk == JV3_FREE_ENTRY && data[i * 3 + 1] == JV3_FREE_ENTRY)
-            continue;  /* free entry */
-        if (trk < 80 && (flags & 0x03) < 4)
-            valid++;
+        uint8_t sid = data[i * 3 + 1];
+        uint8_t flg = data[i * 3 + 2];
+
+        if (trk == JV3_FREE_ENTRY && sid == JV3_FREE_ENTRY) {
+            terminated = true;
+            break;                      /* jv3_open() stops here too */
+        }
+
+        /* No TRS-80 drive has 96 tracks, and no JV3 sector id needs six bits.
+         * jv3_open() takes max_cyl+1 as the cylinder count, so an implausible
+         * track number here becomes an implausible geometry there. */
+        if (trk >= 96 || sid >= 64) return false;
+
+        total += jv3_sizes[flg & 0x03];
+        used++;
+
+        /* The reader breaks out when the running offset passes the end of the
+         * file, silently truncating the disk. That is not a JV3 image. */
+        if ((size_t)JV3_HEADER_SIZE + total > file_size) return false;
     }
 
-    if (valid >= 5) {
-        *confidence = 70;
-        return true;
-    }
-    return false;
+    if (used < 10) return false;        /* not even one track's worth */
+
+    const size_t consumed = (size_t)JV3_HEADER_SIZE + total;
+
+    /* Graded, because a two-sided JV3 carries a second directory block after
+     * side 0's data and then does not end exactly at `consumed`. An exact fit
+     * is the strong case; anything else is reported as the weak case it is. */
+    int conf;
+    if (consumed == file_size)      conf = 85;
+    else if (!terminated)           conf = 20;   /* directory ran to the end */
+    else                            conf = 35;
+
+    *confidence = conf;
+    return true;
 }
 
 static uft_error_t jv3_open(uft_disk_t *disk, const char *path,

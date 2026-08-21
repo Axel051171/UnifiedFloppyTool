@@ -592,6 +592,13 @@ def main() -> int:
         import plugin_registry_gate as _plugreg
         all_errors.append(("plugin registry capacity/lookup",
                            _plugreg.check(repo)))
+        # Three probe entry points had three buffer sizes, so one file came
+        # back as two formats depending on which one the caller used — and
+        # 4096 was too small for jv3_probe()'s 8960-byte floor, making JV3
+        # unidentifiable through uft_disk_open(). One constant now; this keeps
+        # it big enough and keeps literals out.
+        import probe_buffer_gate as _probebuf
+        all_errors.append(("probe buffer size", _probebuf.check(repo)))
 
     total = sum(len(e) for _, e in all_errors)
     print(f"Consistency check ({len(all_errors)} categories, root={repo}):")

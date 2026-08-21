@@ -352,7 +352,11 @@ int uft_smart_open(const char* path, const uft_smart_options_t* opts,
     size_t file_size = ftell(f);
     fseek(f, 0, SEEK_SET);
     
-    size_t header_size = (file_size > 65536) ? 65536 : file_size;
+    /* MF-449: the same constant every other probe entry point uses. This was
+     * a literal 65536 while uft_probe_file_format() used 4096 — two answers
+     * for one file, see ARCH-15. */
+    size_t header_size = (file_size > UFT_PROBE_BUFFER_SIZE)
+                             ? UFT_PROBE_BUFFER_SIZE : file_size;
     uint8_t* header = malloc(header_size);
     if (!header) {
         fclose(f);

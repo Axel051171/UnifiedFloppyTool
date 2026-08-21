@@ -311,37 +311,86 @@ TEST(a_tie_is_reported_as_a_tie) {
     ASSERT(g.runner_up_confidence < g.confidence);
 }
 
-TEST(the_probe_answer_depends_on_how_much_the_caller_read) {
-    /* ARCH-15, found while testing ARCH-13 and pinned here because it is worse
-     * than the tie it turned up next to.
+TEST(both_probe_entry_points_give_the_same_answer) {
+    /* ARCH-15, resolved in MF-449. Until then uft_probe_file_format() read 4096
+     * bytes and uft_smart_open() up to 65536, and the same file came back as
+     * two different formats:
      *
-     * uft_probe_file_format() reads 4096 bytes. uft_smart_open() reads up to
-     * 65536. Same file, two entry points, two different formats:
+     *     4096 bytes  -> XFD = 40, tied with JVC, DSK_SV, DSK_VEC, V9T9
+     *     65536 bytes -> JV3 = 70, alone
      *
-     *     4096 bytes  -> XFD=40, tied with JVC, DSK_SV, DSK_VEC and V9T9
-     *     65536 bytes -> JV3=70, alone
+     * The identification was a property of the buffer size the caller happened
+     * to choose. Worse, the larger buffer gave the wrong answer: JV3 is TRS-80,
+     * the file is Atari. Both halves had to be fixed — the shared constant
+     * UFT_PROBE_BUFFER_SIZE, and jv3_probe(), whose evidence ("the byte at
+     * stride 3 is below 80") could not fail.
      *
-     * The identification is a property of the buffer size the caller happened
-     * to choose, not of the file. And the larger buffer gives the WORSE answer:
-     * JV3 is TRS-80, the file is Atari. Both numbers are asserted exactly, so
-     * whichever way this is unified later, the change is visible. */
-    uft_probe_ranking_t small;
-    uft_probe_file_ranked(img("atrcopy_dos2sd.xfd"), &small);   /* 4096 */
-    ASSERT(small.winner != NULL);
-    ASSERT(strcmp(small.winner->name, "XFD") == 0);
-    ASSERT(small.tied == 5);        /* XFD, JVC, DSK_SV, DSK_VEC, V9T9 */
-    ASSERT(small.claimants == 7);   /* plus JV1 and XDM86 at 35 */
-
+     * Every reference image, through both doors, must now name one format. */
     uft_smart_options_t opts;
     uft_smart_options_init(&opts);
+
+    for (size_t i = 0; i < sizeof(k_expected)/sizeof(k_expected[0]); i++) {
+        const uft_format_plugin_t *direct = uft_probe_file_format(img(k_expected[i].file));
+        ASSERT(direct != NULL);
+
+        uft_smart_result_t res;
+        memset(&res, 0, sizeof(res));
+        ASSERT(uft_smart_open(img(k_expected[i].file), &opts, &res) == 0);
+
+        if (!res.detection.format_name ||
+            strcmp(res.detection.format_name, direct->name) != 0) {
+            printf("%s: probe=%s smart_open=%s\n", k_expected[i].file,
+                   direct->name,
+                   res.detection.format_name ? res.detection.format_name : "(none)");
+            _fail++;
+            uft_smart_close(&res);
+            return;
+        }
+        uft_smart_close(&res);
+    }
+
+    /* and the file that started it: XFD through both, no longer JV3 */
+    const uft_format_plugin_t *x = uft_probe_file_format(img("atrcopy_dos2sd.xfd"));
+    ASSERT(x != NULL);
+    ASSERT(strcmp(x->name, "XFD") == 0);
+
     uft_smart_result_t res;
     memset(&res, 0, sizeof(res));
     ASSERT(uft_smart_open(img("atrcopy_dos2sd.xfd"), &opts, &res) == 0);
-    ASSERT(res.detection.format_name != NULL);
-    ASSERT(strcmp(res.detection.format_name, "JV3") == 0);      /* 65536 */
-    ASSERT(res.detection.equally_ranked == 1);
-    ASSERT(res.detection.claimants == 8);
+    ASSERT(strcmp(res.detection.format_name, "XFD") == 0);
     uft_smart_close(&res);
+}
+
+TEST(jv3_no_longer_matches_arbitrary_bytes) {
+    /* The probe used to count `trk < 80 && (flags & 0x03) < 4` — the second
+     * half is vacuous for a two-bit field — so five hits in a hundred entries
+     * was a near certainty for any input, answered with confidence 70. */
+    const uft_format_plugin_t *jv3 = uft_get_format_plugin_by_name("JV3");
+    ASSERT(jv3 && jv3->probe);
+
+    /* a directory of plausible-looking noise: every track byte below 80 */
+    static unsigned char noise[16384];
+    for (size_t i = 0; i < sizeof(noise); i++)
+        noise[i] = (unsigned char)((i * 7) % 79);
+    int c = 0;
+    ASSERT(!jv3->probe(noise, sizeof(noise), sizeof(noise), &c));
+
+    /* and a directory whose sizes do add up to the file it sits in */
+    static unsigned char good[16384];
+    memset(good, 0xFF, sizeof(good));
+    for (int i = 0; i < 20; i++) {          /* 20 sectors of 256 bytes */
+        good[i * 3 + 0] = (unsigned char)(i / 10);   /* track */
+        good[i * 3 + 1] = (unsigned char)(i % 10);   /* sector id */
+        good[i * 3 + 2] = 0x00;                      /* flags: 256 bytes */
+    }
+    const size_t total = 0x2300 + 20 * 256;
+    c = 0;
+    ASSERT(jv3->probe(good, sizeof(good), total, &c));
+    ASSERT(c >= 85);                        /* exact fit */
+
+    /* one sector more than the file can hold */
+    c = 0;
+    ASSERT(!jv3->probe(good, sizeof(good), 0x2300 + 19 * 256, &c));
 }
 
 TEST(the_smart_open_report_says_when_the_format_is_not_certain) {
@@ -378,7 +427,8 @@ int main(void)
     RUN(d88_and_dmk_no_longer_claim_foreign_images);
     RUN(the_tightened_probes_still_accept_what_their_readers_read);
     RUN(a_tie_is_reported_as_a_tie);
-    RUN(the_probe_answer_depends_on_how_much_the_caller_read);
+    RUN(both_probe_entry_points_give_the_same_answer);
+    RUN(jv3_no_longer_matches_arbitrary_bytes);
     RUN(the_smart_open_report_says_when_the_format_is_not_certain);
     printf("\nResults: %d passed, %d failed\n", _pass, _fail);
     return _fail == 0 ? 0 : 1;

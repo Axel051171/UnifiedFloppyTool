@@ -1803,7 +1803,7 @@ Konvertierungspfade ausgewählt werden.
 
 ---
 
-### ARCH-15 — Die Formaterkennung hängt davon ab, wie viel der Aufrufer gelesen hat (2026-08-21, MF-448) → ⚠ OFFEN
+### ARCH-15 — Die Formaterkennung hängt davon ab, wie viel der Aufrufer gelesen hat (2026-08-21, MF-448) → ✓ BEHOBEN (MF-449), 17. Gate steht
 
 Gemessen beim Testen von ARCH-13, und gravierender als der Gleichstand daneben.
 
@@ -1823,10 +1823,61 @@ Beide Zahlen sind in `tests/test_register_all_formats.c` exakt festgenagelt
 (`the_probe_answer_depends_on_how_much_the_caller_read`), damit jede
 Vereinheitlichung sichtbar wird.
 
-**Nächster Schritt:** eine Konstante für die Probe-Puffergröße, von beiden
-Einstiegspunkten benutzt — und vorher die Frage beantworten, welche der beiden
-Antworten richtiger ist, statt die bequemere zu nehmen. Das braucht mehr
-Referenzmaterial als `tests/corpus_free` hat.
+**Behoben in MF-449.** Die Frage „welche Antwort ist richtiger" hatte eine
+Antwort, die kein zusätzliches Referenzmaterial brauchte: **keine von beiden**,
+und zwar aus drei getrennten Gründen.
+
+**Es waren nicht zwei Einstiegspunkte, sondern drei.**
+`uft_find_format_plugin_for_file()` war eine dritte Kopie der Probe-Schleife —
+eigener 4096-Byte-Stackpuffer, eigene Best-Confidence-Schleife, und danach ein
+Rückfall auf die Datei-Extension, genau die Rateheuristik, die
+`uft_smart_open()` in MF-444 verloren hat. Sie hatte im gesamten Baum keinen
+Aufrufer. Entfernt statt nachgezogen: drei Kopien einer Entscheidung sind der
+Grund, warum die Puffergrößen überhaupt auseinanderlaufen konnten.
+
+**4096 war zu klein für den Baum.** `jv3_probe()` beginnt mit
+
+```c
+if (size < JV3_HEADER_SIZE || ...) return false;    /* 8960 */
+```
+
+Durch `uft_probe_file_format()` — und damit durch `uft_disk_open()` — konnte
+JV3 also **nie** anschlagen. Ein Format, das das Werkzeug zu lesen behauptet und
+nicht identifizieren konnte. Es ist das einzige Probe im Baum über 4096 (das
+zweitgrößte ist D88/D77 mit 688).
+
+**65536 war zu groß, solange `jv3_probe()` so aussah.** Sein Beweis war
+
+```c
+if (trk < 80 && (flags & 0x03) < 4) valid++;
+```
+
+Die zweite Hälfte kann bei einem Zwei-Bit-Feld nicht falsch werden, also blieb
+„das Byte im Abstand 3 ist kleiner als 80" — für etwa ein Drittel beliebiger
+Daten wahr. Fünf Treffer in hundert Einträgen sind damit für jede Eingabe so
+gut wie sicher, und die Antwort war Konfidenz 70. Deshalb gewann JV3 (TRS-80)
+über eine Atari-Datei, sobald der Puffer groß genug war, dass das Probe
+überhaupt lief.
+
+Neu geschrieben nach demselben Muster wie D88/DMK in MF-447: geprüft wird, was
+`jv3_open()` selbst prüft — der Lauf bis zum `0xFF 0xFF`-Terminator, die Summe
+aus `jv3_sizes[flags & 3]`, und dass diese Summe plus Header in die Datei passt.
+Ein Verzeichnis aus Rauschen summiert sich nicht auf die Datei, in der es steht.
+
+**Eine Konstante:** `UFT_PROBE_BUFFER_SIZE = 65536` in
+`include/uft/uft_format_plugin.h`, benutzt von `uft_probe_file_format()`,
+`uft_probe_file_ranked()` und `uft_smart_open()`.
+
+**17. Gate** (`scripts/probe_buffer_gate.py`): vergleicht jede `size < X`-Schranke
+am Kopf eines Probes gegen die Konstante und verbietet Zahlen-Literale als
+Puffergröße. Verifiziert: mit `UFT_PROBE_BUFFER_SIZE 4096` meldet es
+`jv3_probe()`. Grenze ehrlich benannt — ein Probe, das seinen Bedarf zur
+Laufzeit errechnet, wird nicht erfasst.
+
+Nachweis: `tests/test_register_all_formats.c` —
+`both_probe_entry_points_give_the_same_answer` prüft alle elf Referenz-Images
+plus die XFD durch beide Türen, `jv3_no_longer_matches_arbitrary_bytes` prüft
+das Probe gegen ein Verzeichnis aus plausibel aussehendem Rauschen.
 
 ---
 

@@ -321,7 +321,8 @@ size_t uft_probe_file_ranked(const char *path, uft_probe_ranking_t *result) {
     if (fs < 0) { fclose(f); return 0; }
     if (fseek(f, 0, SEEK_SET) != 0) { fclose(f); return 0; }
 
-    size_t probe_size = (fs < 4096) ? (size_t)fs : 4096;
+    size_t probe_size = ((size_t)fs < UFT_PROBE_BUFFER_SIZE)
+                            ? (size_t)fs : UFT_PROBE_BUFFER_SIZE;
     uint8_t *buf = malloc(probe_size);
     if (!buf) { fclose(f); return 0; }
     if (fread(buf, 1, probe_size, f) != probe_size) {
@@ -352,7 +353,8 @@ const uft_format_plugin_t* uft_probe_file_format(const char *path) {
     if (fs < 0) { fclose(f); return NULL; }
     if (fseek(f, 0, SEEK_SET) != 0) { fclose(f); return NULL; }
 
-    size_t probe_size = (fs < 4096) ? (size_t)fs : 4096;
+    size_t probe_size = ((size_t)fs < UFT_PROBE_BUFFER_SIZE)
+                            ? (size_t)fs : UFT_PROBE_BUFFER_SIZE;
     uint8_t *buf = malloc(probe_size);
     if (!buf) { fclose(f); return NULL; }
 
@@ -385,54 +387,17 @@ const uft_format_plugin_t* uft_find_format_plugin_by_extension(const char* ext) 
     return NULL;
 }
 
-const uft_format_plugin_t* uft_find_format_plugin_for_file(const char* path) {
-    if (!path) return NULL;
-    
-    // Datei öffnen und erste Bytes lesen
-    FILE* f = fopen(path, "rb");
-    if (!f) return NULL;
-    
-    // Dateigröße ermitteln
-    if (fseek(f, 0, SEEK_END) != 0) { fclose(f); return NULL; }
-    size_t file_size = ftell(f);
-    if (fseek(f, 0, SEEK_SET) != 0) { fclose(f); return NULL; }
-    // Header lesen (mind. 512 Bytes für die meisten Formate)
-    uint8_t header[4096];
-    size_t header_size = fread(header, 1, sizeof(header), f);
-    fclose(f);
-    
-    if (header_size < 16) {
-        // Zu wenig Daten
-        return NULL;
-    }
-    
-    // Alle Plugins proben
-    const uft_format_plugin_t* best_plugin = NULL;
-    int best_confidence = 0;
-    
-    for (size_t i = 0; i < g_format_plugin_count; i++) {
-        if (!g_format_plugins[i]->probe) continue;
-        
-        int confidence = 0;
-        bool matches = g_format_plugins[i]->probe(header, header_size, 
-                                                   file_size, &confidence);
-        
-        if (matches && confidence > best_confidence) {
-            best_plugin = g_format_plugins[i];
-            best_confidence = confidence;
-        }
-    }
-    
-    // Fallback auf Extension
-    if (!best_plugin) {
-        const char* ext = strrchr(path, '.');
-        if (ext) {
-            best_plugin = uft_find_format_plugin_by_extension(ext);
-        }
-    }
-    
-    return best_plugin;
-}
+/* uft_find_format_plugin_for_file() stood here until MF-449.
+ *
+ * It was the THIRD implementation of "probe a file": its own 4096-byte stack
+ * buffer, its own copy of the best-confidence loop, and — after the loop — a
+ * fallback that guessed the format from the file extension, the same guess
+ * uft_smart_open() lost in MF-444 for claiming something about the content
+ * from something that is not the content.
+ *
+ * It had no caller anywhere in the tree. Removed rather than kept in step with
+ * uft_probe_file_ranked(), because three copies of one decision is how the
+ * buffer sizes drifted apart in the first place (ARCH-15). */
 
 size_t uft_registered_format_plugin_count(void) {
     return g_format_plugin_count;
