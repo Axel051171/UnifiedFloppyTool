@@ -1702,6 +1702,14 @@ Konsument ist um die Registry herumgewachsen und linkt Plugin-Symbole direkt
 (`extern const uft_format_plugin_t uft_format_plugin_d64;`). Ein Mechanismus,
 der nie funktioniert hat, wurde nicht repariert, sondern umgangen.
 
+**Dritte Schicht, gefunden in MF-445:** `MAX_FORMAT_PLUGINS` war **32**. Selbst
+mit korrigierter Duplikatsprüfung hätte die Registry 32 Plugins genommen und die
+restlichen 56 mit `UFT_ERROR_BUFFER_TOO_SMALL` abgewiesen — still. Drei
+unabhängige Deckel auf demselben Mechanismus, keiner davon sichtbar, weil eine
+leere Registry überall `NULL` antwortet. Jetzt 128, Überlauf schreibt nach
+stderr, und `scripts/plugin_registry_gate.py` vergleicht die Konstante gegen die
+tatsächliche Plugin-Zahl (+16 Reserve).
+
 **Fix (MF-444):** Duplikatsprüfung auf `.name` (über alle 88 eindeutig).
 `uft_register_all_formats()` ist idempotent — bereits registriert ist der
 gewünschte Endzustand, kein Fehler — und bricht nicht mehr beim ersten
@@ -1715,7 +1723,7 @@ abgewiesen, Bestand unverändert.
 
 ---
 
-### ARCH-10 — `uft_get_format_plugin(format)` ist für 82 von 88 Plugins ein Zufallstreffer (2026-08-21, MF-444) → ⚠ OFFEN, ~15 Aufrufstellen
+### ARCH-10 — `uft_get_format_plugin(format)` ist für 82 von 88 Plugins ein Zufallstreffer (2026-08-21, MF-444) → ✓ BEHOBEN (MF-445), Wächter steht
 
 Folgefund aus ARCH-9. Die Funktion liefert das **erste** registrierte Plugin mit
 der gesuchten `uft_format_t`. Da 82 Plugins `UFT_FORMAT_DSK` führen, hängt die
@@ -1736,16 +1744,47 @@ Bisher fiel das nicht auf, weil die Registry leer war (ARCH-9) und alle diese
 Pfade schlicht `NULL` bekamen. Mit funktionierender Registrierung werden sie
 scharf — und liefern dann still das falsche Plugin.
 
-**Nächster Schritt:** `uft_disk_t` trägt bereits das geöffnete Plugin bzw. den
-Namen; die Aufrufstellen auf `uft_get_format_plugin_by_name()` umstellen, eine
-Datei pro Commit, jede mit Test. Nicht in MF-444 erledigt: 15 Stellen in 7
-Dateien, jede mit eigenem Fehlerpfad — das ist eine eigene Aufgabe, keine
-Nebenwirkung.
+**Behoben in MF-445.** Die Annahme aus MF-444 („`uft_disk_t` trägt bereits das
+geöffnete Plugin") war falsch — der Struct trug nur `format`. Ein Kommentar in
+`src/core/uft_format_verify.c:22` sagte es sogar: *„Lookup plugin via registry
+(disk->plugin nicht im Struct)"*. Jemand hatte das Problem gesehen und
+umschifft.
 
-Zwischenzeitlich ist die Mehrdeutigkeit wenigstens sichtbar:
-`uft_count_format_plugins_for(format) > 1` beantwortet „kann diese ID ein Plugin
-überhaupt identifizieren?", und der Doc-Comment an `uft_get_format_plugin()`
-sagt es ausdrücklich.
+Der Fix ist die Diagnose ernst genommen: **die Diskette merkt sich ihr Plugin.**
+`struct uft_disk` bekommt `const struct uft_format_plugin *plugin`
+(**angehängt**, nicht eingefügt — der Struct ist public, das Layout ist ABI).
+`uft_disk_open()` hatte den Zeiger die ganze Zeit in der Hand und warf ihn weg;
+jetzt behält es ihn.
+
+Der schwerste Einzelfall war `uft_disk_close()`: es suchte das Plugin über
+`disk->format` und rief dessen `close()` auf `disk->plugin_data` auf — Speicher,
+den ein **anderes** Plugin alloziert hatte. Ein Free auf fremdem Speicher, der
+nur deshalb nie aufschlug, weil die Registry leer war (ARCH-9).
+
+| Gruppe | Stellen | Lösung |
+|---|---|---|
+| Diskette in der Hand | 11 | `uft_disk_plugin(disk)` |
+| nur eine Format-ID | 3 | `uft_resolve_format_plugin(id, pfad_hinweis, &kandidaten)` |
+| Aufrufer weiß es | neu | `uft_get_format_plugin_by_name()`, `uft_disk_convert_as()`, `uft_disk_convert_check_by_name()` |
+
+`uft_disk_plugin()` rät nicht: für eine handgebaute Diskette ohne Plugin-Eintrag
+wird die Format-ID **nur** verwendet, wenn genau ein Plugin sie führt. Sonst
+NULL — der Rückgabewert bekommt gleich `plugin_data` in die Hand.
+
+`uft_resolve_format_plugin()` ist eine Leiter, die auf jeder Sprosse ablehnen
+kann: eindeutige ID → Extension des Zielpfads unter den Plugins dieser ID →
+nichts. Nie ein First Match. Dass hier eine Extension entscheidet und
+`uft_smart_open()` genau diese Rückfalllinie in MF-444 verloren hat, ist kein
+Widerspruch: dort wurde der Name einer **existierenden** Datei zur Aussage über
+ihren Inhalt gemacht; hier existiert die Datei noch nicht und der Aufrufer
+**wählt** — „out.d81" ist eine Absichtserklärung, und genau das ist ein
+Zielformat.
+
+Nachweis: `tests/test_plugin_identity.c`. Registriert D64 **vor** D81 (damit ein
+First Match garantiert falsch liegt), öffnet ein D81 und prüft, dass die
+Diskette ihr eigenes Plugin kennt — inklusive der Assertion
+`uft_disk_plugin(disk) != uft_get_format_plugin(disk->format)`, dem Bug als
+Vergleich geschrieben. Ohne den Fix rot (verifiziert), mit ihm grün.
 
 ---
 

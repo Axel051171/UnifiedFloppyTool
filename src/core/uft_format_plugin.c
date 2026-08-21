@@ -11,6 +11,7 @@
 #include "uft/uft_format_plugin.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <ctype.h>
 #include <string.h>
 #include "uft/uft_compat.h"  /* strcasecmp */
 
@@ -18,7 +19,16 @@
 // Plugin Registry
 // ============================================================================
 
-#define MAX_FORMAT_PLUGINS 32
+/* MF-445: was 32. The tree defines 88 plugins, so uft_register_all_formats()
+ * would have filled the table and then returned UFT_ERROR_BUFFER_TOO_SMALL for
+ * the remaining 56 — the third gate in a row that silently capped the registry
+ * far below the plugin count (the other two: duplicate-check on .format, and
+ * having no caller at all; see ARCH-9).
+ *
+ * 128 leaves headroom, and scripts/check_consistency.py now compares this
+ * constant against the number of plugin definitions in src/ so the next plugin
+ * that would not fit fails the gate instead of disappearing. */
+#define MAX_FORMAT_PLUGINS 128
 
 static const uft_format_plugin_t* g_format_plugins[MAX_FORMAT_PLUGINS] = {0};
 static size_t g_format_plugin_count = 0;
@@ -82,6 +92,10 @@ uft_error_t uft_register_format_plugin(const uft_format_plugin_t* plugin) {
     }
     
     if (g_format_plugin_count >= MAX_FORMAT_PLUGINS) {
+        fprintf(stderr,
+                "[UFT] reject plugin '%s': registry full at %d entries - raise "
+                "MAX_FORMAT_PLUGINS in src/core/uft_format_plugin.c\n",
+                plugin->name, MAX_FORMAT_PLUGINS);
         return UFT_ERROR_BUFFER_TOO_SMALL;
     }
     
@@ -141,6 +155,92 @@ const uft_format_plugin_t* uft_get_format_plugin(uft_format_t format) {
         }
     }
     return NULL;
+}
+
+/* Does this plugin claim `ext` (without the dot)?
+ *
+ * MF-445: replaces a strtok() loop over a 256-byte stack copy. strtok keeps its
+ * cursor in static storage, so two threads walking the plugin list at once
+ * interleaved each other's tokenisation — and the copy silently truncated any
+ * extension list longer than 255 characters. This walks the string in place:
+ * no copy, no truncation, no shared cursor. Separators are ';', ',' and
+ * whitespace; a leading dot on either side is tolerated. */
+static bool plugin_claims_extension(const uft_format_plugin_t* plugin,
+                                    const char* ext) {
+    if (!plugin || !plugin->extensions || !ext || !*ext) return false;
+    if (*ext == '.') ext++;
+    size_t want = strlen(ext);
+    if (want == 0) return false;
+
+    for (const char* s = plugin->extensions; *s; ) {
+        while (*s == ';' || *s == ',' || *s == ' ' || *s == '	' || *s == '.') s++;
+        if (!*s) break;
+        const char* start = s;
+        while (*s && *s != ';' && *s != ',' && *s != ' ' && *s != '	') s++;
+        size_t len = (size_t)(s - start);
+        if (len == want) {
+            size_t i = 0;
+            while (i < len &&
+                   tolower((unsigned char)start[i]) == tolower((unsigned char)ext[i]))
+                i++;
+            if (i == len) return true;
+        }
+    }
+    return false;
+}
+
+/* MF-445: resolve a target plugin without guessing.
+ *
+ * A uft_format_t alone cannot name a plugin — 82 of 88 carry UFT_FORMAT_DSK.
+ * The ladder, each rung refusing to invent what it does not know:
+ *
+ *   1. the id, if exactly one registered plugin carries it
+ *   2. the extension of path_hint, among the plugins carrying that id
+ *   3. nothing
+ *
+ * Rung 2 deserves a word, because uft_smart_open() just LOST its extension
+ * fallback (MF-444) and this looks like the same move reversed. It is not. In
+ * smart_open the name of an existing file was used to make a claim about the
+ * bytes inside it — evidence it is not. Here the file does not exist yet and
+ * the caller is choosing what to write: "out.d81" is a statement of intent, and
+ * intent is exactly what a target format is.
+ *
+ * candidates_out, when given, receives how many plugins carried the id — so a
+ * caller that gets NULL can say "12 plugins claim this id" instead of the
+ * indistinguishable "unsupported". */
+const uft_format_plugin_t* uft_resolve_format_plugin(uft_format_t format,
+                                                     const char* path_hint,
+                                                     size_t* candidates_out) {
+    size_t n = uft_count_format_plugins_for(format);
+    if (candidates_out) *candidates_out = n;
+    if (n == 0) return NULL;
+    if (n == 1) return uft_get_format_plugin(format);
+
+    if (!path_hint) return NULL;
+    const char* dot = strrchr(path_hint, '.');
+    if (!dot || !dot[1]) return NULL;
+
+    const uft_format_plugin_t* hit = NULL;
+    for (size_t i = 0; i < g_format_plugin_count; i++) {
+        const uft_format_plugin_t* pl = g_format_plugins[i];
+        if (!pl || pl->format != format || !pl->extensions) continue;
+        if (!plugin_claims_extension(pl, dot + 1)) continue;
+        if (hit) return NULL;          /* two plugins claim it: still a guess */
+        hit = pl;
+    }
+    return hit;
+}
+
+const uft_format_plugin_t* uft_disk_plugin(const uft_disk_t* disk) {
+    if (!disk) return NULL;
+    if (disk->plugin) return disk->plugin;
+
+    /* No plugin recorded: the disk predates the field or was assembled by
+     * hand. Resolve from the container id only when it can identify exactly
+     * one plugin — a first match out of 82 would be a guess, and the caller
+     * uses the result to touch plugin_data. */
+    if (uft_count_format_plugins_for(disk->format) != 1) return NULL;
+    return uft_get_format_plugin(disk->format);
 }
 
 size_t uft_count_format_plugins_for(uft_format_t format) {
@@ -215,23 +315,14 @@ const uft_format_plugin_t* uft_find_format_plugin_by_extension(const char* ext) 
     if (*ext == '.') ext++;
     
     for (size_t i = 0; i < g_format_plugin_count; i++) {
-        const char* exts = g_format_plugins[i]->extensions;
-        if (!exts) continue;
-        
-        // Extensions parsen (semikolon-getrennt)
-        char buffer[256];
-        strncpy(buffer, exts, sizeof(buffer) - 1);
-        buffer[sizeof(buffer) - 1] = '\0';
-        
-        char* token = strtok(buffer, ";");
-        while (token) {
-            if (strcasecmp(token, ext) == 0) {
-                return g_format_plugins[i];
-            }
-            token = strtok(NULL, ";");
-        }
+        if (plugin_claims_extension(g_format_plugins[i], ext))
+            return g_format_plugins[i];
     }
-    
+
+    /* First match. 13 of the 104 extensions in the tree are claimed by more
+     * than one plugin (".dsk" by 18), so for those the answer above is a pick,
+     * not an identification — callers that must be right use
+     * uft_resolve_format_plugin() or uft_get_format_plugin_by_name(). */
     return NULL;
 }
 

@@ -15,7 +15,7 @@
 
 static inline const uft_format_plugin_t *disk_plugin(uft_disk_t *disk) {
     if (!disk) return NULL;
-    return uft_get_format_plugin(disk->format);
+    return uft_disk_plugin(disk);   /* MF-445: the plugin that opened it */
 }
 
 /* Report progress; return false if user cancelled */

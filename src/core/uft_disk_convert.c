@@ -5,9 +5,20 @@
 #include "uft/uft_disk_convert.h"
 #include "uft/uft_disk_stream.h"
 #include "uft/uft_format_plugin.h"
+#include "uft/uft_log.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+static uft_error_t convert_check_plugins(const uft_format_plugin_t *sp,
+                                         const uft_format_plugin_t *tp,
+                                         uft_convert_mode_t *recommended_mode,
+                                         bool *lossy_out);
+static uft_error_t convert_to_path(uft_disk_t *source, const char *target_path,
+                                   uft_format_t target_format,
+                                   const uft_format_plugin_t *tplugin,
+                                   const uft_disk_convert_options_t *options,
+                                   uft_convert_result_t *result);
 
 typedef struct {
     uft_disk_t            *target;
@@ -55,7 +66,7 @@ uft_error_t uft_disk_convert_to_disk(uft_disk_t *source, uft_disk_t *target,
     memset(result, 0, sizeof(*result));
     result->mode_used = UFT_CONVERT_SECTOR;
 
-    const uft_format_plugin_t *tplugin = uft_get_format_plugin(target->format);
+    const uft_format_plugin_t *tplugin = uft_disk_plugin(target);   /* MF-445 */
     if (!tplugin || !tplugin->write_track) return UFT_ERROR_NOT_SUPPORTED;
 
     convert_ctx_t ctx = { target, tplugin, result, options };
@@ -79,22 +90,21 @@ uft_error_t uft_disk_convert_to_disk(uft_disk_t *source, uft_disk_t *target,
     return err;
 }
 
-uft_error_t uft_disk_convert(uft_disk_t *source, const char *target_path,
-                              uft_format_t target_format,
-                              const uft_disk_convert_options_t *options,
-                              uft_convert_result_t *result)
+/* One body, two ways in: by container id (resolved, may refuse) and by plugin
+ * name (never ambiguous). MF-445. */
+static uft_error_t convert_to_path(uft_disk_t *source, const char *target_path,
+                                   uft_format_t target_format,
+                                   const uft_format_plugin_t *tplugin,
+                                   const uft_disk_convert_options_t *options,
+                                   uft_convert_result_t *result)
 {
-    if (!source || !target_path || !result) return UFT_ERROR_NULL_POINTER;
+    if (!tplugin->open) return UFT_ERROR_NOT_SUPPORTED;
 
-    /* Find plugin by format enum */
-    const uft_format_plugin_t *tplugin = uft_get_format_plugin(target_format);
-    if (!tplugin || !tplugin->open) return UFT_ERROR_NOT_SUPPORTED;
-
-    /* Create empty target file (plugin-specific) */
     uft_disk_t *target = calloc(1, sizeof(uft_disk_t));
     if (!target) return UFT_ERROR_NO_MEMORY;
 
     target->format = target_format;
+    target->plugin = tplugin;     /* MF-445: so close() finds the same one */
     target->read_only = false;
     target->geometry = source->geometry;
 
@@ -112,14 +122,82 @@ uft_error_t uft_disk_convert(uft_disk_t *source, const char *target_path,
     return err;
 }
 
+uft_error_t uft_disk_convert(uft_disk_t *source, const char *target_path,
+                              uft_format_t target_format,
+                              const uft_disk_convert_options_t *options,
+                              uft_convert_result_t *result)
+{
+    if (!source || !target_path || !result) return UFT_ERROR_NULL_POINTER;
+
+    /* MF-445: a uft_format_t does not name a plugin — 82 of 88 carry
+     * UFT_FORMAT_DSK, so uft_get_format_plugin(target_format) used to write
+     * whichever plugin had registered first into a file the caller had named
+     * something else entirely. The resolver takes the id when it is unique and
+     * otherwise the extension the caller chose, and refuses rather than picks. */
+    size_t candidates = 0;
+    const uft_format_plugin_t *tplugin =
+        uft_resolve_format_plugin(target_format, target_path, &candidates);
+    if (!tplugin) {
+        if (candidates > 1) {
+            UFT_WARN("[convert] Zielformat nicht bestimmbar: %zu Plugins fuehren "
+                     "diese Format-ID und '%s' entscheidet nicht - "
+                     "uft_disk_convert_as() mit Plugin-Namen verwenden",
+                     candidates, target_path);
+        }
+        return UFT_ERROR_NOT_SUPPORTED;
+    }
+    return convert_to_path(source, target_path, target_format, tplugin,
+                           options, result);
+}
+
+uft_error_t uft_disk_convert_as(uft_disk_t *source, const char *target_path,
+                                 const char *target_plugin_name,
+                                 const uft_disk_convert_options_t *options,
+                                 uft_convert_result_t *result)
+{
+    if (!source || !target_path || !target_plugin_name || !result)
+        return UFT_ERROR_NULL_POINTER;
+
+    const uft_format_plugin_t *tplugin =
+        uft_get_format_plugin_by_name(target_plugin_name);
+    if (!tplugin) return UFT_ERROR_NOT_SUPPORTED;
+
+    return convert_to_path(source, target_path, tplugin->format, tplugin,
+                           options, result);
+}
+
 uft_error_t uft_disk_convert_check(uft_format_t source_format,
                                     uft_format_t target_format,
                                     uft_convert_mode_t *recommended_mode,
                                     bool *lossy_out)
 {
-    const uft_format_plugin_t *sp = uft_get_format_plugin(source_format);
-    const uft_format_plugin_t *tp = uft_get_format_plugin(target_format);
+    /* MF-445: this reports whether a conversion loses weak bits or flux, from
+     * the capabilities of the two plugins. With an ambiguous container id it
+     * used to read the capabilities of whichever plugin registered first and
+     * answer "lossy: no" on that basis — a verdict about data loss, derived
+     * from a plugin the caller never named. Ambiguity is now refused. */
+    const uft_format_plugin_t *sp = uft_resolve_format_plugin(source_format, NULL, NULL);
+    const uft_format_plugin_t *tp = uft_resolve_format_plugin(target_format, NULL, NULL);
     if (!sp || !tp) return UFT_ERROR_NOT_SUPPORTED;
+    return convert_check_plugins(sp, tp, recommended_mode, lossy_out);
+}
+
+uft_error_t uft_disk_convert_check_by_name(const char *source_plugin,
+                                            const char *target_plugin,
+                                            uft_convert_mode_t *recommended_mode,
+                                            bool *lossy_out)
+{
+    const uft_format_plugin_t *sp = uft_get_format_plugin_by_name(source_plugin);
+    const uft_format_plugin_t *tp = uft_get_format_plugin_by_name(target_plugin);
+    if (!sp || !tp) return UFT_ERROR_NOT_SUPPORTED;
+    return convert_check_plugins(sp, tp, recommended_mode, lossy_out);
+}
+
+static uft_error_t convert_check_plugins(const uft_format_plugin_t *sp,
+                                          const uft_format_plugin_t *tp,
+                                          uft_convert_mode_t *recommended_mode,
+                                          bool *lossy_out)
+{
     if (!sp->read_track || !tp->write_track) return UFT_ERROR_NOT_SUPPORTED;
 
     if (recommended_mode) *recommended_mode = UFT_CONVERT_SECTOR;

@@ -584,6 +584,14 @@ def main() -> int:
         import extern_decl_conflicts as _extern
         all_errors.append(("extern vs definition arity",
                            _extern.check(repo)))
+        # The registry could hold 7 of 88 plugins (duplicate-check on the
+        # container id, MAX_FORMAT_PLUGINS=32, and no caller at all), and every
+        # cap failed silently because an empty registry answers NULL. MF-445
+        # fixed all three; this keeps the capacity honest, .name unique, and
+        # new uft_get_format_plugin() call sites out.
+        import plugin_registry_gate as _plugreg
+        all_errors.append(("plugin registry capacity/lookup",
+                           _plugreg.check(repo)))
 
     total = sum(len(e) for _, e in all_errors)
     print(f"Consistency check ({len(all_errors)} categories, root={repo}):")

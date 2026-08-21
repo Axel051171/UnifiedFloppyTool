@@ -221,6 +221,21 @@ struct uft_disk {
 
     /* Metadata (Key-Value + Annotations, set via uft_meta_* API) */
     void*               meta;          ///< Opaque uft_meta_store_t*
+
+    /* Which plugin opened this disk (MF-445).
+     *
+     * Appended, never inserted — this struct is public and its layout is ABI.
+     *
+     * Until now the disk stored only `format`, and every consumer recovered the
+     * plugin with uft_get_format_plugin(disk->format). 82 of 88 plugins carry
+     * UFT_FORMAT_DSK, so that lookup returns whichever registered first: open a
+     * D81 and close it, and close() belonged to a different plugin than the one
+     * that allocated plugin_data. uft_disk_open() already held the right
+     * pointer and discarded it.
+     *
+     * Read it through uft_disk_plugin(), which handles disks built before this
+     * field existed. */
+    const struct uft_format_plugin* plugin;
 };
 
 /* Forward declarations for layer types (full defs in uft_track.h) */
@@ -773,6 +788,29 @@ size_t uft_registered_format_plugin_count(void);
  * across all 88 (MF-444).
  */
 const uft_format_plugin_t* uft_get_format_plugin_by_name(const char* name);
+
+/**
+ * @brief Das Plugin, das diese Diskette geöffnet hat
+ *
+ * Returns disk->plugin when the disk was opened through a plugin. For a disk
+ * assembled by hand (GUI, legacy paths) that field is NULL; the container id is
+ * then used, but ONLY if exactly one registered plugin carries it. If the id is
+ * ambiguous the answer is NULL — no first-match guess, because the caller is
+ * about to hand plugin_data to whatever comes back (MF-445).
+ */
+const uft_format_plugin_t* uft_disk_plugin(const uft_disk_t* disk);
+
+/**
+ * @brief Ziel-Plugin bestimmen, ohne zu raten (MF-445)
+ *
+ * Ladder: unique format id → extension of @p path_hint among the plugins
+ * carrying that id → NULL. Never a first-match pick. @p candidates_out
+ * (optional) receives how many plugins carry @p format, so a NULL result can be
+ * reported precisely instead of as a plain "unsupported".
+ */
+const uft_format_plugin_t* uft_resolve_format_plugin(uft_format_t format,
+                                                     const char* path_hint,
+                                                     size_t* candidates_out);
 
 /**
  * @brief Wie viele registrierte Plugins diese Container-ID führen

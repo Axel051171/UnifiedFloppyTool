@@ -87,8 +87,7 @@ static uft_error_t fuse_best_crc(uft_recovery_fusion_t *rec,
                                    uft_unified_progress_fn progress,
                                    void *user_data)
 {
-    const uft_format_plugin_t *tplugin =
-        uft_get_format_plugin(rec->target->format);
+    const uft_format_plugin_t *tplugin = uft_disk_plugin(rec->target);  /* MF-445 */
     if (!tplugin || !tplugin->write_track) return UFT_ERROR_NOT_SUPPORTED;
 
     int cyls = rec->target->geometry.cylinders;
@@ -103,8 +102,7 @@ static uft_error_t fuse_best_crc(uft_recovery_fusion_t *rec,
             size_t best_ok_count = 0;
 
             for (fusion_source_t *s = rec->sources; s; s = s->next) {
-                const uft_format_plugin_t *sp =
-                    uft_get_format_plugin(s->disk->format);
+                const uft_format_plugin_t *sp = uft_disk_plugin(s->disk);  /* MF-445 */
                 if (!sp || !sp->read_track) continue;
 
                 uft_track_t tr;

@@ -130,6 +130,7 @@ uft_disk_t* uft_disk_open(const char *path, bool read_only) {
     disk->path_buf[sizeof(disk->path_buf) - 1] = '\0';
     disk->path = disk->path_buf;
     disk->format = plugin->format;
+    disk->plugin = plugin;      /* MF-445: remember it instead of guessing later */
     disk->read_only = read_only;
 
     /* 4. Delegate to plugin */
@@ -150,9 +151,14 @@ void uft_disk_close(void *disk_v) {
     uft_disk_t *disk = (uft_disk_t *)disk_v;
     if (!disk) return;
 
-    /* Plugin close if opened */
+    /* Plugin close if opened.
+     *
+     * MF-445: this used to look the plugin up by disk->format. With 82 plugins
+     * on UFT_FORMAT_DSK that meant close() could belong to a different plugin
+     * than the one whose open() allocated disk->plugin_data — a free of foreign
+     * memory, and the registry was empty so it never surfaced. */
     if (disk->is_open) {
-        const uft_format_plugin_t *plugin = uft_get_format_plugin(disk->format);
+        const uft_format_plugin_t *plugin = uft_disk_plugin(disk);
         if (plugin && plugin->close)
             plugin->close(disk);
     }

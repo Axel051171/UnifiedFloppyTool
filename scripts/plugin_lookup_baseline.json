@@ -1,0 +1,4 @@
+{
+  "_doc": "Files calling uft_get_format_plugin() as of MF-445. The function is correct for a container id carried by exactly one plugin; it is a first-match for the other 82. An entry here is a KNOWN site, not an endorsed one.",
+  "accepted": []
+}

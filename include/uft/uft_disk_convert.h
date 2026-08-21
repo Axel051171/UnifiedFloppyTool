@@ -53,10 +53,29 @@ uft_error_t uft_disk_convert_to_disk(uft_disk_t *source, uft_disk_t *target,
                                        const uft_disk_convert_options_t *options,
                                        uft_convert_result_t *result);
 
+/**
+ * @brief Konvertieren, Ziel-Plugin über seinen Namen ("D81", "G64", ...)
+ *
+ * MF-445: uft_disk_convert() nimmt eine uft_format_t, und 82 der 88 Plugins
+ * führen UFT_FORMAT_DSK. Wenn der Aufrufer weiß, welches Plugin er will, sagt
+ * er es hier — dann gibt es nichts aufzulösen und nichts abzulehnen.
+ */
+uft_error_t uft_disk_convert_as(uft_disk_t *source,
+                                 const char *target_path,
+                                 const char *target_plugin_name,
+                                 const uft_disk_convert_options_t *options,
+                                 uft_convert_result_t *result);
+
 uft_error_t uft_disk_convert_check(uft_format_t source_format,
                                     uft_format_t target_format,
                                     uft_convert_mode_t *recommended_mode,
                                     bool *lossy_out);
+
+/** @brief Wie uft_disk_convert_check(), aber über eindeutige Plugin-Namen. */
+uft_error_t uft_disk_convert_check_by_name(const char *source_plugin,
+                                            const char *target_plugin,
+                                            uft_convert_mode_t *recommended_mode,
+                                            bool *lossy_out);
 
 uft_error_t uft_convert_result_to_text(const uft_convert_result_t *result,
                                          char *buffer, size_t buffer_size);

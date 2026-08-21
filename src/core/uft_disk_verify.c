@@ -46,7 +46,7 @@ static uft_error_t verify_pair_visitor(uft_disk_t *a, uft_disk_t *b,
 {
     (void)b;  /* b = reference, already read into tb */
     verify_ctx_t *ctx = user_data;
-    const uft_format_plugin_t *plugin = uft_get_format_plugin(a->format);
+    const uft_format_plugin_t *plugin = uft_disk_plugin(a);   /* MF-445 */
 
     uft_verify_track_result_t tr;
     memset(&tr, 0, sizeof(tr));
@@ -154,7 +154,7 @@ static uft_error_t self_visitor(uft_disk_t *disk, int cyl, int head,
                                   uft_track_t *track1, void *user_data)
 {
     self_ctx_t *ctx = user_data;
-    const uft_format_plugin_t *plugin = uft_get_format_plugin(disk->format);
+    const uft_format_plugin_t *plugin = uft_disk_plugin(disk);   /* MF-445 */
     if (!plugin || !plugin->read_track) return UFT_ERROR_NOT_SUPPORTED;
 
     uft_track_t track2;

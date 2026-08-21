@@ -177,7 +177,7 @@ uft_error_t uft_disk_transaction_commit(uft_transaction_t *tx) {
     if (!tx) return UFT_ERROR_NULL_POINTER;
     if (tx->aborted) return UFT_ERROR_INVALID_STATE;
 
-    const uft_format_plugin_t *plugin = uft_get_format_plugin(tx->disk->format);
+    const uft_format_plugin_t *plugin = uft_disk_plugin(tx->disk);   /* MF-445 */
     if (!plugin || !plugin->write_track) return UFT_ERROR_NOT_SUPPORTED;
 
     /* Two-phase: first pass = dry-run check all tracks writable

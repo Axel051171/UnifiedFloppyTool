@@ -19,8 +19,9 @@ uft_error_t uft_generic_verify_track(uft_disk_t *disk, int cyl, int head,
                                       const uft_track_t *reference) {
     if (!disk || !reference) return UFT_ERROR_INVALID_STATE;
 
-    /* Lookup plugin via registry (disk->plugin nicht im Struct) */
-    const uft_format_plugin_t *plugin = uft_get_format_plugin(disk->format);
+    /* MF-445: disk->plugin IS im Struct — der Kommentar hier war die
+     * Diagnose, jetzt ist es der Fix. */
+    const uft_format_plugin_t *plugin = uft_disk_plugin(disk);
     if (!plugin || !plugin->read_track) return UFT_ERROR_NOT_SUPPORTED;
 
     uft_track_t actual;
@@ -72,7 +73,7 @@ uft_error_t uft_generic_verify_track(uft_disk_t *disk, int cyl, int head,
 uft_error_t uft_weak_bit_verify_track(uft_disk_t *disk, int cyl, int head,
                                        const uft_track_t *reference) {
     if (!disk || !reference) return UFT_ERROR_INVALID_STATE;
-    const uft_format_plugin_t *plugin = uft_get_format_plugin(disk->format);
+    const uft_format_plugin_t *plugin = uft_disk_plugin(disk);   /* MF-445 */
     if (!plugin || !plugin->read_track) return UFT_ERROR_NOT_SUPPORTED;
 
     uft_track_t actual;
@@ -150,7 +151,7 @@ uft_error_t uft_weak_bit_verify_track(uft_disk_t *disk, int cyl, int head,
 uft_error_t uft_flux_verify_track(uft_disk_t *disk, int cyl, int head,
                                    const uft_track_t *reference) {
     if (!disk || !reference) return UFT_ERROR_INVALID_STATE;
-    const uft_format_plugin_t *plugin = uft_get_format_plugin(disk->format);
+    const uft_format_plugin_t *plugin = uft_disk_plugin(disk);   /* MF-445 */
     if (!plugin || !plugin->read_track) return UFT_ERROR_NOT_SUPPORTED;
 
     uft_track_t actual;
