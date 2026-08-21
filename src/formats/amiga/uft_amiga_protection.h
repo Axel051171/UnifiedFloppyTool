@@ -39,7 +39,12 @@ extern "C" {
 #define AMIGA_SYNC_BTIP         0xA245  /* Beyond the Ice Palace */
 #define AMIGA_SYNC_MERCENARY    0xA89A  /* Mercenary, Backlash */
 #define AMIGA_SYNC_ALT1         0x448A  /* Alternative sync */
-#define AMIGA_SYNC_INDEX        0xF8BC  /* Index copy marker */
+/* MF-452: KEIN Sync-Muster. In X-Copy (`xcopy.i`) ist $F8BC der Wert, den die
+ * Variable `sync` annimmt, um "kein Custom-Sync, index-synchron kopieren" zu
+ * bedeuten (`xcop.s:2108`). Er steht nie auf einer Diskette und darf nicht
+ * gesucht werden. Als Konstante behalten, damit der naechste Leser der
+ * X-Copy-Quelle ihn hier wiederfindet — mit dieser Erklaerung. */
+#define AMIGA_MODE_INDEXCOPY    0xF8BC  /* Modus-Sentinel, kein Sync */
 
 /* Track length constants (from XCopy Pro) */
 #define AMIGA_TRACKLEN_DEFAULT  0x30C0  /* 12480 bytes - Standard DD */
@@ -69,7 +74,9 @@ typedef enum {
     SYNC_TYPE_ARKANOID,         /* $9521 */
     SYNC_TYPE_BTIP,             /* $A245 - Beyond the Ice Palace */
     SYNC_TYPE_MERCENARY,        /* $A89A */
-    SYNC_TYPE_INDEX_COPY,       /* $F8BC */
+    SYNC_TYPE_INDEX_COPY,       /* MF-452: wird nicht mehr erzeugt — $F8BC ist
+                                 * kein Sync. Enum-Wert bleibt stehen, damit
+                                 * die Nummerierung dahinter stabil ist (ABI). */
     SYNC_TYPE_CUSTOM            /* Other non-standard */
 } uft_amiga_sync_type_t;
 

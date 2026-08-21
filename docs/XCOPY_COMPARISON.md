@@ -1,0 +1,174 @@
+# X-Copy — Quellenvergleich, Nachtrag 2026-08-21
+
+**Dieses Dokument ist ein Delta.** Zwei ältere Dateien decken das Thema bereits
+ab und werden hier nicht wiederholt:
+
+| Dokument | Inhalt | Stand |
+|---|---|---|
+| [`XCOPY_ALGORITHM_MIGRATION.md`](XCOPY_ALGORITHM_MIGRATION.md) | 7 portierbare Algorithmen (Single-Pass-Decode, Multi-Pattern-Sync, GAP-Histogramm, `getracklen`, `clockbits`, syncpos-Tabelle, 2-Rev-Index-Capture) | 2026-04-24 |
+| [`XCOPY_INTEGRATION_TODO.md`](XCOPY_INTEGRATION_TODO.md) | T1–T8 Integrationsplan; Statusabgleich MF-421: alles erledigt außer T3-Rest | 2026-04-23 / 2026-08-18 |
+
+Bei einem erneuten Durchgang durch `xcopy_src/xcop.s`, `xio.s`, `xcopy.i` und
+die `xvs.library`-Autodocs kamen **drei Fehler in unserem eigenen Code** heraus,
+die in keinem der beiden Dokumente stehen. Sie sind unten belegt.
+
+---
+
+## Lizenzlage — offener Punkt aus T1
+
+`XCOPY_INTEGRATION_TODO.md` T1 hält fest: Virus-Signatur-Schema steht mit 48
+Einträgen, **die Byte-Pattern selbst sind PENDING und bräuchten eine
+xvs.library-Extraktion.**
+
+Dazu aus der erneuten Durchsicht: `xvslibrary/xvs/Developer/C/clib/xvs_protos.h`
+trägt
+
+```
+Copyright © 2001 Georg Hörmann and Dirk Stöcker
+All Rights Reserved
+```
+
+und im gesamten Archiv liegt kein Lizenztext, der eine Weiterverwendung
+erlaubt. Auch `xcop.s:4049 virustab` — 110 `(Offset, 32-Bit-Wert)`-Paare — ist
+eine fremde Datenbank ohne Lizenz.
+
+**Konsequenz für T1: die Pattern-Extraktion ist nicht durchführbar,** solange
+die Herkunft nicht belegt ist. Dieselbe Regel wie bei `src/switch/` (MF-441).
+Das Schema kann bleiben; die Einträge müssen aus einer Quelle kommen, deren
+Lizenz das hergibt, oder leer bleiben und ehrlich als leer gemeldet werden.
+
+Fachlich kommt hinzu: ein einzelner 32-Bit-Vergleich an festem Offset erzeugt
+über 110 Signaturen eine messbare Falsch-Positiv-Rate. X-Copy weiß das selbst —
+`WHATS_NEW.DOC` begründet den CONTINUE-Knopf mit *„only implemented for the
+case that XCopy detects a harmless bootblock as a virus"*.
+
+---
+
+## Fund 1 — `0xF8BC` ist kein Sync, und wir suchen danach
+
+`xcopy_src/xcopy.i`:
+
+```
+INDEXCOPY = $F8BC
+```
+
+`xcop.s:2108-2110` benutzt den Wert als **Modus-Sentinel**:
+
+```asm
+    move.w  sync,D1
+    cmp.w   #INDEXCOPY,D1
+    beq.s   stdsync         ; -> NUR nach $4489 suchen, index-synchron kopieren
+```
+
+`$F8BC` bedeutet damit ausdrücklich *„kein Custom-Sync — nimm den Standard und
+synchronisiere auf den Index"*. Der Wert steht **nie auf einer Diskette**.
+
+UFT führt ihn als Sync-Muster:
+
+| Ort | |
+|---|---|
+| `src/analysis/uft_track_analysis.c:21` | in `AMIGA_SYNCS[]` |
+| `src/analysis/uft_track_analysis.c:854` | zweite Kopie derselben Liste |
+| `src/analysis/uft_track_analysis.c:977` | `case 0xF8BC:` → meldet `"Index Copy Protection"` |
+| `src/formats/amiga/uft_amiga_protection.h:42` | `AMIGA_SYNC_INDEX 0xF8BC` |
+
+Ein 16-Bit-Muster trifft in einem MFM-Bitstream im Mittel alle 65536 Bit — auf
+einer ~100.000-Bit-Spur also ein- bis zweimal zufällig. Der Befund ist Rauschen
+mit einem Namen davor.
+
+---
+
+## Fund 2 — Das 16-Byte-Sektor-Label wird gelesen und verworfen
+
+`src/flux/uft_flux_decoder.c:1103-1106`:
+
+```c
+amiga_read_field(bits, bit_count, &pos, 16, label, &hdr_csum);
+(void)label;  /* OS-recovery info — preserved on disk, unused here */
+```
+
+`flux_decoded_sector_t` hat kein Feld dafür. Das Label liegt im
+Header-Prüfsummenbereich, wird also gelesen und geht in die Prüfsumme ein —
+danach ist es weg.
+
+Bei einem Werkzeug mit dem Grundsatz „Kein Bit verloren" ist das stiller
+Datenverlust auf dem Hauptpfad. AmigaDOS legt dort Recovery-Informationen ab,
+und mehrere Schutzverfahren benutzen das Feld als Ablage.
+
+---
+
+## Fund 3 — Der Flux-Decoder kann keine Amiga-HD und keine 82 Zylinder
+
+`src/flux/uft_flux_decoder.c:1111`:
+
+```c
+if (track > 159 || sec > 10) return FLUX_ERR_NO_SYNC;
+```
+
+- `sec > 10` — richtig für DD (11 Sektoren, 0–10), **verwirft HD** (22
+  Sektoren, 0–21).
+- `track > 159` — richtig für 80 Zylinder, **verwirft Zylinder 80 und 81**.
+
+Innerhalb von UFT widersprüchlich: `src/formats/adf/uft_adf_plugin.c:96` führt
+`"HD variant (1760 KB)"` als `UFT_FEATURE_SUPPORTED`, `uft_adf_parser_v2.c:39`
+kennt `ADF_SIZE_HD`. Der Sektorpfad kann HD, der Fluxpfad nicht — SCP→ADF einer
+HD-Diskette liefert nichts.
+
+Zum Zylinderlimit: X-Copy erlaubt `endtrack DC.W 79 ; 0 - 81` (`xio.s:210`) und
+steppt in `track0` bis 83 (`xcop.s:1836`). Zylinder 80/81 sind genau der
+Bereich, in dem Zusatzkapazität und Kopierschutz liegen.
+
+---
+
+## Fund 4 — Drei Amiga-Sync-Tabellen, die sich widersprechen
+
+Ergänzung zu `XCOPY_ALGORITHM_MIGRATION.md` §2, das die Multi-Pattern-Suche
+vorschlägt: die Muster **liegen bereits dreimal im Baum**, in drei Fassungen.
+
+| Datei | Inhalt |
+|---|---|
+| `src/analysis/uft_track_analysis.h:41-44` | `0x4489`, `0x9521`, `0xA245` „Ocean/Imagine", `0xA89A` |
+| `src/formats/amiga/uft_amiga_protection.h:35-42` | dieselben, aber `0xA245` = **„Beyond the Ice Palace"**, plus `0x448A`, `0xF8BC` |
+| `src/protection/uft_amiga_protection.c:23,52` | kennt keine davon, dafür `0x8a91` und `0x8914` |
+
+Und der Decoder (`uft_flux_decoder.c:1169`) benutzt keine davon — er sucht nur
+`MFM_SYNC_PATTERN` = `0x4489`. Die Multi-Pattern-Suche aus dem Migrationsbericht
+ist damit nicht „noch zu bauen", sondern „dreimal gebaut und nirgends
+angeschlossen".
+
+Dasselbe Muster wie ARCH-9 / ARCH-10 / ARCH-14: ein Fakt, mehrfach
+implementiert, und welche Fassung gilt, entscheidet der Aufrufweg.
+
+---
+
+## Was X-Copy an Verfahren hat, das keines der drei Dokumente abdeckt
+
+**Gemessene statt nomineller Spurkapazität, pro Laufwerk.**
+`xcop.s:1929 SpeedCheck` löscht die Spur mit `$AAAA`, liest zwei Umdrehungen und
+bestimmt über `getracklen` die tatsächliche Kapazität; `drilen DS.W 4`
+(`xcop.s:2085`) hält je Laufwerk ein Ergebnis, `mestrack` setzt die
+Schreiblänge individuell.
+
+`XCOPY_ALGORITHM_MIGRATION.md` §4 behandelt `getracklen` als
+Puffer-Längenbestimmung — die **Kalibrierung** darüber, also „wie viel kann
+*dieses* Laufwerk pro Umdrehung", steht dort nicht. UFT hat in
+`src/hal/uft_drive.c:12-27` nur nominelle Werte (`.rpm = 300.0`); das ist die
+Bezugsgröße für `uft_write_precomp.c` und für jede Aussage „lange Spur".
+
+Braucht Hardware (UFT-008), deshalb hier nur festgehalten.
+
+---
+
+## Reihenfolge
+
+| # | Aufgabe | Status |
+|---|---|---|
+| 1 | `0xF8BC` aus den Sync-Tabellen | Fund 1 |
+| 2 | Sektor-Label durchreichen | Fund 2 |
+| 3 | HD- und Zylindergrenzen | Fund 3 |
+| 4 | Amiga-Sync-SSOT + Decoder anschließen | Fund 4 + MIGRATION §2 |
+| 5 | Laufwerkskalibrierung im HAL | HW-Bench nötig |
+
+1–3 sind Fehlerbehebungen an Bestehendem und fallen nicht unter die
+EINFRIER-REGEL (MF-363). 4 ist eine Zusammenführung vorhandener Tabellen, keine
+neue Formatkenntnis.

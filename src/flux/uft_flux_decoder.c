@@ -1035,6 +1035,19 @@ flux_encoding_t flux_detect_encoding(const flux_raw_data_t *flux) {
  * step) => 8640 raw cells of payload per sector. */
 #define AMIGA_PAYLOAD_CELLS  (1080 * 8)
 
+/* MF-452: obere Grenzen fuer das Info-Long, abgeleitet aus der Hardware statt
+ * aus dem haeufigsten Fall.
+ *
+ * AMIGA_MAX_SECTOR 21 -> HD (22 Sektoren, 0..21). DD nutzt 0..10; ein
+ * DD-Sektor mit Nummer 15 ist damit nicht mehr per Grenze ausgeschlossen,
+ * sondern faellt ueber die Header-Pruefsumme durch — was der richtige
+ * Mechanismus dafuer ist.
+ *
+ * AMIGA_MAX_TRACK 167 -> 84 Zylinder x 2 Seiten. Amiga-Laufwerke erreichen
+ * physisch 83..84 Zylinder; X-Copy steppt in `track0` bis 83. */
+#define AMIGA_MAX_SECTOR    21
+#define AMIGA_MAX_TRACK     167
+
 /* Read 8 raw MFM cells at bit position `pos` as one byte.
  *
  * Unlike IBM MFM there is NO separate clock-strip step here: in the
@@ -1103,18 +1116,40 @@ static flux_status_t decode_amiga_sector(const uint8_t *bits, size_t bit_count,
     amiga_read_field(bits, bit_count, &pos, 16, label, &hdr_csum);
     amiga_read_field(bits, bit_count, &pos,  4, hchk,  NULL);
     amiga_read_field(bits, bit_count, &pos,  4, dchk,  NULL);
-    (void)label;  /* OS-recovery info — preserved on disk, unused here */
 
-    /* info long = [0xFF][track 0-159][sector 0-10][sectors-to-gap]. */
+    /* info long = [0xFF][track][sector][sectors-to-gap].
+     *
+     * MF-452: die Grenzen standen auf `track > 159 || sec > 10` — richtig fuer
+     * eine 80-Zylinder-DD-Diskette und falsch fuer alles andere, was AmigaDOS
+     * kennt:
+     *
+     *   - HD hat 22 Sektoren pro Spur (0..21). Der Sektorpfad kann das laengst
+     *     (uft_adf_plugin.c fuehrt "HD variant (1760 KB)" als SUPPORTED,
+     *     uft_adf_parser_v2.c kennt ADF_SIZE_HD) — der Fluxpfad verwarf jeden
+     *     Sektor ab Nummer 11, also lieferte SCP->ADF einer HD-Diskette nichts.
+     *   - 82 Zylinder sind auf Amiga-Laufwerken normal; X-Copy erlaubt
+     *     `endtrack DC.W 79 ; 0 - 81` und steppt bis 83. Track = cyl*2+head,
+     *     also bis 163. Genau dort liegen Zusatzkapazitaet und Kopierschutz.
+     *
+     * Die Obergrenzen sind jetzt das, was das Feld physisch tragen kann bzw.
+     * was ein Laufwerk erreichen kann — nicht das, was die haeufigste Diskette
+     * hat. Ein Sektor mit unmoeglichem Info-Long wird weiterhin verworfen. */
     if (info[0] != 0xFF) return FLUX_ERR_NO_SYNC;
     uint8_t track = info[1], sec = info[2];
-    if (track > 159 || sec > 10) return FLUX_ERR_NO_SYNC;
+    if (track > AMIGA_MAX_TRACK || sec > AMIGA_MAX_SECTOR)
+        return FLUX_ERR_NO_SYNC;
 
     sector->cylinder    = track / 2;
     sector->head        = track % 2;
     sector->sector      = sec;
     sector->size_code   = 2;                 /* 512 bytes */
     sector->id_position = (uint32_t)sync_pos;
+
+    /* MF-452: das Label wird behalten. Vorher stand hier `(void)label;` — 16
+     * Byte, die von der Diskette gelesen, in die Header-Pruefsumme gerechnet
+     * und dann fallen gelassen wurden. */
+    memcpy(sector->label, label, sizeof(sector->label));
+    sector->label_present = true;
 
     uint32_t hchk_stored = ((uint32_t)hchk[0] << 24) | ((uint32_t)hchk[1] << 16)
                          | ((uint32_t)hchk[2] <<  8) |  (uint32_t)hchk[3];

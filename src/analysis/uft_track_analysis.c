@@ -16,9 +16,26 @@
  * Platform Profiles - Pre-defined
  *===========================================================================*/
 
+/* MF-452: 0xF8BC gehoert nicht in diese Liste.
+ *
+ * Der Wert stammt aus X-Copy Professional, wo `xcopy.i` ihn als
+ *
+ *     INDEXCOPY = $F8BC
+ *
+ * definiert und `xcop.s:2108` als Modus-Sentinel benutzt:
+ *
+ *     move.w  sync,D1
+ *     cmp.w   #INDEXCOPY,D1
+ *     beq.s   stdsync        ; -> NUR nach $4489 suchen, index-synchron
+ *
+ * Er bedeutet dort ausdruecklich "kein Custom-Sync, nimm den Standard und
+ * synchronisiere auf den Index" und steht NIE auf einer Diskette. Als
+ * Suchmuster aufgenommen trifft er in einem MFM-Bitstream im Mittel alle
+ * 65536 Bit zufaellig — auf einer 100.000-Bit-Spur ein- bis zweimal — und
+ * wurde dann als "Index Copy Protection" gemeldet. Ein Befund aus Rauschen. */
 /* Amiga sync patterns */
 static const uint32_t AMIGA_SYNCS[] = {
-    0x4489, 0x9521, 0xA245, 0xA89A, 0x448A, 0xF8BC
+    0x4489, 0x9521, 0xA245, 0xA89A, 0x448A
 };
 
 /* IBM/PC sync patterns */
@@ -851,11 +868,12 @@ int uft_analyze_track_ex(const uft_analysis_config_t *config,
     } else if (config->search_all_syncs) {
         /* Search all known patterns - try common MFM first */
         static const uint32_t all_syncs[] = {
-            0x4489, 0x9521, 0xA245, 0xA89A, 0x448A, 0xF8BC,
+            0x4489, 0x9521, 0xA245, 0xA89A, 0x448A,   /* 0xF8BC: siehe MF-452 */
             0xA1A1, 0x4E4E, 0x52FF
         };
-        uft_find_syncs_rotated(data, result->track_length,
-                               all_syncs, 9, 16, &result->sync);
+        uft_find_syncs_rotated(data, result->track_length, all_syncs,
+                               sizeof(all_syncs) / sizeof(all_syncs[0]),
+                               16, &result->sync);
     }
     
     /* Step 3: Handle no sync case */
@@ -973,9 +991,6 @@ bool uft_identify_protection(const uft_track_analysis_t *analysis,
             return true;
         case 0xA89A:
             snprintf(name, name_size, "Novagen Protection");
-            return true;
-        case 0xF8BC:
-            snprintf(name, name_size, "Index Copy Protection");
             return true;
         default:
             break;

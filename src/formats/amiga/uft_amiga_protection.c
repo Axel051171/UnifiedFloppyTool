@@ -30,8 +30,11 @@ static const uint16_t KNOWN_SYNCS[] = {
     AMIGA_SYNC_ARKANOID,    /* $9521 - Arkanoid */
     AMIGA_SYNC_BTIP,        /* $A245 - Beyond the Ice Palace */
     AMIGA_SYNC_MERCENARY,   /* $A89A - Mercenary, Backlash */
-    AMIGA_SYNC_ALT1,        /* $448A - Alternative */
-    AMIGA_SYNC_INDEX        /* $F8BC - Index copy */
+    AMIGA_SYNC_ALT1         /* $448A - Alternative */
+    /* MF-452: AMIGA_SYNC_INDEX ($F8BC) stand hier und wurde damit gesucht.
+     * Es ist kein Sync, sondern X-Copys Modus-Wert INDEXCOPY — siehe
+     * uft_amiga_protection.h. Ein 16-Bit-Muster trifft zufaellig alle 65536
+     * Bit; der Treffer wurde als "Index Copy" gemeldet. */
 };
 static const int KNOWN_SYNC_COUNT = sizeof(KNOWN_SYNCS) / sizeof(KNOWN_SYNCS[0]);
 
@@ -72,7 +75,6 @@ uft_amiga_sync_type_t uft_amiga_identify_sync(uint16_t pattern) {
         case AMIGA_SYNC_ARKANOID: return SYNC_TYPE_ARKANOID;
         case AMIGA_SYNC_BTIP:     return SYNC_TYPE_BTIP;
         case AMIGA_SYNC_MERCENARY: return SYNC_TYPE_MERCENARY;
-        case AMIGA_SYNC_INDEX:    return SYNC_TYPE_INDEX_COPY;
         default:                  return SYNC_TYPE_CUSTOM;
     }
 }

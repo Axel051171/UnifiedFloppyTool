@@ -3257,6 +3257,77 @@ eigentlich meint — `uft_pll_init` existiert nämlich in **zwei** Signaturen
 (`uft_decoder_plugin.h:335` mit `adjust_pct`, `uft_flux_pll.h:317` mit
 `uft_encoding_t`), was denselben Aufruf je nach Include-Satz anders bedeutet.
 
+### FMT-16 — Drei Fehler im Amiga-Flux-Pfad, gefunden durch den X-Copy-Quellenvergleich (2026-08-21, MF-452) → ✓ BEHOBEN
+
+Vollständige Analyse: [`docs/XCOPY_COMPARISON.md`](XCOPY_COMPARISON.md).
+Ergänzt [`XCOPY_ALGORITHM_MIGRATION.md`](XCOPY_ALGORITHM_MIGRATION.md) und
+[`XCOPY_INTEGRATION_TODO.md`](XCOPY_INTEGRATION_TODO.md), die den
+Algorithmus-Import abdecken; die drei Fehler unten stehen in keinem von beiden.
+
+**1. `0xF8BC` wurde als Sync gesucht.** In X-Copy ist der Wert `INDEXCOPY`
+(`xcopy_src/xcopy.i`) und dient als Modus-Sentinel:
+
+```asm
+    move.w  sync,D1
+    cmp.w   #INDEXCOPY,D1
+    beq.s   stdsync        ; -> NUR nach $4489 suchen, index-synchron
+```
+
+Er bedeutet dort ausdrücklich „kein Custom-Sync" und steht **nie auf einer
+Diskette**. UFT führte ihn in `AMIGA_SYNCS[]`, in `all_syncs[]`, in
+`KNOWN_SYNCS[]` und meldete bei Treffer `"Index Copy Protection"`. Ein
+16-Bit-Muster trifft in einem MFM-Bitstream im Mittel alle 65536 Bit — auf einer
+100.000-Bit-Spur ein- bis zweimal. Der Befund war Rauschen mit Namen. Aus allen
+drei Tabellen entfernt; die Konstante bleibt als `AMIGA_MODE_INDEXCOPY` mit
+Erklärung stehen, damit der nächste Leser der X-Copy-Quelle sie wiederfindet.
+
+**2. Das 16-Byte-Sektor-Label wurde verworfen.** `uft_flux_decoder.c` las es,
+rechnete es in die Header-Prüfsumme und warf es mit `(void)label;` weg —
+`flux_decoded_sector_t` hatte kein Feld dafür. Stiller Datenverlust auf dem
+Hauptpfad eines Werkzeugs mit dem Grundsatz „Kein Bit verloren". AmigaDOS legt
+dort Wiederherstellungsdaten ab, mehrere Schutzverfahren benutzen es als Ablage.
+
+Nebenbefund dabei: `id_crc` und `data_crc` waren `uint16_t`, die
+Amiga-Prüfsummen sind **32-bittig**. Die Gültigkeitsflags stimmten (verglichen
+wurde vor der Zuweisung mit voller Breite), der gespeicherte Wert war halbiert —
+ein Bericht gab eine Zahl aus, die nicht auf der Diskette steht. Auf `uint32_t`
+geweitet.
+
+**3. Der Flux-Pfad konnte keine Amiga-HD und keine 82 Zylinder.**
+
+```c
+if (track > 159 || sec > 10) return FLUX_ERR_NO_SYNC;
+```
+
+- `sec > 10` verwarf HD (22 Sektoren, 0–21) — während
+  `src/formats/adf/uft_adf_plugin.c:96` `"HD variant (1760 KB)"` als
+  `UFT_FEATURE_SUPPORTED` führt und `uft_adf_parser_v2.c` `ADF_SIZE_HD` kennt.
+  Der Sektorpfad konnte HD, der Fluxpfad nicht: SCP→ADF einer HD-Diskette
+  lieferte nichts.
+- `track > 159` verwarf die Zylinder 80 und 81. X-Copy erlaubt
+  `endtrack DC.W 79 ; 0 - 81` (`xio.s:210`) und steppt in `track0` bis 83.
+  Genau dort liegen Zusatzkapazität und Kopierschutz.
+
+Grenzen jetzt `AMIGA_MAX_SECTOR 21` und `AMIGA_MAX_TRACK 167`, abgeleitet aus
+dem, was Hardware tragen kann statt aus dem häufigsten Fall. Ein DD-Sektor mit
+unplausibler Nummer fällt weiterhin durch — über die Header-Prüfsumme, was der
+richtige Mechanismus dafür ist.
+
+Nachweis: `tests/test_amiga_decoder_limits.c`, sieben Fälle gegen synthetische
+Sektoren, die aus demselben Layout gebaut sind, das der Decoder liest. Ohne die
+Fixes fallen fünf davon (verifiziert).
+
+**Offen aus derselben Durchsicht:**
+- Die Amiga-Sync-Muster liegen **dreimal** im Baum, mit widersprüchlichen Namen
+  (`0xA245` heißt einmal „Ocean/Imagine", einmal „Beyond the Ice Palace"), und
+  der Decoder benutzt keine davon — er sucht nur `0x4489`. Eine geschützte
+  Amiga-Diskette dekodiert damit zu null Sektoren. Siehe XCOPY_COMPARISON §4.
+- T1 aus `XCOPY_INTEGRATION_TODO.md` (Virus-Signaturen) ist **nicht
+  durchführbar**: `xvslibrary` trägt „All Rights Reserved", das Archiv enthält
+  keinen Lizenztext. Dieselbe Regel wie bei `src/switch/` (MF-441).
+
+---
+
 ### ARCH-16 — Acht Header definierten das Packing-Vokabular, und `fat12_bpb_t` war deshalb 40 Bytes statt 36 (2026-08-21, MF-451) → ✓ BEHOBEN, 18. Gate steht
 
 Gefunden beim Angehen von ARCH-1. Die dort beschriebene Doppelung zweier

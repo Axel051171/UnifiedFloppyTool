@@ -466,6 +466,13 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/include/uft/fs)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+    elseif(${test_name} STREQUAL "test_amiga_decoder_limits")
+        # MF-452: drei Befunde aus dem X-Copy-Quellenvergleich
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
+            ${CMAKE_SOURCE_DIR}/src/formats/amiga/uft_amiga_protection.c)
+        target_include_directories(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/amiga)
     elseif(${test_name} STREQUAL "test_plugin_identity")
         # MF-445: registration order is the trap, so the same four plugins as
         # test_smart_open_quality — registered D64-first on purpose.

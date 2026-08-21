@@ -114,11 +114,35 @@ typedef struct {
     uint8_t *data;
     size_t   data_size;
     
-    uint16_t id_crc;            /* CRC from ID field */
-    uint16_t data_crc;          /* CRC from data field */
+    /* MF-452: 32 Bit, nicht 16.
+     *
+     * IBM/ISO-CRCs sind 16-bittig und passten. AmigaDOS speichert je eine
+     * 32-Bit-Pruefsumme fuer Header und Daten — decode_amiga_sector() schrieb
+     * sie in ein uint16_t und verlor die obere Haelfte. Die Gueltigkeitsflags
+     * daneben waren richtig (verglichen wurde vor der Zuweisung mit voller
+     * Breite), aber der GESPEICHERTE Wert war halbiert. Ein Bericht, der die
+     * Pruefsumme ausgibt, gab damit eine Zahl aus, die nicht auf der Diskette
+     * steht. */
+    uint32_t id_crc;            /* CRC/checksum from ID field (32 bit: Amiga) */
+    uint32_t data_crc;          /* CRC/checksum from data field */
     bool     id_crc_ok;
     bool     data_crc_ok;
     bool     deleted;           /* Deleted data mark */
+
+    /* AmigaDOS sector label — 16 Byte OS-Recovery-Information (MF-452).
+     *
+     * Liegt im Sektorkopf zwischen Info-Long und Header-Pruefsumme, geht in
+     * die Header-Pruefsumme ein und wurde bis MF-452 gelesen und mit
+     * `(void)label;` verworfen: das Struct hatte kein Feld dafuer. Bei einem
+     * Werkzeug mit dem Grundsatz "Kein Bit verloren" war das stiller
+     * Datenverlust auf dem Hauptpfad — AmigaDOS legt dort
+     * Wiederherstellungsdaten ab, und mehrere Schutzverfahren benutzen das
+     * Feld als Ablage.
+     *
+     * label_present unterscheidet "16 Nullbytes gelesen" von "nicht
+     * gelesen" — bei IBM/GCR-Formaten gibt es kein Label. */
+    uint8_t  label[16];
+    bool     label_present;
     
     /* Timing info */
     uint32_t id_position;       /* Position in flux stream */
