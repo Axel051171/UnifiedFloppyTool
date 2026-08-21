@@ -409,6 +409,34 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/formats/cbm/uft_cbm_geometry.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+    elseif(${test_name} STREQUAL "test_register_all_formats")
+        # MF-446: the only test that links the entire format layer, because it
+        # is the only one that can answer "does uft_register_all_formats()
+        # actually register all of them". Anything less proves nothing.
+        file(GLOB_RECURSE ALL_FORMAT_SOURCES
+             ${CMAKE_SOURCE_DIR}/src/formats/*.c)
+        target_sources(${test_name} PRIVATE ${ALL_FORMAT_SOURCES}
+            # what the format layer calls out to
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c
+            ${CMAKE_SOURCE_DIR}/src/compat/uft_fnmatch.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_preflight.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_decoder_plugin_stub.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_metadata.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_loss_report.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_mfm_encoder.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_probe_format_impl.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_roundtrip.c
+            ${CMAKE_SOURCE_DIR}/src/analysis/uft_protection_probe.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_kryoflux_stream.c)
+        # the plugins include their headers unqualified ("uft_dms.h")
+        target_include_directories(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/include/uft/formats
+            ${CMAKE_SOURCE_DIR}/include/uft/formats/cbm
+            ${CMAKE_SOURCE_DIR}/include/uft/formats/c64
+            ${CMAKE_SOURCE_DIR}/include/uft/flux
+            ${CMAKE_SOURCE_DIR}/include/uft/fs)
     elseif(${test_name} STREQUAL "test_plugin_identity")
         # MF-445: registration order is the trap, so the same four plugins as
         # test_smart_open_quality — registered D64-first on purpose.

@@ -33,7 +33,12 @@ Unterstützt 6 Hardware-Controller (HAL teilweise wired — siehe pro Eintrag):
  echten Pure-Utility-Funktionen + honest USB/Serial-Stubs; libusb-/Serial-
  Wiring multi-session — siehe `docs/MASTER_PLAN.md` §M3.)
 
-### 2. Format-Unterstützung (88 registered plugins, 138 format IDs)
+### 2. Format-Unterstützung (137 Plugins definiert, 138 format IDs)
+
+> **MF-446:** 137 = 88 ausgeschrieben + 49 aus dem `DSK_PLUGIN()`-Makro.
+> „registered" war nie zutreffend: nichts im Baum ruft
+> `uft_register_all_formats()` oder die 84 Makro-Registrare auf — die
+> Registry ist zur Laufzeit leer (ARCH-12).
 
 > **EINFRIER-REGEL (MF-363):** Kein neuer ungeprüfter Code im Format-/
 > Decoder-Layer. Moratorium bis Label-Skript (T1/T1b/T2/T3) läuft und
@@ -182,7 +187,8 @@ tests/                 — 77 C-Tests + 1 Qt-Test
   Cleanup (785 dead-code Files / ~140k LOC entfernt, davon `src/fluxengine/`,
   `src/algorithms/{core,data,fluxio,imageio,tracks}`, `src/loaders/`,
   `src/filesystems/`, `src/encoding/`, plus 250+ einzelne orphan-Header)
-- 138 Format-IDs, 88 Plugin-B Registrierungen (84 auto + 4 manuell; SSOT:
+- 138 Format-IDs, 137 Plugin-Definitionen (88 ausgeschrieben + 49 DSK-Makro;
+  84 davon mit Registrar-Funktion, die niemand aufruft — MF-446; SSOT:
   `scripts/gen_format_list.py`), 45 Konvertierungspfade,
   13 Roundtrip-Matrix-Einträge (SSOT in `src/core/uft_roundtrip.c`)
 - 6 Hardware-Controller — SCP-Direct M3.1 libusb wiring LANDED (MF-254,

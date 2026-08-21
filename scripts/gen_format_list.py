@@ -4,7 +4,7 @@
 Registry introspection (Format-Erweiterung goal, Phase 0): scans src/formats/
 for every `const uft_format_plugin_t uft_format_plugin_<name> = { ... };` and
 pulls .name / .extensions / .format from the struct body, plus whether the file
-uses the UFT_REGISTER_FORMAT_PLUGIN auto-register macro. This replaces the
+uses the UFT_REGISTER_FORMAT_PLUGIN macro. This replaces the
 hand-maintained FORMAT_GROUPS.md table (which drifted to a stale 130).
 
 Usage:
@@ -81,9 +81,15 @@ def main() -> int:
         print(f"{args.check}: claims {claims or 'none'}; reality {len(plugins)}")
         return 0 if len(plugins) in claims else 1
 
-    print(f"Registered format plugins (code-derived): {len(plugins)}")
-    print(f"  auto-registered (UFT_REGISTER_FORMAT_PLUGIN) : {auto}")
-    print(f"  manually registered                          : {manual}")
+    print(f"Format plugins written out (code-derived): {len(plugins)}")
+    print(f"  with a UFT_REGISTER_FORMAT_PLUGIN registrar  : {auto}")
+    print(f"  without one                                  : {manual}")
+    print("  NOTE (MF-446): the macro only DEFINES uft_register_<name>().")
+    print("  Nothing calls those functions, and nothing calls")
+    print("  uft_register_all_formats() either - 'auto-registered' was never")
+    print("  true. See ARCH-11/ARCH-12 in docs/KNOWN_ISSUES.md.")
+    print("  This count excludes the 49 DSK_PLUGIN() macro expansions in")
+    print("  src/formats/dsk_generic/; the full plugin count is 137.")
     if manual:
         print("  manual:", ", ".join(p["symbol"] for p in plugins if not p["auto"]))
     return 0

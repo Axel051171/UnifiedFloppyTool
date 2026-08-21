@@ -1670,6 +1670,92 @@ seiner wichtigsten Achse steht.
    ermittelt" ersetzen, damit der Bericht nicht behaupten kann, was er nicht
    weiß — unabhängig davon, welcher der beiden Wege gewählt wird.
 
+### ARCH-11 — `uft_register_all_formats()` lief zum ersten Mal — und fand drei Fehler (2026-08-21, MF-446) → ✓ BEHOBEN, Wächter erweitert
+
+Direkte Folge von ARCH-9/ARCH-10: die Registry funktioniert jetzt, also lässt
+sie sich zum ersten Mal ausführen. Das war noch nie passiert — die Funktion
+hatte im gesamten Projektleben keinen Aufrufer.
+
+**Erst beim Ausführen sichtbar, alle drei unabhängig voneinander:**
+
+**1. Pufferüberlauf um eins.** `all_plugins[]` war über eine handgeschriebene
+Summe von Gruppen-Literalen dimensioniert, mit dem Gruppennamen im Kommentar.
+Eine Zeile war abgedriftet: `OTHER + 47` gegen ein `g_other_plugins[]` mit 48
+Einträgen. Das Array fasste damit exakt so viele Zeiger wie es Plugins gibt —
+kein Platz für den Terminator:
+
+```c
+all_plugins[idx] = NULL;      /* idx == 130, Array hat 130 Elemente */
+```
+
+Behoben, indem die Größe aus denselben Arrays abgeleitet wird, auf die
+`g_groups` zeigt (`ALL_PLUGIN_SLOTS` über `ARRAY_COUNT`). Ein Plugin in eine
+Gruppe einzutragen vergrößert die Tabelle jetzt automatisch; es gibt keine
+zweite Stelle mehr zu pflegen.
+
+**2. Sieben Plugins waren definiert und in keiner Gruppe gelistet** — also für
+`uft_register_all_formats()` unerreichbar: **SCP** (der Flux-Container, den der
+gesamte DeepRead-Pfad liest), **G64**, **IMG**, ExtADF, KorgDSS1, AkaiS900,
+LisaTwiggy. Nachgetragen.
+
+**3. Die echte Plugin-Zahl ist 137, nicht 88.** 88 sind ausgeschrieben, 49
+entstehen aus dem `DSK_PLUGIN()`-Makro in `src/formats/dsk_generic/`.
+`MAX_FORMAT_PLUGINS` stand nach MF-445 auf 128 — neun Plugins wären mit
+`UFT_ERROR_BUFFER_TOO_SMALL` abgewiesen worden. Jetzt 192.
+
+**Der eigene Wächter war das Problem an Punkt 3.** `plugin_registry_gate.py`
+aus MF-445 zählte nur ausgeschriebene Definitionen, meldete deshalb 88 und gab
+für eine Kapazität von 128 grünes Licht. Ein Zähler, der zu niedrig zählt, ist
+schlechter als keiner — ihm wird geglaubt. Der Wächter zählt jetzt
+Makro-Instanzen mit und prüft zusätzlich, dass **jedes** definierte Plugin in
+einer Gruppe gelistet ist (Punkt 2 wäre damit sofort aufgefallen).
+
+Nachweis: `tests/test_register_all_formats.c` — 137 definiert, 137 registriert,
+SCP/G64/IMG namentlich, doppelter Aufruf ändert nichts, kein doppelter `.name`.
+Die Zahlen sind absichtlich exakt: „über hundert" wäre auch bei 128 durchgegangen
+(verifiziert — mit `MAX_FORMAT_PLUGINS 128` fallen vier der sechs Tests).
+
+**Weiterhin offen:** `uft_register_all_formats()` hat immer noch keinen Aufrufer
+in der Anwendung. Der Mechanismus funktioniert jetzt, die GUI ruft ihn nicht auf
+— das ist der nächste Schritt und eine eigene Aufgabe (ARCH-12).
+
+---
+
+### ARCH-12 — Die Anwendung registriert keine Plugins (2026-08-21, MF-446) → ⚠ OFFEN
+
+`uft_register_all_formats()` ist ab MF-446 nachweislich korrekt, wird aber
+nirgends aufgerufen — nicht in `main()`, nicht in `UftMainWindow`. In der
+laufenden Anwendung ist die Registry damit leer, und jeder Pfad über
+`uft_disk_open()`, `uft_probe_file_format()`, `uft_smart_open()` oder die
+`uft_disk_*`-API bekommt „kein Plugin gefunden".
+
+Es sind sogar **zwei** tote Registrierungswege, nicht einer. Das Makro
+`UFT_REGISTER_FORMAT_PLUGIN(name)` in `include/uft/uft_format_common.h`
+**definiert** lediglich eine Funktion:
+
+```c
+uft_error_t uft_register_##name(void) {
+    return uft_register_format_plugin(&uft_format_plugin_##name);
+}
+```
+
+84 Plugins nutzen es. **Keine** dieser 84 Funktionen wird irgendwo aufgerufen.
+`scripts/gen_format_list.py` bezeichnete sie als „auto-registered" — das war nie
+zutreffend, das Makro registriert nichts, es schreibt einen Registrar. Wording
+korrigiert (MF-446).
+
+Dass das nie auffiel, hat denselben Grund wie ARCH-9: die GUI benutzt für ihre
+Formatarbeit die Qt-Provider und direkt gelinkte Plugin-Symbole, nicht die
+Registry. Zwei parallele Wege zum selben Zweck — siehe ARCH-6 (zwei
+Format-Layer, vier Nahtstellen).
+
+**Nächster Schritt:** einen Init-Punkt festlegen (GUI-`main()` vor dem ersten
+Fenster) und dort registrieren; danach prüfen, welche der doppelten Pfade
+entfallen können. Nicht in MF-446 erledigt, weil es eine Entscheidung über den
+Anwendungs-Startup ist und nicht über die Registry.
+
+---
+
 ### ARCH-9 — Die Plugin-Registry konnte nie mehr als 7 der 88 Plugins aufnehmen (2026-08-21, MF-444) → ✓ BEHOBEN, Nachweis im Test
 
 **Gefunden, weil `uft_smart_open()` nach dem Umbau über die Registry erkennt und

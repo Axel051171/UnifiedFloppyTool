@@ -29,7 +29,19 @@
 /* ============================================================================
  * Gruppe: CBM — Commodore 8-bit (8 Plugins)
  * ============================================================================ */
+/* MF-446: seven plugins were defined in the tree and listed in no group, so
+ * uft_register_all_formats() could never reach them — among them SCP (the flux
+ * container the whole DeepRead path reads) and IMG. Nothing caught it because
+ * the function had no caller (ARCH-9). */
+extern const uft_format_plugin_t uft_format_plugin_scp;
+extern const uft_format_plugin_t uft_format_plugin_img;
+extern const uft_format_plugin_t uft_format_plugin_adf_ext;
+extern const uft_format_plugin_t uft_format_plugin_korg_dss1;
+extern const uft_format_plugin_t uft_format_plugin_akai_s900;
+extern const uft_format_plugin_t uft_format_plugin_lisa_twiggy;
+
 extern const uft_format_plugin_t uft_format_plugin_d64;
+extern const uft_format_plugin_t uft_format_plugin_g64;   /* MF-446 */
 extern const uft_format_plugin_t uft_format_plugin_d67;
 extern const uft_format_plugin_t uft_format_plugin_d71;
 extern const uft_format_plugin_t uft_format_plugin_d80;
@@ -223,7 +235,8 @@ extern const uft_format_plugin_t uft_format_plugin_xdm86;
 static const uft_format_plugin_t* g_cbm_plugins[] = {
     &uft_format_plugin_d64, &uft_format_plugin_d67, &uft_format_plugin_d71,
     &uft_format_plugin_d80, &uft_format_plugin_d81, &uft_format_plugin_d82,
-    &uft_format_plugin_g71, &uft_format_plugin_dsk_vic,
+    &uft_format_plugin_g71, &uft_format_plugin_g64,        /* MF-446 */
+    &uft_format_plugin_dsk_vic,
 };
 
 static const uft_format_plugin_t* g_atari_plugins[] = {
@@ -235,11 +248,12 @@ static const uft_format_plugin_t* g_atari_plugins[] = {
 static const uft_format_plugin_t* g_apple_plugins[] = {
     &uft_format_plugin_do, &uft_format_plugin_po, &uft_format_plugin_woz,
     &uft_format_plugin_nib, &uft_format_plugin_2img, &uft_format_plugin_d13,
-    &uft_format_plugin_dc42,
+    &uft_format_plugin_dc42, &uft_format_plugin_lisa_twiggy,  /* MF-446 */
 };
 
 static const uft_format_plugin_t* g_amiga_plugins[] = {
     &uft_format_plugin_adf, &uft_format_plugin_dms, &uft_format_plugin_ipf,
+    &uft_format_plugin_adf_ext,                            /* MF-446 */
 };
 
 static const uft_format_plugin_t* g_ibm_pc_plugins[] = {
@@ -247,6 +261,7 @@ static const uft_format_plugin_t* g_ibm_pc_plugins[] = {
     &uft_format_plugin_fdi, &uft_format_plugin_86f, &uft_format_plugin_dsk_emu,
     &uft_format_plugin_dsk_uni, &uft_format_plugin_dsk_krg,
     &uft_format_plugin_t1k, &uft_format_plugin_dsk_dc42v,
+    &uft_format_plugin_img,                                /* MF-446 */
 };
 
 static const uft_format_plugin_t* g_amstrad_plugins[] = {
@@ -288,6 +303,7 @@ static const uft_format_plugin_t* g_japan_plugins[] = {
 static const uft_format_plugin_t* g_flux_plugins[] = {
     &uft_format_plugin_hfe, &uft_format_plugin_kfx,
     &uft_format_plugin_mfi, &uft_format_plugin_pri,
+    &uft_format_plugin_scp,                                /* MF-446 */
 };
 
 static const uft_format_plugin_t* g_tape_plugins[] = {
@@ -313,6 +329,7 @@ static const uft_format_plugin_t* g_other_plugins[] = {
     &uft_format_plugin_pdp, &uft_format_plugin_posix, &uft_format_plugin_qrst,
     &uft_format_plugin_sap_thomson, &uft_format_plugin_syn,
     &uft_format_plugin_v9t9, &uft_format_plugin_victor9k, &uft_format_plugin_xdm86,
+    &uft_format_plugin_korg_dss1, &uft_format_plugin_akai_s900,  /* MF-446 */
 };
 
 #define ARRAY_COUNT(a) (sizeof(a) / sizeof((a)[0]))
@@ -360,24 +377,24 @@ static const uft_format_group_t g_groups[] = {
  * Globale Plugin-Tabelle (flach, alle Plugins aus allen Gruppen)
  * ============================================================================ */
 
-static const uft_format_plugin_t* all_plugins[
-    /* CBM */      8
-    /* ATARI */  + 9
-    /* APPLE */  + 7
-    /* AMIGA */  + 3
-    /* IBM_PC */ + 10
-    /* AMSTRAD */+ 3
-    /* SPECT. */ + 8
-    /* ACORN */  + 3
-    /* TRS80 */  + 6
-    /* MSX */    + 2
-    /* CPM */    + 5
-    /* JAPAN */  + 13
-    /* FLUX */   + 4
-    /* TAPE */   + 1
-    /* OTHER */  + 47
-    /* NULL */   + 1
-] = { NULL };
+/* MF-446: size derived from the group arrays, not hand-counted.
+ *
+ * What stood here was a sum of per-group literals with the group name in a
+ * comment. One of them had drifted: the OTHER line read 47 against a
+ * g_other_plugins[] of 48. The declared size therefore held exactly as many
+ * pointers as there are plugins, leaving no room for the terminator, and
+ * init_all_plugins() ended with
+ *
+ *     all_plugins[idx] = NULL;         with idx == 130, array holds 130
+ *
+ * — one element past the end. It never fired because nothing in the tree ever
+ * called uft_register_all_formats() (ARCH-9).
+ *
+ * ARRAY_COUNT over the same arrays g_groups points at means adding a plugin to
+ * any group grows this automatically. There is no second place to update. */
+#define ALL_PLUGIN_SLOTS (       ARRAY_COUNT(g_cbm_plugins)      + ARRAY_COUNT(g_atari_plugins)        + ARRAY_COUNT(g_apple_plugins)    + ARRAY_COUNT(g_amiga_plugins)        + ARRAY_COUNT(g_ibm_pc_plugins)   + ARRAY_COUNT(g_amstrad_plugins)      + ARRAY_COUNT(g_spectrum_plugins) + ARRAY_COUNT(g_acorn_plugins)        + ARRAY_COUNT(g_trs80_plugins)    + ARRAY_COUNT(g_msx_plugins)          + ARRAY_COUNT(g_cpm_plugins)      + ARRAY_COUNT(g_japan_plugins)        + ARRAY_COUNT(g_flux_plugins)     + ARRAY_COUNT(g_tape_plugins)         + ARRAY_COUNT(g_other_plugins)                                          + 1 /* NULL terminator */ )
+
+static const uft_format_plugin_t* all_plugins[ALL_PLUGIN_SLOTS] = { NULL };
 
 /* Initialisierung der flachen Liste einmalig */
 static bool g_all_plugins_initialized = false;
@@ -387,6 +404,10 @@ static void init_all_plugins(void) {
     size_t idx = 0;
     for (size_t g = 0; g < NUM_GROUPS; g++) {
         for (size_t i = 0; i < g_groups[g].plugin_count; i++) {
+            /* Provably exact with ALL_PLUGIN_SLOTS derived from the same
+             * arrays — kept anyway, because the previous bound was also
+             * "obviously" right and was off by one (MF-446). */
+            if (idx + 1 >= ALL_PLUGIN_SLOTS) break;
             all_plugins[idx++] = g_groups[g].plugins[i];
         }
     }
