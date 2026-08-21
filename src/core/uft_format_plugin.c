@@ -269,22 +269,77 @@ const uft_format_plugin_t* uft_get_format_plugin_by_name(const char* name) {
  * Plugin Probing — Buffer and File
  * ============================================================================ */
 
+/* MF-448 (ARCH-13): one pass, and it keeps what the old loop threw away.
+ *
+ * The winner is unchanged and still deterministic — strict `>` means the first
+ * registered plugin keeps a tie, exactly as before, so no caller sees a
+ * different format than yesterday. What is new is that the tie is now
+ * countable. On atrcopy_dos2sd.xfd four plugins answer 40; the old return value
+ * could not distinguish that from a lone 40, and every consumer printed the
+ * winner as though it had been identified. */
+size_t uft_probe_buffer_ranked(const uint8_t *data, size_t size,
+                               size_t file_size, uft_probe_ranking_t *result) {
+    uft_probe_ranking_t r;
+    memset(&r, 0, sizeof(r));
+
+    if (data && size > 0) {
+        for (size_t i = 0; i < g_format_plugin_count; i++) {
+            const uft_format_plugin_t *p = g_format_plugins[i];
+            if (!p || !p->probe) continue;
+            int conf = 0;
+            if (!p->probe(data, size, file_size, &conf)) continue;
+
+            r.claimants++;
+            if (conf > r.confidence) {
+                /* the previous best becomes the runner-up */
+                r.runner_up = r.winner;
+                r.runner_up_confidence = r.confidence;
+                r.winner = p;
+                r.confidence = conf;
+                r.tied = 1;
+            } else if (conf == r.confidence && r.winner) {
+                r.tied++;                       /* as good as the winner */
+            } else if (conf > r.runner_up_confidence) {
+                r.runner_up = p;
+                r.runner_up_confidence = conf;
+            }
+        }
+    }
+
+    if (result) *result = r;
+    return r.claimants;
+}
+
+size_t uft_probe_file_ranked(const char *path, uft_probe_ranking_t *result) {
+    if (result) memset(result, 0, sizeof(*result));
+    if (!path) return 0;
+
+    FILE *f = fopen(path, "rb");
+    if (!f) return 0;
+    if (fseek(f, 0, SEEK_END) != 0) { fclose(f); return 0; }
+    long fs = ftell(f);
+    if (fs < 0) { fclose(f); return 0; }
+    if (fseek(f, 0, SEEK_SET) != 0) { fclose(f); return 0; }
+
+    size_t probe_size = (fs < 4096) ? (size_t)fs : 4096;
+    uint8_t *buf = malloc(probe_size);
+    if (!buf) { fclose(f); return 0; }
+    if (fread(buf, 1, probe_size, f) != probe_size) {
+        free(buf); fclose(f); return 0;
+    }
+    fclose(f);
+
+    size_t n = uft_probe_buffer_ranked(buf, probe_size, (size_t)fs, result);
+    free(buf);
+    return n;
+}
+
 const uft_format_plugin_t* uft_probe_buffer_format(const uint8_t *data,
                                                      size_t size,
                                                      size_t file_size) {
-    if (!data || size == 0) return NULL;
-    int best_conf = 0;
-    const uft_format_plugin_t *best = NULL;
-    for (size_t i = 0; i < g_format_plugin_count; i++) {
-        const uft_format_plugin_t *p = g_format_plugins[i];
-        if (!p || !p->probe) continue;
-        int conf = 0;
-        if (p->probe(data, size, file_size, &conf) && conf > best_conf) {
-            best_conf = conf;
-            best = p;
-        }
-    }
-    return best;
+    uft_probe_ranking_t r;
+    uft_probe_buffer_ranked(data, size, file_size, &r);
+    return r.winner;
 }
 
 const uft_format_plugin_t* uft_probe_file_format(const char *path) {
@@ -306,10 +361,10 @@ const uft_format_plugin_t* uft_probe_file_format(const char *path) {
     }
     fclose(f);
 
-    const uft_format_plugin_t *plugin =
-        uft_probe_buffer_format(buf, probe_size, (size_t)fs);
+    uft_probe_ranking_t r;
+    uft_probe_buffer_ranked(buf, probe_size, (size_t)fs, &r);
     free(buf);
-    return plugin;
+    return r.winner;
 }
 
 const uft_format_plugin_t* uft_find_format_plugin_by_extension(const char* ext) {

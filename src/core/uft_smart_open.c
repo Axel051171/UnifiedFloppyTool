@@ -151,18 +151,14 @@ void uft_smart_options_init(uft_smart_options_t* opts) {
  * call and keeps the confidence honest — it is the plugin's own answer, not a
  * value this file made up (MF-444). */
 static const uft_format_plugin_t* detect_format(const uint8_t* data, size_t size,
-                                                size_t file_size, int* confidence) {
-    if (confidence) *confidence = 0;
-
-    const uft_format_plugin_t* plugin =
-        uft_probe_buffer_format(data, size, file_size);
-    if (!plugin) return NULL;
-
-    if (confidence && plugin->probe) {
-        int conf = 0;
-        if (plugin->probe(data, size, file_size, &conf)) *confidence = conf;
-    }
-    return plugin;
+                                                size_t file_size,
+                                                uft_probe_ranking_t* ranked) {
+    /* MF-448: one call, and it brings the runners-up with it. The previous
+     * body probed twice — once to find the winner, once more to ask the winner
+     * for its confidence — and still could not tell whether anything else had
+     * answered just as loudly. */
+    uft_probe_buffer_ranked(data, size, file_size, ranked);
+    return ranked->winner;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════════
@@ -388,9 +384,10 @@ int uft_smart_open(const char* path, const uft_smart_options_t* opts,
      * so call it 50 % sure" is a claim about the content derived from
      * something that is not the content. If no plugin recognises the bytes,
      * saying so is the honest answer. */
-    int confidence = 0;
+    uft_probe_ranking_t ranked;
     const uft_format_plugin_t* plugin =
-        detect_format(header, header_size, file_size, &confidence);
+        detect_format(header, header_size, file_size, &ranked);
+    const int confidence = ranked.confidence;
 
     if (!plugin) {
         /* Two different states, and they must not share one message. An empty
@@ -415,9 +412,27 @@ int uft_smart_open(const char* path, const uft_smart_options_t* opts,
     int format_id = format_id_for(plugin);
     uft_format_handler_t* v3_handler = v3_handler_for(format_id);
 
-    result->detection.format_id   = format_id;
-    result->detection.format_name = plugin->name;
-    result->detection.confidence  = confidence;
+    result->detection.format_id      = format_id;
+    result->detection.format_name    = plugin->name;
+    result->detection.confidence     = confidence;
+    result->detection.equally_ranked = ranked.tied;
+    result->detection.claimants      = ranked.claimants;
+    result->detection.runner_up_name =
+        ranked.runner_up ? ranked.runner_up->name : NULL;
+    result->detection.runner_up_confidence = ranked.runner_up_confidence;
+
+    /* A tie is not a detail of the detection, it is the detection. Say it in
+     * the warnings, where it travels with the result into any report. */
+    if (ranked.tied > 1) {
+        char note[256];
+        snprintf(note, sizeof(note),
+                 "  Format nicht eindeutig: %zu Plugins beanspruchen die Datei "
+                 "mit derselben Konfidenz (%d%%). '%s' gewinnt durch "
+                 "Registrierungsreihenfolge, nicht durch Evidenz.\n",
+                 ranked.tied, confidence, plugin->name);
+        strncat(result->warnings, note,
+                sizeof(result->warnings) - strlen(result->warnings) - 1);
+    }
 
     if (opts->progress_cb) {
         opts->progress_cb(40, "Parsing disk image...", opts->user_data);
@@ -567,7 +582,6 @@ char* uft_smart_report(const uft_smart_result_t* result) {
         "  Sectors:     %s / %s readable\n"
         "  CRC Errors:  %s (corrected: %s)\n"
         "  Weak Bits:   %s (resolved: %s)\n"
-        "  God-Mode:    %s\n"
         "%s%s"
         "═══════════════════════════════════════════════════════════════\n",
         result->detection.format_name ? result->detection.format_name : "Unknown",

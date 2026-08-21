@@ -10,6 +10,7 @@
 #ifndef UFT_FORMAT_CONVERT_INTERNAL_H
 #define UFT_FORMAT_CONVERT_INTERNAL_H
 
+#include "uft/uft_compiler.h"
 #include "uft/uft_format_convert.h"
 #include "uft/uft_format_probe.h"
 #include "uft/uft_error.h"
@@ -69,10 +70,7 @@ bool uftc_is_cancelled(const uft_convert_options_ext_t* opts);
  * the OOB-write that happens when warning_count reaches the array
  * capacity. See implementation in uft_format_convert_tables.c. */
 void uftc_add_warning(uft_convert_result_t* result, const char* fmt, ...)
-#ifdef __GNUC__
-    __attribute__((format(printf, 2, 3)))
-#endif
-    ;
+    UFT_PRINTF_FMT(2, 3);   /* MF-448: gnu_printf on MinGW, see uft_compiler.h */
 
 /* ========================================================================== */
 /* Archive converters (defined in uft_format_convert_archive.c)               */

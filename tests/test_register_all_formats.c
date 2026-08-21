@@ -32,6 +32,7 @@
 
 #include "uft/uft_format_plugin.h"
 #include "uft/uft_core.h"   /* uft_disk_open/close */
+#include "uft/uft_smart_open.h"
 
 #include <stdio.h>
 #include <stdint.h>
@@ -275,6 +276,93 @@ TEST(the_tightened_probes_still_accept_what_their_readers_read) {
     ASSERT(!dmk->probe(h, sizeof(h), dmk_size - 1, &c));
 }
 
+TEST(a_tie_is_reported_as_a_tie) {
+    /* ARCH-13 / MF-448. atrcopy_dos2sd.xfd is raw Atari sectors with no header
+     * at all, and four plugins answer with exactly 40:
+     *
+     *     XFD=40  JVC=40  DSK_SV=40  DSK_VEC=40
+     *
+     * uft_probe_buffer_format() compares with `conf > best`, so XFD wins
+     * because the ATARI group sits before OTHER in g_groups[]. Right by
+     * accident. The case is not pathological — a raw sector image really is
+     * indistinguishable from another raw sector image of the same size — but
+     * the answer used to LOOK identified, and that is the part that was wrong.
+     */
+    uft_probe_ranking_t r;
+    size_t n = uft_probe_file_ranked(img("atrcopy_dos2sd.xfd"), &r);
+
+    ASSERT(n == r.claimants);
+    ASSERT(r.winner != NULL);
+    ASSERT(r.tied > 1);                       /* several, equally */
+    ASSERT(r.claimants >= r.tied);
+
+    /* the winner is still the same one the old API returned — deterministic,
+     * so nothing downstream changes format overnight */
+    ASSERT(r.winner == uft_probe_file_format(img("atrcopy_dos2sd.xfd")));
+
+    /* and an unambiguous file reports exactly one at the top */
+    uft_probe_ranking_t g;
+    uft_probe_file_ranked(img("vice_c1541_35trk.g64"), &g);
+    ASSERT(g.winner != NULL);
+    ASSERT(strcmp(g.winner->name, "G64") == 0);
+    ASSERT(g.tied == 1);
+    ASSERT(g.claimants >= 2);                 /* G71 also claims it, lower */
+    ASSERT(g.runner_up != NULL);
+    ASSERT(g.runner_up_confidence < g.confidence);
+}
+
+TEST(the_probe_answer_depends_on_how_much_the_caller_read) {
+    /* ARCH-15, found while testing ARCH-13 and pinned here because it is worse
+     * than the tie it turned up next to.
+     *
+     * uft_probe_file_format() reads 4096 bytes. uft_smart_open() reads up to
+     * 65536. Same file, two entry points, two different formats:
+     *
+     *     4096 bytes  -> XFD=40, tied with JVC, DSK_SV, DSK_VEC and V9T9
+     *     65536 bytes -> JV3=70, alone
+     *
+     * The identification is a property of the buffer size the caller happened
+     * to choose, not of the file. And the larger buffer gives the WORSE answer:
+     * JV3 is TRS-80, the file is Atari. Both numbers are asserted exactly, so
+     * whichever way this is unified later, the change is visible. */
+    uft_probe_ranking_t small;
+    uft_probe_file_ranked(img("atrcopy_dos2sd.xfd"), &small);   /* 4096 */
+    ASSERT(small.winner != NULL);
+    ASSERT(strcmp(small.winner->name, "XFD") == 0);
+    ASSERT(small.tied == 5);        /* XFD, JVC, DSK_SV, DSK_VEC, V9T9 */
+    ASSERT(small.claimants == 7);   /* plus JV1 and XDM86 at 35 */
+
+    uft_smart_options_t opts;
+    uft_smart_options_init(&opts);
+    uft_smart_result_t res;
+    memset(&res, 0, sizeof(res));
+    ASSERT(uft_smart_open(img("atrcopy_dos2sd.xfd"), &opts, &res) == 0);
+    ASSERT(res.detection.format_name != NULL);
+    ASSERT(strcmp(res.detection.format_name, "JV3") == 0);      /* 65536 */
+    ASSERT(res.detection.equally_ranked == 1);
+    ASSERT(res.detection.claimants == 8);
+    uft_smart_close(&res);
+}
+
+TEST(the_smart_open_report_says_when_the_format_is_not_certain) {
+    /* The tie has to reach the human. uft_smart_open() carries it in
+     * detection.equally_ranked and writes it into the warnings, which the
+     * report prints — a confidence number on its own states a certainty nobody
+     * measured. D80 is the case that ties at 65536 bytes. */
+    uft_smart_options_t opts;
+    uft_smart_options_init(&opts);
+
+    uft_smart_result_t res;
+    memset(&res, 0, sizeof(res));
+    ASSERT(uft_smart_open(img("vice_c1541_35trk.g64"), &opts, &res) == 0);
+    ASSERT(res.detection.equally_ranked == 1);
+    char *report = uft_smart_report(&res);
+    ASSERT(report != NULL);
+    ASSERT(strstr(report, "nicht eindeutig") == NULL);
+    free(report);
+    uft_smart_close(&res);
+}
+
 int main(void)
 {
     printf("=== uft_register_all_formats(): first execution ever (MF-446/447) ===\n");
@@ -289,6 +377,9 @@ int main(void)
     RUN(every_reference_image_is_won_by_its_own_plugin);
     RUN(d88_and_dmk_no_longer_claim_foreign_images);
     RUN(the_tightened_probes_still_accept_what_their_readers_read);
+    RUN(a_tie_is_reported_as_a_tie);
+    RUN(the_probe_answer_depends_on_how_much_the_caller_read);
+    RUN(the_smart_open_report_says_when_the_format_is_not_certain);
     printf("\nResults: %d passed, %d failed\n", _pass, _fail);
     return _fail == 0 ? 0 : 1;
 }

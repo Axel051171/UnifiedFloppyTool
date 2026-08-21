@@ -67,6 +67,19 @@ typedef struct {
     const char* format_name;        /**< Format name */
     int confidence;                 /**< Detection confidence 0-100 */
     bool using_v3_parser;           /**< True if v3 parser is active */
+
+    /* MF-448 (ARCH-13): how alone the winner was.
+     *
+     * `equally_ranked` counts the plugins that answered with EXACTLY the
+     * winner's confidence, the winner included. 1 means identified. Anything
+     * above 1 means the winner was picked by registration order, and the
+     * confidence above describes a claim several formats make just as
+     * strongly — a report that prints only the number would be stating
+     * certainty that was not measured. */
+    size_t equally_ranked;          /**< 1 = eindeutig, >1 = Gleichstand */
+    size_t claimants;               /**< Plugins, die die Datei überhaupt beanspruchen */
+    const char* runner_up_name;     /**< Bestes Plugin darunter, oder NULL */
+    int runner_up_confidence;
 } uft_detection_result_t;
 
 /** Protection result */

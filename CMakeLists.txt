@@ -52,6 +52,22 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 add_compile_definitions(UFT_CXX20)
+# MF-448: printf-family format strings are checked, and a mismatch is fatal.
+#
+# The build carried no warning flags at all. That is how MF-444 shipped a
+# uft_smart_report() whose format string had one more %s than the argument list
+# — the report line "God-Mode: %s" survived an edit that removed its argument,
+# so snprintf read past the end of the varargs and the test suite, which only
+# grepped the middle of the report, passed. A compiler had the answer for free.
+#
+# Deliberately narrow: -Wall/-Wextra across 693 files is a separate cleanup, but
+# a wrong printf argument is undefined behaviour, not style — and this program
+# writes forensic reports with printf.
+if(NOT MSVC)
+    add_compile_options(-Wformat -Werror=format -Werror=format-extra-args)
+endif()
+
+
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTORCC ON)

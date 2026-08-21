@@ -1721,15 +1721,15 @@ in der Anwendung. Der Mechanismus funktioniert jetzt, die GUI ruft ihn nicht auf
 
 ---
 
-### ARCH-13 — Bei Punktgleichstand in der Probe entscheidet die Registrierungsreihenfolge (2026-08-21, MF-447) → ⚠ OFFEN
+### ARCH-13 — Bei Punktgleichstand in der Probe entscheidet die Registrierungsreihenfolge (2026-08-21, MF-447) → ✓ SICHTBAR GEMACHT (MF-448)
 
 Gemessen beim Aufräumen von ARCH-12, mit allen 137 Plugins registriert:
 
 ```
-atrcopy_dos2sd.xfd    XFD=40  JVC=40  DSK_SV=40  DSK_VEC=40  JV1=35  XDM86=35
+atrcopy_dos2sd.xfd    XFD=40  JVC=40  DSK_SV=40  DSK_VEC=40  V9T9=40  JV1=35  XDM86=35
 ```
 
-Vier Plugins antworten mit exakt 40. `uft_probe_buffer_format()` vergleicht mit
+Fünf Plugins antworten mit exakt 40. `uft_probe_buffer_format()` vergleicht mit
 `conf > best_conf`, also gewinnt der zuerst Registrierte — hier XFD, weil die
 ATARI-Gruppe in `g_groups[]` vor OTHER steht. Das ist richtig aus Versehen.
 
@@ -1738,16 +1738,127 @@ Der Fall ist nicht pathologisch: XFD *ist* ein Rohformat ohne Header, und ein
 Größe nicht unterscheidbar. Das Problem ist nicht, dass die Probe unsicher ist,
 sondern dass das Ergebnis so aussieht wie ein sicheres.
 
-**Nächster Schritt:** Gleichstand als eigenes Ergebnis behandeln —
-`uft_probe_buffer_format()` behält seinen Rückgabewert (Aufrufer brauchen eine
-Antwort), bekommt aber einen Weg, „N Plugins liegen gleichauf" zu melden, und
-`uft_smart_open()` gibt das in `detection` weiter statt einer Konfidenz, die
-Eindeutigkeit suggeriert. Eigene Aufgabe: es ändert eine Kern-API-Signatur und
-betrifft jeden Aufrufer.
+**Gelöst in MF-448 — als Sichtbarkeit, nicht als Auflösung.** Der Fall ist
+nicht auflösbar: XFD *ist* ein Rohformat ohne Header, und ein Sektorabbild
+derselben Größe ist von einem anderen Rohformat derselben Größe nicht zu
+unterscheiden. Das Problem war nie die Unsicherheit, sondern dass das Ergebnis
+wie Sicherheit aussah.
 
-Zwischenstand ist wenigstens festgehalten:
-`tests/test_register_all_formats.c` pinnt für elf Referenz-Images den Gewinner,
-sodass jede Verschiebung sichtbar wird.
+Neu: `uft_probe_ranking_t` + `uft_probe_buffer_ranked()` /
+`uft_probe_file_ranked()`. Der Gewinner ist unverändert und weiterhin
+deterministisch (strenges `>`, also behält der zuerst Registrierte einen
+Gleichstand) — kein Aufrufer sieht ein anderes Format als vorher. Neu ist, dass
+`tied`, `claimants`, `runner_up` und dessen Konfidenz erhalten bleiben, statt in
+der Schleife verworfen zu werden. `uft_probe_buffer_format()` ist jetzt ein
+Wrapper darum.
+
+`uft_smart_open()` reicht das in `detection.equally_ranked` weiter und schreibt
+bei `> 1` in die Warnungen: „Format nicht eindeutig: N Plugins beanspruchen die
+Datei mit derselben Konfidenz. 'X' gewinnt durch Registrierungsreihenfolge,
+nicht durch Evidenz."
+
+Der Name ist bewusst nicht `uft_probe_result_t` — den führt bereits
+`include/uft/uft_format_probe.h` (siehe ARCH-14).
+
+---
+
+### ARCH-14 — `uft_probe_format()` liefert eine Container-ID, und sein Mehrdeutigkeits-Feld ist ein Phantom (2026-08-21, MF-448) → ⚠ OFFEN
+
+Gefunden über eine Namenskollision. `include/uft/uft_format_probe.h` definiert
+seit jeher ein `uft_probe_result_t` mit genau dem Feld, das ARCH-13 gebraucht
+hätte:
+
+```c
+int          alternative_count;
+uft_format_t alternatives[4];
+int          alt_confidence[4];
+```
+
+Die einzige Implementierung (`src/core/uft_probe_format_impl.c`) füllt es nie —
+sie `memset`t die Struktur und setzt genau ein Feld:
+
+```c
+result->format = (uft_format_t)plugin->format;
+```
+
+Zwei Probleme in einem:
+
+1. **`alternative_count` ist permanent 0.** Ein Feld, das Mehrdeutigkeit melden
+   soll und es nie tut, ist schlimmer als keines — es liest sich als „geprüft,
+   keine Alternativen".
+2. **Der Rückgabewert ist `plugin->format`,** also für 131 von 137 Plugins
+   `UFT_FORMAT_DSK`. Der einzige Aufrufer,
+   `src/formats/uft_format_convert_dispatch.c:490`, wählt daraus den
+   Konvertierungspfad. Dieselbe Klasse wie ARCH-10, eine Ebene höher.
+
+Außerdem sah diese Datei `uft_probe_result_t` nur über einen transitiven
+Include; ein expliziter `#include "uft/uft_format_probe.h"` kollidiert dort mit
+`UFT_FCLASS_*`/`UFT_CLASS_*` aus einem anderen Header — ein eigener
+Header-Konflikt, der mit ARCH-1 zusammenhängt.
+
+**Nächster Schritt:** `uft_probe_format()` auf `uft_probe_ranking_t` umstellen
+oder ganz durch `uft_probe_buffer_ranked()` ersetzen und den Dispatcher
+plugin-basiert entscheiden lassen. Eigene Aufgabe: sie ändert, wie
+Konvertierungspfade ausgewählt werden.
+
+---
+
+### ARCH-15 — Die Formaterkennung hängt davon ab, wie viel der Aufrufer gelesen hat (2026-08-21, MF-448) → ⚠ OFFEN
+
+Gemessen beim Testen von ARCH-13, und gravierender als der Gleichstand daneben.
+
+`uft_probe_file_format()` liest **4096** Bytes. `uft_smart_open()` liest bis zu
+**65536**. Dieselbe Datei, zwei Einstiegspunkte, zwei verschiedene Formate:
+
+| Puffer | Ergebnis |
+|---|---|
+| 4096 Bytes | **XFD** = 40, gleichauf mit JVC, DSK_SV, DSK_VEC, V9T9 |
+| 65536 Bytes | **JV3** = 70, allein |
+
+Die Identifikation ist damit keine Eigenschaft der Datei, sondern der
+Puffergröße, die der Aufrufer zufällig gewählt hat. Und der größere Puffer
+liefert die **schlechtere** Antwort: JV3 ist TRS-80, die Datei ist Atari.
+
+Beide Zahlen sind in `tests/test_register_all_formats.c` exakt festgenagelt
+(`the_probe_answer_depends_on_how_much_the_caller_read`), damit jede
+Vereinheitlichung sichtbar wird.
+
+**Nächster Schritt:** eine Konstante für die Probe-Puffergröße, von beiden
+Einstiegspunkten benutzt — und vorher die Frage beantworten, welche der beiden
+Antworten richtiger ist, statt die bequemere zu nehmen. Das braucht mehr
+Referenzmaterial als `tests/corpus_free` hat.
+
+---
+
+### PORT-1 — `format(printf, …)` prüft auf MinGW gegen den falschen Dialekt (2026-08-21, MF-448) → ✓ BEHOBEN
+
+Nebenbefund aus MF-448, aufgetaucht beim Einschalten von `-Wformat`.
+
+Der CMake-Build hatte **überhaupt keine Warn-Flags**. Deshalb kam in MF-444
+durch, dass `uft_smart_report()` einen Format-String mit einem `%s` mehr hatte
+als Argumente — die Zeile `"God-Mode: %s"` überlebte eine Änderung, die ihr
+Argument entfernte. `snprintf` las über das Ende der Varargs hinaus; die
+Testsuite prüfte nur die Mitte des Berichts und blieb grün. Der Compiler hätte
+es umsonst gesagt.
+
+Beim Einschalten von `-Werror=format` meldete der Baum dann „unknown conversion
+type character 'z'" quer durch die Konvertierungs-Schicht. **Meine erste
+Diagnose war falsch** — ich nahm an, `%zu` funktioniere auf MinGW nicht, und
+wollte `__USE_MINGW_ANSI_STDIO` setzen. Nachgemessen (kompiliert und
+ausgeführt): `%zu` funktioniert zur Laufzeit einwandfrei. Der Fehler lag im
+Attribut: `__attribute__((format(printf, …)))` wählt auf MinGW den
+MSVCRT-Dialekt, der C99 nicht kennt. gcc prüfte also gegen eine Formatsprache,
+die dieser Code nicht benutzt.
+
+`UFT_PRINTF_FMT` in `include/uft/uft_compiler.h` verlangt auf MinGW jetzt
+`gnu_printf`; die einzige handgeschriebene Stelle
+(`uftc_add_warning`) benutzt das Makro. Damit baut der gesamte Baum mit
+`-Wformat -Werror=format -Werror=format-extra-args` sauber durch, und die Klasse
+ist ab jetzt ein Build-Fehler statt einer Warnung unter vielen.
+
+---
+
+
 
 ---
 

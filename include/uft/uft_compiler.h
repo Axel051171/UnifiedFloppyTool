@@ -307,7 +307,21 @@ extern "C" {
     #define UFT_COLD                __attribute__((cold))
     #define UFT_PURE                __attribute__((pure))
     #define UFT_CONST               __attribute__((const))
-    #define UFT_PRINTF_FMT(f, a)    __attribute__((format(printf, f, a)))
+    /* MF-448: gnu_printf, nicht printf.
+     *
+     * On MinGW, `format(printf, ...)` selects the MSVCRT dialect, which
+     * predates C99 and rejects %z, %ll and friends — so gcc checked every call
+     * to a UFT_PRINTF_FMT function against a format language this code does
+     * not use, and reported errors for correct %zu. The runtime is fine
+     * (mingw-w64 routes vsnprintf to its C99 implementation; verified by
+     * running it), so this was purely a checking mismatch — which is worse
+     * than no checking, because the noise is what taught everyone to ignore
+     * the warnings. gnu_printf checks against the dialect actually in use. */
+    #if defined(__MINGW32__) || defined(__MINGW64__)
+        #define UFT_PRINTF_FMT(f, a)  __attribute__((format(gnu_printf, f, a)))
+    #else
+        #define UFT_PRINTF_FMT(f, a)  __attribute__((format(printf, f, a)))
+    #endif
     #define UFT_WARN_UNUSED_RESULT  __attribute__((warn_unused_result))
 #else
     #define UFT_HOT

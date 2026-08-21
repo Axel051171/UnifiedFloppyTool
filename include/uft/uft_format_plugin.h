@@ -800,6 +800,57 @@ const uft_format_plugin_t* uft_get_format_plugin_by_name(const char* name);
  */
 const uft_format_plugin_t* uft_disk_plugin(const uft_disk_t* disk);
 
+/* ── Probe-Ergebnis mit Rangfolge ────────────────────────────────────────────
+ *
+ * MF-448 (ARCH-13): uft_probe_buffer_format() vergleicht mit `conf > best`,
+ * gibt also bei Punktgleichstand den zuerst Registrierten zurück. Gemessen an
+ * einem echten Referenz-Image:
+ *
+ *     atrcopy_dos2sd.xfd → XFD=40  JVC=40  DSK_SV=40  DSK_VEC=40  V9T9=40
+ *
+ * XFD gewinnt, weil die ATARI-Gruppe in g_groups[] vor OTHER steht. Richtig
+ * aus Versehen.
+ *
+ * Der Fall ist nicht pathologisch: XFD *ist* ein Rohformat ohne Header, und
+ * ein Sektorabbild derselben Größe ist von einem anderen Rohformat derselben
+ * Größe nicht unterscheidbar. Das Problem ist nicht, dass die Probe unsicher
+ * ist — sondern dass ihr Ergebnis wie Sicherheit aussieht.
+ */
+
+/** Rangfolge einer Format-Probe.
+ *
+ * Heißt bewusst nicht `uft_probe_result_t` — den Namen führt bereits
+ * `include/uft/uft_format_probe.h` für eine andere Struktur, die über
+ * `uft_format_t` statt über Plugins spricht. Für 131 Plugins auf
+ * UFT_FORMAT_DSK kann deren `alternatives[4]` die Mehrdeutigkeit gar nicht
+ * ausdrücken; siehe ARCH-14. */
+typedef struct uft_probe_ranking {
+    const uft_format_plugin_t* winner;      /**< Höchste Konfidenz, oder NULL */
+    int    confidence;                      /**< Konfidenz des Gewinners, 0 wenn keiner */
+    size_t tied;                            /**< Wie viele Plugins EXAKT diese Konfidenz melden.
+                                                 1 = eindeutig. >1 = der Gewinner steht durch
+                                                 Registrierungsreihenfolge fest, nicht durch Evidenz. */
+    const uft_format_plugin_t* runner_up;   /**< Bestes Plugin UNTERHALB confidence, oder NULL */
+    int    runner_up_confidence;
+    size_t claimants;                       /**< Wie viele Plugins die Daten überhaupt beanspruchen */
+} uft_probe_ranking_t;
+
+/**
+ * @brief Wie uft_probe_buffer_format(), aber mit der Rangfolge dahinter
+ *
+ * Der Gewinner ist derselbe (deterministisch: bei Gleichstand der zuerst
+ * registrierte). Neu ist, dass der Aufrufer erfährt, ob die Antwort eindeutig
+ * war. Wer ein Ergebnis einem Menschen zeigt oder in ein Protokoll schreibt,
+ * benutzt diese Form — `tied > 1` heißt „so gut wie N andere auch".
+ *
+ * @return Anzahl der Plugins, die die Daten beanspruchen (== result->claimants)
+ */
+size_t uft_probe_buffer_ranked(const uint8_t* data, size_t size,
+                               size_t file_size, uft_probe_ranking_t* result);
+
+/** @brief uft_probe_buffer_ranked() auf eine Datei (erste 4096 Bytes). */
+size_t uft_probe_file_ranked(const char* path, uft_probe_ranking_t* result);
+
 /**
  * @brief Ziel-Plugin bestimmen, ohne zu raten (MF-445)
  *

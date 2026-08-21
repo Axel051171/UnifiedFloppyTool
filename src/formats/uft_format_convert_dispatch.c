@@ -485,7 +485,13 @@ uft_error_t uft_convert_file(const char* src_path,
     }
     fclose(f);
 
-    /* Detect source format */
+    /* Detect source format.
+     *
+     * MF-448: note what this call returns:
+     * uft_probe_format() answers with plugin->format, and 131 of 137 plugins
+     * carry UFT_FORMAT_DSK — so `src_format` below identifies a container
+     * class, not a format, and `probe.alternatives[]` is never filled by
+     * anyone. Tracked as ARCH-14. */
     uft_probe_result_t probe;
     uft_format_t src_format = uft_probe_format(src_data, src_size,
                                                 src_path, &probe);
