@@ -52,7 +52,7 @@ case that XCopy detects a harmless bootblock as a virus"*.
 INDEXCOPY = $F8BC
 ```
 
-`xcop.s:2108-2110` benutzt den Wert als **Modus-Sentinel**:
+`xcop.s:2110-2113` benutzt den Wert als **Modus-Sentinel**:
 
 ```asm
     move.w  sync,D1
@@ -159,6 +159,49 @@ Braucht Hardware (UFT-008), deshalb hier nur festgehalten.
 
 ---
 
+## Leads aus dem Umfeld (nicht übernommen, EINFRIER-REGEL)
+
+**`keirf/disk-utilities` — libdisk** ist die eigentliche Fundgrube für das, was
+X-Copys NIBBLE-Modus blind kopiert. Die Header-Kommentare der Format-Handler
+sind halbe Specs. `libdisk/format/amiga/amigados.c` führt über den Standard
+hinaus:
+
+| Sync | Zuordnung |
+|---|---|
+| `0x4521` | Z Out, Track 1 |
+| `0x4891` | Turbo Outrun |
+| `0x4A84` | Future Tank |
+| `0x448A`, `0x8912`, `0x4251`, `0x2149`, `0x2959`, `0x8524`, `0x2429`, `0x4428`, `0x4429`, `0x2849`, `0x4292`, `0x5429` | eigene Handler ohne Titel im Array |
+
+Dazu `copylock.c` (23-Bit-LFSR, Taps 1 und 23), `pdos.c` (Sync `0x1448`,
+Disk-Key-EOR-Ketten, Longtrack ~105.500 bit), `longtrack.c` (≥107.200 bit).
+
+**Warum nicht jetzt:** Die EINFRIER-REGEL (MF-363) verlangt vor neuem
+Formatcode eine reale Referenzdatei. Die richtige Reihenfolge ist deshalb, wie
+in der Referenzliste vorgeschlagen:
+
+1. libdisk als **Referenz-Orakel** behandeln, nicht als Codespender — pro
+   Amiga-Trackformat, das UFT beansprucht, ein Cross-Check gegen `disk-analyse`
+   (analog zur pyOTDR-Validierung).
+2. Greaseweazle-/SCP-Dump einer echten Diskette pro Format, bevor ein Parser
+   entsteht.
+3. `xcop.s` als **Verhaltensspec** extrahieren, nicht als Quelle portieren.
+
+Bemerkung zur Lizenz: libdisk ist quelloffen, was den Weg über das Orakel auch
+rechtlich sauber macht — im Gegensatz zur X-Copy-Quelle und zur `xvs.library`.
+
+---
+
+## Quellenlage im Upload
+
+Der Ordner enthält **zwei** X-Copy-Bäume. Geprüft (MF-454): die Unterschiede
+liegen ausschließlich in der Bootblock-Prüfsumme (`xcop.s:4411-4677`, `addq/neg`
+durch `not.l` ersetzt — arithmetisch identisch, da −(x+1) = ~x) und bei
+`xio.s:2451`. Keine der hier zitierten Stellen ist betroffen. Alle Zitate
+beziehen sich auf `xcopy_src/`.
+
+---
+
 ## Reihenfolge
 
 | # | Aufgabe | Status |
@@ -167,7 +210,9 @@ Braucht Hardware (UFT-008), deshalb hier nur festgehalten.
 | 2 | Sektor-Label durchreichen | ✓ MF-452 |
 | 3 | HD- und Zylindergrenzen | ✓ MF-452 |
 | 4 | Amiga-Sync-SSOT + Decoder anschließen | ✓ MF-453 |
-| 5 | Laufwerkskalibrierung im HAL | HW-Bench nötig |
+| 5 | Fehlerklasse 5 (Header-Longword) | ✓ MF-454 |
+| 6 | Laufwerkskalibrierung im HAL | HW-Bench nötig |
+| 7 | libdisk als Referenz-Orakel (Cross-Check) | Lead, s.o. |
 
 1–3 sind Fehlerbehebungen an Bestehendem und fallen nicht unter die
 EINFRIER-REGEL (MF-363). 4 ist eine Zusammenführung vorhandener Tabellen, keine

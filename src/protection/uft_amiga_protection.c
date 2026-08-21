@@ -17,15 +17,31 @@
  * Protection Registry Database
  *============================================================================*/
 
-/* MF-453: die `sync`-Spalte unten ist NICHT die Sync-Tabelle des Baums.
+/* MF-454: die `sync`-Spalte unten ist NICHT die Sync-Tabelle des Baums.
  *
- * Sie behauptet pro Schutzverfahren einen Sync. Zwei der Werte — 0x8a91
- * (CopyLock) und 0x8914 (Psygnosis Type B) — kommen in keiner der beiden
- * anderen Tabellen vor und stehen auch nicht in der X-Copy-Quelle, gegen die
- * die uebrigen Muster belegt sind (include/uft/formats/uft_amiga_syncs.h).
- * Sie sind damit unbelegt: entweder aus einer Quelle, die hier niemand
- * nennt, oder erfunden. Bis das geklaert ist, bleiben sie stehen und sind
- * hier als unbelegt markiert — nicht in die SSOT uebernommen. */
+ * Sie behauptet pro Schutzverfahren einen Sync. Zwei der Werte kommen in
+ * keiner anderen Tabelle vor und stehen nicht in der X-Copy-Quelle, gegen die
+ * die uebrigen belegt sind (include/uft/formats/uft_amiga_syncs.h). Nachgerechnet
+ * gegen die bekannten Muster und gegen keirf/disk-utilities libdisk:
+ *
+ *   0x8914  (Psygnosis Type B)  ==  0x448A um EIN Bit nach links rotiert.
+ *           0x448A = 0100 0100 1000 1010
+ *           0x8914 = 1000 1001 0001 0100
+ *           (und ebenso 0x4891 "Turbo Outrun" um vier Bit rotiert)
+ *
+ *   0x8A91  (CopyLock)          ==  Rotation von KEINEM bekannten Muster.
+ *
+ * Die Rotation ist gerechnet, nicht vermutet. Was sie bedeutet, ist eine
+ * Schlussfolgerung und wird als solche gesagt: in einer bitweisen Sync-Suche
+ * ist ein Muster und seine Rotation DERSELBE Sync bei anderer Bitausrichtung.
+ * 0x8914 als eigenen Schutz-Sync zu fuehren heisst also mit hoher
+ * Wahrscheinlichkeit, 0x448A ein zweites Mal zu zaehlen — moeglich, dass der
+ * Wert aus einem um ein Bit verschobenen Dump abgelesen wurde.
+ *
+ * Beide bleiben stehen, bis eine reale Referenzdiskette das entscheidet, und
+ * wandern nicht in die SSOT. Die dortige Tabelle ist per Test rotationsfrei
+ * (tests/test_amiga_decoder_limits.c), damit sich dieselbe Doppelzaehlung
+ * nicht ueber die Hintertuer einschleicht. */
 static const uft_amiga_protection_entry_t protection_registry[] = {
     /* Major Protection Systems */
     {UFT_AMIGA_PROT_COPYLOCK, "Rob Northen CopyLock", "Rob Northen Computing",

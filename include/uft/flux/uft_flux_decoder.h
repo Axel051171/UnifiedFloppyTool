@@ -79,6 +79,7 @@ typedef enum {
 typedef enum {
     FLUX_OK = 0,
     FLUX_ERR_NO_SYNC,       /* No sync pattern found */
+    FLUX_ERR_BAD_HEADER,    /* Sync gefunden, Info-Long unbrauchbar (MF-454) */
     FLUX_ERR_BAD_CRC,       /* CRC mismatch */
     FLUX_ERR_NO_DATA,       /* No data after ID */
     FLUX_ERR_WEAK_BITS,     /* Unreliable flux timing */
@@ -167,6 +168,31 @@ typedef struct {
     size_t bad_id_crc;
     size_t bad_data_crc;
     size_t missing_data;
+
+    /* Warum ein Sektor verworfen wurde (MF-454).
+     *
+     * X-Copy meldet pro Spur einen von acht Fehlercodes. Sie sind doppelt
+     * belegt: 1-6 im Quelltext (xcop.s:1163-1174, Label `tofewsc`, `nosync`,
+     * `no2sync`, `hecksum`, `headerr`, `blcksum`), 1-8 im Handbuch von 1992
+     * (Siren Software, archive.org).
+     *
+     *   1 mehr oder weniger als 11 Sektoren    5 Fehler im Header-Longword
+     *   2 kein Sync gefunden                   6 Datenblock-Pruefsumme
+     *   3 nach dem Gap kein weiterer Sync      7 Longtrack
+     *   4 Header-Pruefsumme                    8 Verify-Fehler
+     *
+     * UFT hatte davon drei: bad_id_crc (4), bad_data_crc (6) und teilweise
+     * missing_data. Klasse 5 fiel bisher unter den Tisch — ein Sektor, dessen
+     * Info-Long nicht mit 0xFF beginnt oder dessen Spur-/Sektornummer nicht in
+     * die Geometrie passt, wurde als FLUX_ERR_NO_SYNC gemeldet, also als
+     * "kein Sync gefunden". Das ist eine andere Diagnose: der Sync WAR da, der
+     * Kopf dahinter passt nicht. Auf einer geschuetzten Diskette ist genau das
+     * der interessante Fall.
+     *
+     * 1, 3, 7 und 8 sind hier nicht zaehlbar — sie sind Aussagen ueber die
+     * ganze Spur bzw. ueber einen Schreibvorgang, nicht ueber einen Sektor.
+     * Sie fehlen absichtlich statt mit einer Naeherung gefuellt zu werden. */
+    size_t bad_header_format;   /**< X-Copy-Klasse 5: Sync ok, Info-Long nicht */
     
     /* Raw decoded bits (optional) */
     uint8_t *raw_bits;
@@ -403,7 +429,7 @@ int flux_find_sync(const uint8_t *bits, size_t bit_count,
  * @brief Erste Fundstelle IRGENDEINES der Muster (MF-453)
  *
  * Ein Durchlauf, ein Schieberegister, alle Muster pro Position verglichen —
- * so wie X-Copy es macht (`xcop.s:2120-2135`: rol.l plus sechs Vergleiche).
+ * so wie X-Copy es macht (`xcop.s:2119-2138`: rol.l plus sechs Vergleiche).
  * N-mal flux_find_sync() zu rufen waere N Durchlaeufe und wuerde ausserdem
  * den fruehesten Treffer verfehlen, wenn ein spaeteres Muster frueher steht.
  *

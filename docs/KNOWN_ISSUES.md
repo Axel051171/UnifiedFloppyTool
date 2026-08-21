@@ -3257,6 +3257,88 @@ eigentlich meint — `uft_pll_init` existiert nämlich in **zwei** Signaturen
 (`uft_decoder_plugin.h:335` mit `adjust_pct`, `uft_flux_pll.h:317` mit
 `uft_encoding_t`), was denselben Aufruf je nach Include-Satz anders bedeutet.
 
+### FMT-18 — Zwei unbelegte Sync-Werte nachgerechnet, X-Copys Fehlerklassen übernommen (2026-08-21, MF-454) → ✓ TEILS GEKLÄRT
+
+Aus einer zweiten Referenzliste zum X-Copy-Umfeld
+(`keirf/disk-utilities` libdisk, X-Copy-Handbuch 1992 auf archive.org).
+
+**1. Zitate korrigiert.** Die Zeilennummern aus MF-452/453 waren um zwei bis
+drei Zeilen daneben. Nachgeprüft und in Code, Tests und Doku berichtigt:
+
+| Zitat | war | ist |
+|---|---|---|
+| `cmp.w #INDEXCOPY,D1` | `xcop.s:2108` | **`xcop.s:2112`** |
+| Sync-Register D2–D6 | `xcop.s:2113-2117` | **`xcop.s:2114-2118`** |
+| Rotations-Suchschleife | `xcop.s:2120-2135` | **`xcop.s:2119-2138`** |
+| `synctab`, `xio.s:210`, `xcop.s:1836` | — | unverändert richtig |
+
+Der Upload enthält **zwei** Quellbäume, `xcopy_src/` und `xcopy_src(1)/`.
+Geprüft: die Unterschiede liegen ausschließlich in der Bootblock-Prüfsumme
+(`xcop.s:4411-4677`, `addq/neg` durch `not.l` ersetzt — arithmetisch identisch,
+da −(x+1) = ~x) und bei `xio.s:2451`. **Keine** der zitierten Stellen ist
+betroffen.
+
+**2. `0x8914` ist keine eigene Sync-Konstante.** MF-453 hatte die beiden
+unbelegten Werte aus `src/protection/uft_amiga_protection.c` stehen lassen.
+Nachgerechnet:
+
+```
+0x448A = 0100 0100 1000 1010
+0x8914 = 1000 1001 0001 0100      ← 0x448A um EIN Bit nach links rotiert
+```
+
+In einer bitweisen Sync-Suche ist ein Muster und seine Rotation **derselbe
+Sync bei anderer Bitausrichtung**. `0x8914` als eigenen Schutz-Sync zu führen
+heißt daher mit hoher Wahrscheinlichkeit, `0x448A` ein zweites Mal zu zählen —
+plausibel abgelesen aus einem um ein Bit verschobenen Dump. Die Rotation ist
+gerechnet; die Schlussfolgerung ist als solche benannt.
+
+`0x8A91` (CopyLock) ist **Rotation von keinem** bekannten Muster — weder aus
+X-Copy noch aus libdisk. Bleibt unerklärt.
+
+Beide bleiben stehen, bis eine reale Referenzdiskette entscheidet, und wandern
+nicht in die SSOT. Neu abgesichert: `tests/test_amiga_decoder_limits.c` prüft,
+dass **keine zwei Einträge der SSOT Rotationen voneinander sind** — samt
+Gegenprobe, damit der Test nicht trivial besteht.
+
+**3. X-Copys Fehlerklasse 5 gibt es jetzt.** Die Klassifikation ist doppelt
+belegt: 1–6 im Quelltext (`xcop.s:1163-1174`, Label `tofewsc`, `nosync`,
+`no2sync`, `hecksum`, `headerr`, `blcksum`), 1–8 im Handbuch von 1992 (Siren
+Software).
+
+| | | | |
+|---:|---|---:|---|
+| 1 | ≠ 11 Sektoren | 5 | Fehler im Header-Longword |
+| 2 | kein Sync | 6 | Datenblock-Prüfsumme |
+| 3 | nach Gap kein Sync | 7 | Longtrack |
+| 4 | Header-Prüfsumme | 8 | Verify-Fehler |
+
+UFT hatte 4 und 6 als Zähler. **Klasse 5 fiel unter den Tisch:** ein Sektor,
+dessen Info-Long nicht mit `0xFF` beginnt oder dessen Spur-/Sektornummer nicht
+in die Geometrie passt, wurde als `FLUX_ERR_NO_SYNC` gemeldet — also als „kein
+Sync gefunden". Das ist eine andere Diagnose: der Sync **war** da, der Kopf
+dahinter passt nicht. Auf einer geschützten Diskette ist genau das der
+interessante Fall.
+
+Neu: `FLUX_ERR_BAD_HEADER` und `flux_decoded_track_t.bad_header_format`.
+Klassen 1, 3, 7 und 8 fehlen absichtlich — sie sind Aussagen über die ganze
+Spur bzw. über einen Schreibvorgang, nicht über einen Sektor, und werden nicht
+mit einer Näherung gefüllt.
+
+**Dabei mitgefunden:** nach einem gescheiterten Sektor sprang die Schleife
+`sync_pos + 16` weiter und fand damit den **zweiten** Sync des Amiga-Paares,
+lief auf denselben kaputten Kopf und zählte ein zweites Mal — gemessen
+`bad_header_format == 2` für einen Sektor. Der Zähler hätte Sync-Kandidaten
+gezählt statt Sektoren. Es wird jetzt über den ganzen Sync-Lauf gesprungen.
+
+**Nicht übernommen:** libdisk führt weitere Amiga-Syncs (`0x4521` Z Out,
+`0x4891` Turbo Outrun, `0x4A84` Future Tank und ein Dutzend Custom-Handler).
+Sie sind gute Kandidaten, fallen aber unter die EINFRIER-REGEL: ohne reale
+Referenzdiskette pro Format kein neuer Formatcode. Als Lead in
+`docs/XCOPY_COMPARISON.md` notiert.
+
+---
+
 ### FMT-17 — Die Amiga-Sync-Muster lagen dreimal im Baum, und der Decoder benutzte keines davon (2026-08-21, MF-453) → ✓ BEHOBEN
 
 Fund 4 aus [`docs/XCOPY_COMPARISON.md`](XCOPY_COMPARISON.md). Der
@@ -3298,7 +3380,7 @@ Ergebnis**. Wer geschützte Disketten lesen will, übergibt
 `UFT_AMIGA_SYNC_PATTERNS`.
 
 Neu: `flux_find_sync_any()` — ein Durchlauf, ein Schieberegister, alle Muster
-pro Bitposition, so wie X-Copy es macht (`xcop.s:2120-2135`: `rol.l` plus sechs
+pro Bitposition, so wie X-Copy es macht (`xcop.s:2119-2138`: `rol.l` plus sechs
 Vergleiche). N Einzelaufrufe von `flux_find_sync()` wären nicht nur N
 Durchläufe, sie lieferten auch den frühesten Treffer des **ersten** Musters
 statt des frühesten überhaupt.

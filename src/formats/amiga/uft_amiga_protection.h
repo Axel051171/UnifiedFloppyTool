@@ -46,7 +46,7 @@ extern "C" {
 #define AMIGA_SYNC_ALT1         0x448A  /* ohne belegten Namen */
 /* MF-452: KEIN Sync-Muster. In X-Copy (`xcopy.i`) ist $F8BC der Wert, den die
  * Variable `sync` annimmt, um "kein Custom-Sync, index-synchron kopieren" zu
- * bedeuten (`xcop.s:2108`). Er steht nie auf einer Diskette und darf nicht
+ * bedeuten (`xcop.s:2112`). Er steht nie auf einer Diskette und darf nicht
  * gesucht werden. Als Konstante behalten, damit der naechste Leser der
  * X-Copy-Quelle ihn hier wiederfindet — mit dieser Erklaerung. */
 #define AMIGA_MODE_INDEXCOPY    0xF8BC  /* Modus-Sentinel, kein Sync */

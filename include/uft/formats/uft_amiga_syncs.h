@@ -19,7 +19,7 @@
  *
  * Aus dem 68k-Quelltext von X-Copy Professional 5.3, `xcop.s:2347-2351`. Die
  * Tabelle steht dort auskommentiert neben der Suchschleife, die dieselben
- * Werte in Registern haelt (`xcop.s:2113-2117`):
+ * Werte in Registern haelt (`xcop.s:2114-2118`):
  *
  *     ;synctab
  *     ;   DC.W  $9521,$A245,$A89A,$448A,$4489,$0000,...
@@ -35,7 +35,7 @@
  * ── Was NICHT hier steht ────────────────────────────────────────────────────
  *
  * 0xF8BC. Der Wert ist in X-Copy `INDEXCOPY` (`xcopy.i`) und dient als
- * Modus-Sentinel — "kein Custom-Sync, index-synchron kopieren" (`xcop.s:2108`).
+ * Modus-Sentinel — "kein Custom-Sync, index-synchron kopieren" (`xcop.s:2112`).
  * Er steht nie auf einer Diskette. Siehe MF-452.
  *
  * 0x8a91 und 0x8914 aus `src/protection/uft_amiga_protection.c` (CopyLock bzw.

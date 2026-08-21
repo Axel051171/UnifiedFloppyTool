@@ -8,7 +8,7 @@
 #include "uft/formats/uft_amiga_syncs.h"
 
 /* Quelle fuer alle Namen: X-Copy Professional 5.3, xcop.s:2347-2351
- * (auskommentierte `synctab` neben der Suchschleife xcop.s:2113-2117). */
+ * (auskommentierte `synctab` neben der Suchschleife xcop.s:2114-2118). */
 #define XCOPY_SRC "X-Copy Pro 5.3, xcop.s:2347"
 
 const uft_amiga_sync_t UFT_AMIGA_SYNCS[] = {

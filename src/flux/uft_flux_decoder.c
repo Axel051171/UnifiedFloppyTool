@@ -1171,10 +1171,13 @@ static flux_status_t decode_amiga_sector(const uint8_t *bits, size_t bit_count,
      * Die Obergrenzen sind jetzt das, was das Feld physisch tragen kann bzw.
      * was ein Laufwerk erreichen kann — nicht das, was die haeufigste Diskette
      * hat. Ein Sektor mit unmoeglichem Info-Long wird weiterhin verworfen. */
-    if (info[0] != 0xFF) return FLUX_ERR_NO_SYNC;
+    /* MF-454: FLUX_ERR_BAD_HEADER, nicht FLUX_ERR_NO_SYNC. Der Sync war da —
+     * was dahinter steht, passt nicht. X-Copy trennt diese beiden Faelle seit
+     * 1992 (Code 2 gegen Code 5, xcop.s:1165/1171), UFT warf sie zusammen. */
+    if (info[0] != 0xFF) return FLUX_ERR_BAD_HEADER;
     uint8_t track = info[1], sec = info[2];
     if (track > AMIGA_MAX_TRACK || sec > AMIGA_MAX_SECTOR)
-        return FLUX_ERR_NO_SYNC;
+        return FLUX_ERR_BAD_HEADER;
 
     sector->cylinder    = track / 2;
     sector->head        = track % 2;
@@ -1266,8 +1269,19 @@ flux_status_t flux_decode_amiga_bits(const uint8_t *bits, size_t bit_count,
             pos = (sector_end > (size_t)sync_pos + 16)
                       ? sector_end : (size_t)sync_pos + 16;
         } else {
-            if (status == FLUX_ERR_NO_DATA) track->missing_data++;
-            pos = (size_t)sync_pos + 16;
+            if (status == FLUX_ERR_NO_DATA)    track->missing_data++;
+            if (status == FLUX_ERR_BAD_HEADER) track->bad_header_format++;
+
+            /* MF-454: ueber den GANZEN Sync-Lauf hinweg, nicht ein Wort weit.
+             *
+             * `pos = sync_pos + 16` liess den zweiten Sync des Amiga-Paares
+             * stehen; der wurde beim naechsten Durchlauf gefunden, fuehrte auf
+             * denselben kaputten Kopf und zaehlte ein zweites Mal. Ein Sektor,
+             * zwei Fehler — der Zaehler haette Sync-Kandidaten gezaehlt statt
+             * Sektoren. */
+            size_t after = mfm_skip_sync_run(bits, bit_count,
+                                             (size_t)sync_pos, syncs[hit]);
+            pos = (after > (size_t)sync_pos) ? after : (size_t)sync_pos + 16;
         }
     }
 

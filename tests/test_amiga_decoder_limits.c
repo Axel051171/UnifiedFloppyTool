@@ -7,7 +7,7 @@
  *
  *   1. 0xF8BC wurde als Sync-Muster gesucht. In X-Copy ist der Wert
  *      `INDEXCOPY` — ein Modus-Sentinel fuer "kein Custom-Sync, index-synchron
- *      kopieren" (xcopy.i, xcop.s:2108). Er steht nie auf einer Diskette. Ein
+ *      kopieren" (xcopy.i, xcop.s:2112). Er steht nie auf einer Diskette. Ein
  *      16-Bit-Muster trifft im Mittel alle 65536 Bit zufaellig, und der
  *      Treffer wurde als "Index Copy Protection" gemeldet.
  *
@@ -332,6 +332,63 @@ TEST(find_sync_any_returns_the_earliest_over_all_patterns) {
     ASSERT(flux_find_sync_any(buf, b.nbits, NULL, 2, 0, NULL) == -1);
 }
 
+/* Ein Muster und seine Rotation sind in einer bitweisen Suche derselbe Sync bei
+ * anderer Bitausrichtung. Zwei rotationsgleiche Eintraege in der Tabelle waeren
+ * also Doppelzaehlung — und genau so sieht 0x8914 in
+ * src/protection/uft_amiga_protection.c aus: es ist 0x448A um ein Bit rotiert
+ * (MF-454). */
+static uint16_t rot16(uint16_t v, unsigned n)
+{
+    n &= 15u;
+    if (n == 0) return v;
+    return (uint16_t)((v << n) | (v >> (16 - n)));
+}
+
+TEST(no_two_syncs_in_the_table_are_rotations_of_each_other) {
+    for (size_t i = 0; i < UFT_AMIGA_SYNC_COUNT; i++) {
+        for (size_t j = i + 1; j < UFT_AMIGA_SYNC_COUNT; j++) {
+            for (unsigned n = 1; n < 16; n++) {
+                if (rot16(UFT_AMIGA_SYNCS[i].pattern, n) ==
+                    UFT_AMIGA_SYNCS[j].pattern) {
+                    printf("0x%04X rot%u == 0x%04X\n",
+                           UFT_AMIGA_SYNCS[i].pattern, n,
+                           UFT_AMIGA_SYNCS[j].pattern);
+                    _fail++;
+                    return;
+                }
+            }
+        }
+    }
+
+    /* Gegenprobe, damit der Test nicht nur trivial bestanden wird: die
+     * Rechnung findet die bekannte Rotation. */
+    ASSERT(rot16(0x448A, 1) == 0x8914);
+    ASSERT(rot16(0x4489, 1) == 0x8912);
+}
+
+TEST(a_bad_header_is_not_reported_as_a_missing_sync) {
+    /* MF-454. X-Copy trennt seit 1992 "kein Sync gefunden" (Code 2) von
+     * "Fehler im Header-Longword" (Code 5) — xcop.s:1165 gegen 1171. UFT gab
+     * fuer beides FLUX_ERR_NO_SYNC zurueck, also fuer einen gefundenen Sync
+     * mit unbrauchbarem Kopf dieselbe Diagnose wie fuer eine leere Spur. Auf
+     * einer geschuetzten Diskette ist genau das der interessante Fall. */
+    bitbuf_t *b = make_sector(/*track*/ 200, /*sec*/ 0, /*to_gap*/ 11, NULL);
+    flux_decoded_track_t tr;
+    memset(&tr, 0, sizeof(tr));
+
+    ASSERT(flux_decode_amiga_bits(b->bits, b->nbits, &tr, NULL) != FLUX_OK);
+    ASSERT(tr.sector_count == 0);
+    ASSERT(tr.bad_header_format == 1);   /* Sync war da, Kopf nicht brauchbar */
+
+    /* Gegenprobe: eine Spur ohne jeden Sync zaehlt hier nicht mit */
+    static uint8_t empty[512];
+    memset(empty, 0xAA, sizeof(empty));
+    memset(&tr, 0, sizeof(tr));
+    ASSERT(flux_decode_amiga_bits(empty, sizeof(empty) * 8, &tr, NULL)
+           == FLUX_ERR_NO_SYNC);
+    ASSERT(tr.bad_header_format == 0);
+}
+
 int main(void)
 {
     printf("=== Amiga-Decoder: X-Copy-Quellenvergleich (MF-452) ===\n");
@@ -345,6 +402,8 @@ int main(void)
     RUN(a_custom_sync_decodes_only_when_the_caller_asks);
     RUN(the_sync_table_is_one_table_and_names_its_source);
     RUN(find_sync_any_returns_the_earliest_over_all_patterns);
+    RUN(no_two_syncs_in_the_table_are_rotations_of_each_other);
+    RUN(a_bad_header_is_not_reported_as_a_missing_sync);
     printf("\nResults: %d passed, %d failed\n", _pass, _fail);
     return _fail == 0 ? 0 : 1;
 }
