@@ -1580,6 +1580,84 @@ davon stehen in genau den überzähligen Lesern, die ARCH-6 löschen will
 Leser zusammenführen, dann übernehmen die Überlebenden die Geometrie. Andersherum
 wäre es Arbeit an Code, der verschwinden soll.
 
+### PRINC-2 — `uft_smart_open()` liefert eine erfundene Qualitätsbewertung und druckt sie als forensischen Bericht (2026-08-21, MF-443) → ⚠ OFFEN, Entscheidung nötig
+
+**Prinzip 1 („Keine erfundenen Daten"), schwerster Verstoß dieser Reihe.**
+Gefunden bei der Frage, ob die v3-Kette als API etwas taugt.
+
+`uft_smart_open()` verspricht laut Header: Formaterkennung, Kopierschutz-
+Erkennung, **Qualitätsbewertung** und einen Bericht — in einem Aufruf. Die
+Implementierung zerfällt in drei sehr unterschiedliche Teile:
+
+| Teil | Zustand |
+|---|---|
+| **Erkennung** | **echt** — ruft die tatsächlichen Plugin-Probes und meldet deren Konfidenz. Aber über eine handgepflegte Tabelle von **16** Formaten statt der Registry mit 88. Duplikat, keine Erfindung. |
+| **Kopierschutz** | teilweise — ruft die v3-Parser, Konfidenz ist eine handvergebene Konstante je Schema, funktioniert nur für D64/G64/SCP |
+| **Qualität** | **erfunden** |
+
+`analyze_quality()` (`src/core/uft_smart_open.c:268`) mit Standardoptionen:
+
+```c
+quality->level            = UFT_QUALITY_GOOD;
+quality->readable_sectors = 100;
+quality->total_sectors    = 100;
+```
+
+Hartkodiert. Alles Übrige bleibt bei 0 aus dem `memset` — `crc_corrected`,
+`weak_bits_found`, `weak_bits_resolved`. Nur wenn `enable_god_mode` gesetzt ist
+(Standard: **false**), werden `crc_errors` und `bit_error_rate` tatsächlich
+berechnet; die Sektorzahlen bleiben auch dann bei 100/100.
+
+**Und `uft_smart_report()` gießt genau das in einen Bericht:**
+
+```
+QUALITY ASSESSMENT
+  Level:       Good
+  Sectors:     100 / 100 readable
+  CRC Errors:  0 (corrected: 0)
+  Weak Bits:   0 (resolved: 0)
+  God-Mode:    Not needed
+```
+
+Für jede Diskette, ohne dass ein Sektor gelesen wurde.
+
+Das ist gefährlicher als jeder andere Fund dieser Reihe, und zwar nicht wegen
+Speichersicherheit. Ein Speicherfehler stürzt ab oder verfälscht Daten, die
+jemand später prüfen kann. **Dieser Text sieht aus wie eine Messung und wandert
+in ein Erhaltungsprotokoll.** Ein Archiv, das „100 / 100 readable, Quality
+Good" zu einer beschädigten Diskette ablegt, hat kein Werkzeugproblem mehr,
+sondern einen falschen Nachweis im Bestand.
+
+**Entschärfend:** `uft_smart_open()` hat heute **keinen Aufrufer**, der Bericht
+wird also nirgends erzeugt. Der Defekt ist geladen, nicht abgefeuert — wie
+mehrere Funde dieser Reihe.
+
+**`uft_advanced_mode()`** hat denselben Charakter, milder: eine **eigene**
+Formaterkennung mit **8** Formaten und fest verdrahteten Konfidenzen (`95`),
+parallel zur Registry mit 88 und parallel zu smart_opens eigener Tabelle mit
+16. Drei Formaterkennungen, drei Reichweiten.
+
+**Bewertung, ehrlich in beide Richtungen.** Die *API-Form* ist gut und fehlt
+dem Werkzeug tatsächlich: ein Aufruf, der eine Diskette öffnet und
+zurückgibt, was sie ist, ob sie geschützt ist, wie gut sie gelesen wurde, samt
+Bericht. Genau das will ein Archivar, und nichts sonst im Baum bietet es an
+einer Stelle. Der *Rumpf* ist das Gegenteil dessen, wofür das Projekt auf
+seiner wichtigsten Achse steht.
+
+**Drei Wege, Entscheidung steht aus:**
+
+1. **Rumpf neu bauen, Form behalten** — Erkennung über
+   `uft_probe_buffer_format()` (88 statt 16), Qualität aus echtem
+   Spur-für-Spur-Lesen über die Plugin-Schnittstelle plus OTDR für den Level,
+   Weak Bits aus der Multiread-Maschinerie, Kopierschutz über die 35+ Schemata
+   in `src/protection/` statt der v3-Heuristik. Das ist ein Feature, kein
+   Aufräumen.
+2. **Entfernen** wie `src/switch/` — die Kette hat keinen Einstiegspunkt, und
+   aus ihr ist nichts zu übernehmen (siehe die Prüfung unter ARCH-8).
+3. **Als Minimum sofort:** die erfundenen Werte durch ein ehrliches „nicht
+   ermittelt" ersetzen, damit der Bericht nicht behaupten kann, was er nicht
+   weiß — unabhängig davon, welcher der beiden Wege gewählt wird.
+
 ### ARCH-8 — Handgeschriebene `extern`-Deklarationen: drei falsche in einer Datei, eine mit Schreibzugriff auf eine beliebige Adresse (2026-08-21, MF-442) → ✓ KLASSE LEER, Wächter steht
 
 **Correctness, Speichersicherheit.** Gefunden beim Untersuchen der
