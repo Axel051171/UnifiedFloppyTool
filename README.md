@@ -147,7 +147,7 @@ verification).
 **Honest verification status** (script-generated, see
 [`docs/VERIFICATION_TIERS.md`](docs/VERIFICATION_TIERS.md) for the
 per-format table and [`docs/VERIFICATION_PLAN.md`](docs/VERIFICATION_PLAN.md)
-for the tier definitions): **T1=2, T1b=12, T2=15, T3=59** of 88.
+for the tier definitions): **T1=2, T1b=12, T2=16, T3=58** of 88.
 
 - **T1** (real reference image): FDI — a real 1994 TR-DOS disk magazine
   (83-cylinder, partially formatted last track; image local-only for
@@ -157,7 +157,9 @@ for the tier definitions): **T1=2, T1b=12, T2=15, T3=59** of 88.
   ATR (atrcopy template) plus XFD derived from it, HFE + SCP flux
   (greaseweazle encoding the rights-free ADF)
 - **T2** (synthetic round-trip + spec verified against an authoritative
-  reference implementation): 12 formats
+  reference implementation): listed per format in
+  [`docs/VERIFICATION_TIERS.md`](docs/VERIFICATION_TIERS.md), with the
+  evidence for each
 - **T3** (unverified — no test, or a synthetic test without external spec
   verification): the remaining majority
 

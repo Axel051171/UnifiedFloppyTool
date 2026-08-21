@@ -3652,6 +3652,81 @@ beschrieben stehen.
 
 ---
 
+### FMT-21 — Atari ST: jedes erweiterte Format wurde abgewiesen (2026-08-22, MF-462) → ✓ BEHOBEN
+
+ST-Abbilder haben keinen Kopf. Die Geometrie muss also von woanders kommen —
+und woher genau, war die ganze Frage.
+
+**Was fehlte.** Der Leser kannte sechs Dateigrößen und rechnete sonst nur
+80 Zylinder durch. Die erweiterten ST-Formate mit **82 oder 83 Spuren und 10
+oder 11 Sektoren** — auf dem ST alltäglich, weil das Format serienmäßig
+formatiert wurde — fielen damit alle durch. Nicht falsch gelesen: **gar nicht
+geöffnet.**
+
+SAMdisk durchsucht 80..84 Zylinder × 1..2 Köpfe × 8..11 Sektoren
+(`src/samdisk/st.cpp:47-67`). Genau dieser Bereich fehlte.
+
+**Was schwerer wiegt.** 368.640 Byte sind **80×1×9 und 40×2×9**. Der Dateikopf
+des Plugins listete beide Lesarten auf:
+
+```
+ *   360K  = 80 cyl x 1 head x  9 spt x 512 = 368,640
+ *   360K  = 40 cyl x 2 head x  9 spt x 512 = 368,640  (alt, rare)
+```
+
+— und der Code nahm still die erste. Die zweite Verzweigung war dabei
+nachweislich **unerreichbar**: die `switch`-Anweisung darüber fing die Größe
+schon ab.
+
+Der Bootsektor beantwortet die Frage. TOS schreibt dort einen
+DOS-kompatiblen BPB (Bytes/Sektor 0x0B, Gesamtsektoren 0x13, Sektoren/Spur
+0x18, Köpfe 0x1A). Der Leser benutzte ihn nur, um der Probe eine Zahl zu
+geben — für die Geometrie nicht.
+
+Jetzt gilt SAMdisks Reihenfolge: **BPB zuerst**, aber nur wenn er in sich
+stimmig ist *und* die Dateigröße exakt erklärt — ein BPB, der eine andere
+Diskette beschreibt als die vorliegende, ist kein Beleg. Sonst der
+Größen-Scan.
+
+**Die Reihenfolge des Scans ist der eigentliche Inhalt.** Mehrere
+Kombinationen ergeben dieselbe Größe, der erste Treffer gewinnt. Sie ist so
+gewählt, dass alle sechs bisher bekannten Größen **unverändert** aufgelöst
+werden — ein erweiterter Suchraum, der nebenbei Abbilder anders liest als
+vorher, wäre schlimmer als die Lücke, die er schließt. Dafür gibt es einen
+eigenen Test (`the_six_legacy_sizes_resolve_unchanged`), der auf **beiden**
+Fassungen grün ist; das ist seine Aufgabe.
+
+**Dazu übernommen:** die TOS-Boot-Prüfsumme — die 256 Big-Endian-Wörter des
+Bootsektors summieren zu `0x1234`, sonst bootet TOS nicht
+(`samdisk/st.cpp:6`). Das ist das einzige *positive* Erkennungsmerkmal, das
+ein kopfloses Format überhaupt anbieten kann; die Probe stuft danach ab
+(90 statt vorher 80 für ein rohes `0x60`-Byte, das jede sechzehnte Datei
+zufällig hat). Ihr Fehlen beweist nichts — nicht bootfähige Disketten
+vermeiden den Wert absichtlich.
+
+Nebenbei: `read_track`/`write_track` prüften nur die obere Grenze, ein
+negativer Zylinder rechnete einen negativen Offset aus.
+
+**Rot-Probe** (alte Fassung, neuer Test):
+
+```
+  [TEST] bpb_resolves_the_ambiguous_360k_size     ... FAIL @ 126
+  [TEST] extended_formats_are_accepted            ... FAIL @ 156
+  [TEST] the_six_legacy_sizes_resolve_unchanged   ... OK      <- Absicht
+  [TEST] boot_checksum_outranks_a_bare_size_match ... FAIL @ 227
+```
+
+| Stufe | vorher | nachher |
+|---|---:|---:|
+| T2 | 15 | **16** |
+| T3 | 59 | **58** |
+
+**Ehrlich zur Grenze:** verifiziert sind Geometrie-Herleitung und
+Erkennungsmerkmal, nicht das Verhalten an einem realen ST-Abbild — es liegt
+keines im Korpus. Deshalb T2.
+
+---
+
 ### FMT-20 — CQM: der Leser las ein Layout, das es nicht gibt (2026-08-22, MF-461) → ✓ BEHOBEN
 
 Dritter Schritt des T3-Abbaus, und der erste, bei dem die Prüfung nicht eine
