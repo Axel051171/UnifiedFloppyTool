@@ -613,6 +613,13 @@ def main() -> int:
         # wird mit #if statt #ifdef gefragt (der Wert ist immer 0 oder 1).
         import platform_header_gate as _plathdr
         all_errors.append(("platform header split", _plathdr.check(repo)))
+        # Sektoren pro Spur sind eine Eigenschaft des Laufwerks, nicht des
+        # Dateiformats — der Fakt stand 24-mal im Baum, in drei unvertraeglichen
+        # Indexkonventionen (ARCH-7). Die SSOT steht seit MF-434; dieser
+        # Waechter rechnet jede verbliebene Kopie gegen sie, damit aus
+        # "stimmen zufaellig ueberein" ein nachgewiesenes Uebereinstimmen wird.
+        import cbm_zone_gate as _cbmzone
+        all_errors.append(("CBM zone tables", _cbmzone.check(repo)))
 
     total = sum(len(e) for _, e in all_errors)
     print(f"Consistency check ({len(all_errors)} categories, root={repo}):")

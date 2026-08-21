@@ -228,7 +228,20 @@ static inline int cbm_gcr_decode(uint8_t *out, const uint8_t *in, size_t count)
  *============================================================================*/
 
 /** Sektoren pro Track (C64/1541) */
-static const uint8_t c64_sectors_per_track[41] = {
+/* MF-459: heisst `cbm_gcr_sectors_per_track`, nicht `c64_sectors_per_track`.
+ *
+ * Unter dem alten Namen stand hier `static const uint8_t [41]`, waehrend
+ * include/uft/protection/uft_c64_protection.h denselben Namen als
+ * `static const int []` fuehrt. Zwei Header, ein Bezeichner, verschiedene
+ * Elementtypen. Geprueft: derzeit zieht keine Uebersetzungseinheit beide, die
+ * Kollision war also latent — wie UFT_BIG_ENDIAN vor MF-455 und wie
+ * UFT_SCP_SIGNATURE in ARCH-2, das viermal existierte, einmal mit anderem Typ.
+ * Wer beide eingebunden haette, bekaeme einen Redefinitionsfehler oder je nach
+ * Reihenfolge einen anderen Typ unter demselben Namen.
+ *
+ * Die Werte sind gegen include/uft/formats/cbm/uft_cbm_geometry.h geprueft
+ * (scripts/cbm_zone_gate.py). */
+static const uint8_t cbm_gcr_sectors_per_track[41] = {
     0,  /* Track 0 existiert nicht */
     /* Zone 0: Tracks 1-17 (21 Sektoren, Bitcell 2708) */
     21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21,
@@ -265,7 +278,7 @@ static inline int c64_d64_offset(int track, int sector)
     /* Vereinfachte Berechnung */
     int offset = 0;
     for (int t = 1; t < track && t <= 35; t++) {
-        offset += c64_sectors_per_track[t] * 256;
+        offset += cbm_gcr_sectors_per_track[t] * 256;
     }
     return offset + sector * 256;
 }

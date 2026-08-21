@@ -1521,7 +1521,7 @@ falsches Bit ein falsches Archiv ist.
 OTDR/DeepRead-Pipeline (12 Stufen), die GUI. Wenn etwas real langsam ist,
 liegt es dort — und gehört gemessen, bevor es angefasst wird.
 
-### ARCH-7 — 24 Kopien der CBM-Zonentabelle in drei Indexkonventionen (2026-08-20, MF-434) → ◐ SSOT STEHT, 22 Migrationen offen
+### ARCH-7 — 24 Kopien der CBM-Zonentabelle in drei Indexkonventionen (2026-08-20, MF-434) → ◐ SSOT STEHT, 20 Kopien jetzt GEPRÜFT (MF-459), Migration weiterhin offen
 
 **Architecture.** Sektoren pro Spur, Geschwindigkeitszone, Gap und Kapazität
 sind Eigenschaften eines **Laufwerks**, nicht eines Dateiformats. Ein 1541 legt
@@ -1579,6 +1579,99 @@ davon stehen in genau den überzähligen Lesern, die ARCH-6 löschen will
 (`d64_parser_v2`, `d64_parser_v3`, `commodore/d64.c`, `d64_file`, …). Erst die
 Leser zusammenführen, dann übernehmen die Überlebenden die Geometrie. Andersherum
 wäre es Arbeit an Code, der verschwinden soll.
+
+---
+
+## Nachtrag MF-459 (2026-08-22): geprüft statt migriert
+
+Die Migration bleibt aus dem oben genannten Grund liegen. Was dazwischen fehlte,
+ist jetzt da: **niemand prüfte, ob die verbliebenen Kopien mit der SSOT
+übereinstimmen.** Der Eintrag oben sagt „die Werte stimmten überall überein" —
+das war eine Messung von 2026-08-20, kein Zustand, der sich hält.
+
+**20. Gate** (`scripts/cbm_zone_gate.py`): findet jedes Array-Literal im Baum,
+das nach Zonentabelle aussieht, und rechnet es gegen die SSOT. Aus
+„24 Kopien, die zufällig übereinstimmen" wird „20 Kopien, deren
+Übereinstimmung nachgewiesen ist" — und eine spätere Migration ist damit
+verifizierbar statt riskant.
+
+Die SSOT-Werte werden aus `src/formats/cbm/uft_cbm_geometry.c` **gelesen**,
+nicht im Wächter wiederholt. Ein Wächter mit eigener Kopie der Wahrheit wäre
+die 25.
+
+| | |
+|---|---|
+| Zonentabellen im Baum | 20 |
+| durch die SSOT erklärt | **20** |
+| Konventionen, die aufgehen | 1-basiert mit führender 0, 1-basiert ohne, zwei Seiten hintereinander (D71) |
+
+Verifiziert: eine einzige geänderte Zahl (`21` → `20` in
+`uft_nib_format.c`) wird gemeldet.
+
+**Bewusst ausgenommen:** `src/formats/lisa/` — die Apple Lisa „Twiggy" ist
+ebenfalls zonenweise aufgebaut und beginnt bei 22 Sektoren, hat mit Commodore
+aber nichts zu tun (46 Zylinder, 512-Byte-Sektoren). Der Eintrag oben nennt sie
+als eine der beiden echten Abweichungen. Sie zu melden wäre ein Falschbefund,
+sie stillschweigend mitzuerklären wäre schlimmer.
+
+### Ein latenter Namenskonflikt, dabei gefunden und behoben
+
+`c64_sectors_per_track` existierte in **zwei Headern mit verschiedenen
+Elementtypen**:
+
+| Header | Deklaration |
+|---|---|
+| `include/uft/protection/uft_c64_protection.h:241` | `static const int c64_sectors_per_track[]` |
+| `include/uft/uft_cbm_gcr.h:231` | `static const uint8_t c64_sectors_per_track[41]` |
+
+Geprüft (`gcc -MM` über alle Nutzer beider Header): **derzeit zieht keine
+Übersetzungseinheit beide** — die Kollision war latent, wie `UFT_BIG_ENDIAN`
+vor MF-455 und wie `UFT_SCP_SIGNATURE` in ARCH-2, das viermal existierte,
+einmal mit anderem Typ. Wer beide eingebunden hätte, bekäme einen
+Redefinitionsfehler oder, je nach Reihenfolge, einen anderen Typ unter
+demselben Namen.
+
+Der Eintrag in `uft_cbm_gcr.h` heißt jetzt `cbm_gcr_sectors_per_track`.
+**Regel B** des Gates hält das zu: derselbe Bezeichner mit verschiedenen Typen,
+sobald mindestens eine Definition in einem Header steht.
+
+> Auch hier zeigte die Rot-Probe erst, was die Regel taugt: die erste Fassung
+> meldete **drei** Fälle. Zwei davon waren Fehlalarm — `static const` in einer
+> `.c` ist dateilokal, zwei `.c`-Dateien dürfen denselben Namen tragen. Die
+> Regel gilt jetzt nur, wenn eine Definition in einem Header steht.
+
+---
+
+### ARCH-18 — `uft_xdf_api_impl.c`: eine zweite Format-Schicht, die niemand ruft (2026-08-22, MF-459) → ⚠ OFFEN
+
+Beim Zählen der Zonentabellen aufgefallen. Der Dateikopf verspricht:
+
+> Complete implementation of: Format handlers (ADF, D64, G64, IMG, ST, TRD),
+> Batch processing, Comparison, Hardware integration stubs, JSON export
+
+Gemessen:
+
+- **sechs** `static` Funktionen (`import_adf`, `import_d64`, `import_g64`,
+  `import_img`, `import_st`, …) tragen `__attribute__((unused))` — sie sind per
+  Deklaration als aufruferlos markiert
+- die öffentliche API (`xdf_api_batch_create`, `xdf_api_batch_process`,
+  `xdf_api_compare`) hat **null** Aufrufer in `src/` und `tests/`
+- **elf** `(void)`- bzw. „reserved for"-Marker, darunter
+  `(void)sectors_per_track; /* reserved for full impl */` in `import_adf`
+
+`import_d64` liest D64 mit **eigener Zonentabelle** — eine der 20 oben, und
+damit eine parallele Format-Schicht neben dem D64-Plugin (ARCH-6).
+
+`src/formats/xdf/DEFERRED.md` erklärt, warum die Datei einmal *nicht*
+restauriert wurde: sie brauchte `<fnmatch.h>`, das MinGW nicht hat. Der
+Blocker ist längst weg (`src/compat/uft_fnmatch.c` existiert), die Datei liegt
+im Baum und wird gebaut — nur ruft sie niemand. Das Dokument ist damit
+veraltet.
+
+**Nicht in MF-459 entschieden.** Sie einzubinden hieße, eine zweite
+Format-Schicht scharf zu schalten, die ARCH-6 gerade abbaut; sie zu löschen ist
+ein eigener Schritt mit der MF-369-Beweispipeline. Beides gehört zu ARCH-6,
+nicht zu ARCH-7.
 
 ### PRINC-2 — `uft_smart_open()` liefert eine erfundene Qualitätsbewertung und druckt sie als forensischen Bericht (2026-08-21, MF-443) → ✓ BEHOBEN (MF-444), Nachweis in `tests/test_smart_open_quality.c`
 
