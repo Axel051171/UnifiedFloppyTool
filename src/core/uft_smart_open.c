@@ -247,11 +247,14 @@ static void detect_protection(smart_internal_t* internal,
     if (detected) {
         prot->detected = true;
         strncpy(prot->scheme_name, name, sizeof(prot->scheme_name) - 1);
-        /* MF-442: the parser computes a real confidence per scheme (0.85 for
-         * C64 weak bits, 0.80 for Amiga long tracks, 0.75 generic). This used
-         * to read `prot->confidence = 80` — a number nobody measured, standing
-         * in for one that had just been calculated and thrown away by a
-         * three-parameter call to a four-parameter function. */
+        /* MF-442: the parser reports a per-scheme confidence (0.85 for C64
+         * weak bits, 0.80 for Amiga long tracks, 0.75 generic). Those are
+         * hand-assigned constants, NOT measurements — worth saying plainly,
+         * because this file previously wrote `prot->confidence = 80`, one
+         * global constant standing in for a value the parser had just produced
+         * and a three-parameter call to a four-parameter function had thrown
+         * away. Distinguishing schemes is an improvement over not doing so;
+         * it is not yet a measured confidence. */
         int pct = (int)(conf * 100.0f + 0.5f);
         prot->confidence = (pct < 0) ? 0 : (pct > 100 ? 100 : pct);
         prot->indicator_count = 1;

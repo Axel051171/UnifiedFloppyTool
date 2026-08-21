@@ -1624,12 +1624,16 @@ Hand-Deklarationen dort sind jetzt durch den `#include` ersetzt.
 hat heute einen Aufrufer. Es war eine geladene Falle, keine laufende
 Fehlfunktion — dieselbe Lage wie bei mehreren Funden dieser Reihe.
 
-**Mitgenommen: eine erfundene Zahl weniger.** Die v3-Parser berechnen eine
-echte Konfidenz je Schema (0,85 für C64-Weak-Bits, 0,80 für Amiga-Long-Tracks,
-0,75 generisch). Die Brücke verwarf sie wegen der falschen Signatur, und
-`uft_smart_open.c:246` setzte stattdessen `prot->confidence = 80` — eine Zahl,
-die niemand gemessen hat, an der Stelle einer, die gerade berechnet und
-weggeworfen worden war. Die Konfidenz wird jetzt durchgereicht und skaliert.
+**Mitgenommen, mit Einschränkung.** Die v3-Parser melden eine Konfidenz je
+Schema (0,85 für C64-Weak-Bits, 0,80 für Amiga-Long-Tracks, 0,75 generisch).
+Die Brücke verwarf sie wegen der falschen Signatur, und `uft_smart_open.c:246`
+setzte stattdessen `prot->confidence = 80`. Sie wird jetzt durchgereicht.
+
+*Korrektur an der ersten Fassung dieses Eintrags:* dort stand, der Parser
+„berechne" die Konfidenz. Das stimmt nicht — es sind **handvergebene
+Konstanten je Zweig** (`*confidence = 0.85f;` direkt im `if`). Eine Konstante
+je Schema ist besser als eine globale Konstante für alle, aber gemessen ist
+auch sie nicht. Der Unterschied ist in diesem Projekt keine Wortklauberei.
 
 **Wächter.** `scripts/extern_decl_conflicts.py`, verdrahtet als 15. Kategorie
 in `check_consistency.py`. Er vergleicht **Parameterzahlen**, nicht
@@ -1649,6 +1653,37 @@ benutzt) und die drei `*_parser_v3.c` (nur von der Brücke). Zusammen mehrere
 tausend Zeilen. Ob das eine noch nicht angeschlossene öffentliche API ist oder
 Sediment, ist eine Produktentscheidung wie seinerzeit `src/switch/` — deshalb
 hier notiert und nicht einseitig ausgeführt.
+
+#### Was aus der v3-Kette übernehmenswert wäre: nichts (Prüfung 2026-08-21)
+
+Vor jeder Entscheidung über die Kette die Frage, ob sie etwas kann, das der
+produktive Baum nicht kann. Fähigkeit für Fähigkeit geprüft:
+
+| v3-Fähigkeit | produktives Gegenstück | Urteil |
+|---|---|---|
+| Diagnose-Codes, ~20 (`SCP_DIAG_PLL_UNLOCK`, `_WEAK_BITS`, `_LONG_TRACK`, …) | `otdr_event_type_t` in `analysis/floppy_otdr.h`: 17 Ereignistypen **plus** 5 Schweregrade **plus** `otdr_sample_t` je Flusswechsel (Abweichung, Jitter-RMS, `quality_db`, `is_stable`) | OTDR ist echte Obermenge |
+| Score-Zerlegung in 5 Teilwerte (flux/timing/consistency/decode/structure) | OTDR liefert `quality_db` **pro Sample** und Severity **pro Ereignis** | feiner aufgelöst |
+| Multi-Revolution: „beste Umdrehung" wählen | `recovery/uft_multiread_pipeline.c`: Pro-**Byte**-Voting mit Confidence-Map und Weak-Flag | siehe unten |
+| `d64_verify(original, written, differences)` | `uft_disk_verify()` über `uft_disk_t`, also **formatunabhängig**, plus `uft_sector_compare` mit GUI-Dialog | allgemeiner |
+| `scp_detect_weak_bits` | Weak-Bit-Maschinerie aus PROT-12 | vorhanden |
+| Konfidenz je Schutzschema | handvergebene Konstanten (s. o.) | kein Vorteil |
+
+**Der Punkt, der über „haben wir auch" hinausgeht:** v3 wählt die *beste*
+Umdrehung und verwirft die übrigen. Der produktive Weg stimmt **pro Byte** über
+alle Umdrehungen ab und leitet daraus zusätzlich eine Confidence-Map und
+Weak-Bit-Erkennung ab. Eine Umdrehung auszuwählen wirft genau die Information
+weg, aus der sich Weak Bits überhaupt erst erkennen lassen — bei einem
+forensischen Werkzeug ist das kein Geschmacksunterschied, sondern der
+Unterschied zwischen „Diskette hat instabile Bits" und „Lesefehler".
+
+`d64_verify` ist zusätzlich D64-spezifisch, während `uft_disk_verify()` über
+die Plugin-Schnittstelle arbeitet und damit für jedes der 88 Formate gilt.
+
+**Ergebnis:** aus der v3-Kette ist nichts zu übernehmen. Sie ist keine
+Fundgrube, sondern eine ältere, gröbere Parallelentwicklung derselben Ideen —
+dieselbe Form wie die sechs D64- und fünf SCP-Leser, nur eine Abstraktionsebene
+höher. Das entkoppelt die Scope-Frage von der Substanzfrage: was auch immer mit
+der Kette geschieht, es geht dabei keine Fähigkeit verloren.
 
 ### ARCH-6 — Zwei parallele Formatlayer: der Konverter kennt die Plugin-Registry nicht (2026-08-20, MF-433) → ◐ ERSTE NAHT GESCHLAGEN
 
