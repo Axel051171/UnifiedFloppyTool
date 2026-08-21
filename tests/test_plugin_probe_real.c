@@ -232,23 +232,49 @@ TEST(atr_requires_its_little_endian_magic) {
     ASSERT(!probe_sized(&uft_format_plugin_atr, hdr, 8, 8, &conf));
 }
 
-TEST(d88_checks_media_byte_and_declared_size) {
-    const size_t N = 0x400;
+TEST(d88_checks_media_byte_declared_size_and_track_table) {
+    /* MF-447 changed this test, and the change is the finding.
+     *
+     * The fixture used to be a 0x400-byte zero buffer with media 0x00 and a
+     * declared size of 0x300, and it asserted that d88_probe() accepted it.
+     * That header describes an image whose 164 track offsets are all zero — an
+     * image with no readable track in it. Accepting it was the same leniency
+     * that made this probe claim every reference image in tests/corpus_free at
+     * confidence 90, outranking D64, D67, D71, D80, D82, ADF, ATR and G64 on
+     * their own files.
+     *
+     * The fixture is now a header the reader could follow: one track offset,
+     * pointing past the header and inside the declared size. */
+    const size_t N = 0x2B0 + 0x200;
     uint8_t *hdr = calloc(1, N);
     ASSERT(hdr != NULL);
     int conf = -1;
 
-    /* declared size 0x300 fits into a claimed file size of 0x400 */
+    hdr[0x1A] = 0x00;                        /* not write protected */
     hdr[0x1B] = 0x00;                        /* media: 2D */
-    hdr[0x1C] = 0x00; hdr[0x1D] = 0x03;      /* LE32 0x00000300 */
+    hdr[0x1C] = (uint8_t)(N & 0xFF);         /* declared size == file size */
+    hdr[0x1D] = (uint8_t)((N >> 8) & 0xFF);
+    hdr[0x20] = 0xB0; hdr[0x21] = 0x02;      /* track 0 at 0x2B0 */
     ASSERT(probe_sized(&uft_format_plugin_d88, hdr, N, N, &conf));
+    ASSERT(conf >= 90);                      /* exact size, valid prot byte */
+
+    /* no track offset at all: nothing to read, so not a D88 image */
+    uint8_t save20 = hdr[0x20], save21 = hdr[0x21];
+    hdr[0x20] = 0x00; hdr[0x21] = 0x00;
+    ASSERT(!probe_sized(&uft_format_plugin_d88, hdr, N, N, &conf));
+    hdr[0x20] = save20; hdr[0x21] = save21;
+
+    /* a track offset inside the header itself points at the offset table */
+    hdr[0x20] = 0x10; hdr[0x21] = 0x00;
+    ASSERT(!probe_sized(&uft_format_plugin_d88, hdr, N, N, &conf));
+    hdr[0x20] = save20; hdr[0x21] = save21;
 
     /* an unknown media byte is not a D88 */
     hdr[0x1B] = 0x77;
     ASSERT(!probe_sized(&uft_format_plugin_d88, hdr, N, N, &conf));
+    hdr[0x1B] = 0x00;
 
     /* a declared size larger than the file is not a D88 either */
-    hdr[0x1B] = 0x20;
     hdr[0x1C] = 0x00; hdr[0x1D] = 0x00; hdr[0x1E] = 0x10;  /* 0x00100000 */
     ASSERT(!probe_sized(&uft_format_plugin_d88, hdr, N, N, &conf));
 
@@ -756,7 +782,7 @@ int main(void) {
     RUN(hfe_accepts_v1_and_v3_signatures);
     RUN(plugins_do_not_claim_each_others_headers);
     RUN(atr_requires_its_little_endian_magic);
-    RUN(d88_checks_media_byte_and_declared_size);
+    RUN(d88_checks_media_byte_declared_size_and_track_table);
     RUN(dc42_requires_big_endian_magic_at_offset_82);
     RUN(imd_requires_its_ascii_signature);
     RUN(atx_signature_is_byte_order_correct);

@@ -1721,7 +1721,37 @@ in der Anwendung. Der Mechanismus funktioniert jetzt, die GUI ruft ihn nicht auf
 
 ---
 
-### ARCH-12 — Die Anwendung registriert keine Plugins (2026-08-21, MF-446) → ⚠ OFFEN
+### ARCH-13 — Bei Punktgleichstand in der Probe entscheidet die Registrierungsreihenfolge (2026-08-21, MF-447) → ⚠ OFFEN
+
+Gemessen beim Aufräumen von ARCH-12, mit allen 137 Plugins registriert:
+
+```
+atrcopy_dos2sd.xfd    XFD=40  JVC=40  DSK_SV=40  DSK_VEC=40  JV1=35  XDM86=35
+```
+
+Vier Plugins antworten mit exakt 40. `uft_probe_buffer_format()` vergleicht mit
+`conf > best_conf`, also gewinnt der zuerst Registrierte — hier XFD, weil die
+ATARI-Gruppe in `g_groups[]` vor OTHER steht. Das ist richtig aus Versehen.
+
+Der Fall ist nicht pathologisch: XFD *ist* ein Rohformat ohne Header, und ein
+1-zu-1-Sektorabbild derselben Größe ist von einem anderen Rohformat derselben
+Größe nicht unterscheidbar. Das Problem ist nicht, dass die Probe unsicher ist,
+sondern dass das Ergebnis so aussieht wie ein sicheres.
+
+**Nächster Schritt:** Gleichstand als eigenes Ergebnis behandeln —
+`uft_probe_buffer_format()` behält seinen Rückgabewert (Aufrufer brauchen eine
+Antwort), bekommt aber einen Weg, „N Plugins liegen gleichauf" zu melden, und
+`uft_smart_open()` gibt das in `detection` weiter statt einer Konfidenz, die
+Eindeutigkeit suggeriert. Eigene Aufgabe: es ändert eine Kern-API-Signatur und
+betrifft jeden Aufrufer.
+
+Zwischenstand ist wenigstens festgehalten:
+`tests/test_register_all_formats.c` pinnt für elf Referenz-Images den Gewinner,
+sodass jede Verschiebung sichtbar wird.
+
+---
+
+### ARCH-12 — Die Anwendung registriert keine Plugins (2026-08-21, MF-446) → ✓ BEHOBEN (MF-447) — und der Startup-Aufruf legte zwei Probe-Fehler frei
 
 `uft_register_all_formats()` ist ab MF-446 nachweislich korrekt, wird aber
 nirgends aufgerufen — nicht in `main()`, nicht in `UftMainWindow`. In der
@@ -1749,10 +1779,83 @@ Formatarbeit die Qt-Provider und direkt gelinkte Plugin-Symbole, nicht die
 Registry. Zwei parallele Wege zum selben Zweck — siehe ARCH-6 (zwei
 Format-Layer, vier Nahtstellen).
 
-**Nächster Schritt:** einen Init-Punkt festlegen (GUI-`main()` vor dem ersten
-Fenster) und dort registrieren; danach prüfen, welche der doppelten Pfade
-entfallen können. Nicht in MF-446 erledigt, weil es eine Entscheidung über den
-Anwendungs-Startup ist und nicht über die Registry.
+**Behoben in MF-447.** `main()` registriert vor dem ersten Fenster; eine
+unvollständige Registrierung wird als Dialog gezeigt, nicht geloggt — fehlende
+Formate sind in jedem Öffnen-Dialog still abwesend, und „dieses Tool kann die
+Diskette nicht lesen" ist genau das Falsche zum Verschweigen. Registrierung ist
+reine Buchhaltung: alle 137 Plugins haben `.init == NULL`.
+
+`uft_register_all_formats()` und `uft_get_format_count()` hatten **in keinem
+Header eine Deklaration** — Aufrufer mussten sich ein eigenes `extern`
+schreiben, genau die Klasse, auf die MF-442 einen Wächter gesetzt hat. Das ist
+auch der Grund, warum niemand die Funktion aufrief: ein Symbol ohne Header hat
+keinen naheliegenden Ort, von dem aus es gerufen wird. Jetzt deklariert.
+
+**Was der Startup-Aufruf freilegte — und was passiert wäre, hätte ich ihn ohne
+Prüfung eingebaut:**
+
+Mit 137 registrierten Plugins läuft die Probe-Schleife zum ersten Mal über mehr
+als einen Eintrag. Ergebnis auf den zwölf Referenz-Images in
+`tests/corpus_free`:
+
+| Datei | vorher gewonnen von | eigene Konfidenz |
+|---|---|---|
+| `vice_c1541_35trk.d64` | **D88 = 90** | D64 = 75 |
+| `vice_c1541_2040.d67` | **D88 = 90** | D67 = 75 |
+| `vice_c1541_70trk.d71` | **D88 = 90** | D71 = 70 |
+| `vice_c1541_8050.d80` | **D88 = 90** | D80 = 75 |
+| `vice_c1541_8250.d82` | **D88 = 90** | D82 = 75 |
+| `vice_c1541_80trk.d81` | **D88 = 90** | D81 = 80 |
+| `xdftool_dd_ofs.adf` | **D88 = 90** | ADF = 95 |
+| `atrcopy_dos2sd.atr` | **D88 = 90** | ATR = 95 |
+
+`d88_probe()` beanspruchte **elf von zwölf** Dateien mit Konfidenz 90 und
+gewann in acht Fällen. Die gesamte Beweislage waren zwei Bytes:
+
+```c
+uint32_t dsz = uft_read_le32(data + 0x1C);
+uint8_t media = data[0x1B];
+if (dsz <= file_size && (media == 0 || media == 0x10 || media == 0x20)) {
+    *confidence = 90; return true;
+}
+```
+
+In einer D64 ist Offset 0x1B gewöhnliche Sektordaten, die zufällig 0x00 sind,
+und die LE32 bei 0x1C gewöhnliche Sektordaten, die zufällig kleiner sind als die
+Datei. Die Registrierung einzuschalten, ohne das zu prüfen, hätte das Werkzeug
+**schlechter** gemacht als im nicht-funktionierenden Zustand: jede Commodore-
+Diskette wäre als japanisches PC-88-Image geöffnet worden.
+
+`dmk_probe()` war derselbe Fall in schwächerer Form (Konfidenz 85 für G64, G71,
+ATR aus zwei Wertebereich-Prüfungen).
+
+**Beide korrigiert** — als Bugfix an Bestehendem, ohne neue Spec-Behauptung:
+geprüft wird ausschließlich, was der jeweilige Reader in derselben Datei
+ohnehin dereferenziert. Bei D88 die Track-Offset-Tabelle bei 0x20, auf die
+`d88_read_track()` direkt seekt; bei DMK die Größengleichung, die
+`dmk_read_track()` selbst rechnet (`DMK_HDR + tracks × sides × track_len`).
+Zusätzlich skaliert die Konfidenz jetzt mit der Beweislage, statt eine Zahl zu
+verkünden.
+
+**Ehrliche Grenze:** `tests/corpus_free` enthält weder ein echtes D88 noch ein
+echtes DMK. Der Positiv-Pfad ist gegen synthetische Header verifiziert, die aus
+genau den Feldern gebaut sind, die die jeweiligen Reader dereferenzieren — das
+beweist, dass die Probe akzeptiert, was ihr Reader lesen kann, **nicht**, dass
+sie jede real existierende Datei akzeptiert. Der Negativ-Pfad ist gegen zwölf
+echte Images anderer Formate verifiziert.
+
+**Ein vorher grüner Test wurde geändert:**
+`tests/test_plugin_probe_real.c::d88_checks_media_byte_and_declared_size`
+prüfte einen 0x400-Byte-Nullpuffer mit media 0x00 und Größe 0x300 — also ein
+Image, dessen 164 Track-Offsets alle null sind, in dem kein einziger Track
+steht. Genau diese Nachsicht war der Bug. Fixture ist jetzt ein Header, dem der
+Reader folgen kann; Test umbenannt auf
+`d88_checks_media_byte_declared_size_and_track_table`.
+
+Nachweis: `tests/test_register_all_formats.c` — elf Referenz-Images, jedes vom
+eigenen Plugin gewonnen; D88/DMK beanspruchen keins davon mehr; synthetische
+D88-/DMK-Header werden weiterhin akzeptiert. Mit dem alten `d88_probe()` fallen
+vier der elf Tests (verifiziert).
 
 ---
 

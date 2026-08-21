@@ -812,6 +812,36 @@ const uft_format_plugin_t* uft_resolve_format_plugin(uft_format_t format,
                                                      const char* path_hint,
                                                      size_t* candidates_out);
 
+/* ── Registrierung aller eingebauten Plugins ─────────────────────────────────
+ *
+ * MF-447: these two had no declaration in any header. Callers wrote their own
+ * `extern uft_error_t uft_register_all_formats(void);` — the exact class
+ * MF-442 put a gate on, and the reason nobody noticed the function was dead:
+ * a symbol with no header has no obvious place to be called from.
+ */
+
+/**
+ * @brief Alle eingebauten Format-Plugins registrieren
+ *
+ * Idempotent — bereits registrierte Plugins werden übersprungen, das ist der
+ * gewünschte Endzustand und kein Fehler. Läuft die Liste immer bis zum Ende
+ * durch und meldet danach den ersten echten Fehler.
+ *
+ * Muss einmal beim Start aufgerufen werden, bevor irgendein Pfad über
+ * uft_disk_open(), uft_probe_file_format() oder uft_smart_open() geht: ohne
+ * das ist die Registry leer und jeder dieser Pfade liefert „kein Plugin".
+ *
+ * Definiert in src/formats/format_registry/uft_format_registry.c — wer das
+ * ruft, linkt damit die gesamte Format-Schicht.
+ */
+uft_error_t uft_register_all_formats(void);
+
+/** @brief Wie viele Plugins die eingebaute Tabelle führt (registriert oder nicht). */
+size_t uft_get_format_count(void);
+
+/** @brief Plugin Nr. @p index aus der eingebauten Tabelle, oder NULL. */
+const uft_format_plugin_t* uft_get_format_by_index(size_t index);
+
 /**
  * @brief Wie viele registrierte Plugins diese Container-ID führen
  *

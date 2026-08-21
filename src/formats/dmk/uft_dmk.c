@@ -24,14 +24,45 @@ static uint16_t dmk_crc16(const uint8_t *d, size_t n) {
 
 typedef struct { FILE* file; uint8_t tracks; uint16_t track_len; bool ss; } dmk_data_t;
 
+/* MF-447: same class as d88_probe(). Two byte-range checks — track count 1..96
+ * and a track length between 1000 and 20000 — produced confidence 85, and
+ * claimed G64, G71 and ATR images whose bytes at offsets 1..3 happened to fall
+ * in those ranges.
+ *
+ * The decisive test was missing and costs one line: dmk_read_track() computes
+ *
+ *     off = DMK_HDR + (cyl * sides + head) * track_len
+ *
+ * so the file size follows from the header. A file whose length does not match
+ * that arithmetic is not a DMK image this reader could read to the end. */
 bool dmk_probe(const uint8_t* data, size_t size, size_t file_size, int* confidence) {
     if (size < DMK_HDR) return false;
-    uint8_t tracks = data[1];
-    uint16_t tlen = uft_read_le16(&data[2]);
-    if (tracks > 0 && tracks <= 96 && tlen >= 1000 && tlen <= 20000) {
-        *confidence = 85; return true;
-    }
-    return false;
+
+    const uint8_t  prot   = data[0];
+    const uint8_t  tracks = data[1];
+    const uint16_t tlen   = uft_read_le16(&data[2]);
+    const uint8_t  opts   = data[4];
+    const int      sides  = (opts & 0x10) ? 1 : 2;
+
+    if (tracks == 0 || tracks > 96) return false;
+    if (tlen < 1000 || tlen > 20000) return false;
+
+    /* the size the reader's own track arithmetic implies */
+    const size_t implied = (size_t)DMK_HDR +
+                           (size_t)tracks * (size_t)sides * (size_t)tlen;
+    if (file_size < implied) return false;
+
+    int conf = 55;
+    if (file_size == implied) conf += 30;       /* exact, no trailing data */
+    if (prot == 0x00 || prot == 0xFF) conf += 10;
+
+    /* bytes 5..11 are reserved and zero in every image this reader can use */
+    bool reserved_zero = true;
+    for (int i = 5; i < 12; i++) if (data[i]) { reserved_zero = false; break; }
+    if (reserved_zero) conf += 5;
+
+    *confidence = conf;
+    return true;
 }
 
 static uft_error_t dmk_open(uft_disk_t* disk, const char* path, bool read_only) {

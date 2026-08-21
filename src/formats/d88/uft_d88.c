@@ -9,14 +9,72 @@
 
 typedef struct { FILE* file; uint8_t media; uint32_t track_off[164]; } d88_data_t;
 
+/* MF-447: this probe claimed EVERY file in tests/corpus_free at confidence 90.
+ *
+ * It read two bytes' worth of evidence — `dsz <= file_size` and a media byte in
+ * {0, 0x10, 0x20} — and reported near-certainty. In a D64, offset 0x1B is
+ * ordinary sector data that happens to be 0x00, and the LE32 at 0x1C is
+ * ordinary sector data that happens to be smaller than the file. So D88 won the
+ * probe for D64, D67, D71, D80, D82, ADF, ATR and G64 alike, outranking each
+ * format's own probe. It never surfaced because the registry was empty in every
+ * process (ARCH-9): the probe loop had one entry, or none.
+ *
+ * The rewrite checks what d88_open() and d88_read_track() actually rely on —
+ * the track offset table at 0x20 — and, decisively, scales the confidence to
+ * the evidence instead of announcing 90 from a coincidence. Nothing here is a
+ * new claim about the D88 specification; every test mirrors a field the reader
+ * in this same file already dereferences.
+ *
+ * Honest limits: tests/corpus_free holds no real D88, so the positive path is
+ * verified only against a synthetic header built from the layout this reader
+ * uses (tests/test_probe_conflicts.c) — that proves the probe accepts what the
+ * reader can read, not that it accepts every file a PC-88 ever wrote. The
+ * negative path is verified against twelve real images of other formats. */
 bool d88_probe(const uint8_t* data, size_t size, size_t file_size, int* confidence) {
     if (size < D88_HEADER) return false;
-    uint32_t dsz = uft_read_le32(data + 0x1C);
-    uint8_t media = data[0x1B];
-    if (dsz <= file_size && (media == 0 || media == 0x10 || media == 0x20)) {
-        *confidence = 90; return true;
+
+    const uint32_t dsz   = uft_read_le32(data + 0x1C);
+    const uint8_t  media = data[0x1B];
+    const uint8_t  prot  = data[0x1A];
+
+    /* A disk cannot be smaller than its own header, and d88_open() reads
+     * D88_HEADER bytes before doing anything else. */
+    if (dsz < D88_HEADER || dsz > file_size) return false;
+    if (media != 0x00 && media != 0x10 && media != 0x20 &&
+        media != 0x30 && media != 0x40) return false;
+
+    /* The track offset table is the part the reader uses. Every non-zero entry
+     * must point inside the image and past the header, and the used entries
+     * must ascend — d88_read_track() seeks straight to track_off[idx]. */
+    uint32_t prev = 0;
+    int used = 0;
+    for (int i = 0; i < 164; i++) {
+        uint32_t off = uft_read_le32(data + 0x20 + i * 4);
+        if (off == 0) continue;                 /* unformatted track */
+        if (off < D88_HEADER || off >= dsz) return false;
+        if (off <= prev) return false;          /* tracks do not overlap */
+        prev = off;
+        used++;
     }
-    return false;
+    if (used == 0) return false;                /* no track is reachable */
+
+    /* Evidence, graded. The name field is ASCII with NUL padding and the
+     * write-protect byte is 0x00 or 0x10; both are structure this reader does
+     * not touch, so they raise confidence rather than gate the match. */
+    int conf = 60;
+    if (dsz == file_size) conf += 20;           /* single-disk image */
+    if (prot == 0x00 || prot == 0x10) conf += 10;
+
+    bool name_ok = true;
+    for (int i = 0; i < 17; i++) {
+        uint8_t c = data[i];
+        if (c == 0x00) continue;
+        if (c < 0x20 || c == 0x7F) { name_ok = false; break; }
+    }
+    if (name_ok) conf += 5;
+
+    *confidence = conf;
+    return true;
 }
 
 static uft_error_t d88_open(uft_disk_t* disk, const char* path, bool read_only) {

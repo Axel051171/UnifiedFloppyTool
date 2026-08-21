@@ -35,10 +35,9 @@ Unterstützt 6 Hardware-Controller (HAL teilweise wired — siehe pro Eintrag):
 
 ### 2. Format-Unterstützung (137 Plugins definiert, 138 format IDs)
 
-> **MF-446:** 137 = 88 ausgeschrieben + 49 aus dem `DSK_PLUGIN()`-Makro.
-> „registered" war nie zutreffend: nichts im Baum ruft
-> `uft_register_all_formats()` oder die 84 Makro-Registrare auf — die
-> Registry ist zur Laufzeit leer (ARCH-12).
+> **MF-446/447:** 137 = 88 ausgeschrieben + 49 aus dem `DSK_PLUGIN()`-Makro.
+> Seit MF-447 registriert `main()` sie beim Start — vorher war die Registry
+> zur Laufzeit leer und `uft_disk_open()` lieferte für jede Datei NULL.
 
 > **EINFRIER-REGEL (MF-363):** Kein neuer ungeprüfter Code im Format-/
 > Decoder-Layer. Moratorium bis Label-Skript (T1/T1b/T2/T3) läuft und
