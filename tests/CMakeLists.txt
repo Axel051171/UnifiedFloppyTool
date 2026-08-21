@@ -470,7 +470,8 @@ foreach(test_source ${TEST_SOURCES})
         # MF-452: drei Befunde aus dem X-Copy-Quellenvergleich
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
-            ${CMAKE_SOURCE_DIR}/src/formats/amiga/uft_amiga_protection.c)
+            ${CMAKE_SOURCE_DIR}/src/formats/amiga/uft_amiga_protection.c
+            ${CMAKE_SOURCE_DIR}/src/formats/amiga/uft_amiga_syncs.c)
         target_include_directories(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/formats/amiga)
     elseif(${test_name} STREQUAL "test_plugin_identity")

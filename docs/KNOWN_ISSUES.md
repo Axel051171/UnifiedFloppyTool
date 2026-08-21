@@ -3257,6 +3257,71 @@ eigentlich meint — `uft_pll_init` existiert nämlich in **zwei** Signaturen
 (`uft_decoder_plugin.h:335` mit `adjust_pct`, `uft_flux_pll.h:317` mit
 `uft_encoding_t`), was denselben Aufruf je nach Include-Satz anders bedeutet.
 
+### FMT-17 — Die Amiga-Sync-Muster lagen dreimal im Baum, und der Decoder benutzte keines davon (2026-08-21, MF-453) → ✓ BEHOBEN
+
+Fund 4 aus [`docs/XCOPY_COMPARISON.md`](XCOPY_COMPARISON.md). Der
+Migrationsbericht von 2026-04-24 führt „Multi-Pattern-Sync" als zu bauende
+Portierung — tatsächlich war sie **dreimal gebaut und nirgends angeschlossen**.
+
+| Datei | Inhalt |
+|---|---|
+| `src/analysis/uft_track_analysis.h:41-44` | `0xA245` = **„Ocean/Imagine"** |
+| `src/formats/amiga/uft_amiga_protection.h:38-41` | `0xA245` = **„Beyond the Ice Palace"** |
+| `src/protection/uft_amiga_protection.c:23,52` | kennt keinen davon, dafür `0x8a91`, `0x8914` |
+| `src/flux/uft_flux_decoder.c:1169` | benutzt keine davon — nur `MFM_SYNC_PATTERN` |
+
+Eine Amiga-Diskette mit Arkanoid- oder Mercenary-Sync dekodierte damit zu
+**null Sektoren**, während zwei andere Module wussten, dass es diese Syncs gibt.
+
+**Der Namensstreit ist aus der Quelle entschieden.** `xcop.s:2347-2351` enthält
+eine auskommentierte `synctab` neben der Suchschleife:
+
+```asm
+;synctab
+;   DC.W  $9521,$A245,$A89A,$448A,$4489,$0000,...
+;   DC.W  $9521     ; ARKANOID SYNC
+;   DC.W  $A245     ; BEYOND THE ICE PALACE
+;   DC.W  $A89A     ; MERCENERY/BACKLASH
+```
+
+`0xA245` ist Beyond the Ice Palace; `SYNC_AMIGA_OCEAN` war falsch benannt und
+ist jetzt ein Alias auf `SYNC_AMIGA_BTIP`. Für `0x448A` nennt die Quelle keinen
+Titel — der Eintrag trägt deshalb `name == NULL`, was eine Aussage ist und kein
+fehlender Eintrag.
+
+**SSOT:** `include/uft/formats/uft_amiga_syncs.h` +
+`src/formats/amiga/uft_amiga_syncs.c`. Jeder Eintrag nennt seine Herkunft.
+
+**Decoder:** `flux_decoder_options_t` bekommt `sync_patterns` / `sync_count`.
+NULL/0 bedeutet weiterhin nur `0x4489` — **der Default ändert kein bestehendes
+Ergebnis**. Wer geschützte Disketten lesen will, übergibt
+`UFT_AMIGA_SYNC_PATTERNS`.
+
+Neu: `flux_find_sync_any()` — ein Durchlauf, ein Schieberegister, alle Muster
+pro Bitposition, so wie X-Copy es macht (`xcop.s:2120-2135`: `rol.l` plus sechs
+Vergleiche). N Einzelaufrufe von `flux_find_sync()` wären nicht nur N
+Durchläufe, sie lieferten auch den frühesten Treffer des **ersten** Musters
+statt des frühesten überhaupt.
+
+Dabei mitgefunden: `mfm_skip_sync_run()` verglich fest gegen
+`MFM_SYNC_PATTERN`. Solange nur `0x4489` gesucht wurde, war das dasselbe —
+sobald der Decoder `0xA245` findet, würde ein Sync-Lauf aus zwei Custom-Syncs
+nicht übersprungen und der zweite Sync als Info-Long gelesen. Das Muster kommt
+jetzt als Parameter; der IBM-Pfad ruft weiterhin mit `MFM_SYNC_PATTERN`.
+
+**Nicht übernommen:** `0x8a91` (CopyLock) und `0x8914` (Psygnosis Type B) aus
+`src/protection/uft_amiga_protection.c`. Sie stehen in keiner der anderen
+Tabellen und nicht in der X-Copy-Quelle, gegen die die übrigen belegt sind —
+also unbelegt. Sie bleiben stehen und sind dort als unbelegt markiert, statt
+ungeprüft in die SSOT zu wandern.
+
+Nachweis: `tests/test_amiga_decoder_limits.c` — ein Sektor mit `0xA245`-Sync
+dekodiert mit der Liste und ohne sie nicht; die Tabelle hat fünf Einträge und
+nennt je eine Quelle; `flux_find_sync_any()` liefert den frühesten Treffer über
+alle Muster. Ohne den Fix fällt der erste davon (verifiziert).
+
+---
+
 ### FMT-16 — Drei Fehler im Amiga-Flux-Pfad, gefunden durch den X-Copy-Quellenvergleich (2026-08-21, MF-452) → ✓ BEHOBEN
 
 Vollständige Analyse: [`docs/XCOPY_COMPARISON.md`](XCOPY_COMPARISON.md).

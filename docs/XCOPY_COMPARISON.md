@@ -120,7 +120,7 @@ Bereich, in dem Zusatzkapazität und Kopierschutz liegen.
 
 ---
 
-## Fund 4 — Drei Amiga-Sync-Tabellen, die sich widersprechen
+## Fund 4 — Drei Amiga-Sync-Tabellen, die sich widersprechen → ✓ BEHOBEN (MF-453, FMT-17)
 
 Ergänzung zu `XCOPY_ALGORITHM_MIGRATION.md` §2, das die Multi-Pattern-Suche
 vorschlägt: die Muster **liegen bereits dreimal im Baum**, in drei Fassungen.
@@ -163,10 +163,10 @@ Braucht Hardware (UFT-008), deshalb hier nur festgehalten.
 
 | # | Aufgabe | Status |
 |---|---|---|
-| 1 | `0xF8BC` aus den Sync-Tabellen | Fund 1 |
-| 2 | Sektor-Label durchreichen | Fund 2 |
-| 3 | HD- und Zylindergrenzen | Fund 3 |
-| 4 | Amiga-Sync-SSOT + Decoder anschließen | Fund 4 + MIGRATION §2 |
+| 1 | `0xF8BC` aus den Sync-Tabellen | ✓ MF-452 |
+| 2 | Sektor-Label durchreichen | ✓ MF-452 |
+| 3 | HD- und Zylindergrenzen | ✓ MF-452 |
+| 4 | Amiga-Sync-SSOT + Decoder anschließen | ✓ MF-453 |
 | 5 | Laufwerkskalibrierung im HAL | HW-Bench nötig |
 
 1–3 sind Fehlerbehebungen an Bestehendem und fallen nicht unter die

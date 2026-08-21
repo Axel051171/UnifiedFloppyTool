@@ -38,10 +38,17 @@ extern "C" {
 #define UFT_MAX_BREAKPOINTS         10      /* Max breakpoints to detect */
 
 /* Common sync patterns across platforms */
-#define SYNC_AMIGA_DOS              0x4489  /* Amiga AmigaDOS */
-#define SYNC_AMIGA_ARKANOID         0x9521  /* Amiga Arkanoid protection */
-#define SYNC_AMIGA_OCEAN            0xA245  /* Amiga Ocean/Imagine */
-#define SYNC_AMIGA_NOVAGEN          0xA89A  /* Amiga Mercenary/Backlash */
+/* MF-453: die Amiga-Muster kommen aus include/uft/formats/uft_amiga_syncs.h.
+ * Diese Makros bleiben als Namen fuer bestehende Aufrufer, aber SYNC_AMIGA_OCEAN
+ * war falsch benannt: die X-Copy-Quelle (xcop.s:2350) fuehrt 0xA245 als
+ * "BEYOND THE ICE PALACE", nicht als Ocean/Imagine. Alter Name als Alias
+ * behalten, damit nichts bricht — neuer Code benutzt den richtigen. */
+#define SYNC_AMIGA_DOS              0x4489  /* AmigaDOS */
+#define SYNC_AMIGA_ARKANOID         0x9521  /* Arkanoid */
+#define SYNC_AMIGA_BTIP             0xA245  /* Beyond the Ice Palace */
+#define SYNC_AMIGA_OCEAN            SYNC_AMIGA_BTIP  /* falscher Name, s.o. */
+#define SYNC_AMIGA_NOVAGEN          0xA89A  /* Mercenary / Backlash */
+#define SYNC_AMIGA_ALT1             0x448A  /* ohne belegten Namen */
 #define SYNC_IBM_MFM                0x4489  /* IBM/PC MFM (A1 with missing clock) */
 #define SYNC_ATARI_ST               0x4489  /* Atari ST standard */
 #define SYNC_APPLE_DOS33            0xD5AA96 /* Apple II DOS 3.3 (24-bit) */

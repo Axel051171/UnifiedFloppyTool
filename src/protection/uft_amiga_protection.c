@@ -17,6 +17,15 @@
  * Protection Registry Database
  *============================================================================*/
 
+/* MF-453: die `sync`-Spalte unten ist NICHT die Sync-Tabelle des Baums.
+ *
+ * Sie behauptet pro Schutzverfahren einen Sync. Zwei der Werte — 0x8a91
+ * (CopyLock) und 0x8914 (Psygnosis Type B) — kommen in keiner der beiden
+ * anderen Tabellen vor und stehen auch nicht in der X-Copy-Quelle, gegen die
+ * die uebrigen Muster belegt sind (include/uft/formats/uft_amiga_syncs.h).
+ * Sie sind damit unbelegt: entweder aus einer Quelle, die hier niemand
+ * nennt, oder erfunden. Bis das geklaert ist, bleiben sie stehen und sind
+ * hier als unbelegt markiert — nicht in die SSOT uebernommen. */
 static const uft_amiga_protection_entry_t protection_registry[] = {
     /* Major Protection Systems */
     {UFT_AMIGA_PROT_COPYLOCK, "Rob Northen CopyLock", "Rob Northen Computing",

@@ -1885,6 +1885,7 @@ SOURCES += \
     src/analysis/denoise/uft_denoise_bridge.c \
     src/analysis/denoise/phi_otdr_denoise_1d.c \
     src/formats/amiga/uft_amiga_protection.c \
+    src/formats/amiga/uft_amiga_syncs.c \
     src/protection/ufm_c64_metrics.c \
     src/protection/ufm_c64_scheme_detect.c \
     src/protection/uft_protection_unified.c \

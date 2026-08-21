@@ -19,6 +19,8 @@
 #ifndef UFT_AMIGA_PROTECTION_H
 #define UFT_AMIGA_PROTECTION_H
 
+#include "uft/formats/uft_amiga_syncs.h"
+
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
@@ -31,14 +33,17 @@ extern "C" {
  * Constants - From XCopy Pro
  *===========================================================================*/
 
-/* Standard Amiga sync pattern */
-#define AMIGA_SYNC_STANDARD     0x4489
-
-/* Known copy protection sync patterns (from XCopy Pro synctab) */
+/* MF-453: Werte und Namen kommen aus
+ * include/uft/formats/uft_amiga_syncs.h. Diese Makros bleiben als lesbare
+ * Namen fuer den Code in dieser Datei. Die Namensherkunft (X-Copy
+ * xcop.s:2347-2351) ist dort belegt — hier stand "from XCopy Pro synctab"
+ * ohne Fundstelle, und die Nachbartabelle in src/analysis/ nannte 0xA245
+ * anders. */
+#define AMIGA_SYNC_STANDARD     UFT_AMIGA_SYNC_STANDARD  /* 0x4489 */
 #define AMIGA_SYNC_ARKANOID     0x9521  /* Arkanoid */
 #define AMIGA_SYNC_BTIP         0xA245  /* Beyond the Ice Palace */
 #define AMIGA_SYNC_MERCENARY    0xA89A  /* Mercenary, Backlash */
-#define AMIGA_SYNC_ALT1         0x448A  /* Alternative sync */
+#define AMIGA_SYNC_ALT1         0x448A  /* ohne belegten Namen */
 /* MF-452: KEIN Sync-Muster. In X-Copy (`xcopy.i`) ist $F8BC der Wert, den die
  * Variable `sync` annimmt, um "kein Custom-Sync, index-synchron kopieren" zu
  * bedeuten (`xcop.s:2108`). Er steht nie auf einer Diskette und darf nicht

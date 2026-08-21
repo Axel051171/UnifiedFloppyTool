@@ -8,6 +8,7 @@
  * @version 1.0.0
  */
 
+#include "uft/formats/uft_amiga_syncs.h"
 #include "uft_track_analysis.h"
 #include <string.h>
 #include <stdio.h>
@@ -16,26 +17,21 @@
  * Platform Profiles - Pre-defined
  *===========================================================================*/
 
-/* MF-452: 0xF8BC gehoert nicht in diese Liste.
+/* MF-453: Werte aus include/uft/formats/uft_amiga_syncs.h.
  *
- * Der Wert stammt aus X-Copy Professional, wo `xcopy.i` ihn als
+ * Die Liste lag hier, in src/formats/amiga/uft_amiga_protection.h und in
+ * src/protection/uft_amiga_protection.c — dreimal derselbe Fakt, und die
+ * Namen widersprachen sich (0xA245 hiess hier "Ocean/Imagine", dort "Beyond
+ * the Ice Palace"; die X-Copy-Quelle sagt Letzteres).
  *
- *     INDEXCOPY = $F8BC
- *
- * definiert und `xcop.s:2108` als Modus-Sentinel benutzt:
- *
- *     move.w  sync,D1
- *     cmp.w   #INDEXCOPY,D1
- *     beq.s   stdsync        ; -> NUR nach $4489 suchen, index-synchron
- *
- * Er bedeutet dort ausdruecklich "kein Custom-Sync, nimm den Standard und
- * synchronisiere auf den Index" und steht NIE auf einer Diskette. Als
- * Suchmuster aufgenommen trifft er in einem MFM-Bitstream im Mittel alle
- * 65536 Bit zufaellig — auf einer 100.000-Bit-Spur ein- bis zweimal — und
- * wurde dann als "Index Copy Protection" gemeldet. Ein Befund aus Rauschen. */
-/* Amiga sync patterns */
+ * uint32_t statt uint16_t, weil uft_find_syncs_rotated() 32-Bit-Muster nimmt
+ * (Apple-Syncs sind 24-bittig). */
 static const uint32_t AMIGA_SYNCS[] = {
-    0x4489, 0x9521, 0xA245, 0xA89A, 0x448A
+    UFT_AMIGA_SYNC_STANDARD,   /* 0x4489 */
+    SYNC_AMIGA_ARKANOID,       /* 0x9521 */
+    SYNC_AMIGA_BTIP,           /* 0xA245 */
+    SYNC_AMIGA_NOVAGEN,        /* 0xA89A */
+    SYNC_AMIGA_ALT1,           /* 0x448A */
 };
 
 /* IBM/PC sync patterns */
@@ -868,7 +864,8 @@ int uft_analyze_track_ex(const uft_analysis_config_t *config,
     } else if (config->search_all_syncs) {
         /* Search all known patterns - try common MFM first */
         static const uint32_t all_syncs[] = {
-            0x4489, 0x9521, 0xA245, 0xA89A, 0x448A,   /* 0xF8BC: siehe MF-452 */
+            UFT_AMIGA_SYNC_STANDARD, SYNC_AMIGA_ARKANOID, SYNC_AMIGA_BTIP,
+            SYNC_AMIGA_NOVAGEN, SYNC_AMIGA_ALT1,   /* 0xF8BC: siehe MF-452 */
             0xA1A1, 0x4E4E, 0x52FF
         };
         uft_find_syncs_rotated(data, result->track_length, all_syncs,
@@ -986,8 +983,10 @@ bool uft_identify_protection(const uft_track_analysis_t *analysis,
         case 0x9521:
             snprintf(name, name_size, "Arkanoid Protection");
             return true;
-        case 0xA245:
-            snprintf(name, name_size, "Ocean/Imagine Protection");
+        case SYNC_AMIGA_BTIP:
+            /* MF-453: hiess "Ocean/Imagine Protection". Die X-Copy-Quelle
+             * (xcop.s:2350) fuehrt 0xA245 als BEYOND THE ICE PALACE. */
+            snprintf(name, name_size, "Beyond the Ice Palace Protection");
             return true;
         case 0xA89A:
             snprintf(name, name_size, "Novagen Protection");

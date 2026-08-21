@@ -186,6 +186,22 @@ typedef struct {
     uint8_t  revolution;        /* Which revolution to use (0 = best) */
     bool     decode_all_revs;   /* Decode all revolutions and merge */
     bool     keep_raw_bits;     /* Keep raw decoded bits */
+
+    /* Sync-Muster fuer den Amiga-Pfad (MF-453).
+     *
+     * NULL/0 bedeutet: nur der Standard-Sync 0x4489. Das ist der Default und
+     * aendert nichts an bestehenden Ergebnissen.
+     *
+     * Wer geschuetzte Disketten lesen will, uebergibt hier
+     * UFT_AMIGA_SYNC_PATTERNS / UFT_AMIGA_SYNC_COUNT aus
+     * include/uft/formats/uft_amiga_syncs.h. Bis MF-453 suchte der Decoder
+     * fest nur 0x4489, waehrend drei andere Module wussten, dass es
+     * Arkanoid-, Beyond-the-Ice-Palace- und Mercenary-Syncs gibt — eine
+     * solche Diskette dekodierte zu null Sektoren.
+     *
+     * Der Zeiger muss den Aufruf ueberleben; die Liste wird nicht kopiert. */
+    const uint16_t *sync_patterns;
+    size_t          sync_count;
 } flux_decoder_options_t;
 
 /**
@@ -382,6 +398,21 @@ flux_status_t flux_to_bitstream(const flux_raw_data_t *flux,
  */
 int flux_find_sync(const uint8_t *bits, size_t bit_count,
                    uint16_t pattern, size_t start_pos);
+
+/**
+ * @brief Erste Fundstelle IRGENDEINES der Muster (MF-453)
+ *
+ * Ein Durchlauf, ein Schieberegister, alle Muster pro Position verglichen —
+ * so wie X-Copy es macht (`xcop.s:2120-2135`: rol.l plus sechs Vergleiche).
+ * N-mal flux_find_sync() zu rufen waere N Durchlaeufe und wuerde ausserdem
+ * den fruehesten Treffer verfehlen, wenn ein spaeteres Muster frueher steht.
+ *
+ * @param which  optional: Index des getroffenen Musters in @p patterns
+ * @return Bitposition des Treffers, oder -1
+ */
+int flux_find_sync_any(const uint8_t *bits, size_t bit_count,
+                       const uint16_t *patterns, size_t pattern_count,
+                       size_t start_pos, size_t *which);
 
 /**
  * @brief Get sector size from size code

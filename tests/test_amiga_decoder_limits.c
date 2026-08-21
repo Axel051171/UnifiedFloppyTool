@@ -24,6 +24,7 @@
 
 #include "uft/flux/uft_flux_decoder.h"
 #include "uft_amiga_protection.h"
+#include "uft/formats/uft_amiga_syncs.h"
 
 #include <stdio.h>
 #include <stdint.h>
@@ -97,8 +98,8 @@ static void put_be32(uint8_t *o, uint32_t v)
 }
 
 /* Baut genau einen Sektor. label darf NULL sein (dann 16 Nullbytes). */
-static bitbuf_t *make_sector(uint8_t track, uint8_t sec, uint8_t to_gap,
-                             const uint8_t label[16])
+static bitbuf_t *make_sector_sync(uint8_t track, uint8_t sec, uint8_t to_gap,
+                                  const uint8_t label[16], uint16_t sync)
 {
     static uint8_t storage[8192];
     static bitbuf_t b;
@@ -107,8 +108,8 @@ static bitbuf_t *make_sector(uint8_t track, uint8_t sec, uint8_t to_gap,
 
     /* Vorlauf, damit der Sync nicht bei Bit 0 sitzt */
     for (int i = 0; i < 16; i++) put_raw_byte(&b, 0xAA);
-    put_word(&b, 0x4489);
-    put_word(&b, 0x4489);
+    put_word(&b, sync);
+    put_word(&b, sync);
 
     uint8_t info[4]  = { 0xFF, track, sec, to_gap };
     uint8_t lbl[16];
@@ -141,6 +142,12 @@ static bitbuf_t *make_sector(uint8_t track, uint8_t sec, uint8_t to_gap,
     /* Nachlauf */
     for (int i = 0; i < 8; i++) put_raw_byte(&b, 0xAA);
     return &b;
+}
+
+static bitbuf_t *make_sector(uint8_t track, uint8_t sec, uint8_t to_gap,
+                             const uint8_t label[16])
+{
+    return make_sector_sync(track, sec, to_gap, label, 0x4489);
 }
 
 TEST(a_standard_dd_sector_still_decodes) {
@@ -249,6 +256,82 @@ TEST(f8bc_is_not_classified_as_a_sync) {
     ASSERT(uft_amiga_identify_sync(0xA89A) == SYNC_TYPE_MERCENARY);
 }
 
+TEST(a_custom_sync_decodes_only_when_the_caller_asks) {
+    /* MF-453. Bis dahin suchte flux_decode_amiga_bits() fest nur 0x4489,
+     * waehrend drei andere Module wussten, dass es Arkanoid- (0x9521),
+     * Beyond-the-Ice-Palace- (0xA245) und Mercenary-Syncs (0xA89A) gibt. Eine
+     * so geschuetzte Diskette dekodierte zu null Sektoren.
+     *
+     * Der Default bleibt der Standard-Sync — sonst wuerde sich das Ergebnis
+     * fuer jede bestehende Diskette aendern. Wer mehr will, sagt es. */
+    bitbuf_t *b = make_sector_sync(2, 5, 6, NULL, 0xA245);
+
+    flux_decoded_track_t tr;
+    memset(&tr, 0, sizeof(tr));
+    ASSERT(flux_decode_amiga_bits(b->bits, b->nbits, &tr, NULL) != FLUX_OK);
+    ASSERT(tr.sector_count == 0);       /* Default: nur 0x4489 */
+
+    flux_decoder_options_t opts;
+    flux_decoder_options_init(&opts);
+    opts.sync_patterns = UFT_AMIGA_SYNC_PATTERNS;
+    opts.sync_count    = UFT_AMIGA_SYNC_COUNT;
+
+    memset(&tr, 0, sizeof(tr));
+    ASSERT(flux_decode_amiga_bits(b->bits, b->nbits, &tr, &opts) == FLUX_OK);
+    ASSERT(tr.sector_count == 1);
+    ASSERT(tr.sectors[0].sector == 5);
+    ASSERT(tr.sectors[0].id_crc_ok);
+    ASSERT(tr.sectors[0].data_crc_ok);   /* der Sync-Lauf wurde uebersprungen */
+    free(tr.sectors[0].data);
+}
+
+TEST(the_sync_table_is_one_table_and_names_its_source) {
+    /* Die Werte lagen dreimal im Baum mit widerspruechlichen Namen. Jetzt
+     * einmal, und jeder Eintrag sagt, woher sein Name kommt. */
+    ASSERT(UFT_AMIGA_SYNC_COUNT == 5);
+    ASSERT(UFT_AMIGA_SYNC_PATTERNS[0] == UFT_AMIGA_SYNC_STANDARD);
+
+    const uft_amiga_sync_t *e = uft_amiga_sync_lookup(0xA245);
+    ASSERT(e != NULL);
+    /* X-Copy xcop.s:2350 sagt BEYOND THE ICE PALACE, nicht Ocean/Imagine */
+    ASSERT(strcmp(e->name, "Beyond the Ice Palace") == 0);
+    ASSERT(e->source != NULL);
+
+    /* 0x448A steht in der Quelle ohne Titel — NULL ist die Aussage, nicht
+     * ein fehlender Eintrag */
+    e = uft_amiga_sync_lookup(0x448A);
+    ASSERT(e != NULL);
+    ASSERT(e->name == NULL);
+    ASSERT(e->source != NULL);
+
+    /* und 0xF8BC gehoert nicht dazu (MF-452) */
+    ASSERT(uft_amiga_sync_lookup(0xF8BC) == NULL);
+    ASSERT(!uft_amiga_sync_is_known(0xF8BC));
+}
+
+TEST(find_sync_any_returns_the_earliest_over_all_patterns) {
+    /* N Einzelaufrufe von flux_find_sync() liefern den fruehesten Treffer des
+     * ERSTEN Musters — nicht den fruehesten ueberhaupt. Deshalb ein Durchlauf
+     * mit allen Mustern, so wie X-Copy es macht (xcop.s:2120). */
+    static uint8_t buf[64];
+    memset(buf, 0, sizeof(buf));
+    bitbuf_t b = { buf, sizeof(buf), 0 };
+    for (int i = 0; i < 4; i++) put_raw_byte(&b, 0xAA);
+    put_word(&b, 0xA245);                 /* zuerst der Custom-Sync */
+    for (int i = 0; i < 4; i++) put_raw_byte(&b, 0xAA);
+    put_word(&b, 0x4489);                 /* danach der Standard */
+
+    static const uint16_t pats[] = { 0x4489, 0xA245 };
+    size_t which = 99;
+    int pos = flux_find_sync_any(buf, b.nbits, pats, 2, 0, &which);
+    ASSERT(pos == 32);                    /* 4 Byte Vorlauf */
+    ASSERT(which == 1);                   /* 0xA245, obwohl an Index 1 */
+
+    /* leere Liste ist kein Treffer, kein Absturz */
+    ASSERT(flux_find_sync_any(buf, b.nbits, pats, 0, 0, NULL) == -1);
+    ASSERT(flux_find_sync_any(buf, b.nbits, NULL, 2, 0, NULL) == -1);
+}
+
 int main(void)
 {
     printf("=== Amiga-Decoder: X-Copy-Quellenvergleich (MF-452) ===\n");
@@ -259,6 +342,9 @@ int main(void)
     RUN(cylinder_81_is_no_longer_rejected);
     RUN(an_impossible_info_long_is_still_rejected);
     RUN(f8bc_is_not_classified_as_a_sync);
+    RUN(a_custom_sync_decodes_only_when_the_caller_asks);
+    RUN(the_sync_table_is_one_table_and_names_its_source);
+    RUN(find_sync_any_returns_the_earliest_over_all_patterns);
     printf("\nResults: %d passed, %d failed\n", _pass, _fail);
     return _fail == 0 ? 0 : 1;
 }

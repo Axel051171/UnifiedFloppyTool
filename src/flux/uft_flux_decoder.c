@@ -316,6 +316,33 @@ int flux_find_sync(const uint8_t *bits, size_t bit_count,
     return -1;
 }
 
+/* MF-453: ein Durchlauf fuer beliebig viele Muster.
+ *
+ * Das Schieberegister ist dasselbe wie in flux_find_sync(); neu ist nur, dass
+ * pro Bitposition die ganze Liste geprueft wird. Damit ist der Treffer der
+ * frueheste ueber alle Muster — bei N Einzelaufrufen bekaeme man den
+ * fruehesten Treffer des ERSTEN Musters, was etwas anderes ist. */
+int flux_find_sync_any(const uint8_t *bits, size_t bit_count,
+                       const uint16_t *patterns, size_t pattern_count,
+                       size_t start_pos, size_t *which) {
+    if (which) *which = 0;
+    if (!bits || !patterns || pattern_count == 0 || bit_count < 16) return -1;
+
+    uint16_t window = 0;
+    for (size_t i = start_pos; i < bit_count; i++) {
+        window = (uint16_t)((window << 1) |
+                            ((bits[i / 8] >> (7 - (i % 8))) & 1));
+        if (i < start_pos + 15) continue;
+        for (size_t p = 0; p < pattern_count; p++) {
+            if (window == patterns[p]) {
+                if (which) *which = p;
+                return (int)(i - 15);
+            }
+        }
+    }
+    return -1;
+}
+
 /* ============================================================================
  * MFM Track Decoder
  * ============================================================================ */
@@ -331,8 +358,15 @@ int flux_find_sync(const uint8_t *bits, size_t bit_count,
  * position of the first non-sync word — the address mark. It also
  * handles a 1- or 2-A1 prefix gracefully (Amiga / non-IBM), so it is
  * the right primitive regardless of sync count. */
+/* MF-453: das Muster kommt als Parameter.
+ *
+ * Die Funktion verglich fest gegen MFM_SYNC_PATTERN. Solange der Decoder nur
+ * 0x4489 suchte, war das dasselbe; sobald er auch 0x9521 oder 0xA245 findet,
+ * wuerde ein Sync-Lauf aus zwei Custom-Syncs nicht uebersprungen und der
+ * Decoder laese den zweiten Sync als Info-Long. Der IBM-Pfad ruft weiterhin
+ * mit MFM_SYNC_PATTERN. */
 static size_t mfm_skip_sync_run(const uint8_t *bits, size_t bit_count,
-                                size_t first_sync_pos) {
+                                size_t first_sync_pos, uint16_t pattern) {
     size_t pos = first_sync_pos;
     while (pos + 16 <= bit_count) {
         uint16_t w = 0;
@@ -340,7 +374,7 @@ static size_t mfm_skip_sync_run(const uint8_t *bits, size_t bit_count,
             w = (uint16_t)((w << 1) |
                 ((bits[(pos + b) / 8] >> (7 - ((pos + b) % 8))) & 1));
         }
-        if (w != MFM_SYNC_PATTERN) break;
+        if (w != pattern) break;
         pos += 16;
     }
     return pos;
@@ -352,7 +386,8 @@ static flux_status_t decode_mfm_sector(const uint8_t *bits, size_t bit_count,
                                        size_t *end_pos) {
     /* MF-218: skip the WHOLE sync run (A1 A1 A1), not just one word, so
      * `pos` lands on the address mark. */
-    size_t pos = mfm_skip_sync_run(bits, bit_count, start_pos);
+    size_t pos = mfm_skip_sync_run(bits, bit_count, start_pos,
+                                   MFM_SYNC_PATTERN);
 
     if (pos + 8 * 16 >= bit_count) return FLUX_ERR_UNDERFLOW;
     
@@ -398,7 +433,8 @@ static flux_status_t decode_mfm_sector(const uint8_t *bits, size_t bit_count,
 
     /* MF-218: skip the data field's full A1 A1 A1 sync run, same as the
      * ID field — `pos = data_sync + 16` skipped only one. */
-    pos = mfm_skip_sync_run(bits, bit_count, (size_t)data_sync);
+    pos = mfm_skip_sync_run(bits, bit_count, (size_t)data_sync,
+                            MFM_SYNC_PATTERN);
     sector->data_position = (uint32_t)data_sync;
     
     /* Read data address mark */
@@ -1100,12 +1136,13 @@ static void amiga_read_field(const uint8_t *bits, size_t bit_count,
 }
 
 static flux_status_t decode_amiga_sector(const uint8_t *bits, size_t bit_count,
-                                         size_t sync_pos,
+                                         size_t sync_pos, uint16_t sync_pattern,
                                          flux_decoded_sector_t *sector,
                                          size_t *end_pos) {
-    /* Skip the 0x4489 sync run — Amiga writes two; mfm_skip_sync_run
-     * tolerates one or more and lands on the info field. */
-    size_t pos = mfm_skip_sync_run(bits, bit_count, sync_pos);
+    /* Skip the sync run — Amiga writes two; mfm_skip_sync_run tolerates one or
+     * more and lands on the info field. Das Muster ist das, das gefunden
+     * wurde, nicht zwangslaeufig 0x4489 (MF-453). */
+    size_t pos = mfm_skip_sync_run(bits, bit_count, sync_pos, sync_pattern);
     if (pos + (size_t)AMIGA_PAYLOAD_CELLS > bit_count)
         return FLUX_ERR_UNDERFLOW;
 
@@ -1199,9 +1236,18 @@ flux_status_t flux_decode_amiga_bits(const uint8_t *bits, size_t bit_count,
     track->track_length_bits = (uint32_t)bit_count;
     track->detected_encoding = FLUX_ENC_AMIGA;
 
+    /* MF-453: welche Syncs gesucht werden, entscheidet der Aufrufer. Ohne
+     * Angabe bleibt es beim Standard — der Default aendert nichts. */
+    static const uint16_t default_syncs[] = { MFM_SYNC_PATTERN };
+    const uint16_t *syncs = opts->sync_patterns;
+    size_t          nsyncs = opts->sync_count;
+    if (!syncs || nsyncs == 0) { syncs = default_syncs; nsyncs = 1; }
+
     size_t pos = 0;
     while (pos < bit_count && track->sector_count < FLUX_MAX_SECTORS) {
-        int sync_pos = flux_find_sync(bits, bit_count, MFM_SYNC_PATTERN, pos);
+        size_t hit = 0;
+        int sync_pos = flux_find_sync_any(bits, bit_count, syncs, nsyncs,
+                                          pos, &hit);
         if (sync_pos < 0) break;
 
         flux_decoded_sector_t *sector = &track->sectors[track->sector_count];
@@ -1210,6 +1256,7 @@ flux_status_t flux_decode_amiga_bits(const uint8_t *bits, size_t bit_count,
         size_t sector_end = 0;
         flux_status_t status = decode_amiga_sector(bits, bit_count,
                                                    (size_t)sync_pos,
+                                                   syncs[hit],
                                                    sector, &sector_end);
         if (status == FLUX_OK) {
             track->sector_count++;
