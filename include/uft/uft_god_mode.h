@@ -246,28 +246,9 @@ int uft_fuzzy_sync_find(const uint8_t* bits, size_t bit_count,
                         int max_mismatches,
                         uft_sync_match_t* matches, int max_matches);
 
-/* ═══════════════════════════════════════════════════════════════════════════════
- * DECODER METRICS
- * ═══════════════════════════════════════════════════════════════════════════════ */
-
-/**
- * @brief Decoder quality metrics
- */
-typedef struct {
-    double bit_error_rate;      /**< Estimated BER */
-    double sync_quality;        /**< Sync pattern quality */
-    double timing_jitter;       /**< Timing jitter (ns) */
-    double signal_quality;      /**< Overall signal quality */
-    int missing_sectors;        /**< Missing sector count */
-    int bad_checksums;          /**< Bad checksum count */
-    int recovered_sectors;      /**< Recovered sector count */
-} uft_decoder_metrics_t;
-
-/**
- * @brief Calculate decoder metrics for track
- */
-void uft_calculate_metrics(const uint8_t* track_data, size_t track_len,
-                          int encoding, uft_decoder_metrics_t* metrics);
+/* uft_decoder_metrics_t and uft_calculate_metrics() were removed in MF-444:
+ * the function returned four hard-coded constants regardless of input, and the
+ * struct had no other producer. See src/algorithms/advanced/uft_god_mode_api.c. */
 
 /* ═══════════════════════════════════════════════════════════════════════════════
  * ENCODING CONSTANTS

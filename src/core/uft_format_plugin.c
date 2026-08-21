@@ -60,10 +60,23 @@ uft_error_t uft_register_format_plugin(const uft_format_plugin_t* plugin) {
         }
     }
 
-    // Duplikate prüfen
+    /* Duplikate prüfen — auf .name, nicht auf .format (MF-444).
+     *
+     * This test used to read `g_format_plugins[i]->format == plugin->format`.
+     * 82 of the 88 plugins in the tree declare `.format = UFT_FORMAT_DSK`,
+     * because that enum names a container class ("a sector image"), not a
+     * format. The registry therefore accepted the first DSK plugin and rejected
+     * the other 81, silently, with the same error code used for a plugin that
+     * is genuinely broken. Registration could never hold more than 7 of 88.
+     *
+     * That is why nothing in the tree calls uft_register_all_formats(): every
+     * consumer grew around the registry by linking plugin symbols directly.
+     *
+     * `.name` is unique across all 88 and is what identifies a plugin. Two
+     * plugins sharing a container id is normal and must not be an error. */
     for (size_t i = 0; i < g_format_plugin_count; i++) {
-        if (g_format_plugins[i]->format == plugin->format) {
-            // Plugin für dieses Format bereits registriert
+        if (g_format_plugins[i]->name && plugin->name &&
+            strcmp(g_format_plugins[i]->name, plugin->name) == 0) {
             return UFT_ERROR_PLUGIN_LOAD;
         }
     }
@@ -111,9 +124,37 @@ uft_error_t uft_unregister_format_plugin(uft_format_t format) {
 // Lookup
 // ============================================================================
 
+/* First plugin declaring this container id.
+ *
+ * MF-444: with 82 plugins on UFT_FORMAT_DSK this is a first-match, not an
+ * identification — the answer depends on registration order, and it is wrong
+ * for 81 of the 82 whenever the caller meant a specific format. The callers in
+ * src/core/uft_disk_*.c and uft_format_verify.c pass a uft_format_t and cannot
+ * express more, so the ambiguity is theirs to lose, not this function's to
+ * hide: it is stated here and tracked as ARCH-9 in docs/KNOWN_ISSUES.md.
+ * Callers that know which plugin they want should use
+ * uft_get_format_plugin_by_name(). */
 const uft_format_plugin_t* uft_get_format_plugin(uft_format_t format) {
     for (size_t i = 0; i < g_format_plugin_count; i++) {
         if (g_format_plugins[i]->format == format) {
+            return g_format_plugins[i];
+        }
+    }
+    return NULL;
+}
+
+size_t uft_count_format_plugins_for(uft_format_t format) {
+    size_t n = 0;
+    for (size_t i = 0; i < g_format_plugin_count; i++)
+        if (g_format_plugins[i]->format == format) n++;
+    return n;
+}
+
+const uft_format_plugin_t* uft_get_format_plugin_by_name(const char* name) {
+    if (!name) return NULL;
+    for (size_t i = 0; i < g_format_plugin_count; i++) {
+        if (g_format_plugins[i]->name &&
+            strcmp(g_format_plugins[i]->name, name) == 0) {
             return g_format_plugins[i];
         }
     }
@@ -241,6 +282,10 @@ const uft_format_plugin_t* uft_find_format_plugin_for_file(const char* path) {
     }
     
     return best_plugin;
+}
+
+size_t uft_registered_format_plugin_count(void) {
+    return g_format_plugin_count;
 }
 
 size_t uft_list_format_plugins(const uft_format_plugin_t** plugins, size_t max) {

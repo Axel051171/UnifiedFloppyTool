@@ -1580,7 +1580,19 @@ davon stehen in genau den überzähligen Lesern, die ARCH-6 löschen will
 Leser zusammenführen, dann übernehmen die Überlebenden die Geometrie. Andersherum
 wäre es Arbeit an Code, der verschwinden soll.
 
-### PRINC-2 — `uft_smart_open()` liefert eine erfundene Qualitätsbewertung und druckt sie als forensischen Bericht (2026-08-21, MF-443) → ⚠ OFFEN, Entscheidung nötig
+### PRINC-2 — `uft_smart_open()` liefert eine erfundene Qualitätsbewertung und druckt sie als forensischen Bericht (2026-08-21, MF-443) → ✓ BEHOBEN (MF-444), Nachweis in `tests/test_smart_open_quality.c`
+
+> **Stand MF-444:** Rumpf neu. `analyze_quality()` liest jede Spur über das
+> Plugin und zählt; alle Felder starten auf `UFT_QUALITY_NOT_DETERMINED`
+> (−1) und der Bericht schreibt „not determined", wo nichts gemessen wurde.
+> Erkennung läuft über `uft_probe_buffer_format()` (Registry) statt über die
+> 16er-Tabelle; die Extension-Rückfalllinie („Name endet auf .d64, also 50 %
+> sicher") ist ersatzlos weg. Die v3-Kette ist opt-in
+> (`uft_smart_register_v3_handler()`), nicht mehr fest verdrahtet.
+> `enable_god_mode`/`god_mode_used` und `uft_calculate_metrics()` entfernt —
+> letztere gab für jede Eingabe vier Konstanten zurück und überschrieb damit
+> die gezählten Werte. Test: 683 / 690 / 3200 Sektoren aus D64 / D67 / D81,
+> exakt, gegen VICE-Images. Zwei Folgefunde daraus: ARCH-9, ARCH-10.
 
 **Prinzip 1 („Keine erfundenen Daten"), schwerster Verstoß dieser Reihe.**
 Gefunden bei der Frage, ob die v3-Kette als API etwas taugt.
@@ -1657,6 +1669,115 @@ seiner wichtigsten Achse steht.
 3. **Als Minimum sofort:** die erfundenen Werte durch ein ehrliches „nicht
    ermittelt" ersetzen, damit der Bericht nicht behaupten kann, was er nicht
    weiß — unabhängig davon, welcher der beiden Wege gewählt wird.
+
+### ARCH-9 — Die Plugin-Registry konnte nie mehr als 7 der 88 Plugins aufnehmen (2026-08-21, MF-444) → ✓ BEHOBEN, Nachweis im Test
+
+**Gefunden, weil `uft_smart_open()` nach dem Umbau über die Registry erkennt und
+der erste Test damit der erste Aufrufer der Registry überhaupt war.**
+
+`uft_register_format_plugin()` wies Duplikate ab — verglichen wurde
+`plugin->format`:
+
+```c
+for (size_t i = 0; i < g_format_plugin_count; i++)
+    if (g_format_plugins[i]->format == plugin->format)
+        return UFT_ERROR_PLUGIN_LOAD;
+```
+
+**82 der 88 Plugins tragen `.format = UFT_FORMAT_DSK`.** Das Enum benennt eine
+Container-Klasse („ein Sektorimage"), kein Format. Die Registry nahm also das
+erste DSK-Plugin und wies die anderen 81 ab — still, mit demselben Fehlercode
+wie für ein kaputtes Plugin.
+
+| | |
+|---|---|
+| Plugins im Baum | 88 |
+| eindeutige `.format`-Werte | **7** |
+| davon `UFT_FORMAT_DSK` | **82** |
+| eindeutige `.name`-Werte | **88** |
+
+Daraus folgt der zweite Teil des Befunds: **`uft_register_all_formats()` hatte
+im gesamten Baum keinen einzigen Aufrufer** — auch nicht in der GUI. Jeder
+Konsument ist um die Registry herumgewachsen und linkt Plugin-Symbole direkt
+(`extern const uft_format_plugin_t uft_format_plugin_d64;`). Ein Mechanismus,
+der nie funktioniert hat, wurde nicht repariert, sondern umgangen.
+
+**Fix (MF-444):** Duplikatsprüfung auf `.name` (über alle 88 eindeutig).
+`uft_register_all_formats()` ist idempotent — bereits registriert ist der
+gewünschte Endzustand, kein Fehler — und bricht nicht mehr beim ersten
+abgewiesenen Plugin ab, sondern versucht alle und meldet den ersten echten
+Fehler danach. Neu: `uft_registered_format_plugin_count()`,
+`uft_get_format_plugin_by_name()`, `uft_count_format_plugins_for()`.
+
+Nachweis: `tests/test_smart_open_quality.c::registering_twice_is_not_an_error`
+— vier Plugins auf derselben Container-ID registrieren, doppelte Anmeldung
+abgewiesen, Bestand unverändert.
+
+---
+
+### ARCH-10 — `uft_get_format_plugin(format)` ist für 82 von 88 Plugins ein Zufallstreffer (2026-08-21, MF-444) → ⚠ OFFEN, ~15 Aufrufstellen
+
+Folgefund aus ARCH-9. Die Funktion liefert das **erste** registrierte Plugin mit
+der gesuchten `uft_format_t`. Da 82 Plugins `UFT_FORMAT_DSK` führen, hängt die
+Antwort von der Registrierungsreihenfolge ab und ist für 81 davon falsch, sobald
+der Aufrufer ein bestimmtes Format meinte.
+
+Betroffen (alle übergeben eine `uft_format_t` und können nicht mehr ausdrücken):
+
+- `src/core/uft_disk_convert.c:58,90,120,121`
+- `src/core/uft_disk_verify.c:49,157`
+- `src/core/uft_disk_stream.c:18`
+- `src/core/uft_disk_transaction.c:180`
+- `src/core/uft_format_verify.c:23,75,153`
+- `src/core/uft_recovery_fusion.c:91,107`
+- `src/core/uft_core_stubs.c:155`
+
+Bisher fiel das nicht auf, weil die Registry leer war (ARCH-9) und alle diese
+Pfade schlicht `NULL` bekamen. Mit funktionierender Registrierung werden sie
+scharf — und liefern dann still das falsche Plugin.
+
+**Nächster Schritt:** `uft_disk_t` trägt bereits das geöffnete Plugin bzw. den
+Namen; die Aufrufstellen auf `uft_get_format_plugin_by_name()` umstellen, eine
+Datei pro Commit, jede mit Test. Nicht in MF-444 erledigt: 15 Stellen in 7
+Dateien, jede mit eigenem Fehlerpfad — das ist eine eigene Aufgabe, keine
+Nebenwirkung.
+
+Zwischenzeitlich ist die Mehrdeutigkeit wenigstens sichtbar:
+`uft_count_format_plugins_for(format) > 1` beantwortet „kann diese ID ein Plugin
+überhaupt identifizieren?", und der Doc-Comment an `uft_get_format_plugin()`
+sagt es ausdrücklich.
+
+---
+
+### PRINC-3 — `uft_advanced_read_track()` buchte jeden beschädigten Sektor als „recovered", ohne etwas zu tun (2026-08-21, MF-444) → ✓ BEHOBEN
+
+Dritter Fund derselben Klasse, im Schwestermodul von `uft_smart_open()`.
+
+`src/core/uft_advanced_mode.c:385-425`: bei aktivem God-Mode wurde ein
+Kalman-Filter konfiguriert und initialisiert — in zwei Stack-Variablen, die
+danach verworfen wurden, unter dem Kommentar „... process flux data through
+Kalman ...". Der CRC-Korrektur-Zweig war ein leeres Kommentar-Paar. Danach:
+
+```c
+q.god_mode_used = true;
+...
+if (use_god_mode && q.has_errors) {
+    handle->recovered_sector_count += q.error_count;
+    q.recovered_bits = q.error_count * 8;   /* Estimate */
+}
+```
+
+Gelesen wurde die Spur unverändert über den normalen Handler. `error_count`
+zählt die **defekten** Sektoren — die wurden eins zu eins als wiederhergestellt
+verbucht und von `uft_advanced_get_stats()` als `recovered_sectors` und
+`crc_corrections` veröffentlicht. Je kaputter die Diskette, desto größer der
+behauptete Rettungserfolg.
+
+**Fix:** Die Anforderung wird protokolliert (`UFT_WARN`, ausdrücklich: „no
+recovery algorithm is implemented on this path"), die Spur normal gelesen,
+nichts gezählt. `recovered_sectors` meldet jetzt 0 — und 0 ist wahr.
+
+---
 
 ### ARCH-8 — Handgeschriebene `extern`-Deklarationen: drei falsche in einer Datei, eine mit Schreibzugriff auf eine beliebige Adresse (2026-08-21, MF-442) → ✓ KLASSE LEER, Wächter steht
 

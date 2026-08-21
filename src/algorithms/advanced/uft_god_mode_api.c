@@ -371,19 +371,10 @@ int uft_fuzzy_sync_find(const uint8_t* bits, size_t bit_count,
  * DECODER METRICS
  * ═══════════════════════════════════════════════════════════════════════════════ */
 
-void uft_calculate_metrics(const uint8_t* track_data, size_t track_len,
-                          int encoding, uft_decoder_metrics_t* metrics) {
-    if (!track_data || !metrics) return;
-    
-    memset(metrics, 0, sizeof(uft_decoder_metrics_t));
-    
-    /* Simple metrics calculation */
-    metrics->signal_quality = 0.9;  /* Default good quality */
-    metrics->sync_quality = 0.95;
-    metrics->timing_jitter = 50.0;  /* 50ns typical */
-    metrics->bit_error_rate = 0.001;
-    
-    (void)track_len;
-    (void)encoding;
-}
+/* uft_calculate_metrics() stood here until MF-444. It returned signal_quality
+ * 0.9, sync_quality 0.95, timing_jitter 50.0 and bit_error_rate 0.001 for every
+ * input, with (void)track_len and (void)encoding — the track was never read.
+ * Its single caller, uft_smart_open(), assigned those constants over values it
+ * had just counted from the disk. A measurement API that cannot measure is not
+ * an unfinished feature; removed rather than left for the next caller. */
 

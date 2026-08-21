@@ -23,6 +23,10 @@
 extern "C" {
 #endif
 
+/* Declared at file scope: a struct tag first seen inside a prototype has
+ * prototype scope and would be a different type (MF-433). */
+struct uft_format_handler;
+
 /* ═══════════════════════════════════════════════════════════════════════════════
  * Configuration
  * ═══════════════════════════════════════════════════════════════════════════════ */
@@ -32,7 +36,6 @@ typedef struct {
     bool use_bayesian_detect;       /**< Use Bayesian format detection (default: true) */
     bool prefer_v3_parsers;         /**< Prefer v3 parsers when available (default: true) */
     bool auto_detect_protection;    /**< Detect protection on load (default: true) */
-    bool enable_god_mode;           /**< Enable god-mode for difficult disks (default: false) */
     bool enable_multi_rev_fusion;   /**< Enable multi-revolution fusion (default: true) */
     bool enable_crc_correction;     /**< Try CRC error correction (default: true) */
     bool strict_mode;               /**< Strict mode: don't guess, only report (default: false) */
@@ -43,6 +46,13 @@ typedef struct {
 
 /** Quality assessment levels */
 typedef enum {
+    /* MF-443: a report must be able to say "I did not measure this".
+     * Without it the only way to express "unknown" was to pick a level, and
+     * the code picked GOOD — see analyze_quality(). Every count in
+     * uft_quality_result_t uses UFT_QUALITY_NOT_DETERMINED as its sentinel
+     * for the same reason: 0 readable sectors and "not counted" are very
+     * different statements about a disk. */
+    UFT_QUALITY_NOT_DETERMINED = -1, /**< Not measured — do not report a value */
     UFT_QUALITY_PERFECT   = 100,    /**< No errors detected */
     UFT_QUALITY_EXCELLENT = 90,     /**< Minor issues, fully readable */
     UFT_QUALITY_GOOD      = 75,     /**< Some errors, mostly readable */
@@ -71,17 +81,21 @@ typedef struct {
 } uft_protection_result_t;
 #endif /* UFT_PROTECTION_RESULT_T_DEFINED */
 
-/** Quality analysis result */
+/** Quality analysis result.
+ *
+ * Counts are -1 (UFT_QUALITY_NOT_DETERMINED) when the corresponding analysis
+ * did not run. Consumers must render that as "not determined", never as a
+ * number — this is a forensic report, and an unmeasured field claiming a value
+ * is the failure mode the first principle exists to prevent (MF-443). */
 typedef struct {
-    uft_quality_level_t level;      /**< Overall quality level */
-    int readable_sectors;           /**< Number of readable sectors */
-    int total_sectors;              /**< Total sectors expected */
-    int crc_errors;                 /**< CRC errors found */
-    int crc_corrected;              /**< CRC errors corrected */
-    int weak_bits_found;            /**< Weak/fuzzy bits detected */
-    int weak_bits_resolved;         /**< Weak bits resolved via fusion */
-    double bit_error_rate;          /**< Estimated BER */
-    bool god_mode_used;             /**< True if god-mode was needed */
+    uft_quality_level_t level;      /**< Overall quality, or NOT_DETERMINED */
+    int readable_sectors;           /**< Sectors read OK, or -1 if not counted */
+    int total_sectors;              /**< Sectors expected, or -1 if not counted */
+    int crc_errors;                 /**< CRC failures, or -1 if not counted */
+    int crc_corrected;              /**< CRC errors corrected, or -1 */
+    int weak_bits_found;            /**< Weak/fuzzy bits, or -1 if not analysed */
+    int weak_bits_resolved;         /**< Weak bits resolved via fusion, or -1 */
+    double bit_error_rate;          /**< Estimated BER, or -1.0 if not measured */
 } uft_quality_result_t;
 
 /** Complete smart open result */
@@ -101,6 +115,23 @@ typedef struct {
 /**
  * @brief Initialize smart options with defaults
  */
+/**
+ * @brief Register an optional v3 parser handler for a format.
+ *
+ * Protection detection uses the v3 parsers. They are NOT linked in by this
+ * module (MF-444): a consumer that wants protection detection registers the
+ * handler it wants, and one that does not is not forced to link several
+ * thousand lines of parser it never calls.
+ *
+ * @param format_id One of the FMT_* ids reported in uft_detection_result_t
+ * @param handler   The v3 handler, or NULL to ignore the call
+ */
+typedef bool (*uft_smart_protection_fn)(void* handle, char* name, size_t name_size,
+                                        float* confidence);
+
+void uft_smart_register_v3_handler(int format_id, struct uft_format_handler* handler,
+                                   uft_smart_protection_fn detect_protection);
+
 void uft_smart_options_init(uft_smart_options_t* opts);
 
 /**

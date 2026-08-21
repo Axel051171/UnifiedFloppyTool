@@ -398,14 +398,28 @@ static void init_all_plugins(void) {
  * Public API
  * ============================================================================ */
 
+/* MF-444: idempotent, and it no longer stops at the first plugin it cannot add.
+ *
+ * The previous body returned on the first non-OK result. Since
+ * uft_register_format_plugin() answers UFT_ERROR_PLUGIN_LOAD for a format that
+ * is already registered, a second call to this function aborted on plugin #1
+ * and left the registry in whatever state the first call had produced — and a
+ * single format whose id collides with an earlier one silenced every plugin
+ * behind it in the table. Neither is something a caller could see.
+ *
+ * Now: already-registered is not an error (that is the requested end state),
+ * every remaining plugin is still attempted, and the first genuine failure is
+ * remembered and returned after the loop has run to the end. */
 uft_error_t uft_register_all_formats(void) {
     init_all_plugins();
-    uft_error_t err;
+    uft_error_t first_err = UFT_OK;
     for (int i = 0; all_plugins[i] != NULL; i++) {
-        err = uft_register_format_plugin(all_plugins[i]);
-        if (err != UFT_OK) return err;
+        if (uft_get_format_plugin_by_name(all_plugins[i]->name) != NULL)
+            continue;                     /* already registered: end state met */
+        uft_error_t err = uft_register_format_plugin(all_plugins[i]);
+        if (err != UFT_OK && first_err == UFT_OK) first_err = err;
     }
-    return UFT_OK;
+    return first_err;
 }
 
 size_t uft_get_format_count(void) {

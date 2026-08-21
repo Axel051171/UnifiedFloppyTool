@@ -382,30 +382,33 @@ uft_error_t uft_advanced_read_track(uft_advanced_handle_t* handle,
     bool use_god_mode = (g_config.flags & UFT_ADV_GOD_MODE) &&
                         (q.quality * 100 < g_config.quality_threshold);
     
+    /* MF-444: God-Mode is requested here, and not performed.
+     *
+     * What stood here: a Kalman filter was configured and initialised into two
+     * stack variables that were then dropped, under a comment reading
+     * "... process flux data through Kalman ..."; the CRC-correction branch was
+     * an empty comment; and `q.god_mode_used = true` was set regardless.
+     * Further down, after the ordinary handler read, the result was booked as
+     * recovery:
+     *
+     *     handle->recovered_sector_count += q.error_count;
+     *     q.recovered_bits = q.error_count * 8;      (commented "Estimate")
+     *
+     * and uft_advanced_get_stats() published those as `recovered_sectors` and
+     * `crc_corrections`. Every damaged sector on the disk was therefore counted
+     * as recovered by an algorithm that had not run — the read was the plain
+     * handler read, byte for byte. In a preservation record that is not an
+     * optimistic estimate, it is a false statement about what was done to the
+     * data.
+     *
+     * The request is logged, the track is read normally, and nothing is
+     * claimed. When a recovery algorithm actually runs here, it increments
+     * these counters from what it did. */
     if (use_god_mode) {
-        handle->god_mode_active = true;
-        
-        if (g_config.verbose_logging) {
-            UFT_INFO("[UFT-ADV] God-Mode engaged for track %d/%d (quality: %.1f%%)",
-                     cylinder, head, q.quality * 100);
-        }
-        
-        /* Apply God-Mode algorithms */
-        if (g_config.flags & UFT_ADV_KALMAN_PLL) {
-            /* Use Kalman PLL for timing recovery */
-            uft_kalman_config_t kcfg;
-            uft_kalman_state_t kstate;
-            uft_kalman_config_init(&kcfg, UFT_GODMODE_ENC_GCR_C64);
-            uft_kalman_init(&kstate, &kcfg);
-            /* ... process flux data through Kalman ... */
-        }
-        
-        if (g_config.flags & UFT_ADV_CRC_CORRECTION) {
-            /* Attempt CRC correction on bad sectors */
-            /* ... */
-        }
-        
-        q.god_mode_used = true;
+        UFT_WARN("[UFT-ADV] God-Mode requested for track %d/%d (quality %.1f%%) "
+                 "but no recovery algorithm is implemented on this path - the "
+                 "track is read unmodified and nothing is counted as recovered",
+                 cylinder, head, q.quality * 100);
     }
     
     if (quality) *quality = q;
@@ -419,10 +422,6 @@ uft_error_t uft_advanced_read_track(uft_advanced_handle_t* handle,
         if (err != UFT_OK) {
             *size = 0;
             return err;
-        }
-        if (use_god_mode && q.has_errors) {
-            handle->recovered_sector_count += q.error_count;
-            q.recovered_bits = q.error_count * 8;  /* Estimate */
         }
     } else {
         *size = 0;

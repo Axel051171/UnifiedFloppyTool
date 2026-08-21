@@ -409,6 +409,17 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/formats/cbm/uft_cbm_geometry.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+    elseif(${test_name} STREQUAL "test_smart_open_quality")
+        # MF-443/444: first caller of uft_smart_open(); the numbers must be
+        # counted. Four plugins, registered by the test itself — the registry
+        # is the single detection source, so an empty one must be visible.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/d64/uft_d64_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/formats/d67/uft_d67.c
+            ${CMAKE_SOURCE_DIR}/src/formats/d81/uft_d81.c
+            ${CMAKE_SOURCE_DIR}/src/formats/xfd/uft_xfd.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_scp_readers_agree")
         # MF-439: the five SCP readers must return the same flux
         target_sources(${test_name} PRIVATE

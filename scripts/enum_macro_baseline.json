@@ -1,11 +1,8 @@
 {
   "_doc": "Names that exist as BOTH an enum constant and a macro, with different values, as they stood after the sweep of 2026-08-19 (KNOWN_ISSUES ARCH-5). Every entry here is LATENT: no translation unit reaches both definitions. A live one is never baselined — scripts/enum_macro_conflicts.py fails on it outright, because there the meaning of the name depends on include order. Mechanism and history: MF-427, MF-431.",
   "accepted": [
-    "FMT_ADF",
     "FMT_D64",
     "FMT_G64",
-    "FMT_HFE",
-    "FMT_IMD",
     "FMT_SCP",
     "HFE_IF_C64_DD",
     "HFE_IF_EMU_SHUGART",

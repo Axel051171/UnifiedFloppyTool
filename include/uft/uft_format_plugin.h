@@ -755,6 +755,32 @@ const uft_format_plugin_t* uft_find_format_plugin_for_file(const char* path);
  */
 size_t uft_list_format_plugins(const uft_format_plugin_t** plugins, size_t max);
 
+/**
+ * @brief Anzahl der aktuell registrierten Plugins
+ *
+ * uft_list_format_plugins(NULL, 0) returns 0 because it counts what it copied,
+ * not what exists — so it cannot answer "is the registry empty?". Callers need
+ * that answer to tell "nobody registered anything" apart from "the file was not
+ * recognised" (MF-444).
+ */
+size_t uft_registered_format_plugin_count(void);
+
+/**
+ * @brief Plugin über seinen eindeutigen Namen finden ("D64", "XFD", ...)
+ *
+ * uft_get_format_plugin() keys on uft_format_t, and 82 of 88 plugins share
+ * UFT_FORMAT_DSK — it returns whichever registered first. `.name` is unique
+ * across all 88 (MF-444).
+ */
+const uft_format_plugin_t* uft_get_format_plugin_by_name(const char* name);
+
+/**
+ * @brief Wie viele registrierte Plugins diese Container-ID führen
+ *
+ * >1 means uft_get_format_plugin() cannot identify a plugin from that id alone.
+ */
+size_t uft_count_format_plugins_for(uft_format_t format);
+
 // ============================================================================
 // Helper für Plugin-Implementierung
 // ============================================================================
