@@ -3559,6 +3559,102 @@ beschrieben stehen.
 
 ---
 
+### AUD-5 — Der Build-Paritäts-Prüfer verschluckte 30 Dateien, CMake baute die Anwendung daraus (2026-08-22, MF-458) → ✓ BEHOBEN, Baseline 160 → 0
+
+Angegangen als „Baseline aufräumen". Herausgekommen ist ein echter Fehler im
+Prüfer selbst.
+
+**1. Der Parser-Fehler.** `verify_build_sources.py` verband erst
+Zeilenfortsetzungen und strippte dann Kommentare. In der `.pro` steht:
+
+```
+    src/gw_output_parser.cpp \
+    # src/qmake_stubs/uft_protection_stubs.cpp \ # DISABLED: conflicts with real impls
+    src/gui/uft_otdr_panel.cpp \
+```
+
+Eine auskommentierte Zeile, die selbst auf einem Backslash endet. Nach dem
+Verbinden war **alles ab dem ersten `#` eine einzige Zeile** — das
+anschließende Kommentar-Strippen löschte den gesamten Rest des SOURCES-Blocks.
+**30 Dateien fielen weg**, darunter `src/flux/uft_flux_decoder.c`,
+`src/gui/uft_otdr_panel.cpp`, `src/gui/uft_sector_editor.cpp`,
+`src/gui/ProtectionAnalysisWidget.cpp` und `src/flux/uft_scp_parser.c`.
+
+**2. Warum das mehr war als ein Meldefehler.** `CMakeLists.txt:202` ruft
+dieses Skript mit `--emit-cmake-sources` auf und baut daraus seine Quellliste.
+Gemessen: **559 Quellen vor dem Fix, 589 danach.** Die CMake-Anwendung wurde
+also ohne den Flux-Decoder, das OTDR-Panel und den Sektor-Editor gebaut.
+
+Der **qmake-Release-Build war nie betroffen** — der parst seine Datei selbst.
+Nachgeprüft mit `qmake6 -o` und einem Blick ins erzeugte Makefile: alle sieben
+oben stehen als Ziele drin. Ich hatte den Befund zuerst umgekehrt gelesen
+(„fehlt im Release-Build") und erst durch diese Messung korrigiert.
+
+**3. Die Prämisse des Prüfers stimmte nicht mehr.** Der Docstring sagte: CMake
+globt automatisch, qmake nicht, also fängt dieses Skript die stille Lücke ab.
+Das war einmal so. Heute leitet CMake seine Liste **aus der `.pro` ab** — „CMake
+hat mehr als qmake" kann strukturell nicht mehr vorkommen. Gap A bedeutet jetzt
+etwas Schwächeres: *eine Datei liegt unter `src/`, steht aber in keinem Build.*
+Docstring entsprechend neu geschrieben.
+
+**4. Was die Baseline wirklich enthielt.** Von 160 akzeptierten Abweichungen:
+
+| | |
+|---|---|
+| 30 | Phantome des Parser-Fehlers |
+| 100 | `src/samdisk/` — Referenzbestand, absichtlich nicht gebaut |
+| 3 | Quellen hinter Opt-in-Flags (`kalman_pll`, `experimental_vfo`) — der Prüfer übersprang sie auf der `.pro`-Seite und meldete dann seine eigene Auslassung |
+| 26 | zwischenzeitlich erledigt |
+| **1** | **echter Befund** |
+
+samdisk und die Opt-in-Quellen stehen jetzt als `NOT_BUILT_BY_DESIGN` im
+Prüfer statt in einer Baseline. Eine Baseline sagt „bekannter Mangel, noch
+nicht behoben" — hier war der Zustand der richtige, und 100 Zeilen Altlast
+mitzuschleppen machte die Zahl bedeutungslos.
+
+**5. Der eine echte Befund:** `src/core/uft_error_strings.c` stand in keinem
+Build, definiert aber `uft_strerror()` — deklariert in
+`include/uft/core/uft_error_ext.h:78`, samt Makro-Alias
+`uft_error_string(rc)`. Ein Aufruf hätte einen **Link-Fehler** gegeben: eine
+Zusage im öffentlichen Header ohne Deckung, dieselbe Klasse wie die falschen
+`extern`-Deklarationen aus MF-442. Jetzt gebaut — als eigenes `SOURCES +=`,
+nicht an den Block darüber angehängt, weil eine Kommentarzeile innerhalb einer
+Fortsetzung genau die Kette bricht, um die es in Punkt 1 ging.
+
+**Gap A: 0. Gap B: 0. Baseline leer.**
+
+---
+
+### DOC-3 — `src/samdisk/` hatte keinen Lizenztext, obwohl MIT ihn verlangt (2026-08-22, MF-458) → ✓ BEHOBEN
+
+SAMdisk 4.0 ALPHA, © 2002–2024 Simon Owen, steht unter **MIT** (bestätigt über
+die GitHub-API von `simonowen/samdisk`). Unsere Kopie hatte keine
+`License.txt`. MIT verlangt ausdrücklich, dass Copyright-Vermerk und
+Lizenztext „in all copies or substantial portions" mitgeführt werden — die
+Datei ist Pflicht, nicht Höflichkeit. Nachgetragen.
+
+Dazu `src/samdisk/README.md`, das drei Dinge festhält:
+
+- **Der Ordner wird von keinem Build kompiliert** — beide Builds binden ihn nur
+  als Include-Pfad ein. Wer nach „wird nicht gebaut" filtert, hält ihn für tot;
+  in MF-271 wurden aus genau diesem Muster `tests/test_switch.c` und
+  `tests/test_provider_switch.cpp` fälschlich gelöscht.
+- **Er wird bereits als Referenz-Orakel benutzt**, mit Datei-und-Zeile-Zitaten
+  in `uft_td0.c`, `uft_fdi_plugin.c`, `uft_scp_direct.h` und
+  `scp_provider_v2.h`. Genau der Ansatz, den `docs/XCOPY_COMPARISON.md` für
+  libdisk vorschlägt — hier schon etabliert, nur nirgends dokumentiert.
+- **MIT erlaubt mehr als die Nachbarn:** Codeübernahme ist zulässig, solange
+  der Vermerk mitgeht. X-Copy hat gar keine Lizenz, `xvs.library` sagt „All
+  Rights Reserved".
+
+Für den T3-Abbau relevant: SAMdisk hat für **17 der 62 T3-Formate** einen
+eigenen Handler (`adf_arc`, `cfi`, `cpm`, `cqm`, `do`, `fdi_pc98`, `ipf`,
+`mfi`, `mgt`, `msa`, `sad`, `sap_thomson`, `scl`, `st`, `td0`, `trd`, `udi`).
+Für die ist ein Cross-Check möglich, **ohne eine reale Referenzdiskette zu
+besitzen** — und Referenzmaterial ist dort der Engpass, nicht Code.
+
+---
+
 ### CI-2 — `-Werror=format` brach acht Commits lang die Linux-CI, und ich habe sie nicht angesehen (2026-08-21, MF-457) → ✓ BEHOBEN
 
 **Prozessfehler, nicht nur Codefehler.**

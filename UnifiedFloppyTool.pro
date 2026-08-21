@@ -964,6 +964,15 @@ SOURCES += \
     src/core/uft_smart_open.c \
     src/core/uft_unified_types.c
 
+# MF-458: uft_strerror() ist in include/uft/core/uft_error_ext.h:78 deklariert,
+# samt Makro-Alias uft_error_string(rc) — und war in keinem Build definiert. Ein
+# Aufruf haette einen Link-Fehler gegeben: eine Zusage im oeffentlichen Header
+# ohne Deckung, dieselbe Klasse wie die falschen extern-Deklarationen aus
+# MF-442. Eigenes SOURCES +=, kein Anhaengen an den Block darueber: eine
+# Kommentarzeile INNERHALB einer Fortsetzung bricht die Kette (siehe die
+# auskommentierte Zeile bei src/qmake_stubs/, die 30 Dateien verschluckte).
+SOURCES += src/core/uft_error_strings.c
+
 HEADERS += \
     include/uft/analysis/uft_export_bridge.h \
     include/uft/analysis/otdr_event_core_v12.h \

@@ -1,28 +1,40 @@
 #!/usr/bin/env python3
 """
-Build-System Parity Check (MF-006).
+Build-System Parity Check (MF-006, Praemisse korrigiert MF-458).
 
-qmake's `UnifiedFloppyTool.pro` lists every source file explicitly.
-`CMakeLists.txt` uses `file(GLOB_RECURSE ...)` with a handful of
-exclusion regexes. Whenever a new `.c` / `.cpp` lands under `src/`,
-CMake picks it up automatically but qmake does NOT — producing a
-silent functionality gap in the primary release build (see CI
-break from v4.1.3 after the SSOT cutover, commit 6184f42).
+**Die Rollen haben sich umgedreht, seit dieses Skript geschrieben wurde.**
 
-This script catches the gap. It returns a non-zero exit code
-ONLY when NEW divergence is introduced — i.e. a file added to the
-source tree between this run and the committed baseline. A static
-historical divergence (samdisk vendor code, `_parser_v3.c` stub
-proliferation, mbedtls example mains) is recorded in
-data/build_system_baseline.tsv and ignored.
+Urspruenglich globte `CMakeLists.txt` per `file(GLOB_RECURSE ...)`, waehrend
+`UnifiedFloppyTool.pro` jede Datei einzeln auffuehrt — eine neue `.c` unter
+`src/` landete also automatisch im CMake-Build und fehlte still im
+Release-Build. Genau das fing dieses Skript ab.
 
-What we check:
-  (A) files CMake would glob but are missing from .pro       = silent miss
-  (B) files listed in .pro but not present on disk           = stale entry
+Heute ist es andersherum: `CMakeLists.txt:202` ruft dieses Skript mit
+`--emit-cmake-sources` auf und baut daraus seine Quellliste. Die `.pro` ist
+damit die einzige Wahrheit, und CMake leitet ab. "CMake hat mehr als qmake"
+kann strukturell nicht mehr vorkommen.
 
-A and B are only release-blocking when they differ from the committed
-baseline. The baseline itself is whittled down by separate cleanup
-work (MF-004 stub elimination etc.).
+Was Gap A jetzt bedeutet: **eine Datei liegt unter `src/`, steht aber in
+keinem Build.** Das ist eine andere und schwaechere Aussage — meistens ist es
+Absicht (Referenzbestand, Opt-in-Feature, toter Code), gelegentlich ein
+vergessener Eintrag.
+
+MF-458 hat dabei einen echten Fehler in diesem Parser gefunden: er verband
+erst Zeilenfortsetzungen und strippte dann Kommentare. In der `.pro` steht
+eine auskommentierte Zeile, die selbst auf einem Backslash endet — danach galt der
+gesamte Rest des SOURCES-Blocks als Kommentar. **30 Dateien fielen weg**,
+darunter `src/flux/uft_flux_decoder.c`, `src/gui/uft_otdr_panel.cpp` und
+`src/gui/uft_sector_editor.cpp`. Weil CMake seine Liste von hier bezieht,
+wurde die CMake-Anwendung aus 559 statt 589 Quellen gebaut. Der
+qmake-Release-Build war nie betroffen — der parst seine Datei selbst.
+
+Was wir pruefen:
+  (A) Dateien unter src/, die in keinem Build stehen       = evtl. vergessen
+  (B) Dateien in .pro, die es auf der Platte nicht gibt    = tote Eintraege
+
+A und B blockieren nur, wenn sie von der Baseline abweichen. Bewusst
+ausgenommen (siehe NOT_BUILT_BY_DESIGN): `src/samdisk/` als Referenzbestand
+und die Quellen hinter Opt-in-Flags.
 
 Run:
   python3 scripts/verify_build_sources.py                  # against baseline
@@ -49,6 +61,26 @@ CMAKE_EXCLUSIONS: list[re.Pattern[str]] = [
 
 SOURCE_EXTS = {".c", ".cpp"}
 
+# MF-458: was unter src/ liegt und absichtlich in keinem Build steht.
+#
+# Das gehoert nicht in eine Baseline. Eine Baseline sagt "bekannter Mangel,
+# noch nicht behoben"; hier ist der Zustand aber der richtige, und ihn Jahr um
+# Jahr als 100 Zeilen Altlast mitzuschleppen macht die Zahl bedeutungslos.
+NOT_BUILT_BY_DESIGN: list[re.Pattern[str]] = [
+    # SAMdisk 4.0 (c) 2002-2024 Simon Owen, MIT. Referenzbestand, kein
+    # Baubestandteil: beide Builds binden nur `src/samdisk` als Include-Pfad
+    # ein, kompiliert wird nichts davon. Der Baum zitiert es als Spec-Quelle
+    # mit Datei:Zeile — z.B. src/formats/td0/uft_td0.c:15
+    # ("Authority: src/samdisk/td0.cpp:10") und
+    # include/uft/hal/uft_scp_direct.h:101. Siehe src/samdisk/README.md.
+    re.compile(r"^src/samdisk/"),
+    # Opt-in-Features. Die .pro-Seite wird ueber _OPTIN_FLAGS uebersprungen,
+    # also muss die Platten-Seite dasselbe tun — sonst meldet der Pruefer
+    # seine eigene Auslassung als Befund.
+    re.compile(r"^src/algorithms/(advanced/)?uft_kalman_pll(_v2)?\.c$"),
+    re.compile(r"^src/flux/fdc_bitstream/vfo_experimental\.cpp$"),
+]
+
 
 def collect_cmake_globbed_sources(repo_root: Path) -> set[str]:
     """Replicate what CMake's GLOB_RECURSE picks up for UFT_SOURCES."""
@@ -63,6 +95,8 @@ def collect_cmake_globbed_sources(repo_root: Path) -> set[str]:
             continue
         rel = path.relative_to(repo_root).as_posix()
         if any(p.search(rel) for p in CMAKE_EXCLUSIONS):
+            continue
+        if any(p.search(rel) for p in NOT_BUILT_BY_DESIGN):
             continue
         out.add(rel)
     return out
@@ -97,6 +131,22 @@ def _parse_pro_lists(pro_path: Path, key: str, exts: tuple[str, ...]) -> set[str
         sys.exit(2)
 
     text = pro_path.read_text(encoding="utf-8", errors="replace")
+
+    # MF-458: Kommentare ZUERST weg, dann Fortsetzungen verbinden — in dieser
+    # Reihenfolge, weil qmake es so macht.
+    #
+    # Vorher wurden erst die Fortsetzungen verbunden. In der .pro steht eine
+    # auskommentierte Zeile, die selbst auf einen Fortsetzungs-Backslash
+    # endet (src/qmake_stubs/uft_protection_stubs.cpp, DISABLED). Nach dem
+    # Verbinden war alles ab dem ersten '#' eine einzige Zeile, und das
+    # anschliessende Kommentar-Strippen loeschte den REST des SOURCES-Blocks.
+    # Sieben real gebaute Dateien — darunter src/flux/uft_flux_decoder.c,
+    # src/gui/uft_otdr_panel.cpp und src/gui/uft_sector_editor.cpp — galten
+    # damit als 'nicht im Release-Build'. Nachgeprueft mit `qmake6 -o` und
+    # einem Blick ins erzeugte Makefile: qmake kompiliert sie sehr wohl.
+    # Der Fehler war im Pruefer, nicht im Build, und er hat die Baseline
+    # aufgeblaeht.
+    text = re.sub(r"#[^\n]*", "", text)
     text = re.sub(r"\\\s*\n\s*", " ", text)  # join line continuations
 
     pat = re.compile(rf"^\s*{key}\s*\+?=\s*(.*?)\s*$")
@@ -227,12 +277,12 @@ def main() -> int:
     fixed_b = base_b - miss_b
 
     print(f"Build-system parity check (MF-006)")
-    print(f"  CMake GLOB source files    : {len(cmake_sources):4d}")
-    print(f"  .pro SOURCES entries       : {len(pro_sources):4d}")
-    print(f"  Baseline accepted gaps A/B : {len(base_a):4d} / {len(base_b):4d}")
-    print(f"  Current gaps A/B           : {len(miss_a):4d} / {len(miss_b):4d}")
-    print(f"  NEW regressions A/B        : {len(new_a):4d} / {len(new_b):4d}")
-    print(f"  Baseline entries resolved  : {len(fixed_a):4d} / {len(fixed_b):4d}")
+    print(f"  Quellen unter src/ (baubar) : {len(cmake_sources):4d}")
+    print(f"  .pro SOURCES-Eintraege      : {len(pro_sources):4d}")
+    print(f"  Baseline akzeptiert A/B     : {len(base_a):4d} / {len(base_b):4d}")
+    print(f"  Aktuell A/B                 : {len(miss_a):4d} / {len(miss_b):4d}")
+    print(f"  NEUE Abweichungen A/B       : {len(new_a):4d} / {len(new_b):4d}")
+    print(f"  Baseline-Eintraege erledigt : {len(fixed_a):4d} / {len(fixed_b):4d}")
 
     if args.verbose or new_a or new_b:
         if new_a:
