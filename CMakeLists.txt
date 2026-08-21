@@ -64,7 +64,26 @@ add_compile_definitions(UFT_CXX20)
 # a wrong printf argument is undefined behaviour, not style — and this program
 # writes forensic reports with printf.
 if(NOT MSVC)
-    add_compile_options(-Wformat -Werror=format -Werror=format-extra-args)
+    add_compile_options(-Wformat -Werror=format -Werror=format-extra-args
+                        # MF-457: -Werror=format schaltet auf GCC die GANZE
+                        # format-Gruppe scharf, also auch -Wformat-truncation
+                        # und -Wformat-overflow. Das war nicht gemeint.
+                        #
+                        # Die beiden melden, dass snprintf abschneiden KOENNTE
+                        # — bei einem Pfad in einer Fehlermeldung der Normalfall,
+                        # und snprintf schneidet sicher ab. Eine andere Klasse
+                        # als "Argument fehlt", wofuer der Gate eingeschaltet
+                        # wurde (uft_smart_report() hatte ein %s mehr als
+                        # Argumente, MF-444).
+                        #
+                        # Warum es lokal nicht auffiel: die Analyse braucht
+                        # Optimierung UND glibcs _FORTIFY_SOURCE-Builtins
+                        # (__builtin___snprintf_chk). MinGW hat sie nicht, der
+                        # lokale CMake-Build ist ausserdem Debug. Auf CI-Linux
+                        # mit -O2 brachen dadurch 12 Testziele, acht Commits
+                        # lang, ohne dass ein lokaler Lauf es zeigen konnte.
+                        -Wno-error=format-truncation
+                        -Wno-error=format-overflow)
 endif()
 
 

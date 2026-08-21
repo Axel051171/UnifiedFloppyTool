@@ -3559,6 +3559,66 @@ beschrieben stehen.
 
 ---
 
+### CI-2 — `-Werror=format` brach acht Commits lang die Linux-CI, und ich habe sie nicht angesehen (2026-08-21, MF-457) → ✓ BEHOBEN
+
+**Prozessfehler, nicht nur Codefehler.**
+
+MF-448 schaltete `-Wformat -Werror=format -Werror=format-extra-args` ein, um
+eine reale Fehlerklasse zu schließen: `uft_smart_report()` hatte ein `%s` mehr
+als Argumente (MF-444). Der Zweck war richtig, das Flag zu breit.
+
+`-Werror=format` schaltet auf GCC die **ganze** `format`-Gruppe scharf, also
+auch `-Wformat-truncation` und `-Wformat-overflow`. Die melden, dass `snprintf`
+abschneiden *könnte* — bei einem Pfad in einer Fehlermeldung der Normalfall,
+und `snprintf` schneidet sicher ab. Eine andere Klasse als „Argument fehlt".
+
+**Folge:** auf CI-Linux brachen **12 Testziele** nicht mehr durchs Kompilat:
+
+```
+test_convert_file_detection, test_cpm_fs, test_geos, test_gw_encoder,
+test_gw_protocol, test_register_all_formats, test_write_gate,
+test_greaseweazle_v2, test_hal_conformance, test_kryoflux_emulator,
+test_hardware_tab_gui, test_provider_switch
+```
+
+Sie erscheinen als ctest **„Not Run"** und färben den CI-Job rot. Die
+Workflows *Sanitizer*, *Coverage*, *Audit* und *Emulator* blieben grün, der
+qmake-Build ebenfalls (dort steht `-Wall -Wextra` ohne `-Werror`) — nur der
+CMake-Testbau kippte.
+
+**Warum es lokal nicht auffiel — und warum es nicht auffallen konnte:**
+
+| | lokal | CI |
+|---|---|---|
+| Compiler | MinGW GCC 13 | GCC auf glibc |
+| Build-Typ | Debug (`-O0`) | Release (`-O2`) |
+| `_FORTIFY_SOURCE`-Builtins | nein | ja (`__builtin___snprintf_chk`) |
+
+`-Wformat-truncation` braucht **Optimierung und** die glibc-Builtins.
+Nachgeprüft: mit `-O2` auf MinGW meldet dieselbe Datei weiterhin nichts. Der
+Fehler war lokal **nicht reproduzierbar** — genau der Fall, für den
+[`ci_test_gating`](../.claude/) notiert ist: *local-green ≠ CI-green*.
+
+**Der eigentliche Fehler ist aber, dass ich acht Commits lang „ctest 211/211,
+alle Gates grün" gemeldet und CI nicht aufgerufen habe.** MF-448 bis MF-456
+sind alle mit rotem CI gelandet. Der letzte grüne Lauf war MF-447.
+
+**Fix:** `-Wno-error=format-truncation` und `-Wno-error=format-overflow`. Damit
+bleibt scharf, wofür der Gate da ist (falsche und fehlende Argumente,
+`-Werror=format-extra-args`), und die Truncation-Analyse bleibt Warnung.
+
+**Konsequenz für den Arbeitsablauf:** `gh run list` nach jedem Push, bevor
+„fertig" gesagt wird. Ein lokal grüner Lauf beweist bei
+compiler-flag-Änderungen nichts über die anderen beiden Plattformen — und
+gerade Flags, die Warnungen zu Fehlern machen, sind plattformabhängig.
+
+Der `|| true` im CMake-Testbau ist **kein** Mangel, sondern dokumentierte
+Politik (CI-1): qmake ist der kanonische Build, der CMake-Testbau ist
+best-effort, und der scharfe Schritt ist ctest. Genau deshalb wurden die 12
+nicht gebauten Ziele auch korrekt als Fehler sichtbar.
+
+---
+
 ### ARCH-17 — Das Compiler-Attribut-Vokabular stand in bis zu vier Headern, mit widersprüchlichen Ergebnissen (2026-08-21, MF-456) → ✓ BEHOBEN
 
 Direkter Anschluss an ARCH-1: dieselben Header, dieselbe Klasse. Nachgezählt
