@@ -102,31 +102,12 @@
 #include "uft/uft_packed.h"
 
 /* Alignment */
-#ifndef UFT_ALIGNED
-#ifdef _MSC_VER
-    #define UFT_ALIGNED(n) __declspec(align(n))
-#else
-    #define UFT_ALIGNED(n) __attribute__((aligned(n)))
-#endif
-#endif
-
-/* Inline */
-#ifndef UFT_INLINE
-#ifdef _MSC_VER
-    #define UFT_INLINE __forceinline
-#else
-    #define UFT_INLINE static inline __attribute__((always_inline))
-#endif
-#endif
-
-/* Restrict */
-#ifndef UFT_RESTRICT
-#ifdef _MSC_VER
-    #define UFT_RESTRICT __restrict
-#else
-    #define UFT_RESTRICT __restrict__
-#endif
-#endif
+/* MF-456: UFT_ALIGNED, UFT_INLINE und UFT_RESTRICT standen hier ein
+ * weiteres Mal, hinter #ifndef — also abhaengig von der
+ * Include-Reihenfolge. UFT_INLINE hiess hier
+ * `static inline __attribute__((always_inline))`, in uft_compiler.h
+ * `static inline`. Eigentuemer ist uft_compiler.h. */
+#include "uft/uft_compiler.h"
 
 /*===========================================================================
  * Diagnostic Structure (for TransWarp/FormatID modules)

@@ -32,27 +32,12 @@
  *============================================================================*/
 
 /* Architecture detection */
-#if defined(__x86_64__) || defined(_M_X64)
-    #define UFT_ARCH_X64        1
-    #define UFT_ARCH_NAME       "x86_64"
-    #define UFT_CACHE_LINE_SIZE 64
-#elif defined(__i386__) || defined(_M_IX86)
-    #define UFT_ARCH_X86        1
-    #define UFT_ARCH_NAME       "x86"
-    #define UFT_CACHE_LINE_SIZE 64
-#elif defined(__aarch64__) || defined(_M_ARM64)
-    #define UFT_ARCH_ARM64      1
-    #define UFT_ARCH_NAME       "arm64"
-    #define UFT_CACHE_LINE_SIZE 64
-#elif defined(__arm__) || defined(_M_ARM)
-    #define UFT_ARCH_ARM32      1
-    #define UFT_ARCH_NAME       "arm32"
-    #define UFT_CACHE_LINE_SIZE 32
-#else
-    #define UFT_ARCH_UNKNOWN    1
-    #define UFT_ARCH_NAME       "unknown"
-    #define UFT_CACHE_LINE_SIZE 64
-#endif
+/* MF-456: die zweite Architektur-Erkennung stand hier. Sie widersprach der
+ * in uft_platform.h in der Schreibweise ("arm64" gegen "ARM64") und war
+ * bei UFT_CACHE_LINE_SIZE die informiertere (32 auf ARM32, wo
+ * uft_compiler.h pauschal 64 setzte). Beides steht jetzt in
+ * uft/compat/uft_platform_base.h, das weiter unten ohnehin eingebunden
+ * wird. */
 
 /* OS detection */
 #if defined(_WIN32) || defined(_WIN64)
@@ -91,6 +76,21 @@
  * COMPILER DETECTION & ATTRIBUTES
  *============================================================================*/
 
+/* MF-456: Eigentuemer der Attribut-Makros ist uft_compiler.h.
+ *
+ * Die Kaskade unten definierte UFT_INLINE, UFT_NOINLINE, UFT_ALIGNED und
+ * UFT_RESTRICT ein weiteres Mal, teils ohne #ifndef — mit anderen Ergebnissen:
+ * UFT_INLINE hiess hier `inline __attribute__((always_inline))` (ohne
+ * `static`, also ein Link-Fehler, wenn der Compiler nicht inlinet), in
+ * uft_compiler.h `static inline`. Welche Fassung galt, entschied die
+ * Include-Reihenfolge.
+ *
+ * Die Duplikate sind entfernt, nicht mit #ifndef abgesichert: seit dieser
+ * Header den Eigentuemer selbst einbindet, koennte ein Rueckfall nie feuern —
+ * er waere toter Code mit einem anderen Wert, also genau die Doppelung, die
+ * hier verschwinden soll. */
+#include "uft/uft_compiler.h"
+
 #if defined(__GNUC__) || defined(__clang__)
     #define UFT_COMPILER_GCC_LIKE   1
 #ifndef UFT_LIKELY
@@ -99,14 +99,9 @@
 #ifndef UFT_UNLIKELY
     #define UFT_UNLIKELY(x)         __builtin_expect(!!(x), 0)
 #endif
-#ifndef UFT_INLINE
-    #define UFT_INLINE              inline __attribute__((always_inline))
-#endif
-    #define UFT_NOINLINE            __attribute__((noinline))
 /* MF-451: UFT_PACKED stand hier dreimal (je Compiler-Zweig) und war
  * jedes Mal leer — Packing kommt aus uft_packed.h. */
 #include "uft/uft_packed.h"
-    #define UFT_ALIGNED(n)          __attribute__((aligned(n)))
 #ifndef UFT_UNUSED
     #define UFT_UNUSED              __attribute__((unused))
 #endif
@@ -114,7 +109,6 @@
     #define UFT_CONST               __attribute__((const))
     #define UFT_HOT                 __attribute__((hot))
     #define UFT_COLD                __attribute__((cold))
-    #define UFT_RESTRICT            __restrict__
     /* UFT_PREFETCH / UFT_PREFETCH_W used to be defined in all three branches
      * here as well. uft_compiler.h — included at the bottom of this file —
      * defines UFT_PREFETCH too, with a different replacement list, so gcc
@@ -132,11 +126,6 @@
 #ifndef UFT_UNLIKELY
     #define UFT_UNLIKELY(x)         (x)
 #endif
-#ifndef UFT_INLINE
-    #define UFT_INLINE              __forceinline
-#endif
-    #define UFT_NOINLINE            __declspec(noinline)
-    #define UFT_ALIGNED(n)          __declspec(align(n))
 #ifndef UFT_UNUSED
     #define UFT_UNUSED              
 #endif
@@ -144,7 +133,6 @@
     #define UFT_CONST               
     #define UFT_HOT                 
     #define UFT_COLD                
-    #define UFT_RESTRICT            __restrict
     #define UFT_ASSUME(cond)        __assume(cond)
     
 #else
@@ -154,11 +142,6 @@
 #ifndef UFT_UNLIKELY
     #define UFT_UNLIKELY(x)         (x)
 #endif
-#ifndef UFT_INLINE
-    #define UFT_INLINE              inline
-#endif
-    #define UFT_NOINLINE            
-    #define UFT_ALIGNED(n)          
 #ifndef UFT_UNUSED
     #define UFT_UNUSED              
 #endif
@@ -166,7 +149,6 @@
     #define UFT_CONST               
     #define UFT_HOT                 
     #define UFT_COLD                
-    #define UFT_RESTRICT            
     #define UFT_ASSUME(cond)        ((void)0)
 #endif
 
@@ -174,11 +156,9 @@
  * CACHE-LINE ALIGNMENT (False Sharing Prevention)
  *============================================================================*/
 
-/**
- * @brief Align structure to cache line boundary
- * Use for frequently-accessed shared data in multithreaded code
- */
-#define UFT_CACHE_ALIGNED   UFT_ALIGNED(UFT_CACHE_LINE_SIZE)
+/* MF-456: UFT_CACHE_ALIGNED kommt aus uft_compiler.h. Hier stand dieselbe
+ * Definition ein zweites Mal — identischer Text, aber sie haette sich mit dem
+ * Eigentuemer verschoben, sobald der sich aendert. */
 
 /**
  * @brief Padding to ensure structure members don't share cache lines

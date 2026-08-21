@@ -200,15 +200,22 @@ static inline bool uft_simd_has_neon(void) {
  * These are kept as guards only for backward compatibility
  * ============================================================================= */
 
+/* MF-456: UFT_ALIGNED stand hier hinter `#ifndef UFT_LIKELY`.
+ *
+ * Der Waechter nannte ein ANDERES Makro als das, was er schuetzte: ob
+ * UFT_ALIGNED definiert wurde, hing davon ab, ob UFT_LIKELY schon definiert
+ * war. Kam ein Header vorher, der nur UFT_LIKELY setzt, blieb UFT_ALIGNED
+ * hier aus — kam keiner, wurde es hier definiert und kollidierte mit
+ * uft_compiler.h. UFT_ALIGNED kommt jetzt von dort. */
+#include "uft/uft_compiler.h"
+
 #ifndef UFT_LIKELY
     #if defined(__GNUC__) || defined(__clang__)
         #define UFT_LIKELY(x)   __builtin_expect(!!(x), 1)
         #define UFT_UNLIKELY(x) __builtin_expect(!!(x), 0)
-        #define UFT_ALIGNED(n)  __attribute__((aligned(n)))
     #else
         #define UFT_LIKELY(x)   (x)
         #define UFT_UNLIKELY(x) (x)
-        #define UFT_ALIGNED(n)
     #endif
 #endif
 

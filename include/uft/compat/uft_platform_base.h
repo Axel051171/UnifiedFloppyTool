@@ -112,24 +112,6 @@
 #define UFT_COMPAT_NEEDS_CLOCK_GETTIME 1
 #endif
 
-#ifndef UFT_THREAD_LOCAL
-  #ifdef _MSC_VER
-    #define UFT_THREAD_LOCAL __declspec(thread)
-  #else
-    #define UFT_THREAD_LOCAL __thread
-  #endif
-#endif
-
-#ifndef UFT_INLINE
-  #ifdef _MSC_VER
-    #define UFT_INLINE   __forceinline
-    #define UFT_NOINLINE __declspec(noinline)
-  #else
-    #define UFT_INLINE   static inline __attribute__((always_inline))
-    #define UFT_NOINLINE __attribute__((noinline))
-  #endif
-#endif
-
 #else  /* POSIX */
 
 #include <unistd.h>
@@ -140,15 +122,6 @@
 #ifndef UFT_PATH_SEP
 #define UFT_PATH_SEP '/'
 #define UFT_PATH_SEP_STR "/"
-#endif
-
-#ifndef UFT_THREAD_LOCAL
-#define UFT_THREAD_LOCAL __thread
-#endif
-
-#ifndef UFT_INLINE
-#define UFT_INLINE   inline __attribute__((always_inline))
-#define UFT_NOINLINE __attribute__((noinline))
 #endif
 
 /* O_BINARY gibt es auf POSIX nicht — 0 ist die richtige Antwort. */
@@ -255,6 +228,48 @@
     #define uft_snprintf  snprintf
     #define uft_vsnprintf vsnprintf
   #endif
+#endif
+
+/* ── Architektur ────────────────────────────────────────────────────────────
+ *
+ * MF-456: eine Erkennung. Es gab zwei — `include/uft/uft_platform.h` und
+ * `include/uft/uft_config.h` — und sie widersprachen sich in zwei Punkten:
+ *
+ *   UFT_ARCH_NAME auf ARM64: "ARM64" hier, "arm64" dort. Ein String-Makro mit
+ *   zwei Schreibweisen; welche gilt, entschied die Include-Reihenfolge.
+ *
+ *   UFT_CACHE_LINE_SIZE auf ARM32: `uft_config.h` wusste 32,
+ *   `uft_compiler.h` setzte pauschal 64. Wer zuerst kam, gewann.
+ *
+ * Die Schreibweise folgt der von uft_platform.h (Grossbuchstaben), der
+ * Cache-Line-Wert der von uft_config.h (32 auf ARM32) — das ist die
+ * informiertere der beiden Angaben.
+ */
+#if defined(__x86_64__) || defined(_M_X64)
+    #define UFT_ARCH_X64        1
+    #define UFT_ARCH_NAME       "x86_64"
+    #define UFT_ARCH_BITS       64
+    #define UFT_CACHE_LINE_SIZE 64
+#elif defined(__i386__) || defined(_M_IX86)
+    #define UFT_ARCH_X86        1
+    #define UFT_ARCH_NAME       "x86"
+    #define UFT_ARCH_BITS       32
+    #define UFT_CACHE_LINE_SIZE 64
+#elif defined(__aarch64__) || defined(_M_ARM64)
+    #define UFT_ARCH_ARM64      1
+    #define UFT_ARCH_NAME       "ARM64"
+    #define UFT_ARCH_BITS       64
+    #define UFT_CACHE_LINE_SIZE 64
+#elif defined(__arm__) || defined(_M_ARM)
+    #define UFT_ARCH_ARM32      1
+    #define UFT_ARCH_NAME       "ARM32"
+    #define UFT_ARCH_BITS       32
+    #define UFT_CACHE_LINE_SIZE 32
+#else
+    #define UFT_ARCH_UNKNOWN    1
+    #define UFT_ARCH_NAME       "Unknown"
+    #define UFT_ARCH_BITS       0
+    #define UFT_CACHE_LINE_SIZE 64
 #endif
 
 #endif /* UFT_COMPAT_PLATFORM_BASE_H */

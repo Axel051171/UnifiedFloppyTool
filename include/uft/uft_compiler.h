@@ -142,9 +142,10 @@ extern "C" {
 #undef UFT_CACHE_ALIGNED
 #undef UFT_ALIGNOF
 
-#ifndef UFT_CACHE_LINE_SIZE
-    #define UFT_CACHE_LINE_SIZE 64
-#endif
+/* MF-456: UFT_CACHE_LINE_SIZE kommt aus uft/compat/uft_platform_base.h und ist
+ * dort architekturabhaengig (32 auf ARM32). Hier stand pauschal 64 hinter einem
+ * #ifndef — wer zuerst eingebunden wurde, entschied. */
+#include "uft/compat/uft_platform_base.h"
 
 #if defined(UFT_COMPILER_MSVC)
     #define UFT_ALIGNED(n)      __declspec(align(n))

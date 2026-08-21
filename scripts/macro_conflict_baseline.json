@@ -7,16 +7,10 @@
     "format-constant": "Same format, contradictory values across headers. At most one can be right. 86F and IMD are both tier T3, so the winner cannot be picked without an authoritative source -- do not guess."
   },
   "accepted": [
-    "UFT_ALIGNED",
-    "UFT_ARCH_NAME",
-    "UFT_CACHE_LINE_SIZE",
     "UFT_IMD_MAX_COMMENT",
     "UFT_IMD_MAX_SECTORS",
     "UFT_IMD_MAX_TRACKS",
-    "UFT_INLINE",
     "UFT_MAX_SECTOR_SIZE",
-    "UFT_RESTRICT",
-    "UFT_THREAD_LOCAL",
     "UFT_VERIFY_OPTIONS_DEFAULT"
   ],
   "categories": {

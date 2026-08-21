@@ -24,6 +24,21 @@ einen eigenen Guard. Zwei Regeln halten das:
      werden, die in der Liste unten stehen — nie von einem Header, denn ueber
      einen Header verbreiten sich die Shims unkontrolliert weiter.
 
+  C. Das Compiler-Attribut-Vokabular (UFT_INLINE, UFT_NOINLINE, UFT_RESTRICT,
+     UFT_THREAD_LOCAL, UFT_ALIGNED, UFT_ALIGNOF, UFT_CACHE_ALIGNED) wird nur in
+     `include/uft/uft_compiler.h` definiert, die Architektur-Identitaet
+     (UFT_ARCH_NAME, UFT_ARCH_BITS, UFT_CACHE_LINE_SIZE) nur in
+     `include/uft/compat/uft_platform_base.h`.
+
+     MF-456: dieselben Namen standen in bis zu vier Headern mit
+     unterschiedlichen Ergebnissen. UFT_INLINE hiess `static inline`,
+     `inline __attribute__((always_inline))` oder `static __inline` — die
+     mittlere Fassung ohne `static` ist ein Link-Fehler, sobald der Compiler
+     nicht inlinet. UFT_CACHE_LINE_SIZE war 32 auf ARM32 in einem Header und
+     ungeschuetzt 64 in einem anderen. UFT_ARCH_NAME war "ARM64" oder "arm64".
+     In uft_simd.h stand UFT_ALIGNED hinter `#ifndef UFT_LIKELY` — der
+     Waechter nannte ein anderes Makro als das, was er schuetzte.
+
   B. Kein `#ifdef`/`#if defined` auf UFT_BIG_ENDIAN oder UFT_LITTLE_ENDIAN.
      Beide sind seit MF-455 IMMER 0 oder 1; vorher waren sie je nach Header
      "definiert oder abwesend" bzw. "0 oder 1", `#ifdef` antwortete also
@@ -52,6 +67,23 @@ SHIM_CONSUMERS = {
 }
 
 _INCLUDE = re.compile(r'^\s*#\s*include\s*"([^"]+)"', re.M)
+
+# Wer welches Vokabular besitzt (MF-456).
+VOCAB_OWNER = {
+    "include/uft/uft_compiler.h": {
+        "UFT_INLINE", "UFT_FORCE_INLINE", "UFT_NOINLINE", "UFT_RESTRICT",
+        "UFT_THREAD_LOCAL", "UFT_ALIGNED", "UFT_ALIGNOF", "UFT_CACHE_ALIGNED",
+        "UFT_SSE_ALIGNED",
+    },
+    "include/uft/compat/uft_platform_base.h": {
+        "UFT_ARCH_NAME", "UFT_ARCH_BITS", "UFT_CACHE_LINE_SIZE",
+        "UFT_BIG_ENDIAN", "UFT_LITTLE_ENDIAN", "UFT_PATH_SEP",
+        "UFT_PATH_SEP_STR",
+    },
+}
+_ALL_VOCAB = {n: o for o, names in VOCAB_OWNER.items() for n in names}
+_VOCAB_DEF = re.compile(
+    r"^[ 	]*#[ 	]*define[ 	]+(UFT_[A-Z_0-9]+)", re.M)
 _ENDIAN_IFDEF = re.compile(
     r"^\s*#\s*(?:ifdef|ifndef)\s+(UFT_BIG_ENDIAN|UFT_LITTLE_ENDIAN)\b|"
     r"^\s*#\s*(?:if|elif)\s+.*\bdefined\s*\(?\s*(UFT_BIG_ENDIAN|UFT_LITTLE_ENDIAN)\s*\)?",
@@ -79,6 +111,7 @@ def sources(repo: Path):
 def scan(repo: Path):
     shim_users: list[tuple[str, bool]] = []      # rel, is_header
     endian_ifdefs: list[tuple[str, int, str]] = []
+    vocab_strays: list[tuple[str, int, str, str]] = []
 
     for p in sources(repo):
         rel = str(p.relative_to(repo)).replace("\\", "/")
@@ -88,6 +121,13 @@ def scan(repo: Path):
             if m.group(1).replace("\\", "/").endswith(SHIM_HEADER):
                 shim_users.append((rel, p.suffix.lower() in {".h", ".hpp"}))
 
+        for m in _VOCAB_DEF.finditer(clean):
+            name = m.group(1)
+            owner = _ALL_VOCAB.get(name)
+            if owner and rel != owner:
+                ln = clean[:m.start()].count(chr(10)) + 1
+                vocab_strays.append((rel, ln, name, owner))
+
         # Die beiden Plattform-Header duerfen ueber sich selbst reden.
         if rel.endswith("compat/uft_platform_base.h"):
             continue
@@ -96,11 +136,11 @@ def scan(repo: Path):
             ln = clean[:m.start()].count(chr(10)) + 1
             endian_ifdefs.append((rel, ln, name))
 
-    return shim_users, endian_ifdefs
+    return shim_users, endian_ifdefs, vocab_strays
 
 
 def check(repo: Path) -> list[str]:
-    shim_users, endian_ifdefs = scan(repo)
+    shim_users, endian_ifdefs, vocab_strays = scan(repo)
     errors: list[str] = []
 
     seen = set()
@@ -126,6 +166,13 @@ def check(repo: Path) -> list[str]:
             f"{rel} steht in SHIM_CONSUMERS, bindet {SHIM_HEADER} aber nicht "
             f"mehr ein — Eintrag entfernen, damit die Liste etwas bedeutet")
 
+    for rel, ln, name, owner in vocab_strays:
+        errors.append(
+            f"{rel}:{ln} definiert {name}. Eigentuemer ist {owner} — bis MF-456 "
+            f"stand dasselbe Vokabular in bis zu vier Headern mit "
+            f"unterschiedlichen Ergebnissen, und welches galt, entschied die "
+            f"Include-Reihenfolge. Header einbinden statt neu definieren")
+
     for rel, ln, name in endian_ifdefs:
         errors.append(
             f"{rel}:{ln} fragt {name} mit #ifdef/defined() ab. Seit MF-455 ist "
@@ -136,11 +183,12 @@ def check(repo: Path) -> list[str]:
 
 def main() -> int:
     repo = Path(__file__).resolve().parent.parent
-    shim_users, endian_ifdefs = scan(repo)
+    shim_users, endian_ifdefs, vocab_strays = scan(repo)
     print(f"{SHIM_HEADER} eingebunden von : {len(shim_users)} Datei(en)")
     for rel, is_header in shim_users:
         print(f"    {'HEADER ' if is_header else ''}{rel}")
     print(f"#ifdef auf UFT_*_ENDIAN        : {len(endian_ifdefs)}")
+    print(f"Vokabular ausserhalb des Eigentuemers: {len(vocab_strays)}")
     errs = check(repo)
     for e in errs:
         print(f"  {e}")

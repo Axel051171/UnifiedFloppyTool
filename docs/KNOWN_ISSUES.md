@@ -3559,6 +3559,82 @@ beschrieben stehen.
 
 ---
 
+### ARCH-17 — Das Compiler-Attribut-Vokabular stand in bis zu vier Headern, mit widersprüchlichen Ergebnissen (2026-08-21, MF-456) → ✓ BEHOBEN
+
+Direkter Anschluss an ARCH-1: dieselben Header, dieselbe Klasse. Nachgezählt
+über `uft_common.h`, `uft_compiler.h`, `uft_config.h`, `uft_platform.h`,
+`uft_simd.h` und `compat/uft_platform_base.h`:
+
+| Makro | Definitionen | Nutzungen in `.c`/`.cpp` |
+|---|---:|---:|
+| `UFT_ALIGNED` | 12 | **0** |
+| `UFT_INLINE` | 11 | **0** |
+| `UFT_ARCH_NAME` | 10 | **0** |
+| `UFT_NOINLINE` | 9 | **0** |
+| `UFT_RESTRICT` | 9 | **0** |
+| `UFT_THREAD_LOCAL` | 7 | **0** |
+| `UFT_CACHE_LINE_SIZE` | 7 | **0** |
+| `UFT_ALIGNOF` | 3 | **0** |
+| `UFT_CACHE_ALIGNED` | 2 | **0** |
+
+**70 Definitionen, null Aufrufer.** Das allein wäre nur Ballast. Die
+Widersprüche sind das Problem:
+
+- **`UFT_INLINE` hatte drei Bedeutungen:** `static inline` (`uft_compiler.h`),
+  `static inline __attribute__((always_inline))` (`uft_common.h`) und
+  **`inline __attribute__((always_inline))`** ohne `static`
+  (`uft_config.h`, `compat/uft_platform_base.h` auf POSIX). Die dritte ist in C
+  ein **Link-Fehler**, sobald der Compiler nicht inlinet — eine `inline`-Funktion
+  ohne externe Definition hat keine.
+- **`UFT_CACHE_LINE_SIZE`**: `uft_config.h` wusste **32** auf ARM32,
+  `uft_compiler.h` setzte pauschal 64 hinter `#ifndef`, und `uft_platform.h`
+  setzte **ungeschützt** 64 — die dritte hätte den richtigen Wert auf ARM32
+  überschrieben.
+- **`UFT_ARCH_NAME`**: `"ARM64"` in `uft_platform.h`, `"arm64"` in
+  `uft_config.h`. Ein String-Makro mit zwei Schreibweisen.
+- **`uft_simd.h`** definierte `UFT_ALIGNED` hinter **`#ifndef UFT_LIKELY`** —
+  der Wächter nannte ein anderes Makro als das, was er schützte. Ob
+  `UFT_ALIGNED` hier entstand, hing davon ab, ob ein anderer Header vorher
+  `UFT_LIKELY` gesetzt hatte.
+
+**Zwei Eigentümer, nach Sachgebiet getrennt:**
+
+| Vokabular | Eigentümer |
+|---|---|
+| `UFT_INLINE`, `UFT_FORCE_INLINE`, `UFT_NOINLINE`, `UFT_RESTRICT`, `UFT_THREAD_LOCAL`, `UFT_ALIGNED`, `UFT_ALIGNOF`, `UFT_CACHE_ALIGNED`, `UFT_SSE_ALIGNED` | `include/uft/uft_compiler.h` |
+| `UFT_ARCH_*`, `UFT_ARCH_NAME`, `UFT_ARCH_BITS`, `UFT_CACHE_LINE_SIZE`, `UFT_BIG_ENDIAN`, `UFT_LITTLE_ENDIAN`, `UFT_PATH_SEP` | `include/uft/compat/uft_platform_base.h` |
+
+Übernommen wurde jeweils die **informiertere** Fassung: `static inline` (kein
+Link-Fehler), 32 Byte Cache-Line auf ARM32, Großschreibung bei `UFT_ARCH_NAME`.
+Die Duplikate in `uft_config.h` sind **gelöscht**, nicht mit `#ifndef`
+abgesichert — seit die Datei den Eigentümer selbst einbindet, könnte ein
+Rückfall nie feuern und wäre toter Code mit einem anderen Wert.
+
+**Regel C im 19. Gate** (`scripts/platform_header_gate.py`) hält es zu.
+
+> **Beim Verifizieren der Regel:** Sie prüfte zunächst **nichts**. In das
+> Regex-Literal war beim Schreiben ein echtes Backspace-Byte (0x08) statt der
+> Zeichenfolge `` geraten — `(UFT_[A-Z_0-9]+)` trifft nie. Der Gate lief
+> grün, weil er blind war. Aufgefallen erst bei der Rot-Probe: eine absichtlich
+> eingebaute Doppeldefinition wurde nicht gemeldet. Nach der Reparatur fand die
+> Regel sofort eine echte, von mir übersehene Stelle —
+> `uft_config.h:163 UFT_CACHE_ALIGNED`.
+>
+> Lehre, dieselbe wie bei MF-446: **ein Wächter, der nicht rot werden kann, ist
+> schlimmer als keiner.** Jede neue Regel braucht eine Rot-Probe, bevor sie
+> zählt.
+
+Makro-Konflikt-Baseline: **11 → 5**. Der Rest sind Format-Konstanten
+(`UFT_IMD_MAX_*`, `UFT_MAX_SECTOR_SIZE`, `UFT_VERIFY_OPTIONS_DEFAULT`) — eine
+andere Familie, noch offen.
+
+**Offen gelassen:** dass alle neun Makros null Aufrufer haben. Sie stehen jetzt
+je einmal an einem sinnvollen Ort; ob eine Compiler-Abstraktion ohne Nutzer
+bleiben soll, ist eine Entscheidung über die künftige API und keine
+Fehlerbehebung.
+
+---
+
 ### ARCH-1 — Zwei `uft_platform.h`, die einander nie sehen (2026-08-18, MF-411) → ✓ BEHOBEN (MF-455), 19. Gate steht
 
 > **Gelöst durch Trennen statt Zusammenführen.** Die Zusammenführung war zweimal

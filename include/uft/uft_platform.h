@@ -109,27 +109,8 @@ extern "C" {
  * Architecture Detection
  * ═══════════════════════════════════════════════════════════════════════════════ */
 
-#if defined(__x86_64__) || defined(_M_X64)
-    #define UFT_ARCH_X64 1
-    #define UFT_ARCH_NAME "x86_64"
-    #define UFT_ARCH_BITS 64
-#elif defined(__i386__) || defined(_M_IX86)
-    #define UFT_ARCH_X86 1
-    #define UFT_ARCH_NAME "x86"
-    #define UFT_ARCH_BITS 32
-#elif defined(__aarch64__) || defined(_M_ARM64)
-    #define UFT_ARCH_ARM64 1
-    #define UFT_ARCH_NAME "ARM64"
-    #define UFT_ARCH_BITS 64
-#elif defined(__arm__) || defined(_M_ARM)
-    #define UFT_ARCH_ARM32 1
-    #define UFT_ARCH_NAME "ARM32"
-    #define UFT_ARCH_BITS 32
-#else
-    #define UFT_ARCH_UNKNOWN 1
-    #define UFT_ARCH_NAME "Unknown"
-    #define UFT_ARCH_BITS 0
-#endif
+/* MF-456: Architektur-Erkennung kommt aus uft/compat/uft_platform_base.h,
+ * das dieser Header oben einbindet. Hier stand die zweite Fassung. */
 
 /* ═══════════════════════════════════════════════════════════════════════════════
  * Endianness
@@ -243,14 +224,12 @@ static inline void uft_write_be32(void *p, uint32_t v) {
  * Lesen wie die maßgebliche aussah. Packing kommt aus uft_packed.h. */
 #include "uft/uft_packed.h"
 
-#ifdef UFT_COMPILER_MSVC
-    #define UFT_ALIGNED(n) __declspec(align(n))
-#else
-    #define UFT_ALIGNED(n) __attribute__((aligned(n)))
-#endif
-
-/* Cache line size (typical) */
-#define UFT_CACHE_LINE_SIZE 64
+/* MF-456: UFT_ALIGNED kommt aus uft_compiler.h, UFT_CACHE_LINE_SIZE aus
+ * uft/compat/uft_platform_base.h (dort architekturabhaengig).
+ *
+ * Hier stand beides ein weiteres Mal, das Cache-Line-Mass sogar UNGESCHUETZT
+ * auf 64 — auf ARM32, wo die Basis 32 kennt, haette diese Zeile den richtigen
+ * Wert ueberschrieben. */
 
 /* Page size (typical) */
 #define UFT_PAGE_SIZE 4096
