@@ -228,22 +228,32 @@ static void detect_protection(smart_internal_t* internal,
     
     char name[64] = {0};
     bool detected = false;
-    
+    float conf = 0.0f;
+
     if (fmt->format_id == FMT_D64) {
-        detected = uft_d64_v3_detect_protection(internal->parser_handle, name, sizeof(name));
+        detected = uft_d64_v3_detect_protection(internal->parser_handle, name,
+                                                 sizeof(name), &conf);
         if (detected) strncpy(prot->platform, "Commodore 64", sizeof(prot->platform) - 1);
     } else if (fmt->format_id == FMT_G64) {
-        detected = uft_g64_v3_detect_protection(internal->parser_handle, name, sizeof(name));
+        detected = uft_g64_v3_detect_protection(internal->parser_handle, name,
+                                                 sizeof(name), &conf);
         if (detected) strncpy(prot->platform, "Commodore 64", sizeof(prot->platform) - 1);
     } else if (fmt->format_id == FMT_SCP) {
-        detected = uft_scp_v3_detect_protection(internal->parser_handle, name, sizeof(name));
+        detected = uft_scp_v3_detect_protection(internal->parser_handle, name,
+                                                 sizeof(name), &conf);
         if (detected) strncpy(prot->platform, "Multi-Platform", sizeof(prot->platform) - 1);
     }
     
     if (detected) {
         prot->detected = true;
         strncpy(prot->scheme_name, name, sizeof(prot->scheme_name) - 1);
-        prot->confidence = 80;
+        /* MF-442: the parser computes a real confidence per scheme (0.85 for
+         * C64 weak bits, 0.80 for Amiga long tracks, 0.75 generic). This used
+         * to read `prot->confidence = 80` — a number nobody measured, standing
+         * in for one that had just been calculated and thrown away by a
+         * three-parameter call to a four-parameter function. */
+        int pct = (int)(conf * 100.0f + 0.5f);
+        prot->confidence = (pct < 0) ? 0 : (pct > 100 ? 100 : pct);
         prot->indicator_count = 1;
     }
 }

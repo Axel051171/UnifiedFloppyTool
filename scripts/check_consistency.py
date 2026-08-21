@@ -577,6 +577,13 @@ def main() -> int:
         import enum_macro_conflicts as _enum_macro
         all_errors.append(("enum vs macro conflicts",
                            _enum_macro.check(repo)))
+        # A hand-written `extern` in a .c file is a promise the compiler
+        # believes. MF-442 found three of them wrong in one file, one causing
+        # an arbitrary-address write. The class is currently empty — the gate
+        # keeps it that way.
+        import extern_decl_conflicts as _extern
+        all_errors.append(("extern vs definition arity",
+                           _extern.check(repo)))
 
     total = sum(len(e) for _, e in all_errors)
     print(f"Consistency check ({len(all_errors)} categories, root={repo}):")

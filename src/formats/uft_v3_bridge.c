@@ -17,9 +17,23 @@ struct d64_disk_v3;
 struct d64_params;
 struct d64_diagnosis_list;
 
+/* MF-442: these three used to be declared here with THREE parameters while
+ * every definition takes FOUR — the fourth a `float *confidence` that the
+ * callee dereferences right after its NULL check. Since this file includes no
+ * header for the v3 parsers (they have none; their types live inside the .c
+ * files), the compiler could not see the mismatch. At runtime the callee would
+ * have written 0.0f through whatever the fourth argument slot happened to
+ * hold: an arbitrary-address write.
+ *
+ * Not currently reachable — neither uft_smart_open() nor uft_advanced_open()
+ * has a caller — so this was a loaded trap rather than a live fault. The
+ * confidence value is now forwarded rather than discarded, which also removes
+ * an invented number downstream: uft_smart_open() hard-coded
+ * `prot->confidence = 80` while the parser had computed a real one. */
 extern bool d64_parse(const uint8_t* data, size_t size, struct d64_disk_v3* disk, struct d64_params* params);
 extern uint8_t* d64_write(const struct d64_disk_v3* disk, struct d64_params* params, size_t* out_size);
-extern bool d64_detect_protection(const struct d64_disk_v3* disk, char* protection_name, size_t name_size);
+extern bool d64_detect_protection(const struct d64_disk_v3* disk, char* protection_name,
+                 size_t name_size, float* confidence);
 extern void d64_disk_free(struct d64_disk_v3* disk);
 extern void d64_get_default_params(struct d64_params* params);
 
@@ -28,17 +42,24 @@ struct g64_params;
 
 extern bool g64_parse(const uint8_t* data, size_t size, struct g64_disk* disk, struct g64_params* params);
 extern uint8_t* g64_write(const struct g64_disk* disk, struct g64_params* params, size_t* out_size);
-extern bool g64_detect_protection(const struct g64_disk* disk, char* protection_name, size_t name_size);
+extern bool g64_detect_protection(const struct g64_disk* disk, char* protection_name,
+                 size_t name_size, float* confidence);
 extern void g64_disk_free(struct g64_disk* disk);
 extern void g64_get_default_params(struct g64_params* params);
-extern uint8_t* g64_export_d64(const struct g64_disk* g64, size_t* out_size);
+/* MF-442: was declared with two parameters; the definition takes three,
+ * the third a `bool include_errors`. The callee read whatever the third
+ * argument slot held and branched on it — the exported D64 got an error
+ * map or not, at random. */
+extern uint8_t* g64_export_d64(const struct g64_disk* g64, size_t* out_size,
+                               bool include_errors);
 
 struct scp_disk;
 struct scp_params;
 
 extern bool scp_parse(const uint8_t* data, size_t size, struct scp_disk* disk, struct scp_params* params);
 extern uint8_t* scp_write(const struct scp_disk* disk, struct scp_params* params, size_t* out_size);
-extern bool scp_detect_protection(const struct scp_disk* disk, char* protection_name, size_t name_size);
+extern bool scp_detect_protection(const struct scp_disk* disk, char* protection_name,
+                 size_t name_size, float* confidence);
 extern void scp_disk_free(struct scp_disk* disk);
 extern void scp_get_default_params(struct scp_params* params);
 
@@ -298,10 +319,14 @@ uft_format_handler_t uft_scp_v3_handler = {
  * Extended API Functions
  * ═══════════════════════════════════════════════════════════════════════════════ */
 
-bool uft_d64_v3_detect_protection(void* handle, char* name, size_t name_size) {
+bool uft_d64_v3_detect_protection(void* handle, char* name, size_t name_size,
+                                    float* confidence) {
+    float local = 0.0f;
+    if (!confidence) confidence = &local;   /* callee always writes it */
+    *confidence = 0.0f;
     if (!handle) return false;
     v3_handle_t* h = (v3_handle_t*)handle;
-    return d64_detect_protection((struct d64_disk_v3*)h->disk_buffer, name, name_size);
+    return d64_detect_protection((struct d64_disk_v3*)h->disk_buffer, name, name_size, confidence);
 }
 
 char* uft_d64_v3_get_diagnosis(void* handle) {
@@ -336,22 +361,33 @@ char* uft_d64_v3_get_diagnosis(void* handle) {
     return diag;
 }
 
-bool uft_g64_v3_detect_protection(void* handle, char* name, size_t name_size) {
+bool uft_g64_v3_detect_protection(void* handle, char* name, size_t name_size,
+                                    float* confidence) {
+    float local = 0.0f;
+    if (!confidence) confidence = &local;   /* callee always writes it */
+    *confidence = 0.0f;
     if (!handle) return false;
     v3_handle_t* h = (v3_handle_t*)handle;
-    return g64_detect_protection((struct g64_disk*)h->disk_buffer, name, name_size);
+    return g64_detect_protection((struct g64_disk*)h->disk_buffer, name, name_size, confidence);
 }
 
 uint8_t* uft_g64_v3_export_d64(void* handle, size_t* out_size) {
     if (!handle || !out_size) return NULL;
     v3_handle_t* h = (v3_handle_t*)handle;
-    return g64_export_d64((struct g64_disk*)h->disk_buffer, out_size);
+    /* false: a D64 without a trailing error map is the plain 174848-byte
+     * form every tool reads. The caller can ask for the error variant
+     * once this bridge grows an option for it. */
+    return g64_export_d64((struct g64_disk*)h->disk_buffer, out_size, false);
 }
 
-bool uft_scp_v3_detect_protection(void* handle, char* name, size_t name_size) {
+bool uft_scp_v3_detect_protection(void* handle, char* name, size_t name_size,
+                                    float* confidence) {
+    float local = 0.0f;
+    if (!confidence) confidence = &local;   /* callee always writes it */
+    *confidence = 0.0f;
     if (!handle) return false;
     v3_handle_t* h = (v3_handle_t*)handle;
-    return scp_detect_protection((struct scp_disk*)h->disk_buffer, name, name_size);
+    return scp_detect_protection((struct scp_disk*)h->disk_buffer, name, name_size, confidence);
 }
 
 uint8_t* uft_d64_v3_write(void* handle, size_t* out_size) {

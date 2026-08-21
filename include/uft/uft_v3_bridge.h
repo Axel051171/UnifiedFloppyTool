@@ -42,7 +42,8 @@ extern uft_format_handler_t uft_scp_v3_handler;
  * @param name_size Buffer size
  * @return true if protection detected
  */
-bool uft_d64_v3_detect_protection(void* handle, char* name, size_t name_size);
+bool uft_d64_v3_detect_protection(void* handle, char* name, size_t name_size,
+                                    float* confidence);
 
 /**
  * @brief Get diagnostic text
@@ -63,7 +64,8 @@ uint8_t* uft_d64_v3_write(void* handle, size_t* out_size);
  * G64 Extended Functions
  * ═══════════════════════════════════════════════════════════════════════════════ */
 
-bool uft_g64_v3_detect_protection(void* handle, char* name, size_t name_size);
+bool uft_g64_v3_detect_protection(void* handle, char* name, size_t name_size,
+                                    float* confidence);
 uint8_t* uft_g64_v3_export_d64(void* handle, size_t* out_size);
 uint8_t* uft_g64_v3_write(void* handle, size_t* out_size);
 
@@ -71,7 +73,8 @@ uint8_t* uft_g64_v3_write(void* handle, size_t* out_size);
  * SCP Extended Functions
  * ═══════════════════════════════════════════════════════════════════════════════ */
 
-bool uft_scp_v3_detect_protection(void* handle, char* name, size_t name_size);
+bool uft_scp_v3_detect_protection(void* handle, char* name, size_t name_size,
+                                    float* confidence);
 uint8_t* uft_scp_v3_write(void* handle, size_t* out_size);
 
 #ifdef __cplusplus

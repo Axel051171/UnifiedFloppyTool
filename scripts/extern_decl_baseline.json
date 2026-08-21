@@ -1,0 +1,5 @@
+{
+  "_doc": "Hand-written extern declarations in .c files whose parameter count disagrees with the single definition of that name, as they stood after MF-442. Comparison is on arity only — type spelling varies legitimately across files. An entry here is a KNOWN mismatch, not an acceptable one; the fix is to include the header.",
+  "accepted": [],
+  "detail": []
+}

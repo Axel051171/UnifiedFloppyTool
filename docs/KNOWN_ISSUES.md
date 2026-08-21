@@ -1580,6 +1580,76 @@ davon stehen in genau den überzähligen Lesern, die ARCH-6 löschen will
 Leser zusammenführen, dann übernehmen die Überlebenden die Geometrie. Andersherum
 wäre es Arbeit an Code, der verschwinden soll.
 
+### ARCH-8 — Handgeschriebene `extern`-Deklarationen: drei falsche in einer Datei, eine mit Schreibzugriff auf eine beliebige Adresse (2026-08-21, MF-442) → ✓ KLASSE LEER, Wächter steht
+
+**Correctness, Speichersicherheit.** Gefunden beim Untersuchen der
+`parser_v3`-Schiene. `src/formats/uft_v3_bridge.c` deklarierte:
+
+```c
+extern bool scp_detect_protection(const struct scp_disk*, char*, size_t);
+```
+
+Die Definition in `uft_scp_parser_v3.c` nimmt **vier** Parameter — der vierte
+ist ein `float *confidence`, den die Funktion direkt nach dem Null-Check
+dereferenziert:
+
+```c
+bool scp_detect_protection(const scp_disk_t* disk, char* protection_name,
+                           size_t name_size, float* confidence) {
+    if (!disk) return false;
+    *confidence = 0.0f;        /* <- schreibt durch das vierte Argument */
+```
+
+Bei einem Aufruf mit drei Argumenten steht dort, was zufällig im vierten
+Argumentregister liegt. **Ein Schreibzugriff auf eine beliebige Adresse.**
+
+Dasselbe galt für `d64_detect_protection` und `g64_detect_protection`, und für
+`g64_export_d64`: zwei Parameter deklariert, drei definiert — der dritte ein
+`bool include_errors`, auf den die Funktion verzweigt. Das exportierte D64
+bekam eine Fehlerkarte oder nicht, je nach Registerinhalt.
+
+**Warum das niemand sah.** Die v3-Parser haben **keine Header**; ihre Typen
+liegen in den `.c`-Dateien. Die Brücke konnte also nichts einbinden und schrieb
+die Prototypen von Hand. Eine lokale `extern`-Deklaration ist ein Versprechen,
+das der Compiler glaubt — er hat keine zweite Quelle, gegen die er prüfen
+könnte.
+
+Der Kontrast im selben Baum ist deutlich: `uft_smart_open.c` bindet
+`uft_v3_bridge.h` ein und wurde geprüft; `uft_advanced_mode.c` deklarierte
+dieselben drei Funktionen ebenfalls von Hand und wurde es nicht. Beim Korrigieren
+der Header-Signatur schlug prompt nur die zweite Datei fehl — die
+Hand-Deklarationen dort sind jetzt durch den `#include` ersetzt.
+
+**Reichweite, ehrlich:** weder `uft_smart_open()` noch `uft_advanced_open()`
+hat heute einen Aufrufer. Es war eine geladene Falle, keine laufende
+Fehlfunktion — dieselbe Lage wie bei mehreren Funden dieser Reihe.
+
+**Mitgenommen: eine erfundene Zahl weniger.** Die v3-Parser berechnen eine
+echte Konfidenz je Schema (0,85 für C64-Weak-Bits, 0,80 für Amiga-Long-Tracks,
+0,75 generisch). Die Brücke verwarf sie wegen der falschen Signatur, und
+`uft_smart_open.c:246` setzte stattdessen `prot->confidence = 80` — eine Zahl,
+die niemand gemessen hat, an der Stelle einer, die gerade berechnet und
+weggeworfen worden war. Die Konfidenz wird jetzt durchgereicht und skaliert.
+
+**Wächter.** `scripts/extern_decl_conflicts.py`, verdrahtet als 15. Kategorie
+in `check_consistency.py`. Er vergleicht **Parameterzahlen**, nicht
+Typschreibweisen — `size_t` gegen `unsigned long` oder ein Typedef gegen die
+zugrundeliegende Struktur sind legitime Unterschiede, eine abweichende
+Parameterzahl ist keiner. Geprüft werden nur `extern`-Deklarationen in
+`.c`-Dateien (dort wohnen die handgeschriebenen Versprechen) und nur Namen mit
+**genau einer** Definition im Baum.
+
+Nach den drei Korrekturen: **0 Treffer.** Die Baseline ist leer — die Klasse
+ist nicht verwaltet, sondern geschlossen.
+
+*Offene Scope-Frage, nicht entschieden:* die gesamte v3-Kette hat keinen
+lebenden Einstiegspunkt. `uft_smart_open.c` (0 Aufrufer),
+`uft_advanced_mode.c` (0 Aufrufer), `uft_v3_bridge.c` (nur von diesen beiden
+benutzt) und die drei `*_parser_v3.c` (nur von der Brücke). Zusammen mehrere
+tausend Zeilen. Ob das eine noch nicht angeschlossene öffentliche API ist oder
+Sediment, ist eine Produktentscheidung wie seinerzeit `src/switch/` — deshalb
+hier notiert und nicht einseitig ausgeführt.
+
 ### ARCH-6 — Zwei parallele Formatlayer: der Konverter kennt die Plugin-Registry nicht (2026-08-20, MF-433) → ◐ ERSTE NAHT GESCHLAGEN
 
 **Architecture.** Gemessen, nicht vermutet:

@@ -29,10 +29,14 @@ extern uft_format_handler_t uft_scp_v3_handler;
 /* External probe functions from format registry */
 extern uft_error_t uft_d64_probe(const void* data, size_t size, int* confidence);
 
-/* External detection functions */
-extern bool uft_d64_v3_detect_protection(void* handle, char* name, size_t name_size);
-extern bool uft_g64_v3_detect_protection(void* handle, char* name, size_t name_size);
-extern bool uft_scp_v3_detect_protection(void* handle, char* name, size_t name_size);
+/* MF-442: these three were hand-declared here with three parameters, and the
+ * definitions take four. Nothing could catch that, because a local `extern` is
+ * a promise the compiler believes. uft_smart_open.c includes the header and so
+ * gets checked; this file did not, and that is why the mismatch survived.
+ *
+ * The declarations now come from the header, which makes the compiler the
+ * guardian instead of the reader. */
+#include "uft/uft_v3_bridge.h"
 
 /* ═══════════════════════════════════════════════════════════════════════════════
  * CONFIGURATION
@@ -234,25 +238,33 @@ uft_error_t uft_advanced_open(const char* path, uft_advanced_handle_t** out_hand
     
     /* Auto-detect protection if enabled */
     if ((g_config.flags & UFT_ADV_AUTO_PROTECTION) && h->using_v3) {
+        /* MF-442: the fourth argument is not optional — the callee writes
+         * through it unconditionally. Passing three arguments to a
+         * four-parameter function made this an arbitrary-address write. */
+        float prot_conf = 0.0f;
         switch (fmt) {
             case FMT_D64:
                 h->protection_detected = uft_d64_v3_detect_protection(
-                    h->v3_handle, h->protection_name, sizeof(h->protection_name));
+                    h->v3_handle, h->protection_name,
+                    sizeof(h->protection_name), &prot_conf);
                 break;
             case FMT_G64:
                 h->protection_detected = uft_g64_v3_detect_protection(
-                    h->v3_handle, h->protection_name, sizeof(h->protection_name));
+                    h->v3_handle, h->protection_name,
+                    sizeof(h->protection_name), &prot_conf);
                 break;
             case FMT_SCP:
                 h->protection_detected = uft_scp_v3_detect_protection(
-                    h->v3_handle, h->protection_name, sizeof(h->protection_name));
+                    h->v3_handle, h->protection_name,
+                    sizeof(h->protection_name), &prot_conf);
                 break;
             default:
                 break;
         }
         
         if (h->protection_detected && g_config.verbose_logging) {
-            UFT_WARN("[UFT-ADV] Protection detected: %s", h->protection_name);
+            UFT_WARN("[UFT-ADV] Protection detected: %s (confidence %.0f %%)",
+                     h->protection_name, (double)prot_conf * 100.0);
         }
     }
     
