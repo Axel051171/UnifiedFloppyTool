@@ -4,6 +4,7 @@
  * @version 5.31.0
  */
 
+#include <stddef.h>   /* offsetof */
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -273,6 +274,25 @@ int d81_list_files(const uint8_t *image, size_t size, uft_directory_t *dir)
 
 #define FAT12_SECTOR_SIZE   512
 
+/* MF-451: the UFT_PACK_BEGIN was missing, and unlike the three other stray
+ * UFT_PACK_ENDs found with it, this one had a victim.
+ *
+ * The struct is cast straight onto disk bytes:
+ *
+ *     const fat12_bpb_t *bpb = (const fat12_bpb_t*)image;
+ *     uint16_t bytes_per_sect = bpb->bytes_per_sector;
+ *
+ * Without packing the compiler inserts padding before every 16- and 32-bit
+ * field that follows an odd offset: the struct grows from 36 to 40 bytes and
+ * `bytes_per_sector` is read from offset 12 instead of 11. Every field from
+ * there on was off — sectors_per_cluster, fat_count, the sector counts, the
+ * geometry. A FAT12 boot sector parsed through this struct returned numbers
+ * that never stood in the image.
+ *
+ * The offsets are asserted below rather than described, because "it is packed
+ * now" is exactly the kind of claim that stopped being true here without
+ * anyone noticing. */
+UFT_PACK_BEGIN
 typedef struct {
     uint8_t  jump[3];
     char     oem[8];
@@ -290,6 +310,21 @@ typedef struct {
     uint32_t total_sectors_32;
 } fat12_bpb_t;
 UFT_PACK_END
+
+/* The BPB as DOS writes it: 0x00..0x23, no gaps. */
+_Static_assert(sizeof(fat12_bpb_t) == 36, "FAT12 BPB is 36 bytes on disk");
+_Static_assert(offsetof(fat12_bpb_t, bytes_per_sector)    == 0x0B, "BPB 0x0B");
+_Static_assert(offsetof(fat12_bpb_t, sectors_per_cluster) == 0x0D, "BPB 0x0D");
+_Static_assert(offsetof(fat12_bpb_t, reserved_sectors)    == 0x0E, "BPB 0x0E");
+_Static_assert(offsetof(fat12_bpb_t, fat_count)           == 0x10, "BPB 0x10");
+_Static_assert(offsetof(fat12_bpb_t, root_entries)        == 0x11, "BPB 0x11");
+_Static_assert(offsetof(fat12_bpb_t, total_sectors_16)    == 0x13, "BPB 0x13");
+_Static_assert(offsetof(fat12_bpb_t, media_type)          == 0x15, "BPB 0x15");
+_Static_assert(offsetof(fat12_bpb_t, sectors_per_fat)     == 0x16, "BPB 0x16");
+_Static_assert(offsetof(fat12_bpb_t, sectors_per_track)   == 0x18, "BPB 0x18");
+_Static_assert(offsetof(fat12_bpb_t, heads)               == 0x1A, "BPB 0x1A");
+_Static_assert(offsetof(fat12_bpb_t, hidden_sectors)      == 0x1C, "BPB 0x1C");
+_Static_assert(offsetof(fat12_bpb_t, total_sectors_32)    == 0x20, "BPB 0x20");
 
 /**
  * @brief Get FAT12 cluster value

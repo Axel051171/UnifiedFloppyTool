@@ -69,6 +69,14 @@
 /**
  * @brief STX file header
  */
+/* MF-451: the UFT_PACK_BEGIN that belongs to the UFT_PACK_END below was
+ * missing, so this struct was compiled with default alignment and the stray
+ * pack(pop) popped the compiler's pragma stack below its base — gcc says
+ * "'#pragma pack (pop)' encountered without matching '#pragma pack (push)'".
+ * The layout happened to come out right because every field here is naturally
+ * aligned; that is luck, not design, which is what the _Static_assert after
+ * the struct is for. */
+UFT_PACK_BEGIN
 typedef struct {
     uint8_t signature[4];     /* "RSY\0" */
     uint16_t version;         /* Format version */
@@ -79,6 +87,9 @@ typedef struct {
     uint32_t reserved2;
 } stx_file_header_t;
 UFT_PACK_END
+_Static_assert(sizeof(stx_file_header_t) == 16,
+               "STX/Pasti file header is 16 bytes");
+
 
 /**
  * @brief STX track descriptor

@@ -105,16 +105,7 @@ typedef struct FloppyDevice {
 
 #endif /* UFT_FLOPPY_DEVICE_H */
 
-/* Struct packing macros */
-#ifndef UFT_PACK_BEGIN
-#if defined(_MSC_VER)
-#define UFT_PACK_BEGIN __pragma(pack(push, 1))
-#define UFT_PACK_END   __pragma(pack(pop))
-#elif defined(__GNUC__) || defined(__clang__)
-#define UFT_PACK_BEGIN _Pragma("pack(push, 1)")
-#define UFT_PACK_END   _Pragma("pack(pop)")
-#else
-#define UFT_PACK_BEGIN
-#define UFT_PACK_END
-#endif
-#endif
+/* MF-451: die Packing-Makros standen hier NACH dem eigenen Include-Guard,
+ * wurden also bei jedem Einbinden neu verarbeitet, und definierten UFT_PACK_*
+ * ein weiteres Mal. Sie kommen jetzt aus uft_packed.h. */
+#include "uft/uft_packed.h"

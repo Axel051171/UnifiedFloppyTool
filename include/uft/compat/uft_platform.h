@@ -135,9 +135,9 @@ static inline int clock_gettime(int clk_id, struct timespec *tp) {
 /* Thread-local storage */
 #define UFT_THREAD_LOCAL __declspec(thread)
 
-/* Packed struct */
-#define UFT_PACKED __pragma(pack(push, 1))
-#define UFT_PACKED_END __pragma(pack(pop))
+/* MF-451: UFT_PACKED hiess hier ein pragma-PUSH, wo der Rest des Baums es als
+ * Struct-Attribut benutzt — und auf POSIX (siehe unten) war es leer. Packing
+ * kommt aus uft_packed.h. */
 
 /* Function attributes */
 #ifdef _MSC_VER
@@ -170,9 +170,7 @@ static inline int clock_gettime(int clk_id, struct timespec *tp) {
 /* Thread-local storage */
 #define UFT_THREAD_LOCAL __thread
 
-/* Packed struct */
-#define UFT_PACKED 
-#define UFT_PACKED_END
+/* Packing: siehe uft_packed.h (MF-451) */
 
 /* Function attributes */
 #define UFT_INLINE inline __attribute__((always_inline))

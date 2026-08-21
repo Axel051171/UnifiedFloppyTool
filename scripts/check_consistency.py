@@ -599,6 +599,14 @@ def main() -> int:
         # it big enough and keeps literals out.
         import probe_buffer_gate as _probebuf
         all_errors.append(("probe buffer size", _probebuf.check(repo)))
+        # Eight headers defined UFT_PACKED/UFT_PACK_BEGIN/UFT_PACK_END, and
+        # they disagreed — for macros that decide the layout of structs cast
+        # onto disk bytes. fat12_bpb_t was 40 bytes instead of 36 because a
+        # UFT_PACK_BEGIN was missing, so every field after the OEM name was
+        # read from the wrong offset. One definer now, and the pragmas must
+        # balance.
+        import packing_gate as _packing
+        all_errors.append(("struct packing", _packing.check(repo)))
 
     total = sum(len(e) for _, e in all_errors)
     print(f"Consistency check ({len(all_errors)} categories, root={repo}):")

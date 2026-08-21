@@ -227,21 +227,18 @@ static inline void uft_write_be32(void *p, uint32_t v) {
  * Alignment & Memory
  * ═══════════════════════════════════════════════════════════════════════════════ */
 
-#ifndef UFT_PACKED
+/* MF-451: hier standen UFT_PACKED/UFT_PACK_BEGIN/UFT_PACK_END ein weiteres
+ * Mal — unerreichbar, weil dieser Header zehn Zeilen weiter oben
+ * uft_compiler.h einbindet, das die Namen vorher definiert, und der ganze
+ * Block hinter `#ifndef UFT_PACKED` stand. Eine tote Definition, die beim
+ * Lesen wie die maßgebliche aussah. Packing kommt aus uft_packed.h. */
+#include "uft/uft_packed.h"
+
 #ifdef UFT_COMPILER_MSVC
     #define UFT_ALIGNED(n) __declspec(align(n))
-    #define UFT_PACKED
-    #pragma pack(push, 1)
-    #define UFT_PACK_BEGIN
-    #define UFT_PACK_END
-    #pragma pack(pop)
 #else
     #define UFT_ALIGNED(n) __attribute__((aligned(n)))
-    #define UFT_PACKED __attribute__((packed))
-    #define UFT_PACK_BEGIN
-    #define UFT_PACK_END
 #endif
-#endif /* UFT_PACKED */
 
 /* Cache line size (typical) */
 #define UFT_CACHE_LINE_SIZE 64

@@ -87,18 +87,19 @@
  * Compiler Compatibility
  *===========================================================================*/
 
-/* Packed structs - only define if not already defined by uft_packed.h */
-#ifndef UFT_PACKED_BEGIN
-#ifdef _MSC_VER
-    #define UFT_PACKED_BEGIN __pragma(pack(push, 1))
-    #define UFT_PACKED_END   __pragma(pack(pop))
-    #define UFT_PACKED
-#else
-    #define UFT_PACKED_BEGIN
-    #define UFT_PACKED_END
-    #define UFT_PACKED __attribute__((packed))
-#endif
-#endif
+/* MF-451: das war die gefährlichste der sieben Definitionen.
+ *
+ * Auf GCC definierte sie UFT_PACKED_BEGIN und UFT_PACKED_END **leer** — wer
+ * dieses Paar benutzte und diesen Header zuerst sah, bekam gar kein Packing,
+ * während `UFT_PACKED` gleichzeitig `__attribute__((packed))` war. Zwei
+ * Schreibweisen desselben Zwecks, in derselben Datei, mit gegensätzlicher
+ * Wirkung. Der Kommentar „only define if not already defined by uft_packed.h"
+ * beschreibt genau die Abhängigkeit von der Include-Reihenfolge, die das
+ * Problem ist.
+ *
+ * Packing kommt aus uft_packed.h, dort sind UFT_PACKED_BEGIN/_END Aliase des
+ * echten pragma-Paars. */
+#include "uft/uft_packed.h"
 
 /* Alignment */
 #ifndef UFT_ALIGNED

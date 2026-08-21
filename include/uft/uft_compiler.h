@@ -119,34 +119,20 @@ extern "C" {
  * GCC/Clang: Auch pragma pack für Konsistenz
  * ============================================================================= */
 
-#undef UFT_PACK_BEGIN
-#undef UFT_PACK_END
-#undef UFT_PACKED
-#undef UFT_PACKED_STRUCT
-#undef UFT_PACKED_BEGIN
-#undef UFT_PACKED_END
-#undef UFT_PACKED_ATTR
+/* MF-451: das Packing-Vokabular kommt aus EINER Datei.
+ *
+ * UFT_PACKED, UFT_PACK_BEGIN und UFT_PACK_END waren in sieben Headern
+ * definiert — uft_packed.h, uft_compiler.h, uft_platform.h, uft_common.h,
+ * uft_config.h, compat/uft_platform.h und floppy/uft_floppy_device.h — und sie
+ * widersprachen sich: mal `__attribute__((packed))`, mal ein pragma-Paar, mal
+ * leer. Welche Definition eine Übersetzungseinheit sah, entschied die
+ * Include-Reihenfolge. Für Makros, die das Speicherlayout von Strukturen
+ * bestimmen, die direkt auf Diskettenbytes gecastet werden.
+ *
+ * uft_packed.h ist die Quelle. Sie beginnt mit #undef auf alle Namen, ist also
+ * gegen Reste aus fremden Headern immun. */
+#include "uft/uft_packed.h"
 
-#if defined(UFT_COMPILER_MSVC)
-    #define UFT_PACK_BEGIN      __pragma(pack(push, 1))
-    #define UFT_PACK_END        __pragma(pack(pop))
-    #define UFT_PACKED          /* empty - packing via pragma */
-#elif defined(UFT_GCC_COMPAT)
-    /* GCC/Clang: pragma pack für cross-platform Konsistenz */
-    #define UFT_PACK_BEGIN      _Pragma("pack(push, 1)")
-    #define UFT_PACK_END        _Pragma("pack(pop)")
-    #define UFT_PACKED          /* empty - packing via pragma */
-#else
-    #define UFT_PACK_BEGIN
-    #define UFT_PACK_END
-    #define UFT_PACKED
-#endif
-
-/* Legacy aliases */
-#define UFT_PACKED_BEGIN    UFT_PACK_BEGIN
-#define UFT_PACKED_END      UFT_PACK_END
-#define UFT_PACKED_STRUCT   UFT_PACKED
-#define UFT_PACKED_ATTR     UFT_PACKED
 
 /* =============================================================================
  * ALIGNMENT

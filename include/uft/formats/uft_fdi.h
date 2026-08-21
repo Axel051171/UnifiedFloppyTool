@@ -24,17 +24,12 @@ extern "C" {
  * Portable Packed Structure Macros
  *============================================================================*/
 
-#ifndef UFT_PACKED_BEGIN
-#ifdef _MSC_VER
-    #define UFT_PACKED_BEGIN __pragma(pack(push, 1))
-    #define UFT_PACKED_END   __pragma(pack(pop))
-    #define UFT_PACKED_ATTR
-#else
-    #define UFT_PACKED_BEGIN
-    #define UFT_PACKED_END
-    #define UFT_PACKED_ATTR __attribute__((packed))
-#endif
-#endif /* UFT_PACKED_BEGIN */
+/* MF-451: die achte Definition desselben Vokabulars. Auf GCC waren
+ * UFT_PACKED_BEGIN/_END hier leer und das Packing hing allein am
+ * UFT_PACKED_ATTR am Struct-Ende — wer dagegen das pragma-Paar erwartete und
+ * diesen Header zuerst sah, bekam nichts. Das `#ifndef` machte das Ergebnis
+ * von der Include-Reihenfolge abhängig. */
+#include "uft/uft_packed.h"
 
 /*============================================================================
  * FAT Constants

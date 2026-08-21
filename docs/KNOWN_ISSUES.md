@@ -3257,6 +3257,90 @@ eigentlich meint — `uft_pll_init` existiert nämlich in **zwei** Signaturen
 (`uft_decoder_plugin.h:335` mit `adjust_pct`, `uft_flux_pll.h:317` mit
 `uft_encoding_t`), was denselben Aufruf je nach Include-Satz anders bedeutet.
 
+### ARCH-16 — Acht Header definierten das Packing-Vokabular, und `fat12_bpb_t` war deshalb 40 Bytes statt 36 (2026-08-21, MF-451) → ✓ BEHOBEN, 18. Gate steht
+
+Gefunden beim Angehen von ARCH-1. Die dort beschriebene Doppelung zweier
+Plattform-Header ist der kleinere Teil des Problems: **`UFT_PACKED`,
+`UFT_PACK_BEGIN` und `UFT_PACK_END` waren in acht Headern definiert** — und sie
+widersprachen sich.
+
+| Header | `UFT_PACKED` auf GCC | `UFT_PACK_BEGIN` |
+|---|---|---|
+| `uft_packed.h` | `__attribute__((packed))` | `_Pragma("pack(push,1)")` |
+| `uft_compiler.h` | leer | `_Pragma(...)` |
+| `uft_platform.h` | `__attribute__((packed))` | **leer** |
+| `uft_common.h` | `__attribute__((packed))` | `UFT_PACKED_BEGIN` **leer** |
+| `uft_config.h` | leer | — |
+| `compat/uft_platform.h` | **leer** | — |
+| `floppy/uft_floppy_device.h` | — | `_Pragma(...)` |
+| `formats/uft_fdi.h` | — | **leer**, Packing über `UFT_PACKED_ATTR` |
+
+Welche Definition eine Übersetzungseinheit sah, entschied die
+Include-Reihenfolge — für Makros, die das Speicherlayout von Strukturen
+bestimmen, die **direkt auf Diskettenbytes gecastet werden**. Vier der acht
+benutzten `#ifndef`, machten das Ergebnis also ausdrücklich von der Reihenfolge
+abhängig; `uft_common.h` trug dazu den Kommentar „only define if not already
+defined by uft_packed.h", was genau die Abhängigkeit beschreibt, die das
+Problem ist.
+
+**Der Schaden, konkret.** Vier Dateien hatten ein `UFT_PACK_END` **ohne**
+`UFT_PACK_BEGIN` — ein `pack(pop)`, das den Pragma-Stack des Compilers unter
+seine Basis schiebt. Drei kamen damit durch, weil ihre Strukturen zufällig
+natürlich ausgerichtet sind (2IMG 64 Bytes, G64 12, STX 16). Die vierte nicht:
+
+```c
+typedef struct {
+    uint8_t  jump[3];
+    char     oem[8];
+    uint16_t bytes_per_sector;   /* soll auf 0x0B liegen */
+    ...
+} fat12_bpb_t;
+UFT_PACK_END                     /* ohne BEGIN */
+```
+
+und benutzt als
+
+```c
+const fat12_bpb_t *bpb = (const fat12_bpb_t*)image;
+uint16_t bytes_per_sect = bpb->bytes_per_sector;
+```
+
+Ohne Packing schiebt der Compiler vor jedes 16-/32-Bit-Feld nach ungerader
+Position ein Füllbyte: die Struktur wächst von **36 auf 40 Bytes**, und
+`bytes_per_sector` wird von Offset **12 statt 11** gelesen. Jedes Feld ab dem
+OEM-Namen kam aus der falschen Stelle — Sektorgröße, Cluster-Größe,
+FAT-Anzahl, Sektorzahlen, Geometrie. Ein FAT12-Bootsektor, durch diese Struktur
+gelesen, lieferte Zahlen, die nie im Image standen.
+
+**Fix.**
+- Eine Quelle: `include/uft/uft_packed.h`. Die anderen sieben binden sie ein,
+  statt selbst zu definieren. Der Header beginnt mit `#undef` auf alle Namen,
+  ist also gegen Reste immun.
+- Die vier fehlenden `UFT_PACK_BEGIN` ergänzt.
+- **Layout wird geprüft, nicht beschrieben:** `_Static_assert` auf `sizeof` für
+  alle vier Strukturen und zusätzlich auf `offsetof` für jedes Feld des
+  FAT12-BPB. „Es ist jetzt gepackt" ist genau die Art Behauptung, die hier
+  unbemerkt aufgehört hat zu stimmen.
+- Nebenwirkung: fünf Einträge der Makro-Konflikt-Baseline (`UFT_PACKED`,
+  `_ATTR`, `_BEGIN`, `_END`, `_STRUCT`) haben sich damit erledigt, 17 → 12.
+
+**18. Gate** (`scripts/packing_gate.py`): kein `#define UFT_PACK*` außerhalb von
+`uft_packed.h`, und `UFT_PACK_BEGIN`/`UFT_PACK_END` müssen je Datei aufgehen.
+Grenze ehrlich benannt — die Balance wird pro Datei gezählt, ein BEGIN im
+Header und ein END in der einbindenden `.c` würde durchrutschen; dagegen helfen
+die `_Static_assert`s, nicht der Zähler.
+
+Verifiziert: ohne das `UFT_PACK_BEGIN` meldet der Compiler
+`static assertion failed: "FAT12 BPB is 36 bytes on disk"` und zwölf
+Offset-Zusicherungen dazu.
+
+**Was von ARCH-1 offen bleibt:** die eigentliche Entflechtung der beiden
+`uft_platform.h` (Guard-Kollision, invasive POSIX-Shims). Die Packing-Ebene war
+der Teil, der bereits Schaden angerichtet hat; der Rest bleibt wie dort
+beschrieben stehen.
+
+---
+
 ### ARCH-1 — Zwei `uft_platform.h`, die einander nie sehen (2026-08-18, MF-411)
 
 **Architecture.** Gefunden beim Auflösen der Include-Guard-Kollisionen.
@@ -3346,6 +3430,11 @@ Paar doppelt definiert und erzeugen seit jeher Build-Warnungen —
 / `UFT_ENCODING_MFM` **dreifach** (`uft_flux_pll.h`, `uft_god_mode.h`,
 `uft_types.h`). Nicht von MF-411 verursacht, hier nur festgehalten, weil sie
 beim Vermessen auffielen.
+
+> **Nachtrag MF-451:** dieselbe Klasse, eine Ebene tiefer und mit echtem
+> Schaden, war das Packing-Vokabular — acht Definitionen, `fat12_bpb_t`
+> ungepackt. Siehe ARCH-16. Die Entflechtung der beiden `uft_platform.h`
+> bleibt offen; das Packing ist jetzt unabhängig davon in einer Datei.
 
 ### FMT-14 — Drei Sync-Definitionen im Baum, sie weichen genau auf geschützten Disks ab (2026-08-18, MF-395) → ✓ RESOLVED (MF-401, benannt)
 

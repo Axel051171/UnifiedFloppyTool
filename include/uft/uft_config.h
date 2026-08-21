@@ -105,8 +105,10 @@
     #define UFT_INLINE              inline __attribute__((always_inline))
 #endif
     #define UFT_NOINLINE            __attribute__((noinline))
+/* MF-451: UFT_PACKED stand hier dreimal (je Compiler-Zweig) und war
+ * jedes Mal leer — Packing kommt aus uft_packed.h. */
+#include "uft/uft_packed.h"
     #define UFT_ALIGNED(n)          __attribute__((aligned(n)))
-    #define UFT_PACKED              
 #ifndef UFT_UNUSED
     #define UFT_UNUSED              __attribute__((unused))
 #endif
@@ -137,7 +139,6 @@
 #endif
     #define UFT_NOINLINE            __declspec(noinline)
     #define UFT_ALIGNED(n)          __declspec(align(n))
-    #define UFT_PACKED              
 #ifndef UFT_UNUSED
     #define UFT_UNUSED              
 #endif
@@ -160,7 +161,6 @@
 #endif
     #define UFT_NOINLINE            
     #define UFT_ALIGNED(n)          
-    #define UFT_PACKED              
 #ifndef UFT_UNUSED
     #define UFT_UNUSED              
 #endif
