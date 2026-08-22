@@ -3652,6 +3652,109 @@ beschrieben stehen.
 
 ---
 
+### BUILD-2 — der macOS-Build zerbrach an MF-468, und zwar zu Recht (2026-08-22, MF-470) → ✓ BEHOBEN
+
+Mein Fehler aus BUILD-1, von der CI gefunden: `build-macos` rot.
+
+```
+../src/hal/uft_scp_direct.c:48:12: fatal error: 'libusb-1.0/libusb.h' file not found
+```
+
+**Warum es überhaupt erst jetzt auffiel.** Vor MF-468 setzte der qmake-Build
+`UFT_HAS_LIBUSB` nirgends — dieser `#ifdef`-Zweig wurde auf macOS also **nie
+übersetzt**. Der Schalter hat nicht den Fehler verursacht, er hat ihn
+sichtbar gemacht.
+
+**Warum Linux und Windows trotzdem grün waren.** `pkg-config --cflags
+libusb-1.0` liefert den Pfad **bis einschließlich** des
+`libusb-1.0`-Verzeichnisses, und dort heißt der Header schlicht `libusb.h`:
+
+| Plattform | Include-Pfad | funktioniert |
+|---|---|---|
+| Linux (pkg-config) | `-I/usr/include/libusb-1.0` | beide Formen — weil `/usr/include` **ohnehin** im Standardsuchpfad liegt |
+| Windows (MinGW-Präfix) | `-I<präfix>/include` | nur `<libusb-1.0/libusb.h>` |
+| macOS (Homebrew) | `-I/opt/homebrew/Cellar/libusb/1.0.30/include/libusb-1.0` | nur `<libusb.h>` |
+
+Der Linux-Erfolg war also Zufall: die lange Form geht dort nur auf, weil das
+Elternverzeichnis zusätzlich im Standardpfad steht. Auf Homebrew steht das
+Präfix nirgends — dort geht nur die kurze.
+
+**Behoben an der Wurzel**, in `uft_scp_direct.c` und `uft_xum1541.c`:
+
+```c
+#if defined(__has_include)
+#  if __has_include(<libusb.h>)
+#    include <libusb.h>
+#  else
+#    include <libusb-1.0/libusb.h>
+#  endif
+#else
+#  include <libusb-1.0/libusb.h>
+#endif
+```
+
+**Bewusst NICHT im Build-System geflickt.** Der erste Versuch hängte in der
+`.pro` zusätzlich `pkg-config --variable=includedir` an. Das hätte funktioniert
+— und zwei Build-Systeme unterschiedlich geflickt zurückgelassen, also genau
+die Asymmetrie erzeugt, gegen die BUILD-1 antritt. Zurückgenommen; CMakes
+Kommentar, der dasselbe Falsche behauptete („can resolve
+`<libusb-1.0/libusb.h>`"), ist korrigiert.
+
+**Rot-Probe**, lokal mit dem Homebrew-Pfadlayout nachgestellt:
+
+```
+$ gcc -fsyntax-only -DUFT_HAS_LIBUSB=1 -I<präfix>/include/libusb-1.0 src/hal/uft_scp_direct.c
+src/hal/uft_scp_direct.c:48:12: fatal error: libusb-1.0/libusb.h: No such file or directory
+```
+
+Nach dem Fix übersetzen beide Dateien unter **beiden** Pfadlayouts fehlerfrei.
+
+**Lehre, die zu BUILD-1 gehört:** ich hatte MF-468 als „am kompletten
+Release-Build verifiziert" gemeldet — auf **einer** Plattform. Ein Schalter,
+der neu gesetzt wird, schaltet auf jeder Plattform Code scharf, der dort noch
+nie übersetzt wurde. „Baut bei mir" ist bei einem Build-System-Eingriff kein
+Nachweis, und drei Plattformen hat nur die CI.
+
+---
+
+### HAL-2 — FluxEngine: der Befund stimmt, die Beschreibung war zehn Monate alt (2026-08-22, MF-470) → ✓ KLARGESTELLT
+
+Nachgeprüft, nicht angenommen. Die Analyse führte drei Flag-Stubs als offene
+Verdrahtungslücke:
+
+> `setMotor()`, `seekCylinder()`, `recalibrate()` setzen nur Member-Flags,
+> rufen kein CLI auf. Entweder CLI-Anbindung nachziehen oder die drei
+> Capabilities ehrlich aus dem Capability-Set nehmen, damit `rewireV2()` die
+> Buttons deaktiviert.
+
+**Die zweite Hälfte ist längst geschehen** — und die erste hat kein Ziel mehr:
+
+| gemessen | Ergebnis |
+|---|---|
+| FluxEngine-Klassen im Baum | genau eine: `FluxEngineProviderV2` |
+| `setMotor` / `seekCylinder` / `recalibrate` darin | kommen **nicht vor** |
+| `grep -rn "::setMotor\|void setMotor"` über `src/` | **null Treffer** |
+| Mixins `ControlsMotor` / `SeeksHead` / `Recalibrates` | nicht komponiert, mit negativen `static_assert` festgehalten |
+| Knöpfe in der erzeugten Verdrahtung | `wire_action<cap::X>` nimmt bei fehlender Capability den `setEnabled(false)`-Zweig |
+| Test dafür | `tests/test_wiring_runtime.cpp`, Klausel 2 + 2b (deaktiviert **und** nicht verbunden) |
+
+Der V1-Provider existiert nicht mehr; die drei Stubs sind mit ihm
+verschwunden. Was blieb, war der Dateikopf, der sie **im Präsens** aufzählte
+(„`setMotor()` STUB — sets `m_motorOn` flag only") und damit den nächsten
+Leser auf die Suche nach gelöschtem Code schickte — mich eingeschlossen.
+
+Der Befund selbst bleibt stehen, weil er die Begründung für die ausgelassenen
+Mixins trägt; er steht jetzt im Präteritum und nennt, wo die Abwesenheit heute
+festgehalten und geprüft wird.
+
+**Nicht geändert:** kein Code. Eine CLI-Anbindung wäre auch nicht möglich —
+`fluxengine` hat weder ein `motor`- noch ein `seek`- noch ein
+`recalibrate`-Unterkommando; das Werkzeug steuert beides implizit über `-c`
+innerhalb jedes Lese-/Schreibaufrufs. Genau deshalb sind die Capabilities
+ausgelassen, und das ist die richtige Antwort, nicht eine offene Lücke.
+
+---
+
 ### HAL-1 — SCP: die GUI gab dem Provider `nullptr` (2026-08-22, MF-469) → ✓ VERDRAHTET, Bench offen
 
 Zweiter Teil der Lücke aus BUILD-1. Nachdem der Schalter im Release-Build

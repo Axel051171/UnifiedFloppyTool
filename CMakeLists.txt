@@ -157,7 +157,13 @@ if(LIBUSB_FOUND)
     message(STATUS "UFT libusb-1.0: FOUND (SCP-Direct production transport ENABLED)")
     add_compile_definitions(UFT_HAS_LIBUSB=1)
     # Propagate include dirs globally so every test target that pulls
-    # uft_scp_direct.c via target_sources can resolve <libusb-1.0/libusb.h>.
+    # uft_scp_direct.c via target_sources can resolve the libusb header.
+    #
+    # MF-470: dieser Pfad ist bei pkg-config `<praefix>/include/libusb-1.0`,
+    # dort heisst der Header `libusb.h`; beim Windows-Fallback unten ist es
+    # `<praefix>/include` mit `libusb-1.0/libusb.h`. Der Quellcode nimmt seit
+    # MF-470 beide Formen — vorher behauptete dieser Kommentar, es sei immer
+    # die lange, und der macOS-Build zerbrach daran.
     include_directories(${LIBUSB_INCLUDE_DIRS})
     # CMake sanitizer CI runs with LINK_LIBRARIES_ONLY_TARGETS enabled
     # — raw library names like "usb-1.0" from pkg-config are rejected.

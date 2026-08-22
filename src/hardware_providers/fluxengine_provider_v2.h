@@ -10,33 +10,47 @@
  *   DetectsDrive   v  do_detect_drive()    -> DetectOutcome
  *   MeasuresRPM    v  do_measure_rpm()     -> RpmOutcome
  *
- * V1 audit findings — real vs. silent stubs:
- *   readRawFlux()   REAL  — runs `fluxengine read ibm -s drive:0 -c N -h N
- *                           --revs=N -o tempfile`; reads temp file for raw bytes.
- *   writeRawFlux()  REAL  — runs `fluxengine write ibm -d drive:0 -c N -h N
- *                           -i tempfile`; optional verify by re-reading.
- *   detectDrive()   REAL  — runs `fluxengine rpm`; parses stdout for RPM and
- *                           emits a DriveDetected record.
- *   measureRPM()    REAL  — runs `fluxengine rpm`; parses RPM from stdout.
- *   setMotor()      STUB  — sets m_motorOn flag only; no CLI invocation.
- *   seekCylinder()  STUB  — sets m_currentCylinder flag only; no CLI invocation.
- *   recalibrate()   STUB  — delegates to seekCylinder(0) which is itself a stub.
+ * V1 audit findings — real vs. silent stubs (HISTORISCH, MF-470).
+ *
+ * Der V1-Provider existiert nicht mehr; im Baum gibt es keine
+ * FluxEngine-Klasse ausser dieser, und weder setMotor() noch
+ * seekCylinder() noch recalibrate() kommen darin vor. Was unten in
+ * Praesens stand, las sich wie vorhandener Code und schickte den
+ * naechsten Leser auf die Suche nach etwas, das geloescht ist. Der
+ * Befund selbst bleibt erhalten, weil er die Begruendung fuer die
+ * ausgelassenen Mixins traegt:
+ *
+ *   readRawFlux()   war REAL  — `fluxengine read ibm -s drive:0 -c N -h N
+ *                               --revs=N -o tempfile`
+ *   writeRawFlux()  war REAL  — `fluxengine write ibm -d drive:0 -c N -h N
+ *                               -i tempfile`, optionale Verify-Lesung
+ *   detectDrive()   war REAL  — `fluxengine rpm`, DriveDetected aus stdout
+ *   measureRPM()    war REAL  — `fluxengine rpm`
+ *   setMotor()      war STUB  — setzte nur ein Flag, rief kein CLI
+ *   seekCylinder()  war STUB  — dito
+ *   recalibrate()   war STUB  — delegierte an seekCylinder(0)
+ *
+ * Diese Fassung hat die drei Stub-Faehigkeiten gar nicht erst: sie fehlen
+ * als Mixin, die negativen static_asserts unten halten das fest, und die
+ * erzeugte Verdrahtung schaltet die zugehoerigen Knoepfe deshalb ab
+ * (generated/tab_hardware_wiring.gen.cpp, wire_action<cap::X> —
+ * Abwesenheits-Zweig durch tests/test_wiring_runtime.cpp gedeckt).
  *
  * Intentionally omitted mixins (and why):
  *   ReadsSectors    x  FluxEngine is a flux device. Sector decoding happens
  *                      in the upstream analysis pipeline, not the HAL layer.
  *   WritesSectors   x  Same rationale as ReadsSectors.
- *   ControlsMotor   x  The V1 setMotor() is a silent stub — only records
- *                      state locally. FluxEngine CLI abstracts motor control
+ *   ControlsMotor   x  The V1 setMotor() WAS a silent stub — it only
+ *                      recorded state locally. FluxEngine CLI abstracts motor
  *                      implicitly within each read/write invocation; there is
  *                      no standalone `fluxengine motor` command. Omitting this
  *                      mixin is the structurally honest choice (anti-pragmatism
  *                      rule: "no WIP capability").
- *   SeeksHead       x  The V1 seekCylinder() is a silent stub — FluxEngine
+ *   SeeksHead       x  The V1 seekCylinder() WAS a silent stub — FluxEngine
  *                      CLI handles seeking implicitly via -c flag. No
  *                      standalone `fluxengine seek` command exists.
- *   Recalibrates    x  The V1 recalibrate() delegates to seekCylinder(0)
- *                      which is itself a silent stub. No fluxengine recalibrate
+ *   Recalibrates    x  The V1 recalibrate() delegated to seekCylinder(0),
+ *                      itself a silent stub. No fluxengine recalibrate
  *                      primitive exists.
  *
  * SpecStatus: CommunityConsensus — FluxEngine is an open-source project

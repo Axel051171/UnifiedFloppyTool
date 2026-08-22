@@ -67,6 +67,12 @@ unix|macx {
     CONFIG += link_pkgconfig
     packagesExist(libusb-1.0) {
         PKGCONFIG += libusb-1.0
+        # pkg-config liefert `-I<praefix>/include/libusb-1.0`, wo der Header
+        # schlicht `libusb.h` heisst. Hier wird bewusst NICHT zusaetzlich das
+        # Elternverzeichnis angehaengt: die Schreibweise loest src/hal/*.c
+        # seit MF-470 selbst auf (__has_include), und den Pfad in beiden
+        # Build-Systemen unterschiedlich zu flicken waere genau die Klasse
+        # Asymmetrie, gegen die MF-468 antritt.
         UFT_LIBUSB_FOUND = 1
         message("UFT libusb-1.0: FOUND via pkg-config (SCP-Direct production transport ENABLED)")
     }

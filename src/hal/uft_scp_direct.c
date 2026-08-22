@@ -45,7 +45,28 @@
  * (UFT_HAS_LIBUSB compile-define gates the implementation; the
  * fall-back stubs continue to return UFT_ERR_NOT_IMPLEMENTED). */
 #ifdef UFT_HAS_LIBUSB
-#  include <libusb-1.0/libusb.h>
+/* Beide Schreibweisen, weil beide vorkommen (MF-470).
+ *
+ * `pkg-config --cflags libusb-1.0` liefert den Pfad BIS EINSCHLIESSLICH des
+ * `libusb-1.0`-Verzeichnisses (`-I<praefix>/include/libusb-1.0`); dort heisst
+ * der Header schlicht `libusb.h`. Auf Linux faellt das nicht auf, weil
+ * `/usr/include` ohnehin im Standardsuchpfad liegt und `libusb-1.0/libusb.h`
+ * deshalb ZUSAETZLICH aufgeht. Unter Homebrew liegt das Praefix
+ * (`/opt/homebrew/Cellar/libusb/...`) nicht im Standardpfad — dort geht nur
+ * die kurze Form.
+ *
+ * Genau daran zerbrach der macOS-Build von MF-468: der Schalter war neu auch
+ * im qmake-Build gesetzt, also wurde dieser Zweig dort zum ersten Mal
+ * uebersetzt. */
+#  if defined(__has_include)
+#    if __has_include(<libusb.h>)
+#      include <libusb.h>
+#    else
+#      include <libusb-1.0/libusb.h>
+#    endif
+#  else
+#    include <libusb-1.0/libusb.h>
+#  endif
 #endif
 
 /* ─── Internal context ─────────────────────────────────────────────── */
