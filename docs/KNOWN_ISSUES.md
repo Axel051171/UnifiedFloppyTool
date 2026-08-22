@@ -3652,6 +3652,56 @@ beschrieben stehen.
 
 ---
 
+### BUG-11 — „Alle Lesungen einig" war als „wiederhergestellt" gebucht (2026-08-22, MF-466) → ✓ BEHOBEN
+
+Aus dem a8rawconv-Vergleich (siehe `docs/A8RAWCONV_INTEGRATION_TODO.md`,
+Abschnitt „Nachtrag 2026-08-22"). Dessen Trennung von *bad read* und *weak
+read* zeigt auf eine Stelle in unserer Multiread-Pipeline:
+
+```c
+/* src/recovery/uft_multiread_pipeline.c:360, vorher */
+result->recovered = (avg_conf >= ctx->config.min_confidence);
+```
+
+`avg_conf` misst, **wie weit die Lesungen untereinander übereinstimmen** — mit
+der CRC hat es nichts zu tun. Ein Sektor, dessen Lesungen alle dasselbe sagen,
+dessen CRC aber nie stimmte, erreicht damit Konfidenz 100 und wurde als
+`recovered = true` gemeldet, bei `good_reads == 0`.
+
+Das ist nicht der Ausnahmefall, sondern **genau das, was ein Kopierschutz
+absichtlich erzeugt**: ein Sektor mit vorsätzlich falscher CRC liest sich
+vollkommen stabil, jedes Mal gleich. Er ist weder weak noch beschädigt — und
+schon gar nicht wiederhergestellt.
+
+Die Pipeline trennte gute von schlechten Lesungen bereits **beim Abstimmen**
+(nur CRC-geprüfte Durchgänge stimmen mit, sobald es welche gibt — die Regel
+aus `vote_buffer`). Nur bei der **Aussage am Ende** fiel die Trennung wieder
+weg.
+
+Jetzt verlangt `recovered` beides: genug Übereinstimmung **und** mindestens
+eine geprüfte Lesung. Die Daten werden weiterhin herausgegeben — verworfen
+wird nichts — nur die Behauptung nicht mehr aufgestellt. Wer die Fälle
+unterscheiden will, liest `good_reads == 0` bei hoher `confidence`: stabil,
+aber von nichts bestätigt.
+
+| Fall | vorher | jetzt |
+|---|---|---|
+| 3 gleiche Lesungen, alle CRC-fehlerhaft | recovered ✓ | recovered ✗, Daten da, `has_weak_bits` = false |
+| 1 geprüfte + 2 ungeprüfte, alle gleich | recovered ✓ | recovered ✓ |
+| Lesungen uneinig | wie gehabt | wie gehabt |
+
+**Rot-Probe:** `stable_reads_without_a_verified_crc_are_not_recovered` fällt
+auf der alten Fassung (`FAIL @ 158: res.recovered == false`); das
+Gegenstück `one_verified_read_is_enough_to_claim_recovery` ist auf beiden
+grün — es hält fest, dass die Verschärfung nicht zu weit geht.
+
+**Ehrlich zur Reichweite:** die Pipeline hat **keine Aufrufer in `src/`** —
+nur Tests. Es war also keine falsche Meldung im laufenden Betrieb, sondern
+eine falsche Regel in einem Modul, das noch verdrahtet werden muss. Genau
+deshalb war jetzt der billige Zeitpunkt.
+
+---
+
 ### ARCH-20 (Auflösung) + BUG-10 — die Sektornummer ist jetzt die vom Medium (2026-08-22, MF-465) → ✓ BEHOBEN
 
 Der Befund stand seit MF-463 offen: `uft_format_add_sector()` setzte

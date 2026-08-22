@@ -357,7 +357,23 @@ multiread_error_t multiread_execute(multiread_ctx_t *ctx,
         }
     }
     
-    result->recovered = (avg_conf >= ctx->config.min_confidence);
+    /* Agreement is not verification (MF-466).
+     *
+     * `avg_conf` measures how far the passes agree with each other. A sector
+     * whose reads all say the same thing but whose CRC never verified reaches
+     * confidence 100 — and used to be reported as `recovered` with
+     * `good_reads == 0`. That is the very case a copy protection produces on
+     * purpose: a sector with a deliberately bad CRC reads back perfectly
+     * stably, every time.
+     *
+     * The distinction is the one a8rawconv draws between a bad read and a weak
+     * one: stable-with-CRC-error is neither weak nor recovered. The data is
+     * still handed over — never discard what was read — but the claim is not
+     * made. `good_reads` and `confidence` let the caller tell the two apart:
+     * good_reads == 0 with high confidence means "stable, but nothing
+     * verified it". */
+    result->recovered = (avg_conf >= ctx->config.min_confidence) &&
+                        (result->good_reads > 0);
     result->has_weak_bits = (weak_count > 0);
     result->weak_mask = weak_mask;
     

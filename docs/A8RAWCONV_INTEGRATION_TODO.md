@@ -20,6 +20,67 @@
 > sind es.
 
 
+## Nachtrag 2026-08-22 (MF-466) — zweite Durchsicht
+
+Anlass war eine neue Quellen-Einordnung zu a8rawconv (Nachbarcodebasen,
+ATX-Ökosystem, ATX-Consumer mit offenem Quellcode). Drei Punkte daraus, die
+im Plan von 2026-04 **nicht** vorkamen:
+
+### 1. Weak-Sektor-Semantik — teilweise übernommen, ein Fehler gefunden
+
+a8rawconv trennt beim Mehrfachlesen **good reads von bad reads über die CRC**
+und unterscheidet damit „stabil, aber CRC-fehlerhaft" von „weak". Unsere
+`src/recovery/uft_multiread_pipeline.c` macht diese Trennung beim **Abstimmen**
+schon (nur geprüfte Durchgänge stimmen mit, sobald es welche gibt) — aber
+nicht bei der **Aussage**: `recovered` hing allein an der Übereinstimmung der
+Lesungen. Ein Sektor mit vorsätzlich falscher CRC — stabil, jedes Mal gleich —
+kam als wiederhergestellt zurück. Behoben, siehe KNOWN_ISSUES BUG-11.
+
+### 2. DiskScript als externer Testvektor-Generator — offen, und etwas anderes als TA-Nein
+
+Die Liste oben lehnt `rawdiskscript.cpp` ab („DSL, verstößt gegen Prinzip 3").
+Das bleibt richtig — für einen **Port in UFT**. Der neue Vorschlag ist ein
+anderer: a8rawconv **extern** laufen lassen und Referenz-Flux mit *bekannten*
+Defekten erzeugen (definierte CRC-Fehler, Phantom-Sektoren, lange Spuren),
+dann UFTs Decoder dagegen laufen lassen. Das Erwartungsergebnis ist per
+Konstruktion bekannt, ohne dass eine echte Referenzdiskette vorliegen muss.
+
+Das trifft genau den Engpass der EINFRIER-REGEL (MF-363): 46 T3-Formate haben
+keinen Test, weil kein Referenzmaterial da ist. Ein Generator liefert kein
+T1 — synthetisch bleibt synthetisch — aber er liefert **Positiv- und
+Negativkontrollen für den Decoder**, und die fehlen heute ganz.
+
+Lizenzlage: als externes Werkzeug im Testharness (wie pyOTDR) berührt es
+UFTs Lizenz nicht. Ein Port würde GPLv2+ nach sich ziehen — UFT ist GPL-2,
+also verträglich, aber der externe Weg ist der billigere.
+
+**Offen. Nächster Schritt:** ein Skript unter `tests/vectors/gen/`, das
+a8rawconv aufruft, wenn es im PATH liegt, und die erzeugten SCP-Dateien mit
+einem Erwartungs-Manifest ablegt; ohne a8rawconv überspringen die Tests
+ehrlich (SKIP, nicht PASS).
+
+### 3. Referenz-Orakel für Atari-Formate — offen
+
+Wie SAMdisk für die PC-/CPC-Seite (`src/samdisk/`, MF-460/461) und
+`keirf/disk-utilities` für Amiga wäre a8rawconv das Gegenstück für ATX/FM.
+Betrifft die T3-Formate `atx`, `xfd`, `pro`, `dcm`.
+
+### Lizenz-Hinweis zum Fork
+
+Das Fork-README nennt GPL v2 or later, die LICENSE-Datei im Fork nennt CC0.
+Das widerspricht sich; CC0 lässt sich für fremden GPL-Code nicht vergeben.
+Für UFT ändert das nichts (wir behandeln den Code per Datei-Header als
+GPL-2-or-later, siehe Lizenz-Notiz unten), aber wer den Fork
+weiterveröffentlicht, sollte die LICENSE-Datei korrigieren.
+
+### Status TA1–TA6
+
+Unverändert gegenüber dem Abgleich von MF-421 oben: TA1–TA3 erledigt, TA4
+Code steht (Hardware-Verifikation extern delegiert), **TA5 weiterhin offen**,
+TA6 gegenstandslos.
+
+---
+
 **Stand:** 2026-04-23
 **Quelle:** `github.com/Axel051171/a8rawconv-0.95` (Fork von
 Avery Lee's `a8rawconv`, 9194 LOC C++11)

@@ -80,7 +80,10 @@ typedef struct {
     uint8_t    *data;               /**< Sector/track data */
     size_t      data_len;           /**< Data length */
     uint8_t     quality;            /**< Read quality (0-100) */
-    bool        crc_ok;             /**< CRC passed */
+    /** CRC verified for THIS pass. false means "did not verify" — whether
+     *  because the check failed or because none was available. A sector with
+     *  no verified pass is never reported as recovered (MF-466). */
+    bool        crc_ok;
     double      timing_variance;    /**< Timing variance */
 } multiread_pass_t;
 
@@ -91,11 +94,18 @@ typedef struct {
     uint8_t     sector;             /**< Sector number */
     uint8_t    *data;               /**< Recovered data */
     size_t      data_len;           /**< Data length */
-    uint8_t     confidence;         /**< Recovery confidence (0-100) */
-    uint8_t     good_reads;         /**< Number of good reads */
+    /** Agreement between the passes, 0-100. NOT a statement about the CRC:
+     *  reads that all say the same wrong thing reach 100. */
+    uint8_t     confidence;
+    uint8_t     good_reads;         /**< Passes whose CRC verified */
     uint8_t     total_reads;        /**< Total read attempts */
-    bool        recovered;          /**< Successfully recovered */
-    bool        has_weak_bits;      /**< Contains weak/uncertain bits */
+    /** Data that can be stood behind: enough agreement AND at least one
+     *  verified read. A stable sector with a bad CRC — what a copy protection
+     *  writes on purpose — is returned in @ref data but is NOT recovered
+     *  (MF-466). Check `good_reads == 0 && confidence` high to tell that case
+     *  from a genuinely uncertain one. */
+    bool        recovered;
+    bool        has_weak_bits;      /**< Passes disagreed somewhere */
     uint8_t    *weak_mask;          /**< Weak bit mask (optional) */
 } multiread_sector_t;
 

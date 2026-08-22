@@ -127,6 +127,63 @@ TEST(failed_crc_read_cannot_outvote_a_verified_one) {
     multiread_destroy(ctx);
 }
 
+/* ── stable but never verified: data yes, claim no ── */
+
+TEST(stable_reads_without_a_verified_crc_are_not_recovered) {
+    multiread_ctx_t *ctx = multiread_create(NULL);
+    ASSERT(ctx != NULL);
+
+    /* Three reads that agree byte for byte, and not one of them verified.
+     * That is exactly what a deliberately CRC-broken protection sector looks
+     * like: perfectly stable, and unreadable by design. Agreement drives the
+     * confidence to 100, so before MF-466 the sector came back as
+     * `recovered = true` with `good_reads == 0` — a confident claim about
+     * data nothing had checked.
+     *
+     * The data must still be handed over. Only the claim is withheld. */
+    const uint8_t stable[4] = { 0xDE, 0xAD, 0xBE, 0xEF };
+    ASSERT(multiread_add_pass(ctx, stable, 4, 90, /*crc_ok=*/false) == MULTIREAD_OK);
+    ASSERT(multiread_add_pass(ctx, stable, 4, 90, /*crc_ok=*/false) == MULTIREAD_OK);
+    ASSERT(multiread_add_pass(ctx, stable, 4, 90, /*crc_ok=*/false) == MULTIREAD_OK);
+
+    uint8_t out[4] = {0};
+    multiread_sector_t res;
+    memset(&res, 0, sizeof(res));
+    ASSERT(multiread_execute(ctx, out, 4, &res) == MULTIREAD_OK);
+
+    ASSERT(memcmp(out, stable, 4) == 0);   /* nothing was thrown away */
+    ASSERT(res.good_reads == 0);           /* nothing verified it either */
+    ASSERT(res.has_weak_bits == false);    /* it is stable, not weak */
+    ASSERT(res.confidence >= 90);          /* the reads DO agree */
+    ASSERT(res.recovered == false);        /* ... and that is not recovery */
+
+    free(res.weak_mask);
+    multiread_destroy(ctx);
+}
+
+TEST(one_verified_read_is_enough_to_claim_recovery) {
+    multiread_ctx_t *ctx = multiread_create(NULL);
+    ASSERT(ctx != NULL);
+
+    /* The other side of the same rule: one pass verified, so the claim holds. */
+    const uint8_t good[4] = { 0x01, 0x02, 0x03, 0x04 };
+    ASSERT(multiread_add_pass(ctx, good, 4, 100, /*crc_ok=*/true)  == MULTIREAD_OK);
+    ASSERT(multiread_add_pass(ctx, good, 4,  90, /*crc_ok=*/false) == MULTIREAD_OK);
+    ASSERT(multiread_add_pass(ctx, good, 4,  90, /*crc_ok=*/false) == MULTIREAD_OK);
+
+    uint8_t out[4] = {0};
+    multiread_sector_t res;
+    memset(&res, 0, sizeof(res));
+    ASSERT(multiread_execute(ctx, out, 4, &res) == MULTIREAD_OK);
+
+    ASSERT(memcmp(out, good, 4) == 0);
+    ASSERT(res.good_reads == 1);
+    ASSERT(res.recovered == true);
+
+    free(res.weak_mask);
+    multiread_destroy(ctx);
+}
+
 /* ── no verified read at all: still answers, still flags uncertainty ─ */
 TEST(no_verified_read_still_records_divergence) {
     multiread_ctx_t *ctx = multiread_create(NULL);
@@ -205,6 +262,8 @@ int main(void) {
     RUN(divergent_byte_is_preserved_not_collapsed);
     RUN(failed_crc_read_cannot_outvote_a_verified_one);
     RUN(no_verified_read_still_records_divergence);
+    RUN(stable_reads_without_a_verified_crc_are_not_recovered);
+    RUN(one_verified_read_is_enough_to_claim_recovery);
     RUN(vote_buffers_confidence_drops_on_divergence);
     RUN(guards_null_and_insufficient_passes);
 
