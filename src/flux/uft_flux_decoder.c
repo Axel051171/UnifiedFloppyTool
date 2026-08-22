@@ -180,6 +180,14 @@ flux_status_t flux_raw_from_ns_intervals(const uint32_t *intervals,
                                          size_t count,
                                          flux_raw_data_t *out)
 {
+    return flux_raw_from_ns_intervals_indexed(intervals, count, 0, out);
+}
+
+flux_status_t flux_raw_from_ns_intervals_indexed(const uint32_t *intervals,
+                                                 size_t count,
+                                                 uint32_t revolution_ns,
+                                                 flux_raw_data_t *out)
+{
     if (!intervals || !out || count == 0) return FLUX_ERR_INVALID;
 
     uint32_t *trans = (uint32_t *)malloc(count * sizeof(uint32_t));
@@ -198,6 +206,24 @@ flux_status_t flux_raw_from_ns_intervals(const uint32_t *intervals,
     out->transitions      = trans;
     out->transition_count = n;
     out->sample_rate      = 1000000000u;      /* 1 GHz: one tick is one ns */
+
+    /* Die gemessene Umdrehungsdauer wird nur uebernommen, wenn sie zum
+     * Datenstrom passt (MF-475). `cum` ist die kumulierte Flusszeit, also die
+     * Laenge des Stroms; liegt revolution_ns ausserhalb ±50 % davon, beschreibt
+     * die Zahl etwas anderes als diesen Datensatz — mehrere Umdrehungen, einen
+     * abgeschnittenen Rest, oder eine andere Zeitbasis. Zwei Marken zu setzen
+     * hiesse dann, eine Struktur zu behaupten, die der Strom nicht hat. */
+    if (revolution_ns > 0) {
+        uint64_t lo = cum / 2, hi = cum + cum / 2;
+        if ((uint64_t)revolution_ns >= lo && (uint64_t)revolution_ns <= hi) {
+            uint32_t *idx = (uint32_t *)malloc(2 * sizeof(uint32_t));
+            if (!idx) { free(trans); return FLUX_ERR_OVERFLOW; }
+            idx[0] = 0;
+            idx[1] = revolution_ns;
+            out->index_times = idx;
+            out->index_count = 2;
+        }
+    }
     return FLUX_OK;
 }
 
@@ -207,6 +233,9 @@ void flux_raw_free(flux_raw_data_t *raw)
     free(raw->transitions);
     raw->transitions = NULL;
     raw->transition_count = 0;
+    free(raw->index_times);
+    raw->index_times = NULL;
+    raw->index_count = 0;
 }
 
 flux_status_t flux_to_bitstream(const flux_raw_data_t *flux,
@@ -496,47 +525,59 @@ static flux_status_t decode_mfm_sector(const uint8_t *bits, size_t bit_count,
     return FLUX_OK;
 }
 
-flux_status_t flux_decode_mfm(const flux_raw_data_t *flux,
-                              flux_decoded_track_t *track,
-                              const flux_decoder_options_t *opts) {
-    if (!flux || !track) return FLUX_ERR_INVALID;
-    
-    flux_decoder_options_t default_opts;
-    if (!opts) {
-        flux_decoder_options_init(&default_opts);
-        opts = &default_opts;
-    }
-    
-    /* Zellendauer bestimmen.
-     *
-     * Reihenfolge, absteigend nach Verlaesslichkeit:
-     *   1. ausdruecklich vorgegebenes bitcell_ns — wer eine Zahl nennt,
-     *      meint sie;
-     *   2. Medienprofil + GEMESSENE Umdrehungsdauer aus den Index-Impulsen
-     *      des Abbilds (MF-471);
-     *   3. die alte Annahme "MFM DD".
-     *
-     * Stufe 2 ist der Fall, der ohne sie schweigend falsch lief: eine
-     * Atari-Diskette (288 min^-1) in einem 300-min^-1-Laufwerk liefert
-     * Zellen, die um 4 % kuerzer sind als ihr Nennwert. */
-    double bitcell_ns = opts->bitcell_ns;
-    if (bitcell_ns == 0 && opts->media != UFT_MEDIA_UNKNOWN) {
+/* Zellendauer bestimmen — fuer ALLE Decoder an einer Stelle (MF-475).
+ *
+ * Reihenfolge, absteigend nach Verlaesslichkeit:
+ *   1. ausdruecklich vorgegebenes bitcell_ns — wer eine Zahl nennt, meint sie;
+ *   2. Medienprofil + GEMESSENE Umdrehungsdauer aus den Index-Impulsen des
+ *      Abbilds (MF-471);
+ *   3. @p fallback_ns — der Nennwert, den der jeweilige Decoder annimmt.
+ *
+ * Stufe 2 ist der Fall, der ohne sie schweigend falsch laeuft: eine
+ * Atari-Diskette (288 min^-1) in einem 300-min^-1-Laufwerk liefert Zellen, die
+ * um 4 % kuerzer sind als ihr Nennwert.
+ *
+ * MF-471 hatte diese Reihenfolge nur in flux_decode_mfm(). Die vier anderen
+ * Decoder — FM, GCR (C64 und Apple), AmigaDOS — trugen weiter ihre feste Zahl,
+ * darunter ausgerechnet der FM-Pfad, fuer den das 288-min^-1-Profil gebaut
+ * wurde. Ein Fakt an fuenf Stellen heisst: die Fassung, die laeuft, ist nicht
+ * die bessere, sondern die zufaellig aufgerufene. Deshalb hier eine Funktion
+ * und fuenf Aufrufer, jeder mit seinem eigenen Nennwert.
+ *
+ * Schlaegt die Messung fehl — zu wenige Index-Impulse, Abtastrate 0 — greift
+ * Stufe 3. Keine halb gerechnete Zahl, die wie eine Messung aussaehe. */
+static double flux_pick_bitcell_ns(const flux_raw_data_t *flux,
+                                   const flux_decoder_options_t *opts,
+                                   double fallback_ns)
+{
+    if (opts->bitcell_ns != 0) return opts->bitcell_ns;
+
+    if (flux && opts->media != UFT_MEDIA_UNKNOWN) {
         double rev_ns = 0.0, cell_ns = 0.0;
         double pct = (opts->media_adjust_pct > 0.0) ? opts->media_adjust_pct
                                                     : 100.0;
         if (uft_media_rev_ns_from_index(flux->index_times, flux->index_count,
                                         flux->sample_rate, &rev_ns) &&
             uft_media_cell_ns_from_rev(opts->media, rev_ns, pct, &cell_ns)) {
-            bitcell_ns = cell_ns;
+            return cell_ns;
         }
-        /* Schlaegt die Messung fehl — zu wenige Index-Impulse, Abtastrate 0 —
-         * bleibt bitcell_ns 0 und Stufe 3 greift. Keine halb gerechnete
-         * Zahl, die wie eine Messung aussaehe. */
     }
-    if (bitcell_ns == 0) {
-        bitcell_ns = FLUX_MFM_DD_BITCELL_NS;  /* Default to DD */
+    return fallback_ns;
+}
+
+flux_status_t flux_decode_mfm(const flux_raw_data_t *flux,
+                              flux_decoded_track_t *track,
+                              const flux_decoder_options_t *opts) {
+    if (!flux || !track) return FLUX_ERR_INVALID;
+
+    flux_decoder_options_t default_opts;
+    if (!opts) {
+        flux_decoder_options_init(&default_opts);
+        opts = &default_opts;
     }
-    
+
+    double bitcell_ns = flux_pick_bitcell_ns(flux, opts, FLUX_MFM_DD_BITCELL_NS);
+
     /* Allocate bitstream buffer */
     size_t max_bits = FLUX_MAX_TRACK_SIZE * 8;
     uint8_t *bits = calloc(max_bits / 8 + 1, 1);
@@ -619,7 +660,7 @@ flux_status_t flux_decode_fm(const flux_raw_data_t *flux,
         opts = &default_opts;
     }
     
-    double bitcell_ns = opts->bitcell_ns ? opts->bitcell_ns : FLUX_FM_BITCELL_NS;
+    double bitcell_ns = flux_pick_bitcell_ns(flux, opts, FLUX_FM_BITCELL_NS);
     
     /* Allocate bitstream buffer */
     size_t max_bits = FLUX_MAX_TRACK_SIZE * 8;
@@ -795,8 +836,7 @@ flux_status_t flux_decode_gcr_c64(const flux_raw_data_t *flux,
     }
     
     /* C64 default bitcell: zone 0 (tracks 1-17) = 4000ns */
-    double bitcell_ns = opts->bitcell_ns;
-    if (bitcell_ns == 0) bitcell_ns = 4000.0;
+    double bitcell_ns = flux_pick_bitcell_ns(flux, opts, 4000.0);
     
     /* Allocate bitstream buffer */
     size_t max_bits = FLUX_MAX_TRACK_SIZE * 8;
@@ -989,8 +1029,7 @@ flux_status_t flux_decode_gcr_apple(const flux_raw_data_t *flux,
         opts = &default_opts;
     }
     
-    double bitcell_ns = opts->bitcell_ns;
-    if (bitcell_ns == 0) bitcell_ns = APPLE_GCR_BITCELL_NS;
+    double bitcell_ns = flux_pick_bitcell_ns(flux, opts, APPLE_GCR_BITCELL_NS);
     
     size_t max_bits = FLUX_MAX_TRACK_SIZE * 8;
     uint8_t *bits = calloc(max_bits / 8 + 1, 1);
@@ -1330,8 +1369,7 @@ flux_status_t flux_decode_amiga(const flux_raw_data_t *flux,
         opts = &default_opts;
     }
 
-    double bitcell_ns = opts->bitcell_ns;
-    if (bitcell_ns == 0) bitcell_ns = FLUX_MFM_DD_BITCELL_NS;  /* Amiga DD = 2us */
+    double bitcell_ns = flux_pick_bitcell_ns(flux, opts, FLUX_MFM_DD_BITCELL_NS);
 
     size_t max_bits = FLUX_MAX_TRACK_SIZE * 8;
     uint8_t *bits = calloc(max_bits / 8 + 1, 1);

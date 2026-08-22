@@ -3652,6 +3652,105 @@ beschrieben stehen.
 
 ---
 
+### FLUX-4 — die gemessene Umdrehung erreichte den Decoder nie (2026-08-22, MF-475) → ✓ BEHOBEN
+
+MF-471 hat die Zellendauer aus der **gemessenen** Umdrehung statt aus einer
+Annahme bestimmt. Danach hatte sie keinen Aufrufer — und beim Nachmessen
+zeigten sich zwei Bruchstellen, die beide dafür gesorgt hätten, dass ein
+gesetztes Medienprofil **nichts** geändert hätte.
+
+#### 1. Der Erzeuger lieferte keine Index-Impulse
+
+`flux_raw_from_ns_intervals()` (`src/flux/uft_flux_decoder.c`) machte
+`memset(out, 0, sizeof(*out))` und füllte `index_times` nie. Damit war
+`index_count == 0`, die Messung in MF-471 schlug **immer** fehl, und die Wahl
+fiel auf ihren Nennwert zurück.
+
+Das ist der Grund, warum ich im Konvertierungspfad nicht einfach
+`dopts.media = …` gesetzt habe: die Zeile hätte fachkundig ausgesehen und
+wäre wirkungslos gewesen. Ein Profil ohne Messung ist keine Verbesserung,
+sondern eine Behauptung.
+
+Neu ist `flux_raw_from_ns_intervals_indexed()`, das die gemessene
+Umdrehungsdauer mitnimmt. Die Information gab es längst: das SCP-Plugin
+schreibt sie aus dem Umdrehungskopf nach `uft_track_t::metrics.index_time_ns`
+(`src/formats/scp/uft_scp_plugin.c:401`) — sie wurde auf dem Weg zum Decoder
+nur fallen gelassen.
+
+> **Warum die Dauer geprüft wird, bevor sie übernommen wird.** Aus einer
+> Umdrehungsdauer entstehen zwei Marken: 0 und `revolution_ns`. Das ist eine
+> Aussage über die **Struktur** des Datenstroms — „dieser Strom ist genau eine
+> Umdrehung". Deckt er drei, oder einen abgeschnittenen Rest, wäre die Aussage
+> falsch, und der Decoder würde daraus eine falsche Zellendauer rechnen, die
+> wie eine Messung aussieht. Die Toleranz ist ±50 % der kumulierten Flusszeit:
+> weit genug für eine angeschnittene Umdrehung, eng genug, um zwei
+> auszuschließen. Passt es nicht, bleibt die Spur ohne Marken und der Nennwert
+> gilt — sichtbar schlechter statt unsichtbar falsch.
+
+#### 2. Vier von fünf Decodern kannten die Wahl gar nicht
+
+Die dreistufige Reihenfolge aus MF-471 stand in `flux_decode_mfm()`. Die
+anderen vier trugen weiter ihre feste Zahl:
+
+| Decoder | Zeile vor MF-475 |
+|---|---|
+| `flux_decode_fm` | `opts->bitcell_ns ? … : FLUX_FM_BITCELL_NS` |
+| `flux_decode_gcr_c64` | `if (bitcell_ns == 0) bitcell_ns = 4000.0;` |
+| `flux_decode_gcr_apple` | `… = APPLE_GCR_BITCELL_NS;` |
+| `flux_decode_amiga` | `… = FLUX_MFM_DD_BITCELL_NS;` |
+
+Darunter ausgerechnet der **FM-Pfad** — Atari 810/1050, 288 min⁻¹, also genau
+der Fall, für den das Profil gebaut wurde.
+
+Das ist zum wiederholten Mal dieselbe Diagnose: **wo ein Fakt an fünf Stellen
+steht, ist die Fassung, die läuft, nicht die bessere, sondern die zufällig
+aufgerufene.** Seit MF-475 gibt es `flux_pick_bitcell_ns()` und fünf Aufrufer,
+jeder mit seinem eigenen Nennwert als letzter Stufe.
+
+#### Die verdrahtete Kette
+
+```
+SCP-Umdrehungskopf (duration)
+  → uft_scp_plugin.c        metrics.index_time_ns
+  → uft_format_convert_flux.c  flux_raw_from_ns_intervals_indexed()
+  → flux_raw_data_t         index_times = {0, rev_ns}
+  → flux_pick_bitcell_ns()  Profil + Messung → Zellendauer
+  → flux_decode_amiga()     PLL-Startperiode
+```
+
+Gesetzt wird `UFT_MEDIA_AMIGA_DD` im SCP→ADF-Pfad. Das Medium ist dort
+tatsächlich bekannt und nicht geraten: das Ziel ist ADF, und ADF gibt es nur
+für AmigaDOS-DD.
+
+#### Rot-Proben
+
+| Verfälschung | Ergebnis |
+|---|---|
+| Plausibilitätsprüfung entfernt | genau `builder_refuses_a_revolution_that_does_not_fit` fällt |
+| FM-Pfad auf den Zustand vor MF-475 zurück | genau `fm_decoder_follows_the_measured_revolution` fällt |
+| Rangfolge umgedreht (Messung vor explizitem `bitcell_ns`) | genau `an_explicit_bitcell_still_wins_over_the_measurement` fällt |
+
+`ctest` 219/219, alle 21 Gate-Kategorien 0, `verify_build_sources.py` 0/0.
+
+**Ehrlich zur Reichweite.**
+
+- Verdrahtet ist **ein** Pfad: SCP→ADF. Die anderen Flux-Konvertierungen
+  (SCP→D64, SCP→G64, SCP→HFE) bauen ihre Flux-Daten nicht über
+  `flux_raw_from_ns_intervals()` und sind unberührt — dort ist die Verdrahtung
+  offen und jeweils ein eigener Schritt.
+- Der GUI-Pfad setzt kein Medienprofil. Das Feld existiert in
+  `flux_decoder_options_t`, aber kein Dialog schreibt hinein; Punkt 5 der
+  Gap-Analyse (Prozent-Nachstellung als Bedienelement) ist weiter offen.
+- Geprüft ist, dass die gemessene Umdrehung die **Startperiode der PLL**
+  bestimmt. Dass ein 288-min⁻¹-Abbild damit auch mehr Sektoren liefert als
+  ohne, ist plausibel und **nicht gemessen** — dafür braucht es ein reales
+  Abbild mit abweichender Drehzahl im Korpus.
+- Zwei Module aus dieser Reihe bleiben ohne Aufrufer: die
+  Multiread-Klassifikation (MF-473) und der ATX-Schreiber (MF-474). Beide
+  sind getestet, beide brauchen ihren eigenen Verdrahtungsschritt.
+
+---
+
 ### FMT-24 — ATX kann jetzt auch geschrieben werden (2026-08-22, MF-474) → ✓ BEHOBEN
 
 Punkt 3.2 der a8rawconv-Gap-Analyse. Bis hierher konnte UFT ATX lesen und

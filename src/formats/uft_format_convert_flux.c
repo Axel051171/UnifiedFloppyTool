@@ -239,6 +239,12 @@ static uft_error_t uftc_convert_scp_to_adf_via_plugin(
 
     flux_decoder_options_t dopts;
     flux_decoder_options_init(&dopts);
+    /* Das Medium ist hier bekannt: das Ziel ist ADF, und ADF gibt es nur fuer
+     * AmigaDOS-DD (MF-475). Zusammen mit der gemessenen Umdrehungsdauer aus dem
+     * SCP-Datensatz (unten) waehlt der Decoder die Zellendauer aus der echten
+     * Drehzahl statt aus dem Nennwert. Ohne beides zusammen bleibt es beim
+     * Nennwert — ein Medienprofil ohne Messung ist keine Verbesserung. */
+    dopts.media = UFT_MEDIA_AMIGA_DD;
 
     uftc_report_progress(opts, 10, "Decoding AmigaDOS sectors from flux");
 
@@ -254,9 +260,15 @@ static uft_error_t uftc_convert_scp_to_adf_via_plugin(
                 continue;
             }
 
-            /* ns intervals -> cumulative transition times (MF-438). */
+            /* ns intervals -> cumulative transition times (MF-438), samt der
+             * gemessenen Umdrehungsdauer aus dem SCP-Umdrehungskopf (MF-475).
+             * Das SCP-Plugin legt sie in metrics.index_time_ns ab; ohne sie
+             * traegt die Spur keine Index-Impulse und die Zellendauer-Wahl
+             * faellt auf ihren Nennwert zurueck. */
             flux_raw_data_t raw;
-            if (flux_raw_from_ns_intervals(t.flux, t.flux_count, &raw) != FLUX_OK) {
+            if (flux_raw_from_ns_intervals_indexed(t.flux, t.flux_count,
+                                                   t.metrics.index_time_ns,
+                                                   &raw) != FLUX_OK) {
                 uft_track_release(&t);
                 result->tracks_failed++;
                 continue;

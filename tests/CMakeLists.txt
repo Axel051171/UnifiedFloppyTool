@@ -554,6 +554,14 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c
             ${CMAKE_SOURCE_DIR}/src/formats/amiga/uft_amiga_syncs.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
+    elseif(${test_name} STREQUAL "test_flux_index_wiring")
+        # MF-475: die gemessene Umdrehung erreicht alle fuenf Decoder
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c
+            ${CMAKE_SOURCE_DIR}/src/formats/amiga/uft_amiga_syncs.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
     elseif(${test_name} STREQUAL "test_atx_roundtrip")
         # ATX write-read-Rundlauf (MF-474)
         target_sources(${test_name} PRIVATE

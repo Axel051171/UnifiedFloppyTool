@@ -363,6 +363,40 @@ flux_status_t flux_raw_from_ns_intervals(const uint32_t *intervals,
                                          size_t count,
                                          flux_raw_data_t *out);
 
+/**
+ * @brief Wie flux_raw_from_ns_intervals(), aber mit der GEMESSENEN
+ *        Umdrehungsdauer des Datensatzes (MF-475).
+ *
+ * Die Schwesterfunktion ohne Umdrehungsdauer liefert eine Spur ohne
+ * Index-Impulse (`index_count == 0`). Fuer die Zellendauer-Bestimmung nach
+ * MF-471 ist das der Unterschied zwischen einer Messung und einer Annahme:
+ * ohne Index-Impulse faellt sie auf „MFM DD" zurueck, und eine Diskette mit
+ * abweichender Drehzahl — Atari 810/1050/XF551 mit 288 min⁻¹ — wird
+ * schweigend um 4 % daneben dekodiert.
+ *
+ * @p revolution_ns ist die Zeit vom Indexpuls, an dem der Datensatz beginnt,
+ * bis zum naechsten. Ein SCP-Umdrehungskopf traegt sie als `duration`
+ * (`src/formats/scp/uft_scp_plugin.c` → `uft_track_t::metrics.index_time_ns`).
+ * Daraus entstehen genau zwei Marken: 0 und @p revolution_ns.
+ *
+ * **Nicht uebernommen wird eine Dauer, die nicht zum Datenstrom passt.** Deckt
+ * der Strom mehrere Umdrehungen oder nur einen Bruchteil, waeren zwei Marken
+ * eine falsche Aussage ueber seine Struktur; dann bleibt @p out ohne Marken
+ * und die Zellendauer faellt auf ihren Vorgabewert zurueck. Toleranz ist
+ * ±50 % der kumulierten Flusszeit — weit genug fuer eine angeschnittene
+ * Umdrehung, eng genug, um zwei davon auszuschliessen.
+ *
+ * @p revolution_ns == 0 heisst „nicht gemessen" und ist kein Fehler; die
+ * Funktion verhaelt sich dann wie ihre Schwester.
+ *
+ * Caller owns out->transitions und out->index_times — beides gibt
+ * flux_raw_free() frei.
+ */
+flux_status_t flux_raw_from_ns_intervals_indexed(const uint32_t *intervals,
+                                                 size_t count,
+                                                 uint32_t revolution_ns,
+                                                 flux_raw_data_t *out);
+
 /** @brief Release a flux_raw_data_t built by flux_raw_from_ns_intervals(). */
 void flux_raw_free(flux_raw_data_t *raw);
 
