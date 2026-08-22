@@ -554,6 +554,11 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c
             ${CMAKE_SOURCE_DIR}/src/formats/amiga/uft_amiga_syncs.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
+    elseif(${test_name} STREQUAL "test_atx_roundtrip")
+        # ATX write-read-Rundlauf (MF-474)
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/atx/uft_atx.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
     elseif(${test_name} STREQUAL "test_atx_layout")
         # ATX track/chunk layout vs. the a8rawconv oracle (MF-467)
         target_sources(${test_name} PRIVATE

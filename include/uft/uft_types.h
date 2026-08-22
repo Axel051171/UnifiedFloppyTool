@@ -382,6 +382,37 @@ typedef struct uft_sector {
      * (D88 0xA0 vs 0xB0, STX/EDSK/NFD ST1 vs ST2). Default true = no ID error.
      * Added at struct end (ABI-additive; existing field offsets unchanged). */
     bool             id_crc_ok;       ///< ID-field (address-mark) CRC valid
+
+    /**
+     * @brief Winkelposition des Sektors auf der Spur, 0.0 .. 1.0 (MF-474).
+     *
+     * Wo der Sektor liegt, gemessen vom Indexpuls, als Bruchteil einer
+     * Umdrehung. Ein `double` und kein Rohwert, weil die Einheit nicht dem
+     * Format gehoert.
+     *
+     * NUR GUELTIG, WENN @ref has_angular_position gesetzt ist. Das Flag ist
+     * kein Zierrat: Sektoren entstehen an vielen Stellen per
+     * `memset(&s, 0, sizeof s)`, und 0.0 hiesse dann "liegt genau am
+     * Indexpuls" — eine Aussage, die niemand getroffen hat. Ein eigenes Flag
+     * ist memset-sicher; eine Konvention wie "negativ = unbekannt" haette
+     * jeder Erzeuger einzeln einhalten muessen.
+     *
+     * ATX speichert sie als `mTimingOffset` in 1/26042 Umdrehung
+     * (src/a8rawconv/diskatx.cpp:170, `sec.mPosition = mTimingOffset /
+     * 26042.0f`). Die Position ist dort forensisch tragend: mehrere Sektoren
+     * mit derselben Nummer unterscheiden sich NUR durch sie, und genau das
+     * ist der Phantomsektor-Kopierschutz.
+     *
+     * Die vorhandenen Positionsfelder oben (`bit_offset`, `byte_offset`)
+     * taugen dafuer nicht — sie zaehlen im Datenstrom, nicht auf dem Medium.
+     *
+     * Am Struct-Ende angehaengt, wie `id_crc_ok` darueber: bestehende
+     * Feld-Offsets bleiben unveraendert (ABI-additiv).
+     */
+    double           angular_position;
+
+    /** true, wenn @ref angular_position aus dem Medium stammt. Siehe dort. */
+    bool             has_angular_position;
 } uft_sector_t;
 
 /**

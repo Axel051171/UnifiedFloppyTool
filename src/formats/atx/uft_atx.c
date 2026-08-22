@@ -50,6 +50,7 @@
  */
 #include "uft/uft_format_common.h"
 #include "uft/uft_log.h"
+#include "uft/formats/atx.h"   /* uft_atx_write() (MF-474) */
 
 /*
  * ATX signature as read by uft_read_le32 on the bytes 'A','T','8','X'
@@ -68,6 +69,11 @@
  * for a long one (write_atx:381 writes 128 unconditionally). The extended
  * chunk describes the PHYSICAL size, not extra payload. */
 #define ATX_SECTOR_SIZE        128
+
+/* Winkelposition: ATX zaehlt eine Umdrehung in 26042 Schritten
+ * (diskatx.cpp:170 `sec.mPosition = (float)shdr.mTimingOffset / 26042.0f`,
+ * write_atx:376 rechnet mit demselben Faktor zurueck). */
+#define ATX_TIMING_UNITS_PER_REV 26042
 
 /* File header offsets */
 #define ATX_OFF_VERSION_MAJOR  0x04
@@ -312,6 +318,7 @@ static uft_error_t atx_read_track(uft_disk_t *disk, int cyl, int head,
         const uint8_t *sh = p->file_data + sh_off;
         uint8_t  sec_id       = sh[0];
         uint8_t  fdc          = sh[1];
+        uint16_t timing       = uft_read_le16(sh + 2);
         uint32_t sec_data_off = uft_read_le32(sh + 4);
 
         bool missing = (fdc & ATX_FDC_MISSING_DATA) != 0;
@@ -349,6 +356,14 @@ static uft_error_t atx_read_track(uft_disk_t *disk, int cyl, int head,
 
         produced[s] = (int)track->sector_count - 1;
         uft_sector_t *sec = &track->sectors[track->sector_count - 1];
+
+        /* Winkelposition erhalten (MF-474). ATX zaehlt in 1/26042
+         * Umdrehung (diskatx.cpp:170). Sie ist hier forensisch tragend:
+         * zwei Sektoren mit derselben Nummer unterscheiden sich NUR durch
+         * ihre Position, und genau das ist der Phantomsektor-Kopierschutz.
+         * Bis MF-474 wurde der Wert gelesen und weggeworfen. */
+        sec->angular_position = (double)timing / (double)ATX_TIMING_UNITS_PER_REV;
+        sec->has_angular_position = true;
 
         uft_sector_set_crc(sec, !(data_crc_bad || missing));
         uft_sector_set_id_crc(sec, !addr_crc_bad);
@@ -415,13 +430,203 @@ static uft_error_t atx_read_track(uft_disk_t *disk, int cyl, int head,
     return UFT_OK;
 }
 
+/* ───────────────────────── Write ──────────────────────────────────── */
+
+/*
+ * Bis MF-474 stand hier: "write_track is deliberately omitted — ATX encodes
+ * per-sector timing anomalies, weak bits, duplicate sector IDs, and
+ * FDC-status quirks that cannot be synthesised from sector payload alone."
+ *
+ * Das war richtig, solange der Leser genau diese Dinge wegwarf. Seit MF-467
+ * traegt die Spur sie alle — Status je Sektor, Weak-Maske, doppelte
+ * Sektornummern — und seit MF-474 auch die Winkelposition. Damit ist der
+ * Rueckweg nicht mehr Erfindung, sondern Wiedergabe.
+ *
+ * Was bleibt: eine Spur, die NICHT aus einem ATX stammt, hat keine
+ * Winkelpositionen. Der Schreiber verteilt dann gleichmaessig und SAGT das —
+ * er tut nicht so, als haette er gemessen.
+ */
+
+/** Einen Spur-Datensatz anfuegen. */
+static uft_error_t atx_write_track_record(FILE *f, int cyl,
+                                          const uft_track_t *track,
+                                          bool *out_synth_positions)
+{
+    uint16_t n = (uint16_t)track->sector_count;
+    if (n > ATX_MAX_SECTORS) n = ATX_MAX_SECTORS;
+
+    /* Weak-Chunks nur fuer Sektoren, die wirklich eine Maske tragen. */
+    uint16_t weak_n = 0;
+    for (uint16_t s = 0; s < n; s++)
+        if (track->sectors[s].weak_mask) weak_n++;
+
+    /* Groesse wie write_atx:301-306: Kopf + Sektorliste + Sektordaten +
+     * Weak-Chunks + Abschluss. */
+    uint32_t rec_size = ATX_TRACK_HEADER_SIZE
+                      + ATX_CHUNK_HEADER_SIZE + 8u * n
+                      + ATX_CHUNK_HEADER_SIZE + (uint32_t)ATX_SECTOR_SIZE * n
+                      + ATX_CHUNK_HEADER_SIZE * (uint32_t)weak_n
+                      + ATX_CHUNK_HEADER_SIZE;
+
+    uint8_t th[ATX_TRACK_HEADER_SIZE];
+    memset(th, 0, sizeof(th));
+    uft_write_le32(th + ATX_TRK_OFF_SIZE, rec_size);
+    uft_write_le16(th + ATX_TRK_OFF_TYPE, 0);
+    th[ATX_TRK_OFF_NUMBER] = (uint8_t)cyl;
+    uft_write_le16(th + ATX_TRK_OFF_NUMSECS, n);
+    uft_write_le32(th + ATX_TRK_OFF_FLAGS,
+                   (track->encoding == UFT_ENCODING_MFM) ? ATX_TRK_FLAG_MFM : 0);
+    uft_write_le32(th + ATX_TRK_OFF_CHUNKS, ATX_TRACK_HEADER_SIZE);
+    if (fwrite(th, 1, sizeof(th), f) != sizeof(th)) return UFT_ERROR_FILE_WRITE;
+
+    /* Sektorliste */
+    uint8_t ch[ATX_CHUNK_HEADER_SIZE];
+    memset(ch, 0, sizeof(ch));
+    uft_write_le32(ch, ATX_CHUNK_HEADER_SIZE + 8u * n);
+    ch[4] = ATX_CHUNK_SECTOR_LIST;
+    if (fwrite(ch, 1, sizeof(ch), f) != sizeof(ch)) return UFT_ERROR_FILE_WRITE;
+
+    const uint32_t data_base = ATX_TRACK_HEADER_SIZE
+                             + ATX_CHUNK_HEADER_SIZE + 8u * n
+                             + ATX_CHUNK_HEADER_SIZE;
+
+    for (uint16_t s = 0; s < n; s++) {
+        const uft_sector_t *sec = &track->sectors[s];
+        uint8_t sh[8];
+        memset(sh, 0, sizeof(sh));
+
+        sh[0] = sec->id.sector;
+
+        /* Status zurueckuebersetzen — die Umkehrung von read_track oben.
+         * Adressfeld-CRC setzt BEIDE Bits (write_atx:346-349). */
+        uint8_t fdc = 0;
+        if (sec->status & UFT_SECTOR_ID_CRC_ERROR) fdc |= ATX_FDC_ADDR_CRC_MASK;
+        else if (!sec->crc_ok)                     fdc |= ATX_FDC_CRC_ERROR;
+        if (sec->status & UFT_SECTOR_MISSING)      fdc |= ATX_FDC_MISSING_DATA;
+        if (sec->deleted)                          fdc |= ATX_FDC_DELETED;
+        if (sec->status & UFT_SECTOR_EXTRA)        fdc |= ATX_FDC_LOST_DATA | ATX_FDC_DRQ;
+        if (sec->weak || sec->weak_mask)           fdc |= ATX_FDC_WEAK;
+        sh[1] = fdc;
+
+        /* Winkelposition. Liegt keine vor, gleichmaessig verteilen — und den
+         * Aufrufer wissen lassen, dass diese Zahlen gerechnet und nicht
+         * gemessen sind. */
+        double pos;
+        if (sec->has_angular_position) {
+            pos = sec->angular_position;
+        } else {
+            pos = (n > 0) ? ((double)s / (double)n) : 0.0;
+            *out_synth_positions = true;
+        }
+        if (pos < 0.0) pos = 0.0;
+        long units = (long)(pos * ATX_TIMING_UNITS_PER_REV);
+        units %= ATX_TIMING_UNITS_PER_REV;      /* write_atx:371 */
+        uft_write_le16(sh + 2, (uint16_t)units);
+
+        uft_write_le32(sh + 4, data_base + (uint32_t)s * ATX_SECTOR_SIZE);
+        if (fwrite(sh, 1, sizeof(sh), f) != sizeof(sh)) return UFT_ERROR_FILE_WRITE;
+    }
+
+    /* Sektordaten */
+    memset(ch, 0, sizeof(ch));
+    uft_write_le32(ch, ATX_CHUNK_HEADER_SIZE + (uint32_t)ATX_SECTOR_SIZE * n);
+    ch[4] = ATX_CHUNK_SECTOR_DATA;
+    if (fwrite(ch, 1, sizeof(ch), f) != sizeof(ch)) return UFT_ERROR_FILE_WRITE;
+
+    for (uint16_t s = 0; s < n; s++) {
+        const uft_sector_t *sec = &track->sectors[s];
+        uint8_t payload[ATX_SECTOR_SIZE];
+        memset(payload, 0, sizeof(payload));
+        if (sec->data) {
+            size_t len = sec->data_len ? sec->data_len : sec->data_size;
+            if (len > ATX_SECTOR_SIZE) len = ATX_SECTOR_SIZE;
+            memcpy(payload, sec->data, len);
+        }
+        if (fwrite(payload, 1, sizeof(payload), f) != sizeof(payload))
+            return UFT_ERROR_FILE_WRITE;
+    }
+
+    /* Weak-Chunks: Index in der SEKTORLISTE plus erstes weakes Byte. */
+    for (uint16_t s = 0; s < n; s++) {
+        const uft_sector_t *sec = &track->sectors[s];
+        if (!sec->weak_mask) continue;
+
+        size_t len = sec->data_len ? sec->data_len : sec->data_size;
+        if (len > ATX_SECTOR_SIZE) len = ATX_SECTOR_SIZE;
+        size_t first = len;
+        for (size_t i = 0; i < len; i++) {
+            if (sec->weak_mask[i]) { first = i; break; }
+        }
+        if (first >= len) continue;     /* Maske ohne gesetztes Byte */
+
+        memset(ch, 0, sizeof(ch));
+        uft_write_le32(ch, ATX_CHUNK_HEADER_SIZE);
+        ch[4] = ATX_CHUNK_WEAK_BITS;
+        ch[5] = (uint8_t)s;
+        uft_write_le16(ch + 6, (uint16_t)first);
+        if (fwrite(ch, 1, sizeof(ch), f) != sizeof(ch)) return UFT_ERROR_FILE_WRITE;
+    }
+
+    /* Abschluss der Chunk-Liste: acht Nullbytes (write_atx:415-416). */
+    memset(ch, 0, sizeof(ch));
+    if (fwrite(ch, 1, sizeof(ch), f) != sizeof(ch)) return UFT_ERROR_FILE_WRITE;
+
+    return UFT_OK;
+}
+
+uft_error_t uft_atx_write(const char *path, const uft_track_t *tracks,
+                          size_t track_count, bool enhanced_density)
+{
+    if (!path || !tracks || track_count == 0) return UFT_ERROR_NULL_POINTER;
+    if (track_count > ATX_MAX_TRACKS)         return UFT_ERROR_OUT_OF_RANGE;
+
+    FILE *f = fopen(path, "wb");
+    if (!f) return UFT_ERROR_FILE_OPEN;
+
+    /* Dateikopf, Felder wie write_atx:242-259. Der Creator dort ist 0x5241
+     * fuer a8rawconv; UFT setzt 0x4655. */
+    uint8_t hdr[ATX_FILE_HEADER_SIZE];
+    memset(hdr, 0, sizeof(hdr));
+    memcpy(hdr, "AT8X", 4);
+    uft_write_le16(hdr + ATX_OFF_VERSION_MAJOR, 1);
+    uft_write_le16(hdr + ATX_OFF_VERSION_MINOR, 1);
+    uft_write_le16(hdr + 0x08, 0x4655);            /* creator */
+    hdr[ATX_OFF_DENSITY] = enhanced_density ? 1 : 0;
+    uft_write_le32(hdr + ATX_OFF_TRACK_DATA, ATX_FILE_HEADER_SIZE);
+    if (fwrite(hdr, 1, sizeof(hdr), f) != sizeof(hdr)) {
+        fclose(f);
+        return UFT_ERROR_FILE_WRITE;
+    }
+
+    bool synth_positions = false;
+    for (size_t i = 0; i < track_count; i++) {
+        uft_error_t rc = atx_write_track_record(f, (int)i, &tracks[i],
+                                                &synth_positions);
+        if (rc != UFT_OK) { fclose(f); return rc; }
+    }
+
+    fclose(f);
+
+    if (synth_positions) {
+        /* Prinzip 1: was gerechnet ist, darf nicht als gemessen durchgehen.
+         * Winkelpositionen tragen bei ATX Kopierschutz-Information; ein
+         * gleichmaessig verteiltes Layout sieht plausibel aus und ist es
+         * nicht. */
+        UFT_WARN("ATX: mindestens eine Spur brachte keine Winkelpositionen mit "
+                 "— sie wurden gleichmaessig verteilt. Diese Positionen sind "
+                 "GERECHNET, nicht gemessen (%s)", path);
+    }
+    return UFT_OK;
+}
+
 /* ───────────────────────── Plugin registration ────────────────────── */
 
 /*
- * write_track is deliberately omitted: ATX encodes per-sector timing
- * anomalies, weak bits, duplicate sector IDs, and FDC-status quirks
- * that cannot be synthesised from sector payload alone. Attempting
- * to write ATX would silently lose forensic information. Prinzip 1.
+ * Die Plugin-Schnittstelle `write_track` bleibt bewusst leer: sie schreibt
+ * EINE Spur in eine bestehende Datei, und ein ATX ist eine Kette von
+ * Spur-Datensaetzen ohne Offset-Tabelle — eine Spur nachtraeglich zu
+ * ersetzen hiesse, alles danach zu verschieben. Der Export geht deshalb
+ * ueber uft_atx_write() ueber die ganze Diskette auf einmal (MF-474).
  */
 
 static const uft_plugin_feature_t uft_format_plugin_atx_features[] = {

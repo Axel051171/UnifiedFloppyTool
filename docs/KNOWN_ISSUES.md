@@ -3652,6 +3652,101 @@ beschrieben stehen.
 
 ---
 
+### FMT-24 — ATX kann jetzt auch geschrieben werden (2026-08-22, MF-474) → ✓ BEHOBEN
+
+Punkt 3.2 der a8rawconv-Gap-Analyse. Bis hierher konnte UFT ATX lesen und
+nicht schreiben — und die Begründung dafür stand seit MF-467 in der Datei:
+
+> „write_track is deliberately omitted: ATX encodes per-sector timing
+> anomalies, weak bits, duplicate sector IDs, and FDC-status quirks that
+> cannot be synthesised from sector payload alone."
+
+**Diese Begründung war richtig, ist es aber nicht mehr.** Seit MF-467 trägt
+die gelesene Spur genau diese Dinge: Status je Sektor (Daten- und
+Adressfeld-CRC, fehlendes Datenfeld, Deleted-Mark, langer Sektor, weak),
+doppelte Sektornummern als Phantomsektoren, und die Weak-Maske je Byte. Ein
+Rückweg ist damit Wiedergabe, nicht Erfindung.
+
+#### Eine Lücke, die ich selbst eingebaut hatte
+
+Ein Feld fehlte: die **Winkelposition**. Mein MF-467-Leser las den
+`mTimingOffset` aus dem Sektorkopf **gar nicht mehr** — die alte Fassung
+hatte ihn wenigstens gelesen und dann verworfen (`(void)timing_off`).
+
+Bei ATX ist das keine Nebensache. Zwei Sektoren mit derselben Nummer
+unterscheiden sich **nur** durch ihre Position, und genau das ist der
+Phantomsektor-Kopierschutz. Ohne sie wären es zwei nicht unterscheidbare
+Kopien.
+
+Neu in `uft_sector_t`, am Struct-Ende angehängt wie `id_crc_ok` davor:
+`angular_position` (0…1 vom Indexpuls, ATX zählt in 1/26042 Umdrehung —
+`diskatx.cpp:170`) plus `has_angular_position`.
+
+> **Warum ein eigenes Flag und keine „negativ = unbekannt"-Konvention.**
+> Sektoren entstehen an vielen Stellen per `memset(&s, 0, sizeof s)`. Der
+> Nullwert hieße dann „liegt genau am Indexpuls" — eine Aussage, die niemand
+> getroffen hat. Ein Flag ist memset-sicher; eine Konvention hätte jeder
+> Erzeuger einzeln einhalten müssen, und einer hätte sie übersehen.
+
+#### Der Schreiber
+
+`uft_atx_write()` schreibt die ganze Diskette auf einmal. **Kein
+`write_track`** je Spur, und das ist keine Bequemlichkeit: ein ATX ist eine
+Kette von Spur-Datensätzen ohne Offset-Tabelle — eine Spur nachträglich zu
+ersetzen hieße, alles danach zu verschieben.
+
+Feldsemantik ist die Umkehrung des Lesers, Beleg für Beleg gegen
+`write_atx` (`diskatx.cpp:216-416`), inklusive der Feinheit, dass ein
+Adressfeld-CRC-Fehler **beide** Bits setzt (`:346-349`) und der Abschluss der
+Chunk-Liste acht Nullbytes sind (`:415-416`).
+
+**Was der Schreiber nicht kann, sagt er.** Eine Spur aus einer anderen Quelle
+hat keine Winkelpositionen — kein anderes Format liefert sie. Sie werden dann
+gleichmäßig verteilt, und der Aufruf meldet:
+
+```
+ATX: mindestens eine Spur brachte keine Winkelpositionen mit — sie wurden
+gleichmaessig verteilt. Diese Positionen sind GERECHNET, nicht gemessen
+```
+
+Ein gleichmäßiges Layout sieht plausibel aus und ist es nicht; bei einem
+Format, dessen Positionen Kopierschutz tragen, wäre stilles Erfinden der
+schlimmere Fehler als gar kein Export.
+
+#### Rot-Proben
+
+Das write-read-Muster hat in diesem Projekt schon zwei echte
+Korruptionsfehler gefunden (SCP MF-318, IMD MF-320), deshalb steht es hier am
+Anfang. Zwei gezielte Verfälschungen zeigen, dass der Test den Inhalt prüft
+und nicht die Anwesenheit von Code:
+
+| Verfälschung | Ergebnis |
+|---|---|
+| Leser verwirft die Position wieder | 3 von 4 Fällen fallen, darunter der Phantomsektor-Fall |
+| Weak-Chunk mit falschem Typ geschrieben | genau ein Fall fällt: `back.sectors[3].weak == true` |
+
+`ctest` 218/218, alle 21 Gate-Kategorien 0.
+
+**Ehrlich zur Reichweite.**
+
+- Geprüft ist **semantische** Identität der Spur über den Rundlauf, nicht
+  Byte-Identität der Datei. Byte-Identität hinge an Dingen, die das Format
+  offen lässt (Creator-Kennung, Reihenfolge gleichrangiger Chunks) — sie zu
+  verlangen hieße, eine Konvention zu prüfen statt den Inhalt.
+- Der Gegentest gegen **a8rawconv-Ausgabe desselben Dumps**, den die
+  Gap-Analyse vorschlägt, steht aus: dafür braucht es a8rawconv als Binary
+  im Testharness und ein reales Abbild. Beides ist der nächste Schritt und
+  ein eigener.
+- **Kein Aufrufer exportiert bisher ATX.** `uft_atx_write()` ist die Funktion
+  dafür; der Smart-Export-Dialog kennt sie noch nicht.
+- Lange Sektoren werden als `LOST_DATA|DRQ` zurückgeschrieben, aber ohne
+  den zugehörigen Ext-Chunk — die physische Größe geht dabei verloren. ATX
+  speichert ohnehin nur 128 Byte je Sektor (`write_atx:381`), der Ext-Chunk
+  ist reine Beschreibung. Nachzuholen, wenn ein reales Abbild mit langen
+  Sektoren vorliegt.
+
+---
+
 ### FLUX-3 — stabil-mit-CRC-Fehler ist Kopierschutz, nicht Schaden (2026-08-22, MF-473) → ✓ BEHOBEN
 
 Punkt 3.8 der a8rawconv-Gap-Analyse, und der Punkt, der die fünf Umdrehungen
