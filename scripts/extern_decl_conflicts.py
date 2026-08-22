@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Hand-written `extern` declarations that disagree with the real definition.
+"""Declarations that disagree with the real definition, on parameter count.
 
 Why this exists (MF-442): `src/formats/uft_v3_bridge.c` declared
 
@@ -20,12 +20,40 @@ underlying struct), and flagging those would drown the real finding. A
 parameter-count mismatch cannot be a matter of style.
 
 Deliberately narrow, so the result stays worth reading:
-  - only `extern` declarations written inside .c/.cpp files, which is where
-    hand-written promises live; header declarations are the normal mechanism
-    and are checked by the compiler wherever the header is included
   - only names with exactly one definition in the tree, so an overload-like
     situation cannot produce a false positive
   - variadic declarations are skipped
+
+Two rules.
+
+**A — a hand-written `extern` in a .c/.cpp file disagrees with the definition.**
+That is the MF-442 case above.
+
+**B — a HEADER prototype disagrees with the definition (MF-464).** The original
+version of this file excluded headers with the reasoning that "header
+declarations are the normal mechanism and are checked by the compiler wherever
+the header is included". That reasoning has a hole, and MF-464 walked into it:
+`uft_cpm_format()` was declared in TWO headers with different signatures —
+
+    include/uft/formats/uft_cpm_diskdef.h    (uft_disk_image_t*,  def)
+    include/uft/formats/uft_cpm_diskdefs.h   (uft_disk_image_t**, def, fill)
+
+— two parameters in one, three in the other, and only the three-parameter
+version exists (`src/formats/cpm/uft_cpm_diskdefs.c:1420`). The compiler catches
+that only if some translation unit includes both headers. None does. So it sat
+there, latent, exactly like `c64_sectors_per_track` before MF-459 and
+`UFT_SCP_SIGNATURE` in ARCH-2 — waiting for the first caller to include the
+wrong one of the two and, in C, call a three-parameter function with two
+arguments. The two-parameter declaration is gone; the header says why.
+
+Rule B is restricted to C headers (`.h`, not `.hpp`) and skips any name that a
+`.cpp` or `.hpp` also declares, because C++ overloads make arity a legitimate
+difference.
+
+**21 further mismatches were already in the tree** when rule B was added. They
+are in `scripts/extern_decl_baseline.json` — a baseline entry is a KNOWN
+mismatch, not an acceptable one. None of them has a caller yet, which is the
+only reason none has bitten. The list is in docs/KNOWN_ISSUES.md (ARCH-21).
 """
 from __future__ import annotations
 
@@ -48,6 +76,10 @@ _EXTERN = re.compile(
 _DEFN = re.compile(
     r"^(?!static\b|typedef\b)[A-Za-z_][\w \t\*]*?\b([a-z_]\w*)\s*\(([^;{]*)\)\s*\{",
     re.M)
+# `<type> name(params);` — a prototype, in a header (rule B)
+_PROTO = re.compile(
+    r"^\s*(?:extern\s+)?(?!typedef\b|static\b|return\b)"
+    r"[A-Za-z_][\w \t\*]*?\b([a-z_]\w*)\s*\(([^;{]*)\)\s*;", re.M)
 
 
 def strip(text: str) -> str:
@@ -77,6 +109,8 @@ def arity(params: str):
 def scan(repo: Path):
     defs: dict[str, list[tuple[str, int]]] = {}
     externs: list[tuple[str, str, int, int]] = []   # file, name, arity, line
+    protos: list[tuple[str, str, int, int]] = []    # rule B, C headers only
+    cxx_names: set[str] = set()                     # possible overloads
 
     for p in repo.rglob("*"):
         if not p.is_file() or p.suffix.lower() not in {".c", ".cpp", ".h", ".hpp"}:
@@ -94,13 +128,34 @@ def scan(repo: Path):
             if a is not None:
                 defs.setdefault(m.group(1), []).append((rel, a))
 
-        if p.suffix.lower() in {".c", ".cpp"}:
+        suffix = p.suffix.lower()
+        if suffix in {".c", ".cpp"}:
             for m in _EXTERN.finditer(clean):
                 a = arity(m.group(2))
                 if a is None:
                     continue
-                ln = clean[:m.start()].count(chr(10)) + 1
+                # Line of the NAME, not of the match: comments are
+                # blanked to spaces, so the leading `^\s*` swallows the
+                # doc comment above the prototype and m.start() would
+                # point a dozen lines too high.
+                ln = clean[:m.start(1)].count(chr(10)) + 1
                 externs.append((rel, m.group(1), a, ln))
+
+        if suffix in {".cpp", ".hpp"}:
+            # C++ may overload; every name it mentions is off-limits for rule B
+            for m in _PROTO.finditer(clean):
+                cxx_names.add(m.group(1))
+        elif suffix == ".h":
+            for m in _PROTO.finditer(clean):
+                a = arity(m.group(2))
+                if a is None:
+                    continue
+                # Line of the NAME, not of the match: comments are
+                # blanked to spaces, so the leading `^\s*` swallows the
+                # doc comment above the prototype and m.start() would
+                # point a dozen lines too high.
+                ln = clean[:m.start(1)].count(chr(10)) + 1
+                protos.append((rel, m.group(1), a, ln))
 
     findings = []
     for src, name, a, ln in externs:
@@ -110,8 +165,22 @@ def scan(repo: Path):
         dfile, da = d[0]
         if dfile == src or da == a:
             continue
-        findings.append({"name": name, "decl_file": src, "decl_line": ln,
-                         "decl_arity": a, "def_file": dfile, "def_arity": da})
+        findings.append({"rule": "A", "name": name, "decl_file": src,
+                         "decl_line": ln, "decl_arity": a,
+                         "def_file": dfile, "def_arity": da})
+
+    for src, name, a, ln in protos:
+        if name in cxx_names:
+            continue                      # C++ in play: arity may differ legally
+        d = defs.get(name)
+        if not d or len(d) != 1:
+            continue
+        dfile, da = d[0]
+        if da == a:
+            continue
+        findings.append({"rule": "B", "name": name, "decl_file": src,
+                         "decl_line": ln, "decl_arity": a,
+                         "def_file": dfile, "def_arity": da})
     return findings
 
 
@@ -129,11 +198,17 @@ def check(repo: Path) -> list[str]:
         seen.add(key)
         if key in known:
             continue
+        why = ("A local extern is a promise the compiler believes — include "
+               "the header instead, or correct the promise"
+               if f.get("rule", "A") == "A" else
+               "A header prototype is only checked where that header is "
+               "included; if no translation unit includes it, nothing "
+               "notices. Correct the prototype, or delete it if the function "
+               "does not exist")
         errors.append(
             f"{f['decl_file']}:{f['decl_line']} declares {f['name']}() with "
             f"{f['decl_arity']} parameter(s); {f['def_file']} defines it with "
-            f"{f['def_arity']}. A local extern is a promise the compiler "
-            f"believes — include the header instead, or correct the promise")
+            f"{f['def_arity']}. {why}")
     for key in sorted(known - seen):
         errors.append(f"{key} no longer mismatches — remove it from {BASELINE}")
     return errors
@@ -145,9 +220,12 @@ def main() -> int:
 
     if "--write-baseline" in sys.argv:
         payload = {
-            "_doc": ("Hand-written extern declarations in .c files whose "
-                     "parameter count disagrees with the single definition of "
-                     "that name, as they stood after MF-442. Comparison is on "
+            "_doc": ("Declarations whose parameter count disagrees with the "
+                     "single definition of that name. Rule A: hand-written "
+                     "externs in .c files (MF-442). Rule B: header prototypes "
+                     "(MF-464) — 21 of these were already in the tree when the "
+                     "rule was added; none has a caller yet, which is the only "
+                     "reason they have not bitten. Comparison is on "
                      "arity only — type spelling varies legitimately across "
                      "files. An entry here is a KNOWN mismatch, not an "
                      "acceptable one; the fix is to include the header."),

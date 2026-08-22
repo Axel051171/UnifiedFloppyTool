@@ -246,11 +246,21 @@ uft_error_t uft_cpm_read_directory(const uft_disk_image_t *disk,
 
 
 
-/**
- * @brief Format disk with CP/M filesystem
+/* uft_cpm_format() used to be declared here as
+ *
+ *     uft_error_t uft_cpm_format(uft_disk_image_t *disk,
+ *                                const cpm_diskdef_t *def);
+ *
+ * No such function exists. The only definition is in
+ * src/formats/cpm/uft_cpm_diskdefs.c:1420 and takes THREE parameters
+ * (uft_disk_image_t **out_disk, const cpm_diskdef_t *def,
+ * uint8_t directory_fill); it is declared in uft_cpm_diskdefs.h. Two headers,
+ * one name, two signatures — the compiler only notices if a translation unit
+ * includes both, and none does. A caller who included this header would have
+ * called a three-parameter function with two arguments (MF-464).
+ *
+ * Use the declaration in uft_cpm_diskdefs.h.
  */
-uft_error_t uft_cpm_format(uft_disk_image_t *disk,
-                           const cpm_diskdef_t *def);
 
 #ifdef __cplusplus
 }

@@ -11,6 +11,9 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+/* d64_file_t — the result type of d64_extract_file() below (MF-464) */
+#include <uft/formats/c64/uft_d64_file.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -84,8 +87,19 @@ int uft_inject_file(const char *image_path, const char *filename,
 
 /* D64/D71/D81 (Commodore) */
 int d64_list_files(const uint8_t *image, size_t size, uft_directory_t *dir);
+
+/* d64_extract_file() was declared here with five parameters
+ * (..., uint8_t **data, size_t *size). The only definition takes FOUR
+ * (src/formats/c64/uft_d64_file.c:169) and writes a whole d64_file_t through
+ * the fourth. src/explorertab.cpp called it through this prototype, so the
+ * callee filled ~48 bytes of struct into an 8-byte `uint8_t *outData` on the
+ * GUI's stack, and the caller then dereferenced the filename characters as a
+ * pointer. Nothing warned: C linkage, one name, two shapes (MF-464).
+ *
+ * The real signature now stands here, so the compiler checks it. */
 int d64_extract_file(const uint8_t *image, size_t img_size,
-                     const char *filename, uint8_t **data, size_t *size);
+                     const char *filename, d64_file_t *out_file);
+
 int d64_inject_file(uint8_t *image, size_t img_size,
                     const char *filename, const uint8_t *data, size_t size,
                     uft_file_type_t type);

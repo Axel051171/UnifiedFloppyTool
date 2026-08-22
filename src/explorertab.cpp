@@ -1042,8 +1042,11 @@ void ExplorerTab::onViewHex()
     QString ext = imgInfo.suffix().toLower();
 
     if (ext == "d64" || ext == "d71" || ext == "d81") {
-        uint8_t *outData = nullptr;
-        size_t outSize = 0;
+        /* d64_extract_file() fills a d64_file_t; the previous five-argument
+         * call went through a prototype that did not match the definition and
+         * had the callee write the struct over this function's stack (MF-464). */
+        d64_file_t outFile;
+        memset(&outFile, 0, sizeof(outFile));
         QFile imgFile(m_imagePath);
         if (imgFile.open(QIODevice::ReadOnly)) {
             QByteArray imgBytes = imgFile.readAll();
@@ -1051,10 +1054,10 @@ void ExplorerTab::onViewHex()
             if (d64_extract_file(reinterpret_cast<const uint8_t*>(imgBytes.constData()),
                                  static_cast<size_t>(imgBytes.size()),
                                  fileName.toUtf8().constData(),
-                                 &outData, &outSize) == 0 && outData) {
-                fileData = QByteArray(reinterpret_cast<const char*>(outData),
-                                      static_cast<int>(outSize));
-                free(outData);
+                                 &outFile) == 0 && outFile.data) {
+                fileData = QByteArray(reinterpret_cast<const char*>(outFile.data),
+                                      static_cast<int>(outFile.data_size));
+                free(outFile.data);
                 extracted = true;
             }
         }
@@ -1186,8 +1189,11 @@ void ExplorerTab::onViewText()
     QString ext = imgInfo.suffix().toLower();
 
     if (ext == "d64" || ext == "d71" || ext == "d81") {
-        uint8_t *outData = nullptr;
-        size_t outSize = 0;
+        /* d64_extract_file() fills a d64_file_t; the previous five-argument
+         * call went through a prototype that did not match the definition and
+         * had the callee write the struct over this function's stack (MF-464). */
+        d64_file_t outFile;
+        memset(&outFile, 0, sizeof(outFile));
         QFile imgFile(m_imagePath);
         if (imgFile.open(QIODevice::ReadOnly)) {
             QByteArray imgBytes = imgFile.readAll();
@@ -1195,10 +1201,10 @@ void ExplorerTab::onViewText()
             if (d64_extract_file(reinterpret_cast<const uint8_t*>(imgBytes.constData()),
                                  static_cast<size_t>(imgBytes.size()),
                                  fileName.toUtf8().constData(),
-                                 &outData, &outSize) == 0 && outData) {
-                fileData = QByteArray(reinterpret_cast<const char*>(outData),
-                                      static_cast<int>(outSize));
-                free(outData);
+                                 &outFile) == 0 && outFile.data) {
+                fileData = QByteArray(reinterpret_cast<const char*>(outFile.data),
+                                      static_cast<int>(outFile.data_size));
+                free(outFile.data);
                 extracted = true;
             }
         }

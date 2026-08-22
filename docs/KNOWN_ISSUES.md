@@ -3652,6 +3652,158 @@ beschrieben stehen.
 
 ---
 
+### BUG-9 — Die GUI schrieb beim D64-Dateiexport über den eigenen Stack (2026-08-22, MF-464) → ✓ BEHOBEN
+
+Gefunden beim CP/M-Vergleich, über einen Umweg, der den Fund erst möglich
+gemacht hat — siehe ARCH-21 darunter.
+
+`src/explorertab.cpp` rief an zwei Stellen:
+
+```cpp
+uint8_t *outData = nullptr;
+size_t   outSize = 0;
+if (d64_extract_file(image, size, name, &outData, &outSize) == 0 && outData) {
+    fileData = QByteArray((const char*)outData, (int)outSize);
+```
+
+Fünf Argumente — so stand es in `include/uft/uft_file_ops.h`. Die **einzige**
+Definition, `src/formats/c64/uft_d64_file.c:169`, nimmt **vier**:
+
+```c
+int d64_extract_file(const uint8_t *d64_data, size_t d64_size,
+                     const char *filename, d64_file_t *file)
+```
+
+und schreibt durch den vierten Parameter eine ganze `d64_file_t` (~48 Byte:
+`filename[17]`, `file_type`, `block_count`, `data`, `data_size`).
+
+Der vierte Parameter war hier `&outData` — ein 8 Byte großer Zeiger auf dem
+Stack der GUI-Funktion. Der Callee legte also seine Struktur über `outData`
+und über das, was daneben lag (`outSize`). Danach prüfte der Aufrufer
+`outData` — inzwischen die ersten acht Zeichen des **Dateinamens** — fand es
+„nicht NULL" und reichte es als Zeiger an `QByteArray` weiter. Ein Zeiger aus
+ASCII-Buchstaben, mit einer Länge aus einem ebenfalls überschriebenen Slot.
+
+Nichts hat gewarnt: C-Linkage, ein Name, zwei Formen. Der Compiler sah in der
+GUI nur den Header, der Linker nur den Namen.
+
+**Dass es nie funktioniert haben kann**, zeigt der Gegenbeweis im Baum:
+`tests/test_d64_file.c:152` ruft dieselbe Funktion seit jeher **richtig** auf
+(`d64_extract_file(data, size, "HELLO", &file)`) und ist grün — der Test
+inkludiert den echten Header, die GUI den falschen.
+
+Behoben: der Prototyp in `uft_file_ops.h` trägt jetzt die echte Signatur (der
+Header zieht `uft_d64_file.h` dafür herein), beide Aufrufstellen benutzen eine
+`d64_file_t`. Syntaxgeprüft mit `g++ -fsyntax-only` gegen Qt 6.10.2.
+
+**Ehrlich zur Verifikation:** der C-Pfad ist durch `test_d64_file` gedeckt und
+grün. Die GUI-Strecke selbst (Explorer-Tab → Datei aus D64 exportieren) wurde
+**nicht** durchgeklickt. Der Schritt ersetzt einen Aufruf, der nachweislich
+nicht funktionieren konnte, durch den, den der bestehende Test benutzt; ein
+Smoke-Test bleibt trotzdem offen.
+
+---
+
+### ARCH-21 — Header-Prototypen prüft niemand, wenn niemand sie einbindet (2026-08-22, MF-464) → ◐ WÄCHTER STEHT, 20 Altfälle offen
+
+Der Wächter aus MF-442 (`scripts/extern_decl_conflicts.py`) prüfte
+ausdrücklich **nur** `extern`-Zeilen in `.c`-Dateien, mit der Begründung:
+Header-Deklarationen seien „der normale Mechanismus und werden vom Compiler
+geprüft, wo immer der Header eingebunden wird".
+
+Diese Begründung hat ein Loch: **wo immer** heißt nicht **irgendwo**. Zwei
+Header dürfen denselben Namen mit verschiedenen Signaturen deklarieren,
+solange keine Übersetzungseinheit beide einbindet. Genau das war der Fall bei
+
+```
+include/uft/formats/uft_cpm_diskdef.h    uft_cpm_format(uft_disk_image_t*,  def)
+include/uft/formats/uft_cpm_diskdefs.h   uft_cpm_format(uft_disk_image_t**, def, fill)
+```
+
+— zwei Parameter hier, drei dort, und nur die Drei-Parameter-Fassung
+existiert (`src/formats/cpm/uft_cpm_diskdefs.c:1420`). Dieselbe latente Klasse
+wie `c64_sectors_per_track` vor MF-459 und `UFT_SCP_SIGNATURE` in ARCH-2. Die
+Zwei-Parameter-Deklaration ist entfernt; der Header sagt jetzt, warum.
+
+**Regel B** vergleicht deshalb jetzt auch Header-Prototypen mit der Definition
+— auf Parameteranzahl, wie Regel A, und nur für C-Header (`.h`, nicht `.hpp`)
+und Namen, die keine `.cpp`/`.hpp` ebenfalls deklariert, weil C++-Overloads
+unterschiedliche Stelligkeit legitim machen.
+
+> **Nebenbefund in der eigenen Meldung.** Die Zeilennummern waren rund ein
+> Dutzend Zeilen zu klein. Kommentare werden vor der Suche zu Leerzeichen
+> ausgeweißt, und das führende `^\s*` des Musters verschluckt dann den
+> Doc-Kommentar über dem Prototyp — der Treffer begann in dessen erster Zeile.
+> Gemeldet wird jetzt die Zeile des **Namens**. Ein Wächter, der auf die
+> falsche Zeile zeigt, kostet den Leser genau das Vertrauen, das ihn nützlich
+> macht.
+
+**Was Regel B sofort fand: 22 Fälle.** Einer davon war BUG-9 oben, einer die
+CP/M-Kollision. Die übrigen **20** stehen in
+`scripts/extern_decl_baseline.json` — ein Baseline-Eintrag ist ein
+**bekannter**, kein akzeptierter Fehler:
+
+| Name | Header sagt | Definition hat |
+|---|---:|---:|
+| `uft_format_registry_init` | 1 | 0 |
+| `uft_format_detect` (3 verschiedene Header!) | 5 / 4 / 3 | 2 |
+| `uft_chs_to_lba` | 4 | 3 |
+| `uft_lba_to_chs` | 5 | 4 |
+| `uft_detect_format` | 2 | 3 |
+| `uft_crc16_ccitt` | 3 | 2 |
+| `uft_format_can_convert` | 2 | 3 |
+| `uft_verify_result_to_json` | 1 | 3 |
+| `cpm_open` | 2 | 5 |
+| `uft_imd_get_track` | 4 | 3 |
+| `uft_mfm_write_track` | 5 | 4 |
+| `uft_mfm_get_track_length` | 3 | 2 |
+| `uft_scp_read` | 4 | 3 |
+| `uft_fat32_validate` | 1 | 2 |
+| `uft_fat32_format` | 3 | 4 |
+| `uft_copylock_reconstruct` | 3 | 4 |
+| `bam_validate` | 2 | 4 |
+| `bam_sector_offset` | 3 | 2 |
+
+`uft_format_detect` ist der schlimmste Einzelfall: **drei** Header
+deklarieren ihn mit fünf, vier und drei Parametern, die Definition hat zwei.
+
+Warum keiner davon bisher geknallt hat, ist bei jedem einzeln zu klären —
+in den meisten Fällen steht der Aufrufer in derselben `.c` wie die Definition
+und sieht damit die richtige Signatur, nicht den Header. BUG-9 war der Fall,
+wo das nicht galt.
+
+**Rot-Probe des Wächters:** eine absichtlich verfälschte Stelligkeit in
+`uft_cpm_diskdefs.h` wird gemeldet, nach dem Zurücknehmen ist er wieder grün;
+und beim Beheben von BUG-9 verlangte er von sich aus den Baseline-Eintrag
+zurück („no longer mismatches").
+
+### ARCH-22 — `uft_file_ops.h`: 12 von 19 Prototypen ohne Definition (2026-08-22, MF-464) → ⚠ OFFEN
+
+Bei BUG-9 mitgemessen:
+
+| | |
+|---|---|
+| Prototypen in `include/uft/uft_file_ops.h` | 19 |
+| davon irgendwo definiert | 7 |
+| **Phantom** | **12** |
+
+`adf_extract_file`, `adf_inject_file`, `adf_list_files`, `atr_extract_file`,
+`atr_inject_file`, `atr_list_files`, `d64_inject_file`, `d64_list_files`,
+`d81_inject_file`, `ssd_inject_file`, `trd_inject_file`, `trd_list_files`.
+
+Keiner hat einen Aufrufer — hätte er einen, würde die Anwendung nicht linken.
+Das ist der **laute** Fall und damit der harmlosere; gefährlich war genau der
+eine Name, der zu einer *anderen* Funktion linkte (BUG-9). Deshalb wurde
+zuerst der behoben.
+
+Dieselbe Klasse wie die in MF-366 entfernte Audit-Trail-/Forensic-Report-API.
+Löschen ist der nächste Schritt und braucht seinen eigenen Beweis: `uft_*`-
+Header sind öffentliche API-Fläche, die Entfernung gehört in die
+RELEASE_NOTES. Die GUI benutzt für ADF ohnehin die reale `uft_adf_*`-API
+(`src/explorertab.cpp`), nicht diese Namen.
+
+---
+
 ### FMT-22 — Apple DO/PO gaben Füllbytes als gelesene Sektoren aus (2026-08-22, MF-463) → ✓ BEHOBEN, DO bleibt bewusst T3
 
 Vierter Schritt des T3-Abbaus — und der erste, der **nicht** in einer Hebung
