@@ -807,7 +807,33 @@ void HardwareTab::onConnect()
          * pattern the hardware-provider audit confirmed (ARCH-0). */
         bool constructed = true;
         if (controller == "scp") {
-            m_providerV2 = std::make_unique<::uft::hal::SCPProviderV2>(nullptr);
+            /* MF-469: das Geraet wirklich oeffnen, statt dem Provider
+             * nullptr zu geben. Der C-HAL dahinter ist seit MF-254 fertig
+             * (samdisk-portierter Lesepfad, 22/22 Opcodes byte-verifiziert)
+             * und seit MF-468 auch im Release-Build uebersetzt — es fehlte
+             * allein der Aufruf.
+             *
+             * Schlaegt das Oeffnen fehl (kein Geraet, oder unter Windows
+             * der FTDI-Treiber statt WinUSB), bleibt das Handle null und
+             * der Provider meldet weiter seinen ehrlichen Fehler. Der
+             * bedeutet dann "kein Geraet", nicht mehr "nicht verdrahtet" —
+             * deshalb steht der Grund im Log. */
+            m_scpCtx.reset();
+            uft_scp_direct_ctx_t *scpCtx = nullptr;
+            const uft_error_t scpRc = uft_scp_direct_open(&scpCtx);
+            if (scpRc == UFT_OK && scpCtx) {
+                m_scpCtx.reset(scpCtx);
+                qInfo("[HardwareTab] SuperCard Pro: device opened (libusb)");
+            } else if (scpRc == UFT_ERR_NOT_IMPLEMENTED) {
+                qWarning("[HardwareTab] SuperCard Pro: this build was compiled "
+                         "without libusb - no production transport");
+            } else {
+                qWarning("[HardwareTab] SuperCard Pro: no device found (rc=%d). "
+                         "On Windows the FTDI driver must be replaced by WinUSB "
+                         "via Zadig.", static_cast<int>(scpRc));
+            }
+            m_providerV2 =
+                std::make_unique<::uft::hal::SCPProviderV2>(m_scpCtx.get());
         } else if (controller == "kryoflux") {
             /* MF-256: real QProcess runner that launches the KryoFlux
              * `dtc` CLI. The user must have dtc on PATH (Windows: the
@@ -1143,6 +1169,14 @@ void HardwareTab::onConnect()
     });
 }
 
+/* MF-469: SCPProviderV2 besitzt sein Handle ausdruecklich NICHT
+ * (scp_provider_v2.h:93 "Ownership is NOT transferred"). Der Halter in
+ * hardwaretab.h schliesst es. */
+void HardwareTab::ScpCtxDeleter::operator()(uft_scp_direct_ctx_t *c) const noexcept
+{
+    uft_scp_direct_close(c);   /* NULL ist zulaessig — test_scp_direct_hal.c */
+}
+
 void HardwareTab::onDisconnect()
 {
     /* MF-210 (P1-1/P1-2): issue a clean motor-off to whichever connected
@@ -1164,6 +1198,10 @@ void HardwareTab::onDisconnect()
      *   2. rewireV2()               → Phase 1 disconnect, Phase 2 disable
      *                                 (provider now monostate) */
     m_providerV2 = std::monostate{};
+    /* Erst danach: der Provider haelt einen rohen Zeiger darauf, und ein
+     * offenes libusb-Handle blockiert das Geraet fuer jeden anderen
+     * Prozess (MF-469). */
+    m_scpCtx.reset();
     rewireV2();
 
     m_connected = false;

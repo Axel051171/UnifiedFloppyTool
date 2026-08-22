@@ -23,6 +23,7 @@
 #include <variant>
 
 #include "uft/hal/outcomes.h"   /* forensic Sum-Types — handlers take refs */
+#include "uft/hal/uft_scp_direct.h"  /* uft_scp_direct_ctx_t (MF-469) */
 
 namespace Ui { class TabHardware; }
 
@@ -316,6 +317,20 @@ private:
      * provider types — HardwareTab's destructor is defined in
      * hardwaretab.cpp, which #includes all 9 provider headers. */
     ProviderV2Variant m_providerV2;
+
+    /* MF-469: SCPProviderV2 nimmt ein `uft_scp_direct_ctx_t*` und sagt in
+     * seinem eigenen Kopf ausdruecklich "Ownership is NOT transferred".
+     * Besitzt es also niemand, leckt jede Umschaltung das USB-Handle und
+     * haelt das Geraet belegt. Dieser Halter schliesst es, sobald der
+     * Provider ersetzt oder die Verbindung getrennt wird.
+     *
+     * Ist kein SCP angeschlossen, bleibt der Zeiger null — der Provider
+     * meldet dann weiter seinen ehrlichen Fehler, aber der bedeutet jetzt
+     * "kein Geraet", nicht mehr "nicht verdrahtet". */
+    struct ScpCtxDeleter {
+        void operator()(uft_scp_direct_ctx_t *c) const noexcept;
+    };
+    std::unique_ptr<uft_scp_direct_ctx_t, ScpCtxDeleter> m_scpCtx;
 
     /* Re-runs `wire_hardware_tab(this)` so Phase-1 disconnect, Phase-2
      * disable, and Phase-3 wire-up reflect the current `currentProviderV2()`.

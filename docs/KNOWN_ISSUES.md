@@ -3652,6 +3652,73 @@ beschrieben stehen.
 
 ---
 
+### HAL-1 — SCP: die GUI gab dem Provider `nullptr` (2026-08-22, MF-469) → ✓ VERDRAHTET, Bench offen
+
+Zweiter Teil der Lücke aus BUILD-1. Nachdem der Schalter im Release-Build
+gesetzt ist, fehlte noch der Aufruf:
+
+```cpp
+/* src/hardwaretab.cpp:810, vorher */
+m_providerV2 = std::make_unique<::uft::hal::SCPProviderV2>(nullptr);
+```
+
+Jeder SCP-Klick landete damit im ehrlichen Stub — obwohl der C-HAL dahinter
+seit MF-254 fertig ist.
+
+**Kein Runner, ein Handle.** Die naheliegende Lösung wäre eine
+Runner-Fabrik gewesen, wie sie für Applesauce, ADF-Copy, KryoFlux,
+FluxEngine, FC5025 und USB-Floppy existiert (19 `make_*_runner`-Fabriken im
+Baum). `SCPProviderV2` nimmt aber keinen Runner, sondern ein
+`uft_scp_direct_ctx_t*` — und sein eigener Kopf sagt dazu:
+
+> `scp_provider_v2.h:93` — „The handle must remain valid for the lifetime of
+> this provider. **Ownership is NOT transferred** — call
+> `uft_scp_direct_close()` externally."
+
+Besitzt es also niemand, leckt jede Controller-Umschaltung das USB-Handle und
+hält das Gerät für jeden anderen Prozess belegt. Deshalb hält
+`HardwareTab` es jetzt in einem `unique_ptr` mit eigenem Deleter und gibt es
+frei, bevor `rewireV2()` läuft — nach dem Zerstören des Providers, der einen
+rohen Zeiger darauf hält.
+
+**Wenn kein Gerät da ist**, bleibt das Handle null und der Provider meldet
+weiter seinen ehrlichen Fehler. Der bedeutet jetzt aber etwas anderes: „kein
+Gerät", nicht mehr „nicht verdrahtet". Damit der Unterschied sichtbar ist,
+steht der Grund im Log, in drei unterscheidbaren Fällen:
+
+| Fall | Meldung |
+|---|---|
+| geöffnet | `SuperCard Pro: device opened (libusb)` |
+| Build ohne libusb | `this build was compiled without libusb - no production transport` |
+| kein Gerät | `no device found (rc=…)`, mit dem Hinweis auf Zadig/WinUSB |
+
+Der letzte Hinweis ist kein Beiwerk: unter Windows belegt der
+FTDI-Standardtreiber das Gerät, ohne libusb-Endpunkte anzubieten — der
+häufigste Grund, warum ein angeschlossener SCP nicht gefunden wird.
+
+**Worauf die Verdrahtung ruht, und was davon geprüft ist.** Drei Verträge,
+alle bereits durch Tests gedeckt:
+
+| Vertrag | Test |
+|---|---|
+| `uft_scp_direct_open()` ohne Gerät → Fehler **und** `ctx == NULL` | `test_scp_direct_hal.c::open_without_hardware` |
+| `uft_scp_direct_close(NULL)` ist zulässig | `test_scp_direct_hal.c::close_null_is_safe` |
+| `SCPProviderV2(nullptr)` liefert einen ProviderError, keinen Absturz | `test_scp_provider_v2.cpp` (4 Fälle) |
+
+**Ehrlich zur Verifikation:** der komplette qmake-Release-Build übersetzt und
+linkt (`UnifiedFloppyTool.exe`, 0 Fehler), `ctest` 216/216. Die GUI-Strecke
+selbst — Controller „scp" wählen, Verbinden drücken — wurde **nicht**
+durchgeklickt, und ohne SCP-Hardware ließe sich dabei ohnehin nur der
+„kein Gerät"-Zweig beobachten. Der Tier-3-Nachweis am echten Gerät bleibt
+UFT-008 und ist extern delegiert.
+
+`uft_scp_direct_write_flux()` bleibt unverändert NOT_IMPLEMENTED, bis der
+Lesepfad an echter Hardware verifiziert ist — ein fehlerhafter Flux-Strom
+kann forensische Medien physisch beschädigen. Das ist Projektregel, keine
+Lücke.
+
+---
+
 ### BUILD-1 — `UFT_HAS_LIBUSB` kannte nur CMake, der Release-Build baute SCP als Stub (2026-08-22, MF-468) → ✓ BEHOBEN + 21. WÄCHTER
 
 Der samdisk-portierte SCP-Lesepfad in `src/hal/uft_scp_direct.c` ist seit
