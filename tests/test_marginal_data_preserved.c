@@ -127,6 +127,155 @@ TEST(failed_crc_read_cannot_outvote_a_verified_one) {
     multiread_destroy(ctx);
 }
 
+/* ── Klassifikation: was die Lesungen ZUEINANDER sagen (MF-473) ──────
+ *
+ * Nach a8rawconv `sift_sectors` (src/a8rawconv/disk.cpp:236-365). Die
+ * Unterscheidung, die `has_weak_bits` allein nicht treffen kann:
+ *
+ *   ein Inhalt  + CRC ok      -> gesunder Sektor
+ *   ein Inhalt  + CRC falsch  -> Kopierschutz, nicht weak, nicht rettbar
+ *   mehrere     + CRC falsch  -> weak, ab gemeinsamem Praefix
+ *   mehrere     + CRC ok      -> mehrdeutig (ungewoehnlich)
+ */
+
+TEST(stable_bad_crc_is_protection_not_weakness) {
+    multiread_ctx_t *ctx = multiread_create(NULL);
+    ASSERT(ctx != NULL);
+
+    /* Drei identische Lesungen, keine mit gueltiger CRC. Genau das schreibt
+     * ein Kopierschutz absichtlich aufs Medium: die CRC ist falsch, aber sie
+     * ist JEDES MAL gleich falsch. Nochmal lesen bringt nichts Neues. */
+    const uint8_t prot[8] = { 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88 };
+    ASSERT(multiread_add_pass(ctx, prot, 8, 90, false) == MULTIREAD_OK);
+    ASSERT(multiread_add_pass(ctx, prot, 8, 90, false) == MULTIREAD_OK);
+    ASSERT(multiread_add_pass(ctx, prot, 8, 90, false) == MULTIREAD_OK);
+
+    uint8_t out[8] = {0};
+    multiread_sector_t res;
+    memset(&res, 0, sizeof(res));
+    ASSERT(multiread_execute(ctx, out, 8, &res) == MULTIREAD_OK);
+
+    ASSERT(res.class_ == MULTIREAD_CLASS_STABLE_BAD_CRC);
+    ASSERT(res.distinct_contents == 1);
+    ASSERT(res.weak_offset == -1);          /* nichts laeuft auseinander */
+    ASSERT(res.has_weak_bits == false);     /* stabil ist nicht weak */
+    ASSERT(res.recovered == false);         /* MF-466: nichts hat es geprueft */
+    ASSERT(memcmp(out, prot, 8) == 0);      /* Daten trotzdem da */
+
+    free(res.weak_mask);
+    multiread_destroy(ctx);
+}
+
+TEST(weak_offset_is_the_common_prefix_of_all_reads) {
+    multiread_ctx_t *ctx = multiread_create(NULL);
+    ASSERT(ctx != NULL);
+
+    /* Drei Lesungen ohne gueltige CRC, die ab Byte 4 auseinanderlaufen —
+     * aber unterschiedlich weit: eine weicht erst ab 6 ab, eine ab 4. Der
+     * Weak-Offset ist das LAENGSTE GEMEINSAME PRAEFIX ueber alle, also 4,
+     * nicht der Abstand zum ersten Vergleichspartner (disk.cpp:331-343). */
+    const uint8_t a[8] = { 1, 2, 3, 4, 0xAA, 0xAA, 0xAA, 0xAA };
+    const uint8_t b[8] = { 1, 2, 3, 4, 0xAA, 0xAA, 0xBB, 0xBB };  /* ab 6 */
+    const uint8_t c[8] = { 1, 2, 3, 4, 0xCC, 0xCC, 0xCC, 0xCC };  /* ab 4 */
+    ASSERT(multiread_add_pass(ctx, a, 8, 50, false) == MULTIREAD_OK);
+    ASSERT(multiread_add_pass(ctx, b, 8, 50, false) == MULTIREAD_OK);
+    ASSERT(multiread_add_pass(ctx, c, 8, 50, false) == MULTIREAD_OK);
+
+    uint8_t out[8] = {0};
+    multiread_sector_t res;
+    memset(&res, 0, sizeof(res));
+    ASSERT(multiread_execute(ctx, out, 8, &res) == MULTIREAD_OK);
+
+    ASSERT(res.class_ == MULTIREAD_CLASS_WEAK);
+    ASSERT(res.weak_offset == 4);
+    ASSERT(res.distinct_contents >= 2);
+    ASSERT(res.has_weak_bits == true);
+
+    /* Der Offset hat dieselbe Bedeutung wie ein ATX-Weak-Chunk: alles davor
+     * ist fest, alles danach unsicher. Die ersten vier Bytes muessen also
+     * unveraendert durchkommen. */
+    ASSERT(out[0] == 1 && out[1] == 2 && out[2] == 3 && out[3] == 4);
+
+    free(res.weak_mask);
+    multiread_destroy(ctx);
+}
+
+TEST(one_verified_read_makes_the_sector_stable_good) {
+    multiread_ctx_t *ctx = multiread_create(NULL);
+    ASSERT(ctx != NULL);
+
+    /* Eine gepruefte Lesung, zwei ungepruefte mit ANDEREM Inhalt. Die
+     * CRC-Vorauswahl wirft die beiden weg (disk.cpp:240-254), also bleibt
+     * ein Inhalt uebrig — der Sektor ist stabil und gut, nicht weak.
+     * Ohne die Vorauswahl waere er faelschlich "mehrdeutig". */
+    const uint8_t good[8] = { 9, 9, 9, 9, 9, 9, 9, 9 };
+    const uint8_t junk[8] = { 1, 2, 3, 4, 5, 6, 7, 8 };
+    ASSERT(multiread_add_pass(ctx, good, 8, 100, true)  == MULTIREAD_OK);
+    ASSERT(multiread_add_pass(ctx, junk, 8,  40, false) == MULTIREAD_OK);
+    ASSERT(multiread_add_pass(ctx, junk, 8,  40, false) == MULTIREAD_OK);
+
+    uint8_t out[8] = {0};
+    multiread_sector_t res;
+    memset(&res, 0, sizeof(res));
+    ASSERT(multiread_execute(ctx, out, 8, &res) == MULTIREAD_OK);
+
+    ASSERT(res.class_ == MULTIREAD_CLASS_STABLE_GOOD);
+    ASSERT(res.distinct_contents == 1);
+    ASSERT(res.weak_offset == -1);
+    ASSERT(res.recovered == true);
+    ASSERT(memcmp(out, good, 8) == 0);      /* die gepruefte gewinnt */
+
+    free(res.weak_mask);
+    multiread_destroy(ctx);
+}
+
+TEST(differing_content_despite_good_crc_is_its_own_class) {
+    multiread_ctx_t *ctx = multiread_create(NULL);
+    ASSERT(ctx != NULL);
+
+    /* Zwei Lesungen, beide CRC-geprueft, aber mit verschiedenem Inhalt.
+     * Physikalisch sehr ungewoehnlich; a8rawconv warnt und behaelt eine
+     * (disk.cpp:320-328). Es unter "weak" zu verbuchen waere falsch — die
+     * Ursache ist eine andere, und wer die Klassen fuer eine Diagnose
+     * benutzt, braucht sie getrennt. */
+    const uint8_t x[4] = { 0xDE, 0xAD, 0xBE, 0xEF };
+    const uint8_t y[4] = { 0xDE, 0xAD, 0xC0, 0xDE };
+    /* Drei Lesungen, weil die Voreinstellung min_passes = 3 verlangt —
+     * multiread_execute() lehnt weniger mit INSUFFICIENT_PASSES ab. */
+    ASSERT(multiread_add_pass(ctx, x, 4, 100, true) == MULTIREAD_OK);
+    ASSERT(multiread_add_pass(ctx, y, 4, 100, true) == MULTIREAD_OK);
+    ASSERT(multiread_add_pass(ctx, y, 4, 100, true) == MULTIREAD_OK);
+
+    uint8_t out[4] = {0};
+    multiread_sector_t res;
+    memset(&res, 0, sizeof(res));
+    ASSERT(multiread_execute(ctx, out, 4, &res) == MULTIREAD_OK);
+
+    ASSERT(res.class_ == MULTIREAD_CLASS_AMBIGUOUS_GOOD);
+    ASSERT(res.distinct_contents >= 2);
+    ASSERT(res.weak_offset == -1);          /* nur bei WEAK gesetzt */
+
+    free(res.weak_mask);
+    multiread_destroy(ctx);
+}
+
+TEST(class_names_are_all_present) {
+    /* Ein Name je Klasse, keiner NULL, keiner doppelt — die Klasse wird in
+     * Berichten ausgegeben, und "unbestimmt" fuer eine bestimmte Klasse
+     * waere eine stille Falschaussage. */
+    const multiread_class_t all[] = {
+        MULTIREAD_CLASS_UNKNOWN, MULTIREAD_CLASS_STABLE_GOOD,
+        MULTIREAD_CLASS_STABLE_BAD_CRC, MULTIREAD_CLASS_WEAK,
+        MULTIREAD_CLASS_AMBIGUOUS_GOOD
+    };
+    for (size_t i = 0; i < sizeof(all)/sizeof(all[0]); i++) {
+        const char *n = multiread_class_name(all[i]);
+        ASSERT(n != NULL && n[0] != ' ');
+        for (size_t j = 0; j < i; j++)
+            ASSERT(strcmp(n, multiread_class_name(all[j])) != 0);
+    }
+}
+
 /* ── stable but never verified: data yes, claim no ── */
 
 TEST(stable_reads_without_a_verified_crc_are_not_recovered) {
@@ -264,6 +413,11 @@ int main(void) {
     RUN(no_verified_read_still_records_divergence);
     RUN(stable_reads_without_a_verified_crc_are_not_recovered);
     RUN(one_verified_read_is_enough_to_claim_recovery);
+    RUN(stable_bad_crc_is_protection_not_weakness);
+    RUN(weak_offset_is_the_common_prefix_of_all_reads);
+    RUN(one_verified_read_makes_the_sector_stable_good);
+    RUN(differing_content_despite_good_crc_is_its_own_class);
+    RUN(class_names_are_all_present);
     RUN(vote_buffers_confidence_drops_on_divergence);
     RUN(guards_null_and_insufficient_passes);
 

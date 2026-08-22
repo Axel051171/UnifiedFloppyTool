@@ -149,6 +149,124 @@ static uint8_t vote_byte(const multiread_pass_t *passes, uint8_t pass_count,
     return max_val;
 }
 
+/*============================================================================
+ * Klassifikation mehrerer Lesungen  (MF-473)
+ *===========================================================================*/
+
+/**
+ * @brief Gilt dieser Pass nach der CRC-Vorauswahl noch?
+ *
+ * Dieselbe Regel wie in vote_buffer(): sobald EINE Lesung ihre CRC bestanden
+ * hat, zaehlen nur noch die geprueften. Sie steht hier als eigene Funktion,
+ * damit Klassifikation und Abstimmung nicht auseinanderlaufen koennen —
+ * zwei Stellen mit derselben Regel sind zwei Stellen, die sich widersprechen
+ * koennen.
+ */
+static bool pass_survives_crc_sift(const multiread_pass_t *p, bool any_crc_ok)
+{
+    return !any_crc_ok || p->crc_ok;
+}
+
+const char *multiread_class_name(multiread_class_t cls)
+{
+    switch (cls) {
+        case MULTIREAD_CLASS_STABLE_GOOD:     return "stabil, CRC geprueft";
+        case MULTIREAD_CLASS_STABLE_BAD_CRC:  return "stabiler CRC-Fehler";
+        case MULTIREAD_CLASS_WEAK:            return "weak";
+        case MULTIREAD_CLASS_AMBIGUOUS_GOOD:  return "mehrdeutig trotz guter CRC";
+        case MULTIREAD_CLASS_UNKNOWN:         break;
+    }
+    return "unbestimmt";
+}
+
+/**
+ * @brief Klassifiziert die Lesungen und findet den Weak-Offset.
+ *
+ * Nach a8rawconv `sift_sectors` (src/a8rawconv/disk.cpp:236-365):
+ *
+ *   1. CRC-Vorauswahl (siehe pass_survives_crc_sift)
+ *   2. bleibt ein einziger Inhalt -> stabil; gut oder absichtlich falsch,
+ *      je nachdem ob die Vorauswahl gegriffen hat
+ *   3. bleiben mehrere -> weak bei schlechter CRC, sonst mehrdeutig
+ *
+ * @param out_offset  erstes abweichendes Byte, oder -1. Das ist das laengste
+ *                    gemeinsame Praefix ALLER ueberlebenden Lesungen
+ *                    (disk.cpp:331-343), nicht der Abstand zweier davon.
+ * @param out_distinct Anzahl unterschiedlicher Inhalte, mindestens 1.
+ */
+static multiread_class_t classify_passes(const multiread_pass_t *passes,
+                                         uint8_t pass_count,
+                                         size_t len,
+                                         int32_t *out_offset,
+                                         uint8_t *out_distinct)
+{
+    *out_offset = -1;
+    *out_distinct = 0;
+
+    if (!passes || pass_count == 0 || len == 0)
+        return MULTIREAD_CLASS_UNKNOWN;
+
+    bool any_crc_ok = false;
+    for (uint8_t p = 0; p < pass_count; p++) {
+        if (passes[p].crc_ok) { any_crc_ok = true; break; }
+    }
+
+    /* Erster ueberlebender Pass ist die Bezugsgroesse. */
+    const multiread_pass_t *ref = NULL;
+    for (uint8_t p = 0; p < pass_count; p++) {
+        if (pass_survives_crc_sift(&passes[p], any_crc_ok) && passes[p].data) {
+            ref = &passes[p];
+            break;
+        }
+    }
+    if (!ref)
+        return MULTIREAD_CLASS_UNKNOWN;
+
+    size_t common = len;      /* laengstes gemeinsames Praefix */
+    uint8_t distinct = 1;
+
+    for (uint8_t p = 0; p < pass_count; p++) {
+        const multiread_pass_t *q = &passes[p];
+        if (q == ref || !q->data)
+            continue;
+        if (!pass_survives_crc_sift(q, any_crc_ok))
+            continue;
+
+        size_t n = (q->data_len < len) ? q->data_len : len;
+        size_t i = 0;
+        while (i < n && q->data[i] == ref->data[i])
+            i++;
+
+        /* Eine kuerzere Lesung ist ab ihrem Ende ebenfalls "anders" — sonst
+         * wuerde ein abgeschnittener Pass als deckungsgleich durchgehen. */
+        size_t first_diff = (i < n) ? i : ((n < len) ? n : len);
+
+        if (first_diff < len) {
+            if (distinct < 255) distinct++;
+            if (first_diff < common) common = first_diff;
+        }
+    }
+
+    *out_distinct = distinct;
+
+    if (distinct == 1) {
+        /* Ein einziger Inhalt. `any_crc_ok` entscheidet, ob das ein
+         * gesunder Sektor ist oder ein absichtlich falsch aufgezeichneter. */
+        return any_crc_ok ? MULTIREAD_CLASS_STABLE_GOOD
+                          : MULTIREAD_CLASS_STABLE_BAD_CRC;
+    }
+
+    if (any_crc_ok) {
+        /* Verschiedene Inhalte, obwohl die CRC stimmt. a8rawconv behaelt
+         * einen und warnt; wir melden es als eigene Klasse, statt es unter
+         * "weak" zu verstecken — die Ursachen sind andere. */
+        return MULTIREAD_CLASS_AMBIGUOUS_GOOD;
+    }
+
+    *out_offset = (int32_t)common;
+    return MULTIREAD_CLASS_WEAK;
+}
+
 /**
  * @brief Vote on entire data buffer across passes
  */
@@ -375,6 +493,14 @@ multiread_error_t multiread_execute(multiread_ctx_t *ctx,
     result->recovered = (avg_conf >= ctx->config.min_confidence) &&
                         (result->good_reads > 0);
     result->has_weak_bits = (weak_count > 0);
+
+    /* MF-473: was die Lesungen ZUEINANDER sagen. `has_weak_bits` oben
+     * beantwortet nur "irgendein Byte wich ab" — das trifft auf einen
+     * absichtlich falsch aufgezeichneten Kopierschutz-Sektor NICHT zu, und
+     * genau den muss man von einem gesunden unterscheiden koennen. */
+    result->class_ = classify_passes(ctx->passes, ctx->pass_count, output_len,
+                                     &result->weak_offset,
+                                     &result->distinct_contents);
     result->weak_mask = weak_mask;
     
     /* Update stats */

@@ -3652,6 +3652,80 @@ beschrieben stehen.
 
 ---
 
+### FLUX-3 — stabil-mit-CRC-Fehler ist Kopierschutz, nicht Schaden (2026-08-22, MF-473) → ✓ BEHOBEN
+
+Punkt 3.8 der a8rawconv-Gap-Analyse, und der Punkt, der die fünf Umdrehungen
+aus FLUX-2 erst zu etwas nütze macht.
+
+**Was schon da war.** MF-466 hat geklärt, dass Übereinstimmung keine Prüfung
+ist: `recovered` verlangt seither mindestens eine CRC-geprüfte Lesung. Und
+`vote_buffer()` hatte die CRC-Vorauswahl schon — gibt es eine geprüfte
+Lesung, zählen die ungeprüften nicht mit.
+
+**Was fehlte.** Die Aussage, was mehrere Lesungen *zueinander* sagen.
+`has_weak_bits` beantwortet nur „irgendein Byte wich ab" — und genau das
+trifft auf den interessantesten Fall **nicht** zu.
+
+Der Algorithmus steht in `src/a8rawconv/disk.cpp:236-365` (`sift_sectors`,
+Referenz-Orakel, wird nicht gebaut):
+
+1. **CRC-Vorauswahl**, getrennt für Adress- und Datenfeld (`:240-254`).
+2. Bleibt danach **genau ein** Inhalt → stabil.
+3. Bleiben **mehrere** → der häufigste gewinnt; bei schlechter CRC ist der
+   Sektor zusätzlich weak ab dem längsten gemeinsamen Präfix (`:331-345`).
+
+Daraus vier Klassen, und die dritte Zeile ist die, um die es geht:
+
+| Inhalte | CRC | Klasse | Bedeutung |
+|---:|---|---|---|
+| 1 | gut | `STABLE_GOOD` | gesunder Sektor |
+| mehrere | schlecht | `WEAK` | weak ab `weak_offset` |
+| **1** | **schlecht** | **`STABLE_BAD_CRC`** | **Kopierschutz** — absichtlich falsche CRC, jedes Mal dieselbe |
+| mehrere | gut | `AMBIGUOUS_GOOD` | sehr ungewöhnlich; a8rawconv warnt und behält eine |
+
+a8rawconv sagt an dieser Stelle wörtlich „Stable CRC error detected"
+(`disk.cpp:364`). Der Unterschied ist praktisch, nicht akademisch:
+
+- Als **weak** gemeldet wäre er falsch — er wackelt nicht.
+- Als **beschädigt** gemeldet wäre er falsch — er ist genau so gewollt.
+- **Nochmal lesen hilft nicht**, weil er stabil ist. Ein Werkzeug, das das
+  nicht unterscheidet, schickt den Benutzer in eine Wiederholung, die
+  nichts bringen kann.
+
+**Der Weak-Offset ist das längste gemeinsame Präfix ALLER überlebenden
+Lesungen**, nicht der Abstand zweier davon. Damit hat er dieselbe Bedeutung
+wie der Weak-Chunk eines ATX-Abbilds (`src/formats/atx/uft_atx.c`, MF-467) —
+der eine Wert lässt sich unverändert in das andere Format schreiben.
+
+**Neu** in `multiread_sector_t`, angehängt statt eingefügt (ABI):
+`class_`, `weak_offset`, `distinct_contents`, plus
+`multiread_class_name()`. Die CRC-Vorauswahl steht jetzt als eigene
+Funktion `pass_survives_crc_sift()` da — Klassifikation und Abstimmung
+benutzen dieselbe Regel, statt sie zweimal zu schreiben.
+
+**Rot-Probe, zweistufig.** Ohne die Implementierung linkt der Test nicht —
+das beweist nur, dass Code fehlt. Deshalb die schärfere Variante: die
+Unterscheidung selbst verfälscht (`STABLE_BAD_CRC` → `WEAK`). Es fällt
+**genau ein** Test, `stable_bad_crc_is_protection_not_weakness`, alle
+anderen zwölf bleiben grün. Der Test prüft also die Unterscheidung und
+nicht die Anwesenheit von Code.
+
+`ctest` 217/217, alle 21 Gate-Kategorien 0.
+
+**Ehrlich zur Reichweite.** Die Pipeline hat weiterhin **keine Aufrufer in
+`src/`** — sie ist getestet, aber nicht verdrahtet (steht so schon in
+BUG-11). Was jetzt fehlt, ist der Weg von der Aufzeichnung dorthin: der
+FluxCaptureJob sammelt seit FLUX-2 bis zu fünf Umdrehungen ein, gibt sie
+aber unverändert an den SCP-Schreiber weiter, statt sie je Sektorposition
+zu klassifizieren. Das ist der nächste Schritt und ein eigener.
+
+Ebenfalls offen: die „salvage"-Hälfte von 3.8 — aus mehreren schlechten
+Lesungen eine bessere zusammensetzen. Die Klassifikation sagt jetzt, wo das
+überhaupt Sinn ergibt (`WEAK` ja, `STABLE_BAD_CRC` nein); das Zusammensetzen
+selbst tut sie nicht.
+
+---
+
 ### FLUX-2 — Umdrehungszahl war fest verdrahtet, Voreinstellung war die falsche (2026-08-22, MF-472) → ✓ BEHOBEN
 
 Punkt 2.2 der a8rawconv-Gap-Analyse. Der Flux-Capture-Job bekam seine

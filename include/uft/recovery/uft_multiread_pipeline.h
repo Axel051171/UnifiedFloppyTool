@@ -87,6 +87,46 @@ typedef struct {
     double      timing_variance;    /**< Timing variance */
 } multiread_pass_t;
 
+/**
+ * @brief Was mehrere Lesungen derselben Sektorposition ergeben (MF-473).
+ *
+ * Die Unterscheidung, die a8rawconv beim Sichten trifft
+ * (`src/a8rawconv/disk.cpp:236-365`, Referenz-Orakel, wird nicht gebaut) und
+ * die UFT bisher nicht traf. Der Reihe nach:
+ *
+ *   1. Gibt es mindestens eine Lesung mit gueltiger CRC, werden alle
+ *      ungueltigen verworfen — getrennt fuer Adress- und Datenfeld
+ *      (disk.cpp:240-254). Diese Regel hat `vote_buffer()` schon.
+ *   2. Bleibt danach GENAU EIN Inhalt uebrig, ist der Sektor stabil.
+ *   3. Bleiben mehrere, gewinnt der haeufigste; bei schlechter CRC ist der
+ *      Sektor ausserdem weak ab dem laengsten gemeinsamen Praefix
+ *      (disk.cpp:331-345).
+ *
+ * Warum das zaehlt: `STABLE_BAD_CRC` ist kein Schaden und kein Wackelkontakt,
+ * sondern ein Kopierschutz, der eine falsche CRC ABSICHTLICH aufzeichnet. Ihn
+ * als weak zu melden waere falsch, ihn als beschaedigt zu melden auch — und
+ * nochmal lesen hilft nicht, weil er stabil ist. a8rawconv sagt an dieser
+ * Stelle woertlich "Stable CRC error detected" (disk.cpp:364).
+ */
+typedef enum {
+    /** Noch nichts ausgewertet (kein Pass, oder execute() nicht gelaufen). */
+    MULTIREAD_CLASS_UNKNOWN = 0,
+    /** Ein Inhalt, CRC geprueft. Der Normalfall einer gesunden Diskette. */
+    MULTIREAD_CLASS_STABLE_GOOD,
+    /** Ein Inhalt, CRC falsch — und zwar jedes Mal derselbe. Kopierschutz;
+     *  weitere Leseversuche bringen nichts Neues. */
+    MULTIREAD_CLASS_STABLE_BAD_CRC,
+    /** Mehrere Inhalte bei falscher CRC: weak. @ref weak_offset sagt, ab
+     *  welchem Byte sie auseinanderlaufen. */
+    MULTIREAD_CLASS_WEAK,
+    /** Mehrere Inhalte trotz gueltiger CRC. Sehr ungewoehnlich — a8rawconv
+     *  meldet es als Warnung und behaelt einen davon (disk.cpp:320-328). */
+    MULTIREAD_CLASS_AMBIGUOUS_GOOD
+} multiread_class_t;
+
+/** Klartextname einer Klasse, nie NULL. */
+const char *multiread_class_name(multiread_class_t cls);
+
 /** @brief Sector result from multi-read */
 typedef struct {
     uint8_t     track;              /**< Track number */
@@ -107,6 +147,24 @@ typedef struct {
     bool        recovered;
     bool        has_weak_bits;      /**< Passes disagreed somewhere */
     uint8_t    *weak_mask;          /**< Weak bit mask (optional) */
+
+    /* MF-473 — angehaengt, nicht eingefuegt (ABI). */
+
+    /** Wie sich die Lesungen zueinander verhalten. Siehe
+     *  @ref multiread_class_t; das ist die Aussage, die `has_weak_bits`
+     *  allein nicht treffen kann. */
+    multiread_class_t class_;
+
+    /** Erstes Byte, ab dem die Lesungen auseinanderlaufen, oder -1 wenn sie
+     *  es nicht tun. Das laengste gemeinsame Praefix aller Varianten —
+     *  dieselbe Bedeutung wie der Weak-Chunk eines ATX-Abbilds
+     *  (src/formats/atx/uft_atx.c, MF-467), damit der eine Wert direkt in
+     *  das andere Format geschrieben werden kann. */
+    int32_t     weak_offset;
+
+    /** Wie viele UNTERSCHIEDLICHE Inhalte die Lesungen ergaben, nachdem die
+     *  CRC-Vorauswahl gelaufen ist. 1 heisst stabil. */
+    uint8_t     distinct_contents;
 } multiread_sector_t;
 
 /** @brief Track result from multi-read */
