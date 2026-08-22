@@ -3652,6 +3652,120 @@ beschrieben stehen.
 
 ---
 
+### FLUX-1 — die Drehzahl beim Lesen bestimmt das Laufwerk, nicht die Diskette (2026-08-22, MF-471) → ✓ GRUNDLAGE STEHT
+
+Erster Punkt der a8rawconv-Gap-Analyse (3.1), und ihr wichtigster: ohne ihn
+ist für Atari alles Weitere wertlos.
+
+**Der Fall.** Eine Atari-Diskette wurde mit **288 min⁻¹** beschrieben. Beim
+Sichern liegt sie in einem 300-min⁻¹-Laufwerk — dem Normalfall bei
+Greaseweazle, SCP und KryoFlux. Die Drehzahl beim Lesen bestimmt das
+Laufwerk, also laufen dieselben Bitzellen um 288/300 = **4 % schneller**
+vorbei. Wer mit der nominalen Zellendauer dekodiert, liegt um genau diese
+4 % daneben: 4000 ns Nennwert gegen 3840 ns tatsächlich.
+
+**Was UFT stattdessen tat:**
+
+```c
+/* src/flux/uft_flux_decoder.c:507, vorher */
+double bitcell_ns = opts->bitcell_ns;
+if (bitcell_ns == 0) {
+    bitcell_ns = FLUX_MFM_DD_BITCELL_NS;  /* Default to DD */
+}
+```
+
+Keine Messung, keine Anpassung — bei fehlender Vorgabe die Annahme „MFM DD,
+2 µs". Für eine Atari-FM-Diskette ist das nicht 4 % daneben, sondern der
+Faktor 2.
+
+**Der Rechenweg** stammt aus a8rawconv 0.95 (`src/a8rawconv/`,
+Referenz-Orakel, wird nicht gebaut):
+
+```cpp
+// a8rawconv.cpp:133-136
+// Atari disk timing produces 250,000 clocks per second at 288 RPM. We must
+// compute the effective sample rate given the actual disk rate.
+const double cells_per_rev = 250000.0 / (288.0 / 60.0) * (hd ? 2 : 1);
+double scks_per_cell = rawTrack.mSamplesPerRev / cells_per_rev
+                       * g_clockPeriodAdjust;
+```
+
+Der Kniff: **die Laufwerksdrehzahl muss man gar nicht kennen.** Sie steckt
+bereits in der gemessenen Umdrehungsdauer des Abbilds. Was das Profil
+beitragen muss, ist nur die nominale Zellenzahl je Umdrehung des *Mediums*.
+
+```
+Zellen je Umdrehung = Datenrate × 60 / Medien-Drehzahl     (Profil)
+Zellendauer         = gemessene Umdrehungsdauer / Zellen je Umdrehung
+```
+
+`mSamplesPerRev` ist dort gemessen, nicht angenommen — aus den
+Index-Impulsen (`rawdiskkf.cpp:203-206` für KryoFlux, `rawdiskscp.cpp:167-175`
+für SCP), und zwar **über alle Zwischenräume gemittelt**: ein einzelner trägt
+den vollen Motor-Jitter.
+
+**Neu:** `include/uft/flux/uft_media_profile.h` + `src/flux/uft_media_profile.c`
+— acht Medienprofile mit belegten Konstanten, die Umdrehungsmessung aus
+Index-Impulsen, die Adaption, und der Prozent-Feineinsteller (Punkt 2.1 der
+Analyse, a8rawconvs `-p`, Grenzen 50…200). Er steht dort, weil er in der
+Quelle im selben Ausdruck steht; ihn wegzulassen hieße, die Formel halb zu
+übernehmen.
+
+| Medium | min⁻¹ | Zelle | Beleg |
+|---|---:|---:|---|
+| Atari FM | **288** | 4 µs | `a8rawconv.cpp:133`, `analyze.cpp:37`, `encode.cpp:4` |
+| Atari MFM | **288** | 2 µs | `analyze.cpp:42`, `a8rawconv.cpp:1143` |
+| PC 360K / 720K | 300 | 2 µs | `analyze.cpp:47-49` |
+| PC 1.2M | 360 | 1 µs | 5,25"-HD dreht mit 360 |
+| PC 1.44M | 300 | 1 µs | — |
+| Amiga DD | 300 | 2 µs | — |
+| Apple II GCR | 300 | 4 µs | `encode.cpp:5` |
+
+**Zwei echte Aufrufer**, damit daraus kein Modul ohne Verbraucher wird
+(ARCH-19/22 sind die Mahnung dazu):
+
+1. **Laufwerksprofile.** `UFT_DRIVE_ATARI_810`, `_1050` und `_XF551` gab es
+   nicht — die einzigen Laufwerke im Baum, die nicht mit 300 min⁻¹ drehen,
+   fehlten ganz. Angehängt, nicht eingefügt: bestehende Enum-Werte dürfen
+   sich nicht verschieben. Geometrien aus `diskatr.cpp:42-56` (SD 18×128 FM,
+   ED 26×128 MFM, DD 18×256 MFM).
+2. **Der Decoder.** `flux_decode_mfm()` wählt die Zellendauer jetzt in drei
+   Stufen: ausdrücklich vorgegebenes `bitcell_ns` → Medienprofil plus
+   gemessene Umdrehung → die alte Annahme. **Ohne gesetztes Profil ändert
+   sich nichts** (`opts.media == UFT_MEDIA_UNKNOWN` ist der Default), und
+   schlägt die Messung fehl, greift Stufe 3 — keine halb gerechnete Zahl,
+   die wie eine Messung aussähe.
+
+**Rot-Probe.** `tests/test_media_profile.c`, zehn Fälle. Der entscheidende:
+dasselbe Abbild wird zweimal dekodiert, einmal mit Atari-MFM-Profil und
+einmal mit PC-720K — **gleiche nominale Zellendauer, verschiedene
+Medien-Drehzahl**. Das Verhältnis der Bitraten muss 300/288 sein. Ohne die
+Verdrahtung sind beide Läufe identisch, und genau dieser Fall fällt um.
+
+> Für diesen Test läuft die PLL-Regelung abgeschaltet. Mit Regelung zieht sie
+> die Periode zum tatsächlichen Fluss hin, beide Läufe konvergieren, und der
+> Startwert wird unsichtbar — also genau die Größe, um die es geht. Das ist
+> kein Kunstgriff, um grün zu werden: die *Wahl* der Startperiode ist der
+> Gegenstand, das Einregeln danach ist ein anderer.
+
+**Ehrlich zur Reichweite.** Verifiziert ist die Rechnung gegen eine
+funktionierende Implementierung, nicht an einer realen Atari-Diskette — es
+liegt keine im Korpus. Was noch **nicht** getan ist:
+
+- Kein Aufrufer setzt `opts.media` bisher automatisch. Der Weg
+  „Abbild → Medium erkennen → Profil setzen" ist offen; wer das Profil kennt,
+  kann es heute schon übergeben.
+- Der FM-, GCR- und Amiga-Zweig des Decoders wählt seine Zellendauer
+  weiterhin selbst — nur `flux_decode_mfm()` ist umgestellt.
+- Zonen-Aufzeichnung (Commodore, Apple) gilt je Zone, nicht je Diskette. Das
+  Modul rechnet je Diskette und sagt das im Kopf.
+
+Damit sind die Punkte 3.1 und 2.1 der Gap-Analyse abgedeckt, soweit sie ohne
+GUI-Arbeit gehen. Offen bleiben 2.2 (`-revs` als Einstellung), 2.3
+(SCP-Layout), 3.2 (ATX-Writer), 3.3–3.9.
+
+---
+
 ### BUILD-2 — der macOS-Build zerbrach an MF-468, und zwar zu Recht (2026-08-22, MF-470) → ✓ BEHOBEN
 
 Mein Fehler aus BUILD-1, von der CI gefunden: `build-macos` rot.

@@ -36,6 +36,12 @@ typedef enum {
     UFT_DRIVE_CBM_1541,      /**< Commodore 1541 (alias) */
     UFT_DRIVE_CBM_1571,      /**< Commodore 1571 */
     UFT_DRIVE_APPLE_525,     /**< Apple II 5.25" (alias) */
+    /* Atari 8-bit: 288 min^-1 statt der sonst ueblichen 300 (MF-471).
+     * Neu ANGEHAENGT, nicht eingefuegt — bestehende Enum-Werte duerfen sich
+     * nicht verschieben (ABI). */
+    UFT_DRIVE_ATARI_810,     /**< Atari 810, 5.25" SD, 288 min^-1, FM      */
+    UFT_DRIVE_ATARI_1050,    /**< Atari 1050, 5.25" SD+ED, 288 min^-1      */
+    UFT_DRIVE_ATARI_XF551,   /**< Atari XF551, 5.25" DS/DD, 288 min^-1     */
     UFT_DRIVE_COUNT
 } uft_drive_type_t;
 

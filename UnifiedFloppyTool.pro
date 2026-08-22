@@ -315,6 +315,7 @@ SOURCES += \
     src/gui/uft_sector_editor.cpp \
     src/flux/uft_scp_parser.c \
     src/flux/uft_flux_decoder.c \
+    src/flux/uft_media_profile.c \
     src/fileops/uft_file_ops_extended.c \
     src/analysis/uft_sector_compare.c
 

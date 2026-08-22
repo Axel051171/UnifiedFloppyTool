@@ -51,6 +51,9 @@ void flux_decoder_options_init(flux_decoder_options_t *opts) {
     opts->revolution = 0;
     opts->decode_all_revs = true;
     opts->keep_raw_bits = false;
+    /* MF-471: kein Medienprofil = Verhalten wie bisher. */
+    opts->media = UFT_MEDIA_UNKNOWN;
+    opts->media_adjust_pct = 100.0;
 }
 
 void flux_pll_init(flux_pll_t *pll, double initial_period) {
@@ -504,8 +507,32 @@ flux_status_t flux_decode_mfm(const flux_raw_data_t *flux,
         opts = &default_opts;
     }
     
-    /* Determine bit cell time */
+    /* Zellendauer bestimmen.
+     *
+     * Reihenfolge, absteigend nach Verlaesslichkeit:
+     *   1. ausdruecklich vorgegebenes bitcell_ns — wer eine Zahl nennt,
+     *      meint sie;
+     *   2. Medienprofil + GEMESSENE Umdrehungsdauer aus den Index-Impulsen
+     *      des Abbilds (MF-471);
+     *   3. die alte Annahme "MFM DD".
+     *
+     * Stufe 2 ist der Fall, der ohne sie schweigend falsch lief: eine
+     * Atari-Diskette (288 min^-1) in einem 300-min^-1-Laufwerk liefert
+     * Zellen, die um 4 % kuerzer sind als ihr Nennwert. */
     double bitcell_ns = opts->bitcell_ns;
+    if (bitcell_ns == 0 && opts->media != UFT_MEDIA_UNKNOWN) {
+        double rev_ns = 0.0, cell_ns = 0.0;
+        double pct = (opts->media_adjust_pct > 0.0) ? opts->media_adjust_pct
+                                                    : 100.0;
+        if (uft_media_rev_ns_from_index(flux->index_times, flux->index_count,
+                                        flux->sample_rate, &rev_ns) &&
+            uft_media_cell_ns_from_rev(opts->media, rev_ns, pct, &cell_ns)) {
+            bitcell_ns = cell_ns;
+        }
+        /* Schlaegt die Messung fehl — zu wenige Index-Impulse, Abtastrate 0 —
+         * bleibt bitcell_ns 0 und Stufe 3 greift. Keine halb gerechnete
+         * Zahl, die wie eine Messung aussaehe. */
+    }
     if (bitcell_ns == 0) {
         bitcell_ns = FLUX_MFM_DD_BITCELL_NS;  /* Default to DD */
     }

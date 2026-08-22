@@ -20,6 +20,7 @@
 #define UFT_FLUX_DECODER_H
 
 #include "uft/core/uft_unified_types.h"
+#include "uft/flux/uft_media_profile.h"  /* uft_media_kind_t (MF-471) */
 
 #ifdef __cplusplus
 extern "C" {
@@ -206,6 +207,26 @@ typedef struct {
 typedef struct {
     flux_encoding_t encoding;   /* Encoding to use (AUTO = detect) */
     uint32_t bitcell_ns;        /* Expected bit cell time (0 = auto) */
+
+    /* Medium, mit dem die Diskette BESCHRIEBEN wurde (MF-471).
+     *
+     * UFT_MEDIA_UNKNOWN (Default) laesst alles wie bisher: bitcell_ns == 0
+     * bedeutet dann weiterhin "MFM DD annehmen".
+     *
+     * Ist hier ein Profil gesetzt UND traegt das Abbild mindestens zwei
+     * Index-Impulse, rechnet der Decoder die Zellendauer aus der GEMESSENEN
+     * Umdrehungsdauer statt sie anzunehmen. Das ist der Fall, ohne den eine
+     * Atari-Diskette (288 min^-1) in einem 300-min^-1-Laufwerk um 4 %
+     * daneben liegt. Ein ausdruecklich gesetztes bitcell_ns hat weiterhin
+     * Vorrang — wer eine Zahl vorgibt, meint sie.
+     *
+     * Siehe include/uft/flux/uft_media_profile.h. */
+    uft_media_kind_t media;
+
+    /* Feineinsteller in Prozent fuer die Zellendauer, 50…200; 0 oder 100
+     * bedeutet unveraendert. Entspricht a8rawconvs `-p` und wirkt nur,
+     * wenn @ref media gesetzt ist. */
+    double media_adjust_pct;
     double   tolerance;         /* Timing tolerance (0.15 = 15%) */
     bool     use_pll;           /* Use PLL for timing recovery */
     double   pll_gain;          /* PLL adjustment gain */

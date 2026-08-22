@@ -28,7 +28,31 @@ static const uft_drive_profile_t DRIVE_PROFILES[] = {
       .default_encoding = DRIVE_ENC_GCR },
     { .type = UFT_DRIVE_APPLE, .name = "Apple II", .cylinders = 35, .heads = 1,
       .rpm = 300.0, .step_time_ms = 20, .settle_time_ms = 20, .data_rate_dd = 250.0,
-      .default_encoding = DRIVE_ENC_GCR }
+      .default_encoding = DRIVE_ENC_GCR },
+
+    /* Atari 8-bit — die einzigen Laufwerke hier, die NICHT mit 300 min^-1
+     * drehen (MF-471). 288 belegt in src/a8rawconv/a8rawconv.cpp:133
+     * ("Atari disk timing produces 250,000 clocks per second at 288 RPM"),
+     * analyze.cpp:25 und encode.cpp:4.
+     *
+     * Warum das zaehlt: liest man eine dieser Disketten in einem
+     * 300-min^-1-Laufwerk — der Normalfall beim Sichern mit Greaseweazle,
+     * SCP oder KryoFlux — laufen ihre Bitzellen um 288/300 = 4 % schneller
+     * vorbei. Die Korrektur rechnet uft_media_cell_ns_from_rev()
+     * (include/uft/flux/uft_media_profile.h) aus der GEMESSENEN
+     * Umdrehungsdauer; dieses Feld hier sagt, was beim SCHREIBEN galt.
+     *
+     * Geometrien aus src/a8rawconv/diskatr.cpp:42-56:
+     *   SD 18x128 FM, ED 26x128 MFM, DD 18x256 MFM (zweiseitig = 1440). */
+    { .type = UFT_DRIVE_ATARI_810, .name = "Atari 810 (SD)", .cylinders = 40, .heads = 1,
+      .rpm = 288.0, .step_time_ms = 20, .settle_time_ms = 20, .data_rate_dd = 250.0,
+      .default_encoding = DRIVE_ENC_FM },
+    { .type = UFT_DRIVE_ATARI_1050, .name = "Atari 1050 (SD/ED)", .cylinders = 40, .heads = 1,
+      .rpm = 288.0, .step_time_ms = 20, .settle_time_ms = 20, .data_rate_dd = 250.0,
+      .default_encoding = DRIVE_ENC_FM },
+    { .type = UFT_DRIVE_ATARI_XF551, .name = "Atari XF551 (DS/DD)", .cylinders = 40, .heads = 2,
+      .rpm = 288.0, .step_time_ms = 20, .settle_time_ms = 20, .data_rate_dd = 500.0,
+      .default_encoding = DRIVE_ENC_MFM }
 };
 
 #define PROFILE_COUNT (sizeof(DRIVE_PROFILES) / sizeof(DRIVE_PROFILES[0]))

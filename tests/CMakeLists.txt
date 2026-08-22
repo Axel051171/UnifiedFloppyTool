@@ -432,6 +432,7 @@ foreach(test_source ${TEST_SOURCES})
              ${CMAKE_SOURCE_DIR}/src/formats/*.c)
         target_sources(${test_name} PRIVATE ${CFD_FORMAT_SOURCES}
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c
             ${CMAKE_SOURCE_DIR}/src/compat/uft_fnmatch.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_preflight.c
@@ -461,6 +462,7 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE ${ALL_FORMAT_SOURCES}
             # what the format layer calls out to
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c
             ${CMAKE_SOURCE_DIR}/src/compat/uft_fnmatch.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_preflight.c
@@ -486,6 +488,7 @@ foreach(test_source ${TEST_SOURCES})
         # MF-452: drei Befunde aus dem X-Copy-Quellenvergleich
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c
             ${CMAKE_SOURCE_DIR}/src/formats/amiga/uft_amiga_protection.c
             ${CMAKE_SOURCE_DIR}/src/formats/amiga/uft_amiga_syncs.c)
         target_include_directories(${test_name} PRIVATE
@@ -529,7 +532,8 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/formats/scp/uft_scp_plugin.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_decoder_plugin_stub.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c)
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free"
             UFT_CORPUS_RESTRICTED_DIR="${CMAKE_SOURCE_DIR}/tests/corpus")
@@ -537,9 +541,19 @@ foreach(test_source ${TEST_SOURCES})
         # MF-437: Amiga HFE decoded as Amiga, byte-identical to the source ADF
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/formats/hfe/uft_hfe.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c)
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+    elseif(${test_name} STREQUAL "test_media_profile")
+        # MF-471: Medienprofile + Drehzahl-Adaption gegen das a8rawconv-Orakel
+        # Linkt auch den Decoder, weil MF-471 die Verdrahtung dort prueft
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c
+            ${CMAKE_SOURCE_DIR}/src/formats/amiga/uft_amiga_syncs.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
     elseif(${test_name} STREQUAL "test_atx_layout")
         # ATX track/chunk layout vs. the a8rawconv oracle (MF-467)
         target_sources(${test_name} PRIVATE
@@ -1189,7 +1203,8 @@ foreach(test_source ${TEST_SOURCES})
         # flux decoder TU is the only production source needed (libm
         # for the PLL math).
         target_sources(${test_name} PRIVATE
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c)
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c)
         if(UNIX)
             set(TEST_LIBS ${M_LIBRARY})
         else()
@@ -1202,6 +1217,7 @@ foreach(test_source ${TEST_SOURCES})
         # needed.
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c
             # MF-407 (PROT-11): the flux -> GCR -> metrics chain
             ${CMAKE_SOURCE_DIR}/src/protection/ufm_c64_metrics.c)
         if(UNIX)
@@ -1213,7 +1229,8 @@ foreach(test_source ${TEST_SOURCES})
         # v4.1.5 hardening / audit Lücke #1: hardware-independent
         # Apple ][ 6-and-2 GCR decoder regression test.
         target_sources(${test_name} PRIVATE
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c)
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c)
         if(UNIX)
             set(TEST_LIBS ${M_LIBRARY})
         else()
@@ -1223,7 +1240,8 @@ foreach(test_source ${TEST_SOURCES})
         # v4.1.5 hardening / audit Lücke #1: hardware-independent Amiga
         # MFM decoder regression test (odd/even-split sector layout).
         target_sources(${test_name} PRIVATE
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c)
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c)
         if(UNIX)
             set(TEST_LIBS ${M_LIBRARY})
         else()
@@ -1250,7 +1268,8 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/protection/uft_longtrack.c
             ${CMAKE_SOURCE_DIR}/src/protection/uft_fuzzy_bits.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c)
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c)
         if(UNIX)
             set(TEST_LIBS ${M_LIBRARY})
         else()
@@ -1922,7 +1941,8 @@ option(UFT_ENABLE_BENCHMARKS "Build the micro-benchmarks (not run by ctest)" OFF
 if(UFT_ENABLE_BENCHMARKS)
     add_executable(bench_decode_hotpath
         ${CMAKE_CURRENT_SOURCE_DIR}/benchmarks/bench_decode_hotpath.c
-        ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c)
+        ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c)
     target_include_directories(bench_decode_hotpath PRIVATE
         ${CMAKE_SOURCE_DIR}/include)
     # -O3 regardless of build type: a baseline from a debug build is noise.
