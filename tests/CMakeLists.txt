@@ -540,6 +540,11 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+    elseif(${test_name} STREQUAL "test_atx_layout")
+        # ATX track/chunk layout vs. the a8rawconv oracle (MF-467)
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/atx/uft_atx.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
     elseif(${test_name} STREQUAL "test_sector_id_on_disk")
         # ARCH-20/MF-465: id.sector is the number on the medium. Proof is the
         # D64/G64 corpus pair — same disk, same tool, two representations.

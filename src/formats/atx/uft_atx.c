@@ -3,26 +3,53 @@
  * @brief ATX (Atari 8-bit Protected / VAPI) Plugin.
  *
  * ATX stores Atari 8-bit disk data with FDC status, per-sector timing,
- * weak-bit regions, and extended-sector-header info — all critical for
- * copy-protection preservation.
+ * weak-bit regions and extended-sector info — all of it copy-protection
+ * evidence, which is why the format exists at all.
  *
- * File layout:
- *   [FileHeader    48 bytes]  "AT8X" + version + density + track count
- *   [TrackOffsetTable  N×4 bytes]  LE32 offsets into file, one per track
- *   [Track records]  each containing:
- *     [TrackHeader 32 bytes]  size, type, num_sectors, flags, data_offset
- *     [Chunks]  each 8-byte header (size, type, num, data) + payload:
- *       type=0x01  SectorList    — array of 8-byte ATXSectorHeader entries
- *       type=0x10  WeakBits      — weak-byte offset within a named sector
- *       type=0x11  ExtSectorHdr  — extended sector size info
- *     [Sector data]  128-byte (or 256) blocks referenced by SectorHeader.mDataOffset
+ * **Authority:** `src/a8rawconv/diskatx.cpp` by Avery Lee (GPL-2-or-later,
+ * reference oracle only, not built — see `src/a8rawconv/README.md`). Its
+ * writer (`write_atx`, :216-416) pins the layout byte for byte and its
+ * reader (`read_atx`, :64-190) confirms how it is consumed:
  *
- * Reference: a8rawconv/diskatx.cpp by Avery Lee (GPL-2-or-later),
- * verified against VAPI specification.
+ *   file header, 48 bytes
+ *     0x00 "AT8X"   0x04 version major   0x06 version minor
+ *     0x12 density (0 = single/FM, 1 = enhanced/MFM)
+ *     0x1C track data offset — where the track records begin
+ *   track records, ONE AFTER ANOTHER (there is no offset table):
+ *     track header, 32 bytes
+ *       0x00 record size    0x04 type (0 = track)   0x08 track number
+ *       0x0A sector count   0x10 flags              0x14 chunk offset (= 32)
+ *     chunks, each with an 8-byte header
+ *       0x00 size   0x04 type   0x05 num   0x06 data
+ *       0x01 sector list  — n x 8-byte sector headers
+ *       0x00 sector data  — n x 128 bytes
+ *       0x10 weak bits    — num = index in the list, data = first weak byte
+ *       0x11 ext sector   — num = index in the list, data = size code
+ *       size 0            — end of the chunk list
+ *     sector header, 8 bytes
+ *       0x00 id   0x01 FDC status   0x02 timing   0x04 data offset
+ *       (data offset is relative to the START OF THE TRACK RECORD)
+ *
+ * What this file assumed before MF-467, and what is really there:
+ *
+ *   | assumed                          | reality                        |
+ *   |----------------------------------|--------------------------------|
+ *   | density at 0x13                  | 0x12 (0x13 is padding)         |
+ *   | track count at 0x14              | that is `mImageId`; the format |
+ *   |                                  | has no track count             |
+ *   | a table of LE32 track offsets    | track records, walked in order |
+ *   | track flags at 0x14 of the header| 0x10                           |
+ *   | chunk offset at 0x18             | 0x14                           |
+ *
+ * The last two are why it never returned a single sector: the chunk offset
+ * came out of padding, i.e. 0, so the scan started on the track header
+ * itself, found no sector list, and returned an empty track. Every ATX file
+ * read like an empty disk, silently.
  *
  * Part of M2 TA3 (MASTER_PLAN.md). See docs/A8RAWCONV_INTEGRATION_TODO.md.
  */
 #include "uft/uft_format_common.h"
+#include "uft/uft_log.h"
 
 /*
  * ATX signature as read by uft_read_le32 on the bytes 'A','T','8','X'
@@ -34,34 +61,59 @@
 #define ATX_TRACK_HEADER_SIZE  32
 #define ATX_SECTOR_HEADER_SIZE 8
 #define ATX_CHUNK_HEADER_SIZE  8
-#define ATX_MAX_TRACKS         42
-#define ATX_MAX_SECTORS        32          /* per track, VAPI caps at ~26 */
-#define ATX_SECTOR_SIZE_SD     128
-#define ATX_SECTOR_SIZE_DD     256
+#define ATX_MAX_TRACKS         48          /* a8rawconv warns above 40 */
+#define ATX_MAX_SECTORS        32          /* per track; ED uses 26 */
 
-/* Chunk types (single byte at offset 4 of each chunk header). */
+/* Atari SD and ED both use 128-byte sectors; ATX stores 128 per sector even
+ * for a long one (write_atx:381 writes 128 unconditionally). The extended
+ * chunk describes the PHYSICAL size, not extra payload. */
+#define ATX_SECTOR_SIZE        128
+
+/* File header offsets */
+#define ATX_OFF_VERSION_MAJOR  0x04
+#define ATX_OFF_VERSION_MINOR  0x06
+#define ATX_OFF_DENSITY        0x12
+#define ATX_OFF_TRACK_DATA     0x1C
+
+/* Track header offsets */
+#define ATX_TRK_OFF_SIZE       0x00
+#define ATX_TRK_OFF_TYPE       0x04
+#define ATX_TRK_OFF_NUMBER     0x08
+#define ATX_TRK_OFF_NUMSECS    0x0A
+#define ATX_TRK_OFF_FLAGS      0x10
+#define ATX_TRK_OFF_CHUNKS     0x14
+
+/* Chunk types (byte at offset 4 of each chunk header). */
+#define ATX_CHUNK_SECTOR_DATA     0x00
 #define ATX_CHUNK_SECTOR_LIST     0x01
 #define ATX_CHUNK_WEAK_BITS       0x10
 #define ATX_CHUNK_EXT_SECTOR_HDR  0x11
 
-/* Track flags (uint32_t at offset 20 of TrackHeader). */
+/* Track flags (uint32_t at 0x10 of the track header). */
 #define ATX_TRK_FLAG_MFM          0x00000002
 #define ATX_TRK_FLAG_NO_SKEW      0x00000100
 
-/* FDC status flags (ATXSectorHeader.mFDCStatus, byte 1). Not inverted. */
-#define ATX_FDC_CRC_ERROR         0x08
-#define ATX_FDC_LOST_DATA         0x04      /* also indicates long-sector */
-#define ATX_FDC_MISSING_DATA      0x10      /* data field absent */
-#define ATX_FDC_DELETED           0x20      /* deleted-data mark (0xF8) */
+/* FDC status bits (sector header byte 1, not inverted).
+ * Semantics from write_atx:333-364 and read_atx:170-186. */
+#define ATX_FDC_DRQ               0x02      /* long sector, with LOST_DATA  */
+#define ATX_FDC_LOST_DATA         0x04      /* long sector                  */
+#define ATX_FDC_CRC_ERROR         0x08      /* data-field CRC              */
+#define ATX_FDC_MISSING_DATA      0x10      /* no data field at all        */
+#define ATX_FDC_DELETED           0x20      /* deleted-data mark (0xF8)    */
+#define ATX_FDC_WEAK              0x40      /* sector has weak bits        */
+/* CRC + MISSING together mean the ADDRESS field's CRC failed, not the
+ * data field's (read_atx:184). */
+#define ATX_FDC_ADDR_CRC_MASK     0x18
 
 typedef struct {
     uint8_t  *file_data;
     size_t    file_size;
-    uint16_t  version;
+    uint16_t  version_major;
+    uint16_t  version_minor;
     uint8_t   density;
-    uint16_t  sector_size;
-    uint8_t   track_count;
-    uint32_t  track_offsets[ATX_MAX_TRACKS];
+    uint8_t   track_count;                     /* highest track number + 1 */
+    uint8_t   max_sectors;                     /* largest sector count seen */
+    uint32_t  track_offsets[ATX_MAX_TRACKS];   /* file offset, 0 = absent  */
 } atx_data_t;
 
 /* ───────────────────────── Probe ──────────────────────────────────── */
@@ -96,32 +148,65 @@ static uft_error_t atx_open(uft_disk_t *disk, const char *path, bool ro) {
     p = calloc(1, sizeof(atx_data_t));
     if (!p) goto fail;
 
-    p->file_data = raw;
-    p->file_size = raw_size;
-    p->version = uft_read_le16(raw + 4);
-    p->density = raw[19];
-    p->sector_size = (p->density >= 2) ? ATX_SECTOR_SIZE_DD : ATX_SECTOR_SIZE_SD;
-    p->track_count = raw[20];
-    if (p->track_count > ATX_MAX_TRACKS) p->track_count = ATX_MAX_TRACKS;
+    p->file_data     = raw;
+    p->file_size     = raw_size;
+    p->version_major = uft_read_le16(raw + ATX_OFF_VERSION_MAJOR);
+    p->version_minor = uft_read_le16(raw + ATX_OFF_VERSION_MINOR);
+    p->density       = raw[ATX_OFF_DENSITY];
 
-    /* The file header (bytes 28..31) carries mTrackDataOffset — offset
-     * into the file where the track-offset table begins. In practice
-     * this is almost always 48 (directly after the header). */
-    uint32_t tot_offset = uft_read_le32(raw + 28);
-    if (tot_offset == 0) tot_offset = ATX_FILE_HEADER_SIZE;
+    /* a8rawconv starts reading records directly after the 48-byte header and
+     * ignores this field; its own writer sets it to 48. Honouring it when it
+     * points somewhere sane costs nothing and reads files that do not. */
+    uint32_t pos = uft_read_le32(raw + ATX_OFF_TRACK_DATA);
+    if (pos < ATX_FILE_HEADER_SIZE || pos >= raw_size)
+        pos = ATX_FILE_HEADER_SIZE;
 
-    for (int t = 0; t < p->track_count; t++) {
-        size_t entry = tot_offset + (size_t)t * 4;
-        if (entry + 4 > raw_size) break;
-        p->track_offsets[t] = uft_read_le32(raw + entry);
+    /* Walk the record chain. Each record says how long it is; a record that
+     * claims zero or overruns the file ends the walk rather than looping. */
+    while ((size_t)pos + ATX_TRACK_HEADER_SIZE <= raw_size) {
+        const uint8_t *th = raw + pos;
+        uint32_t rec_size = uft_read_le32(th + ATX_TRK_OFF_SIZE);
+        uint16_t rec_type = uft_read_le16(th + ATX_TRK_OFF_TYPE);
+
+        if (rec_size < ATX_TRACK_HEADER_SIZE ||
+            (size_t)pos + rec_size > raw_size)
+            break;
+
+        if (rec_type == 0) {
+            uint8_t  tnum = th[ATX_TRK_OFF_NUMBER];
+            uint16_t nsec = uft_read_le16(th + ATX_TRK_OFF_NUMSECS);
+
+            if (tnum < ATX_MAX_TRACKS) {
+                if (p->track_offsets[tnum] != 0)
+                    UFT_WARN("ATX: Spur %u kommt mehrfach vor — die spaetere "
+                             "Aufzeichnung gewinnt (%s)", tnum, path);
+                p->track_offsets[tnum] = pos;
+                if (tnum + 1 > p->track_count)
+                    p->track_count = (uint8_t)(tnum + 1);
+                if (nsec <= ATX_MAX_SECTORS && nsec > p->max_sectors)
+                    p->max_sectors = (uint8_t)nsec;
+            } else {
+                UFT_WARN("ATX: Spurnummer %u ausserhalb des Bereichs, "
+                         "uebersprungen (%s)", tnum, path);
+            }
+        }
+
+        pos += rec_size;
     }
 
-    disk->plugin_data = p;
-    disk->geometry.cylinders = p->track_count;
-    disk->geometry.heads = 1;
-    disk->geometry.sectors = 18;  /* Atari DOS 2 default; overridden per-track */
-    disk->geometry.sector_size = p->sector_size;
-    disk->geometry.total_sectors = (uint32_t)p->track_count * 18;
+    if (p->track_count == 0) {
+        UFT_WARN("ATX: keine Spuraufzeichnung gefunden (%s)", path);
+        err = UFT_ERROR_FORMAT_INVALID;
+        goto fail;
+    }
+
+    disk->plugin_data          = p;
+    disk->geometry.cylinders   = p->track_count;
+    disk->geometry.heads       = 1;
+    disk->geometry.sectors     = p->max_sectors ? p->max_sectors : 18;
+    disk->geometry.sector_size = ATX_SECTOR_SIZE;
+    disk->geometry.total_sectors =
+        (uint32_t)p->track_count * disk->geometry.sectors;
     return UFT_OK;
 
 fail:
@@ -137,10 +222,9 @@ static void atx_close(uft_disk_t *disk) {
 
 /* ───────────────────────── Read track ─────────────────────────────── */
 
-/* One-time resolution of weak-bit chunks for a sector index. */
 typedef struct {
-    uint8_t  sector_index;      /* index into the SectorList */
-    uint16_t weak_offset;       /* byte offset of first weak byte in sector */
+    uint8_t  list_index;        /* index into the sector list */
+    uint16_t weak_offset;       /* first weak byte within the sector */
 } atx_weak_info_t;
 
 static uft_error_t atx_read_track(uft_disk_t *disk, int cyl, int head,
@@ -153,55 +237,51 @@ static uft_error_t atx_read_track(uft_disk_t *disk, int cyl, int head,
     uft_track_init(track, cyl, head);
 
     uint32_t trk_off = p->track_offsets[cyl];
-    if (trk_off == 0 || trk_off + ATX_TRACK_HEADER_SIZE > p->file_size)
-        return UFT_OK;  /* empty/missing track — not an error */
+    if (trk_off == 0)
+        return UFT_OK;  /* track absent from the image — not an error */
 
     const uint8_t *th = p->file_data + trk_off;
-    uint32_t trk_size      = uft_read_le32(th + 0);
-    /* th + 4: uint16_t type, 2 reserved, 1 track, 1 reserved = 8 bytes */
-    uint8_t  track_num     = th[8];
-    uint16_t num_sectors   = uft_read_le16(th + 10);
-    uint32_t trk_flags     = uft_read_le32(th + 20);
-    uint32_t data_offset   = uft_read_le32(th + 24);
+    uint32_t trk_size    = uft_read_le32(th + ATX_TRK_OFF_SIZE);
+    uint16_t num_sectors = uft_read_le16(th + ATX_TRK_OFF_NUMSECS);
+    uint32_t trk_flags   = uft_read_le32(th + ATX_TRK_OFF_FLAGS);
+    uint32_t chunk_off   = uft_read_le32(th + ATX_TRK_OFF_CHUNKS);
 
-    (void)track_num;
-    (void)trk_flags;
-
-    if (trk_size < ATX_TRACK_HEADER_SIZE || trk_size > p->file_size ||
-        trk_off + trk_size > p->file_size) return UFT_OK;
+    if (trk_size < ATX_TRACK_HEADER_SIZE ||
+        (size_t)trk_off + trk_size > p->file_size) return UFT_OK;
     if (num_sectors == 0 || num_sectors > ATX_MAX_SECTORS) return UFT_OK;
+    if (chunk_off < ATX_TRACK_HEADER_SIZE || chunk_off >= trk_size) return UFT_OK;
 
-    /* Scan chunks (relative to track start).  Collect SectorList,
-     * WeakBits, ExtSectorHeader. */
-    uint32_t ext_size_bits[ATX_MAX_SECTORS] = {0};      /* per-sector */
+    track->encoding = (trk_flags & ATX_TRK_FLAG_MFM) ? UFT_ENCODING_MFM
+                                                     : UFT_ENCODING_FM;
+
+    /* Scan the chunk list. Offsets are relative to the track record. */
+    uint16_t ext_size_code[ATX_MAX_SECTORS] = {0};
     atx_weak_info_t weak[ATX_MAX_SECTORS];
     int weak_count = 0;
-    uint32_t sec_list_off_in_track = 0;
+    uint32_t sec_list_off = 0;
 
-    uint32_t tcpos = data_offset;
+    uint32_t tcpos = chunk_off;
     while (tcpos + ATX_CHUNK_HEADER_SIZE <= trk_size) {
         const uint8_t *ch = th + tcpos;
-        uint32_t c_size   = uft_read_le32(ch + 0);
-        uint8_t  c_type   = ch[4];
-        uint8_t  c_num    = ch[5];
-        uint16_t c_data   = uft_read_le16(ch + 6);
+        uint32_t c_size = uft_read_le32(ch + 0);
+        uint8_t  c_type = ch[4];
+        uint8_t  c_num  = ch[5];
+        uint16_t c_data = uft_read_le16(ch + 6);
 
-        if (c_size == 0) break;
+        if (c_size == 0) break;                       /* end of chunk list */
         if (c_size < ATX_CHUNK_HEADER_SIZE) break;
         if (tcpos + c_size > trk_size) break;
 
         if (c_type == ATX_CHUNK_SECTOR_LIST) {
-            /* Payload: num_sectors × ATXSectorHeader immediately after */
             if (c_size >= ATX_CHUNK_HEADER_SIZE +
-                          (uint32_t)num_sectors * ATX_SECTOR_HEADER_SIZE) {
-                sec_list_off_in_track = tcpos + ATX_CHUNK_HEADER_SIZE;
-            }
+                          (uint32_t)num_sectors * ATX_SECTOR_HEADER_SIZE)
+                sec_list_off = tcpos + ATX_CHUNK_HEADER_SIZE;
         } else if (c_type == ATX_CHUNK_EXT_SECTOR_HDR) {
-            if (c_num < ATX_MAX_SECTORS) ext_size_bits[c_num] = c_data;
+            if (c_num < ATX_MAX_SECTORS) ext_size_code[c_num] = c_data;
         } else if (c_type == ATX_CHUNK_WEAK_BITS) {
             if (weak_count < ATX_MAX_SECTORS) {
-                weak[weak_count].sector_index = c_num;
-                weak[weak_count].weak_offset  = c_data;
+                weak[weak_count].list_index  = c_num;
+                weak[weak_count].weak_offset = c_data;
                 weak_count++;
             }
         }
@@ -209,90 +289,125 @@ static uft_error_t atx_read_track(uft_disk_t *disk, int cyl, int head,
         tcpos += c_size;
     }
 
-    if (sec_list_off_in_track == 0) return UFT_OK;  /* malformed */
+    if (sec_list_off == 0) {
+        UFT_WARN("ATX: Spur %d hat %u Sektoren im Kopf, aber keine "
+                 "Sektorliste", cyl, num_sectors);
+        return UFT_OK;
+    }
 
-    /* Process each sector in the SectorList. */
+    /* list index -> index of the sector this produced, or -1 if none was
+     * created. The weak chunks address the LIST, so the mapping has to be
+     * kept explicitly instead of assuming the two run in step. */
+    int produced[ATX_MAX_SECTORS];
+    for (int i = 0; i < ATX_MAX_SECTORS; i++) produced[i] = -1;
+
+    uint8_t seen_ids[ATX_MAX_SECTORS];
+    int seen_count = 0;
+
     for (uint16_t s = 0; s < num_sectors && s < ATX_MAX_SECTORS; s++) {
-        size_t sh_off = trk_off + sec_list_off_in_track +
-                         (size_t)s * ATX_SECTOR_HEADER_SIZE;
+        size_t sh_off = (size_t)trk_off + sec_list_off +
+                        (size_t)s * ATX_SECTOR_HEADER_SIZE;
         if (sh_off + ATX_SECTOR_HEADER_SIZE > p->file_size) break;
 
         const uint8_t *sh = p->file_data + sh_off;
-        uint8_t  sec_index    = sh[0];
-        uint8_t  fdc_status   = sh[1];
-        uint16_t timing_off   = uft_read_le16(sh + 2);
+        uint8_t  sec_id       = sh[0];
+        uint8_t  fdc          = sh[1];
         uint32_t sec_data_off = uft_read_le32(sh + 4);
 
-        (void)timing_off;
+        bool missing = (fdc & ATX_FDC_MISSING_DATA) != 0;
+        bool addr_crc_bad = (fdc & ATX_FDC_ADDR_CRC_MASK) == ATX_FDC_ADDR_CRC_MASK;
+        bool data_crc_bad = !addr_crc_bad && (fdc & ATX_FDC_CRC_ERROR) != 0;
+        bool long_sector  = (fdc & ATX_FDC_LOST_DATA) != 0;
 
-        /* Determine sector payload size (long sectors via ext header). */
-        uint16_t size_bytes = p->sector_size;
-        if (fdc_status & ATX_FDC_LOST_DATA) {
-            /* Extended sector — payload size is 128 << max(1, ext & 3) */
-            uint32_t e = ext_size_bits[s];
-            int shift = (int)(e & 3);
-            if (shift < 1) shift = 1;
-            size_bytes = (uint16_t)(128u << shift);
+        /* The stored payload is always 128 bytes. A long sector's extended
+         * chunk states the PHYSICAL size; the extra bytes are not in the
+         * file, so they are not invented here either. */
+        uint8_t payload[ATX_SECTOR_SIZE];
+        const uint8_t *src;
+
+        if (missing) {
+            /* The sector header exists, the data field does not. The buffer
+             * below is a placeholder so the sector can be reported at all —
+             * it is marked MISSING and crc_ok = false, and no caller may
+             * read it as recovered content. */
+            memset(payload, 0, sizeof(payload));
+            src = payload;
+        } else {
+            size_t abs = (size_t)trk_off + sec_data_off;
+            if (sec_data_off == 0 || abs + ATX_SECTOR_SIZE > p->file_size) {
+                UFT_WARN("ATX: Spur %d Sektor %u zeigt auf Offset %u ausserhalb "
+                         "der Spur — uebersprungen", cyl, sec_id, sec_data_off);
+                continue;
+            }
+            src = p->file_data + abs;
         }
 
-        /* Data offset is relative to the TRACK start (not file start). */
-        size_t abs_data = trk_off + sec_data_off;
-        if (abs_data == trk_off) continue;  /* 0 = no data */
-        if (abs_data + size_bytes > p->file_size) continue;
+        if (uft_format_add_sector_with_id(track, sec_id, src,
+                                          ATX_SECTOR_SIZE,
+                                          (uint8_t)cyl, 0) != UFT_OK)
+            continue;
 
-        const uint8_t *src = p->file_data + abs_data;
-        uint8_t zero_buf[256] = {0};
-        if (fdc_status & ATX_FDC_MISSING_DATA) {
-            src = zero_buf;
-            if (size_bytes > sizeof(zero_buf)) size_bytes = sizeof(zero_buf);
+        produced[s] = (int)track->sector_count - 1;
+        uft_sector_t *sec = &track->sectors[track->sector_count - 1];
+
+        uft_sector_set_crc(sec, !(data_crc_bad || missing));
+        uft_sector_set_id_crc(sec, !addr_crc_bad);
+        sec->deleted   = (fdc & ATX_FDC_DELETED) != 0;
+        sec->data_mark = sec->deleted ? 0xF8u : 0xFBu;
+
+        sec->status = UFT_SECTOR_OK;
+        if (data_crc_bad) sec->status |= UFT_SECTOR_CRC_ERROR;
+        if (addr_crc_bad) sec->status |= UFT_SECTOR_ID_CRC_ERROR;
+        if (missing)      sec->status |= UFT_SECTOR_MISSING;
+        if (sec->deleted) sec->status |= UFT_SECTOR_DELETED;
+        if (fdc & ATX_FDC_WEAK) sec->status |= UFT_SECTOR_WEAK;
+
+        if (long_sector) {
+            sec->status |= UFT_SECTOR_EXTRA;
+            unsigned code = ext_size_code[s] & 3u;
+            if (code < 1) code = 1;
+            UFT_INFO("ATX: Spur %d Sektor %u ist ein langer Sektor "
+                     "(physisch %u Byte, im Abbild stehen %u)",
+                     cyl, sec_id, 128u << code, (unsigned)ATX_SECTOR_SIZE);
         }
 
-        uft_format_add_sector(track,
-            sec_index > 0 ? sec_index - 1 : 0,
-            src, size_bytes,
-            (uint8_t)cyl, 0);
-
-        if (track->sector_count == 0) continue;
-        uft_sector_t *last = &track->sectors[track->sector_count - 1];
-
-        last->crc_ok   = (fdc_status & ATX_FDC_CRC_ERROR) == 0;
-        last->deleted  = (fdc_status & ATX_FDC_DELETED)   != 0;
-        last->data_mark = (fdc_status & ATX_FDC_DELETED) ? 0xF8u : 0xFBu;
+        /* A sector number that appears twice on one track is a phantom
+         * sector — one of the oldest Atari protections, and the reason the
+         * format keeps a list instead of an array (write_atx:279-284). */
+        for (int k = 0; k < seen_count; k++) {
+            if (seen_ids[k] == sec_id) {
+                sec->status |= UFT_SECTOR_DUPLICATE;
+                if (produced[k] >= 0)
+                    track->sectors[produced[k]].status |= UFT_SECTOR_DUPLICATE;
+                break;
+            }
+        }
+        if (seen_count < ATX_MAX_SECTORS) seen_ids[seen_count++] = sec_id;
     }
 
-    /* Apply weak-bit annotations (after sectors are created).
+    /* Weak-bit chunks, applied after the sectors exist.
      *
-     * Per ATX spec (Atari VAPI), the WeakBits chunk (0x10) carries a
-     * sector-index + first-weak-byte offset; everything from that offset
-     * to the end of the sector data is considered weak. We allocate a
-     * per-byte mask (1 = weak, 0 = solid) so downstream multi-read
-     * voting / forensic export can preserve the information byte-exact.
-     *
-     * Memory: weak_mask is freed by uft_track_free() in uft_unified_types.c
-     * (already handles confidence_map / weak_mask / timing_ns alongside
-     * data). No leak as long as the caller owns the track. */
+     * The chunk carries the index into the SECTOR LIST plus the offset of the
+     * first weak byte; everything from there to the end of the sector is
+     * weak. The per-byte mask lets multi-read voting and forensic export keep
+     * that byte-exact. uft_track_free() releases weak_mask. */
     for (int w = 0; w < weak_count; w++) {
-        uint8_t idx = weak[w].sector_index;
-        if (idx >= track->sector_count) continue;
-        uft_sector_t *sec = &track->sectors[idx];
-        sec->weak = true;
+        uint8_t li = weak[w].list_index;
+        if (li >= ATX_MAX_SECTORS || produced[li] < 0) continue;
 
-        /* Determine sector size for the mask. Prefer data_size (set by
-         * uft_format_add_sector); fall back to data_len. Skip if zero. */
-        size_t sec_size = sec->data_size ? sec->data_size : sec->data_len;
+        uft_sector_t *sec = &track->sectors[produced[li]];
+        sec->weak = true;
+        sec->status |= UFT_SECTOR_WEAK;
+
+        size_t sec_size = sec->data_len ? sec->data_len : sec->data_size;
         if (sec_size == 0) continue;
 
         uint16_t first = weak[w].weak_offset;
-        if (first >= sec_size) continue;  /* offset past end — no bits weak */
+        if (first >= sec_size) continue;   /* nothing in this sector is weak */
 
-        /* Allocate (or reuse) the per-byte weak mask. calloc → bytes
-         * before `first` stay 0 (solid). */
         if (!sec->weak_mask) {
             sec->weak_mask = calloc(sec_size, 1);
-            if (!sec->weak_mask) {
-                /* Allocation failure: keep sec->weak flag, skip mask. */
-                continue;
-            }
+            if (!sec->weak_mask) continue;   /* flag stays, mask omitted */
         }
         memset(sec->weak_mask + first, 0xFF, sec_size - first);
     }

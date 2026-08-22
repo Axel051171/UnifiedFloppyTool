@@ -3652,6 +3652,124 @@ beschrieben stehen.
 
 ---
 
+### FMT-23 — ATX lieferte für jede Datei eine leere Diskette (2026-08-22, MF-467) → ✓ BEHOBEN, T3 → T2
+
+**a8rawconv ist jetzt das zweite Referenz-Orakel** des Projekts
+(`src/a8rawconv/`, 44 Dateien, 9 194 Zeilen, GPL-2.0-or-later, wird von keinem
+Build kompiliert — siehe `src/a8rawconv/README.md`). Arbeitsteilung:
+
+| Orakel | deckt ab |
+|---|---|
+| `src/samdisk/` | PC, CPC, Sinclair, Atari ST, generische FDC-Formate |
+| `src/a8rawconv/` | **Atari 8-bit (ATX/VAPI, FM), Interleave, Apple/Mac-GCR** |
+
+Der erste Einsatz hat sofort etwas gefunden.
+
+**Was verglichen wurde.** `diskatx.cpp` liefert beide Seiten: `read_atx()`
+(:64-190) und `write_atx()` (:216-416). Der **Schreiber** ist dabei die
+stärkere Quelle — er legt Feld für Feld fest, was der Leser konsumiert. Dazu
+zwei `static_assert` auf 48 bzw. 32 Byte Kopfgröße.
+
+**Was unser Leser tat.** Vier Fehler, zwei davon tödlich:
+
+| Feld | belegt | `uft_atx.c` vorher |
+|---|---|---|
+| Spurkopf-Flags | 0x10 | 0x14 |
+| Chunk-Offset im Spurkopf | **0x14** | **0x18** |
+| Dichte im Dateikopf | 0x12 | 0x13 (Füllbyte) |
+| Spuraufzählung | Aufzeichnungen **hintereinander**, der Reihe nach abgelaufen | erfundene Tabelle von LE32-Offsets, dazu eine „Spurzahl" bei 0x14 — das ist `mImageId`, das Format hat keine Spurzahl |
+
+Die Folge des zweiten Eintrags: der Chunk-Offset kam aus Füllbytes, war also
+**0**. Der Chunk-Scan begann damit auf dem Spurkopf selbst, fand keine
+Sektorliste und gab eine leere Spur zurück — mit `UFT_OK`. **Jede ATX-Datei
+las sich als leere Diskette, ohne eine einzige Fehlermeldung.**
+
+Der MF-421-Statusabgleich führte TA3 („ATX-Plugin") als erledigt, weil dabei
+ein Byte-Order-Fehler in der Signatur gefunden worden war, „wegen dem ATX nie
+Sektordaten geliefert hatte". Die Signatur war danach richtig. Sektordaten kam
+trotzdem keine. Ein Probe-Test allein kann das nicht bemerken — und mehr gab
+es nicht.
+
+**Rot-Probe** (`tests/test_atx_layout.c`, gegen ein bytegenau nach
+`diskatx.cpp` gebautes Abbild):
+
+```
+  [TEST] track_records_are_walked_and_sectors_delivered ... FAIL @ 186: disk.geometry.cylinders == ATX_TRACKS
+  [TEST] fdc_status_becomes_sector_status               ... FAIL @ 234
+  [TEST] weak_chunk_marks_from_its_offset_to_the_end    ... FAIL @ 271
+```
+
+Der erste Fall fällt schon an der Spurzahl: die kam aus `mImageId`.
+
+**Neu belegt übernommen.** Die FDC-Status-Semantik stand vorher halb im
+Dateikopf und wurde halb ausgewertet:
+
+| Bits | Bedeutung (write_atx:333-364, read_atx:170-186) | jetzt |
+|---|---|---|
+| 0x18 **zusammen** | CRC-Fehler im **Adressfeld** | `UFT_SECTOR_ID_CRC_ERROR` |
+| 0x08 allein | CRC-Fehler im **Datenfeld** | `UFT_SECTOR_CRC_ERROR` |
+| 0x10 | kein Datenfeld vorhanden | `UFT_SECTOR_MISSING`, Puffer ausdrücklich als Platzhalter |
+| 0x20 | Deleted-Mark 0xF8 | `UFT_SECTOR_DELETED` |
+| 0x04\|0x02 | langer Sektor | `UFT_SECTOR_EXTRA` + Meldung der physischen Größe |
+| 0x40 | Weak-Sektor | `UFT_SECTOR_WEAK` |
+
+Dazu zwei Dinge, die vorher fehlten:
+
+- **Phantomsektoren.** Zwei Einträge mit derselben Sektornummer auf einer Spur
+  sind einer der ältesten Atari-Kopierschutze — und der Grund, warum das
+  Format eine *Liste* führt und kein Array (`write_atx:279-284`). Beide
+  Vorkommen tragen jetzt `UFT_SECTOR_DUPLICATE`.
+- **Weak-Chunk-Zuordnung.** Der Chunk nennt den Index in der **Sektorliste**.
+  Vorher wurde er als Index in die erzeugten Sektoren gelesen — was
+  auseinanderläuft, sobald ein Listeneintrag übersprungen wird. Die Zuordnung
+  wird jetzt mitgeführt.
+
+Die Sektornummer wird über `uft_format_add_sector_with_id()` (ARCH-20,
+MF-465) durchgereicht statt über den `id - 1`-Umweg, der Sektor 0 auf 1
+abgebildet hätte.
+
+| Stufe | vorher | nachher |
+|---|---:|---:|
+| T2 | 16 | **17** |
+| T3 | 58 | **57** |
+
+**Ehrlich zur Grenze:** verifiziert ist das Layout gegen eine funktionierende
+Implementierung, nicht das Verhalten an einem realen ATX-Abbild — es liegt
+keines im Korpus. Deshalb T2. Zwei weitere ATX-Implementierungen liegen
+außerdem noch im Baum (`src/formats/atari/uft_atx_parser_v2.c` 732 Zeilen,
+`src/formats/atari/atx.c` 97 Zeilen) und sind **nicht** mitgeprüft — das ist
+ARCH-6.
+
+---
+
+### Lizenzwiderspruch im a8rawconv-Fork behoben (2026-08-22, MF-467)
+
+Der Fork `Axel051171/a8rawconv-0.95` trug eine `LICENSE`-Datei mit **CC0-1.0**,
+während sein eigenes README und 17 seiner Quelldateien ausdrücklich
+GPL-2-or-later nennen:
+
+```
+README.md:636  "a8rawconv is released under the GNU General Public License,
+                version 2 or later. A copy of the license is included in the
+                file COPYING"
+
+*.cpp          "Copyright (C) 2014-2020 Avery Lee
+                ... either version 2 of the License, or (at your option)
+                any later version."
+```
+
+CC0 ist eine Rechteverzichtserklärung; für fremden GPL-Code lässt sie sich
+nicht abgeben — ein Fork kann die Lizenz des Originals nicht ändern. Die im
+README genannte `COPYING` fehlte zudem ganz.
+
+Behoben in `Axel051171/a8rawconv-0.95` (Commit `5db54b4`): CC0 entfernt,
+`COPYING` mit dem GPL-2.0-Text angelegt. GitHub meldet den Fork seither als
+GPL-2.0. Für UFT ändert sich nichts — GPL-2 zu GPL-2 ist verträglich — aber
+der Bestand in `src/a8rawconv/` steht damit unter einer Lizenz, die auch
+draußen stimmt.
+
+---
+
 ### BUG-11 — „Alle Lesungen einig" war als „wiederhergestellt" gebucht (2026-08-22, MF-466) → ✓ BEHOBEN
 
 Aus dem a8rawconv-Vergleich (siehe `docs/A8RAWCONV_INTEGRATION_TODO.md`,
