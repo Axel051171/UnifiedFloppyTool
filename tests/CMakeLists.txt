@@ -226,6 +226,11 @@ foreach(test_source ${TEST_SOURCES})
     elseif(${test_name} STREQUAL "test_atr_write_roundtrip")
         # Phase-6 round-trip: ATR write_track -> read_track (MF-341)
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/atr/uft_atr.c)
+    elseif(${test_name} STREQUAL "test_apple_do_po_bounds")
+        # DO/PO: kein Fuellbyte als Sektor, Zylinder begrenzt (MF-463)
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/do/uft_do.c
+            ${CMAKE_SOURCE_DIR}/src/formats/po/uft_po.c)
     elseif(${test_name} STREQUAL "test_st_geometry")
         # ST geometry: BPB before size scan, extended 80..84 cyl range (MF-462)
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/st/uft_st.c)

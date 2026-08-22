@@ -4,6 +4,22 @@
  *
  * Headerless raw 140K Apple II disk. 35 tracks × 16 sectors × 256 bytes.
  * Sector order: DOS 3.3 (interleaved).
+ *
+ * **DO and PO cannot be told apart by content here, and that is not a gap in
+ * this probe** (MF-463). Both are 143,360-byte flat dumps of the same disk;
+ * they differ only in the order of sectors 1..14 within a track — sectors 0
+ * and 15 sit at the same place in both orders. The one structure that would
+ * decide it, the DOS 3.3 VTOC, lives at track 17 sector 0, i.e. file offset
+ * 0x11000 = 69,632 — past the 65,536-byte probe buffer
+ * (UFT_PROBE_BUFFER_SIZE), and the VTOC itself is at the same offset in both
+ * orders anyway. Deciding would mean following the catalog chain through
+ * sectors 14..1, which a probe cannot reach.
+ *
+ * SAMdisk resolves it the same way and says so plainly: its ReadDO() is
+ * marked "not used" and falls back to size plus file extension
+ * (src/samdisk/do.cpp:6-13). Here the extension does the same job, through
+ * the registry's extension matching. Two plugins reporting almost the same
+ * confidence for the same bytes is the honest answer, not a bug.
  */
 #include "uft/uft_format_common.h"
 
@@ -42,12 +58,17 @@ static uft_error_t do_read_track(uft_disk_t *disk, int cyl, int head,
                                   uft_track_t *track) {
     do_pd_t *p = disk->plugin_data;
     if (!p || !p->file || head != 0) return UFT_ERROR_INVALID_STATE;
+    if (cyl < 0 || cyl >= DO_TRACKS) return UFT_ERROR_INVALID_STATE;
     uft_track_init(track, cyl, head);
     uint8_t buf[DO_SS];
     for (int s = 0; s < DO_SPT; s++) {
         long off = (long)(cyl * DO_SPT + s) * DO_SS;
         if (fseek(p->file, off, SEEK_SET) != 0) return UFT_ERROR_IO;
-        if (fread(buf, 1, DO_SS, p->file) != DO_SS) { memset(buf, 0xE5, DO_SS); }
+        /* A short read means those bytes are not in the file. Filling them
+         * with 0xE5 and adding the result as a sector would hand out invented
+         * data as if it had been read (MF-463). The track reports what exists
+         * and stops. */
+        if (fread(buf, 1, DO_SS, p->file) != DO_SS) break;
         uft_format_add_sector(track, (uint8_t)s, buf, DO_SS, (uint8_t)cyl, 0);
     }
     return UFT_OK;
@@ -57,6 +78,7 @@ static uft_error_t do_write_track(uft_disk_t *disk, int cyl, int head,
                                    const uft_track_t *track) {
     do_pd_t *p = disk->plugin_data;
     if (!p || !p->file || head != 0) return UFT_ERROR_INVALID_STATE;
+    if (cyl < 0 || cyl >= DO_TRACKS) return UFT_ERROR_INVALID_STATE;
     if (disk->read_only) return UFT_ERROR_NOT_SUPPORTED;
     for (size_t s = 0; s < track->sector_count && (int)s < DO_SPT; s++) {
         long off = (long)(cyl * DO_SPT + (int)s) * DO_SS;

@@ -4,6 +4,11 @@
  *
  * Same as DO but ProDOS sector order (non-interleaved).
  * 35 tracks × 16 sectors × 256 bytes = 143,360 bytes.
+ *
+ * Why the probe cannot separate this from DO — and why that is the correct
+ * answer rather than a gap — is written out in src/formats/do/uft_do.c
+ * (MF-463). Short version: the two orders differ only in sectors 1..14, and
+ * the structure that would decide it sits past the probe buffer.
  */
 #include "uft/uft_format_common.h"
 
@@ -41,11 +46,14 @@ static void po_close(uft_disk_t *disk) {
 static uft_error_t po_read_track(uft_disk_t *disk, int cyl, int head, uft_track_t *track) {
     po_pd_t *p = disk->plugin_data;
     if (!p || !p->file || head != 0) return UFT_ERROR_INVALID_STATE;
+    if (cyl < 0 || cyl >= PO_TRACKS) return UFT_ERROR_INVALID_STATE;
     uft_track_init(track, cyl, head);
     uint8_t buf[PO_SS];
     for (int s = 0; s < PO_SPT; s++) {
         if (fseek(p->file, (long)(cyl * PO_SPT + s) * PO_SS, SEEK_SET) != 0) return UFT_ERROR_IO;
-        if (fread(buf, 1, PO_SS, p->file) != PO_SS) { memset(buf, 0xE5, PO_SS); }
+        /* Not read means not there — never hand out fill as if it were data
+         * (MF-463; same change in uft_do.c). */
+        if (fread(buf, 1, PO_SS, p->file) != PO_SS) break;
         uft_format_add_sector(track, (uint8_t)s, buf, PO_SS, (uint8_t)cyl, 0);
     }
     return UFT_OK;
@@ -55,6 +63,7 @@ static uft_error_t po_write_track(uft_disk_t *disk, int cyl, int head,
                                    const uft_track_t *track) {
     po_pd_t *p = disk->plugin_data;
     if (!p || !p->file || head != 0) return UFT_ERROR_INVALID_STATE;
+    if (cyl < 0 || cyl >= PO_TRACKS) return UFT_ERROR_INVALID_STATE;
     if (disk->read_only) return UFT_ERROR_NOT_SUPPORTED;
     for (size_t s = 0; s < track->sector_count && (int)s < PO_SPT; s++) {
         if (fseek(p->file, (long)(cyl * PO_SPT + (int)s) * PO_SS, SEEK_SET) != 0)

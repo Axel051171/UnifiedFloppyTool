@@ -3652,6 +3652,111 @@ beschrieben stehen.
 
 ---
 
+### FMT-22 — Apple DO/PO gaben Füllbytes als gelesene Sektoren aus (2026-08-22, MF-463) → ✓ BEHOBEN, DO bleibt bewusst T3
+
+Vierter Schritt des T3-Abbaus — und der erste, der **nicht** in einer Hebung
+endet. Warum, steht unten; es ist der Punkt des Eintrags.
+
+**Der Befund.** Beide Leser sahen so aus:
+
+```c
+if (fread(buf, 1, DO_SS, p->file) != DO_SS) { memset(buf, 0xE5, DO_SS); }
+uft_format_add_sector(track, s, buf, DO_SS, cyl, 0);
+```
+
+Ein Sektor, der nicht in der Datei steht, kam als 256 Byte `0xE5` zurück —
+angelegt mit `crc_ok = true` wie jeder andere. Nichts am Ergebnis sagte, dass
+diese Bytes nie gelesen wurden.
+
+Und `open()` prüft die Dateigröße nicht. Das war also kein Randfall: **jede**
+zu kurze oder abgeschnittene Datei ergab eine vollständig aussehende
+35-Spur-Diskette aus Füllbytes. Genau die Sorte Befund, gegen die der erste
+Satz der Mission geschrieben ist.
+
+Dazu: weder `read_track` noch `write_track` begrenzten den Zylinder. Spur 5000
+ergab einen Offset weit hinter dem Dateiende — beim Lesen eine erfundene Spur,
+beim Schreiben eine still verlängerte Datei.
+
+Jetzt: Zylinder begrenzt, und was nicht gelesen wurde, wird nicht ausgegeben.
+Die Spur meldet, was existiert.
+
+**Rot-Probe:** `tests/test_apple_do_po_bounds.c`, beide Plugins, beide Fälle
+rot auf der alten Fassung.
+
+#### Warum DO trotzdem T3 bleibt
+
+DO und PO sind **inhaltlich nicht unterscheidbar** — nicht in dieser Probe,
+und nicht in irgendeiner Probe mit dem heutigen Puffer:
+
+- Beide sind 143.360-Byte-Rohabzüge derselben Diskette.
+- Sie unterscheiden sich **nur in der Reihenfolge der Sektoren 1..14**;
+  Sektor 0 und 15 liegen in beiden Ordnungen an derselben Stelle.
+- Die Struktur, die es entscheiden würde — das DOS-3.3-VTOC — liegt auf
+  Spur 17 Sektor 0, also bei Dateioffset `0x11000` = 69.632. Der Probe-Puffer
+  ist 65.536 Byte groß (`UFT_PROBE_BUFFER_SIZE`). Und selbst dort gelesen
+  läge das VTOC in **beiden** Ordnungen am selben Offset; entscheiden ließe
+  es sich erst, indem man die Katalogkette durch die Sektoren 14..1 verfolgt.
+
+SAMdisk löst es genauso und sagt es offen: sein `ReadDO()` ist im Quelltext
+mit `// not used` markiert und stützt sich auf Größe **plus Dateiendung**
+(`src/samdisk/do.cpp:6-13`). Bei uns tut die Endung dieselbe Arbeit über die
+Extension-Zuordnung der Registry.
+
+Damit bleibt als „Spec" für DO nur die Geometrie 35×16×256 — zu wenig für
+einen T2-Eintrag. Ein Eintrag in `docs/spec_verification.json` wäre hier
+billig zu haben und wertlos; genau davor warnt die EINFRIER-REGEL. Beide
+Dateiköpfe sagen jetzt aus, was geprüft wurde und was nicht.
+
+| Stufe | vorher | nachher |
+|---|---:|---:|
+| T2 | 16 | 16 |
+| T3 | 58 | 58 |
+
+---
+
+### ARCH-20 — `uft_format_add_sector()` erfindet die Sektornummer (2026-08-22, MF-463) → ⚠ OFFEN
+
+Beim DO-Vergleich aufgefallen. Der Helfer, den **71 der 88 Plugins** benutzen,
+setzt die Sektor-ID hart:
+
+```c
+/* include/uft/uft_format_common.h:78 */
+sector.id.sector = sector_num + 1;  // 1-basiert in ID
+```
+
+`uft_sector_t.id` ist die CHS-Kennung — die Nummer, die **auf der Diskette
+steht**. Für IBM-PC-Formate ist 1-basiert richtig. Für mindestens drei ganze
+Plattformfamilien nicht:
+
+| Familie | Sektornummern auf der Diskette | gemeldet |
+|---|---|---|
+| Apple II (DOS 3.3 / ProDOS) | 0..15 | 1..16 |
+| Amiga (AmigaDOS) | 0..10 | 1..11 |
+| Commodore (1541/71/81) | 0..20 | 1..21 |
+
+Die Folge ist konkret, nicht theoretisch:
+`uft_track_find_sector(track, 0)` findet auf einer Apple- oder
+Commodore-Diskette **nie** einen Sektor, und wer nach 16 fragt, bekommt den,
+der in Wirklichkeit die 15 trägt.
+
+Dass es auch anders geht, steht im selben Baum: die CP/M-Plugins setzen
+`sect->id.sector = def->first_sector + s` (`uft_cpm_diskdefs.c:1344`) — die
+Basis kommt aus der Formatdefinition.
+
+**Nicht in MF-463 geändert.** Der Helfer wird von 71 Plugins benutzt; die
+Korrektur ist ein eigener Arbeitsblock (expliziter ID-Helfer, dann die
+0-basierten Familien umstellen, dazu die Tests, die die falsche Nummerierung
+festschreiben — `test_convert_via_plugin.c:179` prüft ausdrücklich
+`bam.sectors[0].id.sector == 1` mit dem Kommentar „IDs are 1-based", und das
+ist eine D64-Spur). Das im selben Commit mit einer Format-Korrektur zu
+vermischen hieße, zwei verschiedene Dinge unter einen Beweis zu stellen.
+
+Nächster Schritt: `uft_format_add_sector_with_id()` einführen (keine
+Verhaltensänderung), dann Familie für Familie umstellen, jede mit eigener
+Rot-Probe.
+
+---
+
 ### FMT-21 — Atari ST: jedes erweiterte Format wurde abgewiesen (2026-08-22, MF-462) → ✓ BEHOBEN
 
 ST-Abbilder haben keinen Kopf. Die Geometrie muss also von woanders kommen —
