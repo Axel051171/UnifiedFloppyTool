@@ -5083,6 +5083,78 @@ einem echten CopyQM-Abbild. Es liegt keines im Korpus. Deshalb T2, nicht T1.
 
 ---
 
+### ARCH-24 — 97 gebaute Dateien haben keinen Aufrufer (2026-08-22, MF-476) → ⚠ OFFEN
+
+ARCH-19 hat den Befund für `src/formats/misc/` von Hand ausgezählt. Beim
+Verdrahten von MF-475 tauchte dasselbe Bild in anderen Schichten auf, also
+war die Frage: ist `misc/` ein Sonderfall oder ein Ausschnitt?
+
+Es ist ein Ausschnitt. `scripts/audit_orphan_modules.py` misst es jetzt
+reproduzierbar — **das Skript ist die SSOT, die Zahlen unten sind ein
+Stand, kein Vertrag**:
+
+| | |
+|---|---|
+| gebaute Quelldateien mit exportierten Symbolen | 531 |
+| davon mit Aufrufern in `src/` | 430 |
+| davon **nur** von Tests aufgerufen | 4 |
+| davon **ohne jeden** Aufrufer | **97** |
+
+Rund 18 % des Builds ist Code, den niemand aufruft. Er kostet Bauzeit, er
+sieht im Baum nach Funktion aus, und er hat keine.
+
+Die vier „nur von Tests" sind der interessantere Teil: `atari/st.c`,
+`commodore/d67.c`, `d80.c`, `d82.c`. Das ist derselbe Zustand, in dem
+MF-471, MF-473 und MF-474 gelandet sind — geprüft und ohne Wirkung. Ein
+grüner Test über unverdrahtetem Code beweist, dass er funktioniert, und
+verschweigt, dass ihn niemand ruft.
+
+#### Warum das Instrument dreimal umgebaut wurde
+
+Ein Audit-Skript, das falsch misst, ist schlimmer als keins: es lädt dazu
+ein, funktionierenden Code zu löschen. Drei Falsch-Positiv-Klassen fielen
+erst in der Gegenprobe auf, jede hätte für sich zu falschen Schlüssen
+geführt:
+
+1. **Nur Funktionen gezählt.** Ein Format-Plugin exportiert genau ein
+   Symbol — die Plugin-Struktur — und hält jede Funktion `static`.
+   `src/formats/cqm/uft_cqm.c` galt damit als verwaist, obwohl die Registry
+   es führt und es täglich läuft.
+2. **Regex-Überlappung.** `&plugin_a, &plugin_b,` lieferte nur den ersten
+   Eintrag: das Match auf `, &plugin_a,` frisst das Komma, das `&plugin_b`
+   als Anfang braucht. Registrierte Plugins galten reihenweise als verwaist.
+3. **Konditionale `.pro`-Blöcke.** `uft_kalman_pll.c` steht in einem
+   `kalman_pll { ... }`-Block und wird ohne `CONFIG+=kalman_pll` nicht
+   gebaut. Behoben, indem der Parser aus `verify_build_sources.py`
+   importiert statt nachgebaut wird — der kennt diese Falle seit MF-458.
+
+Geprüft ist das Instrument gegen einen unabhängig ermittelten Wert: es
+meldet für `src/formats/misc/` **19**, genau die von Hand ausgezählte Zahl
+aus ARCH-19.
+
+**Was das Skript nicht kann**, steht in seinem Kopfkommentar: kein
+Präprozessor, keine makro-erzeugten Aufrufe. Der verbleibende Fehler zeigt
+in die vorsichtige Richtung — es kann ein Modul fälschlich als *benutzt*
+melden, kaum fälschlich als verwaist.
+
+#### Kein Löschauftrag
+
+97 Dateien sind kein Aufräumtask, sondern eine Landkarte. Ein Modul ohne
+Aufrufer kann dreierlei sein, und die drei Fälle brauchen gegensätzliche
+Antworten:
+
+| Fall | Antwort |
+|---|---|
+| Doppelte Implementierung, die andere läuft | löschen, mit Löschbeweis (MF-369) |
+| Fertig und nur nicht verdrahtet | verdrahten (wie MF-475) |
+| Gegen eine erfundene Spec gebaut | löschen, nicht verdrahten (EINFRIER-REGEL) |
+
+Der dritte Fall ist der Grund, warum „alles verdrahten" die falsche Antwort
+wäre: unter der EINFRIER-REGEL (MF-363) ist ungeprüfter Format-/Decoder-Code
+zu verifizieren oder zu entfernen, nicht in Betrieb zu nehmen.
+
+---
+
 ### ARCH-19 — `src/formats/misc/`: 19 von 21 Dateien haben keinen Aufrufer (2026-08-22, MF-461) → ⚠ OFFEN
 
 Beim CQM-Vergleich aufgefallen: es gibt eine **zweite** CQM-Implementierung,
