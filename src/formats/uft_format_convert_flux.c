@@ -22,6 +22,8 @@
 extern const uft_format_plugin_t uft_format_plugin_hfe;
 extern const uft_format_plugin_t uft_format_plugin_scp;
 #include "uft/flux/uft_mfm_sector_parser.h"
+#include "uft/flux/uft_scp_parser.h"
+#include "uft/recovery/uft_multiread_pipeline.h"
 
 // ============================================================================
 // Flux/Bitstream -> Sector Conversions (Decode Pipeline)
@@ -207,11 +209,100 @@ uft_error_t uftc_convert_scp_to_d64(const uint8_t* src_data, size_t src_size,
  * Reading through the plugin also avoids a sixth private SCP reader: the
  * plugin parses the header, selects a revolution and converts ticks to
  * nanoseconds. */
+enum { ADF_CYLS = 80, ADF_HEADS = 2, ADF_SPT = 11, ADF_SECSZ = 512 };
+
+/* Eine Sektorposition, gesehen ueber alle Umdrehungen einer Spur (MF-473).
+ *
+ * Die Inhalte werden KOPIERT, nicht referenziert: flux_decoded_track_free()
+ * gibt die Sektorpuffer einer Umdrehung frei, bevor die naechste dekodiert
+ * wird. 11 x 5 x 512 Byte sind 28 KB pro Spur — einmal belegt, pro Spur
+ * genullt. */
+typedef struct {
+    uint8_t data[UFT_SCP_MAX_REVOLUTIONS][ADF_SECSZ];
+    bool    crc_ok[UFT_SCP_MAX_REVOLUTIONS];
+    int     count;
+} uftc_adf_votes_t;
+
+/* Die Sektoren EINER dekodierten Umdrehung in die Stimmentabelle einsortieren.
+ * Eine Umdrehung kann dieselbe Sektornummer zweimal enthalten (der Flux laeuft
+ * ueber den Index hinaus); die Obergrenze faengt das ab. */
+static void uftc_adf_collect(const flux_decoded_track_t* dt,
+                             uftc_adf_votes_t* votes)
+{
+    for (size_t s = 0; s < dt->sector_count; s++) {
+        const flux_decoded_sector_t* sec = &dt->sectors[s];
+        if (!sec->data || sec->data_size != ADF_SECSZ) continue;
+        if (sec->sector >= ADF_SPT) continue;
+        uftc_adf_votes_t* v = &votes[sec->sector];
+        if (v->count >= UFT_SCP_MAX_REVOLUTIONS) continue;
+        memcpy(v->data[v->count], sec->data, ADF_SECSZ);
+        v->crc_ok[v->count] = sec->data_crc_ok;
+        v->count++;
+    }
+}
+
+/* Ueber die Lesungen EINER Sektorposition abstimmen und das Ergebnis ablegen
+ * (MF-473).
+ *
+ * Warum ueberhaupt abgestimmt wird: eine SCP-Aufnahme enthaelt bis zu fuenf
+ * Umdrehungen derselben Spur, und bis hierher benutzte der Wandler die erste
+ * und warf die uebrigen weg — das SCP-Plugin sagt das in seinem eigenen
+ * Kommentar ("Fuer bessere Ergebnisse koennte man alle Revolutions
+ * kombinieren"). Damit war jede weitere Aufnahme derselben Umdrehung
+ * gemessene, bezahlte, gespeicherte Information ohne Wirkung.
+ *
+ * Geschrieben wird weiterhin nur, was `recovered` ist — eine Lesung mit
+ * falscher Pruefsumme ueberschreibt nie gute Daten. Neu ist die Aussage
+ * darueber, WARUM ein Sektor nicht gutging: @ref multiread_class_t
+ * unterscheidet den stabil falschen (Kopierschutz, erneutes Lesen aendert
+ * nichts) vom schwankenden (weak). Bisher zaehlte der Pfad nur
+ * `sectors_failed` hoch und sagte nichts.
+ *
+ * @return true wenn der Sektor in @p output geschrieben wurde. */
+static bool uftc_adf_place_voted(const uftc_adf_votes_t* v,
+                                 uint8_t* output, size_t off,
+                                 multiread_class_t* cls_out)
+{
+    multiread_config_t cfg = multiread_config_default();
+    /* Wie viele Umdrehungen es gibt, bestimmt die Datei, nicht eine
+     * Wiederhol-Strategie: min_passes = 1. Eine einzige Umdrehung heisst
+     * "keine Abstimmung moeglich", nicht "Fehler" — und STABLE_GOOD bzw.
+     * STABLE_BAD_CRC sind auch ueber eine Lesung eine gueltige Aussage. */
+    cfg.min_passes = 1;
+    cfg.detect_weak_bits = true;
+
+    multiread_ctx_t* mr = multiread_create(&cfg);
+    if (!mr) return false;
+
+    for (int r = 0; r < v->count; r++) {
+        /* Dieselbe Qualitaets-Konvention wie im Pipeline-Inneren: eine
+         * gepruefte Lesung wiegt 100, eine ungepruefte 50. */
+        multiread_add_pass(mr, v->data[r], ADF_SECSZ,
+                           v->crc_ok[r] ? 100 : 50, v->crc_ok[r]);
+    }
+
+    multiread_sector_t res;
+    memset(&res, 0, sizeof(res));
+    uint8_t voted[ADF_SECSZ];
+    bool placed = false;
+
+    if (multiread_execute(mr, voted, ADF_SECSZ, &res) == MULTIREAD_OK) {
+        if (cls_out) *cls_out = res.class_;
+        if (res.recovered) {
+            memcpy(output + off, voted, ADF_SECSZ);
+            placed = true;
+        }
+    }
+
+    free(res.weak_mask);      /* execute() belegt sie, der Aufrufer gibt frei */
+    multiread_destroy(mr);
+    return placed;
+}
+
 static uft_error_t uftc_convert_scp_to_adf_via_plugin(
     const char* src_path, const char* dst_path,
     const uft_convert_options_ext_t* opts, uft_convert_result_t* result)
 {
-    enum { ADF_CYLS = 80, ADF_HEADS = 2, ADF_SPT = 11, ADF_SECSZ = 512 };
     const size_t adf_size = (size_t)ADF_CYLS * ADF_HEADS * ADF_SPT * ADF_SECSZ;
 
     uftc_report_progress(opts, 5, "Opening SCP via format plugin");
@@ -246,64 +337,157 @@ static uft_error_t uftc_convert_scp_to_adf_via_plugin(
      * Nennwert — ein Medienprofil ohne Messung ist keine Verbesserung. */
     dopts.media = UFT_MEDIA_AMIGA_DD;
 
+    /* Alle Umdrehungen, nicht nur die erste (MF-473).
+     *
+     * Das SCP-Plugin liefert je Spur genau eine Umdrehung — das steht so in
+     * seinem Kommentar und ist Absicht. Der kanonische Parser gibt alle
+     * heraus, also wird er hier zusaetzlich geoeffnet; das Plugin bleibt
+     * zustaendig fuer Kopfpruefung und Geometrie, damit diese Logik nicht ein
+     * zweites Mal existiert. Laesst sich die Datei mit dem Parser nicht
+     * oeffnen, faellt der Pfad auf die eine Umdrehung des Plugins zurueck —
+     * das ist genau das bisherige Verhalten, nicht weniger.
+     *
+     * `use_multiple_revs` ist seit jeher in den Optionen und war bis hier
+     * unbenutzt; der Standard (uft_convert_default_options) steht auf true. */
+    const bool want_multirev = (!opts || opts->use_multiple_revs);
+    uft_scp_ctx_t sctx;
+    memset(&sctx, 0, sizeof(sctx));
+    bool multirev = want_multirev &&
+                    (uft_scp_open(&sctx, src_path) == UFT_SCP_OK);
+
+    uftc_adf_votes_t* votes = calloc(ADF_SPT, sizeof(*votes));
+    if (!votes) {
+        if (multirev) uft_scp_close(&sctx);
+        uft_format_plugin_scp.close(&disk);
+        free(output);
+        result->error = UFT_ERR_MEMORY;
+        return UFT_ERR_MEMORY;
+    }
+
+    int class_counts[5] = { 0, 0, 0, 0, 0 };
+    int revs_seen = 0, tracks_with_flux = 0;
+
     uftc_report_progress(opts, 10, "Decoding AmigaDOS sectors from flux");
 
     for (int cyl = 0; cyl < cyls; cyl++) {
         if (uftc_is_cancelled(opts)) break;
         for (int hd = 0; hd < heads; hd++) {
-            uft_track_t t;
-            memset(&t, 0, sizeof(t));
-            if (uft_format_plugin_scp.read_track(&disk, cyl, hd, &t) != UFT_OK ||
-                !t.flux || t.flux_count == 0) {
-                uft_track_release(&t);
-                result->tracks_failed++;
-                continue;
+            memset(votes, 0, ADF_SPT * sizeof(*votes));
+            int revs_used = 0;
+
+            if (multirev) {
+                /* Dieselbe Abbildung wie im Plugin: 0=C0H0, 1=C0H1, 2=C1H0 … */
+                uft_scp_track_data_t td;
+                memset(&td, 0, sizeof(td));
+                if (uft_scp_read_track(&sctx, cyl * 2 + hd, &td) == UFT_SCP_OK) {
+                    for (int r = 0; r < td.revolution_count; r++) {
+                        const uft_scp_rev_data_t* rev = &td.revolutions[r];
+                        if (!rev->flux_data || rev->flux_count == 0) continue;
+
+                        /* ns intervals -> cumulative transition times (MF-438),
+                         * samt der gemessenen Umdrehungsdauer (MF-475). */
+                        flux_raw_data_t raw;
+                        if (flux_raw_from_ns_intervals_indexed(
+                                rev->flux_data, rev->flux_count,
+                                rev->index_time_ns, &raw) != FLUX_OK)
+                            continue;
+
+                        flux_decoded_track_t dt;
+                        memset(&dt, 0, sizeof(dt));
+                        flux_decode_amiga(&raw, &dt, &dopts);
+                        uftc_adf_collect(&dt, votes);
+                        flux_decoded_track_free(&dt);
+                        flux_raw_free(&raw);
+                        revs_used++;
+                    }
+                }
+                uft_scp_free_track(&td);
             }
 
-            /* ns intervals -> cumulative transition times (MF-438), samt der
-             * gemessenen Umdrehungsdauer aus dem SCP-Umdrehungskopf (MF-475).
-             * Das SCP-Plugin legt sie in metrics.index_time_ns ab; ohne sie
-             * traegt die Spur keine Index-Impulse und die Zellendauer-Wahl
-             * faellt auf ihren Nennwert zurueck. */
-            flux_raw_data_t raw;
-            if (flux_raw_from_ns_intervals_indexed(t.flux, t.flux_count,
-                                                   t.metrics.index_time_ns,
-                                                   &raw) != FLUX_OK) {
+            if (revs_used == 0) {
+                /* Rueckfallpfad: eine Umdrehung ueber das Plugin. */
+                uft_track_t t;
+                memset(&t, 0, sizeof(t));
+                if (uft_format_plugin_scp.read_track(&disk, cyl, hd, &t) == UFT_OK
+                    && t.flux && t.flux_count > 0) {
+                    flux_raw_data_t raw;
+                    if (flux_raw_from_ns_intervals_indexed(
+                            t.flux, t.flux_count,
+                            t.metrics.index_time_ns, &raw) == FLUX_OK) {
+                        flux_decoded_track_t dt;
+                        memset(&dt, 0, sizeof(dt));
+                        flux_decode_amiga(&raw, &dt, &dopts);
+                        uftc_adf_collect(&dt, votes);
+                        flux_decoded_track_free(&dt);
+                        flux_raw_free(&raw);
+                        revs_used = 1;
+                    }
+                }
                 uft_track_release(&t);
-                result->tracks_failed++;
-                continue;
             }
 
-            flux_decoded_track_t dt;
-            memset(&dt, 0, sizeof(dt));
-            flux_decode_amiga(&raw, &dt, &dopts);
+            if (revs_used == 0) { result->tracks_failed++; continue; }
+            revs_seen += revs_used;
+            tracks_with_flux++;
 
             int placed = 0;
-            for (int s = 0; s < dt.sector_count; s++) {
-                flux_decoded_sector_t* sec = &dt.sectors[s];
-                if (!sec->data || sec->data_size != ADF_SECSZ) continue;
-                if (sec->sector >= ADF_SPT) continue;
-                /* Forensic: a sector whose checksum did not validate never
-                 * overwrites good data, and is counted, not hidden. */
-                if (!sec->data_crc_ok) { result->sectors_failed++; continue; }
+            for (int s = 0; s < ADF_SPT; s++) {
+                if (votes[s].count == 0) { result->sectors_failed++; continue; }
                 size_t off = (((size_t)cyl * ADF_HEADS + (size_t)hd) * ADF_SPT
-                              + sec->sector) * ADF_SECSZ;
+                              + (size_t)s) * ADF_SECSZ;
                 if (off + ADF_SECSZ > adf_size) continue;
-                memcpy(output + off, sec->data, ADF_SECSZ);
-                placed++;
+
+                /* Forensik: nur was `recovered` ist, wird geschrieben — eine
+                 * Lesung ohne gueltige Pruefsumme ueberschreibt nie gute
+                 * Daten. Die Klasse sagt, warum. */
+                multiread_class_t cls = MULTIREAD_CLASS_UNKNOWN;
+                if (uftc_adf_place_voted(&votes[s], output, off, &cls)) placed++;
+                else result->sectors_failed++;
+                if ((int)cls >= 0 && (int)cls < 5) class_counts[cls]++;
             }
             result->sectors_converted += placed;
             if (placed > 0) result->tracks_converted++;
             else            result->tracks_failed++;
-
-            flux_decoded_track_free(&dt);
-            flux_raw_free(&raw);
-            uft_track_release(&t);
         }
         uftc_report_progress(opts, 10 + (cyl * 80 / (cyls ? cyls : 1)),
                              "Decoding AmigaDOS sectors from flux");
     }
+
+    free(votes);
+    if (multirev) uft_scp_close(&sctx);
     uft_format_plugin_scp.close(&disk);
+
+    /* Was die Abstimmung ueber die Diskette sagt. Ohne diese Meldungen bliebe
+     * es bei einer Zahl in sectors_failed, die drei verschiedene Ursachen in
+     * einen Topf wirft. */
+    if (class_counts[MULTIREAD_CLASS_STABLE_BAD_CRC] > 0) {
+        uftc_add_warning(result,
+            /* Nur ASCII in Meldungstexten - wie jede andere Warnung in diesem
+             * Modul; die 256-Byte-Puffer und die GUI-Anzeige sind darauf
+             * eingerichtet. */
+            "%d Sektoren %s: jede Umdrehung liest dasselbe, die Pruefsumme "
+            "bleibt falsch - Kopierschutz, erneutes Lesen aendert das nicht",
+            class_counts[MULTIREAD_CLASS_STABLE_BAD_CRC],
+            multiread_class_name(MULTIREAD_CLASS_STABLE_BAD_CRC));
+    }
+    if (class_counts[MULTIREAD_CLASS_WEAK] > 0) {
+        uftc_add_warning(result,
+            "%d Sektoren %s: die Umdrehungen lasen Unterschiedliches",
+            class_counts[MULTIREAD_CLASS_WEAK],
+            multiread_class_name(MULTIREAD_CLASS_WEAK));
+    }
+    if (class_counts[MULTIREAD_CLASS_AMBIGUOUS_GOOD] > 0) {
+        uftc_add_warning(result,
+            "%d Sektoren %s: gueltige Pruefsumme bei abweichendem Inhalt",
+            class_counts[MULTIREAD_CLASS_AMBIGUOUS_GOOD],
+            multiread_class_name(MULTIREAD_CLASS_AMBIGUOUS_GOOD));
+    }
+    if (tracks_with_flux > 0 && revs_seen > tracks_with_flux) {
+        uftc_add_warning(result,
+            "%d Umdrehungen ueber %d Spuren ausgewertet (%.1f je Spur)",
+            revs_seen, tracks_with_flux,
+            (double)revs_seen / (double)tracks_with_flux);
+    }
 
     uftc_report_progress(opts, 95, "Writing output");
     uft_error_t err = uftc_write_output_file(dst_path, output, adf_size);
@@ -773,7 +957,8 @@ static uft_error_t uftc_convert_hfe_to_adf_via_plugin(
     const char* src_path, const char* dst_path,
     const uft_convert_options_ext_t* opts, uft_convert_result_t* result)
 {
-    enum { ADF_CYLS = 80, ADF_HEADS = 2, ADF_SPT = 11, ADF_SECSZ = 512 };
+    /* Geometrie-Konstanten stehen seit MF-473 im Dateikopf (die SCP-Variante
+     * braucht sie ausserhalb ihrer Funktion) — hier keine zweite Kopie. */
     const size_t adf_size = (size_t)ADF_CYLS * ADF_HEADS * ADF_SPT * ADF_SECSZ;
 
     uftc_report_progress(opts, 10, "Opening HFE via format plugin");

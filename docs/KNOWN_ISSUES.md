@@ -3748,6 +3748,132 @@ für AmigaDOS-DD.
 - Zwei Module aus dieser Reihe bleiben ohne Aufrufer: die
   Multiread-Klassifikation (MF-473) und der ATX-Schreiber (MF-474). Beide
   sind getestet, beide brauchen ihren eigenen Verdrahtungsschritt.
+  *(Nachtrag: die Klassifikation ist seit MF-478 verdrahtet — siehe REC-1.)*
+
+---
+
+### REC-1 — vier von fünf Umdrehungen wurden weggeworfen (2026-08-23, MF-478) → ✓ BEHOBEN
+
+Eine SCP-Aufnahme enthält bis zu **fünf** Umdrehungen derselben Spur. Der
+SCP→ADF-Wandler benutzte davon die erste. Das war kein Versehen und stand
+seit jeher im Code, der es tat:
+
+```c
+// Flux der ersten Revolution lesen
+// (Für bessere Ergebnisse könnte man alle Revolutions kombinieren)
+```
+> `src/formats/scp/uft_scp_plugin.c:377-378`
+
+Alles nach Umdrehung 0 war damit **gemessene, übertragene, gespeicherte
+Information ohne jede Wirkung** — bei einem Werkzeug, dessen erster Grundsatz
+„Kein Bit verloren" lautet, die teuerste Art von Datenverlust: er passiert
+nach dem Sichern, im eigenen Haus, an Daten, die man bereits hat.
+
+#### Was daran mehr ist als „mehr Lesungen"
+
+Parallel dazu lag seit MF-473 `multiread_class_t`
+(`src/recovery/uft_multiread_pipeline.c`) im Baum — mit Test, mit
+Dokumentation, mit **null** Aufrufern in `src/`. Die beiden Lücken sind
+dieselbe Lücke: mehrere Lesungen desselben Sektors auszuwerten heißt sagen zu
+können, **wie sie sich zueinander verhalten**.
+
+| Klasse | Bedeutung | Was der Pfad vorher meldete |
+|---|---|---|
+| `STABLE_GOOD` | ein Inhalt, CRC geprüft | (Sektor geschrieben) |
+| `STABLE_BAD_CRC` | ein Inhalt, CRC **immer** falsch | `sectors_failed++` |
+| `WEAK` | mehrere Inhalte bei falscher CRC | `sectors_failed++` |
+| `AMBIGUOUS_GOOD` | mehrere Inhalte trotz guter CRC | `sectors_failed++` |
+
+Drei verschiedene Befunde, eine Zahl. Und der interessanteste davon ist
+`STABLE_BAD_CRC`: das ist **kein Schaden**, sondern ein absichtlich falsch
+aufgezeichneter Kopierschutz. Ihn als beschädigt zu melden ist falsch, ihn
+als weak zu melden auch — und nochmal lesen hilft nicht, weil er stabil ist.
+Genau das sagt der Wandler jetzt:
+
+```
+1 Sektoren stabiler CRC-Fehler: jede Umdrehung liest dasselbe,
+die Pruefsumme bleibt falsch — Kopierschutz, erneutes Lesen aendert das nicht
+```
+
+#### Was sich am Verhalten NICHT ändert
+
+Geschrieben wird weiterhin nur, was `recovered` ist — eine Lesung ohne
+gültige Prüfsumme überschreibt nie gute Daten (MF-466: *Übereinstimmung ist
+keine Prüfung*). Neu ist ausschließlich, dass mehr Lesungen zur Abstimmung
+antreten und dass das Ergebnis benannt wird.
+
+`min_passes` steht in diesem Pfad auf **1**, nicht auf dem Vorgabewert 3: wie
+viele Umdrehungen es gibt, bestimmt die Datei und keine Wiederhol-Strategie.
+Eine einzige Umdrehung heißt „keine Abstimmung möglich", nicht „Fehler".
+
+#### Nebenbefund: `use_multiple_revs` war auch tot
+
+Das Feld steht in `uft_convert_options_t` **und** in
+`uft_convert_options_ext_t`, `uft_convert_default_options()` setzt es auf
+`true`, und der Dispatcher reicht es durch — gelesen hat es niemand. Jetzt
+schaltet es diesen Pfad: `false` liest ausdrücklich nur die erste Umdrehung.
+Das ist zugleich die eingebaute Gegenprobe des Tests.
+
+#### Die verdrahtete Kette
+
+```
+SCP-Datei, N Umdrehungen je Spur
+  → uft_scp_read_track()        alle Umdrehungen (statt Plugin = nur die erste)
+  → flux_raw_from_ns_intervals_indexed()   je Umdrehung (MF-475)
+  → flux_decode_amiga()         je Umdrehung
+  → multiread_add_pass()        je Sektorposition eine Stimme je Umdrehung
+  → multiread_execute()         Abstimmung + classify_passes()
+  → ADF (nur recovered) + Klassen-Meldung im Wandlungsbericht
+```
+
+Das Plugin bleibt für Kopfprüfung und Geometrie zuständig, damit diese Logik
+nicht ein zweites Mal existiert; öffnet der kanonische Parser die Datei nicht,
+fällt der Pfad auf die eine Umdrehung des Plugins zurück — also exakt auf das
+bisherige Verhalten, nicht auf weniger.
+
+#### Rot-Proben
+
+| Verfälschung | Ergebnis |
+|---|---|
+| Umdrehungsschleife auf `r < 1` gekürzt | `a_sector_broken_in_revolution_zero_is_recovered_from_the_others` **und** `…_reported_as_weak` fallen |
+| `*cls_out = res.class_` durch `STABLE_GOOD` ersetzt | `a_stable_crc_error_is_reported_as_copy_protection` **und** `…_reported_as_weak` fallen |
+
+Zwei verschiedene Verfälschungen, zwei verschiedene Fehlerbilder — die Tests
+prüfen tatsächlich zwei getrennte Dinge.
+
+> **Zum Testaufbau.** `tests/test_convert_scp_adf.c` deckt denselben Pfad gegen
+> eine echte Greaseweazle-Aufnahme ab und **SKIPt in CI**, weil die Datei 32 MB
+> groß und gitignored ist. Ein Test, der nur lokal läuft, schützt keine
+> Verdrahtung. Also erzeugt `tests/test_convert_scp_adf_multirev.c` eine
+> AmigaDOS-Spur selbst. Der Kodierer dort ist die exakte Umkehrung von
+> `decode_amiga_sector()` — und **prüft sich selbst**: der erste Test verlangt,
+> dass der (gegen die echte Aufnahme belegte, MF-438) Dekoder alle 11 Sektoren
+> byteidentisch zurückgibt. Ein Kodierer, den der belegte Dekoder liest, ist
+> kein zweites unbelegtes Stück Code.
+
+`ctest` 220/220, alle 21 Gate-Kategorien 0, `verify_build_sources.py` 0/0,
+qmake-Release-Build grün ohne neue Warnungen.
+
+**Ehrlich zur Reichweite.**
+
+- Verdrahtet ist **ein** Pfad: SCP→ADF. `uftc_convert_scp_to_d64()` sucht sich
+  weiterhin die Umdrehung mit den meisten Flusswechseln und dekodiert nur
+  diese; SCP→HFE und SCP→G64 ebenso. Das ist jeweils ein eigener Schritt.
+- Von den 12 exportierten Symbolen des Moduls haben jetzt 6 einen Aufrufer.
+  `multiread_track()` (Callback-getriebenes Mehrfachlesen echter Hardware),
+  `multiread_vote_buffers()`, `multiread_get_stats()` und
+  `multiread_generate_report()` bleiben ohne — der HAL-Lesepfad ist der
+  natürliche Ort dafür und nicht Teil dieses Schrittes.
+- `weak_offset` und `distinct_contents` werden gefüllt und **nicht
+  ausgewertet**. Sie zeigen auf den ATX-Weak-Chunk (MF-467/474) — dort gehören
+  sie hin, und das ist der nächste sinnvolle Schritt: ein SCP mit weak-Sektoren
+  nach ATX schreiben, statt sie nur zu zählen.
+- Der Zusammenhang „Kopierschutz" ist **benannt, nicht klassifiziert**: der
+  Wandler sagt „stabiler CRC-Fehler", nicht welches Schutzverfahren. Die
+  Verknüpfung mit `src/protection/` ist offen.
+- `ADF_SPT = 11` heißt: der Pfad deckt AmigaDOS-DD ab. Eine HD-Diskette mit 22
+  Sektoren dekodiert der Decoder seit MF-452, dieser Wandler schreibt sie
+  nicht.
 
 ---
 
@@ -5108,6 +5234,11 @@ Die 80 „nur von Tests" sind der interessantere Teil — darunter
 derselbe Zustand, in dem MF-471, MF-473 und MF-474 gelandet sind: geprüft
 und ohne Wirkung. Ein grüner Test über unverdrahtetem Code beweist, dass er
 funktioniert, und verschweigt, dass ihn niemand ruft.
+
+> **Stand 2026-08-23 (MF-478):** 224 / **79** / 228.
+> `uft_multiread_pipeline.c` ist von „nur von Tests" nach „benutzt"
+> gewandert — siehe REC-1. Ein Eintrag von 80, in einem Schritt. Die Zahl
+> „ohne jeden Aufrufer" bleibt unverändert; das ist die andere Aufgabe.
 
 #### Warum das Instrument viermal umgebaut wurde
 
