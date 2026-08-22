@@ -74,6 +74,13 @@ NOT_BUILT_BY_DESIGN: list[re.Pattern[str]] = [
     # ("Authority: src/samdisk/td0.cpp:10") und
     # include/uft/hal/uft_scp_direct.h:101. Siehe src/samdisk/README.md.
     re.compile(r"^src/samdisk/"),
+    # a8rawconv 0.95 (c) 2014-2023 Avery Lee, GPL-2.0-or-later. Zweiter
+    # Referenzbestand, gleiche Rolle wie SAMdisk und ebenfalls kein
+    # Baubestandteil — SAMdisk deckt PC/CPC/Sinclair ab, a8rawconv die
+    # Atari-8-bit-Seite (ATX/VAPI, FM, Interleave) und Apple/Mac-GCR.
+    # Anders als SAMdisk wird hier nicht einmal ein Include-Pfad gebunden.
+    # Siehe src/a8rawconv/README.md.
+    re.compile(r"^src/a8rawconv/"),
     # Opt-in-Features. Die .pro-Seite wird ueber _OPTIN_FLAGS uebersprungen,
     # also muss die Platten-Seite dasselbe tun — sonst meldet der Pruefer
     # seine eigene Auslassung als Befund.
