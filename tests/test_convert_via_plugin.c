@@ -176,7 +176,11 @@ TEST(the_disk_id_came_from_the_bam_not_a_default) {
     memset(&bam, 0, sizeof(bam));
     ASSERT(uft_format_plugin_d64.read_track(&disk, 17, 0, &bam) == UFT_OK);
     ASSERT(bam.sector_count > 0);
-    ASSERT(bam.sectors[0].id.sector == 1);          /* IDs are 1-based */
+    /* The BAM lives at track 18 SECTOR 0, and since ARCH-20 (MF-465) the
+     * plugin reports the number the 1541 actually writes into the GCR header.
+     * This line asserted 1 before, because the shared add-sector helper added
+     * one to every index regardless of what the drive does. */
+    ASSERT(bam.sectors[0].id.sector == 0);
     ASSERT(bam.sectors[0].data != NULL);
     ASSERT(bam.sectors[0].data[0xA2] == '4');
     ASSERT(bam.sectors[0].data[0xA3] == '2');

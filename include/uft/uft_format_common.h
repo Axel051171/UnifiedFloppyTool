@@ -49,34 +49,44 @@ void uft_track_free(uft_track_t *track);
 // ============================================================================
 
 /**
- * @brief Erstellt einen Sektor und fügt ihn zum Track hinzu
- * 
+ * @brief Erstellt einen Sektor mit der Nummer, die auf der Diskette steht
+ *
+ * `uft_sector_t.id` ist die CHS-Kennung — also das, was im Sektorkopf des
+ * Mediums steht, nicht ein Laufindex. Wer die echte Nummer kennt, übergibt
+ * sie hier (ARCH-20, MF-465).
+ *
+ * Der ältere `uft_format_add_sector()` unten nimmt stattdessen einen
+ * 0-basierten Laufindex und addiert 1. Das ist für IBM-PC-Formate richtig
+ * (Sektoren 1..N) und für Apple (0..15), Amiga (0..10) und Commodore
+ * (0..N-1) falsch. Formate mit anderer Basis — CP/M etwa — setzen ihre ID
+ * seit jeher selbst (`def->first_sector + s`).
+ *
  * @param track Ziel-Track
- * @param sector_num Sektor-Nummer (0-basiert intern)
+ * @param sector_id Sektor-Nummer WIE AUF DER DISKETTE
  * @param data Sektor-Daten
  * @param size Größe der Daten
  * @param cylinder Logischer Zylinder (für ID)
  * @param head Logischer Kopf (für ID)
  * @return UFT_OK bei Erfolg
  */
-static inline uft_error_t uft_format_add_sector(
+static inline uft_error_t uft_format_add_sector_with_id(
     uft_track_t* track,
-    uint8_t sector_num,
+    uint8_t sector_id,
     const uint8_t* data,
     uint16_t size,
     uint8_t cylinder,
     uint8_t head)
 {
     if (!track || !data) return UFT_ERROR_NULL_POINTER;
-    
+
     uft_sector_t sector;
     memset(&sector, 0, sizeof(sector));
-    
+
     // ID setzen
     sector.id.cylinder = cylinder;
     sector.id.head = head;
-    sector.id.sector = sector_num + 1;  // 1-basiert in ID
-    
+    sector.id.sector = sector_id;
+
     // Size code berechnen (N = log2(size/128))
     uint8_t size_code = 0;
     uint16_t calc_size = 128;
@@ -112,8 +122,29 @@ static inline uft_error_t uft_format_add_sector(
     if (err != UFT_OK) {
         free(sector.data);
     }
-    
+
     return err;
+}
+
+/**
+ * @brief Erstellt einen Sektor aus einem 0-basierten Laufindex (ID = n+1)
+ *
+ * Für Formate mit Sektoren 1..N (IBM PC und Verwandte). Formate, deren
+ * Sektoren bei 0 beginnen, benutzen `uft_format_add_sector_with_id()` —
+ * siehe die Begründung dort (ARCH-20).
+ *
+ * @param sector_num Laufindex, 0-basiert; die ID wird sector_num + 1
+ */
+static inline uft_error_t uft_format_add_sector(
+    uft_track_t* track,
+    uint8_t sector_num,
+    const uint8_t* data,
+    uint16_t size,
+    uint8_t cylinder,
+    uint8_t head)
+{
+    return uft_format_add_sector_with_id(track, (uint8_t)(sector_num + 1),
+                                         data, size, cylinder, head);
 }
 
 /**

@@ -12,6 +12,8 @@
  */
 
 #include "uft/uft_format_plugin.h"
+#include "uft/uft_format_common.h"   /* UFT_MAX_SPT */
+#include "uft/uft_log.h"             /* honest padding warning (MF-465) */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -362,13 +364,39 @@ static uft_error_t img_write_track(uft_disk_t* disk, int cylinder, int head,
         return UFT_ERROR_FILE_SEEK;
     }
     
-    // Sektoren in Reihenfolge schreiben (1-basiert!)
-    // M3 FIX: Static buffer für Null-Sektoren
+    /* Sektoren in aufsteigender Reihenfolge ihrer Nummer AUF DER DISKETTE.
+     *
+     * Vorher wurden sie als 1..N gesucht (`uft_track_find_sector(track, s)`)
+     * und jeder Fehlgriff still mit Nullen aufgefüllt. Das setzt voraus, dass
+     * die Quelle so nummeriert wie eine IBM-PC-Diskette. Eine Quelle mit
+     * anderer Basis — Apple 0..15, Amiga 0..10, Commodore 0..N-1 (ARCH-20) —
+     * verlor damit ihren ersten Sektor und bekam einen Null-Sektor dazu,
+     * ohne dass irgendwo etwas davon stand. Dieselbe Falle greift bei jeder
+     * Quelle mit Lücken oder Versatz in der Nummerierung, etwa einer IMD mit
+     * Sektor-Map (MF-465). */
     static const uint8_t zeros[IMG_SECTOR_SIZE] = {0};
-    
-    for (int s = 1; s <= disk->geometry.sectors; s++) {
-        const uft_sector_t* sector = uft_track_find_sector(track, s);
-        
+
+    const uft_sector_t *order[UFT_MAX_SPT];
+    size_t n = 0;
+    for (size_t i = 0; i < track->sector_count && n < UFT_MAX_SPT; i++) {
+        const uft_sector_t *s = &track->sectors[i];
+        size_t j = n++;
+        while (j > 0 && order[j - 1]->id.sector > s->id.sector) {
+            order[j] = order[j - 1];
+            j--;
+        }
+        order[j] = s;
+    }
+
+    if (n < (size_t)disk->geometry.sectors) {
+        UFT_WARN("IMG: Spur %d/%d liefert %zu von %u Sektoren — der Rest wird "
+                 "als Nullen geschrieben und ist KEIN gelesener Inhalt",
+                 cylinder, head, n, (unsigned)disk->geometry.sectors);
+    }
+
+    for (size_t s = 0; s < (size_t)disk->geometry.sectors; s++) {
+        const uft_sector_t* sector = (s < n) ? order[s] : NULL;
+
         if (sector && sector->data &&
             (sector->data_len >= IMG_SECTOR_SIZE ||
              sector->data_size >= IMG_SECTOR_SIZE)) {
@@ -382,7 +410,7 @@ static uft_error_t img_write_track(uft_disk_t* disk, int cylinder, int head,
             }
         }
     }
-    
+
     return UFT_OK;
 }
 

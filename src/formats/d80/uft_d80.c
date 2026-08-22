@@ -80,7 +80,8 @@ static uft_error_t d80_read_track(uft_disk_t* disk, int cyl, int head, uft_track
     for (int s = 0; s < d80_spt[cyl]; s++) {
         if (fseek(p->file, (long)(d80_off[cyl] + s) * 256, SEEK_SET) != 0) return UFT_ERROR_IO;
         if (fread(buf, 1, 256, p->file) != 256) { memset(buf, 0xE5, 256); }
-        uft_format_add_sector(track, (uint8_t)s, buf, 256, (uint8_t)cyl, (uint8_t)head);
+        /* CBM sectors are 0-based (ARCH-20) */
+        uft_format_add_sector_with_id(track, (uint8_t)s, buf, 256, (uint8_t)cyl, (uint8_t)head);
     }
     return UFT_OK;
 }

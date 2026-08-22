@@ -62,7 +62,8 @@ static uft_error_t woz_plugin_read_track(uft_disk_t *disk, int cyl, int head,
         /* Store raw bitstream as sector 0 */
         uint32_t byte_count = (bit_count + 7) / 8;
         uint16_t chunk = (byte_count > 65535) ? 65535 : (uint16_t)byte_count;
-        uft_format_add_sector(track, 0, bits, chunk, (uint8_t)cyl, (uint8_t)head);
+        /* The comment above says sector 0, so it must BE 0 (ARCH-20) */
+        uft_format_add_sector_with_id(track, 0, bits, chunk, (uint8_t)cyl, (uint8_t)head);
     }
 
     return UFT_OK;

@@ -128,7 +128,8 @@ static uft_error_t d71_read_track(uft_disk_t* disk, int cyl, int head, uft_track
         size_t offset = d71_get_offset(actual_track, sec);
         if (fseek(pdata->file, offset, SEEK_SET) != 0) continue;
         if (fread(sector_buf, 1, D71_SECTOR_SIZE, pdata->file) == D71_SECTOR_SIZE) {
-            uft_format_add_sector(track, sec, sector_buf, D71_SECTOR_SIZE, cyl, head);
+            /* CBM sectors are 0-based (ARCH-20) */
+            uft_format_add_sector_with_id(track, sec, sector_buf, D71_SECTOR_SIZE, cyl, head);
         }
     }
     

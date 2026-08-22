@@ -105,7 +105,8 @@ static uft_error_t img2_read_track(uft_disk_t *d, int cyl, int head, uft_track_t
     for (int s = 0; s < p->spt; s++) {
         if (fread(buf, 1, p->sector_size, p->file) != p->sector_size)
             return UFT_ERROR_IO;
-        uft_format_add_sector(t, (uint8_t)s, buf, p->sector_size, (uint8_t)cyl, 0);
+        /* Apple sectors are 0-based (ARCH-20) */
+        uft_format_add_sector_with_id(t, (uint8_t)s, buf, p->sector_size, (uint8_t)cyl, 0);
     }
     return UFT_OK;
 }

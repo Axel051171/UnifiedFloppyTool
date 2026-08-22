@@ -115,7 +115,8 @@ static uft_error_t d67_read_track(uft_disk_t *disk, int cyl, int head,
         } else if (fread(buf, 1, D67_SS, p->file) != D67_SS) {
             memset(buf, 0xE5, D67_SS);
         }
-        uft_format_add_sector(track, (uint8_t)s, buf, D67_SS,
+        /* CBM sectors are 0-based (ARCH-20) */
+        uft_format_add_sector_with_id(track, (uint8_t)s, buf, D67_SS,
                               (uint8_t)cyl, 0);
     }
     return UFT_OK;

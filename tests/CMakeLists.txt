@@ -248,7 +248,9 @@ foreach(test_source ${TEST_SOURCES})
         # img read_metadata pulls uft_meta_free (uft_metadata.c) via core stubs
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/formats/img/uft_img.c
-            ${CMAKE_SOURCE_DIR}/src/core/uft_metadata.c)
+            ${CMAKE_SOURCE_DIR}/src/core/uft_metadata.c
+            # img warns honestly when it pads a short track (MF-465)
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
     elseif(${test_name} STREQUAL "test_do_write_roundtrip")
         # Phase-6 round-trip: Apple DOS-order DO write_track -> read_track (MF-343)
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/do/uft_do.c)
@@ -536,6 +538,20 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/formats/hfe/uft_hfe.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+    elseif(${test_name} STREQUAL "test_sector_id_on_disk")
+        # ARCH-20/MF-465: id.sector is the number on the medium. Proof is the
+        # D64/G64 corpus pair — same disk, same tool, two representations.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/d64/uft_d64_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/formats/g64/uft_g64.c
+            ${CMAKE_SOURCE_DIR}/src/formats/adf/uft_adf_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/formats/do/uft_do.c
+            ${CMAKE_SOURCE_DIR}/src/formats/img/uft_img.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_metadata.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_unified_types.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_convert_via_plugin")

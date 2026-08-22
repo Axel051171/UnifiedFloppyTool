@@ -111,7 +111,8 @@ static uft_error_t d64_plugin_read_track(uft_disk_t *disk, int cyl, int head,
         long off = d64_offset(d64_track, s);
         if (fseek(p->file, off, SEEK_SET) != 0) continue;
         if (fread(buf, 1, 256, p->file) != 256) continue;
-        uft_format_add_sector(track, (uint8_t)s, buf, 256,
+        /* CBM drives number sectors 0..N-1 per zone (ARCH-20) */
+        uft_format_add_sector_with_id(track, (uint8_t)s, buf, 256,
                               (uint8_t)cyl, (uint8_t)head);
 
         /* Surface the 1541 error code for this sector (represent, don't drop).

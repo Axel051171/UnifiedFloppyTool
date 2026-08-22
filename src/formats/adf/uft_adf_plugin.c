@@ -66,7 +66,8 @@ static uft_error_t adf_read_track(uft_disk_t *disk, int cyl, int head,
         if (fread(buf, 1, ADF_SECTOR_SIZE, p->file) != ADF_SECTOR_SIZE) {
             memset(buf, 0xE5, ADF_SECTOR_SIZE);
         }
-        uft_format_add_sector(track, (uint8_t)s, buf, ADF_SECTOR_SIZE,
+        /* AmigaDOS numbers its sectors 0..10 (ARCH-20) */
+        uft_format_add_sector_with_id(track, (uint8_t)s, buf, ADF_SECTOR_SIZE,
                               (uint8_t)cyl, (uint8_t)head);
     }
     return UFT_OK;

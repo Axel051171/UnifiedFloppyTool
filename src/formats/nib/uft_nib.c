@@ -125,7 +125,9 @@ static uft_error_t nib_read_track(uft_disk_t* disk, int cyl, int head, uft_track
         
         int dec_rc = decode_sector(&tdata[data_start], sec_buf);
         if (dec_rc != 0) {
-            uft_format_add_sector(track, sec, sec_buf, 256, cyl, head);
+            /* `sec` was decoded from the address field — it IS the number
+             * on the disk, so it must not be shifted (ARCH-20). */
+            uft_format_add_sector_with_id(track, sec, sec_buf, 256, cyl, head);
             /* GCR checksum mismatch → mark CRC error but keep data */
             if (dec_rc == -1 && track->sector_count > 0)
                 uft_sector_set_crc(&track->sectors[track->sector_count - 1], false);

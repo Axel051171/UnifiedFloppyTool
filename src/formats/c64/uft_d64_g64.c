@@ -1035,9 +1035,9 @@ static bool plugin_read_disk_id(const uft_format_plugin_t *plugin,
     }
     bool found = false;
     for (size_t i = 0; i < bam.sector_count; i++) {
-        /* uft_format_add_sector() stores the sector number 1-based in the ID,
-         * so BAM sector 0 appears as id.sector == 1. */
-        if (bam.sectors[i].id.sector != D64_BAM_SECTOR + 1) continue;
+        /* Since ARCH-20 the D64 plugin reports the number the drive writes,
+         * so BAM sector 0 is id.sector == 0. */
+        if (bam.sectors[i].id.sector != D64_BAM_SECTOR) continue;
         if (!bam.sectors[i].data) break;
         if (bam.sectors[i].data_len < D64_BAM_ID_OFFSET + 2u) break;
         out[0] = bam.sectors[i].data[D64_BAM_ID_OFFSET];
@@ -1091,7 +1091,7 @@ int uft_cbm_g64_encode_via_plugin(const struct uft_format_plugin *plugin,
             memset(&t, 0, sizeof(t));
             if (plugin->read_track(disk, track - 1, 0, &t) == UFT_OK) {
                 for (size_t i = 0; i < t.sector_count; i++) {
-                    int s = (int)t.sectors[i].id.sector - 1;   /* ID is 1-based */
+                    int s = (int)t.sectors[i].id.sector;  /* 0-based, ARCH-20 */
                     if (s < 0 || s >= 21) continue;
                     if (!t.sectors[i].data || t.sectors[i].data_len != 256) continue;
                     memcpy(sector_data[s], t.sectors[i].data, 256);

@@ -121,7 +121,8 @@ static uft_error_t adfext_read_track(uft_disk_t *disk, int cyl, int head,
         uint8_t buf[512];
         for (int s = 0; s < nsec; s++) {
             if (fread(buf, 1, 512, p->file) != 512) { memset(buf, 0, 512); }
-            uft_format_add_sector(track, (uint8_t)s, buf, 512,
+            /* AmigaDOS sectors are 0-based (ARCH-20) */
+            uft_format_add_sector_with_id(track, (uint8_t)s, buf, 512,
                                   (uint8_t)cyl, (uint8_t)head);
         }
     } else {

@@ -3652,6 +3652,102 @@ beschrieben stehen.
 
 ---
 
+### ARCH-20 (Auflösung) + BUG-10 — die Sektornummer ist jetzt die vom Medium (2026-08-22, MF-465) → ✓ BEHOBEN
+
+Der Befund stand seit MF-463 offen: `uft_format_add_sector()` setzte
+`id.sector = sector_num + 1`, und 71 Plugins benutzen den Helfer.
+
+**Der Beweis brauchte keine Synthetik.** Im Korpus liegt dieselbe Diskette
+zweimal, geschrieben vom selben kanonischen Fremdwerkzeug:
+
+```
+tests/corpus_free/vice_c1541_35trk.d64
+tests/corpus_free/vice_c1541_35trk.g64
+```
+
+Die G64 ist ein GCR-Bitstrom — ihre Sektornummern sind die Bytes, die VICE in
+die 1541-Headerblöcke geschrieben hat, und unser G64-Leser übernimmt sie
+wörtlich (`uft_g64.c:621`). Die D64 ist dieselbe Diskette als Sektordump. Die
+Rot-Probe druckt den Widerspruch in einer Zeile:
+
+```
+FAIL track 1: D64 says 1 2 3 ... 21, G64 says 0 1 2 ... 20
+```
+
+Zwei eigene Leser, eine Diskette, zwei Antworten. Einer erfindet.
+
+**Was geändert wurde.** Neuer Helfer `uft_format_add_sector_with_id()` — nimmt
+die Nummer, wie sie auf der Diskette steht. `uft_format_add_sector()` ist jetzt
+ein Aufruf davon mit `n + 1` und damit unverändert im Verhalten; die
+1-basierten Formate merken nichts.
+
+Umgestellt wurden die dreizehn Plugins, deren Medium bei 0 zählt:
+
+| Familie | Sektoren | Plugins |
+|---|---|---|
+| Apple II | 0..15 | `do`, `po`, `2img`, `nib` |
+| Amiga | 0..10 | `adf`, `adf_ext` |
+| Commodore | 0..N-1 | `d64`, `d67`, `d71`, `d81`, `d80`, `d82` |
+| — | Pseudo-Sektor | `woz_plugin` (Kommentar sagte „sector 0", Code schrieb 1) |
+
+Bei `nib` wog es schwerer als bei den anderen: dort ist `sec` **aus dem
+Adressfeld dekodiert**, also echte forensische Information von der Diskette —
+und wurde um eins erhöht, bevor sie beim Aufrufer ankam.
+
+Mitgezogen: die beiden Stellen in `uft_d64_g64.c`, die den Versatz
+kompensierten (`!= D64_BAM_SECTOR + 1` und `- 1` mit dem Kommentar „ID is
+1-based"), und `tests/test_convert_via_plugin.c:179`, das
+`bam.sectors[0].id.sector == 1` festschrieb — die BAM liegt auf Spur 18
+**Sektor 0**.
+
+Nicht angefasst: `fdi`, `imd`, `jv3`, `nfd`, `dmk` reichen schon seit jeher
+`R - 1` an den Helfer, damit dessen `+1` die echte Nummer wiederherstellt. Die
+Formate waren also richtig, der Weg dorthin nur umständlich. CP/M setzt seine
+ID ohnehin selbst (`def->first_sector + s`).
+
+#### BUG-10 — dabei gefunden: `img_write_track()` verlor Sektor 0 still
+
+Der Schreibpfad suchte seine Sektoren als **1..N**
+(`uft_track_find_sector(track, s)`) und füllte jeden Fehlgriff mit Nullen —
+ohne Meldung. Das setzt voraus, dass die Quelle nummeriert wie eine
+IBM-PC-Diskette.
+
+Mit den korrigierten IDs wäre daraus sofort echter Datenverlust geworden: eine
+Amiga-Spur (0..10) hätte Sektor 0 verloren und einen Null-Sektor dazubekommen.
+Die Rot-Probe zeigt genau das:
+
+```
+FAIL: slot 0 holds 0xA1, expected 0xA0
+```
+
+Die Falle war schon vorher da, nur nicht erreichbar: jede Quelle mit Versatz
+oder Lücke in der Nummerierung — eine IMD mit Sektor-Map etwa — verlor hier
+Daten. `img_write_track()` schreibt die Sektoren jetzt in aufsteigender
+Reihenfolge ihrer **Nummer auf der Diskette** und sagt es, wenn es auffüllen
+muss.
+
+**Warum das nicht nur Kosmetik war.** `g64_write_track()` kodiert `id.sector`
+direkt in den GCR-Headerblock (`uft_g64.c:786`), und der generische
+Plugin-zu-Plugin-Konverter (`src/core/uft_disk_convert.c`, erreichbar über
+`uft_disk_batch.c`) reicht die Spur ungefiltert weiter. Eine D64, über diesen
+Weg nach G64 konvertiert, hätte die Sektornummern **1..21** auf eine Diskette
+geschrieben, die ein 1541 nur mit 0..20 lesen kann. Nur der eigens gebaute
+`d64_to_g64()` kompensierte.
+
+**Nicht geprüft:** die drei weiteren Schreibpfade mit ID-Suche —
+`86f`, `pro` (Atari), `dcm` (Atari). Alle drei gehören zu 1-basierten
+Formaten und werden im Dispatch nur von ihresgleichen beliefert; über den
+generischen Konverter gilt für sie dieselbe Klasse wie für IMG.
+
+`ctest` 215/215, `check_consistency` 20 Kategorien 0.
+
+> Nebenbei hat der Enum-vs-Makro-Wächter (MF-427) den neuen Test selbst
+> angehalten: `SPT` und `SS` als Enum-Konstanten kollidierten mit Makros
+> gleichen Namens in `test_adf_write_roundtrip.c`. Umbenannt statt
+> baselined — der Wächter hatte recht.
+
+---
+
 ### BUG-9 — Die GUI schrieb beim D64-Dateiexport über den eigenen Stack (2026-08-22, MF-464) → ✓ BEHOBEN
 
 Gefunden beim CP/M-Vergleich, über einen Umweg, der den Fund erst möglich
@@ -3866,7 +3962,7 @@ Dateiköpfe sagen jetzt aus, was geprüft wurde und was nicht.
 
 ---
 
-### ARCH-20 — `uft_format_add_sector()` erfindet die Sektornummer (2026-08-22, MF-463) → ⚠ OFFEN
+### ARCH-20 — `uft_format_add_sector()` erfindet die Sektornummer (2026-08-22, MF-463) → ✓ BEHOBEN in MF-465
 
 Beim DO-Vergleich aufgefallen. Der Helfer, den **71 der 88 Plugins** benutzen,
 setzt die Sektor-ID hart:

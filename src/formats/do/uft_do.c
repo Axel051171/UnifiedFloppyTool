@@ -69,7 +69,8 @@ static uft_error_t do_read_track(uft_disk_t *disk, int cyl, int head,
          * data as if it had been read (MF-463). The track reports what exists
          * and stops. */
         if (fread(buf, 1, DO_SS, p->file) != DO_SS) break;
-        uft_format_add_sector(track, (uint8_t)s, buf, DO_SS, (uint8_t)cyl, 0);
+        /* Apple DOS 3.3 numbers its sectors 0..15 (ARCH-20) */
+        uft_format_add_sector_with_id(track, (uint8_t)s, buf, DO_SS, (uint8_t)cyl, 0);
     }
     return UFT_OK;
 }

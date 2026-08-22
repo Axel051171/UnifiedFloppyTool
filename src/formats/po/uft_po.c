@@ -54,7 +54,8 @@ static uft_error_t po_read_track(uft_disk_t *disk, int cyl, int head, uft_track_
         /* Not read means not there — never hand out fill as if it were data
          * (MF-463; same change in uft_do.c). */
         if (fread(buf, 1, PO_SS, p->file) != PO_SS) break;
-        uft_format_add_sector(track, (uint8_t)s, buf, PO_SS, (uint8_t)cyl, 0);
+        /* Apple sectors are 0..15 (ARCH-20) */
+        uft_format_add_sector_with_id(track, (uint8_t)s, buf, PO_SS, (uint8_t)cyl, 0);
     }
     return UFT_OK;
 }
