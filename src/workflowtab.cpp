@@ -529,6 +529,40 @@ void WorkflowTab::onStartAbortClicked()
         // as MF-114 (destination wireup) and stay explicitly unsupported
         // here rather than silently doing the wrong thing.
         if (m_sourceMode == Flux && m_destMode == File) {
+            /* MF-472: eine einzelne Umdrehung ist fuer nicht indexsynchrone
+             * Formate zu wenig, und das ist keine Meinung —
+             * a8rawconv-Handbuch, Abschnitt "Imaging physical floppy disks":
+             *
+             *   "For Atari 8-bit disks, you must have at least two
+             *    revolutions imaged per track ... An index-aligned, one-rev
+             *    image will not work because sectors can cross the index
+             *    mark."
+             *
+             * Die Wahl bleibt beim Menschen — es gibt Faelle, in denen eine
+             * Umdrehung alles ist, was die Diskette noch hergibt. Aber sie
+             * soll wissen, was sie aufgibt, BEVOR das Laufwerk anlaeuft:
+             * ein zweiter Versuch an einer zerfallenden Diskette ist nicht
+             * sicher. */
+            if (ui->spinRevolutions->value() < 2) {
+                const auto answer = QMessageBox::warning(
+                    this, tr("Nur eine Umdrehung"),
+                    tr("Mit einer einzigen Umdrehung je Spur koennen Sektoren "
+                       "verloren gehen, die die Indexmarke ueberlappen — bei "
+                       "Atari-8-bit-Disketten ist das der Normalfall, und auch "
+                       "Amiga- und Commodore-Formate sind nicht indexsynchron.\n\n"
+                       "Fuer eine Bestandssicherung sind 5 Umdrehungen "
+                       "empfohlen: mehrfach gelesene Spuren lassen sich "
+                       "gegeneinander pruefen, und ein zweiter Durchgang an "
+                       "einer zerfallenden Diskette ist nicht sicher.\n\n"
+                       "Trotzdem mit einer Umdrehung aufzeichnen?"),
+                    QMessageBox::Yes | QMessageBox::Cancel,
+                    QMessageBox::Cancel);
+                if (answer != QMessageBox::Yes) {
+                    resetUI();
+                    return;
+                }
+            }
+
             m_captureJob = new FluxCaptureJob();
             // MF-200 (P1.20): hand the job HardwareTab's non-owning V2
             // provider. The drive unit is already bound on the provider
@@ -537,7 +571,20 @@ void WorkflowTab::onStartAbortClicked()
             m_captureJob->setProvider(m_gwProvider);
             m_captureJob->setOutputPath(m_destFile);
             m_captureJob->setGeometry(m_hwCylinders, m_hwSides);
-            m_captureJob->setRevolutions(2);
+            /* MF-472: Umdrehungszahl kommt aus der Oberflaeche statt fest
+             * aus dem Code. Voreinstellung ist 5 — a8rawconv 0.95 setzt
+             * `g_revs = 5` (a8rawconv.cpp:52) und begruendet es im Handbuch:
+             *
+             *   "Use the preservation modes of the imaging software when
+             *    possible. This typically records five revolutions of all
+             *    tracks on the disk. ... if the physical disk is
+             *    deteriorating, you only want to do one pass on the disk
+             *    because you may not get another chance."
+             *
+             * Genau das war der Fehler an der fest verdrahteten 2: bei einer
+             * zerfallenden Diskette gibt es keinen zweiten Durchgang, und
+             * drei verworfene Umdrehungen sind drei verlorene Chancen. */
+            m_captureJob->setRevolutions(ui->spinRevolutions->value());
             m_captureJob->moveToThread(m_workerThread);
 
             connect(m_workerThread, &QThread::started, m_captureJob, &FluxCaptureJob::run);

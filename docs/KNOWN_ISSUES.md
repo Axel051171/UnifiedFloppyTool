@@ -3652,6 +3652,92 @@ beschrieben stehen.
 
 ---
 
+### FLUX-2 — Umdrehungszahl war fest verdrahtet, Voreinstellung war die falsche (2026-08-22, MF-472) → ✓ BEHOBEN
+
+Punkt 2.2 der a8rawconv-Gap-Analyse. Der Flux-Capture-Job bekam seine
+Umdrehungszahl aus dem Quelltext:
+
+```cpp
+/* src/workflowtab.cpp:540, vorher */
+m_captureJob->setRevolutions(2);
+```
+
+`FluxCaptureJob` kann seit jeher 1…5 (`setRevolutions()` klemmt selbst), und
+der SCP-Schreiber reicht bis zu fünf Umdrehungen unverändert durch (MF-327).
+Nur wählen konnte sie niemand.
+
+**Die Zwei war dabei nicht bloß unflexibel, sondern die falsche Zahl.**
+a8rawconv setzt `g_revs = 5` (`a8rawconv.cpp:52`) und begründet es im
+Handbuch, Abschnitt „Imaging physical floppy disks":
+
+> „Use the preservation modes of the imaging software when possible. This
+> typically records five revolutions of all tracks on the disk. For older
+> disk formats this often over-images the disk, but that's much better than
+> finding out later you're missing part of it. Another reason to do this is
+> that **if the physical disk is deteriorating, you only want to do one pass
+> on the disk because you may not get another chance.**"
+
+Genau das war der Fehler: bei einer zerfallenden Diskette gibt es keinen
+zweiten Durchgang, und drei verworfene Umdrehungen sind drei verlorene
+Chancen. Zu viel aufzuzeichnen kostet Plattenplatz; zu wenig kostet die
+Diskette.
+
+**Neu:** eine SpinBox 1…5 in der Operations-Zeile, Voreinstellung **5**.
+
+**Und eine Warnung bei 1**, weil die Untergrenze belegt ist — dasselbe
+Handbuch, wörtlich:
+
+> „For Atari 8-bit disks, you must have at least two revolutions imaged per
+> track … **An index-aligned, one-rev image will not work because sectors can
+> cross the index mark.**"
+
+Das gilt nicht nur für Atari: Amiga und Commodore sind ebenfalls nicht
+indexsynchron. Die Warnung nennt das, sagt was 5 dafür leistet, und läuft
+**vor** dem Anlaufen des Laufwerks — eine Zustimmung danach wäre wertlos.
+Die Entscheidung bleibt beim Menschen: es gibt Fälle, in denen eine
+Umdrehung alles ist, was die Diskette noch hergibt.
+
+#### AUD-8 — dabei gefunden: 17 alte `ui_*.h` in der Repo-Wurzel
+
+Der erste Build nach der UI-Änderung scheiterte an
+
+```
+error: 'class Ui::TabWorkflow' has no member named 'spinRevolutions'
+```
+
+— obwohl `forms/tab_workflow.ui` das Widget enthielt und `uic` es korrekt
+erzeugte. Der Grund steht in einer einzigen Zeile des erzeugten Makefiles:
+
+```
+INCPATH = -IC:/Users/Axel/Github/UnifiedFloppyTool-4.1.0 -I. -I...
+```
+
+**Die Repo-Wurzel steht vor dem Shadow-Build-Verzeichnis.** Dort lagen 17
+`ui_*.h` vom **18. April** (eines vom 14. Mai) — Reste eines alten
+In-Source-Builds. Sie überschatteten alles, was `uic` frisch erzeugte; der
+Compiler sah eine Oberfläche von vor vier Monaten. Nachgemessen: zu jeder
+der 17 Dateien existiert ein `.ui` unter `forms/`, sie sind also wirklich
+nur Reste und keine notwendige Zutat.
+
+Das ist dieselbe Klasse wie AUD-6 (MF-369, stale `release/`- und
+`debug/`-Verzeichnisse), nur eine Ebene tiefer — und mit derselben
+Eigenschaft: **alle sind gitignored** (`.gitignore:22`), CI sieht sie nie,
+nur der lokale Baum leidet, und zwar still. Der Fehler liest sich dabei wie
+ein Fehler im eigenen Code, nicht wie ein Umgebungsproblem.
+
+Die bestehende Kategorie „in-source build artifacts" deckt jetzt auch
+`ui_*.h` und `moc_*.cpp` in der Wurzel ab. Rot-Probe: zwei der alten
+Dateien zurückgelegt → Meldung mit Anzahl, Namen und Ursache; entfernt →
+wieder grün.
+
+**Ehrlich zur Verifikation:** der komplette qmake-Release-Build übersetzt
+und linkt nach dem Aufräumen (0 Fehler), `ctest` 217/217, alle 21
+Gate-Kategorien 0. Die GUI-Strecke — Wert einstellen, Aufzeichnung starten,
+Warnung bei 1 sehen — wurde **nicht** durchgeklickt; ohne Flux-Hardware
+lässt sich davon nur der Dialog selbst prüfen.
+
+---
+
 ### FLUX-1 — die Drehzahl beim Lesen bestimmt das Laufwerk, nicht die Diskette (2026-08-22, MF-471) → ✓ GRUNDLAGE STEHT
 
 Erster Punkt der a8rawconv-Gap-Analyse (3.1), und ihr wichtigster: ohne ihn

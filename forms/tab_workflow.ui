@@ -300,6 +300,38 @@ Auto-increment: Enabled</string>
        </widget>
       </item>
       <item>
+       <widget class="QLabel" name="labelRevolutions">
+        <property name="text">
+         <string>Umdrehungen:</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QSpinBox" name="spinRevolutions">
+        <property name="minimum">
+         <number>1</number>
+        </property>
+        <property name="maximum">
+         <number>5</number>
+        </property>
+        <property name="value">
+         <number>5</number>
+        </property>
+        <property name="toolTip">
+         <string>Wie viele Umdrehungen je Spur aufgezeichnet werden (1-5).
+
+5 ist die Empfehlung fuer Bestandssicherung: mehrfach gelesene Spuren
+lassen sich gegeneinander pruefen, und wenn die Diskette zerfaellt, hat
+man nur diesen einen Durchgang.
+
+Mindestens 2 sind noetig, sobald das Format nicht indexsynchron ist -
+bei Atari 8-bit koennen Sektoren die Indexmarke ueberlappen, ein
+Ein-Umdrehungs-Abbild schneidet sie dann mitten durch. Der Wert 1 bleibt
+waehlbar, warnt aber.</string>
+        </property>
+       </widget>
+      </item>
+      <item>
        <spacer>
         <property name="orientation">
          <enum>Qt::Horizontal</enum>

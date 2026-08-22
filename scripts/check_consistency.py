@@ -553,6 +553,28 @@ def main() -> int:
             if (repo / d).is_dir():
                 e.append(f"stale in-source build dir '{d}/' exists — poisons "
                          f"shadow qmake builds; fix: rm -rf {d}")
+        # MF-472: dieselbe Falle eine Ebene tiefer. `INCPATH` beginnt mit
+        # `-I<repo> -I.` — die Repo-Wurzel steht VOR dem Shadow-Build-
+        # Verzeichnis. Ein altes `ui_*.h` oder `moc_*.cpp` dort ueberschattet
+        # damit die Fassung, die uic/moc gerade frisch erzeugt haben, und der
+        # Compiler sieht eine Oberflaeche von vor vier Monaten. Der Fehler
+        # liest sich dann als "class Ui::X has no member named Y", obwohl das
+        # .ui-File das Widget sehr wohl enthaelt.
+        #
+        # Sie sind alle gitignored (`ui_*.h` in .gitignore:22), also sieht CI
+        # sie nie — nur der lokale Baum leidet, und zwar still.
+        for pat, tool in (("ui_*.h", "uic"), ("moc_*.cpp", "moc")):
+            stale = sorted(p.name for p in repo.glob(pat))
+            if stale:
+                shown = ", ".join(stale[:3])
+                more = f" (+{len(stale) - 3} weitere)" if len(stale) > 3 else ""
+                e.append(
+                    f"{len(stale)} veraltete {tool}-Artefakte in der "
+                    f"Repo-Wurzel: {shown}{more}. INCPATH stellt <repo> vor "
+                    f"das Shadow-Build-Verzeichnis, also gewinnen diese gegen "
+                    f"die frisch erzeugten — der Compiler sieht eine alte "
+                    f"Oberflaeche. Sie sind gitignored, CI merkt nichts; "
+                    f"fix: rm -f {pat}")
         all_errors.append(("in-source build artifacts", e))
     if args.check in ("freeze", "all"):
         # Inventory SSOT + format-layer freeze rule (MF-363/364).
