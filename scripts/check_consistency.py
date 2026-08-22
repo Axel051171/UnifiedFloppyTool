@@ -620,6 +620,13 @@ def main() -> int:
         # "stimmen zufaellig ueberein" ein nachgewiesenes Uebereinstimmen wird.
         import cbm_zone_gate as _cbmzone
         all_errors.append(("CBM zone tables", _cbmzone.check(repo)))
+        # UFT_HAS_LIBUSB setzte nur CMake — der qmake-Build, aus dem die
+        # Releases entstehen, kompilierte den fertigen SCP-Lesepfad also
+        # jahrelang in den Stub-Zweig, und beide Builds liefen dabei
+        # fehlerfrei durch. verify_build_sources.py vergleicht Quelldateien,
+        # keine Defines; genau diese Luecke schliesst der Waechter (MF-468).
+        import define_parity_gate as _defparity
+        all_errors.append(("build define parity", _defparity.check(repo)))
 
     total = sum(len(e) for _, e in all_errors)
     print(f"Consistency check ({len(all_errors)} categories, root={repo}):")

@@ -107,10 +107,13 @@ else()
 endif()
 
 if(Qt6Charts_FOUND)
-    add_compile_definitions(UFT_HAS_QT_CHARTS)
-    message(STATUS "Qt Charts: FOUND")
+    # UFT_HAS_QT_CHARTS wurde hier gesetzt und von keiner Quelldatei gelesen:
+    # es gibt kein QChart, kein QtCharts-Include, kein Chart-Widget. Die alte
+    # Meldung "chart widgets disabled" versprach etwas, das nie geschrieben
+    # wurde. Gefunden von scripts/define_parity_gate.py (MF-468).
+    message(STATUS "Qt Charts: FOUND (derzeit von keinem Widget benutzt)")
 else()
-    message(STATUS "Qt Charts: NOT FOUND (chart widgets disabled)")
+    message(STATUS "Qt Charts: NOT FOUND (wird derzeit auch nicht benutzt)")
 endif()
 
 # Platform libraries
@@ -345,8 +348,10 @@ endif()
 # Compile definitions
 target_compile_definitions(${PROJECT_NAME} PRIVATE
     UFT_HAS_HAL
-    UFT_HAS_SWITCH
-    UFT_HAS_CART7
+    # UFT_HAS_SWITCH und UFT_HAS_CART7 sind mit MF-441 gegenstandslos
+    # geworden: src/switch/ und src/cart7/ wurden damals entfernt. Beide
+    # Schalter blieben stehen und wurden von niemandem gelesen — gefunden
+    # von scripts/define_parity_gate.py (MF-468).
     UFT_VERSION_STRING="${PROJECT_VERSION}"
     $<$<PLATFORM_ID:Windows>:_CRT_SECURE_NO_WARNINGS>
 )

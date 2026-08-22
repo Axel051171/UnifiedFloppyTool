@@ -41,6 +41,72 @@ qtHaveModule(serialport) {
 }
 
 # ═══════════════════════════════════════════════════════════════════════════
+# libusb-1.0 — Produktiv-Transport für SCP-Direct und XUM1541 (MF-468)
+# ═══════════════════════════════════════════════════════════════════════════
+#
+# Bis MF-468 wurde `UFT_HAS_LIBUSB` NUR von CMakeLists.txt:155 gesetzt, also
+# nur im Test-Build. Der qmake-Build — der, aus dem die Releases entstehen —
+# definierte es nirgends. Drei Dateien fragen es ab:
+#
+#   src/hal/uft_scp_direct.c    ganze libusb-Implementierung im #else-Stub
+#   src/hal/uft_xum1541.c       dito
+#   src/hardwaretab.cpp:998     `_has_production_transport` für scp/xum1541
+#
+# Der fertige, samdisk-portierte SCP-Lesepfad war im Release also
+# unerreichbar, und die GUI meldete ihn folgerichtig als nicht produktiv.
+# Kein Test konnte das sehen: `verify_build_sources.py` vergleicht
+# Quelldateien, keine Defines. Deshalb gibt es jetzt
+# `scripts/define_parity_gate.py`.
+#
+# Erkennung in derselben Reihenfolge wie CMakeLists.txt:121-152 —
+# pkg-config zuerst, dann eine Suche über bekannte Präfixe.
+# Eigenes Präfix erzwingen: `qmake LIBUSB_PREFIX=/pfad/zu/libusb`.
+UFT_LIBUSB_FOUND = 0
+
+unix|macx {
+    CONFIG += link_pkgconfig
+    packagesExist(libusb-1.0) {
+        PKGCONFIG += libusb-1.0
+        UFT_LIBUSB_FOUND = 1
+        message("UFT libusb-1.0: FOUND via pkg-config (SCP-Direct production transport ENABLED)")
+    }
+}
+
+equals(UFT_LIBUSB_FOUND, 0) {
+    # Kandidaten-Präfixe. Auf Windows liegt libusb üblicherweise im
+    # MinGW-Präfix, das Qt mitliefert (siehe docs/M3_SCP_TRANSPORT.md).
+    UFT_LIBUSB_CANDIDATES =
+    !isEmpty(LIBUSB_PREFIX): UFT_LIBUSB_CANDIDATES += $$LIBUSB_PREFIX
+    win32 {
+        UFT_QT_ROOT = $$clean_path($$[QT_INSTALL_PREFIX]/../..)
+        UFT_LIBUSB_CANDIDATES += $$files($$UFT_QT_ROOT/Tools/mingw*)
+        UFT_LIBUSB_CANDIDATES += C:/Qt/Tools/mingw1310_64
+    }
+    unix|macx {
+        UFT_LIBUSB_CANDIDATES += /usr/local /usr /opt/homebrew
+    }
+
+    for(prefix, UFT_LIBUSB_CANDIDATES) {
+        equals(UFT_LIBUSB_FOUND, 0):exists($$prefix/include/libusb-1.0/libusb.h) {
+            INCLUDEPATH += $$prefix/include
+            LIBS += -L$$prefix/lib -lusb-1.0
+            UFT_LIBUSB_FOUND = 1
+            message("UFT libusb-1.0: FOUND in $$prefix (SCP-Direct production transport ENABLED)")
+        }
+    }
+}
+
+equals(UFT_LIBUSB_FOUND, 1) {
+    DEFINES += UFT_HAS_LIBUSB=1
+} else {
+    # Ehrlich, nicht still: ohne libusb kompilieren SCP-Direct und XUM1541
+    # in ihren Stub-Zweig, und die GUI meldet für beide keinen
+    # Produktiv-Transport. Das ist ein gültiger Build, aber ein anderer.
+    message("UFT libusb-1.0: NOT FOUND — SCP-Direct und XUM1541 bauen als Stub.")
+    message("  Eigenes Praefix: qmake LIBUSB_PREFIX=/pfad (erwartet <praefix>/include/libusb-1.0/libusb.h)")
+}
+
+# ═══════════════════════════════════════════════════════════════════════════
 # HAL (Hardware Abstraction Layer) - ALWAYS ENABLED
 # ═══════════════════════════════════════════════════════════════════════════
 DEFINES += UFT_HAS_HAL

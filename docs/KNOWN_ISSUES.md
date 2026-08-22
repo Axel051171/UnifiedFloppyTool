@@ -3652,6 +3652,120 @@ beschrieben stehen.
 
 ---
 
+### BUILD-1 — `UFT_HAS_LIBUSB` kannte nur CMake, der Release-Build baute SCP als Stub (2026-08-22, MF-468) → ✓ BEHOBEN + 21. WÄCHTER
+
+Der samdisk-portierte SCP-Lesepfad in `src/hal/uft_scp_direct.c` ist seit
+MF-254 fertig (474 Zeilen, Akkumulator-Reset je Umdrehung, 22/22 Opcodes
+byte-verifiziert). Erreichbar war er trotzdem nicht.
+
+`UFT_HAS_LIBUSB` wurde **ausschließlich** von `CMakeLists.txt:155` gesetzt —
+also nur im Test-Build. Die `UnifiedFloppyTool.pro`, aus der die Releases
+entstehen, kannte das Wort „libusb" nicht einmal. Drei Stellen fragen den
+Schalter ab:
+
+```
+src/hal/uft_scp_direct.c    die ganze libusb-Implementierung
+src/hal/uft_xum1541.c       dito
+src/hardwaretab.cpp:998     `_has_production_transport` für scp/xum1541
+```
+
+Im Release fielen also alle drei in den Stub-Zweig — **einschließlich der
+GUI-Anzeige**, die den Transport folgerichtig als nicht produktiv meldete. Die
+Tests liefen dabei grün, weil CMake den Schalter setzt.
+
+**Behoben:** die `.pro` erkennt libusb jetzt in derselben Reihenfolge wie
+CMake — pkg-config zuerst, dann eine Suche über bekannte Präfixe (auf Windows
+das MinGW-Präfix, das Qt mitliefert), mit `qmake LIBUSB_PREFIX=/pfad` als
+Übersteuerung. Findet sie nichts, sagt sie das im Build-Log, statt still einen
+anderen Build zu erzeugen.
+
+Verifiziert am kompletten qmake-Release-Build:
+
+```
+-DUFT_HAS_LIBUSB=1 ... -IC:/Qt/Tools/mingw1310_64/include
+g++ ... -o release/UnifiedFloppyTool.exe ... -LC:/Qt/Tools/mingw1310_64/lib -lusb-1.0
+```
+
+Beide HAL-Dateien übersetzen mit dem Define warnungsfrei, die Anwendung linkt.
+
+#### Der 21. Wächter: `scripts/define_parity_gate.py`
+
+Der eigentliche Befund ist nicht das fehlende Define, sondern **dass es
+niemand bemerken konnte**. `verify_build_sources.py` vergleicht *Quelldateien*
+zwischen den Build-Systemen — Defines nicht. Ein Schalter, der in einem Build
+an und im anderen aus ist, lässt beide fehlerfrei durchlaufen und trotzdem
+verschiedenen Code entstehen. Das ist dieselbe Klasse Divergenz, nur
+unsichtbar.
+
+Drei Regeln:
+
+| | |
+|---|---|
+| **A** | ein `UFT_*`, das nur ein Build-System setzen kann |
+| **B** | ein `UFT_HAS_*`/`UFT_ENABLE_*`, das der Code abfragt und **kein** Build setzt — ein Schalter, der nie an sein kann |
+| **C** | ein `UFT_*`, das gesetzt wird und im Quellcode nirgends vorkommt — ein Schalter ohne Verbraucher |
+
+Regel A wertet die **Fähigkeit** aus, nicht das Ergebnis: beide Seiten stehen
+in Bedingungen (`packagesExist`, `if(LIBUSB_FOUND)`), die das Skript nicht
+ausführt. Ob zwei Bedingungen dasselbe *meinen*, kann nur ein Mensch
+entscheiden — deshalb hat die Baseline eine Begründungspflicht je Eintrag.
+
+**Zwei Rot-Proben:**
+
+1. Die `.pro`-Änderung zurückgenommen → `build define parity: 1`. Der Wächter
+   erkennt genau den Fehler, für den er gebaut wurde.
+2. Ein frei erfundener CMake-Schalter → von Regel A **und** C gemeldet.
+
+**Drei Schwächen im Wächter selbst, vor dem Scharfschalten gefunden:**
+
+- `#if UFT_HAS_ZLIB` ohne `defined()` galt nicht als Abfrage — damit hätte er
+  jeden so geschriebenen Schalter für tot erklärt.
+- Include-Guards (`#ifndef X` + `#define X`) zählten als Feature-Abfrage.
+- Regel C prüfte nur Präprozessor-Bedingungen. Eine als **Wert** benutzte
+  Konstante wie `UFT_VERSION_STRING` galt damit als verbraucherlos, obwohl vier
+  Quelldateien sie benutzen.
+- Und, zum vierten Mal in diesem Projekt: der Wächter las **Kommentare als
+  Code**. Der Kommentar, der erklärt warum `UFT_HAS_SWITCH` entfernt wurde,
+  steht innerhalb des `target_compile_definitions()`-Blocks und nennt den
+  Namen — der Schalter galt danach weiter als gesetzt. Ein Wächter, der seine
+  eigene Begründung für eine Anweisung hält, meldet Befunde, die er selbst
+  erzeugt hat.
+
+#### Was er sofort fand
+
+**Zwei Leichen aus MF-441, entfernt statt baselined:** `UFT_HAS_SWITCH` und
+`UFT_HAS_CART7` wurden von CMake gesetzt, obwohl `src/switch/` und
+`src/cart7/` in MF-441 gelöscht wurden. Niemand las sie.
+
+**Ein Versprechen ohne Einlösung:** `UFT_HAS_QT_CHARTS` wurde gesetzt und von
+keiner Quelldatei gelesen — es gibt kein `QChart`, kein QtCharts-Include, kein
+Chart-Widget. Die Meldung „chart widgets disabled" versprach etwas, das nie
+geschrieben wurde. Define entfernt, Meldung sagt jetzt die Wahrheit.
+
+Die übrigen elf Abweichungen stehen mit Begründung in
+`scripts/define_parity_baseline.json` — vier davon warten auf eine
+Entscheidung, siehe ARCH-23.
+
+---
+
+### ARCH-23 — vier Schalter ohne Verbraucher (2026-08-22, MF-468) → ⚠ OFFEN
+
+Von `define_parity_gate.py` Regel C gefunden, baselined statt entfernt, weil
+jede Entfernung eine kleine inhaltliche Entscheidung ist:
+
+| Schalter | gesetzt in | Lage |
+|---|---|---|
+| `UFT_HAS_ZLIB` | `src/core/CMakeLists.txt:46` | zlib wird verlinkt, die Meldung verspricht „APD extras enabled" — den Codepfad gibt es nicht |
+| `UFT_C64_PROTECTION_VERSION` | `src/protection/c64/CMakeLists.txt:17` | Versionszeichenkette, die niemand liest |
+| `UFT_C64_KNOWN_TITLES_DB` | dito | Feature-Schalter ohne Feature |
+| `UFT_TRACK_ALIGN_VERSION` | `src/protection/c64/CMakeLists.txt:35` | wie oben |
+
+Zu entscheiden ist jeweils: verdrahten oder entfernen. Beides ist eine eigene
+Aufgabe — im selben Commit wie eine Build-Korrektur wären es zwei Dinge unter
+einem Beweis.
+
+---
+
 ### FMT-23 — ATX lieferte für jede Datei eine leere Diskette (2026-08-22, MF-467) → ✓ BEHOBEN, T3 → T2
 
 **a8rawconv ist jetzt das zweite Referenz-Orakel** des Projekts

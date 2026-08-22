@@ -1,0 +1,18 @@
+{
+  "_doc": "Bekannte Abweichungen zwischen den Praeprozessor-Schaltern der beiden Build-Systeme, geprueft am 2026-08-22 (MF-468). Schluessel ist 'REGEL:NAME' — A = nur eine Seite setzt ihn, B = abgefragt aber von niemandem gesetzt, C = gesetzt aber von niemandem gelesen. Ein Eintrag hier heisst GEPRUEFT UND SO GEWOLLT, nicht 'faellt uns nicht auf'. Wer einen hinzufuegt, schreibt die Begruendung dazu. Der Waechter meldet ausserdem, wenn ein Eintrag keine Abweichung mehr ist — die Liste kann also nicht stillschweigend veralten. Siehe docs/KNOWN_ISSUES.md ARCH-23 fuer die vier Schalter ohne Verbraucher, die noch zu entscheiden sind.",
+  "accepted": {
+    "A:UFT_VERSION_STRING": "Beide Builds liefern die Versionszeichenkette, auf verschiedenen Wegen: CMake als -D (CMakeLists.txt:346), qmake ueber include/uft/uft_version.h, das scripts/generate_version_header.py zu Beginn der .pro erzeugt (Zeilen 19-21). Kein Schalter, sondern ein Wert — und beide Wege sind belegt.",
+    "A:UFT_HAS_EXPERIMENTAL_VFO": "Bewusst nur qmake: das experimentelle VFO ist ein Opt-in ueber `qmake CONFIG+=experimental_vfo`, und nur dann wird src/flux/fdc_bitstream/vfo_experimental.cpp ueberhaupt gebaut. CMake kennt dieses Opt-in nicht und baut die Datei nie — verify_build_sources.py fuehrt sie aus demselben Grund unter NOT_BUILT_BY_DESIGN.",
+    "A:UFT_HAS_KALMAN_PLL": "Wie oben, Opt-in `qmake CONFIG+=kalman_pll` fuer src/algorithms/uft_kalman_pll.c. Zusaetzlich Regel C: das Define wird von niemandem gelesen, weil die Quelldatei ohne das Flag gar nicht erst uebersetzt wird — es dokumentiert, es schaltet nicht.",
+    "C:UFT_HAS_KALMAN_PLL": "Siehe A:UFT_HAS_KALMAN_PLL — der Schalter waehlt Quelldateien aus, keinen Codepfad.",
+    "C:UFT_CXX20": "Von beiden Build-Systemen gesetzt (UnifiedFloppyTool.pro:128, CMakeLists.txt:54), von keiner Quelldatei gelesen. Reine Dokumentation des Standards, der ohnehin ueber CONFIG += c++20 bzw. CMAKE_CXX_STANDARD gesetzt wird. Kein Schaden, aber auch keine Wirkung.",
+    "A:UFT_HAS_ZLIB": "CMake setzt es nur, wenn zlib gefunden wurde (src/core/CMakeLists.txt:44-46) und verlinkt dann ZLIB::ZLIB; die .pro verlinkt zlib nirgends und braucht das Define deshalb nicht. Zu entscheiden ist nicht die Paritaet, sondern ob die 'APD extras' ueberhaupt existieren sollen — siehe C:UFT_HAS_ZLIB.",
+    "C:UFT_HAS_ZLIB": "Kein Verbraucher im Quellcode. Die Meldung 'APD extras enabled' verspricht einen Codepfad, den es nicht gibt. Nicht in MF-468 entschieden: entweder die Extras verdrahten oder Define und Meldung entfernen — beides ist eine eigene Aufgabe. Siehe docs/KNOWN_ISSUES.md ARCH-23.",
+    "A:UFT_C64_PROTECTION_VERSION": "Nur CMake (src/protection/c64/CMakeLists.txt:17). Siehe C-Eintrag: der Schalter hat keinen Verbraucher, die Paritaet ist deshalb nicht die Frage.",
+    "C:UFT_C64_PROTECTION_VERSION": "Kein Verbraucher im Quellcode. ARCH-23.",
+    "A:UFT_C64_KNOWN_TITLES_DB": "Nur CMake (src/protection/c64/CMakeLists.txt:17). Siehe C-Eintrag.",
+    "C:UFT_C64_KNOWN_TITLES_DB": "Kein Verbraucher im Quellcode. ARCH-23.",
+    "A:UFT_TRACK_ALIGN_VERSION": "Nur CMake (src/protection/c64/CMakeLists.txt:35). Siehe C-Eintrag.",
+    "C:UFT_TRACK_ALIGN_VERSION": "Kein Verbraucher im Quellcode. ARCH-23."
+  }
+}
