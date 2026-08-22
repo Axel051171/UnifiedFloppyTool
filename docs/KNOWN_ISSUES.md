@@ -5096,23 +5096,23 @@ Stand, kein Vertrag**:
 | | |
 |---|---|
 | gebaute Quelldateien mit exportierten Symbolen | 531 |
-| davon mit Aufrufern in `src/` | 430 |
-| davon **nur** von Tests aufgerufen | 4 |
-| davon **ohne jeden** Aufrufer | **97** |
+| davon mit Aufrufern in `src/` | 223 |
+| davon **nur** von Tests aufgerufen | **80** |
+| davon **ohne jeden** Aufrufer | **228** |
 
-Rund 18 % des Builds ist Code, den niemand aufruft. Er kostet Bauzeit, er
-sieht im Baum nach Funktion aus, und er hat keine.
+Rund 58 % des Builds ist Code, den kein anderer Produktivcode aufruft. Er
+kostet Bauzeit, er sieht im Baum nach Funktion aus, und er hat keine.
 
-Die vier „nur von Tests" sind der interessantere Teil: `atari/st.c`,
-`commodore/d67.c`, `d80.c`, `d82.c`. Das ist derselbe Zustand, in dem
-MF-471, MF-473 und MF-474 gelandet sind — geprüft und ohne Wirkung. Ein
-grüner Test über unverdrahtetem Code beweist, dass er funktioniert, und
-verschweigt, dass ihn niemand ruft.
+Die 80 „nur von Tests" sind der interessantere Teil — darunter
+`uft_god_mode_api.c` und die fünf `analysis/events/*_bridge.c`. Das ist
+derselbe Zustand, in dem MF-471, MF-473 und MF-474 gelandet sind: geprüft
+und ohne Wirkung. Ein grüner Test über unverdrahtetem Code beweist, dass er
+funktioniert, und verschweigt, dass ihn niemand ruft.
 
-#### Warum das Instrument dreimal umgebaut wurde
+#### Warum das Instrument viermal umgebaut wurde
 
 Ein Audit-Skript, das falsch misst, ist schlimmer als keins: es lädt dazu
-ein, funktionierenden Code zu löschen. Drei Falsch-Positiv-Klassen fielen
+ein, funktionierenden Code zu löschen. Vier Falsch-Positiv-Klassen fielen
 erst in der Gegenprobe auf, jede hätte für sich zu falschen Schlüssen
 geführt:
 
@@ -5128,9 +5128,31 @@ geführt:
    gebaut. Behoben, indem der Parser aus `verify_build_sources.py`
    importiert statt nachgebaut wird — der kennt diese Falle seit MF-458.
 
-Geprüft ist das Instrument gegen einen unabhängig ermittelten Wert: es
-meldet für `src/formats/misc/` **19**, genau die von Hand ausgezählte Zahl
-aus ARCH-19.
+4. **Der eigene Header galt als Aufrufer.** Ein Prototyp
+   `multiread_execute(...);` sieht aus wie ein Aufruf. Damit galt praktisch
+   jedes Modul mit Header als benutzt — das Skript meldete
+   `uft_multiread_pipeline.c` als verdrahtet, obwohl der einzige Treffer
+   sein eigener Prototyp war. Behoben über die Einrückung: Aufrufe stehen
+   in einem Funktionsrumpf, Prototypen in Spalte 0.
+
+> **Die erste „Validierung" war zwei Fehler, die sich aufhoben.** Fassung 3
+> meldete für `src/formats/misc/` **19** — genau die Handzählung aus
+> ARCH-19, und das galt hier als Beleg. Nach Behebung von Fehler 4 meldet
+> das Skript **20**, und die Nachprüfung gibt ihm recht:
+> `misc/polyglot_boot.c` ist gebaut, exportiert `poly_parse_bpb()` und
+> Nachbarn, und **kein einziger Aufrufer** existiert im Baum. ARCH-19s
+> „tatsächlich benutzt: `polyglot_boot.c`, `udi.c`" ist um einen Eintrag zu
+> optimistisch; benutzt ist nur `udi.c`.
+>
+> Eine Übereinstimmung mit einer Handzählung ist also kein Beleg — beide
+> können denselben blinden Fleck haben. Belastbar ist erst die Nachprüfung
+> am Einzelfall, und die steht oben.
+
+Stichproben in beide Richtungen: sechs sicher benutzte Module
+(`uft_flux_decoder.c`, `uft_media_profile.c`, `uft_scp_parser.c`,
+`uft_log.c`, `uft_cqm.c`, `uft_atx.c`) werden korrekt als benutzt gemeldet;
+`uft_event_bridge.c` wird korrekt als nur-von-Tests gemeldet
+(`tests/test_event_bridge.c` ist der einzige Aufrufer).
 
 **Was das Skript nicht kann**, steht in seinem Kopfkommentar: kein
 Präprozessor, keine makro-erzeugten Aufrufe. Der verbleibende Fehler zeigt

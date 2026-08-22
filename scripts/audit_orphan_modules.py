@@ -136,6 +136,19 @@ def scan_tree(dirs: list[str]) -> dict[pathlib.Path, str]:
 
 
 # Aufruf `name(` und Funktionszeiger `= name` / `, name` / `{ name`.
+#
+# Der Aufruf muss EINGERUECKT stehen. Ohne diese Bedingung zaehlt der eigene
+# Header als Aufrufer: ein Prototyp `multiread_execute(...);` sieht wie ein
+# Aufruf aus. Damit galt praktisch jedes Modul mit Header als benutzt — das
+# Skript meldete `uft_multiread_pipeline.c` als verdrahtet, obwohl der einzige
+# Treffer sein eigener Prototyp war. Aufrufe stehen in einem Funktionsrumpf
+# und damit eingerueckt; Prototypen und Definitionen beginnen in Spalte 0.
+#
+# Preis: eine Definition am Zeilenanfang, die eine andere Funktion im selben
+# Ausdruck aufruft, wird uebersehen. Das ist selten und faellt in die
+# vorsichtige Richtung nicht — deshalb faengt PTR_REF (ohne
+# Einrueckungs-Bedingung) den Rest ab.
+INDENTED_LINE = re.compile(r"^[ \t]+.*$", re.M)
 CALL_REF = re.compile(r"\b([a-z_][a-z0-9_]{3,})\s*\(")
 # Trennzeichen werden NICHT verbraucht, sondern nur vorausgeschaut. Eine
 # Registry-Zeile `&plugin_a, &plugin_b,` haette sonst nur den ersten Eintrag
@@ -154,7 +167,9 @@ def reference_index(tree: dict[pathlib.Path, str]) -> dict[str, set[pathlib.Path
     """
     idx: dict[str, set[pathlib.Path]] = defaultdict(set)
     for path, text in tree.items():
-        for rx in (CALL_REF, PTR_REF):
+        for name in CALL_REF.findall("\n".join(INDENTED_LINE.findall(text))):
+            idx[name].add(path)
+        for rx in (PTR_REF,):
             for name in rx.findall(text):
                 idx[name].add(path)
     return idx
