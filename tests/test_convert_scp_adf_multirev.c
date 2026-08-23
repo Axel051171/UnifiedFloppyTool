@@ -284,6 +284,62 @@ TEST(a_clean_capture_converts_to_the_source_adf) {
     remove(scp); remove(out);
 }
 
+TEST(a_single_revolution_of_a_non_index_synced_medium_is_flagged) {
+    /* MF-483. AmigaDOS bindet die Sektorlage nicht an die Indexmarke — die
+     * Spur wird am Stueck geschrieben, wo der Kopf gerade steht. Ein
+     * Ein-Umdrehungs-Abbild schneidet einen Sektor, der ueber den Index
+     * laeuft, mitten durch, und zwar UNAUFFAELLIG: es fehlt einfach einer, so
+     * wie bei einem Lesefehler.
+     *
+     * Der Wandler muss das sagen. a8rawconv tut es fuer Atari fest
+     * verdrahtet (rawdiskscp.cpp:120-124); hier kommt die Eigenschaft aus dem
+     * Medienprofil, damit sie fuer jedes Format stimmt und nicht fuer eines. */
+    uint8_t *adf = make_source_adf();
+    ASSERT(adf != NULL);
+
+    char scp[512], out[512];
+    get_temp_path(scp, sizeof(scp), "onerev.scp");
+    get_temp_path(out, sizeof(out), "onerev.adf");
+    ASSERT(write_scp(scp, adf, 1, NULL) == 0);
+
+    uft_convert_result_t r;
+    ASSERT(convert(scp, out, true, &r) == UFT_OK);
+
+    if (!warned_about(&r, "nicht indexsynchron")) dump_warnings(&r);
+    ASSERT(warned_about(&r, "nicht indexsynchron"));
+    ASSERT(warned_about(&r, "koennen fehlen"));
+
+    /* Die Warnung ersetzt die Daten nicht: was lesbar war, ist da. */
+    size_t got_len = 0;
+    uint8_t *got = slurp(out, &got_len);
+    ASSERT(got != NULL && got_len == ADF_SIZE);
+    ASSERT(sectors_matching(adf, got) == NTRACKS * ADF_SPT);
+    free(got);
+
+    free(adf);
+    remove(scp); remove(out);
+}
+
+TEST(enough_revolutions_says_nothing_about_index_sync) {
+    /* Gegenprobe. Ohne sie wuerde eine Warnung, die IMMER erscheint, genauso
+     * gruen leuchten wie eine, die nur im richtigen Fall kommt. */
+    uint8_t *adf = make_source_adf();
+    ASSERT(adf != NULL);
+
+    char scp[512], out[512];
+    get_temp_path(scp, sizeof(scp), "tworev.scp");
+    get_temp_path(out, sizeof(out), "tworev.adf");
+    ASSERT(write_scp(scp, adf, 2, NULL) == 0);
+
+    uft_convert_result_t r;
+    ASSERT(convert(scp, out, true, &r) == UFT_OK);
+    if (warned_about(&r, "nicht indexsynchron")) dump_warnings(&r);
+    ASSERT(!warned_about(&r, "nicht indexsynchron"));
+
+    free(adf);
+    remove(scp); remove(out);
+}
+
 TEST(a_sector_broken_in_revolution_zero_is_recovered_from_the_others) {
     /* DIE Rotprobe fuer die Verdrahtung. Umdrehung 0 traegt einen Sektor mit
      * falscher Datenpruefsumme und veraendertem Inhalt, die Umdrehungen 1 und
@@ -412,6 +468,8 @@ int main(void)
 
     RUN(the_encoder_produces_a_track_the_decoder_reads);
     RUN(a_clean_capture_converts_to_the_source_adf);
+    RUN(a_single_revolution_of_a_non_index_synced_medium_is_flagged);
+    RUN(enough_revolutions_says_nothing_about_index_sync);
     RUN(a_sector_broken_in_revolution_zero_is_recovered_from_the_others);
     RUN(a_stable_crc_error_is_reported_as_copy_protection);
     RUN(a_sector_that_reads_differently_each_time_is_reported_as_weak);

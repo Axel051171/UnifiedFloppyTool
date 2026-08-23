@@ -87,6 +87,57 @@ TEST(atari_fm_matches_the_oracle_constants)
     ASSERT(uft_media_cells_per_rev(UFT_MEDIA_UNKNOWN) == 0.0);
 }
 
+TEST(index_sync_is_stated_per_profile_never_guessed)
+{
+    /* MF-483. Die Eigenschaft entscheidet, ob EINE Umdrehung genuegt — und
+     * sie ist je Profil belegt, nicht abgeleitet und nicht geraten.
+     *
+     * Atari: a8rawconv sagt es woertlich (rawdiskscp.cpp:120-124).
+     * AmigaDOS: strukturell aus dem Format — keine Index-Adressmarke, und
+     * das Info-Long fuehrt "sectors to gap", was nur braucht, wessen
+     * Sektorlage sich gegen die Luecke verschiebt.
+     * PC: IBM System 34 setzt eine Index-Adressmarke an den Spuranfang. */
+    ASSERT(uft_media_profile(UFT_MEDIA_ATARI_FM)->index_sync  == UFT_IDXSYNC_NONE);
+    ASSERT(uft_media_profile(UFT_MEDIA_ATARI_MFM)->index_sync == UFT_IDXSYNC_NONE);
+    ASSERT(uft_media_profile(UFT_MEDIA_AMIGA_DD)->index_sync  == UFT_IDXSYNC_NONE);
+
+    ASSERT(uft_media_profile(UFT_MEDIA_PC_360K)->index_sync == UFT_IDXSYNC_INDEXED);
+    ASSERT(uft_media_profile(UFT_MEDIA_PC_720K)->index_sync == UFT_IDXSYNC_INDEXED);
+    ASSERT(uft_media_profile(UFT_MEDIA_PC_12M)->index_sync  == UFT_IDXSYNC_INDEXED);
+    ASSERT(uft_media_profile(UFT_MEDIA_PC_144M)->index_sync == UFT_IDXSYNC_INDEXED);
+
+    /* Ohne Beleg wird nichts behauptet: das Disk-II-Laufwerk hat gar keinen
+     * Indexsensor, die Frage ist dort anders gestellt. UNKNOWN heisst hier
+     * "nicht geklaert", nicht "egal". */
+    ASSERT(uft_media_profile(UFT_MEDIA_APPLE2_GCR)->index_sync
+           == UFT_IDXSYNC_UNKNOWN);
+}
+
+TEST(the_revolution_minimum_is_derived_not_stored_twice)
+{
+    /* Zwei Felder, die dasselbe sagen, laufen auseinander — und dann gilt,
+     * was zufaellig gelesen wird. Genau diese Klasse Fehler hat das Projekt
+     * mehrfach getroffen (MF-475: fuenf Zellendauer-Stellen; MF-479: zwei
+     * Layout-Rechnungen; MF-481: zwei Offset-Deutungen). Deshalb wird das
+     * Minimum aus index_sync GERECHNET.
+     *
+     * Der Test prueft die Ableitung fuer JEDES Profil in der Tabelle, nicht
+     * fuer eine Auswahl — sonst schuetzt er einen neuen Eintrag nicht. */
+    for (int k = UFT_MEDIA_UNKNOWN + 1; k < UFT_MEDIA_COUNT; k++) {
+        const uft_media_profile_t *p = uft_media_profile((uft_media_kind_t)k);
+        if (!p) continue;
+        int want = (p->index_sync == UFT_IDXSYNC_NONE) ? 2 : 1;
+        if (uft_media_min_revolutions((uft_media_kind_t)k) != want)
+            printf("\n        %s: %d statt %d\n", p->name,
+                   uft_media_min_revolutions((uft_media_kind_t)k), want);
+        ASSERT(uft_media_min_revolutions((uft_media_kind_t)k) == want);
+    }
+
+    /* Ohne Profil wird nicht geraten. */
+    ASSERT(uft_media_min_revolutions(UFT_MEDIA_UNKNOWN) == 1);
+    ASSERT(uft_media_min_revolutions(UFT_MEDIA_COUNT) == 1);
+}
+
 TEST(atari_disk_in_a_300rpm_drive_reads_four_percent_fast)
 {
     /* Der eigentliche Fall. Eine Umdrehung bei 300 min⁻¹ dauert 200 ms;
@@ -383,6 +434,8 @@ int main(void)
     printf("=== Medienprofile und Drehzahl-Adaption (MF-471) ===\n");
     RUN(table_is_internally_consistent);
     RUN(atari_fm_matches_the_oracle_constants);
+    RUN(index_sync_is_stated_per_profile_never_guessed);
+    RUN(the_revolution_minimum_is_derived_not_stored_twice);
     RUN(atari_disk_in_a_300rpm_drive_reads_four_percent_fast);
     RUN(percent_nudge_scales_and_is_bounded);
     RUN(bad_input_fails_instead_of_guessing);

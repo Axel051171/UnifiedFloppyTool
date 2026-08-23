@@ -40,15 +40,38 @@
  *   Apple II   250 kHz @ 300 min⁻¹ — encode.cpp:5 ("4us @ 300 RPM
  *              (Apple II GCR)").
  */
+/*
+ * Indexsynchronitaet je Profil (MF-483) — je Zeile ein eigener Beleg. Wo
+ * keiner vorliegt, steht UNKNOWN und es wird nicht gewarnt: eine Warnung
+ * ohne Beleg waere eine erfundene Aussage ueber das Medium.
+ *
+ *   Atari FM/MFM  NONE — a8rawconv sagt es woertlich (rawdiskscp.cpp:120-124):
+ *                 "Atari disks are not index aligned and require at least
+ *                 two revolutions."
+ *   AmigaDOS DD   NONE — strukturell aus dem Format, nicht zitiert: AmigaDOS
+ *                 kennt keine Index-Adressmarke, die Spur ist eine Kette von
+ *                 0x4489-Sektoren, und das Info-Long fuehrt ein Feld
+ *                 "sectors to gap" (decode_amiga_sector, uft_flux_decoder.c).
+ *                 Dieses Feld braucht nur, wessen Sektorlage sich gegen die
+ *                 Luecke verschiebt — also wer track-at-once schreibt, wo der
+ *                 Kopf gerade steht.
+ *   PC 360K/720K/1.2M/1.44M  INDEXED — IBM System 34 setzt eine
+ *                 Index-Adressmarke (0xFC) an den Spuranfang und legt die
+ *                 Sektoren von dort aus ab.
+ *   Apple II GCR  UNKNOWN — das Disk-II-Laufwerk hat gar keinen
+ *                 Indexsensor, die Frage ist damit anders gestellt als bei
+ *                 den uebrigen. Ohne belastbare Quelle wird hier nichts
+ *                 behauptet.
+ */
 static const uft_media_profile_t MEDIA_PROFILES[] = {
-    { UFT_MEDIA_ATARI_FM,   "Atari FM (288 min^-1, 4 us)",   288.0,  250000.0, 4000.0 },
-    { UFT_MEDIA_ATARI_MFM,  "Atari MFM (288 min^-1, 2 us)",  288.0,  500000.0, 2000.0 },
-    { UFT_MEDIA_PC_360K,    "PC 360K (300 min^-1, 2 us)",    300.0,  500000.0, 2000.0 },
-    { UFT_MEDIA_PC_12M,     "PC 1.2M (360 min^-1, 1 us)",    360.0, 1000000.0, 1000.0 },
-    { UFT_MEDIA_PC_720K,    "PC 720K (300 min^-1, 2 us)",    300.0,  500000.0, 2000.0 },
-    { UFT_MEDIA_PC_144M,    "PC 1.44M (300 min^-1, 1 us)",   300.0, 1000000.0, 1000.0 },
-    { UFT_MEDIA_AMIGA_DD,   "AmigaDOS DD (300 min^-1, 2 us)",300.0,  500000.0, 2000.0 },
-    { UFT_MEDIA_APPLE2_GCR, "Apple II GCR (300 min^-1, 4 us)",300.0, 250000.0, 4000.0 },
+    { UFT_MEDIA_ATARI_FM,   "Atari FM (288 min^-1, 4 us)",   288.0,  250000.0, 4000.0, UFT_IDXSYNC_NONE },
+    { UFT_MEDIA_ATARI_MFM,  "Atari MFM (288 min^-1, 2 us)",  288.0,  500000.0, 2000.0, UFT_IDXSYNC_NONE },
+    { UFT_MEDIA_PC_360K,    "PC 360K (300 min^-1, 2 us)",    300.0,  500000.0, 2000.0, UFT_IDXSYNC_INDEXED },
+    { UFT_MEDIA_PC_12M,     "PC 1.2M (360 min^-1, 1 us)",    360.0, 1000000.0, 1000.0, UFT_IDXSYNC_INDEXED },
+    { UFT_MEDIA_PC_720K,    "PC 720K (300 min^-1, 2 us)",    300.0,  500000.0, 2000.0, UFT_IDXSYNC_INDEXED },
+    { UFT_MEDIA_PC_144M,    "PC 1.44M (300 min^-1, 1 us)",   300.0, 1000000.0, 1000.0, UFT_IDXSYNC_INDEXED },
+    { UFT_MEDIA_AMIGA_DD,   "AmigaDOS DD (300 min^-1, 2 us)",300.0,  500000.0, 2000.0, UFT_IDXSYNC_NONE },
+    { UFT_MEDIA_APPLE2_GCR, "Apple II GCR (300 min^-1, 4 us)",300.0, 250000.0, 4000.0, UFT_IDXSYNC_UNKNOWN },
 };
 
 #define PROFILE_COUNT (sizeof(MEDIA_PROFILES) / sizeof(MEDIA_PROFILES[0]))
@@ -65,6 +88,14 @@ const uft_media_profile_t *uft_media_profile(uft_media_kind_t kind)
 size_t uft_media_profile_count(void)
 {
     return PROFILE_COUNT;
+}
+
+int uft_media_min_revolutions(uft_media_kind_t kind)
+{
+    const uft_media_profile_t *p = uft_media_profile(kind);
+    /* Abgeleitet, nicht gespeichert — siehe Header. Ohne Beleg (UNKNOWN)
+     * bleibt es bei 1: geraten wird nicht. */
+    return (p && p->index_sync == UFT_IDXSYNC_NONE) ? 2 : 1;
 }
 
 double uft_media_cells_per_rev(uft_media_kind_t kind)

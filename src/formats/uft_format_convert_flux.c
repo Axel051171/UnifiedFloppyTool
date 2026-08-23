@@ -564,6 +564,32 @@ static uft_error_t uftc_convert_scp_to_adf_via_plugin(
             (double)revs_seen / (double)tracks_with_flux);
     }
 
+    /* Reicht EINE Umdrehung fuer dieses Medium ueberhaupt? (MF-483)
+     *
+     * AmigaDOS bindet die Sektorlage nicht an die Indexmarke — die Spur wird
+     * am Stueck geschrieben, wo der Kopf gerade steht, und das Info-Long
+     * fuehrt deshalb ein Feld "sectors to gap". Ein Ein-Umdrehungs-Abbild
+     * schneidet einen Sektor, der ueber den Index laeuft, mitten durch, und
+     * zwar UNAUFFAELLIG: es fehlt einfach einer, so wie bei einem Lesefehler.
+     * Wer das nicht gesagt bekommt, haelt eine unvollstaendige Sicherung fuer
+     * eine beschaedigte Diskette.
+     *
+     * Die Eigenschaft steht im Medienprofil, nicht hier: a8rawconv hat die
+     * Warnung fest verdrahtet (rawdiskscp.cpp:120-124), weil es nur Atari
+     * kennt. UFT kennt viele Formate — waere sie hier fest, wuerde entweder
+     * bei jedem gewarnt oder bei keinem. */
+    int min_revs = uft_media_min_revolutions(dopts.media);
+    if (tracks_with_flux > 0 && min_revs > 1 &&
+        revs_seen < min_revs * tracks_with_flux) {
+        const uft_media_profile_t *mp = uft_media_profile(dopts.media);
+        uftc_add_warning(result,
+            "%s ist nicht indexsynchron und braucht mindestens %d Umdrehungen "
+            "je Spur - das Abbild bringt im Schnitt %.1f. Sektoren, die ueber "
+            "die Indexmarke laufen, koennen fehlen",
+            mp ? mp->name : "Dieses Medium", min_revs,
+            (double)revs_seen / (double)tracks_with_flux);
+    }
+
     uftc_report_progress(opts, 95, "Writing output");
     uft_error_t err = uftc_write_output_file(dst_path, output, adf_size);
     if (err == UFT_OK) {

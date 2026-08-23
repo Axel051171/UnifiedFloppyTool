@@ -66,6 +66,38 @@ typedef enum {
 } uft_media_kind_t;
 
 /**
+ * @brief Liegen die Sektoren fest zum Indexloch? (MF-483)
+ *
+ * Entscheidet, ob EINE Umdrehung genügt. Bei einem nicht indexsynchronen
+ * Format kann ein Sektor über die Indexmarke hinauslaufen; ein
+ * Ein-Umdrehungs-Abbild schneidet ihn dann mitten durch, und zwar
+ * **unauffällig** — es fehlt einfach ein Sektor, so wie bei einem Lesefehler.
+ *
+ * a8rawconv sagt das für Atari wörtlich (`rawdiskscp.cpp:120-124`,
+ * Referenz-Orakel, wird nicht gebaut):
+ *
+ *     if (fileHeader.mNumRevs <= 1) {
+ *         printf("Warning: Only one disk revolution found in image. Atari
+ *                 disks are not index aligned and require at least two
+ *                 revolutions.\n");
+ *     }
+ *
+ * Dort steht die Warnung fest verdrahtet, weil a8rawconv nur Atari kennt.
+ * UFT kennt viele Formate, also gehört die Eigenschaft ins Profil — sonst
+ * würde entweder bei jedem Format gewarnt oder bei keinem.
+ */
+typedef enum {
+    /** Nicht belegt. Es wird NICHT gewarnt: eine Warnung ohne Beleg ist
+     *  eine erfundene Aussage über das Medium. */
+    UFT_IDXSYNC_UNKNOWN = 0,
+    /** Sektorlage ist an die Indexmarke gebunden (IBM System 34 hat eine
+     *  Index-Adressmarke am Spuranfang). Eine Umdrehung genügt. */
+    UFT_IDXSYNC_INDEXED,
+    /** Sektoren liegen frei zur Indexmarke. Mindestens zwei Umdrehungen. */
+    UFT_IDXSYNC_NONE
+} uft_index_sync_t;
+
+/**
  * @brief Nominale Eigenschaften eines Mediums — was beim SCHREIBEN galt.
  *
  * Bewusst nicht dasselbe wie `uft_drive_profile_t`: das beschreibt ein
@@ -79,7 +111,27 @@ typedef struct {
     double       rpm;          /**< Drehzahl beim Schreiben (min⁻¹)      */
     double       data_rate_hz; /**< Bitzellen je Sekunde                 */
     double       bitcell_ns;   /**< nominale Zellendauer bei @ref rpm    */
+
+    /* MF-483 — angehaengt, nicht eingefuegt. */
+
+    /** Ob die Sektorlage an die Indexmarke gebunden ist. Je Profil belegt;
+     *  wo kein Beleg vorliegt, bleibt es UNKNOWN. */
+    uft_index_sync_t index_sync;
 } uft_media_profile_t;
+
+/**
+ * @brief Wie viele Umdrehungen ein Abbild dieses Mediums mindestens braucht.
+ *
+ * ABGELEITET aus @ref uft_media_profile_t::index_sync, nicht daneben
+ * gespeichert: zwei Felder, die dasselbe sagen, laufen irgendwann
+ * auseinander — und dann gilt das, was zufällig gelesen wird. Genau diese
+ * Klasse Fehler hat dieses Projekt mehrfach getroffen (MF-475, MF-479,
+ * MF-481).
+ *
+ * @return 2 wenn das Medium nicht indexsynchron ist, sonst 1.
+ *         Auch bei UNKNOWN 1 — geraten wird nicht.
+ */
+int uft_media_min_revolutions(uft_media_kind_t kind);
 
 /** @return Profil oder NULL, wenn @p kind unbekannt ist. */
 const uft_media_profile_t *uft_media_profile(uft_media_kind_t kind);

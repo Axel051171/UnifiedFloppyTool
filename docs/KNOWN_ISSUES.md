@@ -3752,6 +3752,80 @@ für AmigaDOS-DD.
 
 ---
 
+### FLUX-8 — eine Umdrehung genügt nicht überall, und niemand sagte es (2026-08-23, MF-483) → ✓ BEHOBEN
+
+Erste Umsetzung aus dem Entwurf „Universelle Capture/Decode-Settings":
+`index_sync` im Medienprofil — das einzige Feld dieses Entwurfs, das eine
+forensische **Aussage** erzeugt statt eines Stellknopfs.
+
+**Das Problem.** Bei einem nicht indexsynchronen Format kann ein Sektor über
+die Indexmarke hinauslaufen. Ein Ein-Umdrehungs-Abbild schneidet ihn dann
+mitten durch — und zwar **unauffällig**: es fehlt einfach ein Sektor, genau
+wie bei einem Lesefehler. Wer das nicht gesagt bekommt, hält eine
+unvollständige Sicherung für eine beschädigte Diskette.
+
+a8rawconv sagt es für Atari wörtlich (`rawdiskscp.cpp:120-124`):
+
+> „Only one disk revolution found in image. Atari disks are not index aligned
+> and require at least two revolutions."
+
+Dort ist die Warnung **fest verdrahtet**, weil a8rawconv nur Atari kennt.
+UFT kennt viele Formate — fest verdrahtet würde entweder bei jedem gewarnt
+oder bei keinem. Deshalb gehört die Eigenschaft ins Profil.
+
+#### Je Zeile ein eigener Beleg
+
+| Profil | index_sync | Beleg |
+|---|---|---|
+| Atari FM / MFM | `NONE` | a8rawconv, wörtlich (s. o.) |
+| AmigaDOS DD | `NONE` | **strukturell**, nicht zitiert: keine Index-Adressmarke, und das Info-Long führt ein Feld *sectors to gap* (`decode_amiga_sector`). Das braucht nur, wessen Sektorlage sich gegen die Lücke verschiebt — also wer track-at-once schreibt, wo der Kopf gerade steht |
+| PC 360K/720K/1.2M/1.44M | `INDEXED` | IBM System 34 setzt eine Index-Adressmarke (0xFC) an den Spuranfang |
+| Apple II GCR | `UNKNOWN` | Das Disk-II-Laufwerk hat **gar keinen Indexsensor**; die Frage ist dort anders gestellt. Ohne belastbare Quelle wird nichts behauptet |
+
+`UNKNOWN` warnt nicht. Eine Warnung ohne Beleg wäre eine erfundene Aussage
+über das Medium — dieselbe Sorte Fehler, gegen die die EINFRIER-REGEL steht.
+
+#### Das Minimum wird gerechnet, nicht danebengeschrieben
+
+Der Entwurf schlug `index_sync` **und** `revs_min` als zwei Felder vor.
+Zwei Felder, die dasselbe sagen, laufen auseinander — und dann gilt, was
+zufällig gelesen wird. Genau diese Klasse Fehler hat das Projekt in dieser
+Woche dreimal getroffen: MF-475 (fünf Zellendauer-Stellen), MF-479 (zwei
+Layout-Rechnungen), MF-481 (zwei Offset-Deutungen). Also gibt es ein Feld
+und `uft_media_min_revolutions()` leitet daraus ab. Der Test prüft die
+Ableitung für **jedes** Profil der Tabelle, nicht für eine Auswahl — sonst
+schützt er einen neuen Eintrag nicht.
+
+#### Rot-Proben
+
+| Verfälschung | Ergebnis |
+|---|---|
+| AmigaDOS fälschlich `INDEXED` | Profiltest **und** Wandlungstest fallen |
+| Ableitung durch feste `1` ersetzt | Ableitungstest **und** Wandlungstest fallen |
+
+Dazu die Gegenprobe `enough_revolutions_says_nothing_about_index_sync`: bei
+zwei Umdrehungen darf **keine** Warnung kommen. Ohne sie würde eine Warnung,
+die immer erscheint, genauso grün leuchten.
+
+`ctest` 224/224, alle 21 Gate-Kategorien 0, `verify_build_sources.py` 0/0,
+qmake-Release-Build grün.
+
+**Ehrlich zur Reichweite.**
+
+- Die Warnung erscheint auf **einem** Pfad (SCP→ADF) — dem einzigen, der ein
+  Medienprofil setzt.
+- **Das Capture erzwingt das Minimum nicht.** Die Spinbox in
+  `forms/tab_workflow.ui` lässt 1 zu und erklärt die Regel nur im Tooltip;
+  ein Clamp gegen `uft_media_min_revolutions()` ist GUI-Arbeit und braucht
+  zuerst, dass das Profil im Capture-Pfad überhaupt bekannt ist. Heute ist es
+  das nicht.
+- **AmigaDOS `NONE` ist strukturell begründet, nicht zitiert.** Die
+  Begründung steht oben und ist nachprüfbar; eine Quelle wie a8rawconvs Satz
+  für Atari wäre stärker. Wer eine findet, soll sie eintragen.
+- Apple II bleibt `UNKNOWN`, und das ist Absicht.
+
+---
+
 ### FLUX-7 — 83 Zylinder rein, 80 raus, kein Wort dazu (2026-08-23, MF-482) → ✓ BEHOBEN
 
 Punkt 3.5 der a8rawconv-Gap-Analyse (Geometrie-Override). Beim Nachmessen
