@@ -24,6 +24,7 @@ extern const uft_format_plugin_t uft_format_plugin_scp;
 #include "uft/flux/uft_mfm_sector_parser.h"
 #include "uft/flux/uft_scp_parser.h"
 #include "uft/recovery/uft_multiread_pipeline.h"
+#include "uft/detect/uft_mfm_detect_bridge.h"
 
 // ============================================================================
 // Flux/Bitstream -> Sector Conversions (Decode Pipeline)
@@ -297,6 +298,78 @@ static bool uftc_adf_place_voted(const uftc_adf_votes_t* v,
     free(res.weak_mask);      /* execute() belegt sie, der Aufrufer gibt frei */
     multiread_destroy(mr);
     return placed;
+}
+
+/* Das eigene Ergebnis nachsehen (MF-489).
+ *
+ * Zweimal hat dieser Baum ein Abbild aus lauter Nullen als erfolgreiche
+ * Wandlung gemeldet: MF-437 (HFE->ADF) und MF-438 (SCP->ADF), beide Male
+ * weil ein IBM-Parser auf einer AmigaDOS-Spur nichts fand und der Zaehler
+ * trotzdem hochlief. Beide Male fiel es erst auf, als jemand die Datei
+ * aufmachte.
+ *
+ * Ein Abbild, das kein erkennbares Dateisystem traegt, ist kein Beweis fuer
+ * einen Fehler — eine leere oder fremdformatierte Diskette gibt es. Aber es
+ * ist der Punkt, an dem der Wandler den Mund aufmachen muss, statt
+ * "erfolgreich" zu melden und zu schweigen.
+ *
+ * Der Erkenner dafuer liegt seit jeher im Baum (src/detect/mfm/, 3609
+ * Zeilen, 43 exportierte Symbole) — und hatte **keinen einzigen Aufrufer**.
+ * Neunter Eintrag derselben Liste in dieser Woche.
+ *
+ * Mehrere Kandidaten werden ALLE gemeldet, nicht nur der beste: eine
+ * Diskette kann zwei Dateisysteme tragen (Amiga + Atari auf derselben
+ * Scheibe ist ein bekannter Fall), und nur den Sieger zu nennen hiesse,
+ * das zweite stillschweigend zu unterschlagen. */
+static void uftc_verify_output_filesystem(const uint8_t *image, size_t size,
+                                          uft_convert_result_t *result)
+{
+    if (!image || size == 0 || !result) return;
+
+    uft_mfm_detect_info_t info;
+    memset(&info, 0, sizeof(info));
+    if (uft_mfmd_detect_image(image, size, &info) != UFT_MFMD_OK) return;
+
+    /* Kein Kandidat ODER nur ein schwacher.
+     *
+     * Die zweite Haelfte ist gemessen, nicht vorsorglich: ein 720-KB-Abbild
+     * aus lauter Nullen meldet der Erkenner als „CP/M (vorlaeufig, Stufe 3
+     * noetig)" mit Konfidenz 20 — also NICHT als unbekannt. Eine Pruefung
+     * allein auf `num_candidates == 0` haette dort geschwiegen. Echte
+     * Treffer liegen bei 75-90, die Platzhalter-Vermutung bei 20; die
+     * Schwelle 50 trennt beides mit Abstand. */
+    if (info.num_candidates == 0 || info.confidence < 50) {
+        uftc_add_warning(result,
+            "Das erzeugte Abbild traegt kein erkennbares Dateisystem - "
+            "moeglich, aber pruefenswert: genau so sahen die Fehler MF-437 "
+            "und MF-438 aus");
+    } else {
+        uftc_add_warning(result, "Dateisystem im Ergebnis: %s (%s, %u %%)",
+                         info.fs_name ? info.fs_name : "?",
+                         info.system_name ? info.system_name : "?",
+                         (unsigned)info.confidence);
+
+        /* Weitere Kandidaten nennen — eine Hybrid-Diskette traegt zwei
+         * Dateisysteme, und nur eines zu melden verschweigt das andere.
+         *
+         * GEMESSEN UND EHRLICH: der Erkenner liefert heute NIE mehr als
+         * einen Kandidaten. Er kurzschliesst beim ersten starken Treffer —
+         * selbst ein Abbild mit AmigaDOS-Kennung UND gueltigem FAT-BPB
+         * ergibt nur „Amiga OFS". Diese Schleife ist also richtig, aber
+         * unerreichbar; sie zu pruefen ginge nur ueber eine Aenderung am
+         * Erkenner. Siehe KNOWN_ISSUES FLUX-13. */
+        for (uint8_t i = 1; i < info.num_candidates; i++) {
+            const char *fs = NULL, *sys = NULL;
+            uint8_t conf = 0;
+            if (uft_mfmd_get_candidate(&info, i, &fs, &sys, &conf))
+                uftc_add_warning(result,
+                    "Weiteres Dateisystem erkannt: %s (%s, %u %%) - "
+                    "moeglicherweise eine Hybrid-Diskette",
+                    fs ? fs : "?", sys ? sys : "?", (unsigned)conf);
+        }
+    }
+
+    uft_mfmd_free(&info);
 }
 
 static uft_error_t uftc_convert_scp_to_adf_via_plugin(
@@ -599,6 +672,7 @@ static uft_error_t uftc_convert_scp_to_adf_via_plugin(
     }
 
     uftc_report_progress(opts, 95, "Writing output");
+    uftc_verify_output_filesystem(output, adf_size, result);
     uft_error_t err = uftc_write_output_file(dst_path, output, adf_size);
     if (err == UFT_OK) {
         result->success = true;
@@ -1141,6 +1215,7 @@ static uft_error_t uftc_convert_hfe_to_adf_via_plugin(
     uft_format_plugin_hfe.close(&disk);
 
     uftc_report_progress(opts, 95, "Writing output");
+    uftc_verify_output_filesystem(output, adf_size, result);
     uft_error_t err = uftc_write_output_file(dst_path, output, adf_size);
     if (err == UFT_OK) {
         result->success = true;

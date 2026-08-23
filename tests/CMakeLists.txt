@@ -454,8 +454,13 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/core/uft_probe_format_impl.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_roundtrip.c
             ${CMAKE_SOURCE_DIR}/src/analysis/uft_protection_probe.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_kryoflux_stream.c)
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_kryoflux_stream.c
+            # MF-489: der Wandler sieht sein eigenes Ergebnis nach
+            ${CMAKE_SOURCE_DIR}/src/detect/mfm/uft_mfm_detect_bridge.c
+            ${CMAKE_SOURCE_DIR}/src/detect/mfm/mfm_detect.c
+            ${CMAKE_SOURCE_DIR}/src/detect/mfm/cpm_fs.c)
         target_include_directories(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/include/uft/detect
             ${CMAKE_SOURCE_DIR}/include/uft/formats
             ${CMAKE_SOURCE_DIR}/include/uft/formats/cbm
             ${CMAKE_SOURCE_DIR}/include/uft/formats/c64
@@ -488,9 +493,14 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/core/uft_probe_format_impl.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_roundtrip.c
             ${CMAKE_SOURCE_DIR}/src/analysis/uft_protection_probe.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_kryoflux_stream.c)
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_kryoflux_stream.c
+            # MF-489: der Wandler sieht sein eigenes Ergebnis nach
+            ${CMAKE_SOURCE_DIR}/src/detect/mfm/uft_mfm_detect_bridge.c
+            ${CMAKE_SOURCE_DIR}/src/detect/mfm/mfm_detect.c
+            ${CMAKE_SOURCE_DIR}/src/detect/mfm/cpm_fs.c)
         target_include_directories(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/tests/flux_gen/amigados
+            ${CMAKE_SOURCE_DIR}/include/uft/detect
             ${CMAKE_SOURCE_DIR}/include/uft/formats
             ${CMAKE_SOURCE_DIR}/include/uft/formats/cbm
             ${CMAKE_SOURCE_DIR}/include/uft/formats/c64
@@ -537,6 +547,40 @@ foreach(test_source ${TEST_SOURCES})
         target_include_directories(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/tests/flux_gen/amigados
             ${CMAKE_SOURCE_DIR}/include/uft/flux)
+    elseif(${test_name} STREQUAL "test_convert_output_verify")
+        # MF-489: der Wandler sieht sein eigenes Ergebnis nach
+        file(GLOB_RECURSE OUTV_FORMAT_SOURCES
+             ${CMAKE_SOURCE_DIR}/src/formats/*.c)
+        target_sources(${test_name} PRIVATE ${OUTV_FORMAT_SOURCES}
+            ${CMAKE_SOURCE_DIR}/tests/flux_gen/amigados/flux_gen.c
+            ${CMAKE_SOURCE_DIR}/src/recovery/uft_multiread_pipeline.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c
+            ${CMAKE_SOURCE_DIR}/src/compat/uft_fnmatch.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_preflight.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_decoder_plugin_stub.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_metadata.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_loss_report.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_mfm_encoder.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_probe_format_impl.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_roundtrip.c
+            ${CMAKE_SOURCE_DIR}/src/analysis/uft_protection_probe.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_kryoflux_stream.c
+            # MF-489: der Wandler sieht sein eigenes Ergebnis nach
+            ${CMAKE_SOURCE_DIR}/src/detect/mfm/uft_mfm_detect_bridge.c
+            ${CMAKE_SOURCE_DIR}/src/detect/mfm/mfm_detect.c
+            ${CMAKE_SOURCE_DIR}/src/detect/mfm/cpm_fs.c)
+        target_include_directories(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/tests/flux_gen/amigados
+            ${CMAKE_SOURCE_DIR}/include/uft/detect
+            ${CMAKE_SOURCE_DIR}/include/uft/formats
+            ${CMAKE_SOURCE_DIR}/include/uft/formats/cbm
+            ${CMAKE_SOURCE_DIR}/include/uft/formats/c64
+            ${CMAKE_SOURCE_DIR}/include/uft/flux
+            ${CMAKE_SOURCE_DIR}/include/uft/fs)
     elseif(${test_name} STREQUAL "test_convert_flippy_reverse")
         # MF-484: Flippy-Rueckseite, Zeitachse gespiegelt
         file(GLOB_RECURSE FLIP_FORMAT_SOURCES
@@ -558,9 +602,14 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/core/uft_probe_format_impl.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_roundtrip.c
             ${CMAKE_SOURCE_DIR}/src/analysis/uft_protection_probe.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_kryoflux_stream.c)
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_kryoflux_stream.c
+            # MF-489: der Wandler sieht sein eigenes Ergebnis nach
+            ${CMAKE_SOURCE_DIR}/src/detect/mfm/uft_mfm_detect_bridge.c
+            ${CMAKE_SOURCE_DIR}/src/detect/mfm/mfm_detect.c
+            ${CMAKE_SOURCE_DIR}/src/detect/mfm/cpm_fs.c)
         target_include_directories(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/tests/flux_gen/amigados
+            ${CMAKE_SOURCE_DIR}/include/uft/detect
             ${CMAKE_SOURCE_DIR}/include/uft/formats
             ${CMAKE_SOURCE_DIR}/include/uft/formats/cbm
             ${CMAKE_SOURCE_DIR}/include/uft/formats/c64
@@ -586,8 +635,13 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/core/uft_probe_format_impl.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_roundtrip.c
             ${CMAKE_SOURCE_DIR}/src/analysis/uft_protection_probe.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_kryoflux_stream.c)
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_kryoflux_stream.c
+            # MF-489: der Wandler sieht sein eigenes Ergebnis nach
+            ${CMAKE_SOURCE_DIR}/src/detect/mfm/uft_mfm_detect_bridge.c
+            ${CMAKE_SOURCE_DIR}/src/detect/mfm/mfm_detect.c
+            ${CMAKE_SOURCE_DIR}/src/detect/mfm/cpm_fs.c)
         target_include_directories(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/include/uft/detect
             ${CMAKE_SOURCE_DIR}/include/uft/formats
             ${CMAKE_SOURCE_DIR}/include/uft/formats/cbm
             ${CMAKE_SOURCE_DIR}/include/uft/formats/c64
@@ -616,9 +670,14 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/core/uft_probe_format_impl.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_roundtrip.c
             ${CMAKE_SOURCE_DIR}/src/analysis/uft_protection_probe.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_kryoflux_stream.c)
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_kryoflux_stream.c
+            # MF-489: der Wandler sieht sein eigenes Ergebnis nach
+            ${CMAKE_SOURCE_DIR}/src/detect/mfm/uft_mfm_detect_bridge.c
+            ${CMAKE_SOURCE_DIR}/src/detect/mfm/mfm_detect.c
+            ${CMAKE_SOURCE_DIR}/src/detect/mfm/cpm_fs.c)
         target_include_directories(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/tests/flux_gen/amigados
+            ${CMAKE_SOURCE_DIR}/include/uft/detect
             ${CMAKE_SOURCE_DIR}/include/uft/formats
             ${CMAKE_SOURCE_DIR}/include/uft/formats/cbm
             ${CMAKE_SOURCE_DIR}/include/uft/formats/c64
@@ -648,9 +707,14 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/core/uft_probe_format_impl.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_roundtrip.c
             ${CMAKE_SOURCE_DIR}/src/analysis/uft_protection_probe.c
-            ${CMAKE_SOURCE_DIR}/src/flux/uft_kryoflux_stream.c)
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_kryoflux_stream.c
+            # MF-489: der Wandler sieht sein eigenes Ergebnis nach
+            ${CMAKE_SOURCE_DIR}/src/detect/mfm/uft_mfm_detect_bridge.c
+            ${CMAKE_SOURCE_DIR}/src/detect/mfm/mfm_detect.c
+            ${CMAKE_SOURCE_DIR}/src/detect/mfm/cpm_fs.c)
         # the plugins include their headers unqualified ("uft_dms.h")
         target_include_directories(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/include/uft/detect
             ${CMAKE_SOURCE_DIR}/include/uft/formats
             ${CMAKE_SOURCE_DIR}/include/uft/formats/cbm
             ${CMAKE_SOURCE_DIR}/include/uft/formats/c64
@@ -1630,6 +1694,7 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/formats/dms/uft_dms.c)
         target_include_directories(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/include/uft/detect
             ${CMAKE_SOURCE_DIR}/include/uft/formats)
         set(TEST_LIBS "")
     elseif(${test_name} STREQUAL "test_tdfc_plus")

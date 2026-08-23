@@ -3752,6 +3752,92 @@ für AmigaDOS-DD.
 
 ---
 
+### FLUX-13 — der Wandler prüfte sein eigenes Ergebnis nicht (2026-08-23, MF-489) → ✓ BEHOBEN
+
+Zweimal hat dieser Baum ein Abbild aus lauter Nullen als **erfolgreiche**
+Wandlung gemeldet — MF-437 (HFE→ADF) und MF-438 (SCP→ADF). Beide Male fiel
+es erst auf, als jemand die Datei öffnete. Beide Male hätte eine einzige
+Frage am Ende gereicht: *trägt das, was ich gerade geschrieben habe,
+überhaupt ein Dateisystem?*
+
+#### Der Erkenner lag die ganze Zeit daneben
+
+`src/detect/mfm/` — **3609 Zeilen, 43 exportierte Symbole**, Erkennung für
+FAT12/16, AmigaDOS OFS/FFS/PFS, CP/M, Atari ST, MSX, CBM, mit
+Konfidenz-Bewertung und Kandidatenliste.
+
+| Datei | Aufrufer |
+|---|---|
+| `mfm_detect.c` (33 Symbole) | nur `uft_mfm_detect_bridge.c` |
+| `uft_mfm_detect_bridge.c` (10 Symbole) | **keiner** |
+
+Neunter Eintrag derselben Liste in dieser Woche — und der größte nach
+Symbolzahl.
+
+Gemessen, dass er den entscheidenden Fall auch wirklich trennt:
+
+| Eingabe | Erkennung |
+|---|---|
+| ADF, nur Nullen | **Unknown, 0 Kandidaten** |
+| ADF mit `DOS\0` | Amiga OFS, 90 |
+| Korpus-ADF `xdftool_dd_ofs.adf` | Amiga OFS, 90 |
+
+#### Zwei Messungen, die den Entwurf korrigieren
+
+**1. Der Erkenner liefert nie mehr als EINEN Kandidaten.** Auch nicht bei
+einem absichtlich hybriden Abbild mit AmigaDOS-Kennung **und** gültigem
+FAT-BPB im selben Sektor — er kurzschließt beim ersten starken Treffer.
+
+Damit ruht Baustein B des DiskFlashback-Entwurfs („bei mehreren Treffern
+über Schwelle alle mounten") auf einer Annahme, die heute nicht zutrifft.
+Die Hybrid-Schleife im neuen Code ist richtig geschrieben, aber
+**unerreichbar** — sie zu prüfen ginge nur über eine Änderung am Erkenner.
+Der erste Testentwurf dafür bestand trivial (ein Kandidat, Schleife läuft
+nie) und wurde deshalb **gelöscht** statt behalten.
+
+**2. Ein 720-KB-Nullabbild meldet „CP/M (vorläufig, Stufe 3 nötig)" mit
+Konfidenz 20** — also nicht „unbekannt". Eine Prüfung allein auf
+`num_candidates == 0` hätte dort geschwiegen. Die Prüfung ist deshalb
+konfidenzbewusst: Warnung bei 0 Kandidaten **oder** bestem Wert unter 50.
+Echte Treffer liegen bei 75–90, die Platzhalter-Vermutung bei 20.
+
+#### Warnungs-Reihenfolge
+
+Die Dateisystem-Zeile wird **zuletzt** angefügt. `uftc_add_warning()` hängt
+an und überschreibt nichts (UFT-A04) — bei vollem Puffer ist damit die
+informative Zeile die erste, die unterdrückt wird, nicht die Meldung über
+stabile CRC-Fehler.
+
+#### Rot-Proben
+
+| Verfälschung | Ergebnis |
+|---|---|
+| Prüfung ganz entfernt | **alle 3** Tests fallen |
+| Nur den besten Kandidaten melden | **kein Test fällt** — siehe Messung 1 |
+
+Die zweite Rot-Probe ist der Grund, warum der Kandidaten-Test gelöscht
+wurde. Ein Test, den die passende Verfälschung nicht rot macht, prüft nichts.
+
+`ctest` 229/229, alle 21 Gate-Kategorien 0, `verify_build_sources.py` 0/0,
+qmake-Release-Build grün.
+
+**Ehrlich zur Reichweite.**
+
+- Verdrahtet sind die **beiden ADF-Pfade** (SCP→ADF, HFE→ADF) — genau die
+  zwei, an denen MF-437 und MF-438 passiert sind. SCP→D64, SCP→IMG,
+  HFE→IMG und die Bitstream-Pfade prüfen ihr Ergebnis weiterhin nicht.
+- Ein unerkanntes Dateisystem ist **kein Fehlerbeweis**: eine leere oder
+  fremdformatierte Diskette gibt es. Die Warnung sagt „pruefenswert", nicht
+  „kaputt", und der Wandler bricht nicht ab.
+- Die Hybrid-Meldung ist geschrieben und **ungeprüft** (Messung 1). Wer sie
+  braucht, muss zuerst den Erkenner dazu bringen, weiterzusuchen statt
+  abzubrechen.
+- Der Erkenner arbeitet auf **Sektorbildern**. Für Flux- und
+  Bitstream-Ziele (SCP→HFE, SCP→G64) gibt es nichts zu prüfen — dort ist das
+  Ergebnis kein Dateisystem.
+
+---
+
 ### FLUX-12 — die Zellendauer stand im Histogramm, zweimal, und lief nie (2026-08-23, MF-488) → ✓ BEHOBEN
 
 Baustein A des FloppyControl-Umsetzungsplans, in der Fassung ohne
