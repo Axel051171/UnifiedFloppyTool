@@ -665,6 +665,15 @@ def main() -> int:
         # ausdrueckliche Entscheidung.
         import orphan_module_gate as _orphan
         all_errors.append(("neue verwaiste Module", _orphan.check(repo)))
+        # Geteilte Include-Waechter (MF-511). Zwei Header, derselbe
+        # #ifndef-Name, verschiedener Inhalt: der Praeprozessor meldet
+        # nichts, er nimmt was zuerst kam. Bei einem Typ heisst das zwei
+        # Layouts unter einem Namen — gefunden an uft_verify_result_t, wo
+        # uft_verify_result_free() free() auf ein Feld gerufen haette, das
+        # im anderen Layout kein Zeiger ist. 37 bestehende sind
+        # eingefroren; was das Tor verhindert, ist die 38ste.
+        import shared_guard_gate as _guards
+        all_errors.append(("neue Waechter-Kollisionen", _guards.check(repo)))
 
     total = sum(len(e) for _, e in all_errors)
     print(f"Consistency check ({len(all_errors)} categories, root={repo}):")

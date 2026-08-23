@@ -297,7 +297,7 @@ Every header listed below declares public `uft_*` functions that are promised by
 | 22 | 18 | 6 | `include/uft/uft_integration.h` |
 | 18 | 17 | 1 | `include/uft/uft_parallel.h` |
 | 18 | 17 | 1 | `include/uft/uft_protection_pipeline.h` |
-| 17 | 16 | 4 | `include/uft/uft_write_verify.h` |
+| ~~17~~ | ~~16~~ | ~~4~~ | ~~`include/uft/uft_write_verify.h`~~ — **entfernt (MF-511)**: heute 0 Konsumenten, 8 der 10 Prototypen ohne Definition, und `uft_verify_result_t` kollidierte unter geteiltem Wächter mit der arbeitenden API in `uft_disk_verify.h`. Siehe KNOWN_ISSUES ARCH-26 |
 | 16 | 15 | 3 | `include/uft/uft_dmk.h` |
 | 15 | 14 | 3 | `include/uft/uft_applesauce.h` |
 | 14 | 13 | 3 | `include/uft/uft_operation_result.h` |

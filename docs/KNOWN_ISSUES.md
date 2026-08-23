@@ -3938,6 +3938,89 @@ zweite braucht eine Bank-Sitzung mit echtem Laufwerk.
 
 ---
 
+### ARCH-26 — 38 geteilte Include-Wächter, 37 offen (2026-08-23, MF-511) → ⚠ OFFEN
+
+**Correctness.** Gemessen mit `scripts/shared_guard_gate.py`: von 41
+Wächter-Namen, die mehr als ein Header benutzt, tragen **38 abweichenden
+Inhalt**.
+
+Das Muster:
+
+```c
+/* Header A */                    /* Header B */
+#ifndef GLEICHER_NAME             #ifndef GLEICHER_NAME
+#define GLEICHER_NAME             #define GLEICHER_NAME
+   ... Inhalt A ...                  ... Inhalt B ...
+#endif                            #endif
+```
+
+Der Präprozessor meldet **nichts**. Er nimmt, was zuerst kam. Welchen
+Inhalt eine Übersetzungseinheit sieht, entscheidet damit die
+Include-Reihenfolge — also etwas, das niemand bewusst festlegt.
+
+**Ohne** den Wächter wäre es eine laute Neudefinition. **Mit** ihm ist es
+ein stilles Auswürfeln. Der Wächter, der Fehler verhindern soll, verdeckt
+sie.
+
+Zwei Schweregrade:
+
+| Klasse | Anzahl | Folge |
+|---|---|---|
+| **DATEI** — der Wächter umschließt die ganze Datei | 14 | Wird die zweite Datei eingebunden, liefert sie **gar nichts**. Der Übersetzer meldet fehlende Deklarationen an ganz anderer Stelle |
+| **TYP** — der Wächter umschließt einen Typ | 24 | Zwei Layouts unter einem Namen. Falsche Feld-Offsets, keine Warnung |
+
+**Der Fall, an dem es aufgefallen ist.** `uft_verify_result_t` existierte
+zweimal unter `UFT_VERIFY_RESULT_T_DEFINED`:
+
+| | `uft_write_verify.h` | `uft_disk_verify.h` |
+|---|---|---|
+| erstes Feld | `uft_verify_status_t status` | `uft_error_t overall_status` |
+| Zähler | `int` | `size_t` |
+| Detailzeiger | `uft_track_verify_t *tracks` | `uft_verify_track_result_t *track_results`, weiter hinten |
+| zusätzlich | `bytes_*`, 2 × `char[65]`, Timing | `sectors_*`, Kapazität |
+
+`uft_verify_result_free()` ist gegen das zweite Layout übersetzt und ruft
+`free(r->track_results)`. Wer das erste Layout sieht und diese Funktion
+ruft, übergibt einen Zeiger, der dort keiner ist — **im Verifikationspfad
+eines forensischen Werkzeugs**. Latent nur deshalb, weil kein einziges
+Modul `uft_write_verify.h` einband.
+
+Nachweisbar bekannt und **als „akzeptiert" abgelegt** war es auch schon:
+`scripts/extern_decl_baseline.json` führte
+`uft_verify_result_to_json` mit `decl_arity: 1` gegen `def_arity: 3`, und
+`scripts/macro_conflict_baseline.json` führte
+`UFT_VERIFY_OPTIONS_DEFAULT`. Zwei Werkzeuge hatten den Widerspruch
+gefunden; beide Male war die Antwort eine Ausnahme statt einer Behebung.
+
+**Behoben (MF-511):** `include/uft/uft_write_verify.h` ist entfernt. 10
+Prototypen, davon 8 ohne jede Definition im Baum; die zwei übrigen Namen
+kollidierten mit der arbeitenden API. `docs/PLANNED_APIS.md` führte den
+Header mit „4 Konsumenten" — das ist der **eingefrorene M1-Stand vom
+2026-04-25**, den das Dokument in seinem eigenen Kopf als bewusst nicht
+nachgeführt bezeichnet; heute sind es null. Beide Baseline-Ausnahmen sind
+mitentfernt.
+
+**Offen: 37.** Die einzeln aufzulösen ist Arbeit pro Fall — jede
+Zusammenlegung kann stillschweigend ändern, welche Deklaration ein
+Aufrufer sieht, und genau das ist die Gefahr, gegen die hier gearbeitet
+wird. Die schwersten nach Konsumentenzahl:
+`UFT_SECTOR_ID_T_DEFINED`, `UFT_SECTOR_STATUS_T_DEFINED`,
+`UFT_FORMAT_ID_T_DEFINED` (5 Header), `UFT_PROTECTION_RESULT_T_DEFINED`
+(5 Header), `UFT_PLATFORM_T_DEFINED` (4 Header).
+
+**Was heute gilt:** `scripts/shared_guard_gate.py` ist die **24.
+Kategorie** in `check_consistency.py` und friert die 37 in
+`docs/shared_guard_baseline.txt` ein. Eine *neue* Kollision lässt den
+Commit rot werden; eine aufgelöste meldet sich mit Namen zur Streichung.
+Dieselbe Bauart wie das Verwaisten-Tor (ARCH-25).
+
+**Nicht gemessen:** ob eine der 37 heute tatsächlich in einer
+Übersetzungseinheit zusammentrifft. Das Tor misst die *Möglichkeit*, nicht
+den Eintritt — die Möglichkeit genügt, weil eine neue `#include`-Zeile
+sie jederzeit einlöst.
+
+---
+
 ### ARCH-25 — 228 gebaute Module ruft niemand auf (2026-08-23, MF-508) → ⚠ OFFEN
 
 Gemessen mit `scripts/audit_orphan_modules.py`: von **537** gebauten

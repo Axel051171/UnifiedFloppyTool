@@ -10,8 +10,7 @@
     "UFT_IMD_MAX_COMMENT",
     "UFT_IMD_MAX_SECTORS",
     "UFT_IMD_MAX_TRACKS",
-    "UFT_MAX_SECTOR_SIZE",
-    "UFT_VERIFY_OPTIONS_DEFAULT"
+    "UFT_MAX_SECTOR_SIZE"
   ],
   "categories": {
     "UFT_ARCH_NAME": "platform-boilerplate",
@@ -29,7 +28,6 @@
     "UFT_PACKED_STRUCT": "platform-boilerplate",
     "UFT_RESTRICT": "platform-boilerplate",
     "UFT_THREAD_LOCAL": "platform-boilerplate",
-    "UFT_VERIFY_OPTIONS_DEFAULT": "format-constant",
     "UFT_ALIGNED": "platform-boilerplate"
   },
   "_resolved": {

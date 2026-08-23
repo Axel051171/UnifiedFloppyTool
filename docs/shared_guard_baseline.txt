@@ -1,0 +1,50 @@
+# Waechter-Kollisionen - eingefrorene Grundlinie (MF-511).
+#
+# Jede Zeile ist ein Waechtername, den mehr als ein Header
+# benutzt, mit ABWEICHENDEM Inhalt. Welchen Inhalt eine
+# Uebersetzungseinheit sieht, entscheidet die
+# Include-Reihenfolge - still, ohne Warnung.
+#
+# Klasse DATEI: der Waechter umschliesst die ganze Datei. Wird
+#   die zweite eingebunden, liefert sie GAR NICHTS.
+# Klasse TYP:   der Waechter umschliesst einen Typ. Zwei
+#   Layouts, ein Name - falsche Feld-Offsets ohne Warnung.
+#
+# Wird eine aufgeloest, gehoert ihre Zeile hier heraus.
+UFT_ATARI_DOS_H
+UFT_CRC_H
+UFT_CRC_POLYS_H
+UFT_CRC_TYPE_DEFINED
+UFT_CRC_TYPE_T_DEFINED
+UFT_ENDIAN_FUNCTIONS_DEFINED
+UFT_ENDIAN_H
+UFT_FLUX_DECODER_H
+UFT_FORMATS_ADF_H
+UFT_FORMATS_IMD_H
+UFT_FORMAT_CAPS_DEFINED
+UFT_FORMAT_CLASS_DEFINED
+UFT_FORMAT_DETECT_H
+UFT_FORMAT_ENUM_DEFINED
+UFT_FORMAT_GET_NAME_DECLARED
+UFT_FORMAT_ID_T_DEFINED
+UFT_FORMAT_REGISTRY_H
+UFT_HFE_ENCODING_T_DEFINED
+UFT_IMD_MODE_DEFINED
+UFT_INTERLEAVE_H
+UFT_IPF_INFO_T_DEFINED
+UFT_LOG_H
+UFT_LOG_LEVEL_T_DEFINED
+UFT_MSA_HEADER_T_DEFINED
+UFT_PLATFORM_T_DEFINED
+UFT_PROTECTION_RESULT_T_DEFINED
+UFT_PROTECTION_TYPE_T_DEFINED
+UFT_SAFE_IO_H
+UFT_SCP_FLAGS_DEFINED
+UFT_SCP_READ_DECLARED
+UFT_SECTOR_ID_T_DEFINED
+UFT_SECTOR_STATUS_DEFINED
+UFT_SECTOR_STATUS_T_DEFINED
+UFT_TRACK_QUALITY_T_DEFINED
+UFT_TZX_WAV_H
+UFT_ZXTAP_H
+_SSIZE_T_DEFINED

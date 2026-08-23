@@ -18,7 +18,6 @@
     "include/uft/uft_decoder_plugin.h:uft_crc16_ccitt",
     "include/uft/uft_format_registry.h:uft_format_can_convert",
     "include/uft/uft_format_registry.h:uft_format_detect",
-    "include/uft/uft_write_verify.h:uft_verify_result_to_json",
     "src/algorithms/format/uft_format_detect.h:uft_format_detect",
     "src/algorithms/format/uft_format_detect.h:uft_format_registry_init"
   ],
@@ -93,15 +92,6 @@
       "decl_line": 249,
       "decl_arity": 2,
       "def_file": "src/formats/uft_format_registry.c",
-      "def_arity": 3
-    },
-    {
-      "rule": "B",
-      "name": "uft_verify_result_to_json",
-      "decl_file": "include/uft/uft_write_verify.h",
-      "decl_line": 385,
-      "decl_arity": 1,
-      "def_file": "src/core/uft_disk_verify.c",
       "def_arity": 3
     },
     {

@@ -17,14 +17,15 @@ stehen.
 
 | | |
 |---|---|
-| Tests | **238/238 grün** |
+| Tests | **239/239 grün** |
 | Skelett-Header | **0** |
-| Konsistenz-Tore | **0/0/0/0** |
+| Konsistenz-Tore | **24 Kategorien, 0** |
 | qmake-Release | **baut und linkt** |
 | Gebaute Module mit exportierten Funktionen | 537 |
 | davon **von niemandem aufgerufen** | **228 (42 %)** |
 | Format-Plugins | 88 |
 | davon **Stufe T3 = ungeprüft** | **57 (65 %)** |
+| Geteilte Include-Wächter mit abweichendem Inhalt | **37** (von 40) |
 | `TODO`/`FIXME`-Marken | 58 |
 | Warnungen unter strengen Klassen (C-Kern) | 311 |
 
@@ -78,7 +79,8 @@ benutzen.
 | P1-4 | `uft_geos_protection.c:367`: `%d` mit `size_t` — verschiebt alle folgenden Argumente; `info->name` würde als Zeiger von der falschen Stelle gelesen | ✅ **behoben (MF-509)**; der ganze Baum ist jetzt frei von Formatfehlern |
 | P1-5 | ARCH-3: 22 Banner-Header sind wirklich unfertig, der Skelett-Audit sieht sie nicht | **offen** |
 | P1-6 | ARCH-21: 20 Altfälle von Header-Prototypen, die niemand einbindet | **offen** |
-| P1-7 | ARCH-2/ARCH-4: `UFT_SCP_SIGNATURE` viermal, einmal mit anderem Typ; 7 Header-Duplikate brauchen echte Zusammenführung | **offen** |
+| P1-7 | ARCH-2/ARCH-4: 7 Header-Duplikate brauchen echte Zusammenführung. `UFT_SCP_SIGNATURE` ist **kein** Fall mehr — nachgemessen: zwei wertgleiche `#ifndef`-Defines, keine Abweichung | **offen** (verkleinert, MF-510) |
+| P1-8 | **ARCH-26: 38 geteilte Include-Wächter mit abweichendem Inhalt** — zwei Header, ein `#ifndef`-Name, verschiedener Inhalt; die Include-Reihenfolge entscheidet still, welchen eine Übersetzungseinheit sieht. 14 davon verschlucken eine ganze Datei, 24 geben einem Typ zwei Layouts | **1 behoben, 37 offen; Tor gesetzt (MF-511)** |
 
 ---
 
