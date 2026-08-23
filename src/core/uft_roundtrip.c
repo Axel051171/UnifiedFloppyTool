@@ -112,6 +112,42 @@ static const uft_roundtrip_entry_t g_matrix[] = {
       "MF-527: Bit-Identitaet gemessen NICHT gegeben; siehe SCP->HFE. "
       "Verlustumfang nicht vollstaendig vermessen" },
 
+    /* Bitstream -> Sektor: G64 -> D64, gegen eine FREMDE Referenz geprueft.
+     *
+     * MF-536: ein Rundlauf prueft eine Wandlung gegen sich selbst und kann
+     * nicht unterscheiden, ob beide Richtungen richtig sind oder ob sich
+     * zwei Fehler aufheben. Das Korpus enthaelt dieselbe Diskette zweimal —
+     * vice_c1541_35trk.g64 und .d64, beide von VICE erzeugt. Damit laesst
+     * sich G64 -> D64 gegen eine Quelle pruefen, die dieser Baum nicht
+     * gemacht hat (MF-498(a): benannte Referenz).
+     *
+     * Gemessen (tests/test_convert_roundtrip_measured.c):
+     *
+     *     G64 (278234 B) -> D64 (174848 B), Referenz 174848 B
+     *     143 von 174848 Byte verschieden (0,08 %)
+     *     3 von 683 Sektoren betroffen, KEINER vollstaendig:
+     *
+     *       Sektor 336 = Spur 17, Sektor 0   (127 von 256 Byte)
+     *       Sektor 357 = Spur 18, Sektor 0   (  6 Byte)  <- BAM
+     *       Sektor 358 = Spur 18, Sektor 1   ( 10 Byte)  <- Verzeichnis
+     *
+     * 680 von 683 Sektoren sind bitgleich zu VICE. Die drei Abweichungen
+     * liegen in der BAM und im ersten Verzeichnisblock — dort, wo ein
+     * Emulator Felder fuellt, die eine Aufnahme nicht kennt (Diskettenname,
+     * ID, ungenutzte BAM-Bytes).
+     *
+     * AUSDRUECKLICH OFFEN: welche der beiden Fassungen richtig ist. "Weicht
+     * von VICE ab" heisst nicht "falsch" — das entschiede eine dritte
+     * Quelle, und die gibt es hier nicht. Der Eintrag sagt, WAS abweicht,
+     * nicht WER recht hat.
+     *
+     * Und wie bei ADF -> HFE (MF-535): die Liste stammt aus EINER Datei.
+     * Fuer diese ist sie vollstaendig, fuer das Format ist sie ein Beleg. */
+    { UFT_FORMAT_G64, UFT_FORMAT_D64, UFT_RT_LOSSY_DOCUMENTED,
+      "MF-536: gegen VICE-Referenz geprueft — 680 von 683 Sektoren "
+      "bitgleich; ab: Spur 17/0, Spur 18/0 (BAM), Spur 18/1 (Verzeichnis). "
+      "GCR-Kodierung und Fehlerinfo gehen bauartbedingt verloren" },
+
     /* Flux → Sector: timing/weak-bits/index-pulses dropped */
     { UFT_FORMAT_SCP, UFT_FORMAT_IMG, UFT_RT_LOSSY_DOCUMENTED,
       "weak-bits, flux-timing, index-pulses discarded" },

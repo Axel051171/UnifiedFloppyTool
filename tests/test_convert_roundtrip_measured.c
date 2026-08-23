@@ -268,6 +268,76 @@ static void roundtrip(const char *name, const char *corpus,
     remove(out_path);
 }
 
+
+/** Kreuzprobe: eine Wandlung gegen eine UNABHAENGIGE Referenz.
+ *
+ * MF-536: ein Rundlauf prueft eine Wandlung gegen sich selbst. Er kann
+ * nicht unterscheiden, ob beide Richtungen richtig sind oder ob sich zwei
+ * Fehler aufheben. Das Korpus enthaelt dieselbe Diskette zweimal —
+ * vice_c1541_35trk.d64 und .g64, beide von VICE erzeugt. Damit laesst sich
+ * G64 -> D64 gegen eine Referenz pruefen, die dieser Baum nicht gemacht
+ * hat.
+ *
+ * Das ist die staerkere Messung: sie belegt nicht nur Umkehrbarkeit,
+ * sondern Richtigkeit gegen eine benannte fremde Quelle (MF-498(a)). */
+static void cross_check(const char *name, const char *src_corpus,
+                        const char *ref_corpus, conv_t cv, const char *out_path)
+{
+    char src[1024], ref[1024];
+    snprintf(src, sizeof(src), "%s/%s", UFT_CORPUS_DIR, src_corpus);
+    snprintf(ref, sizeof(ref), "%s/%s", UFT_CORPUS_DIR, ref_corpus);
+
+    size_t n_src = slurp(src, a);
+    size_t n_ref = slurp(ref, c);
+    if (!n_src || !n_ref) {
+        printf("  %s: Korpusdatei fehlt — nicht messbar\n", name);
+        return;
+    }
+    printf("  %s\n", name);
+    printf("    Quelle    %s  %zu Byte\n", src_corpus, n_src);
+    printf("    Referenz  %s  %zu Byte  (unabhaengig, von VICE)\n",
+           ref_corpus, n_ref);
+
+    size_t n_out = one_way(cv, a, n_src, src, out_path, b);
+    if (!n_out) { remove(out_path); return; }
+
+    if (n_out == n_ref && memcmp(b, c, n_ref) == 0) {
+        printf("    BITGLEICH zur Referenz — die Wandlung ist gegen eine\n");
+        printf("    fremde Quelle belegt, nicht nur gegen sich selbst.\n");
+    } else {
+        size_t diff = 0, m = n_out < n_ref ? n_out : n_ref;
+        for (size_t i = 0; i < m; i++) if (b[i] != c[i]) diff++;
+        printf("    Abweichung zur Referenz: %zu -> %zu Byte, "
+               "%zu von %zu verschieden (%.2f %%)\n",
+               n_ref, n_out, diff, m,
+               m ? 100.0 * (double)diff / (double)m : 0.0);
+        const size_t SEC = 256;             /* D64-Sektor */
+        size_t n_sec = m / SEC, touched = 0, whole = 0;
+        for (size_t s = 0; s < n_sec; s++) {
+            size_t d = 0;
+            for (size_t i = 0; i < SEC; i++)
+                if (b[s * SEC + i] != c[s * SEC + i]) d++;
+            if (d) { touched++; if (d == SEC) whole++; }
+        }
+        printf("      betroffen: %zu von %zu Sektoren a %zu Byte "
+               "(%zu davon vollstaendig)\n", touched, n_sec, SEC, whole);
+        if (touched && touched <= 12) {
+            /* Bei wenigen Treffern gehoert die Liste hin, nicht die
+             * Zahl. "3 von 683" ist ein Befund; "Sektor 357, 358, 359"
+             * ist eine Verlustliste. */
+            printf("      Sektoren:");
+            for (size_t s = 0; s < n_sec; s++) {
+                size_t d = 0;
+                for (size_t i = 0; i < SEC; i++)
+                    if (b[s * SEC + i] != c[s * SEC + i]) d++;
+                if (d) printf(" %zu(%zu B)", s, d);
+            }
+            printf("\n");
+        }
+    }
+    remove(out_path);
+}
+
 int main(void)
 {
     setvbuf(stdout, NULL, _IONBF, 0);
@@ -331,6 +401,14 @@ int main(void)
      * `src_class == SECTOR && dst_class == SECTOR` gibt ausdruecklich
      * UFT_ERR_NOT_IMPLEMENTED zurueck (UFT-A08). Ein Rundlauf waere eine
      * Messung an etwas, das es nicht gibt. */
+
+    printf("\n");
+    {
+        conv_t g2d = { "G64->D64", adapt_uftc_convert_g64_to_d64 };
+        cross_check("G64 -> D64, gegen die Korpus-D64 derselben Diskette",
+                    "vice_c1541_35trk.g64", "vice_c1541_35trk.d64",
+                    g2d, "uft_xc_out.d64");
+    }
 
     printf("\n%s (%d Abweichungen)\n",
            failures ? "FEHLGESCHLAGEN" : "OK", failures);
