@@ -598,13 +598,22 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
     elseif(${test_name} STREQUAL "test_atx_roundtrip")
         # ATX write-read-Rundlauf (MF-474)
+        # uft_interleave.c: Ersatz-Winkelpositionen im Schreiber (MF-479)
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/formats/atx/uft_atx.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_interleave.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
+    elseif(${test_name} STREQUAL "test_atx_interleave_positions")
+        # MF-479: ohne gemessene Positionen schreibt ATX das Atari-Layout
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/atx/uft_atx.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_interleave.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
     elseif(${test_name} STREQUAL "test_atx_layout")
         # ATX track/chunk layout vs. the a8rawconv oracle (MF-467)
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/formats/atx/uft_atx.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_interleave.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
     elseif(${test_name} STREQUAL "test_sector_id_on_disk")
         # ARCH-20/MF-465: id.sector is the number on the medium. Proof is the

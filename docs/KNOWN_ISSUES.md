@@ -3752,6 +3752,99 @@ für AmigaDOS-DD.
 
 ---
 
+### FMT-25 — ATX erfand ein Layout, das es auf keiner Diskette gibt (2026-08-23, MF-479) → ✓ BEHOBEN
+
+`uft_atx_write()` muss auch Spuren schreiben können, die keine **gemessenen**
+Winkelpositionen mitbringen — jede Spur, die nicht aus einem ATX stammt, ist
+so eine. Bis hierher verteilte der Schreiber sie als `s / n`: gleiche
+Abstände, erster Sektor bei 0.
+
+**So liegt keine Atari-Diskette.** Das DOS schreibt SD und ED verschränkt
+(etwa 9:1 bzw. 13:1), und jede Spur ist gegen die vorige um rund 8 % einer
+Umdrehung versetzt, weil der Kopf Zeit zum Umsetzen braucht. Bei ATX ist die
+Winkelposition kopierschutzrelevant — ein gleichmäßiges Layout ist damit
+nicht nur ungenau, es ist eine **Form, die es auf dem Medium nicht gibt**.
+Prinzip 1 gilt in beide Richtungen: nichts still verlieren, aber auch nichts
+still erfinden.
+
+#### Der Rechner lag seit Monaten daneben
+
+`uft_compute_interleave()` (`src/core/uft_interleave.c`) ist die wortgleiche
+Portierung von a8rawconvs `compute_interleave`, hat einen eigenen Test
+(`tests/test_interleave.c`) — und hatte **keinen Aufrufer**. Ein Eintrag mehr
+in derselben Liste wie MF-471, MF-473 und MF-474: geprüft und ohne Wirkung.
+
+Der Index in die Verschränkungstabelle ist die **Listenposition**, nicht die
+Sektornummer. Grund: ATX kennt doppelte Sektornummern (Phantom-Sektoren), und
+die liegen gerade **nicht** an derselben Stelle — über die Nummer indiziert
+würden sie zusammenfallen und der Schutz wäre weg.
+
+#### Gerechnet bleibt gerechnet
+
+Die `UFT_WARN`-Meldung fällt **nicht** weg. Sie benennt jetzt, was gerechnet
+wurde:
+
+```
+ATX: mindestens eine Spur brachte keine Winkelpositionen mit - ersatzweise
+wurde das Atari-Verschraenkungslayout gerechnet (9:1 SD / 13:1 ED, 8%
+Spurversatz). Diese Positionen sind GERECHNET, nicht gemessen
+```
+
+Näher am Medium ist nicht dasselbe wie gemessen. Wer eine gemessene Position
+mitbringt, bekommt seine zurück — die Rechnung fasst sie nicht an, und genau
+das prüft `measured_positions_are_never_overwritten`.
+
+#### Ein vorher grüner Test musste geändert werden
+
+`test_atx_roundtrip::a_track_without_positions_still_writes_and_reads`
+verlangte **aufsteigende** Positionen. Das war keine Eigenschaft des Formats,
+sondern des alten Ersatzlayouts: Verschränkung heißt gerade, dass
+aufeinanderfolgende Sektornummern nicht aufeinanderfolgend auf der Spur
+liegen. Die Forderung hätte das richtige Layout ausgeschlossen.
+
+Geprüft wird jetzt, was der Kommentar dieses Tests immer schon meinte —
+paarweise verschieden und im gültigen Bereich. Das ist eine Korrektur einer
+falschen Zusicherung, keine Absenkung: die Bedingung ist strenger geworden
+(paarweise statt nur benachbart).
+
+#### Rot-Probe
+
+Ersatzzweig zurück auf `s / n`: 4 der 5 neuen Tests fallen. Der fünfte
+(`phantom_sectors_keep_distinct_positions`) bleibt grün — richtig so, `s / n`
+liefert ebenfalls verschiedene Positionen; dieser Test bewacht eine andere
+Eigenschaft.
+
+`ctest` 221/221, alle 21 Gate-Kategorien 0, `verify_build_sources.py` 0/0,
+qmake-Release-Build grün ohne neue Warnungen.
+
+**Ehrlich zur Reichweite.**
+
+- `uft_atx_write()` selbst hat **weiter keinen Aufrufer**. Dieser Schritt macht
+  den Schreiber richtig, er liefert keinen ATX-Export. Was dafür fehlt, steht
+  unten.
+- Die Verschränkungsrechnung ist auf **Atari** zugeschnitten (128/256-Byte-
+  Sektoren, 8 % Versatz). Für eine Spur aus einer anderen Welt ohne gemessene
+  Positionen wäre sie falsch — ATX ist ein Atari-Format, deshalb ist das hier
+  richtig und anderswo nicht übertragbar.
+- Belegt ist die Rechnung gegen `compute_interleave`, **nicht** gegen ein
+  reales ATX-Abbild. Es liegt keines im Korpus; ATX bleibt deshalb T2.
+
+> **Was ATX-Export wirklich blockiert (gemessen, nicht vermutet).** Ein
+> Konvertierungspfad nach ATX bräuchte ein eigenes `UFT_FORMAT_ATX` im
+> Format-Enum — das Plugin meldet `UFT_FORMAT_DSK`, also Format-SSOT-Fläche.
+> Der Smart-Export-Dialog (`src/gui/uft_smart_export_dialog.cpp`) **schreibt
+> nichts**, er wählt nur einen Namen, und hat selbst keinen Aufrufer. Vor
+> allem aber: es gibt **keinen einzigen Atari-Flux-Pfad** im Baum
+> (Flux→Sektor existiert für D64, ADF, IMG — nicht für ATR/ATX), und
+> `flux_decode_fm` hat nie eine reale Diskette dekodiert; im Korpus liegt
+> kein Atari-Flux. Solange das so ist, wäre ein SCP→ATX-Pfad genau das, was
+> die EINFRIER-REGEL (MF-363) verhindern soll: neuer Format-Layer-Code gegen
+> einen unbelegten Decoder ohne Referenzabbild. **Der nächste Schritt ist
+> Korpus-Arbeit, nicht Code:** eine reale Atari-Flux-Aufnahme, gegen die
+> `flux_decode_fm` belegt werden kann.
+
+---
+
 ### REC-1 — vier von fünf Umdrehungen wurden weggeworfen (2026-08-23, MF-478) → ✓ BEHOBEN
 
 Eine SCP-Aufnahme enthält bis zu **fünf** Umdrehungen derselben Spur. Der
@@ -5235,10 +5328,11 @@ derselbe Zustand, in dem MF-471, MF-473 und MF-474 gelandet sind: geprüft
 und ohne Wirkung. Ein grüner Test über unverdrahtetem Code beweist, dass er
 funktioniert, und verschweigt, dass ihn niemand ruft.
 
-> **Stand 2026-08-23 (MF-478):** 224 / **79** / 228.
-> `uft_multiread_pipeline.c` ist von „nur von Tests" nach „benutzt"
-> gewandert — siehe REC-1. Ein Eintrag von 80, in einem Schritt. Die Zahl
-> „ohne jeden Aufrufer" bleibt unverändert; das ist die andere Aufgabe.
+> **Stand 2026-08-23:** 225 / **78** / 228.
+> Zwei Einträge sind von „nur von Tests" nach „benutzt" gewandert:
+> `uft_multiread_pipeline.c` (MF-478, siehe REC-1) und `uft_interleave.c`
+> (MF-479, siehe FMT-25). Die Zahl „ohne jeden Aufrufer" bleibt
+> unverändert; das ist die andere Aufgabe.
 
 #### Warum das Instrument viermal umgebaut wurde
 

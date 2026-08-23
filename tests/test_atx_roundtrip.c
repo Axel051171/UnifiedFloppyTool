@@ -224,8 +224,9 @@ TEST(a_track_without_positions_still_writes_and_reads)
     get_temp_path(path, sizeof(path), "nopos");
 
     /* Eine Spur aus einer anderen Quelle — kein Format ausser ATX liefert
-     * Winkelpositionen. Der Schreiber verteilt gleichmaessig und meldet das;
-     * das Ergebnis muss trotzdem ein lesbares ATX sein. */
+     * Winkelpositionen. Der Schreiber rechnet dann das Atari-Layout und
+     * meldet das (MF-479); das Ergebnis muss trotzdem ein lesbares ATX
+     * sein. */
     uft_track_t src;
     memset(&src, 0, sizeof(src));
     uft_track_init(&src, 0, 0);
@@ -251,13 +252,26 @@ TEST(a_track_without_positions_still_writes_and_reads)
         ASSERT(back.sectors[s].data[0] == (uint8_t)(0x40 + s));
     }
 
-    /* Gleichmaessig verteilt heisst: aufsteigend und verschieden. Sie sind
-     * gerechnet — der Schreiber hat davor gewarnt — aber sie duerfen nicht
-     * alle aufeinanderliegen, sonst waere die Datei fuer einen Leser, der
-     * Positionen auswertet, unbrauchbar. */
-    for (int s = 1; s < NSEC; s++)
-        ASSERT(back.sectors[s].angular_position >
-               back.sectors[s - 1].angular_position);
+    /* Die Positionen sind gerechnet — der Schreiber hat davor gewarnt — aber
+     * sie duerfen nicht alle aufeinanderliegen, sonst waere die Datei fuer
+     * einen Leser, der Positionen auswertet, unbrauchbar.
+     *
+     * MF-479: hier stand `aufsteigend`. Das war keine Eigenschaft des
+     * Formats, sondern des alten Ersatzlayouts `s / n`. Verschraenkung heisst
+     * gerade, dass aufeinanderfolgende Sektornummern NICHT aufeinanderfolgend
+     * auf der Spur liegen — die Forderung haette das richtige Layout
+     * ausgeschlossen. Gefordert ist, was der Kommentar immer schon meinte:
+     * paarweise verschieden und im gueltigen Bereich. */
+    for (int s = 0; s < NSEC; s++) {
+        ASSERT(back.sectors[s].angular_position >= 0.0);
+        ASSERT(back.sectors[s].angular_position < 1.0);
+        for (int t = s + 1; t < NSEC; t++) {
+            double d = back.sectors[s].angular_position
+                     - back.sectors[t].angular_position;
+            if (d < 0) d = -d;
+            ASSERT(d >= (1.0 / 26042.0));
+        }
+    }
 
     free_track(&back);
     uft_format_plugin_atx.close(&disk);

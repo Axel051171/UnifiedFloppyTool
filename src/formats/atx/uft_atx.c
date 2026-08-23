@@ -51,6 +51,7 @@
 #include "uft/uft_format_common.h"
 #include "uft/uft_log.h"
 #include "uft/formats/atx.h"   /* uft_atx_write() (MF-474) */
+#include "uft/core/uft_interleave.h"  /* Ersatz-Winkelpositionen (MF-479) */
 
 /*
  * ATX signature as read by uft_read_le32 on the bytes 'A','T','8','X'
@@ -490,6 +491,47 @@ static uft_error_t atx_write_track_record(FILE *f, int cyl,
                              + ATX_CHUNK_HEADER_SIZE + 8u * n
                              + ATX_CHUNK_HEADER_SIZE;
 
+    /* Fehlende Winkelpositionen: das Atari-Layout rechnen, nicht gleichmaessig
+     * verteilen (MF-479).
+     *
+     * Bis hier stand hier `s / n` — gleiche Abstaende, erster Sektor bei 0.
+     * So liegt keine Atari-Diskette: das Betriebssystem schreibt SD/ED mit
+     * etwa 9:1 bzw. 13:1 Verschraenkung, und jede Spur ist gegen die vorige
+     * um rund 8 % einer Umdrehung versetzt (Kopf-Umsetzzeit). Ein
+     * gleichmaessiges Layout ist damit nicht nur ungenau, es ist eine Form,
+     * die es auf dem Medium nicht gibt — und bei ATX ist die Position
+     * kopierschutzrelevant.
+     *
+     * `uft_compute_interleave()` (src/core/uft_interleave.c) ist die
+     * wortgleiche Portierung von a8rawconvs `compute_interleave` und war bis
+     * hier ohne Aufrufer. Der Index ist die LISTENPOSITION, nicht die
+     * Sektornummer: die Funktion vergibt je Eintrag einen eigenen Platz, und
+     * ATX kennt doppelte Sektornummern (Phantom-Sektoren), die gerade NICHT
+     * an derselben Stelle liegen.
+     *
+     * Gerechnet bleibt gerechnet: die Warnung unten faellt nicht weg, sie
+     * benennt jetzt nur, was gerechnet wurde. */
+    float synth[ATX_MAX_SECTORS];
+    bool  synth_ok = false;
+    bool  need_synth = false;
+    for (uint16_t s = 0; s < n; s++)
+        if (!track->sectors[s].has_angular_position) { need_synth = true; break; }
+
+    if (need_synth && n > 0) {
+        /* Sektorgroesse aus der Spur, nicht aus dem ATX-Nutzdatenfeld: die
+         * Verschraenkung haengt daran, ob 128 oder 256 Byte geschrieben
+         * wurden. Traegt die Spur nichts, ist SD (128) die Annahme. */
+        uint16_t ssz = 128;
+        for (uint16_t s = 0; s < n; s++) {
+            size_t len = track->sectors[s].data_len ? track->sectors[s].data_len
+                                                    : track->sectors[s].data_size;
+            if (len > 0) { ssz = (uint16_t)len; break; }
+        }
+        synth_ok = (uft_compute_interleave(synth, n, ssz,
+                                           track->encoding == UFT_ENCODING_MFM,
+                                           cyl, 0, UFT_INTERLEAVE_AUTO) == UFT_OK);
+    }
+
     for (uint16_t s = 0; s < n; s++) {
         const uft_sector_t *sec = &track->sectors[s];
         uint8_t sh[8];
@@ -514,7 +556,12 @@ static uft_error_t atx_write_track_record(FILE *f, int cyl,
         double pos;
         if (sec->has_angular_position) {
             pos = sec->angular_position;
+        } else if (synth_ok) {
+            pos = (double)synth[s];
+            *out_synth_positions = true;
         } else {
+            /* Letzte Stufe: gleichmaessig. Erreicht nur, wenn die
+             * Verschraenkungsrechnung die Spur ablehnt (n > 256). */
             pos = (n > 0) ? ((double)s / (double)n) : 0.0;
             *out_synth_positions = true;
         }
@@ -609,12 +656,14 @@ uft_error_t uft_atx_write(const char *path, const uft_track_t *tracks,
 
     if (synth_positions) {
         /* Prinzip 1: was gerechnet ist, darf nicht als gemessen durchgehen.
-         * Winkelpositionen tragen bei ATX Kopierschutz-Information; ein
-         * gleichmaessig verteiltes Layout sieht plausibel aus und ist es
-         * nicht. */
+         * Winkelpositionen tragen bei ATX Kopierschutz-Information. Seit
+         * MF-479 ist das Ersatzlayout die Atari-Verschraenkung statt gleicher
+         * Abstaende — naeher am Medium, aber immer noch gerechnet. Genau das
+         * sagt die Meldung, und sie faellt deshalb nicht weg. */
         UFT_WARN("ATX: mindestens eine Spur brachte keine Winkelpositionen mit "
-                 "— sie wurden gleichmaessig verteilt. Diese Positionen sind "
-                 "GERECHNET, nicht gemessen (%s)", path);
+                 "- ersatzweise wurde das Atari-Verschraenkungslayout "
+                 "gerechnet (9:1 SD / 13:1 ED, 8%% Spurversatz). Diese "
+                 "Positionen sind GERECHNET, nicht gemessen (%s)", path);
     }
     return UFT_OK;
 }
