@@ -663,6 +663,13 @@ static uft_error_t g64_read_slot(uft_disk_t* disk, int g64_index, int head,
  */
 static uft_error_t g64_read_track(uft_disk_t* disk, int cylinder, int head,
                                    uft_track_t* track) {
+    /* MF-519: negative Koordinaten abweisen, BEVOR mit ihnen
+     * gerechnet oder indiziert wird. Eine Pruefung, die nur nach
+     * oben schaut (`if (cylinder >= tracks)`), laesst -1 durch — und
+     * `track_data[-1]` ist ein Zugriff vor dem Feld. Gefunden an
+     * opus_read_track() von tests/test_disk_open_fuzz.c. */
+    if (cylinder < 0 || head < 0) return UFT_ERROR_INVALID_PARAM;
+
     // cylinder ist 0-basiert, G64-Spuren 1-basiert: Spur = cylinder + 1,
     // Slot = (Spur - 1) * 2 = cylinder * 2.
     return g64_read_slot(disk, track_to_g64_index(cylinder + 1, false),

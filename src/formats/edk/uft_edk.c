@@ -31,6 +31,13 @@ static void edk_close(uft_disk_t *d) {
     if (p) { if (p->file) fclose(p->file); free(p); d->plugin_data = NULL; }
 }
 static uft_error_t edk_read_track(uft_disk_t *d, int cyl, int head, uft_track_t *t) {
+    /* MF-519: negative Koordinaten abweisen, BEVOR mit ihnen
+     * gerechnet oder indiziert wird. Eine Pruefung, die nur nach
+     * oben schaut (`if (cyl >= tracks)`), laesst -1 durch — und
+     * `track_data[-1]` ist ein Zugriff vor dem Feld. Gefunden an
+     * opus_read_track() von tests/test_disk_open_fuzz.c. */
+    if (cyl < 0 || head < 0) return UFT_ERROR_INVALID_PARAM;
+
     edk_data_t *p = d->plugin_data;
     if (!p || !p->file) return UFT_ERROR_INVALID_STATE;
     uft_track_init(t, cyl, head);

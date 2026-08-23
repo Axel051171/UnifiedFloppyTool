@@ -155,6 +155,13 @@ static uft_error_t dsk_track_offset(const dsk_data_t* pdata, int cyl, int head,
 }
 
 static uft_error_t dsk_read_track(uft_disk_t* disk, int cyl, int head, uft_track_t* track) {
+    /* MF-519: negative Koordinaten abweisen, BEVOR mit ihnen
+     * gerechnet oder indiziert wird. Eine Pruefung, die nur nach
+     * oben schaut (`if (cyl >= tracks)`), laesst -1 durch — und
+     * `track_data[-1]` ist ein Zugriff vor dem Feld. Gefunden an
+     * opus_read_track() von tests/test_disk_open_fuzz.c. */
+    if (cyl < 0 || head < 0) return UFT_ERROR_INVALID_PARAM;
+
     dsk_data_t* pdata = disk->plugin_data;
     if (!pdata || !pdata->file) return UFT_ERROR_INVALID_STATE;
 
