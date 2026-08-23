@@ -3938,6 +3938,78 @@ zweite braucht eine Bank-Sitzung mit echtem Laufwerk.
 
 ---
 
+### FUZZ-3 — der Fuzzer sah 44 von 137 Plugins, weil er die falschen Groessen anbot (2026-08-23, MF-518/519) -> ✓ BEHOBEN
+
+**Correctness / Verifikation.** Nach FUZZ-2 stand die ehrliche Zahl:
+**44 von 137** Plugins hatte der Fuzzer je erreicht. Der Grund war keine
+Schwaeche des Fuzzers, sondern die Bauart der Sonden — die meisten
+entscheiden ueber die **Dateigroesse**:
+
+```c
+static bool xyz_probe(const uint8_t *d, size_t s, size_t file_size, int *c) {
+    if (file_size != 819200) return false;
+```
+
+An so einem Tor kommt eine Zufallsdatei beliebiger Laenge **nie** vorbei.
+
+**Die Groessen wurden gelesen, nicht geraten.**
+`scripts/audit_probe_sizes.py` sammelt alle Vergleiche gegen
+`file_size`/`size`/`fs`/`len` in den Sonden unter `src/formats` ein,
+Zahlenliterale wie `#define`-Konstanten: **46 verschiedene Werte aus 30
+Sonden**. `819200` allein verlangen sechs. Die Liste steht als
+`GATE_SIZES` in `tests/test_disk_open_fuzz.c`; ein Abgleich zwischen
+Skriptausgabe und eingebetteter Liste ist Teil der Abnahme.
+
+| | vorher | nachher |
+|---|---|---|
+| Sonde hat je zugestimmt | 44 | **98** von 137 |
+| `open()` wurde je gerufen | 42 | **98** von 137 |
+| Eingaben | 293 | 431 |
+| `probe`-Aufrufe | 240846 | 354282 |
+| Abstuerze | 0 | **0** |
+
+**MF-519 — was der Durchlauf sofort fand.** `opus_read_track`:
+
+```c
+    if (cyl >= image->tracks) return UFT_ERR_INVALID_PARAM;
+    uft_track_t *src = image->track_data[cyl];
+```
+
+`-1 >= tracks` ist **falsch**, also kommt -1 durch, und `track_data[-1]`
+ist ein Zugriff vor dem Feld. Eine Pruefung, die nur nach oben schaut,
+prueft bei vorzeichenbehafteten Werten nichts.
+
+Gemessen: **45** `read_track`-Funktionen indizieren mit `cyl`, ohne je auf
+negativ zu pruefen. Welche davon durch `size_t`-Arithmetik zufaellig
+sicher sind (`size_t idx = cyl * heads + head;` faengt -1 als riesige Zahl
+ab), laesst sich per Regex nicht entscheiden — also wurde die Pruefung
+gesetzt statt erraten, in allen 54 betroffenen Dateien:
+
+```c
+    if (cyl < 0 || head < 0) return UFT_ERR_INVALID_PARAM;
+```
+
+Negative Zylinder und Koepfe haben keine Bedeutung; sie abzuweisen kann
+kein gueltiges Abbild verlieren. Die Aenderung liegt als **zwei** Commits
+vor (je 27 Dateien), weil `.claude/CLAUDE.md` ">50 Dateien" als
+STOP-Bedingung fuehrt — die Regel steht fuer Pruefbarkeit.
+
+**Nebenbei, ein eigener Fehler:** die Pruefung "hat eine Sonde den Puffer
+veraendert" lief nach **jedem** `probe`-Aufruf, also 137 x 6 mal je
+Eingabe ueber bis zu 3 MB — rund 2,5 GB je Eingabe. Damit waere der
+Groessen-Durchlauf rechnerisch nicht gelaufen, und ein Fuzzer, der zu
+langsam zum Laufen ist, prueft nichts. Jetzt: ein Vergleich je Eingabe,
+und nur wenn der anschlaegt, ein zweiter, langsamer Durchlauf zur
+Zuordnung.
+
+**Was weiter offen ist: 39 von 137.** Diese Plugins entscheiden ueber
+Magie-Bytes, nicht ueber Groessen; sie zu erreichen verlangt je Format
+gebaute Eingaben — also Korpusarbeit, `VERIFICATION_PLAN.md`. Die Aussage
+lautet weiterhin nicht "das Werkzeug ist sicher", sondern: **auf 72 % der
+Plugins stuerzt der Oeffnungspfad nach sechs Korrekturen nicht mehr ab.**
+
+---
+
 ### FUZZ-2 — zwoelf `read_track` schrieben durch einen Nullzeiger (2026-08-23, MF-515/516) -> ✓ BEHOBEN
 
 **Correctness.** Der Fuzzer aus MF-512 bekam zwei Erweiterungen, und beide

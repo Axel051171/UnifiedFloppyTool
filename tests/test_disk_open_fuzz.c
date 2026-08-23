@@ -458,8 +458,29 @@ static void run_all_probes_from_registry(size_t n_plugins, size_t size)
                 if (FILE_SIZES[k] == size && i < MAX_PLUGINS)
                     run_one_plugin_open(p, i, tmp_path);
             }
-            /* probe nimmt const und darf nichts veraendern (DESIGN_PRINCIPLES:
-             * keine stille Veraenderung). Geprueft statt geglaubt. */
+        }
+    }
+
+    /* probe nimmt einen const-Zeiger und darf nichts veraendern
+     * (DESIGN_PRINCIPLES: keine stille Veraenderung). Geprueft statt
+     * geglaubt — aber EINMAL je Eingabe, nicht je Sonde.
+     *
+     * Die erste Fassung verglich nach jedem einzelnen probe-Aufruf. Bei
+     * 137 Plugins x 6 Dateigroessen sind das 822 Vergleiche ueber bis zu
+     * 3 MB — rund 2,5 GB je Eingabe. Damit war der Groessen-Durchlauf
+     * (MF-518) rechnerisch unbezahlbar, und ein Fuzzer, der zu langsam
+     * ist, um zu laufen, prueft nichts.
+     *
+     * Der billige Weg zuerst: ein Vergleich ueber alles. Nur wenn er
+     * anschlaegt, kostet die Zuordnung einen zweiten, langsamen Durchlauf
+     * — und das lohnt sich, weil dieser Fall bisher nie eingetreten ist. */
+    if (size && memcmp(shadow, blob, size) != 0) {
+        memcpy(blob, shadow, size);
+        for (size_t i = 0; i < n_plugins; i++) {
+            const uft_format_plugin_t *p = uft_get_format_by_index(i);
+            if (!p || !p->probe) continue;
+            int c = 0;
+            (void)p->probe(blob, size, size, &c);
             if (memcmp(shadow, blob, size) != 0) {
                 printf("  PUFFER VERAENDERT DURCH: %s\n",
                        p->name ? p->name : "(namenlos)");
@@ -601,6 +622,46 @@ int main(int argc, char **argv)
         }
         printf("\n");
     }
+
+    /* ── Groessen-Tore ────────────────────────────────────────────────
+     *
+     * Die meisten Sonden dieses Baums entscheiden ueber die DATEIGROESSE:
+     * `if (file_size != 819200) return false;`. Zufallsbytes einer
+     * beliebigen Laenge kommen an so einem Tor nie vorbei — deshalb sah
+     * der erste Lauf 93 der 137 Plugins nie.
+     *
+     * Diese Liste ist nicht geraten, sondern aus den Sonden GELESEN: alle
+     * Vergleiche gegen `file_size`/`size` in den C-Dateien unter
+     * src/formats, sofern zwischen 1 KB und 20 MB. 46 Werte aus 30 Sonden;
+     * 819200 verlangen allein sechs. Erzeugt mit
+     * scripts/audit_probe_sizes.py, das die Liste jederzeit neu misst. */
+    static const size_t GATE_SIZES[] = {
+        2277, 6656, 89600, 91648, 92160, 102400,
+        133120, 143360, 163840, 174848, 175531, 179200,
+        184320, 196608, 197376, 200960, 201745, 204800,
+        205312, 206114, 232960, 256256, 266240, 315392,
+        327680, 368640, 399363, 512512, 533248, 626688,
+        630784, 634880, 655360, 737280, 819200, 822400,
+        871424, 901120, 1025024, 1066496, 1228800, 1253376,
+        1474560, 1638400, 1802240, 2949120,
+    };
+    printf("\nGroessen-Tore (%d aus den Sonden gelesen):\n",
+           (int)(sizeof(GATE_SIZES) / sizeof(GATE_SIZES[0])));
+    for (size_t gi = 0; gi < sizeof(GATE_SIZES) / sizeof(GATE_SIZES[0]); gi++) {
+        size_t size = GATE_SIZES[gi];
+        if (size > MAX_BLOB) {
+            printf("  %zu passt nicht in MAX_BLOB — uebersprungen\n", size);
+            continue;
+        }
+        snprintf(g_where, sizeof(g_where), "tor %zu/nullen", size);
+        n_inputs++; feed(n_plugins, make_zeros(size));
+        snprintf(g_where, sizeof(g_where), "tor %zu/einsen", size);
+        n_inputs++; feed(n_plugins, make_ones(size));
+        snprintf(g_where, sizeof(g_where), "tor %zu/zufall", size);
+        n_inputs++; feed(n_plugins, make_random(size));
+        printf(".");
+    }
+    printf(" fertig\n");
 
     /* ── Zweiter Teil: echte Dateien, gezielt beschaedigt ──────────────
      *
