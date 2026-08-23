@@ -2269,6 +2269,33 @@ else()
     message(STATUS "UFT SSOT Check SKIPPED: build_system_parity (Python3 not found)")
 endif()
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# Oracle-Registry (MF-499)
+#
+# Seit MF-498 braucht neuer Code im Format-/Decoder-Layer eine BENANNTE
+# Referenz. tests/differential/oracles.py ist die Stelle, an der die
+# benannten Referenzen stehen — und sie laeuft hier mit, damit sie nicht das
+# naechste Stueck wird, das gebaut, geprueft und nie aufgerufen wird.
+#
+# Der Test verlangt KEIN installiertes Fremdwerkzeug: er prueft die Registry
+# auf Widersprueche und die Aufloesungs-Logik gegen den laufenden
+# Python-Interpreter. Ohne pytest, damit ihn jede CI ausfuehren kann.
+# ═══════════════════════════════════════════════════════════════════════════════
+if(Python3_Interpreter_FOUND)
+    add_test(
+        NAME oracle_registry
+        COMMAND ${Python3_EXECUTABLE}
+                ${CMAKE_SOURCE_DIR}/tests/differential/test_oracles.py
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    )
+    set_tests_properties(oracle_registry PROPERTIES
+        LABELS "ssot-compliance"
+    )
+    message(STATUS "UFT Oracle Registry ENABLED: oracle_registry")
+else()
+    message(STATUS "UFT Oracle Registry SKIPPED (Python3 not found)")
+endif()
+
 # ════════════════════════════════════════════════════════════════════════════
 # Micro-benchmarks (MF-435) — OFF by default.
 #
