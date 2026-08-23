@@ -83,6 +83,10 @@ TEST(scp_hfe_is_lossy_documented_not_lossless) {
  * ADF->ADF, bewiesen von tests/test_convert_identity_lossless.c an zwei
  * Korpusdateien, Byte fuer Byte und ohne accept_data_loss.
  *
+ * MF-533 einen dritten: D64->G64, bewiesen von
+ * tests/test_convert_roundtrip_measured.c — der Rundlauf
+ * D64->G64->D64 ist bitgleich.
+ *
  * Der Test fuehrt sie jetzt namentlich. Wer einen dritten hinzufuegt,
  * ohne diese Liste anzufassen, wird rot — und muss dann sagen, welcher
  * Test seine Bit-Identitaet beweist. */
@@ -97,11 +101,12 @@ TEST(every_lossless_pair_is_named_and_proven) {
         n_ll++;
         /* Die beiden, deren Beweis im Baum liegt. */
         if ((tbl[i].from == UFT_FORMAT_D64 && tbl[i].to == UFT_FORMAT_D64) ||
-            (tbl[i].from == UFT_FORMAT_ADF && tbl[i].to == UFT_FORMAT_ADF))
+            (tbl[i].from == UFT_FORMAT_ADF && tbl[i].to == UFT_FORMAT_ADF) ||
+            (tbl[i].from == UFT_FORMAT_D64 && tbl[i].to == UFT_FORMAT_G64))
             n_known++;
     }
-    ASSERT(n_ll == 2);
-    ASSERT(n_known == 2);
+    ASSERT(n_ll == 3);
+    ASSERT(n_known == 3);
 }
 
 TEST(known_ld_scp_to_img) {

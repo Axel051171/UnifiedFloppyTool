@@ -53,6 +53,27 @@ static const uft_roundtrip_entry_t g_matrix[] = {
       "MF-532: Identitaet, woertliche Kopie; Bit-Identitaet gemessen an "
       "xdftool_dd_ofs.adf (901120 B)" },
 
+    /* Sektor -> Bitstream: D64 -> G64.
+     *
+     * MF-533: gemessen, nicht angenommen. Der Rundlauf
+     *
+     *     vice_c1541_35trk.d64 (174848 B)
+     *       -> uftc_convert_d64_to_g64 -> 252758 B G64
+     *       -> uftc_convert_g64_to_d64 -> 174848 B D64
+     *
+     * ist BITGLEICH (tests/test_convert_roundtrip_measured.c). Die D64 ist
+     * aus der G64 vollstaendig wiederherstellbar, es geht also nichts
+     * verloren.
+     *
+     * Die Gegenrichtung G64 -> D64 bleibt UNGEPRUEFT: eine G64 traegt
+     * GCR-Kodierung und Fehlerinformation, die eine D64 nicht halten kann.
+     * Dass D64 -> G64 -> D64 identisch ist, sagt darueber nichts — der
+     * Rundlauf beginnt bei der aermeren Darstellung. Wer G64 -> D64
+     * einstufen will, muss G64 -> D64 -> G64 messen. */
+    { UFT_FORMAT_D64, UFT_FORMAT_G64, UFT_RT_LOSSLESS,
+      "MF-533: Rundlauf D64->G64->D64 bitgleich gemessen an "
+      "vice_c1541_35trk.d64 (174848 B)" },
+
     /* Flux ↔ Flux.
      *
      * MF-527: diese beiden standen als UFT_RT_LOSSLESS — die EINZIGEN zwei

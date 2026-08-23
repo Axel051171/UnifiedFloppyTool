@@ -2216,7 +2216,18 @@ uft_error_t uftc_convert_kryoflux_to_hfe(const uint8_t* src_data,
     /* Write track LUT */
     hfe_track_entry_t* lut = (hfe_track_entry_t*)(hfe_data + 512);
     lut[0].offset = (uint16_t)data_start_block;
-    lut[0].length = (uint16_t)track_len_aligned;
+    /* MF-533: die LUT-Laenge ist die GESAMTLAENGE beider Seiten
+     * (MF-526). `track_len_aligned` ist die je Seite — dieselbe
+     * Datei reserviert damit `blocks_per_track =
+     * (track_len_aligned * 2 + 511) / 512` und interleavt mit der
+     * Seitenlaenge. Hier stand die halbe Zahl; ein Leser, der sie
+     * als Gesamtlaenge nimmt, sieht die Haelfte.
+     *
+     * Gemessen am Rundlauf G64 -> HFE -> G64: 278234 Byte gingen
+     * hinein, 139634 kamen heraus — genau die Haelfte
+     * (tests/test_convert_roundtrip_measured.c). Dieselbe
+     * Korrektur wie MF-528, nur an den drei uebrigen Schreibern. */
+    lut[0].length = (uint16_t)(track_len_aligned * 2);
 
     /* Prepare track bitstream for HFE */
     uint8_t* head0_bits = calloc(1, track_len_aligned);

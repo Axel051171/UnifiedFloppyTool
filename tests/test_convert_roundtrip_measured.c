@@ -1,0 +1,219 @@
+/**
+ * @file test_convert_roundtrip_measured.c
+ * @brief Was der vorhandene Korpus ueber die offenen Pfade hergibt (MF-533)
+ *
+ * ── Warum es diesen Test gibt ────────────────────────────────────────────
+ *
+ * Nach MF-526/527/532 stehen 31 der 44 Wandlungspfade auf UNGEPRUEFT und
+ * werden vom Preflight-Tor abgewiesen. "31 offen" ist aber keine
+ * Arbeitsanweisung — die Frage ist, woran jedes einzelne haengt.
+ *
+ * `scripts/audit_convert_backlog.py` teilt sie in drei Gruppen:
+ *
+ *     MESSBAR        9   Wandler UND Korpusdatei sind da
+ *     KEIN KORPUS   12   Wandler da, Quellformat fehlt im Korpus
+ *     KEIN WANDLER  10   der Dispatcher hat keinen Zweig
+ *
+ * Nur die erste Gruppe laesst sich ohne Beschaffung und ohne neuen Code
+ * angehen. Zwei davon bilden **vollstaendige Rundlaeufe**, weil beide
+ * Richtungen existieren und beide Formate im Korpus liegen:
+ *
+ *     D64 -> G64 -> D64
+ *     G64 -> HFE -> G64
+ *
+ * ── Was dieser Test tut, und was nicht ───────────────────────────────────
+ *
+ * Er MISST. Er behauptet nicht, dass Bit-Identitaet herauskommen muss.
+ *
+ * Rot wird er, wenn eine Wandlung **abstuerzt** oder wenn eine Richtung
+ * fehlschlaegt, die laut Dispatcher existiert — das waere ein Wandler, der
+ * seinen eigenen Zweig nicht bedienen kann.
+ *
+ * Das Ergebnis der Byte-Vergleiche steht im Protokoll und ist die
+ * Grundlage fuer einen Eintrag in `src/core/uft_roundtrip.c`. Die Regel
+ * dort verlangt fuer LL einen Beweis der Bit-Identitaet und fuer LD einen
+ * Beweis der Vollstaendigkeit der Verlustliste — dieser Test liefert die
+ * Messung, nicht die Einstufung. Wer einstuft, muss beides gelesen haben.
+ *
+ * Gerufen werden die Wandler direkt, nicht ueber `uft_convert_file()` —
+ * sonst pruefte der Test das Tor statt der Wandlung, und das Tor weist
+ * genau diese Paare ja ab.
+ */
+
+#include "uft/uft_core.h"
+#include "uft/uft_format_plugin.h"
+#include "uft/uft_format_convert.h"
+
+#include <stdio.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+
+/* Die Wandler haben ZWEI Formen, und das ist keine Kosmetik:
+ *
+ *   6 Argumente, mit `src_path`:  d64_to_g64, g64_to_d64
+ *   5 Argumente, ohne:            g64_to_hfe, hfe_to_g64
+ *
+ * MF-533: die erste Fassung dieses Tests deklarierte alle vier mit fuenf
+ * Argumenten und rief damit die sechsstelligen falsch — `dst_path` bekam
+ * den opts-Zeiger, `opts` den result-Zeiger, `result` Muell. Der Absturz
+ * auf einer gueltigen D64 war meiner, nicht der des Werkzeugs.
+ *
+ * Die Deklarationen stehen jetzt woertlich so wie in
+ * src/formats/uft_format_convert_internal.h. Wer einen internen
+ * Einstiegspunkt direkt ruft, muss seine Signatur abschreiben, nicht
+ * erraten — genau dafuer gibt es den Header. */
+extern uft_error_t uftc_convert_d64_to_g64(const uint8_t *src_data, size_t src_size,
+                                           const char *src_path, const char *dst_path,
+                                           const uft_convert_options_ext_t *opts,
+                                           uft_convert_result_t *result);
+extern uft_error_t uftc_convert_g64_to_d64(const uint8_t *src_data, size_t src_size,
+                                           const char *src_path, const char *dst_path,
+                                           const uft_convert_options_ext_t *opts,
+                                           uft_convert_result_t *result);
+extern uft_error_t uftc_convert_g64_to_hfe(const uint8_t *src_data, size_t src_size,
+                                           const char *dst_path,
+                                           const uft_convert_options_ext_t *opts,
+                                           uft_convert_result_t *result);
+extern uft_error_t uftc_convert_hfe_to_g64(const uint8_t *src_data, size_t src_size,
+                                           const char *dst_path,
+                                           const uft_convert_options_ext_t *opts,
+                                           uft_convert_result_t *result);
+
+#ifndef UFT_CORPUS_DIR
+#define UFT_CORPUS_DIR "."
+#endif
+
+#define MAX_IMG (8 * 1024 * 1024)
+static uint8_t a[MAX_IMG], b[MAX_IMG], c[MAX_IMG];
+
+static int failures;
+
+static size_t slurp(const char *path, uint8_t *dst)
+{
+    FILE *f = fopen(path, "rb");
+    if (!f) return 0;
+    size_t n = fread(dst, 1, MAX_IMG, f);
+    fclose(f);
+    return n;
+}
+
+/* Zwei Aufrufformen, ein Aufrufer: welche gilt, entscheidet `with_path`. */
+typedef uft_error_t (*conv5_fn)(const uint8_t *, size_t, const char *,
+                                const uft_convert_options_ext_t *,
+                                uft_convert_result_t *);
+typedef uft_error_t (*conv6_fn)(const uint8_t *, size_t, const char *,
+                                const char *, const uft_convert_options_ext_t *,
+                                uft_convert_result_t *);
+typedef struct {
+    const char *label;
+    conv5_fn    f5;      /* genau eines der beiden ist gesetzt */
+    conv6_fn    f6;
+} conv_t;
+
+/** Eine Richtung, mit Bericht. Gibt die Groesse des Ergebnisses zurueck
+ *  (0 = fehlgeschlagen). */
+static size_t one_way(conv_t cv,
+                      const uint8_t *src, size_t src_len,
+                      const char *src_path,
+                      const char *out, uint8_t *dst_buf)
+{
+    const char *label = cv.label;
+    /* MF-533: NICHT NULL uebergeben. Der Dispatcher baut
+     * `uft_convert_options_ext_t ext_opts; memset(&ext_opts, 0, ...)` und
+     * reicht `&ext_opts` weiter — er ruft die Wandler nie mit NULL. Wer
+     * einen internen Einstiegspunkt direkt ruft, muss nachbauen, was der
+     * Produktionsaufrufer uebergibt; sonst prueft er einen Pfad, den es
+     * nicht gibt. Mit NULL stuerzte uftc_convert_d64_to_g64() ab — das
+     * war mein Harness, nicht das Werkzeug. */
+    uft_convert_options_ext_t opts;
+    memset(&opts, 0, sizeof(opts));
+    uft_convert_result_t r;
+    memset(&r, 0, sizeof(r));
+    remove(out);
+    /* Die sechsstellige Form bekommt `src_path` — so ruft der
+     * Dispatcher sie auch (uft_format_convert_dispatch.c:190). */
+    uft_error_t e = cv.f6 ? cv.f6(src, src_len, src_path, out, &opts, &r)
+                          : cv.f5(src, src_len, out, &opts, &r);
+    if (e != UFT_OK) {
+        printf("    FAIL %-14s -> %d%s%.70s\n", label, (int)e,
+               r.warning_count > 0 ? "  " : "",
+               r.warning_count > 0 ? r.warnings[0] : "");
+        failures++;
+        return 0;
+    }
+    size_t n = slurp(out, dst_buf);
+    printf("    ok   %-14s -> %zu Byte\n", label, n);
+    return n;
+}
+
+static void roundtrip(const char *name, const char *corpus,
+                      conv_t fwd, const char *mid_path,
+                      conv_t back, const char *out_path)
+{
+    char src[1024];
+    snprintf(src, sizeof(src), "%s/%s", UFT_CORPUS_DIR, corpus);
+    size_t n0 = slurp(src, a);
+    if (!n0) {
+        printf("  %s: Korpusdatei fehlt (%s) — nicht messbar\n", name, src);
+        return;
+    }
+    printf("  %s  (Quelle %s, %zu Byte)\n", name, corpus, n0);
+
+    size_t n1 = one_way(fwd, a, n0, src, mid_path, b);
+    if (!n1) { remove(mid_path); return; }
+
+    size_t n2 = one_way(back, b, n1, mid_path, out_path, c);
+    if (!n2) { remove(mid_path); remove(out_path); return; }
+
+    if (n2 == n0 && memcmp(a, c, n0) == 0) {
+        printf("    BITGLEICH — ein LOSSLESS-Eintrag waere hier belegt.\n");
+    } else {
+        size_t diff = 0, m = n2 < n0 ? n2 : n0;
+        for (size_t i = 0; i < m; i++) if (a[i] != c[i]) diff++;
+        printf("    nicht bitgleich: %zu -> %zu Byte (%+lld), "
+               "%zu von %zu Bytes verschieden (%.1f %%)\n",
+               n0, n2, (long long)n2 - (long long)n0, diff, m,
+               m ? 100.0 * (double)diff / (double)m : 0.0);
+    }
+    remove(mid_path);
+    remove(out_path);
+}
+
+int main(void)
+{
+    setvbuf(stdout, NULL, _IONBF, 0);
+
+    if (uft_register_all_formats() != UFT_OK) {
+        printf("FEHLER: uft_register_all_formats() schlug fehl\n");
+        return 1;
+    }
+
+    printf("Messbare Rundlaeufe aus dem vorhandenen Korpus (MF-533)\n\n");
+
+    {
+        conv_t fwd  = { "D64->G64", NULL, uftc_convert_d64_to_g64 };
+        conv_t back = { "G64->D64", NULL, uftc_convert_g64_to_d64 };
+        roundtrip("D64 -> G64 -> D64", "vice_c1541_35trk.d64",
+                  fwd, "uft_rtm_mid.g64", back, "uft_rtm_out.d64");
+    }
+
+    printf("\n");
+
+    {
+        conv_t fwd  = { "G64->HFE", uftc_convert_g64_to_hfe, NULL };
+        conv_t back = { "HFE->G64", uftc_convert_hfe_to_g64, NULL };
+        roundtrip("G64 -> HFE -> G64", "vice_c1541_35trk.g64",
+                  fwd, "uft_rtm_mid.hfe", back, "uft_rtm_out.g64");
+    }
+
+    /* NICHT GEPRUEFT: die uebrigen 7 der MESSBAR-Gruppe. Sie haben keine
+     * Rueckrichtung mit Korpusdatei (D64->SCP, ADF->HFE, ...) und lassen
+     * sich deshalb nur einseitig fahren — das misst, ob es laeuft, aber
+     * nicht, was verloren geht. Ein einseitiger Lauf gehoert in
+     * test_convert_fuzz.c, nicht hierher. */
+
+    printf("\n%s (%d Abweichungen)\n",
+           failures ? "FEHLGESCHLAGEN" : "OK", failures);
+    return failures ? 1 : 0;
+}
