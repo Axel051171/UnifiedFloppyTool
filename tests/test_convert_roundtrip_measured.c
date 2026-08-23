@@ -105,9 +105,19 @@ extern uft_error_t uftc_convert_hfe_to_sectors(const uint8_t *src_data, size_t s
  * die falsche erwischt und einen Absturz erzeugt, der meiner war. Ein
  * Adapter je Wandler macht die Form zur Sache des Uebersetzers: passt sie
  * nicht, gibt es einen Fehler beim Bauen statt einen Absturz beim Laufen. */
-#define ADAPT5(name)     static uft_error_t adapt_##name(const uint8_t *s, size_t n, const char *sp,                                     const char *dp,                                     const uft_convert_options_ext_t *o,                                     uft_convert_result_t *r)     { (void)sp; return name(s, n, dp, o, r); }
+#define ADAPT5(name) \
+    static uft_error_t adapt_##name(const uint8_t *s, size_t n, \
+                                    const char *sp, const char *dp, \
+                                    const uft_convert_options_ext_t *o, \
+                                    uft_convert_result_t *r) \
+    { (void)sp; return name(s, n, dp, o, r); }
 
-#define ADAPT6P(name)     static uft_error_t adapt_##name(const uint8_t *s, size_t n, const char *sp,                                     const char *dp,                                     const uft_convert_options_ext_t *o,                                     uft_convert_result_t *r)     { return name(s, n, sp, dp, o, r); }
+#define ADAPT6P(name) \
+    static uft_error_t adapt_##name(const uint8_t *s, size_t n, \
+                                    const char *sp, const char *dp, \
+                                    const uft_convert_options_ext_t *o, \
+                                    uft_convert_result_t *r) \
+    { return name(s, n, sp, dp, o, r); }
 
 ADAPT6P(uftc_convert_d64_to_g64)
 ADAPT6P(uftc_convert_g64_to_d64)
@@ -215,6 +225,44 @@ static void roundtrip(const char *name, const char *corpus,
                "%zu von %zu Bytes verschieden (%.1f %%)\n",
                n0, n2, (long long)n2 - (long long)n0, diff, m,
                m ? 100.0 * (double)diff / (double)m : 0.0);
+
+        /* MF-535: WO die Abweichung liegt, nicht nur wieviel.
+         *
+         * "733 von 901120" sagt nichts darueber, ob ein Sektor ganz fehlt
+         * oder tausend Sektoren je ein Bit verloren haben. Die
+         * Verlustliste, die UFT_RT_LOSSY_DOCUMENTED verlangt, braucht
+         * genau diese Unterscheidung — deshalb wird sie hier ausgezaehlt,
+         * nach 512-Byte-Sektoren gruppiert.
+         *
+         * Nur bei kleinen Abweichungen (< 25 %): bei einem voellig
+         * anderen Ergebnis ist die Sektor-Zuordnung bedeutungslos. */
+        if (diff > 0 && diff < m / 4) {
+            const size_t SEC = 512;
+            size_t n_sec = m / SEC;
+            size_t sec_touched = 0, sec_whole = 0, worst = 0, worst_at = 0;
+            size_t first = (size_t)-1, last = 0;
+            for (size_t s = 0; s < n_sec; s++) {
+                size_t d = 0;
+                for (size_t i = 0; i < SEC; i++)
+                    if (a[s * SEC + i] != c[s * SEC + i]) d++;
+                if (!d) continue;
+                sec_touched++;
+                if (d == SEC) sec_whole++;
+                if (d > worst) { worst = d; worst_at = s; }
+                if (first == (size_t)-1) first = s;
+                last = s;
+            }
+            printf("      betroffen: %zu von %zu Sektoren a %zu Byte "
+                   "(%zu davon vollstaendig)\n",
+                   sec_touched, n_sec, SEC, sec_whole);
+            if (sec_touched) {
+                printf("      erster Sektor %zu, letzter %zu, "
+                       "schlimmster %zu mit %zu/%zu Byte\n",
+                       first, last, worst_at, worst, SEC);
+                printf("      Spur %zu bis %zu (11 Sektoren je Spur)\n",
+                       first / 11, last / 11);
+            }
+        }
     }
     remove(mid_path);
     remove(out_path);
