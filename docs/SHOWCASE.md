@@ -34,7 +34,14 @@ Detailliertes Capability-Bild: [`CAPABILITIES.md`](CAPABILITIES.md).
 - **3 libusb-wired**, byte-Protokoll-validiert via Mock (SCP-Direct, XUM1541, Applesauce).
 - **1 USB-CDC-wired** mit Sim (ADF-Copy).
 - **1 Linux-only** (USB-Floppy via SG_IO).
-- **80 Format-Plugins**, 138 Format-IDs, 100% Prinzip-7-Compliance (`spec_status` + `features` populiert).
+- **137 Plugin-Definitionen** (88 ausgeschrieben + 49 aus dem
+  `DSK_PLUGIN()`-Makro), 138 Format-IDs. „100 % Prinzip-7-Compliance"
+  heißt: `spec_status` und `features` sind **gefüllt** — das ist
+  Metadaten-Vollständigkeit, **keine funktionale Verifikation** (MF-509).
+- **Geprüfte Formate:** T1=2, T1b=12, T2=17 — die restlichen **57 von 88
+  stehen auf T3, also ungeprüft**
+  ([`VERIFICATION_TIERS.md`](VERIFICATION_TIERS.md)). Die früher hier
+  stehende Zahl „80 Plugins" war außerdem veraltet.
 - **8 DeepRead-Module** (Adaptive Decode, Weighted Voting, Encoding Boost, Write-Splice, Magnetic Aging, Cross-Track, Revolution Fingerprint, Soft-Decision LLR).
 - **Schutz-Signale** erkannt (Fuzzy Bits, lange/kurze Spuren, No-Flux,
   Overlap, Desync, Weak Bits, Illegal GCR) + 3 heuristisch benannte

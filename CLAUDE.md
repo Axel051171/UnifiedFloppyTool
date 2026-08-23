@@ -46,6 +46,14 @@ Unterstützt 6 Hardware-Controller (HAL teilweise wired — siehe pro Eintrag):
 > läuft und ATR/D64/ADF/FDI/NFD-r0 auf T1/T1b gehoben sind; danach 1:2 (ein
 > neues Format = zwei Hebungen). Verbindliche Fassung:
 > [`docs/VERIFICATION_PLAN.md` §Einfrier-Regel](docs/VERIFICATION_PLAN.md).
+> **Was „unterstützt" hier heißt (MF-509):** von den 88 tier-geführten
+> Plugins stehen **57 auf T3 — ungeprüft**: kein Test, oder ein
+> synthetischer Test ohne Abgleich gegen eine autoritative Quelle. Genau
+> in dieser Lage waren die fünf fabrizierten Parser grün
+> (FMT-2/3/10/11/12). Belegt sind T1=2, T1b=12, T2=17. Die Liste unten
+> nennt, was **gelesen werden soll**, nicht was **geprüft ist** — pro
+> Format: [`docs/VERIFICATION_TIERS.md`](docs/VERIFICATION_TIERS.md).
+
 Liest/schreibt Disk-Images von praktisch jedem 8-Bit- und 16-Bit-Computer:
 - **Commodore:** D64, D71, D81, G64, T64, CRT, PRG, P00
 - **Apple:** DO, PO, WOZ (v1/v2/2.1), A2R, MOOF, 2MG, NIB, DC42
