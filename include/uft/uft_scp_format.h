@@ -119,50 +119,23 @@ typedef enum {
 } uft_scp_disk_type_t;
 #endif /* UFT_SCP_DISK_TYPE_T_DEFINED */
 
-/**
- * @brief Get disk type name
- */
-#ifndef UFT_SCP_DISK_TYPE_NAME_DECLARED
-#define UFT_SCP_DISK_TYPE_NAME_DECLARED
-static inline const char* uft_scp_disk_type_name(uft_scp_disk_type_t type) {
-    switch (type) {
-        case UFT_SCP_DISK_C64:          return "Commodore 64";
-        case UFT_SCP_DISK_AMIGA:        return "Amiga DD";
-        case UFT_SCP_DISK_AMIGA_HD:     return "Amiga HD";
-        case UFT_SCP_DISK_ATARI800_SD:  return "Atari 800 SD";
-        case UFT_SCP_DISK_ATARI800_DD:  return "Atari 800 DD";
-        case UFT_SCP_DISK_ATARI800_ED:  return "Atari 800 ED";
-        case UFT_SCP_DISK_ATARIST_SS:   return "Atari ST SS";
-        case UFT_SCP_DISK_ATARIST_DS:   return "Atari ST DS";
-        case UFT_SCP_DISK_APPLE_II:     return "Apple II";
-        case UFT_SCP_DISK_APPLE_II_PRO: return "Apple II Pro";
-        case UFT_SCP_DISK_APPLE_400K:   return "Apple 400K";
-        case UFT_SCP_DISK_APPLE_800K:   return "Apple 800K";
-        case UFT_SCP_DISK_APPLE_1M44:   return "Apple 1.44M";
-        case UFT_SCP_DISK_IBMPC_360K:   return "IBM PC 360K";
-        case UFT_SCP_DISK_IBMPC_720K:   return "IBM PC 720K";
-        case UFT_SCP_DISK_IBMPC_1M2:    return "IBM PC 1.2M";
-        case UFT_SCP_DISK_IBMPC_1M44:   return "IBM PC 1.44M";
-        case UFT_SCP_DISK_TRS80_SSSD:   return "TRS-80 SSSD";
-        case UFT_SCP_DISK_TRS80_SSDD:   return "TRS-80 SSDD";
-        case UFT_SCP_DISK_TRS80_DSSD:   return "TRS-80 DSSD";
-        case UFT_SCP_DISK_TRS80_DSDD:   return "TRS-80 DSDD";
-        case UFT_SCP_DISK_TI994A:       return "TI-99/4A";
-        case UFT_SCP_DISK_ROLAND_D20:   return "Roland D-20";
-        case UFT_SCP_DISK_AMSTRAD_CPC:  return "Amstrad CPC";
-        case UFT_SCP_DISK_OTHER_320K:   return "Other 320K";
-        case UFT_SCP_DISK_OTHER_1M2:    return "Other 1.2M";
-        case UFT_SCP_DISK_OTHER_720K:   return "Other 720K";
-        case UFT_SCP_DISK_OTHER_1M44:   return "Other 1.44M";
-        case UFT_SCP_DISK_TAPE_GCR1:    return "Tape GCR1";
-        case UFT_SCP_DISK_TAPE_GCR2:    return "Tape GCR2";
-        case UFT_SCP_DISK_TAPE_MFM:     return "Tape MFM";
-        case UFT_SCP_DISK_HDD_MFM:      return "HDD MFM";
-        case UFT_SCP_DISK_HDD_RLL:      return "HDD RLL";
-        default:                        return "Unknown";
-    }
-}
-#endif /* UFT_SCP_DISK_TYPE_NAME_DECLARED */
+/* uft_scp_disk_type_name() wird hier ABSICHTLICH nicht definiert (MF-510).
+ *
+ * Hier stand eine zweite Fassung: `static inline`, ueber exakte Bytewerte
+ * statt ueber die Nibble-Aufteilung, unter demselben Waechter
+ * UFT_SCP_DISK_TYPE_NAME_DECLARED wie die gelinkte Fassung in
+ * src/flux/uft_scp_parser.c. Der Waechter machte beide gegenseitig
+ * unsichtbar — welche ein Uebersetzungslauf bekam, entschied allein die
+ * Include-Reihenfolge, und sie gaben verschiedene Namen zurueck
+ * (0x04 "Amiga DD" gegen "Amiga", 0x24 "Apple 400K" gegen
+ * "Macintosh 400K", 0x30 "IBM PC 360K" gegen "PC 360KB"). Aufgefallen
+ * ist es nie: keine der beiden hatte einen Aufrufer.
+ *
+ * Die gelinkte Fassung bleibt die einzige; sie ist gegen die
+ * SuperCard Pro Image File Specification v2.5 (11.02.2024) geprueft —
+ * tests/test_scp_disk_type_name.c. Deklariert in uft/flux/uft_scp_parser.h.
+ *
+ * Dasselbe Muster wie UFT_SCP_SIGNATURE in uft/uft_format_parsers.h. */
 
 /*============================================================================
  * SCP HEADER FLAGS

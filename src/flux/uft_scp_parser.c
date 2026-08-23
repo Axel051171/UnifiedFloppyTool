@@ -563,24 +563,46 @@ int uft_scp_read_track_memory(const uint8_t* data, size_t size,
  * Utility Functions
  *============================================================================*/
 
+/* REFERENZ (MF-510): SuperCard Pro Image File Specification v2.5,
+ * 11.02.2024, https://www.cbmstuff.com/downloads/scp/scp_image_specs.txt
+ * Abschnitt "DISK TYPE": oberes Nibble = Klasse (Hersteller), unteres
+ * Nibble = Unterklasse (Maschine). Belegte Klassen: 0000 COMMODORE,
+ * 0001 ATARI, 0010 APPLE, 0011 PC, 0100 TANDY, 0101 TEXAS INSTRUMENTS,
+ * 0110 ROLAND, 1000 OTHER.
+ *
+ * Diese Funktion existierte bis MF-510 ZWEIMAL unter demselben Namen —
+ * hier als gelinkte Funktion, und als `static inline` in
+ * uft/uft_scp_format.h, beide unter demselben Waechter. Welche ein
+ * Uebersetzungslauf sah, entschied die Include-Reihenfolge; sie gaben
+ * fuer dieselben Codes verschiedene Namen zurueck. Die inline-Fassung
+ * ist entfernt, diese hier ist die einzige. Geprueft von
+ * tests/test_scp_disk_type_name.c gegen die oben zitierte Spec.
+ *
+ * Nicht belegt und deshalb hier nicht benannt: die Klassen 0x7x, 0xEx,
+ * 0xFx und die 0x8x-Unterklassen. Sie stehen im Enum von
+ * uft/uft_scp_format.h, aber nicht in der zitierten Spec-Fassung. */
 const char* uft_scp_disk_type_name(uint8_t disk_type)
 {
     uint8_t mfg = disk_type & 0xF0;
     uint8_t type = disk_type & 0x0F;
-    
+
     switch (mfg) {
         case UFT_SCP_MAN_CBM:
             switch (type) {
                 case 0x00: return "Commodore 64";
                 case 0x04: return "Amiga";
+                case 0x08: return "Amiga HD";        /* disk_AmigaHD */
                 default: return "Commodore (Unknown)";
             }
         case UFT_SCP_MAN_ATARI:
             switch (type) {
                 case 0x00: return "Atari FM SS";
                 case 0x01: return "Atari FM DS";
+                case 0x02: return "Atari FM Ex";     /* disk_AtariFMEx */
                 case 0x04: return "Atari ST SS";
                 case 0x05: return "Atari ST DS";
+                case 0x06: return "Atari ST SS HD";  /* disk_AtariSTSSHD */
+                case 0x07: return "Atari ST DS HD";  /* disk_AtariSTDSHD */
                 default: return "Atari (Unknown)";
             }
         case UFT_SCP_MAN_APPLE:
