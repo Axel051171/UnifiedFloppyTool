@@ -80,8 +80,16 @@ Eigenentwickeltes OTDR-basiertes Analyse-System (inspiriert von Glasfaser-Messte
 - **Revolution Fingerprint:** Einzigartiger Jitter-Fingerabdruck pro Diskette
 - **Soft-Decision LLR:** Log-Likelihood-Ratios für Viterbi Soft-Input
 
-### 5. Kopierschutz-Analyse (35+ Schemes)
-Erkennt und dokumentiert historische Kopierschutz-Verfahren:
+### 5. Kopierschutz-Analyse
+
+> **Ehrlichkeits-Hinweis (MF-508):** Automatisch laeuft die Erkennung von
+> Schutz-SIGNALEN (Fuzzy Bits, lange/kurze Spuren, No-Flux-Bereiche,
+> Overlap, Desync, Weak Bits, Illegal GCR) plus drei heuristisch
+> benannten Schemata. Der Katalog der 55+ BENANNTEN Verfahren unten liegt
+> in `src/protection/` und hat **keinen Aufrufer** — siehe
+> `docs/OPEN_ITEMS.md` P0-2. Die Liste ist Bestand, nicht Fähigkeit.
+
+Im Katalog dokumentierte historische Kopierschutz-Verfahren:
 - V-MAX!, RapidLok, CopyLock, Speedlock, ProLok, Vorpal
 - Dungeon Master Fuzzy Bits, FatBits, Pirate Slayer
 - Lange Tracks, Halb-Tracks, Custom Sync, Density Mismatch
@@ -119,7 +127,7 @@ Erkennt und dokumentiert historische Kopierschutz-Verfahren:
 ├─────────────────────────────────────────────────────────┤
 │              Analysis Pipeline (C)                       │
 │  OTDR (12 Module) │ TDFC │ φ-OTDR Denoise │ Confidence  │
-│  DeepRead (8 Module) │ Protection (35+ Schemes)          │
+│  DeepRead (8 Module) │ Protection (Signale; Katalog unwired) │
 ├─────────────────────────────────────────────────────────┤
 │              Recovery Pipeline (C)                       │
 │  Multiread Voting │ Adaptive Decode │ Partial Recovery   │
@@ -199,7 +207,8 @@ tests/                 — 77 C-Tests + 1 Qt-Test
   Wiring pending; siehe `docs/MASTER_PLAN.md` §M3)
 - HAL-Tests grün: Greaseweazle (production) + 10 SCP-Direct + 16 XUM1541
   + 17 Applesauce = 43 Stub-Honesty-Asserts, 0 Failures
-- 55+ Kopierschutz-Schemes
+- 55+ Kopierschutz-Schemes **im Katalog** (`src/protection/`), davon
+  erreichbar: Signal-Erkennung + 3 heuristisch benannte — MF-508
 - 8 DeepRead-Module + 12 OTDR-Pipeline-Stufen
 - 9 SIMD-Dispatch-Punkte (SSE2/AVX2 Runtime)
 - ~610 Error-Handling-Fixes (fseek + I/O)

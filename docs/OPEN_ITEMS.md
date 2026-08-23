@@ -1,0 +1,160 @@
+# Offene Punkte — eine Liste (MF-508)
+
+**Stand:** 2026-08-23 · **Basis:** HEAD nach MF-507
+**Zweck:** alle offenen Listen dieses Baums an *einer* Stelle, nach einem
+Maßstab sortiert, der nicht Geschmack ist.
+
+Zusammengeführt aus: `KNOWN_ISSUES.md` (49 offene Einträge),
+`MASTER_PLAN.md`, `MAMMUT_PLAN.md`, `VERIFICATION_PLAN.md`,
+`STUB_ELIMINATION_PLAN.md`, den beiden Integrations-TODOs, 58
+`TODO`/`FIXME`-Marken im Quelltext — plus den Befunden eines
+Übersetzerlaufs und eines Erreichbarkeits-Audits, die hier zum ersten Mal
+stehen.
+
+---
+
+## 0. Der gemessene Ist-Stand
+
+| | |
+|---|---|
+| Tests | **238/238 grün** |
+| Skelett-Header | **0** |
+| Konsistenz-Tore | **0/0/0/0** |
+| qmake-Release | **baut und linkt** |
+| Gebaute Module mit exportierten Funktionen | 537 |
+| davon **von niemandem aufgerufen** | **228 (42 %)** |
+| Format-Plugins | 88 |
+| davon **Stufe T3 = ungeprüft** | **57 (65 %)** |
+| `TODO`/`FIXME`-Marken | 58 |
+| Warnungen unter strengen Klassen (C-Kern) | 311 |
+
+---
+
+## 1. Warum die Frage „sind alle Stubs weg?" am Problem vorbeizielt
+
+Skelett-Header: 0. Stubs im engeren Sinn: praktisch keine. Und trotzdem
+sind **zwei Fünftel der Modulfläche unerreichbar**.
+
+**Stubs sind nicht das Problem — sie sind das Gegenteil davon.** Ein Stub
+sagt die Wahrheit über sich: „nicht implementiert". Was dieser Baum hat,
+ist die gefährlichere Sorte: Code, der fertig aussieht, übersetzt, grüne
+Tests hat — und den nichts erreicht.
+
+Daraus folgt der Maßstab, nach dem diese Liste sortiert ist. Nicht
+„Aufwand", nicht „Alter", sondern:
+
+> **Priorität = Risiko, dass das Werkzeug dem Benutzer etwas Unwahres
+> sagt.**
+
+Das ist der einzige Maßstab, der zur Mission passt („Kein Bit verloren.
+Keine stille Veränderung. **Keine erfundenen Daten.**") — und er ordnet
+die Liste anders, als eine Feature-Liste es täte.
+
+Eine grüne Testsuite über unerreichbarem Code ist kein Qualitätsnachweis.
+Sie ist der Beweis, dass Tests und Produkt verschiedene Codepfade
+benutzen.
+
+---
+
+## P0 — das Werkzeug behauptet etwas, das nicht stimmt
+
+| # | Punkt | Stand |
+|---|---|---|
+| P0-1 | **Erfundene Konfidenzzahlen** in der Kopierschutz-Anzeige: `85 %`, `70 %`, `60 %` waren hartkodierte Literale unter der Spaltenüberschrift „Confidence" | ✅ **behoben (MF-508)** |
+| P0-2 | **„55+ Kopierschutz-Schemes"** steht als Kernfunktion in `CLAUDE.md`/`README` — das Erkennungs-Subsystem (`src/protection/`, 20 Dateien, ~200 Funktionen) hat **keinen Aufrufer**. Die Oberfläche zeigt stattdessen eine Heuristik | **offen** |
+| P0-3 | **57 von 88 Formaten sind T3** („ungeprüft / nur Metadaten") — die Formatliste nennt sie ohne diese Unterscheidung | **offen** |
+| P0-4 | **POL-1: das Schreib-Sicherheitstor hat keinen Aufrufer.** Ein Tor, das nie läuft, ist eine Sicherheitszusage, die niemand einlöst | **offen** (braucht Hardware-Sitzung) |
+| P0-5 | **LIC-1:** `uft_multiread_pipeline.c` trägt `SPDX: MIT`, dokumentiert sich aber als Nachbau von a8rawconvs `sift_sectors` (GPLv2+) | **offen** (Entscheidung des Eigentümers) |
+
+---
+
+## P1 — stille Verfälschung oder wartender Build-Bruch
+
+| # | Punkt | Stand |
+|---|---|---|
+| P1-1 | `session->audit_entries++` auf einem `void *` — schob den Listenzeiger je Logzeile um ein Byte, statt `audit_count` zu zählen. Heap-Korruption im Audit-Pfad | ✅ **behoben (MF-507)** |
+| P1-2 | `uft_td0_to_imd`: `struct uft_imd_image_t` nur in der Parameterliste deklariert → der Prototyp beschrieb einen Typ, den es nirgends gibt, also konnte die Typprüfung **keinen** Aufrufer prüfen | ✅ **behoben (MF-507)** |
+| P1-3 | `GetTempPathA` ohne `<windows.h>` — implizite Deklaration, bricht unter GCC 14+/Clang | ✅ **behoben (MF-507)** |
+| P1-4 | `uft_geos_protection.c:367`: `%d` mit `size_t` — verschiebt alle folgenden Argumente | **offen** (unerreichbarer Code, siehe P2-1) |
+| P1-5 | ARCH-3: 22 Banner-Header sind wirklich unfertig, der Skelett-Audit sieht sie nicht | **offen** |
+| P1-6 | ARCH-21: 20 Altfälle von Header-Prototypen, die niemand einbindet | **offen** |
+| P1-7 | ARCH-2/ARCH-4: `UFT_SCP_SIGNATURE` viermal, einmal mit anderem Typ; 7 Header-Duplikate brauchen echte Zusammenführung | **offen** |
+
+---
+
+## P2 — beworbene Fähigkeit ist nicht erreichbar
+
+**P2-1 ist der größte Posten dieser Liste: 228 gebaute Module ohne
+Aufrufer.** Sie sind im Binary, kosten Bauzeit und Vertrauen, und
+niemand kann sie benutzen.
+
+Die dichtesten Stellen:
+
+| Verzeichnis | ohne Aufrufer | darunter |
+|---|---|---|
+| `src/protection/` | 20 | `uft_protection_detect.c` (20 Fn), `uft_protection_classify.c` (21 Fn), `uft_pc_protection.c` (18 Fn) |
+| `src/formats/misc/` | 20 | |
+| `src/formats/commodore/` | 13 | |
+| `src/formats/atari/` | 12 | |
+| `src/formats/flux/` | 11 | |
+| `src/recovery/` | mehrere | `uft_recovery_meta.c` (**37 Fn**) |
+
+Für jedes gilt genau eine von drei Entscheidungen — **verdrahten**,
+**löschen**, oder **als unerreichbar dokumentieren**. Was nicht geht:
+liegenlassen und weiter als Fähigkeit führen.
+
+Dazu: ARCH-18 (`uft_xdf_api_impl.c`, zweite Formatschicht ohne Aufrufer),
+ARCH-6 (zwei parallele Formatschichten), ARCH-23 (vier Schalter ohne
+Verbraucher), ARCH-7 (CBM-Zonentabelle, 20 geprüfte Kopien, Migration
+offen).
+
+---
+
+## P3 — unbelegte Zusagen
+
+| # | Punkt |
+|---|---|
+| P3-1 | **57 Formate auf T3.** Das Moratorium (MF-363/498) verlangt: erst ATR, D64, ADF, FDI, NFD-r0 auf T1/T1b, danach 1:2 |
+| P3-2 | Korpus-Beschaffung — **blockiert beim Eigentümer**: `cpmtools`, SAMdisks `tc.cpp`, `sector-cpc` (siehe `MAMMUT_PLAN.md` §5) |
+| P3-3 | GUI-Rauchtest für MF-496/MF-501 — **blockiert beim Eigentümer** (kein Bediener in dieser Sitzung) |
+| P3-4 | Tier-3-Hardware-Bench — **kein Gerät vorhanden** (MF-310), an die Gemeinschaft delegiert |
+| P3-5 | Teilaufnahme-Karte nach ddrescue-Vorbild (Mammut §1.3, letzter offener Teil) |
+
+---
+
+## P4 — Hygiene
+
+- 58 `TODO`/`FIXME`-Marken; die ohne Issue-Verweis verstoßen gegen die
+  eigene Regel in `.claude/CLAUDE.md`
+- 311 Warnungen unter `-Wconversion`/`-Wsign-conversion` im C-Kern
+  (überwiegend Rauschen, aber 41 × `-Wmissing-prototypes` deuten auf
+  Funktionen, die `static` sein sollten — also auf P2-1)
+- 10 × `-Wduplicated-branches`, davon geprüft: `mac_dsk.c:43`
+  (`(sz==409600)?80:80`), `atr.c:51`, `uft_frz.c:428`
+  (`(status & 0x20) ? '-' : '-'`) — verdächtig, je einzeln zu prüfen
+- **Ausdrücklich kein Fehler:** die drei identischen PETSCII-Zweige in
+  `uft_d64_file.c`, `uft_t64.c`, `uft_bam_editor.c`. Redundant, aber
+  korrekt — `'A'`–`'Z'` bleibt unverändert. Steht hier, damit niemand sie
+  ein zweites Mal „findet"
+
+---
+
+## Was das für v4.1.6 heißt
+
+Eine Version ist eine **Menge von Zusagen**. Dieser Baum kann heute
+belegen:
+
+- der Lesepfad für AmigaDOS-Flux (SCP→ADF) — mit gemessenen Grenzen
+- 14 Formate auf T1/T1b
+- der Aufnahme-Speicher samt Herkunft in beide Richtungen
+- 238 grüne Tests, 0 Konsistenzverstöße, drei Plattformen im CI
+
+Er kann heute **nicht** belegen:
+
+- dass die 57 T3-Formate lesen, was sie zu lesen behaupten
+- dass die beworbene Kopierschutz-Erkennung erreichbar ist
+- dass das Schreib-Sicherheitstor je läuft
+
+**Die ehrliche v4.1.6 sagt beides.** Ein Release, das nur die erste Liste
+nennt, ist genau der Fehler, gegen den die Einfrier-Regel (MF-498)
+geschrieben wurde — nur eine Ebene höher.

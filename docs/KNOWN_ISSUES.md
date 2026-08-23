@@ -3938,6 +3938,95 @@ zweite braucht eine Bank-Sitzung mit echtem Laufwerk.
 
 ---
 
+### ARCH-25 — 228 gebaute Module ruft niemand auf (2026-08-23, MF-508) → ⚠ OFFEN
+
+Gemessen mit `scripts/audit_orphan_modules.py`: von **537** gebauten
+Quelldateien mit exportierten Funktionen werden **228 von niemandem
+aufgerufen** — weder aus `src/` noch aus Tests. 42 % der Modulfläche.
+
+Das ist der Befund, der die Frage „sind alle Stubs weg?" beantwortet und
+zugleich zeigt, dass sie am Problem vorbeizielt. Skelett-Header: **0**.
+Stubs im engeren Sinn: praktisch keine. **Stubs sind nicht das Problem —
+sie sind das Gegenteil davon.** Ein Stub sagt die Wahrheit über sich:
+„nicht implementiert". Was hier liegt, ist die gefährlichere Sorte: Code,
+der fertig aussieht, übersetzt, grüne Tests hat — und den nichts erreicht.
+
+Die dichtesten Stellen:
+
+| Verzeichnis | ohne Aufrufer | darunter |
+|---|---|---|
+| `src/protection/` | 20 | `uft_protection_classify.c` (21 Fn), `uft_protection_detect.c` (20 Fn), `uft_pc_protection.c` (18 Fn), `uft_amiga_caps.c` (19 Fn) |
+| `src/formats/misc/` | 20 | |
+| `src/formats/commodore/` | 13 | |
+| `src/formats/atari/` | 12 | |
+| `src/formats/flux/` | 11 | |
+| `src/recovery/` | mehrere | `uft_recovery_meta.c` (**37 Fn**) |
+
+**Warum das mehr ist als Ballast.** `src/protection/` trug die beworbene
+Kernfunktion „55+ Kopierschutz-Schemes". Die Oberfläche
+(`ProtectionAnalysisWidget`) ruft davon **nichts** auf — im Quelltext
+stand an der Stelle ehrlich „Placeholder: would call actual scheme
+detection", vor dem Benutzer standen aber drei Schemata mit
+**hartkodierten Prozentzahlen** unter der Spaltenüberschrift
+„Confidence" (85 / 70 / 60). Eine erfundene Messung, präsentiert als
+Messung — genau das, was die Design-Prinzipien verbieten.
+
+Das ist behoben (siehe unten). Die 228 sind es nicht.
+
+**Was jetzt gilt.** Für jedes der 228 Module gibt es genau **drei**
+zulässige Ausgänge — verdrahten, löschen, oder ausdrücklich als
+unerreichbar dokumentieren. Was nicht geht: liegenlassen **und** weiter
+als Fähigkeit führen. Die vier Zusagen-Stellen (`README.md`,
+`CLAUDE.md` ×2, `docs/SHOWCASE.md`) sagen jetzt, was läuft und was
+Bestand ist.
+
+**Nicht gemessen:** wie viele der 228 tatsächlich funktionieren würden,
+wenn man sie verdrahtete. Fünf Format-Parser dieses Baums waren gegen
+erfundene Specs gebaut (FMT-2/3/10/11/12) — unerreichbarer Code ist
+per Definition ungeprüfter Code, und ihn ohne Prüfung anzuschließen
+wäre derselbe Fehler in größerem Maßstab. Der Weg führt über
+`VERIFICATION_PLAN.md`, nicht über einen Aufruf.
+
+Vollständige, nach Risiko sortierte Liste: [`OPEN_ITEMS.md`](OPEN_ITEMS.md).
+
+---
+
+### GUI-1 — erfundene Konfidenzzahlen in der Kopierschutz-Anzeige (2026-08-23, MF-508) → ✓ BEHOBEN
+
+`ProtectionAnalysisWidget` zeigte eine Tabelle mit der Spaltenüberschrift
+**„Confidence"** und den Werten **85 %**, **70 %**, **60 %**. Diese Zahlen
+waren hartkodierte Literale — nichts daran war gemessen:
+
+```cpp
+schemes.append({"RapidLok", 85, "Sync-sensitive, key track 36"});
+```
+
+Unter der Überschrift „Confidence" liest sie jeder als Konfidenz. Damit
+stand eine erfundene Zahl vor dem Benutzer, in einem Werkzeug, dessen
+erster Grundsatz „Keine erfundenen Daten" lautet.
+
+**Was daran richtig war und bleibt:** die Regeln selbst sind eine
+brauchbare Heuristik über selbst erhobenen Merkmalen („langer Sync UND
+Spur 36 vorhanden" → RapidLok). Als Heuristik taugt sie; als Prozentzahl
+war sie eine Behauptung.
+
+Die Spalte heißt jetzt **„Basis"** und sagt `Heuristik`; die Regel, die
+gefeuert hat, steht in den Details („Regel: langer Sync UND Spur 36
+vorhanden"). Das `confidence`-Feld ist **entfernt**, nicht auf 0 gesetzt —
+ein Feld, das da ist, wird irgendwann wieder gefüllt.
+
+**Ausdrücklich unangetastet:** der Fortschrittsbalken („Confidence: N %")
+und die Heatmap-Werte. Die kommen aus `report.confidence_0_100` und
+`hit.confidence`, also aus tatsächlich gerechneten Metriken. Sie sind
+gemessen und bleiben, wie sie sind — ein Befund, der bei genauem Hinsehen
+keiner ist, gehört nicht in eine Fehlerliste.
+
+**Offen bleibt:** der GUI-Rauchtest. Diese Sitzung hat keinen Bediener;
+die Änderung entfernt eine Zahl und ersetzt eine Überschrift, kann das
+Verhalten also nicht verschlechtern, aber abgenommen ist sie damit nicht.
+
+---
+
 ### FUND-4 — die nächste Sitzung wusste nichts von der letzten (2026-08-23, MF-506) → ✓ BEHOBEN
 
 Wer eine Diskette zum zweiten Mal einlegt, tippte Kennung, Beschreibung,

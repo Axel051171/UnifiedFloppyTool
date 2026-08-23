@@ -36,7 +36,10 @@ Detailliertes Capability-Bild: [`CAPABILITIES.md`](CAPABILITIES.md).
 - **1 Linux-only** (USB-Floppy via SG_IO).
 - **80 Format-Plugins**, 138 Format-IDs, 100% Prinzip-7-Compliance (`spec_status` + `features` populiert).
 - **8 DeepRead-Module** (Adaptive Decode, Weighted Voting, Encoding Boost, Write-Splice, Magnetic Aging, Cross-Track, Revolution Fingerprint, Soft-Decision LLR).
-- **55+ Kopierschutz-Schemes** erkannt + dokumentiert.
+- **Schutz-Signale** erkannt (Fuzzy Bits, lange/kurze Spuren, No-Flux,
+  Overlap, Desync, Weak Bits, Illegal GCR) + 3 heuristisch benannte
+  Schemata. Der Katalog von 55+ benannten Verfahren ist **Bestand,
+  nicht Fähigkeit** — er hat keinen Aufrufer (MF-508, OPEN_ITEMS P0-2).
 
 ---
 

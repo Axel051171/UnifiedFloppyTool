@@ -210,9 +210,20 @@ calls — **never a silent no-op**.
 
 ### Copy Protection Analysis
 
-Automatic detection and preservation of 55+ historical protection
-schemes across 10 platforms (122 unique `uft_*_detect_*` entry points
-in `src/protection/`).
+**What runs automatically** is *signal* detection over the flux: fuzzy
+bits, long and short tracks, no-flux areas, track overlap, desync, weak
+bits and illegal GCR. Three schemes are named heuristically from those
+signals (RapidLok, weak-bit protection, FAT/long track) — the UI labels
+them as heuristics, not as measurements.
+
+**What exists in the source but is not reachable:** a catalogue of 55+
+*named* schemes across 10 platforms in `src/protection/`. Those ~200
+functions have **no caller** — see `docs/OPEN_ITEMS.md` P0-2. The earlier
+wording here counted `uft_*_detect_*` entry points and presented the count
+as a capability; a function that exists is not a feature until something
+calls it.
+
+The catalogue covers (as source, not as a reachable feature):
 
 - **Commodore** — V-MAX!, RapidLok, Vorpal, Pirate Slayer, GEOS
 - **Amiga** — Rob Northen Copylock, custom MFM

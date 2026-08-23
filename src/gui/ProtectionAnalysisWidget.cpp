@@ -159,7 +159,26 @@ void ProtectionAnalysisWidget::createSchemePanel()
     // Scheme table
     m_schemeTable = new QTableWidget();
     m_schemeTable->setColumnCount(3);
-    m_schemeTable->setHorizontalHeaderLabels({tr("Scheme"), tr("Confidence"), tr("Details")});
+    /* MF-508: Spalte hiess "Confidence" und trug erfundene Zahlen.
+     *
+     * Die Werte darunter waren hartkodierte Literale (85, 70, 60) — nichts
+     * daran war gemessen. Unter der Ueberschrift "Confidence" liest sie
+     * jeder als Konfidenz, und damit stand eine erfundene Zahl vor dem
+     * Benutzer. Genau das verbieten die Design-Prinzipien.
+     *
+     * Was hier laeuft, IST eine Heuristik ueber selbst erhobenen Merkmalen
+     * ("Long-Sync und Spur 36 vorhanden" -> RapidLok). Als Heuristik ist
+     * sie brauchbar; als Prozentzahl war sie eine Behauptung. Die Spalte
+     * sagt jetzt, worauf der Eintrag beruht, und die Regel steht in den
+     * Details.
+     *
+     * Der eigentliche Erkenner (src/protection/, u.a.
+     * uft_protection_detect.c und uft_protection_classify.c) wird von
+     * NIEMANDEM aufgerufen — siehe ARCH-25 in KNOWN_ISSUES. Ihn hier
+     * anzuschliessen ist eigene Arbeit mit eigener Pruefung; ihn
+     * anzuschliessen, ohne ihn geprueft zu haben, waere derselbe Fehler
+     * noch einmal. */
+    m_schemeTable->setHorizontalHeaderLabels({tr("Scheme"), tr("Basis"), tr("Details")});
     m_schemeTable->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
     m_schemeTable->setSelectionBehavior(QAbstractItemView::SelectRows);
     layout->addWidget(m_schemeTable);
@@ -268,13 +287,21 @@ void ProtectionAnalysisWidget::updateSchemeList()
 {
     m_schemeTable->setRowCount(0);
     
-    // Placeholder: would call actual scheme detection
-    // For now, derive from traits
+    /* Diese Liste ist eine HEURISTIK ueber den selbst erhobenen Merkmalen,
+     * kein Aufruf des Erkennungs-Subsystems. Das steht hier, weil der
+     * frueher an dieser Stelle stehende Kommentar ("Placeholder: would
+     * call actual scheme detection") zwar ehrlich war, aber nur im
+     * Quelltext — vor dem Benutzer standen Prozentzahlen (MF-508). */
     
+    /* MF-508: kein `confidence`-Feld mehr.
+     *
+     * Es trug hartkodierte Zahlen, die als gemessene Konfidenz gelesen
+     * wurden. Das Feld ist entfernt statt auf 0 gesetzt — ein Feld, das
+     * da ist, wird irgendwann wieder gefuellt. */
     struct SchemeGuess {
         QString name;
-        int confidence;
-        QString details;
+        QString basis;    /**< worauf der Eintrag beruht */
+        QString details;  /**< die Regel, die gefeuert hat */
     };
     
     QVector<SchemeGuess> schemes;
@@ -291,11 +318,14 @@ void ProtectionAnalysisWidget::updateSchemeList()
     }
     
     if (hasLongSync && hasTrack36) {
-        schemes.append({"RapidLok", 85, "Sync-sensitive, key track 36"});
+        schemes.append({"RapidLok", tr("Heuristik"),
+                        tr("Regel: langer Sync UND Spur 36 vorhanden")});
     }
-    
+
     if (weakBitTracks >= 3) {
-        schemes.append({"Weak Bit Protection", 70, QString("%1 tracks with weak bits").arg(weakBitTracks)});
+        schemes.append({"Weak Bit Protection", tr("Heuristik"),
+                        tr("Regel: mindestens 3 Spuren mit Weak Bits "
+                           "(gefunden: %1)").arg(weakBitTracks)});
     }
     
     // Check for long tracks
@@ -304,14 +334,16 @@ void ProtectionAnalysisWidget::updateSchemeList()
         if (hit.type == UFM_C64_PROT_LONG_TRACK) longTrackCount++;
     }
     if (longTrackCount > 0) {
-        schemes.append({"FAT Track / Long Track", 60, QString("%1 extended tracks").arg(longTrackCount)});
+        schemes.append({"FAT Track / Long Track", tr("Heuristik"),
+                        tr("Regel: mindestens eine ueberlange Spur "
+                           "(gefunden: %1)").arg(longTrackCount)});
     }
     
     // Populate table
     m_schemeTable->setRowCount(schemes.size());
     for (int i = 0; i < schemes.size(); i++) {
         m_schemeTable->setItem(i, 0, new QTableWidgetItem(schemes[i].name));
-        m_schemeTable->setItem(i, 1, new QTableWidgetItem(QString("%1%").arg(schemes[i].confidence)));
+        m_schemeTable->setItem(i, 1, new QTableWidgetItem(schemes[i].basis));
         m_schemeTable->setItem(i, 2, new QTableWidgetItem(schemes[i].details));
     }
 }
