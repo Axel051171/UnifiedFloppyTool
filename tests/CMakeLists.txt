@@ -441,6 +441,7 @@ foreach(test_source ${TEST_SOURCES})
             # MF-473: SCP->ADF stimmt jetzt ueber die Umdrehungen ab
             ${CMAKE_SOURCE_DIR}/src/recovery/uft_multiread_pipeline.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c
             ${CMAKE_SOURCE_DIR}/src/compat/uft_fnmatch.c
@@ -474,6 +475,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/tests/flux_gen/amigados/flux_gen.c
             ${CMAKE_SOURCE_DIR}/src/recovery/uft_multiread_pipeline.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c
             ${CMAKE_SOURCE_DIR}/src/compat/uft_fnmatch.c
@@ -494,11 +496,25 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/include/uft/formats/c64
             ${CMAKE_SOURCE_DIR}/include/uft/flux
             ${CMAKE_SOURCE_DIR}/include/uft/fs)
+    elseif(${test_name} STREQUAL "test_flux_histogram")
+        # MF-488: Zellendauer aus dem Abstandshistogramm
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/tests/flux_gen/amigados/flux_gen.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c
+            ${CMAKE_SOURCE_DIR}/src/formats/amiga/uft_amiga_syncs.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
+        target_include_directories(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/tests/flux_gen/amigados
+            ${CMAKE_SOURCE_DIR}/include/uft/flux)
     elseif(${test_name} STREQUAL "test_pll_regression")
         # MF-487: Fangbereich der PLL, isoliert gegen synthetische Vektoren
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/tests/flux_gen/amigados/flux_gen.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c
             ${CMAKE_SOURCE_DIR}/src/formats/amiga/uft_amiga_syncs.c
@@ -511,6 +527,7 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/tests/flux_gen/amigados/flux_gen.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c
             ${CMAKE_SOURCE_DIR}/src/formats/amiga/uft_amiga_syncs.c
@@ -528,6 +545,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/tests/flux_gen/amigados/flux_gen.c
             ${CMAKE_SOURCE_DIR}/src/recovery/uft_multiread_pipeline.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c
             ${CMAKE_SOURCE_DIR}/src/compat/uft_fnmatch.c
@@ -555,6 +573,7 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE ${GEO_FORMAT_SOURCES}
             ${CMAKE_SOURCE_DIR}/src/recovery/uft_multiread_pipeline.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c
             ${CMAKE_SOURCE_DIR}/src/compat/uft_fnmatch.c
@@ -584,6 +603,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/tests/flux_gen/amigados/flux_gen.c
             ${CMAKE_SOURCE_DIR}/src/recovery/uft_multiread_pipeline.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c
             ${CMAKE_SOURCE_DIR}/src/compat/uft_fnmatch.c
@@ -615,6 +635,7 @@ foreach(test_source ${TEST_SOURCES})
             # MF-473: SCP->ADF stimmt jetzt ueber die Umdrehungen ab
             ${CMAKE_SOURCE_DIR}/src/recovery/uft_multiread_pipeline.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c
             ${CMAKE_SOURCE_DIR}/src/compat/uft_fnmatch.c
@@ -641,6 +662,7 @@ foreach(test_source ${TEST_SOURCES})
         # MF-452: drei Befunde aus dem X-Copy-Quellenvergleich
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c
             ${CMAKE_SOURCE_DIR}/src/formats/amiga/uft_amiga_protection.c
             ${CMAKE_SOURCE_DIR}/src/formats/amiga/uft_amiga_syncs.c)
@@ -686,6 +708,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/formats/scp/uft_scp_plugin.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_decoder_plugin_stub.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free"
@@ -695,6 +718,7 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/formats/hfe/uft_hfe.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
@@ -704,6 +728,7 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c
             ${CMAKE_SOURCE_DIR}/src/formats/amiga/uft_amiga_syncs.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
@@ -712,6 +737,7 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c
             ${CMAKE_SOURCE_DIR}/src/formats/amiga/uft_amiga_syncs.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
@@ -1379,6 +1405,7 @@ foreach(test_source ${TEST_SOURCES})
         # for the PLL math).
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c)
         if(UNIX)
             set(TEST_LIBS ${M_LIBRARY})
@@ -1392,6 +1419,7 @@ foreach(test_source ${TEST_SOURCES})
         # needed.
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c
             # MF-407 (PROT-11): the flux -> GCR -> metrics chain
             ${CMAKE_SOURCE_DIR}/src/protection/ufm_c64_metrics.c)
@@ -1405,6 +1433,7 @@ foreach(test_source ${TEST_SOURCES})
         # Apple ][ 6-and-2 GCR decoder regression test.
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c)
         if(UNIX)
             set(TEST_LIBS ${M_LIBRARY})
@@ -1416,6 +1445,7 @@ foreach(test_source ${TEST_SOURCES})
         # MFM decoder regression test (odd/even-split sector layout).
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c)
         if(UNIX)
             set(TEST_LIBS ${M_LIBRARY})
@@ -1444,6 +1474,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/protection/uft_longtrack.c
             ${CMAKE_SOURCE_DIR}/src/protection/uft_fuzzy_bits.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c)
         if(UNIX)
             set(TEST_LIBS ${M_LIBRARY})
@@ -2117,6 +2148,7 @@ if(UFT_ENABLE_BENCHMARKS)
     add_executable(bench_decode_hotpath
         ${CMAKE_CURRENT_SOURCE_DIR}/benchmarks/bench_decode_hotpath.c
         ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c)
     target_include_directories(bench_decode_hotpath PRIVATE
         ${CMAKE_SOURCE_DIR}/include)

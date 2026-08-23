@@ -313,6 +313,7 @@ SOURCES += \
     src/gui/uft_otdr_panel.cpp \
     src/gui/ProtectionAnalysisWidget.cpp \
     src/gui/uft_sector_editor.cpp \
+    src/flux/uft_flux_histogram.c \
     src/flux/uft_scp_parser.c \
     src/flux/uft_flux_decoder.c \
     src/flux/uft_media_profile.c \

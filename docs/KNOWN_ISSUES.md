@@ -3752,6 +3752,86 @@ für AmigaDOS-DD.
 
 ---
 
+### FLUX-12 — die Zellendauer stand im Histogramm, zweimal, und lief nie (2026-08-23, MF-488) → ✓ BEHOBEN
+
+Baustein A des FloppyControl-Umsetzungsplans, in der Fassung ohne
+Bedienoberfläche.
+
+Ein MFM-Strom mit Zellendauer T trägt Abstände von 2T, 3T und 4T — mehr gibt
+die Kodierung nicht her. Im Histogramm sind das drei Berge im Verhältnis
+1 : 1,5 : 2, und der erste liegt bei 2T. Damit lässt sich T aus den **Daten
+allein** lesen: ohne Medienprofil, ohne Index-Marken.
+
+#### Zweimal gebaut, zweimal tot
+
+| Fundort | Zustand |
+|---|---|
+| `UftFluxHistogramWidget::detectPeaks()` + `detectEncoding()` | rechnet Berge **und** `m_cellTime`; beide privat, kein Abnehmer außerhalb der Zeichenroutine |
+| `src/flux/fdc_bitstream/fdc_bitstream.cpp:511-513` | rechnet dasselbe — und der Aufruf ist **auskommentiert**:<br>`//  peaks = fdc_misc::find_peaks(dist_freq);`<br>`//  m_codec.set_vfo_cell_size(peaks[0]/2.f);` |
+
+Achte Ausprägung derselben Diagnose in dieser Woche — diesmal in der
+Steigerung: ein Fakt mehrfach implementiert, und es läuft **keine** der
+Fassungen.
+
+Neu ist `src/flux/uft_flux_histogram.c`: GUI-frei, prüfbar, eine Fassung.
+Sie wird als **dritte Stufe** in `flux_pick_bitcell_ns()` eingehängt:
+
+1. ausdrückliches `bitcell_ns` — wer eine Zahl vorgibt, meint sie (MF-471)
+2. Medienprofil + gemessene Umdrehung (MF-471/475)
+3. **Histogramm des Stroms selbst** (neu)
+4. Nennwert
+
+Stufe 3 steht dort, weil sie eine **Messung** ist und keine Annahme — sie
+greift genau da, wo Stufe 2 nichts hat.
+
+#### Ein Gütemaß, das erst beim zweiten Anlauf taugte
+
+Der erste Entwurf hielt ein Histogramm für MFM, wenn zwei Berge im
+Verhältnis ~1,5 standen. **Gleichverteiltes Rauschen bestand diesen Test** —
+zufällige Nebenmaxima treffen 1,5 ohne Weiteres. Der Rauschtest fiel durch,
+und das war richtig so.
+
+Das belastbare Kriterium ist die **Verteilung**, nicht das Verhältnis: ein
+echter MFM-Strom hat fast seine ganze Masse in drei schmalen Bändern um 2T,
+3T und 4T. Gefordert sind jetzt ≥ 70 % der Abstände innerhalb ±8 % dieser
+Bänder. Echtes MFM erreicht > 95 %, gleichverteiltes Rauschen über 1–10 µs
+rund ein Drittel. Der Wert steht als `coverage` im Ergebnis und ist damit
+nachprüfbar statt versteckt.
+
+#### Rot-Proben
+
+| Verfälschung | Ergebnis |
+|---|---|
+| Gütemaß entfernt (nur Berg-Verhältnis) | `noise_gets_no_answer_at_all` fällt |
+| Stufe 3 aus der Zellendauer-Wahl entfernt | `the_decoder_uses_the_histogram_when_nothing_else_knows` fällt — 0 von 11 Sektoren |
+
+Die zweite Probe ist die Verdrahtungsprobe: eine Spur mit 3000 ns
+Zellendauer, ohne Profil und ohne Vorgabe. Der Nennwert ist 2000, das
+Verhältnis 0,67 liegt weit unter dem gemessenen PLL-Fangbereich (FLUX-11:
+0,80…1,50) — ohne Stufe 3 kommt **nichts** heraus.
+
+`ctest` 228/228, alle 21 Gate-Kategorien 0, `verify_build_sources.py` 0/0,
+qmake-Release-Build grün.
+
+**Ehrlich zur Reichweite.**
+
+- Der Schätzer erkennt **MFM**. FM (2T/4T ohne 3T) und GCR haben andere
+  Abstandsfamilien; für sie meldet er `confident == false` und der Nennwert
+  gilt weiter. Das ist richtig, aber es heißt: für Atari-FM bringt die Stufe
+  heute nichts.
+- **Die Bedienoberfläche ist nicht angeschlossen.** Baustein A wollte
+  klickbare Peak-Übernahme und `[AUS HISTOGRAMM]`-Kennzeichnung im Panel;
+  das Widget rechnet weiterhin seine eigenen Berge. Die Doppelung ist
+  gemessen und benannt, aber nicht beseitigt — dafür müsste das Widget den
+  Kern benutzen, und das ist GUI-Arbeit mit manuellem Rauchtest.
+- Der auskommentierte Aufruf in `fdc_bitstream.cpp` **bleibt
+  auskommentiert**. Ihn zu aktivieren würde das Verhalten eines zweiten
+  Decoders ändern, der eigene Tests hat; das ist ein eigener Schritt.
+- Geprüft gegen **synthetischen** AmigaDOS-Flux. Ein reales Abbild mit
+  ungewöhnlicher Zellendauer liegt nicht im Korpus.
+
+---
+
 ### FLUX-11 — der FM-Decoder lief nie mit Regelung (2026-08-23, MF-487) → ✓ BEHOBEN
 
 Baustein E Punkt 1 des FluxEngine-Plans: „jede Änderung an `uft_flux_pll.h`

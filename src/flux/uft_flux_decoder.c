@@ -7,6 +7,7 @@
  */
 
 #include "uft/flux/uft_flux_decoder.h"
+#include "uft/flux/uft_flux_histogram.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -622,6 +623,33 @@ static double flux_pick_bitcell_ns(const flux_raw_data_t *flux,
             return cell_ns;
         }
     }
+
+    /* Dritte Stufe: das Histogramm des Stroms selbst (MF-488).
+     *
+     * Ein MFM-Strom mit Zellendauer T traegt Abstaende von 2T, 3T und 4T.
+     * Der erste Berg im Abstandshistogramm liegt also bei 2T — und das
+     * braucht weder ein Medienprofil noch Index-Marken, nur die Daten.
+     * Genau deshalb steht die Stufe HIER: sie greift, wo Stufe 2 nichts
+     * hat, und ist trotzdem eine Messung und keine Annahme.
+     *
+     * `uft_flux_histogram_cell_ns_from_transitions()` liefert nur dann eine
+     * Zahl, wenn das Histogramm auch wirklich wie MFM aussieht. Tut es das
+     * nicht — GCR, Rauschen, zerschossener Strom —, faellt es durch auf den
+     * Nennwert. Ein Schaetzer, der immer etwas sagt, waere schlimmer als
+     * keiner.
+     *
+     * Der Feineinsteller (MF-480) gilt auch hier: er ist eine Aussage ueber
+     * die Zellendauer, nicht ueber ihre Herkunft. */
+    if (flux && flux->transitions && flux->transition_count > 0) {
+        double hist_ns = 0.0;
+        if (uft_flux_histogram_cell_ns_from_transitions(
+                flux->transitions, flux->transition_count, &hist_ns)) {
+            double pct = (opts->media_adjust_pct > 0.0) ? opts->media_adjust_pct
+                                                        : 100.0;
+            return hist_ns * (pct / 100.0);
+        }
+    }
+
     return fallback_ns;
 }
 
