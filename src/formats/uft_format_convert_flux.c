@@ -1987,9 +1987,26 @@ uft_error_t uftc_convert_scp_to_g64(const uint8_t* src_data, size_t src_size,
         d64_speed_zone_t zone = d64_track_zone(track);
         int halftrack = track * 2;
 
-        g64_set_track(g64, halftrack, bitstream, track_bytes, (uint8_t)zone);
-
+        /* MF-534: der Rueckgabewert wurde verworfen und `tracks_converted++`
+         * lief unabhaengig davon. `g64_set_track()` weist Halbspuren
+         * ausserhalb [2, G64_MAX_TRACKS) ab und meldet das mit -1.
+         *
+         * Gemessen am Rundlauf G64 -> SCP -> G64: die Wandlung meldete
+         * "35 Spuren gewandelt" und schrieb eine Datei von **789 Byte** —
+         * Kopf und Tabelle, kein einziges Spurdatum
+         * (tests/test_convert_roundtrip_measured.c). Eine Erfolgsmeldung
+         * ohne Tat, dieselbe Bauart wie MF-522 und MF-528.
+         *
+         * Der Zaehler sagt jetzt die Wahrheit. Warum die Spuren leer
+         * bleiben, ist damit NICHT behoben — es wird nur sichtbar; siehe
+         * OPEN_ITEMS P0-15. */
+        int set_rc = g64_set_track(g64, halftrack, bitstream, track_bytes,
+                                   (uint8_t)zone);
         free(bitstream);
+        if (set_rc != 0 || track_bytes == 0) {
+            result->tracks_failed++;
+            continue;
+        }
         result->tracks_converted++;
 
         uftc_report_progress(opts, 10 + (track * 80 / num_tracks),

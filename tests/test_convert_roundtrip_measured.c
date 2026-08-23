@@ -79,6 +79,54 @@ extern uft_error_t uftc_convert_hfe_to_g64(const uint8_t *src_data, size_t src_s
                                            const char *dst_path,
                                            const uft_convert_options_ext_t *opts,
                                            uft_convert_result_t *result);
+extern uft_error_t uftc_convert_g64_to_scp(const uint8_t *src_data, size_t src_size,
+                                           const char *dst_path,
+                                           const uft_convert_options_ext_t *opts,
+                                           uft_convert_result_t *result);
+extern uft_error_t uftc_convert_scp_to_g64(const uint8_t *src_data, size_t src_size,
+                                           const char *dst_path,
+                                           const uft_convert_options_ext_t *opts,
+                                           uft_convert_result_t *result);
+extern uft_error_t uftc_convert_sectors_to_hfe(const uint8_t *src_data, size_t src_size,
+                                               const char *dst_path,
+                                               uft_format_t src_format,
+                                               const uft_convert_options_ext_t *opts,
+                                               uft_convert_result_t *result);
+extern uft_error_t uftc_convert_hfe_to_sectors(const uint8_t *src_data, size_t src_size,
+                                               const char *src_path, const char *dst_path,
+                                               uft_format_t dst_format,
+                                               const uft_convert_options_ext_t *opts,
+                                               uft_convert_result_t *result);
+
+/* MF-534: EIN Adapter je Wandler, alle mit derselben Signatur.
+ *
+ * Die Wandler haben mindestens vier verschiedene Formen (5, 6 mit
+ * src_path, 6 mit src_format, 7 mit beidem). Zweimal habe ich in MF-533
+ * die falsche erwischt und einen Absturz erzeugt, der meiner war. Ein
+ * Adapter je Wandler macht die Form zur Sache des Uebersetzers: passt sie
+ * nicht, gibt es einen Fehler beim Bauen statt einen Absturz beim Laufen. */
+#define ADAPT5(name)     static uft_error_t adapt_##name(const uint8_t *s, size_t n, const char *sp,                                     const char *dp,                                     const uft_convert_options_ext_t *o,                                     uft_convert_result_t *r)     { (void)sp; return name(s, n, dp, o, r); }
+
+#define ADAPT6P(name)     static uft_error_t adapt_##name(const uint8_t *s, size_t n, const char *sp,                                     const char *dp,                                     const uft_convert_options_ext_t *o,                                     uft_convert_result_t *r)     { return name(s, n, sp, dp, o, r); }
+
+ADAPT6P(uftc_convert_d64_to_g64)
+ADAPT6P(uftc_convert_g64_to_d64)
+ADAPT5(uftc_convert_g64_to_hfe)
+ADAPT5(uftc_convert_hfe_to_g64)
+ADAPT5(uftc_convert_g64_to_scp)
+ADAPT5(uftc_convert_scp_to_g64)
+
+static uft_error_t adapt_adf_to_hfe(const uint8_t *s, size_t n, const char *sp,
+                                    const char *dp,
+                                    const uft_convert_options_ext_t *o,
+                                    uft_convert_result_t *r)
+{ (void)sp; return uftc_convert_sectors_to_hfe(s, n, dp, UFT_FORMAT_ADF, o, r); }
+
+static uft_error_t adapt_hfe_to_adf(const uint8_t *s, size_t n, const char *sp,
+                                    const char *dp,
+                                    const uft_convert_options_ext_t *o,
+                                    uft_convert_result_t *r)
+{ return uftc_convert_hfe_to_sectors(s, n, sp, dp, UFT_FORMAT_ADF, o, r); }
 
 #ifndef UFT_CORPUS_DIR
 #define UFT_CORPUS_DIR "."
@@ -98,18 +146,10 @@ static size_t slurp(const char *path, uint8_t *dst)
     return n;
 }
 
-/* Zwei Aufrufformen, ein Aufrufer: welche gilt, entscheidet `with_path`. */
-typedef uft_error_t (*conv5_fn)(const uint8_t *, size_t, const char *,
-                                const uft_convert_options_ext_t *,
-                                uft_convert_result_t *);
-typedef uft_error_t (*conv6_fn)(const uint8_t *, size_t, const char *,
-                                const char *, const uft_convert_options_ext_t *,
-                                uft_convert_result_t *);
-typedef struct {
-    const char *label;
-    conv5_fn    f5;      /* genau eines der beiden ist gesetzt */
-    conv6_fn    f6;
-} conv_t;
+typedef uft_error_t (*conv_fn)(const uint8_t *, size_t, const char *,
+                               const char *, const uft_convert_options_ext_t *,
+                               uft_convert_result_t *);
+typedef struct { const char *label; conv_fn fn; } conv_t;
 
 /** Eine Richtung, mit Bericht. Gibt die Groesse des Ergebnisses zurueck
  *  (0 = fehlgeschlagen). */
@@ -133,8 +173,7 @@ static size_t one_way(conv_t cv,
     remove(out);
     /* Die sechsstellige Form bekommt `src_path` — so ruft der
      * Dispatcher sie auch (uft_format_convert_dispatch.c:190). */
-    uft_error_t e = cv.f6 ? cv.f6(src, src_len, src_path, out, &opts, &r)
-                          : cv.f5(src, src_len, out, &opts, &r);
+    uft_error_t e = cv.fn(src, src_len, src_path, out, &opts, &r);
     if (e != UFT_OK) {
         printf("    FAIL %-14s -> %d%s%.70s\n", label, (int)e,
                r.warning_count > 0 ? "  " : "",
@@ -143,7 +182,8 @@ static size_t one_way(conv_t cv,
         return 0;
     }
     size_t n = slurp(out, dst_buf);
-    printf("    ok   %-14s -> %zu Byte\n", label, n);
+    printf("    ok   %-14s -> %7zu Byte  (%d Spuren gewandelt, %d gescheitert)\n",
+           label, n, r.tracks_converted, r.tracks_failed);
     return n;
 }
 
@@ -192,8 +232,8 @@ int main(void)
     printf("Messbare Rundlaeufe aus dem vorhandenen Korpus (MF-533)\n\n");
 
     {
-        conv_t fwd  = { "D64->G64", NULL, uftc_convert_d64_to_g64 };
-        conv_t back = { "G64->D64", NULL, uftc_convert_g64_to_d64 };
+        conv_t fwd  = { "D64->G64", adapt_uftc_convert_d64_to_g64 };
+        conv_t back = { "G64->D64", adapt_uftc_convert_g64_to_d64 };
         roundtrip("D64 -> G64 -> D64", "vice_c1541_35trk.d64",
                   fwd, "uft_rtm_mid.g64", back, "uft_rtm_out.d64");
     }
@@ -201,17 +241,48 @@ int main(void)
     printf("\n");
 
     {
-        conv_t fwd  = { "G64->HFE", uftc_convert_g64_to_hfe, NULL };
-        conv_t back = { "HFE->G64", uftc_convert_hfe_to_g64, NULL };
+        conv_t fwd  = { "G64->HFE", adapt_uftc_convert_g64_to_hfe };
+        conv_t back = { "HFE->G64", adapt_uftc_convert_hfe_to_g64 };
         roundtrip("G64 -> HFE -> G64", "vice_c1541_35trk.g64",
                   fwd, "uft_rtm_mid.hfe", back, "uft_rtm_out.g64");
     }
 
-    /* NICHT GEPRUEFT: die uebrigen 7 der MESSBAR-Gruppe. Sie haben keine
-     * Rueckrichtung mit Korpusdatei (D64->SCP, ADF->HFE, ...) und lassen
-     * sich deshalb nur einseitig fahren — das misst, ob es laeuft, aber
-     * nicht, was verloren geht. Ein einseitiger Lauf gehoert in
-     * test_convert_fuzz.c, nicht hierher. */
+    printf("\n");
+    {
+        conv_t fwd  = { "G64->D64", adapt_uftc_convert_g64_to_d64 };
+        conv_t back = { "D64->G64", adapt_uftc_convert_d64_to_g64 };
+        roundtrip("G64 -> D64 -> G64", "vice_c1541_35trk.g64",
+                  fwd, "uft_rtm_mid2.d64", back, "uft_rtm_out2.g64");
+    }
+
+    printf("\n");
+    {
+        conv_t fwd  = { "G64->SCP", adapt_uftc_convert_g64_to_scp };
+        conv_t back = { "SCP->G64", adapt_uftc_convert_scp_to_g64 };
+        roundtrip("G64 -> SCP -> G64", "vice_c1541_35trk.g64",
+                  fwd, "uft_rtm_mid3.scp", back, "uft_rtm_out3.g64");
+    }
+
+    printf("\n");
+    {
+        conv_t fwd  = { "ADF->HFE", adapt_adf_to_hfe };
+        conv_t back = { "HFE->ADF", adapt_hfe_to_adf };
+        roundtrip("ADF -> HFE -> ADF", "xdftool_dd_ofs.adf",
+                  fwd, "uft_rtm_mid4.hfe", back, "uft_rtm_out4.adf");
+    }
+
+    /* NICHT GEPRUEFT: D64 -> SCP. Der Dispatcher fuehrt das als
+     * ZWEISTUFIGE Kette ueber G64 aus (uft_format_convert_dispatch.c:259),
+     * es gibt keinen eigenen Wandler. Die Kette hier nachzubauen hiesse,
+     * den Produktionspfad nachzubauen statt ihn zu benutzen — genau der
+     * Fehler, der in diesem Baum schon zweimal falsche Zahlen erzeugt hat
+     * (MF-494, MF-497).
+     *
+     * Ebenfalls nicht geprueft: ADF -> IMG. Das Paar steht in der
+     * Wandlungstabelle, hat aber KEINEN Wandler — der Zweig
+     * `src_class == SECTOR && dst_class == SECTOR` gibt ausdruecklich
+     * UFT_ERR_NOT_IMPLEMENTED zurueck (UFT-A08). Ein Rundlauf waere eine
+     * Messung an etwas, das es nicht gibt. */
 
     printf("\n%s (%d Abweichungen)\n",
            failures ? "FEHLGESCHLAGEN" : "OK", failures);

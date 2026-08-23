@@ -3938,6 +3938,74 @@ zweite braucht eine Bank-Sitzung mit echtem Laufwerk.
 
 ---
 
+### RT-3 — fuenf Rundlaeufe gemessen, zwei Wahrheits-Fehler in entgegengesetzte Richtungen (2026-08-23, MF-534) -> teils behoben
+
+**Verifikation.** `scripts/audit_convert_backlog.py` (MF-533) teilt die
+ungeprueften Pfade in MESSBAR / KEIN KORPUS / KEIN WANDLER. Aus der
+MESSBAR-Gruppe sind jetzt **fuenf Rundlaeufe** gefahren
+(`tests/test_convert_roundtrip_measured.c`):
+
+| Rundlauf | Quelle | Ergebnis | Bytes verschieden |
+|---|---|---|---|
+| D64 → G64 → D64 | 174848 | 174848 | **0 — bitgleich** |
+| ADF → HFE → ADF | 901120 | 901120 | 733 (**0,08 %**) |
+| G64 → HFE → G64 | 278234 | 252758 | 82 % |
+| G64 → D64 → G64 | 278234 | 252758 | 85 % |
+| G64 → SCP → G64 | 278234 | **789** | — |
+
+**Zwei Wahrheits-Fehler, in entgegengesetzte Richtungen:**
+
+**(a) `SCP → G64` meldete Erfolg fuer eine leere Datei.** 35 Spuren
+"gewandelt", Ausgabe **789 Byte**. Die Arithmetik geht exakt auf:
+
+```
+G64_HEADER_SIZE (0x2AC) = 684
+789 - 684 = 105 = 35 x (2 Byte Laengenfeld + 1 Byte Daten)
+```
+
+**Jede Spur traegt ein Byte** — der PLL liefert rund **8 Bit statt
+~50000**. Der Zaehler ist behoben: `g64_set_track()` gibt einen
+Rueckgabewert, der verworfen wurde, und `tracks_converted++` lief
+unabhaengig davon. Nach der Korrektur bleibt die Meldung bei 35 — die
+Spuren werden also tatsaechlich gespeichert, nur mit einem Byte.
+
+**Eingegrenzt, nicht behoben:** die Ursache liegt im PLL-Pfad.
+`uft_pll_init(&pll, bitrate, UFT_ENCODING_GCR)` bekommt eine korrekte
+Bitrate in Hz (250000–307692, aus `uft_c64_track_bitrate()`), die
+Flussskalierung ist wie in den drei anderen Wandlern `deltas[f] * 1e-9`
+(MF-418), und verarbeitet wird mit `uft_pll_process_flux_mfm()` — dessen
+Algorithmus ist kodierungs-agnostisch (Lauflaengen), der Name also kein
+Beweis. Was genau den PLL bei GCR verstummen laesst, verlangt einen
+Schrittdebugger. Steht als OPEN_ITEMS **P0-15**.
+
+**(b) `HFE → ADF` meldete Misserfolg fuer eine korrekte Datei.**
+"0 Spuren gewandelt, 160 gescheitert" — und heraus kommt eine ADF von
+exakt 901120 Byte, die sich in **733 von 901120 Bytes (0,08 %)** von der
+Quelle unterscheidet. Der Pfad delegiert an
+`uftc_convert_hfe_to_adf_via_plugin()`, das die Zaehler nicht setzt. Ein
+Benutzer sieht "160 Spuren gescheitert" fuer eine Wandlung, die
+praktisch vollstaendig gelungen ist.
+
+Das ist die Gegenrichtung zu (a) und zu MF-522/528 — dort wurde Erfolg
+ohne Tat gemeldet, hier Misserfolg trotz Tat. Beides macht die Anzeige
+unbrauchbar; beides gehoert behoben. (b) steht ebenfalls in P0-15.
+
+**Die 0,08 % sind bemerkenswert.** ADF → HFE → ADF ist damit der
+aussichtsreichste Kandidat fuer einen weiteren belegten Eintrag: 733
+abweichende Bytes lassen sich benennen, und eine benannte Verlustliste
+ist genau das, was `UFT_RT_LOSSY_DOCUMENTED` verlangt.
+
+**Nicht gemessen:** `D64 → SCP`. Der Dispatcher fuehrt das als
+**zweistufige Kette** ueber G64 aus
+(`uft_format_convert_dispatch.c:259`); es gibt keinen eigenen Wandler.
+Die Kette im Test nachzubauen hiesse, den Produktionspfad nachzubauen
+statt ihn zu benutzen — der Fehler, der hier schon zweimal falsche Zahlen
+erzeugt hat (MF-494, MF-497). Ebenso `ADF → IMG`: steht in der Tabelle,
+hat aber keinen Wandler (UFT-A08 gibt dort ausdruecklich
+`UFT_ERR_NOT_IMPLEMENTED`).
+
+---
+
 ### RT-2 — die Spurlaenge kam aus einer festen Zahl statt aus dem Fluss (2026-08-23, MF-528) -> ✓ BEHOBEN
 
 **Correctness.** RT-1 (MF-527) hatte gemessen, dass der Rundlauf
