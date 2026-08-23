@@ -813,6 +813,10 @@ MF-103, MF-105, MF-107, MF-108 — Kandidaten für die Auffüllung nach S3-1.
   (löst das frühere Nebeneinander von PLANNED_APIS-Zählung,
   Skeleton-Audit und Stub-Guide als Steuerungs-Dokument ab)
 - `docs/M3_HAL_PLAN.md` — Detail-Fahrplan HAL-Wiring M3.1–M3.7
+- `docs/MAMMUT_PLAN.md` — 20-Repo-Vorschlag, gegen den Baum nachgemessen
+  (MF-493). Baustein 2.1 erledigt (MF-492); acht weitere hängen an zwei
+  fehlenden Vorbedingungen (Fundus, `src/vfs/`). §0 listet sieben
+  Vorschlags-Behauptungen, die die Nachmessung nicht bestätigt hat
 - `docs/DESIGN_PRINCIPLES.md` — die 7 Kernprinzipien (unverändert gültig)
 - `.claude/CONSULT_PROTOCOL.md` — Agenten-Zusammenarbeit
 
