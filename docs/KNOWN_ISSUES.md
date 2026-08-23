@@ -3938,6 +3938,60 @@ zweite braucht eine Bank-Sitzung mit echtem Laufwerk.
 
 ---
 
+### FUND-4 — die nächste Sitzung wusste nichts von der letzten (2026-08-23, MF-506) → ✓ BEHOBEN
+
+Wer eine Diskette zum zweiten Mal einlegt, tippte Kennung, Beschreibung,
+Notizen und Aufnahme-Rezept neu. Getippte Angaben, die jemand zum dritten
+Mal eingibt, weichen voneinander ab — und dann steht dieselbe Diskette
+unter zwei Beschreibungen im Archiv.
+
+`uft_fundus_recall()` holt die Angaben der **jüngsten** Aufnahme zu einer
+Kennung. Dazu kommen zwei Felder in den Aufnahme-Angaben: `state`
+(unspezifiziert / vollständig / abgebrochen) und `continues_seq`.
+
+**Abweichung vom Plan, ausdrücklich.** Der Plan sagt, unterbrochene
+Aufnahmen würden beim Fortsetzen „ergänzt statt neu nummeriert".
+Wörtlich hieße das: den bestehenden Eintrag ändern. Das geht nicht — der
+Fundus hängt an, er ersetzt nicht (FUND-1), und diese Zusicherung ist mehr
+wert als die Bequemlichkeit eines einzelnen Eintrags.
+
+„Ergänzt" heißt hier deshalb: die Fortsetzung ist ein **neuer** Eintrag,
+der auf den unterbrochenen **verweist**. Im Manifest steht danach die
+ganze Geschichte — Versuch 1 abgebrochen, Versuch 2 fortgesetzt — statt
+eines Eintrags, dem man nicht mehr ansieht, dass er einmal unvollständig
+war. Ein Test prüft, dass die alten Manifest-Bytes dabei unverändert
+bleiben.
+
+**Vier Entscheidungen, jede mit feuerndem Rotbeweis:**
+
+1. *Kennungen werden **genau** verglichen.* „DISK-1" ist nicht „DISK-10" —
+   ein Vergleich nach bloßem Vorkommen ließe eine Diskette die Notizen
+   einer anderen tragen.
+2. *Der jüngste Eintrag gewinnt.* Wer die Beschreibung zwischendurch
+   präzisiert hat, will die präzisere zurück — also weiterlesen statt beim
+   ersten Treffer abbrechen.
+3. *`UNSPECIFIED` ist bewusst 0.* Wäre „vollständig" der Standardwert,
+   trüge jede Aufnahme eine Aussage, die niemand gemacht hat. Das Feld
+   wird nur geschrieben, wenn jemand es behauptet.
+4. *Eine unbekannte Diskette erfindet nichts* — kein „unbekannt", keine
+   leeren Platzhalter, die später als „steht so im Archiv" gelesen werden.
+
+**Ein Fehler in bestehendem Code, den erst dieser Baustein sichtbar
+machte.** Der Feldleser aus FUND-1 übersprang beim Entmaskieren den
+Rückstrich und übernahm das nächste Zeichen unverändert — aus `\n` wurde
+ein `n`. Solange nur der Dateiname gelesen wurde, fiel das nicht auf
+(Dateinamen enthalten nichts Maskiertes). Sobald Freitext
+zurückgelesen wird, wäre es eine **stille Verfälschung**: der Bediener
+übernähme beim nächsten Mal einen Text, der nie so dastand. Der Leser
+entmaskiert jetzt richtig (`\n`, `\r`, `\t`, `\uXXXX`, `\"`, `\\`), und
+ein Test führt einen Text mit allen dreien durch den Rundlauf.
+
+**Verdrahtet und geprüft:** `tests/test_fundus_resume.c` (8 Tests),
+7 Rotbeweise feuern auf genau den benannten Tests, 237/237 ctest grün,
+qmake-Release baut und linkt.
+
+---
+
 ### FUND-3 — man fand vom Artefakt zur Kette, aber nicht zurück (2026-08-23, MF-505) → ✓ BEHOBEN
 
 MF-504 löste die Doppelung in **eine** Richtung: ein Artefakt zitiert

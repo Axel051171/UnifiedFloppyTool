@@ -73,6 +73,16 @@ typedef struct {
     unsigned next_seq;
 } uft_fundus_t;
 
+/** Wie vollstaendig eine Aufnahme ist (MF-506). */
+typedef enum {
+    /** Niemand hat etwas dazu gesagt. Bewusst 0. */
+    UFT_FUNDUS_STATE_UNSPECIFIED = 0,
+    /** Der Bediener erklaert die Aufnahme fuer vollstaendig. */
+    UFT_FUNDUS_STATE_COMPLETE,
+    /** Abgebrochen — die Daten sind da, aber unvollstaendig. */
+    UFT_FUNDUS_STATE_INTERRUPTED
+} uft_fundus_state_t;
+
 /**
  * Angaben zu einem Artefakt.
  *
@@ -87,6 +97,24 @@ typedef struct {
     const char *operator_id;       /**< wer die Aufnahme gemacht hat */
     const char *capture_protocol;  /**< nach welchem Rezept */
     const char *tool;              /**< Erzeuger samt Version */
+
+    /** Wie vollstaendig diese Aufnahme ist (MF-506).
+     *
+     *  @ref UFT_FUNDUS_STATE_UNSPECIFIED ist bewusst 0: eine genullte
+     *  Angabe behauptet nichts. Waere „vollstaendig" der Standardwert,
+     *  truege jede Aufnahme eine Aussage, die niemand gemacht hat. */
+    uft_fundus_state_t state;
+
+    /** Nummer der Aufnahme, die diese fortsetzt; 0 = keine (MF-506).
+     *
+     *  Der Plan wollte unterbrochene Aufnahmen „ergaenzen statt neu
+     *  nummerieren". Woertlich hiesse das, den bestehenden Eintrag zu
+     *  aendern — und der Fundus haengt an, er ersetzt nicht. „Ergaenzt"
+     *  heisst hier deshalb: ein NEUER Eintrag, der auf den alten
+     *  verweist. Im Manifest steht danach die ganze Geschichte statt
+     *  eines Eintrags, dem man nicht mehr ansieht, dass er einmal
+     *  unvollstaendig war. */
+    unsigned continues_seq;
 
     /** Kopfhash der Herkunftskette, hexadezimal (MF-504).
      *
@@ -155,6 +183,42 @@ bool uft_fundus_add(uft_fundus_t *f, const void *data, size_t size,
  *         Ergebnis — es steht in @p r.
  */
 bool uft_fundus_verify(const uft_fundus_t *f, uft_fundus_verify_t *r);
+
+/** Was die letzte Sitzung ueber diese Diskette wusste (MF-506). */
+typedef struct {
+    /** false = zu dieser Kennung steht nichts im Fundus. Dann sind alle
+     *  uebrigen Felder leer — es wird nichts erfunden. */
+    bool     found;
+    unsigned seq;              /**< Nummer des jüngsten Eintrags */
+    unsigned continues_seq;    /**< worauf er sich bezieht, 0 = nichts */
+    uft_fundus_state_t state;
+
+    char description[192];
+    char notes[384];
+    char capture_protocol[96];
+    char file[128];            /**< Dateiname des Artefakts */
+} uft_fundus_recall_t;
+
+/**
+ * @brief Die Angaben der letzten Aufnahme dieser Diskette holen.
+ *
+ * Damit muss beim Wiedereinlegen niemand Kennung, Beschreibung, Notizen
+ * und Rezept neu tippen. Getippte Angaben, die jemand zum dritten Mal
+ * eingibt, weichen voneinander ab — und dann steht dieselbe Diskette
+ * unter zwei Beschreibungen im Archiv.
+ *
+ * Zurueck kommt der **juengste** Eintrag zu dieser Kennung: wer die
+ * Beschreibung zwischendurch praezisiert hat, will die praezisere.
+ *
+ * Die Kennung wird **genau** verglichen. „DISK-1" ist nicht „DISK-10" —
+ * ein Vergleich nach blossem Vorkommen liesse eine Diskette die Notizen
+ * einer anderen tragen.
+ *
+ * @return false nur bei unbrauchbaren Argumenten. Eine unbekannte
+ *         Diskette ist kein Fehler, sondern `found == false`.
+ */
+bool uft_fundus_recall(const uft_fundus_t *f, const char *identifier,
+                       uft_fundus_recall_t *out);
 
 #ifdef __cplusplus
 }

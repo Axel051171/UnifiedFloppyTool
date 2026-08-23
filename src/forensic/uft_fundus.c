@@ -104,25 +104,72 @@ static bool json_field(char *buf, size_t cap, size_t *at,
 }
 
 /**
- * Aus einer Manifest-Zeile das Feld `file` holen.
+ * Ein Zeichenketten-Feld aus einer Manifest-Zeile holen — entmaskiert.
  *
  * Ein winziger Leser statt eines JSON-Parsers: das Manifest wird von
  * DIESEM Code geschrieben, die Feldform ist bekannt, und eine
  * Fremdbibliothek dafuer waere eine Abhaengigkeit fuer eine Zeile.
  * Fremde Manifeste zu lesen ist nicht der Zweck.
+ *
+ * **Entmaskiert richtig.** Die erste Fassung uebersprang den Rueckstrich
+ * und uebernahm das naechste Zeichen unveraendert — aus `\n` wurde damit
+ * ein `n`. Solange nur der Dateiname gelesen wurde, fiel das nicht auf
+ * (Dateinamen enthalten nichts Maskiertes); sobald Freitext
+ * zurueckgelesen wird, waere es eine stille Verfaelschung: der Bediener
+ * uebernaehme beim naechsten Mal einen Text, der nie so dastand.
  */
-static bool line_file_field(const char *line, char *out, size_t cap)
+static bool line_str_field(const char *line, const char *key,
+                           char *out, size_t cap)
 {
-    const char *k = strstr(line, "\"file\":\"");
+    if (!line || !key || !out || cap == 0) return false;
+    out[0] = '\0';
+
+    char pat[64];
+    if ((size_t)snprintf(pat, sizeof(pat), "\"%s\":\"", key) >= sizeof(pat))
+        return false;
+    const char *k = strstr(line, pat);
     if (!k) return false;
-    k += 8;
+    k += strlen(pat);
+
     size_t n = 0;
     while (*k && *k != '"' && n + 1 < cap) {
-        if (*k == '\\' && k[1]) k++;      /* maskiertes Zeichen uebernehmen */
-        out[n++] = *k++;
+        if (*k == '\\' && k[1]) {
+            k++;
+            switch (*k) {
+            case 'n': out[n++] = '\n'; break;
+            case 'r': out[n++] = '\r'; break;
+            case 't': out[n++] = '\t'; break;
+            case 'u': {
+                /* Nur die Steuerzeichen, die json_str() so schreibt. */
+                unsigned v = 0;
+                if (k[1] && k[2] && k[3] && k[4]) {
+                    char hx[5] = { k[1], k[2], k[3], k[4], 0 };
+                    v = (unsigned)strtoul(hx, NULL, 16);
+                    k += 4;
+                }
+                out[n++] = (char)(v & 0xFF);
+                break;
+            }
+            default: out[n++] = *k; break;   /* " und \\ */
+            }
+            k++;
+        } else {
+            out[n++] = *k++;
+        }
     }
     out[n] = '\0';
-    return n > 0;
+    return true;
+}
+
+/** Eine Zahl aus einer Manifest-Zeile holen; 0 wenn nicht da. */
+static unsigned line_uint_field(const char *line, const char *key)
+{
+    char pat[64];
+    if ((size_t)snprintf(pat, sizeof(pat), "\"%s\":", key) >= sizeof(pat))
+        return 0;
+    const char *k = strstr(line, pat);
+    if (!k) return 0;
+    return (unsigned)strtoul(k + strlen(pat), NULL, 10);
 }
 
 /* ── Oeffnen ────────────────────────────────────────────────────────── */
@@ -256,6 +303,22 @@ bool uft_fundus_add(uft_fundus_t *f, const void *data, size_t size,
          * Manifests bleibt — zwei Schreiber waeren zwei Formate. */
         okf = okf && json_field(line, sizeof(line), &at, "chain_hash",
                                 meta->chain_hash);
+
+        /* Der Zustand wird nur geschrieben, wenn jemand ihn behauptet
+         * hat — UNSPECIFIED ist keine Aussage (MF-506). */
+        if (meta->state == UFT_FUNDUS_STATE_COMPLETE)
+            okf = okf && json_field(line, sizeof(line), &at, "state",
+                                    "complete");
+        else if (meta->state == UFT_FUNDUS_STATE_INTERRUPTED)
+            okf = okf && json_field(line, sizeof(line), &at, "state",
+                                    "interrupted");
+
+        if (meta->continues_seq > 0 && at + 24 < sizeof(line)) {
+            int k = snprintf(line + at, sizeof(line) - at,
+                             ",\"continues\":%u", meta->continues_seq);
+            if (k < 0 || (size_t)k >= sizeof(line) - at) okf = false;
+            else at += (size_t)k;
+        }
     }
     if (!okf || at + 3 >= sizeof(line)) { remove(side); remove(path); return false; }
     line[at++] = '}';
@@ -290,7 +353,8 @@ bool uft_fundus_verify(const uft_fundus_t *f, uft_fundus_verify_t *r)
     char line[FUNDUS_LINE_MAX];
     while (fgets(line, sizeof(line), m)) {
         char name[UFT_FUNDUS_PATH_MAX];
-        if (!line_file_field(line, name, sizeof(name))) continue;
+        if (!line_str_field(line, "file", name, sizeof(name)) || !name[0])
+            continue;
 
         const char *k = strstr(line, "\"sha256\":\"");
         if (!k) continue;
@@ -333,6 +397,53 @@ bool uft_fundus_verify(const uft_fundus_t *f, uft_fundus_verify_t *r)
                 snprintf(r->first_bad, sizeof(r->first_bad), "%s", name);
         } else {
             r->ok++;
+        }
+    }
+    fclose(m);
+    return true;
+}
+
+/* ── Wiedererkennung (MF-506) ───────────────────────────────────────── */
+
+bool uft_fundus_recall(const uft_fundus_t *f, const char *identifier,
+                       uft_fundus_recall_t *out)
+{
+    if (!f || !f->manifest[0] || !identifier || !*identifier || !out)
+        return false;
+    memset(out, 0, sizeof(*out));
+
+    FILE *m = fopen(f->manifest, "rb");
+    if (!m) return true;            /* leerer Fundus ist kein Fehler */
+
+    char line[FUNDUS_LINE_MAX];
+    while (fgets(line, sizeof(line), m)) {
+        char id[192];
+        if (!line_str_field(line, "identifier", id, sizeof(id))) continue;
+        /* GENAU vergleichen: "DISK-1" ist nicht "DISK-10". Ein Vergleich
+         * nach blossem Vorkommen liesse eine Diskette die Notizen einer
+         * anderen tragen. */
+        if (strcmp(id, identifier) != 0) continue;
+
+        /* Weiterlesen statt abbrechen: gesucht ist der JUENGSTE Eintrag,
+         * und angehaengt wird am Ende. Wer die Beschreibung zwischendurch
+         * praezisiert hat, will die praezisere zurueck. */
+        out->found = true;
+        out->seq           = line_uint_field(line, "seq");
+        out->continues_seq = line_uint_field(line, "continues");
+        line_str_field(line, "description", out->description,
+                       sizeof(out->description));
+        line_str_field(line, "notes", out->notes, sizeof(out->notes));
+        line_str_field(line, "capture_protocol", out->capture_protocol,
+                       sizeof(out->capture_protocol));
+        line_str_field(line, "file", out->file, sizeof(out->file));
+
+        char st[32];
+        out->state = UFT_FUNDUS_STATE_UNSPECIFIED;
+        if (line_str_field(line, "state", st, sizeof(st))) {
+            if (strcmp(st, "complete") == 0)
+                out->state = UFT_FUNDUS_STATE_COMPLETE;
+            else if (strcmp(st, "interrupted") == 0)
+                out->state = UFT_FUNDUS_STATE_INTERRUPTED;
         }
     }
     fclose(m);

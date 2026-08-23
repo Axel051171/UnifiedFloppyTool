@@ -544,6 +544,11 @@ foreach(test_source ${TEST_SOURCES})
         target_include_directories(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/tests/flux_gen/amigados
             ${CMAKE_SOURCE_DIR}/include/uft/flux)
+    elseif(${test_name} STREQUAL "test_fundus_resume")
+        # MF-506: die naechste Sitzung weiss, was die letzte wusste
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/forensic/uft_fundus.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_sha256.c)
     elseif(${test_name} STREQUAL "test_fundus_roundtrip")
         # MF-505: die Kette weiss, wohin ihr Ergebnis ging
         target_sources(${test_name} PRIVATE
