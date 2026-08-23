@@ -693,6 +693,18 @@ static uft_error_t g64_read_half_track(uft_disk_t* disk, int halftrack_index,
 
 static uft_error_t g64_write_track(uft_disk_t* disk, int cylinder, int head,
                                     const uft_track_t* track) {
+    /* MF-529: negative Koordinaten abweisen, BEVOR mit ihnen
+     * gerechnet oder indiziert wird. MF-519 hat das fuer
+     * read_track getan und write_track uebersehen. Das ASan-Tor
+     * der CI fand die Folge an d80_write_track: die Schranke
+     * `cylinder >= D80_TRACKS` laesst -1 durch, und d80_spt[-1] liest
+     * vor der Tabelle.
+     *
+     * Beim SCHREIBEN wiegt das schwerer als beim Lesen: ein
+     * falscher Index liefert nicht nur falsche Daten, er bestimmt,
+     * WOHIN geschrieben wird. */
+    if (cylinder < 0 || head < 0) return UFT_ERROR_INVALID_PARAM;
+
     if (!disk || !track) return UFT_ERROR_NULL_POINTER;
     if (disk->read_only) return UFT_ERROR_DISK_PROTECTED;
     
