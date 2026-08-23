@@ -209,6 +209,21 @@ trägt `SPDX: MIT`, dokumentiert sich aber als „nach a8rawconv
   Baustein 2.1 vollständig, samt der drei Korrekturen und der offenen
   Punkte
 - [`VERIFICATION_PLAN.md`](VERIFICATION_PLAN.md) — die EINFRIER-REGEL
-  (MF-363) gilt weiter: neue Format-/Decoder-Bausteine dieses Plans
-  (1.1, 1.2, 1.4 `.tc`) sind Format-Layer und damit
-  moratoriumspflichtig; Rettungsalgorithmen (2.2, 2.3) sind es nicht
+  (MF-363), **präzisiert durch MF-498**
+
+  Die frühere Fassung dieser Zeile behauptete, 1.1/1.2/1.4 seien
+  moratoriumspflichtig, „Rettungsalgorithmen (2.2, 2.3)" dagegen nicht.
+  Das war mit sich selbst nicht konsistent: 2.3 Timeline-Slices ist
+  genauso neuer Decoder-Layer-Code wie ein Parser. Unter der präzisierten
+  Regel entfällt die Unterscheidung nach *Schicht* — es zählt, ob der
+  Baustein **oracle- oder rotbeweis-zuerst** baubar ist:
+
+  | Baustein | Referenz, gegen die gebaut wird |
+  |---|---|
+  | 1.1 diskdefs | `cpmls`-Roundtrip als Oracle, Rotbeweise vor dem Parser |
+  | 1.4 `.tc` | SAMdisk-Quelle im eigenen Baum (`src/samdisk/`) |
+  | 2.3 Timeline | Scheiben-Invarianten als Rotbeweise, vor dem Code |
+  | 1.2 AMSDOS | `sector-cpc` — **nicht im Baum**, also weiter blockiert |
+
+  Damit sind 1.1, 1.4 und 2.3 zulässig, 1.2 bleibt es nicht — nicht wegen
+  der Schicht, sondern weil die Referenz fehlt.

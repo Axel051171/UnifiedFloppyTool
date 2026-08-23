@@ -29,19 +29,35 @@ Stand:   P0 Foundation MF-150, P1.17 V1-Hierarchie weg MF-169,
    - Eine geschützte Datei (s.o.) müsste geändert werden → STOPP
 4. **Commit-Konvention:** Conventional Commits + MF-NNN. Body nennt
    welche Tasks erfüllt wurden.
-5. **EINFRIER-REGEL (MF-363, beschlossen 2026-08-16 — überstimmt jedes
-   Goal):** Kein neuer ungeprüfter Code im Format- oder Decoder-Layer,
-   egal unter welchem Namen (neues Format-Plugin, neue Format-Variante,
-   neuer Decoder, neue Registrierung). Hintergrund: 5 Parser wurden gegen
-   erfundene Specs gebaut (FMT-2/3/10/11/12) — Ursache war Code-Produktion
-   schneller als Verifikation. Es gilt ein **Moratorium**, bis (a) das
-   Verifikations-Label-Skript (T1/T1b/T2/T3 pro Format) läuft und (b) die
-   ersten 5 Formate (ATR, D64, ADF, FDI, NFD-r0) auf T1/T1b gehoben sind.
-   Danach gilt 1:2 — ein neues Format kostet zwei Hebungen. Erlaubt bleiben:
-   Bugfixes an Bestehendem, Verifikations-/Test-/Korpus-Arbeit,
-   Spec-Korrekturen gegen autoritative Quellen. Ein Goal wie „implementiere
-   alle offenen Formate" ist unter dieser Regel als „hebe bestehende Formate
-   auf T1/T1b" zu lesen.
+5. **EINFRIER-REGEL (MF-363, beschlossen 2026-08-16; präzisiert MF-498,
+   2026-08-23 — überstimmt jedes Goal):** Kein neuer **ungeprüfter** Code
+   im Format- oder Decoder-Layer, egal unter welchem Namen (neues
+   Format-Plugin, neue Format-Variante, neuer Decoder, neue Registrierung).
+   Hintergrund: 5 Parser wurden gegen erfundene Specs gebaut
+   (FMT-2/3/10/11/12) — Ursache war Code-Produktion schneller als
+   Verifikation.
+
+   **Was „geprüft" heißt, steht an EINER Stelle:**
+   [`docs/VERIFICATION_PLAN.md` §Einfrier-Regel](../docs/VERIFICATION_PLAN.md).
+   Kurzfassung — alle drei Bedingungen, sonst gilt der Code als ungeprüft:
+   (a) das Verhalten stammt aus einer **benannten** Referenz (Oracle, Spec,
+   reale Aufnahme) oder aus einer Messung am belegten Pfad, die **vor** dem
+   Code steht (Rotbeweis zuerst); (b) **jede** Zahl in Commit, Header und
+   `KNOWN_ISSUES.md` ist gemessen, Ungemessenes steht als „nicht belegt"
+   da; (c) die Referenz steht **im Header**.
+
+   Nicht ausreichend: „ich habe es getestet" ohne benannte Referenz; ein
+   Rotbeweis, der nicht feuert; ein Messaufbau, der den Produktionspfad
+   nachbaut statt ihn zu benutzen.
+
+   **Rückstands-Regel unverändert:** Moratorium für neue Format-Plugins,
+   bis (a) das Label-Skript (T1/T1b/T2/T3 pro Format) läuft und (b) die
+   ersten 5 Formate (ATR, D64, ADF, FDI, NFD-r0) auf T1/T1b gehoben sind;
+   danach 1:2 — ein neues Format kostet zwei Hebungen. Ein Goal wie
+   „implementiere alle offenen Formate" ist als „hebe bestehende Formate
+   auf T1/T1b" zu lesen. Erlaubt bleiben ohnehin: Bugfixes an Bestehendem,
+   Verifikations-/Test-/Korpus-Arbeit, Spec-Korrekturen gegen autoritative
+   Quellen.
 
 ---
 

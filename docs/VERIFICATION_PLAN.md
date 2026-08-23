@@ -62,6 +62,56 @@ welchem Namen** (neues Plugin, neue Variante, neuer Decoder, neue
 Registrierung). Enforcement: `.claude/CLAUDE.md` Daueraufgabe 5 (Agenten) +
 geplantes `check_consistency.py`-Gate (Phase 1).
 
+### Was „geprüft" heißt — operational (MF-498, 2026-08-23)
+
+Der Zweck von MF-363 war nie „kein neuer Code", sondern **keine Parser
+gegen erfundene Specs**. Die Formulierung oben ließ offen, was „geprüft"
+bedeutet, und war damit in beide Richtungen unbrauchbar: sie blockierte
+messbar belegte Arbeit, und sie hätte eine erfundene Spec mit grünen
+synthetischen Tests durchgelassen — genau das, was die fünf Fabrikationen
+hatten.
+
+Neuer Code im Format- oder Decoder-Layer ist zulässig, wenn **alle drei**
+Bedingungen erfüllt sind:
+
+**(a) Gemessene Referenz.** Das Verhalten stammt aus einer *benannten*
+äußeren Quelle — ein Oracle-Werkzeug, eine autoritative Spec, eine reale
+Aufnahme — **oder** aus einer Messung am eigenen bereits belegten Pfad,
+die *vor* dem Code steht (Rotbeweis zuerst).
+
+**(b) Jede Behauptung im Commit ist gemessen.** Zahlen in Commit-Text,
+Header und `KNOWN_ISSUES.md` sind Messwerte, keine Schätzungen. Was nicht
+gemessen wurde, steht ausdrücklich als *nicht belegt* da.
+
+**(c) Die Referenz steht im Header.** Wer die Datei in zwei Jahren öffnet,
+findet dort, woher das Verhalten stammt: Werkzeug samt Version, Spec samt
+Fundstelle, oder die Messung samt Aufbau.
+
+**Was das ausdrücklich NICHT erfüllt:**
+
+- „Ich habe es getestet" ohne benannte Referenz. Synthetische
+  Selbstkonsistenz beweist Selbstkonsistenz — die fabrizierten Parser
+  hatten grüne Tests.
+- Ein Rotbeweis, der **nicht feuert**. Er belegt nichts; er verdeckt eine
+  Lücke, die wie Evidenz aussieht (MF-497).
+- Ein Messaufbau, der den Produktionspfad **nachbaut** statt ihn zu
+  benutzen. Er misst eine andere Verdrahtung — in dieser Codebasis zweimal
+  passiert (MF-494, MF-497), beide Male mit falschem Ergebnis in einem
+  bereits veröffentlichten Dokument.
+
+**Unverändert bleibt die Rückstands-Regel.** Ein neues Format-*Plugin*
+kostet weiterhin zwei Hebungen auf T1/T1b (1:2, siehe unten). Diese
+Präzisierung sagt, welcher Code überhaupt zulässig ist — nicht, dass der
+Rückstand egal wäre.
+
+**Vorgeschichte:** Die Regel wurde in dieser Form nötig, weil drei
+aufeinanderfolgende Decoder-Bausteine (MF-492/495/496) unter der strengen
+Lesart blockiert gewesen wären, obwohl jede ihrer Behauptungen gemessen
+und durch feuernde Rotbeweise belegt war — einschließlich zweier
+Selbstkorrekturen an eigenen, zu großzügig formulierten Zahlen. Eine Regel,
+die diese Arbeit verbietet und eine erfundene Spec durchlässt, misst das
+Falsche.
+
 - **Moratorium** bis: (a) Label-Skript läuft, (b) die ersten 5 Formate
   (ATR, D64, ADF, FDI, NFD-r0) auf T1/T1b gehoben sind.
 - Danach **1:2**: ein neues Format kostet zwei Hebungen (baut den Rückstand

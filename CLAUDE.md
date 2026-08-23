@@ -39,10 +39,13 @@ Unterstützt 6 Hardware-Controller (HAL teilweise wired — siehe pro Eintrag):
 > Seit MF-447 registriert `main()` sie beim Start — vorher war die Registry
 > zur Laufzeit leer und `uft_disk_open()` lieferte für jede Datei NULL.
 
-> **EINFRIER-REGEL (MF-363):** Kein neuer ungeprüfter Code im Format-/
-> Decoder-Layer. Moratorium bis Label-Skript (T1/T1b/T2/T3) läuft und
-> ATR/D64/ADF/FDI/NFD-r0 auf T1/T1b gehoben sind; danach 1:2 (ein neues
-> Format = zwei Hebungen). Details: `.claude/CLAUDE.md` Daueraufgabe 5.
+> **EINFRIER-REGEL (MF-363, präzisiert MF-498):** Kein neuer **ungeprüfter**
+> Code im Format-/Decoder-Layer. „Geprüft" heißt: benannte Referenz oder
+> Rotbeweis-zuerst, jede Zahl im Commit gemessen, Referenz im Header — alle
+> drei. Moratorium für neue Format-Plugins bis Label-Skript (T1/T1b/T2/T3)
+> läuft und ATR/D64/ADF/FDI/NFD-r0 auf T1/T1b gehoben sind; danach 1:2 (ein
+> neues Format = zwei Hebungen). Verbindliche Fassung:
+> [`docs/VERIFICATION_PLAN.md` §Einfrier-Regel](docs/VERIFICATION_PLAN.md).
 Liest/schreibt Disk-Images von praktisch jedem 8-Bit- und 16-Bit-Computer:
 - **Commodore:** D64, D71, D81, G64, T64, CRT, PRG, P00
 - **Apple:** DO, PO, WOZ (v1/v2/2.1), A2R, MOOF, 2MG, NIB, DC42

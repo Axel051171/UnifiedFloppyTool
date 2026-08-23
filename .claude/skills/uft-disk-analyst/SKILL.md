@@ -91,12 +91,19 @@ Fixing stays a human decision with the machine laying out the evidence.
 
 ### The freeze rule applies here too
 
-`.claude/CLAUDE.md` Daueraufgabe 5 (**EINFRIER-REGEL, MF-363**): no new
-unverified code in the format or decoder layer. This skill is squarely on the
-allowed side — verification, corpus and test work — and **raising a format from
-T3 to T1/T1b is exactly the currency the moratorium is denominated in.** What is
-*not* allowed is reaching for a new parser or a new format variant because the
-analysis turned up an unsupported file. Bugfixes to existing parsers are allowed.
+`.claude/CLAUDE.md` Daueraufgabe 5 (**EINFRIER-REGEL, MF-363**, precised by
+MF-498): no new **unverified** code in the format or decoder layer. What
+"verified" means is defined operationally in one place —
+[`docs/VERIFICATION_PLAN.md` §Einfrier-Regel](../../../docs/VERIFICATION_PLAN.md):
+a *named* reference or red-proof-first, every number in the commit measured,
+the reference stated in the header. All three, or it counts as unverified.
+
+This skill is squarely on the allowed side — verification, corpus and test work
+— and **raising a format from T3 to T1/T1b is exactly the currency the
+moratorium is denominated in.** What is *not* allowed is reaching for a new
+parser or a new format variant because the analysis turned up an unsupported
+file, without a named reference to build it against. Bugfixes to existing
+parsers are allowed.
 
 ## Web research: hypothesis, never truth
 
