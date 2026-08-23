@@ -76,9 +76,17 @@ haben, bleibt davon einer:
   zweite Durchlauf gar nicht.
 - Eine Zeile läuft, ändert aber nichts.
 
-Die Sync-Suche selbst bleibt davon unberührt (12 Tests, gegen den belegten
-Dekoder abgeglichen). Ihr Wert für die **Datenrettung** entsteht erst als
-Startwert für 2.2 Dewarp — siehe dort.
+**Und die Korrektur war selbst zu streng (MF-497).** Sie maß nur rohe
+Intervallfelder ohne Index-Marken — dort greift die Profil-Stufe (MF-471)
+gar nicht. Auf dem echten Wandlungspfad, wo sie greift und um den Faktor
+zwei danebenliegt, rettet der zweite Durchlauf **22 von 22 Sektoren, alle
+heil**; ohne ihn sind es 0. Das ist Datenrettung, und die erste Korrektur
+hat sie übersehen, weil ihr Messaufbau den Pfad nicht enthielt.
+
+Arbeitsteilung, gemessen: Kandidat 2 greift bei **gleichmäßigem** Strom mit
+falsch abgeleitetem Takt (dort steigt die Entzerrung wegen Spanne < 1,02
+aus), Kandidat 3 bei **ungleichmäßiger** Geschwindigkeit (dort trifft kein
+einzelner Taktwert beide Abschnitte). Keiner ersetzt den anderen.
 
 ---
 

@@ -4139,6 +4139,47 @@ Der Nutzen für die Datenrettung kommt erst mit der Dewarp-Stufe, die auf
 dieser Messung aufsetzt (Mammut 2.2, `docs/MAMMUT_PLAN.md`): auf der
 Zwei-Tempo-Spur 7 → 10 heile Sektoren.
 
+> **Nachtrag 2026-08-23 (MF-497) — die Korrektur von MF-494 war selbst zu
+> streng.** Sie sagte, vom zweiten Durchlauf bleibe „genau eine Zeile, und
+> dort werden Sektoren gefunden, nicht gerettet". Das stimmte für die dort
+> vermessenen Spuren — und die waren alle vom selben Zuschnitt: rohe
+> Intervallfelder ohne Index-Marken. Damit greift die zweite Stufe der
+> Taktwahl (Medienprofil + gemessene Umdrehung, MF-471) gar nicht, und das
+> Histogramm trifft es ohnehin.
+>
+> Der Wandlungspfad ist anders gebaut: er setzt `media = UFT_MEDIA_AMIGA_DD`
+> und liefert echte Index-Marken, also leitet Stufe 2 die Zellendauer aus
+> der Drehzahl ab — und liegt um den Faktor zwei daneben, wenn die Diskette
+> dichter beschrieben wurde als das Profil annimmt. Gemessen an genau
+> diesem Fall (`a_stream_far_off_the_profile_needs_no_nudge_any_more`, 1000
+> statt 2000 ns je Zelle):
+>
+> | | Sektoren |
+> |---|---|
+> | mit zweitem Durchlauf | **22 von 22, alle heil** |
+> | ohne | **0** |
+>
+> Das ist Datenrettung, nicht bloß Fund — eine ganze Diskette. Die
+> Korrektur MF-494 hat sie übersehen, weil ihr Messaufbau den Pfad nicht
+> enthielt, auf dem sie stattfindet.
+>
+> **Arbeitsteilung, jetzt gemessen statt vermutet:**
+>
+> | Kandidat | greift bei | Gegenstück steigt aus, weil |
+> |---|---|---|
+> | 2 — gemessene Zellendauer | **gleichmäßigem** Strom mit falsch abgeleitetem Takt | Entzerrung findet Spanne < 1,02 und tritt nicht an |
+> | 3 — entzerrter Strom | **ungleichmäßiger** Geschwindigkeit | ein einzelner Taktwert kann beide Abschnitte nicht treffen |
+>
+> Keiner der beiden ersetzt den anderen. Belegt durch Abschalten: ohne
+> Kandidat 2 fällt der Wandlungstest von 22 auf 0 Sektoren, während alle
+> Szenario-Messungen unverändert bleiben; ohne Kandidat 3 bleibt der
+> Wandlungstest grün und die Zwei-Tempo-Spur verliert zwei heile Sektoren.
+>
+> Lehre für die Messung selbst: ein Harness, das den Produktionspfad
+> nachbaut statt ihn zu benutzen, misst eine andere Verdrahtung. Beide
+> Korrekturen — die zu großzügige Erstfassung und die zu strenge
+> Zweitfassung — stammen aus derselben Ursache.
+
 **Drei Korrekturen, die erst die Tests erzwungen haben** — jede eine, die
 ohne Gegenprobe still danebengegangen wäre:
 
