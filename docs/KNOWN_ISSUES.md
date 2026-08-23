@@ -3938,6 +3938,72 @@ zweite braucht eine Bank-Sitzung mit echtem Laufwerk.
 
 ---
 
+### FUND-1 — Aufnahmen hatten keinen Ort, nur Dateinamen (2026-08-23, MF-503) → ✓ ANGELEGT
+
+Eine Diskette wird selten einmal gelesen. Man liest sie, dreht sie um,
+putzt sie, liest sie wieder — und am Ende soll nachvollziehbar sein, welche
+Aufnahme wann unter welchen Bedingungen entstand. Ohne einen Ort dafür
+landet jede Aufnahme als Datei mit selbstgewähltem Namen irgendwo, und die
+Umstände stehen bestenfalls im Gedächtnis.
+
+`src/forensic/uft_fundus.c` ist dieser Ort: ein Verzeichnis, in das
+Artefakte **angehängt** werden, nie ersetzt.
+
+**Was der Fundus zusichert** — jede Zusicherung hat einen Test und einen
+feuernden Rotbeweis:
+
+| Zusicherung | warum sie nötig ist |
+|---|---|
+| angehängt, nie ersetzt | ein Archiv, in dem eine spätere Aufnahme eine frühere anfassen kann, ist ein Arbeitsverzeichnis |
+| Manifest wächst nur am Ende | deshalb **eine Zeile je Eintrag (JSONL)**, kein JSON-Array: ein Array ließe sich nicht anhängen, ohne die Datei neu zu schreiben |
+| Nummern nie wiederverwendet | die Nummern führt das **Manifest**, nicht das Verzeichnis — wer von außen löscht, gibt keine Nummer frei |
+| ohne UFT prüfbar | Prüfsummen-Sidecar im Format von `sha256sum` |
+| Beschädigung wird **benannt** | ein Bericht, der nur eine Zahl nennt, zwingt bei tausend Aufnahmen zum Suchen |
+| fehlend ≠ beschädigt | zwei Befunde mit zwei Abhilfen: eine fehlende Datei sucht man, eine verfälschte liest man neu ein |
+| keine erfundenen Angaben | „unbekannter Bediener" ist eine andere Aussage als „Bediener: unbekannt" |
+
+**Extern belegt, nicht behauptet.** Die Zusicherung „ohne UFT prüfbar"
+lässt sich nicht mit UFT belegen. Ein erzeugter Fundus wurde deshalb mit
+GNU coreutils `sha256sum -c` geprüft:
+
+```
+cap_0001.scp: OK
+cap_0002.scp: OK
+```
+
+und das Manifest mit Pythons `json`-Modul als gültiges JSONL gelesen,
+einschließlich eines Freitextfelds mit Anführungszeichen und Zeilenumbruch.
+Das sind zwei **benannte** Referenzen im Sinne von MF-498(a).
+
+**Abweichung vom Plan, begründet.** Der Plan nennt SHA-512-Sidecars. Hier
+steht SHA-256: der Baum hat `uft_sha256.h`, und Provenance-Kette wie
+Korpus-Manifest rechnen bereits damit. SHA-512 wäre eine dritte
+Hash-Konvention in einem Projekt und zugleich neuer, ungeprüfter
+Kryptocode — unter der Einfrier-Regel bräuchte er eine benannte Referenz
+(NIST-Testvektoren). `sha256sum -c` ist genauso Bordmittel wie
+`sha512sum -c`.
+
+**Ein Testfehler, der erst der Rotbeweis fand.** Die erste Fassung der
+Tests meldete „auch nach Wiederherstellung rot". Ursache war nicht der
+Code: die Aufräumroutine benutzte unter Windows `rmdir` mit
+**Vorwärts**-Schrägstrichen und tat stillschweigend nichts, und weil
+`rand()` ungesät immer dieselbe Folge liefert, fand der nächste Lauf die
+Verzeichnisse des vorigen vor. Die Tests hingen damit von ihrer eigenen
+Aufräumroutine ab. Sie räumen jetzt **vorher** auf — ein Test, der nur mit
+sauberer Umgebung besteht, prüft die Umgebung mit.
+
+**Was hier NICHT drin ist.** Sitzungs-Fortsetzung („Metadaten der letzten
+Sitzung laden"), die Teilaufnahme-Karte nach ddrescue-Vorbild und die
+Mining-Schleife. Der Fundus ist ihre Voraussetzung, nicht ihre Umsetzung.
+Ebenso offen: die Verbindung zur Provenance-Kette
+(`uft_provenance.h`) — beide führen Herkunft, bisher nebeneinander.
+
+**Verdrahtet und geprüft:** `tests/test_fundus.c` (11 Tests), 9 Rotbeweise
+feuern auf genau den benannten Tests, 234/234 ctest grün, qmake-Release
+baut und linkt.
+
+---
+
 ### FLUX-17 — der Decoder wusste, WO der Sektor lag, und niemand fragte (2026-08-23, MF-501) → ✓ BEHOBEN
 
 `flux_decoded_sector_t` trägt seit jeher `id_position` und

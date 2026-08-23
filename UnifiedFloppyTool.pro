@@ -314,6 +314,7 @@ SOURCES += \
     src/gui/ProtectionAnalysisWidget.cpp \
     src/gui/uft_sector_editor.cpp \
     src/flux/uft_flux_histogram.c \
+    src/forensic/uft_fundus.c \
     src/flux/uft_decode_timeline.c \
     src/flux/uft_dewarp.c \
     src/flux/uft_flux_sync_search.c \

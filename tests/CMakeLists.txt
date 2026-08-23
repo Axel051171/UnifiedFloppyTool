@@ -544,6 +544,11 @@ foreach(test_source ${TEST_SOURCES})
         target_include_directories(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/tests/flux_gen/amigados
             ${CMAKE_SOURCE_DIR}/include/uft/flux)
+    elseif(${test_name} STREQUAL "test_fundus")
+        # MF-503: anhaengender Aufnahme-Speicher
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/forensic/uft_fundus.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_sha256.c)
     elseif(${test_name} STREQUAL "test_decode_timeline")
         # MF-501: Scheibenkarte einer Dekodierung
         target_sources(${test_name} PRIVATE
