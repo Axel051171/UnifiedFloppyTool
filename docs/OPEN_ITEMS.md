@@ -17,7 +17,7 @@ stehen.
 
 | | |
 |---|---|
-| Tests | **244/244 grün** |
+| Tests | **245/245 grün** |
 | Skelett-Header | **0** |
 | Konsistenz-Tore | **25 Kategorien, 0** |
 | Fuzz ueber `uft_disk_open()` | 431 Eingaben, **0 Abstürze** (nach 7 Korrekturen) — **103 von 137** Plugins erreicht, 34 nie |
@@ -74,6 +74,7 @@ benutzen.
 | P0-11 | **Leck-Rueckstand jetzt sichtbar, nicht behoben** — LeakSanitizer meldet im Volllauf Lecks bis **8 132 856 Byte in 321 Allokationen** je Test. Das scharfe Tor laeuft deshalb mit `detect_leaks=0` | **offen**, gemessen ab MF-517 |
 | P0-12 | **„44 Konvertierungspfade“ beschreibt eine Tabelle, keine Faehigkeit** — angeboten werden **8** (2 verlustfrei, 6 mit Zustimmung); 33 weist das Preflight-Tor als UNGEPRUEFT ab, 3 als unmoeglich. Die Abweisung ist Absicht und richtig; die Zusage war es nicht | ✅ **Zusagen korrigiert (MF-526)**, 33 Hebungen offen |
 | P0-13 | **Zwei Speicherfehler im Wandlungspfad** — die HFE-Spurtabelle ohne jede Schranke, und `lut[].length` (Gesamtlaenge beider Seiten) dreimal als Laenge je Seite verwendet: Absturz auf einer **gueltigen** Datei, 25080 Byte hinter dem Dateiende | ✅ **behoben (MF-526)** |
+| P0-14 | **Die einzige Zusage ohne Zustimmung war unbelegt — und sie ist falsch.** `SCP<->HFE` stand als LOSSLESS; der jetzt existierende Bit-Identitaets-Test misst 25336 → 6400 Byte je Spur. Herabgestuft auf LOSSY_DOCUMENTED. **Folge: es gibt keine Wandlung mehr, die ohne Zustimmung laeuft** | ✅ **korrigiert (MF-527)**; offen: wo genau der Verlust entsteht |
 | P0-4 | **POL-1: das Schreib-Sicherheitstor hat keinen Aufrufer.** Ein Tor, das nie läuft, ist eine Sicherheitszusage, die niemand einlöst | **offen** (braucht Hardware-Sitzung) |
 | P0-5 | **LIC-1:** `uft_multiread_pipeline.c` trägt `SPDX: MIT`, dokumentiert sich aber als Nachbau von a8rawconvs `sift_sectors` (GPLv2+) | **offen** (Entscheidung des Eigentümers) |
 

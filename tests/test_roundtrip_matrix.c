@@ -47,9 +47,42 @@ TEST(stringify_never_null) {
     ASSERT(uft_roundtrip_status_short((uft_roundtrip_status_t)42) != NULL);
 }
 
-TEST(known_ll_scp_hfe) {
-    ASSERT(uft_roundtrip_status(UFT_FORMAT_SCP, UFT_FORMAT_HFE) == UFT_RT_LOSSLESS);
-    ASSERT(uft_roundtrip_status(UFT_FORMAT_HFE, UFT_FORMAT_SCP) == UFT_RT_LOSSLESS);
+/* MF-527: hiess `known_ll_scp_hfe` und zurrte UFT_RT_LOSSLESS fest.
+ *
+ * Die Regel im Kopf von src/core/uft_roundtrip.c verlangt fuer LL "a
+ * round-trip test that proves byte-identity". Es gab keinen. Jetzt gibt es
+ * ihn — tests/test_convert_roundtrip_lossless.c — und er misst an
+ * gw_amigados.hfe:
+ *
+ *     HFE (2049024 B) -> SCP -> HFE (1025024 B)
+ *     Spur 0: 25336 -> 6400 Byte, 99,9 % der gemeinsamen Bytes verschieden
+ *
+ * Bit-Identitaet liegt nicht vor; der Eintrag ist auf LOSSY_DOCUMENTED
+ * herabgestuft. Dieser Test prueft jetzt die GEMESSENE Lage.
+ *
+ * Folge, die hierher gehoert: die Matrix enthaelt damit **keinen einzigen**
+ * LOSSLESS-Eintrag mehr. Es gibt also keine Wandlung, die ohne
+ * ausdrueckliche Zustimmung laeuft. Fuer ein forensisches Werkzeug ist das
+ * die richtige Lage — aber sie ist neu, und sie steht in
+ * OPEN_ITEMS P0-14. */
+TEST(scp_hfe_is_lossy_documented_not_lossless) {
+    ASSERT(uft_roundtrip_status(UFT_FORMAT_SCP, UFT_FORMAT_HFE)
+           == UFT_RT_LOSSY_DOCUMENTED);
+    ASSERT(uft_roundtrip_status(UFT_FORMAT_HFE, UFT_FORMAT_SCP)
+           == UFT_RT_LOSSY_DOCUMENTED);
+}
+
+/* Die Matrix fuehrt derzeit KEINEN LOSSLESS-Eintrag. Wer einen hinzufuegt,
+ * muss den Bit-Identitaets-Beweis mitliefern — dieser Test haelt fest,
+ * dass die Lage bewusst so ist und nicht aus Versehen. */
+TEST(no_lossless_pair_without_proof) {
+    size_t count = 0;
+    const uft_roundtrip_entry_t *tbl = uft_roundtrip_entries(&count);
+    ASSERT(tbl != NULL && count > 0);
+    int n_ll = 0;
+    for (size_t i = 0; i < count; i++)
+        if (tbl[i].status == UFT_RT_LOSSLESS) n_ll++;
+    ASSERT(n_ll == 0);
 }
 
 TEST(known_ld_scp_to_img) {
@@ -132,7 +165,8 @@ int main(void) {
     RUN(stringify_all_four);
     RUN(short_notation);
     RUN(stringify_never_null);
-    RUN(known_ll_scp_hfe);
+    RUN(scp_hfe_is_lossy_documented_not_lossless);
+    RUN(no_lossless_pair_without_proof);
     RUN(known_ld_scp_to_img);
     RUN(known_im_img_to_scp);
     RUN(untested_is_default);

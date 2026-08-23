@@ -38,17 +38,23 @@ static int _pass = 0, _fail = 0, _last_fail = 0;
 #define ASSERT(c)  do { if (!(c)) { printf("FAIL @ %d: %s\n", __LINE__, #c); \
                         _fail++; return; } } while (0)
 
-/* ── LOSSLESS: allowed silently, even with no consent ─────────────── */
-TEST(lossless_conversion_is_allowed_without_consent) {
+/* ── MF-527: es gibt derzeit KEIN verlustfreies Paar ───────────────
+ *
+ * Dieser Test hiess `lossless_conversion_is_allowed_without_consent` und
+ * benutzte SCP->HFE als Beispiel. Der jetzt existierende
+ * Bit-Identitaets-Test misst fuer dieses Paar das Gegenteil
+ * (25336 -> 6400 Byte je Spur), also ist es auf LOSSY_DOCUMENTED
+ * herabgestuft — und damit fuehrt die Matrix keinen LL-Eintrag mehr.
+ *
+ * Was hier bleibt, ist die Aussage, die zaehlt: ohne Zustimmung laeuft
+ * KEINE Wandlung still durch. */
+TEST(no_conversion_runs_silently_without_consent) {
     uft_preflight_plan_t plan;
-    /* opts = NULL → defaults, accept_data_loss = false */
     uft_error_t rc = uft_preflight_check(UFT_FORMAT_SCP, UFT_FORMAT_HFE,
                                          "in.scp", "out.hfe", NULL, &plan);
-    ASSERT(rc == UFT_OK);
-    ASSERT(plan.roundtrip_status == UFT_RT_LOSSLESS);
-    ASSERT(plan.decision == UFT_PREFLIGHT_OK);   /* no data lost → no gate */
-    ASSERT(plan.writes_sidecar == false);        /* nothing to document */
-    ASSERT(plan.abort_reason == NULL);
+    (void)rc;
+    ASSERT(plan.roundtrip_status != UFT_RT_LOSSLESS);
+    ASSERT(plan.decision != UFT_PREFLIGHT_OK);
 }
 
 /* ── THE property: LOSSY without consent is REFUSED ──────────────── */
@@ -168,7 +174,7 @@ TEST(argument_guards) {
 int main(void) {
     printf("=== Improvement: destructive/lossy-op consent gate "
            "(P3.3 / #110) ===\n");
-    RUN(lossless_conversion_is_allowed_without_consent);
+    RUN(no_conversion_runs_silently_without_consent);
     RUN(lossy_conversion_refused_without_consent);
     RUN(lossy_with_default_opts_is_refused);
     RUN(lossy_conversion_allowed_with_explicit_consent);

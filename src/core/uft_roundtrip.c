@@ -25,11 +25,43 @@
  * Ordering by source format then target format for readability.
  * ───────────────────────────────────────────────────────────────────────── */
 static const uft_roundtrip_entry_t g_matrix[] = {
-    /* Flux ↔ Flux: same information content */
-    { UFT_FORMAT_SCP, UFT_FORMAT_HFE, UFT_RT_LOSSLESS,
-      "flux-bitstream, timing preserved" },
-    { UFT_FORMAT_HFE, UFT_FORMAT_SCP, UFT_RT_LOSSLESS,
-      "bitstream-flux, timing preserved" },
+    /* Flux ↔ Flux.
+     *
+     * MF-527: diese beiden standen als UFT_RT_LOSSLESS — die EINZIGEN zwei
+     * der 44 Pfade, die das Preflight-Tor ohne `accept_data_loss`
+     * durchliess. Die Regel oben in dieser Datei verlangt fuer LL "a
+     * round-trip test that proves byte-identity". Ein solcher Test
+     * existierte nicht: test_roundtrip_matrix.c prueft die Registry-API
+     * und verweist auf "tests/test_roundtrip.c", eine Datei, die es nicht
+     * gibt; die 20 uebrigen *_roundtrip-Tests sind PLUGIN-Rundlaeufe
+     * innerhalb EINES Formats.
+     *
+     * Jetzt gibt es den Test — tests/test_convert_roundtrip_lossless.c —
+     * und er misst an gw_amigados.hfe:
+     *
+     *     HFE (2049024 B) -> SCP -> HFE (1025024 B)
+     *     Geometrie bleibt 80 x 2, aber Spur 0 faellt von 25336 auf
+     *     6400 Byte; 99,9 % der gemeinsamen Bytes weichen ab.
+     *
+     * Bit-Identitaet liegt nicht vor. Dass es nicht an einer Aenderung von
+     * MF-526 liegt, ist ebenfalls belegt: VOR jener Korrektur stuerzte
+     * uftc_convert_hfe_to_scp() auf genau dieser Datei ab (Lesen 25080
+     * Byte hinter dem Dateiende). Die Zusage war also zu keinem Zeitpunkt
+     * belegbar.
+     *
+     * Herabgestuft auf LOSSY_DOCUMENTED statt auf UNTESTED: der Pfad bleibt
+     * damit benutzbar, aber nur mit ausdruecklicher Zustimmung. Streng nach
+     * der Regel oben waere UNTESTED richtig — auch die Verlustliste ist
+     * nicht bewiesen. Das ist bewusst die kleinere Aenderung; die
+     * Entscheidung, ob der Pfad ganz zurueckgezogen wird, gehoert dem
+     * Eigentuemer (OPEN_ITEMS P0-14). */
+    { UFT_FORMAT_SCP, UFT_FORMAT_HFE, UFT_RT_LOSSY_DOCUMENTED,
+      "MF-527: Bit-Identitaet gemessen NICHT gegeben; Bitstromlaenge "
+      "schrumpft im Rundlauf (25336 -> 6400 Byte je Spur). Verlustumfang "
+      "nicht vollstaendig vermessen" },
+    { UFT_FORMAT_HFE, UFT_FORMAT_SCP, UFT_RT_LOSSY_DOCUMENTED,
+      "MF-527: Bit-Identitaet gemessen NICHT gegeben; siehe SCP->HFE. "
+      "Verlustumfang nicht vollstaendig vermessen" },
 
     /* Flux → Sector: timing/weak-bits/index-pulses dropped */
     { UFT_FORMAT_SCP, UFT_FORMAT_IMG, UFT_RT_LOSSY_DOCUMENTED,

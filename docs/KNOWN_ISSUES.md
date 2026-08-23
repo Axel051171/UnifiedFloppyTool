@@ -3938,6 +3938,81 @@ zweite braucht eine Bank-Sitzung mit echtem Laufwerk.
 
 ---
 
+### RT-1 — die einzige Zusage ohne Zustimmung war unbelegt, und sie ist falsch (2026-08-23, MF-527) -> ✓ KORRIGIERT
+
+**Correctness / Forensik.** `src/core/uft_roundtrip.c` schreibt seine
+eigene Regel in den Kopf:
+
+> Rules for adding an entry:
+> **LL → you added a round-trip test that proves byte-identity.**
+
+Zwei Eintraege standen dort als `UFT_RT_LOSSLESS`: `SCP -> HFE` und
+`HFE -> SCP`. Das waren die **einzigen zwei** der 44 Wandlungspfade, die
+das Preflight-Tor **ohne** `accept_data_loss` durchliess (MF-526).
+
+**Den Test gab es nicht.**
+
+- `test_roundtrip_matrix.c` prueft die Registry-API und verweist im Kopf
+  ausdruecklich auf *"den Full-Image-Round-Trip-Test
+  (tests/test_roundtrip.c)"* — **diese Datei existiert nicht.**
+- Die 20 uebrigen `*_roundtrip`-Tests sind **Plugin**-Rundlaeufe
+  (`write_track -> read_track` innerhalb EINES Formats), keine
+  **Wandlungs**-Rundlaeufe zwischen zweien.
+- Jedes `memcmp` in den `test_convert_*`-Tests vergleicht dekodierte
+  Sektoren gegen ein Referenz-ADF — das ist der verlustbehaftete Pfad
+  `SCP -> ADF`, nicht die verlustfreie Zusage.
+
+**Jetzt gibt es ihn**, und er misst:
+
+```
+gw_amigados.hfe  2049024 B
+  --uftc_convert_hfe_to_scp-->  SCP  16164762 B
+  --uftc_convert_scp_to_hfe-->  HFE   1025024 B
+
+Geometrie bleibt 80 x 2 — aber Spur 0 faellt von 25336 auf 6400 Byte.
+99,9 % der gemeinsamen Bytes weichen ab.
+```
+
+**Bit-Identitaet liegt nicht vor.** Und es liegt nicht an MF-526: **vor**
+jener Korrektur stuerzte `uftc_convert_hfe_to_scp()` auf genau dieser
+Datei ab (Lesen 25080 Byte hinter dem Dateiende). Die Zusage war zu
+keinem Zeitpunkt belegbar.
+
+**Herabgestuft auf `UFT_RT_LOSSY_DOCUMENTED`** — nicht auf `UNTESTED`.
+Streng nach der Regel oben waere UNTESTED richtig, denn auch die
+Verlustliste ist nicht bewiesen. LOSSY_DOCUMENTED ist die kleinere
+Aenderung: der Pfad bleibt benutzbar, aber nur mit ausdruecklicher
+Zustimmung. Ob er ganz zurueckgezogen wird, gehoert dem Eigentuemer.
+
+**Die Folge, und sie ist benutzersichtbar:** die Matrix enthaelt jetzt
+**keinen einzigen** LOSSLESS-Eintrag. Es gibt damit **keine Wandlung, die
+ohne ausdrueckliche Zustimmung laeuft**. Fuer ein Werkzeug, dessen erster
+Grundsatz "Keine stille Veraenderung" lautet, ist das die richtige Lage —
+aber sie ist neu, und wer bisher HFE->SCP ohne Zustimmung fuhr, bekommt
+jetzt eine Abweisung.
+
+Drei Tests zurrten die widerlegte Zusage fest und sind angepasst — mit
+Begruendung, nicht mit umgedrehter Konstante:
+
+| Test | vorher | jetzt |
+|---|---|---|
+| `test_roundtrip_matrix` | `known_ll_scp_hfe` | `scp_hfe_is_lossy_documented_not_lossless` + `no_lossless_pair_without_proof` |
+| `test_preflight` | `ll_passes_without_consent` | `scp_hfe_now_requires_consent` |
+| `test_destructive_op_consent` | `lossless_conversion_is_allowed_without_consent` | `no_conversion_runs_silently_without_consent` |
+
+Der neue Test `no_lossless_pair_without_proof` haelt fest, dass die Lage
+**bewusst** so ist: wer wieder einen LL-Eintrag anlegt, muss den
+Bit-Identitaets-Beweis mitliefern.
+
+**Nicht gemessen:** wo im Rundlauf die drei Viertel verloren gehen —
+`uftc_convert_hfe_to_scp` schreibt eine 16-MB-SCP aus einer 2-MB-HFE, und
+`uftc_convert_scp_to_hfe` macht daraus 1 MB. Welche der beiden Richtungen
+wieviel verliert, ist offen (OPEN_ITEMS P0-14). Die ausloesenden
+Zwischendateien bleibt der Test liegen, wenn er nicht bitgleich ist —
+dieselbe Regel wie bei `tests/crashers/`.
+
+---
+
 ### FUZZ-5 — die dritte Route: `uft_convert_file()`, und was sie ueber die 44 Pfade sagt (2026-08-23, MF-526) -> ✓ BEHOBEN / gemessen
 
 **Correctness + Ehrlichkeit.** Der Baum hat drei Produktionsrouten. Zwei

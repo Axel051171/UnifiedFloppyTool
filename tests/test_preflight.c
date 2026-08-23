@@ -39,16 +39,24 @@ TEST(decision_string_stable) {
     ASSERT(uft_preflight_decision_string((uft_preflight_decision_t)99) != NULL);
 }
 
-TEST(ll_passes_without_consent) {
-    /* Prinzip 5: LL darf still laufen — kein consent nötig, kein sidecar. */
+/* MF-527: hiess `ll_passes_without_consent` und benutzte SCP->HFE als
+ * LL-Beispiel. Das Paar ist auf LOSSY_DOCUMENTED herabgestuft, weil der
+ * jetzt existierende Bit-Identitaets-Test das Gegenteil misst
+ * (tests/test_convert_roundtrip_lossless.c). Damit fuehrt die Matrix
+ * keinen LL-Eintrag mehr, und dieser Test kann die LL-Durchreiche nicht
+ * mehr an echten Daten pruefen.
+ *
+ * Er prueft jetzt, was tatsaechlich gilt: SCP->HFE verlangt Zustimmung.
+ * Der Mechanismus "LL laeuft ohne Zustimmung" bleibt im Code; sobald ein
+ * Paar seinen Beweis mitbringt, gehoert der Test wieder in seiner alten
+ * Form her. */
+TEST(scp_hfe_now_requires_consent) {
     uft_preflight_plan_t plan;
     uft_preflight_opts_t opts = { .accept_data_loss = false, .emit_sidecar = true };
-    ASSERT(uft_preflight_check(UFT_FORMAT_SCP, UFT_FORMAT_HFE,
-                                 "a.scp", "a.hfe", &opts, &plan) == UFT_OK);
-    ASSERT(plan.decision == UFT_PREFLIGHT_OK);
-    ASSERT(plan.roundtrip_status == UFT_RT_LOSSLESS);
-    ASSERT(plan.writes_sidecar == false);
-    ASSERT(plan.abort_reason == NULL);
+    (void)uft_preflight_check(UFT_FORMAT_SCP, UFT_FORMAT_HFE,
+                              "a.scp", "a.hfe", &opts, &plan);
+    ASSERT(plan.roundtrip_status == UFT_RT_LOSSY_DOCUMENTED);
+    ASSERT(plan.decision != UFT_PREFLIGHT_OK);
 }
 
 TEST(ld_blocked_without_consent) {
@@ -205,7 +213,7 @@ int main(void) {
     printf("=== Prinzip 1 §1.2 — Pre-Conversion-Report Tests ===\n");
     RUN(decision_enum_stable);
     RUN(decision_string_stable);
-    RUN(ll_passes_without_consent);
+    RUN(scp_hfe_now_requires_consent);
     RUN(ld_blocked_without_consent);
     RUN(ld_proceeds_with_consent);
     RUN(ld_dry_run_no_sidecar);
