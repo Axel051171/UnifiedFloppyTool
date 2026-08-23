@@ -178,6 +178,13 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/formats/scp/uft_scp_writer.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_scp_parser.c)
+    elseif(${test_name} STREQUAL "test_scp_layout")
+        # Punkt 2.3: SCP-Ablage (Spurzahl / Seiten / Startspur)
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/scp/uft_scp_plugin.c
+            ${CMAKE_SOURCE_DIR}/src/formats/scp/uft_scp_writer.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_decoder_plugin_stub.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
     elseif(${test_name} STREQUAL "test_scp_weakbit_multirev")
         # SCP Klasse-1 forensic guard: multi-rev weak-bit pass-through (MF-327)
         target_sources(${test_name} PRIVATE

@@ -3752,6 +3752,100 @@ für AmigaDOS-DD.
 
 ---
 
+### FLUX-6 — jede SCP-Teilaufnahme las sich als leere Diskette (2026-08-23, MF-481) → ✓ BEHOBEN
+
+Punkt 2.3 der a8rawconv-Gap-Analyse fragt nach einem Bedienelement für die
+SCP-Ablage (`scp-ss40`/`ds40`/`ss80`/`ds80`). Beim Nachmessen kam zuerst
+etwas anderes heraus, und es ist schwerer: **das SCP-Plugin verlor jede
+Datei, deren Aufzeichnung nicht bei Spur 0 beginnt** — still, ohne Fehler
+beim Öffnen.
+
+Gemessen an einer selbst geschriebenen Datei mit den Zylindern 20–29
+beidseitig: **20 Spuren geschrieben, 0 gelesen.**
+
+#### Zweimal derselbe Fehler: relativ statt absolut
+
+1. `scp_get_geometry()` rechnete die Zylinderzahl aus der **Anzahl**
+   aufgezeichneter Spuren (`end - start + 1`), der Spurzugriff darunter
+   indiziert aber **absolut** (`cylinder * 2 + head`) und weist alles
+   unterhalb von `start_track` ab. Bei `start_track = 40` meldete das Plugin
+   10 Zylinder, der Aufrufer las 0–9, also die Spuren 0–19 — die es in der
+   Datei nicht gibt.
+2. `scp_open()` las die Offset-Tabelle ab Dateianfang und legte sie **ab
+   Index `start_track`** ab. Die Tabelle ist absolut indiziert. Gelesen
+   wurden also die Einträge 0–19 (Nullen) und nach 40–59 geschrieben —
+   jeder Offset 0.
+
+Solange `start_track == 0` war, fielen beide zusammen. Nur deshalb ist es
+nie aufgefallen.
+
+#### Autorität
+
+a8rawconv 0.95 (`src/a8rawconv/rawdiskscp.cpp`, GPL-2-or-later,
+Referenz-Orakel, wird nicht gebaut):
+
+| Stelle | Aussage |
+|---|---|
+| `:126` | `tracks_to_read = (mEndTrack + 1) / image_track_step` — **`end + 1`, nicht der Bereich** |
+| `:144` | `mTrackOffsets[image_track]` — absolut indiziert |
+| `:106` | „the start/end track range is in terms of tracks per disk and not tracks per side" |
+| `:100-105` | Das 96-tpi-Flag beschreibt das **Laufwerk**, nicht die Ablage in der Datei |
+
+**Gegengelesen im eigenen Baum, und das ist der eigentliche Befund:** der
+UFT-SCP-Schreiber legt die Offsets unter `track_offsets[track_num]` ab
+(`uft_scp_writer.c:220`) und schreibt die volle 168-Einträge-Tabelle; der
+kanonische Parser liest sie absolut (`uft_scp_parser.c:247`). **Nur dieses
+Plugin wich ab.** Wieder der Fall, in dem ein Fakt mehrfach implementiert ist
+und die Fassung läuft, die zufällig aufgerufen wird — dieselbe Diagnose wie
+bei MF-475 (fünf Zellendauer-Stellen) und MF-479 (zwei Layout-Rechnungen).
+
+#### Was NICHT geändert wurde, und warum
+
+- **Keine verschobene Nummerierung.** Zylinder 20 bleibt Zylinder 20. Die
+  bequeme Lösung — den Bereich auf 0 schieben — wäre forensisch falsch: die
+  Spurnummer steht auf dem Medium.
+- **„Nicht aufgezeichnet" bleibt von „unformatiert" getrennt.** Ein Zylinder
+  unterhalb der Startspur meldet `UFT_ERROR_TRACK_NOT_FOUND`; eine Lücke
+  *innerhalb* des Bereichs meldet `UFT_TRACK_UNFORMATTED`. Unformatiert ist
+  eine Aussage über die **Diskette**, nicht aufgezeichnet eine über die
+  **Aufnahme** — beides zusammenzuwerfen hieße, eine nie gemessene
+  Eigenschaft des Mediums zu behaupten. Beides wird geprüft.
+- **Die Kopfzahl bleibt 2**, auch wenn der Kopf `heads` etwas anderes sagt.
+  Das ist die Regel des Orakels: SCP reserviert Einträge für beide Seiten
+  auch bei einseitigen Abbildern (`:111-113`), und a8rawconv liest `mSides`
+  aus, benutzt es aber **nicht** für die Ablage.
+
+#### Rot-Probe
+
+Beide Hälften einzeln zurückgedreht — jede für sich lässt
+`a_partial_capture_starting_above_zero_is_not_lost` fallen, die übrigen drei
+bleiben grün. Zwei unabhängige Ursachen, ein Symptom.
+
+`ctest` 223/223, alle 21 Gate-Kategorien 0, `verify_build_sources.py` 0/0,
+qmake-Release-Build grün.
+
+**Ehrlich zur Reichweite.**
+
+- **Punkt 2.3 ist damit NICHT erledigt.** Was fehlt, ist die erzwungene
+  Deutung (`ss40`/`ds40`/`ss80`/`ds80`) als Bedienelement. Der konkrete
+  Blocker: `uft_format_plugin_t::open(disk, path, ro)` hat keinen Platz für
+  eine Option — das braucht entweder einen additiven `open_ex()` hinter dem
+  `api_version`-Gate (vgl. ARCH-6) oder einen Weg über `uft_disk_t`.
+- Behoben ist der Lesepfad des **Plugins**. Der kanonische Parser war schon
+  richtig; wer über ihn geht (seit MF-478 der Umdrehungspfad in SCP→ADF),
+  war nie betroffen — wohl aber die Geometrie, die dieselbe Konvertierung
+  vom Plugin bezieht. Eine SCP-Teilaufnahme konvertierte also bis hierher zu
+  einer leeren ADF.
+- **Erweiterter Modus (Flag 0x40) bleibt offen.** a8rawconv liest die Tabelle
+  dann von 0x80 (`:94-98`); UFT tut das nicht. Der eigene Schreiber setzt das
+  Flag nie, deshalb fällt es hier nicht auf — eine fremde Datei mit
+  erweitertem Kopf wird weiterhin falsch gelesen. Eigener Schritt.
+- Geprüft gegen **selbst geschriebene** SCP-Dateien, nicht gegen eine fremde
+  Teilaufnahme. Der Schreiber ist dieselbe Codebasis; ein Abbild von
+  SuperCard Pro selbst wäre die stärkere Probe.
+
+---
+
 ### FLUX-5 — der Feineinsteller war da und niemand konnte ihn drehen (2026-08-23, MF-480) → ✓ BEHOBEN
 
 Punkt 2.1 der a8rawconv-Gap-Analyse. `flux_decoder_options_t::media_adjust_pct`

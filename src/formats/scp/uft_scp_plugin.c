@@ -174,16 +174,61 @@ static uft_error_t scp_read_revolution_flux(scp_data_t* scp, uint32_t offset,
 
 /**
  * @brief Ermittelt Geometrie aus Disk-Type
+ *
+ * MF-481: die Zylinderzahl kam aus der ANZAHL der aufgezeichneten Spuren
+ * (`end - start + 1`), der Spurzugriff darunter indiziert aber ABSOLUT
+ * (`cylinder * 2 + head`) und weist alles unterhalb von `start_track` ab.
+ * Solange `start_track == 0` war, fiel das zusammen — und nur deshalb ist es
+ * nie aufgefallen.
+ *
+ * Bei einer Teilaufnahme fiel es auseinander, und zwar still: eine Datei mit
+ * den Zylindern 20..29 hat `start_track = 40`, meldete 10 Zylinder, und der
+ * Aufrufer las die Zylinder 0..9 — also die Spuren 0..19, die es in der Datei
+ * nicht gibt. Jede Spur `UFT_ERROR_TRACK_NOT_FOUND`, kein Fehler beim
+ * Oeffnen, Ergebnis: eine leere Diskette. Genau der Fall aus Prinzip 1, den
+ * man nicht sieht.
+ *
+ * Autoritaet fuer die richtige Rechnung ist a8rawconv 0.95
+ * (`src/a8rawconv/rawdiskscp.cpp:126`, GPL-2-or-later, Referenz-Orakel, wird
+ * nicht gebaut):
+ *
+ *     tracks_to_read = (fileHeader.mEndTrack + 1) / image_track_step
+ *
+ * — also `end + 1`, NICHT der Bereich. Der Kommentar daneben sagt warum
+ * (:106): „the start/end track range is in terms of tracks per disk and not
+ * tracks per side". Die Startspur begrenzt, was AUFGEZEICHNET ist, nicht wie
+ * die Diskette nummeriert ist.
+ *
+ * Zylinder unterhalb der Startspur bleiben damit adressierbar und melden
+ * `UFT_ERROR_TRACK_NOT_FOUND` — nicht „unformatiert". Der Unterschied ist
+ * forensisch: unformatiert ist eine Aussage ueber die DISKETTE, nicht
+ * aufgezeichnet eine ueber die AUFNAHME. Beides zusammenzuwerfen hiesse,
+ * eine Eigenschaft des Mediums zu behaupten, die nie gemessen wurde. Eine
+ * Spur innerhalb des Bereichs mit Offset 0 meldet dagegen sehr wohl
+ * unformatiert — dort wurde gemessen und nichts gefunden.
+ *
+ * Nicht gewaehlt wurde die bequeme Loesung, den Bereich auf 0 zu schieben:
+ * die Spurnummer steht auf dem Medium, Zylinder 20 bleibt Zylinder 20.
  */
 static void scp_get_geometry(uint8_t disk_type, uint8_t start, uint8_t end,
                               uft_geometry_t* geo) {
     geo->sector_size = 512;
     geo->double_step = false;
-    
-    int num_tracks = end - start + 1;
-    geo->cylinders = (num_tracks + 1) / 2;
+
+    (void)start;
+    geo->cylinders = ((int)end + 1 + 1) / 2;   /* a8rawconv: (mEndTrack+1)/2 */
+
+    /* Zwei Koepfe, auch wenn der Kopf `heads` etwas anderes sagt. Das ist
+     * keine Nachlaessigkeit, sondern die Regel des Orakels: SCP reserviert
+     * Eintraege fuer beide Seiten, auch bei einseitigen Abbildern
+     * (rawdiskscp.cpp:111-113), und a8rawconv liest `mSides` aus, benutzt es
+     * aber NICHT fuer die Ablage — seine Seitenzahl kommt aus der erzwungenen
+     * Deutung (`scp-ss40` … `scp-ds80`) oder ist 2. Eine einseitige Spur
+     * meldet sich als unformatiert; das ist richtig und kostet nichts. Ein
+     * Bedienelement fuer die erzwungene Deutung fehlt UFT weiterhin — siehe
+     * KNOWN_ISSUES FLUX-6. */
     geo->heads = 2;
-    
+
     switch (disk_type & 0xF0) {
         case SCP_TYPE_AMIGA:
             geo->sectors = 11;
@@ -275,15 +320,39 @@ static uft_error_t scp_open(uft_disk_t* disk, const char* path, bool read_only) 
     }
     
     memset(track_offsets, 0, SCP_MAX_TRACKS * sizeof(uint32_t));
-    
-    // Track-Offsets stehen nach dem Header
-    if (fread(&track_offsets[header.start_track], sizeof(uint32_t), 
-              num_tracks, f) != (size_t)num_tracks) {
+
+    /* Die Offset-Tabelle steht nach dem Kopf und ist ABSOLUT indiziert:
+     * Eintrag N gehoert zu Spur N. Sie wird nicht bei `start_track`
+     * zusammengeschoben (MF-481).
+     *
+     * Vorher stand hier `fread(&track_offsets[header.start_track], …,
+     * num_tracks, …)` — also: die ersten `num_tracks` Eintraege der Datei
+     * lesen und sie ab Index `start_track` ablegen. Bei einer Teilaufnahme ab
+     * Spur 40 hiess das: die Eintraege 0..19 lesen (in der Datei Nullen, weil
+     * die Spuren nicht aufgezeichnet sind) und sie nach 40..59 schreiben.
+     * Ergebnis: jeder Offset 0, jede Spur „unformatiert", die Diskette leer —
+     * ohne Fehlermeldung.
+     *
+     * Autoritaet: a8rawconv liest die Tabelle als festes Feld im Dateikopf
+     * und indiziert `mTrackOffsets[image_track]` mit der absoluten Spurnummer
+     * (`src/a8rawconv/rawdiskscp.cpp:144`). Der eigene UFT-Schreiber tut
+     * dasselbe (`uft_scp_writer.c:220`: `track_offsets[track->track_num]`),
+     * und der kanonische Parser ebenfalls (`uft_scp_parser.c:247`). Nur
+     * dieses Plugin wich ab.
+     *
+     * Eine kuerzere Tabelle als `end_track + 1` ist kein Fehler: was fehlt,
+     * bleibt 0 und meldet sich als unformatiert. */
+    int table_entries = (int)header.end_track + 1;
+    if (table_entries > SCP_MAX_TRACKS) table_entries = SCP_MAX_TRACKS;
+
+    size_t got = fread(track_offsets, sizeof(uint32_t),
+                       (size_t)table_entries, f);
+    if (got == 0) {
         free(track_offsets);
         fclose(f);
         return UFT_ERROR_FILE_READ;
     }
-    
+
     // Plugin-Daten
     scp_data_t* pdata = calloc(1, sizeof(scp_data_t));
     if (!pdata) {

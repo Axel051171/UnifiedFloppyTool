@@ -30,7 +30,7 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 | `d82` | **T1b** | `test_corpus_cbm_vice`, `test_d82_write_roundtrip` | — | — | 1 |
 | `g71` | **T1b** | `test_corpus_cbm_vice`, `test_g71_read` | — | — | 1 |
 | `hfe` | **T1b** | `test_convert_hfe_adf`, `test_corpus_hfe`, `test_format_probe_fuzz`, `test_hfe_v3_weak`, `test_plugin_probe_real` | HxC hfev3_loader.c opcode semantics (v3 decode + RAND weak bits); HxC HFE docs (v1) | MF-354, MF-362 | 1 |
-| `scp` | **T1b** | `test_convert_scp_adf`, `test_corpus_scp`, `test_format_probe_fuzz`, `test_plugin_probe_real`, `test_protection_probe`, `test_scp_footer_roundtrip`, `test_scp_readers_agree`, `test_scp_weakbit_multirev`, `test_scp_writer_roundtrip` | cbmstuff SCP image spec (48-byte FPCS footer, bitcell track length) | MF-318, MF-351 | 1 |
+| `scp` | **T1b** | `test_convert_scp_adf`, `test_corpus_scp`, `test_format_probe_fuzz`, `test_plugin_probe_real`, `test_protection_probe`, `test_scp_footer_roundtrip`, `test_scp_layout`, `test_scp_readers_agree`, `test_scp_weakbit_multirev`, `test_scp_writer_roundtrip` | cbmstuff SCP image spec (48-byte FPCS footer, bitcell track length) | MF-318, MF-351 | 1 |
 | `xfd` | **T1b** | `test_corpus_xfd`, `test_format_probe_fuzz`, `test_plugin_identity`, `test_plugin_probe_real`, `test_smart_open_quality` | — | — | 1 |
 | `adf_ext` | **T2** | `test_adf_ext_plugin` | WinUAE disk.cpp read_header_ext2 (UAE-1ADF) | MF-352 | — |
 | `akai_s900` | **T2** | `test_akai_s900_plugin` | akaiutil (kmi9000) geometry: DD 5x1024/819200, HD 10x1024/1638400 | MF-348 | — |
