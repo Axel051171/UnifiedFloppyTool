@@ -337,6 +337,31 @@ static uft_error_t uftc_convert_scp_to_adf_via_plugin(
      * Nennwert — ein Medienprofil ohne Messung ist keine Verbesserung. */
     dopts.media = UFT_MEDIA_AMIGA_DD;
 
+    /* Feineinsteller in Prozent (MF-480).
+     *
+     * Die abgeleitete Zellendauer kann systematisch danebenliegen, auch wenn
+     * die Umdrehungsmessung stimmt — dann naemlich, wenn die Diskette mit
+     * einer anderen Datenrate beschrieben wurde als das Medienprofil
+     * annimmt. Dagegen hilft kein besserer Decoder, sondern nur ein Wert,
+     * den der Aufrufer verstellen kann. Der Arbeitsablauf ist alt: in
+     * kleinen Schritten nachstellen und sectors_converted gegen
+     * sectors_failed beobachten. Beide Zahlen stehen bereits im Ergebnis.
+     *
+     * Ausserhalb von 50…200 lehnt das Medienprofil den Wert ab und der
+     * Decoder faellt still auf 100 zurueck. Still ist hier falsch: wer einen
+     * Wert vorgibt, soll erfahren, dass er nicht benutzt wurde. */
+    if (opts && opts->decode_cell_adjust_pct > 0.0) {
+        if (opts->decode_cell_adjust_pct < 50.0 ||
+            opts->decode_cell_adjust_pct > 200.0) {
+            uftc_add_warning(result,
+                "Zellendauer-Feineinsteller %.1f%% liegt ausserhalb 50-200 "
+                "und wurde nicht angewandt",
+                opts->decode_cell_adjust_pct);
+        } else {
+            dopts.media_adjust_pct = opts->decode_cell_adjust_pct;
+        }
+    }
+
     /* Alle Umdrehungen, nicht nur die erste (MF-473).
      *
      * Das SCP-Plugin liefert je Spur genau eine Umdrehung — das steht so in

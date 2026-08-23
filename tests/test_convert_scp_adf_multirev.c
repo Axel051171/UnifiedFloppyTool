@@ -44,6 +44,7 @@
 #include "uft/uft_types.h"
 #include "uft/formats/uft_scp_writer.h"
 #include "uft/flux/uft_flux_decoder.h"
+#include "flux_gen.h"   /* tests/flux_gen/amigados */
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -59,187 +60,30 @@ static int _pass = 0, _fail = 0, _last_fail = 0;
 #define ASSERT(c)  do { if (!(c)) { printf("FAIL @ %d: %s\n", __LINE__, #c); \
                                     _fail++; return; } } while (0)
 
-/* ──────────────────────────────────────────────────────────────────────────
- * Geometrie
- * ────────────────────────────────────────────────────────────────────────*/
+/* Der AmigaDOS-Kodierer liegt seit MF-480 unter tests/flux_gen/amigados/,
+ * weil test_convert_cell_adjust.c ihn ebenfalls braucht. Der Selbsttest
+ * `the_encoder_produces_a_track_the_decoder_reads` unten ist weiterhin die
+ * einzige Begruendung, warum man ihm glauben darf. */
 
-#define ADF_SPT        11
-#define ADF_SECSZ      512
-#define ADF_SIZE       901120u          /* 80 x 2 x 11 x 512 */
-#define AMIGA_CELL_NS  2000u
-/* Eine AmigaDOS-DD-Umdrehung: 500 kbit/s bei 300 U/min = 100000 Zellen.
- * Genau diese Zahl macht die gemessene Umdrehung (200 ms) und die nominale
- * Zellendauer (2 us) deckungsgleich — der MF-475-Pfad waehlt dann 2000 ns. */
-#define AMIGA_CELLS_PER_REV  100000u
-#define AMIGA_REV_NS   (AMIGA_CELLS_PER_REV * AMIGA_CELL_NS)   /* 200 ms */
+#define ADF_SPT        UFT_AMIGADOS_SPT
+#define ADF_SECSZ      UFT_AMIGADOS_SECSZ
+#define ADF_SIZE       UFT_AMIGADOS_ADF_SIZE
+#define AMIGA_CELL_NS  UFT_AMIGADOS_CELL_NS
+#define AMIGA_CELLS_PER_REV  UFT_AMIGADOS_CELLS_PER_REV
+#define AMIGA_REV_NS   UFT_AMIGADOS_REV_NS
 
-/* ──────────────────────────────────────────────────────────────────────────
- * Amiga-MFM-Kodierer — exakte Umkehrung von decode_amiga_sector()
- * ────────────────────────────────────────────────────────────────────────*/
+typedef uft_amigados_defect_t sector_defect_t;
+typedef uft_amigados_cells_t  cellbuf_t;
 
-typedef struct {
-    uint8_t *cells;        /* MSB-first Zellenstrom */
-    size_t   cap;          /* Kapazitaet in Zellen */
-    size_t   n;            /* belegte Zellen */
-    int      prev;         /* letztes DATENbit, fuer die MFM-Taktregel */
-} cellbuf_t;
-
-static void cell_put(cellbuf_t *c, int bit)
-{
-    if (c->n >= c->cap) return;
-    if (bit) c->cells[c->n / 8] |= (uint8_t)(0x80u >> (c->n % 8));
-    c->n++;
-}
-
-/* Ein Datenbit anhaengen: Taktbit nach MFM-Regel (1 nur zwischen zwei
- * Null-Datenbits), dann das Datenbit selbst. */
-static void mfm_put_data_bit(cellbuf_t *c, int d)
-{
-    cell_put(c, (!c->prev && !d) ? 1 : 0);
-    cell_put(c, d);
-    c->prev = d;
-}
-
-/* Ein rohes 16-Zellen-Wort anhaengen — fuer die Sync-Marke 0x4489, deren
- * fehlendes Taktbit sie ueberhaupt erst zur Marke macht. */
-static void cell_put_word(cellbuf_t *c, uint16_t w)
-{
-    for (int i = 15; i >= 0; i--) cell_put(c, (w >> i) & 1);
-    c->prev = w & 1;                       /* letzte Zelle ist ein Datenbit */
-}
-
-/* Fuellmuster 0xAA: abwechselnd, also lauter Datennullen mit Takt. */
-static void cell_put_gap(cellbuf_t *c, size_t cells)
-{
-    for (size_t i = 0; i < cells; i++) mfm_put_data_bit(c, 0);
-}
-
-/**
- * Ein Odd/Even-Feld schreiben und in die Pruefsumme falten.
- *
- * Auf der Diskette stehen erst @p nbytes Rohbytes mit den UNGERADEN
- * Datenbits, dann @p nbytes mit den GERADEN; der Dekoder setzt sie als
- * `((odd & 0x55) << 1) | (even & 0x55)` zusammen. Also ist das Rohbyte der
- * ungeraden Haelfte `(D >> 1) & 0x55` und das der geraden `D & 0x55`.
- *
- * Die Pruefsumme ist das XOR der big-endian Rohbyte-Longs, am Ende mit
- * 0x55555555 maskiert. Weil die Maske genau die Taktbits wegnimmt, darf hier
- * mit taktfreien Rohbytes gerechnet werden: (a^b) & M == (a&M) ^ (b&M).
- */
-static void amiga_put_field(cellbuf_t *c, const uint8_t *data, size_t nbytes,
-                            uint32_t *csum)
-{
-    for (int half = 0; half < 2; half++) {
-        uint32_t acc = 0;
-        int      acc_n = 0;
-        for (size_t j = 0; j < nbytes; j++) {
-            uint8_t rb = (half == 0) ? (uint8_t)((data[j] >> 1) & 0x55u)
-                                     : (uint8_t)(data[j] & 0x55u);
-            for (int b = 3; b >= 0; b--)
-                mfm_put_data_bit(c, (rb >> (2 * b)) & 1);
-            if (csum) {
-                acc = (acc << 8) | rb;
-                if (++acc_n == 4) { *csum ^= acc; acc = 0; acc_n = 0; }
-            }
-        }
-        if (csum && acc_n) {                 /* nbytes nicht durch 4 teilbar */
-            acc <<= 8 * (4 - acc_n);
-            *csum ^= acc;
-        }
-    }
-}
-
-static void be32(uint8_t out[4], uint32_t v)
-{
-    out[0] = (uint8_t)(v >> 24); out[1] = (uint8_t)(v >> 16);
-    out[2] = (uint8_t)(v >>  8); out[3] = (uint8_t)v;
-}
-
-/**
- * Einen AmigaDOS-Sektor anhaengen.
- *
- * @param force_bad_dchk  wenn true, wird die Datenpruefsumme absichtlich
- *                        falsch geschrieben — genau das, was ein
- *                        Kopierschutz auf die Diskette bringt.
- */
-static void amiga_put_sector(cellbuf_t *c, uint8_t track, uint8_t sec,
-                             const uint8_t *data, bool force_bad_dchk)
-{
-    cell_put_gap(c, 32);                     /* Vorspann */
-    cell_put_word(c, 0x4489);                /* Amiga schreibt zwei Marken */
-    cell_put_word(c, 0x4489);
-
-    uint8_t info[4]  = { 0xFF, track, sec, (uint8_t)(ADF_SPT - sec) };
-    uint8_t label[16]; memset(label, 0, sizeof(label));
-
-    /* Kopf- und Datenpruefsumme muessen VOR dem Schreiben feststehen, weil
-     * sie zwischen Label und Daten im Strom liegen. Also erst trocken
-     * rechnen (cellbuf mit cap 0 schluckt die Zellen), dann schreiben. */
-    cellbuf_t dry = { NULL, 0, 0, 0 };
-    uint32_t hdr = 0, dat = 0;
-    amiga_put_field(&dry, info,  4,  &hdr);
-    amiga_put_field(&dry, label, 16, &hdr);
-    amiga_put_field(&dry, data,  ADF_SECSZ, &dat);
-
-    uint8_t hchk[4], dchk[4];
-    be32(hchk, hdr & 0x55555555u);
-    be32(dchk, (dat ^ (force_bad_dchk ? 0x00540000u : 0u)) & 0x55555555u);
-
-    amiga_put_field(c, info,  4,  NULL);
-    amiga_put_field(c, label, 16, NULL);
-    amiga_put_field(c, hchk,  4,  NULL);
-    amiga_put_field(c, dchk,  4,  NULL);
-    amiga_put_field(c, data,  ADF_SECSZ, NULL);
-}
-
-/* Wie ein Sektor dieser Umdrehung aussehen soll. */
-typedef struct {
-    int  sector;          /* 0..10, oder -1 fuer "gilt fuer keinen" */
-    bool bad_checksum;    /* Datenpruefsumme absichtlich falsch */
-    uint8_t overwrite;    /* wenn != 0: Datenbyte 0 durch diesen Wert ersetzen */
-} sector_defect_t;
-
-/**
- * Eine ganze AmigaDOS-Spur als Zellenstrom bauen.
- *
- * @param adf     Quell-ADF, aus dem die 11 Sektoren stammen
- * @param track   AmigaDOS-Spurnummer (cyl*2 + head)
- * @param defect  Defekt fuer genau eine Sektorposition (sector = -1: keiner)
- */
 static void build_track_cells(cellbuf_t *c, const uint8_t *adf, uint8_t track,
                               const sector_defect_t *defect)
 {
-    memset(c->cells, 0, (c->cap + 7) / 8);
-    c->n = 0; c->prev = 0;
-
-    for (int s = 0; s < ADF_SPT; s++) {
-        const uint8_t *src = adf + ((size_t)track * ADF_SPT + (size_t)s) * ADF_SECSZ;
-        uint8_t buf[ADF_SECSZ];
-        memcpy(buf, src, ADF_SECSZ);
-
-        bool bad = false;
-        if (defect && defect->sector == s) {
-            bad = defect->bad_checksum;
-            if (defect->overwrite) buf[0] = defect->overwrite;
-        }
-        amiga_put_sector(c, track, (uint8_t)s, buf, bad);
-    }
-    /* Auf die volle Umdrehung auffuellen — 100000 Zellen sind das, was eine
-     * AmigaDOS-DD-Spur bei 300 U/min traegt. */
-    while (c->n + 1 < c->cap) mfm_put_data_bit(c, 0);
+    uft_amigados_build_track(c, adf, track, defect);
 }
 
-/* Zellenstrom -> ns-Intervalle zwischen den Flusswechseln. */
 static size_t cells_to_intervals(const cellbuf_t *c, uint32_t *out, size_t cap)
 {
-    size_t n = 0, last = 0;
-    for (size_t i = 0; i < c->n && n < cap; i++) {
-        if (!((c->cells[i / 8] >> (7 - (i % 8))) & 1)) continue;
-        out[n++] = (uint32_t)((i - last) * AMIGA_CELL_NS);
-        last = i;
-    }
-    if (n > 0 && out[0] == 0) out[0] = AMIGA_CELL_NS;   /* Zelle 0 gesetzt */
-    return n;
+    return uft_amigados_cells_to_intervals(c, AMIGA_CELL_NS, out, cap);
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
@@ -261,8 +105,7 @@ static uint8_t *make_source_adf(void)
 {
     uint8_t *adf = (uint8_t *)calloc(1, ADF_SIZE);
     if (!adf) return NULL;
-    for (size_t i = 0; i < (size_t)NTRACKS * ADF_SPT * ADF_SECSZ; i++)
-        adf[i] = (uint8_t)(0x40u + ((i * 7u + (i >> 9)) & 0x3Fu));
+    uft_amigados_fill_pattern(adf, (size_t)NTRACKS * ADF_SPT * ADF_SECSZ);
     return adf;
 }
 

@@ -3752,6 +3752,83 @@ für AmigaDOS-DD.
 
 ---
 
+### FLUX-5 — der Feineinsteller war da und niemand konnte ihn drehen (2026-08-23, MF-480) → ✓ BEHOBEN
+
+Punkt 2.1 der a8rawconv-Gap-Analyse. `flux_decoder_options_t::media_adjust_pct`
+existiert seit MF-471, ist getestet, wird von `flux_pick_bitcell_ns()`
+ausgewertet — und **kein Aufrufer setzte ihn je**. Fünfter Eintrag derselben
+Liste nach MF-471/473/474/479.
+
+Verdrahtet über `uft_convert_options_t::decode_cell_adjust_pct` (angehängt,
+ABI), den Dispatcher und den SCP→ADF-Pfad. Standard 100 = unverändert.
+
+#### Was die Messung ergab — und was dadurch aus dem Plan fiel
+
+Vor dem Test stand die Frage: wirkt der Wert überhaupt? Ein Sweep über
+Zellendauern beantwortete sie:
+
+| wahre Zelle | 100 % | 150 % |
+|---|---|---|
+| 2400 ns (120 %) | 22/22 | 22/22 |
+| 2600 ns (130 %) | 22/22 | 22/22 |
+| 3000 ns (150 %) | **0/22** | 22/22 |
+
+**Bis etwa ±30 % fängt die PLL den Versatz selbst ab.** Ein Test bei 4 %
+Abweichung — der naheliegende — hätte grün geleuchtet und über den
+Einsteller nichts ausgesagt.
+
+#### Der erste Testaufbau war unphysikalisch
+
+3000 ns je Zelle bei 300 min⁻¹ heißt 66666 Zellen je Umdrehung. Elf
+AmigaDOS-Sektoren brauchen 95392. **Eine solche Spur gibt es nicht** — der
+Test lieferte folgerichtig 14 von 22 Sektoren, weil die Spuren abgeschnitten
+waren, und ich hätte das um ein Haar als „Feineinsteller wirkt nicht ganz"
+gedeutet.
+
+Der stimmige Fall geht in die andere Richtung: eine Diskette, die **dichter**
+beschrieben wurde als das gewählte Profil annimmt — 1000 ns je Zelle, 200000
+Zellen je Umdrehung, elf Sektoren passen bequem, echte 200 ms. Die aus dem
+DD-Profil abgeleitete Zellendauer liegt dann um den Faktor zwei daneben. Das
+ist genau der Fall eines **falsch gewählten Medienprofils**, und 50 % holt
+die Diskette vollständig zurück.
+
+#### Ein Rettungswerkzeug, kein Verbesserer
+
+Derselbe Wert macht eine gesunde Diskette unlesbar — das prüft
+`a_wrong_nudge_makes_a_good_stream_unreadable`, und deshalb ist der Standard
+neutral. Ein Wert außerhalb 50…200 wird vom Medienprofil abgelehnt und der
+Decoder fiele **still** auf 100 zurück; der Wandler meldet das jetzt, statt
+den Bediener an einem unverbundenen Knopf drehen zu lassen.
+
+#### Rot-Probe
+
+Zuweisung `dopts.media_adjust_pct = opts->decode_cell_adjust_pct` entfernt:
+2 der 4 Tests fallen, und zwar beide Richtungen (Rettung und Schaden). Die
+Ausgangslage und die Bereichsprüfung bleiben grün — richtig, sie hängen nicht
+an dieser Zeile.
+
+`ctest` 222/222, alle 21 Gate-Kategorien 0, `verify_build_sources.py` 0/0,
+qmake-Release-Build grün.
+
+**Ehrlich zur Reichweite.**
+
+- **Nicht belegt ist der Nutzen an einer marginalen Diskette** — dem Fall aus
+  a8rawconvs Handbuch, wo man in Ein-Prozent-Schritten sucht und die Good/Bad-
+  Quote beobachtet. Der synthetische Flux ist jitterfrei. Belegt ist: der Wert
+  erreicht den Decoder, wirkt in beide Richtungen, und außerhalb des Bereichs
+  wird er hörbar abgelehnt.
+- Wirksam nur auf Pfaden, die ein Medienprofil setzen — das ist weiterhin
+  **einer** (SCP→ADF).
+- Der Bediener sieht den Knopf nicht: kein Dialog schreibt das Feld. Die
+  Good/Bad-Quote für den Suchlauf steht dagegen bereits im Ergebnis
+  (`sectors_converted` / `sectors_failed`).
+- Der AmigaDOS-Fluxgenerator ist nach `tests/flux_gen/amigados/` gewandert,
+  weil ihn jetzt zwei Tests brauchen. Sein Selbsttest gegen den an der echten
+  Aufnahme belegten Dekoder (MF-438) ist mitgewandert und bleibt die einzige
+  Begründung, warum man ihm glauben darf.
+
+---
+
 ### FMT-25 — ATX erfand ein Layout, das es auf keiner Diskette gibt (2026-08-23, MF-479) → ✓ BEHOBEN
 
 `uft_atx_write()` muss auch Spuren schreiben können, die keine **gemessenen**

@@ -86,6 +86,10 @@ uft_convert_options_t uft_convert_default_options(void) {
         .synthetic_revolutions = 3,
         .decode_retries = 5,
         .use_multiple_revs = true,
+        /* MF-480: 100 = unveraendert. Der Feineinsteller ist ein
+         * Rettungswerkzeug, kein Verbesserer — ein falscher Wert macht eine
+         * gesunde Diskette unlesbar. Deshalb ist der Standard neutral. */
+        .decode_cell_adjust_pct = 100.0,
         .interpolate_errors = true,
         /* UFT-A05: accept_data_loss intentionally LEFT UNSET (= false via
          * designated-init zero default). Forensic policy: a default-options
@@ -617,6 +621,8 @@ uft_error_t uft_convert_file(const char* src_path,
             ext_opts.use_multiple_revs = options->use_multiple_revs;
             ext_opts.interpolate_errors = options->interpolate_errors;
             ext_opts.accept_data_loss = options->accept_data_loss;   /* UFT-A05 */
+            ext_opts.decode_cell_adjust_pct =
+                options->decode_cell_adjust_pct;                     /* MF-480 */
         }
 
         err = dispatch_conversion(src_format, dst_format, src_data, src_size,

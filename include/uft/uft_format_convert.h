@@ -135,6 +135,12 @@ typedef struct uft_convert_options_ext {
      * LOSSY_DOCUMENTED paths. See uft_convert_options_t in uft_types.h
      * for rationale. */
     bool                accept_data_loss;
+
+    /* MF-480 (appended for ABI safety): percent nudge for the decoder's cell
+     * time, 50…200; 0 or 100 means unchanged. Mirrors
+     * uft_convert_options_t::decode_cell_adjust_pct — see the rationale
+     * there. */
+    double              decode_cell_adjust_pct;
 } uft_convert_options_ext_t;
 
 // ============================================================================

@@ -562,6 +562,21 @@ typedef struct uft_convert_options {
      * forensic information). Caller MUST set this true to run a LOSSY
      * path; otherwise the preflight gate aborts NEED_CONSENT. */
     bool            accept_data_loss;
+
+    /* MF-480 (angehaengt, nicht eingefuegt — ABI).
+     *
+     * Feineinsteller fuer die Zellendauer beim Dekodieren, in Prozent der
+     * aus der gemessenen Umdrehung abgeleiteten Dauer. 50…200; 0 oder 100
+     * heisst unveraendert. Entspricht a8rawconvs `-p`.
+     *
+     * Wozu: liegt die Umdrehungsmessung richtig und die Diskette wurde
+     * trotzdem mit einer anderen Datenrate beschrieben als das Profil
+     * annimmt, ist die abgeleitete Zellendauer systematisch daneben. Der
+     * Arbeitsablauf dazu ist alt und bewaehrt — in kleinen Schritten
+     * verstellen und sectors_converted gegen sectors_failed beobachten.
+     *
+     * Wirkt nur auf Pfaden, die ein Medienprofil setzen. */
+    double          decode_cell_adjust_pct;
 } uft_convert_options_t;
 
 // ============================================================================
