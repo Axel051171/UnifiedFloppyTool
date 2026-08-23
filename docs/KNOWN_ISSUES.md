@@ -3938,6 +3938,82 @@ zweite braucht eine Bank-Sitzung mit echtem Laufwerk.
 
 ---
 
+### FUZZ-4 — der Schreibpfad nahm Koordinaten an, die es nicht gibt (2026-08-23, MF-522) -> ✓ BEHOBEN
+
+**Correctness / Forensik.** Bis hierher war `write_track` von keinem Test
+je mit einer unsinnigen Koordinate aufgerufen worden. Beim Beheben von
+MF-520 fiel auf, dass dieselbe fehlende Schranke auch im Schreibpfad
+stand — gefunden durch **Lesen**, nicht durch Messen.
+`tests/test_disk_write_fuzz.c` schliesst die Luecke: Korpusdatei auf eine
+**Kopie**, schreibbar oeffnen, eine echte Spur lesen, sie an gueltige und
+unsinnige Stellen zurueckschreiben.
+
+Erster Lauf: **29 Befunde in fuenf Plugins.** Kein einziger davon ist ein
+Absturz — und genau das macht sie schlimmer.
+
+**(a) Ohne jede Schranke: ADF, D81.**
+
+```c
+long off = (long)((cyl * 2 + head) * p->spt * ADF_SECTOR_SIZE);
+fseek(p->file, off + s * 512, SEEK_SET);
+fwrite(...);                                   /* -> UFT_OK */
+```
+
+| Koordinate | Folge |
+|---|---|
+| `cyl=1000` | Offset 11 264 000. `fseek` gelingt, `fwrite` verlaengert die Datei — aus 880 KB wurden im Test **11 MB** |
+| `cyl=-1, head=2` | `(-1*2+2) = 0` → Offset **0**: schreibt ueber **Spur 0**. Ein gueltiger Ort, erreicht ueber eine unsinnige Koordinate |
+
+**(b) Schranke da, meldet aber Erfolg: D64, ATR, XFD.**
+
+```c
+if (d64_track < 1 || d64_track > p->max_track) return UFT_OK;
+```
+
+Die Pruefung existiert. Sie schreibt nichts — und sagt dem Aufrufer, es
+sei gelungen. Bei ATR und XFD dasselbe ueber ein `break` in der
+Sektorschleife: nichts geschrieben, `UFT_OK` zurueck.
+
+**Warum das die schwerere Klasse ist.** Ein Absturz ist laut. Eine
+Erfolgsmeldung ohne Tat ist still: die Oberflaeche zeigt "Spur
+geschrieben", und niemand erfaehrt, dass nichts geschah. In einem
+Werkzeug, dessen Grundsaetze "Keine stille Veraenderung. Keine erfundenen
+Daten." lauten, ist das der schlimmere Fall.
+
+**Die Korrektur** bindet die Schranke an die Geometrie, die **das Plugin
+selbst** bei `open` gemeldet hat:
+
+```c
+if (cyl < 0 || head < 0) return UFT_ERROR_INVALID_PARAM;
+if (cyl >= (int)disk->geometry.cylinders ||
+    head >= (int)disk->geometry.heads) return UFT_ERROR_INVALID_PARAM;
+```
+
+Das braucht kein Format-Wissen und keine benannte Referenz — es verlangt
+nur, dass ein Plugin sich an seine eigene Aussage haelt. Bei D64 sind
+zusaetzlich beide `return UFT_OK` in den Schranken zu Fehlern geworden
+(Lese- und Schreibpfad).
+
+| | vorher | nachher |
+|---|---|---|
+| `write_track` angenommen | 115 | 77 |
+| davon **ausserhalb der Geometrie** | **29** | **0** |
+| stille Veraenderung nach Ablehnung | 0 | 0 |
+
+**Geprueft wird auch das Gegenteil:** nach einem **abgelehnten** Schreiben
+muss die Datei bitgleich sein. Ein Plugin, das erst schreibt und dann
+einen Fehler meldet, haette still veraendert. Kein Fall.
+
+**Nicht geprueft:** ob ein **angenommenes** Schreiben das Richtige tut.
+Das verlangt einen Rundlauf gegen eine benannte Referenz und gehoert in
+die Format-Hebung (`VERIFICATION_PLAN.md`). Dieser Test prueft, dass der
+Schreibpfad nicht abstuerzt, nicht ausserhalb schreibt und nach einer
+Ablehnung nichts veraendert hat.
+
+Der Test laeuft im **scharfen** ASan/UBSan-Tor der CI (MF-517).
+
+---
+
 ### FUZZ-3 — der Fuzzer sah 44 von 137 Plugins, weil er die falschen Groessen anbot (2026-08-23, MF-518/519) -> ✓ BEHOBEN
 
 **Correctness / Verifikation.** Nach FUZZ-2 stand die ehrliche Zahl:

@@ -110,7 +110,12 @@ static uft_error_t d64_plugin_read_track(uft_disk_t *disk, int cyl, int head,
     uft_track_init(track, cyl, head);
 
     int d64_track = cyl + 1;
-    if (d64_track < 1 || d64_track > p->max_track) return UFT_OK;
+    /* MF-522: hier stand `return UFT_OK`. Die Schranke war also da —
+     * sie meldete dem Aufrufer nur Erfolg fuer eine Spur, die weder
+     * gelesen noch geschrieben wurde. Eine Erfolgsmeldung ohne Tat ist
+     * in einem forensischen Werkzeug schlimmer als ein Fehler. */
+    if (d64_track < 1 || d64_track > p->max_track)
+        return UFT_ERROR_INVALID_PARAM;
     int nsectors = d64_spt(d64_track);
 
     uint8_t buf[256];
@@ -142,12 +147,35 @@ static uft_error_t d64_plugin_read_track(uft_disk_t *disk, int cyl, int head,
 
 static uft_error_t d64_plugin_write_track(uft_disk_t *disk, int cyl, int head,
                                            const uft_track_t *track) {
+    /* MF-522: gegen die Geometrie pruefen, die dieses Plugin bei `open`
+     * SELBST gemeldet hat. Ohne diese Schranke rechnete die Zeile darunter
+     * einen Offset aus beliebigen Koordinaten:
+     *
+     *   cyl=1000 -> Offset weit hinter dem Dateiende. `fseek` gelingt,
+     *               `fwrite` verlaengert die Datei. Aus 880 KB wurden im
+     *               Test 11 MB, und der Aufrufer bekam UFT_OK.
+     *   cyl=-1   -> Offset konnte auf 0 zurueckfallen und damit SPUR 0
+     *               ueberschreiben. Ein gueltiger Ort, erreicht ueber eine
+     *               unsinnige Koordinate.
+     *
+     * Beides ist eine stille Veraenderung mit Erfolgsmeldung — genau das,
+     * was DESIGN_PRINCIPLES verbietet. Gefunden von
+     * tests/test_disk_write_fuzz.c. */
+    if (cyl < 0 || head < 0) return UFT_ERROR_INVALID_PARAM;
+    if (cyl >= (int)disk->geometry.cylinders ||
+        head >= (int)disk->geometry.heads) return UFT_ERROR_INVALID_PARAM;
+
     d64_pd_t *p = disk->plugin_data;
     if (!p || !p->file || head != 0) return UFT_ERROR_INVALID_STATE;
     if (disk->read_only) return UFT_ERROR_NOT_SUPPORTED;
 
     int d64_track = cyl + 1;
-    if (d64_track < 1 || d64_track > p->max_track) return UFT_OK;
+    /* MF-522: hier stand `return UFT_OK`. Die Schranke war also da —
+     * sie meldete dem Aufrufer nur Erfolg fuer eine Spur, die weder
+     * gelesen noch geschrieben wurde. Eine Erfolgsmeldung ohne Tat ist
+     * in einem forensischen Werkzeug schlimmer als ein Fehler. */
+    if (d64_track < 1 || d64_track > p->max_track)
+        return UFT_ERROR_INVALID_PARAM;
     int nsectors = d64_spt(d64_track);
 
     for (size_t s = 0; s < track->sector_count && (int)s < nsectors; s++) {

@@ -17,10 +17,11 @@ stehen.
 
 | | |
 |---|---|
-| Tests | **241/241 grün** |
+| Tests | **242/242 grün** |
 | Skelett-Header | **0** |
 | Konsistenz-Tore | **25 Kategorien, 0** |
-| Fuzz ueber `uft_disk_open()` | 431 Eingaben, **0 Abstürze** (nach 6 Korrekturen) — **98 von 137** Plugins erreicht, 39 nie |
+| Fuzz ueber `uft_disk_open()` | 431 Eingaben, **0 Abstürze** (nach 7 Korrekturen) — **103 von 137** Plugins erreicht, 34 nie |
+| Fuzz ueber `write_track()` | 360 Schreibversuche, **0 ausserhalb der Geometrie** (vorher 29) |
 | qmake-Release | **baut und linkt** |
 | Gebaute Module mit exportierten Funktionen | 537 |
 | davon **von niemandem aufgerufen** | **228 (42 %)** |
@@ -68,6 +69,7 @@ benutzen.
 | P0-6 | **Drei Speicherfehler im DSK-Oeffnungspfad** — Heap-Ueberlauf (44830 B, gemessen), Stapel-Ueberlauf (1800 B) und ein **doppeltes free bei jeder abgeschnittenen DSK-Datei**. Gefunden vom neuen Fuzzer ueber `uft_disk_open()`, nicht durch Lesen | ✅ **behoben (MF-513)** |
 | P0-7 | **Zwoelf `read_track` schrieben durch einen Nullzeiger** — `track->sectors[s] = ...` auf einem Zeiger, den `uft_track_init()` nicht anlegt. Woertlich derselbe kopierte Rumpf in 12 Plugins; alle zwoelf konnten nie funktionieren. Dazu MF-515: `edsk_parser_read_track` las ~29 KB hinter sein Feld | ✅ **behoben (MF-515/516)**, Tor gesetzt |
 | P0-8 | **45 `read_track` indizierten mit `cyl`, ohne auf negativ zu pruefen** — `-1 >= tracks` ist falsch, `track_data[-1]` ein Zugriff vor dem Feld. Gefunden an OPUS, als der Fuzzer die Dateigroessen anbot, die die Sonden verlangen (aus den Sonden gelesen, 46 Werte) | ✅ **behoben (MF-518/519)** |
+| P0-9 | **Der Schreibpfad nahm Koordinaten an, die es nicht gibt** — ADF und D81 ohne jede Schranke (aus 880 KB wurden 11 MB; `cyl=-1,head=2` schrieb ueber **Spur 0**), D64/ATR/XFD mit Schranke, die `UFT_OK` meldet ohne zu schreiben. 29 Befunde, kein einziger ein Absturz | ✅ **behoben (MF-522)** |
 | P0-4 | **POL-1: das Schreib-Sicherheitstor hat keinen Aufrufer.** Ein Tor, das nie läuft, ist eine Sicherheitszusage, die niemand einlöst | **offen** (braucht Hardware-Sitzung) |
 | P0-5 | **LIC-1:** `uft_multiread_pipeline.c` trägt `SPDX: MIT`, dokumentiert sich aber als Nachbau von a8rawconvs `sift_sectors` (GPLv2+) | **offen** (Entscheidung des Eigentümers) |
 

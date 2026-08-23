@@ -81,6 +81,24 @@ static uft_error_t xfd_read_track(uft_disk_t *d, int cyl, int head, uft_track_t 
 
 static uft_error_t xfd_write_track(uft_disk_t *d, int cyl, int head,
                                     const uft_track_t *t) {
+    /* MF-522: gegen die Geometrie pruefen, die dieses Plugin bei `open`
+     * SELBST gemeldet hat. Ohne diese Schranke rechnete die Zeile darunter
+     * einen Offset aus beliebigen Koordinaten:
+     *
+     *   cyl=1000 -> Offset weit hinter dem Dateiende. `fseek` gelingt,
+     *               `fwrite` verlaengert die Datei. Aus 880 KB wurden im
+     *               Test 11 MB, und der Aufrufer bekam UFT_OK.
+     *   cyl=-1   -> Offset konnte auf 0 zurueckfallen und damit SPUR 0
+     *               ueberschreiben. Ein gueltiger Ort, erreicht ueber eine
+     *               unsinnige Koordinate.
+     *
+     * Beides ist eine stille Veraenderung mit Erfolgsmeldung — genau das,
+     * was DESIGN_PRINCIPLES verbietet. Gefunden von
+     * tests/test_disk_write_fuzz.c. */
+    if (cyl < 0 || head < 0) return UFT_ERROR_INVALID_PARAM;
+    if (cyl >= (int)d->geometry.cylinders ||
+        head >= (int)d->geometry.heads) return UFT_ERROR_INVALID_PARAM;
+
     xfd_data_t *p = d->plugin_data;
     if (!p || !p->file || head != 0) return UFT_ERROR_INVALID_STATE;
     if (d->read_only) return UFT_ERROR_NOT_SUPPORTED;
