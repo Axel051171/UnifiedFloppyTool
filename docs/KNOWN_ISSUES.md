@@ -3938,6 +3938,71 @@ zweite braucht eine Bank-Sitzung mit echtem Laufwerk.
 
 ---
 
+### RT-2 — die Spurlaenge kam aus einer festen Zahl statt aus dem Fluss (2026-08-23, MF-528) -> ✓ BEHOBEN
+
+**Correctness.** RT-1 (MF-527) hatte gemessen, dass der Rundlauf
+HFE -> SCP -> HFE aus einer 2049024-Byte-Datei eine von 1025024 macht.
+Offen blieb: **wo** gehen die drei Viertel verloren. Hier ist die Antwort.
+
+`uftc_convert_scp_to_hfe()` enthielt:
+
+```c
+/* Standard MFM track length estimate */
+int mfm_track_bytes = 6400; /* ~100ms at 250Kbps */
+```
+
+Eine feste Zahl, die den Fluss gar nicht ansah. Zwei Fehler darin, die
+sich **multiplizierten**:
+
+| # | Fehler | Faktor |
+|---|---|---|
+| 1 | 6400 Byte sind 250 kbps x 200 ms, also die **Datenrate**. Der HFE-Bitstrom speichert **Zellen**, und dekodiert wird zwei Bildschirmseiten weiter unten mit `uft_pll_init(&pll, 500000.0, ...)` — 500 kbps | 2 |
+| 2 | `lut[].length` bekam denselben Wert. Das Feld ist die **Gesamtlaenge beider Seiten** (MF-526), nicht die je Seite | 2 |
+
+Zusammen **Faktor 4** — und genau 25336 / 6400 = 3,96.
+
+**Dazu ein drittes Problem, das keinen Faktor hat, sondern eine Zusage
+bricht:** der dekodierte Bitstrom wurde auf `track_len_aligned` gekappt
+
+```c
+if (bytes_to_copy > (size_t)track_len_aligned)
+    bytes_to_copy = (size_t)track_len_aligned;
+```
+
+und danach lief `result->tracks_converted++` **trotzdem**. Eine Spur, von
+der drei Viertel fehlen, wurde als konvertiert gemeldet. Das ist die
+stille Veraenderung, die `DESIGN_PRINCIPLES` verbietet.
+
+**Behoben.** Die Laenge kommt jetzt aus der Zellrate, mit der tatsaechlich
+dekodiert wird; die LUT traegt die Gesamtlaenge; und ein Kappen zaehlt als
+`tracks_failed` **und** erzeugt eine Warnung mit Spur, Kopf und Byte-Zahl.
+
+**Gemessen, vorher/nachher** (`tests/test_convert_roundtrip_lossless.c`,
+`gw_amigados.hfe`, 2049024 Byte):
+
+| | vorher | nachher |
+|---|---|---|
+| Ergebnisdatei | 1025024 B | **2008064 B** |
+| Abweichung zur Quelle | −50,0 % | **−2,0 %** |
+| Spurlaenge (LUT) | 6400 | 25088 (Quelle: 25336) |
+
+Die restlichen 40960 Byte sind die 256-Byte-Aufrundung: 80 Spuren x 248
+Byte plus Kopfbereich.
+
+**Was das NICHT behebt: Bit-Identitaet.** Die Bytes weichen weiterhin ab,
+und das ist erwartbar — der Bitstrom laeuft durch einen PLL und wird neu
+synchronisiert. Ueber Flux -> Bitstrom -> Flux ist Bit-Identitaet
+prinzipiell nicht erreichbar. `UFT_RT_LOSSY_DOCUMENTED` (MF-527) bleibt
+damit die richtige Einstufung; was sich geaendert hat, ist der **Umfang**
+des Verlusts: aus drei Vierteln der Daten wurden zwei Prozent der Laenge.
+
+**Nicht gemessen:** ob die verbleibende Abweichung rein die
+PLL-Resynchronisation ist oder noch etwas anderes enthaelt. Das verlangt
+einen Vergleich auf Sektorebene statt auf Byteebene und gehoert in die
+Format-Hebung (`VERIFICATION_PLAN.md`).
+
+---
+
 ### RT-1 — die einzige Zusage ohne Zustimmung war unbelegt, und sie ist falsch (2026-08-23, MF-527) -> ✓ KORRIGIERT
 
 **Correctness / Forensik.** `src/core/uft_roundtrip.c` schreibt seine

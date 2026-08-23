@@ -1710,8 +1710,34 @@ uft_error_t uftc_convert_scp_to_hfe(const uint8_t* src_data, size_t src_size,
     hfe_track_encoding_t encoding = HFE_ENC_ISOIBM_MFM;
     hfe_floppy_interface_t iface = HFE_IF_IBMPC_DD;
 
-    /* Standard MFM track length estimate */
-    int mfm_track_bytes = 6400; /* ~100ms at 250Kbps */
+    /* Spurlaenge JE SEITE, aus der Zellrate gerechnet, mit der weiter unten
+     * tatsaechlich dekodiert wird.
+     *
+     * MF-528: hier stand `int mfm_track_bytes = 6400; /* ~100ms at 250Kbps *\/`
+     * — eine feste Zahl, die den Fluss gar nicht ansah. Zwei Fehler darin,
+     * die sich multiplizierten:
+     *
+     *   1. 6400 Byte sind 250 kbps x 200 ms, also die DATENRATE. Der HFE-
+     *      Bitstrom speichert aber ZELLEN, und dekodiert wird unten mit
+     *      `uft_pll_init(&pll, 500000.0, UFT_ENCODING_MFM)` — 500 kbps.
+     *      Faktor 2.
+     *   2. `lut[].length` bekam denselben Wert. Das Feld ist aber die
+     *      GESAMTLAENGE beider Seiten (MF-526), nicht die je Seite.
+     *      Nochmal Faktor 2.
+     *
+     * Zusammen Faktor 4, und genau das war messbar: der Rundlauf
+     * HFE -> SCP -> HFE machte aus einer Amiga-Spur von 25336 Byte eine
+     * von 6400 (tests/test_convert_roundtrip_lossless.c, MF-527). Der
+     * Rest wurde vom `bytes_to_copy`-Deckel weiter unten still
+     * abgeschnitten, waehrend `tracks_converted++` trotzdem lief.
+     *
+     * Die Zahlen hier sind gemessen, nicht gewaehlt: die Quelldatei
+     * gw_amigados.hfe fuehrt 25336 Byte je Spur fuer beide Seiten, also
+     * 12668 je Seite. 500000 Zellen/s x 0,2 s / 8 = 12500 Byte — dieselbe
+     * Groessenordnung, auf 256 aufgerundet 12544. */
+    const double cell_rate_hz = 500000.0;   /* wie uft_pll_init() unten */
+    const double rev_seconds  = 60.0 / 300.0;  /* 300 U/min */
+    int mfm_track_bytes = (int)((cell_rate_hz * rev_seconds) / 8.0 + 0.5);
     int track_len_aligned = ((mfm_track_bytes + 255) / 256) * 256;
 
     /* Build HFE file in memory */
@@ -1742,7 +1768,11 @@ uft_error_t uftc_convert_scp_to_hfe(const uint8_t* src_data, size_t src_size,
     hfe_track_entry_t* lut = (hfe_track_entry_t*)(hfe_data + 512);
     for (int cyl = 0; cyl < cylinders; cyl++) {
         lut[cyl].offset = (uint16_t)(data_start_block + (size_t)cyl * blocks_per_track);
-        lut[cyl].length = (uint16_t)track_len_aligned;
+        /* MF-528: das Feld ist die GESAMTLAENGE beider Seiten
+         * (MF-526), track_len_aligned ist die je Seite. Hier stand
+         * die halbe Zahl — ein Leser, der sie als Gesamtlaenge nimmt,
+         * sah damit nur die Haelfte der geschriebenen Bytes. */
+        lut[cyl].length = (uint16_t)(track_len_aligned * 2);
     }
 
     uftc_report_progress(opts, 15, "PLL decoding SCP flux to bitstream");
@@ -1807,8 +1837,21 @@ uft_error_t uftc_convert_scp_to_hfe(const uint8_t* src_data, size_t src_size,
 
             /* Copy decoded bitstream into track buffer, truncating to track_len_aligned */
             size_t bytes_to_copy = (bit_pos + 7) / 8;
-            if (bytes_to_copy > (size_t)track_len_aligned)
+            if (bytes_to_copy > (size_t)track_len_aligned) {
+                /* MF-528: hier wurde still gekappt und danach trotzdem
+                 * `tracks_converted++` gezaehlt. Eine Spur, von der drei
+                 * Viertel fehlen, als "konvertiert" zu melden, ist genau
+                 * die stille Veraenderung, die DESIGN_PRINCIPLES verbietet.
+                 * Gekappt wird weiterhin — der Puffer ist fest —, aber es
+                 * steht jetzt im Ergebnis. */
+                uftc_add_warning(result,
+                    "Spur %d/%d: Bitstrom %zu Byte, Platz %d Byte — "
+                    "%zu Byte abgeschnitten",
+                    cyl, hd, bytes_to_copy, track_len_aligned,
+                    bytes_to_copy - (size_t)track_len_aligned);
+                result->tracks_failed++;
                 bytes_to_copy = (size_t)track_len_aligned;
+            }
 
             uint8_t* dest_buf = (hd == 0) ? head0_bits : head1_bits;
             memcpy(dest_buf, raw_bitstream, bytes_to_copy);
