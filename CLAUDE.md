@@ -65,7 +65,18 @@ Liest/schreibt Disk-Images von praktisch jedem 8-Bit- und 16-Bit-Computer:
 - **Japanisch:** D88, D77, NFD, HDM, XDF, DIM, FDX
 - Plus: MSX, Thomson, TI-99, Roland, HP LIF, CP/M, Micropolis, Victor, Zilog, etc.
 
-### 3. Format-Konvertierung (44 Pfade)
+### 3. Format-Konvertierung (44 Pfade registriert, **8 angeboten**)
+
+> **Ehrlichkeits-Hinweis (MF-526):** die Wandlungstabelle fuehrt 44
+> Paare. Angeboten werden davon **8**: zwei verlustfrei (SCP↔HFE),
+> sechs nur mit ausdruecklichem `accept_data_loss`. Drei sind als
+> unmoeglich gekennzeichnet, **33 weist das Preflight-Tor als
+> UNGEPRUEFT ab** („conversion pair is UNTESTED — not offered until
+> an entry exists“), weil sie keinen Eintrag in
+> `src/core/uft_roundtrip.c` haben. Das ist Absicht (MF-263/UFT-A01)
+> und richtig — die Liste unten nennt die **Tabelle**, nicht die
+> Faehigkeit.
+
 Konvertiert zwischen allen gängigen Formaten:
 - Sektor↔Sektor (D64↔IMG, IMD↔IMG)
 - Sektor→Bitstream (D64→G64, ADF→HFE)
@@ -207,7 +218,8 @@ tests/                 — 77 C-Tests + 1 Qt-Test
   `src/filesystems/`, `src/encoding/`, plus 250+ einzelne orphan-Header)
 - 138 Format-IDs, 137 Plugin-Definitionen (88 ausgeschrieben + 49 DSK-Makro;
   84 davon mit Registrar-Funktion, die niemand aufruft — MF-446; SSOT:
-  `scripts/gen_format_list.py`), 45 Konvertierungspfade,
+  `scripts/gen_format_list.py`), 44 Konvertierungspfade registriert /
+  **8 angeboten** (MF-526),
   13 Roundtrip-Matrix-Einträge (SSOT in `src/core/uft_roundtrip.c`)
 - 6 Hardware-Controller — SCP-Direct M3.1 libusb wiring LANDED (MF-254,
   HW-bench UFT-008 pending); XUM1541 M3.2 + Applesauce M3.3 weiterhin

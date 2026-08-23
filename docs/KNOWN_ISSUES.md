@@ -3938,6 +3938,98 @@ zweite braucht eine Bank-Sitzung mit echtem Laufwerk.
 
 ---
 
+### FUZZ-5 — die dritte Route: `uft_convert_file()`, und was sie ueber die 44 Pfade sagt (2026-08-23, MF-526) -> ✓ BEHOBEN / gemessen
+
+**Correctness + Ehrlichkeit.** Der Baum hat drei Produktionsrouten. Zwei
+waren gefuzzt, die dritte nicht:
+
+| Route | Einstieg | Stand vorher |
+|---|---|---|
+| lesen | `uft_disk_open()` | MF-512, sieben Speicherfehler |
+| schreiben | `write_track()` | MF-522, 29 Befunde |
+| **wandeln** | `uft_convert_file()` | **nicht geprueft** |
+
+Die dritte ist die interessanteste, weil sie die beiden anderen verbindet.
+Die neun bestehenden `test_convert_*`-Tests fahren jeweils EINEN Pfad mit
+GUELTIGER Eingabe; keiner fragt, was bei Muell passiert.
+
+**Zwei Speicherfehler, beide in der HFE-Verarbeitung.**
+
+**(a) Die LUT-Laenge ist die Gesamtlaenge BEIDER Seiten.**
+`lut[].length` beschreibt den interleavten Block; `hfe_deinterleave_track()`
+und `hfe_track_blocks()` erwarten die Laenge **je Seite** — beide rechnen
+in 256-Byte-Haelften und schreiten in 512er-Bloecken. Drei Aufrufer
+uebergaben die Gesamtlaenge. Damit verdoppelte sich die Blockzahl:
+
+```
+gw_amigados.hfe, track_len 25336, Zylinder 79 ab Byte 2023424
+  gelesen bis Byte 2074104 — 25080 Byte hinter dem Dateiende (2049024)
+```
+
+**Absturz auf einer gueltigen Datei.** Belegt durch den Leser, der es
+richtig macht (`src/formats/hfe/uft_hfe.c::deinterleave_track` schreitet
+`pos += 512` und gibt jeder Seite 256 Byte) und durch die Datei selbst:
+eine Amiga-DD-Spur hat rund 12500 Byte je Seite, 25336 ist das Doppelte.
+
+**(b) Keine Schranke auf der Spur-Tabelle.** `track_list_offset`,
+`n_cylinders` und `lut[].offset/length` kommen alle aus der Datei. Bei
+einer gekuerzten HFE liegt die LUT laut Kopf bei Byte 512, die Datei endet
+bei 300 — der erste Zugriff war schon daneben. **Dreimal dieselbe
+Rechnung, dreimal dieselbe fehlende Schranke**; der erste Durchgang schloss
+nur eine davon, und der Fuzzer fand die zweite sofort.
+
+---
+
+**Und die Zahl, um die es eigentlich geht.**
+
+Beim Auswerten fiel auf, dass fast jede Wandlung `UFT_ERR_NOT_SUPPORTED`
+liefert. Zwei Messfehler von mir zuerst, weil sie zur Sache gehoeren:
+
+1. Die Temp-Datei hiess `.img` — damit sah jede Quelle wie ein IMG aus.
+2. Genullte Optionen heissen `accept_data_loss = false`. Das Verlust-Tor
+   (MF-263/UFT-A01) weist damit **korrekt** jeden verlustbehafteten Pfad
+   ab. Ich hatte das als kaputte Wandlungspfade gelesen.
+
+Beides behoben; der Test faehrt jetzt **beide** Laeufe, und der Unterschied
+ist die eigentliche Pruefung: ohne Zustimmung MUSS ein verlustbehafteter
+Pfad abgelehnt werden, mit Zustimmung muss er laufen.
+
+Danach sagt das Werkzeug selbst, warum es ablehnt:
+
+> `Preflight ABORT: conversion pair is UNTESTED — not offered until an entry exists`
+
+Gemessen gegen `src/core/uft_roundtrip.c`:
+
+| | |
+|---|---|
+| Pfade in der Wandlungstabelle | **44** |
+| Eintraege in der Rundlauf-Tabelle | **13** |
+| **tatsaechlich angeboten** | **8** |
+| davon ohne Zustimmung (LOSSLESS) | 2 — SCP↔HFE |
+| davon nur mit `accept_data_loss` | 6 |
+| als IMPOSSIBLE gekennzeichnet | 3 |
+| **als UNTESTED verweigert** | **33** |
+
+Dazu zwei Rundlauf-Eintraege, die in der Wandlungstabelle gar nicht
+stehen: `SCP -> IMD` und `STX -> ST`.
+
+**Das ist kein Fehler des Werkzeugs — es ist das Werkzeug, das ehrlich
+ist.** Das Tor verweigert bewusst, was nicht rundlauf-geprueft ist. Falsch
+ist die **Zusage**: "Format-Konvertierung (44 Pfade)" beschreibt eine
+Tabelle, keine Faehigkeit. Genau dieselbe Bauart wie die 137 Plugins, von
+denen 57 auf T3 stehen (MF-509), und wie die 55+ Kopierschutz-Schemata
+ohne Aufrufer (MF-508).
+
+`CLAUDE.md`, `README.md` und `docs/SHOWCASE.md` sagen es jetzt.
+
+**Ergebnis nach den Korrekturen:** 210 Wandlungen (7 Quellen x 5
+Beschaedigungen x 6 Ziele), **0 Abstuerze**, **0 Zieldateien nach einer
+Ablehnung**. Der letzte Punkt ist der forensische: eine halb geschriebene
+Datei mit Fehlermeldung kann ein Benutzer nicht von einer fertigen
+unterscheiden.
+
+---
+
 ### SAN-1 — der erste ASan-Volllauf: ein eingeschlepptes `snprintf` ueberschrieb das der C-Bibliothek (2026-08-23, MF-523/524) -> ✓ BEHOBEN
 
 **Correctness.** Der berichtende ASan/UBSan-Volllauf aus MF-517 lief zum

@@ -789,7 +789,8 @@ foreach(test_source ${TEST_SOURCES})
            OR ${test_name} STREQUAL "test_disk_open_fuzz"
            OR ${test_name} STREQUAL "test_dsk_open_bounds"
            OR ${test_name} STREQUAL "test_disk_write_fuzz"
-           OR ${test_name} STREQUAL "test_snprintf_not_shadowed")
+           OR ${test_name} STREQUAL "test_snprintf_not_shadowed"
+           OR ${test_name} STREQUAL "test_convert_fuzz")
         # MF-446: the only test that links the entire format layer, because it
         # is the only one that can answer "does uft_register_all_formats()
         # actually register all of them". Anything less proves nothing.

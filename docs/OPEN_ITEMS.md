@@ -17,7 +17,7 @@ stehen.
 
 | | |
 |---|---|
-| Tests | **243/243 grün** |
+| Tests | **244/244 grün** |
 | Skelett-Header | **0** |
 | Konsistenz-Tore | **25 Kategorien, 0** |
 | Fuzz ueber `uft_disk_open()` | 431 Eingaben, **0 Abstürze** (nach 7 Korrekturen) — **103 von 137** Plugins erreicht, 34 nie |
@@ -72,6 +72,8 @@ benutzen.
 | P0-9 | **Der Schreibpfad nahm Koordinaten an, die es nicht gibt** — ADF und D81 ohne jede Schranke (aus 880 KB wurden 11 MB; `cyl=-1,head=2` schrieb ueber **Spur 0**), D64/ATR/XFD mit Schranke, die `UFT_OK` meldet ohne zu schreiben. 29 Befunde, kein einziger ein Absturz | ✅ **behoben (MF-522)** |
 | P0-10 | **Ein eingeschlepptes `snprintf` ueberschrieb das der C-Bibliothek** — Parser von 1995 ohne `%z`; 10 Aufrufstellen unter `src/` betroffen, eine stuerzte ab. Dazu drei weitere Sanitizer-Befunde (Lesen hinter einer Zeichenkette, Verschiebung um 32 Stellen, Linksschieben auf `int`) | ✅ **behoben (MF-523/524)** |
 | P0-11 | **Leck-Rueckstand jetzt sichtbar, nicht behoben** — LeakSanitizer meldet im Volllauf Lecks bis **8 132 856 Byte in 321 Allokationen** je Test. Das scharfe Tor laeuft deshalb mit `detect_leaks=0` | **offen**, gemessen ab MF-517 |
+| P0-12 | **„44 Konvertierungspfade“ beschreibt eine Tabelle, keine Faehigkeit** — angeboten werden **8** (2 verlustfrei, 6 mit Zustimmung); 33 weist das Preflight-Tor als UNGEPRUEFT ab, 3 als unmoeglich. Die Abweisung ist Absicht und richtig; die Zusage war es nicht | ✅ **Zusagen korrigiert (MF-526)**, 33 Hebungen offen |
+| P0-13 | **Zwei Speicherfehler im Wandlungspfad** — die HFE-Spurtabelle ohne jede Schranke, und `lut[].length` (Gesamtlaenge beider Seiten) dreimal als Laenge je Seite verwendet: Absturz auf einer **gueltigen** Datei, 25080 Byte hinter dem Dateiende | ✅ **behoben (MF-526)** |
 | P0-4 | **POL-1: das Schreib-Sicherheitstor hat keinen Aufrufer.** Ein Tor, das nie läuft, ist eine Sicherheitszusage, die niemand einlöst | **offen** (braucht Hardware-Sitzung) |
 | P0-5 | **LIC-1:** `uft_multiread_pipeline.c` trägt `SPDX: MIT`, dokumentiert sich aber als Nachbau von a8rawconvs `sift_sectors` (GPLv2+) | **offen** (Entscheidung des Eigentümers) |
 

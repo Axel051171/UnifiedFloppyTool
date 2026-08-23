@@ -82,7 +82,7 @@ jobs:
         run: |
           cd build
           ctest --output-on-failure --timeout 300 --no-tests=error \
-            --tests-regex "test_disk_open_fuzz|test_disk_write_fuzz|test_dsk_open_bounds|test_format_probe_fuzz"
+            --tests-regex "test_convert_fuzz|test_disk_open_fuzz|test_disk_write_fuzz|test_dsk_open_bounds|test_format_probe_fuzz"
         env:
           # halt_on_error=0: EIN Lauf meldet ALLE Funde statt beim ersten
           # abzubrechen. Sonst kostet jeder einzelne Fehler eine eigene
@@ -160,7 +160,7 @@ jobs:
         run: |
           cd build
           ctest --output-on-failure --timeout 300 --no-tests=error \
-            --tests-regex "test_disk_open_fuzz|test_disk_write_fuzz|test_dsk_open_bounds|test_format_probe_fuzz"
+            --tests-regex "test_convert_fuzz|test_disk_open_fuzz|test_disk_write_fuzz|test_dsk_open_bounds|test_format_probe_fuzz"
         env:
           # Wie beim ASan-Tor: ein Lauf, alle Funde.
           UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=0:exitcode=1

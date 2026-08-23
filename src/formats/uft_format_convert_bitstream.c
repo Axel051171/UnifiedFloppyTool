@@ -66,9 +66,27 @@ uft_error_t uftc_convert_hfe_to_scp(const uint8_t* src_data, size_t src_size,
 
     uftc_report_progress(opts, 20, "Converting bitstream to flux");
 
-    /* Read track LUT */
-    const hfe_track_entry_t* lut = (const hfe_track_entry_t*)
-                                    (src_data + hdr->track_list_offset * 512);
+    /* Read track LUT.
+     *
+     * MF-526: hier stand keine einzige Schranke. Alle drei Groessen kommen
+     * aus der Datei und duerfen beliebig sein:
+     *
+     *   track_list_offset  -> die LUT konnte hinter dem Puffer beginnen
+     *   n_cylinders        -> die LUT-Schleife konnte hinter ihr Ende laufen
+     *   lut[].offset/length-> ein Track konnte hinter dem Puffer liegen
+     *
+     * Bei einer auf 300 Byte gekuerzten HFE liegt die LUT laut Kopf bei
+     * Byte 512 — der erste Zugriff war also schon daneben. Gefunden von
+     * tests/test_convert_fuzz.c. */
+    const size_t lut_start = (size_t)hdr->track_list_offset * 512;
+    if (lut_start >= src_size ||
+        (src_size - lut_start) / sizeof(hfe_track_entry_t) < (size_t)cylinders) {
+        result->error = UFT_ERR_FORMAT;
+        uftc_add_warning(result, "HFE track list does not fit in the file");
+        scp_writer_free(writer);
+        return UFT_ERR_FORMAT;
+    }
+    const hfe_track_entry_t* lut = (const hfe_track_entry_t*)(src_data + lut_start);
 
     for (int cyl = 0; cyl < cylinders; cyl++) {
         if (uftc_is_cancelled(opts)) break;
@@ -78,26 +96,55 @@ uft_error_t uftc_convert_hfe_to_scp(const uint8_t* src_data, size_t src_size,
 
         if (track_offset_blocks == 0 || track_len == 0) continue;
 
-        const uint8_t* interleaved = src_data + (size_t)track_offset_blocks * 512;
+        /* Liegt der Track ueberhaupt in der Datei? Ein Kopf, der auf
+         * Daten zeigt, die es nicht gibt, ist missgebildet — nicht eine
+         * Einladung, dort zu lesen. */
+        const size_t track_start = (size_t)track_offset_blocks * 512;
+        if (track_start >= src_size || src_size - track_start < track_len) {
+            result->tracks_failed++;
+            continue;
+        }
+
+        const uint8_t* interleaved = src_data + track_start;
 
         for (int hd = 0; hd < heads; hd++) {
             /* De-interleave to get single-head track data */
-            uint8_t* track_bits = malloc(track_len);
+            /* MF-526: `lut[].length` ist die Laenge des interleavten
+             * Blocks, also BEIDER Seiten zusammen. `hfe_deinterleave_track()`
+             * und `hfe_track_blocks()` erwarten die Laenge JE SEITE — beide
+             * rechnen in 256-Byte-Haelften und schreiten in 512er-Bloecken.
+             *
+             * Hier wurde die Gesamtlaenge uebergeben. Damit verdoppelte sich
+             * die Blockzahl, und die Schleife las weit hinter den Track
+             * hinaus: bei gw_amigados.hfe (track_len 25336, Zylinder 79 ab
+             * Byte 2023424) bis Byte 2074104 — 25080 Byte hinter dem
+             * Dateiende von 2049024. Absturz auf einer GUELTIGEN Datei,
+             * gefunden von tests/test_convert_fuzz.c.
+             *
+             * Belegt durch den Leser, der es richtig macht:
+             * src/formats/hfe/uft_hfe.c::deinterleave_track schreitet
+             * `pos += 512` und gibt jeder Seite 256 Byte, also
+             * Gesamtlaenge / 2. Und durch die Datei selbst: eine
+             * Amiga-DD-Spur hat rund 12500 Byte je Seite, 25336 ist das
+             * Doppelte. */
+            const uint16_t head_len = (uint16_t)(track_len / 2);
+            if (head_len == 0) continue;
+            uint8_t* track_bits = malloc(head_len);
             if (!track_bits) continue;
 
-            hfe_deinterleave_track(interleaved, track_len, (uint8_t)hd,
+            hfe_deinterleave_track(interleaved, head_len, (uint8_t)hd,
                                     track_bits);
 
             /* Convert bitstream to flux transitions */
             /* HFE stores bits LSB-first, so reverse each byte */
-            hfe_reverse_bits(track_bits, track_len);
+            hfe_reverse_bits(track_bits, head_len);
 
             /* Convert each '1' bit to a flux transition */
             uint32_t flux_buf[131072];
             size_t flux_count = 0;
             uint32_t accum_ns = 0;
 
-            for (size_t byte_i = 0; byte_i < track_len; byte_i++) {
+            for (size_t byte_i = 0; byte_i < head_len; byte_i++) {
                 uint8_t b = track_bits[byte_i];
                 for (int bit = 7; bit >= 0; bit--) {
                     accum_ns += cell_ns;
@@ -444,9 +491,17 @@ uft_error_t uftc_convert_hfe_to_g64(const uint8_t* src_data, size_t src_size,
 
     uftc_report_progress(opts, 20, "Extracting GCR tracks from HFE");
 
-    /* Read track LUT */
-    const hfe_track_entry_t* lut = (const hfe_track_entry_t*)
-                                    (src_data + hdr->track_list_offset * 512);
+    /* Read track LUT — dritte Kopie derselben Rechnung (MF-526). Alle drei
+     * hatten dieselbe fehlende Schranke; dass es drei sind, ist das
+     * eigentliche Problem. */
+    const size_t lut_start = (size_t)hdr->track_list_offset * 512;
+    if (lut_start >= src_size ||
+        (src_size - lut_start) / sizeof(hfe_track_entry_t) < (size_t)cylinders) {
+        result->error = UFT_ERR_FORMAT;
+        uftc_add_warning(result, "HFE track list does not fit in the file");
+        return UFT_ERR_FORMAT;
+    }
+    const hfe_track_entry_t* lut = (const hfe_track_entry_t*)(src_data + lut_start);
 
     for (int cyl = 0; cyl < cylinders; cyl++) {
         if (uftc_is_cancelled(opts)) break;
@@ -459,22 +514,32 @@ uft_error_t uftc_convert_hfe_to_g64(const uint8_t* src_data, size_t src_size,
             continue;
         }
 
-        const uint8_t* interleaved = src_data + (size_t)track_offset_blocks * 512;
+        const size_t track_start = (size_t)track_offset_blocks * 512;
+        if (track_start >= src_size || src_size - track_start < track_len) {
+            result->tracks_failed++;
+            continue;
+        }
+
+        const uint8_t* interleaved = src_data + track_start;
 
         /* De-interleave head 0 (C64 is single-sided) */
-        uint8_t* track_bits = malloc(track_len);
+        /* MF-526: siehe oben — lut[].length ist die Gesamtlaenge
+         * beider Seiten, hfe_deinterleave_track() will die je Seite. */
+        const uint16_t head_len = (uint16_t)(track_len / 2);
+        if (head_len == 0) continue;
+        uint8_t* track_bits = malloc(head_len);
         if (!track_bits) {
             result->tracks_failed++;
             continue;
         }
 
-        hfe_deinterleave_track(interleaved, track_len, 0, track_bits);
+        hfe_deinterleave_track(interleaved, head_len, 0, track_bits);
 
         /* HFE stores bits LSB-first, reverse to MSB-first for G64 */
-        hfe_reverse_bits(track_bits, track_len);
+        hfe_reverse_bits(track_bits, head_len);
 
         /* Determine effective track length (trim trailing zeros) */
-        size_t effective_len = track_len;
+        size_t effective_len = head_len;
         while (effective_len > 0 && track_bits[effective_len - 1] == 0x00) {
             effective_len--;
         }

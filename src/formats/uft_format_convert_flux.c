@@ -1505,9 +1505,25 @@ uft_error_t uftc_convert_hfe_to_sectors(const uint8_t* src_data,
 
     uftc_report_progress(opts, 20, "Extracting MFM sectors from HFE");
 
-    /* Read track LUT */
-    const hfe_track_entry_t* lut = (const hfe_track_entry_t*)
-                                    (src_data + hdr->track_list_offset * 512);
+    /* Read track LUT.
+     *
+     * MF-526: dieselbe fehlende Schranke wie in uftc_convert_hfe_to_scp().
+     * `track_list_offset`, `n_cylinders` und `lut[].offset/length` kommen
+     * alle aus der Datei und duerfen beliebig sein. Bei einer auf die
+     * Haelfte gekuerzten HFE zeigt die LUT auf Tracks, die es nicht mehr
+     * gibt — der Zugriff lag dann hinter dem Puffer. Gefunden von
+     * tests/test_convert_fuzz.c, nachdem der erste Durchgang nur den
+     * SCP-Zweig geschlossen hatte: zwei Kopien derselben Rechnung, und ich
+     * hatte nur eine gesehen. */
+    const size_t lut_start = (size_t)hdr->track_list_offset * 512;
+    if (lut_start >= src_size ||
+        (src_size - lut_start) / sizeof(hfe_track_entry_t) < (size_t)cylinders) {
+        free(output);
+        result->error = UFT_ERR_FORMAT;
+        uftc_add_warning(result, "HFE track list does not fit in the file");
+        return UFT_ERR_FORMAT;
+    }
+    const hfe_track_entry_t* lut = (const hfe_track_entry_t*)(src_data + lut_start);
 
     for (int cyl = 0; cyl < cylinders; cyl++) {
         if (uftc_is_cancelled(opts)) break;
@@ -1520,7 +1536,13 @@ uft_error_t uftc_convert_hfe_to_sectors(const uint8_t* src_data,
             continue;
         }
 
-        const uint8_t* interleaved = src_data + (size_t)track_offset_blocks * 512;
+        const size_t track_start = (size_t)track_offset_blocks * 512;
+        if (track_start >= src_size || src_size - track_start < track_len) {
+            result->tracks_failed++;
+            continue;
+        }
+
+        const uint8_t* interleaved = src_data + track_start;
 
         for (int hd = 0; hd < heads; hd++) {
             /* De-interleave to get single-head track data */
@@ -1530,10 +1552,15 @@ uft_error_t uftc_convert_hfe_to_sectors(const uint8_t* src_data,
                 continue;
             }
 
-            hfe_deinterleave_track(interleaved, track_len, (uint8_t)hd,
+            /* MF-526: lut[].length ist die Gesamtlaenge BEIDER Seiten;
+             * hfe_deinterleave_track() will die je Seite. Die
+             * Gesamtlaenge zu uebergeben verdoppelt die Blockzahl und
+             * liest hinter den Track hinaus. */
+            const uint16_t head_len = (uint16_t)(track_len / 2);
+            hfe_deinterleave_track(interleaved, head_len, (uint8_t)hd,
                                     track_bits);
             /* HFE stores bits LSB-first */
-            hfe_reverse_bits(track_bits, track_len);
+            hfe_reverse_bits(track_bits, head_len);
 
             /*
              * Search for MFM sync pattern 0x4489 in the bitstream.
