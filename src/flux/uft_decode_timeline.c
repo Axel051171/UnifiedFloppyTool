@@ -33,6 +33,16 @@ static int tl_cmp(const void *a, const void *b)
     return 0;
 }
 
+double uft_timeline_angle_error(const uft_decode_timeline_t *t)
+{
+    if (!t) return -1.0;
+    /* Ohne Zeitbasis gibt es keinen Winkel — und damit auch keinen
+     * Fehler, sondern eine Nichtaussage. */
+    if (t->cell_ns <= 0.0 || t->revolution_ns <= 0.0) return -1.0;
+    if (t->warp_span <= 1.0) return 0.0;
+    return (t->warp_span - 1.0) * UFT_TIMELINE_ANGLE_ERR_PER_SPAN;
+}
+
 bool uft_timeline_build(const flux_decoded_track_t *track, size_t bit_count,
                         double cell_ns, double revolution_ns,
                         uft_decode_timeline_t *out)
@@ -112,6 +122,9 @@ bool uft_timeline_build(const flux_decoded_track_t *track, size_t bit_count,
     out->bit_count     = bit_count;
     out->cell_ns       = (cell_ns > 0.0) ? cell_ns : 0.0;
     out->revolution_ns = (revolution_ns > 0.0) ? revolution_ns : 0.0;
+    /* Die Spur weiss selbst, wie gleichmaessig sie lief (MF-495). Ohne
+     * diesen Wert waere die Winkelangabe eine Zahl ohne Fehlerschranke. */
+    out->warp_span     = track->warp_span;
     return true;
 }
 

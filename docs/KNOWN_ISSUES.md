@@ -4000,14 +4000,56 @@ Diese Änderung liefert die Karte; wer sie zum *Steuern* benutzt, ist ein
 eigener Schritt mit eigener Messung. §2.3.3 (dieselbe Timeline über alle
 Aufnahmen einer Diskette) braucht weiterhin den Fundus.
 
-**Grenze der Winkelangabe.** Sie stimmt nur, soweit die Zellendauer über
-die Spur konstant ist. Wo sie das nicht ist — die Zwei-Tempo-Spur aus
-FLUX-15 —, ist der Winkel am Spurende ungenauer als am Anfang. Wie stark,
-ist **nicht gemessen**; es bräuchte eine Aufnahme mit bekannter
-Winkelmarkierung.
+~~**Grenze der Winkelangabe.** … Wie stark, ist **nicht gemessen**; es
+bräuchte eine Aufnahme mit bekannter Winkelmarkierung.~~ — **erledigt in
+MF-502** (siehe Nachtrag unten). Es brauchte keine Hardware: eine
+Synthetik-Spur mit zwei Tempozonen hat konstruktionsbedingt bekannte
+Winkellagen.
 
-**Verdrahtet und geprüft:** `tests/test_decode_timeline.c` (12 Tests) +
-2 Tests in `test_convert_scp_adf_multirev.c`, 10 Rotbeweise feuern auf
+> **Nachtrag 2026-08-23 (MF-502) — die Winkelangabe war schlechter, als der
+> Eintrag zugab.** Oben stand, sie sei „am Spurende ungenauer als am
+> Anfang" und wie stark, sei „nicht gemessen". Nachgemessen ist sie jetzt,
+> und der Befund ist schärfer.
+>
+> Der wahre Winkel einer Sync-Marke ist exakt bekannt: die Sync-Suche gibt
+> ihren Index im Intervallfeld, und die kumulierte Zeit bis dorthin ist
+> eine Summe, keine Schätzung. Verglichen mit dem gemeldeten Winkel
+> (`Bitindex · Zellendauer / Umdrehungsdauer`):
+>
+> | Spanne | größter Winkelfehler |
+> |---|---|
+> | 1,000 (gleichmäßig) | **0,0 Grad** |
+> | 1,020 | 2,7 |
+> | 1,050 | 5,3 |
+> | 1,080 | 10,8 |
+> | 1,153 | **35,5** |
+>
+> Auf einer gleichmäßigen Spur ist der Winkel also **exakt** — das war
+> vorher nicht belegt. Auf einer ungleichmäßigen kann er ein **ganzes
+> Achtel** danebenliegen, und zwar unabhängig davon, ob die Entzerrung
+> lief: die Ursache ist die Annahme selbst, nicht ein Fehler in ihr.
+>
+> **Was daraus folgt.** Die Karte trägt jetzt die gemessene Spanne, und
+> `uft_timeline_angle_error()` gibt eine Schranke in Grad:
+> (Spanne − 1) × **250**. Der Faktor deckt jede gemessene Zeile ab — bei
+> 1,153 sind das 38,3 Grad Schranke gegen 35,5 gemessen. Bewusst
+> konservativ, weil der Spannen-Schätzer bei starkem Verzug **weniger**
+> meldet, als eingebaut wurde (bei Faktor 1,30 nur 1,153); eine Schranke,
+> die dem Schätzer glaubt, wäre zu knapp.
+>
+> Der Wandler ordnet den Schaden nur noch ein, wenn die Schranke unter
+> einem halben Achtel (22,5 Grad) liegt, und nennt sie in der Meldung
+> („Winkel auf ±3 Grad genau"). Darüber verweigert er die Verteilung und
+> sagt warum — eine Verteilung aus falschen Fächern wäre schlechter als
+> keine.
+>
+> **Immer noch nicht gemessen:** ob die Schranke auch für Verzugsformen
+> gilt, die nicht „ein gedehnter Abschnitt" sind — Sinusdrift, mehrere
+> Zonen, Drift über mehrere Umdrehungen. Der Faktor 250 stammt aus einer
+> Familie von Testspuren, nicht aus einer Theorie.
+
+**Verdrahtet und geprüft:** `tests/test_decode_timeline.c` (15 Tests) +
+3 Tests in `test_convert_scp_adf_multirev.c`, 13 Rotbeweise feuern auf
 genau den benannten Tests, 233/233 ctest grün, qmake-Release baut.
 
 ---

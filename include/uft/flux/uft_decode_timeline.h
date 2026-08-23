@@ -91,7 +91,37 @@ typedef struct {
     size_t              bit_count;      /**< Laenge des Bitstroms */
     double              cell_ns;        /**< 0 = unbekannt */
     double              revolution_ns;  /**< 0 = unbekannt */
+    /** Gemessene Schwankung der Zellendauer entlang der Spur
+     *  (`flux_decoded_track_t::warp_span`, MF-495). 0 oder 1 = keine.
+     *  Bestimmt die Genauigkeit des Winkels — siehe
+     *  @ref uft_timeline_angle_error. */
+    double              warp_span;
 } uft_decode_timeline_t;
+
+/**
+ * Grad Winkelfehler je Einheit gemessener Spanne (MF-502).
+ *
+ * **Gemessen, nicht geschaetzt.** Der Winkel entsteht aus
+ * `Bitindex * Zellendauer`, nimmt also eine konstante Zellendauer an. Wo
+ * die Spur nicht gleichmaessig lief, stimmt das nicht mehr. Verglichen
+ * wurde gegen die WAHRE Lage — die kumulierte Zeit bis zur Sync-Marke,
+ * eine Summe und keine Schaetzung:
+ *
+ *   Spanne   Fehler
+ *   ------   ------
+ *   1,000     0,0 Grad
+ *   1,020     2,7
+ *   1,050     5,3
+ *   1,080    10,8
+ *   1,153    35,5      <- engster Fall
+ *
+ * 250 Grad je Einheit deckt jede dieser Zeilen ab (bei 1,153 sind das
+ * 38,3 Grad Schranke gegen 35,5 gemessen). Die Schranke ist bewusst
+ * konservativ: der Spannen-Schaetzer meldet bei starkem Verzug WENIGER
+ * als eingebaut wurde, und eine Schranke, die davon ausgeht, waere zu
+ * knapp.
+ */
+#define UFT_TIMELINE_ANGLE_ERR_PER_SPAN   250.0
 
 /**
  * @brief Karte aus einem Dekodier-Ergebnis bauen.
@@ -108,6 +138,19 @@ typedef struct {
 bool uft_timeline_build(const flux_decoded_track_t *track, size_t bit_count,
                         double cell_ns, double revolution_ns,
                         uft_decode_timeline_t *out);
+
+/**
+ * @brief Wie genau ist die Winkelangabe dieser Karte?
+ *
+ * @return Schranke des Winkelfehlers in **Grad**, oder negativ, wenn es
+ *         gar keinen Winkel gibt (fehlende Zeitbasis). 0 heisst: die Spur
+ *         lief gleichmaessig, der Winkel ist exakt.
+ *
+ * Wer eine Winkellage weiterverarbeitet, muss diesen Wert kennen. Eine
+ * Polarkarte, die einen Punkt mit 40 Grad Unsicherheit als Punkt malt,
+ * behauptet eine Genauigkeit, die niemand gemessen hat.
+ */
+double uft_timeline_angle_error(const uft_decode_timeline_t *t);
 
 /** Gibt die Scheibenliste frei und nullt die Struktur. */
 void uft_timeline_free(uft_decode_timeline_t *t);

@@ -343,6 +343,12 @@ typedef struct {
     int    tracks_with_angle;
     /** Spuren mit ueberhaupt beschaedigten Abschnitten. */
     int    tracks_damaged;
+    /** Groesste Winkel-Fehlerschranke ueber alle Spuren, in Grad.
+     *  Eine Verteilung ohne diese Zahl behauptet eine Genauigkeit,
+     *  die niemand gemessen hat (MF-502). */
+    double worst_angle_err;
+    /** Spuren, deren Schaden zu ungenau lag, um ihn einzuordnen. */
+    int    tracks_angle_too_coarse;
     double sum_decoded;
     double sum_damaged;
     double sum_untouched;
@@ -370,11 +376,20 @@ static void uftc_angle_note(uftc_angle_stats_t *st,
     st->sum_damaged   += uft_timeline_fraction(&tl, UFT_SLICE_DAMAGED);
     st->sum_untouched += uft_timeline_fraction(&tl, UFT_SLICE_UNTOUCHED);
 
+    /* Wie genau ist der Winkel auf DIESER Spur? Die Karte teilt die
+     * Umdrehung in Achtel zu 45 Grad; ist die Schranke groesser als ein
+     * halbes Achtel, landet die Marke womoeglich im falschen Fach, und
+     * eine Verteilung aus falschen Faechern ist schlechter als keine. */
+    const double err_deg = uft_timeline_angle_error(&tl);
+    const bool angle_usable = (err_deg >= 0.0) && (err_deg <= 22.5);
+    if (err_deg > st->worst_angle_err) st->worst_angle_err = err_deg;
+
     bool any_damage = false, any_angle = false;
     for (size_t i = 0; i < tl.count; i++) {
         if (tl.slices[i].status != UFT_SLICE_DAMAGED) continue;
         any_damage = true;
 
+        if (!angle_usable) continue;
         double a = uft_timeline_angle(&tl, i);
         if (a < 0.0) continue;              /* keine Zeitbasis, kein Winkel */
         any_angle = true;
@@ -388,6 +403,7 @@ static void uftc_angle_note(uftc_angle_stats_t *st,
     }
     if (any_damage) st->tracks_damaged++;
     if (any_angle)  st->tracks_with_angle++;
+    if (any_damage && !angle_usable) st->tracks_angle_too_coarse++;
 
     uft_timeline_free(&tl);
 }
@@ -398,13 +414,20 @@ static void uftc_angle_report(const uftc_angle_stats_t *st, int tracks,
     if (!st || !result || tracks <= 0 || st->tracks_damaged == 0) return;
 
     if (st->tracks_with_angle == 0) {
-        /* Schaden ja, Winkel nein — dann fehlte die Umdrehungsmessung.
-         * Das zu sagen ist mehr wert als zu schweigen: es benennt, was
-         * einer Aufnahme fehlt, damit sie mehr hergibt. */
-        uftc_add_warning(result,
-            "Beschaedigte Abschnitte auf %d Spuren; ihre Lage auf der "
-            "Umdrehung ist unbekannt, weil keine Umdrehungsdauer gemessen "
-            "wurde", st->tracks_damaged);
+        /* Schaden ja, Winkel nein. Zwei verschiedene Gruende, und sie
+         * fuehren zu verschiedenen Abhilfen — deshalb werden sie
+         * unterschieden statt zusammengefasst. */
+        if (st->tracks_angle_too_coarse > 0)
+            uftc_add_warning(result,
+                "Beschaedigte Abschnitte auf %d Spuren; ihre Lage auf der "
+                "Umdrehung wird nicht angegeben, weil die Spur ungleich "
+                "schnell lief (Fehlerschranke bis %.0f Grad, ein Achtel "
+                "misst 45)", st->tracks_damaged, st->worst_angle_err);
+        else
+            uftc_add_warning(result,
+                "Beschaedigte Abschnitte auf %d Spuren; ihre Lage auf der "
+                "Umdrehung ist unbekannt, weil keine Umdrehungsdauer "
+                "gemessen wurde", st->tracks_damaged);
         return;
     }
 
@@ -416,8 +439,9 @@ static void uftc_angle_report(const uftc_angle_stats_t *st, int tracks,
 
     uftc_add_warning(result,
         "Schadenslage ueber die Umdrehung (8 Achtel, Promille der "
-        "Spurlaenge): %s - beschaedigt auf %d von %d Spuren",
-        bins, st->tracks_damaged, tracks);
+        "Spurlaenge): %s - beschaedigt auf %d von %d Spuren, Winkel auf "
+        "+/-%.0f Grad genau",
+        bins, st->tracks_damaged, tracks, st->worst_angle_err);
 }
 
 /* ── Was der Decoder ueber seine Zeitbasis gemeldet hat (MF-496) ─────────

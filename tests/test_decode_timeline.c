@@ -372,6 +372,81 @@ TEST(the_same_track_gives_the_same_map)
     uft_timeline_free(&b);
 }
 
+/* ── Wie genau ist der Winkel? (MF-502) ─────────────────────────────── */
+
+TEST(a_steady_track_gets_an_exact_angle)
+{
+    /* Ohne Gleichlauffehler ist der Winkel exakt — gemessen 0,0 Grad
+     * Abweichung gegen die wahre Lage aus der kumulierten Zeit. */
+    flux_decoded_track_t t;
+    build_good_track(&t);
+    t.warp_span = 1.0;
+
+    uft_decode_timeline_t tl;
+    ASSERT(uft_timeline_build(&t, BITS, 2000.0, 2e8, &tl));
+    ASSERT(uft_timeline_angle_error(&tl) == 0.0);
+    uft_timeline_free(&tl);
+
+    /* Auch eine Spur, deren Spanne gar nicht bestimmt wurde (0), darf
+     * keine Fehlerschranke erfinden — 0 heisst hier „kein Verzug
+     * gemessen", und der Winkel ist so gut wie die Zeitbasis. */
+    t.warp_span = 0.0;
+    ASSERT(uft_timeline_build(&t, BITS, 2000.0, 2e8, &tl));
+    ASSERT(uft_timeline_angle_error(&tl) == 0.0);
+    uft_timeline_free(&tl);
+}
+
+TEST(the_angle_error_grows_with_the_measured_span)
+{
+    /* Die Schranke ist gemessen, nicht geschaetzt (siehe Header-Tabelle).
+     * Hier wird gepruefte Rechnung geprueft: sie muss mit der Spanne
+     * wachsen und die gemessenen Faelle abdecken.
+     *
+     *   Spanne   gemessener Fehler   Schranke
+     *   1,020     2,7 Grad            5,0
+     *   1,050     5,3                12,5
+     *   1,080    10,8                20,0
+     *   1,153    35,5                38,3   <- engster Fall
+     */
+    static const struct { double span, measured; } cases[] = {
+        { 1.020,  2.7 }, { 1.050,  5.3 }, { 1.080, 10.8 }, { 1.153, 35.5 },
+    };
+    flux_decoded_track_t t;
+    build_good_track(&t);
+
+    double prev = -1.0;
+    for (size_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
+        t.warp_span = cases[i].span;
+        uft_decode_timeline_t tl;
+        ASSERT(uft_timeline_build(&t, BITS, 2000.0, 2e8, &tl));
+
+        double e = uft_timeline_angle_error(&tl);
+        if (e < cases[i].measured)
+            printf("\n        Spanne %.3f: Schranke %.1f unter gemessenen "
+                   "%.1f Grad\n", cases[i].span, e, cases[i].measured);
+        ASSERT(e >= cases[i].measured);      /* deckt die Messung ab */
+        ASSERT(e > prev);                    /* waechst mit der Spanne */
+        prev = e;
+        uft_timeline_free(&tl);
+    }
+}
+
+TEST(without_a_time_base_there_is_no_error_either)
+{
+    /* Kein Winkel, keine Fehlerschranke — eine Schranke fuer eine
+     * Nichtaussage waere selbst eine Aussage. */
+    flux_decoded_track_t t;
+    build_good_track(&t);
+    t.warp_span = 1.2;
+
+    uft_decode_timeline_t tl;
+    ASSERT(uft_timeline_build(&t, BITS, 2000.0, 0.0, &tl));
+    ASSERT(uft_timeline_angle_error(&tl) < 0.0);
+    uft_timeline_free(&tl);
+
+    ASSERT(uft_timeline_angle_error(NULL) < 0.0);
+}
+
 int main(void)
 {
     printf("=== Scheibenkarte einer Dekodierung (MF-501) ===\n");
@@ -387,6 +462,11 @@ int main(void)
     RUN(bad_arguments_are_refused_not_guessed);
     RUN(an_index_out_of_range_yields_no_angle);
     RUN(the_same_track_gives_the_same_map);
+
+    /* MF-502: die Genauigkeit des Winkels, als Zahl */
+    RUN(a_steady_track_gets_an_exact_angle);
+    RUN(the_angle_error_grows_with_the_measured_span);
+    RUN(without_a_time_base_there_is_no_error_either);
     printf("\nResults: %d passed, %d failed\n", _pass, _fail);
     return _fail == 0 ? 0 : 1;
 }

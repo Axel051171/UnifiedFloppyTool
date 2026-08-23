@@ -118,8 +118,30 @@ static uint8_t *make_source_adf(void)
  *                        Umdrehung). Nur Spur 0 bekommt Defekte; Spur 1
  *                        bleibt sauber und dient als Gegenprobe.
  */
+static int write_scp_warped(const char *path, const uint8_t *adf, int nrevs,
+                            const sector_defect_t *const *defect_per_rev,
+                            double warp_factor, double warp_fraction);
+
 static int write_scp(const char *path, const uint8_t *adf, int nrevs,
                      const sector_defect_t *const *defect_per_rev)
+{
+    return write_scp_warped(path, adf, nrevs, defect_per_rev, 1.0, 0.0);
+}
+
+/**
+ * Wie @ref write_scp, aber die Spur laeuft ungleich schnell.
+ *
+ * @param warp_factor    Faktor, um den der Anfang gedehnt wird (1,0 = kein
+ *                       Gleichlauffehler)
+ * @param warp_fraction  Anteil der Spur, der gedehnt wird
+ *
+ * Gebraucht, um die Sperre zu pruefen, die eine zu ungenaue Winkelangabe
+ * gar nicht erst einordnet (MF-502). Ohne eine solche Spur waere dieser
+ * Zweig ungeprueft — und ein ungeprueftes Sicherheitsnetz ist keines.
+ */
+static int write_scp_warped(const char *path, const uint8_t *adf, int nrevs,
+                            const sector_defect_t *const *defect_per_rev,
+                            double warp_factor, double warp_fraction)
 {
     uint8_t *cellbits = (uint8_t *)calloc((AMIGA_CELLS_PER_REV + 7) / 8 + 1, 1);
     uint32_t *iv = (uint32_t *)malloc(MAX_INTERVALS * sizeof(uint32_t));
@@ -137,6 +159,11 @@ static int write_scp(const char *path, const uint8_t *adf, int nrevs,
             build_track_cells(&c, adf, (uint8_t)track, d);
 
             size_t n = cells_to_intervals(&c, iv, MAX_INTERVALS);
+            if (warp_factor > 1.0 && warp_fraction > 0.0) {
+                size_t lim = (size_t)((double)n * warp_fraction);
+                for (size_t i = 0; i < lim; i++)
+                    iv[i] = (uint32_t)((double)iv[i] * warp_factor);
+            }
             rc = scp_writer_add_track(w, track / 2, track % 2, iv, n,
                                       AMIGA_REV_NS, r);
         }
@@ -522,6 +549,42 @@ TEST(a_clean_disk_gets_no_damage_location)
     remove(scp); remove(out); free(adf);
 }
 
+TEST(a_track_that_ran_unevenly_gets_no_angle_it_cannot_support)
+{
+    /* Die Sperre aus MF-502. Der Winkel entsteht aus Bitindex mal
+     * konstanter Zellendauer; wo die Spur ungleich schnell lief, stimmt
+     * das nicht mehr. Gemessen gegen die wahre Lage: bei einer Spanne von
+     * 1,153 liegt der Winkel schon 35 Grad daneben — ein Achtel misst 45.
+     *
+     * Verlangt wird deshalb NICHT, dass der Wandler die Lage angibt,
+     * sondern dass er sie ausdruecklich verweigert und den Grund nennt.
+     * Eine Verteilung aus falschen Faechern waere schlechter als keine. */
+    uint8_t *adf = make_source_adf();
+    ASSERT(adf != NULL);
+
+    sector_defect_t d = { 3, true, 0x5A };
+    const sector_defect_t *per_rev[3] = { &d, &d, &d };
+
+    char scp[512], out[512];
+    get_temp_path(scp, sizeof(scp), "warp.scp");
+    get_temp_path(out, sizeof(out), "warp.adf");
+    /* Erste Haelfte um 60 % gedehnt — weit ueber der Schwelle. */
+    ASSERT(write_scp_warped(scp, adf, 3, per_rev, 1.6, 0.5) == 0);
+
+    uft_convert_result_t r;
+    ASSERT(convert(scp, out, true, &r) == UFT_OK);
+
+    if (!warned_about(&r, "ungleich schnell")) {
+        printf("\n        keine Verweigerung der Winkelangabe:\n");
+        dump_warnings(&r);
+    }
+    ASSERT(warned_about(&r, "ungleich schnell"));
+    /* Und ausdruecklich KEINE Verteilung, die es nicht tragen kann. */
+    ASSERT(!warned_about(&r, "Schadenslage"));
+
+    remove(scp); remove(out); free(adf);
+}
+
 int main(void)
 {
     printf("=== SCP -> ADF: alle Umdrehungen, und was sie sagen (MF-473) ===\n");
@@ -544,6 +607,7 @@ int main(void)
     /* MF-501: die Ortsangabe erreicht den Menschen */
     RUN(damage_is_reported_with_its_place_on_the_revolution);
     RUN(a_clean_disk_gets_no_damage_location);
+    RUN(a_track_that_ran_unevenly_gets_no_angle_it_cannot_support);
     printf("\nResults: %d passed, %d failed\n", _pass, _fail);
     return _fail == 0 ? 0 : 1;
 }
