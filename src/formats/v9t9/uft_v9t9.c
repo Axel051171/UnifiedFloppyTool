@@ -66,6 +66,18 @@ static uft_error_t v9t9_read_track(uft_disk_t *disk, int cyl, int head, uft_trac
 
 static uft_error_t v9t9_write_track(uft_disk_t *disk, int cyl, int head,
                                      const uft_track_t *track) {
+    /* MF-529: negative Koordinaten abweisen, BEVOR mit ihnen
+     * gerechnet oder indiziert wird. MF-519 hat das fuer
+     * read_track getan und write_track uebersehen. Das ASan-Tor
+     * der CI fand die Folge an d80_write_track: die Schranke
+     * `cyl >= D80_TRACKS` laesst -1 durch, und d80_spt[-1] liest
+     * vor der Tabelle.
+     *
+     * Beim SCHREIBEN wiegt das schwerer als beim Lesen: ein
+     * falscher Index liefert nicht nur falsche Daten, er bestimmt,
+     * WOHIN geschrieben wird. */
+    if (cyl < 0 || head < 0) return UFT_ERROR_INVALID_PARAM;
+
     v9t9_pd_t *p = disk->plugin_data;
     if (!p || !p->file) return UFT_ERROR_INVALID_STATE;
     if (disk->read_only) return UFT_ERROR_NOT_SUPPORTED;

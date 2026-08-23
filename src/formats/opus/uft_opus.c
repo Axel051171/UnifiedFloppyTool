@@ -360,6 +360,18 @@ static uft_error_t opus_read_track(uft_disk_t *disk, int cyl, int head,
  * Persist via uft_opus_write(). */
 static uft_error_t opus_write_track(uft_disk_t *disk, int cyl, int head,
                                      const uft_track_t *track) {
+    /* MF-529: negative Koordinaten abweisen, BEVOR mit ihnen
+     * gerechnet oder indiziert wird. MF-519 hat das fuer
+     * read_track getan und write_track uebersehen. Das ASan-Tor
+     * der CI fand die Folge an d80_write_track: die Schranke
+     * `cyl >= D80_TRACKS` laesst -1 durch, und d80_spt[-1] liest
+     * vor der Tabelle.
+     *
+     * Beim SCHREIBEN wiegt das schwerer als beim Lesen: ein
+     * falscher Index liefert nicht nur falsche Daten, er bestimmt,
+     * WOHIN geschrieben wird. */
+    if (cyl < 0 || head < 0) return UFT_ERR_INVALID_PARAM;
+
     uft_disk_image_t *image = (uft_disk_image_t*)disk->plugin_data;
     if (!image || !track) return UFT_ERR_INVALID_PARAM;
     if (disk->read_only) return UFT_ERR_NOT_SUPPORTED;

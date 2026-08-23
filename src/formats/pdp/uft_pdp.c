@@ -61,6 +61,18 @@ static uft_error_t pdp_read_track(uft_disk_t *d, int cyl, int head, uft_track_t 
 
 static uft_error_t pdp_write_track(uft_disk_t *d, int cyl, int head,
                                     const uft_track_t *t) {
+    /* MF-529: negative Koordinaten abweisen, BEVOR mit ihnen
+     * gerechnet oder indiziert wird. MF-519 hat das fuer
+     * read_track getan und write_track uebersehen. Das ASan-Tor
+     * der CI fand die Folge an d80_write_track: die Schranke
+     * `cyl >= D80_TRACKS` laesst -1 durch, und d80_spt[-1] liest
+     * vor der Tabelle.
+     *
+     * Beim SCHREIBEN wiegt das schwerer als beim Lesen: ein
+     * falscher Index liefert nicht nur falsche Daten, er bestimmt,
+     * WOHIN geschrieben wird. */
+    if (cyl < 0 || head < 0) return UFT_ERROR_INVALID_PARAM;
+
     pdp_data_t *p = d->plugin_data;
     if (!p || !p->file || head != 0) return UFT_ERROR_INVALID_STATE;
     if (d->read_only) return UFT_ERROR_NOT_SUPPORTED;
