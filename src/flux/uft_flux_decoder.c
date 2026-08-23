@@ -8,6 +8,7 @@
 
 #include "uft/flux/uft_flux_decoder.h"
 #include "uft/flux/uft_flux_histogram.h"
+#include "uft/flux/uft_flux_sync_search.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -646,7 +647,14 @@ static double flux_pick_bitcell_ns(const flux_raw_data_t *flux,
                 flux->transitions, flux->transition_count, &hist_ns)) {
             double pct = (opts->media_adjust_pct > 0.0) ? opts->media_adjust_pct
                                                         : 100.0;
-            return hist_ns * (pct / 100.0);
+            /* Das Histogramm rechnet in Abtastschritten, nicht in ns. Solange
+             * jede Quelle im Baum 1 GHz meldet, ist der Faktor 1 — aber
+             * `flux_to_bitstream()` skaliert seit jeher, und zwei Stellen mit
+             * verschiedener Einheitenannahme sind eine Falle, die erst bei der
+             * ersten Aufnahme mit anderer Abtastrate zuschlaegt. */
+            double ns_per_tick = (flux->sample_rate > 0)
+                                     ? (1e9 / flux->sample_rate) : 1.0;
+            return hist_ns * ns_per_tick * (pct / 100.0);
         }
     }
 
@@ -1466,19 +1474,57 @@ flux_status_t flux_decode_amiga_bits(const uint8_t *bits, size_t bit_count,
     return (track->sector_count > 0) ? FLUX_OK : FLUX_ERR_NO_SYNC;
 }
 
-flux_status_t flux_decode_amiga(const flux_raw_data_t *flux,
-                                flux_decoded_track_t *track,
-                                const flux_decoder_options_t *opts) {
-    if (!flux || !track) return FLUX_ERR_INVALID;
+/**
+ * Zellendauer aus den Sync-Marken selbst messen (MF-492).
+ *
+ * Sucht die konfigurierten Sync-Muster direkt im Flussstrom — ohne PLL,
+ * ohne Bitstrom, ohne die Zellendauer, die gerade in Frage steht. Jeder
+ * Fund bringt seine eigene Taktschaetzung mit; zurueck kommt der Median,
+ * weil ein einzelner Fund an einer verwackelten Stelle sonst die ganze Spur
+ * verzoege.
+ *
+ * @return Zellendauer in ns, oder 0 wenn zu wenige Marken gefunden wurden.
+ */
+static double amiga_measured_cell_ns(const flux_raw_data_t *flux,
+                                     const flux_decoder_options_t *opts)
+{
+    if (!flux || !flux->transitions || flux->transition_count < 32) return 0.0;
 
-    flux_decoder_options_t default_opts;
-    if (!opts) {
-        flux_decoder_options_init(&default_opts);
-        opts = &default_opts;
+    static const uint16_t default_syncs[] = { MFM_SYNC_PATTERN };
+    const uint16_t *syncs = opts->sync_patterns;
+    size_t nsyncs = opts->sync_count;
+    if (!syncs || nsyncs == 0) { syncs = default_syncs; nsyncs = 1; }
+
+    enum { MAX_HITS = 64, MIN_HITS = 3 };
+    uft_sync_hit_t hits[MAX_HITS];
+    size_t n = 0;
+
+    for (size_t s = 0; s < nsyncs && n < MIN_HITS; s++) {
+        /* Das Amiga-Muster ist ein PAAR gleicher Sync-Woerter — ein einzelnes
+         * Wort ergibt zu wenige Abstaende, um im Rauschen zu bestehen. */
+        const uint16_t pair[2] = { syncs[s], syncs[s] };
+        uft_sync_pattern_t pat;
+        if (!uft_sync_pattern_from_words(pair, 2, &pat)) continue;
+
+        n = uft_sync_search_transitions(flux->transitions,
+                                        flux->transition_count, &pat,
+                                        UFT_SYNC_DEFAULT_TOL,
+                                        hits, MAX_HITS);
     }
+    /* Unter drei Funden ist es keine Mehrheit, sondern ein Zufall. */
+    if (n < MIN_HITS) return 0.0;
 
-    double bitcell_ns = flux_pick_bitcell_ns(flux, opts, FLUX_MFM_DD_BITCELL_NS);
+    double ns_per_tick = (flux->sample_rate > 0) ? (1e9 / flux->sample_rate)
+                                                 : 1.0;
+    return uft_sync_median_clock(hits, n) * ns_per_tick;
+}
 
+/** Ein Dekodier-Durchlauf mit fest vorgegebener Zellendauer. */
+static flux_status_t amiga_decode_at(const flux_raw_data_t *flux,
+                                     flux_decoded_track_t *track,
+                                     const flux_decoder_options_t *opts,
+                                     double bitcell_ns)
+{
     size_t max_bits = FLUX_MAX_TRACK_SIZE * 8;
     uint8_t *bits = calloc(max_bits / 8 + 1, 1);
     if (!bits) return FLUX_ERR_OVERFLOW;
@@ -1502,6 +1548,96 @@ flux_status_t flux_decode_amiga(const flux_raw_data_t *flux,
     } else {
         free(bits);
     }
+    return rc;
+}
+
+/**
+ * Was ist ein Durchlauf wert?
+ *
+ * Ein Sektor mit heilen Pruefsummen wiegt schwerer als einer, den der
+ * Dekoder nur gefunden hat. Ohne diese Gewichtung wuerde ein Durchlauf
+ * gewinnen, der viele kaputte Sektoren meldet, gegen einen mit wenigen
+ * heilen — und die Auswahl waere eine Zaehlung von Kandidaten statt von
+ * lesbaren Daten.
+ *
+ * Ehrlich dazu: **kein Test unterscheidet diese Gewichtung von einer
+ * blossen Sektorzaehlung.** Der Rotbeweis (Faktor 2 auf 0 gesetzt) kippt
+ * nichts. Auf synthetischem Flux liefern beide Durchlaeufe dieselbe
+ * Mischung aus heilen und kaputten Sektoren; ein Fall, in dem sich die
+ * beiden Masse trennen, braucht eine reale beschaedigte Aufnahme. Die
+ * Gewichtung steht hier als forensische Vorgabe — heile Daten schlagen
+ * Kandidaten —, nicht als gemessene Notwendigkeit.
+ */
+static size_t amiga_track_score(const flux_decoded_track_t *t)
+{
+    size_t whole = 0;
+    for (size_t i = 0; i < t->sector_count; i++)
+        if (t->sectors[i].id_crc_ok && t->sectors[i].data_crc_ok) whole++;
+    return whole * 2u + t->sector_count;
+}
+
+flux_status_t flux_decode_amiga(const flux_raw_data_t *flux,
+                                flux_decoded_track_t *track,
+                                const flux_decoder_options_t *opts) {
+    if (!flux || !track) return FLUX_ERR_INVALID;
+
+    flux_decoder_options_t default_opts;
+    if (!opts) {
+        flux_decoder_options_init(&default_opts);
+        opts = &default_opts;
+    }
+
+    double bitcell_ns = flux_pick_bitcell_ns(flux, opts, FLUX_MFM_DD_BITCELL_NS);
+    flux_status_t rc = amiga_decode_at(flux, track, opts, bitcell_ns);
+
+    /* Zweiter Durchlauf mit gemessener Zellendauer (MF-492).
+     *
+     * Die angenommene Zellendauer kann falsch sein, und dann rastet die PLL
+     * nicht ein. Gemessen (FLUX-11): bei 0,85 der wahren Zellendauer und
+     * 4 % Zittern kommen 0 von 11 Sektoren zurueck, obwohl alle 11 Marken
+     * unveraendert im Strom stehen. Die Sync-Suche findet sie ohne PLL und
+     * sagt, wie lang eine Zelle wirklich ist — damit ist der zweite Versuch
+     * keine Rateschleife, sondern eine Messung.
+     *
+     * Der Ausloeser ist bewusst NICHT „null Sektoren gefunden". Gemessen an
+     * einer Spur, deren Anfang um 80 % gedehnt ist: der erste Durchlauf
+     * findet 2 von 11, der zweite 9 — eine Bedingung auf „gar nichts
+     * gefunden" haette hier gar nicht ausgeloest. Gerade die teilweise
+     * lesbare Diskette ist der forensisch interessante Fall.
+     *
+     * Der zweite Durchlauf gehoert aber ausschliesslich dem AUTOMATISCHEN
+     * Pfad. Wer eine Zellendauer vorgibt, meint sie (MF-471); wer die PLL
+     * abschaltet, will die Periode eingefroren haben; wer am Feineinsteller
+     * dreht, hat sich etwas dabei gedacht (MF-480). In allen drei Faellen
+     * waere eine stille Korrektur genau das, was dieses Werkzeug nicht tut —
+     * und sie hat, als sie noch drin war, drei bestehende Vertragstests
+     * gekippt. Die Messung bleibt trotzdem erreichbar: Vorgabe weglassen. */
+    const bool caller_pinned_the_timing =
+        (opts->bitcell_ns != 0) ||
+        (!opts->use_pll) ||
+        (opts->media_adjust_pct > 0.0 && opts->media_adjust_pct != 100.0);
+    if (caller_pinned_the_timing) return rc;
+
+    double measured = amiga_measured_cell_ns(flux, opts);
+    if (measured <= 0.0) return rc;
+
+    double rel = measured / bitcell_ns;
+    if (rel > 0.98 && rel < 1.02) return rc;   /* derselbe Lauf, nur nochmal */
+
+    /* In eine EIGENE Spur dekodieren und danach vergleichen. Der zweite
+     * Durchlauf ueberschreibt so nie ein besseres erstes Ergebnis — er kann
+     * gewinnen, aber nichts kaputtmachen. */
+    flux_decoded_track_t alt;
+    flux_decoded_track_init(&alt);
+    flux_status_t rc_alt = amiga_decode_at(flux, &alt, opts, measured);
+
+    if (amiga_track_score(&alt) > amiga_track_score(track)) {
+        flux_decoded_track_free(track);
+        *track = alt;                    /* Besitz wandert mit, `sectors`
+                                          * liegt inline in der Struktur */
+        return rc_alt;
+    }
+    flux_decoded_track_free(&alt);
     return rc;
 }
 

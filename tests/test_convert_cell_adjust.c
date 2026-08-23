@@ -150,11 +150,21 @@ static bool warned_about(const uft_convert_result_t *r, const char *needle)
 
 /* ────────────────────────────────────────────────────────────────────── */
 
-TEST(a_stream_far_off_the_profile_yields_nothing_at_the_default)
+TEST(a_stream_far_off_the_profile_needs_no_nudge_any_more)
 {
-    /* Die Ausgangslage, ohne die der Rest nichts bedeutet: die abgeleitete
-     * Dauer liegt um den Faktor zwei daneben, die PLL rastet nicht mehr ein,
-     * und es kommt KEIN Sektor heraus. */
+    /* Diese Pruefung stand bis MF-492 andersherum da: die abgeleitete Dauer
+     * liegt um den Faktor zwei daneben, die PLL rastet nicht ein, es kommt
+     * KEIN Sektor heraus — das war die Ausgangslage, die den Feineinsteller
+     * ueberhaupt noetig machte.
+     *
+     * Seit MF-492 misst der automatische Pfad die Zellendauer an den
+     * Sync-Marken selbst und holt die Diskette ohne Zutun. Die alte
+     * Erwartung war kein Vertrag, sondern eine PROTOKOLLIERTE SCHWAECHE;
+     * sie hat sich erledigt, und der Test sagt jetzt, was gilt.
+     *
+     * Der Feineinsteller ist damit nicht ueberfluessig: er wirkt weiterhin
+     * in allen Decodern und hat weiterhin Vorrang, wenn er gesetzt ist —
+     * das pruefen die beiden folgenden Tests. */
     uint8_t *adf = make_source_adf();
     ASSERT(adf != NULL);
 
@@ -165,9 +175,10 @@ TEST(a_stream_far_off_the_profile_yields_nothing_at_the_default)
 
     uft_convert_result_t r;
     ASSERT(convert(scp, out, 0.0, &r) == UFT_OK);
-    if (r.sectors_converted != 0)
-        printf("\n        %d Sektoren ohne Einsteller\n", r.sectors_converted);
-    ASSERT(r.sectors_converted == 0);
+    if (r.sectors_converted != ALL_SECTORS)
+        printf("\n        %d von %d Sektoren ohne Einsteller\n",
+               r.sectors_converted, ALL_SECTORS);
+    ASSERT(r.sectors_converted == ALL_SECTORS);
 
     free(adf); remove(scp); remove(out);
 }
@@ -261,7 +272,7 @@ int main(void)
         return 1;
     }
 
-    RUN(a_stream_far_off_the_profile_yields_nothing_at_the_default);
+    RUN(a_stream_far_off_the_profile_needs_no_nudge_any_more);
     RUN(the_nudge_recovers_the_whole_disk);
     RUN(a_wrong_nudge_makes_a_good_stream_unreadable);
     RUN(an_out_of_range_nudge_is_refused_out_loud);

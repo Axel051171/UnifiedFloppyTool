@@ -3938,6 +3938,78 @@ zweite braucht eine Bank-Sitzung mit echtem Laufwerk.
 
 ---
 
+### FLUX-14 — die PLL war die einzige Tür zum Sync (2026-08-23, MF-492) → ✓ BEHOBEN
+
+Die übliche Kette ist Flux → PLL → Bitstrom → Sync-Suche. Verliert die PLL
+den Takt, gibt es keinen Bitstrom, und damit findet auch niemand mehr eine
+Marke. Gemessen in FLUX-11: bei einer angenommenen Zellendauer von 0,85 der
+wahren und 4 % Zittern kamen **0 von 11** Sektoren zurück — obwohl alle elf
+Sync-Marken unverändert im Strom standen.
+
+**Der Ausweg.** Eine Sync-Marke ist auch ohne Takt erkennbar. Die
+Amiga-Marke 0x4489 0x4489 hat die Zellabstände 4 3 4 3 2 4 3 4 3 (gemessen
+am erzeugten Zellenstrom, nicht abgeleitet). Gesucht wird deshalb nach einer
+Stelle, an der neun aufeinanderfolgende Abstände zu EINEM gemeinsamen Takt
+passen — `d_i ≈ k_i · T`, mit unbekanntem T. Das ist maßstabsunabhängig, und
+weil T dabei mitfällt, sagt jeder Fund gleich, wie lang eine Zelle an dieser
+Stelle wirklich ist. Neu: `src/flux/uft_flux_sync_search.c`.
+
+**Was das im Decoder ändert.** `flux_decode_amiga()` läuft ein zweites Mal
+mit der gemessenen Zellendauer, in eine eigene Spur, und behält den besseren
+Durchlauf. Er kann also gewinnen, aber nichts kaputtmachen.
+
+| Fall | vorher | nachher |
+|---|---|---|
+| 1200 ns, 20 % Zittern, automatisch | 0 | 7 (= so viel wie mit richtiger Vorgabe) |
+| Spur mit 1200 ns, Nennwert angenommen | 0 | 11 |
+| Anfang um 80 % gedehnt, Nennwert angenommen | 2 | 9 (= so viel wie mit richtiger Vorgabe) |
+
+**Drei Korrekturen, die erst die Tests erzwungen haben** — jede eine, die
+ohne Gegenprobe still danebengegangen wäre:
+
+1. *Der Auslöser war zu eng.* Erst lief der zweite Durchlauf nur bei „kein
+   einziger Sektor gefunden". An der gedehnten Spur fand der erste Durchlauf
+   2 von 11 — und 2 ist nicht 0, also löste nichts aus. Gerade die
+   **teilweise** lesbare Diskette ist der forensisch interessante Fall.
+2. *Der Vorfilter war ein stiller Falsch-Negativ-Pfad.* Gebaut war zuerst
+   eine Ordinal-Vorfilterung (Vorzeichen der Differenzen) nach Plan. Sie
+   brachte gemessen 1,4× (0,110 statt 0,155 ms je Spur) bei identischem
+   Ergebnis, und **kein Rotbeweis konnte sie von ihrer Abwesenheit
+   unterscheiden** — sie war Beschleuniger, nicht Erkenner. Auf 45 µs je Spur
+   ist ein Pfad, der bei einem Fehler still die richtige Stelle verwirft, im
+   forensischen Lesepfad kein guter Handel. Entfernt, samt Rabin-Karp.
+3. *Die stille Korrektur überschrieb ausdrückliche Vorgaben.* Der zweite
+   Durchlauf kippte drei bestehende Vertragstests: eine gesetzte
+   `bitcell_ns` hat Vorrang (MF-471), `use_pll = false` soll die Periode
+   einfrieren, ein gesetzter Feineinsteller ist Absicht (MF-480). Der
+   Durchlauf gehört jetzt ausschließlich dem **automatischen** Pfad — dem,
+   den die Wandlung ohnehin benutzt (`uft_format_convert_flux.c:454-461`
+   setzt `bitcell_ns` nie).
+
+**Grenzen, gemessen.** Bis 10 % Zittern findet die Suche alle 11 Marken, bei
+20 % noch 2–3, ab 30 % keine. Sie liegt dort nicht falsch, sie **schweigt** —
+die gewollte Richtung. Alle Zahlen stammen von synthetischem Flux mit
+gleichverteiltem Zittern; eine reale Aufnahme zittert anders. Die Grenze an
+einer echten marginalen Diskette bleibt **offen** (Korpus-Arbeit).
+
+**Nicht belegt, ausdrücklich.** Die Gewichtung in der Auswahl zwischen den
+zwei Durchläufen (Sektoren mit heilen Prüfsummen zählen doppelt) ist eine
+forensische Vorgabe, **keine gemessene Notwendigkeit**: der Rotbeweis kippt
+nichts, weil auf synthetischem Flux beide Durchläufe dieselbe Mischung aus
+heilen und kaputten Sektoren liefern. Ein trennender Fall braucht eine reale
+beschädigte Aufnahme.
+
+**Nebenbefund.** `flux_pick_bitcell_ns()` gab die Histogramm-Zellendauer in
+Abtastschritten statt in ns zurück, während `flux_to_bitstream()` seit jeher
+skaliert. Solange jede Quelle im Baum 1 GHz meldet, ist der Faktor 1 — die
+Falle hätte bei der ersten Aufnahme mit anderer Abtastrate zugeschlagen.
+Behoben.
+
+**Verdrahtet und geprüft:** `tests/test_flux_sync_search.c` (12 Tests),
+8 Rotbeweise, 230/230 ctest grün, qmake-Release baut.
+
+---
+
 ### FLUX-13 — der Wandler prüfte sein eigenes Ergebnis nicht (2026-08-23, MF-489) → ✓ BEHOBEN
 
 Zweimal hat dieser Baum ein Abbild aus lauter Nullen als **erfolgreiche**
