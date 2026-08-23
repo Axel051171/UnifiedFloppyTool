@@ -194,6 +194,9 @@ static size_t one_way(conv_t cv,
     size_t n = slurp(out, dst_buf);
     printf("    ok   %-14s -> %7zu Byte  (%d Spuren gewandelt, %d gescheitert)\n",
            label, n, r.tracks_converted, r.tracks_failed);
+    if (r.sectors_converted || r.sectors_failed)
+        printf("                      Sektoren: %d gewandelt, %d gescheitert\n",
+               r.sectors_converted, r.sectors_failed);
     return n;
 }
 
@@ -221,10 +224,38 @@ static void roundtrip(const char *name, const char *corpus,
     } else {
         size_t diff = 0, m = n2 < n0 ? n2 : n0;
         for (size_t i = 0; i < m; i++) if (a[i] != c[i]) diff++;
+
+        /* MF-538: die Nulllinie. OHNE sie ist die Prozentzahl wertlos.
+         *
+         * Gemessen an ADF -> HFE -> ADF: die Rueckwandlung lieferte eine
+         * ADF aus LAUTER NULLEN, und der Vergleich meldete "733 von 901120
+         * Bytes verschieden (0,08 %)". Das las sich wie eine fast perfekte
+         * Wandlung. Tatsaechlich hat die Quelldatei — eine leere
+         * OFS-Diskette — genau 733 Bytes ungleich null. Die Wandlung hatte
+         * ALLES verloren, und die Zahl sagte das Gegenteil.
+         *
+         * Die Zaehler hatten die ganze Zeit recht: "0 Spuren gewandelt,
+         * 160 gescheitert". Ich habe der Byte-Statistik geglaubt und den
+         * Zaehlern nicht — und daraus einen LOSSY_DOCUMENTED-Eintrag
+         * gemacht, der zurueckgenommen werden musste (MF-535 -> MF-538).
+         *
+         * Ab jetzt steht daneben, wie weit eine Datei aus lauter Nullen von
+         * der Quelle entfernt waere. Ist die Abweichung nicht KLEINER als
+         * diese Nulllinie, hat die Wandlung nichts geleistet — egal wie
+         * klein die Prozentzahl aussieht. */
+        size_t nonzero = 0;
+        for (size_t i = 0; i < n0; i++) if (a[i]) nonzero++;
+
         printf("    nicht bitgleich: %zu -> %zu Byte (%+lld), "
                "%zu von %zu Bytes verschieden (%.1f %%)\n",
                n0, n2, (long long)n2 - (long long)n0, diff, m,
                m ? 100.0 * (double)diff / (double)m : 0.0);
+        printf("      Nulllinie: eine Datei aus lauter Nullen waere um %zu Byte entfernt\n", nonzero);
+        if (diff >= nonzero) {
+            printf("      >>> DIE WANDLUNG HAT NICHTS GELEISTET: die Abweichung ist\n");
+            printf("      >>> nicht kleiner als die Nulllinie. Die kleine Prozentzahl\n");
+            printf("      >>> kommt von der fast leeren Quelle, nicht von der Wandlung.\n");
+        }
 
         /* MF-535: WO die Abweichung liegt, nicht nur wieviel.
          *

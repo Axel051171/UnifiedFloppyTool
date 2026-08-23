@@ -3938,6 +3938,65 @@ zweite braucht eine Bank-Sitzung mit echtem Laufwerk.
 
 ---
 
+### RT-4 — ich habe der Statistik geglaubt und den Zaehlern nicht (2026-08-23, MF-538) -> ✓ KORRIGIERT
+
+**Selbstkorrektur.** MF-535 hat `ADF -> HFE` als `LOSSY_DOCUMENTED` mit
+einer bezifferten Verlustliste eingetragen. **Der Eintrag war falsch und
+ist zurueckgenommen.**
+
+Die Messung lautete:
+
+```
+ADF -> HFE -> ADF, xdftool_dd_ofs.adf (901120 Byte)
+  zurueck: 901120 Byte, 733 verschieden (0,08 %)
+  betroffen: 5 von 1760 Sektoren, keiner vollstaendig
+```
+
+Das las sich wie eine fast perfekte Wandlung. Tatsaechlich:
+
+> **Die Quelldatei ist eine LEERE OFS-Diskette und hat genau 733 Bytes
+> ungleich null.**
+
+Die Rueckwandlung lieferte eine ADF aus **lauter Nullen**. Sie hatte
+**alles** verloren — und die Prozentzahl sagte das Gegenteil, weil eine
+leere Datei einer fast leeren Quelle sehr aehnlich sieht.
+
+**Die Zaehler hatten die ganze Zeit recht.** `HFE -> ADF` meldete "0
+Spuren gewandelt, 160 gescheitert", und ich hatte das in MF-534 als
+Wahrheits-Fehler in der Anzeige eingeordnet: *"meldet Misserfolg fuer eine
+korrekte Datei"*. Das war falsch. Es meldete Misserfolg fuer eine
+gescheiterte Wandlung — korrekt. Der Fehler lag bei mir.
+
+**Was daraus strukturell folgt.**
+`tests/test_convert_roundtrip_measured.c` rechnet jetzt die **Nulllinie**
+mit: wie weit waere eine Datei aus lauter Nullen von der Quelle entfernt?
+Ist die gemessene Abweichung nicht **kleiner** als diese Linie, hat die
+Wandlung nichts geleistet, und der Test sagt das ausdruecklich:
+
+```
+Nulllinie: eine Datei aus lauter Nullen waere um 733 Byte entfernt
+>>> DIE WANDLUNG HAT NICHTS GELEISTET: die Abweichung ist
+>>> nicht kleiner als die Nulllinie.
+```
+
+Ohne diese Zeile ist jede Prozentzahl ueber einem duennen Abbild wertlos.
+Das gilt fuer dieses Korpus besonders: die meisten Dateien darin sind
+frisch formatierte, also weitgehend leere Disketten.
+
+**Der echte Befund bleibt und ist groesser als der vermeintliche:**
+`HFE -> ADF` liefert eine leere ADF. 160 von 160 Spuren scheitern beim
+`read_track`, es wird kein einziger Sektor platziert, und das Ergebnis ist
+trotzdem eine Datei der richtigen Groesse. Ein Benutzer, der die Zaehler
+nicht liest, haelt sie fuer eine Wandlung. Steht als **P0-16**.
+
+**Und die Lehre, die zur Sache gehoert:** dieselbe Sitzung hat dem Baum
+mehrfach vorgeworfen, Zahlen zu melden, die nichts belegen. Hier habe ich
+genau das getan — eine Prozentzahl veroeffentlicht, ohne ihre Bezugsgroesse
+zu pruefen, und daraus einen Tabelleneintrag gemacht. Der Unterschied ist
+nur, dass es aufgefallen ist, weil die naechste Messung nachgefragt hat.
+
+---
+
 ### RT-3 — fuenf Rundlaeufe gemessen, zwei Wahrheits-Fehler in entgegengesetzte Richtungen (2026-08-23, MF-534) -> teils behoben
 
 **Verifikation.** `scripts/audit_convert_backlog.py` (MF-533) teilt die

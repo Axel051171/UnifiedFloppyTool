@@ -163,30 +163,28 @@ static const uft_roundtrip_entry_t g_matrix[] = {
     { UFT_FORMAT_HFE, UFT_FORMAT_ADF, UFT_RT_LOSSY_DOCUMENTED,
       "bitstream decoded to AmigaDOS sectors" },
 
-    /* Sektor -> Bitstream: ADF -> HFE, mit gemessener Verlustliste.
+    /* ADF -> HFE stand hier bis MF-538 als LOSSY_DOCUMENTED mit einer
+     * bezifferten Verlustliste. Der Eintrag ist ZURUECKGENOMMEN, und der
+     * Grund gehoert hierher, damit ihn niemand zweimal macht.
      *
-     * MF-535: die Regel oben verlangt fuer LD "a test that proves the loss
-     * list is complete". tests/test_convert_roundtrip_measured.c faehrt
-     * ADF -> HFE -> ADF und zaehlt aus, WO die Abweichung liegt statt nur
-     * wieviel:
+     * Die Messung lautete: Rundlauf ADF -> HFE -> ADF, 733 von 901120 Byte
+     * verschieden, also 0,08 % — "5 von 1760 Sektoren betroffen, keiner
+     * vollstaendig". Das las sich wie eine fast perfekte Wandlung.
      *
-     *     xdftool_dd_ofs.adf, 901120 Byte
-     *     zurueck: 901120 Byte, 733 Byte verschieden (0,08 %)
-     *     betroffen: 5 von 1760 Sektoren a 512 Byte, KEINER vollstaendig
-     *     schlimmster Sektor 881 mit 510 von 512 Byte
+     * Die Quelldatei ist eine LEERE OFS-Diskette und hat genau 733 Bytes
+     * ungleich null. Die Rueckwandlung lieferte eine ADF aus lauter Nullen
+     * — sie hatte ALLES verloren, und die Prozentzahl sagte das Gegenteil.
      *
-     * Das ist die Verlustliste: fuenf Sektoren, verstreut ueber Spur 0 bis
-     * 80, keiner ganz verloren. Sie stammt aus EINER Datei — fuer diese
-     * ist sie vollstaendig, fuer das Format ist sie ein Beleg, kein Beweis.
-     * Das steht hier, damit niemand die 0,08 % fuer eine Formatzusage
-     * haelt.
+     * Die Zaehler hatten die ganze Zeit recht: "0 Spuren gewandelt, 160
+     * gescheitert". Ich habe der Byte-Statistik geglaubt und den Zaehlern
+     * nicht.
      *
-     * Ausdruecklich NICHT LOSSLESS: fuenf beschaedigte Sektoren sind in
-     * einem forensischen Werkzeug kein Rundungsfehler. */
-    { UFT_FORMAT_ADF, UFT_FORMAT_HFE, UFT_RT_LOSSY_DOCUMENTED,
-      "MF-535: Rundlauf ADF->HFE->ADF gemessen — 5 von 1760 Sektoren "
-      "betroffen (733 von 901120 Byte, 0,08 %), keiner vollstaendig; "
-      "Messung aus einer Datei" },
+     * `tests/test_convert_roundtrip_measured.c` rechnet seither die
+     * Nulllinie mit und sagt ausdruecklich, wenn eine Abweichung nicht
+     * kleiner ist als sie. ADF -> HFE bleibt UNGEPRUEFT, bis eine Quelle
+     * mit Inhalt vorliegt — eine leere Diskette kann keinen Wandler
+     * belegen. */
+
 
     /* Sector → Flux: target cannot be reproduced from sectors alone */
     { UFT_FORMAT_IMG, UFT_FORMAT_SCP, UFT_RT_IMPOSSIBLE,
