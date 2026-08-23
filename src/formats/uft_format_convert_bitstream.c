@@ -12,6 +12,11 @@
 
 #include "uft_format_convert_internal.h"
 
+/* SCP speichert Flusslaengen als 16-Bit-Vielfache von 25 ns. */
+#ifndef UFT_SCP_TICK_NS
+#define UFT_SCP_TICK_NS 25u
+#endif
+
 // ============================================================================
 // Bitstream <-> Flux Conversions
 // ============================================================================
@@ -247,6 +252,37 @@ uft_error_t uftc_convert_g64_to_scp(const uint8_t* src_data, size_t src_size,
 
         rc = d64_gcr_to_flux(track_data, track_len, zone,
                               flux_buf, &flux_count);
+
+        /* MF-537: EINHEITEN. `d64_gcr_to_flux()` liefert SCP-TICKS — sein
+         * eigener Kommentar sagt es: "Convert to SCP ticks (25ns
+         * resolution)", und es rechnet `bit_time * 1000.0 / 25.0`.
+         * `scp_writer_add_track()` erwartet aber NANOSEKUNDEN; so fuettert
+         * es auch uftc_convert_hfe_to_scp(), und so tut es der
+         * Rueckfallpfad direkt darunter (`accum_ns += cell_ns`).
+         *
+         * Zwei Einheiten im selben Puffer, je nachdem welcher Pfad lief.
+         * Der Hauptpfad gab Ticks als Nanosekunden weiter, der Writer
+         * teilte sie noch einmal durch 25 — und die Rechnung geht exakt
+         * auf:
+         *
+         *     4000 ns Zellzeit  ->  160 Ticks
+         *     als "ns" uebergeben -> 160 / 25 = 6 Ticks
+         *     zurueckgelesen      -> 6 * 25 = 150 ns
+         *
+         * Genau diese 150 ns kamen im Rundlauf G64 -> SCP -> G64 beim
+         * Leser an, wo 4000 erwartet wurden. Der PLL fand mit einer
+         * Zellzeit von 3250 ns in 150-ns-Abstaenden keine einzige
+         * Zellgrenze und lieferte 1 Bit je Spur; die G64 war 789 Byte gross
+         * und meldete trotzdem "35 Spuren gewandelt" (MF-534, OPEN_ITEMS
+         * P0-15).
+         *
+         * Belegt durch Messung an der Zwischendatei
+         * (tests/test_convert_roundtrip_measured.c). */
+        if (rc == 0 && flux_count > 0) {
+            for (size_t i = 0; i < flux_count; i++)
+                flux_buf[i] *= UFT_SCP_TICK_NS;
+        }
+
         if (rc != 0 || flux_count == 0) {
             /* Fallback: manual bit-to-flux conversion */
             flux_count = 0;
