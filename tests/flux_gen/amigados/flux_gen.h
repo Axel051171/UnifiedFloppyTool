@@ -114,6 +114,29 @@ size_t uft_amigados_cells_to_intervals(const uft_amigados_cells_t *c,
                                        uint32_t *out, size_t cap);
 
 /**
+ * Wie @ref uft_amigados_cells_to_intervals, aber mit Zeitzittern (MF-486).
+ *
+ * Jitter verschiebt die POSITION eines Flusswechsels, nicht die Laenge eines
+ * Intervalls — das ist der physikalische Unterschied und er ist wichtig: eine
+ * verschobene Flanke veraendert ZWEI benachbarte Intervalle gegenlaeufig, ein
+ * verlaengertes Intervall nur eines. Wer den Jitter auf die Intervalle
+ * addiert, laesst die Spur mit der Zeit davonlaufen; auf die Positionen
+ * angewandt bleibt sie im Takt und zittert nur.
+ *
+ * @param jitter_pct  Ausschlag in Prozent der Zellendauer, gleichverteilt in
+ *                    [-p, +p]. 0 = kein Jitter. Ueber 50 koennen Intervalle
+ *                    kollabieren; die Funktion begrenzt darauf.
+ * @param seed        Startwert des Zufallsgenerators. Gleicher Seed =
+ *                    gleiche Spur, immer. Ohne das waere kein Test
+ *                    reproduzierbar und kein Befund nachvollziehbar.
+ */
+size_t uft_amigados_cells_to_intervals_jitter(const uft_amigados_cells_t *c,
+                                              unsigned cell_ns,
+                                              double jitter_pct,
+                                              uint64_t seed,
+                                              uint32_t *out, size_t cap);
+
+/**
  * Ein ADF mit erkennbarem, nicht konstantem Inhalt fuellen.
  *
  * Konstante Fuellung wuerde verschweigen, wenn Sektoren vertauscht landen.

@@ -494,6 +494,20 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/include/uft/formats/c64
             ${CMAKE_SOURCE_DIR}/include/uft/flux
             ${CMAKE_SOURCE_DIR}/include/uft/fs)
+    elseif(${test_name} STREQUAL "test_flux_jitter_vectors")
+        # MF-486: synthetische Flux-Vektoren mit Zeitzittern
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/tests/flux_gen/amigados/flux_gen.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c
+            ${CMAKE_SOURCE_DIR}/src/formats/amiga/uft_amiga_syncs.c
+            ${CMAKE_SOURCE_DIR}/src/formats/scp/uft_scp_writer.c
+            ${CMAKE_SOURCE_DIR}/src/recovery/uft_multiread_pipeline.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
+        target_include_directories(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/tests/flux_gen/amigados
+            ${CMAKE_SOURCE_DIR}/include/uft/flux)
     elseif(${test_name} STREQUAL "test_convert_flippy_reverse")
         # MF-484: Flippy-Rueckseite, Zeitachse gespiegelt
         file(GLOB_RECURSE FLIP_FORMAT_SOURCES

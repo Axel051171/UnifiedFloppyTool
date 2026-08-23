@@ -3752,6 +3752,150 @@ für AmigaDOS-DD.
 
 ---
 
+### LIC-1 — eine MIT-Datei, deren Algorithmus als GPL-Nachbau dokumentiert ist (2026-08-23, MF-486) → ⚠ OFFEN
+
+Beim Prüfen des FluxEngine-Umsetzungsplans (dessen Abschnitt 0 ausdrücklich
+um „einen Grep" bittet) fiel dies auf. Der Grep, und was er ergibt:
+
+| Deklaration | Dateien |
+|---|---:|
+| `MIT` | **55** |
+| `GPL-2.0-or-later` | 9 |
+| `GPL-3.0-or-later` | 2 |
+| `Unlicense` | 2 |
+
+`LICENSE:35` sagt **`GPL-2.0-or-later`** — nicht GPL-2.0-only. Damit ist die
+Frage des Entwurfs beantwortet, und zwar günstig: die Aufnahme von
+GPLv2- **und** GPLv3-Code ist zulässig, Portierungen aus a8rawconv und
+FluxEngine wären lizenzrechtlich sauber.
+
+#### Zwei Befunde, die der Entwurf nicht zieht
+
+**1. Zwei GPL-3.0-Dateien heben die effektive Lizenz des Binaries.**
+`src/formats/retro_image/uft_retro_image_detect.c` und ihr Header sind
+`GPL-3.0-or-later`. Wegen der „or-later"-Klausel ist die Kombination legal —
+aber ein verteiltes UFT-Binary, das sie enthält, ist effektiv **GPL-3.0**,
+nicht GPL-2.0. Das steht im Repo nirgends.
+
+**2. `src/recovery/uft_multiread_pipeline.c` trägt `SPDX: MIT` — und sein
+eigener Kommentar sagt in Zeile 185:**
+
+> „Nach a8rawconv `sift_sectors` (src/a8rawconv/disk.cpp:236-365)"
+
+Eine MIT-Datei, deren Algorithmus als Nachbau einer GPLv2+-Quelle
+ausgewiesen ist. Entweder ist es eine unabhängige Reimplementierung nach
+Beschreibung — dann ist MIT haltbar, aber der Kommentar sollte das
+ausdrücklich sagen — oder es ist eine Portierung, dann ist MIT falsch.
+
+**Das ist nicht meine Entscheidung.** Umlizenzieren ist ein Rechtsakt, kein
+Refactoring, und kann die Zustimmung anderer Autoren erfordern. Was hier
+festgehalten wird, ist der Widerspruch; die Auflösung gehört dem Eigentümer
+des Repos.
+
+#### Warum es den FluxEngine-Plan blockiert
+
+Der Plan sagt „portieren mit Header-Attribution" — ohne zu sagen, **in
+welche Datei**. GPL-Code in eine MIT-deklarierte Datei zu portieren macht
+deren Header falsch. Betroffen wären genau die Bereiche, die der Plan
+anfassen will:
+
+- `include/uft/profiles/` — **20 MIT-Dateien**; Baustein A will dorthin
+  Profildaten aus FluxEngine erzeugen.
+- `src/recovery/uft_multiread_pipeline.c` — MIT; Baustein E will die
+  Weak-Klassifikation gegen synthetische Vektoren fahren.
+
+**Handlungsregel bis zur Klärung:** kein weiterer aus GPL-Quellen
+abgeleiteter Code in Dateien mit `SPDX: MIT`. Neue Ports gehören in neue
+Dateien mit `GPL-2.0-or-later`-Header und Attribution. Die MF-486-Änderungen
+halten sich daran: der Jitter-Erzeuger liegt in `tests/flux_gen/amigados/`
+und leitet sich aus keiner fremden Quelle ab.
+
+---
+
+### FLUX-10 — was Zeitzittern wirklich anrichtet (2026-08-23, MF-486) → ✓ GEMESSEN
+
+Baustein E des FluxEngine-Plans, **der einzige der zehn, der ohne
+FluxEngine-Quelle machbar ist** (siehe Schlussabschnitt). Der Plan behauptet:
+
+> „injizierter Jitter ⇒ MUSS `WEAK` ergeben, stabiler CRC-Fehler ⇒ MUSS
+> `PROTECTED_CRC` ergeben"
+
+Beides war zu prüfen. `PROTECTED_CRC` gibt es in diesem Baum nicht — die
+Klasse heißt `MULTIREAD_CLASS_STABLE_BAD_CRC` und ist seit MF-478 verdrahtet
+und geprüft. Bleibt der Jitter.
+
+#### Der gemessene Sweep
+
+Fünf Seeds je Stufe, eine AmigaDOS-Spur mit 11 Sektoren:
+
+| Jitter | gefunden | CRC falsch | Inhalt falsch |
+|---:|---:|---:|---:|
+| 0–15 % | 55/55 | 0 | 0 |
+| **20 %** | 41/55 | **41** | **41** |
+| 25 % | 15/55 | 15 | 14 |
+| 30 % | 4/55 | 4 | 3 |
+| ≥ 35 % | 0/55 | 0 | 0 |
+
+Drei Bereiche:
+
+1. **Bis ~15 %** fängt die PLL alles ab — am Ergebnis ist nichts zu sehen.
+2. **20–30 %** ist das interessante Band: Sektoren werden gefunden **und**
+   sind inhaltlich falsch. Aber jeder einzelne trägt eine falsche
+   Prüfsumme. Bei 25 % sind es 15 CRC-Fehler bei 14 falschen Inhalten — die
+   Prüfsumme ist strenger als nötig, also in der sicheren Richtung.
+3. **Ab 35 %** geht der Sync verloren, es wird gar nichts mehr gefunden.
+
+**Die forensisch entscheidende Aussage** steht in Bereich 2 und ist die
+Invariante, die der Test festhält: *falscher Inhalt kommt nie mit gültiger
+Prüfsumme durch* — `mismatched <= bad_data_crc`. Zeitzittern erzeugt keine
+still veränderten Daten.
+
+#### Ein eigener Fehler, den die Messung gefunden hat
+
+Mein erster Test hieß `heavy_jitter_loses_sectors_it_does_not_corrupt_them`
+und behauptete „was gefunden wird, ist richtig". Er war **grün — weil bei
+45 % gar nichts gefunden wird.** Eine Behauptung, die nur deshalb hält, weil
+die Stichprobe leer ist. Der Sweep hat es aufgedeckt; jetzt prüft der Test
+das Band, in dem tatsächlich etwas gefunden wird, und zusätzlich, dass dieses
+Band überhaupt getroffen ist (`any_mismatch > 0`).
+
+#### Die Behauptung des Entwurfs, richtiggestellt
+
+Aus **einer** verzitterten Spur folgt kein `WEAK`, sondern „gefunden, aber
+Prüfsumme falsch". `WEAK` ist eine Aussage über **mehrere** Lesungen
+derselben Stelle. Wird dieselbe Spur zweimal mit verschiedenem Zittern
+gelesen, laufen die Lesungen auseinander, keine ist geprüft — und **dann**
+klassifiziert die Pipeline `MULTIREAD_CLASS_WEAK`, mit `recovered == false`
+und gesetztem `weak_offset`. Genau das prüft
+`two_jittered_reads_of_one_track_classify_as_weak`; damit ist der
+Vektorsatz die Positivkontrolle, die der Plan haben wollte.
+
+#### Warum der Jitter auf Positionen wirkt, nicht auf Intervalle
+
+Eine verschobene Flanke verändert **zwei** benachbarte Intervalle
+gegenläufig; ein verlängertes Intervall nur eines. Wer Jitter auf Intervalle
+addiert, lässt die Spur mit der Zeit davonlaufen — das wäre Drehzahlschlupf,
+nicht Zittern. Die Rot-Probe dazu: `last_pos` auf die ungestörte Lage
+gesetzt (= Drift statt Jitter) → zwei Tests fallen.
+
+`ctest` 226/226, alle 21 Gate-Kategorien 0, `verify_build_sources.py` 0/0,
+qmake-Release-Build grün.
+
+**Ehrlich zur Reichweite.**
+
+- Gemessen an **AmigaDOS-MFM**. FM (Atari) und GCR können andere Bänder
+  haben; der Generator kann sie heute nicht erzeugen.
+- Der Jitter ist **gleichverteilt**, nicht gaußförmig. Echter Laufwerksjitter
+  ist es auch nicht ganz, aber die Gleichverteilung ist die schärfere
+  Annahme (mehr Ausreißer am Rand) und damit die konservative.
+- Der Vektorsatz hängt noch **nicht** als PLL-Regression in CI — Punkt 1 von
+  Baustein E. Dafür müsste ein fester Erwartungswert je Stufe eingefroren
+  werden, und die Zahlen oben stammen aus einer Messung, nicht aus einer
+  Spezifikation. Erst wenn sie über mehrere Läufe und Plattformen stabil
+  sind, taugen sie als Schwelle.
+
+---
+
 ### FMT-26 — die Verschränkungs-Politik war eine feste Annahme (2026-08-23, MF-485) → ✓ BEHOBEN
 
 Punkt 3.3 der a8rawconv-Gap-Analyse, zweite Hälfte. MF-479 hat

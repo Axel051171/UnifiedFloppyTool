@@ -164,16 +164,62 @@ size_t uft_amigados_cells_to_intervals(const uft_amigados_cells_t *c,
                                        unsigned cell_ns,
                                        uint32_t *out, size_t cap)
 {
+    return uft_amigados_cells_to_intervals_jitter(c, cell_ns, 0.0, 0,
+                                                  out, cap);
+}
+
+/* xorshift64* — derselbe Generator wie in den uebrigen tests/flux_gen/-
+ * Erzeugern. Deterministisch und ohne Bibliothek; rand() waere hier falsch,
+ * weil sein Zustand global ist und ein anderer Test ihn verstellen kann. */
+static uint64_t xs64(uint64_t *s)
+{
+    uint64_t x = *s;
+    x ^= x >> 12; x ^= x << 25; x ^= x >> 27;
+    *s = x;
+    return x * 0x2545F4914F6CDD1DULL;
+}
+
+size_t uft_amigados_cells_to_intervals_jitter(const uft_amigados_cells_t *c,
+                                              unsigned cell_ns,
+                                              double jitter_pct,
+                                              uint64_t seed,
+                                              uint32_t *out, size_t cap)
+{
     if (!c || !c->cells || !out || cell_ns == 0) return 0;
 
-    size_t n = 0, last = 0;
+    if (jitter_pct < 0.0)  jitter_pct = 0.0;
+    if (jitter_pct > 50.0) jitter_pct = 50.0;   /* darueber kollabiert es */
+    const double amp = jitter_pct / 100.0 * (double)cell_ns;
+
+    uint64_t st = seed ? seed : 0x9E3779B97F4A7C15ULL;
+
+    size_t n = 0;
+    long long last_pos = 0;                      /* letzte AUSGEGEBENE Lage */
+    bool first = true;
+
     for (size_t i = 0; i < c->n && n < cap; i++) {
         if (!((c->cells[i / 8] >> (7 - (i % 8))) & 1)) continue;
-        out[n++] = (uint32_t)((i - last) * (size_t)cell_ns);
-        last = i;
+
+        long long pos = (long long)i * (long long)cell_ns;
+        if (amp > 0.0) {
+            /* gleichverteilt in [-amp, +amp], aus 53 Bit Mantisse */
+            double u = (double)(xs64(&st) >> 11) / 9007199254740992.0;
+            pos += (long long)((u * 2.0 - 1.0) * amp);
+        }
+
+        if (first) {
+            /* Die erste Lage IST das erste Intervall; ein Intervall von 0
+             * gibt es nicht. */
+            if (pos <= 0) pos = (long long)cell_ns;
+            out[n++] = (uint32_t)pos;
+            first = false;
+        } else {
+            long long d = pos - last_pos;
+            if (d < 1) d = 1;                    /* nie null oder negativ */
+            out[n++] = (uint32_t)d;
+        }
+        last_pos = pos;
     }
-    /* Zelle 0 gesetzt: ein Intervall von 0 gibt es nicht. */
-    if (n > 0 && out[0] == 0) out[0] = cell_ns;
     return n;
 }
 
