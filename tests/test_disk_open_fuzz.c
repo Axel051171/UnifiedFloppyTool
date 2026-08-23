@@ -152,6 +152,18 @@ static const struct { const char *sig; size_t len; const char *label; } SIGS[] =
     { "Reduced MFM",  11, "DMK"      },
     { "CAPS",          4, "IPF"      },
     { "KryoFlux",      8, "KryoFlux" },
+    /* MF-521: aus den Sonden gelesen mit scripts/audit_probe_magic.py.
+     * Vorher fehlten sie, und die zugehoerigen Plugins waren fuer den
+     * Fuzzer unerreichbar — Zufallsbytes treffen eine Kennung nie. */
+    { "86BX",              4, "86F"      },
+    { "UAE-1ADF",          8, "ExtADF"   },
+    { "M2I\0",             4, "M2I"      },
+    { "FDI",               3, "FDI"      },
+    { "GCR-1571",          8, "G71"      },
+    { "LDB\1",             4, "LDB"      },
+    { "MAME FLOPPY IMAGE", 17, "MFI"      },
+    { "SAD!",              4, "SAD"      },
+    { "SINCLAIR",          8, "SCL"      },
 };
 #define N_SIGS ((int)(sizeof(SIGS) / sizeof(SIGS[0])))
 
