@@ -3752,6 +3752,97 @@ für AmigaDOS-DD.
 
 ---
 
+### POL-1 — das Sicherheitstor hat keinen Aufrufer (2026-08-23, MF-490) → ⚠ TEILWEISE
+
+Beim Prüfen des FreeDOS-FORMAT-Entwurfs, der `src/policy/uft_write_gate.c`
+als „Anker existiert" voraussetzt. Er existiert. **Er läuft nicht.**
+
+`include/uft/policy/uft_write_gate.h` sagt in seinem eigenen Kopf:
+
+> Enforces safety checks **BEFORE any destructive operation**:
+> 1. Format capability check (write allowed?)
+> 2. Drive diagnostics (hardware safe?)
+> 3. Recovery snapshot (backup created?)
+>
+> *„Bei uns geht kein Bit verloren"*
+
+und an der Funktion:
+
+> This **MUST** be called before any destructive operation.
+
+Gemessen: **kein Aufrufer außerhalb der Tests.** `src/fluxwritejob.cpp`
+(269 Zeilen) geht direkt auf den Provider — `set_motor(true)` → `seek()` →
+`write_raw_flux()`, ohne Tor, ohne Schnappschuss, ohne Diagnose.
+
+Zehnter Eintrag derselben Liste in dieser Woche. Die ersten neun waren
+Funktionen, die still nicht halfen. **Diese ist ein Sicherheitsmechanismus,
+der still nicht schützt.**
+
+#### Und die Tests prüften das Falsche
+
+`tests/test_write_gate.c` bestand aus zehn Tests — allesamt
+**Argumentprüfung**: Nullzeiger, Bit-Distinktheit der Flags, Statustexte.
+Keine einzige *Entscheidung* war geprüft. Nicht, ob eine
+schreibgeschützte Diskette abgewiesen wird. Nicht, ob der Schnappschuss
+wirklich entsteht. Und vor allem nicht, ob das Tor überhaupt je „ja" sagen
+kann.
+
+Bei einem Sicherheitsmechanismus ist das die gefährlichste Lücke: **ein Tor,
+das immer „nein" sagt, fällt im Betrieb sofort auf. Eines, das immer „ja"
+sagt, fällt nie auf — bis das erste Medium überschrieben ist.**
+
+#### Was MF-490 tut
+
+Neun Tests für die Entscheidungen: das Tor sagt nachweislich ja (mit real
+angelegtem und geprüftem Schnappschuss auf der Platte), weist ein
+unbekanntes Format ab, trennt „unbekannt" von „erkannt, aber unter der
+Konfidenzschwelle", blockiert ohne Schnappschuss-Ziel, stoppt bei
+Schreibschutz und bei fehlender Diskette, unterscheidet blockierend von
+überstimmbar bei unsicherem Laufwerk, und behandelt `strict_mode` anders als
+den entspannten Modus — mit Gegenprobe, damit `strict_mode` nicht ein Feld
+ohne Wirkung sein kann.
+
+| Rot-Probe | Ergebnis |
+|---|---|
+| Konfidenzschwelle ignoriert | genau `too_low_a_confidence_is_refused` fällt |
+| Schreibschutz übergangen | genau `a_write_protected_disk_stops_the_gate` fällt |
+| `strict_mode` wirkungslos | genau `strict_mode_without_diagnostics_demands_an_override` fällt |
+
+`ctest` 229/229, alle 21 Gate-Kategorien 0, `verify_build_sources.py` 0/0,
+qmake-Release-Build grün.
+
+#### Warum das Tor NICHT verdrahtet wurde
+
+Das ist der offene Teil, und die Begründung gehört hierher statt in eine
+Zusage:
+
+`FluxWriteJob::run()` ist der einzige Pfad, der auf eine physische Diskette
+schreibt, und er läuft über den **produktionsgetesteten**
+Greaseweazle-Provider. Ein Tor davorzuhängen, dessen Verhalten an echter
+Hardware **nicht** nachgeprüft werden kann (kein physisches Laufwerk
+verfügbar, MF-310), riskiert das Gegenteil des Gewollten: eine
+Sicherheitsprüfung, die legitime Schreibvorgänge blockiert und damit die
+einzige funktionierende Hardware-Funktion lahmlegt.
+
+Die Reihenfolge ist deshalb bewusst: **erst beweisen, dass das Tor richtig
+entscheidet — dann verdrahten.** Der erste Teil ist hiermit erledigt; der
+zweite braucht eine Bank-Sitzung mit echtem Laufwerk.
+
+**Ehrlich zur Reichweite.**
+
+- Das Tor bleibt **unverdrahtet**. UFT schreibt weiterhin ohne Schnappschuss,
+  ohne Formatprüfung und ohne Laufwerksdiagnose auf physische Disketten.
+  Das ist der Ist-Stand, nicht eine Absicht.
+- Die Formattabelle des Tores (`FORMAT_SIGS`, 16 Einträge) führt **jedes**
+  Format als beschreibbar. Der Zweig „Format ist read-only → blockieren"
+  ist damit unerreichbar und ungeprüft — dieselbe Sorte toter Zweig wie die
+  Hybrid-Schleife aus FLUX-13.
+- Geprüft ist die Entscheidungslogik gegen **synthetische** Abbilder und
+  konstruierte Diagnosen. Ob die Diagnose-Flags von einem echten Laufwerk je
+  gesetzt werden, ist eine andere Frage und hier nicht beantwortet.
+
+---
+
 ### FLUX-13 — der Wandler prüfte sein eigenes Ergebnis nicht (2026-08-23, MF-489) → ✓ BEHOBEN
 
 Zweimal hat dieser Baum ein Abbild aus lauter Nullen als **erfolgreiche**
