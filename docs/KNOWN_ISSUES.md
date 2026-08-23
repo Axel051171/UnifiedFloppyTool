@@ -3752,6 +3752,109 @@ für AmigaDOS-DD.
 
 ---
 
+### FLUX-11 — der FM-Decoder lief nie mit Regelung (2026-08-23, MF-487) → ✓ BEHOBEN
+
+Baustein E Punkt 1 des FluxEngine-Plans: „jede Änderung an `uft_flux_pll.h`
+läuft gegen den Vektorsatz". Beim Bau des Netzes fiel auf, dass es etwas zu
+fangen gab.
+
+#### Der Fund
+
+`flux_decode_fm()` übernahm als **einziger** der fünf Decoder weder
+`opts->use_pll` noch `opts->pll_gain`. Und weil `flux_pll_init()` mit
+`memset(pll, 0, sizeof(*pll))` beginnt, blieb `use_pll` dort auf `false`.
+`flux_to_bitstream()` prüft `if (pll->use_pll)` an beiden Regelstellen —
+also: **der FM-Pfad lief überhaupt nie mit Regelung.** Er zählte Zellen
+gegen eine feste Periode, und `opts->pll_gain` war dort ohne jede Wirkung.
+
+Ausgerechnet dieser Pfad kann am wenigsten darauf verzichten: Atari
+810/1050 laufen mit 288 min⁻¹ und werden meist in 300-min⁻¹-Laufwerken
+gelesen — 4 % Versatz, den eine abgeschaltete Regelung nicht ausgleicht.
+
+Siebte Instanz derselben Diagnose in dieser Woche: ein Fakt an zwei Stellen,
+und es läuft die zufällig aufgerufene (MF-475, MF-479, MF-481, MF-482,
+MF-485, MF-486).
+
+#### Der gemessene Fangbereich
+
+Flux mit **wahrer** Zellendauer erzeugt, mit **angenommener** dekodiert;
+kein Medienprofil, keine Indexmarken — nur der Regelkreis.
+
+| Annahme/Wahr | Sektoren | eingerastete Bitrate |
+|---:|---:|---:|
+| 0.40–0.70 | 0/11 | kein Einrasten |
+| 0.80 | 11/11 | 520833 |
+| 0.90–1.20 | 11/11 | **500000** (= 1e9/2000) |
+| 1.30 | 11/11 | 480769 |
+| 1.40 | 11/11 | 446429 |
+| 1.50 | 11/11 | 416667 |
+| 1.80–2.00 | 0/11 | kein Einrasten |
+
+Zwei Eigenschaften, die vorher nirgends standen:
+
+1. **Asymmetrie.** Nach oben zieht die PLL bis +50 %, nach unten nur bis
+   −20 %.
+2. **Dekodieren ≠ Einrasten.** Zwischen 1.30 und 1.50 kommen alle elf
+   Sektoren, obwohl die gemeldete Periode deutlich danebenliegt — die
+   Korrektur je Zelle trägt weiter, wo der Mittelwert schon abgedriftet ist.
+
+#### Versatz und Zittern addieren sich, und zwar einseitig
+
+Gefundene Sektoren von 11, schlechtester von fünf Seeds:
+
+| Annahme/Wahr | 0 % | 4 % | 8 % | 12 % | 16 % |
+|---:|---:|---:|---:|---:|---:|
+| 0.85 | 11 | **0** | **0** | **0** | 10 |
+| 0.90 | 11 | 10 | 10 | 10 | 11 |
+| 1.00 | 11 | 10 | 11 | 11 | 11 |
+| **≥ 1.10** | 11 | 11 | 11 | 11 | 11 |
+
+Daraus folgt eine Betriebsempfehlung, die sonst nirgends steht: **wer eine
+Zellendauer schätzen muss, schätzt besser zu groß als zu klein.** Unterhalb
+des Nennwerts ist der Fangbereich brüchig — bei 0.85 genügen 4 % Zittern für
+den Totalverlust —, oberhalb überlebt der Sync alles.
+
+#### Drei eigene Fehler, die die Messung gefunden hat
+
+1. Der erste Testentwurf verlangte, die Kombination sei „nicht schlechter als
+   ihre Teile". **Falsch** — bei 0.85 ist sie es sehr wohl.
+2. Die Tabelle zählt **gefundene**, nicht fehlerfreie Sektoren. Bei 1.10 mit
+   16 % Zittern kommen alle elf, einer davon verfälscht — korrekt als
+   CRC-Fehler markiert. Der Sweep, der die Tabelle erzeugte, maß die falsche
+   Größe.
+3. Die erste Rot-Probe verfälschte `flux_pll_init()`s Voreinstellung — die
+   jeder Aufrufer sofort überschreibt. **Zehnfache Verstärkungsänderung
+   bewegte keinen Test.** Erst die Korrektur an `opts->pll_gain` griff. Ohne
+   diese Rot-Probe wäre ein „PLL-Regressionsnetz" entstanden, das auf
+   PLL-Änderungen nicht reagiert.
+
+#### Rot-Proben
+
+| Verfälschung | Ergebnis |
+|---|---|
+| `pll_gain` 0.05 → 0.002 | 2 Tests fallen (Fangbereich bricht zusammen) |
+| `pll_gain` 0.05 → 0.20 | 1 Test fällt (Zittern-Robustheit weg) |
+| FM-Verdrahtung wieder entfernt | `switching_the_pll_off_freezes_the_period_in_every_decoder` fällt und nennt `fm` beim Namen |
+
+`ctest` 227/227, alle 21 Gate-Kategorien 0, `verify_build_sources.py` 0/0,
+qmake-Release-Build grün.
+
+**Ehrlich zur Reichweite.**
+
+- Gemessen mit **AmigaDOS-MFM-Flux**. Der Regelkreis ist zwar für alle fünf
+  Decoder derselbe (`flux_to_bitstream`), aber Fangbereich und
+  Zittertoleranz können bei FM- und GCR-Zellenfamilien anders liegen. Der
+  Generator kann sie heute nicht erzeugen.
+- Die Schwellen sind **Ränder mit Abstand**, keine gemessenen Kanten. Die
+  Streifen 0.70–0.90 und 1.30–1.80 bleiben absichtlich ohne Zusicherung: wo
+  genau die Kante liegt, weiß der Test nicht, und er tut nicht so.
+- Die FM-Änderung **ändert Verhalten**: der Pfad regelt jetzt. Alle 227 Tests
+  bleiben grün, aber ein reales FM-Abbild ist damit nicht verglichen — es
+  liegt keines im Korpus. Dass die Regelung besser ist als keine, folgt aus
+  den vier anderen Decodern, nicht aus einer Messung an FM-Material.
+
+---
+
 ### LIC-1 — eine MIT-Datei, deren Algorithmus als GPL-Nachbau dokumentiert ist (2026-08-23, MF-486) → ⚠ OFFEN
 
 Beim Prüfen des FluxEngine-Umsetzungsplans (dessen Abschnitt 0 ausdrücklich

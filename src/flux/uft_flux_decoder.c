@@ -729,7 +729,27 @@ flux_status_t flux_decode_fm(const flux_raw_data_t *flux,
     
     flux_pll_t pll;
     flux_pll_init(&pll, bitcell_ns);
-    
+    /* MF-487: hier standen diese beiden Zeilen NICHT — als einziger der fuenf
+     * Decoder. Die Folge ist groesser, als sie aussieht.
+     *
+     * `flux_pll_init()` beginnt mit `memset(pll, 0, sizeof(*pll))`, also ist
+     * `use_pll` danach FALSE. Die uebrigen vier Decoder setzen es gleich
+     * darauf aus `opts->use_pll` (Standard: true) — dieser hier nicht.
+     * `flux_to_bitstream()` prueft `if (pll->use_pll)` an beiden
+     * Regelstellen. Ergebnis: **der FM-Pfad lief ueberhaupt nie mit
+     * Regelung.** Er zaehlte Zellen gegen eine feste Periode, und
+     * `opts->pll_gain` war dort ohne jede Wirkung.
+     *
+     * Fuer FM-Medien ist das genau der falsche Pfad, um darauf zu
+     * verzichten: Atari 810/1050 laufen mit 288 min^-1 und werden meist in
+     * 300-min^-1-Laufwerken gelesen — 4 % Versatz, den eine abgeschaltete
+     * Regelung nicht ausgleichen kann.
+     *
+     * Wieder derselbe Befund wie bei MF-475, MF-479 und MF-481: ein Fakt an
+     * zwei Stellen, und es laeuft die zufaellig aufgerufene. */
+    pll.use_pll = opts->use_pll;
+    pll.freq_gain = opts->pll_gain;
+
     size_t bit_count = max_bits;
     flux_status_t status = flux_to_bitstream(flux, bits, &bit_count, bitcell_ns, &pll);
     if (status != FLUX_OK) {
