@@ -251,6 +251,11 @@ bool uft_fundus_add(uft_fundus_t *f, const void *data, size_t size,
         okf = okf && json_field(line, sizeof(line), &at, "capture_protocol",
                                 meta->capture_protocol);
         okf = okf && json_field(line, sizeof(line), &at, "tool", meta->tool);
+        /* Der Verweis auf die Herkunftskette (MF-504). Er steht hier und
+         * nicht in der Bruecke, weil der Fundus der einzige Schreiber des
+         * Manifests bleibt — zwei Schreiber waeren zwei Formate. */
+        okf = okf && json_field(line, sizeof(line), &at, "chain_hash",
+                                meta->chain_hash);
     }
     if (!okf || at + 3 >= sizeof(line)) { remove(side); remove(path); return false; }
     line[at++] = '}';

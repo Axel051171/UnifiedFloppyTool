@@ -87,6 +87,15 @@ typedef struct {
     const char *operator_id;       /**< wer die Aufnahme gemacht hat */
     const char *capture_protocol;  /**< nach welchem Rezept */
     const char *tool;              /**< Erzeuger samt Version */
+
+    /** Kopfhash der Herkunftskette, hexadezimal (MF-504).
+     *
+     *  **Nicht von Hand setzen.** Dieses Feld fuellt
+     *  @ref uft_fundus_add_from_chain aus der geprueften Kette; wer es
+     *  selbst setzt, bekommt von dort eine Absage. Beim einfachen
+     *  @ref uft_fundus_add darf es gesetzt werden — dann behauptet der
+     *  Aufrufer die Herkunft selbst und traegt sie auch. */
+    const char *chain_hash;
 } uft_fundus_meta_t;
 
 /** Ergebnis einer Nachpruefung. */

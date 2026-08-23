@@ -3938,6 +3938,62 @@ zweite braucht eine Bank-Sitzung mit echtem Laufwerk.
 
 ---
 
+### FUND-2 — zwei Stellen führten Herkunft, nebeneinander (2026-08-23, MF-504) → ✓ BEHOBEN
+
+Mit dem Fundus (FUND-1) führten zwei Dinge Herkunft: die
+**Provenienz-Kette** (`uft_provenance.h`, was mit den Daten geschah,
+hash-verkettet) und der **Fundus** (was gespeichert ist, mit Bediener und
+Werkzeug). Beide kennen Bediener und Werkzeug.
+
+Zwei Quellen für dieselbe Tatsache sind kein Komfort, sondern ein
+Widerspruch in Wartestellung: wer denselben Wert an zwei Stellen angeben
+kann, wird es irgendwann verschieden tun, und dann gibt es keinen Weg mehr
+zu entscheiden, welcher gilt. Genau diese Krankheit hat dieses Projekt in
+dieser Woche fünfzehnmal diagnostiziert — sie hier selbst einzubauen wäre
+schwer zu verteidigen gewesen.
+
+**Aufgelöst in eine Richtung:** die Kette ist die Quelle, der Fundus
+zitiert sie. `uft_fundus_add_from_chain()` nimmt Bediener, Werkzeug und
+den Kopfhash aus der Kette; der Aufrufer liefert nur, was die Kette nicht
+weiß (Kennung, Beschreibung, Notizen, Aufnahme-Rezept).
+
+**Vier Entscheidungen, jede mit einem feuernden Rotbeweis:**
+
+1. *Absage statt stillem Vorrang.* Setzt der Aufrufer trotzdem Bediener,
+   Werkzeug oder Kettenhash, ist das ein Fehler — kein Überschreiben.
+   Sonst gäbe es die Doppelung wieder, nur eine Ebene tiefer.
+2. *Eine kaputte Kette wird nicht zitiert.* Ein Verweis auf eine Kette,
+   deren Verkettung nicht mehr aufgeht, würde sie waschen: das Artefakt
+   sähe belegt aus, und der Beleg wäre wertlos. Geprüft wird **vor** dem
+   Schreiben, damit eine abgelehnte Kette kein Artefakt hinterlässt.
+3. *Der Kopf, nicht der Anfang.* Zitiert wird `entries[count-1]` — der
+   Stand nach der letzten Operation, nicht der bei der ersten.
+4. *Eigene Übersetzungseinheit.* `uft_fundus.h` weiß nichts von der Kette;
+   wer nur ablegen will, braucht keinen Hash-Baum.
+
+**Ein Rotbeweis, der bewusst nicht feuert.** Die Prüfung auf die leere
+Kette lässt sich nicht durch Entfernen widerlegen: `uft_prov_verify()`
+gibt für eine leere Kette ausdrücklich `true` zurück
+(`uft_provenance.c`), also liefe der Code weiter und griffe auf
+`entries[-1]` zu. Das ist **undefiniertes Verhalten**, keine definierte
+falsche Antwort — der Lauf scheitert dann zufällig (der Müll hinter dem
+Feld sprengt die Manifest-Zeile), und ein Beweis, der aus Zufall grün
+wird, belegt nichts. Die Zeile ist eine Grenzprüfung und steht mit dieser
+Begründung im Code, damit sie niemand für redundant hält. Lokal ließ sich
+das nicht zeigen: dieser MinGW-Installation fehlt `libubsan`; der
+Sanitizer-Lauf der CI ist die Stelle, an der so etwas auffiele.
+
+**Noch offen:** die Gegenrichtung. Die Kette weiß nicht, in welchem Fundus
+ihr Ergebnis liegt — ein `UFT_PROV_EXPORT`-Eintrag mit dem Artefaktpfad
+wäre der Gegenzug. Solange nur eine Richtung verdrahtet ist, findet man
+vom Artefakt zur Kette, aber nicht umgekehrt.
+
+**Verdrahtet und geprüft:** `tests/test_fundus_provenance.c` (7 Tests),
+6 feuernde Rotbeweise + 1 begründete Nicht-Widerlegbarkeit, 235/235 ctest
+grün, qmake-Release baut und linkt.
+
+---
+
 ### FUND-1 — Aufnahmen hatten keinen Ort, nur Dateinamen (2026-08-23, MF-503) → ✓ ANGELEGT
 
 Eine Diskette wird selten einmal gelesen. Man liest sie, dreht sie um,

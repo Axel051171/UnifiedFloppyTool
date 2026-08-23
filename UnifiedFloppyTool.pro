@@ -315,6 +315,7 @@ SOURCES += \
     src/gui/uft_sector_editor.cpp \
     src/flux/uft_flux_histogram.c \
     src/forensic/uft_fundus.c \
+    src/forensic/uft_fundus_provenance.c \
     src/flux/uft_decode_timeline.c \
     src/flux/uft_dewarp.c \
     src/flux/uft_flux_sync_search.c \
