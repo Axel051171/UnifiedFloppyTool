@@ -72,17 +72,36 @@ TEST(scp_hfe_is_lossy_documented_not_lossless) {
            == UFT_RT_LOSSY_DOCUMENTED);
 }
 
-/* Die Matrix fuehrt derzeit KEINEN LOSSLESS-Eintrag. Wer einen hinzufuegt,
- * muss den Bit-Identitaets-Beweis mitliefern — dieser Test haelt fest,
- * dass die Lage bewusst so ist und nicht aus Versehen. */
-TEST(no_lossless_pair_without_proof) {
+/* Jeder LOSSLESS-Eintrag braucht einen Beweis — die Regel steht im Kopf
+ * von src/core/uft_roundtrip.c.
+ *
+ * MF-527 hatte den einzigen LL-Eintrag (SCP<->HFE) widerlegt und
+ * herabgestuft; dieser Test hiess damals `no_lossless_pair_without_proof`
+ * und hielt fest, dass die Matrix bewusst KEINEN LL-Eintrag mehr fuehrt.
+ *
+ * MF-532 hat zwei verdient: die Identitaets-Wandlungen D64->D64 und
+ * ADF->ADF, bewiesen von tests/test_convert_identity_lossless.c an zwei
+ * Korpusdateien, Byte fuer Byte und ohne accept_data_loss.
+ *
+ * Der Test fuehrt sie jetzt namentlich. Wer einen dritten hinzufuegt,
+ * ohne diese Liste anzufassen, wird rot — und muss dann sagen, welcher
+ * Test seine Bit-Identitaet beweist. */
+TEST(every_lossless_pair_is_named_and_proven) {
     size_t count = 0;
     const uft_roundtrip_entry_t *tbl = uft_roundtrip_entries(&count);
     ASSERT(tbl != NULL && count > 0);
-    int n_ll = 0;
-    for (size_t i = 0; i < count; i++)
-        if (tbl[i].status == UFT_RT_LOSSLESS) n_ll++;
-    ASSERT(n_ll == 0);
+
+    int n_ll = 0, n_known = 0;
+    for (size_t i = 0; i < count; i++) {
+        if (tbl[i].status != UFT_RT_LOSSLESS) continue;
+        n_ll++;
+        /* Die beiden, deren Beweis im Baum liegt. */
+        if ((tbl[i].from == UFT_FORMAT_D64 && tbl[i].to == UFT_FORMAT_D64) ||
+            (tbl[i].from == UFT_FORMAT_ADF && tbl[i].to == UFT_FORMAT_ADF))
+            n_known++;
+    }
+    ASSERT(n_ll == 2);
+    ASSERT(n_known == 2);
 }
 
 TEST(known_ld_scp_to_img) {
@@ -166,7 +185,7 @@ int main(void) {
     RUN(short_notation);
     RUN(stringify_never_null);
     RUN(scp_hfe_is_lossy_documented_not_lossless);
-    RUN(no_lossless_pair_without_proof);
+    RUN(every_lossless_pair_is_named_and_proven);
     RUN(known_ld_scp_to_img);
     RUN(known_im_img_to_scp);
     RUN(untested_is_default);

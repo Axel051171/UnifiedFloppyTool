@@ -68,11 +68,12 @@ Liest/schreibt Disk-Images von praktisch jedem 8-Bit- und 16-Bit-Computer:
 ### 3. Format-Konvertierung (44 Pfade registriert, **8 angeboten**)
 
 > **Ehrlichkeits-Hinweis (MF-526):** die Wandlungstabelle fuehrt 44
-> Paare. Angeboten werden davon **8** — **alle acht nur mit
-> ausdruecklichem `accept_data_loss`**. Verlustfrei ist seit MF-527
-> **keiner**: die beiden LOSSLESS-Eintraege (SCP↔HFE) trugen keinen
-> Beweis, und der jetzt existierende Bit-Identitaets-Test widerlegt
-> sie (25336 → 6400 Byte je Spur). Drei sind als
+> Paare. Angeboten werden davon **10**: **2 verlustfrei** (D64→D64,
+> ADF→ADF — Identitaet, Bit-Identitaet gemessen, MF-532) und **8 nur
+> mit ausdruecklichem `accept_data_loss`**. Die frueheren
+> LOSSLESS-Eintraege SCP↔HFE trugen keinen Beweis und sind seit
+> MF-527 herabgestuft — der jetzt existierende Bit-Identitaets-Test
+> widerlegt sie. Drei sind als
 > unmoeglich gekennzeichnet, **33 weist das Preflight-Tor als
 > UNGEPRUEFT ab** („conversion pair is UNTESTED — not offered until
 > an entry exists“), weil sie keinen Eintrag in

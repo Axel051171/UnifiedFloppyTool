@@ -25,6 +25,34 @@
  * Ordering by source format then target format for readability.
  * ───────────────────────────────────────────────────────────────────────── */
 static const uft_roundtrip_entry_t g_matrix[] = {
+    /* Identitaet: Wandlung in dasselbe Format.
+     *
+     * MF-532: `uft_convert_file()` hat dafuer einen eigenen Zweig —
+     * `if (src_format == dst_format) uftc_write_output_file(dst, src_data,
+     * src_size)`, also eine woertliche Kopie. Bit-Identitaet ist damit
+     * durch die Bauart gegeben.
+     *
+     * "Durch die Bauart gegeben" ist aber genau die Sorte Annahme, die
+     * dieser Baum an mehreren Stellen teuer bezahlt hat — zuletzt bei der
+     * LOSSLESS-Zusage fuer SCP<->HFE, die niemand je gemessen hatte und
+     * die falsch war (MF-527). Deshalb steht hier kein Eintrag ohne
+     * Beweis: `tests/test_convert_identity_lossless.c` wandelt zwei
+     * Korpusdateien in ihr eigenes Format und vergleicht Byte fuer Byte —
+     * und zwar OHNE `accept_data_loss`, denn genau das ist der Sinn der
+     * LL-Einstufung.
+     *
+     * Gemessen: vice_c1541_35trk.d64 (174848 B) und xdftool_dd_ofs.adf
+     * (901120 B), beide bitgleich.
+     *
+     * Damit fuehrt die Matrix wieder LOSSLESS-Eintraege — die ersten mit
+     * Beweis. */
+    { UFT_FORMAT_D64, UFT_FORMAT_D64, UFT_RT_LOSSLESS,
+      "MF-532: Identitaet, woertliche Kopie; Bit-Identitaet gemessen an "
+      "vice_c1541_35trk.d64 (174848 B)" },
+    { UFT_FORMAT_ADF, UFT_FORMAT_ADF, UFT_RT_LOSSLESS,
+      "MF-532: Identitaet, woertliche Kopie; Bit-Identitaet gemessen an "
+      "xdftool_dd_ofs.adf (901120 B)" },
+
     /* Flux ↔ Flux.
      *
      * MF-527: diese beiden standen als UFT_RT_LOSSLESS — die EINZIGEN zwei
