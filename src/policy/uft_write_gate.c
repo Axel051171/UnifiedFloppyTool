@@ -68,26 +68,39 @@ static const format_sig_t FORMAT_SIGS[] = {
      UFT_FMT_CAP_READ | UFT_FMT_CAP_WRITE | UFT_FMT_CAP_PHYSICAL, 800},
     
     /* Apple */
+    /* MF-491: kein WRITE. Das Plugin sagt READ|VERIFY und hat kein
+     * write_track (src/formats/apple/uft_woz_plugin.c:94). Ein Tor, das
+     * erlaubt, was der Schreiber nicht kann, ist schlimmer als keines:
+     * es erzeugt Vertrauen, das nichts traegt. */
     {"WOZ (Apple II)", 0, 0, MAGIC_WOZ, 4, 0,
-     UFT_FMT_CAP_READ | UFT_FMT_CAP_WRITE | UFT_FMT_CAP_PHYSICAL | UFT_FMT_CAP_PROTECTED, 950},
+     UFT_FMT_CAP_READ | UFT_FMT_CAP_PHYSICAL | UFT_FMT_CAP_PROTECTED, 950},
     {"WOZ2 (Apple II)", 0, 0, MAGIC_WOZ2, 4, 0,
-     UFT_FMT_CAP_READ | UFT_FMT_CAP_WRITE | UFT_FMT_CAP_PHYSICAL | UFT_FMT_CAP_PROTECTED, 950},
+     UFT_FMT_CAP_READ | UFT_FMT_CAP_PHYSICAL | UFT_FMT_CAP_PROTECTED, 950},
     {"NIB (Apple II)", 232960, 232960, NULL, 0, 0,
      UFT_FMT_CAP_READ | UFT_FMT_CAP_PHYSICAL, 800},  /* NIB is read-only in most tools */
     
     /* Flux formats */
+    /* MF-491: kein WRITE. Das SCP-Plugin fuehrt write_track ausdruecklich
+     * als "capability absent - honest NULL" (uft_scp_plugin.c:534). Jemand
+     * hat dort bewusst Ehrlichkeit notiert, und das Sicherheitstor
+     * behauptete das Gegenteil. */
     {"SCP (SuperCard Pro)", 0, 0, MAGIC_SCP, 3, 0,
-     UFT_FMT_CAP_READ | UFT_FMT_CAP_WRITE | UFT_FMT_CAP_PHYSICAL | UFT_FMT_CAP_PROTECTED, 950},
+     UFT_FMT_CAP_READ | UFT_FMT_CAP_PHYSICAL | UFT_FMT_CAP_PROTECTED, 950},
     
     /* IBM PC */
     {"IMG (PC 720K)", 737280, 737280, NULL, 0, 0,
      UFT_FMT_CAP_READ | UFT_FMT_CAP_WRITE | UFT_FMT_CAP_PHYSICAL, 700},
     {"IMG (PC 1.44M)", 1474560, 1474560, NULL, 0, 0,
      UFT_FMT_CAP_READ | UFT_FMT_CAP_WRITE | UFT_FMT_CAP_PHYSICAL, 700},
+    /* MF-491: XDF und DMF haben kein Plugin, das sie schreiben koennte
+     * (src/formats/xdf/ hat nur Adapter und API; DMF gar nichts). Ein
+     * Fail-closed-Tor verspricht nichts, wofuer es keinen Ausfuehrenden
+     * gibt. Wer einen Schreiber baut, traegt ihn in
+     * scripts/write_gate_caps_gate.py ein und setzt das Bit hier. */
     {"XDF (IBM)", 1915904, 1915904, NULL, 0, 0,
-     UFT_FMT_CAP_READ | UFT_FMT_CAP_WRITE | UFT_FMT_CAP_PHYSICAL | UFT_FMT_CAP_PROTECTED, 850},
+     UFT_FMT_CAP_READ | UFT_FMT_CAP_PHYSICAL | UFT_FMT_CAP_PROTECTED, 850},
     {"DMF (MS)", 1720320, 1720320, NULL, 0, 0,
-     UFT_FMT_CAP_READ | UFT_FMT_CAP_WRITE | UFT_FMT_CAP_PHYSICAL, 850},
+     UFT_FMT_CAP_READ | UFT_FMT_CAP_PHYSICAL, 850},
     
     {NULL, 0, 0, NULL, 0, 0, 0, 0}
 };

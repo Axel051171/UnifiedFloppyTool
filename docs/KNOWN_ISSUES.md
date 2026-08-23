@@ -3752,6 +3752,99 @@ für AmigaDOS-DD.
 
 ---
 
+### POL-2 — das Sicherheitstor widersprach der Plugin-Registry (2026-08-23, MF-491) → ✓ BEHOBEN
+
+Fortsetzung von POL-1. Das Tor führt Schreibrechte in einer **eigenen**
+Signaturtabelle (`FORMAT_SIGS`, 16 Einträge). Dieselbe Aussage steht ein
+zweites Mal in der Plugin-Registry (`uft_format_plugin_t.capabilities`).
+
+Elfte Ausprägung derselben Diagnose in dieser Woche — und die erste, bei der
+die beiden Fassungen **inhaltlich** auseinanderlaufen statt nur eine tot zu
+sein. Und zwar in der gefährlichen Richtung:
+
+| Gate-Eintrag | Tor sagte | Plugin sagt |
+|---|---|---|
+| WOZ (Apple II) | WRITE | `READ \| VERIFY`, kein `write_track` |
+| WOZ2 (Apple II) | WRITE | dito |
+| SCP (SuperCard Pro) | WRITE | kein WRITE, `write_track = NULL` |
+| XDF (IBM) | WRITE | **kein Plugin** (nur Adapter + API) |
+| DMF (MS) | WRITE | **kein Plugin** |
+
+SCP ist der sprechendste Fall. Im Plugin steht wörtlich:
+
+```c
+.write_track = NULL,  // capability absent — honest NULL; SCP write path is …
+```
+
+Jemand hat dort bewusst Ehrlichkeit notiert — und das Sicherheitstor
+behauptete gegenüber dem Benutzer das Gegenteil. **Ein Tor, das
+Schreibvorgänge durchwinkt, die der Schreiber gar nicht ausführen kann,
+erzeugt Vertrauen, das nichts trägt.**
+
+#### Eine Korrektur an mir selbst
+
+POL-1 behauptete, die Tabelle führe *jedes* Format als beschreibbar und der
+Read-only-Zweig sei „unerreichbar und ungeprüft". **Das war falsch.** Die
+Aussage stammte aus einem schlampigen `grep` — `UFT_FMT_CAP_READ |` zählt
+Zeilen, nicht Fähigkeiten. NIB trug schon immer kein WRITE; der Zweig war
+also erreichbar, nur ungeprüft. Die Zeile ist in POL-1 durchgestrichen und
+richtiggestellt.
+
+#### Zwei Wächter statt eines Patches
+
+Die fünf Einträge zu korrigieren behebt den Stand, nicht die Ursache — zwei
+Stellen für einen Fakt laufen wieder auseinander. Deshalb kommt der
+strukturelle Teil dazu:
+
+**22. Kategorie in `check_consistency.py`**
+(`scripts/write_gate_caps_gate.py`) vergleicht beide Seiten und ist in
+**beide** Richtungen streng:
+
+- Tor sagt WRITE, Plugin nicht → Fehler *(das gefährliche Auseinander)*
+- Plugin sagt WRITE, Tor nicht → Fehler *(unnötige Blockade)*
+- Gate-Eintrag ohne Zuordnung → Fehler *(ein neuer Eintrag darf nicht
+  unbemerkt ungeprüft bleiben)*
+
+Die einzige Handarbeit ist die Zuordnung Gate-Eintrag → Plugin-Symbol; sie
+zu vergessen fällt sofort auf, weil ein nicht zugeordneter Eintrag als
+Fehler zählt.
+
+**Drei Tests für den jetzt bewusst erreichbaren Zweig:** ein Format ohne
+Schreiber wird blockiert (und es entsteht nicht einmal ein Schnappschuss —
+das Tor bricht ab, bevor es Arbeit macht); mit `allow_readonly_override`
+wird derselbe Befund überstimmbar **und** der Schnappschuss trotzdem
+angelegt; ein Format *mit* Schreiber nimmt den anderen Zweig.
+
+#### Rot-Probe
+
+WOZ wieder als beschreibbar geführt (Zustand vor MF-491):
+
+| Wächter | Reaktion |
+|---|---|
+| `test_write_gate` | 2 Tests fallen |
+| `check_consistency.py` | Kategorie „write-gate caps vs plugins": 1 Befund |
+
+Zwei unabhängige Wächter fangen dieselbe Regression — der Test das
+Verhalten, der Konsistenzprüfer die Ursache.
+
+`ctest` 229/229, alle **22** Gate-Kategorien 0, `verify_build_sources.py`
+0/0, qmake-Release-Build grün.
+
+**Ehrlich zur Reichweite.**
+
+- Das Tor bleibt **unverdrahtet** (POL-1). Diese Änderung macht seine
+  Auskunft richtig; sie sorgt nicht dafür, dass jemand danach fragt.
+- XDF und DMF stehen jetzt auf „nicht beschreibbar", weil es kein Plugin
+  gibt. Ob ein roher IMG-Schreiber sie *könnte*, ist damit **nicht**
+  beantwortet — XDF hat gemischte Sektorgrößen, DMF 21 Sektoren je Spur.
+  Wer einen Schreiber baut, trägt ihn im Wächter ein und setzt das Bit.
+  Fail-closed heißt: im Zweifel nichts versprechen.
+- Die Zuordnung im Wächter ist **nach Symbolnamen** gemacht, nicht nach
+  Format-ID. Ein umbenanntes Plugin fällt als „nicht im Baum gefunden" auf
+  — laut, aber es bleibt Handarbeit.
+
+---
+
 ### POL-1 — das Sicherheitstor hat keinen Aufrufer (2026-08-23, MF-490) → ⚠ TEILWEISE
 
 Beim Prüfen des FreeDOS-FORMAT-Entwurfs, der `src/policy/uft_write_gate.c`
@@ -3833,10 +3926,12 @@ zweite braucht eine Bank-Sitzung mit echtem Laufwerk.
 - Das Tor bleibt **unverdrahtet**. UFT schreibt weiterhin ohne Schnappschuss,
   ohne Formatprüfung und ohne Laufwerksdiagnose auf physische Disketten.
   Das ist der Ist-Stand, nicht eine Absicht.
-- Die Formattabelle des Tores (`FORMAT_SIGS`, 16 Einträge) führt **jedes**
-  Format als beschreibbar. Der Zweig „Format ist read-only → blockieren"
-  ist damit unerreichbar und ungeprüft — dieselbe Sorte toter Zweig wie die
-  Hybrid-Schleife aus FLUX-13.
+- ~~Die Formattabelle des Tores führt **jedes** Format als beschreibbar,
+  der Read-only-Zweig ist unerreichbar.~~ **Diese Aussage war falsch** und
+  ist in POL-2 richtiggestellt: sie stammte aus einem schlampigen `grep`
+  (`UFT_FMT_CAP_READ |` zählt Zeilen, nicht Fähigkeiten). NIB führte schon
+  immer kein WRITE, der Zweig war also erreichbar — nur ungeprüft. Fünf
+  ANDERE Einträge widersprachen dagegen der Plugin-Registry; siehe POL-2.
 - Geprüft ist die Entscheidungslogik gegen **synthetische** Abbilder und
   konstruierte Diagnosen. Ob die Diagnose-Flags von einem echten Laufwerk je
   gesetzt werden, ist eine andere Frage und hier nicht beantwortet.

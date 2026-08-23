@@ -649,6 +649,14 @@ def main() -> int:
         # keine Defines; genau diese Luecke schliesst der Waechter (MF-468).
         import define_parity_gate as _defparity
         all_errors.append(("build define parity", _defparity.check(repo)))
+        # Das Sicherheitstor fuehrt Schreibrechte ein zweites Mal, neben der
+        # Plugin-Registry — und die beiden liefen auseinander, in der
+        # gefaehrlichen Richtung: WOZ, WOZ2, SCP, XDF und DMF galten dem Tor
+        # als beschreibbar, obwohl kein Plugin sie schreiben kann (MF-491).
+        # Ein Tor, das Schreibvorgaenge durchwinkt, die der Schreiber nicht
+        # ausfuehren kann, erzeugt Vertrauen, das nichts traegt.
+        import write_gate_caps_gate as _wgcaps
+        all_errors.append(("write-gate caps vs plugins", _wgcaps.check(repo)))
 
     total = sum(len(e) for _, e in all_errors)
     print(f"Consistency check ({len(all_errors)} categories, root={repo}):")

@@ -401,6 +401,104 @@ TEST(a_relaxed_policy_without_diagnostics_still_passes)
     free(img);
 }
 
+
+/* ------------------------------------------------------------------ */
+/* Der Read-only-Zweig (MF-491)                                        */
+/* ------------------------------------------------------------------ */
+
+/* Ein WOZ-Abbild: Magie "WOZ1" am Anfang. Das Plugin dazu kann NICHT
+ * schreiben (src/formats/apple/uft_woz_plugin.c:94, kein write_track), und
+ * seit MF-491 sagt das Tor dasselbe. */
+static uint8_t *make_woz(size_t *len_out)
+{
+    const size_t n = 4096;
+    uint8_t *b = (uint8_t *)calloc(1, n);
+    if (b) memcpy(b, "WOZ1", 4);
+    if (len_out) *len_out = n;
+    return b;
+}
+
+TEST(a_format_without_a_writer_is_blocked)
+{
+    /* Bis MF-491 fuehrte das Tor WOZ als beschreibbar, obwohl kein Plugin
+     * es schreiben kann. Der Read-only-Zweig war damit fuer dieses Format
+     * unerreichbar \u2014 und ein durchgewinkter Schreibvorgang, den niemand
+     * ausfuehren kann, ist genau die Sorte Vertrauen, die nichts traegt. */
+    size_t n = 0;
+    uint8_t *img = make_woz(&n);
+    ASSERT(img != NULL);
+
+    uft_write_gate_policy_t pol = UFT_GATE_POLICY_IMAGE_ONLY;
+    /* IMAGE_ONLY erlaubt kein Ueberstimmen: hier ist Schluss. */
+    ASSERT(pol.allow_readonly_override == false);
+
+    uft_write_gate_result_t r;
+    uft_gate_status_t st = uft_write_gate_precheck(&pol, img, n,
+                                                   temp_dir(), "uft_gate_ro",
+                                                   &r);
+    if (st != UFT_GATE_FORMAT_READONLY)
+        printf("\n        Status %d: %s\n", (int)st, r.decision_reason);
+    ASSERT(st == UFT_GATE_FORMAT_READONLY);
+    ASSERT((r.checks_failed & UFT_CHECK_FORMAT) != 0);
+    ASSERT(r.override_required == false);
+    ASSERT(uft_write_gate_can_override(&r) == false);
+
+    /* Und es wurde nicht einmal ein Schnappschuss angelegt \u2014 das Tor
+     * bricht ab, bevor es Arbeit macht. */
+    ASSERT((r.checks_passed & UFT_CHECK_SNAPSHOT) == 0);
+
+    free(img);
+}
+
+TEST(a_read_only_format_can_be_overridden_when_the_policy_says_so)
+{
+    /* Die Gegenrichtung, und der Unterschied liegt in der Policy \u2014 nicht
+     * im Zufall. RELAXED erlaubt das Ueberstimmen; dann meldet das Tor den
+     * Befund und verlangt eine ausdrueckliche Entscheidung, statt still
+     * durchzuwinken. */
+    size_t n = 0;
+    uint8_t *img = make_woz(&n);
+    ASSERT(img != NULL);
+
+    uft_write_gate_policy_t pol = UFT_GATE_POLICY_RELAXED;
+    ASSERT(pol.allow_readonly_override == true);
+
+    uft_write_gate_result_t r;
+    uft_gate_status_t st = uft_write_gate_precheck(&pol, img, n,
+                                                   temp_dir(), "uft_gate_ro2",
+                                                   &r);
+    ASSERT(st == UFT_GATE_FORMAT_READONLY);
+    ASSERT(r.override_required == true);
+    ASSERT(uft_write_gate_can_override(&r) == true);
+
+    /* Hier laeuft das Tor weiter und legt den Schnappschuss trotzdem an \u2014
+     * wer ueberstimmen will, soll wenigstens eine Sicherung haben. */
+    ASSERT((r.checks_passed & UFT_CHECK_SNAPSHOT) != 0);
+    if (r.snapshot.path[0]) remove(r.snapshot.path);
+
+    free(img);
+}
+
+TEST(a_writable_format_takes_the_other_branch)
+{
+    /* Gegenprobe: dasselbe Tor, dieselbe Policy, ein Format MIT Schreiber.
+     * Ohne sie koennte der Read-only-Zweig aus einem Tor stammen, das
+     * grundsaetzlich alles ablehnt. */
+    uint8_t *img = make_adf();
+    ASSERT(img != NULL);
+
+    uft_write_gate_policy_t pol = UFT_GATE_POLICY_IMAGE_ONLY;
+    uft_write_gate_result_t r;
+    uft_gate_status_t st = uft_write_gate_precheck(&pol, img, ADF_LEN,
+                                                   temp_dir(), "uft_gate_rw",
+                                                   &r);
+    ASSERT(st == UFT_GATE_OK);
+    ASSERT((r.checks_passed & UFT_CHECK_FORMAT) != 0);
+    if (r.snapshot.path[0]) remove(r.snapshot.path);
+
+    free(img);
+}
+
 int main(void) {
     printf("=== uft_write_gate tests ===\n");
     RUN(status_str_ok);
@@ -422,6 +520,11 @@ int main(void) {
     RUN(an_unsafe_drive_blocks_unless_the_policy_allows_overriding);
     RUN(strict_mode_without_diagnostics_demands_an_override);
     RUN(a_relaxed_policy_without_diagnostics_still_passes);
+
+    /* MF-491: der Read-only-Zweig, jetzt erreichbar */
+    RUN(a_format_without_a_writer_is_blocked);
+    RUN(a_read_only_format_can_be_overridden_when_the_policy_says_so);
+    RUN(a_writable_format_takes_the_other_branch);
     RUN(probe_null_inputs_return_error);
     RUN(probe_zero_len_rejected);
     printf("Results: %d passed, %d failed\n", _pass, _fail);
