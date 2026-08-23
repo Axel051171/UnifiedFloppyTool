@@ -454,7 +454,53 @@ uft_error_t uft_track_add_sector(uft_track_t* track, const uft_sector_t* sector)
         if (!dst->data) return UFT_ERROR_NO_MEMORY;
         memcpy(dst->data, sector->data, sector->data_size);
     }
-    
+
+    /* MF-531: was hineinkopiert wird, muss auch herausgegeben werden koennen.
+     *
+     * `*dst = *sector` oben ist eine FLACHE Kopie. Danach wurde nur `data`
+     * tief kopiert — `confidence_map`, `weak_mask` und `timing_ns` blieben
+     * Zeiger auf die QUELLE. `uft_sector_cleanup()` gibt aber alle vier
+     * frei (und muss das, seit ATX nach TA3 weak_mask fuellt).
+     *
+     * Damit war die API unsymmetrisch: sie nahm drei Zeiger als
+     * Fremdbesitz auf und gab sie spaeter als Eigenbesitz frei. Wird die
+     * Quelle ebenfalls aufgeraeumt, ist das ein doppeltes free — dieselbe
+     * Bauart wie MF-513, nur im gemeinsamen Helfer statt in einem Plugin.
+     *
+     * Ausgeloest hat es bisher niemand: die zwoelf Plugins, die seit
+     * MF-516 ueber diese API gehen, bauen ihre Sektoren ohne weak_mask.
+     * Ein Plugin, das ATX-Sektoren weiterreicht, haette es getroffen.
+     *
+     * Schlaegt eine der Kopien fehl, wird der Sektor MIT den bereits
+     * kopierten Teilen freigegeben und der Zaehler nicht erhoeht — ein
+     * halb aufgebauter Sektor waere schlimmer als keiner. */
+    if (sector->confidence_map && sector->data_size > 0) {
+        dst->confidence_map = malloc(sector->data_size);
+        if (!dst->confidence_map) { uft_sector_cleanup(dst); return UFT_ERROR_NO_MEMORY; }
+        memcpy(dst->confidence_map, sector->confidence_map, sector->data_size);
+    } else {
+        dst->confidence_map = NULL;
+    }
+
+    if (sector->weak_mask && sector->data_size > 0) {
+        dst->weak_mask = malloc(sector->data_size);
+        if (!dst->weak_mask) { uft_sector_cleanup(dst); return UFT_ERROR_NO_MEMORY; }
+        memcpy(dst->weak_mask, sector->weak_mask, sector->data_size);
+    } else {
+        dst->weak_mask = NULL;
+    }
+
+    if (sector->timing_ns && sector->timing_count > 0) {
+        dst->timing_ns = malloc(sector->timing_count * sizeof(double));
+        if (!dst->timing_ns) { uft_sector_cleanup(dst); return UFT_ERROR_NO_MEMORY; }
+        memcpy(dst->timing_ns, sector->timing_ns,
+               sector->timing_count * sizeof(double));
+        dst->timing_count = sector->timing_count;
+    } else {
+        dst->timing_ns = NULL;
+        dst->timing_count = 0;
+    }
+
     track->sector_count++;
     return UFT_OK;
 }
