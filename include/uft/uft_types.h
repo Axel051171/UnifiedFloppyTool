@@ -577,6 +577,16 @@ typedef struct uft_convert_options {
      *
      * Wirkt nur auf Pfaden, die ein Medienprofil setzen. */
     double          decode_cell_adjust_pct;
+
+    /* MF-484 (angehaengt, nicht eingefuegt — ABI).
+     *
+     * Rueckwaerts dekodieren: die Rueckseite einer Flippy-Diskette. Sie wurde
+     * beschrieben, indem man die Diskette im einseitigen Laufwerk umdrehte;
+     * im zweiseitigen Laufwerk laeuft dieselbe Spur rueckwaerts am Kopf
+     * vorbei. Entspricht a8rawconvs `-r`.
+     *
+     * Wirkt nur auf Flux-Pfaden — ein Sektorabbild hat keine Zeitachse. */
+    bool            reverse_decode;
 } uft_convert_options_t;
 
 // ============================================================================

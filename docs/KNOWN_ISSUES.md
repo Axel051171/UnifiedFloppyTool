@@ -3752,6 +3752,79 @@ für AmigaDOS-DD.
 
 ---
 
+### FLUX-9 — die Rückseite einer Flippy-Diskette war nicht lesbar (2026-08-23, MF-484) → ✓ BEHOBEN
+
+Punkt 3.4 der a8rawconv-Gap-Analyse. Eine Flippy-Diskette wurde beschrieben,
+indem man sie im **einseitigen** Laufwerk umdrehte. Liest man sie später im
+zweiseitigen Laufwerk vom zweiten Kopf, läuft dieselbe Spur **rückwärts** am
+Kopf vorbei: der Datenstrom ist zeitlich gespiegelt, und kein Sync-Muster
+passt mehr. Für Bestände mit C64-, Atari- und Apple-Disketten ist das der
+Regelfall, nicht die Ausnahme — UFT konnte diese Seite bisher gar nicht
+dekodieren.
+
+Portierung von a8rawconvs `-r` (`reverse_track`, `disk.cpp:63-89`,
+GPL-2-or-later, Referenz-Orakel, wird nicht gebaut):
+
+```
+max_time = max(letzte Indexzeit, letzte Übergangszeit)
+t  ->  max_time - t        für Übergänge UND Indexmarken
+danach beide Folgen umdrehen
+```
+
+#### Die Reihenfolge ist der Punkt
+
+Erst spiegeln, dann umdrehen. Beide Folgen bleiben dadurch **aufsteigend** —
+worauf der ganze Messpfad seit MF-471 aufbaut:
+`uft_media_rev_ns_from_index()` weist eine nicht aufsteigende Indexreihe
+ausdrücklich zurück. Wer nur umdreht und das Spiegeln vergisst (die
+naheliegende Halb-Portierung), verliert die gemessene Umdrehungsdauer
+**still** und fällt auf den Nennwert zurück, ohne dass es jemand merkt.
+
+Genau das prüft `both_series_stay_ascending_and_the_revolution_survives` —
+zusätzlich, dass der **Abstand** zweier Indexmarken die Spiegelung
+unverändert übersteht. Der Abstand *ist* die Umdrehungsdauer.
+
+#### Rot-Proben
+
+| Verfälschung | Ergebnis |
+|---|---|
+| Verdrahtung entfernt (Schalter ohne Wirkung) | `the_flag_recovers_the_back_side_completely` **und** `the_flag_breaks_a_normal_capture` fallen |
+| nur umdrehen, nicht spiegeln | `both_series_stay_ascending_…` **und** `…recovers_the_back_side…` fallen |
+
+Zwei Verfälschungen, zwei verschiedene Signaturen — und die zweite wird von
+der Monotonie-Invariante gefangen, nicht erst vom Endergebnis.
+
+Dazu zwei Eigenschaften, die die Funktion überhaupt zu einer Spiegelung
+machen: zweimal angewandt ist sie die Identität, und auf einer normal
+gelesenen Vorderseite macht sie die Diskette unlesbar (deshalb kein
+Standardwert).
+
+> **Zum Testaufbau.** Gespiegelt wird zum Erzeugen auf der **Intervall**-Ebene
+> (Abstandsfolge rückwärts gelesen), geprüft wird die Funktion auf der
+> **kumulierten** Ebene (`max_time - t`). Dieselbe Aussage, zwei
+> Darstellungen — ein Test, der zum Erzeugen dasselbe benutzt wie zum Prüfen,
+> prüft nichts.
+
+`ctest` 225/225, alle 21 Gate-Kategorien 0, `verify_build_sources.py` 0/0,
+qmake-Release-Build grün.
+
+**Ehrlich zur Reichweite.**
+
+- Verdrahtet ist **ein** Pfad (SCP→ADF). `flux_raw_reverse()` ist öffentlich
+  und formatunabhängig; die übrigen Flux-Wandlungen rufen es nicht.
+- **Die Spurnummerierung wird nicht gespiegelt.** Bei einer echten
+  Flippy-Diskette liegt Zylinder 0 der Rückseite dort, wo vorne der höchste
+  liegt. a8rawconv dreht nur die Zeitachse und überlässt die Zuordnung dem
+  Aufrufer; UFT tut jetzt dasselbe. Wer eine Rückseite in der richtigen
+  Reihenfolge braucht, muss die Zylinder selbst umsortieren — das ist ein
+  eigener Schritt und keine Zeile in dieser Funktion.
+- Kein Bedienelement: der Schalter existiert in
+  `uft_convert_options_t::reverse_decode`, kein Dialog schreibt ihn.
+- Geprüft gegen **synthetisch gespiegelten** Flux, nicht gegen eine reale
+  Flippy-Aufnahme. Es liegt keine im Korpus.
+
+---
+
 ### FLUX-8 — eine Umdrehung genügt nicht überall, und niemand sagte es (2026-08-23, MF-483) → ✓ BEHOBEN
 
 Erste Umsetzung aus dem Entwurf „Universelle Capture/Decode-Settings":

@@ -227,6 +227,66 @@ flux_status_t flux_raw_from_ns_intervals_indexed(const uint32_t *intervals,
     return FLUX_OK;
 }
 
+/* Zeitachse umdrehen — Flippy-Rueckseite (MF-484).
+ *
+ * Eine Flippy-Diskette wurde beschrieben, indem man sie im einseitigen
+ * Laufwerk umdrehte. Liest man sie spaeter im zweiseitigen Laufwerk vom
+ * zweiten Kopf, laeuft dieselbe Spur RUECKWAERTS am Kopf vorbei: der
+ * Datenstrom ist zeitlich gespiegelt, und kein Sync-Muster passt mehr.
+ *
+ * Wortgleiche Portierung von a8rawconv `reverse_track`
+ * (`src/a8rawconv/disk.cpp:63-89`, GPL-2-or-later, Referenz-Orakel, wird
+ * nicht gebaut):
+ *
+ *     max_time = max(letzte Indexzeit, letzte Uebergangszeit)
+ *     t  ->  max_time - t        fuer Uebergaenge UND Indexmarken
+ *     danach beide Folgen umdrehen
+ *
+ * Die Reihenfolge ist der Punkt: erst spiegeln, dann umdrehen. Das haelt
+ * beide Folgen aufsteigend — worauf der ganze Messpfad seit MF-471 aufbaut
+ * (`uft_media_rev_ns_from_index` weist eine nicht aufsteigende Indexreihe
+ * ausdruecklich zurueck). Der Abstand zweier Indexmarken bleibt dabei
+ * unveraendert, die gemessene Umdrehungsdauer ueberlebt die Spiegelung also.
+ *
+ * In-place, ohne Zuteilung: die Laengen aendern sich nicht.
+ */
+flux_status_t flux_raw_reverse(flux_raw_data_t *raw)
+{
+    if (!raw) return FLUX_ERR_INVALID;
+    if (raw->transition_count == 0 && raw->index_count == 0)
+        return FLUX_ERR_NO_DATA;
+
+    uint32_t max_time = 0;
+    if (raw->index_count > 0 && raw->index_times) {
+        uint32_t last = raw->index_times[raw->index_count - 1];
+        if (last > max_time) max_time = last;
+    }
+    if (raw->transition_count > 0 && raw->transitions) {
+        uint32_t last = raw->transitions[raw->transition_count - 1];
+        if (last > max_time) max_time = last;
+    }
+
+    if (raw->transitions) {
+        for (size_t i = 0; i < raw->transition_count; i++)
+            raw->transitions[i] = max_time - raw->transitions[i];
+        for (size_t i = 0, j = raw->transition_count; i < j--; i++) {
+            uint32_t t = raw->transitions[i];
+            raw->transitions[i] = raw->transitions[j];
+            raw->transitions[j] = t;
+        }
+    }
+    if (raw->index_times) {
+        for (size_t i = 0; i < raw->index_count; i++)
+            raw->index_times[i] = max_time - raw->index_times[i];
+        for (size_t i = 0, j = raw->index_count; i < j--; i++) {
+            uint32_t t = raw->index_times[i];
+            raw->index_times[i] = raw->index_times[j];
+            raw->index_times[j] = t;
+        }
+    }
+    return FLUX_OK;
+}
+
 void flux_raw_free(flux_raw_data_t *raw)
 {
     if (!raw) return;

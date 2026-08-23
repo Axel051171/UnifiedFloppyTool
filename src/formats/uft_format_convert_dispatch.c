@@ -624,6 +624,7 @@ uft_error_t uft_convert_file(const char* src_path,
             ext_opts.decode_cell_adjust_pct =
                 options->decode_cell_adjust_pct;                     /* MF-480 */
             ext_opts.target_geometry = options->target_geometry;      /* MF-482 */
+            ext_opts.reverse_decode  = options->reverse_decode;       /* MF-484 */
         }
 
         err = dispatch_conversion(src_format, dst_format, src_data, src_size,

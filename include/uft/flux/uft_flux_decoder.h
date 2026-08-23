@@ -397,6 +397,30 @@ flux_status_t flux_raw_from_ns_intervals_indexed(const uint32_t *intervals,
                                                  uint32_t revolution_ns,
                                                  flux_raw_data_t *out);
 
+/**
+ * @brief Zeitachse einer Rohspur umdrehen — Flippy-Rueckseite (MF-484).
+ *
+ * Eine Flippy-Diskette wurde beschrieben, indem man sie im einseitigen
+ * Laufwerk umdrehte. Liest man sie spaeter im zweiseitigen Laufwerk vom
+ * zweiten Kopf, laeuft dieselbe Spur RUECKWAERTS am Kopf vorbei — der
+ * Datenstrom ist zeitlich gespiegelt, und kein Sync-Muster passt mehr.
+ * Fuer Bestaende mit C64-, Atari- und Apple-Disketten ist das der
+ * Regelfall, nicht die Ausnahme.
+ *
+ * Portierung von a8rawconvs `-r` (`reverse_track`, disk.cpp:63-89):
+ * jede Zeit wird zu `max_time - t`, danach werden beide Folgen umgedreht.
+ * Beide bleiben dadurch aufsteigend, und der Abstand zweier Indexmarken
+ * bleibt gleich — die gemessene Umdrehungsdauer ueberlebt die Spiegelung.
+ *
+ * Arbeitet in-place und belegt nichts; zweimal angewandt ist es die
+ * Identitaet (bis auf einen etwaigen Versatz, wenn der letzte Uebergang
+ * nicht auf @c max_time liegt).
+ *
+ * @return FLUX_OK; FLUX_ERR_INVALID bei NULL; FLUX_ERR_NO_DATA wenn die
+ *         Spur weder Uebergaenge noch Indexmarken traegt.
+ */
+flux_status_t flux_raw_reverse(flux_raw_data_t *raw);
+
 /** @brief Release a flux_raw_data_t built by flux_raw_from_ns_intervals(). */
 void flux_raw_free(flux_raw_data_t *raw);
 

@@ -146,6 +146,11 @@ typedef struct uft_convert_options_ext {
      * means "derive it from the source". Mirrors
      * uft_convert_options_t::target_geometry — see the rationale there. */
     uft_geometry_t      target_geometry;
+
+    /* MF-484 (appended for ABI safety): decode the flux time axis reversed
+     * — the back side of a flippy disk. Mirrors
+     * uft_convert_options_t::reverse_decode. */
+    bool                reverse_decode;
 } uft_convert_options_ext_t;
 
 // ============================================================================

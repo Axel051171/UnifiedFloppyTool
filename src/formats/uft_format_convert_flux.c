@@ -467,6 +467,11 @@ static uft_error_t uftc_convert_scp_to_adf_via_plugin(
                                 rev->index_time_ns, &raw) != FLUX_OK)
                             continue;
 
+                        /* Flippy-Rueckseite: Zeitachse spiegeln, bevor
+                         * dekodiert wird (MF-484). */
+                        if (opts && opts->reverse_decode)
+                            flux_raw_reverse(&raw);
+
                         flux_decoded_track_t dt;
                         memset(&dt, 0, sizeof(dt));
                         flux_decode_amiga(&raw, &dt, &dopts);
@@ -489,6 +494,9 @@ static uft_error_t uftc_convert_scp_to_adf_via_plugin(
                     if (flux_raw_from_ns_intervals_indexed(
                             t.flux, t.flux_count,
                             t.metrics.index_time_ns, &raw) == FLUX_OK) {
+                        if (opts && opts->reverse_decode)
+                            flux_raw_reverse(&raw);
+
                         flux_decoded_track_t dt;
                         memset(&dt, 0, sizeof(dt));
                         flux_decode_amiga(&raw, &dt, &dopts);
