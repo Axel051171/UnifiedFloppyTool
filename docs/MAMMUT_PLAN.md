@@ -89,7 +89,7 @@ Nach Aufwand sortiert, alle mit vorhandenem Anschluss im Baum.
 | Baustein | Anschluss im Baum | Aufwand |
 |---|---|---|
 | ~~**2.2 Dewarp-Stufe**~~ | ✅ **fertig** (MF-495, FLUX-15): zwei Tempi 7 → 9 heile Sektoren; kein Mittel gegen Zittern; `RECOVERED_DEWARP` offen (Provenance ist Operations-Kette, keine Sektor-Klasse) | — |
-| **§2.1.3 Fit-Anzeige** | `uft_sync_median_clock()` vorhanden, Feineinsteller-Feld vorhanden (MF-480) | S |
+| ~~**§2.1.3 Fit-Anzeige**~~ | ✅ **fertig** (MF-496, FLUX-16) als Meldung im Wandlungsergebnis: „Die Sync-Marken messen 50 % der abgeleiteten Zellendauer". Das GUI-Feld selbst ist offen — nicht wegen Aufwand, sondern weil ein Widget in dieser Sitzung nicht prüfbar ist | — |
 | **1.4 OEM-Namens-Tabelle** | reine Datentabelle, Bootsektor-Detail existiert | S |
 | **1.4 `.tc` (Transcopy)** | Spec aus SAMdisk (im Baum, `src/samdisk/`) statt aus DiskImageTool | S–M |
 | **1.1 diskdefs-Parser** | `src/formats/cpm/uft_cpm_diskdef.c` — Zielverzeichnis korrigiert; Grammatik ist im Vorschlag korrekt beschrieben und öffentlich | S |

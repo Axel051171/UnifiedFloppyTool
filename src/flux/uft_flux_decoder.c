@@ -1587,6 +1587,7 @@ static flux_status_t amiga_try_candidate(const flux_raw_data_t *flux,
                                          flux_decoded_track_t *best,
                                          const flux_decoder_options_t *opts,
                                          double bitcell_ns,
+                                         flux_timing_source_t source,
                                          flux_status_t rc_best)
 {
     flux_decoded_track_t alt;
@@ -1594,6 +1595,13 @@ static flux_status_t amiga_try_candidate(const flux_raw_data_t *flux,
     flux_status_t rc_alt = amiga_decode_at(flux, &alt, opts, bitcell_ns);
 
     if (amiga_track_score(&alt) > amiga_track_score(best)) {
+        /* Die Messwerte gehoeren der SPUR, nicht dem Durchlauf — sie ueber
+         * den Wechsel hinweg zu retten ist der ganze Zweck von MF-496. */
+        alt.initial_cell_ns  = best->initial_cell_ns;
+        alt.measured_cell_ns = best->measured_cell_ns;
+        alt.warp_span        = best->warp_span;
+        alt.timing_source    = source;
+
         flux_decoded_track_free(best);
         *best = alt;                     /* Besitz wandert mit, `sectors`
                                           * liegt inline in der Struktur */
@@ -1643,6 +1651,11 @@ static flux_status_t amiga_try_dewarped(const flux_raw_data_t *flux,
         return rc_best;
     }
 
+    /* Die gemessene Spanne gehoert in die Spur, auch wenn die Stufe gleich
+     * wieder aussteigt: „ich habe nachgesehen und nichts gefunden" ist ein
+     * anderer Befund als „ich habe nicht nachgesehen" (MF-496). */
+    best->warp_span = dr.warp_span;
+
     /* Ohne nennenswerten Gleichlauffehler ist der entzerrte Strom derselbe
      * Strom — ein Durchlauf darauf waere reine Rechenzeit. */
     if (dr.warp_span < 1.02) { free(iv); return rc_best; }
@@ -1660,7 +1673,7 @@ static flux_status_t amiga_try_dewarped(const flux_raw_data_t *flux,
 
     flux_status_t rc = amiga_try_candidate(&dw, best, opts,
                                            dr.ref_clock * ns_per_tick,
-                                           rc_best);
+                                           FLUX_TIMING_DEWARPED, rc_best);
     free(iv);
     return rc;
 }
@@ -1678,6 +1691,8 @@ flux_status_t flux_decode_amiga(const flux_raw_data_t *flux,
 
     double bitcell_ns = flux_pick_bitcell_ns(flux, opts, FLUX_MFM_DD_BITCELL_NS);
     flux_status_t rc = amiga_decode_at(flux, track, opts, bitcell_ns);
+    track->initial_cell_ns = bitcell_ns;
+    track->timing_source   = FLUX_TIMING_INITIAL;
 
     /* Zweiter Durchlauf mit gemessener Zellendauer (MF-492).
      *
@@ -1711,13 +1726,15 @@ flux_status_t flux_decode_amiga(const flux_raw_data_t *flux,
     if (caller_pinned_the_timing) return rc;
 
     double measured = amiga_measured_cell_ns(flux, opts);
+    track->measured_cell_ns = measured;
 
     /* Kandidat 2: die gemessene Zellendauer. Nur wenn sie sich von der
      * gewaehlten unterscheidet — sonst waere es derselbe Lauf noch einmal. */
     if (measured > 0.0) {
         double rel = measured / bitcell_ns;
         if (rel <= 0.98 || rel >= 1.02)
-            rc = amiga_try_candidate(flux, track, opts, measured, rc);
+            rc = amiga_try_candidate(flux, track, opts, measured,
+                                     FLUX_TIMING_MEASURED, rc);
     }
 
     /* Kandidat 3: derselbe Strom, um den Gleichlauffehler entzerrt.

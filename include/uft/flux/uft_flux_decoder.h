@@ -154,6 +154,19 @@ typedef struct {
 } flux_decoded_sector_t;
 
 /**
+ * @brief Welche Zeitbasis das Ergebnis geliefert hat (MF-496).
+ *
+ * Die Reihenfolge ist die Reihenfolge der Kandidaten im Decoder, und
+ * @ref FLUX_TIMING_INITIAL ist bewusst 0: eine auf 0 gesetzte Struktur
+ * behauptet damit nichts, was nicht gemessen wurde.
+ */
+typedef enum {
+    FLUX_TIMING_INITIAL = 0,  /**< erste Wahl: Profil, Histogramm, Nennwert */
+    FLUX_TIMING_MEASURED,     /**< an den Sync-Marken gemessen (MF-492) */
+    FLUX_TIMING_DEWARPED      /**< Strom entzerrt dekodiert (MF-495) */
+} flux_timing_source_t;
+
+/**
  * @brief Decoded track result
  */
 typedef struct {
@@ -198,7 +211,37 @@ typedef struct {
     /* Raw decoded bits (optional) */
     uint8_t *raw_bits;
     size_t   raw_bit_count;
-    
+
+    /* ── Woher die Zeitbasis kam (MF-496) ──────────────────────────────
+     *
+     * Der Decoder probiert seit MF-492/MF-495 mehrere Zeitbasen durch und
+     * behaelt die beste. Bis hierher wusste das niemand ausserhalb: die
+     * Messung entstand, entschied ueber das Ergebnis und wurde verworfen.
+     * Ein Werkzeug, das den Menschen in der Schleife halten will, muss
+     * sagen koennen, WAS es gemessen hat und WELCHE Wahl gewonnen hat.
+     *
+     * Angehaengt statt eingefuegt — eingefuegte Felder verschieben das
+     * Layout aller nachfolgenden und brechen still jeden Aufrufer, der
+     * gegen die alte Fassung uebersetzt wurde.
+     *
+     * Alle Felder sind 0, wenn nichts gemessen wurde; Aufrufer setzen die
+     * Struktur ohnehin auf 0, bevor sie dekodieren lassen. */
+
+    /** Zellendauer der ERSTEN Wahl in ns — Medienprofil, Histogramm oder
+     *  Nennwert, je nachdem was greifen konnte. */
+    double initial_cell_ns;
+
+    /** Zellendauer, die die Sync-Suche im Strom GEMESSEN hat (MF-492), in
+     *  ns. 0 = keine belastbare Messung (unter drei Fundstellen). */
+    double measured_cell_ns;
+
+    /** Verhaeltnis groesster zu kleinster Zellendauer entlang der Spur
+     *  (MF-495). 0 = nicht bestimmt, 1,0 = kein Gleichlauffehler. */
+    double warp_span;
+
+    /** Welcher Kandidat das Ergebnis geliefert hat. */
+    flux_timing_source_t timing_source;
+
 } flux_decoded_track_t;
 
 /**

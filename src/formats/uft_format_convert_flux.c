@@ -321,6 +321,81 @@ static bool uftc_adf_place_voted(const uftc_adf_votes_t* v,
  * Diskette kann zwei Dateisysteme tragen (Amiga + Atari auf derselben
  * Scheibe ist ein bekannter Fall), und nur den Sieger zu nennen hiesse,
  * das zweite stillschweigend zu unterschlagen. */
+/* ── Was der Decoder ueber seine Zeitbasis gemeldet hat (MF-496) ─────────
+ *
+ * Der Decoder probiert seit MF-492/MF-495 mehrere Zeitbasen durch und
+ * behaelt die beste. Bis hierher endete diese Messung im Decoder: sie
+ * entschied ueber das Ergebnis und wurde verworfen. Der Mensch am
+ * Feineinsteller (MF-480) sah davon nichts und musste raten, obwohl das
+ * Werkzeug die Antwort schon gemessen hatte.
+ *
+ * Gesammelt wird ueber alle Spuren und EINMAL berichtet. Es gibt acht
+ * Warnungsplaetze; eine Zeile je Spur waere nach der vierten Spur nur noch
+ * eine Ueberlaufmarkierung.
+ */
+typedef struct {
+    int    tracks;          /**< Spuren, die eine Zellendauer gemeldet haben */
+    int    won_measured;    /**< davon: die Messung lieferte das Ergebnis */
+    int    won_dewarped;    /**< davon: der entzerrte Strom lieferte es */
+    int    warped;          /**< Spuren mit nennenswertem Gleichlauffehler */
+    double worst_span;      /**< groesste gemessene Spanne */
+    double ratio_sum;       /**< Summe gemessen/erste Wahl */
+    int    ratio_n;
+} uftc_timing_stats_t;
+
+static void uftc_timing_note(uftc_timing_stats_t *st,
+                             const flux_decoded_track_t *dt)
+{
+    if (!st || !dt) return;
+    if (dt->initial_cell_ns <= 0.0) return;
+
+    st->tracks++;
+    if (dt->timing_source == FLUX_TIMING_MEASURED) st->won_measured++;
+    if (dt->timing_source == FLUX_TIMING_DEWARPED) st->won_dewarped++;
+
+    if (dt->measured_cell_ns > 0.0) {
+        st->ratio_sum += dt->measured_cell_ns / dt->initial_cell_ns;
+        st->ratio_n++;
+    }
+    /* 1,02 ist die Schwelle, ab der die Entzerrung ueberhaupt antritt
+     * (uft_dewarp.c) — darunter ist die Spanne Messrauschen, kein Befund. */
+    if (dt->warp_span >= 1.02) {
+        st->warped++;
+        if (dt->warp_span > st->worst_span) st->worst_span = dt->warp_span;
+    }
+}
+
+static void uftc_timing_report(const uftc_timing_stats_t *st,
+                               uft_convert_result_t *result)
+{
+    if (!st || !result || st->tracks == 0) return;
+
+    /* Der Feineinsteller-Vorschlag. Gemeldet wird er nur, wenn die Messung
+     * ueber die Spuren hinweg systematisch woanders liegt als die
+     * Ableitung — ein einzelner Ausreisser ist keine Empfehlung. */
+    if (st->ratio_n * 2 >= st->tracks && st->ratio_n > 0) {
+        double pct = 100.0 * st->ratio_sum / (double)st->ratio_n;
+        if (pct < 98.0 || pct > 102.0) {
+            uftc_add_warning(result,
+                "Die Sync-Marken messen eine Zellendauer von %.0f %% der "
+                "abgeleiteten (%d Spuren gemittelt). Wer das bestaetigen "
+                "will, setzt den Feineinsteller auf diesen Wert - der "
+                "Decoder hat ihn bereits benutzt, wo er mehr Sektoren "
+                "brachte (%d Spuren)",
+                pct, st->ratio_n, st->won_measured);
+        }
+    }
+
+    if (st->warped > 0) {
+        uftc_add_warning(result,
+            "Gleichlauffehler gemessen: bis %.0f %% Schwankung der "
+            "Zellendauer innerhalb einer Spur, auf %d von %d Spuren. Die "
+            "Entzerrung hat auf %d Spuren mehr Sektoren geliefert",
+            100.0 * (st->worst_span - 1.0), st->warped, st->tracks,
+            st->won_dewarped);
+    }
+}
+
 static void uftc_verify_output_filesystem(const uint8_t *image, size_t size,
                                           uft_convert_result_t *result)
 {
@@ -451,6 +526,9 @@ static uft_error_t uftc_convert_scp_to_adf_via_plugin(
         return UFT_ERR_MEMORY;
     }
 
+    uftc_timing_stats_t timing;
+    memset(&timing, 0, sizeof(timing));
+
     flux_decoder_options_t dopts;
     flux_decoder_options_init(&dopts);
     /* Das Medium ist hier bekannt: das Ziel ist ADF, und ADF gibt es nur fuer
@@ -548,6 +626,7 @@ static uft_error_t uftc_convert_scp_to_adf_via_plugin(
                         flux_decoded_track_t dt;
                         memset(&dt, 0, sizeof(dt));
                         flux_decode_amiga(&raw, &dt, &dopts);
+                        uftc_timing_note(&timing, &dt);
                         uftc_adf_collect(&dt, votes);
                         flux_decoded_track_free(&dt);
                         flux_raw_free(&raw);
@@ -573,6 +652,7 @@ static uft_error_t uftc_convert_scp_to_adf_via_plugin(
                         flux_decoded_track_t dt;
                         memset(&dt, 0, sizeof(dt));
                         flux_decode_amiga(&raw, &dt, &dopts);
+                        uftc_timing_note(&timing, &dt);
                         uftc_adf_collect(&dt, votes);
                         flux_decoded_track_free(&dt);
                         flux_raw_free(&raw);
@@ -670,6 +750,8 @@ static uft_error_t uftc_convert_scp_to_adf_via_plugin(
             mp ? mp->name : "Dieses Medium", min_revs,
             (double)revs_seen / (double)tracks_with_flux);
     }
+
+    uftc_timing_report(&timing, result);
 
     uftc_report_progress(opts, 95, "Writing output");
     uftc_verify_output_filesystem(output, adf_size, result);

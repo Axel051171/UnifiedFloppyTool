@@ -3938,6 +3938,73 @@ zweite braucht eine Bank-Sitzung mit echtem Laufwerk.
 
 ---
 
+### FLUX-16 — der Decoder maß, entschied und vergaß (2026-08-23, MF-496) → ✓ BEHOBEN
+
+Seit MF-492/MF-495 probiert `flux_decode_amiga()` mehrere Zeitbasen durch
+und behält die beste: die abgeleitete, die an den Sync-Marken gemessene,
+und den entzerrten Strom. Diese Messungen endeten aber **im Decoder**. Sie
+entschieden über das Ergebnis und wurden mit der lokalen Variablen
+verworfen.
+
+Der Mensch am Feineinsteller (MF-480) sah davon nichts. Der vorgesehene
+Arbeitsablauf — in kleinen Schritten nachstellen und beobachten, ob mehr
+Sektoren herauskommen — bestand also aus Raten, während das Werkzeug die
+Antwort bereits gemessen hatte und für sich behielt.
+
+**Was jetzt gemeldet wird.** `flux_decoded_track_t` bekommt vier Felder,
+**angehängt** statt eingefügt (eingefügte Felder verschieben das Layout
+aller nachfolgenden und brechen still jeden Aufrufer, der gegen die alte
+Fassung übersetzt wurde):
+
+| Feld | Bedeutung |
+|---|---|
+| `initial_cell_ns` | erste Wahl: Profil, Histogramm oder Nennwert |
+| `measured_cell_ns` | an den Sync-Marken gemessen (0 = keine belastbare Messung) |
+| `warp_span` | Schwankung der Zellendauer innerhalb der Spur (0 = nicht bestimmt) |
+| `timing_source` | welcher Kandidat das Ergebnis geliefert hat |
+
+`FLUX_TIMING_INITIAL` ist bewusst 0: eine auf 0 gesetzte Struktur behauptet
+damit nichts, was nicht gemessen wurde.
+
+**Was der Mensch sieht.** Der SCP→ADF-Wandler sammelt über alle Spuren und
+meldet **einmal** — es gibt acht Warnungsplätze, eine Zeile je Spur wäre ab
+der vierten nur noch eine Überlaufmarkierung. Gemessen an einer Diskette
+mit 1000 ns je Zelle, während das Profil 2000 ns ableitet:
+
+> Die Sync-Marken messen eine Zellendauer von 50 % der abgeleiteten
+> (2 Spuren gemittelt). Wer das bestätigen will, setzt den Feineinsteller
+> auf diesen Wert — der Decoder hat ihn bereits benutzt, wo er mehr
+> Sektoren brachte (2 Spuren)
+
+Dazu, wenn ein Gleichlauffehler gemessen wurde, eine zweite Zeile mit
+Spanne, Zahl der betroffenen Spuren und der Zahl der Spuren, auf denen die
+Entzerrung mehr Sektoren lieferte.
+
+**Zwei Dinge, die der Vorschlag nicht verlangt hat und die trotzdem
+nötig waren:**
+
+1. *Die Messwerte gehören der Spur, nicht dem Durchlauf.* Gewinnt ein
+   späterer Kandidat, wird seine Spur übernommen — und mit ihr wären die
+   Messwerte des ersten Durchlaufs verschwunden. Sie werden jetzt über den
+   Wechsel hinweg gerettet. Der Rotbeweis dazu kippt den Test.
+2. *Kein Vorschlag ohne Abweichung.* Zwischen 98 % und 102 % schweigt die
+   Meldung. Ein Werkzeug, das bei jeder Diskette etwas zu melden hat, wird
+   nach der dritten ignoriert — und die Warnungsplätze sind knapp.
+
+**Grenze, ausdrücklich.** Gemeldet wird über den **Wandler**, nicht über
+eine GUI-Anzeige. Der Plan (§2.1.3) wollte den Wert im Feineinsteller-Feld
+sehen; dort steht er noch nicht. Der Grund ist nicht Aufwand, sondern
+Prüfbarkeit: eine Meldung im Wandlungsergebnis lässt sich testen, ein
+Widget in dieser Sitzung nicht (kein Bediener, kein Bildschirm). Die Daten
+liegen jetzt am Rand des Decoders bereit; die Anzeige ist ein kleiner
+Schritt, sobald jemand sie klicken kann.
+
+**Verdrahtet und geprüft:** `tests/test_convert_cell_adjust.c` (2 neue
+Tests, 6 gesamt), 7 Rotbeweise feuern auf genau den benannten Tests,
+231/231 ctest grün, qmake-Release baut und linkt.
+
+---
+
 ### FLUX-15 — kein Taktwert half, wo die Diskette nicht gleichmäßig lief (2026-08-23, MF-495) → ✓ BEHOBEN
 
 Jede Verbesserung am Lesepfad bis hierher suchte **einen** besseren

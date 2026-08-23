@@ -263,6 +263,73 @@ TEST(an_out_of_range_nudge_is_refused_out_loud)
     free(adf); remove(scp); remove(out);
 }
 
+/* ------------------------------------------------------------------ */
+/* Die Messung erreicht den Menschen (MF-496)                          */
+/* ------------------------------------------------------------------ */
+
+TEST(the_measured_cell_time_is_reported_as_a_nudge_suggestion)
+{
+    /* Der Punkt dieses Bausteins. Der Decoder MISST die Zellendauer seit
+     * MF-492 und benutzt sie auch — aber der Mensch am Feineinsteller sah
+     * davon nichts und musste raten, obwohl das Werkzeug die Antwort schon
+     * hatte.
+     *
+     * Die Diskette hier ist mit 1000 ns je Zelle beschrieben, das Profil
+     * leitet 2000 ns ab. Die richtige Antwort ist also 50 % — und genau
+     * die muss in der Meldung stehen, nicht bloss „irgendwas stimmt
+     * nicht". */
+    uint8_t *adf = make_source_adf();
+    ASSERT(adf != NULL);
+
+    char scp[512], out[512];
+    get_temp_path(scp, sizeof(scp), "rep.scp");
+    get_temp_path(out, sizeof(out), "rep.adf");
+    ASSERT(write_scp(scp, adf, TRUE_CELL_NS) == 0);
+
+    uft_convert_result_t r;
+    ASSERT(convert(scp, out, 0.0, &r) == UFT_OK);
+
+    if (!warned_about(&r, "Feineinsteller")) {
+        printf("\n        keine Meldung zur Zellendauer; %d Warnungen:\n",
+               r.warning_count);
+        for (int i = 0; i < r.warning_count && i < 8; i++)
+            printf("          %s\n", r.warnings[i]);
+    }
+    ASSERT(warned_about(&r, "Feineinsteller"));
+
+    /* Und die Zahl muss stimmen. 50 % ist der Wert, den der naechste Test
+     * unabhaengig davon als richtig belegt — eine Meldung mit falscher Zahl
+     * waere schlimmer als keine. */
+    ASSERT(warned_about(&r, "50 %"));
+
+    free(adf); remove(scp); remove(out);
+}
+
+TEST(a_disk_that_matches_its_profile_gets_no_such_advice)
+{
+    /* Gegenprobe, ohne die die vorige nichts wert waere: eine Diskette, die
+     * mit der abgeleiteten Zellendauer beschrieben wurde, darf KEINEN
+     * Vorschlag bekommen. Ein Werkzeug, das immer etwas zu meckern hat,
+     * wird ignoriert. */
+    uint8_t *adf = make_source_adf();
+    ASSERT(adf != NULL);
+
+    char scp[512], out[512];
+    get_temp_path(scp, sizeof(scp), "match.scp");
+    get_temp_path(out, sizeof(out), "match.adf");
+    /* 2000 ns = genau das, was das DD-Profil aus 200 ms ableitet. */
+    ASSERT(write_scp(scp, adf, 2000) == 0);
+
+    uft_convert_result_t r;
+    ASSERT(convert(scp, out, 0.0, &r) == UFT_OK);
+    if (warned_about(&r, "Feineinsteller"))
+        printf("\n        unnoetiger Vorschlag bei passender Diskette\n");
+    ASSERT(!warned_about(&r, "Feineinsteller"));
+    ASSERT(!warned_about(&r, "Gleichlauffehler"));
+
+    free(adf); remove(scp); remove(out);
+}
+
 int main(void)
 {
     printf("=== Zellendauer-Feineinsteller in Prozent (MF-480) ===\n");
@@ -276,6 +343,10 @@ int main(void)
     RUN(the_nudge_recovers_the_whole_disk);
     RUN(a_wrong_nudge_makes_a_good_stream_unreadable);
     RUN(an_out_of_range_nudge_is_refused_out_loud);
+
+    /* MF-496: die Messung erreicht den Menschen */
+    RUN(the_measured_cell_time_is_reported_as_a_nudge_suggestion);
+    RUN(a_disk_that_matches_its_profile_gets_no_such_advice);
     printf("\nResults: %d passed, %d failed\n", _pass, _fail);
     return _fail == 0 ? 0 : 1;
 }
