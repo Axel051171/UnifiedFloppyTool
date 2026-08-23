@@ -3938,6 +3938,82 @@ zweite braucht eine Bank-Sitzung mit echtem Laufwerk.
 
 ---
 
+### FLUX-15 — kein Taktwert half, wo die Diskette nicht gleichmäßig lief (2026-08-23, MF-495) → ✓ BEHOBEN
+
+Jede Verbesserung am Lesepfad bis hierher suchte **einen** besseren
+Taktwert: aus dem Medienprofil (MF-471), aus dem Histogramm (MF-488), aus
+den Sync-Marken (MF-492). Wo die Diskette aber nicht überall gleich schnell
+lief — verzogenes Band, schwankende Andruckrolle, Laufwerk mit
+Gleichlauffehler —, gibt es keinen richtigen einzelnen Wert. Jeder ist für
+einen Teil der Spur falsch.
+
+**Das Verfahren.** Zu jedem Intervall gehört eine ganze Zahl von Zellen
+(MFM: 2, 3 oder 4). Also ist `d / k` ein Sofort-Takt, und die geglättete
+Folge dieser Sofort-Takte **ist** der Geschwindigkeitsverlauf. Geglättet
+wird vorwärts *und* rückwärts — eine einseitige Glättung läuft der Wahrheit
+hinterher, und der Nachlauf wäre ausgerechnet an den Sprungstellen am
+größten. Danach wird jedes Intervall auf einen gemeinsamen Bezugstakt
+umgerechnet. Neu: `src/flux/uft_dewarp.c`.
+
+**Ergebnis** (synthetische AmigaDOS-Spuren, *gefunden / heil / inhaltlich
+falsch trotz heiler Prüfsumme*):
+
+| Fall | Spanne | ohne | mit |
+|---|---|---|---|
+| zwei Tempi (35 % ×1,7) | 1,459 | 8 / 7 / 0 | **10 / 9 / 0** |
+| Rampe +25 % + 6 % Zittern | 1,253 | 11 / 11 / 0 | 11 / 11 / 0 |
+| Rampe +40 % + 12 % Zittern | 1,406 | 11 / 11 / 0 | 11 / 11 / 0 |
+| sauber | 1,000 | 11 / 11 / 0 | Stufe läuft nicht |
+
+Die dritte Spalte ist die Bedingung, ohne die diese Stufe im forensischen
+Lesepfad nichts zu suchen hätte: **in keinem gemessenen Fall** entstand ein
+Sektor mit heiler Prüfsumme und falschem Inhalt.
+
+**Vier Entscheidungen, jede mit der Messung dahinter:**
+
+1. *Ausreißer-Abweisung, obwohl sie einen Sektor kostet.* Abstände weit
+   außerhalb von 2…4 Zellen gehen nicht in die Schätzung ein. Ohne diese
+   Abweisung liefert die Zwei-Tempo-Spur einen heilen Sektor mehr (10 statt
+   9) — aber eine **völlig gleichmäßige** Spur meldet dann Spanne 1,038,
+   also 3,8 % Gleichlauffehler, wo keiner ist. Dieser Wert ist zweierlei:
+   Anzeige für den Menschen und Schwelle, ab der die Stufe läuft. Ein
+   erfundener Diagnosewert ist teurer als ein Sektor.
+2. *Kein Mittel gegen Zittern.* Über je 20 Spuren mit 0…12 % Zittern (1320
+   Dekodierungen): **ein** heiler Sektor mehr, insgesamt, bei 4 %. Das ist
+   Rauschen. Die Schwelle von 1,02 bleibt deshalb, wo sie ist — Dewarp
+   wirkt gegen Geschwindigkeitsschwankung, nicht gegen Zittern.
+3. *Der Startwert ist tragend.* Zwei-Tempo-Spur mit dem gemessenen
+   Startwert (2040 ns aus der Sync-Suche): 9 heile Sektoren. Mit 1200 ns —
+   auch plausibel, nämlich die Rate der Mehrheit der Abstände: **3**. Damit
+   ist belegt, wozu MF-492 im Lesepfad steht: nicht als eigener Retter,
+   sondern als Lieferant des Startwerts für diese Stufe.
+4. *Der entzerrte Strom wird nie gespeichert.* Er trägt veränderte Zeiten,
+   und veränderte Zeiten sind veränderte Rohdaten. Er lebt ausschließlich
+   in `amiga_try_dewarped()` und wird danach freigegeben. Die Index-Marken
+   werden dabei ausdrücklich verworfen: sie zeigen auf die ursprüngliche
+   Zeitachse, und sie mitzugeben hieße, eine Umdrehungsdauer zu behaupten,
+   die dieser Strom nicht mehr hat.
+
+**Nicht belegt, ausdrücklich.** Die Bester-Durchlauf-Auswahl schützt hier
+gegen einen Rückschritt, den **kein konstruierbarer Fall mehr auslöst**:
+der Wegwerf-Prototyp verlor auf der Rampe einen Sektor, die Fassung im Baum
+tut das nicht. Der Rotbeweis dazu („immer den entzerrten Durchlauf nehmen")
+kippt nichts. Die Auswahl bleibt trotzdem — reale Medien sind unfreundlicher
+als ein Generator —, aber sie steht als Vorsicht da, nicht als gemessene
+Notwendigkeit.
+
+Ebenso offen: `RECOVERED_DEWARP` aus dem Plan. `uft_provenance.h` führt
+Herkunft als **Operations-Kette** (CAPTURE/DECODE/ANALYZE/…), nicht als
+Sektor-Klasse; eine Herkunft je Sektor gibt es nicht und wäre eine Änderung
+an `flux_decoded_sector_t`. Die Spanne steht als Diagnosewert bereit
+(`uft_dewarp_result_t::warp_span`), eine Anzeige dafür fehlt.
+
+**Verdrahtet und geprüft:** `tests/test_flux_dewarp.c` (7 Tests),
+5 Rotbeweise feuern auf genau den benannten Tests, 231/231 ctest grün,
+qmake-Release baut und linkt.
+
+---
+
 ### FLUX-14 — die PLL war die einzige Tür zum Sync (2026-08-23, MF-492) → ✓ BEHOBEN
 
 Die übliche Kette ist Flux → PLL → Bitstrom → Sync-Suche. Verliert die PLL

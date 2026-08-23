@@ -9,6 +9,7 @@
 #include "uft/flux/uft_flux_decoder.h"
 #include "uft/flux/uft_flux_histogram.h"
 #include "uft/flux/uft_flux_sync_search.h"
+#include "uft/flux/uft_dewarp.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -1576,6 +1577,94 @@ static size_t amiga_track_score(const flux_decoded_track_t *t)
     return whole * 2u + t->sector_count;
 }
 
+/**
+ * Einen Kandidaten dekodieren und nur uebernehmen, wenn er besser ist.
+ *
+ * Jeder Kandidat bekommt eine EIGENE Spur. So kann keiner ein besseres
+ * frueheres Ergebnis ueberschreiben: gewinnen ja, kosten nein.
+ */
+static flux_status_t amiga_try_candidate(const flux_raw_data_t *flux,
+                                         flux_decoded_track_t *best,
+                                         const flux_decoder_options_t *opts,
+                                         double bitcell_ns,
+                                         flux_status_t rc_best)
+{
+    flux_decoded_track_t alt;
+    flux_decoded_track_init(&alt);
+    flux_status_t rc_alt = amiga_decode_at(flux, &alt, opts, bitcell_ns);
+
+    if (amiga_track_score(&alt) > amiga_track_score(best)) {
+        flux_decoded_track_free(best);
+        *best = alt;                     /* Besitz wandert mit, `sectors`
+                                          * liegt inline in der Struktur */
+        return rc_alt;
+    }
+    flux_decoded_track_free(&alt);
+    return rc_best;
+}
+
+/**
+ * Denselben Strom entzerrt als weiteren Kandidaten anbieten (MF-495).
+ *
+ * Wo die Diskette nicht ueberall gleich schnell lief, gibt es keinen
+ * richtigen EINZELNEN Taktwert — dagegen hilft kein besserer Startwert,
+ * sondern nur, den Gleichlauffehler herauszurechnen.
+ *
+ * Der entzerrte Strom lebt ausschliesslich hier und wird nie weiter-
+ * gereicht: er traegt veraenderte Zeiten, und veraenderte Zeiten sind
+ * veraenderte Rohdaten.
+ */
+static flux_status_t amiga_try_dewarped(const flux_raw_data_t *flux,
+                                        flux_decoded_track_t *best,
+                                        const flux_decoder_options_t *opts,
+                                        double t0_ns, flux_status_t rc_best)
+{
+    const size_t n = flux->transition_count;
+    if (!flux->transitions || n < 64 || !(t0_ns > 0.0)) return rc_best;
+
+    const double ns_per_tick = (flux->sample_rate > 0)
+                                   ? (1e9 / flux->sample_rate) : 1.0;
+
+    uint32_t *iv = (uint32_t *)malloc(n * sizeof(uint32_t));
+    if (!iv) return rc_best;
+
+    /* Der Entzerrer rechnet auf ABSTAENDEN, `flux_raw_data_t` haelt
+     * kumulierte Zeiten (MF-438). */
+    uint32_t prev = 0;
+    for (size_t i = 0; i < n; i++) {
+        uint32_t t = flux->transitions[i];
+        iv[i] = (t > prev) ? (t - prev) : 0u;
+        prev = t;
+    }
+
+    uft_dewarp_result_t dr;
+    if (!uft_dewarp_intervals(iv, n, t0_ns / ns_per_tick, 0.0, iv, &dr)) {
+        free(iv);
+        return rc_best;
+    }
+
+    /* Ohne nennenswerten Gleichlauffehler ist der entzerrte Strom derselbe
+     * Strom — ein Durchlauf darauf waere reine Rechenzeit. */
+    if (dr.warp_span < 1.02) { free(iv); return rc_best; }
+
+    uint32_t acc = 0;
+    for (size_t i = 0; i < n; i++) { acc += iv[i]; iv[i] = acc; }
+
+    flux_raw_data_t dw = *flux;
+    dw.transitions = iv;
+    /* Die Index-Marken zeigen auf die urspruengliche Zeitachse und passen
+     * nicht mehr. Sie mitzugeben hiesse, eine Umdrehungsdauer zu behaupten,
+     * die dieser Strom nicht mehr hat. */
+    dw.index_times = NULL;
+    dw.index_count = 0;
+
+    flux_status_t rc = amiga_try_candidate(&dw, best, opts,
+                                           dr.ref_clock * ns_per_tick,
+                                           rc_best);
+    free(iv);
+    return rc;
+}
+
 flux_status_t flux_decode_amiga(const flux_raw_data_t *flux,
                                 flux_decoded_track_t *track,
                                 const flux_decoder_options_t *opts) {
@@ -1599,11 +1688,14 @@ flux_status_t flux_decode_amiga(const flux_raw_data_t *flux,
      * sagt, wie lang eine Zelle wirklich ist — damit ist der zweite Versuch
      * keine Rateschleife, sondern eine Messung.
      *
-     * Der Ausloeser ist bewusst NICHT „null Sektoren gefunden". Gemessen an
-     * einer Spur, deren Anfang um 80 % gedehnt ist: der erste Durchlauf
-     * findet 2 von 11, der zweite 9 — eine Bedingung auf „gar nichts
-     * gefunden" haette hier gar nicht ausgeloest. Gerade die teilweise
-     * lesbare Diskette ist der forensisch interessante Fall.
+     * Der Ausloeser ist bewusst NICHT „null Sektoren gefunden": gerade die
+     * teilweise lesbare Diskette ist der forensisch interessante Fall, und
+     * eine Bedingung auf „gar nichts gefunden" haette dort nie ausgeloest.
+     *
+     * Was der zweite Durchlauf nachweislich bringt, ist eng (MF-494): auf
+     * einer Spur mit 20 % Zittern findet er 7 Sektoren statt keinem — aber
+     * keiner davon traegt eine heile Pruefsumme. Gefunden ist nicht
+     * gerettet. Die Datenrettung leistet erst der dritte Kandidat unten.
      *
      * Der zweite Durchlauf gehoert aber ausschliesslich dem AUTOMATISCHEN
      * Pfad. Wer eine Zellendauer vorgibt, meint sie (MF-471); wer die PLL
@@ -1619,25 +1711,23 @@ flux_status_t flux_decode_amiga(const flux_raw_data_t *flux,
     if (caller_pinned_the_timing) return rc;
 
     double measured = amiga_measured_cell_ns(flux, opts);
-    if (measured <= 0.0) return rc;
 
-    double rel = measured / bitcell_ns;
-    if (rel > 0.98 && rel < 1.02) return rc;   /* derselbe Lauf, nur nochmal */
-
-    /* In eine EIGENE Spur dekodieren und danach vergleichen. Der zweite
-     * Durchlauf ueberschreibt so nie ein besseres erstes Ergebnis — er kann
-     * gewinnen, aber nichts kaputtmachen. */
-    flux_decoded_track_t alt;
-    flux_decoded_track_init(&alt);
-    flux_status_t rc_alt = amiga_decode_at(flux, &alt, opts, measured);
-
-    if (amiga_track_score(&alt) > amiga_track_score(track)) {
-        flux_decoded_track_free(track);
-        *track = alt;                    /* Besitz wandert mit, `sectors`
-                                          * liegt inline in der Struktur */
-        return rc_alt;
+    /* Kandidat 2: die gemessene Zellendauer. Nur wenn sie sich von der
+     * gewaehlten unterscheidet — sonst waere es derselbe Lauf noch einmal. */
+    if (measured > 0.0) {
+        double rel = measured / bitcell_ns;
+        if (rel <= 0.98 || rel >= 1.02)
+            rc = amiga_try_candidate(flux, track, opts, measured, rc);
     }
-    flux_decoded_track_free(&alt);
+
+    /* Kandidat 3: derselbe Strom, um den Gleichlauffehler entzerrt.
+     *
+     * Der Startwert ist hier nicht Beiwerk, sondern tragend: auf einer Spur
+     * mit zwei Geschwindigkeiten liefert die Entzerrung mit dem GEMESSENEN
+     * Startwert 9 heile Sektoren, mit einem anderen plausiblen Wert 3.
+     * Deshalb steht die Sync-Suche vor der Entzerrung und nicht daneben. */
+    rc = amiga_try_dewarped(flux, track, opts,
+                            (measured > 0.0) ? measured : bitcell_ns, rc);
     return rc;
 }
 

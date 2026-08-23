@@ -1,6 +1,6 @@
 # Mammut-Plan — geprüfte Fassung
 
-**Stand:** 2026-08-23 · **Basis:** HEAD `9f23c1fc` (MF-492)
+**Stand:** 2026-08-23 · **Basis:** HEAD nach MF-495
 **Herkunft:** Vorschlag „Mammut-Umsetzung: Konsolidierter Plan aus der
 20-Repo-Evaluierung", gegen den Baum nachgemessen und korrigiert.
 
@@ -88,44 +88,63 @@ Nach Aufwand sortiert, alle mit vorhandenem Anschluss im Baum.
 
 | Baustein | Anschluss im Baum | Aufwand |
 |---|---|---|
-| **2.2 Dewarp-Stufe** | `uft_media_profile.c` (MF-471/483) misst die Umdrehung bereits; `uft_flux_sync_search` liefert **lokale** Takte je Marke — die Warp-Kurve ist die Kurve dieser Werte über die Spur | M |
+| ~~**2.2 Dewarp-Stufe**~~ | ✅ **fertig** (MF-495, FLUX-15): zwei Tempi 7 → 9 heile Sektoren; kein Mittel gegen Zittern; `RECOVERED_DEWARP` offen (Provenance ist Operations-Kette, keine Sektor-Klasse) | — |
 | **§2.1.3 Fit-Anzeige** | `uft_sync_median_clock()` vorhanden, Feineinsteller-Feld vorhanden (MF-480) | S |
 | **1.4 OEM-Namens-Tabelle** | reine Datentabelle, Bootsektor-Detail existiert | S |
 | **1.4 `.tc` (Transcopy)** | Spec aus SAMdisk (im Baum, `src/samdisk/`) statt aus DiskImageTool | S–M |
 | **1.1 diskdefs-Parser** | `src/formats/cpm/uft_cpm_diskdef.c` — Zielverzeichnis korrigiert; Grammatik ist im Vorschlag korrekt beschrieben und öffentlich | S |
 
-**Dewarp ist der nächste Schritt.** Begründung: die Sync-Suche hat die
-Datenquelle dafür gerade erst geschaffen, und der gemessene Fall liegt
-schon vor — eine Spur mit zwei Geschwindigkeiten (Anfang um 70–80 %
-gedehnt) verliert Sektoren, die kein einzelner Taktwert rettet, weil es
-*keinen richtigen einzelnen Wert gibt*. Gemessen: 3 Sektoren mit der
-besten festen Vorgabe. Das ist exakt Dewarps Aufgabe.
+### 2.2 Dewarp — ✅ **FERTIG** (MF-495, FLUX-15)
 
-Prototyp-Messung (Wegwerf-Code, Vorwärts-/Rückwärts-EWMA über dem
-Sofort-Takt `d/k`, k ∈ {2,3,4}), Spalten *gefunden / heil / inhaltlich
-falsch trotz heiler Prüfsumme*:
+Geliefert als `src/flux/uft_dewarp.c`. Vorwärts-/Rückwärts-EWMA über dem
+Sofort-Takt `d / k` (k ∈ {2,3,4}), danach Umrechnung auf einen gemeinsamen
+Bezugstakt. Als dritter Kandidat in `flux_decode_amiga()` verdrahtet, mit
+derselben Bester-Durchlauf-Auswahl wie MF-492.
 
-| Fall | ohne | α = 0,01 | α = 0,05 | α = 0,20 |
-|---|---|---|---|---|
-| 2000 sauber | 11/11/0 | 11/11/0 | 11/11/0 | 11/11/0 |
-| 1200, 4 % Zittern | 10/10/0 | 10/10/0 | 10/10/0 | 10/10/0 |
-| 1200, 20 % Zittern | 7/0/0 | 7/0/0 | 7/0/0 | **10**/0/0 |
-| zwei Tempi (35 % ×1,7) | 8/7/0 | 8/7/0 | **11/10**/0 | **11/10**/0 |
-| Rampe +25 % + 6 % Zittern | 11/11/0 | 11/11/0 | 10/10/**0** | 10/10/0 |
+| Fall | Spanne | ohne | mit |
+|---|---|---|---|
+| zwei Tempi (35 % ×1,7) | 1,459 | 8 gef / 7 heil | **10 / 9** |
+| Rampe +25 % + 6 % Zittern | 1,253 | 11 / 11 | 11 / 11 |
+| Rampe +40 % + 12 % Zittern | 1,406 | 11 / 11 | 11 / 11 |
+| sauber | 1,000 | 11 / 11 | Stufe läuft nicht |
 
-Drei Schlüsse, alle aus dieser Tabelle:
+In keinem gemessenen Fall entstand ein Sektor mit heiler Prüfsumme und
+falschem Inhalt.
 
-1. **Dewarp rettet Daten**, wo die Sync-Suche allein nur findet: auf der
-   Zwei-Tempo-Spur 7 → 10 **heile** Sektoren.
-2. **Es gibt kein sicheres festes α.** Bei 0,05/0,20 kostet die Rampe einen
-   Sektor. Das ist die Überanpassung, die flux-analyze im Kommentar
-   erwähnt — hier gemessen statt zitiert. Konsequenz für die Umsetzung:
-   dieselbe *Bester-Durchlauf*-Auswahl wie in MF-492, damit Dewarp
-   gewinnen, aber nichts kosten kann.
-3. **Die dritte Spalte ist durchgehend 0.** Dewarp hat in keinem
-   gemessenen Fall einen Sektor mit heiler Prüfsumme und falschem Inhalt
-   erzeugt. Das ist die Bedingung, ohne die die Stufe nicht in den
-   Lesepfad dürfte.
+**Abweichungen vom Vorschlag, jede gemessen begründet:**
+
+- **Keine eigene Pipeline-Stufe „nach Capture, vor PLL".** Der Vorschlag
+  wollte sie global; sie läuft stattdessen als Kandidat im Decoder. Grund:
+  eine globale Stufe müsste entscheiden, *ob* sie zuschlägt, bevor jemand
+  das Ergebnis kennt. Als Kandidat tritt sie gegen den unentzerrten
+  Durchlauf an und kann nur gewinnen.
+- **Kein Automatik-Auslöser über die Drehzahlmessung (MF-471/483).** Der
+  Auslöser ist die *selbst gemessene* Spanne aus dem Strom (≥ 1,02), nicht
+  die Umdrehungsdauer. Die Drehzahlmessung sieht Unterschiede **zwischen**
+  Umdrehungen, der Gleichlauffehler sitzt aber **innerhalb** einer.
+- **`RECOVERED_DEWARP` gibt es nicht.** `uft_provenance.h` führt Herkunft
+  als Operations-Kette (CAPTURE/DECODE/…), nicht je Sektor. Eine
+  Sektor-Herkunft wäre eine Änderung an `flux_decoded_sector_t` — offen.
+- **Die Warp-Kurve wird nicht angezeigt.** `uft_dewarp_result_t::warp_span`
+  steht als Diagnosewert bereit („das Medium eiert um 21 %"), das
+  OTDR-Panel greift ihn noch nicht ab — offen, klein.
+
+**Zwei Befunde, die über den Baustein hinausgehen:**
+
+1. **Dewarp ist kein Mittel gegen Zittern.** Über je 20 Spuren mit 0…12 %
+   Zittern (1320 Dekodierungen): ein heiler Sektor mehr, insgesamt. Das ist
+   Rauschen. Wer die Schwelle senkt, kauft Rechenzeit, keine Sektoren.
+2. **Der Startwert entscheidet mit.** Zwei-Tempo-Spur mit dem gemessenen
+   Startwert (2040 ns aus der Sync-Suche): 9 heile Sektoren; mit 1200 ns —
+   auch plausibel — nur 3. Damit ist nachträglich belegt, wozu 2.1 im
+   Lesepfad steht: als Lieferant des Startwerts für 2.2, nicht als eigener
+   Retter.
+
+**Nächster Schritt.** Von den sofort machbaren Bausteinen ist die
+Fit-Anzeige (§2.1.3) der kleinste mit echtem Nutzen: Spanne und gemessene
+Zellendauer liegen vor, der Mensch sieht sie noch nicht. **2.3
+Timeline-Slices** ist durch 2.2 nicht mehr blockiert, braucht für den
+Multi-Capture-Teil aber weiterhin den Fundus.
 
 ---
 
@@ -135,7 +154,7 @@ Drei Schlüsse, alle aus dieser Tabelle:
 |---|---|
 | 1.2 AMSDOS | `src/formats/cpc/` fehlt, kein AMSDOS im Baum; `sector-cpc` als Referenz nicht vorhanden |
 | 1.3 Fundus-Manifest | **Fundus existiert nicht** |
-| 2.3 Timeline-Slices | braucht 2.2; Multi-Capture-Teil braucht Fundus |
+| 2.3 Timeline-Slices | 2.2 ist fertig; nur der Multi-Capture-Teil braucht noch den Fundus |
 | 2.4 Mining-Targets | braucht Hardware mit Motor+Seek (**kein Gerät vorhanden**, MF-310) und Fundus für die append-only-Iterationen |
 | 3.1 `uft-catalog` | superdiskindex nicht im Baum; braucht Fundus |
 | 3.2 Polarkarte | **Datenquelle existiert nicht** (siehe §0.7): das Multiread-Ergebnis trägt keine Winkelpositionen |
