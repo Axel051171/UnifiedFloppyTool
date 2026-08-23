@@ -218,12 +218,32 @@ trägt `SPDX: MIT`, dokumentiert sich aber als „nach a8rawconv
   Regel entfällt die Unterscheidung nach *Schicht* — es zählt, ob der
   Baustein **oracle- oder rotbeweis-zuerst** baubar ist:
 
-  | Baustein | Referenz, gegen die gebaut wird |
-  |---|---|
-  | 1.1 diskdefs | `cpmls`-Roundtrip als Oracle, Rotbeweise vor dem Parser |
-  | 1.4 `.tc` | SAMdisk-Quelle im eigenen Baum (`src/samdisk/`) |
-  | 2.3 Timeline | Scheiben-Invarianten als Rotbeweise, vor dem Code |
-  | 1.2 AMSDOS | `sector-cpc` — **nicht im Baum**, also weiter blockiert |
+  | Baustein | Referenz, gegen die gebaut wird | verfügbar? |
+  |---|---|---|
+  | 2.3 Timeline | Scheiben-Invarianten als Rotbeweise, vor dem Code | **ja** — braucht nichts von außen |
+  | 1.1 diskdefs | `cpmls`-Roundtrip als Oracle | nein — Werkzeug **nicht installiert**, `diskdefs`-Datei nicht im Baum |
+  | 1.4 `.tc` | SAMdisk-Quelle | nein — die eingebundene Teilmenge (`src/samdisk/`, 147 Dateien) enthält **kein** TransCopy |
+  | 1.2 AMSDOS | `sector-cpc` | nein — nicht im Baum |
 
-  Damit sind 1.1, 1.4 und 2.3 zulässig, 1.2 bleibt es nicht — nicht wegen
-  der Schicht, sondern weil die Referenz fehlt.
+  **Korrektur (2026-08-23, MF-500):** Die erste Fassung dieser Tabelle
+  führte 1.1 und 1.4 als zulässig. Beides war falsch, und zwar auf
+  dieselbe Weise wie die sieben Behauptungen, die dieser Plan dem
+  Vorschlag nachgewiesen hat: eine Referenz wurde *benannt*, ohne
+  nachzusehen, ob sie da ist. `src/samdisk/` ist eine Teilmenge von
+  SAMdisk, und TransCopy gehört nicht dazu — `UFT_FORMAT_TC = 36`
+  existiert als Enum-Wert, ohne Leser und ohne Spec.
+
+  Zulässig und *machbar* ist damit derzeit genau einer: **2.3**. Die
+  anderen drei sind nicht durch die Schicht blockiert, sondern durch eine
+  fehlende Referenz — und das ist eine Beschaffungsfrage, keine
+  Programmierfrage:
+
+  | brauchen | woher |
+  |---|---|
+  | `cpmls` + eine `diskdefs`-Datei | cpmtools installieren (`$CPMLS`) |
+  | SAMdisk `tc.cpp` | aus dem Original-Repo nachziehen (MIT) |
+  | `sector-cpc` | bauen (CMake) |
+
+  Alle drei sind in `tests/differential/oracles.py` registriert bzw.
+  registrierbar; der Selbsttest sagt jederzeit, welche davon auf der
+  Maschine liegen.
