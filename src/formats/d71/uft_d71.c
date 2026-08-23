@@ -122,10 +122,30 @@ static uft_error_t d71_read_track(uft_disk_t* disk, int cyl, int head, uft_track
     d71_data_t* pdata = disk->plugin_data;
     if (!pdata || !pdata->file) return UFT_ERROR_INVALID_STATE;
     
+    /* MF-520: `cyl` ist eine Spur EINER SEITE und muss gegen
+     * D71_TRACKS_PER_SIDE geprueft werden, nicht gegen D71_TOTAL_TRACKS.
+     *
+     * Hier stand nur die Schranke gegen `actual_track` (<= 70). Die laesst
+     * fuer head==0 ein `cyl` bis 69 zu — und `d71_sectors_per_track` hat
+     * **35** Eintraege, einen je Spur EINER Seite. Bei cyl=39 war das ein
+     * Lesen 4 Byte hinter der Tabelle.
+     *
+     * Gefunden vom ASan-Tor der CI (MF-517) beim ersten scharfen Lauf:
+     *   global-buffer-overflow ... 4 bytes to the right of global variable
+     *   'd71_sectors_per_track' ... of size 35
+     * Unter Windows blieb es unsichtbar: ein Lesen knapp hinter ein
+     * Global faellt nicht auf, es liefert nur eine falsche Sektorzahl.
+     *
+     * Der Ternaer darunter hatte zwei identische Zweige — die Tabelle
+     * gilt je Seite, also ist `cyl + 1` fuer beide Koepfe richtig. Er ist
+     * weg; die Schranke, die fehlte, steht jetzt da. */
+    if (cyl >= D71_TRACKS_PER_SIDE) return UFT_ERROR_INVALID_ARG;
+    if (head > 1) return UFT_ERROR_INVALID_ARG;
+
     int actual_track = (head == 0) ? (cyl + 1) : (cyl + 1 + D71_TRACKS_PER_SIDE);
     if (actual_track < 1 || actual_track > D71_TOTAL_TRACKS) return UFT_ERROR_INVALID_ARG;
-    
-    int side_track = (head == 0) ? (cyl + 1) : (cyl + 1);
+
+    const int side_track = cyl + 1;      /* Tabelle gilt je Seite */
     int num_sectors = d71_sectors_per_track[side_track - 1];
     
     uft_track_init(track, cyl, head);
@@ -149,10 +169,19 @@ static uft_error_t d71_write_track(uft_disk_t* disk, int cyl, int head,
     if (!pdata || !pdata->file) return UFT_ERROR_INVALID_STATE;
     if (disk->read_only) return UFT_ERROR_NOT_SUPPORTED;
 
+    /* MF-520: dieselbe fehlende Schranke wie in d71_read_track — und hier
+     * waere sie schlimmer. Ein Lesen hinter der Tabelle liefert eine
+     * falsche Sektorzahl; ein SCHREIBEN mit einer falschen Sektorzahl
+     * schreibt an Stellen, die zu einer anderen Spur gehoeren. In einem
+     * Werkzeug, dessen erster Grundsatz "Keine stille Veraenderung"
+     * lautet, ist das der gefaehrlichere der beiden Faelle. */
+    if (cyl < 0 || head < 0 || head > 1) return UFT_ERROR_INVALID_PARAM;
+    if (cyl >= D71_TRACKS_PER_SIDE) return UFT_ERROR_INVALID_PARAM;
+
     int actual_track = (head == 0) ? (cyl + 1) : (cyl + 1 + D71_TRACKS_PER_SIDE);
     if (actual_track < 1 || actual_track > D71_TOTAL_TRACKS) return UFT_ERROR_INVALID_STATE;
 
-    int side_track = cyl + 1;
+    const int side_track = cyl + 1;
     int num_sectors = d71_sectors_per_track[side_track - 1];
 
     for (size_t s = 0; s < track->sector_count && (int)s < num_sectors; s++) {
