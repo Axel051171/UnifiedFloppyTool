@@ -399,6 +399,13 @@ static void scp_close(uft_disk_t* disk) {
 
 static uft_error_t scp_read_track(uft_disk_t* disk, int cylinder, int head,
                                    uft_track_t* track) {
+    /* MF-519: negative Koordinaten abweisen, BEVOR mit ihnen
+     * gerechnet oder indiziert wird. Eine Pruefung, die nur nach
+     * oben schaut (`if (cylinder >= tracks)`), laesst -1 durch — und
+     * `track_data[-1]` ist ein Zugriff vor dem Feld. Gefunden an
+     * opus_read_track() von tests/test_disk_open_fuzz.c. */
+    if (cylinder < 0 || head < 0) return UFT_ERROR_INVALID_PARAM;
+
     if (!disk || !track) return UFT_ERROR_NULL_POINTER;
     
     scp_data_t* pdata = disk->plugin_data;

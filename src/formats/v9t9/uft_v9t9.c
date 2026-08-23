@@ -44,6 +44,13 @@ static void v9t9_close(uft_disk_t *disk) {
 }
 
 static uft_error_t v9t9_read_track(uft_disk_t *disk, int cyl, int head, uft_track_t *track) {
+    /* MF-519: negative Koordinaten abweisen, BEVOR mit ihnen
+     * gerechnet oder indiziert wird. Eine Pruefung, die nur nach
+     * oben schaut (`if (cyl >= tracks)`), laesst -1 durch — und
+     * `track_data[-1]` ist ein Zugriff vor dem Feld. Gefunden an
+     * opus_read_track() von tests/test_disk_open_fuzz.c. */
+    if (cyl < 0 || head < 0) return UFT_ERROR_INVALID_PARAM;
+
     v9t9_pd_t *p = disk->plugin_data;
     if (!p || !p->file) return UFT_ERROR_INVALID_STATE;
     uft_track_init(track, cyl, head);
