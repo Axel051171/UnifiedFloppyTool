@@ -64,6 +64,50 @@ bool uft_fundus_add_from_chain(uft_fundus_t *f, const void *data, size_t size,
                                const uft_fundus_meta_t *extra,
                                char *out_path, size_t out_path_size);
 
+/**
+ * @brief Ablegen UND in der Kette vermerken, wohin es ging (MF-505).
+ *
+ * Die Gegenrichtung zu @ref uft_fundus_add_from_chain: danach findet man
+ * vom Artefakt zur Kette **und** von der Kette zum Artefakt.
+ *
+ * ── Die Reihenfolge steht fest ───────────────────────────────────────
+ *
+ * Erst das Artefakt, dann der Ketteneintrag. Andersherum ginge es nicht:
+ * der Eintrag muss das Artefakt BENENNEN, und sein Name steht erst nach
+ * dem Ablegen fest. Ihn vorher zu reservieren waere moeglich — dann aber
+ * behauptete die Kette einen Export, den ein fehlgeschlagenes Schreiben
+ * nie ausgefuehrt hat. Eine Kette, die etwas Falsches behauptet, ist
+ * schlimmer als eine unvollstaendige.
+ *
+ * ── Was daraus folgt ─────────────────────────────────────────────────
+ *
+ * Schlaegt der Ketteneintrag fehl (etwa weil die Kette voll ist), **bleibt
+ * das Artefakt liegen** und @p out_path nennt es. Ein forensisches
+ * Werkzeug loescht keine aufgenommenen Daten, um seine Buchfuehrung
+ * aufzuraeumen. Der Rueckgabewert ist trotzdem `false`: der Auftrag war
+ * "ablegen UND vermerken", und die Haelfte davon ist nicht erfuellt.
+ *
+ * Scheitert es dagegen VOR dem Schreiben — unbrauchbare Argumente, leere
+ * oder kaputte Kette —, bleibt gar nichts zurueck.
+ *
+ * ── Kein Zirkel ──────────────────────────────────────────────────────
+ *
+ * Das Artefakt zitiert den Kettenkopf, wie er VOR dem Anhaengen war; der
+ * neue Eintrag zeigt vorwaerts auf das Artefakt. Beides zusammen ist ein
+ * Weg, kein Kreis.
+ *
+ * @param out_path  Pfad des Artefakts. Wird auch bei `false` gefuellt,
+ *                  wenn das Artefakt geschrieben wurde — sonst waere die
+ *                  Aufnahme abgelegt und der Aufrufer wuesste nicht wo.
+ * @return true nur, wenn beides gelang
+ */
+bool uft_fundus_store_and_record(uft_fundus_t *f,
+                                 uft_provenance_chain_t *chain,
+                                 const void *data, size_t size,
+                                 const char *suffix,
+                                 const uft_fundus_meta_t *extra,
+                                 char *out_path, size_t out_path_size);
+
 #ifdef __cplusplus
 }
 #endif

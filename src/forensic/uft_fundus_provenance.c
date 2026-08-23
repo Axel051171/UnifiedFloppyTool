@@ -69,3 +69,56 @@ bool uft_fundus_add_from_chain(uft_fundus_t *f, const void *data, size_t size,
     return uft_fundus_add(f, data, size, suffix, &meta,
                           out_path, out_path_size);
 }
+
+/* ── Gegenrichtung: die Kette lernt, wohin ihr Ergebnis ging (MF-505) ── */
+
+bool uft_fundus_store_and_record(uft_fundus_t *f,
+                                 uft_provenance_chain_t *chain,
+                                 const void *data, size_t size,
+                                 const char *suffix,
+                                 const uft_fundus_meta_t *extra,
+                                 char *out_path, size_t out_path_size)
+{
+    if (!f || !chain || !data || size == 0) return false;
+
+    /* Den Bediener VOR dem Anhaengen holen: danach ist der Kopf der neue
+     * Eintrag, und der hat seinen Bediener erst noch bekommen. Auch hier
+     * gilt, dass die Kette die Quelle ist (MF-504). */
+    char op[sizeof(chain->entries[0].operator_id)];
+    op[0] = '\0';
+    if (chain->count > 0)
+        snprintf(op, sizeof(op), "%s",
+                 chain->entries[chain->count - 1].operator_id);
+
+    /* Erst ablegen. Das prueft zugleich die Kette und lehnt eine leere
+     * oder kaputte ab, bevor irgendetwas geschrieben wird. */
+    char path[UFT_FUNDUS_PATH_MAX];
+    path[0] = '\0';
+    if (!uft_fundus_add_from_chain(f, data, size, suffix, chain, extra,
+                                   path, sizeof(path)))
+        return false;
+
+    /* Ab hier ist das Artefakt geschrieben. Was auch immer jetzt
+     * schiefgeht: es bleibt liegen, und der Aufrufer erfaehrt wo. Ein
+     * forensisches Werkzeug loescht keine aufgenommenen Daten, um seine
+     * Buchfuehrung aufzuraeumen. */
+    if (out_path && out_path_size)
+        snprintf(out_path, out_path_size, "%s", path);
+
+    /* Nur den Dateinamen vermerken, nicht den ganzen Pfad: ein Fundus
+     * wird verschoben, kopiert, umbenannt — ein absoluter Pfad in der
+     * Kette waere danach eine Angabe, die ins Leere zeigt. Wo der Fundus
+     * liegt, weiss der, der ihn oeffnet. */
+    const char *name = path;
+    for (const char *p = path; *p; p++)
+        if (*p == '/' || *p == '\\') name = p + 1;
+
+    char desc[128];
+    snprintf(desc, sizeof(desc), "Fundus: %s", name);
+
+    if (uft_prov_add(chain, UFT_PROV_EXPORT, (const uint8_t *)data, size,
+                     desc, op[0] ? op : NULL) != 0)
+        return false;
+
+    return true;
+}

@@ -3938,6 +3938,52 @@ zweite braucht eine Bank-Sitzung mit echtem Laufwerk.
 
 ---
 
+### FUND-3 — man fand vom Artefakt zur Kette, aber nicht zurück (2026-08-23, MF-505) → ✓ BEHOBEN
+
+MF-504 löste die Doppelung in **eine** Richtung: ein Artefakt zitiert
+seine Herkunftskette. Die Gegenrichtung fehlte — die Kette wusste nicht,
+in welchem Fundus ihr Ergebnis liegt. Wer eine Kette in der Hand hatte,
+musste den Fundus danach absuchen.
+
+`uft_fundus_store_and_record()` legt ab **und** vermerkt es: die Kette
+bekommt einen `UFT_PROV_EXPORT`-Eintrag, der das Artefakt benennt.
+
+**Die Reihenfolge steht fest, und zwar aus einem Grund.** Erst das
+Artefakt, dann der Ketteneintrag — der Eintrag muss das Artefakt
+*benennen*, und sein Name steht erst nach dem Ablegen fest. Ihn vorher zu
+reservieren wäre möglich; dann aber behauptete die Kette einen Export, den
+ein fehlgeschlagenes Schreiben nie ausgeführt hat. **Eine Kette, die etwas
+Falsches behauptet, ist schlimmer als eine unvollständige.**
+
+**Daraus folgt der Fall, der Daten kostet, wenn man ihn falsch macht.**
+Schlägt der Ketteneintrag fehl — etwa weil die Kette ihre 256 Einträge
+voll hat —, ist das Artefakt schon geschrieben. Es dann zu löschen wäre
+Buchführung auf Kosten von Daten. Es **bleibt liegen**, `out_path` nennt
+es, und der Rückgabewert ist trotzdem `false`: der Auftrag war „ablegen
+UND vermerken", und die Hälfte davon ist nicht erfüllt. Scheitert es
+dagegen *vor* dem Schreiben (leere oder kaputte Kette), bleibt gar nichts
+zurück — beide Fälle haben einen eigenen Test.
+
+**Kein Zirkel.** Das Artefakt zitiert den Kettenkopf, wie er *vor* dem
+Anhängen war; der neue Eintrag zeigt vorwärts auf das Artefakt. Ein
+Test prüft ausdrücklich, dass der neue Kopf **nicht** im Manifest steht —
+sonst müsste er das Artefakt enthalten, das ihn zitiert.
+
+**Nur der Dateiname, nicht der Pfad.** Ein Fundus wird verschoben,
+kopiert, umbenannt; ein absoluter Pfad in der Kette wäre danach eine
+Angabe, die ins Leere zeigt. Wo der Fundus liegt, weiß der, der ihn
+öffnet.
+
+**Die Rundreise ist getestet:** Manifest → Kettenhash → Eintrag in der
+Kette → und der Eintrag danach ist der Export, der auf dasselbe Artefakt
+zeigt. Das ist die Zusicherung, die den Baustein rechtfertigt.
+
+**Verdrahtet und geprüft:** `tests/test_fundus_roundtrip.c` (7 Tests),
+6 Rotbeweise feuern auf genau den benannten Tests, 236/236 ctest grün,
+qmake-Release baut und linkt.
+
+---
+
 ### FUND-2 — zwei Stellen führten Herkunft, nebeneinander (2026-08-23, MF-504) → ✓ BEHOBEN
 
 Mit dem Fundus (FUND-1) führten zwei Dinge Herkunft: die
@@ -3983,10 +4029,9 @@ Begründung im Code, damit sie niemand für redundant hält. Lokal ließ sich
 das nicht zeigen: dieser MinGW-Installation fehlt `libubsan`; der
 Sanitizer-Lauf der CI ist die Stelle, an der so etwas auffiele.
 
-**Noch offen:** die Gegenrichtung. Die Kette weiß nicht, in welchem Fundus
-ihr Ergebnis liegt — ein `UFT_PROV_EXPORT`-Eintrag mit dem Artefaktpfad
-wäre der Gegenzug. Solange nur eine Richtung verdrahtet ist, findet man
-vom Artefakt zur Kette, aber nicht umgekehrt.
+~~**Noch offen:** die Gegenrichtung.~~ — **erledigt in MF-505** (FUND-3):
+`uft_fundus_store_and_record()` hängt einen `UFT_PROV_EXPORT`-Eintrag an,
+der das Artefakt benennt. Beide Richtungen sind jetzt begehbar.
 
 **Verdrahtet und geprüft:** `tests/test_fundus_provenance.c` (7 Tests),
 6 feuernde Rotbeweise + 1 begründete Nicht-Widerlegbarkeit, 235/235 ctest
