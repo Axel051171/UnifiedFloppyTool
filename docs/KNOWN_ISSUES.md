@@ -3958,11 +3958,43 @@ Stelle wirklich ist. Neu: `src/flux/uft_flux_sync_search.c`.
 mit der gemessenen Zellendauer, in eine eigene Spur, und behält den besseren
 Durchlauf. Er kann also gewinnen, aber nichts kaputtmachen.
 
-| Fall | vorher | nachher |
-|---|---|---|
-| 1200 ns, 20 % Zittern, automatisch | 0 | 7 (= so viel wie mit richtiger Vorgabe) |
-| Spur mit 1200 ns, Nennwert angenommen | 0 | 11 |
-| Anfang um 80 % gedehnt, Nennwert angenommen | 2 | 9 (= so viel wie mit richtiger Vorgabe) |
+> **Korrektur 2026-08-23 (MF-494).** Die zuerst hier stehende Tabelle war
+> in zwei von drei Zeilen falsch zugeschrieben und in der dritten zu
+> großzügig formuliert. Sie lautete:
+>
+> | Fall | vorher | nachher |
+> |---|---|---|
+> | ~~1200 ns, 20 % Zittern, automatisch~~ | ~~0~~ | ~~7~~ |
+> | ~~Spur mit 1200 ns, Nennwert angenommen~~ | ~~0~~ | ~~11~~ |
+> | ~~Anfang um 80 % gedehnt~~ | ~~2~~ | ~~9~~ |
+>
+> Nachgemessen wurde, **ob der zweite Durchlauf überhaupt läuft** (er läuft
+> nur, wenn der gemessene Takt vom gewählten um mehr als 2 % abweicht) und
+> **wie viele Sektoren eine heile Prüfsumme haben** statt nur gefunden zu
+> sein — die Unterscheidung aus MF-466: Übereinstimmung ist keine
+> Verifikation.
+
+| Fall | gewählt | 2. Lauf? | ohne (gef./heil) | mit (gef./heil) |
+|---|---|---|---|---|
+| 1200 ns, 20 % Zittern | 2000 (Nennwert) | **ja** | 0 / 0 | **7 / 0** |
+| zwei Tempi (35 % ×1,7) | 2000 (Nennwert) | ja | 8 / 7 | 8 / 7 |
+| 1200 ns sauber | 1200 (Histogramm) | nein | 11 / 11 | 11 / 11 |
+| Anfang um 80 % gedehnt | 1200 (Histogramm) | nein | 9 / 9 | 9 / 9 |
+
+**Was davon MF-492 gehört, ehrlich:** genau die erste Zeile — und dort
+werden Sektoren **gefunden, nicht gerettet**. Bei 20 % Zittern trägt keiner
+der sieben eine heile Prüfsumme. Forensisch ist das trotzdem etwas wert
+(die Sektorpositionen sind Befund), aber es ist keine Datenrettung, und die
+ursprüngliche Formulierung legte das nahe.
+
+Zeile 3 und 4 gehören dem **Histogramm (MF-488)** — dort läuft der zweite
+Durchlauf gar nicht. Zeile 2 läuft, ändert aber nichts: 2000 gegen
+gemessene 2040 liegt im Fangbereich der PLL, und die Auswahl behält den
+ersten Durchlauf.
+
+Der Nutzen für die Datenrettung kommt erst mit der Dewarp-Stufe, die auf
+dieser Messung aufsetzt (Mammut 2.2, `docs/MAMMUT_PLAN.md`): auf der
+Zwei-Tempo-Spur 7 → 10 heile Sektoren.
 
 **Drei Korrekturen, die erst die Tests erzwungen haben** — jede eine, die
 ohne Gegenprobe still danebengegangen wäre:

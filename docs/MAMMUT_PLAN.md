@@ -65,6 +65,21 @@ Punkt 3 des Vorschlags (§2.1.3, „Ordinal-Fit schlägt 96,3 % vor" in der
 Feineinsteller-Anzeige) ist **noch offen** — die Messung liegt vor
 (`uft_sync_median_clock()`), die GUI-Anzeige fehlt.
 
+**Nachgemessen und richtiggestellt (MF-494).** Die erste Fassung von
+FLUX-14 schrieb MF-492 drei Erfolge zu. Nachgeprüft, wann der zweite
+Durchlauf *überhaupt läuft* und wie viele Sektoren eine *heile Prüfsumme*
+haben, bleibt davon einer:
+
+- 1200 ns mit 20 % Zittern: 0 → **7 gefundene** Sektoren, davon **0 heile**.
+  Gefunden ist nicht gerettet (MF-466).
+- Zwei weitere Zeilen gehörten dem **Histogramm** (MF-488) — dort läuft der
+  zweite Durchlauf gar nicht.
+- Eine Zeile läuft, ändert aber nichts.
+
+Die Sync-Suche selbst bleibt davon unberührt (12 Tests, gegen den belegten
+Dekoder abgeglichen). Ihr Wert für die **Datenrettung** entsteht erst als
+Startwert für 2.2 Dewarp — siehe dort.
+
 ---
 
 ## 2. Sofort machbar (ohne Fremdquelle, ohne Fundus, ohne VFS)
@@ -85,6 +100,32 @@ schon vor — eine Spur mit zwei Geschwindigkeiten (Anfang um 70–80 %
 gedehnt) verliert Sektoren, die kein einzelner Taktwert rettet, weil es
 *keinen richtigen einzelnen Wert gibt*. Gemessen: 3 Sektoren mit der
 besten festen Vorgabe. Das ist exakt Dewarps Aufgabe.
+
+Prototyp-Messung (Wegwerf-Code, Vorwärts-/Rückwärts-EWMA über dem
+Sofort-Takt `d/k`, k ∈ {2,3,4}), Spalten *gefunden / heil / inhaltlich
+falsch trotz heiler Prüfsumme*:
+
+| Fall | ohne | α = 0,01 | α = 0,05 | α = 0,20 |
+|---|---|---|---|---|
+| 2000 sauber | 11/11/0 | 11/11/0 | 11/11/0 | 11/11/0 |
+| 1200, 4 % Zittern | 10/10/0 | 10/10/0 | 10/10/0 | 10/10/0 |
+| 1200, 20 % Zittern | 7/0/0 | 7/0/0 | 7/0/0 | **10**/0/0 |
+| zwei Tempi (35 % ×1,7) | 8/7/0 | 8/7/0 | **11/10**/0 | **11/10**/0 |
+| Rampe +25 % + 6 % Zittern | 11/11/0 | 11/11/0 | 10/10/**0** | 10/10/0 |
+
+Drei Schlüsse, alle aus dieser Tabelle:
+
+1. **Dewarp rettet Daten**, wo die Sync-Suche allein nur findet: auf der
+   Zwei-Tempo-Spur 7 → 10 **heile** Sektoren.
+2. **Es gibt kein sicheres festes α.** Bei 0,05/0,20 kostet die Rampe einen
+   Sektor. Das ist die Überanpassung, die flux-analyze im Kommentar
+   erwähnt — hier gemessen statt zitiert. Konsequenz für die Umsetzung:
+   dieselbe *Bester-Durchlauf*-Auswahl wie in MF-492, damit Dewarp
+   gewinnen, aber nichts kosten kann.
+3. **Die dritte Spalte ist durchgehend 0.** Dewarp hat in keinem
+   gemessenen Fall einen Sektor mit heiler Prüfsumme und falschem Inhalt
+   erzeugt. Das ist die Bedingung, ohne die die Stufe nicht in den
+   Lesepfad dürfte.
 
 ---
 

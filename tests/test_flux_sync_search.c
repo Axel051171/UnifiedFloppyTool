@@ -399,20 +399,23 @@ TEST(the_median_of_the_finds_is_what_counts_not_the_first_one)
     ASSERT(uft_sync_median_clock(h, 0) == 0.0);
 }
 
-TEST(the_decoder_recovers_a_track_the_pll_alone_loses)
+TEST(the_decoder_finds_sectors_the_pll_alone_never_sees)
 {
-    /* Der eigentliche Punkt, am automatischen Pfad gemessen.
+    /* Der eigentliche Punkt, am automatischen Pfad gemessen — und mit dem
+     * Wort, das die Messung hergibt: GEFUNDEN, nicht gerettet.
      *
      * Eine Spur mit 1200 ns je Zelle und 20 % Zittern: das Histogramm
      * (MF-488) verweigert hier die Auskunft — bei diesem Zittern sieht der
      * Strom nicht mehr nach sauberem MFM aus —, und der Nennwert 2000 ns
      * liegt mit dem Verhaeltnis 1,67 ausserhalb des gemessenen PLL-Fang-
-     * bereichs von 0,80…1,50 (MF-487). Genau hier greift die Sync-Suche.
+     * bereichs von 0,80…1,50 (MF-487). Ohne die Sync-Suche kommt hier
+     * **kein einziger** Sektor zurueck.
      *
-     * Der Massstab ist nicht eine Wunschzahl, sondern derselbe Strom mit
-     * ausdruecklich RICHTIGER Vorgabe. Das Zittern kostet Sektoren, und das
-     * soll es auch — verlangt wird, dass die Automatik dabei nicht
-     * schlechter ist als die richtige Vorgabe. */
+     * Ehrlich dazu (MF-494): keiner der gefundenen Sektoren traegt bei
+     * diesem Zittern eine heile Pruefsumme. Die Sektorpositionen sind ein
+     * forensischer Befund, die Daten sind es nicht. Wer hier „gerettet"
+     * liest, liest mehr, als gemessen wurde — deshalb heisst der Test
+     * jetzt so, wie er heisst. */
     uint8_t *adf = make_source_adf();
     ASSERT(adf != NULL);
     uint32_t *iv = (uint32_t *)malloc(MAXCELLS * sizeof(uint32_t));
@@ -421,13 +424,14 @@ TEST(the_decoder_recovers_a_track_the_pll_alone_loses)
     size_t n = build_intervals(adf, 1200, 20.0, 7, iv, MAXCELLS);
     ASSERT(n > 1000);
 
-    size_t automatic = decode_count(iv, n, 0);
-    size_t yardstick = decode_count(iv, n, 1200);
-    if (automatic != yardstick)
-        printf("\n        automatisch %zu, mit richtiger Vorgabe %zu\n",
-               automatic, yardstick);
-    ASSERT(yardstick >= 5);        /* das Zittern kostet, aber nicht alles */
-    ASSERT(automatic >= yardstick);
+    /* Ohne Rettung: der Nennwert ausdruecklich vorgegeben — eine Vorgabe
+     * sperrt den zweiten Durchlauf, das ist hier genau der Vergleichsfall. */
+    size_t without = decode_count(iv, n, 2000);
+    size_t with    = decode_count(iv, n, 0);
+    if (!(without == 0 && with > 0))
+        printf("\n        ohne Rettung %zu, mit %zu\n", without, with);
+    ASSERT(without == 0);
+    ASSERT(with >= 5);
 
     free(iv); free(adf);
 }
@@ -444,7 +448,7 @@ int main(void)
     RUN(an_overflow_placeholder_breaks_the_hit_that_contains_it);
     RUN(a_uniform_gap_yields_marks_not_one_per_interval);
     RUN(the_median_of_the_finds_is_what_counts_not_the_first_one);
-    RUN(the_decoder_recovers_a_track_the_pll_alone_loses);
+    RUN(the_decoder_finds_sectors_the_pll_alone_never_sees);
     RUN(a_good_track_is_not_touched_by_the_second_pass);
     RUN(an_empty_track_stays_empty);
     printf("\nResults: %d passed, %d failed\n", _pass, _fail);
