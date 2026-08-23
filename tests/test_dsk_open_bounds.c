@@ -132,6 +132,7 @@ static void expect_survives(const char *name)
                     uft_track_t trk;
                     memset(&trk, 0, sizeof(trk));
                     (void)plug->read_track(disk, CYL[c], HEAD[h], &trk);
+                    uft_track_cleanup(&trk);   /* MF-525 */
                 }
         }
         uft_disk_close(disk);

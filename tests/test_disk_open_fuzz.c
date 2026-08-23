@@ -263,6 +263,7 @@ static void run_open_path(size_t size)
                 n_track_ok++;
             else
                 n_track_null++;
+            uft_track_cleanup(&trk);   /* MF-525 */
         }
     }
 
@@ -422,10 +423,18 @@ static void run_one_plugin_open(const uft_format_plugin_t *p, size_t idx,
             for (size_t h = 0; h < sizeof(HEAD) / sizeof(HEAD[0]); h++) {
                 uft_track_t trk;
                 memset(&trk, 0, sizeof(trk));
+                /* MF-525: uft_track_add_sector() alloziert das
+                 * sectors-Feld UND je Sektor die Daten. Wer eine
+                 * Spur liest und nicht aufraeumt, leckt sie. Diese
+                 * Schleife liest tausende — ohne cleanup war der
+                 * groesste Posten des LeakSanitizer-Berichts mein
+                 * eigener Test, und er verdeckte damit den echten
+                 * Rueckstand. */
                 if (p->read_track(disk, CYL[c], HEAD[h], &trk) == UFT_OK)
                     n_track_ok++;
                 else
                     n_track_null++;
+                uft_track_cleanup(&trk);
             }
     }
     g_stage = "close";
@@ -560,6 +569,7 @@ static int replay(const char *path)
             memset(&trk, 0, sizeof(trk));
             uft_error_t e = plug->read_track(disk, CYL[c], HEAD[h], &trk);
             printf("%d\n", (int)e);
+            uft_track_cleanup(&trk);   /* MF-525 */
         }
 
     printf("  [5] uft_disk_close ... ");

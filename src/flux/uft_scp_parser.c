@@ -308,6 +308,23 @@ void uft_scp_close(uft_scp_ctx_t* ctx)
         ctx->file = NULL;
     }
 
+    /* MF-525: `scp_parse_extension_footer()` legt diese beiden per
+     * `strdup` an, wenn die Datei einen Erweiterungs-Footer traegt.
+     * `uft_scp_close()` hat sie nie freigegeben — jede geoeffnete
+     * SCP-Datei mit Footer leckte zwei Zeichenketten. In einer
+     * Oberflaeche, die viele Aufnahmen nacheinander oeffnet, summiert
+     * sich das.
+     *
+     * Gefunden im LeakSanitizer-Volllauf der CI (MF-517): 70 Allokationen
+     * unter `uft_scp_open`, dazu 2 x 35 unter
+     * `scp_parse_extension_footer`. Das memset darunter loeschte die
+     * Zeiger, statt sie freizugeben — es machte das Leck damit sogar
+     * unauffindbar. */
+    free(ctx->creator_string);
+    ctx->creator_string = NULL;
+    free(ctx->app_name);
+    ctx->app_name = NULL;
+
     memset(&ctx->header, 0, sizeof(ctx->header));
     memset(ctx->track_offsets, 0, sizeof(ctx->track_offsets));
     memset(&ctx->footer, 0, sizeof(ctx->footer));

@@ -183,6 +183,9 @@ static void run_one(const char *name)
     }
     printf("  fertig\n");
 
+    /* MF-525: die gelesene Spur gehoert freigegeben — sonst leckt
+     * jeder Durchgang das sectors-Feld samt Sektordaten. */
+    uft_track_cleanup(&trk);
     uft_disk_close(disk);
     (void)base_len;
 }
