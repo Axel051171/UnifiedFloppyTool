@@ -544,6 +544,11 @@ foreach(test_source ${TEST_SOURCES})
         target_include_directories(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/tests/flux_gen/amigados
             ${CMAKE_SOURCE_DIR}/include/uft/flux)
+    elseif(${test_name} STREQUAL "test_forensic_audit_count")
+        # MF-507: Audit-Zaehler statt Zeiger-Arithmetik
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/recovery/uft_forensic_recovery.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
     elseif(${test_name} STREQUAL "test_fundus_resume")
         # MF-506: die naechste Sitzung weiss, was die letzte wusste
         target_sources(${test_name} PRIVATE

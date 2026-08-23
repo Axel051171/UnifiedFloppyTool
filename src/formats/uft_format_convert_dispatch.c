@@ -12,6 +12,17 @@
 #include "uft/core/uft_loss_report.h"
 #include "uft/analysis/uft_protection_probe.h"  /* content-based loss (MF-328) */
 
+#ifdef _WIN32
+/* MF-507: `GetTempPathA()` wurde weiter unten benutzt, ohne dass dieser
+ * Header je eingebunden war. Ohne Deklaration nimmt C `int` als
+ * Rueckgabetyp an; richtig ist `DWORD`. Auf x86-64 Windows passt das
+ * zufaellig zusammen, und deshalb ist es nie aufgefallen — undefiniert
+ * ist es trotzdem, und mit `-Werror=implicit-function-declaration`
+ * (Voreinstellung in GCC 14+ und in Clang) baut die Datei gar nicht mehr.
+ * Ein Build-Bruch, der auf einen Werkzeug-Wechsel wartet. */
+#  include <windows.h>
+#endif
+
 // ============================================================================
 // API Implementation
 // ============================================================================

@@ -189,7 +189,18 @@ void uft_forensic_log(
     fprintf(out, "\n");
     fflush(out);
     
-    session->audit_entries++;
+    /* MF-507: `audit_count`, nicht `audit_entries`.
+     *
+     * Hier stand `session->audit_entries++`. Das Feld ist ein `void *`
+     * ("opaque list, may be NULL"), also zaehlte der Ausdruck nicht,
+     * sondern schob den ZEIGER je Logzeile um ein Byte weiter — GCC
+     * erlaubt das als Erweiterung, gemeint war es nie. Wird die Liste
+     * jemals angelegt und freigegeben, zeigt der Zeiger dann nicht mehr
+     * auf ihren Anfang: Heap-Korruption ausgerechnet im Audit-Pfad.
+     *
+     * Gefunden mit `-Wpointer-arith`, nicht von einem Test — kein Test
+     * hatte diesen Pfad je auf seine Nebenwirkung angesehen. */
+    session->audit_count++;
 }
 
 // ============================================================================

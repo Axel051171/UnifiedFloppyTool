@@ -354,6 +354,26 @@ int uft_td0_read(const char* filename, uft_td0_image_t* img);
  */
 int uft_td0_read_mem(const uint8_t* data, size_t size, uft_td0_image_t* img);
 
+/* Vorwaertsdeklaration auf DATEI-Ebene (MF-507).
+ *
+ * Sie stand vorher nur in der Parameterliste unten — und ein Struktur-Tag,
+ * das dort zum ersten Mal auftaucht, gilt nach C-Regeln nur fuer diesen
+ * einen Prototyp. `struct uft_imd_image_t` war damit ein ANDERER Typ als
+ * der aus `uft_imd.h`, und der Uebersetzer meldete am Aufrufer
+ * "incompatible pointer type".
+ *
+ * Das Ergebnis war schlimmer als die Warnung: der Prototyp beschrieb
+ * einen Parametertyp, den es sonst nirgends gibt, also konnte die
+ * Typpruefung KEINEN Aufrufer pruefen. Wer hier etwas Falsches uebergibt,
+ * faellt nicht auf.
+ *
+ * Auf Datei-Ebene meint der Tag denselben Typ wie in `uft_imd.h`, sobald
+ * beide Header in derselben Uebersetzungseinheit liegen — und ohne
+ * `uft_imd.h` bleibt er ein unvollstaendiger Typ, was fuer einen Zeiger
+ * genuegt. Ein Include waere die andere Loesung; sie zoege den ganzen
+ * IMD-Header in jede Datei, die nur TD0 lesen will. */
+struct uft_imd_image_t;
+
 /**
  * @brief Convert TD0 to IMD format
  */
