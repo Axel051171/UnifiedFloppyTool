@@ -621,18 +621,32 @@ static uft_error_t apridisk_read_track(uft_disk_t *disk, int cyl, int head,
     /* Copy track data */
     track->cylinder = cyl;
     track->head = head;
-    track->sector_count = src->sector_count;
     track->encoding = src->encoding;
 
-    for (uint8_t s = 0; s < src->sector_count; s++) {
-        track->sectors[s] = src->sectors[s];
-        if (src->sectors[s].data) {
-            track->sectors[s].data = malloc(src->sectors[s].data_size);
-            if (track->sectors[s].data) {
-                memcpy(track->sectors[s].data, src->sectors[s].data,
-                       src->sectors[s].data_size);
-            }
-        }
+    /* MF-516: hier stand `track->sectors[s] = src->sectors[s];`.
+     *
+     * `uft_track_t.sectors` ist ein DYNAMISCHER Zeiger, kein Feld:
+     *
+     *     uft_sector_t*  sectors;
+     *     size_t         sector_count, sector_capacity;
+     *
+     * `uft_track_init()` legt ihn NICHT an — es nullt die Struktur und
+     * setzt Zylinder und Kopf. Der Zielpuffer kommt vom Aufrufer und ist
+     * genullt. `track->sectors` war hier also bei JEDEM erfolgreichen
+     * Lesen NULL, und die Schleife schrieb hindurch. Dieses read_track
+     * kann nie funktioniert haben.
+     *
+     * `uft_track_add_sector()` legt den Puffer an, laesst ihn wachsen und
+     * kopiert die Sektordaten tief — genau das, was die Schleife von Hand
+     * versuchte, nur ohne den Nullzeiger.
+     *
+     * Derselbe Rumpf stand woertlich in 12 Plugins. Alle 12 sind
+     * geaendert; `scripts/audit_read_track_contract.py` meldet den 13ten.
+     * Gefunden hat es tests/test_disk_open_fuzz.c, indem es eine gueltige
+     * D81-Datei an MGT weiterreichte, dessen Sonde zugestimmt hatte. */
+    for (size_t s = 0; s < src->sector_count; s++) {
+        uft_error_t add_err = uft_track_add_sector(track, &src->sectors[s]);
+        if (add_err != UFT_OK) return add_err;
     }
 
     return UFT_OK;

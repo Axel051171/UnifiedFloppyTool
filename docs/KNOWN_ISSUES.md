@@ -3938,6 +3938,100 @@ zweite braucht eine Bank-Sitzung mit echtem Laufwerk.
 
 ---
 
+### FUZZ-2 — zwoelf `read_track` schrieben durch einen Nullzeiger (2026-08-23, MF-515/516) -> ✓ BEHOBEN
+
+**Correctness.** Der Fuzzer aus MF-512 bekam zwei Erweiterungen, und beide
+fanden sofort etwas.
+
+**(a) Abdeckung je Plugin.** Ueber `uft_disk_open()` gewinnt je Eingabe nur
+**ein** Plugin die Rangfolge — die anderen 136 saehen ihr `open` nie, egal
+wie lange der Fuzzer laeuft. Jetzt bekommt **jedes Plugin, dessen eigene
+Sonde zugestimmt hat**, sein `open` auf genau dieser Datei. Das ist keine
+Umgehung der Rangfolge, sondern die Pruefung des Vertrags: wer ja sagt,
+muss zurechtkommen.
+
+**(b) Mutation echter Dateien.** Zufallsbytes kommen selten an einer Sonde
+vorbei. Die 12 Korpusdateien unter `tests/corpus_free/` (VICE, atrcopy,
+xdftool, Greaseweazle) werden jetzt gezielt beschaedigt: `roh`, `kopf-FF`,
+`kopf-00`, `halb`, `300B`, `bits`, `rumpf`.
+
+**Eigener Messfehler zuerst.** `MAX_BLOB` war 256 KB — acht der zwoelf
+Korpusdateien wurden damit **still abgeschnitten**, ihre Sonden lehnten die
+Truemmer folgerichtig ab, und der Bericht meldete "D71 D80 D81 D82 nie
+erreicht", obwohl fuer genau diese Formate echte Dateien im Repo liegen.
+Eine stille Kuerzung liest sich wie Abdeckung, die es nicht gibt. Der Lauf
+sagt es jetzt ausdruecklich, wenn eine Datei nicht hineinpasst.
+
+**MF-515 — `edsk_parser_read_track` las ~29 KB hinter das Feld.**
+Die Pruefung verglich `track_num`/`side` gegen die Geometrie, die die
+**Datei behauptet** — nie gegen das Feld, das damit indiziert wird
+(`track_offsets[MAX_TRACKS]`, 204 Eintraege). Bei `num_sides=196` und
+`track_num=39` ergab das Index **7644**. Dazu kamen negative Werte durch:
+`-1 >= 180` ist falsch. `edsk_parser_open()` klemmt bereits auf
+`MAX_TRACKS`, wenn es die Tabelle baut — genau deshalb musste dieselbe
+Schranke beim Lesen stehen. Belegt in
+`tests/crashers/dsk_511_edsk_parser.img`.
+
+**MF-516 — zwoelf `read_track` schrieben durch NULL.**
+`uft_track_t.sectors` ist ein **dynamischer Zeiger** mit
+`sector_capacity`, kein Feld. `uft_track_init()` legt ihn **nicht** an; es
+nullt die Struktur. Gefuellt wird ueber `uft_track_add_sector()`, das bei
+Bedarf realloziert und die Sektordaten tief kopiert.
+
+Zwoelf Plugins taten stattdessen dies:
+
+```c
+    track->sector_count = src->sector_count;
+    for (uint8_t s = 0; s < src->sector_count; s++) {
+        track->sectors[s] = src->sectors[s];      /* sectors == NULL */
+```
+
+Woertlich derselbe kopierte Rumpf, zwoelfmal. Bei **jedem erfolgreichen
+Lesen** ein Schreiben durch einen Nullzeiger — diese zwoelf `read_track`
+koennen nie funktioniert haben:
+
+`apridisk` · `cfi` · `cpm_diskdef` · `hardsector` · `logical` · `mgt` ·
+`myz80` · `nanowasp` · `opus` · `posix` · `qrst` · `rcpmfs`
+
+Gefunden wurde es, weil der Fuzzer eine **gueltige, unveraenderte
+D81-Datei** an MGT weiterreichte, dessen Sonde zugestimmt hatte (819200
+Byte passen auf mehrere Formate). Alle zwoelf gehen jetzt ueber
+`uft_track_add_sector()`.
+
+**Auch das Messwerkzeug musste korrigiert werden.** Die erste Fassung von
+`scripts/audit_read_track_contract.py` meldete **18** Faelle, darunter
+`dsk_read_track`, das nachweislich laeuft: es fasst nach
+`uft_format_add_sector()` in `sectors[]` nach, was korrekt ist. Nach der
+Unterscheidung: **12**. Dieselbe Lehre wie beim Verwaisten-Tor (306 gegen
+228) und beim Banner-Audit (12 gegen 6) — ein Messwerkzeug, das falsch
+misst, ist schlimmer als keines.
+
+**Was jetzt gilt:** `scripts/audit_read_track_contract.py` ist die **25.
+Kategorie** in `check_consistency.py`. Der dreizehnte Fall laesst den
+Commit rot werden.
+
+**Der Nenner, den es vorher nicht gab.** "0 Abstuerze" ist ohne ihn ein
+Satz ohne Bezugsgroesse:
+
+| | |
+|---|---|
+| registrierte Plugins | 137 |
+| Sonde hat je zugestimmt | **44** (93 nie) |
+| `open()` wurde je gerufen | **42** (95 nie) |
+| `open()` war je erfolgreich | 41 |
+| Eingaben | 293 (209 synthetisch + 84 Korpus-Mutanten) |
+| `probe`-Aufrufe | 240846 |
+| Abstuerze nach den Korrekturen | **0** |
+
+**Also ausdruecklich: 93 der 137 Plugins hat dieser Fuzzer nie erreicht.**
+In den 44, die er erreicht hat, lagen fuenf Speicherfehler. Die Aussage
+lautet nicht "das Werkzeug ist sicher", sondern "auf 32 % der Plugins
+stuerzt es nach fuenf Korrekturen nicht mehr ab". Der Weg zu den
+restlichen 93 fuehrt ueber gezielt gebaute Eingaben je Format, also ueber
+Korpusarbeit — `VERIFICATION_PLAN.md`.
+
+---
+
 ### FUZZ-1 — drei Speicherfehler im DSK-Oeffnungspfad, gefunden beim ersten Lauf (2026-08-23, MF-512/513) -> ✓ BEHOBEN
 
 **Correctness / Security.** `tests/test_disk_open_fuzz.c` (neu, MF-512)

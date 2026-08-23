@@ -280,13 +280,41 @@ int edsk_parser_read_track(
         return -1;
     }
     
-    /* Validate parameters */
+    /* Validate parameters.
+     *
+     * MF-515: hier stand nur die obere Schranke gegen die Geometrie, die
+     * die DATEI behauptet — nicht gegen das Feld, das sie indiziert.
+     * `track_offsets` und `disk_info.track_sizes` fassen MAX_TRACKS (204)
+     * Eintraege; `num_tracks` und `num_sides` sind je ein Byte aus der
+     * Datei und duerfen bis 255. Bei num_sides=196 und track_num=39 ergab
+     * das den Index 7644 in ein Feld von 204 — ein Lesen rund 29 KB
+     * dahinter.
+     *
+     * `edsk_parser_open()` klemmt bereits auf MAX_TRACKS, wenn es die
+     * Offset-Tabelle baut. Genau deshalb MUSS hier dieselbe Schranke
+     * stehen: alles ab MAX_TRACKS wurde nie gefuellt, existiert also
+     * nicht, egal was der Kopf behauptet.
+     *
+     * Und negative Werte kamen durch: `-1 >= 180` ist falsch, also lief
+     * der Index auf -196. Ein Vergleich, der nur nach oben prueft, prueft
+     * bei vorzeichenbehafteten Werten nichts.
+     *
+     * Gefunden von tests/test_disk_open_fuzz.c, belegt in
+     * tests/crashers/dsk_511_edsk_parser.img (num_tracks=180,
+     * num_sides=196). */
+    if (track_num < 0 || side < 0) {
+        return -1;
+    }
     if (track_num >= ctx->disk_info.num_tracks || side >= ctx->disk_info.num_sides) {
         return -1;
     }
-    
+
     /* Calculate track index */
-    int track_idx = track_num * ctx->disk_info.num_sides + side;
+    long idx = (long)track_num * (long)ctx->disk_info.num_sides + (long)side;
+    if (idx >= MAX_TRACKS) {
+        return -1;
+    }
+    int track_idx = (int)idx;
     uint32_t track_offset = ctx->track_offsets[track_idx];
     
     /* Check for empty track (EDSK) */

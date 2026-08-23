@@ -674,6 +674,14 @@ def main() -> int:
         # eingefroren; was das Tor verhindert, ist die 38ste.
         import shared_guard_gate as _guards
         all_errors.append(("neue Waechter-Kollisionen", _guards.check(repo)))
+        # read_track-Vertrag (MF-516). `uft_track_t.sectors` ist ein
+        # dynamischer Zeiger; uft_track_init() legt ihn NICHT an. Wer
+        # direkt `track->sectors[s] = ...` schreibt, schreibt durch NULL —
+        # so ein read_track kann nie funktioniert haben. Zwoelf Plugins
+        # taten es, woertlich derselbe kopierte Rumpf. Das Tor verhindert
+        # den dreizehnten.
+        import audit_read_track_contract as _rtc
+        all_errors.append(("read_track schreibt durch NULL", _rtc.check(repo)))
 
     total = sum(len(e) for _, e in all_errors)
     print(f"Consistency check ({len(all_errors)} categories, root={repo}):")

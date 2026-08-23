@@ -53,7 +53,10 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <string.h>
+#include <signal.h>
+#include <unistd.h>
 
 /* ── Gesetzter Zufall, plattformgleich ─────────────────────────────────── */
 
@@ -76,7 +79,17 @@ static uint32_t rng_next(void)
 
 /* ── Eingabe-Erzeugung ─────────────────────────────────────────────────── */
 
-#define MAX_BLOB (256 * 1024)
+/* Gross genug fuer die groesste Korpusdatei (gw_amigados.hfe, 2049024 B).
+ *
+ * War 256 KB. Damit schnitt `fread(blob, 1, MAX_BLOB, ...)` acht der
+ * zwoelf Korpusdateien still ab — und ihre Sonden lehnten die Truemmer
+ * folgerichtig ab. Der erste Lauf meldete deshalb "D71 D80 D81 D82 ... nie
+ * erreicht", obwohl fuer genau diese Formate echte Dateien im Repo liegen.
+ *
+ * Eine stille Kuerzung liest sich in der Auswertung wie Abdeckung, die es
+ * nicht gibt. Wird eine Datei doch groesser als dieser Puffer, sagt der
+ * Lauf das jetzt ausdruecklich. */
+#define MAX_BLOB (4 * 1024 * 1024)
 
 static uint8_t blob[MAX_BLOB];
 
@@ -142,28 +155,63 @@ static const struct { const char *sig; size_t len; const char *label; } SIGS[] =
 };
 #define N_SIGS ((int)(sizeof(SIGS) / sizeof(SIGS[0])))
 
-/* ── Der Produktionspfad ───────────────────────────────────────────────── */
+/* ── Absturz-Melder ────────────────────────────────────────────────────── */
 
+/* Was gerade laeuft. Ein Fuzzer, der abstuerzt und nicht sagt woran, kostet
+ * pro Fund einen kompletten Instrumentierungs-Durchgang. Der Handler unten
+ * schreibt diese Angabe auf stderr, bevor der Prozess faellt — damit steht
+ * in JEDEM Absturz, auch in der CI, welche Eingabe und welches Plugin. */
 static const char *tmp_path = "uft_fuzz_tmp.img";
+static char g_where[256] = "(noch nichts)";
+static const char *g_stage_plugin = "-";
+static const char *g_stage = "-";
+
+static void crash_handler(int sig)
+{
+    /* Nur async-signal-sicheres Schreiben: kein printf, kein malloc. */
+    const char *msg = "\n*** ABSTURZ (Signal ";
+    fputs(msg, stderr);
+    fputc('0' + (sig / 10) % 10, stderr);
+    fputc('0' + sig % 10, stderr);
+    fputs(") bei: ", stderr);
+    fputs(g_where, stderr);
+    fputs("  |  Plugin: ", stderr);
+    fputs(g_stage_plugin, stderr);
+    fputs("  Stufe: ", stderr);
+    fputs(g_stage, stderr);
+    fputs("\n    Eingabe liegt in ", stderr);
+    fputs(tmp_path, stderr);
+    fputs("\n", stderr);
+    fflush(stderr);
+    _exit(139);
+}
+
+/* ── Der Produktionspfad ───────────────────────────────────────────────── */
 
 static long n_open_ok, n_open_null, n_track_ok, n_track_null;
 
-/** Schreibt den Blob und schickt ihn durch uft_disk_open() und alles,
- *  was ein Betrachter danach tut. */
-static void run_open_path(size_t size)
+/** Legt den Blob als Datei ab. Muss VOR den Sonden laufen: sobald eine
+ *  Sonde zustimmt, wird ihr `open` auf genau dieser Datei gerufen. */
+static void write_tmp(size_t size)
 {
     FILE *f = fopen(tmp_path, "wb");
     if (!f) {
         printf("  KANN TEMPDATEI NICHT SCHREIBEN: %s\n", tmp_path);
         exit(2);
     }
-    if (fwrite(blob, 1, size, f) != size) {
+    if (size && fwrite(blob, 1, size, f) != size) {
         fclose(f);
         printf("  TEMPDATEI UNVOLLSTAENDIG GESCHRIEBEN\n");
         exit(2);
     }
     fclose(f);
+}
 
+/** Schickt die abgelegte Datei durch uft_disk_open() und alles, was ein
+ *  Betrachter danach tut — also durch die Rangfolge, mit einem Gewinner. */
+static void run_open_path(size_t size)
+{
+    (void)size;
     uft_disk_t *disk = uft_disk_open(tmp_path, true);
     if (!disk) {
         n_open_null++;
@@ -209,6 +257,169 @@ static void run_open_path(size_t size)
     uft_disk_close(disk);
 }
 
+/* ── Mutatoren auf echten Dateien ──────────────────────────────────────── */
+
+#ifndef UFT_CORPUS_DIR
+#define UFT_CORPUS_DIR "."
+#endif
+
+/* Mit benannten Werkzeugen erzeugt (VICE, atrcopy, xdftool, Greaseweazle),
+ * im Repo unter tests/corpus_free/. Fehlt eine, wird sie uebersprungen und
+ * genannt — ein stilles Ueberspringen waere eine Abdeckung, die es nicht
+ * gibt. */
+static const char *const CORPUS[] = {
+    "vice_c1541_35trk.d64", "vice_c1541_35trk.g64", "vice_c1541_70trk.d71",
+    "vice_c1541_80trk.d81", "vice_c1541_2040.d67",  "vice_c1541_8050.d80",
+    "vice_c1541_8250.d82",  "vice_c1541_1571.g71",  "atrcopy_dos2sd.atr",
+    "atrcopy_dos2sd.xfd",   "xdftool_dd_ofs.adf",   "gw_amigados.hfe",
+    NULL
+};
+
+/** Kopf unveraendert, ein Feld dahinter auf 0xFF — laesst Zaehler und
+ *  Laengen auf ihr Maximum laufen, ohne die Erkennung zu verlieren. */
+static size_t mut_header_max(const uint8_t *base, size_t len)
+{
+    memcpy(blob, base, len);
+    for (size_t i = 8; i < 64 && i < len; i++) blob[i] = 0xFF;
+    return len;
+}
+
+/** Dasselbe mit Nullen: Division durch null, Schleifen ohne Abbruch. */
+static size_t mut_header_zero(const uint8_t *base, size_t len)
+{
+    memcpy(blob, base, len);
+    for (size_t i = 8; i < 64 && i < len; i++) blob[i] = 0x00;
+    return len;
+}
+
+/** Abgeschnitten. Das ist der haeufigste reale Schadensfall — und genau
+ *  der, an dem das doppelte free in MF-513 haengt. */
+static size_t mut_truncate_half(const uint8_t *base, size_t len)
+{
+    size_t n = len / 2;
+    memcpy(blob, base, n);
+    return n;
+}
+
+static size_t mut_truncate_header(const uint8_t *base, size_t len)
+{
+    size_t n = len < 300 ? len : 300;
+    memcpy(blob, base, n);
+    return n;
+}
+
+/** Einzelne gekippte Bits, gleichmaessig ueber die Datei verteilt. */
+static size_t mut_bitflips(const uint8_t *base, size_t len)
+{
+    memcpy(blob, base, len);
+    for (int k = 0; k < 64; k++) {
+        size_t at = (size_t)(rng_next() % (len ? len : 1));
+        blob[at] ^= (uint8_t)(1u << (rng_next() & 7));
+    }
+    return len;
+}
+
+/** Der Kopf bleibt, der Rumpf wird Rauschen: die Erkennung greift, der
+ *  Parser laeuft auf Unsinn weiter. */
+static size_t mut_body_noise(const uint8_t *base, size_t len)
+{
+    memcpy(blob, base, len);
+    for (size_t i = 64; i < len; i++) blob[i] = (uint8_t)rng_next();
+    return len;
+}
+
+/** Unveraendert. Gehoert dazu: eine gueltige Datei muss den ganzen Weg
+ *  ueberstehen, sonst misst der Rest nichts. */
+static size_t mut_identity(const uint8_t *base, size_t len)
+{
+    memcpy(blob, base, len);
+    return len;
+}
+
+static const struct {
+    size_t (*fn)(const uint8_t *, size_t);
+    const char *label;
+} MUTATORS[] = {
+    { mut_identity,         "roh"     },
+    { mut_header_max,       "kopf-FF" },
+    { mut_header_zero,      "kopf-00" },
+    { mut_truncate_half,    "halb"    },
+    { mut_truncate_header,  "300B"    },
+    { mut_bitflips,         "bits"    },
+    { mut_body_noise,       "rumpf"   },
+};
+#define N_MUTATORS ((int)(sizeof(MUTATORS) / sizeof(MUTATORS[0])))
+
+/* ── Abdeckung je Plugin ───────────────────────────────────────────────── */
+
+#define MAX_PLUGINS 512
+
+/* Fuer jedes registrierte Plugin: hat seine Sonde je zugestimmt, und ist
+ * sein `open` je gelaufen?
+ *
+ * Ohne diese beiden Zahlen ist "0 Abstuerze" keine Aussage, sondern ein
+ * Satz ohne Nenner. Der erste Lauf dieses Tests oeffnete 81 Dateien — aber
+ * ueber die Rangfolge gewinnt immer nur EIN Plugin je Eingabe, und welche
+ * 136 dabei nie an die Reihe kamen, stand nirgends. */
+static unsigned char cov_probe_hit[MAX_PLUGINS];
+static unsigned char cov_open_called[MAX_PLUGINS];
+static unsigned char cov_open_ok[MAX_PLUGINS];
+
+/** Ruft `open` EINES Plugins auf derselben Datei, die seine eigene Sonde
+ *  gerade angenommen hat.
+ *
+ *  Das ist keine Umgehung der Rangfolge, sondern die Pruefung des
+ *  Vertrags: wenn `probe` ja sagt, muss `open` mit dieser Datei
+ *  zurechtkommen. Ueber `uft_disk_open()` gewinnt je Eingabe nur ein
+ *  Plugin — die anderen 136 saehen ihr `open` sonst nie, egal wie lange
+ *  der Fuzzer laeuft.
+ *
+ *  Der Handle wird genau so aufgebaut wie in uft_disk_open()
+ *  (src/core/uft_core_stubs.c) und mit uft_disk_close() abgebaut, damit
+ *  hier kein zweiter, abweichender Lebenszyklus entsteht. */
+static void run_one_plugin_open(const uft_format_plugin_t *p, size_t idx,
+                                const char *path)
+{
+    if (!p || !p->open) return;
+    cov_open_called[idx] = 1;
+    g_stage_plugin = p->name ? p->name : "?";
+    g_stage = "open";
+
+    uft_disk_t *disk = calloc(1, sizeof(uft_disk_t));
+    if (!disk) return;
+    strncpy(disk->path_buf, path, sizeof(disk->path_buf) - 1);
+    disk->path_buf[sizeof(disk->path_buf) - 1] = '\0';
+    disk->path = disk->path_buf;
+    disk->format = p->format;
+    disk->plugin = p;
+    disk->read_only = true;
+
+    if (p->open(disk, path, true) != UFT_OK) { free(disk); return; }
+    disk->is_open = true;
+    cov_open_ok[idx] = 1;
+
+    uft_geometry_t geo;
+    memset(&geo, 0, sizeof(geo));
+    (void)uft_disk_get_geometry(disk, &geo);
+
+    g_stage = "read_track";
+    if (p->read_track) {
+        static const int CYL[]  = { 0, 1, 39, 79, 1000, -1 };
+        static const int HEAD[] = { 0, 1, -1 };
+        for (size_t c = 0; c < sizeof(CYL) / sizeof(CYL[0]); c++)
+            for (size_t h = 0; h < sizeof(HEAD) / sizeof(HEAD[0]); h++) {
+                uft_track_t trk;
+                memset(&trk, 0, sizeof(trk));
+                if (p->read_track(disk, CYL[c], HEAD[h], &trk) == UFT_OK)
+                    n_track_ok++;
+                else
+                    n_track_null++;
+            }
+    }
+    g_stage = "close";
+    uft_disk_close(disk);
+}
+
 /* ── Registry-getriebene probe-Abdeckung ───────────────────────────────── */
 
 static long n_probe_calls, n_probe_hits, n_probe_bad_conf, n_probe_mutated;
@@ -234,12 +445,18 @@ static void run_all_probes_from_registry(size_t n_plugins, size_t size)
             n_probe_calls++;
             if (hit) {
                 n_probe_hits++;
+                if (i < MAX_PLUGINS) cov_probe_hit[i] = 1;
                 /* uft_format_plugin.h dokumentiert Konfidenz als 0-100. */
                 if (confidence < 0 || confidence > 100) {
                     printf("  KONFIDENZ AUSSERHALB 0-100: %s meldet %d\n",
                            p->name ? p->name : "(namenlos)", confidence);
                     n_probe_bad_conf++;
                 }
+                /* Die Sonde hat zugestimmt — also ist `open` an der Reihe.
+                 * Nur bei der ECHTEN Dateigroesse: bei einer erfundenen
+                 * haette die Sonde in der Wirklichkeit nie zugestimmt. */
+                if (FILE_SIZES[k] == size && i < MAX_PLUGINS)
+                    run_one_plugin_open(p, i, tmp_path);
             }
             /* probe nimmt const und darf nichts veraendern (DESIGN_PRINCIPLES:
              * keine stille Veraenderung). Geprueft statt geglaubt. */
@@ -251,6 +468,21 @@ static void run_all_probes_from_registry(size_t n_plugins, size_t size)
             }
         }
     }
+}
+
+/** Eine Eingabe, vollstaendig: ablegen, alle Sonden fragen (und jedem
+ *  Zustimmenden sein `open` geben), dann die Rangfolge gehen.
+ *
+ *  Die Reihenfolge ist wesentlich: die Datei muss VOR den Sonden liegen,
+ *  weil eine zustimmende Sonde sofort ihr `open` auf genau dieser Datei
+ *  bekommt. */
+static void feed(size_t n_plugins, size_t size)
+{
+    write_tmp(size);
+    /* g_where wurde vom Aufrufer gesetzt (Muster/Mutant + Groesse);
+     * run_one_plugin_open haengt den Plugin-Namen an. */
+    run_all_probes_from_registry(n_plugins, size);
+    run_open_path(size);
 }
 
 /* ── Treiber ───────────────────────────────────────────────────────────── */
@@ -309,6 +541,10 @@ int main(int argc, char **argv)
      * mit Zeilenpufferung in eine Pipe geht genau die letzte Zeile
      * verloren, also die einzige, die zaehlt. */
     setvbuf(stdout, NULL, _IONBF, 0);
+    signal(SIGSEGV, crash_handler);
+    signal(SIGABRT, crash_handler);
+    signal(SIGILL,  crash_handler);
+    signal(SIGFPE,  crash_handler);
 
     uft_error_t reg = uft_register_all_formats();
     if (argc > 1) {
@@ -344,28 +580,76 @@ int main(int argc, char **argv)
         size_t size = SIZES[s];
         if (size > MAX_BLOB) continue;
 
-        /* Vier feste Muster ... */
+        /* Drei feste Muster ... */
         printf("  Groesse %7zu: nullen", size);
-        n_inputs++; run_all_probes_from_registry(n_plugins, make_zeros(size));
-        run_open_path(size);
+        snprintf(g_where, sizeof(g_where), "nullen/%zu", size);
+        n_inputs++; feed(n_plugins, make_zeros(size));
         printf(" einsen");
-        n_inputs++; run_all_probes_from_registry(n_plugins, make_ones(size));
-        run_open_path(size);
+        snprintf(g_where, sizeof(g_where), "einsen/%zu", size);
+        n_inputs++; feed(n_plugins, make_ones(size));
         printf(" zufall");
-        n_inputs++; run_all_probes_from_registry(n_plugins, make_random(size));
-        run_open_path(size);
+        snprintf(g_where, sizeof(g_where), "zufall/%zu", size);
+        n_inputs++; feed(n_plugins, make_random(size));
 
         /* ... und jede dokumentierte Signatur mit Muell dahinter. */
         for (int g = 0; g < N_SIGS; g++) {
             printf(" %s", SIGS[g].label);
+            snprintf(g_where, sizeof(g_where), "sig %s/%zu", SIGS[g].label, size);
             n_inputs++;
-            run_all_probes_from_registry(
-                n_plugins,
-                make_signature_then_garbage(SIGS[g].sig, SIGS[g].len, size));
-            run_open_path(size);
+            feed(n_plugins,
+                 make_signature_then_garbage(SIGS[g].sig, SIGS[g].len, size));
         }
         printf("\n");
     }
+
+    /* ── Zweiter Teil: echte Dateien, gezielt beschaedigt ──────────────
+     *
+     * Zufallsbytes kommen selten an einer Sonde vorbei; wo sie es tun,
+     * scheitert der Parser meist in der ersten Zeile. Eine ECHTE Datei mit
+     * einem verdrehten Feld kommt dagegen tief hinein — dorthin, wo
+     * gerechnet und alloziert wird. Genau dort lagen die drei Fehler aus
+     * MF-513.
+     *
+     * Das Korpus unter tests/corpus_free/ ist mit benannten Werkzeugen
+     * erzeugt (VICE, atrcopy, xdftool, Greaseweazle) und im Repo. */
+    printf("\nKorpus-Mutation:\n");
+    long n_corpus = 0;
+    int n_truncated = 0;
+    for (int ci = 0; CORPUS[ci]; ci++) {
+        char path[1024];
+        snprintf(path, sizeof(path), "%s/%s", UFT_CORPUS_DIR, CORPUS[ci]);
+        FILE *cf = fopen(path, "rb");
+        if (!cf) { printf("  %-24s (fehlt)\n", CORPUS[ci]); continue; }
+        size_t base_len = fread(blob, 1, MAX_BLOB, cf);
+        /* Passte die Datei ueberhaupt hinein? Eine stille Kuerzung wuerde
+         * als Abdeckung durchgehen, die es nicht gibt. */
+        const bool truncated = (fgetc(cf) != EOF);
+        fclose(cf);
+        if (base_len == 0) { printf("  %-24s (leer)\n", CORPUS[ci]); continue; }
+        if (truncated) {
+            printf("  %-24s ABGESCHNITTEN auf %zu B — MAX_BLOB zu klein, "
+                   "diese Datei zaehlt NICHT als Abdeckung\n",
+                   CORPUS[ci], base_len);
+            n_truncated++;
+        }
+
+        static uint8_t base[MAX_BLOB];
+        memcpy(base, blob, base_len);
+        printf("  %-24s %7zu Byte:", CORPUS[ci], base_len);
+
+        for (int m = 0; m < N_MUTATORS; m++) {
+            size_t len = MUTATORS[m].fn(base, base_len);
+            printf(" %s", MUTATORS[m].label);
+            snprintf(g_where, sizeof(g_where), "%s + %s",
+                     CORPUS[ci], MUTATORS[m].label);
+            n_inputs++; n_corpus++;
+            feed(n_plugins, len);
+        }
+        printf("\n");
+    }
+    printf("  (%ld Mutanten aus %d Korpusdateien%s)\n", n_corpus,
+           (int)(sizeof(CORPUS) / sizeof(CORPUS[0]) - 1),
+           n_truncated ? ", DAVON ABGESCHNITTEN — siehe oben" : "");
 
     remove(tmp_path);
 
@@ -377,6 +661,34 @@ int main(int argc, char **argv)
            n_open_ok, n_open_null);
     printf("uft_track_read()       : %ld geliefert, %ld abgelehnt\n",
            n_track_ok, n_track_null);
+
+    /* ── Der Nenner ────────────────────────────────────────────────────
+     *
+     * "0 Abstuerze" ohne diese Zahlen ist ein Satz ohne Nenner. Wer nie
+     * gerufen wurde, ist nicht geprueft — er ist ungeprueft, und das
+     * gehoert genauso hingeschrieben wie das Ergebnis. */
+    size_t n_hit = 0, n_called = 0, n_ok = 0;
+    for (size_t i = 0; i < n_plugins && i < MAX_PLUGINS; i++) {
+        n_hit    += cov_probe_hit[i]   ? 1 : 0;
+        n_called += cov_open_called[i] ? 1 : 0;
+        n_ok     += cov_open_ok[i]     ? 1 : 0;
+    }
+    printf("\nAbdeckung ueber %zu registrierte Plugins:\n", n_plugins);
+    printf("  Sonde hat je zugestimmt   : %3zu  (%zu nie)\n",
+           n_hit, n_plugins - n_hit);
+    printf("  open() wurde je gerufen   : %3zu  (%zu nie)\n",
+           n_called, n_plugins - n_called);
+    printf("  open() war je erfolgreich : %3zu\n", n_ok);
+
+    printf("\n  NIE erreicht (Sonde stimmte keiner Eingabe zu) — ungeprueft:\n    ");
+    size_t col = 0;
+    for (size_t i = 0; i < n_plugins && i < MAX_PLUGINS; i++) {
+        if (cov_probe_hit[i]) continue;
+        const uft_format_plugin_t *p = uft_get_format_by_index(i);
+        printf("%s ", p && p->name ? p->name : "?");
+        if (++col % 12 == 0) printf("\n    ");
+    }
+    printf("\n");
 
     long fail = n_probe_bad_conf + n_probe_mutated;
     printf("\nVertragsverletzungen   : %ld"
