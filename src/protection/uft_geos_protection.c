@@ -364,7 +364,13 @@ int uft_geos_get_report(const geos_analysis_result_t *result,
                 }
                 
                 offset += snprintf(buffer + offset, buffer_size - offset,
-                    "\n  [%d] %s\n"
+                    /* MF-509: `%zu`, nicht `%d`. `i` ist `size_t`; auf
+                     * Win64 verbraucht `%d` vier statt acht Byte, und
+                     * damit verschieben sich ALLE folgenden Argumente.
+                     * `info->name` waere dann ein Zeiger von der falschen
+                     * Stelle — Absturz oder Muell im Bericht, nicht bloss
+                     * eine falsche Zahl. */
+                    "\n  [%zu] %s\n"
                     "      Description: %s\n"
                     "      Severity:    %s\n"
                     "      Nibbler:     %s\n"

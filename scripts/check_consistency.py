@@ -657,6 +657,14 @@ def main() -> int:
         # ausfuehren kann, erzeugt Vertrauen, das nichts traegt.
         import write_gate_caps_gate as _wgcaps
         all_errors.append(("write-gate caps vs plugins", _wgcaps.check(repo)))
+        # 228 gebaute Module ruft niemand auf (ARCH-25, MF-509). Sie heute zu
+        # beheben geht nicht — unerreichbarer Code ist per Definition
+        # ungepruefter Code, und ihn ohne Referenz anzuschliessen waere die
+        # Wette der fuenf fabrizierten Parser in groesserem Massstab. Was
+        # geht, ist die Blutung stoppen: kein NEUES verwaistes Modul ohne
+        # ausdrueckliche Entscheidung.
+        import orphan_module_gate as _orphan
+        all_errors.append(("neue verwaiste Module", _orphan.check(repo)))
 
     total = sum(len(e) for _, e in all_errors)
     print(f"Consistency check ({len(all_errors)} categories, root={repo}):")

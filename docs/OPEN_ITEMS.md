@@ -75,7 +75,7 @@ benutzen.
 | P1-1 | `session->audit_entries++` auf einem `void *` — schob den Listenzeiger je Logzeile um ein Byte, statt `audit_count` zu zählen. Heap-Korruption im Audit-Pfad | ✅ **behoben (MF-507)** |
 | P1-2 | `uft_td0_to_imd`: `struct uft_imd_image_t` nur in der Parameterliste deklariert → der Prototyp beschrieb einen Typ, den es nirgends gibt, also konnte die Typprüfung **keinen** Aufrufer prüfen | ✅ **behoben (MF-507)** |
 | P1-3 | `GetTempPathA` ohne `<windows.h>` — implizite Deklaration, bricht unter GCC 14+/Clang | ✅ **behoben (MF-507)** |
-| P1-4 | `uft_geos_protection.c:367`: `%d` mit `size_t` — verschiebt alle folgenden Argumente | **offen** (unerreichbarer Code, siehe P2-1) |
+| P1-4 | `uft_geos_protection.c:367`: `%d` mit `size_t` — verschiebt alle folgenden Argumente; `info->name` würde als Zeiger von der falschen Stelle gelesen | ✅ **behoben (MF-509)**; der ganze Baum ist jetzt frei von Formatfehlern |
 | P1-5 | ARCH-3: 22 Banner-Header sind wirklich unfertig, der Skelett-Audit sieht sie nicht | **offen** |
 | P1-6 | ARCH-21: 20 Altfälle von Header-Prototypen, die niemand einbindet | **offen** |
 | P1-7 | ARCH-2/ARCH-4: `UFT_SCP_SIGNATURE` viermal, einmal mit anderem Typ; 7 Header-Duplikate brauchen echte Zusammenführung | **offen** |
@@ -87,6 +87,18 @@ benutzen.
 **P2-1 ist der größte Posten dieser Liste: 228 gebaute Module ohne
 Aufrufer.** Sie sind im Binary, kosten Bauzeit und Vertrauen, und
 niemand kann sie benutzen.
+
+> **Die Blutung ist gestoppt (MF-509).** `scripts/orphan_module_gate.py`
+> friert die 228 als Grundlinie ein und ist die **23. Kategorie** in
+> `check_consistency.py`. Ein *neues* verwaistes Modul lässt den Commit
+> jetzt rot werden; ein behobenes meldet sich mit Namen zur Streichung.
+> Aus einem unbegrenzten Problem ist ein begrenztes geworden.
+>
+> Warum nicht mehr: unerreichbarer Code ist per Definition ungeprüfter
+> Code. Fünf Parser dieses Baums waren gegen erfundene Specs gebaut
+> (FMT-2/3/10/11/12) — sie einfach anzuschließen hieße, dieselbe Wette in
+> größerem Maßstab einzugehen. Der Weg führt über
+> `VERIFICATION_PLAN.md`, nicht über einen Aufruf.
 
 Die dichtesten Stellen:
 
@@ -119,6 +131,7 @@ offen).
 | P3-3 | GUI-Rauchtest für MF-496/MF-501 — **blockiert beim Eigentümer** (kein Bediener in dieser Sitzung) |
 | P3-4 | Tier-3-Hardware-Bench — **kein Gerät vorhanden** (MF-310), an die Gemeinschaft delegiert |
 | P3-5 | Teilaufnahme-Karte nach ddrescue-Vorbild (Mammut §1.3, letzter offener Teil) |
+| P3-6 | **ATR Enhanced Density:** beide ATR-Fassungen rechnen fest mit 18 Sektoren/Spur. Für ED (1040 Sektoren à 128 B) ergäbe das 58×18 statt 40×26. **Kein Datenverlust** — ATR ist ein lineares Sektorabbild, jeder Sektor bleibt erreichbar; falsch wäre nur die *gemeldete* Geometrie. Nicht geändert, weil keine **benannte Referenz** im Baum liegt (MF-498(a)) — gehört in die ATR-Hebung auf T1/T1b |
 
 ---
 
@@ -129,9 +142,16 @@ offen).
 - 311 Warnungen unter `-Wconversion`/`-Wsign-conversion` im C-Kern
   (überwiegend Rauschen, aber 41 × `-Wmissing-prototypes` deuten auf
   Funktionen, die `static` sein sollten — also auf P2-1)
-- 10 × `-Wduplicated-branches`, davon geprüft: `mac_dsk.c:43`
-  (`(sz==409600)?80:80`), `atr.c:51`, `uft_frz.c:428`
-  (`(status & 0x20) ? '-' : '-'`) — verdächtig, je einzeln zu prüfen
+- 10 × `-Wduplicated-branches` — die drei verdächtigsten **einzeln
+  geprüft, keiner ist ein Fehler**:
+  - `mac_dsk.c:43` `(sz==409600)?80:80` — Mac 400K *und* 800K haben 80
+    Zylinder; der Ternär steht nur parallel zur `heads`-Zeile darunter
+  - `uft_frz.c:428` `(status & 0x20) ? '-' : '-'` — Bit 5 ist im
+    6502-Statusregister das **unbenutzte**; die übliche `NV-BDIZC`-Anzeige
+    zeigt dort immer `-`
+  - `atr.c:51` `(sectorSize==256)?18:18` — liegt in einer **zweiten,
+    unerreichbaren** ATR-Fassung (die registrierte ist
+    `src/formats/atr/uft_atr.c`); siehe P3-6
 - **Ausdrücklich kein Fehler:** die drei identischen PETSCII-Zweige in
   `uft_d64_file.c`, `uft_t64.c`, `uft_bam_editor.c`. Redundant, aber
   korrekt — `'A'`–`'Z'` bleibt unverändert. Steht hier, damit niemand sie
