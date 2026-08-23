@@ -3938,6 +3938,66 @@ zweite braucht eine Bank-Sitzung mit echtem Laufwerk.
 
 ---
 
+### FUZZ-1 — drei Speicherfehler im DSK-Oeffnungspfad, gefunden beim ersten Lauf (2026-08-23, MF-512/513) -> ✓ BEHOBEN
+
+**Correctness / Security.** `tests/test_disk_open_fuzz.c` (neu, MF-512)
+schickt missgebildete Abbilder durch den **echten** `uft_disk_open()`.
+Erster Lauf: drei Speicherfehler in `src/formats/dsk_cpc/uft_dsk_cpc.c`,
+alle drei ueber den gewoehnlichen Benutzerweg erreichbar — eine fremde
+oder beschaedigte Datei oeffnen.
+
+**Referenz fuer alle drei Schranken** (MF-498(a)): Extended DSK disk image
+file format, Kevin Thacker, https://cpctech.cpcwiki.de/docs/extdsk.html.
+Der Disk Information Block ist 256 Byte gross, *"including track size
+table space"*, Tabelle ab 0x34; der Track Information Block ebenfalls
+256 Byte, *"including the sector info list"*, Liste ab 0x18 mit 8 Byte je
+Eintrag. Die Spec nennt ausdruecklich **kein** Maximum fuer Spuren,
+Seiten oder Sektoren — alle drei Felder sind ein Byte und lassen je 255
+zu. Genau daraus folgen die Schranken 204 und 29; sie sind Arithmetik der
+zitierten Tabellen, nicht gewaehlte Zahlen.
+
+| # | Fehler | Wirkung |
+|---|---|---|
+| 1 | `dsk_open`: `memcpy(track_sizes, &header[0x34], tracks * sides)` ohne Pruefung | Ziel 200 Byte, Produkt bis 65025. Gemessen an `tests/crashers/edsk_511_open.img` (tracks=237, sides=190): **44830 Byte Schreiben** ueber eine `calloc`-te Struktur hinaus, Inhalt aus der Datei; zugleich 44826 Byte Lesen ueber den 256-Byte-Stapelpuffer. Windows meldete **Heap-Korruption (0xC0000374)** |
+| 2 | `dsk_read_track`: `num_sec` (0x15, bis 255) indiziert `track_info[0x18 + s*8]` | 256-Byte-Stapelpuffer; bei s=254 ein Lesen auf Offset 2056, also **1800 Byte darueber**. Zusaetzlich `actual_size` (bis 65535) in einen Puffer von `sec_size` (min. 128) gelesen — Schreibueberlauf bis 65407 Byte |
+| 3 | `dsk_read_track`: `{ free(sec_buf); break; }` in der Schleife, `free(sec_buf)` noch einmal danach | **Doppeltes free** bei **jeder** Datei, die vor dem Ende ihres letzten Sektors aufhoert — also bei genau dem Fall, fuer den dieses Werkzeug gebaut ist. Belegt an `tests/crashers/dsk_512_double_free.img` |
+
+**Warum es 241 gruene Tests nicht gefunden haben.** Der bestehende
+Fuzz-Test (MF-392) nennt **28** Plugins in einer Hand-Liste und ruft
+ausschliesslich `probe`. Die Registry fuehrt **137**, und `probe` schaut
+nur auf einen Kopf. Die Fehler stecken in `open` und `read_track`, wo
+geparst, gerechnet und alloziert wird. Der neue Test faehrt die Registry
+ab und geht den ganzen Weg.
+
+**Nebenbefund, gleich mit behoben:** die Offsetrechnung stand woertlich
+zweimal da (`read_track` und `write_track`), beide Male ohne Schranke.
+Jetzt eine Funktion `dsk_track_offset()`, geprueft gegen die gemeldete
+Geometrie **und** gegen die 204.
+
+**Zweite Fassung desselben Fehlers:** `uft_dsk_cpc_parser_v2.c:354` trug
+dieselbe ungepruefte `memcpy` (Ziel 170 Byte). Dieser Pfad hat heute
+keinen Aufrufer (ARCH-25); die Schranke steht trotzdem drin —
+unerreichbarer Code wird nicht stehen gelassen, sobald der Fehler bekannt
+ist.
+
+**Kappen statt Ablehnen** bei der Sektorzahl: die Eintraege, die im Block
+stehen, sind echt und gehoeren gelesen. Was darueber hinaus behauptet
+wird, existiert nicht — es wird weggelassen, nicht erfunden.
+
+**Ergebnis nach den Korrekturen:** 209 Eingaben, 171798 `probe`-Aufrufe
+(137 Plugins x 209 x 6 Dateigroessen), 81 Oeffnungen, 570 Spurlesungen,
+**0 Abstuerze, 0 Vertragsverletzungen**. Beide ausloesenden Dateien liegen
+unter `tests/crashers/` und werden von `tests/test_dsk_open_bounds.c`
+dauerhaft geprueft. Gegenprobe gemacht: der Fehler wieder eingebaut, der
+Test wird rot (0xC0000374), Fehler zurueckgenommen, Test gruen.
+
+**Nicht gemessen:** ob die anderen 136 Plugins bei laengeren Laeufen oder
+unter ASan/UBSan weitere Fehler zeigen. Dieser Lauf deckt 11
+Dateigroessen x 19 Muster ab — ein Anfang, keine Freisprechung. Der
+Fuzzer nimmt einen Dateinamen als Argument und spielt ihn einzeln nach.
+
+---
+
 ### ARCH-26 — 38 geteilte Include-Wächter, 37 offen (2026-08-23, MF-511) → ⚠ OFFEN
 
 **Correctness.** Gemessen mit `scripts/shared_guard_gate.py`: von 41

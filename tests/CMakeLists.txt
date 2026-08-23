@@ -785,10 +785,18 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/include/uft/formats/c64
             ${CMAKE_SOURCE_DIR}/include/uft/flux
             ${CMAKE_SOURCE_DIR}/include/uft/fs)
-    elseif(${test_name} STREQUAL "test_register_all_formats")
+    elseif(${test_name} STREQUAL "test_register_all_formats"
+           OR ${test_name} STREQUAL "test_disk_open_fuzz"
+           OR ${test_name} STREQUAL "test_dsk_open_bounds")
         # MF-446: the only test that links the entire format layer, because it
         # is the only one that can answer "does uft_register_all_formats()
         # actually register all of them". Anything less proves nothing.
+        #
+        # MF-512: test_disk_open_fuzz braucht genau dieselbe Menge, aus dem
+        # gleichen Grund — es schickt missgebildete Abbilder durch den echten
+        # uft_disk_open(), und das heisst: durch die ganze Registry. Eine
+        # zweite, eigene Liste waere eine zweite Wahrheit ueber dieselbe
+        # Sache; sie wuerde driften. Deshalb ein gemeinsamer Zweig.
         file(GLOB_RECURSE ALL_FORMAT_SOURCES
              ${CMAKE_SOURCE_DIR}/src/formats/*.c)
         target_sources(${test_name} PRIVATE ${ALL_FORMAT_SOURCES}
@@ -826,7 +834,12 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/include/uft/flux
             ${CMAKE_SOURCE_DIR}/include/uft/fs)
         target_compile_definitions(${test_name} PRIVATE
-            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free"
+            # MF-513: die Eingaben, an denen der Oeffnungspfad einmal
+            # abgestuerzt ist. Sie liegen im Repo, weil ein Absturz ohne
+            # seine Eingabe kein Regressionsschutz ist, sondern eine
+            # Anekdote.
+            UFT_CRASHER_DIR="${CMAKE_SOURCE_DIR}/tests/crashers")
     elseif(${test_name} STREQUAL "test_amiga_decoder_limits")
         # MF-452: drei Befunde aus dem X-Copy-Quellenvergleich
         target_sources(${test_name} PRIVATE

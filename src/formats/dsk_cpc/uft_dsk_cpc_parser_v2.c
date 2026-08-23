@@ -349,12 +349,34 @@ static bool dsk_parse_header(const uint8_t* data, size_t size,
     info->sides = data[0x31];
     info->track_size = data[0x32] | (data[0x33] << 8);
     
-    /* EDSK has per-track size table */
+    /* EDSK has per-track size table.
+     *
+     * MF-513: hier stand dieselbe ungepruefte memcpy wie in
+     * src/formats/dsk_cpc/uft_dsk_cpc.c:53 — zwei Fassungen derselben
+     * Tatsache, beide mit demselben Fehler. `tracks` und `sides` sind je
+     * ein Byte, ihr Produkt also bis 65025; das Ziel fasst
+     * DSK_MAX_TRACKS * DSK_MAX_SIDES = 170.
+     *
+     * REFERENZ: Extended DSK disk image file format, Kevin Thacker,
+     * https://cpctech.cpcwiki.de/docs/extdsk.html — der Disk Information
+     * Block ist 256 Byte gross, "including track size table space", und
+     * die Tabelle beginnt bei 0x34. Es passen also hoechstens
+     * 256 - 0x34 = 204 Eintraege in den Kopf; dieses Feld fasst 170,
+     * also ist 170 hier die engere und damit massgebliche Schranke.
+     *
+     * In der anderen Fassung liess derselbe Fehler den Prozess mit
+     * Heap-Korruption (0xC0000374) abbrechen, erreichbar ueber ein
+     * gewoehnliches uft_disk_open() — belegt in
+     * tests/test_dsk_open_bounds.c. Dieser Pfad hat heute keinen Aufrufer
+     * (ARCH-25); ungepruefter unerreichbarer Code wird trotzdem nicht
+     * stehen gelassen, sobald der Fehler bekannt ist. */
     if (*format == DSK_FORMAT_EXTENDED) {
-        memcpy(info->track_sizes, data + 0x34, 
-               info->tracks * info->sides);
+        const unsigned n_entries = (unsigned)data[0x30] * (unsigned)data[0x31];
+        if (n_entries > sizeof(info->track_sizes))
+            return false;                    /* Kopf beschreibt sich selbst falsch */
+        memcpy(info->track_sizes, data + 0x34, n_entries);
     }
-    
+
     return true;
 }
 
