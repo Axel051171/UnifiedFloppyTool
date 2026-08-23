@@ -451,7 +451,9 @@ static uft_error_t atx_read_track(uft_disk_t *disk, int cyl, int head,
 /** Einen Spur-Datensatz anfuegen. */
 static uft_error_t atx_write_track_record(FILE *f, int cyl,
                                           const uft_track_t *track,
-                                          bool *out_synth_positions)
+                                          uft_interleave_mode_t interleave,
+                                          bool *out_synth_positions,
+                                          bool *out_overrode_measured)
 {
     uint16_t n = (uint16_t)track->sector_count;
     if (n > ATX_MAX_SECTORS) n = ATX_MAX_SECTORS;
@@ -511,11 +513,17 @@ static uft_error_t atx_write_track_record(FILE *f, int cyl,
      *
      * Gerechnet bleibt gerechnet: die Warnung unten faellt nicht weg, sie
      * benennt jetzt nur, was gerechnet wurde. */
+    /* MF-485: welche Verschraenkung gerechnet wird, entscheidet der Aufrufer.
+     * FORCE_AUTO ersetzt AUCH gemessene Positionen — a8rawconv beschreibt den
+     * Modus genau so ("overrides existing positions"). Das ist ein Eingriff in
+     * Messdaten, also wird er gemeldet, nicht stillschweigend ausgefuehrt. */
+    const bool force = (interleave == UFT_INTERLEAVE_FORCE_AUTO);
+
     float synth[ATX_MAX_SECTORS];
     bool  synth_ok = false;
-    bool  need_synth = false;
-    for (uint16_t s = 0; s < n; s++)
-        if (!track->sectors[s].has_angular_position) { need_synth = true; break; }
+    bool  need_synth = force;
+    for (uint16_t s = 0; s < n && !need_synth; s++)
+        if (!track->sectors[s].has_angular_position) need_synth = true;
 
     if (need_synth && n > 0) {
         /* Sektorgroesse aus der Spur, nicht aus dem ATX-Nutzdatenfeld: die
@@ -529,7 +537,7 @@ static uft_error_t atx_write_track_record(FILE *f, int cyl,
         }
         synth_ok = (uft_compute_interleave(synth, n, ssz,
                                            track->encoding == UFT_ENCODING_MFM,
-                                           cyl, 0, UFT_INTERLEAVE_AUTO) == UFT_OK);
+                                           cyl, 0, interleave) == UFT_OK);
     }
 
     for (uint16_t s = 0; s < n; s++) {
@@ -554,9 +562,11 @@ static uft_error_t atx_write_track_record(FILE *f, int cyl,
          * Aufrufer wissen lassen, dass diese Zahlen gerechnet und nicht
          * gemessen sind. */
         double pos;
-        if (sec->has_angular_position) {
+        if (sec->has_angular_position && !(force && synth_ok)) {
             pos = sec->angular_position;
         } else if (synth_ok) {
+            if (sec->has_angular_position && out_overrode_measured)
+                *out_overrode_measured = true;
             pos = (double)synth[s];
             *out_synth_positions = true;
         } else {
@@ -622,7 +632,8 @@ static uft_error_t atx_write_track_record(FILE *f, int cyl,
 }
 
 uft_error_t uft_atx_write(const char *path, const uft_track_t *tracks,
-                          size_t track_count, bool enhanced_density)
+                          size_t track_count, bool enhanced_density,
+                          uft_interleave_mode_t interleave)
 {
     if (!path || !tracks || track_count == 0) return UFT_ERROR_NULL_POINTER;
     if (track_count > ATX_MAX_TRACKS)         return UFT_ERROR_OUT_OF_RANGE;
@@ -646,9 +657,11 @@ uft_error_t uft_atx_write(const char *path, const uft_track_t *tracks,
     }
 
     bool synth_positions = false;
+    bool overrode_measured = false;
     for (size_t i = 0; i < track_count; i++) {
         uft_error_t rc = atx_write_track_record(f, (int)i, &tracks[i],
-                                                &synth_positions);
+                                                interleave, &synth_positions,
+                                                &overrode_measured);
         if (rc != UFT_OK) { fclose(f); return rc; }
     }
 
@@ -664,6 +677,16 @@ uft_error_t uft_atx_write(const char *path, const uft_track_t *tracks,
                  "- ersatzweise wurde das Atari-Verschraenkungslayout "
                  "gerechnet (9:1 SD / 13:1 ED, 8%% Spurversatz). Diese "
                  "Positionen sind GERECHNET, nicht gemessen (%s)", path);
+    }
+
+    if (overrode_measured) {
+        /* Prinzip 1, andere Richtung: hier geht keine Information verloren,
+         * sie wird ERSETZT. Eine gemessene Winkelposition durch eine
+         * gerechnete auszutauschen ist genau die stille Veraenderung, gegen
+         * die das erste Prinzip steht — also wird sie laut. */
+        UFT_WARN("ATX: FORCE_AUTO hat GEMESSENE Winkelpositionen durch "
+                 "gerechnete ersetzt. Das Ergebnis beschreibt nicht mehr die "
+                 "Diskette, von der die Spuren stammen (%s)", path);
     }
     return UFT_OK;
 }

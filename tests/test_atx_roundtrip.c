@@ -116,7 +116,7 @@ TEST(everything_the_track_carries_survives_the_round_trip)
     build_track(&src);
     ASSERT(src.sector_count == NSEC);
 
-    ASSERT(uft_atx_write(path, &src, 1, false) == UFT_OK);
+    ASSERT(uft_atx_write(path, &src, 1, false, UFT_INTERLEAVE_AUTO) == UFT_OK);
 
     uft_disk_t disk;
     memset(&disk, 0, sizeof(disk));
@@ -190,7 +190,7 @@ TEST(duplicate_sector_numbers_survive_as_phantom_sectors)
     src.sectors[0].angular_position = 0.10; src.sectors[0].has_angular_position = true;
     src.sectors[1].angular_position = 0.60; src.sectors[1].has_angular_position = true;
 
-    ASSERT(uft_atx_write(path, &src, 1, false) == UFT_OK);
+    ASSERT(uft_atx_write(path, &src, 1, false, UFT_INTERLEAVE_AUTO) == UFT_OK);
 
     uft_disk_t disk;
     memset(&disk, 0, sizeof(disk));
@@ -237,7 +237,7 @@ TEST(a_track_without_positions_still_writes_and_reads)
         ASSERT(src.sectors[s].has_angular_position == false);
     }
 
-    ASSERT(uft_atx_write(path, &src, 1, false) == UFT_OK);
+    ASSERT(uft_atx_write(path, &src, 1, false, UFT_INTERLEAVE_AUTO) == UFT_OK);
 
     uft_disk_t disk;
     memset(&disk, 0, sizeof(disk));
@@ -284,11 +284,11 @@ TEST(write_refuses_what_it_cannot_represent)
     uft_track_t tr;
     build_track(&tr);
 
-    ASSERT(uft_atx_write(NULL, &tr, 1, false) == UFT_ERROR_NULL_POINTER);
-    ASSERT(uft_atx_write("x.atx", NULL, 1, false) == UFT_ERROR_NULL_POINTER);
-    ASSERT(uft_atx_write("x.atx", &tr, 0, false) == UFT_ERROR_NULL_POINTER);
+    ASSERT(uft_atx_write(NULL, &tr, 1, false, UFT_INTERLEAVE_AUTO) == UFT_ERROR_NULL_POINTER);
+    ASSERT(uft_atx_write("x.atx", NULL, 1, false, UFT_INTERLEAVE_AUTO) == UFT_ERROR_NULL_POINTER);
+    ASSERT(uft_atx_write("x.atx", &tr, 0, false, UFT_INTERLEAVE_AUTO) == UFT_ERROR_NULL_POINTER);
     /* ATX kennt keine 8-bit-Spurnummer jenseits der Tabelle des Lesers. */
-    ASSERT(uft_atx_write("x.atx", &tr, 999, false) == UFT_ERROR_OUT_OF_RANGE);
+    ASSERT(uft_atx_write("x.atx", &tr, 999, false, UFT_INTERLEAVE_AUTO) == UFT_ERROR_OUT_OF_RANGE);
 
     free_track(&tr);
 }

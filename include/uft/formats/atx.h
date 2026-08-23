@@ -7,6 +7,7 @@
 
 #include "uft/uft_error.h"
 #include "uft/uft_types.h"
+#include "uft/core/uft_interleave.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -38,6 +39,13 @@ extern "C" {
  *
  * @param tracks            @p track_count Spuren, Index = Spurnummer
  * @param enhanced_density  Dichtebyte im Dateikopf: 1 = ED/MFM, 0 = SD/FM
+ * @param interleave        Wie ERSATZ-Winkelpositionen gerechnet werden, wenn
+ *                          eine Spur keine gemessenen mitbringt (MF-485).
+ *                          UFT_INTERLEAVE_AUTO ist der Normalfall und laesst
+ *                          gemessene Positionen unangetastet.
+ *                          UFT_INTERLEAVE_FORCE_AUTO ersetzt AUCH gemessene —
+ *                          das ist ein Eingriff in Messdaten und wird ueber
+ *                          UFT_WARN gemeldet.
  * @return UFT_OK, sonst ein Schreib-/Argumentfehler. Bei Fehler kann eine
  *         angefangene Datei zurückbleiben — der Aufrufer entscheidet, ob er
  *         sie behält.
@@ -45,7 +53,8 @@ extern "C" {
 uft_error_t uft_atx_write(const char *path,
                           const uft_track_t *tracks,
                           size_t track_count,
-                          bool enhanced_density);
+                          bool enhanced_density,
+                          uft_interleave_mode_t interleave);
 
 #ifdef __cplusplus
 }

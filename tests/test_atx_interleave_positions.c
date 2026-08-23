@@ -88,11 +88,14 @@ static void build_bare_track(uft_track_t *tr, int cyl, int spt, int secsz)
 }
 
 /** Spur schreiben, zurueckoeffnen, Positionen einsammeln. */
-static bool write_read_positions(const char *path, const uft_track_t *tracks,
-                                 size_t track_count, int want_track,
-                                 double *out, int out_n)
+static bool write_read_positions_mode(const char *path,
+                                      const uft_track_t *tracks,
+                                      size_t track_count, int want_track,
+                                      double *out, int out_n,
+                                      uft_interleave_mode_t mode)
 {
-    if (uft_atx_write(path, tracks, track_count, false) != UFT_OK) return false;
+    if (uft_atx_write(path, tracks, track_count, false, mode) != UFT_OK)
+        return false;
 
     uft_disk_t disk;
     memset(&disk, 0, sizeof(disk));
@@ -112,6 +115,14 @@ static bool write_read_positions(const char *path, const uft_track_t *tracks,
     free_track(&back);
     uft_format_plugin_atx.close(&disk);
     return ok;
+}
+
+static bool write_read_positions(const char *path, const uft_track_t *tracks,
+                                 size_t track_count, int want_track,
+                                 double *out, int out_n)
+{
+    return write_read_positions_mode(path, tracks, track_count, want_track,
+                                     out, out_n, UFT_INTERLEAVE_AUTO);
 }
 
 /* ────────────────────────────────────────────────────────────────────── */
@@ -281,6 +292,99 @@ TEST(phantom_sectors_keep_distinct_positions)
     remove(path);
 }
 
+TEST(none_lays_the_sectors_out_one_to_one)
+{
+    /* MF-485: der Modus ist jetzt eine Vorgabe des Aufrufers. NONE heisst
+     * 1:1 ohne Spurversatz — was das triviale Layout WAR, aber jetzt nur
+     * noch auf ausdrueckliche Ansage. */
+    char path[512];
+    get_temp_path(path, sizeof(path), "none");
+
+    /* Vier Spuren, gelesen wird die vierte: dort waere der Versatz 0.24 —
+     * NONE muss ihn unterdruecken, nicht nur die Verschraenkung. */
+    uft_track_t tr[4];
+    for (int c = 0; c < 4; c++) build_bare_track(&tr[c], c, SD_SPT, SEC);
+
+    double got[SD_SPT];
+    ASSERT(write_read_positions_mode(path, tr, 4, 3, got, SD_SPT,
+                                     UFT_INTERLEAVE_NONE));
+
+    /* Zwei Eigenschaften, keine ausgerechnete Zahl: gleiche Abstaende, und
+     * kein Spurversatz — obwohl dies Spur 3 ist.
+     *
+     * Der Abstand ist NICHT 1/n: uft_compute_interleave reserviert 2 % der
+     * Umdrehung fuer die Luecke (`spacing = 0.98f / n`, wortgleich aus
+     * a8rawconv). Die Zahl hier nachzurechnen hiesse, die Konstante ein
+     * zweites Mal aufzuschreiben — geprueft wird deshalb die Gleichheit der
+     * Abstaende, nicht ihr Wert. */
+    ASSERT(got[0] < ATX_UNIT);                 /* kein Versatz auf Spur 3 */
+
+    double step = got[1] - got[0];
+    ASSERT(step > 0.0);
+    for (int s = 1; s < SD_SPT; s++) {
+        double d = (got[s] - got[s - 1]) - step;
+        if (d < 0) d = -d;
+        if (d >= 2 * ATX_UNIT)
+            printf("\n        s=%2d Abstand %.5f statt %.5f\n",
+                   s, got[s] - got[s - 1], step);
+        ASSERT(d < 2 * ATX_UNIT);              /* zwei Quantisierungsschritte */
+    }
+
+    /* Und es ist wirklich 1:1 — aufsteigend, nicht verschraenkt. */
+    for (int s = 1; s < SD_SPT; s++)
+        ASSERT(got[s] > got[s - 1]);
+
+    for (int c = 0; c < 4; c++) free_track(&tr[c]);
+    remove(path);
+}
+
+TEST(force_auto_overrides_measured_positions_and_says_so)
+{
+    /* Der gefaehrliche Modus. a8rawconv beschreibt ihn woertlich als
+     * "overrides existing positions" — er ersetzt also GEMESSENE Werte durch
+     * gerechnete. Das ist kein Verlust, sondern eine stille Veraenderung, und
+     * genau dagegen steht Prinzip 1. Er darf existieren, aber nicht leise
+     * sein: uft_atx_write() meldet ihn ueber UFT_WARN.
+     *
+     * Geprueft wird die Wirkung: mit AUTO bleiben die gemessenen Positionen
+     * stehen, mit FORCE_AUTO nicht. */
+    char path[512];
+    get_temp_path(path, sizeof(path), "force");
+
+    uft_track_t tr;
+    build_bare_track(&tr, 0, SD_SPT, SEC);
+    /* Zwei ausdruecklich gemessene Positionen, die das Verschraenkungslayout
+     * nicht traefe. */
+    tr.sectors[0].angular_position = 0.311; tr.sectors[0].has_angular_position = true;
+    tr.sectors[1].angular_position = 0.733; tr.sectors[1].has_angular_position = true;
+
+    double keep[SD_SPT], forced[SD_SPT];
+    ASSERT(write_read_positions_mode(path, &tr, 1, 0, keep, SD_SPT,
+                                     UFT_INTERLEAVE_AUTO));
+    ASSERT(write_read_positions_mode(path, &tr, 1, 0, forced, SD_SPT,
+                                     UFT_INTERLEAVE_FORCE_AUTO));
+
+    /* AUTO laesst die Messung stehen. */
+    ASSERT(keep[0] > 0.311 - ATX_UNIT && keep[0] < 0.311 + ATX_UNIT);
+    ASSERT(keep[1] > 0.733 - ATX_UNIT && keep[1] < 0.733 + ATX_UNIT);
+
+    /* FORCE_AUTO ersetzt sie durch das gerechnete Layout. */
+    float want[SD_SPT];
+    ASSERT(uft_compute_interleave(want, SD_SPT, SEC, false, 0, 0,
+                                  UFT_INTERLEAVE_FORCE_AUTO) == UFT_OK);
+    for (int s = 0; s < 2; s++) {
+        double d = forced[s] - (double)want[s];
+        if (d < 0) d = -d;
+        if (d >= ATX_UNIT)
+            printf("\n        s=%d forced=%.5f want=%.5f\n", s, forced[s],
+                   (double)want[s]);
+        ASSERT(d < ATX_UNIT);
+    }
+
+    free_track(&tr);
+    remove(path);
+}
+
 int main(void)
 {
     printf("=== ATX: Ersatz-Winkelpositionen sind das Atari-Layout (MF-479) ===\n");
@@ -289,6 +393,8 @@ int main(void)
     RUN(enhanced_density_gets_a_different_interleave_than_single);
     RUN(measured_positions_are_never_overwritten);
     RUN(phantom_sectors_keep_distinct_positions);
+    RUN(none_lays_the_sectors_out_one_to_one);
+    RUN(force_auto_overrides_measured_positions_and_says_so);
     printf("\nResults: %d passed, %d failed\n", _pass, _fail);
     return _fail == 0 ? 0 : 1;
 }

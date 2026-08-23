@@ -3752,6 +3752,71 @@ für AmigaDOS-DD.
 
 ---
 
+### FMT-26 — die Verschränkungs-Politik war eine feste Annahme (2026-08-23, MF-485) → ✓ BEHOBEN
+
+Punkt 3.3 der a8rawconv-Gap-Analyse, zweite Hälfte. MF-479 hat
+`uft_compute_interleave()` an den ATX-Schreiber gehängt — aber fest auf
+`UFT_INTERLEAVE_AUTO`. Die drei anderen Modi (`FORCE_AUTO`, `NONE`,
+`XF551_DD_HS`) waren damit weiterhin unerreichbar, obwohl sie im Enum stehen
+und die Rechnung sie kennt.
+
+`uft_atx_write()` bekommt einen Modus-Parameter. Die Signatur zu ändern war
+frei: die Funktion hat außerhalb der Tests **keinen Aufrufer**.
+
+#### Der eine Modus, der eine Meldung braucht
+
+a8rawconv beschreibt `FORCE_AUTO` wörtlich als *„overrides existing
+positions"* — er ersetzt **gemessene** Winkelpositionen durch gerechnete.
+Das ist kein Datenverlust, sondern eine **stille Veränderung**, und genau
+dagegen steht Prinzip 1. Der Modus darf existieren; leise sein darf er nicht:
+
+```
+ATX: FORCE_AUTO hat GEMESSENE Winkelpositionen durch gerechnete ersetzt.
+Das Ergebnis beschreibt nicht mehr die Diskette, von der die Spuren stammen
+```
+
+Damit hat der ATX-Schreiber jetzt **zwei** Meldungen, die sauber getrennt
+sind: MF-479 meldet *gerechnet statt gemessen* (nichts war da), MF-485 meldet
+*gerechnet anstelle von gemessen* (etwas war da und wurde ersetzt).
+
+#### Ein Testfehler, der mir gehörte
+
+Der `NONE`-Test verlangte zuerst Abstände von `1/n`. Gemessen kamen
+`0.98/n` — `uft_compute_interleave` reserviert 2 % der Umdrehung für die
+Lücke (`spacing = 0.98f / n`, wortgleich aus a8rawconv). **Meine Erwartung
+war falsch, nicht der Code.**
+
+Der Test prüft jetzt die *Eigenschaften* statt einer ausgerechneten Zahl:
+gleiche Abstände, aufsteigend, und kein Spurversatz obwohl es Spur 3 ist.
+Die Konstante ein zweites Mal aufzuschreiben wäre genau die Duplikation,
+die dieses Projekt sechsmal gebissen hat.
+
+#### Rot-Proben
+
+| Verfälschung | Ergebnis |
+|---|---|
+| Modus ignoriert (wieder fest `AUTO`) | `none_lays_the_sectors_out_one_to_one` fällt — am **Spurversatz**, den `NONE` unterdrücken muss |
+| `force` fest auf `false` | `force_auto_overrides_measured_positions_and_says_so` fällt |
+
+`ctest` 225/225, alle 21 Gate-Kategorien 0, `verify_build_sources.py` 0/0,
+qmake-Release-Build grün.
+
+**Ehrlich zur Reichweite.**
+
+- `uft_atx_write()` hat **weiter keinen Produktiv-Aufrufer**. Der Modus ist
+  jetzt wählbar, aber niemand wählt ihn — der Blocker steht unverändert in
+  FMT-25 (eigenes `UFT_FORMAT_ATX`, kein Atari-Flux-Pfad, kein Korpus).
+- **Der Spurversatz ist nicht abschaltbar außer über `NONE`.** Der Entwurf
+  wollte `track_skew_pct` als eigenes Profilfeld; das wäre ein zweiter Ort
+  für dieselbe Zahl, die schon in `uft_interleave.c` steht. Wer den Versatz
+  getrennt steuern will, sollte ihn dort parametrisieren, nicht daneben.
+- **`XF551_DD_HS` ist ungeprüft.** Der Modus existiert in der Rechnung und
+  ist jetzt durchgereicht, aber es gibt keinen Beleg dafür, wie eine
+  XF551-Hochgeschwindigkeitsspur wirklich liegt — nur a8rawconvs Formel.
+  Ein Test dagegen wäre ein Test gegen sich selbst.
+
+---
+
 ### FLUX-9 — die Rückseite einer Flippy-Diskette war nicht lesbar (2026-08-23, MF-484) → ✓ BEHOBEN
 
 Punkt 3.4 der a8rawconv-Gap-Analyse. Eine Flippy-Diskette wurde beschrieben,
