@@ -8,6 +8,29 @@
 #include <string.h>
 #include <stdio.h>
 
+/* Laenge der Kennung, aus der Kennung selbst.
+ *
+ * MF-514: hier stand zweimal `memcmp(..., SAP_SIGNATURE, 66)`. Das
+ * Kopffeld `char signature[66]` ist 66 Byte lang — das Vergleichsmuster
+ * aber nicht: SAP_SIGNATURE ist
+ *
+ *     "SYSTEME D'ARCHIVAGE PUISSANT - ARCHIVE V"
+ *
+ * also 40 Zeichen plus Nullbyte = 41. Verglichen wurden 66. GCC sagt es
+ * woertlich: "'memcmp' specified bound 66 exceeds source size 41"
+ * (-Wstringop-overread), zweimal, in jedem Bau dieses Baums.
+ *
+ * Die Folge ist nicht nur ein Lesen 25 Byte hinter dem Literal. Der
+ * Vergleich kann praktisch nie zutreffen: er verlangt, dass die Datei
+ * nach der Kennung genau die Bytes enthaelt, die der Binder zufaellig
+ * hinter das Literal gelegt hat. Die SAP-Erkennung war damit tot, und
+ * zwar still — ein Rueckgabewert 0 sieht aus wie "kein SAP".
+ *
+ * Verglichen wird jetzt die Kennung, und zwar so lang wie sie ist. Die
+ * Laenge kommt aus dem Literal selbst, damit sie nicht ein drittes Mal
+ * als Zahl irgendwo steht. */
+#define SAP_SIGNATURE_LEN  (sizeof(SAP_SIGNATURE) - 1)   /* 40 */
+
 void sap_decrypt_sector(uint8_t *data, size_t size) {
     for (size_t i = 0; i < size; i++) {
         data[i] ^= SAP_CRYPT_BYTE;
@@ -23,7 +46,7 @@ int sap_probe(const uint8_t *data, size_t size) {
     
     const SapHeader *hdr = (const SapHeader *)data;
     
-    if (memcmp(hdr->signature, SAP_SIGNATURE, 66) == 0) return 95;
+    if (memcmp(hdr->signature, SAP_SIGNATURE, SAP_SIGNATURE_LEN) == 0) return 95;
     
     return 0;
 }
@@ -41,7 +64,7 @@ int sap_open(SapDevice *dev, const char *path) {
     }
     fclose(f);
     
-    if (memcmp(hdr.signature, SAP_SIGNATURE, 66) != 0) {
+    if (memcmp(hdr.signature, SAP_SIGNATURE, SAP_SIGNATURE_LEN) != 0) {
         return -1;
     }
     
