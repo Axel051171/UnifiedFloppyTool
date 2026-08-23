@@ -316,10 +316,60 @@ static uft_error_t uftc_convert_scp_to_adf_via_plugin(
         return UFT_ERR_FORMAT;
     }
 
-    int cyls  = disk.geometry.cylinders > 0 ? disk.geometry.cylinders : ADF_CYLS;
-    int heads = disk.geometry.heads     > 0 ? disk.geometry.heads     : ADF_HEADS;
-    if (cyls  > ADF_CYLS)  cyls  = ADF_CYLS;
-    if (heads > ADF_HEADS) heads = ADF_HEADS;
+    /* Der Lesebereich entsteht in drei Stufen (MF-482): was die Datei sagt,
+     * was der Aufrufer vorgibt, was das Zielformat fasst.
+     *
+     * Bis hierher gab es nur Stufe eins und drei — und Stufe drei war STILL.
+     * Eine Amiga-Diskette mit 82 oder 83 Zylindern ist nichts Exotisches;
+     * genau dort liegen Zusatzkapazitaet und Kopierschutz, und der
+     * AmigaDOS-Dekoder laesst Spuren bis 167 ausdruecklich zu (MF-452). Das
+     * ADF-Format fasst 80, also MUSS gekuerzt werden — aber „Kein Bit
+     * verloren" heisst hier „kein Bit STILL verloren". Die Kuerzung wird
+     * gemeldet.
+     *
+     * Stufe zwei ist a8rawconvs `-g tracks,sides` (a8rawconv.cpp:1354-1364,
+     * beim Lesen eines Abbilds als `forced_tracks`/`forced_sides` in
+     * rawdiskscp.cpp:126-127). `uft_convert_options_t::target_geometry` gibt
+     * es dafuer seit jeher — mit dem Kommentar „(0 = auto)" — und niemand las
+     * es je. Ein gesetzter Wert gewinnt gegen die Datei: das ist der Sinn
+     * einer Vorgabe, und blindes Lesen ueber das Aufgezeichnete hinaus zaehlt
+     * die fehlenden Spuren als nicht gelesen statt sie zu verschweigen. */
+    int file_cyls  = disk.geometry.cylinders > 0 ? disk.geometry.cylinders
+                                                 : ADF_CYLS;
+    int file_heads = disk.geometry.heads     > 0 ? disk.geometry.heads
+                                                 : ADF_HEADS;
+
+    int cyls  = file_cyls;
+    int heads = file_heads;
+    bool forced = false;
+    if (opts && opts->target_geometry.cylinders > 0) {
+        cyls = opts->target_geometry.cylinders;
+        forced = true;
+    }
+    if (opts && opts->target_geometry.heads > 0) {
+        heads = opts->target_geometry.heads;
+        forced = true;
+    }
+    if (forced) {
+        uftc_add_warning(result,
+            "Geometrie vorgegeben: %d Zylinder x %d Seiten "
+            "(aus der Datei abgeleitet waeren %d x %d)",
+            cyls, heads, file_cyls, file_heads);
+    }
+
+    if (cyls > ADF_CYLS) {
+        uftc_add_warning(result,
+            "%d Zylinder angefordert, ADF fasst nur %d - %d Zylinder je Seite "
+            "nicht uebernommen",
+            cyls, ADF_CYLS, cyls - ADF_CYLS);
+        cyls = ADF_CYLS;
+    }
+    if (heads > ADF_HEADS) {
+        uftc_add_warning(result,
+            "%d Seiten angefordert, ADF fasst nur %d",
+            heads, ADF_HEADS);
+        heads = ADF_HEADS;
+    }
 
     uint8_t* output = calloc(1, adf_size);
     if (!output) {

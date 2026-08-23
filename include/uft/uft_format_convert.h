@@ -141,6 +141,11 @@ typedef struct uft_convert_options_ext {
      * uft_convert_options_t::decode_cell_adjust_pct — see the rationale
      * there. */
     double              decode_cell_adjust_pct;
+
+    /* MF-482 (appended for ABI safety): explicit read range. 0 in a field
+     * means "derive it from the source". Mirrors
+     * uft_convert_options_t::target_geometry — see the rationale there. */
+    uft_geometry_t      target_geometry;
 } uft_convert_options_ext_t;
 
 // ============================================================================

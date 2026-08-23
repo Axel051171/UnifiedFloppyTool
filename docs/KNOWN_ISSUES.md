@@ -3752,6 +3752,77 @@ für AmigaDOS-DD.
 
 ---
 
+### FLUX-7 — 83 Zylinder rein, 80 raus, kein Wort dazu (2026-08-23, MF-482) → ✓ BEHOBEN
+
+Punkt 3.5 der a8rawconv-Gap-Analyse (Geometrie-Override). Beim Nachmessen
+kam wieder zuerst ein Verlust heraus:
+
+```c
+if (cyls  > ADF_CYLS)  cyls  = ADF_CYLS;      // vorher: ohne ein Wort
+```
+
+Eine Amiga-Diskette mit 82 oder 83 Zylindern ist nichts Exotisches — genau
+dort liegen Zusatzkapazität und Kopierschutz, und der AmigaDOS-Dekoder lässt
+Spuren bis 167 seit MF-452 **ausdrücklich** zu. ADF fasst 80. Gekürzt werden
+*muss* also; verschwiegen werden darf es nicht. „Kein Bit verloren" heißt
+hier: **kein Bit still verloren.**
+
+Gemessen: eine SCP mit 83 Zylindern → ADF, `warning_count` enthielt kein Wort
+über die drei verlorenen Zylinder je Seite.
+
+#### Der Bereich entsteht jetzt in drei Stufen
+
+| Stufe | Quelle | vorher |
+|---|---|---|
+| 1 | was die Datei sagt (`disk.geometry`) | ✓ |
+| 2 | was der Aufrufer vorgibt (`target_geometry`) | **fehlte** |
+| 3 | was das Zielformat fasst | still |
+
+Stufe 2 ist a8rawconvs `-g tracks,sides` (`a8rawconv.cpp:1354-1364`; beim
+Lesen eines Abbilds als `forced_tracks`/`forced_sides`,
+`rawdiskscp.cpp:126-127`). `uft_convert_options_t::target_geometry` gibt es
+dafür seit jeher — mit dem Kommentar „(0 = auto)" — und **niemand las es je**.
+Sechster Eintrag derselben Liste nach MF-471/473/474/479/480.
+
+Damit ist zugleich die numerische Form dessen da, was FLUX-6 als
+`scp-ss40`/`ds40`/`ss80`/`ds80` offen gelassen hatte: `-g 80,1` ist `ss80`.
+Was weiterhin fehlt, ist ein Bedienelement.
+
+#### Rot-Proben
+
+| Verfälschung | Ergebnis |
+|---|---|
+| Zylinder-Vorgabe ignoriert | `an_explicit_range_limits_what_is_read` **und** `a_range_beyond_the_target_is_refused_out_loud` fallen |
+| Kürzungsmeldung entfernt | `cylinders_the_target_cannot_hold_are_reported_not_dropped` fällt |
+
+Zwei Verfälschungen, zwei verschiedene Fehlerbilder. `one_side_can_be_selected`
+bleibt bei der ersten grün — richtig, die Seitenvorgabe ist ein eigener Zweig.
+
+Dazu eine Gegenprobe, die eine Dauer-Meldung auffliegen ließe: bei 80
+Zylindern darf **keine** Kürzungsmeldung kommen.
+
+`ctest` 224/224, alle 21 Gate-Kategorien 0, `verify_build_sources.py` 0/0,
+qmake-Release-Build grün.
+
+**Ehrlich zur Reichweite.**
+
+- **Overdump beim SICHERN fehlt weiter** — und das ist die Hälfte, die
+  Punkt 3.5 eigentlich meint. `FluxCaptureJob::setGeometry()` existiert,
+  aber die Zahlen kommen aus `WorkflowTab::setHardwareDevice()`, also aus
+  dem erkannten Laufwerk; kein Bedienelement kann „lies 83 Zylinder" sagen.
+  Das ist GUI-Arbeit mit manuellem Rauchtest, kein `ctest`-Fall.
+- Verdrahtet ist **ein** Wandlungspfad (SCP→ADF). SCP→D64, SCP→IMG,
+  SCP→HFE und SCP→G64 leiten ihre Geometrie weiterhin selbst ab.
+- Die Vorgabe kann über das Aufgezeichnete hinausgehen (blindes Lesen); die
+  fehlenden Spuren zählen dann als nicht gelesen. Sie kann **nicht** über das
+  Zielformat hinausgehen — dort greift Stufe 3, jetzt hörbar.
+- Der Test benutzt absichtlich **nicht dekodierbaren** Kurzflux: geprüft wird,
+  was der Wandler über den *Bereich* sagt, nicht was er aus den Spuren holt.
+  Eine vollständige AmigaDOS-Spur je Zylinder wären 16 MB Testdaten für eine
+  Aussage, die davon nicht abhängt.
+
+---
+
 ### FLUX-6 — jede SCP-Teilaufnahme las sich als leere Diskette (2026-08-23, MF-481) → ✓ BEHOBEN
 
 Punkt 2.3 der a8rawconv-Gap-Analyse fragt nach einem Bedienelement für die
