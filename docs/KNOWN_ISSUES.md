@@ -3938,6 +3938,74 @@ zweite braucht eine Bank-Sitzung mit echtem Laufwerk.
 
 ---
 
+### SAN-1 — der erste ASan-Volllauf: ein eingeschlepptes `snprintf` ueberschrieb das der C-Bibliothek (2026-08-23, MF-523/524) -> ✓ BEHOBEN
+
+**Correctness.** Der berichtende ASan/UBSan-Volllauf aus MF-517 lief zum
+ersten Mal ueber die **ganze** Suite statt ueber neun Testnamen. Er
+meldete vier Befunde ausserhalb der Lecks — drei davon im Produktionscode,
+und keiner war unter Windows sichtbar.
+
+**MF-523 — `snprintf` war nicht das der C-Bibliothek.**
+
+`src/formats/amiga_ext/snprintf.c` definiert **globales** `snprintf` und
+`vsnprintf` — nicht `static`, nicht umbenannt, ohne Guard ausser
+`_MSC_VER` — und steht in `UnifiedFloppyTool.pro`. Unter glibc ist
+`snprintf` ein echtes externes Symbol; **jede** Aufrufstelle des Programms
+band damit gegen diese Fassung.
+
+Ihr Parser stammt von 1995 und kennt genau `- 0-9 l u U o O d D x X s c %`.
+**Es fehlt `z`.** Ein `"%zu"` wird falsch gelesen, die Argumentliste
+verschiebt sich, und ein spaeteres `"%s"` landet auf einer Zahl:
+
+```
+SEGV on unknown address 0x0000000028
+  #0 fmtstr        src/formats/amiga_ext/snprintf.c:175
+  #3 snprintf
+  #4 uft_probe_format  src/core/uft_probe_format_impl.c:78
+```
+
+Die Zeile dort formatiert `"%zu plugins claim this data at confidence %d;
+'%s' wins ..."`. **Gemessen: 10 Aufrufstellen unter `src/`** benutzen
+`%z`, `%ll` oder `%p` — alle zehn standen im ausgelieferten Binary auf
+diesem Parser. Im besten Fall falscher Text, im schlechtesten ein
+Absturz. Niemand ruft die Amiga-Fassung absichtlich: `plp_snprintf` kommt
+im ganzen Baum nur im Kommentar der eigenen Datei vor.
+
+**Warum es unter Windows unsichtbar blieb** — gemessen, nicht vermutet:
+`nm` zeigt die `snprintf`-Symbole des Testbinaries als `t`, also lokal.
+MinGWs `<stdio.h>` liefert `snprintf` als `static inline` ueber
+`__mingw_vsnprintf`; jede Uebersetzungseinheit bekommt ihr eigenes Symbol,
+und die globale Fassung wird nie referenziert. Das Objekt ist trotzdem
+gebunden.
+
+Die Datei wird jetzt nur noch uebersetzt, wenn `UFT_USE_VENDORED_SNPRINTF`
+ausdruecklich gesetzt ist. `tests/test_snprintf_not_shadowed.c` haelt das
+fest — und schreibt dazu, dass er unter MinGW gar nicht rot werden **kann**.
+Wer das nicht dazuschreibt, liest spaeter ein gruenes Windows-Ergebnis als
+Freispruch.
+
+**MF-524 — die drei uebrigen Befunde.**
+
+| Fund | Stelle | Ursache |
+|---|---|---|
+| global-buffer-overflow | `src/formats/c64/uft_cmd.c:151` `cmd_format` | Die Schleife las `name[i]` fuer i = 0..15, auch **nach** dem Nullbyte. `name[i] != '\0'` half nicht — es nahm den else-Zweig und las weiter |
+| shift exponent 32 | `src/formats/nintendo/uft_n64.c:391` | `#define ROL(i,b) ((i)<<(b) \| (i)>>(32-(b)))` ist fuer `b == 0` undefiniert, und `b` kommt aus den Daten: `ROL(d, d & 0x1F)` |
+| left shift of 143 by 24 | `tests/test_air_cross_validate.c:371` | `buf[8] << 24` auf `int`; ab Byte-Wert 128 undefiniert. Im Test, nicht im Produktionscode |
+
+**Was der Volllauf ausserdem gemessen hat: der Leck-Rueckstand.**
+LeakSanitizer meldet Lecks in vielen Tests, von 88 Byte bis **8 132 856
+Byte in 321 Allokationen**. Der ist **nicht** behoben und **nicht**
+beziffert — er ist ab jetzt sichtbar. Genau deshalb laeuft das scharfe
+Tor mit `detect_leaks=0`: ein ungemessener Rueckstand darf kein Tor
+bewachen, aber er darf auch nicht unsichtbar bleiben.
+
+**Die Lehre.** Sieben Speicherfehler hat der eigene Fuzzer gefunden. Diese
+vier hat er **nicht** gefunden, und keiner davon war unter Windows
+sichtbar. Ein Werkzeug, das nur auf einer Plattform geprueft wird, ist auf
+einer Plattform geprueft.
+
+---
+
 ### FUZZ-4 — der Schreibpfad nahm Koordinaten an, die es nicht gibt (2026-08-23, MF-522) -> ✓ BEHOBEN
 
 **Correctness / Forensik.** Bis hierher war `write_track` von keinem Test

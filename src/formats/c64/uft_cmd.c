@@ -146,9 +146,23 @@ int cmd_format(cmd_editor_t *editor, const char *name, const char *id)
     bam[2] = '3';  /* CMD DOS 3.x */
     bam[3] = 0x00;
     
-    /* Set disk name */
+    /* Set disk name.
+     *
+     * MF-524: die Schleife las `name[i]` fuer i = 0..15, auch NACH
+     * dem abschliessenden Nullbyte. Bei einem kuerzeren Namen — etwa
+     * dem String-Literal "TEST" — ist das ein Lesen hinter dem
+     * Objekt. ASan im Volllauf der CI (MF-517):
+     *   global-buffer-overflow ... src/formats/c64/uft_cmd.c:151
+     *                              in cmd_format
+     * Der Vergleich `name[i] != '\0'` half nicht: er nahm nur den
+     * else-Zweig und las in der naechsten Runde weiter. Jetzt endet
+     * die Laengenmessung am Nullbyte, der Rest wird aufgefuellt. */
+    size_t name_len = 0;
+    if (name) {
+        while (name_len < 16 && name[name_len] != '\0') name_len++;
+    }
     for (int i = 0; i < 16; i++) {
-        if (name && name[i] && name[i] != '\0') {
+        if (name && (size_t)i < name_len) {
             char c = name[i];
             if (c >= 'a' && c <= 'z') c -= 0x20;
             bam[4 + i] = c;

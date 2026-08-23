@@ -363,12 +363,12 @@ static void test_ipf_minimal(void) {
 
     /* Validate CRC of CAPS record */
     uint32_t caps_crc = air_crc32_header(buf, 0, 12);
-    uint32_t stored_crc = (buf[8]<<24)|(buf[9]<<16)|(buf[10]<<8)|buf[11];
+    uint32_t stored_crc = ((uint32_t)buf[8]<<24)|((uint32_t)buf[9]<<16)|((uint32_t)buf[10]<<8)|(uint32_t)buf[11];
     ASSERT_EQ(caps_crc, stored_crc, "IPF CAPS CRC-32 valid");
 
     /* Validate CRC of INFO record */
     uint32_t info_crc = air_crc32_header(buf + 12, 0, 96);
-    uint32_t info_stored = (buf[20]<<24)|(buf[21]<<16)|(buf[22]<<8)|buf[23];
+    uint32_t info_stored = ((uint32_t)buf[20]<<24)|((uint32_t)buf[21]<<16)|((uint32_t)buf[22]<<8)|(uint32_t)buf[23];
     ASSERT_EQ(info_crc, info_stored, "IPF INFO CRC-32 valid");
 
     free(buf);

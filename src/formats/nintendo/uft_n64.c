@@ -341,7 +341,17 @@ int n64_get_info(const n64_rom_t *rom, n64_info_t *info)
  * CRC Calculation (N64 CRC algorithm)
  * ============================================================================ */
 
-#define ROL(i, b) (((i) << (b)) | ((i) >> (32 - (b))))
+/* MF-524: `(i) >> (32 - (b))` ist fuer b == 0 eine Verschiebung um 32
+ * Stellen eines 32-Bit-Typs, also undefiniert. UBSan im Volllauf der
+ * CI (MF-517):
+ *   src/formats/nintendo/uft_n64.c:391: runtime error: shift exponent
+ *   32 is too large for 32-bit type 'unsigned int'
+ *
+ * Und b kommt aus den DATEN: `ROL(d, (d & 0x1F))` trifft den Fall bei
+ * jedem d, dessen untere fuenf Bits 0 sind. Die Maskierung mit 31
+ * macht aus der 32 wieder eine 0 und laesst jeden anderen Wert
+ * unveraendert — dieselbe Rotation, ohne die undefinierte Stelle. */
+#define ROL(i, b) (((i) << ((b) & 31)) | ((i) >> ((32 - (b)) & 31)))
 
 static uint32_t crc_table[256];
 static bool crc_init = false;

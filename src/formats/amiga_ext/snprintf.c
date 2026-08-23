@@ -4,8 +4,37 @@
  * @version 3.8.0
  */
 
-/* MSVC CRT already provides snprintf/vsnprintf - skip this entire file */
-#if defined(_MSC_VER)
+/* MF-523: Diese Datei definierte GLOBALES `snprintf` und `vsnprintf` —
+ * nicht static, nicht umbenannt, ohne Guard ausser `_MSC_VER`. Sie steht
+ * in UnifiedFloppyTool.pro. Unter glibc ist `snprintf` ein echtes externes
+ * Symbol, also band JEDE Aufrufstelle des Programms gegen diese Fassung
+ * statt gegen die der C-Bibliothek.
+ *
+ * Ihr Formatparser stammt von 1995 und kennt genau:
+ *     -  0-9  l  u  U  o  O  d  D  x  X  s  c  %
+ * Es fehlt `z`. Ein "%zu" wird deshalb falsch gelesen, die Argumentliste
+ * verschiebt sich, und ein spaeteres "%s" landet auf einer Zahl.
+ *
+ * Gefunden im ASan-Volllauf der CI (MF-517):
+ *     SEGV on unknown address 0x28
+ *       fmtstr -> dopr -> vsnprintf -> snprintf
+ *       -> uft_probe_format  src/core/uft_probe_format_impl.c:78
+ * Die Zeile dort formatiert "%zu ... %d ... '%s'".
+ *
+ * Gemessen: 10 Aufrufstellen unter src/ benutzen %z, %ll oder %p. Alle
+ * zehn standen im ausgelieferten Binary auf diesem Parser.
+ *
+ * Unter MinGW blieb es unsichtbar, weil dessen <stdio.h> `snprintf` als
+ * `static inline` liefert — jede Uebersetzungseinheit bekommt ihr eigenes
+ * lokales Symbol, und die globale Fassung hier wird nie referenziert.
+ *
+ * Niemand ruft die Amiga-Fassung absichtlich: `plp_snprintf` kommt im
+ * ganzen Baum nur im Kommentar dieser Datei vor. Sie wird deshalb nur noch
+ * uebersetzt, wenn jemand sie ausdruecklich anfordert — fuer eine
+ * Plattform, der `snprintf` wirklich fehlt.
+ *
+ * Belegt von tests/test_snprintf_not_shadowed.c. */
+#if defined(_MSC_VER) || !defined(UFT_USE_VENDORED_SNPRINTF)
 /* nothing */
 #else
 
