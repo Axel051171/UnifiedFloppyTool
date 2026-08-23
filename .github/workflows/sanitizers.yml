@@ -105,6 +105,14 @@ jobs:
       # den Rueckstand scharf zu schalten, ohne ihn vorher zu kennen, waere
       # derselbe Fehler in die andere Richtung.
       - name: Full suite under ASan (reporting only, incl. leaks)
+        # MF-530: `if: always()`, weil GitHub den Auftrag sonst
+        # abbricht, sobald das scharfe Tor darueber rot wird — und
+        # dann faellt genau die Messung aus, die den Rueckstand
+        # sichtbar haelt. Beim d80-Fund (MF-529) ist das passiert:
+        # ein Befund im Tor, und der Leck-Bericht des ganzen Laufs
+        # war weg. Ein Tor, das die Messung mitreisst, misst nicht
+        # mehr.
+        if: always()
         run: |
           cd build
           ctest --output-on-failure --timeout 300 || true
@@ -168,6 +176,14 @@ jobs:
       # BERICHTEND. Vorher liefen hier neun Testnamen mit `|| true`; die
       # restlichen 232 sah niemand unter UBSan.
       - name: Full suite under UBSan (reporting only)
+        # MF-530: `if: always()`, weil GitHub den Auftrag sonst
+        # abbricht, sobald das scharfe Tor darueber rot wird — und
+        # dann faellt genau die Messung aus, die den Rueckstand
+        # sichtbar haelt. Beim d80-Fund (MF-529) ist das passiert:
+        # ein Befund im Tor, und der Leck-Bericht des ganzen Laufs
+        # war weg. Ein Tor, das die Messung mitreisst, misst nicht
+        # mehr.
+        if: always()
         run: |
           cd build
           ctest --output-on-failure --timeout 300 || true
