@@ -63,14 +63,46 @@ jobs:
           cmake --build build --parallel $(nproc) 2>&1 || true
           # GUI may fail (missing headers) — tests are what matters
 
-      - name: Run tests with ASan
+      # ─────────────────────────────────────────────────────────────────
+      # SCHARF (MF-517). Dieser Schritt hat KEIN `|| true`.
+      #
+      # Er faehrt genau die Tests, die den Weg gehen, den ein Benutzer
+      # geht: eine Datei oeffnen. Dort lagen fuenf Speicherfehler, die
+      # 241 gruene Tests nicht gefunden haben (KNOWN_ISSUES FUZZ-1/FUZZ-2)
+      # — Heap-Ueberlauf 44830 B, Stapel-Ueberlauf 1800 B, ein doppeltes
+      # free bei jeder abgeschnittenen DSK-Datei, ein Lesen 29 KB hinter
+      # ein Feld, und zwoelf read_track, die durch NULL schrieben.
+      #
+      # detect_leaks=0 mit Absicht: geleckt wird in diesem Baum an vielen
+      # Stellen, und ein ungemessener Rueckstand darf kein Tor bewachen.
+      # Speicher-FEHLER sind etwas anderes als Speicher-Verlust; die
+      # ersten werden hier scharf geprueft, die zweiten weiter unten
+      # gemeldet.
+      - name: Memory-safety gate — open path (ARMED)
         run: |
           cd build
-          # Only run tests that actually compiled (self-contained + core-linked)
-          # "Not Run" tests fail ctest exit code — exclude known non-compiling tests
-          ctest --output-on-failure --timeout 300 \
-            --tests-regex "test_pll|test_recovery|test_roundtrip|test_writer_backend|test_woz_writer|test_platform|test_scp_direct_hal|test_xum1541_hal|test_applesauce_hal" \
-            || true
+          ctest --output-on-failure --timeout 300 --no-tests=error \
+            --tests-regex "test_disk_open_fuzz|test_dsk_open_bounds|test_format_probe_fuzz"
+        env:
+          ASAN_OPTIONS: detect_leaks=0:abort_on_error=1:print_stacktrace=1
+
+      # ─────────────────────────────────────────────────────────────────
+      # BERICHTEND, nicht scharf.
+      #
+      # Bis MF-517 lief hier eine Liste von NEUN Testnamen, und das mit
+      # `|| true`. Damit sah der Baum 232 seiner 241 Tests nie unter ASan,
+      # und die neun, die er sah, konnten nichts roeten. Als "ASan-
+      # Workflow" gefuehrt zu werden und beides zu sein, ist genau die
+      # Sorte Zusage, gegen die DESIGN_PRINCIPLES geschrieben ist.
+      #
+      # Jetzt laeuft die ganze Suite, damit der Rueckstand GEMESSEN im Log
+      # steht statt geschaetzt zu werden. `|| true` bleibt hier bewusst:
+      # den Rueckstand scharf zu schalten, ohne ihn vorher zu kennen, waere
+      # derselbe Fehler in die andere Richtung.
+      - name: Full suite under ASan (reporting only, incl. leaks)
+        run: |
+          cd build
+          ctest --output-on-failure --timeout 300 || true
         env:
           ASAN_OPTIONS: detect_leaks=1:abort_on_error=1:print_stacktrace=1
 
@@ -118,12 +150,21 @@ jobs:
           cmake --build build --parallel $(nproc) 2>&1 || true
           # GUI may fail (missing headers) — tests are what matters
 
-      - name: Run tests with UBSan
+      # SCHARF (MF-517) — siehe die Begruendung im ASan-Auftrag oben.
+      - name: UB gate — open path (ARMED)
         run: |
           cd build
-          ctest --output-on-failure --timeout 300 \
-            --tests-regex "test_pll|test_recovery|test_roundtrip|test_writer_backend|test_woz_writer|test_platform|test_scp_direct_hal|test_xum1541_hal|test_applesauce_hal" \
-            || true
+          ctest --output-on-failure --timeout 300 --no-tests=error \
+            --tests-regex "test_disk_open_fuzz|test_dsk_open_bounds|test_format_probe_fuzz"
+        env:
+          UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
+
+      # BERICHTEND. Vorher liefen hier neun Testnamen mit `|| true`; die
+      # restlichen 232 sah niemand unter UBSan.
+      - name: Full suite under UBSan (reporting only)
+        run: |
+          cd build
+          ctest --output-on-failure --timeout 300 || true
         env:
           UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
 

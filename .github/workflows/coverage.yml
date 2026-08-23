@@ -65,9 +65,14 @@ jobs:
         run: |
           cd build
           # Only run tests that actually compiled (self-contained + core-linked)
-          ctest --output-on-failure --timeout 120 \
-            --tests-regex "test_pll|test_recovery|test_roundtrip|test_writer_backend|test_woz_writer|test_platform|test_scp_direct_hal|test_xum1541_hal|test_applesauce_hal" \
-            || true
+          # MF-517: hier stand eine Liste von NEUN Testnamen. Die
+          # Coverage-Zahl, die dieser Auftrag erzeugt und als Badge
+          # veroeffentlicht, beschrieb damit 9 von 241 Tests — sie sagte
+          # etwas ueber den Baum, was sie nicht messen konnte.
+          #
+          # Jetzt laeuft die ganze Suite. `|| true` bleibt: dieser Auftrag
+          # misst, er bewacht nicht (das tut ci.yml, seit CI-1 scharf).
+          ctest --output-on-failure --timeout 300 || true
 
       - name: Generate coverage report
         run: |
