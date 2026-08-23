@@ -455,6 +455,73 @@ TEST(a_sector_that_reads_differently_each_time_is_reported_as_weak) {
     remove(scp); remove(out);
 }
 
+/* ------------------------------------------------------------------ */
+/* Wo der Schaden auf der Umdrehung sitzt (MF-501)                     */
+/* ------------------------------------------------------------------ */
+
+TEST(damage_is_reported_with_its_place_on_the_revolution)
+{
+    /* Der Decoder wusste seit jeher, WO ein Sektor lag (`id_position`),
+     * und niemand las es: die einzige Funktion, die es auswertete
+     * (`uft_otdr_adaptive_decode`), hat keinen Aufrufer. Seit MF-501 wird
+     * daraus eine Winkellage — die Datenquelle, die der Polarkarte
+     * fehlte.
+     *
+     * Hier ist Sektor 3 in ALLEN Umdrehungen kaputt, also nicht durch
+     * Mehrfachlesung zu retten. Der Bericht muss den Schaden nennen UND
+     * verorten. */
+    uint8_t *adf = make_source_adf();
+    ASSERT(adf != NULL);
+
+    sector_defect_t d = { 3, true, 0x5A };
+    const sector_defect_t *per_rev[3] = { &d, &d, &d };
+
+    char scp[512], out[512];
+    get_temp_path(scp, sizeof(scp), "angle.scp");
+    get_temp_path(out, sizeof(out), "angle.adf");
+    ASSERT(write_scp(scp, adf, 3, per_rev) == 0);
+
+    uft_convert_result_t r;
+    ASSERT(convert(scp, out, true, &r) == UFT_OK);
+
+    if (!warned_about(&r, "Schadenslage")) {
+        printf("\n        keine Schadenslage gemeldet:\n");
+        dump_warnings(&r);
+    }
+    ASSERT(warned_about(&r, "Schadenslage"));
+    /* Die Meldung muss die Umdrehung in Achtel teilen und die Zahl der
+     * betroffenen Spuren nennen — sonst ist sie eine Behauptung ohne
+     * Groessenordnung. */
+    ASSERT(warned_about(&r, "Achtel"));
+
+    remove(scp); remove(out); free(adf);
+}
+
+TEST(a_clean_disk_gets_no_damage_location)
+{
+    /* Gegenprobe. Ein Werkzeug, das auch bei heilen Disketten eine
+     * Schadenslage meldet, hat keine gemessen, sondern eine Zeile
+     * ausgegeben. */
+    uint8_t *adf = make_source_adf();
+    ASSERT(adf != NULL);
+
+    char scp[512], out[512];
+    get_temp_path(scp, sizeof(scp), "noangle.scp");
+    get_temp_path(out, sizeof(out), "noangle.adf");
+    ASSERT(write_scp(scp, adf, 3, NULL) == 0);
+
+    uft_convert_result_t r;
+    ASSERT(convert(scp, out, true, &r) == UFT_OK);
+    if (warned_about(&r, "Schadenslage")) {
+        printf("\n        Schadenslage bei heiler Diskette:\n");
+        dump_warnings(&r);
+    }
+    ASSERT(!warned_about(&r, "Schadenslage"));
+    ASSERT(!warned_about(&r, "ihre Lage auf der Umdrehung ist unbekannt"));
+
+    remove(scp); remove(out); free(adf);
+}
+
 int main(void)
 {
     printf("=== SCP -> ADF: alle Umdrehungen, und was sie sagen (MF-473) ===\n");
@@ -473,6 +540,10 @@ int main(void)
     RUN(a_sector_broken_in_revolution_zero_is_recovered_from_the_others);
     RUN(a_stable_crc_error_is_reported_as_copy_protection);
     RUN(a_sector_that_reads_differently_each_time_is_reported_as_weak);
+
+    /* MF-501: die Ortsangabe erreicht den Menschen */
+    RUN(damage_is_reported_with_its_place_on_the_revolution);
+    RUN(a_clean_disk_gets_no_damage_location);
     printf("\nResults: %d passed, %d failed\n", _pass, _fail);
     return _fail == 0 ? 0 : 1;
 }

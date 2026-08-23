@@ -239,6 +239,14 @@ typedef struct {
      *  (MF-495). 0 = nicht bestimmt, 1,0 = kein Gleichlauffehler. */
     double warp_span;
 
+    /** Zellendauer, mit der das behaltene Ergebnis tatsaechlich dekodiert
+     *  wurde, in ns. Bei @ref FLUX_TIMING_DEWARPED ist das der Bezugstakt
+     *  des entzerrten Stroms — also NICHT @ref measured_cell_ns.
+     *
+     *  Ohne diesen Wert laesst sich eine Bitposition nicht in eine Zeit
+     *  und damit nicht in eine Winkellage umrechnen (MF-501). */
+    double used_cell_ns;
+
     /** Welcher Kandidat das Ergebnis geliefert hat. */
     flux_timing_source_t timing_source;
 

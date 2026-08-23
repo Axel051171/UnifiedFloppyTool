@@ -1601,6 +1601,7 @@ static flux_status_t amiga_try_candidate(const flux_raw_data_t *flux,
         alt.measured_cell_ns = best->measured_cell_ns;
         alt.warp_span        = best->warp_span;
         alt.timing_source    = source;
+        alt.used_cell_ns     = bitcell_ns;
 
         flux_decoded_track_free(best);
         *best = alt;                     /* Besitz wandert mit, `sectors`
@@ -1692,6 +1693,7 @@ flux_status_t flux_decode_amiga(const flux_raw_data_t *flux,
     double bitcell_ns = flux_pick_bitcell_ns(flux, opts, FLUX_MFM_DD_BITCELL_NS);
     flux_status_t rc = amiga_decode_at(flux, track, opts, bitcell_ns);
     track->initial_cell_ns = bitcell_ns;
+    track->used_cell_ns    = bitcell_ns;
     track->timing_source   = FLUX_TIMING_INITIAL;
 
     /* Zweiter Durchlauf mit gemessener Zellendauer (MF-492).

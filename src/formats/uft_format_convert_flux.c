@@ -18,6 +18,7 @@
 #include "uft/uft_format_plugin.h"
 #include "uft/uft_track.h"
 #include "uft/flux/uft_flux_decoder.h"
+#include "uft/flux/uft_decode_timeline.h"
 
 extern const uft_format_plugin_t uft_format_plugin_hfe;
 extern const uft_format_plugin_t uft_format_plugin_scp;
@@ -321,6 +322,104 @@ static bool uftc_adf_place_voted(const uftc_adf_votes_t* v,
  * Diskette kann zwei Dateisysteme tragen (Amiga + Atari auf derselben
  * Scheibe ist ein bekannter Fall), und nur den Sieger zu nennen hiesse,
  * das zweite stillschweigend zu unterschlagen. */
+/* ── Wo auf der Umdrehung der Schaden sitzt (MF-501) ─────────────────────
+ *
+ * Der Decoder weiss seit jeher, WO ein Sektor lag (`id_position`), und
+ * seit MF-496 auch, mit welcher Zellendauer er gelesen wurde. Zusammen mit
+ * der gemessenen Umdrehungsdauer wird daraus eine Winkellage — die
+ * Datenquelle, die der Polarkarte (Mammut 3.2) fehlte.
+ *
+ * Berichtet werden ROHE Zahlen: acht gleich grosse Sektoren der Umdrehung
+ * und wieviel Schaden in jedem liegt. Keine Deutung („der Schaden haeuft
+ * sich bei 3 Uhr") — die waere eine Behauptung ueber die Ursache, und die
+ * ist aus einer Wandlung nicht ableitbar.
+ */
+#define UFTC_ANGLE_BINS 8
+
+typedef struct {
+    /** Anteil beschaedigter Bits je Achtel der Umdrehung, aufsummiert. */
+    double bins[UFTC_ANGLE_BINS];
+    /** Spuren, fuer die eine Winkellage bestimmt werden konnte. */
+    int    tracks_with_angle;
+    /** Spuren mit ueberhaupt beschaedigten Abschnitten. */
+    int    tracks_damaged;
+    double sum_decoded;
+    double sum_damaged;
+    double sum_untouched;
+} uftc_angle_stats_t;
+
+/**
+ * Eine dekodierte Spur in die Winkelverteilung eintragen.
+ *
+ * @param revolution_ns  gemessene Umdrehungsdauer; 0 heisst „nicht
+ *                       gemessen", und dann wird KEINE Winkellage
+ *                       eingetragen statt einer geschaetzten.
+ */
+static void uftc_angle_note(uftc_angle_stats_t *st,
+                            const flux_decoded_track_t *dt,
+                            double revolution_ns)
+{
+    if (!st || !dt || dt->track_length_bits == 0) return;
+
+    uft_decode_timeline_t tl;
+    if (!uft_timeline_build(dt, (size_t)dt->track_length_bits,
+                            dt->used_cell_ns, revolution_ns, &tl))
+        return;
+
+    st->sum_decoded   += uft_timeline_fraction(&tl, UFT_SLICE_DECODED);
+    st->sum_damaged   += uft_timeline_fraction(&tl, UFT_SLICE_DAMAGED);
+    st->sum_untouched += uft_timeline_fraction(&tl, UFT_SLICE_UNTOUCHED);
+
+    bool any_damage = false, any_angle = false;
+    for (size_t i = 0; i < tl.count; i++) {
+        if (tl.slices[i].status != UFT_SLICE_DAMAGED) continue;
+        any_damage = true;
+
+        double a = uft_timeline_angle(&tl, i);
+        if (a < 0.0) continue;              /* keine Zeitbasis, kein Winkel */
+        any_angle = true;
+
+        int bin = (int)(a * UFTC_ANGLE_BINS);
+        if (bin < 0) bin = 0;
+        if (bin >= UFTC_ANGLE_BINS) bin = UFTC_ANGLE_BINS - 1;
+        st->bins[bin] += (double)(tl.slices[i].end_bit
+                                  - tl.slices[i].first_bit)
+                         / (double)tl.bit_count;
+    }
+    if (any_damage) st->tracks_damaged++;
+    if (any_angle)  st->tracks_with_angle++;
+
+    uft_timeline_free(&tl);
+}
+
+static void uftc_angle_report(const uftc_angle_stats_t *st, int tracks,
+                              uft_convert_result_t *result)
+{
+    if (!st || !result || tracks <= 0 || st->tracks_damaged == 0) return;
+
+    if (st->tracks_with_angle == 0) {
+        /* Schaden ja, Winkel nein — dann fehlte die Umdrehungsmessung.
+         * Das zu sagen ist mehr wert als zu schweigen: es benennt, was
+         * einer Aufnahme fehlt, damit sie mehr hergibt. */
+        uftc_add_warning(result,
+            "Beschaedigte Abschnitte auf %d Spuren; ihre Lage auf der "
+            "Umdrehung ist unbekannt, weil keine Umdrehungsdauer gemessen "
+            "wurde", st->tracks_damaged);
+        return;
+    }
+
+    char bins[128];
+    int n = 0;
+    for (int i = 0; i < UFTC_ANGLE_BINS && n < (int)sizeof(bins) - 8; i++)
+        n += snprintf(bins + n, sizeof(bins) - (size_t)n, "%s%.0f",
+                      i ? " " : "", 1000.0 * st->bins[i] / (double)tracks);
+
+    uftc_add_warning(result,
+        "Schadenslage ueber die Umdrehung (8 Achtel, Promille der "
+        "Spurlaenge): %s - beschaedigt auf %d von %d Spuren",
+        bins, st->tracks_damaged, tracks);
+}
+
 /* ── Was der Decoder ueber seine Zeitbasis gemeldet hat (MF-496) ─────────
  *
  * Der Decoder probiert seit MF-492/MF-495 mehrere Zeitbasen durch und
@@ -528,6 +627,8 @@ static uft_error_t uftc_convert_scp_to_adf_via_plugin(
 
     uftc_timing_stats_t timing;
     memset(&timing, 0, sizeof(timing));
+    uftc_angle_stats_t angles;
+    memset(&angles, 0, sizeof(angles));
 
     flux_decoder_options_t dopts;
     flux_decoder_options_init(&dopts);
@@ -627,6 +728,8 @@ static uft_error_t uftc_convert_scp_to_adf_via_plugin(
                         memset(&dt, 0, sizeof(dt));
                         flux_decode_amiga(&raw, &dt, &dopts);
                         uftc_timing_note(&timing, &dt);
+                        uftc_angle_note(&angles, &dt,
+                                        (double)rev->index_time_ns);
                         uftc_adf_collect(&dt, votes);
                         flux_decoded_track_free(&dt);
                         flux_raw_free(&raw);
@@ -653,6 +756,8 @@ static uft_error_t uftc_convert_scp_to_adf_via_plugin(
                         memset(&dt, 0, sizeof(dt));
                         flux_decode_amiga(&raw, &dt, &dopts);
                         uftc_timing_note(&timing, &dt);
+                        uftc_angle_note(&angles, &dt,
+                                        (double)t.metrics.index_time_ns);
                         uftc_adf_collect(&dt, votes);
                         flux_decoded_track_free(&dt);
                         flux_raw_free(&raw);
@@ -752,6 +857,7 @@ static uft_error_t uftc_convert_scp_to_adf_via_plugin(
     }
 
     uftc_timing_report(&timing, result);
+    uftc_angle_report(&angles, tracks_with_flux, result);
 
     uftc_report_progress(opts, 95, "Writing output");
     uftc_verify_output_filesystem(output, adf_size, result);

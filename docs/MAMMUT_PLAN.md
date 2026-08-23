@@ -98,9 +98,14 @@ Nach Aufwand sortiert, alle mit vorhandenem Anschluss im Baum.
 |---|---|---|
 | ~~**2.2 Dewarp-Stufe**~~ | ✅ **fertig** (MF-495, FLUX-15): zwei Tempi 7 → 9 heile Sektoren; kein Mittel gegen Zittern; `RECOVERED_DEWARP` offen (Provenance ist Operations-Kette, keine Sektor-Klasse) | — |
 | ~~**§2.1.3 Fit-Anzeige**~~ | ✅ **fertig** (MF-496, FLUX-16) als Meldung im Wandlungsergebnis: „Die Sync-Marken messen 50 % der abgeleiteten Zellendauer". Das GUI-Feld selbst ist offen — nicht wegen Aufwand, sondern weil ein Widget in dieser Sitzung nicht prüfbar ist | — |
-| **1.4 OEM-Namens-Tabelle** | reine Datentabelle, Bootsektor-Detail existiert | S |
-| **1.4 `.tc` (Transcopy)** | Spec aus SAMdisk (im Baum, `src/samdisk/`) statt aus DiskImageTool | S–M |
-| **1.1 diskdefs-Parser** | `src/formats/cpm/uft_cpm_diskdef.c` — Zielverzeichnis korrigiert; Grammatik ist im Vorschlag korrekt beschrieben und öffentlich | S |
+| ~~2.3 Timeline-Slices~~ | ✅ **Karte fertig** (MF-501, FLUX-17) — siehe unten | — |
+| **1.4 OEM-Namens-Tabelle** | reine Datentabelle, Bootsektor-Detail existiert; **Herkunft je Zeile offen** — eine Tabelle aus dem Gedächtnis wäre erfundene Daten | S |
+| ~~1.4 `.tc` (Transcopy)~~ | ❌ **blockiert** (MF-500): `src/samdisk/` ist eine Teilmenge und enthält kein TransCopy | — |
+| ~~1.1 diskdefs-Parser~~ | ❌ **blockiert** (MF-500): `cpmls` nicht installiert, keine `diskdefs`-Datei im Baum | — |
+
+> Die durchgestrichenen Zeilen standen hier, bevor jemand nachgesehen hat.
+> Was wirklich fehlt und woher es käme, steht in der Referenz-Tabelle unter
+> §5 — **eine** Stelle, nicht zwei.
 
 ### 2.2 Dewarp — ✅ **FERTIG** (MF-495, FLUX-15)
 
@@ -162,7 +167,7 @@ Multi-Capture-Teil aber weiterhin den Fundus.
 |---|---|
 | 1.2 AMSDOS | `src/formats/cpc/` fehlt, kein AMSDOS im Baum; `sector-cpc` als Referenz nicht vorhanden |
 | 1.3 Fundus-Manifest | **Fundus existiert nicht** |
-| 2.3 Timeline-Slices | 2.2 ist fertig; nur der Multi-Capture-Teil braucht noch den Fundus |
+| ~~2.3 Timeline-Slices~~ | **Karte fertig** (MF-501, FLUX-17): Scheiben + Winkellage, im Wandler verdrahtet. Offen bleibt das STEUERN der Recovery-Stufen damit (§2.3.1) und der Multi-Capture-Teil (§2.3.3, braucht Fundus) |
 | 2.4 Mining-Targets | braucht Hardware mit Motor+Seek (**kein Gerät vorhanden**, MF-310) und Fundus für die append-only-Iterationen |
 | 3.1 `uft-catalog` | superdiskindex nicht im Baum; braucht Fundus |
 | 3.2 Polarkarte | **Datenquelle existiert nicht** (siehe §0.7): das Multiread-Ergebnis trägt keine Winkelpositionen |

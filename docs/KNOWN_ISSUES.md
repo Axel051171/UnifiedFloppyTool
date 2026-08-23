@@ -3938,6 +3938,80 @@ zweite braucht eine Bank-Sitzung mit echtem Laufwerk.
 
 ---
 
+### FLUX-17 — der Decoder wusste, WO der Sektor lag, und niemand fragte (2026-08-23, MF-501) → ✓ BEHOBEN
+
+`flux_decoded_sector_t` trägt seit jeher `id_position` und
+`data_position`, und vier Stellen in `uft_flux_decoder.c` füllen sie.
+Gelesen wurden sie von genau einer Funktion — `uft_otdr_adaptive_decode()`
+—, und die hat **keinen Aufrufer**; die beiden Erwähnungen in der
+Oberfläche sind Kommentare, die erklären, warum sie nicht verdrahtet ist.
+
+Die Ortsangabe wurde also berechnet und weggeworfen. Fünfzehnte
+Ausprägung derselben Diagnose: *wo eine Tatsache mehrfach vorliegt, läuft
+nicht die bessere Fassung, sondern die, die zufällig aufgerufen wird* —
+hier in ihrer Variante *gebaut, gefüllt, nie gelesen*.
+
+**Was jetzt daraus wird.** `src/flux/uft_decode_timeline.c` baut aus einem
+Dekodier-Ergebnis eine Scheibenkarte über der Spur: welcher Abschnitt heil
+gelesen wurde, welcher beschädigt ist, welchen niemand angefasst hat. Mit
+der benutzten Zellendauer (neu: `used_cell_ns`) und der gemessenen
+Umdrehungsdauer wird aus einer Bitposition eine **Winkellage** — genau die
+Datenquelle, die der Polarkarte (Mammut 3.2) fehlte und deren Fehlen in
+`MAMMUT_PLAN.md` §0.7 als Blocker steht.
+
+**Was der Mensch sieht** (SCP→ADF, eine Zeile je Wandlung):
+
+> Schadenslage ueber die Umdrehung (8 Achtel, Promille der Spurlänge):
+> 0 0 0 91 0 0 0 0 — beschädigt auf 2 von 2 Spuren
+
+Rohe Zahlen, keine Deutung. „Der Schaden häuft sich bei 3 Uhr" wäre eine
+Behauptung über die Ursache, und die ist aus einer Wandlung nicht
+ableitbar.
+
+**Invarianten zuerst, wie beschlossen (MF-498a).** Für eine Karte über der
+Spur gibt es kein Oracle — kein Fremdwerkzeug baut dieselbe Karte. Was sich
+prüfen lässt, sind ihre Zusicherungen, und die standen als Test **vor** dem
+Code: der erste Lauf gegen einen Wegwerf-Stummel war **11 von 12 rot**.
+
+| Zusicherung | warum sie nötig ist |
+|---|---|
+| lückenlos, überschneidungsfrei | eine Lücke wäre ein Bereich, über den die Karte schweigt, ohne es zu sagen |
+| aufsteigend, nicht leer | sonst ist „die Scheibe davor" nicht definiert |
+| `DECODED` nur bei heilen Prüfsummen | eine Aussage über gelesene Daten, nicht über gefundene Kandidaten (MF-466) |
+| leere Spur = `UNTOUCHED`, nicht „in Ordnung" | Schweigen als Erfolg auszulegen ist der bequemste Weg, eine unlesbare Diskette für gesund zu halten |
+| kein Winkel ohne Umdrehungsmessung | ein Winkel ohne Zeitbasis ist eine Erfindung mit Nachkommastellen |
+| Winkel bleibt in [0,1) | mehrere Umdrehungen im Strom sind der Normalfall (MF-478) |
+
+**Zwei Befunde aus den Rotbeweisen, beide an eigenen Tests:**
+
+1. *Der Haupt-Überdeckungstest übte die führende Scheibe nie.* Die
+   Testspur legte ihren ersten Sektor auf Bit 0 — dann gibt es keinen
+   Abschnitt davor. Der Rotbeweis „führende Scheibe entfällt" kippte drei
+   andere Tests, aber nicht den, der Überdeckung im Namen trägt. Die
+   Testspur beginnt jetzt bei Bit 800.
+2. *„Lehnt falsche Argumente ab" bestand gegen den Stummel* — der lehnte
+   alles ab. Der Test verlangt jetzt zuerst, dass eine **gültige** Eingabe
+   durchgeht.
+
+**Was ausdrücklich NICHT umgesetzt ist.** Der Plan (§2.3.1) will, dass die
+Recovery-Stufen fortan scheibenweise arbeiten und harte Scheiben teurer
+behandeln. Das tun sie nicht — sie laufen weiter über die ganze Spur.
+Diese Änderung liefert die Karte; wer sie zum *Steuern* benutzt, ist ein
+eigener Schritt mit eigener Messung. §2.3.3 (dieselbe Timeline über alle
+Aufnahmen einer Diskette) braucht weiterhin den Fundus.
+
+**Grenze der Winkelangabe.** Sie stimmt nur, soweit die Zellendauer über
+die Spur konstant ist. Wo sie das nicht ist — die Zwei-Tempo-Spur aus
+FLUX-15 —, ist der Winkel am Spurende ungenauer als am Anfang. Wie stark,
+ist **nicht gemessen**; es bräuchte eine Aufnahme mit bekannter
+Winkelmarkierung.
+
+**Verdrahtet und geprüft:** `tests/test_decode_timeline.c` (12 Tests) +
+2 Tests in `test_convert_scp_adf_multirev.c`, 10 Rotbeweise feuern auf
+genau den benannten Tests, 233/233 ctest grün, qmake-Release baut.
+
+---
+
 ### FLUX-16 — der Decoder maß, entschied und vergaß (2026-08-23, MF-496) → ✓ BEHOBEN
 
 Seit MF-492/MF-495 probiert `flux_decode_amiga()` mehrere Zeitbasen durch

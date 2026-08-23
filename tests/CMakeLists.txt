@@ -444,6 +444,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_sync_search.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_dewarp.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_decode_timeline.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c
             ${CMAKE_SOURCE_DIR}/src/compat/uft_fnmatch.c
@@ -485,6 +486,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_sync_search.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_dewarp.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_decode_timeline.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c
             ${CMAKE_SOURCE_DIR}/src/compat/uft_fnmatch.c
@@ -517,6 +519,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_sync_search.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_dewarp.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_decode_timeline.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c
@@ -533,12 +536,27 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_sync_search.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_dewarp.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_decode_timeline.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c
             ${CMAKE_SOURCE_DIR}/src/formats/amiga/uft_amiga_syncs.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
         target_include_directories(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/tests/flux_gen/amigados
+            ${CMAKE_SOURCE_DIR}/include/uft/flux)
+    elseif(${test_name} STREQUAL "test_decode_timeline")
+        # MF-501: Scheibenkarte einer Dekodierung
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_decode_timeline.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_sync_search.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_dewarp.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c
+            ${CMAKE_SOURCE_DIR}/src/formats/amiga/uft_amiga_syncs.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
+        target_include_directories(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/include/uft/flux)
     elseif(${test_name} STREQUAL "test_flux_dewarp")
         # MF-495: Gleichlauffehler herausrechnen
@@ -548,6 +566,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_sync_search.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_dewarp.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_decode_timeline.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c
             ${CMAKE_SOURCE_DIR}/src/formats/amiga/uft_amiga_syncs.c
@@ -563,6 +582,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_sync_search.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_dewarp.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_decode_timeline.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c
             ${CMAKE_SOURCE_DIR}/src/formats/amiga/uft_amiga_syncs.c
@@ -578,6 +598,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_sync_search.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_dewarp.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_decode_timeline.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c
             ${CMAKE_SOURCE_DIR}/src/formats/amiga/uft_amiga_syncs.c
@@ -598,6 +619,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_sync_search.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_dewarp.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_decode_timeline.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c
             ${CMAKE_SOURCE_DIR}/src/compat/uft_fnmatch.c
@@ -634,6 +656,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_sync_search.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_dewarp.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_decode_timeline.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c
             ${CMAKE_SOURCE_DIR}/src/compat/uft_fnmatch.c
@@ -669,6 +692,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_sync_search.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_dewarp.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_decode_timeline.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c
             ${CMAKE_SOURCE_DIR}/src/compat/uft_fnmatch.c
@@ -706,6 +730,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_sync_search.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_dewarp.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_decode_timeline.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c
             ${CMAKE_SOURCE_DIR}/src/compat/uft_fnmatch.c
@@ -745,6 +770,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_sync_search.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_dewarp.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_decode_timeline.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c
             ${CMAKE_SOURCE_DIR}/src/compat/uft_fnmatch.c
@@ -779,6 +805,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_sync_search.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_dewarp.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_decode_timeline.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c
             ${CMAKE_SOURCE_DIR}/src/formats/amiga/uft_amiga_protection.c
             ${CMAKE_SOURCE_DIR}/src/formats/amiga/uft_amiga_syncs.c)
@@ -827,6 +854,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_sync_search.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_dewarp.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_decode_timeline.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free"
@@ -839,6 +867,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_sync_search.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_dewarp.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_decode_timeline.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
@@ -851,6 +880,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_sync_search.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_dewarp.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_decode_timeline.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c
             ${CMAKE_SOURCE_DIR}/src/formats/amiga/uft_amiga_syncs.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
@@ -862,6 +892,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_sync_search.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_dewarp.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_decode_timeline.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c
             ${CMAKE_SOURCE_DIR}/src/formats/amiga/uft_amiga_syncs.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
@@ -1532,6 +1563,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_sync_search.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_dewarp.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_decode_timeline.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c)
         if(UNIX)
             set(TEST_LIBS ${M_LIBRARY})
@@ -1548,6 +1580,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_sync_search.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_dewarp.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_decode_timeline.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c
             # MF-407 (PROT-11): the flux -> GCR -> metrics chain
             ${CMAKE_SOURCE_DIR}/src/protection/ufm_c64_metrics.c)
@@ -1564,6 +1597,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_sync_search.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_dewarp.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_decode_timeline.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c)
         if(UNIX)
             set(TEST_LIBS ${M_LIBRARY})
@@ -1578,6 +1612,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_sync_search.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_dewarp.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_decode_timeline.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c)
         if(UNIX)
             set(TEST_LIBS ${M_LIBRARY})
@@ -1609,6 +1644,7 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_sync_search.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_dewarp.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_decode_timeline.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c)
         if(UNIX)
             set(TEST_LIBS ${M_LIBRARY})
@@ -2313,6 +2349,7 @@ if(UFT_ENABLE_BENCHMARKS)
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_sync_search.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_dewarp.c
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_decode_timeline.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c)
     target_include_directories(bench_decode_hotpath PRIVATE
         ${CMAKE_SOURCE_DIR}/include)
