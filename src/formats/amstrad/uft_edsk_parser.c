@@ -676,8 +676,20 @@ int main(void) {
     {
         edsk_parser_ctx_t* ctx = calloc(1, sizeof(edsk_parser_ctx_t));
         assert(ctx != NULL);
+        /* MF-552: hier stand
+         *
+         *     ctx->is_extended = true;
+         *     assert(ctx->is_extended == true);
+         *
+         * Ein assert, das nicht fehlschlagen kann. Es prueft, dass eine
+         * Zuweisung zuweist — das tut der Uebersetzer.
+         *
+         * Der Block heisst "Context allocation". Was daran wirklich
+         * pruefenswert ist: dass  genullt hat. Genau darauf
+         * verlassen sich die Parser weiter unten, wenn sie Felder nicht
+         * ausdruecklich setzen. */
+        assert(ctx->is_extended == false);   /* calloc muss genullt haben */
         ctx->is_extended = true;
-        assert(ctx->is_extended == true);
         free(ctx);
         printf("✓ Context allocation\n");
     }

@@ -3938,6 +3938,66 @@ zweite braucht eine Bank-Sitzung mit echtem Laufwerk.
 
 ---
 
+### TAUT-1 — das Muster, das dreimal vorkam, ist jetzt ein Tor (2026-08-24, MF-552)
+
+Drei der schwersten Funde dieser Sitzung sind **dasselbe Muster** in
+verschiedener Kleidung:
+
+| | Stelle | Was aussah wie eine Pruefung |
+|---|---|---|
+| MF-542 | `uft_forensic_recovery.c` | `crc_stored = crc_computed;` → `crc_valid = (crc_computed == crc_stored)` |
+| MF-551 | `uft_fat12.c` | `*size = written;` → `return (w == sz) ? OK : IO` |
+| MF-545 | `uft_format_convert_*.c` | `success` folgte daraus, dass sich die Datei ANLEGEN liess |
+
+Alle drei sehen im Quelltext wie eine Pruefung aus. **Keine davon prueft
+etwas.** Und alle drei sitzen an einer Stelle, an der ein forensisches
+Werkzeug eine Zusicherung gibt — CRC gueltig, Datei vollstaendig, Wandlung
+gelungen.
+
+`scripts/audit_self_comparison.py` ist die **28.** Kategorie und sucht das
+Muster maschinell. **Rotbeweis:** die zwei Zeilen aus MF-542 wieder
+eingesetzt →
+
+```
+src/recovery/uft_forensic_recovery.c:894:
+ ist immer wahr —
+Zeile 893 setzt 
+```
+
+Das Tor haette den schwersten Fund dieser Sitzung selbst gefunden.
+
+**Was der erste Lauf ergab, und was daraus wurde.**
+
+5 Befunde. Nachgelesen: **null Produktionsfehler.** Drei Fehlalarme, weil
+das Tor den Kontrollfluss nicht sah (`else if`-Zweige, Schleifenvariablen),
+zwei echte Tautologien — aber in toten Selbsttests hinter
+`#ifdef ..._TEST`:
+
+```c
+ctx->is_extended = true;
+assert(ctx->is_extended == true);   /* prueft, dass Zuweisung zuweist */
+```
+
+Beide sind jetzt aussagekraeftig: sie pruefen, dass `calloc` genullt hat —
+worauf sich die Parser weiter unten verlassen.
+
+**Zwei eigene Messfehler auf dem Weg**, beide beim Nachlesen aufgefallen:
+
+1. Der Kommentar-Entferner loeschte Zeilenumbrueche. Alle fuenf Befunde
+   trugen Stellenangaben, an denen etwas voellig anderes stand. **Ein
+   Befund mit falscher Stelle ist schlimmer als kein Befund** — er kostet
+   die Zeit, ihn zu widerlegen, und macht beim naechsten Mal misstrauisch
+   gegen das Tor statt gegen den Code.
+2. Das Zuruecksetzen an Zweiggrenzen lief eine Reihenfolge zu spaet, also
+   nach der Pruefung derselben Zeile. Drei von fuenf Meldungen blieben
+   falsch.
+
+**Das Ergebnis ist die eigentliche Nachricht:** ausserhalb der bereits
+behobenen Stellen gibt es dieses Muster im Baum **nicht**. Die Sorge war
+begruendet, der Verdacht auf Verbreitung nicht.
+
+---
+
 ### FS-1 — ein Torso mit dem richtigen Namen (2026-08-24, MF-551) -> ✓ BEHOBEN, OHNE WAECHTER
 
 Die Dateiausgabe zweier Dateisysteme meldete Erfolg fuer abgeschnittene

@@ -701,6 +701,14 @@ def main() -> int:
         # Grundlinie). Das Tor verhindert den zweiten.
         import audit_dead_probe as _dp
         all_errors.append(("Sonden, die nie zustimmen", _dp.check(repo)))
+        # Selbstvergleiche (MF-552). Drei der schwersten Funde dieser
+        # Sitzung sind dasselbe Muster: eine Zahl wird mit sich selbst
+        # verglichen, und die Pruefung kann nicht fehlschlagen.
+        # MF-542 (CRC), MF-551 (Dateigroesse), MF-545 (Erfolg aus dem
+        # Anlegen der Datei). Alle drei sahen im Quelltext wie eine
+        # Pruefung aus.
+        import audit_self_comparison as _sc
+        all_errors.append(("Selbstvergleiche", _sc.check(repo)))
 
     total = sum(len(e) for _, e in all_errors)
     print(f"Consistency check ({len(all_errors)} categories, root={repo}):")
