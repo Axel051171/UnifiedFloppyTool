@@ -1217,8 +1217,42 @@ static bool scp_parse_track(
         rev->flux_count = flux_count;
         
         /* Read flux data */
-        uint32_t flux_offset = offset + data_off;
-        if (flux_offset + flux_count * 2 > size) {
+        /* MF-554: die Schranke rechnete in uint32 und lief ueber.
+         *
+         * `flux_count` ist ein voller uint32 aus der Datei und wurde nur
+         * gegen 0 geprueft. Die Schranke lautete:
+         *
+         *     if (flux_offset + flux_count * 2 > size)
+         *
+         * `flux_count * 2` ist uint32-Arithmetik. Bei `flux_count =
+         * 0x80000000` ergibt das **0** — die Schranke geht auf, obwohl der
+         * Anspruch 4 GB betraegt.
+         *
+         * Die Zeile darunter rechnet dagegen in size_t:
+         *
+         *     malloc(flux_count * sizeof(uint16_t))
+         *
+         * `sizeof` liefert size_t, also 64 Bit, und hier laeuft nichts
+         * ueber: es werden 4 GB angefordert. Auf einer Maschine mit genug
+         * Speicher gelingt das, und die Schleife danach liest
+         * `flux_data[f * 2]` fuer f bis 0x7FFFFFFF — bis zu 4 GB hinter
+         * einem Dateipuffer von wenigen Megabyte.
+         *
+         * Zwei Rechnungen ueber dieselbe Zahl, eine mit 32 Bit und eine
+         * mit 64. Die schmalere prueft, die breitere alloziert. Genau
+         * andersherum waere es sicher gewesen.
+         *
+         * Gefunden von `scripts/audit_unbounded_alloc.py`, nachdem dessen
+         * Schranken-Erkennung zweimal nachgeschaerft werden musste — die
+         * erste Fassung zaehlte `== 0` als Obergrenze und haette diesen
+         * Fall (wie auch MF-543 selbst) nicht gemeldet.
+         *
+         * Jetzt wird in 64 Bit gerechnet, und `offset + data_off` gleich
+         * mit: auch das sind zwei uint32 aus der Datei. */
+        uint64_t flux_offset64 = (uint64_t)offset + data_off;
+        uint64_t flux_need = (uint64_t)flux_count * 2u;
+        uint32_t flux_offset = (uint32_t)flux_offset64;
+        if (flux_offset64 + flux_need > (uint64_t)size) {
             scp_diagnosis_add(diag, SCP_DIAG_TRUNCATED, track->physical_track,
                               track->side, r, "Flux data truncated");
             rev_offset += 12;

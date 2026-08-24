@@ -625,8 +625,26 @@ int xdf_api_export_classic(xdf_api_t *api, const char *path) {
             
         case XDF_PLATFORM_PC:
             /* Export IMG */
-            size = hdr->num_cylinders * hdr->num_heads * 
-                   hdr->sectors_per_track * (1 << hdr->sector_size_shift);
+            /* MF-554: `1 << hdr->sector_size_shift` ist ab einer
+             * Schiebeweite von 32 UNDEFINIERTES VERHALTEN, und der Wert
+             * kommt ungeprueft aus dem Kopf. Dazu war das Produkt der
+             * vier Zahlen durch nichts begrenzt.
+             *
+             * Gefunden von `scripts/audit_unbounded_alloc.py`. Die
+             * Groessencodes der IBM-Welt decken 128..8192 Byte ab, also
+             * Schiebeweiten 7..13; alles darueber beschreibt kein
+             * Laufwerk, das je gebaut wurde. */
+            if (hdr->sector_size_shift > 13 ||
+                hdr->num_cylinders == 0 || hdr->num_cylinders > 1024 ||
+                hdr->num_heads == 0     || hdr->num_heads > 2 ||
+                hdr->sectors_per_track == 0 ||
+                hdr->sectors_per_track > 1024) {
+                rc = -1;
+                break;
+            }
+            size = (size_t)hdr->num_cylinders * hdr->num_heads *
+                   hdr->sectors_per_track *
+                   ((size_t)1 << hdr->sector_size_shift);
             data = calloc(1, size);
             if (data) {
                 rc = 0;
@@ -635,8 +653,18 @@ int xdf_api_export_classic(xdf_api_t *api, const char *path) {
             
         case XDF_PLATFORM_ATARIST:
             /* Export ST */
-            size = hdr->num_cylinders * hdr->num_heads * 
-                   hdr->sectors_per_track * 512;
+            /* MF-554: dieselben Schranken wie im PC-Zweig darueber. Hier
+             * ist die Sektorgroesse fest (512), das Produkt der drei
+             * uebrigen Zahlen war es trotzdem nicht. */
+            if (hdr->num_cylinders == 0 || hdr->num_cylinders > 1024 ||
+                hdr->num_heads == 0     || hdr->num_heads > 2 ||
+                hdr->sectors_per_track == 0 ||
+                hdr->sectors_per_track > 1024) {
+                rc = -1;
+                break;
+            }
+            size = (size_t)hdr->num_cylinders * hdr->num_heads *
+                   hdr->sectors_per_track * 512u;
             data = calloc(1, size);
             if (data) {
                 rc = 0;

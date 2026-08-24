@@ -111,10 +111,52 @@ int st_msa_decompress(const uint8_t *msa_data, size_t msa_size,
     uint16_t start_track = read_be16(msa_data + 6);
     uint16_t end_track = read_be16(msa_data + 8);
     
-    uint16_t tracks = end_track - start_track + 1;
-    size_t track_size = spt * ST_SECTOR_SIZE;
-    *st_size = tracks * sides * track_size;
-    
+    /* MF-554: hier stand keine einzige Schranke.
+     *
+     * Gefunden von `scripts/audit_unbounded_alloc.py`, das nach der Form
+     * von MF-543 sucht. Der Befund ist schwerer als gemeldet — es sind
+     * drei Fehler in vier Zeilen:
+     *
+     * (1) `tracks = end_track - start_track + 1` LAEUFT UNTER, wenn
+     *     `end_track < start_track`. Beides kommt aus der Datei und wird
+     *     nicht verglichen. Bei start=100, end=0 ergibt die uint16-
+     *     Rechnung 65437 statt eines Fehlers.
+     *
+     * (2) `spt` ist ungeprueft (bis 65535). `track_size = spt * 512`
+     *     wird damit bis 33 MB — je Spur.
+     *
+     * (3) `tracks * sides` in der Schleifenbedingung darunter ist
+     *     int-Arithmetik (beide uint16 werden zu int befoerdert). Bei
+     *     65437 x 65536 laeuft das ueber, und ein vorzeichenbehafteter
+     *     Ueberlauf ist undefiniertes Verhalten — der Uebersetzer darf
+     *     daraus machen, was er will.
+     *
+     * Eine echte Atari-ST-Diskette hat hoechstens 11 Sektoren je Spur,
+     * 2 Seiten und 86 Spuren. Die Schranken sind grosszuegig gesetzt,
+     * damit ungewoehnliche, aber echte Abbilder durchgehen — und eng
+     * genug, dass keine der drei Rechnungen mehr entgleisen kann.
+     *
+     * Die letzte Schranke ist die wichtigere: das Ergebnis muss zu der
+     * Datei passen, die es beschreibt. Eine Zahl aus der Datei gegen eine
+     * andere Zahl aus derselben Datei zu pruefen waere keine Pruefung
+     * (vgl. MF-551, MF-542). */
+    if (end_track < start_track) return -2;
+    if (spt == 0 || spt > 64) return -2;
+    if (sides == 0 || sides > 2) return -2;
+
+    uint32_t tracks = (uint32_t)end_track - start_track + 1u;
+    if (tracks > 256) return -2;
+
+    size_t track_size = (size_t)spt * ST_SECTOR_SIZE;
+    *st_size = (size_t)tracks * sides * track_size;
+
+    /* Eine MSA ist komprimiert, das Ergebnis ist also groesser als die
+     * Quelle — aber nicht beliebig. Der schlechteste Fall des hier
+     * benutzten RLE ist 2 Byte Kopf je Lauf; ein Faktor 4096 ist weit
+     * jenseits von allem, was echte Abbilder erreichen, und deckelt
+     * trotzdem die Faelle, in denen der Kopf luegt. */
+    if (*st_size == 0 || *st_size > msa_size * 4096u) return -2;
+
     *st_data = malloc(*st_size);
     if (!*st_data) return -3;
     

@@ -46,44 +46,38 @@
  * gleiche Lauf erzeugt die gleichen Eingaben auf jeder Plattform, sonst
  * waere ein Fund nicht nachstellbar. Ein Fund druckt seinen Seed.
  *
- * ── STAND MF-539: dieser Lauf terminiert derzeit NICHT ───────────────────
+ * ── WAS DIE VERBREITERUNG GEBRACHT HAT (MF-539 -> 543 -> 553) ───────
  *
- * Mit den in MF-539 ergaenzten Kennungen erreicht der Fuzzer Plugins, die
- * vorher keine Eingabe je erreichte. Zwei davon brechen sofort — nicht der
- * Test, sondern der Produktionspfad `uft_disk_open()`:
+ * MF-539 ergaenzte 25 Sonden-Kennungen und 7 Groessen-Tore, abgelesen aus
+ * den probe-Funktionen. Damit erreichte der Fuzzer Plugins, die NIE eine
+ * Eingabe gesehen hatten — und terminierte nicht mehr: 55 GB Working Set,
+ * dann 0xC0000409 (STATUS_STACK_BUFFER_OVERRUN).
  *
- *   QRST     src/formats/qrst/uft_qrst.c:183-221
- *            Geometrie kommt ungeprueft aus dem 22-Byte-Kopf: nur
- *            `!= 0`, keine Obergrenze, kein Abgleich gegen die
- *            Dateigroesse. Zwei Folgen:
- *              (a) die Fuellschleife laeuft `cylinders * heads` mal —
- *                  bis 65535*65535 — und alloziert je Durchlauf eine
- *                  Spur. Gemessen: 55 GB Working Set bei einer 511-Byte-
- *                  Eingabe, danach von Hand abgebrochen.
- *              (b) `uft_disk_alloc()` nimmt `heads` als **uint8_t**
- *                  (uft_disk_image_compat.h:54), die Schleife indiziert
- *                  aber mit dem **ungekuerzten** uint16-Wert:
- *                      size_t idx = c * heads + h;   // qrst:212
- *                      disk->track_data[idx] = track; // qrst:221
- *                  Bei heads > 255 schreibt das hinter das Feld.
- *                  Nachgestellt mit 22 Byte (cyl=2, heads=300):
- *                  Feld hat 2*44=88 Plaetze, geschrieben wird bis
- *                  Index 599. Prozess endet mit 0xC0000409
- *                  (STATUS_STACK_BUFFER_OVERRUN).
+ * Zwei echte Speicherfehler im Produktionspfad, beide Bestand und beide
+ * nur deshalb nie aufgefallen, weil keine Eingabe je ihre Kennung trug:
  *
- *   NanoWasp src/formats/nanowasp/uft_nanowasp.c:111-165
- *            Gleiche Familie, andere Spielart: die Schleifen sind auf
- *            uint8_t begrenzt, aber `sect->data = malloc(sector_size)`
- *            nimmt `sector_size` ungeprueft aus dem Kopf (bis 65535) fuer
- *            bis zu 255*255*255 Sektoren. Gemessen: 21 GB Working Set bei
- *            einer 511-Byte-Eingabe, dann abgebrochen.
+ *   QRST      Geometrie ungeprueft aus einem 22-Byte-Kopf.
+ *             uft_disk_alloc() nimmt heads als uint8_t, die Fuellschleife
+ *             indiziert mit dem ungekuerzten uint16 — ein Feld mit 88
+ *             Plaetzen, beschrieben bis Index 599.
+ *   NanoWasp  die Groessenpruefung war berechnet und NIE BENUTZT:
+ *             1,1 TB Anspruch auf eine 80-Byte-Datei.
  *
- * Beide sind Bestand, nicht neu — sie waren nur nie erreichbar, weil keine
- * Eingabe je ihre Kennung trug. Der Lauf bleibt absichtlich so stehen: die
- * Kennungen sind an der Sonde nachgelesen und richtig, und ein Fuzzer, der
- * einen Fund umgeht, um gruen zu werden, misst nichts. Erst wenn die
- * Geometrie in diesen Parsern gegen die Dateigroesse geprueft wird, kann
- * dieser Test wieder bis zur Abdeckungszahl durchlaufen.
+ * Beide behoben in MF-543. Seither:
+ *
+ *      Sonde hat je zugestimmt : 128 von 137   (vorher 103)
+ *      Abstuerze               : 0
+ *      Vertragsverletzungen    : 0
+ *
+ * Nie erreicht bleiben 9 (MSA, DIM_ATARI, DC42, D77, D88, FDI_PC98, CFI,
+ * Logical, POSIX). Sie verlangen einen Kopf, dessen INHALT und
+ * DATEILAENGE zueinander passen — das kann ein Erzeuger aus "Kennung plus
+ * beliebiger Rest" nicht liefern. POSIX kann ueberhaupt nie gewinnen, weil
+ * seine Sonde unbedingt false liefert (MF-546).
+ *
+ * Die Lehre steht ueber dem Befund: der Fuzzer meldete vorher brav "kein
+ * Absturz" und prueste dabei 103 von 137 Plugins. Eine gruene Zahl ueber
+ * einer unvollstaendigen Menge ist keine Aussage ueber das Ganze.
  */
 
 #include "uft/uft_core.h"
@@ -248,7 +242,36 @@ static const struct { const char *sig; size_t len; const char *label; } SIGS[] =
  * pro Fund einen kompletten Instrumentierungs-Durchgang. Der Handler unten
  * schreibt diese Angabe auf stderr, bevor der Prozess faellt — damit steht
  * in JEDEM Absturz, auch in der CI, welche Eingabe und welches Plugin. */
-static const char *tmp_path = "uft_fuzz_tmp.img";
+/* MF-553: der Pfad traegt die Prozesskennung.
+ *
+ * Vorher stand hier ein fester relativer Name. Zwei Instanzen im selben
+ * Arbeitsverzeichnis ueberschreiben einander damit die EINGABEdatei —
+ * nicht die Ausgabe. Ein Lauf oeffnet dann eine Datei, die ein anderer
+ * Lauf gerade hineingeschrieben hat, und der Bericht am Ende gehoert zu
+ * keiner der beiden Eingaben.
+ *
+ * Aufgefallen ist es bei der Suche nach dem QRST-Absturz (MF-543): ein
+ * paralleler Helfer-Prozess lief im selben Verzeichnis und kontaminierte
+ * den Lauf. Der Fund war trotzdem echt — er liess sich in einem eigenen
+ * Verzeichnis unabhaengig wiederholen — aber die erste Spur fuehrte
+ * zwanzig Minuten in die falsche Richtung.
+ *
+ * `ctest -j8` startet Tests parallel im selben Arbeitsverzeichnis. Solange
+ * nur dieser eine Test die Datei benutzt, geht es gut; der naechste Test,
+ * der denselben Namen waehlt, bricht beide. Ein Fuzzer, dessen Eingabe
+ * jemand anderes schreiben kann, misst nicht, was er zu messen glaubt. */
+static char tmp_path_buf[64];
+static const char *tmp_path = NULL;
+
+static const char *fuzz_tmp_path(void)
+{
+    if (!tmp_path) {
+        snprintf(tmp_path_buf, sizeof(tmp_path_buf),
+                 "uft_fuzz_tmp_%ld.img", (long)getpid());
+        tmp_path = tmp_path_buf;
+    }
+    return tmp_path;
+}
 static char g_where[256] = "(noch nichts)";
 static const char *g_stage_plugin = "-";
 static const char *g_stage = "-";
@@ -267,7 +290,7 @@ static void crash_handler(int sig)
     fputs("  Stufe: ", stderr);
     fputs(g_stage, stderr);
     fputs("\n    Eingabe liegt in ", stderr);
-    fputs(tmp_path, stderr);
+    fputs(fuzz_tmp_path(), stderr);
     fputs("\n", stderr);
     fflush(stderr);
     _exit(139);
@@ -281,9 +304,9 @@ static long n_open_ok, n_open_null, n_track_ok, n_track_null;
  *  Sonde zustimmt, wird ihr `open` auf genau dieser Datei gerufen. */
 static void write_tmp(size_t size)
 {
-    FILE *f = fopen(tmp_path, "wb");
+    FILE *f = fopen(fuzz_tmp_path(), "wb");
     if (!f) {
-        printf("  KANN TEMPDATEI NICHT SCHREIBEN: %s\n", tmp_path);
+        printf("  KANN TEMPDATEI NICHT SCHREIBEN: %s\n", fuzz_tmp_path());
         exit(2);
     }
     if (size && fwrite(blob, 1, size, f) != size) {
@@ -299,7 +322,7 @@ static void write_tmp(size_t size)
 static void run_open_path(size_t size)
 {
     (void)size;
-    uft_disk_t *disk = uft_disk_open(tmp_path, true);
+    uft_disk_t *disk = uft_disk_open(fuzz_tmp_path(), true);
     if (!disk) {
         n_open_null++;
         return;                 /* Muell abzulehnen ist richtig. */
@@ -552,7 +575,7 @@ static void run_all_probes_from_registry(size_t n_plugins, size_t size)
                  * Nur bei der ECHTEN Dateigroesse: bei einer erfundenen
                  * haette die Sonde in der Wirklichkeit nie zugestimmt. */
                 if (FILE_SIZES[k] == size && i < MAX_PLUGINS)
-                    run_one_plugin_open(p, i, tmp_path);
+                    run_one_plugin_open(p, i, fuzz_tmp_path());
             }
         }
     }
@@ -829,7 +852,7 @@ int main(int argc, char **argv)
            (int)(sizeof(CORPUS) / sizeof(CORPUS[0]) - 1),
            n_truncated ? ", DAVON ABGESCHNITTEN — siehe oben" : "");
 
-    remove(tmp_path);
+    remove(fuzz_tmp_path());
 
     printf("\nEingaben               : %ld\n", n_inputs);
     printf("probe-Aufrufe          : %ld  (%zu Plugins x %ld Eingaben x 6 "

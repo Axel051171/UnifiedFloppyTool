@@ -202,6 +202,58 @@ uft_error_t uft_myz80_read_mem(const uint8_t *data, size_t size,
     disk->sectors_per_track = sectors;
     disk->bytes_per_sector = sector_size;
     
+    /* MF-554: die Geometrie aus dem Kopf ist eine BEHAUPTUNG.
+     *
+     * Gefunden von `scripts/audit_unbounded_alloc.py`, das nach der Form
+     * von MF-543 sucht: eine Zahl kommt aus der Datei und bestimmt eine
+     * Allokation oder Schleifengrenze, ohne dass dazwischen eine Schranke
+     * gegen die Dateigroesse oder eine Konstante steht.
+     *
+     * Hier war genau das der Fall. Aus dem Kopf kamen `cylinders` (uint16,
+     * bis 65535), `heads`, `sectors` und `sector_size` (uint16, bis 65535),
+     * und keine dieser vier Zahlen wurde je gegen etwas geprueft. Die
+     * Schleife darunter laeuft `cylinders * heads` mal und ruft je Sektor
+     * `malloc(sector_size)`.
+     *
+     * Bei den Maximalwerten sind das 65535 x 255 x 255 Sektoren zu je
+     * 65535 Byte. Der Anspruch uebersteigt jeden Arbeitsspeicher, und die
+     * Eingabe dafuer ist ein Kopf von wenigen Byte.
+     *
+     * Dieselben zwei Schranken wie in `uft_qrst.c` (MF-543):
+     *
+     *   (1) Einzelgrenzen, die kein reales Laufwerk ueberschreitet.
+     *   (2) Das PRODUKT muss in die Datei passen. Das faengt die Faelle,
+     *       in denen jede Zahl fuer sich plausibel aussieht und nur ihr
+     *       Produkt nicht.
+     *
+     * Die zweite Schranke ist die wichtigere: sie prueft gegen etwas, das
+     * NICHT aus derselben Datei stammt — die tatsaechliche Laenge. Eine
+     * Zahl aus der Datei gegen eine andere Zahl aus der Datei zu pruefen
+     * ist keine Pruefung (vgl. MF-551, MF-542). */
+    if (cylinders == 0 || cylinders > 1024 ||
+        heads == 0     || heads > 2 ||
+        sectors == 0   || sectors > 1024 ||
+        sector_size == 0 || sector_size > 16384) {
+        if (result) {
+            result->error = UFT_ERR_FORMAT;
+            result->error_detail =
+                "MYZ80 geometry out of range (MF-554)";
+        }
+        return UFT_ERR_FORMAT;
+    }
+    {
+        uint64_t need = (uint64_t)cylinders * heads * sectors * sector_size;
+        if (need > (uint64_t)size) {
+            if (result) {
+                result->error = UFT_ERR_FORMAT;
+                result->error_detail =
+                    "MYZ80 header claims more data than the file holds "
+                    "(MF-554)";
+            }
+            return UFT_ERR_FORMAT;
+        }
+    }
+
     /* Read disk data */
     size_t data_pos = 0;
     uint8_t sz_code = size_code(sector_size);

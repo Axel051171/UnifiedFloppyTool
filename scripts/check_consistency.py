@@ -709,6 +709,14 @@ def main() -> int:
         # Pruefung aus.
         import audit_self_comparison as _sc
         all_errors.append(("Selbstvergleiche", _sc.check(repo)))
+        # Ungedeckelte Groessen aus der Datei (MF-554). Die Form von
+        # MF-543: eine Zahl kommt aus dem Dateikopf und bestimmt eine
+        # Allokation oder Schleifengrenze, ohne gegen etwas geprueft zu
+        # werden, das NICHT aus derselben Datei stammt. Beim Anlegen fand
+        # das Tor drei echte Faelle (myz80, CPC-DSK-Index bis 65024 in ein
+        # Feld mit 204 Eintraegen, xdf-Schiebeweite mit UB ab 32).
+        import audit_unbounded_alloc as _ua
+        all_errors.append(("Groessen ohne Schranke", _ua.check(repo)))
 
     total = sum(len(e) for _, e in all_errors)
     print(f"Consistency check ({len(all_errors)} categories, root={repo}):")

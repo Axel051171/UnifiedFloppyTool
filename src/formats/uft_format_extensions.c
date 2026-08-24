@@ -153,15 +153,38 @@ int uft_cpc_dsk_load(
     const uft_cpc_dsk_header_t *hdr = (const uft_cpc_dsk_header_t *)dsk_data;
     int tracks = hdr->tracks;
     int sides = hdr->sides;
-    
+
+    /* MF-554: `track_sizes` hat 204 Eintraege, `t * sides + s` lief bis
+     * 65024.
+     *
+     * `tracks` und `sides` sind uint8 aus dem Kopf, also je bis 255. Der
+     * Index `t * sides + s` erreicht damit 254 * 255 + 254 = 65024 —
+     * das Feld ist `uint8_t track_sizes[204]`
+     * (include/uft/uft_format_extensions.h:138). Bis zu 64820 Eintraege
+     * hinter dem Feld gelesen, aus einem Kopf von 256 Byte.
+     *
+     * Dieselbe Stelle ist in `src/formats/dsk_cpc/uft_dsk_cpc.c` schon
+     * einmal repariert worden (MF-512, DSK_MAX_TRACK_ENTRIES). Hier lag
+     * eine zweite Fassung derselben Rechnung, und die hatte die Schranke
+     * nicht — gefunden von `scripts/audit_unbounded_alloc.py`.
+     *
+     * Zwei Kopien derselben Rechnung, eine repariert, eine nicht: genau
+     * das Muster aus MF-526 (LUT-Laenge) und MF-550 (Flux-Kappung). Wer
+     * eine Stelle repariert, muss nach ihren Geschwistern suchen. */
+    if (tracks > 204) tracks = 204;
+    if (sides > 2)    sides = 2;
+
     const uint8_t *track_ptr = dsk_data + 256;
-    
+
     for (int t = 0; t < tracks; t++) {
         for (int s = 0; s < sides; s++) {
             size_t track_size;
-            
+
             if (extended) {
                 int idx = t * sides + s;
+                if (idx >= (int)(sizeof(hdr->track_sizes) /
+                                 sizeof(hdr->track_sizes[0])))
+                    break;               /* MF-554 */
                 track_size = hdr->track_sizes[idx] * 256;
                 if (track_size == 0) continue;
             } else {
