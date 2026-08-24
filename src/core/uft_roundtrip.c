@@ -184,8 +184,16 @@ static const uft_roundtrip_entry_t g_matrix[] = {
       "weak-bits, flux-timing, index-pulses discarded" },
     { UFT_FORMAT_SCP, UFT_FORMAT_ADF, UFT_RT_LOSSY_DOCUMENTED,
       "flux-timing discarded (ADF sector model)" },
+    /* MF-565: bis zu diesem Commit war dieser Eintrag eine Zusage ohne
+     * Deckung — der Pfad sass auf einem Stub-Parser und lieferte auf einer
+     * fehlerfreien Aufnahme 0 von 683 Sektoren bei `success = true`.
+     * Jetzt gemessen: 683 von 683 (tests/test_convert_scp_d64_multirev.c).
+     * Die Verlustliste ist entsprechend ausbuchstabiert; sie war vorher
+     * nicht falsch, nur unvollstaendig. */
     { UFT_FORMAT_SCP, UFT_FORMAT_D64, UFT_RT_LOSSY_DOCUMENTED,
-      "flux-timing discarded" },
+      "flux-timing, weak-bits, index-pulses discarded; only side 0 and "
+      "tracks 1-35 are read (36-42 dropped); per-sector status survives "
+      "only as the D64 error map" },
     { UFT_FORMAT_SCP, UFT_FORMAT_IMD, UFT_RT_LOSSY_DOCUMENTED,
       "flux-timing + weak-bits discarded" },
 

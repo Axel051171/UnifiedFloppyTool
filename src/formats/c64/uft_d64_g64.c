@@ -1157,11 +1157,22 @@ int uft_cbm_g64_encode_via_plugin(const struct uft_format_plugin *plugin,
  * disease this refactor exists to remove (ARCH-6).
  *
  * @param errors_found incremented per checksum failure; may be NULL
+ * @param state        optional in/out map, ein Byte je Sektor (MF-565):
+ *                     0 = nie gesehen, 1 = abgelegt, Pruefsumme falsch,
+ *                     2 = abgelegt und geprueft. Ein Sektor auf 2 wird
+ *                     NICHT ueberschrieben — sonst ersetzt ein spaeterer,
+ *                     schlechterer Durchgang einen heilen Sektor durch
+ *                     einen mit Pruefsummenfehler. Das ist die
+ *                     Nicht-Verschlimmerungs-Garantie, und sie steht an
+ *                     der einen Stelle, die weiss was schon da ist.
+ *                     Ein Sektor auf 1 DARF ersetzt werden — schlechter
+ *                     als kaputt geht nicht.
+ *                     NULL = kein Schutz (Verhalten wie vor MF-565).
  * @return number of sectors decoded from this track
  */
 static int gcr_track_to_sectors(d64_image_t *img, int track,
                                 const uint8_t *gcr_data, size_t gcr_len,
-                                int *errors_found)
+                                int *errors_found, uint8_t *state)
 {
     cbm_tables_init();
     if (!img || !gcr_data || gcr_len < 350) return 0;
@@ -1202,9 +1213,10 @@ static int gcr_track_to_sectors(d64_image_t *img, int track,
                     pos += 5;
                 }
                 
-                if (data_block[0] == 0x07 && h_track == track && 
-                    h_sector >= 0 && h_sector < num_sectors) {
-                    
+                if (data_block[0] == 0x07 && h_track == track &&
+                    h_sector >= 0 && h_sector < num_sectors &&
+                    !(state && state[h_sector] == 2)) {
+
                     memcpy(sector_data, data_block + 1, 256);
                     
                     /* Verify checksum */
@@ -1221,6 +1233,14 @@ static int gcr_track_to_sectors(d64_image_t *img, int track,
                     
                     d64_set_sector(img, track, h_sector, sector_data, error);
                     sectors_found++;
+                    /* Abgelegt ist abgelegt — aber nur eine heile
+                     * Pruefsumme beendet die Suche. Ein Sektor mit
+                     * Pruefsummenfehler bleibt auf 1: seine Daten sind
+                     * geborgen und werden NICHT verworfen, aber eine
+                     * spaetere Umdrehung darf ihn noch ersetzen. Er ist
+                     * das Beste von bisher, nicht das Ende (MF-565). */
+                    if (state)
+                        state[h_sector] = (error == D64_ERR_OK) ? 2 : 1;
                 }
             }
         } else {
@@ -1229,6 +1249,15 @@ static int gcr_track_to_sectors(d64_image_t *img, int track,
     }
 
     return sectors_found;
+}
+
+int uft_cbm_gcr_track_to_sectors(d64_image_t *img, int track,
+                                 const uint8_t *gcr_data, size_t gcr_len,
+                                 int *errors_found, uint8_t *state)
+{
+    /* Kein zweiter Dekoder — derselbe, den g64_to_d64() fahrt (MF-565). */
+    return gcr_track_to_sectors(img, track, gcr_data, gcr_len, errors_found,
+                                state);
 }
 
 
@@ -1307,7 +1336,8 @@ int uft_cbm_d64_decode_via_plugin(const struct uft_format_plugin *plugin,
         if (t.raw_data && t.raw_size > 0) {
             /* Same decoder the blob path uses — not a second copy of it. */
             int found = gcr_track_to_sectors(img, track, t.raw_data,
-                                              t.raw_size, &errors_found);
+                                              t.raw_size, &errors_found,
+                                              NULL);
             sectors_converted += found;
             if (found > 0) tracks_converted++;
 
@@ -1401,7 +1431,7 @@ int g64_to_d64(const g64_image_t *g64, d64_image_t **d64,
         
         int sectors_found = gcr_track_to_sectors(
             img, track, g64->track_data[halftrack],
-            g64->tracks[halftrack].length, &errors_found);
+            g64->tracks[halftrack].length, &errors_found, NULL);
         sectors_converted += sectors_found;
 
         if (sectors_found > 0) {

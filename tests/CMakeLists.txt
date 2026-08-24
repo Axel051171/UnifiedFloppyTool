@@ -552,7 +552,11 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/include/uft/fs)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
-    elseif(${test_name} STREQUAL "test_convert_scp_adf_multirev")
+    elseif(${test_name} STREQUAL "test_convert_scp_adf_multirev"
+           OR ${test_name} STREQUAL "test_convert_scp_d64_multirev")
+        # MF-565 teilt sich die Rezeptur mit MF-473: beide fahren ueber die
+        # Format-Registry und brauchen den SCP-Parser fuer die Umdrehungen.
+        #
         # MF-473: SCP->ADF ueber ALLE Umdrehungen + multiread-Klassifikation.
         # Braucht denselben Unterbau wie test_convert_file_detection (der
         # Wandler laeuft ueber die Format-Registry), zusaetzlich die

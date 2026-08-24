@@ -525,6 +525,46 @@ int uft_cbm_d64_decode_via_plugin(const struct uft_format_plugin *plugin,
                                   d64_image_t **out,
                                   convert_result_t *result);
 
+/**
+ * @brief Eine Spur byte-ausgerichteten CBM-GCR in Sektoren (MF-565).
+ *
+ * ── Warum es diesen Zugang gibt ──────────────────────────────────────────
+ *
+ * Es ist **derselbe** Dekoder, den @ref g64_to_d64 und
+ * @ref uft_cbm_d64_decode_via_plugin benutzen — nur bisher nicht von
+ * aussen erreichbar. Der Fluss-Pfad (`uftc_convert_scp_to_d64`) hatte
+ * deshalb einen eigenen, und der war ein Stub: er schob Bits in ein
+ * Schieberegister und fand nie eine Sync-Marke. Gemessen an einer
+ * fehlerfreien synthetischen Aufnahme: **0 von 683 Sektoren**.
+ *
+ * Ein dritter Dekoder waere genau die Krankheit, gegen die MF-436 diesen
+ * hier herausgezogen hat. Also derselbe.
+ *
+ * ── Was der Aufrufer liefern muss ────────────────────────────────────────
+ *
+ * @p gcr_data ist **byte-ausgerichtet**: die Sync-Laeufe muessen als
+ * 0xFF-Bytes dastehen. Aus einem G64 ist das von selbst so. Aus Fluss
+ * nicht — dort hat der Bitstrom beliebige Phase und muss vorher an der
+ * Sync-Marke ausgerichtet werden.
+ *
+ * @param img           Zielbild; Sektoren werden per d64_set_sector gesetzt
+ * @param track         Spurnummer, 1-basiert
+ * @param gcr_data      byte-ausgerichteter GCR-Strom der Spur
+ * @param gcr_len       dessen Laenge; unter 350 Byte passt kein Sektor
+ * @param errors_found  wird je Pruefsummenfehler erhoeht; darf NULL sein
+ * @param state         optionale Fund-Karte, ein Byte je Sektor:
+ *                      0 = nie gesehen, 1 = abgelegt aber Pruefsumme
+ *                      falsch, 2 = abgelegt und geprueft. Ein Sektor auf
+ *                      2 wird nicht ueberschrieben; einer auf 1 darf von
+ *                      einer spaeteren Umdrehung ersetzt werden. So kann
+ *                      ein zweiter Durchgang nur besser machen, nie
+ *                      schlechter. NULL = kein Schutz.
+ * @return Anzahl in diesem Durchgang abgelegter Sektoren
+ */
+int uft_cbm_gcr_track_to_sectors(d64_image_t *img, int track,
+                                 const uint8_t *gcr_data, size_t gcr_len,
+                                 int *errors_found, uint8_t *state);
+
 #ifdef __cplusplus
 }
 #endif

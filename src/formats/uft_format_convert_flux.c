@@ -32,6 +32,71 @@ extern const uft_format_plugin_t uft_format_plugin_scp;
 // ============================================================================
 
 /**
+ * Richtet einen PLL-Bitstrom an der CBM-Sync-Marke aus (MF-565).
+ *
+ * ── Warum das noetig ist ────────────────────────────────────────────────
+ *
+ * Der geprufte GCR-Dekoder (@ref uft_cbm_gcr_track_to_sectors, seit
+ * MF-536 gegen VICE gemessen) sucht 0xFF-BYTES. Aus einem G64 stimmt die
+ * Byte-Grenze von selbst; aus Fluss nicht — der PLL faengt an, wo die
+ * Aufnahme anfing, und das ist eine beliebige Bitphase. Ohne Ausrichtung
+ * sieht der Dekoder nie ein 0xFF, obwohl der Strom voll davon ist.
+ *
+ * ── Wie ausgerichtet wird ───────────────────────────────────────────────
+ *
+ * Die CBM-Sync-Marke ist ein Lauf von Einsen (Standard: 5 Byte = 40).
+ * Gesucht wird das ENDE des ersten Laufs von mindestens
+ * @ref UFT_CBM_SYNC_MIN_ONES Einsen; dahinter faengt der Kopf an, und
+ * genau dort wird die Byte-Grenze hingelegt. Damit endet der Lauf auf
+ * einer Byte-Grenze und seine letzten acht Bits stehen als 0xFF da —
+ * das, wonach der Dekoder sucht.
+ *
+ * @param bits      Bitstrom, MSB zuerst je Byte (so schreibt der PLL)
+ * @param bit_count Anzahl gueltiger Bits
+ * @param out       Zielpuffer fuer die ausgerichteten Bytes
+ * @param out_cap   dessen Groesse
+ * @return Anzahl geschriebener Bytes; 0 wenn keine Sync-Marke im Strom
+ *         liegt. **Null heisst „keine gefunden", nicht „leer"** — der
+ *         Aufrufer darf das nicht als leere Spur melden.
+ */
+#define UFT_CBM_SYNC_MIN_ONES  10
+
+static size_t uftc_cbm_align_bits(const uint8_t *bits, size_t bit_count,
+                                  uint8_t *out, size_t out_cap)
+{
+    if (!bits || !out || bit_count < UFT_CBM_SYNC_MIN_ONES) return 0;
+
+    size_t run = 0, sync_end = SIZE_MAX;
+    for (size_t b = 0; b < bit_count; b++) {
+        int v = (bits[b / 8] >> (7 - (b % 8))) & 1;
+        if (v) {
+            run++;
+        } else {
+            if (run >= UFT_CBM_SYNC_MIN_ONES) { sync_end = b; break; }
+            run = 0;
+        }
+    }
+    /* Ein Lauf, der bis ans Ende reicht, ist auch einer. */
+    if (sync_end == SIZE_MAX && run >= UFT_CBM_SYNC_MIN_ONES)
+        sync_end = bit_count;
+    if (sync_end == SIZE_MAX) return 0;
+
+    /* Die Byte-Grenze liegt auf dem ersten Bit NACH dem Lauf. Davor
+     * bleiben so viele Bits, wie in ganze Bytes passen — die tragen die
+     * 0xFF-Marke. */
+    size_t phase = sync_end % 8;
+    size_t n = 0;
+    for (size_t b = phase; b + 8 <= bit_count && n < out_cap; b += 8) {
+        uint8_t byte = 0;
+        for (int k = 0; k < 8; k++)
+            byte = (uint8_t)((byte << 1) |
+                             ((bits[(b + k) / 8] >> (7 - ((b + k) % 8))) & 1));
+        out[n++] = byte;
+    }
+    return n;
+}
+
+/**
  * @brief SCP -> D64: Decode SCP flux to C64 D64 sector image
  *
  * Pipeline: SCP parse -> flux deltas -> PLL -> GCR bitstream -> sector extract
@@ -62,6 +127,14 @@ uft_error_t uftc_convert_scp_to_d64(const uint8_t* src_data, size_t src_size,
 
     uftc_report_progress(opts, 10, "Decoding flux to GCR sectors");
 
+    /* ── `decode_retries` bekommt seine dokumentierte Bedeutung (MF-565) ──
+     *
+     * Das Feld ist als „Sector extraction (Flux -> Sector)" dokumentiert und
+     * steht per Vorgabe auf 5. Gemessen vor dieser Aenderung: es wurde genau
+     * hier in eine lokale Variable gelesen und **nie benutzt** — ein
+     * Vorkommen im ganzen Baum, ein Knopf ohne Draht.
+     *
+     * Jetzt begrenzt es, wie viele Umdrehungen versucht werden. */
     int retries = (opts && opts->decode_retries > 0) ? opts->decode_retries : 5;
 
     /* Process each track: flux -> PLL -> GCR -> sectors */
@@ -70,47 +143,45 @@ uft_error_t uftc_convert_scp_to_d64(const uint8_t* src_data, size_t src_size,
 
         int scp_track_idx = (track - 1) * 2; /* Side 0 only for C64 */
         int sectors_per_trk = uft_c64_sectors_per_track(track);
-
-        /* Get flux deltas for best revolution */
-        double deltas[131072];
-        int best_rev = 0;
-        int max_flux = 0;
-
-        for (int rev = 0; rev < (int)scp.header.revolutions; rev++) {
-            int count = uft_scp_get_track_flux(&scp, scp_track_idx, rev,
-                                                deltas, 131072);
-            if (count > max_flux) {
-                max_flux = count;
-                best_rev = rev;
-            }
-        }
-
-        /* Read the best revolution */
-        int flux_count = uft_scp_get_track_flux(&scp, scp_track_idx, best_rev,
-                                                 deltas, 131072);
-        if (flux_count <= 0) {
-            result->tracks_failed++;
-            continue;
-        }
-
-        /* Initialize PLL for C64 GCR encoding */
-        uft_pll_t pll;
         int bitrate = uft_c64_track_bitrate(track);
-        uft_pll_init(&pll, (double)bitrate, UFT_ENCODING_GCR);
 
-        /* Allocate bitstream buffer */
-        size_t max_bits = flux_count * 4;
-        size_t bit_buf_size = (max_bits + 7) / 8;
-        uint8_t* bitstream = calloc(1, bit_buf_size);
-        if (!bitstream) {
-            result->tracks_failed++;
-            continue;
-        }
+        /* ── Alle Umdrehungen, nicht die mit dem meisten Fluss ────────────
+         *
+         * Vorher suchte diese Schleife `max_flux` und dekodierte NUR die.
+         * Zwei Fehler in einem: die uebrigen Umdrehungen lagen ungenutzt in
+         * der Datei, und das Kriterium war verkehrt herum — eine Umdrehung
+         * mit ZUSAETZLICHEN Uebergaengen (Rauschen, schwaches Bit,
+         * Schreibnaht) hat MEHR Fluss als eine saubere. `max_flux` waehlte
+         * also unter Umstaenden gerade die schlechteste aus.
+         *
+         * Der Amiga-Zwilling in dieser Datei
+         * (`uftc_convert_scp_to_adf_via_plugin`) laeuft seit MF-473 ueber
+         * alle Umdrehungen. Derselbe Job, dieselbe Datei, zwei Fassungen. */
+        uint8_t sec_state[21] = {0};   /* 0 unbekannt, 1 kaputt, 2 heil */
+        int verified = 0;
+        int revs = (int)scp.header.revolutions;
+        if (revs > retries) revs = retries;
+        if (revs < 1) revs = 1;
 
-        /* Run PLL to extract bitstream */
-        size_t bit_pos = 0;
-        for (int f = 0; f < flux_count && bit_pos < max_bits - 16; f++) {
-            double delta_sec = deltas[f] * 1e-9;  /* MF-418: uft_scp_get_track_flux()
+        double deltas[131072];
+        for (int rev = 0; rev < revs && verified < sectors_per_trk; rev++) {
+            int flux_count = uft_scp_get_track_flux(&scp, scp_track_idx, rev,
+                                                    deltas, 131072);
+            if (flux_count <= 0) continue;
+
+            /* Initialize PLL for C64 GCR encoding */
+            uft_pll_t pll;
+            uft_pll_init(&pll, (double)bitrate, UFT_ENCODING_GCR);
+
+            size_t max_bits = (size_t)flux_count * 4;
+            size_t bit_buf_size = (max_bits + 7) / 8;
+            uint8_t* bitstream = calloc(1, bit_buf_size);
+            if (!bitstream) break;
+
+            /* Run PLL to extract bitstream */
+            size_t bit_pos = 0;
+            for (int f = 0; f < flux_count && bit_pos < max_bits - 16; f++) {
+                double delta_sec = deltas[f] * 1e-9;  /* MF-418: uft_scp_get_track_flux()
                                                  * yields NANOSECONDS, with the
                                                  * SCP resolution multiplier already
                                                  * applied by the shipped parser. The
@@ -118,41 +189,56 @@ uft_error_t uftc_convert_scp_to_d64(const uint8_t* src_data, size_t src_size,
                                                  * was off by 25*(1+resolution). Never
                                                  * observed because the accessor was a
                                                  * stub returning -1. */
-            uft_pll_process_flux_mfm(&pll, delta_sec, bitstream, &bit_pos);
-        }
-
-        /* Extract GCR sectors from bitstream using C64 parser */
-        uft_c64_parser_t parser;
-        uft_c64_parser_init(&parser, track);
-
-        bool sector_found[21] = {false};
-        uint8_t sector_data[21][256];
-
-        for (size_t b = 0; b < bit_pos; b++) {
-            size_t byte_idx = b / 8;
-            size_t bit_idx = 7 - (b % 8);
-            uint8_t bit = (bitstream[byte_idx] >> bit_idx) & 1;
-            uft_c64_parser_add_bit(&parser, bit, (unsigned long)b);
-
-            /* Check if parser found a complete sector */
-            if (parser.state == UFT_C64_STATE_IDLE &&
-                parser.last_sector >= 0 &&
-                parser.last_sector < sectors_per_trk &&
-                parser.last_track == track) {
-                /* Attempt to extract sector data from parser buffer */
-                if (parser.byte_len >= 256 && !sector_found[parser.last_sector]) {
-                    memcpy(sector_data[parser.last_sector],
-                           parser.byte_buffer, 256);
-                    sector_found[parser.last_sector] = true;
-                    result->sectors_converted++;
-                }
+                uft_pll_process_flux_mfm(&pll, delta_sec, bitstream, &bit_pos);
             }
+
+            /* ── Ausrichten, dann der GEPRUEFTE Dekoder ───────────────────
+             *
+             * Hier stand bis MF-565 `uft_c64_parser_add_bit()` — ein Stub,
+             * der Bits in ein Schieberegister schob und laut eigenem
+             * Kommentar „Full sync-pattern detection + sector extraction
+             * deferred" war. Er konnte keinen Sektor finden, und er fand
+             * keinen: 0 von 683 auf einer fehlerfreien Aufnahme.
+             *
+             * Genommen wird jetzt derselbe Dekoder wie im G64-Pfad, der
+             * seit MF-536 gegen VICE gemessen ist. Er will Bytes, also
+             * wird der Bitstrom vorher an der Sync-Marke ausgerichtet. */
+            size_t gcr_cap = bit_pos / 8 + 1;
+            uint8_t* gcr = malloc(gcr_cap);
+            if (gcr) {
+                size_t gcr_len = uftc_cbm_align_bits(bitstream, bit_pos,
+                                                     gcr, gcr_cap);
+                if (gcr_len > 0) {
+                    uft_cbm_gcr_track_to_sectors(d64, track, gcr, gcr_len,
+                                                 NULL, sec_state);
+                    verified = 0;
+                    for (int s = 0; s < sectors_per_trk; s++)
+                        if (sec_state[s] == 2) verified++;
+                }
+                free(gcr);
+            }
+            free(bitstream);
         }
 
-        /* Write extracted sectors to D64 */
+        /* Was auch die letzte Umdrehung nicht hergab, fehlt. */
         for (int s = 0; s < sectors_per_trk; s++) {
-            if (sector_found[s]) {
-                d64_set_sector(d64, track, s, sector_data[s], D64_ERR_OK);
+            if (sec_state[s] == 2) {
+                result->sectors_converted++;
+            } else if (sec_state[s] == 1) {
+                /* Geborgen, aber die Pruefsumme stimmt nicht. Die Daten
+                 * BLEIBEN stehen — der Dekoder hat sie schon abgelegt und
+                 * mit D64_ERR_CHECKSUM markiert. Sie hier mit Fuellbyte zu
+                 * ueberschreiben waere „Kein Bit verloren" verletzt: eine
+                 * Spur mit Lesefehler ist mehr wert als gar keine. Gezaehlt
+                 * werden sie als GESCHEITERT, denn geprueft sind sie
+                 * nicht (MF-565). */
+                result->sectors_failed++;
+                if (result->warning_count < 8) {
+                    uftc_add_warning(result,
+                             "Track %d sector %d: Pruefsumme falsch, Daten "
+                             "behalten und als fehlerhaft markiert",
+                             track, s);
+                }
             } else {
                 /* Fill unread sector with forensic fill byte (0x01).
                  * Using UFT_FORENSIC_FILL_BYTE instead of 0x00 so that
@@ -173,7 +259,6 @@ uft_error_t uftc_convert_scp_to_d64(const uint8_t* src_data, size_t src_size,
             }
         }
 
-        free(bitstream);
         result->tracks_converted++;
 
         uftc_report_progress(opts, 10 + (track * 80 / 35), "Decoding tracks");

@@ -46,11 +46,52 @@ extern "C" {
 #define D64_HEADER_MARK         0x08  /* Header block ID */
 #define D64_DATA_MARK           0x07  /* Data block ID */
 
-/* Speed zones (bits per cell in us @ 300 RPM) */
-#define D64_ZONE0_BIT_TIME_US   4.0   /* Tracks 1-17 */
-#define D64_ZONE1_BIT_TIME_US   3.75  /* Tracks 18-24 */
-#define D64_ZONE2_BIT_TIME_US   3.5   /* Tracks 25-30 */
-#define D64_ZONE3_BIT_TIME_US   3.25  /* Tracks 31-35+ */
+/* ── Zonen-Zellzeiten bei 300 U/min (MF-565) ─────────────────────────────
+ *
+ * **Diese vier Werte standen gegenlaeufig zu ihren eigenen Kommentaren.**
+ * `D64_ZONE_0` heisst laut Enum „21 sectors, fastest" und laut Kommentar
+ * „Tracks 1-17" — trug aber 4,0 us, die Zellzeit der LANGSAMSTEN Zone.
+ * Alle vier Zeilen waren vertauscht.
+ *
+ * ── Referenz ────────────────────────────────────────────────────────────
+ *
+ * Die 1541 leitet ihre vier Datenraten aus 16 MHz ab (Immers/Neufeld,
+ * „Inside Commodore DOS", Zonentabelle; dieselben Raten stehen im Baum in
+ * `include/uft/uft_c64_gcr.h:137`):
+ *
+ *     16 MHz / 52 = 307 692 bps  ->  3,25 us   Spuren  1-17  (21 Sektoren)
+ *     16 MHz / 56 = 285 714 bps  ->  3,50 us   Spuren 18-24  (19 Sektoren)
+ *     16 MHz / 60 = 266 667 bps  ->  3,75 us   Spuren 25-30  (18 Sektoren)
+ *     16 MHz / 64 = 250 000 bps  ->  4,00 us   Spuren 31-35  (17 Sektoren)
+ *
+ * ── Die Gegenprobe, die es entschieden hat ──────────────────────────────
+ *
+ * Sie braucht keine Quelle, nur eine Uhr: eine Umdrehung bei 300 U/min
+ * dauert 200,0 ms. `uft_c64_bytes_per_track(1)` meldet 7692 Byte fuer
+ * Spur 1, und
+ *
+ *     7692 Byte * 8 Bit * 3,25 us = 200,0 ms      <- passt
+ *     7692 Byte * 8 Bit * 4,00 us = 246,1 ms      <- so war es
+ *
+ * Der alte Wert beschrieb eine Diskette, die sich 23 % zu langsam dreht.
+ *
+ * ── Was daran hing ──────────────────────────────────────────────────────
+ *
+ * `d64_gcr_to_flux()` schrieb den Fluss mit dieser Zellzeit, der Leser
+ * stellte seinen PLL nach `uft_c64_track_bitrate()` ein — und das ist die
+ * RICHTIGE Tabelle. Schreiber und Leser lagen um 23 % auseinander.
+ * Gemessen im Rundlauf D64 -> SCP -> D64: **0 von 683 Sektoren**
+ * wiedergefunden, auf einer fehlerfreien synthetischen Aufnahme
+ * (`tests/test_convert_scp_d64_multirev.c`).
+ *
+ * Die beiden Zahlen standen seit MF-537 nebeneinander im Kommentar von
+ * `uft_format_convert_bitstream.c` — „4000 ns Zellzeit" und „der PLL …
+ * mit einer Zellzeit von 3250 ns". Verglichen hat sie niemand.
+ */
+#define D64_ZONE0_BIT_TIME_US   3.25  /* Tracks 1-17,   307 692 bps */
+#define D64_ZONE1_BIT_TIME_US   3.5   /* Tracks 18-24,  285 714 bps */
+#define D64_ZONE2_BIT_TIME_US   3.75  /* Tracks 25-30,  266 667 bps */
+#define D64_ZONE3_BIT_TIME_US   4.0   /* Tracks 31-35+, 250 000 bps */
 
 /* Gap lengths (in GCR bytes) */
 #define D64_GAP1_LENGTH         9     /* After header, before data */

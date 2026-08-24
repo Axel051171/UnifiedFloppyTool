@@ -75,6 +75,9 @@ Zahl korrekturbedürftig.
 | ~~**C3**~~ | „22 Banner-Header sind unfertig“ | gemessen | ✅ **MF-558** — der Audit zaehlte 78; **67 davon waren leere Aufhaenger**, die sich nur als unfertig beschrifteten. Jetzt **11**, davon 8 mit wirklich offenen Prototypen. Die Zahl, um die es ging, war nie 22 und nie 78 |
 | ~~**C4**~~ | 7 Header-Duplikate brauchen Zusammenfuehrung | gemessen | ⚠ **MF-559 gemessen, nicht aufgeloest**: 37 Kollisionen, davon **5 mit echtem Wert-Konflikt** und **3 in gebautem Code scharf** (`UFT_PROT_COPYLOCK` hat fuenf Werte). Das Tor misst jetzt fuenf Sonden statt einer und friert die Verteilung ein. Zusammenlegen = ABI-Arbeit |
 | ~~**C5**~~ | `uft_track_writer.h` (473 Z.) und `uft_xdf_mxdf.h` (336 Z.) zu 100 % Phantom | gemeldet, dann gemessen | ✅ **MF-549** — beide entfernt, beide Baeume bauen |
+| ~~**C8**~~ | **`SCP→D64` stand als angebotener Pfad in der Matrix und lieferte eine leere Diskette bei `success = true`** | gemessen (MF-565) | ✅ **MF-565** — drei Ursachen: Zonen-Zellzeiten vertauscht (4,0 µs auf der schnellsten Zone), Sektor-Parser ein Stub, nur EINE Umdrehung und die nach `max_flux` gewählt. **0 von 683 → 683 von 683.** Kein Test im Baum hatte diesen Pfad je angefasst |
+| **C9** | **Die CBM-Datenprüfsumme ist ein einziges XOR-Byte — ein zerstörter Sektor besteht sie mit 1/256.** Der Wandler behandelt „Prüfsumme heil" als „geprüft" und lässt spätere Umdrehungen dann nicht mehr ran | gemessen (MF-565) | ⚠ **offen.** Gemessen an einer voll verrauschten Umdrehung: **3 Sektoren als gewandelt gemeldet, 0 byteweise richtig** — 683/256 = 2,7 erwartet. Deshalb 680 statt 683, wenn die verrauschte Umdrehung zuerst liegt. Abhilfe ist **Übereinstimmung über mehrere Umdrehungen** statt Vertrauen in ein Prüfbyte (was der ADF-Pfad seit MF-473 tut). Eigener Rotbeweis nötig; festgenagelt in `tests/test_convert_scp_d64_multirev.c` |
+| **C10** | **Zwei Zählweisen für dieselbe SCP-Datei.** `scp_writer_add_track()` nimmt den Zylinder und rechnet `*2 + side`; `uft_scp_get_track_flux()` nimmt den fertigen SCP-Index | gemessen (MF-565) | ⚠ **offen.** Kostete beim Bau des Rotbeweises einen halben Durchgang: mit dem Halbspur-Index landeten die Spuren doppelt so weit auseinander, und nur Spur 1 traf — **21 von 683**. Dazu prüft der Schreiber `track_num < 84`, rechnet dann aber bis `167`. Keine Datenverfälschung gemessen, aber eine Falle für jeden nächsten Aufrufer |
 
 ---
 
@@ -89,6 +92,7 @@ Zahl korrekturbedürftig.
 | **D5** | 12 Wandlungspfade brauchen Korpusdateien, 10 einen Wandler, der nicht existiert | teils Beschaffung, teils Neubau |
 | **D6** | ATR Enhanced Density: gemeldete Geometrie falsch, **kein Datenverlust** | braucht benannte Referenz (MF-498a) |
 | **D7** | Teilaufnahme-Karte nach ddrescue-Vorbild | offen |
+| **D8** | **`audit_unbounded_alloc.py` schlüsselt seine Ausnahmen nach Zeilennummer.** Jede Änderung oberhalb einer der 9 begründeten Stellen lässt das Tor rot werden, und die billigste Antwort ist, die Zahl hochzuzählen — ohne die Begründung noch einmal zu lesen. Genau die stille Drift, gegen die das Tor gebaut wurde. Gemessen: ohne Zeilennummer kollidiert genau **1 von 9** Schlüsseln, ein Zähl-basierter Abgleich pro `(Datei, Variable)` würde tragen | eigener Rotbeweis nötig |
 
 ---
 

@@ -116,8 +116,9 @@ BASELINE: dict[str, str] = {
         "Aus `hdr->n_heads`, ebenfalls **uint8_t** "
         "(uft_hfe_format.h:92). Siehe den Eintrag darueber.",
 
-    "src/formats/uft_format_convert_flux.c:1535:heads":
-        "Aus `hdr->n_heads`, **uint8_t**. Siehe oben. Zusaetzlich haelt "
+    "src/formats/uft_format_convert_flux.c:1620:heads":
+        "Aus `hdr->n_heads`, **uint8_t** (Deklaration Zeile 1539). Siehe "
+        "oben. Zusaetzlich haelt "
         "die LUT-Schranke aus MF-526 den Zugriff in der Datei.",
 
     "src/formats/nanowasp/uft_nanowasp.c:157:cylinders":

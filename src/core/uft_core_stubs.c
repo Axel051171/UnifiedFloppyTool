@@ -371,40 +371,21 @@ void uft_kfx_free(uft_kfx_stream_t *stream) {
  * with correct-typed signatures (const uft_imd_image_t* / const
  * uft_td0_image_t* instead of the ABI-broken const void*). */
 
-/* ============================================================================
- * C64 GCR parser — ABI-correct honest impl
+/* MF-565: der C64-GCR-Parser (init/add_bit) ist ENTFERNT.
  *
- * Previous (void*) 1-arg + (void*,int) stubs were §1.3 mismatches
- * against include/uft/uft_c64_gcr.h which declares:
- *   void uft_c64_parser_init(uft_c64_parser_t *p, int track);
- *   void uft_c64_parser_add_bit(uft_c64_parser_t *p, uint8_t bit,
- *                                unsigned long position);
- * The single caller (uft_format_convert_flux.c) passes those types;
- * the old stubs silently did the wrong thing.
+ * Er war ein Stub: add_bit() schob Bits in ein Schieberegister, und der
+ * Kommentar daneben sagte es auch — "Full sync-pattern detection + sector
+ * extraction deferred". Sein einziger Aufrufer war
+ * `uftc_convert_scp_to_d64()`, und der lieferte damit auf einer
+ * fehlerfreien synthetischen Aufnahme 0 von 683 Sektoren, meldete aber
+ * success = true.
  *
- * init zeros the struct and sets the start state. add_bit folds the
- * bit into the sliding window and counts bits/position. Full C64 GCR
- * sync + sector extraction (~200 lines) is deferred — this minimal
- * honest impl keeps counters consistent without inventing sectors.
- * ============================================================================ */
-
-#include "uft/uft_c64_gcr.h"
-
-void uft_c64_parser_init(uft_c64_parser_t *parser, int track) {
-    if (!parser) return;
-    memset(parser, 0, sizeof(*parser));
-    parser->state = UFT_C64_STATE_IDLE;
-    parser->last_track = track;
-}
-
-void uft_c64_parser_add_bit(uft_c64_parser_t *parser,
-                             uint8_t bit, unsigned long position) {
-    if (!parser) return;
-    parser->datacells = (uint16_t)((parser->datacells << 1) | (bit & 1));
-    parser->bits++;
-    parser->data_position = position;
-    /* Full sync-pattern detection + sector extraction deferred. */
-}
+ * Der Baum hatte die ganze Zeit einen geprueften GCR-Dekoder — den des
+ * G64-Pfades, seit MF-536 gegen VICE gemessen. Er ist jetzt oeffentlich
+ * (`uft_cbm_gcr_track_to_sectors`), und der Fluss-Pfad benutzt ihn:
+ * 683 von 683. Die Deklarationen sind in include/uft/uft_c64_gcr.h im
+ * selben Commit gefallen.
+ */
 
 /* Six SIMD decoder stubs (uft_gcr_decode_5to4_{scalar,sse2,avx2} +
  * uft_mfm_decode_flux_{scalar,sse2,avx2}) deleted per spec §1.4 — zero

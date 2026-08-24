@@ -227,46 +227,20 @@ typedef struct {
  * Bitstream Processing
  *============================================================================*/
 
-/** Parser state */
-typedef enum {
-    UFT_C64_STATE_IDLE,
-    UFT_C64_STATE_ID,
-    UFT_C64_STATE_DATA,
-} uft_c64_parser_state_t;
-
-/** Parser context */
-typedef struct {
-    uft_c64_parser_state_t state;
-    uint16_t    datacells;      /**< 16-bit sliding window */
-    int         bits;           /**< Bits accumulated */
-    uint8_t     gcr_buffer[512];
-    int         gcr_len;
-    uint8_t     byte_buffer[512];
-    int         byte_len;
-    
-    /* Last found sector info */
-    int         last_track;
-    int         last_sector;
-    uint16_t    last_disk_id;
-    unsigned long id_position;
-    unsigned long data_position;
-} uft_c64_parser_t;
-
-/**
- * @brief Initialize parser
- * @param parser Parser context
- * @param track Current track (for bitrate buckets)
+/* MF-565: `uft_c64_parser_t` + `uft_c64_parser_init/add_bit` ENTFERNT.
+ *
+ * Der Parser war ein Stub — add_bit() schob Bits in ein Schieberegister,
+ * "Full sync-pattern detection + sector extraction deferred" stand als
+ * Kommentar daneben. Sein einziger Aufrufer, der Fluss-Pfad
+ * `uftc_convert_scp_to_d64()`, benutzt seit MF-565 den GCR-Dekoder, den
+ * der G64-Pfad schon hatte und der seit MF-536 gegen VICE gemessen ist:
+ * @ref uft_cbm_gcr_track_to_sectors (include/uft/formats/c64/uft_d64_g64.h).
+ *
+ * Gemessen an einer fehlerfreien synthetischen Aufnahme: mit dem Stub
+ * 0 von 683 Sektoren, mit dem geprueften Dekoder 683 von 683.
+ * Nicht wieder einfuehren — ein zweiter GCR-Parser ist die Krankheit,
+ * gegen die MF-436 den einen herausgezogen hat.
  */
-void uft_c64_parser_init(uft_c64_parser_t *parser, int track);
-
-/**
- * @brief Add bit to parser
- * @param parser Parser context
- * @param bit Bit value (0 or 1)
- * @param position Bit position for logging
- */
-void uft_c64_parser_add_bit(uft_c64_parser_t *parser,
-                            uint8_t bit, unsigned long position);
 
 
 /*============================================================================
