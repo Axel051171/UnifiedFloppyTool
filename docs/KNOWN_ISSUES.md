@@ -3938,6 +3938,56 @@ zweite braucht eine Bank-Sitzung mit echtem Laufwerk.
 
 ---
 
+### PROT-3 — 350 Funktionen, vier Aufrufer, sechzehn beruehrt (2026-08-24, MF-557) — ⚠ UEBERWACHT
+
+`CLAUDE.md` und `README.md` fuehren „55+ Kopierschutz-Verfahren“ als
+**Kernfunktion**. Gemessen:
+
+```
+Dateien in src/protection/            38
+Funktionen mit uft_-Praefix          350
+davon von ausserhalb gerufen           4
+davon von irgendeinem Test beruehrt   16
+weder verdrahtet noch beruehrt       334
+```
+
+Die vier Aufrufer sind `uft_crc16_ccitt` (ein generischer CRC-Helfer),
+`uft_longtrack_get_def`, `uft_longtrack_type_name` und
+`uft_prot_config_init`. Der Erkenner selbst —
+`uft_protection_detect.c`, `uft_protection_classify.c` und die uebrigen
+34 Dateien — hat **keinen einzigen**.
+
+**Der Katalog ist nicht bloss unverdrahtet, sondern unbelegt.** „Von einem
+Test beruehrt“ heisst hier nur, dass der Name in `tests/` vorkommt; das ist
+eine Obergrenze, keine Aussage ueber Pruefqualitaet. Die Zahl der wirklich
+gepruesten Funktionen ist hoechstens 16, eher weniger.
+
+**Warum das nicht in dieser Runde verdrahtet wird.** 334 ungeprueste
+Funktionen an ein forensisches Urteil zu haengen ist genau die Lage, aus der
+die fuenf fabrizierten Parser kamen (FMT-2/3/10/11/12). Die Oberflaeche sagt
+das bereits von sich aus (`src/gui/ProtectionAnalysisWidget.cpp`):
+
+> *„Der eigentliche Erkenner … wird von NIEMANDEM aufgerufen … ihn
+> anzuschliessen, ohne ihn geprueft zu haben, waere derselbe Fehler noch
+> einmal.“*
+
+Was fehlte, war die **Zahl**. Ohne sie liest sich „wird von niemandem
+aufgerufen“ wie ein Detail; mit ihr wie das, was es ist.
+
+`scripts/audit_protection_claims.py` misst die vier Zahlen neu und
+vergleicht sie mit dem C1-Eintrag im Rueckstand. Wer etwas verdrahtet oder
+prueft, aendert die Zahl — das Tor verlangt dann nur, dass die Doku
+nachzieht. Es verlangt NICHT, dass die Zahl klein bleibt.
+
+**Zwei Messungen, zwei Zahlen — und die Lehre daraus.** Meine erste
+Zaehlung von Hand ergab 33 Dateien und 369 Funktionen, die des Tors 38 und
+350. Der Unterschied: die Handzaehlung ging nur eine Verzeichnisebene tief
+und fing dafuer Zeilen mit, die keine Definitionen sind. **Die Zahl im Tor
+gilt**, weil sie reproduzierbar ist — eine Zahl, die niemand nachrechnen
+kann, ist keine Messung.
+
+---
+
 ### FZ-2 — die letzten neun brauchten einen Erzeuger, der rechnen kann (2026-08-24, MF-556) -> ✓ BEHOBEN
 
 Nach MF-543 erreichte der Oeffnungs-Fuzzer 128 von 137 Plugins. Die neun

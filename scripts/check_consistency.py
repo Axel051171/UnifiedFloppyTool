@@ -725,6 +725,13 @@ def main() -> int:
         # gewandelt. Gemessen beim Anlegen: 7 von 9 Aufrufen.
         import audit_discarded_result as _dr
         all_errors.append(("Verworfene Schreib-Antworten", _dr.check(repo)))
+        # Kopierschutz-Katalog gegen die Behauptung (MF-557). CLAUDE.md und
+        # README fuehren "55+ Verfahren" als Kernfunktion; gemessen sind es
+        # 350 Funktionen mit 4 Aufrufern von aussen, davon einer ein
+        # CRC-Helfer. Das Tor haelt die Zahl fest — wer verdrahtet oder
+        # prueft, aendert sie, und die Doku muss nachziehen.
+        import audit_protection_claims as _pc
+        all_errors.append(("Kopierschutz-Behauptung", _pc.check(repo)))
 
     total = sum(len(e) for _, e in all_errors)
     print(f"Consistency check ({len(all_errors)} categories, root={repo}):")
