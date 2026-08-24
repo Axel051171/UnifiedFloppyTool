@@ -6144,10 +6144,50 @@ Winkellagen.
 > sagt warum — eine Verteilung aus falschen Fächern wäre schlechter als
 > keine.
 >
-> **Immer noch nicht gemessen:** ob die Schranke auch für Verzugsformen
+> ~~**Immer noch nicht gemessen:** ob die Schranke auch für Verzugsformen
 > gilt, die nicht „ein gedehnter Abschnitt" sind — Sinusdrift, mehrere
-> Zonen, Drift über mehrere Umdrehungen. Der Faktor 250 stammt aus einer
-> Familie von Testspuren, nicht aus einer Theorie.
+> Zonen, Drift über mehrere Umdrehungen.~~ — **gemessen in MF-562**, siehe
+> unten. Der Faktor 250 stammt weiterhin aus einer Familie von Testspuren,
+> nicht aus einer Theorie; die Familie ist jetzt größer und enthält die
+> Formen, die vorher fehlten.
+
+---
+
+#### Nachtrag 2026-08-24 (MF-562) — die Schranke hält, und der engste Fall war nicht dabei
+
+`tests/test_timeline_angle_shapes.c` misst vier weitere Verzugsformen nach
+demselben Verfahren: eine Synthetik-Spur hat konstruktionsbedingt bekannte
+Winkellagen, weil die kumulierte Zeit bis zu jedem Bit eine **Summe** ist
+und keine Schätzung.
+
+| Form | Spanne | Schranke | wahrer Fehler | nötiger Faktor |
+|---|---|---|---|---|
+| gleichmäßig | 1,0000 | 0,0 | **0,0** | 0 |
+| ein Abschnitt | 1,1200 | 30,0 | 12,5 | 104 |
+| drei Zonen | 1,1702 | 42,6 | 7,1 | 42 |
+| Sinusdrift | 1,1276 | 31,9 | 6,9 | 54 |
+| **lineare Drift** | 1,0993 | 24,8 | **17,1** | **173** |
+
+**Die Schranke hält für alle vier.** Der engste Fall ist **lineare Drift** —
+genau die Form, die in der ursprünglichen Familie fehlte. Sie braucht
+Faktor **173** gegen die eingebauten 250, also 1,4× Luft; die übrigen
+liegen bei 42 bis 104.
+
+Warum ausgerechnet lineare Drift: bei ihr weicht der Winkel **monoton** ab,
+der Fehler summiert sich über die ganze Spur. Ein gedehnter Abschnitt
+dagegen holt am Ende wieder auf, und die Sinusdrift hebt sich über eine
+Periode fast auf. Die Spanne sieht die Drift kaum (1,0993 bei 10 %
+eingebautem Verzug) — deshalb ist der nötige Faktor dort am größten.
+
+**Die Gegenprobe steht mit in der Tabelle:** auf einer gleichmäßigen Spur
+ist der Fehler **exakt null**. Ein Test, dessen Messgröße immer klein
+herauskommt, würde das nicht zeigen.
+
+**Was weiterhin offen bleibt:** Drift über *mehrere Umdrehungen* — der Test
+baut eine Umdrehung. Und alles, was keine der fünf Formen ist. Der Faktor
+ist damit für fünf konstruierte Formen belegt, nicht für alle möglichen.
+
+
 
 **Verdrahtet und geprüft:** `tests/test_decode_timeline.c` (15 Tests) +
 3 Tests in `test_convert_scp_adf_multirev.c`, 13 Rotbeweise feuern auf
