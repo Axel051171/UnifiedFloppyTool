@@ -173,9 +173,31 @@ uft_error_t uftc_convert_hfe_to_scp(const uint8_t* src_data, size_t src_size,
             }
 
             /* Add flux data for each revolution (duplicate for synthetic) */
+            /* MF-555: die Antwort des Schreibers wird gelesen.
+             *
+             * Sie wurde verworfen. Schlaegt das Schreiben fehl, fehlt die
+             * Spur im Abbild — und der Wandler zaehlte sie trotzdem als
+             * gewandelt. Dieselbe Sache wie MF-545, eine Ebene tiefer:
+             * dort folgte der Erfolg daraus, dass sich die DATEI anlegen
+             * liess, hier daraus, dass der Aufruf zurueckkam.
+             *
+             * Gefunden von scripts/audit_discarded_result.py, gebaut nach
+             * dem dritten Fall von "eine Stelle repariert, das Geschwister
+             * nicht" (MF-526, MF-550, MF-554). Von fuenf Aufrufen des
+             * SCP-Schreibers pruefte genau einer. */
+            int add_rc = 0;
             for (int rev = 0; rev < revolutions; rev++) {
-                scp_writer_add_track(writer, cyl, hd, flux_buf, flux_count,
-                                      duration_ns, rev);
+                if (scp_writer_add_track(writer, cyl, hd, flux_buf,
+                                          flux_count, duration_ns, rev) != 0)
+                    add_rc = -1;
+            }
+            if (add_rc != 0) {
+                uftc_add_warning(result,
+                         "HFE->SCP Spur %d Kopf %d: der SCP-Schreiber hat "
+                         "die Spur abgewiesen — sie fehlt im Abbild "
+                         "(MF-555)", cyl, hd);
+                result->tracks_failed++;
+                continue;
             }
 
             free(track_bits);
@@ -349,9 +371,19 @@ uft_error_t uftc_convert_g64_to_scp(const uint8_t* src_data, size_t src_size,
 
         /* Write to SCP with specified number of revolutions */
         int scp_track = (track - 1) * 2; /* Side 0 */
+        /* MF-555: siehe die Begruendung bei HFE->SCP weiter oben. */
+        int add_rc = 0;
         for (int rev = 0; rev < revolutions; rev++) {
-            scp_writer_add_track(writer, track - 1, 0, flux_buf, flux_count,
-                                  duration_ns, rev);
+            if (scp_writer_add_track(writer, track - 1, 0, flux_buf,
+                                      flux_count, duration_ns, rev) != 0)
+                add_rc = -1;
+        }
+        if (add_rc != 0) {
+            uftc_add_warning(result,
+                     "G64->SCP Spur %d: der SCP-Schreiber hat die Spur "
+                     "abgewiesen — sie fehlt im Abbild (MF-555)", track);
+            result->tracks_failed++;
+            continue;
         }
 
         /* MF-550: siehe die ausfuehrliche Begruendung bei HFE->SCP weiter
@@ -656,7 +688,18 @@ uft_error_t uftc_convert_hfe_to_g64(const uint8_t* src_data, size_t src_size,
 
         /* Store in G64 (halftrack = track * 2) */
         int halftrack = track_num * 2;
-        g64_set_track(g64, halftrack, track_bits, effective_len, speed);
+        /* MF-555: `g64_set_track()` weist Halbspuren und zu lange
+         * Spuren ab (MF-534). Die Antwort wurde verworfen — eine
+         * abgewiesene Spur fehlte im Abbild und galt trotzdem als
+         * geschrieben. */
+        if (g64_set_track(g64, halftrack, track_bits, effective_len,
+                          speed) != 0) {
+            uftc_add_warning(result,
+                     "Halbspur %d: der G64-Schreiber hat sie abgewiesen — "
+                     "sie fehlt im Abbild (MF-555)", halftrack);
+            result->tracks_failed++;
+            continue;
+        }
 
         free(track_bits);
         result->tracks_converted++;

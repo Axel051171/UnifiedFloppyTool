@@ -60,7 +60,7 @@ Zahl korrekturbedürftig.
 | # | Sache | Herkunft | Stand |
 |---|---|---|---|
 | **B1** | 9 von 137 Plugins vom Fuzzer nie erreicht (MSA, DIM_ATARI, DC42, D77, D88, FDI_PC98, CFI, Logical, POSIX). Sie verlangen einen Kopf, dessen Inhalt und Dateilänge zueinander passen | gemessen | **offen** — braucht Erzeuger, der beides gemeinsam setzt |
-| **B2** | Fuzzer-Temppfad ist relativ; zwei Instanzen im selben Verzeichnis überschreiben einander die Eingabe. Falle für parallele CI | gemeldet | **offen** |
+| ~~**B2**~~ | Fuzzer-Temppfad relativ; zwei Instanzen ueberschreiben einander die EINGABE | gemessen | ✅ **MF-553** — Pfad traegt die Prozesskennung. War bei der QRST-Suche real und kostete zwanzig Minuten |
 | ~~**B3**~~ | Flux-Puffer-Deckel 131072: ueberzaehlige Flusswechsel still verworfen | gemeldet, dann gemessen | ✅ **MF-550** — alle drei Stellen melden und beziffern jetzt; gemessen 129024 von 260096 verworfen, Spur zaehlt als gescheitert |
 | ~~**B4**~~ | FS-Extraktion: Kettenbruch → Torso-Datei mit `OK`-Status | gemeldet, dann gemessen | ✅ **MF-551** — FAT12 und AmigaDOS vergleichen jetzt gegen die gemeldete Groesse und schreiben bei einer Luecke gar nichts. **Kein Waechter**: der Test-Baukasten bedient `find_path` nicht, Grund im Testbaum |
 

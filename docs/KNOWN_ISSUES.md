@@ -3938,6 +3938,52 @@ zweite braucht eine Bank-Sitzung mit echtem Laufwerk.
 
 ---
 
+### SIB-1 — eine Stelle repariert, das Geschwister nicht (2026-08-24, MF-555) -> ✓ BEHOBEN
+
+**Die Meta-Familie.** Dreimal in dieser Sitzung war eine Stelle behoben und
+ihre Kopie nicht:
+
+| | Was repariert war | Was stehenblieb |
+|---|---|---|
+| MF-526 | `lut[].length` je Seite in einer Kopie | die zweite stuerzte weiter ab |
+| MF-550 | Flux-Kappung meldete sich (MF-528) | drei weitere Stellen schwiegen |
+| MF-554 | CPC-DSK-Index gedeckelt (MF-512) | zweite Fassung: 65024 in ein Feld mit 204 |
+
+Das ist keine Nachlaessigkeit im Einzelfall, sondern eine Eigenschaft des
+Baums: **derselbe Gedanke steht mehrfach da, und eine Reparatur trifft eine
+Kopie.**
+
+`scripts/audit_discarded_result.py` sucht eine Klasse, in der das besonders
+weh tut. Gemessen beim Anlegen:
+
+```
+scp_writer_add_track   4 von 5 Aufrufen verwarfen die Antwort
+g64_set_track          3 von 4 Aufrufen verwarfen die Antwort
+```
+
+Der eine gepruefte `g64_set_track`-Aufruf war der aus **MF-534** — eine
+Reparatur aus derselben Sitzung, mit **drei unreparierten Geschwistern**.
+
+**Was das bedeutet.** Beide Funktionen schreiben eine Spur in ein Abbild.
+Schlaegt das fehl, fehlt die Spur — und an zwei Stellen stand
+`tracks_converted++` unmittelbar daneben. Das ist die „Erfolgsmeldung ohne
+Tat“ aus MF-545, eine Ebene tiefer: dort folgte der Erfolg daraus, dass
+sich die **Datei** anlegen liess, hier daraus, dass der **Aufruf**
+zurueckkam.
+
+Alle sieben behoben. Jede meldet jetzt mit Spurnummer, und die Spur zaehlt
+als gescheitert statt als gewandelt.
+
+**Rotbeweis:** eine der sieben Reparaturen zurueckgenommen -> das Tor meldet
+sie. Wiederhergestellt -> 0.
+
+**Die Lehre, die ueber dem Befund steht:** wer eine Stelle repariert, muss
+nach ihren Geschwistern suchen. Von Hand geht das nicht zuverlaessig —
+viermal ist es in dieser Sitzung schiefgegangen. Ein Tor je Fehlerform
+schon.
+
+---
+
 ### TAUT-1 — das Muster, das dreimal vorkam, ist jetzt ein Tor (2026-08-24, MF-552)
 
 Drei der schwersten Funde dieser Sitzung sind **dasselbe Muster** in

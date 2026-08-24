@@ -995,11 +995,23 @@ int d64_to_g64(const d64_image_t *d64, g64_image_t **g64,
                                           track, d64->disk_id, opts.gap_fill);
         
         if (gcr_len > 0) {
-            g64_set_track(img, halftrack, gcr_track, gcr_len, speed_map[track]);
-            tracks_converted++;
+            /* MF-555: die Antwort des Schreibers wird gelesen.
+             *
+             * Sie wurde verworfen, und `tracks_converted++` stand direkt
+             * daneben. `g64_set_track()` weist unter anderem Halbspuren
+             * und zu lange Spuren ab (MF-534) — eine abgewiesene Spur
+             * fehlte im Abbild und wurde trotzdem gezaehlt.
+             *
+             * Gefunden von scripts/audit_discarded_result.py: von vier
+             * Aufrufen dieses Schreibers pruefte genau einer, und das war
+             * der aus MF-534. Drei Geschwister blieben stehen. */
+            if (g64_set_track(img, halftrack, gcr_track, gcr_len,
+                              speed_map[track]) == 0) {
+                tracks_converted++;
+            }
         }
     }
-    
+
     *g64 = img;
     
     if (result) {
@@ -1112,8 +1124,14 @@ int uft_cbm_g64_encode_via_plugin(const struct uft_format_plugin *plugin,
                                           track, disk_id, opts.gap_fill);
 
         if (gcr_len > 0) {
-            g64_set_track(img, halftrack, gcr_track, gcr_len, speed_map[track]);
-            tracks_converted++;
+            /* MF-555: siehe die Begruendung an der Schwesterstelle weiter
+             * oben in dieser Datei. Zweite Kopie derselben Rechnung, und
+             * genau das ist das Muster: eine reparierte Stelle hat fast
+             * immer ein unrepariertes Geschwister. */
+            if (g64_set_track(img, halftrack, gcr_track, gcr_len,
+                              speed_map[track]) == 0) {
+                tracks_converted++;
+            }
         }
     }
 

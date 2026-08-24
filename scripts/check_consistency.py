@@ -717,6 +717,14 @@ def main() -> int:
         # Feld mit 204 Eintraegen, xdf-Schiebeweite mit UB ab 32).
         import audit_unbounded_alloc as _ua
         all_errors.append(("Groessen ohne Schranke", _ua.check(repo)))
+        # Verworfene Schreib-Antworten (MF-555). Dreimal in dieser Sitzung
+        # war eine Stelle repariert und ihr Geschwister nicht (MF-526,
+        # MF-550, MF-554). Dieses Tor sucht eine Klasse, in der das
+        # besonders weh tut: ein Schreibaufruf, dessen Fehler niemand
+        # liest — die Spur fehlt im Abbild und zaehlt trotzdem als
+        # gewandelt. Gemessen beim Anlegen: 7 von 9 Aufrufen.
+        import audit_discarded_result as _dr
+        all_errors.append(("Verworfene Schreib-Antworten", _dr.check(repo)))
 
     total = sum(len(e) for _, e in all_errors)
     print(f"Consistency check ({len(all_errors)} categories, root={repo}):")

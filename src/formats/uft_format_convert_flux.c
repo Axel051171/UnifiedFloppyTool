@@ -2092,12 +2092,30 @@ uft_error_t uftc_convert_kryoflux_to_scp(const uint8_t* src_data,
      * a full disk conversion requires the caller to iterate over
      * all track files and call this for each one.
      */
+    /* MF-555: die Antwort des Schreibers wird gelesen.
+     *
+     * Sie wurde verworfen, und `result->tracks_converted = 1;` stand
+     * unmittelbar dahinter — die eine Spur galt als gewandelt, gleich ob
+     * der Schreiber sie angenommen hatte.
+     *
+     * Bei einer Ein-Spur-Wandlung wie dieser ist das besonders deutlich:
+     * scheitert der Aufruf, enthaelt die SCP nichts, und das Ergebnis
+     * meldet trotzdem eine gewandelte Spur. */
+    int add_rc = 0;
     for (int rev = 0; rev < revolutions; rev++) {
-        scp_writer_add_track(writer, 0, 0, flux_buf, stream.flux_count,
-                              duration_ns, rev);
+        if (scp_writer_add_track(writer, 0, 0, flux_buf, stream.flux_count,
+                                  duration_ns, rev) != 0)
+            add_rc = -1;
     }
-
-    result->tracks_converted = 1;
+    if (add_rc != 0) {
+        uftc_add_warning(result,
+                 "KryoFlux->SCP: der SCP-Schreiber hat die Spur abgewiesen "
+                 "— das Abbild bleibt leer (MF-555)");
+        result->tracks_failed = 1;
+        result->tracks_converted = 0;
+    } else {
+        result->tracks_converted = 1;
+    }
     uftc_add_warning(result,
              "Single Kryoflux track converted to SCP (%zu flux transitions); "
              "full disk requires all track files",

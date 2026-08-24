@@ -368,9 +368,22 @@ static uft_error_t dispatch_conversion(uft_format_t src_format,
                 for (size_t i = 0; i < flux_count; i++)
                     duration += flux_buf[i];
 
+                /* MF-555: siehe uft_format_convert_bitstream.c
+                 * (HFE->SCP) fuer die Begruendung. */
+                int add_rc = 0;
                 for (int rev = 0; rev < revolutions; rev++) {
-                    scp_writer_add_track(writer, cyl, hd, flux_buf,
-                                          flux_count, duration, rev);
+                    if (scp_writer_add_track(writer, cyl, hd, flux_buf,
+                                              flux_count, duration,
+                                              rev) != 0)
+                        add_rc = -1;
+                }
+                if (add_rc != 0) {
+                    uftc_add_warning(result,
+                             "Sektor->SCP Spur %d Kopf %d: der "
+                             "SCP-Schreiber hat die Spur abgewiesen — sie "
+                             "fehlt im Abbild (MF-555)", cyl, hd);
+                    result->tracks_failed++;
+                    continue;
                 }
                 /* MF-550: siehe uft_format_convert_bitstream.c (HFE->SCP)
                  * fuer die ausfuehrliche Begruendung. Dieselbe stille
