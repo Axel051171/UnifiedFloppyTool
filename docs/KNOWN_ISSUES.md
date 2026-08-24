@@ -3938,6 +3938,61 @@ zweite braucht eine Bank-Sitzung mit echtem Laufwerk.
 
 ---
 
+### FZ-2 — die letzten neun brauchten einen Erzeuger, der rechnen kann (2026-08-24, MF-556) -> ✓ BEHOBEN
+
+Nach MF-543 erreichte der Oeffnungs-Fuzzer 128 von 137 Plugins. Die neun
+uebrigen fehlten nicht wegen ihrer Kennung, sondern weil ihre Sonde eine
+**Beziehung** zwischen Kopf und Dateilaenge verlangt:
+
+| Plugin | Was die Sonde verlangt |
+|---|---|
+| FDI_PC98 | `file_size == hdr_size + cyls*heads*spt*secsize` |
+| DIM_ATARI | `file_size == 32 + cyl*heads*spt*512` |
+| D88 / D77 | `disk_size` (LE32 im Kopf) <= Dateilaenge, plus aufsteigende Spurtabelle |
+| Logical | Geometrie im Kopf — und seit MF-543 muss sie hineinpassen |
+| MSA | Feldschranken (spt 1..18, sides 1..2, end >= start) |
+| DC42 | Kennung auf **Offset 82**, nicht am Anfang |
+
+„Kennung plus beliebiger Rest“ kann das nicht liefern: die Kennung steht
+am Anfang, die Laenge kommt aus der Schleife darum herum, und beide wissen
+nichts voneinander.
+
+**Sechs Erzeuger**, die eine Datei bauen, welche ihre eigene Behauptung
+erfuellt. Jede geht einmal roh durch und danach viermal beschaedigt — und
+die beschaedigte Fassung ist die interessante: die Sonde stimmt weiter zu,
+der Parser laeuft auf Feldern, die nicht mehr stimmen. **Genau dort sassen
+QRST und NanoWasp** (MF-543).
+
+**Ergebnis:**
+
+```
+Sonde hat je zugestimmt   : 135 von 137   (vorher 128, davor 103)
+open() war je erfolgreich : 122
+Abstuerze                 : 0
+Vertragsverletzungen      : 0
+```
+
+Die zwei verbleibenden sind beide **dokumentiert unerreichbar**:
+
+* **POSIX** — `posix_probe_plugin()` gibt unbedingt `false` zurueck; die
+  Identitaet steckt in einer Nachbardatei (MF-546).
+* **CFI** — hat gar keine Kennung; die Sonde dekomprimiert die erste Spur
+  und verlangt danach einen gueltigen BPB. Braucht eine echte,
+  RLE-komprimierte Datei im Korpus.
+
+**Ein Messfehler auf dem Weg, und ein aufschlussreicher.** Der erste
+DIM_ATARI-Erzeuger setzte `hdr[0x06] = 0` (einseitig), rechnete die Groesse
+aber mit zwei Seiten, und `hdr[0x0D] = 1` (HD), was die Sonde auf 18
+Sektoren festlegt. Der Fuzzer meldete daraufhin „DIM_ATARI nie erreicht“
+— obwohl ein Erzeuger dafuer existierte.
+
+**Ein Erzeuger, der die Sonde knapp verfehlt, sieht in der Auswertung
+genauso aus wie gar keiner.** Das ist dieselbe Klasse wie die gruene Zahl
+ueber einer unvollstaendigen Menge: die Ausgabe unterscheidet nicht
+zwischen „nicht versucht“ und „versucht und danebengelegen“.
+
+---
+
 ### SIB-1 — eine Stelle repariert, das Geschwister nicht (2026-08-24, MF-555) -> ✓ BEHOBEN
 
 **Die Meta-Familie.** Dreimal in dieser Sitzung war eine Stelle behoben und

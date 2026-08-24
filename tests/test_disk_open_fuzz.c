@@ -319,6 +319,236 @@ static void write_tmp(size_t size)
 
 /** Schickt die abgelegte Datei durch uft_disk_open() und alles, was ein
  *  Betrachter danach tut — also durch die Rangfolge, mit einem Gewinner. */
+
+/* ── Stimmige Abbilder: Kopf UND Laenge passen zueinander (MF-556) ────────
+ *
+ * Neun Plugins hat der Fuzzer nie erreicht — nicht, weil ihre Kennung
+ * fehlte, sondern weil ihre Sonde eine BEZIEHUNG verlangt:
+ *
+ *     FDI_PC98   file_size == hdr_size + cyls*heads*spt*secsize
+ *     DIM_ATARI  file_size == 32 + cyl*heads*spt*512
+ *     D88 / D77  disk_size (LE32 im Kopf) <= file_size, plus eine
+ *                aufsteigende Spurtabelle, die in die Datei zeigt
+ *     Logical    Geometrie im Kopf, und seit MF-543 muss sie hineinpassen
+ *     MSA        Feldschranken im Kopf (spt 1..18, sides 1..2, end >= start)
+ *     DC42       Kennung auf Offset 82, nicht am Anfang
+ *
+ * "Kennung plus beliebiger Rest" kann so etwas nicht liefern: die Kennung
+ * steht am Anfang, die Laenge kommt aus der Schleife darum herum, und
+ * beide wissen nichts voneinander.
+ *
+ * Deshalb hier ein dritter Erzeuger-Typ. Er baut eine Datei, die ihre
+ * EIGENE Behauptung erfuellt. Der Fuzzer schickt sie einmal so durch und
+ * danach beschaedigt — und genau die beschaedigte Fassung ist die
+ * interessante: die Sonde stimmt zu, und der Parser laeuft auf Feldern,
+ * die nicht mehr stimmen. Dort sassen QRST und NanoWasp (MF-543).
+ *
+ * Jeder Erzeuger gibt die Laenge zurueck, die er belegt hat. Die Werte
+ * stammen aus den Sonden, nicht aus einer Spezifikation — die Stelle steht
+ * je Erzeuger dabei. */
+
+static void put_le16(uint8_t *p, uint16_t v)
+{ p[0] = (uint8_t)(v & 0xFF); p[1] = (uint8_t)(v >> 8); }
+
+static void put_le32(uint8_t *p, uint32_t v)
+{ p[0] = (uint8_t)v; p[1] = (uint8_t)(v >> 8);
+  p[2] = (uint8_t)(v >> 16); p[3] = (uint8_t)(v >> 24); }
+
+static void put_be16(uint8_t *p, uint16_t v)
+{ p[0] = (uint8_t)(v >> 8); p[1] = (uint8_t)(v & 0xFF); }
+
+static void put_be32(uint8_t *p, uint32_t v)
+{ p[0] = (uint8_t)(v >> 24); p[1] = (uint8_t)(v >> 16);
+  p[2] = (uint8_t)(v >> 8);  p[3] = (uint8_t)v; }
+
+/** MSA: Kennung 0x0E0F, danach vier BE16-Felder mit Schranken.
+ *  src/formats/msa/uft_msa_plugin.c:55-90 (spt 1..18, sides+1 in 1..2,
+ *  end >= start). */
+static size_t build_msa(void)
+{
+    const uint16_t spt = 9, sides_m1 = 1, start = 0, end = 79;
+    const uint16_t tracks = (uint16_t)(end - start + 1);
+    const size_t track_bytes = (size_t)spt * 512;
+    size_t pos = 10;
+
+    memset(blob, 0, MAX_BLOB);
+    put_be16(blob + 0, 0x0E0F);
+    put_be16(blob + 2, spt);
+    put_be16(blob + 4, sides_m1);
+    put_be16(blob + 6, start);
+    put_be16(blob + 8, end);
+
+    /* Je Spur ein Laengenfeld gefolgt von unkomprimierten Daten. */
+    for (uint16_t t = 0; t < (uint16_t)(tracks * (sides_m1 + 1)); t++) {
+        if (pos + 2 + track_bytes > MAX_BLOB) break;
+        put_be16(blob + pos, (uint16_t)track_bytes);
+        pos += 2;
+        for (size_t i = 0; i < track_bytes; i++)
+            blob[pos + i] = (uint8_t)(t * 7 + i);
+        pos += track_bytes;
+    }
+    return pos;
+}
+
+/** Logical: "LGD\0" + Geometrie als LE16 auf 4/6/8/10.
+ *  src/formats/logical/uft_logical.c:48-70 (cyls 1..256, heads 1..4,
+ *  sects 1..64, secsize aus {128,256,512,1024}). Seit MF-543 muss die
+ *  Geometrie zusaetzlich in die Datei passen. */
+static size_t build_logical(void)
+{
+    const uint16_t cyls = 40, heads = 2, sects = 9, secsz = 512;
+    const size_t hdr = 32;
+    const size_t need = (size_t)cyls * heads * sects * secsz;
+
+    memset(blob, 0, MAX_BLOB);
+    memcpy(blob, "LGD\0", 4);
+    put_le16(blob + 4,  cyls);
+    put_le16(blob + 6,  heads);
+    put_le16(blob + 8,  sects);
+    put_le16(blob + 10, secsz);
+    if (hdr + need > MAX_BLOB) return hdr;
+    for (size_t i = 0; i < need; i++)
+        blob[hdr + i] = (uint8_t)(i * 3 + 1);
+    return hdr + need;
+}
+
+/** DIM (Atari): 32-Byte-Kopf, und die Datei muss GENAU
+ *  32 + cyl*heads*spt*512 lang sein.
+ *  src/formats/dim_atari/uft_dim_atari.c:56-95. */
+static size_t build_dim_atari(void)
+{
+    const uint8_t spt = 9, cyl_last = 79;
+    const size_t cyls = (size_t)cyl_last + 1, heads = 2;
+    const size_t need = cyls * heads * spt * 512;
+
+    /* MF-556: die ersten Werte hier waren falsch, und zwar auf eine
+     * lehrreiche Weise.
+     *
+     * `blob[0x06] = 0` heisst EINSEITIG (h = sides_byte + 1), waehrend die
+     * Groesse unten mit zwei Seiten gerechnet wurde. Und `blob[0x0D] = 1`
+     * heisst HD — was die Sonde dann auf 18 Sektoren und 2 Seiten
+     * festlegt, beides nicht erfuellt.
+     *
+     * Der Fuzzer meldete daraufhin "DIM_ATARI nie erreicht", obwohl ein
+     * Erzeuger dafuer existierte. Ein Erzeuger, der die Sonde knapp
+     * verfehlt, sieht in der Auswertung genauso aus wie gar keiner.
+     * Gegengelesen an src/formats/dim_atari/uft_dim_atari.c:56-95. */
+    memset(blob, 0, MAX_BLOB);
+    blob[0x06] = 1;          /* 0=einseitig, 1=zweiseitig -> h = 2 */
+    blob[0x08] = spt;        /* aus {9,10,11,18}                   */
+    blob[0x0A] = 0;          /* erster Zylinder                    */
+    blob[0x0C] = cyl_last;   /* >= [0x0A], c = end_track + 1       */
+    blob[0x0D] = 0;          /* 0=DD; 1 verlangt 18 spt und 2 Seiten */
+    if (32 + need > MAX_BLOB) return 32;
+    for (size_t i = 0; i < need; i++)
+        blob[32 + i] = (uint8_t)(i ^ 0x5A);
+    return 32 + need;
+}
+
+/** FDI (PC-98): kein Magic, dafuer drei Beziehungen.
+ *  src/formats/fdi_pc98/uft_fdi_pc98.c:52-96 — reserved@0x00 == 0,
+ *  hdr_size@0x08 in 256..65536, data_size@0x0C == Produkt, und
+ *  file_size == hdr_size + data_size. */
+static size_t build_fdi_pc98(void)
+{
+    const uint32_t hdr_size = 4096;
+    const uint32_t secsz = 1024, spt = 8, heads = 2, cyls = 77;
+    const uint32_t data_size = cyls * heads * spt * secsz;
+
+    memset(blob, 0, MAX_BLOB);
+    put_le32(blob + 0x00, 0);          /* reserved MUSS 0 sein */
+    put_le32(blob + 0x04, 0x90);       /* fdd type             */
+    put_le32(blob + 0x08, hdr_size);
+    put_le32(blob + 0x0C, data_size);
+    put_le32(blob + 0x10, secsz);
+    put_le32(blob + 0x14, spt);
+    put_le32(blob + 0x18, heads);
+    put_le32(blob + 0x1C, cyls);
+    if ((size_t)hdr_size + data_size > MAX_BLOB) return hdr_size;
+    for (size_t i = 0; i < data_size; i++)
+        blob[hdr_size + i] = (uint8_t)(i * 11 + 5);
+    return (size_t)hdr_size + data_size;
+}
+
+/** D88 / D77: 688-Byte-Kopf, Medientyp, disk_size, und eine aufsteigende
+ *  Spurtabelle, deren Eintraege in die Datei zeigen.
+ *  src/formats/d88/uft_d88.c:33-79, src/formats/d77/uft_d77.c:66-89. */
+static size_t build_d88(void)
+{
+    const size_t HDR = 0x2B0;
+    const int tracks = 8;
+    const size_t track_bytes = 0x200;
+    size_t pos = HDR;
+
+    memset(blob, 0, MAX_BLOB);
+    memcpy(blob, "FUZZDISK", 8);       /* Name, 17 Byte, darf beliebig sein */
+    blob[0x1A] = 0;                    /* nicht schreibgeschuetzt */
+    blob[0x1B] = 0x00;                 /* Medientyp 2D            */
+
+    for (int i = 0; i < tracks; i++) {
+        if (pos + track_bytes > MAX_BLOB) break;
+        put_le32(blob + 0x20 + i * 4, (uint32_t)pos);
+        for (size_t k = 0; k < track_bytes; k++)
+            blob[pos + k] = (uint8_t)(i * 13 + k);
+        pos += track_bytes;
+    }
+    put_le32(blob + 0x1C, (uint32_t)pos);   /* disk_size == Dateilaenge */
+    return pos;
+}
+
+/** DC42: die Kennung liegt NICHT am Anfang, sondern als BE16 0x0100 auf
+ *  Offset 82. src/formats/dc42/uft_dc42.c:96-121 — dazu data[0] <= 63 und
+ *  BE32 auf 0x40 != 0. */
+static size_t build_dc42(void)
+{
+    const uint32_t data_size = 800u * 1024u;
+    const size_t HDR = 84;
+
+    memset(blob, 0, MAX_BLOB);
+    blob[0] = 10;                       /* Namenslaenge <= 63 */
+    memcpy(blob + 1, "FUZZDISK42", 10);
+    put_be32(blob + 0x40, data_size);   /* != 0 */
+    put_be32(blob + 0x44, 0);           /* tag size */
+    blob[82] = 0x01;                    /* Kennung 0x0100 */
+    blob[83] = 0x00;
+    if (HDR + data_size > MAX_BLOB) return HDR;
+    for (size_t i = 0; i < data_size; i++)
+        blob[HDR + i] = (uint8_t)(i * 17 + 9);
+    return HDR + data_size;
+}
+
+static const struct { size_t (*fn)(void); const char *label; } BUILDERS[] = {
+    { build_msa,       "MSA"       },
+    { build_logical,   "Logical"   },
+    { build_dim_atari, "DIM_ATARI" },
+    { build_fdi_pc98,  "FDI_PC98"  },
+    { build_d88,       "D88/D77"   },
+    { build_dc42,      "DC42"      },
+};
+#define N_BUILDERS ((int)(sizeof(BUILDERS) / sizeof(BUILDERS[0])))
+
+/** Beschaedigt ein stimmiges Abbild an einer Stelle — die interessante
+ *  Fassung. Die Sonde stimmt weiter zu, der Parser laeuft auf einem Feld,
+ *  das nicht mehr passt. */
+static size_t damage(size_t len, int variant)
+{
+    if (!len) return 0;
+    switch (variant) {
+        case 0: return len;                       /* unveraendert */
+        case 1:                                    /* Kopf auf 0xFF */
+            for (size_t i = 4; i < 64 && i < len; i++) blob[i] = 0xFF;
+            return len;
+        case 2:                                    /* halbiert */
+            return len / 2;
+        case 3:                                    /* Kopf zufaellig */
+            for (size_t i = 4; i < 64 && i < len; i++)
+                blob[i] = (uint8_t)rng_next();
+            return len;
+        default:
+            return len > 300 ? 300 : len;
+    }
+}
+
 static void run_open_path(size_t size)
 {
     (void)size;
@@ -739,6 +969,34 @@ int main(int argc, char **argv)
             n_inputs++;
             feed(n_plugins,
                  make_signature_then_garbage(SIGS[g].sig, SIGS[g].len, size));
+        }
+        printf("\n");
+    }
+
+    /* ── Stimmige Abbilder, roh und beschaedigt (MF-556) ──────────────
+     *
+     * Neun Plugins hatte der Fuzzer nie erreicht, weil ihre Sonde eine
+     * BEZIEHUNG zwischen Kopf und Dateilaenge verlangt. "Kennung plus
+     * beliebiger Rest" kann so etwas nicht liefern.
+     *
+     * Jeder Erzeuger baut eine Datei, die ihre eigene Behauptung
+     * erfuellt. Sie geht einmal so durch und danach viermal beschaedigt —
+     * und die beschaedigte Fassung ist die interessante: die Sonde stimmt
+     * weiter zu, und der Parser laeuft auf Feldern, die nicht mehr
+     * stimmen. Genau dort sassen QRST und NanoWasp (MF-543). */
+    printf("\nStimmige Abbilder (%d Erzeuger x 5 Beschaedigungen):\n",
+           N_BUILDERS);
+    for (int b = 0; b < N_BUILDERS; b++) {
+        printf("  %-10s", BUILDERS[b].label);
+        for (int v = 0; v < 5; v++) {
+            size_t len = BUILDERS[b].fn();
+            len = damage(len, v);
+            if (!len) { printf(" (leer)"); continue; }
+            printf(" v%d", v);
+            snprintf(g_where, sizeof(g_where), "bau %s/v%d/%zu",
+                     BUILDERS[b].label, v, len);
+            n_inputs++;
+            feed(n_plugins, len);
         }
         printf("\n");
     }
