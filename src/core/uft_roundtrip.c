@@ -53,6 +53,37 @@ static const uft_roundtrip_entry_t g_matrix[] = {
       "MF-532: Identitaet, woertliche Kopie; Bit-Identitaet gemessen an "
       "xdftool_dd_ofs.adf (901120 B)" },
 
+    /* Sektor -> Bitstream und zurueck: IMG -> HFE -> IMG.
+     *
+     * MF-539. Bis dahin konnte dieses Paar gar nichts belegen, weil
+     * `uftc_convert_sectors_to_hfe()` eine Datei erzeugte, die kein Leser
+     * dekodiert: die Bytes wurden nicht MFM-kodiert, beide CRC-Felder
+     * blieben 0x00 0x00, und die Bit-Spiegelung fuer HFEs LSB-first-Ablage
+     * fehlte. Gezaehlt wurde trotzdem jede Spur und jeder Sektor.
+     *
+     * Seit der Reparatur ruft der Schreiber `uft_mfm_encode_track()` — den
+     * Encoder, der die ganze Zeit im Baum lag und den niemand rief. Er ist
+     * seinerseits belegt (tests/test_mfm_encoder_decodes_back.c): 108
+     * Synchronmarken, kein Nullbyte, 18 von 18 Sektoren mit gueltiger ID-
+     * und Daten-CRC und byteweise gleichem Inhalt zurueck.
+     *
+     * Gemessen, tests/test_convert_img_hfe_roundtrip.c:
+     *
+     *     1474560 B IMG (80 x 2 x 18 x 512, je Sektor eigenes Muster)
+     *       -> uftc_convert_sectors_to_hfe -> 4015104 B HFE
+     *          (80 Spuren, 2880 Sektoren, 22778 Synchronmarken)
+     *       -> uftc_convert_hfe_to_sectors -> 1474560 B IMG
+     *          (160 Spuren, 2880 Sektoren)
+     *     0 von 1474560 Byte verschieden.
+     *
+     * Die Quelle ist synthetisch, und das traegt hier: eine IMG-Datei IST
+     * der rohe Sektorinhalt, ohne Kopf und ohne Struktur, die man falsch
+     * erfinden koennte. Jeder Sektor hat ein Muster mit seiner eigenen
+     * Position darin — eine Vertauschung waere aufgefallen.
+     *
+     * Beide Richtungen einzeln eingetragen: die Matrix wird paarweise
+     * abgefragt, und beide sind gemessen. */
+
     /* Sektor -> Bitstream: D64 -> G64.
      *
      * MF-533: gemessen, nicht angenommen. Der Rundlauf
@@ -158,8 +189,23 @@ static const uft_roundtrip_entry_t g_matrix[] = {
     { UFT_FORMAT_SCP, UFT_FORMAT_IMD, UFT_RT_LOSSY_DOCUMENTED,
       "flux-timing + weak-bits discarded" },
 
+    /* MF-539: dieser Eintrag ist BEWUSST verlustbehaftet geblieben,
+     * obwohl die Gegenrichtung IMG -> HFE jetzt als verlustfrei gemessen
+     * ist. Die Asymmetrie ist der eigentliche Befund.
+     *
+     * Der Rundlauf tests/test_convert_img_hfe_roundtrip.c ist bitgleich —
+     * aber seine Quelle ist ein synthetisches IMG, und ein IMG HAT keine
+     * schwachen Bits. Ein Rundlauf kann nur zeigen, dass ueberlebt, was
+     * die Quelle traegt. Ueber eine ECHTE, aufgenommene HFE mit schwachen
+     * Bits sagt er nichts, und die verliert beim Weg nach IMG genau das.
+     *
+     * Das ist dieselbe Falle wie in MF-538, wo eine leere Quelle eine
+     * gescheiterte Wandlung gut aussehen liess: eine Messung belegt nur
+     * die Eigenschaft, die in der Quelle ueberhaupt vorkommt. */
     { UFT_FORMAT_HFE, UFT_FORMAT_IMG, UFT_RT_LOSSY_DOCUMENTED,
-      "bitstream decoded to sectors; weak-bits lost" },
+      "bitstream decoded to sectors; weak-bits lost (MF-539: die gemessene "
+      "Bit-Identitaet der Gegenrichtung belegt das NICHT — ihre Quelle war "
+      "ein IMG und hat keine schwachen Bits)" },
     { UFT_FORMAT_HFE, UFT_FORMAT_ADF, UFT_RT_LOSSY_DOCUMENTED,
       "bitstream decoded to AmigaDOS sectors" },
 
@@ -191,8 +237,41 @@ static const uft_roundtrip_entry_t g_matrix[] = {
       "IMG has no timing; synthesising flux would be fabrication" },
     { UFT_FORMAT_ADF, UFT_FORMAT_SCP, UFT_RT_IMPOSSIBLE,
       "ADF has no timing; synthesising flux would be fabrication" },
-    { UFT_FORMAT_IMG, UFT_FORMAT_HFE, UFT_RT_IMPOSSIBLE,
-      "no timing data available in IMG source" },
+    /* IMG -> HFE stand hier als UNMOEGLICH, "no timing data available in
+     * IMG source". Die Begruendung verwechselt zwei Dinge, und MF-539 hat
+     * das gemessen widerlegt.
+     *
+     * HFE ist ein BITSTREAM-Format: es speichert MFM-Zellen, nicht
+     * Flusszeiten. Ein Zellenstrom laesst sich aus Sektoren erzeugen, ohne
+     * irgendein Timing zu erfinden — genau das tut D64 -> G64, das diese
+     * Matrix seit MF-533 als LOSSLESS fuehrt. Fuer SCP und andere
+     * FLUX-Formate bleibt die Begruendung richtig und die beiden
+     * Nachbareintraege daher unangetastet.
+     *
+     * Was die synthetische HFE NICHT ist: eine Aufnahme. Luecken,
+     * Sektorverschraenkung und Schreibnaehte sind erzeugt, nicht gemessen.
+     * Sie taugt zum Zurueckgewinnen der Sektoren und nicht als Beleg
+     * darueber, wie die Diskette wirklich aussah. Genau diese Grenze gilt
+     * fuer D64 -> G64 seit jeher mit.
+     *
+     * Gemessen (tests/test_convert_img_hfe_roundtrip.c):
+     *
+     *     1474560 B IMG (80 x 2 x 18 x 512, je Sektor eigenes Muster)
+     *       -> 4015104 B HFE (80 Spuren, 2880 Sektoren, 22778 Syncs)
+     *       -> 1474560 B IMG (160 Spuren, 2880 Sektoren)
+     *     0 von 1474560 Byte verschieden.
+     *
+     * Vor MF-539 konnte dieses Paar gar nichts belegen: der Schreiber
+     * kodierte die Bytes nicht, liess beide CRC-Felder auf 0x00 0x00 und
+     * spiegelte die Bits nicht fuer HFEs LSB-first-Ablage — und zaehlte
+     * trotzdem jede Spur als gewandelt. Die Unmoeglichkeit stand also neben
+     * einem Wandler, der ohnehin nichts Lesbares erzeugte; aufgefallen ist
+     * beides erst zusammen. */
+    { UFT_FORMAT_IMG, UFT_FORMAT_HFE, UFT_RT_LOSSLESS,
+      "MF-539: Rundlauf IMG->HFE->IMG bitgleich, 1474560 B, 2880 Sektoren; "
+      "HFE ist Bitstream, kein Flux — der synthetische Zellenstrom erfindet "
+      "kein Timing, ist aber auch keine Aufnahme "
+      "(tests/test_convert_img_hfe_roundtrip.c)" },
 
     /* Protected → unprotected: copy-protection cannot round-trip */
     { UFT_FORMAT_IPF, UFT_FORMAT_ADF, UFT_RT_LOSSY_DOCUMENTED,

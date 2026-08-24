@@ -11,6 +11,7 @@
  */
 
 #include "uft_format_convert_internal.h"
+#include "uft/uft_mfm_encoder.h"
 
 /* SCP speichert Flusslaengen als 16-Bit-Vielfache von 25 ns. */
 #ifndef UFT_SCP_TICK_NS
@@ -658,14 +659,37 @@ uft_error_t uftc_convert_sectors_to_hfe(const uint8_t* src_data,
     hfe_floppy_interface_t iface = HFE_IF_IBMPC_DD;
 
     if (src_format == UFT_FORMAT_ADF) {
-        sectors = 11;
-        encoding = HFE_ENC_AMIGA_MFM;
-        iface = HFE_IF_AMIGA_DD;
-        if (src_size > 901120) {
-            sectors = 22; /* HD */
-            bitrate = 500;
-            iface = HFE_IF_AMIGA_HD;
-        }
+        /* MF-539: hier stand eine Amiga-Geometrie, und darunter kodierte die
+         * IBM-System-34-Schleife. Der Kopf sagte AMIGA_MFM, der Inhalt war
+         * IBM — und beides war ohnehin unkodiert (siehe unten).
+         *
+         * Gemessen gegen die echte Aufnahme tests/corpus_free/gw_amigados.hfe:
+         *
+         *                          echte HFE        unsere Ausgabe
+         *      Sync 0x4489              22                     0
+         *      haeufigstes Byte    0x55 (12498)      0x4E (6712)
+         *      rohe Nullbytes        0 von 12792   5969 von 12800
+         *
+         * Fuer AmigaDOS gibt es in diesem Baum keinen Encoder — `grep -rln
+         * 0x4489 src/ --include=*.c` findet Dekoder und Schutz-Erkennung,
+         * aber nichts, was eine Amiga-Spur schreibt. Solange das so ist,
+         * wird die Wandlung ABGELEHNT statt eine Datei zu erzeugen, die
+         * niemand lesen kann. Das ist die Regel aus UFT-A02: lieber ein
+         * ehrlicher Fehler als eine plausible Datei.
+         *
+         * Die Gegenrichtung HFE -> ADF ist davon nicht betroffen; sie geht
+         * ueber den AmigaDOS-Dekoder und liefert die Quell-ADF byteweise
+         * zurueck (tests/test_convert_hfe_adf.c). */
+        (void)encoding;
+        (void)iface;
+        result->error = UFT_ERR_NOT_IMPLEMENTED;
+        uftc_add_warning(result,
+                 "ADF->HFE requires an AmigaDOS MFM encoder; this tree has "
+                 "only an IBM System-34 encoder (src/core/uft_mfm_encoder.c). "
+                 "Writing an IBM-encoded track for an Amiga disk would "
+                 "produce a file no reader can decode, so the conversion is "
+                 "refused (MF-539).");
+        return UFT_ERR_NOT_IMPLEMENTED;
     } else {
         /* IMG: detect from file size */
         if (src_size <= 368640) {
@@ -697,11 +721,29 @@ uft_error_t uftc_convert_sectors_to_hfe(const uint8_t* src_data,
      * 3. Track data blocks (interleaved head 0/1 in 256-byte chunks)
      */
 
-    /* Calculate MFM track size: each sector is ~640 MFM bytes
-     * (preamble + sync + IDAM + gap + sync + DAM + data + CRC + gap) */
-    int raw_track_bits = sectors * (sector_size + 62) * 16; /* rough estimate */
-    int mfm_track_bytes = (raw_track_bits + 7) / 8;
-    if (mfm_track_bytes < 6250) mfm_track_bytes = 6250;
+    /* MF-539: die Spurlaenge ergibt sich aus Bitrate und Drehzahl, nicht aus
+     * einer Schaetzung ueber die Sektorzahl.
+     *
+     * Eine Umdrehung dauert 60/rpm Sekunden. `bitrate` ist die DATENrate,
+     * nicht die Zellrate — MFM legt zwischen je zwei Datenbits ein Taktbit,
+     * der Zellenstrom ist also doppelt so lang. Bei 250 kbit/s und 300 U/min:
+     *
+     *      50000 Datenbits -> 100000 Zellen -> 12500 Byte Zellenstrom
+     *
+     * Gegenprobe an der echten Aufnahme tests/corpus_free/gw_amigados.hfe
+     * (Amiga DD, Kopf meldet 253 kbit/s): 12792 Byte je Seite. Passt.
+     *
+     * Ohne die Verdopplung war die Spur exakt halb so lang, und in eine
+     * 18-Sektor-Spur passten gemessen 10 Sektoren — die uebrigen 8 gab
+     * `uft_mfm_encode_track()` nicht mehr aus. Der Rundlauf
+     * tests/test_convert_img_hfe_roundtrip.c meldete 1600 statt 2880
+     * zurueckgelesene Sektoren und 48,25 % abweichende Bytes.
+     *
+     * Vorher stand hier `sectors * (sector_size + 62) * 16 / 8`, eine
+     * Schaetzung ueber die Sektorzahl. Sie fiel nicht auf, weil der Inhalt
+     * ohnehin nicht kodiert war und die Laenge damit bedeutungslos. */
+    const int track_cells = (int)((uint32_t)bitrate * 1000u * 60u / 300u * 2u);
+    int mfm_track_bytes = (track_cells + 7) / 8;
     /* Round up to multiple of 256 for HFE interleaving */
     int track_len_aligned = ((mfm_track_bytes + 255) / 256) * 256;
 
@@ -748,84 +790,148 @@ uft_error_t uftc_convert_sectors_to_hfe(const uint8_t* src_data,
 
     uftc_report_progress(opts, 40, "Encoding MFM tracks");
 
-    /* Encode each cylinder's sectors into MFM bitstream */
-    for (int cyl = 0; cyl < cylinders; cyl++) {
-        if (uftc_is_cancelled(opts)) break;
-
-        uint8_t head0_mfm[32768];
-        uint8_t head1_mfm[32768];
-        memset(head0_mfm, 0x4E, track_len_aligned); /* Gap fill */
-        memset(head1_mfm, 0x4E, track_len_aligned);
-
-        for (int hd = 0; hd < heads; hd++) {
-            uint8_t* mfm_buf = (hd == 0) ? head0_mfm : head1_mfm;
-            int mfm_pos = 0;
-
-            /* Write track preamble: gap4a (80x 0x4E) + sync (12x 0x00) + IAM */
-            memset(mfm_buf, 0x4E, 80); mfm_pos = 80;
-            memset(mfm_buf + mfm_pos, 0x00, 12); mfm_pos += 12;
-            /* IAM: 3x 0xC2 + 0xFC */
-            mfm_buf[mfm_pos++] = 0xC2;
-            mfm_buf[mfm_pos++] = 0xC2;
-            mfm_buf[mfm_pos++] = 0xC2;
-            mfm_buf[mfm_pos++] = 0xFC;
-            /* Gap1 */
-            memset(mfm_buf + mfm_pos, 0x4E, 50); mfm_pos += 50;
-
-            for (int sec = 0; sec < sectors; sec++) {
-                /* Calculate source offset */
-                size_t src_offset = ((size_t)cyl * heads * sectors +
-                                     (size_t)hd * sectors + sec) * sector_size;
-
-                /* Pre-ID sync: 12x 0x00 */
-                memset(mfm_buf + mfm_pos, 0x00, 12); mfm_pos += 12;
-                /* IDAM: 3x 0xA1 + 0xFE */
-                mfm_buf[mfm_pos++] = 0xA1;
-                mfm_buf[mfm_pos++] = 0xA1;
-                mfm_buf[mfm_pos++] = 0xA1;
-                mfm_buf[mfm_pos++] = 0xFE;
-                /* ID: C H R N */
-                mfm_buf[mfm_pos++] = (uint8_t)cyl;
-                mfm_buf[mfm_pos++] = (uint8_t)hd;
-                mfm_buf[mfm_pos++] = (uint8_t)(sec + 1);
-                mfm_buf[mfm_pos++] = 0x02; /* 512 bytes */
-                /* CRC placeholder (2 bytes) */
-                mfm_buf[mfm_pos++] = 0x00;
-                mfm_buf[mfm_pos++] = 0x00;
-                /* Gap2 */
-                memset(mfm_buf + mfm_pos, 0x4E, 22); mfm_pos += 22;
-                /* Pre-data sync: 12x 0x00 */
-                memset(mfm_buf + mfm_pos, 0x00, 12); mfm_pos += 12;
-                /* DAM: 3x 0xA1 + 0xFB */
-                mfm_buf[mfm_pos++] = 0xA1;
-                mfm_buf[mfm_pos++] = 0xA1;
-                mfm_buf[mfm_pos++] = 0xA1;
-                mfm_buf[mfm_pos++] = 0xFB;
-                /* Sector data */
-                if (src_offset + sector_size <= src_size) {
-                    memcpy(mfm_buf + mfm_pos, src_data + src_offset, sector_size);
-                } else {
-                    memset(mfm_buf + mfm_pos, 0xE5, sector_size);
-                }
-                mfm_pos += sector_size;
-                /* CRC placeholder (2 bytes) */
-                mfm_buf[mfm_pos++] = 0x00;
-                mfm_buf[mfm_pos++] = 0x00;
-                /* Gap3 */
-                int gap3 = (sectors <= 9) ? 84 : ((sectors <= 15) ? 54 : 38);
-                memset(mfm_buf + mfm_pos, 0x4E, gap3); mfm_pos += gap3;
-
-                result->sectors_converted++;
-            }
+    /* MF-539: kodiert wird mit `uft_mfm_encode_track()`, nicht mehr von Hand.
+     *
+     * Hier stand eine zweite, handgeschriebene Fassung des IBM-System-34-
+     * Aufbaus. Sie hatte drei voneinander unabhaengige Fehler, von denen
+     * jeder einzelne die Ausgabe unlesbar macht:
+     *
+     *   1. KEIN KODIERSCHRITT. `0x4E`, `0x00`, `0xC2`, `0xA1`, `0xFE`,
+     *      `0xFB` und die Nutzdaten gingen als rohe Bytes in den Puffer.
+     *      Eine HFE-Spur enthaelt aber den MFM-ZELLENSTROM: acht Datenbits
+     *      werden zu sechzehn Zellen. Deshalb steht in einer echten
+     *      Aufnahme ueberall 0x55 (= kodiertes 0x00) und nirgends ein
+     *      Nullbyte — MFM kann nie mehr als drei Nullbits am Stueck
+     *      erzeugen. Unsere Ausgabe hatte 5969 Nullbytes je Spur.
+     *
+     *   2. CRC NIE BERECHNET. Beide CRC-Felder jedes Sektors blieben
+     *      `0x00 0x00` ("CRC placeholder"). Selbst bei richtiger Kodierung
+     *      haette jeder Leser auf JEDEM Sektor einen CRC-Fehler gemeldet.
+     *
+     *   3. KEINE BIT-SPIEGELUNG. HFE speichert LSB-first. Alle sechs
+     *      anderen HFE-Schreiber dieses Baums rufen `hfe_reverse_bits()`
+     *      (uft_format_convert_bitstream.c:145/458/586,
+     *      uft_format_convert_flux.c:1563/1860/2269) — dieser eine nicht.
+     *
+     * Trotzdem liefen `sectors_converted++` und `tracks_converted++`
+     * bedingungslos durch, und `success = true` folgte allein daraus, dass
+     * sich die Datei schreiben liess.
+     *
+     * Der richtige Encoder lag die ganze Zeit im Baum und wurde von
+     * niemandem gerufen. Er ist seit MF-539 belegt — nicht durch Lesen,
+     * sondern durch Rueckwandlung mit dem vorhandenen Dekoder
+     * (tests/test_mfm_encoder_decodes_back.c):
+     *
+     *      kodiert: 32768 Byte Zellenstrom
+     *      Sync 0x4489: 108 (erwartet 108 = 6 je Sektor x 18)
+     *      Nullbytes: 0 von 32768
+     *      dekodiert: 18 Sektoren, alle mit gueltiger ID- und Daten-CRC
+     *      und byteweise gleichem Inhalt
+     *
+     * `uft_mfm_encode_track()` fuellt bis zur uebergebenen Kapazitaet mit
+     * Gap auf, gibt also genau die Spurlaenge zurueck; 0 bedeutet, dass die
+     * Sektoren nicht hineinpassen. Der Rueckgabewert wird geprueft. */
+    {
+        const size_t track_cap = (size_t)track_len_aligned;
+        uint8_t *head_buf[2];
+        head_buf[0] = malloc(track_cap);
+        head_buf[1] = malloc(track_cap);
+        uft_sector_t *secs = calloc((size_t)sectors, sizeof(uft_sector_t));
+        if (!head_buf[0] || !head_buf[1] || !secs) {
+            free(head_buf[0]); free(head_buf[1]); free(secs);
+            free(hfe_data);
+            result->error = UFT_ERR_MEMORY;
+            return UFT_ERR_MEMORY;
         }
 
-        /* Interleave head 0/1 data into HFE track block */
-        uint8_t* track_dest = hfe_data + (size_t)lut[cyl].offset * 512;
-        hfe_interleave_track(head0_mfm, head1_mfm,
-                              (uint16_t)track_len_aligned, track_dest);
+        uft_mfm_encode_params_t enc_params = UFT_MFM_PARAMS_DEFAULT_DD;
+        if (bitrate >= 400) {
+            uft_mfm_encode_params_t hd = UFT_MFM_PARAMS_DEFAULT_HD;
+            enc_params = hd;
+        }
 
-        result->tracks_converted++;
-        uftc_report_progress(opts, 40 + (cyl * 50 / cylinders), "Encoding MFM tracks");
+        /* Ein Ersatzsektor fuer Quelldaten, die die Datei nicht mehr
+         * hergibt. 0xE5 ist das Formatier-Fuellbyte der IBM-Welt — es
+         * bedeutet "nie beschrieben" und ist von echten Nullen
+         * unterscheidbar. Die Warnung oben nennt die Groessendifferenz. */
+        uint8_t *pad = malloc((size_t)sector_size);
+        if (!pad) {
+            free(head_buf[0]); free(head_buf[1]); free(secs);
+            free(hfe_data);
+            result->error = UFT_ERR_MEMORY;
+            return UFT_ERR_MEMORY;
+        }
+        memset(pad, 0xE5, (size_t)sector_size);
+
+        for (int cyl = 0; cyl < cylinders; cyl++) {
+            if (uftc_is_cancelled(opts)) break;
+
+            int heads_done = 0;
+            for (int hd = 0; hd < heads; hd++) {
+                for (int sec = 0; sec < sectors; sec++) {
+                    size_t src_offset = ((size_t)cyl * heads * sectors +
+                                         (size_t)hd * sectors + sec)
+                                        * (size_t)sector_size;
+                    memset(&secs[sec], 0, sizeof(secs[sec]));
+                    secs[sec].id.cylinder  = (uint8_t)cyl;
+                    secs[sec].id.head      = (uint8_t)hd;
+                    secs[sec].id.sector    = (uint8_t)(sec + 1);
+                    secs[sec].id.size_code = 2;   /* 2 = 512 Byte */
+                    secs[sec].data_len     = (size_t)sector_size;
+                    secs[sec].data_size    = (uint16_t)sector_size;
+                    secs[sec].data = (src_offset + (size_t)sector_size <= src_size)
+                                     ? (uint8_t *)(src_data + src_offset)
+                                     : pad;
+                }
+
+                size_t written = uft_mfm_encode_track(secs, (size_t)sectors,
+                                                      (uint8_t)cyl, (uint8_t)hd,
+                                                      &enc_params,
+                                                      head_buf[hd], track_cap);
+                if (written == 0) {
+                    /* Passt nicht in eine Umdrehung. Nicht als Erfolg
+                     * zaehlen und keine halbe Spur ablegen — die Seite
+                     * bleibt Gap, und die Spur gilt als gescheitert. */
+                    memset(head_buf[hd], 0x55, track_cap);
+                    continue;
+                }
+
+                /* HFE speichert LSB-first. */
+                hfe_reverse_bits(head_buf[hd], (uint32_t)track_cap);
+
+                result->sectors_converted += sectors;
+                heads_done++;
+            }
+
+            uint8_t *track_dest = hfe_data + (size_t)lut[cyl].offset * 512;
+            hfe_interleave_track(head_buf[0], head_buf[1],
+                                  (uint16_t)track_len_aligned, track_dest);
+
+            if (heads_done == heads) result->tracks_converted++;
+            else                     result->tracks_failed++;
+
+            uftc_report_progress(opts, 40 + (cyl * 50 / cylinders),
+                                 "Encoding MFM tracks");
+        }
+
+        free(pad);
+        free(secs);
+        free(head_buf[0]);
+        free(head_buf[1]);
+    }
+
+    /* MF-539: eine Datei, in der keine einzige Spur steht, wird nicht
+     * geschrieben. Vorher folgte `success = true` allein daraus, dass sich
+     * die Datei anlegen liess — dieselbe Bauart, die in MF-538 eine ADF aus
+     * lauter Nullen als Erfolg gemeldet hat. */
+    if (result->tracks_converted == 0) {
+        free(hfe_data);
+        result->error = UFT_ERR_FORMAT;
+        uftc_add_warning(result,
+                 "no track could be encoded (%d of %d failed); no file was "
+                 "written rather than leaving an empty HFE behind (MF-539)",
+                 result->tracks_failed, cylinders);
+        return UFT_ERR_FORMAT;
     }
 
     uftc_report_progress(opts, 95, "Writing HFE output");

@@ -414,10 +414,58 @@ int main(void)
 
     printf("\n");
     {
-        conv_t fwd  = { "ADF->HFE", adapt_adf_to_hfe };
-        conv_t back = { "HFE->ADF", adapt_hfe_to_adf };
-        roundtrip("ADF -> HFE -> ADF", "xdftool_dd_ofs.adf",
-                  fwd, "uft_rtm_mid4.hfe", back, "uft_rtm_out4.adf");
+        /* MF-539: hier stand der Rundlauf ADF -> HFE -> ADF. Er ist weg,
+         * weil die Hinrichtung seit MF-539 ABLEHNT statt eine Datei zu
+         * erzeugen, die niemand lesen kann — fuer AmigaDOS gibt es in
+         * diesem Baum keinen MFM-Encoder.
+         *
+         * Was hier gemessen wurde und wie es aufgeflogen ist, steht in der
+         * Nulllinien-Erklaerung weiter oben (MF-538). Kurz: die
+         * Rueckwandlung lieferte eine ADF aus lauter Nullen, und weil die
+         * Quelle eine leere OFS-Diskette ist, sah das nach 0,08 %
+         * Abweichung aus.
+         *
+         * Statt dessen wird die Ablehnung geprueft: sie MUSS kommen, und
+         * sie darf keine Datei hinterlassen. Eine Wandlung, die still
+         * wieder funktioniert, ohne dass jemand einen Amiga-Encoder
+         * geschrieben hat, faellt hier auf. */
+        printf("ADF -> HFE: belegte Ablehnung (MF-539)\n");
+        char src[1024];
+        snprintf(src, sizeof(src), "%s/%s", UFT_CORPUS_DIR,
+                 "xdftool_dd_ofs.adf");
+        size_t n0 = slurp(src, a);
+        if (!n0) {
+            printf("  (Quelle fehlt)\n");
+        } else {
+            uft_convert_options_ext_t o;
+            uft_convert_result_t r;
+            memset(&o, 0, sizeof(o));
+            memset(&r, 0, sizeof(r));
+            o.accept_data_loss = true;   /* auch MIT Zustimmung nein */
+            remove("uft_rtm_mid4.hfe");
+            uft_error_t e = adapt_adf_to_hfe(a, n0, NULL, "uft_rtm_mid4.hfe",
+                                             &o, &r);
+            if (e == UFT_OK) {
+                printf("  FAIL: die Wandlung wurde ANGENOMMEN (%d). Wenn ein\n"
+                       "        AmigaDOS-Encoder dazugekommen ist, gehoert\n"
+                       "        hier ein Rundlauf hin, kein Ablehnungstest.\n",
+                       (int)e);
+                failures++;
+            } else {
+                printf("  ok   abgelehnt mit %d\n", (int)e);
+                if (r.warning_count > 0)
+                    printf("       Begruendung: %s\n", r.warnings[0]);
+                FILE *f = fopen("uft_rtm_mid4.hfe", "rb");
+                if (f) {
+                    fclose(f);
+                    printf("  FAIL: es liegt trotzdem eine Datei da.\n");
+                    failures++;
+                    remove("uft_rtm_mid4.hfe");
+                } else {
+                    printf("  ok   keine Datei hinterlassen\n");
+                }
+            }
+        }
     }
 
     /* NICHT GEPRUEFT: D64 -> SCP. Der Dispatcher fuehrt das als

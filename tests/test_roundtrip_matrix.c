@@ -102,11 +102,18 @@ TEST(every_lossless_pair_is_named_and_proven) {
         /* Die beiden, deren Beweis im Baum liegt. */
         if ((tbl[i].from == UFT_FORMAT_D64 && tbl[i].to == UFT_FORMAT_D64) ||
             (tbl[i].from == UFT_FORMAT_ADF && tbl[i].to == UFT_FORMAT_ADF) ||
-            (tbl[i].from == UFT_FORMAT_D64 && tbl[i].to == UFT_FORMAT_G64))
+            (tbl[i].from == UFT_FORMAT_D64 && tbl[i].to == UFT_FORMAT_G64) ||
+            /* MF-539: IMG <-> HFE, Rundlauf bitgleich gemessen
+             * (tests/test_convert_img_hfe_roundtrip.c, 1474560 B,
+             * 2880 Sektoren, 0 Byte verschieden). */
+            /* NUR die Hinrichtung. HFE -> IMG bleibt verlustbehaftet:
+             * die Messquelle war ein IMG und hat keine schwachen Bits,
+             * belegt ihren Verlust also nicht. */
+            (tbl[i].from == UFT_FORMAT_IMG && tbl[i].to == UFT_FORMAT_HFE))
             n_known++;
     }
-    ASSERT(n_ll == 3);
-    ASSERT(n_known == 3);
+    ASSERT(n_ll == 4);
+    ASSERT(n_known == 4);
 }
 
 TEST(known_ld_scp_to_img) {
@@ -117,9 +124,26 @@ TEST(known_ld_scp_to_img) {
 }
 
 TEST(known_im_img_to_scp) {
+    /* Die Unmoeglichkeit gilt fuer FLUX-Ziele: SCP speichert Flusszeiten,
+     * und eine Sektordatei hat keine. Sie zu erzeugen waere Erfindung. */
     ASSERT(uft_roundtrip_status(UFT_FORMAT_IMG, UFT_FORMAT_SCP) == UFT_RT_IMPOSSIBLE);
-    ASSERT(uft_roundtrip_status(UFT_FORMAT_IMG, UFT_FORMAT_HFE) == UFT_RT_IMPOSSIBLE);
     ASSERT(uft_roundtrip_status(UFT_FORMAT_ADF, UFT_FORMAT_SCP) == UFT_RT_IMPOSSIBLE);
+
+    /* MF-539: IMG -> HFE stand hier bis heute daneben, mit derselben
+     * Begruendung. Sie traegt nicht: HFE ist ein BITSTREAM-Format und
+     * speichert MFM-Zellen, kein Timing. Ein Zellenstrom laesst sich aus
+     * Sektoren erzeugen, ohne etwas zu erfinden — D64 -> G64 tut genau das
+     * und steht seit MF-533 als LOSSLESS in derselben Matrix.
+     *
+     * Widerlegt wurde die Unmoeglichkeit nicht durch Argument, sondern
+     * durch Messung: der Rundlauf ist bitgleich
+     * (tests/test_convert_img_hfe_roundtrip.c). Was unmoeglich ist, kann
+     * das nicht.
+     *
+     * Der Anspruch bleibt eng: die synthetische HFE gibt die Sektoren
+     * zurueck, sie ist keine Aufnahme. Luecken und Schreibnaehte sind
+     * erzeugt. Diese Grenze gilt fuer D64 -> G64 ebenso. */
+    ASSERT(uft_roundtrip_status(UFT_FORMAT_IMG, UFT_FORMAT_HFE) == UFT_RT_LOSSLESS);
 }
 
 TEST(untested_is_default) {

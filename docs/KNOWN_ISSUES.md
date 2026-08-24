@@ -3938,6 +3938,80 @@ zweite braucht eine Bank-Sitzung mit echtem Laufwerk.
 
 ---
 
+### RT-5 — die kaputte Zweitfassung neben dem richtigen Encoder (2026-08-24, MF-539) -> ✓ BEHOBEN
+
+**Was MF-538 nach sich zog.** Die Untersuchung, warum `HFE → ADF` eine leere
+ADF liefert, endete nicht bei der Rueckrichtung. `test_convert_hfe_adf` ist
+gruen und gibt die Original-ADF **byteweise** zurueck — der Fehler lag also
+in der HFE, die *wir* erzeugen.
+
+**Der Vergleich mit einer echten Aufnahme.**
+
+|                        | `gw_amigados.hfe` | unsere `ADF→HFE` |
+|---|---|---|
+| Sync `0x4489` je Seite | 22 (11 Sektoren × 2) | **0** |
+| haeufigstes Byte       | `0x55` (12498×) | `0x4E` (6712×) |
+| rohe Nullbytes         | 0 von 12792 | **5969 von 12800** |
+
+`0x55` ist MFM-kodiertes `0x00`. `0x4E` ist das IBM-Fuellbyte **im
+Klartext**. Und mehr als drei Nullbits am Stueck kann ein gueltiger
+MFM-Strom gar nicht enthalten — 5969 Nullbytes sind kein falscher
+Dialekt, sondern **gar kein MFM**.
+
+**Drei unabhaengige Fehler in `uftc_convert_sectors_to_hfe()`**, jeder
+einzelne toedlich:
+
+1. **kein Kodierschritt** — `0x4E`, `0x00`, `0xC2`, `0xA1`, `0xFE`, `0xFB`
+   und die Nutzdaten gingen als rohe Bytes in den Puffer. Eine HFE-Spur
+   enthaelt den Zellenstrom: acht Datenbits werden zu sechzehn Zellen.
+2. **CRC nie berechnet** — beide CRC-Felder jedes Sektors blieben
+   `0x00 0x00` („CRC placeholder“).
+3. **keine Bit-Spiegelung** — HFE speichert LSB-first. Alle sechs anderen
+   HFE-Schreiber des Baums rufen `hfe_reverse_bits()`; dieser nicht.
+
+Trotzdem liefen `sectors_converted++` und `tracks_converted++`
+bedingungslos, und `success` folgte allein daraus, dass sich die Datei
+schreiben liess.
+
+**Der richtige Encoder lag die ganze Zeit im Baum.**
+`src/core/uft_mfm_encoder.c` ist vollstaendig — Zell-Ausgabe, echte
+`0x4489`-Marken, CRC16-CCITT — und hatte **keinen einzigen Test**. Vor der
+Verdrahtung belegt (`tests/test_mfm_encoder_decodes_back.c`), nicht durch
+Lesen, sondern durch Rueckwandlung mit dem vorhandenen Dekoder:
+
+```
+kodiert: 32768 Byte Zellenstrom
+Sync 0x4489: 108 (erwartet 108 = 6 je Sektor x 18)
+Nullbytes: 0 von 32768
+dekodiert: 18 Sektoren, alle mit gueltiger ID- und Daten-CRC
+und byteweise gleichem Inhalt
+```
+
+**Ergebnis.** `IMG → HFE → IMG` ist **bitgleich**: 1474560 Byte, 2880 von
+2880 Sektoren, 0 Byte verschieden (`test_convert_img_hfe_roundtrip.c`).
+Dabei fiel ein zweiter Rechenfehler auf: die Spurlaenge kam aus der
+DATENrate statt aus der Zellrate — MFM verdoppelt. Die Spur war halb so
+lang, 10 von 18 Sektoren passten hinein, 48,25 % der Bytes wichen ab.
+
+**`ADF → HFE` lehnt jetzt ab.** Fuer AmigaDOS gibt es in diesem Baum
+keinen Encoder. Statt einer Datei, die niemand lesen kann, kommt
+`UFT_ERR_NOT_IMPLEMENTED` mit Begruendung — Regel aus UFT-A02.
+
+**Und die Asymmetrie, die dabei fast verlorenging.** `IMG → HFE` steht
+jetzt als LOSSLESS, `HFE → IMG` **bleibt verlustbehaftet**. Der bitgleiche
+Rundlauf belegt die Rueckrichtung NICHT: seine Quelle ist ein IMG, und ein
+IMG hat keine schwachen Bits. Eine Messung belegt nur die Eigenschaft, die
+in der Quelle ueberhaupt vorkommt — dieselbe Falle wie in MF-538. Gefangen
+hat das nicht ich, sondern der Doppel-Eintrags-Waechter in
+`test_roundtrip_matrix`.
+
+**`IMG → HFE` stand vorher als UNMOEGLICH** („no timing data available in
+IMG source“). Die Begruendung verwechselt Bitstream mit Flux: HFE
+speichert MFM-Zellen, kein Timing. Fuer SCP bleibt sie richtig, und die
+Nachbareintraege sind unangetastet.
+
+---
+
 ### RT-4 — ich habe der Statistik geglaubt und den Zaehlern nicht (2026-08-23, MF-538) -> ✓ KORRIGIERT
 
 **Selbstkorrektur.** MF-535 hat `ADF -> HFE` als `LOSSY_DOCUMENTED` mit
