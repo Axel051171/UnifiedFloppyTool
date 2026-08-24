@@ -323,9 +323,24 @@ int uft_recovery_wizard_next_step(uft_recovery_wizard_t *wiz)
         case UFT_REC_STEP_EXECUTE:
             wiz->current_step = UFT_REC_STEP_VERIFY;
             update_step_description(wiz);
+            /* MF-548: hier stand "Recovery pass complete. Verifying data
+             * integrity — re-checking all sector CRCs and checksums...".
+             *
+             * Kein Durchlauf ist gelaufen, keine CRC wurde nachgeprueft.
+             * Der Satz beschrieb zwei Taetigkeiten, die es nicht gibt, und
+             * die Oberflaeche zeigte ihn woertlich an — zusammen mit einem
+             * gefaelschten Fortschrittsbalken (src/gui/uft_recovery_dialog.cpp,
+             * dort ebenfalls MF-548).
+             *
+             * Ein Assistent, der einem Benutzer erzaehlt, seine Diskette sei
+             * wiederhergestellt und geprueft, ist gefaehrlicher als gar kein
+             * Assistent: er ersetzt das Misstrauen, das der Benutzer sonst
+             * haette. */
             snprintf(wiz->recommendation, sizeof(wiz->recommendation),
-                     "Recovery pass complete. Verifying data integrity — "
-                     "re-checking all sector CRCs and checksums...");
+                     "Kein Recovery-Durchlauf: der Arbeiter ist nicht "
+                     "verdrahtet (MF-548). Es wurde nichts gelesen, nichts "
+                     "geschrieben und keine Pruefsumme nachgerechnet. Der "
+                     "naechste Schritt zeigt deshalb keine Messwerte.");
             break;
 
         case UFT_REC_STEP_VERIFY:

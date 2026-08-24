@@ -2,7 +2,11 @@
 
 **Stand 2026-08-24.** Zusammengeführt aus `OPEN_ITEMS.md`, `KNOWN_ISSUES.md`,
 `MASTER_PLAN.md`, `STUB_ELIMINATION_PLAN.md`, `VERIFICATION_PLAN.md` und den
-Funden der Prüf-Sitzung MF-534…543.
+Funden der Prüf-Sitzung MF-534…548.
+
+**Fortschritt:** von 24 Einträgen sind 4 abgetragen (A4, A6, A7, A8),
+1 überwacht statt behoben (A5). Was bleibt, steht unten mit dem Grund,
+warum es bleibt.
 
 ---
 
@@ -43,11 +47,11 @@ Zahl korrekturbedürftig.
 | **A1** | **57 von 88 tier-geführten Formaten stehen auf T3 — ungeprüft.** Kein Test, oder ein synthetischer Test ohne Abgleich gegen eine autoritative Quelle. Genau in dieser Lage waren die fünf fabrizierten Parser grün. Belegt: T1=2, T1b=12, T2=17 | gemessen | **offen**, Moratorium MF-363/498 |
 | **A2** | **29 von 44 Wandlungspfaden ungeprüft.** Das Preflight-Tor weist sie ab — richtig. Aber die Doku nennt weiter „44 Pfade" als Fähigkeit | gemessen | **offen**; Zahlen seit MF-541 abgeleitet |
 | **A3** | **294 Header-Prototypen ohne Definition.** Davon 2 im gefährlichen Fall: `static inline`-Wrapper im selben Header rufen sie. Der erste echte Aufrufer bricht den Link | gemeldet, Stichproben gemessen | **offen** |
-| **A4** | **POSIX-Plugin kann nie gewinnen.** `posix_probe_plugin()` gibt unbedingt `false` zurück; die echte Erkennung ist pfadbasiert und wird über `.probe` nie gerufen. Steht in der Registry als Fähigkeit | gemessen | **offen** |
+| ~~**A4**~~ | POSIX-Plugin kann nie gewinnen: `posix_probe_plugin()` gibt unbedingt `false` zurueck, und `uft_disk_open()` waehlt nur ueber den Inhalt | gemessen | ✅ **MF-546** — ehrlich beschriftet, 27. Tor verhindert den zweiten Fall (gemessen: es ist der einzige) |
 | **A5** | **Fünf `uft_format_id_t` unter einem Wächter.** `UFT_FMT_D64` ist 4, 6 oder 20 je nach Include-Reihenfolge. Heute sehen alle gebauten Einheiten dieselbe Zahl — überwacht, nicht behoben | gemessen | **überwacht** (26. Tor), Zusammenlegung offen |
-| **A6** | **14 Stellen „Erfolg ohne Tat"** in der Wandler-Schicht: Datei voller Größe geschrieben, `success = true`, obwohl null Spuren gewandelt wurden. In 5 davon lügt zusätzlich der Zähler | gemeldet | **offen** — Muster-Vorlage existiert (`uftc_convert_scp_to_mfm_sectors`) |
-| **A7** | **GUI-Recovery meldet „Recovery complete" für eine Simulation.** Fortschrittsbalken läuft Spur für Spur, dann „Verifying data integrity — re-checking all sector CRCs". Nichts davon passiert | gemeldet | **offen** |
-| **A8** | **`uft_cross_track_recover()` kopiert bei ≥90 % Ähnlichkeit den Sektor einer *anderen* Spur** in den defekten, setzt `valid = true` und übernimmt sogar den Hash des Spenders. Keine Provenienz-Markierung | gemeldet | **offen** |
+| ~~**A6**~~ | 14 Stellen `success = true`, weil sich die Datei ANLEGEN liess — nicht weil etwas drinstand | gemeldet, dann gemessen | ✅ **MF-545** — 7 Wandler mit Spurschleife auf `uftc_finish_or_refuse()`; die 7 uebrigen sind Rohkopien ohne Schleife. Dazu ein Mantel um die 13 Ausgaenge von `uft_convert_file()`, damit kein Fehlschlag eine ALTE Datei zuruecklaesst |
+| ~~**A7**~~ | GUI-Recovery zaehlte einen Fortschrittsbalken hoch und meldete „Recovery complete“, ohne die Diskette anzufassen | gemeldet, dann gemessen | ✅ **MF-548** — kein Balken, keine Spurmeldung, keine Erfolgsmeldung; auch der Wizard-Text im C-Teil. **Kein Bedien-Rauchtest** |
+| ~~**A8**~~ | `uft_cross_track_recover()` ueberschrieb einen defekten Sektor mit den Bytes eines anderen, setzte `valid = true` und uebernahm **den Hash des Spenders** | gemeldet, dann gemessen | ✅ **MF-547** — zaehlt jetzt Kandidaten, aendert nichts. **Kein Tor bewacht das** (Typen dateilokal, kein Aufrufer) |
 
 ---
 
@@ -90,7 +94,7 @@ Zahl korrekturbedürftig.
 
 ## Was in dieser Sitzung abgetragen wurde
 
-34 Fehler, MF-534…543. Die vier, die etwas über den Baum sagen:
+38 Fehler, MF-534…548. Die vier, die etwas über den Baum sagen:
 
 **MF-538 — ich habe der Statistik geglaubt und den Zählern nicht.** Eine
 Wandlung meldete „0,08 % Abweichung". Die Quelldatei war eine leere Diskette

@@ -376,13 +376,48 @@ uft_error_t uft_posix_write(const uft_disk_image_t *disk,
  * Format Plugin Registration
  * ============================================================================ */
 
+/**
+ * @brief Sonde, die niemals zustimmt — und warum das richtig ist (MF-546).
+ *
+ * Ein POSIX-Abbild ist eine rohe Sektordatei PLUS eine Nachbardatei
+ * `<pfad>.geom`, in der die Geometrie steht. Die Identitaet des Formats
+ * steckt damit ausserhalb der Datei.
+ *
+ * Die Plugin-Sonde bekommt `(data, size, file_size)` — nur den Inhalt.
+ * Sie KANN nicht pruefen, ob nebenan eine `.geom` liegt. Ein `true` von
+ * hier waere eine Behauptung ueber etwas, das diese Funktion nicht sieht:
+ * jede beliebige rohe Sektordatei saehe aus wie ein POSIX-Abbild.
+ *
+ * Die echte Erkennung ist `uft_posix_probe(path, confidence)` weiter oben.
+ * Sie oeffnet die `.geom` und ist deshalb pfadgebunden.
+ *
+ * ── Was daraus folgt, und was nicht ──────────────────────────────────────
+ *
+ * `uft_disk_open()` waehlt sein Plugin AUSSCHLIESSLICH ueber den Inhalt;
+ * die Endungs-Rueckfalllinie wurde in MF-444/449 absichtlich entfernt.
+ * Dieses Plugin kann dort also nie gewinnen — es ist ueber den
+ * Standardweg unerreichbar.
+ *
+ * Es bleibt trotzdem registriert, damit seine Lese-API (`uft_posix_read`,
+ * `uft_posix_probe`) erreichbar ist und der Formatcode an einer Stelle
+ * liegt. Was NICHT gilt: dass „POSIX" in einer Liste unterstuetzter
+ * Formate dasselbe bedeutet wie die anderen 136. Es bedeutet: der Code ist
+ * da, der Weg dorthin fuehrt aber nicht ueber die Erkennung.
+ *
+ * Ueberwacht von `scripts/audit_dead_probe.py` (26. Kategorie in
+ * `check_consistency.py`). Gemessen beim Anlegen: dies ist die EINZIGE
+ * Sonde im Baum, die niemals zustimmen kann — 1 bekannt, 0 weitere.
+ *
+ * Der ordentliche Weg waere eine Sonde, die den Pfad sieht. Das ist eine
+ * additive Erweiterung der Plugin-Schnittstelle hinter dem bestehenden
+ * `api_version`-Tor und gehoert nicht in eine Release-Vorbereitung.
+ */
 static bool posix_probe_plugin(const uint8_t *data, size_t size,
                                size_t file_size, int *confidence) {
     (void)data;
     (void)size;
     (void)file_size;
-    
-    /* This probe doesn't work without the path - use uft_posix_probe instead */
+
     if (confidence) *confidence = 0;
     return false;
 }

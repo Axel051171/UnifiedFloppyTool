@@ -391,32 +391,43 @@ bool UftRecExecutePage::isComplete() const
 
 void UftRecExecutePage::startRecovery()
 {
-    /*
-     * In a full implementation this would call the chosen recovery strategy
-     * on a background thread. For now we simulate track-by-track progress
-     * to demonstrate the UI flow and still invoke the C wizard state machine.
-     */
-    const uft_recovery_wizard_t *ws = m_wiz->wizardState();
-    int totalTracks = (ws->sectors_ok + ws->sectors_bad + ws->sectors_weak);
-    if (totalTracks <= 0) totalTracks = 160;  /* fallback */
+    /* MF-548: hier lief ein GEFAELSCHTER Fortschrittsbalken.
+     *
+     * Der alte Code zaehlte eine Schleife von 1 bis 160 hoch, schrieb
+     * "Processing track %1 / %2" und meldete danach "Recovery complete."
+     * Es wurde nichts gelesen, nichts geschrieben, nichts wiederhergestellt.
+     * Der eigene Kommentar sagte es offen ("we simulate track-by-track
+     * progress") — nur stand das im Quelltext und nicht auf dem Bildschirm.
+     *
+     * Das ist die schwerste Bauart, die dieses Werkzeug haben kann: der
+     * Benutzer bekommt genau die Zeichen, an denen man echte Arbeit
+     * erkennt — laufender Balken, Spurzahlen, Abschlussmeldung — und keine
+     * davon deckt etwas. Wer danach seine Diskette weglegt, hat sie
+     * aufgrund einer Vorfuehrung weggelegt.
+     *
+     * Die Verify-Seite dieses Dialogs wurde mit MF-115 bereits auf
+     * "— (not yet measured)" umgestellt. Diese Seite blieb stehen und
+     * widersprach ihr zwei Klicks vorher.
+     *
+     * Jetzt gilt die honest-stub-Konvention: kein Balken, keine
+     * Spurmeldung, keine Erfolgsmeldung. Die Seite sagt, was sie ist.
+     * Sie bleibt begehbar, damit der Assistent nicht in einer Sackgasse
+     * endet — die Verify-Seite dahinter ist ihrerseits ehrlich.
+     *
+     * NICHT GEPRUEFT: kein Bedien-Rauchtest. In dieser Sitzung gibt es
+     * keinen Bediener; der Baum uebersetzt und linkt (qmake-Release), mehr
+     * ist ueber die Oberflaeche nicht belegt. Steht in KNOWN_ISSUES. */
+    m_progress->setValue(0);
+    m_progress->setEnabled(false);
+    m_trackLabel->setText(QString());
 
-    m_statusLabel->setText(tr("Running recovery..."));
-
-    for (int t = 0; t < totalTracks && !m_cancelled; t++) {
-        int pct = ((t + 1) * 100) / totalTracks;
-        m_progress->setValue(pct);
-        m_trackLabel->setText(tr("Processing track %1 / %2")
-            .arg(t + 1).arg(totalTracks));
-
-        /* Keep UI responsive */
-        QApplication::processEvents();
-    }
-
-    if (m_cancelled) {
-        m_statusLabel->setText(tr("Recovery cancelled."));
-    } else {
-        m_statusLabel->setText(tr("Recovery complete."));
-    }
+    m_statusLabel->setText(tr(
+        "Kein Recovery-Durchlauf: der Arbeiter ist nicht verdrahtet.\n\n"
+        "Diese Seite hat bis v4.1.6 einen Fortschrittsbalken gezeigt und "
+        "\"Recovery complete\" gemeldet, ohne die Diskette anzufassen. Sie "
+        "zeigt jetzt nichts, weil nichts passiert.\n\n"
+        "Was tatsaechlich laeuft, steht im Analyse-Schritt davor. Zum "
+        "Sichern eines Mediums die Imaging-Ansicht benutzen."));
 
     m_cancelBtn->setEnabled(false);
     m_done = true;

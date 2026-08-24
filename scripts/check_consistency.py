@@ -693,6 +693,14 @@ def main() -> int:
         # Include-Zeile die Bedeutung verschiebt.
         import audit_format_id_drift as _fid
         all_errors.append(("Format-ID-Drift je Einheit", _fid.check(repo)))
+        # Tote Sonden (MF-546). uft_disk_open() waehlt AUSSCHLIESSLICH ueber
+        # den Inhalt — die Endungs-Rueckfalllinie ist seit MF-444/449 weg.
+        # Ein Plugin, dessen probe nie `true` liefert, steht damit in der
+        # Registry, wird in der Format-Liste gezaehlt und ist unerreichbar.
+        # Gemessen: genau EIN Fall im Baum (POSIX, mit Begruendung in der
+        # Grundlinie). Das Tor verhindert den zweiten.
+        import audit_dead_probe as _dp
+        all_errors.append(("Sonden, die nie zustimmen", _dp.check(repo)))
 
     total = sum(len(e) for _, e in all_errors)
     print(f"Consistency check ({len(all_errors)} categories, root={repo}):")

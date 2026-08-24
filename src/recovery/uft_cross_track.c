@@ -342,7 +342,31 @@ int uft_cross_track_add_sector(uft_disk_map_t *map,
 }
 
 /**
- * @brief Recover bad sectors using cross-track analysis
+ * @brief Findet Sektoren, fuer die es anderswo einen aehnlichen gibt.
+ *
+ * MF-547: die Funktion hiess "recover" und TAT das auch — sie hat den
+ * defekten Sektor mit den Bytes des aehnlichen ueberschrieben, ihn fuer
+ * gueltig erklaert und den Hash des Spenders uebernommen. Das ist
+ * Datenfabrikation; die Begruendung steht ausfuehrlich an der Fundstelle
+ * weiter unten.
+ *
+ * Was sie JETZT tut: sie sucht zu jedem ungueltigen Sektor einen anderen,
+ * der zu mehr als 90 % gleich ist, und ZAEHLT ihn. Sie aendert nichts.
+ *
+ * @param map        Sektorkarte. Wird NICHT veraendert.
+ * @param[out] recovered  Anzahl der Sektoren, fuer die ein Kandidat
+ *                   gefunden wurde. NICHT die Anzahl wiederhergestellter
+ *                   Sektoren — es wird nichts wiederhergestellt. Der Name
+ *                   des Parameters bleibt, weil die Funktion keinen
+ *                   Aufrufer hat und eine Umbenennung nur die Signatur
+ *                   aendern wuerde, ohne dass jemand sie liest; diese
+ *                   Zeile ist die Wahrheit dazu.
+ * @return 0 bei Erfolg, -1 bei ungueltigen Argumenten.
+ *
+ * @note Ein Kandidat ist kein Beleg. 90 % von 512 Byte heisst, dass bis zu
+ *       51 Byte abweichen duerfen — auf einer Diskette mit wiederholten
+ *       Strukturen ist das haeufig und bedeutet nichts. Die Entscheidung,
+ *       ob die Aehnlichkeit etwas heisst, gehoert einem Menschen.
  */
 int uft_cross_track_recover(uft_disk_map_t *map, size_t *recovered)
 {
@@ -370,13 +394,57 @@ int uft_cross_track_recover(uft_disk_map_t *map, size_t *recovered)
                         }
                     }
                     
-                    /* If >90% match, use as recovery source */
+                    /* MF-547: hier wurde ein defekter Sektor mit den Bytes
+                     * eines ANDEREN ueberschrieben.
+                     *
+                     * Der alte Code lautete:
+                     *
+                     *     if (match_bytes > data_len * 9 / 10) {
+                     *         memcpy(refs[i].data, refs[j].data, data_len);
+                     *         refs[i].valid = true;
+                     *         refs[i].hash  = refs[j].hash;   // <-- !!
+                     *         (*recovered)++;
+                     *     }
+                     *
+                     * Drei Dinge auf einmal, und jedes einzelne ist ein
+                     * Verstoss gegen "Keine erfundenen Daten":
+                     *
+                     *   1. Die Rohlesung wird ueberschrieben. Was auf der
+                     *      Diskette stand, ist danach weg — auch die
+                     *      abweichenden 10 %, die das Interessante sind.
+                     *   2. `valid = true` erklaert erfundene Bytes fuer
+                     *      gueltig. Nichts am Sektor sagt noch, dass er
+                     *      nicht gelesen, sondern geraten wurde.
+                     *   3. Der HASH DES SPENDERS wird mitkopiert. Damit
+                     *      bestaetigt jede spaetere Integritaetspruefung
+                     *      die Faelschung. Das ist der schwerste Teil: er
+                     *      zerstoert genau die Faehigkeit, den Eingriff
+                     *      spaeter zu bemerken.
+                     *
+                     * 90 % Uebereinstimmung heisst bei 512 Byte, dass bis
+                     * zu 51 Byte anders sind. Auf einer Diskette mit
+                     * wiederholten Strukturen (Verzeichnisbloecke, leere
+                     * Cluster, Fuellmuster) ist das kein Beleg fuer
+                     * Gleichheit, sondern fuer Aehnlichkeit — und genau der
+                     * Unterschied ist das, was ein Kopierschutz ausmacht.
+                     *
+                     * Was jetzt passiert: der Fund wird GEMELDET, die Daten
+                     * bleiben unangetastet. Ein Mensch kann entscheiden,
+                     * ob die Aehnlichkeit etwas bedeutet; das Werkzeug
+                     * entscheidet es nicht fuer ihn.
+                     *
+                     * Die Funktion hat keinen Aufrufer (gemessen: kein
+                     * Treffer in src/, tests/, include/), der Schaden ist
+                     * also latent. Wer sie verdrahtet, bekommt jetzt eine
+                     * Zaehlung von Kandidaten statt stiller Fabrikation.
+                     *
+                     * KEIN TOR BEWACHT DAS. Die Typen dieses Moduls sind
+                     * dateilokal, es gibt keinen Header und keinen
+                     * Aufrufer — ein Test muesste ihr Layout nachbauen und
+                     * wuerde damit die Kopie pruefen, nicht das Original.
+                     * Steht als offener Punkt in KNOWN_ISSUES (CT-1). */
                     if (match_bytes > map->refs[i].data_len * 9 / 10) {
-                        memcpy(map->refs[i].data, map->refs[j].data, 
-                               map->refs[i].data_len);
-                        map->refs[i].valid = true;
-                        map->refs[i].hash = map->refs[j].hash;
-                        (*recovered)++;
+                        (*recovered)++;   /* Kandidat gezaehlt, nicht ersetzt */
                         break;
                     }
                 }

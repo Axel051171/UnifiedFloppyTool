@@ -3938,6 +3938,110 @@ zweite braucht eine Bank-Sitzung mit echtem Laufwerk.
 
 ---
 
+### CT-1 — der Hash des Spenders wurde mitkopiert (2026-08-24, MF-547) -> ✓ BEHOBEN
+
+`uft_cross_track_recover()` (`src/recovery/uft_cross_track.c`) hat einen
+defekten Sektor mit den Bytes eines ANDEREN ueberschrieben, sobald der zu
+mehr als 90 % gleich war:
+
+```c
+if (match_bytes > data_len * 9 / 10) {
+    memcpy(refs[i].data, refs[j].data, data_len);
+    refs[i].valid = true;
+    refs[i].hash  = refs[j].hash;      // <-- der schwerste Teil
+    (*recovered)++;
+}
+```
+
+Drei Verstoesse gegen „Keine erfundenen Daten“ in einem Block:
+
+1. **Die Rohlesung wird ueberschrieben.** Was auf der Diskette stand, ist
+   danach weg — auch die abweichenden 10 %, die das Interessante sind.
+2. **`valid = true`** erklaert erfundene Bytes fuer gueltig.
+3. **Der Hash des Spenders wird uebernommen.** Damit bestaetigt jede
+   spaetere Integritaetspruefung die Faelschung. Das zerstoert genau die
+   Faehigkeit, den Eingriff spaeter zu bemerken.
+
+**90 % sind kein Beleg.** Bei 512 Byte duerfen 51 abweichen. Auf einer
+Diskette mit wiederholten Strukturen — Verzeichnisbloecken, leeren
+Clustern, Fuellmustern — ist das haeufig und bedeutet nichts. Und genau
+der Unterschied zwischen zwei fast gleichen Sektoren ist das, woran man
+einen Kopierschutz erkennt.
+
+**Jetzt:** der Fund wird gezaehlt, die Daten bleiben unangetastet. Der
+Ausgabeparameter heisst weiter `recovered` und zaehlt Kandidaten — die
+Doku sagt das ausdruecklich, statt die Signatur einer Funktion zu aendern,
+die niemand ruft.
+
+**Kein Aufrufer** (gemessen: kein Treffer in `src/`, `tests/`, `include/`)
+— der Schaden war latent.
+
+**KEIN TOR BEWACHT DAS.** Die Typen des Moduls sind dateilokal, es gibt
+keinen Header und keinen Aufrufer; ein Test muesste ihr Layout nachbauen
+und wuerde damit die Kopie pruefen, nicht das Original. Das ist eine
+bekannte Luecke, keine vergessene.
+
+---
+
+### GUI-1 — ein Fortschrittsbalken, der nichts anzeigt (2026-08-24, MF-548) -> ✓ BEHOBEN
+
+`UftRecExecutePage::startRecovery()` zaehlte eine Schleife von 1 bis 160
+hoch, schrieb „Processing track %1 / %2“ und meldete danach **„Recovery
+complete.“** Es wurde nichts gelesen, nichts geschrieben, nichts
+wiederhergestellt. Der eigene Kommentar sagte es offen (*„we simulate
+track-by-track progress“*) — nur stand das im Quelltext und nicht auf dem
+Bildschirm.
+
+Dazu passend im C-Teil (`uft_recovery_wizard.c`): *„Recovery pass complete.
+Verifying data integrity — re-checking all sector CRCs and checksums…“*
+Zwei Taetigkeiten, die es nicht gibt.
+
+**Das ist die schwerste Bauart, die dieses Werkzeug haben kann.** Der
+Benutzer bekommt genau die Zeichen, an denen man echte Arbeit erkennt —
+laufender Balken, Spurzahlen, Abschlussmeldung — und keine davon deckt
+etwas. Wer danach seine Diskette weglegt, hat sie aufgrund einer
+**Vorfuehrung** weggelegt.
+
+Die Verify-Seite desselben Dialogs wurde mit MF-115 bereits auf „— (not
+yet measured)“ umgestellt. Diese Seite blieb stehen und widersprach ihr
+zwei Klicks vorher.
+
+**Jetzt** gilt die `honest-stub`-Konvention: kein Balken, keine
+Spurmeldung, keine Erfolgsmeldung. Die Seite sagt, was sie ist, und
+verweist auf die Imaging-Ansicht.
+
+**NICHT GEPRUEFT: kein Bedien-Rauchtest.** In dieser Sitzung gibt es
+keinen Bediener. Belegt ist, dass der Baum uebersetzt und linkt
+(qmake-Release, 0 Fehler) — mehr nicht. Der Rauchtest steht als P3-3 beim
+Eigentuemer.
+
+---
+
+### PROBE-1 — ein Plugin, das nie gewinnen kann (2026-08-24, MF-546) -> ✓ UEBERWACHT
+
+`posix_probe_plugin()` gibt **unbedingt `false`** zurueck. `uft_disk_open()`
+waehlt sein Plugin ausschliesslich ueber den Inhalt — die
+Endungs-Rueckfalllinie wurde in MF-444/449 absichtlich entfernt. POSIX ist
+damit ueber den Standardweg **unerreichbar** und wird trotzdem in der
+Format-Liste gezaehlt.
+
+**Kein Fehler in der Sonde, sondern ein Bruch zwischen Format und
+Schnittstelle.** Ein POSIX-Abbild ist eine rohe Sektordatei PLUS eine
+Nachbardatei `<pfad>.geom`. Die Identitaet steckt ausserhalb der Datei; die
+Plugin-Sonde sieht nur den Inhalt. Ein `true` von dort waere eine
+Behauptung ueber etwas, das die Funktion nicht sieht — jede rohe
+Sektordatei saehe aus wie ein POSIX-Abbild.
+
+**Gemessen: das ist der EINZIGE Fall im Baum.** 1 bekannt, 0 weitere.
+`scripts/audit_dead_probe.py` ist die **27.** Kategorie von
+`check_consistency.py` und verhindert den zweiten.
+
+Der ordentliche Weg waere eine Sonde, die den Pfad sieht — additive
+Erweiterung der Plugin-Schnittstelle hinter dem `api_version`-Tor. Nicht in
+einer Release-Vorbereitung.
+
+---
+
 ### FZ-1 — 22 Byte genuegen: eine Geometrie ist eine Behauptung (2026-08-24, MF-543) -> ✓ BEHOBEN
 
 **Wie es gefunden wurde.** Der Oeffnungs-Fuzzer erreichte 103 der 137
