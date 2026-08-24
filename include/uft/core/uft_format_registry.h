@@ -281,39 +281,35 @@ const char* uft_format_name(uft_format_id_t id);
  */
 const char* uft_format_category_name(uft_format_category_t cat);
 
-/**
- * @brief Query whether a format id carries a capability bit.
+/* MF-549: `uft_format_has_cap()` und die drei Wrapper
+ * `uft_format_is_sector/_is_flux/_can_write()` standen hier bis heute.
  *
- * Declaration restored in MF-304: it was wrongly deleted by the MF-296
- * phantom-decl sweep, whose line-based prototype detector misread the
- * `return uft_format_has_cap(...);` call sites below as prototypes and
- * so failed to count them as header call-sites. Local gcc only warns on
- * the resulting implicit declaration; macOS clang errors (CI break).
- * The three static-inline wrappers below are the public capability API
- * and depend on this symbol.
- */
-bool uft_format_has_cap(uft_format_id_t id, uint32_t cap);
-
-/**
- * @brief Check if format is sector-based
- */
-static inline bool uft_format_is_sector(uft_format_id_t id) {
-    return uft_format_has_cap(id, UFT_FCAP_SECTOR);
-}
-
-/**
- * @brief Check if format is flux-based
- */
-static inline bool uft_format_is_flux(uft_format_id_t id) {
-    return uft_format_has_cap(id, UFT_FCAP_FLUX);
-}
-
-/**
- * @brief Check if format supports writing
- */
-static inline bool uft_format_can_write(uft_format_id_t id) {
-    return uft_format_has_cap(id, UFT_FCAP_WRITE);
-}
+ * Die Funktion war DEKLARIERT und nirgends DEFINIERT, und anders als bei
+ * der Encoding-Einteilung war sie auch nicht implementierbar: es gibt im
+ * ganzen Baum keine `uft_format_info_t`-Tabelle. Der Typ ist definiert,
+ * ein Feld `capabilities` ist vorgesehen — Daten dazu gibt es nicht.
+ * Eine Funktion, die Faehigkeiten nachschlaegt, kann ohne Nachschlagewerk
+ * nur raten.
+ *
+ * Gerufen hat sie niemand: kein Treffer fuer `uft_format_is_sector`,
+ * `uft_format_is_flux` oder `uft_format_can_write` in src/ oder tests/.
+ *
+ * ── Warum das schon einmal schiefging ────────────────────────────────────
+ *
+ * MF-296 hat die DEKLARATION geloescht und die Wrapper stehen lassen. Die
+ * riefen sie weiter, der Build brach, MF-304 hat die Deklaration
+ * zurueckgeholt — und den Kommentar hinterlassen, der bis eben hier stand:
+ * "The three static-inline wrappers below are the public capability API
+ * and depend on this symbol."
+ *
+ * Der Satz stimmte. Nur war "the public capability API" eine API ohne
+ * Implementierung, ohne Daten und ohne Aufrufer. Zwei Runden lang wurde
+ * ueber die Deklaration gestritten, statt zu fragen, ob es die Sache
+ * ueberhaupt gibt.
+ *
+ * Deshalb JETZT beides zusammen: Deklaration und Wrapper. Was fehlt, ist
+ * nicht das Symbol, sondern die Faehigkeitstabelle. Die gehoert zu
+ * `uft_format_info_t`, und wer sie anlegt, bringt die Funktion mit. */
 
 
 

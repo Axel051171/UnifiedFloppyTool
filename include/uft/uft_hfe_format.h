@@ -231,6 +231,20 @@ static inline uint32_t hfe_track_data_offset(const hfe_track_entry_t *entry) {
  * @return Number of blocks
  */
 static inline uint32_t hfe_track_blocks(uint16_t track_len) {
+    /* ACHTUNG (MF-526): `track_len` ist hier die Laenge JE SEITE, nicht die
+     * Laenge des interleavten Blocks.
+     *
+     * Das Feld `length` in der Spur-Tabelle einer HFE-Datei ist die
+     * GESAMTLAENGE beider Seiten. Wer es hier ungeteilt hineingibt,
+     * verdoppelt die Blockzahl — und weil hfe_deinterleave_track() je Block
+     * um 512 Byte weiterschreitet, liest die Schleife dann etwa doppelt so
+     * weit wie der Track lang ist. Genau das ist passiert: drei Aufrufer
+     * uebergaben die Gesamtlaenge, und die Wandlung HFE -> SCP stuerzte auf
+     * einer GUELTIGEN Datei ab (25080 Byte hinter dem Dateiende).
+     *
+     * Die Aufteilung 256/256 je 512-Byte-Block ist im Baum an der Stelle
+     * belegt, die es richtig macht:
+     * src/formats/hfe/uft_hfe.c::deinterleave_track. */
     /* Each block contains 256 bytes per head (interleaved) */
     return (track_len + 255) / 256;
 }

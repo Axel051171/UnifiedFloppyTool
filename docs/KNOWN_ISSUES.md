@@ -3938,6 +3938,87 @@ zweite braucht eine Bank-Sitzung mit echtem Laufwerk.
 
 ---
 
+### PH-1 — zwei Faehigkeits-APIs ohne Faehigkeit (2026-08-24, MF-549) -> ✓ ENTFERNT
+
+**Gemessen:** `include/uft/**/*.h` fuehrt **294** Funktions-Prototypen, die
+nirgends definiert sind. Zwei davon waren der gefaehrliche Fall: eine
+`static inline` im SELBEN Header ruft sie. Jede Uebersetzungseinheit, die
+so einen Wrapper benutzt, scheitert beim Linken.
+
+| Symbol | Wrapper, die es rufen | Definiert? | Daten? | Aufrufer? |
+|---|---|---|---|---|
+| `uft_encoding_category()` | `uft_encoding_is_fm/_is_mfm/_is_gcr` | nein | — | **keine** |
+| `uft_format_has_cap()` | `uft_format_is_sector/_is_flux/_can_write` | nein | **keine Tabelle im Baum** | **keine** |
+
+**Warum sie entfernt wurden statt implementiert.**
+
+Die Encoding-Einteilung *waere* machbar — die Namen des Enums tragen sie
+(`UFT_DISK_ENC_MFM_*` → MFM). Aber eine Schnittstelle zu implementieren,
+die niemand ruft, heisst ungepruefte Oberflaeche hinzuzufuegen.
+
+`uft_format_has_cap()` war nicht einmal implementierbar: es gibt im ganzen
+Baum **keine `uft_format_info_t`-Tabelle**. Der Typ ist definiert, ein Feld
+`capabilities` ist vorgesehen — Daten dazu gibt es nicht. Eine Funktion,
+die Faehigkeiten nachschlaegt, kann ohne Nachschlagewerk nur raten.
+
+**Das war schon einmal da.** MF-296 hat die *Deklaration* von
+`uft_format_has_cap()` geloescht und die Wrapper stehen lassen; die riefen
+sie weiter, der Build brach, MF-304 hat sie zurueckgeholt. Der Kommentar
+von damals stand bis eben im Header:
+
+> *„The three static-inline wrappers below are the public capability API and
+> depend on this symbol.“*
+
+Der Satz stimmte. Nur war „die public capability API“ eine API ohne
+Implementierung, ohne Daten und ohne Aufrufer. **Zwei Runden lang wurde
+ueber die Deklaration gestritten, statt zu fragen, ob es die Sache
+ueberhaupt gibt.**
+
+---
+
+### PH-2 — 809 Zeilen Header ohne eine Zeile Code (2026-08-24, MF-549) -> ✓ ENTFERNT
+
+| Header | Zeilen | Prototypen | Phantom | Eingebunden von | Implementierung |
+|---|---|---|---|---|---|
+| `include/uft/hardware/uft_track_writer.h` | 473 | 29 | **29 (100 %)** | **niemandem** | keine Datei |
+| `include/uft/xdf/uft_xdf_mxdf.h` | 336 | 27 | **27 (100 %)** | `uft_xdf_api_impl.c` | keine Datei |
+
+`uft_track_writer.h` beschreibt auf 473 Zeilen Doxygen eine Schreib-API
+(`writer_write_track`, `writer_master_disk`, `writer_kill_track` …), die es
+nicht gibt. `find src -name '*track_writer*'` ist leer.
+
+`uft_xdf_mxdf.h` wird von genau einer Datei eingebunden — und die ruft
+**kein einziges** seiner 27 Symbole. `src/formats/xdf/DEFERRED.md` haelt die
+Absicht fest, die v3.7-Implementierung spaeter zu restaurieren; die steht
+aber in einer `DEFERRED.md`, nicht in dem Header, den ein Aufrufer liest.
+Was fehlt, ist der Code, nicht die Deklaration — und der liegt in der
+Historie, wo er wiederzufinden ist.
+
+Dieselbe Klasse wie `uft_audit_trail.h` (MF-366).
+
+**Ertrag, gemessen:** Phantom-Deklarationen **294 → 237**. Header 524 → 522.
+`ctest` 254/254, qmake-Release baut, `verify_build_sources.py` ohne neue
+Abweichung.
+
+---
+
+### PH-3 — eine Fehlermeldung nennt eine Funktion, die es nicht gibt (2026-08-24, MF-549) -> ✓ BEHOBEN
+
+`src/hal/uft_hal_unified.c` sagte im Fehlerfall:
+
+> *„Use `uft_fc_open()` from `uft_fc5025.h`. Requires fc5025 tools.“*
+
+`uft_fc_open()` ist in `include/uft/hal/uft_fc5025.h:99` deklariert und
+nirgends definiert — gemessen: die beiden einzigen Vorkommen im Baum waren
+die Deklaration und dieser Satz.
+
+Wir haben einem Benutzer im Fehlerfall eine Funktion genannt, die es nicht
+gibt. Er sucht sie, findet den Header, ruft sie — und der Linker sagt ihm
+als erster die Wahrheit. Eine Fehlermeldung ist kein Ort fuer
+Absichtserklaerungen.
+
+---
+
 ### CT-1 — der Hash des Spenders wurde mitkopiert (2026-08-24, MF-547) -> ✓ BEHOBEN
 
 `uft_cross_track_recover()` (`src/recovery/uft_cross_track.c`) hat einen

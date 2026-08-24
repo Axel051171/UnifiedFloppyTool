@@ -46,7 +46,7 @@ Zahl korrekturbedürftig.
 |---|---|---|---|
 | **A1** | **57 von 88 tier-geführten Formaten stehen auf T3 — ungeprüft.** Kein Test, oder ein synthetischer Test ohne Abgleich gegen eine autoritative Quelle. Genau in dieser Lage waren die fünf fabrizierten Parser grün. Belegt: T1=2, T1b=12, T2=17 | gemessen | **offen**, Moratorium MF-363/498 |
 | **A2** | **29 von 44 Wandlungspfaden ungeprüft.** Das Preflight-Tor weist sie ab — richtig. Aber die Doku nennt weiter „44 Pfade" als Fähigkeit | gemessen | **offen**; Zahlen seit MF-541 abgeleitet |
-| **A3** | **294 Header-Prototypen ohne Definition.** Davon 2 im gefährlichen Fall: `static inline`-Wrapper im selben Header rufen sie. Der erste echte Aufrufer bricht den Link | gemeldet, Stichproben gemessen | **offen** |
+| **A3** | Header-Prototypen ohne Definition | gemeldet, dann gemessen | ⚠ **294 → 237 (MF-549)**: die 2 gefaehrlichen Faelle (von `static inline` im selben Header gerufen) sind weg, dazu zwei Header mit 809 Zeilen und 0 Implementierung. **237 bleiben** — davon 40 in zwei Tests, die in EXCLUDED_TESTS stehen |
 | ~~**A4**~~ | POSIX-Plugin kann nie gewinnen: `posix_probe_plugin()` gibt unbedingt `false` zurueck, und `uft_disk_open()` waehlt nur ueber den Inhalt | gemessen | ✅ **MF-546** — ehrlich beschriftet, 27. Tor verhindert den zweiten Fall (gemessen: es ist der einzige) |
 | **A5** | **Fünf `uft_format_id_t` unter einem Wächter.** `UFT_FMT_D64` ist 4, 6 oder 20 je nach Include-Reihenfolge. Heute sehen alle gebauten Einheiten dieselbe Zahl — überwacht, nicht behoben | gemessen | **überwacht** (26. Tor), Zusammenlegung offen |
 | ~~**A6**~~ | 14 Stellen `success = true`, weil sich die Datei ANLEGEN liess — nicht weil etwas drinstand | gemeldet, dann gemessen | ✅ **MF-545** — 7 Wandler mit Spurschleife auf `uftc_finish_or_refuse()`; die 7 uebrigen sind Rohkopien ohne Schleife. Dazu ein Mantel um die 13 Ausgaenge von `uft_convert_file()`, damit kein Fehlschlag eine ALTE Datei zuruecklaesst |
@@ -74,7 +74,7 @@ Zahl korrekturbedürftig.
 | **C2** | **Schreib-Sicherheitstor ohne Aufrufer.** Ein Tor, das nie läuft, ist eine Zusage, die niemand einlöst | gemessen (P0-4) | **blockiert** — Hardware-Sitzung |
 | **C3** | 22 Banner-Header sind unfertig; der Skelett-Audit sieht sie nicht | gemessen (P1-5) | **offen** |
 | **C4** | 7 Header-Duplikate brauchen echte Zusammenführung | gemessen (P1-7) | **offen** |
-| **C5** | `uft_track_writer.h` (473 Zeilen) und `uft_xdf_mxdf.h` (336 Zeilen) sind zu 100 % Phantom — dieselbe Klasse, die MF-366 einmal entfernt hat | gemeldet | **offen** |
+| ~~**C5**~~ | `uft_track_writer.h` (473 Z.) und `uft_xdf_mxdf.h` (336 Z.) zu 100 % Phantom | gemeldet, dann gemessen | ✅ **MF-549** — beide entfernt, beide Baeume bauen |
 
 ---
 

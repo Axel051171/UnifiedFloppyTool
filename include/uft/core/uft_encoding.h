@@ -173,32 +173,25 @@ typedef struct uft_encoding_info {
 
 
 
-/**
- * @brief Get encoding category
- */
-uft_encoding_category_t uft_encoding_category(uft_disk_encoding_t enc);
-
-
-/**
- * @brief Check if encoding is FM-based
- */
-static inline bool uft_encoding_is_fm(uft_disk_encoding_t enc) {
-    return uft_encoding_category(enc) == UFT_ENCCAT_FM;
-}
-
-/**
- * @brief Check if encoding is MFM-based
- */
-static inline bool uft_encoding_is_mfm(uft_disk_encoding_t enc) {
-    return uft_encoding_category(enc) == UFT_ENCCAT_MFM;
-}
-
-/**
- * @brief Check if encoding is GCR-based
- */
-static inline bool uft_encoding_is_gcr(uft_disk_encoding_t enc) {
-    return uft_encoding_category(enc) == UFT_ENCCAT_GCR;
-}
+/* MF-549: `uft_encoding_category()` und die drei Wrapper
+ * `uft_encoding_is_fm/_is_mfm/_is_gcr()` standen hier bis heute.
+ *
+ * Die Funktion war DEKLARIERT und nirgends DEFINIERT — gemessen: kein
+ * Treffer in src/, tests/, tools/. Die drei Wrapper waren `static inline`
+ * und riefen sie. Jede Uebersetzungseinheit, die einen davon benutzt
+ * haette, waere beim Linken gescheitert.
+ *
+ * Gerufen hat sie niemand: kein Treffer fuer `uft_encoding_is_fm`,
+ * `uft_encoding_is_mfm` oder `uft_encoding_is_gcr` in src/ oder tests/.
+ *
+ * Die Zuordnung waere machbar — die Namen des Enums tragen sie
+ * (`UFT_DISK_ENC_MFM_*` -> MFM und so weiter). Aber eine Schnittstelle zu
+ * implementieren, die niemand ruft, heisst ungepruefte Oberflaeche
+ * hinzuzufuegen, und genau davon hat dieser Baum genug. Wer die Einteilung
+ * braucht, schreibt sie mit ihrem ersten Aufrufer zusammen — dann gibt es
+ * auch etwas, woran man sie pruefen kann.
+ *
+ * Dieselbe Klasse wie `uft_audit_trail.h`, entfernt in MF-366. */
 
 
 

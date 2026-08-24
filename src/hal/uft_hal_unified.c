@@ -1122,7 +1122,20 @@ static int stub_open(uft_hal_t *hal, const char *path) {
             hint = " Use uft_xum_open() from uft_xum1541.h. Requires OpenCBM library.";
             break;
         case HAL_CTRL_FC5025:
-            hint = " Use uft_fc_open() from uft_fc5025.h. Requires fc5025 tools.";
+            /* MF-549: hier stand "Use uft_fc_open() from uft_fc5025.h".
+             *
+             * `uft_fc_open()` ist in `include/uft/hal/uft_fc5025.h:99`
+             * DEKLARIERT und nirgends definiert — gemessen: die beiden
+             * einzigen Vorkommen im Baum waren die Deklaration und dieser
+             * Satz. Wir haben einem Benutzer im Fehlerfall eine Funktion
+             * genannt, die es nicht gibt: er sucht sie, findet den Header,
+             * ruft sie, und der Linker sagt ihm als erster die Wahrheit.
+             *
+             * Eine Fehlermeldung ist kein Ort fuer Absichtserklaerungen.
+             * Sie sagt jetzt, was tatsaechlich geht. */
+            hint = " FC5025 support is read-only and goes through the "
+                   "fcimage command-line tool; there is no in-tree open "
+                   "function for it (MF-549).";
             break;
         default:
             hint = " No dedicated driver available for this controller.";
