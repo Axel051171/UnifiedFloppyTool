@@ -686,6 +686,13 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
         target_include_directories(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/include/uft/flux)
+    elseif(${test_name} STREQUAL "test_timeline_worklist")
+        # MF-564: Invarianten VOR dem Umbau auf scheibenweise Recovery
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/flux/uft_decode_timeline.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
+        target_include_directories(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/include/uft/flux)
     elseif(${test_name} STREQUAL "test_timeline_angle_shapes")
         # MF-562: haelt die Winkelschranke auch bei anderen Verzugsformen?
         target_sources(${test_name} PRIVATE

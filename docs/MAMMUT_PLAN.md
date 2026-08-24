@@ -167,7 +167,7 @@ Multi-Capture-Teil aber weiterhin den Fundus.
 |---|---|
 | 1.2 AMSDOS | `src/formats/cpc/` fehlt, kein AMSDOS im Baum; `sector-cpc` als Referenz nicht vorhanden |
 | 1.3 Fundus-Manifest | **fertig bis auf die Teilaufnahme-Karte**: anhaengender Speicher mit sha256sum-Sidecars (MF-503), Herkunftskette in beide Richtungen (MF-504/505), Sitzungs-Fortsetzung (MF-506). Offen: ddrescue-artige Teilaufnahme-Karte |
-| ~~2.3 Timeline-Slices~~ | **Karte fertig** (MF-501, FLUX-17): Scheiben + Winkellage, im Wandler verdrahtet. Offen bleibt das STEUERN der Recovery-Stufen damit (§2.3.1) und der Multi-Capture-Teil (§2.3.3, braucht Fundus) |
+| ~~2.3 Timeline-Slices~~ | **Karte fertig** (MF-501, FLUX-17): Scheiben + Winkellage, im Wandler verdrahtet. **§2.3.1: Baustein + Invarianten fertig (MF-564)** —  liefert die zu bearbeitenden Scheiben und laesst DECODED aus; die Nicht-Verschlimmerungs-Garantie ist damit geprueft, BEVOR Steuerlogik existiert. Das Verdrahten der Stufen steht noch aus. **§2.3.3 entsperrt (MF-561)**: der Fundus kann jetzt alle Aufnahmen einer Diskette aufzaehlen |
 | 2.4 Mining-Targets | braucht Hardware mit Motor+Seek (**kein Gerät vorhanden**, MF-310) und Fundus für die append-only-Iterationen |
 | 3.1 `uft-catalog` | superdiskindex nicht im Baum; braucht Fundus |
 | 3.2 Polarkarte | **Datenquelle existiert nicht** (siehe §0.7): das Multiread-Ergebnis trägt keine Winkelpositionen |

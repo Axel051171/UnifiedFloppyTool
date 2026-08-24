@@ -152,6 +152,51 @@ bool uft_timeline_build(const flux_decoded_track_t *track, size_t bit_count,
  */
 double uft_timeline_angle_error(const uft_decode_timeline_t *t);
 
+/**
+ * @brief Welche Scheiben Arbeit brauchen — und welche nicht (MF-564).
+ *
+ * ── Wofuer das da ist ────────────────────────────────────────────────────
+ *
+ * Der Plan (§2.3.1) will, dass die Recovery-Stufen scheibenweise arbeiten.
+ * Heute laufen sie ueber die ganze Spur, und die Karte aus MF-501 wird nur
+ * zum MELDEN benutzt. Diese Funktion ist der Baustein dazwischen: sie
+ * sagt, WO gearbeitet werden muss.
+ *
+ * ── Die Zusage, die sie traegt ───────────────────────────────────────────
+ *
+ * **Eine `UFT_SLICE_DECODED`-Scheibe steht nie in der Liste.**
+ *
+ * Das ist keine Bequemlichkeit, sondern die Nicht-Verschlimmerungs-
+ * Garantie: eine Recovery-Stufe, die an sauber dekodiertem Material
+ * dreht, macht es hoechstens kaputt. Wer diese Liste abarbeitet, kann
+ * gutes Material gar nicht erst anfassen.
+ *
+ * Daraus folgt der Grundfall unmittelbar: **auf einer sauberen Spur ist
+ * die Liste leer.** Das scheibenweise Vorgehen ist dort ein Nichts-Tun,
+ * und sein Ergebnis ist per Konstruktion dasselbe wie das des
+ * Ganzspur-Verfahrens. Diese Zusage steht, bevor eine Zeile Steuerlogik
+ * geschrieben ist — geprueft in `tests/test_timeline_worklist.c`.
+ *
+ * ── Die Antwort ist die WIRKLICHE Zahl ───────────────────────────────────
+ *
+ * Der Rueckgabewert nennt, wie viele Scheiben Arbeit brauchen — auch wenn
+ * @p out kleiner ist. Geschrieben werden hoechstens @p max Eintraege; die
+ * Antwort ist trotzdem die volle Zahl.
+ *
+ * Eine Antwort, die weniger meldet als da ist, waere die stille Kuerzung
+ * aus MF-550: der Aufrufer haelt die Spur fuer besser, als sie ist, und
+ * merkt nichts.
+ *
+ * @param t    Karte. NULL -> 0.
+ * @param out  Feld fuer die Indizes, aufsteigend. Darf NULL sein — dann
+ *             wird nur gezaehlt. Das ist die Art, vorher die Groesse zu
+ *             erfragen.
+ * @param max  Groesse von @p out. Ohne @p out bedeutungslos.
+ * @return Anzahl der Scheiben, die NICHT `UFT_SLICE_DECODED` sind.
+ */
+size_t uft_timeline_work_list(const uft_decode_timeline_t *t,
+                              size_t *out, size_t max);
+
 /** Gibt die Scheibenliste frei und nullt die Struktur. */
 void uft_timeline_free(uft_decode_timeline_t *t);
 

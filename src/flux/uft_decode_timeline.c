@@ -43,6 +43,33 @@ double uft_timeline_angle_error(const uft_decode_timeline_t *t)
     return (t->warp_span - 1.0) * UFT_TIMELINE_ANGLE_ERR_PER_SPAN;
 }
 
+size_t uft_timeline_work_list(const uft_decode_timeline_t *t,
+                              size_t *out, size_t max)
+{
+    if (!t || !t->slices) return 0;
+
+    size_t n = 0;
+    for (size_t i = 0; i < t->count; i++) {
+        /* DECODED wird uebersprungen, und das ist der ganze Zweck.
+         *
+         * Eine Recovery-Stufe, die an sauber dekodiertem Material dreht,
+         * macht es hoechstens kaputt. Wer diese Liste abarbeitet, kann
+         * gutes Material gar nicht erst anfassen — die
+         * Nicht-Verschlimmerungs-Garantie steckt in dieser einen Zeile. */
+        if (t->slices[i].status == UFT_SLICE_DECODED) continue;
+
+        /* Geschrieben wird nur, was passt — GEZAEHLT wird alles.
+         *
+         * Die Antwort nennt die wirkliche Zahl, auch wenn das Feld des
+         * Aufrufers kleiner ist. Eine Antwort, die weniger meldet als da
+         * ist, liesse ihn die Spur fuer besser halten, als sie ist
+         * (MF-550). */
+        if (out && n < max) out[n] = i;
+        n++;
+    }
+    return n;
+}
+
 bool uft_timeline_build(const flux_decoded_track_t *track, size_t bit_count,
                         double cell_ns, double revolution_ns,
                         uft_decode_timeline_t *out)
