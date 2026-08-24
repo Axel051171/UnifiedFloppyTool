@@ -233,7 +233,20 @@ TEST(a_wrong_nudge_makes_a_good_stream_unreadable)
     ASSERT(convert(scp, out, 0.0, &ok) == UFT_OK);
     ASSERT(ok.sectors_converted == ALL_SECTORS);
 
-    ASSERT(convert(scp, out, NUDGE_PCT, &bad) == UFT_OK);
+    /* MF-545: hier stand `== UFT_OK`.
+     *
+     * Der Aufruf wandelt in diesem Fall NICHTS — die Zaehler daneben sagen
+     * es ja selbst. Bis MF-545 schrieb der Wandler trotzdem eine Datei
+     * voller Groesse und meldete Erfolg; seither lehnt er ab, wenn keine
+     * einzige Spur gewandelt wurde.
+     *
+     * Die Aussage dieses Tests haengt daran nicht: gemessen werden die
+     * Zaehler, nicht der Rueckgabewert. Was sich geaendert hat, ist die
+     * Ehrlichkeit des Aufrufs, nicht das Verhalten, das hier geprueft wird.
+     *
+     * Belegt, dass es keine Regression ist: im selben Test gibt der
+     * GELUNGENE Aufruf weiterhin UFT_OK zurueck. */
+    ASSERT(convert(scp, out, NUDGE_PCT, &bad) != UFT_OK);
     ASSERT(bad.sectors_converted == 0);
 
     free(adf); remove(scp); remove(out);

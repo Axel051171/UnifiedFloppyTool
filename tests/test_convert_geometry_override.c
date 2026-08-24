@@ -118,7 +118,20 @@ TEST(cylinders_the_target_cannot_hold_are_reported_not_dropped)
     ASSERT(write_scp(scp, 83) == 0);
 
     uft_convert_result_t r;
-    ASSERT(convert(scp, out, 0, 0, &r) == UFT_OK);
+    /* MF-545: hier stand `== UFT_OK`.
+     *
+     * Der Aufruf wandelt in diesem Fall NICHTS — die Zaehler daneben sagen
+     * es ja selbst. Bis MF-545 schrieb der Wandler trotzdem eine Datei
+     * voller Groesse und meldete Erfolg; seither lehnt er ab, wenn keine
+     * einzige Spur gewandelt wurde.
+     *
+     * Die Aussage dieses Tests haengt daran nicht: gemessen werden die
+     * Zaehler, nicht der Rueckgabewert. Was sich geaendert hat, ist die
+     * Ehrlichkeit des Aufrufs, nicht das Verhalten, das hier geprueft wird.
+     *
+     * Belegt, dass es keine Regression ist: im selben Test gibt der
+     * GELUNGENE Aufruf weiterhin UFT_OK zurueck. */
+    ASSERT(convert(scp, out, 0, 0, &r) != UFT_OK);
 
     if (!warned_about(&r, "83")) dump_warnings(&r);
     ASSERT(warned_about(&r, "83"));      /* die Zahl, die die Datei traegt */
@@ -138,7 +151,7 @@ TEST(a_disk_within_the_target_says_nothing_about_truncation)
     ASSERT(write_scp(scp, 80) == 0);
 
     uft_convert_result_t r;
-    ASSERT(convert(scp, out, 0, 0, &r) == UFT_OK);
+    ASSERT(convert(scp, out, 0, 0, &r) != UFT_OK);   /* MF-545, s.o. */
     if (warned_about(&r, "fasst nur")) dump_warnings(&r);
     ASSERT(!warned_about(&r, "fasst nur"));
 
@@ -156,8 +169,8 @@ TEST(an_explicit_range_limits_what_is_read)
     ASSERT(write_scp(scp, 80) == 0);
 
     uft_convert_result_t full, limited;
-    ASSERT(convert(scp, out, 0,  0, &full)    == UFT_OK);
-    ASSERT(convert(scp, out, 40, 2, &limited) == UFT_OK);
+    ASSERT(convert(scp, out, 0,  0, &full)    != UFT_OK);
+    ASSERT(convert(scp, out, 40, 2, &limited) != UFT_OK);
 
     int n_full    = full.tracks_converted    + full.tracks_failed;
     int n_limited = limited.tracks_converted + limited.tracks_failed;
@@ -180,7 +193,7 @@ TEST(one_side_can_be_selected)
     ASSERT(write_scp(scp, 80) == 0);
 
     uft_convert_result_t r;
-    ASSERT(convert(scp, out, 80, 1, &r) == UFT_OK);
+    ASSERT(convert(scp, out, 80, 1, &r) != UFT_OK);  /* MF-545, s.o. */
     int n = r.tracks_converted + r.tracks_failed;
     if (n != 80) printf("\n        %d Spuren statt 80\n", n);
     ASSERT(n == 80);
@@ -199,7 +212,7 @@ TEST(a_range_beyond_the_target_is_refused_out_loud)
     ASSERT(write_scp(scp, 83) == 0);
 
     uft_convert_result_t r;
-    ASSERT(convert(scp, out, 84, 2, &r) == UFT_OK);
+    ASSERT(convert(scp, out, 84, 2, &r) != UFT_OK);  /* MF-545, s.o. */
     if (!warned_about(&r, "84")) dump_warnings(&r);
     ASSERT(warned_about(&r, "84"));
 

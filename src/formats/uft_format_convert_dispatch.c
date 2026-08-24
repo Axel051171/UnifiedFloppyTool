@@ -458,7 +458,58 @@ static uft_error_t uftc_preflight_gate(uft_format_t src_format,
 // Main Conversion Entry Point
 // ============================================================================
 
+static uft_error_t uft_convert_file_inner(const char* src_path,
+                              const char* dst_path,
+                              uft_format_t dst_format,
+                              const uft_convert_options_t* options,
+                              uft_convert_result_t* result);
+
+/**
+ * @brief Wandelt eine Datei — und laesst bei Misserfolg NICHTS zurueck.
+ *
+ * MF-545. Die eigentliche Arbeit macht `uft_convert_file_inner()`; dieser
+ * Mantel existiert wegen einer einzigen Eigenschaft, die sich sonst nicht
+ * durchhalten laesst:
+ *
+ *     Scheitert die Wandlung, darf am Zielpfad keine Datei liegen.
+ *
+ * Der innere Teil hat DREIZEHN vorzeitige Ausgaenge — fehlende Datei,
+ * Lesefehler, unerkanntes Format, Preflight-Tor, kein Wandlungspfad,
+ * NOT_IMPLEMENTED, und weitere. Dreizehn Stellen einzeln aufzuraeumen
+ * heisst, dass der vierzehnte Ausgang es vergisst.
+ *
+ * Warum das ueberhaupt noetig wurde: bis MF-545 ueberschrieben die Wandler
+ * die Zieldatei IMMER, ein Fehlschlag hinterliess also eine leere oder
+ * halbe Datei. Das war falsch, aber wenigstens sichtbar. Seit MF-545
+ * schreiben sie bei Misserfolg gar nicht mehr — und dadurch bleibt die
+ * Datei eines FRUEHEREN Laufs liegen, mit passendem Namen und plausibler
+ * Groesse. Das ist schlimmer: eine leere Datei ist erkennbar leer, eine
+ * alte sieht aus wie das Ergebnis.
+ *
+ * Gefunden von `tests/test_convert_leaves_no_ghost.c`, der genau diesen
+ * Fall stellt — erst eine Datei hinlegen, dann eine Wandlung scheitern
+ * lassen. Der erste Anlauf des Tests rief den internen Wandler direkt und
+ * sah deshalb nur EINEN der Ausgaenge; erst ueber den Engpass wurde
+ * sichtbar, dass es dreizehn sind.
+ *
+ * Geloescht wird nur, wenn wirklich nichts geschrieben wurde:
+ * `bytes_written > 0` heisst, ein Ergebnis ist entstanden, und das gehoert
+ * dem Aufrufer — auch wenn danach noch etwas schiefging.
+ */
 uft_error_t uft_convert_file(const char* src_path,
+                              const char* dst_path,
+                              uft_format_t dst_format,
+                              const uft_convert_options_t* options,
+                              uft_convert_result_t* result) {
+    uft_error_t rc = uft_convert_file_inner(src_path, dst_path, dst_format,
+                                            options, result);
+    if (rc != UFT_OK && dst_path && result && result->bytes_written == 0) {
+        remove(dst_path);
+    }
+    return rc;
+}
+
+static uft_error_t uft_convert_file_inner(const char* src_path,
                               const char* dst_path,
                               uft_format_t dst_format,
                               const uft_convert_options_t* options,
@@ -715,6 +766,7 @@ uft_error_t uft_convert_file(const char* src_path,
     }
 
     free(src_data);
+
     return result->success ? UFT_OK : result->error;
 }
 

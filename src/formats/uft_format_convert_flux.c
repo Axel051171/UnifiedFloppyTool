@@ -885,13 +885,10 @@ static uft_error_t uftc_convert_scp_to_adf_via_plugin(
 
     uftc_report_progress(opts, 95, "Writing output");
     uftc_verify_output_filesystem(output, adf_size, result);
-    uft_error_t err = uftc_write_output_file(dst_path, output, adf_size);
-    if (err == UFT_OK) {
-        result->success = true;
-        result->bytes_written = (int)adf_size;
-    } else {
-        result->error = err;
-    }
+    /* MF-545: schreiben ODER ablehnen. Vorher folgte `success`
+     * allein daraus, dass sich die Datei anlegen liess. */
+    uft_error_t err = uftc_finish_or_refuse(result, dst_path,
+                                            output, adf_size, "SCP->ADF");
     free(output);
     uftc_report_progress(opts, 100, "SCP->ADF complete");
     return err;
@@ -1060,13 +1057,10 @@ done_mfm:
 
     uftc_report_progress(opts, 90, "Writing output");
 
-    uft_error_t err = uftc_write_output_file(dst_path, output, output_size);
-    if (err == UFT_OK) {
-        result->success = true;
-        result->bytes_written = (int)output_size;
-    } else {
-        result->error = err;
-    }
+    /* MF-545: schreiben ODER ablehnen. Vorher folgte `success`
+     * allein daraus, dass sich die Datei anlegen liess. */
+    uft_error_t err = uftc_finish_or_refuse(result, dst_path,
+                                            output, output_size, "SCP->Sektoren");
 
     free(output);
     uft_scp_free(&scp);
@@ -1318,13 +1312,10 @@ uft_error_t uftc_convert_kryoflux_to_adf(const uint8_t* src_data,
 
     uftc_report_progress(opts, 80, "Writing ADF output");
 
-    uft_error_t err = uftc_write_output_file(dst_path, output, output_size);
-    if (err == UFT_OK) {
-        result->success = true;
-        result->bytes_written = (int)output_size;
-    } else {
-        result->error = err;
-    }
+    /* MF-545: schreiben ODER ablehnen. Vorher folgte `success`
+     * allein daraus, dass sich die Datei anlegen liess. */
+    uft_error_t err = uftc_finish_or_refuse(result, dst_path,
+                                            output, output_size, "HFE->Sektoren");
 
     free(output);
     uft_kfx_free(&stream);
@@ -1428,13 +1419,10 @@ static uft_error_t uftc_convert_hfe_to_adf_via_plugin(
 
     uftc_report_progress(opts, 95, "Writing output");
     uftc_verify_output_filesystem(output, adf_size, result);
-    uft_error_t err = uftc_write_output_file(dst_path, output, adf_size);
-    if (err == UFT_OK) {
-        result->success = true;
-        result->bytes_written = (int)adf_size;
-    } else {
-        result->error = err;
-    }
+    /* MF-545: schreiben ODER ablehnen. Vorher folgte `success`
+     * allein daraus, dass sich die Datei anlegen liess. */
+    uft_error_t err = uftc_finish_or_refuse(result, dst_path,
+                                            output, adf_size, "HFE->ADF");
     free(output);
     uftc_report_progress(opts, 100, "HFE->ADF complete");
     return err;
@@ -1874,13 +1862,10 @@ uft_error_t uftc_convert_scp_to_hfe(const uint8_t* src_data, size_t src_size,
 
     uftc_report_progress(opts, 95, "Writing HFE output");
 
-    uft_error_t err = uftc_write_output_file(dst_path, hfe_data, total_size);
-    if (err == UFT_OK) {
-        result->success = true;
-        result->bytes_written = (int)total_size;
-    } else {
-        result->error = err;
-    }
+    /* MF-545: schreiben ODER ablehnen. Vorher folgte `success`
+     * allein daraus, dass sich die Datei anlegen liess. */
+    uft_error_t err = uftc_finish_or_refuse(result, dst_path,
+                                            hfe_data, total_size, "SCP->HFE");
 
     free(hfe_data);
     uft_scp_free(&scp);

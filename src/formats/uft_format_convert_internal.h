@@ -61,6 +61,20 @@ extern const size_t g_num_conversion_paths;
 
 uft_error_t uftc_write_output_file(const char* path, const uint8_t* data,
                                     size_t size);
+
+/* MF-545: schreibt das Ergebnis, ODER lehnt ab, wenn `tracks_converted == 0`.
+ *
+ * Benutze DIESE Funktion statt `uftc_write_output_file()` + `success = true`.
+ * Die zweite Bauart macht den Erfolg davon abhaengig, dass sich die Datei
+ * ANLEGEN liess — nicht davon, dass etwas drinsteht. Zweimal gemessen
+ * (MF-538: 160 von 160 Spuren gescheitert, 901120 Byte Nullen als UFT_OK;
+ * MF-539: 80 Spuren "gewandelt" ohne eine einzige Synchronmarke).
+ * Begruendung ausfuehrlich bei der Definition in
+ * uft_format_convert_tables.c. */
+uft_error_t uftc_finish_or_refuse(uft_convert_result_t* result,
+                                   const char* dst_path,
+                                   const uint8_t* data, size_t size,
+                                   const char* what);
 void uftc_report_progress(const uft_convert_options_ext_t* opts,
                            int percent, const char* stage);
 bool uftc_is_cancelled(const uft_convert_options_ext_t* opts);

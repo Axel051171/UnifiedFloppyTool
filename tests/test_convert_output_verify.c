@@ -161,7 +161,20 @@ TEST(an_image_with_no_filesystem_is_called_out)
     ASSERT(write_scp_undecodable(scp) == 0);
 
     uft_convert_result_t r;
-    ASSERT(convert(scp, out, &r) == UFT_OK);
+    /* MF-545: hier stand `== UFT_OK`.
+     *
+     * Der Aufruf wandelt in diesem Fall NICHTS — die Zaehler daneben sagen
+     * es ja selbst. Bis MF-545 schrieb der Wandler trotzdem eine Datei
+     * voller Groesse und meldete Erfolg; seither lehnt er ab, wenn keine
+     * einzige Spur gewandelt wurde.
+     *
+     * Die Aussage dieses Tests haengt daran nicht: gemessen werden die
+     * Zaehler, nicht der Rueckgabewert. Was sich geaendert hat, ist die
+     * Ehrlichkeit des Aufrufs, nicht das Verhalten, das hier geprueft wird.
+     *
+     * Belegt, dass es keine Regression ist: im selben Test gibt der
+     * GELUNGENE Aufruf weiterhin UFT_OK zurueck. */
+    ASSERT(convert(scp, out, &r) != UFT_OK);
 
     if (!warned_about(&r, "kein erkennbares Dateisystem")) dump_warnings(&r);
     ASSERT(warned_about(&r, "kein erkennbares Dateisystem"));

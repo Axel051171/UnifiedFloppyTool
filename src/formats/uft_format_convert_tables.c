@@ -373,6 +373,100 @@ uft_error_t uftc_write_output_file(const char* path, const uint8_t* data,
 }
 
 // ============================================================================
+// Helper: Ergebnis schreiben — oder ehrlich ablehnen (MF-545)
+// ============================================================================
+
+/**
+ * @brief Schreibt das Ergebnis, ODER lehnt ab, wenn nichts gewandelt wurde.
+ *
+ * ── Warum es diesen Baustein gibt ────────────────────────────────────────
+ *
+ * Die Wandler-Schicht hatte an vierzehn Stellen dieselbe Bauart:
+ *
+ *     uft_error_t err = uftc_write_output_file(dst, buf, size);
+ *     if (err == UFT_OK) {
+ *         result->success = true;
+ *         result->bytes_written = (int)size;
+ *     }
+ *
+ * `success` folgte allein daraus, dass sich die Datei ANLEGEN liess — nicht
+ * daraus, dass etwas drinstand. Eine Schleife, in der jede Spur scheitern
+ * darf, endete damit in einer Datei richtiger Groesse voller Nullen, und
+ * der Rueckgabewert sagte UFT_OK.
+ *
+ * Zweimal in dieser Sitzung gemessen:
+ *
+ *   MF-538  HFE -> ADF: 160 von 160 Spuren gescheitert, kein Sektor
+ *           platziert, 901120 Byte Nullen geschrieben, UFT_OK. Nur die
+ *           Zaehler verrieten es — und ich habe sie zuerst nicht geglaubt.
+ *   MF-539  ADF -> HFE: 80 Spuren und 1760 Sektoren als "gewandelt"
+ *           gemeldet fuer eine Datei ohne eine einzige Synchronmarke.
+ *
+ * Das Vorbild stand die ganze Zeit daneben: `uftc_convert_scp_to_mfm_sectors()`
+ * (uft_format_convert_flux.c) prueft vor dem Schreiben, ob ueberhaupt Inhalt
+ * entstand, und schreibt sonst NICHTS. Nur hat es niemand
+ * verallgemeinert — vierzehn Kopien der falschen Bauart standen daneben.
+ *
+ * ── Warum der Zaehler und nicht der Inhalt ───────────────────────────────
+ *
+ * Das Vorbild sucht nach einem Byte ungleich null. Das ist teuer und
+ * ungenau: eine leere, aber korrekt gewandelte Diskette hat zu Recht nur
+ * Nullen, und ein einziges Fuellbyte laesst eine gescheiterte Wandlung
+ * bestehen. Der Zaehler weiss es besser, weil ihn die Schleife fuehrt, die
+ * die Arbeit tut.
+ *
+ * @param result        Ergebnis; `tracks_converted` entscheidet.
+ * @param dst_path      Zieldatei. Wird bei Ablehnung NICHT angelegt.
+ * @param data,size     Was geschrieben wuerde.
+ * @param what          Kurzname des Pfades fuer die Begruendung, z.B. "G64->SCP".
+ * @return UFT_OK bei Erfolg, UFT_ERR_FORMAT bei Ablehnung, sonst der
+ *         Schreibfehler.
+ */
+uft_error_t uftc_finish_or_refuse(uft_convert_result_t* result,
+                                   const char* dst_path,
+                                   const uint8_t* data, size_t size,
+                                   const char* what) {
+    if (!result) return UFT_ERR_INVALID_PARAM;
+
+    if (result->tracks_converted == 0) {
+        result->success = false;
+        result->error = UFT_ERR_FORMAT;
+
+        /* Eine AELTERE Datei am selben Pfad muss weg.
+         *
+         * Das ist die Falle, die dieser Baustein selbst aufgestellt hat:
+         * vorher ueberschrieb der Wandler die Zieldatei immer, jetzt
+         * schreibt er bei Ablehnung nicht mehr. Damit bliebe ein Ergebnis
+         * eines FRUEHEREN Laufs liegen — mit passendem Namen, plausibler
+         * Groesse und frischem Zeitstempel des Ordners. Ein Benutzer, der
+         * nach dem Lauf ins Verzeichnis schaut, sieht seine Datei.
+         *
+         * Eine stehengebliebene Datei ist schlimmer als die
+         * Null-Byte-Datei, die es vorher gab: die war wenigstens
+         * erkennbar leer. */
+        if (dst_path) remove(dst_path);
+
+        uftc_add_warning(result,
+                 "%s: keine einzige Spur gewandelt (%d gescheitert) — es "
+                 "wurde KEINE Datei geschrieben. Eine Datei richtiger "
+                 "Groesse ohne Inhalt ist von einer gelungenen Wandlung "
+                 "nicht zu unterscheiden (MF-545).",
+                 what ? what : "conversion", result->tracks_failed);
+        return UFT_ERR_FORMAT;
+    }
+
+    uft_error_t err = uftc_write_output_file(dst_path, data, size);
+    if (err == UFT_OK) {
+        result->success = true;
+        result->bytes_written = (int)size;
+    } else {
+        result->success = false;
+        result->error = err;
+    }
+    return err;
+}
+
+// ============================================================================
 // Helper: Progress callback
 // ============================================================================
 

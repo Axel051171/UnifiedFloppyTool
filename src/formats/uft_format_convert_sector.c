@@ -386,13 +386,10 @@ uft_error_t uftc_convert_img_to_imd(const uint8_t* src_data, size_t src_size,
 
     uftc_report_progress(opts, 95, "Writing IMD output");
 
-    uft_error_t err = uftc_write_output_file(dst_path, imd_data, pos);
-    if (err == UFT_OK) {
-        result->success = true;
-        result->bytes_written = (int)pos;
-    } else {
-        result->error = err;
-    }
+    /* MF-545: schreiben ODER ablehnen. Vorher folgte `success`
+     * allein daraus, dass sich die Datei anlegen liess. */
+    uft_error_t err = uftc_finish_or_refuse(result, dst_path,
+                                            imd_data, pos, "IMG->IMD");
 
     uftc_add_warning(result,
              "Created IMD: %d cyls x %d heads x %d secs (%s), %zu bytes",

@@ -426,7 +426,10 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/adf/uft_adf_plugin.c)
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
-    elseif(${test_name} STREQUAL "test_geometry_from_file_is_bounded")
+    elseif(${test_name} STREQUAL "test_geometry_from_file_is_bounded"
+           OR ${test_name} STREQUAL "test_convert_leaves_no_ghost")
+        # MF-545 teilt sich die Rezeptur mit MF-543: beide fahren
+        # ueber die ganze Format-Schicht.
         # MF-543: faehrt ueber uft_disk_open(), braucht also die ganze
         # Format-Schicht — dieselbe Rezeptur wie test_disk_open_fuzz.
         file(GLOB_RECURSE GEO_FORMAT_SOURCES

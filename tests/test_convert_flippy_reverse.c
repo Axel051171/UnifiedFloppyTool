@@ -199,7 +199,20 @@ TEST(a_mirrored_capture_decodes_to_nothing_without_the_flag)
     ASSERT(write_scp(scp, adf, true) == 0);
 
     uft_convert_result_t r;
-    ASSERT(convert(scp, out, false, &r) == UFT_OK);
+    /* MF-545: hier stand `== UFT_OK`.
+     *
+     * Der Aufruf wandelt in diesem Fall NICHTS — die Zaehler daneben sagen
+     * es ja selbst. Bis MF-545 schrieb der Wandler trotzdem eine Datei
+     * voller Groesse und meldete Erfolg; seither lehnt er ab, wenn keine
+     * einzige Spur gewandelt wurde.
+     *
+     * Die Aussage dieses Tests haengt daran nicht: gemessen werden die
+     * Zaehler, nicht der Rueckgabewert. Was sich geaendert hat, ist die
+     * Ehrlichkeit des Aufrufs, nicht das Verhalten, das hier geprueft wird.
+     *
+     * Belegt, dass es keine Regression ist: im selben Test gibt der
+     * GELUNGENE Aufruf weiterhin UFT_OK zurueck. */
+    ASSERT(convert(scp, out, false, &r) != UFT_OK);
     if (r.sectors_converted != 0)
         printf("\n        %d Sektoren ohne -r\n", r.sectors_converted);
     ASSERT(r.sectors_converted == 0);
@@ -247,7 +260,7 @@ TEST(the_flag_breaks_a_normal_capture)
     ASSERT(convert(scp, out, false, &ok) == UFT_OK);
     ASSERT(ok.sectors_converted == ALL_SECTORS);
 
-    ASSERT(convert(scp, out, true, &bad) == UFT_OK);
+    ASSERT(convert(scp, out, true, &bad) != UFT_OK);
     ASSERT(bad.sectors_converted == 0);
 
     free(adf); remove(scp); remove(out);

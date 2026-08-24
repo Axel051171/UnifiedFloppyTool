@@ -471,13 +471,10 @@ uft_error_t uftc_convert_g64_to_hfe(const uint8_t* src_data, size_t src_size,
 
     uftc_report_progress(opts, 95, "Writing HFE output");
 
-    uft_error_t err = uftc_write_output_file(dst_path, hfe_data, total_size);
-    if (err == UFT_OK) {
-        result->success = true;
-        result->bytes_written = (int)total_size;
-    } else {
-        result->error = err;
-    }
+    /* MF-545: schreiben ODER ablehnen. Vorher folgte `success`
+     * allein daraus, dass sich die Datei anlegen liess. */
+    uft_error_t err = uftc_finish_or_refuse(result, dst_path,
+                                            hfe_data, total_size, "G64->HFE");
 
     uftc_add_warning(result,
              "G64->HFE: %d tracks wrapped in HFE container (C64 DD mode)",
