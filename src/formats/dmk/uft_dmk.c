@@ -114,10 +114,51 @@ static uft_error_t dmk_read_track(uft_disk_t* disk, int cyl, int head, uft_track
     for (int i = 0; i < 64; i++) {
         uint16_t ptr = uft_read_le16(&tbuf[i * 2]);
         if (ptr == 0 || ptr == 0xFFFF) break;
-        uint16_t idam_off = (ptr & 0x3FFF) - DMK_IDAM_SIZE;
-        if (idam_off >= p->track_len - 20) continue;
-        
-        uint8_t* idam = &tbuf[DMK_IDAM_SIZE + idam_off];
+        /* MF-563: die Schranke prueste die FALSCHE Groesse.
+         *
+         * Hier stand:
+         *
+         *     uint16_t idam_off = (ptr & 0x3FFF) - DMK_IDAM_SIZE;
+         *     if (idam_off >= p->track_len - 20) continue;
+         *     uint8_t* idam = &tbuf[DMK_IDAM_SIZE + idam_off];
+         *
+         * Drei Fehler in drei Zeilen:
+         *
+         * (1) Die Subtraktion LAEUFT UNTER. `ptr & 0x3FFF` kommt aus der
+         *     Datei und darf kleiner als 128 sein; in uint16 wird daraus
+         *     ~65500 statt eines Fehlers.
+         *
+         * (2) Die Schranke prueft `idam_off`, indiziert wird aber mit
+         *     `DMK_IDAM_SIZE + idam_off` — 128 Byte weiter. Die Pruefung
+         *     ist also um 128 zu kurz.
+         *
+         * (3) `p->track_len - 20` laeuft selbst unter, wenn `track_len`
+         *     kleiner als 20 ist.
+         *
+         * Gefunden von ASan in der CI, nicht lokal (MinGW hat keinen
+         * Sanitizer):
+         *
+         *     heap-buffer-overflow, READ of size 1
+         *     dmk_read_track uft_dmk.c:121
+         *     29 Byte rechts von einem 6047-Byte-Bereich
+         *
+         * Nachgerechnet: track_len 6047, gelesen bei 6076 = 128 + 5948.
+         * Die alte Pruefung fragte `5948 >= 6027` — falsch, also durch.
+         *
+         * Was wirklich gelesen wird, ist das Fenster `idam[-3] .. idam[6]`:
+         * drei 0xA1-Synchronbytes davor fuer die MFM-Erkennung, sechs
+         * Bytes Adressmarke danach. Genau dieses Fenster wird jetzt
+         * geprueft, und zwar am ABSOLUTEN Index. */
+        const uint16_t raw = (uint16_t)(ptr & 0x3FFF);
+        if (raw < DMK_IDAM_SIZE) continue;          /* (1) kein Unterlauf */
+        const size_t base = (size_t)raw;            /* = DMK_IDAM_SIZE + idam_off */
+
+        /* (2)+(3): das gelesene Fenster muss GANZ in den Puffer passen.
+         * Gerechnet wird in size_t, damit keine der beiden Grenzen
+         * unterlaufen kann. */
+        if (base < 3 || base + 6 >= (size_t)p->track_len) continue;
+
+        uint8_t* idam = &tbuf[base];
         if (idam[0] != 0xFE) continue;
         
         uint8_t sec_id = idam[3], sz = idam[4] & 3;
@@ -127,7 +168,11 @@ static uft_error_t dmk_read_track(uft_disk_t* disk, int cyl, int head, uft_track
          * MFM, the three 0xA1 sync bytes that precede the 0xFE. Detect MFM from
          * the actual preceding bytes (FM has no A1). Stored CRC is the two bytes
          * after N, big-endian (FDC writes MSB first). MF-353. */
-        bool id_mfm = (idam_off >= 3 && idam[-1] == 0xA1 &&
+        /* MF-563: `idam_off >= 3` hiess "drei Byte hinter dem Anfang des
+         * DATENbereichs", also `base >= DMK_IDAM_SIZE + 3`. Mit dem
+         * absoluten Index steht das jetzt da, statt es auszurechnen. */
+        bool id_mfm = (base >= (size_t)DMK_IDAM_SIZE + 3 &&
+                       idam[-1] == 0xA1 &&
                        idam[-2] == 0xA1 && idam[-3] == 0xA1);
         uint16_t id_crc_calc = dmk_crc16(id_mfm ? idam - 3 : idam,
                                          id_mfm ? 8 : 5);
@@ -135,7 +180,22 @@ static uft_error_t dmk_read_track(uft_disk_t* disk, int cyl, int head, uft_track
         bool id_crc_ok = (id_crc_calc == id_crc_stored);
 
         // Find DAM (0xFB=normal, 0xF8=deleted)
-        for (int j = 7; j < 60 && idam_off + j < p->track_len - sec_sz; j++) {
+        /* MF-563: DIESELBE Verschiebung noch einmal.
+         *
+         * Hier stand `idam_off + j < p->track_len - sec_sz`. Zwei Fehler:
+         *
+         *   - der absolute Index ist `base + j`, nicht `idam_off + j` —
+         *     wieder 128 Byte zu kurz geprueft;
+         *   - `p->track_len - sec_sz` laeuft unter, wenn der Sektor
+         *     groesser ist als die Spur (sec_sz bis 1024, track_len kommt
+         *     aus der Datei).
+         *
+         * Geprueft wird jetzt das Fenster, das WIRKLICH gelesen wird:
+         * `&idam[j+1]` mit `sec_sz` Byte. Die Rechnung laeuft in size_t,
+         * damit keine Seite unterlaufen kann. */
+        for (int j = 7;
+             j < 60 && base + (size_t)j + 1u + sec_sz <= (size_t)p->track_len;
+             j++) {
             if (idam[j] == 0xFB || idam[j] == 0xF8) {
                 uft_format_add_sector(track, sec_id - 1, &idam[j + 1], sec_sz, cyl, head);
                 if (track->sector_count > 0) {
@@ -147,9 +207,12 @@ static uft_error_t dmk_read_track(uft_disk_t* disk, int cyl, int head, uft_track
                     /* Data-field CRC: [A1 A1 A1] DAM + data, CRC stored as the
                      * two big-endian bytes after the data. */
                     const uint8_t *dam = &idam[j];
-                    bool d_mfm = (idam_off + j >= 3 && dam[-1] == 0xA1 &&
+                    /* MF-563: wie oben, am absoluten Index. */
+                    bool d_mfm = (base + (size_t)j >= (size_t)DMK_IDAM_SIZE + 3 &&
+                                  dam[-1] == 0xA1 &&
                                   dam[-2] == 0xA1 && dam[-3] == 0xA1);
-                    size_t crc_pos = (size_t)DMK_IDAM_SIZE + idam_off + j + 1 + sec_sz;
+                    /* MF-563: `DMK_IDAM_SIZE + idam_off` IST `base`. */
+                    size_t crc_pos = base + (size_t)j + 1u + sec_sz;
                     if (crc_pos + 2 <= (size_t)p->track_len) {
                         uint16_t d_crc_calc = dmk_crc16(d_mfm ? dam - 3 : dam,
                                                         (d_mfm ? 3u : 0u) + 1u + sec_sz);
@@ -198,17 +261,38 @@ static uft_error_t dmk_write_track(uft_disk_t* disk, int cyl, int head,
     for (int i = 0; i < 64; i++) {
         uint16_t ptr = uft_read_le16(&tbuf[i * 2]);
         if (ptr == 0 || ptr == 0xFFFF) break;
-        uint16_t idam_off = (ptr & 0x3FFF) - DMK_IDAM_SIZE;
-        if (idam_off >= p->track_len - 20) continue;
+        /* MF-563: DIE ZWEITE KOPIE derselben Rechnung.
+         *
+         * `dmk_write_track()` trug dieselben drei Fehler wie
+         * `dmk_read_track()` weiter oben: Unterlauf bei der Subtraktion,
+         * eine Schranke auf `idam_off` statt auf dem absoluten Index
+         * (128 Byte zu kurz), und `track_len - sec_sz`, das selbst
+         * unterlaufen kann.
+         *
+         * ASan hat nur den LESER gemeldet, weil der Fuzzer nur liest. Der
+         * Schreiber haette denselben Zugriff gemacht — und dort waere es
+         * ein SCHREIBEN gewesen.
+         *
+         * Achte Stelle in dieser Sitzung, an der eine reparierte Rechnung
+         * eine unreparierte Kopie hatte (MF-526, 550, 554, 555, 559, 560,
+         * 561, jetzt hier). Der Unterschied diesmal: die Kopie stand
+         * hundertzwanzig Zeilen tiefer in derselben Datei. */
+        const uint16_t raw = (uint16_t)(ptr & 0x3FFF);
+        if (raw < DMK_IDAM_SIZE) continue;
+        const size_t base = (size_t)raw;
 
-        uint8_t* idam = &tbuf[DMK_IDAM_SIZE + idam_off];
+        if (base < 3 || base + 6 >= (size_t)p->track_len) continue;
+
+        uint8_t* idam = &tbuf[base];
         if (idam[0] != 0xFE) continue;
 
         uint8_t sec_id = idam[3], sz = idam[4] & 3;
         uint16_t sec_sz = 128 << sz;
 
         /* Find DAM (0xFB or 0xF8) */
-        for (int j = 7; j < 60 && idam_off + j < p->track_len - sec_sz; j++) {
+        for (int j = 7;
+             j < 60 && base + (size_t)j + 1u + sec_sz <= (size_t)p->track_len;
+             j++) {
             if (idam[j] == 0xFB || idam[j] == 0xF8) {
                 /* Find matching sector in input track (sec_id is 1-based in DMK) */
                 for (size_t ts = 0; ts < track->sector_count; ts++) {

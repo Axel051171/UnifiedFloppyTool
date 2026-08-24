@@ -740,6 +740,14 @@ def main() -> int:
         # keinen Sanitizer.
         import audit_negative_index as _ni
         all_errors.append(("Index ohne untere Schranke", _ni.check(repo)))
+        # Schranke auf der falschen Groesse (MF-563). ASan fand in
+        # dmk_read_track einen heap-buffer-overflow: die Schranke prueste
+        # `idam_off`, indiziert wurde mit `DMK_IDAM_SIZE + idam_off` — um
+        # 128 zu kurz. Eine Pruefung, die die falsche Zahl prueft, sieht
+        # aus wie eine Pruefung. Die uebrigen Tore fangen das nicht: hier
+        # FEHLT keine Schranke, sie steht nur auf der falschen Groesse.
+        import audit_bound_on_wrong_value as _bw
+        all_errors.append(("Schranke auf falscher Groesse", _bw.check(repo)))
 
     total = sum(len(e) for _, e in all_errors)
     print(f"Consistency check ({len(all_errors)} categories, root={repo}):")
