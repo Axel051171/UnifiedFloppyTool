@@ -148,6 +148,7 @@ uft_error_t uftc_convert_hfe_to_scp(const uint8_t* src_data, size_t src_size,
             /* Convert each '1' bit to a flux transition */
             uint32_t flux_buf[131072];
             size_t flux_count = 0;
+            size_t flux_dropped = 0;
             uint32_t accum_ns = 0;
 
             for (size_t byte_i = 0; byte_i < head_len; byte_i++) {
@@ -157,6 +158,8 @@ uft_error_t uftc_convert_hfe_to_scp(const uint8_t* src_data, size_t src_size,
                     if ((b >> bit) & 1) {
                         if (flux_count < 131072) {
                             flux_buf[flux_count++] = accum_ns;
+                        } else {
+                            flux_dropped++;
                         }
                         accum_ns = 0;
                     }
@@ -176,7 +179,41 @@ uft_error_t uftc_convert_hfe_to_scp(const uint8_t* src_data, size_t src_size,
             }
 
             free(track_bits);
-            result->tracks_converted++;
+
+            /* MF-550: die Kappung wird GEZAEHLT, nicht verschwiegen.
+             *
+             * Vorher stand oben nur `if (flux_count < 131072) ...` und
+             * sonst nichts: was nicht mehr hineinpasste, verschwand ohne
+             * Warnung, ohne Zaehler, ohne dass die Spur als unvollstaendig
+             * galt.
+             *
+             * Erreichbar ist das. `track_len` ist ein uint16 aus der Datei,
+             * also bis 32767 Byte je Seite; 32767 x 8 = 262136 moegliche
+             * Uebergaenge gegen einen Deckel von 131072. Eine normale Spur
+             * (12500 Byte, 100000 Zellen) bleibt darunter — eine
+             * praeparierte oder sehr dicht beschriebene nicht.
+             *
+             * Schlimmer als das blosse Fehlen: `accum_ns = 0` lief weiter
+             * mit. Der Zeitbezug hinter der Kappung stimmt also auch dann
+             * nicht, wenn spaeter wieder Platz gewesen waere. Was
+             * herauskommt, ist nicht "etwas weniger Daten", sondern keine
+             * verwertbare Aussage mehr — deshalb gilt die Spur als
+             * gescheitert und nicht als gewandelt.
+             *
+             * Vorbild: MF-528 in uft_format_convert_flux.c (SCP->HFE), wo
+             * genau das seit einer Weile richtig steht. Drei Stellen
+             * hatten es nicht. */
+            if (flux_dropped) {
+                uftc_add_warning(result,
+                         "HFE->SCP Spur %d Kopf %d: %zu von %zu "
+                         "Flusswechseln verworfen (Puffer fasst 131072) — "
+                         "die Spur ist unvollstaendig und zaehlt als "
+                         "gescheitert (MF-550)",
+                         cyl, hd, flux_dropped, flux_count + flux_dropped);
+                result->tracks_failed++;
+            } else {
+                result->tracks_converted++;
+            }
         }
 
         uftc_report_progress(opts, 20 + (cyl * 70 / cylinders),
@@ -250,6 +287,7 @@ uft_error_t uftc_convert_g64_to_scp(const uint8_t* src_data, size_t src_size,
         /* Convert GCR bitstream to flux using d64_gcr_to_flux() */
         uint32_t flux_buf[131072];
         size_t flux_count = 0;
+        size_t flux_dropped = 0;   /* MF-550 */
 
         rc = d64_gcr_to_flux(track_data, track_len, zone,
                               flux_buf, &flux_count);
@@ -295,6 +333,8 @@ uft_error_t uftc_convert_g64_to_scp(const uint8_t* src_data, size_t src_size,
                     if ((b >> bit) & 1) {
                         if (flux_count < 131072) {
                             flux_buf[flux_count++] = accum_ns;
+                        } else {
+                            flux_dropped++;
                         }
                         accum_ns = 0;
                     }
@@ -314,7 +354,18 @@ uft_error_t uftc_convert_g64_to_scp(const uint8_t* src_data, size_t src_size,
                                   duration_ns, rev);
         }
 
-        result->tracks_converted++;
+        /* MF-550: siehe die ausfuehrliche Begruendung bei HFE->SCP weiter
+         * oben. Dieselbe stille Kappung, dieselbe Folge. */
+        if (flux_dropped) {
+            uftc_add_warning(result,
+                     "G64->SCP Spur %d: %zu von %zu Flusswechseln verworfen "
+                     "(Puffer fasst 131072) — die Spur ist unvollstaendig "
+                     "und zaehlt als gescheitert (MF-550)",
+                     track, flux_dropped, flux_count + flux_dropped);
+            result->tracks_failed++;
+        } else {
+            result->tracks_converted++;
+        }
         uftc_report_progress(opts, 20 + (track * 70 / 42),
                              "Converting GCR tracks");
     }

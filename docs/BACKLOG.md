@@ -61,7 +61,7 @@ Zahl korrekturbedürftig.
 |---|---|---|---|
 | **B1** | 9 von 137 Plugins vom Fuzzer nie erreicht (MSA, DIM_ATARI, DC42, D77, D88, FDI_PC98, CFI, Logical, POSIX). Sie verlangen einen Kopf, dessen Inhalt und Dateilänge zueinander passen | gemessen | **offen** — braucht Erzeuger, der beides gemeinsam setzt |
 | **B2** | Fuzzer-Temppfad ist relativ; zwei Instanzen im selben Verzeichnis überschreiben einander die Eingabe. Falle für parallele CI | gemeldet | **offen** |
-| **B3** | Flux-Puffer-Deckel 131072 an mehreren Stellen: überzählige Flusswechsel werden **still** verworfen. Eine Stelle meldet es seit MF-528, die übrigen nicht | gemeldet | **offen** |
+| ~~**B3**~~ | Flux-Puffer-Deckel 131072: ueberzaehlige Flusswechsel still verworfen | gemeldet, dann gemessen | ✅ **MF-550** — alle drei Stellen melden und beziffern jetzt; gemessen 129024 von 260096 verworfen, Spur zaehlt als gescheitert |
 | **B4** | FS-Extraktion (FAT12, AmigaDOS): Kettenbruch → `break`, Torso-Datei mit `OK`-Status. Kein Abgleich `geschrieben == Soll` | gemeldet | **offen** |
 
 ---

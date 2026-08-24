@@ -3938,6 +3938,57 @@ zweite braucht eine Bank-Sitzung mit echtem Laufwerk.
 
 ---
 
+### FLUX-1 — 129024 von 260096 Flusswechseln, still verworfen (2026-08-24, MF-550) -> ✓ BEHOBEN
+
+Drei Wandler bauen aus einem Bitstrom Flusswechsel und legen sie in einem
+Puffer fuer 131072 Eintraege ab:
+
+```c
+if (flux_count < 131072) {
+    flux_buf[flux_count++] = accum_ns;
+}
+accum_ns = 0;
+```
+
+Keine Warnung, kein Zaehler, und die Spur galt weiterhin als **gewandelt**.
+
+**Erreichbar, nicht theoretisch.** `lut[].length` ist ein uint16 aus der
+Datei, je Seite die Haelfte. Gemessen an einer HFE mit 32512 Byte je Seite:
+
+```
+HFE->SCP Spur 0 Kopf 0: 129024 von 260096 Flusswechseln verworfen
+(Puffer fasst 131072) — die Spur ist unvollstaendig und zaehlt als
+gescheitert (MF-550)
+```
+
+Die Haelfte der Spur. Eine normale Amiga-DD-Spur (12500 Byte, hoechstens
+100000 Uebergaenge) bleibt darunter — der Deckel greift also **nicht im
+Alltag, sondern genau dann, wenn eine Datei ungewoehnlich ist**. Das ist
+der Fall, in dem ein forensisches Werkzeug am wenigsten schweigen darf.
+
+**Schlimmer als das blosse Fehlen:** `accum_ns = 0` lief weiter mit. Nach
+der Kappung wird weiter zurueckgesetzt, ohne dass etwas abgelegt wird —
+selbst wenn spaeter wieder Platz waere, stimmte der Zeitbezug nicht mehr.
+Der abgeschnittene Teil ist nicht „etwas weniger Daten“, sondern keine
+verwertbare Aussage.
+
+**Das Vorbild stand seit MF-528 daneben** (SCP->HFE in
+`uft_format_convert_flux.c`): kappen, beziffern, Spur als gescheitert
+zaehlen. Drei Stellen hatten es nicht — HFE->SCP, G64->SCP, Sektor->SCP.
+
+**Mein eigener Messfehler dabei:** der erste Anlauf des Tests nahm 32768
+Byte je Seite, also 65536 gesamt. Das ist genau eins zu viel — das
+LUT-Feld ist ein uint16, 65536 wird darin zu 0, und der Wandler
+ueberspringt eine Spur der Laenge null. Der Test meldete „0 Spuren, 0
+Warnungen“, was wie ein Befund aussah und ein Messfehler war.
+
+**Nebenbeobachtung, nicht behoben:** `uint32_t flux_buf[131072]` sind
+**512 KB auf dem Stapel**, an drei Stellen. Bei einem Standard-Thread-Stapel
+von 1 MB unter Windows ist das knapp. Nicht angefasst, weil es eine eigene
+Aenderung ist und kein Fund dieser Runde — steht als Hinweis hier.
+
+---
+
 ### PH-1 — zwei Faehigkeits-APIs ohne Faehigkeit (2026-08-24, MF-549) -> ✓ ENTFERNT
 
 **Gemessen:** `include/uft/**/*.h` fuehrt **294** Funktions-Prototypen, die

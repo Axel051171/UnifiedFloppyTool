@@ -347,6 +347,7 @@ static uft_error_t dispatch_conversion(uft_format_t src_format,
                 /* Convert MFM bitstream to flux */
                 uint32_t flux_buf[131072];
                 size_t flux_count = 0;
+                size_t flux_dropped = 0;
                 uint32_t accum = 0;
 
                 for (int i = 0; i < mfm_pos && i < (int)sizeof(mfm_track); i++) {
@@ -356,6 +357,8 @@ static uft_error_t dispatch_conversion(uft_format_t src_format,
                         if ((b >> bit) & 1) {
                             if (flux_count < 131072)
                                 flux_buf[flux_count++] = accum;
+                            else
+                                flux_dropped++;   /* MF-550 */
                             accum = 0;
                         }
                     }
@@ -369,7 +372,21 @@ static uft_error_t dispatch_conversion(uft_format_t src_format,
                     scp_writer_add_track(writer, cyl, hd, flux_buf,
                                           flux_count, duration, rev);
                 }
-                result->tracks_converted++;
+                /* MF-550: siehe uft_format_convert_bitstream.c (HFE->SCP)
+                 * fuer die ausfuehrliche Begruendung. Dieselbe stille
+                 * Kappung, dieselbe Folge. */
+                if (flux_dropped) {
+                    uftc_add_warning(result,
+                             "Sektor->SCP Spur %d Kopf %d: %zu von %zu "
+                             "Flusswechseln verworfen (Puffer fasst 131072) "
+                             "— die Spur ist unvollstaendig und zaehlt als "
+                             "gescheitert (MF-550)",
+                             cyl, hd, flux_dropped,
+                             flux_count + flux_dropped);
+                    result->tracks_failed++;
+                } else {
+                    result->tracks_converted++;
+                }
             }
         }
 
