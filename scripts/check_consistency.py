@@ -732,6 +732,14 @@ def main() -> int:
         # prueft, aendert sie, und die Doku muss nachziehen.
         import audit_protection_claims as _pc
         all_errors.append(("Kopierschutz-Behauptung", _pc.check(repo)))
+        # Index aus cyl/head ohne untere Schranke (MF-560). Die CI fand mit
+        # ASan einen heap-buffer-overflow in mfi_read_track: der Index wurde
+        # nur nach OBEN geprueft. MF-516/522 hatte diese Klasse in 54
+        # Dateien behoben; drei Stellen, die den Index VOR der Schranke
+        # ausrechnen, sind durchgerutscht. Lokal unsichtbar — MinGW hat
+        # keinen Sanitizer.
+        import audit_negative_index as _ni
+        all_errors.append(("Index ohne untere Schranke", _ni.check(repo)))
 
     total = sum(len(e) for _, e in all_errors)
     print(f"Consistency check ({len(all_errors)} categories, root={repo}):")

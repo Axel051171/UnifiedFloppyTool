@@ -198,6 +198,17 @@ static uft_error_t mfi_read_track(uft_disk_t *disk, int cyl, int head,
     mfi_data_t *pdata = disk->plugin_data;
     if (!pdata || !pdata->file) return UFT_ERROR_INVALID_STATE;
 
+    /* MF-560: negative Koordinaten abweisen, BEVOR daraus ein Index wird.
+     *
+     * Hier stand nur die obere Schranke. Ein negatives `cyl` oder `head`
+     * ergibt einen negativen Index, kommt an `>=` vorbei und liest vor dem
+     * Feld — gefunden von ASan in der CI (heap-buffer-overflow in
+     * mfi_read_track), nicht lokal: MinGW hat keinen Sanitizer.
+     *
+     * MF-516/522 hat dieselbe Klasse in 54 Dateien behoben. Diese hier
+     * rechnet den Index VOR der Schranke aus und ist dabei durchgerutscht. */
+    if (cyl < 0 || head < 0) return UFT_ERROR_INVALID_PARAM;
+
     int idx = cyl * pdata->heads + head;
     if (idx >= pdata->track_count) return UFT_ERROR_INVALID_STATE;
 

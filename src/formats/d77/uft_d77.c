@@ -182,6 +182,18 @@ static uft_error_t d77_read_track(uft_disk_t *disk, int cyl, int head,
     d77_data_t *pdata = disk->plugin_data;
     if (!pdata || !pdata->file) return UFT_ERROR_INVALID_STATE;
 
+    /* MF-560: negative Koordinaten abweisen, BEVOR daraus ein Index wird.
+     *
+     * Hier stand nur die obere Schranke gegen D77_MAX_TRACKS. Ein negatives
+     * `cyl` oder `head` ergibt einen negativen Index, kommt an `>=` vorbei
+     * und greift vor das Feld. Dieselbe Stelle wie in uft_mfi.c, wo ASan
+     * sie in der CI gefunden hat — lokal unsichtbar, MinGW hat keinen
+     * Sanitizer.
+     *
+     * MF-516/522 hat diese Klasse in 54 Dateien behoben; die Stellen, die
+     * den Index VOR der Schranke ausrechnen, sind durchgerutscht. */
+    if (cyl < 0 || head < 0) return UFT_ERROR_INVALID_PARAM;
+
     int idx = cyl * disk->geometry.heads + head;
     if (idx >= D77_MAX_TRACKS) return UFT_ERROR_INVALID_STATE;
     if (pdata->track_offsets[idx] == 0) return UFT_ERROR_INVALID_STATE;
@@ -245,6 +257,18 @@ static uft_error_t d77_write_track(uft_disk_t *disk, int cyl, int head,
     d77_data_t *pdata = disk->plugin_data;
     if (!pdata || !pdata->file) return UFT_ERROR_INVALID_STATE;
     if (disk->read_only) return UFT_ERROR_NOT_SUPPORTED;
+
+    /* MF-560: negative Koordinaten abweisen, BEVOR daraus ein Index wird.
+     *
+     * Hier stand nur die obere Schranke gegen D77_MAX_TRACKS. Ein negatives
+     * `cyl` oder `head` ergibt einen negativen Index, kommt an `>=` vorbei
+     * und greift vor das Feld. Dieselbe Stelle wie in uft_mfi.c, wo ASan
+     * sie in der CI gefunden hat — lokal unsichtbar, MinGW hat keinen
+     * Sanitizer.
+     *
+     * MF-516/522 hat diese Klasse in 54 Dateien behoben; die Stellen, die
+     * den Index VOR der Schranke ausrechnen, sind durchgerutscht. */
+    if (cyl < 0 || head < 0) return UFT_ERROR_INVALID_PARAM;
 
     int idx = cyl * disk->geometry.heads + head;
     if (idx >= D77_MAX_TRACKS) return UFT_ERROR_INVALID_STATE;

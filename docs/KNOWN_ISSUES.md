@@ -4623,6 +4623,82 @@ unvollstaendigen Menge ist keine Aussage ueber das Ganze.
 
 ---
 
+### NEG-1 — die CI fand, was der Rechner hier nicht sehen kann (2026-08-24, MF-560) -> ✓ BEHOBEN
+
+**Sanitizer-CI rot**, seit mehreren Commits. Der Grund:
+
+```
+ERROR: AddressSanitizer: heap-buffer-overflow
+READ of size 4 at 0x51e000004874
+  #0 mfi_read_track   src/formats/mfi/uft_mfi.c:205
+  #1 run_one_plugin_open   tests/test_disk_open_fuzz.c:761
+Puffer angelegt in:
+  #1 mfi_open   src/formats/mfi/uft_mfi.c:120
+```
+
+Die Stelle lautete:
+
+```c
+int idx = cyl * pdata->heads + head;
+if (idx >= pdata->track_count) return UFT_ERROR_INVALID_STATE;
+mfi_track_entry_t *te = &pdata->tracks[idx];
+if (te->compressed_size == 0) ...            /* Zeile 205 */
+```
+
+**Nur die obere Schranke.** Ein negatives `cyl` oder `head` ergibt einen
+negativen Index, kommt an `>=` vorbei und greift vor das Feld.
+
+**MF-516/522 hat genau diese Klasse in 54 Dateien behoben** — mit
+`if (cyl < 0 || head < 0) return UFT_ERROR_INVALID_PARAM;` am
+Funktionsanfang. Drei Stellen rechnen den Index **vor** der Schranke aus
+und sind dabei durchgerutscht: `mfi_read_track` und `d77_read_track` /
+`d77_write_track`.
+
+**Siebter Fall in dieser Sitzung, in dem eine reparierte Stelle
+unreparierte Geschwister hatte** (MF-526, MF-550, MF-554, MF-555, MF-559,
+MF-560).
+
+── Warum es lokal nicht auffiel ─────────────────────────────────────────
+
+MinGW hat weder `libasan` noch `libubsan` (`cannot find -lasan`). Ein
+Lesen knapp vor einem Feld **faultet unter Windows nicht** — es liefert
+still falsche Daten. `ctest` war und ist hier gruen; die CI ist die einzige
+Stelle, an der das sichtbar wird.
+
+Genau dafuer wurde das scharfe Tor in MF-517 eingebaut (`--no-tests=error`,
+`halt_on_error=0:exitcode=1`). Es hat funktioniert.
+
+── Warum der Fuzzer ihn jetzt erst erreicht ─────────────────────────────
+
+Der SIGS-Eintrag fuer MFI zeigte bis MF-553 auf
+`src/formats/mame/uft_mame_mfi.c` — eine Datei ohne
+`uft_format_plugin_t`, die in keiner Registry steht. Das registrierte
+MFI-Plugin vergleicht `"MAMEFLOP"`. **Der alte Eintrag sah aus wie
+Abdeckung und war keine.** Seit der Korrektur erreicht der Fuzzer das echte
+Plugin — und fand den Fehler beim ersten Lauf unter ASan.
+
+── Das Tor, und was es ueber sich selbst gelernt hat ────────────────────
+
+`scripts/audit_negative_index.py` ist die **32.** Kategorie.
+
+**Der erste Lauf meldete sieben Treffer — sechs davon Fehlalarme:**
+
+* drei, weil der Index `size_t` oder `uint32_t` ist: ein negativer Wert
+  wird dort zu einer sehr grossen Zahl, und die obere Schranke faengt ihn
+* zwei, weil die Koordinaten selbst `uint8_t` sind
+* einer, weil `uft_ldbs.c` die Schranke als `idx >= 0` schreibt statt
+  `idx < 0` — dieselbe Pruefung, andere Richtung
+
+Nach dem Nachschaerfen: **0 Befunde, und der Rotbeweis meldet genau die
+drei echten Stellen.**
+
+Ein Tor, das sechs von sieben danebenliegt, wird beim naechsten Mal nicht
+gelesen — und faengt dann auch den echten Fall nicht mehr. Zwoelfter Fall
+in dieser Sitzung, in dem ein Messwerkzeug beim ersten Anlauf etwas anderes
+mass als gemeint.
+
+---
+
 ### ID-2 — fuenf Bedeutungen fuer einen Namen, in derselben Binaerdatei (2026-08-24, MF-559) — ⚠ UEBERWACHT
 
 `scripts/shared_guard_gate.py` zaehlt 40 geteilte `#ifndef`-Waechter, davon
