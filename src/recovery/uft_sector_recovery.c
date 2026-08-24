@@ -16,48 +16,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* ============================================================================
- * Types
- * ============================================================================ */
-
-typedef enum {
-    UFT_SECTOR_OK,
-    UFT_SECTOR_CRC_ERROR,
-    UFT_SECTOR_HEADER_ERROR,
-    UFT_SECTOR_MISSING,
-    UFT_SECTOR_WEAK,
-    UFT_SECTOR_RECOVERED
-} uft_sector_status_t;
-
-typedef struct {
-    uint8_t  track;
-    uint8_t  head;
-    uint8_t  sector;
-    uint8_t  size_code;
-    uint8_t *data;
-    size_t   data_len;
-    uint16_t header_crc;
-    uint16_t data_crc;
-    uft_sector_status_t status;
-    uint8_t  confidence;
-    uint8_t  read_count;        /* Number of successful reads */
-} uft_sector_t;
-
-typedef struct {
-    uft_sector_t *sectors;
-    size_t sector_count;
-    size_t good_sectors;
-    size_t bad_sectors;
-    size_t recovered_sectors;
-    size_t missing_sectors;
-} uft_sector_map_t;
-
-typedef struct {
-    size_t max_retries;
-    bool   use_averaging;
-    bool   attempt_reconstruction;
-    uint8_t recovery_level;
-} uft_sector_recovery_config_t;
+/* Types + public prototypes live in the module-private header so tests
+ * can exercise the real contract instead of re-declaring it. See
+ * uft_sector_recovery.h for why it is deliberately NOT under
+ * include/uft/ (name collision with the global uft_sector_t). */
+#include "uft_sector_recovery.h"
 
 /* ============================================================================
  * CRC
@@ -279,11 +242,20 @@ int uft_sector_recover_average(uft_sector_t *sector,
     average_sector_reads(all_reads, read_count + 1, sector->data_len,
                          averaged, confidence);
     
-    /* Check if averaging fixed CRC */
+    /* Check if averaging fixed CRC.
+     *
+     * HONESTY FIX: the old condition was
+     *     new_crc == sector->data_crc || sector->status == UFT_SECTOR_CRC_ERROR
+     * The right-hand side made the guard a tautology for exactly the
+     * sectors this function is called for (CRC-failed ones): the vote
+     * result was copied over the raw read and reported RECOVERED even
+     * when its CRC still did not match. Prinzip 1 ("keine stille
+     * Veraenderung"): only a vote that actually matches the stored CRC
+     * may replace the raw read; otherwise data and status stay as read
+     * and the caller gets -1. */
     uint16_t new_crc = crc16(averaged, sector->data_len);
-    
-    if (new_crc == sector->data_crc || 
-        sector->status == UFT_SECTOR_CRC_ERROR) {
+
+    if (new_crc == sector->data_crc) {
         memcpy(sector->data, averaged, sector->data_len);
         sector->status = UFT_SECTOR_RECOVERED;
         sector->read_count = read_count + 1;

@@ -682,6 +682,17 @@ def main() -> int:
         # den dreizehnten.
         import audit_read_track_contract as _rtc
         all_errors.append(("read_track schreibt durch NULL", _rtc.check(repo)))
+        # Format-ID-Drift (MF-540). Fuenf Header definieren
+        # `uft_format_id_t` unter demselben Waechter
+        # UFT_FORMAT_ID_T_DEFINED — wer zuerst inkludiert wird, gewinnt,
+        # der Rest wird still uebersprungen. `UFT_FMT_D64` ist je nach
+        # Header 4, 6 oder 20. Gemessen: heute sehen alle gebauten
+        # Einheiten dieselbe Zahl (4), die Falle ist also scharfgestellt,
+        # aber nicht ausgeloest. Das Tor MISST je Uebersetzungseinheit mit
+        # dem Praeprozessor und roetet an dem Tag, an dem eine
+        # Include-Zeile die Bedeutung verschiebt.
+        import audit_format_id_drift as _fid
+        all_errors.append(("Format-ID-Drift je Einheit", _fid.check(repo)))
 
     total = sum(len(e) for _, e in all_errors)
     print(f"Consistency check ({len(all_errors)} categories, root={repo}):")

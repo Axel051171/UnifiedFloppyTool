@@ -3938,6 +3938,79 @@ zweite braucht eine Bank-Sitzung mit echtem Laufwerk.
 
 ---
 
+### ID-1 — fuenf `uft_format_id_t` unter einem Waechter (2026-08-24, MF-540) — ⚠ UEBERWACHT, NICHT BEHOBEN
+
+**Der Zustand.** Fuenf Header definieren `uft_format_id_t`, und alle fuenf
+benutzen denselben Waechter `UFT_FORMAT_ID_T_DEFINED`:
+
+| Header | Definition | `UFT_FMT_D64` |
+|---|---|---|
+| `include/uft/core/uft_format_registry.h` | enum, 76 Eintraege | **20** |
+| `include/uft/core/uft_unified_types.h` | enum, 34 Eintraege | **4** |
+| `include/uft/formats/uft_format_params.h` | enum, 61 Eintraege | **6** |
+| `include/uft/core/uft_roundtrip.h` | `typedef uint32_t` | — |
+| `include/uft/uft_format_validate.h` | `typedef uint32_t` | — |
+
+Dazu eine sechste Fassung in `src/core/unified/uft_format_registry.h`.
+
+Ein geteilter Waechter heisst: **wer zuerst kommt, gewinnt, der Rest wird
+still uebersprungen.** Welche Zahl `UFT_FMT_D64` in einer
+Uebersetzungseinheit bedeutet, entscheidet die Include-Reihenfolge — ohne
+Warnung, ohne Fehler.
+
+**Wie das entstanden ist.** Absichtlich. `uft_roundtrip.h` sagt es selbst
+(MF-265): *„the UFT_FORMAT_ID_T_DEFINED guard is shared so the two
+definitions never conflict in the same TU“*. Der Satz beschreibt das Ziel
+korrekt — er verhindert einen **Uebersetzungsfehler**. Was er nicht
+verhindert, ist der stille **Bedeutungswechsel**, und genau der ist in
+einem forensischen Werkzeug der schlimmere von beiden.
+
+**Was gemessen ist, und was nicht.** Gemessen mit dem Praeprozessor, je
+Uebersetzungseinheit, die `UFT_FMT_*`-Konstanten benutzt (es sind vier):
+
+```
+src/core/uft_unified_types.c            enum(34)   UFT_FMT_D64 = 4
+src/protection/uft_protection_stubs.c   enum(34)   UFT_FMT_D64 = 4
+src/formats/uft_format_extensions.c     kein uft_format_id_t sichtbar
+src/policy/uft_write_gate.c             kein uft_format_id_t sichtbar
+```
+
+**Die Falle ist scharfgestellt, aber nicht ausgeloest.** Jede Einheit, die
+ueberhaupt ein Enum sieht, sieht dasselbe. Es wird heute nichts falsch
+gerechnet — eine Voruntersuchung hatte das als „die einzige echte
+Code-Bombe“ eingestuft, und diese Einstufung traegt die Messung **nicht**.
+
+**Was sie ausloest.** Eine einzige Zeile. Der Rotbeweis fuer das Tor ist
+ein zusaetzliches `#include "uft/core/uft_format_registry.h"` ganz oben in
+`src/protection/uft_protection_stubs.c`:
+
+```
+UFT_FMT_D64 bedeutet in gebautem Code 2 verschiedene Zahlen:
+src/core/uft_unified_types.c sieht UFT_FMT_D64=4,
+src/protection/uft_protection_stubs.c sieht UFT_FMT_D64=20
+```
+
+Niemand haette das bemerkt: es bricht nichts, es rechnet nur das Falsche.
+
+**Was jetzt gilt.** `scripts/audit_format_id_drift.py` ist die **26.**
+Kategorie von `check_consistency.py` und misst das je Uebersetzungseinheit
+bei jedem Commit. Die Zusammenlegung der fuenf Enums ist **nicht**
+gemacht: das ist Arbeit am ABI und gehoert nicht in eine
+Release-Vorbereitung.
+
+**Naechster Schritt, konkret:** `uft_unified_types.h` ist der De-facto-
+Gewinner (beide messbaren Einheiten sehen ihn). Die anderen vier auf ihn
+zurueckfuehren, mit `static_assert` auf die Werte, die heute in
+Serialisierung oder Dateiformaten stehen. Eigener Vorgang, eigener Zweig.
+
+**Und die Randbemerkung, die zur Sache gehoert.** Der Waechter steht in
+`docs/shared_guard_baseline.txt` — also in der Liste, die das
+Kollisions-Tor derselben Sitzung eingefroren hat. Eingefroren heisst
+„bekannt“, nicht „ungefaehrlich“. Eine Grundlinie, die niemand nachliest,
+ist eine Erlaubnis.
+
+---
+
 ### RT-5 — die kaputte Zweitfassung neben dem richtigen Encoder (2026-08-24, MF-539) -> ✓ BEHOBEN
 
 **Was MF-538 nach sich zog.** Die Untersuchung, warum `HFE → ADF` eine leere

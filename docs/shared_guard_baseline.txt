@@ -26,7 +26,7 @@ UFT_FORMAT_CLASS_DEFINED
 UFT_FORMAT_DETECT_H
 UFT_FORMAT_ENUM_DEFINED
 UFT_FORMAT_GET_NAME_DECLARED
-UFT_FORMAT_ID_T_DEFINED
+UFT_FORMAT_ID_T_DEFINED  # MF-540: fuenf Header, drei verschiedene Enums darunter (UFT_FMT_D64 = 4 / 6 / 20). Heute sehen alle gebauten Einheiten dieselbe Zahl; ueberwacht von scripts/audit_format_id_drift.py. Siehe KNOWN_ISSUES ID-1 — eingefroren heisst bekannt, nicht ungefaehrlich.
 UFT_FORMAT_REGISTRY_H
 UFT_HFE_ENCODING_T_DEFINED
 UFT_IMD_MODE_DEFINED

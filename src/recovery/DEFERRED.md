@@ -16,17 +16,22 @@ Current `include/uft/recovery/uft_recovery_params.h` (from v4.x) has a
 different shape — needs either (a) extending the header to cover
 v3.7's needs, or (b) rewriting params.c against v4.x's shape.
 
-## `uft_forensic_recovery.c` — deferred
+## `uft_forensic_recovery.c` — RESTORED (status note stale until 2026-08-24)
 
-References undefined `uft_forensic_config_t`, `uft_forensic_session_t`,
-`uft_forensic_result_t`. 42 errors. Needs a `uft_forensic_config.h`
-that was not extracted — the forensic subsystem evolved structurally
-between v3.7 and v4.x.
+Originally deferred: references to undefined `uft_forensic_config_t`,
+`uft_forensic_session_t`, `uft_forensic_result_t` (42 errors). Since
+resolved — `include/uft/recovery/uft_forensic_types.h` (status note
+2026-04-25 in that header) reconstructs the missing private types, and
+the file is built by UnifiedFloppyTool.pro plus exercised by
+`tests/test_forensic_audit_count.c` and `tests/test_forensic_crc_honesty.c`.
+This section was not updated when the restoration landed; corrected
+2026-08-24.
 
-## `uft_forensic_track.c` — deferred
+## `uft_forensic_track.c` — RESTORED (status note stale until 2026-08-24)
 
-Same root cause as uft_forensic_recovery.c — needs the forensic
-session types. 4 errors.
+Same history as uft_forensic_recovery.c: deferred for the missing
+forensic session types, restored via uft_forensic_types.h, built by
+UnifiedFloppyTool.pro. Corrected 2026-08-24.
 
 ## `uft_recovery_advanced.c` — deferred
 

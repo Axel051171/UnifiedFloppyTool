@@ -592,6 +592,19 @@ foreach(test_source ${TEST_SOURCES})
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/recovery/uft_forensic_recovery.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
+    elseif(${test_name} STREQUAL "test_forensic_crc_honesty")
+        # crc_valid war eine Tautologie (crc_stored = crc_computed) —
+        # ohne Header-CRC gibt es kein CRC-Urteil
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/recovery/uft_forensic_recovery.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
+    elseif(${test_name} STREQUAL "test_sector_recovery_honesty")
+        # CRC-Fehler-Sektoren wurden trotz weiterhin falscher CRC als
+        # RECOVERED markiert und die Rohlesung ueberschrieben
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/recovery/uft_sector_recovery.c)
+        target_include_directories(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/recovery)
     elseif(${test_name} STREQUAL "test_fundus_resume")
         # MF-506: die naechste Sitzung weiss, was die letzte wusste
         target_sources(${test_name} PRIVATE

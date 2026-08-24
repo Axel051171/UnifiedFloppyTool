@@ -99,6 +99,46 @@ def _excluded_test_count(repo: Path):
     return count
 
 
+def _matrix_entry_count(repo: Path):
+    """Autoritativ: Eintraege in g_matrix[] (src/core/uft_roundtrip.c).
+
+    MF-541: Kommentare MUESSEN vorher weg. Die Matrix traegt lange
+    Begruendungstexte, in denen die Verdikt-Namen woertlich vorkommen
+    ("IMG -> HFE steht jetzt als LOSSLESS") — ein Zaehler ueber den
+    Rohtext liest sie als Eintraege mit. Genau so kam beim ersten Versuch
+    5 statt 4 heraus.
+    """
+    f = repo / "src/core/uft_roundtrip.c"
+    if not f.exists():
+        return None
+    text = f.read_text(encoding="utf-8", errors="replace")
+    text = re.sub(r"/\*.*?\*/", "", text, flags=re.S)
+    text = re.sub(r"//[^\n]*", "", text)
+    m = re.search(r"g_matrix\[\]\s*=\s*\{(.*?)\n\};", text, re.S)
+    if not m:
+        return None
+    return len(re.findall(r"\{\s*UFT_FORMAT_", m.group(1)))
+
+
+def _matrix_lossless_count(repo: Path):
+    """Autoritativ: LOSSLESS-Verdikte in g_matrix[], ohne Kommentare.
+
+    Jedes einzelne muss eine Bit-Identitaets-Messung im Baum haben; die
+    Zahl steht in `tests/test_roundtrip_matrix.c` als `n_ll` gepinnt.
+    Zwei Stellen, eine Wahrheit — dieser Eintrag haelt die Doku daran.
+    """
+    f = repo / "src/core/uft_roundtrip.c"
+    if not f.exists():
+        return None
+    text = f.read_text(encoding="utf-8", errors="replace")
+    text = re.sub(r"/\*.*?\*/", "", text, flags=re.S)
+    text = re.sub(r"//[^\n]*", "", text)
+    m = re.search(r"g_matrix\[\]\s*=\s*\{(.*?)\n\};", text, re.S)
+    if not m:
+        return None
+    return len(re.findall(r"UFT_RT_LOSSLESS", m.group(1)))
+
+
 # (file, regex with one numeric group, source callable, description)
 DERIVED_CLAIMS = [
     ("docs/MASTER_PLAN.md", r"Static_assert pinnt `sizeof == (\d+)`",
@@ -107,6 +147,17 @@ DERIVED_CLAIMS = [
     ("docs/MASTER_PLAN.md", r"noch (\d+) Exclusions",
      _excluded_test_count,
      "MASTER_PLAN UFT-T04: active EXCLUDED_TESTS entries"),
+    # MF-541: die Wandlungszahlen. CLAUDE.md fuehrte "13
+    # Roundtrip-Matrix-Eintraege" und "8 angeboten", waehrend derselbe
+    # Abschnitt zwei Zeilen weiter "11" sagte — drei Zahlen fuer eine
+    # Sache, keine davon gemessen. Diese Klasse hat MF-526/527 schon
+    # einmal getroffen; sie kommt wieder, solange die Zahl von Hand
+    # gepflegt wird.
+    ("CLAUDE.md", r"(\d+) Roundtrip-Matrix-Eintr", _matrix_entry_count,
+     "CLAUDE.md: Eintraege in g_matrix[]"),
+    ("CLAUDE.md", r"(\d+) verlustfrei \(je mit Messung\)",
+     _matrix_lossless_count,
+     "CLAUDE.md: LOSSLESS-Verdikte in g_matrix[]"),
 ]
 
 

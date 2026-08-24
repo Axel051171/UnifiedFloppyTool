@@ -65,21 +65,38 @@ Liest/schreibt Disk-Images von praktisch jedem 8-Bit- und 16-Bit-Computer:
 - **Japanisch:** D88, D77, NFD, HDM, XDF, DIM, FDX
 - Plus: MSX, Thomson, TI-99, Roland, HP LIF, CP/M, Micropolis, Victor, Zilog, etc.
 
-### 3. Format-Konvertierung (44 Pfade registriert, **8 angeboten**)
+### 3. Format-Konvertierung (44 Pfade registriert, **15 angeboten**)
 
-> **Ehrlichkeits-Hinweis (MF-526):** die Wandlungstabelle fuehrt 44
-> Paare. Angeboten werden davon **11**: **3 verlustfrei** (D64→D64,
-> ADF→ADF, D64→G64 — Bit-Identitaet je gemessen, MF-532/533) und
-> **8 nur mit ausdruecklichem `accept_data_loss`**. Die frueheren
-> LOSSLESS-Eintraege SCP↔HFE trugen keinen Beweis und sind seit
-> MF-527 herabgestuft — der jetzt existierende Bit-Identitaets-Test
-> widerlegt sie. Drei sind als
-> unmoeglich gekennzeichnet, **33 weist das Preflight-Tor als
-> UNGEPRUEFT ab** („conversion pair is UNTESTED — not offered until
-> an entry exists“), weil sie keinen Eintrag in
-> `src/core/uft_roundtrip.c` haben. Das ist Absicht (MF-263/UFT-A01)
-> und richtig — die Liste unten nennt die **Tabelle**, nicht die
-> Faehigkeit.
+> **Ehrlichkeits-Hinweis (MF-526, Zahlen neu gemessen MF-541):** die
+> Wandlungstabelle fuehrt **44** Paare. Davon haben **15** einen Eintrag in
+> der Rundlauf-Matrix und werden angeboten:
+>
+> * **4 verlustfrei (je mit Messung)** — D64→D64, ADF→ADF, D64→G64,
+>   IMG→HFE. Jedes einzelne mit einer Bit-Identitaets-Messung im Baum
+>   (MF-532/533/539), keines auf Zusicherung.
+> * **11 nur mit ausdruecklichem `accept_data_loss`.**
+>
+> **29 weist das Preflight-Tor als UNGEPRUEFT ab** („conversion pair is
+> UNTESTED — not offered until an entry exists“), weil sie keinen Eintrag
+> in `src/core/uft_roundtrip.c` haben. Das ist Absicht (MF-263/UFT-A01)
+> und richtig.
+>
+> Die Matrix selbst hat **17** Eintraege — zwei davon (`SCP→IMD`,
+> `STX→ST`) haben kein Gegenstueck in der Wandlungstabelle: Verdikte ohne
+> Konsumenten.
+>
+> Frueher standen hier drei einander widersprechende Zahlen („8 angeboten“
+> in der Ueberschrift, „11“ zwei Zeilen weiter, „33 abgewiesen“). Seit
+> MF-541 haengen die Matrix-Zahlen an `scripts/update_inventory.py`
+> (DERIVED_CLAIMS) und werden bei jedem Commit gegen
+> `src/core/uft_roundtrip.c` geprueft — von Hand gepflegte Zahlen driften,
+> das ist in diesem Baum dreimal belegt.
+>
+> Die frueheren LOSSLESS-Eintraege SCP↔HFE trugen keinen Beweis und sind
+> seit MF-527 herabgestuft. `ADF→HFE` stand kurzzeitig als verlustbehaftet
+> mit bezifferter Liste und ist seit MF-538 zurueckgenommen; seit MF-539
+> lehnt der Wandler ausdruecklich ab, weil dem Baum ein AmigaDOS-Encoder
+> fehlt.
 
 Konvertiert zwischen allen gängigen Formaten:
 - Sektor↔Sektor (D64↔IMG, IMD↔IMG)
@@ -223,8 +240,9 @@ tests/                 — 77 C-Tests + 1 Qt-Test
 - 138 Format-IDs, 137 Plugin-Definitionen (88 ausgeschrieben + 49 DSK-Makro;
   84 davon mit Registrar-Funktion, die niemand aufruft — MF-446; SSOT:
   `scripts/gen_format_list.py`), 44 Konvertierungspfade registriert /
-  **8 angeboten** (MF-526),
-  13 Roundtrip-Matrix-Einträge (SSOT in `src/core/uft_roundtrip.c`)
+  **15 angeboten**, davon **4 verlustfrei (je mit Messung)** (MF-541),
+  17 Roundtrip-Matrix-Einträge (SSOT in `src/core/uft_roundtrip.c`;
+  die Zahlen sind seit MF-541 abgeleitet, nicht gepflegt)
 - 6 Hardware-Controller — SCP-Direct M3.1 libusb wiring LANDED (MF-254,
   HW-bench UFT-008 pending); XUM1541 M3.2 + Applesauce M3.3 weiterhin
   [~] partial scaffold (Pure-Utility + Lifecycle real, USB-/Serial-

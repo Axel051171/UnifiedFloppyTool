@@ -137,8 +137,19 @@ def scan() -> tuple[int, list[tuple[str, str, list[tuple[str, int]]]]]:
 def load_baseline() -> set[str] | None:
     if not BASELINE.exists():
         return None
-    return {ln.strip() for ln in BASELINE.read_text(encoding="utf-8").splitlines()
-            if ln.strip() and not ln.startswith("#")}
+    # MF-540: Zeilenkommentare hinter dem Namen sind erlaubt und
+    # erwuenscht. Eine Grundlinie aus nackten Namen liest sich wie eine
+    # Freigabe — dabei heisst "eingefroren" nur "bekannt". Beim ersten
+    # Eintrag, der einen Grund bekam (UFT_FORMAT_ID_T_DEFINED, fuenf
+    # Header mit drei verschiedenen Enums darunter), roetete das Tor
+    # seine eigene Grundlinie, weil es den Kommentar als Teil des Namens
+    # las.
+    out = set()
+    for ln in BASELINE.read_text(encoding="utf-8").splitlines():
+        ln = ln.split("#", 1)[0].strip()
+        if ln:
+            out.add(ln)
+    return out
 
 
 def check(repo) -> list:

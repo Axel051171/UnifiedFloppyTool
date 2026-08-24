@@ -872,11 +872,23 @@ int uft_forensic_recover_sector(
         out_sector->confidence_map[i] = (uint8_t)(byte_conf * 255.0f);
     }
     
-    // Compute CRC
+    // Compute CRC of the correlated payload — a real measurement.
     out_sector->crc_computed = crc16_ccitt(out_sector->data, sector_size);
-    // In real implementation, crc_stored would come from sector header
-    out_sector->crc_stored = out_sector->crc_computed;  // Placeholder
-    out_sector->crc_valid = (out_sector->crc_computed == out_sector->crc_stored);
+
+    // HONESTY FIX: the stored CRC never reaches this function — its
+    // inputs are raw, undecoded bitstreams (see signature), so there is
+    // no sector header to take crc_stored from. The previous code
+    // fabricated it (crc_stored = crc_computed), which made crc_valid
+    // true BY CONSTRUCTION: every sector got DATA_OK|CRC_OK, the
+    // correction path was dead code, and uft_forensic_recover_track()
+    // counted every found sector as recovered. Reading the stored CRC
+    // out of an assumed bit position behind the payload would invent a
+    // framing this function does not know (EINFRIER-REGEL: no decoder
+    // behaviour without a named reference). Per Prinzip 1 ("keine
+    // erfundenen Daten") we therefore leave
+    //   crc_stored = 0      — sentinel: not available (memset above)
+    //   crc_valid  = false  — meaning NOT VERIFIED, not "CRC failed"
+    // until a caller can supply the CRC decoded from the sector header.
     
     // Compute quality metrics
     float total_conf = 0.0f;
@@ -900,33 +912,27 @@ int uft_forensic_recover_sector(
     
     session->total_weak_bits += weak_bit_count;
     
-    // Update flags
-    if (out_sector->crc_valid) {
-        out_sector->flags |= UFT_FSEC_FLAG_DATA_OK | UFT_FSEC_FLAG_CRC_OK;
-    }
+    // Update flags. DATA_OK/CRC_OK are deliberately NOT set: without
+    // the stored CRC there is no verification to base either claim on.
     if (weak_bit_count > 0) {
         out_sector->flags |= UFT_FSEC_FLAG_WEAK_BITS;
     }
-    
-    // Attempt correction if CRC invalid
-    if (!out_sector->crc_valid) {
-        int corrections = uft_forensic_correct_sector(out_sector, session);
-        if (corrections > 0) {
-            out_sector->flags |= UFT_FSEC_FLAG_RECOVERED;
-            session->total_sectors_recovered++;
-        }
-    }
-    
-    // Update session statistics
+
+    // No CRC-guided correction here: uft_forensic_correct_sector()
+    // flips bits until crc_computed matches crc_stored. With crc_stored
+    // not available (0-sentinel, see above) that would "correct" the
+    // payload toward a fabricated target — inventing data. The function
+    // remains available to callers that do have the decoded header CRC.
+
+    // Update session statistics. Without CRC verification no sector may
+    // be counted "perfect" (uft_forensic_types.h: perfect = CRC OK) —
+    // classify by measured confidence only. The 0.5 partial/failed
+    // split is the pre-existing threshold of this function, unchanged.
     session->total_sectors_found++;
-    if (out_sector->crc_valid && out_sector->quality.overall > 0.95f) {
-        session->total_sectors_perfect++;
-    } else if (!out_sector->crc_valid) {
-        if (out_sector->quality.overall > 0.5f) {
-            session->total_sectors_partial++;
-        } else {
-            session->total_sectors_failed++;
-        }
+    if (out_sector->quality.overall > 0.5f) {
+        session->total_sectors_partial++;
+    } else {
+        session->total_sectors_failed++;
     }
     
     // Cleanup
@@ -936,10 +942,11 @@ int uft_forensic_recover_sector(
     free(weak_bits);
     
     uft_forensic_log(session, 3,
-        "Sector C%u H%u S%u: quality=%.2f, CRC=%s, weak_bits=%u",
+        "Sector C%u H%u S%u: quality=%.2f, "
+        "CRC=UNVERIFIED (computed=0x%04X, stored n/a), weak_bits=%u",
         cylinder, head, sector_id,
         out_sector->quality.overall,
-        out_sector->crc_valid ? "OK" : "FAIL",
+        (unsigned)out_sector->crc_computed,
         weak_bit_count);
     
     return 0;
