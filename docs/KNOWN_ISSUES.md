@@ -3938,6 +3938,84 @@ zweite braucht eine Bank-Sitzung mit echtem Laufwerk.
 
 ---
 
+### BAN-1 — 67 Header, die sich als unfertig ausgaben (2026-08-24, MF-558) -> ✓ BEHOBEN
+
+`docs/PLANNED_APIS.md` und der Rueckstand fuehrten „22 Banner-Header, die
+wirklich unfertig sind“. Der Audit meldete zuletzt **78**, davon **70 mit
+veraltetem Banner**.
+
+**Nachgesehen: 67 der 78 sind vollstaendig LEER.** Achtzehn Zeilen:
+Include-Waechter, drei System-Includes, `extern "C"` — und ein Satz, der
+das Modul als unfertig bezeichnete.
+
+```c
+#ifndef UFT_FORMATS_WOZ_H
+#define UFT_FORMATS_WOZ_H
+#include <stdint.h>
+#include <stdbool.h>
+#include <stddef.h>
+#ifdef __cplusplus
+extern "C" {
+#endif
+/* <Satz, der das Modul als unfertig bezeichnet> */
+#ifdef __cplusplus
+}
+#endif
+#endif
+```
+
+Sie werden von echten Modulen eingebunden — `src/formats/apple/woz.c`
+bindet `uft/formats/woz.h` ein — und liefern dort **keine einzige
+Deklaration**.
+
+**Der Schaden war die Beschriftung.** Wer den Satz in `woz.h` fand, schloss
+daraus, die WOZ-Unterstuetzung sei unfertig. `src/formats/apple/woz.c` ist
+es nicht. 67 Dateien mit einer Aussage, die ueber ihr Modul etwas
+Unwahres behauptet.
+
+Jede traegt jetzt, was zutrifft: ein Aufhaenger ohne Deklarationen, damit
+der `#include` aufloest. **78 → 11 Banner-Header.**
+
+**Und der Fehler dabei, der zur Sache gehoert.** Mein erster Erklaertext
+zitierte den alten Satz woertlich — und der Audit fand ihn wieder. Die
+Zahl blieb bei 78, obwohl 67 Dateien richtig beschriftet waren.
+
+**Ein Werkzeug, das nach Woertern sucht, findet auch die Erklaerung, warum
+das Wort dasteht.** Der Text nennt den alten Satz jetzt, ohne ihn zu
+zitieren. Elfter Fall dieser Sitzung, in dem eine Messung etwas anderes
+mass als gemeint.
+
+**Was bleibt:** 11 Banner-Header, davon 8 mit wirklich offenen Prototypen
+(20 Stueck: 5 ohne Aufrufer, 6 mit — alle sechs aus
+`tests/test_fat_extensions.c`, das in `EXCLUDED_TESTS` steht — und 9 mit
+Namensverwandten). Das ist die Zahl, um die es in ARCH-3 immer ging; die
+67 haben sie nur aufgeblaeht.
+
+---
+
+### IMPL-1 — elf Funktionsruempfe, die niemand uebersetzt (2026-08-24, MF-558)
+
+`include/uft/uft_format_detect.h` ist eine Einzeldatei-Bibliothek: elf
+Funktionsruempfe stehen hinter `#ifdef UFT_FORMAT_DETECT_IMPLEMENTATION`.
+
+**Dieses Makro definiert niemand** — nicht in `src/`, nicht in `tests/`,
+nicht in `UnifiedFloppyTool.pro`, nicht in einer `CMakeLists.txt`. Die elf
+Funktionen sind damit unerreichbar, darunter `uft_format_is_flux()` und
+`uft_format_is_writable()`.
+
+Dazu: `uft_format_is_flux` ist in **drei** Headern deklariert, mit **zwei
+verschiedenen Parametertypen** (`uft_format_t` und `uft_detect_format_t`).
+Keine der drei hat eine erreichbare Definition, keine hat einen Aufrufer.
+
+Gemessen: **genau ein** solches IMPLEMENTATION-Makro im ganzen Baum. Kein
+Muster, ein Einzelfall — deshalb kein Tor, sondern dieser Eintrag.
+
+Nicht angefasst: das Makro in einer Uebersetzungseinheit zu definieren
+wuerde elf ungeprueste Funktionen erreichbar machen. Das ist die Bauart,
+die MF-549 entfernt hat.
+
+---
+
 ### PROT-3 — 350 Funktionen, vier Aufrufer, sechzehn beruehrt (2026-08-24, MF-557) — ⚠ UEBERWACHT
 
 `CLAUDE.md` und `README.md` fuehren „55+ Kopierschutz-Verfahren“ als

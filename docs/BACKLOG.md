@@ -72,7 +72,7 @@ Zahl korrekturbedürftig.
 |---|---|---|---|
 | **C1** | **„55+ Kopierschutz-Schemes“ steht als Kernfunktion in `CLAUDE.md` und `README`.** Gemessen: **38 Dateien, 350 Funktionen, 4 von aussen gerufen, 16 von einem Test beruehrt** — und eine der vier ist ein CRC-Helfer. **334 Funktionen sind weder verdrahtet noch geprueft** | gemessen (MF-557) | ⚠ **ueberwacht, nicht verdrahtet.** Den Katalog anzuschliessen hiesse, 334 ungeprueste Funktionen an ein forensisches Urteil zu haengen — genau die Lage, aus der die fuenf fabrizierten Parser kamen. Die Oberflaeche sagt es bereits von sich aus (`ProtectionAnalysisWidget.cpp`); seit MF-557 haelt `scripts/audit_protection_claims.py` die Zahl fest |
 | **C2** | **Schreib-Sicherheitstor ohne Aufrufer.** Ein Tor, das nie läuft, ist eine Zusage, die niemand einlöst | gemessen (P0-4) | **blockiert** — Hardware-Sitzung |
-| **C3** | 22 Banner-Header sind unfertig; der Skelett-Audit sieht sie nicht | gemessen (P1-5) | **offen** |
+| ~~**C3**~~ | „22 Banner-Header sind unfertig“ | gemessen | ✅ **MF-558** — der Audit zaehlte 78; **67 davon waren leere Aufhaenger**, die sich nur als unfertig beschrifteten. Jetzt **11**, davon 8 mit wirklich offenen Prototypen. Die Zahl, um die es ging, war nie 22 und nie 78 |
 | **C4** | 7 Header-Duplikate brauchen echte Zusammenführung | gemessen (P1-7) | **offen** |
 | ~~**C5**~~ | `uft_track_writer.h` (473 Z.) und `uft_xdf_mxdf.h` (336 Z.) zu 100 % Phantom | gemeldet, dann gemessen | ✅ **MF-549** — beide entfernt, beide Baeume bauen |
 
