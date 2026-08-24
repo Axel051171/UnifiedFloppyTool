@@ -4623,6 +4623,77 @@ unvollstaendigen Menge ist keine Aussage ueber das Ganze.
 
 ---
 
+### ID-2 — fuenf Bedeutungen fuer einen Namen, in derselben Binaerdatei (2026-08-24, MF-559) — ⚠ UEBERWACHT
+
+`scripts/shared_guard_gate.py` zaehlt 40 geteilte `#ifndef`-Waechter, davon
+37 mit abweichendem Inhalt. Es sagte aber nicht, ob der Unterschied etwas
+**bedeutet**. Zwei Enums mit denselben Namen und denselben Werten sind
+Redundanz; dieselben Namen mit anderen Werten sind eine stille
+Bedeutungsverschiebung.
+
+**Gemessen: fuenf Waechter haben echte Wert-Konflikte, drei davon sind in
+gebautem Code scharf.**
+
+| Konstante | Werte in derselben Binaerdatei |
+|---|---|
+| `UFT_FORMAT_ADF` | **3** (7 Einheiten), **6** (1 Einheit) |
+| `UFT_PLATFORM_AMIGA` | **1**, **2**, **5** |
+| `UFT_PROT_COPYLOCK` | **1**, **10**, **22**, **512**, **4096** |
+
+Fuenf Bedeutungen fuer einen Namen. `UFT_PROT_COPYLOCK` ist in einer Datei
+eine laufende Nummer, in einer anderen ein Bitflag — dieselbe Konstante,
+zwei Entwuerfe.
+
+Nicht scharf, aber kollidierend: `UFT_FMT_D64` (ID-1, alle Einheiten sehen
+4) und `UFT_SECTOR_STATUS_DEFINED` (`UFT_SECTOR_DELETED` ist 2 oder 8, aber
+nur eine Einheit benutzt ihn).
+
+── Was ich NICHT zeigen konnte, und das gehoert dazu ────────────────────
+
+**Vier Versuche, eine falsche Rechnung nachzuweisen — alle vier gescheitert.**
+
+1. `uft_format_suggest.c` vergleicht seine Tabelle (ADF=6) gegen
+   `det.format`. Sieht nach einem Fehler aus — aber der Erzeuger
+   `uft_detect_format_impl.c` sieht **ebenfalls 6**. Selbstkonsistent.
+2. Der oeffentliche Struct `uft_format_suggestion_t` traegt
+   `int format_id; /**< uft_format_t enum value */` und wird mit der
+   6-Nummerierung gefuellt. Beide GUI-Aufrufer lesen aber nur
+   `format_name`. Geladene Waffe, kein Schuss.
+3. `uft_detect_buffer_impl.c` sieht ADF=3 und schien
+   `uft_detect_format()` (6) zu rufen — mein grep traf
+   `uft_detect_format_t` als Teilzeichenkette. Es ruft
+   `uft_probe_buffer_format()`.
+4. Sein einziger Leser, `uft_sector_compare.c`, benutzt gar keine
+   Format-Konstanten.
+
+**Die Kollision ist real und gemessen. Eine daraus folgende falsche
+Rechnung ist es nicht.** Das zu sagen ist wichtiger, als einen Fehler zu
+behaupten, den ich viermal nicht finden konnte — in dieser Sitzung wurde
+schon einmal eine Zahl veroeffentlicht, ohne ihre Bezugsgroesse zu pruefen
+(MF-538).
+
+Eine Stelle bleibt bemerkenswert: `uft_detect_buffer_impl.c:49` castet
+`plugin->format` (kanonisch) nach `uft_detect_format_t` (Detect-
+Nummerierung). Das ist die einzige gefundene Stelle, an der eine
+Umnummerierung ausdruecklich steht — ungeprueft.
+
+── Was jetzt gilt ───────────────────────────────────────────────────────
+
+`scripts/audit_format_id_drift.py` (26. Kategorie) misst seit MF-559 nicht
+mehr eine Sonde, sondern **fuenf**, und friert die gemessene
+**Werteverteilung je Sonde** ein. Kommt eine Uebersetzungseinheit dazu,
+wird eine Include-Zeile umsortiert oder legt jemand die Enums zusammen,
+aendert sich die Verteilung — und das Tor sagt es.
+
+**Rotbeweis:** ein `#include "uft/uft_types.h"` vor dem Detect-Header in
+`uft_format_suggest.c` → Verteilung wird `{3: 8}` statt `{3: 7, 6: 1}`, das
+Tor meldet die Aenderung mit beiden Tupeln.
+
+Die Aufloesung — die Enums zusammenlegen — ist Arbeit am ABI und gehoert
+nicht in eine Release-Vorbereitung.
+
+---
+
 ### ID-1 — fuenf `uft_format_id_t` unter einem Waechter (2026-08-24, MF-540) — ⚠ UEBERWACHT, NICHT BEHOBEN
 
 **Der Zustand.** Fuenf Header definieren `uft_format_id_t`, und alle fuenf

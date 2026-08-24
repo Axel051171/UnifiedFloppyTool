@@ -1,132 +1,91 @@
 #!/usr/bin/env python3
-"""Sieht eine Uebersetzungseinheit `UFT_FMT_*` anders als die anderen? (MF-540)
+"""Bedeutet derselbe Name in zwei Uebersetzungseinheiten dasselbe? (MF-540/559)
 
 ── Was hier schiefstehen kann ───────────────────────────────────────────
 
-Der Baum hat FUENF Header, die `uft_format_id_t` definieren, und alle
-fuenf benutzen denselben Waechter `UFT_FORMAT_ID_T_DEFINED`:
+Der Baum hat Header, die sich einen `#ifndef`-Waechter TEILEN, aber
+verschiedenen Inhalt darunter stellen. Wer zuerst eingebunden wird,
+gewinnt; die uebrigen werden still uebersprungen. Welche Zahl eine
+Konstante in einer Uebersetzungseinheit bedeutet, entscheidet damit die
+Include-Reihenfolge — ohne Warnung, ohne Fehler.
 
-    include/uft/core/uft_format_registry.h    enum, UFT_FMT_D64 = 20
-    include/uft/core/uft_unified_types.h      enum, UFT_FMT_D64 = 4
-    include/uft/formats/uft_format_params.h   enum, UFT_FMT_D64 = 6
-    include/uft/core/uft_roundtrip.h          typedef uint32_t
-    include/uft/uft_format_validate.h         typedef uint32_t
-    (dazu src/core/unified/uft_format_registry.h, eine sechste Fassung)
+`scripts/shared_guard_gate.py` zaehlt diese Kollisionen (40, davon 37 mit
+abweichendem Inhalt). Es sagt aber nicht, ob der Unterschied etwas
+BEDEUTET. Zwei Enums mit denselben Namen und denselben Werten sind
+Redundanz; dieselben Namen mit anderen Werten sind eine stille
+Bedeutungsverschiebung.
 
-Ein geteilter Waechter heisst: **wer zuerst kommt, gewinnt, und die
-uebrigen werden still uebersprungen.** Welche Zahl `UFT_FMT_D64` in einer
-Uebersetzungseinheit bedeutet, entscheidet damit die Include-Reihenfolge —
-ohne Warnung, ohne Fehler.
+Gemessen (MF-559): von 37 Kollisionen haben **fuenf** echte Wert-Konflikte,
+und **drei davon sind in gebautem Code scharf**:
 
-Das ist keine Vermutung. `uft_roundtrip.h` sagt es selbst (Zeile 37 ff.,
-MF-265): "the UFT_FORMAT_ID_T_DEFINED guard is shared so the two
-definitions never conflict in the same TU". Der Satz beschreibt die
-Absicht richtig — er verhindert einen Uebersetzungsfehler. Was er nicht
-verhindert, ist der stille Bedeutungswechsel.
+    UFT_FORMAT_ADF        3 in sieben Einheiten, 6 in uft_format_suggest.c
+    UFT_PLATFORM_AMIGA    1 / 2 / 5 in drei Einheiten
+    UFT_PROT_COPYLOCK     1 / 10 / 22 / 512 / 4096 in fuenf Einheiten
 
-── Warum das Tor MISST statt zu verbieten ───────────────────────────────
+Fuenf Bedeutungen fuer einen Namen, alle in derselben Binaerdatei.
 
-Beim Anlegen (MF-540) wurde der Zustand gemessen, nicht angenommen:
+Der urspruengliche Fall (MF-540, `UFT_FMT_D64`) ist NICHT scharf: alle
+messbaren Einheiten sehen dieselbe Zahl. Er bleibt hier, weil die Kollision
+besteht und der naechste Include ihn scharf machen kann.
 
-    src/core/uft_unified_types.c            enum(34)   UFT_FMT_D64 = 4
-    src/protection/uft_protection_stubs.c   enum(34)   UFT_FMT_D64 = 4
-    src/formats/uft_format_extensions.c     kein uft_format_id_t sichtbar
-    src/policy/uft_write_gate.c             kein uft_format_id_t sichtbar
+── Wie gemessen wird ────────────────────────────────────────────────────
 
-(Die erste Fassung dieses Kommentars sagte "enum(299)". Das war der
-Zaehlfehler des kaputten Regex, nicht der Baum — siehe die Erklaerung bei
-TYPEDEF weiter unten. Beide Einheiten sehen `uft_unified_types.h` mit 34
-Eintraegen.)
+Nicht per Textvergleich, sondern mit dem PRAEPROZESSOR: fuer jede
+Uebersetzungseinheit, die eine Sonden-Konstante benutzt, wird ermittelt,
+welchen Wert sie dort wirklich hat. Das ist die einzige Messung, die zaehlt
+— alles andere ist eine Aussage ueber Text, nicht ueber das Programm.
 
-Der Rotbeweis, der dieses Tor traegt: eine einzige zusaetzliche
-`#include "uft/core/uft_format_registry.h"`-Zeile ganz oben in
-`src/protection/uft_protection_stubs.c` — und das Tor meldet
+── Was das Tor durchlaesst, und warum ───────────────────────────────────
 
-    UFT_FMT_D64 bedeutet in gebautem Code 2 verschiedene Zahlen:
-    src/core/uft_unified_types.c sieht UFT_FMT_D64=4,
-    src/protection/uft_protection_stubs.c sieht UFT_FMT_D64=20
+Die drei scharfen Faelle stehen mit ihrer gemessenen Werteverteilung in
+`ARMED_BASELINE`. Ein Eintrag dort heisst NICHT "harmlos", sondern
+"gemessen, und die Verteilung ist genau diese". Aendert sich die
+Verteilung — eine neue Einheit, eine umsortierte Include-Zeile — roetet das
+Tor.
 
-Also: die Kollision ist **echt**, in gebautem Code aber **nicht scharf**.
-Jede Einheit, die ueberhaupt ein Enum sieht, sieht dasselbe. Ein Verbot
-waere hier falsch — es wuerde einen Zustand roeten, der heute richtig ist.
+Sie aufzuloesen heisst, die Enums zusammenzulegen. Das ist Arbeit am ABI
+und gehoert nicht in eine Release-Vorbereitung; siehe KNOWN_ISSUES ID-1
+und ID-2.
 
-Was fehlt, ist der Waechter fuer den Tag, an dem sich das aendert: eine
-neue `#include`-Zeile, ein umsortierter Header, ein neues Modul, das
-`uft_format_registry.h` zuerst zieht. Dann bedeutet `UFT_FMT_D64` in
-einer Einheit 4 und in der naechsten 20, und niemand merkt es, weil
-nichts bricht — es wird nur das Falsche berechnet.
-
-Genau diesen Tag faengt dieses Tor.
-
-Das Tor **konsolidiert nicht**. Fuenf Enums zu einem zusammenzulegen ist
-Arbeit am ABI und gehoert nicht in eine Release-Vorbereitung; sie steht
-als offener Punkt in `docs/KNOWN_ISSUES.md`. Bis dahin gilt: die Falle
-ist bekannt, beziffert und ueberwacht.
-
-── Grenzen, die zur Sache gehoeren ──────────────────────────────────────
+── Grenzen ──────────────────────────────────────────────────────────────
 
 Gemessen wird mit dem Praeprozessor des lokalen gcc. Ist keiner
-auffindbar, gibt das Tor **nichts** zurueck statt zu raten — ein Tor, das
-ohne Messung urteilt, ist schlimmer als keines. Die CI misst mit ihrem
-eigenen Compiler und faengt es dort.
+auffindbar, gibt das Tor NICHTS zurueck statt zu raten — ein Tor, das ohne
+Messung urteilt, ist schlimmer als keines. Die CI misst mit ihrem eigenen
+Compiler.
 
-Gemessen werden nur Uebersetzungseinheiten, die `UFT_FMT_`-Konstanten
-tatsaechlich benutzen. Eine Einheit, die den Typ nur durchreicht, kann
-sich nicht verrechnen.
+Gemessen werden nur Einheiten, die die Konstante tatsaechlich benutzen.
+Eine Einheit, die den Typ nur durchreicht, kann sich nicht verrechnen.
 """
 
 from __future__ import annotations
 
-import os
 import re
 import shutil
 import subprocess
 import sys
 from pathlib import Path
 
-# `[^{}]*` und NICHT `.*?`: der Rumpf darf keine Klammer enthalten.
-#
-# Die erste Fassung dieses Tors benutzte `.*?` mit re.S. Damit begann der
-# Treffer beim ERSTEN `typedef enum {` der praeprozessierten Datei — oft
-# einem voellig fremden — und lief bis zum `} uft_format_id_t;`, verschluckte
-# also mehrere Enums am Stueck. Der Rumpf hatte dann 299 statt 34 Eintraege,
-# und `UFT_FMT_D64` wurde an einer Position gefunden, die niemandem gehoert.
-#
-# Das Tor meldete daraufhin "alle Einheiten sehen dieselbe Zahl" — und der
-# Rotbeweis, der es roeten sollte, feuerte nicht. Ein Tor, das nicht feuern
-# kann, ist kein Tor. Aufgefallen ist es nur, weil der Rotbeweis ZUERST
-# gelaufen ist.
-TYPEDEF = re.compile(
-    r"typedef\s+enum[^{]*\{([^{}]*)\}\s*uft_format_id_t\s*;", re.S)
+# (Waechter, Sonden-Konstante). Die Sonde ist ein Name, der in mindestens
+# zwei konkurrierenden Fassungen desselben Waechters vorkommt.
+PROBES = [
+    ("UFT_FORMAT_ID_T_DEFINED",       "UFT_FMT_D64"),
+    ("UFT_FORMAT_ENUM_DEFINED",       "UFT_FORMAT_ADF"),
+    ("UFT_PLATFORM_T_DEFINED",        "UFT_PLATFORM_AMIGA"),
+    ("UFT_PROTECTION_TYPE_T_DEFINED", "UFT_PROT_COPYLOCK"),
+    ("UFT_SECTOR_STATUS_DEFINED",     "UFT_SECTOR_DELETED"),
+]
 
-# Die Konstante, an der gemessen wird. D64 steht in allen drei Enums und
-# liegt in jedem an anderer Stelle — ein Unterschied faellt damit sicher
-# auf. Waere sie in nur einem definiert, koennte das Tor nichts vergleichen.
-PROBE = "UFT_FMT_D64"
+# Gemessene Verteilungen, MF-559. Sonde -> {Wert: Anzahl Einheiten}.
+# Nur Sonden, die HEUTE scharf sind, stehen hier. Aendert sich die
+# Verteilung, will man es wissen.
+ARMED_BASELINE: dict[str, dict[int, int]] = {
+    "UFT_FORMAT_ADF":     {3: 7, 6: 1},
+    "UFT_PLATFORM_AMIGA": {1: 1, 2: 1, 5: 1},
+    "UFT_PROT_COPYLOCK":  {1: 1, 10: 1, 22: 1, 512: 1, 4096: 1},
+}
 
-
-def _value_of(body: str, name: str) -> int | None:
-    """Wert eines Enumerators, explizite Zuweisungen beruecksichtigt."""
-    val = -1
-    for raw in body.split(","):
-        tok = raw.split("/*")[0].split("//")[0].strip()
-        if not tok:
-            continue
-        if "=" in tok:
-            lhs, rhs = tok.split("=", 1)
-            lhs = lhs.strip()
-            try:
-                val = int(rhs.strip(), 0)
-            except ValueError:
-                # Ausdruck statt Zahl — hier nicht aufloesbar. Weiterzaehlen
-                # waere geraten, also aufgeben statt falsch antworten.
-                return None
-        else:
-            lhs = tok
-            val += 1
-        if lhs == name:
-            return val
-    return None
+ENUM_BODY = re.compile(r"enum[^{]*\{([^{}]*)\}", re.S)
 
 
 def _find_gcc() -> str | None:
@@ -138,35 +97,62 @@ def _find_gcc() -> str | None:
     return None
 
 
-def _users(repo: Path) -> list[Path]:
-    """Uebersetzungseinheiten, die UFT_FMT_-Konstanten benutzen."""
-    pat = re.compile(r"\bUFT_FMT_[A-Z0-9_]+")
-    out: list[Path] = []
-    for sub in ("src",):
-        for p in (repo / sub).rglob("*.c"):
-            try:
-                if pat.search(p.read_text(encoding="utf-8", errors="replace")):
-                    out.append(p)
-            except OSError:
+def _value_in(text: str, name: str) -> int | None:
+    """Wert von `name` im praeprozessierten Text, ueber alle enums.
+
+    `[^{}]*` und nicht `.*?`: der Rumpf darf keine Klammer enthalten. Die
+    erste Fassung dieses Tors (MF-540) benutzte `.*?` mit re.S, verschluckte
+    damit mehrere Enums am Stueck und fand den Namen an einer Position, die
+    niemandem gehoert. Sie meldete daraufhin "alle Einheiten sehen dieselbe
+    Zahl" — und der Rotbeweis feuerte nicht. Aufgefallen ist es nur, weil
+    der Rotbeweis ZUERST gelaufen ist.
+    """
+    for m in ENUM_BODY.finditer(text):
+        v = -1
+        for raw in m.group(1).split(","):
+            tok = raw.split("/*")[0].split("//")[0].strip()
+            if not tok:
                 continue
+            if "=" in tok:
+                lhs, rhs = tok.split("=", 1)
+                lhs = lhs.strip()
+                try:
+                    v = int(rhs.strip(), 0)
+                except ValueError:
+                    continue
+            else:
+                lhs = tok
+                v += 1
+            if lhs == name:
+                return v
+    return None
+
+
+def _users(repo: Path, probe: str) -> list[Path]:
+    pat = re.compile(r"\b" + re.escape(probe) + r"\b")
+    out: list[Path] = []
+    for p in (repo / "src").rglob("*.c"):
+        try:
+            if pat.search(p.read_text(encoding="utf-8", errors="replace")):
+                out.append(p)
+        except OSError:
+            continue
     return sorted(out)
 
 
-def check(repo: Path) -> list[str]:
-    gcc = _find_gcc()
-    if not gcc:
-        # Kein Compiler -> keine Messung -> kein Urteil. Siehe Kopfkommentar.
-        return []
-
-    incs: list[str] = []
+def _incs(repo: Path) -> list[str]:
+    out: list[str] = []
     for d in ("include", "include/uft", "include/uft/core",
-              "include/uft/formats", "src", "."):
-        incs += ["-I", str(repo / d)]
+              "include/uft/formats", "include/uft/flux",
+              "include/uft/protection", "src", "."):
+        out += ["-I", str(repo / d)]
+    return out
 
-    seen: dict[str, tuple[Path, int]] = {}
-    errors: list[str] = []
 
-    for src in _users(repo):
+def measure(repo: Path, probe: str, gcc: str,
+            incs: list[str]) -> dict[int, int]:
+    seen: dict[int, int] = {}
+    for src in _users(repo, probe):
         try:
             r = subprocess.run([gcc, "-E", "-P", str(src)] + incs,
                                capture_output=True, text=True,
@@ -175,48 +161,71 @@ def check(repo: Path) -> list[str]:
             continue
         if not r.stdout:
             continue
-        m = TYPEDEF.search(r.stdout)
-        if not m:
-            continue                      # sieht kein Enum — kann nichts irren
-        val = _value_of(m.group(1), PROBE)
-        if val is None:
+        v = _value_in(r.stdout, probe)
+        if v is None:
+            continue
+        seen[v] = seen.get(v, 0) + 1
+    return seen
+
+
+def check(repo: Path) -> list[str]:
+    gcc = _find_gcc()
+    if not gcc:
+        return []          # keine Messung -> kein Urteil
+
+    incs = _incs(repo)
+    errors: list[str] = []
+
+    for guard, probe in PROBES:
+        seen = measure(repo, probe, gcc, incs)
+        base = ARMED_BASELINE.get(probe)
+
+        if base is None:
+            if len(seen) > 1:
+                parts = ", ".join(f"{v} ({n}x)"
+                                  for v, n in sorted(seen.items()))
+                errors.append(
+                    f"{probe} (Waechter {guard}) bedeutet in gebautem Code "
+                    f"{len(seen)} verschiedene Zahlen: {parts}. Die "
+                    f"Include-Reihenfolge entscheidet still, welche gilt. "
+                    f"Siehe docs/KNOWN_ISSUES.md ID-1/ID-2.")
             continue
 
-        key = str(val)
-        if key in seen:
-            continue
-        seen[key] = (src, val)
-
-    if len(seen) > 1:
-        rel = lambda p: p.relative_to(repo).as_posix()
-        parts = ", ".join(
-            f"{rel(p)} sieht {PROBE}={v}" for p, v in seen.values())
-        errors.append(
-            f"{PROBE} bedeutet in gebautem Code {len(seen)} verschiedene "
-            f"Zahlen: {parts}. Fuenf Header definieren uft_format_id_t unter "
-            f"demselben Waechter UFT_FORMAT_ID_T_DEFINED — die "
-            f"Include-Reihenfolge entscheidet still, welcher gilt. Beim "
-            f"Anlegen dieses Tors (MF-540) war der Wert ueberall 4. Wer das "
-            f"geaendert hat, hat eine Bedeutung verschoben, nicht nur eine "
-            f"Zeile. Siehe docs/KNOWN_ISSUES.md, Abschnitt ID-1.")
+        if seen != base:
+            errors.append(
+                f"{probe}: die Werteverteilung hat sich geaendert. Gemessen "
+                f"{dict(sorted(seen.items()))}, eingefroren "
+                f"{dict(sorted(base.items()))}. Entweder ist eine "
+                f"Uebersetzungseinheit dazugekommen, eine Include-Zeile "
+                f"umsortiert worden, oder jemand hat die Enums "
+                f"zusammengelegt. Alle drei will man wissen — die Zahl in "
+                f"scripts/audit_format_id_drift.py::ARMED_BASELINE gehoert "
+                f"dann nachgezogen.")
 
     return errors
 
 
 def main() -> int:
     repo = Path(sys.argv[1] if len(sys.argv) > 1 else ".").resolve()
-    if not _find_gcc():
+    gcc = _find_gcc()
+    if not gcc:
         print("kein gcc auffindbar — nicht gemessen, kein Urteil")
         return 0
+
+    incs = _incs(repo)
+    print(f"Bedeutungs-Drift je Uebersetzungseinheit (root={repo}):\n")
+    for guard, probe in PROBES:
+        seen = measure(repo, probe, gcc, incs)
+        mark = ">>> SCHARF" if len(seen) > 1 else "ok"
+        print(f"  {probe:24s} {dict(sorted(seen.items()))}  {mark}")
+
     errs = check(repo)
-    for src in _users(repo):
-        print(f"  benutzt UFT_FMT_*: {src.relative_to(repo).as_posix()}")
     if errs:
-        print("\nBEFUND:")
+        print("\nBEFUNDE:")
         for e in errs:
             print(f"  {e}")
         return 1
-    print("\nOK: alle messbaren Uebersetzungseinheiten sehen dieselbe Zahl")
+    print("\nOK: alle Verteilungen wie gemessen eingefroren")
     return 0
 
 
