@@ -187,7 +187,65 @@ uft_error_t uft_qrst_read_mem(const uint8_t *data, size_t size,
         }
         return UFT_ERR_FORMAT;
     }
-    
+
+    /* MF-543: eine Geometrie aus der Datei ist eine BEHAUPTUNG.
+     *
+     * Hier stand nur `!= 0`. Alles andere kam ungeprueft aus einem
+     * 22-Byte-Kopf, und zwei Zeilen weiter passierte das hier:
+     *
+     *     uft_disk_alloc(cylinders, heads)     heads ist uint8_t
+     *         -> track_count = cylinders * (heads & 0xFF)
+     *     for (uint16_t h = 0; h < heads; h++) heads ist uint16_t
+     *         idx = c * heads + h;             ungekuerzt
+     *         disk->track_data[idx] = track;   schreibt weit dahinter
+     *
+     * Bei `heads = 300` hat das Feld 2 x 44 = 88 Plaetze und wird bis
+     * Index 599 beschrieben. Gefunden vom Oeffnungs-Fuzzer, nachdem er um
+     * 25 Sondenkennungen erweitert wurde und QRST zum ersten Mal ueberhaupt
+     * eine Eingabe bekam: 55 GB Arbeitsspeicher, dann 0xC0000409
+     * (STATUS_STACK_BUFFER_OVERRUN). 22 Byte genuegen.
+     *
+     * Zwei Schranken, und beide sind noetig:
+     *
+     * (1) `heads > 255` kann nicht ehrlich angelegt werden, weil
+     *     `uft_disk_alloc()` den Wert als uint8_t nimmt. Eine Kuerzung
+     *     stillschweigend hinzunehmen hiesse, mit zwei verschiedenen
+     *     Zahlen zu rechnen — genau das war der Fehler.
+     *
+     * (2) Die behaupteten Nutzdaten muessen in die Datei passen. Das
+     *     faengt auch die Faelle, in denen jede Einzelzahl fuer sich
+     *     plausibel aussieht (80 x 2 x 255 x 8192) und nur ihr Produkt
+     *     nicht. Bei Kompression steht im Kopf ein kleinerer Rest, deshalb
+     *     wird nur bei `QRST_COMP_NONE` gegen die Dateigroesse geprueft;
+     *     Schranke (1) und die Einzelgrenzen gelten immer.
+     *
+     * Die Sonde prueft weiterhin nur Kennung und Mindestlaenge — sie
+     * bekommt die Dateigroesse, aber ein Sondenfehler wuerde ein
+     * legitimes Abbild unsichtbar machen. Die Ablehnung gehoert hierher,
+     * wo sie eine Begruendung mitgeben kann. */
+    if (heads > 255 || cylinders > 1024 || sectors > 1024 ||
+        sector_size > 16384) {
+        if (result) {
+            result->error = UFT_ERR_FORMAT;
+            result->error_detail =
+                "QRST geometry out of range (heads must fit uint8; see MF-543)";
+        }
+        return UFT_ERR_FORMAT;
+    }
+
+    if (header->compression == QRST_COMP_NONE) {
+        uint64_t need = (uint64_t)cylinders * heads * sectors * sector_size;
+        if (need > (uint64_t)(size - QRST_HEADER_SIZE)) {
+            if (result) {
+                result->error = UFT_ERR_FORMAT;
+                result->error_detail =
+                    "QRST header claims more data than the file holds";
+            }
+            return UFT_ERR_FORMAT;
+        }
+    }
+
+
     if (result) {
         result->cylinders = cylinders;
         result->heads = heads;

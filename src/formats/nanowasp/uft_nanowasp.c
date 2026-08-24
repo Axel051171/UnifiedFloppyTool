@@ -97,7 +97,38 @@ uft_error_t uft_nanowasp_read_mem(const uint8_t *data, size_t size,
     /* Calculate expected data size */
     size_t data_size = (size_t)cylinders * heads * sectors * sector_size;
     size_t available = size - NANOWASP_HEADER_SIZE;
-    
+
+    /* MF-543: `available` wurde berechnet und NIE BENUTZT.
+     *
+     * Die Zeile darueber rechnet aus, wie viel der Kopf behauptet; die
+     * Zeile darunter rechnet aus, wie viel wirklich da ist; verglichen
+     * wurden sie nie. Bei `sector_size = 65535` und 255 x 255 x 255
+     * Sektoren ergibt das 1,1 TB Anspruch auf eine 80-Byte-Datei — und
+     * die Schleife weiter unten ruft `malloc(sector_size)` je Sektor,
+     * bis der Speicher voll ist.
+     *
+     * Gefunden zusammen mit dem QRST-Fall (siehe dort), als der
+     * Oeffnungs-Fuzzer um 25 Sondenkennungen erweitert wurde und beide
+     * Plugins zum ersten Mal ueberhaupt eine Eingabe bekamen. Der Lauf
+     * starb bei 21 GB Arbeitsspeicher.
+     *
+     * Die Schleifen sind hier uint8-begrenzt, es gibt also keinen
+     * Ueberlauf des Feldes wie bei QRST — der Schaden ist "nur" die
+     * Erschoepfung des Speichers. Fuer ein Werkzeug, das unbeaufsichtigt
+     * ueber ein Archiv laeuft, ist das derselbe Ausfall.
+     *
+     * Eine berechnete Groesse, die niemand vergleicht, ist keine
+     * Pruefung. Sie sieht nur so aus. */
+    if (data_size > available) {
+        if (result) {
+            result->error = UFT_ERR_FORMAT;
+            result->error_detail =
+                "NanoWasp header claims more data than the file holds";
+        }
+        return UFT_ERR_FORMAT;
+    }
+
+
     if (result) {
         result->cylinders = cylinders;
         result->heads = heads;

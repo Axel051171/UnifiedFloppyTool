@@ -45,6 +45,45 @@
  * Der Zufall ist ein eigener, gesetzter xorshift — nicht `rand()`. Der
  * gleiche Lauf erzeugt die gleichen Eingaben auf jeder Plattform, sonst
  * waere ein Fund nicht nachstellbar. Ein Fund druckt seinen Seed.
+ *
+ * ── STAND MF-539: dieser Lauf terminiert derzeit NICHT ───────────────────
+ *
+ * Mit den in MF-539 ergaenzten Kennungen erreicht der Fuzzer Plugins, die
+ * vorher keine Eingabe je erreichte. Zwei davon brechen sofort — nicht der
+ * Test, sondern der Produktionspfad `uft_disk_open()`:
+ *
+ *   QRST     src/formats/qrst/uft_qrst.c:183-221
+ *            Geometrie kommt ungeprueft aus dem 22-Byte-Kopf: nur
+ *            `!= 0`, keine Obergrenze, kein Abgleich gegen die
+ *            Dateigroesse. Zwei Folgen:
+ *              (a) die Fuellschleife laeuft `cylinders * heads` mal —
+ *                  bis 65535*65535 — und alloziert je Durchlauf eine
+ *                  Spur. Gemessen: 55 GB Working Set bei einer 511-Byte-
+ *                  Eingabe, danach von Hand abgebrochen.
+ *              (b) `uft_disk_alloc()` nimmt `heads` als **uint8_t**
+ *                  (uft_disk_image_compat.h:54), die Schleife indiziert
+ *                  aber mit dem **ungekuerzten** uint16-Wert:
+ *                      size_t idx = c * heads + h;   // qrst:212
+ *                      disk->track_data[idx] = track; // qrst:221
+ *                  Bei heads > 255 schreibt das hinter das Feld.
+ *                  Nachgestellt mit 22 Byte (cyl=2, heads=300):
+ *                  Feld hat 2*44=88 Plaetze, geschrieben wird bis
+ *                  Index 599. Prozess endet mit 0xC0000409
+ *                  (STATUS_STACK_BUFFER_OVERRUN).
+ *
+ *   NanoWasp src/formats/nanowasp/uft_nanowasp.c:111-165
+ *            Gleiche Familie, andere Spielart: die Schleifen sind auf
+ *            uint8_t begrenzt, aber `sect->data = malloc(sector_size)`
+ *            nimmt `sector_size` ungeprueft aus dem Kopf (bis 65535) fuer
+ *            bis zu 255*255*255 Sektoren. Gemessen: 21 GB Working Set bei
+ *            einer 511-Byte-Eingabe, dann abgebrochen.
+ *
+ * Beide sind Bestand, nicht neu — sie waren nur nie erreichbar, weil keine
+ * Eingabe je ihre Kennung trug. Der Lauf bleibt absichtlich so stehen: die
+ * Kennungen sind an der Sonde nachgelesen und richtig, und ein Fuzzer, der
+ * einen Fund umgeht, um gruen zu werden, misst nichts. Erst wenn die
+ * Geometrie in diesen Parsern gegen die Dateigroesse geprueft wird, kann
+ * dieser Test wieder bis zur Abdeckungszahl durchlaufen.
  */
 
 #include "uft/uft_core.h"
@@ -161,9 +200,45 @@ static const struct { const char *sig; size_t len; const char *label; } SIGS[] =
     { "FDI",               3, "FDI"      },
     { "GCR-1571",          8, "G71"      },
     { "LDB\1",             4, "LDB"      },
-    { "MAME FLOPPY IMAGE", 17, "MFI"      },
+    /* MF-539: hier stand `{ "MAME FLOPPY IMAGE", 17, "MFI" }`. Diese Kennung
+     * steht in src/formats/mame/uft_mame_mfi.c — einer Datei, die zwar in
+     * UnifiedFloppyTool.pro:2552 gelistet ist, aber KEINE
+     * `uft_format_plugin_t`-Struktur enthaelt und darum in keiner Registry
+     * steht (gemessen: `grep -n "uft_format_plugin_t" src/formats/mame/
+     * uft_mame_mfi.c` liefert nichts). Das registrierte MFI-Plugin ist
+     * src/formats/mfi/uft_mfi.c:277, und dessen Sonde vergleicht
+     * MFI_MAGIC = "MAMEFLOP", 8 Byte (uft_mfi.c:37/78). Der Eintrag zeigte
+     * also auf tote Nachbarschaft: er sah aus wie Abdeckung fuer MFI und
+     * war keine. */
+    { "MAMEFLOP",          8, "MFI"      },
     { "SAD!",              4, "SAD"      },
     { "SINCLAIR",          8, "SCL"      },
+
+    /* MF-539: 18 weitere Kennungen, je an der genannten Stelle nachgelesen,
+     * nicht aus einer Formatliste abgeschrieben. Vorher stimmte fuer diese
+     * 18 Plugins keine Sonde je zu — sie waren im Lauf als "NIE erreicht"
+     * ausgewiesen, also ungeprueft. */
+    { "AT8X",              4, "ATX"      },  /* uft_atx.c:61  0x58385441 LE  */
+    { "APRO",              4, "PRO"      },  /* uft_pro_plugin.c:13 0x4F525041 LE */
+    { "RSY\0",             4, "STX"      },  /* uft_stx_plugin.c:12-15 'R','S','Y',0 */
+    { "2IMG",              4, "2IMG"     },  /* uft_2img.c:28 0x474D4932 LE */
+    { "DMS!",              4, "DMS"      },  /* uft_dms_plugin.c:22 */
+    { "CQ\x14",            3, "CQM"      },  /* uft_cqm.c:132 'C','Q',0x14 */
+    { "UDI!",              4, "UDI"      },  /* uft_udi_plugin.c:29 */
+    { "dk",                2, "VDK"      },  /* uft_vdk_plugin.c:12 0x6B64 LE16 */
+    { "T98FDDIMAGE.R0",   14, "NFD"      },  /* uft_nfd_plugin.c:90-93 */
+    { "PRI ",              4, "PRI"      },  /* uft_pri.c:29 */
+    { "\x1F\xA6\xDE\xBA\xCC\x13\x7D\x74", 8, "CAS" },  /* uft_cas.c:32 */
+    { "ACT Apricot disk image\x1A\x04", 24, "ApriDisk" },
+                                             /* uft_apridisk.h:29 ("\032\004") */
+    { "RCPM",              4, "RCPMFS"   },  /* uft_rcpmfs.h:32 */
+    { "nanowasp floppy image\r\n\x1A", 24, "NanoWasp" },
+                                             /* uft_nanowasp.h:24 ("\r\n\032") */
+    { "QRST",              4, "QRST"     },  /* uft_qrst.h:24 */
+    { "SAP\0",             4, "SAP"      },  /* uft_sap_plugin.c:69-73; Byte 3
+                                              * muss SAP_VERSION_FM (0x00)
+                                              * oder _MFM (0x01) sein */
+    { "FDS\x1A",           4, "FDS"      },  /* uft_fds_plugin.c:30 */
 };
 #define N_SIGS ((int)(sizeof(SIGS) / sizeof(SIGS[0])))
 
@@ -656,15 +731,35 @@ int main(int argc, char **argv)
      * Vergleiche gegen `file_size`/`size` in den C-Dateien unter
      * src/formats, sofern zwischen 1 KB und 20 MB. 46 Werte aus 30 Sonden;
      * 819200 verlangen allein sechs. Erzeugt mit
-     * scripts/audit_probe_sizes.py, das die Liste jederzeit neu misst. */
+     * scripts/audit_probe_sizes.py, das die Liste jederzeit neu misst.
+     *
+     * MF-539: sieben Werte kamen dazu (jetzt 53). Sie standen in der
+     * Geometrie-Tabelle von src/formats/dsk_generic/uft_dsk_generic.c bzw.
+     * als `#define` in src/formats/d13/uft_d13.c und wurden deshalb vom
+     * frueheren Lauf des Skripts nicht als `file_size`-Vergleich erkannt —
+     * dsk_gen_probe_idx() vergleicht gegen `g->expected_size` aus der
+     * Tabelle, nicht gegen eine Zahl im Quelltext. Jeder Wert unten ist an
+     * der genannten Zeile nachgelesen, nicht abgeleitet. */
     static const size_t GATE_SIZES[] = {
         2277, 6656, 89600, 91648, 92160, 102400,
-        133120, 143360, 163840, 174848, 175531, 179200,
+        116480,                    /* D13     uft_d13.c:16              */
+        133120, 143360,
+        152320,                    /* DSK_VIC uft_dsk_generic.c:76      */
+        163840, 174848, 175531,
+        177408,                    /* DSK_CRO uft_dsk_generic.c:69      */
+        179200,
         184320, 196608, 197376, 200960, 201745, 204800,
-        205312, 206114, 232960, 256256, 266240, 315392,
-        327680, 368640, 399363, 512512, 533248, 626688,
-        630784, 634880, 655360, 737280, 819200, 822400,
+        205312, 206114, 232960, 256256, 266240,
+        286720,                    /* DSK_OLI uft_dsk_generic.c:68      */
+        315392,
+        327680, 368640, 399363, 512512, 533248,
+        573440,                    /* DSK_SMC uft_dsk_generic.c:44      */
+        626688,
+        630784, 634880, 655360,
+        696320,                    /* DSK_ORC uft_dsk_generic.c:78      */
+        737280, 819200, 822400,
         871424, 901120, 1025024, 1066496, 1228800, 1253376,
+        1261568,                   /* DSK_RLD uft_dsk_generic.c:55      */
         1474560, 1638400, 1802240, 2949120,
     };
     printf("\nGroessen-Tore (%d aus den Sonden gelesen):\n",

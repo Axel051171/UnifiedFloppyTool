@@ -3938,6 +3938,112 @@ zweite braucht eine Bank-Sitzung mit echtem Laufwerk.
 
 ---
 
+### FZ-1 — 22 Byte genuegen: eine Geometrie ist eine Behauptung (2026-08-24, MF-543) -> ✓ BEHOBEN
+
+**Wie es gefunden wurde.** Der Oeffnungs-Fuzzer erreichte 103 der 137
+registrierten Plugins; 34 hatten **nie eine Eingabe gesehen**, weil ihre
+Sonde eine Kennung oder eine exakte Dateigroesse verlangt, die der Fuzzer
+nicht erzeugte. Nach dem Eintragen von 25 aus den Sonden abgelesenen
+Kennungen und 7 Groessen-Toren terminierte er nicht mehr: **55 GB
+Arbeitsspeicher bei 61 GB RAM**, dann `0xC0000409`
+(STATUS_STACK_BUFFER_OVERRUN).
+
+**QRST — Schreibzugriff hinter das Feld.**
+
+```c
+uft_disk_alloc(uint16_t ntracks, uint8_t nheads)   // heads ist uint8
+    d->track_count = ntracks * nheads;             // mit 44
+
+for (uint16_t h = 0; h < heads; h++)               // heads ist uint16
+    size_t idx = c * heads + h;                    // mit 300
+    disk->track_data[idx] = track;                 // schreibt bis 599
+```
+
+`uft_qrst.c` las `heads` als uint16 aus einem 22-Byte-Kopf und prueste nur
+`!= 0`. Der Aufruf kuerzt auf `heads & 0xFF`, die Schleife nicht. Bei
+`heads = 300` hat das Feld 2 × 44 = **88 Plaetze** und wird bis **Index
+599** beschrieben.
+
+**22 Byte genuegen.** Keine Nutzdaten, kein gueltiges Abbild — nur ein
+Kopf, dessen Zahlen niemand nachrechnet. Erreichbar ueber
+`uft_disk_open()`, also ueber den Produktionspfad.
+
+**Warum es niemand sah.** Die Anzeige log nicht. `uft_disk_open()` meldete
+brav *„2 Zylinder × 44 Koepfe“* — den **gekuerzten** Wert. Wer die
+Ausgabe las, sah nichts Auffaelliges. Der Fehler lag darin, dass zwei
+Stellen mit **zwei verschiedenen Zahlen** rechneten, und keine Anzeige
+zeigt so etwas.
+
+**NanoWasp — eine Pruefung, die nur so aussah.**
+
+```c
+size_t data_size = (size_t)cylinders * heads * sectors * sector_size;
+size_t available = size - NANOWASP_HEADER_SIZE;   // NIE BENUTZT
+```
+
+Eine Zeile rechnet den Anspruch aus, die naechste den Vorrat — verglichen
+wurden sie nie. Bei `sector_size = 65535` und 255³ Sektoren sind das
+1,1 TB Anspruch auf eine 80-Byte-Datei, und die Schleife ruft je Sektor
+`malloc()`. Der Lauf starb bei 21 GB.
+
+**Die Familie.** `uft_disk_alloc()` hat 14 Aufrufer; sechs Plugins nutzen
+`idx = c * heads + h`:
+
+| Plugin | `heads` aus der Datei | Stand |
+|---|---|---|
+| QRST | uint16, **ungeprueft** | ✅ behoben |
+| NanoWasp | uint8, aber `sector_size` ungeprueft | ✅ behoben |
+| Logical | uint16, Sonde deckelt auf 4 | ✅ Schranke jetzt auch im Leser |
+| CFI | uint16, `> 8` abgewiesen, expliziter uint8-Cast | — war schon sicher |
+| myz80 | konstant | — |
+| RCPMFS | uint8 aus Tabelle | — |
+
+Bei Logical trug bisher **die Sonde** die Speichersicherheit. Das haelt,
+solange `uft_disk_open()` der einzige Weg ist — `uft_logical_read_mem()`
+ist aber ein eigener oeffentlicher Einstieg, und ein spaeterer zweiter
+Aufrufer haette den Fehler stillschweigend zurueckgeholt.
+
+**Was jetzt geprueft wird** (`tests/test_geometry_from_file_is_bounded.c`,
+ueber `uft_disk_open()`, nicht am Plugin vorbei):
+
+```
+ok   QRST 300 Koepfe    abgelehnt (uft_disk_open lieferte NULL)
+---  QRST 2 Koepfe      geoeffnet: 2 Zylinder x 2 Koepfe x 9 Sektoren
+     Kopf behauptet 18432 Byte Nutzdaten, Datei hat 18454
+ok   QRST 2 Koepfe      Geometrie passt in die Datei
+ok   NanoWasp Kopf      abgelehnt (uft_disk_open lieferte NULL)
+```
+
+Die zweite Zeile ist die wichtige: ein Tor, das alles ablehnt, ist kein
+Tor. Geprueft wird die **Eigenschaft** — passt die behauptete Geometrie in
+die Datei? — nicht der Einzelfall.
+
+**Ertrag.** Die Fuzzer-Deckung stieg von **103 auf 128 von 137** Plugins,
+Abstuerze 0, Vertragsverletzungen 0. Nie erreicht bleiben 9: MSA,
+DIM_ATARI, DC42, D77, D88, FDI_PC98, CFI, Logical, POSIX — sie verlangen
+einen Kopf, dessen Inhalt und Dateilaenge zueinander passen, was ein
+Erzeuger aus „Kennung + beliebiger Rest“ nicht liefern kann.
+
+**Nebenbefund POSIX:** `posix_probe_plugin()`
+(`src/formats/posix/uft_posix.c:379-388`) gibt **unbedingt `false`**
+zurueck. Kein Eingabewert kann es je erreichen; die echte Erkennung ist
+pfadbasiert und wird ueber `.probe` nie gerufen. Das Plugin steht in der
+Registry und kann ueber `uft_disk_open()` nie gewinnen — gefuehrte
+Faehigkeit ohne Weg dorthin. Offen.
+
+**Nebenbefund Fuzzer-Temppfad:** `tmp_path` ist relativ
+(`"uft_fuzz_tmp.img"`). Zwei Instanzen im selben Arbeitsverzeichnis
+ueberschreiben einander die Eingabedatei — eine Falle fuer parallele CI.
+Offen.
+
+**Und der Grund, warum das ueberhaupt auffiel:** nicht eine bessere
+Analyse, sondern eine **breitere Eingabemenge**. Die 34 nie erreichten
+Plugins waren nicht als Luecke gefuehrt — der Fuzzer meldete brav „kein
+Absturz“ und pruefte dabei 103 von 137. Eine gruene Zahl ueber einer
+unvollstaendigen Menge ist keine Aussage ueber das Ganze.
+
+---
+
 ### ID-1 — fuenf `uft_format_id_t` unter einem Waechter (2026-08-24, MF-540) — ⚠ UEBERWACHT, NICHT BEHOBEN
 
 **Der Zustand.** Fuenf Header definieren `uft_format_id_t`, und alle fuenf

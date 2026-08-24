@@ -110,6 +110,42 @@ uft_error_t uft_logical_read_mem(const uint8_t *data, size_t size,
         return UFT_ERR_FORMAT;
     }
     
+    /* MF-543: dieselben Schranken wie in der Sonde, noch einmal hier.
+     *
+     * `uft_logical_probe()` (oben) deckelt `heads` auf 4, und ueber
+     * `uft_disk_open()` kommt niemand an ihr vorbei. Trotzdem steht die
+     * Pruefung jetzt auch hier, denn `uft_logical_read_mem()` ist ein
+     * eigener oeffentlicher Einstieg — und die Schranke traegt
+     * Speichersicherheit: `uft_disk_alloc()` nimmt `heads` als uint8_t,
+     * waehrend die Fuellschleife unten mit dem ungekuerzten uint16 aus
+     * dem Kopf indiziert.
+     *
+     * Genau diese Bauart hat in `uft_qrst.c` einen Schreibzugriff weit
+     * hinter das Feld erzeugt (22 Byte Eingabe, Index 599 in einem Feld
+     * mit 88 Plaetzen). Dort fehlte die Sonden-Schranke; hier gibt es sie.
+     * Auf die Sonde als einzige Verteidigung zu setzen heisst, dass ein
+     * spaeterer zweiter Aufrufer den Fehler stillschweigend zurueckholt. */
+    if (heads > 4 || cylinders > 256 || sectors > 64 || sector_size > 1024) {
+        if (result) {
+            result->error = UFT_ERR_FORMAT;
+            result->error_detail =
+                "Logical geometry out of range (see MF-543)";
+        }
+        return UFT_ERR_FORMAT;
+    }
+
+    {
+        uint64_t need = (uint64_t)cylinders * heads * sectors * sector_size;
+        if (need > (uint64_t)(size - LOGICAL_HEADER_SIZE)) {
+            if (result) {
+                result->error = UFT_ERR_FORMAT;
+                result->error_detail =
+                    "Logical header claims more data than the file holds";
+            }
+            return UFT_ERR_FORMAT;
+        }
+    }
+
     if (first_sector == 0) first_sector = 1;
     
     if (result) {
