@@ -405,6 +405,55 @@ bool uft_fundus_verify(const uft_fundus_t *f, uft_fundus_verify_t *r)
 
 /* ── Wiedererkennung (MF-506) ───────────────────────────────────────── */
 
+/* ==========================================================================
+ * Eine Manifest-Zeile lesen (MF-561)
+ * ========================================================================== */
+
+/**
+ * @brief Eine Zeile in einen Eintrag uebersetzen.
+ *
+ * Es gibt genau EINEN Leser. `uft_fundus_recall()` benutzte bis MF-561
+ * einen eigenen Block mit denselben sechs `line_str_field()`-Aufrufen; mit
+ * `uft_fundus_walk()` waere das die zweite Kopie geworden.
+ *
+ * In dieser Pruef-Sitzung ist siebenmal aufgefallen, dass eine reparierte
+ * Stelle eine unreparierte Kopie hatte (MF-526, 550, 554, 555, 559, 560).
+ * Ein zweiter Manifest-Leser waere die achte gewesen — und zwar eine, die
+ * man erst bemerkt, wenn ein neues Feld nur in einer der beiden Fassungen
+ * ankommt.
+ *
+ * @return false, wenn die Zeile keinen brauchbaren Eintrag enthaelt.
+ */
+static bool parse_entry_line(const char *line, uft_fundus_entry_t *e)
+{
+    if (!line || !e) return false;
+    memset(e, 0, sizeof(*e));
+
+    /* Eine Zeile ohne Nummer ist keine Zeile dieses Manifests. */
+    e->seq = line_uint_field(line, "seq");
+    if (e->seq == 0) return false;
+
+    e->continues_seq = line_uint_field(line, "continues");
+
+    line_str_field(line, "identifier", e->identifier, sizeof(e->identifier));
+    line_str_field(line, "description", e->description,
+                   sizeof(e->description));
+    line_str_field(line, "notes", e->notes, sizeof(e->notes));
+    line_str_field(line, "capture_protocol", e->capture_protocol,
+                   sizeof(e->capture_protocol));
+    line_str_field(line, "file", e->file, sizeof(e->file));
+
+    char st[32];
+    e->state = UFT_FUNDUS_STATE_UNSPECIFIED;
+    if (line_str_field(line, "state", st, sizeof(st))) {
+        if (strcmp(st, "complete") == 0)
+            e->state = UFT_FUNDUS_STATE_COMPLETE;
+        else if (strcmp(st, "interrupted") == 0)
+            e->state = UFT_FUNDUS_STATE_INTERRUPTED;
+    }
+    return true;
+}
+
 bool uft_fundus_recall(const uft_fundus_t *f, const char *identifier,
                        uft_fundus_recall_t *out)
 {
@@ -427,25 +476,93 @@ bool uft_fundus_recall(const uft_fundus_t *f, const char *identifier,
         /* Weiterlesen statt abbrechen: gesucht ist der JUENGSTE Eintrag,
          * und angehaengt wird am Ende. Wer die Beschreibung zwischendurch
          * praezisiert hat, will die praezisere zurueck. */
-        out->found = true;
-        out->seq           = line_uint_field(line, "seq");
-        out->continues_seq = line_uint_field(line, "continues");
-        line_str_field(line, "description", out->description,
-                       sizeof(out->description));
-        line_str_field(line, "notes", out->notes, sizeof(out->notes));
-        line_str_field(line, "capture_protocol", out->capture_protocol,
-                       sizeof(out->capture_protocol));
-        line_str_field(line, "file", out->file, sizeof(out->file));
+        uft_fundus_entry_t e;
+        if (!parse_entry_line(line, &e)) continue;
 
-        char st[32];
-        out->state = UFT_FUNDUS_STATE_UNSPECIFIED;
-        if (line_str_field(line, "state", st, sizeof(st))) {
-            if (strcmp(st, "complete") == 0)
-                out->state = UFT_FUNDUS_STATE_COMPLETE;
-            else if (strcmp(st, "interrupted") == 0)
-                out->state = UFT_FUNDUS_STATE_INTERRUPTED;
-        }
+        out->found         = true;
+        out->seq           = e.seq;
+        out->continues_seq = e.continues_seq;
+        out->state         = e.state;
+        snprintf(out->description, sizeof(out->description), "%s",
+                 e.description);
+        snprintf(out->notes, sizeof(out->notes), "%s", e.notes);
+        snprintf(out->capture_protocol, sizeof(out->capture_protocol), "%s",
+                 e.capture_protocol);
+        snprintf(out->file, sizeof(out->file), "%s", e.file);
     }
     fclose(m);
+    return true;
+}
+
+
+/* ==========================================================================
+ * Aufzaehlung (MF-561)
+ * ========================================================================== */
+
+bool uft_fundus_walk(const uft_fundus_t *f,
+                     bool (*fn)(const uft_fundus_entry_t *e, void *user),
+                     void *user)
+{
+    if (!f || !f->manifest[0] || !fn) return false;
+
+    FILE *m = fopen(f->manifest, "rb");
+    if (!m) return true;            /* leerer Fundus ist kein Fehler */
+
+    char line[FUNDUS_LINE_MAX];
+    while (fgets(line, sizeof(line), m)) {
+        uft_fundus_entry_t e;
+        if (!parse_entry_line(line, &e)) continue;
+        if (!fn(&e, user)) break;   /* der Aufrufer bestimmt, wann genug ist */
+    }
+    fclose(m);
+    return true;
+}
+
+/* Sammelt beim Durchgang, was zu einer Kennung gehoert. */
+typedef struct {
+    const char         *want;
+    uft_fundus_entry_t *out;
+    size_t              max;
+    size_t              n;
+} collect_ctx_t;
+
+static bool collect_cb(const uft_fundus_entry_t *e, void *user)
+{
+    collect_ctx_t *c = (collect_ctx_t *)user;
+
+    /* GENAU vergleichen: "DISK-1" ist nicht "DISK-10". Dieselbe Regel wie
+     * in uft_fundus_recall() — ein Vergleich nach blossem Vorkommen liesse
+     * eine Diskette die Aufnahmen einer anderen tragen. */
+    if (strcmp(e->identifier, c->want) != 0) return true;
+
+    if (c->n < c->max) c->out[c->n] = *e;
+    c->n++;
+
+    /* Weiterlaufen auch wenn das Feld voll ist: sonst stimmt die Zahl
+     * nicht, die wir am Ende zurueckgeben — und eine Zahl, die weniger
+     * meldet als da ist, ist genau die Sorte stiller Kuerzung, die dieser
+     * Baum an anderer Stelle teuer bezahlt hat (MF-550). */
+    return true;
+}
+
+bool uft_fundus_collect_for(const uft_fundus_t *f, const char *identifier,
+                            uft_fundus_entry_t *out, size_t max,
+                            size_t *out_count)
+{
+    if (!f || !identifier || !*identifier || !out_count) return false;
+    if (max && !out) return false;
+    *out_count = 0;
+
+    collect_ctx_t c;
+    c.want = identifier;
+    c.out  = out;
+    c.max  = max;
+    c.n    = 0;
+
+    if (!uft_fundus_walk(f, collect_cb, &c)) return false;
+
+    /* Der Aufrufer bekommt hoechstens `max`. Wie viele es WIRKLICH gibt,
+     * steht im Vertrag: wer das wissen muss, nimmt uft_fundus_walk(). */
+    *out_count = c.n < max ? c.n : max;
     return true;
 }

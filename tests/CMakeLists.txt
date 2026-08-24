@@ -662,6 +662,11 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/forensic/uft_fundus_provenance.c
             ${CMAKE_SOURCE_DIR}/src/forensic/uft_provenance.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_sha256.c)
+    elseif(${test_name} STREQUAL "test_fundus_walk")
+        # MF-561: Aufzaehlung — alle Aufnahmen einer Diskette
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/forensic/uft_fundus.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_sha256.c)
     elseif(${test_name} STREQUAL "test_fundus")
         # MF-503: anhaengender Aufnahme-Speicher
         target_sources(${test_name} PRIVATE

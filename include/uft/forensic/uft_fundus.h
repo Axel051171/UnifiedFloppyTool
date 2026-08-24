@@ -220,6 +220,90 @@ typedef struct {
 bool uft_fundus_recall(const uft_fundus_t *f, const char *identifier,
                        uft_fundus_recall_t *out);
 
+/* ==========================================================================
+ * Aufzaehlung (MF-561)
+ * ========================================================================== */
+
+/**
+ * @brief Ein Eintrag des Manifests, so wie er dasteht.
+ *
+ * Dieselben Felder wie @ref uft_fundus_recall_t plus die Kennung — denn
+ * beim Durchgehen weiss der Aufrufer noch nicht, zu welcher Diskette ein
+ * Eintrag gehoert.
+ *
+ * Leere Felder bleiben leer. Ein Manifest-Eintrag, der keine Notizen hat,
+ * bekommt hier keine erfundenen.
+ */
+typedef struct {
+    unsigned seq;              /**< laufende Nummer */
+    unsigned continues_seq;    /**< worauf er sich bezieht, 0 = nichts */
+    uft_fundus_state_t state;
+
+    char identifier[128];      /**< Kennung der Diskette, ggf. leer */
+    char description[192];
+    char notes[384];
+    char capture_protocol[96];
+    char file[128];            /**< Dateiname des Artefakts */
+} uft_fundus_entry_t;
+
+/**
+ * @brief Jeden Eintrag des Manifests einmal sehen.
+ *
+ * ── Warum es das gibt ────────────────────────────────────────────────────
+ *
+ * `uft_fundus_recall()` liefert **einen** Eintrag — den juengsten zu einer
+ * Kennung. Das ist richtig fuer seinen Zweck (fortsetzen, wo man
+ * aufgehoert hat), reicht aber fuer zwei Dinge nicht:
+ *
+ *   * **Multi-Capture-Overlay** braucht ALLE Aufnahmen derselben
+ *     Diskette, um sie uebereinanderzulegen.
+ *   * **Die Mining-Schleife** braucht ALLE Eintraege, um sie erneut durch
+ *     eine verbesserte Dekodierung zu schicken.
+ *
+ * `uft_fundus_verify()` laeuft zwar ueber das Manifest, gibt aber nichts
+ * heraus; es meldet nur eine Bilanz. Bis MF-561 gab es keine Aufzaehlung.
+ *
+ * ── Reihenfolge ──────────────────────────────────────────────────────────
+ *
+ * Manifest-Reihenfolge, also so, wie angehaengt wurde — aeltester Eintrag
+ * zuerst. Das ist die Reihenfolge, in der die Aufnahmen entstanden sind,
+ * und die einzige, die ohne Sortieren stimmt.
+ *
+ * @param fn    Rueckruf je Eintrag. Gibt er `false` zurueck, bricht der
+ *              Durchgang ab — der Aufrufer bestimmt, wann genug ist.
+ * @param user  wird durchgereicht
+ * @return false nur bei unbrauchbaren Argumenten oder wenn das Manifest
+ *         nicht lesbar ist. Ein LEERER Fundus ist kein Fehler: der
+ *         Rueckruf wird dann nie gerufen, und die Antwort ist `true`.
+ */
+bool uft_fundus_walk(const uft_fundus_t *f,
+                     bool (*fn)(const uft_fundus_entry_t *e, void *user),
+                     void *user);
+
+/**
+ * @brief Alle Eintraege EINER Diskette holen, aelteste zuerst.
+ *
+ * Genau das, was ein Overlay braucht: mehrere Aufnahmen derselben
+ * Diskette, in der Reihenfolge ihrer Entstehung.
+ *
+ * Die Kennung wird **genau** verglichen, nicht als Teilzeichenkette —
+ * dieselbe Regel wie in `uft_fundus_recall()`. Ein Vergleich nach blossem
+ * Vorkommen liesse eine Diskette die Aufnahmen einer anderen tragen.
+ *
+ * @param out       Feld des Aufrufers
+ * @param max       seine Groesse
+ * @param out_count wie viele geschrieben wurden. Gibt es MEHR als @p max,
+ *                  werden die ersten @p max geschrieben und `out_count`
+ *                  steht auf @p max — der Aufrufer sieht nicht, dass
+ *                  abgeschnitten wurde. Wer das wissen muss, benutzt
+ *                  @ref uft_fundus_walk.
+ * @return false nur bei unbrauchbaren Argumenten. Eine unbekannte
+ *         Diskette ist kein Fehler, sondern `*out_count == 0`.
+ */
+bool uft_fundus_collect_for(const uft_fundus_t *f, const char *identifier,
+                            uft_fundus_entry_t *out, size_t max,
+                            size_t *out_count);
+
 #ifdef __cplusplus
 }
 #endif
