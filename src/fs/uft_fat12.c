@@ -697,6 +697,17 @@ uint8_t *uft_fat_extract(const uft_fat_ctx_t *ctx, const uft_fat_entry_t *e,
 
     size_t csize = uft_fat_cluster_size(ctx);
     size_t written = 0;
+    /* MF-551: der Abbruch bleibt (etwas ist besser als nichts, wenn der
+     * Aufrufer es WEISS), aber er ist ab jetzt erkennbar.
+     *
+     * `*size` steht am Ende auf dem, was wirklich gelesen wurde. Ein
+     * Aufrufer, der es mit `entry->size` vergleicht, sieht die Luecke —
+     * `uft_fat_extract_to_file()` tut das seit MF-551 und schreibt in dem
+     * Fall gar nichts.
+     *
+     * Was hier NICHT passiert und bewusst nicht passiert: die Luecke mit
+     * Nullen auffuellen, damit die Groesse stimmt. Das waere erfundener
+     * Inhalt an einer Stelle, an der ein Lesefehler war. */
     for (size_t i = 0; i < chain.count && written < need; i++) {
         uint8_t tmp[8192];
         if (csize > sizeof(tmp)) break;
@@ -722,15 +733,54 @@ uint8_t *uft_fat_extract_path(const uft_fat_ctx_t *ctx, const char *path,
 int uft_fat_extract_to_file(const uft_fat_ctx_t *ctx, const char *path,
                              const char *dest_path) {
     if (!ctx || !path || !dest_path) return UFT_FAT_ERR_INVALID;
+
+    /* MF-551: die Sollgroesse holen, BEVOR extrahiert wird.
+     *
+     * Vorher stand hier nur `uft_fat_extract_path(...)` und am Ende
+     * `return (w == sz) ? UFT_FAT_OK : UFT_FAT_ERR_IO;`. Das verglich die
+     * geschriebenen Bytes mit der Zahl, die die Extraktion GELIEFERT hat —
+     * nicht mit der, die im Verzeichniseintrag steht.
+     *
+     * Die Extraktionsschleife in `uft_fat_extract()` bricht bei jedem
+     * Clusterfehler mit `break` ab und setzt `*size = written`. Ein
+     * abgebrochener Kettenlauf liefert also eine kuerzere Datei UND eine
+     * kuerzere Sollzahl, und der Vergleich ging auf. Schlaegt schon der
+     * erste Cluster fehl, entsteht eine Datei mit **null Byte** und
+     * `UFT_FAT_OK`.
+     *
+     * Fuer ein Sicherungswerkzeug ist das der schlimmste Ausgang: der
+     * Benutzer bekommt eine Datei mit dem richtigen Namen, die aussieht,
+     * als sei sie gerettet. Nur ihre Groesse verraet es — und die kennt er
+     * nur, wenn er sie ohnehin schon hat. */
+    uft_fat_entry_t e;
+    if (uft_fat_find_path(ctx, path, &e) != UFT_FAT_OK)
+        return UFT_FAT_ERR_NOTFOUND;
+
     size_t sz = 0;
-    uint8_t *buf = uft_fat_extract_path(ctx, path, NULL, &sz);
+    uint8_t *buf = uft_fat_extract(ctx, &e, NULL, &sz);
     if (!buf) return UFT_FAT_ERR_NOTFOUND;
+
+    /* Die Kette ist gebrochen. KEINE Datei schreiben: ein Torso mit dem
+     * richtigen Namen ist gefaehrlicher als gar nichts. Wer den Rest
+     * trotzdem will, ruft `uft_fat_extract()` direkt und sieht dort an
+     * `*size`, wie weit er gekommen ist. */
+    if (sz < (size_t)e.size) {
+        free(buf);
+        return UFT_FAT_ERR_BADCHAIN;
+    }
+
     FILE *f = fopen(dest_path, "wb");
     if (!f) { free(buf); return UFT_FAT_ERR_IO; }
     size_t w = fwrite(buf, 1, sz, f);
     fclose(f);
     free(buf);
-    return (w == sz) ? UFT_FAT_OK : UFT_FAT_ERR_IO;
+    if (w != sz) {
+        /* Halb geschriebene Datei nicht liegen lassen — dieselbe Regel
+         * wie MF-545 in der Wandler-Schicht. */
+        remove(dest_path);
+        return UFT_FAT_ERR_IO;
+    }
+    return UFT_FAT_OK;
 }
 
 /* ==========================================================================

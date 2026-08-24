@@ -627,15 +627,45 @@ int uft_amiga_extract_file(const uft_amiga_ctx_t *ctx, const char *path,
 int uft_amiga_extract_to_file(const uft_amiga_ctx_t *ctx, const char *path,
                                const char *dest_path) {
     if (!ctx || !path || !dest_path) return -1;
+
+    /* MF-551: dieselbe Sache wie in uft_fat12.c, hier fuer AmigaDOS.
+     *
+     * `uft_amiga_extract_file_alloc()` bricht die Blockkette bei einem
+     * Block ausserhalb des Abbilds mit `break` ab und setzt
+     * `*size_out = written`. Es gibt 0 zurueck. Wer danach nur `rc`
+     * prueft — und das tat diese Funktion —, schreibt einen Torso mit dem
+     * richtigen Namen und meldet Erfolg.
+     *
+     * Der Vergleich muss gegen die GEMELDETE Dateigroesse gehen, nicht
+     * gegen das, was die Extraktion geliefert hat. Sonst vergleicht man
+     * eine Zahl mit sich selbst — dieselbe Bauart wie die CRC-Tautologie
+     * aus MF-542. */
+    uft_amiga_entry_t e;
+    if (uft_amiga_find_path(ctx, path, &e) != 0) return -4;
+
     uint8_t *buf = NULL; size_t n = 0;
     int rc = uft_amiga_extract_file_alloc(ctx, path, &buf, &n);
     if (rc != 0) return rc;
+
+    /* Kette gebrochen: KEINE Datei schreiben. Ein Torso mit dem richtigen
+     * Namen ist gefaehrlicher als gar nichts — wer den Rest trotzdem will,
+     * ruft `uft_amiga_extract_file_alloc()` direkt und sieht an `*size_out`,
+     * wie weit er gekommen ist. */
+    if (n < (size_t)e.size) {
+        free(buf);
+        return -7;   /* unvollstaendige Kette */
+    }
+
     FILE *f = fopen(dest_path, "wb");
     if (!f) { free(buf); return -3; }
     size_t wrote = fwrite(buf, 1, n, f);
     fclose(f);
     free(buf);
-    return wrote == n ? 0 : -3;
+    if (wrote != n) {
+        remove(dest_path);   /* keine halbe Datei liegen lassen (MF-545) */
+        return -3;
+    }
+    return 0;
 }
 
 /* --------------------------------------------------------------------------

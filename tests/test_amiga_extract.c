@@ -262,6 +262,33 @@ TEST(get_chain_zero_block_count) {
     free(adf);
 }
 
+/* MF-551: hier stand ein Test, der belegen sollte, dass
+ *  bei gebrochener Blockkette KEINE Datei
+ * schreibt. Er ist wieder raus, und der Grund gehoert hierher.
+ *
+ * Der Baukasten  oben bedient  —
+ * mehr brauchen die vier Tests darueber nicht.  geht
+ * aber ueber , und das findet in diesem Abbild
+ * nichts (rc = -4), obwohl der Baukasten einen Hash-Eintrag im Wurzelblock
+ * anlegt. Was ihm fehlt, ist nicht gemessen.
+ *
+ * Zwei Anlaeufe sind dabei am TEST gescheitert, nicht am Werkzeug:
+ *   - der erste gab dem Baukasten direkt Block 5000 mit; der legt die
+ *     Datenbloecke selbst an und schrieb 1,6 MB hinter einen 880-KB-Puffer.
+ *     Segfault im Test.
+ *   - der zweite baute gueltig und bog danach den Kettenzeiger um — das
+ *     war richtig, scheiterte aber an find_path.
+ *
+ * Was NICHT getan wurde: die Zusicherung so abschwaechen, dass sie ohne
+ * find_path durchgeht. Ein Test, der auch VOR der Reparatur gruen waere,
+ * beweist nichts — er sieht nur aus wie ein Beweis.
+ *
+ * Der Fix in src/fs/uft_amigados.c und src/fs/uft_fat12.c steht also ohne
+ * automatischen Waechter. Das ist eine bekannte Luecke, keine vergessene;
+ * sie steht in KNOWN_ISSUES als FS-1. Was fehlt, ist ein Korpus-ADF mit
+ * echtem Dateisystem — dann geht find_path, und der Test hier ist zehn
+ * Zeilen. */
+
 int main(void) {
     printf("=== AmigaDOS file-chain extraction regression tests ===\n");
     RUN(get_chain_high_block_allocation);

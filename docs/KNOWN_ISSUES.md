@@ -3938,6 +3938,60 @@ zweite braucht eine Bank-Sitzung mit echtem Laufwerk.
 
 ---
 
+### FS-1 — ein Torso mit dem richtigen Namen (2026-08-24, MF-551) -> ✓ BEHOBEN, OHNE WAECHTER
+
+Die Dateiausgabe zweier Dateisysteme meldete Erfolg fuer abgeschnittene
+Dateien.
+
+**FAT12** (`src/fs/uft_fat12.c`):
+
+```c
+for (...) {
+    if (uft_fat_read_cluster(...) != UFT_FAT_OK) break;   // still
+    ...
+}
+*size = written;            // die GEKUERZTE Zahl
+...
+return (w == sz) ? UFT_FAT_OK : UFT_FAT_ERR_IO;   // vergleicht sie mit sich selbst
+```
+
+Die Extraktion bricht bei jedem Clusterfehler ab und liefert eine kuerzere
+Datei UND eine kuerzere Sollzahl. Der Vergleich ging deshalb immer auf.
+**Schlaegt schon der erste Cluster fehl, entsteht eine Datei mit null Byte
+und `UFT_FAT_OK`.**
+
+Dieselbe Bauart wie die CRC-Tautologie aus MF-542: eine Zahl wird mit sich
+selbst verglichen.
+
+**AmigaDOS** (`src/fs/uft_amigados.c`): identisch — `break` bei einem Block
+ausserhalb des Abbilds, `*size_out = written`, Rueckgabe 0, und
+`extract_to_file()` prueste nur `rc`.
+
+**Jetzt** wird gegen die im Verzeichniseintrag GEMELDETE Groesse verglichen,
+und bei einer Luecke wird **gar keine Datei geschrieben**. Ein Torso mit dem
+richtigen Namen ist gefaehrlicher als gar nichts: er sieht aus, als sei er
+gerettet, und nur seine Groesse verraet es — die kennt der Benutzer aber
+nur, wenn er die Datei ohnehin schon hat.
+
+Was ausdruecklich NICHT passiert: die Luecke mit Nullen auffuellen, damit
+die Groesse stimmt. Das waere erfundener Inhalt an genau der Stelle, an der
+ein Lesefehler war.
+
+**KEIN AUTOMATISCHER WAECHTER — und der Grund ist gemessen.** Der
+Test-Baukasten in `tests/test_amiga_extract.c` bedient
+`uft_amiga_get_chain()`, nicht `uft_amiga_find_path()`; letzteres findet in
+dem synthetischen Abbild nichts (rc = -4). Zwei Testanlaeufe scheiterten am
+Baukasten, nicht am Werkzeug — der erste liess den Builder 1,6 MB hinter
+einen 880-KB-Puffer schreiben (Segfault im Test).
+
+Die Zusicherung wurde NICHT abgeschwaecht, damit sie durchgeht: ein Test,
+der auch vor der Reparatur gruen waere, beweist nichts. Die Begruendung
+steht im Testbaum an der Stelle, wo der Test gestanden haette. Was fehlt,
+ist ein Korpus-ADF mit echtem Dateisystem — dann geht `find_path`, und der
+Test ist zehn Zeilen. Steht im Rueckstand unter D3 (Korpus-Beschaffung).
+
+---
+
 ### FLUX-1 — 129024 von 260096 Flusswechseln, still verworfen (2026-08-24, MF-550) -> ✓ BEHOBEN
 
 Drei Wandler bauen aus einem Bitstrom Flusswechsel und legen sie in einem
