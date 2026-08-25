@@ -304,20 +304,42 @@ Status legend:
 
 | Controller | Status | Read | Write | Flux | Notes |
 |---|:---:|:---:|:---:|:---:|---|
-| Greaseweazle | ✅ | Yes | Yes | Yes | Protocol v1.23, 72 MHz capture, byte-identical to v4.1.4-rc1 |
+| Greaseweazle | ✅ | Yes | Yes | Yes | Protocol v1.23, 72 MHz capture. Bench-verified **2026-05-15** (v4.1.4-rc1); the production path is byte-identical since — that is what the ✅ rests on, not a new bench |
 | KryoFlux | 🟢 | Yes | — | Yes | DTC subprocess (proprietary protocol); read-only by design |
 | FluxEngine | 🟢 | Yes | Yes | Yes | `fluxengine` CLI subprocess wrapper |
 | FC5025 | 🟢 | Yes | — | — | fcimage subprocess (read-only hardware) |
 | SCP-Direct | 🟡 | Yes\* | (safety-blocked) | Yes\* | M3.1 full libusb impl, 22/22 opcodes byte-exact vs samdisk; write blocked until real-HW read-verify |
-| XUM1541 / ZoomFloppy | 🟡 | Yes\* | Yes\* | — | M3.2 libusb wired; opencbm bus-timing pending |
-| Applesauce | 🟡 | Yes\* | — | Yes\* | M3.3 `?vers` handshake wired; `?disk` state machine v4.1.6 |
+| XUM1541 / ZoomFloppy | 🟡 | Yes\* | Yes\* | — | M3.2 libusb wired. Wire protocol **rewritten against the OpenCBM source** (MF-301) — see below. Emulator 56/56. Silicon-untested |
+| Applesauce | 🟡 | Yes\* | — | Yes\* | M3.3 `?vers` handshake wired; `?disk` state machine **still open** |
 | ADF-Copy | 🟠 | — | — | — | QSerialPort transport wired, Teensy-probe (MF-213) |
-| USB-Floppy | 🐧 | Linux | Linux | — | SG_IO ioctl; Win/Mac backends v4.1.6 |
+| USB-Floppy | 🐧 | Linux | Linux | — | SG_IO ioctl; Win/Mac backends **still open** |
 
 `\*` = libusb-mock-validated, no Tier-3 hardware-bench yet. GUI shows
 an orange "Preview" badge instead of the green Production badge. Any
 provider not in Tier-3 PASS reports `not_implemented` for unwired
 calls — **never a silent no-op**.
+
+**What changed here in 4.1.6 — and what did not.** No controller changed
+status, and no hardware bench happened; there is still no machine behind
+this project. One substantive fix landed:
+
+> **XUM1541: the bulk-opcode table was invented** (MF-301). An audit
+> against the OpenCBM source — `xum1541_types.h`,
+> `lib/plugin/xum1541/xum1541.c`, `archlib.c`, read verbatim — found that
+> UFT's `OPEN=8` / `CLOSE=9` **collided with the real `READ=8` /
+> `WRITE=9`**, and that IEC addressing is not a separate opcode family at
+> all but a WRITE with the ATN flag. Also corrected: the 3-byte status
+> read (the old 1-byte read would have failed with
+> `LIBUSB_ERROR_OVERFLOW` on real silicon), the header layout, the IOCTL
+> transport, and an EOI `bytes_read` out-param so a shortened transfer is
+> distinguishable from a full one — forensic length preservation. The
+> emulator was rewritten to the same verified wire format: 56/56.
+>
+> This is verification against a **named reference**, not against
+> silicon. The status stays 🟡 for exactly that reason.
+
+Also fixed: the macOS build broke on a one-sided libusb include (MF-470).
+Everything else in this layer was header hygiene.
 
 ### Copy Protection Analysis
 
