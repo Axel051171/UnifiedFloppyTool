@@ -119,9 +119,30 @@ static inline uft_error_t uft_format_add_sector_with_id(
     uft_sector_set_id_crc(&sector, true);/* default: ID-field CRC ok (no header error) */
 
     uft_error_t err = uft_track_add_sector(track, &sector);
-    if (err != UFT_OK) {
-        free(sector.data);
-    }
+
+    /* ── MF-592: der Puffer hier gehoert UNS, immer ──────────────────────
+     *
+     * `uft_track_add_sector()` KOPIERT (uft_format_plugin.c:452-456):
+     *
+     *     dst->data = malloc(sector->data_size);
+     *     memcpy(dst->data, sector->data, sector->data_size);
+     *
+     * Die Spur bekommt also ihre eigene Allokation. Der Puffer, den wir
+     * oben mit `malloc(size)` angelegt haben, bleibt unserer — und wurde
+     * bisher NUR im Fehlerfall freigegeben.
+     *
+     * Damit leckte **jeder gelesene Sektor** seinen Puffer. Gemessen an
+     * `test_atr_512`: 2944 Byte in 8 Objekten, also 3x128 + 5x512 — die
+     * ganze Spur, einmal zu viel. Auf einer 1,44-MB-Diskette mit 2880
+     * Sektoren sind das 1,44 MB je Lesevorgang; bei Mehrfachaufnahmen
+     * entsprechend mehr.
+     *
+     * Sichtbar wurde es, weil 58 von 266 Tests unter LeakSanitizer
+     * abbrachen. Der Rueckstand galt als „Testcode" (MF-531, gemessen mit
+     * `audit_track_cleanup.py` — das aber nach fehlenden AUFRAEUM-Aufrufen
+     * sucht, nicht nach doppelter Allokation). Die Tests raeumen korrekt
+     * auf; sie konnten diesen Puffer nur nie sehen. */
+    free(sector.data);
 
     return err;
 }
