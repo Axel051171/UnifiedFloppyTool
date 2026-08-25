@@ -152,9 +152,18 @@ typedef struct {
  * HELPERS
  *============================================================================*/
 
+/* MF-594: die Casts hier lauteten `(int)` — und genau das war der
+ * Fehler. `(int)buf[pos+3] << 24` ist ab 128 undefiniert. Der Wert
+ * SOLL vorzeichenbehaftet herauskommen (KryoFlux speichert hier
+ * signed little-endian), also erst vorzeichenlos zusammensetzen und
+ * dann umdeuten — das ist implementierungsdefiniert, nicht
+ * undefiniert, und auf jedem Zweierkomplement-Ziel dasselbe
+ * Bitmuster wie vorher gemeint. `test_air_cross_validate` fiel
+ * darueber (ILLEGAL unter -fsanitize=shift). */
 static inline int kf_extract_int(const uint8_t* buf, int pos) {
-    return (int)buf[pos] | ((int)buf[pos+1] << 8) |
-           ((int)buf[pos+2] << 16) | ((int)buf[pos+3] << 24);
+    uint32_t v = (uint32_t)buf[pos]         | ((uint32_t)buf[pos+1] << 8) |
+                 ((uint32_t)buf[pos+2] << 16) | ((uint32_t)buf[pos+3] << 24);
+    return (int32_t)v;
 }
 
 /*============================================================================

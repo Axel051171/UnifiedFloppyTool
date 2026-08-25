@@ -274,8 +274,10 @@ static bool validate_adf(const uint8_t* data, size_t len) {
     // Bootblock checksum (simplified check)
     uint32_t checksum = 0;
     for (int i = 0; i < 1024; i += 4) {
-        uint32_t val = (data[i] << 24) | (data[i+1] << 16) | 
-                       (data[i+2] << 8) | data[i+3];
+        /* MF-594: ohne Cast ist `data[i] << 24` ab 128 undefiniert. */
+        uint32_t val = ((uint32_t)data[i]   << 24) |
+                       ((uint32_t)data[i+1] << 16) |
+                       ((uint32_t)data[i+2] <<  8) | (uint32_t)data[i+3];
         checksum += val;
     }
     

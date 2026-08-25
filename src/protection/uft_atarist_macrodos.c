@@ -316,8 +316,11 @@ int uft_macrodos_extract_key(const uint8_t *key_sector, size_t size,
     /* Macrodos key is typically in first sector */
     /* Seed at offset 0x100, key at 0x110 */
     if (size >= 0x120) {
-        *seed = (key_sector[0x100] << 24) | (key_sector[0x101] << 16) |
-                (key_sector[0x102] << 8) | key_sector[0x103];
+        /* MF-594: ohne Cast ist die 24er-Schiebung ab 128 undefiniert. */
+        *seed = ((uint32_t)key_sector[0x100] << 24) |
+                ((uint32_t)key_sector[0x101] << 16) |
+                ((uint32_t)key_sector[0x102] <<  8) |
+                 (uint32_t)key_sector[0x103];
         
         size_t copy_size = key_size < 16 ? key_size : 16;
         memcpy(key, key_sector + 0x110, copy_size);

@@ -96,8 +96,14 @@ static uint16_t read_le16(const uint8_t *p) {
     return p[0] | (p[1] << 8);
 }
 
+/* MF-594: die Klammern trugen bis hierher keinen Cast — `p[3] << 24`
+ * befoerdert `uint8_t` zu `int`, und ab 128 passt das Ergebnis nicht mehr
+ * hinein. In C ist das undefiniert, nicht bloss haesslich; UBSan meldet es,
+ * der Uebersetzer nicht. Gefunden vom Fuzzer in uft_apridisk.c:22, sieben
+ * Geschwister derselben Bauart standen daneben. */
 static uint32_t read_le32(const uint8_t *p) {
-    return p[0] | (p[1] << 8) | (p[2] << 16) | (p[3] << 24);
+    return (uint32_t)p[0]         | ((uint32_t)p[1] << 8) |
+           ((uint32_t)p[2] << 16) | ((uint32_t)p[3] << 24);
 }
 
 static void write_le16(uint8_t *p, uint16_t v) {

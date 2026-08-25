@@ -180,9 +180,9 @@ size_t uft_fe_gen_count_unsafe(const uft_fe_gen_scp_t *s) {
     /* first rev entry */
     size_t rev = track_off + SCP_TRK_HDR;
     uint32_t track_length = (uint32_t)(s->bytes[rev + 4] | (s->bytes[rev + 5] << 8) |
-                            (s->bytes[rev + 6] << 16) | (s->bytes[rev + 7] << 24));
+                            ((uint32_t)s->bytes[rev + 6] << 16) | ((uint32_t)s->bytes[rev + 7] << 24));
     uint32_t data_off = (uint32_t)(s->bytes[rev + 8] | (s->bytes[rev + 9] << 8) |
-                        (s->bytes[rev + 10] << 16) | (s->bytes[rev + 11] << 24));
+                        ((uint32_t)s->bytes[rev + 10] << 16) | ((uint32_t)s->bytes[rev + 11] << 24));
     size_t flux_pos = track_off + data_off;
     size_t unsafe = 0;
     const double min_t = (double)UFT_FE_MIN_NS;

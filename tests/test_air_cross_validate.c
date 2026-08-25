@@ -219,7 +219,7 @@ static void test_stx_protected(void) {
     ASSERT_EQ((flags & 0x40) != 0, 1, "STX TRK_IMAGE flag set");
     ASSERT_EQ((flags & 0x80) != 0, 1, "STX TRK_SYNC flag set");
 
-    uint32_t fuzzy_count = td[4] | (td[5]<<8) | (td[6]<<16) | (td[7]<<24);
+    uint32_t fuzzy_count = td[4] | ((uint32_t)td[5]<<8) | ((uint32_t)td[6]<<16) | ((uint32_t)td[7]<<24);
     ASSERT_EQ(fuzzy_count, 512, "STX fuzzy_count=512");
 
     /* Sector descriptors */
@@ -349,16 +349,16 @@ static void test_ipf_minimal(void) {
     ASSERT_EQ(memcmp(buf + 188, "DATA", 4), 0, "IPF DATA record present");
 
     /* Validate INFO fields (big-endian) */
-    uint32_t media_type = (buf[24]<<24)|(buf[25]<<16)|(buf[26]<<8)|buf[27];
+    uint32_t media_type = ((uint32_t)buf[24]<<24)|((uint32_t)buf[25]<<16)|((uint32_t)buf[26]<<8)|buf[27];
     ASSERT_EQ(media_type, 1, "IPF mediaType=1 (floppy)");
 
-    uint32_t enc_type = (buf[28]<<24)|(buf[29]<<16)|(buf[30]<<8)|buf[31];
+    uint32_t enc_type = ((uint32_t)buf[28]<<24)|((uint32_t)buf[29]<<16)|((uint32_t)buf[30]<<8)|buf[31];
     ASSERT_EQ(enc_type, 2, "IPF encoderType=2 (SPS)");
 
-    uint32_t max_track = (buf[52]<<24)|(buf[53]<<16)|(buf[54]<<8)|buf[55];
+    uint32_t max_track = ((uint32_t)buf[52]<<24)|((uint32_t)buf[53]<<16)|((uint32_t)buf[54]<<8)|buf[55];
     ASSERT_EQ(max_track, 83, "IPF maxTrack=83");
 
-    uint32_t platform = (buf[72]<<24)|(buf[73]<<16)|(buf[74]<<8)|buf[75];
+    uint32_t platform = ((uint32_t)buf[72]<<24)|((uint32_t)buf[73]<<16)|((uint32_t)buf[74]<<8)|buf[75];
     ASSERT_EQ(platform, 2, "IPF platform=Atari_ST");
 
     /* Validate CRC of CAPS record */
@@ -650,23 +650,23 @@ static void test_endianness(void) {
 
     /* LE32 */
     uint8_t le32[] = {0x78, 0x56, 0x34, 0x12};
-    uint32_t v32 = le32[0] | (le32[1]<<8) | (le32[2]<<16) | (le32[3]<<24);
+    uint32_t v32 = le32[0] | ((uint32_t)le32[1]<<8) | ((uint32_t)le32[2]<<16) | ((uint32_t)le32[3]<<24);
     ASSERT_EQ(v32, 0x12345678, "LE32: {78,56,34,12} = 0x12345678");
 
     /* BE32 (IPF format) */
     uint8_t be32[] = {0x12, 0x34, 0x56, 0x78};
-    uint32_t vbe = (be32[0]<<24) | (be32[1]<<16) | (be32[2]<<8) | be32[3];
+    uint32_t vbe = ((uint32_t)be32[0]<<24) | ((uint32_t)be32[1]<<16) | ((uint32_t)be32[2]<<8) | be32[3];
     ASSERT_EQ(vbe, 0x12345678, "BE32: {12,34,56,78} = 0x12345678");
 
     /* Round-trip LE32 */
     uint8_t rt[4];
     put_le32(rt, 0xDEADBEEF);
-    uint32_t rt_val = rt[0] | (rt[1]<<8) | (rt[2]<<16) | (rt[3]<<24);
+    uint32_t rt_val = rt[0] | ((uint32_t)rt[1]<<8) | ((uint32_t)rt[2]<<16) | ((uint32_t)rt[3]<<24);
     ASSERT_EQ(rt_val, 0xDEADBEEF, "LE32 round-trip 0xDEADBEEF");
 
     /* Round-trip BE32 */
     put_be32(rt, 0xCAFEBABE);
-    uint32_t rt_be = (rt[0]<<24) | (rt[1]<<16) | (rt[2]<<8) | rt[3];
+    uint32_t rt_be = ((uint32_t)rt[0]<<24) | ((uint32_t)rt[1]<<16) | ((uint32_t)rt[2]<<8) | rt[3];
     ASSERT_EQ(rt_be, 0xCAFEBABE, "BE32 round-trip 0xCAFEBABE");
 }
 

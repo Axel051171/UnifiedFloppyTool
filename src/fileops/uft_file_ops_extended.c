@@ -447,7 +447,9 @@ int fat12_list_files(const uint8_t *image, size_t size, uft_directory_t *dir)
         }
         
         /* Size */
-        f->size = entry[28] | (entry[29] << 8) | (entry[30] << 16) | (entry[31] << 24);
+        /* MF-594: ohne Cast ist `entry[31] << 24` ab 128 undefiniert. */
+        f->size = (uint32_t)entry[28]         | ((uint32_t)entry[29] << 8) |
+                  ((uint32_t)entry[30] << 16) | ((uint32_t)entry[31] << 24);
         f->blocks = (f->size + sects_per_clust * bytes_per_sect - 1) / 
                     (sects_per_clust * bytes_per_sect);
         

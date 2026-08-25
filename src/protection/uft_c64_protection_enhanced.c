@@ -342,8 +342,11 @@ int uft_rapidlok_extract_key(const uint8_t *key_sector, size_t size,
     
     /* RapidLok key is typically in first 256 bytes */
     /* Seed is at offset 0x10 */
-    *seed = (key_sector[0x10] << 24) | (key_sector[0x11] << 16) |
-            (key_sector[0x12] << 8) | key_sector[0x13];
+    /* MF-594: ohne Cast ist die 24er-Schiebung ab 128 undefiniert. */
+    *seed = ((uint32_t)key_sector[0x10] << 24) |
+            ((uint32_t)key_sector[0x11] << 16) |
+            ((uint32_t)key_sector[0x12] <<  8) |
+             (uint32_t)key_sector[0x13];
     
     /* Key table starts at offset 0x20 */
     memcpy(key, key_sector + 0x20, key_size > 224 ? 224 : key_size);
