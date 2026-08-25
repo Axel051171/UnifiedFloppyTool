@@ -1,4 +1,16 @@
-# Ein Rückstand, eine Ordnung
+# Rückstand — ARCHIV
+
+> **Diese Liste ist nicht mehr die führende.** Seit MF-588 ist
+> [`docs/OPEN_ITEMS.md`](OPEN_ITEMS.md) die **einzige** Liste; neue
+> Befunde kommen dorthin, nirgendwo sonst.
+>
+> Was hier steht, bleibt als **Archiv** erhalten: die 29 abgetragenen
+> Einträge mit ihrer jeweiligen Messung. Sie sind der Beleg dafür, was
+> in der Prüfsitzung MF-534…588 gefunden und wie es gemessen wurde —
+> und mehrere davon nennen Zahlen, die sonst nirgends stehen.
+>
+> Die 14 **offenen** Einträge sind nach `OPEN_ITEMS.md` übernommen.
+
 
 **Stand 2026-08-24.** Zusammengeführt aus `OPEN_ITEMS.md`, `KNOWN_ISSUES.md`,
 `MASTER_PLAN.md`, `STUB_ELIMINATION_PLAN.md`, `VERIFICATION_PLAN.md` und den

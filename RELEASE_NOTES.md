@@ -22,6 +22,34 @@ Kurzfassung dessen, was gefunden wurde:
 | Forensik-Bericht | `Filesystem: ✓ Valid` ohne ein Byte zu lesen | „— not checked" mit Begründung |
 | Lizenz | `SPDX: MIT` auf einer GPLv2+-Portierung, in einem GPLv2-Projekt | `GPL-2.0-or-later` |
 
+## Die vier Kennzahlen
+
+Ziel dieses Releases: **kein Satz ohne Messung.** Diese vier Zahlen sagen,
+wie weit das Werkzeug geprüft ist — jede mit dem Weg, sie selbst
+nachzurechnen. Wer sie nachmisst und etwas anderes bekommt, hat einen
+Fehler gefunden, und der gehört gemeldet.
+
+| Kennzahl | Messwert | Quelle |
+|---|---|---|
+| **Ungeprüfte Formate** | **57 von 88** auf T3. Belegt: T1=2, T1b=12, T2=17 | `docs/VERIFICATION_TIERS.md`; Kurzfassung im `README.md` |
+| **Angebotene Wandlungspfade** | **12 von 44**, davon **4 verlustfrei je mit Bit-Identitäts-Messung**, 8 nur mit Zustimmung. 30 weist das Preflight-Tor als UNGEPRÜFT ab, 2 als unmöglich | abgeleitet aus `src/core/uft_roundtrip.c` durch `scripts/update_inventory.py` (DERIVED_CLAIMS) — bei jedem Commit gegen die Quelle geprüft |
+| **Leckende Tests** | **58 von 266** unter LeakSanitizer. Über zwei CI-Läufe stabil: 58 von 258 (MF-564), 58 von 266 (MF-584) — derselbe absolute Wert bei acht Tests mehr | CI-Auftrag „Sanitizer Checks", Schritt *Full suite under ASan (reporting only, incl. leaks)*. Die **scharfen** Tore (9 Tests) sind 9/9 |
+| **Bench-Alter je Controller** | **1 von 9** hat je einen Tier-3-Bench: Greaseweazle, **2026-05-15**. Die übrigen acht: **nie** | `docs/CAPABILITIES.md`, Abschnitt „Bench-Alter je Controller" |
+
+**Wie diese Zahlen ehrlich bleiben.** Die zweite ist abgeleitet, nicht
+gepflegt — von Hand geführte Zahlen driften, und das ist in diesem Baum
+dreimal belegt (MF-526, MF-541, MF-567). Die dritte kommt aus dem
+CI-Protokoll, nicht aus einer Notiz. Die erste und vierte stehen in einem
+Dokument, das eine Zeile pro Format bzw. Controller führt.
+
+**Zum Testlauf:** auf einem Entwicklungsrechner mit vollständigem Korpus
+laufen **266/266** durch. Auf einem **frischen Klon** überspringen sechs
+Testdateien, weil `tests/corpus/` gitignored ist (10 Dateien, nicht
+verteilbar geklärt). `tests/corpus_free/` liegt im Repo. Die Liste steht
+in `docs/OPEN_ITEMS.md` unter „Korpus-gebundene Tests".
+
+---
+
 ## Was dieses Release NICHT kann
 
 Diese Liste gehört zum Release, nicht in eine Fußnote:

@@ -200,3 +200,75 @@ Er kann heute **nicht** belegen:
 **Die ehrliche v4.1.6 sagt beides.** Ein Release, das nur die erste Liste
 nennt, ist genau der Fehler, gegen den die Einfrier-Regel (MF-498)
 geschrieben wurde — nur eine Ebene höher.
+
+
+---
+
+## Übernommen aus BACKLOG.md — Risiko-Ordnung (MF-588)
+
+**`docs/OPEN_ITEMS.md` ist ab hier die EINZIGE Liste.** `BACKLOG.md`
+verweist nur noch hierher; neue Befunde kommen hierhin, nirgendwo sonst.
+
+Diese Einträge sind nicht nach Subsystem oder Aufwand sortiert, sondern
+nach der Frage: **was passiert, wenn es falsch ist und niemand merkt es?**
+
+| Stufe | Kriterium |
+|---|---|
+| **A** | Das Werkzeug sagt etwas Falsches über gesicherte Daten, und der Benutzer kann es nicht sehen |
+| **B** | Das Werkzeug beschädigt oder verliert Daten, sichtbar |
+| **C** | Das Werkzeug behauptet eine Fähigkeit, die es nicht hat |
+| **D** | Das Werkzeug ist unvollständig, sagt es aber |
+
+Ein Absturz ist Stufe **B**, nicht A — und das ist Absicht: ein Absturz
+ist ein ehrlicher Fehler. Eine Diskette, die als „vollständig gesichert"
+gemeldet wird und es nicht ist, wird nie bemerkt.
+
+**Stand: 14 offen, 29 abgetragen** (die abgetragenen stehen mit ihrer
+Messung in `BACKLOG.md`, das als Archiv erhalten bleibt).
+
+| # | Sache | Herkunft | Stand |
+|---|---|---|---|
+| **A1** | **57 von 88 tier-geführten Formaten stehen auf T3 — ungeprüft.** Kein Test, oder ein synthetischer Test ohne Abgleich gegen eine autoritative Quelle. Genau in dieser Lage waren die fünf fabrizierten Parser grün. Belegt: T1=2, T1b=12, T2=17 | gemessen | **offen**, Moratorium MF-363/498 |
+| **A2** | **29 von 44 Wandlungspfaden ungeprüft.** Das Preflight-Tor weist sie ab — richtig. Aber die Doku nennt weiter „44 Pfade" als Fähigkeit | gemessen | **offen**; Zahlen seit MF-541 abgeleitet |
+| **A3** | Header-Prototypen ohne Definition | gemeldet, dann gemessen | ⚠ **294 → 237 (MF-549)**: die 2 gefaehrlichen Faelle (von `static inline` im selben Header gerufen) sind weg, dazu zwei Header mit 809 Zeilen und 0 Implementierung. **237 bleiben** — davon 40 in zwei Tests, die in EXCLUDED_TESTS stehen |
+| **C1** | **„55+ Kopierschutz-Schemes“ steht als Kernfunktion in `CLAUDE.md` und `README`.** Gemessen: **38 Dateien, 350 Funktionen, 4 von aussen gerufen, 16 von einem Test beruehrt** — und eine der vier ist ein CRC-Helfer. **334 Funktionen sind weder verdrahtet noch geprueft** | gemessen (MF-557) | ⚠ **ueberwacht, nicht verdrahtet.** Den Katalog anzuschliessen hiesse, 334 ungeprueste Funktionen an ein forensisches Urteil zu haengen — genau die Lage, aus der die fuenf fabrizierten Parser kamen. Die Oberflaeche sagt es bereits von sich aus (`ProtectionAnalysisWidget.cpp`); seit MF-557 haelt `scripts/audit_protection_claims.py` die Zahl fest |
+| **C12** | **10 von 22 Wandler-Funktionen haben null Tests** (`imd→img`, `img→imd`, `kryoflux→{adf,d64,hfe,scp}`, `nbz→{d64,g64}`, `td0→{imd,img}`) | gemessen (MF-567) | ⚠ **nicht angeboten** — keins der zehn hat einen Matrix-Eintrag, das Preflight-Tor weist alle ab. Das ist die Konstruktion aus MF-263, und sie trägt. Ein Test wird erst nötig, wenn eines davon angeboten werden soll |
+| **C14** | **15 216 Zeilen Oberfläche.** Bei Beginn der Prüfsitzung: 2 Qt-Tests, beide auf demselben Reiter (Hardware). Wandel-, Explorer-, Status-, Workflow-, XCopy-Reiter: null Tests | gemessen (MF-569) | ⚠ **offen.** Das ist der Grund, warum MF-568/569 in einer einzigen Prüfrunde vier Klasse-A-Befunde ergaben. Vor einem Release muss diese Schicht so weit durchgemessen sein, dass zwei Runden hintereinander nichts Neues finden. **MF-574: der erste Reiter jenseits der Hardware hat jetzt einen Test** (`test_tools_tab_convert`, ToolsTab/Konvertieren). **MF-574…577: alle fünf Reiter jenseits der Hardware haben jetzt einen Test.** Was bleibt, ist Menschenarbeit: Aussehen, Bedienfluss, und alles hinter einem modalen Dialog |
+| **D10** | **Fünf weitere `write()` ohne Prüfung** (Presets, Log, Text-Ausgabe, zwei Serial-Kommandos) | gemessen (MF-571) | ⚠ **offen, geringe Tragweite.** Keiner davon schreibt Abbild-Daten oder behauptet einen forensischen Befund. Der Vollständigkeit halber notiert, damit die Zahl nicht als „alle erledigt“ missverstanden wird |
+| **C10** | **Zwei Zählweisen für dieselbe SCP-Datei.** `scp_writer_add_track()` nimmt den Zylinder und rechnet `*2 + side`; `uft_scp_get_track_flux()` nimmt den fertigen SCP-Index | gemessen (MF-565) | ⚠ **offen.** Kostete beim Bau des Rotbeweises einen halben Durchgang: mit dem Halbspur-Index landeten die Spuren doppelt so weit auseinander, und nur Spur 1 traf — **21 von 683**. Dazu prüft der Schreiber `track_num < 84`, rechnet dann aber bis `167`. Keine Datenverfälschung gemessen, aber eine Falle für jeden nächsten Aufrufer |
+| **D1** | Tier-3-Hardware-Bench | **kein Gerät** (MF-310) — an die Gemeinschaft delegiert |
+| **D3** | Korpus-Beschaffung (`cpmtools`, SAMdisk `tc.cpp`, `sector-cpc`) | **Eigentümer** |
+| **D4** | GUI-Bedien-Nachweis | ⚠ **teilweise auflösbar, Einordnung war zu pessimistisch (MF-574).** „Nur der Eigentümer kann klicken“ stimmt nicht: der Baum hat kopflose Qt-Tests (`QT_QPA_PLATFORM=offscreen`), die in ctest laufen. Dieselbe Fehleinordnung wie bei C2. **`test_tools_tab_convert.cpp` treibt seit MF-574 den Konvertieren-Knopf wirklich an** — drei Zusicherungen, jede einzeln rotbewiesen. **MF-585: die Leitung ist bewacht** — MF-496 und MF-501 fassen keine GUI-Datei an, sie melden über `uftc_add_warning()`; bis MF-568 hat diese Ausgabe **nie einen Benutzer erreicht** (der Knopf war eine Dateikopie). `converterWarningsReachTheOutputPane` hält jetzt fest, dass Wandler-Meldungen im Ausgabefeld ankommen — rotbewiesen durch Kappen der Leitung. **Was ein Mensch noch leisten muss**, auf fünf Punkte eingedampft in [`docs/CLICK_SESSION_v4.1.6.md`](CLICK_SESSION_v4.1.6.md): Lesbarkeit der Meldung, ob der Feineinsteller-Vorschlag auf einen erreichbaren Regler zeigt, Verständlichkeit der Schadenslage, der modale Zustimmungs-Dialog (kopflos nicht prüfbar), und ob die zurückgenommenen Anzeigen wie eine ehrliche Auskunft klingen statt wie ein Fehler |
+| **D5** | 12 Wandlungspfade brauchen Korpusdateien, 10 einen Wandler, der nicht existiert | teils Beschaffung, teils Neubau |
+| **D6** | ATR Enhanced Density: gemeldete Geometrie falsch, **kein Datenverlust** | braucht benannte Referenz (MF-498a) |
+| **D7** | Teilaufnahme-Karte nach ddrescue-Vorbild | offen |
+
+---
+
+## Korpus-gebundene Tests — Beschaffungsliste (MF-588)
+
+**Gemessen auf diesem Rechner: 266/266, keine Skips.** Auf einem frischen
+Klon ist das anders, und der Unterschied gehört in den Release-Text.
+
+`tests/corpus/` ist **gitignored** (`.gitignore:105`) — 10 Dateien liegen
+hier lokal, keine davon im Repo. Sechs Testdateien hängen daran:
+
+| Test | braucht |
+|---|---|
+| `test_corpus_scp.c` | `gw_amigados.scp` |
+| `test_corpus_fdi.c` | `zxart_spectrofon01.fdi` |
+| `test_corpus_protection_copylock.c` | dec0de-Referenzen (`*.BIN`) |
+| `test_c64_protection_real_corpus.c` | `c64pp_*.g64` |
+| `test_convert_scp_adf.c` | `gw_amigados.scp` |
+| `test_scp_legacy_adapter.c` | `gw_amigados.scp` |
+
+`tests/corpus_free/` (12 Dateien) **liegt im Repo** — die darauf gestützten
+Tests laufen überall.
+
+**Das ist keine Lücke im Werkzeug, sondern eine in der Verteilung.** Ein
+Release-Text, der „266/266" sagt, ohne diesen Unterschied zu nennen,
+behauptet für den Leser etwas, das bei ihm nicht gilt. Deshalb steht die
+Zahl mit ihrer Bedingung in den Release Notes.
+
+**Zu beschaffen** (Eigentümer): Lizenz-/Verteilungsklärung für die 10
+Dateien, oder Ersatz aus frei verteilbaren Quellen.

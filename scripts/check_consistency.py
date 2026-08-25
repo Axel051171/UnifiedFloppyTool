@@ -770,6 +770,13 @@ def main() -> int:
         import audit_verdict_cannot_fail as _vc
         all_errors.append(("Urteil kann nicht scheitern", _vc.check(repo)))
 
+        # 36. Kategorie (MF-587): ein TODO ohne Verweis ist ein Bug — die
+        # Regel steht seit Monaten in .claude/CLAUDE.md, gezaehlt hat sie
+        # niemand. Gemessen: 35 Marken, 33 ohne jeden Verweis. Die
+        # Grundlinie darf sinken, nicht steigen.
+        import audit_todo_without_plan as _tp
+        all_errors.append(("TODO ohne Verweis", _tp.check(repo)))
+
     total = sum(len(e) for _, e in all_errors)
     print(f"Consistency check ({len(all_errors)} categories, root={repo}):")
     for label, errs in all_errors:

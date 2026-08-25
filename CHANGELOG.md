@@ -73,11 +73,13 @@ und kein Rückgabewert mehr etwas behauptet, das niemand nachgesehen hat.
 
 ### Fortschreibung der „deferred to v4.1.6"-Liste aus 4.1.5
 
-Jeder Punkt einzeln nachgemessen, nicht fortgeschrieben:
+**12 von 12**, jeder einzeln nachgemessen statt fortgeschrieben. (Der erste Anlauf in MF-579 führte nur 10 — die beiden hardwaregebundenen Bench-Punkte fehlten. Eine Liste, die sich selbst nicht zählt, ist die Sorte Fehler, gegen die dieses Release geschrieben ist.)
 
 | Punkt | Stand |
 |---|---|
-| M3.2 XUM1541 real-HW Tier-3 | **bleibt offen** — braucht ein Gerät (kein Hardware-Zugang, MF-310) |
+| HIL.GW formal bench session | **bleibt offen** — braucht ein Gerät. Der Greaseweazle-Produktionspfad ist seit dem Bench vom 2026-05-15 (v4.1.4-rc1) byte-identisch; das ✅ im README ruht darauf, nicht auf einem neuen Bench |
+| UFT-008 SCP-Direct Tier-3 verify | **bleibt offen** — braucht echte SCP-Hardware. Schreiben bleibt bis dahin gesperrt |
+| M3.2 XUM1541 real-HW Tier-3 | **bleibt offen** — braucht ein Gerät (kein Hardware-Zugang, MF-310). Das **Drahtprotokoll** ist seit MF-301 gegen die OpenCBM-Quelle geprüft (die alte Opcode-Tabelle war erfunden und kollidierte mit dem echten READ/WRITE) — das ist eine benannte Referenz, kein Silizium |
 | M3.3 Applesauce `?disk` | **bleibt offen** — die Quelle sagt es selbst: „serial-port enumeration not wired" |
 | UFI Windows + macOS | **bleibt offen** — nur `ufi_linux.c` existiert |
 | ARCH-9 XUM1541 macOS `.dylib` | **Formulierung fraglich** — im Baum kein Treffer auf `dylib`; entweder erledigt oder nie begonnen. Nicht als erledigt geführt, solange das nicht geklärt ist |

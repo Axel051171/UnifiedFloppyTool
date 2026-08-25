@@ -47,12 +47,39 @@ Dokument anpassen, nicht die Behauptung wegerklären.
 | FluxEngine    | ✅   | ✅    | -         | SIMULATED    | CLI subprocess  | read+write (CLI-wrapper) |
 | FC5025        | ✅   | -     | -         | SIMULATED    | fcimage CLI     | read-only (fcimage-wrapper) |
 | SCP-Direct    | 🟡   | 🟡    | -         | mock-only    | libusb-direct   | libusb wired, 22/22 opcodes byte-exact vs samdisk |
-| XUM1541       | 🟡   | 🟡    | -         | mock-only    | libusb-direct   | libusb wired, opencbm bus-timing pending |
-| Applesauce    | 🟡   | ⬜    | -         | byte-compile | USB-CDC serial  | `?vers` handshake wired; `?disk` read-state-machine v4.1.6 |
+| XUM1541       | 🟡   | 🟡    | -         | mock-only    | libusb-direct   | libusb wired; Drahtprotokoll gegen die **OpenCBM-Quelle** geprüft (MF-301) — die alte Opcode-Tabelle war erfunden |
+| Applesauce    | 🟡   | ⬜    | -         | byte-compile | USB-CDC serial  | `?vers` handshake wired; `?disk` read-state-machine **weiter offen** |
 | ADF-Copy      | 🟡   | ⬜    | -         | SIMULATED    | USB-CDC serial  | QSerialPort transport wired, Teensy-probe MF-213 |
-| USB-Floppy    | Linux| Linux | -         | -            | SG_IO ioctl     | Linux-only via SG_IO; Win/Mac (DeviceIoControl/IOKit) v4.1.6 |
+| USB-Floppy    | Linux| Linux | -         | -            | SG_IO ioctl     | Linux-only via SG_IO; Win/Mac (DeviceIoControl/IOKit) **weiter offen** |
 
-**TL;DR Hardware-Status v4.1.5:**
+### Bench-Alter je Controller (MF-589)
+
+Das Ziel dieses Releases verlangt, dass jede Aussage eine Quelle hat.
+Für Hardware heißt das: **wann** wurde zuletzt an echtem Gerät geprüft?
+
+| Controller | Letzter Tier-3-Bench | Quelle |
+|---|---|---|
+| Greaseweazle | **2026-05-15** (v4.1.4-rc1) | `RELEASE_NOTES.md` v4.1.5, Abschnitt „Hardware verification status"; der Produktionspfad ist seither byte-identisch |
+| KryoFlux | **nie** | Subprocess-Wrapper um DTC; die Hardware-Verifikation liegt beim Fremdwerkzeug |
+| FluxEngine | **nie** | dito, `fluxengine` CLI |
+| FC5025 | **nie** | dito, `fcimage` CLI |
+| SCP-Direct | **nie** | 22/22 Opcodes byte-exakt gegen samdisk — eine benannte Referenz, kein Gerät (UFT-008 offen) |
+| XUM1541 | **nie** | Protokoll gegen OpenCBM-Quelle geprüft (MF-301), Emulator 56/56 — kein Gerät |
+| Applesauce | **nie** | `?vers`-Handshake verdrahtet, byte-kompiliert — kein Gerät |
+| ADF-Copy | **nie** | Transport verdrahtet, Teensy-Sonde — kein Gerät |
+| USB-Floppy | **nie** | SG_IO nur unter Linux; UFI-Emulator treibt den Produktions-HAL |
+
+**Ein einziger Bench, und der ist aus v4.1.4-rc1.** Das ✅ bei
+Greaseweazle ruht darauf, dass sich der Code seither nicht geändert hat —
+nicht auf einer neuen Messung. Alles andere ist gegen **benannte
+Referenzen** geprüft (samdisk, OpenCBM, Emulatoren), und das ist etwas
+anderes als Silizium.
+
+Es gibt kein Gerät hinter diesem Projekt (MF-310). Jeder Tier-3-Bench
+muss von einem fremden Schreibtisch kommen — siehe den Aufruf im
+`README.md`.
+
+**TL;DR Hardware-Status v4.1.6 (unverändert gegenüber v4.1.5):**
 - **1/9 production:** Greaseweazle (Tier-3 PASS).
 - **3/9 lesen real:** KryoFlux/FluxEngine/FC5025 über Subprocess-Wrapper.
 - **3/9 wired aber mock-only:** SCP-Direct/XUM1541/Applesauce (libusb-mock-validiert; Tier-3 braucht echte HW + Bench-Session).
