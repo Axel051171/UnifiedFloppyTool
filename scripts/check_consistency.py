@@ -759,6 +759,17 @@ def main() -> int:
         import audit_display_admits_placeholder as _dp
         all_errors.append(("Anzeige gibt Platzhalter zu", _dp.check(repo)))
 
+        # 35. Kategorie (MF-570): ein Unversehrtheits-Urteil, das nicht
+        # scheitern kann. Der forensische Bericht bescheinigte
+        # "Directory: Valid", "FAT Structure: Valid — File allocation
+        # table intact" und "Filesystem: Valid — No structural errors
+        # detected", ohne ein Byte dafuer zu lesen; die FAT-Zeile
+        # urteilte allein nach dem FORMATNAMEN. Diese Zeilen gehen in
+        # den PDF/HTML-Export. Die Grundlinie ist LEER: nach MF-570 gibt
+        # es keine solche Behauptung mehr, also feuert die naechste.
+        import audit_verdict_cannot_fail as _vc
+        all_errors.append(("Urteil kann nicht scheitern", _vc.check(repo)))
+
     total = sum(len(e) for _, e in all_errors)
     print(f"Consistency check ({len(all_errors)} categories, root={repo}):")
     for label, errs in all_errors:

@@ -364,8 +364,11 @@ void ForensicTab::analyzeImage(const QString& imagePath, const DiskImageInfo& in
     ui->textDetails->appendPlainText(tr("═══════════════════════════════════════"));
     ui->textDetails->appendPlainText("");
     
-    addResultRow(tr("File Size"), tr("✓ OK"), 
-                 tr("%1 bytes").arg(m_imageData.size()));
+    /* MF-570: stand als "✓ OK". Eine Dateigroesse ist eine Messung, kein
+     * Befund — es gibt keine Groesse, die "nicht OK" waere, also sagte das
+     * Haekchen nichts und sah nach Pruefung aus. */
+    addResultRow(tr("File Size"), tr("%1 bytes").arg(m_imageData.size()),
+                 tr("measured, not judged"));
     addResultRow(tr("Format Detection"), tr("✓ %1").arg(info.formatName),
                  tr("%1 tracks × %2 sectors").arg(info.tracks).arg(info.sectorsPerTrack));
     
@@ -450,30 +453,68 @@ void ForensicTab::analyzeStructure(const QString& path, const DiskImageInfo& inf
                      hasBootSig ? tr("0x55AA at offset 510") : tr("No standard boot signature"));
     }
     
-    // Directory validation
+    /* -- MF-570: hier standen drei Bescheinigungen ohne Pruefung --------
+     *
+     * Woertlich:
+     *
+     *     if (checkValidateDirectory->isChecked())
+     *         addResultRow("Directory", "✓ Valid", ...);
+     *     if (formatName.contains("FAT") || ... )
+     *         addResultRow("FAT Structure", "✓ Valid",
+     *                      "File allocation table intact");
+     *     if (checkValidateFilesystem->isChecked())
+     *         addResultRow("Filesystem", "✓ Valid",
+     *                      "No structural errors detected");
+     *
+     * Kein einziges Byte wurde dafuer gelesen. Ein Haekchen ankreuzen
+     * erzeugte ein gruenes "Valid" — auch auf einer vollstaendig
+     * zerstoerten Diskette. Die FAT-Zeile urteilte allein danach, ob der
+     * FORMATNAME "FAT", "IMG" oder "DOS" enthaelt.
+     *
+     * Und diese Zeilen gehen in den Export (PDF/HTML, `onExportReport()`).
+     * Sie verlassen das Werkzeug also als Dokument, das bescheinigt, das
+     * Dateisystem sei fehlerfrei.
+     *
+     * Fuer ein forensisches Werkzeug ist das die schaerfste Form des
+     * Fehlers: ein gruenes Haekchen ist genau das, was ein Pruefer sehen
+     * will, und niemand zweifelt es an. Eine erfundene Dateiliste koennte
+     * jemand hinterfragen; "Filesystem: ✓ Valid" nicht.
+     *
+     * Die Pruefungen daneben sind ECHT und bleiben: die Bootsignatur liest
+     * 0x55AA an Offset 510, die Pruefsummen rechnen wirklich, die
+     * Formaterkennung kommt aus dem Kern. Es geht also — an diesen drei
+     * Stellen wurde es nur nicht gemacht.
+     *
+     * Bis das Lesen verdrahtet ist, steht hier, was gilt: nicht geprueft.
+     * Die Dateisystem-Schicht des Baums (AmigaDOS, FAT12) waere da, aber
+     * ihre Verzeichnis-Funktionen haben keine Aufrufer und keinen Beleg
+     * gegen ein benanntes Abbild — siehe MF-569. Wer sie verdrahtet,
+     * bringt die Messung mit. */
     if (ui->checkValidateDirectory->isChecked()) {
-        addResultRow(tr("Directory"), tr("✓ Valid"),
-                     tr("Structure consistent with %1 format").arg(info.formatName));
+        addResultRow(tr("Directory"), tr("— not checked"),
+                     tr("Directory reading is not wired yet — this is not "
+                        "a statement about the image"));
     }
-    
-    // FAT validation (for FAT-based formats)
+
     if (ui->checkValidateFAT->isChecked()) {
-        if (info.formatName.contains("FAT") || info.formatName.contains("IMG") || 
+        if (info.formatName.contains("FAT") || info.formatName.contains("IMG") ||
             info.formatName.contains("DOS")) {
-            addResultRow(tr("FAT Structure"), tr("✓ Valid"),
-                         tr("File allocation table intact"));
+            addResultRow(tr("FAT Structure"), tr("— not checked"),
+                         tr("FAT validation is not wired yet — the format "
+                            "name alone says nothing about the table"));
         } else {
             addResultRow(tr("FAT Structure"), tr("— N/A"),
                          tr("Not a FAT-based format"));
         }
     }
-    
-    // Filesystem validation
+
     if (ui->checkValidateFilesystem->isChecked()) {
-        addResultRow(tr("Filesystem"), tr("✓ Valid"),
-                     tr("No structural errors detected"));
+        addResultRow(tr("Filesystem"), tr("— not checked"),
+                     tr("Filesystem validation is not wired yet — this is "
+                        "not a statement about the image"));
     }
-    
+
+
     ui->textDetails->appendPlainText(tr("  Structure validation complete."));
 }
 
@@ -508,8 +549,27 @@ void ForensicTab::detectProtection(const QByteArray& data)
     }
     
     if (!foundProtection) {
-        addResultRow(tr("Copy Protection"), tr("✓ None detected"),
-                     tr("No known protection signatures found"));
+        /* MF-570: stand als "✓ None detected — No known protection
+         * signatures found".
+         *
+         * Geprueft werden hier DREI Heuristiken (V-MAX!-Zeichenkette, ein
+         * Byte an 0x1e0, Dateigroesse). Der Baum kennt weit mehr, ruft es
+         * aber nicht: der Katalog der 55+ benannten Verfahren in
+         * `src/protection/` hat keinen Aufrufer (BACKLOG C1).
+         *
+         * Vor allem aber ist ein SEKTORABBILD der falsche Ort dafuer:
+         * schwache Bits, lange Spuren, Fuzzy Bits und Schreibnaehte stehen
+         * im Fluss, nicht in den Sektoren. Sie sind hier bauartbedingt
+         * unsichtbar.
+         *
+         * "Keine gefunden" mit gruenem Haekchen liest sich als "diese
+         * Diskette ist ungeschuetzt". Das ist Abwesenheit von Beweis,
+         * ausgegeben als Beweis von Abwesenheit. */
+        addResultRow(tr("Copy Protection"), tr("— nothing matched"),
+                     tr("3 signature heuristics ran and found nothing. "
+                        "Flux-level protection (weak bits, long tracks, "
+                        "fuzzy bits) cannot be seen in a sector image at "
+                        "all — this is not an all-clear"));
     }
     
     ui->textDetails->appendPlainText(tr("  Protection analysis complete."));
