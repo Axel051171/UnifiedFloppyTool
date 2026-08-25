@@ -2342,7 +2342,8 @@ if(TARGET Qt6::Test)
         # Formular (AUTOUIC), den Validator und die ganze Wandlungs-
         # Maschine dahinter.
         if(${qt_test_name} STREQUAL "test_tools_tab_convert" OR
-           ${qt_test_name} STREQUAL "test_explorer_tab_no_fiction")
+           ${qt_test_name} STREQUAL "test_explorer_tab_no_fiction" OR
+           ${qt_test_name} STREQUAL "test_status_tab_unknown_allocation")
             set_target_properties(${qt_test_name} PROPERTIES AUTOUIC ON)
             file(GLOB_RECURSE _TOOLSTAB_FORMAT_SOURCES
                  ${CMAKE_SOURCE_DIR}/src/formats/*.c)
@@ -2350,6 +2351,18 @@ if(TARGET Qt6::Test)
                 target_sources(${qt_test_name} PRIVATE
                     ${CMAKE_SOURCE_DIR}/src/toolstab.cpp
                     ${CMAKE_SOURCE_DIR}/forms/tab_tools.ui)
+            elseif(${qt_test_name} STREQUAL "test_status_tab_unknown_allocation")
+                # MF-576: der Status-Reiter mit der Belegungskarte. Er
+                # bettet ProtectionAnalysisWidget ein, und DecodeJob
+                # liefert die Geometrie.
+                target_sources(${qt_test_name} PRIVATE
+                    ${CMAKE_SOURCE_DIR}/src/statustab.cpp
+                    ${CMAKE_SOURCE_DIR}/forms/tab_status.ui
+                    ${CMAKE_SOURCE_DIR}/src/gui/ProtectionAnalysisWidget.cpp
+                    ${CMAKE_SOURCE_DIR}/src/decodejob.cpp
+                    ${CMAKE_SOURCE_DIR}/src/protection/ufm_c64_metrics.c
+                    ${CMAKE_SOURCE_DIR}/src/protection/ufm_c64_scheme_detect.c
+                    ${CMAKE_SOURCE_DIR}/src/protection/uft_c64_protection_enhanced.c)
             else()
                 # MF-575: der Explorer, plus das Schreib-Tor aus MF-573
                 # und die FS-Schicht, die er anfasst.
