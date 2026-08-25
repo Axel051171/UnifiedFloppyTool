@@ -2507,14 +2507,21 @@ if(TARGET Qt6::Test)
             endif()
             set_tests_properties(${qt_test_name} PROPERTIES
                 ENVIRONMENT "QT_QPA_PLATFORM=offscreen;PATH=${_uft_test_path}")
-        elseif(${qt_test_name} STREQUAL "test_hardware_tab_gui" OR
-               ${qt_test_name} STREQUAL "test_provider_switch" OR
-               ${qt_test_name} STREQUAL "test_wiring_runtime")
-            # CI-1: test_wiring_runtime constructs QPushButton, so on a
-            # headless Linux runner it must also run offscreen — otherwise
-            # Qt tries the xcb plugin, fails to init, and abort()s
-            # ("Subprocess aborted"). Windows already gets offscreen via
-            # the WIN32 branch above.
+        else()
+            # CI-1: ein Qt-Test, der ein Widget baut, muss auf einem
+            # kopflosen Linux-Runner offscreen laufen — sonst versucht Qt
+            # das xcb-Plugin, scheitert und bricht ab ("Subprocess
+            # aborted"). Windows bekommt offscreen ueber den WIN32-Zweig.
+            #
+            # MF-577: hier standen DREI Testnamen einzeln aufgezaehlt. Die
+            # vier GUI-Tests aus MF-574…577 fehlten darin, und das waere
+            # erst in CI aufgefallen — lokal laeuft alles ueber den
+            # WIN32-Zweig. Dieselbe Form wie das Preflight-Tor aus MF-567:
+            # eine Aufzaehlung, die nur die bekannten Faelle nennt, und
+            # alles Neue faellt still durch.
+            #
+            # Aufgezaehlt wird darum nichts mehr. Offscreen schadet einem
+            # Test, der kein Widget baut, nicht.
             set_tests_properties(${qt_test_name} PROPERTIES
                 ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
         endif()
