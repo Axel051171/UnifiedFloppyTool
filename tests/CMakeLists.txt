@@ -2336,6 +2336,64 @@ if(TARGET Qt6::Test)
                 ${CMAKE_SOURCE_DIR}/src/hardware_providers)
         endif()
 
+        # MF-574: der ToolsTab-Konvertieren-Knopf, kopflos angetrieben.
+        # MF-568 hat ihn von `QFile::copy()` auf `uft_convert_file()`
+        # umgestellt — geklickt hatte das niemand. Der Reiter braucht sein
+        # Formular (AUTOUIC), den Validator und die ganze Wandlungs-
+        # Maschine dahinter.
+        if(${qt_test_name} STREQUAL "test_tools_tab_convert")
+            set_target_properties(${qt_test_name} PROPERTIES AUTOUIC ON)
+            file(GLOB_RECURSE _TOOLSTAB_FORMAT_SOURCES
+                 ${CMAKE_SOURCE_DIR}/src/formats/*.c)
+            target_sources(${qt_test_name} PRIVATE
+                ${CMAKE_SOURCE_DIR}/src/toolstab.cpp
+                ${CMAKE_SOURCE_DIR}/forms/tab_tools.ui
+                ${CMAKE_SOURCE_DIR}/src/disk_image_validator.cpp
+                ${CMAKE_SOURCE_DIR}/src/rawformatdialog.cpp
+                ${CMAKE_SOURCE_DIR}/forms/rawformatdialog.ui
+                ${CMAKE_SOURCE_DIR}/src/visualdiskdialog.cpp
+                ${CMAKE_SOURCE_DIR}/forms/visualdiskdialog.ui
+                ${CMAKE_SOURCE_DIR}/src/gui/uft_sector_editor.cpp
+                ${_TOOLSTAB_FORMAT_SOURCES}
+                # Dieselbe Zusatzliste wie der MREV-Zweig weiter oben:
+                # die Wandlungs-Maschine braucht Dekoder, Abstimmung,
+                # Preflight und die Melde-Bausteine.
+                ${CMAKE_SOURCE_DIR}/src/recovery/uft_multiread_pipeline.c
+                ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_decoder.c
+                ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_histogram.c
+                ${CMAKE_SOURCE_DIR}/src/flux/uft_flux_sync_search.c
+                ${CMAKE_SOURCE_DIR}/src/flux/uft_dewarp.c
+                ${CMAKE_SOURCE_DIR}/src/flux/uft_decode_timeline.c
+                ${CMAKE_SOURCE_DIR}/src/flux/uft_media_profile.c
+                ${CMAKE_SOURCE_DIR}/src/flux/uft_mfm_sector_parser.c
+                ${CMAKE_SOURCE_DIR}/src/flux/uft_kryoflux_stream.c
+                ${CMAKE_SOURCE_DIR}/src/compat/uft_fnmatch.c
+                ${CMAKE_SOURCE_DIR}/src/core/uft_preflight.c
+                ${CMAKE_SOURCE_DIR}/src/core/uft_decoder_plugin_stub.c
+                ${CMAKE_SOURCE_DIR}/src/core/uft_metadata.c
+                ${CMAKE_SOURCE_DIR}/src/core/uft_log.c
+                ${CMAKE_SOURCE_DIR}/src/core/uft_loss_report.c
+                ${CMAKE_SOURCE_DIR}/src/core/uft_mfm_encoder.c
+                ${CMAKE_SOURCE_DIR}/src/core/uft_probe_format_impl.c
+                ${CMAKE_SOURCE_DIR}/src/core/uft_roundtrip.c
+                ${CMAKE_SOURCE_DIR}/src/analysis/uft_protection_probe.c
+                ${CMAKE_SOURCE_DIR}/src/detect/mfm/uft_mfm_detect_bridge.c
+                ${CMAKE_SOURCE_DIR}/src/detect/mfm/mfm_detect.c
+                ${CMAKE_SOURCE_DIR}/src/detect/mfm/cpm_fs.c)
+            target_include_directories(${qt_test_name} PRIVATE
+                ${CMAKE_SOURCE_DIR}/forms
+                ${CMAKE_SOURCE_DIR}/src/gui
+                ${CMAKE_SOURCE_DIR}/include/uft/detect
+                ${CMAKE_SOURCE_DIR}/include/uft/formats
+                ${CMAKE_SOURCE_DIR}/include/uft/formats/cbm
+                ${CMAKE_SOURCE_DIR}/include/uft/formats/c64
+                ${CMAKE_SOURCE_DIR}/include/uft/flux
+                ${CMAKE_SOURCE_DIR}/include/uft/fs)
+            # Die Format-Quellen erwarten die Pfade, die uft_core PUBLIC
+            # exportiert (include/uft, include/uft/core, .../compat).
+            target_link_libraries(${qt_test_name} PRIVATE uft_core uft_crc)
+        endif()
+
         # MF-169 (P1.17): the V1 `hardware_providers` cmake target was
         # deleted with the V1 provider hierarchy. Qt-side tests now
         # link only against Qt6::Core+Test+Widgets+SerialPort. The V2
