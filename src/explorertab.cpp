@@ -324,40 +324,55 @@ QString ExplorerTab::formatSize(qint64 size) const
 
 QList<FileEntry> ExplorerTab::readDirectory(const QString& path)
 {
-    Q_UNUSED(path);  // Will be used when real filesystem parsing is implemented
+    Q_UNUSED(path);
     QList<FileEntry> entries;
-    
-    // Detect format from image path
+
+    /* -- MF-569: hier standen 13 ERFUNDENE Eintraege ---------------------
+     *
+     * Woertlich im Quelltext: "Generate sample entries based on format",
+     * "Real implementation would call: uft_list_files(...)". Angezeigt
+     * wurde davon nichts. Auf dem Bildschirm stand eine Dateiliste.
+     *
+     *     ADF     s, c, devs, libs, Disk.info, Startup-Sequence
+     *     D64     GAME 17280, DEMO 8192, MUSIC 4096, DATA 2048
+     *             (GAME sogar mit Splat-Flag "*")
+     *     ST/MSA  AUTO, DESKTOP.INF, GAME.PRG 65536
+     *
+     * Plausible Namen, plausible Groessen, plausible Attribute -- und
+     * KEIN Hinweis, dass nichts davon aus dem Abbild gelesen wurde. Fuer
+     * einen Forensiker ist so eine Liste von einer echten nicht zu
+     * unterscheiden. Das ist der schwerste Fehler, den dieses Werkzeug
+     * machen kann: "Keine erfundenen Daten" ist sein erster Satz.
+     *
+     * Bemerkenswert: der generische Zweig daneben war ehrlich
+     * ("Directory listing not available for this format"). Nur die drei
+     * Formate, die ein Benutzer am ehesten oeffnet, fabrizierten.
+     *
+     * -- Warum hier nicht einfach der echte Leser steht ------------------
+     *
+     * Der Baum HAT eine AmigaDOS-Schicht, und sie hat sogar die passende
+     * Funktion: `uft_amiga_foreach_entry()`. Gemessen hat sie **null
+     * Aufrufer**, und die AmigaDOS-Tests decken die Datei-Extraktion
+     * gegen SYNTHETISCHE ADFs ab -- nicht das Verzeichnislesen, und nicht
+     * gegen die echte Korpus-ADF.
+     *
+     * Eine erfundene Liste durch eine nie gelaufene zu ersetzen waere
+     * derselbe Fehler in neu: genau in dieser Lage waren die fuenf
+     * fabrizierten Parser gruen (FMT-2/3/10/11/12, EINFRIER-REGEL
+     * MF-363/498).
+     *
+     * Also sagt die Anzeige, was sie weiss: nichts. Wer das Lesen
+     * verdrahtet, bringt seinen Beleg mit -- eine Messung gegen ein
+     * benanntes Abbild, dessen Inhalt jemand anders kennt. */
     QFileInfo fi(m_imagePath);
-    QString ext = fi.suffix().toLower();
-    
-    // Generate sample entries based on format
-    // Real implementation would call: uft_list_files(image, path, &entries)
-    
-    if (ext == "adf") {
-        // Amiga disk - sample entries
-        entries.append({"s", 0, "DIR", true, "----rwed"});
-        entries.append({"c", 0, "DIR", true, "----rwed"});
-        entries.append({"devs", 0, "DIR", true, "----rwed"});
-        entries.append({"libs", 0, "DIR", true, "----rwed"});
-        entries.append({"Disk.info", 1024, "INFO", false, "----rwed"});
-        entries.append({"Startup-Sequence", 256, "TEXT", false, "----rwed"});
-    } else if (ext == "d64") {
-        // C64 disk - sample entries
-        entries.append({"GAME", 17280, "PRG", false, "*"});
-        entries.append({"DEMO", 8192, "PRG", false, " "});
-        entries.append({"MUSIC", 4096, "PRG", false, " "});
-        entries.append({"DATA", 2048, "SEQ", false, " "});
-    } else if (ext == "st" || ext == "msa") {
-        // Atari ST
-        entries.append({"AUTO", 0, "DIR", true, ""});
-        entries.append({"DESKTOP.INF", 512, "INF", false, ""});
-        entries.append({"GAME.PRG", 65536, "PRG", false, ""});
-    } else {
-        // Generic - show placeholder
-        entries.append({"(Directory listing not available for this format)", 0, "", false, ""});
-    }
-    
+    entries.append({
+        tr("(no directory listing - filesystem reading is not wired)"),
+        0, "", false, ""});
+    entries.append({
+        tr("  %1 is loaded; its sectors are readable in the Hex view.")
+            .arg(fi.fileName()),
+        0, "", false, ""});
+
     return entries;
 }
 

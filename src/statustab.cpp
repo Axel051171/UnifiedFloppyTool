@@ -196,6 +196,13 @@ void StatusTab::onBAMViewerClicked()
         tr("<b>%1</b> &mdash; %2").arg(allocType, m_currentImage.formatName), dlg);
     layout->addWidget(header);
 
+    /* MF-569: der Vorbehalt gehoert dorthin, wo jemand ihn liest. */
+    QLabel *caveat = new QLabel(
+        tr("<i>The allocation map is not read from this image yet - "
+           "every block is shown as unknown (?).</i>"), dlg);
+    caveat->setWordWrap(true);
+    layout->addWidget(caveat);
+
     // Block allocation table
     QTableWidget *table = new QTableWidget(dlg);
 
@@ -219,11 +226,27 @@ void StatusTab::onBAMViewerClicked()
     }
     table->setVerticalHeaderLabels(rowHeaders);
 
-    // Populate with placeholder allocation data
-    // In a full implementation, this would read from the actual BAM/FAT data
+    /* -- MF-569: hier wurde JEDE Diskette als vollstaendig frei gezeigt --
+     *
+     * Woertlich: "Placeholder: mark all as allocated for now" -- und
+     * darunter `setBackground(gruen)` plus `setText("F")` fuer jeden
+     * Block, jede Spur, jedes Abbild.
+     *
+     * Auf dem Bildschirm stand damit eine vollstaendige Belegungskarte
+     * mit echten Spur- und Sektorbeschriftungen, farbcodiert, die sagte:
+     * diese Diskette ist leer. Der Hinweis "In a full implementation,
+     * this would read from the actual BAM/FAT data" stand im QUELLTEXT.
+     *
+     * Der Bootsektor-Hexdump ein paar Zeilen weiter macht es richtig: er
+     * schreibt in die Anzeige, dass er nichts anzeigt. Es geht also -- an
+     * dieser Stelle wurde es nur nicht gemacht.
+     *
+     * Bis die BAM/FAT wirklich gelesen wird, zeigt die Karte, was sie
+     * weiss: nichts. Grau, ein Fragezeichen, und darueber ein Satz. Eine
+     * unbekannte Belegung als "frei" zu malen, ist eine Aussage ueber
+     * Daten, die niemand nachgesehen hat. */
     for (int t = 0; t < tracks; t++) {
-        // Free blocks count column
-        QTableWidgetItem *freeItem = new QTableWidgetItem(QString::number(maxSectors));
+        QTableWidgetItem *freeItem = new QTableWidgetItem(QString("?"));
         freeItem->setTextAlignment(Qt::AlignCenter);
         freeItem->setFlags(freeItem->flags() & ~Qt::ItemIsEditable);
         table->setItem(t, 0, freeItem);
@@ -232,11 +255,10 @@ void StatusTab::onBAMViewerClicked()
             QTableWidgetItem *item = new QTableWidgetItem();
             item->setFlags(item->flags() & ~Qt::ItemIsEditable);
             item->setTextAlignment(Qt::AlignCenter);
-
-            // Color-code: green=free, red=allocated, gray=nonexistent
-            // Placeholder: mark all as allocated for now
-            item->setBackground(QColor("#4a9e4a")); // green = free
-            item->setText("F");
+            item->setBackground(QColor("#6b6b6b"));   /* grau = unbekannt */
+            item->setText("?");
+            item->setToolTip(tr("Allocation unknown - the BAM/FAT is not "
+                                "read yet"));
             table->setItem(t, s + 1, item);
         }
     }

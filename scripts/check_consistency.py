@@ -749,6 +749,16 @@ def main() -> int:
         import audit_bound_on_wrong_value as _bw
         all_errors.append(("Schranke auf falscher Groesse", _bw.check(repo)))
 
+        # 34. Kategorie (MF-569): eine Anzeige, die im Quelltext zugibt,
+        # keine echten Daten zu zeigen, muss es auch auf dem Bildschirm
+        # sagen. Der Datei-Browser lieferte 13 erfundene
+        # Verzeichniseintraege, die Belegungskarte zeigte jede Diskette
+        # als leer -- beides nur im Quelltext eingeraeumt. Der
+        # Bootsektor-Hexdump daneben macht es richtig und beweist, dass
+        # es geht.
+        import audit_display_admits_placeholder as _dp
+        all_errors.append(("Anzeige gibt Platzhalter zu", _dp.check(repo)))
+
     total = sum(len(e) for _, e in all_errors)
     print(f"Consistency check ({len(all_errors)} categories, root={repo}):")
     for label, errs in all_errors:
