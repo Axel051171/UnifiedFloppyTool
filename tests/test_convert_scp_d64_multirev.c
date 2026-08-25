@@ -317,8 +317,8 @@ int main(void)
                t_alone ? 100.0 * alone / t_alone : 0.0,
                r_alone.sectors_converted);
         printf("  DANN-SAUBER dieselbe, mit zwei sauberen dahinter: %d von "
-               "%d (%.1f %%)\n", all, t_all,
-               t_all ? 100.0 * all / t_all : 0.0);
+               "%d (%.1f %%), gemeldet %d gewandelt\n", all, t_all,
+               t_all ? 100.0 * all / t_all : 0.0, r_all.sectors_converted);
 
         if (alone >= t_alone) {
             /* Kein Rotbeweis ohne Schaden: wenn das Rauschen nichts
@@ -364,6 +364,30 @@ int main(void)
          * Arbeit mit eigenem Rotbeweis (BACKLOG C-9).
          *
          * Hier wird nur festgenagelt, dass es nicht SCHLECHTER wird. */
+
+        /* ── Der Rotbeweis fuer C9 ──────────────────────────────────────
+         *
+         * Liegen MEHRERE Umdrehungen vor, ist „Pruefbyte stimmt" nicht
+         * mehr die beste verfuegbare Auskunft. Zwei Umdrehungen, die
+         * denselben Sektor byteweise gleich liefern, sind ein viel
+         * staerkerer Beleg als ein 8-Bit-XOR.
+         *
+         * Wer das nicht nutzt, meldet mehr als er hat: der Zufallstreffer
+         * aus der verrauschten Umdrehung gilt als geprueft, die saubere
+         * Lesung dahinter kommt nicht mehr durch, und die Zahl im Bericht
+         * ist trotzdem 683.
+         *
+         * Diese Schranke ist die Aussage selbst: **gemeldet darf nie mehr
+         * sein als byteweise richtig.** */
+        if (r_all.sectors_converted > all) {
+            printf("  FAIL: bei %d Umdrehungen gemeldet %d gewandelt, "
+                   "byteweise richtig\n        sind %d. Ein Zufallstreffer "
+                   "des 8-Bit-Pruefbytes gilt als geprueft\n        und "
+                   "sperrt die saubere Lesung aus (C9).\n",
+                   NREVS, r_all.sectors_converted, all);
+            failures++;
+        }
+
         if (r_alone.sectors_converted > 6) {
             printf("  FAIL: %d Sektoren als gewandelt gemeldet, byteweise "
                    "richtig sind %d.\n        Erwartet waren rund 683/256 = "

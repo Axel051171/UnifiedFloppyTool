@@ -41,6 +41,31 @@ Beim Anlegen wurde deshalb JEDER Treffer einzeln nachgelesen und mit
 seiner Begruendung in `BASELINE` eingetragen. Ein Eintrag dort heisst
 nicht "harmlos", sondern "geprueft, und hier steht das Ergebnis". Was das
 Tor verhindert, ist der naechste ungeprueste Fall.
+
+── Wie die Grundlinie abgeglichen wird (MF-566) ─────────────────────────
+
+Der Schluessel eines BASELINE-Eintrags sieht aus wie `Datei:Zeile:Name`,
+aber **die Zeile ist Fundhilfe, nicht Schluessel.** Abgeglichen wird nach
+ANZAHL je `(Datei, Variable)`.
+
+Vorher war die Zeile Teil des Schluessels, und das war falsch: jede
+Aenderung OBERHALB einer begruendeten Stelle liess das Tor rot werden,
+ohne dass sich inhaltlich etwas geaendert hatte — gemessen zweimal in
+zwei aufeinanderfolgenden Commits (MF-565, MF-566). Die billigste Antwort
+darauf war beide Male, die Zahl hochzuzaehlen, ohne die Begruendung noch
+einmal zu lesen. Genau die stille Drift, gegen die dieses Tor gebaut ist.
+
+Was der Zaehl-Abgleich leistet, jeweils rotbewiesen:
+
+  * eine reine Verschiebung feuert NICHT
+  * eine ZWEITE Stelle mit demselben Namen in derselben Funktion feuert
+  * eine Ausnahme, zu der es keine Fundstelle mehr gibt, feuert ebenfalls
+    — sonst deckt sie stillschweigend die naechste Stelle desselben
+    Namens
+
+Die Zeilennummern in den Schluesseln sind zum Zeitpunkt ihres Eintrags
+richtig und duerfen veralten. Wer sie pflegt, tut es fuer den naechsten
+Leser, nicht fuer das Tor.
 """
 
 from __future__ import annotations
@@ -116,10 +141,10 @@ BASELINE: dict[str, str] = {
         "Aus `hdr->n_heads`, ebenfalls **uint8_t** "
         "(uft_hfe_format.h:92). Siehe den Eintrag darueber.",
 
-    "src/formats/uft_format_convert_flux.c:1620:heads":
-        "Aus `hdr->n_heads`, **uint8_t** (Deklaration Zeile 1539). Siehe "
-        "oben. Zusaetzlich haelt "
-        "die LUT-Schranke aus MF-526 den Zugriff in der Datei.",
+    "src/formats/uft_format_convert_flux.c:1745:heads":
+        "Aus `hdr->n_heads`, **uint8_t** (uft_hfe_format.h:92) — der Typ "
+        "deckelt, nicht eine Stelle im Code. Zusaetzlich haelt die "
+        "LUT-Schranke aus MF-526 den Zugriff in der Datei.",
 
     "src/formats/nanowasp/uft_nanowasp.c:157:cylinders":
         "uint8_t aus `header->cylinders`, also hoechstens 255. Das PRODUKT "
@@ -191,6 +216,9 @@ def _functions(text: str):
 
 def check(repo: Path) -> list[str]:
     errors: list[str] = []
+    # Alle Fundstellen erst sammeln; der Abgleich gegen die Grundlinie
+    # laeuft danach ueber die ANZAHL je (Datei, Variable) — siehe unten.
+    hits: list[tuple[str, str, int, int]] = []
     d = repo / "src" / "formats"
     if not d.exists():
         return errors
@@ -248,16 +276,53 @@ def check(repo: Path) -> list[str]:
                         continue
                     if not re.search(r"\b" + re.escape(name) + r"\b", ln):
                         continue
-                    key = f"{rel}:{lineno}:{name}"
-                    if key in BASELINE:
-                        continue
-                    errors.append(
-                        f"{rel}:{lineno}: `{name}` kommt aus der Datei "
-                        f"(Zeile {decl}) und bestimmt hier eine Allokation "
-                        f"oder Schleifengrenze, ohne dass dazwischen eine "
-                        f"Schranke gegen die Dateigroesse oder eine "
-                        f"Konstante steht. Vorbild MF-543: 22 Byte Eingabe, "
-                        f"Feld mit 88 Plaetzen, beschrieben bis Index 599.")
+                    hits.append((rel, name, lineno, decl))
+
+    # ── Abgleich gegen die Grundlinie, nach ANZAHL je (Datei, Variable) ──
+    #
+    # MF-566: der Abgleich lief frueher ueber `Datei:Zeile:Name`. Jede
+    # Aenderung OBERHALB einer der begruendeten Stellen liess das Tor rot
+    # werden, ohne dass sich inhaltlich etwas geaendert hatte — gemessen
+    # zweimal in zwei aufeinanderfolgenden Commits (MF-565, MF-566).
+    #
+    # Und die billigste Antwort darauf war jedes Mal, die Zahl
+    # hochzuzaehlen, ohne die Begruendung noch einmal zu lesen. Genau die
+    # stille Drift, gegen die dieses Tor gebaut wurde.
+    #
+    # Gezaehlt wird deshalb je `(Datei, Variable)`: so viele Fundstellen,
+    # wie die Grundlinie begruendete Ausnahmen dafuer fuehrt, sind gedeckt.
+    # Eine mehr ist ein Befund. Das haelt eine Verschiebung aus und faengt
+    # eine NEUE Stelle trotzdem — auch eine mit demselben Namen in
+    # derselben Datei.
+    allowed: dict[tuple[str, str], int] = {}
+    for key in BASELINE:
+        f, _line, n = key.rsplit(":", 2)
+        allowed[(f, n)] = allowed.get((f, n), 0) + 1
+
+    seen: dict[tuple[str, str], int] = {}
+    for rel, name, lineno, decl in hits:
+        pair = (rel, name)
+        seen[pair] = seen.get(pair, 0) + 1
+        if seen[pair] <= allowed.get(pair, 0):
+            continue
+        errors.append(
+            f"{rel}:{lineno}: `{name}` kommt aus der Datei "
+            f"(Zeile {decl}) und bestimmt hier eine Allokation "
+            f"oder Schleifengrenze, ohne dass dazwischen eine "
+            f"Schranke gegen die Dateigroesse oder eine "
+            f"Konstante steht. Vorbild MF-543: 22 Byte Eingabe, "
+            f"Feld mit 88 Plaetzen, beschrieben bis Index 599.")
+
+    # Eine Ausnahme, die keine Fundstelle mehr hat, ist erledigt. Sie
+    # stehen zu lassen hiesse, eine Deckung fuer eine Stelle zu fuehren,
+    # die es nicht mehr gibt — und die naechste Stelle desselben Namens
+    # waere damit stillschweigend gedeckt.
+    for pair, n in allowed.items():
+        extra = n - seen.get(pair, 0)
+        if extra > 0:
+            errors.append(
+                f"{pair[0]}: {extra} begruendete Ausnahme(n) fuer `{pair[1]}` "
+                f"ohne Fundstelle — erledigt, bitte aus BASELINE entfernen.")
 
     return errors
 

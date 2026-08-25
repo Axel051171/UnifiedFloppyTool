@@ -96,6 +96,62 @@ static size_t uftc_cbm_align_bits(const uint8_t *bits, size_t bit_count,
     return n;
 }
 
+/* Eine Sektorposition, gesehen ueber alle Umdrehungen einer Spur (MF-566).
+ *
+ * Spiegelbild von @ref uftc_adf_votes_t weiter unten — dieselbe Aufgabe auf
+ * der Commodore-Seite. 21 x 5 x 256 Byte sind 26,9 kB je Spur, einmal auf
+ * dem Stapel und pro Spur genullt. */
+typedef struct {
+    uint8_t data[UFT_SCP_MAX_REVOLUTIONS][256];
+    bool    crc_ok[UFT_SCP_MAX_REVOLUTIONS];
+    int     count;
+} uftc_d64_votes_t;
+
+/**
+ * Ein Sektor aus allen Umdrehungen, die ihn gelesen haben (MF-566).
+ *
+ * Genommen wird der Abstimmer aus `uft_multiread_pipeline.c` — derselbe,
+ * den `uftc_adf_place_voted()` seit MF-473 fuer die Amiga-Seite fahrt. Er
+ * stimmt BYTEWEISE ab, wiegt eine Lesung mit heilem Pruefbyte 100 und eine
+ * mit falschem 50, und erkennt schwache Bits.
+ *
+ * @param out      256 Byte Ziel
+ * @param cls_out  Einordnung der Abstimmung; darf NULL sein
+ * @return true, wenn etwas Verwertbares herauskam
+ */
+static bool uftc_d64_place_voted(const uftc_d64_votes_t* v, uint8_t* out,
+                                 multiread_class_t* cls_out)
+{
+    if (!v || v->count <= 0) return false;
+
+    multiread_config_t cfg = multiread_config_default();
+    /* Wie viele Umdrehungen es gibt, bestimmt die Datei, nicht eine
+     * Wiederhol-Strategie: min_passes = 1. Eine einzige Umdrehung heisst
+     * „keine Abstimmung moeglich", nicht „Fehler". */
+    cfg.min_passes = 1;
+    cfg.detect_weak_bits = true;
+
+    multiread_ctx_t* mr = multiread_create(&cfg);
+    if (!mr) return false;
+
+    for (int r = 0; r < v->count; r++)
+        multiread_add_pass(mr, v->data[r], 256,
+                           v->crc_ok[r] ? 100 : 50, v->crc_ok[r]);
+
+    multiread_sector_t res;
+    memset(&res, 0, sizeof(res));
+    bool placed = false;
+
+    if (multiread_execute(mr, out, 256, &res) == MULTIREAD_OK) {
+        if (cls_out) *cls_out = res.class_;
+        placed = res.recovered;
+    }
+
+    free(res.weak_mask);      /* execute() belegt sie, der Aufrufer gibt frei */
+    multiread_destroy(mr);
+    return placed;
+}
+
 /**
  * @brief SCP -> D64: Decode SCP flux to C64 D64 sector image
  *
@@ -137,6 +193,17 @@ uft_error_t uftc_convert_scp_to_d64(const uint8_t* src_data, size_t src_size,
      * Jetzt begrenzt es, wie viele Umdrehungen versucht werden. */
     int retries = (opts && opts->decode_retries > 0) ? opts->decode_retries : 5;
 
+    /* Nebenbild fuer die Einzelauswertung je Umdrehung (MF-566). Einmal
+     * angelegt und wiederverwendet — 35 Spuren mal bis zu 5 Umdrehungen
+     * waeren sonst 175 Bilder zu je 175 kB. */
+    d64_image_t* scratch = d64_create(35);
+    if (!scratch) {
+        d64_free(d64);
+        uft_scp_free(&scp);
+        result->error = UFT_ERR_MEMORY;
+        return UFT_ERR_MEMORY;
+    }
+
     /* Process each track: flux -> PLL -> GCR -> sectors */
     for (int track = 1; track <= 35; track++) {
         if (uftc_is_cancelled(opts)) break;
@@ -157,14 +224,37 @@ uft_error_t uftc_convert_scp_to_d64(const uint8_t* src_data, size_t src_size,
          * Der Amiga-Zwilling in dieser Datei
          * (`uftc_convert_scp_to_adf_via_plugin`) laeuft seit MF-473 ueber
          * alle Umdrehungen. Derselbe Job, dieselbe Datei, zwei Fassungen. */
-        uint8_t sec_state[21] = {0};   /* 0 unbekannt, 1 kaputt, 2 heil */
-        int verified = 0;
+        /* ── Und: Uebereinstimmung schlaegt Pruefbyte (MF-566) ────────────
+         *
+         * Die CBM-Datenpruefsumme ist EIN XOR-Byte. Ein zerstoerter Sektor
+         * besteht sie mit Wahrscheinlichkeit 1/256 — auf einer Diskette mit
+         * 683 Sektoren sind das 2,7 zu erwartende Zufallstreffer, und
+         * gemessen wurden 3 (tests/test_convert_scp_d64_multirev.c).
+         *
+         * Wer „Pruefbyte stimmt" als „geprueft" nimmt, laesst so einen
+         * Treffer stehen und die saubere Lesung der naechsten Umdrehung
+         * nicht mehr durch. Gemessen: 683 gemeldet, 680 byteweise richtig.
+         *
+         * Liegen mehrere Umdrehungen vor, gibt es eine bessere Auskunft:
+         * Lesungen, die denselben Sektor BYTEWEISE GLEICH liefern. Das ist
+         * ein 2048-Bit-Beleg statt eines 8-Bit-Belegs.
+         *
+         * Abgestimmt wird mit DEMSELBEN Abstimmer, den der Amiga-Pfad in
+         * dieser Datei seit MF-473 benutzt (`multiread_*`) — nicht mit
+         * einem zweiten. Ein zweiter Abstimmer waere genau der
+         * Geschwister-Fall, gegen den diese ganze Reihe laeuft. Er wiegt
+         * eine gepruefte Lesung 100, eine ungepruefte 50, und erkennt
+         * nebenbei schwache Bits. */
+        uftc_d64_votes_t votes[21];
+        memset(votes, 0, sizeof(votes));
+
         int revs = (int)scp.header.revolutions;
         if (revs > retries) revs = retries;
         if (revs < 1) revs = 1;
+        if (revs > UFT_SCP_MAX_REVOLUTIONS) revs = UFT_SCP_MAX_REVOLUTIONS;
 
         double deltas[131072];
-        for (int rev = 0; rev < revs && verified < sectors_per_trk; rev++) {
+        for (int rev = 0; rev < revs; rev++) {
             int flux_count = uft_scp_get_track_flux(&scp, scp_track_idx, rev,
                                                     deltas, 131072);
             if (flux_count <= 0) continue;
@@ -209,35 +299,68 @@ uft_error_t uftc_convert_scp_to_d64(const uint8_t* src_data, size_t src_size,
                 size_t gcr_len = uftc_cbm_align_bits(bitstream, bit_pos,
                                                      gcr, gcr_cap);
                 if (gcr_len > 0) {
-                    uft_cbm_gcr_track_to_sectors(d64, track, gcr, gcr_len,
-                                                 NULL, sec_state);
-                    verified = 0;
-                    for (int s = 0; s < sectors_per_trk; s++)
-                        if (sec_state[s] == 2) verified++;
+                    /* Diese Umdrehung wird fuer sich dekodiert — in ein
+                     * Nebenbild, mit frischer Karte. Nur so hat sie eine
+                     * eigene Stimme; schriebe sie direkt ins Ergebnis,
+                     * gaebe es nichts zu vergleichen. */
+                    uint8_t rev_state[21] = {0};
+                    uft_cbm_gcr_track_to_sectors(scratch, track, gcr,
+                                                 gcr_len, NULL, rev_state);
+
+                    for (int s = 0; s < sectors_per_trk; s++) {
+                        if (rev_state[s] == 0) continue;
+                        uftc_d64_votes_t* v = &votes[s];
+                        if (v->count >= UFT_SCP_MAX_REVOLUTIONS) continue;
+                        if (d64_get_sector(scratch, track, s,
+                                           v->data[v->count], NULL) != 0)
+                            continue;
+                        v->crc_ok[v->count] = (rev_state[s] == 2);
+                        v->count++;
+                    }
                 }
                 free(gcr);
             }
             free(bitstream);
         }
 
-        /* Was auch die letzte Umdrehung nicht hergab, fehlt. */
+        /* ── Das Urteil je Sektor ──────────────────────────────────────────
+         *
+         * Der Abstimmer sagt, WAS herauskam, und wie er dazu kam. Nur
+         * `MULTIREAD_STABLE_GOOD` heisst „geprueft": ueber alle vorliegenden
+         * Umdrehungen dasselbe, mit heilem Pruefbyte. Alles andere wird
+         * BEHALTEN und als fehlerhaft markiert — verworfen wird nichts. */
         for (int s = 0; s < sectors_per_trk; s++) {
-            if (sec_state[s] == 2) {
-                result->sectors_converted++;
-            } else if (sec_state[s] == 1) {
-                /* Geborgen, aber die Pruefsumme stimmt nicht. Die Daten
-                 * BLEIBEN stehen — der Dekoder hat sie schon abgelegt und
-                 * mit D64_ERR_CHECKSUM markiert. Sie hier mit Fuellbyte zu
-                 * ueberschreiben waere „Kein Bit verloren" verletzt: eine
-                 * Spur mit Lesefehler ist mehr wert als gar keine. Gezaehlt
-                 * werden sie als GESCHEITERT, denn geprueft sind sie
-                 * nicht (MF-565). */
-                result->sectors_failed++;
-                if (result->warning_count < 8) {
-                    uftc_add_warning(result,
-                             "Track %d sector %d: Pruefsumme falsch, Daten "
-                             "behalten und als fehlerhaft markiert",
-                             track, s);
+            uint8_t voted[256];
+            multiread_class_t cls = MULTIREAD_CLASS_UNKNOWN;
+
+            if (votes[s].count > 0 &&
+                uftc_d64_place_voted(&votes[s], voted, &cls)) {
+
+                if (cls == MULTIREAD_CLASS_STABLE_GOOD) {
+                    d64_set_sector(d64, track, s, voted, D64_ERR_OK);
+                    result->sectors_converted++;
+                } else {
+                    /* Geborgen, aber nicht bestaetigt: entweder stimmte
+                     * das Pruefbyte nicht, oder zwei Umdrehungen lesen
+                     * verschiedene Daten. Welches von beidem — instabiler
+                     * Sektor, schwache Bits, oder ein 1/256-Zufallstreffer
+                     * des Pruefbytes — sagt @ref multiread_class_t.
+                     *
+                     * Die Daten BLEIBEN stehen; sie mit Fuellbyte zu
+                     * ueberschreiben waere „Kein Bit verloren" verletzt.
+                     * `D64_ERR_CHECKSUM` ist die naechstliegende Marke, die
+                     * das Format hergibt — sie untertreibt das Vertrauen,
+                     * sie uebertreibt es nie (MF-566). */
+                    d64_set_sector(d64, track, s, voted, D64_ERR_CHECKSUM);
+                    result->sectors_failed++;
+                    if (result->warning_count < 8) {
+                        uftc_add_warning(result,
+                                 "Track %d sector %d: %d Lesung(en), nicht "
+                                 "bestaetigt (%s) — Daten behalten, als "
+                                 "fehlerhaft markiert",
+                                 track, s, votes[s].count,
+                                 multiread_class_name(cls));
+                    }
                 }
             } else {
                 /* Fill unread sector with forensic fill byte (0x01).
@@ -263,6 +386,8 @@ uft_error_t uftc_convert_scp_to_d64(const uint8_t* src_data, size_t src_size,
 
         uftc_report_progress(opts, 10 + (track * 80 / 35), "Decoding tracks");
     }
+
+    d64_free(scratch);
 
     uftc_report_progress(opts, 90, "Writing D64 output");
 
