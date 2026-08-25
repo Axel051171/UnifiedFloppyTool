@@ -11,8 +11,13 @@
  * - Performance optimization
  */
 
-#ifndef UFT_INTERLEAVE_H
-#define UFT_INTERLEAVE_H
+/* MF-591: Waechter war `UFT_INTERLEAVE_H` — derselbe wie in dem
+ * gleichnamigen oeffentlichen Header unter include/uft/. Wer beide
+ * erreichte, sah nur den ERSTEN; welchen, entschied die
+ * Include-Reihenfolge. Der private traegt jetzt einen eigenen Namen.
+ */
+#ifndef UFT_SRC_INTERLEAVE_H
+#define UFT_SRC_INTERLEAVE_H
 
 #include <stdint.h>
 #include <stddef.h>
@@ -203,4 +208,4 @@ void uft_interleave_stats_dump(const uft_interleave_stats_t *stats);
 }
 #endif
 
-#endif /* UFT_INTERLEAVE_H */
+#endif /* UFT_SRC_INTERLEAVE_H */

@@ -17,8 +17,13 @@
  * - Bibo-DOS (DD variant)
  */
 
-#ifndef UFT_ATARI_DOS_H
-#define UFT_ATARI_DOS_H
+/* MF-591: Waechter war `UFT_ATARI_DOS_H` — derselbe wie in dem
+ * gleichnamigen oeffentlichen Header unter include/uft/. Wer beide
+ * erreichte, sah nur den ERSTEN; welchen, entschied die
+ * Include-Reihenfolge. Der private traegt jetzt einen eigenen Namen.
+ */
+#ifndef UFT_SRC_ATARI_DOS_H
+#define UFT_SRC_ATARI_DOS_H
 
 #include <stdint.h>
 #include <stddef.h>
@@ -386,4 +391,4 @@ int uft_dos_read_file(const uint8_t *image, uint16_t sector_size,
 }
 #endif
 
-#endif /* UFT_ATARI_DOS_H */
+#endif /* UFT_SRC_ATARI_DOS_H */

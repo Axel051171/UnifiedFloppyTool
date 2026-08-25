@@ -9,8 +9,13 @@
  * - Clock recovery from noisy data
  */
 
-#ifndef UFT_FLUX_DECODER_H
-#define UFT_FLUX_DECODER_H
+/* MF-591: Waechter war `UFT_FLUX_DECODER_H` — derselbe wie in dem
+ * gleichnamigen oeffentlichen Header unter include/uft/. Wer beide
+ * erreichte, sah nur den ERSTEN; welchen, entschied die
+ * Include-Reihenfolge. Der private traegt jetzt einen eigenen Namen.
+ */
+#ifndef UFT_SRC_FLUX_DECODER_H
+#define UFT_SRC_FLUX_DECODER_H
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -190,4 +195,4 @@ size_t uft_decode_gcr_apple(const uint8_t *encoded, size_t len, uint8_t *decoded
 }
 #endif
 
-#endif /* UFT_FLUX_DECODER_H */
+#endif /* UFT_SRC_FLUX_DECODER_H */

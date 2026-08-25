@@ -11,8 +11,13 @@
  * - Extension correlation
  */
 
-#ifndef UFT_FORMAT_DETECT_H
-#define UFT_FORMAT_DETECT_H
+/* MF-591: Waechter war `UFT_FORMAT_DETECT_H` — derselbe wie in dem
+ * gleichnamigen oeffentlichen Header unter include/uft/. Wer beide
+ * erreichte, sah nur den ERSTEN; welchen, entschied die
+ * Include-Reihenfolge. Der private traegt jetzt einen eigenen Namen.
+ */
+#ifndef UFT_SRC_FORMAT_DETECT_H
+#define UFT_SRC_FORMAT_DETECT_H
 
 #include <stdint.h>
 #include <stddef.h>
@@ -233,4 +238,4 @@ void uft_format_dump_candidates(const uft_format_candidates_t *candidates);
 }
 #endif
 
-#endif /* UFT_FORMAT_DETECT_H */
+#endif /* UFT_SRC_FORMAT_DETECT_H */

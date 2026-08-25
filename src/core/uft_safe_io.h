@@ -5,8 +5,13 @@
  * P0-001: All file operations with NULL checks and cleanup
  */
 
-#ifndef UFT_SAFE_IO_H
-#define UFT_SAFE_IO_H
+/* MF-591: Waechter war `UFT_SAFE_IO_H` — derselbe wie in dem
+ * gleichnamigen oeffentlichen Header unter include/uft/. Wer beide
+ * erreichte, sah nur den ERSTEN; welchen, entschied die
+ * Include-Reihenfolge. Der private traegt jetzt einen eigenen Namen.
+ */
+#ifndef UFT_SRC_SAFE_IO_H
+#define UFT_SRC_SAFE_IO_H
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -255,4 +260,4 @@ static inline void uft_cleanup_buffer_ptr(void **ptr) {
 }
 #endif
 
-#endif /* UFT_SAFE_IO_H */
+#endif /* UFT_SRC_SAFE_IO_H */

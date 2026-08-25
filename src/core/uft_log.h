@@ -1,5 +1,10 @@
-#ifndef UFT_LOG_H
-#define UFT_LOG_H
+/* MF-591: Waechter war `UFT_LOG_H` — derselbe wie in dem
+ * gleichnamigen oeffentlichen Header unter include/uft/. Wer beide
+ * erreichte, sah nur den ERSTEN; welchen, entschied die
+ * Include-Reihenfolge. Der private traegt jetzt einen eigenen Namen.
+ */
+#ifndef UFT_SRC_LOG_H
+#define UFT_SRC_LOG_H
 /**
  * @file uft_log.h
  * @brief Unified Logging System for UFT
@@ -60,4 +65,4 @@ void uft_log_set_callback(void (*cb)(uft_log_level_t, const char*));
 }
 #endif
 
-#endif /* UFT_LOG_H */
+#endif /* UFT_SRC_LOG_H */

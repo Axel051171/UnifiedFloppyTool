@@ -1,5 +1,10 @@
-#ifndef UFT_ENDIAN_H
-#define UFT_ENDIAN_H
+/* MF-591: Waechter war `UFT_ENDIAN_H` — derselbe wie in dem
+ * gleichnamigen oeffentlichen Header unter include/uft/. Wer beide
+ * erreichte, sah nur den ERSTEN; welchen, entschied die
+ * Include-Reihenfolge. Der private traegt jetzt einen eigenen Namen.
+ */
+#ifndef UFT_SRC_ENDIAN_H
+#define UFT_SRC_ENDIAN_H
 /**
  * @file uft_endian.h
  * @brief Portable Endianness Conversion for UFT
@@ -135,4 +140,4 @@ static inline uint32_t uft_bswap32(uint32_t v) {
 }
 #endif
 
-#endif /* UFT_ENDIAN_H */
+#endif /* UFT_SRC_ENDIAN_H */

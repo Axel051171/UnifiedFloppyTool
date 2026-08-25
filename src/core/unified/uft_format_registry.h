@@ -12,8 +12,13 @@
  * @date 2026-01-13
  */
 
-#ifndef UFT_FORMAT_REGISTRY_H
-#define UFT_FORMAT_REGISTRY_H
+/* MF-591: Waechter war `UFT_FORMAT_REGISTRY_H` — derselbe wie in dem
+ * gleichnamigen oeffentlichen Header unter include/uft/. Wer beide
+ * erreichte, sah nur den ERSTEN; welchen, entschied die
+ * Include-Reihenfolge. Der private traegt jetzt einen eigenen Namen.
+ */
+#ifndef UFT_SRC_FORMAT_REGISTRY_H
+#define UFT_SRC_FORMAT_REGISTRY_H
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -284,4 +289,4 @@ bool uft_format_has_filesystem(uft_format_id_t id);
 }
 #endif
 
-#endif /* UFT_FORMAT_REGISTRY_H */
+#endif /* UFT_SRC_FORMAT_REGISTRY_H */
