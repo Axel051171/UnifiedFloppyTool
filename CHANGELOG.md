@@ -1,5 +1,112 @@
 # Changelog
 
+## [4.1.6] - unveröffentlicht
+
+**Thema: jede Aussage gemessen — auch die darüber, was das Werkzeug nicht
+kann.** Der Schwerpunkt lag nicht auf neuen Formaten (die stehen unter
+Moratorium, MF-363/498), sondern darauf, dass keine Anzeige, kein Bericht
+und kein Rückgabewert mehr etwas behauptet, das niemand nachgesehen hat.
+
+### Behoben — falsche Aussagen über gesicherte Daten
+
+- **`SCP→D64` lieferte eine leere Diskette und meldete Erfolg** (MF-565).
+  Drei Ursachen: die Zonen-Zellzeiten standen gegenläufig zu ihren eigenen
+  Kommentaren (4,0 µs auf der schnellsten Zone), der Sektor-Parser war ein
+  Stub, und nur *eine* Umdrehung wurde dekodiert — ausgewählt nach dem
+  höchsten Flusszähler, was gerade die verrauschteste trifft. Gemessen:
+  **0 von 683 → 683 von 683 Sektoren.** Kein Test im Baum hatte diesen
+  Pfad je angefasst.
+- **Der Speicher-Weg ging vollständig am Preflight-Tor vorbei** (MF-567).
+  `uft_convert_memory()` übergibt keine Dateipfade; die Prüfung kehrte
+  ohne Pfade sofort zurück, und der Aufrufer zählte nur drei Abbruchwerte
+  auf — der vierte fiel durch. Gemessen: `IMG→SCP`, in der Matrix als
+  UNMÖGLICH mit *„synthesising flux would be fabrication"* geführt,
+  lieferte **3 712 758 Byte aus 4096 Byte Zufall**, ohne Einverständnis.
+- **Der Konvertieren-Knopf der Oberfläche rief `QFile::copy()`** und
+  meldete „Conversion complete!" (MF-568). Wer SCP→D64 wählte, bekam eine
+  byteweise Kopie der SCP-Datei unter dem Namen `.d64`. Zweiter Fall im
+  selben Muster in `DecodeJob::convertImage()`.
+- **Der Datei-Browser erfand Verzeichnislisten** (MF-569) — 13 fest
+  verdrahtete Einträge über ADF, D64 und ST/MSA, mit plausiblen Namen,
+  Größen und Attributen.
+- **Die BAM/FAT-Belegungskarte zeigte jede Diskette als leer** (MF-569).
+- **Der forensische Bericht bescheinigte drei Dinge ohne ein Byte zu
+  lesen** (MF-570): `Directory ✓ Valid`, `FAT Structure ✓ Valid — File
+  allocation table intact`, `Filesystem ✓ Valid`. Ein Häkchen ankreuzen
+  erzeugte das Urteil; die FAT-Zeile entschied nach dem **Formatnamen**.
+  Diese Zeilen gehen in den PDF/HTML-Export.
+- **`Copy Protection: ✓ None detected` nach drei Heuristiken** (MF-570) —
+  Abwesenheit von Beweis, ausgegeben als Beweis von Abwesenheit.
+- **`uftc_convert_hfe_to_sectors()` meldete Erfolg bei null gewandelten
+  Spuren** (MF-568): 737 280 Byte IMG aus einer 1024-Byte-Eingabe.
+
+### Behoben — Datenverlust
+
+- **Fünf Schreibpfade der Oberfläche verwarfen den Rückgabewert von
+  `write()`** und meldeten trotzdem Erfolg (MF-571), darunter
+  `MainWindow::onSave()` und zweimal das Zurückschreiben eines Abbilds
+  nach einer FAT12-Änderung.
+- **Das Schreib-Sicherheitstor hat endlich Aufrufer** (MF-573). Es war als
+  „blockiert — Hardware-Sitzung" geführt; die Signatur nimmt Abbild-Daten
+  und ein Schnappschuss-Verzeichnis, **keine Hardware**. Sechs Stellen
+  gehen jetzt hindurch; Schnappschüsse liegen in `.uft-snapshots` neben
+  dem Abbild.
+
+### Neu
+
+- **Mehrfach-Umdrehungs-Abstimmung für den D64-Pfad** (MF-566) über
+  denselben Abstimmer, den der Amiga-Pfad seit MF-473 fährt. Die
+  CBM-Datenprüfsumme ist ein einziges XOR-Byte — ein zerstörter Sektor
+  besteht sie mit 1/256, gemessen 3 von 683.
+- **`decode_retries` tut endlich, was dokumentiert ist** (MF-565) — es war
+  ein Feld, das gelesen und weggeworfen wurde.
+- **`uft_format_from_name()`** (MF-568), damit die Oberfläche ihre
+  Zielliste aus der Wandlungstabelle statt aus einer vierten Handliste
+  zieht.
+- **Sechs kopflose Qt-Tests** (MF-574…577) — alle fünf Reiter jenseits der
+  Hardware haben jetzt einen. Vorher: null.
+- **Zwei neue Konsistenz-Tore**, damit die gefundenen Formen nicht
+  zurückkommen: eine Anzeige, die sich im Quelltext als Platzhalter
+  beschriftet, muss es auf dem Bildschirm sagen (34.); ein
+  Unversehrtheits-Urteil, das nicht scheitern kann, ist keines (35.,
+  **leere Grundlinie**).
+
+### Fortschreibung der „deferred to v4.1.6"-Liste aus 4.1.5
+
+Jeder Punkt einzeln nachgemessen, nicht fortgeschrieben:
+
+| Punkt | Stand |
+|---|---|
+| M3.2 XUM1541 real-HW Tier-3 | **bleibt offen** — braucht ein Gerät (kein Hardware-Zugang, MF-310) |
+| M3.3 Applesauce `?disk` | **bleibt offen** — die Quelle sagt es selbst: „serial-port enumeration not wired" |
+| UFI Windows + macOS | **bleibt offen** — nur `ufi_linux.c` existiert |
+| ARCH-9 XUM1541 macOS `.dylib` | **Formulierung fraglich** — im Baum kein Treffer auf `dylib`; entweder erledigt oder nie begonnen. Nicht als erledigt geführt, solange das nicht geklärt ist |
+| 5-and-3 Apple GCR (13-Sektor) | **bleibt offen** — neuer Format-Code, fällt unter das Moratorium MF-363/498 |
+| FM-Dekoder (`flux_decode_fm`) | **vorhanden, nicht belegt** — echte PLL-Dekodierung, kein Stub. Ohne benannte Referenz gilt er nach der Einfrier-Regel trotzdem als ungeprüft |
+| Per-track exact loss counts | **bleibt offen** — im Verlust-Header kein Hinweis darauf |
+| `uft-decode` CLI-Verdrahtung | **zurückgezogen, nicht verschoben.** UFT ist GUI-only; eine CLI zu verdrahten widerspricht der Projektrichtung. Das Gerüst (`cli/uft-decode/`) ist in keinem Build und soll es nicht werden |
+| USBFloppy SG_IO-Mock | **überholt** — die UFI-Emulator-Arbeit (`tests/emulators/ufi/`) deckt das ab, mit Abweichungs- und Abdeckungsmatrix |
+| MF-271 Switch/cart7 löschen | ✅ **erledigt** — beide Verzeichnisse sind weg |
+
+### Was dieses Release weiterhin NICHT kann
+
+- **57 von 88 tier-geführten Formaten stehen auf T3 — ungeprüft.** Kein
+  Test, oder ein synthetischer ohne Abgleich gegen eine autoritative
+  Quelle. Belegt: T1=2, T1b=12, T2=17.
+- **12 von 44 Wandlungspfaden werden angeboten**, davon 4 verlustfrei mit
+  Messung. Die übrigen weist das Preflight-Tor als UNGEPRÜFT ab.
+- **Der Katalog der 55+ Kopierschutz-Verfahren hat keinen Aufrufer.**
+  Automatisch läuft Signal-Erkennung plus drei heuristisch benannte
+  Schemata.
+- **Das Dateisystem wird nicht gelesen.** Verzeichnislisten und
+  Belegungskarte sagen das jetzt in der Anzeige.
+- **58 von 261 Tests lecken unter ASan** (gemessen über zwei CI-Läufe,
+  MF-572). Der Rückstand ist alt und nicht gewachsen.
+- **Kein Bedien-Abnahmetest.** Die kopflosen Qt-Tests decken Logik und
+  Anzeige ab, nicht Aussehen, Bedienfluss oder alles hinter einem modalen
+  Dialog.
+
+
 ## [4.1.5] - 2026-06-05
 
 ### Added
