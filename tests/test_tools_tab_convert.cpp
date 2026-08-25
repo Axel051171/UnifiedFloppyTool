@@ -154,6 +154,66 @@ private slots:
                  "Phantom-Test oben nichts.");
     }
 
+    /* ── Die Leitung: Wandler-Warnungen erreichen den Bildschirm ───────
+     *
+     * MF-585. Der eigentliche Grund, warum das hier steht:
+     *
+     * `MF-496` (Feineinsteller-Vorschlag aus den gemessenen Sync-Marken)
+     * und `MF-501` (Schadenslage ueber die Umdrehung) fassen **keine
+     * einzige GUI-Datei** an. Sie geben ihre Befunde ueber
+     * `uftc_add_warning()` in `result->warnings[]` aus.
+     *
+     * Bis MF-568 hat diese Ausgabe NIE einen Benutzer erreicht: der
+     * Konvertieren-Knopf war `QFile::copy()` und rief den Wandler gar
+     * nicht. Beide Funktionen sind also erst in 4.1.6 ueberhaupt
+     * sichtbar geworden — und zwar ueber genau diese Leitung.
+     *
+     * Reisst sie, verschwinden sie wieder lautlos. Ein Feineinsteller-
+     * Vorschlag, den niemand sieht, ist kein Feineinsteller-Vorschlag.
+     *
+     * Geprueft wird die Leitung, nicht der Wortlaut: WELCHE Meldung
+     * kommt, haengt an der Eingabe. Dass sie ankommt und als Meldung
+     * erkennbar ist, haengt an der Oberflaeche.
+     */
+    void converterWarningsReachTheOutputPane()
+    {
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+
+        const QString src = dir.filePath("quelle.bin");
+        {
+            QFile f(src);
+            QVERIFY(f.open(QIODevice::WriteOnly));
+            QCOMPARE(f.write(QByteArray(4096, '\x33')), qint64(4096));
+        }
+
+        ToolsTab tab;
+        auto *editSrc = tab.findChild<QLineEdit *>("editConvertSource");
+        auto *editDst = tab.findChild<QLineEdit *>("editConvertTarget");
+        auto *btn     = tab.findChild<QPushButton *>("btnConvert");
+        QVERIFY(editSrc && editDst && btn);
+
+        editSrc->setText(src);
+        editDst->setText(dir.filePath("ziel.img"));
+        btn->click();
+
+        const QString out = outputOf(&tab);
+
+        /* Jede Meldung des Wandlers erscheint mit dem Merkzeichen "  ! ".
+         * Ohne das waere sie von der uebrigen Ausgabe nicht zu
+         * unterscheiden — und eine Warnung, die wie ein Fortschrittstext
+         * aussieht, ist keine. */
+        QVERIFY2(out.contains("  ! "),
+                 qPrintable("Der Wandler hat gemeldet, und nichts davon "
+                            "steht in der Ausgabe:\n" + out));
+
+        /* Und die Gegenprobe: der Test misst nur etwas, wenn ueberhaupt
+         * eine Meldung entstanden ist. */
+        int marks = out.count("  ! ");
+        QVERIFY2(marks >= 1,
+                 qPrintable(QString("%1 Meldungen angezeigt").arg(marks)));
+    }
+
     /* ── Zusage 3: ein unbekanntes Ziel wird nicht geraten ─────────────── */
     void unknownTargetIsRefused()
     {
