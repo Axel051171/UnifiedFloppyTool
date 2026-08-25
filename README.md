@@ -16,7 +16,8 @@ implementations — **not yet against a real-disk reference corpus** (a
 per-format verification-tier table is in progress; see
 [`docs/KNOWN_ISSUES.md`](docs/KNOWN_ISSUES.md)). 9 hardware controllers
 via a type-driven HAL (Greaseweazle fully wired, **hardware bench pass
-pending** — deferred to v4.1.6; SCP-Direct M3.1 mock-validated; KryoFlux
+pending** — still open in 4.1.6, and it needs a machine we do not have
+(see "Please break it" below); SCP-Direct M3.1 mock-validated; KryoFlux
 / FluxEngine / FC5025 via subprocess wrappers; XUM1541 / Applesauce /
 ADF-Copy / USB-Floppy as honest scaffolds — see
 [`docs/CAPABILITIES.md`](docs/CAPABILITIES.md)). No controller has a
@@ -38,6 +39,116 @@ documented real-hardware bench pass in this release.
 | Checksums | `SHA256SUMS.txt` | Verify with `sha256sum -c` |
 
 > **macOS:** Falls "App ist beschädigt" erscheint: `xattr -cr UnifiedFloppyTool.app`
+
+---
+
+## What's New in v4.1.6 (unreleased — not tagged yet)
+
+**Theme: every statement measured — including the statement of what the
+tool cannot do.**
+
+No new formats (those are under a moratorium). Instead: a sweep through
+everything the tool *says* about preserved data. What it found, measured:
+
+| Where | Before | After |
+|---|---|---|
+| `SCP→D64` | **0 of 683 sectors**, reported success | 683 of 683 |
+| In-memory conversion | bypassed the preflight gate entirely — **3.7 MB of fabricated flux from 4 KB of noise**, no consent asked | gate applies, 32 pairs refused |
+| GUI **Convert** button | `QFile::copy()` + "Conversion complete!" | goes through `uft_convert_file()` |
+| File browser | **13 invented directory entries** (`devs`, `libs`, `Startup-Sequence`, `GAME 17280`, …) | says it does not read the filesystem |
+| Allocation map | every disk shown as entirely **free**, colour-coded | grey `?`, caveat on screen |
+| Forensic report | `Filesystem: ✓ Valid` **without reading a byte** — and it goes into the PDF export | `— not checked`, with the reason |
+| Copy protection | `✓ None detected` after three heuristics | `— nothing matched`, plus why that is not an all-clear |
+| Licence header | `SPDX: MIT` on a GPLv2+ port, inside a GPLv2 project | `GPL-2.0-or-later` |
+
+**Also new**
+
+- **Multi-revolution voting for the C64 path** — the CBM data checksum is
+  a single XOR byte; a corrupt sector passes it with probability 1/256
+  (measured: 3 of 683). Agreement across revolutions beats one check
+  byte, and it uses the *same* voter the Amiga path already had.
+- **The write-safety gate finally has callers.** Six in-place image
+  modifications (rename, delete, mkdir, import ×2, save) now take a
+  verified snapshot into `.uft-snapshots` next to the image first. It was
+  filed as "needs a hardware session" — the signature takes image bytes
+  and a snapshot directory, no hardware at all.
+- **Six headless Qt tests** — every tab now has one. Before this release:
+  two, both on the same tab.
+- **Two new consistency gates** so the discovered shapes cannot come
+  back: a display that admits in the source that it is a placeholder must
+  say so *on screen*; and an integrity verdict that cannot fail is not a
+  verdict (that one ships with an **empty baseline** — the next such
+  claim fires).
+
+**What this release still cannot do** — this list is part of the release,
+not a footnote:
+
+- **57 of 88 tier-tracked formats are unverified (T3).** Proven: T1=2,
+  T1b=12, T2=17.
+- **12 of 44 conversion paths are offered**, 4 of them lossless *with a
+  measurement*. The rest the preflight gate refuses as UNTESTED — on
+  purpose.
+- **The copy-protection catalogue (55+ schemes) has no caller.** What runs
+  automatically is signal detection plus three heuristically named
+  schemes.
+- **The filesystem is not read.** Directory listing and allocation map now
+  say so.
+- **58 of 261 tests leak under ASan.** Old backlog, not growing (measured
+  across two CI runs).
+- **No hands-on acceptance test.** The headless Qt tests cover logic and
+  display, not look, flow, or anything behind a modal dialog.
+- **No controller has a documented real-hardware bench pass.**
+
+---
+
+## Please break it — and tell us how
+
+This project has a specific, unusual gap: **there is no physical hardware
+behind it.** Every Tier-3 bench result has to come from someone else's
+desk. And 57 of 88 formats have never met a real disk — only synthetic
+round-trips.
+
+That makes your report worth more than any test we can write ourselves.
+
+**What helps most, roughly in order:**
+
+1. **A real disk of a format marked T3.** Read it, convert it, and tell us
+   whether the result opens in the tool you normally use (VICE, WinUAE,
+   Applesauce, an emulator, the original machine). A single verified
+   format moves it out of "unproven".
+2. **A hardware controller session.** Greaseweazle, SuperCard Pro,
+   KryoFlux, FC5025, XUM1541, Applesauce — any of them. Even "it
+   connected and read track 0" is data we do not have.
+3. **Anything that claims something.** If a number, a status, a
+   checkmark or a message looks wrong — that is exactly the bug class
+   this release was about. Six of them were found this way.
+4. **A crash.** Attach the input file if you can share it.
+
+**What makes a report useful:**
+
+- the **exact** version (`Help → About`, or `VERSION.txt`)
+- OS and how you installed it
+- what you clicked, what you expected, what happened
+- the image file, or its size and format, if you can share it
+- for conversions: the source format, the target format, and the message
+  the tool printed
+
+**Where:**
+[Issues](https://github.com/Axel051171/UnifiedFloppyTool/issues) for bugs
+and format reports ·
+[Discussions](https://github.com/Axel051171/UnifiedFloppyTool/discussions)
+for "is this supposed to work like that?"
+
+**What we will not do with it:** guess. If a report cannot be reproduced
+or measured, it goes on the open list as unproven rather than being
+quietly closed — and if it turns out the tool was right, that gets
+written down too.
+
+> A note on trust: this release deliberately *removed* several things
+> that looked like features — an invented file listing, a green
+> allocation map, three "✓ Valid" certificates. If something you relied
+> on now says "not checked", that is not a regression. It is the tool
+> admitting it never knew.
 
 ---
 
