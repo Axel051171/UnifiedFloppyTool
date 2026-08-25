@@ -9,6 +9,11 @@
 #include "ui_tab_tools.h"
 #include "disk_image_validator.h"
 
+extern "C" {
+#include "uft/uft_format_convert.h"
+}
+
+
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QFile>
@@ -210,16 +215,96 @@ void ToolsTab::onConvert()
     appendOutput(tr("Converting: %1").arg(QFileInfo(source).fileName()));
     appendOutput(tr("       To:  %1").arg(target));
     
-    // For now, just copy the file
-    // Real implementation would use format conversion
-    if (QFile::copy(source, target)) {
-        appendOutput(tr("Conversion complete!"));
+    /* -- MF-568: hier stand `QFile::copy()` -----------------------------
+     *
+     * Woertlich:
+     *
+     *     // For now, just copy the file
+     *     // Real implementation would use format conversion
+     *     if (QFile::copy(source, target))
+     *         appendOutput(tr("Conversion complete!"));
+     *
+     * Wer SCP -> D64 waehlte, bekam eine byteweise Kopie der SCP-Datei
+     * unter dem Namen `.d64` -- und die Meldung "Conversion complete!".
+     * Das Preflight-Tor, die Rundlauf-Matrix, die Verlustmeldung und
+     * saemtliche Wandler wurden dabei nicht einmal beruehrt.
+     *
+     * Jetzt geht der Knopf durch `uft_convert_file()` -- denselben
+     * Engpass, den MF-263/UFT-A01 als einzigen vorsieht und den MF-567
+     * auch fuer den Speicher-Weg dichtgemacht hat. */
+    uft_format_t dstFmt = uft_format_from_name(
+        ui->comboConvertTo->currentText().toUtf8().constData());
+    if (dstFmt == UFT_FORMAT_UNKNOWN) {
+        dstFmt = uft_format_from_name(
+            QFileInfo(target).suffix().toUtf8().constData());
+    }
+    if (dstFmt == UFT_FORMAT_UNKNOWN) {
+        appendOutput(tr("Unknown target format - nothing was written."));
+        appendOutput(QString());
+        emit statusMessage(tr("Conversion refused: unknown target format"));
+        return;
+    }
+
+    /* Verlustbehaftete Wandlungen verlangen ein ausdrueckliches Ja. WAS
+     * verloren geht, sagt die Matrix -- nicht diese Datei. */
+    uft_convert_options_t opts;
+    memset(&opts, 0, sizeof(opts));
+    opts.accept_data_loss = false;
+
+    uft_convert_result_t res;
+    memset(&res, 0, sizeof(res));
+    uft_error_t rc = uft_convert_file(source.toUtf8().constData(),
+                                      target.toUtf8().constData(),
+                                      dstFmt, &opts, &res);
+
+    if (rc != UFT_OK && res.warning_count > 0) {
+        /* Das Tor hat abgelehnt. Liegt es am Verlust, darf der Benutzer
+         * entscheiden -- aber er entscheidet es, nicht der Code. */
+        bool needsConsent = false;
+        for (int i = 0; i < res.warning_count && i < 8; i++) {
+            if (QString::fromUtf8(res.warnings[i])
+                    .contains("accept_data_loss")) {
+                needsConsent = true;
+            }
+        }
+
+        if (needsConsent) {
+            QString what;
+            for (int i = 0; i < res.warning_count && i < 8; i++) {
+                what += QString::fromUtf8(res.warnings[i]) + "\n";
+            }
+            if (QMessageBox::question(this, tr("Lossy conversion"),
+                    tr("This conversion loses information:\n\n%1\n"
+                       "Proceed anyway?").arg(what))
+                == QMessageBox::Yes) {
+                memset(&res, 0, sizeof(res));
+                opts.accept_data_loss = true;
+                rc = uft_convert_file(source.toUtf8().constData(),
+                                      target.toUtf8().constData(),
+                                      dstFmt, &opts, &res);
+            }
+        }
+    }
+
+    for (int i = 0; i < res.warning_count && i < 8; i++) {
+        appendOutput(QString("  ! ") + QString::fromUtf8(res.warnings[i]));
+    }
+
+    if (rc == UFT_OK && res.success) {
+        appendOutput(tr("Conversion complete: %1 tracks, %2 sectors "
+                        "(%3 failed)")
+                     .arg(res.tracks_converted)
+                     .arg(res.sectors_converted)
+                     .arg(res.sectors_failed));
+        emit statusMessage(tr("Conversion complete"));
     } else {
-        appendOutput(tr("Conversion failed!"));
+        /* Kein "complete" ohne Tat. Sein Ziel raeumt der Wandler selbst
+         * auf (MF-545); hier bleibt die ehrliche Meldung. */
+        appendOutput(tr("Conversion refused or failed (error %1) - "
+                        "no output written.").arg((int)rc));
+        emit statusMessage(tr("Conversion failed"));
     }
     appendOutput(QString());
-    
-    emit statusMessage(tr("Conversion complete"));
 }
 
 void ToolsTab::onRepair()
@@ -426,56 +511,21 @@ void ToolsTab::onSaveOutput()
 
 void ToolsTab::setupFormatConversionMap()
 {
-    // Commodore formats
-    m_conversionMap["D64"] = {"G64", "NIB", "SCP", "HFE", "TAP"};
-    m_conversionMap["G64"] = {"D64", "NIB", "SCP", "HFE"};
-    m_conversionMap["NIB"] = {"D64", "G64", "SCP", "HFE"};
-    m_conversionMap["D71"] = {"SCP", "HFE"};
-    m_conversionMap["D81"] = {"IMG", "SCP", "HFE"};
-    
-    // Amiga formats
-    m_conversionMap["ADF"] = {"HFE", "SCP", "ADZ"};
-    m_conversionMap["ADZ"] = {"ADF", "HFE", "SCP"};
-    
-    // Apple formats
-    m_conversionMap["WOZ"] = {"NIB", "PO", "DO", "SCP", "HFE", "A2R"};
-    m_conversionMap["A2R"] = {"WOZ", "NIB", "PO", "SCP", "HFE"};
-    m_conversionMap["NIB_Apple"] = {"WOZ", "PO", "DO", "2IMG"};
-    m_conversionMap["PO"] = {"DO", "2IMG", "WOZ", "NIB"};
-    m_conversionMap["DO"] = {"PO", "2IMG", "WOZ", "NIB"};
-    
-    // Atari formats
-    m_conversionMap["ST"] = {"MSA", "STX", "SCP", "HFE", "IMG"};
-    m_conversionMap["MSA"] = {"ST", "SCP", "HFE"};
-    m_conversionMap["STX"] = {"ST", "SCP", "HFE"};
-    m_conversionMap["ATR"] = {"XFD", "ATX", "SCP"};
-    
-    // PC formats - most flexible
-    m_conversionMap["IMG"] = {"IMA", "XDF", "DMF", "TD0", "IMD", "SCP", "HFE"};
-    m_conversionMap["IMA"] = {"IMG", "XDF", "TD0", "SCP", "HFE"};
-    m_conversionMap["XDF"] = {"IMG", "SCP", "HFE"};
-    m_conversionMap["DMF"] = {"IMG", "SCP", "HFE"};
-    m_conversionMap["TD0"] = {"IMG", "SCP", "HFE"};
-    m_conversionMap["IMD"] = {"IMG", "TD0", "SCP", "HFE"};
-    
-    // BBC formats
-    m_conversionMap["SSD"] = {"DSD", "SCP", "HFE"};
-    m_conversionMap["DSD"] = {"SSD", "SCP", "HFE"};
-    m_conversionMap["ADL"] = {"SCP", "HFE"};
-    
-    // Spectrum formats
-    m_conversionMap["TRD"] = {"SCL", "SCP", "HFE"};
-    m_conversionMap["SCL"] = {"TRD", "SCP"};
-    
-    // Japanese formats
-    m_conversionMap["D88"] = {"IMG", "SCP", "HFE"};
-    m_conversionMap["NFD"] = {"D88", "SCP"};
-    
-    // Flux formats - can convert to almost anything
-    m_conversionMap["SCP"] = {"HFE", "RAW", "D64", "G64", "ADF", "ST", "IMG", "ATR", "WOZ"};
-    m_conversionMap["HFE"] = {"SCP", "RAW", "D64", "G64", "ADF", "ST", "IMG"};
-    m_conversionMap["RAW"] = {"SCP", "HFE", "D64", "G64", "ADF", "ST", "IMG"};
-    m_conversionMap["KF"] = {"SCP", "HFE", "RAW"};
+    /* -- MF-568: die Handliste ist WEG -----------------------------------
+     *
+     * Hier standen 40 Zeilen `m_conversionMap["X"] = {"Y", "Z"}` -- die
+     * VIERTE Aufzaehlung dessen, was gewandelt werden kann, nach
+     * Wandlungstabelle, Rundlauf-Matrix und Verteiler. Sie war die
+     * einzige, die der Benutzer je sah, und sie bot Paare an, die die
+     * Maschine nicht hat: SCP->ATR, SCP->WOZ, TRD->SCL, D64->TAP.
+     *
+     * `populateConvertToFormats()` fragt jetzt
+     * `uft_convert_list_targets()` -- die Tabelle selbst.
+     *
+     * Die leere Funktion bleibt stehen, weil der Konstruktor sie ruft und
+     * die Kopfdatei sie fuehrt; sie zu loeschen waere eine zweite
+     * Aenderung an einer Stelle, die diese Sitzung nicht misst. Was hier
+     * NICHT wieder hineingehoert, ist eine Liste. */
 }
 
 void ToolsTab::onConvertFromChanged(int index)
@@ -489,11 +539,39 @@ void ToolsTab::populateConvertToFormats(const QString& fromFormat)
     ui->comboConvertTo->blockSignals(true);
     ui->comboConvertTo->clear();
     
-    if (m_conversionMap.contains(fromFormat)) {
-        ui->comboConvertTo->addItems(m_conversionMap[fromFormat]);
+    /* -- MF-568: die Liste kommt jetzt aus der Maschine -----------------
+     *
+     * Hier stand `m_conversionMap` -- eine von Hand gepflegte Liste, die
+     * VIERTE Aufzaehlung dessen, was gewandelt werden kann (nach
+     * Wandlungstabelle, Rundlauf-Matrix und Verteiler) und die einzige,
+     * die der Benutzer je zu sehen bekam. Sie bot Paare an, die es nicht
+     * gibt: SCP->ATR, SCP->WOZ, TRD->SCL, D64->TAP.
+     *
+     * `uft_convert_list_targets()` liest die Tabelle selbst. Was hier
+     * nicht auftaucht, kann das Werkzeug nicht -- und sagt es, bevor
+     * jemand klickt. */
+    uft_format_t srcFmt =
+        uft_format_from_name(fromFormat.toUtf8().constData());
+    QStringList targets;
+    if (srcFmt != UFT_FORMAT_UNKNOWN) {
+        const uft_conversion_path_t* paths[64];
+        int n = uft_convert_list_targets(srcFmt, paths, 64);
+        for (int i = 0; i < n; i++) {
+            if (paths[i]->target == srcFmt) continue;   /* Identitaet */
+            QString name = QString::fromUtf8(
+                uft_format_get_name(paths[i]->target));
+            if (!targets.contains(name)) targets << name;
+        }
+    }
+    if (targets.isEmpty()) {
+        /* Nichts anzubieten ist eine Aussage, kein Fehler. Ein
+         * Ausweichvorschlag waere geraten. */
+        ui->comboConvertTo->addItem(tr("(no conversion available)"));
+        ui->comboConvertTo->setEnabled(false);
     } else {
-        // Default: allow flux formats
-        ui->comboConvertTo->addItems({"SCP", "HFE", "RAW"});
+        targets.sort();
+        ui->comboConvertTo->addItems(targets);
+        ui->comboConvertTo->setEnabled(true);
     }
     
     ui->comboConvertTo->blockSignals(false);

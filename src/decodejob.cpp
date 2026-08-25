@@ -9,6 +9,11 @@
  */
 
 #include "decodejob.h"
+
+extern "C" {
+#include "uft/uft_format_convert.h"
+}
+
 #include "disk_image_validator.h"
 #include <QThread>
 #include <QDebug>
@@ -315,7 +320,7 @@ bool DecodeJob::verifySectors()
 }
 
 // ============================================================================
-// Convert Image (Simple Copy for now)
+// Convert Image (ueber uft_convert_file, MF-568)
 // ============================================================================
 
 bool DecodeJob::convertImage()
@@ -323,67 +328,70 @@ bool DecodeJob::convertImage()
     if (m_destPath.isEmpty()) {
         return true; // No conversion requested
     }
-    
+
     emit progress(85);
-    
-    // For now, just copy the file
-    // Real implementation would use format conversion APIs
-    QFile srcFile(m_sourcePath);
-    if (!srcFile.open(QIODevice::ReadOnly)) {
-        emit error(QString("Cannot open source: %1").arg(srcFile.errorString()));
-        return false;
-    }
-    
-    QFile destFile(m_destPath);
-    if (!destFile.open(QIODevice::WriteOnly)) {
-        srcFile.close();
-        emit error(QString("Cannot create destination: %1").arg(destFile.errorString()));
-        return false;
-    }
-    
-    // Copy in chunks
-    QByteArray buffer;
-    qint64 totalSize = srcFile.size();
-    qint64 written = 0;
-    
-    while (!srcFile.atEnd() && !isCancelled()) {
-        buffer = srcFile.read(65536); // 64KB chunks
 
-        // MF-122: previously the return value of write() was discarded,
-        // so a full disk or I/O error silently produced a truncated
-        // output file with no error signal. Treat any short write as a
-        // hard failure — partial output is still on disk so we delete
-        // it before bailing.
-        qint64 wrote = destFile.write(buffer);
-        if (wrote != buffer.size()) {
-            QString errMsg = QString("Write failed at offset %1 (%2 of %3 bytes): %4")
-                                 .arg(written)
-                                 .arg(wrote < 0 ? 0 : wrote)
-                                 .arg(buffer.size())
-                                 .arg(destFile.errorString());
-            srcFile.close();
-            destFile.close();
-            QFile::remove(m_destPath);
-            emit error(errMsg);
-            return false;
+    /* -- MF-568: hier stand eine Kopie in 64-kB-Bloecken ----------------
+     *
+     * Der Kopf der Funktion sagte es selbst: "Convert Image (Simple Copy
+     * for now)", und daneben stand "Real implementation would use format
+     * conversion APIs". Die Oberflaeche meldete waehrenddessen
+     * "Converting...".
+     *
+     * Wer also eine SCP-Aufnahme mit Ziel `.d64` dekodieren liess, bekam
+     * die SCP-Datei unter dem Namen `.d64` zurueck -- ohne Warnung, ohne
+     * Verlustmeldung, mit Fortschrittsbalken bis 95 %.
+     *
+     * Bemerkenswert daran: MF-122 hat INNERHALB dieser Kopie den
+     * Rueckgabewert von `write()` gehaertet, weil eine volle Platte sonst
+     * still eine abgeschnittene Datei erzeugt haette. Die Sorgfalt galt
+     * dem Detail; dass die Funktion gar nicht wandelt, blieb stehen.
+     *
+     * Jetzt geht auch dieser Weg durch `uft_convert_file()` -- denselben
+     * Engpass wie die Konvertieren-Schaltflaeche (ToolsTab) und derselbe,
+     * den MF-567 fuer den Speicher-Weg dichtgemacht hat. */
+    uft_format_t dstFmt = uft_format_from_name(
+        QFileInfo(m_destPath).suffix().toUtf8().constData());
+    if (dstFmt == UFT_FORMAT_UNKNOWN) {
+        emit error(QString("Unknown target format for '%1' - nothing was "
+                           "written.").arg(QFileInfo(m_destPath).fileName()));
+        return false;
+    }
+
+    uft_convert_options_t opts;
+    memset(&opts, 0, sizeof(opts));
+    /* Ein Hintergrundauftrag hat niemanden zu fragen. Verlustbehaftete
+     * Wandlungen weist das Tor hier also ab, statt sie stillschweigend
+     * zu erlauben -- die Zustimmung gehoert an die Oberflaeche, wo
+     * jemand sie geben kann (ToolsTab). */
+    opts.accept_data_loss = false;
+
+    uft_convert_result_t res;
+    memset(&res, 0, sizeof(res));
+    uft_error_t rc = uft_convert_file(m_sourcePath.toUtf8().constData(),
+                                      m_destPath.toUtf8().constData(),
+                                      dstFmt, &opts, &res);
+
+    if (rc != UFT_OK || !res.success) {
+        QString msg = QString("Conversion to %1 refused or failed "
+                              "(error %2)")
+                          .arg(QString::fromUtf8(uft_format_get_name(dstFmt)))
+                          .arg((int)rc);
+        for (int i = 0; i < res.warning_count && i < 8; i++) {
+            msg += "\n  " + QString::fromUtf8(res.warnings[i]);
         }
-        written += buffer.size();
-
-        int pct = 85 + static_cast<int>((written * 10) / totalSize);
-        emit progress(pct);
-    }
-    
-    srcFile.close();
-    destFile.close();
-    
-    if (isCancelled()) {
-        // Remove partial file
-        QFile::remove(m_destPath);
+        emit error(msg);
         return false;
     }
-    
-    qDebug() << "Copied to:" << m_destPath;
-    
+
+    for (int i = 0; i < res.warning_count && i < 8; i++) {
+        qDebug() << "convert:" << res.warnings[i];
+    }
+    qDebug() << "Converted to:" << m_destPath
+             << res.tracks_converted << "tracks,"
+             << res.sectors_converted << "sectors,"
+             << res.sectors_failed << "failed";
+
     emit progress(95);
     return true;
 }

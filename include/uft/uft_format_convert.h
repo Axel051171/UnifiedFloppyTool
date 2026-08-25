@@ -232,6 +232,30 @@ uft_format_class_t uft_format_get_class(uft_format_t format);
 #ifndef UFT_FORMAT_GET_NAME_DECLARED
 #define UFT_FORMAT_GET_NAME_DECLARED
 const char* uft_format_get_name(uft_format_t format);
+
+/**
+ * @brief Format zu einem Kuerzel — die Rueckrichtung zu
+ *        @ref uft_format_get_name (MF-568).
+ *
+ * Gross-/Kleinschreibung egal; ein fuehrender Punkt wird ueberlesen, damit
+ * sowohl `"D64"` als auch `".d64"` gehen.
+ *
+ * ── Wofuer das gebraucht wird ────────────────────────────────────────────
+ *
+ * Die Oberflaeche fuehrte bis MF-568 eine EIGENE, von Hand gepflegte
+ * Wandlungsliste (`ToolsTab::m_conversionMap`) — die vierte Liste dessen,
+ * was gewandelt werden kann, nach Wandlungstabelle, Rundlauf-Matrix und
+ * Verteiler. Sie bot Paare an, die die Maschine nicht hat (`SCP→ATR`,
+ * `SCP→WOZ`, `TRD→SCL`), und sie war die einzige, die der Benutzer je sah.
+ *
+ * Damit die Oberflaeche stattdessen `uft_convert_list_targets()` benutzen
+ * kann, braucht sie den Weg vom angezeigten Kuerzel zurueck zum Format.
+ *
+ * @return das Format, oder @ref UFT_FORMAT_UNKNOWN wenn das Kuerzel in
+ *         `g_format_info[]` nicht vorkommt. **Kein Raten** — ein
+ *         unbekanntes Kuerzel ist unbekannt, nicht „vermutlich IMG".
+ */
+uft_format_t uft_format_from_name(const char* name);
 #endif /* UFT_FORMAT_GET_NAME_DECLARED */
 
 #ifdef __cplusplus

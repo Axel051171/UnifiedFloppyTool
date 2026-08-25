@@ -45,6 +45,27 @@ const char* uft_format_get_name(uft_format_t format) {
     return "Unknown";
 }
 
+uft_format_t uft_format_from_name(const char* name) {
+    if (!name || !*name) return UFT_FORMAT_UNKNOWN;
+
+    /* Eine fuehrende Endung ist erlaubt: die Oberflaeche hat mal ein
+     * Kuerzel ("D64") und mal einen Dateinamen-Rest (".d64") zur Hand. */
+    if (*name == '.') name++;
+
+    for (int i = 0; g_format_info[i].name; i++) {
+        const char* a = g_format_info[i].name;
+        const char* b = name;
+        while (*a && *b) {
+            int ca = (*a >= 'a' && *a <= 'z') ? *a - 32 : *a;
+            int cb = (*b >= 'a' && *b <= 'z') ? *b - 32 : *b;
+            if (ca != cb) break;
+            a++; b++;
+        }
+        if (!*a && !*b) return g_format_info[i].format;
+    }
+    return UFT_FORMAT_UNKNOWN;
+}
+
 const uft_conversion_path_t* uft_convert_get_path(uft_format_t src,
                                                     uft_format_t dst) {
     for (size_t i = 0; i < g_num_conversion_paths; i++) {

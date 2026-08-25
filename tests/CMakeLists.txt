@@ -464,6 +464,8 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/include/uft/formats/cbm
             ${CMAKE_SOURCE_DIR}/include/uft/formats/c64
             ${CMAKE_SOURCE_DIR}/include/uft/flux)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_convert_img_hfe_roundtrip")
         # MF-539: braucht die ganze Format-Schicht wie die uebrigen
         # Wandlungstests, aber keine Korpusdatei.
@@ -554,7 +556,8 @@ foreach(test_source ${TEST_SOURCES})
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_convert_scp_adf_multirev"
            OR ${test_name} STREQUAL "test_convert_scp_d64_multirev"
-           OR ${test_name} STREQUAL "test_convert_table_has_dispatch")
+           OR ${test_name} STREQUAL "test_convert_table_has_dispatch"
+           OR ${test_name} STREQUAL "test_format_from_name")
         # MF-565 teilt sich die Rezeptur mit MF-473: beide fahren ueber die
         # Format-Registry und brauchen den SCP-Parser fuer die Umdrehungen.
         #

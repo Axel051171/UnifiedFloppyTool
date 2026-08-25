@@ -1859,13 +1859,30 @@ uft_error_t uftc_convert_hfe_to_sectors(const uint8_t* src_data,
 
     uftc_report_progress(opts, 95, "Writing output");
 
-    uft_error_t err = uftc_write_output_file(dst_path, output, output_size);
-    if (err == UFT_OK) {
-        result->success = true;
-        result->bytes_written = (int)output_size;
-    } else {
-        result->error = err;
-    }
+    /* ── MF-568: diese Stelle hatte MF-545 uebersehen ────────────────────
+     *
+     * Hier stand `uftc_write_output_file()` und danach `success = true`,
+     * sobald sich die Datei ANLEGEN liess — genau das Muster, das MF-545
+     * an sieben anderen Wandlern beseitigt hat. Der achte blieb stehen.
+     *
+     * Gemessen (tests/test_convert_leaves_no_ghost.c, Fall 2): eine hinter
+     * dem Kopf abgeschnittene `gw_amigados.hfe` (1024 Byte) ergab
+     *
+     *     Rueckgabe UFT_OK, success = true,
+     *     737 280 Byte IMG geschrieben,
+     *     0 Spuren gewandelt, 80 gescheitert.
+     *
+     * Ein vollstaendig erfundenes Diskettenabbild, als Erfolg gemeldet.
+     * Derselbe Befund wie MF-565 (SCP->D64), anderer Wandler — zehnter
+     * Geschwister-Fall der Reihe MF-534…568.
+     *
+     * Gefunden wurde er, weil der Geister-Test aus MF-545 selbst falsch
+     * gemessen hat: er reichte eine Quelle hinein, die als DSK erkannt
+     * wurde, und pruefte damit nur den Fall „Paar gibt es nicht" — nie
+     * den, um den es MF-545 ging. */
+    uft_error_t err = uftc_finish_or_refuse(result, dst_path,
+                                            output, output_size,
+                                            "HFE->Sektoren");
 
     free(output);
     uftc_report_progress(opts, 100, "HFE->sector complete");
