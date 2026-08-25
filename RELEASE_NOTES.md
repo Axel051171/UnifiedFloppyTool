@@ -1,3 +1,56 @@
+# UnifiedFloppyTool v4.1.6 Release Notes
+
+**Release Date:** unveröffentlicht — Tag noch nicht gesetzt
+**Vorgänger:** v4.1.5 (2026-06-05)
+
+## Worum es in diesem Release geht
+
+Nicht um neue Formate — die stehen unter Moratorium (MF-363/498). Sondern
+darum, dass **keine Aussage des Werkzeugs mehr unbelegt ist**, auch nicht
+die darüber, was es nicht kann.
+
+Die vollständige Liste steht in [`CHANGELOG.md`](CHANGELOG.md). Die
+Kurzfassung dessen, was gefunden wurde:
+
+| Fund | vorher | nachher |
+|---|---|---|
+| `SCP→D64` | 0 von 683 Sektoren, meldet Erfolg | 683 von 683 |
+| `uft_convert_memory()` | ging komplett am Preflight-Tor vorbei; 3,7 MB erfundener Fluss aus 4 KB Zufall | Tor greift, 32 Paare abgewiesen |
+| Konvertieren-Knopf | `QFile::copy()` + „Conversion complete!" | geht durch `uft_convert_file()` |
+| Datei-Browser | 13 erfundene Verzeichniseinträge | sagt, dass er nicht liest |
+| Belegungskarte | jede Diskette grün „frei" | grau „?", Vorbehalt in der Anzeige |
+| Forensik-Bericht | `Filesystem: ✓ Valid` ohne ein Byte zu lesen | „— not checked" mit Begründung |
+| Lizenz | `SPDX: MIT` auf einer GPLv2+-Portierung, in einem GPLv2-Projekt | `GPL-2.0-or-later` |
+
+## Was dieses Release NICHT kann
+
+Diese Liste gehört zum Release, nicht in eine Fußnote:
+
+- **57 von 88 tier-geführten Formaten sind ungeprüft** (T3). Belegt:
+  T1=2, T1b=12, T2=17.
+- **12 von 44 Wandlungspfaden werden angeboten**, davon 4 verlustfrei mit
+  Messung. Die übrigen weist das Preflight-Tor ab — das ist Absicht.
+- **Der Kopierschutz-Katalog (55+ Verfahren) hat keinen Aufrufer.**
+  Automatisch läuft Signal-Erkennung plus drei heuristisch benannte
+  Schemata.
+- **Das Dateisystem wird nicht gelesen.** Verzeichnisliste und
+  Belegungskarte sagen das jetzt in der Anzeige.
+- **58 von 261 Tests lecken unter ASan.** Alter Rückstand, nicht
+  gewachsen (über zwei CI-Läufe gemessen).
+- **Kein Bedien-Abnahmetest.** Sechs kopflose Qt-Tests decken Logik und
+  Anzeige aller Reiter ab — nicht Aussehen, Bedienfluss oder alles hinter
+  einem modalen Dialog.
+- **Tier-3-Hardware-Prüfung fehlt weiterhin** — kein Gerät verfügbar,
+  an die Gemeinschaft delegiert.
+
+## Offen vor dem Tag
+
+- Bedien-Abnahme der neuen Oberflächen-Funktionen (MF-496 Feineinsteller,
+  MF-501 Schadenslage-Zeile) — braucht einen Menschen an der Maus
+- CI-Matrix grün für den Tag-Kandidaten
+
+---
+
 # UnifiedFloppyTool v4.1.5 Release Notes
 
 **Release Date:** 2026-06-05

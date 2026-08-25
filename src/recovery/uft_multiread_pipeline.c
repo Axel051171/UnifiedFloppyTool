@@ -14,8 +14,35 @@
  * @author UFT Team
  * @version 3.5.0
  * @date 2026-01-03
- * 
- * SPDX-License-Identifier: MIT
+ *
+ * SPDX-License-Identifier: GPL-2.0-or-later
+ * SPDX-FileCopyrightText: 2024-2026 Axel Kramer
+ *
+ * ── Herkunft (MF-580, vorher P0-5/LIC-1) ────────────────────────────────
+ *
+ * Diese Datei trug `SPDX-License-Identifier: MIT` und dokumentierte sich
+ * im selben Atemzug als Nachbau von a8rawconv:
+ *
+ *     `uftc_classify_passes()`, weiter unten:
+ *     "Nach a8rawconv `sift_sectors` (src/a8rawconv/disk.cpp:236-365)"
+ *
+ * mit Zeilenverweisen bis hinunter zu einzelnen Abschnitten
+ * (disk.cpp:331-343 fuer das laengste gemeinsame Praefix). a8rawconv
+ * (Avery Lee) steht unter GPLv2 oder spaeter.
+ *
+ * Die MIT-Angabe war damit auf ZWEI unabhaengigen Wegen falsch:
+ *
+ *   1. gegen die Herkunft — ein Nachbau von GPLv2+-Code kann nicht unter
+ *      MIT stehen
+ *   2. gegen das Projekt selbst — `LICENSE` im Wurzelverzeichnis ist die
+ *      GNU GPL Version 2
+ *
+ * Das war keine Praeferenzfrage, sondern eine unwahre Aussage in der
+ * Zeile, die Rechtsfolgen hat. Fuer ein Werkzeug, dessen erster Satz
+ * "Keine erfundenen Daten" lautet, ist eine falsche Lizenzangabe
+ * dieselbe Fehlerklasse wie eine erfundene Dateiliste — nur teurer.
+ *
+ * Korrigiert auf GPL-2.0-or-later, passend zu beidem.
  */
 
 #include <stdint.h>

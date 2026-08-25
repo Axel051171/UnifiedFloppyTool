@@ -92,6 +92,24 @@
        under packaging/flatpak/screenshots/ and restore the block. -->
 
   <releases>
+    <release version="4.1.6" date="2026-08-25">
+      <description>
+        <p>
+          Truthfulness release. Every statement the tool makes about
+          preserved data is now measured — including the statement of
+          what it cannot do. SCP-to-D64 recovered 0 of 683 sectors
+          while reporting success; it now recovers 683 of 683. The
+          in-memory conversion path bypassed the preflight gate
+          entirely and fabricated 3.7 MB of flux from 4 KB of noise.
+          The GUI Convert button was a file copy. The file browser
+          invented directory listings; the allocation map showed every
+          disk as empty; the forensic report certified "Filesystem:
+          Valid" without reading a byte. All fixed and pinned by
+          tests, plus two new consistency gates and six headless Qt
+          tests covering every tab.
+        </p>
+      </description>
+    </release>
     <release version="4.1.5" date="2026-06-05">
       <description>
         <p>

@@ -101,7 +101,7 @@ Zahl korrekturbedürftig.
 | # | Sache | Blocker |
 |---|---|---|
 | **D1** | Tier-3-Hardware-Bench | **kein Gerät** (MF-310) — an die Gemeinschaft delegiert |
-| **D2** | LIC-1 Lizenzherkunft `uft_multiread_pipeline.c` | **Entscheidung des Eigentümers** |
+| ~~**D2**~~ | LIC-1 Lizenzherkunft `uft_multiread_pipeline.c` | ✅ **MF-580** — `MIT` → `GPL-2.0-or-later`. Keine Entscheidung, sondern eine Korrektur: die Datei nennt ihre Herkunft selbst mit Zeilenverweisen, und das Projekt steht ohnehin unter GPL v2. Für ein Werkzeug mit dem Leitsatz Keine-erfundenen-Daten ist eine falsche Lizenzangabe dieselbe Fehlerklasse wie eine erfundene Dateiliste — nur teurer |
 | **D3** | Korpus-Beschaffung (`cpmtools`, SAMdisk `tc.cpp`, `sector-cpc`) | **Eigentümer** |
 | **D4** | GUI-Bedien-Nachweis | ⚠ **teilweise auflösbar, Einordnung war zu pessimistisch (MF-574).** „Nur der Eigentümer kann klicken“ stimmt nicht: der Baum hat kopflose Qt-Tests (`QT_QPA_PLATFORM=offscreen`), die in ctest laufen. Dieselbe Fehleinordnung wie bei C2. **`test_tools_tab_convert.cpp` treibt seit MF-574 den Konvertieren-Knopf wirklich an** — drei Zusicherungen, jede einzeln rotbewiesen. Was ein Mensch noch leisten muss: Aussehen, Bedienfluss, und alles mit modalem Dialog (verlustbehaftete Wandlung fragt nach) |
 | **D5** | 12 Wandlungspfade brauchen Korpusdateien, 10 einen Wandler, der nicht existiert | teils Beschaffung, teils Neubau |
