@@ -265,8 +265,22 @@ void MainWindow::onSave()
                     tr("Cannot write to file:\n%1").arg(m_currentFile));
                 return;
             }
-            outFile.write(imageData);
+            /* MF-571: hier stand `outFile.write(imageData);` ohne
+             * Pruefung, und danach unbedingt "Saved: %1". Das ist die
+             * SPEICHERN-Funktion eines forensischen Werkzeugs: eine kurze
+             * Schreibung ergab eine halbe Datei mit richtigem Namen und
+             * der Meldung, sie sei gespeichert. */
+            const qint64 want = imageData.size();
+            const qint64 wrote = outFile.write(imageData);
             outFile.close();
+            if (wrote != want) {
+                QFile::remove(m_currentFile);
+                QMessageBox::critical(this, tr("Save Error"),
+                    tr("Only %1 of %2 bytes were written - the partial "
+                       "file was removed.")
+                    .arg(wrote < 0 ? 0 : wrote).arg(want));
+                return;
+            }
         }
 
         statusBar()->showMessage(tr("Saved: %1").arg(m_currentFile), 3000);

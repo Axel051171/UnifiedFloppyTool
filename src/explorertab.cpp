@@ -728,8 +728,18 @@ void ExplorerTab::onDelete()
                     rc = uft_fat12_delete(&fs, fullPath.toUtf8().constData());
                     if (rc == 0 && fs.modified) {
                         imgFile.seek(0);
-                        imgFile.write(reinterpret_cast<const char*>(fs.data),
-                                      static_cast<qint64>(fs.data_size));
+                        /* MF-571: hier wird das ABBILD zurueckgeschrieben. Eine
+                         * kurze Schreibung haette es still beschaedigt —
+                         * richtiger Name, richtige Endung, halber Inhalt. */
+                        const qint64 want = static_cast<qint64>(fs.data_size);
+                        const qint64 wrote = imgFile.write(
+                            reinterpret_cast<const char*>(fs.data), want);
+                        if (wrote != want) {
+                            QMessageBox::critical(this, tr("Write failed"),
+                                tr("Only %1 of %2 bytes were written back to "
+                                   "the image. It may now be damaged.")
+                                .arg(wrote < 0 ? 0 : wrote).arg(want));
+                        }
                     }
                     uft_fat12_free(&fs);
                 }
@@ -810,8 +820,18 @@ void ExplorerTab::onNewFolder()
                                             UFT_FAT12_ATTR_DIRECTORY);
                 if (rc == 0 && fs.modified) {
                     imgFile.seek(0);
-                    imgFile.write(reinterpret_cast<const char*>(fs.data),
-                                  static_cast<qint64>(fs.data_size));
+                    /* MF-571: hier wird das ABBILD zurueckgeschrieben. Eine
+                     * kurze Schreibung haette es still beschaedigt —
+                     * richtiger Name, richtige Endung, halber Inhalt. */
+                    const qint64 want = static_cast<qint64>(fs.data_size);
+                    const qint64 wrote = imgFile.write(
+                        reinterpret_cast<const char*>(fs.data), want);
+                    if (wrote != want) {
+                        QMessageBox::critical(this, tr("Write failed"),
+                            tr("Only %1 of %2 bytes were written back to "
+                               "the image. It may now be damaged.")
+                            .arg(wrote < 0 ? 0 : wrote).arg(want));
+                    }
                 }
                 uft_fat12_free(&fs);
             }

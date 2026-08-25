@@ -313,8 +313,19 @@ void ForensicTab::onExportReport()
     
     QFile file(path);
     if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
-        file.write(report.toUtf8());
+        /* MF-571: ein abgeschnittener forensischer Bericht ist
+         * schlimmer als keiner — er sieht vollstaendig aus. */
+        const QByteArray bytes = report.toUtf8();
+        const qint64 wrote = file.write(bytes);
         file.close();
+        if (wrote != bytes.size()) {
+            QFile::remove(path);
+            QMessageBox::critical(this, tr("Export"),
+                tr("Only %1 of %2 bytes were written - the partial report "
+                   "was removed.").arg(wrote < 0 ? 0 : wrote)
+                                  .arg(bytes.size()));
+            return;
+        }
         QMessageBox::information(this, tr("Export"), tr("Report saved to:\n%1").arg(path));
     } else {
         QMessageBox::warning(this, tr("Error"), tr("Cannot save report:\n%1").arg(file.errorString()));

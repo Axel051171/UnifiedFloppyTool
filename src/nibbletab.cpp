@@ -9,6 +9,11 @@
 #include "ui_tab_nibble.h"
 #include "disk_image_validator.h"
 
+extern "C" {
+#include "uft/formats/cbm/uft_cbm_geometry.h"
+}
+
+
 #include <QFile>
 #include <QFileDialog>
 #include <QMessageBox>
@@ -167,13 +172,30 @@ void NibbleTab::onReadTrack()
     qint64 offset = 0;
     
     if (info.formatName.contains("D64")) {
-        static const int d64Sectors[] = {21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,21,
-            19,19,19,19,19,19,19,18,18,18,18,18,18,17,17,17,17,17};
+        /* -- MF-571: hier stand die 25. Kopie der Sektortabelle ----------
+         *
+         * Woertlich:
+         *
+         *     static const int d64Sectors[] = {21,21,...,17,17};
+         *
+         * MF-434 hat genau diese Tabelle aus 24 Stellen des Kerns
+         * entfernt und durch `uft_cbm_sectors_per_track()` ersetzt --
+         * "sie sind Laufwerks-Fakten, keine Encoder-Fakten". Die
+         * Oberflaeche hatte eine eigene, und die Zusammenfuehrung hat sie
+         * uebersehen.
+         *
+         * Die Zahlen waren RICHTIG; hier geht also nichts verloren. Es
+         * ist die Form, die weg muss: eine von Hand gepflegte Kopie eines
+         * Fakts driftet, und dieser Baum hat das dreimal in einer Sitzung
+         * bezahlt (MF-541, MF-566, MF-567). */
         offset = 0;
         for (int t = 0; t < m_currentTrack && t < 35; t++) {
-            offset += d64Sectors[t] * 256;
+            offset += uft_cbm_sectors_per_track(UFT_CBM_1541, t + 1) * 256;
         }
-        trackSize = (m_currentTrack < 35) ? d64Sectors[m_currentTrack] * 256 : 0;
+        trackSize = (m_currentTrack < 35)
+                  ? uft_cbm_sectors_per_track(UFT_CBM_1541,
+                                              m_currentTrack + 1) * 256
+                  : 0;
     } else if (info.sectorsPerTrack > 0 && info.sectorSize > 0) {
         trackSize = info.sectorsPerTrack * info.sectorSize;
         offset = (m_currentTrack * info.heads + m_currentHead) * trackSize;
@@ -274,7 +296,21 @@ void NibbleTab::onExportNIB()
     for (int i = 0; i < qMin(m_trackData.size(), 6656); i++) nibData[offset + i] = m_trackData[i];
     
     QFile file(path);
-    if (file.open(QIODevice::WriteOnly)) { file.write(nibData); file.close(); emit statusMessage(tr("Exported to: %1").arg(path)); }
+    if (file.open(QIODevice::WriteOnly)) {
+        /* MF-571: write() ungeprueft, "Exported to" unbedingt. */
+        const qint64 wrote = file.write(nibData);
+        file.close();
+        if (wrote != nibData.size()) {
+            QFile::remove(path);
+            emit statusMessage(tr("Export failed: only %1 of %2 bytes "
+                                  "written - partial file removed")
+                               .arg(wrote < 0 ? 0 : wrote)
+                               .arg(nibData.size()));
+        } else {
+            emit statusMessage(tr("Exported to: %1 (%2 bytes)")
+                               .arg(path).arg(wrote));
+        }
+    }
 }
 
 void NibbleTab::onExportG64()

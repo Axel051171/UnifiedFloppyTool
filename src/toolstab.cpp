@@ -400,10 +400,30 @@ void ToolsTab::onCreateBlank()
     
     QFile file(path);
     if (file.open(QIODevice::WriteOnly)) {
-        file.write(blank);
+        /* MF-571: der Rueckgabewert von write() wurde verworfen, und
+         * gemeldet wurde `blank.size()` — die BEABSICHTIGTE Groesse.
+         *
+         * Bei voller Platte oder E/A-Fehler entstand damit eine
+         * abgeschnittene Datei plus die Meldung, es seien 174848 Byte
+         * geschrieben worden. Dieselbe Form wie MF-122 (dort im
+         * Kopier-Pfad) und MF-550 (dort bei verworfenen Flusswechseln):
+         * eine gemeldete Zahl, die nicht die gemessene ist.
+         *
+         * Eine halbe Datei ist schlimmer als keine — sie hat den
+         * richtigen Namen und die richtige Endung. */
+        qint64 wrote = file.write(blank);
         file.close();
+        if (wrote != blank.size()) {
+            QFile::remove(path);
+            appendOutput(tr("Failed to create %1: only %2 of %3 bytes "
+                            "written — partial file removed.")
+                         .arg(path).arg(wrote < 0 ? 0 : wrote)
+                         .arg(blank.size()));
+            appendOutput(QString());
+            return;
+        }
         appendOutput(tr("Created blank disk: %1 (%2 bytes)")
-            .arg(path).arg(blank.size()));
+            .arg(path).arg(wrote));
     } else {
         appendOutput(tr("Failed to create: %1").arg(file.errorString()));
     }
