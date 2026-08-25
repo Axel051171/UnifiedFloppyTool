@@ -71,6 +71,10 @@ private:
     void populateFileTable(const QList<FileEntry>& entries);
     QString formatSize(qint64 size) const;
     QList<FileEntry> readDirectory(const QString& path);
+
+    /** MF-573: Schreib-Sicherheitstor vor jeder Aenderung am Abbild.
+     *  false heisst abbrechen — der Benutzer wurde bereits informiert. */
+    bool gateBeforeModify(const QString &what, QString *snapOut = nullptr);
     
     Ui::TabExplorer *ui;
     QMenu *m_contextMenu;

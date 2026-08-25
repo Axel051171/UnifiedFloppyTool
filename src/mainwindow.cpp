@@ -1,4 +1,5 @@
 #include "mainwindow.h"
+#include "uft_gui_write_gate.h"
 #include "ui_mainwindow.h"
 #include "visualdisk.h"
 #include "disk_image_validator.h"
@@ -257,6 +258,29 @@ void MainWindow::onSave()
             QByteArray imageData = srcFile.readAll();
             srcFile.close();
 
+            /* -- MF-573: erst das Tor, dann die Datei -------------------
+             *
+             * `QFile(m_currentFile)` mit `WriteOnly` KUERZT beim Oeffnen.
+             * Im normalen Speichern-Fall ist Quelle == Ziel, das Original
+             * ist damit schon weg, bevor ein Byte geschrieben wurde — es
+             * lebt nur noch in `imageData` im Speicher.
+             *
+             * MF-571 hat hier die kurze Schreibung erkannt und die
+             * Teildatei entfernt. Das war richtig gegen die falsche
+             * Erfolgsmeldung, aber es loescht im Gleichstands-Fall den
+             * letzten Rest. Ehrlich UND leer ist immer noch leer.
+             *
+             * Das Tor legt vorher einen geprueften Schnappschuss an
+             * (`uft_write_gate_precheck`, Richtlinie
+             * UFT_GATE_POLICY_IMAGE_ONLY). Geht das Schreiben schief,
+             * steht der Zustand von vorher noch da, und die Meldung sagt
+             * wo. Genau das meint „Keine stille Veraenderung". */
+            QString snapPath;
+            if (!uftGuiWriteGateAllows(this, m_currentFile, imageData,
+                                       tr("saving"), &snapPath)) {
+                return;   /* Der Aufrufer hat den Benutzer informiert. */
+            }
+
             /* Write it out (handles the Save As case where m_currentFile
              * was updated to the new path) */
             QFile outFile(m_currentFile);
@@ -277,8 +301,9 @@ void MainWindow::onSave()
                 QFile::remove(m_currentFile);
                 QMessageBox::critical(this, tr("Save Error"),
                     tr("Only %1 of %2 bytes were written - the partial "
-                       "file was removed.")
-                    .arg(wrote < 0 ? 0 : wrote).arg(want));
+                       "file was removed.\n\n"
+                       "The state before this attempt is preserved at:\n%3")
+                    .arg(wrote < 0 ? 0 : wrote).arg(want).arg(snapPath));
                 return;
             }
         }

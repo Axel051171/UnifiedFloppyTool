@@ -288,6 +288,7 @@ SOURCES += \
     src/advanceddialogs.cpp \
     src/main.cpp \
     src/mainwindow.cpp \
+    src/uft_gui_write_gate.cpp \
     src/diskanalyzerwindow.cpp \
     src/visualdisk.cpp \
     src/explorertab.cpp \
@@ -363,6 +364,7 @@ HEADERS += \
     include/uft/analysis/uft_triage.h \
     src/advanceddialogs.h \
     src/mainwindow.h \
+    src/uft_gui_write_gate.h \
     src/diskanalyzerwindow.h \
     src/visualdisk.h \
     src/explorertab.h \

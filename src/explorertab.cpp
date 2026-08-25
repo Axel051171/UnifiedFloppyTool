@@ -6,6 +6,7 @@
  */
 
 #include "explorertab.h"
+#include "uft_gui_write_gate.h"
 #include "ui_tab_explorer.h"
 #include "disk_image_validator.h"
 
@@ -389,6 +390,42 @@ void ExplorerTab::onBrowseImage()
     }
 }
 
+
+/**
+ * Vor jeder Aenderung am Abbild: Format pruefen, Schnappschuss anlegen.
+ *
+ * MF-573. Fuenf Slots dieser Datei aendern Abbilder an Ort und Stelle —
+ * `onImportFiles`, `onImportFolder`, `onRename`, `onDelete`,
+ * `onNewFolder`. Keiner davon fragte das Schreib-Sicherheitstor.
+ *
+ * Gefragt WURDE der Benutzer („Are you sure you want to delete the
+ * selected files?"), es war also nichts Stilles. Was fehlte, ist der
+ * Schnappschuss: die Zusage, dass der Zustand VOR der Aenderung noch
+ * existiert, wenn die Aenderung sich als Fehler erweist.
+ *
+ * Der Rueckstand fuehrte das Tor als „blockiert — Hardware-Sitzung"
+ * (BACKLOG C2). Fuer den Abbild-Pfad war das falsch: die Signatur nimmt
+ * Abbild-Daten und ein Schnappschuss-Verzeichnis, keine Hardware.
+ *
+ * @return false heisst ABBRECHEN, ohne zu schreiben — der Benutzer wurde
+ *         bereits informiert.
+ */
+bool ExplorerTab::gateBeforeModify(const QString &what, QString *snapOut)
+{
+    QFile f(m_imagePath);
+    if (!f.open(QIODevice::ReadOnly)) {
+        QMessageBox::critical(this, tr("Write refused"),
+            tr("Cannot read the image before %1:\n%2\n\n"
+               "Without its current state there is nothing to fall back "
+               "to, so nothing was changed.")
+            .arg(what, f.errorString()));
+        return false;
+    }
+    const QByteArray data = f.readAll();
+    f.close();
+    return uftGuiWriteGateAllows(this, m_imagePath, data, what, snapOut);
+}
+
 void ExplorerTab::onImportFiles()
 {
     if (!m_imageLoaded) {
@@ -402,6 +439,8 @@ void ExplorerTab::onImportFiles()
     if (files.isEmpty()) return;
 
     QFileInfo imgInfo(m_imagePath);
+    if (!gateBeforeModify(tr("importing files"))) return;
+
     QString ext = imgInfo.suffix().toLower();
 
     int imported = 0;
@@ -498,6 +537,8 @@ void ExplorerTab::onImportFolder()
     if (dir.isEmpty()) return;
 
     QFileInfo imgInfo(m_imagePath);
+    if (!gateBeforeModify(tr("importing a folder"))) return;
+
     QString ext = imgInfo.suffix().toLower();
 
     // Collect all files in the folder recursively
@@ -617,6 +658,8 @@ void ExplorerTab::onRename()
     QString ext = imgInfo.suffix().toLower();
     int rc = -1;
 
+    if (!gateBeforeModify(tr("renaming"))) return;
+
     if (ext == "adf") {
         // Amiga ADF supports rename directly
         uft_adf_volume_t *vol = uft_adf_open(m_imagePath.toUtf8().constData(), false);
@@ -697,6 +740,11 @@ void ExplorerTab::onDelete()
         rows.insert(item->row());
     }
 
+    /* MF-573: EINMAL vor dem Durchgang, nicht je Datei. Ein
+     * Schnappschuss je geloeschtem Namen waere N Kopien desselben
+     * Abbilds — und der erste, der zaehlt, waere schon der zweite. */
+    if (!gateBeforeModify(tr("deleting files"))) return;
+
     int deleted = 0;
     int failed = 0;
     QStringList errors;
@@ -710,7 +758,7 @@ void ExplorerTab::onDelete()
         QString fullPath = m_currentDir + fileName;
         int rc = -1;
 
-        if (ext == "adf") {
+    if (ext == "adf") {
             uft_adf_volume_t *vol = uft_adf_open(m_imagePath.toUtf8().constData(), false);
             if (vol) {
                 rc = uft_adf_delete(vol, fullPath.toUtf8().constData());
@@ -795,6 +843,8 @@ void ExplorerTab::onNewFolder()
     if (!ok || name.isEmpty()) return;
 
     QFileInfo imgInfo(m_imagePath);
+    if (!gateBeforeModify(tr("creating a folder"))) return;
+
     QString ext = imgInfo.suffix().toLower();
     int rc = -1;
 
