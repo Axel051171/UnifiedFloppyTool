@@ -553,7 +553,8 @@ foreach(test_source ${TEST_SOURCES})
         target_compile_definitions(${test_name} PRIVATE
             UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_convert_scp_adf_multirev"
-           OR ${test_name} STREQUAL "test_convert_scp_d64_multirev")
+           OR ${test_name} STREQUAL "test_convert_scp_d64_multirev"
+           OR ${test_name} STREQUAL "test_convert_table_has_dispatch")
         # MF-565 teilt sich die Rezeptur mit MF-473: beide fahren ueber die
         # Format-Registry und brauchen den SCP-Parser fuer die Umdrehungen.
         #

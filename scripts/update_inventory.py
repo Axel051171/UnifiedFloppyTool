@@ -140,6 +140,41 @@ def _matrix_lossless_count(repo: Path):
 
 
 # (file, regex with one numeric group, source callable, description)
+def _matrix_verdict_count(repo: Path, verdict: str):
+    """Autoritativ: Verdikte einer Sorte in g_matrix[], ohne Kommentare."""
+    f = repo / "src/core/uft_roundtrip.c"
+    if not f.exists():
+        return None
+    text = f.read_text(encoding="utf-8", errors="replace")
+    text = re.sub(r"/\*.*?\*/", "", text, flags=re.S)
+    text = re.sub(r"//[^\n]*", "", text)
+    m = re.search(r"g_matrix\[\]\s*=\s*\{(.*?)\n\};", text, re.S)
+    if not m:
+        return None
+    return len(re.findall(r"UFT_RT_" + verdict + r"\b", m.group(1)))
+
+
+def _matrix_offered_count(repo: Path):
+    """Angeboten = LOSSLESS + LOSSY_DOCUMENTED (MF-567).
+
+    Was das Preflight-Tor durchlaesst; IMPOSSIBLE und alles ohne Eintrag
+    weist es ab. Die Zahl stand in CLAUDE.md von Hand und war nach MF-567
+    um drei daneben — dieselbe Drift, gegen die MF-541 die Nachbarzahl
+    eine Zeile weiter oben abgeleitet hat. Die abgeleitete schlug sofort
+    an, die von Hand gepflegte nicht.
+    """
+    ll = _matrix_verdict_count(repo, "LOSSLESS")
+    ld = _matrix_verdict_count(repo, "LOSSY_DOCUMENTED")
+    if ll is None or ld is None:
+        return None
+    return ll + ld
+
+
+def _matrix_consent_count(repo: Path):
+    """Nur mit ausdruecklichem accept_data_loss = LOSSY_DOCUMENTED."""
+    return _matrix_verdict_count(repo, "LOSSY_DOCUMENTED")
+
+
 DERIVED_CLAIMS = [
     ("docs/MASTER_PLAN.md", r"Static_assert pinnt `sizeof == (\d+)`",
      _pinned_plugin_struct_size,
@@ -158,6 +193,16 @@ DERIVED_CLAIMS = [
     ("CLAUDE.md", r"(\d+) verlustfrei \(je mit Messung\)",
      _matrix_lossless_count,
      "CLAUDE.md: LOSSLESS-Verdikte in g_matrix[]"),
+    # MF-567: dieselbe Klasse noch zweimal. Die Ueberschrift sagte "15
+    # angeboten", zwei Zeilen weiter stand "11 nur mit accept_data_loss",
+    # beide von Hand gepflegt. Nachdem drei Urteile ohne Wandler entfernt
+    # waren, waren beide falsch — waehrend die Zahl DANEBEN, seit MF-541
+    # abgeleitet, im selben Lauf anschlug. Also auch diese beiden ableiten.
+    ("CLAUDE.md", r"\*\*(\d+) angeboten\*\*", _matrix_offered_count,
+     "CLAUDE.md: angebotene Paare (LOSSLESS + LOSSY_DOCUMENTED)"),
+    ("CLAUDE.md", r"\*\*(\d+) nur mit ausdruecklichem `accept_data_loss`",
+     _matrix_consent_count,
+     "CLAUDE.md: Paare, die Einverstaendnis verlangen (LOSSY_DOCUMENTED)"),
 ]
 
 

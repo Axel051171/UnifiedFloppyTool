@@ -47,11 +47,46 @@ uft_error_t uft_preflight_check(uft_format_id_t from,
     plan_out->abort_reason     = "invalid arguments";
     plan_out->writes_sidecar   = false;
 
-    if (!source_path || !target_path) {
-        return UFT_OK;  /* plan_out records the problem */
-    }
-
+    /* ── Kein Pfad heisst keine NEBENDATEI, nicht kein URTEIL (MF-567) ──
+     *
+     * Hier stand:
+     *
+     *     if (!source_path || !target_path) return UFT_OK;
+     *
+     * `uft_convert_memory()` hat keine Dateien und reicht `NULL, NULL`
+     * durch. Damit kehrte die Pruefung sofort zurueck, die Entscheidung
+     * blieb auf `ABORT_INVALID_ARG` — und **genau dieser Wert stand nicht
+     * in der Abbruchliste** des Aufrufers. Ergebnis: der Speicher-Modus
+     * ging vollstaendig am Tor vorbei.
+     *
+     * Gemessen: `IMG -> SCP` traegt in der Matrix UNMOEGLICH mit der
+     * Begruendung „IMG has no timing; synthesising flux would be
+     * fabrication". Ueber `uft_convert_memory()`, OHNE
+     * `accept_data_loss`, kamen aus 4096 Byte Zufall **3 712 758 Byte
+     * SCP** heraus, Rueckgabe UFT_OK.
+     *
+     * Direkt darueber, im Aufrufer, stand seit UFT-A01 der Satz: „Before
+     * UFT-A01 this entry point bypassed preflight entirely, violating the
+     * documented single chokepoint guarantee." Der Kommentar sagte, es sei
+     * behoben. Die Messung sagte, es war es nie.
+     *
+     * Die Pfade werden fuer das URTEIL nicht gebraucht — nur fuer die
+     * Nebendatei. Also wird das Urteil immer gefaellt, und nur
+     * `writes_sidecar` haengt am Ziel. */
     if (!opts) opts = &k_default_opts;
+
+    /* Was ein echter Argument-Widerspruch BLEIBT (MF-567):
+     *
+     * Eine Nebendatei verlangen und kein Ziel angeben — das laesst sich
+     * nicht erfuellen, und `ABORT_INVALID_ARG` ist dafuer die richtige
+     * Antwort. Fehlende Pfade ALLEIN sind es nicht: das Urteil ueber ein
+     * Formatpaar haengt an den Formaten, nicht an Dateinamen. */
+    if (opts->emit_sidecar && !opts->dry_run && !target_path) {
+        plan_out->abort_reason =
+            "sidecar requested but no target path — cannot write a loss "
+            "record without a destination";
+        return UFT_OK;   /* decision bleibt ABORT_INVALID_ARG */
+    }
 
     plan_out->source_path        = source_path;
     plan_out->target_path        = target_path;
@@ -80,7 +115,11 @@ uft_error_t uft_preflight_check(uft_format_id_t from,
             } else {
                 plan_out->decision     = UFT_PREFLIGHT_OK;
                 plan_out->abort_reason = NULL;
-                plan_out->writes_sidecar = opts->emit_sidecar && !opts->dry_run;
+                /* Ohne Ziel keine Nebendatei — das ist der EINZIGE Teil,
+                 * der wirklich einen Pfad braucht (MF-567). */
+                plan_out->writes_sidecar = opts->emit_sidecar &&
+                                           !opts->dry_run &&
+                                           target_path != NULL;
             }
             break;
 

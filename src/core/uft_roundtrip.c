@@ -194,8 +194,15 @@ static const uft_roundtrip_entry_t g_matrix[] = {
       "flux-timing, weak-bits, index-pulses discarded; only side 0 and "
       "tracks 1-35 are read (36-42 dropped); per-sector status survives "
       "only as the D64 error map" },
-    { UFT_FORMAT_SCP, UFT_FORMAT_IMD, UFT_RT_LOSSY_DOCUMENTED,
-      "flux-timing + weak-bits discarded" },
+    /* MF-567: SCP->IMD stand hier als LOSSY_DOCUMENTED und ist ENTFERNT.
+     *
+     * Es gibt keinen Wandler dafuer — kein Zweig im Verteiler, keine
+     * Funktion im Baum; die Wandlungstabelle bietet das Paar nicht einmal
+     * an. Ein Urteil ueber den Verlust einer Wandlung, die es nicht gibt,
+     * ist eine Aussage ohne Gegenstand. Dass CLAUDE.md diesen Eintrag seit
+     * MF-526 als "Verdikt ohne Konsumenten" fuehrt, hat ihn nicht
+     * verschwinden lassen — festgestellt und stehen gelassen ist nicht
+     * behoben. Siehe IPF->ADF und STX->ST weiter unten, gleicher Fall. */
 
     /* MF-539: dieser Eintrag ist BEWUSST verlustbehaftet geblieben,
      * obwohl die Gegenrichtung IMG -> HFE jetzt als verlustfrei gemessen
@@ -281,11 +288,28 @@ static const uft_roundtrip_entry_t g_matrix[] = {
       "kein Timing, ist aber auch keine Aufnahme "
       "(tests/test_convert_img_hfe_roundtrip.c)" },
 
-    /* Protected → unprotected: copy-protection cannot round-trip */
-    { UFT_FORMAT_IPF, UFT_FORMAT_ADF, UFT_RT_LOSSY_DOCUMENTED,
-      "SPS protection markers, timing tracks discarded" },
-    { UFT_FORMAT_STX, UFT_FORMAT_ST, UFT_RT_LOSSY_DOCUMENTED,
-      "STX weak/long/fuzzy sectors collapsed to standard MFM" },
+    /* MF-567: hier standen IPF->ADF und STX->ST als LOSSY_DOCUMENTED.
+     *
+     * Beide sind ENTFERNT, und der Grund ist derselbe wie bei SCP->IMD
+     * weiter oben: **es gibt keinen Wandler dafuer.** Kein Zweig im
+     * Verteiler, keine Funktion im Baum. Gemessen mit
+     * `tests/test_convert_table_has_dispatch.c`, das jedes Paar der
+     * Wandlungstabelle einmal wirklich ruft.
+     *
+     * Ein LOSSY_DOCUMENTED-Urteil sagt: „der Verlust ist bekannt und in
+     * Kategorien dokumentiert". Ueber eine Wandlung, die nicht
+     * stattfindet, ist das eine Aussage ohne Gegenstand — und es hatte
+     * eine Wirkung: das Urteil liess das Paar durch das Preflight-Tor,
+     * und der Benutzer lief bis in den Rueckfall des Verteilers
+     * („dispatch not yet implemented"), nachdem ihm Tabelle UND Tor
+     * zugesagt hatten, der Weg sei gangbar.
+     *
+     * Ohne Eintrag gilt jetzt UNGEPRUEFT, und das Tor weist ab, bevor
+     * irgendetwas anfaengt. Dieselbe Bewegung wie MF-527 (SCP<->HFE) und
+     * MF-538 (ADF->HFE): eine Zusage ohne Deckung wird zurueckgenommen,
+     * nicht umformuliert. Kommen die Wandler, kommen die Urteile mit
+     * ihrer Messung zurueck.
+     */
 
     /* Sector ↔ Sector note (UFT-A08):
      * No sector-sector pair is currently LOSSLESS in the public

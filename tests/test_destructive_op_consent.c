@@ -155,11 +155,32 @@ TEST(argument_guards) {
     ASSERT(uft_preflight_check(UFT_FORMAT_SCP, UFT_FORMAT_HFE,
                                "a", "b", NULL, NULL) == UFT_ERROR_NULL_POINTER);
 
-    /* NULL source/target path → plan records ABORT_INVALID_ARG (the
-     * call still "succeeds" so the caller always gets a safe record). */
+    /* MF-567: fehlende Pfade schalten das URTEIL nicht mehr ab.
+     *
+     * Hier stand `NULL` als Quellpfad und erwartet wurde
+     * ABORT_INVALID_ARG. Das war der Weg, auf dem `uft_convert_memory()`
+     * — das immer `NULL, NULL` uebergibt — komplett am Tor vorbeikam:
+     * gemessen lieferte `IMG -> SCP` (Matrix: UNMOEGLICH, „synthesising
+     * flux would be fabrication") ohne Einverstaendnis 3 712 758 Byte
+     * erfundenen Fluss mit Rueckgabe UFT_OK.
+     *
+     * Das Urteil haengt jetzt an den FORMATEN. Ohne Quellpfad wird also
+     * ganz normal geurteilt: SCP->HFE ist LD, ohne Zustimmung
+     * NEED_CONSENT. */
     uft_preflight_plan_t plan;
+    uft_preflight_opts_t no_sidecar = { .accept_data_loss = false,
+                                        .emit_sidecar = false };
     uft_error_t rc = uft_preflight_check(UFT_FORMAT_SCP, UFT_FORMAT_HFE,
-                                         NULL, "out.hfe", NULL, &plan);
+                                         NULL, "out.hfe", &no_sidecar, &plan);
+    ASSERT(rc == UFT_OK);
+    ASSERT(plan.decision == UFT_PREFLIGHT_ABORT_NEED_CONSENT);
+
+    /* Ein Argument-Widerspruch bleibt einer: Nebendatei verlangt, aber
+     * kein Ziel, wohin sie geschrieben werden koennte. */
+    uft_preflight_opts_t want_sidecar = { .accept_data_loss = true,
+                                          .emit_sidecar = true };
+    rc = uft_preflight_check(UFT_FORMAT_SCP, UFT_FORMAT_HFE,
+                             "in.scp", NULL, &want_sidecar, &plan);
     ASSERT(rc == UFT_OK);
     ASSERT(plan.decision == UFT_PREFLIGHT_ABORT_INVALID_ARG);
 

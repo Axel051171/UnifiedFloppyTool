@@ -467,9 +467,24 @@ static uft_error_t uftc_preflight_gate(uft_format_t src_format,
     uft_preflight_check((uft_format_id_t)src_format,
                         (uft_format_id_t)dst_format,
                         src_path, dst_path, &preopts, out_plan);
-    if (out_plan->decision == UFT_PREFLIGHT_ABORT_IMPOSSIBLE ||
-        out_plan->decision == UFT_PREFLIGHT_ABORT_UNTESTED ||
-        out_plan->decision == UFT_PREFLIGHT_ABORT_NEED_CONSENT) {
+    /* ── Was das Tor nicht kennt, ist kein „weiter" (MF-567) ────────────
+     *
+     * Hier standen die drei ABBRUCH-Werte einzeln aufgezaehlt. Jeder
+     * andere Wert — auch ein UNBEKANNTER — fiel durch und hiess damit
+     * „durchlassen".
+     *
+     * Genau das ist passiert: im Speicher-Modus kehrte
+     * `uft_preflight_check()` bei fehlenden Pfaden frueh zurueck und liess
+     * `ABORT_INVALID_ARG` stehen. Der Wert stand nicht in der Liste, also
+     * ging der Aufruf durch — und `IMG -> SCP`, in der Matrix als
+     * UNMOEGLICH mit „synthesising flux would be fabrication" gefuehrt,
+     * lieferte 3,7 MB erfundenen Fluss mit Rueckgabe UFT_OK.
+     *
+     * Aufgezaehlt wird darum jetzt, was DURCHLAESST, nicht was abbricht.
+     * Ein neuer Entscheidungswert, den hier niemand eingetragen hat,
+     * blockiert dann — und das ist die richtige Richtung fuer ein
+     * forensisches Werkzeug. */
+    if (out_plan->decision != UFT_PREFLIGHT_OK) {
         result->error = UFT_ERR_NOT_SUPPORTED;
         if (result->warning_count <
             sizeof(result->warnings) / sizeof(result->warnings[0])) {

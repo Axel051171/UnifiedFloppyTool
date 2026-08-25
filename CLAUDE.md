@@ -65,7 +65,7 @@ Liest/schreibt Disk-Images von praktisch jedem 8-Bit- und 16-Bit-Computer:
 - **Japanisch:** D88, D77, NFD, HDM, XDF, DIM, FDX
 - Plus: MSX, Thomson, TI-99, Roland, HP LIF, CP/M, Micropolis, Victor, Zilog, etc.
 
-### 3. Format-Konvertierung (44 Pfade registriert, **15 angeboten**)
+### 3. Format-Konvertierung (44 Pfade registriert, **12 angeboten**)
 
 > **Ehrlichkeits-Hinweis (MF-526, Zahlen neu gemessen MF-541):** die
 > Wandlungstabelle fuehrt **44** Paare. Davon haben **15** einen Eintrag in
@@ -74,16 +74,29 @@ Liest/schreibt Disk-Images von praktisch jedem 8-Bit- und 16-Bit-Computer:
 > * **4 verlustfrei (je mit Messung)** — D64→D64, ADF→ADF, D64→G64,
 >   IMG→HFE. Jedes einzelne mit einer Bit-Identitaets-Messung im Baum
 >   (MF-532/533/539), keines auf Zusicherung.
-> * **11 nur mit ausdruecklichem `accept_data_loss`.**
+> * **8 nur mit ausdruecklichem `accept_data_loss`.**
 >
-> **29 weist das Preflight-Tor als UNGEPRUEFT ab** („conversion pair is
+> **30 weist das Preflight-Tor als UNGEPRUEFT ab** („conversion pair is
 > UNTESTED — not offered until an entry exists“), weil sie keinen Eintrag
-> in `src/core/uft_roundtrip.c` haben. Das ist Absicht (MF-263/UFT-A01)
-> und richtig.
+> in `src/core/uft_roundtrip.c` haben; zwei weitere als UNMOEGLICH. Das ist
+> Absicht (MF-263/UFT-A01) und richtig.
 >
-> Die Matrix selbst hat **17** Eintraege — zwei davon (`SCP→IMD`,
-> `STX→ST`) haben kein Gegenstueck in der Wandlungstabelle: Verdikte ohne
-> Konsumenten.
+> **Seit MF-567 stimmt das auch fuer den Speicher-Weg.** Bis dahin ging
+> `uft_convert_memory()` vollstaendig am Tor vorbei: es uebergibt keine
+> Dateipfade, und die Pruefung kehrte ohne Pfade sofort mit
+> `ABORT_INVALID_ARG` zurueck — ein Wert, den der Aufrufer nicht als
+> Abbruch fuehrte. Gemessen kamen aus 4096 Byte Zufall **3 712 758 Byte
+> SCP** heraus, ohne Einverstaendnis, bei einem Paar, das die Matrix
+> woertlich Fabrikation nennt. Der Kommentar an der Stelle sagte seit
+> UFT-A01, der Umweg sei geschlossen.
+>
+> Die Matrix hat **14** Eintraege. Es waren 17; die drei ohne Wandler
+> (`SCP→IMD`, `IPF→ADF`, `STX→ST`) sind seit MF-567 entfernt. Zwei davon
+> standen hier seit MF-526 als „Verdikte ohne Konsumenten" — festgestellt
+> und stehen gelassen ist nicht behoben, und es war nicht folgenlos: ein
+> Urteil laesst das Paar durch das Preflight-Tor, und der Benutzer lief
+> bis in den Rueckfall des Verteilers, nachdem Tabelle UND Tor ihm
+> zugesagt hatten, der Weg sei gangbar.
 >
 > Frueher standen hier drei einander widersprechende Zahlen („8 angeboten“
 > in der Ueberschrift, „11“ zwei Zeilen weiter, „33 abgewiesen“). Seit
@@ -240,9 +253,10 @@ tests/                 — 77 C-Tests + 1 Qt-Test
 - 138 Format-IDs, 137 Plugin-Definitionen (88 ausgeschrieben + 49 DSK-Makro;
   84 davon mit Registrar-Funktion, die niemand aufruft — MF-446; SSOT:
   `scripts/gen_format_list.py`), 44 Konvertierungspfade registriert /
-  **15 angeboten**, davon **4 verlustfrei (je mit Messung)** (MF-541),
-  17 Roundtrip-Matrix-Einträge (SSOT in `src/core/uft_roundtrip.c`;
-  die Zahlen sind seit MF-541 abgeleitet, nicht gepflegt)
+  **12 angeboten**, davon **4 verlustfrei (je mit Messung)** (MF-541/567),
+  14 Roundtrip-Matrix-Einträge (SSOT in `src/core/uft_roundtrip.c`;
+  die Zahlen sind seit MF-541 abgeleitet, nicht gepflegt; MF-567 hat drei
+  Urteile ohne Wandler entfernt)
 - 6 Hardware-Controller — SCP-Direct M3.1 libusb wiring LANDED (MF-254,
   HW-bench UFT-008 pending); XUM1541 M3.2 + Applesauce M3.3 weiterhin
   [~] partial scaffold (Pure-Utility + Lifecycle real, USB-/Serial-

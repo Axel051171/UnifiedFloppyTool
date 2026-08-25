@@ -141,13 +141,57 @@ TEST(null_opts_uses_safe_defaults) {
     ASSERT(plan.decision == UFT_PREFLIGHT_ABORT_NEED_CONSENT);
 }
 
-TEST(null_paths_rejected) {
+/* ── Fehlende Pfade schalten die PRUEFUNG nicht ab (MF-567) ────────────
+ *
+ * Dieser Test hielt bis MF-567 fest: fehlt EINER der beiden Pfade, ist
+ * die Entscheidung `ABORT_INVALID_ARG`. Das klang nach Vorsicht und war
+ * ein Loch.
+ *
+ * `uft_convert_memory()` hat keine Dateien und reicht `NULL, NULL`
+ * durch. Die Pruefung kehrte damit sofort zurueck, die Entscheidung blieb
+ * `ABORT_INVALID_ARG` — und der Aufrufer zaehlte nur drei ABBRUCH-Werte
+ * einzeln auf, dieser war nicht dabei. Also ging alles durch.
+ *
+ * Gemessen: `IMG -> SCP`, in der Matrix UNMOEGLICH mit „synthesising flux
+ * would be fabrication", lieferte ueber den Speicher-Weg und OHNE
+ * `accept_data_loss` **3 712 758 Byte** aus 4096 Byte Zufall, Rueckgabe
+ * UFT_OK.
+ *
+ * Der neue Vertrag trennt zwei Dinge, die vorher eins waren:
+ *
+ *   das URTEIL       haengt an den FORMATEN — Pfade sind dafuer
+ *                    bedeutungslos, es wird immer gefaellt
+ *   die NEBENDATEI   braucht ein Ziel; wird eine verlangt und es gibt
+ *                    keins, ist das ein echter Argument-Widerspruch und
+ *                    bleibt ABORT_INVALID_ARG
+ */
+TEST(missing_paths_do_not_disable_the_verdict) {
     uft_preflight_plan_t plan;
+
+    /* Ohne QUELLPFAD wird trotzdem geurteilt. SCP->HFE ist LD, ohne
+     * Einverstaendnis also NEED_CONSENT — und NICHT „ungeprueftes
+     * Argument, faellt durch". */
+    uft_preflight_opts_t no_sidecar = { .accept_data_loss = false,
+                                        .emit_sidecar = false };
     ASSERT(uft_preflight_check(UFT_FORMAT_SCP, UFT_FORMAT_HFE,
-                                 NULL, "a.hfe", NULL, &plan) == UFT_OK);
-    ASSERT(plan.decision == UFT_PREFLIGHT_ABORT_INVALID_ARG);
+                                 NULL, "a.hfe", &no_sidecar, &plan) == UFT_OK);
+    ASSERT(plan.decision == UFT_PREFLIGHT_ABORT_NEED_CONSENT);
+
+    /* Auch ganz ohne Pfade — das ist der Fall des Speicher-Wandlers. */
     ASSERT(uft_preflight_check(UFT_FORMAT_SCP, UFT_FORMAT_HFE,
-                                 "a.scp", NULL, NULL, &plan) == UFT_OK);
+                                 NULL, NULL, &no_sidecar, &plan) == UFT_OK);
+    ASSERT(plan.decision == UFT_PREFLIGHT_ABORT_NEED_CONSENT);
+
+    /* Und das UNMOEGLICH-Paar bleibt unmoeglich, auch ohne Dateien. */
+    ASSERT(uft_preflight_check(UFT_FORMAT_IMG, UFT_FORMAT_SCP,
+                                 NULL, NULL, &no_sidecar, &plan) == UFT_OK);
+    ASSERT(plan.decision == UFT_PREFLIGHT_ABORT_IMPOSSIBLE);
+
+    /* Der Widerspruch, der einer bleibt: Nebendatei verlangt, kein Ziel. */
+    uft_preflight_opts_t want_sidecar = { .accept_data_loss = true,
+                                          .emit_sidecar = true };
+    ASSERT(uft_preflight_check(UFT_FORMAT_SCP, UFT_FORMAT_HFE,
+                                 "a.scp", NULL, &want_sidecar, &plan) == UFT_OK);
     ASSERT(plan.decision == UFT_PREFLIGHT_ABORT_INVALID_ARG);
 }
 
@@ -220,7 +264,7 @@ int main(void) {
     RUN(im_always_aborts);
     RUN(untested_always_aborts);
     RUN(null_opts_uses_safe_defaults);
-    RUN(null_paths_rejected);
+    RUN(missing_paths_do_not_disable_the_verdict);
     RUN(null_plan_returns_null_pointer);
     RUN(emit_sidecar_writes_loss_json);
     RUN(emit_sidecar_rejects_when_not_planned);
