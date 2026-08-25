@@ -5332,10 +5332,32 @@ Freispruch.
 
 **Was der Volllauf ausserdem gemessen hat: der Leck-Rueckstand.**
 LeakSanitizer meldet Lecks in vielen Tests, von 88 Byte bis **8 132 856
-Byte in 321 Allokationen**. Der ist **nicht** behoben und **nicht**
-beziffert — er ist ab jetzt sichtbar. Genau deshalb laeuft das scharfe
-Tor mit `detect_leaks=0`: ein ungemessener Rueckstand darf kein Tor
-bewachen, aber er darf auch nicht unsichtbar bleiben.
+Byte in 321 Allokationen**. Der ist **nicht** behoben — er ist ab jetzt
+sichtbar. Genau deshalb laeuft das scharfe Tor mit `detect_leaks=0`: ein
+ungemessener Rueckstand darf kein Tor bewachen, aber er darf auch nicht
+unsichtbar bleiben.
+
+**Beziffert, 2026-08-25 (MF-572).** Hier stand „nicht beziffert", und das
+war unnoetig: die Zahl steht in jedem CI-Lauf. Gemessen ueber zwei
+Laeufe, ASan-Volllauf (berichtend):
+
+| Lauf | Suite | rot unter ASan | rot unter UBSan |
+|---|---|---|---|
+| MF-564 (32763606826) | 258 | **58** | 2 |
+| MF-571 (32865184962) | 261 | **58** | 2 |
+
+Dieselbe ABSOLUTE Zahl bei drei Tests mehr — die drei neuen
+(`test_convert_scp_d64_multirev`, `test_convert_table_has_dispatch`,
+`test_format_from_name`) sind unter beiden Sanitizern sauber, und keine
+Leck-Spur nennt den in MF-565…571 geaenderten Code. Der Rueckstand ist
+also alt, nicht gewachsen.
+
+Beide scharfen Tore blieben 9/9. Die zwei UBSan-Ausfaelle sind in beiden
+Laeufen dieselben: `test_air_cross_validate`, `test_disk_open_fuzz`.
+
+Wer den Rueckstand angeht, hat damit eine Ausgangszahl: **58 von 261**.
+Ohne sie ist „vielen Tests" nicht pruefbar, und ein Fortschritt daran
+waere nicht von einer Aenderung der Testmenge zu unterscheiden.
 
 **Die Lehre.** Sieben Speicherfehler hat der eigene Fuzzer gefunden. Diese
 vier hat er **nicht** gefunden, und keiner davon war unter Windows
