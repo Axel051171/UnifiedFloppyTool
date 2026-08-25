@@ -2343,7 +2343,8 @@ if(TARGET Qt6::Test)
         # Maschine dahinter.
         if(${qt_test_name} STREQUAL "test_tools_tab_convert" OR
            ${qt_test_name} STREQUAL "test_explorer_tab_no_fiction" OR
-           ${qt_test_name} STREQUAL "test_status_tab_unknown_allocation")
+           ${qt_test_name} STREQUAL "test_status_tab_unknown_allocation" OR
+           ${qt_test_name} STREQUAL "test_honest_stubs_stay_honest")
             set_target_properties(${qt_test_name} PROPERTIES AUTOUIC ON)
             file(GLOB_RECURSE _TOOLSTAB_FORMAT_SOURCES
                  ${CMAKE_SOURCE_DIR}/src/formats/*.c)
@@ -2351,6 +2352,24 @@ if(TARGET Qt6::Test)
                 target_sources(${qt_test_name} PRIVATE
                     ${CMAKE_SOURCE_DIR}/src/toolstab.cpp
                     ${CMAKE_SOURCE_DIR}/forms/tab_tools.ui)
+            elseif(${qt_test_name} STREQUAL "test_honest_stubs_stay_honest")
+                # MF-577: die zwei Reiter, an denen NICHTS zu beanstanden
+                # war — festgehalten, damit sie es bleiben. Workflow zieht
+                # die drei Auftragsklassen und das Histogramm-Widget nach.
+                target_sources(${qt_test_name} PRIVATE
+                    ${CMAKE_SOURCE_DIR}/src/xcopytab.cpp
+                    ${CMAKE_SOURCE_DIR}/forms/tab_xcopy.ui
+                    ${CMAKE_SOURCE_DIR}/src/workflowtab.cpp
+                    ${CMAKE_SOURCE_DIR}/forms/tab_workflow.ui
+                    ${CMAKE_SOURCE_DIR}/src/decodejob.cpp
+                    ${CMAKE_SOURCE_DIR}/src/fluxcapturejob.cpp
+                    ${CMAKE_SOURCE_DIR}/src/fluxwritejob.cpp
+                    ${CMAKE_SOURCE_DIR}/src/uft_flux_histogram_widget.cpp
+                    # fluxcapturejob spricht den Greaseweazle-V2-Provider an
+                    ${CMAKE_SOURCE_DIR}/src/hardware_providers/greaseweazle_provider_v2.cpp
+                    ${CMAKE_SOURCE_DIR}/src/hal/uft_greaseweazle_full.c)
+                target_include_directories(${qt_test_name} PRIVATE
+                    ${CMAKE_SOURCE_DIR}/src/hardware_providers)
             elseif(${qt_test_name} STREQUAL "test_status_tab_unknown_allocation")
                 # MF-576: der Status-Reiter mit der Belegungskarte. Er
                 # bettet ProtectionAnalysisWidget ein, und DecodeJob
@@ -2448,8 +2467,11 @@ if(TARGET Qt6::Test)
         # test_hardware_tab_gui and test_provider_switch pull in the C++20
         # type-driven HAL (concepts, std::visit, generic-lambda template
         # params), so they must explicitly opt in to C++20.
+        # MF-577: test_honest_stubs_stay_honest zieht ueber
+        # fluxcapturejob.cpp ebenfalls die C++20-Concepts nach.
         if(${qt_test_name} STREQUAL "test_wiring_runtime" OR
            ${qt_test_name} STREQUAL "test_hardware_tab_gui" OR
+           ${qt_test_name} STREQUAL "test_honest_stubs_stay_honest" OR
            ${qt_test_name} STREQUAL "test_provider_switch")
             set_target_properties(${qt_test_name} PROPERTIES
                 CXX_STANDARD 20
