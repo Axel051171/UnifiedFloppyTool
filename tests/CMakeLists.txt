@@ -2341,13 +2341,30 @@ if(TARGET Qt6::Test)
         # umgestellt — geklickt hatte das niemand. Der Reiter braucht sein
         # Formular (AUTOUIC), den Validator und die ganze Wandlungs-
         # Maschine dahinter.
-        if(${qt_test_name} STREQUAL "test_tools_tab_convert")
+        if(${qt_test_name} STREQUAL "test_tools_tab_convert" OR
+           ${qt_test_name} STREQUAL "test_explorer_tab_no_fiction")
             set_target_properties(${qt_test_name} PROPERTIES AUTOUIC ON)
             file(GLOB_RECURSE _TOOLSTAB_FORMAT_SOURCES
                  ${CMAKE_SOURCE_DIR}/src/formats/*.c)
+            if(${qt_test_name} STREQUAL "test_tools_tab_convert")
+                target_sources(${qt_test_name} PRIVATE
+                    ${CMAKE_SOURCE_DIR}/src/toolstab.cpp
+                    ${CMAKE_SOURCE_DIR}/forms/tab_tools.ui)
+            else()
+                # MF-575: der Explorer, plus das Schreib-Tor aus MF-573
+                # und die FS-Schicht, die er anfasst.
+                target_sources(${qt_test_name} PRIVATE
+                    ${CMAKE_SOURCE_DIR}/src/explorertab.cpp
+                    ${CMAKE_SOURCE_DIR}/forms/tab_explorer.ui
+                    ${CMAKE_SOURCE_DIR}/src/uft_gui_write_gate.cpp
+                    ${CMAKE_SOURCE_DIR}/src/policy/uft_write_gate.c
+                    ${CMAKE_SOURCE_DIR}/src/core/uft_snapshot.c
+                    ${CMAKE_SOURCE_DIR}/src/fs/uft_amigados.c
+                    ${CMAKE_SOURCE_DIR}/src/fs/uft_fat12.c
+                    ${CMAKE_SOURCE_DIR}/src/fileops/uft_file_ops_extended.c
+                    ${CMAKE_SOURCE_DIR}/src/core/uft_sha256.c)
+            endif()
             target_sources(${qt_test_name} PRIVATE
-                ${CMAKE_SOURCE_DIR}/src/toolstab.cpp
-                ${CMAKE_SOURCE_DIR}/forms/tab_tools.ui
                 ${CMAKE_SOURCE_DIR}/src/disk_image_validator.cpp
                 ${CMAKE_SOURCE_DIR}/src/rawformatdialog.cpp
                 ${CMAKE_SOURCE_DIR}/forms/rawformatdialog.ui
