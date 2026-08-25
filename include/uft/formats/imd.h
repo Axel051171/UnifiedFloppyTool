@@ -1,5 +1,17 @@
-#ifndef UFT_FORMATS_IMD_H
-#define UFT_FORMATS_IMD_H
+/* MF-593: der Waechter hiess bis hierher `UFT_FORMATS_IMD_H` — genau wie
+ * in `formats/uft_imd.h`, wo die echte IMD-API steht. Wer diesen leeren
+ * Aufhaenger zuerst einband, bekam vom echten Header **nichts**.
+ *
+ * Gemessen mit einem Uebersetzungsvorgang, der beide in dieser Reihenfolge
+ * einbindet:
+ *
+ *     error: 'UFT_IMD_MODE_500K_MFM' undeclared
+ *     warning: implicit declaration of 'uft_imd_mode_to_rate'
+ *
+ * Umgekehrte Reihenfolge: uebersetzt anstandslos. Es entschied also die
+ * Include-Reihenfolge, ob es die IMD-Unterstuetzung gibt. */
+#ifndef UFT_FORMATS_IMD_HANGER_H
+#define UFT_FORMATS_IMD_HANGER_H
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -32,4 +44,4 @@ extern "C" {
 }
 #endif
 
-#endif /* UFT_FORMATS_IMD_H */
+#endif /* UFT_FORMATS_IMD_HANGER_H */

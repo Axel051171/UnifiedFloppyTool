@@ -158,61 +158,28 @@ extern "C" {
     #define uft_be64(x) (x)
 #endif
 
-/* Guard against redefinition */
-#ifndef UFT_ENDIAN_FUNCTIONS_DEFINED
-#define UFT_ENDIAN_FUNCTIONS_DEFINED
-/* Unaligned access */
-static inline uint16_t uft_read_le16(const void *p) {
-    const uint8_t *b = (const uint8_t*)p;
-    return (uint16_t)b[0] | ((uint16_t)b[1] << 8);
-}
-
-static inline uint32_t uft_read_le32(const void *p) {
-    const uint8_t *b = (const uint8_t*)p;
-    return (uint32_t)b[0] | ((uint32_t)b[1] << 8) |
-           ((uint32_t)b[2] << 16) | ((uint32_t)b[3] << 24);
-}
-
-static inline uint16_t uft_read_be16(const void *p) {
-    const uint8_t *b = (const uint8_t*)p;
-    return ((uint16_t)b[0] << 8) | (uint16_t)b[1];
-}
-
-static inline uint32_t uft_read_be32(const void *p) {
-    const uint8_t *b = (const uint8_t*)p;
-    return ((uint32_t)b[0] << 24) | ((uint32_t)b[1] << 16) |
-           ((uint32_t)b[2] << 8) | (uint32_t)b[3];
-}
-
-static inline void uft_write_le16(void *p, uint16_t v) {
-    uint8_t *b = (uint8_t*)p;
-    b[0] = v & 0xFF;
-    b[1] = (v >> 8) & 0xFF;
-}
-
-static inline void uft_write_le32(void *p, uint32_t v) {
-    uint8_t *b = (uint8_t*)p;
-    b[0] = v & 0xFF;
-    b[1] = (v >> 8) & 0xFF;
-    b[2] = (v >> 16) & 0xFF;
-    b[3] = (v >> 24) & 0xFF;
-}
-
-static inline void uft_write_be16(void *p, uint16_t v) {
-    uint8_t *b = (uint8_t*)p;
-    b[0] = (v >> 8) & 0xFF;
-    b[1] = v & 0xFF;
-}
-
-static inline void uft_write_be32(void *p, uint32_t v) {
-    uint8_t *b = (uint8_t*)p;
-    b[0] = (v >> 24) & 0xFF;
-    b[1] = (v >> 16) & 0xFF;
-    b[2] = (v >> 8) & 0xFF;
-    b[3] = v & 0xFF;
-}
-
-#endif /* UFT_ENDIAN_FUNCTIONS_DEFINED */
+/* MF-593: hier stand ein ZWEITER Satz Endian-Funktionen unter dem
+ * Waechter `UFT_ENDIAN_FUNCTIONS_DEFINED` — demselben, den
+ * `uft/uft_endian.h` benutzt. Der Kommentar oben in jenem Header nannte
+ * das absichtlich („guards to prevent redefinition errors"). Die Absicht
+ * war richtig, die Ausfuehrung nicht: dieser Satz kannte nur 16 und 32
+ * Bit, jener auch 64.
+ *
+ * Wer also `uft_platform.h` zuerst einband, verlor `uft_read_le64`,
+ * `uft_read_be64`, `uft_write_le64`, `uft_write_be64` — gemessen an einem
+ * Uebersetzungsvorgang in dieser Reihenfolge:
+ *
+ *     warning: implicit declaration of 'uft_read_be64'
+ *     ld returned 1 exit status
+ *
+ * Das faellt auf, sobald jemand sie braucht. Kein Uebersetzungsvorgang im
+ * Baum tat das bisher — es war eine gestellte Falle, keine ausgeloeste.
+ *
+ * Statt zwei Saetze abzugleichen gibt es jetzt einen. Die Signaturen
+ * dieses Satzes waren `const void*`, die des verbliebenen sind
+ * `const uint8_t*` — enger, aber keine .c/.cpp-Datei, die diesen Header
+ * einbindet, ruft eine dieser Funktionen ueberhaupt auf (nachgemessen). */
+#include "uft/uft_endian.h"
 /* ═══════════════════════════════════════════════════════════════════════════════
  * Alignment & Memory
  * ═══════════════════════════════════════════════════════════════════════════════ */
