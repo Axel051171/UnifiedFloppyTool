@@ -101,8 +101,16 @@ typedef struct {
     uint8_t     reserved[2];        /**< Reserved */
     uint16_t    checksum;           /**< Checksum */
     uint8_t     product_code[3];    /**< Product code (BCD) */
-    uint8_t     version_region;     /**< Version (high nibble) + Region (low nibble) */
-    uint8_t     size_code;          /**< ROM size code */
+    /* MF-598: der Kommentar hier sagte „Version (high nibble) +
+     * Region (low nibble)" — beides falsch herum, und der Code
+     * folgte ihm. $7FFF traegt OBEN die Region und UNTEN den
+     * Groessencode; die Version steht im unteren Halbbyte von
+     * $7FFE. Referenz: maxim-zhao/sega8bitheaderreader,
+     * source/Unit1.pas (TSegaHeader.RegionAndCartSize), bestaetigt
+     * von SMS Power! „ROM Header". Name unveraendert gelassen,
+     * damit kein oeffentliches Feld verschwindet. */
+    uint8_t     version_region;     /**< $7FFF: Region (high) + ROM-Groesse (low) */
+    uint8_t     size_code;          /**< ROM size code = $7FFF & 0x0F */
 } sms_header_t;
 
 /**

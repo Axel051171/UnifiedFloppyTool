@@ -247,7 +247,7 @@ Messung in `BACKLOG.md`, das als Archiv erhalten bleibt).
 
 ## Korpus-gebundene Tests — Beschaffungsliste (MF-588)
 
-**Gemessen auf diesem Rechner: 266/266, keine Skips.** Auf einem frischen
+**Gemessen auf diesem Rechner: 266/266, ein Skip** (`test_freezer`, siehe unten). Auf einem frischen
 Klon ist das anders, und der Unterschied gehört in den Release-Text.
 
 `tests/corpus/` ist **gitignored** (`.gitignore:105`) — 10 Dateien liegen
@@ -261,6 +261,7 @@ hier lokal, keine davon im Repo. Sechs Testdateien hängen daran:
 | `test_c64_protection_real_corpus.c` | `c64pp_*.g64` |
 | `test_convert_scp_adf.c` | `gw_amigados.scp` |
 | `test_scp_legacy_adapter.c` | `gw_amigados.scp` |
+| `test_freezer.c` (8 von 14) | ein echtes Action-Replay-Einfrierabbild |
 
 `tests/corpus_free/` (12 Dateien) **liegt im Repo** — die darauf gestützten
 Tests laufen überall.
@@ -272,3 +273,55 @@ Zahl mit ihrer Bedingung in den Release Notes.
 
 **Zu beschaffen** (Eigentümer): Lizenz-/Verteilungsklärung für die 10
 Dateien, oder Ersatz aus frei verteilbaren Quellen.
+
+---
+
+## Was die Prüfstands-Reparatur zutage gefördert hat (MF-596…598)
+
+**32 Testläufe konnten nicht scheitern.** `RUN_TEST` zählte den Erfolg
+hinter dem Aufruf, bedingungslos; `ASSERT` kehrte bei Fehlschlag nur aus
+der Testfunktion zurück. `main()` gab `(tests_passed == tests_run) ? 0 : 1`
+— also immer 0. Nach der Reparatur (MF-596) fielen **sechs Tests mit 17
+Prüfungen**, die als bestanden gemeldet worden waren.
+
+Die Einordnung, jede mit ihrer Ursache:
+
+| Prüfung | Ursache | Erledigt |
+|---|---|---|
+| `test_gcr_ops::gcr_count_syncs_bytealigned` | Puffer 200 Byte; die Vorlage legt Syncs erst ab 500 an | ✅ MF-597, Test |
+| `test_gcr_ops::gcr_detect_density` | rief mit `NULL` und traf damit die Wache statt der Größenlogik | ✅ MF-597, Test |
+| `test_genesis::calculate_checksum` | Vorlage ohne Nutzlast → Prüfsumme korrekt 0 | ✅ MF-597, Test |
+| `test_genesis::verify_checksum` | dieselbe Ursache: 0 == 0 stimmt überein | ✅ MF-597, Test |
+| `test_sms` (3 Prüfungen) | **Code falsch:** Region liegt im OBEREN Halbbyte von `$7FFF`, gelesen wurde das untere. Jedes Game-Gear-Abbild wurde als Master System gemeldet; der Größencode kam aus dem falschen Byte | ✅ MF-598, Referenz im Header |
+| `test_gameboy::get_gb_info` | **Code falsch:** roher Struktur-Überwurf über einen Kopf, dessen Felder überlappen. `sizeof` = 86 statt 80, `cartridge_type` landete auf `$014C` statt `$0147`, `global_checksum` sechs Byte hinter dem Kopfende | ✅ MF-598, Pan Docs im Header |
+| `test_floppy_formats::spec_detect_tap` | **Code falsch:** die kennungslose Z80-Vermutung stand vor TAP und DSK und schluckte beide | ✅ MF-598 |
+| `test_freezer` (8 Prüfungen) | **unentscheidbar:** weder Vorlage noch Erkenner haben einen Nachweis | ⚠ ausgelassen, siehe unten |
+
+**Drei davon waren echte Fehler im Format-Layer**, keine Testfehler. Sie
+standen unbemerkt, weil ihre Tests sich nicht rot melden konnten.
+
+### Der offene Fall: Action Replay
+
+`freezer_detect()` verlangt `size >= 66816 && size <= 67584`. Die
+Testvorlage ist 66 664 Byte groß (`0x80 + 1000 + 65536`). Woher das
+Fenster stammt, sagt niemand: `include/uft/formats/c64/uft_freezer.h:58`
+nennt seine Versatztabelle wörtlich „typical layout", `docs/` kennt keine
+Quelle, und ein AR-Einfrierabbild ist kein genormtes Dateiformat, sondern
+das, was die Steckmodul-Firmware auf die Diskette schreibt.
+
+Beide Seiten aneinander anzupassen wäre Erfindung — dieselbe Bauart wie
+bei den fünf fabrizierten Parsern (FMT-2/3/10/11/12). Die EINFRIER-REGEL
+verlangt eine **benannte** Referenz; es gibt keine. Die acht Prüfungen
+sind deshalb ausgelassen (`SKIP_TEST`, Rückgabe 77), die sechs
+referenzfreien laufen weiter.
+
+**Zu beschaffen** (Eigentümer): ein echtes Action-Replay-Einfrierabbild.
+Dann lässt sich der Erkenner dagegen messen statt gegen sich selbst.
+
+### Nebenbei aufgelöst
+
+Die Liste in `tests/CMakeLists.txt`, die sieben Testnamen für
+`SKIP_RETURN_CODE 77` aufzählte, gilt jetzt für alle Tests. 77 ist ein
+absichtlich gewählter Sentinel; eine Liste, die Sonderfälle nennt statt
+die Regel, veraltet still — in diesem Baum zum dritten Mal belegt
+(MF-567, MF-578, hier).

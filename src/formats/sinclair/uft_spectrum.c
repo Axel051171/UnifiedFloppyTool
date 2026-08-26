@@ -29,22 +29,27 @@ spec_format_t spec_detect_format(const uint8_t *data, size_t size)
     }
     
     /* Check for Z80 */
-    if (size >= 30) {
-        /* Z80 v1: PC at offset 6-7 is non-zero */
-        uint16_t pc = data[6] | (data[7] << 8);
-        if (pc != 0) {
-            /* Could be Z80 v1 */
-            return SPEC_FORMAT_Z80;
-        }
-        /* Z80 v2/v3: PC==0, additional header at offset 30 */
-        if (size >= 32) {
-            uint16_t extra_len = data[30] | (data[31] << 8);
-            if (extra_len == 23 || extra_len == 54 || extra_len == 55) {
-                return SPEC_FORMAT_Z80;
-            }
-        }
-    }
-    
+    /* MF-598: die Z80-Pruefung stand HIER, vor TAP und DSK. Sie lautet im
+     * Kern „Datei >= 30 Byte und die Bytes 6..7 sind nicht beide null" —
+     * und das trifft auf fast jede Datei zu. Z80 hat als einziges der
+     * Formate hier KEINE Kennung; die Pruefung ist eine Rueckfall-Vermutung
+     * und darf nicht vor den strukturell gepruefeten stehen.
+     *
+     * Was sie verdeckte, gemessen an den Vorlagen aus
+     * tests/test_floppy_formats.c:
+     *
+     *   TAP: der Dateiname im Kopfblock liegt ab Versatz 4, also stehen in
+     *        6..7 die Buchstaben 'S','T' -> pc = 0x5453 != 0 -> Z80.
+     *   DSK: die Kennung ist "MV - CPC", also 6..7 = 'P','C' -> Z80.
+     *
+     * Beide Erkennungen waren damit unerreichbar. `spec_detect_tap` fiel
+     * seit jeher und wurde als bestanden gemeldet (MF-596); fuer DSK gibt
+     * es keinen Test, der es gezeigt haette.
+     *
+     * Die Pruefung selbst bleibt unveraendert — nur ihr Platz aendert sich.
+     * Sie steht jetzt unten, direkt vor UNKNOWN.
+     */
+
     /* Check for TAP */
     if (size >= 21) {
         /* TAP: first block should be header (19 bytes + flag) */
@@ -61,7 +66,26 @@ spec_format_t spec_detect_format(const uint8_t *data, size_t size)
     if (size >= 256 && memcmp(data, "EXTENDED", 8) == 0) {
         return SPEC_FORMAT_DSK;
     }
-    
+
+    /* Z80 zuletzt (MF-598, Begruendung oben): kennungsloses Format, die
+     * Pruefung ist eine Vermutung und darf keine strukturell gepruefte
+     * Erkennung verdecken. */
+    if (size >= 30) {
+        /* Z80 v1: PC at offset 6-7 is non-zero */
+        uint16_t pc = data[6] | (data[7] << 8);
+        if (pc != 0) {
+            /* Could be Z80 v1 */
+            return SPEC_FORMAT_Z80;
+        }
+        /* Z80 v2/v3: PC==0, additional header at offset 30 */
+        if (size >= 32) {
+            uint16_t extra_len = data[30] | (data[31] << 8);
+            if (extra_len == 23 || extra_len == 54 || extra_len == 55) {
+                return SPEC_FORMAT_Z80;
+            }
+        }
+    }
+
     return SPEC_FORMAT_UNKNOWN;
 }
 

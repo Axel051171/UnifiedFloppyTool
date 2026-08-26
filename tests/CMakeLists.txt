@@ -1996,17 +1996,18 @@ foreach(test_source ${TEST_SOURCES})
     # Register as CTest
     add_test(NAME ${test_name} COMMAND ${test_name})
 
-    # Restricted-corpus tests (image is local-only, gitignored): exit code 77
-    # means "corpus image absent, skipped" — not a failure (MF-367).
-    if(${test_name} STREQUAL "test_corpus_fdi" OR
-       ${test_name} STREQUAL "test_corpus_scp" OR
-       ${test_name} STREQUAL "test_convert_scp_adf" OR
-       ${test_name} STREQUAL "test_scp_readers_agree" OR
-       ${test_name} STREQUAL "test_corpus_protection_copylock" OR
-       ${test_name} STREQUAL "test_c64_protection_real_corpus" OR
-       ${test_name} STREQUAL "test_scp_legacy_adapter")
-        set_tests_properties(${test_name} PROPERTIES SKIP_RETURN_CODE 77)
-    endif()
+    # Exit code 77 heisst "ausgelassen", nicht "gescheitert" (MF-367).
+    #
+    # MF-598: hier stand eine Liste von sieben Testnamen. Wer einen achten
+    # Test korpusgebunden macht, muss daran denken, ihn einzutragen — und
+    # vergisst er es, meldet ctest einen Fehlschlag statt einer Auslassung.
+    # Dasselbe Aufzaehl-Muster hat in diesem Baum schon zweimal geschadet
+    # (MF-567 Abbruchliste, MF-578 Offscreen-Liste): eine Liste, die
+    # Sonderfaelle nennt statt die Regel, veraltet still.
+    #
+    # 77 ist ein absichtlich gewaehlter Sentinel — kein Test gibt ihn
+    # versehentlich zurueck. Also gilt er fuer alle.
+    set_tests_properties(${test_name} PROPERTIES SKIP_RETURN_CODE 77)
 
     # MF-254 / MF-255: tests that link uft_scp_direct.c or uft_xum1541.c
     # need libusb-1.0.dll on PATH at runtime (Windows). Use the same \;

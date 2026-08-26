@@ -144,7 +144,59 @@ int gb_open(const uint8_t *data, size_t size, gb_rom_t *rom)
     if (rom->is_gba) {
         memcpy(&rom->gba_header, data, sizeof(gba_header_t));
     } else {
-        memcpy(&rom->gb_header, data + GB_HEADER_OFFSET, sizeof(gb_header_t));
+        /* ── MF-598: hier stand ein roher Struktur-Ueberwurf ──────────────
+         *
+         *     memcpy(&rom->gb_header, data + GB_HEADER_OFFSET,
+         *            sizeof(gb_header_t));
+         *
+         * `gb_header_t` ist aber keine Speicherabbildung, sondern eine
+         * AUSGEWERTETE Darstellung: sie fuehrt `title[16]`, `manufacturer[4]`
+         * und `cgb_flag` nebeneinander. Im echten Kopf ueberlappen die drei
+         * — der Titel ist $0134..$0143, und darin liegen Hersteller-Code
+         * ($013F..$0142) und CGB-Flagge ($0143). Dazu kommt Auffuellung vor
+         * `global_checksum`, weil die Struktur nicht gepackt ist.
+         *
+         * Gemessen mit `offsetof` auf diesem Baum:
+         *
+         *     sizeof(gb_header_t)  = 86     echter Kopf $0100..$014F = 80
+         *     cartridge_type       -> $014C   soll $0147
+         *     rom_size             -> $014D   soll $0148
+         *     global_checksum      -> $0154   soll $014E
+         *
+         * Ab `cgb_flag` war also JEDES Feld falsch, und `global_checksum`
+         * las sechs Byte HINTER dem Kopf, im Programmcode. Aufgefallen ist
+         * es an `test_gameboy::get_gb_info`, das `GB_MBC_MBC1_RAM_BATT`
+         * erwartete und etwas anderes bekam — der Test war seit MF-596 nur
+         * nicht mehr in der Lage, sich selbst gruen zu melden.
+         *
+         * Referenz: Pan Docs, „The Cartridge Header"
+         * (gbdev/pandocs, src/The_Cartridge_Header.md) — Abschnitte
+         * „0134-0143 — Title", „013F-0142 — Manufacturer code",
+         * „0143 — CGB flag", „0147 — Cartridge type",
+         * „014E-014F — Global checksum".
+         *
+         * Feldweise statt Ueberwurf, damit die Ueberlappung ausdrueckbar
+         * ist. */
+        const uint8_t *h = data + GB_HEADER_OFFSET;
+        gb_header_t *gh = &rom->gb_header;
+
+        memcpy(gh->entry,        h + 0x00,  4);   /* $0100..$0103 */
+        memcpy(gh->logo,         h + 0x04, 48);   /* $0104..$0133 */
+        memcpy(gh->title,        h + 0x34, 16);   /* $0134..$0143 */
+        memcpy(gh->manufacturer, h + 0x3F,  4);   /* $013F..$0142, im Titel */
+        gh->cgb_flag        = h[0x43];            /* $0143,        im Titel */
+        memcpy(gh->new_licensee, h + 0x44,  2);   /* $0144..$0145 */
+        gh->sgb_flag        = h[0x46];
+        gh->cartridge_type  = h[0x47];
+        gh->rom_size        = h[0x48];
+        gh->ram_size        = h[0x49];
+        gh->destination     = h[0x4A];
+        gh->old_licensee    = h[0x4B];
+        gh->version         = h[0x4C];
+        gh->header_checksum = h[0x4D];
+        /* $014E..$014F, big-endian — so sagt es die Struktur, und so steht
+         * es in Pan Docs („big-endian"). */
+        gh->global_checksum = (uint16_t)((h[0x4E] << 8) | h[0x4F]);
     }
     
     rom->header_valid = true;

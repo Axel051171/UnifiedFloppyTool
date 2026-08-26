@@ -43,8 +43,42 @@ sms_console_t sms_detect_console(const uint8_t *data, size_t size)
     
     uint32_t offset;
     if (sms_find_header(data, size, &offset)) {
-        /* Check region byte for GG vs SMS */
-        uint8_t region = data[offset + 15] & 0x0F;
+        /* MF-598: hier stand `& 0x0F`. Region ist das OBERE Halbbyte von
+         * $7FFF; unten steht die ROM-Groesse. Mit der falschen Haelfte
+         * traf keiner der Faelle unten zu, und jedes Game-Gear-Abbild fiel
+         * durch bis zur Rueckfall-Heuristik — die pauschal SMS zurueckgibt.
+         * Also wurde JEDES GG-Abbild als Master System gemeldet.
+         *
+         * ── Referenz ────────────────────────────────────────────────────────────
+ *
+         * maxim-zhao/sega8bitheaderreader, `source/Unit1.pas` — der von SMS Power!
+         * verlinkte Kopf-Leser. Er modelliert den Sega-Kopf so:
+ *
+         *     TSegaHeader = packed record
+         *       TMRSEGAChars: array[0..7] of char;      { $7FF0..$7FF7 }
+         *       UnknownValue, Checksum, PartNumber: word;
+         *       Version, RegionAndCartSize: byte;       { $7FFE, $7FFF }
+         *     end;
+ *
+         * und liest daraus:
+ *
+         *     RegionAndCartSize shr 4   -> Region   ($3 SMS Japan, $4 SMS Export,
+         *                                            $5 GG Japan,  $6 GG Export,
+         *                                            $7 GG International)
+         *     RegionAndCartSize and $F  -> Groesse  ($a 8K, $b 16K, $c 32K, $d 48K,
+         *                                            $e 64K, $f 128K, $0 256K,
+         *                                            $1 512K, $2 1M)
+         *     Version and $f0           -> dritte BCD-Ziffer der Produktnummer
+ *
+         * Deckt sich mit SMS Power! „ROM Header": „The high four bits of the last
+         * byte of the header determine the region."
+ *
+         * Eine dritte Quelle (docs.retrogamecoders.com) behauptet Version im
+         * OBEREN Halbbyte von $7FFF. Sie widerspricht beiden anderen und ihrem
+         * eigenen Beispiel ($05 = „SMS export, 32KB" geht in keiner Lesart auf).
+         * Nicht gefolgt.
+         */
+        uint8_t region = data[offset + 15] >> 4;
         
         switch (region) {
             case 5:
@@ -164,8 +198,12 @@ int sms_open(const uint8_t *data, size_t size, sms_rom_t *rom)
         rom->header.product_code[0] = hdr[12];
         rom->header.product_code[1] = hdr[13];
         rom->header.product_code[2] = hdr[14] >> 4;
+        /* MF-598: `size_code` kam aus `hdr[14] & 0x0F` — das ist das
+         * Versionsfeld, nicht die Groesse. Der Groessencode steht im
+         * unteren Halbbyte von $7FFF (= hdr[15]). Referenz siehe
+         * sms_detect_console() oben. */
         rom->header.version_region = hdr[15];
-        rom->header.size_code = hdr[14] & 0x0F;
+        rom->header.size_code = hdr[15] & 0x0F;
     }
     
     /* Detect console */
@@ -240,8 +278,14 @@ int sms_get_info(const sms_rom_t *rom, sms_info_t *info)
         info->calc_checksum = sms_calc_checksum(rom->data, rom->size);
         info->checksum_valid = (info->checksum == info->calc_checksum);
         
-        info->region = rom->header.version_region & 0x0F;
-        info->version = (rom->header.version_region >> 4) & 0x0F;
+        /* MF-598: beide Halbbytes waren vertauscht. Region steht OBEN in
+         * $7FFF; die Version steht gar nicht in diesem Byte, sondern im
+         * unteren Halbbyte von $7FFE — oben darin liegt die dritte
+         * BCD-Ziffer der Produktnummer, die `product_code[2]` schon
+         * richtig entnimmt. Referenz siehe sms_detect_console(). */
+        info->region = (rom->header.version_region >> 4) & 0x0F;
+        info->version = rom->data
+                      ? (rom->data[rom->header_offset + 14] & 0x0F) : 0;
         
         /* Product code (BCD) */
         info->product_code = 
