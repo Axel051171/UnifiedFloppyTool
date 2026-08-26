@@ -432,8 +432,24 @@ TEST(nib_analysis_buffer)
     uint8_t *data = create_test_nib(&size, 35, false);
     ASSERT_NOT_NULL(data);
     
-    /* Save to temp file */
-    const char *filename = "/tmp/test_nib_analysis.nib";
+    /* MF-600: hier stand `/tmp/test_nib_analysis.nib` fest verdrahtet.
+     * Unter Windows gibt es kein `/tmp` — `fopen` lieferte NULL und
+     * `ASSERT_NOT_NULL(fp)` fiel. Auf einem Entwicklungsrechner mit MSYS
+     * faellt das nicht auf, weil die Laufzeit den Pfad umbiegt; im
+     * CI-Windows-Auftrag nicht. Gesehen hat es niemand, weil dieser Test
+     * sich bis MF-596 nicht rot melden konnte.
+     *
+     * Dieselbe Wahl der Umgebungsvariablen wie in den 40+ anderen Tests,
+     * die schon einen `get_temp_path()`-Helfer haben (z. B.
+     * tests/test_atr_512.c:38). */
+    char filename[512];
+    const char *dir = getenv("TMPDIR");
+    if (!dir || !dir[0]) dir = getenv("TMP");
+    if (!dir || !dir[0]) dir = getenv("TEMP");
+    if (!dir || !dir[0]) dir = ".";
+    snprintf(filename, sizeof(filename), "%s/uft_nib_analysis_%d.nib",
+             dir, rand() % 100000);
+
     FILE *fp = fopen(filename, "wb");
     ASSERT_NOT_NULL(fp);
     fwrite(data, 1, size, fp);
