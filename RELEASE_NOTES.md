@@ -147,7 +147,7 @@ Gemessen gegen die acht Punkte der Freigabe-Bedingung:
 | 4 | Offene P0 nur eigentümer- oder hardware-blockiert | ⚠ **siehe unten** — die Bedingung kennt eine Kategorie nicht |
 | 5 | Version, CHANGELOG, verschobene Liste 12/12 | ✅ `VERSION.txt` = `uft_version.h` = 4.1.6; die zwölf Punkte abgerechnet (2 erledigt, 10 bleiben, jeder mit Messung) |
 | 6 | Vier Kennzahlen mit Wert und Quelle im Release-Text | ✅ Abschnitt „Die vier Kennzahlen" |
-| 7 | CI-Matrix grün auf genau dem getaggten Commit | ⏳ **offen bis zum Tag** — Linux, macOS und Windows müssen auf dem Tag-Commit selbst grün sein, nicht auf einem Vorgänger |
+| 7 | CI-Matrix grün auf genau dem getaggten Commit | ⏳ **offen bis zum Tag.** Zuletzt vollständig grün auf `3700fbdf`: Konsistenz, Linux 6.7.3/c++17, Linux 6.10.1/c++20, macOS, Windows — dazu Sanitizer, Audit und Coverage. Der Tag-Commit selbst braucht denselben Nachweis; ein grüner Vorgänger zählt nicht |
 | 8 | Kein ungedeckter Satz in README, CLAUDE.md, Release-Text | ✅ zwei veraltete Sätze berichtigt (MF-602); die Zahlen der Wandlungsmatrix sind seit MF-541 abgeleitet, nicht gepflegt |
 
 ### Zu Punkt 4: eine Kategorie fehlt in der Bedingung
