@@ -252,7 +252,13 @@ TEST(gcr_find_sync_end)
 
 TEST(gcr_count_syncs_bytealigned)
 {
-    uint8_t buffer[200];
+    /* MF-597: der Puffer war 200 Byte gross. `create_test_track()` legt
+     * seine Syncs aber nur `if (size >= 500)` an — dieser Test prueft also
+     * seit jeher das Zaehlen von Syncs auf einer Spur OHNE Syncs, und
+     * `count >= 1` fiel. Sichtbar wurde es erst, als RUN_TEST anfing,
+     * Fehlschlaege zu zaehlen (MF-596). 500 ist die Groesse, die die
+     * Nachbartests benutzen. */
+    uint8_t buffer[500];
     create_test_track(buffer, sizeof(buffer));
     
     int count = gcr_count_syncs_bytealigned(buffer, sizeof(buffer));
@@ -482,11 +488,19 @@ TEST(gcr_is_killer_track)
 
 TEST(gcr_detect_density)
 {
+    /* MF-597: hier stand zweimal `NULL` als Spur-Zeiger. Damit greift die
+     * Wache `if (!gcr || size == 0) return 3;` und die Groessenlogik lief
+     * NIE — die erste Zusicherung fiel, die zweite ging nur zufaellig
+     * durch, weil der Wachwert 3 ist. Der Test prueft jetzt, was er
+     * behauptet. */
+    uint8_t small_track[16];
+    memset(small_track, GCR_GAP_BYTE, sizeof(small_track));
+
     /* Small track = density 0 */
-    ASSERT_EQ(gcr_detect_density(NULL, 6200), 0);
+    ASSERT_EQ(gcr_detect_density(small_track, 6200), 0);
     
     /* Large track = density 3 */
-    ASSERT_EQ(gcr_detect_density(NULL, 7600), 3);
+    ASSERT_EQ(gcr_detect_density(small_track, 7600), 3);
 }
 
 /* ============================================================================

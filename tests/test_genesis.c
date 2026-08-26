@@ -99,6 +99,24 @@ static uint8_t *create_test_genesis_rom(size_t *size)
     
     /* Region codes */
     memcpy(hdr + 0xF0, "JUE             ", 16);
+
+    /* MF-597: hier fehlte jede Nutzlast. `calloc()` liefert Nullen, und die
+     * Mega-Drive-Pruefsumme summiert 16-Bit-Worte ab $200 bis Dateiende —
+     * ueber Nullen ist sie korrekt 0. Zwei Pruefungen fielen daran, und
+     * beide Male lag es an dieser Vorlage, nicht am Rechenweg:
+     *
+     *   calculate_checksum: `ASSERT(checksum != 0)` — sie IST 0, richtig so.
+     *   verify_checksum:    `ASSERT_FALSE(...)` — Kopf sagt 0, gerechnet 0,
+     *                       also stimmen sie ueberein und verify sagt wahr.
+     *
+     * Beide waren seit jeher rot und wurden als bestanden gemeldet
+     * (MF-596). Eine Nutzlast ungleich null stellt her, was die Tests
+     * beschreiben: eine Pruefsumme mit Wert, die zum Kopfeintrag 0 nicht
+     * passt. Der Rechenweg selbst bleibt unangetastet — er entspricht dem
+     * bekannten MD-Verfahren (Summe der BE16-Worte ab $200, Ablage in
+     * $18E). */
+    for (size_t i = 0x200; i < rom_size; i++)
+        data[i] = (uint8_t)(i & 0xFF);
     
     *size = rom_size;
     return data;
