@@ -93,8 +93,11 @@ not a footnote:
   schemes.
 - **The filesystem is not read.** Directory listing and allocation map now
   say so.
-- **58 of 261 tests leak under ASan.** Old backlog, not growing (measured
-  across two CI runs).
+- **One test skips 8 of its 14 checks** (`test_freezer`): there is no
+  named reference for the Action Replay format, and bending either side
+  to match the other would be fabrication. Skipped, not made green.
+  (The ASan leak backlog that stood here — 58 tests — is now **0 of 266**,
+  measured in CI: MF-592/595/598/599.)
 - **No hands-on acceptance test.** The headless Qt tests cover logic and
   display, not look, flow, or anything behind a modal dialog.
 - **No controller has a documented real-hardware bench pass.**

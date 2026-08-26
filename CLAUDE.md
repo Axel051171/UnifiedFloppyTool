@@ -197,7 +197,12 @@ Im Katalog dokumentierte historische Kopierschutz-Verfahren:
 - **Primär:** qmake (`.pro`-Datei), ~693 Source-Dateien / ~515 Header
   (Stand 2026-08-19 nach MF-271; zaehlen mit
   `find src -name '*.c' -o -name '*.cpp' | wc -l`)
-- **Tests:** CMake (`tests/CMakeLists.txt`), 205/205 grün (Stand 2026-08-16);
+- **Tests:** CMake (`tests/CMakeLists.txt`), **266/266 grün mit einem
+  benannten Skip** (Stand 2026-08-26, MF-601). Vorher stand hier 205/205
+  (2026-08-16) — die Zahl war doppelt veraltet, und bis MF-596 zählten
+  32 Testdateien ihren Erfolg bedingungslos, konnten also gar nicht rot
+  werden. Was dahinter lag: sieben Tests mit 18 Prüfungen, drei davon
+  echte Fehler im Format-Layer;
   GLOB-discovered von 228+ `test_*.c`/`*.cpp` Quelldateien, 39 in
   `EXCLUDED_TESTS` (fehlende Module / WIP-Subsysteme). Zahlen driften —
   bis `update_inventory.py` (Phase 1, MF-363) existiert, gilt: `ctest -N`
