@@ -59,9 +59,31 @@ static inline uft_disk_image_t* uft_disk_alloc(uint16_t ntracks, uint8_t nheads)
     d->track_count = (size_t)ntracks * nheads;
     d->track_data = (uft_track_t**)calloc(d->track_count, sizeof(uft_track_t*));
     if (!d->track_data) { free(d); return NULL; }
-    for (size_t i = 0; i < d->track_count; i++) {
-        d->track_data[i] = (uft_track_t*)calloc(1, sizeof(uft_track_t));
-    }
+    /* MF-595: hier stand eine Schleife, die JEDEN Steckplatz mit einer
+     * leeren `uft_track_t` vorbelegte:
+     *
+     *     for (size_t i = 0; i < d->track_count; i++)
+     *         d->track_data[i] = calloc(1, sizeof(uft_track_t));
+     *
+     * Achtzehn Format-Parser legen sich mit `uft_track_alloc()` ihre
+     * eigene Spur an und schreiben sie darueber. Die vorbelegte war damit
+     * unerreichbar und wurde nie frei.
+     *
+     * Gemessen im CI-Leckbericht: 9 972 768 Byte in 786 Objekten aus
+     * `uft_disk_alloc` — 12 688 Byte je Objekt, und das ist auf das Byte
+     * genau `sizeof(uft_track_t)`.
+     *
+     * Dass das Streichen sicher ist, sagt der Baum selbst: es gibt eine
+     * ZWEITE `uft_disk_alloc()`, gelinkt aus `src/core/uft_unified_types.c`
+     * und ueber `core/uft_unified_types.h` erreichbar. Die belegt seit
+     * jeher NICHT vor. Welche ein Modul bekommt, entscheidet sein
+     * `#include` — `uft_g71.c` etwa benutzt die gelinkte. Jeder Verbraucher
+     * muss also ohnehin mit NULL-Steckplaetzen zurechtkommen, sonst waere
+     * er dort laengst abgestuerzt. `uft_disk_free()` unten prueft
+     * entsprechend (`if (d->track_data[i])`).
+     *
+     * Damit tun jetzt beide Fassungen dasselbe. Dass es sie zweimal gibt,
+     * bleibt offen — siehe OPEN_ITEMS.md. */
     d->owns_data = true;
     return d;
 }

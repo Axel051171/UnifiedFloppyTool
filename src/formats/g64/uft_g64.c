@@ -528,6 +528,12 @@ static uft_error_t g64_read_slot(uft_disk_t* disk, int g64_index, int head,
     // Raw-Daten im Track speichern
     track->raw_data = gcr_data;
     track->raw_size = track_size;
+    /* MF-595: `uft_track_release()` gibt NUR frei, wenn diese Fahne
+     * steht (uft_unified_types.c:256). Wer einen eigenen Puffer an die
+     * Spur haengt und sie stehen laesst, leckt ihn — und der Aufrufer
+     * kann nichts dafuer, er raeumt ja korrekt auf. Gemessen im
+     * CI-Leckbericht ueber g64_read_slot(). */
+    track->owns_data = true;
     track->encoding = UFT_ENC_GCR_CBM;
     
     // GCR zu Sektoren dekodieren

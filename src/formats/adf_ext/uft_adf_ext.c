@@ -141,6 +141,12 @@ static uft_error_t adfext_read_track(uft_disk_t *disk, int cyl, int head,
         if (fread(raw, 1, td->len, p->file) != td->len) { free(raw); return UFT_ERROR_IO; }
         track->raw_data = raw;
         track->raw_size = td->len;
+        /* MF-595: `uft_track_release()` gibt NUR frei, wenn diese Fahne
+         * steht (uft_unified_types.c:256). Wer einen eigenen Puffer an die
+         * Spur haengt und sie stehen laesst, leckt ihn — und der Aufrufer
+         * kann nichts dafuer, er raeumt ja korrekt auf. Gemessen im
+         * CI-Leckbericht ueber g64_read_slot(). */
+        track->owns_data = true;
         track->raw_len  = td->len;
     }
     return UFT_OK;
