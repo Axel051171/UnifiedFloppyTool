@@ -1,0 +1,6 @@
+# Arbeitsdateien eines Zyklus — Ergebnisse gehoeren nach out/, nicht hierher
+work/
+*.messung.json
+inventory.json
+inv*.json
+__pycache__/

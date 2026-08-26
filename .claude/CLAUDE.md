@@ -195,17 +195,18 @@ ehrliche TODOs auf der Issue-Liste.
 
 ---
 
-## Agenten-Übersicht (22 Agenten)
+## Agenten-Übersicht (23 Agenten)
 
 29 Agenten wurden auf eine schlanke Kern-Suite (13) reduziert; mit dem
 Type-Driven-HAL-Refactor sind 8 spezialisierte Refactor-Agenten dazu-
 gekommen (Test-Autoren, DTO/Provider-Migratoren, Type-Architekt,
 Wiring-Codegen, PoC-Builder); plus 1 Hardware-Emulator-Autor (v4.1.5+,
-post-refactor scope). Insgesamt aktuell 22. Die früher entfernten Agenten
+post-refactor scope); plus 1 Scout, der FREMDEN Code sichtet und nur
+Dokumente zurückliefert (v4.1.7+). Insgesamt aktuell 23. Die früher entfernten Agenten
 waren in 3 Monaten nicht aufgerufen oder von den neueren Must-Fix-
 Prävention-Agenten abgedeckt — bei Bedarf aus git zurückholen.
 
-Stand der Modelle: alle 22 Agenten laufen auf `claude-fable-5`
+Stand der Modelle: alle 23 Agenten laufen auf `claude-fable-5`
 (einheitlicher Stack, ersetzt die frühere Opus 4.7 / Sonnet 4.6 / Haiku 4.5
 Tier-Verteilung).
 
@@ -246,6 +247,12 @@ Tier-Verteilung).
 |---|---|---|
 | `hardware-emulation-author` | Fable 5 | Firmware-realistische Emulatoren pro Controller (Wire + State-Machine + Flux-Generator + Edge-Cases) — reduziert Bench-Session-Bedarf, ersetzt sie NICHT. Output unter `tests/emulators/<controller>/` + `tests/flux_gen/<controller>/`. Forensisch ehrlich via `DIVERGENCES.md` + `coverage_matrix.md`. Ein Controller pro Invocation. |
 
+### Aufklärungs-Suite (1, post-v4.1.6)
+
+| Agent | Modell | Zweck |
+|---|---|---|
+| `uft-scout` | Fable 5 | Sichtet **fremden** Quellcode auf das, was UFT fehlt oder besser könnte, und liefert **nur Dokumente** zurück — Gutachten mit Lizenzurteil, Inventar-Abfrage, Oracle-Kandidat und Differenzlauf-Plan. Werkzeugkasten `tools/uft-scout/`, Betriebsanweisung dort in `AGENT.md`. Schreibt **nie** nach `src/`, `include/` oder `tests/`; höchstens 5 OPEN_ITEMS-Vorschläge je Zyklus. Der einzige Agent, der außerhalb des Baums arbeitet. |
+
 ---
 
 ## Delegations-Regel
@@ -275,7 +282,7 @@ Siehe `.claude/CONSULT_PROTOCOL.md` für Details. Kurzfassung:
    REASON / SEVERITY`. Haupt-Session oder `orchestrator` parst und routet.
    Funktioniert ohne Änderung an den Agent-Tools, vollständig beobachtbar.
 
-2. **Direkter Agent-Spawn (sparsam):** Nur 4 von 22 Agenten haben
+2. **Direkter Agent-Spawn (sparsam):** Nur 4 von 23 Agenten haben
    `Agent`-Tool in der Frontmatter:
    - `orchestrator` — Master-Router, darf beliebig spawnen
    - `deep-diagnostician` — gezielte Teilfragen
