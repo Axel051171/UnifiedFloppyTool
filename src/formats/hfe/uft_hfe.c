@@ -692,6 +692,27 @@ static uft_error_t hfe_read_track(uft_disk_t* disk, int cylinder, int head,
     
     track->encoding = hfe_to_uft_encoding(pdata->header.track_encoding);
 
+    /* MF-596: alles, was unten an die Spur geht, ist unser eigener Speicher
+     * — `side0`/`side1` aus dem De-Interleave, im v3-Fall `dbits`/`dweak`
+     * aus `hfe_v3_decode()`. `uft_track_release()` gibt aber NUR frei, wenn
+     * diese Fahne steht (uft_unified_types.c:256), und diese Datei kannte
+     * sie an keiner Stelle.
+     *
+     * Gemessen im CI-Leckbericht, ueber `uft_smart_open()`:
+     *
+     *     Direct leak of 2 026 880 byte(s) in 80 object(s)
+     *       #1 hfe_read_track    src/formats/hfe/uft_hfe.c:662
+     *       #2 analyze_quality   src/core/uft_smart_open.c:263
+     *       #3 uft_smart_open    src/core/uft_smart_open.c:489
+     *
+     * Der Kommentar an `weak_mask` unten sagte seit MF-362 „freed by
+     * uft_track_free" — das stimmte nur unter einer Bedingung, die
+     * niemand herstellte.
+     *
+     * Hier und nicht in den Zweigen, weil ALLE drei Zuweisungspfade
+     * (v3-Erfolg, v3-Rueckfall, v1/v2) eigenen Speicher anhaengen. */
+    track->owns_data = true;
+
     if (pdata->is_v3) {
         /* HFE v3: the bit-reversed bytes are an OPCODE stream, not a clean
          * bitstream. Decode it (MF-362) into the output bitstream + a per-bit

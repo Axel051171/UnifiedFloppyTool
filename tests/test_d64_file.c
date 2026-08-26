@@ -24,17 +24,30 @@ static int tests_passed = 0;
  * ============================================================================ */
 
 #define TEST(name) static void test_##name(void)
+/* MF-596: `tests_passed++` stand hier bedingungslos hinter dem
+ * Aufruf. ASSERT kehrt bei Fehlschlag nur aus der Testfunktion
+ * zurueck — RUN_TEST zaehlte trotzdem einen Erfolg und druckte
+ * "PASSED" in die Zeile hinter "FAILED at line N". Damit war
+ * `tests_passed == tests_run` immer wahr und der Rueckgabewert
+ * immer 0: dieser Test konnte nicht rot werden. */
+static int uft_test_failed = 0;
 #define RUN_TEST(name) do { \
     printf("  Running %s... ", #name); \
     tests_run++; \
+    uft_test_failed = 0; \
     test_##name(); \
-    tests_passed++; \
-    printf("PASSED\n"); \
+    if (uft_test_failed) { \
+        printf("  -> %s FAILED\n", #name); \
+    } else { \
+        tests_passed++; \
+        printf("PASSED\n"); \
+    } \
 } while(0)
 
 #define ASSERT(condition) do { \
     if (!(condition)) { \
         printf("FAILED at line %d: %s\n", __LINE__, #condition); \
+        uft_test_failed = 1;   /* MF-596 */ \
         return; \
     } \
 } while(0)
