@@ -137,9 +137,51 @@ ist ein Unterschied, und er gehört benannt.
 
 ## Offen vor dem Tag
 
-- Bedien-Abnahme der neuen Oberflächen-Funktionen (MF-496 Feineinsteller,
-  MF-501 Schadenslage-Zeile) — braucht einen Menschen an der Maus
-- CI-Matrix grün für den Tag-Kandidaten
+Gemessen gegen die acht Punkte der Freigabe-Bedingung:
+
+| # | Bedingung | Stand |
+|---|---|---|
+| 1 | `ctest` 100 % auf dem Tag-Kandidaten | ✅ **266/266**, ein benannter Skip (`test_freezer`, 8 von 14 Prüfungen; Grund oben) |
+| 2 | Sanitizer grün inkl. Testcode, 0 Lecks | ✅ **ASan 0/266, UBSan 0/266**, beide scharfen Tore 9/9 |
+| 3 | Alle Tore 0, keines abgeschaltet oder aufgeweicht | ✅ `scripts/check_consistency.py` — 36 Kategorien, alle 0. Keines in den Warn-Modus geschoben |
+| 4 | Offene P0 nur eigentümer- oder hardware-blockiert | ⚠ **siehe unten** — die Bedingung kennt eine Kategorie nicht |
+| 5 | Version, CHANGELOG, verschobene Liste 12/12 | ✅ `VERSION.txt` = `uft_version.h` = 4.1.6; die zwölf Punkte abgerechnet (2 erledigt, 10 bleiben, jeder mit Messung) |
+| 6 | Vier Kennzahlen mit Wert und Quelle im Release-Text | ✅ Abschnitt „Die vier Kennzahlen" |
+| 7 | CI-Matrix grün auf genau dem getaggten Commit | ⏳ **offen bis zum Tag** — Linux, macOS und Windows müssen auf dem Tag-Commit selbst grün sein, nicht auf einem Vorgänger |
+| 8 | Kein ungedeckter Satz in README, CLAUDE.md, Release-Text | ✅ zwei veraltete Sätze berichtigt (MF-602); die Zahlen der Wandlungsmatrix sind seit MF-541 abgeleitet, nicht gepflegt |
+
+### Zu Punkt 4: eine Kategorie fehlt in der Bedingung
+
+Die Bedingung verlangt, offene P0 seien **entweder** eigentümer- **oder**
+hardware-blockiert. Ein Eintrag ist keines von beidem:
+
+**P0-2 — der Kopierschutz-Katalog hat keinen Aufrufer.** 38 Dateien, 350
+Funktionen, 4 Aufrufer, 16 von einem Test berührt (gemessen MF-557,
+seither von `scripts/audit_protection_claims.py` festgehalten).
+
+Der ist nicht blockiert, sondern **entschieden**: ihn anzuschließen hieße,
+334 ungeprüfte Funktionen an ein forensisches Urteil zu hängen — genau
+die Lage, aus der die fünf fabrizierten Parser kamen. Das Ziel dieses
+Releases sagt es selbst als Nicht-Ziel: *„niemals Code verdrahten, damit
+er benutzt aussieht."*
+
+Die Dokumentation ist seit MF-508/509 ehrlich; `README.md` schreibt
+wörtlich „a function that exists is not a feature until something calls
+it". Der Eintrag bleibt also offen — als Entscheidung, nicht als
+Rückstand. Wer ihn schließen will, braucht zuerst Prüfung für die 334,
+nicht einen Aufruf.
+
+### Was noch einen Menschen braucht
+
+- **Bedien-Abnahme** der neuen Oberflächen-Funktionen (MF-496
+  Feineinsteller, MF-501 Schadenslage-Zeile). Protokoll liegt in
+  `docs/CLICK_SESSION_v4.1.6.md`; ein Mensch an der Maus kann es nicht
+  ersetzen.
+- **Tier-3-Bench** für die acht Controller ohne Gerät — an die
+  Gemeinschaft delegiert (MF-310).
+- **Ein echtes Action-Replay-Einfrierabbild**, damit `test_freezer` seine
+  acht ausgelassenen Prüfungen wieder aufnehmen kann.
+- **Lizenz-/Verteilungsklärung** für die 10 Dateien in `tests/corpus/`.
 
 ---
 
