@@ -40,6 +40,40 @@ und kein Rückgabewert mehr etwas behauptet, das niemand nachgesehen hat.
 - **`uftc_convert_hfe_to_sectors()` meldete Erfolg bei null gewandelten
   Spuren** (MF-568): 737 280 Byte IMG aus einer 1024-Byte-Eingabe.
 
+- **Drei Formatfehler standen hinter Tests, die nicht rot werden
+  konnten** (MF-598). Alle drei gegen eine **benannte** Referenz behoben,
+  die im Code steht:
+  - **Jedes Game-Gear-Abbild wurde als Master System gemeldet.** Die
+    Region steht im oberen Halbbyte von `$7FFF`, gelesen wurde das untere;
+    mit der falschen Hälfte traf kein Fall zu und jedes GG-Abbild fiel
+    durch bis zur Rückfall-Heuristik, die pauschal SMS zurückgibt. Der
+    ROM-Größencode kam aus dem falschen Byte. Referenz:
+    `maxim-zhao/sega8bitheaderreader`, `source/Unit1.pas`
+    (`TSegaHeader.RegionAndCartSize`), bestätigt von SMS Power!.
+  - **Der Game-Boy-Kopf wurde als Speicherabbild überworfen**, obwohl
+    seine Felder überlappen (Titel `$0134..$0143`, darin Hersteller-Code
+    und CGB-Flagge). Gemessen mit `offsetof`: `sizeof` = 86 statt 80,
+    `cartridge_type` landete auf `$014C` statt `$0147`, die globale
+    Prüfsumme sechs Byte **hinter** dem Kopfende. Referenz: Pan Docs,
+    „The Cartridge Header".
+  - **Die kennungslose Z80-Vermutung stand vor TAP und DSK** und
+    verschluckte beide. Sie lautet „Datei ≥ 30 Byte und Bytes 6..7 nicht
+    beide null" — bei TAP stehen dort Buchstaben aus dem Dateinamen, bei
+    DSK das `PC` aus `MV - CPC`. Für DSK gab es keinen Test, der es
+    gezeigt hätte.
+- **Neunzehn Linksschiebungen waren in C undefiniert** (MF-594).
+  `p[3] << 24` befördert `uint8_t` zu `int`; ab 128 passt das Ergebnis
+  nicht hinein. Gefunden vom Fuzzer über den echten Öffnungspfad unter
+  UBSan (`uft_apridisk.c:22`), acht Stellen im Produktionscode, elf im
+  Testcode. **UBSan-Volllauf: 2 → 0 von 266.**
+- **Vier geteilte Include-Wächter verschluckten eine ganze Datei**
+  (MF-593, nach MF-591). Darunter der leere IMD-Aufhänger, der den
+  Wächter des echten `formats/uft_imd.h` trug: wer ihn zuerst einband,
+  bekam vom echten Header **nichts**. Belegt mit zwei
+  Übersetzungsvorgängen — in der einen Reihenfolge
+  `'UFT_IMD_MODE_500K_MFM' undeclared`, in der anderen fehlerfrei.
+  **Klasse DATEI: 14 → 4 → 0.**
+
 ### Behoben — Datenverlust
 
 - **Fünf Schreibpfade der Oberfläche verwarfen den Rückgabewert von
@@ -51,6 +85,29 @@ und kein Rückgabewert mehr etwas behauptet, das niemand nachgesehen hat.
   und ein Schnappschuss-Verzeichnis, **keine Hardware**. Sechs Stellen
   gehen jetzt hindurch; Schnappschüsse liegen in `.uft-snapshots` neben
   dem Abbild.
+
+- **Der Leck-Rückstand ist bei null** — im CI gemessen, jeder Schritt mit
+  seiner Ursache: **58 → 15 → 2 → 0** von 266 unter LeakSanitizer.
+  - **58 → 15** (MF-592): `uft_track_add_sector()` **kopiert**, und der
+    geteilte Helfer `uft_format_add_sector_with_id()` gab seinen eigenen
+    Puffer nur im Fehlerfall frei. Also leckte **jeder gelesene Sektor**
+    — 1,44 MB je Lesevorgang einer 1,44-MB-Diskette. Der Rückstand galt
+    bis dahin als Testcode-Problem (MF-531); die damalige Messung stellte
+    die richtige Frage und traf die falsche Klasse.
+  - **15 → 2** (MF-595/598): `uft_disk_alloc()` belegte jeden Steckplatz
+    mit einer leeren Spur vor, die achtzehn Parser überschrieben — 9 972 768
+    Byte in 786 Objekten, exakt `sizeof(uft_track_t)` je Objekt. Dazu vier
+    Spur-Erzeuger (G64, G71, ADF-Ext, HFE), die eigenen Speicher anhängten,
+    ohne `owns_data` zu setzen — ohne das gibt `uft_track_release()` gar
+    nichts frei.
+  - **2 → 0** (MF-599): `uft_track_t` führt **drei** Flux-Zeiger, und die
+    beiden Aufräumer des Typs deckten je einen anderen Satz ab.
+    `uft_track_release()` gab ein Feld frei, das an einer Spur niemand
+    belegt, und ließ das belegte stehen.
+- **SPDX-Konflikt aufgelöst** (MF-580): `uft_multiread_pipeline.c` trug
+  `MIT`, dokumentierte sich aber als Portierung von a8rawconvs
+  `sift_sectors` (GPLv2+). Korrigiert auf `GPL-2.0-or-later` mit
+  Herkunftszeile.
 
 ### Neu
 
@@ -89,6 +146,46 @@ und kein Rückgabewert mehr etwas behauptet, das niemand nachgesehen hat.
 | `uft-decode` CLI-Verdrahtung | **zurückgezogen, nicht verschoben.** UFT ist GUI-only; eine CLI zu verdrahten widerspricht der Projektrichtung. Das Gerüst (`cli/uft-decode/`) ist in keinem Build und soll es nicht werden |
 | USBFloppy SG_IO-Mock | **überholt** — die UFI-Emulator-Arbeit (`tests/emulators/ufi/`) deckt das ab, mit Abweichungs- und Abdeckungsmatrix |
 | MF-271 Switch/cart7 löschen | ✅ **erledigt** — beide Verzeichnisse sind weg |
+
+### Der Prüfstand selbst
+
+**„266/266" war nie wahr.** In **32 Testdateien** zählte das Aufruf-Makro
+den Erfolg bedingungslos hinter dem Aufruf, während `ASSERT` bei
+Fehlschlag nur aus der Testfunktion zurückkehrte. `main()` gab
+`(tests_passed == tests_run) ? 0 : 1` zurück — also immer 0. Diese Tests
+druckten „PASSED" in die Zeile direkt hinter „FAILED at line N" und
+konnten nicht rot werden (MF-596).
+
+Dahinter lagen **sieben Tests mit 18 Prüfungen**:
+
+| | Ursache | |
+|---|---|---|
+| `test_gcr_ops` (2) | Puffer 200 Byte, Vorlage füllt erst ab 500; Aufruf mit `NULL` traf die Wache statt der Größenlogik | Testfehler (MF-597) |
+| `test_genesis` (2) | Vorlage ohne Nutzlast → Prüfsumme korrekt 0 | Testfehler (MF-597) |
+| `test_sms` (3), `test_gameboy` (1), `test_floppy_formats` (1) | siehe oben | **Formatfehler** (MF-598) |
+| `test_nib_format` (1) | `/tmp` fest verdrahtet — fällt nur unter Windows, lokal biegt MSYS den Pfad um | Testfehler (MF-600) |
+| `test_freezer` (8) | weder Vorlage noch Erkenner haben einen Nachweis | **ausgelassen**, siehe unten |
+
+**Action Replay ist nicht repariert, sondern ausgelassen.** Die
+Testvorlage ist 66 664 Byte groß, der Erkenner verlangt
+`[66816, 67584]` — beide Zahlen ohne Nachweis, und der Header nennt seine
+eigene Versatztabelle wörtlich „typical layout". Eine Seite an die andere
+anzupassen wäre Erfindung, dieselbe Bauart wie bei den fünf fabrizierten
+Parsern. Acht Prüfungen sind mit gedrucktem Grund ausgelassen (Rückgabe
+77), die sechs referenzfreien laufen weiter; ein Fehlschlag schlägt die
+Auslassung, sonst verdeckte 77 einen echten roten Test.
+
+**Neues Tor (37.): „Test kann nicht scheitern"** (MF-605). Es meldet eine
+Datei nur, wenn beides zutrifft — bedingungsloser Erfolgszähler **und**
+kein Fluchtweg in den Zusicherungen. Alle drei Fluchtwege sind im Baum
+belegt (`exit()`, ein Fehlerzähler für `main()`, eine Fahne, die das
+Aufruf-Makro abfragt), keiner erfunden. Grundlinie **0**, ohne
+eingefrorenen Rückstand.
+
+**Nebenbei:** die Liste in `tests/CMakeLists.txt`, die sieben Testnamen
+für `SKIP_RETURN_CODE 77` aufzählte, gilt jetzt für alle Tests. Eine
+Liste, die Sonderfälle nennt statt die Regel, veraltet still — in diesem
+Baum zum dritten Mal belegt (MF-567, MF-578, MF-598).
 
 ### Was dieses Release weiterhin NICHT kann
 
