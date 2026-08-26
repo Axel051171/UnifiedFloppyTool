@@ -33,7 +33,7 @@ Fehler gefunden, und der gehört gemeldet.
 |---|---|---|
 | **Ungeprüfte Formate** | **57 von 88** auf T3. Belegt: T1=2, T1b=12, T2=17 | `docs/VERIFICATION_TIERS.md`; Kurzfassung im `README.md` |
 | **Angebotene Wandlungspfade** | **12 von 44**, davon **4 verlustfrei je mit Bit-Identitäts-Messung**, 8 nur mit Zustimmung. 30 weist das Preflight-Tor als UNGEPRÜFT ab, 2 als unmöglich | abgeleitet aus `src/core/uft_roundtrip.c` durch `scripts/update_inventory.py` (DERIVED_CLAIMS) — bei jedem Commit gegen die Quelle geprüft |
-| **Leckende Tests** | **58 von 266** unter LeakSanitizer. Über zwei CI-Läufe stabil: 58 von 258 (MF-564), 58 von 266 (MF-584) — derselbe absolute Wert bei acht Tests mehr | CI-Auftrag „Sanitizer Checks", Schritt *Full suite under ASan (reporting only, incl. leaks)*. Die **scharfen** Tore (9 Tests) sind 9/9 |
+| **Leckende Tests** | **0 von 266** unter LeakSanitizer, **0 von 266** unter UBSan. Der Weg dahin, jeder Schritt gemessen: 58 → 15 (MF-592) → 2 (MF-595/598) → **0** (MF-599) | CI-Auftrag „Sanitizer Checks", Schritte *Full suite under ASan (reporting only, incl. leaks)* und *Full suite under UBSan*. Die **scharfen** Tore (je 9 Tests) sind 9/9 |
 | **Bench-Alter je Controller** | **1 von 9** hat je einen Tier-3-Bench: Greaseweazle, **2026-05-15**. Die übrigen acht: **nie** | `docs/CAPABILITIES.md`, Abschnitt „Bench-Alter je Controller" |
 
 **Wie diese Zahlen ehrlich bleiben.** Die zweite ist abgeleitet, nicht
@@ -43,10 +43,43 @@ CI-Protokoll, nicht aus einer Notiz. Die erste und vierte stehen in einem
 Dokument, das eine Zeile pro Format bzw. Controller führt.
 
 **Zum Testlauf:** auf einem Entwicklungsrechner mit vollständigem Korpus
-laufen **266/266** durch. Auf einem **frischen Klon** überspringen sechs
-Testdateien, weil `tests/corpus/` gitignored ist (10 Dateien, nicht
-verteilbar geklärt). `tests/corpus_free/` liegt im Repo. Die Liste steht
-in `docs/OPEN_ITEMS.md` unter „Korpus-gebundene Tests".
+laufen **266/266** durch, davon **einer ausgelassen**: `test_freezer`
+lässt 8 seiner 14 Prüfungen aus, weil es für das Action-Replay-Format
+keine benannte Referenz gibt (siehe unten). Auf einem **frischen Klon**
+überspringen weitere sechs Testdateien, weil `tests/corpus/` gitignored
+ist (10 Dateien, nicht verteilbar geklärt). `tests/corpus_free/` liegt im
+Repo. Die Liste steht in `docs/OPEN_ITEMS.md` unter „Korpus-gebundene
+Tests".
+
+**Und diese Zahl war vorher falsch.** Bis MF-596 zählte das Aufruf-Makro
+`RUN_TEST` in **32 Testdateien** den Erfolg bedingungslos hinter dem
+Aufruf, während `ASSERT` bei Fehlschlag nur aus der Testfunktion
+zurückkehrte. `main()` gab `(tests_passed == tests_run) ? 0 : 1` — also
+immer 0. Diese Tests konnten nicht rot werden; sie druckten „PASSED" in
+die Zeile direkt hinter „FAILED at line N".
+
+Dahinter lagen **sieben Tests mit 18 Prüfungen**, die seit unbekannter
+Zeit fielen. Vier waren Testfehler (Vorlagen, die nicht hergaben, was die
+Prüfung behauptete). **Drei waren echte Fehler im Format-Layer:**
+
+* **Jedes Game-Gear-Abbild wurde als Master System gemeldet** — die
+  Region steht im oberen Halbbyte von `$7FFF`, gelesen wurde das untere.
+  Der ROM-Größencode kam aus dem falschen Byte (MF-598).
+* **Der Game-Boy-Kopf wurde als Speicherabbild überworfen**, obwohl seine
+  Felder überlappen: `sizeof` = 86 statt 80, `cartridge_type` landete auf
+  `$014C` statt `$0147`, die globale Prüfsumme sechs Byte hinter dem
+  Kopfende (MF-598).
+* **Die kennungslose Z80-Vermutung stand vor TAP und DSK** und verschluckte
+  beide Erkennungen (MF-598).
+
+Ein achter zeigte sich nur unter Windows (`/tmp` fest verdrahtet,
+MF-600) — „lokal grün" und „CI grün" sind zwei verschiedene Aussagen.
+
+Alle drei Format-Fehler sind gegen eine **benannte** Referenz behoben,
+die im Code steht: `maxim-zhao/sega8bitheaderreader` für SMS/GG, Pan Docs
+für den Game-Boy-Kopf. Wo keine Referenz zu finden war — Action Replay —
+ist **nichts angepasst**, sondern ausgelassen: eine Seite an die andere
+anzugleichen wäre Erfindung.
 
 ---
 
@@ -63,13 +96,44 @@ Diese Liste gehört zum Release, nicht in eine Fußnote:
   Schemata.
 - **Das Dateisystem wird nicht gelesen.** Verzeichnisliste und
   Belegungskarte sagen das jetzt in der Anzeige.
-- **58 von 261 Tests lecken unter ASan.** Alter Rückstand, nicht
-  gewachsen (über zwei CI-Läufe gemessen).
+- **Ein Test lässt 8 seiner 14 Prüfungen aus** (`test_freezer`): für
+  das Action-Replay-Format gibt es keine benannte Referenz, und beide
+  Seiten aneinander anzupassen wäre Erfindung. Ausgelassen, nicht grün
+  gemacht.
 - **Kein Bedien-Abnahmetest.** Sechs kopflose Qt-Tests decken Logik und
   Anzeige aller Reiter ab — nicht Aussehen, Bedienfluss oder alles hinter
   einem modalen Dialog.
 - **Tier-3-Hardware-Prüfung fehlt weiterhin** — kein Gerät verfügbar,
   an die Gemeinschaft delegiert.
+
+## Die zwölf verschobenen Punkte aus v4.1.5 — abgerechnet
+
+Der Release-Text von v4.1.5 nannte zwölf Punkte, die ausdrücklich „auf
+v4.1.6 verschoben" wurden. Ein Release, das behauptet, jede Aussage sei
+gemessen, muss auch diese Liste abschließen — sonst bleibt eine
+Zusage offen, die niemand mehr nachschlägt.
+
+**Stand: 2 erledigt, 10 bleiben.** Jede Zeile mit dem, was gemessen wurde.
+
+| # | Punkt | Stand |
+|---|---|---|
+| 1 | HIL.GW formale Bench-Sitzung | **bleibt** — kein Gerät hinter diesem Projekt (MF-310); Tier-3 kann nur von einem fremden Schreibtisch kommen |
+| 2 | UFT-008 SCP-Direct Tier-3 | **bleibt** — dito. 22/22 Opcodes byte-exakt gegen samdisk ist eine benannte Referenz, kein Gerät |
+| 3 | M3.2 XUM1541 Tier-3 | **bleibt** — dito. Drahtprotokoll gegen die OpenCBM-Quelle geprüft (MF-301), Emulator 56/56 |
+| 4 | M3.3 Applesauce `?disk`-Zustandsautomat | **bleibt** — gemessen: `?disk` kommt in `src/` nicht vor. `?vers` ist verdrahtet |
+| 5 | UFI Windows + macOS | **bleibt** — nur `ufi_linux.c` (SG_IO). `docs/CAPABILITIES.md` sagt das seit MF-589 als „weiter offen" statt „v4.1.6" |
+| 6 | ARCH-9 XUM1541 macOS-`.dylib`-Lader | **bleibt** — gemessen: `OpenCbmLibrary::load()` kommt im Baum nicht vor |
+| 7 | 5-und-3-GCR (Apple DOS 3.2) | **bleibt** — gemessen: kein Code dafür. Neuer Decoder-Code fällt unter die EINFRIER-REGEL und braucht zuerst eine benannte Referenz |
+| 8 | FM-Decoder vervollständigen | **bleibt, nicht belegt** — der Unvollständigkeits-Vermerk steht nicht mehr in `flux_decode_fm()`, aber die Historie der Datei ist ein einziger Sammel-Commit (`4d622192 v4.1.0 Release`). Ob vollständig oder nur der Vermerk entfernt, lässt sich hier nicht entscheiden |
+| 9 | Sidecar je Wandler genauer | **bleibt** — gemessen: `src/core/uft_loss_report.c` schreibt weiter Einträge auf Kategorie-Ebene (`"category"`), keine Spur-Zählungen |
+| 10 | `uft-decode`-CLI verdrahten | **bleibt, Eigentümer-Entscheidung** — `cli/uft-decode/main.c` liegt im Baum, ist aber in keinem Bausystem (0 Treffer in `.pro` und `tests/CMakeLists.txt`). UFT ist ein GUI-Werkzeug; ob es eine CLI geben soll, ist keine Frage, die der Code beantwortet |
+| 11 | MF-271 `src/switch/` + `src/cart7/` löschen | ✅ **erledigt (MF-441)** — gemessen: beide Verzeichnisse existieren nicht mehr |
+| 12 | USBFloppy SG_IO-Mock | ✅ **erledigt** — `tests/emulators/ufi/` mit Firmware-Zustandsautomat; er treibt den Produktions-HAL (`src/hal/ufi.c`) über den eingesetzten `uft_ufi_ops_t`-Unterbau |
+
+**Sechs der zehn offenen brauchen ein Gerät**, das es hier nicht gibt.
+Einer ist eine Eigentümer-Entscheidung. Drei sind unfertige Arbeit, und
+einer davon (Nr. 8) ist ehrlicherweise *unbekannt* statt *offen* — das
+ist ein Unterschied, und er gehört benannt.
 
 ## Offen vor dem Tag
 
