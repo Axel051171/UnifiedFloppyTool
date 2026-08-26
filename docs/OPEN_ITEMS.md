@@ -245,6 +245,28 @@ Messung in `BACKLOG.md`, das als Archiv erhalten bleibt).
 
 ---
 
+## Übernommen aus KNOWN_ISSUES.md (MF-607)
+
+`docs/KNOWN_ISSUES.md` ist ein **Prinzipien-Register**, kein
+Arbeitsvorrat — es hält fest, wo das Werkzeug seine eigenen
+Design-Prinzipien nicht einhält, und das meiste darin ist abgeschlossene
+Geschichte (973 Zeilen, davon **genau zwei** mit Status `OPEN`,
+nachgemessen).
+
+Diese zwei stehen ab hier hier, damit es bei EINER Liste bleibt. Das
+Register bleibt als Archiv erhalten und verweist für offene Arbeit
+hierher.
+
+| # | Sache | Stand |
+|---|---|---|
+| KI-6.1 | **Keine CI-Prüfung durch echte Emulatoren.** Prinzip 6 verlangt, dass Exporte durch einen Emulator laufen. `.github/workflows/emulator.yml` **existiert**, nennt sich aber im eigenen Kopf „SCAFFOLD ONLY": es belegt, dass VICE auf `ubuntu-22.04` installierbar und `c1541` kopflos aufrufbar ist, und liest eine feste D64-Vorlage. Was fehlt, sagt die Datei selbst: der echte Rundlauf braucht ein UFT-Werkzeug, das Fluss/Sektoren entgegennimmt und eine kanonische D64/ADF ausgibt — **das ist derselbe Blocker wie der verschobene Punkt 10** (`uft-decode`-CLI, Eigentümer-Entscheidung). Der Eintrag nannte das Gerüst bisher nicht | **bleibt** — hängt an einer Eigentümer-Entscheidung, nicht an Arbeit |
+| KI-7.4 | **ADF-Schreibseite: zwei ehrliche Stubs.** `uft_adf_add_file()` (`src/formats/uft_adf.c:896`) und `uft_adf_delete()` (`:909`) geben `-1` zurück; ein dritter abgeleiteter Stub ab Zeile 1017 fällt auf dieselben zurück. Die Oberfläche bietet die Schreibseite nicht an | **bleibt, und das ist richtig so** — ein Stub, der `-1` zurückgibt statt zu tun als ob, ist releasefähig. Plan v4.2 (AmigaDOS-Bitmap-Belegung + Verzeichnis-Hash + Blockprüfsummen als ein Patch), gesteuert über `docs/STUB_ELIMINATION_PLAN.md` Phase 5 |
+
+Fünf weitere Einträge stehen auf `MITIGATED` — sie beschreiben Zustände
+mit Abmilderung, keine offene Arbeit, und bleiben im Register.
+
+---
+
 ## Korpus-gebundene Tests — Beschaffungsliste (MF-588)
 
 **Gemessen auf diesem Rechner: 266/266, ein Skip** (`test_freezer`, siehe unten). Auf einem frischen

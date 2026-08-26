@@ -1,5 +1,15 @@
 # Known Issues — Principle Compliance
 
+> **Für offene Arbeit ist [`docs/OPEN_ITEMS.md`](OPEN_ITEMS.md) die
+> einzige Liste** (MF-607). Die beiden Einträge, die hier noch auf
+> `OPEN` standen — 6.1 (Emulator-CI) und 7.4 (ADF-Schreibseite) — sind
+> dorthin übernommen und stehen dort als KI-6.1 und KI-7.4.
+>
+> Dieses Dokument bleibt, was es ist: ein **Register**, wo das Werkzeug
+> seine eigenen [Design-Prinzipien](DESIGN_PRINCIPLES.md) nicht einhält,
+> mit der Geschichte dazu. Neue Befunde kommen nach `OPEN_ITEMS.md`,
+> nicht hierher.
+
 Diese Liste dokumentiert Fälle wo UFT aktuell die [Design-Prinzipien](DESIGN_PRINCIPLES.md)
 nicht vollständig einhält. Die Liste ist öffentlich (Meta-Prinzip C) und wird
 aktiv abgearbeitet.
