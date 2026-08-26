@@ -52,12 +52,21 @@ beide Richtungen.
 
 | Feld | Bedeutung | Was du tust |
 |---|---|---|
-| `vorhanden: true`, `treffer` | starker Treffer | Kandidat verwerfen (AGENT.md Regel 4) |
-| `vorhanden: false`, `schwache_treffer` | nur ein Teilwort passt | **von Hand nachsehen**, nicht verwerfen |
+| `vorhanden: true` | starker Treffer | Kandidat verwerfen (AGENT.md Regel 4) |
+| `abgedeckt: false` | **der Index kennt den Begriff gar nicht** | von Hand im Baum nachsehen — `false` heißt hier NICHT `fehlt` |
+| `schwache_treffer` gesetzt | nur ein Teilwort passt | von Hand nachsehen, nicht verwerfen |
+| `plugin_liste_vollstaendig: true` | die Formatliste kommt aus der SSOT | nur **hier** heißt „kein Treffer" wirklich „nicht vorhanden" |
 
-Der Grund steht im Skript: `flux visualization` galt als vorhanden, weil
-`flux` ein Decoder-Verzeichnis ist. UFT hat keine Fluss-Visualisierung.
-Ein schwacher Treffer ist ein Hinweis, kein Urteil.
+Beide Richtungen sind belegt, beide durch Rotbeweis gefunden:
+
+- `flux visualization` galt als **vorhanden**, weil `flux` ein
+  Decoder-Verzeichnis ist — UFT hat keine Fluss-Visualisierung (MF-610).
+- `jitter`, `weak bits`, `multi capture voting`, `bit slip` galten als
+  **fehlend**, obwohl UFT alle vier hat (MF-611, erster Scout-Zyklus).
+
+Der Index führt Formate, Verzeichnisse, Controller und vendorte
+Bibliotheken — **keine Fähigkeiten**. Wer das vergisst, schlägt
+Dubletten vor.
 
 ## Vor jedem Vorschlag
 

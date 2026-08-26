@@ -267,6 +267,56 @@ mit Abmilderung, keine offene Arbeit, und bleiben im Register.
 
 ---
 
+## Aus dem ersten Scout-Zyklus (MF-611, 2026-08-26)
+
+Erster Lauf des neuen `uft-scout` gegen ein benanntes Repository
+(`JYewman/Greaseweazle-Floppy-Disk-Restorer`).
+
+**Ergebnis aus dem Repo: kein Fund** — und das ist das Ergebnis, kein
+Ausweichen. Das Gutachten liegt in
+`tools/uft-scout/out/greaseweazle-floppy-disk-restorer.gutachten.md`,
+das Repo steht in der Negativliste. Nachgeprüft, weil eine Absage über
+fremden Code genauso belegt gehören muss wie eine Zusage:
+
+| Behauptung des Scouts | Nachgemessen |
+|---|---|
+| Lizenz MIT | ✅ `LICENSE`, „Copyright (c) 2026 Joshua Yewman" |
+| Head-Alignment misst nicht, was es anzeigt | ✅ `src/floppy_formatter/analysis/head_alignment.py:444` — wörtlich `# For now, we simulate by reading at the nominal position`; dazu `:256` „rough approximation" |
+| PLL-Sweep bewertet gegen einen Decoder ohne CRC | ✅ `.../recovery/pll_tuning.py:570` — `crc_valid = len(set(data_bytes)) > 1  # Basic sanity check`, zwei Zeilen darüber `# Real implementation would calculate CRC-CCITT` |
+
+Die Zeilenangabe zum PLL-Fall stimmte auf sechs Zeilen genau; die
+Dateipfade nannte der Scout ohne das `src/floppy_formatter/`-Präfix —
+beim Nachschlagen gefunden, ohne Folge für den Befund.
+
+**Der Ertrag dieses Laufs sind zwei Befunde über den Werkzeugkasten
+selbst**, beide hier nachgemessen:
+
+| # | Sache | Stand |
+|---|---|---|
+| SCOUT-1 | **Das Scout-Inventar ist für Fähigkeitsfragen strukturell falsch-negativ — ohne jede Warnung.** Gemessen: `jitter`, `weak bits`, `multi capture voting`, `bit slip` liefern alle `vorhanden: false` **und leere schwache Treffer**, obwohl UFT die Fähigkeiten hat (nachgeprüft: `src/hardwaretab.cpp`, `src/recovery/uft_bitstream_recovery.c` — 93 Treffer, `src/algorithms/advanced/uft_multi_rev_fusion.c`, `src/recovery/uft_multiread_pipeline.c`, alle vorhanden). Ursache: der Suchindex (`tools/uft-scout/scripts/inventar.py`) kennt nur Formatnamen, Verzeichnisse, Controller und vendorte Bibliotheken — keine Fähigkeiten. Folge: `AGENT.md` Regel 4 („Inventar vor Vorschlag") ist für alles außerhalb der Formatfrage **nicht einlösbar**, und der Scout schlüge Dubletten vor. In diesem Lauf hat ihn nur seine manuelle Gegenprobe davor bewahrt | **offen** |
+| SCOUT-2 | `python tools/uft-scout/scripts/inventar.py query --help` stürzt mit `FileNotFoundError` ab, weil `argv[2]` ungeprüft als Datei geöffnet wird — statt die Hilfe zu zeigen. Gemessen 2026-08-26 | **offen** |
+
+### Warum SCOUT-1 mich besonders angeht
+
+Am selben Tag habe ich an genau dieser Abfrage die **umgekehrte**
+Richtung repariert: `flux visualization` galt als vorhanden, weil `flux`
+ein Verzeichnisname ist (MF-610). Der Rotbeweis dazu deckte den
+Falsch-Positiv ab — und ließ den Falsch-Negativ **ohne Netz**.
+
+Das ist dieselbe Bauart wie MF-531 gegen MF-592: eine Messung, die ihre
+Frage beantwortet und die andere Hälfte des Problems nicht sieht. Der
+Unterschied ist, dass es diesmal ein Fremder gefunden hat, und zwar
+sofort im ersten Lauf.
+
+**Der billigere von zwei Wegen ist der ehrlichere:** statt den Index um
+Modul- und Funktionsnamen zu erweitern (viel Arbeit, neue Fehlalarme),
+soll die Abfrage für Begriffe außerhalb ihrer Abdeckung sagen
+„**Inventar deckt das nicht ab**" statt „vorhanden: false". Eine Antwort,
+die ihre eigene Reichweite kennt, ist hier mehr wert als eine, die mehr
+zu wissen vorgibt.
+
+---
+
 ## Korpus-gebundene Tests — Beschaffungsliste (MF-588)
 
 **Gemessen auf diesem Rechner: 266/266, ein Skip** (`test_freezer`, siehe unten). Auf einem frischen

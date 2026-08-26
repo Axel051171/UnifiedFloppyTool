@@ -184,21 +184,87 @@ def query(inv, begriffe):
                 # Hinweis, kein Beleg.
                 schwach.append(t)
 
+        # ── MF-611 (SCOUT-1): die Abfrage muss ihre Reichweite kennen ──
+        #
+        # Der Index kennt Formatnamen, Verzeichnisse, Controller und
+        # vendorte Bibliotheken. Er kennt KEINE Faehigkeiten. Bis hierher
+        # antwortete er auf `jitter`, `weak bits`, `multi capture voting`
+        # und `bit slip` mit `vorhanden: false` und leeren schwachen
+        # Treffern — obwohl UFT alle vier hat (`src/hardwaretab.cpp`,
+        # `src/recovery/uft_bitstream_recovery.c`,
+        # `src/algorithms/advanced/uft_multi_rev_fusion.c`).
+        #
+        # Das ist die Gegenrichtung zu der Korrektur eine Stunde davor
+        # (MF-610, `flux visualization` galt faelschlich als vorhanden).
+        # Deren Rotbeweis deckte den Falsch-Positiv ab und liess den
+        # Falsch-Negativ ohne Netz — gefunden hat es der erste
+        # Scout-Lauf, sofort.
+        #
+        # Der ehrliche Weg ist billiger als der vollstaendige: statt den
+        # Index um Modul- und Funktionsnamen zu erweitern (viel Arbeit,
+        # neue Fehlalarme), sagt die Antwort jetzt, wenn die Frage
+        # ausserhalb ihrer Abdeckung liegt. Eine Antwort, die ihre
+        # Reichweite kennt, ist mehr wert als eine, die mehr zu wissen
+        # vorgibt.
+        # Kein einziger Treffer heisst: der Index hat zu diesem Begriff
+        # NICHTS — und er kann nicht wissen, ob das „gibt es nicht" oder
+        # „kenne ich nicht" bedeutet. Der erste Anlauf dieser Korrektur
+        # prueste nur mehrwortige Fragen; `jitter` (einwortig, in UFT
+        # vorhanden) fiel weiter als blankes `false` durch. Derselbe
+        # Testlauf hat das sofort gezeigt.
+        #
+        # Ausnahme, und sie ist belegbar: fuer FORMATNAMEN ist die Liste
+        # vollstaendig — sie kommt aus der SSOT. Dort heisst „kein
+        # Treffer" wirklich „nicht vorhanden". Das steht als eigenes Feld
+        # in der Antwort, damit der Aufrufer es unterscheiden kann.
+        abgedeckt = bool(stark) or bool(schwach)
+        if stark:
+            hinweis = ""
+        elif schwach:
+            hinweis = ("nur Teilwort-Treffer — von Hand pruefen, NICHT "
+                       "als vorhanden verwerfen")
+        elif not abgedeckt:
+            hinweis = ("INVENTAR DECKT DAS NICHT AB — der Index kennt "
+                       "Formate, Verzeichnisse, Controller und vendorte "
+                       "Bibliotheken, keine Faehigkeiten. `false` heisst "
+                       "hier NICHT `fehlt`. Von Hand im Baum pruefen, "
+                       "bevor etwas vorgeschlagen wird (AGENT.md Regel 4)")
+        else:
+            hinweis = ""
+
         out[b] = {
             "vorhanden": bool(stark),
+            "abgedeckt": abgedeckt,
             "treffer": stark[:8],
             "schwache_treffer": schwach[:8],
             "tier": inv["tiers"].get(bl),
-            "hinweis": ("nur Teilwort-Treffer — von Hand pruefen, NICHT "
-                        "als vorhanden verwerfen"
-                        if schwach and not stark else ""),
+            # Nur hierfuer ist die Liste vollstaendig (SSOT): wenn der
+            # Begriff ein Formatname ist, heisst „kein Treffer" wirklich
+            # „nicht vorhanden".
+            "plugin_liste_vollstaendig": bool(
+                inv.get("ssot", {}).get("ok")),
+            "hinweis": hinweis,
         }
     return out
 
 
+def _hilfe():
+    """Docstring ausgeben, ohne an der Konsolen-Kodierung zu sterben.
+
+    MF-611: `query --help` druckte die Hilfe und starb dann mit
+    UnicodeEncodeError — die Windows-Konsole laeuft unter cp1252, der
+    Kopfkommentar enthaelt Gedankenstriche und Pfeile. Eine Hilfe, die
+    beim Helfen abstuerzt, ist keine.
+    """
+    txt = __doc__ or ""
+    enc = (sys.stdout.encoding or "utf-8")
+    sys.stdout.write(txt.encode(enc, errors="replace").decode(enc))
+    sys.stdout.write(os.linesep)
+
+
 def main():
     if len(sys.argv) < 3:
-        print(__doc__); return 2
+        _hilfe(); return 2
     if sys.argv[1] == "build":
         root = sys.argv[2]
         out = "inventory.json"
@@ -215,12 +281,24 @@ def main():
               f"HEAD {inv['head']} -> {out}")
         return 0 if inv.get("ssot", {}).get("ok") else 1
     if sys.argv[1] == "query":
-        with open(sys.argv[2], encoding="utf-8") as f:
-            inv = json.load(f)
+        # MF-611 (SCOUT-2): hier stand `open(sys.argv[2])` ungeprueft —
+        # `query --help` endete mit einem FileNotFoundError-Traceback
+        # statt mit der Hilfe. Gefunden im ersten Scout-Lauf.
+        if len(sys.argv) < 4 or sys.argv[2] in ("-h", "--help"):
+            _hilfe()
+            return 2
+        try:
+            with open(sys.argv[2], encoding="utf-8") as f:
+                inv = json.load(f)
+        except OSError as exc:
+            print("Inventar nicht lesbar: %s\n"
+                  "Zuerst `inventar.py build <uft-pfad> -o <datei>` "
+                  "laufen lassen." % exc, file=sys.stderr)
+            return 2
         print(json.dumps(query(inv, sys.argv[3:]),
                          ensure_ascii=False, indent=1))
         return 0
-    print(__doc__); return 2
+    _hilfe(); return 2
 
 
 if __name__ == "__main__":

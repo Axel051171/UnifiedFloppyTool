@@ -53,6 +53,22 @@ nicht Eleganz des fremden Codes.
    SSOT nicht lesbar, endet `build` mit `rc=1` — **dann brich ab**,
    statt mit einem leeren Inventar weiterzuarbeiten.
 
+   **`false` heißt nicht `fehlt`.** Seit dem ersten Zyklus (MF-611)
+   trägt jede Antwort ein Feld `abgedeckt`. Ist es `false`, kennt der
+   Index den Begriff überhaupt nicht — er führt Formate, Verzeichnisse,
+   Controller und vendorte Bibliotheken, **keine Fähigkeiten**. Gemessen
+   an jenem Lauf: `jitter`, `weak bits`, `multi capture voting` und
+   `bit slip` kamen alle als „nicht vorhanden" zurück, obwohl UFT alle
+   vier hat.
+
+   Bei `abgedeckt: false` gilt: **von Hand im Baum nachsehen**, bevor du
+   etwas vorschlägst. Sonst schlägst du Dubletten vor.
+
+   Eine Ausnahme ist belegbar: für **Formatnamen** ist die Liste
+   vollständig, weil sie aus der SSOT kommt. Steht
+   `plugin_liste_vollstaendig: true` und ist der Begriff ein Formatname,
+   dann heißt „kein Treffer" wirklich „nicht vorhanden".
+
    Das Inventar führt außerdem `korpus` — welche Referenz-Abbilder mit
    welcher Herkunft bereits liegen. Prüfe jede Beschaffungsliste
    dagegen: die Beschaffung ist in diesem Projekt der Engpass, und nach

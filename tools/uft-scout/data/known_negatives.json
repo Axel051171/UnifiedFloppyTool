@@ -1,33 +1,121 @@
 {
   "_kommentar": "Bereits bewertete Repos (Mammut-Evaluierung 2026-08-23 + Einzelbewertungen). status: verworfen|bewertet|integriert. Neubewertung nur bei gemessener wesentlicher Änderung (AGENT.md Regel 6).",
   "eintraege": {
-    "LibraryLibrarian/misskey_mfm_parser": {"status": "verworfen", "grund": "MFM = Markup for Misskey, Namenskollision"},
-    "havill/wlite": {"status": "verworfen", "grund": "Unicode-wchar-Bibliothek, kein Floppy-Bezug"},
-    "Naguissa/uMFMLib": {"status": "verworfen", "grund": "Arduino-Mini-MFM, trivial vs. UFT-Decoder"},
-    "jfdelnero/HXCFE_file_selector": {"status": "verworfen", "grund": "Zielmaschinen-Firmware, keine übertragbaren Algorithmen"},
-    "GmEsoft/TRS80_HxC": {"status": "verworfen", "grund": "dito, TRS-80-Selector"},
-    "wiebow/d71-81writer.c64": {"status": "verworfen", "grund": "C64-seitiges Schreiben, Ökosystem-Trivia"},
-    "Pontiac76/RetroDiskImages": {"status": "verworfen", "grund": "PowerShell-Wrapper; nur XUM1541-Workflow-Referenz"},
-    "Rob1c/volvex": {"status": "verworfen", "grund": "DTC-GUI-Wrapper; einzig Auto-Init-UX-Idee"},
-    "picosonic/arcimage": {"status": "verworfen", "grund": "ADFS-Fakten besser über FluxEngine-textpb; /format defekt"},
-    "yas-sim/fdc_bitstream": {"status": "integriert", "grund": "bereits vollständig in UFT vendored (src/flux/fdc_bitstream)"},
-    "kristomu/flux-analyze": {"status": "bewertet", "grund": "Gutachten liegt vor: Ordinal/Dewarp/Timeline, GPL-3.0 Konzept"},
-    "tomas-nestorovic/RIDE": {"status": "bewertet", "grund": "Gutachten: Mining-Targets, fsck; keine Lizenzdatei"},
-    "Digitoxin1/DiskImageTool": {"status": "bewertet", "grund": "Gutachten: HOST_OS_CONTAMINATION u.a., GPL-3.0 Konzept"},
-    "shamada-code/superdiskindex": {"status": "bewertet", "grund": "Gutachten: Katalogmodus, MIT portierbar"},
-    "akspa0/floppyai": {"status": "bewertet", "grund": "Gutachten: Thermik-Protokolle, Polar-Karten; keine Lizenzdatei"},
-    "lipro-cpm4l/cpmtools": {"status": "bewertet", "grund": "Gutachten: 131 diskdefs via Laufzeit-Parser"},
-    "ha1tch/plus3": {"status": "bewertet", "grund": "Gutachten: +3DOS Spec/Oracle, Apache-2.0"},
-    "neuro-sys/sector-cpc": {"status": "bewertet", "grund": "Gutachten: AMSDOS-Spec; keine Lizenzdatei"},
-    "KBNLresearch/diskimgr": {"status": "bewertet", "grund": "Gutachten: Archiv-Metadaten-Konzept, Apache-2.0"},
-    "latchdevel/HxCFloppyImageConverter": {"status": "bewertet", "grund": "Gutachten: hxcfe-CLI als Oracle"},
-    "davidgiven/fluxengine": {"status": "bewertet", "grund": "Umsetzungsplan liegt vor (VFS, textpb-Ernte, VCD)"},
-    "keirf/disk-utilities": {"status": "bewertet", "grund": "Referenz-Oracle libdisk, Amiga-Decoder"},
-    "keirf/greaseweazle": {"status": "integriert", "grund": "Provider vorhanden, Tier-3-Bench 2026-05-15"},
-    "simonowen/samdisk": {"status": "integriert", "grund": "teil-vendored (src/samdisk), MIT"},
-    "RobSmithDev/ArduinoFloppyDiskReader": {"status": "bewertet", "grund": "DrawBridge; Provider-Kandidat"},
-    "RobSmithDev/DiskFlashback": {"status": "bewertet", "grund": "Umsetzungsplan liegt vor (Sektor-Cache, Mount, PFS3)"},
-    "imqqmi/FloppyControl": {"status": "bewertet", "grund": "Umsetzungsplan liegt vor (CRC-Orakel, Fundus), GPL-3.0"},
-    "FDOS/format": {"status": "bewertet", "grund": "Umsetzungsplan liegt vor (Verify-Kette, Interleave-Daten)"}
+    "LibraryLibrarian/misskey_mfm_parser": {
+      "status": "verworfen",
+      "grund": "MFM = Markup for Misskey, Namenskollision"
+    },
+    "havill/wlite": {
+      "status": "verworfen",
+      "grund": "Unicode-wchar-Bibliothek, kein Floppy-Bezug"
+    },
+    "Naguissa/uMFMLib": {
+      "status": "verworfen",
+      "grund": "Arduino-Mini-MFM, trivial vs. UFT-Decoder"
+    },
+    "jfdelnero/HXCFE_file_selector": {
+      "status": "verworfen",
+      "grund": "Zielmaschinen-Firmware, keine übertragbaren Algorithmen"
+    },
+    "GmEsoft/TRS80_HxC": {
+      "status": "verworfen",
+      "grund": "dito, TRS-80-Selector"
+    },
+    "wiebow/d71-81writer.c64": {
+      "status": "verworfen",
+      "grund": "C64-seitiges Schreiben, Ökosystem-Trivia"
+    },
+    "Pontiac76/RetroDiskImages": {
+      "status": "verworfen",
+      "grund": "PowerShell-Wrapper; nur XUM1541-Workflow-Referenz"
+    },
+    "Rob1c/volvex": {
+      "status": "verworfen",
+      "grund": "DTC-GUI-Wrapper; einzig Auto-Init-UX-Idee"
+    },
+    "picosonic/arcimage": {
+      "status": "verworfen",
+      "grund": "ADFS-Fakten besser über FluxEngine-textpb; /format defekt"
+    },
+    "yas-sim/fdc_bitstream": {
+      "status": "integriert",
+      "grund": "bereits vollständig in UFT vendored (src/flux/fdc_bitstream)"
+    },
+    "kristomu/flux-analyze": {
+      "status": "bewertet",
+      "grund": "Gutachten liegt vor: Ordinal/Dewarp/Timeline, GPL-3.0 Konzept"
+    },
+    "tomas-nestorovic/RIDE": {
+      "status": "bewertet",
+      "grund": "Gutachten: Mining-Targets, fsck; keine Lizenzdatei"
+    },
+    "Digitoxin1/DiskImageTool": {
+      "status": "bewertet",
+      "grund": "Gutachten: HOST_OS_CONTAMINATION u.a., GPL-3.0 Konzept"
+    },
+    "shamada-code/superdiskindex": {
+      "status": "bewertet",
+      "grund": "Gutachten: Katalogmodus, MIT portierbar"
+    },
+    "akspa0/floppyai": {
+      "status": "bewertet",
+      "grund": "Gutachten: Thermik-Protokolle, Polar-Karten; keine Lizenzdatei"
+    },
+    "lipro-cpm4l/cpmtools": {
+      "status": "bewertet",
+      "grund": "Gutachten: 131 diskdefs via Laufzeit-Parser"
+    },
+    "ha1tch/plus3": {
+      "status": "bewertet",
+      "grund": "Gutachten: +3DOS Spec/Oracle, Apache-2.0"
+    },
+    "neuro-sys/sector-cpc": {
+      "status": "bewertet",
+      "grund": "Gutachten: AMSDOS-Spec; keine Lizenzdatei"
+    },
+    "KBNLresearch/diskimgr": {
+      "status": "bewertet",
+      "grund": "Gutachten: Archiv-Metadaten-Konzept, Apache-2.0"
+    },
+    "latchdevel/HxCFloppyImageConverter": {
+      "status": "bewertet",
+      "grund": "Gutachten: hxcfe-CLI als Oracle"
+    },
+    "davidgiven/fluxengine": {
+      "status": "bewertet",
+      "grund": "Umsetzungsplan liegt vor (VFS, textpb-Ernte, VCD)"
+    },
+    "keirf/disk-utilities": {
+      "status": "bewertet",
+      "grund": "Referenz-Oracle libdisk, Amiga-Decoder"
+    },
+    "keirf/greaseweazle": {
+      "status": "integriert",
+      "grund": "Provider vorhanden, Tier-3-Bench 2026-05-15"
+    },
+    "simonowen/samdisk": {
+      "status": "integriert",
+      "grund": "teil-vendored (src/samdisk), MIT"
+    },
+    "RobSmithDev/ArduinoFloppyDiskReader": {
+      "status": "bewertet",
+      "grund": "DrawBridge; Provider-Kandidat"
+    },
+    "RobSmithDev/DiskFlashback": {
+      "status": "bewertet",
+      "grund": "Umsetzungsplan liegt vor (Sektor-Cache, Mount, PFS3)"
+    },
+    "imqqmi/FloppyControl": {
+      "status": "bewertet",
+      "grund": "Umsetzungsplan liegt vor (CRC-Orakel, Fundus), GPL-3.0"
+    },
+    "FDOS/format": {
+      "status": "bewertet",
+      "grund": "Umsetzungsplan liegt vor (Verify-Kette, Interleave-Daten)"
+    },
+    "JYewman/Greaseweazle-Floppy-Disk-Restorer": {
+      "status": "verworfen",
+      "grund": "Gutachten 2026-08-26: Kern-Module Scheinmessungen (head_alignment liest bei jedem Offset dieselbe Spur, PLL-Sweep ohne CRC-Rechnung); Reales (RPM+Jitter, Bit-Slip, Multi-Rev-Voting, Erase) hat UFT bereits. MIT, aber substanzlos"
+    }
   }
 }
