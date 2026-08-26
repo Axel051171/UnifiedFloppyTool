@@ -12,9 +12,10 @@ digital forensics, and copy-protection research.
 138 disk-image format IDs, 88 registered plugin parsers. **Verification
 honesty:** most parsers are currently validated only against synthetic
 round-trip tests and/or specs verified against authoritative reference
-implementations — **not yet against a real-disk reference corpus** (a
-per-format verification-tier table is in progress; see
-[`docs/KNOWN_ISSUES.md`](docs/KNOWN_ISSUES.md)). 9 hardware controllers
+implementations — **not yet against a real-disk reference corpus**. The
+per-format verification-tier table now exists and is kept current:
+[`docs/VERIFICATION_TIERS.md`](docs/VERIFICATION_TIERS.md) — **57 of 88
+formats are T3 (unverified)**; proven: T1=2, T1b=12, T2=17. 9 hardware controllers
 via a type-driven HAL (Greaseweazle fully wired, **hardware bench pass
 pending** — still open in 4.1.6, and it needs a machine we do not have
 (see "Please break it" below); SCP-Direct M3.1 mock-validated; KryoFlux
@@ -27,22 +28,22 @@ documented real-hardware bench pass in this release.
 
 ## Downloads
 
-**[Latest Release](https://github.com/Axel051171/UnifiedFloppyTool/releases/latest)** — currently **v4.1.5** (2026-06-05)
+**[Latest Release](https://github.com/Axel051171/UnifiedFloppyTool/releases/latest)** — currently **v4.1.6** (2026-08-26)
 
 | Platform | File | Notes |
 |----------|------|-------|
-| Linux | `unifiedfloppytool_4.1.5_amd64.deb` | Ubuntu/Debian |
-| Linux | `UnifiedFloppyTool-4.1.5-linux-amd64.tar.gz` | Portable binary |
-| macOS | `UnifiedFloppyTool-4.1.5-macOS-arm64.dmg` | Apple Silicon |
-| macOS | `UnifiedFloppyTool-4.1.5-macOS.tar.gz` | Universal portable |
-| Windows | `UnifiedFloppyTool-4.1.5-windows-x64.tar.gz` | Portable, Qt DLLs included |
+| Linux | `unifiedfloppytool_4.1.6_amd64.deb` | Ubuntu/Debian |
+| Linux | `UnifiedFloppyTool-4.1.6-linux-amd64.tar.gz` | Portable binary |
+| macOS | `UnifiedFloppyTool-4.1.6-macOS-arm64.dmg` | Apple Silicon |
+| macOS | `UnifiedFloppyTool-4.1.6-macOS.tar.gz` | Universal portable |
+| Windows | `UnifiedFloppyTool-4.1.6-windows-x64.tar.gz` | Portable, Qt DLLs included |
 | Checksums | `SHA256SUMS.txt` | Verify with `sha256sum -c` |
 
 > **macOS:** Falls "App ist beschädigt" erscheint: `xattr -cr UnifiedFloppyTool.app`
 
 ---
 
-## What's New in v4.1.6 (unreleased — not tagged yet)
+## What's New in v4.1.6 (2026-08-26)
 
 **Theme: every statement measured — including the statement of what the
 tool cannot do.**
@@ -74,11 +75,48 @@ everything the tool *says* about preserved data. What it found, measured:
   and a snapshot directory, no hardware at all.
 - **Six headless Qt tests** — every tab now has one. Before this release:
   two, both on the same tab.
-- **Two new consistency gates** so the discovered shapes cannot come
-  back: a display that admits in the source that it is a placeholder must
-  say so *on screen*; and an integrity verdict that cannot fail is not a
-  verdict (that one ships with an **empty baseline** — the next such
-  claim fires).
+- **Three new consistency gates** (37 categories total, all at 0) so the
+  discovered shapes cannot come back: a display that admits in the source
+  that it is a placeholder must say so *on screen*; an integrity verdict
+  that cannot fail is not a verdict; and a **test that cannot fail** is
+  worse than no test — see below. The last two ship with an **empty
+  baseline**: the next such claim fires.
+
+### The test harness itself was the biggest find
+
+**"266/266 green" was never true.** In **32 test files** the runner macro
+counted success unconditionally after the call, while `ASSERT` merely
+returned from the test function on failure. `main()` returned
+`(tests_passed == tests_run) ? 0 : 1` — so always 0. These tests printed
+`PASSED` on the line directly below `FAILED at line N`, and **could not
+go red**.
+
+Behind them sat **seven tests with 18 checks**. Four were faulty
+fixtures. **Three were real bugs in the format layer**, each fixed
+against a *named* reference that now sits in the code:
+
+| Bug | Reference |
+|---|---|
+| **Every Game Gear image was reported as Master System** — the region code lives in the *upper* nibble of `$7FFF`, the parser read the lower one; the ROM-size code came from the wrong byte entirely | [`maxim-zhao/sega8bitheaderreader`](https://github.com/maxim-zhao/sega8bitheaderreader) `source/Unit1.pas`, confirmed by [SMS Power!](https://www.smspower.org/Development/ROMHeader) |
+| **The Game Boy header was overlaid as a memory struct** although its fields overlap. Measured with `offsetof`: `sizeof` = 86 instead of 80, `cartridge_type` landed at `$014C` instead of `$0147`, the global checksum **six bytes past the end of the header** | [Pan Docs — The Cartridge Header](https://gbdev.io/pandocs/The_Cartridge_Header.html) |
+| **The magic-less Z80 guess ran before TAP and DSK** and swallowed both. It amounts to "file ≥ 30 bytes and bytes 6..7 not both zero" — which is nearly every file | — (ordering fix, no spec claim) |
+
+An eighth surfaced only on Windows (`/tmp` hard-wired; MSYS bends the
+path locally, CI does not).
+
+**Where no reference could be found, nothing was changed.** The Action
+Replay detector demands `66816 ≤ size ≤ 67584`; the test fixture is
+66 664 bytes. Neither number has a source — the header calls its own
+offset table "typical layout". Bending one side to match the other would
+be fabrication, so those 8 checks are **skipped with a printed reason**,
+not made green. The reference image is on the procurement list.
+
+- **The leak backlog went from 58 to 0**, every step measured in CI:
+  **58 → 15 → 2 → 0** of 266 under LeakSanitizer, and UBSan **0 of 266**.
+  The largest cause was not test-code debt, as two earlier audits had
+  concluded: `uft_track_add_sector()` **copies**, and the shared helper
+  freed its own buffer only on the error path — so **every sector read
+  leaked its buffer**.
 
 **What this release still cannot do** — this list is part of the release,
 not a footnote:
@@ -499,11 +537,14 @@ sudo udevadm control --reload-rules
 | [Showcase](docs/SHOWCASE.md) | One-page pitch — what UFT is and what it can do today |
 | [Capabilities Matrix](docs/CAPABILITIES.md) | Per-controller honest capability matrix (Tier-3 / Tier-2.5 / mock-only / scaffold) |
 | [Design Principles](docs/DESIGN_PRINCIPLES.md) | 7+4 binding principles for the project |
-| [Known Issues](docs/KNOWN_ISSUES.md) | Open principle-compliance gaps |
+| [Open Items](docs/OPEN_ITEMS.md) | **The** single list of open work — everything else points here |
+| [Verification Tiers](docs/VERIFICATION_TIERS.md) | Per-format proof level (T1 / T1b / T2 / T3) with sources |
+| [Known Issues](docs/KNOWN_ISSUES.md) | Archive: where the tool does not meet its own design principles |
+| [Bench Protocol](docs/BENCH_PROTOCOL.md) | How to run a Tier-3 hardware bench and report it |
 | [Master Plan](docs/MASTER_PLAN.md) | M-milestone roadmap (M3 hardware, M4 emulator-CI) |
 | [Refactor Brief](docs/REFACTOR_BRIEF.md) | Type-Driven HAL architecture spec |
 | [10-min Demo](docs/demo/QUICK_DEMO.md) | Hands-on demo script (no hardware required) |
-| [Release Notes](RELEASE_NOTES.md) | All releases v4.1.3..v4.1.5 |
+| [Release Notes](RELEASE_NOTES.md) | All releases v4.1.3..v4.1.6 |
 | [Changelog](CHANGELOG.md) | Full version history |
 | [Contributing](CONTRIBUTING.md) | How to contribute |
 
@@ -521,6 +562,11 @@ UFT builds upon the work of these projects:
 - [Pauline](https://github.com/jfdelnero/Pauline) — Jean-François DEL NERO
 - [libdsk](https://github.com/lipro-cpm4l/libdsk) — John Elliott
 - [MAME](https://github.com/mamedev/mame) floppy subsystem
+- [Pan Docs](https://gbdev.io/pandocs/) — gbdev community (Game Boy cartridge header)
+- [SMS Power!](https://www.smspower.org/) and
+  [sega8bitheaderreader](https://github.com/maxim-zhao/sega8bitheaderreader) —
+  Maxim (SMS/Game Gear ROM header)
+- [VICE](https://vice-emu.sourceforge.io/) — CBM emulator team (D64 geometry, `c1541`)
 
 ---
 
