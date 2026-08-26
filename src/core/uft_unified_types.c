@@ -262,6 +262,27 @@ void uft_track_release(uft_track_t *track) {
         }
         free(track->sectors);
         free(track->raw_data);
+        /* MF-599: `flux` fehlte hier. `uft_track_t` fuehrt DREI
+         * Flux-Zeiger — `flux`, `flux_data` (legacy) und `flux_times` —
+         * und die beiden Aufraeumer dieses Typs deckten je einen anderen
+         * Satz ab, keiner den vollen:
+         *
+         *   uft_track_cleanup()  gibt bedingungslos frei: sectors, flux,
+         *                        raw_data
+         *   uft_track_release()  gibt nur bei owns_data frei: sectors,
+         *                        raw_data, flux_times, confidence,
+         *                        weak_mask, revisions
+         *
+         * An einer `uft_track_t` setzt `flux_times` aber NIEMAND
+         * (nachgemessen: die einzigen Schreiber sitzen an anderen
+         * Strukturen). Belegt wird `flux`, und zwar von
+         * `uft_track_set_flux()`. Dieser Aufraeumer gab also ein nie
+         * belegtes Feld frei und liess das belegte stehen — genau
+         * verkehrt herum.
+         *
+         * `flux_times` bleibt vorsichtshalber stehen: es ist stets NULL,
+         * und `free(NULL)` kostet nichts. */
+        free(track->flux);
         free(track->flux_times);
         free(track->confidence);
         free(track->weak_mask);
@@ -280,6 +301,12 @@ void uft_track_release(uft_track_t *track) {
     track->sector_count = 0;
     track->sector_capacity = 0;
     track->raw_data = NULL;
+    /* MF-599: mit dem `free` oben muessen auch diese beiden zurueckgesetzt
+     * werden, sonst zeigt eine zweimal freigegebene Spur auf toten
+     * Speicher — der Kommentar direkt darueber verspricht ausdruecklich,
+     * dass ein zweites Freigeben sicher ist. */
+    track->flux = NULL;
+    track->flux_count = 0;
     track->raw_size = 0;
     track->raw_capacity = 0;
     track->flux_times = NULL;

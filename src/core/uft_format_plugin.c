@@ -521,8 +521,13 @@ uft_error_t uft_track_set_flux(uft_track_t* track, const uint32_t* flux,
         memcpy(track->flux, flux, count * sizeof(uint32_t));
         track->flux_count = count;
         track->flux_tick_ns = tick_ns;
+        /* MF-599: wir haben KOPIERT, also gehoert der Puffer der Spur. Ohne
+         * diese Fahne gibt `uft_track_release()` nichts frei — sie ist dort
+         * die Bedingung fuer den ganzen Block. Gemessen an test_scp_layout:
+         * 5120 Byte in 20 Objekten je Testfunktion. */
+        track->owns_data = true;
     }
-    
+
     return UFT_OK;
 }
 
