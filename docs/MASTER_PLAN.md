@@ -6,6 +6,15 @@ Findings (`KNOWN_ISSUES.md`, must-fix-hunter-Backlog, Skeleton-Audit,
 XCopy/a8rawconv-Todos) zusammenführt. Jede Session beginnt hier —
 nicht mit einem frischen Scan.
 
+> **Nächste Fassung:** [`PLAN_v4.1.7.md`](PLAN_v4.1.7.md) — „Inhalt, nicht
+> nur Struktur". v4.1.6 ist getaggt und veröffentlicht (2026-08-26).
+>
+> Kurzfassung des Plans: **vier der fünf Moratoriums-Formate stehen
+> bereits auf T1/T1b** (nachgemessen; nur `nfd` fehlt), und was T1b heute
+> belegt, ist Struktur — nicht Inhalt. Deshalb ist der Hebel nicht die
+> Hebung, sondern **VFS-Phase 1 lesend** als Oracle-Differenztest, parallel
+> zu vier Hardware-Gleisen, die sich mit ihr gegenseitig füttern.
+
 ---
 
 ## Die ehrliche Bestandsaufnahme
