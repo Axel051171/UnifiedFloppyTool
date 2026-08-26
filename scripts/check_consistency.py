@@ -777,6 +777,17 @@ def main() -> int:
         import audit_todo_without_plan as _tp
         all_errors.append(("TODO ohne Verweis", _tp.check(repo)))
 
+        # 37. Kategorie (MF-605): ein Test, der nicht scheitern kann, ist
+        # schlimmer als kein Test — er belegt einen Platz in der Bilanz und
+        # beruhigt. In 32 Dateien zaehlte `RUN_TEST` den Erfolg
+        # bedingungslos hinter dem Aufruf, waehrend `ASSERT` bei Fehlschlag
+        # nur aus der Testfunktion zurueckkehrte; `main()` gab damit immer 0
+        # zurueck. Dahinter lagen sieben Tests mit 18 Pruefungen, davon DREI
+        # echte Fehler im Format-Layer (MF-596 … MF-600). Grundlinie 0 — es
+        # gibt keinen Grund, warum es je wieder einen geben sollte.
+        import audit_test_can_fail as _tf
+        all_errors.append(("Test kann nicht scheitern", _tf.check(repo)))
+
     total = sum(len(e) for _, e in all_errors)
     print(f"Consistency check ({len(all_errors)} categories, root={repo}):")
     for label, errs in all_errors:
