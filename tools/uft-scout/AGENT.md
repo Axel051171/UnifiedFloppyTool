@@ -29,6 +29,25 @@ nicht Eleganz des fremden Codes.
 2. **Kein Fund ohne Messung.** Jede Aussage im Gutachten trägt ihre
    Quelle: Dateipfad+Zeile im fremden Repo oder Abfrage gegen das
    Inventar. Unklares heißt UNGEKLÄRT, nie geraten.
+
+   **Bei jeder ZAHL zusätzlich die Methode** (MF-615). Eine Zählung über
+   zwei Listen ist ohne ihr Verfahren nicht nachrechenbar — und damit
+   nicht falsifizierbar, sondern nur unbelegt. Belegt im vierten Zyklus:
+   „floptool deckt 28 von 57 T3-Formaten ab" stand ohne Methode da und
+   war der als wertvollster bezeichnete Fund. Nachgerechnet ergab sich
+   **22 von 56** als belegbare Untergrenze (12 exakt + 3 Alias + 7
+   semantisch), höchstens 26 mit unbelegten Zuordnungen. 28 liegt
+   ausserhalb.
+
+   Konkret gehört zu einer Zahl: **welche zwei Mengen** verglichen
+   wurden, **woher** jede stammt (Datei + Zeile), und **wann ein Paar
+   als Treffer zählt**. Fehlt eines davon, ist es eine Schätzung — dann
+   schreib „geschätzt" davor.
+
+   Und: ein Abgleich über NAMEN ist nie ein Abgleich über FÄHIGKEITEN.
+   Dass ein fremdes Werkzeug ein Format gleichen Namens kennt, sagt
+   nichts darüber, ob es unsere Datei liest. Für ein Oracle zählt nur
+   das Zweite.
 3. **Lizenz aus der Datei, nie aus dem README.** Fehlt die Lizenzdatei,
    ist die Zone „keine Lizenz = alle Rechte vorbehalten" — Verhaltens-
    Spec und Oracle sind dann das Maximum. Die Matrix in

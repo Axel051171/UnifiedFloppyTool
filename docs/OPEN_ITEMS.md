@@ -293,8 +293,8 @@ selbst**, beide hier nachgemessen:
 
 | # | Sache | Stand |
 |---|---|---|
-| SCOUT-1 | **Das Scout-Inventar ist für Fähigkeitsfragen strukturell falsch-negativ — ohne jede Warnung.** Gemessen: `jitter`, `weak bits`, `multi capture voting`, `bit slip` liefern alle `vorhanden: false` **und leere schwache Treffer**, obwohl UFT die Fähigkeiten hat (nachgeprüft: `src/hardwaretab.cpp`, `src/recovery/uft_bitstream_recovery.c` — 93 Treffer, `src/algorithms/advanced/uft_multi_rev_fusion.c`, `src/recovery/uft_multiread_pipeline.c`, alle vorhanden). Ursache: der Suchindex (`tools/uft-scout/scripts/inventar.py`) kennt nur Formatnamen, Verzeichnisse, Controller und vendorte Bibliotheken — keine Fähigkeiten. Folge: `AGENT.md` Regel 4 („Inventar vor Vorschlag") ist für alles außerhalb der Formatfrage **nicht einlösbar**, und der Scout schlüge Dubletten vor. In diesem Lauf hat ihn nur seine manuelle Gegenprobe davor bewahrt | **offen** |
-| SCOUT-2 | `python tools/uft-scout/scripts/inventar.py query --help` stürzt mit `FileNotFoundError` ab, weil `argv[2]` ungeprüft als Datei geöffnet wird — statt die Hilfe zu zeigen. Gemessen 2026-08-26 | **offen** |
+| SCOUT-1 | **Das Scout-Inventar ist für Fähigkeitsfragen strukturell falsch-negativ — ohne jede Warnung.** Gemessen: `jitter`, `weak bits`, `multi capture voting`, `bit slip` liefern alle `vorhanden: false` **und leere schwache Treffer**, obwohl UFT die Fähigkeiten hat (nachgeprüft: `src/hardwaretab.cpp`, `src/recovery/uft_bitstream_recovery.c` — 93 Treffer, `src/algorithms/advanced/uft_multi_rev_fusion.c`, `src/recovery/uft_multiread_pipeline.c`, alle vorhanden). Ursache: der Suchindex (`tools/uft-scout/scripts/inventar.py`) kennt nur Formatnamen, Verzeichnisse, Controller und vendorte Bibliotheken — keine Fähigkeiten. Folge: `AGENT.md` Regel 4 („Inventar vor Vorschlag") ist für alles außerhalb der Formatfrage **nicht einlösbar**, und der Scout schlüge Dubletten vor. In diesem Lauf hat ihn nur seine manuelle Gegenprobe davor bewahrt | ✅ **behoben (MF-611).** Feld `abgedeckt`; `false` heißt jetzt nicht mehr `fehlt`. Nachbesserung MF-613: Bindestrich und Unterstrich umgingen die Trennung weiterhin |
+| SCOUT-2 | `python tools/uft-scout/scripts/inventar.py query --help` stürzt mit `FileNotFoundError` ab, weil `argv[2]` ungeprüft als Datei geöffnet wird — statt die Hilfe zu zeigen. Gemessen 2026-08-26 | ✅ **behoben (MF-611).** rc=2 mit Hilfe; ein fehlendes Inventar bekommt eine Meldung statt eines Tracebacks |
 
 ### Warum SCOUT-1 mich besonders angeht
 
@@ -336,10 +336,10 @@ lokale Haertungen. Kein Update noetig.
 
 | # | Sache | Stand |
 |---|---|---|
-| SCOUT-3 | **Die MIT-Pflicht der vendorten Kopie ist nicht erfuellt.** Upstream ist MIT (`LICENSE.md`, © 2022 Yasunori Shimura). In `src/flux/fdc_bitstream/` liegt **keine LICENSE-Datei**, kein Permission Notice, kein gepinnter Upstream-Commit — nachgemessen. MIT verlangt beides in jeder Kopie. Dieselbe Familie wie P0-5 (SPDX), nur umgekehrt: dort stand eine falsche Angabe, hier fehlt sie ganz. Weg: `LICENSE.md` ins Verzeichnis, Herkunftszeile „yas-sim/fdc_bitstream @ 0178992 (2024-06-04), MIT" in die Verzeichnis-README. Reine Doku, einfrier-frei | **offen** |
+| SCOUT-3 | **Die MIT-Pflicht der vendorten Kopie ist nicht erfuellt.** Upstream ist MIT (`LICENSE.md`, © 2022 Yasunori Shimura). In `src/flux/fdc_bitstream/` liegt **keine LICENSE-Datei**, kein Permission Notice, kein gepinnter Upstream-Commit — nachgemessen. MIT verlangt beides in jeder Kopie. Dieselbe Familie wie P0-5 (SPDX), nur umgekehrt: dort stand eine falsche Angabe, hier fehlt sie ganz. Weg: `LICENSE.md` ins Verzeichnis, Herkunftszeile „yas-sim/fdc_bitstream @ 0178992 (2024-06-04), MIT" in die Verzeichnis-README. Reine Doku, einfrier-frei | ✅ **behoben (MF-614).** `LICENSE.md` liegt im Verzeichnis, die README nennt Upstream-Commit `0178992` (2024-06-04) — Einzelheiten im Abschnitt „Abgearbeitet aus den Scout-Zyklen |
 | SCOUT-4 | **2795 Zeilen werden gebaut und von niemandem gerufen.** `UnifiedFloppyTool.pro:400-414` uebersetzt die Kopie; nachgemessen: **0 Einbinder** ausserhalb des Verzeichnisses fuer `fdc_bitstream.h`, `bit_array.h`, `fdc_vfo_base.h`, und der einzige Test-Treffer ist eine Kommentarzeile. „Integriert" in der Negativliste beschreibt **Vendoring, keine Faehigkeit**. Entscheidung des Eigentuemers: (a) als Differenzlauf-Orakel gegen den Produktionspfad verdrahten — Plan mit Korpus, Metrik, Toleranzliste und Rotbeweis (eine 1-Bit-Verschiebung muss BEIDE Decoder roeten) steht im Gutachten; (b) aus dem Bau nehmen. **Nicht** verdrahten, damit es benutzt aussieht — das ist ein ausdrueckliches Nicht-Ziel | **offen, Eigentuemer** |
 | SCOUT-5 | **Ein Wahrheitspaar fuer D77 liegt beim Upstream und ist nicht mitgekommen.** `test_data/`: `2019FM77AVDemo-4MHz.raw` und `-8MHz.raw` (je 3 649 229 B, dieselbe Diskette mit zwei Abtastraten) plus `2019FM77AVDemo.d77` (348 848 B) — reale Aufnahme mit unabhaengig erzeugtem Sektorabbild. Nachgemessen: `d77` steht auf **T3 ohne alles** (kein Test, keine Spec-Quelle, kein Korpus), und der Korpus fuehrt kein D77/FM-7/RAW. **BLOCKIERT bis Lizenzklaerung:** das Repo ist MIT, der Disketten-INHALT (ein Demo-Programm) hat eigene Urheber. Eigentuemer-Vorlage nach Regel 8 | **offen, Lizenzklaerung** |
-| SCOUT-6 | **Zwei Doku-Stellen sagen Unwahres ueber die Kopie.** (a) `KNOWN_ISSUES.md` FLUX-12 nennt sie „zweiter Decoder, der eigene Tests hat" — es gibt keinen. (b) `src/flux/fdc_bitstream/README.md:65` fuehrt `vfo_fixed.cpp` als gebaut, `UnifiedFloppyTool.pro:419` sagt seit dem Entfernen das Gegenteil. Dazu die Negativlisten-Formulierung „integriert" → „vendored, 0 Aufrufer" (betrifft auch den samdisk-Eintrag) | **offen** |
+| SCOUT-6 | **Zwei Doku-Stellen sagen Unwahres ueber die Kopie.** (a) `KNOWN_ISSUES.md` FLUX-12 nennt sie „zweiter Decoder, der eigene Tests hat" — es gibt keinen. (b) `src/flux/fdc_bitstream/README.md:65` fuehrt `vfo_fixed.cpp` als gebaut, `UnifiedFloppyTool.pro:419` sagt seit dem Entfernen das Gegenteil. Dazu die Negativlisten-Formulierung „integriert" → „vendored, 0 Aufrufer" (betrifft auch den samdisk-Eintrag) | ✅ **behoben (MF-614).** Beide Sätze berichtigt — Einzelheiten im Abschnitt „Abgearbeitet aus den Scout-Zyklen |
 
 ### Werkzeugkasten: ein dritter eigener Fehler
 
@@ -390,6 +390,65 @@ nehmen), `SCOUT-5` (D77-Wahrheitspaar, Lizenzklärung), `SCOUT-12`
 **Die Zahl `28 von 57` zur floptool-Abdeckung ist die Messung des
 Scouts, nicht meine** — sie gehört nachgerechnet, bevor sie in einen
 Release-Text kommt.
+
+---
+
+## SCOUT-9 nachgerechnet: die Zahl war keine Messung (MF-615, 2026-08-27)
+
+Der vierte Scout-Zyklus meldete **„floptool deckt 28 von 57 T3-Formaten
+ab"** und nannte das den wertvollsten Fund der Serie. Ich habe die Zahl
+im Bericht ausdrücklich als ungeprüft markiert. Jetzt ist sie geprüft.
+
+**Sie stimmt nicht — und wichtiger: sie war nie überprüfbar.**
+
+### Wie ich gemessen habe
+
+Quelle ist MAMEs Hauptliste `src/lib/formats/all.cpp` (234 `en.add()`-
+Aufrufe, 154 verschiedene `FLOPPY_*_FORMAT`-Symbole), gegen die
+56 T3-Zeilen aus `docs/VERIFICATION_TIERS.md`. Drei Stufen, jede
+nachvollziehbar:
+
+| Stufe | Zahl | Beispiel |
+|---|---|---|
+| exakte Namensgleichheit | **12** | `86f`, `apridisk`, `img`, `ipf`, `nib`, `trd`, `vdk` … |
+| Alias im MAME-Namen | **+3** | `ssd` → `acorn_ssd`, `opus` → `opus_ddos`, `cpm` → `poly_cpm` |
+| semantisch begründbar | **+7** | `2img` → `apple_2mg`, `victor9k` → `victor_9000`, `fdi_pc98` → `pc98fdi`, `d77` → `d88` |
+| | **= 22 von 56** | belegbare Untergrenze |
+| möglich, aber unbelegt | +4 | `do`/`po` → `apple_gcr`?, `v9t9` → `ti99_sdf`? |
+| | **≤ 26** | Obergrenze dieser Methode |
+
+**28 liegt außerhalb.** Und die Methode des Scouts steht nirgends — ohne
+sie ist auch seine Zahl nicht falsifizierbar, sondern nur unbelegt. Das
+ist dieselbe Klasse wie die Zahlen, die dieser Baum dreimal driften sah
+(MF-526/541/567), nur diesmal aus einer neuen Quelle.
+
+### Was auch meine 22 NICHT sind
+
+Ein Papier-Abgleich über Namen. Er sagt nichts darüber, ob floptool
+**unsere** Dateien lesen kann — nur, dass MAME ein Format dieses Namens
+kennt. Für ein Oracle zählt aber genau das Gegenteil: es muss dieselbe
+Datei lesen und dasselbe herausbekommen.
+
+**Entschieden wird das mit dem Binary, nicht mit einer Liste.** Der
+nächste Schritt ist deshalb nicht „22 heben", sondern:
+
+1. `floptool` beschaffen (liegt der offiziellen MAME-Distribution bei,
+   kein Bau nötig) — Eigentümer, steht auf der Beschaffungsliste
+2. `floptool flopdir`/`identify` gegen die 22 Kandidaten laufen lassen,
+   mit unseren Korpus-Dateien wo vorhanden
+3. Erst was dabei übrig bleibt, ist ein Oracle-Kandidat für Phase 1
+
+### Der Befund über den Scout
+
+Er hat in fünf Zyklen dreizehn belegte Funde geliefert, jeden mit
+Datei und Zeile. Dieser eine war eine **Schätzung im Gewand einer
+Messung** — und sie stand ausgerechnet an der Stelle, die er selbst als
+den wertvollsten Fund bezeichnet hat.
+
+Für `AGENT.md` heißt das: Regel 2 („kein Fund ohne Messung") verlangt
+bislang eine Quelle. Sie verlangt nicht, die **Methode** dazuzusagen.
+Bei einer Zählung über zwei Listen ist die Methode aber die halbe
+Aussage. Nachgetragen.
 
 ---
 
