@@ -6675,7 +6675,15 @@ qmake-Release-Build grün.
   Kern benutzen, und das ist GUI-Arbeit mit manuellem Rauchtest.
 - Der auskommentierte Aufruf in `fdc_bitstream.cpp` **bleibt
   auskommentiert**. Ihn zu aktivieren würde das Verhalten eines zweiten
-  Decoders ändern, der eigene Tests hat; das ist ein eigener Schritt.
+  Decoders ändern; das ist ein eigener Schritt.
+
+  **Berichtigt (MF-614):** hier stand „der eigene Tests hat". Das ist
+  falsch — nachgemessen im zweiten Scout-Zyklus: die vendorte Kopie hat
+  **0 Aufrufer und 0 Tests** im Baum, der einzige Treffer in `tests/`
+  ist eine Kommentarzeile. Sie wird gebaut
+  (`UnifiedFloppyTool.pro:400-414`), aber nichts bindet ihre Header ein.
+  „Integriert" beschreibt Vendoring, keine Fähigkeit. Was mit den 2795
+  Zeilen geschehen soll, steht als SCOUT-4 in `docs/OPEN_ITEMS.md`.
 - Geprüft gegen **synthetischen** AmigaDOS-Flux. Ein reales Abbild mit
   ungewöhnlicher Zellendauer liegt nicht im Korpus.
 

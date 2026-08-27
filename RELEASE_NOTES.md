@@ -31,7 +31,7 @@ Fehler gefunden, und der gehört gemeldet.
 
 | Kennzahl | Messwert | Quelle |
 |---|---|---|
-| **Ungeprüfte Formate** | **57 von 88** auf T3. Belegt: T1=2, T1b=12, T2=17 | `docs/VERIFICATION_TIERS.md`; Kurzfassung im `README.md` |
+| **Ungeprüfte Formate** | **56 von 88** auf T3. Belegt: T1=2, T1b=12, T2=18 | `docs/VERIFICATION_TIERS.md`; Kurzfassung im `README.md` |
 | **Angebotene Wandlungspfade** | **12 von 44**, davon **4 verlustfrei je mit Bit-Identitäts-Messung**, 8 nur mit Zustimmung. 30 weist das Preflight-Tor als UNGEPRÜFT ab, 2 als unmöglich | abgeleitet aus `src/core/uft_roundtrip.c` durch `scripts/update_inventory.py` (DERIVED_CLAIMS) — bei jedem Commit gegen die Quelle geprüft |
 | **Leckende Tests** | **0 von 266** unter LeakSanitizer, **0 von 266** unter UBSan. Der Weg dahin, jeder Schritt gemessen: 58 → 15 (MF-592) → 2 (MF-595/598) → **0** (MF-599) | CI-Auftrag „Sanitizer Checks", Schritte *Full suite under ASan (reporting only, incl. leaks)* und *Full suite under UBSan*. Die **scharfen** Tore (je 9 Tests) sind 9/9 |
 | **Bench-Alter je Controller** | **1 von 9** hat je einen Tier-3-Bench: Greaseweazle, **2026-05-15**. Die übrigen acht: **nie** | `docs/CAPABILITIES.md`, Abschnitt „Bench-Alter je Controller" |
@@ -87,8 +87,8 @@ anzugleichen wäre Erfindung.
 
 Diese Liste gehört zum Release, nicht in eine Fußnote:
 
-- **57 von 88 tier-geführten Formaten sind ungeprüft** (T3). Belegt:
-  T1=2, T1b=12, T2=17.
+- **56 von 88 tier-geführten Formaten sind ungeprüft** (T3). Belegt:
+  T1=2, T1b=12, T2=18.
 - **12 von 44 Wandlungspfaden werden angeboten**, davon 4 verlustfrei mit
   Messung. Die übrigen weist das Preflight-Tor ab — das ist Absicht.
 - **Der Kopierschutz-Katalog (55+ Verfahren) hat keinen Aufrufer.**

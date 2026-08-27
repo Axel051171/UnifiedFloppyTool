@@ -5,12 +5,34 @@
  * MFI is MAME's native floppy disk format designed for cycle-accurate
  * floppy emulation. It stores flux-level timing data per track.
  *
- * File layout:
- *   Offset  Size  Description
- *   0x00    8     Magic "MAMEFLOP"
- *   0x08    4     Form factor (LE32): 1=3.5", 2=5.25", 3=8"
- *   0x0C    4     Reserved (0)
- *   0x10    N*16  Track entries (cylinder, head, type, offset, size, write_splice)
+ * File layout — MF-614: das hier stand vorher, war erfunden, und der Parser
+ * folgte ihm:
+ *
+ *     0x00  8   Magic "MAMEFLOP"          <- die Kennung ist 16 Byte lang
+ *     0x08  4   Form factor               <- liegt IN der Kennung
+ *     0x0C  4   Reserved
+ *     0x10  N*16 Track entries            <- dort liegen cyl/head_count
+ *
+ * Die Kennung ist ein PRAEFIX der echten. Der Leser wies echte MAME-Dateien
+ * deshalb nicht ab, sondern nahm sie AN und las sie falsch. Ein Parser, der
+ * abweist, ist aergerlich; einer, der annimmt und still falsch auslegt, ist
+ * die Klasse, an der dieses Projekt fuenfmal verbrannt ist (FMT-2/3/10/11/12).
+ *
+ * Richtig, nach [1] und [2]:
+ *
+ *   struct header (32 Byte, = sizeof(header) = Beginn der Eintraege)
+ *     0x00   16  sign[16]      "MAMEFLOPPYIMAGE\0" oder "MESSFLOPPYIMAGE\0"
+ *     0x10    4  cyl_count     untere 30 Bit Zylinder, obere 2 Bit Aufloesung
+ *     0x14    4  head_count
+ *     0x18    4  form_factor
+ *     0x1C    4  variant
+ *
+ *   struct entry (16 Byte), Anzahl = (cyl_count << resolution) * head_count,
+ *   ab 0x20, zylinder-dur, kopf-innen:
+ *     0x00    4  offset
+ *     0x04    4  compressed_size
+ *     0x08    4  uncompressed_size
+ *     0x0C    4  write_splice
  *
  * Track entry (16 bytes):
  *   0x00    4     Offset in file (LE32)
@@ -25,7 +47,15 @@
  * Since MFI stores flux data, we present it as raw track data.
  * Full flux decoding requires PLL — this plugin provides the container.
  *
- * Reference: MAME source (lib/formats/mfi_dsk.cpp)
+ * Referenz (benannt, wie die Einfrier-Regel es verlangt):
+ *   [1] MAME, src/lib/formats/mfi_dsk.h — struct header / struct entry,
+ *       RESOLUTION_SHIFT = 30, CYLINDER_MASK = 0x3fffffff
+ *   [2] MAME, src/lib/formats/mfi_dsk.cpp:81-82 — sign/sign_old,
+ *       identify() vergleicht alle 16 Byte, load() liest die
+ *       Eintraege ab sizeof(header).
+ * Beide Dateien BSD-3-Clause (SPDX je Datei). Kein MAME-Code kopiert.
+ * Abgesichert durch tests/test_mfi_layout.c (Rotprobe: beide
+ * Zusicherungen fallen auf der alten Fassung).
  */
 
 #include "uft/uft_format_common.h"
@@ -34,9 +64,14 @@
  * Constants
  * ============================================================================ */
 
-#define MFI_MAGIC           "MAMEFLOP"
-#define MFI_MAGIC_LEN       8
-#define MFI_HEADER_SIZE     16
+/* MF-614: 16 Byte einschliesslich der abschliessenden Null, beide Varianten
+ * (mfi_dsk.cpp:81-82). Der alte Wert 8 traf nur ein Praefix. */
+#define MFI_MAGIC           "MAMEFLOPPYIMAGE"
+#define MFI_MAGIC_OLD       "MESSFLOPPYIMAGE"
+#define MFI_MAGIC_LEN       16
+#define MFI_HEADER_SIZE     32
+#define MFI_RESOLUTION_SHIFT 30
+#define MFI_CYLINDER_MASK   0x3FFFFFFFu
 #define MFI_TRACK_ENTRY     16
 #define MFI_MAX_TRACKS      168     /* 84 cyl * 2 heads */
 
@@ -75,10 +110,21 @@ bool mfi_probe(const uint8_t *data, size_t size, size_t file_size,
     (void)file_size;
     if (size < MFI_HEADER_SIZE) return false;
 
-    if (memcmp(data, MFI_MAGIC, MFI_MAGIC_LEN) != 0)
+    /* MF-614: beide Kennungen, volle 16 Byte. identify() in mfi_dsk.cpp
+     * vergleicht ebenso alle 16 — ein Praefix-Vergleich nimmt Dateien an,
+     * die er nicht lesen kann. */
+    if (memcmp(data, MFI_MAGIC, MFI_MAGIC_LEN) != 0 &&
+        memcmp(data, MFI_MAGIC_OLD, MFI_MAGIC_LEN) != 0)
         return false;
 
-    uint32_t ff = uft_read_le32(data + 8);
+    /* Dieselben Schranken wie identify(): Zylinder <= 84, Aufloesung < 3,
+     * Koepfe <= 2. Ohne sie waere jede Datei mit passender Kennung gut. */
+    uint32_t cyl_raw = uft_read_le32(data + 0x10);
+    if ((cyl_raw & MFI_CYLINDER_MASK) > 84) return false;
+    if ((cyl_raw >> MFI_RESOLUTION_SHIFT) >= 3) return false;
+    if (uft_read_le32(data + 0x14) > 2) return false;
+
+    uint32_t ff = uft_read_le32(data + 0x18);
     if (ff >= MFI_FF_35 && ff <= MFI_FF_8) {
         *confidence = 95;
     } else {
@@ -121,7 +167,22 @@ static uft_error_t mfi_open(uft_disk_t *disk, const char *path,
     if (!pdata) { fclose(f); return UFT_ERROR_NO_MEMORY; }
 
     pdata->file = f;
-    pdata->form_factor = uft_read_le32(hdr + 8);
+    /* MF-614: stand auf `hdr + 8` — mitten in der Kennung. */
+    pdata->form_factor = uft_read_le32(hdr + 0x18);
+
+    /* Geometrie kommt aus dem Kopf, nicht aus der Dateigroesse. Die
+     * Eintragszahl ist (cyl_count << resolution) * head_count
+     * (mfi_dsk.cpp load()). */
+    uint32_t cyl_raw    = uft_read_le32(hdr + 0x10);
+    uint32_t resolution = cyl_raw >> MFI_RESOLUTION_SHIFT;
+    uint32_t hdr_cyls   = cyl_raw & MFI_CYLINDER_MASK;
+    uint32_t hdr_heads  = uft_read_le32(hdr + 0x14);
+    if (hdr_cyls > 84 || hdr_heads > 2 || resolution >= 3) {
+        free(pdata); fclose(f);
+        return UFT_ERROR_FORMAT_INVALID;
+    }
+    size_t want = (size_t)(hdr_cyls << resolution) * hdr_heads;
+    if (want > MFI_MAX_TRACKS) want = MFI_MAX_TRACKS;
 
     /* Read track entries until EOF or max */
     size_t remaining = file_size - MFI_HEADER_SIZE;
@@ -129,7 +190,9 @@ static uft_error_t mfi_open(uft_disk_t *disk, const char *path,
     uint8_t max_cyl = 0;
     uint8_t max_head = 0;
 
-    while (remaining >= MFI_TRACK_ENTRY && count < MFI_MAX_TRACKS) {
+    /* MF-614: lief bis EOF und leitete cyl/head aus dem Laufindex ab.
+     * Jetzt genau so viele Eintraege, wie der Kopf ansagt. */
+    while (remaining >= MFI_TRACK_ENTRY && count < want) {
         uint8_t entry[MFI_TRACK_ENTRY];
         if (fread(entry, 1, MFI_TRACK_ENTRY, f) != MFI_TRACK_ENTRY)
             break;

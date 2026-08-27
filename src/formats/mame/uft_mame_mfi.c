@@ -14,6 +14,24 @@
 #include <stdbool.h>
 
 /* MFI Constants */
+/* ── MF-614: diese Kennung ist erfunden ──────────────────────────────
+ *
+ * MAMEs MFI-Kennung ist `sign[16] = "MAMEFLOPPYIMAGE"` einschliesslich der
+ * abschliessenden Null (src/lib/formats/mfi_dsk.cpp:81-82, BSD-3). Die
+ * Zeichenkette hier — mit Leerzeichen, 17 Byte — kommt in keiner
+ * MFI-Datei vor. Der Vergleich unten kann also niemals zutreffen.
+ *
+ * Diese Datei wird gebaut (UnifiedFloppyTool.pro:2554), enthaelt aber
+ * keine `uft_format_plugin_t`-Struktur und steht in keiner Registry; sie
+ * hat im ganzen Baum keinen Aufrufer (nachgemessen). Das registrierte
+ * MFI-Plugin ist src/formats/mfi/uft_mfi.c.
+ *
+ * Die Kennung wird BEWUSST NICHT berichtigt: das wuerde einen zweiten,
+ * lebenden MFI-Leser neben dem registrierten schaffen. Was hier ansteht,
+ * ist eine Loeschentscheidung, kein Fix — Eintrag SCOUT-12 in
+ * docs/OPEN_ITEMS.md. Bis dahin steht wenigstens dabei, dass der Wert
+ * falsch ist, statt ihn als Spec auszugeben.
+ */
 #define MFI_MAGIC           "MAME FLOPPY IMAGE"
 #define MFI_MAGIC_LEN       17
 

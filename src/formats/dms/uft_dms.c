@@ -2,7 +2,34 @@
  * uft_dms.c — DMS (Disk Masher System) decompression library for UFT
  * ===================================================================
  * Reentrant, memory-buffer based DMS → ADF decoder.
- * Based on xDMS 1.3 by Andre Rodrigues de la Rocha (Public Domain).
+ * SPDX-License-Identifier: LicenseRef-PublicDomain-xDMS
+ *
+ * Based on xDMS 1.3 by Andre Rodrigues de la Rocha.
+ *
+ * MF-614: Die Angabe „Public Domain" stand hier seit jeher als blosser
+ * Satz — kein SPDX, keine Quelle, nichts Nachpruefbares. In diesem Baum
+ * ist genau diese Form schon einmal falsch gewesen (P0-5: `SPDX: MIT`
+ * auf einem GPLv2+-Nachbau), deshalb ist sie jetzt belegt statt
+ * behauptet:
+ *
+ *   Debian, `xdms_1.3.2-6_copyright`, machine-readable format 1.0:
+ *     Files: *
+ *     Copyright: Andre Rodrigues de la Rocha <adlroc@usa.net>
+ *                Heikki Orsila <heikki.orsila@iki.fi>
+ *     License: Public Domain
+ *       „xDMS is released as public domain software. You can spread it,
+ *        modify it and use it in any way you like."
+ *   Upstream: http://zakalwe.fi/~shd/foss/xdms/
+ *
+ * Ein foermlicher SPDX-Bezeichner fuer eine formlose PD-Erklaerung
+ * existiert nicht; `LicenseRef-` ist die dafuer vorgesehene Form. Die
+ * Erklaerung wird damit ZITIERT, nicht in eine Lizenz umgedeutet, die
+ * der Autor nie gewaehlt hat.
+ *
+ * NICHT belegt: dass dieser Port dasselbe TUT wie das Original. Der Test
+ * `tests/test_uft_dms.c` sagt selbst „Since we don't have real DMS files
+ * here"; `dms` steht auf T3, ohne Korpus. Ein Differenzlauf gegen das
+ * Original-xDMS steht als SCOUT-11 in docs/OPEN_ITEMS.md.
  *
  * Refactored for UFT:
  *  - All global mutable state → dms_ctx_t context struct

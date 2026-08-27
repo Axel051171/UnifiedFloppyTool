@@ -116,6 +116,14 @@
     "JYewman/Greaseweazle-Floppy-Disk-Restorer": {
       "status": "verworfen",
       "grund": "Gutachten 2026-08-26: Kern-Module Scheinmessungen (head_alignment liest bei jedem Offset dieselbe Spur, PLL-Sweep ohne CRC-Rechnung); Reales (RPM+Jitter, Bit-Slip, Multi-Rev-Voting, Erase) hat UFT bereits. MIT, aber substanzlos"
+    },
+    "mamedev/mame": {
+      "status": "bewertet",
+      "grund": "Gutachten 2026-08-27 (Zuschnitt src/lib/formats + src/tools): floptool-Oracle fuer 28/57 T3-Formate, MFI-Dreifach-Divergenz, ipf_dsk als BSD-3-Referenz; Zone je Datei (441x BSD-3, 6x GPL-2.0+, 6x LGPL-2.1+ in formats)"
+    },
+    "jfdelnero/AdfOpus_HxC": {
+      "status": "bewertet",
+      "grund": "Gutachten 2026-08-27 (adfopus_hxc): kein AmigaDOS-Encoder im Quelltext (MFM nur via libhxcfe.dll-Binaerdatei); als drittes ADF-Oracle untauglich (Win32-GUI ohne CLI, Engine = vendorte ADFlib 0.7.9d = dieselbe Hand wie unadf); abgeleitet: DMS-Hebung via xDMS-1.3-Oracle, Folgeziel HxCFloppyEmulator/libhxcfe-Quelle"
     }
   }
 }

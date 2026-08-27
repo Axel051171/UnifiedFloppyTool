@@ -10,8 +10,8 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 |---|---|
 | T1 | 2 |
 | T1b | 12 |
-| T2 | 17 |
-| T3 | 57 |
+| T2 | 18 |
+| T3 | 56 |
 | **gesamt** | **88** |
 
 ## Pro Format
@@ -43,6 +43,7 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 | `imd` | **T2** | `test_format_probe_fuzz`, `test_imd_error_marks`, `test_imd_track_record`, `test_imd_write_roundtrip`, `test_plugin_probe_real` | MAME src/lib/formats/imd_dsk.cpp (sector numbering map unconditional: "offs += 5 + sector_num"; cylinder map if header[2] & 0x80; head map if & 0x40) cross-checked against hharte/libimd src/libimd.h (IMD_HFLAG_CMAP_PRES 0x80, IMD_HFLAG_HMAP_PRES 0x40, LIBIMD_MAX_SECTORS_PER_TRACK 256) | MF-430 | — |
 | `korg_dss1` | **T2** | `test_korg_dss1_plugin` | chickensys Korg DSS-1 geometry (80x2x5x1024) | MF-347 | — |
 | `lisa_twiggy` | **T2** | `test_lisa_twiggy_plugin` | bitsavers Lisa Twiggy ZCAV zone table (46 tracks/side, 22..15 spt) | MF-349 | — |
+| `mfi` | **T2** | `test_mfi_layout` | MAME, src/lib/formats/mfi_dsk.h (struct header / struct entry, RESOLUTION_SHIFT = 30, CYLINDER_MASK = 0x3fffffff) und src/lib/formats/mfi_dsk.cpp:81-82 (sign[16] = "MAMEFLOPPYIMAGE", sign_old[16] = "MESSFLOPPYIMAGE", je einschliesslich der abschliessenden Null), identify() vergleicht alle 16 Byte, load() liest die Eintragstabelle ab sizeof(header) = 0x20. Beide Dateien BSD-3-Clause per SPDX-Header; kein Code uebernommen, nur das Layout verglichen. | MF-614 — gefunden im vierten Scout-Zyklus. Der Leser prueste ACHT Byte ("MAMEFLOP"), ein Praefix der echten Kennung: er wies echte MAME-Dateien deshalb nicht ab, sondern nahm sie AN und las sie falsch. Die Spurtabelle las er ab 0x10 (sein eigener Kopfkommentar beschrieb das so) — dort liegen cyl_count und head_count; die Eintraege beginnen bei 0x20. form_factor holte er von 0x08, also aus der Kennung. Die Eintragszahl leitete er aus der Dateigroesse ab statt aus (cyl_count << resolution) * head_count. Alle vier berichtigt; zusaetzlich uebernommen: die Schranken aus identify() (Zylinder <= 84, Aufloesung < 3, Koepfe <= 2). Abgesichert mit tests/test_mfi_layout.c gegen ein bytegenau nach mfi_dsk.h gebautes Abbild; Rotprobe: beide Zusicherungen fallen auf der alten Fassung, die erste schon daran, dass ein verfaelschtes Byte 8 noch als gueltig durchging. NICHT verifiziert: die Spurnutzlast. Das Fixture traegt Kopf und Eintragstabelle, keine echten MFI-Zellendaten — dafuer braucht es eine reale Datei, und im Korpus liegt keine. Deshalb T2 und nicht T1. | — |
 | `msa` | **T2** | `test_format_probe_fuzz`, `test_msa`, `test_plugin_probe_real` | SAMdisk 4.0 (MIT), src/samdisk/msa.cpp:9-16 MSA_HEADER + :38-44 Plausibilitaet | MF-460 — 10-Byte-Kopf Feld fuer Feld verglichen, alle big-endian: Magic 0x0E0F, Sektoren/Spur, Seiten MINUS EINS, Startspur, Endspur. Der +1-Aufschlag bei den Seiten stand nicht in unserer Beschreibung, wird vom Code aber richtig gerechnet (wie samdisk/msa.cpp:44). Die Probe pruefte nur das Magic und meldete 95; sie prueft jetzt zusaetzlich, was msa_plugin_open() ohnehin verlangt, plus SAMdisks Nullbyte-Pruefung der oberen Feldbytes. | — |
 | `nfd` | **T2** | `test_nfd_r0` | pc98.org nfdr0/nfdr1 + tomari/d88split nfd2mhlt.pl (r1 skip accounting spec-only, no real r1 corpus yet) | MF-358, MF-360 | — |
 | `st` | **T2** | `test_st_geometry`, `test_st_write_roundtrip` | SAMdisk 4.0 (MIT), src/samdisk/st.cpp:6-67 (Boot-Pruefsumme, BPB-Pfad, Geometrie-Scan) + src/samdisk/bpb.h (BIOS Parameter Block). BPB-Offsets unabhaengig gegengelesen an der DOS-Bootsektor-Spalte der CopyQM-Layoutbeschreibung (rio.early8bitz.de, siehe Eintrag cqm), die dieselben Offsets 0x0b/0x18/0x1a nennt. | MF-462 — ST ist kopflos, die Geometrie muss also aus BPB oder Dateigroesse kommen; verifiziert wurde die Reihenfolge und der Umfang beider Wege. (a) BPB zuerst: Bytes/Sektor 0x0B, Gesamtsektoren 0x13, Sektoren/Spur 0x18, Koepfe 0x1A, akzeptiert nur wenn in sich stimmig UND die Dateigroesse exakt erklaert — wie samdisk/st.cpp:24-45. Das entscheidet den Fall 368.640 Byte, der 80x1x9 UND 40x2x9 ist; der Dateikopf nannte beide Lesarten, der Code nahm still die erste. (b) Groessen-Scan als Rueckfall ueber 80..84 Zylinder und 8..11 Sektoren wie samdisk/st.cpp:47-67 — die erweiterten ST-Formate mit 82/83 Spuren und 10/11 Sektoren wurden vorher AUSNAHMSLOS abgewiesen. Die Reihenfolge des Scans ist so gewaehlt, dass alle sechs bisher bekannten Groessen unveraendert aufgeloest werden (Test the_six_legacy_sizes_resolve_unchanged). Zusaetzlich uebernommen: die TOS-Boot-Pruefsumme (256 Big-Endian-Woerter des Bootsektors summieren zu 0x1234, samdisk/st.cpp:6) als einziges positives Erkennungsmerkmal des Formats — nur bei SAMdisk belegt, nicht doppelt gegengelesen. NICHT verifiziert: Verhalten an einem realen ST-Abbild (keines im Korpus) — daher T2. | — |
@@ -76,7 +77,6 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 | `jvc` | **T3** | — | — | — | — |
 | `kfx` | **T3** | — | — | — | — |
 | `logical` | **T3** | — | — | — | — |
-| `mfi` | **T3** | — | — | — | — |
 | `mgt` | **T3** | — | — | — | — |
 | `micropolis` | **T3** | — | — | — | — |
 | `msx_disk` | **T3** | — | — | — | — |

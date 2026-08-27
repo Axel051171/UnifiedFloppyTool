@@ -14,8 +14,8 @@ honesty:** most parsers are currently validated only against synthetic
 round-trip tests and/or specs verified against authoritative reference
 implementations — **not yet against a real-disk reference corpus**. The
 per-format verification-tier table now exists and is kept current:
-[`docs/VERIFICATION_TIERS.md`](docs/VERIFICATION_TIERS.md) — **57 of 88
-formats are T3 (unverified)**; proven: T1=2, T1b=12, T2=17. 9 hardware controllers
+[`docs/VERIFICATION_TIERS.md`](docs/VERIFICATION_TIERS.md) — **56 of 88
+formats are T3 (unverified)**; proven: T1=2, T1b=12, T2=18. 9 hardware controllers
 via a type-driven HAL (Greaseweazle fully wired, **hardware bench pass
 pending** — still open in 4.1.6, and it needs a machine we do not have
 (see "Please break it" below); SCP-Direct M3.1 mock-validated; KryoFlux
@@ -121,8 +121,9 @@ not made green. The reference image is on the procurement list.
 **What this release still cannot do** — this list is part of the release,
 not a footnote:
 
-- **57 of 88 tier-tracked formats are unverified (T3).** Proven: T1=2,
-  T1b=12, T2=17.
+- **56 of 88 tier-tracked formats are unverified (T3).** Proven: T1=2,
+  T1b=12, T2=18. (Was 57/17 — `mfi` moved up in v4.1.7 after a real
+  parser bug was fixed against MAME's `mfi_dsk.h`.)
 - **12 of 44 conversion paths are offered**, 4 of them lossless *with a
   measurement*. The rest the preflight gate refuses as UNTESTED — on
   purpose.
@@ -146,7 +147,7 @@ not a footnote:
 
 This project has a specific, unusual gap: **there is no physical hardware
 behind it.** Every Tier-3 bench result has to come from someone else's
-desk. And 57 of 88 formats have never met a real disk — only synthetic
+desk. And 56 of 88 formats have never met a real disk — only synthetic
 round-trips.
 
 That makes your report worth more than any test we can write ourselves.
@@ -299,7 +300,7 @@ verification).
 **Honest verification status** (script-generated, see
 [`docs/VERIFICATION_TIERS.md`](docs/VERIFICATION_TIERS.md) for the
 per-format table and [`docs/VERIFICATION_PLAN.md`](docs/VERIFICATION_PLAN.md)
-for the tier definitions): **T1=2, T1b=12, T2=17, T3=57** of 88.
+for the tier definitions): **T1=2, T1b=12, T2=18, T3=56** of 88.
 
 - **T1** (real reference image): FDI — a real 1994 TR-DOS disk magazine
   (83-cylinder, partially formatted last track; image local-only for

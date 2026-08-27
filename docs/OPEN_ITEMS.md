@@ -228,7 +228,7 @@ Messung in `BACKLOG.md`, das als Archiv erhalten bleibt).
 
 | # | Sache | Herkunft | Stand |
 |---|---|---|---|
-| **A1** | **57 von 88 tier-geführten Formaten stehen auf T3 — ungeprüft.** Kein Test, oder ein synthetischer Test ohne Abgleich gegen eine autoritative Quelle. Genau in dieser Lage waren die fünf fabrizierten Parser grün. Belegt: T1=2, T1b=12, T2=17 | gemessen | **offen**, Moratorium MF-363/498 |
+| **A1** | **56 von 88 tier-geführten Formaten stehen auf T3 — ungeprüft.** (War 57; `mfi` ist mit MF-614 auf T2 gehoben.) Kein Test, oder ein synthetischer Test ohne Abgleich gegen eine autoritative Quelle. Genau in dieser Lage waren die fünf fabrizierten Parser grün. Belegt: T1=2, T1b=12, T2=17 | gemessen | **offen**, Moratorium MF-363/498 |
 | **A2** | **29 von 44 Wandlungspfaden ungeprüft.** Das Preflight-Tor weist sie ab — richtig. Aber die Doku nennt weiter „44 Pfade" als Fähigkeit | gemessen | **offen**; Zahlen seit MF-541 abgeleitet |
 | **A3** | Header-Prototypen ohne Definition | gemeldet, dann gemessen | ⚠ **294 → 237 (MF-549)**: die 2 gefaehrlichen Faelle (von `static inline` im selben Header gerufen) sind weg, dazu zwei Header mit 809 Zeilen und 0 Implementierung. **237 bleiben** — davon 40 in zwei Tests, die in EXCLUDED_TESTS stehen |
 | **C1** | **„55+ Kopierschutz-Schemes“ steht als Kernfunktion in `CLAUDE.md` und `README`.** Gemessen: **38 Dateien, 350 Funktionen, 4 von aussen gerufen, 16 von einem Test beruehrt** — und eine der vier ist ein CRC-Helfer. **334 Funktionen sind weder verdrahtet noch geprueft** | gemessen (MF-557) | ⚠ **ueberwacht, nicht verdrahtet.** Den Katalog anzuschliessen hiesse, 334 ungeprueste Funktionen an ein forensisches Urteil zu haengen — genau die Lage, aus der die fuenf fabrizierten Parser kamen. Die Oberflaeche sagt es bereits von sich aus (`ProtectionAnalysisWidget.cpp`); seit MF-557 haelt `scripts/audit_protection_claims.py` die Zahl fest |
@@ -314,6 +314,82 @@ soll die Abfrage für Begriffe außerhalb ihrer Abdeckung sagen
 „**Inventar deckt das nicht ab**" statt „vorhanden: false". Eine Antwort,
 die ihre eigene Reichweite kennt, ist hier mehr wert als eine, die mehr
 zu wissen vorgibt.
+
+---
+
+## Aus dem zweiten Scout-Zyklus (MF-612, 2026-08-27)
+
+`yas-sim/fdc_bitstream` — vom Eigentuemer benannt, **steht bereits als
+`integriert` in der Negativliste**. Der Scout hat das zuerst geprueft, eine
+Neubewertung als Uebernahme-Kandidat nach Regel 6 **verweigert** und
+stattdessen die Frage gedreht: nicht „uebernehmen?", sondern **„ist unsere
+Kopie aktuell, und weicht sie ab?"**
+
+Gutachten: `tools/uft-scout/out/fdc_bitstream.gutachten.md`.
+
+**Antwort auf die Divergenzfrage: die Kopie ist aktuell.** Upstream-HEAD
+`0178992` vom 2024-06-04 — seit dem Vendoring **null** Commits
+(nachgemessen ueber die GitHub-API). Abweichungen sind ausschliesslich
+lokale Haertungen. Kein Update noetig.
+
+**Vier Befunde am eigenen Baum**, alle nachgeprueft:
+
+| # | Sache | Stand |
+|---|---|---|
+| SCOUT-3 | **Die MIT-Pflicht der vendorten Kopie ist nicht erfuellt.** Upstream ist MIT (`LICENSE.md`, © 2022 Yasunori Shimura). In `src/flux/fdc_bitstream/` liegt **keine LICENSE-Datei**, kein Permission Notice, kein gepinnter Upstream-Commit — nachgemessen. MIT verlangt beides in jeder Kopie. Dieselbe Familie wie P0-5 (SPDX), nur umgekehrt: dort stand eine falsche Angabe, hier fehlt sie ganz. Weg: `LICENSE.md` ins Verzeichnis, Herkunftszeile „yas-sim/fdc_bitstream @ 0178992 (2024-06-04), MIT" in die Verzeichnis-README. Reine Doku, einfrier-frei | **offen** |
+| SCOUT-4 | **2795 Zeilen werden gebaut und von niemandem gerufen.** `UnifiedFloppyTool.pro:400-414` uebersetzt die Kopie; nachgemessen: **0 Einbinder** ausserhalb des Verzeichnisses fuer `fdc_bitstream.h`, `bit_array.h`, `fdc_vfo_base.h`, und der einzige Test-Treffer ist eine Kommentarzeile. „Integriert" in der Negativliste beschreibt **Vendoring, keine Faehigkeit**. Entscheidung des Eigentuemers: (a) als Differenzlauf-Orakel gegen den Produktionspfad verdrahten — Plan mit Korpus, Metrik, Toleranzliste und Rotbeweis (eine 1-Bit-Verschiebung muss BEIDE Decoder roeten) steht im Gutachten; (b) aus dem Bau nehmen. **Nicht** verdrahten, damit es benutzt aussieht — das ist ein ausdrueckliches Nicht-Ziel | **offen, Eigentuemer** |
+| SCOUT-5 | **Ein Wahrheitspaar fuer D77 liegt beim Upstream und ist nicht mitgekommen.** `test_data/`: `2019FM77AVDemo-4MHz.raw` und `-8MHz.raw` (je 3 649 229 B, dieselbe Diskette mit zwei Abtastraten) plus `2019FM77AVDemo.d77` (348 848 B) — reale Aufnahme mit unabhaengig erzeugtem Sektorabbild. Nachgemessen: `d77` steht auf **T3 ohne alles** (kein Test, keine Spec-Quelle, kein Korpus), und der Korpus fuehrt kein D77/FM-7/RAW. **BLOCKIERT bis Lizenzklaerung:** das Repo ist MIT, der Disketten-INHALT (ein Demo-Programm) hat eigene Urheber. Eigentuemer-Vorlage nach Regel 8 | **offen, Lizenzklaerung** |
+| SCOUT-6 | **Zwei Doku-Stellen sagen Unwahres ueber die Kopie.** (a) `KNOWN_ISSUES.md` FLUX-12 nennt sie „zweiter Decoder, der eigene Tests hat" — es gibt keinen. (b) `src/flux/fdc_bitstream/README.md:65` fuehrt `vfo_fixed.cpp` als gebaut, `UnifiedFloppyTool.pro:419` sagt seit dem Entfernen das Gegenteil. Dazu die Negativlisten-Formulierung „integriert" → „vendored, 0 Aufrufer" (betrifft auch den samdisk-Eintrag) | **offen** |
+
+### Werkzeugkasten: ein dritter eigener Fehler
+
+**W1 — die Provenienz wurde mitten im Wort abgeschnitten.**
+`inventar.py` kappte das Herkunftsfeld des Korpus auf 60 Zeichen: aus
+`GTK3VICE-3.10-win64` wurde `GTK3VI`, aus einem ganzen Satz
+`byte-identical t`. Provenienz ist fuer T1/T1b **konstitutiv**
+(`VERIFICATION_PLAN.md` §Provenienz-Regel) — sie ausgerechnet in dem
+Werkzeug zu verstuemmeln, das Beschaffungslisten dagegen prueft, ist
+verkehrt herum. Eingebaut am selben Tag beim Ergaenzen des Korpus-Felds
+(MF-610), gefunden im zweiten Lauf. **Behoben.**
+
+Was im zweiten Lauf **funktionierte**: die Korrekturen aus MF-611. Das
+Feld `abgedeckt` hat den Scout dreimal zur Handnachschau gezwungen und
+bei „wd179x fdc emulation" einen Fehlschluss verhindert — die Faehigkeit
+liegt in der vendorten Kopie selbst.
+
+---
+
+## Abgearbeitet aus den Scout-Zyklen (MF-614, 2026-08-27)
+
+Fünf Zyklen haben dreizehn Befunde über den eigenen Baum geliefert. Was
+ohne Eigentümer-Entscheidung machbar war, ist erledigt:
+
+| # | Sache | Ergebnis |
+|---|---|---|
+| **SCOUT-8** | **Drei MFI-Fassungen, keine las eine echte Datei** | ✅ **behoben.** Das registrierte Plugin prüfte **8 Byte** `"MAMEFLOP"` — ein Präfix der echten 16-Byte-Kennung. Es wies echte MAME-Dateien deshalb nicht ab, sondern **nahm sie an** und las die Spurtabelle ab `0x10`, wo `cyl_count`/`head_count` liegen; die Einträge beginnen bei `0x20`. `form_factor` kam aus `0x08`, also aus der Kennung, und die Eintragszahl aus der Dateigröße statt aus dem Kopf. Alle vier berichtigt gegen `mfi_dsk.h`/`.cpp` (BSD-3), zusätzlich die Schranken aus `identify()`. Rotprobe zuerst: beide Zusicherungen fielen auf der alten Fassung. **`mfi` steht damit auf T2 statt T3 — die Kennzahl sinkt von 57 auf 56** |
+| **SCOUT-12** | Die zweite MFI-Fassung `uft_mame_mfi.c` trägt eine **erfundene** 17-Byte-Kennung `"MAME FLOPPY IMAGE"` mit Leerzeichen, die nie zutrifft; sie wird gebaut, hat keinen Aufrufer und keine Registry-Struktur | ⚠ **benannt, nicht berichtigt.** Die Kennung zu korrigieren würde einen **zweiten lebenden** MFI-Leser neben dem registrierten schaffen — das wäre schlimmer. Was ansteht, ist eine Löschentscheidung. Im Code steht jetzt, dass der Wert falsch ist, statt ihn als Spec auszugeben |
+| **SCOUT-3** | MIT-Pflicht der vendorten `fdc_bitstream`-Kopie unerfüllt | ✅ **behoben.** `LICENSE.md` liegt im Verzeichnis, die README nennt Upstream-Commit `0178992` (2024-06-04), Lizenz und die Art der lokalen Abweichungen |
+| **SCOUT-10** | `uft_dms.c` behauptete „Public Domain" ohne Beleg, 0 SPDX | ✅ **behoben.** Belegt gegen Debians `xdms`-`copyright` (machine-readable 1.0), mit dem Wortlaut des Autors. `SPDX-License-Identifier: LicenseRef-PublicDomain-xDMS` — eine formlose PD-Erklärung wird **zitiert**, nicht in eine Lizenz umgedeutet, die der Autor nie gewählt hat |
+| **SCOUT-6** | Zwei Doku-Stellen behaupteten Unwahres über `fdc_bitstream` | ✅ **behoben.** `KNOWN_ISSUES.md` FLUX-12 sagte „der eigene Tests hat" — die Kopie hat **0 Aufrufer und 0 Tests**; die README führte eine gelöschte Datei als gebaut |
+| **W5/W6/W7/W9/W10/W11** | Sechs Fehler im Scout-Werkzeugkasten | ✅ **behoben.** Der schwerste: `vermessen.py` stufte MAMEs **GPL-2.0-`COPYING` als MIT** ein (First-Match, MIT-Regex zuerst, die Datei zitiert ab Zeile 64 einen MIT-Text). Dort zonengleich — bei GPL-3 mit MIT-Zitat wäre aus „nicht portierbar" ein „portierbar" geworden. Jetzt gewinnt bei mehreren Treffern die **strengste** Zone, und eine Datei mit zwei Lizenztexten ist ein PRÜFEN-Fall |
+
+### Nebenbei berichtigt
+
+Ein Kommentar in `tests/test_disk_open_fuzz.c` nannte seit MF-539 die
+8-Byte-Kennung als den *richtigen* Wert. Mein eigener Fix hat ihn
+veralten lassen — mitgezogen.
+
+### Offen geblieben
+
+`SCOUT-4` (2795 Zeilen ohne Aufrufer: verdrahten oder aus dem Bau
+nehmen), `SCOUT-5` (D77-Wahrheitspaar, Lizenzklärung), `SCOUT-12`
+(Löschentscheidung) — alle drei brauchen den Eigentümer.
+`SCOUT-7` (HFE-Fixture), `SCOUT-9` (floptool-Oracle) und `SCOUT-11`
+(DMS-Differenzlauf) brauchen Material von außen.
+
+**Die Zahl `28 von 57` zur floptool-Abdeckung ist die Messung des
+Scouts, nicht meine** — sie gehört nachgerechnet, bevor sie in einen
+Release-Text kommt.
 
 ---
 

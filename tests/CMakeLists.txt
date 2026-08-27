@@ -221,6 +221,11 @@ foreach(test_source ${TEST_SOURCES})
     elseif(${test_name} STREQUAL "test_atr_512")
         # ATR 512-byte-sector (SpartaDOS X) read, not clamped to 128 (MF-340)
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/atr/uft_atr.c)
+    elseif(${test_name} STREQUAL "test_mfi_layout")
+        # MFI signature width + entry offset vs. MAME mfi_dsk.h (MF-614)
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/mfi/uft_mfi.c
+            ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
     elseif(${test_name} STREQUAL "test_cqm_layout")
         # CopyQM header offsets + RLE polarity vs. the published layout (MF-461)
         # The plugin reports integrity findings through UFT_WARN, hence uft_log.c

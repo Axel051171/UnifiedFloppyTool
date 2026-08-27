@@ -75,10 +75,40 @@ def inventar_abgleich(m, inv):
 
 
 def zaehle_offene(outdir):
+    """Wie viele Gutachten warten noch auf Uebernahme?
+
+    MF-614 (W9): hier stand `sum(1 for f in os.listdir(outdir) if
+    f.endswith(".gutachten.md"))` — also ALLE Gutachten, die je
+    geschrieben wurden. Nach sechs Zyklen war die Bremse dauerhaft zu und
+    meldete „bereits 5 offene Gutachten in diesem Zyklus", obwohl kein
+    einziges aus dem laufenden Zyklus stammte. Die Bremse, die eine
+    Flutung verhindern soll, hat sich selbst blockiert.
+
+    AGENT.md Regel 5 begrenzt VORSCHLAEGE je Zyklus, nicht Dateien im
+    Archiv. Ein Gutachten, dessen Befunde uebernommen sind, belegt keinen
+    Platz mehr. Gezaehlt wird deshalb nur, was noch keine
+    Uebernahme-Marke traegt.
+
+    Die Marke setzt der Mensch, der die Vorschlaege nach OPEN_ITEMS
+    uebernimmt — eine Zeile am Dateianfang:
+
+        <!-- uebernommen: MF-NNN -->
+    """
     if not os.path.isdir(outdir):
         return 0
-    return sum(1 for f in os.listdir(outdir)
-               if f.endswith(".gutachten.md"))
+    offen = 0
+    for f in os.listdir(outdir):
+        if not f.endswith(".gutachten.md"):
+            continue
+        try:
+            with open(os.path.join(outdir, f), encoding="utf-8",
+                      errors="replace") as fh:
+                kopf = fh.read(400)
+        except OSError:
+            kopf = ""
+        if "uebernommen:" not in kopf and "übernommen:" not in kopf:
+            offen += 1
+    return offen
 
 
 def erzeuge(m, inv, outdir):
@@ -90,8 +120,10 @@ def erzeuge(m, inv, outdir):
                       f"({NEG[voll]['status']}: {NEG[voll]['grund']})")
     if zaehle_offene(outdir) >= CFG["max_vorschlaege_je_zyklus"]:
         return None, ("RATENBREMSE: bereits "
-                      f"{CFG['max_vorschlaege_je_zyklus']} offene "
-                      "Gutachten in diesem Zyklus (AGENT.md Regel 5)")
+                      f"{CFG['max_vorschlaege_je_zyklus']} Gutachten ohne "
+                      "Uebernahme-Marke (AGENT.md Regel 5). Erst "
+                      "abarbeiten, dann `<!-- uebernommen: MF-NNN -->` in "
+                      "die betroffenen Dateien in out/ setzen.")
     if m["domaenen_score"] < CFG["mindest_domaenen_score"]:
         return None, (f"ÜBERSPRUNGEN: Domänen-Score {m['domaenen_score']} "
                       f"< {CFG['mindest_domaenen_score']}")

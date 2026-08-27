@@ -1,3 +1,21 @@
+> **Herkunft und Lizenz (MF-614).**
+> Diese Dateien sind eine vendorte Kopie von
+> [`yas-sim/fdc_bitstream`](https://github.com/yas-sim/fdc_bitstream),
+> Stand **`0178992` (2024-06-04)** — dem Upstream-HEAD; seit dem
+> Vendoring gab es dort null Commits (nachgemessen).
+>
+> **Lizenz: MIT**, © 2022 Yasunori Shimura. Der vollstaendige Text liegt
+> als `LICENSE.md` in diesem Verzeichnis. MIT verlangt, dass
+> Copyright- und Permission-Notice in **jeder** Kopie mitgehen — bis
+> MF-614 lag hier keines von beidem, und auch kein Hinweis, welchem
+> Upstream-Stand die Dateien entsprechen. Das war eine laufende
+> Pflichtverletzung, gefunden im zweiten Scout-Zyklus.
+>
+> Aenderungen gegenueber dem Upstream sind ausschliesslich lokale
+> Haertungen (sign-compare-Casts, ein UB-Fix in `vfo_pid3.cpp`,
+> Include-Reihenfolge, `#ifdef UFT_HAS_EXPERIMENTAL_VFO`). Kein
+> Upstream-Inhalt fehlt.
+
 # The C++ FDC bitstream library  
 
 ## Description:  
@@ -62,7 +80,7 @@ The `vfo_*` files in this directory are experimental alternatives:
 | `vfo_pid.cpp` | PID controller variant |
 | `vfo_pid2.cpp` | PID controller variant (v2) |
 | `vfo_pid3.cpp` | PID controller variant (v3) |
-| `vfo_fixed.cpp` | Fixed frequency (no tracking) |
+| ~~`vfo_fixed.cpp`~~ | **entfernt** — 7 Zeilen trivialer Stub, von `VFO_TYPE_DEFAULT` nie ausgewaehlt (`UnifiedFloppyTool.pro:419`). Bis MF-614 stand die Datei hier als gebaut. |
 | `vfo_experimental.cpp` | Test/experimental implementation |
 | `fdc_vfo_base.cpp` | Base class for all VFO variants |
 

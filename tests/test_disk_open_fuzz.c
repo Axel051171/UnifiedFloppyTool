@@ -200,10 +200,15 @@ static const struct { const char *sig; size_t len; const char *label; } SIGS[] =
      * `uft_format_plugin_t`-Struktur enthaelt und darum in keiner Registry
      * steht (gemessen: `grep -n "uft_format_plugin_t" src/formats/mame/
      * uft_mame_mfi.c` liefert nichts). Das registrierte MFI-Plugin ist
-     * src/formats/mfi/uft_mfi.c:277, und dessen Sonde vergleicht
-     * MFI_MAGIC = "MAMEFLOP", 8 Byte (uft_mfi.c:37/78). Der Eintrag zeigte
-     * also auf tote Nachbarschaft: er sah aus wie Abdeckung fuer MFI und
-     * war keine. */
+     * src/formats/mfi/uft_mfi.c. Der Eintrag zeigte also auf tote
+     * Nachbarschaft: er sah aus wie Abdeckung fuer MFI und war keine.
+     *
+     * MF-614: der Satz hier nannte danach `MFI_MAGIC = "MAMEFLOP", 8 Byte`
+     * als den richtigen Wert. Das war er nie — MAMEs Kennung ist 16 Byte
+     * (`sign[16] = "MAMEFLOPPYIMAGE"`, mfi_dsk.cpp:81-82), und der
+     * 8-Byte-Vergleich traf ein Praefix davon. Er wies echte Dateien
+     * deshalb nicht ab, sondern nahm sie an und las sie falsch. Behoben;
+     * abgesichert durch tests/test_mfi_layout.c. */
     { "MAMEFLOP",          8, "MFI"      },
     { "SAD!",              4, "SAD"      },
     { "SINCLAIR",          8, "SCL"      },

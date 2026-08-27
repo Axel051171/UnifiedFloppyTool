@@ -140,7 +140,16 @@ def build(root):
                     inv["korpus"].append({
                         "format": e.get("format", ""),
                         "herkunft": e.get("origin", ""),
-                        "werkzeug": (e.get("tool", "") or "")[:60],
+                        # MF-612 (W1): hier stand `[:60]`. Die
+                        # Provenienz endete mitten im Wort
+                        # („GTK3VI" statt „GTK3VICE-3.10-win64").
+                        # Sie ist fuer T1/T1b konstitutiv
+                        # (VERIFICATION_PLAN §Provenienz-Regel) —
+                        # sie ausgerechnet in dem Werkzeug zu
+                        # kuerzen, das Beschaffungslisten prueft,
+                        # ist verkehrt herum. Gefunden im zweiten
+                        # Scout-Lauf.
+                        "werkzeug": e.get("tool", "") or "",
                         "datei": e.get("file", ""),
                     })
         except (OSError, ValueError) as exc:
@@ -168,7 +177,23 @@ def query(inv, begriffe):
     """
     out = {}
     for b in begriffe:
-        bl = b.lower().strip()
+        # MF-613: `bl.split()` trennt NUR an Leerzeichen. Damit umging
+        # jeder Bindestrich und jeder Unterstrich die Stark/Schwach-
+        # Trennung:
+        #
+        #     "flux visualization"  -> schwacher Treffer  (richtig)
+        #     "flux-visualization"  -> vorhanden: true    (falsch)
+        #     "flux_visualization"  -> vorhanden: true    (falsch)
+        #
+        # Und `gutachten.py` fuettert Repo-Basisnamen direkt hinein —
+        # `hxcfe_amiga_copy_utility` galt als vorhanden, wegen `amiga`.
+        #
+        # Das ist derselbe Fehler wie MF-610, zum dritten Mal in einer
+        # neuen Variante. Die ersten beiden Korrekturen haben den
+        # Einzelfall repariert (erst nur mehrwortig, dann null Treffer);
+        # diese repariert die REGEL: Trennzeichen werden vor dem
+        # Zerlegen vereinheitlicht, egal welches.
+        bl = re.sub(r"[-_./]+", " ", b.lower()).strip()
         mehrwortig = len(bl.split()) > 1
 
         stark, schwach = [], []

@@ -34,12 +34,39 @@ def lauf(cmd, cwd=None):
     return subprocess.run(cmd, cwd=cwd, capture_output=True, text=True)
 
 
+ZONEN_ORDNUNG = ["GRUEN", "GELB", "ORANGE", "PRUEFEN", "ROT"]
+
+
 def lizenz_datei_urteil(pfad):
+    """Urteil ueber EINE Lizenzdatei.
+
+    MF-614 (W7, lizenzkritisch): hier stand ein First-Match ueber
+    LIZENZ_MUSTER — die erste passende Zeile gewann, und MIT steht ganz
+    oben. Gemessen an MAMEs `COPYING`: die Datei ist GPL-2.0, zitiert
+    aber ab Zeile 64 einen MIT-Text, und das Werkzeug urteilte **MIT**.
+    Dort zufaellig zonengleich; bei einer GPL-3-Datei mit MIT-Zitat waere
+    aus GELB ein GRUEN geworden — also aus „nicht portierbar" ein
+    „portierbar".
+
+    Jetzt werden ALLE Muster geprueft, und bei mehreren Treffern gewinnt
+    die STRENGSTE Zone. Eine Datei, die zwei Lizenzen nennt, ist ein
+    PRUEFEN-Fall, kein Freibrief.
+    """
     text = open(pfad, encoding="utf-8", errors="replace").read()[:6000]
-    for rx, kennung, zone in LIZENZ_MUSTER:
-        if re.search(rx, text, re.I):
-            return {"datei": pfad, "kennung": kennung, "zone": zone}
-    return {"datei": pfad, "kennung": "UNGEKLAERT", "zone": "PRUEFEN"}
+    treffer = [(k, z) for rx, k, z in LIZENZ_MUSTER
+               if re.search(rx, text, re.I)]
+    if not treffer:
+        return {"datei": pfad, "kennung": "UNGEKLAERT", "zone": "PRUEFEN"}
+    if len(treffer) == 1:
+        k, z = treffer[0]
+        return {"datei": pfad, "kennung": k, "zone": z}
+    kennungen = sorted({k for k, _ in treffer})
+    zone = sorted({z for _, z in treffer}, key=ZONEN_ORDNUNG.index)[-1]
+    return {"datei": pfad,
+            "kennung": " + ".join(kennungen) + " (mehrdeutig)",
+            "zone": "PRUEFEN" if zone == "GRUEN" else zone,
+            "hinweis": ("mehrere Lizenztexte in derselben Datei — von Hand "
+                        "entscheiden, welcher gilt (AGENT.md Regel 8)")}
 
 
 def messen(root):
@@ -64,14 +91,22 @@ def messen(root):
     m["toplevel"] = sorted(os.listdir(root))[:30]
 
     # Lizenz: Wurzel UND eine Ebene tiefer (Vendoring)
+    # MF-614 (W10): suchte nur in der Wurzel und EINE Ebene tiefer. Bei
+    # AdfOpus lagen drei GPL-2-Dateien tiefer (ADFOpusSrc/ADFLib/Docs/),
+    # und das Urteil lautete ROT („keine Lizenzdatei") statt GRUEN — die
+    # gefaehrlichste Fehlrichtung, weil ROT jede Verwendung sperrt.
+    #
+    # MF-614 (W5): `COPYRIGHT` fehlte im Muster; MAMEs fat32-Verzeichnis
+    # traegt seinen vollen GPL-2.0-Text in `COPYRIGHT.txt`.
     lz = []
-    kandidaten = [root] + [os.path.join(root, d) for d in os.listdir(root)
-                           if os.path.isdir(os.path.join(root, d))
-                           and d != ".git"]
-    for d in kandidaten:
-        for name in os.listdir(d):
-            if re.match(r"(LICEN[SC]E|COPYING)", name, re.I):
-                lz.append(lizenz_datei_urteil(os.path.join(d, name)))
+    LIZENZ_NAMEN = re.compile(r"(LICEN[SC]E|COPYING|COPYRIGHT|NOTICE)", re.I)
+    for dp, dn, fn in os.walk(root):
+        dn[:] = [d for d in dn if d not in (".git", "node_modules")]
+        for name in fn:
+            if LIZENZ_NAMEN.match(name):
+                lz.append(lizenz_datei_urteil(os.path.join(dp, name)))
+    lz = lz[:40]        # eine Handvoll genuegt; 40 ist kein stilles Kappen,
+                        # sondern eine Schranke gegen Baeume mit hunderten
     m["lizenzen"] = lz
     m["lizenz_zone"] = (sorted({l["zone"] for l in lz},
                                key=["GRUEN", "GELB", "ORANGE",
@@ -101,10 +136,17 @@ def messen(root):
 
 
 def main():
-    if len(sys.argv) < 2:
+    # MF-614 (W6): `--help` und ein nicht existenter Pfad endeten in einem
+    # rohen Traceback aus `subprocess.run(cwd=...)`. Playbook Stufe 2
+    # verlangt „melden", nicht abstuerzen.
+    if len(sys.argv) < 2 or sys.argv[1] in ("-h", "--help"):
         print(__doc__); return 2
     ziel = sys.argv[1]
-    workdir = "work"
+    # MF-614 (W11): `workdir` war relativ zum aktuellen Verzeichnis — die
+    # Messung landete in <uft-root>/work/ statt im Werkzeugkasten. Jetzt
+    # neben dem Skript, egal von wo aufgerufen.
+    workdir = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                           "..", "work")
     if "--workdir" in sys.argv:
         workdir = sys.argv[sys.argv.index("--workdir") + 1]
     if ziel.startswith(("http://", "https://", "git@")):
@@ -117,6 +159,9 @@ def main():
                 print(f"FEHLER clone: {r.stderr.strip()}"); return 1
     else:
         pfad = ziel
+    if not os.path.isdir(pfad):
+        print("Pfad existiert nicht: %s" % pfad, file=sys.stderr)
+        return 2
     m = messen(pfad)
     out = None
     if "-o" in sys.argv:
