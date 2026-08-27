@@ -452,6 +452,61 @@ Aussage. Nachgetragen.
 
 ---
 
+## SCOUT-12 erledigt, ein vierter MFI-Leser gefunden (MF-616, 2026-08-27)
+
+`src/formats/mame/uft_mame_mfi.c` ist **gelöscht** (Freigabe des
+Eigentümers). Sie trug eine erfundene 17-Byte-Kennung
+`"MAME FLOPPY IMAGE"` mit Leerzeichen, die in keiner MFI-Datei vorkommt,
+wurde gebaut und hatte keinen Aufrufer.
+
+### Die Löschpipeline hat einen Fehler in meiner eigenen Prüfung gefangen
+
+Sechs Stufen nach MF-369. Fünf waren sauber — Stufe 6 nicht:
+
+| Stufe | Ergebnis |
+|---|---|
+| 1 · bedingt in der `.pro`? | nein, einfacher `SOURCES`-Eintrag |
+| 2 · beide Endungen, alle Verzeichnisse | 4 Treffer: eigener `@file`-Kopf, zwei Kommentarzeilen, `.pro` |
+| 3 · Kommentar-Strip | die zwei Testtreffer sind Kommentar, kein Aufruf |
+| 4 · Symbolrauschen | `uft_mfi_probe` mit **2 Treffern ausserhalb** → siehe unten |
+| 5 · Skript-Referenzen | keine |
+| 6 · Vollbau | **qmake grün, CMake ROT** |
+
+Stufe 6 fiel, weil `tests/CMakeLists.txt` die Datei nicht beim Namen
+nennt: drei `GLOB_RECURSE ${CMAKE_SOURCE_DIR}/src/formats/*.c` ziehen
+**jede** Format-Datei ein. Eine Namenssuche findet das nicht, und das
+Glob-Ergebnis liegt zwischengespeichert im Bauverzeichnis — der erste
+Bau nach dem Löschen meldete `AutogenInfo.json … does not exist`.
+
+**Der Fehler danach war meiner:** ich habe `ctest` auf dem gescheiterten
+Bau laufen lassen und „267/267" gelesen. Das waren veraltete
+Binärdateien. Erst `cmake ..` (neu erzeugen, nicht nur bauen) macht die
+Zahl gültig. Dieselbe Falle steht in den Projektnotizen als
+„`cmake .` gegen `cmake ..`" — ich bin trotzdem hineingelaufen.
+
+### Der Fund bei Stufe 4: es gab vier MFI-Leser, nicht drei
+
+| # | Ort | Zustand |
+|---|---|---|
+| 1 | `src/formats/mfi/uft_mfi.c` | registriert — **behoben** (MF-614) |
+| 2 | `src/formats/mame/uft_mame_mfi.c` | erfundene Kennung — **gelöscht** (MF-616) |
+| 3 | `include/uft/profiles/uft_mfi_format.h` | `static inline uft_mfi_probe`, **gleicher Name wie #2 bei anderer Signatur** (2 statt 3 Parameter) |
+| 4 | `src/samdisk/mfi.cpp` | eingekauft, weist die moderne Kennung ab, nicht gebaut |
+
+**#3 ist ebenfalls tot, nur eine Ebene tiefer.** Es wird ausschließlich
+von `include/uft/profiles/uft_format_registry.h` eingebunden, und die
+bindet **niemand** ein (nachgemessen). Auch dessen Spec ist erfunden:
+`UFT_MFI_SIGNATURE_V1 = "MAMEFLOP"` — wieder acht statt sechzehn Byte —
+plus eine „v2" mit der Kennung `"MFI2"`, die MAME nicht kennt, und ein
+`signature[8]`-Feld in einer selbstgebauten v1/v2-Aufteilung.
+
+| # | Sache | Stand |
+|---|---|---|
+| **SCOUT-13** | **Ein fünfter Ort mit erfundener MFI-Spec, tot:** `include/uft/profiles/uft_mfi_format.h` (v1/v2-Aufteilung, `"MAMEFLOP"` 8 Byte, `"MFI2"`) samt seinem einzigen Einbinder `profiles/uft_format_registry.h` (471 Zeilen, **kein Einbinder**). Löschkandidat nach derselben Pipeline — der Fall liegt gleich, die Freigabe fehlt | **offen, Eigentümer** |
+| **SCOUT-14** | **Vier Dateien heißen `uft_format_registry.h`** — `src/core/unified/`, `include/uft/core/`, `include/uft/profiles/`, `include/uft/`. Verwandt mit der Wächter-Kollisionsfamilie (P1-8): wer welche sieht, entscheidet die Include-Reihenfolge | **offen** |
+
+---
+
 ## Korpus-gebundene Tests — Beschaffungsliste (MF-588)
 
 **Gemessen auf diesem Rechner: 266/266, ein Skip** (`test_freezer`, siehe unten). Auf einem frischen

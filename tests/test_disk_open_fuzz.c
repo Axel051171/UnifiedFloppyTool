@@ -194,12 +194,17 @@ static const struct { const char *sig; size_t len; const char *label; } SIGS[] =
     { "FDI",               3, "FDI"      },
     { "GCR-1571",          8, "G71"      },
     { "LDB\1",             4, "LDB"      },
-    /* MF-539: hier stand `{ "MAME FLOPPY IMAGE", 17, "MFI" }`. Diese Kennung
-     * steht in src/formats/mame/uft_mame_mfi.c — einer Datei, die zwar in
-     * UnifiedFloppyTool.pro:2552 gelistet ist, aber KEINE
-     * `uft_format_plugin_t`-Struktur enthaelt und darum in keiner Registry
-     * steht (gemessen: `grep -n "uft_format_plugin_t" src/formats/mame/
-     * uft_mame_mfi.c` liefert nichts). Das registrierte MFI-Plugin ist
+    /* MF-539: hier stand `{ "MAME FLOPPY IMAGE", 17, "MFI" }`. Diese
+     * Kennung stand in src/formats/mame/uft_mame_mfi.c — einer Datei, die
+     * zwar gebaut wurde, aber KEINE `uft_format_plugin_t`-Struktur
+     * enthielt und darum in keiner Registry stand.
+     *
+     * MF-616: die Datei ist geloescht. Ihre Kennung war erfunden (17 Byte
+     * mit Leerzeichen; MAMEs sind 16 ohne), sie hatte im ganzen Baum
+     * keinen Aufrufer, und ihre exportierten Namen kollidierten dem
+     * Namen nach mit einem `static inline uft_mfi_probe` in
+     * include/uft/profiles/uft_mfi_format.h — bei abweichender Signatur.
+     * Das registrierte MFI-Plugin ist
      * src/formats/mfi/uft_mfi.c. Der Eintrag zeigte also auf tote
      * Nachbarschaft: er sah aus wie Abdeckung fuer MFI und war keine.
      *
