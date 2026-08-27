@@ -236,3 +236,19 @@ src/recovery/uft_forensic_track.c
 src/recovery/uft_protection.c
 src/recovery/uft_recovery_meta.c
 src/recovery/uft_sector_recovery.c
+
+# MF-617: mit dem Loeschen von include/uft/profiles/ (26 Header ohne
+# jeden Einbinder) wurde dieses Modul SICHTBAR verwaist — es war es
+# vorher schon. Der Detektor zaehlte den `static inline uft_86f_probe`
+# aus dem toten `uft_86f_format.h` als Benutzung: ein Toter hielt einen
+# Toten am Leben.
+#
+# Es ist eine ZWEITE 86F-Fassung neben dem registrierten
+# src/formats/86box/uft_86f_plugin.c — dasselbe Muster wie bei MFI
+# (MF-614/616: dort waren es vier Fassungen, eine registriert). Der
+# Ausgang ist eine Loeschentscheidung, und die steht dem Eigentuemer zu:
+# SCOUT-15 in docs/OPEN_ITEMS.md.
+#
+# Hier eingetragen heisst NICHT „erledigt". Es heisst: gesehen, benannt,
+# und nicht mehr unbemerkt.
+src/formats/86box/uft_86box.c

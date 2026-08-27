@@ -507,6 +507,66 @@ plus eine „v2" mit der Kennung `"MFI2"`, die MAME nicht kennt, und ein
 
 ---
 
+## SCOUT-13 erledigt: 26 tote Header, und was dabei sichtbar wurde (MF-617)
+
+`include/uft/profiles/` hatte **28 Header. Zwei sind lebendig.** Gelöscht
+sind die anderen 26, einschließlich `uft_mfi_format.h` (fünfter Ort mit
+erfundener MFI-Spec) und `uft_format_registry.h` (471 Zeilen, kein
+Einbinder).
+
+Geblieben: `uft_imd_data_modes.h` (2 echte Einbindungen) und
+`uft_ipf_format.h` (1).
+
+### Die Pipeline, sechs Stufen
+
+| Stufe | Ergebnis |
+|---|---|
+| 1 · Include-Pfad | `profiles/` steht auf **keinem** — weder `.pro` noch CMake |
+| 2 · Einbinder, pfadgenau | nur die zwei lebenden |
+| 3 · Kommentar-Strip | die Treffer bei `uft_mfi_format.h`/`uft_td0_format.h` waren Kommentare |
+| 4 · Symbolrauschen | **58 Namen kommen auch außerhalb vor** — aber als eigenständige Definitionen |
+| 5 · namenlose Einbindungen | jede einzelne liegt **innerhalb** von `profiles/` |
+| 6 · Vollbau | qmake grün (Binary unverändert 5 018 112 Byte), cmake grün, 267/267 |
+
+Stufe 4 war der Grund, überhaupt so genau zu messen: hätte auch nur
+einer der 58 Namen von außen *gebraucht* statt nur *auch definiert*
+worden, wäre die Löschung ein Linkfehler geworden.
+
+### Was die Löschung bewirkt hat — und was nicht
+
+**Vier Konflikte sind weg**, und das Tor hat sie selbst gemeldet:
+
+    UFT_IMD_MAX_COMMENT     Makro-Konflikt  aufgeloest
+    UFT_IMD_MAX_SECTORS     Makro-Konflikt  aufgeloest
+    UFT_IMD_MAX_TRACKS      Makro-Konflikt  aufgeloest
+    UFT_FORMAT_COUNT        Enum-gegen-Makro aufgeloest
+
+Alle vier aus den Grundlinien gestrichen und unter `MF-617` als
+aufgelöst vermerkt — die Grundlinie soll etwas bedeuten.
+
+**Meine Vermutung war dagegen falsch, und das ist gemessen.** Ich hatte
+erwartet, dass die Wächter-Kollisionen sinken, weil `profiles/` Träger
+von `UFT_FORMAT_ENUM_DEFINED` und `UFT_PLATFORM_T_DEFINED` war:
+
+    geteilte Waechter      26 -> 25
+    davon ABWEICHEND       23 -> 23     unveraendert
+
+Nur eine **redundante** Kollision fiel weg. Die 23 der Klasse TYP (P1-8)
+bleiben unberührt — die toten Header waren nicht ihre zweite Seite.
+
+### Ein Toter hielt einen Toten am Leben
+
+| # | Sache | Stand |
+|---|---|---|
+| **SCOUT-15** | **`src/formats/86box/uft_86box.c` — 268 Zeilen, gebaut, keine Aufrufer.** Eine ZWEITE 86F-Fassung neben dem registrierten `uft_86f_plugin.c`, dasselbe Muster wie bei MFI. Sie war schon vorher unerreichbar; der Verwaisten-Detektor zählte den `static inline uft_86f_probe` aus dem toten `uft_86f_format.h` als Benutzung. Mit dessen Löschung wurde sie **sichtbar**, nicht tot. In `docs/orphan_baseline.txt` mit Begründung eingetragen — das heißt „gesehen und benannt", nicht „erledigt" | **offen, Eigentümer** |
+
+Das ist inzwischen das dritte Mal dieses Musters: **MFI hatte vier
+Fassungen** (eine registriert, drei tot), **86F hat zwei**. Wert einer
+eigenen Suche — nicht „welches Format fehlt", sondern „welches Format
+haben wir mehrfach, und welche Fassung gewinnt".
+
+---
+
 ## Korpus-gebundene Tests — Beschaffungsliste (MF-588)
 
 **Gemessen auf diesem Rechner: 266/266, ein Skip** (`test_freezer`, siehe unten). Auf einem frischen
