@@ -68,6 +68,74 @@ ein Prüfziel.
 
 ---
 
+## Was die Scout-Serie zu diesem Plan beigetragen hat (Stand MF-617)
+
+Der Plan entstand vor den fünf Scout-Zyklen. Sie haben ihn an zwei
+Stellen verschoben — und an einer bestätigt.
+
+### Eine Formathebung ist schon passiert, ohne Phase 1
+
+`mfi` steht auf **T2 statt T3** (MF-614). Nicht durch Korpus-Arbeit,
+sondern weil ein echter Parser-Fehler gegen eine benannte Referenz
+behoben wurde: das registrierte Plugin prüfte acht statt sechzehn
+Signaturbytes, nahm echte MAME-Dateien deshalb **an** und las die
+Spurtabelle vom falschen Versatz.
+
+    T3   57 -> 56        T2   17 -> 18
+
+**Das ist ein Weg, den der Plan nicht kannte:** ein Format hebt sich
+auch dadurch, dass man seinen Leser gegen eine Referenz richtigstellt.
+Die Einfrier-Regel erlaubt das ausdrücklich („Bugfixes an Bestehendem,
+Spec-Korrekturen gegen autoritative Quellen"), und es braucht kein
+Korpus-Abbild — nur eine benannte Quelle und einen Rotbeweis.
+
+Wie viele der 56 auf diesem Weg erreichbar sind, ist **nicht gemessen**.
+Es wäre eine eigene Frage wert.
+
+### Der floptool-Hebel ist kleiner als gemeldet
+
+Der vierte Zyklus nannte „28 von 57" und bezeichnete das als wertvollsten
+Fund. Nachgerechnet (MF-615): **22 von 56** als belegbare Untergrenze,
+höchstens 26 — und die Methode des Scouts stand nirgends.
+
+Wichtiger noch: es ist ein Abgleich über **Namen**. Er sagt nichts
+darüber, ob floptool *unsere* Dateien liest. Für Phase 1 zählt nur das.
+Der erste Schritt ist deshalb das Binary, nicht die Liste.
+
+### Bestätigt: Oracle und Korpus-Erzeuger dürfen nicht dieselbe Hand sein
+
+Phase 1 warnt davor. Der fünfte Zyklus hat den Fall geliefert: AdfOpus
+schied als drittes ADF-Oracle aus, **nicht** weil es schlecht wäre,
+sondern weil seine Engine ADFlib ist — dieselbe Bibliothek hinter
+`unadf`, das der Plan bereits führt. Die Warnung war also nicht
+theoretisch.
+
+### Was dabei sonst herauskam
+
+Fünf Zyklen, **keine einzige Übernahme** aus fremdem Code — aber
+fünfzehn belegte Funde über den eigenen Baum — plus **elf** über das
+Werkzeug des Scouts selbst (SCOUT-1/2 und W1/W4…W11), von denen zehn
+behoben sind.
+
+Im Baum: ein Klasse-A-Fehler im Format-Layer (MFI las jede echte Datei
+falsch **und nahm sie an**), drei Lizenz-/Herkunftspflichten, zwei
+falsche Doku-Sätze, **27 gelöschte tote Dateien** (1 + 26), vier
+aufgelöste Makro-/Enum-Konflikte und ein sichtbar gewordener Verwaister.
+
+Vier der elf Werkzeugfehler hatte ich selbst am Tag der Einpflege
+eingebaut. Der Scout hat sie im jeweils nächsten Lauf gefunden.
+
+**Der Scout ist kein Import-Trichter. Er ist ein Auditor von außen.**
+Jedes fremde Repository zwingt zu einer Frage über den eigenen Baum, die
+sonst niemand stellt: „haben wir das?", „ist unsere Kopie aktuell?",
+„erfüllen wir die Lizenz?"
+
+Für die Planung heißt das: Scout-Zyklen gehören **nicht** als
+Beschaffungsquelle für Phase 1 eingeplant, sondern als eigenständige
+Prüfschleife neben ihr.
+
+---
+
 ## Phase 0 — `nfd-r0` auf T1b (klein, entsperrend)
 
 **Warum zuerst:** P3-1 ist die einzige Bedingung des Moratoriums. Solange
@@ -280,7 +348,8 @@ Nach dem Muster von v4.1.6 — messbar, nicht „sicher gefühlt":
 - [ ] **Klick-Sitzung** für jede neu verdrahtete Anzeige, protokolliert.
 - [ ] **Alle Tore 0**, keines aufgeweicht; Sanitizer weiter 0/0.
 - [ ] **Die vier Kennzahlen** neu gemessen im Release-Text. Erwartung:
-      ungeprüfte Formate sinken von 57; **gemessen schrumpfen schlägt
+      ungeprüfte Formate sinken von 56 (Stand nach MF-614); **gemessen
+      schrumpfen schlägt
       behauptet verschwinden.**
 - [ ] **Bench-Alter je Controller** neu — jeder Tier-3 aus Phase 2 mit
       Datum und Protokoll-Verweis.
