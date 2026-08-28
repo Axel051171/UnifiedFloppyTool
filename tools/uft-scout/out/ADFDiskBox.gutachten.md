@@ -1,3 +1,4 @@
+<!-- uebernommen: MF-639 -->
 # Gutachten: hippy666/ADFDiskBox
 
 * **Zyklus:** 8 (2026-08-28), Auftrag des Eigentümers (ADF-Zweitmeinungs-Suche)

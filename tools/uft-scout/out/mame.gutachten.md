@@ -1,3 +1,4 @@
+<!-- uebernommen: MF-623 -->
 # Gutachten: mamedev/mame (Zuschnitt: Floppy-Formatbibliothek + floptool)
 <!-- uebernommen: MF-623 -->
 Stand: 2026-08-27 · Messung: `work/mame.messung.json`

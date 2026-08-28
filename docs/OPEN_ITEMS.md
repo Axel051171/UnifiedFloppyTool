@@ -2222,3 +2222,119 @@ alle vier ab.
 Ob `lazbuild` DIMConsole unter MinGW ohne Widgetset durchbaut — das
 erweist erst der Bau. Vorher kein Registry-Eintrag: **kein Oracle auf
 Zusicherung.**
+
+---
+
+## Zyklus 10 (atrcopy) und 11 (a8rawconv): Atari hat einen Leser, ein Oracle-Paar — und keinen FM-Decoder (MF-643, 2026-08-28)
+
+Zwei Zyklen auf derselben Plattform, unabhängig gelaufen, mit
+zusammenpassendem Ergebnis.
+
+### Der Entlastungsbefund zuerst (a8rawconv, Frage A)
+
+Unsere zwei Ports behaupten „Port of a8rawconv 0.95 … **(GPL-2-or-later)**".
+**Die Angabe stimmt.** Beide Quelldateien tragen den GPL-Kopf wörtlich —
+`interleave.cpp:1-16`, `compensation.cpp:1-16`, „either version 2 …, or
+(at your option) any later version". 17 von 44 Quelldateien tragen ihn,
+`COPYING` ist der GPLv2-Volltext. Der Scanner meldete „GPL-2.0 + LGPL
+(mehrdeutig)" — **Fehlalarm**: die „Lesser"-Treffer stehen im
+unveränderten FSF-Standardtext.
+
+Nach drei Lizenz-Überraschungen an einem Tag ist das die vierte Prüfung
+— und die erste, die nichts findet. Das gehört genauso deutlich gesagt.
+
+**Und die vendorte Kopie ist aktuell:** 44/44 Quelldateien
+**byteidentisch** mit HEAD `5db54b47` (`cmp` je Datei). Seit MF-467 kein
+Quellcode-Commit im Repo.
+
+### Der schwere Befund: UFT kann FM-Fluss nicht dekodieren
+
+`src/flux/uft_flux_decoder.c`, `flux_decode_fm()` — selbst nachgelesen:
+
+```c
+    /* FM sector decoding would go here - similar to MFM */
+    /* For now, just note we found a sync */
+    pos = sync_pos + 16;
+}
+free(bits);
+return (track->sector_count > 0) ? FLUX_OK : FLUX_ERR_NO_SYNC;
+```
+
+`sector_count` wird in der ganzen Funktion **kein einziges Mal erhöht**
+(gemessen: 0 Treffer). Die Rückgabe kann deshalb **nur**
+`FLUX_ERR_NO_SYNC` sein.
+
+Das ist schlimmer als ein Stub: die Funktion setzt `detected_encoding`,
+rechnet `avg_bitrate`, findet Syncs — sie **sieht implementiert aus** und
+kann nie gelingen. Ein Lazy-Stub mit Fassade.
+
+Folge: **Flux→ATR für Atari-SD ist heute unmöglich.** Und die
+Rundlauf-Matrix führt **kein einziges Atari-Paar** — der einzige
+ATR-Bezug in `src/core/uft_roundtrip.c` ist ein Kommentar, der sagt, ein
+echter Wandler fehle noch.
+
+> **Korrektur meiner eigenen Messung:** mein erster Zähllauf meldete 19
+> Atari-Treffer in der Matrix. Falsch — `grep -i atr` trifft auch
+> „m**atr**ix". Genau die Falle, vor der AGENT.md Regel 2 warnt, diesmal
+> in meiner Zählung.
+
+Die Referenz liegt im Baum: `src/a8rawconv/sectorparser.cpp` (615 Zeilen,
+WD177x-genau), Zone **GRÜN**.
+
+### Der neunte „Tür fehlt"-Fall — und er ist doppelt
+
+Beide Zyklen fanden ihn unabhängig: `src/formats/atari/` trägt **zwei
+parallele** Atari-DOS-Implementierungen, zusammen rund **3 400 Zeilen**
+(`atari_dos2.c` 1006, `atari_check.c` 680, `atari_atr.c` 459,
+`atari_sparta.c` 410, `atari_util.c` 314, plus `uft_atari_dos.c` 510).
+Inhaltlich decken sie DOS 2.0/2.5, MyDOS mit VTOC2 und SpartaDOS ab —
+also alles, was atrcopy kann.
+
+**0 Aufrufer außerhalb des Verzeichnisses. 0 Tests. Kein `ANKER:`.** Der
+ExplorerTab kennt nicht einmal `*.atr` als Filter.
+
+Nach der Verwaisten-Regel ist das ein Löschfall — **oder** die Tür für
+Phase 1. Zusätzlich zur Türfrage steht hier eine **Dubletten-Frage**:
+welche der zwei Fassungen trägt?
+
+### Das Oracle-Problem für ATR ist gelöst
+
+atrcopy hat unseren ATR-Korpus **erzeugt** (Manifest: „atrcopy 10.1").
+Als alleiniges Oracle wäre der T1b-Eintrag **zirkulär** — dieselbe Falle
+wie AdfOpus/ADFlib. floptool fällt aus (kein Atari-Dateisystem).
+
+**Zwei unabhängige zweite Hände gefunden:**
+
+| Werkzeug | Lizenz | liefert |
+|---|---|---|
+| `lsatr` aus dmsc/mkatr | GPL-2.0 | eigener C-Leser für DOS 1/2.0/2.5/MyDOS/SpartaDOS/BW-DOS; Extraktion → SHA-1 extern |
+| a8rawconv selbst | GPL-2.0-or-later | heute gebaut; `ATR→XFD` **byteidentisch** zum Korpus-XFD, Kreis `ATR→SCP(FM)→ATR` byteidentisch |
+
+Erzeuger ≠ Prüfer ist damit für ATR gesichert.
+
+**atrcopy als Oracle hat eine Auflage:** unter NumPy 2.5.1 stürzt 10.1
+bei **jedem** Abbild-Open ab (drei gemessene Bruchstellen: `np.alen`
+entfernt seit NumPy 1.23, zwei NEP-50-uint8-Überläufe). Der
+Registry-Eintrag muss `numpy<1.23` pinnen, sonst „prüft" ein Absturz.
+Auf dieser Maschine (nur Python 3.13) nicht herstellbar.
+
+### Vorschläge
+
+`SCOUT-30` FM-Fluss real machen (Kennzahl: **Wandlungspfade rauf** —
+Voraussetzung für SCP→ATR) · `SCOUT-31` Testvektor-Generator ·
+`SCOUT-32` Atari-DOS-Tür öffnen **oder löschen**, samt Dubletten-Entscheid ·
+`SCOUT-33` a8rawconv als Zweitoracle registrieren · `SCOUT-34`
+ATR↔XFD-Wandlungspfad (der einzige Vorschlag, der eine der **vier**
+Release-Zahlen direkt bewegt) · `SCOUT-35` atrcopy mit Pinnungs-Auflage ·
+`SCOUT-36` lsatr als zweite Hand · `SCOUT-37` 25 MPL-2.0-Fixtures,
+darunter die reale ED-Referenz, die P3-6 als fehlend führt.
+
+### Nebenbefund
+
+Der Fork-Commit `5db54b47` hat eine unwirksame CC0-LICENSE entfernt —
+der Plan-Abschnitt „Lizenz-Hinweis zum Fork" in
+`A8RAWCONV_INTEGRATION_TODO.md` ist dadurch überholt.
+
+Aus demselben Plan sind **TA1, TA2, TA3, TA4-Code erledigt** (TA3 sogar
+über den Plan hinaus: `uft_atx.c` mit 726 statt geplanter ~400 Zeilen).
+**Offen:** TA5 (FM/MFM-Parser-Review) und Nachtrag 2 (Generator).

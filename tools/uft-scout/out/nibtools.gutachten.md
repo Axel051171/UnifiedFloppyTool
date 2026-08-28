@@ -1,3 +1,4 @@
+<!-- uebernommen: MF-634 -->
 # Gutachten: rittwage/nibtools (Zyklus 7)
 <!-- uebernommen: MF-634 (Commit 87ebfe30, docs/OPEN_ITEMS.md "Scout-Zyklus 7: nibtools" Z.1698ff; Berichtigung der eigenen Zahl dort Z.1902) -->
 Stand: 2026-08-28 · Messung: `work/nibtools.messung.json`

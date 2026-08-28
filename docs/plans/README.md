@@ -45,10 +45,29 @@ Dokument, auf das sich ein Baustein berufen kann?
 | XCopy-Übernahme | [`XCOPY_INTEGRATION_TODO.md`](../XCOPY_INTEGRATION_TODO.md) | **ja** |
 | FloppyControl | [`FLOPPYCONTROL.md`](FLOPPYCONTROL.md) | **ja** (seit MF-641) |
 | DiskFlashback | [`DISKFLASHBACK.md`](DISKFLASHBACK.md) | **ja** (seit MF-641) |
-| **FluxEngine** | — nur als **Controller** geführt (`CAPABILITIES.md:47`, `BENCH_PROTOCOL.md:51`); kein Plan-Inhalt | **nein** |
-| **FDOS** | — **im ganzen `docs/` nicht genannt** | **nein** |
+| FluxEngine (Software-Übernahmen) | [`FLUXENGINE.md`](FLUXENGINE.md) | **ja** (seit MF-643) |
+| FreeDOS-FORMAT | [`FDOS_FORMAT.md`](FDOS_FORMAT.md) | **ja** (seit MF-643) |
+| Tore-Bündel (Eigentümer-Entscheidungen) | [`TORE_BUENDEL.md`](TORE_BUENDEL.md) | — kein Anker, sondern eine Tagesordnung |
 
-### Warum für FluxEngine und FDOS keine Datei angelegt wurde
+**Das Register ist damit vollständig.** Alle zuvor fehlenden Pläne
+liegen im Baum; jeder Baustein kann sich auf ein auffindbares Dokument
+berufen.
+
+### Wie die letzten zwei entstanden sind
+
+Nicht durch Erfinden. Der Eigentümer hat die Chat-Artefakte geliefert,
+gegen HEAD `e97888fc` neu vermessen — und die Messung hat drei Dinge
+korrigiert, die aus dem Gedächtnis falsch gewesen wären: FluxEngine ist
+Zone **GRÜN** statt GELB, der VFS-Baustein gehört zu
+`PLAN_v4.1.7.md` Phase 1 (ein Baustein, ein Ort), der Sektor-Cache zu
+`DISKFLASHBACK.md`.
+
+Eine vierte Korrektur kam beim Einchecken dazu (MF-643): FluxEngine ist
+**GPL-2.0-only**, nicht „or later". Portierbar bleibt es — aber ein Port
+verengt unseren Baum von `or-later` auf `only`. Steht als Nachtrag in
+`FLUXENGINE.md`.
+
+### Warum das vorher zu Recht verweigert wurde
 
 Weil es nichts zu schreiben gäbe. Gemessen (`grep -rn <name> docs/`):
 
