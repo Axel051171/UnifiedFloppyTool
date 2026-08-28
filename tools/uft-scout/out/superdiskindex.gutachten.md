@@ -1,3 +1,4 @@
+<!-- stufe: 2 — mechanischer Entwurf, Tiefenpruefung ausstehend (MF-646) -->
 # Gutachten-Entwurf: superdiskindex
 Stand: 2026-08-26 · Messung: `superdiskindex.messung.json`
 (HEAD `52463ced6d`, letzter Commit 2020-05-07)

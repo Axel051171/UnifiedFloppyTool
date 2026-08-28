@@ -1,3 +1,4 @@
+<!-- uebernommen: MF-646 -->
 # Gutachten: jfdelnero/AdfOpus_HxC
 Stand: 2026-08-27 · Messung: `work/adfopus.messung.json`
 (HEAD `bf82094caa`, letzter Commit 2017-01-22 „bak files removed.")

@@ -1,3 +1,4 @@
+<!-- stufe: 2 — mechanischer Entwurf, Tiefenpruefung ausstehend (MF-646) -->
 # Gutachten-Entwurf: sector-cpc
 Stand: 2026-08-26 · Messung: `sector-cpc.messung.json`
 (HEAD `4b79ea5124`, letzter Commit 2021-02-06)

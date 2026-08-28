@@ -2338,3 +2338,79 @@ der Plan-Abschnitt „Lizenz-Hinweis zum Fork" in
 Aus demselben Plan sind **TA1, TA2, TA3, TA4-Code erledigt** (TA3 sogar
 über den Plan hinaus: `uft_atx.c` mit 726 statt geplanter ~400 Zeilen).
 **Offen:** TA5 (FM/MFM-Parser-Review) und Nachtrag 2 (Generator).
+
+---
+
+## Vier liegengebliebene Gutachten abgearbeitet — zwei Befunde, zwei Entwürfe (MF-646, 2026-08-28)
+
+Die Ratenbremse zählte vier Gutachten ohne Übernahme-Marke. Nachgesehen:
+**zwei** davon sind vollständig und tragen Befunde, **zwei** sind
+mechanische Entwürfe, deren Tiefenprüfung nie lief.
+
+### `adfopus_hxc` — drei Befunde, einer davon ein `LIZ-1`-Fall
+
+Zone **GRÜN** für ADFOpus/ADFlib/fdi2raw. Drei Ergebnisse:
+
+1. **Der AmigaDOS-Encoder ist dort nicht.** Die `MF-539`-Lücke (`ADF→HFE`
+   lehnt ab, weil uns ein Encoder fehlt) schließt dieses Repo nicht —
+   AdfOpus ruft libhxcfe nur als DLL. **Folgeziel benannt:**
+   `jfdelnero/HxCFloppyEmulator` (libhxcfe-Quelltext: Amiga-MFM-Encoder
+   und HFE-Writer aus einem Haus) sowie `keirf/disk-utilities` gezielt
+   auf die **Encoder**-Seite — die Negativliste kennt bisher nur den
+   Decoder.
+2. **Als drittes ADF-Oracle untauglich** — ADFlib, wieder dieselbe Hand.
+   Bestätigt die Zirkularitätsregel ein drittes Mal.
+3. **`uft_dms.c` ist ein 1940-Zeilen-Port ohne Abgleich** gegen die
+   autoritative Quelle, `dms` steht auf **T3**. Und: **kein SPDX-Tag**;
+   die Public-Domain-Behauptung stützt sich allein auf den
+   xDMS-Datei-Header. Das ist ein **`LIZ-1`-Fall** — Klasse B, fremde
+   Codebasis, Lizenz nur aus einem Datei-Header statt aus einer
+   Lizenzdatei. Debians `xdms`-copyright wäre der Zweitbeleg.
+
+   Kennzahl: **ungeprüfte Formate runter** (`dms` T3→T1b über einen
+   xDMS-Differenzlauf) — moratoriumskonform, weil Hebung, nicht neues
+   Format.
+
+### `hxcfe_amiga_copy_utility` — ein Fixture, das einen toten Zweig belebt
+
+Zone **PRÜFEN**. Der Fund ist ein HxC-**natives** HFE-v1-Abbild, und
+sein Wert liegt in einem Feldunterschied, den ich nachgemessen habe:
+
+| Feld | unser `gw_amigados.hfe` | das HxC-native |
+|---|---|---|
+| `track_encoding` | **0xFF (unknown)** | **0x01 (AMIGA_MFM)** |
+| `interface_mode` | **0xFF (unknown)** | 0x04 |
+| Spuren | 80 | 84 |
+
+Selbst nachgeprüft am Korpus-Abbild (Bytes 0–17): `track_encoding` und
+`interface_mode` stehen beide auf `0xFF`. **Folge:** der Zweig
+`case HFE_ENC_AMIGA_MFM:` in `src/formats/hfe/uft_hfe.c:137` wird von
+unserem einzigen HFE-Fixture **nie durchlaufen**. Wir haben eine
+Abbildung, die niemand prüft.
+
+Kennzahl: **ungeprüfte Formate runter** (`hfe`) — ein Fixture, das einen
+bestehenden Codepfad erstmals ausführt, ist billiger als jede neue
+Fähigkeit. Lizenz des Fixtures ist Zone PRÜFEN und vor Übernahme zu
+klären (Regel aus MF-630: ein nicht verteilbares Fixture vergiftet den
+Korpus).
+
+### `sector-cpc` und `superdiskindex` — Entwürfe, keine Gutachten
+
+Beide sind die **mechanische Ausgabe** von `gutachten.py`: Messwerte,
+Lizenzzone, Inventar-Abgleich — und eine unausgefüllte
+UNGEKLÄRT-Liste. Die Tiefenprüfung, die Kategorie, Einhängepunkt und
+Vorschlag festlegt, **lief nie**.
+
+* `sector-cpc` (39 Zeilen): **Zone ROT** — keine Lizenzdatei. Damit ist
+  ohnehin nur Verhaltens-Spec und Oracle möglich.
+* `superdiskindex` (61 Zeilen): **Zone GRÜN**.
+
+Sie bekommen **keine** Übernahme-Marke — es gibt nichts zu übernehmen.
+Sie sind als **offene Zyklen** gekennzeichnet und warten auf ihre
+Stufe 3, nicht auf eine Entscheidung.
+
+> **Werkzeug-Befund:** die Ratenbremse zählt Entwürfe wie fertige
+> Gutachten. Das ist nicht falsch — ein Entwurf ist unerledigte Arbeit —
+> aber der Zähler unterscheidet nicht zwischen „wartet auf den
+> Eigentümer" und „wartet auf die eigene Stufe 3". Ein Feld im Kopf
+> (`<!-- stufe: 2 -->`) würde das trennen, ohne die Bremse zu lockern.
