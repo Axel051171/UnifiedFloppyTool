@@ -1315,6 +1315,12 @@ foreach(test_source ${TEST_SOURCES})
     elseif(${test_name} STREQUAL "test_d88_error_marks")
         # D88 DDAM/FDC-status disk-error marking + offset fix (Phase-4 WP5, MF-336)
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/d88/uft_d88.c)
+    elseif(${test_name} STREQUAL "test_d88_header_variants")
+        # 672-Byte-Kopf (160 Spureintraege) wurde vom Erkenner abgewiesen (MF-625);
+        # beide Geschwister, weil die feste Schranke 0x2B0 in beiden stand
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/formats/d88/uft_d88.c
+            ${CMAKE_SOURCE_DIR}/src/formats/d77/uft_d77.c)
     elseif(${test_name} STREQUAL "test_d64_write_roundtrip")
         # D64 write_track round-trip; confirms the systemic data_len fix on the CBM family (MF-323)
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/d64/uft_d64_plugin.c)

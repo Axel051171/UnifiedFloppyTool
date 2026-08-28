@@ -1038,3 +1038,82 @@ Untergrenze, keine Bestandsaufnahme.
 **Offen (`ORPH-2`):** Der Verwaisten-Detektor sollte Deklarationen von
 Aufrufen trennen. Bis dahin gilt die Grundlinie als unvollständig, und
 das steht hier, statt als stille Annahme.
+
+---
+
+## SCOUT-5 zweiter Schritt: die Herkunftsfrage hat einen Fehler ausgegraben (MF-625, 2026-08-28)
+
+Der Auftrag war ein Ähnlichkeitsvergleich gegen die üblichen Verdächtigen,
+nachdem Schritt 1 in `uft_d77.c`, `uft_d88.c` und `uft_d88_parser_v2.c`
+**keine einzige Herkunftsangabe** gefunden hatte.
+
+### Das Ergebnis zur Herkunft
+
+**Kein Anhaltspunkt für abgeschriebenen Code — und die Frage war falsch
+gestellt.** Verglichen wurde gegen MAMEs `src/lib/formats/d88_dsk.cpp`:
+
+* MAME ist **BSD-3-Clause** (`copyright-holders: Miodrag Milanovic` /
+  `Olivier Galibert`), nicht GPL. Selbst eine Ableitung wäre für dieses
+  Projekt zulässig und bräuchte nur Attribution — der schlimmste Fall ist
+  also deutlich harmloser als angenommen.
+* Strukturell verschieden: MAME hat `D88_HEADER_LEN`, `d88_dsk_identify`,
+  eine Klasse `d88_format`; wir haben eine Tabellenform im Kopfkommentar
+  und eine Konfidenz-Staffelung, die es dort nicht gibt.
+* Die übereinstimmenden Zahlen (`0x2B0`, Medium 00/10/20/30/40, Dichte
+  00/40) stammen aus einer **öffentlichen Spezifikation** —
+  <https://www.pc98.org/project/doc/d88.html>, dieselbe Quelle, die schon
+  MF-336 entschieden hat. Übereinstimmung mit einer publizierten Spec ist
+  kein Indiz für Abschrift; sie ist das erwartete Ergebnis.
+
+Damit ist der Fall von „unentscheidbar" auf „kein positiver Befund gegen
+eine benannte Vergleichsquelle" gehoben. Die Neuimplementierung, die als
+Ausweichweg im Raum stand, ist gegenstandslos.
+
+### Was der Vergleich stattdessen fand
+
+Die Spec nennt **zwei** Kopfgrößen: „Total Size: 688 **or 672** bytes",
+164 bzw. 160 Spureinträge. MAME führt dasselbe Paar („der erste
+Spur-Versatz muss 0x02A0 oder 0x02B0 sein").
+
+**Unsere beiden Erkenner kannten nur 688.** `uft_d88.c:53` und
+`uft_d77.c:84` prüften jeden Spur-Versatz gegen die feste Untergrenze
+`0x2B0`. Ein Abbild mit 160-Eintrag-Kopf hat seinen ersten Versatz bei
+`0x2A0` — acht Byte darunter. Folge: **`probe()` gab `false` zurück, und
+`uft_disk_open()` behandelte eine vollständig gültige Datei als
+unbekanntes Format.** Kein Teilverlust, kein stiller Fehler: die Tür ging
+gar nicht auf.
+
+Dazu las `d77_open()` alle 164 Einträge auch dann, wenn nur 160 existieren
+— die letzten vier waren der Sektorkopf der ersten Spur, gelesen als
+Versätze, was `track_count` auf 164 setzte und dem Aufrufer eine
+82-Zylinder-Geometrie für eine 80-Zylinder-Diskette gab.
+
+### Wie die Fassung unterschieden wird — erzwungen, nicht geraten
+
+Die Kopfgröße steht nirgends in der Datei. Sie folgt aber aus der Anordnung:
+Einträge 160..163 lägen bei `0x2A0..0x2AF`. Beginnen dort Spurdaten, können
+dieselben Bytes nicht zugleich Tabelleneinträge sein. Der **kleinste
+Nicht-Null-Versatz unter den ersten 160** entscheidet deshalb exakt. 160
+Einträge sind eine volle 80-Zylinder-Diskette mit zwei Köpfen — die kürzere
+Fassung verliert keine erreichbare Spur.
+
+### Der Rotbeweis war beim ersten Anlauf grün — und damit wertlos
+
+`tests/test_d88_header_variants.c` rief zuerst nur `plug->open()`. Vier
+Prüfungen, alle grün, Fehler unverändert vorhanden: `open()` liest den Kopf
+selbst und kommt an der Schranke gar nicht vorbei. Erst über `plug->probe()`
+— das Tor, an dem die Erkennung wirklich entscheidet — fielen genau die
+beiden 672er-Fälle um, die fallen mussten. Ein Beweis, der die fragliche
+Stelle nicht durchläuft, beweist nichts; das steht jetzt im Testkopf.
+
+### Ertrag
+
+`d77` steigt **T3 → T2** (Test + benannte Spec-Quelle in
+`docs/spec_verification.json`). Damit T2=19, T3=**55** von 88 — nachgezogen
+in README und CLAUDE.md, weil das Konsistenz-Tor die Abweichung selbst
+gemeldet hat.
+
+**Offen:** `src/formats/d88/uft_d88_parser_v2.c` trägt dieselben festen 164
+Einträge, hat aber kein Plugin und keinen Aufrufer. Er fällt damit unter die
+Verwaisten-Regel, nicht unter diesen Fix — geprüft wird er hier nicht, und
+verdrahtet wird er nicht, damit er benutzt aussieht.

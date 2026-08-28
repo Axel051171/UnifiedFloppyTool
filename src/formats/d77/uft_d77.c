@@ -36,7 +36,9 @@
  * Constants
  * ============================================================================ */
 
-#define D77_HEADER_SIZE     0x2B0   /* 688 bytes */
+#define D77_HEADER_SIZE     0x2B0   /* 688 bytes, 164 track entries */
+#define D77_HEADER_MIN      0x2A0   /* 672 bytes, 160 entries (MF-625) */
+#define D77_TRACKS_160      160     /* 80 cylinders x 2 heads */
 #define D77_MAX_TRACKS      164     /* 82 cylinders x 2 heads */
 #define D77_SEC_HDR_SIZE    16
 #define D77_MAX_SECTOR_SIZE 8192
@@ -63,10 +65,29 @@ typedef struct {
  * probe
  * ============================================================================ */
 
+/**
+ * How many track-table entries this image has: 160 or 164 (MF-625).
+ *
+ * The variant is not stored, but it is forced by the data rather than
+ * guessed: entries 160..163 would occupy 0x2A0..0x2AF, so if a track's data
+ * begins at 0x2A0 those sixteen bytes cannot also be table entries. 160
+ * entries is a full 80-cylinder double-sided disk, so the shorter header
+ * loses no reachable track.
+ */
+static int d77_track_entries(const uint8_t *tbl_base)
+{
+    uint32_t lowest = 0;
+    for (int i = 0; i < D77_TRACKS_160; i++) {
+        uint32_t o = uft_read_le32(tbl_base + i * 4);
+        if (o != 0 && (lowest == 0 || o < lowest)) lowest = o;
+    }
+    return (lowest == D77_HEADER_MIN) ? D77_TRACKS_160 : D77_MAX_TRACKS;
+}
+
 bool d77_probe(const uint8_t *data, size_t size, size_t file_size,
                int *confidence)
 {
-    if (size < D77_HEADER_SIZE) return false;
+    if (size < D77_HEADER_MIN) return false;
 
     uint32_t disk_size = uft_read_le32(data + 0x1C);
     uint8_t media = data[0x1B];
@@ -79,9 +100,16 @@ bool d77_probe(const uint8_t *data, size_t size, size_t file_size,
         media != D77_MEDIA_2HD)
         return false;
 
-    /* First track offset should point past header */
+    /* First track offset should point past header.
+     *
+     * MF-625: the bound was D77_HEADER_SIZE (0x2B0), which rejected every
+     * image written with the 160-entry table. D77 shares D88's layout, and
+     * that layout has two documented header sizes — 688 bytes with 164 track
+     * entries, 672 with 160 (<https://www.pc98.org/project/doc/d88.html>;
+     * MAME d88_dsk.cpp names the same pair, "0x02A0 or 0x02B0"). The lower
+     * bound is therefore the smaller of the two. */
     uint32_t first_off = uft_read_le32(data + 0x20);
-    if (first_off < D77_HEADER_SIZE || first_off >= disk_size)
+    if (first_off < D77_HEADER_MIN || first_off >= disk_size)
         return false;
 
     *confidence = 85;
@@ -115,9 +143,16 @@ static uft_error_t d77_open(uft_disk_t *disk, const char *path,
     pdata->media_type = hdr[0x1B];
     pdata->disk_size = uft_read_le32(hdr + 0x1C);
 
-    /* Read track offset table */
+    /* Read track offset table.
+     *
+     * MF-625: only the entries this image actually has. On a 672-byte header
+     * the last four of the 164 would be the first track's sector header read
+     * as offsets — which put track_count at 164 and handed the caller an
+     * 82-cylinder geometry for an 80-cylinder disk. The remaining entries
+     * stay 0 = unformatted, which d77_read_track() already refuses. */
+    const int entries = d77_track_entries(hdr + 0x20);
     uint8_t track_count = 0;
-    for (int i = 0; i < D77_MAX_TRACKS; i++) {
+    for (int i = 0; i < entries; i++) {
         pdata->track_offsets[i] = uft_read_le32(hdr + 0x20 + i * 4);
         if (pdata->track_offsets[i] != 0)
             track_count = (uint8_t)(i + 1);
@@ -133,7 +168,7 @@ static uft_error_t d77_open(uft_disk_t *disk, const char *path,
     uint16_t sector_size = 256;
     uint16_t sectors_per_track = 16;
 
-    if (pdata->track_offsets[0] >= D77_HEADER_SIZE) {
+    if (pdata->track_offsets[0] >= D77_HEADER_MIN) {
         uint8_t sec_hdr[D77_SEC_HDR_SIZE];
         if (fseek(f, (long)pdata->track_offsets[0], SEEK_SET) == 0 &&
             fread(sec_hdr, 1, D77_SEC_HDR_SIZE, f) == D77_SEC_HDR_SIZE) {

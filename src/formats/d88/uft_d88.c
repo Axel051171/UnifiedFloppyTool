@@ -7,6 +7,34 @@
 
 #define D88_HEADER 0x2B0
 
+/* MF-625: the layout is documented with TWO header sizes, and this reader
+ * accepted only one. <https://www.pc98.org/project/doc/d88.html> — "Total
+ * Size: 688 or 672 bytes"; the track table at 0x20 holds 164 entries
+ * (modern) or 160 (older tools). MAME's d88_dsk.cpp names the same pair:
+ * the first track offset must be 0x02A0 or 0x02B0.
+ *
+ * The variant is not stored anywhere, but it is FORCED by the data rather
+ * than guessed: entries 160..163 would occupy 0x2A0..0x2AF, so if a track's
+ * data begins at 0x2A0 those sixteen bytes cannot also be table entries.
+ * The smallest non-zero offset among the first 160 entries therefore decides
+ * it exactly. 160 entries is a full 80-cylinder double-sided disk, so a
+ * 672-byte header loses no reachable track. */
+#define D88_HEADER_160 0x2A0
+#define D88_TRACKS_160 160
+#define D88_TRACKS_164 164
+
+/** How many track-table entries this image has: 160 or 164, decided by the
+ *  lowest non-zero offset among the entries that exist in BOTH variants. */
+static int d88_track_entries(const uint8_t* tbl_base)
+{
+    uint32_t lowest = 0;
+    for (int i = 0; i < D88_TRACKS_160; i++) {
+        uint32_t o = uft_read_le32(tbl_base + i * 4);
+        if (o != 0 && (lowest == 0 || o < lowest)) lowest = o;
+    }
+    return (lowest == D88_HEADER_160) ? D88_TRACKS_160 : D88_TRACKS_164;
+}
+
 typedef struct { FILE* file; uint8_t media; uint32_t track_off[164]; } d88_data_t;
 
 /* MF-447: this probe claimed EVERY file in tests/corpus_free at confidence 90.
@@ -37,21 +65,26 @@ bool d88_probe(const uint8_t* data, size_t size, size_t file_size, int* confiden
     const uint8_t  media = data[0x1B];
     const uint8_t  prot  = data[0x1A];
 
-    /* A disk cannot be smaller than its own header, and d88_open() reads
-     * D88_HEADER bytes before doing anything else. */
-    if (dsz < D88_HEADER || dsz > file_size) return false;
+    /* A disk cannot be smaller than its own header. The lower bound is the
+     * SMALLER of the two documented header sizes (MF-625) — measuring against
+     * 0x2B0 rejected every 160-entry image outright. */
+    if (dsz < D88_HEADER_160 || dsz > file_size) return false;
     if (media != 0x00 && media != 0x10 && media != 0x20 &&
         media != 0x30 && media != 0x40) return false;
+
+    const int entries = d88_track_entries(data + 0x20);
+    const uint32_t hdr_len = (entries == D88_TRACKS_160) ? D88_HEADER_160
+                                                        : D88_HEADER;
 
     /* The track offset table is the part the reader uses. Every non-zero entry
      * must point inside the image and past the header, and the used entries
      * must ascend — d88_read_track() seeks straight to track_off[idx]. */
     uint32_t prev = 0;
     int used = 0;
-    for (int i = 0; i < 164; i++) {
+    for (int i = 0; i < entries; i++) {
         uint32_t off = uft_read_le32(data + 0x20 + i * 4);
         if (off == 0) continue;                 /* unformatted track */
-        if (off < D88_HEADER || off >= dsz) return false;
+        if (off < hdr_len || off >= dsz) return false;
         if (off <= prev) return false;          /* tracks do not overlap */
         prev = off;
         used++;
@@ -87,7 +120,11 @@ static uft_error_t d88_open(uft_disk_t* disk, const char* path, bool read_only) 
     if (!p) { fclose(f); return UFT_ERROR_NO_MEMORY; }
     p->file = f;
     p->media = hdr[0x1B];
-    for (int i = 0; i < 164; i++) p->track_off[i] = uft_read_le32(&hdr[0x20 + i*4]);
+    /* Only the entries this image actually has (MF-625). On a 160-entry
+     * image the remaining four stay 0 = unformatted, so d88_read_track()
+     * refuses them instead of seeking into the first track's sector header. */
+    const int entries = d88_track_entries(&hdr[0x20]);
+    for (int i = 0; i < entries; i++) p->track_off[i] = uft_read_le32(&hdr[0x20 + i*4]);
     
     disk->plugin_data = p;
     disk->geometry.cylinders = (p->media == 0x20) ? 77 : 80;

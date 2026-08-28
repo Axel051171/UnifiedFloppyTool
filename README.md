@@ -121,9 +121,10 @@ not made green. The reference image is on the procurement list.
 **What this release still cannot do** — this list is part of the release,
 not a footnote:
 
-- **56 of 88 tier-tracked formats are unverified (T3).** Proven: T1=2,
-  T1b=12, T2=18. (Was 57/17 — `mfi` moved up in v4.1.7 after a real
-  parser bug was fixed against MAME's `mfi_dsk.h`.)
+- **55 of 88 tier-tracked formats are unverified (T3).** Proven: T1=2,
+  T1b=12, T2=19. (Was 57/17 — `mfi` and then `d77` moved up in v4.1.7,
+  each after a real parser bug was fixed against a named reference:
+  MAME's `mfi_dsk.h`, and the pc98.org D88 spec plus MAME's `d88_dsk`.)
 - **12 of 44 conversion paths are offered**, 4 of them lossless *with a
   measurement*. The rest the preflight gate refuses as UNTESTED — on
   purpose.
@@ -300,7 +301,7 @@ verification).
 **Honest verification status** (script-generated, see
 [`docs/VERIFICATION_TIERS.md`](docs/VERIFICATION_TIERS.md) for the
 per-format table and [`docs/VERIFICATION_PLAN.md`](docs/VERIFICATION_PLAN.md)
-for the tier definitions): **T1=2, T1b=12, T2=18, T3=56** of 88.
+for the tier definitions): **T1=2, T1b=12, T2=19, T3=55** of 88.
 
 - **T1** (real reference image): FDI — a real 1994 TR-DOS disk magazine
   (83-cylinder, partially formatted last track; image local-only for

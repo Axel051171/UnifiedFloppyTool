@@ -10,8 +10,8 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 |---|---|
 | T1 | 2 |
 | T1b | 12 |
-| T2 | 18 |
-| T3 | 56 |
+| T2 | 19 |
+| T3 | 55 |
 | **gesamt** | **88** |
 
 ## Pro Format
@@ -36,7 +36,8 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 | `akai_s900` | **T2** | `test_akai_s900_plugin` | akaiutil (kmi9000) geometry: DD 5x1024/819200, HD 10x1024/1638400 | MF-348 | — |
 | `atx` | **T2** | `test_atx_interleave_positions`, `test_atx_layout`, `test_atx_roundtrip`, `test_format_probe_fuzz`, `test_plugin_probe_real` | a8rawconv 0.95 (GPL-2-or-later, Referenz-Orakel in src/a8rawconv/, wird nicht gebaut): src/a8rawconv/diskatx.cpp:3-62 (ATXFileHeader/ATXTrackHeader/ATXSectorHeader/ATXTrackChunkHeader mit static_assert auf 48 bzw. 32 Byte), :64-190 read_atx, :216-416 write_atx. Der Schreiber ist hier die staerkere Quelle: er legt Feld fuer Feld fest, was der Leser konsumiert. | MF-467 — Datei-, Spur-, Chunk- und Sektorkopf Feld fuer Feld verglichen. Vier Fehler gefunden und behoben, zwei davon toedlich: (1) Spurkopf-Flags standen bei uns auf 0x14, richtig ist 0x10; (2) der Chunk-Offset stand auf 0x18, richtig ist 0x14 — dadurch kam der Offset aus Fuellbytes, also 0, der Chunk-Scan begann auf dem Spurkopf selbst, fand keine Sektorliste und lieferte eine leere Spur. JEDE ATX-Datei las sich als leere Diskette, ohne Fehlermeldung. (3) Die Dichte wurde von 0x13 gelesen (Fuellbyte) statt von 0x12. (4) Der Leser erwartete eine Tabelle von LE32-Spur-Offsets und eine Spurzahl im Dateikopf bei 0x14 — beides gibt es im Format nicht: 0x14 ist mImageId, und die Spuraufzeichnungen stehen hintereinander und werden der Reihe nach abgelaufen (read_atx:75-101, write_atx:300-317). Neu belegt uebernommen: FDC-Status-Semantik (0x18 zusammen = Adressfeld-CRC, 0x08 allein = Datenfeld-CRC, 0x10 = kein Datenfeld, 0x20 = Deleted-Mark 0xF8, 0x04|0x02 = langer Sektor, 0x40 = weak), doppelte Sektornummern als Phantomsektoren (UFT_SECTOR_DUPLICATE), und die Zuordnung der Weak-Chunks ueber den Index in der SEKTORLISTE statt ueber die Reihenfolge der erzeugten Sektoren. Abgesichert mit tests/test_atx_layout.c gegen ein bytegenau nach diskatx.cpp gebautes Abbild; Rot-Probe: alle drei Faelle fallen auf der alten Fassung um, der erste schon an der Spurzahl. NICHT verifiziert: Verhalten an einem realen ATX-Abbild — keines im Korpus, daher T2 und nicht T1. | — |
 | `cqm` | **T2** | `test_cqm_layout`, `test_format_probe_fuzz`, `test_plugin_probe_real` | Primaer: "CopyQM Format (*.cqm) — Disk image layout", RPN, 2023-03-31, https://rio.early8bitz.de/cqm/cqm-format.pdf (abgeleitet aus LibDsk drvqm.c/crctable.c). Gegengelesen: SAMdisk 4.0 (MIT), src/samdisk/cqm.cpp:10-41 CQM_HEADER + :60-79 CRC + :129-146 RLE. | MF-461 — 133-Byte-Kopf Feld fuer Feld verglichen; beide Quellen stimmen ueberall ueberein, und die Primaerquelle sagt ausdruecklich, dass der Block 0x03..0x1B der BPB einer DOS-Diskette ist (was die Feldfolge dort unabhaengig bestaetigt). Der bisherige Leser las ein Layout, das in KEINER der beiden Quellen vorkommt und auch kein BPB ist: Sektorgroesse als 128<<n-Code aus dem Einzelbyte 0x03 statt als LE16-Byteanzahl aus 0x03,0x04; Sektoren/Spur aus 0x08 (das ist die FAT-Kopienzahl) statt aus 0x10,0x11; Koepfe aus 0x09 (Verzeichniseintraege) statt aus 0x12,0x13; Zylinder aus 0x0F (High-Byte von Sektoren/FAT) statt aus 0x5A; Kommentarlaenge aus 0x10,0x11 statt aus 0x6F,0x70; Datenbeginn bei Offset 18 statt bei 133+Kommentarlaenge. Dazu war die RLE-Polaritaet invertiert (positive Zahl = Wiederholung statt Literalfolge). Kopfpruefsumme (Summe ueber alle 133 Byte == 0 mod 256), Daten-CRC (CRC-32 reflektiert mit CopyQMs 6-Bit-Tabellenquirk &0x3f), Sektorbasis 0x71 und Fuellbyte nach Blind-Modus 0x58 fehlten ganz. Alles ersetzt und mit tests/test_cqm_layout.c gegen ein bytegenau nach Spec gebautes Abbild abgesichert; Rot-Probe: alle fuenf Faelle fallen auf der alten Fassung um. | — |
-| `d88` | **T2** | `test_d88_error_marks`, `test_format_probe_fuzz`, `test_plugin_probe_real` | pc98.org D88 + MAME d88_dsk (DDAM @+07, FDC status @+08) | MF-336 | — |
+| `d77` | **T2** | `test_d88_header_variants` | pc98.org D88 (D77 teilt das Layout) + MAME d88_dsk — Kopf 688 ODER 672 Byte, Spurtabelle 164 bzw. 160 Eintraege, erster Versatz 0x2B0 oder 0x2A0 | MF-625 | — |
+| `d88` | **T2** | `test_d88_error_marks`, `test_d88_header_variants`, `test_format_probe_fuzz`, `test_plugin_probe_real` | pc98.org D88 + MAME d88_dsk (DDAM @+07, FDC status @+08) | MF-336 | — |
 | `dc42` | **T2** | `test_dc42_checksum_roundtrip`, `test_format_probe_fuzz`, `test_plugin_probe_real` | DiscFerret/Mini-vMac DC42 checksum (BE16 word add, ROR32 1) | MF-324 | — |
 | `dmk` | **T2** | `test_dmk_crc` | David Keil DMK spec (openMSX DMK-Format-Details) + WD177x CRC-CCITT pinned to check value 0x29B1 | MF-353 | — |
 | `dsk_cpc` | **T2** | `test_edsk_error_marks`, `test_format_probe_fuzz`, `test_plugin_probe_real` | EDSK uPD765 ST1/ST2 status-bit semantics (bit5 CRC, ST2 bit6 deleted); MF-332 verified the dsk_cpc implementation (the separate 'edsk' plugin in amstrad/ remains untested) | MF-332 | — |
@@ -59,7 +60,6 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 | `cfi` | **T3** | — | — | — | — |
 | `cpm` | **T3** | `test_cpm_fs` | — | — | — |
 | `d13` | **T3** | — | — | — | — |
-| `d77` | **T3** | — | — | — | — |
 | `dcm` | **T3** | — | — | — | — |
 | `dim` | **T3** | — | — | — | — |
 | `dim_atari` | **T3** | — | — | — | — |

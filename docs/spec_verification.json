@@ -8,6 +8,14 @@
   "spec_source": "akaiutil (kmi9000) geometry: DD 5x1024/819200, HD 10x1024/1638400",
   "evidence": "MF-348"
  },
+ "atx": {
+  "spec_source": "a8rawconv 0.95 (GPL-2-or-later, Referenz-Orakel in src/a8rawconv/, wird nicht gebaut): src/a8rawconv/diskatx.cpp:3-62 (ATXFileHeader/ATXTrackHeader/ATXSectorHeader/ATXTrackChunkHeader mit static_assert auf 48 bzw. 32 Byte), :64-190 read_atx, :216-416 write_atx. Der Schreiber ist hier die staerkere Quelle: er legt Feld fuer Feld fest, was der Leser konsumiert.",
+  "evidence": "MF-467 — Datei-, Spur-, Chunk- und Sektorkopf Feld fuer Feld verglichen. Vier Fehler gefunden und behoben, zwei davon toedlich: (1) Spurkopf-Flags standen bei uns auf 0x14, richtig ist 0x10; (2) der Chunk-Offset stand auf 0x18, richtig ist 0x14 — dadurch kam der Offset aus Fuellbytes, also 0, der Chunk-Scan begann auf dem Spurkopf selbst, fand keine Sektorliste und lieferte eine leere Spur. JEDE ATX-Datei las sich als leere Diskette, ohne Fehlermeldung. (3) Die Dichte wurde von 0x13 gelesen (Fuellbyte) statt von 0x12. (4) Der Leser erwartete eine Tabelle von LE32-Spur-Offsets und eine Spurzahl im Dateikopf bei 0x14 — beides gibt es im Format nicht: 0x14 ist mImageId, und die Spuraufzeichnungen stehen hintereinander und werden der Reihe nach abgelaufen (read_atx:75-101, write_atx:300-317). Neu belegt uebernommen: FDC-Status-Semantik (0x18 zusammen = Adressfeld-CRC, 0x08 allein = Datenfeld-CRC, 0x10 = kein Datenfeld, 0x20 = Deleted-Mark 0xF8, 0x04|0x02 = langer Sektor, 0x40 = weak), doppelte Sektornummern als Phantomsektoren (UFT_SECTOR_DUPLICATE), und die Zuordnung der Weak-Chunks ueber den Index in der SEKTORLISTE statt ueber die Reihenfolge der erzeugten Sektoren. Abgesichert mit tests/test_atx_layout.c gegen ein bytegenau nach diskatx.cpp gebautes Abbild; Rot-Probe: alle drei Faelle fallen auf der alten Fassung um, der erste schon an der Spurzahl. NICHT verifiziert: Verhalten an einem realen ATX-Abbild — keines im Korpus, daher T2 und nicht T1."
+ },
+ "cqm": {
+  "spec_source": "Primaer: \"CopyQM Format (*.cqm) — Disk image layout\", RPN, 2023-03-31, https://rio.early8bitz.de/cqm/cqm-format.pdf (abgeleitet aus LibDsk drvqm.c/crctable.c). Gegengelesen: SAMdisk 4.0 (MIT), src/samdisk/cqm.cpp:10-41 CQM_HEADER + :60-79 CRC + :129-146 RLE.",
+  "evidence": "MF-461 — 133-Byte-Kopf Feld fuer Feld verglichen; beide Quellen stimmen ueberall ueberein, und die Primaerquelle sagt ausdruecklich, dass der Block 0x03..0x1B der BPB einer DOS-Diskette ist (was die Feldfolge dort unabhaengig bestaetigt). Der bisherige Leser las ein Layout, das in KEINER der beiden Quellen vorkommt und auch kein BPB ist: Sektorgroesse als 128<<n-Code aus dem Einzelbyte 0x03 statt als LE16-Byteanzahl aus 0x03,0x04; Sektoren/Spur aus 0x08 (das ist die FAT-Kopienzahl) statt aus 0x10,0x11; Koepfe aus 0x09 (Verzeichniseintraege) statt aus 0x12,0x13; Zylinder aus 0x0F (High-Byte von Sektoren/FAT) statt aus 0x5A; Kommentarlaenge aus 0x10,0x11 statt aus 0x6F,0x70; Datenbeginn bei Offset 18 statt bei 133+Kommentarlaenge. Dazu war die RLE-Polaritaet invertiert (positive Zahl = Wiederholung statt Literalfolge). Kopfpruefsumme (Summe ueber alle 133 Byte == 0 mod 256), Daten-CRC (CRC-32 reflektiert mit CopyQMs 6-Bit-Tabellenquirk &0x3f), Sektorbasis 0x71 und Fuellbyte nach Blind-Modus 0x58 fehlten ganz. Alles ersetzt und mit tests/test_cqm_layout.c gegen ein bytegenau nach Spec gebautes Abbild abgesichert; Rot-Probe: alle fuenf Faelle fallen auf der alten Fassung um."
+ },
  "d64": {
   "spec_source": "VICE D64 sizes incl. error-block trailer + 40/42-track variants",
   "evidence": "MF-333, MF-350"
@@ -15,6 +23,10 @@
  "d67": {
   "spec_source": "VICE/Schepers D67 690-block geometry (176640 bytes)",
   "evidence": "MF-314"
+ },
+ "d77": {
+  "spec_source": "pc98.org D88 (D77 teilt das Layout) + MAME d88_dsk — Kopf 688 ODER 672 Byte, Spurtabelle 164 bzw. 160 Eintraege, erster Versatz 0x2B0 oder 0x2A0",
+  "evidence": "MF-625"
  },
  "d88": {
   "spec_source": "pc98.org D88 + MAME d88_dsk (DDAM @+07, FDC status @+08)",
@@ -52,6 +64,14 @@
   "spec_source": "bitsavers Lisa Twiggy ZCAV zone table (46 tracks/side, 22..15 spt)",
   "evidence": "MF-349"
  },
+ "mfi": {
+  "spec_source": "MAME, src/lib/formats/mfi_dsk.h (struct header / struct entry, RESOLUTION_SHIFT = 30, CYLINDER_MASK = 0x3fffffff) und src/lib/formats/mfi_dsk.cpp:81-82 (sign[16] = \"MAMEFLOPPYIMAGE\", sign_old[16] = \"MESSFLOPPYIMAGE\", je einschliesslich der abschliessenden Null), identify() vergleicht alle 16 Byte, load() liest die Eintragstabelle ab sizeof(header) = 0x20. Beide Dateien BSD-3-Clause per SPDX-Header; kein Code uebernommen, nur das Layout verglichen.",
+  "evidence": "MF-614 — gefunden im vierten Scout-Zyklus. Der Leser prueste ACHT Byte (\"MAMEFLOP\"), ein Praefix der echten Kennung: er wies echte MAME-Dateien deshalb nicht ab, sondern nahm sie AN und las sie falsch. Die Spurtabelle las er ab 0x10 (sein eigener Kopfkommentar beschrieb das so) — dort liegen cyl_count und head_count; die Eintraege beginnen bei 0x20. form_factor holte er von 0x08, also aus der Kennung. Die Eintragszahl leitete er aus der Dateigroesse ab statt aus (cyl_count << resolution) * head_count. Alle vier berichtigt; zusaetzlich uebernommen: die Schranken aus identify() (Zylinder <= 84, Aufloesung < 3, Koepfe <= 2). Abgesichert mit tests/test_mfi_layout.c gegen ein bytegenau nach mfi_dsk.h gebautes Abbild; Rotprobe: beide Zusicherungen fallen auf der alten Fassung, die erste schon daran, dass ein verfaelschtes Byte 8 noch als gueltig durchging. NICHT verifiziert: die Spurnutzlast. Das Fixture traegt Kopf und Eintragstabelle, keine echten MFI-Zellendaten — dafuer braucht es eine reale Datei, und im Korpus liegt keine. Deshalb T2 und nicht T1."
+ },
+ "msa": {
+  "spec_source": "SAMdisk 4.0 (MIT), src/samdisk/msa.cpp:9-16 MSA_HEADER + :38-44 Plausibilitaet",
+  "evidence": "MF-460 — 10-Byte-Kopf Feld fuer Feld verglichen, alle big-endian: Magic 0x0E0F, Sektoren/Spur, Seiten MINUS EINS, Startspur, Endspur. Der +1-Aufschlag bei den Seiten stand nicht in unserer Beschreibung, wird vom Code aber richtig gerechnet (wie samdisk/msa.cpp:44). Die Probe pruefte nur das Magic und meldete 95; sie prueft jetzt zusaetzlich, was msa_plugin_open() ohnehin verlangt, plus SAMdisks Nullbyte-Pruefung der oberen Feldbytes."
+ },
  "nfd": {
   "spec_source": "pc98.org nfdr0/nfdr1 + tomari/d88split nfd2mhlt.pl (r1 skip accounting spec-only, no real r1 corpus yet)",
   "evidence": "MF-358, MF-360"
@@ -65,36 +85,20 @@
   "spec_source": "cbmstuff SCP image spec (48-byte FPCS footer, bitcell track length)",
   "evidence": "MF-318, MF-351"
  },
+ "st": {
+  "spec_source": "SAMdisk 4.0 (MIT), src/samdisk/st.cpp:6-67 (Boot-Pruefsumme, BPB-Pfad, Geometrie-Scan) + src/samdisk/bpb.h (BIOS Parameter Block). BPB-Offsets unabhaengig gegengelesen an der DOS-Bootsektor-Spalte der CopyQM-Layoutbeschreibung (rio.early8bitz.de, siehe Eintrag cqm), die dieselben Offsets 0x0b/0x18/0x1a nennt.",
+  "evidence": "MF-462 — ST ist kopflos, die Geometrie muss also aus BPB oder Dateigroesse kommen; verifiziert wurde die Reihenfolge und der Umfang beider Wege. (a) BPB zuerst: Bytes/Sektor 0x0B, Gesamtsektoren 0x13, Sektoren/Spur 0x18, Koepfe 0x1A, akzeptiert nur wenn in sich stimmig UND die Dateigroesse exakt erklaert — wie samdisk/st.cpp:24-45. Das entscheidet den Fall 368.640 Byte, der 80x1x9 UND 40x2x9 ist; der Dateikopf nannte beide Lesarten, der Code nahm still die erste. (b) Groessen-Scan als Rueckfall ueber 80..84 Zylinder und 8..11 Sektoren wie samdisk/st.cpp:47-67 — die erweiterten ST-Formate mit 82/83 Spuren und 10/11 Sektoren wurden vorher AUSNAHMSLOS abgewiesen. Die Reihenfolge des Scans ist so gewaehlt, dass alle sechs bisher bekannten Groessen unveraendert aufgeloest werden (Test the_six_legacy_sizes_resolve_unchanged). Zusaetzlich uebernommen: die TOS-Boot-Pruefsumme (256 Big-Endian-Woerter des Bootsektors summieren zu 0x1234, samdisk/st.cpp:6) als einziges positives Erkennungsmerkmal des Formats — nur bei SAMdisk belegt, nicht doppelt gegengelesen. NICHT verifiziert: Verhalten an einem realen ST-Abbild (keines im Korpus) — daher T2."
+ },
  "stx": {
   "spec_source": "Pasti STX descriptor spec (atari.8bitchip.info/STXdesc)",
   "evidence": "MF-335"
- },
- "woz": {
-  "spec_source": "Applesauce WOZ reference v1/v2/2.1 (chunk layout, CRC32, WRIT logical refs)",
-  "evidence": "MF-317, MF-357, MF-361"
  },
  "td0": {
   "spec_source": "SAMdisk 4.0 (MIT), src/samdisk/td0.cpp:14-25 TD0_HEADER + :28/:208 Kommentar-Flag",
   "evidence": "MF-460 — 12-Byte-Kopf Feld fuer Feld verglichen: Signatur, Volume-Sequenz, Check-Signatur, Version, Quelldichte, Laufwerkstyp, Spurdichte, DOS-Modus, Seiten, CRC. Position und Breite stimmen ueberall ueberein. Eine Abweichung gefunden und behoben: Byte 7 war als \"Stepping type (0=SS, 1=DS, 2=EDS)\" beschrieben, ist aber die Spurdichte mit Bit 7 als Kommentar-Flag — was unser eigener Code in uft_td0_lzss.c:469 bereits so auswertet. Falsch war die Beschreibung, nicht das Verhalten."
  },
- "msa": {
-  "spec_source": "SAMdisk 4.0 (MIT), src/samdisk/msa.cpp:9-16 MSA_HEADER + :38-44 Plausibilitaet",
-  "evidence": "MF-460 — 10-Byte-Kopf Feld fuer Feld verglichen, alle big-endian: Magic 0x0E0F, Sektoren/Spur, Seiten MINUS EINS, Startspur, Endspur. Der +1-Aufschlag bei den Seiten stand nicht in unserer Beschreibung, wird vom Code aber richtig gerechnet (wie samdisk/msa.cpp:44). Die Probe pruefte nur das Magic und meldete 95; sie prueft jetzt zusaetzlich, was msa_plugin_open() ohnehin verlangt, plus SAMdisks Nullbyte-Pruefung der oberen Feldbytes."
- },
- "cqm": {
-  "spec_source": "Primaer: \"CopyQM Format (*.cqm) — Disk image layout\", RPN, 2023-03-31, https://rio.early8bitz.de/cqm/cqm-format.pdf (abgeleitet aus LibDsk drvqm.c/crctable.c). Gegengelesen: SAMdisk 4.0 (MIT), src/samdisk/cqm.cpp:10-41 CQM_HEADER + :60-79 CRC + :129-146 RLE.",
-  "evidence": "MF-461 — 133-Byte-Kopf Feld fuer Feld verglichen; beide Quellen stimmen ueberall ueberein, und die Primaerquelle sagt ausdruecklich, dass der Block 0x03..0x1B der BPB einer DOS-Diskette ist (was die Feldfolge dort unabhaengig bestaetigt). Der bisherige Leser las ein Layout, das in KEINER der beiden Quellen vorkommt und auch kein BPB ist: Sektorgroesse als 128<<n-Code aus dem Einzelbyte 0x03 statt als LE16-Byteanzahl aus 0x03,0x04; Sektoren/Spur aus 0x08 (das ist die FAT-Kopienzahl) statt aus 0x10,0x11; Koepfe aus 0x09 (Verzeichniseintraege) statt aus 0x12,0x13; Zylinder aus 0x0F (High-Byte von Sektoren/FAT) statt aus 0x5A; Kommentarlaenge aus 0x10,0x11 statt aus 0x6F,0x70; Datenbeginn bei Offset 18 statt bei 133+Kommentarlaenge. Dazu war die RLE-Polaritaet invertiert (positive Zahl = Wiederholung statt Literalfolge). Kopfpruefsumme (Summe ueber alle 133 Byte == 0 mod 256), Daten-CRC (CRC-32 reflektiert mit CopyQMs 6-Bit-Tabellenquirk &0x3f), Sektorbasis 0x71 und Fuellbyte nach Blind-Modus 0x58 fehlten ganz. Alles ersetzt und mit tests/test_cqm_layout.c gegen ein bytegenau nach Spec gebautes Abbild abgesichert; Rot-Probe: alle fuenf Faelle fallen auf der alten Fassung um."
- },
- "st": {
-  "spec_source": "SAMdisk 4.0 (MIT), src/samdisk/st.cpp:6-67 (Boot-Pruefsumme, BPB-Pfad, Geometrie-Scan) + src/samdisk/bpb.h (BIOS Parameter Block). BPB-Offsets unabhaengig gegengelesen an der DOS-Bootsektor-Spalte der CopyQM-Layoutbeschreibung (rio.early8bitz.de, siehe Eintrag cqm), die dieselben Offsets 0x0b/0x18/0x1a nennt.",
-  "evidence": "MF-462 — ST ist kopflos, die Geometrie muss also aus BPB oder Dateigroesse kommen; verifiziert wurde die Reihenfolge und der Umfang beider Wege. (a) BPB zuerst: Bytes/Sektor 0x0B, Gesamtsektoren 0x13, Sektoren/Spur 0x18, Koepfe 0x1A, akzeptiert nur wenn in sich stimmig UND die Dateigroesse exakt erklaert — wie samdisk/st.cpp:24-45. Das entscheidet den Fall 368.640 Byte, der 80x1x9 UND 40x2x9 ist; der Dateikopf nannte beide Lesarten, der Code nahm still die erste. (b) Groessen-Scan als Rueckfall ueber 80..84 Zylinder und 8..11 Sektoren wie samdisk/st.cpp:47-67 — die erweiterten ST-Formate mit 82/83 Spuren und 10/11 Sektoren wurden vorher AUSNAHMSLOS abgewiesen. Die Reihenfolge des Scans ist so gewaehlt, dass alle sechs bisher bekannten Groessen unveraendert aufgeloest werden (Test the_six_legacy_sizes_resolve_unchanged). Zusaetzlich uebernommen: die TOS-Boot-Pruefsumme (256 Big-Endian-Woerter des Bootsektors summieren zu 0x1234, samdisk/st.cpp:6) als einziges positives Erkennungsmerkmal des Formats — nur bei SAMdisk belegt, nicht doppelt gegengelesen. NICHT verifiziert: Verhalten an einem realen ST-Abbild (keines im Korpus) — daher T2."
- },
- "atx": {
-  "spec_source": "a8rawconv 0.95 (GPL-2-or-later, Referenz-Orakel in src/a8rawconv/, wird nicht gebaut): src/a8rawconv/diskatx.cpp:3-62 (ATXFileHeader/ATXTrackHeader/ATXSectorHeader/ATXTrackChunkHeader mit static_assert auf 48 bzw. 32 Byte), :64-190 read_atx, :216-416 write_atx. Der Schreiber ist hier die staerkere Quelle: er legt Feld fuer Feld fest, was der Leser konsumiert.",
-  "evidence": "MF-467 — Datei-, Spur-, Chunk- und Sektorkopf Feld fuer Feld verglichen. Vier Fehler gefunden und behoben, zwei davon toedlich: (1) Spurkopf-Flags standen bei uns auf 0x14, richtig ist 0x10; (2) der Chunk-Offset stand auf 0x18, richtig ist 0x14 — dadurch kam der Offset aus Fuellbytes, also 0, der Chunk-Scan begann auf dem Spurkopf selbst, fand keine Sektorliste und lieferte eine leere Spur. JEDE ATX-Datei las sich als leere Diskette, ohne Fehlermeldung. (3) Die Dichte wurde von 0x13 gelesen (Fuellbyte) statt von 0x12. (4) Der Leser erwartete eine Tabelle von LE32-Spur-Offsets und eine Spurzahl im Dateikopf bei 0x14 — beides gibt es im Format nicht: 0x14 ist mImageId, und die Spuraufzeichnungen stehen hintereinander und werden der Reihe nach abgelaufen (read_atx:75-101, write_atx:300-317). Neu belegt uebernommen: FDC-Status-Semantik (0x18 zusammen = Adressfeld-CRC, 0x08 allein = Datenfeld-CRC, 0x10 = kein Datenfeld, 0x20 = Deleted-Mark 0xF8, 0x04|0x02 = langer Sektor, 0x40 = weak), doppelte Sektornummern als Phantomsektoren (UFT_SECTOR_DUPLICATE), und die Zuordnung der Weak-Chunks ueber den Index in der SEKTORLISTE statt ueber die Reihenfolge der erzeugten Sektoren. Abgesichert mit tests/test_atx_layout.c gegen ein bytegenau nach diskatx.cpp gebautes Abbild; Rot-Probe: alle drei Faelle fallen auf der alten Fassung um, der erste schon an der Spurzahl. NICHT verifiziert: Verhalten an einem realen ATX-Abbild — keines im Korpus, daher T2 und nicht T1."
- },
- "mfi": {
-  "spec_source": "MAME, src/lib/formats/mfi_dsk.h (struct header / struct entry, RESOLUTION_SHIFT = 30, CYLINDER_MASK = 0x3fffffff) und src/lib/formats/mfi_dsk.cpp:81-82 (sign[16] = \"MAMEFLOPPYIMAGE\", sign_old[16] = \"MESSFLOPPYIMAGE\", je einschliesslich der abschliessenden Null), identify() vergleicht alle 16 Byte, load() liest die Eintragstabelle ab sizeof(header) = 0x20. Beide Dateien BSD-3-Clause per SPDX-Header; kein Code uebernommen, nur das Layout verglichen.",
-  "evidence": "MF-614 — gefunden im vierten Scout-Zyklus. Der Leser prueste ACHT Byte (\"MAMEFLOP\"), ein Praefix der echten Kennung: er wies echte MAME-Dateien deshalb nicht ab, sondern nahm sie AN und las sie falsch. Die Spurtabelle las er ab 0x10 (sein eigener Kopfkommentar beschrieb das so) — dort liegen cyl_count und head_count; die Eintraege beginnen bei 0x20. form_factor holte er von 0x08, also aus der Kennung. Die Eintragszahl leitete er aus der Dateigroesse ab statt aus (cyl_count << resolution) * head_count. Alle vier berichtigt; zusaetzlich uebernommen: die Schranken aus identify() (Zylinder <= 84, Aufloesung < 3, Koepfe <= 2). Abgesichert mit tests/test_mfi_layout.c gegen ein bytegenau nach mfi_dsk.h gebautes Abbild; Rotprobe: beide Zusicherungen fallen auf der alten Fassung, die erste schon daran, dass ein verfaelschtes Byte 8 noch als gueltig durchging. NICHT verifiziert: die Spurnutzlast. Das Fixture traegt Kopf und Eintragstabelle, keine echten MFI-Zellendaten — dafuer braucht es eine reale Datei, und im Korpus liegt keine. Deshalb T2 und nicht T1."
+ "woz": {
+  "spec_source": "Applesauce WOZ reference v1/v2/2.1 (chunk layout, CRC32, WRIT logical refs)",
+  "evidence": "MF-317, MF-357, MF-361"
  }
 }
