@@ -401,20 +401,48 @@ int uft_amiga_load_dir(const uft_amiga_ctx_t *ctx, uint32_t block_num,
     const uint8_t *b = ctx->data + block_num * BLOCK_SIZE;
     read_bcpl(b + 432, 31, dir->dir_name, sizeof(dir->dir_name));
 
+    /* MF-639: Ringschutz ueber eine Besucht-Bitmap.
+     *
+     * Hier stand nur `if (e.hash_chain == head) break;` — das faengt eine
+     * SELBST-Schleife und sonst nichts. Ein Ring ueber zwei Bloecke
+     * (A -> B -> A) passiert die Bedingung nie: die Schleife laeuft
+     * endlos, und `dir_append()` verdoppelt dabei jedes Mal die
+     * Kapazitaet. Ergebnis: das Werkzeug haengt mit wachsendem
+     * Speicherverbrauch, statt einen Fehler zu melden — bei einer Datei,
+     * die von aussen kommt. Genau dafuer ist UFT gebaut.
+     *
+     * Das Muster ist nicht neu: `uft_amigados_extended.c:82-129` fuehrt
+     * dieselbe Bitmap samt Tiefendeckel und zaehlt Ringe sogar als
+     * Befund. Nur sass der registrierte Dateisystem-Treiber auf diesem
+     * Walker hier, dem ohne Schutz.
+     *
+     * Ein Bit je Block, einmal fuer das ganze Verzeichnis: die Bitmap
+     * gilt ueber alle 72 Slots hinweg, weil ein Block auch aus zwei
+     * verschiedenen Ketten erreichbar sein kann — auch das ist ein Ring,
+     * nur ein verzweigter. */
+    const size_t bitmap_bytes = (size_t)ctx->total_blocks / 8u + 1u;
+    uint8_t *visited = (uint8_t *)calloc(1, bitmap_bytes);
+    if (!visited) return -2;
+
     /* Hash table at offset 24, 72 slots of 4 bytes each. */
     for (int slot = 0; slot < HASH_SIZE; slot++) {
         uint32_t head = be32(b + 24 + slot * 4);
         while (head != 0 && head < ctx->total_blocks) {
+            if (visited[head >> 3] & (uint8_t)(1u << (head & 7u)))
+                break;                    /* Ring: dieser Block war schon da */
+            visited[head >> 3] |= (uint8_t)(1u << (head & 7u));
+
             uft_amiga_entry_t e;
             parse_entry(ctx, head, &e);
             if (dir_append(dir, &e) != 0) {
+                free(visited);
                 uft_amiga_free_dir(dir);
                 return -2;
             }
-            if (e.hash_chain == head) break;  /* defensive: self-loop */
             head = e.hash_chain;
         }
     }
+    free(visited);
     return 0;
 }
 
@@ -514,8 +542,23 @@ int uft_amiga_get_chain(const uft_amiga_ctx_t *ctx, uint32_t file_block,
     if (!chain->blocks) return -2;
     chain->capacity = cap;
 
+    /* MF-639: derselbe Ringschutz wie in uft_amiga_load_dir(). Auch hier
+     * stand nur eine Selbst-Schleifen-Pruefung (`next == cur_hdr`), und
+     * auch hier faengt sie einen Ring ueber zwei Extension-Bloecke nicht.
+     * Die Stelle ist getrennt geprueft worden, nicht mitgeraten: es ist
+     * dieselbe Fehlerform, und eine Datei mit ringfoermiger
+     * Extension-Kette haette dieselbe Wirkung. */
+    const size_t ext_bitmap_bytes = (size_t)ctx->total_blocks / 8u + 1u;
+    uint8_t *ext_visited = (uint8_t *)calloc(1, ext_bitmap_bytes);
+    if (!ext_visited) { uft_amiga_free_chain(chain); return -2; }
+
     uint32_t cur_hdr = file_block;
     while (cur_hdr != 0 && (size_t)(cur_hdr + 1) * BLOCK_SIZE <= ctx->size) {
+        if (cur_hdr < ctx->total_blocks) {
+            if (ext_visited[cur_hdr >> 3] & (uint8_t)(1u << (cur_hdr & 7u)))
+                break;                  /* Ring in der Extension-Kette */
+            ext_visited[cur_hdr >> 3] |= (uint8_t)(1u << (cur_hdr & 7u));
+        }
         const uint8_t *hb = ctx->data + cur_hdr * BLOCK_SIZE;
 
         /* AmigaDOS file/T_LIST data-block table convention (per ADFlib):
@@ -553,16 +596,17 @@ int uft_amiga_get_chain(const uft_amiga_ctx_t *ctx, uint32_t file_block,
                 size_t nc = chain->capacity * 2;
                 uint32_t *tmp = (uint32_t *)realloc(chain->blocks,
                                                     nc * sizeof(uint32_t));
-                if (!tmp) { uft_amiga_free_chain(chain); return -2; }
+                if (!tmp) { free(ext_visited);
+                            uft_amiga_free_chain(chain); return -2; }
                 chain->blocks = tmp; chain->capacity = nc;
             }
             chain->blocks[chain->count++] = blk;
         }
         uint32_t next = be32(hb + OFF_NEXT_EXT);
-        if (next == cur_hdr) break;
         cur_hdr = next;
         if (cur_hdr) chain->has_extension = true;
     }
+    free(ext_visited);
     /* no complete field in this struct */
     return 0;
 }

@@ -1306,6 +1306,11 @@ foreach(test_source ${TEST_SOURCES})
     elseif(${test_name} STREQUAL "test_stx_error_marks")
         # STX (Pasti) FDC-status disk-error marking + descriptor offset fix (Phase-4 WP5, MF-335)
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/stx/uft_stx_plugin.c)
+    elseif(${test_name} STREQUAL "test_amigados_cycle")
+        # MF-639: Ringschluss in der AmigaDOS-Hashkette — beide Ketten
+        # brachen nur bei einer Selbst-Schleife ab
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/fs/uft_amigados.c)
     elseif(${test_name} STREQUAL "test_d88_error_marks")
         # D88 DDAM/FDC-status disk-error marking + offset fix (Phase-4 WP5, MF-336)
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/d88/uft_d88.c)
