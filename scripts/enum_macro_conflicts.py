@@ -86,10 +86,38 @@ def _as_int(tok: str):
     return int(re.sub(r"[uUlL]+$", "", tok), 0)
 
 
+_SCOPE_CACHE = {}
+
+
+def _scope(repo: Path):
+    """Was CI sieht — git statt Verzeichnisnamen (MF-633).
+
+    SKIP_DIRS bleibt als zweites Sieb: es faengt auch die Faelle, in denen
+    git nicht befragbar ist. Es ist aber nicht mehr die einzige Grenze,
+    und genau das war der Fehler — `tools/uft-scout/work/` ist gitignored
+    und stand in keiner Liste, also meldete dieser Pruefer Befunde aus
+    geklonten Fremd-Repos."""
+    key = str(repo.resolve())
+    if key not in _SCOPE_CACHE:
+        import importlib.util
+        spec = importlib.util.spec_from_file_location(
+            "uft_repo_scope",
+            str(Path(__file__).resolve().parent / "repo_scope.py"))
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        pred, warn = mod.make_filter(repo)
+        if warn:
+            print("  WARNUNG:", warn)
+        _SCOPE_CACHE[key] = pred
+    return _SCOPE_CACHE[key]
+
+
 def _walk(repo: Path):
+    im_baum = _scope(repo)
     for p in repo.rglob("*"):
         if p.is_file() and p.suffix.lower() in ALL_EXT \
-                and not any(d in p.parts for d in SKIP_DIRS):
+                and not any(d in p.parts for d in SKIP_DIRS) \
+                and im_baum(p):
             yield p
 
 

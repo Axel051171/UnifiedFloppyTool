@@ -112,10 +112,26 @@ def scan(repo: Path):
     protos: list[tuple[str, str, int, int]] = []    # rule B, C headers only
     cxx_names: set[str] = set()                     # possible overloads
 
+    # MF-633: SKIP_DIRS ist eine Aufzaehlung bekannter Faelle und war
+    # unvollstaendig — `tools/uft-scout/work/` ist gitignored, enthaelt
+    # geklonte Fremd-Repos, und dieser Pruefer meldete daraus drei
+    # Befunde (cbm_open mit 3 gegen 5 Parametern). CI sieht sie nie.
+    import importlib.util as _ilu
+    _spec = _ilu.spec_from_file_location(
+        "uft_repo_scope",
+        str(Path(__file__).resolve().parent / "repo_scope.py"))
+    _mod = _ilu.module_from_spec(_spec)
+    _spec.loader.exec_module(_mod)
+    _im_baum, _warn = _mod.make_filter(repo)
+    if _warn:
+        print("  WARNUNG:", _warn)
+
     for p in repo.rglob("*"):
         if not p.is_file() or p.suffix.lower() not in {".c", ".cpp", ".h", ".hpp"}:
             continue
         if any(s in p.parts for s in SKIP_DIRS):
+            continue
+        if not _im_baum(p):        # MF-633: nur was CI auch sieht
             continue
         rel = str(p.relative_to(repo)).replace("\\", "/")
         try:
