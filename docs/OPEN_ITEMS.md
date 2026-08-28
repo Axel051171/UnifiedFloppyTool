@@ -2041,3 +2041,91 @@ weiß**, weil die Lizenz nicht dabeisteht.
 Was **nicht** geht: die Erklärungen entfernen, um die Liste zu leeren.
 Eine Attribution zu löschen macht aus einer offenen Frage eine
 verschwiegene.
+
+---
+
+## LIZ-1 Klasse A vermessen: drei selbsterklärte GPL-3.0-Ports (MF-638, 2026-08-28)
+
+Die sieben Port-Erklärungen aus dem Zensus (MF-636) sind einzeln geprüft.
+Die Lizenz stand in **fünf von sieben Fällen im Kopf selbst** — mein
+Klassifikator hatte sie nur nicht gesehen, weil sein Fenster 60 Zeichen
+maß und die Lizenz meist in der Folgezeile steht. Die Zahl „41 ohne
+Lizenz" aus MF-636 ist damit **zu hoch**; für Klasse A gemessen:
+
+| Datei | Quelle | Lizenz | erreichbar? |
+|---|---|---|---|
+| `src/core/uft_interleave.c` | a8rawconv 0.95 (Avery Lee) | **GPL-2-or-later** | — |
+| `src/core/uft_write_precomp.c` | a8rawconv 0.95 (Avery Lee) | **GPL-2-or-later** | — |
+| `src/formats/ipf/uft_ipf_air.c` | AIR, Jean Louis-Guerin | **GPL-3.0** | **ja** |
+| `src/formats/kfx/uft_kfstream_air.c` | AIR, SPS & Louis-Guerin | **GPL-3.0** | nein |
+| `src/formats/stx/uft_stx_air.c` | AIR, Jean Louis-Guerin | **GPL-3.0** | nein |
+| `src/formats/amiga/uft_amiga_protection.c` | XCopy Pro (1989-2011), 68000-Assembler | **keine genannt** | nein |
+
+**Die beiden a8rawconv-Ports sind sauber** — GPL-2-or-later ist mit
+unserem Baum verträglich, die Attribution nennt Autor und Lizenz, und
+`include/uft/core/…​.h` trägt laut Kopf die volle Zuschreibung. Kein
+Handlungsbedarf. (Nebenbei: `src/a8rawconv/` ist als vendortes
+Verzeichnis vom SPDX-Tor ausgenommen — diese beiden liegen in
+`src/core/`, also außerhalb, und sind trotzdem in Ordnung.)
+
+**Die drei AIR-Dateien sind der Kern.** Sie erklären sich selbst als
+„**Full port** of AIR `<Datei>.cs` to C" und nennen „Original: Copyright
+(C) 2013-2015 SPS & Jean Louis-Guerin (**GPL-3.0**)". Das ist derselbe
+Fall wie nibtools, nur **besser belegt** — hier steht die Lizenz im
+eigenen Kopf, es braucht kein Ähnlichkeitsaudit. Eine Sprachübersetzung
+(`.cs` → C) bleibt eine Ableitung.
+
+### Erreichbarkeit — und ein Schein-Test
+
+`uft_ipf_air.c` ist **erreichbar**: `uft_ipf_plugin.c` ruft
+`ipf_air_alloc()` (`:70`), `ipf_air_free()` (`:78`),
+`ipf_air_get_geometry()` (`:85`) und `ipf_air_get_track_meta()` (`:135`).
+Keine statischen Gleichnamen (nachgeprüft, 0). Quarantäne würde hier
+**IPF-Lesen kosten** — anders als bei allen bisherigen Fällen.
+
+`uft_kfstream_air.c` und `uft_stx_air.c` haben **null** Aufrufer. Beide
+stehen in `docs/orphan_baseline.txt`.
+
+Dabei fiel ein eigener Befund an: **`tests/test_air_cross_validate.c`**
+(745 Zeilen, läuft in ctest) heißt „Cross-validation test harness for AIR
+enhanced parsers" und ruft **keine einzige AIR-Funktion**. Gemessen über
+alle 20 exportierten Namen der drei Module: 0 Aufrufe; der einzige
+Treffer war sein eigenes `main`. Der CMake-Eintrag bindet keine der drei
+Quellen ein. Der Test erzeugt synthetische STX/IPF/KF-Dateien und prüft
+sie gegen seine **eigene** Inline-Logik. Er ist damit kein Beleg für die
+AIR-Parser — dieselbe Klasse wie MF-596, nur diesmal nicht „kann nicht
+scheitern", sondern „prüft etwas anderes als der Name sagt".
+
+(Die `main()` in allen drei Modulen sind sauber gekapselt —
+`STX_AIR_TEST`, `KF_AIR_TEST`, `IPF_AIR_TEST`. Dort ist kein Fehler.)
+
+### Was ich NICHT getan habe
+
+**Nichts gelöscht.** Dein Verfahren aus SCOUT-23 („übersetzt/portiert →
+Quarantäne") träfe auf die drei AIR-Dateien zu, und bei zweien wäre es
+kostenlos. Aber: das sind neue Befunde aus meinem eigenen Zensus, nicht
+die vier Dateien, über die du entschieden hast — und der dritte Fall
+kostet eine Fähigkeit, die dein Verfahren nicht vorsah. Vorlage statt
+Alleingang.
+
+**Offen (`LIZ-2`), Eigentümer, drei Entscheidungen:**
+
+1. **`uft_kfstream_air.c` + `uft_stx_air.c`** — GPL-3.0-Port, unerreichbar,
+   kein Test hängt daran. Quarantäne kostet nichts. Analog zu
+   `uft_track_align.c`.
+2. **`uft_ipf_air.c`** — GPL-3.0-Port, **erreichbar**. Quarantäne nimmt
+   IPF-Lesen aus dem Werkzeug. Alternativen: Neubau Clean-Room gegen die
+   öffentliche CAPS/SPS-Spezifikation (aufwendig), oder Freigabe bei
+   Jean Louis-Guerin erbitten. Die dritte Möglichkeit — behalten und
+   nichts sagen — ist nach der Release-Zusage keine.
+3. **`uft_amiga_protection.c`** — XCopy Pro war kommerzielle
+   Amiga-Software; eine Lizenz nennt der Kopf nicht. Nach deiner Regel
+   („unklar → wie portiert behandeln") ein Quarantänefall; er ist
+   unerreichbar, kostet also nichts. **Achtung:** es gibt **zwei**
+   Dateien dieses Basisnamens (`src/formats/amiga/` und
+   `src/protection/`) — nur die erste trägt die XCopy-Erklärung.
+
+Unabhängig davon und ohne Lizenzbezug: `test_air_cross_validate.c`
+gehört entweder an die AIR-Module angeschlossen oder umbenannt. Ein Test,
+dessen Name etwas anderes verspricht als er prüft, ist eine
+Erfolgsmeldung ohne Tat.
