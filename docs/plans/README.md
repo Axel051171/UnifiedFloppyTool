@@ -48,6 +48,7 @@ Dokument, auf das sich ein Baustein berufen kann?
 | FluxEngine (Software-Übernahmen) | [`FLUXENGINE.md`](FLUXENGINE.md) | **ja** (seit MF-643) |
 | FreeDOS-FORMAT | [`FDOS_FORMAT.md`](FDOS_FORMAT.md) | **ja** (seit MF-643) |
 | Tore-Bündel (Eigentümer-Entscheidungen) | [`TORE_BUENDEL.md`](TORE_BUENDEL.md) | — kein Anker, sondern eine Tagesordnung |
+| Umsetzungsliste (nach Reife geordnet) | [`UMSETZUNGSLISTE.md`](UMSETZUNGSLISTE.md) | — kein Anker, sondern eine Reihenfolge |
 
 **Das Register ist damit vollständig.** Alle zuvor fehlenden Pläne
 liegen im Baum; jeder Baustein kann sich auf ein auffindbares Dokument
