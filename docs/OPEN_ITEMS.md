@@ -384,12 +384,16 @@ veralten lassen — mitgezogen.
 `SCOUT-4` (2795 Zeilen ohne Aufrufer: verdrahten oder aus dem Bau
 nehmen), `SCOUT-5` (D77-Wahrheitspaar, Lizenzklärung), `SCOUT-12`
 (Löschentscheidung) — alle drei brauchen den Eigentümer.
-`SCOUT-7` (HFE-Fixture), `SCOUT-9` (floptool-Oracle) und `SCOUT-11`
-(DMS-Differenzlauf) brauchen Material von außen.
+`SCOUT-7` (HFE-Fixture) und `SCOUT-11` (DMS-Differenzlauf) brauchen
+Material von außen. `SCOUT-9` (floptool-Oracle) ist seit MF-623
+**erledigt** — Werkzeug beschafft, am Korpus gemessen, Ergebnis am Ende
+dieser Datei.
 
 **Die Zahl `28 von 57` zur floptool-Abdeckung ist die Messung des
 Scouts, nicht meine** — sie gehört nachgerechnet, bevor sie in einen
-Release-Text kommt.
+Release-Text kommt. Nachgerechnet in MF-615 (`22 von 56` über Namen),
+und in MF-623 durch eine Fähigkeits-Messung ersetzt: **1 von 5**
+Phase-1-Zielen.
 
 ---
 
@@ -863,3 +867,106 @@ Die Liste in `tests/CMakeLists.txt`, die sieben Testnamen für
 absichtlich gewählter Sentinel; eine Liste, die Sonderfälle nennt statt
 die Regel, veraltet still — in diesem Baum zum dritten Mal belegt
 (MF-567, MF-578, hier).
+
+---
+
+## SCOUT-9 entschieden: floptool ist ein Oracle für EIN Phase-1-Ziel (MF-623, 2026-08-28)
+
+Die drei Schritte von MF-615 sind gegangen. Entschieden hat es das
+Binärprogramm, nicht die Liste.
+
+**Beschafft:** `floptool.exe` (3 041 280 Byte) aus `mame0289b_x64.exe`
+(87 626 249 Byte, Release `mame0289` vom 2026-07-30). Die SHA-256 der
+Distribution wurde gegen die offizielle `SHA256SUMS` des Release geprüft
+und ist identisch (`a1aa7912…150b7d`). Das Werkzeug selbst trägt
+`6973d1b5…20ac21`.
+
+### Was floptool überhaupt kann — die Dateisystem-Liste, nicht die Format-Liste
+
+`identify` rät über die Dateigröße und ist als Oracle unbrauchbar: es
+hielt `dec0de_README.txt` für ein Acorn-DSD. Der Phase-1-Mechanismus ist
+`flopdir <container> <dateisystem> <datei>` mit **ausdrücklich genanntem**
+Format — damit entfällt das Raten.
+
+Damit zählt aber die Dateisystem-Liste, und die ist klein: **62 Einträge
+in 19 Familien** (`floptool help all`). Darunter CBM DOS, ProDOS, PC-FAT,
+HP-LIF, CoCo RS-DOS/OS-9, Adam-EOS, ISIS, Oric-Jasmin, vtech.
+**Kein Amiga-Dateisystem. Kein Atari DOS.**
+
+### Der Differenzlauf über den freien Korpus (12 Dateien)
+
+| Ergebnis | Dateien | Anzahl |
+|---|---|---|
+| echte Auflistung mit Volumename + Disk-ID | `.d64`, `.d71`, `.g64` | **3** |
+| **schweigender Fehlgriff** (rc=0, leer) | `.adf` | **1** |
+| lauter Fehler | `.d81`, `.hfe`, `.d67`, `.g71`, `.xfd`, `.atr` | 6 |
+| hängt (>9 min, abgebrochen) | `.d80`, `.d82` | 2 |
+
+Gelesen wird echt: aus `vice_c1541_35trk.d64` kommt
+`Volume: name=UFTCORPUS disk_id=42 os_version=2A` und der Eintrag
+`UFT MARKER PRG` — genau das, was die Herkunftsangabe des Korpus
+(`c1541 -format "uftcorpus,42"`) verspricht. MAME ist eine von VICE
+unabhängige Implementierung, also eine echte Zweitmeinung.
+
+### Gegen die fünf Phase-1-Ziele: 1 von 5
+
+D64 **ja**. ADF, ATR, FDI, NFD-r0 **nein** — nicht aus Schwäche des
+Abgleichs, sondern weil floptool für keines davon ein Dateisystem
+mitbringt. Die frühere Zahl `22 von 56` war ein Abgleich über Namen; sie
+ist damit nicht widerlegt, sondern **ersetzt**: gemessen wurde jetzt, was
+das Werkzeug an unseren Dateien tut.
+
+### Der Fallstrick, und wo er festgeschrieben ist
+
+floptool prüft den **Container**, nicht das **Dateisystem**. Rotbeweis in
+beide Richtungen:
+
+* 174 848 Byte Zufall als `d64`/`cbmdos` → lauter Fehler
+  (`Block number overflow`). Es erfindet nichts.
+* falscher Container (`d64` auf einer ADF-Datei) → lauter Fehler.
+* **richtiger Container, falsches Dateisystem** (`adf`/`cbmdos` auf einem
+  880-KB-AmigaDOS-Abbild) → `rc=0`, leerer Volumename, leere Liste, keine
+  Warnung.
+
+Wer dieses Oracle benutzt, wertet eine leere Auflistung deshalb als
+**„kein Ergebnis"**, nie als „leere Diskette" — sonst bestätigt das
+Oracle stillschweigend einen Lesefehler von UFT. Jeder Aufruf braucht
+außerdem ein Zeitlimit (siehe die zwei Hänger). Das steht jetzt am
+Registry-Eintrag selbst, nicht nur hier.
+
+### Was das an der Registry geändert hat
+
+`floptool` ist der **sechste** Eintrag in `tests/differential/oracles.py`
+— und der erste, der auf dieser Maschine tatsächlich vorhanden ist
+(vorher: 0 von 5).
+
+Er nennt allerdings keine Version: weder `--version` noch `-version` noch
+der argumentlose Aufruf geben eine aus. Nach der Provenienz-Regel wäre er
+damit dauerhaft `complete: false` und für kein T1b-Manifest brauchbar.
+Das ist die falsche Folgerung — die Regel schützt die
+**Nachbeschaffbarkeit**, und die SHA-256 des Binärprogramms leistet das
+strenger als eine Versionszeile. Der Eintrag wird also nicht aufgeweicht,
+sondern verschärft: jeder aufgelöste Oracle-Pfad trägt ab jetzt seinen
+Hash im Manifest, und `version_is_unaskable` muss am Eintrag **erklärt**
+sein — ein Werkzeug mit Versionsabfrage, das sich für stumm erklärt,
+weist der Selbsttest ab.
+
+### Nebenbei: der Testläufer meldete Erfolg für Prüfungen, die er nie sah
+
+`tests/differential/test_oracles.py` läuft unter ctest **ohne** pytest,
+über ein eigenes `main()`. Dessen Startblock stand mitten in der Datei;
+alles darunter existierte beim Aufruf noch nicht. Vier neu angehängte
+Prüfungen wurden übersprungen, gemeldet wurde „10 von 10 bestanden".
+Dieselbe Klasse wie MF-596 (32 Testdateien, die nicht rot werden
+konnten), nur eine Ebene höher.
+
+Der Läufer zählt jetzt die `def test_`-Zeilen im Quelltext und bricht ab,
+wenn er weniger einsammelt als dort stehen (rc=1, gemessen). Fixturen mit
+einem Parameter bekommt er nachgebildet. Beide Wege — ctest-Direktlauf
+und pytest — melden jetzt 14 von 14.
+
+### Offen
+
+Für ADF und ATR braucht Phase 1 ein anderes Oracle; `unadf` und
+`atrcopy` stehen dafür schon im Plan. Ob D71 und G64 über D64 hinaus
+etwas zur Hebung beitragen, ist noch nicht bewertet.

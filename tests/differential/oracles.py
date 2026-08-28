@@ -34,6 +34,7 @@ viele gefunden wurden — er meldet **nicht** Erfolg, wenn es keines ist.
 """
 from __future__ import annotations
 
+import hashlib
 import os
 import re
 import shutil
@@ -79,6 +80,22 @@ class Oracle:
     version_exit_ok: tuple[int, ...] = field(default=(0,))
     """Rueckgabewerte, die als Erfolg gelten. Manche Werkzeuge geben ihre
     Version mit einem Fehlercode aus (Aufruf ohne Argumente = Usage)."""
+
+    version_is_unaskable: bool = False
+    """Dieses Werkzeug kann seine Version NICHT nennen (MF-623).
+
+    Gemessen an floptool aus mame0289b: weder `--version` noch `-version`
+    noch der argumentlose Aufruf geben eine Versionszeile aus. Ohne diese
+    Erklaerung bliebe der Eintrag dauerhaft `complete: False`.
+
+    Die Erklaerung weicht die Provenienz-Regel nicht auf. Was die Regel
+    schuetzt, ist die Nachbeschaffbarkeit — und die SHA-256 des
+    Binaerprogramms leistet das strenger als eine Versionszeile: eine
+    Version gibt es in vielen Uebersetzungen, den Hash genau einmal.
+    Wer dieses Flag setzt, tauscht den schwaecheren Anker gegen den
+    staerkeren; wer es bei einem Werkzeug MIT Versionsabfrage setzt,
+    verschenkt eine Angabe und begeht damit den Fehler, den die Regel
+    verhindern will."""
 
 
 REGISTRY: tuple[Oracle, ...] = (
@@ -144,6 +161,37 @@ REGISTRY: tuple[Oracle, ...] = (
         origin="https://kryoflux.com (DTC, Binaerdistribution)",
         licence="proprietaer, nur Ausfuehrung",
         version_exit_ok=(0, 1, 255),
+    ),
+    Oracle(
+        name="floptool",
+        env="FLOPTOOL",
+        exes=("floptool", "floptool.exe"),
+        version_args=(),
+        version_re=r"(?!x)x",
+        version_is_unaskable=True,
+        reference_for=(
+            "Verzeichnislesung mit AUSDRUECKLICH genanntem Container und "
+            "Dateisystem: `floptool flopdir <format> <fs> <datei>`. "
+            "Gemessen am freien Korpus (mame0289b): D64, D71 und G64 "
+            "liefern gegen `cbmdos` eine echte Auflistung samt Volumename "
+            "und Disk-ID. NICHT geeignet fuer die uebrigen Phase-1-Ziele — "
+            "floptool kennt weder ein Amiga- noch ein Atari-DOS-"
+            "Dateisystem (62 Dateisystem-Eintraege, keiner davon). "
+            "FALLSTRICK: der Container wird geprueft, das Dateisystem "
+            "NICHT. `flopdir adf cbmdos` auf einem AmigaDOS-Abbild endet "
+            "mit rc=0, leerem Volumenamen und leerer Liste — ein "
+            "schweigender Fehlgriff. Zufallsbytes und ein falscher "
+            "Container fliegen dagegen laut heraus. Wer dieses Oracle "
+            "benutzt, wertet eine LEERE Auflistung als „kein Ergebnis\", "
+            "nie als „leere Diskette\". Zusaetzlich gemessen: auf .d80 "
+            "und .d82 haengt floptool (>9 min, abgebrochen) — jeder "
+            "Aufruf braucht ein Zeitlimit."),
+        origin="MAME-Distribution (https://github.com/mamedev/mame), "
+               "Werkzeug floptool; hier aus mame0289b, dessen SHA-256 "
+               "gegen die offiziellen SHA256SUMS des Release geprueft "
+               "wurde",
+        licence="GPL-2.0-or-later (MAME); hier wird nur die AUSGABE "
+                "verglichen, es wandert kein Code ein",
     ),
 )
 
@@ -224,25 +272,54 @@ def version(name: str, path: Path | None = None) -> str | None:
     return version_of(get(name), path)
 
 
-def manifest_entry(name: str) -> dict:
+def sha256_of(path: Path | None) -> str | None:
+    """SHA-256 der Werkzeug-Datei — der starke Herkunfts-Anker (MF-623).
+
+    Steht bei JEDEM aufgeloesten Eintrag im Manifest, nicht nur bei denen
+    ohne Versionsabfrage: eine Version sagt, welche Fassung gemeint war,
+    der Hash sagt, welches Programm tatsaechlich gelaufen ist.
+    """
+    if path is None:
+        return None
+    try:
+        h = hashlib.sha256()
+        with open(path, "rb") as f:
+            for block in iter(lambda: f.read(1 << 20), b""):
+                h.update(block)
+        return h.hexdigest()
+    except OSError:
+        return None
+
+
+def manifest_entry_for(o: Oracle, path: Path | None = None) -> dict:
     """Die Angaben, die ein T1b-Manifest ueber seinen Erzeuger braucht.
 
-    `complete` ist genau dann True, wenn Werkzeug UND Version feststehen —
-    fehlt eines, zaehlt der Korpus-Eintrag nicht (VERIFICATION_PLAN,
-    Provenienz-Regel), und dieses Feld sagt es, statt es offenzulassen.
+    `complete` ist genau dann True, wenn das Werkzeug gefunden wurde UND
+    seine Herkunft gepinnt ist — durch die Version, oder, bei einem
+    Werkzeug das seine Version nicht nennen kann und das ausdruecklich
+    erklaert, durch die SHA-256 seiner Datei. Fehlt beides, zaehlt der
+    Korpus-Eintrag nicht (VERIFICATION_PLAN, Provenienz-Regel), und
+    dieses Feld sagt es, statt es offenzulassen.
     """
-    o = get(name)
-    p = resolve(name)
-    v = version(name, p) if p else None
+    p = path if path is not None else resolve_oracle(o)
+    v = version_of(o, p) if p else None
+    sha = sha256_of(p)
+    anker = bool(v) or bool(o.version_is_unaskable and sha)
     return {
         "tool": o.name,
         "path": str(p) if p else None,
         "version": v,
+        "sha256": sha,
         "origin": o.origin,
         "licence": o.licence,
         "reference_for": o.reference_for,
-        "complete": bool(p and v),
+        "complete": bool(p and anker),
     }
+
+
+def manifest_entry(name: str) -> dict:
+    """Wie @ref manifest_entry_for, ueber den Kurznamen."""
+    return manifest_entry_for(get(name))
 
 
 def available() -> dict[str, bool]:
@@ -268,9 +345,13 @@ def _selfcheck() -> int:
         seen.add(o.name)
         if not o.exes:
             problems.append("%s: keine ausfuehrbaren Namen" % o.name)
-        if not o.version_args:
+        if not o.version_args and not o.version_is_unaskable:
             problems.append("%s: keine Versionsabfrage - dann ist seine "
                             "Aussage nicht zitierfaehig" % o.name)
+        if o.version_args and o.version_is_unaskable:
+            problems.append("%s: hat eine Versionsabfrage UND erklaert sich "
+                            "fuer stumm - eines von beidem ist falsch"
+                            % o.name)
         try:
             re.compile(o.version_re)
         except re.error as exc:
@@ -296,8 +377,11 @@ def _selfcheck() -> int:
     for o in REGISTRY:
         if have[o.name]:
             v = version(o.name)
-            print("  [da]     %-9s %-12s %s"
-                  % (o.name, v or "Version unbekannt", resolve(o.name)))
+            if not v:
+                v = ("per SHA-256 verankert" if o.version_is_unaskable
+                     else "Version unbekannt")
+            print("  [da]     %-9s %-22s %s"
+                  % (o.name, v, resolve(o.name)))
         else:
             print("  [fehlt]  %-9s %s" % (o.name, o.origin))
     n = sum(1 for v in have.values() if v)

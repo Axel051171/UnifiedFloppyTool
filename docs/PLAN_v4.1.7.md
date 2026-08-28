@@ -102,6 +102,19 @@ Wichtiger noch: es ist ein Abgleich über **Namen**. Er sagt nichts
 darüber, ob floptool *unsere* Dateien liest. Für Phase 1 zählt nur das.
 Der erste Schritt ist deshalb das Binary, nicht die Liste.
 
+**Gegangen (MF-623).** floptool liegt vor, am freien Korpus gemessen:
+es liefert für `.d64`, `.d71` und `.g64` eine echte Auflistung — und für
+die übrigen vier Phase-1-Ziele nichts, weil es weder ein Amiga- noch ein
+Atari-DOS-Dateisystem kennt (62 Dateisystem-Einträge, keiner davon).
+Also **1 von 5**, nicht 22 und nicht 28. Für ADF und ATR bleibt es bei
+`unadf` und `atrcopy`.
+
+Der Betriebsfallstrick steht am Registry-Eintrag: floptool prüft den
+Container, nicht das Dateisystem. `flopdir adf cbmdos` auf einem
+AmigaDOS-Abbild endet mit rc=0 und leerer Liste. Eine leere Auflistung
+ist deshalb **„kein Ergebnis"**, nie „leere Diskette" — sonst bestätigt
+das Oracle einen Lesefehler von UFT, statt ihn aufzudecken.
+
 ### Bestätigt: Oracle und Korpus-Erzeuger dürfen nicht dieselbe Hand sein
 
 Phase 1 warnt davor. Der fünfte Zyklus hat den Fall geliefert: AdfOpus

@@ -19,7 +19,9 @@ durchspielen, ohne ein Fremdwerkzeug zu verlangen.
 from __future__ import annotations
 
 import os
+import re
 import subprocess
+import tempfile
 import sys
 from pathlib import Path
 
@@ -152,11 +154,41 @@ def test_availability_reports_every_registered_tool():
 
 
 def main() -> int:
+    """Der Direktlauf fuer ctest — ohne pytest, aber mit dessen Zusagen.
+
+    Zwei Dinge, die hier schon schiefgegangen sind (MF-623):
+
+    1. **Angehaengte Pruefungen wurden nicht gesehen.** Der Startblock
+       `if __name__ == "__main__"` stand einmal in der Mitte der Datei;
+       alles darunter existierte beim Aufruf noch nicht. Gemeldet wurde
+       „10 von 10 bestanden", obwohl 14 Pruefungen dastanden — eine
+       Erfolgsmeldung ohne Tat. Dagegen zaehlt `_erwartete_anzahl()`
+       unten die `def test_`-Zeilen im QUELLTEXT und vergleicht.
+    2. **pytest-Fixtures fehlen hier.** Eine Pruefung mit Parameter
+       (`tmp_path`) waere mit TypeError gescheitert. Sie bekommt jetzt
+       ein echtes Wegwerf-Verzeichnis.
+    """
     fns = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
+    erwartet = _erwartete_anzahl()
+    if len(fns) != erwartet:
+        print("  FAIL %-58s %s"
+              % ("<Selbstkontrolle des Laufers>",
+                 "%d Pruefungen gefunden, %d stehen im Quelltext - "
+                 "steht der Startblock vor ihren Definitionen?"
+                 % (len(fns), erwartet)))
+        return 1
     bad = 0
     for fn in fns:
+        nargs = fn.__code__.co_argcount
         try:
-            fn()
+            if nargs == 0:
+                fn()
+            elif nargs == 1:
+                with tempfile.TemporaryDirectory() as d:
+                    fn(Path(d))
+            else:
+                raise TypeError("mehr als eine Fixture wird hier nicht "
+                                "nachgebildet")
         except Exception as exc:                      # noqa: BLE001
             print("  FAIL %-58s %s" % (fn.__name__, exc))
             bad += 1
@@ -164,6 +196,84 @@ def main() -> int:
             print("  ok   %s" % fn.__name__)
     print("%d von %d bestanden" % (len(fns) - bad, len(fns)))
     return 1 if bad else 0
+
+
+def _erwartete_anzahl() -> int:
+    """Wie viele `def test_` stehen im Quelltext dieser Datei?"""
+    quelle = Path(__file__).resolve().read_text(encoding="utf-8")
+    return len(re.findall(r"^def test_", quelle, re.M))
+
+
+
+# ── MF-623: Herkunft ohne Versionszeile ─────────────────────────────────
+#
+# floptool aus der MAME-Distribution druckt keine Version — weder
+# `--version` noch `-version` noch der argumentlose Aufruf (gemessen an
+# floptool aus mame0289b). Nach der bisherigen Regel waere es damit
+# dauerhaft `complete: False` und fuer kein T1b-Manifest brauchbar.
+#
+# Das ist die falsche Schlussfolgerung. Was die Provenienz-Regel schuetzt,
+# ist die Nachbeschaffbarkeit: ein Dritter muss GENAU dieses Werkzeug
+# wiederherstellen koennen. Eine SHA-256 des Binaerprogramms leistet das
+# strenger als eine Versionszeile — „4.2" gibt es hundertfach, den Hash
+# einmal. Der Eintrag wird also nicht aufgeweicht, sondern verschaerft:
+# jeder aufgeloeste Oracle-Pfad traegt ab hier seinen Hash im Manifest.
+#
+# Aufgeweicht wuerde es genau dann, wenn ein Werkzeug seine Version
+# HAETTE und wir sie uns sparen. Darum die zweite Pruefung unten.
+
+def test_the_manifest_pins_the_binary_by_hash(tmp_path):
+    """Jeder aufgeloeste Oracle-Eintrag traegt die SHA-256 seiner Datei.
+
+    Nicht `sys.executable` als Pruefling: unter Windows ist das haeufig
+    der Store-Aliaspunkt — 0 Byte gross und nicht zu oeffnen (gemessen:
+    OSError 22). Genau daran ist der erste Anlauf dieses Tests
+    gescheitert, und `sha256_of` hat dabei richtig gehandelt, indem es
+    `None` lieferte statt einen Hash zu erfinden.
+    """
+    import hashlib
+    datei = tmp_path / "werkzeug.bin"
+    datei.write_bytes(b"UFT-Oracle-Pruefling")
+    o = oracles.get("gw")
+    e = oracles.manifest_entry_for(o, datei)
+    assert e["sha256"] == hashlib.sha256(b"UFT-Oracle-Pruefling").hexdigest()
+    assert len(e["sha256"]) == 64
+
+
+def test_a_binary_that_cannot_be_read_yields_no_hash_and_no_completeness():
+    """Kein Anker ist ein ehrliches Ergebnis, kein erfundener Hash."""
+    fehlt = Path("gibt-es-nicht-12345.bin")
+    assert oracles.sha256_of(fehlt) is None
+    o = oracles.get("floptool")
+    assert oracles.manifest_entry_for(o, fehlt)["complete"] is False
+
+
+def test_a_tool_without_a_version_query_is_complete_only_if_it_says_so(
+        tmp_path):
+    """Kein Freibrief: die Ausnahme muss am Eintrag deklariert sein."""
+    datei = tmp_path / "stumm.bin"
+    datei.write_bytes(b"stumm-binaer")
+    stumm = oracles.Oracle(
+        name="stumm", env="STUMM", exes=("x",), version_args=("--nope",),
+        version_re=r"(niemals)", reference_for="Pruefling fuer den Hash-Weg",
+        origin="testsuite", licence="n/a")
+    e = oracles.manifest_entry_for(stumm, datei)
+    assert e["version"] is None
+    assert e["complete"] is False, "ohne Deklaration bleibt es unvollstaendig"
+
+    from dataclasses import replace
+    erklaert = replace(stumm, version_is_unaskable=True)
+    e2 = oracles.manifest_entry_for(erklaert, datei)
+    assert e2["version"] is None
+    assert e2["sha256"] is not None
+    assert e2["complete"] is True, "mit Hash-Anker ist die Herkunft gepinnt"
+
+
+def test_floptool_is_registered_and_declares_its_silent_failure():
+    """Der gemessene Fallstrick steht am Eintrag, nicht nur im Commit."""
+    o = oracles.get("floptool")
+    assert o.version_is_unaskable is True
+    assert "cbmdos" in o.reference_for.lower()
 
 
 if __name__ == "__main__":
