@@ -2455,6 +2455,16 @@ if(TARGET Qt6::Test)
             target_link_libraries(${qt_test_name} PRIVATE uft_core uft_crc)
         endif()
 
+        # MF-631 (SCOUT-F2 Stufe 1): das Fluss-Visualisierungs-Widget wird
+        # in keiner GUI instanziiert (MF-630) und war damit nie ausgefuehrt.
+        # Der Test treibt es kopflos an, bevor es verdrahtet wird.
+        if(${qt_test_name} STREQUAL "test_flux_visualizer")
+            target_sources(${qt_test_name} PRIVATE
+                ${CMAKE_SOURCE_DIR}/src/widgets/fluxvisualizerwidget.cpp)
+            target_include_directories(${qt_test_name} PRIVATE
+                ${CMAKE_SOURCE_DIR}/src/widgets)
+        endif()
+
         # MF-169 (P1.17): the V1 `hardware_providers` cmake target was
         # deleted with the V1 provider hierarchy. Qt-side tests now
         # link only against Qt6::Core+Test+Widgets+SerialPort. The V2
