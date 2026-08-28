@@ -1,4 +1,5 @@
 # Notiz (keine Neubewertung): jfdelnero/HXCFE_file_selector
+<!-- uebernommen: MF-614 -->
 
 Stand: 2026-08-27 · dritter Scout-Zyklus · Inventar: UFT `bb74f540`
 
@@ -34,3 +35,5 @@ file_selector (`COPYING_FULL` Z. 1–5 nennt die Ableitung ausdrücklich);
 der Verwerfungsgrund „Zielmaschinen-Code" trifft dessen Code-Anteil
 genauso — der dortige Fund ist eine **Datei**, kein Code. Siehe
 `hxcfe_amiga_copy_utility.gutachten.md`.
+
+<!-- uebernommen: MF-614 — Gutachten bestaetigt bestehenden Negativlisten-Eintrag (status: verworfen); keine weitere Abarbeitung noetig -->

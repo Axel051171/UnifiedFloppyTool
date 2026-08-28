@@ -109,6 +109,15 @@ Atari-DOS-Dateisystem kennt (62 Dateisystem-Einträge, keiner davon).
 Also **1 von 5**, nicht 22 und nicht 28. Für ADF und ATR bleibt es bei
 `unadf` und `atrcopy`.
 
+**Nachtrag MF-629 — die starke Form.** `flopdir` ist nicht das Beste,
+was floptool kann. `flophashes <format> <fs> <datei>` gibt **CRC32 und
+SHA-1 je Datei** aus, `flopread` holt die Bytes heraus. Der
+Oracle-Differenzlaufsatz aus Phase 1 — „ein unabhängiges Werkzeug liest
+denselben Inhalt heraus" — ist damit wörtlich prüfbar statt nur
+strukturell. Gemessen am Korpus-D64: `UFT MARKER`, 254 Byte, sha1
+`56fea729e9e37c473b12c3b76fc0d3e387b39b5a`. Ebenfalls nachgemessen:
+floptool liest `pc_fat` vollständig, ist also nicht auf CBM beschränkt.
+
 Der Betriebsfallstrick steht am Registry-Eintrag: floptool prüft den
 Container, nicht das Dateisystem. `flopdir adf cbmdos` auf einem
 AmigaDOS-Abbild endet mit rc=0 und leerer Liste. Eine leere Auflistung

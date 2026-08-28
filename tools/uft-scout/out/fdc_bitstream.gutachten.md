@@ -1,4 +1,5 @@
 # Gutachten: yas-sim/fdc_bitstream (Zweitlauf — Divergenzmessung)
+<!-- uebernommen: MF-626 -->
 
 Stand: 2026-08-27 · Inventar: UFT HEAD `bb74f540`
 (`scout_inv2.json`: 88 Plugins, SSOT ok, 22 Korpus-Abbilder) ·
@@ -263,3 +264,5 @@ Handnachschau bei `abgedeckt:false`). Regel 3 (Lizenz aus der Datei).
 Regel 7 (Differenzlauf statt Meinung). Regel 8 (test_data-Inhaltslizenz
 → Vorlage). Einfrier-Regel: kein Vorschlag ist Format-/Decoder-Code;
 die drei Format-Kandidaten stehen ausdrücklich als gesperrter Fundus.
+
+<!-- uebernommen: MF-626 — Verdikt "Baum-Hygiene, keine Uebernahme" ausgefuehrt: vendorte fdc_bitstream-Bibliothek entfernt (Commit 70d2e0e7) -->

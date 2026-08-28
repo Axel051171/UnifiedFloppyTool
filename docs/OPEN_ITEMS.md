@@ -1396,3 +1396,116 @@ Daraus folgt etwas für `ORPH-2` selbst: **eine Verzeichnis-Messung braucht
 ihre eigene Grundlinie**, wenn sie je ein Tor werden soll — die
 bestehende lässt sich dafür nicht mitbenutzen. Bis dahin ist der Bericht
 das, was er ist: ein Bericht, und diese Notiz hier sein Gedächtnis.
+
+---
+
+## Scout-Zyklus 6: FloppyControl — und was er über unser eigenes Oracle verriet (MF-629, 2026-08-28)
+
+Untersucht: **https://github.com/imqqmi/FloppyControl** (HEAD `0633bc7`,
+letzter Commit 2026-01-26). Gutachten im Volltext:
+`tools/uft-scout/out/FloppyControl.gutachten.md`.
+
+### Lizenz — und eine Genauigkeit, die zählt
+
+**GPL-3.0**, aus der Wurzel-`LICENSE` gelesen, nicht aus dem README
+(selbst nachgeprüft). Die Lizenzmatrix führt GPL-3.0 als „für ein
+GPL-2.0-Projekt nicht portierbar". Der Scout hat zu Recht ergänzt, dass
+das hier eine Nuance hat: UFT steht seit MF-621 auf
+`GPL-2.0-**or-later**`, und eine Verbindung mit GPL-3.0-Code ist damit
+rechtlich möglich — sie hebt das Ganze aber auf GPLv3. Das ist eine
+Eigentümer-Entscheidung, keine Nebenbei-Übernahme. **Bis dahin gilt: kein
+Code, nur Verhaltens-Spec und Oracle-Nutzung.**
+
+### Der wertvollste Ertrag kam aus der Gegenprobe, nicht aus dem Fund
+
+Der Scout schlug `dskx` vor — eine echte .NET-Konsolen-CLI im Fremd-Repo
+(`FloppyControlApp.net7/WindowsFormsApplication2/FAT12Extractor/src/DskX.Cli/Program.cs`;
+`list`/`extract`, `--deleted`, `--deleted-only`, `--version`; selbst
+gelesen, existiert). Begründung: sie entscheide den FAT12-Inhalt, „für
+den floptool seit MF-623 blind ist".
+
+**Das stimmt nicht, und die Prüfung hat sich gelohnt.** Ich habe ein
+minimales 720K-FAT12-Abbild gebaut und floptool darauf angesetzt:
+
+```
+floptool flopdir pc pc_fat fat12.img
+  Volume: name=UNTITLED oem_name=UFTPROBE
+  file HELLO.TXT ... 0xd
+floptool flophashes pc pc_fat fat12.img
+  file HELLO.TXT 13 crc32 2cc7187a sha1 1b1ca0d5744a10fc96cb61...
+```
+
+floptool liest FAT12 vollständig. Es ist dieselbe Klasse Fehler wie in
+MF-615, nur andersherum: dort wurde floptools Abdeckung **über**schätzt,
+hier **unter**schätzt — beide Male ohne Messung am Werkzeug.
+
+Was `dskx` wirklich hinzufügt, ist schmaler und immer noch interessant:
+**gelöschte Verzeichniseinträge** (`--deleted-only`) und
+Bad-Cluster-Behandlung (`0xFF7`). floptools Auflistung zeigt so etwas
+nicht. Für ein forensisches Werkzeug ist genau das die interessante
+Hälfte — aber es ist ein P3-Fund, kein P2.
+
+### Was die Gegenprobe an unserem Oracle geändert hat
+
+MF-623 hat floptool mit `identify` und `flopdir` verzeichnet. Das war
+unvollständig. Das Werkzeug kann außerdem `flophashes`, `flopread`,
+`flopblocks`, `flopconvert`, `flopwrite` — und **`flophashes` ist die
+stärkste Oracle-Form, die dieser Baum hat**: CRC32 und SHA-1 **je Datei**.
+
+Am Korpus gemessen:
+
+| Aufruf | Ergebnis |
+|---|---|
+| `flophashes d64 cbmdos vice_c1541_35trk.d64` | `UFT MARKER`, 254 B, sha1 `56fea729e9e37c473b12c3b76fc0d3e387b39b5a` |
+| `flophashes g64 cbmdos vice_c1541_35trk.g64` | `MARKER`, 254 B, sha1 `a25b5799b3708c84ede2d27fa722d69320514487` |
+| `flopread d64 cbmdos … "UFT MARKER"` | 254 Byte herausgeschrieben |
+
+Damit heißt der Phase-1-Differenzlauf nicht mehr „das Verzeichnis sieht
+gleich aus", sondern **„derselbe Inhalt, byteweise nachgerechnet"**. Der
+Registry-Eintrag in `tests/differential/oracles.py` nennt jetzt diese
+Form als die bevorzugte.
+
+### Die drei Vorschläge, neu gewichtet
+
+| # | Fund | Zone | Bewertung |
+|---|---|---|---|
+| **SCOUT-F1** | `dskx` als Oracle für **gelöschte** FAT12-Einträge und Bad-Cluster | GELB | **P3** statt P2 — floptool deckt normalen FAT12-Inhalt bereits ab (oben gemessen). Bleibt interessant, weil gelöschte Einträge forensisch die interessante Hälfte sind. Baut auf .NET 7, ungebaut |
+| **SCOUT-F2** | Fluss-Scatterplot (`Graphics.cs:1942-2160`) — Strom über Zeit, 4/6/8-µs-Farbbänder, Index-Marken | GELB | **P2, Eigentümer-Vorlage.** UFT hat gemessen keine Fluss-Visualisierung; die Datenquellen (Intervalle, MF-488-Peaks) liegen im Baum. GUI-Folge → Regel 8 |
+| **SCOUT-F3** | Analog-Oszilloskop-Rettungspfad (`WaveformEdit.cs:334/636-744/796`) + 18-MB-Fixture | GELB | **P3, Eigentümer-Vorlage.** UFT hat keinerlei Analog-Ingest. Urheberrecht am Fixture-Inhalt UNGEKLÄRT — Beschaffung nur nach Vorlage |
+
+Als Fundus abgelegt und **nicht** vorgeschlagen: DiskSpare-Spec und
+„2M"-Format (Einfrier-Regel), AddNoise-Dither-Mining (Forensik-Vorbehalt:
+erfundene Daten), StepStick-Mikroschritte und die Frage nach einem
+siebten Controller (Hardware-Folge, MF-310).
+
+FloppyControl selbst taugt **nicht** als Decoder-Oracle: WinForms-GUI,
+nicht skriptbar. Einzig `dskx` ist ein Konsolenprogramm.
+
+### Zur Verfahrenslage
+
+Das Repo stand bereits als `bewertet` in `data/known_negatives.json`
+(2026-08-23). Gemessen: **0 Commits seit der Bewertung**. Regel 6
+verlangt für einen erneuten Vorschlag eine gemessene wesentliche
+Änderung — die gibt es nicht. Die drei Funde stehen hier trotzdem, weil
+sie Bereiche betreffen, die in keinem Baum-Dokument als abgedeckt
+nachweisbar sind; die Übernahme ist ausdrücklich Eigentümer-Entscheid.
+
+### Werkzeug-Befunde am Scout selbst
+
+* **W12:** `vermessen.py` zählt Domänen-Treffer in
+  Webseiten-Mitschnitten (`*_files/`) und PDFs mit — der Score 24 für
+  dieses Repo ist überwiegend Rauschen („GCR" in `dashicons.css`).
+* **W13:** Die Ratenbremse in `gutachten.py` liest nur die ersten 400
+  Byte einer Datei; vier längst abgearbeitete Gutachten trugen deshalb
+  keine Übernahme-Marke. Nachgetragen mit gemessenem MF-Anker
+  (fdc_bitstream→MF-626, mame→MF-623, greaseweazle-restorer→MF-611,
+  hxcfe_file_selector→MF-614). Vier bleiben echt offen.
+
+### UNGEKLÄRT
+
+`dskx` ist **nicht gebaut und nicht ausgeführt** — der Versionsstring
+stammt aus der Quelle, nicht aus einer Prozessausgabe. Vor einem
+Registry-Eintrag muss er laufen, sonst wäre es ein Oracle auf
+Zusicherung. Ebenfalls offen: das Urheberrecht am `.wvfrm`-Fixture, und
+ob FloppyControls SCP-/KryoFlux-Import als Zweitmeinung taugt (GUI-only,
+nicht geprüft).

@@ -1,4 +1,5 @@
 # Gutachten: mamedev/mame (Zuschnitt: Floppy-Formatbibliothek + floptool)
+<!-- uebernommen: MF-623 -->
 Stand: 2026-08-27 · Messung: `work/mame.messung.json`
 (HEAD `c0d3677674`, letzter Commit 2026-08-27, „commodore/c64: GEOS boots now")
 · Inventar: UFT HEAD `bb74f540` (`scout_inv4.json`, 88 Plugins aus SSOT,
@@ -306,3 +307,5 @@ stub-eliminator; Rotbeweis für CHD wäre eine chdman-erzeugte Datei
   Rotbeweis + benannte Referenz + Referenz im Header (je Vorschlag
   benannt in §6).
 - floptool-Nutzung als Prozess-Orakel berührt kein Lizenz-Linken.
+
+<!-- uebernommen: MF-623 — floptool als Oracle registriert (Commit 06db93a9); MFI-Befunde in MF-614/616 abgearbeitet -->

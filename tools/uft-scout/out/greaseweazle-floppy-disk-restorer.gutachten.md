@@ -1,4 +1,5 @@
 # Gutachten: JYewman/Greaseweazle-Floppy-Disk-Restorer
+<!-- uebernommen: MF-611 -->
 
 Stand: 2026-08-26 · Inventar: UFT HEAD `756806c3`
 (`scout_inv.json`: 88 Plugins, SSOT ok, 22 Korpus-Abbilder) ·
@@ -184,3 +185,5 @@ erst recht (es prüft selbst keine CRCs).
   (es gab keine), sondern auf manuell belegte starke Treffer im
   UFT-Baum bzw. auf Substanzlosigkeit der Fremdquelle.
 - Kein Code aus diesem Agenten (Regel 1); nichts nach `src/`/`docs/`.
+
+<!-- uebernommen: MF-611 — Verdikt "irrelevant": Negativlisten-Eintrag JYewman/Greaseweazle-Floppy-Disk-Restorer gesetzt (Commit bb74f540) -->

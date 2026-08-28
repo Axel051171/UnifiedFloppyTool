@@ -107,7 +107,7 @@
     },
     "imqqmi/FloppyControl": {
       "status": "bewertet",
-      "grund": "Umsetzungsplan liegt vor (CRC-Orakel, Fundus), GPL-3.0"
+      "grund": "Umsetzungsplan liegt vor (CRC-Orakel, Fundus), GPL-3.0; Wiedervorlage Zyklus 6 (2026-08-28, Eigentuemer-Auftrag): 0 Commits seit Bewertung gemessen, Gutachten out/FloppyControl.gutachten.md — 3 Vorlagen (dskx-FAT12-Oracle, Flux-Scatterplot-Spec, Analog-Oszilloskop-Spec), Rest Fundus"
     },
     "FDOS/format": {
       "status": "bewertet",
