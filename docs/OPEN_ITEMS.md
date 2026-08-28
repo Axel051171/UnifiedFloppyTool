@@ -1309,3 +1309,74 @@ Fähigkeit annimmt, die er nicht hat.
 Dass die 35 Format-Verzeichnisse weg können. Ein Format-Plugin ohne
 Außenreferenz ist der bekannte Registrierungs-Rückstand (MF-446/447), und
 die Antwort darauf steht im Plan, nicht in einer Löschliste.
+
+---
+
+## Zweiter ORPH-2-Fall: 1886 Zeilen Plattform-Wissen ohne Aufrufer (MF-628, 2026-08-28)
+
+`src/analysis/profiles/` — sechs Dateien, **1886 Zeilen**, **null**
+Aufrufer von außen. Gemessen mit der Logik von `audit_orphan_modules.py`
+über `src/`, `include/` **und** `tests/`; jede der sechs Dateien einzeln
+geprüft, keine hat eine Nennung außerhalb des Verzeichnisses.
+
+### Warum der Datei-Detektor nur ein Drittel davon sah
+
+In `docs/orphan_baseline.txt` standen **2 von 6**:
+`uft_profile_xdf.c` und `uft_profiles_all.c`. Die vier übrigen —
+`uft_profile_japanese.c`, `_misc.c`, `_uk.c`, `_us.c`, zusammen 1384
+Zeilen — versteckten sich hinter ihrem eigenen Sammler: `uft_profiles_all.c`
+nennt sie, also galten sie als benutzt. Dass der Sammler selbst niemanden
+hat, fiel auf; dass damit der ganze Ring unerreichbar ist, nicht.
+
+Das ist der zweite Beleg für ORPH-2 nach `src/flux/fdc_bitstream/` — und
+diesmal ein Ring mit einem sichtbaren und vier unsichtbaren Gliedern
+statt zwölf unsichtbaren.
+
+### Was da liegt
+
+Plattform-Profile: Sync-Muster, Geometrie und Encoding-Hinweise für
+TI-99/4A, TRS-80 Model I/III/4, Victor 9000/Sirius 1, Kaypro, Osborne
+(`uft_profile_us.c`) sowie UK-, japanische und sonstige Plattformen.
+Exportiert werden unter anderem `uft_detect_profile_by_size`,
+`uft_get_all_profiles`, `uft_get_profiles_by_category`,
+`uft_format_requires_track_copy`.
+
+**Kein Duplikat.** `src/flux/uft_media_profile.c` (166 Zeilen) klingt
+ähnlich, ist aber etwas anderes und **lebt**: magnetisches Zeitverhalten,
+gerufen aus `src/flux/uft_flux_decoder.c`,
+`src/formats/uft_format_convert_flux.c` und `tests/test_media_profile.c`.
+Hier geht es um Plattform-Erkennung, nicht um Zellzeiten.
+
+### Warum ich es nicht gelöscht habe
+
+Ein Plan-Anker liegt **nicht** vor — weder `MASTER_PLAN.md` noch
+`PLAN_v4.1.7.md` nennen dieses Verzeichnis. Nach der Verwaisten-Regel
+wäre das ein Löschfall.
+
+Es ist aber nicht dieselbe Lage wie bei `fdc_bitstream`. Dort war der
+Code **belegte Redundanz** (`MASTER_PLAN.md:435`, „1626 LOC Redundanz"
+dreier paralleler Decoder-Pfade); hier dupliziert er nichts, und es ist
+genau die Art Wissen, die ein forensisches Werkzeug für unbekannte
+Disketten braucht. Löschen wäre regelkonform und trotzdem womöglich der
+teurere Weg.
+
+**Offen (`PROF-1`), Eigentümer-Entscheidung, dieselbe Form wie `DEEP-1`:**
+verdrahten (dann Anker eintragen), oder löschen. Was nicht geht: weiter
+liegen lassen, ohne dass eine der beiden Zeilen gezogen wird — dafür ist
+die Grundlinie da, und dort stehen bislang nur zwei der sechs Dateien.
+
+### Ein Versuch, der sofort widerlegt wurde
+
+Ich habe die vier fehlenden Dateien in `docs/orphan_baseline.txt`
+nachgetragen — und das Tor hat im selben Lauf widersprochen: es meldete
+sie als „weniger als in der Grundlinie, bitte dort streichen".
+
+Zu Recht. Die Grundlinie ist definiert als das, was der **Datei**-Detektor
+meldet, und der hält die vier für benutzt, weil ihr Sammler sie nennt.
+Ein Verzeichnis-Befund in einer Datei-Grundlinie erzeugt einen dauerhaften
+Fehlstand, den niemand auflösen kann. Zurückgenommen.
+
+Daraus folgt etwas für `ORPH-2` selbst: **eine Verzeichnis-Messung braucht
+ihre eigene Grundlinie**, wenn sie je ein Tor werden soll — die
+bestehende lässt sich dafür nicht mitbenutzen. Bis dahin ist der Bericht
+das, was er ist: ein Bericht, und diese Notiz hier sein Gedächtnis.
