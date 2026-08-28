@@ -100,6 +100,19 @@ identifier outside the allowed set. It exists because the one violation
 in the tree was found by accident, in a scout side-run, and not by a
 gate (MF-620/621).
 
+**What that gate does not do, measured (MF-622):** it catches a *wrong*
+identifier, never a *missing* one. Of the 1182 source files under `src/`
+and `include/` (vendored trees excluded), **50 carry an SPDX header and
+1132 do not — 4.2 %**. The rule above is therefore binding for new and
+touched files, and aspirational for the rest.
+
+Adding 1132 headers is a single mass change with real consequences —
+it is a decision for the owner, not something to do in passing. Until
+then, do not read this section as a description of the tree. Two known
+cases sit inside those 1132: `src/formats/d77/uft_d77.c` and
+`src/formats/d88/uft_d88.c` carry no header, no `based on`, and no spec
+reference at all.
+
 ## Code Style
 
 - C++17 features where appropriate

@@ -731,6 +731,58 @@ Datei zeigen lassen.
 
 ---
 
+## Die neue SPDX-Politik gilt für 4,2 % des Baums (MF-622)
+
+Regel 1 steht seit MF-621 in `CONTRIBUTING.md`, und Tor 38 setzt sie
+durch. Bevor das als erledigt gilt, die Reichweite — gemessen, nicht
+angenommen:
+
+| Quelldateien in `src/` + `include/` (ohne eingekaufte Bäume) | |
+|---|---|
+| mit SPDX-Kopf | **50** |
+| ohne | **1132** |
+| Anteil | **4,2 %** |
+
+**Das Tor fängt einen *falschen* Bezeichner, nie einen *fehlenden*.** Die
+Regel ist damit bindend für neue und angefasste Dateien — und für den
+Rest eine Absichtserklärung. Das steht jetzt in `CONTRIBUTING.md`, damit
+niemand den Abschnitt für eine Beschreibung des Baums hält.
+
+1132 Köpfe nachzutragen ist **eine** Masseänderung mit echten Folgen und
+gehört dem Eigentümer, nicht dem Vorbeigehen.
+
+| # | Sache | Stand |
+|---|---|---|
+| **SCOUT-19** | 1132 Quelldateien ohne SPDX-Kopf. Masseänderung, Eigentümer-Entscheidung. Ein Tor gegen *fehlende* Köpfe wäre erst danach sinnvoll — vorher meldete es 1132 Zeilen und würde am nächsten Tag abgeschaltet | **offen, Eigentümer** |
+
+### Die D77-Untersuchung: erster Schritt gemacht, Ergebnis unbequem
+
+Der Auftrag war: Herkunft messen, dann entscheiden. Gemessen an
+`src/formats/d77/uft_d77.c`, `src/formats/d88/uft_d88.c` und
+`uft_d88_parser_v2.c`:
+
+**Keine einzige Herkunftsangabe.** Kein SPDX, kein „based on", kein
+fremdes Copyright, keine Spec-Referenz — in keiner der drei Dateien.
+
+Das ist **nicht** der harmlose Fall („Ursprung gefunden, Lizenz klar,
+Attribution nachtragen"), aber auch nicht der schlimme („erkennbar
+fremder Code ohne Lizenz"). Es ist der dritte: **nichts deutet auf
+fremden Ursprung, aber nichts schließt ihn aus.** Genau die
+Unentscheidbarkeit, die `VERIFICATION_PLAN.md` §Provenienz-Regel als
+konstitutiv beschreibt — „ohne sie ist ‚Parser falsch' von ‚Datei
+beschädigt' nicht unterscheidbar".
+
+Der nächste Schritt wäre ein Ähnlichkeitsvergleich gegen die üblichen
+Verdächtigen. Der braucht deren Quelltext im Zugriff und ist ein eigener
+Arbeitsgang — **nicht** nebenbei erledigt, und ich habe ihn nicht
+gemacht, statt ihn zu behaupten.
+
+`d77` steht auf **T3** ohne Test, ohne Spec-Quelle, ohne Korpus. Die
+Neuimplementierung gegen die öffentliche D88-Spezifikation wäre also
+ohnehin kein Verlust — sie wäre eine Hebung.
+
+---
+
 ## Korpus-gebundene Tests — Beschaffungsliste (MF-588)
 
 **Gemessen auf diesem Rechner: 266/266, ein Skip** (`test_freezer`, siehe unten). Auf einem frischen
