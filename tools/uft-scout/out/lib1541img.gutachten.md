@@ -1,3 +1,4 @@
+<!-- uebernommen: MF-648 -->
 # Gutachten: excess-c64/lib1541img
 
 **Zyklus:** 2026-08-28 · Inventar `work/inv.json` (erzeugt 2026-08-28 17:41,

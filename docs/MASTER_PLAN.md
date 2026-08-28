@@ -288,7 +288,19 @@ Muss:
       Validation, get_error). 13/26 honest USB-Stubs return -1 +
       not-implemented Error-String. 16 Tests grün. Header-Banner
       PLANNED → PARTIAL. Skeleton-Audit drops: 135 → 134, phantom
-      decls 2659 → 2633. Multi-Session-libusb-Wiring offen.
+      decls 2659 → 2633.
+      **Nachtrag MF-650 — diese Zeile war doppelt veraltet.** Gemessen:
+      das libusb-Wiring ist seit **MF-301** da (16 `UFT_HAS_LIBUSB`-
+      Stellen; 3-Byte-Status, ATN-Semantik, Lifecycle real), und
+      `KNOWN_ISSUES.md` §M.4 führt die beiden Protokoll-Deltas seit
+      MF-301 als „RESOLVED IN CODE". Offen ist **nicht** USB, sondern
+      die **CBM-DOS-Kommandoebene**: `uft_xum_identify_drive`,
+      `_get_status`, `_read_track`, `_read_track_gcr`, `_read_disk` und
+      zwei weitere geben unbedingt `UFT_ERR_NOT_IMPLEMENTED` — sie
+      brauchen `U1:`/`M-R`/Kanal 15, nicht mehr Draht. Referenz dafür
+      liegt in `opencbm/libd64copy/std.c:24` (wörtlich unser TODO-
+      Kommando), hardwarefrei prüfbar gegen `tests/emulators/xum1541/`.
+      Was weiterhin fehlt, ist die Tier-3-Bank (MF-310).
 - [~] M3.3 Applesauce HAL real statt stubbed — Commit df9c96e scaffold:
       `src/hal/uft_applesauce.c` (+257 LOC) mit 13/20 echten Funktionen
       (format_name 11 Formate, ticks_to_ns / ns_to_ticks / get_sample_clock

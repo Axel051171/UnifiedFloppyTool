@@ -81,7 +81,7 @@ sha1 `56fea729e9e37c473b12c3b76fc0d3e387b39b5a`.
 Wo ein Werkzeug Spur- statt Dateiebene beurteilt (`nibscan`s BAM-/DIR-
 und Full-CRC), ergänzt das die Datei-Ebene, es ersetzt sie nicht.
 
-## Registrierte Oracles (6)
+## Registrierte Oracles (7)
 
 Stand `tests/differential/oracles.py`, 2026-08-28.
 
@@ -93,6 +93,7 @@ Stand `tests/differential/oracles.py`, 2026-08-28.
 | `samdisk` | `SAMDISK` | MIT | `--version` | Container-Formate und ihre Randfälle. Die **Quelle** liegt zusätzlich im Baum (`src/samdisk/`) und dient als Spec-Referenz |
 | `dtc` | `DTC` | proprietär, nur Ausführung | `-h` | KryoFlux-Rohstrom-Aufnahme; Bezug für den KryoFlux-Lesepfad |
 | `floptool` | `FLOPTOOL` | GPL-2.0-or-later (MAME) | **SHA-256** (keine Versionsabfrage) | Verzeichnis **und Hashes** bei ausdrücklich genanntem Container + Dateisystem |
+| `lsatr` | `LSATR` | GPL-2.0-or-later | `-v` → „mkatr version 1.4" | Atari-DOS in ATR **und** XFD: Geometrie, DOS-Variante, freie Sektoren; Inhalte je Datei über `-x`/`-X`. Die **unabhängige** Hand gegen den atrcopy-erzeugten Korpus |
 
 ### floptool — der einzige, der auf dieser Maschine liegt
 
@@ -123,7 +124,6 @@ Registry-Eintrag. Sie zählen deshalb für kein T1b-Manifest.
 |---|---|---|
 | `nibconv`, `nibscan` (nibtools) | vom Scout **gebaut**, hardwarefrei mit MinGW ohne OpenCBM, auf dem Korpus gelaufen; liefert BAM-/DIR- und Full-CRC über dekodierte Spuren | Registry-Eintrag (`version_is_unaskable` + SHA-256, `VERSION` ist nur ein Build-Datum) — `SCOUT-20` |
 | `dskx` (FloppyControl) | Quelle gelesen, CLI belegt (`list`/`extract`/`--deleted`) | **nicht gebaut, nicht gelaufen** — vor jedem Eintrag bauen. Eng auf gelöschte FAT12-Einträge und Bad-Cluster zu schneiden, weil floptool den normalen Inhalt bereits liest — `SCOUT-F1` |
-| `lsatr` (dmsc/mkatr) | GPL-2.0, unabhängige C-Codebasis; liest DOS 1/2.0/2.5/MyDOS/SpartaDOS/BW-DOS | bauen (`make`), dann Eintrag. **Zweite Hand für ATR** — löst die Zirkularität gegen atrcopy |
 | `a8rawconv` | im Baum vendort (`src/a8rawconv/`), heute gebaut; `ATR→XFD` byteidentisch zum Korpus-XFD | Eintrag ausstehend (`SCOUT-33`). Zugleich die In-Tree-Referenz für den FM-Pfad |
 | `atrcopy` | erzeugt unseren ATR-Korpus; `crc`-Unterbefehl liefert CRC32 je Datei über den Inhalt | **Auflage:** braucht `numpy<1.23` — unter NumPy 2.5.1 drei gemessene Abstürze bei jedem Abbild-Open. Nur zusammen mit `lsatr` eintragen (Zirkularität) |
 | **fdc_bitstream** (yas-sim) | **extern**, nicht im Baum — die vendorte Kopie ist mit MF-626 gelöscht | als **Upstream-Oracle** bauen und eintragen, **nicht** zurückholen (siehe unten) |
@@ -158,6 +158,7 @@ urteilt.
 | `ADFDiskBox` | ruft nur `cmd.exe /C gw …`; **keine** eigene ADF-Ebene (0 Treffer auf `ReadAllBytes\|FileStream\|adflib\|RootBlock`) |
 | `FloppyControl` selbst | WinForms-GUI, nicht skriptbar. Nur sein `dskx` ist ein Konsolenprogramm |
 | `WinUAE` | ADFlib-unabhängig und damit inhaltlich interessant, aber GUI **und** ohne Lizenzdatei im Repo — Referenz ja, Oracle nein |
+| `atrip` | **dieselbe Hand wie der Korpus.** `README.rst:6` nennt es wörtlich „The successor to atrcopy", gleicher Autor — fünfte Registrierungsfrage, ausgeschlossen. Unabhängig davon auf dieser Maschine nicht lauffähig: `pkg_resources` fehlt unter Python 3.13, und `np.fromstring` steht neunmal im Code (tot unter NumPy 2.5.1) |
 
 **Offene Lücke:** eine **ADFlib-unabhängige, skriptbare** Zweitmeinung
 für ADF fehlt weiterhin. Drei Zyklen haben sie gesucht und nicht

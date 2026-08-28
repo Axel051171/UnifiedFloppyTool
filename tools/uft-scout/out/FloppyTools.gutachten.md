@@ -1,3 +1,4 @@
+<!-- uebernommen: MF-648 -->
 # Gutachten: Datamuseum-DK/FloppyTools
 
 Stand: 2026-08-28 · Messung: `work/FloppyTools.messung.json`

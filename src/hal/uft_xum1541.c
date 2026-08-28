@@ -3,7 +3,13 @@
  * @brief XUM1541/ZoomFloppy HAL backend (M3.2 partial scaffold).
  *
  * SPEC_STATUS: REVERSE-ENGINEERED — based on opencbm xum1541.c
- *   (https://github.com/OpenCBM/OpenCBM, BSD-2),
+ *   (https://github.com/OpenCBM/OpenCBM, **GPL-2.0-or-later**; the header
+ *   of `opencbm/lib/plugin/xum1541/xum1541.c` reads "either version 2 of
+ *   the License, or (at your option) any later version". This line said
+ *   "BSD-2" until MF-650 — measured at the original, that was wrong: the
+ *   five BSD notices in that tree belong to other files, none of them
+ *   this one. An attribution is a legal statement (MF-636), so a wrong
+ *   licence here is a defect, not a typo),
  *   IEC bus timing from Commodore 1541 service manual (Sams Photofact),
  *   sector-zone tables from VIC-1541 + 8050 ROM listings.
  *   NOT covered by an official ZoomFloppy SDK.

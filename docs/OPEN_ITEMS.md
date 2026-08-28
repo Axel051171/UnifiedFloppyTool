@@ -2556,3 +2556,189 @@ M²FM-Decode-Pfad (BSD-2, UFT hat nur das Enum) · acht fehlende
 P5002, HP9885, Ohio Scientific, Alpha LSI) — Moratorium · ZipCode
 4/5-pack · MMB-Container · `_UNREAD_`-Sentinel und DDHF-Manifest als
 Verfahren · Q1-Multi-Lesungs-Korpus (44 MB, Inhalt Zone PRÜFEN).
+
+---
+
+## Zyklen 16–19: LIZ-1 schrumpft von 48 auf 14, und die Tür bleibt offen (MF-650, 2026-08-28)
+
+Vier Aufklärer, ausgewählt nach einem einzigen Kriterium: löst er einen
+**im Baum benannten Blocker**? HxCFloppyEmulator (LIZ-1), OpenCBM
+(`KNOWN_ISSUES` §M.4), libdsk (Oracle + die Sechsfach-Geometrie aus
+MF-648), mkatr/atrip (`lsatr` für B1).
+
+Alle vier haben geliefert, und drei davon haben eine Aussage **dieses
+Baums** korrigiert — zweimal meine eigene.
+
+### Die Tür zu GPLv3 bleibt offen, und zwar doppelt gesichert
+
+`docs/plans/FLUXENGINE.md` hielt seit MF-644 fest: heute liegt kein
+GPL-2.0-only-Code im Baum — **mit dem Vorbehalt**, dass die 48
+ungeklärten Attributionen aus `LIZ-1` das umwerfen könnten, und
+HxCFloppyEmulator stand dreimal darin.
+
+Selbst nachgemessen am Klon:
+
+```
+either version 2 : 478 Dateien
+either version 3 :   0 Dateien
+```
+
+Die `COPYING`-Dateien legen zwar den GPL-3.0-Volltext bei, aber **kein
+einziger** Dateikopf erteilt einen Version-3-Grant; die operative
+Erklärung ist durchgängig „either version 2 … or (at your option) any
+later version". Formal ist das Matrix-Zeile PRÜFEN (COPYING ≠ Kopf),
+operativ **GRÜN**.
+
+Und die drei Attributionen bei uns sind gar keine Ableitungen. Das Audit
+lief idiombasiert in **beide** Richtungen — neun HxC-Idiome bei uns
+gesucht, acht unserer Idiome dort — je **0 Treffer**. Der schärfste
+Einzelbeleg ist eine Bedeutungsdifferenz, die ein Port mitgeschleppt
+hätte: unser `calculateFormatValue()` (`src/rawformatdialog.cpp:368`)
+baut `(tracks<<16)|(sides<<8)|sectors`, während HxCs `formatvalue` das
+**Füllbyte** ist (`cb_rawfile_loader_window.cxx:104`). Wer abschreibt,
+erfindet nicht dieselbe Zahl neu mit anderer Bedeutung.
+
+**Verdikt: freigesprochen, keine Quarantäne.** Die Köpfe werden nach
+MF-636 berichtigt, nicht gelöscht. Selbst wenn es Ableitungen wären,
+hätte die Tür offen gestanden — GPLv2+ verengt nichts.
+
+### 31 der 48 Verdachtsfälle haben denselben Ursprung
+
+Der libdsk-Zyklus hat den größten Brocken von `LIZ-1` aufgelöst, und
+zwar in unserem eigenen Baum: **32 Dateien** tragen eine
+„Reference: libdsk drv*.c"-Attribution, **keine davon mit Lizenz**.
+
+Gemessen am Klon (Fassung 1.5.12): **146** Dateien mit
+„any later version", Lizenztext `doc/COPYING` = „GNU **Library** General
+Public License Version 2" → **LGPL-2.0-or-later**, Zone GRÜN.
+
+> **Eigene Fehlmessung, festgehalten weil sie eine Methode betrifft.**
+> Mein erster Grep suchte `either version 2` einzeilig und fand **eine**
+> Datei — ich hielt den Bericht deshalb für widerlegt. Der Grant steht
+> im libdsk-Kopf über zwei Zeilen umbrochen („either\n * version 2 of
+> the License"). Der Bericht hatte recht, meine Messung war die falsche.
+> Dieselbe Klasse wie `grep -i atr` auf „m**atr**ix" (MF-643): ein
+> Suchmuster, das die Frage nur scheinbar stellt.
+
+Die Rechnung für die fünfte Kennzahl, Verdachtsstufe:
+
+| | |
+|---|---|
+| Stand MF-636 | **48** |
+| − libdsk (Lizenz jetzt bestimmt) | 31 |
+| − HxCFloppyEmulator (drei, freigesprochen) | 3 |
+| **verbleibend** | **14** |
+
+Zwei der 32 libdsk-Verweise nennen Treiber (`drvmgt.c`, `drvopus.c`),
+die es in **diesem** Fork nicht gibt — nur upstream (1.5.22). Für die
+beiden trägt die Messung nicht; sie bleiben offen und werden auch so
+gekennzeichnet.
+
+### Ein Attributionsfehler, der eine falsche Rechtsaussage war
+
+`src/hal/uft_xum1541.c:6` schrieb: „based on opencbm xum1541.c
+(https://github.com/OpenCBM/OpenCBM, **BSD-2**)".
+
+Am Original nachgelesen — `opencbm/lib/plugin/xum1541/xum1541.c:10-13`:
+
+> „This program is free software; … under the terms of the GNU General
+> Public License … either version 2 of the License, or (at your option)
+> any later version."
+
+**GPL-2.0-or-later, nicht BSD-2.** Im ganzen OpenCBM-Baum tragen fünf
+Dateien eine BSD-Notiz; diese ist keine davon. Berichtigt.
+
+Das ist keine Kleinigkeit: eine Attribution ist eine rechtliche Aussage
+(MF-636). Eine zu großzügige Lizenz zu behaupten ist genau der Fehler,
+den `LIZ-1` sucht — nur hier mit Namen und Zeile.
+
+### M.4 war seit einem Monat erledigt, und zwei Dokumente wussten es nicht
+
+Ich habe den Aufklärer mit der Prämisse losgeschickt, zwei HIGH-Befunde
+blockierten die M3.2-Verdrahtung. Er hat die Prämisse korrigiert:
+`docs/KNOWN_ISSUES.md:427` führt §M.4 seit **MF-301** als „RESOLVED IN
+CODE". Alle acht Protokoll-Behauptungen wurden trotzdem am frischen
+Klon nachgeprüft — sie stimmen (`XUM_STATUSBUF_SIZE=3`,
+`xum1541_types.h:64`; Header `[opcode, proto|flags, size_lo, size_hi]`,
+`xum1541.c:998-1001`; IEC-Adressierung als WRITE+ATN, `archlib.c:337ff`).
+
+Selbst nachgezählt: **16** `UFT_HAS_LIBUSB`-Stellen in
+`src/hal/uft_xum1541.c`. Das Wiring **ist** da. Offen sind **sieben**
+Funktionen mit unbedingtem `UFT_ERR_NOT_IMPLEMENTED` —
+`identify_drive`, `get_status`, `read_track`, `read_track_gcr`,
+`read_disk` und zwei weitere —, und die brauchen kein USB, sondern die
+**CBM-DOS-Kommandoebene**: `U1:`, `M-R`, Kanal 15.
+
+`docs/MASTER_PLAN.md` sagte „13/26, Multi-Session-libusb-Wiring offen",
+`CLAUDE.md` an zwei Stellen „USB I/O pending libusb wiring". Beide in
+**beide** Richtungen falsch: zu pessimistisch beim Draht, zu optimistisch
+bei der Vollständigkeit. Berichtigt.
+
+### Der Entlastungsbefund zur Sechsfach-Geometrie
+
+MF-648 fand 77 × 26 × 1 × 128 sechsmal unter sechs Systemnamen und ließ
+offen, ob das falsch ist. libdsk antwortet, dreifach gemessen:
+
+* kennt **keinen** der sechs Systemnamen (0 Treffer im ganzen Baum),
+* führt **keine** 26 × 128-Geometrie (die einzige 128er-Zeile ist ein
+  MYZ80-Festplattencontainer, `dsksgeom.c:78`),
+* urteilt **nie nach Dateigröße**: `dskid` auf 256 256 Byte Zufall
+  antwortet wörtlich **„Bad format."** Identifikation läuft über Inhalt
+  (`dskgeom.c:236ff`: Sektor-IDs → Boot-BPB → PCW-Spec-Byte →
+  DFS-Katalog → CP/M-86) oder über einen ausdrücklich genannten
+  Formatnamen.
+
+Damit ist die ehrliche Sammelzeile aus SCOUT-47 nicht bloß zulässig,
+sondern **Stand der Referenzpraxis**. Und sie sagt zugleich, wie es
+richtig ginge: Geometrie aus Inhalt, nie aus Größe.
+
+### `lsatr` ist registriert — und der Korpus dahinter ist leer
+
+Selbst gebaut, selbst gelaufen, selbst gehasht: `mingw32-make CC=gcc`,
+gcc 13.1.0, rc=0; `lsatr.exe` SHA-256
+`dc7f90046d833b7b122865f8d9347bb90526d05bda02e145ae663fea043ed1d5`;
+`-v` → „mkatr version 1.4".
+
+```
+atrcopy_dos2sd.atr: 720 sectors of 128 bytes, DOS 2.0s, 707 sectors free of 707 total.
+atrcopy_dos2sd.xfd: 720 sectors of 128 bytes, DOS 2.0s, 707 sectors free of 707 total.
+```
+
+Zeichengleich — die dritte unabhängige Bestätigung, dass XFD das ATR
+ohne den 16-Byte-Kopf ist (**A3**). Registriert als siebtes Oracle;
+`oracle_registry` grün.
+
+**Der Nebenbefund wiegt schwerer als der Fund:** 707 von 707 Sektoren
+frei — unser einziges ATR-Abbild ist **leer**. `B1` wollte damit über
+3 400 Zeilen Atari-DOS entscheiden. Auf einem leeren Verzeichnis
+entscheidet dieser Differenzlauf **nichts**. B1 braucht zuerst ein
+nicht-leeres Abbild; das steht jetzt in der Umsetzungsliste.
+
+`atrip` ist **kein** Oracle: `README.rst:6` nennt es wörtlich „The
+successor to atrcopy" — dieselbe Hand wie der Korpus-Erzeuger, fünfte
+Registrierungsfrage. Unabhängig davon auf dieser Maschine nicht
+lauffähig (`pkg_resources` fehlt unter Python 3.13, `np.fromstring`
+neunmal). Als Nicht-Oracle eingetragen.
+
+### Was sonst anliegt
+
+| # | Fund | Kennzahl |
+|---|---|---|
+| SCOUT-49 | `hxcfe` v2.16.15.2 gebaut und gemessen: ADF→HFE→ADF byteidentisch, liest unser SCP (1760/1760 Sektoren), FDI, ATR; **nicht** G64. Schließt das Drei-Hände-Dreieck xdftool/gw/hxcfe | T3 runter |
+| SCOUT-50 | **B4 ist gelöst und kostet nichts:** Fixture mit `track_encoding=0x01`/`interface_mode=0x04` selbst erzeugt — der tote Zweig `uft_hfe.c:137` läuft erstmals, die Lizenzfrage am Fremd-Fixture entfällt | T3 runter (`hfe`) |
+| SCOUT-51 | AmigaDOS-MFM-Encoder `tg_addAmigaSectorToTrack()` (`amiga_mfm_track.c:356-485`, GPLv2+) schließt die MF-539-Lücke — ADF→HFE lehnt heute ab, weil uns der Encoder fehlt | Wandlungspfade rauf |
+| SCOUT-55 | `libcbmimage` gebaut und gelaufen, auch gegen **unser** `vice_c1541_35trk.d64`; trennt SpeedDOS/Dolphin/ProLogic-BAM ausdrücklich — die zweite Hand für genau die MF-649-Zone, und sie löst die VICE-Zirkularität aller acht CBM-Korpuszeilen | T3 mittelbar |
+| SCOUT-59 | libdsk-Trio als Oracle: 13 Treiber mit gemessenem byteidentischem Schreib-Rundlauf, davon sieben auf T3 (edsk, jv3, apridisk, myz80, nanowasp, logical, qrst) | T3 runter |
+| SCOUT-60 | TD0/CQM/IMD-Korpus aus den seltenen libdsk-**Schreibern** — Formate, für die sonst kaum ein Erzeuger existiert | Tier-Leiter T2→T1b |
+| SCOUT-65 | Nicht-leeres DOS-2-Trio (SD/ED/DD) für B1; Urteil bleibt beim unabhängigen `lsatr`, deshalb unbedenklich | T3 runter (`atr`) |
+| SCOUT-66 | `lsatr` kennt **beide** Ablagen der ersten drei Sektoren im DD-ATR (`src/atr.c:76-90`), unser `atr_sector_offset()` (`uft_atr.c:19-25`) nur die 128-Byte-Form → Verdacht auf 384 Byte Versatz. **Nur quelltextbelegt, nicht ausgeführt** | T3 runter (`atr`) |
+
+**Fundus:** 181 HxC-Loader als Spec-Quelle · 86 XML-DiskLayouts
+(sui-generis-Vorsicht) · M3.2-DOS-Schicht-Spec (bewegt keine Zahl) ·
+MyDOS/SpartaDOS/LiteDOS-Lesewissen (Moratorium) · mkatr als
+SpartaFS-Generator (erst nach B1).
+
+**Nebenfund zur Inventar-Härtung:** `src/formats/d1m/` ist ein leeres,
+ungetracktes Verzeichnis und erzeugt trotzdem `vorhanden: true` —
+dieselbe Index-Falle wie seinerzeit die Fluss-Visualisierung (MF-630).
+Ein Verzeichnisname ist keine Fähigkeit.

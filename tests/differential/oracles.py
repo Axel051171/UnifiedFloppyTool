@@ -203,6 +203,40 @@ REGISTRY: tuple[Oracle, ...] = (
         licence="GPL-2.0-or-later (MAME); hier wird nur die AUSGABE "
                 "verglichen, es wandert kein Code ein",
     ),
+    Oracle(
+        name="lsatr",
+        env="LSATR",
+        exes=("lsatr", "lsatr.exe"),
+        version_args=("-v",),
+        version_re=r"mkatr version ([0-9]+\.[0-9]+)",
+        reference_for=(
+            "Atari-DOS-Dateisysteme in ATR und XFD: Sektorgeometrie, "
+            "DOS-Variante und freie Sektoren (`lsatr <datei>`), Inhalte "
+            "je Datei ueber `-x`/`-X`. Loest die ZIRKULARITAET des "
+            "ATR-Korpus: der stammt von atrcopy (robmcmullen), lsatr ist "
+            "eine unabhaengige C-Codebasis von Daniel Serpell — 0 Treffer "
+            "fuer atrcopy/robmcmullen/omnivore im ganzen Quellbaum. Der "
+            "Nachfolger atrip ist dagegen KEIN Oracle: `README.rst:6` "
+            "nennt ihn woertlich den Nachfolger von atrcopy, also "
+            "dieselbe Hand (fuenfte Registrierungsfrage, MF-644). "
+            "Selbst gemessen am freien Korpus: `atrcopy_dos2sd.atr` und "
+            "`.xfd` liefern ZEICHENGLEICH `720 sectors of 128 bytes, "
+            "DOS 2.0s, 707 sectors free of 707 total.` (je rc=0) — das "
+            "ist zugleich die dritte unabhaengige Bestaetigung, dass XFD "
+            "das ATR ohne den 16-Byte-Kopf ist. "
+            "FALLSTRICK, ebenfalls gemessen: dieses Korpus-Abbild ist "
+            "LEER (707 von 707 Sektoren frei, kein Verzeichniseintrag). "
+            "Ein Differenzlauf darauf entscheidet auf Datei-Ebene NICHTS "
+            "— wer lsatr fuer eine Inhaltspruefung benutzt, braucht "
+            "zuerst ein nicht-leeres Abbild."),
+        origin="https://github.com/dmsc/mkatr (Daniel Serpell); hier mit "
+               "`mingw32-make CC=gcc` aus dem Klon gebaut, gcc 13.1.0, "
+               "rc=0 ohne Warnungen",
+        licence="GPL-2.0-or-later — 26 von 26 Quelldateien tragen "
+                "\"either version 2 ... or (at your option) any later "
+                "version\" im Kopf; nur die AUSGABE wird verglichen, es "
+                "wandert kein Code ein",
+    ),
 )
 
 

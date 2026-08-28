@@ -23,7 +23,11 @@ Unterstützt 6 Hardware-Controller (HAL teilweise wired — siehe pro Eintrag):
 - **KryoFlux** (24 MHz, USB via DTC-Tool) — read via subprocess
 - **FC5025** (USB 5.25" Read-Only) — read via fcimage CLI
 - **XUM1541/ZoomFloppy** (IEC-Bus für Commodore-Laufwerke) — HAL [~] M3.2
-  partial (drive-tables + lifecycle real, USB I/O pending libusb wiring)
+  partial. **Berichtigt MF-650:** das libusb-Wiring ist seit MF-301 da
+  (16 `UFT_HAS_LIBUSB`-Stellen), und `KNOWN_ISSUES.md` §M.4 führt die
+  Protokoll-Deltas seit MF-301 als „RESOLVED IN CODE". Offen ist die
+  **CBM-DOS-Kommandoebene** (`U1:`/`M-R`/Kanal 15) — sieben Funktionen
+  geben unbedingt `UFT_ERR_NOT_IMPLEMENTED` —, plus die Tier-3-Bank
 - **Applesauce** (Apple-spezialisiert, 8 MHz / 125 ns, Text-Protokoll
   über serielle USB-Verbindung) — HAL [~] M3.3 partial (utility + tick-
   conversion + lifecycle real, serial I/O pending)
@@ -372,9 +376,10 @@ tests/                 — 77 C-Tests + 1 Qt-Test
   die Zahlen sind seit MF-541 abgeleitet, nicht gepflegt; MF-567 hat drei
   Urteile ohne Wandler entfernt)
 - 6 Hardware-Controller — SCP-Direct M3.1 libusb wiring LANDED (MF-254,
-  HW-bench UFT-008 pending); XUM1541 M3.2 + Applesauce M3.3 weiterhin
-  [~] partial scaffold (Pure-Utility + Lifecycle real, USB-/Serial-
-  Wiring pending; siehe `docs/MASTER_PLAN.md` §M3)
+  HW-bench UFT-008 pending); XUM1541 M3.2 libusb verdrahtet seit MF-301,
+  offen ist die CBM-DOS-Kommandoebene (MF-650); Applesauce M3.3 weiterhin
+  [~] partial scaffold (Pure-Utility + Lifecycle real, Serial-Wiring
+  pending; siehe `docs/MASTER_PLAN.md` §M3)
 - HAL-Tests grün: Greaseweazle (production) + 10 SCP-Direct + 16 XUM1541
   + 17 Applesauce = 43 Stub-Honesty-Asserts, 0 Failures
 - 55+ Kopierschutz-Schemes **im Katalog** (`src/protection/`), davon

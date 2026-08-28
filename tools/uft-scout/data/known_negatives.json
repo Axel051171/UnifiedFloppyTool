@@ -156,6 +156,30 @@
     "Datamuseum-DK/FloppyTools": {
       "status": "bewertet",
       "grund": "Gutachten 2026-08-28 (out/FloppyTools.gutachten.md): BSD-2, Archiv-Werkzeug Datamuseum.dk; Upstream auf Codeberg (GitHub-Spiegel eingefroren 2026-03-25). 4 Vorschlaege: DG-Nova-Widerspruch, KryoFlux-Zweithand-Oracle, Q1-Multi-Lesungs-Korpus, Zilog-Referenz. M2FM-Decoder + 8 fehlende Formate im Fundus (Moratorium)."
+    },
+    "dmsc/mkatr": {
+      "status": "bewertet",
+      "grund": "Gutachten Zyklus Atari-Zweithand (2026-08-28, out/mkatr_atrip.gutachten.md): GPL-2.0-or-later (26/26 Datei-Koepfe), lsatr mit MinGW gebaut (sha256 dc7f9004..) und auf Korpus-Paar gelaufen (rc=0, DOS 2.0s 707/707 frei — Korpus-ATR ist LEER); alle drei Oracle-Fragen JA, unabhaengige Hand (0 atrcopy-Treffer). Vorschlaege SCOUT-64..66 (vorlaeufig): Registry-Eintrag lsatr (B2), DOS-2-Korpus-Trio, DD-Voll-Boot-Spec"
+    },
+    "robmcmullen/atrip": {
+      "status": "bewertet",
+      "grund": "Gutachten Zyklus Atari-Zweithand (2026-08-28, out/mkatr_atrip.gutachten.md): als ATR-Oracle AUSGESCHLOSSEN — zirkulaer (README.rst:6 'The successor to atrcopy', gleiche Hand wie Korpus-Erzeuger, fuenfte Registrierungsfrage MF-644) UND gemessen nicht lauffaehig (import scheitert an pkg_resources unter Python 3.13; np.fromstring 9x; Beta 0.5.0, letzter Commit 2019). Wert: samples/dos_{sd,ed,dd}_test1.atr als nicht-leere DOS-2-Fixtures (SCOUT-65), Hashes im Gutachten"
+    },
+    "lipro-cpm4l/libdsk": {
+      "status": "bewertet",
+      "grund": "Gutachten Zyklus libdsk (2026-08-28, out/libdsk.gutachten.md): LGPL-2.0-or-later (GRUEN, 134/150 Dateien mit or-later-Kopf; ldbs.c MIT, blast.c zlib, crc16/crctable ohne Kopf). dskid/dsktrans/dskform mit MinGW hand-gebaut (Rezept im Gutachten), 13 Formate WRITE+ROUNDTRIP byteidentisch gemessen; deckt 7 der 12 libdsk-staemmigen T3-Formate (edsk/jv3/apridisk/myz80/nanowasp/logical/qrst) + seltene TD0/CQM-Schreiber. MF-648-Entlastungsbefund: kein 26x128-Eintrag, keine der 6 Systemzuschreibungen, dskid lehnt 256256-Zufall ab ('Bad format'). 31 UFT-Dateien mit libdsk-Attribution ohne Lizenzangabe -> SCOUT-62. Fork veraltet (1.5.12/2015; Upstream seasip 1.5.22, drvmgt/drvopus nur dort). 5 Vorschlaege (vorlaeufig SCOUT-59..63)."
+    },
+    "jfdelnero/HxCFloppyEmulator": {
+      "status": "bewertet",
+      "grund": "Gutachten 2026-08-28: LIZ-1-Kernfrage beantwortet (GPL-2.0-or-later, kein GPL-2.0-only; drei Baum-Attributionen eigenstaendig, Idiom-Audit 0 Treffer beidseitig); hxcfe v2.16.15.2 gebaut+gemessen als Oracle (ADF->HFE->ADF byte-identisch, kein G64/D64); AmigaDOS-MFM-Encoder amiga_mfm_track.c:356 GPLv2+ portierbar (MF-539); B4-Fixture-Rezept gemessen. SCOUT-49..52"
+    },
+    "OpenCBM/OpenCBM": {
+      "status": "bewertet",
+      "grund": "Gutachten Zyklus OpenCBM (2026-08-28, out/OpenCBM.gutachten.md): GPL-2.0-or-later (GRUEN); M.4-Befunde am Original bestaetigt, MF-301-HAL deckungsgleich; Rest-M3.2 = DOS-Kommandoschicht (libd64copy/cbmctrl als Referenz, Fundus)"
+    },
+    "OpenCBM/libcbmimage": {
+      "status": "bewertet",
+      "grund": "Gutachten Zyklus OpenCBM (2026-08-28): GPL-2.0 (GRUEN); cbmimage.exe mit CC=gcc gebaut+gelaufen (dir/bam auch auf UFT-Korpus-D64 und D1M); Oracle-Kandidat SCOUT-55/56 (40-Spur-BAM-Zweithand fuer A5, CMD-FD-Fixtures 829440/1658880/3317760)"
     }
   }
 }

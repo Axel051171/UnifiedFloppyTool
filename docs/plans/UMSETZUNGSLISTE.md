@@ -126,7 +126,15 @@ Fassungen gegen den Korpus, gegen `lsatr` diffen. Stimmt eine überein,
 bekommt sie den Anker und die andere fällt. Stimmt keine, fallen beide
 und Atari-DOS wird sauberer Neubau.
 
-* **Davor:** `lsatr` bauen (`make`, GPL-2.0, dmsc/mkatr)
+* **Davor:** ~~`lsatr` bauen~~ — **erledigt (MF-650)**, gebaut, gelaufen,
+  als siebtes Oracle registriert
+* 🔴 **Neue Vorbedingung, gemessen (MF-650):** unser einziges ATR-Abbild
+  ist **leer** — `lsatr` sagt „707 sectors free of 707 total", kein
+  Verzeichniseintrag. Ein Differenzlauf darauf entscheidet auf
+  Datei-Ebene **nichts**. B1 braucht zuerst ein nicht-leeres DOS-2-Trio
+  (SD/ED/DD), siehe SCOUT-65. Das Urteil bleibt beim unabhängigen
+  `lsatr`, deshalb dürfen die Fixtures von derselben Hand wie der Korpus
+  stammen
 
 ### B2 🟡 `lsatr` + a8rawconv als ATR-Zweithände registrieren
 **Kennzahl: begründete fünfte** — „Dateisysteme mit Inhalts-Differenzlauf"
@@ -155,8 +163,12 @@ Unser einziges HFE-Abbild trägt `track_encoding = 0xFF` und
 `case HFE_ENC_AMIGA_MFM:` (`uft_hfe.c:137`) wird **nie durchlaufen**.
 
 * Ein HxC-natives Abbild trägt `0x01`/`0x04`
-* **Lizenz des Fixtures ist Zone PRÜFEN** → 🔴 bis geklärt, oder
-  selbst erzeugen mit `hxcfe`
+* ~~**Lizenz des Fixtures ist Zone PRÜFEN** → 🔴 bis geklärt~~ —
+  **hinfällig (MF-650).** Der Aufklärer hat `hxcfe` gebaut und das
+  Fixture **selbst erzeugt**: `track_encoding = 0x01`,
+  `interface_mode = 0x04` gemessen. Damit läuft der tote Zweig
+  `uft_hfe.c:137` erstmals, und die Lizenzfrage an einem Fremd-Fixture
+  stellt sich gar nicht. Reife: 🟢, gehört nach Stufe A
 
 ---
 
@@ -164,7 +176,7 @@ Unser einziges HFE-Abbild trägt `track_encoding = 0xFF` und
 
 | # | Sache | Wartet auf |
 |---|---|---|
-| C1 🔴 | `LIZ-1` — 48 Attributionen ohne genannte Lizenz | Sprechstunde. **Vorbedingung** jeder Lizenzentscheidung |
+| C1 🟡 | `LIZ-1` — ~~48~~ **14** Attributionen ohne genannte Lizenz (MF-650: 31 × libdsk = **LGPL-2.0-or-later** bestimmt, 3 × HxC freigesprochen). Der Rest ist Fleißarbeit, keine Sprechstunde mehr | nur noch die letzten 14 bestimmen |
 | C2 🔴 | `LIZ-2` — drei AIR-Dateien (GPL-3.0, eine erreichbar), XCopy-Port | Sprechstunde. `uft_ipf_air.c` kostet IPF-Lesen |
 | C3 🔴 | Klick-Session | MF-496, MF-501, Fluss-Widget, D64-Browser — eine Sitzung |
 | C4 🔴 | Acorn-Korpus | **selbst erzeugbar** mit DIMConsole (`new`+`add`+`savecsv`) — braucht Lazarus/FPC |
