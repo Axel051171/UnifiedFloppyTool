@@ -1509,3 +1509,186 @@ Registry-Eintrag muss er laufen, sonst wäre es ein Oracle auf
 Zusicherung. Ebenfalls offen: das Urheberrecht am `.wvfrm`-Fixture, und
 ob FloppyControls SCP-/KryoFlux-Import als Zweitmeinung taugt (GUI-only,
 nicht geprüft).
+
+---
+
+## Phase-1-Bereitschaft für D64: der Leser ist da, die Tür fehlt (MF-629, 2026-08-28)
+
+Aus `flophashes` folgt eine Frage, die der Plan bislang nicht gestellt
+hat: für einen Verzeichnis-Differenzlauf braucht es **zwei** Seiten.
+floptool liefert seine — was liefert UFT?
+
+### Gemessen
+
+`src/formats/d64/uft_d64_parser_v3.c` **liest das Verzeichnis
+vollständig**. Ab Zeile 1085 läuft es über die Einträge der
+Verzeichnisspur, füllt `d64_dir_entry_t directory[]` mit Dateityp,
+Startspur/-sektor, entpacktem Dateinamen und REL-Feldern. Die Datei steht
+**nicht** in der Verwaisten-Grundlinie; ihr `main()` ist mit
+`#ifdef D64_V3_TEST` gekapselt, kollidiert also nicht.
+
+Erreichbar ist davon aber nichts. Der Weg nach draußen führt über
+`src/formats/uft_v3_bridge.c`, und dort haben von vier
+`uft_d64_v3_*`-Funktionen **drei keinen Aufrufer**:
+
+| Funktion | Aufrufer |
+|---|---|
+| `uft_d64_v3_detect_protection` | `src/core/uft_advanced_mode.c` |
+| `uft_d64_v3_get_diagnosis` | **keiner** |
+| `uft_d64_v3_handler` | **keiner** |
+| `uft_d64_v3_write` | **keiner** |
+
+Und selbst die Diagnose würde nicht helfen: `uft_v3_bridge.c:332-350`
+setzt eine Zeichenkette aus **Spurzahl und Dateigröße** zusammen — das
+Verzeichnis kommt darin nicht vor.
+
+Das registrierte Plugin (`uft_d64_plugin.c:220-229`) bietet
+`probe/open/close/read_track/write_track/verify_track`. Spur und Sektor,
+keine Datei-Ebene. Auch `src/fs/` hat keinen CBM-DOS-Treiber — dort
+liegen AmigaDOS, FAT12 und Hilfsmodule.
+
+### Was das für den Plan heißt
+
+Phase 1 nennt als ersten Schritt „CBM DOS (D64), Oracle `c1541`, kleinstes
+Format, Korpus liegt bereits". Der Schritt ist **kleiner** als er
+aussieht, aber ein anderer als beschrieben:
+
+* **Nicht** „einen CBM-DOS-Leser schreiben" — es gibt einen, und er
+  arbeitet.
+* **Noch nicht** „Verzeichnisse vergleichen" — auf UFT-Seite kommt
+  nichts heraus, was man vergleichen könnte.
+* Sondern: **das bereits Gelesene nach außen führen.** Eine Funktion, die
+  `disk->directory[]` in eine vergleichbare Form bringt, plus ein
+  Aufrufer. Danach steht der Differenzlauf gegen
+  `floptool flophashes d64 cbmdos` sofort offen — mit SHA-1 je Datei,
+  nicht nur mit Namen.
+
+Das ist dieselbe Gestalt wie bei DeepRead (`DEEP-1`) und den
+Plattform-Profilen (`PROF-1`): **das Können liegt im Baum, der Zugang
+fehlt.** Drei Fälle in einer Sitzung, aus drei ganz verschiedenen
+Richtungen gefunden.
+
+**Offen (`PH1-1`):** `uft_d64_v3_get_diagnosis` um die Verzeichnisliste
+erweitern oder eine eigene Ausleitung schreiben, dann Aufrufer setzen.
+Erst danach ist der D64-Differenzlauf Arbeit statt Vorarbeit. Vor dem
+Code steht wie immer der Rotbeweis: ein Test, der die UFT-Liste gegen
+die floptool-Liste stellt und **rot** ist, weil UFT nichts liefert.
+
+---
+
+## Einspruch des Eigentümers zu F2 — und was dahinter lag (MF-630, 2026-08-28)
+
+Der Eigentümer hat dem Satz „UFT hat gemessen keine Fluss-Visualisierung"
+widersprochen und zwei mögliche Auflösungen benannt: entweder sind die
+Widgets in der Verwaisten-Bereinigung gefallen, oder gemeint war präzise
+„keine **Zeitbereichs**-Darstellung".
+
+**Beides trifft nicht zu. Es ist ein dritter Fall.**
+
+### Gemessen
+
+| Datei | Zeilen | im Bau | instanziiert |
+|---|---|---|---|
+| `src/widgets/fluxvisualizerwidget.cpp` | 1092 | ja | **nein** |
+| `src/uft_flux_histogram_widget.cpp` | 821 | ja | **nein** |
+| `src/gui/uft_otdr_panel.cpp` | 942 | ja | ja |
+
+`fluxvisualizerwidget.h` definiert `FluxViewMode` mit **fünf** Modi —
+`WAVEFORM`, `HISTOGRAM`, `SPECTROGRAM`, `CELL_VIEW`, `COMPARISON`
+(Multi-Revolutions-Vergleich) — plus `drawSyncPatterns()`,
+`drawWeakBits()`, `drawRegions()`, `drawRuler()`, `drawMarker()`.
+`WAVEFORM` **ist** eine Strom-über-Zeit-Darstellung, und `COMPARISON`
+geht über FloppyControls Scatterplot hinaus.
+
+Instanziiert wird davon nichts: Suche nach `FluxVisualizerWidget` und
+`UftFluxHistogramWidget` über alle `*.cpp`/`*.h` unter `src/` liefert
+Treffer **nur in den Widget-Dateien selbst**. 1913 Zeilen Fluss-Anzeige
+werden in jeden Bau übersetzt und nie erzeugt.
+
+### Der Zuschnitt ändert sich damit
+
+F2 ist **kein neues Widget und keine neue Ansicht**, sondern:
+
+1. den vorhandenen Widget-Stapel verdrahten (Ansicht im bestehenden
+   Stack, wie der Eigentümer vorgibt),
+2. **erst danach** prüfen, ob `WAVEFORM` um Periodendarstellung mit
+   µs-Farbbändern und Index-Marken ergänzt werden muss.
+
+Ein neues Widget hätte genau die „fünf Bedeutungen für einen Namen"-Klasse
+erzeugt, vor der der Eigentümer gewarnt hat.
+
+Die Vorgabe zur Datenquelle bleibt: MF-501-Winkellage plus
+Multirev-Klassifikation, **ein Datenmodell, zwei Ansichten** (später die
+Polarkarte, Welle 3.2). Arbeitsteilung: Logik und kopflose Qt-Tests hier,
+Klick-Abnahme beim Eigentümer, Protokoll ins CLICK_SESSION-Dokument.
+
+### ORPH-3 — warum die Werkzeuge geschwiegen haben
+
+`exported_names()` in `scripts/audit_orphan_modules.py` liefert für
+klassenbasierte C++-Dateien eine **leere Menge**, und das Skript
+überspringt Dateien ohne Exporte (`if not names: continue`).
+
+Gemessen über `src/`:
+
+| | Anzahl | Zeilen |
+|---|---|---|
+| `.cpp` **ohne** erkannte Exporte | **50 von 56** | **26 918** |
+| davon GUI/Widget | 15 | 9 661 |
+| `.c` ohne erkannte Exporte | 3 von 531 | — |
+
+Die C-Seite ist also sauber erfasst, **die C++-Seite praktisch gar nicht**.
+Damit haben weder die Datei- noch die Verzeichnis-Messung je etwas über
+die Oberflächenschicht ausgesagt — dieselbe Schicht, die
+`gui_layer_was_unaudited` als „15 216 Zeilen Oberfläche, 2 Qt-Tests"
+führt.
+
+**Offen (`ORPH-3`):** `exported_names()` um Klassenmethoden und
+Qt-Metaobjekte erweitern, oder eine eigene Messung „welche
+QWidget-Ableitung wird nie instanziiert?". Bis dahin gilt für beide
+Waisen-Messungen: **sie sprechen über C, nicht über C++.** Das steht
+jetzt hier, statt als stille Annahme.
+
+### Zum Muster
+
+Das ist der vierte Fall an einem Tag, in dem das Können im Baum liegt und
+der Zugang fehlt — nach DeepRead (`DEEP-1`), den Plattform-Profilen
+(`PROF-1`) und dem D64-Verzeichnis (`PH1-1`). Alle vier aus verschiedenen
+Richtungen gefunden, keiner durch dieselbe Messung.
+
+---
+
+## Entscheidungen des Eigentümers zu Scout-Zyklus 6 (MF-630)
+
+**SCOUT-F1 — angenommen, Reihenfolge bindend.** .NET-7-SDK auf die
+Dev-Maschine (optionale CI-Spur, **kein** Pflichtpfad), `dskx` bauen,
+gegen **dasselbe** selbstgebaute 720K-Fixture laufen lassen, das schon
+floptool vermessen hat — **erst danach** Registry-Eintrag, eng
+geschnitten auf **gelöschte Einträge und Bad-Cluster**, denn dafür ist es
+laut Messung das einzige Werkzeug. Zeitpunkt: **mit dem FAT-VFS-Baustein,
+nicht vorher** — es ist das forensische Gegenstück zur
+Datei-Schadenskarte und hat allein keinen Abnehmer. Begründung des
+Eigentümers: „Oracle auf Zusicherung abzulehnen ist exakt die Disziplin,
+die den Baum trägt."
+
+**SCOUT-F2 — angenommen als P2**, mit dem Zuschnitt oben. Der Scatterplot
+ist nicht nur Anzeige, sondern **das fehlende Bedienelement der geplanten
+Rettungskette**: Fensterwahl für das CRC-Orakel und die
+Overlay-Differenzkarte brauchen genau diese Zeitbereichs-Sicht.
+
+**SCOUT-F3 — P3 bestätigt, Fixture abgelehnt.** 18 MB mit ungeklärtem
+Urheberrecht sind für **Daten** dieselbe ROT-Zone wie für Code; ein
+Fixture, das nicht verteilt werden darf, vergiftet den Korpus. Bessere
+Beschaffung: mit dem Start des Analog-Import-Bausteins die
+Referenzaufnahme **selbst** erzeugen — eigenes Scope, eigene Diskette,
+Provenienz im README, und nebenbei die erste echte Messung für die offene
+FLUX-15-Winkelfrage. Bis dahin Fundus.
+
+**Regel 6 präzisiert** (steht jetzt in `tools/uft-scout/AGENT.md`): sie
+gilt streng nur für `verworfen`. `bewertet` heißt nicht `erschöpft` —
+Neubesuch zulässig bei neuer Fragestellung, und das Gutachten muss den
+Anlass benennen.
+
+**`flophashes` ist ab jetzt der Standard** für **jeden** VFS-Differenzlauf,
+nicht nur für D64: verglichen wird der Inhalt byteweise über CRC32/SHA-1
+je Datei, nicht die Verzeichnisdarstellung. Eingetragen am
+Registry-Eintrag und in `PLAN_v4.1.7.md`.

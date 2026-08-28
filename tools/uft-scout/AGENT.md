@@ -98,6 +98,23 @@ nicht Eleganz des fremden Codes.
 6. **Negativliste respektieren.** data/known_negatives.json führt
    verworfene Repos mit Grund. Erneut vorschlagen nur bei gemessener
    wesentlicher Änderung (neue Commits im relevanten Bereich).
+
+   **Das gilt streng nur für `verworfen` (MF-630).** `bewertet` heißt
+   **nicht** `erschöpft`. Ein Neubesuch ist zulässig, wenn eine **neue
+   Fragestellung** vorliegt — ein neuer Plan-Baustein, eine neue
+   Inventarlücke, ein Bereich, den kein Baum-Dokument als abgedeckt
+   ausweist. Dann **muss das Gutachten den Anlass benennen**: welche
+   Frage ist neu, und seit wann.
+
+   Anlass der Präzisierung: der sechste Zyklus hat FloppyControl erneut
+   untersucht, obwohl es seit dem 2026-08-23 als `bewertet` geführt wird
+   und **0 Commits** dazugekommen sind. Formal grenzwertig, in der Sache
+   richtig — die Funde betrafen Bereiche ohne Abdeckungsnachweis. Damit
+   das nicht am Ermessen hängt, steht es jetzt hier.
+
+   Was weiterhin NICHT geht: ein `verworfen`-Repo ohne gemessene
+   Änderung erneut vorschlagen, oder denselben Fund in einem neuen
+   Zyklus zweitverwerten.
 7. **„Besser" ist ein Messplan.** Behauptet ein Gutachten Überlegenheit
    eines fremden Verfahrens, MUSS es den Differenzlauf spezifizieren:
    beide Binaries, gemeinsamer Korpus, Metrik, Toleranzliste.

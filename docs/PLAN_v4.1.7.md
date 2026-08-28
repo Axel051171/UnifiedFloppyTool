@@ -205,6 +205,18 @@ Wahrheits-Tore (34./35.) existieren. Es fehlt nur die Datenquelle.
 | # | Dateisystem | Oracle | Warum an dieser Stelle |
 |---|---|---|---|
 | 1 | **CBM DOS** (D64) | `c1541` aus VICE | kleinstes Format, skriptbares Oracle, BAM überschaubar, Korpus liegt bereits |
+
+> **Bereitschaft gemessen (MF-629).** Der erste Schritt ist ein anderer als
+> hier steht. `src/formats/d64/uft_d64_parser_v3.c:1085ff` liest das
+> Verzeichnis bereits vollständig in `d64_dir_entry_t directory[]` — aber
+> **kein erreichbarer Weg gibt es heraus**: von den vier
+> `uft_d64_v3_*`-Funktionen in `src/formats/uft_v3_bridge.c` hat nur
+> `detect_protection` einen Aufrufer, und `get_diagnosis` setzt bloß
+> Spurzahl und Dateigröße zusammen. Es ist also nicht „einen Leser
+> schreiben", sondern „das Gelesene ausleiten" — `PH1-1` in OPEN_ITEMS.
+>
+> Als Oracle steht `floptool flophashes d64 cbmdos` bereit und liefert
+> **SHA-1 je Datei**, nicht nur Namen.
 | 2 | **AmigaDOS** (ADF) | `xdftool` (amitools) — derselbe Erzeuger wie der Korpus; **zusätzlich** `unadf` als unabhängige Zweitmeinung | zweitkleinster Schritt; Korpus liegt |
 | 3 | **Atari DOS 2** (ATR) | `atrcopy` | Korpus liegt |
 | 4 | **FAT12** (IMG/DSK) | `mtools` (`mdir`) | größte Verbreitung, aber kein Korpus-Eintrag → braucht erst einen |

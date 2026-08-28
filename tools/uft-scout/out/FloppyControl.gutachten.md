@@ -152,6 +152,41 @@ Spur-Ebene bzw. Histogramm-Aggregat, keine Strom-über-Zeit-Darstellung**.
 derselbe Befund wie der Rotbeweis MF-610: UFT hat keine
 Fluss-Visualisierung.
 
+> ### BERICHTIGT (MF-630, Einspruch des Eigentümers)
+>
+> **Der Satz „UFT hat keine Fluss-Visualisierung" ist falsch.** Die
+> Handprüfung oben nennt drei Widgets und hat ein viertes übersehen:
+>
+> `src/widgets/fluxvisualizerwidget.h` definiert `FluxViewMode` mit
+> **fünf** Modi — `WAVEFORM`, `HISTOGRAM`, `SPECTROGRAM`, `CELL_VIEW`,
+> `COMPARISON` (Multi-Revolutions-Vergleich) — samt
+> `drawWaveform()`, `drawSyncPatterns()`, `drawWeakBits()`,
+> `drawRuler()`, `drawMarker()`. `WAVEFORM` **ist** eine
+> Strom-über-Zeit-Darstellung. Das Widget hat 1092 Zeilen, das
+> Histogramm-Widget 821, beide stehen in `UnifiedFloppyTool.pro`.
+>
+> **Der belegte Satz lautet anders und ist schwerwiegender:** die
+> Widgets sind **unerreichbar**. Weder `FluxVisualizerWidget` noch
+> `UftFluxHistogramWidget` wird irgendwo im Baum instanziiert —
+> gemessen über `src/`, alle `*.cpp`/`*.h`, Treffer nur in den
+> Widget-Dateien selbst. 1913 Zeilen Fluss-Anzeige werden in jeden Bau
+> übersetzt und nie erzeugt.
+>
+> **Konsequenz für den Zuschnitt:** F2 ist **keine neue Ansicht und kein
+> neues Widget**, sondern das Verdrahten eines vorhandenen
+> Widget-Stapels — und erst danach die Frage, ob dessen `WAVEFORM`-Modus
+> um Periodendarstellung mit µs-Farbbändern und Index-Marken ergänzt
+> werden muss. Ein neues Widget hätte die nächste
+> „fünf-Bedeutungen-für-einen-Namen"-Klasse erzeugt.
+>
+> **Warum die Werkzeuge das nicht meldeten:** `exported_names()` in
+> `scripts/audit_orphan_modules.py` liefert für klassenbasierte
+> C++-Dateien eine **leere Menge**, und das Skript überspringt Dateien
+> ohne Exporte. Gemessen: **50 von 56 `.cpp` unter `src/` (26 918
+> Zeilen) sind für die Waisen-Messung unsichtbar**, davon 15
+> GUI/Widget-Dateien mit 9 661 Zeilen. Die C-Seite ist davon nicht
+> betroffen (528 von 531 erkannt). Als `ORPH-3` verzeichnet.
+
 **Einhängepunkt:** die offene Fit-Anzeige MAMMUT_PLAN §2.1.3 (Spanne +
 gemessene Zellendauer liegen vor, der Mensch sieht sie nicht) und das
 OTDR-Panel (`src/gui/uft_otdr_panel.cpp`). Datenquelle liegt komplett im
@@ -301,9 +336,11 @@ PLAN_v4.1.7 Phase 1 („inhaltlich statt strukturell"); Bauprobe
 `out/FloppyControl.gutachten.md` §F1.
 
 **SCOUT-F2 (P2, Entscheidungsvorlage GUI) — Fluss-Scatterplot nach
-FloppyControl-Vorbild.** UFT hat gemessen keine Fluss-Visualisierung
-(Rotbeweis MF-610; Handprüfung 2026-08-28: Histogramm-, Sektor- und
-Spur-Widgets vorhanden, keine Strom-über-Zeit-Darstellung), während
+FloppyControl-Vorbild.** *(Begründung berichtigt MF-630, siehe §F2:
+UFT **hat** eine Fluss-Visualisierung — `FluxVisualizerWidget`, fünf
+Modi einschließlich `WAVEFORM` — sie wird nur **nirgends
+instanziiert**. Der Vorschlag ist deshalb „vorhandenen Widget-Stapel
+verdrahten", nicht „neue Ansicht bauen".)* Während
 FloppyControl den Periodenstrom als interaktiven Scatterplot mit
 4/6/8-µs-Farbbändern, Index-Marken, Schwellenlinien und Zoom/Drag
 zeichnet (`Graphics.cs:1942-2160`). Vorgeschlagen wird eine
