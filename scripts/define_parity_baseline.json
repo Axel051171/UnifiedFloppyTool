@@ -10,8 +10,6 @@
     "A:UFT_C64_PROTECTION_VERSION": "Nur CMake (src/protection/c64/CMakeLists.txt:17). Siehe C-Eintrag: der Schalter hat keinen Verbraucher, die Paritaet ist deshalb nicht die Frage.",
     "C:UFT_C64_PROTECTION_VERSION": "Kein Verbraucher im Quellcode. ARCH-23.",
     "A:UFT_C64_KNOWN_TITLES_DB": "Nur CMake (src/protection/c64/CMakeLists.txt:17). Siehe C-Eintrag.",
-    "C:UFT_C64_KNOWN_TITLES_DB": "Kein Verbraucher im Quellcode. ARCH-23.",
-    "A:UFT_TRACK_ALIGN_VERSION": "Nur CMake (src/protection/c64/CMakeLists.txt:35). Siehe C-Eintrag.",
-    "C:UFT_TRACK_ALIGN_VERSION": "Kein Verbraucher im Quellcode. ARCH-23."
+    "C:UFT_C64_KNOWN_TITLES_DB": "Kein Verbraucher im Quellcode. ARCH-23."
   }
 }

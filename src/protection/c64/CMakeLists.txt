@@ -19,19 +19,13 @@ target_compile_definitions(uft_c64_protection PRIVATE
     UFT_C64_KNOWN_TITLES_DB=1
 )
 
-# C64/1541 Track Alignment Module
-# Based on nibtools by Pete Rittwage (c64preservation.com)
-# Provides track alignment for protected disk mastering
-
-add_library(uft_track_align STATIC
-    uft_track_align.c
-)
-
-target_include_directories(uft_track_align PUBLIC 
-    ${CMAKE_SOURCE_DIR}/include
-)
-
-# Add defines for track alignment features
-target_compile_definitions(uft_track_align PRIVATE
-    UFT_TRACK_ALIGN_VERSION="1.0"
-)
+# MF-637: das Ziel `uft_track_align` ist entfernt. Die Quelle war ein Port
+# aus nibtools (GPL-3.0 seit 2025-01-30, davor lizenzlos) und liegt seit
+# MF-635 in Quarantaene — Beweis: `shift_buffer_left` zeichengleich samt
+# des erfundenen Bezeichners `carryshift`, sieben woertliche
+# Kommentar-Echos, Entsprechungen zu allen 14 prot.c-Funktionen.
+#
+# Die Bibliothek wurde gebaut und von NIEMANDEM verlinkt: kein anderes
+# CMakeLists nennt das Ziel. Ein drittes Bau-Verzeichnis fuer dieselbe
+# Datei — nach der .pro und tests/CMakeLists.txt — und genau dieses hat
+# die CI rot gemacht, weil es beim Loeschen uebersehen wurde.
