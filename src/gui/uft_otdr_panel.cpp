@@ -439,6 +439,50 @@ void UftOtdrPanel::analyzeTrack(int cylinder, int head)
         .arg(cylinder).arg(head).arg(otdr_quality_name(trk->stats.overall)));
 
     unsetCursor();
+
+    /* MF-632: die rohen Flusszeiten dieser Spur liegen jetzt vor. Wer eine
+     * zweite Sicht darauf zeigen will (die Fluss-Visualisierung), haengt
+     * sich hier an — ohne dass dieses Panel wissen muss, wer zuhoert. */
+    emit fluxTrackReady(cylinder, head);
+}
+
+/* MF-632: Zugang zu den Rohdaten, die dieses Panel ohnehin haelt.
+ *
+ * Beide Funktionen geben bei jeder Unklarheit LEER bzw. 0 zurueck statt
+ * ein Teilergebnis — ein halber Flussstrom sieht aus wie ein kurzer, und
+ * das waere in einem forensischen Werkzeug eine stille Veraenderung. */
+std::vector<uint32_t> UftOtdrPanel::trackFlux(int cylinder, int head,
+                                              int revolution) const
+{
+    if (!m_disk) return {};
+    const int idx = cylinder * 2 + head;
+    if (idx < 0 || idx >= (int)m_disk->track_count) return {};
+
+    const otdr_track_t *trk = &m_disk->tracks[idx];
+
+    const uint32_t *quelle = nullptr;
+    uint32_t anzahl = 0;
+
+    if (revolution < 0) {
+        quelle = trk->flux_ns;
+        anzahl = trk->flux_count;
+    } else {
+        if (revolution >= (int)trk->num_revolutions) return {};
+        if (revolution >= OTDR_MAX_REVOLUTIONS) return {};
+        quelle = trk->flux_multi[revolution];
+        anzahl = trk->flux_multi_count[revolution];
+    }
+
+    if (!quelle || anzahl == 0) return {};
+    return std::vector<uint32_t>(quelle, quelle + anzahl);
+}
+
+int UftOtdrPanel::trackRevolutions(int cylinder, int head) const
+{
+    if (!m_disk) return 0;
+    const int idx = cylinder * 2 + head;
+    if (idx < 0 || idx >= (int)m_disk->track_count) return 0;
+    return (int)m_disk->tracks[idx].num_revolutions;
 }
 
 void UftOtdrPanel::analyzeFullDisk()

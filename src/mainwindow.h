@@ -22,6 +22,7 @@ class VisualDiskWindow;
 class StatusTab;
 class DecodeJob;
 class UftOtdrPanel;
+class FluxVisualizerWidget;   /* MF-632: zweite Sicht im Signal-Reiter */
 
 class MainWindow : public QMainWindow
 {
@@ -49,6 +50,9 @@ protected:
     void dropEvent(QDropEvent *event) override;
 
 private slots:
+    /** MF-632: Fluss-Ansicht auf die eben analysierte Spur stellen. */
+    void onFluxTrackReady(int cylinder, int head);
+
     // File menu
     void onOpen();
     void onSave();
@@ -84,6 +88,9 @@ private:
     // Tab references for signal connections
     StatusTab* m_statusTab = nullptr;
     UftOtdrPanel* m_otdrPanel = nullptr;
+    /* MF-632: die Fluss-Visualisierung im selben Reiter. Lag seit
+     * jeher im Baum und wurde von niemandem instanziiert (MF-630). */
+    FluxVisualizerWidget* m_fluxView = nullptr;
     
     // Decode thread
     QThread* m_decodeThread = nullptr;

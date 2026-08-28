@@ -24,6 +24,9 @@
 #define UFT_OTDR_PANEL_H
 
 #include <QWidget>
+
+#include <cstdint>
+#include <vector>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QSplitter>
@@ -92,11 +95,43 @@ public:
     /** @brief Check if flux data is loaded */
     bool hasFluxData() const { return m_scpCtx != nullptr; }
 
+    /**
+     * @brief Rohe Flusszeiten einer Spur, in Nanosekunden (MF-632).
+     *
+     * Das Panel haelt die Zeiten ohnehin — `otdr_track_t::flux_ns` und
+     * `flux_multi[]`. Bisher gab es keinen Weg, sie von aussen zu sehen;
+     * damit war der zweite Blick auf dieselben Daten (die
+     * Fluss-Visualisierung) nicht anschliessbar, obwohl beide Seiten im
+     * Baum lagen.
+     *
+     * @param cylinder   Zylinder
+     * @param head       Kopf (0/1)
+     * @param revolution -1 fuer die Hauptaufnahme, sonst der Index in
+     *                   `flux_multi[]`
+     * @return leerer Vektor, wenn nichts geladen ist oder die Spur nicht
+     *         existiert — nie ein Teilergebnis ohne Hinweis
+     */
+    std::vector<uint32_t> trackFlux(int cylinder, int head,
+                                    int revolution = -1) const;
+
+    /** @brief Wie viele Umdrehungen diese Spur fuehrt (0 = keine Daten). */
+    int trackRevolutions(int cylinder, int head) const;
+
 signals:
     void analysisStarted();
     void analysisProgress(int percent, const QString &status);
     void analysisComplete(float overallQuality);
     void trackSelected(int cylinder, int head);
+
+    /**
+     * @brief Fuer diese Spur liegen rohe Flusszeiten bereit (MF-632).
+     *
+     * Gesendet am Ende von analyzeTrack(). Absichtlich ohne Nutzdaten im
+     * Signal: der Empfaenger holt sie mit trackFlux(), damit keine Kopie
+     * durch die Signalkette laeuft und keine veraltete Kopie entstehen
+     * kann.
+     */
+    void fluxTrackReady(int cylinder, int head);
 
 public slots:
     void onTrackChanged(int trackIndex);

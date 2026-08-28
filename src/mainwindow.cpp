@@ -15,6 +15,8 @@
 #include "explorertab.h"
 #include "toolstab.h"
 #include "uft_otdr_panel.h"
+#include "widgets/fluxvisualizerwidget.h"   /* MF-632 */
+#include <QSplitter>
 
 #include <QVBoxLayout>
 #include <QFileDialog>
@@ -160,10 +162,71 @@ void MainWindow::loadTabWidgets()
     layout5->addWidget(toolsTab);
     
     // Tab 7: Signal Analysis — OTDR-style flux quality visualization
+    //
+    // MF-632 (SCOUT-F2 Stufe 2): darunter haengt jetzt die
+    // Fluss-Visualisierung. Sie lag seit jeher im Baum
+    // (src/widgets/fluxvisualizerwidget.cpp, 1092 Zeilen, fuenf Ansichten)
+    // und wurde von NIEMANDEM instanziiert — gemessen in MF-630. Sie ist
+    // deshalb kein neues Widget, sondern eine zweite Sicht auf dieselben
+    // Daten, die das OTDR-Panel ohnehin haelt: ein Datenmodell, zwei
+    // Ansichten.
+    //
+    // Ein Splitter statt eines Unterreiters, weil die Fensterwahl fuer das
+    // CRC-Orakel beide Sichten gleichzeitig braucht — Qualitaet oben,
+    // Zeitbereich unten. Voreinstellung 60/40 zugunsten des OTDR-Panels,
+    // das die Bedienelemente traegt.
     m_otdrPanel = new UftOtdrPanel();
+    m_fluxView  = new FluxVisualizerWidget();
+    m_fluxView->setViewMode(FluxViewMode::WAVEFORM);
+    m_fluxView->setMinimumHeight(120);
+
+    QSplitter* signalSplit = new QSplitter(Qt::Vertical, ui->tab_signal_analysis);
+    signalSplit->addWidget(m_otdrPanel);
+    signalSplit->addWidget(m_fluxView);
+    signalSplit->setStretchFactor(0, 6);
+    signalSplit->setStretchFactor(1, 4);
+
     QVBoxLayout* layoutOtdr = new QVBoxLayout(ui->tab_signal_analysis);
     layoutOtdr->setContentsMargins(0, 0, 0, 0);
-    layoutOtdr->addWidget(m_otdrPanel);
+    layoutOtdr->addWidget(signalSplit);
+
+    // Die Verbindung, die aus zwei Widgets eine Ansicht macht. Das Panel
+    // schickt nur die Spurkennung; die Zeiten holt der Empfaenger selbst,
+    // damit keine Kopie durch die Signalkette laeuft.
+    connect(m_otdrPanel, &UftOtdrPanel::fluxTrackReady,
+            this, &MainWindow::onFluxTrackReady);
+}
+
+/**
+ * @brief Die Fluss-Ansicht auf die eben analysierte Spur stellen (MF-632).
+ *
+ * Holt die Hauptaufnahme und, falls vorhanden, die weiteren Umdrehungen —
+ * letztere sind die Grundlage der COMPARISON-Ansicht und damit der
+ * Weak-Bit-Beurteilung.
+ *
+ * Liefert das Panel nichts, wird die Ansicht GELEERT statt die alte Spur
+ * stehenzulassen. Eine Anzeige, die Daten der vorigen Spur unter der
+ * neuen Beschriftung zeigt, waere genau die stille Veraenderung, die
+ * dieses Projekt ausschliesst.
+ */
+void MainWindow::onFluxTrackReady(int cylinder, int head)
+{
+    if (!m_fluxView || !m_otdrPanel) return;
+
+    const std::vector<uint32_t> haupt = m_otdrPanel->trackFlux(cylinder, head);
+    if (haupt.empty()) {
+        m_fluxView->clearData();
+        return;
+    }
+
+    m_fluxView->setFluxData(haupt);
+
+    const int umdrehungen = m_otdrPanel->trackRevolutions(cylinder, head);
+    for (int r = 0; r < umdrehungen; ++r) {
+        const std::vector<uint32_t> rev = m_otdrPanel->trackFlux(cylinder, head, r);
+        if (!rev.empty())
+            m_fluxView->addRevolution(rev);
+    }
 }
 
 void MainWindow::setupConnections()
