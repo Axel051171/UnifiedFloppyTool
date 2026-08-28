@@ -104,9 +104,11 @@ einige IDs laufen über dedizierte Handler ohne Plugin-Struct, z.B. QDOS).
 > ⚠ **MF-620: die beiden Zahlen haben verschiedene Quellen, und eine
 > Zuschreibung hier war falsch.** Der Satz endete mit „Code-abgeleitet
 > via `scripts/gen_format_list.py`" — dieses Skript liefert **88**
-> Plugins (137 mit dem DSK-Makro), nie 161. Die 161 stammen aus
-> `src/formats/uft_format_registry_v2.c`, einer Datei **ohne Aufrufer**
-> (`docs/orphan_baseline.txt`). Sie beschreiben einen Katalog, nicht das
+> Plugins (137 mit dem DSK-Makro), nie 161. Die 161 stammen aus einer Tabelle **ohne Aufrufer**, die bis MF-624 in
+> `src/formats/uft_format_registry_v2.c` stand und seither als
+> [`FORMAT_CATALOG.md`](FORMAT_CATALOG.md) gefuehrt wird — dort mit einer
+> gemessenen Spalte: 95 der 162 Eintraege haben ein registriertes Plugin,
+> 67 nicht. Sie beschreiben einen Katalog, nicht das
 > Verhalten des Werkzeugs.
 
 | Metric | Wert | Quelle |
@@ -114,7 +116,7 @@ einige IDs laufen über dedizierte Handler ohne Plugin-Struct, z.B. QDOS).
 | Plugin-Structs (`uft_format_plugin_t`) | 84 | `scripts/gen_format_list.py` / `audit_plugin_compliance.py` |
 | davon auto-registriert (Makro) | 80 | `UFT_REGISTER_FORMAT_PLUGIN` |
 | davon manuell registriert | 4 | g64, hfe, img, scp |
-| Format-IDs im Katalog | 161 ⚠ | `uft_format_registry_v2.c` — **diese Datei ruft niemand auf** (MF-619, steht in `docs/orphan_baseline.txt`). Die Zahl beschreibt eine Tabelle, nicht das Verhalten des Werkzeugs. Registriert wird ueber `src/formats/format_registry/uft_format_registry.c:434`, gerufen von `src/main.cpp:43` |
+| Format-IDs im Katalog | 161 ⚠ | [`FORMAT_CATALOG.md`](FORMAT_CATALOG.md) — **eine Namensliste, kein Verhalten** (MF-619/624; die C-Datei dahinter hatte keinen Aufrufer und ist geloescht; 95 der 162 Eintraege haben ein Plugin, 67 nicht). Die Zahl beschreibt eine Tabelle, nicht das Verhalten des Werkzeugs. Registriert wird ueber `src/formats/format_registry/uft_format_registry.c:434`, gerufen von `src/main.cpp:43` |
 | `spec_status` populiert | **84/84 (100%)** | MF-262 / audit |
 | `features`-Matrix populiert | **80/80 (100%)** | MF-263 |
 | Round-Trip getestet | 6/138 | `tests/conformance/` (IBM-DD, IBM-HD, AtariST, C64-GCR, Apple2-GCR, Amiga) |

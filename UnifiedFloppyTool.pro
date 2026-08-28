@@ -1475,7 +1475,6 @@ SOURCES += \
     src/formats/uft_axdf.c \
     src/formats/uft_cw_raw.c \
     src/formats/uft_fdc_gaps.c \
-    src/formats/uft_format_registry_v2.c
 
 SOURCES += \
     src/analysis/events/uft_export_bridge.c \

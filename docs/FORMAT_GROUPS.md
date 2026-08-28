@@ -8,11 +8,12 @@
 >
 > - **84 registrierte Format-Plugins** (`uft_format_plugin_t`-Structs): 80 via
 >   `UFT_REGISTER_FORMAT_PLUGIN`-Makro + 4 manuell (g64, hfe, img, scp).
-> - **161 Format-IDs** im Registry-Katalog (`uft_format_registry_v2.c`) — mehr
+> - **161 Format-IDs** im Registry-Katalog ([`FORMAT_CATALOG.md`](FORMAT_CATALOG.md)) — mehr
 >   als Plugins, weil ein Plugin mehrere IDs bedienen kann und einige IDs über
 >   dedizierte Handler laufen (kein Plugin-Struct).
 >
->   ⚠ **MF-619: Diese Datei hat keinen Aufrufer.** Sie steht in
+>   ⚠ **MF-619: Diese Tabelle hatte keinen Aufrufer** und ist seit
+>   MF-624 kein Code mehr, sondern ein Dokument. Sie stand in
 >   `docs/orphan_baseline.txt`; ihre sechs exportierten Funktionen
 >   (`uft_format_registry_count`, `_get_name`, `_get_extensions`,
 >   `_get_platform`, `_find_by_extension`, `_print`) ruft niemand.
@@ -25,7 +26,7 @@
 >   Kopierschutz-Schemes" (P0-2). Die Zahl, die das Projekt sonst führt,
 >   kommt aus der SSOT `scripts/gen_format_list.py`: **88 Plugins**
 >   ausgeschrieben, 137 mit dem DSK-Makro.
-> - **Sinclair QL / QDOS** ist eine solche ID (`uft_format_registry_v2.c:500`,
+> - **Sinclair QL / QDOS** ist eine solche ID (im Katalog als `QL`,
 >   Handler `src/formats/ql/qdos.c` mit eigener `qdos_*`-API, data_layer 2 =
 >   Sektor-Image) — sie fehlte in der alten Gruppierung unten und wird hier
 >   nachgetragen. Die kuratierte Gruppen-Tabelle unten ist historisch und kann

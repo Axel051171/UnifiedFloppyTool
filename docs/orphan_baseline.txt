@@ -216,7 +216,6 @@ src/formats/uft_cw_raw.c
 src/formats/uft_fdc_gaps.c
 src/formats/uft_format_extensions.c
 src/formats/uft_format_names_extended.c
-src/formats/uft_format_registry_v2.c
 src/formats/uft_format_versions.c
 src/formats/victor/victor9k.c
 src/formats/zilog/zilogmcz.c

@@ -1,7 +1,9 @@
 # FORMAT-CLASSIFICATION — Kopierschutz- & Disk-Fehler-Repräsentation
 
-_Momentaufnahme vom 2026-07-05 aus `src/formats/uft_format_registry_v2.c`
-(`data_layer`-Feld). 161 Format-IDs._
+_Momentaufnahme vom 2026-07-05 aus der Katalogtabelle (`data_layer`-Feld),
+161 Format-IDs. Die Tabelle liegt seit MF-624 in
+[`FORMAT_CATALOG.md`](FORMAT_CATALOG.md); ihre fruehere C-Datei
+`src/formats/uft_format_registry_v2.c` ist geloescht._
 
 > ⚠ **MF-620 — zwei Einschränkungen, die hier fehlten.**
 >
@@ -11,9 +13,11 @@ _Momentaufnahme vom 2026-07-05 aus `src/formats/uft_format_registry_v2.c`
 > von Hand erstellte Momentaufnahme und altert wie jede andere. Wer sie
 > auffrischen will, muss den Weg erst schreiben.
 >
-> **Zweitens: die Quelle hat keinen Aufrufer.**
-> `uft_format_registry_v2.c` steht in `docs/orphan_baseline.txt`; seine
-> sechs exportierten Funktionen ruft niemand. Registriert wird über
+> **Zweitens: die Quelle hatte keinen Aufrufer.**
+> `uft_format_registry_v2.c` stand in `docs/orphan_baseline.txt`; seine
+> sechs exportierten Funktionen rief niemand. Seit MF-624 ist die Datei
+> geloescht und die Tabelle steht als Dokument in
+> [`FORMAT_CATALOG.md`](FORMAT_CATALOG.md). Registriert wird über
 > `src/formats/format_registry/uft_format_registry.c:434`
 > (`uft_register_all_formats()`, gerufen von `src/main.cpp:43`), und
 > dessen `all_plugins[]` speist sich aus Gruppen, nicht aus dieser
@@ -29,7 +33,7 @@ _Momentaufnahme vom 2026-07-05 aus `src/formats/uft_format_registry_v2.c`
 > die Anzahl `.c`-Quelldateien im Format-Layer, von denen viele Duplikate, Helfer oder
 > toter Copy-Paste sind (siehe `docs/KNOWN_ISSUES.md` FMT-1..4, Memory
 > `format-layer-fabrication`). Die **klassifizierungsrelevante** Einheit ist die
-> distinkte **Format-ID** in `uft_format_registry_v2.c`: **161**.
+> distinkte **Format-ID** im Katalog ([`FORMAT_CATALOG.md`](FORMAT_CATALOG.md)): **161**.
 > (MF-620: hier stand „in der SSOT-Registry". Das ist sie nicht —
 > die Datei hat keinen Aufrufer, und die SSOT des Projekts ist
 > `scripts/gen_format_list.py` mit 88 Plugins.) Diese Tabelle

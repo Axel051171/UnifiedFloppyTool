@@ -720,7 +720,7 @@ Header. Gestrichen und unter `MF-622` vermerkt.
 
 | # | | |
 |---|---|---|
-| **SCOUT-17b** | `src/formats/uft_format_registry_v2.c`, 587 Zeilen | ⚠ **angehalten.** Regel 2 träfe zu — kein Plan-Anker, keine Symbolkollision. Aber die Datei hat einen Konsumenten, den die Regel nicht kennt: **sieben Verweise in vier Dokumenten.** `FORMAT-CLASSIFICATION.md` ist im Kern eine Klassifikation genau dieser 162-Einträge-Tabelle; `CAPABILITIES.md` und `FORMAT_GROUPS.md` beziehen ihre „161 Format-IDs" daraus. Sie zu löschen entzieht einem ganzen Dokument den Gegenstand |
+| **SCOUT-17b** | `src/formats/uft_format_registry_v2.c`, 587 Zeilen | ✅ **erledigt in MF-624** — Tabelle nach `docs/FORMAT_CATALOG.md` überführt, Datei gelöscht. Der damalige Vorbehalt steht unten unverändert, weil er richtig war: ⚠ **angehalten.** Regel 2 träfe zu — kein Plan-Anker, keine Symbolkollision. Aber die Datei hat einen Konsumenten, den die Regel nicht kennt: **sieben Verweise in vier Dokumenten.** `FORMAT-CLASSIFICATION.md` ist im Kern eine Klassifikation genau dieser 162-Einträge-Tabelle; `CAPABILITIES.md` und `FORMAT_GROUPS.md` beziehen ihre „161 Format-IDs" daraus. Sie zu löschen entzieht einem ganzen Dokument den Gegenstand |
 
 Diese Information lag bei der Regelentscheidung noch nicht vor. Zwei
 Wege, beide sauber:
@@ -970,3 +970,71 @@ und pytest — melden jetzt 14 von 14.
 Für ADF und ATR braucht Phase 1 ein anderes Oracle; `unadf` und
 `atrcopy` stehen dafür schon im Plan. Ob D71 und G64 über D64 hinaus
 etwas zur Hebung beitragen, ist noch nicht bewertet.
+
+---
+
+## SCOUT-17b: die Tabelle war nie Code (MF-624, 2026-08-28)
+
+`src/formats/uft_format_registry_v2.c` ist **gelöscht**, ihre 162 Einträge
+stehen als [`FORMAT_CATALOG.md`](FORMAT_CATALOG.md) im Baum.
+
+Die Verwaisten-Regel traf zu — alle acht exportierten Funktionen hatten
+baumweit **0 Aufrufer** (einzeln nachgemessen). Der Vorbehalt aus MF-621
+war aber ebenfalls richtig: drei Dokumente beziehen ihre Zahl „161
+Format-IDs" von hier, und „Katalogquelle" ist kein *Plan*-Anker im Sinne
+der Regel. Beides zusammen ergibt nur einen sauberen Weg: die Tabelle ist
+faktisch immer Dokumentation gewesen, also wird sie eine.
+
+`FORMAT-CLASSIFICATION.md` nennt sich „generiert" — im Baum liegt kein
+Erzeuger (MF-620 hatte das schon festgestellt). Das Löschen brach deshalb
+nichts Mechanisches, nur Zitate, und die zeigen jetzt auf den Katalog.
+
+### Die neue Spalte — und was sie nicht sagt
+
+Der Katalog trägt eine gemessene Spalte „Plugin?": steht dieser Name oder
+eine seiner Endungen in der Plugin-SSOT (88 ausgeschriebene + 49
+`DSK_PLUGIN()`-Ausprägungen = 137)?
+
+**95 von 162 ja, 67 nein.**
+
+Der erste Anlauf dieser Zahl war ein reiner Namensabgleich und ergab
+„100 ohne Plugin". Er war falsch: `2MG` gegen `2IMG`, `A2R` gegen einen
+tatsächlich vorhandenen Eintrag. Über Endungen nachgemessen blieben 67 —
+und für `CRT`, `EDD`, `FDX` liegt sogar Code im Baum, der gebaut, aber
+nie registriert wird und über `uft_disk_open()` deshalb unerreichbar ist.
+Genau die Lage aus MF-446/447.
+
+Es ist derselbe Fehler, den ich bei SCOUT-9 am Werkzeug gemessen habe:
+**ein Abgleich über Namen ist kein Abgleich über Fähigkeiten** — hier
+einmal in die andere Richtung, mit einer zu hohen Fehlzahl statt einer zu
+hohen Erfolgszahl.
+
+### Zwei Fallen beim Überführen, beide vom Wächter gefangen
+
+Der Auslese-Code bekam eine Zusicherung „erkannte Zeilen == öffnende
+Klammern". Sie hat zweimal gefeuert:
+
+* `{"D81", "d81", "1581 3.5\" MFM", …}` — das maskierte Anführungszeichen
+  brach das Muster. **Eine Zeile wäre stillschweigend verschwunden.**
+* `{NULL, NULL, NULL, NULL, 0}` — der Abschluss-Eintrag ist keine
+  Datenzeile; meine Zählung war zu grob, nicht die Tabelle falsch.
+
+Ohne die Zusicherung hätte der Katalog 161 statt 162 Zeilen gehabt, und
+niemand hätte es gemerkt.
+
+### Nebenbei gefunden: eine dritte Registry, die der Detektor nicht sieht
+
+`src/formats/uft_format_registry.c` (15 KB, 16 `.name`-Einträge) definiert
+`uft_scp_probe`, `uft_hfe_probe`, `uft_a2r_probe`, `uft_woz_probe` und
+weitere. Gemessen: `uft_hfe_probe` hat **keinen** Treffer außerhalb der
+Datei; die anderen drei nur **Header-Deklarationen**, keinen Aufrufer.
+
+Trotzdem steht die Datei **nicht** in `docs/orphan_baseline.txt`. Das ist
+derselbe blinde Fleck, der SCOUT-15 verdeckt hat: eine Deklaration im
+Header zählt dem Detektor als Benutzung. Damit ist unklar, wie viele
+weitere Waisen die Grundlinie übersieht — die 227 Einträge sind eine
+Untergrenze, keine Bestandsaufnahme.
+
+**Offen (`ORPH-2`):** Der Verwaisten-Detektor sollte Deklarationen von
+Aufrufen trennen. Bis dahin gilt die Grundlinie als unvollständig, und
+das steht hier, statt als stille Annahme.
