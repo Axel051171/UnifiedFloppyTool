@@ -9,7 +9,23 @@
  * Uses multi-factor detection: magic bytes + file extension + file size.
  * Integrates with UFT's forensic signature pipeline.
  *
- * SPDX-License-Identifier: GPL-3.0-or-later
+ * SPDX-License-Identifier: GPL-2.0-or-later
+ *
+ * MF-621: hier stand `GPL-3.0-or-later` — in einem Projekt, dessen
+ * `LICENSE` der reine GPL-2-Text ohne „or later"-Klausel ist. GPL-3
+ * kombiniert damit nicht.
+ *
+ * Der Kopf war schlicht falsch, nicht die Absicht: die Datei nennt
+ * keinen fremden Ursprung, kein fremdes Copyright — sie ist
+ * UFT-eigener Code (nachgemessen im Lizenz-Zensus, MF-620). Der
+ * Urheber entscheidet also, was gilt, und die Entscheidung steht seit
+ * MF-621 in `CONTRIBUTING.md` §Licensing: eigener Code traegt
+ * GPL-2.0-or-later.
+ *
+ * Gefunden wurde die Abweichung NICHT von einem Tor, sondern nebenbei
+ * beim Probelauf eines Scout-Werkzeugs. Seither prueft
+ * `scripts/audit_spdx_policy.py` es — ein Zufallsfund ist kein
+ * Verfahren.
  */
 #ifndef UFT_RETRO_IMAGE_DETECT_H
 #define UFT_RETRO_IMAGE_DETECT_H

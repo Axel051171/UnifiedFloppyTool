@@ -69,6 +69,37 @@ ctest --output-on-failure
 6. Commit with clear messages: `git commit -m "Add: new feature description"`
 7. Push and create a Pull Request
 
+## Licensing — what header your file carries
+
+**Code written for UFT carries `SPDX-License-Identifier: GPL-2.0-or-later`.**
+
+That is the whole rule. Reasons, so it is not folklore:
+
+- It matches the project's `LICENSE` (GPL v2) and is what MF-580 already
+  chose for the one ported file in the tree.
+- The `-or-later` half keeps the door open to GPL-3 sources (for example
+  `flux-analyze`, `DiskImageTool`) should the project ever move up. A
+  `GPL-2.0-only` header would close it permanently.
+
+**Ported or adapted code keeps its origin's licence** and names it. Use
+the samdisk pattern: SPDX identifier, upstream project, upstream commit,
+and one sentence on what was changed. `src/flux/fdc_bitstream/README.md`
+is the worked example.
+
+**A licence that is only a sentence in a comment is not a licence.** Two
+cases in this tree show why: `SPDX: MIT` sat on a GPLv2+ port for months
+(P0-5, fixed in MF-580), and `uft_dms.c` claimed "Public Domain" with no
+source until MF-614 pinned it to Debian's `xdms` copyright file.
+
+**Not permitted without an owner decision:** GPL-3.0, AGPL, Apache-2.0
+and BSD-4-Clause in this tree — none of them combine with GPL-2.0.
+`tools/uft-scout/playbook/lizenzmatrix.md` is the binding table.
+
+This is checked: `scripts/audit_spdx_policy.py` fails on any SPDX
+identifier outside the allowed set. It exists because the one violation
+in the tree was found by accident, in a scout side-run, and not by a
+gate (MF-620/621).
+
 ## Code Style
 
 - C++17 features where appropriate

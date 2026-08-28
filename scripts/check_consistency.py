@@ -788,6 +788,15 @@ def main() -> int:
         import audit_test_can_fail as _tf
         all_errors.append(("Test kann nicht scheitern", _tf.check(repo)))
 
+        # 38. Kategorie (MF-621): SPDX-Bezeichner ausserhalb der Politik.
+        # `uft_retro_image_detect.c` trug GPL-3.0-or-later in einem
+        # GPL-2.0-Projekt — GPL-3 kombiniert damit nicht. Gefunden wurde
+        # das nicht von einem Tor, sondern nebenbei beim Probelauf eines
+        # Scout-Werkzeugs gegen den eigenen Baum. Ein Zufallsfund ist kein
+        # Verfahren. Die Politik steht in CONTRIBUTING.md §Licensing.
+        import audit_spdx_policy as _spdx
+        all_errors.append(("SPDX ausserhalb der Politik", _spdx.check(repo)))
+
     total = sum(len(e) for _, e in all_errors)
     print(f"Consistency check ({len(all_errors)} categories, root={repo}):")
     for label, errs in all_errors:

@@ -1954,7 +1954,6 @@ SOURCES += \
     src/analysis/events/otdr_event_core_v2.c \
     src/analysis/denoise/uft_denoise_bridge.c \
     src/analysis/denoise/phi_otdr_denoise_1d.c \
-    src/formats/86box/uft_86box.c
 
 # Amiga (2 files)
 SOURCES += \

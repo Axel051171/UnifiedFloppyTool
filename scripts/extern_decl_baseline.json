@@ -1,197 +1,202 @@
 {
-  "_doc": "Declarations whose parameter count disagrees with the single definition of that name. Rule A: hand-written externs in .c files (MF-442). Rule B: header prototypes (MF-464) — 21 of these were already in the tree when the rule was added; none has a caller yet, which is the only reason they have not bitten. Comparison is on arity only — type spelling varies legitimately across files. An entry here is a KNOWN mismatch, not an acceptable one; the fix is to include the header.",
-  "accepted": [
-    "include/uft/formats/c64/uft_c64_bam.h:bam_sector_offset",
-    "include/uft/formats/c64/uft_c64_bam.h:bam_validate",
-    "include/uft/formats/cpm.h:cpm_open",
-    "include/uft/formats/uft_format_params.h:uft_format_detect",
-    "include/uft/formats/uft_imd_adapter.h:uft_imd_get_track",
-    "include/uft/formats/uft_mfm.h:uft_mfm_get_track_length",
-    "include/uft/formats/uft_mfm.h:uft_mfm_write_track",
-    "include/uft/formats/uft_scp.h:uft_scp_read",
-    "include/uft/fs/uft_fat32.h:uft_fat32_format",
-    "include/uft/fs/uft_fat32.h:uft_fat32_validate",
-    "include/uft/protection/uft_protection.h:uft_copylock_reconstruct",
-    "include/uft/uft_core.h:uft_chs_to_lba",
-    "include/uft/uft_core.h:uft_detect_format",
-    "include/uft/uft_core.h:uft_lba_to_chs",
-    "include/uft/uft_decoder_plugin.h:uft_crc16_ccitt",
-    "include/uft/uft_format_registry.h:uft_format_can_convert",
-    "include/uft/uft_format_registry.h:uft_format_detect",
-    "src/algorithms/format/uft_format_detect.h:uft_format_detect",
-    "src/algorithms/format/uft_format_detect.h:uft_format_registry_init"
-  ],
-  "detail": [
-    {
-      "rule": "B",
-      "name": "uft_format_registry_init",
-      "decl_file": "src/algorithms/format/uft_format_detect.h",
-      "decl_line": 146,
-      "decl_arity": 1,
-      "def_file": "src/formats/uft_format_registry.c",
-      "def_arity": 0
-    },
-    {
-      "rule": "B",
-      "name": "uft_format_detect",
-      "decl_file": "src/algorithms/format/uft_format_detect.h",
-      "decl_line": 174,
-      "decl_arity": 5,
-      "def_file": "src/formats/uft_format_registry.c",
-      "def_arity": 2
-    },
-    {
-      "rule": "B",
-      "name": "uft_chs_to_lba",
-      "decl_file": "include/uft/uft_core.h",
-      "decl_line": 144,
-      "decl_arity": 4,
-      "def_file": "src/formats/fat32/uft_fat32_mbr.c",
-      "def_arity": 3
-    },
-    {
-      "rule": "B",
-      "name": "uft_lba_to_chs",
-      "decl_file": "include/uft/uft_core.h",
-      "decl_line": 149,
-      "decl_arity": 5,
-      "def_file": "src/formats/fat32/uft_fat32_mbr.c",
-      "def_arity": 4
-    },
-    {
-      "rule": "B",
-      "name": "uft_detect_format",
-      "decl_file": "include/uft/uft_core.h",
-      "decl_line": 192,
-      "decl_arity": 2,
-      "def_file": "src/core/uft_detect_format_impl.c",
-      "def_arity": 3
-    },
-    {
-      "rule": "B",
-      "name": "uft_crc16_ccitt",
-      "decl_file": "include/uft/uft_decoder_plugin.h",
-      "decl_line": 361,
-      "decl_arity": 3,
-      "def_file": "src/protection/uft_protection_ext.c",
-      "def_arity": 2
-    },
-    {
-      "rule": "B",
-      "name": "uft_format_detect",
-      "decl_file": "include/uft/uft_format_registry.h",
-      "decl_line": 234,
-      "decl_arity": 4,
-      "def_file": "src/formats/uft_format_registry.c",
-      "def_arity": 2
-    },
-    {
-      "rule": "B",
-      "name": "uft_format_can_convert",
-      "decl_file": "include/uft/uft_format_registry.h",
-      "decl_line": 249,
-      "decl_arity": 2,
-      "def_file": "src/formats/uft_format_registry.c",
-      "def_arity": 3
-    },
-    {
-      "rule": "B",
-      "name": "cpm_open",
-      "decl_file": "include/uft/formats/cpm.h",
-      "decl_line": 35,
-      "decl_arity": 2,
-      "def_file": "src/detect/mfm/cpm_fs.c",
-      "def_arity": 5
-    },
-    {
-      "rule": "B",
-      "name": "uft_format_detect",
-      "decl_file": "include/uft/formats/uft_format_params.h",
-      "decl_line": 269,
-      "decl_arity": 3,
-      "def_file": "src/formats/uft_format_registry.c",
-      "def_arity": 2
-    },
-    {
-      "rule": "B",
-      "name": "uft_imd_get_track",
-      "decl_file": "include/uft/formats/uft_imd_adapter.h",
-      "decl_line": 221,
-      "decl_arity": 4,
-      "def_file": "src/formats/legacy/uft_imd.c",
-      "def_arity": 3
-    },
-    {
-      "rule": "B",
-      "name": "uft_mfm_write_track",
-      "decl_file": "include/uft/formats/uft_mfm.h",
-      "decl_line": 117,
-      "decl_arity": 5,
-      "def_file": "src/formats/mfm_native/uft_mfm_image.c",
-      "def_arity": 4
-    },
-    {
-      "rule": "B",
-      "name": "uft_mfm_get_track_length",
-      "decl_file": "include/uft/formats/uft_mfm.h",
-      "decl_line": 123,
-      "decl_arity": 3,
-      "def_file": "src/formats/mfm_native/uft_mfm_image.c",
-      "def_arity": 2
-    },
-    {
-      "rule": "B",
-      "name": "uft_scp_read",
-      "decl_file": "include/uft/formats/uft_scp.h",
-      "decl_line": 206,
-      "decl_arity": 4,
-      "def_file": "src/core/uft_core_stubs.c",
-      "def_arity": 3
-    },
-    {
-      "rule": "B",
-      "name": "uft_fat32_validate",
-      "decl_file": "include/uft/fs/uft_fat32.h",
-      "decl_line": 200,
-      "decl_arity": 1,
-      "def_file": "src/formats/fat32/uft_fat32_mbr.c",
-      "def_arity": 2
-    },
-    {
-      "rule": "B",
-      "name": "uft_fat32_format",
-      "decl_file": "include/uft/fs/uft_fat32.h",
-      "decl_line": 214,
-      "decl_arity": 3,
-      "def_file": "src/formats/fat32/uft_fat32_mbr.c",
-      "def_arity": 4
-    },
-    {
-      "rule": "B",
-      "name": "uft_copylock_reconstruct",
-      "decl_file": "include/uft/protection/uft_protection.h",
-      "decl_line": 372,
-      "decl_arity": 3,
-      "def_file": "src/protection/uft_copylock.c",
-      "def_arity": 4
-    },
-    {
-      "rule": "B",
-      "name": "bam_validate",
-      "decl_file": "include/uft/formats/c64/uft_c64_bam.h",
-      "decl_line": 394,
-      "decl_arity": 2,
-      "def_file": "src/formats/c64/uft_bam_editor.c",
-      "def_arity": 4
-    },
-    {
-      "rule": "B",
-      "name": "bam_sector_offset",
-      "decl_file": "include/uft/formats/c64/uft_c64_bam.h",
-      "decl_line": 422,
-      "decl_arity": 3,
-      "def_file": "src/formats/c64/uft_bam_editor.c",
-      "def_arity": 2
-    }
+ "_doc": "Declarations whose parameter count disagrees with the single definition of that name. Rule A: hand-written externs in .c files (MF-442). Rule B: header prototypes (MF-464) — 21 of these were already in the tree when the rule was added; none has a caller yet, which is the only reason they have not bitten. Comparison is on arity only — type spelling varies legitimately across files. An entry here is a KNOWN mismatch, not an acceptable one; the fix is to include the header.",
+ "accepted": [
+  "include/uft/formats/c64/uft_c64_bam.h:bam_sector_offset",
+  "include/uft/formats/c64/uft_c64_bam.h:bam_validate",
+  "include/uft/formats/cpm.h:cpm_open",
+  "include/uft/formats/uft_format_params.h:uft_format_detect",
+  "include/uft/formats/uft_imd_adapter.h:uft_imd_get_track",
+  "include/uft/formats/uft_mfm.h:uft_mfm_get_track_length",
+  "include/uft/formats/uft_mfm.h:uft_mfm_write_track",
+  "include/uft/formats/uft_scp.h:uft_scp_read",
+  "include/uft/fs/uft_fat32.h:uft_fat32_format",
+  "include/uft/fs/uft_fat32.h:uft_fat32_validate",
+  "include/uft/protection/uft_protection.h:uft_copylock_reconstruct",
+  "include/uft/uft_core.h:uft_chs_to_lba",
+  "include/uft/uft_core.h:uft_detect_format",
+  "include/uft/uft_core.h:uft_lba_to_chs",
+  "include/uft/uft_decoder_plugin.h:uft_crc16_ccitt",
+  "src/algorithms/format/uft_format_detect.h:uft_format_detect",
+  "src/algorithms/format/uft_format_detect.h:uft_format_registry_init"
+ ],
+ "detail": [
+  {
+   "rule": "B",
+   "name": "uft_format_registry_init",
+   "decl_file": "src/algorithms/format/uft_format_detect.h",
+   "decl_line": 146,
+   "decl_arity": 1,
+   "def_file": "src/formats/uft_format_registry.c",
+   "def_arity": 0
+  },
+  {
+   "rule": "B",
+   "name": "uft_format_detect",
+   "decl_file": "src/algorithms/format/uft_format_detect.h",
+   "decl_line": 174,
+   "decl_arity": 5,
+   "def_file": "src/formats/uft_format_registry.c",
+   "def_arity": 2
+  },
+  {
+   "rule": "B",
+   "name": "uft_chs_to_lba",
+   "decl_file": "include/uft/uft_core.h",
+   "decl_line": 144,
+   "decl_arity": 4,
+   "def_file": "src/formats/fat32/uft_fat32_mbr.c",
+   "def_arity": 3
+  },
+  {
+   "rule": "B",
+   "name": "uft_lba_to_chs",
+   "decl_file": "include/uft/uft_core.h",
+   "decl_line": 149,
+   "decl_arity": 5,
+   "def_file": "src/formats/fat32/uft_fat32_mbr.c",
+   "def_arity": 4
+  },
+  {
+   "rule": "B",
+   "name": "uft_detect_format",
+   "decl_file": "include/uft/uft_core.h",
+   "decl_line": 192,
+   "decl_arity": 2,
+   "def_file": "src/core/uft_detect_format_impl.c",
+   "def_arity": 3
+  },
+  {
+   "rule": "B",
+   "name": "uft_crc16_ccitt",
+   "decl_file": "include/uft/uft_decoder_plugin.h",
+   "decl_line": 361,
+   "decl_arity": 3,
+   "def_file": "src/protection/uft_protection_ext.c",
+   "def_arity": 2
+  },
+  {
+   "rule": "B",
+   "name": "uft_format_detect",
+   "decl_file": "include/uft/uft_format_registry.h",
+   "decl_line": 234,
+   "decl_arity": 4,
+   "def_file": "src/formats/uft_format_registry.c",
+   "def_arity": 2
+  },
+  {
+   "rule": "B",
+   "name": "uft_format_can_convert",
+   "decl_file": "include/uft/uft_format_registry.h",
+   "decl_line": 249,
+   "decl_arity": 2,
+   "def_file": "src/formats/uft_format_registry.c",
+   "def_arity": 3
+  },
+  {
+   "rule": "B",
+   "name": "cpm_open",
+   "decl_file": "include/uft/formats/cpm.h",
+   "decl_line": 35,
+   "decl_arity": 2,
+   "def_file": "src/detect/mfm/cpm_fs.c",
+   "def_arity": 5
+  },
+  {
+   "rule": "B",
+   "name": "uft_format_detect",
+   "decl_file": "include/uft/formats/uft_format_params.h",
+   "decl_line": 269,
+   "decl_arity": 3,
+   "def_file": "src/formats/uft_format_registry.c",
+   "def_arity": 2
+  },
+  {
+   "rule": "B",
+   "name": "uft_imd_get_track",
+   "decl_file": "include/uft/formats/uft_imd_adapter.h",
+   "decl_line": 221,
+   "decl_arity": 4,
+   "def_file": "src/formats/legacy/uft_imd.c",
+   "def_arity": 3
+  },
+  {
+   "rule": "B",
+   "name": "uft_mfm_write_track",
+   "decl_file": "include/uft/formats/uft_mfm.h",
+   "decl_line": 117,
+   "decl_arity": 5,
+   "def_file": "src/formats/mfm_native/uft_mfm_image.c",
+   "def_arity": 4
+  },
+  {
+   "rule": "B",
+   "name": "uft_mfm_get_track_length",
+   "decl_file": "include/uft/formats/uft_mfm.h",
+   "decl_line": 123,
+   "decl_arity": 3,
+   "def_file": "src/formats/mfm_native/uft_mfm_image.c",
+   "def_arity": 2
+  },
+  {
+   "rule": "B",
+   "name": "uft_scp_read",
+   "decl_file": "include/uft/formats/uft_scp.h",
+   "decl_line": 206,
+   "decl_arity": 4,
+   "def_file": "src/core/uft_core_stubs.c",
+   "def_arity": 3
+  },
+  {
+   "rule": "B",
+   "name": "uft_fat32_validate",
+   "decl_file": "include/uft/fs/uft_fat32.h",
+   "decl_line": 200,
+   "decl_arity": 1,
+   "def_file": "src/formats/fat32/uft_fat32_mbr.c",
+   "def_arity": 2
+  },
+  {
+   "rule": "B",
+   "name": "uft_fat32_format",
+   "decl_file": "include/uft/fs/uft_fat32.h",
+   "decl_line": 214,
+   "decl_arity": 3,
+   "def_file": "src/formats/fat32/uft_fat32_mbr.c",
+   "def_arity": 4
+  },
+  {
+   "rule": "B",
+   "name": "uft_copylock_reconstruct",
+   "decl_file": "include/uft/protection/uft_protection.h",
+   "decl_line": 372,
+   "decl_arity": 3,
+   "def_file": "src/protection/uft_copylock.c",
+   "def_arity": 4
+  },
+  {
+   "rule": "B",
+   "name": "bam_validate",
+   "decl_file": "include/uft/formats/c64/uft_c64_bam.h",
+   "decl_line": 394,
+   "decl_arity": 2,
+   "def_file": "src/formats/c64/uft_bam_editor.c",
+   "def_arity": 4
+  },
+  {
+   "rule": "B",
+   "name": "bam_sector_offset",
+   "decl_file": "include/uft/formats/c64/uft_c64_bam.h",
+   "decl_line": 422,
+   "decl_arity": 3,
+   "def_file": "src/formats/c64/uft_bam_editor.c",
+   "def_arity": 2
+  }
+ ],
+ "_resolved": {
+  "MF-622": [
+   "include/uft/uft_format_registry.h:uft_format_can_convert",
+   "include/uft/uft_format_registry.h:uft_format_detect",
+   "_note: aufgeloest durch das Loeschen von include/uft/uft_format_registry.h — ein Header ohne jeden Einbinder (Verwaisten-Regel, MF-621). Die abweichende Deklaration sass dort."
   ]
+ }
 }

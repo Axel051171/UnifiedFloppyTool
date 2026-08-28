@@ -5,7 +5,15 @@
  * 86F is a track-level format used by 86Box and PCem emulators.
  * Magic: "86BX" at offset 0, followed by geometry and track data.
  *
- * Wraps existing uft_86f_probe() / uft_86f_read() API.
+ * MF-622: hier stand, dieses Plugin umhuelle die vorhandene
+ * `uft_86f_probe()` / `uft_86f_read()`-API. Das war nie so. Die
+ * Funktionen lagen in src/formats/86box/uft_86box.c, und dieses
+ * Plugin hat sie NIE gerufen — nachgemessen: der einzige Treffer
+ * im ganzen Baum war dieser Kommentar selbst.
+ *
+ * Die Datei war unerreichbar (Verwaisten-Grundlinie) und ist mit
+ * MF-622 geloescht. Dieses Plugin traegt die 86F-Unterstuetzung
+ * allein.
  */
 #include "uft/uft_format_common.h"
 

@@ -8,6 +8,29 @@
 #
 # Wird eines behoben, gehoert seine Zeile hier heraus — das Tor
 # sagt dann, welche.
+#
+# ── VERWAISTEN-REGEL (MF-621, beschlossen vom Eigentuemer) ────────────
+#
+# Verwaister Code bleibt nur mit **benanntem Plan-Anker**: welcher
+# Baustein aus docs/MASTER_PLAN.md oder docs/PLAN_v4.1.7.md wird ihn
+# verdrahten? Ohne Anker wird geloescht.
+#
+# Das ist die MF-271-Linie, nur ausgeschrieben. Der Grund ist nicht
+# Ordnungsliebe: unerreichbarer Code ist per Definition ungeprueft, und
+# ihn ohne Referenz anzuschliessen waere die Wette der fuenf
+# fabrizierten Parser in groesserem Massstab (ARCH-25/MF-509). Wer ihn
+# weder anschliesst noch loescht, fuehrt eine Faehigkeit, die es nicht
+# gibt.
+#
+# Git vergisst nichts — eine Loeschung ist keine Vernichtung, sondern
+# eine Aussage darueber, was heute gilt.
+#
+# Form eines Ankers, direkt ueber der Zeile:
+#
+#     # ANKER: PLAN_v4.1.7 Phase 1 (VFS-P1, AmigaDOS-Leseseite)
+#     src/fs/uft_amigados_read.c
+#
+# Ohne diese Zeile ist der Eintrag ein Loeschkandidat, kein Bestand.
 src/algorithms/advanced/uft_bayesian_detect.c
 src/algorithms/advanced/uft_bayesian_detect_v2.c
 src/algorithms/advanced/uft_decoder_metrics.c
@@ -237,18 +260,3 @@ src/recovery/uft_protection.c
 src/recovery/uft_recovery_meta.c
 src/recovery/uft_sector_recovery.c
 
-# MF-617: mit dem Loeschen von include/uft/profiles/ (26 Header ohne
-# jeden Einbinder) wurde dieses Modul SICHTBAR verwaist — es war es
-# vorher schon. Der Detektor zaehlte den `static inline uft_86f_probe`
-# aus dem toten `uft_86f_format.h` als Benutzung: ein Toter hielt einen
-# Toten am Leben.
-#
-# Es ist eine ZWEITE 86F-Fassung neben dem registrierten
-# src/formats/86box/uft_86f_plugin.c — dasselbe Muster wie bei MFI
-# (MF-614/616: dort waren es vier Fassungen, eine registriert). Der
-# Ausgang ist eine Loeschentscheidung, und die steht dem Eigentuemer zu:
-# SCOUT-15 in docs/OPEN_ITEMS.md.
-#
-# Hier eingetragen heisst NICHT „erledigt". Es heisst: gesehen, benannt,
-# und nicht mehr unbemerkt.
-src/formats/86box/uft_86box.c

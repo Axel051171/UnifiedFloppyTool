@@ -673,6 +673,64 @@ wahre Quelle und ihren Zustand.
 
 ---
 
+## Zwei Regeln beschlossen — vier Entscheidungen mechanisch erledigt (MF-621/622)
+
+Statt fünf Einzelfälle zu entscheiden, hat der Eigentümer zwei Regeln
+festgelegt. Vier der fünf lösen sich damit von selbst; eine bleibt als
+echte Untersuchung.
+
+### Regel 1 — SPDX-Politik (`CONTRIBUTING.md` §Licensing)
+
+**UFT-eigener Code trägt `GPL-2.0-or-later`.** Portierter Code behält die
+Lizenz seines Ursprungs und nennt sie (samdisk-Muster). Das `-or-later`
+hält die Tür zu GPL-3-Quellen offen, falls das Projekt je hochzieht.
+
+| # | | |
+|---|---|---|
+| **SCOUT-18** | GPL-3.0 in einem GPL-2.0-Projekt | ✅ **erledigt.** Die Datei ist UFT-eigener Code (kein fremder Ursprung, nachgemessen) — also entscheidet der Urheber, und die Entscheidung steht jetzt geschrieben. Kopf auf `GPL-2.0-or-later` berichtigt, in `.c` und `.h` |
+
+**Und der Zufallsfund wird ein Verfahren.** Neues Tor 38,
+`scripts/audit_spdx_policy.py`: jeder SPDX-Bezeichner in `src/` oder
+`include/` außerhalb einer kleinen erlaubten Menge lässt den Commit
+scheitern. Rotbeweis gelaufen — mit dem alten Kopf meldet es beide
+Dateien mit Zeilennummer, danach 0. Neue Bezeichner einzutragen ist
+ausdrücklich eine Eigentümer-Entscheidung, keine Nebenbei-Ergänzung.
+
+### Regel 2 — Verwaisten-Regel (`docs/orphan_baseline.txt`)
+
+**Verwaister Code bleibt nur mit benanntem Plan-Anker** — welcher
+Baustein wird ihn verdrahten? Ohne Anker wird gelöscht; Git vergisst
+nichts. Das ist die MF-271-Linie, ausgeschrieben, samt Form des Ankers.
+
+| # | | |
+|---|---|---|
+| **SCOUT-15** | `src/formats/86box/uft_86box.c`, 268 Zeilen | ✅ **gelöscht.** Kein Plan-Anker. Dabei ein weiterer Fund: das registrierte Plugin behauptet im Kopfkommentar, es umhülle `uft_86f_probe()`/`uft_86f_read()` — **es ruft sie nirgends.** Der einzige Treffer im ganzen Baum war dieser Kommentar. Berichtigt |
+| **SCOUT-17** | zwei Registry-Header | ✅ **gelöscht** — `src/core/unified/` und `include/uft/`, beide ohne Einbinder, ohne Plan-Anker, ohne Symbolkollision |
+
+**Nebenwirkung, vom Tor gemeldet:** zwei Einträge in
+`extern_decl_baseline.json` lösen sich auf — die abweichende Deklaration
+von `uft_format_detect` und `uft_format_can_convert` saß im gelöschten
+Header. Gestrichen und unter `MF-622` vermerkt.
+
+### Was ich NICHT gelöscht habe, und warum
+
+| # | | |
+|---|---|---|
+| **SCOUT-17b** | `src/formats/uft_format_registry_v2.c`, 587 Zeilen | ⚠ **angehalten.** Regel 2 träfe zu — kein Plan-Anker, keine Symbolkollision. Aber die Datei hat einen Konsumenten, den die Regel nicht kennt: **sieben Verweise in vier Dokumenten.** `FORMAT-CLASSIFICATION.md` ist im Kern eine Klassifikation genau dieser 162-Einträge-Tabelle; `CAPABILITIES.md` und `FORMAT_GROUPS.md` beziehen ihre „161 Format-IDs" daraus. Sie zu löschen entzieht einem ganzen Dokument den Gegenstand |
+
+Diese Information lag bei der Regelentscheidung noch nicht vor. Zwei
+Wege, beide sauber:
+
+* **Tabelle in ein Dokument überführen**, dann die `.c` löschen — die
+  161 sind dann Doku, was sie faktisch ohnehin sind.
+* **Anker eintragen** („Katalogquelle für FORMAT-CLASSIFICATION") und
+  behalten — dann sagt die Grundlinie die Wahrheit über den Grund.
+
+Was **nicht** geht: löschen und die vier Dokumente auf eine gelöschte
+Datei zeigen lassen.
+
+---
+
 ## Korpus-gebundene Tests — Beschaffungsliste (MF-588)
 
 **Gemessen auf diesem Rechner: 266/266, ein Skip** (`test_freezer`, siehe unten). Auf einem frischen
