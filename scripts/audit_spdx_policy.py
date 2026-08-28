@@ -80,6 +80,62 @@ def scan(repo: pathlib.Path) -> list[tuple[str, int, str]]:
     return treffer
 
 
+
+# ── Zweite Stufe: Attributionen im Fliesstext (MF-636) ───────────────────
+#
+# Der SPDX-Zensus oben sieht nur, was einen SPDX-Bezeichner traegt. SCOUT-23
+# hing genau daran vorbei: vier Dateien erklaerten im KOPFKOMMENTAR eine
+# Ableitung — "Based on nibtools by Pete Rittwage" — und trugen keinen
+# fremden SPDX. Der Zensus aus MF-620/621 meldete sie deshalb nicht, und
+# die Frage "ist das ein Port?" blieb ein Jahr lang ungestellt, waehrend
+# der Upstream unter GPL-3 stand.
+#
+# Eine Ableitungserklaerung ist eine RECHTLICHE Aussage. Sie gehoert
+# gesehen, unabhaengig davon, ob jemand daneben einen Bezeichner gesetzt
+# hat. Diese Stufe meldet sie — als LISTE, nicht als Fehler: eine
+# Attribution ist nichts Verbotenes, sie ist etwas Entscheidungsbeduerftiges.
+ATTRIBUTION = re.compile(
+    r"(based\s+on|adapted\s+from|derived\s+from|port(?:ed)?\s+of|"
+    r"portiert\s+aus|nach\s+dem\s+Vorbild|taken\s+from|"
+    r"originally\s+(?:by|from))\s+(.{0,60})",
+    re.IGNORECASE)
+
+# Was KEINE Fremd-Attribution ist: Verweise auf den eigenen Baum und auf
+# Spezifikationen. "Based on the D88 spec" begruendet kein Urheberrecht.
+ATTRIB_HARMLOS = re.compile(
+    r"^(the\s+)?(spec|specification|documentation|docs?|format|layout|"
+    r"standard|MF-\d+|uft_|src/|include/|docs/)", re.IGNORECASE)
+
+
+def scan_attributions(repo: pathlib.Path) -> list[tuple[str, int, str]]:
+    """Fliesstext-Attributionen in Quellkoepfen — Liste, kein Urteil."""
+    treffer = []
+    for basis in ("src", "include"):
+        wurzel = repo / basis
+        if not wurzel.is_dir():
+            continue
+        for p in sorted(wurzel.rglob("*")):
+            if p.suffix.lower() not in (".c", ".cpp", ".h", ".hpp", ".cc"):
+                continue
+            rel = p.relative_to(repo).as_posix()
+            if any(rel.startswith(a) for a in AUSGENOMMEN):
+                continue
+            try:
+                text = p.read_text(encoding="utf-8", errors="replace")
+            except OSError:
+                continue
+            # Nur der Kopf: eine Ableitungserklaerung steht oben, nicht in
+            # Zeile 800. Das haelt die Liste bei den rechtlich gemeinten
+            # Aussagen statt bei jedem "based on" im Prosatext.
+            kopf = "\n".join(text.splitlines()[:60])
+            for m in ATTRIBUTION.finditer(kopf):
+                quelle = m.group(2).strip().strip("*/ ").strip()
+                if not quelle or ATTRIB_HARMLOS.match(quelle):
+                    continue
+                zeile = kopf[:m.start()].count("\n") + 1
+                treffer.append((rel, zeile, "%s %s" % (m.group(1), quelle)))
+    return treffer
+
 def check(repo) -> list:
     """Schnittstelle fuer check_consistency.py."""
     try:
@@ -95,6 +151,11 @@ def check(repo) -> list:
 
 
 def main() -> int:
+    attrib = scan_attributions(ROOT)
+    print("Fliesstext-Attributionen (MF-636, Liste, kein Fehler): %d" % len(attrib))
+    for f, ln, q in attrib:
+        print("  %s:%d  %s" % (f, ln, q))
+    print()
     rows = scan(ROOT)
     print("SPDX ausserhalb der Politik: %d" % len(rows))
     for f, ln, k in rows:

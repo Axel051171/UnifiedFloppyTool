@@ -1960,3 +1960,84 @@ Format) und sind kein Nebenbei-Schnitt. Der strukturelle Weg wäre, die
 Liste aus der SSOT abzuleiten statt sie zu pflegen; ein Tor darauf würde
 heute 32-mal feuern, und ob man die als Grundlinie einfriert oder
 abarbeitet, ist eine Entscheidung, keine Mechanik.
+
+---
+
+## LIZ-1: der Attributions-Zensus — SCOUT-23 war die Spitze, nicht der Fall (MF-636, 2026-08-28)
+
+Die Werkzeug-Lehre aus SCOUT-23 lautete: der SPDX-Zensus war blind für
+Fließtext-Attributionen, und genau daran hat der Fall ein Jahr lang
+vorbeigehangen. `scripts/audit_spdx_policy.py` hat jetzt eine zweite
+Stufe, die Kopfkommentare auf „based on / adapted from / derived from /
+port of / portiert aus / nach dem Vorbild / taken from / originally by"
+absucht.
+
+**Bewusst kein Tor, sondern eine Liste.** Eine Attribution ist nichts
+Verbotenes; sie ist etwas Entscheidungsbedürftiges. Ein Tor würde
+erzwingen, dass jemand sie wegdefiniert.
+
+### Der erste Lauf
+
+**88 Attributionen** (unsere eigenen Erklärkommentare aus MF-635
+abgezogen). Klassifiziert:
+
+| Klasse | Anzahl | Bedeutung |
+|---|---|---|
+| **A — ausdrückliche Port-Erklärung** | **7** | „Port of …" / „portiert" |
+| **B — nennt fremde Codebasis** | **43** | davon **2 mit genannter Lizenz**, **41 ohne** |
+| C — Spezifikation, Doku, Messung | 38 | rechtlich unkritisch |
+
+**Klasse A im Wortlaut:**
+
+* `src/core/uft_interleave.c` — „Port of a8rawconv 0.95's
+  `compute_interleave()` by Avery Lee"
+* `src/core/uft_write_precomp.c` — „Port of a8rawconv 0.95's
+  `postcomp_track_mac800k` by Avery Lee"
+* `src/formats/amiga/uft_amiga_protection.c` — „port of XCopy Pro
+  (1989-2011) 68000 Assembly algorithms" (und `:47` „Port of `ROL.L #1,D0`")
+* `src/formats/ipf/uft_ipf_air.c` — „port of AIR `IPFReader.cs` /
+  `IPFStruct.cs` / `IPFWriter.cs` to C"
+* `src/formats/kfx/uft_kfstream_air.c` — „port of AIR `KFReader.cs` to C"
+* `src/formats/stx/uft_stx_air.c` — „port of AIR `PastiRead.cs` /
+  `PastiStruct.cs` / `PastiWrite.cs` to C"
+
+Bemerkenswert: `src/a8rawconv/` ist als vendortes Verzeichnis ausgenommen
+— diese beiden Dateien liegen in `src/core/`, also **außerhalb** der
+Ausnahme.
+
+**Klasse B, die mit Lizenz** (also vorbildlich): `uft_cbm_formats.c`
+(cbmconvert, GPLv2+), `uft_dms.h` (xDMS 1.3, Public Domain).
+
+**Klasse B ohne Lizenz**, Auswahl: hactool (SciresM), bbctapedisc, SPS
+CAPS Library, DrCoolZic/Aufit, dec0de (Orion ^ The Replicants), MAME
+`lib/formats` (Olivier Galibert), HxCFloppyEmulator (dreimal),
+msa-to-zip, qbarnes/catweasel-cw und /gw2dmk, libdsk `diskdefs`, opencbm
+`xum1541.c`, ipflib 4.2 / spsdeclib 5.1, RTCExtractor, Super-Kit 1541
+V2.0.
+
+### Was das heißt
+
+SCOUT-23 hat vier Dateien betroffen, von denen eine ein Port war. Hier
+stehen **50 Dateien mit einer Ableitungs- oder Codebasis-Erklärung, davon
+48 ohne Lizenzangabe** — und alle sind in v4.1.6 veröffentlicht.
+
+Das ist **kein** Vorwurf an den Code: die meisten dieser Attributionen
+sind vermutlich korrekt und harmlos (MAME ist BSD-3, HxC ist GPL-2, xDMS
+ist Public Domain — alles verträglich). Der Befund ist, dass **niemand es
+weiß**, weil die Lizenz nicht dabeisteht.
+
+**Offen (`LIZ-1`), Eigentümer.** Vorschlag zur Reihenfolge, nach Risiko:
+
+1. **Klasse A zuerst** (7 Erklärungen, 6 Dateien) — dieselbe Prüfung wie
+   SCOUT-23: Idiom-Vergleich gegen die Quelle, dann entweder Kopf
+   berichtigen oder Quarantäne. Die AIR-Dateien (`.cs` → C) sind der
+   klarste Fall, weil eine Sprachübersetzung eine Ableitung bleibt.
+2. **Klasse B: Lizenz nachtragen**, nicht neu bewerten. Für die meisten
+   ist sie in einer Minute nachschlagbar; die Arbeit ist, sie
+   hinzuschreiben. Wo sie sich nicht klären lässt, wird daraus ein
+   eigener Fall.
+3. Klasse C braucht nichts.
+
+Was **nicht** geht: die Erklärungen entfernen, um die Liste zu leeren.
+Eine Attribution zu löschen macht aus einer offenen Frage eine
+verschwiegene.

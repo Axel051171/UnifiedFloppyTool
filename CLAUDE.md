@@ -227,6 +227,46 @@ Im Katalog dokumentierte historische Kopierschutz-Verfahren:
 - C-Header mit `protected` als Feldname → nicht direkt in C++ includierbar
 - Qt6 erfordert `static_cast<char>()` für `QByteArray::append()`
 
+### Grundsatz: Dateimengen kommen aus git, nicht aus gepflegten Listen (MF-636)
+
+**Wer in einem Skript entscheidet, WELCHE Dateien geprüft werden, fragt
+`git ls-files --cached --others --exclude-standard` — nie eine
+hartkodierte Verzeichnisliste.** Der Helfer dafür ist
+`scripts/repo_scope.py`.
+
+Der Grund ist gemessen, nicht theoretisch. Eine gepflegte Ausschlussliste
+ist eine Aufzählung bekannter Fälle, und die veraltet still. In diesem
+Baum ist genau das **viermal** passiert:
+
+| | was aufgezählt wurde | was durchfiel |
+|---|---|---|
+| MF-567 | Abbruch-Codes | drei Urteile ohne Wandler |
+| MF-578 | Offscreen-Tests | neue GUI-Tests |
+| MF-598 | `SKIP_RETURN_CODE`-Namen | jeder neue Skip |
+| MF-633 | `SKIP_DIRS` in zwei Toren | `tools/uft-scout/work/` — geklonte **Fremd-Repos**, aus denen zwei Tore Befunde meldeten, die CI nie sieht |
+
+Die Regel gilt in beide Richtungen: `git ls-files` liefert auch neue,
+noch nicht hinzugefügte Dateien (`--others --exclude-standard`), damit
+sich niemand einem Tor entzieht, indem er `git add` unterlässt. Ist git
+nicht befragbar, lässt der Filter alles durch **und sagt es** — eine
+stille Lücke wäre schlimmer als ein paar Fremdbefunde mit Hinweis.
+
+### Grundsatz: eine Attribution ist eine rechtliche Aussage (MF-636)
+
+„Based on X" / „Port of X" im Kopfkommentar erklärt eine **Ableitung**,
+keine Höflichkeit. Wer eine setzt, nennt die Lizenz der Quelle dazu; wer
+eigenständig implementiert und nur fremde Doku gelesen hat, schreibt das
+auch so („Verhalten nach der Dokumentation von X, eigenständige
+Implementierung").
+
+`scripts/audit_spdx_policy.py` führt diese Erklärungen seit MF-636 als
+**Liste** neben der SPDX-Prüfung — bewusst kein Tor, denn eine
+Attribution ist nichts Verbotenes, sondern etwas
+Entscheidungsbedürftiges. Der erste Lauf fand **88** davon: 7
+ausdrückliche Port-Erklärungen, 43 mit genannter fremder Codebasis
+(davon **nur 2 mit genannter Lizenz**), 38 reine Spec-Verweise. Siehe
+`LIZ-1` in `docs/OPEN_ITEMS.md`.
+
 ## Verzeichnisstruktur
 
 ```
