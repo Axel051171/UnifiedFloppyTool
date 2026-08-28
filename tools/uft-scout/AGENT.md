@@ -122,12 +122,39 @@ nicht Eleganz des fremden Codes.
    Vendoring-Fragen, alles mit GUI- oder Hardware-Folge: Vorlage an den
    Eigentümer, keine eigene Entscheidung.
 
+9. **Jeder Vorschlag benennt seine Kennzahl** (MF-640). Welche der vier
+   Release-Zahlen bewegt er?
+
+   * ungeprüfte Formate (T3) — **runter**
+   * angebotene Wandlungspfade — **rauf**
+   * leckende Tests — **null halten**
+   * Bench-Alter je Controller — **runter**
+
+   Oder er begründet eine fünfte. Kandidatin: **Dateien mit ungeklärter
+   Herkunft** (`scripts/audit_spdx_policy.py`, Attributionsstufe).
+
+   **Ein Fund, der keine Zahl bewegt, ist Fundus, nicht Auftrag.** Er
+   gehört ins Gutachten, aber nicht in die OPEN_ITEMS-Vorschläge. Das ist
+   die schärfste Fassung der Ratenbremse: nicht „höchstens fünf", sondern
+   „höchstens fünf, die etwas bewegen".
+
+10. **Konfliktordnung.** Widersprechen sich Befunde, gilt: **Messung vor
+    Plan**, **Lizenz vor Fähigkeit**, **Ehrlichkeit vor
+    Vollständigkeit**. Ein Gutachten, das gegen einen Plan misst, ist
+    kein Fehler des Gutachtens — der Plan wird geändert. Eine Fähigkeit,
+    deren Lizenz ungeklärt ist, wird nicht vorgeschlagen. Und eine
+    ehrliche Zeile schlägt eine vollständige Liste.
+
 ## Gutachten-Pflichtfelder
 Kategorie (Innovation/Verbesserung/Daten/Oracle/irrelevant) ·
-Lizenzzone mit Konsequenz · Was das Inventar dazu sagt (Abfrage zitiert) ·
-Einhängepunkt (bestehender Plan/Baustein) · Oracle-Kandidat ·
-Beschaffungsliste (Fixtures, Referenzen) · Aufwandsklasse S/M/L ·
-Differenzlauf-Plan (falls „besser"-Behauptung) · UNGEKLÄRT-Liste
+Lizenzzone mit Konsequenz · **Attribution der Quelle mit deren Lizenz**
+(MF-636: „based on / port of" ist eine rechtliche Aussage) ·
+**bewegte Kennzahl** (MF-640) · Was das Inventar dazu sagt (Abfrage
+zitiert) · Einhängepunkt — und der muss **im Baum auffindbar** sein
+(`docs/plans/README.md`; ein Anker, den `git grep` nicht findet, ist
+keiner) · Oracle-Kandidat · Beschaffungsliste (Fixtures, Referenzen) ·
+Aufwandsklasse S/M/L · Differenzlauf-Plan (falls „besser"-Behauptung) ·
+UNGEKLÄRT-Liste
 
 ## Was Erfolg heißt
 Nicht „viel gefunden", sondern: Stufe-4-Arbeit beginnt mit fertiger

@@ -251,6 +251,47 @@ sich niemand einem Tor entzieht, indem er `git add` unterlässt. Ist git
 nicht befragbar, lässt der Filter alles durch **und sagt es** — eine
 stille Lücke wäre schlimmer als ein paar Fremdbefunde mit Hinweis.
 
+### Grundsatz: jeder Baustein benennt seine Kennzahl (MF-640)
+
+**Jeder Vorschlag und jeder Baustein sagt, welche der Release-Kennzahlen
+er bewegt.** Ein Fund, der keine Zahl bewegt, ist **Fundus, nicht
+Auftrag** — er wird notiert, nicht eingeplant.
+
+Die vier geführten Zahlen:
+
+| Kennzahl | Richtung | Quelle |
+|---|---|---|
+| ungeprüfte Formate (T3) | **runter** | `docs/VERIFICATION_TIERS.md`, abgeleitet |
+| angebotene Wandlungspfade | **rauf** | `src/core/uft_roundtrip.c`, abgeleitet |
+| leckende Tests | **null halten** | ASan/UBSan in CI |
+| Bench-Alter je Controller | **runter** | `docs/CAPABILITIES.md` |
+
+Wer eine **fünfte** Zahl einführt, begründet sie. Eine Kandidatin steht
+bereit und ist seit MF-635/638 im Sinkflug: **Dateien mit ungeklärter
+Herkunft** — gemessen von `scripts/audit_spdx_policy.py`, Klasse A und
+B ohne genannte Lizenz.
+
+Der Sinn ist nicht Buchhaltung, sondern **Kopplung**: Scout-Priorisierung,
+Eigentümer-Entscheidungen und MF-Reihenfolge hängen damit am selben Maß,
+ohne dass jemand Reihenfolgen verhandeln muss. Das Release ist kein
+Endpunkt, sondern der Messpunkt der Schleife — seine Zahlen sagen, wo der
+nächste Durchlauf ansetzt.
+
+### Konfliktordnung: was gewinnt, wenn Teile sich widersprechen (MF-640)
+
+1. **Messung vor Plan.** Ein Plan, den eine Messung widerlegt, wird
+   geändert, nicht verteidigt. Vorgeführt am Fluss-Widget: der Plan sagte
+   „neue Ansicht bauen", die Messung sagte „das Widget existiert und wird
+   nur nicht instanziiert" — gebaut wurde die Verdrahtung (MF-630/632).
+2. **Lizenz vor Fähigkeit.** Belegt an IPF: ein erreichbarer,
+   funktionierender Parser wiegt eine ungeklärte Ableitung nicht auf
+   (MF-638).
+3. **Ehrlichkeit vor Vollständigkeit.** Die Registry-Zeile „nicht lesbar"
+   schlägt 1100 Zeilen Können ohne Tür (MF-635).
+
+Diese drei Vorränge werden ohnehin praktiziert; ausgesprochen verhindern
+sie, dass je zwei davon gegeneinander optimieren.
+
 ### Grundsatz: eine Attribution ist eine rechtliche Aussage (MF-636)
 
 „Based on X" / „Port of X" im Kopfkommentar erklärt eine **Ableitung**,
