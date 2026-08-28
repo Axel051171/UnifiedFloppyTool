@@ -1253,6 +1253,22 @@ wird. Zerfällt in zwei sehr verschiedene Hälften:
 | | Anzahl | Zeilen | Bedeutung |
 |---|---|---|---|
 | `src/formats/*` | 35 | 18 051 | **nicht registriert**, nicht überflüssig → ARCH-11/12, Antwort ist verdrahten |
+
+Die Zuordnung „nicht registriert" ist nachgemessen, nicht gefolgert:
+verglichen wurden die 35 geschlossenen Verzeichnisse gegen die 88
+Verzeichnisse, in denen `scripts/gen_format_list.py` ein Plugin findet
+(Schnittmenge über den Verzeichnispfad). **Die Schnittmenge ist leer.**
+Kein einziges geschlossenes Verzeichnis enthält ein registriertes Plugin
+— und umgekehrt landet kein registriertes Plugin fälschlich im Bericht.
+Das ist zugleich die Gegenprobe, dass die Messung Plugin-Registrierungen
+als Erreichbarkeit erkennt: sonst stünden Verzeichnisse wie
+`src/formats/d64` mit in der Liste.
+
+Stichprobe dazu: `src/formats/pc98` exportiert `uft_fdi98_open`,
+`uft_fdi98_read_sector`, `uft_pc98_analyze` und weitere — freistehende
+Funktionen, **keine** `uft_format_plugin_*`-Struktur. Es ist also nicht
+ein Plugin, das der Registrierung harrt, sondern Code, der nie an den
+Plugin-Weg angeschlossen wurde.
 | übrige | 5 | 4 059 | einzeln anzusehen |
 
 Die fünf übrigen: `src/analysis/profiles` (1573), `src/parsers/a2r`
