@@ -1,12 +1,38 @@
 # FORMAT-CLASSIFICATION — Kopierschutz- & Disk-Fehler-Repräsentation
 
-_Generiert 2026-07-05 aus `src/formats/uft_format_registry_v2.c` (SSOT `data_layer`-Feld). 161 Format-IDs._
+_Momentaufnahme vom 2026-07-05 aus `src/formats/uft_format_registry_v2.c`
+(`data_layer`-Feld). 161 Format-IDs._
+
+> ⚠ **MF-620 — zwei Einschränkungen, die hier fehlten.**
+>
+> **Erstens: es gibt keinen Erzeuger.** Der Satz oben sagte „Generiert",
+> aber im Baum liegt kein Skript, das diese Datei erzeugt (nachgemessen:
+> `grep -rl "FORMAT-CLASSIFICATION" scripts/` ist leer). Sie ist eine
+> von Hand erstellte Momentaufnahme und altert wie jede andere. Wer sie
+> auffrischen will, muss den Weg erst schreiben.
+>
+> **Zweitens: die Quelle hat keinen Aufrufer.**
+> `uft_format_registry_v2.c` steht in `docs/orphan_baseline.txt`; seine
+> sechs exportierten Funktionen ruft niemand. Registriert wird über
+> `src/formats/format_registry/uft_format_registry.c:434`
+> (`uft_register_all_formats()`, gerufen von `src/main.cpp:43`), und
+> dessen `all_plugins[]` speist sich aus Gruppen, nicht aus dieser
+> Tabelle.
+>
+> Die 161 beschreiben also einen **Katalog**, nicht das Verhalten des
+> Werkzeugs — dieselbe Unterscheidung wie bei den „55+
+> Kopierschutz-Schemes" (P0-2). Die Zahl, die das Projekt sonst führt,
+> kommt aus der SSOT `scripts/gen_format_list.py`: **88 Plugins**
+> ausgeschrieben, 137 mit dem DSK-Makro.
 
 > **Nenner-Klärung (357 vs. 161):** Die Ziel-Vorlage nennt „~357 Formate" — das ist
 > die Anzahl `.c`-Quelldateien im Format-Layer, von denen viele Duplikate, Helfer oder
 > toter Copy-Paste sind (siehe `docs/KNOWN_ISSUES.md` FMT-1..4, Memory
 > `format-layer-fabrication`). Die **klassifizierungsrelevante** Einheit ist die
-> distinkte registrierte **Format-ID** in der SSOT-Registry: **161**. Diese Tabelle
+> distinkte **Format-ID** in `uft_format_registry_v2.c`: **161**.
+> (MF-620: hier stand „in der SSOT-Registry". Das ist sie nicht —
+> die Datei hat keinen Aufrufer, und die SSOT des Projekts ist
+> `scripts/gen_format_list.py` mit 88 Plugins.) Diese Tabelle
 > klassifiziert alle 161. Nicht-registrierte `.c`-Module sind per Definition kein
 > exportierbares Format und tragen keine eigene Repräsentationsklasse.
 

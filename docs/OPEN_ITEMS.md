@@ -611,6 +611,68 @@ als behobener Fehler.
 
 ---
 
+## Lizenz-Zensus je Datei — und was er sofort fand (MF-620)
+
+Der letzte offene Werkzeugfehler des Scouts (W8) war: `vermessen.py`
+sieht **Datei-Lizenzen** nicht, nur Lizenzdateien. Bei MAME war genau
+das die maßgebliche Ebene (441× BSD-3 neben 6× GPL-2.0+ neben 6×
+LGPL-2.1+, je SPDX-Kopfzeile) — der vierte Zyklus musste den Zensus von
+Hand machen.
+
+Jetzt zählt das Werkzeug SPDX- und `// license:`-Kopfzeilen mit. Beim
+Probelauf **gegen den eigenen Baum**:
+
+| Bezeichner | Dateien |
+|---|---|
+| `GPL-2.0-or-later` | 7 |
+| `MIT` | 6 |
+| `LicenseRef-PublicDomain-xDMS` | 1 |
+| `Unlicense` | 1 |
+| **`GPL-3.0-or-later`** | **1** |
+
+### Der Fund
+
+| # | Sache | Stand |
+|---|---|---|
+| **SCOUT-18** | **`GPL-3.0-or-later` in einem GPL-2.0-Projekt.** `src/formats/retro_image/uft_retro_image_detect.c` und `include/uft/formats/uft_retro_image_detect.h` tragen diesen Bezeichner. Nachgemessen: unsere `LICENSE` ist der reine GPL-2-Text **ohne** „or later"-Klausel; die Datei nennt **keinen** fremden Ursprung (kein „based on", kein Copyright Dritter) — es ist UFT-eigener Code. Sie steht in `docs/orphan_baseline.txt`, ist also unerreichbar; die gebaute Binärdatei ist damit nicht betroffen, die Quell-Release aber schon. Die Lizenzmatrix des Scouts sagt: „GPL-3.0 ist für ein GPL-2.0-Projekt NICHT portierbar" | **offen, Eigentümer.** Zwei Auslegungen, beide plausibel: (a) der Kopf ist schlicht falsch — jemand schrieb GPL-3, wo GPL-2 gemeint war; (b) die Datei war als GPL-3 gedacht und gehört dann nicht in diesen Baum. Beides ist eine **Lizenzentscheidung**, keine Codeänderung — deshalb nicht von mir angefasst |
+
+`Unlicense` (`flashfloppy/uft_ff_formats.c`) ist unproblematisch —
+gemeinfrei-äquivalent und mit GPL-2 verträglich.
+
+### Zwei Einschränkungen des Zensus, die im Ergebnis stehen
+
+**Stichprobe, keine Vollzählung:** 600 Quelldateien, und das Ergebnis
+sagt das selbst (`lizenz_je_datei_vollstaendig: false`).
+
+**Der erste Anlauf war blind.** Er lief die Verzeichnisse in
+Walk-Reihenfolge ab und verbrannte sein Budget in `.claude/skills/` und
+`.agents/` — 600 Dateien geprüft, **null** Lizenzkopfzeilen gefunden,
+obwohl es sie gibt. Erst als `src/`, `include/`, `lib/` Vorrang bekamen,
+fand er die sieben GPL-2-Köpfe, die ich teils selbst heute gesetzt habe.
+Ein Zensus, der in einem Skriptordner anfängt, misst Skriptordner.
+
+---
+
+## Die dritte Doku-Stelle zur „161" (MF-620)
+
+`FORMAT-CLASSIFICATION.md` sagte „_Generiert 2026-07-05 aus
+`uft_format_registry_v2.c`_". **Es gibt keinen Erzeuger** — nachgemessen:
+`grep -rl "FORMAT-CLASSIFICATION" scripts/` ist leer. Die Datei ist eine
+von Hand erstellte Momentaufnahme, die sich als erzeugt ausgibt, und ihre
+Quelle hat keinen Aufrufer. Beides steht jetzt darin.
+
+Dazu zwei falsche Zuschreibungen berichtigt:
+
+* `CAPABILITIES.md:100` schrieb die 161 der SSOT `gen_format_list.py`
+  zu — **die liefert 88.**
+* `FORMAT-CLASSIFICATION.md:32` nannte `uft_format_registry_v2.c` die
+  „SSOT-Registry". Sie ist weder SSOT noch erreichbar.
+
+Damit ist SCOUT-16 **erledigt**: alle drei Stellen nennen jetzt die
+wahre Quelle und ihren Zustand.
+
+---
+
 ## Korpus-gebundene Tests — Beschaffungsliste (MF-588)
 
 **Gemessen auf diesem Rechner: 266/266, ein Skip** (`test_freezer`, siehe unten). Auf einem frischen

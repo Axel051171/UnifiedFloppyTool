@@ -107,6 +107,57 @@ def messen(root):
                 lz.append(lizenz_datei_urteil(os.path.join(dp, name)))
     lz = lz[:40]        # eine Handvoll genuegt; 40 ist kein stilles Kappen,
                         # sondern eine Schranke gegen Baeume mit hunderten
+    # ── MF-620 (W8): Lizenzen JE DATEI, nicht nur Lizenzdateien ──────
+    #
+    # Bei MAME ist das die massgebliche Ebene: `src/lib/formats/` fuehrt
+    # 441x BSD-3, 6x GPL-2.0+ und 6x LGPL-2.1+ in SPDX-Kopfzeilen — eine
+    # pauschale Zone fuer „MAME" waere wertlos gewesen. Der vierte
+    # Scout-Zyklus musste diesen Zensus von Hand machen.
+    #
+    # Gezaehlt wird eine Stichprobe (die Zone entscheidet sich an der
+    # Verteilung, nicht an jeder einzelnen Datei); die Obergrenze steht
+    # ausdruecklich im Ergebnis, damit niemand die Zahl fuer vollstaendig
+    # haelt.
+    SPDX = re.compile(r"SPDX-License-Identifier:\s*([A-Za-z0-9.+\-]+)")
+    LIZ  = re.compile(r"^\s*(?://|#|\*)\s*license:\s*([A-Za-z0-9.+\-]+)",
+                      re.I | re.M)
+    je_datei = Counter()
+    geprueft = 0
+    GRENZE = 600
+    # Quellverzeichnisse zuerst. Ohne das verbrennt die Stichprobe ihr
+    # Budget in Werkzeug- und Skriptordnern, die alphabetisch vorn
+    # stehen — gemessen am eigenen Baum: 600 Dateien geprueft, NULL
+    # Lizenzkopfzeilen gefunden, obwohl es sie gibt.
+    QUELLE = ("src", "include", "lib", "source", "core")
+    wurzeln = [os.path.join(root, d) for d in QUELLE
+               if os.path.isdir(os.path.join(root, d))] or [root]
+    for wurzel in wurzeln:
+      for dp, dn, fn in os.walk(wurzel):
+        dn[:] = [d for d in dn if d not in (".git", "node_modules")]
+        for name in fn:
+                  if geprueft >= GRENZE:
+                      break
+                  if os.path.splitext(name)[1].lower() not in (
+                          ".c", ".cpp", ".h", ".hpp", ".py", ".rs", ".cc"):
+                      continue
+                  try:
+                      with open(os.path.join(dp, name), encoding="utf-8",
+                                errors="replace") as fh:
+                          kopf = fh.read(2000)
+                  except OSError:
+                      continue
+                  geprueft += 1
+                  m1 = SPDX.search(kopf) or LIZ.search(kopf)
+                  if m1:
+                      je_datei[m1.group(1)] += 1
+    m["lizenz_je_datei"] = je_datei.most_common(8)
+    m["lizenz_je_datei_geprueft"] = geprueft
+    m["lizenz_je_datei_vollstaendig"] = geprueft < GRENZE
+    if je_datei and not m.get("lizenz_je_datei_vollstaendig"):
+        m["lizenz_je_datei_hinweis"] = (
+            "Stichprobe: nur die ersten %d Quelldateien geprueft. Die "
+            "Verteilung ist ein Hinweis, keine Vollzaehlung." % GRENZE)
+
     m["lizenzen"] = lz
     m["lizenz_zone"] = (sorted({l["zone"] for l in lz},
                                key=["GRUEN", "GELB", "ORANGE",

@@ -100,7 +100,14 @@ muss von einem fremden Schreibtisch kommen — siehe den Aufruf im
 **Status (Phase-0-Re-Verifikation 2026-07-05):** **84 Plugin-Structs**, 161
 Format-IDs im Katalog (1 Plugin kann mehrere IDs bedienen, z.B. WOZ v1/v2/2.1;
 einige IDs laufen über dedizierte Handler ohne Plugin-Struct, z.B. QDOS).
-Code-abgeleitet via `scripts/gen_format_list.py`.
+
+> ⚠ **MF-620: die beiden Zahlen haben verschiedene Quellen, und eine
+> Zuschreibung hier war falsch.** Der Satz endete mit „Code-abgeleitet
+> via `scripts/gen_format_list.py`" — dieses Skript liefert **88**
+> Plugins (137 mit dem DSK-Makro), nie 161. Die 161 stammen aus
+> `src/formats/uft_format_registry_v2.c`, einer Datei **ohne Aufrufer**
+> (`docs/orphan_baseline.txt`). Sie beschreiben einen Katalog, nicht das
+> Verhalten des Werkzeugs.
 
 | Metric | Wert | Quelle |
 |---|---|---|
