@@ -410,3 +410,135 @@ ADF-Referenzkorpus aus erster Hand, mit Provenienz im Manifest — und
 hebt `adf` von T1b auf **T1**, ohne auf irgendjemanden zu warten.
 
 Das ist der Punkt, an dem ich anfangen würde.
+
+---
+
+# Fünf Nachträge (MF-641, 2026-08-28)
+
+Der Plan oben ist unverändert richtig. Diese fünf Nachträge stammen aus
+Ereignissen, die **jünger sind als er** — die IPF/nibtools-Welle, acht
+Fälle „Können im Baum, Zugang fehlt", und drei Scout-Zyklen.
+
+## Nachtrag 1 — Phase 1 beginnt mit Türen, nicht mit Bauen
+
+`MF-629` hat es gemessen: `src/formats/d64/uft_d64_parser_v3.c:1085ff`
+liest das Verzeichnis **vollständig** in `d64_dir_entry_t directory[]` —
+und kein erreichbarer Weg gibt es heraus. Von den vier
+`uft_d64_v3_*`-Funktionen in `uft_v3_bridge.c` hat nur
+`detect_protection` einen Aufrufer; `get_diagnosis` liefert bloß
+Spurzahl und Dateigröße.
+
+**Der erste Phase-1-Commit ist also eine Verdrahtung, kein Neubau.**
+Rotbeweis zuerst: ein Test, der die UFT-Liste gegen die `c1541`-Liste
+stellt und **rot** ist, weil UFT nichts liefert. Danach `flophashes`,
+byteweise. Tage statt Wochen.
+
+### Die Regel, die daraus folgt
+
+> **Erst Türen suchen, dann bauen.** Vor jedem der vier FS-Bausteine
+> steht eine Bereitschafts-Messung: gibt es den Leser schon, und fehlt
+> nur der Zugang?
+
+Nach **acht** Fällen dieser Gestalt an einem einzigen Tag — DeepRead
+(`DEEP-1`), Plattform-Profile (`PROF-1`), D64-Verzeichnis (`PH1-1`),
+Fluss-Widget (MF-630/632, inzwischen verdrahtet), C64-NIB-Leser
+(MF-635, gelöscht), zwei AIR-Parser (`LIZ-2`), AmigaDOS-Ringschutz
+(MF-639) — ist die Wahrscheinlichkeit hoch, dass auch ADF- und
+FAT12-Leser teilweise dastehen.
+
+Die Tür-Suche ist zugleich **Härtung**: MF-639 hat sie geliefert. Der
+AmigaDOS-Walker brach beide Ketten nur bei einer Selbst-Schleife ab; ein
+Ring über zwei Blöcke lief endlos mit unbegrenztem `realloc`. Die
+Lösung lag im Nachbar-Walker (`uft_amigados_extended.c`), der die
+Besucht-Bitmap seit jeher führt.
+
+## Nachtrag 2 — die Quarantäne-Folgen als eigener Block
+
+Der Plan kennt die IPF/nibtools-Welle noch nicht.
+
+**(a) `capsimg` als einziger legaler IPF-Rückweg.** `uft_ipf_air.c` ist
+ein selbsterklärter „Full port" von AIR (`GPL-3.0`) und **erreichbar** —
+das IPF-Plugin ruft vier seiner Funktionen. Quarantäne kostet hier
+IPF-Lesen, anders als in allen anderen Fällen. Bis zur
+Eigentümer-Entscheidung bleibt der ehrliche Satz stehen:
+**„IPF: erkannt, nicht gelesen."** Danach Helper-Prozess nach
+PFS3-Muster, wenn die Lizenzprüfung ihn trägt.
+
+**(b) Das GCR-Audit ist Vorbedingung — und es ist erledigt.**
+
+> **Ergebnis (MF-635, ergänzt MF-641): Phase 1 Nr. 1 steht auf sauberem
+> Grund.** Gemessen:
+>
+> * `uft_gcr_ops.c` — eigenständige Rümpfe, nibtools-Vokabular. Drei
+>   Funktionen verglichen, alle anders gebaut; ein Echo, und das ist der
+>   Fachbegriff „header checksum".
+> * `uft_d64_g64.c` — eigenständig, keine der auffälligen Konstanten.
+> * `uft_track_align.c` — **Port**, in Quarantäne (MF-635).
+> * Im **gesamten** `src/formats/{c64,d64,g64}/` tragen genau **zwei**
+>   Dateien eine Zuschreibung — die beiden bereits geprüften. Das
+>   „& Co." ist leer.
+> * Und entscheidend: `uft_d64_parser_v3.c` trägt **keine** Zuschreibung
+>   und nutzt **null** Funktionen aus `uft_gcr_ops.c` — es führt eigene
+>   GCR-Tabellen (`:90`, `:96`). Der D64-Verzeichnispfad hängt gar nicht
+>   am auditierten Modul.
+>
+> **Kein Clean-Room-GCR nötig. Phase 1 kann starten.**
+
+**(c) Die Attributions-Stufe als CI-Tor.** `audit_spdx_policy.py` führt
+seit MF-636 die Fließtext-Attributionen als Liste (88 gefunden). Sie
+soll ein Tor werden — aber erst, wenn Klasse A und B abgearbeitet sind;
+sonst friert man 48 offene Fragen als Grundlinie ein. Reihenfolge:
+erst `LIZ-2` entscheiden, dann das Tor scharfstellen.
+
+## Nachtrag 3 — die vier fehlenden Pläne, verdaut statt kopiert
+
+`docs/plans/README.md` misst es: **FluxEngine, FloppyControl,
+DiskFlashback und FDOS sind nicht ankerfähig.** Sie 1:1 einzuchecken
+wäre falsch — sie tragen Erledigtes und Überholtes.
+
+Der Schnitt: je Plan eine **Baum-Fassung mit nur den offenen
+Bausteinen**, jeder mit Kennzahl-Bezug (Regel 9) und MF-Verweisen auf
+das schon Gelieferte. Danach endet der Zustand, dass die
+Verwaisten-Regel Material bedroht, dessen Plan nur außerhalb existiert.
+
+## Nachtrag 4 — das Tore-Bündel als Meilenstein mit Datum
+
+Eigentümer-Entscheidungen über Phasen zu verteilen kostet mehr als sie
+zu bündeln. Die Liste ist jetzt vollständig zählbar:
+
+| # | Entscheidung | liegt seit |
+|---|---|---|
+| 1 | **SCOUT-4** — fdc_bitstream: Oracle verdrahten oder raus | MF-626 (bereits entfernt; Rücknahme per `git revert` möglich) |
+| 2 | **SCOUT-5** — D77-Fixture, Lizenz des Disketteninhalts | MF-625 |
+| 3 | **LIZ-2** — drei AIR-Dateien (GPL-3.0), davon eine erreichbar; XCopy-Port | MF-638 |
+| 4 | **capsimg** — IPF-Rückweg | MF-641 |
+| 5 | **Beschaffungskorb** — cpmtools, sector-cpc, mame-tools (liegt), .NET-SDK, DMS aus dem Aminet | laufend |
+| 6 | **Klick-Session** — MF-496, MF-501, Fluss-Widget, demnächst D64-Browser | MF-632 |
+| 7 | **Hardware-Warenkorb** — USB-Floppy, ZoomFloppy, Teensy | Gleis A |
+
+Ein Termin, sieben Punkte — danach ist **kein Baustein mehr
+eigentümer-blockiert**.
+
+## Nachtrag 5 — Acorn diszipliniert einreihen
+
+Acorn ist real die schwächste Ecke (SSD, DSD, ADF, ADL überwiegend T3),
+und der Scout arbeitet an DiscImageManager. Die 1:2-Regel gilt trotzdem:
+**neue Fähigkeiten erst, wenn Phase 1 die vier Kern-Dateisysteme
+inhaltlich bewiesen hat.**
+
+Der Acorn-Ertrag wird deshalb Gutachten + Verhaltens-Spec +
+Oracle-Registrierung (sofern DiscImageManager skriptbar ist — das prüft
+der Scout) und liegt als **fünfter Phase-1-Kandidat** bereit. Nicht als
+Vordrängler. Dafür gibt es den Fundus.
+
+---
+
+## Was das Ziel-Release schreibt
+
+v4.1.6 bewies **jede Aussage**. v4.1.7 beweist den **Inhalt** der
+wichtigsten Formate.
+
+Und der Satz „Das Dateisystem wird nicht gelesen" verschwindet nicht aus
+der Ehrlichkeitsliste, weil er unangenehm war, sondern **weil er falsch
+geworden ist**. Das ist die einzige Art, wie diese Liste je schrumpfen
+darf.

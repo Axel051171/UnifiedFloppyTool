@@ -2129,3 +2129,96 @@ Unabhängig davon und ohne Lizenzbezug: `test_air_cross_validate.c`
 gehört entweder an die AIR-Module angeschlossen oder umbenannt. Ein Test,
 dessen Name etwas anderes verspricht als er prüft, ist eine
 Erfolgsmeldung ohne Tat.
+
+---
+
+## Scout-Zyklus 9: DiscImageManager — ein erfundener Formatkopf, und das erste Acorn-Oracle (MF-642, 2026-08-28)
+
+Untersucht: **https://github.com/geraldholdsworth/DiscImageManager**
+(HEAD `5ffe4796fe`, 2026-08-24). Gutachten:
+`tools/uft-scout/out/DiscImageManager.gutachten.md`.
+
+**Lizenz GPL-3.0** (Wurzel-`LICENSE`, bestätigt in `DIMConsole.lpr:4-19`).
+Zone GELB — kein Port, kein Vendoring; Pascal wäre ohnehin keiner.
+Verhaltens-Spec und Oracle sind das Maximum.
+
+### Der Fehler im eigenen Baum — selbst nachgemessen
+
+`src/formats/acorn/uft_adl.c:1-13` behauptet:
+
+> „ADL (Acorn **DFS** Large) … Headerless, 80 tracks × 1 head × 16
+> sectors × 256 bytes = 327,680."
+
+mit `#define ADL_SIZE 327680` und `disk->geometry.heads = 1`.
+
+**Das ist zweifach falsch.** Gegen zwei unabhängige Belege im
+DIM-Klon geprüft:
+
+| Beleg | Aussage |
+|---|---|
+| `LazarusSource/DiscImage_ADFS.pas:73-75` | `163840` = ADFS **S**, `327680` = ADFS **M**, `655360` = ADFS **L** |
+| beigelegtes `ADFS_L.adl` | **655360 Byte** (`stat` gemessen) |
+
+Also: `.adl` ist **ADFS L**, 655 360 Byte, **zwei** Seiten — nicht „DFS
+Large" mit 327 680 und einem Kopf. Und die Zahl, die wir führen, ist die
+von ADFS **M**.
+
+Folge für den Benutzer: ein echtes `.adl` fällt durch unsere
+größenexakte Sonde und wird nicht gelesen; eine 327 680-Byte-Datei
+bekäme den falschen Namen. **Fabrikations-Klasse** — dieselbe Bauart wie
+FMT-2/3/10/11/12: eine plausible, in sich stimmige, erfundene Spec.
+
+### Das erste skriptbare Acorn-Oracle
+
+DIM hat ein eigenes Konsolen-Ziel (`DIMConsole.lpi/.lpr`,
+`{$DEFINE DIMCONSOLE}`), ist skriptbar (`-c <script>` + `runscript`) und
+hardwarefrei. Entscheidend: `GetFileCrc`/`GetFileMD5` hashen den per
+`ExtractFile` gewonnenen **Inhalt byteweise**
+(`DiscImage_Published.pas:98-115`), und `savecsv` schreibt sie je Zeile.
+
+**Das ist exakt das `flophashes`-Muster** — und floptool hat **kein
+einziges Acorn-Dateisystem** (MF-623: 62 Dateisystem-Einträge, keines
+davon). DIM ist damit die fehlende zweite Hand auf **Datei-Ebene** für
+die schwächste Ecke des Baums, und eine andere Hand als MAME und UFT.
+
+### Die fünf Vorschläge, je mit Kennzahl
+
+| # | Vorschlag | Kennzahl |
+|---|---|---|
+| **SCOUT-25** | `uft_adl.c`-Identitätsfehler beheben. Rotbeweis: ein 655 360-Byte-L-Abbild gegen `uft_disk_open()` — heute NULL | ungeprüfte Formate runter (`adl` T3→T2) |
+| **SCOUT-26** | DIMConsole als Acorn-Datei-Hash-Oracle registrieren **und den Acorn-Korpus selbst erzeugen** (`new` + `add` + `savecsv`). Heute: **0** Acorn-Abbilder im Korpus | Korpus 0→n; T3→T1b-Weg für `ssd` und `adl`, **ohne Bench** |
+| **SCOUT-27** | ADFS-Verhaltens-Spec: Old-Map-Prüfsummen `$0FF/$1FF`, Root-Checkbytes, New-Map-Disc-Record, Zonen-CrossCheck-XOR=`$FF`, acht Broken-Directory-Codes. Stufe 4 liest gegen RISC-OS-Primärdoku gegen | ungeprüfte Formate runter (Grundlage) |
+| **SCOUT-28** | größenexakte Sonden tolerant gegen gekürzte Abbilder; die 204 800-Byte-Mehrdeutigkeit über den Katalog entscheiden statt still 80×1 zu wählen | `ssd` T3→T2; stille Fehlklassifikation raus |
+| **SCOUT-29** | Watford-DFS in die SSD-Hebungs-Spec — **kein neues Plugin** (Moratorium) | SSD-Spec vollständig |
+
+### Was der Zyklus **bestätigt** hat
+
+Die DSD-Verschränkungsformel in DIM ist **deckungsgleich** mit unserer.
+Das ist kein Fund, sondern ein Beleg — und genau so verzeichnet.
+
+### Attribution im Fremd-Repo (Pflichtfeld)
+
+`DiscImage_ADFS.pas:4422` — „Adapted from the RISC OS RamFS ARM code
+procedure `InitDiscRec` in RamFS50". Quelle: RISC OS Open,
+**Apache-2.0**. Wer die Disc-Record-Erzeugung je als Spec nutzt, muss
+auf die **RISC-OS-Primärquelle** ausweichen, nicht auf DIMs Nachbau —
+Apache-2.0 ist für diesen Baum nicht portierbar, und ein Nachbau eines
+Nachbaus verdoppelt die Unsicherheit.
+
+### Beschaffung
+
+Lazarus/FPC (`lazbuild`, nur fürs Oracle) · DIMConsole-Binary mit SHA-256
+· **selbst erzeugter** Acorn-Korpus (DFS S/D 40/80, WDFS, ADFS
+S/M/L/D/E/F mit Inhalt, `savecsv`-Hashes, Manifest) · RISC-OS-Primärdoku
+für SCOUT-27.
+
+**Die beigelegten GPL-3-Blanks werden nicht kopiert** — und sie sind
+ohnehin gekürzt (651 264 / 323 584 Byte gemessen, statt 655 360 /
+327 680). Der Scout hat daraus SCOUT-28 abgeleitet: unsere Sonden lehnen
+alle vier ab.
+
+### Offen
+
+Ob `lazbuild` DIMConsole unter MinGW ohne Widgetset durchbaut — das
+erweist erst der Bau. Vorher kein Registry-Eintrag: **kein Oracle auf
+Zusicherung.**

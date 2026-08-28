@@ -1,4 +1,5 @@
 # Gutachten: rittwage/nibtools (Zyklus 7)
+<!-- uebernommen: MF-634 (Commit 87ebfe30, docs/OPEN_ITEMS.md "Scout-Zyklus 7: nibtools" Z.1698ff; Berichtigung der eigenen Zahl dort Z.1902) -->
 Stand: 2026-08-28 · Messung: `work/nibtools.messung.json`
 (HEAD `0abdc11505`, letzter Commit 2025-06-26, „added error check for D64 output")
 · Inventar: UFT `f98e0576` (`work/inv.json`, 88 Plugins, SSOT ok, 22 Korpus-Abbilder)

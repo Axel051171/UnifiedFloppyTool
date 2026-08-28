@@ -128,6 +128,18 @@
     "rittwage/nibtools": {
       "status": "bewertet",
       "grund": "Gutachten Zyklus 7 (2026-08-28): GPL-3.0 (GELB) — nur Spec+Oracle; nibconv/nibscan hardwarefrei gebaut und als Zweitoracle vorgeschlagen; C64-NIB im Baum unerreichbar (3 Spec-Abweichungen); Lizenz-Altlast 'Based on nibtools' zur Eigentuemer-Vorlage"
+    },
+    "pbakota/amigadx": {
+      "status": "bewertet",
+      "grund": "Gutachten 2026-08-28: WCX-DLL auf vendorter ADFlib (gleiche Hand wie unadf/AdfOpus), Zone ROT; als ADF-Oracle untauglich. Ertrag: SCOUT-19 (81-83-Zyl.-ADF-Sonden) + SCOUT-20 (Zyklus-Schutz Basis-Walker)"
+    },
+    "hippy666/ADFDiskBox": {
+      "status": "verworfen",
+      "grund": "Gutachten Zyklus 8 (2026-08-28): reiner cmd.exe/gw-Wrapper (WinForms), 0 eigene ADF-/FS-/MFM-Zeilen (grep-Beleg im Gutachten); MIT sauber inkl. Attribution (GreaseweazleGUI .NET, MIT). Einziger Ertrag: 82-Zyl-Diskdef amiga.amigados.plus als Feld-Beleg fuer SCOUT-G1 (Plain-ADF 81-83 Zyl., Referenz WinUAE disk.cpp) — out/ADFDiskBox.gutachten.md"
+    },
+    "geraldholdsworth/DiscImageManager": {
+      "status": "bewertet",
+      "grund": "Gutachten Zyklus 9 (2026-08-28, Eigentuemer-Auftrag Acorn): GPL-3.0 (GELB) — nur Spec+Oracle. Ertrag: DIMConsole als einziges bekanntes hardwarefreies Acorn-FS-Hash-Oracle (savecsv CRC32/MD5 je Datei, floptool-FS ohne Acorn); ADFS-Spec-Quellen (Old/New Map, Zone-Checks, 8 Broken-Codes, SEQ/INT/MUX-Interleave mit Auto-Erkennung); 2 Korrektheitsbefunde im eigenen Baum (uft_adl.c erfundenes 'DFS Large' 327680=ADFS M statt L 655360; groessenexakte Probes lehnen DIMs gekuerzte Referenz-Blanks ab). 5 Vorschlaege SCOUT-25..29 — out/DiscImageManager.gutachten.md"
     }
   }
 }
