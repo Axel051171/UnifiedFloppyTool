@@ -1226,7 +1226,7 @@ und sagen über geschlossene Subsysteme nichts.
 
 ---
 
-## ORPH-2 gebaut — und der erste Lauf fand fünf DeepRead-Module ohne Aufrufer (MF-627, 2026-08-28)
+## ORPH-2 gebaut — und der erste Lauf legte einen Widerspruch offen (MF-627, 2026-08-28)
 
 `scripts/audit_orphan_modules.py --dirs` ist neu: die Messung auf
 Verzeichnisebene, die MF-626 als Lücke benannt hat. **Kein Tor, ein
@@ -1261,6 +1261,18 @@ Die fünf übrigen: `src/analysis/profiles` (1573), `src/parsers/a2r`
 
 ### Der Befund, der weh tut
 
+> **Zur Genauigkeit (nachgetragen MF-628):** der Bericht hat diese fünf
+> Dateien **nicht entdeckt** — sie stehen seit MF-509 einzeln in
+> `docs/orphan_baseline.txt`, alle fünf. Der Datei-Detektor hatte sie
+> längst. Neu ist nicht der Waisenstatus, sondern der **Widerspruch**:
+> dieselben Module standen in `CLAUDE.md` unter den Kernfunktionen, und
+> niemand hatte die beiden Stellen nebeneinandergelegt.
+>
+> Der echte ORPH-2-Fall ist `src/flux/fdc_bitstream/`: davon stand
+> **keine einzige** der zwölf Dateien in der Grundlinie (nachgemessen an
+> `70d2e0e7^`). Genau dafür ist die Verzeichnis-Messung da — für
+> geschlossene Ringe, nicht für Einzeldateien.
+
 **`src/analysis/deepread/` hat keinen Aufrufer.** Alle **13** exportierten
 Funktionen der fünf Forensik-Module — Write-Splice-Erkennung,
 Magnetic-Aging-Profil, Cross-Track-Korrelation, Revolution-Fingerprint,
@@ -1283,6 +1295,14 @@ sind also **3 von 8**.
 **Offen (`DEEP-1`):** verdrahten oder als unerreichbar dokumentieren — die
 dritte Möglichkeit, es weiter als Kernfunktion zu führen, ist seit dieser
 Messung keine mehr.
+
+Ein Plan-Anker im Sinne der Verwaisten-Regel liegt **nicht** vor.
+`MASTER_PLAN.md:332` nennt DeepRead nur unter den **Nicht-Zielen**: „die
+5 DeepRead-Module sind genug, bis M2 fertig ist und tatsächlich ein
+Nutzer sie ausprobiert hat". Der Satz setzt voraus, dass ein Nutzer sie
+ausprobieren *kann* — er kann nicht, es ruft sie nichts. Das ist keine
+Verdrahtungszusage, sondern eine dritte Stelle, an der der Baum eine
+Fähigkeit annimmt, die er nicht hat.
 
 ### Was der Bericht ausdrücklich nicht sagt
 
