@@ -140,6 +140,22 @@
     "geraldholdsworth/DiscImageManager": {
       "status": "bewertet",
       "grund": "Gutachten Zyklus 9 (2026-08-28, Eigentuemer-Auftrag Acorn): GPL-3.0 (GELB) — nur Spec+Oracle. Ertrag: DIMConsole als einziges bekanntes hardwarefreies Acorn-FS-Hash-Oracle (savecsv CRC32/MD5 je Datei, floptool-FS ohne Acorn); ADFS-Spec-Quellen (Old/New Map, Zone-Checks, 8 Broken-Codes, SEQ/INT/MUX-Interleave mit Auto-Erkennung); 2 Korrektheitsbefunde im eigenen Baum (uft_adl.c erfundenes 'DFS Large' 327680=ADFS M statt L 655360; groessenexakte Probes lehnen DIMs gekuerzte Referenz-Blanks ab). 5 Vorschlaege SCOUT-25..29 — out/DiscImageManager.gutachten.md"
+    },
+    "monkeyman79/dfsimage": {
+      "status": "bewertet",
+      "grund": "Gutachten Zyklus (2026-08-28, Eigentuemer-Auftrag Acorn, zweite Hand neben DIM): MIT (GRUEN) + vendortes wildparse (PSF-2.0, Hand-Einstufung, Eigentuemer-Vorlage). Ertrag: zweites, DIM-unabhaengiges Acorn-DFS-Datei-Hash-Oracle (digest -m data -a sha256, list {sha1}, index -f json) + MIT-Korpus-Erzeugung (create/format/convert linear<->interleaved); Bereitschafts-Messung im Baum: drei tuerlose Acorn-Module (uft_bbc_dfs.c 5 Exporte/0 Aufrufer, ssd_dsd.c Header inkludiert niemand, uft_ssd_parser_v2.c eigenes main) und dreifache Katalog-Implementierung; Verhaltens-Deltas 18-Bit-Sign-Extension + lineare DSD-Ablage. Kein Watford, MMB=Fundus. 4 Vorschlaege (vorlaeufig SCOUT-38..41) - out/dfsimage.gutachten.md"
+    },
+    "cmosher01/Apple-II-Disk-Tools": {
+      "status": "bewertet",
+      "grund": "Gutachten Zyklus apple2-cmosher (2026-08-28): DEPRECATED, aber to_woz2 = einziger Konsolen-DSK->WOZ2-Oracle-Kandidat; GPL-3.0 Konzept/Oracle"
+    },
+    "cmosher01/DskToWoz2": {
+      "status": "bewertet",
+      "grund": "Gutachten Zyklus apple2-cmosher (2026-08-28): DSK->WOZ2-Verhaltens-Spec ausgeschrieben; GUI-only, GPL-3.0, kein Port; Nibblize stammt aus CiderPress (BSD-3)"
+    },
+    "Datamuseum-DK/FloppyTools": {
+      "status": "bewertet",
+      "grund": "Gutachten 2026-08-28 (out/FloppyTools.gutachten.md): BSD-2, Archiv-Werkzeug Datamuseum.dk; Upstream auf Codeberg (GitHub-Spiegel eingefroren 2026-03-25). 4 Vorschlaege: DG-Nova-Widerspruch, KryoFlux-Zweithand-Oracle, Q1-Multi-Lesungs-Korpus, Zilog-Referenz. M2FM-Decoder + 8 fehlende Formate im Fundus (Moratorium)."
     }
   }
 }

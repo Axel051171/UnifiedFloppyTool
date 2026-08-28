@@ -2414,3 +2414,145 @@ Stufe 3, nicht auf eine Entscheidung.
 > aber der Zähler unterscheidet nicht zwischen „wartet auf den
 > Eigentümer" und „wartet auf die eigene Stufe 3". Ein Feld im Kopf
 > (`<!-- stufe: 2 -->`) würde das trennen, ohne die Bremse zu lockern.
+
+---
+
+## Zyklen 12–15: vier Aufklärer, ein Lesefehler, und eine sechsfache Zahl (MF-648, 2026-08-28)
+
+Vier Scout-Zyklen parallel gelaufen: **lib1541img** (BSD-2), **dfsimage**
+(MIT), **Apple-II-Disk-Tools + DskToWoz2** (beide GPL-3.0), **Datamuseum
+FloppyTools** (BSD-2). Drei der vier Lizenzurteile stehen in Zone GRÜN —
+zum ersten Mal ist für CBM und für 8"-Minicomputer eine portierbare
+Referenz da, nicht nur eine lesbare.
+
+Die drei Befunde unten sind **selbst nachgemessen**, nicht vom Aufklärer
+übernommen. Bei einem davon fiel die eigene Messung breiter aus als der
+gemeldete Fund.
+
+### Befund 1 — der 40-Spur-D64 liest den Disknamen als Belegungskarte
+
+`src/formats/d64/uft_d64_parser_v3.c:1029ff`. Die Schleife läuft bis
+`disk->tracks` mit
+
+```c
+size_t entry_off = 4 + (track - 1) * 4;
+```
+
+Für Spur 36 ergibt das `4 + 35*4 = 144 = 0x90`. Vierzehn Zeilen tiefer
+steht in derselben Funktion:
+
+```c
+d64_copy_filename(disk->disk_name, bam + 0x90, 16);
+```
+
+**Dieselbe Adresse.** Für jedes 40-Spur-Abbild werden die Spuren 36–40
+aus dem Disknamen und der Disk-ID gelesen; `free_blocks` ist damit
+falsch. Und die Größe wird angenommen: `d64_is_valid_size()` (:524ff)
+führt `D64_SIZE_40` und `D64_SIZE_40_ERR` ausdrücklich.
+
+Der Fehler sitzt **genau in dem Leser**, den die Umsetzungsliste unter
+A2 als Phase-1-Erstcommit ausleiten will. Wäre er ausgeleitet worden,
+hätte der Differenzlauf gegen `flophashes` eine falsche Belegung
+verglichen — grün oder rot, in beiden Fällen wertlos.
+
+**Referenz für den Fix, benannt und in Zone GRÜN:** lib1541img
+(BSD-2-Clause, excess-c64) sondiert die erweiterten Belegungskarten
+statt zu extrapolieren — DolphinDOS `bam+0x1c+4*track`, SpeedDOS
+`bam+0x30+4*track`, PrologicDOS inline mit Namensversatz
+(`cbmdosvfsreader.c:88-115, 395-435`). Der Aufklärer hat die
+Eigenständigkeit belegt: 0 Treffer für „vice|nibtools|based on|port of"
+über den ganzen Fremdbaum, also weder Korpus-Erzeuger noch
+nibtools-Verwandtschaft — die Zirkularitätsfrage aus `ORACLES.md` ist
+beantwortet, bevor sie gestellt wurde.
+
+**Zusatzwiderspruch, mitgemessen:** `src/formats/c64/uft_d64_plugin.c:68`
+nimmt Abbilder ab 205312 Byte als **42 Spuren** an; der v3-Parser lehnt
+dieselbe Datei als ungültige Größe ab. Zwei Wege, zwei Antworten.
+
+→ **SCOUT-42**, Kennzahl: ungeprüfte Formate runter (`d64`-Hebung ist
+Moratoriums-Bedingung). Als **A5** in die Umsetzungsliste, **vor** A2.
+
+### Befund 2 — dieselbe 8"-Geometrie steht sechsmal unter sechs Namen
+
+Gemeldet war ein Widerspruch bei DG Nova. Die eigene Messung
+(`grep -rn 256256 src/`) fand die Klasse dahinter: **77 × 26 × 1 × 128 =
+256 256** liegt sechsmal im Baum, jedes Mal als eigenes „System":
+
+| Datei | Name in der Tabelle |
+|---|---|
+| `src/detect/mfm/mfm_detect.c:1517` | „IBM 8" SSSD 250K" |
+| `src/formats/dsk_generic/uft_dsk_generic.c:63` | „Xerox 820" |
+| `src/formats/industrial/uft_cromemco.c:28` | „Cromemco 8" SSSD 250KB" |
+| `src/formats/japanese_ext/uft_hitachi_s1.c:25` | „S1 8" SSSD 250KB" |
+| `src/formats/minicomputer/uft_dg_nova.c:25` | „DG Nova 8" SS/SD 250KB" |
+| `src/formats/motorola/uft_versados.c:34` | „VersaDOS SS 128b 250KB" |
+
+Das ist **nicht automatisch falsch** — viele 8"-Systeme benutzten das
+IBM-3740-Layout, und `mfm_detect.c` nennt es auch so. Falsch ist, dass
+**keine** der fünf Formatzeilen eine Referenz trägt und alle fünf
+Formate denselben Bytebestand als ihr eigenes System beanspruchen. Die
+Erkennung nach Dateigröße ist damit für alle sechs mehrdeutig, und
+welches Plugin gewinnt, entscheidet die Registrierungsreihenfolge.
+
+Datamuseum FloppyTools (BSD-2) dekodiert echte Nova-Disketten mit
+**77 × 1 × 8 × 512 FM** (`dg_nova.py:15-16`) — eine andere Geometrie.
+Das entscheidet die Frage noch nicht: eine unbelegte Zahl durch eine
+zweite unbelegte Zahl zu ersetzen wäre keine Verbesserung. Was
+entschieden ist: die sechs Zeilen sind eine **Fabrikations-Klasse**
+(FMT-2/3/10/11/12) und gehören auf Referenz oder auf eine ehrliche
+Sammelzeile „IBM-3740-kompatibel, System nicht unterscheidbar".
+
+→ **SCOUT-47**, Kennzahl: ungeprüfte Formate runter (fünf T3-Einträge
+auf einmal). Aufwand M, weil die Entscheidung eine Quelle je System
+verlangt.
+
+### Befund 3 — A2R behauptet Schreiben und kann nicht einmal proben
+
+`src/formats/uft_format_registry.c:232-244` führt A2R mit
+`supports_read = true` **und** `supports_write = true`. Verdrahtet ist
+ein einziges Feld: `.probe = uft_a2r_probe`. Die Probe vergleicht das
+Magic `"A2R2"` (`:24`) — **A2R-v3-Dateien proben nie**.
+
+Der eigentliche Leser, `src/parsers/a2r/uft_a2r_parser.c` (~1100 Zeilen,
+beherrscht v3 mit RWCP/SLVD), ist in der `.pro` und hat außerhalb seines
+Verzeichnisses **null** Nennungen. Selbst gegengeprüft: die einzigen
+Treffer für `uft_a2r_` außerhalb `src/parsers/a2r/` sind die
+Registry-Zeile und die Probe selbst.
+
+Das ist dieselbe Klasse wie GUI-1 (MF-635) — eine Zusicherung, hinter
+der nichts steht — **und** der zehnte „Können im Baum, Zugang fehlt"-Fall.
+`docs/plans/FLUXENGINE.md` §FE-5 stellt genau diese Frage; sie ist damit
+beantwortet, die Entscheidung (verdrahten mit Rotbeweis **oder**
+ehrliche Registry-Zeile) steht aus.
+
+→ **SCOUT-46**, Kennzahl: Ehrlichkeit der Formatliste. Schließt FE-5.
+
+### Was die vier Zyklen sonst geliefert haben
+
+| # | Fund | Kennzahl | Reife |
+|---|---|---|---|
+| SCOUT-38 | `dfsimage` (MIT, Hashes je Datei, `list`/`digest`/`index -f json`) als **zweites** Acorn-Oracle neben DIMConsole — zwei unabhängige Hände, stärker als der D64-Standard | T3 runter | B (`pip install` aus dem Klon) |
+| SCOUT-39 | **Drei** türlose Acorn-Module: `src/formats/bbc/uft_bbc_dfs.c` (5 Exporte, nur eigene Prototypen), `src/formats/bbc/ssd_dsd.c` (Header inkludiert niemand), `src/formats/ssd/uft_ssd_parser_v2.c` (eigenes `main()`, unregistriert) — dreifache Katalog-Implementierung, kein `# ANKER:` | T3 runter | B |
+| SCOUT-40 | 18-Bit-Adress-Vorzeichenerweiterung (`dfsimage entry.py:257-262`) fehlt in `uft_bbc_dfs.c:59-61`; falsche Kommentarzahl „0xA0 = 1280" in `uft_ssd_plugin.c:53` | T3 runter | B |
+| SCOUT-41 | Lineare vs. verschränkte DSD-Ablage: UFT liest ein lineares 409 600-B-Abbild still mit **vertauschten Seiten** | T3 runter | B |
+| SCOUT-43 | Zweiter türloser CBM-Verzeichnisleser: `src/formats/cbm/uft_cbm_formats.c` (959 Z., cbmconvert-Ableitung **mit** genannter GPLv2+-Lizenz, ohne SPDX, D64/D71/D81/T64, null Aufrufer). Zwei Leser, eine Tür — einer bekommt sie, der andere Anker oder Löschung. Nebenbei: der Kopf **behauptet** LyNX und implementiert es nicht (`src/formats/misc/lnx.c` ist **Atari** Lynx, selbst nachgesehen) | Tier-Leiter D71/D81 | C (Eigentümer) |
+| SCOUT-44 | DSK→WOZ2: der Pfad ist seit jeher registriert (`uft_format_convert_tables.c:214`), hat aber **keinen Arbeiter** und keinen Matrix-Eintrag. Vollständige Verhaltens-Spec aus `dsktowoz2.c` liegt im Gutachten (TMAP, TRKS 14 Blöcke, Spurlänge 0xC5C0/0xBB30, Prologe, 4-and-4, 6-and-2, Interleave) | Wandlungspfade rauf | B |
+| SCOUT-45 | Apple-Oracle-Paar: `to_woz2` (Konsole, deterministisch, deckt `.do`/`.d13`) + `floptool prodos_140k` (liegt registriert, deckt `.po`). **Korpus kostenlos**: `to_woz2` prüft den Inhalt nicht, seed-erzeugte DSKs genügen — heute hat `inv["korpus"]` **null** Apple-Einträge | T3 runter (4 Formate) | B |
+| SCOUT-48 | FloppyTools (BSD-2) als quelloffene **zweite Hand** für `src/flux/uft_kryoflux_stream.c` — heute ist die einzige KryoFlux-Referenz das proprietäre `dtc`. Lauf belegt (`python -m floppytools -d q1`, rc=0); Windows braucht `PYTHONUTF8=1` | T3 runter | B |
+
+### Lizenz-Nebenbefund mit Folgen für Stufe 4
+
+Beide Apple-Repos sind **GPL-3.0** — kein Code in unseren Baum. Aber
+ihre Nibblize-Routinen erklären selbst: „Based on code by Andy McFadden,
+from CiderPress", und CiderPress ist **BSD-3-Clause** (am Original
+geprüft). Wer die Apple-GCR-Kodierung je portieren will, nimmt die
+grüne Quelle mit Attribution — nicht die gelbe Ableitung. Das gehört
+notiert, bevor jemand den bequemeren Weg nimmt.
+
+### Fundus — bewusst nicht eingeplant
+
+M²FM-Decode-Pfad (BSD-2, UFT hat nur das Enum) · acht fehlende
+8"-Formate aus dem Archiv (ISIS-II, WANG WCS, Q1, Lexitron, Philips
+P5002, HP9885, Ohio Scientific, Alpha LSI) — Moratorium · ZipCode
+4/5-pack · MMB-Container · `_UNREAD_`-Sentinel und DDHF-Manifest als
+Verfahren · Q1-Multi-Lesungs-Korpus (44 MB, Inhalt Zone PRÜFEN).

@@ -34,6 +34,26 @@ die Rundlauf-Matrix führt **kein** Atari-Paar.
   In-Tree-Referenz ist ausdrücklich erlaubt
 * CHANGELOG-Zeile ist bereits berichtigt (MF-644)
 
+### A5 🟢 40-Spur-D64: die Belegungskarte liest den Disknamen — **vor A2**
+**Kennzahl: ungeprüfte Formate runter** (`d64`; Hebung ist Moratoriums-Bedingung)
+
+`uft_d64_parser_v3.c:1029ff` rechnet `entry_off = 4 + (track-1)*4`. Für
+Spur 36 ist das **0x90** — und vierzehn Zeilen tiefer liest dieselbe
+Funktion den Disknamen von `bam + 0x90`. Jedes 40-Spur-Abbild bekommt
+für die Spuren 36–40 Namens- und ID-Bytes als Belegung; `free_blocks`
+ist falsch. Die Größe wird ausdrücklich angenommen (`:524ff`).
+
+* **Referenz, benannt und Zone GRÜN:** lib1541img (BSD-2) sondiert
+  DolphinDOS/SpeedDOS/PrologicDOS statt zu extrapolieren
+  (`cbmdosvfsreader.c:88-115, 395-435`); Eigenständigkeit belegt, also
+  **nicht zirkulär**
+* **Rotbeweis:** 40-Spur-D64 → `free_blocks` und BAM je Spur → heute
+  liefert Spur 36 den Disknamen
+* **Nebenbefund gleich mit:** `uft_d64_plugin.c:68` nimmt ab 205312 B
+  **42** Spuren an, der v3-Parser lehnt dieselbe Datei ab
+* **Warum vor A2:** A2 leitet genau diesen Leser aus. Ein Differenzlauf
+  gegen `flophashes` auf falscher Belegung ist wertlos — grün wie rot
+
 ### A2 🟢 D64-Verzeichnis ausleiten (Phase 1, erster Commit)
 **Kennzahl: ungeprüfte Formate runter** (`d64` T1b → inhaltlich belegt)
 
@@ -156,9 +176,14 @@ Unser einziges HFE-Abbild trägt `track_encoding = 0xFF` und
 
 ## Was die Reihenfolge trägt
 
-A1 bis A4 sind **unabhängig voneinander** und brauchen niemanden. Sie
-bewegen zusammen drei der vier Kennzahlen und schließen zwei
-Fabrikations-Fälle.
+A1, A3, A4 und A5 sind **unabhängig voneinander** und brauchen
+niemanden. Sie bewegen zusammen drei der vier Kennzahlen und schließen
+zwei Fabrikations-Fälle.
+
+**Eine einzige Reihenfolgebindung:** A5 vor A2. Sie ist nicht
+organisatorisch, sondern inhaltlich — A2 leitet den Leser aus, den A5
+repariert, und ein Differenzlauf auf falscher Belegung beweist nichts
+(MF-648).
 
 B1 hängt an einem `make`, B2 an einer Python-Umgebung, B3 an einem
 Upstream-Bau — alles Agentenarbeit.
