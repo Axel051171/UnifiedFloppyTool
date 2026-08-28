@@ -567,6 +567,50 @@ haben wir mehrfach, und welche Fassung gewinnt".
 
 ---
 
+## SCOUT-14 nachgemessen: die Prämisse war falsch, der Fund ein anderer (MF-619)
+
+SCOUT-14 lautete: „vier Dateien heißen `uft_format_registry.h` —
+verwandt mit der Wächter-Kollisionsfamilie P1-8". **Beides stimmt nicht
+mehr.**
+
+Es sind **drei** (die vierte war die mit MF-617 gelöschte), und sie
+tragen **verschiedene** Wächter:
+
+    src/core/unified/uft_format_registry.h    UFT_SRC_FORMAT_REGISTRY_H
+    include/uft/core/uft_format_registry.h    UFT_CORE_UFT_FORMAT_REGISTRY_H
+    include/uft/uft_format_registry.h         UFT_FORMAT_REGISTRY_H
+
+Sie kollidieren also nicht — das hat MF-591 erledigt, als die privaten
+Wächter umbenannt wurden. Meine Einordnung war eine Vermutung, und sie
+war falsch.
+
+**Zwei der drei haben keinen Einbinder** (nachgemessen, pfadgenau UND
+namenlos; `include/uft` liegt auf dem Include-Pfad, deshalb war die
+zweite Prüfung nötig). Lebendig ist nur
+`include/uft/core/uft_format_registry.h`, eingebunden von
+`uft_imd_adapter.h:24`.
+
+### Der eigentliche Fund liegt eine Ebene tiefer
+
+Es gibt **drei** `.c`-Dateien mit „registry" im Namen, und keine bindet
+einen der drei Header ein:
+
+| Datei | Zeilen | Stand |
+|---|---|---|
+| `src/formats/format_registry/uft_format_registry.c` | 471 | **lebt** — definiert `uft_register_all_formats()` (`:434`), gerufen von `src/main.cpp:43` |
+| `src/formats/uft_format_registry.c` | 482 | erreichbar |
+| `src/formats/uft_format_registry_v2.c` | 587 | **in der Verwaisten-Grundlinie** — kein Aufrufer |
+
+| # | Sache | Stand |
+|---|---|---|
+| **SCOUT-16** | **Drei Dokumente zitieren eine Kennzahl aus einer Datei ohne Aufrufer.** `CAPABILITIES.md:110`, `FORMAT_GROUPS.md:11` und `FORMAT-CLASSIFICATION.md:3` führen **„161 Format-IDs im Katalog"** und nennen `uft_format_registry_v2.c` als Quelle. Die Datei hat 162 Tabelleneinträge — und **keinen Aufrufer**; ihre sechs exportierten Funktionen ruft niemand. Registriert wird über `format_registry/uft_format_registry.c`, dessen `all_plugins[]` aus Gruppen gespeist wird, nicht aus dieser Tabelle. Die 161 beschreiben einen **Katalog**, nicht das Verhalten — dieselbe Unterscheidung wie bei „55+ Kopierschutz-Schemes" (P0-2). `KNOWN_ISSUES.md` hat die Datei zweimal als unbenutzt vermerkt (`:2772`, `:9072`), ohne dass die Zahl berichtigt wurde | ⚠ **zwei von drei Stellen markiert** (MF-619). `FORMAT-CLASSIFICATION.md` ist generiert — dort muss der Erzeuger geändert werden, nicht die Ausgabe |
+| **SCOUT-17** | Zwei Registry-Header ohne Einbinder (`src/core/unified/`, `include/uft/`) und eine Registry-`.c` ohne Aufrufer (`_v2.c`, 587 Zeilen). Löschkandidaten nach derselben Pipeline wie MF-616/617 | **offen, Eigentümer** |
+
+SCOUT-14 selbst ist damit **erledigt** — als widerlegte Vermutung, nicht
+als behobener Fehler.
+
+---
+
 ## Korpus-gebundene Tests — Beschaffungsliste (MF-588)
 
 **Gemessen auf diesem Rechner: 266/266, ein Skip** (`test_freezer`, siehe unten). Auf einem frischen

@@ -107,7 +107,7 @@ Code-abgeleitet via `scripts/gen_format_list.py`.
 | Plugin-Structs (`uft_format_plugin_t`) | 84 | `scripts/gen_format_list.py` / `audit_plugin_compliance.py` |
 | davon auto-registriert (Makro) | 80 | `UFT_REGISTER_FORMAT_PLUGIN` |
 | davon manuell registriert | 4 | g64, hfe, img, scp |
-| Format-IDs im Katalog | 161 | `uft_format_registry_v2.c` |
+| Format-IDs im Katalog | 161 ⚠ | `uft_format_registry_v2.c` — **diese Datei ruft niemand auf** (MF-619, steht in `docs/orphan_baseline.txt`). Die Zahl beschreibt eine Tabelle, nicht das Verhalten des Werkzeugs. Registriert wird ueber `src/formats/format_registry/uft_format_registry.c:434`, gerufen von `src/main.cpp:43` |
 | `spec_status` populiert | **84/84 (100%)** | MF-262 / audit |
 | `features`-Matrix populiert | **80/80 (100%)** | MF-263 |
 | Round-Trip getestet | 6/138 | `tests/conformance/` (IBM-DD, IBM-HD, AtariST, C64-GCR, Apple2-GCR, Amiga) |
