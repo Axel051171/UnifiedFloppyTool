@@ -1223,3 +1223,69 @@ referenziert? Das ist eine kleine Ergänzung derselben Indexstruktur und
 würde genau die Klasse finden, die hier durchrutschte. Bis dahin gilt:
 die 227 Grundlinien-Einträge sind eine Untergrenze für **Einzeldateien**
 und sagen über geschlossene Subsysteme nichts.
+
+---
+
+## ORPH-2 gebaut — und der erste Lauf fand fünf DeepRead-Module ohne Aufrufer (MF-627, 2026-08-28)
+
+`scripts/audit_orphan_modules.py --dirs` ist neu: die Messung auf
+Verzeichnisebene, die MF-626 als Lücke benannt hat. **Kein Tor, ein
+Bericht** — das Ergebnis braucht Auslegung, und ein Wächter, der daraus
+Löschungen erzwingt, wäre falsch.
+
+### Warum erst messen, dann verdrahten
+
+Der erste Entwurf indizierte nur `src/` und `include/` und meldete
+prompt `src/formats/nintendo` als geschlossen — obwohl `test_rom_headers`
+es aufruft (MF-598). Tests gehören dazu; ein Verzeichnis, das wenigstens
+ein Test benutzt, ist geprüft, nicht abgeschnitten. Dieselbe
+Unterscheidung trifft der Wächter für Einzeldateien längst.
+
+Ebenso ausgenommen: Dateien direkt unter `src/`. Dort liegt `main.cpp`,
+und ein Programmstart hat definitionsgemäß keinen Aufrufer — ohne diese
+Ausnahme stünden 14 513 Zeilen als „verwaist" im Bericht.
+
+### Das Ergebnis
+
+**40 Verzeichnisse, 22 110 Zeilen**, in die von außen nie hineingerufen
+wird. Zerfällt in zwei sehr verschiedene Hälften:
+
+| | Anzahl | Zeilen | Bedeutung |
+|---|---|---|---|
+| `src/formats/*` | 35 | 18 051 | **nicht registriert**, nicht überflüssig → ARCH-11/12, Antwort ist verdrahten |
+| übrige | 5 | 4 059 | einzeln anzusehen |
+
+Die fünf übrigen: `src/analysis/profiles` (1573), `src/parsers/a2r`
+(1073), `src/analysis/deepread` (979), `src/algorithms/recovery` (400),
+`src/compat` (34).
+
+### Der Befund, der weh tut
+
+**`src/analysis/deepread/` hat keinen Aufrufer.** Alle **13** exportierten
+Funktionen der fünf Forensik-Module — Write-Splice-Erkennung,
+Magnetic-Aging-Profil, Cross-Track-Korrelation, Revolution-Fingerprint,
+Soft-Decision-LLR — werden außerhalb ihres Verzeichnisses **nirgends**
+genannt: nicht in `src/`, nicht in der GUI, nicht in `tests/`. Die
+einzigen Treffer sind ihre eigenen Prototypen unter
+`include/uft/analysis/`.
+
+Gegengeprüft mit einfachem `grep` über alle neun `uft_deepread_*`-Namen,
+unabhängig von der Skript-Logik — nach dem ORPH-2-Fehlschluss von MF-624
+gehört das dazu.
+
+Das ist dieselbe Klasse wie der Kopierschutz-Katalog (P0-2): **Bestand,
+nicht Fähigkeit.** CLAUDE.md führte „5 DeepRead Forensik-Module" und „8
+DeepRead-Module" unter den Kernfunktionen; beide Stellen tragen jetzt die
+Messung. Die drei **Decode-Booster** sind davon nicht betroffen — sie
+haben mit `src/gui/uft_otdr_panel.cpp` einen echten Aufrufer. Erreichbar
+sind also **3 von 8**.
+
+**Offen (`DEEP-1`):** verdrahten oder als unerreichbar dokumentieren — die
+dritte Möglichkeit, es weiter als Kernfunktion zu führen, ist seit dieser
+Messung keine mehr.
+
+### Was der Bericht ausdrücklich nicht sagt
+
+Dass die 35 Format-Verzeichnisse weg können. Ein Format-Plugin ohne
+Außenreferenz ist der bekannte Registrierungs-Rückstand (MF-446/447), und
+die Antwort darauf steht im Plan, nicht in einer Löschliste.

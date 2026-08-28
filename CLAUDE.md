@@ -126,6 +126,17 @@ Eigenentwickeltes OTDR-basiertes Analyse-System (inspiriert von Glasfaser-Messte
 - **Weighted Voting:** Float-gewichtete Multi-Revolution-Fusion statt einfacher Majority-Vote
 - **Encoding Boost:** OTDR-Histogramm-Analyse verbessert Format-/Encoding-Erkennung
 
+> **Ehrlichkeits-Hinweis (MF-627):** Die fünf Module unten liegen in
+> `src/analysis/deepread/` und haben **keinen Aufrufer**. Gemessen: alle
+> 13 exportierten Funktionen werden außerhalb ihres Verzeichnisses
+> nirgends genannt — nicht in `src/`, nicht in der GUI, nicht in
+> `tests/`; die einzigen Treffer sind ihre eigenen Prototypen in
+> `include/uft/analysis/`. Unabhängig mit einfachem `grep` gegengeprüft.
+> Das ist dieselbe Lage wie beim Kopierschutz-Katalog (P0-2): **Bestand,
+> nicht Fähigkeit.** Die drei Decode-Booster darüber sind davon nicht
+> betroffen — sie haben mit `src/gui/uft_otdr_panel.cpp` einen echten
+> Aufrufer.
+
 **5 Forensik-Module:**
 - **Write-Splice Detection:** Erkennt Schreibkopf-Ein/Aus-Übergänge
 - **Magnetic Aging Profile:** Unterscheidet Alterung von physischem Schaden
@@ -180,7 +191,7 @@ Im Katalog dokumentierte historische Kopierschutz-Verfahren:
 ├─────────────────────────────────────────────────────────┤
 │              Analysis Pipeline (C)                       │
 │  OTDR (12 Module) │ TDFC │ φ-OTDR Denoise │ Confidence  │
-│  DeepRead (8 Module) │ Protection (Signale; Katalog unwired) │
+│  DeepRead (3 verdrahtet + 5 unwired) │ Protection (Signale)  │
 ├─────────────────────────────────────────────────────────┤
 │              Recovery Pipeline (C)                       │
 │  Multiread Voting │ Adaptive Decode │ Partial Recovery   │
@@ -275,7 +286,11 @@ tests/                 — 77 C-Tests + 1 Qt-Test
   + 17 Applesauce = 43 Stub-Honesty-Asserts, 0 Failures
 - 55+ Kopierschutz-Schemes **im Katalog** (`src/protection/`), davon
   erreichbar: Signal-Erkennung + 3 heuristisch benannte — MF-508
-- 8 DeepRead-Module + 12 OTDR-Pipeline-Stufen
+- 8 DeepRead-Module, davon **3 erreichbar** (die Decode-Booster, über
+  `src/gui/uft_otdr_panel.cpp`) und **5 ohne Aufrufer** (die
+  Forensik-Module in `src/analysis/deepread/`, 13 exportierte
+  Funktionen, 0 Nennungen außerhalb — MF-627) + 12
+  OTDR-Pipeline-Stufen
 - 9 SIMD-Dispatch-Punkte (SSE2/AVX2 Runtime)
 - ~610 Error-Handling-Fixes (fseek + I/O)
 - Thread-Safety: 3 Subsysteme mit Mutex

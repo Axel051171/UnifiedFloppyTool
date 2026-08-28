@@ -184,10 +184,104 @@ def used_elsewhere(names: set[str], idx: dict[str, set[pathlib.Path]],
     return False
 
 
+def closed_subsystems(sources, tree, idx, test_idx) -> list[dict]:
+    """Verzeichnisse, in die von aussen nie hineingerufen wird (ORPH-2).
+
+    Warum das eine ZWEITE Messung braucht: `used_elsewhere()` schliesst
+    genau eine Datei aus, die gepruefte. Geschwister zaehlen als Aufrufer.
+    Ein Ring von Dateien, die einander rufen und die sonst niemand ruft,
+    ist damit unsichtbar — und zwar umso zuverlaessiger, je vollstaendiger
+    der Ring ist. Belegt an `src/flux/fdc_bitstream/` (MF-626): zwoelf
+    Dateien, 6483 Zeilen, kein Einbinder von aussen, trotzdem nie in der
+    Grundlinie.
+
+    Diese Messung fragt deshalb pro VERZEICHNIS: wird einer seiner
+    exportierten Namen ausserhalb des Verzeichnisses genannt — in `src/`,
+    in `include/` ODER in `tests/`?
+
+    Die Tests gehoeren ausdruecklich dazu. Ein erster Entwurf liess sie
+    weg und meldete daraufhin `src/formats/nintendo` als geschlossen,
+    obwohl `test_rom_headers` es aufruft (MF-598). Ein Verzeichnis, das
+    wenigstens ein Test benutzt, ist geprueft und nicht abgeschnitten —
+    dieselbe Unterscheidung, die der Waechter oben schon fuer einzelne
+    Dateien trifft.
+
+    Ausdruecklich KEIN Tor, sondern ein Bericht. Ein Treffer heisst nicht
+    "loeschen":
+
+      - `src/` selbst enthaelt die Einstiegspunkte (`main.cpp`); ein
+        Programmstart hat definitionsgemaess keinen Aufrufer. Deshalb
+        sind Dateien direkt unter `src/` ausgenommen.
+      - Ein Format-Verzeichnis ohne Aussenreferenz heisst in aller Regel
+        **nicht registriert**, nicht ueberfluessig — das ist ARCH-11/12,
+        und die Antwort darauf ist verdrahten, nicht loeschen.
+
+    Wer daraus eine Loeschentscheidung ableitet, braucht denselben Beleg
+    wie sonst auch: keinen Plan-Anker, keinen Einbinder, und einen Blick
+    in die Datei.
+    """
+    by_dir: dict[str, list] = defaultdict(list)
+    for q in sources:
+        if q.suffix not in (".c", ".cpp"):
+            continue
+        try:
+            rel = q.relative_to(ROOT)
+        except ValueError:
+            continue
+        parts = rel.parts
+        if parts[0] != "src" or len(parts) < 3:
+            continue          # Dateien direkt unter src/: Einstiegspunkte
+        by_dir["/".join(parts[:-1])].append(q)
+
+    out = []
+    for d, files in sorted(by_dir.items()):
+        inside = {q for q in tree
+                  if str(q.relative_to(ROOT)).replace(chr(92), "/").startswith(d + "/")}
+        names: set[str] = set()
+        for f in files:
+            if f in tree:
+                names |= exported_names(tree[f])
+        if not names:
+            continue
+        outside: set = set()
+        for n in names:
+            outside |= (idx.get(n) or set()) - inside
+            outside |= (test_idx.get(n) or set()) - inside
+        if outside:
+            continue
+        out.append({
+            "dir": d,
+            "files": len(files),
+            "exported": len(names),
+            "lines": sum(len(tree[f].splitlines()) for f in files if f in tree),
+        })
+    out.sort(key=lambda r: -r["lines"])
+    return out
+
+
+def print_closed(gefunden: list[dict]) -> None:
+    print("Geschlossene Subsysteme - von aussen nie gerufen (ORPH-2)")
+    print("")
+    print("  Ein Treffer heisst NICHT 'loeschen'. Bei Format-Verzeichnissen")
+    print("  heisst er meist 'nicht registriert' (ARCH-11/12).")
+    print("")
+    print("  %-44s %7s %6s %5s" % ("Verzeichnis", "Zeilen", "Dat.", "Fn"))
+    print("  %-44s %7s %6s %5s" % ("-" * 44, "-" * 7, "-" * 6, "-" * 5))
+    for r in gefunden:
+        print("  %-44s %7d %6d %5d"
+              % (r["dir"], r["lines"], r["files"], r["exported"]))
+    print("")
+    print("  %d Verzeichnisse, %d Zeilen"
+          % (len(gefunden), sum(r["lines"] for r in gefunden)))
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--detail", action="store_true", help="jede verwaiste Datei nennen")
     ap.add_argument("--json", action="store_true", help="maschinenlesbare Ausgabe")
+    ap.add_argument("--dirs", action="store_true",
+                    help="Bericht: Verzeichnisse, in die von aussen nie "
+                         "hineingerufen wird (ORPH-2). Kein Tor.")
     args = ap.parse_args()
 
     sources = built_sources()
@@ -219,6 +313,14 @@ def main() -> int:
                 "used_by": state,
             }
         )
+
+    if args.dirs:
+        gefunden = closed_subsystems(sources, src_tree, src_idx, test_idx)
+        if args.json:
+            print(json.dumps(gefunden, indent=2))
+        else:
+            print_closed(gefunden)
+        return 0
 
     if args.json:
         print(json.dumps(rows, indent=2))
