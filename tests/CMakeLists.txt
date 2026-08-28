@@ -209,6 +209,12 @@ foreach(test_source ${TEST_SOURCES})
     elseif(${test_name} STREQUAL "test_d64_geometry_zones")
         # Phase-0 geometry: D64 GCR zoned per-track sector counts (MF-337)
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/d64/uft_d64_plugin.c)
+    elseif(${test_name} STREQUAL "test_d64_bam_40track")
+        # 40-track BAM must not read the disk name as allocation data (MF-648).
+        # The test includes the parser translation unit directly, because
+        # d64_disk_v3_t exists only in the .c file — so do NOT add the parser
+        # here as well, only the logger it now uses.
+        target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/core/uft_log.c)
     elseif(${test_name} STREQUAL "test_d64_42track")
         # D64 extended 41/42-track variant support (MF-350)
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/d64/uft_d64_plugin.c)

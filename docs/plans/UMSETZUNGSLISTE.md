@@ -34,7 +34,7 @@ die Rundlauf-Matrix führt **kein** Atari-Paar.
   In-Tree-Referenz ist ausdrücklich erlaubt
 * CHANGELOG-Zeile ist bereits berichtigt (MF-644)
 
-### A5 🟢 40-Spur-D64: die Belegungskarte liest den Disknamen — **vor A2**
+### A5 ✅ 40-Spur-D64: die Belegungskarte liest den Disknamen — **erledigt (MF-649)**
 **Kennzahl: ungeprüfte Formate runter** (`d64`; Hebung ist Moratoriums-Bedingung)
 
 `uft_d64_parser_v3.c:1029ff` rechnet `entry_off = 4 + (track-1)*4`. Für
@@ -53,6 +53,18 @@ ist falsch. Die Größe wird ausdrücklich angenommen (`:524ff`).
   **42** Spuren an, der v3-Parser lehnt dieselbe Datei ab
 * **Warum vor A2:** A2 leitet genau diesen Leser aus. Ein Differenzlauf
   gegen `flophashes` auf falscher Belegung ist wertlos — grün wie rot
+
+**Erledigt MF-649.** Rotbeweis `tests/test_d64_bam_40track.c` lief zuerst
+rot und nannte die Zahlen: Spur 36 führte `0x55` — ein Byte aus dem
+Disknamen —, und `free_blocks` stand bei **1003** statt **578**, also
+**425 Phantomblöcke**. Danach grün, 269/269 im Prüfstand.
+Der Fix sondiert DolphinDOS (`bam+0x1c+4*track`) und SpeedDOS
+(`bam+0x30+4*track`) und nimmt eine Lage nur an, wenn sie sich für
+**alle** Spuren 36–40 selbst bestätigt: das Zählbyte muss der Anzahl
+gesetzter Bits entsprechen. Findet sich keine, bleiben die Einträge leer
+und der Leser sagt es — statt zu raten. Prüfkriterium und Versätze aus
+lib1541img `cbmdosvfsreader.c:16-34, 395-436` (BSD-2, Commit `face2dd`).
+Der Plugin-Pfad war nicht betroffen: er liest die BAM nicht.
 
 ### A2 🟢 D64-Verzeichnis ausleiten (Phase 1, erster Commit)
 **Kennzahl: ungeprüfte Formate runter** (`d64` T1b → inhaltlich belegt)

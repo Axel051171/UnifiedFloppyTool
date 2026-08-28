@@ -31,6 +31,8 @@
 #include <stdarg.h>
 #include <math.h>
 
+#include "uft/uft_log.h"
+
 /* ═══════════════════════════════════════════════════════════════════════════
  * CONSTANTS
  * ═══════════════════════════════════════════════════════════════════════════ */
@@ -1023,34 +1025,118 @@ bool d64_merge_sector_revs(
  * PARSING FUNCTIONS
  * ═══════════════════════════════════════════════════════════════════════════ */
 
+/* Extended-BAM layouts for tracks 36..40.
+ *
+ * The standard 1541 BAM occupies bam[0x04..0x8F] — four bytes for each of
+ * tracks 1..35. It ENDS there: bam[0x90] is the first byte of the disk name.
+ * Extrapolating `4 + (track-1)*4` past track 35 therefore reads the name and
+ * the disk ID as allocation data (measured, MF-648).
+ *
+ * The 40-track DOS extensions place the extra entries elsewhere, and there is
+ * no single standard. Offsets and the self-consistency check below follow
+ * lib1541img (BSD-2-Clause, excess-c64), `src/lib/1541img/cbmdosvfsreader.c`:
+ * `parseTrackBam()` at :16-34 rejects a candidate when the free-sector count
+ * byte disagrees with the number of set bits, and :395-436 uses exactly that
+ * to probe both layouts. Verified against that source, commit face2dd.
+ *
+ *   DolphinDOS  bam + 0x1c + 4*track   (track 36 -> 0xAC, track 40 -> 0xBC)
+ *   SpeedDOS    bam + 0x30 + 4*track   (track 36 -> 0xC0, track 40 -> 0xD0)
+ *
+ * Both ranges end inside the 256-byte sector. When neither validates, the
+ * entries stay zero and contribute nothing to free_blocks — an honest
+ * "unknown" rather than an invented number. */
+#define D64_BAM_STD_LAST_TRACK  35
+#define D64_BAM_DOLPHIN_BASE    0x1c
+#define D64_BAM_SPEED_BASE      0x30
+
+/**
+ * @brief Does a candidate BAM entry describe itself consistently?
+ *
+ * The count byte must equal the number of free bits within the track's
+ * actual sector count. A run of disk-name bytes fails this almost always,
+ * which is what makes the probe safe.
+ *
+ * @return true when the four bytes at @p entry are self-consistent.
+ */
+static bool d64_bam_entry_consistent(const uint8_t* entry, uint8_t sectors) {
+    uint8_t counted = 0;
+    for (uint8_t s = 0; s < sectors; s++) {
+        if (entry[1 + s / 8] & (uint8_t)(1u << (s % 8))) counted++;
+    }
+    return counted == entry[0];
+}
+
+/**
+ * @brief Pick the extended-BAM base that describes ALL of tracks 36..40.
+ *
+ * @return 0 when no known layout fits.
+ */
+static size_t d64_extended_bam_base(const uint8_t* bam, int last_track) {
+    static const size_t bases[] = { D64_BAM_DOLPHIN_BASE, D64_BAM_SPEED_BASE };
+
+    for (size_t i = 0; i < sizeof(bases) / sizeof(bases[0]); i++) {
+        bool all_fit = true;
+        for (int track = D64_BAM_STD_LAST_TRACK + 1; track <= last_track; track++) {
+            const uint8_t* entry = bam + bases[i] + (size_t)track * 4u;
+            if (!d64_bam_entry_consistent(entry, d64_sectors_per_track[track])) {
+                all_fit = false;
+                break;
+            }
+        }
+        if (all_fit) return bases[i];
+    }
+    return 0;
+}
+
 /**
  * @brief Parse BAM
  */
 static bool d64_parse_bam(const uint8_t* data, size_t size, d64_disk_v3_t* disk) {
     size_t bam_offset = d64_get_sector_offset(D64_BAM_TRACK, D64_BAM_SECTOR);
     if (bam_offset + D64_SECTOR_SIZE > size) return false;
-    
+
     const uint8_t* bam = data + bam_offset;
-    
+
     /* DOS type */
     disk->dos_type = bam[2];
-    
-    /* Parse BAM entries */
+
+    /* Standard BAM — tracks 1..35 only; past that the disk name begins. */
     disk->free_blocks = 0;
-    for (int track = 1; track <= disk->tracks; track++) {
+    int std_last = disk->tracks < D64_BAM_STD_LAST_TRACK
+                 ? disk->tracks : D64_BAM_STD_LAST_TRACK;
+    for (int track = 1; track <= std_last; track++) {
         size_t entry_off = 4 + (track - 1) * 4;
-        
+
         disk->bam[track].free_sectors = bam[entry_off];
         disk->bam[track].bitmap[0] = bam[entry_off + 1];
         disk->bam[track].bitmap[1] = bam[entry_off + 2];
         disk->bam[track].bitmap[2] = bam[entry_off + 3];
-        
+
         /* Don't count directory track */
         if (track != D64_BAM_TRACK) {
             disk->free_blocks += disk->bam[track].free_sectors;
         }
     }
-    
+
+    /* Extended tracks 36..40, only from a layout that checks out. */
+    if (disk->tracks > D64_BAM_STD_LAST_TRACK) {
+        size_t base = d64_extended_bam_base(bam, disk->tracks);
+        if (base != 0) {
+            for (int track = D64_BAM_STD_LAST_TRACK + 1; track <= disk->tracks; track++) {
+                const uint8_t* entry = bam + base + (size_t)track * 4u;
+                disk->bam[track].free_sectors = entry[0];
+                disk->bam[track].bitmap[0] = entry[1];
+                disk->bam[track].bitmap[1] = entry[2];
+                disk->bam[track].bitmap[2] = entry[3];
+                disk->free_blocks += entry[0];
+            }
+        } else {
+            UFT_WARN("D64: 40-Spur-Abbild ohne erkennbare erweiterte BAM — "
+                     "Spuren %d..%d bleiben unbelegt statt geraten",
+                     D64_BAM_STD_LAST_TRACK + 1, disk->tracks);
+        }
+    }
+
     /* Disk name */
     d64_copy_filename(disk->disk_name, bam + 0x90, 16);
     
