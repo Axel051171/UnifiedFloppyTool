@@ -1029,15 +1029,26 @@ niemand hätte es gemerkt.
 weitere. Gemessen: `uft_hfe_probe` hat **keinen** Treffer außerhalb der
 Datei; die anderen drei nur **Header-Deklarationen**, keinen Aufrufer.
 
-Trotzdem steht die Datei **nicht** in `docs/orphan_baseline.txt`. Das ist
-derselbe blinde Fleck, der SCOUT-15 verdeckt hat: eine Deklaration im
-Header zählt dem Detektor als Benutzung. Damit ist unklar, wie viele
-weitere Waisen die Grundlinie übersieht — die 227 Einträge sind eine
-Untergrenze, keine Bestandsaufnahme.
+Trotzdem steht die Datei **nicht** in `docs/orphan_baseline.txt`.
 
-**Offen (`ORPH-2`):** Der Verwaisten-Detektor sollte Deklarationen von
-Aufrufen trennen. Bis dahin gilt die Grundlinie als unvollständig, und
-das steht hier, statt als stille Annahme.
+> **Berichtigt in MF-626 — dieser Absatz war falsch.** Ich hatte daraus
+> geschlossen, der Detektor zähle Header-Deklarationen als Benutzung, und
+> das als `ORPH-2` notiert. Nachgemessen mit der Logik des Skripts selbst
+> (`scan_tree` + `reference_index` + `exported_names`): die Datei hat 22
+> exportierte Namen, und drei davon werden wirklich gerufen —
+> `uft_format_detect` aus `src/gui/ProtectionAnalysisWidget.cpp`,
+> `uft_d64_probe` und `uft_format_get_handler` aus
+> `src/core/uft_advanced_mode.c`. **Die Datei ist erreichbar, und der
+> Detektor hat recht.** Mein Befund beruhte auf einem einfachen `grep`
+> über vier `*_probe`-Namen — ein Ausschnitt, nicht die Menge.
+>
+> `CALL_REF` verlangt ohnehin eine eingerückte Zeile, genau damit ein
+> Prototyp am Zeilenanfang nicht als Aufruf zählt
+> (`audit_orphan_modules.py:150-160`). Die Lücke, die ich beschrieben
+> habe, ist dort bereits geschlossen.
+>
+> Die **echte** Lücke steht weiter unten und ist eine andere — siehe
+> `ORPH-2` in der MF-626-Notiz.
 
 ---
 
@@ -1117,3 +1128,98 @@ gemeldet hat.
 Einträge, hat aber kein Plugin und keinen Aufrufer. Er fällt damit unter die
 Verwaisten-Regel, nicht unter diesen Fix — geprüft wird er hier nicht, und
 verdrahtet wird er nicht, damit er benutzt aussieht.
+
+---
+
+## SCOUT-4 nach der Waisen-Regel entschieden: fdc_bitstream ist raus (MF-626, 2026-08-28)
+
+`src/flux/fdc_bitstream/` (Yasunori Shimura, MIT, mit `LICENSE.md` und
+Autorennennung im Kopf jeder Datei) ist **entfernt**, samt seiner vierzehn
+Header unter `include/uft/flux/`. Zusammen **6483 Zeilen**, in jeden Bau
+übersetzt.
+
+### Die Messung, die es entschieden hat
+
+| Frage | Antwort |
+|---|---|
+| Einbinder außerhalb des Subsystems? | **keiner** — alle 14 Header einzeln geprüft |
+| Eintrag in `docs/orphan_baseline.txt`? | nein — siehe ORPH-2 unten |
+| Benannter Plan-Anker? | **keiner** |
+
+Die einzige Plannennung ist `MASTER_PLAN.md:435`, und die führt die
+Bibliothek als Teil von **„1626 LOC Redundanz"** dreier paralleler
+Decoder-Pfade — also als Problem, nicht als Vorhaben.
+
+### Der Vorbehalt, den ich selbst hatte — und warum er nicht trägt
+
+Ich hatte notiert, Phase 1 wolle einen unabhängigen Decoder als Oracle,
+und fdc_bitstream sei genau das. Nachgelesen: **der Plan nennt seine
+Oracles ausdrücklich und ausschließlich als externe Programme** —
+`c1541`, `unadf`, `xdftool`, `atrcopy`, `mtools`, `cpmls`
+(`PLAN_v4.1.7.md:198-199, 216, 381`). Eine in den eigenen Binärcode
+übersetzte Bibliothek ist in dem Sinn, auf den es ankommt, gerade nicht
+unabhängig — und ein Oracle braucht ohnehin einen Prüfstand, der sie
+aufruft. Genau das war die Option „(a) verdrahten mit Differenzlauf-Plan",
+also ein eigenes Vorhaben, kein Regelfall.
+
+Einen Anker zu schreiben, um den Code zu behalten, wäre das Gegenteil der
+Regel gewesen: dem Bestand nachträglich einen Zweck andichten. MIT plus
+Git heißt, dass die Rücknahme billig und lizenzrechtlich sauber ist —
+`git revert` auf diesen Commit, falls Phase 1 den Prüfstand doch will.
+
+### Was die Tore beim Löschen zusätzlich fanden
+
+* **`A:UFT_HAS_EXPERIMENTAL_VFO`** stand in
+  `scripts/define_parity_baseline.json` als geprüfte Abweichung. Der
+  Wächter meldete von sich aus, dass sie keine mehr ist — der Schalter kam
+  nur aus dem gelöschten `experimental_vfo`-Block. Eintrag entfernt.
+* **`verify_build_sources.py:88`** trug ein Ausnahmemuster für
+  `vfo_experimental.cpp`. Ein Muster, das auf nichts mehr passt, ist eine
+  stille Ausnahme für Code, den es nicht gibt — und lässt später
+  versehentlich etwas Neues durch. Entfernt.
+* Die Quelldatei-Zahlen in `CLAUDE.md` waren **in beide Richtungen**
+  abgedriftet: gemessen 715 Quellen und 481 Header gegen die dort
+  geführten „~693 / ~515". Nachgezogen, mit dem Zählbefehl daneben.
+
+### Nebenbei, zum dritten Mal in dieser Sitzung
+
+Meine erste Entfernung der `INCLUDEPATH`-Zeile schlug **stillschweigend
+fehl**: im Heredoc wurde `\n` zu einem echten Zeilenumbruch, das Muster
+passte nicht, und der Ersetzungsaufruf meldete nichts. Aufgefallen ist es
+nur, weil ich hinterher im erzeugten `Makefile.Release` nachgesehen habe.
+Die Wiederholung lief über einen Schnitt mit Zusicherung („genau eine
+Zeile erwartet"), der bei Nichttreffer laut geworden wäre.
+
+
+### ORPH-2, neu gefasst: der Detektor misst Dateien, nicht Subsysteme
+
+Warum standen 6483 Zeilen ohne jeden äußeren Aufrufer **nicht** in der
+Verwaisten-Grundlinie? Nicht wegen Header-Deklarationen — die Vermutung
+aus MF-624 ist oben berichtigt. Der Grund steht in
+`scripts/audit_orphan_modules.py:178-185`:
+
+```python
+def used_elsewhere(names, idx, own):
+    for n in names:
+        hits = idx.get(n)
+        if hits and (hits - {own}):     # nur die EIGENE Datei fällt raus
+            return True
+```
+
+Ausgeschlossen wird genau eine Datei: die geprüfte. **Geschwister zählen
+mit.** `fdc_bitstream.cpp` ruft `bit_array`, `mfm_codec` ruft
+`fdc_vfo_base`, und so weiter — jede der zwölf Dateien hatte damit einen
+„Aufrufer" und galt als benutzt. Von außen rief keine einzige jemand.
+
+Das ist keine Nachlässigkeit, sondern eine Grenze der gewählten Einheit:
+der Wächter fragt „ruft jemand diese **Datei**?", nicht „ruft jemand in
+dieses **Subsystem** hinein?". Für einzelne verwaiste Module ist das
+richtig; für einen geschlossenen Ring von Dateien ist es blind, und zwar
+umso zuverlässiger, je vollständiger der Ring ist.
+
+**Offen (`ORPH-2`):** eine zweite Messung auf Verzeichnisebene — welche
+Verzeichnisse unter `src/` werden von außerhalb ihrer selbst nie
+referenziert? Das ist eine kleine Ergänzung derselben Indexstruktur und
+würde genau die Klasse finden, die hier durchrutschte. Bis dahin gilt:
+die 227 Grundlinien-Einträge sind eine Untergrenze für **Einzeldateien**
+und sagen über geschlossene Subsysteme nichts.

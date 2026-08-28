@@ -229,7 +229,6 @@ INCLUDEPATH += \
     src/samdisk \
     src/hardware_providers \
     src/widgets \
-    src/flux/fdc_bitstream \
     src/hal \
     include/uft/protection \
     src/protection
@@ -392,29 +391,14 @@ HEADERS += \
     include/uft/flux/uft_scp_parser.h \
     include/uft/flux/uft_mfm_sector_parser.h
 
-# FDC Bitstream Sources (third-party library by Yasunori Shimura)
-# VFO/PLL: The vfo_* files are EXPERIMENTAL VFO implementations from this library.
-# Production PLL is in src/decoder/uft_pll_v2.c (with SIMD dispatch) and
-# src/flux/pll/uft_pll_pi.c (PI controller variant) -- neither is in this block.
-SOURCES += \
-    src/flux/fdc_bitstream/bit_array.cpp \
-    src/flux/fdc_bitstream/fdc_bitstream.cpp \
-    src/flux/fdc_bitstream/fdc_crc.cpp \
-    src/flux/fdc_bitstream/fdc_misc.cpp \
-    src/flux/fdc_bitstream/fdc_vfo_base.cpp \
-    src/flux/fdc_bitstream/mfm_codec.cpp \
-    src/flux/fdc_bitstream/vfo_pid.cpp \
-    src/flux/fdc_bitstream/vfo_pid2.cpp \
-    src/flux/fdc_bitstream/vfo_pid3.cpp \
-    src/flux/fdc_bitstream/vfo_simple.cpp \
-    src/flux/fdc_bitstream/vfo_simple2.cpp
-
-# Optional: experimental VFO (reads vfo_settings.txt at runtime)
-experimental_vfo {
-    SOURCES += src/flux/fdc_bitstream/vfo_experimental.cpp
-    DEFINES += UFT_HAS_EXPERIMENTAL_VFO
-    message("Experimental VFO enabled")
-}
+# MF-626: die vendorte fdc_bitstream-Bibliothek (Yasunori Shimura, MIT) ist
+# entfernt. 6483 Zeilen wurden in jeden Bau uebersetzt, ohne dass ein
+# einziger Einbinder ausserhalb des Subsystems existierte, und ohne
+# benannten Plan-Anker: MASTER_PLAN.md:435 fuehrt sie als Teil von
+# "1626 LOC Redundanz" dreier paralleler Decoder-Pfade, und die Oracles
+# in PLAN_v4.1.7 Phase 1 sind ausdruecklich externe Programme (c1541,
+# unadf, xdftool, atrcopy, mtools, cpmls), keine eingebaute Bibliothek.
+# Verwaisten-Regel, docs/orphan_baseline.txt. Git behaelt sie.
 
 # vfo_fixed.cpp removed: 7 LOC trivial stub, never selected by VFO_TYPE_DEFAULT
 

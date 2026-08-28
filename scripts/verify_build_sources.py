@@ -85,7 +85,11 @@ NOT_BUILT_BY_DESIGN: list[re.Pattern[str]] = [
     # also muss die Platten-Seite dasselbe tun — sonst meldet der Pruefer
     # seine eigene Auslassung als Befund.
     re.compile(r"^src/algorithms/(advanced/)?uft_kalman_pll(_v2)?\.c$"),
-    re.compile(r"^src/flux/fdc_bitstream/vfo_experimental\.cpp$"),
+    # MF-626: der Eintrag fuer src/flux/fdc_bitstream/vfo_experimental.cpp ist
+    # weg, weil das ganze Verzeichnis weg ist (Verwaisten-Regel). Ein Muster,
+    # das auf nichts mehr passt, ist eine stille Ausnahme fuer Code, den es
+    # nicht gibt — genau die Sorte Eintrag, die spaeter versehentlich etwas
+    # Neues durchlaesst.
 ]
 
 

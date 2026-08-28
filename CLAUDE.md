@@ -194,7 +194,7 @@ Im Katalog dokumentierte historische Kopierschutz-Verfahren:
 
 ## Build-System
 
-- **Primär:** qmake (`.pro`-Datei), ~693 Source-Dateien / ~515 Header
+- **Primär:** qmake (`.pro`-Datei), 715 Source-Dateien / 481 Header
   (Stand 2026-08-19 nach MF-271; zaehlen mit
   `find src -name '*.c' -o -name '*.cpp' | wc -l`)
 - **Tests:** CMake (`tests/CMakeLists.txt`), **266/266 grün mit einem
@@ -250,7 +250,12 @@ tests/                 — 77 C-Tests + 1 Qt-Test
 
 ## Schlüssel-Metriken
 
-- ~693 Source-Dateien, ~515 Header — Stand 2026-08-20 nach MF-441
+- 715 Source-Dateien, 481 Header — Stand 2026-08-28 nach MF-626
+  (fdc_bitstream entfernt). Die Vorgängerzahl „~693/~515" stammte vom
+  2026-08-20 und war in beide Richtungen abgedriftet: Quellen zu
+  niedrig, Header deutlich zu hoch. Nachzählen mit
+  `find src -name '*.c' -o -name '*.cpp' | wc -l` und
+  `find include -name '*.h' | wc -l`; früher MF-441
   (src/switch/ + src/cart7/ entfernt, 801 Dateien); davor MF-011 19-Welle
   Cleanup (785 dead-code Files / ~140k LOC entfernt, davon `src/fluxengine/`,
   `src/algorithms/{core,data,fluxio,imageio,tracks}`, `src/loaders/`,

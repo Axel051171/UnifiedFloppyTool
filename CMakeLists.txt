@@ -324,7 +324,6 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_SOURCE_DIR}/src/algorithms/bitstream
     ${CMAKE_SOURCE_DIR}/src/hardware_providers
     ${CMAKE_SOURCE_DIR}/src/widgets
-    ${CMAKE_SOURCE_DIR}/src/flux/fdc_bitstream
     ${CMAKE_SOURCE_DIR}/src/hal
     ${CMAKE_SOURCE_DIR}/src/protection
     ${CMAKE_SOURCE_DIR}/src/core/unified
