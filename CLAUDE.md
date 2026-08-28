@@ -267,9 +267,21 @@ Die vier geführten Zahlen:
 | Bench-Alter je Controller | **runter** | `docs/CAPABILITIES.md` |
 
 Wer eine **fünfte** Zahl einführt, begründet sie. Eine Kandidatin steht
-bereit und ist seit MF-635/638 im Sinkflug: **Dateien mit ungeklärter
-Herkunft** — gemessen von `scripts/audit_spdx_policy.py`, Klasse A und
-B ohne genannte Lizenz.
+bereit: **Dateien mit ungeklärter Herkunft**. Sie hat **zwei Stufen**,
+und die zu verwechseln wäre genau die Zahlendrift, die dieser Baum
+dreimal gesehen hat (MF-645):
+
+| Stufe | Zahl | Quelle | bedeutet |
+|---|---|---|---|
+| **Verdacht** | **48** | `scripts/audit_spdx_policy.py`, Attributionsstufe: Klasse A und B ohne genannte Lizenz | die Frage ist offen — es ist noch kein Befund |
+| **Befund** | **5** offene Zeilen | [`docs/QUARANTINE.md`](docs/QUARANTINE.md) | auditiert, Weg festgelegt oder ausstehend |
+
+**Gemeldet wird die Befund-Stufe**, weil sie ein Urteil trägt. Die
+Verdachts-Stufe ist der Rückstand, aus dem sie gespeist wird — und
+solange er 48 beträgt, ist jede Aussage über die Gesamtlage vorläufig
+(`LIZ-1`).
+
+Verfahren dazu: [`docs/QUARANTINE_PROCESS.md`](docs/QUARANTINE_PROCESS.md).
 
 Der Sinn ist nicht Buchhaltung, sondern **Kopplung**: Scout-Priorisierung,
 Eigentümer-Entscheidungen und MF-Reihenfolge hängen damit am selben Maß,
