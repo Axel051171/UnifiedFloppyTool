@@ -155,7 +155,15 @@ static const uft_plugin_feature_t uft_format_plugin_nib_features[] = {
 };
 
 const uft_format_plugin_t uft_format_plugin_nib = {
-    .name = "NIB", .description = "Apple II Nibble", .extensions = "nib",
+    /* MF-635: die Beschreibung sagt jetzt ausdruecklich, fuer WELCHE Maschine
+     * dieses Plugin da ist. `.nib` ist ein Name mit zwei Bedeutungen — Apple II
+     * Nibble (hier) und Commodore MNIB (nicht gelesen). Die Probe unten
+     * verlangt exakt NIB_FILE_SIZE = 232960 Byte; eine Commodore-NIB-Datei
+     * faellt durch und wurde bis MF-635 in der Oberflaeche trotzdem unter
+     * "Commodore 64/128" angeboten. Ein Name, zwei Bedeutungen, eine falsche
+     * Zusage — dieselbe Klasse wie MF-559. */
+    .name = "NIB", .description = "Apple II Nibble (nicht Commodore MNIB)",
+    .extensions = "nib",
     .format = UFT_FORMAT_NIB, .capabilities = UFT_FORMAT_CAP_READ | UFT_FORMAT_CAP_VERIFY,
     .probe = nib_probe, .open = nib_open, .close = nib_close, .read_track = nib_read_track,
     .verify_track = uft_generic_verify_track,

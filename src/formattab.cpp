@@ -65,8 +65,28 @@ void FormatTab::setupFormatDatabase() {
     // ========================================================================
     // COMMODORE FAMILY
     // ========================================================================
+    // MF-635: fuenf Eintraege sind hier gestrichen — NIB, NBZ, P64, X64, T64,
+    // TAP. Gemessen gegen die Plugin-SSOT (scripts/gen_format_list.py, 88
+    // ausgeschriebene + 49 DSK_PLUGIN-Auspraegungen):
+    //
+    //   NBZ, P64, X64, T64, TAP  -> kein Plugin, weder ueber Namen noch
+    //                               ueber Dateiendung
+    //   NIB                      -> es gibt ein Plugin dieses Namens, aber es
+    //                               ist src/formats/nib/uft_nib.c, "Apple II
+    //                               Nibble", dessen Probe exakt 232960 Byte
+    //                               verlangt (35 x 6656). Eine Commodore-
+    //                               MNIB-Datei trifft sie nie.
+    //
+    // Der ausgewaehlte Text wandert als `p.format` weiter (:1137), also war
+    // eine Beschriftung wie "NIB (nicht lesbar)" keine Option — sie haette
+    // den Wert verfaelscht. Wer eine dieser Dateien oeffnen will, bekommt
+    // jetzt keinen Eintrag statt eines Versprechens.
+    //
+    // Der C64-NIB-Leser existierte (src/formats/c64/uft_nib_format.c, 1100
+    // Zeilen) und war unerreichbar; er ist in MF-635 geloescht. Der Neubau
+    // kommt mit dem Commodore-NIB-Baustein, Oracle-first gegen nibscan.
     m_systemFormats["Commodore 64/128"] = {
-        "D64", "G64", "D71", "D81", "NIB", "NBZ", "P64", "X64", "T64", "TAP"
+        "D64", "G64", "D71", "D81"
     };
     
     m_systemFormats["Commodore Plus/4"] = {

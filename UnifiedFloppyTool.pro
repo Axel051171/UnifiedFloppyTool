@@ -2054,7 +2054,6 @@ SOURCES += \
     src/formats/c64/uft_frz.c \
     src/formats/c64/uft_gcr_ops.c \
     src/formats/c64/uft_geos.c \
-    src/formats/c64/uft_nib_format.c \
     src/formats/c64/uft_p00.c \
     src/formats/c64/uft_reu.c \
     src/formats/c64/uft_sid.c \
@@ -3250,8 +3249,7 @@ SOURCES += \
     src/protection/c64/c64_protection_analysis.c \
     src/protection/c64/c64_protection_db.c \
     src/protection/c64/uft_c64_protection.c \
-    src/protection/c64/uft_c64_protection_ext.c \
-    src/protection/c64/uft_track_align.c
+    src/protection/c64/uft_c64_protection_ext.c
 
 # Core Protection Framework (4 files)
 SOURCES += \
@@ -3339,8 +3337,7 @@ HEADERS += \
     include/uft/protection/uft_protection_stubs.h \
     include/uft/protection/uft_protection_unified.h \
     include/uft/protection/uft_rtc_decompress.h \
-    include/uft/protection/uft_speedlock.h \
-    include/uft/protection/uft_track_align.h
+    include/uft/protection/uft_speedlock.h
 
 # Internal header (not in include/uft/)
 HEADERS += src/protection/c64/c64_protection_internal.h

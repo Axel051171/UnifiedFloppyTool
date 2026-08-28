@@ -2,7 +2,37 @@
  * @file uft_gcr_ops.c
  * @brief C64/1541 GCR Operations Implementation
  * 
- * Based on nibtools gcr.c by Pete Rittwage (c64preservation.com)
+ * Verhalten nach der nibtools-Dokumentation und -Quelle (Pete Rittwage,
+ * c64preservation.com) — EIGENSTAENDIGE Implementierung, kein Port.
+ *
+ * MF-635: hier stand "Based on nibtools gcr.c". Das ist eine
+ * Ableitungserklaerung, und nibtools steht seit 2025-01-30 unter GPL-3;
+ * fuer diesen GPL-2.0-or-later-Baum waere das eine Lizenzfrage. Ein
+ * Aehnlichkeitsaudit gegen gcr.c @0abdc11 hat sie entschieden:
+ *
+ *   strip_runs        nibtools kompaktiert in-place ueber source/buffer-
+ *                     Zeiger mit run-Zaehler und Parametern
+ *                     (length_max, minrun, target); hier: eigener
+ *                     Ausgabepuffer, Lauflaengen-Scan, getrennte Zweige
+ *                     fuer Sync und Gap, Parameter (min_sync, min_gap)
+ *   kill_partial_sync nibtools: vier feste 1000er-Felder und ein
+ *                     locked-Automat mit 10-Bit-Sync-Idiom; hier: eine
+ *                     Suchschleife ueber gcr_find_sync/_end
+ *   reduce_runs       drueben eine do/while-Schleife um strip_runs mit
+ *                     fuenf Parametern; hier ein Einzeiler mit vier
+ *
+ * Woertliche Kommentar-Echos: EINES, und das ist der Fachbegriff
+ * "header checksum". Keine der auffaelligen nibtools-Konstanten
+ * (0x4b "Original Format Pattern", die Tri-Bit-/Low-Frequency-Notizen)
+ * kommt hier vor.
+ *
+ * Was UEBERNOMMEN ist, ist das Vokabular: die Zerlegung folgt nibtools'
+ * Funktionsnamen mit gcr_-Praefix (check_errors, compare_sectors,
+ * kill_partial_sync, lengthen_sync, reduce_gaps/runs, strip_runs). Das
+ * ist gewollt und benannt — die Rumpfe sind es nicht.
+ *
+ * Oracle fuer diese Datei: nibscan aus rittwage/nibtools, hardwarefrei
+ * baubar (SCOUT-20).
  * 
  * @author UFT Project
  * @date 2026-01-16

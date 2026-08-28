@@ -2,7 +2,18 @@
  * @file uft_d64_g64.c
  * @brief D64/G64 Disk Image Format Conversion Implementation
  * 
- * Based on nibtools by Pete Rittwage (c64preservation.com)
+ * Verhalten nach der nibtools-Dokumentation und -Quelle (Pete Rittwage,
+ * c64preservation.com) — EIGENSTAENDIGE Implementierung, kein Port.
+ *
+ * MF-635: hier stand "Based on nibtools", eine Ableitungserklaerung.
+ * Aehnlichkeitsaudit gegen gcr.c @0abdc11: nibtools' convert_GCR_sector
+ * hat hier keine Entsprechung — die Wandlung ist auf Spurebene anders
+ * zerlegt. Keine der auffaelligen Konstanten ist uebernommen: weder die
+ * Blockmarke 0x07 noch 0x4b ("Original Format Pattern") noch die
+ * Tri-Bit-/Low-Frequency-Fehlermodelle. Einziges Kommentar-Echo ist der
+ * Fachbegriff "header checksum".
+ *
+ * Oracle fuer diese Datei: nibconv aus rittwage/nibtools (SCOUT-20/21).
  * 
  * @author UFT Project
  * @date 2026-01-16

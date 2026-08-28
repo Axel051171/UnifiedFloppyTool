@@ -1823,3 +1823,140 @@ Fehlermodelle).
 Ungeklärt bleibt unter anderem, ob UFTs Ausgabe **wertgleich** zu
 nibconv ist — belegt ist bisher nur Positions- und Anzahlgleichheit gegen
 VICE.
+
+---
+
+## SCOUT-23 entschieden: ein Port, zwei Eigenständige, zwei Löschungen (MF-635, 2026-08-28)
+
+### Vorweg eine Faktenkorrektur
+
+Die Vorgabe sagte „solange v4.1.6 nicht getaggt ist, gehört das vor den
+Tag". **v4.1.6 ist getaggt** (`e1b56dee`) und seit dem 2026-08-26
+öffentlich released — und **alle vier Dateien sind darin enthalten**
+(einzeln mit `git cat-file -e v4.1.6:<pfad>` geprüft). SCOUT-23 ist damit
+kein Blocker *vor* einem Tag, sondern ein Befund *in einem
+veröffentlichten Release*. Am Vorgehen ändert das nichts; an der
+Dringlichkeit schon.
+
+### Das Audit, pro Datei entschieden
+
+Methode wie vorgegeben: Struktur, Funktionszerlegung, Fehlerbehandlung,
+charakteristische Schwellwerte, Kommentar-Echos. **Nicht** die
+GCR-Tabellen — die sind Commodore-Spezifikation und beweisen nichts.
+Beweiskräftig sind Idiome.
+
+| Datei | Urteil |
+|---|---|
+| `src/protection/c64/uft_track_align.c` | **PORTIERT** |
+| `src/formats/c64/uft_gcr_ops.c` | eigenständige Rümpfe, nibtools-**Vokabular** |
+| `src/formats/c64/uft_d64_g64.c` | **eigenständig** |
+| `src/formats/c64/uft_nib_format.c` | Audit entfällt — gelöscht (s.u.) |
+
+**`uft_track_align.c` — der Beweis.** `shift_buffer_left` steht zeichen-
+gleich da:
+
+| | nibtools `prot.c:157` | UFT `uft_track_align.c:253` |
+|---|---|---|
+| | `int carryshift = 8 - n;` | `int carryshift = 8 - bits;` |
+| | `tempbuf[length] = 0x00;` | `temp[length] = 0x00;` |
+| | `buffer[i] = (tempbuf[i] << n) \| (carry >> carryshift);` | `buffer[i] = (temp[i] << bits) \| (carry >> carryshift);` |
+
+Der Bezeichner `carryshift` ist erfunden, nicht abgeleitet — zwei
+unabhängige Autoren wählen ihn nicht beide. Dazu **sieben wörtliche
+Kommentar-Echos** („back up a little", „set first byte to shift", „shift
+buffer left to edge of sync marks", „36 - 42 (non-standard)") und eine
+Funktion-für-Funktion-Entsprechung: **alle 14** Funktionen aus `prot.c`
+haben ein Gegenstück, **acht namensgleich** (`align_pirateslayer`,
+`align_vmax`, `align_vmax_new`, `fix_first_gcr`, `fix_last_gcr`,
+`search_fat_tracks`, `shift_buffer_left/right`).
+
+**`uft_gcr_ops.c` — warum es kein Port ist.** Drei Rümpfe verglichen,
+alle drei anders gebaut: `strip_runs` (nibtools kompaktiert in-place über
+`source`/`buffer` mit `run`-Zähler und den Parametern
+`length_max, minrun, target`; hier eigener Ausgabepuffer,
+Lauflängen-Scan, getrennte Zweige, Parameter `min_sync, min_gap`),
+`kill_partial_sync` (drüben vier feste 1000er-Felder und ein
+`locked`-Automat mit 10-Bit-Sync-Idiom; hier eine Suchschleife),
+`reduce_runs` (drüben `do/while` mit fünf Parametern, hier ein Einzeiler
+mit vier). Ein einziges Kommentar-Echo, und das ist der Fachbegriff
+„header checksum". **Übernommen ist das Vokabular** — die Zerlegung folgt
+nibtools' Funktionsnamen mit `gcr_`-Präfix. Das steht jetzt so im Kopf.
+
+**`uft_d64_g64.c`** — keine Entsprechung zu `convert_GCR_sector`, keine
+der auffälligen Konstanten (Blockmarke `0x07`, `0x4b` „Original Format
+Pattern"), keine Tri-Bit-/Low-Frequency-Notizen, ein Echo („header
+checksum").
+
+**Die Köpfe der beiden Eigenständigen sind berichtigt.** „Based on X" ist
+eine Ableitungserklärung, keine Höflichkeit; sie lauten jetzt „Verhalten
+nach der nibtools-Dokumentation und -Quelle — EIGENSTÄNDIGE
+Implementierung, kein Port" samt der Messung, die das trägt, und dem
+Oracle (`nibscan`/`nibconv`).
+
+### Zwei Löschungen
+
+**`uft_nib_format.c` (1100 Zeilen) + `tests/test_nib_format.c` (557) +
+`include/uft/formats/c64/uft_nib_format.h` (gelöscht).** Verwaisten-Regel:
+kein erreichbarer Weg dorthin.
+
+> **Berichtigung meiner eigenen Zahl von MF-634:** ich hatte geschrieben,
+> eine der 27 Funktionen habe einen Produktions-Aufrufer
+> (`nib_format_name` aus `uft_nib_parser_v2.c`). **Falsch.** Jene Datei
+> definiert bei `:233` eine **eigene `static`**-Funktion gleichen Namens.
+> Es waren **null** Produktions-Aufrufer. Der Referenz-Index ist
+> namensbasiert und hat einen `static`-Namensgleichklang als Aufruf
+> gezählt — dieselbe Klasse Fehler wie überall heute, diesmal in meiner
+> eigenen Messung.
+
+**`uft_track_align.c` (1175) + Header (622) + `tests/test_track_align.c`
+(602) — Quarantäne.** Auch hier kostet es **keine Fähigkeit**: gemessen
+null Produktions-Aufrufer. Der einzige Kandidat war wieder ein
+Namensgleichklang — `find_sync`, und `uft_mfm_sector_parser.c:104` wie
+`uft_g64.c:223` führen je ein **eigenes `static find_sync`** mit anderer
+Signatur. (Nebenbei: `uft_track_align.c:128` exportierte ein
+nicht-statisches `find_sync` in den globalen Namensraum.)
+
+Der Neubau kommt Clean-Room und Oracle-first gegen `nibscan`, wenn der
+Baustein drankommt. **Nicht** gewählt wurde der Ausweg „Projekt auf GPLv3
+heben": das wäre Relizenzierung unter Kontaminationsdruck, verbaut die
+geplanten FluxEngine-GPL-2.0-Ports — und heilt den schlimmsten Fall
+nicht, denn vor 2025-01-30 war nibtools **lizenzlos**, und lizenzlos ist
+unter keiner Lizenz einbaubar.
+
+### SCOUT-22, Listen-Teil: die Oberfläche versprach fünf Formate zu viel
+
+Der Registry-Eintrag war schon ehrlich („Apple II Nibble"). Die Unwahrheit
+stand in `src/formattab.cpp:69`: die Auswahlliste **„Commodore 64/128"**
+bot `NIB`, `NBZ`, `P64`, `X64`, `T64`, `TAP` an. Gegen die Plugin-SSOT
+gemessen: **fünf davon haben gar kein Plugin**, und `NIB` trifft nur ein
+gleichnamiges — das Apple-II-Plugin, dessen Probe exakt 232 960 Byte
+verlangt. **Sechs von zehn Einträgen waren ein Versprechen ohne Deckung.**
+
+Eine Beschriftung wie „NIB (nicht lesbar)" war keine Option: der gewählte
+Text wandert als `p.format` weiter (`:1137`). Die fünf sind gestrichen,
+mit der Messung als Begründung im Code. Die Plugin-Beschreibung heißt
+jetzt „Apple II Nibble (nicht Commodore MNIB)" — ein Name mit zwei
+Bedeutungen ist die MF-559-Klasse.
+
+### GUI-1: das ist nicht auf Commodore beschränkt
+
+Weil das Geschwister-Muster heute schon zweimal zugeschlagen hat, habe
+ich die **ganze** GUI-Formatdatenbank gemessen statt nur die eine Liste:
+
+| | |
+|---|---|
+| Systeme in `m_systemFormats` | **33** |
+| angebotene Format-Einträge | **156** |
+| davon ohne jedes Plugin | **32 (21 %)** |
+
+Die schwersten: PC/DOS 7 von 14 (`DMF, 2M, 360K, 720K, 1.2M, 1.44M,
+2.88M` — bei den Kapazitätsangaben ist es zusätzlich ein
+Kategorienfehler), Flux (raw) 4 von 12 (`KFRAW, GWRAW, A2R, MFM`), ZX
+Spectrum 3 von 10, Amiga 2 von 5 (`ADZ, HDF`).
+
+**Offen (`GUI-1`), Eigentümer:** ich habe nur das System bereinigt, nach
+dem gefragt war — die übrigen 27 Einträge brauchen Urteil (Kapazität vs.
+Format) und sind kein Nebenbei-Schnitt. Der strukturelle Weg wäre, die
+Liste aus der SSOT abzuleiten statt sie zu pflegen; ein Tor darauf würde
+heute 32-mal feuern, und ob man die als Grundlinie einfriert oder
+abarbeitet, ist eine Entscheidung, keine Mechanik.

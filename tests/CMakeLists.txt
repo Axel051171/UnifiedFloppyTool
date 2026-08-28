@@ -120,13 +120,7 @@ foreach(test_source ${TEST_SOURCES})
         if(TARGET uft_c64_protection)
             list(APPEND TEST_LIBS uft_c64_protection)
         endif()
-    elseif(${test_name} STREQUAL "test_track_align")
-        # Include Track Alignment source directly
-        target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/protection/c64/uft_track_align.c)
-    elseif(${test_name} STREQUAL "test_nib_format")
-        # Include NIB/NB2/NBZ format source directly
-        target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/c64/uft_nib_format.c)
-    elseif(${test_name} STREQUAL "test_gcr_ops")
+        elseif(${test_name} STREQUAL "test_gcr_ops")
         # Include GCR Operations source directly
         target_sources(${test_name} PRIVATE ${CMAKE_SOURCE_DIR}/src/formats/c64/uft_gcr_ops.c)
     elseif(${test_name} STREQUAL "test_d64_g64")
