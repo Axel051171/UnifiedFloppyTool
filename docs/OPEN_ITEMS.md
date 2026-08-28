@@ -1692,3 +1692,134 @@ Anlass benennen.
 nicht nur für D64: verglichen wird der Inhalt byteweise über CRC32/SHA-1
 je Datei, nicht die Verzeichnisdarstellung. Eingetragen am
 Registry-Eintrag und in `PLAN_v4.1.7.md`.
+
+---
+
+## Scout-Zyklus 7: nibtools — der schärfste „Können ohne Tür"-Fall bisher (MF-634, 2026-08-28)
+
+Untersucht: **https://github.com/rittwage/nibtools** (HEAD `0abdc11`,
+2025-06-26). Gutachten: `tools/uft-scout/out/nibtools.gutachten.md`.
+Fünf Funde, alle gemessen. Ich habe die tragenden Behauptungen
+nachgeprüft; drei davon musste ich präzisieren.
+
+### Lizenz — meine Annahme im Auftrag war falsch
+
+Ich hatte dem Scout mitgegeben, nibtools sei „vermutlich GPL-2, also die
+grüne Zone". **Das stimmt nicht.** Selbst nachgesehen: `LICENSE` ist der
+GPL-3-Volltext, hinzugefügt in Commit `a549c18` („Create LICENSE"). Davor
+führte das Repo **keine** Lizenzdatei.
+
+**Zone GELB: kein Code portierbar.** Erlaubt sind Verhaltens-Spec und
+Oracle-Nutzung — und genau da liegt hier der Wert.
+
+### Die Lizenzfrage, die daraus folgt (SCOUT-23)
+
+Vier Dateien in unserem Baum behaupten Ableitung:
+
+| Datei | Wortlaut |
+|---|---|
+| `src/formats/c64/uft_d64_g64.c:5` | „Based on nibtools by Pete Rittwage" |
+| `src/formats/c64/uft_gcr_ops.c:5` | „Based on nibtools **gcr.c**" |
+| `src/formats/c64/uft_nib_format.c:5` | „Based on nibtools"; dazu `:42` „LZ77 Compression (from nibtools by Marcus Geelnard)" |
+| `src/protection/c64/uft_track_align.c:5` | „Based on nibtools by Pete Rittwage and Markus Brenner"; `:479` nennt `prot.c align_rl_special()` |
+
+Zwei weitere Treffer sind **keine** Ableitungsbehauptung und gehören
+nicht in dieselbe Schublade: `src/formats/g71/uft_g71.c:15` nennt
+nibtools als *Referenz*, `src/hardware_providers/xum1541_provider_v2.h`
+erwähnt es in Prosa.
+
+**Das Datum entscheidet, und ich habe es gemessen:** alle vier kamen am
+**2026-02-08** (Commit `4d622192`) in den Baum — über ein Jahr **nach**
+der GPL-3-Lizenzierung des Upstream (2025-01-30). Der Scout nannte
+2026-01-16; das ist das Datum im Dateikopf, nicht das der Aufnahme.
+
+Damit ist die Frage nicht akademisch: sind das **Ports** oder
+**Verhaltens-Nachbauten**? Bei Port müsste das Ergebnis GPL-3 sein —
+unser Baum steht seit MF-621 auf `GPL-2.0-or-later`, was eine Verbindung
+erlaubt, aber das **Ganze auf GPLv3 hebt**. Das ist eine
+Eigentümer-Entscheidung, keine Nebenbei-Übernahme. Optionen: Herkunft
+klären, Freigabe bei Rittwage erbitten, oder neu schreiben. Der
+SPDX-Zensus aus MF-620/621 konnte das nicht sehen — die Dateien tragen
+keinen fremden SPDX-Bezeichner, nur Fließtext.
+
+### SCOUT-22: UFT liest C64-NIB überhaupt nicht
+
+`src/formats/c64/uft_nib_format.c` hat **1100 Zeilen**, liest NIB/NB2/NBZ
+und hat einen grünen Test. Nachgemessen über alle 27 exportierten
+Funktionen:
+
+* **15** werden ausschließlich von Tests gerufen,
+* **11** von niemandem,
+* **1** von der Produktion — `nib_format_name`, ein Namens-Helfer, aus
+  `src/formats/nib/uft_nib_parser_v2.c`. **Und diese Datei steht selbst in
+  `docs/orphan_baseline.txt`.** Der einzige Produktions-Aufrufer ist also
+  auch tot.
+
+Das registrierte `nib`-Plugin ist eine **andere** Datei und etwas
+anderes: `src/formats/nib/uft_nib.c` heißt „Apple II Nibble", `:10`
+setzt `NIB_FILE_SIZE 232960` (35 × 6656). Eine Commodore-MNIB-Datei
+trifft diese Probe nie.
+
+Die Formatliste führt „NIB". Für den Benutzer heißt das heute: **eine
+C64-NIB-Datei wird nicht gelesen**, und die 1100 Zeilen, die es könnten,
+sind unerreichbar. Das ist der fünfte Fall dieser Gestalt an einem Tag —
+nach DeepRead (`DEEP-1`), den Plattform-Profilen (`PROF-1`), dem
+D64-Verzeichnis (`PH1-1`) und dem Fluss-Widget (MF-630/632, inzwischen
+verdrahtet) — und der einzige, bei dem die Formatliste eine Fähigkeit
+verspricht, die der Öffnungspfad nicht hat.
+
+Dazu drei gemessene Spec-Abweichungen gegen `fileio.c` (Halbspur 84 wird
+still verworfen, abweichende Dichte-Flag-Behandlung, Kapazitätsschranken
+ohne Entsprechung). **Spec-Korrekturen gegen eine autoritative Quelle
+sind einfrier-frei** und können sofort gemacht werden; die
+*Registrierung* als Plugin ist „neue Registrierung" im Sinne von MF-363
+und wartet auf das Moratorium (danach 1:2).
+
+### SCOUT-20 und SCOUT-21: ein hardwarefreies Zweitoracle
+
+Der Scout hat `nibconv`, `nibscan` und `nibrepair` **heute gebaut** —
+mit MinGW 13.1.0, ohne OpenCBM-Bibliothek, ohne Patches — und auf dem
+Korpus laufen lassen. `nibscan` liefert Dichteprofil je Spur,
+Fehlerkarte, Bad-GCR-Zählung, Killer/Fat/RapidLok-Signale und
+**BAM/DIR-CRC plus Full-CRC über dekodierte Spuren**: das Spur-Analogon
+zu `flophashes`, und die zweite Hand neben `c1541`, die
+`PLAN_v4.1.7.md:224-230` wörtlich verlangt.
+
+Wichtiger noch: `nibconv G64→D64` weicht auf `vice_c1541_35trk.g64` von
+der VICE-Referenz in **exakt den drei Sektoren und 143 Byte-Positionen
+aus MF-536** ab (T17/0: 127, T18/0: 6, T18/1: 10). Die dritte Quelle, die
+der Matrix-Kommentar dort als fehlend führt, **existiert also** — und sie
+bestätigt, dass die Abweichung im G64-Inhalt steckt (PETSCII-Fall), nicht
+im Wandler.
+
+Vorbehalt, den der Scout selbst benennt und der bleibt: `uft_d64_g64.c`
+ist „Based on nibtools" — als Oracle ist das eine **verwandte Hand**,
+derselbe Einwand wie im AdfOpus/ADFlib-Fall. Für die MF-536-Frage
+entscheidet es trotzdem etwas, weil dort VICE die Gegenseite ist.
+
+### SCOUT-24: eine Definition, die wir vermissen, steht dort
+
+`docs/KNOWN_ISSUES.md:1267ff` führt `density_deviation` als undefiniert.
+`nibscan.c:532-536` definiert es: gespeicherte Dichte ≠ `speed_map`-Vorgabe.
+Dazu zwei benannte GCR-Fehllese-Modelle (`nibrepair.c:228-230`,
+Tri-Bit- und Low-Frequency-Verwechslung), die unsere Recovery-Schicht
+nicht führt.
+
+### Beschaffungsliste: leer
+
+Das Oracle ist der Klon plus ein dokumentiertes Build-Rezept (heute
+verifiziert), der G64/D64-Korpus liegt, und das NIB-Rotbeweis-Fixture ist
+aus liegendem Material erzeugbar. Zum ersten Mal in dieser Serie kostet
+ein Fund den Eigentümer **keine** Beschaffung.
+
+### Offen
+
+`SCOUT-20` (Oracle-Eintrag; Version ist nur ein Build-Datum, also
+`version_is_unaskable` + SHA-256-Anker), `SCOUT-21` (MF-536 nachmessen),
+`SCOUT-22` (drei Spec-Korrekturen sofort, Plugin-Frage später),
+`SCOUT-23` (Lizenz-Vorlage, Eigentümer), `SCOUT-24` (Definition +
+Fehlermodelle).
+
+Ungeklärt bleibt unter anderem, ob UFTs Ausgabe **wertgleich** zu
+nibconv ist — belegt ist bisher nur Positions- und Anzahlgleichheit gegen
+VICE.

@@ -1,3 +1,4 @@
+<!-- uebernommen: MF-629 (OPEN_ITEMS "Scout-Zyklus 6", Funde verarbeitet in MF-629/630/631) -->
 # Gutachten: imqqmi/FloppyControl (Wiedervorlage, Zyklus 6)
 Stand: 2026-08-28 · Messung: `work/FloppyControl.messung.json`
 (HEAD `0633bc7ad5`, letzter Commit 2026-01-26)

@@ -124,6 +124,10 @@
     "jfdelnero/AdfOpus_HxC": {
       "status": "bewertet",
       "grund": "Gutachten 2026-08-27 (adfopus_hxc): kein AmigaDOS-Encoder im Quelltext (MFM nur via libhxcfe.dll-Binaerdatei); als drittes ADF-Oracle untauglich (Win32-GUI ohne CLI, Engine = vendorte ADFlib 0.7.9d = dieselbe Hand wie unadf); abgeleitet: DMS-Hebung via xDMS-1.3-Oracle, Folgeziel HxCFloppyEmulator/libhxcfe-Quelle"
+    },
+    "rittwage/nibtools": {
+      "status": "bewertet",
+      "grund": "Gutachten Zyklus 7 (2026-08-28): GPL-3.0 (GELB) — nur Spec+Oracle; nibconv/nibscan hardwarefrei gebaut und als Zweitoracle vorgeschlagen; C64-NIB im Baum unerreichbar (3 Spec-Abweichungen); Lizenz-Altlast 'Based on nibtools' zur Eigentuemer-Vorlage"
     }
   }
 }
