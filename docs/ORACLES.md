@@ -35,6 +35,35 @@ ausgeführt wurde, ist kein Eintrag. Der Selbsttest
 (`python tests/differential/oracles.py`) sagt, welche vorhanden sind —
 und meldet **nicht** Erfolg, wenn es keines ist.
 
+### Fünfte Frage: dieselbe Hand? (MF-644)
+
+> **Wer den Korpus erzeugt hat, darf ihn nicht allein prüfen.**
+
+Ein Oracle, das dasselbe Werkzeug ist wie der Korpus-Erzeuger, prüft
+seine eigene Selbstkonsistenz — nicht UFT. Der T1b-Eintrag wird damit
+**zirkulär**, und das fällt niemandem auf, weil alles grün ist.
+
+Der Fall ist zweimal gemessen worden:
+
+* **ADF:** `unadf` und AdfOpus teilen sich **ADFlib** — dieselbe
+  Bibliothek, die über `xdftool` auch unser Korpus-Abbild erzeugt hat.
+  AdfOpus schied deshalb aus, **nicht** weil es schlecht wäre
+  (`PLAN_v4.1.7.md:127-133`).
+* **ATR:** `atrcopy 10.1` hat `atrcopy_dos2sd.atr` **erzeugt**
+  (Manifest wörtlich). Als alleiniges Oracle wäre der Eintrag zirkulär.
+
+**Aufgelöst wird es durch eine zweite, unabhängige Hand** — nicht durch
+eine zweite Fassung derselben Bibliothek. Für ATR sind es zwei:
+
+| zweite Hand | Lizenz | Unabhängigkeit belegt durch |
+|---|---|---|
+| `lsatr` (dmsc/mkatr) | GPL-2.0 | eigene C-Codebasis, eigener DOS-2- und SpartaDOS-Leser, keine atrcopy-Verwandtschaft |
+| `a8rawconv` | GPL-2.0-or-later | anderer Autor, anderer Ansatz (Flux-Ebene); `ATR→XFD` byteidentisch zum Korpus-XFD |
+
+**Registrierungsregel:** jeder neue Eintrag nennt, **wer den Korpus
+erzeugt hat, gegen den er prüfen soll**. Ist es dasselbe Werkzeug, wird
+er nur zusammen mit einer zweiten Hand eingetragen — oder gar nicht.
+
 ## Der Differenzlauf-Standard (seit MF-629)
 
 Verglichen wird **Inhalt, byteweise nachgerechnet**, nicht die
@@ -94,6 +123,31 @@ Registry-Eintrag. Sie zählen deshalb für kein T1b-Manifest.
 |---|---|---|
 | `nibconv`, `nibscan` (nibtools) | vom Scout **gebaut**, hardwarefrei mit MinGW ohne OpenCBM, auf dem Korpus gelaufen; liefert BAM-/DIR- und Full-CRC über dekodierte Spuren | Registry-Eintrag (`version_is_unaskable` + SHA-256, `VERSION` ist nur ein Build-Datum) — `SCOUT-20` |
 | `dskx` (FloppyControl) | Quelle gelesen, CLI belegt (`list`/`extract`/`--deleted`) | **nicht gebaut, nicht gelaufen** — vor jedem Eintrag bauen. Eng auf gelöschte FAT12-Einträge und Bad-Cluster zu schneiden, weil floptool den normalen Inhalt bereits liest — `SCOUT-F1` |
+| `lsatr` (dmsc/mkatr) | GPL-2.0, unabhängige C-Codebasis; liest DOS 1/2.0/2.5/MyDOS/SpartaDOS/BW-DOS | bauen (`make`), dann Eintrag. **Zweite Hand für ATR** — löst die Zirkularität gegen atrcopy |
+| `a8rawconv` | im Baum vendort (`src/a8rawconv/`), heute gebaut; `ATR→XFD` byteidentisch zum Korpus-XFD | Eintrag ausstehend (`SCOUT-33`). Zugleich die In-Tree-Referenz für den FM-Pfad |
+| `atrcopy` | erzeugt unseren ATR-Korpus; `crc`-Unterbefehl liefert CRC32 je Datei über den Inhalt | **Auflage:** braucht `numpy<1.23` — unter NumPy 2.5.1 drei gemessene Abstürze bei jedem Abbild-Open. Nur zusammen mit `lsatr` eintragen (Zirkularität) |
+| **fdc_bitstream** (yas-sim) | **extern**, nicht im Baum — die vendorte Kopie ist mit MF-626 gelöscht | als **Upstream-Oracle** bauen und eintragen, **nicht** zurückholen (siehe unten) |
+
+### Warum fdc_bitstream extern bleibt (MF-644)
+
+Der Wunsch dahinter ist richtig: ein **zweiter, unabhängiger
+MFM-Decoder als Schiedsrichter** ist genau, was Tier-Hebung und
+Rettungskette später brauchen.
+
+Der Weg dorthin ist aber nicht `git revert` auf MF-626. Ein
+zurückgeholtes Vendoring bringt 2795 Zeilen in den Baum, die
+
+* die Verwaisten-Regel bei **jedem** Durchgang erneut anfassen muss,
+* eine Baulast in beiden Build-Systemen tragen,
+* und einen Anker brauchen, der nur existiert, um sie zu rechtfertigen.
+
+Als **externes Oracle** entfällt all das: Upstream im Prüfstand bauen,
+hier registrieren, fertig. Kein Code im Baum, keine Lizenzfrage, keine
+Baulast — und derselbe Schiedsrichter.
+
+Der Anker gehört deshalb **hierher**, nicht in einen Plan: ein Oracle
+ist kein Baustein, den man später verdrahtet, sondern ein Werkzeug, das
+urteilt.
 
 ## Was ausdrücklich **kein** Oracle ist
 

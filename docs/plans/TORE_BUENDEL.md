@@ -8,6 +8,24 @@ Entscheidung.
 
 ## 1 · SCOUT-4 — fdc_bitstream: Oracle verdrahten oder aus dem Bau nehmen
 
+> ### ERLEDIGT (MF-644) — dieser Posten ist keine Entscheidung mehr
+>
+> Der Eigentümer hat die Empfehlung (a) **zurückgezogen**, nachdem der
+> veraltete Stand sichtbar wurde, und den besseren Weg benannt:
+>
+> **fdc_bitstream wird als *externes* Oracle registriert, nicht
+> zurückgeholt.** Der Wunsch — ein zweiter unabhängiger MFM-Decoder als
+> Schiedsrichter — ist damit erfüllt, ohne 2795 Zeilen in den Baum zu
+> holen, die die Verwaisten-Regel bei jedem Durchgang erneut anfassen
+> müsste. Kein Code im Baum, keine Lizenzfrage, keine Baulast.
+>
+> Der Anker gehört nach [`ORACLES.md`](../ORACLES.md), nicht in einen
+> Plan: ein Oracle ist kein Baustein, den man verdrahtet, sondern ein
+> Werkzeug, das urteilt.
+>
+> **Aus einer Eigentümer-Entscheidung ist damit eine Agenten-Aufgabe
+> geworden.** Sieben Posten sind noch sechs.
+
 > ### Statuskorrektur (MF-643): der Code ist bereits draußen
 >
 > Dieser Posten beschreibt den Stand **vor** MF-626. Dort wurde

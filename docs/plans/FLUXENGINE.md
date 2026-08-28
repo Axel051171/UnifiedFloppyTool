@@ -31,11 +31,34 @@ Attribution nach samdisk-Muster (Quelle + Commit im Header).
 >   Synthetik-Quellen, Tür-Suche und Oracle-Betrieb kommen ohne fremden
 >   Code aus.
 >
-> Praktische Folge für die Reihenfolge: FE-1/FE-3/FE-6 laufen ohne
-> Lizenzentscheidung. FE-2 und FE-4 warten auf ein „ja" zur Verengung —
-> und dieses „ja" ist deckungsgleich mit der Absage an GPLv3, die bei
-> nibtools und AIR ohnehin aus anderen Gründen gefallen ist (`LIZ-2`).
-> Wer beides zusammen entscheidet, entscheidet es einmal.
+> **Neuer Schnitt (MF-644) — die Verengung lässt sich ganz vermeiden.**
+> FE-2 und FE-4 brauchen gar keinen Port, weil ihre Gegenstände
+> **öffentlich spezifiziert** sind:
+>
+> * **VCD** ist im Verilog-Standard beschrieben (IEEE 1364, Abschnitt
+>   Value Change Dump) — ein Textformat mit Zeitstempeln und
+>   Signalwechseln.
+> * **AU** ist der Sun-Audio-Header: sechs Big-Endian-Langworte, danach
+>   Rohdaten. Trivial und dokumentiert.
+> * **fl2** ist Protobuf; sein `.proto`-Schema **ist** die
+>   Schnittstellenbeschreibung. Ein handgeschriebener Varint-Leser
+>   gegen das Schema ist eine Implementierung nach Spec, kein Port.
+>
+> Aus Spec implementiert statt portiert, tritt die Verengung **nie**
+> ein. Damit bleibt vom ganzen Plan nur **ein** Port-Zweig übrig: der
+> `UFT_INCOMPLETE`-Fall in FE-6 — und der ist pro Format entscheidbar
+> statt pauschal.
+>
+> **Gemessen (MF-644): die Tür ist offen.** Im Baum liegt heute kein
+> GPL-2.0-only-Code — keine SPDX-only-Kennung, und der einverleibte
+> Fremdcode ist `src/samdisk` (**MIT**, 147 Dateien) sowie
+> `src/a8rawconv` (**GPL-2.0-or-later**, 46 Dateien).
+>
+> **Vorbehalt, der die Reihenfolge bestimmt:** die 48 Attributionen ohne
+> genannte Lizenz aus `LIZ-1` sind ungeklärt, und HxCFloppyEmulator
+> taucht dreimal auf. Ist eine davon ein Port von GPL-2.0-only-Code, war
+> die Tür längst zu. **`LIZ-1` ist damit Vorbedingung jeder
+> Lizenzentscheidung**, nicht ihr Parallelvorgang.
 >
 > `dep/` trägt abweichende Lizenzen, laut `COPYING.md` alle
 > GPL-2.0-verträglich; das Aggregat bleibt GPL-2.0.
