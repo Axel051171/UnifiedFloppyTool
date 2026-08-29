@@ -3043,3 +3043,119 @@ meldete „0 Übersetzungsfehler" neben „ROT", weil es **Binder**fehler
 waren. Beide werden jetzt getrennt gezählt, und wenn keines der Muster
 greift, sagt das Skript das — die Muster sind eine Lesehilfe, kein
 Urteil.
+
+---
+
+## GUI-6 — 38 Bedienelemente in einer geschlossenen Schleife (MF-668)
+
+**Kennzahl:** keine der vier. Das ist ein Ehrlichkeits-Befund, kein
+Rückstand — nach Regel 9 (MF-640) also **Fundus mit Entscheidungsbedarf**,
+nicht eingeplante Arbeit. Die Entscheidung gehört dem Eigentümer, weil
+sie sichtbare Oberfläche entfernt.
+
+### Gemessen
+
+Die drei „Advanced…"-Dialoge (`src/advanceddialogs.{h,cpp}`, 530 Zeilen)
+bieten zusammen **38 Bedienelemente** an: Flux 15, PLL 9, Nibble 14.
+
+Ihr vollständiger Weg:
+
+```
+Dialog  ->  FormatTab::m_fluxAdvParams  ->  Dialog
+```
+
+`git grep` nach den drei Parameter-Typen findet **außerhalb der Dialoge
+selbst genau einen** Konsumenten: `src/formattab.h`, wo sie als
+Mitglieder liegen. In `formattab.cpp` werden sie an exakt sechs Stellen
+berührt — dreimal `setParams`, dreimal `getParams`, je Dialog ein Paar.
+**Niemand liest sie sonst.** Kein Wandler, kein Dekoder, keine HAL.
+
+Die Schleife ist geschlossen: der Benutzer stellt etwas ein, es wird
+gemerkt, es wird ihm beim nächsten Öffnen wieder gezeigt, und es wirkt
+sich auf nichts aus.
+
+### Warum „verdrahten" für die meisten nicht in Frage kommt
+
+Zwei Messungen, die die naheliegende Reparatur ausschließen:
+
+**Erstens:** die Oberfläche baut **nirgends** ein
+`flux_decoder_options_t`. Nur vier Kerndateien tun das, intern. Es gibt
+keinen Parameterweg von einem Dialog zum Dekoder — für kein einziges
+der 38.
+
+**Zweitens:** von 34 systematisch geprüften Elementen nennen **19** einen
+Namen, den es im ganzen Baum als Feld nicht gibt — `preserveGaps`,
+`preserveSync`, `ignoreBadGCR`, `rawNibble`, `adaptiveGain`,
+`lockThreshold`, `weakBitWindow` und weitere. Sie sind nicht
+unverdrahtet, sie sind **erfunden**. Für sie gibt es unten keine
+Schraube, an der eine Leitung enden könnte.
+
+**Drittens:** von den Feldern, die es gibt, sind mehrere im Dekoder tot.
+Gezählt in `src/flux/uft_flux_decoder.c` — Lesestellen, nicht
+Setzstellen:
+
+| Feld | Lesestellen | |
+|---|---:|---|
+| `use_pll` | 7 | lebt |
+| `media` | 6 | lebt |
+| `pll_gain` | 6 | lebt |
+| `media_adjust_pct` | 3 | lebt |
+| `bitcell_ns` | 2 | lebt |
+| `sync_patterns` / `sync_count` | 2 | lebt |
+| **`tolerance`** | **0** | dreimal geschrieben, nie gelesen |
+| **`revolution`** | **0** | tot |
+| **`decode_all_revs`** | **0** | tot |
+
+Der PLL-Dialog hat einen Toleranz-Regler. Eine Leitung dorthin war im
+Zuge dieser Arbeit **gebaut und wieder ausgebaut**: ein Regler mit
+Verkabelung und ohne Wirkung ist kein Fortschritt gegenüber einem Regler
+ohne Verkabelung — nur schwerer zu erkennen.
+
+### Die drei Wege, und was gegen sie spricht
+
+1. **Löschen.** 530 Zeilen Dialog plus drei Menü-Einträge. Ehrlich und
+   billig; nimmt aber eine Oberfläche weg, die jemand vielleicht als
+   Zusage gelesen hat.
+2. **Ausblenden/sperren**, mit sichtbarem Grund. Behält die Elemente als
+   Landkarte dessen, was einmal kommen soll — aber nur, wenn es dafür
+   einen benannten, `git grep`-findbaren Plananker gibt (Anker-Regel).
+   Ohne Anker ist das die Verwaisten-Regel, und die sagt löschen.
+3. **Verdrahten.** Für die sechs lebenden Felder machbar, je Feld
+   ungefähr wie MF-480: eine öffentliche Option, eine Zeile im
+   Verteiler, ein Verbraucher, ein Rotbeweis. Für die 19 erfundenen
+   Namen und die drei toten Felder **nicht** machbar, ohne vorher den
+   Dekoder zu erweitern — und das ist Format-/Decoder-Layer, also
+   Einfrier-Regel: nur gegen eine benannte Referenz.
+
+Empfehlung: 2 für die sechs lebenden Felder mit Anker auf diesen
+Eintrag, 1 für den Rest. Die Entscheidung ist nicht getroffen.
+
+### Was in MF-668 tatsächlich behoben wurde
+
+Nicht die 38 — eine **halbe Naht**, die die Messung nebenbei aufdeckte.
+
+`decode_cell_adjust_pct` (MF-480) war der einzige Wert mit einem
+vollständigen Weg von außen bis zum Dekoder. Er stand in
+`uftc_convert_scp_to_adf_via_plugin` und **fehlte** in
+`uftc_convert_hfe_to_adf_via_plugin` — dieselbe Aufzählungs-Falle wie
+sechsmal zuvor in diesem Baum: ein Verhalten an einer Stelle gepflegt,
+an der zweiten still vergessen. Wer den Feineinsteller auf einem
+HFE-Abbild benutzte, bekam sein Ergebnis, als hätte er nichts
+eingestellt.
+
+Die naheliegende Reparatur wäre falsch gewesen. `media_adjust_pct` wird
+nur dort gelesen, wo **Zeiten** in Zellen umgerechnet werden;
+`flux_decode_amiga_bits()` — der Weg für ein HFE — liest aus den
+Optionen nur die Sync-Muster. Ein HFE ist ein fertig getakteter
+Bitstrom, die Zellgrenzen sind beim Aufzeichnen gefallen. Der Regler ist
+dort nicht unverdrahtet, sondern **bedeutungslos**.
+
+Behoben also so: eine Funktion `uftc_apply_decode_options()` mit zwei
+Aufrufern, die je nach Quelle den Wert anwendet **oder sagt, dass er
+hier nicht gilt**. Drei Zustände sind möglich, und nur der dritte war
+verboten — wirken, sich erklären, oder schweigen.
+
+Rotbeweis: `tests/test_decode_options_reach.c`, absichtlich über den
+HFE-Pfad (über SCP wäre er von Anfang an grün gewesen und hätte die
+Lücke zugedeckt). Gegenprobe durch Sabotage des HFE-Aufrufs: 2
+Abweichungen, danach wieder grün.

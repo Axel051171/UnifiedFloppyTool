@@ -780,6 +780,80 @@ static void uftc_verify_output_filesystem(const uint8_t *image, size_t size,
     uft_mfmd_free(&info);
 }
 
+/* Traegt die vom Aufrufer vorgegebenen Dekoder-Werte ein — oder sagt, dass
+ * sie hier nicht gelten.
+ *
+ * ── Was gemessen wurde (MF-668) ────────────────────────────────────────
+ *
+ * Bis hierher stand dieser Code nur in `uftc_convert_scp_to_adf_via_plugin`.
+ * Die HFE-Wandlung weiter unten baut ihr eigenes `flux_decoder_options_t`,
+ * hat `opts` in der Hand und sah nie hinein. Wer den Feineinsteller aus
+ * MF-480 auf einem HFE-Abbild benutzte, bekam sein Ergebnis, als haette er
+ * nichts eingestellt: keine Wirkung, keine Warnung.
+ *
+ * Die naheliegende Reparatur waere gewesen, den Wert dort einfach auch zu
+ * setzen. Die zweite Messung sagt, dass das falsch waere:
+ *
+ *   `media_adjust_pct` wird in `uft_flux_decoder.c` an drei Stellen
+ *   gelesen (620, 649, 1727) — alle drei rechnen ZEITEN in Zellen um.
+ *   `flux_decode_amiga_bits()`, der Weg fuer ein HFE-Abbild, liest aus den
+ *   Optionen ueberhaupt nur `sync_patterns`/`sync_count`.
+ *
+ * Ein HFE-Abbild ist ein FERTIG GETAKTETER Bitstrom. Die Entscheidung, wo
+ * eine Zelle anfaengt, ist beim Aufzeichnen gefallen und steht in der
+ * Datei; eine Zellendauer im Nachhinein zu verstellen hat dort nichts
+ * mehr, woran es angreifen koennte. Der Regler ist auf diesem Pfad nicht
+ * unverdrahtet, er ist **bedeutungslos**.
+ *
+ * Deshalb tut diese Funktion je nach Quelle zweierlei. Bei einer
+ * Fluss-Quelle wendet sie den Wert an. Bei einem Bitstrom sagt sie, dass
+ * er nicht gilt. Beides ist besser als die dritte Moeglichkeit, die vorher
+ * galt: schweigen.
+ *
+ * ── Zurueckgenommen: eine Zeitgeber-Toleranz ────────────────────────────
+ *
+ * Der "Advanced PLL"-Dialog hat einen Toleranz-Regler, und dieselbe Naht
+ * fuer ihn zu bauen lag nahe. Gemessen: `flux_decoder_options_t.tolerance`
+ * wird im ganzen Baum dreimal GESCHRIEBEN (hier bei der Vorbelegung, in
+ * `uft_otdr_adaptive_decode.c`) und **nirgends gelesen**. Eine Leitung
+ * dorthin waere ein Regler mit Verkabelung und ohne Wirkung gewesen —
+ * genau der Zustand, den diese Arbeit beseitigen soll, nur mit besserer
+ * Buchfuehrung. Der Weg ist zurueckgenommen; das tote Feld steht als
+ * Befund in `docs/OPEN_ITEMS.md`.
+ *
+ * @param quelle_hat_zeit  true fuer Fluss-Quellen (SCP, KryoFlux), false
+ *                         fuer bereits getaktete Bitstroeme (HFE). */
+static void uftc_apply_decode_options(const uft_convert_options_ext_t* opts,
+                                      flux_decoder_options_t* dopts,
+                                      uft_convert_result_t* result,
+                                      bool quelle_hat_zeit)
+{
+    if (!opts || !dopts) return;
+    if (opts->decode_cell_adjust_pct <= 0.0) return;
+
+    if (!quelle_hat_zeit) {
+        uftc_add_warning(result,
+            "Zellendauer-Feineinsteller %.1f%% gilt nur fuer Fluss-Quellen "
+            "und wurde nicht angewandt: die Quelle ist ein bereits "
+            "getakteter Bitstrom, dessen Zellgrenzen beim Aufzeichnen "
+            "festgelegt wurden", opts->decode_cell_adjust_pct);
+        return;
+    }
+
+    /* Ausserhalb von 50…200 lehnt das Medienprofil den Wert ab und der
+     * Decoder faellt still auf 100 zurueck. Still ist hier falsch: wer
+     * einen Wert vorgibt, soll erfahren, dass er nicht benutzt wurde. */
+    if (opts->decode_cell_adjust_pct < 50.0 ||
+        opts->decode_cell_adjust_pct > 200.0) {
+        uftc_add_warning(result,
+            "Zellendauer-Feineinsteller %.1f%% liegt ausserhalb 50-200 "
+            "und wurde nicht angewandt", opts->decode_cell_adjust_pct);
+        return;
+    }
+
+    dopts->media_adjust_pct = opts->decode_cell_adjust_pct;
+}
+
 static uft_error_t uftc_convert_scp_to_adf_via_plugin(
     const char* src_path, const char* dst_path,
     const uft_convert_options_ext_t* opts, uft_convert_result_t* result)
@@ -873,30 +947,7 @@ static uft_error_t uftc_convert_scp_to_adf_via_plugin(
      * Nennwert — ein Medienprofil ohne Messung ist keine Verbesserung. */
     dopts.media = UFT_MEDIA_AMIGA_DD;
 
-    /* Feineinsteller in Prozent (MF-480).
-     *
-     * Die abgeleitete Zellendauer kann systematisch danebenliegen, auch wenn
-     * die Umdrehungsmessung stimmt — dann naemlich, wenn die Diskette mit
-     * einer anderen Datenrate beschrieben wurde als das Medienprofil
-     * annimmt. Dagegen hilft kein besserer Decoder, sondern nur ein Wert,
-     * den der Aufrufer verstellen kann. Der Arbeitsablauf ist alt: in
-     * kleinen Schritten nachstellen und sectors_converted gegen
-     * sectors_failed beobachten. Beide Zahlen stehen bereits im Ergebnis.
-     *
-     * Ausserhalb von 50…200 lehnt das Medienprofil den Wert ab und der
-     * Decoder faellt still auf 100 zurueck. Still ist hier falsch: wer einen
-     * Wert vorgibt, soll erfahren, dass er nicht benutzt wurde. */
-    if (opts && opts->decode_cell_adjust_pct > 0.0) {
-        if (opts->decode_cell_adjust_pct < 50.0 ||
-            opts->decode_cell_adjust_pct > 200.0) {
-            uftc_add_warning(result,
-                "Zellendauer-Feineinsteller %.1f%% liegt ausserhalb 50-200 "
-                "und wurde nicht angewandt",
-                opts->decode_cell_adjust_pct);
-        } else {
-            dopts.media_adjust_pct = opts->decode_cell_adjust_pct;
-        }
-    }
+    uftc_apply_decode_options(opts, &dopts, result, true);
 
     /* Alle Umdrehungen, nicht nur die erste (MF-473).
      *
@@ -1582,6 +1633,11 @@ static uft_error_t uftc_convert_hfe_to_adf_via_plugin(
 
     flux_decoder_options_t dopts;
     flux_decoder_options_init(&dopts);
+    /* MF-668: bis hierher las diese Wandlung `opts` nie. Sie wendet den
+     * Feineinsteller auch jetzt nicht an — auf einem getakteten Bitstrom
+     * hat er nichts, woran er angreifen koennte — aber sie SAGT das
+     * inzwischen, statt zu schweigen. */
+    uftc_apply_decode_options(opts, &dopts, result, false);
 
     uftc_report_progress(opts, 20, "Decoding AmigaDOS sectors from HFE");
 
