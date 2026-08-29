@@ -5,6 +5,11 @@
       "stand": "tiefengeprueft",
       "uebergabe": "out/hfe.uebergabe.md",
       "hinweis": "Zweiter Lauf 2026-08-29: Variantentabelle 2x belegt (hxcfe + samdisk), Offset-8-Frage entschieden (Generation haengt an der Signatur; rev1 = ExtHFE, write-only), fuenf Fixtures aus hxcfe.exe erzeugt (work/fixtures/, gitignored, Uebernahme = menschliches Tor). Kernbefund F1: Interface-Mode-Tabelle im registrierten Plugin ab 0x08 um eins verschoben, korrekte Tabelle existiert doppelt im eigenen Baum."
+    },
+    "dim_atari": {
+      "stand": "tiefengeprueft",
+      "uebergabe": "out/dim_atari.uebergabe.md",
+      "hinweis": "Zyklus 2026-08-29, Anlass FMT-13: Magic 0x4242 gehoert zum Format, 3x unabhaengig belegt (Hatari+HxC+Jacknife, je Code-Verzweigung); Tuer-Messung gelaufen: Produktions-Probe nimmt Datei ohne Magic mit Konfidenz 90 an, hxcfe lehnt sie ab. Fixture-Paar erzeugt (work/fixtures/atarist_dd_HXC_DIM.dim + _NOMAGIC). E-Copy-Dialekt einquellig -> ZU VERIFIZIEREN. X68000-Befunde als Fundus fuer eigenen dim-Zyklus."
     }
   }
 }

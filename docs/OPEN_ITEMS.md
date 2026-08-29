@@ -3870,3 +3870,65 @@ zwischen Kopfbytes und Nutzlast liegt, lässt sich jetzt am einzigen
 Controller mit Bench-Erfahrung stellen, ohne Gerät.
 
 Prüfstand: Bau grün, 283/283 mit benanntem Skip.
+
+---
+
+## FMT-13 geschlossen — die zweite Quelle war beschaffbar (MF-687)
+
+MF-684 hat angehalten, weil **eine** verifizierte Fremdquelle gegen die
+eigene Dokumentation stand. Ein Varianten-Zyklus hat die fehlenden
+Quellen beschafft. Jetzt sind es **drei unabhängige Implementierungen**,
+alle drei von mir im Klon nachgelesen:
+
+| Quelle | Fundstelle | was sie tut |
+|---|---|---|
+| Hatari (GPLv2+) | `src/floppies/dim.c:75-76` | lehnt ab, wenn `[0]`/`[1]` ≠ `0x42` |
+| Hatari, Spec-Kommentar | `dim.c:36` | `0x0000 Word ID Header (0x4242('BB'))` |
+| HxC libhxcfe | `dim_loader/dim_loader.c:74`, `:110` | `id_header != 0x4242` → ablehnen |
+| Jacknife | `dllmain.c:590` | `== 0x4242 // "BB"` |
+
+**`BB` gehört zum Format, nicht zu einer Fastcopy-Variante.** Der
+Verdacht aus MF-684 löst sich auf: das Atari-`.dim` *ist* das
+FastCopy-Format. Unser Header-Kommentar („Flags (unused, often 0)" /
+„Reserved") war von keiner Quelle gedeckt.
+
+### Was gemessen wurde, bevor etwas geändert wurde
+
+Zwei Abbilder, Unterschied **genau zwei Byte**. Vorher:
+
+```
+mit  `BB`: angenommen=ja Konfidenz=90
+ohne `BB`: angenommen=ja Konfidenz=90
+```
+
+Jede Datei passender Länge wurde als DIM angenommen und ihre ersten 32
+Byte als Geometrie gelesen. Nachher: `ohne BB → angenommen=nein`.
+
+### Eine Feinheit, die ich NICHT übernommen habe
+
+Hatari lehnt zusätzlich `[0x03] != 0` und `[0x0A] != 0` ab. Das sind
+**Hataris eigene Grenzen** — es kann keine „used sectors only"-Abbilder
+und keine Startspur ≠ 0 —, nicht Eigenschaften des Formats. Unsere
+Header-Tabelle führt beide Felder als zulässig, und sie hier abzulehnen
+würde eine Leser-Beschränkung in ein Urteil über die Datei verwandeln.
+
+Nur das Magic ist von allen drei Quellen gedeckt, also wird nur das
+Magic geprüft. Das ist der Unterschied zwischen einer Referenz folgen
+und sie abschreiben.
+
+### Was offen bleibt
+
+* **`dim_atari` steht weiter auf T3.** Ein Proben-Test hebt kein Format;
+  dafür braucht es ein reales Abbild aus fremder Hand. Der
+  Varianten-Zyklus hat ein Fixture-Paar erzeugt (`tools/uft-variants/
+  work/fixtures/`) — die Aufnahme in den Baum ist Verteilung und damit
+  Eigentümer-Entscheidung.
+* **E-Copy** ist die einzige kopflose `.dim`-Fassung und bleibt
+  **unbelegt**: nur Jacknife setzt sie um, Foren-Zeugnisse sind keine
+  zweite Quelle. Für sie wäre unsere Geometrie-Lesart ebenfalls falsch.
+* **Der X68000-Zweig** in der Probe ist seit dem Magic-Fix nahezu tot.
+  Er bleibt stehen: seine Medientyp-Tabelle wird laut Varianten-Zyklus
+  von MAME und HxC widersprochen, und das zu entfernen ist eine eigene
+  Änderung mit eigenem Beleg. Als Fundus notiert, nicht gehandelt.
+* **Der Schreibpfad** prüft das Magic weiterhin nicht — `write_track`
+  schreibt in fremde Dateien passender Größe. Eigener Prüfauftrag.

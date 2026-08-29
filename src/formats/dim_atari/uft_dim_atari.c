@@ -7,8 +7,8 @@
  *
  * Header layout:
  *   Offset  Size  Description
- *   0x00    1     Flags (unused, often 0)
- *   0x01    2     Reserved
+ *   0x00    2     ID header 0x4242 ("BB") — REQUIRED
+ *   0x02    1     1 = geometry auto-detected, 0 = user-specified
  *   0x03    1     Sectors used only (0=all, 1=used only)
  *   0x04    2     Reserved
  *   0x06    1     Sides (0=single, 1=double)
@@ -20,6 +20,18 @@
  *   0x0C    1     End track (typically 79 or 39)
  *   0x0D    1     Density (0=DD, 1=HD)
  *   0x0E-1F       Reserved (zero padded)
+ *
+ * Reference for the layout above, and for the magic in particular
+ * (MF-687): Hatari `src/floppies/dim.c:34-45` (header table) and `:75-76`
+ * (rejection). Cross-checked in two further independent implementations —
+ * HxC libhxcfe `dim_loader/dim_loader.c:74` and `:110`, and Jacknife
+ * `dllmain.c:590`. All three refuse a file whose first two bytes are not
+ * 0x42 0x42.
+ *
+ * Until MF-687 this comment claimed offset 0x00 was "Flags (unused)" and
+ * 0x01-0x02 "Reserved". No source supports that, and the probe checked no
+ * magic at all: any file of a plausible length was accepted as DIM and its
+ * first 32 bytes read as geometry.
  *
  * IMPORTANT: Must NOT match X68000 DIM which uses byte 0 as media type
  * (valid X68000 media types: 0x00, 0x01, 0x02, 0x03, 0x09, 0x11, 0x19)
@@ -100,7 +112,31 @@ static bool dim_atari_probe(const uint8_t *data, size_t size, size_t file_size,
 {
     if (size < DIM_ATARI_HDR_SIZE) return false;
 
-    /* Reject if file looks like X68000 DIM (256-byte header, known media type) */
+    /* ID header 0x4242 ("BB") — the format's magic (MF-687).
+     *
+     * Three independent implementations refuse a file without it: Hatari
+     * `dim.c:75-76`, HxC `dim_loader.c:74`/`:110`, Jacknife
+     * `dllmain.c:590`. Hatari additionally documents it as the format's
+     * first field (`dim.c:36`).
+     *
+     * Deliberately NOT copied from Hatari: it also rejects `[0x03] != 0`
+     * and `[0x0A] != 0`. Those are Hatari's own limits — it cannot handle
+     * "used sectors only" images or a non-zero start track — not
+     * properties of the format. The header table above documents both
+     * fields as legal, and refusing them here would turn a reader
+     * limitation into a false verdict about the file.
+     *
+     * Only the magic is agreed by all three sources, so only the magic is
+     * enforced. */
+    if (data[0x00] != 0x42 || data[0x01] != 0x42) return false;
+
+    /* Reject if file looks like X68000 DIM (256-byte header, known media type)
+     *
+     * MF-687: with the magic check above this branch is very nearly dead —
+     * an X68000 image would have to carry 0x4242 by coincidence. It is
+     * left in place because removing it is a separate change with its own
+     * evidence: a variants cycle reports that the media-type table here is
+     * contradicted by MAME and HxC. Noted as Fundus, not acted on. */
     if (dim_atari_is_x68k_media(data[0]) && file_size > 256) {
         /* Check if X68000 geometry matches: 256-byte header + data */
         /* X68000 DIM has 256-byte header; Atari DIM has 32-byte header.

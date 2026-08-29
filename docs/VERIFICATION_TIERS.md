@@ -62,7 +62,7 @@ Ein T3 mit Test-Eintrag bedeutet: es existiert ein synthetischer Test, aber die 
 | `d13` | **T3** | — | — | — | — |
 | `dcm` | **T3** | — | — | — | — |
 | `dim` | **T3** | — | — | — | — |
-| `dim_atari` | **T3** | — | — | — | — |
+| `dim_atari` | **T3** | `test_dim_atari_magic` | — | — | — |
 | `dms` | **T3** | `test_uft_dms` | — | — | — |
 | `do` | **T3** | `test_apple_do_po_bounds`, `test_do_write_roundtrip`, `test_format_probe_fuzz`, `test_plugin_probe_real`, `test_sector_id_on_disk` | — | — | — |
 | `edk` | **T3** | — | — | — | — |

@@ -1,11 +1,9 @@
 {
   "_kommentar": "Referenz-Klone sind UNABHAENGIGE Implementierungen — Forks derselben Basis zaehlen als EINE Quelle (AGENT.md Regel 1). Pfade sind relativ zur Baumwurzel; sie werden von den Skripten aufgeloest. Fehlende Pfade werden STILL uebersprungen, aber in der Evidenz als 'nicht vorhanden' gefuehrt — eine Quelle, die es nicht gibt, darf keine Zwei-Quellen-Regel erfuellen.",
-
   "referenz_klone": {
     "_kommentar_intern": "Im Baum vendorte Fremdquellen. Sie sind BEQUEM, aber Vorsicht: samdisk und a8rawconv liegen als Quelle da und sind damit legitime Zweitmeinungen — uft_selbst ist KEINE Fremdquelle und zaehlt nie als zweite Quelle.",
     "samdisk_in_uft": "src/samdisk",
     "a8rawconv_in_uft": "src/a8rawconv",
-
     "_kommentar_scout": "Klone, die der uft-scout angelegt hat. Sie sind gitignored und koennen fehlen — dann faellt die Quelle sauber weg. Neue Klone hier eintragen, sobald ein Zyklus sie anlegt.",
     "fluxengine": "tools/uft-scout/work/fluxengine",
     "hxcfe": "tools/uft-scout/work/HxCFloppyEmulator",
@@ -18,77 +16,269 @@
     "discimagemanager": "tools/uft-scout/work/DiscImageManager",
     "mkatr": "tools/uft-scout/work/mkatr",
     "jacknife": "tools/uft-scout/work/Jacknife",
-
+    "hatari": "tools/uft-scout/work/hatari",
     "_kommentar_eigen": "Der eigene Baum. NUR fuer die Frage 'widersprechen sich zwei Reader im eigenen Baum?' (AGENT.md Regel 2, zweiter Halbsatz) — nie als zweite unabhaengige Quelle.",
     "uft_selbst": "src/formats"
   },
-
-  "eigene_quellen": ["uft_selbst"],
-
+  "eigene_quellen": [
+    "uft_selbst"
+  ],
   "korpus_verzeichnisse": [
     "tests/corpus_free",
     "tests/corpus",
     "tests/differential/corpus"
   ],
-
   "formate": {
-    "hfe": {"suchworte": ["HXCPICFE", "HXCHFEV3", "hfe"]},
-    "scp": {"suchworte": ["SuperCard", "\"SCP\"", "scp_"]},
-    "woz": {"suchworte": ["WOZ1", "WOZ2", "woz"]},
-    "a2r": {"suchworte": ["A2R2", "A2R3", "a2r"]},
-    "td0": {"suchworte": ["teledisk", "td0", "TD0"]},
-    "g64": {"suchworte": ["GCR-1541", "g64"]},
-    "atr": {"suchworte": ["atr", "0x0296", "NICKATARI"]},
-    "atx": {"suchworte": ["atx", "AT8X"]},
-    "adf": {"suchworte": ["adf", "amigados"]},
-    "d64": {"suchworte": ["d64", "1541"]},
-    "imd": {"suchworte": ["imagedisk", "\"IMD\""]},
-    "dmk": {"suchworte": ["dmk"]},
-    "dsk_cpc": {"suchworte": ["EXTENDED CPC DSK", "MV - CPC"]},
-    "adl": {"suchworte": ["adl", "ADFS", "adfs"]},
-    "msa": {"suchworte": ["msa", "MSA", "0x0E0F"]},
-    "dim_atari": {"suchworte": ["dim", "0x4242"]},
-    "xfd": {"suchworte": ["xfd", "XFD"]}
+    "hfe": {
+      "suchworte": [
+        "HXCPICFE",
+        "HXCHFEV3",
+        "hfe"
+      ]
+    },
+    "scp": {
+      "suchworte": [
+        "SuperCard",
+        "\"SCP\"",
+        "scp_"
+      ]
+    },
+    "woz": {
+      "suchworte": [
+        "WOZ1",
+        "WOZ2",
+        "woz"
+      ]
+    },
+    "a2r": {
+      "suchworte": [
+        "A2R2",
+        "A2R3",
+        "a2r"
+      ]
+    },
+    "td0": {
+      "suchworte": [
+        "teledisk",
+        "td0",
+        "TD0"
+      ]
+    },
+    "g64": {
+      "suchworte": [
+        "GCR-1541",
+        "g64"
+      ]
+    },
+    "atr": {
+      "suchworte": [
+        "atr",
+        "0x0296",
+        "NICKATARI"
+      ]
+    },
+    "atx": {
+      "suchworte": [
+        "atx",
+        "AT8X"
+      ]
+    },
+    "adf": {
+      "suchworte": [
+        "adf",
+        "amigados"
+      ]
+    },
+    "d64": {
+      "suchworte": [
+        "d64",
+        "1541"
+      ]
+    },
+    "imd": {
+      "suchworte": [
+        "imagedisk",
+        "\"IMD\""
+      ]
+    },
+    "dmk": {
+      "suchworte": [
+        "dmk"
+      ]
+    },
+    "dsk_cpc": {
+      "suchworte": [
+        "EXTENDED CPC DSK",
+        "MV - CPC"
+      ]
+    },
+    "adl": {
+      "suchworte": [
+        "adl",
+        "ADFS",
+        "adfs"
+      ]
+    },
+    "msa": {
+      "suchworte": [
+        "msa",
+        "MSA",
+        "0x0E0F"
+      ]
+    },
+    "dim_atari": {
+      "suchworte": [
+        "dim",
+        "0x4242"
+      ]
+    },
+    "xfd": {
+      "suchworte": [
+        "xfd",
+        "XFD"
+      ]
+    }
   },
-
   "erkennungen": [
-    {"format": "HFE", "magic": "HXCPICFE", "offset": 0,
-     "version": {"offset": 8, "len": 1,
-                 "map": {"0": "rev0"}},
-     "_hinweis": "Offset 8 ist `format_revision`, NICHT die HFE-Generation. Unser eigener Leser unterscheidet v1/v3 an der SIGNATUR (uft_hfe.c:414-416), und unser Schreiber setzt revision immer 0 (uft_hfe.c:543). Die frueher hier stehende Zuordnung 1 = v2 trug keine Quelle und ist entfernt — sie gehoert als [ZU VERIFIZIEREN] ins Dossier, nicht als Tatsache in die Erkennungstabelle."},
-    {"format": "HFE", "magic": "HXCHFEV3", "offset": 0,
-     "version_fest": "v3"},
-    {"format": "WOZ", "magic": "WOZ1", "offset": 0,
-     "version_fest": "1.x"},
-    {"format": "WOZ", "magic": "WOZ2", "offset": 0,
-     "version_fest": "2.x (2.1-Flux nur via INFO-Chunk!)"},
-    {"format": "A2R", "magic": "A2R2", "offset": 0,
-     "version_fest": "2.x"},
-    {"format": "A2R", "magic": "A2R3", "offset": 0,
-     "version_fest": "3.x"},
-    {"format": "SCP", "magic": "SCP", "offset": 0,
-     "version": {"offset": 3, "len": 1}},
-    {"format": "TD0-normal", "magic": "TD", "offset": 0,
-     "version": {"offset": 4, "len": 1}},
-    {"format": "TD0-advanced", "magic": "td", "offset": 0,
-     "version": {"offset": 4, "len": 1}},
-    {"format": "G64", "magic": "GCR-1541", "offset": 0,
-     "version": {"offset": 8, "len": 1}},
-    {"format": "G71", "magic": "GCR-1571", "offset": 0,
-     "version": {"offset": 8, "len": 1}},
-    {"format": "ATR", "magic": [150, 2], "offset": 0,
-     "version_fest": "klassisch",
-     "_hinweis": "0x0296 little-endian. Die Sektorgroesse steht auf Offset 4-5 und ist die Angabe, die XFD nicht speichern kann (MF-655) — als Variantenachse interessant."},
-    {"format": "ATX", "magic": "AT8X", "offset": 0,
-     "version": {"offset": 4, "len": 1}},
-    {"format": "IMD", "magic": "IMD ", "offset": 0,
-     "version_fest": "ASCII-Header"},
-    {"format": "CPC-DSK", "magic": "MV - CPC", "offset": 0,
-     "version_fest": "standard"},
-    {"format": "CPC-EDSK", "magic": "EXTENDED", "offset": 0,
-     "version_fest": "extended"}
+    {
+      "format": "HFE",
+      "magic": "HXCPICFE",
+      "offset": 0,
+      "version": {
+        "offset": 8,
+        "len": 1,
+        "map": {
+          "0": "rev0"
+        }
+      },
+      "_hinweis": "Offset 8 ist `format_revision`, NICHT die HFE-Generation. Unser eigener Leser unterscheidet v1/v3 an der SIGNATUR (uft_hfe.c:414-416), und unser Schreiber setzt revision immer 0 (uft_hfe.c:543). Die frueher hier stehende Zuordnung 1 = v2 trug keine Quelle und ist entfernt — sie gehoert als [ZU VERIFIZIEREN] ins Dossier, nicht als Tatsache in die Erkennungstabelle."
+    },
+    {
+      "format": "HFE",
+      "magic": "HXCHFEV3",
+      "offset": 0,
+      "version_fest": "v3"
+    },
+    {
+      "format": "WOZ",
+      "magic": "WOZ1",
+      "offset": 0,
+      "version_fest": "1.x"
+    },
+    {
+      "format": "WOZ",
+      "magic": "WOZ2",
+      "offset": 0,
+      "version_fest": "2.x (2.1-Flux nur via INFO-Chunk!)"
+    },
+    {
+      "format": "A2R",
+      "magic": "A2R2",
+      "offset": 0,
+      "version_fest": "2.x"
+    },
+    {
+      "format": "A2R",
+      "magic": "A2R3",
+      "offset": 0,
+      "version_fest": "3.x"
+    },
+    {
+      "format": "SCP",
+      "magic": "SCP",
+      "offset": 0,
+      "version": {
+        "offset": 3,
+        "len": 1
+      }
+    },
+    {
+      "format": "TD0-normal",
+      "magic": "TD",
+      "offset": 0,
+      "version": {
+        "offset": 4,
+        "len": 1
+      }
+    },
+    {
+      "format": "TD0-advanced",
+      "magic": "td",
+      "offset": 0,
+      "version": {
+        "offset": 4,
+        "len": 1
+      }
+    },
+    {
+      "format": "G64",
+      "magic": "GCR-1541",
+      "offset": 0,
+      "version": {
+        "offset": 8,
+        "len": 1
+      }
+    },
+    {
+      "format": "G71",
+      "magic": "GCR-1571",
+      "offset": 0,
+      "version": {
+        "offset": 8,
+        "len": 1
+      }
+    },
+    {
+      "format": "ATR",
+      "magic": [
+        150,
+        2
+      ],
+      "offset": 0,
+      "version_fest": "klassisch",
+      "_hinweis": "0x0296 little-endian. Die Sektorgroesse steht auf Offset 4-5 und ist die Angabe, die XFD nicht speichern kann (MF-655) — als Variantenachse interessant."
+    },
+    {
+      "format": "ATX",
+      "magic": "AT8X",
+      "offset": 0,
+      "version": {
+        "offset": 4,
+        "len": 1
+      }
+    },
+    {
+      "format": "IMD",
+      "magic": "IMD ",
+      "offset": 0,
+      "version_fest": "ASCII-Header"
+    },
+    {
+      "format": "CPC-DSK",
+      "magic": "MV - CPC",
+      "offset": 0,
+      "version_fest": "standard"
+    },
+    {
+      "format": "CPC-EDSK",
+      "magic": "EXTENDED",
+      "offset": 0,
+      "version_fest": "extended"
+    }
   ],
-
-  "endung_nur_hinweis": ["adf", "adl", "d64", "d71", "d81", "xfd", "img",
-                          "ima", "st", "dsk", "dmk", "ssd", "dsd"]
+  "endung_nur_hinweis": [
+    "adf",
+    "adl",
+    "d64",
+    "d71",
+    "d81",
+    "xfd",
+    "img",
+    "ima",
+    "st",
+    "dsk",
+    "dmk",
+    "ssd",
+    "dsd"
+  ]
 }
