@@ -3360,3 +3360,65 @@ lesbar.
 Die 38 Attrappen aus GUI-6 und der PLL-Toleranz-Regler aus GUI-7 sind
 **Löschungs**-Entscheidungen, keine Verdrahtungs-Aufgaben. Sie stehen
 dort und bleiben dort.
+
+---
+
+## SCOUT-25 — der Scout hatte keinen Nenner (MF-675)
+
+**Kennzahl:** keine direkt; betrifft die Verlässlichkeit der
+Scout-Priorisierung, an der nach Regel 9 (MF-640) die MF-Reihenfolge
+hängt.
+
+### Der Befund
+
+Auf die Frage „hat der Scout alle Listen abgearbeitet" ließ sich aus
+dem Baum **keine Antwort geben**. Die eingereichten Repo-Listen standen
+nur im Gesprächsverlauf; nirgendwo im Baum stand, was beauftragt war.
+
+Messbar war nur, was **angekommen** ist — und das sieht vollständig aus:
+
+| | |
+|---|---|
+| geklont und gemessen | 31 |
+| Gutachten geliefert | 26 (30 der 31 Repos abgedeckt, mehrere gebündelt) |
+| früher schon bewertet | 57 (`known_negatives.json`) |
+
+„26 Gutachten" ist aber eine Zahl **ohne Nenner**. Sie klingt nach
+Vollständigkeit und beantwortet nur „was wurde getan", nicht „wurde
+alles getan" — derselbe Unterschied wie zwischen einem grünen Test und
+einem Test, der scheitern kann.
+
+### Zwei echte Lücken, die dabei sichtbar wurden
+
+* **`apple2-disk-tools`** ist geklont und gemessen, hat aber **kein**
+  Gutachten. Der einzige „Apple II"-Treffer in `out/` steht im
+  nibtools-Gutachten und meint etwas anderes.
+* **Sieben Gutachten haben keine Spur in dieser Liste**: `ADFDiskBox`,
+  `adf_zweitmeinung`, `amigadx`, `atari_st_werkzeuge`, `cbm_erzeuger`,
+  `mac_fs_dfxml`, `mkatr_atrip`. Ein Gutachten ohne Entscheidung ist
+  Arbeit, die niemand aufgenommen hat.
+
+  Der Vergleich ist ein **grober Namensabgleich** und liefert Fragen,
+  keine Urteile: `settings_triage` erscheint dort ebenfalls, obwohl es
+  aufgenommen ist — als `SET-1`, unter anderem Namen.
+
+### Behoben, teilweise
+
+`scripts/scout_stand.py` zählt den Stand aus dem, was auf der Platte
+liegt — keine gepflegte Aufzählung, dieselbe Regel wie `repo_scope.py`.
+Es sagt **ausdrücklich**, dass der Nenner fehlt, statt eine
+Vollständigkeit zu suggerieren.
+
+### Offen: die Auftragsliste
+
+`tools/uft-scout/data/auftraege.json` existiert nicht. Solange sie
+fehlt, bleibt „alles abgearbeitet?" unbeantwortbar — und zwar
+**dauerhaft**, denn der Gesprächsverlauf einer Sitzung ist keine Quelle,
+die eine spätere Sitzung befragen kann.
+
+Sie lässt sich nicht rückwirkend rekonstruieren, ohne zu raten: die
+eingereichten URLs stehen nirgends im Baum, und aus 31 Klonen auf die
+ursprüngliche Liste zu schließen hieße, die Antwort aus der Frage
+abzuleiten. **Nächster Schritt gehört dem Eigentümer:** die Listen
+erneut übergeben, damit sie eingetragen werden können — dann sagt
+`scout_stand.py` beim nächsten Lauf, was fehlt.
