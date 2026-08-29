@@ -3531,3 +3531,41 @@ Fehler, den MF-649 in unserem eigenen D64-Parser behoben hat. Zwei
 Projekte, unabhängig, derselbe Off-by-one an derselben Stelle. Das ist
 kein Auftrag, aber es sagt etwas über die Fehlerklasse: die
 40-Spur-Erweiterung lädt zu genau dieser Verwechslung ein.
+
+---
+
+## LIZ-3 — EUPL-1.2 in der Matrix, und die Regel dahinter (MF-679)
+
+Aus dem gwnbd-Zyklus. Die Lizenz stand **nicht** in der Matrix, und der
+Scout hat sie richtigerweise nicht selbst eingeordnet, sondern
+vorgelegt. Entschieden vom Eigentümer, jetzt kodifiziert.
+
+### Die Zeile
+
+**EUPL-1.2 → Zone GELB-GRÜN.** Verhaltens-Spec und Oracle ohne
+Rückfrage; ein Port **nur** mit Eigentümer-Vorlage je Fall.
+
+Nicht GRÜN, obwohl die Kompatibilitätsklausel (Art. 5) mit ihrem Anhang
+GPL-2.0 nennt — aus zwei Gründen:
+
+* Die Wirkung ist **einseitig**: sie erlaubt, eine *Kombination* unter
+  GPL-2.0 weiterzugeben, macht EUPL-Code aber nicht allgemein
+  GPLv2-kompatibel.
+* Die Auslösebedingung ist eine Rechtsfrage am Einzelfall und wirkt
+  **stromabwärts** auf jeden, der das Ergebnis weitergibt.
+
+### Die Meta-Regel, die der Fall lehrt
+
+**Eine Kennung, die nicht in der Matrix steht, ist automatisch Zone
+PRÜFEN** — auch wenn sie permissiv aussieht. Der Agent ordnet nie selbst
+ein.
+
+EUPL-1.2 ist genau das Gegenbeispiel zum Augenmaß: sie sieht aus wie
+eine gewöhnliche freie Lizenz, und ihre Verträglichkeit hängt an einer
+Klausel mit Anhang. Ein Fehler dieser Art fällt erst beim Verteilen auf
+— und dann bei jemand anderem.
+
+Steht in `playbook/lizenzmatrix.md` als eigene Zeile plus Fußnote (1)
+und (2), und als Verschärfung von Regel 3 in `AGENT.md`. Der Scout hat
+es im gwnbd-Zyklus von sich aus richtig gemacht; diese Einträge machen
+daraus eine Regel, damit es nicht Ermessen bleibt.

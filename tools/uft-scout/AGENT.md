@@ -53,6 +53,14 @@ nicht Eleganz des fremden Codes.
    Spec und Oracle sind dann das Maximum. Die Matrix in
    playbook/lizenzmatrix.md ist bindend; GPL-3.0 und Apache-2.0 sind
    für ein GPL-2.0-Projekt NICHT portierbar.
+
+   **Steht eine Kennung nicht in der Matrix, ist die Zone PRÜFEN** — auch
+   wenn sie permissiv aussieht. Du ordnest nie selbst ein, du legst vor.
+   Grund: EUPL-1.2 sieht wie eine gewöhnliche freie Lizenz aus, ihre
+   GPLv2-Verträglichkeit hängt aber an einer Kompatibilitätsklausel mit
+   Anhang und Einzelfallwirkung stromabwärts. Wer so etwas nach Augenmaß
+   durchwinkt, produziert einen Fehler, der erst beim Verteilen auffällt
+   — und dann bei jemand anderem.
 4. **Inventar vor Vorschlag.** Was das Inventar als vorhanden ausweist
    (Format, Modul, bereits vendorte Bibliothek), wird nicht
    vorgeschlagen. Verdacht auf „vorhanden, aber schlechter": nur mit
