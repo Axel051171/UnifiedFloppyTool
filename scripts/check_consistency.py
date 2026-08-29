@@ -804,6 +804,19 @@ def main() -> int:
         import untracked_flood_gate as _flood
         all_errors.append(("ungetrackte Flut", _flood.check(repo)))
 
+        # 40. Kategorie (MF-669): eine Einstellung, die gesetzt und nie
+        # gelesen wird. Das ist das Oberflaechen-Gegenstueck zum Test, der
+        # nicht scheitern kann — es sieht aus wie Faehigkeit und tut
+        # nichts. Ausloeser waren 38 Bedienelemente in drei Dialogen,
+        # deren ganzer Weg "Dialog -> Mitglied -> Dialog" lautete (MF-668),
+        # und drei tote Felder in flux_decoder_options_t. Gefunden wurde
+        # beides, weil jemand zufaellig hinsah; dieses Tor sieht jedes Mal
+        # hin. Es geht ueber VARIABLEN des jeweiligen Typs, nicht ueber
+        # Feldnamen — Namen sind nicht eindeutig, und ein Zaehler, der das
+        # ignoriert, spricht tote Felder frei (dreimal belegt).
+        import audit_setting_wiring as _sw
+        all_errors.append(("Einstellung ohne Wirkung", _sw.check(repo)))
+
     total = sum(len(e) for _, e in all_errors)
     print(f"Consistency check ({len(all_errors)} categories, root={repo}):")
     for label, errs in all_errors:

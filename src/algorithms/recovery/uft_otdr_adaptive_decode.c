@@ -321,8 +321,20 @@ flux_status_t uft_otdr_adaptive_decode(const flux_raw_data_t *flux,
     /* ── Step 6: Aggressive re-decode ───────────────────────────────── */
 
     flux_decoder_options_t agg_opts = base_opts;
-    agg_opts.tolerance = UFT_ADAPTIVE_PLL_TOLERANCE;
     agg_opts.pll_gain = UFT_ADAPTIVE_PLL_GAIN;
+    /* Hier stand bis MF-669 `agg_opts.tolerance = UFT_ADAPTIVE_PLL_TOLERANCE`.
+     *
+     * Die Zeile sah aus wie die Haelfte, die den Lauf aggressiv macht, und
+     * war es nicht: `tolerance` wurde im ganzen Baum dreimal geschrieben
+     * und NIRGENDS gelesen. Die Aggressivitaet dieses Laufs kam
+     * ausschliesslich aus `pll_gain` (sechs Lesestellen) — die
+     * Zeitgeber-Toleranz von ±33 % ist nie angewandt worden.
+     *
+     * Das Feld ist entfernt statt still stehen gelassen, weil eine
+     * wirkungslose Zuweisung neben einer wirksamen schwerer zu erkennen
+     * ist als gar keine. Wer die Toleranz wirklich will, baut zuerst die
+     * Lesestelle im Dekoder gegen eine benannte Referenz — GUI-7 in
+     * docs/OPEN_ITEMS.md. */
 
     flux_decoded_track_init(&result->adaptive_track);
     flux_decode_track(flux, &result->adaptive_track, &agg_opts);

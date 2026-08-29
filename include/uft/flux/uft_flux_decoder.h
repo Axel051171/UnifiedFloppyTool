@@ -49,7 +49,6 @@ extern "C" {
 #define MFM_DDAM                    0xF8    /* Deleted Data Address Mark */
 
 /* Tolerances */
-#define FLUX_TIMING_TOLERANCE       0.15    /* 15% timing tolerance */
 #define FLUX_PLL_GAIN               0.05    /* PLL adjustment gain */
 
 /* Maximum values */
@@ -278,12 +277,24 @@ typedef struct {
      * bedeutet unveraendert. Entspricht a8rawconvs `-p` und wirkt nur,
      * wenn @ref media gesetzt ist. */
     double media_adjust_pct;
-    double   tolerance;         /* Timing tolerance (0.15 = 15%) */
     bool     use_pll;           /* Use PLL for timing recovery */
     double   pll_gain;          /* PLL adjustment gain */
-    uint8_t  revolution;        /* Which revolution to use (0 = best) */
-    bool     decode_all_revs;   /* Decode all revolutions and merge */
     bool     keep_raw_bits;     /* Keep raw decoded bits */
+
+    /* Hier standen bis MF-669 drei weitere Felder: `tolerance`,
+     * `revolution` und `decode_all_revs`. Alle drei wurden gesetzt und
+     * von niemandem gelesen — gemessen von
+     * `scripts/audit_setting_wiring.py`, das genau diese Klasse sucht.
+     *
+     * `revolution` und `decode_all_revs` waren Doppelgaenger: die
+     * Umdrehungswahl gibt es wirklich, unter den Namen
+     * `use_multiple_revs` und `synthetic_revolutions` in den
+     * Wandlungsoptionen, mit sieben Lesestellen zusammen.
+     *
+     * `tolerance` hatte keinen Doppelgaenger, sondern keinen
+     * Mechanismus. Wer es wieder einfuehrt, baut zuerst die Lesestelle
+     * gegen eine benannte Referenz (Einfrier-Regel), dann das Feld —
+     * nicht umgekehrt. Siehe GUI-7 in docs/OPEN_ITEMS.md. */
 
     /* Sync-Muster fuer den Amiga-Pfad (MF-453).
      *

@@ -48,11 +48,8 @@ void flux_decoder_options_init(flux_decoder_options_t *opts) {
     memset(opts, 0, sizeof(*opts));
     opts->encoding = FLUX_ENC_AUTO;
     opts->bitcell_ns = 0;
-    opts->tolerance = FLUX_TIMING_TOLERANCE;
     opts->use_pll = true;
     opts->pll_gain = FLUX_PLL_GAIN;
-    opts->revolution = 0;
-    opts->decode_all_revs = true;
     opts->keep_raw_bits = false;
     /* MF-471: kein Medienprofil = Verhalten wie bisher. */
     opts->media = UFT_MEDIA_UNKNOWN;
