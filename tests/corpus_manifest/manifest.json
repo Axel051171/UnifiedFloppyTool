@@ -207,6 +207,24 @@
       "tool": "VICE 3.10 c1541 (SDLVICE-3.10-win64-r46215)",
       "source": "c1541 -format \"uftcorpus,42\" g71 <img> -write marker.txt \"marker\"; marker.txt is original UFT text (rights-free). 1571 GCR, 168 half-track slots.",
       "test": "test_corpus_cbm_vice"
+    },
+    {
+      "file": "tests/corpus_free/hxcfe_atarist_dd.dim",
+      "sha256": "73f1de73570c08e1f077119643406727a58039df8bbac976210c047334079eb8",
+      "format": "dim_atari",
+      "origin": "cross-tool",
+      "tool": "HxC libhxcfe hxcfe.exe (Klon 05b53aa)",
+      "source": "hxcfe.exe -finput:tests/differential/corpus/sources/atarist_dd.st -conv:ATARIST_DIM; Quelle ist eigener Differential-Korpus (selbst gebaut), Zielformat von fremder Hand erzeugt. Traegt das ID-Magic 0x4242 an 0x00 (MF-687). BPB 0x0E-0x1F ist bei HxC-Erzeugnissen genullt — ein FastCopy-Pro-Erzeugnis mit gefuellter BPB fehlt noch (FMT-15).",
+      "test": "test_dim_atari_magic"
+    },
+    {
+      "file": "tests/corpus_free/hxcfe_atarist_dd_nomagic.dim",
+      "sha256": "c47c3f8edea35766135e79e98e8c0c94bf42fd2b4f705168eede9e227a1c97a5",
+      "format": "none",
+      "origin": "derived",
+      "tool": "Python, aus hxcfe_atarist_dd.dim",
+      "source": "Byte 0x00 und 0x01 auf 0 gesetzt, sonst byteidentisch. GEGENSTUECK, kein gueltiges DIM: es belegt, dass Probe und open() das Magic pruefen und nicht die Dateigroesse (MF-687/688).",
+      "test": "test_dim_atari_magic"
     }
   ]
 }

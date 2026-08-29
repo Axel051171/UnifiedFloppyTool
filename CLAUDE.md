@@ -51,11 +51,12 @@ Unterstützt 6 Hardware-Controller (HAL teilweise wired — siehe pro Eintrag):
 > neues Format = zwei Hebungen). Verbindliche Fassung:
 > [`docs/VERIFICATION_PLAN.md` §Einfrier-Regel](docs/VERIFICATION_PLAN.md).
 > **Was „unterstützt" hier heißt (MF-509):** von den 88 tier-geführten
-> Plugins stehen **53 auf T3 — ungeprüft** (MF-654: `adl` und
-> `adf_arc` sind auf T2 gehoben): kein Test, oder ein
+> Plugins stehen **52 auf T3 — ungeprüft** (MF-654: `adl` und
+> `adf_arc` auf T2; MF-690: `dim_atari` auf T1b, erstes fremd erzeugtes
+> DIM im Korpus): kein Test, oder ein
 > synthetischer Test ohne Abgleich gegen eine autoritative Quelle. Genau
 > in dieser Lage waren die fünf fabrizierten Parser grün
-> (FMT-2/3/10/11/12). Belegt sind T1=2, T1b=12, T2=21. Die Liste unten
+> (FMT-2/3/10/11/12). Belegt sind T1=2, T1b=13, T2=21 (MF-690: `dim_atari` gehoben). Die Liste unten
 > nennt, was **gelesen werden soll**, nicht was **geprüft ist** — pro
 > Format: [`docs/VERIFICATION_TIERS.md`](docs/VERIFICATION_TIERS.md).
 

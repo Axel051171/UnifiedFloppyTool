@@ -90,8 +90,32 @@ Schreibfehler wandern in fremde Sammlungen.
    sondern Rückstand.
 
 7. **Spec-Sicherung.** Fragile Quellen (Foren-Specs, Seiten die
-   Archivierung blockieren) als Kopie nach `docs/specs/<format>/`
-   mit Abrufdatum — die SCP-Lektion.
+   Archivierung blockieren) als Kopie nach **`docs/format_refs/<format>/`**
+   mit Quell-URL, Abrufdatum, Lizenzlage und Zyklus im Kopf — die
+   SCP-Lektion.
+
+   **Berichtigt MF-689:** hier stand `docs/specs/<format>/`. Das
+   Verzeichnis ist seit dem Quarantäne-Verfahren für etwas anderes
+   vergeben — für Verhaltens-Specs, die **wir** schreiben, aus
+   Dokumentation und Blackbox-Läufen. Gesicherte **Fremdkopien** haben
+   eine andere Lizenzlage und dürfen nicht danebenliegen, sonst kann
+   niemand mehr sagen, welche Datei welchem Recht unterliegt. Die ältere
+   Zusage gewinnt; siehe `docs/format_refs/README.md`.
+
+7b. **Fixture-Beschaffung: die fremde Hand ist das WERKZEUG, nicht der
+   Bediener.** Wo ein Erzeugnis nur vom Originalprogramm kommt, gilt der
+   Weg über den Emulator als fremde Hand: das Werkzeug im Emulator
+   laufen lassen, das Abbild entnehmen, die Werkzeugkette ins Manifest.
+
+   Zweimal in einer Woche gebraucht, darum als Regel statt als Einfall:
+   * **FastCopy Pro** unter Hatari/EmuTOS — für ein DIM mit gefüllter
+     BPB (FMT-15 offen; HxC erzeugt nur genullte).
+   * **AmigaOS Workbench** unter WinUAE/Amiberry — für ADF-Abbilder mit
+     Hard- und Softlinks, die `xdftool` nicht anlegen kann (FS-2).
+
+   Pflicht wie bei jedem Fixture: Werkzeug, Fassung, Befehl und
+   Quelldaten ins Manifest; Downloads realer Spiele-Abbilder bleiben
+   **ROT** (fremdes Urheberrecht).
 
 8. **Eskalation statt Auslegung** bei: Fixture-Lizenz unklar,
    Spec widerspricht Implementierungen, Variante nur durch

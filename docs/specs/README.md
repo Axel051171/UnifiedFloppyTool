@@ -1,5 +1,11 @@
 # Verhaltens-Specs für Clean-Room-Neubauten
 
+> **Nicht zu verwechseln (MF-689):** gesicherte **Fremdkopien** — Foren-
+> Specs, Herstellerseiten, Handbuchauszüge — liegen in
+> [`../format_refs/<format>/`](../format_refs/README.md), nicht hier.
+> Hier wohnt nur, was **wir** selbst geschrieben haben. Der Unterschied
+> ist die Lizenzlage, und sie zu vermischen macht beide unbrauchbar.
+
 Hier liegen die Specs, die **Weg 2** des Quarantäne-Verfahrens verlangt
 ([`../QUARANTINE_PROCESS.md`](../QUARANTINE_PROCESS.md) §5).
 

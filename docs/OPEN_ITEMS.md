@@ -4011,3 +4011,101 @@ zurückgesetzt → 0.
 „alle Schreibpfade sind sicher": die kopflosen Formate erkennen allein
 an der Größe, und eine Größenprüfung ist dünn. Ob das ein eigener Befund
 ist, ist eine andere Messung — und eine andere Frage.
+
+---
+
+## ORPH-4 — 42 unerreichbare Format-Leser, alle schreibend geöffnet (MF-691)
+
+**Kennzahl:** keine der vier direkt — aber es ist die größte einzelne
+Menge toten Codes, die dieser Baum seit MF-369 gesehen hat, und sie
+trägt ein Risiko.
+
+### Was der Modus-Zensus gefunden hat
+
+Gesucht war das Muster aus MF-688 in allgemeiner Form: **wer öffnet
+schreibbar, obwohl der Aufruf nur lesen will?** Von 468 `fopen`-Stellen
+in `src/formats/` öffnen 48 unbedingt `"r+b"`.
+
+Der erste Blick sah nach 48 Modus-Fehlern aus. Der zweite zeigte etwas
+anderes:
+
+| | |
+|---|---|
+| Dateien mit unbedingtem `"r+b"` | 48 |
+| davon mit **null** externen Aufrufern | **42** |
+| Zeilen darin | **5 479** |
+| erreichbar | 3 (`msx`, `pc98`, `trs80`) |
+| ohne erkennbare Funktionen | 3 |
+
+Die 42 gehören einer **zweiten, älteren Leser-Familie** an: sie benutzen
+`FloppyDevice` statt `uft_disk_t` und eine Signatur ohne
+`read_only`-Parameter. Ihr Öffnungsmuster ist überall dasselbe:
+
+```c
+FILE *fp = fopen(path, "r+b");
+bool ro = false;
+if (!fp) { fp = fopen(path, "rb"); ro = true; }
+```
+
+Also: *schreibbar öffnen, wenn es irgend geht.* Eine Datei anzusehen
+hieße hier, sie beschreibbar in der Hand zu halten.
+
+### Warum das jetzt nicht gefährlich ist — und wann es das wird
+
+Solange niemand sie aufruft, richtet das Muster nichts an. Wer diese
+Familie aber verdrahtet, bekommt **42 Schreibvektoren auf einen
+Schlag** — und zwar solche, die schon beim bloßen Öffnen greifen, nicht
+erst beim Schreiben. Das ist derselbe Fehler wie MF-688, nur
+zweiundvierzigfach und vorbereitet.
+
+Sie werden dabei **gebaut**: die Dateien stehen in
+`UnifiedFloppyTool.pro`. Toter Code, der übersetzt wird, ist teurer als
+toter Code, der wegfällt — er wird bei jeder Änderung mitgeschleppt und
+sieht in jeder Statistik nach Fähigkeit aus.
+
+### Warum hier nicht gelöscht wird
+
+Eine Löschung dieser Größe braucht die **sechsstufige Beweiskette** aus
+MF-369 (`.pro`-Bedingungen, Regex-Falle, Kommentar-Strip,
+Symbol-Rauschen, Skript-Referenzen, qmake-Vollbau-Abnahme). Das ist eine
+eigene Sitzung, kein Tagesrand — und die Erfahrung aus MF-369 sagt, dass
+genau die Abkürzung teuer wird.
+
+**Nächster Schritt:** die Kette auf diese 42 anwenden, nicht auf
+Verdacht löschen. Die drei erreichbaren (`msx`, `pc98`, `trs80`) bleiben
+davon unberührt und brauchen stattdessen die Modus-Korrektur aus MF-688:
+`read_only` respektieren.
+
+---
+
+## FMT-15 — kopflose Formate erkennen allein an der Größe (MF-691)
+
+**Kennzahl:** keine. Ehrlichkeits-Befund, kein Handlungsdruck.
+
+Die Null aus Tor 42 (MF-688) heißt „dieses Muster kommt nicht mehr vor",
+nicht „alle Schreibpfade sind sicher". Der Rest ist eine **andere
+Frage**, und sie gehört benannt, bevor sie wieder zu Stillschweigen
+wird.
+
+Von 81 Plugins mit Schreibpfad sind die meisten **kopflos** — ADF, D64,
+IMG, XFD und Verwandte sind rohe Sektorabbilder ohne Magic. Sie werden
+allein an der **Dateigröße** erkannt. Das ist dünn:
+
+* Jede Datei von 174 848 Byte ist für uns eine D64. Ein ZIP, ein
+  Abschnitt eines Videos, eine fremde Sicherung — die Größe entscheidet.
+* Beim Schreiben heißt das: ein mehrdeutiges Ziel wird ohne Rückfrage
+  angenommen.
+
+### Schließbedingung
+
+Zwei Wege, einer davon genügt je Format:
+
+1. **Inhalts-Plausibilität** statt Größe allein — BAM-Struktur für D64,
+   Root-Block-Prüfsumme für ADF, Bootsektor-Plausibilität für IMG. Das
+   ist je Format eine eigene, belegbare Prüfung mit eigenem Rotbeweis.
+2. **Ausdrückliche Bestätigung** bei mehrdeutigen **Schreib**zielen. Die
+   Leseseite darf großzügig bleiben; die Schreibseite ist die, an der
+   Daten verloren gehen.
+
+Beides ist Arbeit mit Referenzbedarf, keine Aufräumaktion. Der Eintrag
+steht, damit die Frage nicht mit der beantworteten verwechselt wird.

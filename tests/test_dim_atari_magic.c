@@ -61,6 +61,10 @@
 #include <string.h>
 #include <stdbool.h>
 
+#ifndef UFT_CORPUS_DIR
+#define UFT_CORPUS_DIR "."
+#endif
+
 extern const uft_format_plugin_t uft_format_plugin_dim_atari;
 
 static int fehler;
@@ -190,6 +194,69 @@ static bool schreibversuch_veraendert_die_datei(const char *pfad)
     return veraendert;
 }
 
+/* ── Die fremde Hand (MF-690) ────────────────────────────────────────
+ *
+ * Alles oben ist synthetisch: der Test baut die Koepfe selbst. Das
+ * genuegt fuer die Frage "lehnt die Probe ab, was keines ist" — aber es
+ * beweist nicht, dass wir ein DIM lesen, das jemand ANDERES geschrieben
+ * hat. Genau diese Luecke nennt VERIFICATION_TIERS.md T3.
+ *
+ * Seit MF-690 liegen zwei Abbilder im freien Korpus, erzeugt von HxC:
+ *
+ *     hxcfe.exe -finput:tests/differential/corpus/sources/atarist_dd.st
+ *               -conv:ATARIST_DIM
+ *
+ * Die Quelle ist unser eigener Differential-Korpus, das ZIELFORMAT aber
+ * von fremder Hand. Dazu ein Gegenstueck, bei dem nur die zwei
+ * Magic-Bytes genullt sind — sonst byteidentisch.
+ *
+ * Das Paar ist die staerkere Fassung des Zwei-Byte-Beweises von oben:
+ * dort baue ich beide Seiten selbst, hier kommt die gueltige Seite von
+ * einem fremden Werkzeug. Wenn unsere Probe sie annimmt und das
+ * Gegenstueck ablehnt, liegt das nicht an meinem Kopf-Nachbau. */
+static void pruefe_korpus(void)
+{
+    char gut[1024], boese[1024];
+    snprintf(gut, sizeof(gut), "%s/hxcfe_atarist_dd.dim", UFT_CORPUS_DIR);
+    snprintf(boese, sizeof(boese), "%s/hxcfe_atarist_dd_nomagic.dim",
+             UFT_CORPUS_DIR);
+
+    FILE *f = fopen(gut, "rb");
+    if (!f) {
+        printf("  FAIL %s fehlt — die Datei liegt im FREIEN Korpus\n", gut);
+        fehler++;
+        return;
+    }
+    uint8_t kopf[64];
+    size_t gelesen = fread(kopf, 1, sizeof(kopf), f);
+    fseek(f, 0, SEEK_END);
+    long groesse = ftell(f);
+    fclose(f);
+    if (gelesen != sizeof(kopf)) { printf("  FAIL Korpus-DIM zu kurz\n");
+                                   fehler++; return; }
+
+    int k = 0;
+    bool ja = uft_format_plugin_dim_atari.probe(kopf, sizeof(kopf),
+                                                (size_t)groesse, &k);
+    PRUEFE(ja, "das HxC-erzeugte DIM wird NICHT angenommen (Konfidenz %d). "
+               "Ein fremdes Werkzeug hat es geschrieben; lehnen wir es ab, "
+               "ist unsere Pruefung zu streng", k);
+    if (ja) printf("  ok   HxC-DIM angenommen, Konfidenz %d\n", k);
+
+    /* Und das Gegenstueck, das sich nur in zwei Byte unterscheidet. */
+    uft_disk_t disk;
+    memset(&disk, 0, sizeof(disk));
+    disk.read_only = true;
+    uft_error_t rc = uft_format_plugin_dim_atari.open(&disk, boese, true);
+    PRUEFE(rc != UFT_OK,
+           "das Gegenstueck OHNE Magic wird geoeffnet (rc=%d) — dann "
+           "entscheidet die Dateigroesse und nicht der Kopf", (int)rc);
+    if (rc == UFT_OK && uft_format_plugin_dim_atari.close)
+        uft_format_plugin_dim_atari.close(&disk);
+    if (rc != UFT_OK)
+        printf("  ok   Gegenstueck ohne Magic abgelehnt\n");
+}
+
 int main(void)
 {
     setvbuf(stdout, NULL, _IONBF, 0);
@@ -235,6 +302,10 @@ int main(void)
         printf("  ok   das Magic entscheidet, nicht die Dateigroesse\n");
 
     free(mit); free(ohne);
+
+    /* ── Die fremde Hand (MF-690) ──────────────────────────────────── */
+    printf("\n");
+    pruefe_korpus();
 
     /* ── Der Schreibpfad (MF-688) ─────────────────────────────────── */
     printf("\n");
