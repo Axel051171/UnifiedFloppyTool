@@ -80,7 +80,34 @@ GEPRUEFT = [
 ]
 
 # Feld -> Grund. Wer hier eintraegt, nennt auch das Ende.
-ERLAUBT_UNGELESEN: dict[str, str] = {}
+#
+# ACHTUNG: die sechs Eintraege unten sind KEINE Absicht. Sie sind der
+# Rueckstand, den dieses Tor bei seiner Verschaerfung (MF-672) gefunden
+# hat — sechs Wandlungsoptionen, die in `uft_convert_default_options()`
+# auf einen sinnvollen Wert gesetzt, in den erweiterten Typ kopiert und
+# von niemandem gelesen werden.
+#
+# Sie stehen hier statt rot, weil ein dauerhaft rotes Tor uebergangen
+# wird und dann auch NEUE Faelle nicht mehr faengt. Das ist eine
+# Abwaegung, keine Entwarnung: der Rueckstand ist als OPT-1 in
+# docs/OPEN_ITEMS.md benannt, mit Bedingung fuers Verschwinden.
+#
+# Diese Liste waechst NICHT. Wer einen siebten Eintrag braucht, hat
+# entweder einen Mechanismus zu bauen oder ein Feld zu loeschen.
+ERLAUBT_UNGELESEN: dict[str, str] = {
+    "verify_after":
+        "OPT-1: verspricht Pruefung nach der Wandlung, niemand liest es",
+    "preserve_errors":
+        "OPT-1: verspricht Fehler-Erhalt, niemand liest es",
+    "preserve_weak_bits":
+        "OPT-1: verspricht Schwachbit-Erhalt, niemand liest es",
+    "interpolate_errors":
+        "OPT-1: verspricht Interpolation, niemand liest es",
+    "synthetic_cell_time_us":
+        "OPT-1: Zellendauer fuer erzeugte Fluss-Abbilder, niemand liest es",
+    "synthetic_jitter_percent":
+        "OPT-1: Jitter fuer erzeugte Fluss-Abbilder, niemand liest es",
+}
 
 DEKL = [
     # flux_decoder_options_t opts;   /   const flux_decoder_options_t *opts
@@ -178,6 +205,37 @@ def quellen(repo: Path) -> list[tuple[str, str]]:
     return aus
 
 
+def ist_weiterleitung(text: str, pos: int, feld: str) -> bool:
+    """Steht dieser Zugriff rechts von einer Zuweisung an DASSELBE Feld?
+
+    ── Warum diese Unterscheidung noetig wurde (MF-672) ──────────────────
+
+    Der erste Entwurf zaehlte jeden Zugriff, der kein Schreiben ist, als
+    Lesestelle. Damit sprach er eine ganze Klasse toter Einstellungen
+    frei, und zwar leise:
+
+        ext_opts.verify_after = options->verify_after;
+
+    Das ist EINE Zeile mit einem Schreiben und einem Lesen. Das Tor sah
+    das Lesen und gab Entwarnung — obwohl die Kette danach im Nichts
+    endet: `verify_after` wird kopiert und von niemandem benutzt.
+    Gemessen betraf das vier Felder gleichzeitig (`verify_after`,
+    `preserve_errors`, `preserve_weak_bits`, `interpolate_errors`).
+
+    Eine reine Weitergabe ist kein Verbrauch. Sie verschiebt die Frage
+    nur eine Struktur weiter — und wenn dort auch niemand liest, ist die
+    Einstellung genauso tot, nur schwerer zu sehen.
+
+    Das ist dieselbe Lehre wie in `measurement_hit_wrong_class`: eine
+    Messung kann die richtige Frage stellen und die falsche Fehlerklasse
+    treffen. "0 gefunden" war hier keine Entwarnung, sondern die Frage
+    "was kann dieses Skript nicht sehen?".
+    """
+    zeilen_anfang = text.rfind(chr(10), 0, pos) + 1
+    davor = text[zeilen_anfang:pos]
+    return re.search(r"(\.|->)\s*" + re.escape(feld) + r"\s*=(?!=)", davor) is not None
+
+
 def zaehle(typ: str, feld: str, dateien) -> tuple[int, int, list[str]]:
     """(Schreibstellen, Lesestellen, Fundorte der Lesestellen)."""
     schreib = lies = 0
@@ -200,11 +258,13 @@ def zaehle(typ: str, feld: str, dateien) -> tuple[int, int, list[str]]:
                     # `x = ` ist Schreiben, `x == ` / `x != ` ist Lesen.
                     if re.match(r"\s*=(?!=)", rest):
                         schreib += 1
-                    else:
-                        lies += 1
-                        zeile = text[:m.start()].count("\n") + 1
-                        if len(orte) < 3:
-                            orte.append(f"{pfad}:{zeile}")
+                        continue
+                    if ist_weiterleitung(text, m.start(), feld):
+                        continue
+                    lies += 1
+                    zeile = text[:m.start()].count("\n") + 1
+                    if len(orte) < 3:
+                        orte.append(f"{pfad}:{zeile}")
     return schreib, lies, orte
 
 
@@ -250,13 +310,71 @@ def pruefe_trichter(repo: Path) -> list[str]:
     return befunde
 
 
-def check(repo: Path) -> list[str]:
-    """Schnittstelle fuer `check_consistency.py`: eine Zeile je Befund."""
-    dateien = quellen(repo)
-    if not dateien:
-        return ["audit_setting_wiring: keine Quelldateien im Blick — "
-                "das Tor kann nichts sagen"]
-    befunde = pruefe_trichter(repo)
+def pruefe_vorgaben(dateien) -> list[str]:
+    """Wer Wandlungsoptionen baut, holt die Vorgaben — er nullt sie nicht.
+
+    ── Warum (MF-672) ────────────────────────────────────────────────────
+
+    `memset(&opts, 0, sizeof(opts))` sieht nach "keine besonderen
+    Wuensche" aus und ist etwas anderes. `uft_convert_default_options()`
+    setzt zehn Werte, und `use_multiple_revs` steht darin auf TRUE.
+    Genullt ist es false — und `uft_format_convert_flux.c:964` liest
+    `(!opts || opts->use_multiple_revs)`.
+
+    Die Folge, gemessen: alle drei Stellen der Oberflaeche (ToolsTab,
+    DecodeJob, Speichern-unter) haben genullt. Sie waren damit
+    SCHLECHTER als gar keine Angabe — eine SCP mit fuenf Umdrehungen
+    wurde wie eine mit einer dekodiert, ohne dass es jemand sehen konnte.
+
+    Die Regel ist absichtlich weit gefasst: JEDE Datei, die eine
+    `uft_convert_options_t` anlegt, muss die Vorgabefunktion nennen. Wer
+    bewusst von Null ausgehen will, ruft sie und ueberschreibt — das ist
+    eine Zeile mehr und dafuer sichtbar.
+    """
+    befunde = []
+    for pfad, text in dateien:
+        # Kommentare zuerst weg. Beim Rotbeweis schwieg die Regel, und der
+        # Grund war lehrreich: der Kommentar, der die Reparatur BEGRUENDET,
+        # nennt die Vorgabefunktion im Fliesstext — und das zaehlte als
+        # Aufruf. Ein Tor, das sich von einer Erklaerung besaenftigen
+        # laesst, prueft nichts. Dieselbe Kommentar-Falle wie in der
+        # Loesch-Beweiskette (audit_cleanup_2026_08).
+        code = re.sub(r"/\*.*?\*/", " ", text, flags=re.S)
+        code = re.sub(r"//[^\n]*", " ", code)
+        if not re.search(r"uft_convert_options_t\s+\w+\s*[;=]", code):
+            continue
+        if "uft_convert_default_options" in code:
+            continue
+        befunde.append(
+            f"{pfad}: legt eine uft_convert_options_t an, ohne "
+            f"uft_convert_default_options() zu nennen. Eine genullte "
+            f"Struktur schaltet use_multiple_revs ab (MF-672).")
+    return befunde
+
+
+def erhebe(repo: Path, dateien, befunde: list[str]):
+    """Je FELDNAME die Summe ueber alle geprueften Strukturen.
+
+    ── Warum zusammengefasst und nicht je Struktur (MF-672) ──────────────
+
+    Die Weiterleitungs-Erkennung eine Funktion hoeher war noetig, aber
+    allein ueberkorrigiert sie: `uft_convert_options_t.synthetic_revolutions`
+    hat als einzige Verwendung die Zeile
+
+        ext_opts.synthetic_revolutions = options->synthetic_revolutions;
+
+    — also nur eine Weitergabe. Trotzdem ist das Feld NICHT tot: die
+    Kette endet in `scp_writer_create()`, vier Lesestellen weiter, unter
+    dem Namen der erweiterten Struktur.
+
+    Die Frage lautet nicht "wird DIESES Feld gelesen", sondern "kommt
+    diese Einstellung irgendwo an". Darum zaehlt der Feldname ueber alle
+    geprueften Einstellungs-Strukturen zusammen. Das ist eng genug, um
+    die Namensverwechslungen von oben zu vermeiden (`g->tolerance` steht
+    in keiner davon), und weit genug, um eine Weitergabe nicht faelschlich
+    als Ende zu lesen.
+    """
+    gesamt: dict[str, tuple[int, int, str]] = {}
     for hdr, typ in GEPRUEFT:
         namen = felder(repo / hdr, typ)
         if not namen:
@@ -264,11 +382,25 @@ def check(repo: Path) -> list[str]:
                            f"({hdr}) — Fehler im Tor, nicht leere Struktur")
             continue
         for f in namen:
-            s, l, _ = zaehle(typ, f, dateien)
-            if s > 0 and l == 0 and f not in ERLAUBT_UNGELESEN:
-                befunde.append(
-                    f"{typ}.{f}: {s} Schreibstelle(n), 0 Lesestellen — "
-                    f"eine Einstellung ohne Wirkung")
+            sch, li, _ = zaehle(typ, f, dateien)
+            vs, vl, vw = gesamt.get(f, (0, 0, ""))
+            gesamt[f] = (vs + sch, vl + li,
+                         (vw + " / " if vw else "") + f"{typ}.{f}")
+    return gesamt
+
+
+def check(repo: Path) -> list[str]:
+    """Schnittstelle fuer `check_consistency.py`: eine Zeile je Befund."""
+    dateien = quellen(repo)
+    if not dateien:
+        return ["audit_setting_wiring: keine Quelldateien im Blick — "
+                "das Tor kann nichts sagen"]
+    befunde = pruefe_trichter(repo) + pruefe_vorgaben(dateien)
+    for name, (schreib, lies, wo) in erhebe(repo, dateien, befunde).items():
+        if schreib > 0 and lies == 0 and name not in ERLAUBT_UNGELESEN:
+            befunde.append(
+                f"{wo}: {schreib} Schreibstelle(n), 0 echte Lesestellen — "
+                f"eine Einstellung ohne Wirkung")
     return befunde
 
 
@@ -283,50 +415,40 @@ def main() -> int:
         print("FEHLER: keine Quelldateien im Blick — Tor kann nichts sagen.")
         return 2
 
+    hinweise: list[str] = list(pruefe_vorgaben(dateien))
     for z in pruefe_trichter(WURZEL):
         print("!! Trichter: " + z)
+    gesamt = erhebe(WURZEL, dateien, hinweise)
+    for z in hinweise:
+        print("!! " + z)
 
-    tot: list[tuple[str, str, int]] = []
-    unbenutzt: list[tuple[str, str]] = []
-    gesamt = 0
-
-    for hdr, typ in GEPRUEFT:
-        pfad = WURZEL / hdr
-        namen = felder(pfad, typ)
-        if not namen:
-            print(f"FEHLER: keine Felder in {typ} gefunden ({hdr}).")
-            print("Das Tor kann eine Struktur nicht lesen — das ist ein")
-            print("Fehler im Tor, nicht eine leere Struktur.")
-            return 2
-        print(f"\n{typ}  ({hdr}) — {len(namen)} Felder")
-        for f in namen:
-            gesamt += 1
-            s, l, orte = zaehle(typ, f, dateien)
-            marke = "  "
-            if s > 0 and l == 0 and f not in ERLAUBT_UNGELESEN:
-                marke = "!!"
-                tot.append((typ, f, s))
-            elif s == 0 and l == 0:
-                unbenutzt.append((typ, f))
-                marke = " ?"
-            if a.liste or marke != "  ":
-                wo = ("  " + ", ".join(orte)) if orte else ""
-                print(f" {marke} {f:<28} schreib={s:<3} lies={l:<3}{wo}")
+    tot, unbenutzt = [], []
+    for name, (schreib, lies, wo) in gesamt.items():
+        marke = "  "
+        if schreib > 0 and lies == 0 and name not in ERLAUBT_UNGELESEN:
+            marke, _ = "!!", tot.append((name, schreib, wo))
+        elif schreib == 0 and lies == 0:
+            marke, _ = " ?", unbenutzt.append(name)
+        if a.liste or marke != "  ":
+            print(f" {marke} {name:<28} schreib={schreib:<3} lies={lies}")
 
     print("\n" + "=" * 70)
-    print(f"{gesamt} Felder geprueft.")
+    print(f"{len(gesamt)} Feldnamen geprueft "
+          f"(ueber {len(GEPRUEFT)} Einstellungs-Strukturen zusammengefasst).")
+    if ERLAUBT_UNGELESEN:
+        print(f"{len(ERLAUBT_UNGELESEN)} ausdrueckliche Ausnahme(n) — "
+              f"siehe ERLAUBT_UNGELESEN in dieser Datei.")
     if unbenutzt:
         print(f"{len(unbenutzt)} weder geschrieben noch gelesen "
-              f"(kein Fehler, aber sehenswert):")
-        for typ, f in unbenutzt:
-            print(f"    {typ}.{f}")
-    if not tot:
+              f"(kein Fehler, aber sehenswert): {', '.join(sorted(unbenutzt))}")
+    if not tot and not hinweise:
         print("Geschrieben-aber-nie-gelesen: 0")
         return 0
 
-    print(f"\nROT: {len(tot)} Feld(er) werden gesetzt und nie gelesen.")
-    for typ, f, s in tot:
-        print(f"    {typ}.{f}  ({s} Schreibstelle(n), 0 Lesestellen)")
+    if tot:
+        print(f"\nROT: {len(tot)} Einstellung(en) kommen nirgends an.")
+        for name, schreib, wo in tot:
+            print(f"    {wo}  ({schreib} Schreibstelle(n), 0 echte Lesestellen)")
     print("""
 Ein solches Feld ist eine Zusage ohne Deckung. Drei Wege, kein vierter:
 

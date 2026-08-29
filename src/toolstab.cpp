@@ -247,8 +247,26 @@ void ToolsTab::onConvert()
 
     /* Verlustbehaftete Wandlungen verlangen ein ausdrueckliches Ja. WAS
      * verloren geht, sagt die Matrix -- nicht diese Datei. */
-    uft_convert_options_t opts;
-    memset(&opts, 0, sizeof(opts));
+/* Vorgaben holen, nicht nullen (MF-672).
+     *
+     * Hier stand `memset(&opts, 0, sizeof(opts))`. Das ist nicht dasselbe
+     * wie "keine besonderen Wuensche": `uft_convert_default_options()`
+     * setzt zehn Werte, und einer davon aendert das Ergebnis.
+     *
+     *   `use_multiple_revs` steht per Vorgabe auf TRUE. Genullt ist es
+     *   false, und `uft_format_convert_flux.c:964` liest
+     *   `(!opts || opts->use_multiple_revs)` — ein Aufrufer, der NULL
+     *   uebergibt, bekommt die Verschmelzung ueber alle Umdrehungen; ein
+     *   Aufrufer, der eine genullte Struktur uebergibt, bekommt sie
+     *   nicht.
+     *
+     * Die Oberflaeche war damit schlechter als gar keine Angabe: sie hat
+     * SCP-Abbilder mit einer Umdrehung dekodiert, wo fuenf vorlagen, und
+     * niemand konnte es sehen.
+     *
+     * `accept_data_loss` bleibt ausdruecklich aus — die Vorgabe laesst es
+     * absichtlich ungesetzt (UFT-A05), und das gilt hier weiter. */
+    uft_convert_options_t opts = uft_convert_default_options();
     opts.accept_data_loss = false;
 
     uft_convert_result_t res;

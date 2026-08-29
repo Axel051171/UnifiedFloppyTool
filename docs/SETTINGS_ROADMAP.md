@@ -59,7 +59,7 @@ anderthalb Jahre lang, ohne Wirkung und ohne Warnung.
 
 ---
 
-## (a) Synonyme — 19 Regler, null neue Leitungen
+## (a) Synonyme — 16 Regler, null neue Leitungen
 
 Diese Namen meinen etwas, das UFT **schon kann**. Der Regler muss nur
 auf den vorhandenen Träger zeigen. Das ist die billigste Einstellbarkeit,
@@ -89,7 +89,9 @@ selbst nachgeprüft.
 | `includeHalfTracks` | `has_half_tracks`, `G64_MAX_TRACKS 84` | `uft_g64.c:156-157` | Bitstrom |
 | `includeQuarterTracks` | `quarter_tracks` (WOZ-TMAP) | `uft_woz.c:376-378`, `:609` | Bitstrom |
 | `trackStep` | `geometry.double_step` | `uft_kryoflux_dtc.c:540` | **Erfassung**, nicht Dekodierung |
-| `revsToRead`, `revsToUse`, `mergeRevs`, `mergeMode` | `use_multiple_revs`, `synthetic_revolutions` | `uft_format_convert_flux.c:964`; `convert_bitstream.c:64/280`, `dispatch.c:349` | Fluss |
+| `mergeRevs` | `use_multiple_revs` | `uft_format_convert_flux.c:964` | Fluss |
+| **neu gefunden:** Umdrehungen im ERZEUGTEN Abbild | `synthetic_revolutions` | `convert_bitstream.c:64/280`, `dispatch.c:349`, `convert_flux.c:2335` — alle vier in `scp_writer_create()` | **Ziel**, nicht Quelle |
+| **neu gefunden:** Strenge der Umdrehungs-Abstimmung | `multiread_config_t.{min_passes, majority_pct, min_confidence}` | `uft_multiread_pipeline.c` (10 Lesestellen) | Fluss |
 
 ### Die Einheiten-Falle
 
@@ -146,7 +148,7 @@ Vergleichen von Ausgaben, nie als Codequelle. Lizenz vor Fähigkeit.
 
 ---
 
-## (c) Gestrichen — 15 Namen
+## (c) Gestrichen — 18 Namen
 
 Mit Grund, damit niemand sie in zwei Jahren als vergessene Wunschliste
 wiederentdeckt.
@@ -165,6 +167,9 @@ wiederentdeckt.
 | `syncLength` | Sync-Lauflängen behandelt der Dekoder selbst und tolerant (`mfm_skip_sync_run`). |
 | `autoDetectSync` | Existiert bereits als `FLUX_ENC_AUTO`. Freies Sync-Scannen wäre neuer Decoder-Mechanismus (EINFRIER). |
 | `fillBadSectors`, `fillByte` | Als **globaler** Schalter Konflikt mit „Keine erfundenen Daten". Wo Füllen Format-Semantik ist, existiert es bereits lokal (`uft_hardsector.c:290/329`, `uft_imd_parser_v2.c:373`). |
+| `revsToRead` | Doppelgänger eines Reglers, den es **schon gibt**: `ui->spinRevolutions` → `setRevolutions()`, `src/workflowtab.cpp:587` (MF-472). Und er sitzt auf der richtigen Seite — wie viele Umdrehungen *aufgenommen* werden, entscheidet die Erfassung, nicht die Dekodierung. |
+| `revsToUse` | Kein Mechanismus. Das Zielfeld war `flux_decoder_options_t.revolution` (0 Lesestellen, mit MF-669 gelöscht). Die Verschmelzung nimmt **immer alle** Umdrehungen, die in der Datei stehen (`convert_flux.c:993`, `for r < td.revolution_count`) — es gibt nichts auszuwählen. |
+| `mergeMode` (First/Best/All) | Zwei seiner drei Werte sind eine Umkodierung von `mergeRevs` — „All" ist `use_multiple_revs = true`, „First" ist `false`. „Best" hat keinen Mechanismus: eine Verschmelzungs-**Strategie** gibt es im Baum nicht (`git grep merge_mode\|fusion_mode\|vote_mode` → 0 Treffer). Ein Auswahlfeld, dessen dritter Wert nichts bedeutet, ist schlimmer als ein Häkchen. |
 
 ---
 
@@ -196,16 +201,42 @@ die Einheit ihres **Trägers**, nicht die, die die alten Dialoge
 behaupteten. `Weak:` ist ausdrücklich kein Prozentregler: 15 % und 0.15
 sehen im Dialog gleich plausibel aus und bedeuten dasselbe nur zufällig.
 
+### MF-672 — die vier Umdrehungs-Regler waren einer
+
+Vor dem Verdrahten gemessen, und die Messung hat drei von vier
+gestrichen. Die Roadmap-Zeile davor war **falsch**: sie führte
+`synthetic_revolutions` als Träger für „wie viele Umdrehungen
+verwenden". Alle vier Lesestellen dieses Feldes münden in
+`scp_writer_create()` — es entscheidet, wie viele Umdrehungen in ein
+**erzeugtes** Abbild geschrieben werden. Quelle und Ziel verwechselt.
+
+Übrig bleibt **ein** echter Regler (`mergeRevs`), und die Messung fand
+dabei **zwei Träger, die kein Dialog je benannt hat**:
+
+* **`synthetic_revolutions`** — die Umdrehungszahl im erzeugten Abbild.
+  Vier Lesestellen, kein Weg von außen. Wer eine SCP erzeugt, bekommt,
+  was drei verschiedene Rückfallwerte im Quelltext für richtig halten.
+* **`multiread_config_t`** — die Strenge der Umdrehungs-Abstimmung
+  (`min_passes`, `majority_pct`, `min_confidence`). Lebendig und
+  erreichbar, aber `uft_format_convert_flux.c:127` ruft
+  `multiread_config_default()` **fest verdrahtet**. Das ist die Größe,
+  die `mergeMode` eigentlich hätte meinen können — nicht
+  First/Best/All, sondern wie stark eine Mehrheit sein muss.
+
+**Nebenbefund, nicht behoben:** dieselbe Option hat in derselben Datei
+zwei Rückfallwerte — `convert_bitstream.c:65` nimmt 1 Umdrehung
+(HFE→SCP), `:281` nimmt 3 (G64→SCP). Ohne genannten Grund. Welcher der
+beiden richtig ist, sagt keine Referenz im Baum; darum benannt und
+stehen gelassen, statt eine Zahl zu raten.
+
 ## Noch ungeklärt
 
 * **GUI-7:** der PLL-Toleranz-Regler im OTDR-Panel ist der achte Fall
   derselben Klasse — Regler → `QSettings("pllTolerance")` → Regler,
   sonst kein Leser. Sein Zielfeld ist seit MF-669 gelöscht. Entscheidung
   steht aus: entfernen, oder Oracle-first einen Mechanismus bauen.
-* Ob `revsToRead` und `revsToUse` wirklich zwei Regler sind oder einer.
-  `synthetic_revolutions` und `use_multiple_revs` sind zwei Felder, aber
-  ob die Unterscheidung „lesen" vs. „verwenden" im Baum trägt, ist nicht
-  gemessen.
+* Welcher der beiden Rückfallwerte für `synthetic_revolutions` richtig
+  ist (1 bei HFE→SCP, 3 bei G64→SCP). Braucht eine externe Referenz.
 
 ## Herkunft
 

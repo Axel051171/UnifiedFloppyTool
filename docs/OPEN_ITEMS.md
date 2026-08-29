@@ -3210,3 +3210,92 @@ wirksamen ist schwerer zu erkennen als gar keine.
 
 Nicht entschieden. `CLAUDE.md` nennt die ±33 % bis dahin weiterhin
 falsch — das ist mit diesem Eintrag benannt, nicht behoben.
+
+---
+
+## OPT-1 — sechs Wandlungsoptionen, die nirgends ankommen (MF-672)
+
+**Kennzahl:** keine der vier direkt. Der Eintrag steht trotzdem, weil er
+eine **Zusage** betrifft: `preserve_weak_bits` und `verify_after` sind
+Namen, die in einem Forensik-Werkzeug etwas versprechen.
+
+### Gemessen
+
+`uft_convert_default_options()` setzt zehn Werte. Sechs davon werden in
+den erweiterten Typ kopiert und dort von **niemandem** gelesen:
+
+| Feld | verspricht |
+|---|---|
+| `verify_after` | Prüfung nach der Wandlung |
+| `preserve_errors` | Fehler bleiben erhalten |
+| `preserve_weak_bits` | Schwachbit-Information bleibt erhalten |
+| `interpolate_errors` | Fehlstellen werden interpoliert |
+| `synthetic_cell_time_us` | Zellendauer erzeugter Fluss-Abbilder |
+| `synthetic_jitter_percent` | Jitter erzeugter Fluss-Abbilder |
+
+Jedes hat drei Schreibstellen (Vorgabe, Weitergabe, Ziel der Weitergabe)
+und **null** echte Lesestellen. Von Hand nachgeprüft für
+`preserve_weak_bits` und `verify_after`: alle weiteren Treffer im Baum
+gehören zu **anderen** Strukturen (`uft_merge_engine.h`, die
+`*_parser_v3.c`-Parameter, `uft_snapshot.h::verify_after_write`).
+
+### Warum das Tor sie nicht sofort fand
+
+`scripts/audit_setting_wiring.py` hat sie beim ersten Lauf **freigegeben**,
+und der Grund ist eine eigene Lehre. Die Zeile
+
+```c
+ext_opts.verify_after = options->verify_after;
+```
+
+enthält ein Schreiben *und* ein Lesen. Das Tor sah das Lesen und gab
+Entwarnung — obwohl die Kette danach im Nichts endet. Eine reine
+**Weitergabe ist kein Verbrauch**; sie verschiebt die Frage nur eine
+Struktur weiter.
+
+Seit MF-672 unterscheidet das Tor beides und fasst je Feldnamen über alle
+Einstellungs-Strukturen zusammen — weit genug, um eine Weitergabe nicht
+fälschlich als Ende zu lesen, eng genug, um die Namensverwechslungen von
+MF-669 zu vermeiden. Rotbeweis geführt.
+
+### Stand
+
+Die sechs stehen in `ERLAUBT_UNGELESEN` **mit Verweis auf diesen
+Eintrag** — nicht weil sie in Ordnung sind, sondern weil ein dauerhaft
+rotes Tor übergangen wird und dann auch neue Fälle nicht mehr fängt. Die
+Liste wächst nicht: ein siebter Eintrag bedeutet, dass jemand einen
+Mechanismus zu bauen oder ein Feld zu löschen hat.
+
+**Ende dieses Eintrags:** wenn jedes der sechs entweder eine Lesestelle
+hat (Oracle-first, benannte Referenz, Rotbeweis vor dem Code) oder
+gelöscht ist. Löschen ist eine öffentliche API-Änderung — deshalb
+Eigentümer-Entscheidung, nicht Wartungsarbeit.
+
+---
+
+## Behoben in MF-672: die Oberfläche nullte ihre Optionen
+
+Kein offener Punkt, sondern der Grund, warum OPT-1 überhaupt auffiel.
+
+Alle drei Stellen, an denen die Oberfläche Wandlungsoptionen baute
+(`toolstab.cpp`, `decodejob.cpp`, `uft_save_image.cpp`), taten es mit
+`memset(&opts, 0, sizeof(opts))`. Das sieht nach „keine besonderen
+Wünsche" aus und ist etwas anderes:
+
+`use_multiple_revs` steht per Vorgabe auf **true**, und
+`uft_format_convert_flux.c:964` liest `(!opts || opts->use_multiple_revs)`.
+Ein Aufrufer mit `NULL` bekam also die Verschmelzung über alle
+Umdrehungen — ein Aufrufer mit genullter Struktur nicht.
+
+**Die Oberfläche war damit schlechter als gar keine Angabe.** Sie hat
+SCP-Abbilder mit fünf Umdrehungen dekodiert, als läge eine vor, und
+niemand konnte es sehen. Alle drei rufen jetzt
+`uft_convert_default_options()`; `accept_data_loss` bleibt ausdrücklich
+ungesetzt (UFT-A05).
+
+Damit sich das nicht wiederholt, prüft das Tor seither: wer eine
+`uft_convert_options_t` anlegt, muss die Vorgabefunktion **aufrufen**.
+Beim Rotbeweis schwieg diese Regel zunächst — der Kommentar, der die
+Reparatur begründet, nennt die Funktion im Fließtext, und das zählte als
+Aufruf. Ein Tor, das sich von einer Erklärung besänftigen lässt, prüft
+nichts; Kommentare werden jetzt vorher entfernt.
