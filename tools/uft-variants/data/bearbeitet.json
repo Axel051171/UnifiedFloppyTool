@@ -1,0 +1,10 @@
+{
+  "_kommentar": "Zyklus-Gedaechtnis: welche Formate hat uft-variants bearbeitet? Verhindert, dass zwei Zyklen dasselbe Format anfassen. Eintrag erst, wenn die Uebergabe in out/ liegt.",
+  "bearbeitet": {
+    "hfe": {
+      "stand": "entwurf",
+      "uebergabe": "out/hfe.uebergabe.md",
+      "hinweis": "Erster Lauf des Eigentuemers; mechanischer Entwurf, Tiefenpruefung offen. Die Evidenz ist mit MF-656 neu erhoben — die alte enthielt einen Fehltreffer, der die Zwei-Quellen-Regel scheinbar erfuellte."
+    }
+  }
+}

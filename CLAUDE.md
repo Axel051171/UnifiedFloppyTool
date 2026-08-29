@@ -401,7 +401,7 @@ tests/                 — 77 C-Tests + 1 Qt-Test
 - ~610 Error-Handling-Fixes (fseek + I/O)
 - Thread-Safety: 3 Subsysteme mit Mutex
 - Compiler-Hardening: stack-protector, FORTIFY_SOURCE, ASLR
-- 23 Agent-Definitionen (`.claude/agents/`, alle auf claude-fable-5);
+- 24 Agent-Definitionen (`.claude/agents/`, alle auf claude-fable-5);
   neu seit v4.1.6: `uft-scout` — sichtet fremden Code, liefert nur
   Dokumente (`tools/uft-scout/`)
 
