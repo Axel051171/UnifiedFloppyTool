@@ -940,6 +940,7 @@ foreach(test_source ${TEST_SOURCES})
            OR ${test_name} STREQUAL "test_convert_identity_lossless"
            OR ${test_name} STREQUAL "test_convert_atr_xfd"
            OR ${test_name} STREQUAL "test_capability_manifest"
+           OR ${test_name} STREQUAL "test_plugin_capability_api"
            OR ${test_name} STREQUAL "test_convert_roundtrip_measured")
         # MF-446: the only test that links the entire format layer, because it
         # is the only one that can answer "does uft_register_all_formats()
@@ -971,6 +972,9 @@ foreach(test_source ${TEST_SOURCES})
             ${CMAKE_SOURCE_DIR}/src/core/uft_loss_report.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_mfm_encoder.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_probe_format_impl.c
+            # MF-660: Zugang zum Faehigkeits-Manifest. Gehoert in die
+            # gemeinsame Liste, nicht in einen Sonderzweig.
+            ${CMAKE_SOURCE_DIR}/src/core/uft_plugin_capability.c
             ${CMAKE_SOURCE_DIR}/src/core/uft_roundtrip.c
             ${CMAKE_SOURCE_DIR}/src/analysis/uft_protection_probe.c
             ${CMAKE_SOURCE_DIR}/src/flux/uft_kryoflux_stream.c

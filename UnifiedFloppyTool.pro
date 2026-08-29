@@ -830,6 +830,7 @@ SOURCES += \
     src/core/uft_metadata.c \
     src/core/uft_recovery_fusion.c \
     src/core/uft_log.c \
+    src/core/uft_plugin_capability.c \
     src/core/uft_hw_batch.c \
     src/core/uft_fs_registry.c \
     src/core/uft_capture.c \

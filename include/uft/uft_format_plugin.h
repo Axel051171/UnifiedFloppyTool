@@ -779,6 +779,47 @@ size_t uft_list_format_plugins(const uft_format_plugin_t** plugins, size_t max);
  */
 size_t uft_registered_format_plugin_count(void);
 
+/* ==========================================================================
+ * Faehigkeits-Manifest abfragen (MF-660)
+ *
+ * 88 Plugins deklarieren zusammen rund 590 Aussagen ueber ihr Koennen.
+ * Bis MF-658 las sie niemand. Diese vier Funktionen sind der Zugang;
+ * die Oberflaeche steuert daraus, welche Bedienelemente ein Format
+ * ueberhaupt anbietet (docs/plans/VARIANTEN_UND_FAEHIGKEITEN.md, Stufe 2).
+ *
+ * Umsetzung: src/core/uft_plugin_capability.c
+ * ========================================================================== */
+
+/** Was der Aufrufer mit einem Bedienelement tun soll. */
+typedef enum uft_control_visibility {
+    UFT_CONTROL_HIDE = 0,        /**< ausblenden — das Format kann es nicht */
+    UFT_CONTROL_SHOW = 1,        /**< zeigen und bedienbar */
+    UFT_CONTROL_SHOW_LIMITED = 2 /**< zeigen, bedienbar, mit Hinweis (PARTIAL) */
+} uft_control_visibility_t;
+
+/**
+ * @brief Stufe einer Faehigkeit; UNSUPPORTED, wenn nicht deklariert.
+ *
+ * "Nicht deklariert" und "ausdruecklich verneint" fallen hier bewusst
+ * zusammen: fuer die Oberflaeche ist die Folge dieselbe. Wer den
+ * Unterschied braucht, fragt uft_plugin_declares_feature().
+ */
+uft_feature_support_t uft_plugin_feature_state(const uft_format_plugin_t* plugin,
+                                                const char* feature);
+
+/** @brief Begruendung zur Einschraenkung; NULL wenn keine. Pflicht bei PARTIAL. */
+const char* uft_plugin_feature_note(const uft_format_plugin_t* plugin,
+                                     const char* feature);
+
+/** @brief Erwaehnt das Plugin die Faehigkeit ueberhaupt? */
+bool uft_plugin_declares_feature(const uft_format_plugin_t* plugin,
+                                  const char* feature);
+
+/** @brief Was die Oberflaeche mit dem zugehoerigen Bedienelement tun soll. */
+uft_control_visibility_t uft_plugin_control_visibility(
+        const uft_format_plugin_t* plugin, const char* feature);
+
+
 /**
  * @brief Plugin über seinen eindeutigen Namen finden ("D64", "XFD", ...)
  *
