@@ -817,6 +817,25 @@ def main() -> int:
         import audit_setting_wiring as _sw
         all_errors.append(("Einstellung ohne Wirkung", _sw.check(repo)))
 
+        # 41. Kategorie (MF-681): das Zaehlwerk des Scout-Abgleichs gegen
+        # seine eigenen drei Fehler. Der Nenner (beauftragt / begutachtet /
+        # offen) steuert die gesamte Restarbeit am Scout-Rueckstand, und er
+        # lag beim ersten Lauf DREIMAL falsch — jedes Mal so, dass Arbeit
+        # verschwand: Namensgleichheit zweier Repos, Erwaehnung statt
+        # Begutachtung, Alteintrag ohne Bezeichner.
+        #
+        # Der Selbsttest hat auf seinem ERSTEN Lauf gleich einen vierten
+        # gefangen: beim Umbau war aus `` ein `\b` geworden, das Muster
+        # suchte also einen echten Backslash. Ein Zaehlwerk ohne Test ist
+        # eine Zahl, der man glaubt.
+        import subprocess as _sp
+        _r = _sp.run([sys.executable, str(repo / "tests" / "test_scout_stand.py")],
+                     capture_output=True, text=True, timeout=300)
+        all_errors.append(("Scout-Zaehlwerk",
+                           [] if _r.returncode == 0 else
+                           [l for l in _r.stdout.splitlines()
+                            if "FAIL" in l] or ["test_scout_stand.py rot"]))
+
     total = sum(len(e) for _, e in all_errors)
     print(f"Consistency check ({len(all_errors)} categories, root={repo}):")
     for label, errs in all_errors:

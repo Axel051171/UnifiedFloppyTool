@@ -3647,3 +3647,38 @@ Nutzlast schiefgeht — bei unserem einzigen Tier-3-gebenchten Controller
 **strukturell unprüfbar** ist, wusste `DIVERGENCES.md` bereits und
 niemand hatte es als Auftrag gelesen. gwnbd hat es sichtbar gemacht,
 indem es einen konkreten Fall dieser Klasse mitbrachte.
+
+---
+
+## SCOUT-27 — das Zählwerk hat jetzt einen Test (MF-681)
+
+Schritt 4 des Plans. Der Nenner (beauftragt / begutachtet / offen)
+steuert die gesamte Restarbeit am Scout-Rückstand — und er lag beim
+ersten Lauf **dreimal** falsch, jedes Mal so, dass Arbeit verschwand.
+
+`tests/test_scout_stand.py` stellt alle drei als Fixtures nach:
+namensgleiches Fremd-Repo, bloße Erwähnung statt Begutachtung,
+Alteintrag ohne Bezeichner. Dazu zwei Normalfälle und eine Prüfung, dass
+jeder echte Auftrag einen Bezeichner trägt — die einzige Prüfung am
+Bestand, und sie schreibt bewusst **keine Zahl** fest: ein Test, der
+`78` festnagelt, wäre beim nächsten übergebenen Repo rot, ohne dass
+etwas kaputt ist.
+
+Registriert als 41. Kategorie in `check_consistency.py`. Rotbeweis
+geführt: Zuordnung sabotiert → 6 Befunde, zurückgesetzt → 0.
+
+### Der Test hat auf seinem ersten Lauf einen vierten Fehler gefangen
+
+Beim Umbau auf fünf Stufen war aus `` ein `\b` geworden — das
+Muster suchte einen echten Backslash statt einer Wortgrenze. Die
+Erwähnungs-Erkennung war damit tot, und **niemand hätte es gemerkt**:
+sie meldet still zu wenig, nicht zu viel.
+
+Nach der Korrektur ändert sich der Stand: **34 offen statt 37**, plus
+**3 „nur erwähnt (prüfen)"** — `amigadev/trackloader`,
+`gonk23/HXCFE_Amiga_copy_utility`, `joncampbell123/floppytools`. Diese
+drei kommen in fremden Gutachten vor, ohne deren Gegenstand zu sein.
+Sie sind eine Frage, kein Ergebnis: entweder mitbehandelt und nur nicht
+sauber benannt, oder übersehen.
+
+Ein Zählwerk ohne Test ist eine Zahl, der man glaubt.

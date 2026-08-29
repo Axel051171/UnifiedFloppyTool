@@ -133,7 +133,7 @@ def status_von(e, texte, negativ, klone):
         return "frueher bewertet"
     if slug and slug.lower() in klone:
         return "geklont, kein Gutachten"
-    if name and re.search(r"\\b" + re.escape(name) + r"\\b",
+    if name and re.search(r"\b" + re.escape(name) + r"\b",
                           texte, re.I):
         return "nur erwaehnt (pruefen)"
     return "OFFEN"
