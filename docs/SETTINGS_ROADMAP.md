@@ -2,6 +2,16 @@
 
 **Stand:** 2026-08-29 (MF-670) · **Anker:** `SETTINGS_ROADMAP`
 
+> **Dies ist eine Fachliste, keine Arbeitsliste** (MF-674). Die offene
+> Arbeit steht als `SET-1` in [`docs/OPEN_ITEMS.md`](OPEN_ITEMS.md) —
+> der einzigen Liste dieses Baums. Hier steht, WAS ein Regler bedeutet:
+> sein Träger, seine Lesestelle, seine Einheit. Dort steht, was als
+> Nächstes zu tun ist.
+>
+> Die Trennung ist Absicht. Diese Datei wiederholt keine Reihenfolge,
+> und `OPEN_ITEMS.md` wiederholt keine Trägernamen — eine Angabe an zwei
+> Stellen driftet, und das ist in diesem Baum dreimal belegt.
+
 ## Wozu dieses Dokument
 
 Einstellbarkeit ist die Menge der **wirksamen** Regler, nicht der

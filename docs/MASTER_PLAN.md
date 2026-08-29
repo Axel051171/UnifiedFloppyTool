@@ -1,10 +1,27 @@
 # UFT Masterplan
 
 **Stand:** 2026-07-02 (Konsolidierungs-Pass MF-289; ursprünglich 2026-04-23)
-**Zweck:** DAS führende Status-Dokument. Einheitlicher Fahrplan der alle
-Findings (`KNOWN_ISSUES.md`, must-fix-hunter-Backlog, Skeleton-Audit,
-XCopy/a8rawconv-Todos) zusammenführt. Jede Session beginnt hier —
-nicht mit einem frischen Scan.
+**Zweck:** Fahrplan und Status — **nicht** die Liste der offenen Punkte.
+
+> **Berichtigt MF-674.** Hier stand bis dahin, dies sei „DAS führende
+> Status-Dokument", das „alle Findings zusammenführt". Das stimmte, als
+> es geschrieben wurde, und ist seit MF-588/607 überholt:
+> [`docs/OPEN_ITEMS.md`](OPEN_ITEMS.md) ist die **einzige** Liste offener
+> Arbeit, und sie führt diesen Masterplan ausdrücklich als eine ihrer
+> Quellen auf.
+>
+> Der Widerspruch stand ein Vierteljahr lang da und fiel erst auf, als
+> jemand fragte, ob es eine Liste gibt oder mehrere: `KNOWN_ISSUES.md`
+> und `BACKLOG.md` haben sich beide im Kopf zurückgezogen, dieses
+> Dokument nicht — und es erwähnte `OPEN_ITEMS.md` mit keinem Wort.
+> Zwei Dokumente, die beide die Sammelstelle sein wollen, sind genau die
+> Drift, gegen die dieser Baum sonst Tore baut.
+>
+> **Was hierher gehört:** Reihenfolge, Meilensteine, Stand der
+> Sanierungsphasen. **Was nach `OPEN_ITEMS.md` gehört:** jeder neue
+> Befund, jeder offene Punkt.
+
+Jede Session beginnt hier — nicht mit einem frischen Scan.
 
 > **Nächste Fassung:** [`PLAN_v4.1.7.md`](PLAN_v4.1.7.md) — „Inhalt, nicht
 > nur Struktur". v4.1.6 ist getaggt und veröffentlicht (2026-08-26).

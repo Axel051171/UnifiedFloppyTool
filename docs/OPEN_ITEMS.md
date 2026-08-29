@@ -3299,3 +3299,64 @@ Beim Rotbeweis schwieg diese Regel zunächst — der Kommentar, der die
 Reparatur begründet, nennt die Funktion im Fließtext, und das zählte als
 Aufruf. Ein Tor, das sich von einer Erklärung besänftigen lässt, prüft
 nichts; Kommentare werden jetzt vorher entfernt.
+
+---
+
+## SET-1 — die einstellbare Fläche, Rest (MF-674)
+
+**Kennzahl:** keine der vier direkt. Die Gruppe ist trotzdem geführt,
+weil sie eine **Zusage** betrifft: was die Oberfläche anbietet, muss
+wirken oder sagen, warum nicht.
+
+**Wo die Einzelheiten stehen:** [`docs/SETTINGS_ROADMAP.md`](SETTINGS_ROADMAP.md).
+Dieser Eintrag ist der **Arbeits**-Zeiger, die Roadmap die **Fach**-Liste
+— Träger, Lesestelle und Einheit je Regler stehen dort und werden hier
+nicht wiederholt. Eine Zahl an zwei Stellen driftet; das ist in diesem
+Baum dreimal belegt.
+
+### Erledigt
+
+| | |
+|---|---|
+| MF-671 | vier OTDR-Schwellen, über einen Trichter |
+| MF-672 | Umdrehungs-Gruppe — drei von vier gestrichen, dafür ein echter Fehler behoben |
+| MF-673 | Abstimm-Strenge; zwei Attrappen entfernt statt verdrahtet |
+
+### Offen, in der Reihenfolge ihres Aufwands
+
+**a) `synthetic_revolutions` — vollständiger Weg, keine Oberfläche.**
+Wie viele Umdrehungen in ein *erzeugtes* Abbild geschrieben werden. Vier
+Lesestellen, alle in `scp_writer_create()`; die öffentliche Option
+existiert und wird durchgereicht. Es fehlt nur der Regler. Billigster
+offener Punkt der Gruppe.
+
+Dazu gehört ein **ungeklärter Nebenbefund**: dieselbe Option hat in
+derselben Datei zwei Rückfallwerte — `convert_bitstream.c:65` nimmt 1
+(HFE→SCP), `:281` nimmt 3 (G64→SCP), ohne genannten Grund. Welcher
+richtig ist, sagt keine Referenz im Baum. **Vor** dem Regler zu klären,
+sonst stellt der Benutzer eine Zahl ein, deren Vorgabe niemand
+begründen kann.
+
+**b) Bitstrom-Gruppe.** `ignoreBadGCR`, `includeHalfTracks`,
+`includeQuarterTracks` — Träger und Lesestellen sind in der Roadmap
+belegt. Sie liegen in drei verschiedenen Format-Plugins, also drei
+kleine Nähte statt einer.
+
+**c) Fluss-Gruppe.** `bitcell_ns`, `pll_gain`, `keep_raw_bits`,
+`sync_patterns`. Wirkt auf die meisten Formate — und hat als einzige
+Gruppe **noch gar keinen Ort**. Die drei „Advanced…"-Dialoge sind
+gelöscht bzw. zur Löschung vorgesehen (GUI-6), der Werkzeug-Reiter
+kennt nur Wandlungsoptionen. **Erst die Frage „wohin", dann die Naht** —
+sonst entsteht die vierte Stelle, an der jemand Optionen zusammenbaut,
+und damit die nächste Aufzählungs-Falle.
+
+`sync_patterns` hat dabei einen eigenen Wert: ohne die Amiga-Sync-Liste
+dekodiert eine geschützte Diskette zu **null** Sektoren (MF-453). Das
+ist kein Feinschliff, sondern der Unterschied zwischen lesbar und nicht
+lesbar.
+
+### Wovon dieser Eintrag NICHT handelt
+
+Die 38 Attrappen aus GUI-6 und der PLL-Toleranz-Regler aus GUI-7 sind
+**Löschungs**-Entscheidungen, keine Verdrahtungs-Aufgaben. Sie stehen
+dort und bleiben dort.
