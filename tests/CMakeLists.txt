@@ -1203,6 +1203,14 @@ foreach(test_source ${TEST_SOURCES})
         # MF-399: real KryoFlux stream decoder instead of local constants
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/flux/uft_kryoflux_stream.c)
+    elseif(${test_name} STREQUAL "test_cbmdos_directory")
+        # MF-683: Phase 1, die Tuer des D64-Lesers. Braucht nur das
+        # Dateisystem-Modul — es liest das Abbild selbst und haengt an
+        # keinem Format-Parser.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/fs/uft_cbmdos.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_vote_confidence")
         # MF-673: prueft die Abstimm-Strenge direkt am Abstimmer — kein
         # Korpus noetig, damit der Beweis auch in CI feuert statt sich zu
