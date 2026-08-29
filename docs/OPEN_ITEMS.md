@@ -3745,3 +3745,67 @@ Prüfung dazukommt oder unser Header korrigiert wird.
 
 **Bis dahin ist der Befund mehr wert als der Fix**, weil er die Frage
 festhält, die vorher niemand gestellt hatte.
+
+---
+
+## FS-1 — `uft_amiga_entry_t.blocks`: ein Ergebnisfeld ohne Erzeuger (MF-685)
+
+**Kennzahl:** keine direkt; Ehrlichkeits-Befund am Dateisystem-Leser.
+
+`uft_amiga_entry_t` führt ein Feld `blocks` („Blocks used"). In
+`src/fs/uft_amigados.c` wird es **nirgends zugewiesen** — gemessen, alle
+`blocks`-Treffer dort gehören zu `uft_amiga_chain_t`. Es meldet immer 0.
+
+Eine 127-Byte-OFS-Datei belegt mindestens einen Datenblock. **0 ist also
+nicht ungenau, sondern falsch.**
+
+Aufgefallen ist es, weil `test_adf_directory_crosstool` es beim ersten
+Lauf als Ergebnis ausgab: „belegt 0 Blöcke" — eine gedruckte Null sieht
+aus wie eine Messung. Der Test nennt es jetzt beim Namen und schreibt
+den falschen Wert **nicht** fest; ihn zu behaupten hieße, den Fehler
+einzufrieren.
+
+### Die Fehlerklasse ist neu
+
+`audit_setting_wiring.py` (MF-669/672) fängt *Einstellungen*, die
+geschrieben und nie gelesen werden. Hier ist es die Spiegelseite: ein
+**Ergebnis**feld, das gelesen werden kann und nie geschrieben wird. Das
+Tor sieht diese Klasse nicht — es prüft Einstellungs-Strukturen, nicht
+Ausgabe-Strukturen.
+
+Ob sich das lohnt zu automatisieren, ist offen. Ein Ausgabefeld ohne
+Erzeuger ist in einem Forensik-Werkzeug aber genau so gefährlich wie
+ein Regler ohne Wirkung: beide sehen aus wie eine Aussage.
+
+### Drei Wege
+
+1. **Füllen** — aus der Blockkette (`uft_amiga_get_chain` existiert).
+   Braucht einen eigenen Rotbeweis und kostet je Verzeichniseintrag
+   einen Kettenlauf; das ist eine Aufwandsentscheidung, keine
+   Kleinigkeit.
+2. **Entfernen** — öffentliche Struktur, also API-Änderung.
+3. **Als unbelegt dokumentieren** — der heutige Zustand, aber im Header
+   statt nur im Test.
+
+Nicht entschieden.
+
+---
+
+## FS-2 — was das ADF-Korpus NICHT bezeugen kann (MF-685)
+
+Der Kreuzvergleich aus MF-685 prüft ein **flaches OFS mit einer Datei**.
+Mehr trägt `xdftool_dd_ofs.adf` nicht. Ausdrücklich **nicht** geprüft:
+
+* **FFS** — anderes Datenblock-Format (roh 512 statt 488 mit Kopf).
+* **Unterverzeichnisse** — die Hash-Kette über mehr als eine Ebene.
+* **Hard- und Softlinks** — der Leser kann sie laut Header
+  (`is_hardlink`, `is_softlink`, `real_entry`, `link_target`); ob er sie
+  richtig kann, weiß niemand.
+* **Lange Dateinamen** (LFS) und internationale Groß-/Kleinschreibung —
+  `uft_amiga_hash_name(…, bool intl)` hat den Schalter, das Korpus
+  keinen Fall dafür.
+
+Das steht hier als **benannte Grenze**, nicht als stille Lücke. Jeder
+dieser Fälle braucht ein fremd erzeugtes Abbild; `xdftool` kann sie
+erzeugen, und die Erzeugungsbefehle gehören dann ins Manifest — genau
+wie beim vorhandenen.

@@ -128,6 +128,49 @@ Gemessen am Korpus-D64: `UFT MARKER`.
 Wo ein Werkzeug Spur- statt Dateiebene beurteilt (`nibscan`s BAM-/DIR-
 und Full-CRC), ergänzt das die Datei-Ebene, es ersetzt sie nicht.
 
+## Pflichtfeld: Längensemantik (MF-685)
+
+**Jedes registrierte Oracle nennt, ob es rohe oder auf Blockgrenzen
+gepolsterte Längen liefert** — gemessen, mit Datum und Kalibrierdatei.
+Ohne dieses Feld ist ein Eintrag unvollständig.
+
+Der Anlass steht eine Überschrift höher: floptool meldete 254 Byte für
+eine 127-Byte-Datei, und dieser Wert stand hier als Messung. Es gibt
+keinen Grund anzunehmen, dass floptool das einzige Werkzeug mit dieser
+Eigenschaft ist — also wird gefragt, statt gehofft.
+
+**Kalibrierung:** eine Datei mit krummer, bekannter Länge durchreichen
+und die gemeldete Zahl ansehen. Das Hausmaß ist **127 Byte** — die
+Länge des UFT-Markers, der in beiden Korpus-Abbildern steckt (D64 und
+ADF) und dessen wahrer Wert dreifach belegt ist.
+
+Warum krumm: eine Datei mit glatter Länge kann beide Antworten geben,
+ohne dass man den Unterschied sieht. 127 liegt unter jeder üblichen
+Blockgröße und über null — eine gepolsterte Antwort ist sofort als
+solche erkennbar (254 bei CBM-DOS, 488 bei Amiga-OFS, 512 bei FAT).
+
+| Semantik | heißt | taugt für |
+|---|---|---|
+| **roh** | Länge aus dem Dateikopf | Inhalte byteweise |
+| **gepolstert** | belegte Blockkapazität | Namen, Zahl, Reihenfolge — Inhalte nur mit ausdrücklicher Toleranz |
+| **ungemessen** | niemand hat nachgesehen | nichts. Ein Oracle ohne Kalibrierung ist eine Zusicherung |
+
+Die Kalibrierung passiert **einmal je Oracle**, nicht einmal je
+Schreck.
+
+### Stand der Kalibrierung
+
+| Werkzeug | Semantik | gemessen | womit |
+|---|---|---|---|
+| `floptool` (`flophashes`) | **gepolstert** (254 B bei einem CBM-Block) | 2026-08-29, MF-684 | Korpus-D64, `UFT MARKER` |
+| `amitools xdftool` | **roh** | 2026-08-29, MF-685 | Korpus-ADF, `marker.txt` — der eigene Leser meldet 127, nicht 488 |
+| `adfrescue` | **roh** | Scout-Zyklus `adf_zweitmeinung` | 127 B, byteidentisch zur xdftool-Extraktion |
+| `lsatr`, `a8rawconv`, `gw`, `cpmls`, `hxcfe`, `samdisk`, `dtc` | **ungemessen** | — | offen |
+
+Die sieben ungemessenen sind kein Vorwurf, sondern eine Liste: keiner
+von ihnen war bisher an einem Inhalts-Differenzlauf beteiligt. Wer den
+ersten fährt, kalibriert vorher.
+
 ## Registrierte Oracles (7)
 
 Stand `tests/differential/oracles.py`, 2026-08-28.

@@ -1203,6 +1203,14 @@ foreach(test_source ${TEST_SOURCES})
         # MF-399: real KryoFlux stream decoder instead of local constants
         target_sources(${test_name} PRIVATE
             ${CMAKE_SOURCE_DIR}/src/flux/uft_kryoflux_stream.c)
+    elseif(${test_name} STREQUAL "test_adf_directory_crosstool")
+        # MF-685: der ADF-Leser gegen ein FREMD erzeugtes Abbild. Die
+        # bestehenden AmigaDOS-Tests bauen synthetisch — dieser hier ist
+        # der erste Abgleich gegen den xdftool-Befehl aus dem Manifest.
+        target_sources(${test_name} PRIVATE
+            ${CMAKE_SOURCE_DIR}/src/fs/uft_amigados.c)
+        target_compile_definitions(${test_name} PRIVATE
+            UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
     elseif(${test_name} STREQUAL "test_cbmdos_directory")
         # MF-683: Phase 1, die Tuer des D64-Lesers. Braucht nur das
         # Dateisystem-Modul — es liest das Abbild selbst und haengt an
