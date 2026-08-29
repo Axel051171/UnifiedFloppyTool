@@ -2514,6 +2514,25 @@ if(TARGET Qt6::Test)
         # Auswahlfeld — also den Weg, den ein Benutzer nimmt — und liest
         # danach die Sichtbarkeit der echten Widgets. Braucht deshalb den
         # ganzen Tab samt Format-Registry.
+        # MF-664 (Stufe 4a): Speichern unter muss wandeln oder ablehnen —
+        # nie umetikettieren. Braucht die ganze Format-Registry und den
+        # Wandler, weil der Test durch uft_convert_file und sein
+        # Preflight-Tor laeuft.
+        if(${qt_test_name} STREQUAL "test_save_image_converts")
+            file(GLOB_RECURSE SAVEIMG_FORMAT_SOURCES
+                 ${CMAKE_SOURCE_DIR}/src/formats/*.c)
+            target_sources(${qt_test_name} PRIVATE
+                ${CMAKE_SOURCE_DIR}/src/uft_save_image.cpp
+                ${SAVEIMG_FORMAT_SOURCES}
+                ${UFT_FORMAT_LAYER_DEPS})
+            target_include_directories(${qt_test_name} PRIVATE
+                ${CMAKE_SOURCE_DIR}/src
+                ${UFT_FORMAT_LAYER_INCLUDES})
+            target_compile_definitions(${qt_test_name} PRIVATE
+                UFT_CORPUS_DIR="${CMAKE_SOURCE_DIR}/tests/corpus_free")
+            target_link_libraries(${qt_test_name} PRIVATE uft_core uft_crc)
+        endif()
+
         if(${qt_test_name} STREQUAL "test_format_tab_capability_gating")
             file(GLOB_RECURSE CAPGATE_FORMAT_SOURCES
                  ${CMAKE_SOURCE_DIR}/src/formats/*.c)

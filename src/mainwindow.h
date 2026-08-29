@@ -68,6 +68,18 @@ private slots:
      * Zwei Haelften derselben fehlenden Tuer.
      */
     void onAnalyze();
+
+private:
+    /**
+     * @brief Speichert das geladene Abbild nach @p ziel (MF-664).
+     *
+     * Wandelt, wenn das Zielformat abweicht; lehnt ab, wenn der Wandler
+     * das Paar nicht traegt. Uebernimmt @p ziel als neuen aktuellen Pfad
+     * NUR bei Erfolg.
+     */
+    void speichereNach(const QString &ziel);
+
+private slots:
     void onSave();
     void onSaveAs();
     

@@ -1,5 +1,6 @@
 #include "mainwindow.h"
 #include "diskanalyzerwindow.h"  /* MF-663 */
+#include "uft_save_image.h"        /* MF-664 */
 #include "uft_gui_write_gate.h"
 #include "ui_mainwindow.h"
 #include "visualdisk.h"
@@ -326,95 +327,56 @@ void MainWindow::onSave()
 {
     if (m_currentFile.isEmpty()) {
         onSaveAs();
-    } else {
-        /* Save current disk image using format writer.
-         * For sector-level formats we can write directly.
-         * The file is already loaded via m_currentFile. */
-        QFile srcFile(m_currentFile);
-        if (!srcFile.exists()) {
-            QMessageBox::warning(this, tr("Save Error"),
-                tr("Source file no longer exists:\n%1").arg(m_currentFile));
-            return;
-        }
-
-        /* If the current file is the same as the save target, we just
-         * confirm - the image is already on disk. For Save As, the caller
-         * sets m_currentFile to the new path before calling onSave(). */
-        if (m_currentImageInfo.isValid) {
-            /* Read the image data from the current file */
-            if (!srcFile.open(QIODevice::ReadOnly)) {
-                QMessageBox::warning(this, tr("Save Error"),
-                    tr("Cannot read file:\n%1").arg(m_currentFile));
-                return;
-            }
-            QByteArray imageData = srcFile.readAll();
-            srcFile.close();
-
-            /* -- MF-573: erst das Tor, dann die Datei -------------------
-             *
-             * `QFile(m_currentFile)` mit `WriteOnly` KUERZT beim Oeffnen.
-             * Im normalen Speichern-Fall ist Quelle == Ziel, das Original
-             * ist damit schon weg, bevor ein Byte geschrieben wurde — es
-             * lebt nur noch in `imageData` im Speicher.
-             *
-             * MF-571 hat hier die kurze Schreibung erkannt und die
-             * Teildatei entfernt. Das war richtig gegen die falsche
-             * Erfolgsmeldung, aber es loescht im Gleichstands-Fall den
-             * letzten Rest. Ehrlich UND leer ist immer noch leer.
-             *
-             * Das Tor legt vorher einen geprueften Schnappschuss an
-             * (`uft_write_gate_precheck`, Richtlinie
-             * UFT_GATE_POLICY_IMAGE_ONLY). Geht das Schreiben schief,
-             * steht der Zustand von vorher noch da, und die Meldung sagt
-             * wo. Genau das meint „Keine stille Veraenderung". */
-            QString snapPath;
-            if (!uftGuiWriteGateAllows(this, m_currentFile, imageData,
-                                       tr("saving"), &snapPath)) {
-                return;   /* Der Aufrufer hat den Benutzer informiert. */
-            }
-
-            /* Write it out (handles the Save As case where m_currentFile
-             * was updated to the new path) */
-            QFile outFile(m_currentFile);
-            if (!outFile.open(QIODevice::WriteOnly)) {
-                QMessageBox::warning(this, tr("Save Error"),
-                    tr("Cannot write to file:\n%1").arg(m_currentFile));
-                return;
-            }
-            /* MF-571: hier stand `outFile.write(imageData);` ohne
-             * Pruefung, und danach unbedingt "Saved: %1". Das ist die
-             * SPEICHERN-Funktion eines forensischen Werkzeugs: eine kurze
-             * Schreibung ergab eine halbe Datei mit richtigem Namen und
-             * der Meldung, sie sei gespeichert. */
-            const qint64 want = imageData.size();
-            const qint64 wrote = outFile.write(imageData);
-            outFile.close();
-            if (wrote != want) {
-                QFile::remove(m_currentFile);
-                QMessageBox::critical(this, tr("Save Error"),
-                    tr("Only %1 of %2 bytes were written - the partial "
-                       "file was removed.\n\n"
-                       "The state before this attempt is preserved at:\n%3")
-                    .arg(wrote < 0 ? 0 : wrote).arg(want).arg(snapPath));
-                return;
-            }
-        }
-
-        statusBar()->showMessage(tr("Saved: %1").arg(m_currentFile), 3000);
+        return;
     }
+    // Ziel == Quelle: die Identitaet. uftSaveImageAs() erkennt das und
+    // kopiert byteweise — die Rundlauf-Matrix fuehrt das seit MF-532 mit
+    // Messung als verlustfrei.
+    speichereNach(m_currentFile);
 }
 
 void MainWindow::onSaveAs()
 {
-    QString filename = QFileDialog::getSaveFileName(this,
+    const QString filename = QFileDialog::getSaveFileName(this,
         tr("Save Disk Image"),
         QString(),
         tr("D64 (*.d64);;G64 (*.g64);;ADF (*.adf);;HFE (*.hfe);;SCP (*.scp);;IMG (*.img);;All Files (*)"));
-    
-    if (!filename.isEmpty()) {
-        m_currentFile = filename;
-        onSave();
+
+    if (filename.isEmpty())
+        return;
+
+    // MF-664: hier stand `m_currentFile = filename; onSave();`.
+    //
+    // Das war zweifach falsch. Erstens setzte es die QUELLE auf den
+    // Zielnamen, bevor gespeichert wurde — onSave() suchte danach eine
+    // Datei, die es noch gar nicht gab, und meldete "Source file no
+    // longer exists". Speichern unter einem NEUEN Namen scheiterte damit
+    // immer. Zweitens kopierte onSave() nur Bytes, sodass der einzige
+    // Fall, der ueberhaupt lief, ein D64 unter dem Namen .hfe war.
+    //
+    // Der Zielpfad wird erst uebernommen, wenn das Schreiben GELUNGEN
+    // ist. Ein fehlgeschlagenes "Speichern unter" darf nicht den
+    // Merkzettel umbiegen.
+    speichereNach(filename);
+}
+
+void MainWindow::speichereNach(const QString &ziel)
+{
+    const UftSaveOutcome r = uftSaveImageAs(m_currentFile, ziel);
+
+    if (!r.ok) {
+        QMessageBox::warning(this, tr("Speichern"), r.message);
+        statusBar()->showMessage(tr("Nicht gespeichert"), 5000);
+        return;
     }
+
+    m_currentFile = ziel;
+
+    // Eine Wandlung ist ein Eingriff und gehoert gesagt, nicht in der
+    // Statuszeile versteckt. Eine Identitaets-Kopie reicht die Zeile.
+    if (r.converted)
+        QMessageBox::information(this, tr("Speichern"), r.message);
+    statusBar()->showMessage(r.message.section('\n', 0, 0), 5000);
 }
 
 void MainWindow::openFile(const QString &filename)

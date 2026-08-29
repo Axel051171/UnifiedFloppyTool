@@ -295,9 +295,66 @@ Beispiel, das die Regel erzwingt: `uft_hfe.c:797` gibt für v3
 Das ist derselbe Mechanismus wie Stufe 2, nur auf Varianten statt auf
 Bedienelementen angewandt.
 
-**Aufwand:** M. **Abnahme:** Rundlauf-Test — laden, unter derselben
-Variante speichern, bitgleich. Muster liegt vor
-(`tests/test_convert_atr_xfd.c`, MF-655).
+### ⚠ Stufe 4 musste bei null anfangen (MF-664)
+
+Beim Messen des Speicherpfads kam heraus, dass unter dem geplanten
+Varianten-Wähler **kein Boden** war. `MainWindow::onSave()` las die
+Quelldatei und schrieb **dieselben Bytes** — kein Format-Schreiber kam
+vor. „Speichern unter → HFE" legte bei einem geladenen D64 dessen Bytes
+in einer `.hfe`-Datei ab.
+
+Klasse GUI-1 (MF-635, „Convert = `QFile::copy`"), und dieselbe, die
+MF-568 im Dekodier-Auftrag schon einmal beheben musste.
+
+**Drei Fehler in derselben Funktion**, alle gemessen:
+
+1. **Umetikettieren statt wandeln** (oben).
+2. **Speichern unter einem NEUEN Namen scheiterte immer.** `onSaveAs()`
+   setzte `m_currentFile` auf den Zielnamen und rief dann `onSave()`,
+   das mit `if (!srcFile.exists())` prüft — die Quelle war da schon
+   überschrieben. Die Meldung „Source file no longer exists" führte in
+   die Irre: die Quelle existierte, sie hieß nur nicht mehr so.
+3. Damit lief als einziger Fall „auf eine bestehende Datei desselben
+   Formats speichern" — und der ist eine Kopie.
+
+Einen Varianten-Wähler darüberzusetzen hieße, eine zweite Zusage auf
+eine gebrochene zu stapeln. Also zuerst der Boden.
+
+**`src/uft_save_image.cpp` (neu)** entscheidet einmal und prüfbar:
+
+    Ziel == Quelle (Format)  ->  geprüfte Byte-Kopie (Identität)
+    Ziel != Quelle           ->  uft_convert_file() mit Preflight-Tor
+    Ziel unbekannt           ->  ablehnen und sagen warum
+
+Das Quellformat kommt aus dem **Inhalt**, nicht aus der Endung —
+MF-444 hat das im Kern schon so entschieden. `accept_data_loss` bleibt
+**aus**: Zustimmung gehört dorthin, wo jemand sie geben kann, und
+„Speichern" ist keine solche Stelle. Der Zielpfad wird erst übernommen,
+wenn das Schreiben **gelungen** ist — ein fehlgeschlagenes Speichern
+darf den Merkzettel nicht umbiegen.
+
+**Rotbeweis:** das alte Verhalten wiederhergestellt (immer kopieren) →
+Rückgabewert **2**; zurückgesetzt → **0**. Der Test prüft dabei nicht,
+dass die Wandlung *gelingt* — die meisten Paare weist das Tor zu Recht
+als UNGEPRÜFT ab. Er prüft, dass im Ablehnungsfall **keine Datei**
+entsteht und im Erfolgsfall eine, die nicht mehr wie die Quelle
+aussieht. Beides ist falsifizierbar.
+
+**Aufwand war M.** 277/277 grün.
+
+### Offen: der eigentliche Varianten-Wähler
+
+Der Boden trägt jetzt. Was noch fehlt, ist die Auswahlliste — und dafür
+fehlt eine Quelle: `uft_format_variant_t` hat **0 Instanzen**, und das
+Fähigkeits-Manifest unterscheidet nicht zwischen *lesen* und
+*schreiben*. HFE ist der Beleg: es führt „HFE v3 SUPPORTED", aber
+`uft_hfe.c:797` lehnt das **Schreiben** von v3 ab.
+
+Solange diese Richtung fehlt, wäre jede Auswahlliste geraten. Der
+nächste Schritt ist deshalb `uft_format_variant_t` zu füllen — mit den
+Tabellen, die `uft-variants` liefert (für HFE liegt sie bereits).
+
+**Ursprünglicher Aufwand M — der Boden hat ihn aufgebraucht.**
 
 ---
 
@@ -366,7 +423,7 @@ rechnen richtig" ein „der Pfad liest eine echte Datei richtig" — und
     1  Tor: Fähigkeit muss beweisbar sein      S   ERLEDIGT MF-658
     2  Manifest -> Bedienelemente              M   ERLEDIGT MF-660/661
     3a Variante anzeigen (read_metadata)       S   ERLEDIGT MF-662/663
-    4  Variante beim Speichern + Standard      M
+    4  Variante beim Speichern + Standard      M   BODEN GELEGT MF-664
     5  Nibble -> Flux -> PLL verdrahten        3x M
     3b Varianten-Modell als Heimat             M   (wenn genug Formate)
 
