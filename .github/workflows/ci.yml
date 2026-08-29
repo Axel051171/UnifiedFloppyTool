@@ -98,20 +98,36 @@ jobs:
           ldd build/UnifiedFloppyTool | grep -v "not found" || true
 
       - name: Build tests (CMake)
-        # qmake is the canonical build (above). CMake test infra is best-
-        # effort: each missing target_sources(...) wire surfaces as a link
-        # error in a single test binary, but the qmake build proves the
-        # source tree compiles. Mirror the coverage.yml/sanitizers.yml
-        # pattern (`|| true`) — partial CMake builds are acceptable, full
-        # break is not. Wrapped commands always exit 0 → no annotation.
+        id: buildtests
+        # qmake is the canonical build (above). CMake test infra is
+        # keep-going: one unbuildable target must not abort the parallel
+        # build and leave ~150 others as ctest "Not Run" (KNOWN_ISSUES
+        # CI-1). Independent test executables still build.
+        #
+        # MF-667: hier stand `|| true` — und der Kommentar am ctest-Schritt
+        # behauptete gleichzeitig, "a build breakage surfaces in the build
+        # step". Beides zusammen ging nicht auf: der Schritt KONNTE nicht
+        # rot werden.
+        #
+        # Gemessen wurde die Folge: VIER Qt-Ziele bauten laengere Zeit
+        # nicht, und niemand sah es. ctest blieb gruen, weil die
+        # betroffenen Ziele nicht liefen; lokal blieb es unsichtbar, weil
+        # ausfuehrbare Dateien aus frueheren Baeufen herumlagen.
+        #
+        # Der Rueckgabewert wird jetzt FESTGEHALTEN statt verworfen. Der
+        # Schritt bleibt gruen, damit ctest danach noch laeuft und man die
+        # Ergebnisse der bauenden Ziele sieht — die Bewertung faellt am
+        # Ende, mit Namen.
         run: |
+          set +e
           cmake -B build-tests \
             -DCMAKE_BUILD_TYPE=Release \
-            -DUFT_BUILD_TESTS=ON || true
-          # keep-going (`-- -k`): one unbuildable test target must not abort
-          # the whole parallel build and leave ~150 others as ctest "Not Run"
-          # (KNOWN_ISSUES CI-1). Independent test executables still build.
-          cmake --build build-tests --parallel $(nproc) -- -k 2>&1 || true
+            -DUFT_BUILD_TESTS=ON
+          echo "configure_rc=$?" >> "$GITHUB_OUTPUT"
+          cmake --build build-tests --parallel $(nproc) -- -k 2>&1 \
+            | tee build-tests.log
+          echo "build_rc=${PIPESTATUS[0]}" >> "$GITHUB_OUTPUT"
+          exit 0
 
       - name: Run tests
         # GATED (KNOWN_ISSUES CI-1 resolved): no more `|| true`. A test that
@@ -120,10 +136,43 @@ jobs:
         # Windows libusb mock + /tmp path — are fixed; all three test jobs
         # verified 163/163 green before this gate was armed.
         # `--no-tests=ignore` (CMake >= 3.20) still tolerates a fully-failed
-        # test build (exit 0) so a build breakage surfaces in the build step,
-        # not as a confusing "no tests" ctest error.
+        # test build (exit 0) so a build breakage surfaces as a build
+        # breakage, not as a confusing "no tests" ctest error.
+        #
+        # MF-667: dieser Satz stand hier schon und war UNWAHR — der
+        # Bau-Schritt trug `|| true` und konnte nicht rot werden. Bewertet
+        # wird er jetzt von einem eigenen Schritt direkt darunter.
         run: |
           cd build-tests && ctest --output-on-failure --timeout 120 --no-tests=ignore
+
+      - name: Der Pruefstand muss BAUEN, nicht nur bestehen (MF-667)
+        # Laeuft NACH ctest, damit die Ergebnisse der bauenden Ziele
+        # sichtbar bleiben — und faellt trotzdem, wenn irgendein Ziel
+        # nicht uebersetzt.
+        #
+        # "Tests gruen" und "Bau gruen" sind ZWEI Aussagen. Bis MF-667
+        # wurde nur die erste geprueft; die zweite war mit `|| true`
+        # verworfen, und vier Ziele bauten laengere Zeit unbemerkt nicht.
+        if: always()
+        run: |
+          if [ "${{ steps.buildtests.outputs.configure_rc }}" != "0" ]; then
+            echo "::error::cmake configure fuer den Pruefstand ist gescheitert."
+            exit 1
+          fi
+          rc="${{ steps.buildtests.outputs.build_rc }}"
+          if [ "$rc" = "0" ]; then
+            echo "Pruefstand baut vollstaendig."
+            exit 0
+          fi
+          echo "::error::Der Pruefstand baut NICHT vollstaendig (rc=$rc)."
+          echo "Ziele mit Fehlern:"
+          grep -oE 'CMakeFiles/[A-Za-z0-9_]+\.dir' build-tests.log \
+            | sed 's|CMakeFiles/||; s|\.dir$||' | sort -u | head -40
+          echo
+          echo "Erste Uebersetzungsfehler:"
+          grep -E '^[^ ]+:[0-9]+:[0-9]+: (error|fatal error):' \
+            build-tests.log | head -20
+          exit 1
 
       - name: Upload build logs on failure
         if: failure()
@@ -221,6 +270,7 @@ jobs:
           file build/release/UnifiedFloppyTool.exe
 
       - name: Build tests (CMake)
+        id: buildtests
         # Same best-effort policy as the Linux job: partial CMake test
         # builds are acceptable since qmake (above) is the canonical
         # production build. The Windows build of test_gw_protocol
@@ -229,12 +279,17 @@ jobs:
         # appeared should fail the CI on that platform.
         shell: bash
         run: |
+          set +e
           cmake -B build-tests -G "MinGW Makefiles" \
             -DCMAKE_BUILD_TYPE=Release \
-            -DUFT_BUILD_TESTS=ON || true
+            -DUFT_BUILD_TESTS=ON
+          echo "configure_rc=$?" >> "$GITHUB_OUTPUT"
           # keep-going (`-- -k`): see Linux job — one unbuildable target must
           # not abort the whole build (KNOWN_ISSUES CI-1).
-          cmake --build build-tests --parallel $(nproc) -- -k 2>&1 || true
+          cmake --build build-tests --parallel $(nproc) -- -k 2>&1 \
+            | tee build-tests.log
+          echo "build_rc=${PIPESTATUS[0]}" >> "$GITHUB_OUTPUT"
+          exit 0
 
       - name: Run tests
         # GATED (KNOWN_ISSUES CI-1 resolved): no `|| true`. The Windows env
@@ -243,6 +298,33 @@ jobs:
         shell: bash
         run: |
           cd build-tests && ctest --output-on-failure --timeout 120 --no-tests=ignore
+
+      - name: Der Pruefstand muss BAUEN, nicht nur bestehen (MF-667)
+        # Wie im Linux-Auftrag: nach ctest, damit die Ergebnisse der
+        # bauenden Ziele sichtbar bleiben — und trotzdem rot, wenn eines
+        # nicht uebersetzt. "Tests gruen" und "Bau gruen" sind zwei
+        # Aussagen; bis MF-667 wurde nur die erste geprueft.
+        if: always()
+        shell: bash
+        run: |
+          if [ "${{ steps.buildtests.outputs.configure_rc }}" != "0" ]; then
+            echo "::error::cmake configure fuer den Pruefstand ist gescheitert."
+            exit 1
+          fi
+          rc="${{ steps.buildtests.outputs.build_rc }}"
+          if [ "$rc" = "0" ]; then
+            echo "Pruefstand baut vollstaendig."
+            exit 0
+          fi
+          echo "::error::Der Pruefstand baut NICHT vollstaendig (rc=$rc)."
+          echo "Ziele mit Fehlern:"
+          grep -oE 'CMakeFiles/[A-Za-z0-9_]+[.]dir' build-tests.log \
+            | sed 's|CMakeFiles/||; s|[.]dir$||' | sort -u | head -40
+          echo
+          echo "Erste Uebersetzungsfehler:"
+          grep -E '^[^ ]+:[0-9]+:[0-9]+: (error|fatal error):' \
+            build-tests.log | head -20
+          exit 1
 
       - name: Upload build logs on failure
         if: failure()

@@ -3002,3 +3002,44 @@ Zeit grün. Kein Tor prüft, **ob der Prüfstand überhaupt baut** — die
 Annahme war, dass `ctest` das mitbringt. Tut es nicht, wenn alte
 Binärdateien herumliegen. Ein Tor „`cmake --build` mit Rückgabewert 0"
 wäre billig und hätte das hier sofort gezeigt.
+
+### ✅ Nachgezogen (MF-667)
+
+**In der CI stand der Grund schwarz auf weiß**, und der Kommentar
+daneben widersprach ihm:
+
+```yaml
+cmake --build build-tests --parallel $(nproc) -- -k 2>&1 || true
+```
+
+Der ctest-Schritt darunter erklärte gleichzeitig, `--no-tests=ignore`
+sei so gewählt, „so a build breakage surfaces **in the build step**".
+Genau das konnte der Bau-Schritt nicht — er trug `|| true` und war nicht
+rot zu bekommen. Dieselbe Maskierung, die CI-1 am 2026-07-04 für `ctest`
+entfernt hat; für den **Bau** blieb sie stehen.
+
+Behoben in **beiden** Aufträgen (Linux und Windows), und zwar so, dass
+der gute Grund für `-k` erhalten bleibt:
+
+* Der Bau läuft weiter mit keep-going und bleibt selbst grün — damit
+  `ctest` danach noch läuft und man die Ergebnisse der bauenden Ziele
+  sieht.
+* Sein Rückgabewert wird **festgehalten** statt verworfen.
+* Ein eigener Schritt **nach** `ctest` bewertet ihn, nennt die
+  gescheiterten Ziele beim Namen und färbt den Auftrag rot.
+
+Dazu `scripts/pruefstand.py` für lokal: baut und testet in einem Zug,
+verliert den Rückgabewert nicht, und sagt ausdrücklich etwas, wenn die
+Tests grün und der Bau rot sind — der Zustand, der heute eine Stunde
+gekostet hat.
+
+**Rotbeweis für das Tor selbst:** ein Ziel absichtlich gebrochen
+(undefinierter Aufruf in `uft_bbc_dfs.c`). Ergebnis: `Bau: ROT
+(Rückgabewert 2)`, zwanzig Ziele namentlich, `GESAMT: ROT`,
+Rückgabewert 1. Zurückgesetzt → alles grün.
+
+Beim Rotbeweis fiel gleich eine Ungenauigkeit auf: die erste Fassung
+meldete „0 Übersetzungsfehler" neben „ROT", weil es **Binder**fehler
+waren. Beide werden jetzt getrennt gezählt, und wenn keines der Muster
+greift, sagt das Skript das — die Muster sind eine Lesehilfe, kein
+Urteil.
